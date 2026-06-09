@@ -1,0 +1,185 @@
+navbar:
+  admin:
+    self: Admin
+    user: User
+    group: Group
+    namespace: Namespace
+    capturer: Capturer
+  etl:
+    self: ETL
+    queue: Queue
+model:
+  name:
+    user: User
+    group: Group
+    namespace: Namespace
+    capturer: Capturer
+    accessKey: Access Key
+field:
+  label:
+    __actions: Actions
+    date: Date
+    time: Time
+    id: ID
+    unionID: Union ID
+    name: Name
+    description: Description
+    createdAt: Created At
+    createdAtTime: Created At Time
+    createdAtDate: Created At Date
+    updatedAt: Updated At
+    updatedAtTime: Updated At Time
+    updatedAtDate: Updated At Date
+    deletedAt: Deleted At
+    deletedAtTime: Deleted At Time
+    deletedAtDate: Deleted At Date
+    active: Is Active
+    field: Field
+    action: Action
+    search: Search
+    username: Username
+    password: Password
+    nickleName: Nickle Name
+    email: Email
+    oldPassword: Old Password
+    newPassword: New Password
+    newPasswordAgain: New Password Again
+    namespace: Namespace
+    target: Target
+    effect: Effect
+    version: Version
+    device: Device
+    bpfExpr: BPF Expression
+    snapLen: Snap Length
+    timeout: Timeout
+    promisc: Promiscuous Mode
+    enabled: Enabled
+    expiredAt: Expired At
+    lastAccessAt: Last Access At
+  content:
+    condition: condition(s)
+    doubleCheck: Please enter `{random}` to double check
+  value:
+    null: "null"
+    undefined: "undefined"
+action:
+  signIn: Sign In
+  signOut: Sign Out
+  signUp: Sign Up 
+  language: Language
+  pwdForget: Password Forget
+  profile: Profile
+  reset: Reset
+  create: Create
+  update: Update
+  delete: Delete
+  edit: Edit
+  close: Close
+  confirm: Confirm
+  activate: Activate
+  deactivate: Deactivate
+  add: Add
+  remove: Remove
+  join: join
+  leave: Leave
+  previousDate: Previous Date
+  currentDate: Current Date
+  nextDate: Next Date
+  currentTime: Current Time
+  copySecret: Copy Secret
+title:
+  zk: Zhong Kui
+  home: Home Page
+  signIn: User Sign In
+  err404: Error - 404
+  err401: Error - 401
+  userProfile: User Profile
+  profileInfo: Profile Info
+  accessKey: Access Key
+  passwordReset: Password Reset
+  userAdmin: Admin - User
+  groupAdmin: Admin - Group
+  namespaceAdmin: Admin - Namespace
+  capturerAdmin: Admin - Capturer
+  queueEtl: ETL - Queue
+summary:
+  pageNotFound: Page Does Not Exists!
+  notSignInYet: Please must sign in first.
+  goingToSignIn: Going to sign in page...
+  dataLoading: Data is loading...
+  endOfData: No more data
+  unknownError: Something went wrong...
+notice:
+  wellcome: Wellcome!
+  goodBye: Good Bye!
+  profileUpdated: Profile updated successfully!
+  passwordReset: Password reset successfully!
+  copied: Copied!
+  copyFailed: Copy Failed!
+unit:
+  second: s
+  count: cnt
+option:
+  search:
+    eq: Equal
+    neq: Not Equal
+    pfx: Prefix With
+    npfx: Not Prefix With
+    ipfx: Prefix With (ignore case)
+    inpfix: Not Prefix With (ignore case)
+    sfx: Suffix With
+    nsfx: Not Suffix With
+    isfx: Suffix With (ignore case)
+    insfx: Not Suffix With (ignore case)
+    ctn: Contains
+    nctn: Not Contains
+    ictn: Contains (ignore case)
+    inctn: Not Contains (ignore case)
+    nil: Is Null
+    nnil: Is Not Null
+    lt: Less Than
+    lte: Less Than Or Equal
+    gt: Greater Than
+    gte: Greater Than Or Equal
+validation:
+  mixed:
+    default: '{path} is invalid'
+    required: '{path} is a required field'
+    defined: '{path} must be defined'
+    notNull: '{path} cannot be null'
+    oneOf: '{path} must be one of the following values: {values}'
+    notOneOf: '{path} must not be one of the following values: {values}'
+  string:
+    length: '{path} must be exactly {length} characters'
+    min: '{path} must be at least {min} characters'
+    max: '{path} must be at most {max} characters'
+    matches: '{path} must match the following: "{regex}"'
+    email: '{path} must be a valid email'
+    url: '{path} must be a valid URL'
+    uuid: '{path} must be a valid UUID'
+    datetime: '{path} must be a valid ISO date-time'
+    datetime_precision: '{path} must be a valid ISO date-time with a sub-second precision of exactly {precision} digits'
+    datetime_offset: '{path} must be a valid ISO date-time with UTC "Z" timezone'
+    trim: '{path} must be a trimmed string'
+    lowercase: '{path} must be a lowercase string'
+    uppercase: '{path} must be a upper case string'
+  number:
+    min: '{path} must be greater than or equal to {min}'
+    max: '{path} must be less than or equal to {max}'
+    lessThan: '{path} must be less than {less}'
+    moreThan: '{path} must be greater than {more}'
+    positive: '{path} must be a positive number'
+    negative: '{path} must be a negative number'
+    integer: '{path} must be an integer'
+  date:
+    min: '{path} field must be later than {min}'
+    max: '{path} field must be at earlier than {max}'
+  boolean:
+    isValue: '{path} field must be {value}'
+  object:
+    noUnknown: '{path} field has unspecified keys: {unknown}'
+    exact: '{path} object contains unknown properties: {properties}'
+  array:
+    min: '{path} field must have at least {min} items'
+    max: '{path} field must have less than or equal to {max} items'
+    length: '{path} must have {length} items'

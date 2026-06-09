@@ -1,0 +1,99 @@
+syntax = "proto3";
+
+package reporter.v1;
+
+import "google/protobuf/empty.proto";
+
+option go_package = ".;reporter_v1";
+
+// ReporterService provides methods for watching resources and sending feedback.
+service ReporterService {
+  /// Watch streams resource events and heartbeats to the client.
+  rpc Watch(WatchRequest) returns (stream WatchResponse);
+  /// Feedback receives a stream of feedback requests from the client.
+  rpc Feedback(stream FeedbackRequest) returns (google.protobuf.Empty);
+}
+
+enum EventType {
+  CREATED  = 0;
+  MODIFIED = 1;
+  DELETED  = 2;
+}
+
+enum ErrorType {
+  UNKNOWN    = 0;
+  NOT_FOUND  = 1;
+  GOAWAY     = 2;
+  DUPLICATED = 3;
+}
+
+enum StatusType {
+  RUNNING = 0;
+  STOPPED = 1;
+}
+
+message Resource {
+  string namespace = 1;
+  string name      = 2;
+  string version   = 3;
+}
+
+message Config {
+  string device   = 1;
+  uint32 snap_len = 2;
+  bool   promisc  = 3;
+  int32  timeout  = 4;
+  string bpf_expr = 5;
+  bool   enabled  = 6;
+}
+
+message Snapshot {
+  Config config         = 1;
+  int64  config_version = 2;
+}
+
+message Heartbeat {
+}
+
+message Event {
+  EventType type         = 1;
+  Snapshot  cur_snapshot = 2; // current snapshot
+  Snapshot  prv_snapshot = 3; // previous snapshot, only for MODIFIED
+}
+
+message Error {
+  ErrorType type   = 1;
+  string    detail = 2;
+}
+
+message Status {
+  StatusType type           = 1;
+  int64      config_version = 2;
+  int64      global_version = 3;
+}
+
+message WatchRequest {
+  int64    timestamp                  = 1;
+  Resource resource                   = 2;
+  int32    heartbeat_interval_seconds = 4;
+  int64    global_version             = 5;
+}
+
+message WatchResponse {
+  int64 timestamp = 1;
+  oneof content {
+    Heartbeat heartbeat = 2;
+    Event     event     = 3;
+    Error     error     = 4;
+  }
+  int64 global_version = 5;
+}
+
+message FeedbackRequest {
+  int64    timestamp       = 1;
+  Resource resource        = 2;
+  string   session_id      = 3;
+  Status   status          = 4;
+  int64    timeout_seconds = 5;
+  bool     uploaded        = 6;
+}

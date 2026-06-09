@@ -1,0 +1,110 @@
+<template>
+  <v-chip
+    v-if="
+      header.type !== BackendDataType.ACTIONS && item[header.key] === undefined
+    "
+  >
+    {{ $t("model.__base.value.undefined") }}
+  </v-chip>
+
+  <v-chip
+    v-else-if="
+      header.type !== BackendDataType.ACTIONS && item[header.key] === null
+    "
+  >
+    {{ $t("model.__base.value.null") }}
+  </v-chip>
+  <hex-string-chip
+    v-else-if="header.type === BackendDataType.UUID"
+    color="info"
+    suffix="..."
+    :value="item[header.key]"
+  />
+  <boolean-chip
+    v-else-if="header.type === BackendDataType.BOOLEAN"
+    :value="item[header.key]"
+  />
+  <storage-size-chip
+    v-else-if="header.type === BackendDataType.BINARY_BYTE"
+    :value="item[header.key]"
+    binary
+  />
+  <storage-size-chip
+    v-else-if="header.type === BackendDataType.DECIMAL_BYTE"
+    :value="item[header.key]"
+  />
+  <json-chip
+    v-else-if="header.type === BackendDataType.JSON"
+    :value="item[header.key]"
+  />
+  <div v-else-if="header.type === BackendDataType.DATETIME">
+    {{ localeDatetimeFormat(DateTime.fromISO(item[header.key])) }}
+  </div>
+  <div v-else-if="header.type === BackendDataType.DATE">
+    {{ localeDateFormat(DateTime.fromISO(item[header.key])) }}
+  </div>
+  <div v-else-if="header.type === BackendDataType.TIME">
+    {{ localeTimeFormat(DateTime.fromISO(item[header.key])) }}
+  </div>
+  <div v-else-if="header.type === BackendDataType.DURATION">
+    {{ localDurationFormat(item[header.key]) }}
+  </div>
+  <v-menu
+    v-else-if="header.type === BackendDataType.ACTIONS && actions"
+    location="bottom right"
+    open-on-hover
+  >
+    <template #activator="{ props }">
+      <v-btn
+        icon="mdi-dots-vertical"
+        variant="plain"
+        density="compact"
+        v-bind="props"
+      />
+    </template>
+    <v-list>
+      <v-list-item
+        v-for="(action, name) in actions(item)"
+        :key="name"
+        :vallue="name"
+        @click="action(item)"
+      >
+        <v-list-item-title>{{ $t(`action.${name}`) }}</v-list-item-title>
+      </v-list-item>
+    </v-list>
+  </v-menu>
+  <template v-else>
+    {{ item[header.key] }}
+  </template>
+</template>
+
+<script setup lang="ts" name="adaptive-cell">
+import type { PropType } from "vue";
+import type { ItemActions, TableHeader } from "../@types/table";
+import { BackendDataType } from "@/types";
+import {
+  localDurationFormat,
+  localeDateFormat,
+  localeDatetimeFormat,
+  localeTimeFormat,
+} from "@/utils/i18n";
+import { DateTime } from "luxon";
+
+const props = defineProps({
+  header: {
+    type: Object as PropType<TableHeader>,
+    required: true,
+  },
+  item: {
+    type: Object as PropType<Record<string, any>>,
+    required: true,
+  },
+  actions: {
+    type: Function as PropType<(item: Record<string, any>) => ItemActions>,
+  },
+  refresh: {
+    type: Function as PropType<() => void>,
+    default: Function(),
+  },
+});
+</script>

@@ -1,0 +1,108 @@
+package database
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"gorm.io/gorm/logger"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
+)
+
+// ZapGormLogger 是 GORM 日志接口的 Zap 适配器
+// 将 GORM 的日志输出重定向到项目的 Zap 日志系统
+type ZapGormLogger struct {
+	loggger *logging.Logger
+}
+
+// NewZapGormLogger 创建新的 ZapGormLogger 实例
+// 用于将 GORM 日志适配到项目的 Zap 日志系统
+//
+// 参数:
+//   - logger: 项目的 Zap 日志记录器实例
+//
+// 返回:
+//   - logger.Interface: 实现了 GORM 日志接口的适配器
+func NewZapGormLogger(logger *logging.Logger) logger.Interface {
+	return ZapGormLogger{
+		loggger: logger,
+	}
+}
+
+// LogMode 设置日志级别（当前实现中忽略级别设置）
+// 注意：当前实现中日志级别控制由底层的 Zap 日志系统处理
+//
+// 参数:
+//   - level: GORM 日志级别
+//
+// 返回:
+//   - logger.Interface: 返回自身实例（级别设置被忽略）
+func (l ZapGormLogger) LogMode(level logger.LogLevel) logger.Interface {
+	return ZapGormLogger{
+		loggger: l.loggger,
+	}
+}
+
+// Info 记录信息级别日志
+// 对应 GORM 的一般信息日志输出
+//
+// 参数:
+//   - ctx: 上下文
+//   - msg: 日志消息
+//   - data: 可变参数，用于格式化消息
+func (l ZapGormLogger) Info(ctx context.Context, msg string, data ...any) {
+	// 过滤掉 GORM 自动替换的回调函数日志
+	if strings.Contains(msg, "replacing callback") {
+		return
+	}
+	l.loggger.Infof(msg, data...)
+}
+
+// Warn 记录警告级别日志
+// 对应 GORM 的警告信息日志输出
+//
+// 参数:
+//   - ctx: 上下文
+//   - msg: 日志消息
+//   - data: 可变参数，用于格式化消息
+func (l ZapGormLogger) Warn(ctx context.Context, msg string, data ...any) {
+	l.loggger.Warnf(msg, data...)
+}
+
+// Error 记录错误级别日志
+// 对应 GORM 的错误信息日志输出
+//
+// 参数:
+//   - ctx: 上下文
+//   - msg: 日志消息
+//   - data: 可变参数，用于格式化消息
+func (l ZapGormLogger) Error(ctx context.Context, msg string, data ...any) {
+	l.loggger.Errorf(msg, data...)
+}
+
+// Trace 记录 SQL 跟踪日志
+// 这是 GORM 日志系统的核心方法，记录所有 SQL 执行详情
+// 包括执行时间、SQL 语句、影响行数和错误信息
+//
+// 参数:
+//   - ctx: 上下文
+//   - begin: SQL 开始执行的时间
+//   - fc: 回调函数，返回 SQL 语句和影响行数
+//   - err: SQL 执行错误（如果有）
+func (l ZapGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
+	elapsed := time.Since(begin)
+	sql, rows := fc()
+	
+	// 根据执行结果和耗时选择适当的日志级别
+	switch {
+	case err != nil:
+		// SQL 执行错误：记录错误级别日志
+		l.loggger.Errorf("sql execution error: %v, elapsed: %v, sql: %s, rows: %d", err, elapsed, sql, rows)
+	case elapsed > 200*time.Millisecond:
+		// 慢查询：记录警告级别日志（执行时间超过200毫秒）
+		l.loggger.Warnf("slow sql query, elapsed: %v, sql: %s, rows: %d", elapsed, sql, rows)
+	default:
+		// 正常查询：记录调试级别日志
+		l.loggger.Debugf("sql execution, elapsed: %v, sql: %s, rows: %d", elapsed, sql, rows)
+	}
+}

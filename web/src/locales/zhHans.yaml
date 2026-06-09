@@ -1,0 +1,318 @@
+navbar:
+  admin:
+    self: 管理
+    user: 用户
+    group: 用户组
+    namespace: 命名空间
+    capturer: 采集器
+  etl:
+    self: 数据处理
+    server: 服务端
+    task: 任务
+model:
+  __base:
+    field:
+      __actions: 操作
+      date: 日期
+      time: 时间
+      field: 字段
+      action: 操作
+      search: 搜索
+    content:
+      condition: 条件
+      doubleCheck: 请输入 `{random}` 以二次确认
+    value:
+      blank: "空白"
+      null: "空"
+      undefined: "未定义"
+  user:
+    name: 用户
+    field:
+      id: ID
+      unionID: 联合 ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      deletedAt: 删除时日
+      deletedAtTime: 删除时间
+      deletedAtDate: 删除日期
+      active: 是否可用
+      username: 用户名
+      password: 密码
+      nickleName: 昵称
+      email: 邮箱
+      oldPassword: 旧密码
+      newPassword: 新密码
+      newPasswordAgain: 新密码二次确认
+  policy:
+    name: 规则
+    field:
+      namespace: 命名空间
+      name: 名称
+      target: 目标
+      effect: 影响
+      action: 动作
+      createdAt: 创建时日
+      updatedAt: 更新时日
+  group:
+    name: 用户组
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      description: 描述
+  namespace:
+    name: 命名空间
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      description: 描述
+  capturer:
+    name: 采集器
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      namespace: 命名空间
+      version: 版本号
+      device: 设备
+      bpfExpr: BPF 表达式
+      snapLen: 捕获长度
+      timeout: 超时时长
+      promisc: 混杂模式
+      enabled: 启用
+  accessKey:
+    name: 访问密钥
+    field:
+      createdAt: 创建时日
+      updatedAt: 更新时日
+      expiredAt: 过期时日
+      lastAccessAt: 最后使用时日
+      enabled: 启用
+      description: 描述
+  server:
+    name: 服务端
+    field:
+      started: 启动时日
+      status: 状态
+      queueWeights: 管道权重
+  queue:
+    name: 管道
+    field:
+      queue: 管道
+      days: 天数
+      running: 运行状态
+      memoryUsage: 内存占用
+      latency: 延迟
+      size: 大小
+      retrievalTime: 获取时间
+      processed: 已运行
+      failed: 已失败
+      active: 运行中
+      pending: 等待中
+      retry: 重试中
+      scheduled: 已计划
+      archived: 已归档
+      aggregating: 聚合中
+      completed: 已完成
+  scheduler:
+    name: 定时任务
+    field:
+      id: ID
+      spec: 规划
+      next: 下一次调度时日
+      prev: 上一次调度时日
+      typeName: 任务类型名称
+      payload: 请求负载
+  task:
+    name: 任务
+    field:
+      id: ID
+      type: 类型
+      queue: 管道
+      state: 状态
+      payload: 请求负载
+      result: 返回结果
+      retried: 已重试次数
+      lastErr: 最后报错信息
+      lastFailedAt: 最后失败时日
+      nextProcessAt: 下次运行时日
+      completedAt: 结束时日
+      start: 开始时日
+      deadline: 截止时日
+      timeout: 超时时长
+      retention: 保留时长
+      group: 组名
+      isOrphaned: 孤立任务
+chart:
+  title:
+    queueSize: 管道大小
+    taskProcess: 任务处理
+  axis:
+    size: 大小
+    count: 数量
+    date: 日期
+    queue: 管道
+  field:
+    active: 运行中
+    pending: 等待中
+    retring: 重试中
+    scheduled: 已计划
+    archived: 已归档
+    processed: 已运行
+    failed: 已失败
+  serie:
+    queueSize: 管道大小
+action:
+  signIn: 登录
+  signOut: 退出
+  signUp: 注册
+  language: 语言
+  pwdForget: 忘记密码
+  profile: 个人资料
+  expand: 展开
+  reset: 重置
+  create: 创建
+  update: 更新
+  delete: 删除
+  edit: 修改
+  close: 关闭
+  confirm: 确认
+  activate: 启用
+  deactivate: 禁用
+  pause: 暂停
+  unpause: 继续
+  add: 添加
+  remove: 移除
+  join: 加入
+  leave: 离开
+  copy: 复制
+  archive: 归档
+  cancel: 取消
+  run: 运行
+  previousDate: 上一天
+  currentDate: 当天
+  nextDate: 下一天
+  currentTime: 当前时间
+  copySecret: 复制密钥
+title:
+  zk: Zhong Kui
+  home: 首页 
+  signIn: 用户登录
+  err404: 错误 - 404
+  err401: 错误 - 401
+  userProfile: 用户个人资料
+  profileInfo: 个人信息
+  accessKey: 访问密钥
+  passwordReset: 重置密码
+  userAdmin: 管理 - 用户
+  groupAdmin: 管理 - 用户组
+  namespaceAdmin: 管理 - 命名空间
+  capturerAdmin: 管理 - 采集器
+  queueEtl: 数据处理 - 管道
+summary:
+  pageNotFound: 页面不存在！
+  notSignInYet: 请先登录。
+  goingToSignIn: 正在前往登录页...
+  dataLoading: 数据加载中...
+  endOfData: 到头了
+  noServerYet: "目前尚未有正在运行中的{name}哦！"
+  noServerYetHelp: "您可以尝试点击下面的{btn}按钮，再次获取数据。"
+notice:
+  wellcome: 欢迎！
+  goodBye: 再见！
+  profileUpdated: 个人资料更新成功！
+  passwordReset: 密码重置成功！
+  copied: 已复制！
+  copyFailed: 复制失败！
+  deleteConfirm: "确认删除 {category} {key} 吗？"
+  archiveConfirm: "确认归档 {category} {key} 吗？"
+  cancelConfirm: "确认取消 {category} {key} 吗？"
+  runConfirm: "确认运行 {category} {key} 吗？"
+unit:
+  day: 天
+  second: 秒
+  count: 个
+option:
+  search:
+    eq: 等于
+    neq: 不等于
+    pfx: 开头为
+    npfx: 开头不为
+    ipfx: 开头为（忽略大小写）
+    inpfx: 开头不为（忽略大小写）
+    sfx: 结尾为
+    nsfx: 结尾不为
+    isfx: 结尾为（忽略大小写）
+    insfx: 结尾不为（忽略大小写）
+    ctn: 包含
+    nctn: 不包含
+    ictn: 包含（忽略大小写）
+    inctn: 不包含（忽略大小写）
+    nil: 为空
+    nnil: 不为空
+    lt: 小于
+    lte: 小于等于
+    gt: 大于
+    gte: 大于等于
+validation:
+  mixed:
+    default: '{path}不合法'
+    required: '{path}是必填项'
+    defined: '{path}必须被携带'
+    notNull: '{path}不能为空'
+    oneOf: '{path}必须是以下值之一: {values}'
+    notOneOf: '{path}必须不是以下值之一: {values}'
+  string:
+    length: '{path}字符长度必须为{length}'
+    min: '{path}字符最小长度必须为{min}'
+    max: '{path}字符最大长度必须为{max}'
+    matches: '{path}必须匹配正则"{regex}"'
+    email: '{path}必须是合法的邮箱地址'
+    url: '{path}必须是合法的URL地址'
+    uuid: '{path}必须是合法的UUID'
+    datetime: '{path}必须为合法的ISO日期时间'
+    datetime_precision: '{path}必须为合法的ISO日期时间，精确到{precision}位小数'
+    datetime_offset: '{path}必须为合法的ISO日期时间，时区为UTC "Z"'
+    trim: '{path}必须为去除两端空白字符后的字符串'
+    lowercase: '{path}必须为小写字符串'
+    uppercase: '{path}必须为大写字符串'
+  number:
+    min: '{path}必须大于或等于{min}'
+    max: '{path}必须小于或等于{max}'
+    lessThan: '{path}必须小于{less}'
+    moreThan: '{path}必须大于{more}'
+    positive: '{path}必须为正数'
+    negative: '{path}必须为负数'
+    integer: '{path}必须为整数'
+  date:
+    min: '{path}必须晚于{min}'
+    max: '{path}必须早于{max}'
+  boolean:
+    isValue: '{path}必须为{value}'
+  object:
+    noUnknown: '{path}字段包含未指定的键：{unknown}'
+    exact: '{path}对象包含未知属性：{properties}'
+  array:
+    min: '{path}必须至少有{min}项'
+    max: '{path}必须至多有{max}项'
+    length: '{path}必须有{length}项'

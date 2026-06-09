@@ -1,0 +1,247 @@
+package migrate
+
+import (
+	"context"
+	"database/sql"
+	"fmt"
+	"net/url"
+	"strings"
+
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
+)
+
+type dbDialect struct {
+	urlSchemes        []string
+	defaultDBName     string
+	dbKeyName         string
+	adminDBName       string
+	quoteDB           bool
+	createIfNotExists bool
+}
+
+var (
+	postgresDialect = dbDialect{
+		urlSchemes:        []string{"postgres://", "postgresql://"},
+		defaultDBName:     "postgres",
+		dbKeyName:         "dbname",
+		adminDBName:       "postgres",
+		quoteDB:           true,
+		createIfNotExists: false,
+	}
+	clickhouseDialect = dbDialect{
+		urlSchemes:        []string{"clickhouse://"},
+		defaultDBName:     "default",
+		dbKeyName:         "database",
+		adminDBName:       "default",
+		quoteDB:           false,
+		createIfNotExists: true,
+	}
+)
+
+type TempDB struct {
+	cfg     *Config
+	db      *sql.DB
+	dsn     string
+	name    string
+	dialect dbDialect
+}
+
+func sqlDriverName(gormDriver string) string {
+	switch gormDriver {
+	case "postgres":
+		return "pgx"
+	default:
+		return gormDriver
+	}
+}
+
+func dialectFor(driver string) (dbDialect, error) {
+	switch driver {
+	case "postgres":
+		return postgresDialect, nil
+	case "clickhouse":
+		return clickhouseDialect, nil
+	default:
+		return dbDialect{}, errors.Newf("unsupported driver for temp db: %s", driver)
+	}
+}
+
+func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error) {
+	suffix, err := crypto.GenerateRandomString(8)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	dialect, err := dialectFor(cfg.Driver)
+	if err != nil {
+		return nil, err
+	}
+
+	return createTempDB(ctx, cfg, suffix, dialect)
+}
+
+func createTempDB(ctx context.Context, cfg *Config, suffix string, d dbDialect) (*TempDB, error) {
+	adminDSN, dbName, err := parseDSN(cfg.DSN, d)
+	if err != nil {
+		return nil, err
+	}
+
+	driver := sqlDriverName(cfg.Driver)
+	adminDB, err := sql.Open(driver, adminDSN)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer adminDB.Close()
+
+	tempName := fmt.Sprintf("%s_dryrun_%s", dbName, suffix)
+
+	if _, err = adminDB.ExecContext(ctx, d.createSQL(tempName)); err != nil {
+		return nil, errors.WithStack(err)
+	}
+
+	tempDSN := replaceDSNName(cfg.DSN, tempName, d)
+	tempDB, err := sql.Open(driver, tempDSN)
+	if err != nil {
+		adminDB.ExecContext(ctx, d.dropSQL(tempName))
+		return nil, errors.WithStack(err)
+	}
+
+	if err := tempDB.PingContext(ctx); err != nil {
+		tempDB.Close()
+		adminDB.ExecContext(ctx, d.dropSQL(tempName))
+		return nil, errors.Newf("cannot ping temp database: %v", err)
+	}
+
+	return &TempDB{
+		cfg:     cfg,
+		db:      tempDB,
+		dsn:     tempDSN,
+		name:    tempName,
+		dialect: d,
+	}, nil
+}
+
+func (t *TempDB) Close(ctx context.Context) error {
+	if t.db != nil {
+		t.db.Close()
+	}
+
+	if t.cfg.KeepTemp {
+		return nil
+	}
+
+	return t.dropDB(ctx)
+}
+
+func (t *TempDB) dropDB(ctx context.Context) error {
+	adminDSN, _, err := parseDSN(t.cfg.DSN, t.dialect)
+	if err != nil {
+		return err
+	}
+
+	adminDB, err := sql.Open(sqlDriverName(t.cfg.Driver), adminDSN)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer adminDB.Close()
+
+	_, err = adminDB.ExecContext(ctx, t.dialect.dropSQL(t.name))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+func (d dbDialect) createSQL(name string) string {
+	if d.quoteDB {
+		s := fmt.Sprintf(`CREATE DATABASE "%s"`, name)
+		if d.createIfNotExists {
+			s = fmt.Sprintf(`CREATE DATABASE IF NOT EXISTS "%s"`, name)
+		}
+		return s
+	}
+	s := fmt.Sprintf("CREATE DATABASE %s", name)
+	if d.createIfNotExists {
+		s = fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s", name)
+	}
+	return s
+}
+
+func (d dbDialect) dropSQL(name string) string {
+	if d.quoteDB {
+		return fmt.Sprintf(`DROP DATABASE IF EXISTS "%s"`, name)
+	}
+	return fmt.Sprintf("DROP DATABASE IF EXISTS %s", name)
+}
+
+func (d dbDialect) matchesURLScheme(dsn string) bool {
+	for _, scheme := range d.urlSchemes {
+		if strings.HasPrefix(dsn, scheme) {
+			return true
+		}
+	}
+	return false
+}
+
+func parseDSN(dsn string, d dbDialect) (adminDSN, dbName string, err error) {
+	if d.matchesURLScheme(dsn) {
+		u, err := url.Parse(dsn)
+		if err != nil {
+			return "", "", errors.WithStack(err)
+		}
+		dbName = strings.TrimPrefix(u.Path, "/")
+		if dbName == "" {
+			dbName = d.defaultDBName
+		}
+		u.Path = "/" + d.adminDBName
+		adminDSN = u.String()
+		return adminDSN, dbName, nil
+	}
+
+	params := make(map[string]string)
+	for part := range strings.FieldsSeq(dsn) {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) == 2 {
+			params[strings.ToLower(strings.TrimSpace(kv[0]))] = strings.TrimSpace(kv[1])
+		}
+	}
+
+	dbName = params[d.dbKeyName]
+	if dbName == "" {
+		dbName = d.defaultDBName
+	}
+
+	params[d.dbKeyName] = d.adminDBName
+	var parts []string
+	for k, v := range params {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, v))
+	}
+	adminDSN = strings.Join(parts, " ")
+	return adminDSN, dbName, nil
+}
+
+func replaceDSNName(dsn, newName string, d dbDialect) string {
+	if d.matchesURLScheme(dsn) {
+		u, err := url.Parse(dsn)
+		if err != nil {
+			return dsn
+		}
+		u.Path = "/" + newName
+		return u.String()
+	}
+
+	params := make(map[string]string)
+	for part := range strings.FieldsSeq(dsn) {
+		kv := strings.SplitN(part, "=", 2)
+		if len(kv) == 2 {
+			params[strings.ToLower(strings.TrimSpace(kv[0]))] = strings.TrimSpace(kv[1])
+		}
+	}
+	params[d.dbKeyName] = newName
+	var parts []string
+	for k, v := range params {
+		parts = append(parts, fmt.Sprintf("%s=%s", k, v))
+	}
+	return strings.Join(parts, " ")
+}
