@@ -92,7 +92,4 @@ config.toml
 *.prof
 *.pprof
 *.test
-*.cap
-*.pcap
-nic_probe
-template
+testdata

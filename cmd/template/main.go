@@ -1,0 +1,241 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"strings"
+	"text/template"
+
+	"github.com/go-playground/validator/v10"
+	"github.com/pelletier/go-toml/v2"
+	"github.com/spf13/cobra"
+	"zhongkui.com/zhongkui/internal/benchmark/capture"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
+)
+
+var (
+	validate                  = validator.New(validator.WithRequiredStructEnabled())
+	funcMaps template.FuncMap = template.FuncMap(map[string]any{
+		"join":       strings.Join,
+		"capitalize": serializer.Capitalize,
+	})
+	STRING_ACTIONS map[string]any = map[string]any{
+		"nil":   struct{}{},
+		"nnil":  struct{}{},
+		"eq":    struct{}{},
+		"neq":   struct{}{},
+		"pfx":   struct{}{},
+		"npfx":  struct{}{},
+		"ipfx":  struct{}{},
+		"inpfx": struct{}{},
+		"sfx":   struct{}{},
+		"nsfx":  struct{}{},
+		"isfx":  struct{}{},
+		"insfx": struct{}{},
+		"ctn":   struct{}{},
+		"nctn":  struct{}{},
+		"ictn":  struct{}{},
+		"inctn": struct{}{},
+	}
+	NUMBER_ACTIONS map[string]any = map[string]any{
+		"nil":  struct{}{},
+		"nnil": struct{}{},
+		"eq":   struct{}{},
+		"neq":  struct{}{},
+		"lt":   struct{}{},
+		"lte":  struct{}{},
+		"gt":   struct{}{},
+		"gte":  struct{}{},
+	}
+	BOOLEAN_ACTIONS = map[string]any{
+		"nil":  struct{}{},
+		"nnil": struct{}{},
+		"eq":   struct{}{},
+	}
+	DATETIME_ACTIONS = NUMBER_ACTIONS
+	DATE_ACTIONS     = NUMBER_ACTIONS
+	TIME_ACTIONS     = NUMBER_ACTIONS
+)
+
+type searchGenerateConfigFilterBy struct {
+	FieldName string   `toml:"fieldName" validate:"required"`
+	FieldType string   `toml:"fieldType" validate:"required,oneof=string int uint int8 uint8 int16 uint16 int32 uint32 int64 uint64 float32 float64 bool time.Time serializer.TimeOnly serializer.DateOnly"`
+	Column    string   `toml:"column"`
+	Actions   []string `toml:"actions" validate:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn nil nnil lt lte gt gte"`
+	Binding   string   `toml:"binding" validate:"required"`
+}
+
+type searchGenerateConfigOrderBy struct {
+	FieldName string `toml:"fieldName" validate:"required"`
+	Column    string `toml:"column"`
+}
+
+type searchGenerateItem struct {
+	OrderByFields  []searchGenerateConfigOrderBy  `toml:"orderByFields"`
+	FilterByFields []searchGenerateConfigFilterBy `toml:"filterByFields"`
+}
+
+type searchGenerateConfig struct {
+	PackageName string
+	TimeModule  bool                          `toml:"timeModule"`
+	Searchs     map[string]searchGenerateItem `toml:"searchs"`
+}
+
+func actionValidate(fieldType string, actions []string) error {
+	for _, action := range actions {
+		var allowActions map[string]any
+		switch fieldType {
+		case "string":
+			allowActions = STRING_ACTIONS
+		case "int", "uint", "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64":
+			allowActions = NUMBER_ACTIONS
+		case "bool":
+			allowActions = BOOLEAN_ACTIONS
+		case "time.Time":
+			allowActions = DATETIME_ACTIONS
+		case "serializer.TimeOnly":
+			allowActions = TIME_ACTIONS
+		case "serializer.DateOnly":
+			allowActions = DATE_ACTIONS
+		default:
+			return errors.Newf("Invalid action: %s for %s type", action, fieldType)
+		}
+		if value := allowActions[action]; value != nil {
+			continue
+		}
+	}
+	return nil
+}
+
+var searchGenerateCmd = &cobra.Command{
+	Use:   "search-generate",
+	Short: "Generate search models",
+	Run: func(cmd *cobra.Command, arg []string) {
+		flags := cmd.Flags()
+		packageName, err := flags.GetString("packageName")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid package name: %v", err))
+		}
+		if packageName == "" {
+			panic("package name is required")
+		}
+		tmplPath, err := flags.GetString("templatePath")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid template path: %v", err))
+		}
+		if tmplPath == "" {
+			panic("template path is required")
+		}
+		cfgPath, err := flags.GetString("configPath")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid configs path: %v", err))
+		}
+		if cfgPath == "" {
+			panic("configs path is required")
+		}
+		outputPath, err := flags.GetString("outputPath")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid output path: %v", err))
+		}
+		if outputPath == "" {
+			panic("output path is required")
+		}
+		tempBytes, err := os.ReadFile(tmplPath)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid template file: %v", err))
+		}
+		tmpl, err := template.New("search-generate").Funcs(funcMaps).Parse(string(tempBytes))
+		if err != nil {
+			panic(fmt.Sprintf("Invalid template file: %v", err))
+		}
+		cfgBytes, err := os.ReadFile(cfgPath)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid configs file: %v", err))
+		}
+		cfg := searchGenerateConfig{
+			PackageName: packageName,
+			TimeModule:  true,
+		}
+		err = toml.Unmarshal(cfgBytes, &cfg.Searchs)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid toml config: %v", err))
+		}
+		err = validate.Struct(&cfg)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid configs: %v", err))
+		}
+		for fieldName, item := range cfg.Searchs {
+			for _, field := range item.FilterByFields {
+				if err = actionValidate(field.FieldType, field.Actions); err != nil {
+					panic(fmt.Sprintf("Invalid action for field %s: %v", fieldName, err))
+				}
+			}
+		}
+		outputFile, err := os.OpenFile(outputPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid output file: %v", err))
+		}
+		defer outputFile.Close()
+		err = tmpl.Execute(outputFile, cfg)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to execute template: %v", err))
+		}
+	},
+}
+
+var RootCmd = &cobra.Command{
+	Use:   "api",
+	Short: "The seismograph api group command lines",
+	Run: func(cmd *cobra.Command, args []string) {
+		cmd.Help()
+	},
+}
+
+func Execute() {
+	if err := RootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+var genFallbackPcapCmd = &cobra.Command{
+	Use:   "gen-fallback-pcap",
+	Short: "Generate fallback pcap file",
+	Run: func(cmd *cobra.Command, args []string) {
+		flags := cmd.Flags()
+		outputPath, err := flags.GetString("output")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid output path: %v", err))
+		}
+		if outputPath == "" {
+			panic("output path is required")
+		}
+		numPackets, err := flags.GetInt("numPackets")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid numPackets: %v", err))
+		}
+		if err := bench.GenerateFallbackPcap(outputPath, numPackets); err != nil {
+			panic(err)
+		}
+	},
+}
+
+func init() {
+	flags := searchGenerateCmd.Flags()
+	flags.String("packageName", "", "Package name")
+	flags.String("templatePath", "", "Path to the template file")
+	flags.String("configPath", "", "Path to the toml configs file")
+	flags.String("outputPath", "", "Path to the directory where the models will be generated")
+
+	genFallbackFlags := genFallbackPcapCmd.Flags()
+	genFallbackFlags.String("output", "", "Output path for the pcap file")
+	genFallbackFlags.Int("numPackets", 0, "Number of packets to generate")
+
+	RootCmd.AddCommand(searchGenerateCmd)
+	RootCmd.AddCommand(genFallbackPcapCmd)
+}
+
+func main() {
+	RootCmd.Execute()
+}
