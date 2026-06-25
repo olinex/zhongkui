@@ -1,8 +1,7 @@
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/pkg/version"
 	"zhongkui.com/zhongkui/internal/provider"
@@ -12,11 +11,12 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "show version info",
 	Long:  "show version info, default output semver, --verbose output full info",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		_, i := cmdToolBox(cmd)
-		viper := provider.MustInvokeViper(i)
-		verbose := viper.GetBool("verbose")
-		fmt.Println(version.PrintVersion(verbose))
+		v := provider.MustInvokeViper(i)
+		verbose := v.GetBool("verbose")
+		pterm.Println(version.PrintVersion(verbose))
+		return nil
 	},
 }
 

@@ -22,66 +22,52 @@ type TLSInputs struct {
 var generateTLSCmd = &cobra.Command{
 	Use:   "create-tls",
 	Short: "Create tls by self Signed",
-	Run: func(cmd *cobra.Command, args []string) {
-		flags := cmd.Flags()
-		name, err := flags.GetString("name")
-		if err != nil {
-			panic(fmt.Sprintf("invalid name: %v", err))
-		}
-		dirPath, err := flags.GetString("dir-path")
-		if err != nil {
-			panic(fmt.Sprintf("invalid path: %v", err))
-		}
-		ttl, err := flags.GetDuration("ttl")
-		if err != nil {
-			panic(fmt.Sprintf("invalid ttl: %v", err))
-		}
-		dnsNames, err := flags.GetStringArray("dns-names")
-		if err != nil {
-			panic(fmt.Sprintf("invalid dns names: %v", err))
-		}
+	RunE: func(cmd *cobra.Command, args []string) error {
+		_, injector := cmdToolBox(cmd)
+		v := provider.MustInvokeViper(injector)
+		name := v.GetString("name")
+		dirPath := v.GetString("dir-path")
+		ttl := v.GetDuration("ttl")
+		dnsNames := v.GetStringSlice("dns-names")
+
 		inputs := TLSInputs{
 			Name:     name,
 			DirPath:  dirPath,
 			TTL:      ttl,
 			DNSNames: dnsNames,
 		}
-		// Validator is already initialized in PersistentPreRunE
-		_, injector := cmdToolBox(cmd)
 		validate := provider.MustInvokeValidate(injector)
 		if err := validate.Struct(&inputs); err != nil {
-			panic(err)
+			return err
 		}
 		if err := os.MkdirAll(dirPath, os.ModeDir|os.ModePerm); err != nil {
-			panic(err)
+			return err
 		}
 		now := time.Now()
 		key, cert, err := tlsutil.GenerateSelfSignedCert(now, now.Add(ttl), dnsNames)
 		if err != nil {
-			panic(fmt.Sprintf("cannot generate self cert: %v", err))
+			return fmt.Errorf("cannot generate self cert: %v", err)
 		}
 		keyPath, certPath := path.Join(dirPath, fmt.Sprintf("%s-key.pem", name)), path.Join(dirPath, fmt.Sprintf("%s-cert.pem", name))
 		keyFile, err := os.Create(keyPath)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		defer keyFile.Close()
 		certFile, err := os.Create(certPath)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		defer certFile.Close()
-		_, err = keyFile.WriteString(key)
-		if err != nil {
-			panic(err)
+		if _, err = keyFile.WriteString(key); err != nil {
+			return err
 		}
 		pterm.Success.Printf("tls key file %s was created\n", keyPath)
-		_, err = certFile.WriteString(cert)
-		if err != nil {
-			panic(err)
+		if _, err = certFile.WriteString(cert); err != nil {
+			return err
 		}
 		pterm.Success.Printf("tls cert file %s was created\n", certPath)
-		os.Exit(0)
+		return nil
 	},
 }
 

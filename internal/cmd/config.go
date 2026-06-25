@@ -8,7 +8,7 @@ import (
 var describeConfigCmd = &cobra.Command{
 	Use:   "describe-config",
 	Short: "Show default config descriptions",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		descs := provider.DescribeLoggerConfig()
 		descs.Join(provider.DescribeDatabaseConfig())
 		descs.Join(provider.DescribeEtcdConfig())
@@ -18,8 +18,6 @@ var describeConfigCmd = &cobra.Command{
 		descs.Join(provider.DescribeGrpcServerConfig())
 		descs.Join(provider.DescribePipelineConfig())
 		descs.Join(provider.DescribeTranslateConfig())
-		if err := descs.Describe(); err != nil {
-			panic(err)
-		}
+		return descs.Describe()
 	},
 }

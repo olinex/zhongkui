@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin/binding"
@@ -33,7 +31,7 @@ func extractUser() (*core.User, error) {
 	// nicklename
 	userIn.NickleName, err = pterm.DefaultInteractiveTextInput.Show("please enter nicklename")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	err = validator.StructPartial(&userIn, "UserProfileChangeIn.NickleName")
 	if err != nil {
@@ -42,7 +40,7 @@ func extractUser() (*core.User, error) {
 	// email
 	userIn.Email, err = pterm.DefaultInteractiveTextInput.Show("please enter user's email")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	err = validator.StructPartial(&userIn, "UserProfileChangeIn.Email")
 	if err != nil {
@@ -50,7 +48,7 @@ func extractUser() (*core.User, error) {
 	}
 	hashedPassword, err := crypto.HashPassword(userIn.Password)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	return &core.User{
 		UnionID:    serializer.NewHexUUIDv4(),
@@ -68,7 +66,7 @@ func extractUsernamePassword() (username, password string, err error) {
 	// username
 	userIn.Username, err = pterm.DefaultInteractiveTextInput.Show("please enter username")
 	if err != nil {
-		panic(err)
+		return "", "", err
 	}
 	err = validator.StructPartial(&userIn, "UserPasswordLoginIn.Username")
 	if err != nil {
@@ -78,7 +76,7 @@ func extractUsernamePassword() (username, password string, err error) {
 	for {
 		userIn.Password, err = pterm.DefaultInteractiveTextInput.WithMask("*").Show("please enter password")
 		if err != nil {
-			panic(err)
+			return "", "", err
 		}
 		err = validator.StructPartial(&userIn, "UserPasswordLoginIn.Password")
 		if err != nil {
@@ -86,7 +84,7 @@ func extractUsernamePassword() (username, password string, err error) {
 		}
 		passwordAgain, err := pterm.DefaultInteractiveTextInput.WithMask("*").Show("please enter password again")
 		if err != nil {
-			panic(err)
+			return "", "", err
 		}
 		err = validator.StructPartial(&userIn, "UserPasswordLoginIn.PasswordAgain")
 		if err != nil {
@@ -104,85 +102,79 @@ func extractUsernamePassword() (username, password string, err error) {
 var createUserCmd = &cobra.Command{
 	Use:   "create-user",
 	Short: "Create user by command line",
-	Run: func(cmd *cobra.Command, args []string) {
-		flags := cmd.Flags()
-		timeout, err := flags.GetDuration("timeout")
-		if err != nil {
-			panic(fmt.Sprintf("invalid timeout: %v", err))
-		}
-		superuser, err := flags.GetBool("superuser")
-		if err != nil {
-			panic(fmt.Sprintf("invalid superuser: %v", err))
-		}
-		_, injector := cmdToolBox(cmd)
-		// Force validater initialization
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx, injector := cmdToolBox(cmd)
+		v := provider.MustInvokeViper(injector)
+		timeout := v.GetDuration("timeout")
+		superuser := v.GetBool("superuser")
+
 		provider.MustInvokeValidate(injector)
 		db := provider.MustInvokeCoreDatabase(injector)
-		// Force rbac initialization
 		provider.MustInvokeRbac(injector)
 		user, err := extractUser()
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(ctx, timeout)
 		gormDB := db.WithContext(ctx)
+		errCh := make(chan error, 1)
 		go func() {
-			if err := user.Create(gormDB, superuser); err != nil {
-				panic(err)
-			}
-			cancel()
+			errCh <- user.Create(gormDB, superuser)
 		}()
 		<-ctx.Done()
 		if ctx.Err() == context.DeadlineExceeded {
+			cancel()
 			pterm.Error.Println("create user timeout")
-			os.Exit(1)
-		} else {
-			pterm.Success.Printf("create user %s success\n", user.Username)
-			os.Exit(0)
+			return ctx.Err()
 		}
+		cancel()
+		if err := <-errCh; err != nil {
+			return err
+		}
+		pterm.Success.Printf("create user %s success\n", user.Username)
+		return nil
 	},
 }
 
 var forceResetPasswordCmd = &cobra.Command{
 	Use:   "force-reset-password",
 	Short: "Force reset user's password by command line",
-	Run: func(cmd *cobra.Command, args []string) {
-		flags := cmd.Flags()
-		timeout, err := flags.GetDuration("timeout")
-		if err != nil {
-			panic(fmt.Sprintf("invalid timeout: %v", err))
-		}
-		_, injector := cmdToolBox(cmd)
-		// Force validater initialization
-		provider.MustInvokeValidate(injector)
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx, injector := cmdToolBox(cmd)
+		v := provider.MustInvokeViper(injector)
+		timeout := v.GetDuration("timeout")
+
 		db := provider.MustInvokeCoreDatabase(injector)
-		// Force rbac initialization
 		provider.MustInvokeRbac(injector)
 		username, password, err := extractUsernamePassword()
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			os.Exit(1)
+			return err
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(ctx, timeout)
 		gormDB := db.WithContext(ctx)
+		errCh := make(chan error, 1)
 		go func() {
 			var user core.User
 			if err := gormDB.Take(&user, &core.User{Username: username}).Error; err != nil {
-				panic(err)
-			} else if err := user.ResetPassword(gormDB, password); err != nil {
-				panic(err)
+				errCh <- err
+				return
 			}
-			cancel()
+			errCh <- user.ResetPassword(gormDB, password)
 		}()
 		<-ctx.Done()
 		if ctx.Err() == context.DeadlineExceeded {
+			cancel()
 			pterm.Error.Println("force reset password timeout")
-			os.Exit(1)
-		} else {
-			pterm.Success.Printf("reset user %s's password success\n", username)
-			os.Exit(0)
+			return ctx.Err()
 		}
+		cancel()
+		if err := <-errCh; err != nil {
+			return err
+		}
+		pterm.Success.Printf("reset user %s's password success\n", username)
+		return nil
 	},
 }
 
