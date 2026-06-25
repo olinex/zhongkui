@@ -3,6 +3,7 @@ package pcap
 import (
 	"time"
 
+	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/tasks/workers"
 )
 
@@ -13,11 +14,13 @@ func NewPcapBatchTaskWorker() *workers.BatchTaskWorker {
 		100000,
 		time.Second,
 		ExtractPacketFromPcap,
-		[]workers.TransformFunc{
+		[]pipeline.TransformFunc{
 			TransFromPacketToModel,
 		},
-		[]workers.LoadFunc{
+		[]pipeline.LoadFunc{
 			LoadPacketModelToTable,
 		},
+		nil,
+		nil,
 	)
 }

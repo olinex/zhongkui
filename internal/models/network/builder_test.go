@@ -307,17 +307,16 @@ func TestModelBuilder(t *testing.T) {
 func TestModelBuilderErrorCases(t *testing.T) {
 	Convey("Test ModelBuilder error cases", t, func() {
 
-		Convey("BuildAsPacketLinkModel should panic with empty stack", func() {
+		Convey("BuildAsPacketLinkModel should return nil with empty stack", func() {
 			builder := &ModelBuilder{
 				Stack: LayerStack{},
 			}
 
-			So(func() {
-				builder.BuildAsPacketLinkModel()
-			}, ShouldPanicWith, "link layer stack is empty")
+			result := builder.BuildAsPacketLinkModel()
+			So(result, ShouldBeNil)
 		})
 
-		Convey("BuildAsPacketLinkModel should panic with wrong layer level", func() {
+		Convey("BuildAsPacketLinkModel should return nil with wrong layer level", func() {
 			builder := &ModelBuilder{
 				Stack: LayerStack{
 					{
@@ -327,12 +326,11 @@ func TestModelBuilderErrorCases(t *testing.T) {
 				},
 			}
 
-			So(func() {
-				builder.BuildAsPacketLinkModel()
-			}, ShouldPanicWith, "first stack layer is not link layer")
+			result := builder.BuildAsPacketLinkModel()
+			So(result, ShouldBeNil)
 		})
 
-		Convey("BuildAsPacketLinkModel should panic with nil headers", func() {
+		Convey("BuildAsPacketLinkModel should return nil with nil headers", func() {
 			builder := &ModelBuilder{
 				Stack: LayerStack{
 					{
@@ -343,9 +341,8 @@ func TestModelBuilderErrorCases(t *testing.T) {
 				},
 			}
 
-			So(func() {
-				builder.BuildAsPacketLinkModel()
-			}, ShouldPanicWith, "first stack layer headers is nil")
+			result := builder.BuildAsPacketLinkModel()
+			So(result, ShouldBeNil)
 		})
 
 		Convey("BuildAsPacketNetworkModel should panic with insufficient layers", func() {

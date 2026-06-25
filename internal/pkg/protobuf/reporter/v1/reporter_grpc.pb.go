@@ -8,7 +8,6 @@ package reporter_v1
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -124,7 +123,7 @@ func RegisterReporterServiceServer(s grpc.ServiceRegistrar, srv ReporterServiceS
 	s.RegisterService(&ReporterService_ServiceDesc, srv)
 }
 
-func _ReporterService_Watch_Handler(srv any, stream grpc.ServerStream) error {
+func _ReporterService_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(WatchRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
@@ -135,7 +134,7 @@ func _ReporterService_Watch_Handler(srv any, stream grpc.ServerStream) error {
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ReporterService_WatchServer = grpc.ServerStreamingServer[WatchResponse]
 
-func _ReporterService_Feedback_Handler(srv any, stream grpc.ServerStream) error {
+func _ReporterService_Feedback_Handler(srv interface{}, stream grpc.ServerStream) error {
 	return srv.(ReporterServiceServer).Feedback(&grpc.GenericServerStream[FeedbackRequest, emptypb.Empty]{ServerStream: stream})
 }
 

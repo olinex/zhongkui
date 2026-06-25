@@ -2,10 +2,14 @@ package tcp
 
 import (
 	"context"
+	"encoding/json"
+	"net"
 	"time"
 
-	n "zhongkui.com/zhongkui/internal/models/network"
+	"github.com/gopacket/gopacket/layers"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+
+	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/test"
 )
 
@@ -232,4 +236,53 @@ func (r *Reassembler[P]) notice(ctx context.Context) {
 
 func (r *Reassembler[P]) stop() {
 	close(r.signalChan)
+}
+
+// reassemblerAux 是 Reassembler 序列化的辅助结构体。
+// 仅序列化 Rectifier 的嵌入字段和 lastNoticeTime，跳过 signalChan（运行时通道）。
+type reassemblerAux[P TCPPacket] struct {
+	ClientAddr     net.IP         `json:"client_addr"`
+	ClientPort     layers.TCPPort `json:"client_port"`
+	Client         *Side[P]       `json:"client"`
+	ServerAddr     net.IP         `json:"server_addr"`
+	ServerPort     layers.TCPPort `json:"server_port"`
+	Server         *Side[P]       `json:"server"`
+	LastNoticeTime time.Time      `json:"last_notice_time"`
+}
+
+// MarshalJSON 实现 Reassembler[P] 的 JSON 序列化。
+// 序列化 Rectifier 的 TCP 连接信息和最近通知时间，跳过运行时信号通道。
+func (r Reassembler[P]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(reassemblerAux[P]{
+		ClientAddr:     r.ClientAddr,
+		ClientPort:     r.ClientPort,
+		Client:         r.Client,
+		ServerAddr:     r.ServerAddr,
+		ServerPort:     r.ServerPort,
+		Server:         r.Server,
+		LastNoticeTime: r.lastNoticeTime,
+	})
+}
+
+// UnmarshalJSON 实现 Reassembler[P] 的 JSON 反序列化。
+// 恢复 Rectifier 状态和最后通知时间，并重新创建信号通道。
+func (r *Reassembler[P]) UnmarshalJSON(data []byte) error {
+	var aux reassemblerAux[P]
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return errors.WithStack(err)
+	}
+	r.ClientAddr = aux.ClientAddr
+	r.ClientPort = aux.ClientPort
+	r.Client = aux.Client
+	r.ServerAddr = aux.ServerAddr
+	r.ServerPort = aux.ServerPort
+	r.Server = aux.Server
+	r.lastNoticeTime = aux.LastNoticeTime
+	// 反序列化后重建信号通道，容量使用 Client 端的乱序包上限
+	chanSize := aux.Client.maxOutOrderPacketSize
+	if aux.Server != nil && aux.Server.maxOutOrderPacketSize > chanSize {
+		chanSize = aux.Server.maxOutOrderPacketSize
+	}
+	r.signalChan = make(chan any, chanSize)
+	return nil
 }

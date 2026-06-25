@@ -24,7 +24,7 @@ type User struct {
 
 	// Username 是用户的登录用户名
 	// 必须唯一，用于用户登录认证，长度限制为 64 个字符
-	Username string `gorm:"type:VARCHAR(64)"`
+	Username string `gorm:"type:VARCHAR(64);uniqueIndex"`
 
 	// Password 是用户的加密密码
 	// 使用 bcrypt 算法加密存储，长度为 72 字节
@@ -32,7 +32,7 @@ type User struct {
 
 	// Email 是用户的电子邮件地址
 	// 必须唯一，用于用户通信和密码重置，长度限制为 128 个字符
-	Email string `gorm:"type:VARCHAR(128)"`
+	Email string `gorm:"type:VARCHAR(128);uniqueIndex"`
 
 	// Active 表示用户是否处于激活状态
 	// 当用户被禁用时，该字段为 false，用户将无法登录系统

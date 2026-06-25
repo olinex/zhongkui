@@ -96,4 +96,5 @@ message FeedbackRequest {
   Status   status          = 4;
   int64    timeout_seconds = 5;
   bool     uploaded        = 6;
+  string   secret_key      = 7;
 }

@@ -8,9 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -152,38 +150,10 @@ func (c *Config) ToEtcdConfig(ctx context.Context, logger *logging.Logger) (cfg 
 	return
 }
 
-// DescribeConfig 生成 etcd 配置的结构化描述信息。
-// 该函数用于将 Config 结构体的字段元信息（路径、类型、默认值、注释）提取为
-// ConfigDescriptions 切片，便于配置文档生成和配置校验。
-//
-// 多个 name 参数会用逗号连接，形成 "etcd.{name1,name2,...}" 格式的配置前缀。
-// 这允许在同一应用中为不同的 etcd 实例定义独立的配置命名空间。
-//
-// 参数:
-//   - names: etcd 配置的名称列表，用于构建配置键前缀
-//
-// 返回值:
-//   - config.ConfigDescriptions: 配置描述信息切片，包含每个字段的元数据
-func DescribeConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
+func DescribeConfig() config.ConfigDescriptions {
+	return config.DescribeConfig[Config](PREFIX)
 }
 
-// ExtractConfig 从 viper.Viper 实例中提取指定名称的 etcd 配置。
-// 该函数封装了 config.ExtractConfig，自动添加 etcd 前缀，简化配置提取调用。
-//
-// 内部流程:
-//  1. 以 "etcd.<name>" 为键前缀从 viper 中读取子配置
-//  2. 应用默认值（通过 defaults 标签）
-//  3. 将 viper 配置反序列化到 Config 结构体
-//  4. 执行结构体验证（通过 validator 标签）
-//
-// 参数:
-//   - v: viper.Viper 实例，包含已加载的配置数据
-//   - name: etcd 配置的名称，对应 viper 中 "etcd.<name>" 子键
-//
-// 返回值:
-//   - *Config: 提取并验证后的 etcd 配置对象
-//   - error: 提取过程中的错误，如配置键不存在、反序列化失败或验证不通过
-func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, PREFIX, name))
+func ExtractConfig(v *viper.Viper) (*Config, error) {
+	return config.ExtractConfig[Config](v, PREFIX)
 }

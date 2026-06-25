@@ -5,8 +5,6 @@ package pipeline
 
 import (
 	"context"
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hibiken/asynq"
@@ -118,6 +116,10 @@ type Config struct {
 
 	// Scheduler 调度器配置，包含定时任务的相关设置。
 	Scheduler SchedulerConfig `mapstructure:"scheduler" comment:"scheduler configuration for scheduled tasks (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 调度器配置
+
+	// Params 任务配置映射，在任务执行时会动态注入任务函数。
+	// 默认值: 空映射 {}
+	Params map[string]map[string]any `mapstructure:"params" default:"{}" comment:"map of task configurations"` // 任务配置映射
 }
 
 // ToAsynqConfig 将 pipeline 配置转换为 asynq 原生配置。
@@ -151,52 +153,10 @@ func (c *Config) ToAsynqConfig(
 	}
 }
 
-// DescribeConfig 生成 pipeline 配置的描述信息。
-// 此函数用于生成配置结构的详细说明，包括每个字段的路径、类型、默认值和注释。
-// 主要用于帮助文档生成或配置验证。
-//
-// 参数说明:
-//   - names: 可变参数，指定要描述的 pipeline 名称。如果为空，则描述通用配置结构。
-//     多个名称将生成对应的配置路径，如 "pipeline.{name1,name2}.field"
-//
-// 返回值:
-//
-//	返回 config.ConfigDescriptions 切片，包含所有配置字段的详细描述信息。
-//
-// 示例用法:
-//
-//	// 描述名为 "worker" 的 pipeline 配置
-//	descs := DescribeConfig("worker")
-//	// 描述多个 pipeline 配置
-//	descs := DescribeConfig("worker", "manager")
-func DescribeConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
+func DescribeConfig() config.ConfigDescriptions {
+	return config.DescribeConfig[Config](PREFIX)
 }
 
-// ExtractConfig 从 Viper 配置中提取指定名称的 pipeline 配置。
-// 此函数从全局配置中提取特定 pipeline 的配置节，应用默认值，
-// 并进行配置验证，返回完整的配置结构。
-//
-// 参数说明:
-//   - v: Viper 配置实例，包含已加载的配置文件和环境变量
-//   - name: pipeline 名称，用于从配置中提取对应的配置节
-//
-// 返回值:
-//
-//	*Config: 提取并解析后的配置结构指针
-//	error: 如果提取或验证失败，返回相应的错误信息
-//
-// 错误情况:
-//   - 配置节不存在: 返回错误 "Cannot get Config config from nil"
-//   - 配置解析失败: 返回 Viper 解析错误
-//   - 配置验证失败: 返回验证器错误
-//
-// 示例用法:
-//
-//	config, err := ExtractConfig(viperInstance, "worker")
-//	if err != nil {
-//	    // 处理错误
-//	}
-func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, PREFIX, name))
+func ExtractConfig(v *viper.Viper) (*Config, error) {
+	return config.ExtractConfig[Config](v, PREFIX)
 }

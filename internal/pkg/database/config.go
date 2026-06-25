@@ -10,8 +10,9 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
-// PREFIX 是数据库配置在配置文件中的前缀
-const PREFIX = "database"
+const (
+	PREFIX = "database"
+)
 
 // MetaConfig 包含 GORM 数据库连接的元配置选项
 // 这些配置对应 gorm.Config 结构体的字段，用于精细控制数据库行为
@@ -69,28 +70,10 @@ type Config struct {
 	Meta   MetaConfig `mapstructure:"meta" comment:"database GORM config options (ref: https://pkg.go.dev/gorm.io/gorm#Config)"`
 }
 
-// DescribeConfig 返回数据库配置的描述信息
-// 用于生成配置文档或验证配置结构
-//
-// 参数:
-//   - names: 可选的配置名称列表，用于生成特定配置的描述
-//
-// 返回:
-//   - config.ConfigDescriptions: 配置描述信息
 func DescribeConfig(names ...string) config.ConfigDescriptions {
 	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
 }
 
-// ExtractConfig 从 Viper 配置中提取数据库配置
-// 使用指定的名称从配置文件中读取配置并解析为 Config 结构
-//
-// 参数:
-//   - v: Viper 配置实例
-//   - name: 配置名称，对应配置文件中的 database.{name} 路径
-//
-// 返回:
-//   - *Config: 成功时返回配置实例
-//   - error: 如果配置解析失败，返回错误信息
 func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, PREFIX, name))
+	return config.ExtractConfig[Config](v, fmt.Sprintf("%s.%s", PREFIX, name))
 }

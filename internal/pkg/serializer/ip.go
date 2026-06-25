@@ -116,7 +116,7 @@ func (i IPv4Addr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	case "postgres":
 		return "INET"
 	case "clickhouse":
-		return "IPv4 CODEC(ZSTD(3))"
+		return "FixedString(4)"
 	default:
 		return ""
 	}
@@ -126,7 +126,7 @@ func (i IPv4Addr) Value() (driver.Value, error) {
 	if len(i) == 0 {
 		return nil, nil
 	}
-	return i.String(), nil
+	return []byte(net.IP(i).To4()), nil
 }
 
 func (i *IPv4Addr) Scan(value any) error {
@@ -137,9 +137,18 @@ func (i *IPv4Addr) Scan(value any) error {
 	var ip net.IP
 	switch v := value.(type) {
 	case string:
-		ip = net.ParseIP(v)
+		if len(v) == 4 {
+			// ClickHouse FixedString(4) 驱动返回 string 类型的原始二进制 IP
+			ip = net.IP(v).To4()
+		} else {
+			ip = net.ParseIP(v)
+		}
 	case []byte:
-		ip = net.ParseIP(string(v))
+		if len(v) == 4 {
+			ip = net.IP(v).To4()
+		} else {
+			ip = net.ParseIP(string(v))
+		}
 	case net.IP:
 		ip = v
 	default:
@@ -148,8 +157,7 @@ func (i *IPv4Addr) Scan(value any) error {
 	if ip.To4() == nil {
 		return errors.Newf("Not valid ipv4")
 	}
-	*i = IPv4Addr(ip)
-	*i = IPv4Addr(ip)
+	*i = IPv4Addr(ip.To4())
 	return nil
 }
 
@@ -189,7 +197,7 @@ func (i IPv6Addr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	case "postgres":
 		return "INET"
 	case "clickhouse":
-		return "IPv6 CODEC(ZSTD(3))"
+		return "FixedString(16)"
 	default:
 		return ""
 	}
@@ -199,7 +207,7 @@ func (i IPv6Addr) Value() (driver.Value, error) {
 	if len(i) == 0 {
 		return nil, nil
 	}
-	return i.String(), nil
+	return []byte(net.IP(i).To16()), nil
 }
 
 func (i *IPv6Addr) Scan(value any) error {
@@ -210,9 +218,18 @@ func (i *IPv6Addr) Scan(value any) error {
 	var ip net.IP
 	switch v := value.(type) {
 	case string:
-		ip = net.ParseIP(v)
+		if len(v) == 16 {
+			// ClickHouse FixedString(16) 驱动返回 string 类型的原始二进制 IP
+			ip = net.IP(v).To16()
+		} else {
+			ip = net.ParseIP(v)
+		}
 	case []byte:
-		ip = net.ParseIP(string(v))
+		if len(v) == 16 {
+			ip = net.IP(v).To16()
+		} else {
+			ip = net.ParseIP(string(v))
+		}
 	case net.IP:
 		ip = v
 	default:
@@ -221,6 +238,6 @@ func (i *IPv6Addr) Scan(value any) error {
 	if ip.To16() == nil {
 		return errors.Newf("Not valid ipv6")
 	}
-	*i = IPv6Addr(ip)
+	*i = IPv6Addr(ip.To16())
 	return nil
 }

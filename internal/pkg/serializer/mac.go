@@ -48,7 +48,7 @@ func (m MacAddr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	case "postgres":
 		return "MACADDR"
 	case "clickhouse":
-		return "String CODEC(ZSTD(3))"
+		return "FixedString(6)"
 	default:
 		return ""
 	}
@@ -58,7 +58,7 @@ func (m MacAddr) Value() (driver.Value, error) {
 	if len(m) == 0 {
 		return nil, nil
 	}
-	return m.String(), nil
+	return []byte(m), nil
 }
 
 func (m *MacAddr) Scan(value any) error {
@@ -66,23 +66,40 @@ func (m *MacAddr) Scan(value any) error {
 		*m = nil
 		return nil
 	}
-	var macStr string
 	switch v := value.(type) {
 	case string:
-		macStr = v
+		if v == "" {
+			*m = nil
+			return nil
+		}
+		if len(v) == 6 {
+			// ClickHouse FixedString(6) 驱动返回 string 类型的原始二进制 MAC
+			*m = MacAddr(net.HardwareAddr(v))
+		} else {
+			addr, err := net.ParseMAC(v)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			*m = MacAddr(addr)
+		}
 	case []byte:
-		macStr = string(v)
+		if len(v) == 0 {
+			*m = nil
+			return nil
+		}
+		if len(v) == 6 {
+			// FixedString(6) 返回的原始二进制 MAC 地址
+			*m = MacAddr(net.HardwareAddr(v))
+		} else {
+			// 字符串形式的 MAC 地址
+			addr, err := net.ParseMAC(string(v))
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			*m = MacAddr(addr)
+		}
 	default:
 		return errors.Newf("Unsupport mac value type: %T", value)
 	}
-	if macStr == "" {
-		*m = nil
-		return nil
-	}
-	addr, err := net.ParseMAC(macStr)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	*m = MacAddr(addr)
 	return nil
 }

@@ -20,7 +20,7 @@ func TestValidateGtCurrentTime(t *testing.T) {
 		Convey("Should validate time.Time fields correctly", func() {
 			// 定义测试结构体
 			type TestStruct struct {
-				FutureTime time.Time `validate:"gtCurrentTime"`
+				FutureTime time.Time `binding:"gtCurrentTime"`
 			}
 
 			Convey("Future time should pass validation", func() {
@@ -65,7 +65,7 @@ func TestValidateGtCurrentTime(t *testing.T) {
 		Convey("Should validate *time.Time fields correctly", func() {
 			// 定义测试结构体，使用指针类型
 			type TestStruct struct {
-				FutureTime *time.Time `validate:"gtCurrentTime"`
+				FutureTime *time.Time `binding:"gtCurrentTime"`
 			}
 
 			Convey("Future time pointer should pass validation", func() {
@@ -108,7 +108,7 @@ func TestValidateGtCurrentTime(t *testing.T) {
 		Convey("Should handle non-time fields gracefully", func() {
 			// 定义测试结构体，使用非时间类型
 			type TestStruct struct {
-				InvalidField string `validate:"gtCurrentTime"`
+				InvalidField string `binding:"gtCurrentTime"`
 			}
 
 			// 创建测试数据
@@ -135,7 +135,7 @@ func TestValidateLtCurrentTime(t *testing.T) {
 		Convey("Should validate time.Time fields correctly", func() {
 			// 定义测试结构体
 			type TestStruct struct {
-				PastTime time.Time `validate:"ltCurrentTime"`
+				PastTime time.Time `binding:"ltCurrentTime"`
 			}
 
 			Convey("Past time should pass validation", func() {
@@ -180,7 +180,7 @@ func TestValidateLtCurrentTime(t *testing.T) {
 		Convey("Should validate *time.Time fields correctly", func() {
 			// 定义测试结构体，使用指针类型
 			type TestStruct struct {
-				PastTime *time.Time `validate:"ltCurrentTime"`
+				PastTime *time.Time `binding:"ltCurrentTime"`
 			}
 
 			Convey("Past time pointer should pass validation", func() {
@@ -223,7 +223,7 @@ func TestValidateLtCurrentTime(t *testing.T) {
 		Convey("Should handle non-time fields gracefully", func() {
 			// 定义测试结构体，使用非时间类型
 			type TestStruct struct {
-				InvalidField string `validate:"ltCurrentTime"`
+				InvalidField string `binding:"ltCurrentTime"`
 			}
 
 			// 创建测试数据

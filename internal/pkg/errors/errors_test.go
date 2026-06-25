@@ -124,10 +124,10 @@ func TestNewf(t *testing.T) {
 }
 
 func TestWithStack(t *testing.T) {
-	original := base.ERROR_STACK_ENV_VAR
-	base.ERROR_STACK_ENV_VAR = false
+	original := base.Env.ErrorStack
+	base.Env.ErrorStack = false
 	defer func() {
-		base.ERROR_STACK_ENV_VAR = original
+		base.Env.ErrorStack = original
 	}()
 
 	convey.Convey("Test WithStack function", t, func() {
@@ -239,10 +239,10 @@ func TestIs(t *testing.T) {
 		})
 
 		convey.Convey("with stack error enabled", func() {
-			original := base.ERROR_STACK_ENV_VAR
-			base.ERROR_STACK_ENV_VAR = true
+			original := base.Env.ErrorStack
+			base.Env.ErrorStack = true
 			defer func() {
-				base.ERROR_STACK_ENV_VAR = original
+				base.Env.ErrorStack = original
 			}()
 
 			errWithStack := New("stack error")
@@ -263,10 +263,10 @@ func TestStackError(t *testing.T) {
 }
 
 func TestWithStackEnabled(t *testing.T) {
-	original := base.ERROR_STACK_ENV_VAR
-	base.ERROR_STACK_ENV_VAR = true
+	original := base.Env.ErrorStack
+	base.Env.ErrorStack = true
 	defer func() {
-		base.ERROR_STACK_ENV_VAR = original
+		base.Env.ErrorStack = original
 	}()
 
 	convey.Convey("Test with stack enabled", t, func() {
@@ -312,10 +312,10 @@ func TestWithStackEnabled(t *testing.T) {
 }
 
 func TestWithStackDisabled(t *testing.T) {
-	original := base.ERROR_STACK_ENV_VAR
-	base.ERROR_STACK_ENV_VAR = false
+	original := base.Env.ErrorStack
+	base.Env.ErrorStack = false
 	defer func() {
-		base.ERROR_STACK_ENV_VAR = original
+		base.Env.ErrorStack = original
 	}()
 
 	convey.Convey("Test with stack disabled", t, func() {

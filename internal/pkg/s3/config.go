@@ -1,9 +1,6 @@
 package s3
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 )
@@ -54,48 +51,10 @@ type Config struct {
 	UseSSL bool `mapstructure:"useSSL" default:"true" comment:"use HTTPS for S3 connections (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
 }
 
-// DescribeConfig 返回S3配置的描述信息
-// 用于生成配置文档或验证配置结构
-//
-// 参数:
-//   - names: 可选的配置名称列表，用于生成特定配置的描述
-//     如果提供多个名称，将生成类似"s3.{name1,name2}"的配置前缀
-//     如果不提供名称，将使用默认前缀"s3"
-//
-// 返回值:
-//   - config.ConfigDescriptions: 配置描述信息，包含每个配置项的路径、类型、默认值和注释
-//
-// 示例:
-//   // 获取所有S3配置的描述
-//   descs := DescribeConfig()
-//
-//   // 获取特定S3配置的描述
-//   descs := DescribeConfig("default", "backup")
-func DescribeConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
+func DescribeConfig() config.ConfigDescriptions {
+	return config.DescribeConfig[Config](PREFIX)
 }
 
-// ExtractConfig 从Viper实例中提取S3配置
-// 根据配置名称从Viper配置中提取对应的S3配置实例
-//
-// 参数:
-//   - v: Viper配置实例，包含已加载的配置数据
-//   - name: 配置名称，对应配置文件中的s3配置节名称
-//     例如，如果配置文件有"s3.default"节，name应为"default"
-//
-// 返回值:
-//   - *Config: 提取的S3配置实例，包含所有配置字段的值
-//   - error: 提取过程中的错误，如配置不存在或解析失败
-//
-// 示例:
-//   // 从Viper实例中提取名为"default"的S3配置
-//   cfg, err := ExtractConfig(v, "default")
-//   if err != nil {
-//       // 处理错误
-//   }
-//
-//   // 使用配置创建S3客户端
-//   client, err := NewS3Client(cfg)
-func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, PREFIX, name))
+func ExtractConfig(v *viper.Viper) (*Config, error) {
+	return config.ExtractConfig[Config](v, PREFIX)
 }

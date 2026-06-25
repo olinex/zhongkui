@@ -10,18 +10,14 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"go.uber.org/fx"
 	"golang.org/x/sync/errgroup"
-	"zhongkui.com/zhongkui/internal/depend"
 	migcore "zhongkui.com/zhongkui/internal/migrations/core"
 	migraw "zhongkui.com/zhongkui/internal/migrations/raw"
-	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/migrate"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/tasks/workers"
+	"zhongkui.com/zhongkui/internal/provider"
 )
 
 var clearCmd = &cobra.Command{
@@ -41,65 +37,52 @@ var clearDatabaseCmd = &cobra.Command{
 		if err != nil {
 			panic(fmt.Sprintf("invalid timeout: %v", err))
 		}
-		fx.New(
-			depend.FxLogger(),
-			fx.Provide(
-				func() (*cobra.Command, context.Context) {
-					return cmd, context.Background()
-				},
-				config.NewDefaultViperWithCmd,
-				depend.DatabaseLoggerAnnotate(),
-				depend.CoreDatabaseAnnotate(),
-				depend.RawDatabaseAnnotate(),
-			),
-			fx.Invoke(validator.ValidatorRegister),
-			fx.Invoke(func(p MigrateParams) {
-				random, err := crypto.GenerateRandomString(6)
-				if err != nil {
-					pterm.Error.Println(err.Error())
-					os.Exit(1)
-				}
-				err = staticInputDoubleCheck(random)
-				if err != nil {
-					pterm.Error.Println(err.Error())
-					os.Exit(1)
-				}
-				pterm.Warning.Println("rolling back all migrations...")
-				ctx, cancel := context.WithTimeout(p.Ctx, timeout)
-				defer cancel()
+		_, injector := cmdToolBox(cmd)
+		p := newMigrateParams(injector)
+		random, err := crypto.GenerateRandomString(6)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			os.Exit(1)
+		}
+		err = staticInputDoubleCheck(random)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			os.Exit(1)
+		}
+		pterm.Warning.Println("rolling back all migrations...")
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
-				type dbInfo struct {
-					name string
-					db   *migrate.Migrator
-				}
-				var migrators []dbInfo
+		type dbInfo struct {
+			name string
+			db   *migrate.Migrator
+		}
+		var migrators []dbInfo
 
-				if m, err := createClearMigrator(p, "core", migcore.Migrations); err != nil {
-					pterm.Error.Printf("failed to connect core: %v\n", err)
-					os.Exit(1)
-				} else {
-					migrators = append(migrators, dbInfo{"core", m})
-				}
-				if m, err := createClearMigrator(p, "raw", migraw.Migrations); err != nil {
-					pterm.Error.Printf("failed to connect raw: %v\n", err)
-					os.Exit(1)
-				} else {
-					migrators = append(migrators, dbInfo{"raw", m})
-				}
+		if m, err := createClearMigrator(p, "core", migcore.Migrations); err != nil {
+			pterm.Error.Printf("failed to connect core: %v\n", err)
+			os.Exit(1)
+		} else {
+			migrators = append(migrators, dbInfo{"core", m})
+		}
+		if m, err := createClearMigrator(p, "raw", migraw.Migrations); err != nil {
+			pterm.Error.Printf("failed to connect raw: %v\n", err)
+			os.Exit(1)
+		} else {
+			migrators = append(migrators, dbInfo{"raw", m})
+		}
 
-				for _, mi := range migrators {
-					pterm.Info.Printf("rolling back %s...\n", mi.name)
-					if err := mi.db.Down(ctx); err != nil {
-						pterm.Error.Printf("%s rollback failed: %v\n", mi.name, err)
-						mi.db.Close()
-						os.Exit(1)
-					}
-					mi.db.Close()
-				}
-				pterm.Success.Println("clear database complete")
-				os.Exit(0)
-			}),
-		).Run()
+		for _, mi := range migrators {
+			pterm.Info.Printf("rolling back %s...\n", mi.name)
+			if err := mi.db.Down(ctx); err != nil {
+				pterm.Error.Printf("%s rollback failed: %v\n", mi.name, err)
+				mi.db.Close()
+				os.Exit(1)
+			}
+			mi.db.Close()
+		}
+		pterm.Success.Println("clear database complete")
+		os.Exit(0)
 	},
 }
 
@@ -140,52 +123,36 @@ var clearTempFilesCmd = &cobra.Command{
 		if err != nil {
 			panic(fmt.Sprintf("invalid force continue: %v", err))
 		}
-		fx.New(
-			depend.FxLogger(),
-			fx.Provide(
-				func() (*cobra.Command, context.Context) {
-					return cmd, context.Background()
-				},
-				config.NewDefaultViperWithCmd,
-				depend.ETCDLoggerAnnotate(),
-				depend.DatabaseLoggerAnnotate(),
-				depend.PipelineLoggerAnnotate(),
-				depend.CoreDatabaseAnnotate(),
-				depend.RawDatabaseAnnotate(),
-				depend.ManageEtcdAnnotate(),
-				depend.PipelineRedisAnnotate(),
-				depend.CaptureS3Annotate(),
-				workers.TaskContext,
-			),
-			fx.Invoke(func(p pipeline.ContextFunc) {
-				random, err := crypto.GenerateRandomString(6)
-				if err != nil {
-					pterm.Error.Println(err.Error())
-					os.Exit(1)
-				}
-				err = staticInputDoubleCheck(random)
-				if err != nil {
-					pterm.Error.Println(err.Error())
-					os.Exit(1)
-				}
-				ctx := p()
-				in := workers.GetFxIn(ctx)
-				in.PipelineLogger.Info("clearing temp files")
-				timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
-				defer cancel()
-				wg, ctx := errgroup.WithContext(timeoutCtx)
-				wg.Go(func() error {
-					return nil
-				})
-				if err := wg.Wait(); err != nil {
-					in.PipelineLogger.Errorf(`clear temp files error: %+v`, err)
-					os.Exit(1)
-				} else {
-					in.PipelineLogger.Info("clear temp files complete")
-					os.Exit(0)
-				}
-			}),
-		).Run()
+		_, injector := cmdToolBox(cmd)
+		logger := provider.MustInvokePipelineLogger(injector)
+		ctxFunc := pipeline.TaskContext(context.Background(), injector)
+		random, err := crypto.GenerateRandomString(6)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			os.Exit(1)
+		}
+		err = staticInputDoubleCheck(random)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			os.Exit(1)
+		}
+		ctx := ctxFunc()
+		scope := pipeline.GetScope(ctx)
+		logger.Info("clearing temp files")
+		timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+		wg, _ := errgroup.WithContext(timeoutCtx)
+		wg.Go(func() error {
+			return nil
+		})
+		if err := wg.Wait(); err != nil {
+			logger.Errorf(`clear temp files error: %+v`, err)
+			os.Exit(1)
+		} else {
+			logger.Info("clear temp files complete")
+			os.Exit(0)
+		}
+		_ = scope // scope reserved for future use
 	},
 }
 

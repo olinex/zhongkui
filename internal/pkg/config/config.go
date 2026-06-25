@@ -65,12 +65,29 @@ func NewViper(
 ) *viper.Viper {
 	v := viper.New()
 	v.SetEnvPrefix(envPrefix)
+	v.AutomaticEnv()
+
+	// 如果命令行通过 --config / -c 指定了配置文件路径，则直接加载该文件
+	if flags != nil {
+		if configFlag := flags.Lookup("config"); configFlag != nil {
+			if configFile := configFlag.Value.String(); configFile != "" {
+				v.SetConfigFile(configFile)
+				if err := v.BindPFlags(flags); err != nil {
+					panic(err)
+				}
+				if err := v.ReadInConfig(); err != nil {
+					panic(err)
+				}
+				return v
+			}
+		}
+	}
+
 	v.SetConfigName(configName)
 	v.SetConfigType(configType)
 	v.AddConfigPath(configPath)
 	v.AddConfigPath(".")
 	v.AddConfigPath("..")
-	v.AutomaticEnv()
 
 	if err := v.BindPFlags(flags); err != nil {
 		panic(err)
@@ -306,7 +323,7 @@ func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
 	if err := defaults.Set(&cfg); err != nil {
 		return nil, errors.WithStack(err)
 	} else if sub := v.Sub(prefix); sub == nil {
-		return nil, errors.Newf(`Cannot get %T config from nil`, cfg)
+		return nil, errors.Newf(`Cannot get %s %T config from nil`, prefix, cfg)
 	} else if err := sub.Unmarshal(&cfg, viper.DecodeHook(
 		mapstructure.ComposeDecodeHookFunc(
 			mapstructure.TextUnmarshallerHookFunc(),

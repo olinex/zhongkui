@@ -84,17 +84,17 @@ func TestRecoverWithStack_NormalTaskExecution(t *testing.T) {
 		sugarLogger := observedLogger.Sugar()
 
 		// 保存原始环境变量值
-		originalDebugEnvVar := base.DEBUG_ENV_VAR
-		originalErrorStackEnvVar := base.ERROR_STACK_ENV_VAR
+		originalDebugEnvVar := base.Env.Debug
+		originalErrorStackEnvVar := base.Env.ErrorStack
 
 		// 设置测试环境变量
-		base.DEBUG_ENV_VAR = true
-		base.ERROR_STACK_ENV_VAR = true
+		base.Env.Debug = true
+		base.Env.ErrorStack = true
 
 		defer func() {
 			// 恢复原始环境变量值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
-			base.ERROR_STACK_ENV_VAR = originalErrorStackEnvVar
+			base.Env.Debug = originalDebugEnvVar
+			base.Env.ErrorStack = originalErrorStackEnvVar
 		}()
 
 		Convey("应该正确处理成功执行的任务", func() {
@@ -211,17 +211,17 @@ func TestRecoverWithStack_PanicRecovery(t *testing.T) {
 		sugarLogger := observedLogger.Sugar()
 
 		// 保存原始环境变量值
-		originalDebugEnvVar := base.DEBUG_ENV_VAR
-		originalErrorStackEnvVar := base.ERROR_STACK_ENV_VAR
+		originalDebugEnvVar := base.Env.Debug
+		originalErrorStackEnvVar := base.Env.ErrorStack
 
 		// 设置测试环境变量
-		base.DEBUG_ENV_VAR = true
-		base.ERROR_STACK_ENV_VAR = true
+		base.Env.Debug = true
+		base.Env.ErrorStack = true
 
 		defer func() {
 			// 恢复原始环境变量值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
-			base.ERROR_STACK_ENV_VAR = originalErrorStackEnvVar
+			base.Env.Debug = originalDebugEnvVar
+			base.Env.ErrorStack = originalErrorStackEnvVar
 		}()
 
 		Convey("应该能够恢复 nil panic", func() {
@@ -374,17 +374,17 @@ func TestRecoverWithStack_ContextAndTaskInfo(t *testing.T) {
 		sugarLogger := observedLogger.Sugar()
 
 		// 保存原始环境变量值
-		originalDebugEnvVar := base.DEBUG_ENV_VAR
-		originalErrorStackEnvVar := base.ERROR_STACK_ENV_VAR
+		originalDebugEnvVar := base.Env.Debug
+		originalErrorStackEnvVar := base.Env.ErrorStack
 
 		// 设置测试环境变量
-		base.DEBUG_ENV_VAR = true
-		base.ERROR_STACK_ENV_VAR = true
+		base.Env.Debug = true
+		base.Env.ErrorStack = true
 
 		defer func() {
 			// 恢复原始环境变量值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
-			base.ERROR_STACK_ENV_VAR = originalErrorStackEnvVar
+			base.Env.Debug = originalDebugEnvVar
+			base.Env.ErrorStack = originalErrorStackEnvVar
 		}()
 
 		Convey("应该能够正确处理任务上下文", func() {
@@ -518,13 +518,13 @@ func TestRecoverWithStack_ErrorStackHandling(t *testing.T) {
 		sugarLogger := observedLogger.Sugar()
 
 		// 保存原始环境变量值
-		originalDebugEnvVar := base.DEBUG_ENV_VAR
-		originalErrorStackEnvVar := base.ERROR_STACK_ENV_VAR
+		originalDebugEnvVar := base.Env.Debug
+		originalErrorStackEnvVar := base.Env.ErrorStack
 
-		Convey("当 ERROR_STACK_ENV_VAR 为 true 时，应该添加错误堆栈", func() {
+		Convey("当 ERROR_STACK 为 true 时，应该添加错误堆栈", func() {
 			// 设置环境变量
-			base.DEBUG_ENV_VAR = true
-			base.ERROR_STACK_ENV_VAR = true
+			base.Env.Debug = true
+			base.Env.ErrorStack = true
 
 			// 创建中间件
 			middleware := RecoverWithStack(sugarLogger)
@@ -556,8 +556,8 @@ func TestRecoverWithStack_ErrorStackHandling(t *testing.T) {
 
 		Convey("当 ERROR_STACK_ENV_VAR 为 false 时，不应该添加错误堆栈", func() {
 			// 设置环境变量
-			base.DEBUG_ENV_VAR = true
-			base.ERROR_STACK_ENV_VAR = false
+			base.Env.Debug = true
+			base.Env.ErrorStack = false
 
 			// 创建中间件
 			middleware := RecoverWithStack(sugarLogger)
@@ -586,8 +586,8 @@ func TestRecoverWithStack_ErrorStackHandling(t *testing.T) {
 
 		Convey("当 DEBUG_ENV_VAR 为 false 时，中间件可能不会被使用", func() {
 			// 设置环境变量
-			base.DEBUG_ENV_VAR = false
-			base.ERROR_STACK_ENV_VAR = true
+			base.Env.Debug = false
+			base.Env.ErrorStack = true
 
 			// 创建中间件（即使 DEBUG_ENV_VAR 为 false，中间件仍然可以创建）
 			middleware := RecoverWithStack(sugarLogger)
@@ -599,8 +599,8 @@ func TestRecoverWithStack_ErrorStackHandling(t *testing.T) {
 
 		// 恢复原始环境变量值
 		defer func() {
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
-			base.ERROR_STACK_ENV_VAR = originalErrorStackEnvVar
+			base.Env.Debug = originalDebugEnvVar
+			base.Env.ErrorStack = originalErrorStackEnvVar
 		}()
 	})
 }
@@ -615,17 +615,17 @@ func TestRecoverWithStack_EdgeCases(t *testing.T) {
 		sugarLogger := observedLogger.Sugar()
 
 		// 保存原始环境变量值
-		originalDebugEnvVar := base.DEBUG_ENV_VAR
-		originalErrorStackEnvVar := base.ERROR_STACK_ENV_VAR
+		originalDebugEnvVar := base.Env.Debug
+		originalErrorStackEnvVar := base.Env.ErrorStack
 
 		// 设置测试环境变量
-		base.DEBUG_ENV_VAR = true
-		base.ERROR_STACK_ENV_VAR = true
+		base.Env.Debug = true
+		base.Env.ErrorStack = true
 
 		defer func() {
 			// 恢复原始环境变量值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
-			base.ERROR_STACK_ENV_VAR = originalErrorStackEnvVar
+			base.Env.Debug = originalDebugEnvVar
+			base.Env.ErrorStack = originalErrorStackEnvVar
 		}()
 
 		Convey("应该处理任务处理器为 nil 的情况", func() {
@@ -752,17 +752,17 @@ func TestRecoverWithStack_Integration(t *testing.T) {
 		sugarLogger := observedLogger.Sugar()
 
 		// 保存原始环境变量值
-		originalDebugEnvVar := base.DEBUG_ENV_VAR
-		originalErrorStackEnvVar := base.ERROR_STACK_ENV_VAR
+		originalDebugEnvVar := base.Env.Debug
+		originalErrorStackEnvVar := base.Env.ErrorStack
 
 		// 设置测试环境变量
-		base.DEBUG_ENV_VAR = true
-		base.ERROR_STACK_ENV_VAR = true
+		base.Env.Debug = true
+		base.Env.ErrorStack = true
 
 		defer func() {
 			// 恢复原始环境变量值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
-			base.ERROR_STACK_ENV_VAR = originalErrorStackEnvVar
+			base.Env.Debug = originalDebugEnvVar
+			base.Env.ErrorStack = originalErrorStackEnvVar
 		}()
 
 		Convey("应该能够正确处理链式中间件", func() {
@@ -892,7 +892,7 @@ func TestRecoverWithStack_Integration(t *testing.T) {
 		Convey("应该验证中间件在实际服务器中的使用模式", func() {
 			// 这个测试验证中间件在 server.go 中的实际使用模式
 			// 在 server.go 中，中间件的使用模式是：
-			// if base.DEBUG_ENV_VAR {
+			// if base.Env.Debug {
 			//     mux.Use(RecoverWithStack(logger))
 			// }
 

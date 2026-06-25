@@ -37,25 +37,26 @@ func TestValidatorRegister(t *testing.T) {
 			// 设置 Gin 的 binding validator
 			binding.Validator = &defaultValidator{}
 
-			// 调用 ValidatorRegister 函数
-			ValidatorRegister()
-
 			// 获取验证器实例
 			validate := MustValidate()
+
+			// 调用 ValidatorRegister 函数
+			err := ValidatorRegister(validate)
+			So(err, ShouldBeNil)
 
 			// 通过实际验证测试所有自定义标签是否已注册
 			// 测试强密码验证
 			type StrongPasswordTest struct {
-				Password string `validate:"strongPassword"`
+				Password string `binding:"strongPassword"`
 			}
 
 			validPassword := StrongPasswordTest{Password: "Password123!"}
-			err := validate.Struct(validPassword)
+			err = validate.Struct(validPassword)
 			So(err, ShouldBeNil)
 
 			// 测试 Windows 文件名验证
 			type WindowsFileNameTest struct {
-				FileName string `validate:"windowsFileName"`
+				FileName string `binding:"windowsFileName"`
 			}
 
 			validWindowsFile := WindowsFileNameTest{FileName: "test_file.txt"}
@@ -64,7 +65,7 @@ func TestValidatorRegister(t *testing.T) {
 
 			// 测试 Unix 文件名验证
 			type UnixFileNameTest struct {
-				FileName string `validate:"unixFileName"`
+				FileName string `binding:"unixFileName"`
 			}
 
 			validUnixFile := UnixFileNameTest{FileName: "test_file.txt"}
@@ -73,7 +74,7 @@ func TestValidatorRegister(t *testing.T) {
 
 			// 测试通用文件名验证
 			type FileNameTest struct {
-				FileName string `validate:"fileName"`
+				FileName string `binding:"fileName"`
 			}
 
 			validFile := FileNameTest{FileName: "test_file.txt"}
@@ -82,7 +83,7 @@ func TestValidatorRegister(t *testing.T) {
 
 			// 测试严格文件名验证
 			type StrictFileNameTest struct {
-				FileName string `validate:"strictFileName"`
+				FileName string `binding:"strictFileName"`
 			}
 
 			validStrictFile := StrictFileNameTest{FileName: "testfile123"}
@@ -91,7 +92,7 @@ func TestValidatorRegister(t *testing.T) {
 
 			// 测试小于当前时间验证
 			type LtCurrentTimeTest struct {
-				TimeField time.Time `validate:"ltCurrentTime"`
+				TimeField time.Time `binding:"ltCurrentTime"`
 			}
 
 			validPastTime := LtCurrentTimeTest{TimeField: time.Now().Add(-1 * time.Hour)}
@@ -100,7 +101,7 @@ func TestValidatorRegister(t *testing.T) {
 
 			// 测试大于当前时间验证
 			type GtCurrentTimeTest struct {
-				TimeField time.Time `validate:"gtCurrentTime"`
+				TimeField time.Time `binding:"gtCurrentTime"`
 			}
 
 			validFutureTime := GtCurrentTimeTest{TimeField: time.Now().Add(1 * time.Hour)}
@@ -112,18 +113,19 @@ func TestValidatorRegister(t *testing.T) {
 			// 设置 Gin 的 binding validator
 			binding.Validator = &defaultValidator{}
 
-			// 调用 ValidatorRegister 函数
-			ValidatorRegister()
-
 			// 获取验证器实例
 			validate := MustValidate()
 
+			// 调用 ValidatorRegister 函数
+			err := ValidatorRegister(validate)
+			So(err, ShouldBeNil)
+
 			// 创建一个测试结构体来验证标签名称函数
 			type TestStruct struct {
-				FieldWithJSONTag  string `json:"json_field" validate:"required"`
-				FieldWithMapTag   string `mapstructure:"map_field" validate:"required"`
-				FieldWithoutTag   string `validate:"required"`
-				FieldWithBothTags string `json:"json_name" mapstructure:"map_name" validate:"required"`
+				FieldWithJSONTag  string `json:"json_field" binding:"required"`
+				FieldWithMapTag   string `mapstructure:"map_field" binding:"required"`
+				FieldWithoutTag   string `binding:"required"`
+				FieldWithBothTags string `json:"json_name" mapstructure:"map_name" binding:"required"`
 			}
 
 			testData := TestStruct{
@@ -134,7 +136,7 @@ func TestValidatorRegister(t *testing.T) {
 			}
 
 			// 验证结构体是有效的
-			err := validate.Struct(testData)
+			err = validate.Struct(testData)
 			So(err, ShouldBeNil)
 		})
 
@@ -142,15 +144,16 @@ func TestValidatorRegister(t *testing.T) {
 			// 设置 Gin 的 binding validator
 			binding.Validator = &defaultValidator{}
 
-			// 调用 ValidatorRegister 函数
-			ValidatorRegister()
-
 			// 获取验证器实例
 			validate := MustValidate()
 
+			// 调用 ValidatorRegister 函数
+			err := ValidatorRegister(validate)
+			So(err, ShouldBeNil)
+
 			// 测试强密码验证
 			type PasswordTest struct {
-				Password string `validate:"strongPassword"`
+				Password string `binding:"strongPassword"`
 			}
 
 			Convey("Valid strong password should pass validation", func() {
@@ -176,16 +179,17 @@ func TestValidatorRegister(t *testing.T) {
 			// 设置 Gin 的 binding validator
 			binding.Validator = &defaultValidator{}
 
-			// 调用 ValidatorRegister 函数
-			ValidatorRegister()
-
 			// 获取验证器实例
 			validate := MustValidate()
 
+			// 调用 ValidatorRegister 函数
+			err := ValidatorRegister(validate)
+			So(err, ShouldBeNil)
+
 			// 测试时间验证
 			type TimeTest struct {
-				PastTime   time.Time `validate:"ltCurrentTime"`
-				FutureTime time.Time `validate:"gtCurrentTime"`
+				PastTime   time.Time `binding:"ltCurrentTime"`
+				FutureTime time.Time `binding:"gtCurrentTime"`
 			}
 
 			Convey("Valid time comparisons should pass validation", func() {
@@ -213,18 +217,19 @@ func TestValidatorRegister(t *testing.T) {
 			// 设置 Gin 的 binding validator
 			binding.Validator = &defaultValidator{}
 
-			// 调用 ValidatorRegister 函数
-			ValidatorRegister()
-
 			// 获取验证器实例
 			validate := MustValidate()
 
+			// 调用 ValidatorRegister 函数
+			err := ValidatorRegister(validate)
+			So(err, ShouldBeNil)
+
 			// 测试文件名验证
 			type FileNameTest struct {
-				WindowsFileName string `validate:"windowsFileName"`
-				UnixFileName    string `validate:"unixFileName"`
-				GenericFileName string `validate:"fileName"`
-				StrictFileName  string `validate:"strictFileName"`
+				WindowsFileName string `binding:"windowsFileName"`
+				UnixFileName    string `binding:"unixFileName"`
+				GenericFileName string `binding:"fileName"`
+				StrictFileName  string `binding:"strictFileName"`
 			}
 
 			Convey("Valid file names should pass validation", func() {
@@ -263,35 +268,42 @@ func TestValidatorRegisterMultipleTimes(t *testing.T) {
 		binding.Validator = &defaultValidator{}
 
 		Convey("Should handle multiple calls without errors", func() {
+			// 获取验证器实例
+			validate := MustValidate()
+
 			// 第一次调用
-			ValidatorRegister()
+			err := ValidatorRegister(validate)
+			So(err, ShouldBeNil)
 
 			// 第二次调用
-			ValidatorRegister()
+			err = ValidatorRegister(validate)
+			So(err, ShouldBeNil)
 
 			// 第三次调用
-			ValidatorRegister()
+			err = ValidatorRegister(validate)
+			So(err, ShouldBeNil)
 
 			// 验证验证器仍然正常工作
-			validate := MustValidate()
+			validate = MustValidate()
 			So(validate, ShouldNotBeNil)
 
 			// 通过实际验证测试验证器是否正常工作
 			type TestStruct struct {
-				Password string `validate:"strongPassword"`
+				Password string `binding:"strongPassword"`
 			}
 
 			testData := TestStruct{Password: "Password123!"}
-			err := validate.Struct(testData)
+			err = validate.Struct(testData)
 			So(err, ShouldBeNil)
 		})
 
 		Convey("Should maintain all validation rules after multiple calls", func() {
-			// 调用一次
-			ValidatorRegister()
-
-			// 获取验证器
+			// 获取验证器实例
 			validate := MustValidate()
+
+			// 调用 ValidatorRegister 函数
+			err := ValidatorRegister(validate)
+			So(err, ShouldBeNil)
 
 			// 测试所有验证规则在第一次调用后都正常工作
 			testCases := []struct {
@@ -316,8 +328,8 @@ func TestValidatorRegisterMultipleTimes(t *testing.T) {
 
 			// 测试时间验证规则
 			type TimeTest struct {
-				PastTime   time.Time `validate:"ltCurrentTime"`
-				FutureTime time.Time `validate:"gtCurrentTime"`
+				PastTime   time.Time `binding:"ltCurrentTime"`
+				FutureTime time.Time `binding:"gtCurrentTime"`
 			}
 
 			timeTest := TimeTest{
@@ -325,11 +337,12 @@ func TestValidatorRegisterMultipleTimes(t *testing.T) {
 				FutureTime: time.Now().Add(1 * time.Hour),
 			}
 
-			err := validate.Struct(timeTest)
+			err = validate.Struct(timeTest)
 			So(err, ShouldBeNil)
 
 			// 再次调用
-			ValidatorRegister()
+			err = ValidatorRegister(validate)
+			So(err, ShouldBeNil)
 
 			// 验证所有规则在第二次调用后仍然正常工作
 			err = validate.Struct(timeTest)
@@ -337,7 +350,7 @@ func TestValidatorRegisterMultipleTimes(t *testing.T) {
 
 			// 测试强密码规则仍然正常工作
 			type PasswordTest struct {
-				Password string `validate:"strongPassword"`
+				Password string `binding:"strongPassword"`
 			}
 
 			passwordTest := PasswordTest{Password: "Password123!"}

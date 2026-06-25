@@ -136,5 +136,5 @@ type Inspector = asynq.Inspector
 //	        name, info.Size, info.Latency, info.MemoryUsage)
 //	}
 func NewInspector(cli *redis.Client) *Inspector {
-	return asynq.NewInspectorFromRedisClient(cli)
+	return asynq.NewInspectorFromRedisClient(cli.Client)
 }

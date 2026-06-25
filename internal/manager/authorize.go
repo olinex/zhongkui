@@ -3,8 +3,8 @@ package manager
 import (
 	"net/http"
 
+	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/depend"
 )
 
 // RBAC_POLICY_CTX_NAME 是 Gin 上下文中存储 RBAC 策略的键名
@@ -20,7 +20,7 @@ var (
 // RbacPolicyMiddleware 创建一个 Gin 中间件，将 RBAC 策略设置到 Gin 上下文中
 // 参数 policy: RBAC 策略实例
 // 返回: Gin 中间件函数
-func RbacPolicyMiddleware(policy *depend.RbacPolicy) gin.HandlerFunc {
+func RbacPolicyMiddleware(policy *casbin.Enforcer) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set(RBAC_POLICY_CTX_NAME, policy)
 		c.Next()
@@ -31,9 +31,9 @@ func RbacPolicyMiddleware(policy *depend.RbacPolicy) gin.HandlerFunc {
 // 参数 c: Gin 上下文
 // 返回: RBAC 策略实例
 // 注意: 如果上下文不存在 RBAC 策略，会触发 panic
-func GetRbacPolicy(c *gin.Context) *depend.RbacPolicy {
+func GetRbacPolicy(c *gin.Context) *casbin.Enforcer {
 	if policy, ok := c.Get(RBAC_POLICY_CTX_NAME); ok {
-		return policy.(*depend.RbacPolicy)
+		return policy.(*casbin.Enforcer)
 	}
 	panic("rbac policy does not exists")
 }

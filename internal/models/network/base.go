@@ -147,7 +147,7 @@ type BaseMeta struct {
 	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"`
 	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`
 	Version   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"version"`
-	SessionID serializer.HexUUID `gorm:"type:FixedString(16)" json:"session_id"`
+	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"session_id"`
 }
 
 // TimestampMeta 表示时间戳元数据

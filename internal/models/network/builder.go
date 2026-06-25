@@ -53,6 +53,23 @@ func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLev
 				Headers: headers,
 			}
 			stack = append(stack, &info)
+		case layers.LayerTypeLoopback:
+			// Loopback 链路层（pcap DLT_NULL/DLT_LOOP），不包含 MAC 地址
+			// 递归解析内层数据包，起始层级为网络层（无链路层头部）
+			currentLevel = nextLevel
+			loop := layer.(*layers.Loopback)
+			info := LayerInfo{
+				Level:   currentLevel,
+				Proto:   layerType,
+				Headers: NewLoopbackHeaders(),
+			}
+			stack = append(stack, &info)
+			innerPacket := gopacket.NewPacket(layer.LayerPayload(), loop.NextLayerType(), opts)
+			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, LayerLevelNetwork)
+			stack = append(stack, innerInfos...)
+			payload = innerPayload
+			currentLevel = innerLevel
+			return
 		case layers.LayerTypeIPv4:
 			currentLevel = nextLevel
 			ip := layer.(*layers.IPv4)
@@ -66,7 +83,7 @@ func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLev
 			// 处理IP-in-IP封装（IPIP协议）
 			if ip.Protocol == layers.IPProtocolIPIP {
 				innerPacket := gopacket.NewPacket(ip.LayerPayload(), layers.LayerTypeIPv4, opts)
-				innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, LayerLevelLink)
+				innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, currentLevel)
 				stack = append(stack, innerInfos...)
 				payload = innerPayload
 				currentLevel = innerLevel
@@ -75,7 +92,7 @@ func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLev
 		case layers.LayerTypeIPv6:
 			currentLevel = nextLevel
 			ip := layer.(*layers.IPv6)
-			headers := NewIPv6Base(ip)
+			headers := NewIPv6Headers(ip)
 			info := LayerInfo{
 				Level:   currentLevel,
 				Proto:   layerType,
@@ -172,7 +189,8 @@ func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLev
 			stack = append(stack, &info)
 			// GRE隧道封装：根据协议类型解析内层数据包
 			innerPacket := gopacket.NewPacket(layer.LayerPayload(), gre.Protocol, opts)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, LayerLevelLink)
+			innerBaseLevel := getTunnelInnerBaseLevel(gre.Protocol)
+			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, innerBaseLevel)
 			stack = append(stack, innerInfos...)
 			payload = innerPayload
 			currentLevel = innerLevel
@@ -189,7 +207,8 @@ func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLev
 			stack = append(stack, &info)
 			// Geneve隧道封装：根据协议类型解析内层数据包
 			innerPacket := gopacket.NewPacket(layer.LayerPayload(), gnv.Protocol, opts)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, LayerLevelLink)
+			innerBaseLevel := getTunnelInnerBaseLevel(gnv.Protocol)
+			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, innerBaseLevel)
 			stack = append(stack, innerInfos...)
 			payload = innerPayload
 			currentLevel = innerLevel
@@ -206,7 +225,7 @@ func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLev
 			stack = append(stack, &info)
 			// MPLS标签栈：递归解析下一个MPLS标签或内层数据包
 			innerPacket := gopacket.NewPacket(layer.LayerPayload(), layers.LayerTypeMPLS, opts)
-			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, LayerLevelLink)
+			innerLevel, innerInfos, innerPayload := ExtractLayerInfos(innerPacket, currentLevel.Next())
 			stack = append(stack, innerInfos...)
 			payload = innerPayload
 			currentLevel = innerLevel
@@ -228,13 +247,36 @@ func ExtractLayerInfos(packet gopacket.Packet, baseLevel LayerLevel) (currentLev
 			stack = append(stack, &info)
 			return
 		default:
-			// 未知协议层，直接提取载荷数据
+			// 未知协议层，记录到堆栈中并提取载荷数据
+			currentLevel = nextLevel
+			info := LayerInfo{
+				Level:   currentLevel,
+				Proto:   layerType,
+				Headers: nil,
+			}
+			stack = append(stack, &info)
 			payload = layer.LayerPayload()
 			return
 		}
 		nextLevel = currentLevel.Next()
 	}
 	return
+}
+
+// getTunnelInnerBaseLevel 根据隧道封装的协议类型确定内层数据包的起始层级。
+//
+// 对于透明以太网桥接（TransparentEthernetBridging），内层包含完整的以太网帧，
+// 起始层级为链路层；对于 IPv4/IPv6 等网络层协议，内层直接以网络层开始。
+// 其他未知协议默认从链路层开始解析。
+func getTunnelInnerBaseLevel(proto layers.EthernetType) LayerLevel {
+	switch proto {
+	case layers.EthernetTypeIPv4, layers.EthernetTypeIPv6:
+		return LayerLevelNetwork
+	case layers.EthernetTypeTransparentEthernetBridging:
+		return LayerLevelLink
+	default:
+		return LayerLevelLink
+	}
 }
 
 // ModelBuilder 数据包模型构建器
@@ -270,17 +312,17 @@ type ModelBuilder struct {
 //  4. 返回可用于数据库存储的结构化数据
 func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 	if len(b.Stack) < 1 {
-		panic("link layer stack is empty")
+		return nil
 	}
 	info := b.Stack[0]
 	if info.Level != LayerLevelLink {
-		panic("first stack layer is not link layer")
+		return nil
 	}
 	if info.Headers == nil {
-		panic("first stack layer headers is nil")
+		return nil
 	}
 	switch info.Proto {
-	case layers.LayerTypeEthernet:
+	case layers.LayerTypeEthernet, layers.LayerTypeLoopback:
 		eth := info.Headers.(*EthernetHeaders)
 		return &PacketEthernet{
 			AsPacket: AsPacket{
@@ -307,7 +349,7 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 			EthernetHeaders: *eth,
 		}
 	default:
-		panic(fmt.Sprintf("unknown link layer protocol %s", info.Proto))
+		return nil
 	}
 }
 
@@ -347,7 +389,7 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 		net := info.Headers.(*IPv4Headers)
 		model := b.BuildAsPacketLinkModel()
 		if model == nil {
-			panic("link layer model is nil")
+			return nil
 		}
 		return &PacketIPv4{
 			PacketEthernet: *model.(*PacketEthernet),
@@ -357,7 +399,7 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 		net := info.Headers.(*IPv6Headers)
 		model := b.BuildAsPacketLinkModel()
 		if model == nil {
-			panic("link layer model is nil")
+			return nil
 		}
 		return &PacketIPv6{
 			PacketEthernet: *model.(*PacketEthernet),
@@ -402,11 +444,11 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 		panic("last stack layer is not transport layer")
 	}
 	if info.Headers == nil {
-		panic("last stack layer headers is nil")
+		return nil
 	}
 	model := b.BuildAsPacketNetworkModel()
 	if model == nil {
-		panic("network layer model is nil")
+		return nil
 	}
 	switch model.(type) {
 	case *PacketIPv4:

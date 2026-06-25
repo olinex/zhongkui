@@ -23,6 +23,7 @@ type PcapS3Object struct {
 	Namespace string    `json:"namespace"` // 命名空间
 	Name      string    `json:"name"`      // 文件名称
 	Version   string    `json:"version"`   // 版本号
+	SecretKey string    `json:"secretKey"` // 密钥
 }
 
 // GetObjectKey 获取 S3 对象的完整键名。

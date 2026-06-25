@@ -11,7 +11,9 @@ import (
 // Client 是gRPC客户端连接的类型别名。
 // 它是对google.golang.org/grpc.ClientConn的包装，提供与gRPC服务器的连接。
 // 通过该连接可以调用远程服务的方法。
-type Client = g.ClientConn
+type Client struct {
+	*g.ClientConn
+}
 
 // NewClient 根据给定的配置创建一个新的gRPC客户端连接。
 // 这是创建gRPC客户端的主要入口点，它将ClientConfig配置转换为gRPC连接选项，
@@ -51,13 +53,15 @@ type Client = g.ClientConn
 //	    log.Fatal("Failed to create gRPC client:", err)
 //	}
 //	defer client.Close()
-func NewClient(cfg *ClientConfig) (*Client, error) {
+func NewClient(cfg *ClientConfig, extraOpts ...g.DialOption) (*Client, error) {
 	// 将ClientConfig转换为gRPC连接选项
 	lis, options, err := cfg.ToOptions()
 	if err != nil {
 		// 包装配置转换错误，保留堆栈信息
 		return nil, errors.WithStack(err)
 	}
+
+	options = append(options, extraOpts...)
 
 	// 使用转换后的地址和选项创建gRPC客户端连接
 	conn, err := g.NewClient(lis, options...)
@@ -67,5 +71,9 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}
 
 	// 返回成功创建的客户端连接
-	return conn, nil
+	return &Client{conn}, nil
+}
+
+func (c *Client) Shutdown() error {
+	return c.ClientConn.Close()
 }

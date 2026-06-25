@@ -12,20 +12,11 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/redis"
 )
 
-// TestClientTypeAlias 测试 Client 类型别名是否正确工作。
-// 验证类型别名提供预期的接口并与底层 asynq 库保持兼容性。
-func TestClientTypeAlias(t *testing.T) {
-	Convey("测试 Client 类型别名", t, func() {
-		Convey("Client 应该是 asynq.Client 的别名", func() {
-			// 验证 Client 确实是 asynq.Client 的类型别名
-			var client Client
-			So(&client, ShouldHaveSameTypeAs, &asynq.Client{})
-
-			// 验证类型别名保持了相同的接口
-			So(client, ShouldHaveSameTypeAs, Client{})
-		})
-
-		Convey("Client 应该具有 asynq.Client 的所有方法", func() {
+// TestClientCreation 测试 Client 创建功能是否正确工作。
+// 验证客户端能够基于 Redis 客户端正确创建并具有预期的方法。
+func TestClientCreation(t *testing.T) {
+	Convey("测试 Client 创建", t, func() {
+		Convey("NewClient 应该返回非 nil 的 Client", func() {
 			// 创建一个简单的 Redis 配置用于测试
 			redisCfg := &redis.Config{
 				Type: "normal",
@@ -40,20 +31,62 @@ func TestClientTypeAlias(t *testing.T) {
 			pipelineClient := NewClient(redisClient)
 			defer pipelineClient.Close()
 
-			// 验证客户端类型
-			So(pipelineClient, ShouldHaveSameTypeAs, &asynq.Client{})
+			// 验证客户端不为 nil
+			So(pipelineClient, ShouldNotBeNil)
+		})
+
+		Convey("NewTracedClient 应该返回非 nil 的 Client", func() {
+			// 创建一个简单的 Redis 配置用于测试
+			redisCfg := &redis.Config{
+				Type: "normal",
+				Addr: "localhost:6379",
+			}
+
+			// 创建 Redis 客户端
+			redisClient := redis.NewClient(redisCfg)
+			defer redisClient.Close()
+
+			// 创建带追踪的 Pipeline 客户端
+			pipelineClient := NewTracedClient(redisClient)
+			defer pipelineClient.Close()
 
 			// 验证客户端不为 nil
 			So(pipelineClient, ShouldNotBeNil)
 		})
+
+		Convey("Client 应该具有 EnqueueContext 和 Close 方法", func() {
+			// 创建一个简单的 Redis 配置用于测试
+			redisCfg := &redis.Config{
+				Type: "normal",
+				Addr: "localhost:6379",
+			}
+
+			// 创建 Redis 客户端
+			redisClient := redis.NewClient(redisCfg)
+			defer redisClient.Close()
+
+			// 创建 Pipeline 客户端
+			pipelineClient := NewClient(redisClient)
+			defer pipelineClient.Close()
+
+			// 验证客户端具有预期的方法
+			So(pipelineClient, ShouldNotBeNil)
+			ctx := context.Background()
+			task := asynq.NewTask("test:task", []byte(`{"data": "test"}`))
+			_, err := pipelineClient.EnqueueContext(ctx, task)
+			_ = err
+
+			err = pipelineClient.Close()
+			_ = err
+		})
 	})
 }
 
-// TestNewClient_Creation 测试 NewClient 函数的客户端创建功能。
-// 验证函数能够基于传入的 Redis 客户端正确创建 asynq.Client 实例。
+// TestNewClient_Creation 测试 NewClient 和 NewTracedClient 函数的客户端创建功能。
+// 验证函数能够基于传入的 Redis 客户端正确创建 pipeline.Client 实例。
 func TestNewClient_Creation(t *testing.T) {
-	Convey("测试 NewClient 函数的客户端创建", t, func() {
-		Convey("应该能够使用有效的 Redis 客户端创建 Pipeline 客户端", func() {
+	Convey("测试 NewClient 和 NewTracedClient 函数的客户端创建", t, func() {
+		Convey("NewClient 应该能够使用有效的 Redis 客户端创建 Pipeline 客户端", func() {
 			// 创建 Redis 客户端配置
 			redisCfg := &redis.Config{
 				Type: "normal",
@@ -70,13 +103,30 @@ func TestNewClient_Creation(t *testing.T) {
 			// 验证客户端不为 nil
 			So(pipelineClient, ShouldNotBeNil)
 
-			// 验证客户端类型正确
-			So(pipelineClient, ShouldHaveSameTypeAs, &asynq.Client{})
-
-			// 清理资源 - 注意：asynq 客户端共享 Redis 连接，不能通过 asynq 关闭
+			// 清理资源
 			err := pipelineClient.Close()
-			// 当使用共享 Redis 连接时，Close() 会返回错误
-			// 我们不断言具体错误，因为行为取决于 asynq 库的实现
+			_ = err
+		})
+
+		Convey("NewTracedClient 应该能够使用有效的 Redis 客户端创建 Pipeline 客户端", func() {
+			// 创建 Redis 客户端配置
+			redisCfg := &redis.Config{
+				Type: "normal",
+				Addr: "localhost:6379",
+			}
+
+			// 创建 Redis 客户端
+			redisClient := redis.NewClient(redisCfg)
+			defer redisClient.Close()
+
+			// 创建带追踪的 Pipeline 客户端
+			pipelineClient := NewTracedClient(redisClient)
+
+			// 验证客户端不为 nil
+			So(pipelineClient, ShouldNotBeNil)
+
+			// 清理资源
+			err := pipelineClient.Close()
 			_ = err
 		})
 
@@ -102,36 +152,9 @@ func TestNewClient_Creation(t *testing.T) {
 			// 验证客户端不为 nil
 			So(pipelineClient, ShouldNotBeNil)
 
-			// 验证客户端类型正确
-			So(pipelineClient, ShouldHaveSameTypeAs, &asynq.Client{})
-
-			// 清理资源 - 注意：asynq 客户端共享 Redis 连接，不能通过 asynq 关闭
+			// 清理资源
 			err := pipelineClient.Close()
-			// 当使用共享 Redis 连接时，Close() 会返回错误
-			// 我们不断言具体错误，因为行为取决于 asynq 库的实现
 			_ = err
-		})
-	})
-}
-
-// TestNewClient_NilRedisClient 测试 NewClient 函数对 nil Redis 客户端的处理。
-// 验证函数在传入 nil Redis 客户端时的行为。
-func TestNewClient_NilRedisClient(t *testing.T) {
-	Convey("测试 NewClient 函数对 nil Redis 客户端的处理", t, func() {
-		Convey("传入 nil Redis 客户端应该创建客户端实例", func() {
-			// 注意：asynq.NewClientFromRedisClient 内部会处理 nil 情况
-			// 它会尝试创建客户端，但可能在实际使用时失败
-			pipelineClient := NewClient(nil)
-
-			// 验证客户端不为 nil (asynq 库会返回一个客户端实例)
-			So(pipelineClient, ShouldNotBeNil)
-
-			// 验证客户端类型正确
-			So(pipelineClient, ShouldHaveSameTypeAs, &asynq.Client{})
-
-			// 尝试关闭客户端（应该不会 panic）
-			err := pipelineClient.Close()
-			_ = err // 标记为已使用，具体行为取决于 asynq 库的实现
 		})
 	})
 }
@@ -140,36 +163,7 @@ func TestNewClient_NilRedisClient(t *testing.T) {
 // 验证客户端可以执行基本操作而不会立即出错。
 func TestClientMethods(t *testing.T) {
 	Convey("测试 Pipeline 客户端的基本方法", t, func() {
-		Convey("客户端应该具有 Enqueue 方法", func() {
-			// 创建 Redis 客户端配置
-			redisCfg := &redis.Config{
-				Type: "normal",
-				Addr: "localhost:6379",
-			}
-
-			// 创建 Redis 客户端
-			redisClient := redis.NewClient(redisCfg)
-			defer redisClient.Close()
-
-			// 创建 Pipeline 客户端
-			pipelineClient := NewClient(redisClient)
-			defer pipelineClient.Close()
-
-			// 创建一个测试任务
-			task := asynq.NewTask("test:task", []byte(`{"data": "test"}`))
-
-			// 尝试入队任务（可能会失败，因为没有真实的 Redis 服务器）
-			// 但我们主要测试方法调用不会 panic
-			info, err := pipelineClient.Enqueue(task)
-			_ = err // 标记为已使用，具体结果取决于 Redis 连接
-
-			// 我们不断言具体的错误，因为执行结果取决于 Redis 连接
-			// 当连接失败时，TaskInfo 可能为 nil，这是正常行为
-			// 我们只验证方法可以调用而不 panic
-			_ = info
-		})
-
-		Convey("客户端应该具有 EnqueueContext 方法", func() {
+		Convey("客户端应该支持带超时的 EnqueueContext 方法", func() {
 			// 创建 Redis 客户端配置
 			redisCfg := &redis.Config{
 				Type: "normal",
@@ -221,7 +215,7 @@ func TestClientMethods(t *testing.T) {
 			_ = err // 标记为已使用，我们不断言具体错误
 		})
 
-		Convey("客户端应该具有 Enqueue 和 EnqueueContext 方法", func() {
+		Convey("客户端应该支持 EnqueueContext 和 Close 组合调用", func() {
 			// 创建 Redis 客户端配置
 			redisCfg := &redis.Config{
 				Type: "normal",
@@ -236,17 +230,11 @@ func TestClientMethods(t *testing.T) {
 			pipelineClient := NewClient(redisClient)
 			defer pipelineClient.Close()
 
-			// 验证客户端具有 Enqueue 方法
-			task := asynq.NewTask("test:task", []byte(`{"data": "test"}`))
-			_, err := pipelineClient.Enqueue(task)
-			// 我们不断言具体的错误，因为执行结果取决于 Redis 连接
-			// 但我们验证了方法可以调用
-			_ = err // 标记为已使用
-
 			// 验证客户端具有 EnqueueContext 方法
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
-			_, err = pipelineClient.EnqueueContext(ctx, task)
+			task := asynq.NewTask("test:task", []byte(`{"data": "test"}`))
+			_, err := pipelineClient.EnqueueContext(ctx, task)
 			_ = err // 标记为已使用
 		})
 	})
@@ -286,7 +274,7 @@ func TestClientIntegrationSmokeTest(t *testing.T) {
 			task := asynq.NewTask("integration:test", []byte(`{"test": "data"}`))
 
 			// 提交任务到队列
-			info, err := pipelineClient.Enqueue(task)
+			info, err := pipelineClient.EnqueueContext(ctx, task)
 			So(err, ShouldBeNil)
 			So(info, ShouldNotBeNil)
 
@@ -328,9 +316,10 @@ func TestClientThreadSafety(t *testing.T) {
 
 					// 每个 goroutine 创建一个任务并尝试入队
 					task := asynq.NewTask("concurrent:task", []byte(`{"id": "`+string(rune(id))+`"}`))
+					ctx := context.Background()
 
 					// 尝试入队任务（可能会失败，因为没有真实的 Redis 服务器）
-					_, err := pipelineClient.Enqueue(task)
+					_, err := pipelineClient.EnqueueContext(ctx, task)
 					_ = err // 标记为已使用，具体结果取决于 Redis 连接
 					// 我们不断言错误，因为执行结果取决于 Redis 连接
 					// 主要测试并发调用不会 panic

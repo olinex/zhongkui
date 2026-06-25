@@ -67,9 +67,11 @@ func (s *RingBufferStore) ToBuffer() *RingBuffer {
 // 基于github.com/smallnest/ringbuffer实现，支持并发读写操作
 // 适用于生产者-消费者模式、日志缓冲、数据流处理等场景
 type RingBuffer struct {
-	lock  *sync.Once             `json:"-"`
-	size  BufferSize             `json:"-"`
-	inner *ringbuffer.RingBuffer `json:"-"` // 内部环形缓冲区实例
+	lock   *sync.Once             `json:"-"`
+	size   BufferSize             `json:"-"`
+	inner  *ringbuffer.RingBuffer `json:"-"` // 内部环形缓冲区实例
+	cancel context.CancelFunc     `json:"-"` // 用于取消 WithCancel 启动的 goroutine
+	done   chan struct{}          `json:"-"` // WithCancel goroutine 退出时关闭，用于同步等待
 }
 
 // NewRingBuffer 创建并初始化一个新的环形缓冲区
@@ -103,8 +105,21 @@ func (r *RingBuffer) WithTimeout(timeout time.Duration) *RingBuffer {
 	return r
 }
 
+// WithCancel 创建一个可取消的 RingBuffer，当 ctx 被取消时，会通知等待的读写操作。
+//
+// 注意：不用 smallnest/ringbuffer.WithCancel，因为它的 goroutine 无法同步等待完成，
+// 导致 Release() 将 buffer 归还 pool 后，该 goroutine 仍可能持有引用并调用 CloseWithError，
+// 与 pool 中已被复用的 buffer 产生数据竞争，引发间歇性 nil pointer dereference。
+// 这里改用独立 goroutine + cancel/done channel，确保 Release 时可以等待 goroutine 退出。
 func (r *RingBuffer) WithCancel(ctx context.Context) *RingBuffer {
-	r.inner = r.inner.WithCancel(ctx)
+	var cancelCtx context.Context
+	cancelCtx, r.cancel = context.WithCancel(ctx)
+	r.done = make(chan struct{})
+	go func() {
+		<-cancelCtx.Done()
+		r.inner.CloseWithError(cancelCtx.Err())
+		close(r.done)
+	}()
 	return r
 }
 
@@ -113,10 +128,19 @@ func (r *RingBuffer) SetBlocking(blocking bool) *RingBuffer {
 	return r
 }
 
+// Release 释放 RingBuffer 持有的资源，并将底层 buffer 归还 sync.Pool。
+//
+// 在归还前，会先取消 WithCancel 启动的 goroutine 并等待其退出，确保
+// CloseWithError 不会在 buffer 被 pool 复用后仍并发执行，从而避免数据竞争。
 func (r *RingBuffer) Release() {
 	r.lock.Do(func() {
 		if r.inner == nil {
 			return
+		}
+		// 取消 WithCancel goroutine 并等待其完成，确保不会再对 inner 调用 CloseWithError
+		if r.cancel != nil {
+			r.cancel()
+			<-r.done
 		}
 		r.inner.Reset()
 		switch r.size {

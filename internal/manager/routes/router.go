@@ -4,7 +4,6 @@
 // 1. 定义所有API路由及其对应的处理函数
 // 2. 配置全局和分组的中间件链
 // 3. 组织路由结构，包括公共路由、用户路由、管理路由等
-// 4. 集成依赖注入，通过fx框架管理路由依赖
 //
 // 路由分组结构：
 //   - /api/v1                   API版本根路径
@@ -17,70 +16,46 @@ package routes
 
 import (
 	"github.com/gin-gonic/gin"
-	"go.uber.org/fx"
-	"zhongkui.com/zhongkui/internal/depend"
+	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/provider"
 )
 
-// RouterFxIn 定义路由注册的依赖注入结构体。
-//
-// 该结构体使用fx框架的依赖注入机制，汇集了路由注册所需的所有依赖项。
-// 通过嵌入fx.In接口，实现了依赖的自动注入和生命周期管理。
-type RouterFxIn struct {
-	fx.In
-	// Cfg 应用程序配置，包含认证、安全、命名空间等配置信息
-	Cfg *manager.Config
-	// Engine Gin HTTP引擎实例，用于注册路由和处理HTTP请求
-	Engine *gin.Engine
-	// Policy RBAC策略引擎，用于权限控制和访问授权
-	Policy *depend.RbacPolicy
-	// APILoggerFxIn API日志记录器依赖，提供结构化的请求日志记录
-	depend.APILoggerFxIn
-	// ManageEtcdFxIn etcd客户端依赖，用于配置管理和服务发现
-	depend.ManageEtcdFxIn
-	// CoreDatabaseFxIn 核心数据库连接依赖，存储用户、权限等核心数据
-	depend.CoreDatabaseFxIn
-	// RawDatabaseFxIn 原始数据数据库连接依赖，存储网络抓包等原始数据
-	depend.RawDatabaseFxIn
-	// TranslateFxIn 国际化翻译依赖，支持多语言错误消息和界面
-	depend.TranslateFxIn
-	// WorkerPipelineInspectorFxIn 工作管道检查器依赖，用于ETL任务监控
-	depend.WorkerPipelineInspectorFxIn
-}
+func RouteRegister(i do.Injector) error {
+	viper := provider.MustInvokeViper(i)
+	etcd := provider.MustInvokeEtcdClient(i)
+	coreDB := provider.MustInvokeCoreDatabase(i)
+	engine := provider.MustInvokeGin(i)
+	inspector := provider.MustInvokePipelineInspector(i)
+	apiLogger := provider.MustInvokeApiLogger(i)
+	i18n := provider.MustInvokeI18n(i)
+	rbac := provider.MustInvokeRbac(i)
+	cfg, err := manager.ExtractConfig(viper)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
-// RouteRegisterFx 注册所有HTTP路由及其中间件。
-//
-// 这是应用程序的主路由注册函数，负责：
-// 1. 创建JWT认证器实例
-// 2. 注册全局中间件（应用于所有请求）
-// 3. 创建分组中间件（应用于特定路由组）
-// 4. 注册默认错误处理
-// 5. 注册健康检查端点
-// 6. 组织并注册所有API路由
-//
-// 参数:
-//   - in: 包含所有依赖项的注入结构体
-//
-// 注意：此函数在应用程序启动时被fx框架自动调用，用于初始化路由。
-func RouteRegisterFx(in RouterFxIn) {
 	// 创建JWT认证器，用于用户身份验证和令牌管理
-	authenticator := manager.NewJwtAuthenticator(&in.Cfg.Auth, in.CoreDB)
+	authenticator := manager.NewJwtAuthenticator(&cfg.Auth, coreDB)
 
 	// ==================== 全局中间件配置 ====================
 	// 以下中间件将应用于所有HTTP请求，按照添加顺序执行
 
 	// gin.Recovery() - Gin框架的崩溃恢复中间件，防止未处理的panic导致服务崩溃
-	in.Engine.Use(gin.Recovery())
+	engine.Use(gin.Recovery())
+	// OtelMiddleware - OTEL中间件，用于记录请求跟踪和指标
+	engine.Use(manager.OtelMiddleware())
 	// ConfigMiddleware - 配置中间件，将应用程序配置注入到请求上下文
-	in.Engine.Use(manager.ConfigMiddleware(in.Cfg))
+	engine.Use(manager.ConfigMiddleware(cfg))
 	// SecureHeadersMiddleware - 安全响应头中间件，设置CSP、HSTS等安全头
-	in.Engine.Use(manager.SecureHeadersMiddleware(&in.Cfg.Secure))
+	engine.Use(manager.SecureHeadersMiddleware(&cfg.Secure))
 	// CORSHeadersMiddleware - CORS跨域中间件，处理跨域请求
-	in.Engine.Use(manager.CORSHeadersMiddleware(&in.Cfg.Secure.CORS))
+	engine.Use(manager.CORSHeadersMiddleware(&cfg.Secure.CORS))
 	// ZapLoggerMiddleware - 结构化日志中间件，记录请求详情和性能指标
-	in.Engine.Use(manager.ZapLoggerMiddleware(in.APILogger))
+	engine.Use(manager.ZapLoggerMiddleware(apiLogger))
 	// TranslateMiddleware - 国际化中间件，支持多语言错误消息和界面
-	in.Engine.Use(manager.TranslateMiddleware(in.Translate))
+	engine.Use(manager.TranslateMiddleware(i18n))
 
 	// ==================== 分组中间件配置 ====================
 	// 以下中间件将根据路由分组选择性应用，提供细粒度的访问控制和功能支持
@@ -90,29 +65,29 @@ func RouteRegisterFx(in RouterFxIn) {
 	// forceAuthenticateMiddleware - 强制认证中间件，要求请求必须通过JWT认证
 	forceAuthenticateMiddleware := authenticator.AuthenticateMiddleware(false)
 	// policyMiddleware - RBAC策略中间件，将策略引擎注入请求上下文
-	policyMiddleware := manager.RbacPolicyMiddleware(in.Policy)
+	policyMiddleware := manager.RbacPolicyMiddleware(rbac)
 	// dbMiddleware - 数据库中间件，将核心数据库连接注入请求上下文
-	dbMiddleware := manager.DatabaseMiddleware(in.CoreDB)
+	dbMiddleware := manager.DatabaseMiddleware(coreDB)
 	// etcdMiddleware - etcd客户端中间件，将etcd客户端注入请求上下文
-	etcdMiddleware := manager.EtcdClientMiddleware(in.ManageEtcd)
+	etcdMiddleware := manager.EtcdClientMiddleware(etcd)
 	// namespaceMiddleware - 命名空间中间件，处理多租户命名空间隔离
-	namespaceMiddleware := manager.NamespaceMiddleware(&in.Cfg.Namespace)
+	namespaceMiddleware := manager.NamespaceMiddleware(&cfg.Namespace)
 	// authorizeMiddleware := manager.RbacPolicyAuthorizeMiddleware() - 权限验证中间件（暂未启用）
-	pipelineInspectorMiddleware := manager.PipelineInspectorMiddleware(in.WorkerPipelineInspector)
+	pipelineInspectorMiddleware := manager.PipelineInspectorMiddleware(inspector)
 
 	// ==================== 默认错误处理 ====================
 	// 重写Gin框架的默认错误响应，提供统一的错误格式和国际化支持
 
 	// NoRoute - 处理404路由未找到错误
-	in.Engine.NoRoute(manager.ErrDefaultPageNotFound.AbortWithGinH)
+	engine.NoRoute(manager.ErrDefaultPageNotFound.AbortWithGinH)
 	// NoMethod - 处理405方法不允许错误
-	in.Engine.NoMethod(manager.ErrDefaultNoMethod.AbortWithGinH)
+	engine.NoMethod(manager.ErrDefaultNoMethod.AbortWithGinH)
 
 	// ==================== 全局API端点 ====================
 	// 这些端点不经过分组中间件，可用于健康检查和服务发现
 
 	// /ping - 健康检查端点，用于服务健康监测和负载均衡器检查
-	in.Engine.GET("/ping", func(c *gin.Context) {
+	engine.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 		})
@@ -123,7 +98,7 @@ func RouteRegisterFx(in RouterFxIn) {
 
 	// 创建API版本根路径组：/api/v1
 	// 所有业务API都挂载在此路径下，便于版本管理和路由组织
-	v1Group := in.Engine.Group("/api/v1")
+	v1Group := engine.Group("/api/v1")
 
 	// ==================== 管理接口组：/api/v1/admin ====================
 	// 管理接口需要完整的认证和授权，用于系统管理和配置
@@ -359,4 +334,5 @@ func RouteRegisterFx(in RouterFxIn) {
 		// 取消处理中的任务 - 取消正在处理的任务
 		inspectorGroup.POST("/task/:id/cancel-processing", etlPipelineInspectorTaskCancelPorcessing)
 	}
+	return nil
 }

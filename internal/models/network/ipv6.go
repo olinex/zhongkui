@@ -405,40 +405,40 @@ func NewIPv6Routing(ipv6 *layers.IPv6Routing) *IPv6Routing {
 type IPv6Base struct {
 	// IPv6Version IPv6版本号，固定为6
 	// 用于标识IP协议版本，IPv6的版本号始终为6
-	IPv6Version      uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_version"`
-	
+	IPv6Version uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_version"`
+
 	// IPv6TrafficClass 流量类别，用于QoS（服务质量）区分
 	// 对应IPv4中的TOS字段，用于区分数据包的优先级和服务类型
-	IPv6TrafficClass uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_traffic_class"`
-	
+	IPv6TrafficClass uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_traffic_class"`
+
 	// IPv6FlowLabel 流标签，用于标识属于同一流的数据包
 	// 用于支持需要特殊处理的数据流，如实时音视频流
-	IPv6FlowLabel    uint32              `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"ipv6_flow_label"`
-	
+	IPv6FlowLabel uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"ipv6_flow_label"`
+
 	// IPv6Length 有效载荷长度，表示IPv6头部之后的数据长度（以字节为单位）
 	// 不包括IPv6头部本身的40字节，但包括扩展头部
-	IPv6Length       uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv6_length"`
-	
+	IPv6Length uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv6_length"`
+
 	// IPv6NextHeader 下一个头部类型，标识紧接在IPv6头部之后的内容
 	// 可以是传输层协议（如TCP、UDP、ICMPv6）或扩展头部
-	IPv6NextHeader   layers.IPProtocol   `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_next_header"`
-	
+	IPv6NextHeader layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_next_header"`
+
 	// IPv6HopLimit 跳数限制，对应IPv4中的TTL字段
 	// 每经过一个路由器减1，当减到0时数据包被丢弃
-	IPv6HopLimit     uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_hop_limit"`
-	
+	IPv6HopLimit uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_hop_limit"`
+
 	// IPv6Src 源IPv6地址，数据包的发送方地址
 	// 使用serializer.IPv6Addr类型进行序列化和数据库存储
-	IPv6Src          serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6_src"`
-	
+	IPv6Src serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6_src"`
+
 	// IPv6Dst 目的IPv6地址，数据包的接收方地址
 	// 使用serializer.IPv6Addr类型进行序列化和数据库存储
-	IPv6Dst          serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6_dst"`
-	
+	IPv6Dst serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6_dst"`
+
 	// IPv6HopByHop IPv6逐跳选项扩展头部
 	// 包含需要在数据包传输路径上每个路由器处理的选项
 	// 使用JSON序列化存储到数据库中
-	IPv6HopByHop     *IPv6HopByHop       `gorm:"type:String CODEC(ZSTD(3))" json:"ipv6_hop_by_hop"`
+	IPv6HopByHop *IPv6HopByHop `gorm:"type:String CODEC(ZSTD(3))" json:"ipv6_hop_by_hop"`
 }
 
 // NewIPv6Base 从gopacket IPv6层创建IPv6Base
@@ -504,6 +504,15 @@ func (i *IPv6Headers) DstAddr() net.IP {
 	return net.IP(i.IPv6Dst)
 }
 
+// NewIPv6Headers 从gopacket IPv6层创建IPv6Headers
+// 将gopacket的IPv6层转换为内部表示的IPv6Headers结构
+func NewIPv6Headers(ipv6 *layers.IPv6) *IPv6Headers {
+	return &IPv6Headers{
+		IPv6Base:       *NewIPv6Base(ipv6),
+		IPv6LastHeader: ipv6.NextHeader,
+	}
+}
+
 // PacketIPv6 表示IPv6数据包
 // IPv6数据包完整结构，包含以太网头部和IPv6头部
 // 该结构用于存储原始IPv6数据包信息，对应数据库中的packet_ipv6表
@@ -526,7 +535,3 @@ type FusedIPv6 struct {
 	// IPv6Headers IPv6头部信息，包含IPv6基础头部和扩展头部
 	IPv6Headers
 }
-
-
-
-

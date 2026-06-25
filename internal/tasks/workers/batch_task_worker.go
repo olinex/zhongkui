@@ -10,15 +10,20 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 )
 
+func emptyLiveFunc(ctx context.Context, task *pipeline.Task) error {
+	return nil
+}
+
 // BatchTaskWorker 批量任务 worker，用于处理流水线式的批量数据处理任务。
 // 支持数据提取、转换和加载三个阶段的流水线处理。
 type BatchTaskWorker struct {
-	bufferCount   int             // 缓冲区大小
-	bufferTimeout time.Duration   // 缓冲区超时时间
-	live          []LiveFunc      // 数据处理的函数列表
-	extract       ExtractFunc     // 数据提取函数
-	transforms    []TransformFunc // 数据转换函数列表
-	loads         []LoadFunc      // 数据加载函数列表
+	bufferCount   int                      // 缓冲区大小
+	bufferTimeout time.Duration            // 缓冲区超时时间
+	preE          pipeline.LiveFunc        // 数据处理前
+	postE         pipeline.LiveFunc        // 数据处理后
+	extract       pipeline.ExtractFunc     // 数据提取函数
+	transforms    []pipeline.TransformFunc // 数据转换函数列表
+	loads         []pipeline.LoadFunc      // 数据加载函数列表
 }
 
 // NewBatchTaskWorker 创建一个新的批量任务 worker。
@@ -27,15 +32,23 @@ type BatchTaskWorker struct {
 func NewBatchTaskWorker(
 	bufferCount int,
 	bufferTimeout time.Duration,
-	extract ExtractFunc,
-	transforms []TransformFunc, // 数据转换函数列表
-	loads []LoadFunc, // 数据加载函数列表
-	live ...LiveFunc, // 数据处理前的函数列表
+	extract pipeline.ExtractFunc,
+	transforms []pipeline.TransformFunc,
+	loads []pipeline.LoadFunc,
+	preE pipeline.LiveFunc,
+	postE pipeline.LiveFunc,
 ) *BatchTaskWorker {
+	if preE == nil {
+		preE = emptyLiveFunc
+	}
+	if postE == nil {
+		postE = emptyLiveFunc
+	}
 	return &BatchTaskWorker{
 		bufferCount:   bufferCount,
 		bufferTimeout: bufferTimeout,
-		live:          live,
+		preE:          preE,
+		postE:         postE,
 		extract:       extract,
 		transforms:    transforms,
 		loads:         loads,
@@ -45,18 +58,14 @@ func NewBatchTaskWorker(
 // Do 执行批量任务处理。
 // 启动数据提取、数据转换和数据加载的流水线处理流程。
 func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) error {
-	callbacks := make([]func(), 0, len(w.live))
+	if err := w.preE(ctx, task); err != nil {
+		return errors.WithStack(err)
+	}
 	defer func() {
-		for i := len(callbacks) - 1; i >= 0; i-- {
-			callbacks[i]()
+		if err := w.postE(ctx, task); err != nil {
+			panic(err)
 		}
 	}()
-	for _, before := range w.live {
-		if callback, err := before(ctx, task); err != nil {
-			callbacks = append(callbacks, callback)
-			return errors.WithStack(err)
-		}
-	}
 	channel := make(chan rxgo.Item, w.bufferCount)
 	outterWg, outterCtx := errgroup.WithContext(ctx)
 	outterWg.Go(func() error {
@@ -78,7 +87,7 @@ func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) error {
 				continue
 			}
 			for _, load := range w.loads {
-				func(load LoadFunc) {
+				func(load pipeline.LoadFunc) {
 					innerWG.Go(func() error {
 						return load(innerCtx, items)
 					})

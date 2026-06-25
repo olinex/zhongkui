@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
+	g "google.golang.org/grpc"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
@@ -47,27 +48,30 @@ func WithPrefix(key string) string {
 }
 
 // NewEtcdClient 根据提供的配置创建并返回一个新的 etcd 客户端实例。
-// 该函数是创建 etcd 客户端的入口方法，内部会先将 Config 转换为 etcd SDK
-// 所需的 clientv3.Config，然后调用 clientv3.New 建立连接。
+//
+// 支持通过 dialOpts 注入额外的 gRPC 拨号选项（如 OpenTelemetry 拦截器）。
 //
 // 创建流程:
 //  1. 调用 cfg.ToEtcdConfig() 将内部配置转换为 etcd SDK 配置
-//  2. 调用 clientv3.New() 根据配置创建客户端连接
-//  3. 所有错误均通过 errors.WithStack 包装，保留完整的调用栈信息
+//  2. 注入 dialOpts 到 DialOptions 中
+//  3. 调用 clientv3.New() 根据配置创建客户端连接
+//  4. 所有错误均通过 errors.WithStack 包装，保留完整的调用栈信息
 //
 // 参数:
-//   - ctx: 上下文对象，用于控制客户端的生命周期和取消操作
+//   - ctx: 上下文对象，用于控制 etcd 客户端的生命周期和取消操作
 //   - cfg: etcd 客户端配置，包含端点、认证、TLS 等信息
 //   - logger: 日志记录器，会传递给 etcd SDK 用于内部日志输出
+//   - dialOpts: 额外的 gRPC 拨号选项（可选），如 otelgrpc 拦截器
 //
 // 返回值:
 //   - *EtcdClient: 成功时返回 etcd 客户端实例
 //   - error: 创建过程中的错误，包括配置转换失败或连接建立失败
-func NewEtcdClient(ctx context.Context, cfg *Config, logger *logging.Logger) (*EtcdClient, error) {
+func NewEtcdClient(ctx context.Context, cfg *Config, logger *logging.Logger, dialOpts ...g.DialOption) (*EtcdClient, error) {
 	ecfg, err := cfg.ToEtcdConfig(ctx, logger)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	ecfg.DialOptions = append(ecfg.DialOptions, dialOpts...)
 	client, err := clientv3.New(ecfg)
 	if err != nil {
 		return nil, errors.WithStack(err)

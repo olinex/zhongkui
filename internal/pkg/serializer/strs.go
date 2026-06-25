@@ -80,7 +80,16 @@ func (h *HexUUID) Scan(value any) error {
 	case [16]byte:
 		*h = HexUUID(datatypes.BinUUID(v))
 	case []byte:
-		*h = HexUUID(datatypes.BinUUID(v))
+		if len(v) == 16 {
+			*h = HexUUID(datatypes.BinUUID(v))
+		} else {
+			// 尝试按 UUID 字符串解析
+			u, err := uuid.Parse(string(v))
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			*h = HexUUID(u)
+		}
 	case string:
 		if v == "" {
 			*h = HexUUID(datatypes.NewNilBinUUID())
@@ -103,7 +112,7 @@ func (h HexUUID) GormDBDataType(db *database.DB, field *schema.Field) string {
 	case "postgres":
 		return "UUID"
 	case "clickhouse":
-		return "UUID CODEC(ZSTD(3))"
+		return "FixedString(16)"
 	default:
 		return ""
 	}

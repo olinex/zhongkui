@@ -63,23 +63,23 @@ func TestNewServer(t *testing.T) {
 
 		Convey("应该在调试环境下控制中间件的添加", func() {
 			// 保存原始的 DEBUG_ENV_VAR 值
-			originalDebugEnvVar := base.DEBUG_ENV_VAR
+			originalDebugEnvVar := base.Env.Debug
 
 			// 测试调试模式开启
-			base.DEBUG_ENV_VAR = true
+			base.Env.Debug = true
 
 			// 验证调试模式已开启
-			So(base.DEBUG_ENV_VAR, ShouldBeTrue)
+			So(base.Env.Debug, ShouldBeTrue)
 
 			// 恢复原始值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
+			base.Env.Debug = originalDebugEnvVar
 
 			// 测试调试模式关闭
-			base.DEBUG_ENV_VAR = false
-			So(base.DEBUG_ENV_VAR, ShouldBeFalse)
+			base.Env.Debug = false
+			So(base.Env.Debug, ShouldBeFalse)
 
 			// 恢复原始值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
+			base.Env.Debug = originalDebugEnvVar
 		})
 	})
 }
@@ -193,7 +193,7 @@ func TestServer_Integration(t *testing.T) {
 
 		Convey("应该验证不同环境下的配置行为", func() {
 			// 测试不同环境变量的组合
-			originalDebugEnvVar := base.DEBUG_ENV_VAR
+			originalDebugEnvVar := base.Env.Debug
 
 			// 测试各种组合
 			testCases := []struct {
@@ -206,12 +206,12 @@ func TestServer_Integration(t *testing.T) {
 			}
 
 			for _, tc := range testCases {
-				base.DEBUG_ENV_VAR = tc.debugValue
-				So(base.DEBUG_ENV_VAR, ShouldEqual, tc.debugValue)
+				base.Env.Debug = tc.debugValue
+				So(base.Env.Debug, ShouldEqual, tc.debugValue)
 			}
 
 			// 恢复原始值
-			base.DEBUG_ENV_VAR = originalDebugEnvVar
+			base.Env.Debug = originalDebugEnvVar
 		})
 	})
 }

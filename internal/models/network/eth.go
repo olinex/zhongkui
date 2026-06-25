@@ -1,6 +1,8 @@
 package network
 
 import (
+	"net"
+
 	"github.com/gopacket/gopacket/layers"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -46,6 +48,15 @@ func NewEthernetHeaders(eth *layers.Ethernet) *EthernetHeaders {
 		EthSrcMAC: serializer.MacAddr(eth.SrcMAC),
 		EthType:   eth.EthernetType,
 		EthLength: eth.Length,
+	}
+}
+
+func NewLoopbackHeaders() *EthernetHeaders {
+	return &EthernetHeaders{
+		EthDstMAC: serializer.MacAddr(net.HardwareAddr{}),
+		EthSrcMAC: serializer.MacAddr(net.HardwareAddr{}),
+		EthType:   layers.EthernetTypeLLC,
+		EthLength: 0,
 	}
 }
 

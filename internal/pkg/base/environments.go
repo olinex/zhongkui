@@ -1,32 +1,26 @@
 package base
 
 import (
-	"fmt"
-	"os"
-	"strings"
+	"github.com/kelseyhightower/envconfig"
+	"sync"
 )
 
 var (
-	DEBUG_ENV_VAR       bool = false
-	ERROR_STACK_ENV_VAR bool = false
+	once sync.Once
+	Env  GlobalEnv
 )
 
-func init() {
-	// DEBUG 环境变量
-	tmp := strings.ToLower(os.Getenv(fmt.Sprintf(`%s_DEBUG`, strings.ToUpper(GLOBAL_PREFIX))))
-	switch tmp {
-	case "true", "t", "1":
-		DEBUG_ENV_VAR = true
-	default:
-		DEBUG_ENV_VAR = false
-	}
+type GlobalEnv struct {
+	Environment string
+	Debug       bool
+	ErrorStack  bool
+	Otel        bool
+}
 
-	// ERROR_STACK 环境变量
-	tmp = strings.ToLower(os.Getenv(fmt.Sprintf(`%s_ERROR_STACK`, strings.ToUpper(GLOBAL_PREFIX))))
-	switch tmp {
-	case "true", "t", "1":
-		ERROR_STACK_ENV_VAR = true
-	default:
-		ERROR_STACK_ENV_VAR = false
-	}
+func init() {
+	once.Do(func() {
+		if err := envconfig.Process(GLOBAL_PREFIX, &Env); err != nil {
+			panic(err)
+		}
+	})
 }

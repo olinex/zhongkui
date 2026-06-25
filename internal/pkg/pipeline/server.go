@@ -139,15 +139,20 @@ type Server struct {
 //  2. 在生产环境中应该使用 defer server.Shutdown() 确保资源清理
 //  3. 处理函数应该是幂等的，因为任务可能会被重试
 //  4. 在 DEBUG_ENV_VAR 为 true 时会启用 panic 恢复中间件
-func NewServer(cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs HandlerFuncs) *Server {
+func NewServer(cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs HandlerFuncs, mws ...asynq.MiddlewareFunc) *Server {
 	// 创建任务分发器，负责根据任务类型路由到对应的处理函数
 	mux := asynq.NewServeMux()
 
 	// 在调试环境下添加 panic 恢复中间件
 	// 该中间件会捕获任务处理过程中的 panic 并记录调用栈
 	// 防止单个任务的异常导致整个服务器崩溃
-	if base.DEBUG_ENV_VAR {
+	if base.Env.Debug {
 		mux.Use(RecoverWithStack(logger))
+	}
+
+	// 注册额外的中间件（如 OTEL trace 中间件）
+	for _, mw := range mws {
+		mux.Use(mw)
 	}
 
 	// 注册所有任务处理函数到分发器
@@ -160,17 +165,17 @@ func NewServer(cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs 
 
 	// 返回配置完成的服务器实例
 	return &Server{
-		logger: logger,                                   // 日志记录器，用于记录服务器运行状态
-		srv:    asynq.NewServerFromRedisClient(cli, cfg), // 创建 asynq 服务器并连接到 Redis
-		mux:    mux,                                      // 配置好的任务分发器
+		logger: logger,                                          // 日志记录器，用于记录服务器运行状态
+		srv:    asynq.NewServerFromRedisClient(cli.Client, cfg), // 创建 asynq 服务器并连接到 Redis
+		mux:    mux,                                             // 配置好的任务分发器
 	}
 }
 
 // Start 启动任务队列服务器，开始从 Redis 队列中获取并处理任务。
-// 该方法会启动后台 goroutine 来监听任务队列并分发任务给注册的处理函数。
+// 该方法会阻塞当前 goroutine，持续处理任务直到服务器被关闭。
 //
 // 返回值：
-//   - error - 启动过程中发生的错误，nil 表示成功启动
+//   - error - 启动过程中发生的错误，nil 表示成功启动并优雅关闭
 //
 // 工作流程：
 //  1. 启动 asynq 服务器，开始监听 Redis 队列
@@ -195,8 +200,8 @@ func NewServer(cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs 
 //  5. 所有错误都会通过 errors.WithStack 包装，便于调试
 func (s *Server) Start() error {
 	// 启动 asynq 服务器，开始处理队列中的任务
-	// 该方法会启动 worker goroutine 并开始消费任务队列
-	if err := s.srv.Start(s.mux); err != nil {
+	// Run 会阻塞当前 goroutine，持续处理任务直到 Shutdown 被调用
+	if err := s.srv.Run(s.mux); err != nil {
 		// 使用 errors.WithStack 包装错误，添加堆栈跟踪信息
 		// 便于在生产环境中定位问题
 		return errors.WithStack(err)

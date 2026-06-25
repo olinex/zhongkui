@@ -8,10 +8,8 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"go.uber.org/fx"
-	"zhongkui.com/zhongkui/internal/depend"
-	"zhongkui.com/zhongkui/internal/pkg/tls"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkui.com/zhongkui/internal/provider"
+	tlsutil "zhongkui.com/zhongkui/internal/pkg/tls"
 )
 
 type TLSInputs struct {
@@ -42,54 +40,48 @@ var generateTLSCmd = &cobra.Command{
 		if err != nil {
 			panic(fmt.Sprintf("invalid dns names: %v", err))
 		}
-		fx.New(
-			depend.FxLogger(),
-			fx.Invoke(
-				validator.ValidatorRegister,
-				func() {
-					inputs := TLSInputs{
-						Name:     name,
-						DirPath:  dirPath,
-						TTL:      ttl,
-						DNSNames: dnsNames,
-					}
-					validator := validator.MustValidate()
-					if err := validator.Struct(&inputs); err != nil {
-						panic(err)
-					}
-					if err := os.MkdirAll(dirPath, os.ModeDir|os.ModePerm); err != nil {
-						panic(err)
-					}
-					now := time.Now()
-					key, cert, err := tls.GenerateSelfSignedCert(now, now.Add(ttl), dnsNames)
-					if err != nil {
-						panic(fmt.Sprintf("cannot generate self cert: %v", err))
-					}
-					keyPath, certPath := path.Join(dirPath, fmt.Sprintf("%s-key.pem", name)), path.Join(dirPath, fmt.Sprintf("%s-cert.pem", name))
-					keyFile, err := os.Create(keyPath)
-					if err != nil {
-						panic(err)
-					}
-					defer keyFile.Close()
-					certFile, err := os.Create(certPath)
-					if err != nil {
-						panic(err)
-					}
-					defer certFile.Close()
-					_, err = keyFile.WriteString(key)
-					if err != nil {
-						panic(err)
-					}
-					pterm.Success.Printf("tls key file %s was created\n", keyPath)
-					_, err = certFile.WriteString(cert)
-					if err != nil {
-						panic(err)
-					}
-					pterm.Success.Printf("tls cert file %s was created\n", certPath)
-					os.Exit(0)
-				},
-			),
-		).Run()
+		inputs := TLSInputs{
+			Name:     name,
+			DirPath:  dirPath,
+			TTL:      ttl,
+			DNSNames: dnsNames,
+		}
+		// Validator is already initialized in PersistentPreRunE
+		_, injector := cmdToolBox(cmd)
+		validate := provider.MustInvokeValidate(injector)
+		if err := validate.Struct(&inputs); err != nil {
+			panic(err)
+		}
+		if err := os.MkdirAll(dirPath, os.ModeDir|os.ModePerm); err != nil {
+			panic(err)
+		}
+		now := time.Now()
+		key, cert, err := tlsutil.GenerateSelfSignedCert(now, now.Add(ttl), dnsNames)
+		if err != nil {
+			panic(fmt.Sprintf("cannot generate self cert: %v", err))
+		}
+		keyPath, certPath := path.Join(dirPath, fmt.Sprintf("%s-key.pem", name)), path.Join(dirPath, fmt.Sprintf("%s-cert.pem", name))
+		keyFile, err := os.Create(keyPath)
+		if err != nil {
+			panic(err)
+		}
+		defer keyFile.Close()
+		certFile, err := os.Create(certPath)
+		if err != nil {
+			panic(err)
+		}
+		defer certFile.Close()
+		_, err = keyFile.WriteString(key)
+		if err != nil {
+			panic(err)
+		}
+		pterm.Success.Printf("tls key file %s was created\n", keyPath)
+		_, err = certFile.WriteString(cert)
+		if err != nil {
+			panic(err)
+		}
+		pterm.Success.Printf("tls cert file %s was created\n", certPath)
+		os.Exit(0)
 	},
 }
 

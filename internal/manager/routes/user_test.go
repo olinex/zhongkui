@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	validator.ValidatorRegister()
+	validator.ValidatorRegister(validator.MustValidate())
 }
 
 func createUserSelfTestDB() *database.DB {

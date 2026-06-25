@@ -12,7 +12,7 @@
 //  1. Router: 顶层路由器，管理多个TCP流分组
 //  2. ReassemblerNode: 重组器节点，包含重组器实例和控制器
 //  3. reassembleController: 重组器控制器，管理数据包通道
-//  4. RouterStore: 路由器存储格式，支持序列化
+//  4. RouterAux: 路由器辅助序列化格式
 //
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型
@@ -160,21 +160,11 @@ func (n *ReassemblerNode[P]) run(
 	return nil
 }
 
-// RouterStore 是包路由器的序列化存储格式，用于持久化路由器状态。
-// 该结构体包含路由器中所有重组器节点的序列化表示，支持JSON格式的存储和恢复。
-// 通过序列化路由器状态，可以实现路由器的持久化、状态恢复和分布式部署。
+// RouterAux 是 Router 的 JSON 序列化辅助格式，用于持久化和恢复路由器状态。
 //
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型
-//
-// 字段说明:
-//   - Metas: 基础元数据列表，每个元数据对应一个TCP连接组
-//   - Nodes: 节点集合列表，每个子列表对应一个元数据的重组器节点链表
-//   - PacketChannelSize: 数据包通道大小，影响goroutine间的通信效率
-//   - MaxReassemblerSize: 最大重组器缓冲区大小，控制单个重组器的容量
-//   - MaxAppBufferSize: 最大应用层缓冲区大小，控制应用层数据的缓存
-//   - MaxOutOrderPacketSize: 最大乱序包数量，控制乱序包处理的容量
-type RouterStore[P TCPPacket] struct {
+type RouterAux[P TCPPacket] struct {
 	Metas                 []*n.BaseMeta           `json:"metas"`                     // 基础元数据列表
 	Nodes                 [][]*ReassemblerNode[P] `json:"nodes"`                     // 节点集合列表
 	MaxReassemblerSize    int                     `json:"max_reassembler_size"`      // 最大重组器缓冲区大小
@@ -182,7 +172,7 @@ type RouterStore[P TCPPacket] struct {
 	NoticeTimeout         time.Duration           `json:"notice_timeout"`            // 通知超时时间
 }
 
-// toRouter 将RouterStore转换为Router实例。
+// toRouter 将RouterAux转换为Router实例。
 // 该方法重建路由器中的双向链表结构，恢复路由器的运行时状态。
 // 转换过程包括：
 //  1. 为每个元数据创建根节点映射
@@ -199,7 +189,7 @@ type RouterStore[P TCPPacket] struct {
 //  4. 返回重建完成的路由器实例
 //
 // 注意：序列化时节点指针被置为nil，反序列化时需要重新建立连接关系。
-func (s *RouterStore[P]) toRouter() *Router[P] {
+func (s *RouterAux[P]) toRouter() *Router[P] {
 	roots := make(map[n.BaseMeta]*groupEntry[P], len(s.Metas))
 	for index, meta := range s.Metas {
 		if index >= len(s.Nodes) || len(s.Nodes[index]) == 0 {
@@ -280,7 +270,7 @@ func NewRouter[P TCPPacket](maxReassemblerSize, maxOutOrderPacketSize int, notic
 // MarshalJSON 序列化Router实例为JSON格式的字节数组。
 // 该方法将路由器的运行时状态转换为可序列化的存储格式，支持持久化和传输。
 // 序列化过程包括：
-//  1. 将路由器转换为RouterStore格式
+//  1. 将路由器转换为RouterAux格式
 //  2. 使用标准JSON库进行序列化
 //  3. 处理序列化过程中的错误
 //
@@ -306,8 +296,8 @@ func (r Router[P]) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON 反序列化JSON格式的字节数组为Router实例。
 // 该方法从持久化存储中恢复路由器的状态，重建所有重组器节点和链表结构。
 // 反序列化过程包括：
-//  1. 解析JSON数据到RouterStore结构
-//  2. 将RouterStore转换为Router实例
+//  1. 解析JSON数据到RouterAux结构
+//  2. 将RouterAux转换为Router实例
 //  3. 重建双向链表结构
 //
 // 参数:
@@ -317,13 +307,13 @@ func (r Router[P]) MarshalJSON() ([]byte, error) {
 //   - error: 反序列化过程中发生的错误，包含堆栈信息
 //
 // 反序列化流程:
-//  1. 使用标准JSON库解析数据到RouterStore
+//  1. 使用标准JSON库解析数据到RouterAux
 //  2. 调用asRouter方法重建路由器实例
 //  3. 恢复路由器的根节点映射
 //
 // 注意：反序列化后需要重新启动重组器节点，因为控制器状态无法序列化。
 func (r *Router[P]) UnmarshalJSON(data []byte) error {
-	var store RouterStore[P]
+	var store RouterAux[P]
 	if err := json.Unmarshal(data, &store); err != nil {
 		return errors.WithStack(err)
 	} else {
@@ -341,17 +331,17 @@ func (r *Router[P]) UnmarshalJSON(data []byte) error {
 //  4. 保存路由器的配置参数
 //
 // 返回值:
-//   - *RouterStore[P]: 准备就绪的存储格式实例
+//   - *RouterAux[P]: 准备就绪的辅助格式实例
 //
 // 转换流程:
 //  1. 初始化元数据和节点集合的切片
 //  2. 遍历根节点映射，处理每个链表
 //  3. 对于每个链表，遍历所有节点，断开指针连接并收集节点
-//  4. 保存配置参数到存储格式中
+//  4. 保存配置参数到辅助格式中
 //
 // 注意：该方法会修改节点的Prev和Next指针，将其设置为nil。
 // 这是必要的，因为JSON序列化无法处理循环引用，且指针关系可以在反序列化时重建。
-func (r *Router[P]) toStore() *RouterStore[P] {
+func (r *Router[P]) toStore() *RouterAux[P] {
 	metas := make([]*n.BaseMeta, 0, len(r.roots))
 	nodes := make([][]*ReassemblerNode[P], 0, len(r.roots))
 	for meta, group := range r.roots {
@@ -362,7 +352,7 @@ func (r *Router[P]) toStore() *RouterStore[P] {
 		}
 		nodes = append(nodes, sets)
 	}
-	return &RouterStore[P]{
+	return &RouterAux[P]{
 		Metas:                 metas,
 		Nodes:                 nodes,
 		MaxReassemblerSize:    r.maxReassemblerSize,
@@ -577,7 +567,10 @@ LOOP:
 			}
 		}
 	}
-	time.Sleep(r.noticeTimeout)
+	select {
+	case <-ctx.Done():
+	case <-time.After(r.noticeTimeout):
+	}
 	cancel()
 	if err := wg.Wait(); err != nil {
 		return errors.WithStack(err)

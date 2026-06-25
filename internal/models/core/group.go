@@ -10,7 +10,7 @@ import (
 type Group struct {
 	database.BaseModel
 	// Name 是组的唯一名称，最大长度为32个字符，不能为空。
-	Name string `gorm:"type:VARCHAR(32)"`
+	Name string `gorm:"type:VARCHAR(32);uniqueIndex"`
 	// Description 是组的可选描述信息，最大长度为256个字符。
 	Description string `gorm:"type:VARCHAR(256)"`
 }

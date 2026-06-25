@@ -763,6 +763,7 @@ type FeedbackRequest struct {
 	Status         *Status                `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
 	TimeoutSeconds int64                  `protobuf:"varint,5,opt,name=timeout_seconds,json=timeoutSeconds,proto3" json:"timeout_seconds,omitempty"`
 	Uploaded       bool                   `protobuf:"varint,6,opt,name=uploaded,proto3" json:"uploaded,omitempty"`
+	SecretKey      string                 `protobuf:"bytes,7,opt,name=secret_key,json=secretKey,proto3" json:"secret_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -839,6 +840,13 @@ func (x *FeedbackRequest) GetUploaded() bool {
 	return false
 }
 
+func (x *FeedbackRequest) GetSecretKey() string {
+	if x != nil {
+		return x.SecretKey
+	}
+	return ""
+}
+
 var File_api_reporter_proto protoreflect.FileDescriptor
 
 const file_api_reporter_proto_rawDesc = "" +
@@ -881,7 +889,7 @@ const file_api_reporter_proto_rawDesc = "" +
 	"\x05event\x18\x03 \x01(\v2\x12.reporter.v1.EventH\x00R\x05event\x12*\n" +
 	"\x05error\x18\x04 \x01(\v2\x12.reporter.v1.ErrorH\x00R\x05error\x12%\n" +
 	"\x0eglobal_version\x18\x05 \x01(\x03R\rglobalVersionB\t\n" +
-	"\acontent\"\xf3\x01\n" +
+	"\acontent\"\x92\x02\n" +
 	"\x0fFeedbackRequest\x12\x1c\n" +
 	"\ttimestamp\x18\x01 \x01(\x03R\ttimestamp\x121\n" +
 	"\bresource\x18\x02 \x01(\v2\x15.reporter.v1.ResourceR\bresource\x12\x1d\n" +
@@ -889,7 +897,9 @@ const file_api_reporter_proto_rawDesc = "" +
 	"session_id\x18\x03 \x01(\tR\tsessionId\x12+\n" +
 	"\x06status\x18\x04 \x01(\v2\x13.reporter.v1.StatusR\x06status\x12'\n" +
 	"\x0ftimeout_seconds\x18\x05 \x01(\x03R\x0etimeoutSeconds\x12\x1a\n" +
-	"\buploaded\x18\x06 \x01(\bR\buploaded*3\n" +
+	"\buploaded\x18\x06 \x01(\bR\buploaded\x12\x1d\n" +
+	"\n" +
+	"secret_key\x18\a \x01(\tR\tsecretKey*3\n" +
 	"\tEventType\x12\v\n" +
 	"\aCREATED\x10\x00\x12\f\n" +
 	"\bMODIFIED\x10\x01\x12\v\n" +

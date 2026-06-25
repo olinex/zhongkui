@@ -12,8 +12,9 @@ import (
 func TransFromPacketToModel(ctx context.Context, i any) (any, error) {
 	item, ok := i.(*PcapItem)
 	if !ok {
-		return nil, errors.Newf("Expect gopacket.Packet, got %T", i)
+		return nil, errors.Newf("Expect pcap.PcapItem, got %T", i)
 	}
 	builder := n.NewPacketModelBuilder(item.Packet, item.SessionID, item.Source)
-	return builder.BuildAsPacketModel(), nil
+	model := builder.BuildAsPacketModel()
+	return model, nil
 }

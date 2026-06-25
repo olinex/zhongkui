@@ -97,3 +97,8 @@ func validateLtCurrentTime(fl validator.FieldLevel) bool {
 		return b.After(a)
 	})
 }
+
+func init() {
+	validations[TAG_GREATER_THAN_CURRENT_TIME] = validateGtCurrentTime
+	validations[TAG_LESSER_THAN_CURRENT_TIME] = validateLtCurrentTime
+}

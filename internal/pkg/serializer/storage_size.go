@@ -66,7 +66,7 @@ func (s *BibyteSize64) UnmarshalJSON(text []byte) error {
 }
 
 func (s BibyteSize64) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(s.marshal())
+	data, err := json.Marshal(s.String())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -147,7 +147,7 @@ func (s *BibyteSize) UnmarshalJSON(text []byte) error {
 }
 
 func (s BibyteSize) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(s.marshal())
+	data, err := json.Marshal(s.String())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

@@ -4,8 +4,6 @@ import (
 	"context"
 	"sync"
 
-	"go.uber.org/fx"
-	"zhongkui.com/zhongkui/internal/depend"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -14,13 +12,6 @@ import (
 var (
 	Cache *NamespaceCache = newNamespaceCache()
 )
-
-// NamespaceFxIn 是Fx依赖注入的输入结构体，用于提供命名空间缓存所需的依赖
-type NamespaceFxIn struct {
-	fx.In
-	Lc fx.Lifecycle
-	depend.CoreDatabaseFxIn
-}
 
 // NamespaceCache 是命名空间缓存结构体，提供线程安全的命名空间名称缓存
 type NamespaceCache struct {
@@ -128,8 +119,8 @@ func (n *NamespaceCache) delete(namespace string) {
 // Namespace 表示命名空间模型，命名空间的名称不可修改
 type Namespace struct {
 	database.BaseModel        // 嵌入基础模型，包含ID、CreatedAt、UpdatedAt等字段
-	Name               string `gorm:"type:VARCHAR(32)"` // 命名空间名称，唯一且不可为空，最大32字符
-	Description        string `gorm:"type:VARCHAR(256)"`  // 命名空间描述，可选，最大256字符
+	Name               string `gorm:"type:VARCHAR(32);uniqueIndex"`  // 命名空间名称，唯一且不可为空，最大32字符
+	Description        string `gorm:"type:VARCHAR(256)"` // 命名空间描述，可选，最大256字符
 }
 
 // AfterCreate 在创建命名空间后触发的钩子函数，将命名空间名称添加到缓存中
@@ -181,23 +172,4 @@ func NamespaceExist(namespace string) bool {
 	defer Cache.lock.RUnlock()
 	_, ok := Cache.cache[namespace]
 	return ok
-}
-
-// NamespaceCacheFx 是Fx生命周期钩子函数，用于管理命名空间缓存的初始化和清理
-// 参数：
-//   - in: 包含Fx生命周期和数据库依赖的输入结构体
-func NamespaceCacheFx(in NamespaceFxIn) {
-	in.Lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			if err := Cache.Load(ctx, in.CoreDB); err != nil {
-				return errors.WithStack(err)
-			} else {
-				return nil
-			}
-		},
-		OnStop: func(_ context.Context) error {
-			Cache.Clear()
-			return nil
-		},
-	})
 }

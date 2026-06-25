@@ -46,17 +46,17 @@ func (v *Version) Commit(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 	defer session.Close()
-	// 获取锁
+	// 获取锁（使用独立的短期超时 context，不影响后续业务逻辑）
 	mu := concurrency.NewMutex(session, fmt.Sprintf("%s%s/", versionLockPrefix, name))
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	v.logger.Infof("get %s's version lock", name, name)
-	err = mu.Lock(ctx)
+	lockCtx, lockCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer lockCancel()
+	v.logger.Infof("get %s's version lock...", name)
+	err = mu.Lock(lockCtx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer mu.Unlock(ctx)
-	v.logger.Infof("get %s's version lock %s success", name, name)
+	v.logger.Infof("get %s's version lock success", name)
 	// 获取上一个版本号
 	rsp, err := v.client.Get(ctx, fmt.Sprintf("%s%s", versionPrefix, name))
 	if err != nil {

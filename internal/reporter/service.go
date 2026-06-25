@@ -1,46 +1,25 @@
 package reporter
 
 import (
-	"context"
 	"io"
 	"time"
 
 	"github.com/hibiken/asynq"
+	"github.com/samber/do/v2"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/fx"
 	"go.uber.org/zap"
 	g "google.golang.org/grpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"zhongkui.com/zhongkui/internal/depend"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkui.com/zhongkui/internal/pkg/grpc"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkui.com/zhongkui/internal/provider"
 	"zhongkui.com/zhongkui/internal/tasks/pcap"
 )
-
-// ReporterServiceFxIn 是 ReporterService 的依赖注入结构体
-// 该结构体通过 Go 的 Fx 依赖注入框架，将服务所需的所有依赖注入到 ReporterService 中
-//
-// 字段说明：
-//   - fx.In: 嵌入 Fx 的 In 结构体，标识这是一个依赖注入输入结构
-//   - Lc: Fx 生命周期管理器，用于注册服务的启动和停止钩子
-//   - GRPCLoggerFxIn: gRPC 日志记录器依赖，提供结构化的日志记录能力
-//   - ManageEtcdFxIn: 管理用 etcd 客户端依赖，用于存储和监听配置信息
-//   - CoreDatabaseFxIn: 核心数据库依赖，提供对核心数据库的访问
-//   - ReporterGrpcServerFxIn: gRPC 服务器依赖，用于注册和运行 gRPC 服务
-//   - WorkerPipelineClientFxIn: 工作流管道客户端依赖，用于异步任务处理
-type ReporterServiceFxIn struct {
-	fx.In
-	Lc fx.Lifecycle
-	depend.GRPCLoggerFxIn
-	depend.ManageEtcdFxIn
-	depend.CoreDatabaseFxIn
-	depend.ReporterGrpcServerFxIn
-	depend.WorkerPipelineClientFxIn
-}
 
 // ReporterService 实现了 reporter_v1.ReporterServiceServer 接口
 // 该服务提供两个主要功能：
@@ -54,33 +33,25 @@ type ReporterServiceFxIn struct {
 //   - logger: 结构化的日志记录器
 type ReporterService struct {
 	reporter_v1.UnimplementedReporterServiceServer
+	grpc    *grpc.Server
 	client  *etcd.EtcdClient
 	pClient *pipeline.Client
 	logger  *zap.SugaredLogger
 }
 
-// ServiceInjectFx 是依赖注入函数，用于创建并注册 ReporterService 到 gRPC 服务器
-// 该函数在 Fx 依赖注入框架中被调用，负责：
-//  1. 使用依赖注入的参数创建 ReporterService 实例
-//  2. 将服务实例注册到 gRPC 服务器中
-//  3. 返回服务实例（虽然当前未显式返回，但在 Fx 框架中会被使用）
-//
-// 参数：
-//   - in: ReporterServiceFxIn - 包含所有必需依赖的注入结构
-//
-// 实现细节：
-//   - 从依赖中提取 etcd 客户端、管道客户端和日志记录器
-//   - 创建 ReporterService 实例
-//   - 调用 reporter_v1.RegisterReporterServiceServer 注册服务
-//   - 注意：当前函数未显式返回 ReporterService 实例，但在 Fx 框架中
-//     服务会被正确注册到 gRPC 服务器中
-func ServiceInjectFx(in ReporterServiceFxIn) {
+func NewReportService(i do.Injector) *ReporterService {
+	etcd := provider.MustInvokeEtcdClient(i)
+	pClient := provider.MustInvokePipelineClient(i)
+	logger := provider.MustInvokeGrpcLogger(i)
+	grpc := provider.MustInvokeReporterGrpcServer(i)
 	srv := &ReporterService{
-		client:  in.ManageEtcd,
-		pClient: in.WorkerPipelineClient,
-		logger:  in.GRPCLogger,
+		grpc:    grpc,
+		client:  etcd,
+		pClient: pClient,
+		logger:  logger,
 	}
-	reporter_v1.RegisterReporterServiceServer(in.ReporterGrpcServer, srv)
+	reporter_v1.RegisterReporterServiceServer(grpc, srv)
+	return srv
 }
 
 // newWatchResponseError 创建一个表示错误的 WatchResponse
@@ -420,6 +391,7 @@ func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.
 			Namespace: request.Resource.Namespace,
 			Name:      request.Resource.Name,
 			Version:   request.Resource.Version,
+			SecretKey: request.SecretKey,
 		})
 		if err != nil {
 			return errors.WithStack(err)
@@ -435,52 +407,24 @@ func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.
 	}
 }
 
-// RunGrpcServiceFx 启动 gRPC 服务并将其生命周期管理注册到 Fx 框架
-// 该函数负责管理 gRPC 服务的完整生命周期：
-//  1. 服务启动：在单独的 goroutine 中启动 gRPC 服务器
-//  2. 优雅停止：支持优雅停止，确保正在处理的请求完成
-//  3. 超时保护：设置停止超时，防止服务无限期等待
-//  4. 日志记录：记录服务的启动和停止状态
-//
-// 参数：
-//   - in: ReporterServiceFxIn - 包含所有必需依赖的注入结构
-//
-// 生命周期管理：
-//   - OnStart: 应用启动时调用，启动 gRPC 服务器
-//   - OnStop: 应用停止时调用，优雅停止 gRPC 服务器
-//
-// 实现细节：
-//   - 使用 goroutine 启动服务器，避免阻塞 Fx 启动流程
-//   - 设置 5 秒优雅停止超时，超时后强制停止
-//   - 记录详细的启动和停止日志，便于问题排查
-func RunGrpcServiceFx(in ReporterServiceFxIn) {
-	in.Lc.Append(fx.Hook{
-		OnStart: func(_ context.Context) error {
-			// 在单独的 goroutine 中启动 gRPC 服务器
-			go func() {
-				in.GRPCLogger.Info("grpc server listening on")
-				if err := in.ReporterGrpcServer.Serve(); err != nil {
-					// 服务器启动失败，记录致命错误
-					in.GRPCLogger.Fatal("failed to start grpc server", zap.Error(err))
-				}
-			}()
-			return nil
-		},
-		OnStop: func(_ context.Context) error {
-			// 记录优雅停止开始
-			in.GRPCLogger.Info("grpc try graceful stop")
+func (srv *ReporterService) Run() error {
+	srv.logger.Info("grpc server listening on")
+	if err := srv.grpc.Serve(); err != nil {
+		srv.logger.Fatal("failed to start grpc server", zap.Error(err))
+		return errors.WithStack(err)
+	}
+	// 记录优雅停止开始
+	srv.logger.Info("grpc try graceful stop")
 
-			// 设置优雅停止超时定时器
-			// 5秒后如果仍未优雅停止，强制停止服务器
-			timer := time.AfterFunc(time.Second*5, func() {
-				in.GRPCLogger.Warn("server graceful stop timeout")
-				in.ReporterGrpcServer.Stop() // 强制停止
-			})
-			defer timer.Stop() // 确保函数退出时停止定时器
-
-			// 尝试优雅停止，等待正在处理的请求完成
-			in.ReporterGrpcServer.GracefulStop()
-			return nil
-		},
+	// 设置优雅停止超时定时器
+	// 5秒后如果仍未优雅停止，强制停止服务器
+	timer := time.AfterFunc(time.Second*5, func() {
+		srv.logger.Warn("server graceful stop timeout")
+		srv.grpc.Stop() // 强制停止
 	})
+	defer timer.Stop() // 确保函数退出时停止定时器
+
+	// 尝试优雅停止，等待正在处理的请求完成
+	srv.grpc.GracefulStop()
+	return nil
 }

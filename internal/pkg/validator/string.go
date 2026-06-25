@@ -410,3 +410,12 @@ func validateDirPath(fl validator.FieldLevel) bool {
 		return IsValidDirPath(v)
 	}
 }
+
+func init() {
+	validations[TAG_STRONG_PASSWORD] = validateStrongPassword
+	validations[TAG_WINDOWS_FILE_NAME] = validateWindowsFileName
+	validations[TAG_UNIX_FILE_NAME] = validateUnixFileName
+	validations[TAG_FILE_NAME] = validateFileName
+	validations[TAG_STRICT_FILE_NAME] = validateStrictFileName
+	validations[TAG_DIRPATH] = validateDirPath
+}

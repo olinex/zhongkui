@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/creasty/defaults"
-	"github.com/redis/go-redis/v9"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -48,9 +47,8 @@ func TestNewClient_NormalType(t *testing.T) {
 			So(client, ShouldNotBeNil)
 
 			// 验证客户端类型和基本属性
-			// 注意：无法直接访问redis.Client的内部字段，
-			// 但我们可以验证客户端创建时没有panic
-			So(client, ShouldHaveSameTypeAs, &redis.Client{})
+			// Client 是包装 *redis.Client 的结构体，验证底层客户端不为 nil
+			So(client.Client, ShouldNotBeNil)
 
 			// 测试客户端可以关闭（清理）
 			err = client.Close()
@@ -99,9 +97,8 @@ func TestNewClient_SentinelType(t *testing.T) {
 			// 验证客户端不为nil
 			So(client, ShouldNotBeNil)
 
-			// 验证客户端类型
-			// 注意：redis.NewFailoverClient返回*redis.Client，与普通客户端相同
-			So(client, ShouldHaveSameTypeAs, &redis.Client{})
+			// 验证底层客户端不为 nil
+			So(client.Client, ShouldNotBeNil)
 
 			// 测试客户端可以关闭（清理）
 			err = client.Close()
@@ -134,7 +131,7 @@ func TestNewClient_InvalidType(t *testing.T) {
 					errMsg, ok := r.(string)
 					So(ok, ShouldBeTrue)
 					So(errMsg, ShouldContainSubstring, "invalid-type")
-					So(errMsg, ShouldContainSubstring, "Unsupport client type")
+					So(errMsg, ShouldContainSubstring, "unsupport client type")
 				}
 			}()
 
@@ -207,15 +204,11 @@ func TestNewClient_ContextOperations(t *testing.T) {
 	})
 }
 
-// TestClientTypeAlias 测试Client类型别名是否正确工作
-// 验证类型别名提供预期的接口并与底层go-redis库保持兼容性
+// TestClientTypeAlias 测试Client包装类型是否正确工作
+// 验证Client结构体正确嵌入redis.Client并提供预期的方法访问
 func TestClientTypeAlias(t *testing.T) {
-	Convey("测试Client类型别名", t, func() {
-		Convey("Client应该是redis.Client的别名", func() {
-			// 验证Client确实是redis.Client的别名
-			var client Client
-			So(&client, ShouldHaveSameTypeAs, &redis.Client{})
-
+	Convey("测试Client包装类型", t, func() {
+		Convey("Client应该包装redis.Client并提供方法访问", func() {
 			// 创建最小配置
 			cfg := &Config{}
 			err := defaults.Set(cfg)
@@ -224,12 +217,14 @@ func TestClientTypeAlias(t *testing.T) {
 
 			// 测试NewClient返回正确的类型
 			createdClient := NewClient(cfg)
-			So(createdClient, ShouldHaveSameTypeAs, &client)
+			So(createdClient, ShouldNotBeNil)
+
+			// 验证底层 redis.Client 可访问
+			So(createdClient.Client, ShouldNotBeNil)
 
 			// 清理
-			if createdClient != nil {
-				createdClient.Close()
-			}
+			err = createdClient.Close()
+			So(err, ShouldBeNil)
 		})
 	})
 }

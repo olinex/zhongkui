@@ -3,7 +3,9 @@ package capture
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v5"
@@ -400,7 +402,7 @@ func (cc *CaptureClient) uploadPacketHandler(
 	ctx context.Context,
 	cause context.CancelCauseFunc,
 	sessionID serializer.HexUUID,
-	uploadChan chan time.Time,
+	uploadChan chan notice,
 	snapshot *captureSnapshot,
 ) {
 	ws, err := wire.NewWire(snapshot.config, cc.logger)
@@ -417,12 +419,20 @@ func (cc *CaptureClient) uploadPacketHandler(
 		snapshot.config.Promisc,
 		time.Duration(snapshot.config.Timeout)*time.Second,
 	)
-	err = ws.SetBPFFilter(snapshot.config.BpfExpr)
+
+	// 组合 BPF 过滤器：将用户指定的过滤表达式与 S3 上传流量的排除规则合并
+	// 避免抓包时捕获到自身向 S3 上传数据的流量，防止流量无限递归放大
+	bpfExpr, err := buildBpfExpr(snapshot.config.BpfExpr, cc.s3.GetEndpoint())
 	if err != nil {
 		cause(errors.WithStack(err))
 		return
 	}
-	cc.logger.Infof("set bpf filter %s", snapshot.config.BpfExpr)
+	err = ws.SetBPFFilter(bpfExpr)
+	if err != nil {
+		cause(errors.WithStack(err))
+		return
+	}
+	cc.logger.Infof("set bpf filter %s", bpfExpr)
 	linkType := ws.LinkType()
 	cc.logger.Infof("link type %s", linkType)
 	tmpCapturer := capturer{
@@ -441,7 +451,7 @@ func (cc *CaptureClient) uploadPacketHandler(
 }
 
 // upload 监听配置变更，当收到新配置时启动数据包捕获处理器
-func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan chan time.Time) error {
+func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan chan notice) error {
 	err := os.MkdirAll(cc.cfg.Upload.DumpDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
@@ -500,7 +510,7 @@ func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUI
 }
 
 // feedback 通过gRPC流定期向服务器发送反馈，包含抓包状态和上传信息
-func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan <-chan time.Time) error {
+func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan <-chan notice) error {
 	ticker := time.NewTicker(cc.cfg.Feedback.IntervalTimeout)
 	defer ticker.Stop()
 
@@ -511,21 +521,22 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 	}
 
 	for {
-		var timestamp time.Time
+		var n notice
 		var uploaded bool
 		select {
 		case <-ctx.Done():
 			stream.CloseAndRecv()
 			return ctx.Err()
-		case timestamp = <-ticker.C:
+		case timestamp := <-ticker.C:
+			n = notice{ts: timestamp}
 			uploaded = false
-		case timestamp = <-uploadChan:
+		case n = <-uploadChan:
 			uploaded = true
 		}
 
 		snapshot := mutex.snapshot()
 		err := stream.Send(&reporter_v1.FeedbackRequest{
-			Timestamp: timestamp.UnixMilli(),
+			Timestamp: n.ts.UnixMilli(),
 			Resource:  cc.cfg.Resource.ToGRPC(),
 			SessionId: sessionID.String(),
 			Status: &reporter_v1.Status{
@@ -535,6 +546,7 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 			},
 			TimeoutSeconds: int64(cc.cfg.Feedback.TolerateIntervalTimeout().Seconds()),
 			Uploaded:       uploaded,
+			SecretKey:      n.secretKey,
 		})
 		if err != nil {
 			cc.logger.Warnf("feedback stream error: %v", err)
@@ -544,12 +556,73 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 	}
 }
 
+// buildBpfExpr 构建最终的 BPF 过滤表达式，将用户指定的过滤规则与 S3 上传流量的排除规则合并。
+// 当 s3Endpoint 为空时，直接返回用户的 bpfExpr 不做修改。
+//
+// S3 上传流量排除规则：
+// 通过解析 S3 端点地址（支持 http://host:port, https://host, host:port 等形式），
+// 生成 "not (host <host> and port <port>)" 的 pcap 过滤表达式，确保抓包时不会捕获到
+// 自身向 S3 上传数据的 TCP 流量，从而避免流量包的无限递归放大。
+func buildBpfExpr(bpfExpr, s3Endpoint string) (string, error) {
+	s3Filter, err := buildS3ExclusionFilter(s3Endpoint)
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	if bpfExpr == "" {
+		return s3Filter, nil
+	}
+	return fmt.Sprintf("(%s) and %s", bpfExpr, s3Filter), nil
+}
+
+// buildS3ExclusionFilter 根据 S3 端点地址构建 pcap 过滤表达式，用于排除上传到 S3 的流量。
+// 支持的端点格式：
+//   - http://host:port
+//   - https://host:port
+//   - host:port
+//
+// 返回格式：not (host <host> and port <port>)
+// 若端点为空或无法解析，返回错误——S3 上传是必须的，端点必须有效。
+func buildS3ExclusionFilter(endpoint string) (string, error) {
+	if endpoint == "" || endpoint == "-" {
+		return "", errors.New("s3 endpoint is empty, cannot build S3 exclusion filter")
+	}
+
+	host, port := parseEndpoint(endpoint)
+	if host == "" {
+		return "", errors.Newf("failed to parse s3 endpoint %q: no host found", endpoint)
+	}
+
+	if port == "" {
+		return fmt.Sprintf("not host %s", host), nil
+	}
+	return fmt.Sprintf("not (host %s and port %s)", host, port), nil
+}
+
+// parseEndpoint 从 S3 端点地址中提取主机名和端口号。
+// 使用 net/url 解析带 scheme 的端点；对于不带 scheme 的格式直接按 host:port 分割。
+func parseEndpoint(endpoint string) (host, port string) {
+	if strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://") {
+		u, err := url.Parse(endpoint)
+		if err != nil || u.Host == "" {
+			return "", ""
+		}
+		return u.Hostname(), u.Port()
+	}
+
+	// 不带 scheme，直接按 host:port 分割
+	parts := strings.Split(endpoint, ":")
+	if len(parts) == 2 {
+		return parts[0], parts[1]
+	}
+	return endpoint, ""
+}
+
 func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) error {
 	// mutex 互斥锁管理器，用于保护共享状态和确保线程安全
 	// 提供对配置状态、版本信息等共享资源的读写保护
 	// 支持快照机制，避免在状态读取时发生数据竞争
 	mutex := newCaptureMutex()
-	uploadChan := make(chan time.Time, 100)
+	uploadChan := make(chan notice, 100)
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() error {
 		return cc.runWithRetry(ctx, cc.cfg.Watch.MaxRetries, func(ctx context.Context) error {

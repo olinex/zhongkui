@@ -6,11 +6,35 @@ package s3
 import (
 	"context"
 	"io"
+	"net/http"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
+
+// ClientOption 是 S3 客户端的可选配置函数类型。
+// 用于在创建 S3Client 时注入自定义配置，如自定义 HTTP Transport。
+type ClientOption func(*minio.Options)
+
+// WithTransport 返回一个 ClientOption，用于设置 S3 客户端的底层 HTTP Transport。
+//
+// 参数:
+//   - rt: 自定义的 http.RoundTripper 实现，用于替代默认的 http.DefaultTransport
+//
+// 使用场景:
+//   - 集成 OpenTelemetry 链路追踪
+//   - 添加自定义 HTTP 中间件
+//   - 配置代理或限流等
+//
+// 示例:
+//
+//	client, err := s3.NewS3Client(cfg, s3.WithTransport(s3.NewOtelRoundTripper(http.DefaultTransport)))
+func WithTransport(rt http.RoundTripper) ClientOption {
+	return func(opts *minio.Options) {
+		opts.Transport = rt
+	}
+}
 
 // S3Client 是S3兼容对象存储服务的客户端封装
 // 封装了minio.Client并提供统一的接口，简化S3操作
@@ -23,6 +47,16 @@ type S3Client struct {
 	// bucket 是默认的存储桶名称
 	// 所有操作默认在此存储桶中执行
 	bucket string
+
+	// endpoint 是S3服务的端点地址，用于构建 BPF 过滤器以排除上传流量
+	// 格式如 "localhost:9000" 或 "s3.amazonaws.com"
+	endpoint string
+}
+
+// GetEndpoint 返回S3服务的端点地址
+// 用于上层构建 BPF 过滤规则，避免抓包时捕获到自身的上传流量
+func (s *S3Client) GetEndpoint() string {
+	return s.endpoint
 }
 
 // NewS3Client 创建并初始化一个新的S3Client实例
@@ -48,21 +82,23 @@ type S3Client struct {
 //	if err != nil {
 //	    log.Fatal("Failed to create S3 client:", err)
 //	}
-func NewS3Client(cfg *Config) (*S3Client, error) {
-	client, err := minio.New(
-		cfg.Endpoint,
-		&minio.Options{
-			Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
-			Secure: cfg.UseSSL,
-			Region: cfg.Region,
-		},
-	)
+func NewS3Client(cfg *Config, opts ...ClientOption) (*S3Client, error) {
+	mOpts := &minio.Options{
+		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Secure: cfg.UseSSL,
+		Region: cfg.Region,
+	}
+	for _, opt := range opts {
+		opt(mOpts)
+	}
+	client, err := minio.New(cfg.Endpoint, mOpts)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &S3Client{
-		cli:    client,
-		bucket: cfg.Bucket,
+		cli:      client,
+		bucket:   cfg.Bucket,
+		endpoint: cfg.Endpoint,
 	}, nil
 }
 
@@ -246,36 +282,13 @@ func (s *S3Client) StatObject(ctx context.Context, objectKey string, opts minio.
 	return s.cli.StatObject(ctx, s.bucket, objectKey, opts)
 }
 
-// IsExists 检查错误是否表示对象或存储桶不存在
-// 通过分析minio错误响应，判断错误是否由对象或存储桶不存在引起
-// 如果错误为nil，表示操作成功，对象存在
-// 如果错误是NoSuchKey或NoSuchBucket，表示对象或存储桶不存在
-// 其他错误表示存在其他问题（如权限不足、网络错误等），但对象可能存在
-//
-// 参数:
-//   - err: 要检查的错误，通常来自S3操作（如GetObject、StatObject等）
-//
-// 返回值:
-//   - bool: true表示对象可能存在（错误为nil或其他非"不存在"错误）
-//     false表示对象或存储桶确定不存在（错误为NoSuchKey或NoSuchBucket）
-//
-// 示例:
-//
-//	_, err := client.StatObject(ctx, "some-object.txt", minio.StatObjectOptions{})
-//	if !s3.IsExists(err) {
-//	    fmt.Println("Object does not exist")
-//	} else if err != nil {
-//	    fmt.Println("Other error:", err)
-//	} else {
-//	    fmt.Println("Object exists")
-//	}
-func IsExists(err error) bool {
+func IsNotExists(err error) bool {
 	if err == nil {
-		return true
+		return false
 	}
 	rsp := minio.ToErrorResponse(err)
 	if rsp.Code == minio.NoSuchKey || rsp.Code == minio.NoSuchBucket {
-		return false
+		return true
 	}
-	return true
+	return false
 }

@@ -175,11 +175,11 @@ func TestIPv4Addr_Database(t *testing.T) {
 	Convey("Test IPv4Addr database methods", t, func() {
 		Convey("Value method", func() {
 			ipStr := "192.168.1.1"
-			ip := net.ParseIP(ipStr)
+			ip := net.ParseIP(ipStr).To4()
 			ipv4Addr := IPv4Addr(ip)
 			value, err := ipv4Addr.Value()
 			So(err, ShouldBeNil)
-			So(value, ShouldEqual, ipStr)
+			So(value, ShouldResemble, []byte(ip))
 		})
 
 		Convey("Scan from string", func() {
@@ -240,11 +240,11 @@ func TestIPv6Addr_Database(t *testing.T) {
 	Convey("Test IPv6Addr database methods", t, func() {
 		Convey("Value method", func() {
 			ipStr := "2001:db8::1"
-			ip := net.ParseIP(ipStr)
+			ip := net.ParseIP(ipStr).To16()
 			ipv6Addr := IPv6Addr(ip)
 			value, err := ipv6Addr.Value()
 			So(err, ShouldBeNil)
-			So(value, ShouldEqual, ipStr)
+			So(value, ShouldResemble, []byte(ip))
 		})
 
 		Convey("Scan from string", func() {

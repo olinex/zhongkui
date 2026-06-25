@@ -22,7 +22,7 @@ type stackError interface {
 //
 //	err := errors.New("something went wrong")
 func New(msg string) error {
-	if base.ERROR_STACK_ENV_VAR {
+	if base.Env.ErrorStack {
 		return errors.New(msg)
 	}
 	return e.New(msg)
@@ -35,7 +35,7 @@ func New(msg string) error {
 //
 //	err := errors.Newf("invalid value: %d", value)
 func Newf(format string, args ...any) error {
-	if base.ERROR_STACK_ENV_VAR {
+	if base.Env.ErrorStack {
 		return errors.New(fmt.Sprintf(format, args...))
 	}
 	return fmt.Errorf(format, args...)
@@ -52,7 +52,7 @@ func Newf(format string, args ...any) error {
 //	    return errors.WithStack(err)
 //	}
 func WithStack(err error) error {
-	if base.ERROR_STACK_ENV_VAR && err != nil {
+	if base.Env.ErrorStack && err != nil {
 		switch err.(type) {
 		case stackError:
 			return err

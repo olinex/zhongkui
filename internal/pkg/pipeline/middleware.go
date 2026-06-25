@@ -36,13 +36,13 @@ import (
 // 1. 该中间件应该在任务处理器链的最外层使用
 // 2. 在 server.go 中可以看到，该中间件仅在 DEBUG_ENV_VAR 为 true 时启用
 // 3. panic 被捕获后，任务会正常结束，不会影响其他任务的执行
-// 4. 错误信息会通过 errors.WithStack 添加堆栈跟踪（根据 ERROR_STACK_ENV_VAR 配置）
+// 4. 错误信息会通过 errors.WithStack 添加堆栈跟踪（根据 base.Env.ErrorStack 配置）
 //
 // 示例用法：
 //
 //	// 在任务服务器初始化时使用中间件
 //	mux := asynq.NewServeMux()
-//	if base.DEBUG_ENV_VAR {
+//	if base.Env.Debug {
 //	    mux.Use(RecoverWithStack(logger))
 //	}
 //	mux.HandleFunc("email:send", emailHandler)
@@ -102,7 +102,7 @@ func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Han
 			}
 
 			// 返回错误，使用 errors.WithStack 包装以添加堆栈跟踪
-			// 根据 base.ERROR_STACK_ENV_VAR 配置决定是否真正添加堆栈
+			// 根据 base.Env.ErrorStack 配置决定是否真正添加堆栈
 			// 这样可以统一错误处理，便于调试和问题追踪
 			return errors.WithStack(err)
 		})

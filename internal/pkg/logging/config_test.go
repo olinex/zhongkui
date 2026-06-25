@@ -86,17 +86,17 @@ func TestParseLevel(t *testing.T) {
 		convey.Convey("should panic on invalid level", func() {
 			convey.So(func() {
 				ParseLevel("invalid")
-			}, convey.ShouldPanicWith, "Unknown log level: invalid")
+			}, convey.ShouldPanicWith, "unknown log level: invalid")
 		})
 
-		convey.Convey("should be case-insensitive for valid levels", func() {
+		convey.Convey("should be case-sensitive for valid levels", func() {
 			convey.So(func() {
 				ParseLevel("DEBUG")
-			}, convey.ShouldPanicWith, "Unknown log level: DEBUG")
+			}, convey.ShouldPanicWith, "unknown log level: DEBUG")
 
 			convey.So(func() {
 				ParseLevel("Info")
-			}, convey.ShouldPanicWith, "Unknown log level: Info")
+			}, convey.ShouldPanicWith, "unknown log level: Info")
 		})
 	})
 }

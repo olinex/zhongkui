@@ -19,6 +19,30 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/redis"
 )
 
+// schedulerLogger 是 asynq.Logger 接口的适配器。
+// PeriodicTaskManager 与 Server 共享同一个 Redis 连接，
+// 其内部 Scheduler.Shutdown 调用 client.Close() 时会因共享连接返回错误，
+// 这是预期行为，不需要作为 error 级别日志输出。
+type schedulerLogger struct {
+	logger *logging.Logger
+}
+
+var _ asynq.Logger = (*schedulerLogger)(nil)
+
+func (l *schedulerLogger) Debug(args ...any) { l.logger.Debug(args...) }
+func (l *schedulerLogger) Info(args ...any)  { l.logger.Info(args...) }
+func (l *schedulerLogger) Warn(args ...any)  { l.logger.Warn(args...) }
+func (l *schedulerLogger) Fatal(args ...any) { l.logger.Fatal(args...) }
+func (l *schedulerLogger) Error(args ...any) {
+	if len(args) > 0 {
+		if s, ok := args[0].(string); ok && strings.Contains(s, "Failed to close redis client connection") {
+			l.logger.Debug(args...)
+			return
+		}
+	}
+	l.logger.Error(args...)
+}
+
 var (
 	// schedulerName 调度器名称常量，用于标识当前服务组件。
 	// 此名称会出现在日志和监控指标中，帮助识别调度器实例。
@@ -247,12 +271,12 @@ func NewElectionScheduler(
 	// 创建 asynq 定时任务管理器
 	manager, err := asynq.NewPeriodicTaskManager(
 		asynq.PeriodicTaskManagerOpts{
-			RedisUniversalClient:       redis,
+			RedisUniversalClient:       redis.Client,
 			PeriodicTaskConfigProvider: &provider,
 			SyncInterval:               cfg.SyncInterval,
 			SchedulerOpts: &asynq.SchedulerOpts{
 				HeartbeatInterval: cfg.HeartbeatInterval,
-				Logger:            logger,
+				Logger:            &schedulerLogger{logger: logger},
 				Location:          loc,
 			},
 		},

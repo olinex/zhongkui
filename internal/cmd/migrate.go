@@ -12,29 +12,33 @@ import (
 
 	"github.com/pressly/goose/v3"
 	"github.com/pterm/pterm"
+	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.uber.org/fx"
-	"zhongkui.com/zhongkui/internal/depend"
 	migcore "zhongkui.com/zhongkui/internal/migrations/core"
 	migraw "zhongkui.com/zhongkui/internal/migrations/raw"
 	apimodel "zhongkui.com/zhongkui/internal/models/api"
 	coremodel "zhongkui.com/zhongkui/internal/models/core"
 	netmodel "zhongkui.com/zhongkui/internal/models/network"
 	tagmodel "zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/migrate"
+	"zhongkui.com/zhongkui/internal/provider"
 )
 
 type MigrateParams struct {
-	fx.In
-	Ctx context.Context
-	V   *viper.Viper
-	depend.CoreDatabaseFxIn
-	depend.RawDatabaseFxIn
-	depend.DatabaseLoggerFxIn
+	V      *viper.Viper
+	CoreDB *database.DB
+	RawDB  *database.DB
+}
+
+func newMigrateParams(i do.Injector) MigrateParams {
+	return MigrateParams{
+		V:      provider.MustInvokeViper(i),
+		CoreDB: provider.MustInvokeCoreDatabase(i),
+		RawDB:  provider.MustInvokeRawDatabase(i),
+	}
 }
 
 var migrateCmd = &cobra.Command{
@@ -162,32 +166,22 @@ func nextMigrationVersion(dir string) int {
 
 func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) {
 	return func(cmd *cobra.Command, args []string) {
-		fx.New(
-			depend.FxLogger(),
-			fx.Provide(
-				func() (*cobra.Command, context.Context) { return cmd, context.Background() },
-				config.NewDefaultViperWithCmd,
-				depend.DatabaseLoggerAnnotate(),
-				depend.CoreDatabaseAnnotate(),
-				depend.RawDatabaseAnnotate(),
-			),
-			fx.Invoke(func(p MigrateParams) {
-				timeout := getTimeout(cmd)
-				ctx, cancel := context.WithTimeout(p.Ctx, timeout)
-				defer cancel()
+		_, i := cmdToolBox(cmd)
+		p := newMigrateParams(i)
+		timeout := getTimeout(cmd)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
 
-				dbTarget := getDBTarget(cmd)
+		dbTarget := getDBTarget(cmd)
 
-				for _, dbName := range targetDBs(dbTarget) {
-					pterm.DefaultSection.Printf("%s (%s)", action, dbName)
-					if err := migrateDB(ctx, p, dbName, cmd, action); err != nil {
-						pterm.Error.Printf("%s %s: %v\n", dbName, action, err)
-						os.Exit(1)
-					}
-				}
-				os.Exit(0)
-			}),
-		).Run()
+		for _, dbName := range targetDBs(dbTarget) {
+			pterm.DefaultSection.Printf("%s (%s)", action, dbName)
+			if err := migrateDB(ctx, p, dbName, cmd, action); err != nil {
+				pterm.Error.Printf("%s %s: %v\n", dbName, action, err)
+				os.Exit(1)
+			}
+		}
+		os.Exit(0)
 	}
 }
 
@@ -217,26 +211,16 @@ func migrateDB(ctx context.Context, p MigrateParams, dbName string, cmd *cobra.C
 }
 
 func runDryRunMigrateCmd(cmd *cobra.Command, args []string) {
-	fx.New(
-		depend.FxLogger(),
-		fx.Provide(
-			func() (*cobra.Command, context.Context) { return cmd, context.Background() },
-			config.NewDefaultViperWithCmd,
-			depend.DatabaseLoggerAnnotate(),
-			depend.CoreDatabaseAnnotate(),
-			depend.RawDatabaseAnnotate(),
-		),
-		fx.Invoke(func(p MigrateParams) {
-			dbTarget := getDBTarget(cmd)
-			for _, dbName := range targetDBs(dbTarget) {
-				pterm.DefaultSection.Printf("dry-run %s", dbName)
-				if err := migrateDryRunDB(p, dbName); err != nil {
-					pterm.Error.Printf("dry-run %s: %v\n", dbName, err)
-				}
-			}
-			os.Exit(0)
-		}),
-	).Run()
+	_, i := cmdToolBox(cmd)
+	p := newMigrateParams(i)
+	dbTarget := getDBTarget(cmd)
+	for _, dbName := range targetDBs(dbTarget) {
+		pterm.DefaultSection.Printf("dry-run %s", dbName)
+		if err := migrateDryRunDB(p, dbName); err != nil {
+			pterm.Error.Printf("dry-run %s: %v\n", dbName, err)
+		}
+	}
+	os.Exit(0)
 }
 
 func migrateDryRunDB(p MigrateParams, dbName string) error {
@@ -262,50 +246,30 @@ func migrateDryRunDB(p MigrateParams, dbName string) error {
 }
 
 func runDiffMigrateCmd(cmd *cobra.Command, args []string) {
-	fx.New(
-		depend.FxLogger(),
-		fx.Provide(
-			func() (*cobra.Command, context.Context) { return cmd, context.Background() },
-			config.NewDefaultViperWithCmd,
-			depend.DatabaseLoggerAnnotate(),
-			depend.CoreDatabaseAnnotate(),
-			depend.RawDatabaseAnnotate(),
-		),
-		fx.Invoke(func(p MigrateParams) {
-			dbTarget := getDBTarget(cmd)
-			for _, dbName := range targetDBs(dbTarget) {
-				pterm.DefaultSection.Printf("diff %s", dbName)
-				if err := migrateDiffDB(p, dbName); err != nil {
-					pterm.Error.Printf("diff %s: %v\n", dbName, err)
-				}
-			}
-			os.Exit(0)
-		}),
-	).Run()
+	_, i := cmdToolBox(cmd)
+	p := newMigrateParams(i)
+	dbTarget := getDBTarget(cmd)
+	for _, dbName := range targetDBs(dbTarget) {
+		pterm.DefaultSection.Printf("diff %s", dbName)
+		if err := migrateDiffDB(p, dbName); err != nil {
+			pterm.Error.Printf("diff %s: %v\n", dbName, err)
+		}
+	}
+	os.Exit(0)
 }
 
 func runCheckMigrateCmd(cmd *cobra.Command, args []string) {
-	fx.New(
-		depend.FxLogger(),
-		fx.Provide(
-			func() (*cobra.Command, context.Context) { return cmd, context.Background() },
-			config.NewDefaultViperWithCmd,
-			depend.DatabaseLoggerAnnotate(),
-			depend.CoreDatabaseAnnotate(),
-			depend.RawDatabaseAnnotate(),
-		),
-		fx.Invoke(func(p MigrateParams) {
-			dbTarget := getDBTarget(cmd)
-			keepTemp := getKeepTemp(cmd)
-			for _, dbName := range targetDBs(dbTarget) {
-				pterm.DefaultSection.Printf("check %s", dbName)
-				if err := migrateCheckDB(p, dbName, keepTemp); err != nil {
-					pterm.Error.Printf("check %s: %v\n", dbName, err)
-				}
-			}
-			os.Exit(0)
-		}),
-	).Run()
+	_, i := cmdToolBox(cmd)
+	p := newMigrateParams(i)
+	dbTarget := getDBTarget(cmd)
+	keepTemp := getKeepTemp(cmd)
+	for _, dbName := range targetDBs(dbTarget) {
+		pterm.DefaultSection.Printf("check %s", dbName)
+		if err := migrateCheckDB(p, dbName, keepTemp); err != nil {
+			pterm.Error.Printf("check %s: %v\n", dbName, err)
+		}
+	}
+	os.Exit(0)
 }
 
 func migrateCheckDB(p MigrateParams, dbName string, keepTemp bool) error {
@@ -349,8 +313,6 @@ func coreModels() []any {
 func rawModels() []any {
 	return []any{
 		&netmodel.PacketEthernet{},
-		// 事实上没有FusedEthernet，因为FusedEthernet在理论上并不存在，该类主要是为了后续上层协议引用
-		// &netmodel.FusedEthernet{},
 		&netmodel.PacketIPv4{},
 		&netmodel.PacketIPv6{},
 		&netmodel.PacketIPv4TCP{},

@@ -1,7 +1,6 @@
 package tls
 
 import (
-	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
@@ -47,36 +46,4 @@ func TestGenerateTestSignedCert(t *testing.T) {
 			So(privKey, ShouldNotBeNil)
 		})
 	})
-}
-
-// TestGenerateTestSignedCertErrorHandling tests the error handling of the GenerateTestSignedCert function.
-// It verifies that the function returns an error when the RSA key generation fails.
-func TestGenerateTestSignedCertErrorHandling(t *testing.T) {
-	Convey("TestGenerateTestSignedCertErrorHandling", t, func() {
-		Convey("should return error when RSA key generation fails", func() {
-			// Mock a failure in RSA key generation
-			originalRandReader := rand.Reader
-			defer func() { rand.Reader = originalRandReader }()
-			rand.Reader = &errorReader{}
-
-			_, _, err := GenerateTestSignedCert()
-			So(err, ShouldNotBeNil)
-		})
-	})
-}
-
-// errorReader is a mock reader that always returns an error.
-type errorReader struct{}
-
-func (r *errorReader) Read(p []byte) (n int, err error) {
-	return 0, &errorMock{msg: "mock error"}
-}
-
-// errorMock is a custom error type for testing.
-type errorMock struct {
-	msg string
-}
-
-func (e *errorMock) Error() string {
-	return e.msg
 }

@@ -94,12 +94,14 @@ func (s *Server) SetServingStatus(status healthpb.HealthCheckResponse_ServingSta
 // 返回：
 //   - *Server: 初始化后的gRPC服务器实例
 //   - error: 如果初始化失败，返回相应的错误
-func NewServer(authenticators map[string]Authenticator, cfg *ServerConfig) (*Server, error) {
+func NewServer(authenticators map[string]Authenticator, cfg *ServerConfig, extraOpts ...g.ServerOption) (*Server, error) {
 	// 根据配置创建监听器和服务器选项
 	lis, options, err := cfg.ToOptions(authenticators)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	options = append(options, extraOpts...)
 
 	// 创建gRPC服务器实例
 	srv := g.NewServer(options...)

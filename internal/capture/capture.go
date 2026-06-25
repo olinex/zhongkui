@@ -9,6 +9,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/capture/wire"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
@@ -47,38 +48,21 @@ type capturer struct {
 	linkType layers.LinkType
 }
 
-// filePath 生成pcap文件的完整路径
-// 文件名格式为：{sessionID}.{timestamp}.pcap
-// 其中timestamp使用Unix毫秒时间戳，确保文件名的唯一性
-// 文件路径基于配置中的DumpDir目录
-// 返回值：pcap文件的完整绝对路径
-func (c *capturer) pcapPath(ts time.Time) string {
-	return filepath.Join(
-		c.uploadCfg.DumpDir,
-		fmt.Sprintf(
-			"%s.%d.pcap",
-			c.sessionID.String(),
-			ts.UnixMilli(),
-		),
-	)
-}
-
 // filePath 生成压缩文件的完整路径
 // 该方法根据配置中的临时目录、会话ID和时间戳生成唯一的压缩文件名
-// 文件名格式：{sessionID}.{timestamp_unix_millis}.zstd
 // 返回值：压缩文件的完整绝对路径
-func (c *capturer) zstdPath(ts time.Time) string {
+func (c *capturer) filePath(ts time.Time) string {
 	return filepath.Join(
 		c.uploadCfg.DumpDir,
 		fmt.Sprintf(
-			"%s.%d.zstd",
+			"%d.%s.%s",
+			ts.UnixMilli(),
 			c.sessionID.String(),
-			ts.UnixMilli()),
+			crypto.FILE_EXT),
 	)
 }
 
 // 构建唯一的对象存储键名
-// 键名格式：namespace/name/version/timestamp_sessionID.zstd
 func (c *capturer) objectKey(ts time.Time) string {
 	return BuildObjectKey(
 		c.resource.Namespace,
@@ -113,23 +97,17 @@ func (c *capturer) objectKey(ts time.Time) string {
 // 并发安全：
 //   - 该方法不是线程安全的，每个capturer实例应独立使用
 //   - 数据包通道的读取是阻塞的，直到通道关闭或上下文取消
-func (c *capturer) capture(ctx context.Context, ws wire.Wire, uploadChan chan<- time.Time) error {
+func (c *capturer) capture(ctx context.Context, ws wire.Wire, uploadChan chan<- notice) error {
 	wg, ctx := errgroup.WithContext(ctx)
-	dumpChan := make(chan time.Time, 10)
-	compressChan := make(chan time.Time, 10)
+	dumpChan := make(chan notice, 10)
 	wg.Go(func() error {
 		defer close(dumpChan)
-		// 第一阶段：数据包捕获和导出到pcap文件
+		// 第一阶段：数据包捕获/压缩/加密到指定文件
 		return c.dump(ctx, ws, dumpChan)
 	})
 	wg.Go(func() error {
-		defer close(compressChan)
-		// 第二阶段：文件压缩
-		return c.compress(ctx, dumpChan, compressChan)
-	})
-	wg.Go(func() error {
 		// 第三阶段：文件上传到S3
-		return c.upload(ctx, compressChan, uploadChan)
+		return c.upload(ctx, dumpChan, uploadChan)
 	})
 	if err := wg.Wait(); err != nil {
 		return errors.WithStack(err)

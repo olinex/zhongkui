@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"encoding/json"
 	"net"
 	"testing"
 	"time"
@@ -89,6 +90,64 @@ func (m *mockTCPPacket) IsRst() bool {
 
 func (m *mockTCPPacket) GetPayload() []byte {
 	return m.payload
+}
+
+// mockAux 是 mockTCPPacket 的 JSON 序列化辅助结构体。
+type mockAux struct {
+	StreamID string         `json:"stream_id"`
+	SrcAddr  net.IP         `json:"src_addr"`
+	DstAddr  net.IP         `json:"dst_addr"`
+	SrcPort  layers.TCPPort `json:"src_port"`
+	DstPort  layers.TCPPort `json:"dst_port"`
+	SeqNum   uint32         `json:"seq_num"`
+	AckNum   uint32         `json:"ack_num"`
+	Syn      bool           `json:"syn"`
+	SynAck   bool           `json:"syn_ack"`
+	Ack      bool           `json:"ack"`
+	Fin      bool           `json:"fin"`
+	Rst      bool           `json:"rst"`
+	Payload  []byte         `json:"payload"`
+}
+
+// MarshalJSON 实现 mockTCPPacket 的 JSON 序列化，支持 outOrderPackets 测试。
+func (m *mockTCPPacket) MarshalJSON() ([]byte, error) {
+	return json.Marshal(mockAux{
+		StreamID: m.streamID,
+		SrcAddr:  m.srcAddr,
+		DstAddr:  m.dstAddr,
+		SrcPort:  m.srcPort,
+		DstPort:  m.dstPort,
+		SeqNum:   m.seqNum,
+		AckNum:   m.ackNum,
+		Syn:      m.flags.syn,
+		SynAck:   m.flags.synAck,
+		Ack:      m.flags.ack,
+		Fin:      m.flags.fin,
+		Rst:      m.flags.rst,
+		Payload:  m.payload,
+	})
+}
+
+// UnmarshalJSON 实现 mockTCPPacket 的 JSON 反序列化。
+func (m *mockTCPPacket) UnmarshalJSON(data []byte) error {
+	var aux mockAux
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	m.streamID = aux.StreamID
+	m.srcAddr = aux.SrcAddr
+	m.dstAddr = aux.DstAddr
+	m.srcPort = aux.SrcPort
+	m.dstPort = aux.DstPort
+	m.seqNum = aux.SeqNum
+	m.ackNum = aux.AckNum
+	m.flags.syn = aux.Syn
+	m.flags.synAck = aux.SynAck
+	m.flags.ack = aux.Ack
+	m.flags.fin = aux.Fin
+	m.flags.rst = aux.Rst
+	m.payload = aux.Payload
+	return nil
 }
 
 func newMockTCPPacket() *mockTCPPacket {

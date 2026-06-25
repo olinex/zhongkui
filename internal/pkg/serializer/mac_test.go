@@ -73,7 +73,7 @@ func TestMacAddr_Database(t *testing.T) {
 			macAddr := MacAddr(mac)
 			value, err := macAddr.Value()
 			So(err, ShouldBeNil)
-			So(value, ShouldEqual, macStr)
+			So(value, ShouldResemble, []byte(mac))
 		})
 
 		Convey("Value method with empty MAC", func() {
@@ -91,12 +91,26 @@ func TestMacAddr_Database(t *testing.T) {
 			So(scannedMac.String(), ShouldEqual, macStr)
 		})
 
-		Convey("Scan from []byte", func() {
+		Convey("Scan from string []byte", func() {
 			macStr := "00:11:22:33:44:55"
 			var scannedMac MacAddr
 			err := scannedMac.Scan([]byte(macStr))
 			So(err, ShouldBeNil)
 			So(scannedMac.String(), ShouldEqual, macStr)
+		})
+
+		Convey("Scan from 6-byte raw MAC (FixedString(6))", func() {
+			raw := []byte{0x00, 0x11, 0x22, 0x33, 0x44, 0x55}
+			var scannedMac MacAddr
+			err := scannedMac.Scan(raw)
+			So(err, ShouldBeNil)
+			So(scannedMac.String(), ShouldEqual, "00:11:22:33:44:55")
+		})
+
+		Convey("Scan from empty []byte", func() {
+			var scannedMac MacAddr
+			err := scannedMac.Scan([]byte{})
+			So(err, ShouldBeNil)
 		})
 
 		Convey("Scan from nil", func() {

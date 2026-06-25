@@ -5,8 +5,10 @@ package redis
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/redis/go-redis/v9"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 // Client 是 go-redis/v9 库中 redis.Client 的类型别名。
@@ -19,7 +21,11 @@ import (
 //	if err != nil {
 //	    // 处理连接错误
 //	}
-type Client = redis.Client
+type Client struct {
+	*redis.Client
+	lock   sync.Mutex
+	closed bool
+}
 
 // NewClient 根据提供的配置创建一个新的Redis客户端。
 // 这个工厂函数支持两种Redis部署模式:
@@ -54,12 +60,33 @@ func NewClient(cfg *Config) *Client {
 	switch cfg.Type {
 	case NORMAL_TYPE:
 		// 为独立实例创建标准Redis客户端
-		return redis.NewClient(cfg.ToOptions())
+		return &Client{
+			Client: redis.NewClient(cfg.ToOptions()),
+			lock:   sync.Mutex{},
+			closed: false,
+		}
 	case SENTINEL_TYPE:
 		// 为Redis Sentinel集群创建具备故障转移感知的客户端
-		return redis.NewFailoverClient(cfg.ToSentinelOptions())
+		return &Client{
+			Client: redis.NewFailoverClient(cfg.ToSentinelOptions()),
+			lock:   sync.Mutex{},
+			closed: false,
+		}
 	default:
 		// 无效的配置类型 - 触发panic以防止运行时错误
 		panic(fmt.Sprintf("unsupport client type %s", cfg.Type))
 	}
+}
+
+func (c *Client) Shutdown() error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	if c.closed {
+		return nil
+	}
+	if err := c.Client.Close(); err != nil {
+		return errors.WithStack(err)
+	}
+	c.closed = true
+	return nil
 }
