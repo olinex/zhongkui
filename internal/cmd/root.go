@@ -25,9 +25,6 @@ var RootCmd = &cobra.Command{
 		var i = do.New()
 		ctx := cmd.Context()
 		provider.InjectCommand(i, cmd)
-		provider.InjectValidate(i)
-		// 强制性注入 validator.Validate 实例，确保在其他组件中可以使用
-		provider.MustInvokeValidate(i)
 		provider.InjectViper(i)
 		provider.InjectS3(i)
 		provider.InjectGin(i)

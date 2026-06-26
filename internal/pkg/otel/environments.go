@@ -4,9 +4,22 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"zhongkui.com/zhongkui/internal/pkg/base"
 )
+
+var (
+	once sync.Once
+	Env  OtelEnv
+)
+
+type OtelEnv struct {
+	ServiceName  string
+	OtlpEndpoint string
+	OtlpInsecure bool
+	OtlpProtocol string
+}
 
 // ExtractConfig 从 viper 实例中提取 OTEL 配置，同时支持环境变量覆盖
 //
@@ -43,7 +56,7 @@ var (
 func init() {
 	// 环境变量
 	tmp := os.Getenv(fmt.Sprintf(`%s_OTEL_EXPORTER_OTLP_PROTOCOL`, strings.ToUpper(base.GLOBAL_PREFIX)))
-	
+
 	if tmp != "" {
 		EXPORTER_OTLP_PROTOCOL_ENV = tmp
 	}

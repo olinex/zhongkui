@@ -319,7 +319,6 @@ func DescribeConfig[C any](prefix string) ConfigDescriptions {
 //	fmt.Println(cfg.Host) // "10.0.0.1"
 func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
 	var cfg C
-	validate := validator.MustValidate()
 	if err := defaults.Set(&cfg); err != nil {
 		return nil, errors.WithStack(err)
 	} else if sub := v.Sub(prefix); sub == nil {
@@ -332,7 +331,7 @@ func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
 		),
 	)); err != nil {
 		return nil, errors.WithStack(err)
-	} else if err := validate.Struct(&cfg); err != nil {
+	} else if err := validator.Validate.Struct(&cfg); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &cfg, nil

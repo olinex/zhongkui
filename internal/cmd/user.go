@@ -62,13 +62,12 @@ func extractUser() (*core.User, error) {
 
 func extractUsernamePassword() (username, password string, err error) {
 	userIn := routes.UserRegisterIn{}
-	validator := validator.MustValidate()
 	// username
 	userIn.Username, err = pterm.DefaultInteractiveTextInput.Show("please enter username")
 	if err != nil {
 		return "", "", err
 	}
-	err = validator.StructPartial(&userIn, "UserPasswordLoginIn.Username")
+	err = validator.Validate.StructPartial(&userIn, "UserPasswordLoginIn.Username")
 	if err != nil {
 		return "", "", errors.Newf("Bad username cause: %v", err)
 	}
@@ -78,7 +77,7 @@ func extractUsernamePassword() (username, password string, err error) {
 		if err != nil {
 			return "", "", err
 		}
-		err = validator.StructPartial(&userIn, "UserPasswordLoginIn.Password")
+		err = validator.Validate.StructPartial(&userIn, "UserPasswordLoginIn.Password")
 		if err != nil {
 			return "", "", errors.Newf("Bad password cause: %v", err)
 		}
@@ -86,7 +85,7 @@ func extractUsernamePassword() (username, password string, err error) {
 		if err != nil {
 			return "", "", err
 		}
-		err = validator.StructPartial(&userIn, "UserPasswordLoginIn.PasswordAgain")
+		err = validator.Validate.StructPartial(&userIn, "UserPasswordLoginIn.PasswordAgain")
 		if err != nil {
 			return "", "", errors.Newf("Bad password again cause: %v", err)
 		}
@@ -108,9 +107,7 @@ var createUserCmd = &cobra.Command{
 		timeout := v.GetDuration("timeout")
 		superuser := v.GetBool("superuser")
 
-		provider.MustInvokeValidate(injector)
 		db := provider.MustInvokeCoreDatabase(injector)
-		provider.MustInvokeRbac(injector)
 		user, err := extractUser()
 		if err != nil {
 			pterm.Error.Println(err.Error())

@@ -152,7 +152,7 @@ func TestTranslationRegister(t *testing.T) {
 
 		Convey("Should register translation successfully", func() {
 			// 获取验证器实例
-			validate := MustValidate()
+			validate := mustValidate()
 			So(validate, ShouldNotBeNil)
 
 			// 验证函数至少可以调用而不panic
@@ -275,13 +275,13 @@ func TestErrorHandling(t *testing.T) {
 	Convey("Test error handling in i18n functions", t, func() {
 		Convey("Should handle nil parameters gracefully", func() {
 			// 在实际代码中，函数应该处理 nil 参数
-			// 由于函数内部使用 MustValidate()，如果验证器未初始化会 panic
+			// 由于函数内部使用 mustValidate()，如果验证器未初始化会 panic
 
 			// 重置验证器以确保干净的状态
 			binding.Validator = &defaultValidator{}
 
 			// 获取验证器实例（确保不会 panic）
-			validate := MustValidate()
+			validate := mustValidate()
 			So(validate, ShouldNotBeNil)
 
 			t.Log("Functions rely on properly initialized validator")
@@ -348,8 +348,8 @@ func BenchmarkTranslationRegistration(b *testing.B) {
 		// 重置验证器状态
 		binding.Validator = &defaultValidator{}
 
-		// 调用 MustValidate 获取验证器实例
-		_ = MustValidate()
+		// 调用 mustValidate 获取验证器实例
+		_ = mustValidate()
 
 		// 注意：由于依赖复杂，我们无法完整测试 translationRegister
 		// 在实际基准测试中，应该设置完整的依赖

@@ -150,7 +150,6 @@ func newBundle(cfg *Config, logger *logging.Logger) *i18n.Bundle {
 func newUniversalTranslator(cfg *Config, bundle *i18n.Bundle, logger *logging.Logger) *ut.UniversalTranslator {
 	// 获取全局验证器实例
 	// 验证器是单例模式，确保所有翻译使用同一个验证器实例
-	validate := validator.MustValidate()
 	var uni *ut.UniversalTranslator
 
 	// 创建英语和简体中文的本地化器
@@ -187,7 +186,7 @@ func newUniversalTranslator(cfg *Config, bundle *i18n.Bundle, logger *logging.Lo
 		case language.SimplifiedChinese:
 			logger.Infof("register zh validator translation for %s", lang)
 			// 注册中文验证器翻译（默认规则）
-			err := zh_translations.RegisterDefaultTranslations(validate, trans)
+			err := zh_translations.RegisterDefaultTranslations(validator.Validate, trans)
 			if err != nil {
 				panic(err)
 			}
@@ -199,7 +198,7 @@ func newUniversalTranslator(cfg *Config, bundle *i18n.Bundle, logger *logging.Lo
 		case language.English:
 			logger.Infof("register en validator translation for %s", lang)
 			// 注册英文验证器翻译（默认规则）
-			err := en_translations.RegisterDefaultTranslations(validate, trans)
+			err := en_translations.RegisterDefaultTranslations(validator.Validate, trans)
 			if err != nil {
 				panic(err)
 			}

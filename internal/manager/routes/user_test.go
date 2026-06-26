@@ -20,12 +20,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
-
-func init() {
-	validator.ValidatorRegister(validator.MustValidate())
-}
 
 func createUserSelfTestDB() *database.DB {
 	cfg := &database.Config{

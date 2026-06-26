@@ -8,8 +8,9 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/provider"
 	tlsutil "zhongkui.com/zhongkui/internal/pkg/tls"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkui.com/zhongkui/internal/provider"
 )
 
 type TLSInputs struct {
@@ -36,8 +37,7 @@ var generateTLSCmd = &cobra.Command{
 			TTL:      ttl,
 			DNSNames: dnsNames,
 		}
-		validate := provider.MustInvokeValidate(injector)
-		if err := validate.Struct(&inputs); err != nil {
+		if err := validator.Validate.Struct(&inputs); err != nil {
 			return err
 		}
 		if err := os.MkdirAll(dirPath, os.ModeDir|os.ModePerm); err != nil {

@@ -34,7 +34,7 @@ import (
 // - 翻译器会缓存翻译结果以提高性能
 func translationRegister(trans ut.Translator, bundle *i18n.Bundle, tag, lang string) error {
 	// 获取全局验证器实例
-	validate := MustValidate()
+	validate := mustValidate()
 
 	// 创建对应语言的本地化器
 	localizer := i18n.NewLocalizer(bundle, lang)
