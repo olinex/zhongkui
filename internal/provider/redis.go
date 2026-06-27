@@ -1,10 +1,10 @@
 package provider
 
 import (
-	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/redis"
 )
 
@@ -25,15 +25,10 @@ func redisProvider(name string) do.Provider[*redis.Client] {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		client := redis.NewClient(cfg)
 		// 如果 OTEL 已启用，为 Redis 添加链路追踪和指标收集
-		if rt, err := InvokeOtel(i); err == nil && rt != nil {
-			if err := redisotel.InstrumentTracing(client.Client); err != nil {
-				return nil, errors.WithStack(err)
-			}
-			if err := redisotel.InstrumentMetrics(client.Client); err != nil {
-				return nil, errors.WithStack(err)
-			}
+		client := redis.NewClient(cfg)
+		if err := otel.InjectRedisClient(client); err != nil {
+			return nil, errors.WithStack(err)
 		}
 		return client, nil
 	}

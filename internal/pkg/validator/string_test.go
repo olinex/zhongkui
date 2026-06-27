@@ -2,9 +2,10 @@ package validator
 
 import (
 	"fmt"
-	. "github.com/smartystreets/goconvey/convey"
 	"runtime"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 // TestIsValidStrongPassword tests the password validation function
@@ -670,9 +671,9 @@ func TestBase32Validation(t *testing.T) {
 	Convey("Test Base32 validation", t, func() {
 		Convey("Valid Base32 strings", func() {
 			validBase32s := []string{
-				"NBSWY3DP",              // "hello"
-				"ORSXG5A=",              // "test"
-				"",                      // Empty string is valid base32
+				"NBSWY3DP", // "hello"
+				"ORSXG5A=", // "test"
+				"",         // Empty string is valid base32
 			}
 
 			for _, value := range validBase32s {

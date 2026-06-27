@@ -5,6 +5,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 )
 
 const (
@@ -33,11 +34,9 @@ func newDatabaseProvider(name string) do.Provider[*database.DB] {
 			return nil, errors.WithStack(err)
 		}
 		// 如果 OTEL 已启用，为 GORM 添加 OTEL 追踪插件
-		if rt, err := InvokeOtel(i); err == nil {
-			if plugin := rt.GormPlugin(); plugin != nil {
-				if err := db.Use(plugin); err != nil {
-					return nil, errors.WithStack(err)
-				}
+		if plugin := otel.GormPlugin(); plugin != nil {
+			if err := db.Use(plugin); err != nil {
+				return nil, errors.WithStack(err)
 			}
 		}
 		return db, nil

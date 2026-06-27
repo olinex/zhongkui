@@ -5,6 +5,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 )
 
 const (
@@ -37,9 +38,7 @@ func loggerProvider(name string) do.Provider[*logging.Logger] {
 			return nil, errors.WithStack(err)
 		}
 		// 如果 OTEL 已启用，将 logger 通过 otelzap bridge 接入 OpenTelemetry
-		if rt, err := InvokeOtel(i); err == nil && rt != nil {
-			logger = rt.WrapSugaredLogger(logger, name)
-		}
+		logger = otel.WrapSugaredLogger(logger, name)
 		return logger, nil
 	}
 }

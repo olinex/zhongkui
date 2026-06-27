@@ -4,10 +4,10 @@ import (
 	"context"
 
 	"github.com/samber/do/v2"
-	g "google.golang.org/grpc"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 )
 
 func etcdClientProvider(ctx context.Context) do.Provider[*etcd.EtcdClient] {
@@ -19,12 +19,7 @@ func etcdClientProvider(ctx context.Context) do.Provider[*etcd.EtcdClient] {
 		} else if cfg, err := etcd.ExtractConfig(viper); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
-			var dialOpts []g.DialOption
-			// 如果 OTEL 已启用，为 etcd gRPC 添加追踪
-			if rt, err := InvokeOtel(i); err == nil && rt != nil {
-				dialOpts = append(dialOpts, rt.EtcdDialOptions()...)
-			}
-			client, err := etcd.NewEtcdClient(ctx, cfg, logger, dialOpts...)
+			client, err := etcd.NewEtcdClient(ctx, cfg, logger, otel.EtcdDialOptions()...)
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}

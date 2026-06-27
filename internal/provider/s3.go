@@ -1,11 +1,10 @@
 package provider
 
 import (
-	"net/http"
-
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 )
 
@@ -20,13 +19,8 @@ func newS3Provider() do.Provider[*s3.S3Client] {
 			return nil, errors.WithStack(err)
 		}
 
-		var opts []s3.ClientOption
 		// 如果 OTEL 已启用，为 S3 HTTP 调用添加链路追踪
-		if rt, err := InvokeOtel(i); err == nil && rt != nil {
-			opts = append(opts, s3.WithTransport(s3.NewOtelRoundTripper(http.DefaultTransport)))
-		}
-
-		client, err := s3.NewS3Client(cfg, opts...)
+		client, err := s3.NewS3Client(cfg, otel.S3ClientOptions()...)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

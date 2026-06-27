@@ -24,6 +24,9 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		var i = do.New()
 		ctx := cmd.Context()
+		provider.InjectOtelShutdowner(ctx, i)
+		_ = provider.MustInvokeOtelShutdowner(ctx, i)
+
 		provider.InjectCommand(i, cmd)
 		provider.InjectViper(i)
 		provider.InjectS3(i)

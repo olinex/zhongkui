@@ -8,6 +8,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/grpc"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 )
 
 const (
@@ -45,11 +46,7 @@ func grpcServerProvider(name string) do.Provider[*grpc.Server] {
 			return nil, errors.WithStack(err)
 		}
 		// 如果 OTEL 已启用，添加 gRPC 追踪的 stats handler
-		rt, err := InvokeOtel(i)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		server, err := grpc.NewServer(grpcReporterAuthenticator(i), cfg, rt.GrpcServerOptions()...)
+		server, err := grpc.NewServer(grpcReporterAuthenticator(i), cfg, otel.GrpcServerOptions()...)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -68,11 +65,7 @@ func grpcClientProvider(name string) do.Provider[*grpc.Client] {
 			return nil, errors.WithStack(err)
 		}
 		// 如果 OTEL 已启用，添加 gRPC 追踪的 stats handler
-		rt, err := InvokeOtel(i)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		client, err := grpc.NewClient(cfg, rt.GrpcClientOptions()...)
+		client, err := grpc.NewClient(cfg, otel.GrpcClientOptions()...)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

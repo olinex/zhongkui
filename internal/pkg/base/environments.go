@@ -13,7 +13,6 @@ type GlobalEnv struct {
 	Environment string `envconfig:"ENVIRONMENT" default:"product"`
 	Debug       bool   `envconfig:"DEBUG" default:"false"`
 	ErrorStack  bool   `envconfig:"ERROR_STACK" default:"false"`
-	Otel        bool   `envconfig:"OTEL" default:"false"`
 }
 
 func init() {

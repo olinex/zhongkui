@@ -75,3 +75,7 @@ func WithStack(err error) error {
 func Is(err error, target error) bool {
 	return errors.Is(err, target)
 }
+
+func Join(errs ...error) error {
+	return e.Join(errs...)
+}

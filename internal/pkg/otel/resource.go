@@ -2,7 +2,6 @@ package otel
 
 import (
 	"context"
-	"fmt"
 
 	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -11,7 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/version"
 )
 
-func NewResource(ctx context.Context, name, namespace, instanceID string) (*sdkresource.Resource, error) {
+func NewResource(ctx context.Context) (*sdkresource.Resource, error) {
 	res, err := sdkresource.New(
 		ctx,
 		sdkresource.WithFromEnv(),      // 从环境变量 OTEL_RESOURCE_ATTRIBUTES 和 OTEL_SERVICE_NAME 中发现并提供属性。
@@ -21,11 +20,8 @@ func NewResource(ctx context.Context, name, namespace, instanceID string) (*sdkr
 		sdkresource.WithContainer(),    // 发现并提供容器信息。
 		sdkresource.WithHost(),         // 发现并提供主机信息。
 		sdkresource.WithAttributes(
-			semconv.DeploymentEnvironment(base.ENVIRONMENT_VAR),
-			semconv.ServiceName(fmt.Sprintf(`%s.%s`, base.GLOBAL_PREFIX, name)),
+			semconv.DeploymentEnvironment(base.Env.Environment),
 			semconv.ServiceVersion(version.Short()),
-			semconv.ServiceNamespace(namespace),
-			semconv.ServiceInstanceID(instanceID),
 		),
 	)
 	if err != nil {

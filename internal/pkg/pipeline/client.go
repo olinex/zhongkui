@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/hibiken/asynq"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/redis"
 )
 
@@ -73,30 +74,15 @@ type Client struct {
 //	// 使用完毕后关闭客户端
 //	defer pipelineClient.Close()
 func NewClient(cli *redis.Client) *Client {
-	return &Client{
-		cli: asynq.NewClientFromRedisClient(cli.Client),
-	}
-}
-
-// NewTracedClient 创建一个带 OpenTelemetry 追踪的 Pipeline 客户端。
-// 与 NewClient 功能相同，但在 Enqueue 和 EnqueueContext 方法中自动创建追踪 span，
-// 用于链路追踪和性能监控。
-//
-// 参数:
-//
-//	cli: *redis.Client - Redis 客户端实例，用于连接 Redis 服务器。
-//
-// 返回:
-//
-//	*Client - 带链路追踪的客户端实例。
-//
-// 示例:
-//
-//	client := NewTracedClient(redisClient)
-//	info, err := client.EnqueueContext(ctx, task)
-func NewTracedClient(cli *redis.Client) *Client {
-	return &Client{
-		cli: newTracedClient(asynq.NewClientFromRedisClient(cli.Client)),
+	client := asynq.NewClientFromRedisClient(cli.Client)
+	if wrap := otel.WrapAsynqClient(client); wrap != nil {
+		return &Client{
+			cli: wrap,
+		}
+	} else {
+		return &Client{
+			cli: client,
+		}
 	}
 }
 

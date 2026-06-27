@@ -3,11 +3,11 @@ package provider
 import (
 	"context"
 
-	"github.com/hibiken/asynq"
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 )
 
@@ -63,10 +63,6 @@ func newPipelineClientProvider() do.Provider[*pipeline.Client] {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		// 如果 OTEL 已启用，创建带链路追踪的客户端
-		if rt, err := InvokeOtel(i); err == nil && rt != nil {
-			return pipeline.NewTracedClient(redis), nil
-		}
 		return pipeline.NewClient(redis), nil
 	}
 }
@@ -97,24 +93,12 @@ func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server
 		ctxFunc := pipeline.TaskContext(ctx, i)
 		rawCfg := cfg.ToAsynqConfig(ctxFunc, logger)
 
-		// 如果 OTEL 已启用，添加 Asynq trace 中间件
-		rt, err := InvokeOtel(i)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		var mws []asynq.MiddlewareFunc
-		if rt != nil {
-			if mw := rt.AsynqMiddleware(); mw != nil {
-				mws = append(mws, mw)
-			}
-		}
-
 		return pipeline.NewServer(
 			redisClient,
 			rawCfg,
 			logger,
 			handlers,
-			mws...,
+			otel.AsynqServerMiddleware(),
 		), nil
 	}
 }
