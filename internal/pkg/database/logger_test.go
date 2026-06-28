@@ -8,6 +8,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // TestNewZapGormLogger 测试 NewZapGormLogger 函数的创建行为
@@ -18,7 +19,7 @@ func TestNewZapGormLogger(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		log := zapLogger.Sugar()
+		log := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 		
 		gormLogger := NewZapGormLogger(log)
 		
@@ -36,7 +37,7 @@ func TestZapGormLogger_LogMode(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		log := zapLogger.Sugar()
+		log := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 		
 		zapLoggerStruct := ZapGormLogger{loggger: log}
 		
@@ -60,7 +61,7 @@ func TestZapGormLogger_Info(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		log := zapLogger.Sugar()
+		log := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 		
 		zapLoggerStruct := ZapGormLogger{loggger: log}
 		ctx := context.Background()
@@ -89,7 +90,7 @@ func TestZapGormLogger_Warn(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		log := zapLogger.Sugar()
+		log := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 		
 		zapLoggerStruct := ZapGormLogger{loggger: log}
 		ctx := context.Background()
@@ -111,7 +112,7 @@ func TestZapGormLogger_Error(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		log := zapLogger.Sugar()
+		log := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 		
 		zapLoggerStruct := ZapGormLogger{loggger: log}
 		ctx := context.Background()
@@ -133,7 +134,7 @@ func TestZapGormLogger_Trace(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		log := zapLogger.Sugar()
+		log := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 		
 		zapLoggerStruct := ZapGormLogger{loggger: log}
 		ctx := context.Background()
@@ -185,7 +186,7 @@ func TestZapGormLogger_Trace_EdgeCases(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		log := zapLogger.Sugar()
+		log := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 		
 		zapLoggerStruct := ZapGormLogger{loggger: log}
 		ctx := context.Background()

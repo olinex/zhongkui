@@ -1,6 +1,7 @@
 package wire
 
 import (
+	"context"
 	"io"
 	"net"
 	"strings"
@@ -58,13 +59,13 @@ type Wire interface {
 	Close()
 }
 
-func NewWire(config *reporter_v1.Config, logger *logging.Logger) (Wire, error) {
+func NewWire(ctx context.Context, config *reporter_v1.Config, logger *logging.Logger) (Wire, error) {
 	if config == nil {
 		return nil, errors.New("config is nil")
 	}
 	pWire, err := NewPlatformWire(config)
 	if err != nil {
-		logger.Warnf(`new platform wire failed: %v`, err)
+		logger.Ctx(ctx).Errorf(`new platform wire failed: %v`, err)
 		return NewLibpcapWire(config)
 	}
 	return pWire, nil

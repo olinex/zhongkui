@@ -24,19 +24,20 @@ import (
 // 其内部 Scheduler.Shutdown 调用 client.Close() 时会因共享连接返回错误，
 // 这是预期行为，不需要作为 error 级别日志输出。
 type schedulerLogger struct {
+	ctx    context.Context
 	logger *logging.Logger
 }
 
 var _ asynq.Logger = (*schedulerLogger)(nil)
 
-func (l *schedulerLogger) Debug(args ...any) { l.logger.Debug(args...) }
-func (l *schedulerLogger) Info(args ...any)  { l.logger.Info(args...) }
-func (l *schedulerLogger) Warn(args ...any)  { l.logger.Warn(args...) }
-func (l *schedulerLogger) Fatal(args ...any) { l.logger.Fatal(args...) }
+func (l *schedulerLogger) Debug(args ...any) { l.logger.With("context", l.ctx).Debug(args...) }
+func (l *schedulerLogger) Info(args ...any)  { l.logger.With("context", l.ctx).Info(args...) }
+func (l *schedulerLogger) Warn(args ...any)  { l.logger.With("context", l.ctx).Warn(args...) }
+func (l *schedulerLogger) Fatal(args ...any) { l.logger.With("context", l.ctx).Fatal(args...) }
 func (l *schedulerLogger) Error(args ...any) {
 	if len(args) > 0 {
 		if s, ok := args[0].(string); ok && strings.Contains(s, "Failed to close redis client connection") {
-			l.logger.Debug(args...)
+			l.logger.With("context", l.ctx).Debug(args...)
 			return
 		}
 	}
@@ -96,7 +97,7 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 			if _, err := e.client.Put(e.ctx, key, string(value)); err != nil {
 				return errors.WithStack(err)
 			}
-			e.logger.Infof(`Key %s was force flush into etcd`, key)
+			e.logger.With("context", e.ctx).Infof(`Key %s was force flush into etcd`, key)
 		} else {
 			// 安全模式：仅当键不存在时才写入配置（事务操作）
 			rsp, err := e.client.Txn(e.ctx).
@@ -107,9 +108,9 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 				return errors.WithStack(err)
 			}
 			if rsp.Succeeded {
-				e.logger.Infof(`Key %s was written into etcd`, key)
+				e.logger.With("context", e.ctx).Infof(`Key %s was written into etcd`, key)
 			} else {
-				e.logger.Infof(`Key %s already exists`, key)
+				e.logger.With("context", e.ctx).Infof(`Key %s already exists`, key)
 			}
 		}
 	}
@@ -276,7 +277,7 @@ func NewElectionScheduler(
 			SyncInterval:               cfg.SyncInterval,
 			SchedulerOpts: &asynq.SchedulerOpts{
 				HeartbeatInterval: cfg.HeartbeatInterval,
-				Logger:            &schedulerLogger{logger: logger},
+				Logger:            &schedulerLogger{ctx: ctx, logger: logger},
 				Location:          loc,
 			},
 		},

@@ -51,7 +51,7 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, s
 	if err := writer.WriteFileHeader(c.captureCfg.SnapLen, c.linkType); err != nil {
 		return errors.WithStack(err)
 	}
-	c.logger.Infof(
+	c.logger.Ctx(ctx).Infof(
 		"header {snap length: %d, link type: %s} is write to pcap file %s",
 		c.captureCfg.SnapLen,
 		c.linkType,
@@ -116,7 +116,7 @@ func (c *capturer) dump(ctx context.Context, ws wire.Wire, notifyChan chan<- not
 				return nil
 			case notifyChan <- n:
 			}
-			c.logger.Infof("dump pcap file %s success", filePath)
+			c.logger.Ctx(ctx).Infof("dump pcap file %s success", filePath)
 		}
 	}
 }

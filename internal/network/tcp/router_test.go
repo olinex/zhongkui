@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
@@ -90,7 +91,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 	Convey("Test Router JSON Marshal/Unmarshal (With Flows)", t, func() {
 
 		Convey("Router with single flow should marshal and unmarshal correctly", func() {
-			logger := zap.NewNop().Sugar()
+			logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
 			clientAddr := net.ParseIP("192.168.1.100")
 			serverAddr := net.ParseIP("10.0.0.1")
@@ -156,7 +157,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 		})
 
 		Convey("Router with multiple flows across different metas should be preserved", func() {
-			logger := zap.NewNop().Sugar()
+			logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 			clientAddr := net.ParseIP("192.168.1.100")
 			serverAddr := net.ParseIP("10.0.0.1")
 
@@ -332,7 +333,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 func TestRouterJSON_NonSYNPacket(t *testing.T) {
 	Convey("Test Router JSON with non-SYN packets", t, func() {
 		Convey("Non-SYN packet should not create node, router stays empty", func() {
-			logger := zap.NewNop().Sugar()
+			logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
 			clientAddr := net.ParseIP("192.168.1.100")
 			serverAddr := net.ParseIP("10.0.0.1")
@@ -643,7 +644,7 @@ func TestReassemblerJSONRoundTrip(t *testing.T) {
 func TestRouterJSON_NestedStatePreservation(t *testing.T) {
 	Convey("Test Router JSON preserves nested state", t, func() {
 		Convey("Complete TCP handshake state should survive Router round-trip", func() {
-			logger := zap.NewNop().Sugar()
+			logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
 			clientAddr := net.ParseIP("192.168.1.100")
 			serverAddr := net.ParseIP("10.0.0.1")

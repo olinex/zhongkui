@@ -17,6 +17,7 @@ import (
 	"golang.org/x/text/language"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 func newBaseTestLocalizer() *i18n.Localizer {
@@ -54,6 +55,8 @@ func newBaseTestTranslator() ut.Translator {
 
 // setupI18nMiddleware 返回一个注入 Localizer 和 Translator 的 Gin 中间件
 func setupI18nMiddleware() gin.HandlerFunc {
+	// 确保自定义验证规则（如 strongPassword）已注册到 Gin 的 binding engine
+	validator.Init()
 	return func(c *gin.Context) {
 		c.Set(manager.LOCALIZER_CTX_NAME, newBaseTestLocalizer())
 		c.Set(manager.TRANSLATOR_CTX_NAME, newBaseTestTranslator())

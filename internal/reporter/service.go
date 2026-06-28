@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"context"
 	"io"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/grpc"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/provider"
@@ -36,7 +38,7 @@ type ReporterService struct {
 	grpc    *grpc.Server
 	client  *etcd.EtcdClient
 	pClient *pipeline.Client
-	logger  *zap.SugaredLogger
+	logger  *logging.Logger
 }
 
 func NewReportService(i do.Injector) *ReporterService {
@@ -407,19 +409,19 @@ func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.
 	}
 }
 
-func (srv *ReporterService) Run() error {
-	srv.logger.Info("grpc server listening on")
+func (srv *ReporterService) Run(ctx context.Context) error {
+	srv.logger.Ctx(ctx).Info("grpc server listening on")
 	if err := srv.grpc.Serve(); err != nil {
 		srv.logger.Fatal("failed to start grpc server", zap.Error(err))
 		return errors.WithStack(err)
 	}
 	// 记录优雅停止开始
-	srv.logger.Info("grpc try graceful stop")
+	srv.logger.Ctx(ctx).Info("grpc try graceful stop")
 
 	// 设置优雅停止超时定时器
 	// 5秒后如果仍未优雅停止，强制停止服务器
 	timer := time.AfterFunc(time.Second*5, func() {
-		srv.logger.Warn("server graceful stop timeout")
+		srv.logger.Ctx(ctx).Warn("server graceful stop timeout")
 		srv.grpc.Stop() // 强制停止
 	})
 	defer timer.Stop() // 确保函数退出时停止定时器

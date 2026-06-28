@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/test"
 )
@@ -27,7 +28,7 @@ func withAckNum(ack uint32) func(*mockTCPPacket) {
 }
 
 func BenchmarkRouterSingleFlow(b *testing.B) {
-	logger := zap.NewNop().Sugar()
+	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
 	clientAddr := net.ParseIP("192.168.1.100")
 	serverAddr := net.ParseIP("10.0.0.1")
@@ -147,7 +148,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 }
 
 func BenchmarkRouterConcurrentFlows(b *testing.B) {
-	logger := zap.NewNop().Sugar()
+	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
 	clientAddr := net.ParseIP("192.168.1.100")
 	serverAddr := net.ParseIP("10.0.0.1")

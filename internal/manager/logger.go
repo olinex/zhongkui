@@ -42,6 +42,7 @@ func (a *ApiLogger) logf(lvl zapcore.Level, c *gin.Context, fields []any, templa
 		zap.String("method", c.Request.Method),
 		zap.String("path", c.Request.URL.Path),
 		zap.String("ip", c.ClientIP()),
+		zap.Any("context", c.Request.Context()),
 	)
 	a.logger.With(fields...).WithOptions(
 		zap.AddCallerSkip(2),

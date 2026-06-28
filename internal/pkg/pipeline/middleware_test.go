@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
 	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // TestRecoverWithStack_MiddlewareCreation 测试 RecoverWithStack 中间件的创建功能。
@@ -23,7 +24,7 @@ func TestRecoverWithStack_MiddlewareCreation(t *testing.T) {
 		// 创建测试用的日志记录器核心，用于捕获日志输出
 		observedZapCore, _ := observer.New(zap.InfoLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		Convey("应该能够成功创建中间件函数", func() {
 			// 调用 RecoverWithStack 创建中间件
@@ -81,7 +82,7 @@ func TestRecoverWithStack_NormalTaskExecution(t *testing.T) {
 		// 创建测试用的日志记录器核心，用于捕获日志输出
 		observedZapCore, observedLogs := observer.New(zap.ErrorLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		// 保存原始环境变量值
 		originalDebugEnvVar := base.Env.Debug
@@ -208,7 +209,7 @@ func TestRecoverWithStack_PanicRecovery(t *testing.T) {
 		// 创建测试用的日志记录器核心，用于捕获日志输出
 		observedZapCore, observedLogs := observer.New(zap.ErrorLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		// 保存原始环境变量值
 		originalDebugEnvVar := base.Env.Debug
@@ -371,7 +372,7 @@ func TestRecoverWithStack_ContextAndTaskInfo(t *testing.T) {
 		// 创建测试用的日志记录器核心，用于捕获日志输出
 		observedZapCore, observedLogs := observer.New(zap.ErrorLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		// 保存原始环境变量值
 		originalDebugEnvVar := base.Env.Debug
@@ -473,7 +474,7 @@ func TestRecoverWithStack_ContextAndTaskInfo(t *testing.T) {
 					// 重置日志记录器
 					observedZapCore, observedLogs = observer.New(zap.ErrorLevel)
 					observedLogger = zap.New(observedZapCore)
-					sugarLogger = observedLogger.Sugar()
+					sugarLogger = &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 					// 创建中间件
 					middleware := RecoverWithStack(sugarLogger)
@@ -515,7 +516,7 @@ func TestRecoverWithStack_ErrorStackHandling(t *testing.T) {
 		// 创建测试用的日志记录器核心，用于捕获日志输出
 		observedZapCore, _ := observer.New(zap.ErrorLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		// 保存原始环境变量值
 		originalDebugEnvVar := base.Env.Debug
@@ -612,7 +613,7 @@ func TestRecoverWithStack_EdgeCases(t *testing.T) {
 		// 创建测试用的日志记录器核心，用于捕获日志输出
 		observedZapCore, _ := observer.New(zap.ErrorLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		// 保存原始环境变量值
 		originalDebugEnvVar := base.Env.Debug
@@ -749,7 +750,7 @@ func TestRecoverWithStack_Integration(t *testing.T) {
 		// 创建测试用的日志记录器核心，用于捕获日志输出
 		observedZapCore, observedLogs := observer.New(zap.ErrorLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		// 保存原始环境变量值
 		originalDebugEnvVar := base.Env.Debug
@@ -839,7 +840,7 @@ func TestRecoverWithStack_Integration(t *testing.T) {
 					// 重置日志记录器
 					observedZapCore, observedLogs = observer.New(zap.ErrorLevel)
 					observedLogger = zap.New(observedZapCore)
-					sugarLogger = observedLogger.Sugar()
+					sugarLogger = &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 					// 创建中间件
 					middleware := RecoverWithStack(sugarLogger)

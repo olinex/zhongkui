@@ -55,7 +55,7 @@ func (l ZapGormLogger) Info(ctx context.Context, msg string, data ...any) {
 	if strings.Contains(msg, "replacing callback") {
 		return
 	}
-	l.loggger.Infof(msg, data...)
+	l.loggger.Ctx(ctx).Infof(msg, data...)
 }
 
 // Warn 记录警告级别日志
@@ -66,7 +66,7 @@ func (l ZapGormLogger) Info(ctx context.Context, msg string, data ...any) {
 //   - msg: 日志消息
 //   - data: 可变参数，用于格式化消息
 func (l ZapGormLogger) Warn(ctx context.Context, msg string, data ...any) {
-	l.loggger.Warnf(msg, data...)
+	l.loggger.Ctx(ctx).Warnf(msg, data...)
 }
 
 // Error 记录错误级别日志
@@ -77,7 +77,7 @@ func (l ZapGormLogger) Warn(ctx context.Context, msg string, data ...any) {
 //   - msg: 日志消息
 //   - data: 可变参数，用于格式化消息
 func (l ZapGormLogger) Error(ctx context.Context, msg string, data ...any) {
-	l.loggger.Errorf(msg, data...)
+	l.loggger.Ctx(ctx).Errorf(msg, data...)
 }
 
 // Trace 记录 SQL 跟踪日志
@@ -92,17 +92,17 @@ func (l ZapGormLogger) Error(ctx context.Context, msg string, data ...any) {
 func (l ZapGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
 	elapsed := time.Since(begin)
 	sql, rows := fc()
-	
+
 	// 根据执行结果和耗时选择适当的日志级别
 	switch {
 	case err != nil:
 		// SQL 执行错误：记录错误级别日志
-		l.loggger.Errorf("sql execution error: %v, elapsed: %v, sql: %s, rows: %d", err, elapsed, sql, rows)
+		l.loggger.Ctx(ctx).Errorf("sql execution error: %v, elapsed: %v, sql: %s, rows: %d", err, elapsed, sql, rows)
 	case elapsed > 200*time.Millisecond:
 		// 慢查询：记录警告级别日志（执行时间超过200毫秒）
-		l.loggger.Warnf("slow sql query, elapsed: %v, sql: %s, rows: %d", elapsed, sql, rows)
+		l.loggger.Ctx(ctx).Warnf("slow sql query, elapsed: %v, sql: %s, rows: %d", elapsed, sql, rows)
 	default:
 		// 正常查询：记录调试级别日志
-		l.loggger.Debugf("sql execution, elapsed: %v, sql: %s, rows: %d", elapsed, sql, rows)
+		l.loggger.Ctx(ctx).Debugf("sql execution, elapsed: %v, sql: %s, rows: %d", elapsed, sql, rows)
 	}
 }

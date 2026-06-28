@@ -1,6 +1,8 @@
 package logging
 
 import (
+	"context"
+
 	"github.com/creasty/defaults"
 	"go.uber.org/zap"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -10,9 +12,30 @@ import (
 // LoggerCfg is a type alias for zap.Config, simplifying imports and type references
 type LoggerCfg = zap.Config
 
-// Logger 是 zap.SugaredLogger 的类型别名，提供结构化日志记录功能
-// Logger is a type alias for zap.SugaredLogger, providing structured logging capabilities
-type Logger = zap.SugaredLogger
+// Logger 包装 *zap.SugaredLogger，提供结构化日志记录功能。
+// 通过嵌入方式继承 SugaredLogger 的全部方法，同时提供 Ctx 方法用于注入 context。
+type Logger struct {
+	*zap.SugaredLogger
+}
+
+// logCtx 控制 Ctx 方法的行为，默认 no-op 避免不必要的开销。
+// OTEL 启用时由 EnableCtx 替换为注入 context field 的实现。
+var logCtx = func(l *Logger, _ context.Context) *Logger { return l }
+
+// EnableCtx 启用 context 注入功能。
+// OTEL 集成应调用此函数，之后 Ctx(ctx) 会将 context 注入日志字段，
+// otelzap bridge 自动提取用于 trace 关联，contextStrippingCore 确保不会输出到 stdout。
+func EnableCtx() {
+	logCtx = func(l *Logger, ctx context.Context) *Logger {
+		return &Logger{l.SugaredLogger.With("context", ctx)}
+	}
+}
+
+// Ctx 将 context 注入到日志记录器中。
+// OTEL 未启用时为零开销 no-op；启用后将 context 作为字段注入以供 otelzap trace 关联。
+func (l *Logger) Ctx(ctx context.Context) *Logger {
+	return logCtx(l, ctx)
+}
 
 // NewProductionLogger 根据提供的配置创建生产环境的日志记录器
 //
@@ -58,7 +81,7 @@ func NewProductionLogger(cfg *LoggerCfg) (*Logger, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return logger.Sugar(), nil
+	return &Logger{logger.Sugar()}, nil
 }
 
 // NewDefaultLogger 使用默认配置创建日志记录器

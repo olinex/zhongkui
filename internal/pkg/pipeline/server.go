@@ -4,6 +4,8 @@
 package pipeline
 
 import (
+	"context"
+
 	"github.com/hibiken/asynq"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -139,7 +141,7 @@ type Server struct {
 //  2. 在生产环境中应该使用 defer server.Shutdown() 确保资源清理
 //  3. 处理函数应该是幂等的，因为任务可能会被重试
 //  4. 在 DEBUG_ENV_VAR 为 true 时会启用 panic 恢复中间件
-func NewServer(cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs HandlerFuncs, mws ...asynq.MiddlewareFunc) *Server {
+func NewServer(ctx context.Context, cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs HandlerFuncs, mws ...asynq.MiddlewareFunc) *Server {
 	// 创建任务分发器，负责根据任务类型路由到对应的处理函数
 	mux := asynq.NewServeMux()
 
@@ -160,7 +162,7 @@ func NewServer(cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs 
 	for pattern, hFunc := range hFuncs {
 		mux.HandleFunc(pattern, hFunc)
 		// 记录已加载的任务处理函数，便于监控和调试
-		logger.Infof("load pipeline task handle func `%s`", pattern)
+		logger.Ctx(ctx).Infof("load pipeline task handle func `%s`", pattern)
 	}
 
 	// 返回配置完成的服务器实例

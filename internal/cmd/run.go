@@ -36,9 +36,9 @@ var grpcCmd = &cobra.Command{
 	Use:   "grpc",
 	Short: "Run the zhongkui http grpc api process",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, i := cmdToolBox(cmd)
+		ctx, i := cmdToolBox(cmd)
 		srv := reporter.NewReportService(i)
-		return srv.Run()
+		return srv.Run(ctx)
 	},
 }
 
@@ -64,14 +64,14 @@ var captureCmd = &cobra.Command{
 		client := provider.MustInvokeCaptureClient(i)
 
 		sessionID := serializer.NewHexUUIDv4()
-		log.Infof("starting zhongkui capture %s", sessionID.String())
+		log.Ctx(ctx).Infof("starting zhongkui capture %s", sessionID.String())
 
 		if err := client.Run(ctx, sessionID); err != nil {
 			log.DPanic(err)
 			return errors.New("capture client run failed")
 		}
 
-		log.Infof("shutting down zhongkui capture %s", sessionID.String())
+		log.Ctx(ctx).Infof("shutting down zhongkui capture %s", sessionID.String())
 		return nil
 	},
 }

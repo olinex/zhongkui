@@ -50,13 +50,13 @@ func (v *Version) Commit(ctx context.Context) error {
 	mu := concurrency.NewMutex(session, fmt.Sprintf("%s%s/", versionLockPrefix, name))
 	lockCtx, lockCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer lockCancel()
-	v.logger.Infof("get %s's version lock...", name)
+	v.logger.Ctx(ctx).Infof("get %s's version lock...", name)
 	err = mu.Lock(lockCtx)
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer mu.Unlock(ctx)
-	v.logger.Infof("get %s's version lock success", name)
+	v.logger.Ctx(ctx).Infof("get %s's version lock success", name)
 	// 获取上一个版本号
 	rsp, err := v.client.Get(ctx, fmt.Sprintf("%s%s", versionPrefix, name))
 	if err != nil {
@@ -66,7 +66,7 @@ func (v *Version) Commit(ctx context.Context) error {
 	if len(rsp.Kvs) != 0 {
 		lastVersion = string(rsp.Kvs[0].Value)
 	}
-	v.logger.Infof("get %s's last version %s success", name, lastVersion)
+	v.logger.Ctx(ctx).Infof("get %s's last version %s success", name, lastVersion)
 	nextVersion, err := v.handler.Handle(ctx, v.logger, lastVersion)
 	if err != nil {
 		return errors.WithStack(err)
@@ -76,6 +76,6 @@ func (v *Version) Commit(ctx context.Context) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	v.logger.Infof("handle %s's next version %s success", name, nextVersion)
+	v.logger.Ctx(ctx).Infof("handle %s's next version %s success", name, nextVersion)
 	return nil
 }

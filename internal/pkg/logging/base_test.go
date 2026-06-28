@@ -91,7 +91,7 @@ func TestLoggerAliases(t *testing.T) {
 			convey.So(cfg, convey.ShouldResemble, zapCfg)
 		})
 
-		convey.Convey("Logger should be alias of zap.SugaredLogger", func() {
+		convey.Convey("Logger should embed *zap.SugaredLogger", func() {
 			cfg := &LoggerCfg{
 				Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
 				Development:      false,
@@ -103,7 +103,7 @@ func TestLoggerAliases(t *testing.T) {
 
 			logger, err := NewProductionLogger(cfg)
 			convey.So(err, convey.ShouldBeNil)
-			var _ *zap.SugaredLogger = logger
+			convey.So(logger.SugaredLogger, convey.ShouldNotBeNil)
 		})
 	})
 }

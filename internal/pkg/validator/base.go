@@ -2,6 +2,7 @@ package validator
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
@@ -10,6 +11,7 @@ import (
 var (
 	validations = map[string]func(fl validator.FieldLevel) bool{}
 	Validate    *validator.Validate
+	initOnce    sync.Once
 )
 
 // mustValidate 获取全局验证器实例，用于数据校验。
@@ -53,5 +55,15 @@ func mustValidate() *validator.Validate {
 }
 
 func init() {
-	Validate = mustValidate()
+	// 注意：validations map 由 string.go、time.go 中包级变量的 init() 函数填充，
+	// 这些 init() 按文件名排序在 base.go 之后执行。因此不能在 base.go 的 init() 中
+	// 调用 mustValidate()，改为由外部调用方通过 Init() 显式触发。
+}
+
+// Init 初始化验证器，将 validations map 中的所有自定义验证规则注册到 Gin 的 binding engine。
+// 应用启动时或测试初始化时必须调用一次。使用 sync.Once 保证多次调用安全。
+func Init() {
+	initOnce.Do(func() {
+		Validate = mustValidate()
+	})
 }

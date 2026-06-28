@@ -1,13 +1,15 @@
 package provider
 
 import (
+	"context"
+
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
-func newI18nProvider() do.Provider[*translate.I18n] {
+func newI18nProvider(ctx context.Context) do.Provider[*translate.I18n] {
 	return func(i do.Injector) (*translate.I18n, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
@@ -16,13 +18,13 @@ func newI18nProvider() do.Provider[*translate.I18n] {
 		} else if logger, err := InvokeApiLogger(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
-			return translate.InitI18n(cfg, logger), nil
+			return translate.InitI18n(ctx, cfg, logger), nil
 		}
 	}
 }
 
-func InjectI18n(i do.Injector) {
-	do.Provide(i, newI18nProvider())
+func InjectI18n(ctx context.Context, i do.Injector) {
+	do.Provide(i, newI18nProvider(ctx))
 }
 
 func InvokeI18n(i do.Injector) (*translate.I18n, error) {

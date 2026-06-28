@@ -158,7 +158,7 @@ func (cc *CaptureClient) runWithRetry(ctx context.Context, maxRetries uint, fn f
 		backoff.WithNotify(func(err error, interval time.Duration) {
 			// 重试通知回调函数
 			// 每次重试时记录日志，便于监控和问题排查
-			cc.logger.Infof("retry %d times, interval: %s", maxRetries, interval)
+			cc.logger.Ctx(ctx).Infof("retry %d times, interval: %s", maxRetries, interval)
 		}),
 	)
 
@@ -222,7 +222,7 @@ func (cc *CaptureClient) runWithRetry(ctx context.Context, maxRetries uint, fn f
 func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
 	// 记录监控启动日志，包含资源标识信息
 	// 便于跟踪监控流程和问题排查
-	cc.logger.Infof("watch resource %s", cc.cfg.Resource.String())
+	cc.logger.Ctx(ctx).Infof("watch resource %s", cc.cfg.Resource.String())
 
 	// 计算允许的心跳间隔容忍阈值
 	// 用于检测心跳是否超时，防止连接假死
@@ -243,7 +243,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
 	if err != nil {
 		// 连接建立失败，记录警告日志并返回错误
 		// 上层调用者可以通过重试机制恢复
-		cc.logger.Warnf("failed to create watch stream: %v", err)
+		cc.logger.Ctx(ctx).Warnf("failed to create watch stream: %v", err)
 		return errors.WithStack(err)
 	}
 
@@ -265,7 +265,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
 		if err != nil {
 			// 流错误，记录警告日志并返回错误
 			// 可能是网络中断、服务器重启或协议错误
-			cc.logger.Warnf("watch stream error: %v", err)
+			cc.logger.Ctx(ctx).Warnf("watch stream error: %v", err)
 			return errors.WithStack(err)
 		}
 
@@ -288,7 +288,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
 
 			// 记录心跳接收日志（调试级别）
 			// 便于监控连接状态和问题排查
-			cc.logger.Debugf(
+			cc.logger.Ctx(ctx).Debugf(
 				"receive current heartbeat: %s, previous heartbeat: %s",
 				curHeartbeat.Format(time.RFC3339),
 				snapshot.prevHeartbeat.Format(time.RFC3339),
@@ -348,7 +348,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
 				)
 
 				// 记录配置创建日志
-				cc.logger.Infof(
+				cc.logger.Ctx(ctx).Infof(
 					"config created, config version: %d, global version: %d",
 					content.Event.CurSnapshot.ConfigVersion,
 					resp.GlobalVersion,
@@ -375,7 +375,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
 				)
 
 				// 记录配置修改日志
-				cc.logger.Infof(
+				cc.logger.Ctx(ctx).Infof(
 					"config modified, config version: %d, global version: %d",
 					content.Event.CurSnapshot.ConfigVersion,
 					resp.GlobalVersion,
@@ -387,7 +387,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
 				mutex.reset()
 
 				// 记录配置删除日志
-				cc.logger.Infof(
+				cc.logger.Ctx(ctx).Infof(
 					"config deleted, config version: %d, global version: %d",
 					content.Event.PrvSnapshot.ConfigVersion,
 					resp.GlobalVersion,
@@ -405,13 +405,13 @@ func (cc *CaptureClient) uploadPacketHandler(
 	uploadChan chan notice,
 	snapshot *captureSnapshot,
 ) {
-	ws, err := wire.NewWire(snapshot.config, cc.logger)
+	ws, err := wire.NewWire(ctx, snapshot.config, cc.logger)
 	if err != nil {
 		cause(errors.WithStack(err))
 		return
 	}
 	defer ws.Close()
-	cc.logger.Infof(
+	cc.logger.Ctx(ctx).Infof(
 		"open wire(%s) device %s, snaplen: %d, promisc: %v, timeout: %s",
 		ws.Name(),
 		snapshot.config.Device,
@@ -432,9 +432,9 @@ func (cc *CaptureClient) uploadPacketHandler(
 		cause(errors.WithStack(err))
 		return
 	}
-	cc.logger.Infof("set bpf filter %s", bpfExpr)
+	cc.logger.Ctx(ctx).Infof("set bpf filter %s", bpfExpr)
 	linkType := ws.LinkType()
-	cc.logger.Infof("link type %s", linkType)
+	cc.logger.Ctx(ctx).Infof("link type %s", linkType)
 	tmpCapturer := capturer{
 		resource:   &cc.cfg.Resource,
 		uploadCfg:  &cc.cfg.Upload,
@@ -470,7 +470,7 @@ func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUI
 				continue
 			}
 			innerCtx, innerCause := context.WithCancelCause(ctx)
-			cc.logger.Infof(
+			cc.logger.Ctx(ctx).Infof(
 				"upload resource %s/%s, config version: %d",
 				cc.cfg.Resource.String(),
 				sessionID,
@@ -500,9 +500,9 @@ func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUI
 			}
 			mutex.asStopped()
 			if err := context.Cause(innerCtx); err == nil || errors.Is(err, context.Canceled) {
-				cc.logger.Infof("upload packet handler exit, session id: %s", sessionID)
+				cc.logger.Ctx(ctx).Infof("upload packet handler exit, session id: %s", sessionID)
 			} else {
-				cc.logger.Warnf("recv report inner ctx err: %v, upgrade error to main context", err)
+				cc.logger.Ctx(ctx).Warnf("recv report inner ctx err: %v, upgrade error to main context", err)
 				return errors.WithStack(err)
 			}
 		}
@@ -516,7 +516,7 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 
 	stream, err := cc.client.Feedback(ctx)
 	if err != nil {
-		cc.logger.Warnf("failed to create feedback stream: %v", err)
+		cc.logger.Ctx(ctx).Warnf("failed to create feedback stream: %v", err)
 		return errors.WithStack(err)
 	}
 
@@ -549,7 +549,7 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 			SecretKey:      n.secretKey,
 		})
 		if err != nil {
-			cc.logger.Warnf("feedback stream error: %v", err)
+			cc.logger.Ctx(ctx).Warnf("feedback stream error: %v", err)
 			stream.CloseAndRecv()
 			return errors.WithStack(err)
 		}

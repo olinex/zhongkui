@@ -68,7 +68,7 @@ func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Han
 					if writer != nil {
 						taskID = writer.TaskID()
 					}
-					logger.Errorf(
+					logger.Ctx(ctx).Errorf(
 						"Task [id:%s, type:%s] panic with: %v and stack: %s",
 						taskID,        // 任务唯一标识符，如果 writer 为 nil 则使用 "unknown"
 						task.Type(),   // 任务类型（处理器模式）
@@ -93,7 +93,7 @@ func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Han
 				if writer != nil {
 					taskID = writer.TaskID()
 				}
-				logger.Errorf(
+				logger.Ctx(ctx).Errorf(
 					"Task [id:%s, type:%s] raise error: %+v",
 					taskID,      // 任务唯一标识符，如果 writer 为 nil 则使用 "unknown"
 					task.Type(), // 任务类型
