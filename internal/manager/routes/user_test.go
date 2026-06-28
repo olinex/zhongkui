@@ -31,7 +31,7 @@ func createUserSelfTestDB() *database.DB {
 	config.OutputPaths = []string{}
 	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 	zapLogger, _ := config.Build()
-	logger := zapLogger.Sugar()
+	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 	db, err := database.NewDatabase(cfg, logger)
 	if err != nil {
@@ -94,7 +94,7 @@ func createTestLoggingLogger() *logging.Logger {
 	config.OutputPaths = []string{}
 	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 	zapLogger, _ := config.Build()
-	return zapLogger.Sugar()
+	return &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 }
 
 func injectLoggerMiddleware(logger *logging.Logger) gin.HandlerFunc {

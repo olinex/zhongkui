@@ -33,6 +33,11 @@ endif
 	bench-slow
 	bench-fast
 	bench-raw
+	otelite-install
+	otelite-start
+	otelite-stop
+	otelite-uninstall
+	otelite-cli-help
 
 # run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
 # 用法: make run-dev-deps
@@ -398,81 +403,66 @@ bench-probe:
 	@rm -f /tmp/nic_probe
 
 # ============================================================
-# OpenTelemetry 前端工具 (mesaglio/otel-front)
+# OpenTelemetry 前端工具 (planetf1/otelite)
 # ============================================================
-# otel-front 是一个轻量级单二进制 OTEL 可视化工具，无需 Docker/数据库。
-#   - Web UI: http://localhost:8000
+# otelite 是一个轻量级单二进制 OTEL 可视化工具，无需 Docker/数据库。
+#   - Web UI: http://localhost:3000
 #   - OTLP gRPC: localhost:4317
 #   - OTLP HTTP: http://localhost:4318
-# 项目地址: https://github.com/mesaglio/otel-front
+#   - TUI: otelite tui
+#   - CLI: otelite logs / traces / metrics / usage
+# 项目地址: https://github.com/planetf1/otelite
 
-OTEL_FRONT_VERSION := v0.0.4
-OTEL_FRONT_BIN := $(GOBIN)/otel-front
-OTEL_FRONT_PID := /tmp/otel-front.pid
+OTELITE_BIN := otelite
+OTELITE_PID := /tmp/otelite.pid
 
-# 根据 OS/ARCH 确定下载的 tarball 文件名
-OTEL_FRONT_OS :=
-OTEL_FRONT_ARCH :=
-ifeq ($(UNAME_S),Darwin)
-OTEL_FRONT_OS := Darwin
-else ifneq (,$(findstring Linux,$(UNAME_S)))
-OTEL_FRONT_OS := Linux
-else
-OTEL_FRONT_OS := Linux
-endif
-ifeq ($(shell uname -m),arm64)
-OTEL_FRONT_ARCH := arm64
-else ifeq ($(shell uname -m),aarch64)
-OTEL_FRONT_ARCH := arm64
-else
-OTEL_FRONT_ARCH := x86_64
-endif
+# otelite-install - 安装 otelite 二进制 (macOS 使用 Homebrew，Linux 使用 cargo 或安装脚本)
+# 用法: make otelite-install
+otelite-install:
+	@echo "=== 安装 otelite ==="
+	@case "$(UNAME_S)" in \
+		Darwin) \
+			if command -v brew >/dev/null 2>&1; then \
+				brew install planetf1/tap/otelite; \
+			else \
+				echo "未找到 Homebrew，尝试使用 cargo 安装..."; \
+				cargo install otelite; \
+			fi ;; \
+		Linux) \
+			if command -v cargo >/dev/null 2>&1; then \
+				cargo install otelite; \
+			else \
+				curl --proto '=https' --tlsv1.2 -LsSf https://github.com/planetf1/otelite/releases/latest/download/otelite-installer.sh | sh; \
+			fi ;; \
+		*) \
+			echo "不支持的平台，请手动安装: https://github.com/planetf1/otelite"; \
+			exit 1 ;; \
+	esac
+	@echo "已安装"
+	@$(OTELITE_BIN) --version || true
 
-OTEL_FRONT_TARBALL := otel-front_$(OTEL_FRONT_VERSION)_$(OTEL_FRONT_OS)_$(OTEL_FRONT_ARCH).tar.gz
-OTEL_FRONT_URL := https://github.com/mesaglio/otel-front/releases/download/$(OTEL_FRONT_VERSION)/$(OTEL_FRONT_TARBALL)
-
-# otel-front-install - 从 GitHub Releases 下载预编译的 otel-front 二进制
-# 用法: make otel-front-install
-otel-front-install:
-	@echo "=== 安装 otel-front $(OTEL_FRONT_VERSION) ==="
-	@echo "下载 $(OTEL_FRONT_URL)"
-	@mkdir -p /tmp/otel-front-install
-	@curl -sL -o /tmp/otel-front-install/$(OTEL_FRONT_TARBALL) "$(OTEL_FRONT_URL)"
-	@cd /tmp/otel-front-install && tar -xzf $(OTEL_FRONT_TARBALL)
-	@BIN=$$(find /tmp/otel-front-install -maxdepth 1 -type f -name 'otel-front*' ! -name '*.tar.gz' ! -name '*.md' | head -1); \
-		if [ -z "$$BIN" ] || [ ! -f "$$BIN" ]; then \
-			echo "安装失败，未找到 otel-front 二进制"; \
-			echo "tarball 内容:"; \
-			tar -tzf /tmp/otel-front-install/$(OTEL_FRONT_TARBALL) | head -10; \
-			rm -rf /tmp/otel-front-install; \
-			exit 1; \
-		fi; \
-		mv "$$BIN" $(OTEL_FRONT_BIN)
-	@chmod +x $(OTEL_FRONT_BIN)
-	@rm -rf /tmp/otel-front-install
-	@echo "已安装到 $(OTEL_FRONT_BIN)"
-	@$(OTEL_FRONT_BIN) --version || true
-
-# otel-front-start - 后台启动 otel-front 并打印环境变量配置
-# 用法: make otel-front-start
-otel-front-start:
-	@if [ ! -f "$(OTEL_FRONT_BIN)" ]; then \
-		echo "otel-front 未安装，请先运行 make otel-front-install"; \
+# otelite-start - 后台启动 otelite daemon 并打印配置信息
+# 用法: make otelite-start
+otelite-start:
+	@if ! command -v $(OTELITE_BIN) >/dev/null 2>&1; then \
+		echo "otelite 未安装，请先运行 make otelite-install"; \
 		exit 1; \
 	fi
-	@if [ -f "$(OTEL_FRONT_PID)" ] && kill -0 $$(cat "$(OTEL_FRONT_PID)") 2>/dev/null; then \
-		echo "otel-front 已在运行 (PID: $$(cat $(OTEL_FRONT_PID)))"; \
+	@if otelite status >/dev/null 2>&1; then \
+		echo "otelite 已在运行"; \
 		exit 0; \
 	fi
-	@echo "=== 启动 otel-front ==="
-	@nohup $(OTEL_FRONT_BIN) --no-browser > /tmp/otel-front.log 2>&1 & \
-		echo $$! > $(OTEL_FRONT_PID) && \
-		sleep 1 && \
-		echo "otel-front 已启动 (PID: $$(cat $(OTEL_FRONT_PID)))"
+	@echo "=== 启动 otelite daemon ==="
+	@otelite start
+	@sleep 1
+	@echo "otelite daemon 已启动"
 	@echo ""
 	@echo "┌──────────────────────────────────────────────────────────┐"
-	@echo "│  otel-front Web UI (traces / metrics / logs 可视化)      │"
-	@echo "│    http://localhost:8000                                   │"
+	@echo "│  otelite Web UI (traces / metrics / logs 可视化)         │"
+	@echo "│    http://localhost:3000                                   │"
+	@echo "├──────────────────────────────────────────────────────────┤"
+	@echo "│  TUI 终端界面                                             │"
+	@echo "│    otelite tui                                             │"
 	@echo "├──────────────────────────────────────────────────────────┤"
 	@echo "│  OTLP gRPC 端点 (应用上报地址)                              │"
 	@echo "│    localhost:4317                                          │"
@@ -484,38 +474,87 @@ otel-front-start:
 	@echo "在运行应用之前，设置以下环境变量以启用 OpenTelemetry 上报:"
 	@echo ""
 	@echo "  # 启用 OTEL 可观测功能"
-	@echo "  export ZKI_OTEL=true"
+	@echo "  export OTEL_ENABLED=true"
 	@echo ""
-	@echo "  # 使用 gRPC 上报 (默认)"
-	@echo "  export OTEL_EXPORTER_OTLP_ENDPOINT=localhost:4317"
-	@echo "  export OTEL_EXPORTER_OTLP_PROTOCOL=grpc"
+	@echo "  # 使用 gRPC 上报 (默认，协议通过 OTEL_OTLP_PROTOCOL 控制)"
+	@echo "  export OTEL_OTLP_PROTOCOL=grpc"
+	@echo "  export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317"
 	@echo ""
-	@echo "  # 或使用 HTTP 上报 (otel-front 推荐)"
+	@echo "  # 或使用 HTTP 上报"
+	@echo "  export OTEL_OTLP_PROTOCOL=http"
 	@echo "  export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318"
-	@echo "  export OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf"
 	@echo ""
 	@echo "  # 通用设置"
-	@echo "  export OTEL_TRACES_EXPORTER=otlp"
-	@echo "  export OTEL_METRICS_EXPORTER=otlp"
-	@echo "  export OTEL_LOGS_EXPORTER=otlp"
 	@echo "  export OTEL_EXPORTER_OTLP_INSECURE=true"
 	@echo "  export OTEL_SERVICE_NAME=zhongkui-dev"
 	@echo ""
 	@echo "  # 然后正常运行应用:"
 	@echo "  go run cmd/zki/main.go run"
 	@echo ""
-	@echo "日志文件: /tmp/otel-front.log"
-	@echo "停止服务: make otel-front-stop"
+	@echo "CLI 命令: make otelite-cli-help"
+	@echo "停止服务: make otelite-stop"
 
-# otel-front-stop - 停止后台运行的 otel-front
-# 用法: make otel-front-stop
-otel-front-stop:
-	@if [ -f "$(OTEL_FRONT_PID)" ] && kill -0 $$(cat "$(OTEL_FRONT_PID)") 2>/dev/null; then \
-		echo "=== 停止 otel-front (PID: $$(cat $(OTEL_FRONT_PID))) ==="; \
-		kill $$(cat $(OTEL_FRONT_PID)) && rm -f $(OTEL_FRONT_PID); \
+# otelite-stop - 停止后台运行的 otelite daemon
+# 用法: make otelite-stop
+otelite-stop:
+	@if command -v $(OTELITE_BIN) >/dev/null 2>&1 && otelite status >/dev/null 2>&1; then \
+		echo "=== 停止 otelite daemon ==="; \
+		otelite stop; \
+		rm -f $(OTELITE_PID); \
 		echo "已停止"; \
 	else \
-		echo "otel-front 未在运行"; \
-		rm -f $(OTEL_FRONT_PID); \
+		echo "otelite 未在运行"; \
+		rm -f $(OTELITE_PID); \
 	fi
+
+# otelite-uninstall - 卸载 otelite (macOS 用 brew uninstall，Linux 用 cargo uninstall)
+# 用法: make otelite-uninstall
+otelite-uninstall:
+	@if command -v $(OTELITE_BIN) >/dev/null 2>&1 && otelite status >/dev/null 2>&1; then \
+		echo "otelite 正在运行，请先执行 make otelite-stop"; \
+		exit 1; \
+	fi
+	@echo "=== 卸载 otelite ==="
+	@case "$(UNAME_S)" in \
+		Darwin) \
+			if brew list planetf1/tap/otelite >/dev/null 2>&1; then \
+				brew uninstall planetf1/tap/otelite; \
+			elif command -v cargo >/dev/null 2>&1 && cargo install --list 2>/dev/null | grep -q '^otelite '; then \
+				cargo uninstall otelite; \
+			else \
+				rm -f $$(command -v otelite 2>/dev/null) $$(command -v otelite 2>/dev/null || echo "$(GOBIN)/otelite"); \
+				echo "已手动移除 otelite 二进制"; \
+			fi ;; \
+		Linux) \
+			if command -v cargo >/dev/null 2>&1 && cargo install --list 2>/dev/null | grep -q '^otelite '; then \
+				cargo uninstall otelite; \
+			else \
+				rm -f $$(command -v otelite 2>/dev/null) $$(command -v otelite 2>/dev/null || echo "$(GOBIN)/otelite"); \
+				echo "已手动移除 otelite 二进制"; \
+			fi ;; \
+		*) \
+			echo "请手动卸载 otelite"; \
+			exit 1 ;; \
+	esac
+	@rm -f $(OTELITE_PID)
+	@echo "卸载完成"
+
+# otelite-cli-help - 打印 otelite CLI 常用命令参考
+# 用法: make otelite-cli-help
+otelite-cli-help:
+	@echo "otelite CLI 常用命令:"
+	@echo ""
+	@echo "  otelite serve          - 前台启动 (适用于调试)"
+	@echo "  otelite start          - 后台启动 daemon"
+	@echo "  otelite stop           - 停止 daemon"
+	@echo "  otelite restart        - 重启 daemon"
+	@echo "  otelite status         - 查看 daemon 状态"
+	@echo "  otelite tui            - 终端 UI 界面"
+	@echo ""
+	@echo "  otelite logs list --severity ERROR --since 1h"
+	@echo "  otelite logs search \"keyword\""
+	@echo "  otelite traces list --min-duration 1s"
+	@echo "  otelite metrics list --name \"http_*\""
+	@echo "  otelite usage --since 24h"
+	@echo "  otelite --format json logs list | jq '.'"
 

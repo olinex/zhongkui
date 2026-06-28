@@ -12,6 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -29,7 +30,7 @@ func createRbacTestDB() *database.DB {
 	config.OutputPaths = []string{}
 	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 	zapLogger, _ := config.Build()
-	logger := zapLogger.Sugar()
+	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 	db, err := database.NewDatabase(cfg, logger)
 	if err != nil {

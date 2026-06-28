@@ -3,6 +3,7 @@
 package bench
 
 import (
+	"context"
 	"testing"
 
 	"go.uber.org/zap"
@@ -16,14 +17,14 @@ import (
 func BenchmarkPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
 	runBaseline(b, "platform-smoke", LevelSmoke, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
 func BenchmarkPlatformSmallFlows(b *testing.B) {
 	logger := newBenchLogger()
 	runBaseline(b, "platform-smallflows", LevelSmallFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
@@ -33,12 +34,12 @@ func BenchmarkPlatformBigFlows(b *testing.B) {
 	}
 	logger := newBenchLogger()
 	runBaseline(b, "platform-bigflows", LevelBigFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
 func newBenchLogger() *logging.Logger {
-	return zap.NewNop().Sugar()
+	return &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 }
 
 // === 纯计数 (skip copy) 基线 ===
@@ -46,14 +47,14 @@ func newBenchLogger() *logging.Logger {
 func BenchmarkRawPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-smoke", LevelSmoke, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
 func BenchmarkRawPlatformSmallFlows(b *testing.B) {
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-smallflows", LevelSmallFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
@@ -63,6 +64,6 @@ func BenchmarkRawPlatformBigFlows(b *testing.B) {
 	}
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-bigflows", LevelBigFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }

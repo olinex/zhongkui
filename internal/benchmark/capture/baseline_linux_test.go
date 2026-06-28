@@ -3,6 +3,7 @@
 package bench
 
 import (
+	"context"
 	"runtime"
 	"sync/atomic"
 	"testing"
@@ -15,7 +16,7 @@ import (
 )
 
 func newBenchLogger() *logging.Logger {
-	return zap.NewNop().Sugar()
+	return &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 }
 
 // === Platform 基线 (loopback) ===
@@ -23,14 +24,14 @@ func newBenchLogger() *logging.Logger {
 func BenchmarkPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
 	runBaseline(b, "platform-smoke", LevelSmoke, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
 func BenchmarkPlatformSmallFlows(b *testing.B) {
 	logger := newBenchLogger()
 	runBaseline(b, "platform-smallflows", LevelSmallFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
@@ -40,21 +41,21 @@ func BenchmarkPlatformBigFlows(b *testing.B) {
 	}
 	logger := newBenchLogger()
 	runBaseline(b, "platform-bigflows", LevelBigFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
 func BenchmarkPlatformSlowSmoke(b *testing.B) {
 	logger := newBenchLogger()
 	runSlowBaseline(b, "platform-slow-smoke", LevelSmoke, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	}, 1*time.Millisecond)
 }
 
 func BenchmarkPlatformSlowSmallFlows(b *testing.B) {
 	logger := newBenchLogger()
 	runSlowBaseline(b, "platform-slow-smallflows", LevelSmallFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	}, 1*time.Millisecond)
 }
 
@@ -392,14 +393,14 @@ func BenchmarkAfpacketSlowSmallFlows(b *testing.B) {
 func BenchmarkRawPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-smoke", LevelSmoke, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
 func BenchmarkRawPlatformSmallFlows(b *testing.B) {
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-smallflows", LevelSmallFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 
@@ -409,7 +410,7 @@ func BenchmarkRawPlatformBigFlows(b *testing.B) {
 	}
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-bigflows", LevelBigFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
-		return wire.NewWire(cfg, logger)
+		return wire.NewWire(context.Background(), cfg, logger)
 	})
 }
 

@@ -5,6 +5,9 @@ import (
 
 	"github.com/casbin/casbin/v2"
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // RBAC_POLICY_CTX_NAME 是 Gin 上下文中存储 RBAC 策略的键名
@@ -46,20 +49,38 @@ func GetRbacPolicy(c *gin.Context) *casbin.Enforcer {
 // 2. 获取当前用户
 // 3. 获取请求的完整路径作为资源对象
 // 4. 使用 RBAC 策略验证用户是否有权访问该资源
-func Authorize(c *gin.Context) *CodeError {
+func Authorize(c *gin.Context, span trace.Span) *CodeError {
 	policy := GetRbacPolicy(c)
-	if namespace, err := GetNamespace(c); err != nil {
+	attrs := []attribute.KeyValue{attribute.String("action", c.Request.Method)}
+	namespace, err := GetNamespace(c)
+	if err != nil {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Error, "namespace does not exist")
 		return err
-	} else if user, err := GetUser(c); err != nil {
+	}
+	attrs = append(attrs, attribute.String("namespace", namespace))
+	user, err := GetUser(c)
+	if err != nil {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Error, "user does not exist")
 		return err
-	} else if object := c.FullPath(); object == "" {
+	}
+	attrs = append(attrs, attribute.String("user", user.UnionID.String()))
+	object := c.FullPath()
+	if object == "" {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Error, "object is blank")
 		return ErrAuthorizeBlankFullPath
-	} else if ok, err := policy.Enforce(
+	}
+	attrs = append(attrs, attribute.String("object", object))
+	if ok, err := policy.Enforce(
 		user.UnionID.String(), // 用户标识
 		object,                // 资源路径
 		c.Request.Method,      // HTTP 方法
 		namespace,             // 命名空间
 	); err != nil || !ok {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Error, "authorize failed")
 		GetLogger(c).Infof(
 			c,
 			nil,
@@ -72,6 +93,8 @@ func Authorize(c *gin.Context) *CodeError {
 		)
 		return ErrAuthorizeFailed
 	} else {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Ok, "authorize success")
 		return nil
 	}
 }
@@ -83,9 +106,16 @@ func Authorize(c *gin.Context) *CodeError {
 // 参数 action: 操作类型
 // 返回: 授权错误码，nil 表示授权成功
 // 注意: 此函数用于固定资源的授权检查，不依赖于请求路径
-func StaticAuthorize(c *gin.Context, namespace, object, action string) *CodeError {
+func StaticAuthorize(c *gin.Context, span trace.Span, namespace, object, action string) *CodeError {
+	attrs := []attribute.KeyValue{
+		attribute.String("action", action),
+		attribute.String("namespace", namespace),
+		attribute.String("object", object),
+	}
 	policy := GetRbacPolicy(c)
 	if user, err := GetUser(c); err != nil {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Error, "user does not exist")
 		return err
 	} else if ok, err := policy.Enforce(
 		user.UnionID.String(),
@@ -93,11 +123,16 @@ func StaticAuthorize(c *gin.Context, namespace, object, action string) *CodeErro
 		object,
 		action,
 	); err != nil {
-		// TODO: log
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Error, err.Error())
 		return ErrAuthorizeFailed
 	} else if !ok {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Error, "authorize failed")
 		return ErrAuthorizeFailed
 	} else {
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Ok, "authorize success")
 		return nil
 	}
 }
@@ -107,7 +142,9 @@ func StaticAuthorize(c *gin.Context, namespace, object, action string) *CodeErro
 // 功能: 对每个请求自动执行 Authorize 函数进行权限检查
 func RbacPolicyAuthorizeMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := Authorize(c); err != nil {
+		_, span := StartMiddlewareSpan(c, "authorize")
+		defer span.End()
+		if err := Authorize(c, span); err != nil {
 			err.AbortWithGinH(c)
 			return
 		} else {
@@ -124,7 +161,9 @@ func RbacPolicyAuthorizeMiddleware() gin.HandlerFunc {
 // 功能: 对每个请求自动执行 StaticAuthorize 函数进行固定资源的权限检查
 func StaticRbacPolicyAuthorizeMiddleware(namespace, object, action string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if err := StaticAuthorize(c, namespace, object, action); err != nil {
+		_, span := StartMiddlewareSpan(c, "static-authorize")
+		defer span.End()
+		if err := StaticAuthorize(c, span, namespace, object, action); err != nil {
 			err.AbortWithGinH(c)
 			return
 		} else {

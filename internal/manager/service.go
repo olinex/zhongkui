@@ -33,12 +33,12 @@ func RunHttpService(ctx context.Context, i do.Injector) error {
 		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Handler: engine,
 	}
-	apiLogger.Info("web server listening on")
+	apiLogger.Ctx(ctx).Info("web server listening on")
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		apiLogger.Fatal("failed to start http server", zap.Error(err))
+		apiLogger.Ctx(ctx).Fatal("failed to start http server", zap.Error(err))
 	} else if ctx != nil {
-		apiLogger.Warn("http server received error", zap.Error(err))
+		apiLogger.Ctx(ctx).Warn("http server received error", zap.Error(err))
 	}
-	apiLogger.Info("web server forced to shutdown")
+	apiLogger.Ctx(ctx).Info("web server forced to shutdown")
 	return srv.Shutdown(ctx)
 }

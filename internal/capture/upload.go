@@ -14,9 +14,9 @@ func (c *capturer) uploadOne(ctx context.Context, filePath, objectKey string) er
 	defer func() {
 		err := os.Remove(filePath)
 		if err != nil {
-			c.logger.Errorf(`remove file %s error: %v`, filePath, err)
+			c.logger.Ctx(ctx).Errorf(`remove file %s error: %v`, filePath, err)
 		} else {
-			c.logger.Infof(`remove file %s success`, filePath)
+			c.logger.Ctx(ctx).Infof(`remove file %s success`, filePath)
 		}
 	}()
 
@@ -38,7 +38,7 @@ func (c *capturer) uploadOne(ctx context.Context, filePath, objectKey string) er
 
 	// 记录上传成功的详细日志
 	// 包含对象键名、文件大小和SHA256校验和
-	c.logger.Infof(`upload file %s to s3, size: %d, checksum: %s`, objectKey, info.Size, info.ChecksumSHA256)
+	c.logger.Ctx(ctx).Infof(`upload file %s to s3, size: %d, checksum: %s`, objectKey, info.Size, info.ChecksumSHA256)
 	return nil
 }
 
@@ -59,7 +59,7 @@ func (c *capturer) upload(ctx context.Context, sourceChan <-chan notice, notifyC
 				return nil
 			case notifyChan <- n:
 			}
-			c.logger.Infof(`upload file %s to %s success`, filePath, objectKey)
+			c.logger.Ctx(ctx).Infof(`upload file %s to %s success`, filePath, objectKey)
 		}
 	}
 }

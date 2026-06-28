@@ -125,7 +125,7 @@ type NamespaceConfig struct {
 type CORSConfig struct {
 	// AllowOrigin 是允许的跨域请求来源地址，
 	// 只有来自此地址的跨域请求才会被接受，支持使用 * 允许所有来源（不推荐生产环境使用）
-	AllowOrigin string `mapstructure:"allowOrigin" default:"http://localhost:3000"`
+	AllowOrigin string `mapstructure:"allowOrigin" default:"http://localhost:8081"`
 	// AllowCredentials 控制是否允许跨域请求携带凭证（Cookie、HTTP 认证等），
 	// 开启后浏览器会在跨域请求中包含认证信息
 	AllowCredentials bool `mapstructure:"allowCredentials" default:"true"`

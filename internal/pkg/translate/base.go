@@ -1,6 +1,7 @@
 package translate
 
 import (
+	"context"
 	"embed"
 	"fmt"
 
@@ -78,7 +79,7 @@ type I18n struct {
 //	├── en.toml      # 英语翻译文件
 //	├── zh-Hans.toml # 简体中文翻译文件
 //	└── ja.toml      # 日语翻译文件
-func newBundle(cfg *Config, logger *logging.Logger) *i18n.Bundle {
+func newBundle(ctx context.Context, cfg *Config, logger *logging.Logger) *i18n.Bundle {
 	// 创建新的消息包，使用默认语言作为基础语言
 	// 基础语言决定了消息包的默认语言和回退机制
 	bundle := i18n.NewBundle(cfg.DefaultLocale.StdTag())
@@ -100,12 +101,12 @@ func newBundle(cfg *Config, logger *logging.Logger) *i18n.Bundle {
 		// 优先尝试加载自定义本地化文件
 		// 自定义文件允许用户覆盖内置翻译
 		if _, err := bundle.LoadMessageFile(customPath); err == nil {
-			logger.Infof("load custom locale %s from %s", lang, customPath)
+			logger.Ctx(ctx).Infof("load custom locale %s from %s", lang, customPath)
 			continue
 		} else if _, err := bundle.LoadMessageFileFS(embeddedLocales, buildinPath); err == nil {
 			// 如果自定义文件不存在，尝试加载内置文件
 			// 内置文件提供默认翻译
-			logger.Infof("load buildin locale %s from %s", lang, buildinPath)
+			logger.Ctx(ctx).Infof("load buildin locale %s from %s", lang, buildinPath)
 			continue
 		} else {
 			// 如果两种文件都不存在，则抛出异常
@@ -147,7 +148,7 @@ func newBundle(cfg *Config, logger *logging.Logger) *i18n.Bundle {
 // 注意:
 //   - 目前仅支持英语（en）和简体中文（zh-Hans）的验证器翻译
 //   - 其他语言会跳过验证器翻译注册，但仍可用于消息翻译
-func newUniversalTranslator(cfg *Config, bundle *i18n.Bundle, logger *logging.Logger) *ut.UniversalTranslator {
+func newUniversalTranslator(ctx context.Context, cfg *Config, bundle *i18n.Bundle, logger *logging.Logger) *ut.UniversalTranslator {
 	// 获取全局验证器实例
 	// 验证器是单例模式，确保所有翻译使用同一个验证器实例
 	var uni *ut.UniversalTranslator
@@ -184,7 +185,7 @@ func newUniversalTranslator(cfg *Config, bundle *i18n.Bundle, logger *logging.Lo
 		// 目前仅支持英语和简体中文的验证器翻译
 		switch tag {
 		case language.SimplifiedChinese:
-			logger.Infof("register zh validator translation for %s", lang)
+			logger.Ctx(ctx).Infof("register zh validator translation for %s", lang)
 			// 注册中文验证器翻译（默认规则）
 			err := zh_translations.RegisterDefaultTranslations(validator.Validate, trans)
 			if err != nil {
@@ -196,7 +197,7 @@ func newUniversalTranslator(cfg *Config, bundle *i18n.Bundle, logger *logging.Lo
 				panic(err)
 			}
 		case language.English:
-			logger.Infof("register en validator translation for %s", lang)
+			logger.Ctx(ctx).Infof("register en validator translation for %s", lang)
 			// 注册英文验证器翻译（默认规则）
 			err := en_translations.RegisterDefaultTranslations(validator.Validate, trans)
 			if err != nil {
@@ -332,14 +333,14 @@ func MustGetTranslator(uni *ut.UniversalTranslator, lang *Language) ut.Translato
 //   - 使用单例模式或依赖注入管理 I18n 实例
 //   - 确保所有支持语言的翻译文件都存在
 //   - 在生产环境中监控初始化错误
-func InitI18n(cfg *Config, logger *logging.Logger) *I18n {
+func InitI18n(ctx context.Context, cfg *Config, logger *logging.Logger) *I18n {
 	// 创建消息包：加载所有翻译资源文件
 	// 消息包管理应用程序的所有本地化消息
-	bundle := newBundle(cfg, logger)
+	bundle := newBundle(ctx, cfg, logger)
 
 	// 创建通用翻译器：注册验证器错误消息翻译
 	// 通用翻译器处理验证器规则的本地化
-	uni := newUniversalTranslator(cfg, bundle, logger)
+	uni := newUniversalTranslator(ctx, cfg, bundle, logger)
 
 	// 创建并返回 I18n 实例
 	// I18n 实例是国际化系统的核心，提供统一的接口

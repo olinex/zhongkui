@@ -144,7 +144,7 @@ func (n *ReassemblerNode[P]) run(
 	wg.Go(func() error {
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Errorf(`reassemblerNode %s panic: %v`, n.ID, err)
+				logger.Ctx(ctx).Errorf(`reassemblerNode %s panic: %v`, n.ID, err)
 			}
 		}()
 		err := n.Reassembler.parse(
@@ -153,7 +153,7 @@ func (n *ReassemblerNode[P]) run(
 			dstChan,
 		)
 		if err != nil && !errors.Is(err, context.Canceled) {
-			logger.Debugf(`reassemblerNode %s run error: %v`, n.ID, err)
+			logger.Ctx(ctx).Debugf(`reassemblerNode %s run error: %v`, n.ID, err)
 		}
 		return nil
 	})

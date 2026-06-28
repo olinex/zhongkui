@@ -7,6 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -268,14 +270,23 @@ func (j *JwtAuthenticator) AuthenticatorMiddleware() gin.HandlerFunc {
 //   - gin.HandlerFunc: Gin 中间件函数
 func (j *JwtAuthenticator) AuthenticateMiddleware(allowAnonymous bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		_, span := StartMiddlewareSpan(c, "authenticate")
+		defer span.End()
+		attrs := []attribute.KeyValue{attribute.Bool("allow-anon", allowAnonymous)}
 		if user := j.Authenticate(c); user != nil {
+			attrs = append(attrs, attribute.String("user", user.UnionID.String()))
 			c.Set(USER_CTX_NAME, user)
 		} else if allowAnonymous {
+			attrs = append(attrs, attribute.String("user", "anon"))
 			c.Set(USER_CTX_NAME, anonymous)
 		} else {
+			span.SetAttributes(attrs...)
+			span.SetStatus(codes.Error, "auth failed")
 			ErrJwtBadToken.AbortWithGinH(c)
 			return
 		}
+		span.SetAttributes(attrs...)
+		span.SetStatus(codes.Ok, "auth success")
 		c.Next()
 	}
 }

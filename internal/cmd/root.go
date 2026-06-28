@@ -7,6 +7,7 @@ import (
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 const (
@@ -31,7 +32,8 @@ var RootCmd = &cobra.Command{
 		provider.InjectViper(i)
 		provider.InjectS3(i)
 		provider.InjectGin(i)
-		provider.InjectI18n(i)
+		validator.Init()
+		provider.InjectI18n(ctx, i)
 		provider.InjectRbac(i)
 		provider.InjectApiLogger(i)
 		provider.InjectDatabaseLogger(i)

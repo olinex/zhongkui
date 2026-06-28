@@ -15,17 +15,27 @@
 package routes
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
-func RouteRegister(i do.Injector) error {
+func RouteRegister(ctx context.Context, i do.Injector) error {
 	viper := provider.MustInvokeViper(i)
 	etcd := provider.MustInvokeEtcdClient(i)
 	coreDB := provider.MustInvokeCoreDatabase(i)
+
+	// 初始化命名空间缓存：设置数据库引用并预加载全量命名空间
+	core.Cache.SetDB(coreDB)
+	if err := core.Cache.Load(ctx); err != nil {
+		return errors.WithStack(err)
+	}
+
 	engine := provider.MustInvokeGin(i)
 	inspector := provider.MustInvokePipelineInspector(i)
 	apiLogger := provider.MustInvokeApiLogger(i)

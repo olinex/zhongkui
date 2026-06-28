@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
 	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // mockTaskHandler 是一个模拟的任务处理函数，用于测试。
@@ -91,7 +92,7 @@ func TestServer_Start(t *testing.T) {
 		// 创建测试用的日志记录器
 		observedZapCore, _ := observer.New(zap.InfoLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		Convey("应该验证 errors.WithStack 的使用", func() {
 			// 创建一个模拟的错误
@@ -127,7 +128,7 @@ func TestServer_Shutdown(t *testing.T) {
 		// 创建测试用的日志记录器
 		observedZapCore, _ := observer.New(zap.InfoLevel)
 		observedLogger := zap.New(observedZapCore)
-		sugarLogger := observedLogger.Sugar()
+		sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 		Convey("应该验证 Shutdown 方法的存在", func() {
 			// 创建一个 Server 实例（仅用于类型检查）
@@ -162,7 +163,7 @@ func TestServer_Integration(t *testing.T) {
 			// 创建测试用的日志记录器
 			observedZapCore, observedLogs := observer.New(zap.InfoLevel)
 			observedLogger := zap.New(observedZapCore)
-			sugarLogger := observedLogger.Sugar()
+			sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 			// 创建 ServeMux 并注册处理函数
 			mux := asynq.NewServeMux()
@@ -181,7 +182,7 @@ func TestServer_Integration(t *testing.T) {
 			// 创建测试用的日志记录器
 			observedZapCore, _ := observer.New(zap.InfoLevel)
 			observedLogger := zap.New(observedZapCore)
-			sugarLogger := observedLogger.Sugar()
+			sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 			// 测试 RecoverWithStack 中间件创建
 			middleware := RecoverWithStack(sugarLogger)
@@ -224,7 +225,7 @@ func TestServer_ConcurrentSafety(t *testing.T) {
 			// 创建测试用的日志记录器
 			observedZapCore, _ := observer.New(zap.InfoLevel)
 			observedLogger := zap.New(observedZapCore)
-			sugarLogger := observedLogger.Sugar()
+			sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 			// 创建 Server 实例
 			server := &Server{
@@ -241,7 +242,7 @@ func TestServer_ConcurrentSafety(t *testing.T) {
 			// 创建测试用的日志记录器
 			observedZapCore, _ := observer.New(zap.InfoLevel)
 			observedLogger := zap.New(observedZapCore)
-			sugarLogger := observedLogger.Sugar()
+			sugarLogger := &logging.Logger{SugaredLogger: observedLogger.Sugar()}
 
 			// 创建 Server 实例
 			server := &Server{

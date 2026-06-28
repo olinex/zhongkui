@@ -67,7 +67,7 @@ func TestNamespaceCache_NewNamespaceCache(t *testing.T) {
 			convey.So(cache, convey.ShouldNotBeNil)
 			// 注意：inited 和 cache 是私有字段，无法直接访问
 			// 我们可以通过 All() 方法来验证缓存状态
-			result := cache.All()
+			result := cache.All(context.Background())
 			convey.So(result, convey.ShouldNotBeNil)
 			convey.So(len(result), convey.ShouldEqual, 0)
 		})
@@ -80,7 +80,7 @@ func TestNamespaceCache_All(t *testing.T) {
 		cache := NewNamespaceCache()
 
 		convey.Convey("Should return empty slice when cache is not initialized", func() {
-			result := cache.All()
+			result := cache.All(context.Background())
 			convey.So(result, convey.ShouldNotBeNil)
 			convey.So(len(result), convey.ShouldEqual, 0)
 		})
@@ -91,7 +91,7 @@ func TestNamespaceCache_All(t *testing.T) {
 			cache.Add("namespace2")
 			cache.Add("namespace3")
 
-			result := cache.All()
+			result := cache.All(context.Background())
 			convey.So(result, convey.ShouldNotBeNil)
 			convey.So(len(result), convey.ShouldEqual, 3)
 			convey.So(result, convey.ShouldContain, "namespace1")
@@ -112,14 +112,14 @@ func TestNamespaceCache_Clear(t *testing.T) {
 			cache.Add("namespace2")
 
 			// 验证缓存中有数据
-			result := cache.All()
+			result := cache.All(context.Background())
 			convey.So(len(result), convey.ShouldEqual, 2)
 
 			// 执行清除
 			cache.Clear()
 
 			// 验证缓存已清空
-			result = cache.All()
+			result = cache.All(context.Background())
 			convey.So(result, convey.ShouldNotBeNil)
 			convey.So(len(result), convey.ShouldEqual, 0)
 		})
@@ -132,11 +132,11 @@ func TestNamespaceCache_SetAndDelete(t *testing.T) {
 		cache := NewNamespaceCache()
 
 		convey.Convey("Should add namespace to cache using Add method", func() {
-			result := cache.All()
+			result := cache.All(context.Background())
 			convey.So(len(result), convey.ShouldEqual, 0)
 
 			cache.Add("test-namespace")
-			result = cache.All()
+			result = cache.All(context.Background())
 			convey.So(len(result), convey.ShouldEqual, 1)
 			convey.So(result, convey.ShouldContain, "test-namespace")
 		})
@@ -145,7 +145,7 @@ func TestNamespaceCache_SetAndDelete(t *testing.T) {
 			cache.Add("test-namespace")
 			cache.Add("test-namespace") // 添加相同的命名空间
 
-			result := cache.All()
+			result := cache.All(context.Background())
 			convey.So(len(result), convey.ShouldEqual, 1)
 			convey.So(result, convey.ShouldContain, "test-namespace")
 		})
@@ -154,11 +154,11 @@ func TestNamespaceCache_SetAndDelete(t *testing.T) {
 			cache.Add("test-namespace")
 			cache.Add("another-namespace")
 
-			result := cache.All()
+			result := cache.All(context.Background())
 			convey.So(len(result), convey.ShouldEqual, 2)
 
 			cache.Clear()
-			result = cache.All()
+			result = cache.All(context.Background())
 			convey.So(len(result), convey.ShouldEqual, 0)
 		})
 	})
@@ -183,7 +183,7 @@ func TestNamespace_AfterCreate(t *testing.T) {
 			}
 
 			// 验证初始状态
-			initialResult := Cache.All()
+			initialResult := Cache.All(context.Background())
 			convey.So(len(initialResult), convey.ShouldEqual, 1)
 			convey.So(initialResult, convey.ShouldContain, "dummy-namespace")
 
@@ -191,7 +191,7 @@ func TestNamespace_AfterCreate(t *testing.T) {
 			convey.So(err, convey.ShouldBeNil)
 
 			// 验证新命名空间已添加
-			finalResult := Cache.All()
+			finalResult := Cache.All(context.Background())
 			convey.So(len(finalResult), convey.ShouldEqual, 2)
 			convey.So(finalResult, convey.ShouldContain, "dummy-namespace")
 			convey.So(finalResult, convey.ShouldContain, "new-namespace")
@@ -218,7 +218,7 @@ func TestNamespace_AfterDelete(t *testing.T) {
 			}
 
 			// 验证初始状态
-			initialResult := Cache.All()
+			initialResult := Cache.All(context.Background())
 			convey.So(len(initialResult), convey.ShouldEqual, 2)
 			convey.So(initialResult, convey.ShouldContain, "namespace-to-delete")
 			convey.So(initialResult, convey.ShouldContain, "other-namespace")
@@ -227,7 +227,7 @@ func TestNamespace_AfterDelete(t *testing.T) {
 			convey.So(err, convey.ShouldBeNil)
 
 			// 验证命名空间已删除
-			finalResult := Cache.All()
+			finalResult := Cache.All(context.Background())
 			convey.So(len(finalResult), convey.ShouldEqual, 1)
 			convey.So(finalResult, convey.ShouldNotContain, "namespace-to-delete")
 			convey.So(finalResult, convey.ShouldContain, "other-namespace")
@@ -292,20 +292,50 @@ func TestNamespaceExist(t *testing.T) {
 // TestNamespaceCache_Load 测试 NamespaceCache 的 Load 方法
 func TestNamespaceCache_Load(t *testing.T) {
 	convey.Convey("Test NamespaceCache Load method", t, func() {
-		convey.Convey("Should return nil if cache is already initialized", func() {
-			cache := newNamespaceCache()
-			cache.inited = true
-
-			err := cache.Load(context.Background(), nil)
-			convey.So(err, convey.ShouldBeNil)
+		convey.Convey("Should return error when database is not set", func() {
+			cache := NewNamespaceCache()
+			err := cache.Load(context.Background())
+			convey.So(err, convey.ShouldNotBeNil)
+			convey.So(err.Error(), convey.ShouldContainSubstring, "database not set")
 		})
 
-		convey.Convey("Should handle database error", func() {
-			// 创建一个模拟的数据库连接，会返回错误
-			// 由于Load方法会调用Select和Find方法，我们需要一个更完整的模拟
-			// 这里我们简化测试，直接测试错误处理逻辑
-			// 在实际项目中，可以使用gomock或testify/mock进行更完整的模拟
-			convey.SkipSo("需要更完整的数据库模拟，跳过此测试", convey.ShouldBeTrue)
+		convey.Convey("Should allow repeated Load calls (no short-circuit)", func() {
+			// Load 允许重复调用以支持多实例场景下的缓存刷新
+			cache := NewNamespaceCache()
+			// 没有设置 DB 时 Load 会报错，但这验证了方法不会因为内部状态而短路
+			err := cache.Load(context.Background())
+			convey.So(err, convey.ShouldNotBeNil) // 未设置 DB 时会报错
+
+			// 第二次调用同理，不会因为"已加载"而跳过
+			err = cache.Load(context.Background())
+			convey.So(err, convey.ShouldNotBeNil)
+		})
+	})
+}
+
+// TestNamespaceCache_SetDB 测试 NamespaceCache 的 SetDB 方法
+func TestNamespaceCache_SetDB(t *testing.T) {
+	convey.Convey("Test NamespaceCache SetDB method", t, func() {
+		cache := NewNamespaceCache()
+
+		convey.Convey("Should set database reference", func() {
+			// SetDB 接受 nil 也是合法的（用于清理引用）
+			cache.SetDB(nil)
+			// 验证不会 panic
+			convey.So(true, convey.ShouldBeTrue)
+		})
+	})
+}
+
+// TestNamespaceCache_Reload 测试 NamespaceCache 的 Reload 方法
+func TestNamespaceCache_Reload(t *testing.T) {
+	convey.Convey("Test NamespaceCache Reload method", t, func() {
+		cache := NewNamespaceCache()
+
+		convey.Convey("Reload should behave same as Load", func() {
+			err := cache.Reload(context.Background())
+			convey.So(err, convey.ShouldNotBeNil)
+			convey.So(err.Error(), convey.ShouldContainSubstring, "database not set")
 		})
 	})
 }
@@ -315,7 +345,6 @@ func TestGlobalCache(t *testing.T) {
 	convey.Convey("Test global Cache variable", t, func() {
 		convey.Convey("Should be initialized and not nil", func() {
 			convey.So(Cache, convey.ShouldNotBeNil)
-			convey.So(Cache.inited, convey.ShouldBeFalse)
 			convey.So(Cache.cache, convey.ShouldNotBeNil)
 			convey.So(len(Cache.cache), convey.ShouldEqual, 0)
 		})

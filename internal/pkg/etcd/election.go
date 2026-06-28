@@ -149,7 +149,7 @@ func (e *Election) Start() error {
 			select {
 			// 外部上下文结束
 			case <-innerCtx.Done():
-				e.logger.Info("stop observe leader election")
+				e.logger.With("context", e.ctx).Info("stop observe leader election")
 				return nil
 			// 完成了一次选举过程
 			case rsp, open := <-electResultChan:
@@ -165,7 +165,7 @@ func (e *Election) Start() error {
 					panic("get more than one leader from election")
 				}
 				leaderID := string(rsp.Kvs[0].Value)
-				e.logger.Infof(
+				e.logger.With("context", e.ctx).Infof(
 					`New leader %s %s has been elected, current candidate id is %s`,
 					name,
 					leaderID,
@@ -173,11 +173,11 @@ func (e *Election) Start() error {
 				)
 				// 本次选举的领导者不是当前进程，继续参与选举
 				if string(rsp.Kvs[0].Value) != candidateID {
-					e.logger.Infof(`Current candidate %s is not leader, continue campaign`, candidateID)
+					e.logger.With("context", e.ctx).Infof(`Current candidate %s is not leader, continue campaign`, candidateID)
 					continue
 				}
 				// 本次选举成为了领导者，有权运行定时调度
-				e.logger.Infof(`Handler %s is running...`, name)
+				e.logger.With("context", e.ctx).Infof(`Handler %s is running...`, name)
 				return e.handler.Start(e.ctx)
 			}
 		}

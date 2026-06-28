@@ -94,6 +94,7 @@ func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server
 		rawCfg := cfg.ToAsynqConfig(ctxFunc, logger)
 
 		return pipeline.NewServer(
+			ctx,
 			redisClient,
 			rawCfg,
 			logger,

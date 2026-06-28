@@ -106,6 +106,39 @@ func InjectRedisClient(client *redis.Client) error {
 	return nil
 }
 
+// contextStrippingCore 从 zap 字段中过滤掉 context.Context 类型的值，
+// 避免这些字段被序列化到 stdout/控制台输出中产生冗余信息。
+// context 仅保留给 otelzap core 用于 trace 关联。
+type contextStrippingCore struct {
+	zapcore.Core
+}
+
+func (c *contextStrippingCore) With(fields []zapcore.Field) zapcore.Core {
+	return &contextStrippingCore{c.Core.With(stripContextFields(fields))}
+}
+
+func (c *contextStrippingCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	return c.Core.Check(ent, ce)
+}
+
+func (c *contextStrippingCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
+	return c.Core.Write(ent, stripContextFields(fields))
+}
+
+func stripContextFields(fields []zapcore.Field) []zapcore.Field {
+	if len(fields) == 0 {
+		return fields
+	}
+	filtered := make([]zapcore.Field, 0, len(fields))
+	for _, f := range fields {
+		if _, ok := f.Interface.(context.Context); ok {
+			continue
+		}
+		filtered = append(filtered, f)
+	}
+	return filtered
+}
+
 // WrapLogger 将已有的 *zap.Logger 包装，使其通过 OpenTelemetry 导出日志。
 //
 // 当 OTEL 未启用或日志导出被禁用时，返回原始 logger 不做任何修改。
@@ -114,15 +147,23 @@ func WrapLogger(logger *zap.Logger, name string) *zap.Logger {
 	if !Env.Enabled {
 		return logger
 	}
-	core := otelzap.NewCore(name, otelzap.WithLoggerProvider(global.GetLoggerProvider()))
-	return logger.WithOptions(zap.WrapCore(func(c zapcore.Core) zapcore.Core {
-		return zapcore.NewTee(c, core)
+	otelCore := otelzap.NewCore(name, otelzap.WithLoggerProvider(global.GetLoggerProvider()))
+	// 原始 console core 用 contextStrippingCore 包裹，去掉 context.Context 字段避免 stdout 冗余
+	consoleCore := &contextStrippingCore{logger.Core()}
+	return logger.WithOptions(zap.WrapCore(func(_ zapcore.Core) zapcore.Core {
+		return zapcore.NewTee(consoleCore, otelCore)
 	}))
 }
 
-// WrapSugaredLogger 将已有的 *logging.Logger (zap.SugaredLogger) 包装，使其通过 OTEL 导出日志。
+// WrapSugaredLogger 将已有的 *logging.Logger 包装，使其通过 OTEL 导出日志。
+// 同时启用 logging.EnableCtx()，使 logger.Ctx(ctx) 将 context 注入日志字段供 otelzap trace 关联。
 func WrapSugaredLogger(logger *logging.Logger, name string) *logging.Logger {
-	return WrapLogger(logger.Desugar(), name).Sugar()
+	if !Env.Enabled {
+		return logger
+	}
+	logging.EnableCtx()
+	wrapped := WrapLogger(logger.Desugar(), name).Sugar()
+	return &logging.Logger{SugaredLogger: wrapped}
 }
 
 // GormPlugin 返回 GORM 的 OTEL 插件，自动为数据库操作创建 trace span。

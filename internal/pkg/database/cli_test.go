@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // TestNewDatabase_ValidConfig 测试 NewDatabase 函数使用有效配置时的行为
@@ -21,7 +22,7 @@ func TestNewDatabase_ValidConfig(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		db, err := NewDatabase(cfg, logger)
 
@@ -53,7 +54,7 @@ func TestNewDatabase_UnsupportedDriver(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		db, err := NewDatabase(cfg, logger)
 
@@ -81,7 +82,7 @@ func TestNewDatabase_EmptyDriver(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		db, err := NewDatabase(cfg, logger)
 
@@ -109,7 +110,7 @@ func TestNewDatabase_PostgresDriver(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		_, err := NewDatabase(cfg, logger)
 
@@ -141,7 +142,7 @@ func TestNewDatabase_ClickHouseDriver(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		_, err := NewDatabase(cfg, logger)
 
@@ -161,7 +162,7 @@ func TestNewDatabase_NilConfig(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		db, err := NewDatabase(nil, logger)
 
@@ -215,7 +216,7 @@ func TestNewDatabase_InvalidDSN(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		db, _ := NewDatabase(cfg, logger)
 
@@ -267,7 +268,7 @@ func TestNewDatabase_WithMetaConfig(t *testing.T) {
 		config.OutputPaths = []string{}
 		config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
 		zapLogger, _ := config.Build()
-		logger := zapLogger.Sugar()
+		logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 
 		db, err := NewDatabase(cfg, logger)
 
