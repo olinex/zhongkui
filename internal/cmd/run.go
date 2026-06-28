@@ -25,7 +25,7 @@ var webCmd = &cobra.Command{
 	Short: "Run the zhongkui http web api process",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, i := cmdToolBox(cmd)
-		if err := routes.RouteRegister(i); err != nil {
+		if err := routes.RouteRegister(ctx, i); err != nil {
 			return err
 		}
 		return manager.RunHttpService(ctx, i)

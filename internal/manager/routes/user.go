@@ -37,7 +37,7 @@ type UserProfileChangeIn struct {
 // UserPasswordLoginIn 定义密码登录的输入结构体
 // 包含用户名和密码信息
 type UserPasswordLoginIn struct {
-	Username string `json:"username" binding:"required,min=6,max=32,alphaunicode"` // 用户名，必填，6-32个字符，支持Unicode字母
+	Username string `json:"username" binding:"required,min=6,max=32,alphaunicode"`         // 用户名，必填，6-32个字符，支持Unicode字母
 	Password string `json:"password" binding:"required,min=8,max=64,ascii,strongPassword"` // 密码，必填，8-64个ASCII字符，需满足强密码要求
 }
 
@@ -51,15 +51,15 @@ type UserRegisterIn struct {
 // UserPasswordResetIn 定义用户密码重置的输入结构体
 // 包含旧密码和新密码信息
 type UserPasswordResetIn struct {
-	OldPassword string `json:"oldPassword" binding:"required,min=8,max=64,ascii"`       // 旧密码，必填，8-64个ASCII字符
+	OldPassword string `json:"oldPassword" binding:"required,min=8,max=64,ascii"`          // 旧密码，必填，8-64个ASCII字符
 	NewPassword string `json:"newPassword" binding:"required,min=8,max=64,strongPassword"` // 新密码，必填，8-64个ASCII字符，需满足强密码要求
 }
 
 // UserAccessKeyCreateIn 定义创建访问密钥的输入结构体
 // 包含访问密钥的启用状态、描述和过期时间
 type UserAccessKeyCreateIn struct {
-	Enabled     bool       `json:"enabled" default:"true"`                                // 是否启用，默认为true
-	Description string     `json:"description" binding:"required,min=6,max=256"`          // 描述，必填，6-256个字符
+	Enabled     bool       `json:"enabled" default:"true"`                                  // 是否启用，默认为true
+	Description string     `json:"description" binding:"required,min=6,max=256"`            // 描述，必填，6-256个字符
 	ExpiredAt   *time.Time `json:"expiredAt" default:"-" binding:"omitempty,gtCurrentTime"` // 过期时间，可选，需晚于当前时间
 }
 
@@ -75,12 +75,12 @@ type AuthorizationInfoOut struct {
 // 继承BaseItemOut，包含访问密钥的详细信息
 type UserAccessKeyOut struct {
 	utils.BaseItemOut
-	Enabled         bool       `json:"enabled"`           // 是否启用
-	AccessKeyID     string     `json:"accessKeyID"`       // 访问密钥ID
-	AccessKeySecret string     `json:"accessKeySecret"`   // 访问密钥Secret
-	Description     string     `json:"description"`       // 描述信息
-	ExpiredAt       *time.Time `json:"expiredAt"`         // 过期时间
-	LastAccessAt    *time.Time `json:"lastAccessAt"`      // 最后访问时间
+	Enabled         bool       `json:"enabled"`         // 是否启用
+	AccessKeyID     string     `json:"accessKeyID"`     // 访问密钥ID
+	AccessKeySecret string     `json:"accessKeySecret"` // 访问密钥Secret
+	Description     string     `json:"description"`     // 描述信息
+	ExpiredAt       *time.Time `json:"expiredAt"`       // 过期时间
+	LastAccessAt    *time.Time `json:"lastAccessAt"`    // 最后访问时间
 }
 
 // userRegister 处理用户注册请求
@@ -260,7 +260,7 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 	}
 	logger := manager.GetLogger(c)
 	db := manager.GetDatabase(c)
-	
+
 	// 查询用户所属的用户组
 	var groups []*core.RbacPolicy
 	if err := db.Find(&groups, "ptype = ? AND v0 = ?", base.GROUP_LABEL, user.UnionID.String()).Error; err != nil {
@@ -268,13 +268,13 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	
+
 	// 提取用户组名称
 	names := make([]string, 0, len(groups))
 	for _, group := range groups {
 		names = append(names, group.V1)
 	}
-	
+
 	// 查询用户组对应的策略
 	var policies []*core.RbacPolicy
 	if err := db.Find(&policies, "ptype = ? AND v0 IN ?", base.POLICY_LABEL, names).Error; err != nil {
@@ -282,14 +282,14 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	
+
 	// 构建返回结果
 	out := AuthorizationInfoOut{
 		Model:      base.RBAC_MODEL,
 		Policies:   make([][]string, 0, len(groups)+len(policies)),
-		Namespaces: core.Cache.All(),
+		Namespaces: core.Cache.All(c),
 	}
-	
+
 	// 将策略和用户组信息合并
 	for _, p := range append(policies, groups...) {
 		out.Policies = append(out.Policies, []string{
@@ -300,7 +300,7 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 			p.V3,
 		})
 	}
-	
+
 	// 返回授权信息
 	manager.SimpleOK.AbortWithGinW(c, out)
 }
@@ -317,7 +317,7 @@ func userSelfAccessKeyListGet(c *gin.Context) {
 	}
 	logger := manager.GetLogger(c)
 	db := manager.GetDatabase(c)
-	
+
 	// 查询用户的所有访问密钥
 	var keys []*core.AccessKey
 	if err := db.Find(&keys, "user_id = ?", user.ID).Error; err != nil {
@@ -325,7 +325,7 @@ func userSelfAccessKeyListGet(c *gin.Context) {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	
+
 	// 构建返回结果
 	out := make([]*UserAccessKeyOut, 0, len(keys))
 	for _, key := range keys {
@@ -343,7 +343,7 @@ func userSelfAccessKeyListGet(c *gin.Context) {
 			LastAccessAt:    key.LastAccessAt,
 		})
 	}
-	
+
 	// 返回访问密钥列表
 	manager.SimpleOK.AbortWithGinW(c, out)
 }
@@ -358,7 +358,7 @@ func userSelfAccessKeyCreate(c *gin.Context) {
 		codeErr.AbortWithGinH(c)
 		return
 	}
-	
+
 	var in UserAccessKeyCreateIn
 	// 设置默认值
 	if err := defaults.Set(&in); err != nil {
@@ -370,7 +370,7 @@ func userSelfAccessKeyCreate(c *gin.Context) {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	
+
 	db := manager.GetDatabase(c)
 	// 创建新的访问密钥对象
 	key, err := core.NewAccessKey(user, in.Enabled, in.Description, in.ExpiredAt)
@@ -378,10 +378,10 @@ func userSelfAccessKeyCreate(c *gin.Context) {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	
+
 	// 获取配置信息
 	cfg := manager.GetConfig(c)
-	
+
 	// 在事务中执行创建操作
 	db.Transaction(func(tx *database.DB) error {
 		var count int64
@@ -427,28 +427,30 @@ func userSelfAccessKeyRemove(c *gin.Context) {
 		codeErr.AbortWithGinH(c)
 		return
 	}
-	
+
 	// 获取URL路径参数
 	id, ok := getUint64Param(c, "id")
 	if !ok {
 		return
 	}
-	
+
 	// 删除访问密钥
 	db := manager.GetDatabase(c)
 	if err := db.Delete(&core.AccessKey{}, "id = ? AND user_id = ?", id, user.ID).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	
+
 	// 返回成功响应
 	manager.SimpleOK.AbortWithGinH(c)
 }
 
 // userSelfAccessKeyEnabled 启用或禁用访问密钥
 // 路由：
-//   POST /api/v1/user/self/access-key/:id/activate   - 启用
-//   POST /api/v1/user/self/access-key/:id/deactivate - 禁用
+//
+//	POST /api/v1/user/self/access-key/:id/activate   - 启用
+//	POST /api/v1/user/self/access-key/:id/deactivate - 禁用
+//
 // 功能：更新访问密钥的启用状态
 func userSelfAccessKeyEnabled(enabled bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -458,13 +460,13 @@ func userSelfAccessKeyEnabled(enabled bool) gin.HandlerFunc {
 			codeErr.AbortWithGinH(c)
 			return
 		}
-		
+
 		// 获取URL路径参数
 		id, ok := getUint64Param(c, "id")
 		if !ok {
 			return
 		}
-		
+
 		// 更新访问密钥的启用状态
 		db := manager.GetDatabase(c)
 		var key core.AccessKey
@@ -472,7 +474,7 @@ func userSelfAccessKeyEnabled(enabled bool) gin.HandlerFunc {
 			manager.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}
-		
+
 		// 返回更新后的访问密钥信息
 		manager.SimpleOK.AbortWithGinW(c, UserAccessKeyOut{
 			BaseItemOut: utils.BaseItemOut{

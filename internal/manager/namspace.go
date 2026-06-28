@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"zhongkui.com/zhongkui/internal/models/core"
 )
 
@@ -43,6 +45,8 @@ var (
 //   - gin.HandlerFunc: 可直接注册到 Gin 路由中的中间件处理函数
 func NamespaceMiddleware(cfg *NamespaceConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		_, span := StartMiddlewareSpan(c, "namespace")
+		defer span.End()
 		namespace := DEFAULT_NAMESPACE
 		if temp := c.GetHeader(cfg.HeaderName); temp != "" {
 			namespace = temp
@@ -52,9 +56,18 @@ func NamespaceMiddleware(cfg *NamespaceConfig) gin.HandlerFunc {
 			namespace = temp
 		}
 		if ok := core.NamespaceExist(namespace); !ok {
+			span.SetAttributes(
+				attribute.String("namespace", namespace),
+				attribute.Bool("exists", false),
+			)
+			span.SetStatus(codes.Error, "namespace does not exist")
 			ErrNampspaceDoesNotExist.AbortWithGinH(c)
 			return
 		}
+		span.SetAttributes(
+			attribute.String("namespace", namespace),
+			attribute.Bool("exists", true),
+		)
 		c.Set(NAMESPACE_CTX_NAME, namespace)
 		c.Next()
 	}

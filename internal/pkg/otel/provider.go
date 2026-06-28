@@ -10,7 +10,23 @@ import (
 )
 
 func NewTraceProvider(exp sdktrace.SpanExporter, res *sdkresource.Resource) *sdktrace.TracerProvider {
-	return sdktrace.NewTracerProvider(sdktrace.WithBatcher(exp), sdktrace.WithResource(res))
+	sampler := NewSampler()
+	opts := []sdktrace.TracerProviderOption{
+		sdktrace.WithResource(res),
+		sdktrace.WithSampler(sampler),
+	}
+
+	if Env.SamplerType == SAMPLER_TAIL {
+		// 尾部过滤模式：创建 filter processor 包裹 batch processor，
+		// 只有通过过滤条件的 Span 才会进入批处理并导出
+		batchProcessor := sdktrace.NewBatchSpanProcessor(exp)
+		filterProcessor := NewFilterSpanProcessor(batchProcessor)
+		opts = append(opts, sdktrace.WithSpanProcessor(filterProcessor))
+	} else {
+		opts = append(opts, sdktrace.WithBatcher(exp))
+	}
+
+	return sdktrace.NewTracerProvider(opts...)
 }
 
 func NewMeterProvider(exp sdkmetric.Exporter, res *sdkresource.Resource) *sdkmetric.MeterProvider {
