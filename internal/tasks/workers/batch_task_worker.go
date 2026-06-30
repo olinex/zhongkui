@@ -8,6 +8,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/tasks/totel"
 )
 
 func emptyLiveFunc(ctx context.Context, task *pipeline.Task) error {
@@ -38,6 +39,7 @@ func NewBatchTaskWorker(
 	preE pipeline.LiveFunc,
 	postE pipeline.LiveFunc,
 ) *BatchTaskWorker {
+	totel.InitMetrics()
 	if preE == nil {
 		preE = emptyLiveFunc
 	}
@@ -57,16 +59,29 @@ func NewBatchTaskWorker(
 
 // Do 执行批量任务处理。
 // 启动数据提取、数据转换和数据加载的流水线处理流程。
-func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) error {
-	if err := w.preE(ctx, task); err != nil {
+func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) (err error) {
+	taskType := task.Type()
+	ctx, span := totel.StartBatchTaskSpan(ctx, taskType)
+	defer totel.EndSpan(span, &err)
+	defer func() {
+		if err != nil {
+			totel.RecordTaskError(ctx, taskType)
+		} else {
+			totel.RecordTask(ctx, taskType)
+		}
+	}()
+
+	err = w.preE(ctx, task)
+	if err != nil {
 		return errors.WithStack(err)
 	}
 	defer func() {
-		if err := w.postE(ctx, task); err != nil {
-			panic(err)
+		if pe := w.postE(ctx, task); pe != nil {
+			panic(pe)
 		}
 	}()
 	channel := make(chan rxgo.Item, w.bufferCount)
+	var loadedCount int
 	outterWg, outterCtx := errgroup.WithContext(ctx)
 	outterWg.Go(func() error {
 		observe := rxgo.FromChannel(channel)
@@ -86,6 +101,7 @@ func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) error {
 			if len(items) == 0 {
 				continue
 			}
+			loadedCount += len(items)
 			for _, load := range w.loads {
 				func(load pipeline.LoadFunc) {
 					innerWG.Go(func() error {
@@ -94,8 +110,8 @@ func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) error {
 				}(load)
 			}
 		}
-		if err := innerWG.Wait(); err != nil {
-			return errors.WithStack(err)
+		if ierr := innerWG.Wait(); ierr != nil {
+			return errors.WithStack(ierr)
 		}
 		return nil
 	})
@@ -103,5 +119,10 @@ func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) error {
 		defer close(channel)
 		return w.extract(outterCtx, task, channel)
 	})
-	return outterWg.Wait()
+	err = outterWg.Wait()
+	if err != nil {
+		return err
+	}
+	totel.RecordItemsLoaded(ctx, taskType, loadedCount)
+	return nil
 }

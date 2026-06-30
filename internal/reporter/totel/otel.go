@@ -1,0 +1,182 @@
+package totel
+
+import (
+	"context"
+	"fmt"
+	"sync"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
+	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
+)
+
+const (
+	SCOPE_NAME    = base.GLOBAL_PREFIX + "-reporter"
+	SPAN_RUN      = "reporter.run"
+	SPAN_WATCH    = "reporter.watch"
+	SPAN_FEEDBACK = "reporter.feedback"
+)
+
+var (
+	once sync.Once
+	// ---------- Metrics ----------
+	// watchConnectionsCounter 统计 Watch 连接数
+	watchConnectionsCounter metric.Int64Counter
+	// watchEventsCounter 统计 Watch 推送的事件数，按事件类型标记
+	watchEventsCounter metric.Int64Counter
+	// watchErrorsCounter 统计 Watch 过程中的错误数
+	watchErrorsCounter metric.Int64Counter
+	// feedbackRequestsCounter 统计接收到的 Feedback 请求数
+	feedbackRequestsCounter metric.Int64Counter
+	// feedbackTasksEnqueuedCounter 统计 Feedback 触发的异步任务数
+	feedbackTasksEnqueuedCounter metric.Int64Counter
+	// feedbackErrorsCounter 统计 Feedback 过程中的错误数
+	feedbackErrorsCounter metric.Int64Counter
+	// processingDuration 统计各阶段处理耗时分布
+	processingDuration metric.Int64Histogram
+)
+
+func InitMetrics() {
+	once.Do(initMetrics)
+}
+
+func initMetrics() {
+	var err, e error
+	meter := otel.Meter(SCOPE_NAME)
+
+	watchConnectionsCounter, e = meter.Int64Counter(
+		"reporter.watch.connections",
+		metric.WithDescription("Total number of Watch stream connections"),
+		metric.WithUnit("{connection}"),
+	)
+	err = errors.Join(err, e)
+
+	watchEventsCounter, e = meter.Int64Counter(
+		"reporter.watch.events",
+		metric.WithDescription("Total number of Watch config change events pushed"),
+		metric.WithUnit("{event}"),
+	)
+	err = errors.Join(err, e)
+
+	watchErrorsCounter, e = meter.Int64Counter(
+		"reporter.watch.errors",
+		metric.WithDescription("Total number of Watch stream errors"),
+		metric.WithUnit("{error}"),
+	)
+	err = errors.Join(err, e)
+
+	feedbackRequestsCounter, e = meter.Int64Counter(
+		"reporter.feedback.requests",
+		metric.WithDescription("Total number of Feedback requests received"),
+		metric.WithUnit("{request}"),
+	)
+	err = errors.Join(err, e)
+
+	feedbackTasksEnqueuedCounter, e = meter.Int64Counter(
+		"reporter.feedback.tasks_enqueued",
+		metric.WithDescription("Total number of async tasks enqueued via Feedback"),
+		metric.WithUnit("{task}"),
+	)
+	err = errors.Join(err, e)
+
+	feedbackErrorsCounter, e = meter.Int64Counter(
+		"reporter.feedback.errors",
+		metric.WithDescription("Total number of Feedback stream errors"),
+		metric.WithUnit("{error}"),
+	)
+	err = errors.Join(err, e)
+
+	processingDuration, e = meter.Int64Histogram(
+		"reporter.processing.duration",
+		metric.WithDescription("Duration of reporter processing stages in milliseconds"),
+		metric.WithUnit("ms"),
+	)
+	err = errors.Join(err, e)
+
+	if err != nil {
+		panic(fmt.Errorf("reporter otel metrics init failed: %w", err))
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Span 辅助函数
+// ---------------------------------------------------------------------------
+
+// StartRunSpan 在 ReporterService.Run 中创建 span。
+func StartRunSpan(ctx context.Context) (context.Context, trace.Span) {
+	tracer := otel.Tracer(SCOPE_NAME)
+	return tracer.Start(ctx, SPAN_RUN)
+}
+
+// StartWatchSpan 在 Watch 流式接口中创建 span。
+func StartWatchSpan(ctx context.Context, resourceKey string) (context.Context, trace.Span) {
+	tracer := otel.Tracer(SCOPE_NAME)
+	ctx, span := tracer.Start(ctx, SPAN_WATCH,
+		trace.WithAttributes(
+			attribute.String("reporter.watch.key", resourceKey),
+		),
+	)
+	return ctx, span
+}
+
+// StartFeedbackSpan 在 Feedback 流式接口中创建 span。
+func StartFeedbackSpan(ctx context.Context) (context.Context, trace.Span) {
+	tracer := otel.Tracer(SCOPE_NAME)
+	return tracer.Start(ctx, SPAN_FEEDBACK)
+}
+
+// ---------------------------------------------------------------------------
+// Metrics 记录辅助函数
+// ---------------------------------------------------------------------------
+
+// RecordWatchConnection 记录一次 Watch 连接建立。
+func RecordWatchConnection(ctx context.Context) {
+	watchConnectionsCounter.Add(ctx, 1)
+}
+
+// RecordWatchEvent 记录一次 Watch 配置变更事件。
+func RecordWatchEvent(ctx context.Context, eventType string) {
+	watchEventsCounter.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("reporter.watch.event_type", eventType),
+	))
+}
+
+// RecordWatchError 记录一次 Watch 错误。
+func RecordWatchError(ctx context.Context) {
+	watchErrorsCounter.Add(ctx, 1)
+}
+
+// RecordFeedbackRequest 记录一次 Feedback 请求。
+func RecordFeedbackRequest(ctx context.Context) {
+	feedbackRequestsCounter.Add(ctx, 1)
+}
+
+// RecordFeedbackTaskEnqueued 记录一次 Feedback 触发的异步任务入队。
+func RecordFeedbackTaskEnqueued(ctx context.Context) {
+	feedbackTasksEnqueuedCounter.Add(ctx, 1)
+}
+
+// RecordFeedbackError 记录一次 Feedback 错误。
+func RecordFeedbackError(ctx context.Context) {
+	feedbackErrorsCounter.Add(ctx, 1)
+}
+
+// ---------------------------------------------------------------------------
+// 通用 span 工具
+// ---------------------------------------------------------------------------
+
+// EndSpan 安全结束 span，并在发生错误时记录错误状态。
+func EndSpan(span trace.Span, errPtr *error) {
+	if span == nil {
+		return
+	}
+	if errPtr != nil && *errPtr != nil {
+		span.RecordError(*errPtr)
+		span.SetStatus(codes.Error, (*errPtr).Error())
+	}
+	span.End()
+}

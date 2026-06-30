@@ -280,7 +280,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 				withSeqNum(5000), withPayload(nil),
 			)
 			synAck.ackNum = 1001
-			serverSide.handshakeWithSecondSynAck(synAck)
+			serverSide.handshakeWithSecondSynAck(ctx, synAck)
 
 			ack := newMockTCPPacketWithOptions(
 				withAckFlag(true),
@@ -289,7 +289,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 				withSeqNum(1001), withPayload(nil),
 			)
 			ack.ackNum = 5001
-			clientSide.handshakeWithThirdAck(ack, serverSide)
+			clientSide.handshakeWithThirdAck(ctx, ack, serverSide)
 
 			// 注入乱序包：发送 seq=1003 的包（跳过 seq=1002）
 			ooPkt := newMockTCPPacketWithOptions(
@@ -300,7 +300,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 				withPayload([]byte("hello")),
 			)
 			ooPkt.ackNum = 5001
-			err = clientSide.addPacket(ooPkt, serverSide)
+			err = clientSide.addPacket(ctx, ooPkt, serverSide)
 			So(err, ShouldBeNil)
 			So(len(clientSide.outOrderPackets), ShouldEqual, 1)
 
@@ -500,7 +500,7 @@ func TestSideJSONRoundTrip(t *testing.T) {
 				withPayload(nil),
 			)
 			synAck.ackNum = 2001
-			err = serverSide.handshakeWithSecondSynAck(synAck)
+			err = serverSide.handshakeWithSecondSynAck(ctx, synAck)
 			So(err, ShouldBeNil)
 
 			ack := newMockTCPPacketWithOptions(
@@ -511,7 +511,7 @@ func TestSideJSONRoundTrip(t *testing.T) {
 				withPayload(nil),
 			)
 			ack.ackNum = 5001
-			err = clientSide.handshakeWithThirdAck(ack, serverSide)
+			err = clientSide.handshakeWithThirdAck(ctx, ack, serverSide)
 			So(err, ShouldBeNil)
 
 			// 双方都应该在 Established 状态

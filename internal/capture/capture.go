@@ -8,6 +8,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"golang.org/x/sync/errgroup"
+	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/capture/wire"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -98,6 +99,10 @@ func (c *capturer) objectKey(ts time.Time) string {
 //   - 该方法不是线程安全的，每个capturer实例应独立使用
 //   - 数据包通道的读取是阻塞的，直到通道关闭或上下文取消
 func (c *capturer) capture(ctx context.Context, ws wire.Wire, uploadChan chan<- notice) error {
+	ctx, span := totel.StartCaptureSpan(ctx)
+	var err error
+	defer totel.EndSpan(span, &err)
+
 	wg, ctx := errgroup.WithContext(ctx)
 	dumpChan := make(chan notice, 10)
 	wg.Go(func() error {
@@ -109,7 +114,7 @@ func (c *capturer) capture(ctx context.Context, ws wire.Wire, uploadChan chan<- 
 		// 第三阶段：文件上传到S3
 		return c.upload(ctx, dumpChan, uploadChan)
 	})
-	if err := wg.Wait(); err != nil {
+	if err = wg.Wait(); err != nil {
 		return errors.WithStack(err)
 	}
 

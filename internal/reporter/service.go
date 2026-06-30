@@ -20,6 +20,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkui.com/zhongkui/internal/reporter/totel"
 	"zhongkui.com/zhongkui/internal/tasks/pcap"
 )
 
@@ -42,6 +43,7 @@ type ReporterService struct {
 }
 
 func NewReportService(i do.Injector) *ReporterService {
+	totel.InitMetrics()
 	etcd := provider.MustInvokeEtcdClient(i)
 	pClient := provider.MustInvokePipelineClient(i)
 	logger := provider.MustInvokeGrpcLogger(i)
@@ -110,15 +112,16 @@ func newWatchResponseError(err error, errorType reporter_v1.ErrorType, globalVer
 //  4. 启动定时器发送心跳包
 //  5. 循环处理：上下文取消、资源变更事件、心跳事件
 //  6. 将事件转换为统一的响应格式发送给客户端
-func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.ServerStreamingServer[reporter_v1.WatchResponse]) error {
+func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.ServerStreamingServer[reporter_v1.WatchResponse]) (err error) {
 	// 获取请求上下文，用于控制整个监听过程的生命周期
 	ctx := stream.Context()
+	key := core.ReporterConfigKey(req.Resource)
+	ctx, span := totel.StartWatchSpan(ctx, key)
+	defer totel.EndSpan(span, &err)
+	totel.RecordWatchConnection(ctx)
 
 	// 提取客户端已知的全局版本号，用于增量同步
 	globalVersion := req.GlobalVersion
-
-	// 根据资源信息生成 etcd 存储键
-	key := core.ReporterConfigKey(req.Resource)
 
 	// 首次获取初始值 - 客户端连接时立即获取当前资源状态
 	rsp, err := srv.client.Get(
@@ -201,6 +204,7 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 				switch event.Type {
 				case clientv3.EventTypeDelete:
 					// 资源删除事件
+					totel.RecordWatchEvent(ctx, "DELETE")
 					config, err := core.UnmarshalAsReporterConfig(event.PrevKv.Value)
 					if err != nil {
 						// 反序列化删除前的配置失败
@@ -236,6 +240,7 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 
 					if event.IsCreate() {
 						// 资源创建事件
+						totel.RecordWatchEvent(ctx, "CREATE")
 						stream.Send(&reporter_v1.WatchResponse{
 							Timestamp: time.Now().UnixMilli(),
 							Content: &reporter_v1.WatchResponse_Event{
@@ -252,6 +257,7 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 						})
 					} else if event.IsModify() {
 						// 资源修改事件
+						totel.RecordWatchEvent(ctx, "MODIFY")
 						prvConfig, err := core.UnmarshalAsReporterConfig(event.PrevKv.Value)
 						if err != nil {
 							// 反序列化修改前的配置失败
@@ -324,12 +330,14 @@ func (srv *ReporterService) Watch(req *reporter_v1.WatchRequest, stream g.Server
 //  3. 将请求数据序列化并存储到 etcd
 //  4. 如果请求标记为已上传，创建异步处理任务
 //  5. 客户端发送完成后，返回空的响应
-func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.FeedbackRequest, emptypb.Empty]) error {
+func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.FeedbackRequest, emptypb.Empty]) (err error) {
 	// 确保函数退出时发送并关闭流，返回空的响应
 	defer stream.SendAndClose(&emptypb.Empty{})
 
 	// 获取请求上下文
 	ctx := stream.Context()
+	ctx, span := totel.StartFeedbackSpan(ctx)
+	defer totel.EndSpan(span, &err)
 
 	// 租约对象，用于管理状态数据的生命周期
 	var lease *clientv3.LeaseGrantResponse
@@ -346,6 +354,9 @@ func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.
 			// 接收请求时发生错误
 			return errors.WithStack(err)
 		}
+
+		// 记录接收到的反馈请求
+		totel.RecordFeedbackRequest(ctx)
 
 		// 租约管理：为第一个请求创建租约，后续请求续租
 		if lease == nil {
@@ -406,12 +417,17 @@ func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.
 		if err != nil {
 			return errors.WithStack(err)
 		}
+		totel.RecordFeedbackTaskEnqueued(ctx)
 	}
 }
 
-func (srv *ReporterService) Run(ctx context.Context) error {
+func (srv *ReporterService) Run(ctx context.Context) (err error) {
+	ctx, span := totel.StartRunSpan(ctx)
+	defer totel.EndSpan(span, &err)
+
 	srv.logger.Ctx(ctx).Info("grpc server listening on")
-	if err := srv.grpc.Serve(); err != nil {
+	err = srv.grpc.Serve()
+	if err != nil {
 		srv.logger.Fatal("failed to start grpc server", zap.Error(err))
 		return errors.WithStack(err)
 	}

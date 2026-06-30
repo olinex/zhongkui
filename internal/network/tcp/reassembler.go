@@ -10,7 +10,6 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 
 	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/test"
 )
 
 // Reassembler 表示一个TCP流重组器，用于从TCP数据包流中重组完整的应用层消息。
@@ -67,6 +66,7 @@ func newReassembler[P TCPPacket](
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	recordReassemblerCreated(ctx)
 	return &Reassembler[P]{
 		Rectifier:  *rectifier,
 		signalChan: make(chan any, maxOutOrderPacketSize),
@@ -116,38 +116,41 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 	} else {
 		rspPeek = rspPeekTmp
 	}
-	for _, supposer := range detectors {
-		test.Tracer.Begin("detector.Detect")
-		if ok, err := supposer.Detect(ctx, reqPeek, true); err != nil {
-			test.Tracer.End()
-			return nil, errors.WithStack(err)
+	for protocol, supposer := range detectors {
+		_, detectSpan := startDetectSpan(ctx, protocol)
+		var dErr error
+		var ok, ok2 bool
+		ok, dErr = supposer.Detect(ctx, reqPeek, true)
+		if dErr != nil {
+			endSpan(detectSpan, &dErr)
+			return nil, errors.WithStack(dErr)
 		} else if !ok {
-			test.Tracer.End()
+			endSpan(detectSpan, nil)
 			continue
 		}
-		if ok, err := supposer.Detect(ctx, rspPeek, false); err != nil {
-			test.Tracer.End()
-			return nil, errors.WithStack(err)
-		} else if !ok {
-			test.Tracer.End()
+		ok2, dErr = supposer.Detect(ctx, rspPeek, false)
+		if dErr != nil {
+			endSpan(detectSpan, &dErr)
+			return nil, errors.WithStack(dErr)
+		} else if !ok2 {
+			endSpan(detectSpan, nil)
 			continue
 		}
-		test.Tracer.End()
+		endSpan(detectSpan, nil)
 
-		test.Tracer.Begin("detector.Extract")
+		_, extractSpan := startExtractSpan(ctx, protocol)
 		var clientPayload, serverPayload any
-		if clientTmp, serverTmp, err := supposer.Extract(ctx, r.Client.buffer, r.Server.buffer); err != nil {
-			test.Tracer.End()
-			return nil, errors.WithStack(err)
-		} else {
-			clientPayload = clientTmp
-			serverPayload = serverTmp
+		clientPayload, serverPayload, dErr = supposer.Extract(ctx, r.Client.buffer, r.Server.buffer)
+		if dErr != nil {
+			endSpan(extractSpan, &dErr)
+			recordAppExtractionError(ctx)
+			return nil, errors.WithStack(dErr)
 		}
-		test.Tracer.End()
+		endSpan(extractSpan, nil)
 
-		test.Tracer.Begin("detector.Build")
+		_, buildSpan := startBuildSpan(ctx, protocol)
 		var app any
-		if tmp, err := supposer.Build(
+		app, dErr = supposer.Build(
 			ctx,
 			meta,
 			r.ClientAddr,
@@ -158,13 +161,14 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 			r.Server.frameStack,
 			clientPayload,
 			serverPayload,
-		); err != nil {
-			test.Tracer.End()
-			return nil, errors.WithStack(err)
-		} else {
-			app = tmp
+		)
+		if dErr != nil {
+			endSpan(buildSpan, &dErr)
+			recordAppExtractionError(ctx)
+			return nil, errors.WithStack(dErr)
 		}
-		test.Tracer.End()
+		endSpan(buildSpan, nil)
+		recordAppExtracted(ctx, string(protocol))
 		return app, nil
 	}
 	return nil, nil
@@ -199,6 +203,9 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 //   - 每次收到信号都会尝试提取应用层数据，即使数据可能不完整
 //   - 应用层协议推测器可能需要在多个数据包到达后才能成功识别协议
 func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, dstChan chan<- any) error {
+	_, span := startParseSpan(ctx)
+	defer endSpan(span, nil)
+	defer recordReassemblerCompleted(ctx)
 	defer r.release()
 	reqPeek := make([]byte, r.Client.buffer.Capacity())
 	rspPeek := make([]byte, r.Server.buffer.Capacity())

@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"sync/atomic"
+
 	"github.com/reactivex/rxgo/v2"
 	"github.com/samber/do/v2"
 	"golang.org/x/sync/errgroup"
@@ -12,25 +14,42 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkui.com/zhongkui/internal/tasks/totel"
 )
 
 func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task, channel chan<- rxgo.Item) error {
+	taskType := task.Type()
+	ctx, span := totel.StartExtractSpan(ctx, taskType)
+	var extractedCount int64
+	var err error
+	defer func() {
+		totel.RecordItemsExtracted(ctx, taskType, int(extractedCount))
+		totel.EndSpan(span, &err)
+		if err != nil {
+			totel.RecordTaskError(ctx, taskType)
+		}
+	}()
+
 	scope := pipeline.GetScope(ctx)
-	router, err := do.Invoke[*IPv4TCPRouter](scope)
-	if err != nil {
-		return errors.WithStack(err)
+	router, e := do.Invoke[*IPv4TCPRouter](scope)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
-	logger, err := provider.InvokePipelineLogger(scope)
-	if err != nil {
-		return errors.WithStack(err)
+	logger, e := provider.InvokePipelineLogger(scope)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
-	db, err := provider.InvokeRawDatabase(scope)
-	if err != nil {
-		return errors.WithStack(err)
+	db, e := provider.InvokeRawDatabase(scope)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
-	param, err := pipeline.GetTaskParam[Param](ctx)
-	if err != nil {
-		return errors.WithStack(err)
+	param, e := pipeline.GetTaskParam[Param](ctx)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
 	wg, ctx := errgroup.WithContext(ctx)
 	srcChan := make(chan *network.PacketIPv4TCP, param.MaxReassemblerSize)
@@ -39,6 +58,7 @@ func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task,
 	wg.Go(func() error {
 		for tmp := range dstChan {
 			transport := tmp.(*network.HttpTransport)
+			atomic.AddInt64(&extractedCount, 1)
 			channel <- rxgo.Of(transport)
 		}
 		return nil
@@ -54,7 +74,7 @@ func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task,
 		var packets = make([]network.PacketIPv4TCP, 0, param.MaxReassemblerSize)
 		end := time.Now().Truncate(param.WindowRange)
 		start := end.Add(-param.WindowRange)
-		err = db.
+		if e := db.
 			WithContext(ctx).
 			Where("timestamp >= ? AND timestamp < ?", start, end).
 			FindInBatches(&packets, param.MaxReassemblerSize, func(tx *gorm.DB, batch int) error {
@@ -62,13 +82,13 @@ func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task,
 					srcChan <- &packet
 				}
 				return nil
-			}).Error
-		if err != nil {
-			return errors.WithStack(err)
+			}).Error; e != nil {
+			return errors.WithStack(e)
 		}
 		return nil
 	})
-	return wg.Wait()
+	err = wg.Wait()
+	return err
 }
 
 func ExtractIPv6HttpTransportFromTable(ctx context.Context, task *pipeline.Task, channel chan<- rxgo.Item) error {

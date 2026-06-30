@@ -9,6 +9,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkui.com/zhongkui/internal/tasks/totel"
 )
 
 type VersionTaskWrapper[T any] interface {
@@ -28,15 +29,27 @@ func (w *versionTaskHandler[T]) Name() string {
 	return w.task.Type()
 }
 
-func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logger, lastVersion string) (string, error) {
+func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logger, lastVersion string) (nextVersion string, err error) {
 	name := w.Name()
+	ctx, span := totel.StartVersionTaskSpan(ctx, name, lastVersion)
+	defer totel.EndSpan(span, &err)
+	defer func() {
+		if err != nil {
+			totel.RecordTaskError(ctx, name)
+		} else {
+			totel.RecordTask(ctx, name)
+		}
+	}()
+
 	// 获取注入器
 	scope := pipeline.GetScope(ctx)
 	defer scope.Shutdown()
 	// 加载数据
-	data, err := w.wrapper.Load(ctx, name, lastVersion)
-	if err != nil {
-		return "", errors.WithStack(err)
+	_, loadSpan := totel.StartVersionLoadSpan(ctx, name, lastVersion)
+	data, lErr := w.wrapper.Load(ctx, name, lastVersion)
+	totel.EndSpan(loadSpan, &lErr)
+	if lErr != nil {
+		return "", errors.WithStack(lErr)
 	}
 	if data == nil {
 		return "", errors.New("data is nil")
@@ -53,17 +66,23 @@ func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logg
 		return "", errors.WithStack(err)
 	}
 	// 计算下一个版本
-	nextVersion, err := w.wrapper.Next(ctx, name, lastVersion)
+	_, nextSpan := totel.StartVersionNextSpan(ctx, name, lastVersion)
+	nextVersion, err = w.wrapper.Next(ctx, name, lastVersion)
+	totel.EndSpan(nextSpan, &err)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	// 存储数据
+	_, storeSpan := totel.StartVersionStoreSpan(ctx, name, nextVersion)
 	err = w.wrapper.Store(ctx, name, nextVersion, data)
+	totel.EndSpan(storeSpan, &err)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	// 清除旧版本数据
+	_, clearSpan := totel.StartVersionClearSpan(ctx, name, lastVersion)
 	err = w.wrapper.Clear(ctx, name, lastVersion)
+	totel.EndSpan(clearSpan, &err)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -75,6 +94,7 @@ type VersionTaskWorker[T any] struct {
 }
 
 func NewVersionTaskWorker[T any](wrapper VersionTaskWrapper[T]) *VersionTaskWorker[T] {
+	totel.InitMetrics()
 	return &VersionTaskWorker[T]{
 		wrapper: wrapper,
 	}

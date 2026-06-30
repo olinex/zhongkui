@@ -23,11 +23,11 @@ import (
 	"encoding/json"
 	"time"
 
+	"go.opentelemetry.io/otel/attribute"
 	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/test"
 )
 
 // ReassemblerNode 表示重组器节点，用于在双向链表中管理TCP流的重组器实例。
@@ -259,6 +259,7 @@ type Router[P TCPPacket] struct {
 //   - maxReassemblerSize: 根据系统内存和并发连接数设置
 //   - maxOutOrderPacketSize: 根据网络延迟和乱序程度设置
 func NewRouter[P TCPPacket](maxReassemblerSize, maxOutOrderPacketSize int, noticeTimeout time.Duration) Router[P] {
+	InitMetrics()
 	return Router[P]{
 		roots:                 make(map[n.BaseMeta]*groupEntry[P], 32),
 		maxReassemblerSize:    maxReassemblerSize,
@@ -416,9 +417,10 @@ func (r *Router[P]) Default() any {
 //   - 时间复杂度：O(n) 在最坏情况下需要遍历整个链表
 //   - 空间复杂度：O(m×n) m为元数据分组数，n为每个分组的节点数
 //   - 并发安全：通过errgroup管理goroutine，确保错误传播和资源清理
-func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packet P, wg *errgroup.Group, dstChan chan<- any) error {
-	test.Tracer.Begin("router.addPacket")
-	defer test.Tracer.End()
+func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packet P, wg *errgroup.Group, dstChan chan<- any) (err error) {
+	ctx, span := startRouterSpan(ctx, packet)
+	defer endSpan(span, &err)
+	defer recordPacket(ctx, packet)
 	streamID := packet.StreamID()
 	meta := packet.Meta()
 
@@ -462,7 +464,7 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 			return errors.WithStack(err)
 		}
 		group.pushFront(ln)
-	} else if err := ln.node.Reassembler.addPacket(packet); err != nil {
+	} else if err := ln.node.Reassembler.addPacket(ctx, packet); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -472,7 +474,18 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 	return nil
 }
 
-func (r *Router[P]) cleanup(force bool) {
+func (r *Router[P]) cleanup(ctx context.Context, force bool) {
+	ctx, span := startCleanupSpan(ctx, force)
+	var removedCount, evictedCount int
+	defer func() {
+		span.SetAttributes(
+			attribute.Int("tcp.cleanup.removed", removedCount),
+			attribute.Int("tcp.cleanup.evicted", evictedCount),
+		)
+		recordCleanupFlowsRemoved(ctx, removedCount)
+		recordCleanupFlowsEvicted(ctx, evictedCount)
+		endSpan(span, nil)
+	}()
 	for _, group := range r.roots {
 		if group == nil {
 			continue
@@ -485,6 +498,7 @@ func (r *Router[P]) cleanup(force bool) {
 				current.node.Reassembler.lastNoticeTime.Add(r.noticeTimeout).Before(time.Now()) {
 				group.remove(current)
 				current.node.Reassembler.stop()
+				removedCount++
 			}
 			current = next
 		}
@@ -493,6 +507,7 @@ func (r *Router[P]) cleanup(force bool) {
 			evicted := group.popTail()
 			if evicted != nil {
 				evicted.node.Reassembler.stop()
+				evictedCount++
 			}
 		}
 	}
@@ -541,8 +556,7 @@ func (r *Router[P]) cleanup(force bool) {
 //  2. errgroup会等待所有goroutine完成
 //  3. 每个重组器节点有自己的清理逻辑，确保资源释放
 func (r *Router[P]) Run(ctx context.Context, logger *logging.Logger, srcChan <-chan P, dstChan chan<- any) error {
-	test.Tracer.Begin("router.Run")
-	defer test.Tracer.End()
+	InitMetrics()
 	ctx, cancel := context.WithCancel(ctx)
 	wg, ctx := errgroup.WithContext(ctx)
 	ticker := time.NewTicker(r.noticeTimeout)
@@ -554,7 +568,7 @@ LOOP:
 		case <-ctx.Done():
 			break LOOP
 		case <-ticker.C:
-			r.cleanup(false)
+			r.cleanup(ctx, false)
 		case packet, open := <-srcChan:
 			if !open {
 				break LOOP

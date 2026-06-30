@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/pcapgo"
+	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/capture/wire"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -17,9 +18,21 @@ type notice struct {
 	secretKey string
 }
 
-func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, secretKey string) error {
+func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, secretKey string) (err error) {
+	ctx, span := totel.StartDumpOneSpan(ctx, filePath)
+	var packetCount int
+	var byteCount int
+	defer func() {
+		if err != nil {
+			totel.RecordDumpError(ctx)
+		} else {
+			totel.RecordSegmentDumped(ctx, packetCount, byteCount)
+		}
+		totel.EndSpan(span, &err)
+	}()
+
 	var file *os.File
-	file, err := os.Create(filePath)
+	file, err = os.Create(filePath)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -59,8 +72,8 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, s
 	)
 	timer := time.NewTimer(c.uploadCfg.IntervalTimeout)
 
-	count := 0
-	size := 0
+	packetCount = 0
+	byteCount = 0
 	for {
 		select {
 		case <-ctx.Done():
@@ -82,22 +95,25 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, s
 		if err := writer.WritePacket(packet.CaptureInfo, packet.Data); err != nil {
 			return errors.WithStack(err)
 		}
-		count += 1
-		size += len(packet.Data)
-		if uint32(size) > uint32(c.uploadCfg.PacketBufferSize) || uint(count) > c.uploadCfg.PacketCount {
+		packetCount += 1
+		byteCount += len(packet.Data)
+		if uint32(byteCount) > uint32(c.uploadCfg.PacketBufferSize) || uint(packetCount) > c.uploadCfg.PacketCount {
 			break
 		}
 	}
 	return nil
 }
 
-func (c *capturer) dump(ctx context.Context, ws wire.Wire, notifyChan chan<- notice) error {
+func (c *capturer) dump(ctx context.Context, ws wire.Wire, notifyChan chan<- notice) (err error) {
+	ctx, span := totel.StartDumpSpan(ctx)
+	defer totel.EndSpan(span, &err)
 	for {
 		ts := time.Now()
 		filePath := c.filePath(ts)
-		secretKey, err := crypto.GenerateRandomBase64String(32)
-		if err != nil {
-			return errors.WithStack(err)
+		secretKey, e := crypto.GenerateRandomBase64String(32)
+		if e != nil {
+			err = e
+			return errors.WithStack(e)
 		}
 		n := notice{
 			ts:        ts,

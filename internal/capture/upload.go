@@ -6,15 +6,27 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
+	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-func (c *capturer) uploadOne(ctx context.Context, filePath, objectKey string) error {
+func (c *capturer) uploadOne(ctx context.Context, filePath, objectKey string) (err error) {
+	ctx, span := totel.StartUploadOneSpan(ctx, objectKey)
+	var uploadedSize int64
 	defer func() {
-		err := os.Remove(filePath)
 		if err != nil {
-			c.logger.Ctx(ctx).Errorf(`remove file %s error: %v`, filePath, err)
+			totel.RecordUploadError(ctx)
+		} else {
+			totel.RecordSegmentUploaded(ctx, uploadedSize)
+		}
+		totel.EndSpan(span, &err)
+	}()
+
+	defer func() {
+		e := os.Remove(filePath)
+		if e != nil {
+			c.logger.Ctx(ctx).Errorf(`remove file %s error: %v`, filePath, e)
 		} else {
 			c.logger.Ctx(ctx).Infof(`remove file %s success`, filePath)
 		}
@@ -35,6 +47,7 @@ func (c *capturer) uploadOne(ctx context.Context, filePath, objectKey string) er
 	if err != nil {
 		return errors.WithStack(err)
 	}
+	uploadedSize = info.Size
 
 	// 记录上传成功的详细日志
 	// 包含对象键名、文件大小和SHA256校验和
@@ -42,7 +55,9 @@ func (c *capturer) uploadOne(ctx context.Context, filePath, objectKey string) er
 	return nil
 }
 
-func (c *capturer) upload(ctx context.Context, sourceChan <-chan notice, notifyChan chan<- notice) error {
+func (c *capturer) upload(ctx context.Context, sourceChan <-chan notice, notifyChan chan<- notice) (err error) {
+	ctx, span := totel.StartUploadFileSpan(ctx)
+	defer totel.EndSpan(span, &err)
 	for {
 		select {
 		case <-ctx.Done():
@@ -50,9 +65,10 @@ func (c *capturer) upload(ctx context.Context, sourceChan <-chan notice, notifyC
 		case n := <-sourceChan:
 			filePath := c.filePath(n.ts)
 			objectKey := c.objectKey(n.ts)
-			err := c.uploadOne(ctx, filePath, objectKey)
-			if err != nil {
-				return errors.WithStack(err)
+			e := c.uploadOne(ctx, filePath, objectKey)
+			if e != nil {
+				err = e
+				return errors.WithStack(e)
 			}
 			select {
 			case <-ctx.Done():

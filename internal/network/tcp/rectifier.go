@@ -8,7 +8,6 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/test"
 )
 
 // Rectifier 表示一个TCP整流器，用于管理TCP连接的数据包流重组和状态转换。
@@ -206,21 +205,25 @@ func (r *Rectifier[P]) isSameFlow(packet P) (same, c2s bool) {
 //   - 错误处理使用errors.WithStack添加调用栈信息
 //   - 通道操作是阻塞的，调用者应确保通道有足够的缓冲区
 //   - 如果上下文被取消，方法将返回错误而不是阻塞
-func (r *Rectifier[P]) addPacket(packet P) error {
-	test.Tracer.Begin("rectifier.addPacket")
-	defer test.Tracer.End()
+func (r *Rectifier[P]) addPacket(ctx context.Context, packet P) error {
 	var currentSide, otherSide *Side[P]
-	if same, c2s := r.isSameFlow(packet); !same {
+	var c2s bool
+	if same, dir := r.isSameFlow(packet); !same {
 		return errors.Newf(`%s is not same flow`, tcpPacketSeq(packet))
-	} else if c2s {
+	} else if dir {
 		currentSide = r.Client
 		otherSide = r.Server
+		c2s = true
 	} else {
 		currentSide = r.Server
 		otherSide = r.Client
+		c2s = false
 	}
 
-	if err := currentSide.addPacket(packet, otherSide); err != nil {
+	ctx, span := startRectifierSpan(ctx, packet, c2s)
+	defer endSpan(span, nil)
+
+	if err := currentSide.addPacket(ctx, packet, otherSide); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil

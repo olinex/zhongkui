@@ -10,6 +10,7 @@ import (
 
 	"github.com/cenkalti/backoff/v5"
 	"golang.org/x/sync/errgroup"
+	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/capture/wire"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
@@ -82,6 +83,7 @@ type CaptureClient struct {
 //	cfg := capture.LoadConfig()
 //	client := capture.NewCaptureClient(logger, grpcClient, s3Client, cfg)
 func NewCaptureClient(logger *logging.Logger, client reporter_v1.ReporterServiceClient, s3 *s3.S3Client, cfg *Config) *CaptureClient {
+	totel.InitMetrics()
 	return &CaptureClient{
 		logger: logger,
 		client: client,
@@ -219,7 +221,9 @@ func (cc *CaptureClient) runWithRetry(ctx context.Context, maxRetries uint, fn f
 // - 通过mutex保护共享状态（配置、版本信息）
 // - 使用通道进行事件通知，避免数据竞争
 // - 支持多goroutine并发处理不同资源
-func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) error {
+func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) (err error) {
+	ctx, span := totel.StartWatchSpan(ctx, cc.cfg.Resource.String())
+	defer totel.EndSpan(span, &err)
 	// 记录监控启动日志，包含资源标识信息
 	// 便于跟踪监控流程和问题排查
 	cc.logger.Ctx(ctx).Infof("watch resource %s", cc.cfg.Resource.String())
@@ -405,8 +409,14 @@ func (cc *CaptureClient) uploadPacketHandler(
 	uploadChan chan notice,
 	snapshot *captureSnapshot,
 ) {
+	device := snapshot.config.Device
+	ctx, span := totel.StartPacketHandlerSpan(ctx, device, snapshot.configVersion)
+	var handlerErr error
+	defer totel.EndSpan(span, &handlerErr)
+
 	ws, err := wire.NewWire(ctx, snapshot.config, cc.logger)
 	if err != nil {
+		handlerErr = err
 		cause(errors.WithStack(err))
 		return
 	}
@@ -424,11 +434,13 @@ func (cc *CaptureClient) uploadPacketHandler(
 	// 避免抓包时捕获到自身向 S3 上传数据的流量，防止流量无限递归放大
 	bpfExpr, err := buildBpfExpr(snapshot.config.BpfExpr, cc.s3.GetEndpoint())
 	if err != nil {
+		handlerErr = err
 		cause(errors.WithStack(err))
 		return
 	}
 	err = ws.SetBPFFilter(bpfExpr)
 	if err != nil {
+		handlerErr = err
 		cause(errors.WithStack(err))
 		return
 	}
@@ -446,13 +458,16 @@ func (cc *CaptureClient) uploadPacketHandler(
 	}
 	err = tmpCapturer.capture(ctx, ws, uploadChan)
 	if err != nil {
+		handlerErr = err
 		cause(errors.WithStack(err))
 	}
 }
 
 // upload 监听配置变更，当收到新配置时启动数据包捕获处理器
-func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan chan notice) error {
-	err := os.MkdirAll(cc.cfg.Upload.DumpDir, 0755)
+func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan chan notice) (err error) {
+	ctx, span := totel.StartUploadSpan(ctx, cc.cfg.Resource.String(), sessionID.String())
+	defer totel.EndSpan(span, &err)
+	err = os.MkdirAll(cc.cfg.Upload.DumpDir, 0755)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -510,7 +525,10 @@ func (cc *CaptureClient) upload(ctx context.Context, sessionID serializer.HexUUI
 }
 
 // feedback 通过gRPC流定期向服务器发送反馈，包含抓包状态和上传信息
-func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan <-chan notice) error {
+func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexUUID, mutex *captureMutex, uploadChan <-chan notice) (err error) {
+	ctx, span := totel.StartFeedbackSpan(ctx, sessionID.String())
+	defer totel.EndSpan(span, &err)
+
 	ticker := time.NewTicker(cc.cfg.Feedback.IntervalTimeout)
 	defer ticker.Stop()
 
@@ -617,7 +635,11 @@ func parseEndpoint(endpoint string) (host, port string) {
 	return endpoint, ""
 }
 
-func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) error {
+func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) (err error) {
+	resource := cc.cfg.Resource.String()
+	ctx, span := totel.StartRunSpan(ctx, resource)
+	defer totel.EndSpan(span, &err)
+
 	// mutex 互斥锁管理器，用于保护共享状态和确保线程安全
 	// 提供对配置状态、版本信息等共享资源的读写保护
 	// 支持快照机制，避免在状态读取时发生数据竞争

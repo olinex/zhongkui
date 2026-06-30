@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/pcap"
@@ -21,6 +22,7 @@ import (
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkui.com/zhongkui/internal/tasks/totel"
 )
 
 // PcapItem 表示从 PCAP 文件中提取的数据包项。
@@ -38,38 +40,57 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 	if err := json.Unmarshal(task.Payload(), &obj); err != nil {
 		return errors.WithStack(err)
 	}
+	taskType := task.Type()
+	ctx, span := totel.StartExtractSpan(ctx, taskType)
+	var packetCount int64
+	var err error
+	defer func() {
+		totel.RecordPacketsExtracted(ctx, taskType, int(packetCount))
+		totel.EndSpan(span, &err)
+		if err != nil {
+			totel.RecordTaskError(ctx, taskType)
+		}
+	}()
+
 	scope := pipeline.GetScope(ctx)
-	s3, err := provider.InvokeS3(scope)
-	if err != nil {
-		return errors.WithStack(err)
+	s3, e := provider.InvokeS3(scope)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
 	objectKey := obj.GetObjectKey()
-	rc, err := s3.GetObject(ctx, objectKey, minio.GetObjectOptions{Checksum: true})
-	if err != nil {
-		return errors.WithStack(err)
+	rc, e := s3.GetObject(ctx, objectKey, minio.GetObjectOptions{Checksum: true})
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
 	defer rc.Close()
-	compressor, err := crypto.NewZstdCompressor()
-	if err != nil {
-		return errors.WithStack(err)
+	compressor, e := crypto.NewZstdCompressor()
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
-	encryptor, err := crypto.NewAESGCMEncryptor([]byte(obj.SecretKey))
-	if err != nil {
-		return errors.WithStack(err)
+	encryptor, e := crypto.NewAESGCMEncryptor([]byte(obj.SecretKey))
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
-	pipeline, err := crypto.NewCompressEncryptPipeline(compressor, encryptor)
-	if err != nil {
-		return errors.WithStack(err)
+	cryptoPipeline, e := crypto.NewCompressEncryptPipeline(compressor, encryptor)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
-	drc, err := pipeline.DecryptDecompress(rc)
-	if err != nil {
-		return errors.WithStack(err)
+	drc, e := cryptoPipeline.DecryptDecompress(rc)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
 	defer drc.Close()
 	// 解压后的数据通过管道传递给 PCAP 解析器
-	pipeOut, pipeIn, err := os.Pipe()
-	if err != nil {
-		return errors.WithStack(err)
+	pipeOut, pipeIn, e := os.Pipe()
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
 	}
 	defer pipeOut.Close()
 	wg, ctx := errgroup.WithContext(ctx)
@@ -78,26 +99,26 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		var src io.Reader = drc
 		if base.Env.Debug {
 			debugDir := filepath.Join("tmp")
-			if err = os.MkdirAll(debugDir, 0755); err != nil {
-				return errors.WithStack(err)
+			if e := os.MkdirAll(debugDir, 0755); e != nil {
+				return errors.WithStack(e)
 			}
-			debugFile, err := os.Create(filepath.Join(debugDir, fmt.Sprintf("%s_%s.pcap", obj.SessionID, obj.Timestamp.Format("20060102_150405"))))
-			if err != nil {
-				return errors.WithStack(err)
+			debugFile, e := os.Create(filepath.Join(debugDir, fmt.Sprintf("%s_%s.pcap", obj.SessionID, obj.Timestamp.Format("20060102_150405"))))
+			if e != nil {
+				return errors.WithStack(e)
 			}
 			defer debugFile.Close()
 			src = io.TeeReader(drc, debugFile)
 		}
-		if _, err = io.Copy(pipeIn, src); err != nil {
-			return errors.WithStack(err)
+		if _, e := io.Copy(pipeIn, src); e != nil {
+			return errors.WithStack(e)
 		}
 		return nil
 	})
 	wg.Go(func() error {
 		defer pipeOut.Close()
-		handle, err := pcap.OpenOfflineFile(pipeOut)
-		if err != nil {
-			return errors.WithStack(err)
+		handle, e := pcap.OpenOfflineFile(pipeOut)
+		if e != nil {
+			return errors.WithStack(e)
 		}
 		defer handle.Close()
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
@@ -110,10 +131,11 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 				return nil
 			default:
 			}
-			sessionID, err := serializer.HexUUIDv4FromString(obj.SessionID)
-			if err != nil {
-				return errors.WithStack(err)
+			sessionID, e := serializer.HexUUIDv4FromString(obj.SessionID)
+			if e != nil {
+				return errors.WithStack(e)
 			}
+			atomic.AddInt64(&packetCount, 1)
 			channel <- rxgo.Of(&PcapItem{
 				SessionID: sessionID,
 				Source: reporter_v1.ResourceRaw{
@@ -126,5 +148,6 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		}
 		return nil
 	})
-	return wg.Wait()
+	err = wg.Wait()
+	return err
 }

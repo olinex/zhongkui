@@ -9,7 +9,6 @@ import (
 
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/test"
 )
 
 // TCPState 表示TCP连接的状态，遵循标准TCP状态机。
@@ -232,14 +231,16 @@ func (s *Side[P]) isCompleted() bool {
 //   - 数据包载荷长度可能为0（如纯ACK包），此时期望序列号不变
 //   - 该方法不处理乱序包，乱序包应由addPacket方法处理
 //   - 如果上下文被取消，方法将返回错误而不是阻塞
-func (s *Side[P]) appendPacket(packet P) error {
+func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 	payload := packet.GetPayload()
-	s.expectedSeq += uint32(len(payload))
+	length := len(payload)
+	s.expectedSeq += uint32(length)
 	s.frameStack = append(s.frameStack, packet.FrameInfo())
+	recordBytesWritten(ctx, length)
 	// 将新进入的TCP包的有效载荷写入到应用层数据缓冲区中
 	if n, err := s.buffer.Write(payload); err != nil {
 		return errors.WithStack(err)
-	} else if n != len(payload) {
+	} else if n != length {
 		return errors.New("payload not fully written to buffer")
 	}
 	return nil
@@ -276,7 +277,7 @@ func newSides[P TCPPacket](ctx context.Context, first P, maxOutOrderPacketSize i
 		expectedSeq:           seq + 1,
 		maxOutOrderPacketSize: maxOutOrderPacketSize,
 	}
-	if err := clientSide.appendPacket(first); err != nil {
+	if err := clientSide.appendPacket(ctx, first); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
 	serverSide = &Side[P]{
@@ -311,14 +312,14 @@ func newSides[P TCPPacket](ctx context.Context, first P, maxOutOrderPacketSize i
 //  1. 客户端发送SYN (seq=x)
 //  2. 服务端发送SYN-ACK (seq=y, ack=x+1) ← 此方法处理此包
 //  3. 客户端发送ACK (seq=x+1, ack=y+1)
-func (s *Side[P]) handshakeWithSecondSynAck(second P) error {
+func (s *Side[P]) handshakeWithSecondSynAck(ctx context.Context, second P) error {
 	if !second.IsSynAck() || s.cli2Srv {
 		return errors.Newf(`%s is not second syn-ack packet`, tcpPacketSeq(second))
 	}
 	s.state = StateSynReceived
 	s.isn = second.SeqNum()
 	s.expectedSeq = s.isn + 1
-	if err := s.appendPacket(second); err != nil {
+	if err := s.appendPacket(ctx, second); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
@@ -341,7 +342,7 @@ func (s *Side[P]) handshakeWithSecondSynAck(second P) error {
 //   - 客户端期望序列号必须与ACK包的序列号匹配
 //   - 该方法同时更新客户端和服务端状态为Established
 //   - 连接建立后，双方可以开始正常的数据传输
-func (s *Side[P]) handshakeWithThirdAck(third P, otherSide *Side[P]) error {
+func (s *Side[P]) handshakeWithThirdAck(ctx context.Context, third P, otherSide *Side[P]) error {
 	if !third.IsAck() || !s.cli2Srv {
 		return errors.Newf(`%s is not third ack packet`, tcpPacketSeq(third))
 	}
@@ -351,7 +352,7 @@ func (s *Side[P]) handshakeWithThirdAck(third P, otherSide *Side[P]) error {
 	}
 	s.state = StateEstablished
 	otherSide.state = StateEstablished
-	if err := s.appendPacket(third); err != nil {
+	if err := s.appendPacket(ctx, third); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
@@ -374,11 +375,11 @@ func (s *Side[P]) handshakeWithThirdAck(third P, otherSide *Side[P]) error {
 //   - RST包立即终止连接，不进行正常的四次挥手过程
 //   - 期望序列号递增1，表示已处理RST包
 //   - 连接资源应立即释放，不再接受任何数据包
-func (s *Side[P]) reset(packet P, otherSide *Side[P]) error {
+func (s *Side[P]) reset(ctx context.Context, packet P, otherSide *Side[P]) error {
 	s.state = StateClosed
 	otherSide.state = StateClosed
 	s.expectedSeq += 1
-	if err := s.appendPacket(packet); err != nil {
+	if err := s.appendPacket(ctx, packet); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
@@ -401,10 +402,10 @@ func (s *Side[P]) reset(packet P, otherSide *Side[P]) error {
 //  2. 发送ACK确认 (此方法处理FIN包并进入CloseWait)
 //  3. 等待本地应用发出FIN包
 //  4. 收到对方的ACK确认，进入Closed状态
-func (s *Side[P]) handwaveWithFin(first P) error {
+func (s *Side[P]) handwaveWithFin(ctx context.Context, first P) error {
 	s.state = StateCloseWait
 	s.expectedSeq += 1
-	if err := s.appendPacket(first); err != nil {
+	if err := s.appendPacket(ctx, first); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
@@ -440,14 +441,14 @@ func (s *Side[P]) handwaveWithAck() {
 //  3. 从缓冲区中删除已处理的数据包
 //  4. 递归调用自身，继续处理下一个期望序列号的数据包
 //  5. 如果不存在，返回nil表示重组完成
-func (s *Side[P]) tryReassembly(otherSide *Side[P]) error {
+func (s *Side[P]) tryReassembly(ctx context.Context, otherSide *Side[P]) error {
 	for {
 		packet, ok := s.outOrderPackets[s.expectedSeq]
 		if !ok {
 			return nil
 		}
 		delete(s.outOrderPackets, s.expectedSeq)
-		err := s.addPacket(packet, otherSide)
+		err := s.addPacket(ctx, packet, otherSide)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -476,9 +477,10 @@ func (s *Side[P]) tryReassembly(otherSide *Side[P]) error {
 //     1. 如果对端处于CloseWait状态且确认号匹配，确认连接关闭
 //     2. 如果当前处于Established状态且是FIN包，处理连接终止
 //     3. 否则，按正常数据包处理
-func (s *Side[P]) addPacket(packet P, otherSide *Side[P]) error {
-	test.Tracer.Begin("side.addPacket")
-	defer test.Tracer.End()
+func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (err error) {
+	ctx, span := startSideSpan(ctx, packet, s.cli2Srv)
+	defer endSpan(span, &err)
+	defer recordPacket(ctx, packet)
 	// 若连接已关闭，直接忽略
 	if s.isCompleted() {
 		return nil
@@ -486,21 +488,22 @@ func (s *Side[P]) addPacket(packet P, otherSide *Side[P]) error {
 
 	// 强制短连, 并关闭两侧的管道
 	if packet.IsRst() {
-		if err := s.reset(packet, otherSide); err != nil {
+		if err := s.reset(ctx, packet, otherSide); err != nil {
 			return errors.WithStack(err)
 		}
 		return nil
 	}
 	// 完成三次握手前，tcp 包不会进入缓冲区
 	if s.isListen() && otherSide.isSynSent() {
-		return s.handshakeWithSecondSynAck(packet)
+		return s.handshakeWithSecondSynAck(ctx, packet)
 	}
 	if s.isSynSent() && otherSide.isSynReceived() {
-		return s.handshakeWithThirdAck(packet, otherSide)
+		return s.handshakeWithThirdAck(ctx, packet, otherSide)
 	}
 	// 处理乱序包
 	seq := packet.SeqNum()
 	if seqLess(seq, s.expectedSeq) {
+		recordRetransmit(ctx)
 		return nil
 	} else if seqLess(s.expectedSeq, seq) {
 		if s.outOrderPackets == nil {
@@ -509,6 +512,7 @@ func (s *Side[P]) addPacket(packet P, otherSide *Side[P]) error {
 			return errors.Newf(`Out order packet size is over max size %d`, s.maxOutOrderPacketSize)
 		}
 		s.outOrderPackets[seq] = packet
+		recordOutOfOrder(ctx)
 		return nil
 	}
 	// 处理按序包
@@ -516,12 +520,12 @@ func (s *Side[P]) addPacket(packet P, otherSide *Side[P]) error {
 		otherSide.handwaveWithAck()
 	}
 	if s.isEstablished() && packet.IsFin() {
-		return s.handwaveWithFin(packet)
+		return s.handwaveWithFin(ctx, packet)
 	}
-	if err := s.appendPacket(packet); err != nil {
+	if err := s.appendPacket(ctx, packet); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := s.tryReassembly(otherSide); err != nil {
+	if err := s.tryReassembly(ctx, otherSide); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
