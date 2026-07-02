@@ -305,6 +305,7 @@ func etlPipelineInspectorQueueListGet(c *gin.Context) {
 		return
 	}
 	out := make(ETLPipelineInspectorQueueListOut, len(queues))
+	var mu sync.Mutex
 	wg, _ := errgroup.WithContext(c)
 	for _, queue := range queues {
 		func(name string) {
@@ -324,6 +325,7 @@ func etlPipelineInspectorQueueListGet(c *gin.Context) {
 				if err != nil {
 					return errors.WithStack(err)
 				}
+				mu.Lock()
 				out[name] = &PipelineQueueInfo{
 					MemoryUsage:    queueInfo.MemoryUsage,
 					Latency:        queueInfo.Latency,
@@ -343,6 +345,7 @@ func etlPipelineInspectorQueueListGet(c *gin.Context) {
 					Paused:         queueInfo.Paused,
 					RetrievalTime:  queueInfo.Timestamp,
 				}
+				mu.Unlock()
 				return nil
 			})
 		}(queue)

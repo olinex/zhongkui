@@ -16,56 +16,70 @@ import (
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-var errInvalidOTLPProtocol = errors.New("invalid OTLP protocol")
+var (
+	errInvalidProvider     = errors.New("invalid provider")
+	errInvalidOTLPProtocol = errors.New("invalid OTLP protocol")
+)
 
 func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
-	if base.Env.Debug {
+	switch Env.Provider {
+	case PROVIDER_STDOUT:
 		return stdouttrace.New(
 			stdouttrace.WithPrettyPrint(),
 		)
-	}
-	switch Env.OtlpProtocol {
-	case HTTP:
-		return otlptracehttp.New(ctx)
-	case GRPC:
-		return otlptracegrpc.New(ctx)
+	case PROVIDER_OTLP:
+		switch Env.OtlpProtocol {
+		case HTTP:
+			return otlptracehttp.New(ctx)
+		case GRPC:
+			return otlptracegrpc.New(ctx)
+		default:
+			return nil, errInvalidOTLPProtocol
+		}
 	default:
-		return nil, errInvalidOTLPProtocol
+		return nil, errInvalidProvider
 	}
 }
 
 func NewMeterExporter(ctx context.Context) (sdkmetric.Exporter, error) {
-	if base.Env.Debug {
+	switch Env.Provider {
+	case PROVIDER_STDOUT:
 		return stdoutmetric.New(
 			stdoutmetric.WithPrettyPrint(),
 		)
-	}
-	switch Env.OtlpProtocol {
-	case HTTP:
-		return otlpmetrichttp.New(ctx)
-	case GRPC:
-		return otlpmetricgrpc.New(ctx)
+	case PROVIDER_OTLP:
+		switch Env.OtlpProtocol {
+		case HTTP:
+			return otlpmetrichttp.New(ctx)
+		case GRPC:
+			return otlpmetricgrpc.New(ctx)
+		default:
+			return nil, errInvalidOTLPProtocol
+		}
 	default:
-		return nil, errInvalidOTLPProtocol
+		return nil, errInvalidProvider
 	}
 }
 
 func NewLogExporter(ctx context.Context) (sdklog.Exporter, error) {
-	if base.Env.Debug {
+	switch Env.Provider {
+	case PROVIDER_STDOUT:
 		return stdoutlog.New(
 			stdoutlog.WithPrettyPrint(),
 		)
-	}
-	switch Env.OtlpProtocol {
-	case HTTP:
-		return otlploghttp.New(ctx)
-	case GRPC:
-		return otlploggrpc.New(ctx)
+	case PROVIDER_OTLP:
+		switch Env.OtlpProtocol {
+		case HTTP:
+			return otlploghttp.New(ctx)
+		case GRPC:
+			return otlploggrpc.New(ctx)
+		default:
+			return nil, errInvalidOTLPProtocol
+		}
 	default:
-		return nil, errInvalidOTLPProtocol
+		return nil, errInvalidProvider
 	}
 }

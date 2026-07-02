@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
@@ -29,12 +30,13 @@ import (
 //	返回: "prod/network-capture/v1.0/1745012345678_550e8400-e29b-41d4-a716-446655440000.zstd"
 func BuildObjectKey(namespace, name, version string, timestamp time.Time, sessionID serializer.HexUUID) string {
 	return fmt.Sprintf(
-		`%s/%s/%s/%d_%s.zstd`,
+		`%s/%s/%s/%d_%s.%s`,
 		namespace,
 		name,
 		version,
 		timestamp.UnixMilli(),
 		sessionID.String(),
+		crypto.FILE_EXT,
 	)
 }
 
@@ -69,10 +71,10 @@ func ParseObjectKey(objectKey string) (namespace, name, version string, timestam
 		return
 	}
 	tmp := sourceParts[3]
-	if !strings.HasSuffix(tmp, ".zstd") {
+	if !strings.HasSuffix(tmp, crypto.FILE_DOT_EXT) {
 		return
 	}
-	tmp = strings.TrimRight(tmp, ".zstd")
+	tmp = strings.TrimRight(tmp, crypto.FILE_DOT_EXT)
 	nameParts := strings.Split(tmp, "_")
 	if len(nameParts) != 2 {
 		return

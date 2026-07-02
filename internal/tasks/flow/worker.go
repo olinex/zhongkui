@@ -118,7 +118,9 @@ func newIPv4FlowTaskWorker() pipeline.TaskWorker {
 		10000,
 		time.Minute,
 		ExtractIPv4HttpTransportFromTable,
-		[]pipeline.TransformFunc{},
+		[]pipeline.TransformFunc{
+			TransAppendTags,
+		},
 		[]pipeline.LoadFunc{
 			LoadHttpTransportToTable,
 		},
@@ -132,7 +134,9 @@ func newIPv6FlowTaskWorker() pipeline.TaskWorker {
 		10000,
 		time.Minute,
 		ExtractIPv6HttpTransportFromTable,
-		[]pipeline.TransformFunc{},
+		[]pipeline.TransformFunc{
+			TransAppendTags,
+		},
 		[]pipeline.LoadFunc{
 			LoadHttpTransportToTable,
 		},

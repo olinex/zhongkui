@@ -12,6 +12,7 @@ import (
 
 const (
 	FILE_EXT              = "zkcn"
+	FILE_DOT_EXT          = "." + FILE_EXT
 	COMPRESS_CONTENT_TYPE = "application/zkcn"
 	MAGIC_BYTES           = "\x5a\x4b\x43\x4e" // "ZKCN" — Zhongkui Crypto Notation
 	HEADER_VERSION        = 0x01

@@ -33,11 +33,13 @@ endif
 	bench-slow
 	bench-fast
 	bench-raw
-	otelite-install
-	otelite-start
-	otelite-stop
-	otelite-uninstall
-	otelite-cli-help
+	uptrace-install
+	uptrace-config
+	uptrace-init
+	uptrace-start
+	uptrace-stop
+	uptrace-uninstall
+	uptrace-cli-help
 
 # run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
 # 用法: make run-dev-deps
@@ -403,72 +405,173 @@ bench-probe:
 	@rm -f /tmp/nic_probe
 
 # ============================================================
-# OpenTelemetry 前端工具 (planetf1/otelite)
+# OpenTelemetry 后端工具 (uptrace/uptrace)
 # ============================================================
-# otelite 是一个轻量级单二进制 OTEL 可视化工具，无需 Docker/数据库。
-#   - Web UI: http://localhost:3000
-#   - OTLP gRPC: localhost:4317
-#   - OTLP HTTP: http://localhost:4318
-#   - TUI: otelite tui
-#   - CLI: otelite logs / traces / metrics / usage
-# 项目地址: https://github.com/planetf1/otelite
+# uptrace 是一个开源 APM 平台，支持 traces / metrics / logs 全链路监控。
+# 依赖 ClickHouse + PostgreSQL + Redis（通过 make run-dev-deps 启动）。
+#   - Web UI:      http://localhost:14318
+#   - OTLP gRPC:   localhost:4317
+#   - OTLP HTTP:   http://localhost:4318
+# 安装流程参考: https://uptrace.dev/get/hosted/install
+# 项目地址: https://github.com/uptrace/uptrace
 
-OTELITE_BIN := otelite
-OTELITE_PID := /tmp/otelite.pid
+UPTRACE_VERSION ?= 2.0.3
+UPTRACE_BIN := $(GOBIN)/uptrace
+UPTRACE_CONFIG := config/uptrace.yml
+UPTRACE_PID := /tmp/uptrace.pid
+ifeq ($(UNAME_S),Linux)
+UPTRACE_DOCKER_CMD := nerdctl
+else
+UPTRACE_DOCKER_CMD := docker
+endif
 
-# otelite-install - 安装 otelite 二进制 (macOS 使用 Homebrew，Linux 使用 cargo 或安装脚本)
-# 用法: make otelite-install
-otelite-install:
-	@echo "=== 安装 otelite ==="
-	@case "$(UNAME_S)" in \
-		Darwin) \
-			if command -v brew >/dev/null 2>&1; then \
-				brew install planetf1/tap/otelite; \
-			else \
-				echo "未找到 Homebrew，尝试使用 cargo 安装..."; \
-				cargo install otelite; \
-			fi ;; \
-		Linux) \
-			if command -v cargo >/dev/null 2>&1; then \
-				cargo install otelite; \
-			else \
-				curl --proto '=https' --tlsv1.2 -LsSf https://github.com/planetf1/otelite/releases/latest/download/otelite-installer.sh | sh; \
-			fi ;; \
-		*) \
-			echo "不支持的平台，请手动安装: https://github.com/planetf1/otelite"; \
-			exit 1 ;; \
-	esac
-	@echo "已安装"
-	@$(OTELITE_BIN) --version || true
-
-# otelite-start - 后台启动 otelite daemon 并打印配置信息
-# 用法: make otelite-start
-otelite-start:
-	@if ! command -v $(OTELITE_BIN) >/dev/null 2>&1; then \
-		echo "otelite 未安装，请先运行 make otelite-install"; \
-		exit 1; \
-	fi
-	@if otelite status >/dev/null 2>&1; then \
-		echo "otelite 已在运行"; \
+# uptrace-install - 下载并安装 uptrace 二进制（已安装则跳过）
+# 用法: make uptrace-install
+uptrace-install:
+	@if [ -f $(UPTRACE_BIN) ] && [ -x $(UPTRACE_BIN) ]; then \
+		echo "uptrace 已安装: $(UPTRACE_BIN)"; \
+		$(UPTRACE_BIN) version || true; \
 		exit 0; \
 	fi
-	@echo "=== 启动 otelite daemon ==="
-	@otelite start
-	@sleep 1
-	@echo "otelite daemon 已启动"
+	@echo "=== 安装 uptrace v$(UPTRACE_VERSION) ==="
+	@mkdir -p $(GOBIN)
+	@case "$(UNAME_S)" in \
+		Darwin) \
+			arch=$$(uname -m); \
+			if [ "$$arch" = "arm64" ]; then \
+				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_darwin_arm64"; \
+			else \
+				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_darwin_amd64"; \
+			fi ;; \
+		Linux) \
+			arch=$$(uname -m); \
+			if [ "$$arch" = "aarch64" ]; then \
+				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_linux_arm64"; \
+			else \
+				url="https://github.com/uptrace/uptrace/releases/download/v$(UPTRACE_VERSION)/uptrace_linux_amd64"; \
+			fi ;; \
+		*) \
+			echo "不支持的平台，请手动下载: https://github.com/uptrace/uptrace/releases"; \
+			exit 1 ;; \
+	esac; \
+	echo "  下载: $$url"; \
+	curl -sL -o $(UPTRACE_BIN) "$$url" && chmod +x $(UPTRACE_BIN)
+	@echo "  已安装到 $(UPTRACE_BIN)"
+	@$(UPTRACE_BIN) version || true
+
+# uptrace-config - 使用 uptrace 官方命令生成配置文件，并修改为本机连接信息
+# 用法: make uptrace-config
+# 依赖: make uptrace-install
+uptrace-config:
+	@if [ ! -f $(UPTRACE_BIN) ]; then \
+		echo "uptrace 未安装，请先运行 make uptrace-install"; \
+		exit 1; \
+	fi
+	@if [ -f $(UPTRACE_CONFIG) ]; then \
+		echo "配置文件已存在: $(UPTRACE_CONFIG)，跳过生成"; \
+	else \
+		echo "=== 生成配置文件 $(UPTRACE_CONFIG) ==="; \
+		mkdir -p $$(dirname $(UPTRACE_CONFIG)); \
+		$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) config create; \
+		case "$(UNAME_S)" in \
+			Darwin) \
+				sed -i '' '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
+				sed -i '' '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
+				sed -i '' 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
+				sed -i '' 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
+				sed -i '' '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
+				;; \
+			Linux) \
+				sed -i '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
+				sed -i '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
+				sed -i 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
+				sed -i 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
+				sed -i '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
+				;; \
+		esac; \
+		echo "  配置文件已生成 ($(UPTRACE_CONFIG))"; \
+	fi
+
+# uptrace-init - 初始化数据库（按官方文档顺序执行迁移和种子数据）
+# 用法: make uptrace-init
+# 前置条件: make run-dev-deps, make uptrace-install, make uptrace-config
+uptrace-init:
+	@if [ ! -f $(UPTRACE_BIN) ]; then \
+		echo "uptrace 未安装，请先运行 make uptrace-install"; \
+		exit 1; \
+	fi
+	@if [ ! -f $(UPTRACE_CONFIG) ]; then \
+		echo "配置文件 $(UPTRACE_CONFIG) 不存在，请先运行 make uptrace-config"; \
+		exit 1; \
+	fi
+	@echo "=== 创建 ClickHouse 数据库 ==="
+	@$(UPTRACE_DOCKER_CMD) exec clickhouse-server clickhouse-client -q "CREATE DATABASE IF NOT EXISTS uptrace" 2>/dev/null; \
+	if [ $$? -ne 0 ]; then \
+		echo "  ClickHouse 不可用，请先运行 make run-dev-deps"; \
+		exit 1; \
+	fi
+	@echo "  数据库已就绪"
+	@echo ""
+	@echo "=== 创建 PostgreSQL 数据库 ==="
+	@$(UPTRACE_DOCKER_CMD) exec postgres psql -U postgres -c "CREATE DATABASE uptrace" 2>/dev/null || true
+	@echo "  数据库已就绪"
+	@echo ""
+	@echo "=== 初始化 PostgreSQL ==="
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) pg init
+	@echo ""
+	@echo "=== 运行 PostgreSQL 迁移 ==="
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) pg migrate
+	@echo ""
+	@echo "=== 初始化 ClickHouse ==="
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch init
+	@echo ""
+	@echo "=== 运行 ClickHouse 迁移 ==="
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch migrate
+	@echo ""
+	@echo "=== 创建 ClickHouse 分布式表 ==="
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch dist
+	@echo ""
+	@echo "=== 写入种子数据 ==="
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) db seed 2>/dev/null || echo "  (seed data will be loaded by serve on first start)"
+	@echo ""
+	@echo "数据库初始化完成"
+
+# uptrace-start - 后台启动 uptrace serve
+# 用法: make uptrace-start
+# 前置条件: make uptrace-init
+uptrace-start:
+	@if [ ! -f $(UPTRACE_BIN) ]; then \
+		echo "uptrace 未安装，请先运行 make uptrace-install"; \
+		exit 1; \
+	fi
+	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
+		echo "uptrace 已在运行 (PID $$(cat $(UPTRACE_PID)))"; \
+		exit 0; \
+	fi
+	@echo "=== 后台启动 uptrace serve ==="
+	@nohup $(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) serve > /tmp/uptrace.log 2>&1 & echo $$! > $(UPTRACE_PID)
+	@sleep 3
+	@if kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
+		echo "uptrace 已启动 (PID $$(cat $(UPTRACE_PID)))"; \
+	else \
+		echo "uptrace 启动失败，查看日志:"; \
+		tail -20 /tmp/uptrace.log; \
+		rm -f $(UPTRACE_PID); \
+		exit 1; \
+	fi
 	@echo ""
 	@echo "┌──────────────────────────────────────────────────────────┐"
-	@echo "│  otelite Web UI (traces / metrics / logs 可视化)         │"
-	@echo "│    http://localhost:3000                                   │"
-	@echo "├──────────────────────────────────────────────────────────┤"
-	@echo "│  TUI 终端界面                                             │"
-	@echo "│    otelite tui                                             │"
+	@echo "│  uptrace Web UI (traces / metrics / logs 可视化)         │"
+	@echo "│    http://localhost:14318                                  │"
 	@echo "├──────────────────────────────────────────────────────────┤"
 	@echo "│  OTLP gRPC 端点 (应用上报地址)                              │"
 	@echo "│    localhost:4317                                          │"
 	@echo "├──────────────────────────────────────────────────────────┤"
 	@echo "│  OTLP HTTP 端点                                            │"
 	@echo "│    http://localhost:4318                                   │"
+	@echo "├──────────────────────────────────────────────────────────┤"
+	@echo "│  首次登录需使用 uptrace 配置中的 seed_data 账户             │"
+	@echo "│  DSN 格式: http://<token>@localhost:14318?grpc=4317       │"
 	@echo "└──────────────────────────────────────────────────────────┘"
 	@echo ""
 	@echo "在运行应用之前，设置以下环境变量以启用 OpenTelemetry 上报:"
@@ -476,7 +579,7 @@ otelite-start:
 	@echo "  # 启用 OTEL 可观测功能"
 	@echo "  export OTEL_ENABLED=true"
 	@echo ""
-	@echo "  # 使用 gRPC 上报 (默认，协议通过 OTEL_OTLP_PROTOCOL 控制)"
+	@echo "  # 使用 gRPC 上报"
 	@echo "  export OTEL_OTLP_PROTOCOL=grpc"
 	@echo "  export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317"
 	@echo ""
@@ -491,70 +594,59 @@ otelite-start:
 	@echo "  # 然后正常运行应用:"
 	@echo "  go run cmd/zki/main.go run"
 	@echo ""
-	@echo "CLI 命令: make otelite-cli-help"
-	@echo "停止服务: make otelite-stop"
+	@echo "日志文件: tail -f /tmp/uptrace.log"
+	@echo "CLI 帮助: make uptrace-cli-help"
+	@echo "停止服务: make uptrace-stop"
 
-# otelite-stop - 停止后台运行的 otelite daemon
-# 用法: make otelite-stop
-otelite-stop:
-	@if command -v $(OTELITE_BIN) >/dev/null 2>&1 && otelite status >/dev/null 2>&1; then \
-		echo "=== 停止 otelite daemon ==="; \
-		otelite stop; \
-		rm -f $(OTELITE_PID); \
+# uptrace-stop - 停止后台运行的 uptrace serve
+# 用法: make uptrace-stop
+uptrace-stop:
+	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
+		pid=$$(cat $(UPTRACE_PID)); \
+		echo "=== 停止 uptrace (PID $$pid) ==="; \
+		kill $$pid 2>/dev/null || true; \
+		sleep 1; \
+		if kill -0 $$pid 2>/dev/null; then \
+			echo "强制终止..."; \
+			kill -9 $$pid 2>/dev/null || true; \
+		fi; \
+		rm -f $(UPTRACE_PID); \
 		echo "已停止"; \
 	else \
-		echo "otelite 未在运行"; \
-		rm -f $(OTELITE_PID); \
+		echo "uptrace 未在运行"; \
+		rm -f $(UPTRACE_PID); \
 	fi
 
-# otelite-uninstall - 卸载 otelite (macOS 用 brew uninstall，Linux 用 cargo uninstall)
-# 用法: make otelite-uninstall
-otelite-uninstall:
-	@if command -v $(OTELITE_BIN) >/dev/null 2>&1 && otelite status >/dev/null 2>&1; then \
-		echo "otelite 正在运行，请先执行 make otelite-stop"; \
+# uptrace-uninstall - 卸载 uptrace 二进制和配置文件
+# 用法: make uptrace-uninstall
+uptrace-uninstall:
+	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
+		echo "uptrace 正在运行，请先执行 make uptrace-stop"; \
 		exit 1; \
 	fi
-	@echo "=== 卸载 otelite ==="
-	@case "$(UNAME_S)" in \
-		Darwin) \
-			if brew list planetf1/tap/otelite >/dev/null 2>&1; then \
-				brew uninstall planetf1/tap/otelite; \
-			elif command -v cargo >/dev/null 2>&1 && cargo install --list 2>/dev/null | grep -q '^otelite '; then \
-				cargo uninstall otelite; \
-			else \
-				rm -f $$(command -v otelite 2>/dev/null) $$(command -v otelite 2>/dev/null || echo "$(GOBIN)/otelite"); \
-				echo "已手动移除 otelite 二进制"; \
-			fi ;; \
-		Linux) \
-			if command -v cargo >/dev/null 2>&1 && cargo install --list 2>/dev/null | grep -q '^otelite '; then \
-				cargo uninstall otelite; \
-			else \
-				rm -f $$(command -v otelite 2>/dev/null) $$(command -v otelite 2>/dev/null || echo "$(GOBIN)/otelite"); \
-				echo "已手动移除 otelite 二进制"; \
-			fi ;; \
-		*) \
-			echo "请手动卸载 otelite"; \
-			exit 1 ;; \
-	esac
-	@rm -f $(OTELITE_PID)
+	@echo "=== 卸载 uptrace ==="
+	@rm -f $(UPTRACE_BIN) && echo "  已删除 $(UPTRACE_BIN)" || true
+	@rm -f $(UPTRACE_CONFIG) && echo "  已删除 $(UPTRACE_CONFIG)" || true
+	@rm -f $(UPTRACE_PID)
 	@echo "卸载完成"
 
-# otelite-cli-help - 打印 otelite CLI 常用命令参考
-# 用法: make otelite-cli-help
-otelite-cli-help:
-	@echo "otelite CLI 常用命令:"
+# uptrace-cli-help - 打印 uptrace CLI 常用命令参考
+# 用法: make uptrace-cli-help
+uptrace-cli-help:
+	@echo "uptrace CLI 常用命令:"
 	@echo ""
-	@echo "  otelite serve          - 前台启动 (适用于调试)"
-	@echo "  otelite start          - 后台启动 daemon"
-	@echo "  otelite stop           - 停止 daemon"
-	@echo "  otelite restart        - 重启 daemon"
-	@echo "  otelite status         - 查看 daemon 状态"
-	@echo "  otelite tui            - 终端 UI 界面"
+	@echo "  uptrace version         - 查看版本"
+	@echo "  uptrace serve           - 前台启动服务 (调试用)"
+	@echo "  uptrace config create   - 生成配置文件模板"
+	@echo "  uptrace config validate - 验证配置文件"
 	@echo ""
-	@echo "  otelite logs list --severity ERROR --since 1h"
-	@echo "  otelite logs search \"keyword\""
-	@echo "  otelite traces list --min-duration 1s"
-	@echo "  otelite metrics list --name \"http_*\""
-	@echo "  otelite usage --since 24h"
-	@echo "  otelite --format json logs list | jq '.'"
+	@echo "  数据库管理 (按官方文档顺序):"
+	@echo "  uptrace pg init         - 初始化 PostgreSQL (仅首次)"
+	@echo "  uptrace pg migrate      - 运行 PostgreSQL 迁移"
+	@echo "  uptrace ch init         - 初始化 ClickHouse (仅首次)"
+	@echo "  uptrace ch migrate      - 运行 ClickHouse 迁移"
+	@echo "  uptrace ch dist         - 创建 ClickHouse 分布式表"
+	@echo "  uptrace db seed         - 写入项目/用户种子数据"
+	@echo ""
+	@echo "  在浏览器打开 http://localhost:14318 查看 Web UI"
 

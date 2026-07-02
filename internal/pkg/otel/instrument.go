@@ -34,7 +34,7 @@ import (
 // 当 Runtime 为 nil 时返回 nil。
 func AsynqServerMiddleware() asynq.MiddlewareFunc {
 	if !Env.Enabled {
-		return nil
+		return func(next asynq.Handler) asynq.Handler { return next }
 	}
 	tracer := otel.Tracer(fmt.Sprintf(`%s-asynq-server`, base.GLOBAL_PREFIX))
 	return func(next asynq.Handler) asynq.Handler {

@@ -6,12 +6,14 @@ import (
 )
 
 const (
-	PREFIX = "OTEL"
-	HTTP   = "http"
-	GRPC   = "grpc"
+	PREFIX            = "OTEL"
+	HTTP              = "http"
+	GRPC              = "grpc"
+	PROVIDER_OTLP     = "otlp"
+	PROVIDER_STDOUT   = "stdout"
 	SAMPLER_ALWAYS_ON = "always_on"
-	SAMPLER_HEAD    = "head"
-	SAMPLER_TAIL    = "tail"
+	SAMPLER_HEAD      = "head"
+	SAMPLER_TAIL      = "tail"
 )
 
 var (
@@ -20,6 +22,7 @@ var (
 
 type OtelEnv struct {
 	Enabled      bool    `envconfig:"ENABLED" default:"false"`
+	Provider     string  `envconfig:"PROVIDER" default:"otlp"`
 	OtlpProtocol string  `envconfig:"OTLP_PROTOCOL" default:"grpc"`
 	SamplerType  string  `envconfig:"SAMPLER_TYPE" default:"always_on"`
 	SamplerRatio float64 `envconfig:"SAMPLER_RATIO" default:"1.0"`

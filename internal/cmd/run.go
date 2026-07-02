@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/manager/routes"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -46,12 +47,19 @@ var workerCmd = &cobra.Command{
 	Use:   "worker",
 	Short: "Run the zhongkui worker Process",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, i := cmdToolBox(cmd)
+		ctx, i := cmdToolBox(cmd)
 		server, err := provider.InvokePipelineServer(i)
 		if err != nil {
 			return err
 		}
-		return server.Start()
+		scheduler, err := provider.InvokePipelineScheduler(i)
+		if err != nil {
+			return err
+		}
+		wg, ctx := errgroup.WithContext(ctx)
+		wg.Go(server.Start)
+		wg.Go(scheduler.Start)
+		return wg.Wait()
 	},
 }
 

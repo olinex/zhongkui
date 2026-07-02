@@ -314,6 +314,7 @@ func (r Router[P]) MarshalJSON() ([]byte, error) {
 //
 // 注意：反序列化后需要重新启动重组器节点，因为控制器状态无法序列化。
 func (r *Router[P]) UnmarshalJSON(data []byte) error {
+	initMetrics()
 	var store RouterAux[P]
 	if err := json.Unmarshal(data, &store); err != nil {
 		return errors.WithStack(err)
@@ -556,7 +557,6 @@ func (r *Router[P]) cleanup(ctx context.Context, force bool) {
 //  2. errgroup会等待所有goroutine完成
 //  3. 每个重组器节点有自己的清理逻辑，确保资源释放
 func (r *Router[P]) Run(ctx context.Context, logger *logging.Logger, srcChan <-chan P, dstChan chan<- any) error {
-	InitMetrics()
 	ctx, cancel := context.WithCancel(ctx)
 	wg, ctx := errgroup.WithContext(ctx)
 	ticker := time.NewTicker(r.noticeTimeout)

@@ -11,7 +11,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-func (c *capturer) uploadOne(ctx context.Context, filePath, objectKey string) (err error) {
+func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (err error) {
 	ctx, span := totel.StartUploadOneSpan(ctx, objectKey)
 	var uploadedSize int64
 	defer func() {
@@ -65,7 +65,7 @@ func (c *capturer) upload(ctx context.Context, sourceChan <-chan notice, notifyC
 		case n := <-sourceChan:
 			filePath := c.filePath(n.ts)
 			objectKey := c.objectKey(n.ts)
-			e := c.uploadOne(ctx, filePath, objectKey)
+			e := c.uploadOne(ctx, objectKey, filePath)
 			if e != nil {
 				err = e
 				return errors.WithStack(e)
