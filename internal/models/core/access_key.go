@@ -18,6 +18,9 @@ const (
 	ACCESS_KEY_PREFIX = "akp"
 )
 
+// ErrTooManyAccessKey 表示用户创建的访问密钥数量已达上限
+var ErrTooManyAccessKey = errors.New("too many access keys")
+
 // AccessKey 表示一个访问键实体，用于 API 认证和授权
 // 每个访问键属于一个用户，包含访问 ID 和密钥对
 type AccessKey struct {
@@ -102,6 +105,26 @@ func NewAccessKey(user *User, enabled bool, description string, expiredAt *time.
 		RawExpiredAt:    expiredAt,
 		LastAccessAt:    nil,
 	}, nil
+}
+
+// CreateWithLimit 在事务中创建访问键，并检查用户已有的访问键数量是否超限
+// 参数:
+//   - db: 数据库连接
+//   - maxCount: 用户允许创建的最大访问键数量
+//
+// 返回:
+//   - error: 创建过程中发生的错误，如果超出数量限制返回 ErrTooManyAccessKey
+func (a *AccessKey) CreateWithLimit(db *database.DB, maxCount int) error {
+	return db.Transaction(func(tx *database.DB) error {
+		var count int64
+		if err := tx.Model(&AccessKey{}).Where("user_id = ?", a.RawUserID).Count(&count).Error; err != nil {
+			return errors.WithStack(err)
+		}
+		if count >= int64(maxCount) {
+			return ErrTooManyAccessKey
+		}
+		return tx.Create(a).Error
+	})
 }
 
 // AccessKeyPool 管理访问键的缓存和重复检查

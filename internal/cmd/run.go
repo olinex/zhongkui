@@ -13,14 +13,6 @@ import (
 	_ "zhongkui.com/zhongkui/internal/tasks"
 )
 
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run the zhongkui server process",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
-	},
-}
-
 var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "Run the zhongkui http web api process",
@@ -82,11 +74,4 @@ var captureCmd = &cobra.Command{
 		log.Ctx(ctx).Infof("shutting down zhongkui capture %s", sessionID.String())
 		return nil
 	},
-}
-
-func init() {
-	runCmd.AddCommand(webCmd)
-	runCmd.AddCommand(grpcCmd)
-	runCmd.AddCommand(workerCmd)
-	runCmd.AddCommand(captureCmd)
 }

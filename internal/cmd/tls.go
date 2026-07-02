@@ -21,7 +21,7 @@ type TLSInputs struct {
 }
 
 var generateTLSCmd = &cobra.Command{
-	Use:   "create-tls",
+	Use:   "tls",
 	Short: "Create tls by self Signed",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		_, injector := cmdToolBox(cmd)

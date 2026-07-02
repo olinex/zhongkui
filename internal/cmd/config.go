@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
+	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -10,6 +11,7 @@ var describeConfigCmd = &cobra.Command{
 	Short: "Show default config descriptions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		descs := provider.DescribeLoggerConfig()
+		descs.Join(manager.DescribeConfig())
 		descs.Join(provider.DescribeDatabaseConfig())
 		descs.Join(provider.DescribeEtcdConfig())
 		descs.Join(provider.DescribeRedisConfig())

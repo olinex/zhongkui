@@ -63,14 +63,6 @@ func rawModels() []any {
 	}
 }
 
-var migrateCmd = &cobra.Command{
-	Use:   "migrate",
-	Short: "Database migration management",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
-	},
-}
-
 var migrateUpCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Apply all pending migrations",
@@ -197,8 +189,11 @@ func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) error 
 		rawDB := provider.MustInvokeRawDatabase(i)
 
 		timeout := v.GetDuration("timeout")
-		ctx, cancel := context.WithTimeout(ctx, timeout)
-		defer cancel()
+		if timeout > 0 {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithTimeout(ctx, timeout)
+			defer cancel()
+		}
 
 		dbTarget := targetFromViper(v)
 
@@ -425,22 +420,13 @@ func parseInt64(s string) int64 {
 }
 
 func init() {
-	migrateCmd.AddCommand(migrateUpCmd)
-	migrateCmd.AddCommand(migrateDownCmd)
-	migrateCmd.AddCommand(migrateUpToCmd)
-	migrateCmd.AddCommand(migrateDownToCmd)
-	migrateCmd.AddCommand(migrateStatusCmd)
-	migrateCmd.AddCommand(migrateDryRunCmd)
-	migrateCmd.AddCommand(migrateDiffCmd)
-	migrateCmd.AddCommand(migrateCheckCmd)
-	migrateCmd.AddCommand(migrateCreateCmd)
-
 	for _, c := range []*cobra.Command{
 		migrateUpCmd, migrateDownCmd, migrateUpToCmd, migrateDownToCmd,
 		migrateStatusCmd, migrateDryRunCmd, migrateDiffCmd, migrateCheckCmd, migrateCreateCmd,
 	} {
 		c.Flags().String("db", "all", "target database: core, raw, all")
 		c.Flags().Bool("verbose", false, "print migration SQL")
+		c.Flags().Duration("timeout", 0, "migration timeout (0 means no timeout)")
 	}
 
 	migrateDownCmd.Flags().Bool("force", false, "skip confirmation")

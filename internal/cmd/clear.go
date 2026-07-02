@@ -17,14 +17,6 @@ import (
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
-var clearCmd = &cobra.Command{
-	Use:   "clear",
-	Short: "Clear zhongkui data",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return cmd.Help()
-	},
-}
-
 var clearDatabaseCmd = &cobra.Command{
 	Use:   "database",
 	Short: "Clear all database tables (rollback all migrations)",
@@ -110,6 +102,4 @@ func createClearMigrator(coreDB, rawDB *database.DB, dbName string, migrationFS 
 func init() {
 	flags := clearDatabaseCmd.Flags()
 	flags.Duration("timeout", time.Minute, "timeout for clearing database")
-
-	clearCmd.AddCommand(clearDatabaseCmd)
 }

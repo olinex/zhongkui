@@ -6,8 +6,8 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/provider"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkui.com/zhongkui/internal/provider"
 )
 
 const (
@@ -75,14 +75,67 @@ func Execute() {
 	}
 }
 
+var runCmd = &cobra.Command{
+	Use:   "run",
+	Short: "Run the zhongkui server process",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
+var clearCmd = &cobra.Command{
+	Use:   "clear",
+	Short: "Clear zhongkui data",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
+var migrateCmd = &cobra.Command{
+	Use:   "migrate",
+	Short: "Database migration management",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
+var createCmd = &cobra.Command{
+	Use:   "create",
+	Short: "Create resources (user, tls, access-key)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
 func init() {
 	RootCmd.PersistentFlags().StringP("config", "c", "", "config file path (e.g. /etc/zhongkui/config.toml)")
-	RootCmd.AddCommand(runCmd)
-	RootCmd.AddCommand(describeConfigCmd)
-	RootCmd.AddCommand(migrateCmd)
-	RootCmd.AddCommand(clearCmd)
-	RootCmd.AddCommand(createUserCmd)
-	RootCmd.AddCommand(generateTLSCmd)
-	RootCmd.AddCommand(forceResetPasswordCmd)
 	RootCmd.AddCommand(versionCmd)
+	RootCmd.AddCommand(describeConfigCmd)
+	// run
+	runCmd.AddCommand(webCmd)
+	runCmd.AddCommand(grpcCmd)
+	runCmd.AddCommand(workerCmd)
+	runCmd.AddCommand(captureCmd)
+	RootCmd.AddCommand(runCmd)
+	// clear
+	clearCmd.AddCommand(clearDatabaseCmd)
+	RootCmd.AddCommand(clearCmd)
+	// migrate
+	migrateCmd.AddCommand(migrateUpCmd)
+	migrateCmd.AddCommand(migrateDownCmd)
+	migrateCmd.AddCommand(migrateUpToCmd)
+	migrateCmd.AddCommand(migrateDownToCmd)
+	migrateCmd.AddCommand(migrateStatusCmd)
+	migrateCmd.AddCommand(migrateDryRunCmd)
+	migrateCmd.AddCommand(migrateDiffCmd)
+	migrateCmd.AddCommand(migrateCheckCmd)
+	migrateCmd.AddCommand(migrateCreateCmd)
+	RootCmd.AddCommand(migrateCmd)
+	// create
+	createCmd.AddCommand(createUserCmd)
+	createCmd.AddCommand(generateTLSCmd)
+	createCmd.AddCommand(createAccessKeyCmd)
+	RootCmd.AddCommand(createCmd)
+
+	RootCmd.AddCommand(forceResetPasswordCmd)
 }

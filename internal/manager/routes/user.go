@@ -10,8 +10,6 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -382,38 +380,29 @@ func userSelfAccessKeyCreate(c *gin.Context) {
 	// 获取配置信息
 	cfg := manager.GetConfig(c)
 
-	// 在事务中执行创建操作
-	db.Transaction(func(tx *database.DB) error {
-		var count int64
-		// 检查用户已有的访问密钥数量
-		if err := tx.Model(&key).Where("user_id = ?", user.ID).Count(&count).Error; err != nil {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return errors.WithStack(err)
-		} else if count >= int64(cfg.Auth.AccessKeyCount) {
-			// 超出最大限制
+	// 使用复用方法在事务中创建访问密钥
+	if err := key.CreateWithLimit(db, int(cfg.Auth.AccessKeyCount)); err != nil {
+		if err == core.ErrTooManyAccessKey {
 			ErrTooManyAccessKey.AbortWithGinH(c)
-			return nil
-		} else if err := tx.Create(&key).Error; err != nil {
-			// 创建失败
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return errors.WithStack(err)
 		} else {
-			// 创建成功，返回创建的访问密钥信息
-			manager.SimpleOK.AbortWithGinW(c, UserAccessKeyOut{
-				BaseItemOut: utils.BaseItemOut{
-					ID:        key.ID,
-					CreatedAt: key.CreatedAt,
-					UpdatedAt: key.UpdatedAt,
-				},
-				Enabled:         key.Enabled,
-				AccessKeyID:     key.AccessKeyID,
-				AccessKeySecret: key.AccessKeySecret,
-				Description:     key.Description,
-				ExpiredAt:       key.RawExpiredAt,
-				LastAccessAt:    key.LastAccessAt,
-			})
-			return nil
+			manager.CreateAccidentError(err).AbortWithGinH(c)
 		}
+		return
+	}
+
+	// 创建成功，返回创建的访问密钥信息
+	manager.SimpleOK.AbortWithGinW(c, UserAccessKeyOut{
+		BaseItemOut: utils.BaseItemOut{
+			ID:        key.ID,
+			CreatedAt: key.CreatedAt,
+			UpdatedAt: key.UpdatedAt,
+		},
+		Enabled:         key.Enabled,
+		AccessKeyID:     key.AccessKeyID,
+		AccessKeySecret: key.AccessKeySecret,
+		Description:     key.Description,
+		ExpiredAt:       key.RawExpiredAt,
+		LastAccessAt:    key.LastAccessAt,
 	})
 }
 

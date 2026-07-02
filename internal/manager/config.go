@@ -187,36 +187,6 @@ type Config struct {
 	Secure SecureConfig `mapstructure:"secure"`
 }
 
-// Describe 生成 API 管理层配置的结构化描述文档。
-//
-// 该方法通过反射递归遍历 Config 结构体的所有公开字段，
-// 提取 mapstructure、default 和 comment 标签信息，
-// 生成可用于配置文档展示或参数说明的描述集合。
-//
-// 返回值：
-//   - config.ConfigDescriptions: 包含所有配置项路径、类型、默认值和说明的描述集合
-func (c *Config) Describe() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
-}
-
-// ExtractConfig 从 Viper 实例中提取并校验 API 管理层的配置。
-//
-// 该函数执行以下步骤：
-//  1. 应用结构体默认值（default 标签）
-//  2. 从 Viper 中提取 "api" 前缀下的子配置树
-//  3. 将子配置树反序列化到 Config 结构体
-//  4. 对 Config 结构体执行结构化校验
-//
-// 参数：
-//   - v: 已加载配置的 Viper 实例
-//
-// 返回值：
-//   - *Config: 成功时返回填充并校验通过的配置结构体指针
-//   - error: 任一步骤失败时返回的错误
-func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
-}
-
 // ConfigMiddleware 创建一个将配置注入 Gin 上下文的中间件。
 //
 // 该中间件在每次请求处理前将 Config 对象存入 Gin 上下文中，
@@ -250,4 +220,26 @@ func GetConfig(c *gin.Context) *Config {
 		return cfg.(*Config)
 	}
 	panic("config does not exists")
+}
+
+// ExtractConfig 从 Viper 实例中提取并校验 API 管理层的配置。
+//
+// 该函数执行以下步骤：
+//  1. 应用结构体默认值（default 标签）
+//  2. 从 Viper 中提取 "api" 前缀下的子配置树
+//  3. 将子配置树反序列化到 Config 结构体
+//  4. 对 Config 结构体执行结构化校验
+//
+// 参数：
+//   - v: 已加载配置的 Viper 实例
+//
+// 返回值：
+//   - *Config: 成功时返回填充并校验通过的配置结构体指针
+//   - error: 任一步骤失败时返回的错误
+func ExtractConfig(v *viper.Viper) (*Config, error) {
+	return config.ExtractConfig[Config](v, PREFIX)
+}
+
+func DescribeConfig() config.ConfigDescriptions {
+	return config.DescribeConfig[Config](PREFIX)
 }
