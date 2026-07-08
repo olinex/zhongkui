@@ -28,15 +28,15 @@ var (
 // UserProfileChangeIn 定义用户个人资料修改的输入结构体
 // 包含用户昵称和邮箱信息
 type UserProfileChangeIn struct {
-	NickleName string `json:"nickleName" binding:"required,min=6,max=32,alphaunicode"` // 用户昵称，必填，6-32个字符，支持Unicode字母
-	Email      string `json:"email" binding:"required,min=10,max=128,email"`           // 用户邮箱，必填，10-128个字符，需符合邮箱格式
+	NickleName string `json:"nickleName" viper:"nicklename" prompt:"please enter nicklename" binding:"required,min=6,max=32,alphaunicode"` // 用户昵称，必填，6-32个字符，支持Unicode字母
+	Email      string `json:"email" viper:"email" prompt:"please enter user's email" binding:"required,min=10,max=128,email"`              // 用户邮箱，必填，10-128个字符，需符合邮箱格式
 }
 
 // UserPasswordLoginIn 定义密码登录的输入结构体
 // 包含用户名和密码信息
 type UserPasswordLoginIn struct {
-	Username string `json:"username" binding:"required,min=6,max=32,alphaunicode"`         // 用户名，必填，6-32个字符，支持Unicode字母
-	Password string `json:"password" binding:"required,min=8,max=64,ascii,strongPassword"` // 密码，必填，8-64个ASCII字符，需满足强密码要求
+	Username string `json:"username" viper:"username" prompt:"please enter username" binding:"required,min=6,max=32,alphaunicode"`                                    // 用户名，必填，6-32个字符，支持Unicode字母
+	Password string `json:"password" viper:"password" prompt:"please enter password" mask:"true" confirm:"true" binding:"required,min=8,max=64,ascii,strongPassword"` // 密码，必填，8-64个ASCII字符，需满足强密码要求
 }
 
 // UserRegisterIn 定义用户注册的输入结构体

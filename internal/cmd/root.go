@@ -146,6 +146,7 @@ func init() {
 	createCmd.AddCommand(createUserCmd)
 	createCmd.AddCommand(generateTLSCmd)
 	createCmd.AddCommand(createAccessKeyCmd)
+	createCmd.AddCommand(createCapturerCmd)
 	RootCmd.AddCommand(createCmd)
 
 	RootCmd.AddCommand(forceResetPasswordCmd)

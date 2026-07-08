@@ -96,7 +96,7 @@ func NewS3Client(cfg *Config, opts ...ClientOption) (*S3Client, error) {
 	}
 	if client, err := minio.New(cfg.Endpoint, mOpts); err != nil {
 		return nil, errors.WithStack(err)
-	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cfg.SecretKey); err != nil {
+	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cfg.CryptoKey); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
 		return &S3Client{
