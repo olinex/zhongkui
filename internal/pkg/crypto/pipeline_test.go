@@ -297,3 +297,147 @@ func (m *mockTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 func (m *mockTransform) WrapReader(r io.Reader) (io.ReadCloser, error) {
 	return io.NopCloser(r), nil
 }
+
+// ---------------------------------------------------------------------------
+// pipelineReadCloser & DecryptDecompress Close 链测试
+// ---------------------------------------------------------------------------
+
+// trackingCloser 实现 io.ReadWriteCloser，将关闭调用记录到共享切片中。
+// 写路径时通过 writer 字段透传数据，读路径时通过 reader 字段透传数据。
+type trackingCloser struct {
+	name    string
+	reader  io.Reader
+	writer  io.Writer
+	records *[]string
+}
+
+func (tc *trackingCloser) Read(p []byte) (int, error) {
+	return tc.reader.Read(p)
+}
+
+func (tc *trackingCloser) Write(p []byte) (int, error) {
+	return tc.writer.Write(p)
+}
+
+func (tc *trackingCloser) Close() error {
+	*tc.records = append(*tc.records, tc.name)
+	return nil
+}
+
+// trackingTransform 实现 Transform + AlgoIDer，WrapReader/WrapWriter 返回指定名称的 trackingCloser
+type trackingTransform struct {
+	readerName string
+	algoID     byte
+	records    *[]string
+}
+
+func (t *trackingTransform) AlgoID() byte { return t.algoID }
+
+func (t *trackingTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
+	tc := &trackingCloser{name: t.readerName, writer: w, records: t.records}
+	return tc, nil
+}
+
+func (t *trackingTransform) WrapReader(r io.Reader) (io.ReadCloser, error) {
+	tc := &trackingCloser{name: t.readerName, reader: r, records: t.records}
+	return tc, nil
+}
+
+func TestPipelineReadCloserCloseOrder(t *testing.T) {
+	Convey("Test pipelineReadCloser Close order", t, func() {
+		Convey("Should close decomp → enc → src in order", func() {
+			var records []string
+
+			src := &trackingCloser{name: "src", reader: &bytes.Buffer{}, records: &records}
+			enc := &trackingCloser{name: "enc", reader: io.NopCloser(nil), records: &records}
+			decomp := &trackingCloser{name: "decomp", reader: io.NopCloser(nil), records: &records}
+
+			prc := &pipelineReadCloser{
+				srcCloser:    src,
+				encReader:    enc,
+				decompReader: decomp,
+			}
+
+			err := prc.Close()
+			So(err, ShouldBeNil)
+			So(records, ShouldResemble, []string{"decomp", "enc", "src"})
+		})
+
+		Convey("Should not panic when srcCloser is nil", func() {
+			var records []string
+
+			enc := &trackingCloser{name: "enc", reader: io.NopCloser(nil), records: &records}
+			decomp := &trackingCloser{name: "decomp", reader: io.NopCloser(nil), records: &records}
+
+			prc := &pipelineReadCloser{
+				srcCloser:    nil,
+				encReader:    enc,
+				decompReader: decomp,
+			}
+
+			err := prc.Close()
+			So(err, ShouldBeNil)
+			So(records, ShouldResemble, []string{"decomp", "enc"})
+		})
+	})
+}
+
+func TestDecryptDecompressCloseAllResources(t *testing.T) {
+	Convey("Test DecryptDecompress closes all layers including source io.Closer", t, func() {
+		var records []string
+
+		// 创建带追踪的 compressor 和 encryptor
+		compressor := &trackingTransform{readerName: "decomp", algoID: AlgoCompressionZstd, records: &records}
+		encryptor := &trackingTransform{readerName: "enc", algoID: AlgoEncryptionAESGCM, records: &records}
+
+		pipeline, err := NewCompressEncryptPipeline(compressor, encryptor)
+		So(err, ShouldBeNil)
+
+		Convey("When source implements io.Closer, should close src too", func() {
+			// 先将数据写入头部（模拟加密压缩后的数据）
+			var buf bytes.Buffer
+			w, err := pipeline.CompressEncrypt(&buf)
+			So(err, ShouldBeNil)
+			w.Write([]byte("test data"))
+			w.Close()
+
+			// 使用 trackingCloser 包裹源数据，验证关闭链
+			records = nil // 重置记录（排除写入阶段的记录）
+			src := &trackingCloser{name: "src", reader: &buf, records: &records}
+
+			r, err := pipeline.DecryptDecompress(src)
+			So(err, ShouldBeNil)
+
+			_, err = io.ReadAll(r)
+			So(err, ShouldBeNil)
+
+			err = r.Close()
+			So(err, ShouldBeNil)
+
+			// 验证关闭顺序：decomp → enc → src
+			So(records, ShouldResemble, []string{"decomp", "enc", "src"})
+		})
+
+		Convey("When source is plain io.Reader, should not panic", func() {
+			var buf bytes.Buffer
+			w, err := pipeline.CompressEncrypt(&buf)
+			So(err, ShouldBeNil)
+			w.Write([]byte("hello"))
+			w.Close()
+
+			records = nil
+			// bytes.Buffer 不实现 io.Closer，作为纯 io.Reader 传入
+			r, err := pipeline.DecryptDecompress(&buf)
+			So(err, ShouldBeNil)
+
+			_, err = io.ReadAll(r)
+			So(err, ShouldBeNil)
+
+			err = r.Close()
+			So(err, ShouldBeNil)
+
+			// 只关闭 decomp 和 enc，没有 src
+			So(records, ShouldResemble, []string{"decomp", "enc"})
+		})
+	})
+}

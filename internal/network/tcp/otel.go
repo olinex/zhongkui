@@ -49,8 +49,6 @@ var (
 	cleanupFlowsRemovedCounter metric.Int64Counter
 	// cleanupFlowsEvictedCounter 统计清理时因超出容量被驱逐的流数量
 	cleanupFlowsEvictedCounter metric.Int64Counter
-	// processingDuration 统计各阶段处理耗时分布
-	processingDuration metric.Int64Histogram
 )
 
 func InitMetrics() {
@@ -127,13 +125,6 @@ func initMetrics() {
 		"tcp.cleanup.flows_evicted",
 		metric.WithDescription("Total number of TCP flows evicted due to capacity overflow"),
 		metric.WithUnit("{flow}"),
-	)
-	err = errors.Join(err, e)
-
-	processingDuration, e = meter.Int64Histogram(
-		"tcp.processing.duration",
-		metric.WithDescription("Duration of TCP packet processing stages in milliseconds"),
-		metric.WithUnit("ms"),
 	)
 	err = errors.Join(err, e)
 

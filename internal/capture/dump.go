@@ -41,15 +41,7 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, s
 	buffer := bufio.NewWriterSize(file, int(c.uploadCfg.PacketBufferSize))
 	defer buffer.Flush()
 	// 流式压缩加密层，实现分块压缩后加密
-	compressor, err := crypto.NewZstdCompressorWithLevel(c.uploadCfg.EncoderLevel)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	encryptor, err := crypto.NewAESGCMEncryptor([]byte(secretKey))
-	if err != nil {
-		return errors.WithStack(err)
-	}
-	pipeline, err := crypto.NewCompressEncryptPipeline(compressor, encryptor)
+	pipeline, err := crypto.NewZstdAESGCMPipelineWithLevel(secretKey, c.uploadCfg.EncoderLevel)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -49,6 +49,11 @@ type Config struct {
 	// 默认值: true (使用HTTPS)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7#New
 	UseSSL bool `mapstructure:"useSSL" default:"true" comment:"use HTTPS for S3 connections (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
+
+	// CryptoKey 是S3对象存储的加密密钥
+	// 用于加密和解密S3对象存储中的数据
+	// 默认值: "-" (表示必须显式配置)
+	CryptoKey string `mapstructure:"cryptoKey" default:"-" comment:"crypto key for S3 object storage"`
 }
 
 func DescribeConfig() config.ConfigDescriptions {

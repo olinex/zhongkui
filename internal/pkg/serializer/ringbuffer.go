@@ -20,6 +20,7 @@ const (
 )
 
 var (
+	errRingBufferReleased error = errors.New("ring buffer is released")
 	smallBufferPool = sync.Pool{
 		New: func() any {
 			return ringbuffer.New(int(SmallBufferSzie))
@@ -159,6 +160,9 @@ func (r *RingBuffer) Release() {
 // 该方法提取缓冲区当前的所有数据，并连同容量信息一起编码为存储格式
 // 返回值: 包含缓冲区完整状态和数据的RingBufferStore实例
 func (r *RingBuffer) ToStore() *RingBufferStore {
+	if r.inner == nil {
+		return &RingBufferStore{}
+	}
 	maxSize := r.inner.Capacity()
 	data := make([]byte, maxSize, maxSize)
 	if _, err := r.inner.Peek(data); err != nil {
@@ -198,6 +202,9 @@ func (r *RingBuffer) UnmarshalJSON(data []byte) error {
 // 该方法将缓冲区的长度重置为0，但不改变容量，可以立即重用缓冲区
 // 返回值: 操作过程中的错误，通常为nil
 func (r *RingBuffer) Flush() error {
+	if r.inner == nil {
+		return errRingBufferReleased
+	}
 	return r.inner.Flush()
 }
 
@@ -206,6 +213,9 @@ func (r *RingBuffer) Flush() error {
 // data: 用于存储读取结果的字节切片，切片容量决定最大读取量
 // 返回值: 实际读取的字节数和读取过程中的错误
 func (r *RingBuffer) Read(data []byte) (int, error) {
+	if r.inner == nil {
+		return 0, errRingBufferReleased
+	}
 	return r.inner.Read(data)
 }
 
@@ -213,6 +223,9 @@ func (r *RingBuffer) Read(data []byte) (int, error) {
 // 该方法一次性读取缓冲区中的所有可用数据，读取后缓冲区变为空状态
 // 返回值: 包含所有数据的字节切片和读取过程中的错误
 func (r *RingBuffer) ReadAll() ([]byte, error) {
+	if r.inner == nil {
+		return nil, errRingBufferReleased
+	}
 	length := r.inner.Length()
 	result := make([]byte, length)
 	if _, err := r.inner.Read(result); err != nil {
@@ -226,6 +239,9 @@ func (r *RingBuffer) ReadAll() ([]byte, error) {
 // data: 要写入缓冲区的字节切片
 // 返回值: 实际写入的字节数和写入过程中的错误
 func (r *RingBuffer) Write(data []byte) (int, error) {
+	if r.inner == nil {
+		return 0, errRingBufferReleased
+	}
 	return r.inner.Write(data)
 }
 
@@ -234,6 +250,9 @@ func (r *RingBuffer) Write(data []byte) (int, error) {
 // data: 用于存储查看结果的字节切片，切片容量决定最大查看量
 // 返回值: 实际查看的字节数和操作过程中的错误
 func (r *RingBuffer) Peek(data []byte) (int, error) {
+	if r.inner == nil {
+		return 0, errRingBufferReleased
+	}
 	return r.inner.Peek(data)
 }
 
@@ -241,6 +260,9 @@ func (r *RingBuffer) Peek(data []byte) (int, error) {
 // 该方法查看缓冲区中的所有可用数据，但不移动读取指针，数据保持原样
 // 返回值: 包含所有数据的字节切片和操作过程中的错误
 func (r *RingBuffer) PeekAll(data []byte) ([]byte, error) {
+	if r.inner == nil {
+		return nil, errRingBufferReleased
+	}
 	length := r.inner.Length()
 	data = data[:length]
 	if length == 0 {
@@ -256,6 +278,9 @@ func (r *RingBuffer) PeekAll(data []byte) ([]byte, error) {
 // 该方法线程安全，返回缓冲区创建时指定的最大容量值
 // 返回值: 缓冲区的总容量，单位：字节
 func (r *RingBuffer) Capacity() int {
+	if r.inner == nil {
+		return 0
+	}
 	return r.inner.Capacity()
 }
 
@@ -263,6 +288,9 @@ func (r *RingBuffer) Capacity() int {
 // 该方法线程安全，返回缓冲区中已存储但尚未读取的字节数
 // 返回值: 可读取的字节数，范围从0到Capacity()
 func (r *RingBuffer) Length() int {
+	if r.inner == nil {
+		return 0
+	}
 	return r.inner.Length()
 }
 
@@ -270,9 +298,15 @@ func (r *RingBuffer) Length() int {
 // 该方法线程安全，计算缓冲区中还可以写入的字节数
 // 返回值: 剩余的可写入字节数，等于Capacity() - Length()
 func (r *RingBuffer) Free() int {
+	if r.inner == nil {
+		return 0
+	}
 	return r.inner.Free()
 }
 
 func (r *RingBuffer) IsEmpty() bool {
+	if r.inner == nil {
+		return true
+	}
 	return r.inner.IsEmpty()
 }

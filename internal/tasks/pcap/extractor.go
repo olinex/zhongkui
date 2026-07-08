@@ -14,7 +14,6 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/reactivex/rxgo/v2"
 	"golang.org/x/sync/errgroup"
-	_ "zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"

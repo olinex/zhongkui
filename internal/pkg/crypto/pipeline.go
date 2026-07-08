@@ -109,7 +109,17 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	return decompReader, nil
+	// 收集源 reader 的 Closer（如果实现了的话），用于级联关闭
+	var srcCloser io.Closer
+	if closer, ok := r.(io.Closer); ok {
+		srcCloser = closer
+	}
+
+	return &pipelineReadCloser{
+		srcCloser:    srcCloser,
+		encReader:    encReader,
+		decompReader: decompReader,
+	}, nil
 }
 
 func (p *Pipeline) validateHeader(header []byte) error {
@@ -151,6 +161,46 @@ func (pwc *pipelineWriteCloser) Close() error {
 	// 再关闭加密写入器（写入 nonce + 加密所有数据）
 	if err := pwc.encWriter.Close(); err != nil {
 		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// ---------------------------------------------------------------------------
+// pipelineReadCloser — 组合读取关闭逻辑
+// ---------------------------------------------------------------------------
+
+type pipelineReadCloser struct {
+	srcCloser    io.Closer     // 源 reader 的 Closer，可能为 nil（当源不是 io.Closer 时）
+	encReader    io.ReadCloser // 解密读取器（内层）
+	decompReader io.ReadCloser // 解压读取器（外层，直接面向调用者）
+}
+
+func (prc *pipelineReadCloser) Read(p []byte) (int, error) {
+	return prc.decompReader.Read(p)
+}
+
+func (prc *pipelineReadCloser) Close() error {
+	// 先关闭解压读取器（释放解压器内部资源）
+	if err := prc.decompReader.Close(); err != nil {
+		// 仍尝试关闭剩余层
+		prc.encReader.Close()
+		if prc.srcCloser != nil {
+			prc.srcCloser.Close()
+		}
+		return errors.WithStack(err)
+	}
+	// 再关闭解密读取器（清理加密状态）
+	if err := prc.encReader.Close(); err != nil {
+		if prc.srcCloser != nil {
+			prc.srcCloser.Close()
+		}
+		return errors.WithStack(err)
+	}
+	// 最后关闭源 reader（如 *minio.Object，释放 HTTP 连接）
+	if prc.srcCloser != nil {
+		if err := prc.srcCloser.Close(); err != nil {
+			return errors.WithStack(err)
+		}
 	}
 	return nil
 }

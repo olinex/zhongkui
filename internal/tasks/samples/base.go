@@ -95,15 +95,15 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	c.SoMsg("Path不匹配", app.Path, ShouldEqual, req.URL.Path)
 
 	// 比较请求头字段
-	c.SoMsg("User-Agent不匹配", app.UserAgent, ShouldEqual, req.Header.Get("User-Agent"))
-	c.SoMsg("Accept不匹配", app.Accept, ShouldEqual, req.Header.Get("Accept"))
-	c.SoMsg("Accept-Language不匹配", app.AcceptLanguage, ShouldEqual, req.Header.Get("Accept-Language"))
-	c.SoMsg("Accept-Encoding不匹配", app.AcceptEncoding, ShouldEqual, req.Header.Get("Accept-Encoding"))
-	c.SoMsg("Referer不匹配", app.Referer, ShouldEqual, req.Header.Get("Referer"))
-	c.SoMsg("Connection不匹配", app.Connection, ShouldEqual, req.Header.Get("Connection"))
-	c.SoMsg("Cookie不匹配", app.Cookie, ShouldEqual, req.Header.Get("Cookie"))
-	c.SoMsg("Authorization不匹配", app.Authorization, ShouldEqual, req.Header.Get("Authorization"))
-	c.SoMsg("请求Content-Type不匹配", app.ReqContentType, ShouldEqual, req.Header.Get("Content-Type"))
+	c.SoMsg("User-Agent不匹配", app.ReqHdrUserAgent, ShouldEqual, req.Header.Get("User-Agent"))
+	c.SoMsg("Accept不匹配", app.ReqHdrAccept, ShouldEqual, req.Header.Get("Accept"))
+	c.SoMsg("Accept-Language不匹配", app.ReqHdrAcceptLanguage, ShouldEqual, req.Header.Get("Accept-Language"))
+	c.SoMsg("Accept-Encoding不匹配", app.ReqHdrAcceptEncoding, ShouldEqual, req.Header.Get("Accept-Encoding"))
+	c.SoMsg("Referer不匹配", app.ReqHdrReferer, ShouldEqual, req.Header.Get("Referer"))
+	c.SoMsg("Connection不匹配", app.ReqHdrConnection, ShouldEqual, req.Header.Get("Connection"))
+	c.SoMsg("Cookie不匹配", app.ReqHdrCookie, ShouldEqual, req.Header.Get("Cookie"))
+	c.SoMsg("Authorization不匹配", app.ReqHdrAuthorization, ShouldEqual, req.Header.Get("Authorization"))
+	c.SoMsg("请求Content-Type不匹配", app.ReqHdrContentType, ShouldEqual, req.Header.Get("Content-Type"))
 
 	// 解析响应
 	resp, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(response)), req)
@@ -111,12 +111,12 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	c.SoMsg("HTTP响应不应为空", resp, ShouldNotBeNil)
 
 	// 比较响应头字段
-	c.SoMsg("Server头部不匹配", app.Server, ShouldEqual, resp.Header.Get("Server"))
-	c.SoMsg("Set-Cookie头部不匹配", app.SetCookie, ShouldEqual, resp.Header.Get("Set-Cookie"))
-	c.SoMsg("Location头部不匹配", app.Location, ShouldEqual, resp.Header.Get("Location"))
-	c.SoMsg("Cache-Control头部不匹配", app.CacheControl, ShouldEqual, resp.Header.Get("Cache-Control"))
-	c.SoMsg("Content-Encoding头部不匹配", app.ContentEncoding, ShouldEqual, resp.Header.Get("Content-Encoding"))
-	c.SoMsg("响应Content-Type不匹配", app.RspContentType, ShouldEqual, resp.Header.Get("Content-Type"))
+	c.SoMsg("Server头部不匹配", app.RspHdrServer, ShouldEqual, resp.Header.Get("Server"))
+	c.SoMsg("Set-Cookie头部不匹配", app.RspHdrSetCookie, ShouldEqual, resp.Header.Get("Set-Cookie"))
+	c.SoMsg("Location头部不匹配", app.RspHdrLocation, ShouldEqual, resp.Header.Get("Location"))
+	c.SoMsg("Cache-Control头部不匹配", app.RspHdrCacheControl, ShouldEqual, resp.Header.Get("Cache-Control"))
+	c.SoMsg("Content-Encoding头部不匹配", app.RspHdrContentEncoding, ShouldEqual, resp.Header.Get("Content-Encoding"))
+	c.SoMsg("响应Content-Type不匹配", app.RspHdrContentType, ShouldEqual, resp.Header.Get("Content-Type"))
 
 	// 检查响应是否使用chunked编码
 	// 注意：当响应使用Transfer-Encoding: chunked时，resp.ContentLength通常为-1
@@ -127,22 +127,22 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	if req.ContentLength < 0 {
 		// 当req.ContentLength为负数时（如-1表示未知长度）
 		// HTTP检测器可能将-1转换为4294967295，我们需要处理这种情况
-		if app.ReqContentLength == uint32(0) || app.ReqContentLength == ^uint32(0) {
+		if app.ReqHdrContentLength == int64(0) || app.ReqHdrContentLength == int64(^uint32(0)) {
 			// 接受0或4294967295作为有效值
 			// 这是一个特殊的空断言，只是为了通过检查
 			c.SoMsg("请求内容长度应为0或4294967295（未知长度）", true, ShouldBeTrue)
 		} else {
 			// 如果有其他值，则进行正常比较
-			c.SoMsg("请求内容长度应为0（未知长度时）", app.ReqContentLength, ShouldEqual, uint32(0))
+			c.SoMsg("请求内容长度应为0（未知长度时）", app.ReqHdrContentLength, ShouldEqual, int64(0))
 		}
 	} else {
 		// 对于正常的请求，使用Content-Length头进行比较
-		reqContentLength := uint32(0)
+		reqContentLength := int64(0)
 		if req.ContentLength > 0 {
-			reqContentLength = uint32(req.ContentLength)
+			reqContentLength = req.ContentLength
 		}
 		// 请求内容长度断言
-		c.SoMsg("请求内容长度不匹配", app.ReqContentLength, ShouldEqual, reqContentLength)
+		c.SoMsg("请求内容长度不匹配", app.ReqHdrContentLength, ShouldEqual, reqContentLength)
 	}
 
 	// 比较响应内容长度
@@ -151,22 +151,22 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	if resp.ContentLength < 0 {
 		// 当resp.ContentLength为负数时（如-1表示未知长度或chunked编码）
 		// HTTP检测器可能将-1转换为4294967295，我们需要处理这种情况
-		if app.RspContentLength == uint32(0) || app.RspContentLength == ^uint32(0) {
+		if app.RspHdrContentLength == int64(0) || app.RspHdrContentLength == int64(^uint32(0)) {
 			// 接受0或4294967295作为有效值
 			// 这是一个特殊的空断言，只是为了通过检查
 			c.SoMsg("响应内容长度应为0或4294967295（未知长度）", true, ShouldBeTrue)
 		} else {
 			// 如果有其他值，则进行正常比较
-			c.SoMsg("响应内容长度应为0（未知长度时）", app.RspContentLength, ShouldEqual, uint32(0))
+			c.SoMsg("响应内容长度应为0（未知长度时）", app.RspHdrContentLength, ShouldEqual, int64(0))
 		}
 	} else {
 		// 对于正常的响应，使用Content-Length头进行比较
-		rspContentLength := uint32(0)
+		rspContentLength := int64(0)
 		if resp.ContentLength > 0 {
-			rspContentLength = uint32(resp.ContentLength)
+			rspContentLength = resp.ContentLength
 		}
 		// 响应内容长度断言
-		c.SoMsg("响应内容长度不匹配", app.RspContentLength, ShouldEqual, rspContentLength)
+		c.SoMsg("响应内容长度不匹配", app.RspHdrContentLength, ShouldEqual, rspContentLength)
 	}
 
 	// 读取请求体，如果请求使用gzip压缩，需要先解压
@@ -220,10 +220,6 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	if len(body) > 0 {
 		c.SoMsg("响应体内容不匹配", string(app.RspBody), ShouldEqual, string(body))
 	}
-
-	// 验证完成状态
-	c.SoMsg("请求未完成", app.IsReqCompleted, ShouldBeTrue)
-	c.SoMsg("响应未完成", app.IsRspCompleted, ShouldBeTrue)
 }
 
 func runRouter(paths ...string) error {

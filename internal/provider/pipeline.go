@@ -4,12 +4,30 @@ import (
 	"context"
 
 	"github.com/samber/do/v2"
+	// "zhongkui.com/zhongkui/internal/network/detectors"
+	// "zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 )
+
+// func initDetectors(ctx context.Context, i do.Injector) error {
+// 	if viper, err := InvokeViper(i); err != nil {
+// 		return errors.WithStack(err)
+// 	} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
+// 		return errors.WithStack(err)
+// 	} else if client, err := InvokeS3(i); err != nil {
+// 		return errors.WithStack(err)
+// 	} else {
+// 		tcp.RegisterAppProtocolDetector(
+// 			detectors.AppHTTP,
+// 			detectors.NewHttpDetector(client, detectors.SecretKey),
+// 		)
+// 		return nil
+// 	}
+// }
 
 func newPipelineInspectorProvider() do.Provider[*pipeline.Inspector] {
 	return func(i do.Injector) (*pipeline.Inspector, error) {

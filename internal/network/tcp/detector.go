@@ -6,8 +6,14 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
+
+// ErrDataIncomplete 表示应用层数据尚未完整到达。
+// 当 Extract 阶段发现数据不足以构成完整消息时，Detector 实现应返回此错误，
+// 以通知 parse 循环等待后续数据包到达后重试，而非将流视为失败终止。
+var ErrDataIncomplete = errors.New("application data incomplete, retry later")
 
 // AppProtocol 表示应用层协议的枚举类型。
 // 该类型用于标识TCP数据流中承载的应用层协议类型，支持协议识别和协议特定的数据处理。

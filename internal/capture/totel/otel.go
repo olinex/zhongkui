@@ -15,17 +15,17 @@ import (
 )
 
 const (
-	SCOPE_NAME              = base.GLOBAL_PREFIX + "-capture"
-	SPAN_RUN                = "capture.run"
-	SPAN_WATCH              = "capture.watch"
-	SPAN_FEEDBACK           = "capture.feedback"
-	SPAN_UPLOAD             = "capture.upload"
-	SPAN_PACKET_HANDLER     = "capture.packet_handler"
-	SPAN_CAPTURE            = "capture.capture"
-	SPAN_DUMP               = "capture.dump"
-	SPAN_DUMP_ONE           = "capture.dump_one"
-	SPAN_UPLOAD_FILE        = "capture.upload_file"
-	SPAN_UPLOAD_ONE         = "capture.upload_one"
+	SCOPE_NAME          = base.GLOBAL_PREFIX + "-capture"
+	SPAN_RUN            = "capture.run"
+	SPAN_WATCH          = "capture.watch"
+	SPAN_FEEDBACK       = "capture.feedback"
+	SPAN_UPLOAD         = "capture.upload"
+	SPAN_PACKET_HANDLER = "capture.packet_handler"
+	SPAN_CAPTURE        = "capture.capture"
+	SPAN_DUMP           = "capture.dump"
+	SPAN_DUMP_ONE       = "capture.dump_one"
+	SPAN_UPLOAD_FILE    = "capture.upload_file"
+	SPAN_UPLOAD_ONE     = "capture.upload_one"
 )
 
 var (
@@ -43,8 +43,6 @@ var (
 	dumpErrorCounter metric.Int64Counter
 	// uploadErrorCounter 统计 upload 阶段错误次数
 	uploadErrorCounter metric.Int64Counter
-	// processingDuration 统计各阶段处理耗时分布
-	processingDuration metric.Int64Histogram
 )
 
 func InitMetrics() {
@@ -94,13 +92,6 @@ func initMetrics() {
 		"capture.upload.errors",
 		metric.WithDescription("Total number of upload phase errors"),
 		metric.WithUnit("{error}"),
-	)
-	err = errors.Join(err, e)
-
-	processingDuration, e = meter.Int64Histogram(
-		"capture.processing.duration",
-		metric.WithDescription("Duration of capture processing stages in milliseconds"),
-		metric.WithUnit("ms"),
 	)
 	err = errors.Join(err, e)
 

@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/creasty/defaults"
 	"github.com/hibiken/asynq"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.etcd.io/etcd/client/v3/clientv3util"
@@ -83,6 +84,10 @@ type etcdBaseConfigProvider struct {
 //   - error: 如果导入过程中出现错误则返回错误，否则返回 nil
 func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTaskConfig) error {
 	for taskType, cfg := range cfgs {
+		// 嵌套 map value 不会经过 defaults.Set，需要手动补齐默认值
+		if err := defaults.Set(&cfg); err != nil {
+			return errors.WithStack(err)
+		}
 		// 构造 etcd 键，格式为 "scheduler/cfg/<taskType>"
 		key := fmt.Sprintf(`%s%s`, cfgPrefix, taskType)
 

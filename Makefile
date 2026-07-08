@@ -38,6 +38,7 @@ endif
 	uptrace-init
 	uptrace-start
 	uptrace-stop
+	uptrace-clear
 	uptrace-uninstall
 	uptrace-cli-help
 
@@ -53,7 +54,7 @@ run-dev-deps:
 				quay.io/coreos/etcd:v3.6.5; \
 			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
 				--ulimit nofile=262144:262144 \
-				clickhouse:26.3; \
+				clickhouse:25.3.3; \
 			docker run -itd --restart unless-stopped --name postgres --network host \
 				-e POSTGRES_PASSWORD=root_password \
 				-e POSTGRES_USER=postgres \
@@ -73,7 +74,7 @@ run-dev-deps:
 				quay.io/coreos/etcd:v3.6.5; \
 			nerdctl run -td --restart=always --name clickhouse-server --net=host \
 				--ulimit nofile=262144:262144 \
-				clickhouse:26.3; \
+				clickhouse:25.3.3; \
 			nerdctl run -td --restart=always --name postgres --net=host \
 				-e POSTGRES_PASSWORD=root_password \
 				-e POSTGRES_USER=postgres \
@@ -93,7 +94,7 @@ run-dev-deps:
 				quay.io/coreos/etcd:v3.6.5; \
 			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
 				--ulimit nofile=262144:262144 \
-				clickhouse:26.3; \
+				clickhouse:25.3.3; \
 			docker run -itd --restart unless-stopped --name postgres --network host \
 				-e POSTGRES_PASSWORD=root_password \
 				-e POSTGRES_USER=postgres \
@@ -479,6 +480,7 @@ uptrace-config:
 				sed -i '' '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
 				sed -i '' 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
 				sed -i '' 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
+				sed -i '' 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
 				sed -i '' '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
 				;; \
 			Linux) \
@@ -486,6 +488,7 @@ uptrace-config:
 				sed -i '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
 				sed -i 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
 				sed -i 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
+				sed -i 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
 				sed -i '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
 				;; \
 		esac; \
@@ -543,21 +546,21 @@ uptrace-start:
 	@if [ ! -f $(UPTRACE_BIN) ]; then \
 		echo "uptrace 未安装，请先运行 make uptrace-install"; \
 		exit 1; \
-	fi
-	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
+	elif [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
 		echo "uptrace 已在运行 (PID $$(cat $(UPTRACE_PID)))"; \
 		exit 0; \
-	fi
-	@echo "=== 后台启动 uptrace serve ==="
-	@nohup $(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) serve > /tmp/uptrace.log 2>&1 & echo $$! > $(UPTRACE_PID)
-	@sleep 3
-	@if kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
-		echo "uptrace 已启动 (PID $$(cat $(UPTRACE_PID)))"; \
 	else \
-		echo "uptrace 启动失败，查看日志:"; \
-		tail -20 /tmp/uptrace.log; \
-		rm -f $(UPTRACE_PID); \
-		exit 1; \
+		echo "=== 后台启动 uptrace serve ==="; \
+		nohup $(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) serve > /tmp/uptrace.log 2>&1 & echo $$! > $(UPTRACE_PID); \
+		sleep 3; \
+		if kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
+			echo "uptrace 已启动 (PID $$(cat $(UPTRACE_PID)))"; \
+		else \
+			echo "uptrace 启动失败，查看日志:"; \
+			tail -20 /tmp/uptrace.log; \
+			rm -f $(UPTRACE_PID); \
+			exit 1; \
+		fi; \
 	fi
 	@echo ""
 	@echo "┌──────────────────────────────────────────────────────────┐"
@@ -577,12 +580,12 @@ uptrace-start:
 	@echo ""
 	@echo "在运行应用之前，设置以下环境变量以启用 OpenTelemetry 上报:"
 	@echo ""
+	@echo "  export OTEL_SERVICE_NAME=zki"
 	@echo "  export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317"
-	@echo "  export OTEL_SERVICE_NAME=zhongkui-dev"
 	@echo '  export OTEL_EXPORTER_OTLP_HEADERS="uptrace-dsn=http://project1_secret@localhost:14318?grpc=4317"'
 	@echo "  export OTEL_EXPORTER_OTLP_COMPRESSION=gzip"
-	@echo "  export OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION=BASE2_EXPONENTIAL_BUCKET_HISTOGRAM"
 	@echo "  export OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE=DELTA"
+	@echo "  export OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION=BASE2_EXPONENTIAL_BUCKET_HISTOGRAM"
 	@echo ""
 	@echo "  # 然后正常运行应用:"
 	@echo "  go run cmd/zki/main.go run"
@@ -609,6 +612,28 @@ uptrace-stop:
 		echo "uptrace 未在运行"; \
 		rm -f $(UPTRACE_PID); \
 	fi
+
+# uptrace-clear - 清除 uptrace-init 创建的数据库及数据
+# 用法: make uptrace-clear
+# 注意: 此操作不可逆，将重置 ClickHouse 和 PostgreSQL 中的 uptrace schema
+uptrace-clear:
+	@if [ -f $(UPTRACE_PID) ] && kill -0 $$(cat $(UPTRACE_PID)) 2>/dev/null; then \
+		echo "uptrace 正在运行，请先执行 make uptrace-stop"; \
+		exit 1; \
+	fi
+	@if [ ! -f $(UPTRACE_BIN) ]; then \
+		echo "uptrace 未安装，请先运行 make uptrace-install"; \
+		exit 1; \
+	fi
+	@echo "=== 清除 uptrace 数据 ==="
+	@echo ""
+	@echo "--- 重置 ClickHouse schema ---"
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch reset
+	@echo ""
+	@echo "--- 重置 PostgreSQL schema ---"
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) pg reset
+	@echo ""
+	@echo "清除完成，可通过 make uptrace-init 重新初始化"
 
 # uptrace-uninstall - 卸载 uptrace 二进制和配置文件
 # 用法: make uptrace-uninstall

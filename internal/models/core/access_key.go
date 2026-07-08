@@ -97,6 +97,7 @@ func NewAccessKey(user *User, enabled bool, description string, expiredAt *time.
 		return nil, errors.WithStack(err)
 	}
 	return &AccessKey{
+		RawUserID:       user.ID,
 		User:            *user,
 		Enabled:         enabled,
 		AccessKeyID:     id,

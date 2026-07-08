@@ -10,6 +10,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -37,7 +38,6 @@ func WithTransport(rt http.RoundTripper) ClientOption {
 }
 
 // S3Client 是S3兼容对象存储服务的客户端封装
-// 封装了minio.Client并提供统一的接口，简化S3操作
 // 所有操作都使用初始化时指定的默认存储桶
 type S3Client struct {
 	// cli 是底层的minio.Client实例
@@ -51,6 +51,9 @@ type S3Client struct {
 	// endpoint 是S3服务的端点地址，用于构建 BPF 过滤器以排除上传流量
 	// 格式如 "localhost:9000" 或 "s3.amazonaws.com"
 	endpoint string
+
+	// pipeline 是加密解密管道，用于对上传下载的对象进行加密解密
+	pipeline *crypto.Pipeline
 }
 
 // GetEndpoint 返回S3服务的端点地址
@@ -91,15 +94,18 @@ func NewS3Client(cfg *Config, opts ...ClientOption) (*S3Client, error) {
 	for _, opt := range opts {
 		opt(mOpts)
 	}
-	client, err := minio.New(cfg.Endpoint, mOpts)
-	if err != nil {
+	if client, err := minio.New(cfg.Endpoint, mOpts); err != nil {
 		return nil, errors.WithStack(err)
+	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cfg.SecretKey); err != nil {
+		return nil, errors.WithStack(err)
+	} else {
+		return &S3Client{
+			cli:      client,
+			bucket:   cfg.Bucket,
+			endpoint: cfg.Endpoint,
+			pipeline: pipeline,
+		}, nil
 	}
-	return &S3Client{
-		cli:      client,
-		bucket:   cfg.Bucket,
-		endpoint: cfg.Endpoint,
-	}, nil
 }
 
 // GetObject 从S3存储桶中获取指定对象的读取流
@@ -130,6 +136,25 @@ func (s *S3Client) GetObject(ctx context.Context, objectKey string, opts minio.G
 	return s.cli.GetObject(ctx, s.bucket, objectKey, opts)
 }
 
+func (s *S3Client) CGetOject(ctx context.Context, objectKey, secretKey string, opts minio.GetObjectOptions) (io.ReadCloser, error) {
+	if obj, err := s.GetObject(ctx, objectKey, opts); err != nil {
+		return nil, errors.WithStack(err)
+	} else if info, err := obj.Stat(); err != nil {
+		if IsNotExists(err) {
+			return nil, nil
+		}
+		return nil, errors.WithStack(err)
+	} else if info.Size == 0 {
+		return nil, nil
+	} else if secretKey == "" {
+		return s.pipeline.DecryptDecompress(obj)
+	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(secretKey); err != nil {
+		return nil, errors.WithStack(err)
+	} else {
+		return pipeline.DecryptDecompress(obj)
+	}
+}
+
 // FGetObject 从S3存储桶下载对象到本地文件系统
 // 将指定对象的内容直接保存到本地文件，适用于大文件下载
 // 此方法会自动创建文件并写入对象内容，无需手动处理流
@@ -151,6 +176,27 @@ func (s *S3Client) GetObject(ctx context.Context, objectKey string, opts minio.G
 //	}
 func (s *S3Client) FGetObject(ctx context.Context, objectKey, filePath string, opts minio.GetObjectOptions) error {
 	return s.cli.FGetObject(ctx, s.bucket, objectKey, filePath, opts)
+}
+
+func (s *S3Client) CPutObject(ctx context.Context, objectKey, secretKey string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
+	pipeReader, pipeWriter := io.Pipe()
+	defer pipeReader.Close()
+	defer pipeWriter.Close()
+	var pipeline *crypto.Pipeline
+	if secretKey == "" {
+		pipeline = s.pipeline
+	} else if tmp, err := crypto.NewZstdAESGCMPipeline(secretKey); err != nil {
+		return minio.UploadInfo{}, errors.WithStack(err)
+	} else {
+		pipeline = tmp
+	}
+	w, err := pipeline.CompressEncrypt(pipeWriter)
+	if err != nil {
+		return minio.UploadInfo{}, errors.WithStack(err)
+	}
+	defer w.Close()
+	defer io.Copy(w, reader)
+	return s.cli.PutObject(ctx, s.bucket, objectKey, pipeReader, objectSize, opts)
 }
 
 // PutObject 将数据流上传到S3存储桶

@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS packet_ethernets (
 ) ENGINE = MergeTree()
 ORDER BY (namespace, capture, version, session_id, eth_src_mac, eth_dst_mac, eth_type, timestamp)
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 24 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS packet_ipv4 (
 ) ENGINE = MergeTree()
 ORDER BY (namespace, capture, version, session_id, ipv4_src, ipv4_dst, ipv4_ip_protocol, eth_src_mac, eth_dst_mac, eth_type, timestamp)
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 24 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS fused_ipv4 (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS fused_ipv4 (
 ) ENGINE = MergeTree()
 ORDER BY (namespace, capture, version, session_id, ipv4_src, ipv4_dst, ipv4_ip_protocol, eth_src_mac, eth_dst_mac, eth_type, timestamp)
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 168 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv6 (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS packet_ipv6 (
 ) ENGINE = MergeTree()
 ORDER BY (namespace, capture, version, session_id, ipv6_src, ipv6_dst, ipv6_flow_label, ipv6_last_header, eth_src_mac, eth_dst_mac, eth_type, timestamp)
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 24 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS fused_ipv6 (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS fused_ipv6 (
 ) ENGINE = MergeTree()
 ORDER BY (namespace, capture, version, session_id, ipv6_src, ipv6_dst, ipv6_flow_label, ipv6_last_header, eth_src_mac, eth_dst_mac, eth_type, timestamp)
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 168 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -201,7 +201,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 24 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS fused_ipv4_tcps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -264,7 +264,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 168 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -326,7 +326,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 24 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS fused_ipv6_tcps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -386,7 +386,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 168 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv4_udps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -437,7 +437,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 24 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv6_udps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -485,7 +485,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 24 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS fused_ipv4_udps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -534,7 +534,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 168 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS fused_ipv6_udps (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -580,7 +580,7 @@ ORDER BY (
 	timestamp
 )
 PARTITION BY toStartOfHour(timestamp)
-TTL timestamp + INTERVAL 168 HOUR DELETE;
+TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS http_transports (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
@@ -601,37 +601,154 @@ CREATE TABLE IF NOT EXISTS http_transports (
 	queries String CODEC(ZSTD(3)),
 	fragment String CODEC(ZSTD(3)),
 	method LowCardinality(String) CODEC(ZSTD(3)),
-	user_agent String CODEC(ZSTD(3)),
-	referer String CODEC(ZSTD(3)),
-	accept LowCardinality(String) CODEC(ZSTD(3)),
-	accept_encoding LowCardinality(String) CODEC(ZSTD(3)),
-	accept_language LowCardinality(String) CODEC(ZSTD(3)),
-	connection LowCardinality(String) CODEC(ZSTD(3)),
-	cookie String CODEC(ZSTD(3)),
-	authorization String CODEC(ZSTD(3)),
-	req_content_type LowCardinality(String) CODEC(ZSTD(3)),
-	req_content_length UInt32 CODEC(ZSTD(3)),
-	req_headers String CODEC(ZSTD(3)),
 	req_body String CODEC(ZSTD(3)),
 	req_time DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)),
 	req_duration Int64 CODEC(ZSTD(3)),
-	is_req_completed Bool,
-	server LowCardinality(String) CODEC(ZSTD(3)),
-	set_cookie String CODEC(ZSTD(3)),
-	location String CODEC(ZSTD(3)),
-	cache_control LowCardinality(String) CODEC(ZSTD(3)),
-	content_encoding LowCardinality(String) CODEC(ZSTD(3)),
-	rsp_content_type LowCardinality(String) CODEC(ZSTD(3)),
-	rsp_content_length UInt32 CODEC(ZSTD(3)),
-	rsp_headers String CODEC(ZSTD(3)),
+	req_hdr_authorization String CODEC(ZSTD(3)),
+	req_hdr_proxy_authorization String CODEC(ZSTD(3)),
+	req_hdr_cache_control LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_if_match String CODEC(ZSTD(3)),
+	req_hdr_if_none_match String CODEC(ZSTD(3)),
+	req_hdr_if_modified_since String CODEC(ZSTD(3)),
+	req_hdr_if_unmodified_since String CODEC(ZSTD(3)),
+	req_hdr_if_range String CODEC(ZSTD(3)),
+	req_hdr_connection LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_keep_alive String CODEC(ZSTD(3)),
+	req_hdr_accept LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_accept_encoding LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_accept_language LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_expect LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_max_forwards Int32 CODEC(ZSTD(3)),
+	req_hdr_cookie String CODEC(ZSTD(3)),
+	req_hdr_origin String CODEC(ZSTD(3)),
+	req_hdr_access_control_request_headers String CODEC(ZSTD(3)),
+	req_hdr_access_control_request_method LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_content_type LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_content_length Int64 CODEC(ZSTD(3)),
+	req_hdr_content_encoding LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_content_language LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_forwarded String CODEC(ZSTD(3)),
+	req_hdr_via String CODEC(ZSTD(3)),
+	req_hdr_range String CODEC(ZSTD(3)),
+	req_hdr_from String CODEC(ZSTD(3)),
+	req_hdr_host String CODEC(ZSTD(3)),
+	req_hdr_referer String CODEC(ZSTD(3)),
+	req_hdr_referrer_policy LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_user_agent String CODEC(ZSTD(3)),
+	req_hdr_te LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_transfer_encoding LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_trailer String CODEC(ZSTD(3)),
+	req_hdr_sec_websocket_key String CODEC(ZSTD(3)),
+	req_hdr_sec_websocket_version String CODEC(ZSTD(3)),
+	req_hdr_sec_websocket_protocol String CODEC(ZSTD(3)),
+	req_hdr_sec_websocket_extensions String CODEC(ZSTD(3)),
+	req_hdr_sec_fetch_site LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_fetch_mode LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_fetch_user LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_fetch_dest LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_purpose LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_service_worker_navigation_preload String CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua String CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_arch LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_bitness LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_full_version String CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_full_version_list String CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_mobile LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_model String CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_platform LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_platform_version String CODEC(ZSTD(3)),
+	req_hdr_sec_ch_ua_wow64 LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_ch_prefers_color_scheme LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_ch_prefers_reduced_motion LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_sec_ch_prefers_reduced_transparency LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_want_content_digest String CODEC(ZSTD(3)),
+	req_hdr_want_repr_digest String CODEC(ZSTD(3)),
+	req_hdr_upgrade_insecure_requests LowCardinality(String) CODEC(ZSTD(3)),
+	req_hdr_date String CODEC(ZSTD(3)),
+	req_hdr_link String CODEC(ZSTD(3)),
+	req_hdr_upgrade String CODEC(ZSTD(3)),
+	req_hdr_priority String CODEC(ZSTD(3)),
+	req_hdr_alt_used String CODEC(ZSTD(3)),
 	rsp_body String CODEC(ZSTD(3)),
 	rsp_time DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)),
 	rsp_duration Int64 CODEC(ZSTD(3)),
-	is_rsp_completed Bool
+	rsp_hdr_www_authenticate String CODEC(ZSTD(3)),
+	rsp_hdr_proxy_authenticate String CODEC(ZSTD(3)),
+	rsp_hdr_age Int64 CODEC(ZSTD(3)),
+	rsp_hdr_cache_control LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_clear_site_data String CODEC(ZSTD(3)),
+	rsp_hdr_expires String CODEC(ZSTD(3)),
+	rsp_hdr_no_vary_search String CODEC(ZSTD(3)),
+	rsp_hdr_last_modified String CODEC(ZSTD(3)),
+	rsp_hdr_etag String CODEC(ZSTD(3)),
+	rsp_hdr_vary LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_connection LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_keep_alive String CODEC(ZSTD(3)),
+	rsp_hdr_accept_patch String CODEC(ZSTD(3)),
+	rsp_hdr_accept_post String CODEC(ZSTD(3)),
+	rsp_hdr_set_cookie String CODEC(ZSTD(3)),
+	rsp_hdr_access_control_allow_credentials LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_access_control_allow_headers String CODEC(ZSTD(3)),
+	rsp_hdr_access_control_allow_methods String CODEC(ZSTD(3)),
+	rsp_hdr_access_control_allow_origin String CODEC(ZSTD(3)),
+	rsp_hdr_access_control_expose_headers String CODEC(ZSTD(3)),
+	rsp_hdr_access_control_max_age Int64 CODEC(ZSTD(3)),
+	rsp_hdr_timing_allow_origin String CODEC(ZSTD(3)),
+	rsp_hdr_content_disposition String CODEC(ZSTD(3)),
+	rsp_hdr_content_digest String CODEC(ZSTD(3)),
+	rsp_hdr_repr_digest String CODEC(ZSTD(3)),
+	rsp_hdr_content_type LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_content_length Int64 CODEC(ZSTD(3)),
+	rsp_hdr_content_encoding LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_content_language LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_content_location String CODEC(ZSTD(3)),
+	rsp_hdr_forwarded String CODEC(ZSTD(3)),
+	rsp_hdr_via String CODEC(ZSTD(3)),
+	rsp_hdr_accept_ranges LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_content_range String CODEC(ZSTD(3)),
+	rsp_hdr_location String CODEC(ZSTD(3)),
+	rsp_hdr_refresh String CODEC(ZSTD(3)),
+	rsp_hdr_allow String CODEC(ZSTD(3)),
+	rsp_hdr_server LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_cross_origin_embedder_policy LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_cross_origin_opener_policy LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_cross_origin_resource_policy LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_content_security_policy String CODEC(ZSTD(3)),
+	rsp_hdr_content_security_policy_report_only String CODEC(ZSTD(3)),
+	rsp_hdr_expect_ct String CODEC(ZSTD(3)),
+	rsp_hdr_permissions_policy String CODEC(ZSTD(3)),
+	rsp_hdr_strict_transport_security String CODEC(ZSTD(3)),
+	rsp_hdr_x_content_type_options LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_x_frame_options LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_x_permitted_cross_domain_policies LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_x_powered_by LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_x_xss_protection LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_reporting_endpoints String CODEC(ZSTD(3)),
+	rsp_hdr_report_to String CODEC(ZSTD(3)),
+	rsp_hdr_transfer_encoding LowCardinality(String) CODEC(ZSTD(3)),
+	rsp_hdr_trailer String CODEC(ZSTD(3)),
+	rsp_hdr_sec_websocket_accept String CODEC(ZSTD(3)),
+	rsp_hdr_sec_websocket_protocol String CODEC(ZSTD(3)),
+	rsp_hdr_sec_websocket_extensions String CODEC(ZSTD(3)),
+	rsp_hdr_accept_ch String CODEC(ZSTD(3)),
+	rsp_hdr_critical_ch String CODEC(ZSTD(3)),
+	rsp_hdr_attribution_reporting_eligible String CODEC(ZSTD(3)),
+	rsp_hdr_attribution_reporting_register_source String CODEC(ZSTD(3)),
+	rsp_hdr_attribution_reporting_register_trigger String CODEC(ZSTD(3)),
+	rsp_hdr_date String CODEC(ZSTD(3)),
+	rsp_hdr_link String CODEC(ZSTD(3)),
+	rsp_hdr_retry_after String CODEC(ZSTD(3)),
+	rsp_hdr_server_timing String CODEC(ZSTD(3)),
+	rsp_hdr_service_worker String CODEC(ZSTD(3)),
+	rsp_hdr_service_worker_allowed String CODEC(ZSTD(3)),
+	rsp_hdr_source_map String CODEC(ZSTD(3)),
+	rsp_hdr_upgrade String CODEC(ZSTD(3)),
+	rsp_hdr_alt_svc String CODEC(ZSTD(3)),
+	rsp_hdr_priority String CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (namespace, capture, version, session_id, client_port, server_port, ip_version, client_ip, server_ip, req_time)
 PARTITION BY toStartOfHour(req_time)
-TTL req_time + INTERVAL 168 HOUR DELETE;
+TTL toDateTime(req_time) + INTERVAL 168 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS http_api_meta (
 	batch UInt32 CODEC(ZSTD(3)),
@@ -645,8 +762,7 @@ CREATE TABLE IF NOT EXISTS http_api_meta (
 ) ENGINE = MergeTree()
 ORDER BY (api, method, status_codes)
 PARTITION BY batch
-TTL toDateTime(batch * 3600) + INTERVAL 24 HOUR DELETE
-SETTINGS allow_suspicious_fixed_string_types = 1;
+TTL toDateTime(batch * 3600) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS http_api_nodes (
 	batch UInt32 CODEC(ZSTD(3)),
@@ -683,7 +799,7 @@ CREATE TABLE IF NOT EXISTS tag_summings (
 ) ENGINE = SummingMergeTree()
 ORDER BY (minute, api, tags)
 PARTITION BY toStartOfHour(minute)
-TTL minute + INTERVAL 72 HOUR DELETE;
+TTL toDateTime(minute) + INTERVAL 72 HOUR DELETE;
 
 -- +goose Down
 DROP TABLE IF EXISTS packet_ethernets;

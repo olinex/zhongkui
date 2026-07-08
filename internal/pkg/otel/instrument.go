@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
@@ -79,16 +80,25 @@ func (c *TracedAsynqClient) EnqueueContext(ctx context.Context, task *asynq.Task
 	_, span := c.tracer.Start(ctx, spanName)
 	defer span.End()
 
-	span.SetAttributes(
-		attribute.String("task.id", task.ResultWriter().TaskID()),
-		attribute.Int(`task.payload_size`, len(task.Payload())),
-	)
-
 	info, err := c.Client.EnqueueContext(ctx, task, opts...)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
+		return info, err
 	}
+	span.SetAttributes(
+		attribute.String("task.id", info.ID),
+		attribute.String("task.group", info.Group),
+		attribute.String("task.queue", info.Queue),
+		attribute.String("task.state", info.State.String()),
+		attribute.String("task.timeout", info.Timeout.String()),
+		attribute.String("task.deadline", info.Deadline.Format(time.RFC3339)),
+		attribute.String("task.completed_at", info.CompletedAt.Format(time.RFC3339)),
+		attribute.Bool("task.is_orphaned", info.IsOrphaned),
+		attribute.Int("task.max_retry", info.MaxRetry),
+		attribute.Int("task.retried", info.Retried),
+		attribute.Int("task.payload_size", len(info.Payload)),
+	)
 	return info, err
 }
 

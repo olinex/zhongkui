@@ -7,7 +7,7 @@ import (
 )
 
 var describeConfigCmd = &cobra.Command{
-	Use:   "describe-config",
+	Use:   "config",
 	Short: "Show default config descriptions",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		descs := provider.DescribeLoggerConfig()

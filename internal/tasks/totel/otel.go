@@ -42,8 +42,6 @@ var (
 	itemsLoadedCounter metric.Int64Counter
 	// packetsExtractedCounter 统计从 PCAP 提取的原始数据包总数
 	packetsExtractedCounter metric.Int64Counter
-	// processingDuration 统计各阶段处理耗时分布
-	processingDuration metric.Int64Histogram
 )
 
 func InitMetrics() {
@@ -93,13 +91,6 @@ func initMetrics() {
 		"tasks.packets.extracted",
 		metric.WithDescription("Total number of raw packets extracted from PCAP files"),
 		metric.WithUnit("{packet}"),
-	)
-	err = errors.Join(err, e)
-
-	processingDuration, e = meter.Int64Histogram(
-		"tasks.processing.duration",
-		metric.WithDescription("Duration of task processing stages in milliseconds"),
-		metric.WithUnit("ms"),
 	)
 	err = errors.Join(err, e)
 

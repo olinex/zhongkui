@@ -45,8 +45,8 @@ func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logg
 	scope := pipeline.GetScope(ctx)
 	defer scope.Shutdown()
 	// 加载数据
-	_, loadSpan := totel.StartVersionLoadSpan(ctx, name, lastVersion)
-	data, lErr := w.wrapper.Load(ctx, name, lastVersion)
+	innerCtx, loadSpan := totel.StartVersionLoadSpan(ctx, name, lastVersion)
+	data, lErr := w.wrapper.Load(innerCtx, name, lastVersion)
 	totel.EndSpan(loadSpan, &lErr)
 	if lErr != nil {
 		return "", errors.WithStack(lErr)
@@ -66,22 +66,22 @@ func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logg
 		return "", errors.WithStack(err)
 	}
 	// 计算下一个版本
-	_, nextSpan := totel.StartVersionNextSpan(ctx, name, lastVersion)
-	nextVersion, err = w.wrapper.Next(ctx, name, lastVersion)
+	innerCtx, nextSpan := totel.StartVersionNextSpan(ctx, name, lastVersion)
+	nextVersion, err = w.wrapper.Next(innerCtx, name, lastVersion)
 	totel.EndSpan(nextSpan, &err)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	// 存储数据
-	_, storeSpan := totel.StartVersionStoreSpan(ctx, name, nextVersion)
-	err = w.wrapper.Store(ctx, name, nextVersion, data)
+	innerCtx, storeSpan := totel.StartVersionStoreSpan(ctx, name, nextVersion)
+	err = w.wrapper.Store(innerCtx, name, nextVersion, data)
 	totel.EndSpan(storeSpan, &err)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
 	// 清除旧版本数据
-	_, clearSpan := totel.StartVersionClearSpan(ctx, name, lastVersion)
-	err = w.wrapper.Clear(ctx, name, lastVersion)
+	innerCtx, clearSpan := totel.StartVersionClearSpan(ctx, name, lastVersion)
+	err = w.wrapper.Clear(innerCtx, name, lastVersion)
 	totel.EndSpan(clearSpan, &err)
 	if err != nil {
 		return "", errors.WithStack(err)

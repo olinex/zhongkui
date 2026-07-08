@@ -21,6 +21,8 @@ package tcp
 import (
 	"context"
 	"encoding/json"
+	"slices"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -344,15 +346,47 @@ func (r *Router[P]) UnmarshalJSON(data []byte) error {
 // 注意：该方法会修改节点的Prev和Next指针，将其设置为nil。
 // 这是必要的，因为JSON序列化无法处理循环引用，且指针关系可以在反序列化时重建。
 func (r *Router[P]) toStore() *RouterAux[P] {
-	metas := make([]*n.BaseMeta, 0, len(r.roots))
-	nodes := make([][]*ReassemblerNode[P], 0, len(r.roots))
+	// 先收集所有 meta 及其对应的 nodes，然后按 meta 排序保证输出确定性
+	type entry struct {
+		meta  *n.BaseMeta
+		nodes []*ReassemblerNode[P]
+	}
+	entries := make([]entry, 0, len(r.roots))
 	for meta, group := range r.roots {
-		metas = append(metas, &meta)
+		m := meta
 		sets := make([]*ReassemblerNode[P], 0, len(group.nodes))
 		for ln := group.head; ln != nil; ln = ln.next {
 			sets = append(sets, ln.node)
 		}
-		nodes = append(nodes, sets)
+		entries = append(entries, entry{meta: &m, nodes: sets})
+	}
+	slices.SortFunc(entries, func(a, b entry) int {
+		if a.meta.Namespace != b.meta.Namespace {
+			if a.meta.Namespace < b.meta.Namespace {
+				return -1
+			}
+			return 1
+		}
+		if a.meta.Capture != b.meta.Capture {
+			if a.meta.Capture < b.meta.Capture {
+				return -1
+			}
+			return 1
+		}
+		if a.meta.Version != b.meta.Version {
+			if a.meta.Version < b.meta.Version {
+				return -1
+			}
+			return 1
+		}
+		return strings.Compare(a.meta.SessionID.String(), b.meta.SessionID.String())
+	})
+
+	metas := make([]*n.BaseMeta, len(entries))
+	nodes := make([][]*ReassemblerNode[P], len(entries))
+	for i, e := range entries {
+		metas[i] = e.meta
+		nodes[i] = e.nodes
 	}
 	return &RouterAux[P]{
 		Metas:                 metas,

@@ -19,7 +19,7 @@ func TestBuildObjectKey(t *testing.T) {
 			sessionID, err := serializer.HexUUIDv4FromString("550e8400-e29b-41d4-a716-446655440000")
 			So(err, ShouldBeNil)
 
-			expectedKey := "prod/network-capture/v1.0/1776508200000_550e8400-e29b-41d4-a716-446655440000.zstd"
+			expectedKey := "prod/network-capture/v1.0/1776508200000_550e8400-e29b-41d4-a716-446655440000.zkcn"
 			actualKey := BuildObjectKey(namespace, name, version, timestamp, sessionID)
 
 			So(actualKey, ShouldEqual, expectedKey)
@@ -33,7 +33,7 @@ func TestBuildObjectKey(t *testing.T) {
 			sessionID, err := serializer.HexUUIDv4FromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 			So(err, ShouldBeNil)
 
-			expectedKey := "test-namespace/test-capture/v2.1-beta/1776508200000_6ba7b810-9dad-11d1-80b4-00c04fd430c8.zstd"
+			expectedKey := "test-namespace/test-capture/v2.1-beta/1776508200000_6ba7b810-9dad-11d1-80b4-00c04fd430c8.zkcn"
 			actualKey := BuildObjectKey(namespace, name, version, timestamp, sessionID)
 
 			So(actualKey, ShouldEqual, expectedKey)
@@ -47,7 +47,7 @@ func TestBuildObjectKey(t *testing.T) {
 			sessionID, err := serializer.HexUUIDv4FromString("123e4567-e89b-12d3-a456-426614174000")
 			So(err, ShouldBeNil)
 
-			expectedKey := "dev/packet-capture/1.2.3/1776508200000_123e4567-e89b-12d3-a456-426614174000.zstd"
+			expectedKey := "dev/packet-capture/1.2.3/1776508200000_123e4567-e89b-12d3-a456-426614174000.zkcn"
 			actualKey := BuildObjectKey(namespace, name, version, timestamp, sessionID)
 
 			So(actualKey, ShouldEqual, expectedKey)
@@ -61,7 +61,7 @@ func TestBuildObjectKey(t *testing.T) {
 			sessionID, err := serializer.HexUUIDv4FromString("00000000-0000-0000-0000-000000000000")
 			So(err, ShouldBeNil)
 
-			expectedKey := "test/test/v1/0_00000000-0000-0000-0000-000000000000.zstd"
+			expectedKey := "test/test/v1/0_00000000-0000-0000-0000-000000000000.zkcn"
 			actualKey := BuildObjectKey(namespace, name, version, timestamp, sessionID)
 
 			So(actualKey, ShouldEqual, expectedKey)
@@ -75,7 +75,7 @@ func TestBuildObjectKey(t *testing.T) {
 			sessionID, err := serializer.HexUUIDv4FromString("ffffffff-ffff-ffff-ffff-ffffffffffff")
 			So(err, ShouldBeNil)
 
-			expectedKey := "max/max-capture/v1/1776508200000_ffffffff-ffff-ffff-ffff-ffffffffffff.zstd"
+			expectedKey := "max/max-capture/v1/1776508200000_ffffffff-ffff-ffff-ffff-ffffffffffff.zkcn"
 			actualKey := BuildObjectKey(namespace, name, version, timestamp, sessionID)
 
 			So(actualKey, ShouldEqual, expectedKey)
@@ -89,7 +89,7 @@ func TestParseObjectKey(t *testing.T) {
 		Convey("当解析有效的对象键名时", func() {
 			// 使用与 BuildObjectKey 测试中相同的时间戳
 			timestamp := time.Date(2026, 4, 18, 10, 30, 0, 0, time.UTC)
-			objectKey := "prod/network-capture/v1.0/1776508200000_550e8400-e29b-41d4-a716-446655440000.zstd"
+			objectKey := "prod/network-capture/v1.0/1776508200000_550e8400-e29b-41d4-a716-446655440000.zkcn"
 
 			namespace, name, version, parsedTimestamp, sessionID, ok := ParseObjectKey(objectKey)
 
@@ -104,7 +104,7 @@ func TestParseObjectKey(t *testing.T) {
 		Convey("当解析包含特殊字符的对象键名时", func() {
 			// 使用与 BuildObjectKey 测试中相同的时间戳
 			timestamp := time.Date(2026, 4, 18, 10, 30, 0, 0, time.UTC)
-			objectKey := "test-namespace/test-capture/v2.1-beta/1776508200000_6ba7b810-9dad-11d1-80b4-00c04fd430c8.zstd"
+			objectKey := "test-namespace/test-capture/v2.1-beta/1776508200000_6ba7b810-9dad-11d1-80b4-00c04fd430c8.zkcn"
 
 			namespace, name, version, parsedTimestamp, sessionID, ok := ParseObjectKey(objectKey)
 
@@ -119,7 +119,7 @@ func TestParseObjectKey(t *testing.T) {
 		Convey("当解析包含点号版本号的对象键名时", func() {
 			// 使用与 BuildObjectKey 测试中相同的时间戳
 			timestamp := time.Date(2026, 4, 18, 10, 30, 0, 0, time.UTC)
-			objectKey := "dev/packet-capture/1.2.3/1776508200000_123e4567-e89b-12d3-a456-426614174000.zstd"
+			objectKey := "dev/packet-capture/1.2.3/1776508200000_123e4567-e89b-12d3-a456-426614174000.zkcn"
 
 			namespace, name, version, parsedTimestamp, sessionID, ok := ParseObjectKey(objectKey)
 
@@ -132,7 +132,7 @@ func TestParseObjectKey(t *testing.T) {
 		})
 
 		Convey("当对象键名缺少部分时", func() {
-			objectKey := "prod/network-capture/1776508200000_550e8400-e29b-41d4-a716-446655440000.zstd"
+			objectKey := "prod/network-capture/1776508200000_550e8400-e29b-41d4-a716-446655440000.zkcn"
 
 			namespace, name, version, timestamp, sessionID, ok := ParseObjectKey(objectKey)
 
@@ -144,7 +144,7 @@ func TestParseObjectKey(t *testing.T) {
 			So(sessionID.IsNil(), ShouldBeTrue)
 		})
 
-		Convey("当对象键名缺少 .zstd 后缀时", func() {
+		Convey("当对象键名缺少 .zkcn 后缀时", func() {
 			objectKey := "prod/network-capture/v1.0/1776508200000_550e8400-e29b-41d4-a716-446655440000"
 
 			namespace, name, version, timestamp, sessionID, ok := ParseObjectKey(objectKey)
@@ -158,7 +158,7 @@ func TestParseObjectKey(t *testing.T) {
 		})
 
 		Convey("当对象键名缺少下划线分隔符时", func() {
-			objectKey := "prod/network-capture/v1.0/1776508200000550e8400-e29b-41d4-a716-446655440000.zstd"
+			objectKey := "prod/network-capture/v1.0/1776508200000550e8400-e29b-41d4-a716-446655440000.zkcn"
 
 			namespace, name, version, timestamp, sessionID, ok := ParseObjectKey(objectKey)
 
@@ -171,7 +171,7 @@ func TestParseObjectKey(t *testing.T) {
 		})
 
 		Convey("当时间戳部分不是数字时", func() {
-			objectKey := "prod/network-capture/v1.0/not-a-number_550e8400-e29b-41d4-a716-446655440000.zstd"
+			objectKey := "prod/network-capture/v1.0/not-a-number_550e8400-e29b-41d4-a716-446655440000.zkcn"
 
 			namespace, name, version, timestamp, sessionID, ok := ParseObjectKey(objectKey)
 
@@ -184,7 +184,7 @@ func TestParseObjectKey(t *testing.T) {
 		})
 
 		Convey("当会话ID部分不是有效的UUID时", func() {
-			objectKey := "prod/network-capture/v1.0/1776508200000_not-a-valid-uuid.zstd"
+			objectKey := "prod/network-capture/v1.0/1776508200000_not-a-valid-uuid.zkcn"
 
 			_, _, _, _, _, ok := ParseObjectKey(objectKey)
 
@@ -194,7 +194,7 @@ func TestParseObjectKey(t *testing.T) {
 		})
 
 		Convey("当对象键名包含额外的斜杠时", func() {
-			objectKey := "prod/network-capture/v1.0/extra/1776508200000_550e8400-e29b-41d4-a716-446655440000.zstd"
+			objectKey := "prod/network-capture/v1.0/extra/1776508200000_550e8400-e29b-41d4-a716-446655440000.zkcn"
 
 			namespace, name, version, timestamp, sessionID, ok := ParseObjectKey(objectKey)
 

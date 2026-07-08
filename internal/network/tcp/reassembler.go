@@ -27,8 +27,9 @@ import (
 //   - 应用层消息构建: 将重组的数据组装成应用层协议对象
 type Reassembler[P TCPPacket] struct {
 	Rectifier[P]
-	signalChan     chan any
-	lastNoticeTime time.Time
+	signalChan      chan any
+	lastNoticeTime  time.Time
+	rwBufferTimeout time.Duration
 }
 
 // newReassembler 根据TCP三次握手的第一个SYN包创建一个新的TCP Reassembler。
@@ -68,8 +69,9 @@ func newReassembler[P TCPPacket](
 	}
 	recordReassemblerCreated(ctx)
 	return &Reassembler[P]{
-		Rectifier:  *rectifier,
-		signalChan: make(chan any, maxOutOrderPacketSize),
+		Rectifier:       *rectifier,
+		signalChan:      make(chan any, maxOutOrderPacketSize),
+		rwBufferTimeout: rwBufferTimeout,
 	}, nil
 }
 
@@ -117,10 +119,10 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 		rspPeek = rspPeekTmp
 	}
 	for protocol, supposer := range detectors {
-		_, detectSpan := startDetectSpan(ctx, protocol)
+		innerCtx, detectSpan := startDetectSpan(ctx, protocol)
 		var dErr error
 		var ok, ok2 bool
-		ok, dErr = supposer.Detect(ctx, reqPeek, true)
+		ok, dErr = supposer.Detect(innerCtx, reqPeek, true)
 		if dErr != nil {
 			endSpan(detectSpan, &dErr)
 			return nil, errors.WithStack(dErr)
@@ -128,7 +130,7 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 			endSpan(detectSpan, nil)
 			continue
 		}
-		ok2, dErr = supposer.Detect(ctx, rspPeek, false)
+		ok2, dErr = supposer.Detect(innerCtx, rspPeek, false)
 		if dErr != nil {
 			endSpan(detectSpan, &dErr)
 			return nil, errors.WithStack(dErr)
@@ -138,20 +140,20 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 		}
 		endSpan(detectSpan, nil)
 
-		_, extractSpan := startExtractSpan(ctx, protocol)
+		innerCtx, extractSpan := startExtractSpan(ctx, protocol)
 		var clientPayload, serverPayload any
-		clientPayload, serverPayload, dErr = supposer.Extract(ctx, r.Client.buffer, r.Server.buffer)
+		clientPayload, serverPayload, dErr = supposer.Extract(innerCtx, r.Client.buffer, r.Server.buffer)
 		if dErr != nil {
 			endSpan(extractSpan, &dErr)
-			recordAppExtractionError(ctx)
+			recordAppExtractionError(innerCtx)
 			return nil, errors.WithStack(dErr)
 		}
 		endSpan(extractSpan, nil)
 
-		_, buildSpan := startBuildSpan(ctx, protocol)
+		innerCtx, buildSpan := startBuildSpan(ctx, protocol)
 		var app any
 		app, dErr = supposer.Build(
-			ctx,
+			innerCtx,
 			meta,
 			r.ClientAddr,
 			r.ServerAddr,
@@ -164,14 +166,23 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 		)
 		if dErr != nil {
 			endSpan(buildSpan, &dErr)
-			recordAppExtractionError(ctx)
+			recordAppExtractionError(innerCtx)
 			return nil, errors.WithStack(dErr)
 		}
 		endSpan(buildSpan, nil)
-		recordAppExtracted(ctx, string(protocol))
+		recordAppExtracted(innerCtx, string(protocol))
 		return app, nil
 	}
 	return nil, nil
+}
+
+// isRetryableError 判断错误是否为可重试的非致命错误。
+// 当 Extract 阶段因数据不足或上下文超时失败时，不应终止整个 parse 循环，
+// 而应等待后续数据包到达后重试。
+func isRetryableError(err error) bool {
+	return errors.Is(err, ErrDataIncomplete) ||
+		errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, context.Canceled)
 }
 
 // parse 解析TCP流中的应用层数据，将提取的应用层对象发送到目标通道。
@@ -182,19 +193,15 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 // 参数:
 //   - ctx: 上下文对象，用于传递取消信号和超时控制
 //   - meta: 基础元数据，包含命名空间、捕获器名称、版本号等系统信息
-//   - signalChan: 信号通道，当有新的TCP数据包到达时发送信号触发解析
 //   - dstChan: 目标通道，用于发送成功提取的应用层对象
 //
 // 返回值:
-//   - error: 处理过程中发生错误时返回错误信息，上下文取消时返回nil
+//   - error: 致命错误时返回错误信息；上下文取消、流僵死或正常关闭时返回nil
 //
-// 处理流程:
-//  1. 进入无限循环，监听信号和上下文取消
-//  2. 当收到信号通道的信号时，触发应用层数据提取
-//  3. 调用extractApplication方法提取应用层对象
-//  4. 如果提取成功，将应用层对象发送到目标通道
-//  5. 如果提取过程中发生错误，返回错误
-//  6. 当上下文被取消时，优雅地退出循环
+// 错误处理策略:
+//   - 可重试错误（ErrDataIncomplete、DeadlineExceeded、Canceled）：continue 等待下次信号重试
+//   - 可重试错误 + 流僵死（lastNoticeTime 超过 rwBufferTimeout）：return nil 释放资源
+//   - 其他致命错误：return error 向上传播
 //
 // 注意:
 //   - 该方法在单独的goroutine中运行，监听信号通道和上下文取消
@@ -203,7 +210,7 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 //   - 每次收到信号都会尝试提取应用层数据，即使数据可能不完整
 //   - 应用层协议推测器可能需要在多个数据包到达后才能成功识别协议
 func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, dstChan chan<- any) error {
-	_, span := startParseSpan(ctx)
+	ctx, span := startParseSpan(ctx)
 	defer endSpan(span, nil)
 	defer recordReassemblerCompleted(ctx)
 	defer r.release()
@@ -219,6 +226,14 @@ func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, dstChan ch
 			}
 			app, err := r.extractApplication(ctx, meta, reqPeek, rspPeek)
 			if err != nil {
+				if isRetryableError(err) {
+					// 数据不足或上下文超时，不是致命错误，等待后续数据包重试
+					if time.Since(r.lastNoticeTime) > r.rwBufferTimeout {
+						// 流已僵死，超过超时时间无新数据到达，主动释放资源
+						return nil
+					}
+					continue
+				}
 				return errors.WithStack(err)
 			}
 			if app != nil {
@@ -248,26 +263,28 @@ func (r *Reassembler[P]) stop() {
 // reassemblerAux 是 Reassembler 序列化的辅助结构体。
 // 仅序列化 Rectifier 的嵌入字段和 lastNoticeTime，跳过 signalChan（运行时通道）。
 type reassemblerAux[P TCPPacket] struct {
-	ClientAddr     net.IP         `json:"client_addr"`
-	ClientPort     layers.TCPPort `json:"client_port"`
-	Client         *Side[P]       `json:"client"`
-	ServerAddr     net.IP         `json:"server_addr"`
-	ServerPort     layers.TCPPort `json:"server_port"`
-	Server         *Side[P]       `json:"server"`
-	LastNoticeTime time.Time      `json:"last_notice_time"`
+	ClientAddr      net.IP         `json:"client_addr"`
+	ClientPort      layers.TCPPort `json:"client_port"`
+	Client          *Side[P]       `json:"client"`
+	ServerAddr      net.IP         `json:"server_addr"`
+	ServerPort      layers.TCPPort `json:"server_port"`
+	Server          *Side[P]       `json:"server"`
+	LastNoticeTime  time.Time      `json:"last_notice_time"`
+	RwBufferTimeout time.Duration  `json:"rw_buffer_timeout"`
 }
 
 // MarshalJSON 实现 Reassembler[P] 的 JSON 序列化。
 // 序列化 Rectifier 的 TCP 连接信息和最近通知时间，跳过运行时信号通道。
 func (r Reassembler[P]) MarshalJSON() ([]byte, error) {
 	return json.Marshal(reassemblerAux[P]{
-		ClientAddr:     r.ClientAddr,
-		ClientPort:     r.ClientPort,
-		Client:         r.Client,
-		ServerAddr:     r.ServerAddr,
-		ServerPort:     r.ServerPort,
-		Server:         r.Server,
-		LastNoticeTime: r.lastNoticeTime,
+		ClientAddr:      r.ClientAddr,
+		ClientPort:      r.ClientPort,
+		Client:          r.Client,
+		ServerAddr:      r.ServerAddr,
+		ServerPort:      r.ServerPort,
+		Server:          r.Server,
+		LastNoticeTime:  r.lastNoticeTime,
+		RwBufferTimeout: r.rwBufferTimeout,
 	})
 }
 
@@ -285,6 +302,7 @@ func (r *Reassembler[P]) UnmarshalJSON(data []byte) error {
 	r.ServerPort = aux.ServerPort
 	r.Server = aux.Server
 	r.lastNoticeTime = aux.LastNoticeTime
+	r.rwBufferTimeout = aux.RwBufferTimeout
 	// 反序列化后重建信号通道，容量使用 Client 端的乱序包上限
 	chanSize := aux.Client.maxOutOrderPacketSize
 	if aux.Server != nil && aux.Server.maxOutOrderPacketSize > chanSize {

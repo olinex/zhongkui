@@ -3,9 +3,7 @@ package detectors
 import (
 	"bufio"
 	"bytes"
-	"compress/gzip"
 	"context"
-	"encoding/json"
 	"io"
 	"net"
 	"net/http"
@@ -13,11 +11,10 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"golang.org/x/sync/errgroup"
-	"gorm.io/datatypes"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/tcp"
-	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
@@ -40,7 +37,17 @@ const (
 // HttpDetector HTTP协议检测器
 // 实现tcp.AppProtocolDetector接口，用于检测和提取TCP流中的HTTP协议数据
 // 该检测器负责识别HTTP请求和响应，解析HTTP协议头部，并构建完整的HTTP传输对象
-type HttpDetector struct{}
+type HttpDetector struct {
+	client    *s3.S3Client
+	sevretKey string
+}
+
+func NewHttpDetector(client *s3.S3Client, sevretKey string) *HttpDetector {
+	return &HttpDetector{
+		client:    client,
+		sevretKey: sevretKey,
+	}
+}
 
 // isClient 判断给定的字节数据是否为HTTP客户端请求
 // 该方法通过分析数据的前几个字节来判断是否为有效的HTTP请求行
@@ -112,50 +119,6 @@ func isServer(peek []byte) (ok bool, err error) {
 		return true, nil
 	default:
 		return false, nil
-	}
-}
-
-// decompressRequestBody 根据 HTTP 请求的 Content-Encoding 头部自动解压请求体
-// 该方法支持 gzip 压缩格式，其他压缩格式将返回原始请求体
-//
-// 参数:
-//   - req: HTTP 请求对象，包含请求头部和原始请求体
-//
-// 返回值:
-//   - io.ReadCloser: 解压后的请求体读取器，调用者负责关闭
-//   - error: 解压过程中发生的错误，如压缩格式不支持或解压失败
-//
-// 支持的压缩格式:
-//   - "gzip": 使用 gzip.NewReader 解压请求体
-//   - 其他: 返回原始请求体，不做解压处理
-func decompressRequestBody(req *http.Request) (io.ReadCloser, error) {
-	switch req.Header.Get("Content-Encoding") {
-	case "gzip":
-		return gzip.NewReader(req.Body)
-	default:
-		return req.Body, nil
-	}
-}
-
-// decompressResponseBody 根据 HTTP 响应的 Content-Encoding 头部自动解压响应体
-// 该方法支持 gzip 压缩格式，其他压缩格式将返回原始响应体
-//
-// 参数:
-//   - resp: HTTP 响应对象，包含响应头部和原始响应体
-//
-// 返回值:
-//   - io.ReadCloser: 解压后的响应体读取器，调用者负责关闭
-//   - error: 解压过程中发生的错误，如压缩格式不支持或解压失败
-//
-// 支持的压缩格式:
-//   - "gzip": 使用 gzip.NewReader 解压响应体
-//   - 其他: 返回原始响应体，不做解压处理
-func decompressResponseBody(resp *http.Response) (io.ReadCloser, error) {
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		return gzip.NewReader(resp.Body)
-	default:
-		return resp.Body, nil
 	}
 }
 
@@ -231,37 +194,34 @@ func (s *HttpDetector) Extract(
 	serverReader := bufio.NewReader(serverRb)
 	var req *http.Request
 	var rsp *http.Response
-	if req, err = http.ReadRequest(clientReader); err == io.EOF {
-		err = errors.WithStack(err)
-		return
-	} else if err != nil {
-		err = errors.WithStack(err)
-		return
-	} else if rsp, err = http.ReadResponse(serverReader, req); err == io.EOF {
-		err = errors.WithStack(err)
-		return
-	} else if err != nil {
-		err = errors.WithStack(err)
-		return
-	}
 	wg, ctx := errgroup.WithContext(ctx)
 	wg.Go(func() (rErr error) {
+		if req, rErr = http.ReadRequest(clientReader); rErr == io.EOF {
+			return errors.WithStack(rErr)
+		} else if rErr != nil {
+			return errors.WithStack(rErr)
+		}
 		defer req.Body.Close()
-		body, err := io.ReadAll(req.Body)
-		if err != nil {
-			return errors.WithStack(err)
+		body, rErr := io.ReadAll(req.Body)
+		if rErr != nil {
+			return errors.WithStack(rErr)
 		}
 		req.Body = io.NopCloser(bytes.NewReader(body))
-		return nil
+		return rErr
 	})
 	wg.Go(func() (rErr error) {
+		if rsp, rErr = http.ReadResponse(serverReader, req); rErr == io.EOF {
+			return errors.WithStack(rErr)
+		} else if rErr != nil {
+			return errors.WithStack(rErr)
+		}
 		defer rsp.Body.Close()
-		body, err := io.ReadAll(rsp.Body)
-		if err != nil {
-			return errors.WithStack(err)
+		body, rErr := io.ReadAll(rsp.Body)
+		if rErr != nil {
+			return errors.WithStack(rErr)
 		}
 		rsp.Body = io.NopCloser(bytes.NewReader(body))
-		return nil
+		return rErr
 	})
 	if err = wg.Wait(); err != nil {
 		return
@@ -272,48 +232,6 @@ func (s *HttpDetector) Extract(
 	}
 }
 
-// Build 构建完整的HTTP传输对象
-// 实现tcp.AppProtocolDetector接口的Build方法，用于将提取的HTTP数据构建为应用层可用的HTTP传输对象
-// 该方法将原始的HTTP请求/响应、网络层信息和时间信息整合到一个统一的HttpTransport结构中
-//
-// 参数:
-//   - ctx: 上下文对象，用于传递取消信号和超时控制
-//   - meta: 基础元数据，包含命名空间、捕获器名称、版本号等系统信息
-//   - clientAddr: 客户端IP地址
-//   - serverAddr: 服务端IP地址
-//   - clientPort: 客户端端口号
-//   - serverPort: 服务端端口号
-//   - clientFrameStack: 客户端帧栈信息，包含HTTP请求的捕获时间和网络层堆栈
-//   - serverFrameStack: 服务端帧栈信息，包含HTTP响应的捕获时间和网络层堆栈
-//   - clientPayload: 客户端负载，类型为*http.Request，从Extract方法提取的HTTP请求
-//   - serverPayload: 服务端负载，类型为*http.Response，从Extract方法提取的HTTP响应
-//
-// 返回值:
-//   - app: 构建的HTTP传输对象，类型为*n.HttpTransport
-//   - err: 构建过程中发生的错误，如数据转换失败、JSON序列化失败等
-//
-// 构建流程:
-//  1. 验证基础元数据不为nil
-//  2. 构建HTTP基础信息（网络层信息）：
-//     - 设置客户端和服务端的IP地址、端口号
-//     - 根据客户端IP地址判断IP版本（IPv4或IPv6）
-//  3. 如果有HTTP请求数据，构建HTTP请求信息：
-//     - 验证类型转换，确保clientPayload为*http.Request
-//     - 序列化HTTP头部为JSON格式
-//     - 读取HTTP请求体内容
-//     - 序列化URL查询参数为JSON格式
-//     - 计算请求持续时间和时间戳
-//     - 提取关键HTTP头部字段（User-Agent、Referer、Cookie等）
-//     - 构建URI信息（URL、协议、主机、路径、查询参数、片段）
-//     - 设置HTTP协议版本
-//  4. 如果有HTTP响应数据，构建HTTP响应信息：
-//     - 验证类型转换，确保serverPayload为*http.Response
-//     - 序列化HTTP响应头部为JSON格式
-//     - 读取HTTP响应体内容
-//     - 计算响应持续时间和时间戳
-//     - 提取关键HTTP响应头部字段（Server、Set-Cookie、Location等）
-//  5. 合并客户端和服务端的帧栈信息，按时间戳排序
-//  6. 返回完整的HttpTransport对象，包含所有HTTP传输信息
 func (s *HttpDetector) Build(
 	ctx context.Context,
 	meta *n.BaseMeta,
@@ -322,120 +240,32 @@ func (s *HttpDetector) Build(
 	clientFrameStack, serverFrameStack n.FrameStack,
 	clientPayload, serverPayload any,
 ) (app any, err error) {
-	if meta == nil {
-		return nil, errors.New("meta is nil")
+	request, ok := clientPayload.(*http.Request)
+	if !ok {
+		return nil, errors.New("clientPayload is not *http.Request")
 	}
-	var hBase n.HttpBase
-	hBase.ClientIP = serializer.IPAddr(clientAddr)
-	hBase.ClientPort = clientPort
-	hBase.ServerIP = serializer.IPAddr(serverAddr)
-	hBase.ServerPort = serverPort
-	if clientAddr.To4() != nil {
-		hBase.IPVersion = layers.IPProtocolIPv4
-	} else {
-		hBase.IPVersion = layers.IPProtocolIPv6
+	response, ok := serverPayload.(*http.Response)
+	if !ok {
+		return nil, errors.New("serverPayload is not *http.Response")
 	}
-	var request n.HttpRequest
-	var uri n.HttpURI
-	if clientPayload != nil && len(clientFrameStack) != 0 {
-		rawReq, ok := clientPayload.(*http.Request)
-		if !ok {
-			return nil, errors.New("client payload is not http.Request pointer")
-		}
-		rawReqHeaders, err := json.Marshal(rawReq.Header)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		body, err := decompressRequestBody(rawReq)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		defer body.Close()
-		content, err := io.ReadAll(body)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		query, err := json.Marshal(rawReq.URL.Query())
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		startTime := clientFrameStack[0].Timestamp
-		endTime := clientFrameStack[len(clientFrameStack)-1].Timestamp
-		request = n.HttpRequest{
-			Method:           rawReq.Method,
-			UserAgent:        rawReq.UserAgent(),
-			Referer:          rawReq.Referer(),
-			Accept:           rawReq.Header.Get(base.HDR_ACCEPT),
-			AcceptEncoding:   rawReq.Header.Get(base.HDR_ACCEPT_ENCODING),
-			AcceptLanguage:   rawReq.Header.Get(base.HDR_ACCEPT_LANGUAGE),
-			Connection:       rawReq.Header.Get(base.HDR_CONNECTION),
-			Cookie:           rawReq.Header.Get(base.HDR_COOKIE),
-			Authorization:    rawReq.Header.Get(base.HDR_AUTHORIZATION),
-			ReqContentType:   rawReq.Header.Get(base.HDR_CONTENT_TYPE),
-			ReqContentLength: uint32(rawReq.ContentLength),
-			ReqHeaders:       datatypes.JSON(rawReqHeaders),
-			ReqBody:          content,
-			ReqTime:          startTime,
-			ReqDuration:      endTime.Sub(startTime),
-			IsReqCompleted:   true,
-		}
-		uri = n.HttpURI{
-			URL:      rawReq.URL.String(),
-			Scheme:   rawReq.URL.Scheme,
-			Host:     rawReq.URL.Host,
-			Path:     rawReq.URL.Path,
-			Queries:  datatypes.JSON(query),
-			Fragment: rawReq.URL.Fragment,
-		}
-		hBase.HttpVersion = rawReq.Proto
+	transport, err := n.NewHttpTransport(
+		ctx,
+		s.client,
+		meta,
+		clientAddr,
+		serverAddr,
+		clientPort,
+		serverPort,
+		clientFrameStack,
+		serverFrameStack,
+		request,
+		response,
+		s.sevretKey,
+	)
+	if err != nil {
+		return nil, errors.WithStack(err)
 	}
-	var response n.HttpResponse
-	if serverPayload != nil && len(serverFrameStack) != 0 {
-		rawRsp, ok := serverPayload.(*http.Response)
-		if !ok {
-			return nil, errors.New("server payload is not http.Response pointer")
-		}
-		rawRspHeaders, err := json.Marshal(rawRsp.Header)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		body, err := decompressResponseBody(rawRsp)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		defer body.Close()
-		content, err := io.ReadAll(body)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		startTime := serverFrameStack[0].Timestamp
-		endTime := serverFrameStack[len(serverFrameStack)-1].Timestamp
-		response = n.HttpResponse{
-			Server:           rawRsp.Header.Get(base.HDR_SERVER),
-			SetCookie:        rawRsp.Header.Get(base.HDR_SET_COOKIE),
-			Location:         rawRsp.Header.Get(base.HDR_LOCATION),
-			CacheControl:     rawRsp.Header.Get(base.HDR_CACHE_CONTROL),
-			ContentEncoding:  rawRsp.Header.Get(base.HDR_CONTENT_ENCODING),
-			RspContentType:   rawRsp.Header.Get(base.HDR_CONTENT_TYPE),
-			RspContentLength: uint32(rawRsp.ContentLength),
-			RspHeaders:       datatypes.JSON(rawRspHeaders),
-			RspBody:          content,
-			RspTime:          startTime,
-			RspDuration:      endTime.Sub(startTime),
-			IsRspCompleted:   true,
-		}
-	}
-
-	return &n.HttpTransport{
-		BaseMeta: *meta,
-		FusedMeta: n.FusedMeta{
-			FrameStack: sortedFrameStack(clientFrameStack, serverFrameStack),
-		},
-		HttpBase:     hBase,
-		HttpURI:      uri,
-		HttpRequest:  request,
-		HttpResponse: response,
-	}, nil
+	return transport, nil
 }
 
 // init 初始化函数，在包加载时自动执行

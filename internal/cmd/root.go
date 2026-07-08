@@ -75,6 +75,14 @@ func Execute() {
 	}
 }
 
+var describeCmd = &cobra.Command{
+	Use:   "describe",
+	Short: "Show configuration details",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
+	},
+}
+
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Run the zhongkui server process",
@@ -110,7 +118,10 @@ var createCmd = &cobra.Command{
 func init() {
 	RootCmd.PersistentFlags().StringP("config", "c", "", "config file path (e.g. /etc/zhongkui/config.toml)")
 	RootCmd.AddCommand(versionCmd)
-	RootCmd.AddCommand(describeConfigCmd)
+	// describe
+	describeCmd.AddCommand(describeConfigCmd)
+	describeCmd.AddCommand(describeSchedulerCmd)
+	RootCmd.AddCommand(describeCmd)
 	// run
 	runCmd.AddCommand(webCmd)
 	runCmd.AddCommand(grpcCmd)

@@ -36,8 +36,6 @@ var (
 	feedbackTasksEnqueuedCounter metric.Int64Counter
 	// feedbackErrorsCounter 统计 Feedback 过程中的错误数
 	feedbackErrorsCounter metric.Int64Counter
-	// processingDuration 统计各阶段处理耗时分布
-	processingDuration metric.Int64Histogram
 )
 
 func InitMetrics() {
@@ -87,13 +85,6 @@ func initMetrics() {
 		"reporter.feedback.errors",
 		metric.WithDescription("Total number of Feedback stream errors"),
 		metric.WithUnit("{error}"),
-	)
-	err = errors.Join(err, e)
-
-	processingDuration, e = meter.Int64Histogram(
-		"reporter.processing.duration",
-		metric.WithDescription("Duration of reporter processing stages in milliseconds"),
-		metric.WithUnit("ms"),
 	)
 	err = errors.Join(err, e)
 

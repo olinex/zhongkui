@@ -51,6 +51,12 @@ func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task,
 		err = e
 		return errors.WithStack(e)
 	}
+	end := time.Now().Truncate(param.WindowRange)
+	start := end.Add(-param.WindowRange)
+	logger.Ctx(ctx).Infof("start extract ipv4 http transport from table, window [%s, %s), maxReassemblerSize=%d",
+		start.Format(time.RFC3339), end.Format(time.RFC3339), param.MaxReassemblerSize)
+	var queriedCount int64
+
 	wg, ctx := errgroup.WithContext(ctx)
 	srcChan := make(chan *network.PacketIPv4TCP, param.MaxReassemblerSize)
 	dstChan := make(chan any, param.MaxReassemblerSize)
@@ -59,7 +65,11 @@ func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task,
 		for tmp := range dstChan {
 			transport := tmp.(*network.HttpTransport)
 			atomic.AddInt64(&extractedCount, 1)
-			channel <- rxgo.Of(transport)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case channel <- rxgo.Of(transport):
+			}
 		}
 		return nil
 	})
@@ -72,14 +82,17 @@ func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task,
 	wg.Go(func() error {
 		defer close(srcChan)
 		var packets = make([]network.PacketIPv4TCP, 0, param.MaxReassemblerSize)
-		end := time.Now().Truncate(param.WindowRange)
-		start := end.Add(-param.WindowRange)
 		if e := db.
 			WithContext(ctx).
 			Where("timestamp >= ? AND timestamp < ?", start, end).
 			FindInBatches(&packets, param.MaxReassemblerSize, func(tx *gorm.DB, batch int) error {
 				for _, packet := range packets {
-					srcChan <- &packet
+					select {
+					case <-ctx.Done():
+						return ctx.Err()
+					case srcChan <- &packet:
+						atomic.AddInt64(&queriedCount, 1)
+					}
 				}
 				return nil
 			}).Error; e != nil {
@@ -88,6 +101,8 @@ func ExtractIPv4HttpTransportFromTable(ctx context.Context, task *pipeline.Task,
 		return nil
 	})
 	err = wg.Wait()
+	logger.Ctx(ctx).Infof("finish extract ipv4 http transport from table, queried=%d, extracted=%d, err=%v",
+		atomic.LoadInt64(&queriedCount), atomic.LoadInt64(&extractedCount), err)
 	return err
 }
 
