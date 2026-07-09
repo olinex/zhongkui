@@ -564,7 +564,7 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 			},
 			TimeoutSeconds: int64(cc.cfg.Feedback.TolerateIntervalTimeout().Seconds()),
 			Uploaded:       uploaded,
-			SecretKey:      n.secretKey,
+			SecretKey:      n.cryptoKey,
 		})
 		if err != nil {
 			cc.logger.Ctx(ctx).Warnf("feedback stream error: %v", err)

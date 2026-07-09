@@ -13,15 +13,15 @@ import (
 type Zkcn struct {
 	client    *S3Client
 	objectKey string
-	secretKey string
+	cryptoKey []byte
 	timeout   time.Duration
 }
 
-func NewZkcn(client *S3Client, objectKey, secretKey string, timeout time.Duration) *Zkcn {
+func NewZkcn(client *S3Client, objectKey string, cryptoKey []byte, timeout time.Duration) *Zkcn {
 	return &Zkcn{
 		client:    client,
 		objectKey: objectKey,
-		secretKey: secretKey,
+		cryptoKey: cryptoKey,
 		timeout:   timeout,
 	}
 }
@@ -37,7 +37,7 @@ func (t *Zkcn) Store(ctx context.Context, reader io.Reader) (minio.UploadInfo, e
 	return t.client.CPutObject(
 		ctx,
 		t.objectKey,
-		t.secretKey,
+		t.cryptoKey,
 		reader,
 		-1,
 		opts,
@@ -45,7 +45,7 @@ func (t *Zkcn) Store(ctx context.Context, reader io.Reader) (minio.UploadInfo, e
 }
 
 func (t *Zkcn) Load(ctx context.Context) (io.ReadCloser, error) {
-	return t.client.CGetOject(ctx, t.objectKey, t.secretKey, minio.GetObjectOptions{})
+	return t.client.CGetOject(ctx, t.objectKey, t.cryptoKey, minio.GetObjectOptions{})
 }
 
 func (t *Zkcn) Clear(ctx context.Context) error {

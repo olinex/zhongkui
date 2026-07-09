@@ -18,9 +18,13 @@ func newS3Provider() do.Provider[*s3.S3Client] {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		kd, err := InvokeKeyDerivation(i)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 
 		// 如果 OTEL 已启用，为 S3 HTTP 调用添加链路追踪
-		client, err := s3.NewS3Client(cfg, otel.S3ClientOptions()...)
+		client, err := s3.NewS3Client(cfg, kd, otel.S3ClientOptions()...)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

@@ -5,10 +5,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-func NewZstdAESGCMPipelineWithLevel(secretKey string, compressLevel zstd.EncoderLevel) (*Pipeline, error) {
+func NewZstdAESGCMPipelineWithLevel(cryptoKey []byte, compressLevel zstd.EncoderLevel) (*Pipeline, error) {
 	if compressor, err := NewZstdCompressorWithLevel(compressLevel); err != nil {
 		return nil, errors.WithStack(err)
-	} else if encryptor, err := NewAESGCMEncryptor([]byte(secretKey)); err != nil {
+	} else if encryptor, err := NewAESGCMEncryptor(cryptoKey); err != nil {
 		return nil, errors.WithStack(err)
 	} else if pipeline, err := NewCompressEncryptPipeline(compressor, encryptor); err != nil {
 		return nil, errors.WithStack(err)
@@ -17,6 +17,6 @@ func NewZstdAESGCMPipelineWithLevel(secretKey string, compressLevel zstd.Encoder
 	}
 }
 
-func NewZstdAESGCMPipeline(secretKey string) (*Pipeline, error) {
-	return NewZstdAESGCMPipelineWithLevel(secretKey, zstd.SpeedDefault)
+func NewZstdAESGCMPipeline(cryptoKey []byte) (*Pipeline, error) {
+	return NewZstdAESGCMPipelineWithLevel(cryptoKey, zstd.SpeedDefault)
 }

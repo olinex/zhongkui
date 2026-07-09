@@ -5,6 +5,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// PASSWORD_BOOK_SIZE 定义密码本的固定大小（字节数）。
+const PASSWORD_BOOK_SIZE = 65536
+
 // HashPassword 使用 bcrypt 算法对原始密码进行哈希处理。
 //
 // bcrypt 是一种自适应的密码哈希算法，内置盐值（salt），能够有效抵御彩虹表攻击。

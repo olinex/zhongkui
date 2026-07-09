@@ -55,7 +55,7 @@ func (f *FlowVersionTaskWrapper[T, P]) Load(ctx context.Context, name, lastVersi
 	temp := s3.NewZkcn(
 		client,
 		objectKey(name, lastVersion),
-		"",
+		nil,
 		0,
 	)
 	rc, err := temp.Load(ctx)
@@ -97,7 +97,7 @@ func (f *FlowVersionTaskWrapper[T, P]) Store(ctx context.Context, name, nextVers
 	temp := s3.NewZkcn(
 		client,
 		objectKey(name, nextVersion),
-		"",
+		nil,
 		0,
 	)
 	_, err = temp.Store(ctx, bytes.NewReader(raw))
@@ -116,7 +116,7 @@ func (f *FlowVersionTaskWrapper[T, P]) Clear(ctx context.Context, name, lastVers
 	temp := s3.NewZkcn(
 		client,
 		objectKey(name, lastVersion),
-		"",
+		nil,
 		0,
 	)
 	err = temp.Clear(ctx)

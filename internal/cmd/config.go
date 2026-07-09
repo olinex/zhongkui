@@ -12,6 +12,7 @@ var describeConfigCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		descs := provider.DescribeLoggerConfig()
 		descs.Join(manager.DescribeConfig())
+		descs.Join(provider.DescribeCryptoConfig())
 		descs.Join(provider.DescribeDatabaseConfig())
 		descs.Join(provider.DescribeEtcdConfig())
 		descs.Join(provider.DescribeRedisConfig())

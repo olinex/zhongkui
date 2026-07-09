@@ -30,6 +30,7 @@ var RootCmd = &cobra.Command{
 
 		provider.InjectCommand(i, cmd)
 		provider.InjectViper(i)
+		provider.InjectKeyDerivation(i)
 		provider.InjectS3(i)
 		provider.InjectGin(i)
 		validator.Init()
@@ -147,6 +148,7 @@ func init() {
 	createCmd.AddCommand(generateTLSCmd)
 	createCmd.AddCommand(createAccessKeyCmd)
 	createCmd.AddCommand(createCapturerCmd)
+	createCmd.AddCommand(createPasswordBookCmd)
 	RootCmd.AddCommand(createCmd)
 
 	RootCmd.AddCommand(forceResetPasswordCmd)

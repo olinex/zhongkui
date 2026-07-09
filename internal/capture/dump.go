@@ -15,10 +15,10 @@ import (
 
 type notice struct {
 	ts        time.Time
-	secretKey string
+	cryptoKey string
 }
 
-func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, secretKey string) (err error) {
+func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, cryptoKey []byte) (err error) {
 	ctx, span := totel.StartDumpOneSpan(ctx, filePath)
 	var packetCount int
 	var byteCount int
@@ -41,7 +41,7 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, s
 	buffer := bufio.NewWriterSize(file, int(c.uploadCfg.PacketBufferSize))
 	defer buffer.Flush()
 	// 流式压缩加密层，实现分块压缩后加密
-	pipeline, err := crypto.NewZstdAESGCMPipelineWithLevel(secretKey, c.uploadCfg.EncoderLevel)
+	pipeline, err := crypto.NewZstdAESGCMPipelineWithLevel(cryptoKey, c.uploadCfg.EncoderLevel)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -102,20 +102,20 @@ func (c *capturer) dump(ctx context.Context, ws wire.Wire, notifyChan chan<- not
 	for {
 		ts := time.Now()
 		filePath := c.filePath(ts)
-		secretKey, e := crypto.GenerateRandomBase64String(32)
+		cryptoKey, e := crypto.GenerateRandomBase64String(32)
 		if e != nil {
 			err = e
 			return errors.WithStack(e)
 		}
 		n := notice{
 			ts:        ts,
-			secretKey: secretKey,
+			cryptoKey: cryptoKey,
 		}
 		select {
 		case <-ctx.Done():
 			return nil
 		default:
-			err = c.dumpOne(ctx, ws, filePath, secretKey)
+			err = c.dumpOne(ctx, ws, filePath, []byte(cryptoKey))
 			if err != nil {
 				return errors.WithStack(err)
 			}

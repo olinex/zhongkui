@@ -27,6 +27,7 @@ import (
 
 func RouteRegister(ctx context.Context, i do.Injector) error {
 	viper := provider.MustInvokeViper(i)
+	kd := provider.MustInvokeKeyDerivation(i)
 	etcd := provider.MustInvokeEtcdClient(i)
 	coreDB := provider.MustInvokeCoreDatabase(i)
 
@@ -47,7 +48,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	}
 
 	// 创建JWT认证器，用于用户身份验证和令牌管理
-	authenticator := manager.NewJwtAuthenticator(&cfg.Auth, coreDB)
+	authenticator := manager.NewJwtAuthenticator(&cfg.Auth, coreDB, kd)
 
 	// ==================== 全局中间件配置 ====================
 	// 以下中间件将应用于所有HTTP请求，按照添加顺序执行

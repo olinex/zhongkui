@@ -73,7 +73,6 @@ func createUserSelfTestAuthConfig() *manager.AuthConfig {
 		Issuer:              "zhongkui-test",
 		Subject:             "api-test",
 		Audience:            []string{"web-test"},
-		SecretKey:           "test-secret-key-for-unit-test",
 		TokenPrefix:         "Bearer:",
 		TokenTimeout:        time.Hour,
 		TokenRefreshTimeout: 24 * time.Hour,
@@ -87,6 +86,15 @@ func createUserSelfTestAuthConfig() *manager.AuthConfig {
 		},
 		AccessKeyCount: 3,
 	}
+}
+
+func createTestKeyDerivation() *crypto.KeyDerivation {
+	provider := crypto.NewConfigFileSecretKeyProvider("test-secret-key-for-unit-test")
+	book, err := crypto.LoadPasswordBook("")
+	if err != nil {
+		panic("failed to load password book: " + err.Error())
+	}
+	return crypto.NewKeyDerivation(provider, book)
 }
 
 func createTestLoggingLogger() *logging.Logger {
@@ -124,7 +132,8 @@ func setupUserSelfTestRouterWithDBAndUser(db *database.DB, user *core.User) *gin
 func setupUserSelfTestRouterWithFullDeps(db *database.DB, user *core.User) *gin.Engine {
 	r := setupUserSelfTestRouterWithDBAndUser(db, user)
 	authConfig := createUserSelfTestAuthConfig()
-	authenticator := manager.NewJwtAuthenticator(authConfig, db)
+	kd := createTestKeyDerivation()
+	authenticator := manager.NewJwtAuthenticator(authConfig, db, kd)
 	loggingLogger := createTestLoggingLogger()
 	r.Use(func(c *gin.Context) {
 		c.Set(manager.AUTH_CTX_NAME, authenticator)
@@ -450,9 +459,9 @@ func TestUserPasswordLogin(t *testing.T) {
 	Convey("测试 userPasswordLogin 函数", t, func() {
 		db := createUserSelfTestDB()
 		authConfig := createUserSelfTestAuthConfig()
-		authenticator := manager.NewJwtAuthenticator(authConfig, db)
+		kd := createTestKeyDerivation()
+		authenticator := manager.NewJwtAuthenticator(authConfig, db, kd)
 		loggingLogger := createTestLoggingLogger()
-
 		r := setupUserSelfTestRouterWithDB(db)
 		r.Use(injectLoggerMiddleware(loggingLogger))
 		r.Use(func(c *gin.Context) {
@@ -654,7 +663,8 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 		db := createUserSelfTestDB()
 		user := createTestUserInDB(db, "refreshuser", "刷新用户", "refresh@example.com", "Str0ngP@ss", true)
 		authConfig := createUserSelfTestAuthConfig()
-		authenticator := manager.NewJwtAuthenticator(authConfig, db)
+		kd := createTestKeyDerivation()
+		authenticator := manager.NewJwtAuthenticator(authConfig, db, kd)
 
 		r := setupUserSelfTestRouterWithDBAndUser(db, user)
 		r.Use(func(c *gin.Context) {

@@ -32,12 +32,12 @@ type AESGCMEncryptor struct {
 
 // NewAESGCMEncryptor 创建基于 AES-GCM 的加密器。
 // key: AES 密钥，合法长度为 16、24 或 32 字节。
-func NewAESGCMEncryptor(key []byte) (*AESGCMEncryptor, error) {
-	switch len(key) {
+func NewAESGCMEncryptor(cryptoKey []byte) (*AESGCMEncryptor, error) {
+	switch len(cryptoKey) {
 	case 16, 24, 32:
-		return &AESGCMEncryptor{key: key}, nil
+		return &AESGCMEncryptor{key: cryptoKey}, nil
 	default:
-		return nil, errors.Newf("invalid AES key length: %d (must be 16, 24, or 32)", len(key))
+		return nil, errors.Newf("invalid AES key length: %d (must be 16, 24, or 32)", len(cryptoKey))
 	}
 }
 
@@ -178,14 +178,14 @@ func (wc *aesGCMWriteCloser) encryptAndWrite(plaintext []byte) error {
 // ---------------------------------------------------------------------------
 
 type aesGCMReadCloser struct {
-	r          io.Reader
-	key        []byte
-	buf        bytes.Buffer // 已解密待读取的明文
-	exhausted  bool         // 所有块已读取完毕
-	initOnce   sync.Once
-	initErr    error
-	closed     bool
-	mu         sync.Mutex
+	r         io.Reader
+	key       []byte
+	buf       bytes.Buffer // 已解密待读取的明文
+	exhausted bool         // 所有块已读取完毕
+	initOnce  sync.Once
+	initErr   error
+	closed    bool
+	mu        sync.Mutex
 }
 
 func (rc *aesGCMReadCloser) Read(p []byte) (int, error) {

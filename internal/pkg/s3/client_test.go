@@ -109,10 +109,10 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 	accessKey := os.Getenv("S3_TEST_ACCESS_KEY")
 	secretKey := os.Getenv("S3_TEST_SECRET_KEY")
 	bucket := os.Getenv("S3_TEST_BUCKET")
-	cryptoKey := os.Getenv("S3_TEST_CRYPTO_KEY")
+	cryptoKeyEnv := os.Getenv("S3_TEST_CRYPTO_KEY")
 
-	if endpoint == "" || accessKey == "" || secretKey == "" || bucket == "" || cryptoKey == "" {
-		t.Skip("Skipping integration test: set S3_TEST_ENDPOINT, S3_TEST_ACCESS_KEY, S3_TEST_SECRET_KEY, S3_TEST_BUCKET, S3_TEST_CRYPTO_KEY to run")
+	if endpoint == "" || accessKey == "" || secretKey == "" || bucket == "" {
+		t.Skip("Skipping integration test: set S3_TEST_ENDPOINT, S3_TEST_ACCESS_KEY, S3_TEST_SECRET_KEY, S3_TEST_BUCKET to run")
 	}
 
 	convey.Convey("Test CPutObject & CGetObject roundtrip with real S3", t, func() {
@@ -123,18 +123,24 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 			Bucket:    bucket,
 			Region:    "us-east-1",
 			UseSSL:    false,
-			CryptoKey: cryptoKey,
 		}
 
-		client, err := NewS3Client(cfg)
+		provider := crypto.NewConfigFileSecretKeyProvider(cryptoKeyEnv)
+		book, err := crypto.LoadPasswordBook("")
+		convey.So(err, convey.ShouldBeNil)
+		kd := crypto.NewKeyDerivation(provider, book)
+
+		client, err := NewS3Client(cfg, kd)
 		convey.So(err, convey.ShouldBeNil)
 		convey.So(client, convey.ShouldNotBeNil)
+
+		cryptoKey := []byte(cryptoKeyEnv)
 
 		convey.Convey("encrypted upload → encrypted download should produce identical data", func() {
 			original := []byte(`{"name":"integration-test","version":"v2","data":"hello zhongkui"}`)
 			objectKey := "test/crypto-roundtrip/test.json"
 
-			// 使用独立的 secretKey 测试自定义加密管道
+			// 使用独立的 cryptoKey 测试自定义加密管道
 			uploadInfo, err := client.CPutObject(
 				context.Background(),
 				objectKey,
@@ -159,7 +165,7 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 		})
 
 		convey.Convey("CGetOject on non-existent key should return nil, nil", func() {
-			rc, err := client.CGetOject(context.Background(), "test/non-existent-key-xyz", "", minio.GetObjectOptions{})
+			rc, err := client.CGetOject(context.Background(), "test/non-existent-key-xyz", nil, minio.GetObjectOptions{})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rc, convey.ShouldBeNil)
 		})
@@ -168,6 +174,11 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 
 func TestNewS3Client_InvalidConfig(t *testing.T) {
 	convey.Convey("Test NewS3Client with invalid config", t, func() {
+		provider := crypto.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
+		book, err := crypto.LoadPasswordBook("")
+		convey.So(err, convey.ShouldBeNil)
+		kd := crypto.NewKeyDerivation(provider, book)
+
 		convey.Convey("should fail with unreachable endpoint", func() {
 			cfg := &Config{
 				Endpoint:  "http://127.0.0.1:19999",
@@ -175,24 +186,9 @@ func TestNewS3Client_InvalidConfig(t *testing.T) {
 				SecretKey: "invalid",
 				Bucket:    "nonexistent",
 				UseSSL:    false,
-				CryptoKey: "0123456789abcdef0123456789abcdef",
 			}
 
-			_, err := NewS3Client(cfg)
-			convey.So(err, convey.ShouldNotBeNil)
-		})
-
-		convey.Convey("should fail with invalid crypto key length", func() {
-			cfg := &Config{
-				Endpoint:  "http://127.0.0.1:9000",
-				AccessKey: "test",
-				SecretKey: "test",
-				Bucket:    "test",
-				UseSSL:    false,
-				CryptoKey: "short",
-			}
-
-			_, err := NewS3Client(cfg)
+			_, err := NewS3Client(cfg, kd)
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 	})

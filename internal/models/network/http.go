@@ -14,9 +14,15 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+)
+
+const (
+	CRYPTO_KEY_OFFSET = 41827
+	CRYPTO_KEY_LENGTH = 32
 )
 
 // sortedFrameStack 返回按时间戳排序的帧栈，合并客户端和服务端的帧信息。
@@ -842,7 +848,7 @@ type HttpRequestBody struct {
 	ReqDuration time.Duration `gorm:"type:Int64 CODEC(ZSTD(3))" json:"req_duration"`
 }
 
-func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, startTime, endTime time.Time, secretKey string) (*HttpRequestBody, error) {
+func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, startTime, endTime time.Time, cryptoKey []byte) (*HttpRequestBody, error) {
 	body, err := decompressRequestBody(req)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -850,7 +856,7 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 	defer body.Close()
 	id := serializer.NewHexUUIDv4()
 	key := objectKey(id.String(), true)
-	zkcn := s3.NewZkcn(client, key, secretKey, 0)
+	zkcn := s3.NewZkcn(client, key, cryptoKey, 0)
 	if _, err := zkcn.Store(ctx, body); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -873,7 +879,7 @@ type HttpResponseBody struct {
 	RspDuration time.Duration `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rsp_duration"`
 }
 
-func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, startTime, endTime time.Time, secretKey string) (*HttpResponseBody, error) {
+func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, startTime, endTime time.Time, cryptoKey []byte) (*HttpResponseBody, error) {
 	body, err := decompressResponseBody(resp)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -881,7 +887,7 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 	defer body.Close()
 	id := serializer.NewHexUUIDv4()
 	key := objectKey(id.String(), true)
-	zkcn := s3.NewZkcn(client, key, secretKey, 0)
+	zkcn := s3.NewZkcn(client, key, cryptoKey, 0)
 	if _, err := zkcn.Store(ctx, body); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -980,7 +986,7 @@ func NewHttpTransport(
 	clientPort, serverPort layers.TCPPort,
 	clientFrameStack, serverFrameStack FrameStack,
 	request *http.Request, response *http.Response,
-	secretKey string,
+	kd *crypto.KeyDerivation,
 ) (transport *HttpTransport, err error) {
 	if meta == nil {
 		return nil, errors.New("meta is nil")
@@ -995,6 +1001,10 @@ func NewHttpTransport(
 	} else {
 		hBase.IPVersion = layers.IPProtocolIPv6
 	}
+	cryptoKey, err := kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	var uri *HttpURI
 	var requestBody *HttpRequestBody
 	var requestHeaders *HttpRequestHeaders
@@ -1005,7 +1015,7 @@ func NewHttpTransport(
 		}
 		startTime := clientFrameStack[0].Timestamp
 		endTime := clientFrameStack[len(clientFrameStack)-1].Timestamp
-		requestBody, err = NewHttpRequestBody(ctx, s3Client, request, startTime, endTime, secretKey)
+		requestBody, err = NewHttpRequestBody(ctx, s3Client, request, startTime, endTime, cryptoKey)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -1017,7 +1027,7 @@ func NewHttpTransport(
 	if response != nil && len(serverFrameStack) != 0 {
 		startTime := serverFrameStack[0].Timestamp
 		endTime := serverFrameStack[len(serverFrameStack)-1].Timestamp
-		responseBody, err = NewHttpResponseBody(ctx, s3Client, response, startTime, endTime, secretKey)
+		responseBody, err = NewHttpResponseBody(ctx, s3Client, response, startTime, endTime, cryptoKey)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}

@@ -3,11 +3,16 @@ package s3
 import (
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 )
 
 // PREFIX 是S3配置在配置文件中的前缀
 // 用于在Viper配置管理器中标识S3相关的配置项
-const PREFIX = "s3"
+const (
+	PREFIX            = "s3"
+	CRYPTO_KEY_OFFSET = 43036
+	CRYPTO_KEY_LENGTH = 64
+)
 
 // Config 是S3兼容对象存储的配置结构体
 // 包含连接到S3兼容服务所需的所有参数
@@ -49,11 +54,10 @@ type Config struct {
 	// 默认值: true (使用HTTPS)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7#New
 	UseSSL bool `mapstructure:"useSSL" default:"true" comment:"use HTTPS for S3 connections (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
+}
 
-	// CryptoKey 是S3对象存储的加密密钥
-	// 用于加密和解密S3对象存储中的数据
-	// 默认值: "-" (表示必须显式配置)
-	CryptoKey string `mapstructure:"cryptoKey" default:"-" comment:"crypto key for S3 object storage"`
+func (c *Config) ExtractCryptoKey(kd *crypto.KeyDerivation) ([]byte, error) {
+	return kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
 }
 
 func DescribeConfig() config.ConfigDescriptions {

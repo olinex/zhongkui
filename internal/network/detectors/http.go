@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/tcp"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -38,14 +39,14 @@ const (
 // 实现tcp.AppProtocolDetector接口，用于检测和提取TCP流中的HTTP协议数据
 // 该检测器负责识别HTTP请求和响应，解析HTTP协议头部，并构建完整的HTTP传输对象
 type HttpDetector struct {
-	client    *s3.S3Client
-	sevretKey string
+	client *s3.S3Client
+	kd     *crypto.KeyDerivation
 }
 
-func NewHttpDetector(client *s3.S3Client, sevretKey string) *HttpDetector {
+func NewHttpDetector(client *s3.S3Client, kd *crypto.KeyDerivation) *HttpDetector {
 	return &HttpDetector{
-		client:    client,
-		sevretKey: sevretKey,
+		client: client,
+		kd:     kd,
 	}
 }
 
@@ -260,7 +261,7 @@ func (s *HttpDetector) Build(
 		serverFrameStack,
 		request,
 		response,
-		s.sevretKey,
+		s.kd,
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)

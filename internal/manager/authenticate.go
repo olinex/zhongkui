@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -63,6 +64,8 @@ type JwtAuthenticator struct {
 	cfg *AuthConfig
 	// db 数据库连接，用于验证用户信息
 	db *database.DB
+	// kd 密钥派生器，用于从密码派生密钥
+	kd *crypto.KeyDerivation
 }
 
 // NewJwtAuthenticator 创建新的 JWT 认证器实例
@@ -72,10 +75,11 @@ type JwtAuthenticator struct {
 //
 // 返回:
 //   - *JwtAuthenticator: 新创建的认证器实例
-func NewJwtAuthenticator(cfg *AuthConfig, db *database.DB) *JwtAuthenticator {
+func NewJwtAuthenticator(cfg *AuthConfig, db *database.DB, kd *crypto.KeyDerivation) *JwtAuthenticator {
 	return &JwtAuthenticator{
 		cfg: cfg,
 		db:  db,
+		kd:  kd,
 	}
 }
 
@@ -149,8 +153,11 @@ func (j *JwtAuthenticator) Parse(token string) (*jwt.Token, *UserClaims, error) 
 	jToken, err := jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, jwt.ErrHashUnavailable
+		} else if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
+			return nil, errors.WithStack(err)
+		} else {
+			return cryptoKey, nil
 		}
-		return []byte(j.cfg.SecretKey), nil
 	})
 	return jToken, &claims, errors.WithStack(err)
 }
@@ -162,7 +169,7 @@ func (j *JwtAuthenticator) Parse(token string) (*jwt.Token, *UserClaims, error) 
 //
 // 返回:
 //   - *core.User: 认证成功的用户对象，认证失败返回 nil
-func (j *JwtAuthenticator) Authenticate(c *gin.Context) *core.User {
+func (j *JwtAuthenticator) Authenticate(c *gin.Context, kd *crypto.KeyDerivation) *core.User {
 	token := j.getPureToken(c)
 	if token == "" {
 		return nil
@@ -197,7 +204,9 @@ func (j *JwtAuthenticator) Sign(user *core.User) (string, *CodeError) {
 		Email:            user.Email,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	if tokenStr, err := token.SignedString([]byte(j.cfg.SecretKey)); err != nil {
+	if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
+		return "", CreateAccidentError(err)
+	} else if tokenStr, err := token.SignedString(cryptoKey); err != nil {
 		// TODO: log
 		return "", ErrJwtBadToken
 	} else {
@@ -273,7 +282,7 @@ func (j *JwtAuthenticator) AuthenticateMiddleware(allowAnonymous bool) gin.Handl
 		_, span := StartMiddlewareSpan(c, "authenticate")
 		defer span.End()
 		attrs := []attribute.KeyValue{attribute.Bool("allow-anon", allowAnonymous)}
-		if user := j.Authenticate(c); user != nil {
+		if user := j.Authenticate(c, j.kd); user != nil {
 			attrs = append(attrs, attribute.String("user", user.UnionID.String()))
 			c.Set(USER_CTX_NAME, user)
 		} else if allowAnonymous {

@@ -85,7 +85,7 @@ func (s *S3Client) GetEndpoint() string {
 //	if err != nil {
 //	    log.Fatal("Failed to create S3 client:", err)
 //	}
-func NewS3Client(cfg *Config, opts ...ClientOption) (*S3Client, error) {
+func NewS3Client(cfg *Config, kd *crypto.KeyDerivation, opts ...ClientOption) (*S3Client, error) {
 	mOpts := &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.UseSSL,
@@ -96,7 +96,9 @@ func NewS3Client(cfg *Config, opts ...ClientOption) (*S3Client, error) {
 	}
 	if client, err := minio.New(cfg.Endpoint, mOpts); err != nil {
 		return nil, errors.WithStack(err)
-	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cfg.CryptoKey); err != nil {
+	} else if cryptoKey, err := cfg.ExtractCryptoKey(kd); err != nil {
+		return nil, errors.WithStack(err)
+	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cryptoKey); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
 		return &S3Client{
@@ -136,7 +138,7 @@ func (s *S3Client) GetObject(ctx context.Context, objectKey string, opts minio.G
 	return s.cli.GetObject(ctx, s.bucket, objectKey, opts)
 }
 
-func (s *S3Client) CGetOject(ctx context.Context, objectKey, secretKey string, opts minio.GetObjectOptions) (io.ReadCloser, error) {
+func (s *S3Client) CGetOject(ctx context.Context, objectKey string, cryptoKey []byte, opts minio.GetObjectOptions) (io.ReadCloser, error) {
 	if obj, err := s.GetObject(ctx, objectKey, opts); err != nil {
 		return nil, errors.WithStack(err)
 	} else if info, err := obj.Stat(); err != nil {
@@ -146,9 +148,9 @@ func (s *S3Client) CGetOject(ctx context.Context, objectKey, secretKey string, o
 		return nil, errors.WithStack(err)
 	} else if info.Size == 0 {
 		return nil, nil
-	} else if secretKey == "" {
+	} else if cryptoKey == nil {
 		return s.pipeline.DecryptDecompress(obj)
-	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(secretKey); err != nil {
+	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cryptoKey); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
 		return pipeline.DecryptDecompress(obj)
@@ -178,14 +180,14 @@ func (s *S3Client) FGetObject(ctx context.Context, objectKey, filePath string, o
 	return s.cli.FGetObject(ctx, s.bucket, objectKey, filePath, opts)
 }
 
-func (s *S3Client) CPutObject(ctx context.Context, objectKey, secretKey string, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
+func (s *S3Client) CPutObject(ctx context.Context, objectKey string, cryptoKey []byte, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
 	pipeReader, pipeWriter := io.Pipe()
 	defer pipeReader.Close()
 	defer pipeWriter.Close()
 	var pipeline *crypto.Pipeline
-	if secretKey == "" {
+	if cryptoKey == nil {
 		pipeline = s.pipeline
-	} else if tmp, err := crypto.NewZstdAESGCMPipeline(secretKey); err != nil {
+	} else if tmp, err := crypto.NewZstdAESGCMPipeline(cryptoKey); err != nil {
 		return minio.UploadInfo{}, errors.WithStack(err)
 	} else {
 		pipeline = tmp

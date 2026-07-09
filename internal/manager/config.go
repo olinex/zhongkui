@@ -17,12 +17,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 )
 
 // PREFIX 是 API 管理层配置在 Viper 中的键前缀，
 // 所有 API 管理层的配置项均位于 "api" 前缀之下。
 // 例如：api.host、api.port、api.auth.secretKey 等。
-const PREFIX = "api"
+const (
+	PREFIX            = "api"
+	CRYPTO_KEY_OFFSET = 9820
+	CRYPTO_KEY_LENGTH = 32
+)
 
 // CONFIG_CTX_NAME 是配置对象在 Gin 上下文中存储时使用的键名，
 // 用于 ConfigMiddleware 注入和 GetConfig 提取配置。
@@ -61,9 +66,6 @@ type AuthConfig struct {
 	// Audience 是 JWT 令牌的目标受众列表（aud 声明），
 	// 限定令牌的接收方，验证时会校验请求方是否在受众列表中
 	Audience []string `mapstructure:"audience" default:"[\"web\"]"`
-	// SecretKey 是 JWT 令牌的签名密钥，
-	// 生产环境必须设置为强随机字符串，默认值 "-" 仅用于开发调试
-	SecretKey string `mapstructure:"secretKey" default:"-"`
 	// TokenPrefix 是令牌在传输时携带的前缀标识，
 	// 类似于 HTTP Authorization 头的 "Bearer " 方案，用于从原始令牌值中区分出 JWT
 	TokenPrefix string `mapstructure:"tokenPrefix" default:"Bearer:"`
@@ -84,6 +86,10 @@ type AuthConfig struct {
 	AccessKeyCount uint `mapstructure:"accessKeyCount" default:"3"`
 }
 
+func (a *AuthConfig) ExtractCryptoKey(kd *crypto.KeyDerivation) ([]byte, error) {
+	return kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
+}
+
 // ToJwtRegisterClaims 将认证配置转换为 JWT 标准注册声明（Registered Claims）。
 //
 // 该方法基于当前认证配置生成符合 JWT RFC 7519 规范的标准声明集合，
@@ -92,13 +98,13 @@ type AuthConfig struct {
 //
 // 返回值：
 //   - jwt.RegisteredClaims: 可直接用于 jwt.Token 签名的标准声明
-func (j *AuthConfig) ToJwtRegisterClaims() jwt.RegisteredClaims {
+func (a *AuthConfig) ToJwtRegisterClaims() jwt.RegisteredClaims {
 	now := time.Now()
 	return jwt.RegisteredClaims{
-		Issuer:    j.Issuer,
-		Subject:   j.Subject,
-		Audience:  j.Audience,
-		ExpiresAt: jwt.NewNumericDate(now.Add(j.TokenTimeout)),
+		Issuer:    a.Issuer,
+		Subject:   a.Subject,
+		Audience:  a.Audience,
+		ExpiresAt: jwt.NewNumericDate(now.Add(a.TokenTimeout)),
 		NotBefore: jwt.NewNumericDate(now),
 		IssuedAt:  jwt.NewNumericDate(now),
 	}
