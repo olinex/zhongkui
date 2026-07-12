@@ -1,4 +1,4 @@
-package crypto
+package combine
 
 import (
 	"bytes"
@@ -13,17 +13,17 @@ func TestAESGCMEncryptor(t *testing.T) {
 		Convey("Should create encryptor with valid key lengths", func() {
 			for _, length := range []int{16, 24, 32} {
 				key := make([]byte, length)
-				e, err := NewAESGCMEncryptor(key)
+				e, err := NewAESGCMCryptor(key)
 				So(err, ShouldBeNil)
 				So(e, ShouldNotBeNil)
-				So(e.AlgoID(), ShouldEqual, AlgoEncryptionAESGCM)
+				So(e.ModeID(), ShouldEqual, MODE_ENCRYPTION_AES_GCM)
 			}
 		})
 
 		Convey("Should reject invalid key lengths", func() {
 			for _, length := range []int{0, 1, 8, 15, 17, 20, 31, 33} {
 				key := make([]byte, length)
-				_, err := NewAESGCMEncryptor(key)
+				_, err := NewAESGCMCryptor(key)
 				So(err, ShouldNotBeNil)
 			}
 		})
@@ -32,7 +32,7 @@ func TestAESGCMEncryptor(t *testing.T) {
 			key := make([]byte, 32)
 			original := []byte("hello world, this is sensitive data!")
 
-			e, err := NewAESGCMEncryptor(key)
+			e, err := NewAESGCMCryptor(key)
 			So(err, ShouldBeNil)
 
 			// 加密
@@ -64,7 +64,7 @@ func TestAESGCMEncryptor(t *testing.T) {
 
 		Convey("Should handle empty data", func() {
 			key := make([]byte, 32)
-			e, _ := NewAESGCMEncryptor(key)
+			e, _ := NewAESGCMCryptor(key)
 
 			var encrypted bytes.Buffer
 			w, _ := e.WrapWriter(&encrypted)
@@ -86,7 +86,7 @@ func TestAESGCMEncryptor(t *testing.T) {
 				large[i] = byte(i % 256)
 			}
 
-			e, _ := NewAESGCMEncryptor(key)
+			e, _ := NewAESGCMCryptor(key)
 
 			var encrypted bytes.Buffer
 			w, _ := e.WrapWriter(&encrypted)
@@ -109,13 +109,13 @@ func TestAESGCMEncryptor(t *testing.T) {
 			key2[31] = 0x02
 			original := []byte("secret data")
 
-			e1, _ := NewAESGCMEncryptor(key1)
+			e1, _ := NewAESGCMCryptor(key1)
 			var encrypted bytes.Buffer
 			w, _ := e1.WrapWriter(&encrypted)
 			w.Write(original)
 			w.Close()
 
-			e2, _ := NewAESGCMEncryptor(key2)
+			e2, _ := NewAESGCMCryptor(key2)
 			r, _ := e2.WrapReader(&encrypted)
 			_, err := io.ReadAll(r)
 			So(err, ShouldNotBeNil)
@@ -126,7 +126,7 @@ func TestAESGCMEncryptor(t *testing.T) {
 			key := make([]byte, 32)
 			original := []byte("same data")
 
-			e, _ := NewAESGCMEncryptor(key)
+			e, _ := NewAESGCMCryptor(key)
 
 			var enc1, enc2 bytes.Buffer
 			w1, _ := e.WrapWriter(&enc1)
@@ -146,7 +146,7 @@ func TestAESGCMEncryptor(t *testing.T) {
 func TestAESGCMEncryptorConcurrent(t *testing.T) {
 	Convey("Test AESGCMEncryptor concurrent safety", t, func() {
 		key := make([]byte, 32)
-		e, _ := NewAESGCMEncryptor(key)
+		e, _ := NewAESGCMCryptor(key)
 
 		for i := 0; i < 10; i++ {
 			var buf bytes.Buffer

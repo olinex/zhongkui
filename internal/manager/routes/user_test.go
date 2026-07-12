@@ -17,6 +17,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -88,13 +89,13 @@ func createUserSelfTestAuthConfig() *manager.AuthConfig {
 	}
 }
 
-func createTestKeyDerivation() *crypto.KeyDerivation {
-	provider := crypto.NewConfigFileSecretKeyProvider("test-secret-key-for-unit-test")
-	book, err := crypto.LoadPasswordBook("")
+func createTestKeyDerivation() *key.KeyDerivation {
+	provider := key.NewConfigFileSecretKeyProvider("test-secret-key-for-unit-test")
+	book, err := key.LoadPasswordBook("")
 	if err != nil {
 		panic("failed to load password book: " + err.Error())
 	}
-	return crypto.NewKeyDerivation(provider, book)
+	return key.NewKeyDerivation(provider, book)
 }
 
 func createTestLoggingLogger() *logging.Logger {

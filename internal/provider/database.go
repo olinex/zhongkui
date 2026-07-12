@@ -6,6 +6,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
+	_ "zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 const (

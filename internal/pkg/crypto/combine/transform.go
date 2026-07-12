@@ -1,5 +1,4 @@
-// Package crypto 提供密码学相关的工具函数，包括密码哈希、随机字符串生成、签名验签以及流式压缩加密等功能。
-package crypto
+package combine
 
 import "io"
 
@@ -16,18 +15,7 @@ type Transform interface {
 	WrapReader(r io.Reader) (io.ReadCloser, error)
 }
 
-// AlgoIDer 标识算法的类型，用于自描述流头部写入。
-type AlgoIDer interface {
-	AlgoID() byte
+// ModeIDer 标识算法的类型，用于自描述流头部写入。
+type ModeIDer interface {
+	ModeID() byte
 }
-
-// 压缩算法标识常量
-const (
-	AlgoCompressionZstd byte = 0x01
-	AlgoCompressionGzip byte = 0x02
-)
-
-// 加密算法标识常量
-const (
-	AlgoEncryptionAESGCM byte = 0x01
-)

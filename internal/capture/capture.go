@@ -10,7 +10,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/capture/wire"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
@@ -59,7 +59,8 @@ func (c *capturer) filePath(ts time.Time) string {
 			"%d.%s.%s",
 			ts.UnixMilli(),
 			c.sessionID.String(),
-			crypto.FILE_EXT),
+			combine.FILE_EXT,
+		),
 	)
 }
 

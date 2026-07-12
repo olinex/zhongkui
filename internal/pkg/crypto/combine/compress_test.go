@@ -1,4 +1,4 @@
-package crypto
+package combine
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ func TestZstdCompressor(t *testing.T) {
 		Convey("Should create compressor with default level", func() {
 			c, err := NewZstdCompressor()
 			So(err, ShouldBeNil)
-			So(c.AlgoID(), ShouldEqual, AlgoCompressionZstd)
+			So(c.ModeID(), ShouldEqual, MODE_COMPRESSION_ZSTD)
 		})
 
 		Convey("Should compress and decompress data correctly", func() {
@@ -117,7 +117,7 @@ func TestGzipCompressor(t *testing.T) {
 		Convey("Should create compressor with default level", func() {
 			c := NewGzipCompressor()
 			So(c, ShouldNotBeNil)
-			So(c.AlgoID(), ShouldEqual, AlgoCompressionGzip)
+			So(c.ModeID(), ShouldEqual, MODE_COMPRESSION_GZIP)
 		})
 
 		Convey("Should compress and decompress data correctly", func() {

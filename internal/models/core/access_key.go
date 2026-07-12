@@ -18,8 +18,14 @@ const (
 	ACCESS_KEY_PREFIX = "akp"
 )
 
-// ErrTooManyAccessKey 表示用户创建的访问密钥数量已达上限
-var ErrTooManyAccessKey = errors.New("too many access keys")
+var (
+	// ErrTooManyAccessKey 表示用户创建的访问密钥数量已达上限
+	ErrTooManyAccessKey = errors.New("too many access keys")
+	// 编译期断言：确保 AccessKey 实现了 auth.AccessKey 接口
+	_ auth.AccessKey = (*AccessKey)(nil)
+	// 编译期断言：确保 AccessKeyPool 实现了 auth.AccessKeyPool 接口
+	_ auth.AccessKeyPool = (*AccessKeyPool)(nil)
+)
 
 // AccessKey 表示一个访问键实体，用于 API 认证和授权
 // 每个访问键属于一个用户，包含访问 ID 和密钥对

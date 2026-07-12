@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -28,7 +28,7 @@ func NewZkcn(client *S3Client, objectKey string, cryptoKey []byte, timeout time.
 
 func (t *Zkcn) Store(ctx context.Context, reader io.Reader) (minio.UploadInfo, error) {
 	opts := minio.PutObjectOptions{
-		ContentType:  crypto.COMPRESS_CONTENT_TYPE,
+		ContentType:  combine.COMPRESS_CONTENT_TYPE,
 		AutoChecksum: minio.ChecksumSHA256,
 	}
 	if t.timeout > 0 {

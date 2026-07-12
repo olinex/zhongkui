@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -65,7 +65,7 @@ type JwtAuthenticator struct {
 	// db 数据库连接，用于验证用户信息
 	db *database.DB
 	// kd 密钥派生器，用于从密码派生密钥
-	kd *crypto.KeyDerivation
+	kd *key.KeyDerivation
 }
 
 // NewJwtAuthenticator 创建新的 JWT 认证器实例
@@ -75,7 +75,7 @@ type JwtAuthenticator struct {
 //
 // 返回:
 //   - *JwtAuthenticator: 新创建的认证器实例
-func NewJwtAuthenticator(cfg *AuthConfig, db *database.DB, kd *crypto.KeyDerivation) *JwtAuthenticator {
+func NewJwtAuthenticator(cfg *AuthConfig, db *database.DB, kd *key.KeyDerivation) *JwtAuthenticator {
 	return &JwtAuthenticator{
 		cfg: cfg,
 		db:  db,
@@ -169,7 +169,7 @@ func (j *JwtAuthenticator) Parse(token string) (*jwt.Token, *UserClaims, error) 
 //
 // 返回:
 //   - *core.User: 认证成功的用户对象，认证失败返回 nil
-func (j *JwtAuthenticator) Authenticate(c *gin.Context, kd *crypto.KeyDerivation) *core.User {
+func (j *JwtAuthenticator) Authenticate(c *gin.Context, kd *key.KeyDerivation) *core.User {
 	token := j.getPureToken(c)
 	if token == "" {
 		return nil

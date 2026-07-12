@@ -1,6 +1,7 @@
 package tag
 
 import (
+	"strings"
 	"time"
 
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -58,14 +59,14 @@ func (t *AndTerm) String() string {
 		return ""
 	}
 
-	result := ""
+	var result strings.Builder
 	for i, factor := range t.Not {
 		if i > 0 {
-			result += " AND "
+			result.WriteString(" AND ")
 		}
-		result += factor.String()
+		result.WriteString(factor.String())
 	}
-	return result
+	return result.String()
 }
 
 // NotFactor 表示一个 NOT 因子，包含可选的 NOT 操作符和一个原子项

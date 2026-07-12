@@ -10,7 +10,8 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 )
 
 func TestWithTransport(t *testing.T) {
@@ -125,10 +126,10 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 			UseSSL:    false,
 		}
 
-		provider := crypto.NewConfigFileSecretKeyProvider(cryptoKeyEnv)
-		book, err := crypto.LoadPasswordBook("")
+		provider := key.NewConfigFileSecretKeyProvider(cryptoKeyEnv)
+		book, err := key.LoadPasswordBook("")
 		convey.So(err, convey.ShouldBeNil)
-		kd := crypto.NewKeyDerivation(provider, book)
+		kd := key.NewKeyDerivation(provider, book)
 
 		client, err := NewS3Client(cfg, kd)
 		convey.So(err, convey.ShouldBeNil)
@@ -174,10 +175,10 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 
 func TestNewS3Client_InvalidConfig(t *testing.T) {
 	convey.Convey("Test NewS3Client with invalid config", t, func() {
-		provider := crypto.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
-		book, err := crypto.LoadPasswordBook("")
+		provider := key.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
+		book, err := key.LoadPasswordBook("")
 		convey.So(err, convey.ShouldBeNil)
-		kd := crypto.NewKeyDerivation(provider, book)
+		kd := key.NewKeyDerivation(provider, book)
 
 		convey.Convey("should fail with unreachable endpoint", func() {
 			cfg := &Config{
@@ -199,13 +200,13 @@ func TestCPutObject_StreamEncryption(t *testing.T) {
 		convey.Convey("verify pipeline encrypts data before sending", func() {
 			key := []byte("0123456789abcdef0123456789abcdef")
 
-			compressor, err := crypto.NewZstdCompressor()
+			compressor, err := combine.NewZstdCompressor()
 			convey.So(err, convey.ShouldBeNil)
 
-			encryptor, err := crypto.NewAESGCMEncryptor(key)
+			encryptor, err := combine.NewAESGCMCryptor(key)
 			convey.So(err, convey.ShouldBeNil)
 
-			pipeline, err := crypto.NewCompressEncryptPipeline(compressor, encryptor)
+			pipeline, err := combine.NewCompressEncryptPipeline(compressor, encryptor)
 			convey.So(err, convey.ShouldBeNil)
 
 			original := []byte("stream encryption test payload")

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 )
 
 func TestTempCryptoRoundtrip(t *testing.T) {
@@ -14,13 +14,13 @@ func TestTempCryptoRoundtrip(t *testing.T) {
 		// 模拟 Store 的完整流程：压缩加密 -> 写入 -> 解密解压
 		key := []byte("0123456789abcdef0123456789abcdef") // 32 bytes for AES-256
 
-		compressor, err := crypto.NewZstdCompressor()
+		compressor, err := combine.NewZstdCompressor()
 		convey.So(err, convey.ShouldBeNil)
 
-		encryptor, err := crypto.NewAESGCMEncryptor(key)
+		encryptor, err := combine.NewAESGCMCryptor(key)
 		convey.So(err, convey.ShouldBeNil)
 
-		pipeline, err := crypto.NewCompressEncryptPipeline(compressor, encryptor)
+		pipeline, err := combine.NewCompressEncryptPipeline(compressor, encryptor)
 		convey.So(err, convey.ShouldBeNil)
 
 		convey.Convey("数据写入 → 读取应完全一致", func() {

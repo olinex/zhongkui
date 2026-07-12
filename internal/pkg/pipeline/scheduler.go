@@ -20,6 +20,12 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/redis"
 )
 
+var (
+	// 编译期断言：确保 Scheduler 实现了 etcd.ElectionHandler 接口
+	_ asynq.Logger         = (*schedulerLogger)(nil)
+	_ etcd.ElectionHandler = (*Scheduler)(nil)
+)
+
 // schedulerLogger 是 asynq.Logger 接口的适配器。
 // PeriodicTaskManager 与 Server 共享同一个 Redis 连接，
 // 其内部 Scheduler.Shutdown 调用 client.Close() 时会因共享连接返回错误，
@@ -28,8 +34,6 @@ type schedulerLogger struct {
 	ctx    context.Context
 	logger *logging.Logger
 }
-
-var _ asynq.Logger = (*schedulerLogger)(nil)
 
 func (l *schedulerLogger) Debug(args ...any) { l.logger.With("context", l.ctx).Debug(args...) }
 func (l *schedulerLogger) Info(args ...any)  { l.logger.With("context", l.ctx).Info(args...) }

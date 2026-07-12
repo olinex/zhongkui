@@ -58,6 +58,8 @@ const (
 // 这些实例在包初始化时创建，可在路由处理函数中直接使用，
 // 避免重复创建相同的错误对象。
 var (
+	// 编译期断言：确保 DetailContext 实现了 LocalizedError 接口
+	_ LocalizedError = (*DetailContext)(nil)
 	// SimpleOK 表示请求成功的响应，HTTP 状态码和业务码均为 200
 	SimpleOK = CreateCodeError(http.StatusOK, http.StatusOK, nil)
 	// ErrDefaultPageNotFound 表示请求的资源不存在（404）

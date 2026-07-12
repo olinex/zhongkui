@@ -1,4 +1,4 @@
-package crypto
+package key
 
 import (
 	_ "embed"
@@ -7,6 +7,9 @@ import (
 
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
+
+// PASSWORD_BOOK_SIZE 定义密码本的固定大小（字节数）。
+const PASSWORD_BOOK_SIZE = 65536
 
 //go:embed default_password_book.bin
 var defaultPasswordBookData []byte

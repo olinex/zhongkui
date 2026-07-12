@@ -1,4 +1,4 @@
-package crypto
+package combine
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ func TestPipelineWithZstd(t *testing.T) {
 		compressor, err := NewZstdCompressor()
 		So(err, ShouldBeNil)
 
-		encryptor, err := NewAESGCMEncryptor(key)
+		encryptor, err := NewAESGCMCryptor(key)
 		So(err, ShouldBeNil)
 
 		pipeline, err := NewCompressEncryptPipeline(compressor, encryptor)
@@ -64,9 +64,9 @@ func TestPipelineWithZstd(t *testing.T) {
 			// version 应为 1
 			So(data[4], ShouldEqual, 0x01)
 			// compressID 应为 Zstd
-			So(data[5], ShouldEqual, AlgoCompressionZstd)
+			So(data[5], ShouldEqual, MODE_COMPRESSION_ZSTD)
 			// encryptID 应为 AES-GCM
-			So(data[6], ShouldEqual, AlgoEncryptionAESGCM)
+			So(data[6], ShouldEqual, MODE_ENCRYPTION_AES_GCM)
 		})
 
 		Convey("Should handle empty data", func() {
@@ -125,7 +125,7 @@ func TestPipelineWithGzip(t *testing.T) {
 		key := make([]byte, 32)
 
 		compressor := NewGzipCompressor()
-		encryptor, _ := NewAESGCMEncryptor(key)
+		encryptor, _ := NewAESGCMCryptor(key)
 
 		pipeline, err := NewCompressEncryptPipeline(compressor, encryptor)
 		So(err, ShouldBeNil)
@@ -152,8 +152,8 @@ func TestPipelineWithGzip(t *testing.T) {
 			w.Close()
 
 			data := buf.Bytes()
-			So(data[5], ShouldEqual, AlgoCompressionGzip)
-			So(data[6], ShouldEqual, AlgoEncryptionAESGCM)
+			So(data[5], ShouldEqual, MODE_COMPRESSION_GZIP)
+			So(data[6], ShouldEqual, MODE_ENCRYPTION_AES_GCM)
 		})
 	})
 }
@@ -165,7 +165,7 @@ func TestPipelineAlgorithmMismatch(t *testing.T) {
 		Convey("Should reject mismatched compression algorithm", func() {
 			// 用 gzip 压缩
 			compressor := NewGzipCompressor()
-			encryptor, _ := NewAESGCMEncryptor(key)
+			encryptor, _ := NewAESGCMCryptor(key)
 			pipeline1, _ := NewCompressEncryptPipeline(compressor, encryptor)
 
 			var buf bytes.Buffer
@@ -182,7 +182,7 @@ func TestPipelineAlgorithmMismatch(t *testing.T) {
 
 		Convey("Should reject invalid magic bytes", func() {
 			compressor := NewGzipCompressor()
-			enc, _ := NewAESGCMEncryptor(key)
+			enc, _ := NewAESGCMCryptor(key)
 			pipeline, _ := NewCompressEncryptPipeline(compressor, enc)
 
 			invalidReader := bytes.NewReader([]byte{
@@ -197,7 +197,7 @@ func TestPipelineAlgorithmMismatch(t *testing.T) {
 
 		Convey("Should reject unsupported version", func() {
 			compressor := NewGzipCompressor()
-			enc, _ := NewAESGCMEncryptor(key)
+			enc, _ := NewAESGCMCryptor(key)
 			pipeline, _ := NewCompressEncryptPipeline(compressor, enc)
 
 			invalidReader := bytes.NewReader([]byte{
@@ -217,7 +217,7 @@ func TestPipelineConstructErrors(t *testing.T) {
 		Convey("Should reject compressor without AlgoIDer", func() {
 			// 使用匿名 struct 实现 Transform 但没有 AlgoIDer
 			badCompressor := &mockTransform{}
-			encryptor, _ := NewAESGCMEncryptor(make([]byte, 32))
+			encryptor, _ := NewAESGCMCryptor(make([]byte, 32))
 
 			_, err := NewCompressEncryptPipeline(badCompressor, encryptor)
 			So(err, ShouldNotBeNil)
@@ -237,7 +237,7 @@ func TestPipelineConcurrent(t *testing.T) {
 	Convey("Test Pipeline concurrent usage", t, func() {
 		key := make([]byte, 32)
 		compressor, _ := NewZstdCompressor()
-		encryptor, _ := NewAESGCMEncryptor(key)
+		encryptor, _ := NewAESGCMCryptor(key)
 		pipeline, _ := NewCompressEncryptPipeline(compressor, encryptor)
 
 		var wg sync.WaitGroup
@@ -387,8 +387,8 @@ func TestDecryptDecompressCloseAllResources(t *testing.T) {
 		var records []string
 
 		// 创建带追踪的 compressor 和 encryptor
-		compressor := &trackingTransform{readerName: "decomp", algoID: AlgoCompressionZstd, records: &records}
-		encryptor := &trackingTransform{readerName: "enc", algoID: AlgoEncryptionAESGCM, records: &records}
+		compressor := &trackingTransform{readerName: "decomp", algoID: MODE_COMPRESSION_ZSTD, records: &records}
+		encryptor := &trackingTransform{readerName: "enc", algoID: MODE_ENCRYPTION_AES_GCM, records: &records}
 
 		pipeline, err := NewCompressEncryptPipeline(compressor, encryptor)
 		So(err, ShouldBeNil)

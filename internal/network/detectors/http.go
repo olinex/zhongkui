@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/tcp"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -24,9 +24,6 @@ const (
 	// 当识别到HTTP请求或响应时使用此值，表示Payload中包含HTTP协议数据。
 	// HTTP协议识别基于请求行、响应行、头部字段等HTTP协议特征进行判断。
 	AppHTTP tcp.AppProtocol = "http"
-)
-
-const (
 	// HTTPVersion10 表示 HTTP/1.0 版本。
 	HTTPVersion10 = "HTTP/1.0"
 	// HTTPVersion11 表示 HTTP/1.1 版本。
@@ -35,15 +32,18 @@ const (
 	NewLine = "\r\n"
 )
 
+// 编译期断言：确保 HttpDetector 实现了 tcp.AppProtocolDetector 接口
+var _ tcp.AppProtocolDetector = (*HttpDetector)(nil)
+
 // HttpDetector HTTP协议检测器
 // 实现tcp.AppProtocolDetector接口，用于检测和提取TCP流中的HTTP协议数据
 // 该检测器负责识别HTTP请求和响应，解析HTTP协议头部，并构建完整的HTTP传输对象
 type HttpDetector struct {
 	client *s3.S3Client
-	kd     *crypto.KeyDerivation
+	kd     *key.KeyDerivation
 }
 
-func NewHttpDetector(client *s3.S3Client, kd *crypto.KeyDerivation) *HttpDetector {
+func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector {
 	return &HttpDetector{
 		client: client,
 		kd:     kd,

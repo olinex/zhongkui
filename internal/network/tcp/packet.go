@@ -8,6 +8,12 @@ import (
 	n "zhongkui.com/zhongkui/internal/models/network"
 )
 
+var (
+	// 编译期断言：确保 network 包中的 TCP 数据包类型实现了 TCPPacket 接口
+	_ TCPPacket = (*n.PacketIPv4TCP)(nil)
+	_ TCPPacket = (*n.PacketIPv6TCP)(nil)
+)
+
 // TCPPacket 是TCP数据包的通用接口，封装了网络层捕获的TCP数据包信息。
 // 该接口支持泛型设计，可适配不同的TCP数据包实现，如IPv4 TCP和IPv6 TCP。
 // 接口定义了TCP数据包的核心属性和方法，用于在网络数据包处理流水线中进行

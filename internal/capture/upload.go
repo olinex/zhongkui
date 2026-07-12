@@ -7,7 +7,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"zhongkui.com/zhongkui/internal/capture/totel"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -39,7 +39,7 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (e
 		objectKey,
 		filePath,
 		minio.PutObjectOptions{
-			ContentType:  crypto.COMPRESS_CONTENT_TYPE,
+			ContentType:  combine.COMPRESS_CONTENT_TYPE,
 			AutoChecksum: minio.ChecksumSHA256,
 			Expires:      time.Now().Add(c.uploadCfg.ExpireAge),
 		},

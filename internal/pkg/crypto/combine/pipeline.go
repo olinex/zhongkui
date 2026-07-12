@@ -1,4 +1,4 @@
-package crypto
+package combine
 
 import (
 	"io"
@@ -23,27 +23,27 @@ const (
 // 输出流包含自描述头部，携带压缩算法和加密算法的标识信息。
 type Pipeline struct {
 	compressor Transform
-	encryptor  Transform
+	cryptor    Transform
 	compressID byte
-	encryptID  byte
+	cryptID    byte
 }
 
 // NewCompressEncryptPipeline 创建先压缩后加密的管道。
 // compressor 和 encryptor 需实现 AlgoIDer 接口，否则返回错误。
-func NewCompressEncryptPipeline(compressor, encryptor Transform) (*Pipeline, error) {
-	cIDer, ok := compressor.(AlgoIDer)
+func NewCompressEncryptPipeline(compressor, cryptor Transform) (*Pipeline, error) {
+	cIDer, ok := compressor.(ModeIDer)
 	if !ok {
-		return nil, errors.New("compressor does not implement AlgoIDer")
+		return nil, errors.New("compressor does not implement ModeIDer")
 	}
-	eIDer, ok := encryptor.(AlgoIDer)
+	eIDer, ok := cryptor.(ModeIDer)
 	if !ok {
-		return nil, errors.New("encryptor does not implement AlgoIDer")
+		return nil, errors.New("encryptor does not implement ModeIDer")
 	}
 	return &Pipeline{
 		compressor: compressor,
-		encryptor:  encryptor,
-		compressID: cIDer.AlgoID(),
-		encryptID:  eIDer.AlgoID(),
+		cryptor:    cryptor,
+		compressID: cIDer.ModeID(),
+		cryptID:    eIDer.ModeID(),
 	}, nil
 }
 
@@ -56,14 +56,14 @@ func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error) {
 	copy(header[0:4], MAGIC_BYTES)
 	header[4] = HEADER_VERSION
 	header[5] = p.compressID
-	header[6] = p.encryptID
+	header[6] = p.cryptID
 
 	if _, err := w.Write(header); err != nil {
 		return nil, errors.WithStack(err)
 	}
 
 	// 创建加密写入器（包裹 w）
-	encWriter, err := p.encryptor.WrapWriter(w)
+	encWriter, err := p.cryptor.WrapWriter(w)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -97,7 +97,7 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 	}
 
 	// 创建解密读取器（包裹 r，自动读 nonce + 解密）
-	encReader, err := p.encryptor.WrapReader(r)
+	encReader, err := p.cryptor.WrapReader(r)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -132,8 +132,8 @@ func (p *Pipeline) validateHeader(header []byte) error {
 	if header[5] != p.compressID {
 		return errors.Newf("compression algorithm mismatch: header=%d, pipeline=%d", header[5], p.compressID)
 	}
-	if header[6] != p.encryptID {
-		return errors.Newf("encryption algorithm mismatch: header=%d, pipeline=%d", header[6], p.encryptID)
+	if header[6] != p.cryptID {
+		return errors.Newf("encryption algorithm mismatch: header=%d, pipeline=%d", header[6], p.cryptID)
 	}
 	return nil
 }

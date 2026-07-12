@@ -14,7 +14,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -986,7 +986,7 @@ func NewHttpTransport(
 	clientPort, serverPort layers.TCPPort,
 	clientFrameStack, serverFrameStack FrameStack,
 	request *http.Request, response *http.Response,
-	kd *crypto.KeyDerivation,
+	kd *key.KeyDerivation,
 ) (transport *HttpTransport, err error) {
 	if meta == nil {
 		return nil, errors.New("meta is nil")

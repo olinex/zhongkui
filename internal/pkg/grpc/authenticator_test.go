@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"zhongkui.com/zhongkui/internal/pkg/auth"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/signature"
 )
 
 // mockAccessKey 是 auth.AccessKey 接口的模拟实现，用于单元测试
@@ -59,7 +59,7 @@ func (m *mockAccessKeyPool) UpdateLastAccess(_ context.Context, _ string) error 
 func buildToken(accessKeyID, secret, method string, timestamp int64, nonce string) string {
 	timestampStr := strconv.FormatInt(timestamp, 10)
 	base64Method := base64.URLEncoding.EncodeToString([]byte(method))
-	signaturer := crypto.NewHMACSHA256Signaturer(secret)
+	signaturer := signature.NewHMACSHA256Signaturer(secret)
 	raw := fmt.Sprintf("%s/%s/%s/%s", timestampStr, nonce, method, "")
 	signature, _ := signaturer.Sign(raw)
 	return fmt.Sprintf("%s:%s:%s:%s:%s", accessKeyID, timestampStr, nonce, base64Method, signature)

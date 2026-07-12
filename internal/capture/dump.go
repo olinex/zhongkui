@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/capture/wire"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -41,7 +42,7 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, c
 	buffer := bufio.NewWriterSize(file, int(c.uploadCfg.PacketBufferSize))
 	defer buffer.Flush()
 	// 流式压缩加密层，实现分块压缩后加密
-	pipeline, err := crypto.NewZstdAESGCMPipelineWithLevel(cryptoKey, c.uploadCfg.EncoderLevel)
+	pipeline, err := combine.NewZstdAESGCMPipelineWithLevel(cryptoKey, c.uploadCfg.EncoderLevel)
 	if err != nil {
 		return errors.WithStack(err)
 	}

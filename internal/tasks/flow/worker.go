@@ -10,7 +10,7 @@ import (
 
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/tcp"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
@@ -19,7 +19,7 @@ import (
 )
 
 func objectKey(name, version string) string {
-	return fmt.Sprintf(`temp/%s/%s.%s`, name, version, crypto.FILE_EXT)
+	return fmt.Sprintf(`temp/%s/%s.%s`, name, version, combine.FILE_EXT)
 }
 
 type IPv4TCPRouter = tcp.Router[*network.PacketIPv4TCP]

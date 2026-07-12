@@ -10,7 +10,8 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -53,7 +54,7 @@ type S3Client struct {
 	endpoint string
 
 	// pipeline 是加密解密管道，用于对上传下载的对象进行加密解密
-	pipeline *crypto.Pipeline
+	pipeline *combine.Pipeline
 }
 
 // GetEndpoint 返回S3服务的端点地址
@@ -85,7 +86,7 @@ func (s *S3Client) GetEndpoint() string {
 //	if err != nil {
 //	    log.Fatal("Failed to create S3 client:", err)
 //	}
-func NewS3Client(cfg *Config, kd *crypto.KeyDerivation, opts ...ClientOption) (*S3Client, error) {
+func NewS3Client(cfg *Config, kd *key.KeyDerivation, opts ...ClientOption) (*S3Client, error) {
 	mOpts := &minio.Options{
 		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
 		Secure: cfg.UseSSL,
@@ -98,7 +99,7 @@ func NewS3Client(cfg *Config, kd *crypto.KeyDerivation, opts ...ClientOption) (*
 		return nil, errors.WithStack(err)
 	} else if cryptoKey, err := cfg.ExtractCryptoKey(kd); err != nil {
 		return nil, errors.WithStack(err)
-	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cryptoKey); err != nil {
+	} else if pipeline, err := combine.NewZstdAESGCMPipeline(cryptoKey); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
 		return &S3Client{
@@ -150,7 +151,7 @@ func (s *S3Client) CGetOject(ctx context.Context, objectKey string, cryptoKey []
 		return nil, nil
 	} else if cryptoKey == nil {
 		return s.pipeline.DecryptDecompress(obj)
-	} else if pipeline, err := crypto.NewZstdAESGCMPipeline(cryptoKey); err != nil {
+	} else if pipeline, err := combine.NewZstdAESGCMPipeline(cryptoKey); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
 		return pipeline.DecryptDecompress(obj)
@@ -184,10 +185,10 @@ func (s *S3Client) CPutObject(ctx context.Context, objectKey string, cryptoKey [
 	pipeReader, pipeWriter := io.Pipe()
 	defer pipeReader.Close()
 	defer pipeWriter.Close()
-	var pipeline *crypto.Pipeline
+	var pipeline *combine.Pipeline
 	if cryptoKey == nil {
 		pipeline = s.pipeline
-	} else if tmp, err := crypto.NewZstdAESGCMPipeline(cryptoKey); err != nil {
+	} else if tmp, err := combine.NewZstdAESGCMPipeline(cryptoKey); err != nil {
 		return minio.UploadInfo{}, errors.WithStack(err)
 	} else {
 		pipeline = tmp

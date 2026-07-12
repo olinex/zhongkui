@@ -1,9 +1,10 @@
-package crypto
+package key
 
 import (
 	"crypto/sha256"
 	"io"
 	"math"
+	"sync"
 
 	"golang.org/x/crypto/hkdf"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -11,6 +12,11 @@ import (
 
 const (
 	MIN_KEY_LENGTH = 16
+)
+
+var (
+	globalKeyDerivation *KeyDerivation
+	keyDerivationOnce   sync.Once
 )
 
 type KeyDerivation struct {
@@ -23,6 +29,20 @@ func NewKeyDerivation(secretKeyProvider SecretKeyProvider, passwordBook *Passwor
 		secretKeyProvider: secretKeyProvider,
 		passwordBook:      passwordBook,
 	}
+}
+
+// InitGlobalKeyDerivation 使用 sync.Once 初始化全局唯一的 KeyDerivation 实例。
+// 多次调用仅首次生效，后续调用不会重复初始化。
+func InitGlobalKeyDerivation(secretKeyProvider SecretKeyProvider, passwordBook *PasswordBook) {
+	keyDerivationOnce.Do(func() {
+		globalKeyDerivation = NewKeyDerivation(secretKeyProvider, passwordBook)
+	})
+}
+
+// GetKeyDerivation 返回全局唯一的 KeyDerivation 实例。
+// 如果尚未调用 InitGlobalKeyDerivation 初始化，则返回 nil。
+func GetKeyDerivation() *KeyDerivation {
+	return globalKeyDerivation
 }
 
 func (k *KeyDerivation) DeriveChildKey(offset, length int) ([]byte, error) {

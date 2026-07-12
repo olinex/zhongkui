@@ -17,7 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 )
 
 // PREFIX 是 API 管理层配置在 Viper 中的键前缀，
@@ -86,7 +86,7 @@ type AuthConfig struct {
 	AccessKeyCount uint `mapstructure:"accessKeyCount" default:"3"`
 }
 
-func (a *AuthConfig) ExtractCryptoKey(kd *crypto.KeyDerivation) ([]byte, error) {
+func (a *AuthConfig) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error) {
 	return kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
 }
 

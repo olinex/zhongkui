@@ -1,4 +1,4 @@
-package crypto
+package key
 
 import (
 	"fmt"
@@ -10,6 +10,12 @@ import (
 const (
 	CRYPTO_SOURCE_CONFIG = "config"
 	CRYPTO_SOURCE_KMS    = "kms"
+)
+
+var (
+	// 编译期断言：确保各 Provider 实现了 SecretKeyProvider 接口
+	_ SecretKeyProvider = (*ConfigFileSecretKeyProvider)(nil)
+	_ SecretKeyProvider = (*KMSSecretKeyProvider)(nil)
 )
 
 // SecretKeyProvider 定义主密钥提供者接口。

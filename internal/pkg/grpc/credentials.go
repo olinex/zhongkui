@@ -10,6 +10,7 @@ import (
 
 	"google.golang.org/grpc/credentials"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/signature"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -69,7 +70,7 @@ func (pc *AccessKeySecretPerRPCCredentials) GetRequestMetadata(ctx context.Conte
 	fullMethod := fmt.Sprintf(`%s://%s%s`, service.Scheme, service.Host, method)
 
 	// 创建 HMAC-SHA256 签名器
-	signaturer := crypto.NewHMACSHA256Signaturer(pc.AccessKeySecret)
+	signaturer := signature.NewHMACSHA256Signaturer(pc.AccessKeySecret)
 
 	// TODO: 需要请求体加入签名
 	// 构建待签名的原始数据：时间戳/随机数/完整方法名/请求体（目前为空）

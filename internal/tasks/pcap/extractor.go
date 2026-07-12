@@ -15,7 +15,7 @@ import (
 	"github.com/reactivex/rxgo/v2"
 	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
@@ -64,17 +64,17 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		return errors.WithStack(e)
 	}
 	defer rc.Close()
-	compressor, e := crypto.NewZstdCompressor()
+	compressor, e := combine.NewZstdCompressor()
 	if e != nil {
 		err = e
 		return errors.WithStack(e)
 	}
-	encryptor, e := crypto.NewAESGCMEncryptor([]byte(obj.SecretKey))
+	encryptor, e := combine.NewAESGCMCryptor([]byte(obj.SecretKey))
 	if e != nil {
 		err = e
 		return errors.WithStack(e)
 	}
-	cryptoPipeline, e := crypto.NewCompressEncryptPipeline(compressor, encryptor)
+	cryptoPipeline, e := combine.NewCompressEncryptPipeline(compressor, encryptor)
 	if e != nil {
 		err = e
 		return errors.WithStack(e)

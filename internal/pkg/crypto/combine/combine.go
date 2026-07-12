@@ -1,4 +1,4 @@
-package crypto
+package combine
 
 import (
 	"github.com/klauspost/compress/zstd"
@@ -8,7 +8,7 @@ import (
 func NewZstdAESGCMPipelineWithLevel(cryptoKey []byte, compressLevel zstd.EncoderLevel) (*Pipeline, error) {
 	if compressor, err := NewZstdCompressorWithLevel(compressLevel); err != nil {
 		return nil, errors.WithStack(err)
-	} else if encryptor, err := NewAESGCMEncryptor(cryptoKey); err != nil {
+	} else if encryptor, err := NewAESGCMCryptor(cryptoKey); err != nil {
 		return nil, errors.WithStack(err)
 	} else if pipeline, err := NewCompressEncryptPipeline(compressor, encryptor); err != nil {
 		return nil, errors.WithStack(err)

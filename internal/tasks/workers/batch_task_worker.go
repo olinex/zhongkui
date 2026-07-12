@@ -11,6 +11,9 @@ import (
 	"zhongkui.com/zhongkui/internal/tasks/totel"
 )
 
+// 编译期断言：确保 BatchTaskWorker 实现了 pipeline.TaskWorker 接口
+var _ pipeline.TaskWorker = (*BatchTaskWorker)(nil)
+
 func emptyLiveFunc(ctx context.Context, task *pipeline.Task) error {
 	return nil
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
@@ -36,7 +36,7 @@ func BuildObjectKey(namespace, name, version string, timestamp time.Time, sessio
 		version,
 		timestamp.UnixMilli(),
 		sessionID.String(),
-		crypto.FILE_EXT,
+		combine.FILE_EXT,
 	)
 }
 
@@ -71,10 +71,10 @@ func ParseObjectKey(objectKey string) (namespace, name, version string, timestam
 		return
 	}
 	tmp := sourceParts[3]
-	if !strings.HasSuffix(tmp, crypto.FILE_DOT_EXT) {
+	if !strings.HasSuffix(tmp, combine.FILE_DOT_EXT) {
 		return
 	}
-	tmp = strings.TrimRight(tmp, crypto.FILE_DOT_EXT)
+	tmp = strings.TrimRight(tmp, combine.FILE_DOT_EXT)
 	nameParts := strings.Split(tmp, "_")
 	if len(nameParts) != 2 {
 		return

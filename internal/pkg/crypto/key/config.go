@@ -1,4 +1,4 @@
-package crypto
+package key
 
 import (
 	"github.com/spf13/viper"

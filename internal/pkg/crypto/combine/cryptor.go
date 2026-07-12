@@ -1,63 +1,69 @@
-package crypto
+package combine
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
 	"encoding/binary"
 	"io"
 	"sync"
 
+	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// 加密算法标识常量
 const (
-	aesGCMNonceSize = 12
-	aesGCMTagSize   = 16 // GCM 认证标签长度
+	MODE_ENCRYPTION_AES_GCM byte = 0x01
 )
 
-// chunkSize 控制每个明文分块的大小。
-// 每块达到此大小时立即加密并写入底层 writer，避免缓冲全部数据。
-const chunkSize = 64 * 1024 // 64KB
+const (
+	// CHUNK_SIZE 控制每个明文分块的大小。
+	// 每块达到此大小时立即加密并写入底层 writer，避免缓冲全部数据。
+	CHUNK_SIZE = 64 * 1024 // 64KB
+)
 
-// AESGCMEncryptor 使用 AES-GCM 认证加密算法进行流式加密和解密。
+// 编译期断言：确保 AESGCMCryptor 实现了 Transform 和 ModeIDer 接口
+var (
+	_ Transform = (*AESGCMCryptor)(nil)
+	_ ModeIDer  = (*AESGCMCryptor)(nil)
+)
+
+// AESGCMCryptor 使用 AES-GCM 认证加密算法进行流式加密和解密。
 // 内部采用分块加密模式：数据达到 chunkSize（64KB）时立即加密写入，
 // 避免大数据量时的内存暴涨。
 //
 // 密钥长度决定 AES 变体：16 字节 = AES-128，24 字节 = AES-192，32 字节 = AES-256。
-type AESGCMEncryptor struct {
+type AESGCMCryptor struct {
 	key []byte
 }
 
-// NewAESGCMEncryptor 创建基于 AES-GCM 的加密器。
+// NewAESGCMCryptor 创建基于 AES-GCM 的加密器。
 // key: AES 密钥，合法长度为 16、24 或 32 字节。
-func NewAESGCMEncryptor(cryptoKey []byte) (*AESGCMEncryptor, error) {
+func NewAESGCMCryptor(cryptoKey []byte) (*AESGCMCryptor, error) {
 	switch len(cryptoKey) {
 	case 16, 24, 32:
-		return &AESGCMEncryptor{key: cryptoKey}, nil
+		return &AESGCMCryptor{key: cryptoKey}, nil
 	default:
 		return nil, errors.Newf("invalid AES key length: %d (must be 16, 24, or 32)", len(cryptoKey))
 	}
 }
 
-// AlgoID 返回 AES-GCM 加密算法的标识字节。
-func (e *AESGCMEncryptor) AlgoID() byte { return AlgoEncryptionAESGCM }
+// ModeID 返回 AES-GCM 加密算法的标识字节。
+func (e *AESGCMCryptor) ModeID() byte { return MODE_ENCRYPTION_AES_GCM }
 
 // WrapWriter 包装 io.Writer，返回一个写入即加密的 WriteCloser。
 // 采用分块加密模式，每块格式：[4B 密文长度][12B nonce][密文]。
 // 长度前缀使解密端能逐块读取，无需全部缓冲。
-func (e *AESGCMEncryptor) WrapWriter(w io.Writer) (io.WriteCloser, error) {
+func (e *AESGCMCryptor) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	return &aesGCMWriteCloser{
 		w:         w,
 		key:       e.key,
-		chunkSize: chunkSize,
+		chunkSize: CHUNK_SIZE,
 	}, nil
 }
 
 // WrapReader 包装 io.Reader，返回一个读取即解密的 ReadCloser。
 // 输入格式为块密文：[4B 密文长度][12B nonce][密文]...
-func (e *AESGCMEncryptor) WrapReader(r io.Reader) (io.ReadCloser, error) {
+func (e *AESGCMCryptor) WrapReader(r io.Reader) (io.ReadCloser, error) {
 	return &aesGCMReadCloser{
 		r:   r,
 		key: e.key,
@@ -69,12 +75,12 @@ func (e *AESGCMEncryptor) WrapReader(r io.Reader) (io.ReadCloser, error) {
 // ---------------------------------------------------------------------------
 
 type aesGCMWriteCloser struct {
+	mu        sync.Mutex
 	w         io.Writer
 	key       []byte
 	chunkSize int
 	buf       bytes.Buffer // 当前未满块的明文缓冲区
 	closed    bool
-	mu        sync.Mutex
 }
 
 func (wc *aesGCMWriteCloser) Write(p []byte) (int, error) {
@@ -101,10 +107,7 @@ func (wc *aesGCMWriteCloser) Write(p []byte) (int, error) {
 		}
 
 		// 取 min(space, len(remaining)) 字节写入缓冲区
-		take := space
-		if take > len(remaining) {
-			take = len(remaining)
-		}
+		take := min(space, len(remaining))
 		wc.buf.Write(remaining[:take])
 		remaining = remaining[take:]
 		written += take
@@ -139,32 +142,19 @@ func (wc *aesGCMWriteCloser) flushLocked() error {
 }
 
 func (wc *aesGCMWriteCloser) encryptAndWrite(plaintext []byte) error {
-	// 生成随机 nonce
-	nonce := make([]byte, aesGCMNonceSize)
-	if _, err := rand.Read(nonce); err != nil {
-		return errors.WithStack(err)
-	}
-
-	block, err := aes.NewCipher(wc.key)
+	mode, err := mode.NewAESGCMMode(wc.key, nil)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return errors.WithStack(err)
-	}
-
 	// 加密
-	ciphertext := gcm.Seal(nil, nonce, plaintext, nil)
-
+	ciphertext, err := mode.Encrypt(plaintext)
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	// 写入 [4B 密文长度][12B nonce][密文]
 	var lenBuf [4]byte
 	binary.BigEndian.PutUint32(lenBuf[:], uint32(len(ciphertext)))
-
 	if _, err := wc.w.Write(lenBuf[:]); err != nil {
-		return errors.WithStack(err)
-	}
-	if _, err := wc.w.Write(nonce); err != nil {
 		return errors.WithStack(err)
 	}
 	if _, err := wc.w.Write(ciphertext); err != nil {
@@ -178,25 +168,15 @@ func (wc *aesGCMWriteCloser) encryptAndWrite(plaintext []byte) error {
 // ---------------------------------------------------------------------------
 
 type aesGCMReadCloser struct {
+	mu        sync.Mutex
 	r         io.Reader
 	key       []byte
 	buf       bytes.Buffer // 已解密待读取的明文
 	exhausted bool         // 所有块已读取完毕
-	initOnce  sync.Once
-	initErr   error
 	closed    bool
-	mu        sync.Mutex
 }
 
 func (rc *aesGCMReadCloser) Read(p []byte) (int, error) {
-	// 延迟初始化
-	rc.initOnce.Do(func() {
-		rc.initErr = rc.initGCM()
-	})
-	if rc.initErr != nil {
-		return 0, rc.initErr
-	}
-
 	// 当缓冲区无数据时，尝试读取下一个块
 	for rc.buf.Len() == 0 && !rc.exhausted {
 		if err := rc.readNextChunk(); err != nil {
@@ -218,10 +198,6 @@ func (rc *aesGCMReadCloser) Close() error {
 	return nil
 }
 
-func (rc *aesGCMReadCloser) initGCM() error {
-	return nil
-}
-
 func (rc *aesGCMReadCloser) readNextChunk() error {
 	// 读取 4B 密文长度
 	var lenBuf [4]byte
@@ -229,34 +205,21 @@ func (rc *aesGCMReadCloser) readNextChunk() error {
 		return err // 可能返回 io.EOF
 	}
 	cipherLen := binary.BigEndian.Uint32(lenBuf[:])
-
-	// 读取 nonce
-	nonce := make([]byte, aesGCMNonceSize)
-	if _, err := io.ReadFull(rc.r, nonce); err != nil {
-		return errors.WithStack(err)
-	}
-
 	// 读取密文
 	ciphertext := make([]byte, cipherLen)
 	if _, err := io.ReadFull(rc.r, ciphertext); err != nil {
 		return errors.WithStack(err)
 	}
-
 	// 解密
-	block, err := aes.NewCipher(rc.key)
+	mode, err := mode.NewAESGCMMode(rc.key, nil)
 	if err != nil {
 		return errors.WithStack(err)
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return errors.WithStack(err)
-	}
 
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	}
+	plaintext, err := mode.Decrypt(ciphertext)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-
 	rc.buf.Write(plaintext)
 	return nil
 }

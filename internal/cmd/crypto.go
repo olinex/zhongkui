@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -18,7 +18,7 @@ var createPasswordBookCmd = &cobra.Command{
 	Long:  "Generate a cryptographically secure random password book file (65536 bytes) used for child key derivation.",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Generate PasswordBookSize (65536) random bytes using crypto/rand
-		data := make([]byte, crypto.PASSWORD_BOOK_SIZE)
+		data := make([]byte, key.PASSWORD_BOOK_SIZE)
 		if _, err := rand.Read(data); err != nil {
 			return errors.WithStack(err)
 		}

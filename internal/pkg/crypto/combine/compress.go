@@ -1,4 +1,4 @@
-package crypto
+package combine
 
 import (
 	"compress/gzip"
@@ -8,9 +8,23 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// 压缩算法标识常量
+const (
+	MODE_COMPRESSION_ZSTD byte = 0x01
+	MODE_COMPRESSION_GZIP byte = 0x02
+)
+
 // ---------------------------------------------------------------------------
 // ZstdCompressor — 基于 Zstandard 的压缩/解压（默认）
 // ---------------------------------------------------------------------------
+
+// 编译期断言：确保 ZstdCompressor 和 GzipCompressor 实现了 Transform 和 ModeIDer 接口
+var (
+	_ Transform = (*ZstdCompressor)(nil)
+	_ ModeIDer  = (*ZstdCompressor)(nil)
+	_ Transform = (*GzipCompressor)(nil)
+	_ ModeIDer  = (*GzipCompressor)(nil)
+)
 
 // ZstdCompressor 使用 Zstandard 算法进行流式压缩和解压。
 type ZstdCompressor struct {
@@ -28,8 +42,8 @@ func NewZstdCompressorWithLevel(level zstd.EncoderLevel) (*ZstdCompressor, error
 	return &ZstdCompressor{level: level}, nil
 }
 
-// AlgoID 返回 Zstd 压缩算法的标识字节。
-func (c *ZstdCompressor) AlgoID() byte { return AlgoCompressionZstd }
+// ModeID 返回 Zstd 压缩算法的标识字节。
+func (c *ZstdCompressor) ModeID() byte { return MODE_COMPRESSION_ZSTD }
 
 // WrapWriter 包装 io.Writer，返回一个写入即压缩的 WriteCloser。
 func (c *ZstdCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error) {
@@ -73,8 +87,8 @@ func NewGzipCompressorWithLevel(level int) (*GzipCompressor, error) {
 	return &GzipCompressor{level: level}, nil
 }
 
-// AlgoID 返回 Gzip 压缩算法的标识字节。
-func (c *GzipCompressor) AlgoID() byte { return AlgoCompressionGzip }
+// ModeID 返回 Gzip 压缩算法的标识字节。
+func (c *GzipCompressor) ModeID() byte { return MODE_COMPRESSION_GZIP }
 
 // WrapWriter 包装 io.Writer，返回一个写入即压缩的 WriteCloser。
 func (c *GzipCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error) {

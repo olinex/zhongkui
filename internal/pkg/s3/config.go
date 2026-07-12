@@ -3,7 +3,7 @@ package s3
 import (
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 )
 
 // PREFIX 是S3配置在配置文件中的前缀
@@ -56,7 +56,7 @@ type Config struct {
 	UseSSL bool `mapstructure:"useSSL" default:"true" comment:"use HTTPS for S3 connections (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
 }
 
-func (c *Config) ExtractCryptoKey(kd *crypto.KeyDerivation) ([]byte, error) {
+func (c *Config) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error) {
 	return kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
 }
 

@@ -11,9 +11,12 @@ import (
 	"time"
 
 	"zhongkui.com/zhongkui/internal/pkg/auth"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/signature"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
+
+// 编译期断言：确保 AccessKeyAuthenticator 实现了 Authenticator 接口
+var _ Authenticator = (*AccessKeyAuthenticator)(nil)
 
 // Authenticator 定义gRPC认证器接口，用于处理请求的身份验证。
 // 不同的认证协议可以实现该接口，提供不同的认证逻辑。
@@ -125,7 +128,7 @@ func (a *AccessKeyAuthenticator) Handle(ctx context.Context, method, token strin
 		return "", ErrAccessKeyExpired
 	} else {
 		// 第7步：签名验证
-		signaturer := crypto.NewHMACSHA256Signaturer(key.Secret())
+		signaturer := signature.NewHMACSHA256Signaturer(key.Secret())
 		// TODO: 需要请求体加入签名
 		// 构建待签名的原始数据，格式为：timestamp/nonce/method/body
 		// 当前body部分为空字符串，后续需要将请求体加入签名以增强安全性
