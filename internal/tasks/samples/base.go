@@ -101,8 +101,8 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	c.SoMsg("Accept-Encoding不匹配", app.ReqHdrAcceptEncoding, ShouldEqual, req.Header.Get("Accept-Encoding"))
 	c.SoMsg("Referer不匹配", app.ReqHdrReferer, ShouldEqual, req.Header.Get("Referer"))
 	c.SoMsg("Connection不匹配", app.ReqHdrConnection, ShouldEqual, req.Header.Get("Connection"))
-	c.SoMsg("Cookie不匹配", app.ReqHdrCookie, ShouldEqual, req.Header.Get("Cookie"))
-	c.SoMsg("Authorization不匹配", app.ReqHdrAuthorization, ShouldEqual, req.Header.Get("Authorization"))
+	c.SoMsg("Cookie不匹配", string(app.ReqHdrCookie.Value()), ShouldEqual, req.Header.Get("Cookie"))
+	c.SoMsg("Authorization不匹配", string(app.ReqHdrAuthorization.Value()), ShouldEqual, req.Header.Get("Authorization"))
 	c.SoMsg("请求Content-Type不匹配", app.ReqHdrContentType, ShouldEqual, req.Header.Get("Content-Type"))
 
 	// 解析响应
@@ -112,7 +112,7 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 
 	// 比较响应头字段
 	c.SoMsg("Server头部不匹配", app.RspHdrServer, ShouldEqual, resp.Header.Get("Server"))
-	c.SoMsg("Set-Cookie头部不匹配", app.RspHdrSetCookie, ShouldEqual, resp.Header.Get("Set-Cookie"))
+	c.SoMsg("Set-Cookie头部不匹配", string(app.RspHdrSetCookie.Value()), ShouldEqual, resp.Header.Get("Set-Cookie"))
 	c.SoMsg("Location头部不匹配", app.RspHdrLocation, ShouldEqual, resp.Header.Get("Location"))
 	c.SoMsg("Cache-Control头部不匹配", app.RspHdrCacheControl, ShouldEqual, resp.Header.Get("Cache-Control"))
 	c.SoMsg("Content-Encoding头部不匹配", app.RspHdrContentEncoding, ShouldEqual, resp.Header.Get("Content-Encoding"))

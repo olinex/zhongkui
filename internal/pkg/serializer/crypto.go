@@ -3,6 +3,7 @@ package serializer
 import (
 	"context"
 	"reflect"
+	"unsafe"
 
 	"gorm.io/gorm/schema"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
@@ -22,7 +23,15 @@ type CryptoTag struct {
 }
 
 type Crypto struct {
-	Value []byte
+	value []byte
+}
+
+func NewCrypto(value []byte) *Crypto {
+	return &Crypto{value: value}
+}
+
+func (c *Crypto) Value() []byte {
+	return c.value
 }
 
 type CryptoSerializer struct{}
@@ -77,16 +86,22 @@ func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst re
 	if fieldValue.Kind() != reflect.Pointer {
 		return errors.New("crypto: field must be a pointer to Crypto")
 	}
+	// 如果指针为 nil，先分配一个新的 Crypto 实例
+	if fieldValue.IsNil() {
+		fieldValue.Set(reflect.New(fieldValue.Type().Elem()))
+	}
 	fieldValue = fieldValue.Elem()
 	if fieldValue.Kind() != reflect.Struct {
 		return errors.New("crypto: field must be a struct (Crypto)")
 	}
-	// 设置解密后的字节数组到 Value 字段
-	valueField := fieldValue.FieldByName("Value")
-	if !valueField.IsValid() || !valueField.CanSet() {
-		return errors.New("crypto: Crypto missing Value field or not settable")
+	// 设置解密后的字节数组到 value 字段
+	// 注意：value 是 unexported 字段，在 Go 1.22+ 中 reflect.Set 会因 flagRO 被拒绝
+	// 因此通过 unsafe.Pointer 绕过只读检查
+	valueField := fieldValue.FieldByName("value")
+	if !valueField.IsValid() {
+		return errors.New("crypto: Crypto missing value field")
 	}
-	valueField.Set(reflect.ValueOf(plainText))
+	reflect.NewAt(valueField.Type(), unsafe.Pointer(valueField.UnsafeAddr())).Elem().Set(reflect.ValueOf(plainText))
 	return nil
 }
 
@@ -104,14 +119,15 @@ func (cs CryptoSerializer) Value(ctx context.Context, field *schema.Field, dst r
 	if v.Kind() != reflect.Struct {
 		return nil, errors.New("crypto: field value must be a struct (Crypto)")
 	}
-	// 获取 Value 字段（[]byte）
-	valueField := v.FieldByName("Value")
+	// 获取 value 字段（[]byte）
+	valueField := v.FieldByName("value")
 	if !valueField.IsValid() {
-		return nil, errors.New("crypto: Crypto missing Value field")
+		return nil, errors.New("crypto: Crypto missing value field")
 	}
-	plaintext, ok := valueField.Interface().([]byte)
-	if !ok {
-		return nil, errors.Newf("crypto: Crypto.Value must be []byte, got %T", valueField.Interface())
+	plaintext := valueField.Bytes()
+	// 空数据无需加密，直接返回 nil（对应数据库 NULL）
+	if len(plaintext) == 0 {
+		return nil, nil
 	}
 	// 解析标签
 	m, err := cs.getTagMode(field)

@@ -184,7 +184,7 @@ func TestCrypto_Scan(t *testing.T) {
 		ctx := context.Background()
 
 		Convey("nil dbValue sets zero value", func() {
-			model := &CryptoTestModel{Secret: &Crypto{Value: []byte("old")}}
+			model := &CryptoTestModel{Secret: &Crypto{value: []byte("old")}}
 			dst := reflect.ValueOf(model).Elem()
 			err := cs.Scan(ctx, field, dst, nil)
 			So(err, ShouldBeNil)
@@ -237,9 +237,9 @@ func TestCrypto_Scan(t *testing.T) {
 		})
 
 		Convey("valid ciphertext roundtrip via Scan/Value", func() {
-			// 使用 Value 加密
+			// 使用 value 加密
 			modelWrite := &CryptoTestModel{
-				Secret: &Crypto{Value: []byte("my secret message")},
+				Secret: &Crypto{value: []byte("my secret message")},
 			}
 			dstWrite := reflect.ValueOf(modelWrite).Elem()
 			dbValue, err := cs.Value(ctx, field, dstWrite, modelWrite.Secret)
@@ -255,7 +255,7 @@ func TestCrypto_Scan(t *testing.T) {
 			err = cs.Scan(ctx, field, dstRead, cipherBytes)
 			So(err, ShouldBeNil)
 			So(modelRead.Secret, ShouldNotBeNil)
-			So(string(modelRead.Secret.Value), ShouldEqual, "my secret message")
+			So(string(modelRead.Secret.value), ShouldEqual, "my secret message")
 		})
 	})
 }
@@ -276,7 +276,7 @@ func TestCrypto_Value(t *testing.T) {
 
 		Convey("valid fieldValue produces ciphertext", func() {
 			model := &CryptoTestModel{
-				Secret: &Crypto{Value: []byte("hello crypto")},
+				Secret: &Crypto{value: []byte("hello crypto")},
 			}
 			dst := reflect.ValueOf(model).Elem()
 			result, err := cs.Value(ctx, field, dst, model.Secret)
@@ -290,7 +290,7 @@ func TestCrypto_Value(t *testing.T) {
 
 		Convey("fieldValue is not a pointer returns error", func() {
 			model := &CryptoTestModel{
-				Secret: &Crypto{Value: []byte("data")},
+				Secret: &Crypto{value: []byte("data")},
 			}
 			dst := reflect.ValueOf(model).Elem()
 			// 传值而非指针
@@ -308,23 +308,19 @@ func TestCrypto_Value(t *testing.T) {
 			result, err := cs.Value(ctx, field, dst, wrong)
 			So(err, ShouldNotBeNil)
 			// WrongStruct 没有名为 "Value" 的字段
-			So(err.Error(), ShouldContainSubstring, "Crypto missing Value field")
+			So(err.Error(), ShouldContainSubstring, "Crypto missing value field")
 			So(result, ShouldBeNil)
 		})
 
-		Convey("empty testBytes value produces valid ciphertext", func() {
+		Convey("empty testBytes value returns nil (skip encrypt)", func() {
 			model := &CryptoTestModel{
-				Secret: &Crypto{Value: []byte{}},
+				Secret: &Crypto{value: []byte{}},
 			}
 			dst := reflect.ValueOf(model).Elem()
 			result, err := cs.Value(ctx, field, dst, model.Secret)
 			So(err, ShouldBeNil)
-			So(result, ShouldNotBeNil)
-
-			cipherBytes, ok := result.([]byte)
-			So(ok, ShouldBeTrue)
-			// 空明文加密后仍有 nonce + tag
-			So(len(cipherBytes), ShouldBeGreaterThan, 0)
+			// 空数据跳过加密，直接返回 nil
+			So(result, ShouldBeNil)
 		})
 
 		Convey("large testBytes value", func() {
@@ -333,7 +329,7 @@ func TestCrypto_Value(t *testing.T) {
 				largeData[i] = byte(i % 256)
 			}
 			model := &CryptoTestModel{
-				Secret: &Crypto{Value: largeData},
+				Secret: &Crypto{value: largeData},
 			}
 			dst := reflect.ValueOf(model).Elem()
 			result, err := cs.Value(ctx, field, dst, model.Secret)
@@ -460,7 +456,7 @@ func TestCrypto_ScanValue_Roundtrip(t *testing.T) {
 		Convey("encrypt via Value, decrypt via Scan succeeds", func() {
 			original := []byte("roundtrip test data here")
 			modelWrite := &CryptoTestModel{
-				Secret: &Crypto{Value: original},
+				Secret: &Crypto{value: original},
 			}
 			dstWrite := reflect.ValueOf(modelWrite).Elem()
 
@@ -476,24 +472,26 @@ func TestCrypto_ScanValue_Roundtrip(t *testing.T) {
 			err = cs.Scan(ctx, field, dstRead, cipherBytes)
 			So(err, ShouldBeNil)
 			So(modelRead.Secret, ShouldNotBeNil)
-			So(string(modelRead.Secret.Value), ShouldEqual, string(original))
+			So(string(modelRead.Secret.Value()), ShouldEqual, string(original))
 		})
 
-		Convey("encrypt empty data, decrypt via Scan succeeds", func() {
+		Convey("encrypt empty data returns nil, Scan handles nil", func() {
 			modelWrite := &CryptoTestModel{
-				Secret: &Crypto{Value: []byte{}},
+				Secret: &Crypto{value: []byte{}},
 			}
 			dstWrite := reflect.ValueOf(modelWrite).Elem()
 
 			dbValue, err := cs.Value(ctx, field, dstWrite, modelWrite.Secret)
 			So(err, ShouldBeNil)
-			cipherBytes, ok := dbValue.([]byte)
-			So(ok, ShouldBeTrue)
+			// 空数据跳过加密，返回 nil
+			So(dbValue, ShouldBeNil)
 
-			modelRead := &CryptoTestModel{Secret: &Crypto{}}
+			// Scan 接收到 nil 时置零字段
+			modelRead := &CryptoTestModel{Secret: &Crypto{value: []byte("should be cleared")}}
 			dstRead := reflect.ValueOf(modelRead).Elem()
-			err = cs.Scan(ctx, field, dstRead, cipherBytes)
+			err = cs.Scan(ctx, field, dstRead, nil)
 			So(err, ShouldBeNil)
+			So(modelRead.Secret, ShouldBeNil)
 		})
 	})
 }

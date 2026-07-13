@@ -2,6 +2,7 @@ package network
 
 import (
 	"github.com/gopacket/gopacket/layers"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // UDPHeaders 表示UDP协议头部信息
@@ -58,6 +59,7 @@ func NewUDPHeaders(udp *layers.UDP) *UDPHeaders {
 type PacketIPv4UDP struct {
 	PacketIPv4 // 嵌入IPv4数据包基础结构
 	UDPHeaders // 嵌入UDP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
 }
 
 // PacketIPv6UDP 表示IPv6 UDP数据包
@@ -71,6 +73,7 @@ type PacketIPv4UDP struct {
 type PacketIPv6UDP struct {
 	PacketIPv6 // 嵌入IPv6数据包基础结构
 	UDPHeaders // 嵌入UDP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
 }
 
 

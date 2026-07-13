@@ -59,7 +59,7 @@ func createTestUserInDB(db *database.DB, username, nickleName, email, password s
 		UnionID:    serializer.NewHexUUIDv4(),
 		NickleName: nickleName,
 		Username:   username,
-		Password:   hashedPassword,
+		Password:   serializer.NewCrypto(hashedPassword),
 		Email:      email,
 		Active:     active,
 	}
@@ -582,7 +582,7 @@ func TestUserSelfPasswordReset(t *testing.T) {
 
 			var updatedUser core.User
 			db.First(&updatedUser, "union_id = ?", user.UnionID)
-			So(crypto.CheckPassword(updatedUser.Password, "NewP@ssw0rd"), ShouldBeTrue)
+			So(crypto.CheckPassword(updatedUser.Password.Value(), "NewP@ssw0rd"), ShouldBeTrue)
 		})
 
 		Convey("应返回错误当旧密码错误时", func() {

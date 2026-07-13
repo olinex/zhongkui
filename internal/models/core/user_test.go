@@ -20,7 +20,7 @@ func TestUser_Fields(t *testing.T) {
 					0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
 				NickleName: "测试用户",
 				Username:   "testuser",
-				Password:   []byte("hashed_password_placeholder"),
+				Password:   serializer.NewCrypto([]byte("hashed_password_placeholder")),
 				Email:      "test@example.com",
 				Active:     true,
 			}
@@ -29,7 +29,7 @@ func TestUser_Fields(t *testing.T) {
 			convey.So(user.UnionID.String(), convey.ShouldEqual, "01020304-0506-0708-090a-0b0c0d0e0f10")
 			convey.So(user.NickleName, convey.ShouldEqual, "测试用户")
 			convey.So(user.Username, convey.ShouldEqual, "testuser")
-			convey.So(string(user.Password), convey.ShouldEqual, "hashed_password_placeholder")
+			convey.So(string(user.Password.Value()), convey.ShouldEqual, "hashed_password_placeholder")
 			convey.So(user.Email, convey.ShouldEqual, "test@example.com")
 			convey.So(user.Active, convey.ShouldBeTrue)
 		})
@@ -66,12 +66,12 @@ func TestUser_ResetPassword(t *testing.T) {
 				UnionID: serializer.HexUUID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
 					0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
 				Username: "testuser",
-				Password: []byte("old_hashed_password"),
+				Password: serializer.NewCrypto([]byte("old_hashed_password")),
 			}
 
 			// 验证用户数据正确设置
 			convey.So(user.Username, convey.ShouldEqual, "testuser")
-			convey.So(string(user.Password), convey.ShouldEqual, "old_hashed_password")
+			convey.So(string(user.Password.Value()), convey.ShouldEqual, "old_hashed_password")
 		})
 
 		convey.Convey("Should validate password requirements", func() {
@@ -115,7 +115,7 @@ func TestUser_Create(t *testing.T) {
 					0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10},
 				NickleName: "普通用户",
 				Username:   "regularuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "regular@example.com",
 				Active:     true,
 			}
@@ -133,7 +133,7 @@ func TestUser_Create(t *testing.T) {
 					0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20},
 				NickleName: "超级用户",
 				Username:   "superuser",
-				Password:   []byte("hashed_super_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_super_password")),
 				Email:      "super@example.com",
 				Active:     true,
 			}
@@ -206,21 +206,21 @@ func TestUser_PasswordSecurity(t *testing.T) {
 		convey.Convey("Should store password as encrypted bytes", func() {
 			// 验证密码以加密字节形式存储
 			user := &User{
-				Password: []byte("$2a$10$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQR"),
+				Password: serializer.NewCrypto([]byte("$2a$10$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQR")),
 			}
 
-			convey.So(user.Password, convey.ShouldNotBeEmpty)
-			convey.So(len(user.Password), convey.ShouldBeGreaterThan, 0)
+			convey.So(user.Password.Value(), convey.ShouldNotBeEmpty)
+			convey.So(len(user.Password.Value()), convey.ShouldBeGreaterThan, 0)
 		})
 
 		convey.Convey("Should not expose plain text password", func() {
 			// 验证明文密码不会暴露
 			user := &User{
-				Password: []byte("hashed_password"),
+				Password: serializer.NewCrypto([]byte("hashed_password")),
 			}
 
-			// 密码字段应该是字节切片，不是字符串
-			convey.So(user.Password, convey.ShouldHaveSameTypeAs, []byte{})
+			// 密码字段应该是 Crypto 类型，值存储在 Value 中
+			convey.So(user.Password, convey.ShouldHaveSameTypeAs, &serializer.Crypto{})
 		})
 	})
 }

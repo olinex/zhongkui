@@ -76,6 +76,16 @@ func NewLoopbackHeaders() *EthernetHeaders {
 type PacketEthernet struct {
 	AsPacket
 	EthernetHeaders
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=83,length=32"`
+}
+
+// GetPayload 返回载荷数据
+// 提供统一的接口获取载荷数据，便于后续处理
+func (p *PacketEthernet) GetPayload() []byte {
+	if p.Payload == nil {
+		return nil
+	}
+	return p.Payload.Value()
 }
 
 // FusedEthernet 表示融合后的以太网数据

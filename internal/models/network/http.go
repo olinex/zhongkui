@@ -220,9 +220,11 @@ type HttpRequestHeaders struct {
 	// ======================== 认证 (Authentication) ========================
 
 	// ReqHdrAuthorization 认证信息，包含用于向服务器验证用户代理身份的凭据，如 Bearer token、Basic 认证等
-	ReqHdrAuthorization string `gorm:"column:req_hdr_authorization;type:String CODEC(ZSTD(3))" json:"req_hdr_authorization"`
+	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
+	ReqHdrAuthorization *serializer.Crypto `gorm:"column:req_hdr_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_authorization" secure:"mode=\"aes-gcm\",offset=5123,length=32"`
 	// ReqHdrProxyAuthorization 代理认证信息，包含用于向代理服务器验证用户代理的凭据
-	ReqHdrProxyAuthorization string `gorm:"column:req_hdr_proxy_authorization;type:String CODEC(ZSTD(3))" json:"req_hdr_proxy_authorization"`
+	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
+	ReqHdrProxyAuthorization *serializer.Crypto `gorm:"column:req_hdr_proxy_authorization;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_proxy_authorization" secure:"mode=\"aes-gcm\",offset=18456,length=32"`
 
 	// ======================== 缓存 (Caching) ========================
 
@@ -268,7 +270,8 @@ type HttpRequestHeaders struct {
 	// ======================== Cookie ========================
 
 	// ReqHdrCookie 客户端发送的 HTTP Cookie，包含先前由服务器通过 Set-Cookie 标头设置并存储的 cookie
-	ReqHdrCookie string `gorm:"column:req_hdr_cookie;type:String CODEC(ZSTD(3))" json:"req_hdr_cookie"`
+	// 使用 Crypto 加密存储，Cookie 常包含会话令牌等涉敏信息
+	ReqHdrCookie *serializer.Crypto `gorm:"column:req_hdr_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_cookie" secure:"mode=\"aes-gcm\",offset=27901,length=32"`
 
 	// ======================== CORS ========================
 
@@ -327,7 +330,8 @@ type HttpRequestHeaders struct {
 	// ======================== WebSocket ========================
 
 	// ReqHdrSecWebSocketKey WebSocket 握手密钥，包含一个密钥用于验证客户端确实意图打开 WebSocket 连接
-	ReqHdrSecWebSocketKey string `gorm:"column:req_hdr_sec_websocket_key;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_websocket_key"`
+	// 使用 Crypto 加密存储，WebSocket 握手密钥涉及连接安全
+	ReqHdrSecWebSocketKey *serializer.Crypto `gorm:"column:req_hdr_sec_websocket_key;type:String CODEC(ZSTD(3));serializer:crypto" json:"req_hdr_sec_websocket_key" secure:"mode=\"aes-gcm\",offset=36234,length=32"`
 	// ReqHdrSecWebSocketVersion WebSocket 协议版本，指示客户端使用的 WebSocket 协议版本号
 	ReqHdrSecWebSocketVersion string `gorm:"column:req_hdr_sec_websocket_version;type:String CODEC(ZSTD(3))" json:"req_hdr_sec_websocket_version"`
 	// ReqHdrSecWebSocketProtocol WebSocket 子协议，指示客户端支持的子协议列表，按优先顺序排列
@@ -405,11 +409,16 @@ type HttpRequestHeaders struct {
 	ReqHdrAltUsed string `gorm:"column:req_hdr_alt_used;type:String CODEC(ZSTD(3))" json:"req_hdr_alt_used"`
 }
 
+// newCrypto 将字符串包装为 Crypto 用于加密存储，空值交由 Serializer 层自动判断处理
+func newCrypto(s string) *serializer.Crypto {
+	return serializer.NewCrypto([]byte(s))
+}
+
 func NewHttpRequestHeaders(req *http.Request) *HttpRequestHeaders {
 	return &HttpRequestHeaders{
-		// 认证
-		ReqHdrAuthorization:      req.Header.Get("Authorization"),
-		ReqHdrProxyAuthorization: req.Header.Get("Proxy-Authorization"),
+		// 认证（加密存储）
+		ReqHdrAuthorization:      newCrypto(req.Header.Get("Authorization")),
+		ReqHdrProxyAuthorization: newCrypto(req.Header.Get("Proxy-Authorization")),
 		// 缓存
 		ReqHdrCacheControl: req.Header.Get("Cache-Control"),
 		// 条件请求
@@ -428,8 +437,8 @@ func NewHttpRequestHeaders(req *http.Request) *HttpRequestHeaders {
 		// 控制
 		ReqHdrExpect:      req.Header.Get("Expect"),
 		ReqHdrMaxForwards: parseInt32(req.Header.Get("Max-Forwards")),
-		// Cookie
-		ReqHdrCookie: req.Header.Get("Cookie"),
+		// Cookie（加密存储）
+		ReqHdrCookie: newCrypto(req.Header.Get("Cookie")),
 		// CORS
 		ReqHdrOrigin:                      req.Header.Get("Origin"),
 		ReqHdrAccessControlRequestHeaders: req.Header.Get("Access-Control-Request-Headers"),
@@ -454,8 +463,8 @@ func NewHttpRequestHeaders(req *http.Request) *HttpRequestHeaders {
 		ReqHdrTE:               req.Header.Get("TE"),
 		ReqHdrTransferEncoding: req.Header.Get("Transfer-Encoding"),
 		ReqHdrTrailer:          req.Header.Get("Trailer"),
-		// WebSocket
-		ReqHdrSecWebSocketKey:        req.Header.Get("Sec-WebSocket-Key"),
+		// WebSocket（加密存储）
+		ReqHdrSecWebSocketKey:        newCrypto(req.Header.Get("Sec-WebSocket-Key")),
 		ReqHdrSecWebSocketVersion:    req.Header.Get("Sec-WebSocket-Version"),
 		ReqHdrSecWebSocketProtocol:   req.Header.Get("Sec-WebSocket-Protocol"),
 		ReqHdrSecWebSocketExtensions: req.Header.Get("Sec-WebSocket-Extensions"),
@@ -529,9 +538,11 @@ type HttpResponseHeaders struct {
 	// ======================== 认证 (Authentication) ========================
 
 	// RspHdrWWWAuthenticate 认证质询，定义应该用于访问资源的身份验证方法和参数
-	RspHdrWWWAuthenticate string `gorm:"column:rsp_hdr_www_authenticate;type:String CODEC(ZSTD(3))" json:"rsp_hdr_www_authenticate"`
+	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
+	RspHdrWWWAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_www_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_www_authenticate" secure:"mode=\"aes-gcm\",offset=44789,length=32"`
 	// RspHdrProxyAuthenticate 代理认证质询，定义应用于访问代理服务器后面资源的身份验证方法
-	RspHdrProxyAuthenticate string `gorm:"column:rsp_hdr_proxy_authenticate;type:String CODEC(ZSTD(3))" json:"rsp_hdr_proxy_authenticate"`
+	// 使用 Crypto 加密存储，防止涉敏信息泄露后被逆向破解
+	RspHdrProxyAuthenticate *serializer.Crypto `gorm:"column:rsp_hdr_proxy_authenticate;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_proxy_authenticate" secure:"mode=\"aes-gcm\",offset=53123,length=32"`
 
 	// ======================== 缓存 (Caching) ========================
 
@@ -572,7 +583,8 @@ type HttpResponseHeaders struct {
 	// ======================== Cookie ========================
 
 	// RspHdrSetCookie 设置 Cookie，将 cookie 从服务器发送到用户代理，以便后续请求中回传
-	RspHdrSetCookie string `gorm:"column:rsp_hdr_set_cookie;type:String CODEC(ZSTD(3))" json:"rsp_hdr_set_cookie"`
+	// 使用 Crypto 加密存储，Set-Cookie 常包含会话令牌等涉敏信息
+	RspHdrSetCookie *serializer.Crypto `gorm:"column:rsp_hdr_set_cookie;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_set_cookie" secure:"mode=\"aes-gcm\",offset=61234,length=32"`
 
 	// ======================== CORS ========================
 
@@ -690,7 +702,8 @@ type HttpResponseHeaders struct {
 	// ======================== WebSocket ========================
 
 	// RspHdrSecWebSocketAccept WebSocket 握手接受，指示服务器愿意升级到 WebSocket 连接
-	RspHdrSecWebSocketAccept string `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3))" json:"rsp_hdr_sec_websocket_accept"`
+	// 使用 Crypto 加密存储，WebSocket 握手响应涉及连接安全
+	RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rsp_hdr_sec_websocket_accept" secure:"mode=\"aes-gcm\",offset=70278,length=32"`
 	// RspHdrSecWebSocketProtocol WebSocket 子协议，指示服务器从客户端的偏好中选择的子协议
 	RspHdrSecWebSocketProtocol string `gorm:"column:rsp_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"rsp_hdr_sec_websocket_protocol"`
 	// RspHdrSecWebSocketExtensions WebSocket 扩展，指示服务器从客户端的偏好中选择的扩展
@@ -738,9 +751,9 @@ type HttpResponseHeaders struct {
 
 func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders {
 	return &HttpResponseHeaders{
-		// 认证
-		RspHdrWWWAuthenticate:   resp.Header.Get("WWW-Authenticate"),
-		RspHdrProxyAuthenticate: resp.Header.Get("Proxy-Authenticate"),
+		// 认证（加密存储）
+		RspHdrWWWAuthenticate:   newCrypto(resp.Header.Get("WWW-Authenticate")),
+		RspHdrProxyAuthenticate: newCrypto(resp.Header.Get("Proxy-Authenticate")),
 		// 缓存
 		RspHdrAge:           parseInt64(resp.Header.Get("Age")),
 		RspHdrCacheControl:  resp.Header.Get("Cache-Control"),
@@ -757,8 +770,8 @@ func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders {
 		// 内容协商
 		RspHdrAcceptPatch: resp.Header.Get("Accept-Patch"),
 		RspHdrAcceptPost:  resp.Header.Get("Accept-Post"),
-		// Cookie
-		RspHdrSetCookie: resp.Header.Get("Set-Cookie"),
+		// Cookie（加密存储）
+		RspHdrSetCookie: newCrypto(resp.Header.Get("Set-Cookie")),
 		// CORS
 		RspHdrAccessControlAllowCredentials: resp.Header.Get("Access-Control-Allow-Credentials"),
 		RspHdrAccessControlAllowHeaders:     resp.Header.Get("Access-Control-Allow-Headers"),
@@ -810,8 +823,8 @@ func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders {
 		// 传输编码
 		RspHdrTransferEncoding: resp.Header.Get("Transfer-Encoding"),
 		RspHdrTrailer:          resp.Header.Get("Trailer"),
-		// WebSocket
-		RspHdrSecWebSocketAccept:     resp.Header.Get("Sec-WebSocket-Accept"),
+		// WebSocket（加密存储）
+		RspHdrSecWebSocketAccept:     newCrypto(resp.Header.Get("Sec-WebSocket-Accept")),
 		RspHdrSecWebSocketProtocol:   resp.Header.Get("Sec-WebSocket-Protocol"),
 		RspHdrSecWebSocketExtensions: resp.Header.Get("Sec-WebSocket-Extensions"),
 		// 客户端提示

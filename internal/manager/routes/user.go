@@ -109,7 +109,7 @@ func userRegister(c *gin.Context) {
 		UnionID:    serializer.NewHexUUIDv4(), // 生成唯一标识符
 		Username:   in.Username,
 		NickleName: in.NickleName,
-		Password:   hashPassword,
+		Password:   serializer.NewCrypto(hashPassword),
 		Email:      in.Email,
 		Active:     true, // 新用户默认激活
 	}
@@ -137,7 +137,7 @@ func userPasswordLogin(c *gin.Context) {
 	// 从数据库查询用户（必须执行SQL查询以确保安全）
 	err := manager.GetDatabase(c).Take(&user, &core.User{Username: in.Username, Active: true}).Error
 	// 验证密码
-	passwordValid := crypto.CheckPassword(user.Password, in.Password)
+	passwordValid := user.Password != nil && crypto.CheckPassword(user.Password.Value(), in.Password)
 	auth := manager.GetAuth(c)
 	// 检查登录是否成功
 	if err != nil || user.ID == 0 || !passwordValid {
@@ -174,7 +174,7 @@ func userSelfPasswordReset(c *gin.Context) {
 	// 从数据库重新加载用户信息（必须执行SQL查询以确保安全）
 	err := db.Take(&user, &core.User{UnionID: user.UnionID, Active: true}).Error
 	// 验证旧密码
-	passwordValid := crypto.CheckPassword(user.Password, in.OldPassword)
+	passwordValid := user.Password != nil && crypto.CheckPassword(user.Password.Value(), in.OldPassword)
 	if err != nil || user.ID == 0 || !passwordValid {
 		ErrOldPasswordCheckFailed.AbortWithGinH(c)
 		return
@@ -335,7 +335,7 @@ func userSelfAccessKeyListGet(c *gin.Context) {
 			},
 			Enabled:         key.Enabled,
 			AccessKeyID:     key.AccessKeyID,
-			AccessKeySecret: key.AccessKeySecret,
+			AccessKeySecret: key.Secret(),
 			Description:     key.Description,
 			ExpiredAt:       key.RawExpiredAt,
 			LastAccessAt:    key.LastAccessAt,
@@ -399,7 +399,7 @@ func userSelfAccessKeyCreate(c *gin.Context) {
 		},
 		Enabled:         key.Enabled,
 		AccessKeyID:     key.AccessKeyID,
-		AccessKeySecret: key.AccessKeySecret,
+		AccessKeySecret: key.Secret(),
 		Description:     key.Description,
 		ExpiredAt:       key.RawExpiredAt,
 		LastAccessAt:    key.LastAccessAt,
@@ -473,7 +473,7 @@ func userSelfAccessKeyEnabled(enabled bool) gin.HandlerFunc {
 			},
 			Enabled:         key.Enabled,
 			AccessKeyID:     key.AccessKeyID,
-			AccessKeySecret: key.AccessKeySecret,
+			AccessKeySecret: key.Secret(),
 			Description:     key.Description,
 			ExpiredAt:       key.RawExpiredAt,
 			LastAccessAt:    key.LastAccessAt,

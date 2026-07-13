@@ -163,26 +163,6 @@ type CaptureMeta struct {
 	CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"capture_length"`
 }
 
-// S3Payload 表示S3存储的载荷信息
-// 当数据包载荷较大时，存储在S3对象存储中，此处存储引用信息
-type S3Payload struct {
-	S3Store  string `gorm:"type:String CODEC(ZSTD(3))" json:"s3_store"`
-	S3Offset uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"s3_offset"`
-	S3Length uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"s3_length"`
-}
-
-// BytesPayload 表示字节载荷
-// 直接存储在数据库中的载荷数据
-type BytesPayload struct {
-	Payload []byte `gorm:"type:String CODEC(ZSTD(3))" json:"payload"`
-}
-
-// GetPayload 返回载荷数据
-// 提供统一的接口获取载荷数据，便于后续处理
-func (b *BytesPayload) GetPayload() []byte {
-	return b.Payload
-}
-
 // PacketMeta 表示数据包元数据
 // 包含原始数据包的网络层堆栈信息
 type PacketMeta struct {
@@ -202,7 +182,6 @@ type AsPacket struct {
 	TimestampMeta
 	CaptureMeta
 	PacketMeta
-	BytesPayload
 }
 
 // AsFused 表示融合后的数据包结构
@@ -211,14 +190,4 @@ type AsFused struct {
 	BaseMeta
 	TimestampMeta
 	FusedMeta
-	BytesPayload
-}
-
-// AsS3 表示存储在S3的数据包结构
-// 用于存储大型数据包，载荷部分存储在S3对象存储中
-type AsS3 struct {
-	BaseMeta
-	TimestampMeta
-	FusedMeta
-	S3Payload
 }

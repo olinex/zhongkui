@@ -59,7 +59,7 @@ func TestAccessKey_Secret(t *testing.T) {
 		convey.Convey("Should return access key secret", func() {
 			expectedSecret := "test-secret-key-1234567890"
 			accessKey := &AccessKey{
-				AccessKeySecret: expectedSecret,
+				AccessKeySecret: serializer.NewCrypto([]byte(expectedSecret)),
 			}
 			convey.So(accessKey.Secret(), convey.ShouldEqual, expectedSecret)
 		})
@@ -111,7 +111,7 @@ func TestNewAccessKey(t *testing.T) {
 
 			// 验证访问键 ID 和密钥的长度
 			convey.So(len(accessKey.AccessKeyID), convey.ShouldEqual, 20)
-			convey.So(len(accessKey.AccessKeySecret), convey.ShouldEqual, 40)
+			convey.So(len(accessKey.AccessKeySecret.Value()), convey.ShouldEqual, 40)
 
 			// 测试禁用状态的访问键
 			accessKey2, err := NewAccessKey(user, false, "Disabled key", nil)
@@ -145,7 +145,7 @@ func TestNewAccessKey(t *testing.T) {
 
 			// 验证两个访问键的 ID 和密钥不同
 			convey.So(accessKey1.AccessKeyID, convey.ShouldNotEqual, accessKey2.AccessKeyID)
-			convey.So(accessKey1.AccessKeySecret, convey.ShouldNotEqual, accessKey2.AccessKeySecret)
+			convey.So(accessKey1.Secret(), convey.ShouldNotEqual, accessKey2.Secret())
 		})
 	})
 }
@@ -305,6 +305,227 @@ func TestConstants(t *testing.T) {
 	convey.Convey("Test constants", t, func() {
 		convey.Convey("ACCESS_KEY_PREFIX should have correct value", func() {
 			convey.So(ACCESS_KEY_PREFIX, convey.ShouldEqual, "akp")
+		})
+	})
+}
+
+// TestAccessKey_Secret_EdgeCases 测试 Secret 方法的边界情况
+func TestAccessKey_Secret_EdgeCases(t *testing.T) {
+	convey.Convey("Test AccessKey Secret method edge cases", t, func() {
+		convey.Convey("Should handle empty secret", func() {
+			accessKey := &AccessKey{
+				AccessKeySecret: serializer.NewCrypto([]byte("")),
+			}
+			convey.So(accessKey.Secret(), convey.ShouldEqual, "")
+		})
+
+		convey.Convey("Should handle secret with special characters", func() {
+			testCases := []string{
+				"key-with-dashes-1234567890",
+				"key.with.dots.1234567890",
+				"key_with_underscores_12345",
+				"key/with/slashes/123456789",
+				"key@with#symbols!1234567890",
+				"密钥包含中文字符测试12345678",
+				"🔑emoji-key-123456789012345",
+			}
+			for _, secret := range testCases {
+				accessKey := &AccessKey{
+					AccessKeySecret: serializer.NewCrypto([]byte(secret)),
+				}
+				convey.So(accessKey.Secret(), convey.ShouldEqual, secret)
+			}
+		})
+
+		convey.Convey("Should handle secret with control characters", func() {
+			controlChars := "key\twith\ncontrol\r\nchars"
+			accessKey := &AccessKey{
+				AccessKeySecret: serializer.NewCrypto([]byte(controlChars)),
+			}
+			convey.So(accessKey.Secret(), convey.ShouldEqual, controlChars)
+		})
+
+		convey.Convey("Should handle very long secret", func() {
+			longSecret := make([]byte, 10000)
+			for i := range longSecret {
+				longSecret[i] = byte('A' + (i % 26))
+			}
+			accessKey := &AccessKey{
+				AccessKeySecret: serializer.NewCrypto(longSecret),
+			}
+			convey.So(accessKey.Secret(), convey.ShouldEqual, string(longSecret))
+		})
+
+		convey.Convey("Should handle access key with new user entity (no pre-saved ID)", func() {
+			user := &User{
+				UnionID: serializer.NewHexUUIDv4(),
+			}
+			accessKey := &AccessKey{
+				User:            *user,
+				RawUserID:       0,
+				AccessKeySecret: serializer.NewCrypto([]byte("newuser-secret")),
+			}
+			convey.So(accessKey.Secret(), convey.ShouldEqual, "newuser-secret")
+			convey.So(accessKey.RawUserID, convey.ShouldEqual, 0)
+		})
+	})
+}
+
+// TestAccessKey_AccessKeyID_EdgeCases 测试 AccessKeyID 边界情况
+func TestAccessKey_AccessKeyID_EdgeCases(t *testing.T) {
+	convey.Convey("Test AccessKey AccessKeyID edge cases", t, func() {
+		convey.Convey("Should handle empty AccessKeyID", func() {
+			accessKey := &AccessKey{
+				AccessKeyID: "",
+			}
+			convey.So(accessKey.AccessKeyID, convey.ShouldEqual, "")
+			convey.So(len(accessKey.AccessKeyID), convey.ShouldEqual, 0)
+		})
+
+		convey.Convey("Should handle AccessKeyID with special characters", func() {
+			specialID := "akid-with!#$%&'()*+,-./0123"
+			accessKey := &AccessKey{
+				AccessKeyID: specialID,
+			}
+			convey.So(accessKey.AccessKeyID, convey.ShouldEqual, specialID)
+		})
+	})
+}
+
+// TestNewAccessKey_EdgeCases 测试 NewAccessKey 边界情况
+func TestNewAccessKey_EdgeCases(t *testing.T) {
+	convey.Convey("Test NewAccessKey edge cases", t, func() {
+		user := &User{
+			UnionID: serializer.NewHexUUIDv4(),
+		}
+
+		convey.Convey("Should handle empty description", func() {
+			accessKey, err := NewAccessKey(user, true, "", nil)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(accessKey.Description, convey.ShouldEqual, "")
+			convey.So(accessKey.AccessKeyID, convey.ShouldNotBeEmpty)
+			convey.So(len(accessKey.AccessKeyID), convey.ShouldEqual, 20)
+			convey.So(len(accessKey.AccessKeySecret.Value()), convey.ShouldEqual, 40)
+		})
+
+		convey.Convey("Should handle description with special characters", func() {
+			descriptions := []string{
+				"包含中文的描述信息",
+				"description with emoji 🚀",
+				"<script>alert('xss')</script>",
+				"SQL injection'; DROP TABLE users; --",
+				"unicode: \u0000\u0001\u0002 end",
+				"    leading and trailing spaces   ",
+				"multi\nline\ndescription",
+				"tab\tseparated\tdescription",
+			}
+			for _, desc := range descriptions {
+				accessKey, err := NewAccessKey(user, true, desc, nil)
+				convey.So(err, convey.ShouldBeNil)
+				convey.So(accessKey.Description, convey.ShouldEqual, desc)
+			}
+		})
+
+		convey.Convey("Should handle expired access key (past expiration time)", func() {
+			pastTime := time.Now().Add(-24 * time.Hour)
+			accessKey, err := NewAccessKey(user, false, "expired key", &pastTime)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(accessKey.ExpiredAt(), convey.ShouldNotBeNil)
+			convey.So(accessKey.ExpiredAt().Before(time.Now()), convey.ShouldBeTrue)
+		})
+
+		convey.Convey("Should handle far future expiration time", func() {
+			farFuture := time.Now().Add(365 * 24 * 100 * time.Hour) // ~100 年后
+			accessKey, err := NewAccessKey(user, true, "long-lived key", &farFuture)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(accessKey.ExpiredAt(), convey.ShouldNotBeNil)
+			convey.So(accessKey.ExpiredAt().After(time.Now()), convey.ShouldBeTrue)
+		})
+
+		convey.Convey("Should handle immediate expiration (zero duration)", func() {
+			now := time.Now()
+			accessKey, err := NewAccessKey(user, true, "instant-expire", &now)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(accessKey.ExpiredAt(), convey.ShouldNotBeNil)
+		})
+
+		convey.Convey("Should generate random ID and secret that are different per call", func() {
+			keys := make([]*AccessKey, 0, 100)
+			for i := 0; i < 100; i++ {
+				key, err := NewAccessKey(user, true, "batch", nil)
+				convey.So(err, convey.ShouldBeNil)
+				keys = append(keys, key)
+			}
+
+			// 验证所有生成的 ID 和 Secret 都唯一
+			ids := make(map[string]bool)
+			secrets := make(map[string]bool)
+			for _, k := range keys {
+				convey.So(ids[k.AccessKeyID], convey.ShouldBeFalse)
+				convey.So(secrets[k.Secret()], convey.ShouldBeFalse)
+				ids[k.AccessKeyID] = true
+				secrets[k.Secret()] = true
+			}
+		})
+	})
+}
+
+// TestAccessKey_CreateWithLimit_EdgeCases 测试 CreateWithLimit 边界情况
+func TestAccessKey_CreateWithLimit_EdgeCases(t *testing.T) {
+	convey.Convey("Test AccessKey CreateWithLimit edge cases", t, func() {
+		convey.Convey("Should have CreateWithLimit method with correct signature", func() {
+			accessKey := &AccessKey{}
+			convey.So(accessKey.CreateWithLimit, convey.ShouldNotBeNil)
+		})
+
+		convey.Convey("ErrTooManyAccessKey should be a defined error", func() {
+			convey.So(ErrTooManyAccessKey, convey.ShouldNotBeNil)
+			convey.So(ErrTooManyAccessKey.Error(), convey.ShouldEqual, "too many access keys")
+		})
+	})
+}
+
+// TestAccessKey_ExpiredAt_EdgeCases 测试 ExpiredAt 边界情况
+func TestAccessKey_ExpiredAt_EdgeCases(t *testing.T) {
+	convey.Convey("Test AccessKey ExpiredAt edge cases", t, func() {
+		convey.Convey("Should handle very old expiration time", func() {
+			oldTime := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+			accessKey := &AccessKey{
+				RawExpiredAt: &oldTime,
+			}
+			convey.So(accessKey.ExpiredAt(), convey.ShouldEqual, &oldTime)
+		})
+
+		convey.Convey("Should handle zero time expiration", func() {
+			zeroTime := time.Time{}
+			accessKey := &AccessKey{
+				RawExpiredAt: &zeroTime,
+			}
+			convey.So(accessKey.ExpiredAt(), convey.ShouldEqual, &zeroTime)
+			convey.So(accessKey.ExpiredAt().IsZero(), convey.ShouldBeTrue)
+		})
+	})
+}
+
+// TestAccessKey_LastAccessAt_EdgeCases 测试 LastAccessAt 边界情况
+func TestAccessKey_LastAccessAt_EdgeCases(t *testing.T) {
+	convey.Convey("Test AccessKey LastAccessAt edge cases", t, func() {
+		convey.Convey("Should be nil for newly created key", func() {
+			user := &User{
+				UnionID: serializer.NewHexUUIDv4(),
+			}
+			accessKey, err := NewAccessKey(user, true, "new key", nil)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(accessKey.LastAccessAt, convey.ShouldBeNil)
+		})
+
+		convey.Convey("Should handle non-nil last access time", func() {
+			lastAccess := time.Now()
+			accessKey := &AccessKey{
+				LastAccessAt: &lastAccess,
+			}
+			convey.So(accessKey.LastAccessAt, convey.ShouldEqual, &lastAccess)
+			convey.So(accessKey.LastAccessAt.IsZero(), convey.ShouldBeFalse)
 		})
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -16,9 +17,22 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/text/language"
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
+
+func TestMain(m *testing.M) {
+	// 初始化全局 KeyDerivation，供 CryptoSerializer 使用
+	pb, err := key.LoadPasswordBook("")
+	if err != nil {
+		panic(err)
+	}
+	provider := key.NewConfigFileSecretKeyProvider("this-is-a-32-byte-secret-key!!")
+	key.InitGlobalKeyDerivation(provider, pb)
+
+	os.Exit(m.Run())
+}
 
 func newBaseTestLocalizer() *i18n.Localizer {
 	bundle := i18n.NewBundle(language.English)
