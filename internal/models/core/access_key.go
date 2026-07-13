@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/redis"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 const (
@@ -43,8 +44,8 @@ type AccessKey struct {
 	// 长度为 32 字符，用于 API 请求的身份识别
 	AccessKeyID string `gorm:"type:VARCHAR(32)"`
 	// AccessKeySecret 是访问键的密钥
-	// 长度为 64 字符，用于签名验证
-	AccessKeySecret string `gorm:"type:VARCHAR(64)"`
+	// 通过 AES-GCM 加密存储，读取时自动解密
+	AccessKeySecret *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=3027,length=32"`
 	// Description 是访问键的可选描述信息
 	// 用于标识访问键的用途或所有者
 	Description string `gorm:"type:VARCHAR(256)"`
@@ -72,7 +73,7 @@ func (a *AccessKey) IsEnabled() bool {
 // Secret 返回访问键的密钥
 // 实现 auth.AccessKey 接口
 func (a *AccessKey) Secret() string {
-	return a.AccessKeySecret
+	return string(a.AccessKeySecret.Value())
 }
 
 // ExpiredAt 返回访问键的过期时间
@@ -107,7 +108,7 @@ func NewAccessKey(user *User, enabled bool, description string, expiredAt *time.
 		User:            *user,
 		Enabled:         enabled,
 		AccessKeyID:     id,
-		AccessKeySecret: secret,
+		AccessKeySecret: serializer.NewCrypto([]byte(secret)),
 		Description:     description,
 		RawExpiredAt:    expiredAt,
 		LastAccessAt:    nil,

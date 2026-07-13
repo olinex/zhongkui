@@ -58,7 +58,7 @@ var createUserCmd = &cobra.Command{
 			UnionID:    serializer.NewHexUUIDv4(),
 			Username:   userIn.Username,
 			NickleName: userIn.NickleName,
-			Password:   hashedPassword,
+			Password:   serializer.NewCrypto(hashedPassword),
 			Email:      userIn.Email,
 			Active:     true,
 		}
@@ -178,7 +178,7 @@ var createAccessKeyCmd = &cobra.Command{
 		// 输出访问密钥信息
 		pterm.Success.Printf("access key created for user %s\n", in.Username)
 		pterm.Info.Printf("  AccessKeyID:     %s\n", key.AccessKeyID)
-		pterm.Info.Printf("  AccessKeySecret: %s\n", key.AccessKeySecret)
+		pterm.Info.Printf("  AccessKeySecret: %s\n", key.Secret())
 		pterm.Info.Printf("  Description:     %s\n", key.Description)
 		pterm.Info.Printf("  Enabled:         %v\n", key.Enabled)
 		if key.RawExpiredAt != nil {

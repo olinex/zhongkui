@@ -342,11 +342,9 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 				PacketMeta: PacketMeta{
 					LayerStack: b.Stack,
 				},
-				BytesPayload: BytesPayload{
-					Payload: b.Payload,
-				},
 			},
 			EthernetHeaders: *eth,
+			Payload:         serializer.NewCrypto(b.Payload),
 		}
 	default:
 		return nil

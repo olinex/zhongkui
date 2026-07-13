@@ -154,25 +154,6 @@ func TestFrameStack(t *testing.T) {
 	})
 }
 
-func TestBytesPayload(t *testing.T) {
-	Convey("Test BytesPayload methods", t, func() {
-		Convey("GetPayload should return payload", func() {
-			payload := []byte("test payload")
-			bytesPayload := BytesPayload{Payload: payload}
-
-			result := bytesPayload.GetPayload()
-			So(result, ShouldResemble, payload)
-		})
-
-		Convey("GetPayload should handle empty payload", func() {
-			bytesPayload := BytesPayload{Payload: nil}
-
-			result := bytesPayload.GetPayload()
-			So(result, ShouldBeNil)
-		})
-	})
-}
-
 func TestBaseMeta(t *testing.T) {
 	Convey("Test BaseMeta structure", t, func() {
 		Convey("Should create valid BaseMeta", func() {
@@ -213,22 +194,6 @@ func TestCaptureMeta(t *testing.T) {
 
 			So(meta.Truncated, ShouldBeTrue)
 			So(meta.CaptureLength, ShouldEqual, 1500)
-		})
-	})
-}
-
-func TestS3Payload(t *testing.T) {
-	Convey("Test S3Payload structure", t, func() {
-		Convey("Should store S3 reference information", func() {
-			payload := S3Payload{
-				S3Store:  "s3://bucket/key",
-				S3Offset: 1024,
-				S3Length: 2048,
-			}
-
-			So(payload.S3Store, ShouldEqual, "s3://bucket/key")
-			So(payload.S3Offset, ShouldEqual, 1024)
-			So(payload.S3Length, ShouldEqual, 2048)
 		})
 	})
 }
@@ -303,9 +268,6 @@ func TestAsPacket(t *testing.T) {
 						},
 					},
 				},
-				BytesPayload: BytesPayload{
-					Payload: []byte("test data"),
-				},
 			}
 
 			So(packet.Namespace, ShouldEqual, "test")
@@ -313,7 +275,6 @@ func TestAsPacket(t *testing.T) {
 			So(packet.Truncated, ShouldBeFalse)
 			So(packet.CaptureLength, ShouldEqual, 1514)
 			So(len(packet.LayerStack), ShouldEqual, 1)
-			So(string(packet.GetPayload()), ShouldEqual, "test data")
 		})
 	})
 }
@@ -346,60 +307,12 @@ func TestAsFused(t *testing.T) {
 						},
 					},
 				},
-				BytesPayload: BytesPayload{
-					Payload: []byte("fused data"),
-				},
 			}
 
 			So(fused.Namespace, ShouldEqual, "test")
 			So(fused.Timestamp.Unix(), ShouldEqual, now.Unix())
 			So(len(fused.FrameStack), ShouldEqual, 1)
 			So(fused.FrameStack[0].Timestamp.Unix(), ShouldEqual, now.Add(-time.Second).Unix())
-			So(string(fused.GetPayload()), ShouldEqual, "fused data")
-		})
-	})
-}
-
-func TestAsS3(t *testing.T) {
-	Convey("Test AsS3 structure", t, func() {
-		Convey("Should compose S3 storage data correctly", func() {
-			sessionID, _ := serializer.HexUUIDv4FromString("12345678-1234-1234-1234-123456789012")
-			now := time.Now()
-
-			s3Data := AsS3{
-				BaseMeta: BaseMeta{
-					Namespace: "test",
-					Capture:   "eth0",
-					Version:   "v1",
-					SessionID: sessionID,
-				},
-				TimestampMeta: TimestampMeta{Timestamp: now},
-				FusedMeta: FusedMeta{
-					FrameStack: FrameStack{
-						{
-							Timestamp: now.Add(-2 * time.Second),
-							LayerStack: LayerStack{
-								{
-									Level:   LayerLevelApplication,
-									Proto:   gopacket.LayerTypePayload,
-									Headers: map[string]any{"content-type": "application/json"},
-								},
-							},
-						},
-					},
-				},
-				S3Payload: S3Payload{
-					S3Store:  "s3://bucket/large-packet.bin",
-					S3Offset: 0,
-					S3Length: 1048576, // 1MB
-				},
-			}
-
-			So(s3Data.Namespace, ShouldEqual, "test")
-			So(s3Data.Timestamp.Unix(), ShouldEqual, now.Unix())
-			So(s3Data.S3Store, ShouldEqual, "s3://bucket/large-packet.bin")
-			So(s3Data.S3Length, ShouldEqual, 1048576)
-			So(len(s3Data.FrameStack), ShouldEqual, 1)
 		})
 	})
 }

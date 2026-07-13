@@ -27,8 +27,8 @@ type User struct {
 	Username string `gorm:"type:VARCHAR(64);uniqueIndex"`
 
 	// Password 是用户的加密密码
-	// 使用 bcrypt 算法加密存储，长度为 72 字节
-	Password []byte `gorm:"type:BYTEA"`
+	// 使用 bcrypt 算法加密后，再通过 AES-GCM 加密存储
+	Password *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=3985,length=32"`
 
 	// Email 是用户的电子邮件地址
 	// 必须唯一，用于用户通信和密码重置，长度限制为 128 个字符
@@ -56,10 +56,9 @@ type User struct {
 func (u *User) ResetPassword(db *database.DB, password string) error {
 	if newHashedPassword, err := crypto.HashPassword(password); err != nil {
 		return errors.WithStack(err)
-	} else if err := db.Model(u).UpdateColumn("password", newHashedPassword).Error; err != nil {
-		return errors.WithStack(err)
 	} else {
-		return nil
+		u.Password = serializer.NewCrypto(newHashedPassword)
+		return errors.WithStack(db.Select("password").Updates(u).Error)
 	}
 }
 

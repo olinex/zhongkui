@@ -12,11 +12,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -255,7 +255,7 @@ func TestUserDetailGet(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "测试用户详情",
 				Username:   "userdetail",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "detail@example.com",
 				Active:     true,
 			}
@@ -328,7 +328,7 @@ func TestUserUpdate(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "原始昵称",
 				Username:   "updateuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "original@example.com",
 				Active:     true,
 			}
@@ -360,7 +360,7 @@ func TestUserUpdate(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "测试用户",
 				Username:   "testuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "test@example.com",
 				Active:     true,
 			}
@@ -407,7 +407,7 @@ func TestUserSetActive(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "待激活用户",
 				Username:   "inactiveuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "inactive@example.com",
 				Active:     false,
 			}
@@ -431,7 +431,7 @@ func TestUserSetActive(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "待禁用用户",
 				Username:   "activeuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "active@example.com",
 				Active:     true,
 			}
@@ -475,7 +475,7 @@ func TestUserGroupJoin(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "组加入用户",
 				Username:   "groupjoinuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "groupjoin@example.com",
 				Active:     true,
 			}
@@ -540,7 +540,7 @@ func TestUserGroupJoin(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "测试用户",
 				Username:   "testuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "test@example.com",
 				Active:     true,
 			}
@@ -578,7 +578,7 @@ func TestUserGroupLeave(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "组离开用户",
 				Username:   "groupleaveuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "groupleave@example.com",
 				Active:     true,
 			}
@@ -616,7 +616,7 @@ func TestUserGroupLeave(t *testing.T) {
 				UnionID:    serializer.NewHexUUIDv4(),
 				NickleName: "测试用户",
 				Username:   "testuser",
-				Password:   []byte("hashed_password"),
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
 				Email:      "test@example.com",
 				Active:     true,
 			}

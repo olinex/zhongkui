@@ -324,14 +324,14 @@ func (tc *trackingCloser) Close() error {
 	return nil
 }
 
-// trackingTransform 实现 Transform + AlgoIDer，WrapReader/WrapWriter 返回指定名称的 trackingCloser
+// trackingTransform 实现 Transform + ModeIDer，WrapReader/WrapWriter 返回指定名称的 trackingCloser
 type trackingTransform struct {
 	readerName string
 	algoID     byte
 	records    *[]string
 }
 
-func (t *trackingTransform) AlgoID() byte { return t.algoID }
+func (t *trackingTransform) ModeID() byte { return t.algoID }
 
 func (t *trackingTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	tc := &trackingCloser{name: t.readerName, writer: w, records: t.records}

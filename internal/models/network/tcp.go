@@ -9,6 +9,7 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/hash"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // TCPOption 表示TCP协议选项
@@ -187,6 +188,7 @@ func NewTCPHeaders(tcp *layers.TCP) *TCPHeaders {
 type PacketIPv4TCP struct {
 	PacketIPv4 // 嵌入IPv4数据包基础结构
 	TCPHeaders // 嵌入TCP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
 }
 
 // StreamID 返回TCP流ID
@@ -239,6 +241,7 @@ func (p *PacketIPv4TCP) FrameInfo() *FrameInfo {
 type FusedIPv4TCP struct {
 	FusedIPv4  // 嵌入融合IPv4数据基础结构
 	TCPHeaders // 嵌入TCP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=49915,length=32"`
 }
 
 // PacketIPv6TCP 表示IPv6 TCP数据包
@@ -247,6 +250,7 @@ type FusedIPv4TCP struct {
 type PacketIPv6TCP struct {
 	PacketIPv6 // 嵌入IPv6数据包基础结构
 	TCPHeaders // 嵌入TCP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
 }
 
 // StreamID 返回TCP流ID
@@ -299,14 +303,17 @@ func (p *PacketIPv6TCP) FrameInfo() *FrameInfo {
 type FusedIPv6TCP struct {
 	FusedIPv6  // 嵌入融合IPv6数据基础结构
 	TCPHeaders // 嵌入TCP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16648,length=32"`
 }
 
 type FusedIPv4UDP struct {
 	FusedIPv4  // 嵌入融合IPv4数据基础结构
 	UDPHeaders // 嵌入UDP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=51725,length=32"`
 }
 
 type FusedIPv6UDP struct {
 	FusedIPv6  // 嵌入融合IPv6数据基础结构
 	UDPHeaders // 嵌入UDP头部信息
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=36791,length=32"`
 }

@@ -188,9 +188,6 @@ func TestPacketEthernet(t *testing.T) {
 							},
 						},
 					},
-					BytesPayload: BytesPayload{
-						Payload: []byte("test payload"),
-					},
 				},
 				EthernetHeaders: EthernetHeaders{
 					EthDstMAC: serializer.MacAddr(dstMAC),
@@ -215,9 +212,6 @@ func TestPacketEthernet(t *testing.T) {
 			So(len(packet.LayerStack), ShouldEqual, 1)
 			So(packet.LayerStack[0].Level, ShouldEqual, LayerLevelLink)
 			So(packet.LayerStack[0].Proto, ShouldEqual, layers.LayerTypeEthernet)
-
-			// 验证载荷
-			So(string(packet.GetPayload()), ShouldEqual, "test payload")
 
 			// 验证以太网头部
 			So(packet.EthDstMAC.String(), ShouldEqual, "00:11:22:33:44:55")
@@ -296,9 +290,6 @@ func TestFusedEthernet(t *testing.T) {
 							},
 						},
 					},
-					BytesPayload: BytesPayload{
-						Payload: []byte("fused payload"),
-					},
 				},
 				EthernetHeaders: EthernetHeaders{
 					EthDstMAC: serializer.MacAddr(dstMAC),
@@ -319,9 +310,6 @@ func TestFusedEthernet(t *testing.T) {
 			So(len(fused.FrameStack), ShouldEqual, 1)
 			So(fused.FrameStack[0].Timestamp.Unix(), ShouldEqual, now.Add(-time.Second).Unix())
 			So(len(fused.FrameStack[0].LayerStack), ShouldEqual, 1)
-
-			// 验证载荷
-			So(string(fused.GetPayload()), ShouldEqual, "fused payload")
 
 			// 验证以太网头部
 			So(fused.EthDstMAC.String(), ShouldEqual, "00:11:22:33:44:55")

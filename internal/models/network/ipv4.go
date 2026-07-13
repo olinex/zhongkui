@@ -258,6 +258,7 @@ func (i *IPv4Headers) DstAddr() net.IP {
 type PacketIPv4 struct {
 	PacketEthernet
 	IPv4Headers
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16429,length=32"`
 }
 
 // FusedIPv4 表示融合的IPv4数据
@@ -287,4 +288,5 @@ type PacketIPv4 struct {
 type FusedIPv4 struct {
 	FusedEthernet
 	IPv4Headers
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=60580,length=32"`
 }
