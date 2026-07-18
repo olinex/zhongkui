@@ -69,19 +69,18 @@ func (f *FlowVersionTaskWrapper[T, P]) Load(ctx context.Context, name, lastVersi
 			param.NoticeTimeout,
 		)
 		return &router, nil
-	} else {
-		defer rc.Close()
-		data, err := io.ReadAll(rc)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		router := new(tcp.Router[P]) // T = *tcp.Router[P]，需先创建实例再反序列化
-		err = json.Unmarshal(data, router)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		return router, nil
 	}
+	defer rc.Close()
+	data, err := io.ReadAll(rc)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	router := new(tcp.Router[P])
+	err = json.Unmarshal(data, router)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return router, nil
 }
 
 func (f *FlowVersionTaskWrapper[T, P]) Store(ctx context.Context, name, nextVersion string, data T) error {

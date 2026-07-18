@@ -8,47 +8,139 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// AES-GCM 相关常量
 const (
-	AES_GCM            = "aes-gcm"
-	AES_GCM_TAG_SIZE   = 16 // GCM 认证标签长度
+	// AES_GCM 算法标识字符串，用于日志和配置
+	AES_GCM = "aes-gcm"
+
+	// AES_GCM_TAG_SIZE GCM 认证标签长度（字节）
+	// GCM 模式会在密文末尾附加 16 字节的认证标签，用于验证数据完整性
+	AES_GCM_TAG_SIZE = 16
+
+	// AES_GCM_NONCE_SIZE GCM nonce 长度（字节）
+	// NIST SP 800-38D 推荐 nonce 长度为 12 字节，这是 GCM 的标准长度
 	AES_GCM_NONCE_SIZE = 12
 )
 
 // 编译期断言：确保 AESGCMMode 实现了 Mode 接口
 var _ Mode = (*AESGCMMode)(nil)
 
+// AESGCMMode 实现 AES-GCM 认证加密模式。
+//
+// AES-GCM（Galois/Counter Mode）是一种认证加密模式，提供：
+//   - 数据机密性：使用 AES 算法加密明文
+//   - 数据完整性：使用 GHASH 函数生成认证标签
+//   - 可选的附加认证数据（AAD）：可以认证但不加密的数据
+//
+// 密文格式：[12B nonce][密文][16B 认证标签]
+//
+// 密钥长度决定 AES 变体：
+//   - 16 字节 = AES-128
+//   - 24 字节 = AES-192
+//   - 32 字节 = AES-256
 type AESGCMMode struct {
-	gcm            cipher.AEAD
+	// gcm 是 Go 标准库的 AEAD（Authenticated Encryption with Associated Data）接口
+	gcm cipher.AEAD
+
+	// additionalData 是可选的附加认证数据（AAD）
+	// AAD 会被认证但不会被加密，常用于存储元数据
 	additionalData []byte
 }
 
+// NewAESGCMMode 创建 AES-GCM 加密模式实例。
+//
+// 参数：
+//   - cryptoKey: AES 密钥，长度必须为 16、24 或 32 字节
+//   - additionalData: 可选的附加认证数据（AAD），可以为 nil 或空
+//
+// 返回值：
+//   - *AESGCMMode: 成功时返回加密模式实例
+//   - error: 密钥长度无效或其他初始化错误时返回非 nil 错误
+//
+// 示例：
+//
+//	mode, err := NewAESGCMMode([]byte("0123456789abcdef"), nil)
+//	if err != nil {
+//	    return err
+//	}
+//	ciphertext, err := mode.Encrypt([]byte("hello"))
 func NewAESGCMMode(cryptoKey, additionalData []byte) (*AESGCMMode, error) {
+	// 创建 AES cipher 块
 	block, err := aes.NewCipher(cryptoKey)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	// 创建 GCM 模式
 	gcm, err := cipher.NewGCM(block)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+
 	return &AESGCMMode{gcm: gcm, additionalData: additionalData}, nil
 }
 
+// Encrypt 使用 AES-GCM 加密明文。
+//
+// 加密过程：
+//  1. 生成 12 字节的随机 nonce（使用 crypto/rand）
+//  2. 使用 GCM Seal 方法加密明文并生成认证标签
+//  3. 返回格式：[nonce][密文+认证标签]
+//
+// 参数：
+//   - plaintext: 待加密的明文，可以为空
+//
+// 返回值：
+//   - []byte: 密文，格式为 [12B nonce][密文][16B 认证标签]
+//   - error: 随机数生成失败时返回错误
+//
+// 注意：
+//   - 每次加密都会生成新的随机 nonce，确保相同明文产生不同密文
+//   - nonce 不需要保密，但必须唯一（使用随机数保证）
 func (e *AESGCMMode) Encrypt(plaintext []byte) ([]byte, error) {
+	// 生成随机 nonce
 	nonce := make([]byte, AES_GCM_NONCE_SIZE)
 	if _, err := rand.Read(nonce); err != nil {
 		return nil, errors.WithStack(err)
 	}
+
+	// Seal 方法加密明文并附加认证标签
+	// 输出格式：[密文][认证标签]
 	ciphertext := e.gcm.Seal(nil, nonce, plaintext, e.additionalData)
+
+	// 返回 [nonce][密文+认证标签]
 	return append(nonce, ciphertext...), nil
 }
 
+// Decrypt 使用 AES-GCM 解密密文。
+//
+// 解密过程：
+//  1. 从密文前 12 字节提取 nonce
+//  2. 剩余部分为密文+认证标签
+//  3. 使用 GCM Open 方法解密并验证认证标签
+//
+// 参数：
+//   - ciphertext: 密文，格式必须为 [12B nonce][密文][16B 认证标签]
+//
+// 返回值：
+//   - []byte: 解密后的明文
+//   - error: 密文格式错误、认证失败或密钥不匹配时返回错误
+//
+// 错误场景：
+//   - 密文长度小于 28 字节（12B nonce + 16B 标签）
+//   - 密文被篡改（认证标签验证失败）
+//   - 使用了错误的密钥
 func (e *AESGCMMode) Decrypt(ciphertext []byte) ([]byte, error) {
+	// 检查密文最小长度
 	if len(ciphertext) < AES_GCM_NONCE_SIZE+AES_GCM_TAG_SIZE {
 		return nil, errors.Newf("ciphertext too short: expected at least %d bytes, got %d",
 			AES_GCM_NONCE_SIZE+AES_GCM_TAG_SIZE, len(ciphertext))
 	}
+
+	// 提取 nonce
 	nonce := ciphertext[:AES_GCM_NONCE_SIZE]
 	ciphertext = ciphertext[AES_GCM_NONCE_SIZE:]
+
+	// Open 方法解密并验证认证标签
 	return e.gcm.Open(nil, nonce, ciphertext, e.additionalData)
 }
