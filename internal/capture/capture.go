@@ -47,6 +47,12 @@ type capturer struct {
 	// linkType 链路类型，定义网络接口的数据链路层协议类型
 	// 如Ethernet、PPP、Raw等，影响pcap文件头的写入
 	linkType layers.LinkType
+
+	// trackFile 文件追踪回调，在 dump 阶段创建临时文件后调用，将文件路径注册到 CaptureClient 的待清理集合
+	trackFile func(string)
+
+	// untrackFile 文件追踪回调，在 upload 阶段成功删除临时文件后调用，将文件路径从待清理集合中移除
+	untrackFile func(string)
 }
 
 // filePath 生成压缩文件的完整路径

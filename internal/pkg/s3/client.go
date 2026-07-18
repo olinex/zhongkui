@@ -55,6 +55,9 @@ type S3Client struct {
 
 	// pipeline 是加密解密管道，用于对上传下载的对象进行加密解密
 	pipeline *combine.Pipeline
+
+	// cfg 是创建此客户端的配置副本，供 Zkcn 等内部组件查询上传策略
+	cfg Config
 }
 
 // GetEndpoint 返回S3服务的端点地址
@@ -107,6 +110,7 @@ func NewS3Client(cfg *Config, kd *key.KeyDerivation, opts ...ClientOption) (*S3C
 			bucket:   cfg.Bucket,
 			endpoint: cfg.Endpoint,
 			pipeline: pipeline,
+			cfg:      *cfg,
 		}, nil
 	}
 }
@@ -139,6 +143,33 @@ func (s *S3Client) GetObject(ctx context.Context, objectKey string, opts minio.G
 	return s.cli.GetObject(ctx, s.bucket, objectKey, opts)
 }
 
+// CGetOject 从 S3 存储桶中获取加密对象并自动解密解压，返回明文读取流。
+// C 前缀代表 Crypto（加密），区别于普通的 GetObject。
+//
+// 内部流程（if-else 级联）：
+//  1. 调用 GetObject 获取 S3 对象流
+//  2. 对获取的对象调用 Stat() 检查状态：
+//     a. 如果对象不存在（NoSuchKey/NoSuchBucket），返回 (nil, nil)
+//     b. 如果对象大小为 0（空对象），返回 (nil, nil)
+//  3. 根据 cryptoKey 参数决定解密策略：
+//     a. 如果 cryptoKey == nil，使用 S3Client 初始化时的默认 pipeline 解密
+//     b. 如果 cryptoKey != nil，使用该密钥创建新的 pipeline 解密
+//
+// 参数：
+//   - ctx: 上下文，用于控制请求的生命周期和取消
+//   - objectKey: 对象键，即对象在存储桶中的唯一标识
+//   - cryptoKey: 解密密钥，用于 AES-GCM 解密，长度须为 16/24/32 字节
+//     如果为 nil，使用 S3Client 初始化时配置的默认解密管道
+//   - opts: 获取对象的选项，可配置服务器端加密、版本 ID 等
+//
+// 返回值：
+//   - io.ReadCloser: 解密解压后的明文数据读取流，调用者使用完毕后必须关闭
+//     nil 表示对象不存在或为空（此时 error 也为 nil）
+//   - error: 获取或解密失败时返回的错误
+//
+// 注意：
+//   - 返回的 ReadCloser 关闭时会依次关闭解密器、解压器以及源 S3 对象流
+//   - 调用者需要自行判断 nil 返回值来区分"对象不存在"和"解密失败"
 func (s *S3Client) CGetOject(ctx context.Context, objectKey string, cryptoKey []byte, opts minio.GetObjectOptions) (io.ReadCloser, error) {
 	if obj, err := s.GetObject(ctx, objectKey, opts); err != nil {
 		return nil, errors.WithStack(err)
@@ -181,25 +212,76 @@ func (s *S3Client) FGetObject(ctx context.Context, objectKey, filePath string, o
 	return s.cli.FGetObject(ctx, s.bucket, objectKey, filePath, opts)
 }
 
+// CPutObject 将数据读取器中的内容经过压缩加密后，以流式方式上传到 S3 存储桶。
+// C 前缀代表 Crypto（加密），区别于普通的 PutObject。
+//
+// 内部流程（如果-否则 级联）：
+//  1. 创建 io.Pipe 作为加密管道和 S3 上传之间的桥梁
+//  2. 根据 cryptoKey 参数选择加密管道：
+//     a. 如果 cryptoKey == nil，使用 S3Client 初始化时的默认 pipeline
+//     b. 如果 cryptoKey != nil，使用该密钥创建新的 pipeline
+//  3. 调用 pipeline.CompressEncrypt 创建加密写入器
+//  4. 将加密后的数据通过 pipeReader 传递给 minio.PutObject 进行上传
+//  5. io.Copy 将明文 reader 的数据流式写入加密管道
+//
+// 使用 defer 确保所有资源正确释放（pipeReader、pipeWriter、加密写入器、数据拷贝）。
+//
+// 参数：
+//   - ctx: 上下文，用于控制上传的生命周期和取消
+//   - objectKey: 对象键，即对象在存储桶中的唯一标识
+//   - cryptoKey: 加密密钥，用于 AES-GCM 加密，长度须为 16/24/32 字节
+//     如果为 nil，使用 S3Client 初始化时配置的默认加密管道
+//   - reader: 要上传的原始数据读取器，通过管道流式加密后上传
+//   - objectSize: 对象大小（字节数），-1 表示未知大小（流式上传）
+//   - opts: 上传选项，如内容类型、元数据、服务器端加密等
+//
+// 返回值：
+//   - minio.UploadInfo: 上传信息，包含 ETag、版本 ID、上传时间等
+//   - error: 上传或加密失败时返回的错误
+//
+// 注意：
+//   - 加密是流式进行的，不会将整个数据加载到内存中
+//   - pipeReader 和 pipeWriter 分别由 minio 上传线程和加密线程并发操作
 func (s *S3Client) CPutObject(ctx context.Context, objectKey string, cryptoKey []byte, reader io.Reader, objectSize int64, opts minio.PutObjectOptions) (minio.UploadInfo, error) {
 	pipeReader, pipeWriter := io.Pipe()
-	defer pipeReader.Close()
-	defer pipeWriter.Close()
 	var pipeline *combine.Pipeline
 	if cryptoKey == nil {
 		pipeline = s.pipeline
 	} else if tmp, err := combine.NewZstdAESGCMPipeline(cryptoKey); err != nil {
+		pipeReader.Close()
+		pipeWriter.Close()
 		return minio.UploadInfo{}, errors.WithStack(err)
 	} else {
 		pipeline = tmp
 	}
 	w, err := pipeline.CompressEncrypt(pipeWriter)
 	if err != nil {
+		pipeReader.Close()
+		pipeWriter.Close()
 		return minio.UploadInfo{}, errors.WithStack(err)
 	}
-	defer w.Close()
-	defer io.Copy(w, reader)
-	return s.cli.PutObject(ctx, s.bucket, objectKey, pipeReader, objectSize, opts)
+
+	// 在 goroutine 中将 reader 的数据通过加密管道写入 pipeWriter。
+	// 必须放在 PutObject 之前启动，因为 io.Pipe 是同步的：
+	// 读端（pipeReader）被 PutObject 消费时，写端必须在另一个 goroutine 中并发写入，
+	// 否则会形成死锁：PutObject 等数据 → defer io.Copy 等函数返回 → 函数等 PutObject 返回。
+	//
+	// 注意 defer 的执行顺序（LIFO）：
+	//   - pipeWriter.Close() 必须在 w.Close() 之后执行
+	//   - w.Close() 需要向 pipeWriter 写入 GCM 认证标签（finalization block）
+	//   - 如果 pipeWriter 先关闭，w.Close() 会写入失败，导致数据不完整
+	go func() {
+		defer pipeWriter.Close() // 后注册，后执行（LIFO：第二个执行）
+		defer w.Close()          // 先注册，先执行（LIFO：第一个执行）
+		io.Copy(w, reader)
+	}()
+
+	uploadInfo, err := s.cli.PutObject(ctx, s.bucket, objectKey, pipeReader, objectSize, opts)
+	pipeReader.Close()
+	if err != nil {
+		return minio.UploadInfo{}, errors.WithStack(err)
+	}
+	return uploadInfo, nil
 }
 
 // PutObject 将数据流上传到S3存储桶

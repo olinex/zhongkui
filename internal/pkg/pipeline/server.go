@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/hibiken/asynq"
-	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/redis"
@@ -145,12 +144,9 @@ func NewServer(ctx context.Context, cli *redis.Client, cfg RawConfig, logger *lo
 	// 创建任务分发器，负责根据任务类型路由到对应的处理函数
 	mux := asynq.NewServeMux()
 
-	// 在调试环境下添加 panic 恢复中间件
-	// 该中间件会捕获任务处理过程中的 panic 并记录调用栈
-	// 防止单个任务的异常导致整个服务器崩溃
-	if base.Env.Debug {
-		mux.Use(RecoverWithStack(logger))
-	}
+	// 错误边界中间件：捕获 panic + 记录错误堆栈
+	// 始终启用，确保生产环境也能看到完整的错误信息
+	mux.Use(RecoverWithStack(logger))
 
 	// 注册额外的中间件（如 OTEL trace 中间件）
 	for _, mw := range mws {

@@ -7,6 +7,10 @@ import (
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
+var (
+	_ do.ShutdownerWithError = (*capture.CaptureClient)(nil)
+)
+
 func newCaptureClientProvider(i do.Injector) (*capture.CaptureClient, error) {
 	if viper, err := InvokeViper(i); err != nil {
 		return nil, errors.WithStack(err)
@@ -33,7 +37,7 @@ func NewCaptureClient() do.Provider[*capture.CaptureClient] {
 }
 
 func InjectCaptureClient(i do.Injector) {
-	do.ProvideTransient(i, NewCaptureClient())
+	do.Provide(i, NewCaptureClient())
 }
 
 func InvokeCaptureClient(i do.Injector) (*capture.CaptureClient, error) {

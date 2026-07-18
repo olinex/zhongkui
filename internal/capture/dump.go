@@ -38,6 +38,9 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, c
 		return errors.WithStack(err)
 	}
 	defer file.Close()
+	if c.trackFile != nil {
+		c.trackFile(filePath)
+	}
 	// 带缓冲区的写入器，实现批量写入文件
 	buffer := bufio.NewWriterSize(file, int(c.uploadCfg.PacketBufferSize))
 	defer buffer.Flush()

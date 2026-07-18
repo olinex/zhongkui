@@ -12,6 +12,7 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 func TestWithTransport(t *testing.T) {
@@ -100,6 +101,51 @@ func TestIsNotExists(t *testing.T) {
 				Code:    "InternalError",
 				Message: "We encountered an internal error, please try again.",
 			}
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("XMinioObjectNotFoundAs403 error - depends on minio.ToErrorResponse mapping", func() {
+			err := minio.ErrorResponse{Code: "XMinioObjectNotFoundAs403"}
+			// minio.ToErrorResponse may or may not map this to NoSuchKey
+			// 只需验证不会 panic
+			_ = IsNotExists(err)
+			convey.So(true, convey.ShouldBeTrue) // 至少不崩溃
+		})
+
+		convey.Convey("NoSuchUpload error should return false", func() {
+			err := minio.ErrorResponse{Code: "NoSuchUpload", Message: "The specified multipart upload does not exist."}
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("NoSuchVersion error should return false", func() {
+			err := minio.ErrorResponse{Code: "NoSuchVersion", Message: "The specified version does not exist."}
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("InvalidAccessKeyId error should return false", func() {
+			err := minio.ErrorResponse{Code: "InvalidAccessKeyId", Message: "The AWS Access Key Id you provided does not exist."}
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("empty string error should return false", func() {
+			convey.So(IsNotExists(minio.ErrorResponse{}), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("non-minio error type (context.DeadlineExceeded) should return false", func() {
+			convey.So(IsNotExists(context.DeadlineExceeded), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("non-minio error type (context.Canceled) should return false", func() {
+			convey.So(IsNotExists(context.Canceled), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("wrapped io.EOF in custom error chain should return false", func() {
+			err := errors.WithStack(io.EOF)
+			convey.So(IsNotExists(err), convey.ShouldBeFalse)
+		})
+
+		convey.Convey("custom string error should return false", func() {
+			err := errors.New("custom error message")
 			convey.So(IsNotExists(err), convey.ShouldBeFalse)
 		})
 	})

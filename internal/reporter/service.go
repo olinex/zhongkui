@@ -425,24 +425,35 @@ func (srv *ReporterService) Run(ctx context.Context) (err error) {
 	ctx, span := totel.StartRunSpan(ctx)
 	defer totel.EndSpan(span, &err)
 
-	srv.logger.Ctx(ctx).Info("grpc server listening on")
-	err = srv.grpc.Serve()
-	if err != nil {
+	// 在 goroutine 中启动 gRPC 服务
+	errCh := make(chan error, 1)
+	go func() {
+		srv.logger.Ctx(ctx).Info("grpc server listening on")
+		if err := srv.grpc.Serve(); err != nil {
+			errCh <- errors.WithStack(err)
+		}
+	}()
+
+	// 等待 context 取消或错误
+	select {
+	case <-ctx.Done():
+		// 收到信号，开始优雅关闭
+		srv.logger.Ctx(ctx).Info("grpc received shutdown signal")
+
+		// 设置优雅停止超时定时器
+		// 5秒后如果仍未优雅停止，强制停止服务器
+		timer := time.AfterFunc(time.Second*5, func() {
+			srv.logger.Ctx(ctx).Warn("server graceful stop timeout")
+			srv.grpc.Stop() // 强制停止
+		})
+		defer timer.Stop()
+
+		// 尝试优雅停止，等待正在处理的请求完成
+		srv.grpc.GracefulStop()
+		return nil
+	case err := <-errCh:
+		// 服务启动失败
 		srv.logger.Fatal("failed to start grpc server", zap.Error(err))
-		return errors.WithStack(err)
+		return err
 	}
-	// 记录优雅停止开始
-	srv.logger.Ctx(ctx).Info("grpc try graceful stop")
-
-	// 设置优雅停止超时定时器
-	// 5秒后如果仍未优雅停止，强制停止服务器
-	timer := time.AfterFunc(time.Second*5, func() {
-		srv.logger.Ctx(ctx).Warn("server graceful stop timeout")
-		srv.grpc.Stop() // 强制停止
-	})
-	defer timer.Stop() // 确保函数退出时停止定时器
-
-	// 尝试优雅停止，等待正在处理的请求完成
-	srv.grpc.GracefulStop()
-	return nil
 }

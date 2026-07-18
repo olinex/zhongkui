@@ -29,6 +29,9 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (e
 			c.logger.Ctx(ctx).Errorf(`remove file %s error: %v`, filePath, e)
 		} else {
 			c.logger.Ctx(ctx).Infof(`remove file %s success`, filePath)
+			if c.untrackFile != nil {
+				c.untrackFile(filePath)
+			}
 		}
 	}()
 

@@ -6,6 +6,8 @@ import (
 	"github.com/samber/do/v2"
 	// "zhongkui.com/zhongkui/internal/network/detectors"
 	// "zhongkui.com/zhongkui/internal/network/tcp"
+	"zhongkui.com/zhongkui/internal/network/detectors"
+	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
@@ -13,21 +15,19 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 )
 
-// func initDetectors(ctx context.Context, i do.Injector) error {
-// 	if viper, err := InvokeViper(i); err != nil {
-// 		return errors.WithStack(err)
-// 	} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
-// 		return errors.WithStack(err)
-// 	} else if client, err := InvokeS3(i); err != nil {
-// 		return errors.WithStack(err)
-// 	} else {
-// 		tcp.RegisterAppProtocolDetector(
-// 			detectors.AppHTTP,
-// 			detectors.NewHttpDetector(client, detectors.SecretKey),
-// 		)
-// 		return nil
-// 	}
-// }
+func initDetectors(i do.Injector) error {
+	if kd, err := InvokeKeyDerivation(i); err != nil {
+		return errors.WithStack(err)
+	} else if client, err := InvokeS3(i); err != nil {
+		return errors.WithStack(err)
+	} else {
+		tcp.RegisterAppProtocolDetector(
+			detectors.AppHTTP,
+			detectors.NewHttpDetector(client, kd),
+		)
+		return nil
+	}
+}
 
 func newPipelineInspectorProvider() do.Provider[*pipeline.Inspector] {
 	return func(i do.Injector) (*pipeline.Inspector, error) {
@@ -68,6 +68,8 @@ func newPipelineRegistryProvider() do.Provider[pipeline.HandlerFuncs] {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
+			return nil, errors.WithStack(err)
+		} else if err := initDetectors(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
 			return pipeline.WorkerRegistry(cfg.Params), nil
