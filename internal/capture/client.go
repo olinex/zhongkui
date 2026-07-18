@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cenkalti/backoff/v5"
@@ -51,6 +52,12 @@ type CaptureClient struct {
 	// 负责将压缩后的数据包文件上传到对象存储，并设置过期时间
 	// 支持多区域、多桶配置，确保数据持久性和可用性
 	s3 *s3.S3Client
+
+	// pendingFiles 待清理的临时 zkcn 文件集合，用于在 Shutdown 时统一清理
+	// key 为文件的绝对路径，value 为空结构体
+	// 包含正在导入（dump）和等待上传（upload queue）的临时文件
+	// 使用 sync.Map 保证并发安全，无需额外加锁
+	pendingFiles sync.Map
 }
 
 // NewCaptureClient 创建新的抓包客户端实例，初始化所有必要组件和通道
@@ -448,13 +455,15 @@ func (cc *CaptureClient) uploadPacketHandler(
 	linkType := ws.LinkType()
 	cc.logger.Ctx(ctx).Infof("link type %s", linkType)
 	tmpCapturer := capturer{
-		resource:   &cc.cfg.Resource,
-		uploadCfg:  &cc.cfg.Upload,
-		captureCfg: snapshot.config,
-		logger:     cc.logger,
-		s3:         cc.s3,
-		sessionID:  sessionID,
-		linkType:   linkType,
+		resource:    &cc.cfg.Resource,
+		uploadCfg:   &cc.cfg.Upload,
+		captureCfg:  snapshot.config,
+		logger:      cc.logger,
+		s3:          cc.s3,
+		sessionID:   sessionID,
+		linkType:    linkType,
+		trackFile:   cc.trackFile,
+		untrackFile: cc.untrackFile,
 	}
 	err = tmpCapturer.capture(ctx, ws, uploadChan)
 	if err != nil {
@@ -662,4 +671,32 @@ func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) 
 		})
 	})
 	return wg.Wait()
+}
+
+// trackFile 将文件路径加入待清理集合，在文件创建后调用
+// 该方法线程安全，可在多个 goroutine 中并发调用
+func (cc *CaptureClient) trackFile(path string) {
+	cc.pendingFiles.Store(path, struct{}{})
+}
+
+// untrackFile 将文件路径从待清理集合中移除，在文件成功上传并删除后调用
+// 该方法线程安全，可在多个 goroutine 中并发调用
+func (cc *CaptureClient) untrackFile(path string) {
+	cc.pendingFiles.Delete(path)
+}
+
+// Shutdown 实现 do.ShutdownerWithError 接口，在 DI 容器关闭时被调用
+// 清理所有尚未上传或正在导入的临时 zkcn 文件，防止文件溢出
+func (cc *CaptureClient) Shutdown() error {
+	cc.pendingFiles.Range(func(key, _ any) bool {
+		path := key.(string)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			cc.logger.Errorf("shutdown cleanup remove file %s error: %v", path, err)
+		} else {
+			cc.logger.Infof("shutdown cleanup remove file %s success", path)
+		}
+		cc.pendingFiles.Delete(path)
+		return true
+	})
+	return nil
 }

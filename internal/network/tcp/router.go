@@ -509,6 +509,17 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 	return nil
 }
 
+func (r *Router[P]) activeFlowCount() int {
+	count := 0
+	for _, group := range r.roots {
+		if group == nil {
+			continue
+		}
+		count += group.len()
+	}
+	return count
+}
+
 func (r *Router[P]) cleanup(ctx context.Context, force bool) {
 	ctx, span := startCleanupSpan(ctx, force)
 	var removedCount, evictedCount int
@@ -615,6 +626,17 @@ LOOP:
 			}
 		}
 	}
+	// 最后执行一次清理，强制清理所有超时流
+	r.cleanup(ctx, false)
+	// 如果没有活跃的流，立即退出，避免不必要的等待
+	if r.activeFlowCount() == 0 {
+		cancel()
+		if err := wg.Wait(); err != nil {
+			return errors.WithStack(err)
+		}
+		return nil
+	}
+	// 有活跃流时，等待一个 noticeTimeout 让它们完成或超时
 	select {
 	case <-ctx.Done():
 	case <-time.After(r.noticeTimeout):

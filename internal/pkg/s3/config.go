@@ -11,7 +11,7 @@ import (
 const (
 	PREFIX            = "s3"
 	CRYPTO_KEY_OFFSET = 43036
-	CRYPTO_KEY_LENGTH = 64
+	CRYPTO_KEY_LENGTH = 32
 )
 
 // Config 是S3兼容对象存储的配置结构体

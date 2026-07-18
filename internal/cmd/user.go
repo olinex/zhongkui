@@ -37,8 +37,9 @@ var createUserCmd = &cobra.Command{
 	Short: "Create user by command line",
 	Long:  "Create a new user. Parameters can be provided via command-line flags. Any missing parameters will be prompted interactively.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
 		superuser := v.GetBool("superuser")
 
@@ -53,7 +54,7 @@ var createUserCmd = &cobra.Command{
 			return err
 		}
 
-		db := provider.MustInvokeCoreDatabase(injector)
+		db := provider.MustInvokeCoreDatabase(i)
 		user := &core.User{
 			UnionID:    serializer.NewHexUUIDv4(),
 			Username:   userIn.Username,
@@ -79,12 +80,13 @@ var forceResetPasswordCmd = &cobra.Command{
 	Use:   "force-reset-password",
 	Short: "Force reset user's password by command line",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
 
-		db := provider.MustInvokeCoreDatabase(injector)
-		provider.MustInvokeRbac(injector)
+		db := provider.MustInvokeCoreDatabase(i)
+		provider.MustInvokeRbac(i)
 		username, password, err := extractUsernamePassword(v)
 		if err != nil {
 			pterm.Error.Println(err.Error())
@@ -121,8 +123,9 @@ var createAccessKeyCmd = &cobra.Command{
 	Short: "Create access key for a user",
 	Long:  "Create an API access key for an existing user. Parameters can be provided via command-line flags or prompted interactively.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ctx, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
 
 		var in createAccessKeyInput
@@ -139,7 +142,7 @@ var createAccessKeyCmd = &cobra.Command{
 		}
 		maxCount := int(cfg.Auth.AccessKeyCount)
 
-		db := provider.MustInvokeCoreDatabase(injector)
+		db := provider.MustInvokeCoreDatabase(i)
 
 		// 查找用户
 		ctx, cancel := context.WithTimeout(ctx, timeout)

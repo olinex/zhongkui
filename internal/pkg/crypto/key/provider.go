@@ -3,6 +3,7 @@ package key
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -26,6 +27,7 @@ type SecretKeyProvider interface {
 // ConfigFileSecretKeyProvider 从配置文件中读取主密钥。
 type ConfigFileSecretKeyProvider struct {
 	parentSecretKey string
+	warnOnce        sync.Once
 }
 
 // NewConfigFileSecretKeyProvider 创建从配置文件读取主密钥的提供者。
@@ -38,7 +40,9 @@ func (p *ConfigFileSecretKeyProvider) GetSecretKey() ([]byte, error) {
 	if p.parentSecretKey == "" {
 		return nil, errors.New("parent secret key is empty in config file")
 	}
-	fmt.Fprintf(os.Stderr, "WARNING: Using parent secret key from config file. This is NOT safe for production. Please switch to KMS as soon as possible.\n")
+	p.warnOnce.Do(func() {
+		fmt.Fprintf(os.Stderr, "WARNING: Using parent secret key from config file. This is NOT safe for production. Please switch to KMS as soon as possible.\n")
+	})
 	return []byte(p.parentSecretKey), nil
 }
 

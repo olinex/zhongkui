@@ -17,8 +17,9 @@ var createCapturerCmd = &cobra.Command{
 	Short: "Create a network capturer",
 	Long:  "Create a new network capturer with device configuration. Parameters can be provided via command-line flags or prompted interactively.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		_, injector := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(injector)
+		_, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
+		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
 
 		var in routes.CapturerCreateIn
@@ -27,17 +28,17 @@ var createCapturerCmd = &cobra.Command{
 			return err
 		}
 
-		db := provider.MustInvokeCoreDatabase(injector)
-		client := provider.MustInvokeEtcdClient(injector)
+		ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
+		defer cancel()
+
+		db := provider.MustInvokeCoreDatabase(i)
+		client := provider.MustInvokeEtcdClient(i)
 
 		instance := core.Capturer{
 			NamespaceName: in.Namespace,
 			Name:          in.Name,
 			Version:       in.Version,
 		}
-
-		ctx, cancel := context.WithTimeout(cmd.Context(), timeout)
-		defer cancel()
 
 		if err := instance.CreateWithConfig(db.WithContext(ctx), client, in.Config.ToGRPC()); err != nil {
 			pterm.Error.Printf("cannot create capturer: %v\n", err)

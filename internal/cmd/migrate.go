@@ -184,6 +184,7 @@ func nextMigrationVersion(dir string) int {
 func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) error {
 	return func(cmd *cobra.Command, args []string) error {
 		ctx, i := cmdToolBox(cmd)
+		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
 		coreDB := provider.MustInvokeCoreDatabase(i)
 		rawDB := provider.MustInvokeRawDatabase(i)

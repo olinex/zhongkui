@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS access_keys (
     user_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     enabled BOOLEAN NOT NULL DEFAULT true,
     access_key_id VARCHAR(32) NOT NULL UNIQUE,
-    access_key_secret VARCHAR(64) NOT NULL,
+    access_key_secret BYTEA NOT NULL,
     description VARCHAR(256),
     expired_at TIMESTAMPTZ,
     last_access_at TIMESTAMPTZ

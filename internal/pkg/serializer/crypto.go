@@ -115,6 +115,11 @@ func (cs CryptoSerializer) Value(ctx context.Context, field *schema.Field, dst r
 	if v.Kind() != reflect.Pointer {
 		return nil, errors.New("crypto: field value must be a pointer to Crypto")
 	}
+	// 处理 nil 指针的情况：(*Crypto)(nil) 作为 interface{} 是非 nil 的，
+	// 但底层指针为 nil，此时应返回 NULL
+	if v.IsNil() {
+		return nil, nil
+	}
 	v = v.Elem()
 	if v.Kind() != reflect.Struct {
 		return nil, errors.New("crypto: field value must be a struct (Crypto)")

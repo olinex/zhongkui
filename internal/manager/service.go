@@ -33,12 +33,25 @@ func RunHttpService(ctx context.Context, i do.Injector) error {
 		Addr:    fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
 		Handler: engine,
 	}
-	apiLogger.Ctx(ctx).Info("web server listening on")
-	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+
+	// 在 goroutine 中启动 HTTP 服务
+	errCh := make(chan error, 1)
+	go func() {
+		apiLogger.Ctx(ctx).Info("web server listening on")
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errCh <- errors.WithStack(err)
+		}
+	}()
+
+	// 等待 context 取消或错误
+	select {
+	case <-ctx.Done():
+		// 收到信号，开始优雅关闭
+		apiLogger.Ctx(ctx).Info("web server received shutdown signal")
+		return errors.WithStack(srv.Shutdown(ctx))
+	case err := <-errCh:
+		// 服务启动失败
 		apiLogger.Ctx(ctx).Fatal("failed to start http server", zap.Error(err))
-	} else if ctx != nil {
-		apiLogger.Ctx(ctx).Warn("http server received error", zap.Error(err))
+		return err
 	}
-	apiLogger.Ctx(ctx).Info("web server forced to shutdown")
-	return srv.Shutdown(ctx)
 }

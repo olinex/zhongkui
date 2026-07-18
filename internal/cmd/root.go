@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"os/signal"
+	"syscall"
 
 	"github.com/pterm/pterm"
 	"github.com/samber/do/v2"
@@ -12,11 +14,20 @@ import (
 
 const (
 	INJECTOR_CTX_NAME = "inj"
+	SIGNAL_CTX_NAME   = "sig"
 )
 
 func cmdToolBox(cmd *cobra.Command) (context.Context, do.Injector) {
 	ctx := cmd.Context()
 	return ctx, ctx.Value(INJECTOR_CTX_NAME).(do.Injector)
+}
+
+// getSignalCancel 从 context 中获取信号监听停止函数
+func getSignalCancel(ctx context.Context) context.CancelFunc {
+	if cancel, ok := ctx.Value(SIGNAL_CTX_NAME).(context.CancelFunc); ok {
+		return cancel
+	}
+	return nil
 }
 
 var RootCmd = &cobra.Command{
@@ -25,6 +36,13 @@ var RootCmd = &cobra.Command{
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		var i = do.New()
 		ctx := cmd.Context()
+
+		// 统一信号处理：监听 SIGINT/SIGTERM，收到信号时取消 context
+		// 所有服务通过监听 context 取消来实现优雅关闭
+		ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+		ctx = context.WithValue(ctx, SIGNAL_CTX_NAME, stop)
+		cmd.SetContext(ctx)
+
 		provider.InjectOtelShutdowner(ctx, i)
 		_ = provider.MustInvokeOtelShutdowner(ctx, i)
 
@@ -62,6 +80,13 @@ var RootCmd = &cobra.Command{
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		ctx, i := cmdToolBox(cmd)
+
+		// 调用信号取消函数，确保信号监听资源被释放
+		// 即使服务已经正常退出，这里调用也是安全的
+		if cancel := getSignalCancel(ctx); cancel != nil {
+			cancel()
+		}
+
 		i.ShutdownWithContext(ctx)
 		return nil
 	},

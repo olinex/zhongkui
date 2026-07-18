@@ -93,3 +93,4 @@ config.toml
 *.test
 testdata
 config/uptrace.yml
+certs/

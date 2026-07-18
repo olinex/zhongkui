@@ -144,6 +144,11 @@ func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 	for _, kv := range rsp.Kvs {
 		// 解析 JSON 格式的任务配置
 		var sCfg SchedulerTaskConfig
+		// 填充默认值，确保未设置或为零值的字段有合理的默认值
+		// 例如 Timeout 默认 24h，避免 0 值导致任务立即超时
+		if err := defaults.Set(&sCfg); err != nil {
+			return nil, errors.WithStack(err)
+		}
 		if err := json.Unmarshal(kv.Value, &sCfg); err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -153,15 +158,15 @@ func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 			continue
 		}
 
+		// 从 etcd 键中提取任务类型（去除前缀）
+		taskType := strings.TrimLeft(string(kv.Key), cfgPrefix)
+
 		// 构建 asynq 任务选项
 		opts := []asynq.Option{
 			asynq.Queue(sCfg.Queue),
 			asynq.Timeout(sCfg.Timeout),
 			asynq.MaxRetry(sCfg.MaxRetry),
 		}
-
-		// 从 etcd 键中提取任务类型（去除前缀）
-		taskType := strings.TrimLeft(string(kv.Key), cfgPrefix)
 
 		// 创建定时任务配置
 		cfg := &asynq.PeriodicTaskConfig{
@@ -230,8 +235,9 @@ func (s *Scheduler) Start(_ context.Context) error {
 //
 // 参数:
 //   - _ context.Context: 上下文对象（虽然当前未使用，但保持接口一致性）
-func (s *Scheduler) Shutdown(_ context.Context) {
+func (s *Scheduler) Shutdown(_ context.Context) error {
 	s.manager.Shutdown()
+	return nil
 }
 
 // NewElectionScheduler 创建并返回一个基于 etcd 选举的调度器实例。

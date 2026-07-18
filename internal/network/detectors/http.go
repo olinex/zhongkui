@@ -268,17 +268,3 @@ func (s *HttpDetector) Build(
 	}
 	return transport, nil
 }
-
-// init 初始化函数，在包加载时自动执行
-// 该函数负责验证常量定义的正确性，并将HTTP协议检测器注册到TCP协议检测器系统中
-//
-// 主要功能:
-//  1. 验证换行符常量NewLine的长度是否为2字节（\r\n）
-//  2. 将HttpDetector实例注册到全局检测器注册表中，关联AppHTTP协议标识
-//
-// 注意事项:
-//   - 注册操作确保系统能够识别和处理HTTP协议数据流
-//   - 该函数在包导入时自动执行，无需手动调用
-func init() {
-	tcp.RegisterAppProtocolDetector(AppHTTP, &HttpDetector{})
-}

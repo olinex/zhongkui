@@ -43,7 +43,7 @@ type ElectionHandler interface {
 	Name() string
 	CandidateID() string
 	Start(ctx context.Context) error
-	Shutdown(ctx context.Context)
+	Shutdown(ctx context.Context) error
 }
 
 // Election 封装了基于 etcd 的分布式领导者选举逻辑。
