@@ -43,6 +43,9 @@ func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
 		return nil, errors.WithStack(err)
 	}
 	kd := key.GetKeyDerivation()
+	if kd == nil {
+		return nil, errors.New("crypto: KeyDerivation not initialized, call key.InitGlobalKeyDerivation first")
+	}
 	cryptoKey, err := kd.DeriveChildKey(cTag.Offset, cTag.Length)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -61,15 +64,23 @@ func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
 }
 
 func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error {
-	// 如果数据库值为 nil，则置零字段并返回
-	if dbValue == nil {
+	// 断言数据库值为 []byte 或 string（ClickHouse String 列返回 string 类型）
+	var raw []byte
+	switch v := dbValue.(type) {
+	case nil:
+		raw = nil
+	case []byte:
+		raw = v
+	case string:
+		raw = []byte(v)
+	default:
+		return errors.Newf(`expected []byte or string, got %T`, dbValue)
+	}
+	// 数据不足 AES-GCM 最小密文长度（nonce 12 + tag 16 = 28 字节）视为空
+	// 兼容 ClickHouse 驱动对已消费的嵌入结构体字段传入特殊零值的情况
+	if len(raw) < 28 {
 		field.ReflectValueOf(ctx, dst).Set(reflect.Zero(field.FieldType))
 		return nil
-	}
-	// 断言数据库值为 []byte
-	cipherText, ok := dbValue.([]byte)
-	if !ok {
-		return errors.Newf(`expected []byte, got %T`, dbValue)
 	}
 	// 解析标签
 	m, err := cs.getTagMode(field)
@@ -77,7 +88,7 @@ func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst re
 		return errors.WithStack(err)
 	}
 	// 解密
-	plainText, err := m.Decrypt(cipherText)
+	plainText, err := m.Decrypt(raw)
 	if err != nil {
 		return errors.WithStack(err)
 	}

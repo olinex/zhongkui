@@ -13,9 +13,9 @@ import (
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/minio/minio-go/v7"
 	"github.com/reactivex/rxgo/v2"
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
@@ -58,12 +58,22 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		return errors.WithStack(e)
 	}
 	objectKey := obj.GetObjectKey()
-	rc, e := s3.GetObject(ctx, objectKey, minio.GetObjectOptions{Checksum: true})
+
+	// 下载 S3 对象的原始加密数据流
+	rc, e := s3.GetObject(ctx, objectKey, minio.GetObjectOptions{})
 	if e != nil {
 		err = e
 		return errors.WithStack(e)
 	}
 	defer rc.Close()
+
+	// 包装下载流为 ETag 校验 Reader，边读取边计算 MD5，读取完毕后自动与服务端 ETag 比对
+	verifiedReader, e := s3.VerifyDownloadIntegrity(ctx, objectKey, rc)
+	if e != nil {
+		err = e
+		return errors.WithStack(e)
+	}
+
 	compressor, e := combine.NewZstdCompressor()
 	if e != nil {
 		err = e
@@ -79,7 +89,7 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		err = e
 		return errors.WithStack(e)
 	}
-	drc, e := cryptoPipeline.DecryptDecompress(rc)
+	drc, e := cryptoPipeline.DecryptDecompress(verifiedReader)
 	if e != nil {
 		err = e
 		return errors.WithStack(e)
@@ -92,8 +102,8 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		return errors.WithStack(e)
 	}
 	defer pipeOut.Close()
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.Go(func() error {
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("pipe-in", func() error {
 		defer pipeIn.Close()
 		var src io.Reader = drc
 		if base.Env.Debug {
@@ -113,7 +123,7 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		}
 		return nil
 	})
-	wg.Go(func() error {
+	wg.GoNamed("pipe-out", func() error {
 		defer pipeOut.Close()
 		handle, e := pcap.OpenOfflineFile(pipeOut)
 		if e != nil {
@@ -123,6 +133,11 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 		for packet := range packetSource.Packets() {
 			if packet == nil {
+				continue
+			}
+			// 过滤空数据包：解压管道末尾可能产生尾部填充字节，
+			// gopacket pcap reader 会将其解析为 data 为空的伪数据包
+			if len(packet.Data()) == 0 {
 				continue
 			}
 			select {
@@ -135,6 +150,9 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 				return errors.WithStack(e)
 			}
 			atomic.AddInt64(&packetCount, 1)
+			if stats := GetPcapStats(ctx); stats != nil {
+				stats.RecordPacket(len(packet.Data()))
+			}
 			channel <- rxgo.Of(&PcapItem{
 				SessionID: sessionID,
 				Source: reporter_v1.ResourceRaw{

@@ -10,6 +10,11 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
+var (
+	_ driver.Valuer = (*LayerStack)(nil)
+	_ driver.Valuer = (*FrameStack)(nil)
+)
+
 const (
 	// PACKET_TTL_HOURS 定义原始数据包的生存时间（小时）
 	PACKET_TTL_HOURS = 24
@@ -86,8 +91,16 @@ func (l *LayerStack) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*l = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*l = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Layer_stack scan failed, except []byte, got %T", value)
@@ -129,8 +142,16 @@ func (f *FrameStack) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*f = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*f = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Frame_stack scan failed, except []byte, got %T", value)
@@ -142,7 +163,7 @@ func (f *FrameStack) Scan(value any) error {
 // 所有网络数据模型的基础字段，用于数据分区和查询优化
 type BaseMeta struct {
 	// WARN：gorm 的 clickhouse driver 有着严重的 bug
-	// 在进行FindInBatches时， 若返回的数据数量查过 batchSize，会根据主键排序
+	// 在进行FindInBatches时， 若返回的数据数量超过 batchSize，会根据主键排序
 	// 若此时表没有主键， 会导致报错 primary key required，因此 clickhouse 表必须设置一个伪主键，且不能是联合主键
 	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"`
 	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`

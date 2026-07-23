@@ -20,7 +20,7 @@ import (
 var clearDatabaseCmd = &cobra.Command{
 	Use:   "database",
 	Short: "Clear all database tables (rollback all migrations)",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		ctx, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
 		coreDB := provider.MustInvokeCoreDatabase(injector)
@@ -30,12 +30,12 @@ var clearDatabaseCmd = &cobra.Command{
 		random, err := crypto.GenerateRandomString(6)
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 		err = staticInputDoubleCheck(random)
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 		pterm.Warning.Println("rolling back all migrations...")
 		ctx, cancel := context.WithTimeout(ctx, timeout)
@@ -49,13 +49,13 @@ var clearDatabaseCmd = &cobra.Command{
 
 		if m, err := createClearMigrator(coreDB, rawDB, "core", migcore.Migrations); err != nil {
 			pterm.Error.Printf("failed to connect core: %v\n", err)
-			return err
+			return
 		} else {
 			migrators = append(migrators, dbInfo{"core", m})
 		}
 		if m, err := createClearMigrator(coreDB, rawDB, "raw", migraw.Migrations); err != nil {
 			pterm.Error.Printf("failed to connect raw: %v\n", err)
-			return err
+			return
 		} else {
 			migrators = append(migrators, dbInfo{"raw", m})
 		}
@@ -65,12 +65,11 @@ var clearDatabaseCmd = &cobra.Command{
 			if err := mi.db.Down(ctx); err != nil {
 				pterm.Error.Printf("%s rollback failed: %v\n", mi.name, err)
 				mi.db.Close()
-				return err
+				return
 			}
 			mi.db.Close()
 		}
 		pterm.Success.Println("clear database complete")
-		return nil
 	},
 }
 

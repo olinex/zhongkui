@@ -4,12 +4,14 @@ import (
 	"context"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/pterm/pterm"
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
+	_ "zhongkui.com/zhongkui/internal/pkg/base"
 )
 
 const (
@@ -87,7 +89,14 @@ var RootCmd = &cobra.Command{
 			cancel()
 		}
 
-		i.ShutdownWithContext(ctx)
+		// 使用独立的 context 进行 shutdown，避免因信号 context 已取消
+		// 导致 samber/do 跳过 ShutdownerWithError 实现的实际清理逻辑
+		// io.Closer / Shutdowner / ShutdownerWithError / ShutdownerWithContext / ShutdownerWithContextAndError will be called
+		// 带 10 秒超时兜底，防止 shutdown 阶段无限阻塞
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer shutdownCancel()
+		i.ShutdownWithContext(shutdownCtx)
+		pterm.Debug.Println("zhongkui server process exit")
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {

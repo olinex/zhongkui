@@ -35,14 +35,14 @@ type schedulerLogger struct {
 	logger *logging.Logger
 }
 
-func (l *schedulerLogger) Debug(args ...any) { l.logger.With("context", l.ctx).Debug(args...) }
-func (l *schedulerLogger) Info(args ...any)  { l.logger.With("context", l.ctx).Info(args...) }
-func (l *schedulerLogger) Warn(args ...any)  { l.logger.With("context", l.ctx).Warn(args...) }
-func (l *schedulerLogger) Fatal(args ...any) { l.logger.With("context", l.ctx).Fatal(args...) }
+func (l *schedulerLogger) Debug(args ...any) { l.logger.Ctx(l.ctx).Debug(args...) }
+func (l *schedulerLogger) Info(args ...any)  { l.logger.Ctx(l.ctx).Info(args...) }
+func (l *schedulerLogger) Warn(args ...any)  { l.logger.Ctx(l.ctx).Warn(args...) }
+func (l *schedulerLogger) Fatal(args ...any) { l.logger.Ctx(l.ctx).Fatal(args...) }
 func (l *schedulerLogger) Error(args ...any) {
 	if len(args) > 0 {
 		if s, ok := args[0].(string); ok && strings.Contains(s, "Failed to close redis client connection") {
-			l.logger.With("context", l.ctx).Debug(args...)
+			l.Debug(args...)
 			return
 		}
 	}
@@ -106,7 +106,7 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 			if _, err := e.client.Put(e.ctx, key, string(value)); err != nil {
 				return errors.WithStack(err)
 			}
-			e.logger.With("context", e.ctx).Infof(`Key %s was force flush into etcd`, key)
+			e.logger.Ctx(e.ctx).Infof(`Key %s was force flush into etcd`, key)
 		} else {
 			// 安全模式：仅当键不存在时才写入配置（事务操作）
 			rsp, err := e.client.Txn(e.ctx).
@@ -117,9 +117,9 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 				return errors.WithStack(err)
 			}
 			if rsp.Succeeded {
-				e.logger.With("context", e.ctx).Infof(`Key %s was written into etcd`, key)
+				e.logger.Ctx(e.ctx).Infof(`Key %s was written into etcd`, key)
 			} else {
-				e.logger.With("context", e.ctx).Infof(`Key %s already exists`, key)
+				e.logger.Ctx(e.ctx).Infof(`Key %s already exists`, key)
 			}
 		}
 	}

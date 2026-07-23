@@ -154,6 +154,28 @@ func TestTCPOptions_Basic(t *testing.T) {
 			So(decoded[0].Length, ShouldEqual, 10)
 			So(decoded[0].Data, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08})
 		})
+
+		Convey("Should handle nil slice with Value method", func() {
+			var options TCPOptions // nil slice
+			value, err := options.Value()
+			So(err, ShouldBeNil)
+			// nil slice should return nil driver.Value for SQL NULL
+			So(value, ShouldBeNil)
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var options TCPOptions
+			err := options.Scan("")
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var options TCPOptions
+			err := options.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
 	})
 }
 

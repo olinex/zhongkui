@@ -10,10 +10,10 @@ import (
 	"strings"
 
 	"github.com/gopacket/gopacket/layers"
-	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -195,8 +195,8 @@ func (s *HttpDetector) Extract(
 	serverReader := bufio.NewReader(serverRb)
 	var req *http.Request
 	var rsp *http.Response
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.Go(func() (rErr error) {
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("client", func() (rErr error) {
 		if req, rErr = http.ReadRequest(clientReader); rErr == io.EOF {
 			return errors.WithStack(rErr)
 		} else if rErr != nil {
@@ -210,7 +210,7 @@ func (s *HttpDetector) Extract(
 		req.Body = io.NopCloser(bytes.NewReader(body))
 		return rErr
 	})
-	wg.Go(func() (rErr error) {
+	wg.GoNamed("server", func() (rErr error) {
 		if rsp, rErr = http.ReadResponse(serverReader, req); rErr == io.EOF {
 			return errors.WithStack(rErr)
 		} else if rErr != nil {

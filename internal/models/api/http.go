@@ -31,7 +31,7 @@ type HttpApiNode struct {
 	Key                          string             `gorm:"type:String CODEC(ZSTD(3))"`
 	Depth                        int64              `gorm:"type:UInt64 CODEC(ZSTD(3))"`
 	Hits                         int64              `gorm:"type:UInt64 CODEC(ZSTD(3))"`
-	Variants                     []byte             `gorm:"type:String CODEC(ZSTD(3))"`
+	Variants                     string             `gorm:"type:String CODEC(ZSTD(3))"`
 	CreateTime                   time.Time          `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))"`
 	LastHitTime                  time.Time          `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))"`
 	ChildsPopularityN            string             `gorm:"type:String CODEC(ZSTD(3))"`

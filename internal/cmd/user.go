@@ -36,7 +36,7 @@ var createUserCmd = &cobra.Command{
 	Use:   "user",
 	Short: "Create user by command line",
 	Long:  "Create a new user. Parameters can be provided via command-line flags. Any missing parameters will be prompted interactively.",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
@@ -46,12 +46,13 @@ var createUserCmd = &cobra.Command{
 		userIn, err := extractUserInput(v)
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		hashedPassword, err := crypto.HashPassword(userIn.Password)
 		if err != nil {
-			return err
+			pterm.Error.Println(err.Error())
+			return
 		}
 
 		db := provider.MustInvokeCoreDatabase(i)
@@ -68,18 +69,17 @@ var createUserCmd = &cobra.Command{
 
 		if err := user.Create(db.WithContext(ctx), superuser); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		pterm.Success.Printf("create user %s success\n", user.Username)
-		return nil
 	},
 }
 
 var forceResetPasswordCmd = &cobra.Command{
 	Use:   "force-reset-password",
 	Short: "Force reset user's password by command line",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
@@ -90,7 +90,7 @@ var forceResetPasswordCmd = &cobra.Command{
 		username, password, err := extractUsernamePassword(v)
 		if err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
@@ -98,16 +98,15 @@ var forceResetPasswordCmd = &cobra.Command{
 		var user core.User
 		if err := db.WithContext(ctx).Take(&user, &core.User{Username: username}).Error; err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		if err := user.ResetPassword(db.WithContext(ctx), password); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		pterm.Success.Printf("reset user %s's password success\n", username)
-		return nil
 	},
 }
 
@@ -122,7 +121,7 @@ var createAccessKeyCmd = &cobra.Command{
 	Use:   "access-key",
 	Short: "Create access key for a user",
 	Long:  "Create an API access key for an existing user. Parameters can be provided via command-line flags or prompted interactively.",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
@@ -131,14 +130,14 @@ var createAccessKeyCmd = &cobra.Command{
 		var in createAccessKeyInput
 		if err := cliinput.Extract(v, &in, ""); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		// 从配置文件读取最大数量，通过 ExtractConfig 获取带默认值的配置
 		cfg, err := manager.ExtractConfig(v)
 		if err != nil {
 			pterm.Error.Printf("cannot extract config: %v\n", err)
-			return err
+			return
 		}
 		maxCount := int(cfg.Auth.AccessKeyCount)
 
@@ -151,7 +150,7 @@ var createAccessKeyCmd = &cobra.Command{
 		var user core.User
 		if err := db.WithContext(ctx).Take(&user, &core.User{Username: in.Username}).Error; err != nil {
 			pterm.Error.Printf("cannot find user %s: %v\n", in.Username, err)
-			return err
+			return
 		}
 
 		// 计算过期时间
@@ -165,7 +164,7 @@ var createAccessKeyCmd = &cobra.Command{
 		key, err := core.NewAccessKey(&user, in.Enabled, in.Description, expiredAt)
 		if err != nil {
 			pterm.Error.Printf("cannot create access key: %v\n", err)
-			return err
+			return
 		}
 
 		// 使用复用方法在事务中创建
@@ -175,7 +174,7 @@ var createAccessKeyCmd = &cobra.Command{
 			} else {
 				pterm.Error.Printf("cannot create access key: %v\n", err)
 			}
-			return err
+			return
 		}
 
 		// 输出访问密钥信息
@@ -189,7 +188,6 @@ var createAccessKeyCmd = &cobra.Command{
 		} else {
 			pterm.Info.Printf("  ExpiredAt:       never\n")
 		}
-		return nil
 	},
 }
 

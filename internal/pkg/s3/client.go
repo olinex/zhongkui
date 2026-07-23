@@ -5,8 +5,12 @@ package s3
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+	"hash"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
@@ -422,4 +426,61 @@ func IsNotExists(err error) bool {
 		return true
 	}
 	return false
+}
+
+// etagVerifyingReader 对流经的数据计算 MD5，在读取完毕时自动校验 ETag 一致性。
+// 包装一个 io.Reader，所有 Read 调用透传到底层 reader，同时将数据写入内部 MD5 哈希。
+// 当底层 reader 返回 io.EOF 时，自动比对计算出的 MD5 与期望的 ETag。
+type etagVerifyingReader struct {
+	src         io.Reader
+	expectedMD5 string
+	objectKey   string
+	hash        hash.Hash
+	verified    bool
+}
+
+func (r *etagVerifyingReader) Read(p []byte) (n int, err error) {
+	n, err = r.src.Read(p)
+	if n > 0 {
+		r.hash.Write(p[:n])
+	}
+	if err == io.EOF && !r.verified {
+		r.verified = true
+		computedMD5 := hex.EncodeToString(r.hash.Sum(nil))
+		if computedMD5 != r.expectedMD5 {
+			return n, errors.Newf(
+				"S3 object integrity check failed for %s: expected ETag %s, computed MD5 %s",
+				r.objectKey, r.expectedMD5, computedMD5,
+			)
+		}
+	}
+	return n, err
+}
+
+// VerifyDownloadIntegrity 返回一个包装了 src 的 Reader，对流经数据进行 MD5 校验。
+// 先通过 StatObject 获取 S3 对象存储的 ETag（单次上传中等于文件 MD5），
+// 然后在流式读取过程中增量计算 MD5，读取完毕时自动与 ETag 比对。
+//
+// 所有数据均为流式处理，不会将整个对象加载到内存中。校验失败时，错误会在
+// 底层 reader 返回 io.EOF 的同一 Read 调用中返回。
+//
+// 参数：
+//   - ctx: 上下文
+//   - objectKey: S3 对象键
+//   - src: 已下载的对象数据流
+//
+// 返回值：
+//   - io.Reader: 包装后的 Reader，可直接传递给下游消费者
+//   - error: StatObject 失败时返回错误
+func (s *S3Client) VerifyDownloadIntegrity(ctx context.Context, objectKey string, src io.Reader) (io.Reader, error) {
+	stat, err := s.StatObject(ctx, objectKey, minio.StatObjectOptions{})
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &etagVerifyingReader{
+		src:         src,
+		expectedMD5: strings.Trim(stat.ETag, `"`),
+		objectKey:   objectKey,
+		hash:        md5.New(),
+	}, nil
 }

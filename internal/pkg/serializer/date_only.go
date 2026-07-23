@@ -114,7 +114,10 @@ func (d *DateOnly) Scan(value any) error {
 	}
 }
 
-func (d DateOnly) Value() (driver.Value, error) {
+func (d *DateOnly) Value() (driver.Value, error) {
+	if d == nil {
+		return nil, nil
+	}
 	if d.IsZero() {
 		return nil, nil
 	}

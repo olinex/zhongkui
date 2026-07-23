@@ -13,10 +13,10 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/pcap"
 	. "github.com/smartystreets/goconvey/convey"
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/models/network"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/tcp"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
@@ -225,7 +225,7 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 func runRouter(paths ...string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	wg, ctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroupx.WithContext(ctx)
 	logger, err := logging.NewDefaultLogger()
 	if err != nil {
 		return err

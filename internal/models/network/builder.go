@@ -344,7 +344,6 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 				},
 			},
 			EthernetHeaders: *eth,
-			Payload:         serializer.NewCrypto(b.Payload),
 		}
 	default:
 		return nil
@@ -392,6 +391,7 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 		return &PacketIPv4{
 			PacketEthernet: *model.(*PacketEthernet),
 			IPv4Headers:    *net,
+			Payload:        serializer.NewCrypto(b.Payload),
 		}
 	case layers.LayerTypeIPv6:
 		net := info.Headers.(*IPv6Headers)
@@ -402,6 +402,7 @@ func (b *ModelBuilder) BuildAsPacketNetworkModel() any {
 		return &PacketIPv6{
 			PacketEthernet: *model.(*PacketEthernet),
 			IPv6Headers:    *net,
+			Payload:        serializer.NewCrypto(b.Payload),
 		}
 	default:
 		panic(fmt.Sprintf("unknown network layer protocol %s", info.Proto))
@@ -456,12 +457,14 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 			return &PacketIPv4TCP{
 				PacketIPv4: *model.(*PacketIPv4),
 				TCPHeaders: *tcp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
 			return &PacketIPv4UDP{
 				PacketIPv4: *model.(*PacketIPv4),
 				UDPHeaders: *udp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
 		default:
 			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
@@ -473,12 +476,14 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 			return &PacketIPv6TCP{
 				PacketIPv6: *model.(*PacketIPv6),
 				TCPHeaders: *tcp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
 			return &PacketIPv6UDP{
 				PacketIPv6: *model.(*PacketIPv6),
 				UDPHeaders: *udp,
+				Payload:    serializer.NewCrypto(b.Payload),
 			}
 		default:
 			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))

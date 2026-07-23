@@ -98,7 +98,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 			_, err = cs.getTagMode(field)
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "key length must be greater than")
+			So(err.Error(), ShouldContainSubstring, "key length should greater than")
 		})
 
 		Convey("empty tag", func() {
@@ -192,12 +192,12 @@ func TestCrypto_Scan(t *testing.T) {
 			So(model.Secret, ShouldBeNil)
 		})
 
-		Convey("non-[]byte dbValue returns error", func() {
+		Convey("invalid dbValue type returns error", func() {
 			model := &CryptoTestModel{Secret: &Crypto{}}
 			dst := reflect.ValueOf(model).Elem()
-			err := cs.Scan(ctx, field, dst, "not a byte slice")
+			err := cs.Scan(ctx, field, dst, 12345) // int 类型触发 unknown type 错误
 			So(err, ShouldNotBeNil)
-			So(err.Error(), ShouldContainSubstring, "expected []byte")
+			So(err.Error(), ShouldContainSubstring, "expected []byte or string")
 		})
 
 		Convey("dst is not a pointer returns error", func() {

@@ -3,8 +3,8 @@ package pcap
 import (
 	"context"
 
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
@@ -26,6 +26,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 	ipv6TCPModels := make([]*network.PacketIPv6TCP, 0)
 	ipv4UDPModels := make([]*network.PacketIPv4UDP, 0)
 	ipv6UDPModels := make([]*network.PacketIPv6UDP, 0)
+	stats := GetPcapStats(ctx)
 	for _, item := range items {
 		if item == nil {
 			continue
@@ -33,25 +34,46 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		switch model := item.(type) {
 		case *network.PacketEthernet:
 			ethModels = append(ethModels, model)
+			if stats != nil {
+				stats.RecordEth()
+			}
 		case *network.PacketIPv4:
 			ipv4Models = append(ipv4Models, model)
+			if stats != nil {
+				stats.RecordIPv4()
+			}
 		case *network.PacketIPv6:
 			ipv6Models = append(ipv6Models, model)
+			if stats != nil {
+				stats.RecordIPv6()
+			}
 		case *network.PacketIPv4TCP:
 			ipv4TCPModels = append(ipv4TCPModels, model)
+			if stats != nil {
+				stats.RecordIPv4TCP()
+			}
 		case *network.PacketIPv6TCP:
 			ipv6TCPModels = append(ipv6TCPModels, model)
+			if stats != nil {
+				stats.RecordIPv6TCP()
+			}
 		case *network.PacketIPv4UDP:
 			ipv4UDPModels = append(ipv4UDPModels, model)
+			if stats != nil {
+				stats.RecordIPv4UDP()
+			}
 		case *network.PacketIPv6UDP:
 			ipv6UDPModels = append(ipv6UDPModels, model)
+			if stats != nil {
+				stats.RecordIPv6UDP()
+			}
 		default:
 			return errors.Newf("Packet model type error, expect network packet model, got %T", item)
 		}
 	}
-	wg, innerCtx := errgroup.WithContext(ctx)
+	wg, innerCtx := errgroupx.WithContext(ctx)
 	if len(ethModels) > 0 {
-		wg.Go(func() error {
+		wg.GoNamed("eth", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ethModels).Error; err != nil {
 				return errors.WithStack(err)
 			}
@@ -59,7 +81,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		})
 	}
 	if len(ipv4Models) > 0 {
-		wg.Go(func() error {
+		wg.GoNamed("ipv4", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ipv4Models).Error; err != nil {
 				return errors.WithStack(err)
 			}
@@ -67,7 +89,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		})
 	}
 	if len(ipv6Models) > 0 {
-		wg.Go(func() error {
+		wg.GoNamed("ipv6", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ipv6Models).Error; err != nil {
 				return errors.WithStack(err)
 			}
@@ -75,7 +97,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		})
 	}
 	if len(ipv4TCPModels) > 0 {
-		wg.Go(func() error {
+		wg.GoNamed("ipv4-tcp", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ipv4TCPModels).Error; err != nil {
 				return errors.WithStack(err)
 			}
@@ -83,7 +105,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		})
 	}
 	if len(ipv6TCPModels) > 0 {
-		wg.Go(func() error {
+		wg.GoNamed("ipv6-tcp", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ipv6TCPModels).Error; err != nil {
 				return errors.WithStack(err)
 			}
@@ -91,7 +113,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		})
 	}
 	if len(ipv4UDPModels) > 0 {
-		wg.Go(func() error {
+		wg.GoNamed("ipv4-udp", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ipv4UDPModels).Error; err != nil {
 				return errors.WithStack(err)
 			}
@@ -99,7 +121,7 @@ func LoadPacketModelToTable(ctx context.Context, items []any) error {
 		})
 	}
 	if len(ipv6UDPModels) > 0 {
-		wg.Go(func() error {
+		wg.GoNamed("ipv6-udp", func() error {
 			if err := rawDB.WithContext(innerCtx).Create(ipv6UDPModels).Error; err != nil {
 				return errors.WithStack(err)
 			}

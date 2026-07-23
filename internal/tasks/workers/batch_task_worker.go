@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/reactivex/rxgo/v2"
-	"golang.org/x/sync/errgroup"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/tasks/totel"
@@ -85,14 +85,14 @@ func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) (err erro
 	}()
 	channel := make(chan rxgo.Item, w.bufferCount)
 	var loadedCount int
-	outterWg, outterCtx := errgroup.WithContext(ctx)
-	outterWg.Go(func() error {
+	outterWg, outterCtx := errgroupx.WithContext(ctx)
+	outterWg.GoNamed("transform", func() error {
 		observe := rxgo.FromChannel(channel)
 		for _, transform := range w.transforms {
 			observe = observe.Map(transform)
 		}
 		observe = observe.BufferWithTimeOrCount(rxgo.WithDuration(w.bufferTimeout), w.bufferCount)
-		innerWG, innerCtx := errgroup.WithContext(ctx)
+		innerWG, innerCtx := errgroupx.WithContext(outterCtx)
 		for batch := range observe.Observe() {
 			if batch.E != nil {
 				return batch.E
@@ -107,7 +107,7 @@ func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) (err erro
 			loadedCount += len(items)
 			for _, load := range w.loads {
 				func(load pipeline.LoadFunc) {
-					innerWG.Go(func() error {
+					innerWG.GoNamed("load", func() error {
 						return load(innerCtx, items)
 					})
 				}(load)
@@ -118,7 +118,7 @@ func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) (err erro
 		}
 		return nil
 	})
-	outterWg.Go(func() error {
+	outterWg.GoNamed("extract", func() error {
 		defer close(channel)
 		return w.extract(outterCtx, task, channel)
 	})

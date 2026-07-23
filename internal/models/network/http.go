@@ -14,6 +14,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
@@ -53,9 +54,9 @@ func sortedFrameStack(reqFrameStack, rspFrameStack FrameStack) FrameStack {
 
 func objectKey(name string, req bool) string {
 	if req {
-		return fmt.Sprintf(`body/request/%s`, name)
+		return fmt.Sprintf(`body/request/%s.%s`, name, combine.FILE_EXT)
 	}
-	return fmt.Sprintf(`body/response/%s`, name)
+	return fmt.Sprintf(`body/response/%s.%s`, name, combine.FILE_EXT)
 }
 
 // parseInt32 解析字符串为 int32，解析失败返回 0

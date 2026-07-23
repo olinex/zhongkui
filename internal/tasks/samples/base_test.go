@@ -5,16 +5,16 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/models/network"
 	_ "zhongkui.com/zhongkui/internal/network/detectors"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 )
 
 func TestBase(t *testing.T) {
 	Convey("Test extractPackets with IPv4 TCP", t, func() {
 		Convey("Should read pcap file without error", func(c C) {
 			srcChan := make(chan *network.PacketIPv4TCP)
-			wg, ctx := errgroup.WithContext(context.Background())
+			wg, ctx := errgroupx.WithContext(context.Background())
 			wg.Go(func() error {
 				defer close(srcChan)
 				return extractPackets(ctx, "http_base.cap", srcChan)

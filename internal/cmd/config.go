@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/provider"
@@ -9,7 +10,7 @@ import (
 var describeConfigCmd = &cobra.Command{
 	Use:   "config",
 	Short: "Show default config descriptions",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		descs := provider.DescribeLoggerConfig()
 		descs.Join(manager.DescribeConfig())
 		descs.Join(provider.DescribeCryptoConfig())
@@ -21,6 +22,9 @@ var describeConfigCmd = &cobra.Command{
 		descs.Join(provider.DescribeGrpcServerConfig())
 		descs.Join(provider.DescribePipelineConfig())
 		descs.Join(provider.DescribeTranslateConfig())
-		return descs.Describe()
+		if err := descs.Describe(); err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
 	},
 }

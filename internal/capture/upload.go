@@ -11,7 +11,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (err error) {
+func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string, n notice) (err error) {
 	ctx, span := totel.StartUploadOneSpan(ctx, objectKey)
 	var uploadedSize int64
 	defer func() {
@@ -35,16 +35,19 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (e
 		}
 	}()
 
-	// 调用S3客户端上传文件
-	// 设置文件内容类型、自动校验和和过期时间
-	info, err := c.s3.FPutObject(
+	// 调用 S3 客户端上传文件
+	// SendContentMd5 使 SDK 自动计算文件 MD5 并通过 Content-MD5 头发送，
+	// 服务端校验通过后将 MD5 作为 ETag 返回。此机制在所有 S3 兼容存储上通用。
+	// 下载侧可通过 StatObject 获取 ETag 并计算下载数据 MD5 进行一致性比对。
+	var info minio.UploadInfo
+	info, err = c.s3.FPutObject(
 		ctx,
 		objectKey,
 		filePath,
 		minio.PutObjectOptions{
-			ContentType:  combine.COMPRESS_CONTENT_TYPE,
-			AutoChecksum: minio.ChecksumSHA256,
-			Expires:      time.Now().Add(c.uploadCfg.ExpireAge),
+			ContentType:    combine.COMPRESS_CONTENT_TYPE,
+			SendContentMd5: true,
+			Expires:        time.Now().Add(c.uploadCfg.ExpireAge),
 		},
 	)
 	if err != nil {
@@ -52,9 +55,12 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string) (e
 	}
 	uploadedSize = info.Size
 
-	// 记录上传成功的详细日志
-	// 包含对象键名、文件大小和SHA256校验和
-	c.logger.Ctx(ctx).Infof(`upload file %s to s3, size: %d, checksum: %s`, objectKey, info.Size, info.ChecksumSHA256)
+	// 记录上传成功日志
+	// ETag 在单次上传中等于文件内容的 MD5 哈希，下载侧可据此校验完整性
+	c.logger.Ctx(ctx).Infof(
+		`upload file %s to s3, size: %d, packets: %d, bytes: %d, etag: %s`,
+		objectKey, info.Size, n.packetCount, n.byteCount, info.ETag,
+	)
 	return nil
 }
 
@@ -68,7 +74,7 @@ func (c *capturer) upload(ctx context.Context, sourceChan <-chan notice, notifyC
 		case n := <-sourceChan:
 			filePath := c.filePath(n.ts)
 			objectKey := c.objectKey(n.ts)
-			e := c.uploadOne(ctx, objectKey, filePath)
+			e := c.uploadOne(ctx, objectKey, filePath, n)
 			if e != nil {
 				err = e
 				return errors.WithStack(e)

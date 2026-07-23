@@ -23,7 +23,7 @@ Examples:
   zhongkui describe scheduler
   zhongkui describe scheduler --name network:periodic:ipv4reassemble
   zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
 		names := v.GetStringSlice("name")
@@ -33,28 +33,30 @@ Examples:
 		if len(names) == 0 {
 			rsp, err := client.Get(ctx, prefix, clientv3.WithPrefix())
 			if err != nil {
-				return errors.WithStack(err)
+				pterm.Error.Println(err.Error())
+				return
 			}
 			if len(rsp.Kvs) == 0 {
 				pterm.Warning.Println("no scheduled task configs found in etcd")
-				return nil
+				return
 			}
-			return renderSchedulerTable(prefix, rsp)
+			renderSchedulerTable(prefix, rsp)
 		}
 		for _, name := range names {
 			rsp, err := client.Get(ctx, prefix+name)
 			if err != nil {
-				return errors.WithStack(err)
+				pterm.Error.Println(err.Error())
+				return
 			}
 			if len(rsp.Kvs) == 0 {
 				pterm.Warning.Printf("scheduled task config not found: %s\n", name)
 				continue
 			}
 			if err := renderSchedulerTable(prefix, rsp); err != nil {
-				return err
+				pterm.Error.Println(err.Error())
+				return
 			}
 		}
-		return nil
 	},
 }
 

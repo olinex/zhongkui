@@ -10,8 +10,8 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -116,7 +116,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			wg, ctx := errgroup.WithContext(ctx)
+			wg, ctx := errgroupx.WithContext(ctx)
 
 			r := NewRouter[*mockTCPPacket](100, 50, time.Second)
 			dstChan := make(chan any, 10)
@@ -179,7 +179,7 @@ func TestRouterJSONMarshalUnmarshal_WithFlows(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			wg, ctx := errgroup.WithContext(ctx)
+			wg, ctx := errgroupx.WithContext(ctx)
 
 			r := NewRouter[*mockTCPPacket](100, 50, time.Second)
 			dstChan := make(chan any, 10)
@@ -353,7 +353,7 @@ func TestRouterJSON_NonSYNPacket(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			wg, ctx := errgroup.WithContext(ctx)
+			wg, ctx := errgroupx.WithContext(ctx)
 
 			r := NewRouter[*mockTCPPacket](100, 50, time.Second)
 			dstChan := make(chan any, 10)
@@ -658,7 +658,7 @@ func TestRouterJSON_NestedStatePreservation(t *testing.T) {
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			wg, ctx := errgroup.WithContext(ctx)
+			wg, ctx := errgroupx.WithContext(ctx)
 
 			r := NewRouter[*mockTCPPacket](100, 50, time.Second)
 			dstChan := make(chan any, 10)

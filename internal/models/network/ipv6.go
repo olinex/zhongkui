@@ -10,6 +10,11 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
+var (
+	_ driver.Valuer = (*IPv6HeaderTLVOptions)(nil)
+	_ driver.Valuer = (*IPv6HopByHop)(nil)
+)
+
 // IPv6HeaderTLVOption 表示IPv6扩展头部TLV选项
 // IPv6扩展头部中的TLV（类型-长度-值）选项结构，用于存储IPv6扩展头部中的各种选项信息
 // 这些选项可以出现在逐跳选项头部（Hop-by-Hop Options Header）或目标选项头部（Destination Options Header）中
@@ -131,8 +136,16 @@ func (i *IPv6HeaderTLVOptions) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*i = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*i = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Ipv6_header_tlv_options scan failed, except []byte, got %T", value)
@@ -203,7 +216,10 @@ func NewIPv6HopByHop(hbh *layers.IPv6HopByHop) *IPv6HopByHop {
 //
 //	driver.Value - 序列化后的JSON字符串
 //	error - 序列化过程中发生的错误，如果成功则为nil
-func (h IPv6HopByHop) Value() (driver.Value, error) {
+func (h *IPv6HopByHop) Value() (driver.Value, error) {
+	if h == nil {
+		return nil, nil
+	}
 	return json.Marshal(h)
 }
 
@@ -226,14 +242,24 @@ func (h IPv6HopByHop) Value() (driver.Value, error) {
 //	其他类型会返回类型错误
 func (h *IPv6HopByHop) Scan(value any) error {
 	if value == nil {
-		h = nil
+		if h != nil {
+			*h = IPv6HopByHop{}
+		}
 		return nil
 	}
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*h = IPv6HopByHop{}
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*h = IPv6HopByHop{}
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Ipv6_hop_by_hop scan failed, except []byte, got %T", value)

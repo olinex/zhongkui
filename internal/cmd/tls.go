@@ -24,44 +24,49 @@ var generateTLSCmd = &cobra.Command{
 	Use:   "tls",
 	Short: "Create tls by self Signed",
 	Long:  "Generate a self-signed TLS certificate and key pair. Parameters can be provided via command-line flags or prompted interactively.",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		_, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
 
 		var inputs TLSInputs
 		if err := cliinput.Extract(v, &inputs, ""); err != nil {
 			pterm.Error.Println(err.Error())
-			return err
+			return
 		}
 
 		if err := os.MkdirAll(inputs.DirPath, os.ModeDir|os.ModePerm); err != nil {
-			return err
+			pterm.Error.Println(err.Error())
+			return
 		}
 		now := time.Now()
 		key, cert, err := tlsutil.GenerateSelfSignedCert(now, now.Add(inputs.TTL), inputs.DNSNames)
 		if err != nil {
-			return fmt.Errorf("cannot generate self cert: %v", err)
+			pterm.Error.Println(err.Error())
+			return
 		}
 		keyPath, certPath := path.Join(inputs.DirPath, fmt.Sprintf("%s-key.pem", inputs.Name)), path.Join(inputs.DirPath, fmt.Sprintf("%s-cert.pem", inputs.Name))
 		keyFile, err := os.Create(keyPath)
 		if err != nil {
-			return err
+			pterm.Error.Println(err.Error())
+			return
 		}
 		defer keyFile.Close()
 		certFile, err := os.Create(certPath)
 		if err != nil {
-			return err
+			pterm.Error.Println(err.Error())
+			return
 		}
 		defer certFile.Close()
 		if _, err = keyFile.WriteString(key); err != nil {
-			return err
+			pterm.Error.Println(err.Error())
+			return
 		}
 		pterm.Success.Printf("tls key file %s was created\n", keyPath)
 		if _, err = certFile.WriteString(cert); err != nil {
-			return err
+			pterm.Error.Println(err.Error())
+			return
 		}
 		pterm.Success.Printf("tls cert file %s was created\n", certPath)
-		return nil
 	},
 }
 

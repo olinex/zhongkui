@@ -146,6 +146,22 @@ func TestGRERouting(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "Routing scan failed")
 		})
+
+		Convey("GRERouting Scan should handle empty string", func() {
+			var routing GRERouting
+			err := routing.Scan("")
+			So(err, ShouldBeNil)
+			// struct should be zero-valued after empty scan
+			So(routing.AddressFamily, ShouldEqual, 0)
+		})
+
+		Convey("GRERouting Scan should handle empty bytes", func() {
+			var routing GRERouting
+			err := routing.Scan([]byte{})
+			So(err, ShouldBeNil)
+			// struct should be zero-valued after empty scan
+			So(routing.AddressFamily, ShouldEqual, 0)
+		})
 	})
 }
 

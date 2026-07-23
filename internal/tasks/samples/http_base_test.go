@@ -6,10 +6,10 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/models/network"
 	_ "zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/network/tcp"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
@@ -488,7 +488,7 @@ func TestBaseHttpCapFile(t *testing.T) {
 		Convey("Should get http application", func(c C) {
 			srcChan := make(chan *network.PacketIPv4TCP, 100)
 			dstChan := make(chan any, 100)
-			wg, ctx := errgroup.WithContext(context.Background())
+			wg, ctx := errgroupx.WithContext(context.Background())
 			logger, err := logging.NewDefaultLogger()
 			c.So(err, ShouldBeNil)
 			wg.Go(func() error {
@@ -510,7 +510,7 @@ func TestBaseHttpCapFile(t *testing.T) {
 }
 
 func BenchmarkHttpCapFile(b *testing.B) {
-  for i := 0; i < b.N; i++ {
-    runRouter("http_base.cap")
-  }
+	for i := 0; i < b.N; i++ {
+		runRouter("http_base.cap")
+	}
 }

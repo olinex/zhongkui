@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"runtime/debug"
+	"strings"
 
 	"github.com/hibiken/asynq"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -64,10 +65,12 @@ func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Han
 			err := next.ProcessTask(ctx, task)
 
 			if err != nil {
-				// 日志记录完整堆栈信息
+				// 对重复错误信息去重聚合后记录完整堆栈
+				// GORM ClickHouse 驱动在扫描多行数据时会将同类错误用 "; " 拼接，
+				// 导致日志中大量重复输出，通过去重聚合可显著提高可读性
 				logger.Ctx(ctx).Errorf(
 					"Task [id:%s, type:%s] raise error: %+v",
-					taskID, taskType, err,
+					taskID, taskType, DedupErrorMsg(err),
 				)
 				// 将包含堆栈的错误返回给 asynq，
 				// asynq 会通过 err.Error() 将其存入 LastErr 字段，
@@ -78,4 +81,59 @@ func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Han
 			return nil
 		})
 	}
+}
+
+// DedupErrorMsg 对重复的错误信息进行去重聚合
+// GORM ClickHouse 驱动在扫描多行数据时会将同类错误用 "; " 拼接，
+// 例如 "expected []byte, got string; expected []byte, got string; ..."
+// 该函数将重复信息合并为 "msg (xN)" 格式，减少日志量并提高可读性
+//
+// 参数:
+//   - err: 原始错误对象
+//
+// 返回:
+//   - string: 去重聚合后的错误信息字符串
+//
+// 示例:
+//   - 输入: "expected []byte, got string; expected []byte, got string"
+//   - 输出: "expected []byte, got string (x2)"
+//   - 输入: "err_a; err_a; err_b; err_a"
+//   - 输出: "err_a (x3); err_b (x1)"
+func DedupErrorMsg(err error) string {
+	if err == nil {
+		return "<nil>"
+	}
+	msg := err.Error()
+	parts := strings.Split(msg, "; ")
+	if len(parts) <= 1 {
+		return msg
+	}
+
+	// 统计每种错误信息的出现次数，同时保持首次出现顺序
+	counts := make(map[string]int)
+	var order []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if _, exists := counts[p]; !exists {
+			order = append(order, p)
+		}
+		counts[p]++
+	}
+
+	if len(counts) == 0 {
+		return msg
+	}
+
+	result := make([]string, 0, len(order))
+	for _, p := range order {
+		if counts[p] > 1 {
+			result = append(result, fmt.Sprintf("%s (x%d)", p, counts[p]))
+		} else {
+			result = append(result, p)
+		}
+	}
+	return strings.Join(result, "; ")
 }

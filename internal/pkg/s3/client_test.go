@@ -3,9 +3,14 @@ package s3
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/minio/minio-go/v7"
@@ -289,6 +294,117 @@ func TestCPutObject_StreamEncryption(t *testing.T) {
 			result, err := io.ReadAll(decrypted)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(result, convey.ShouldResemble, original)
+		})
+	})
+}
+
+// TestVerifyDownloadIntegrity 测试 S3 下载数据的 ETag 一致性校验。
+// 通过 mock HTTP 服务器模拟服务端返回的 ETag 与实际下载数据不一致的场景，
+// 验证 VerifyDownloadIntegrity 能正确检测出数据损坏。
+func TestVerifyDownloadIntegrity(t *testing.T) {
+	convey.Convey("Test VerifyDownloadIntegrity with mock S3 server", t, func() {
+		// 构建两组数据：goodData 用于设置服务端 ETag，corruptData 用于模拟损坏的下载内容
+		goodData := []byte("original file content for integrity check")
+		corruptData := []byte("corrupted file content!!! different data")
+
+		goodMD5 := md5.Sum(goodData)
+		goodETag := fmt.Sprintf(`"%s"`, hex.EncodeToString(goodMD5[:]))
+
+		testBucket := "test-bucket"
+		testObjectKey := "test/object.zkcn"
+		expectedPath := "/" + testBucket + "/" + testObjectKey
+
+		// 启动 mock HTTP 服务器
+		// HEAD 请求（StatObject）：返回 goodData 的 ETag
+		// GET 请求（GetObject）：返回 corruptData（MD5 与 ETag 不一致）
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != expectedPath {
+				w.WriteHeader(http.StatusNotFound)
+				return
+			}
+			switch r.Method {
+			case http.MethodHead:
+				w.Header().Set("ETag", goodETag)
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", len(goodData)))
+				w.Header().Set("Last-Modified", "Mon, 02 Jan 2006 15:04:05 GMT")
+				w.WriteHeader(http.StatusOK)
+			case http.MethodGet:
+				w.Header().Set("ETag", goodETag)
+				w.Header().Set("Content-Length", fmt.Sprintf("%d", len(corruptData)))
+				w.Header().Set("Last-Modified", "Mon, 02 Jan 2006 15:04:05 GMT")
+				w.WriteHeader(http.StatusOK)
+				w.Write(corruptData)
+			default:
+				w.WriteHeader(http.StatusMethodNotAllowed)
+			}
+		}))
+		defer server.Close()
+
+		convey.Convey("should return error when downloaded data MD5 does not match ETag", func() {
+			cfg := &Config{
+				Endpoint:  strings.TrimPrefix(server.URL, "http://"),
+				AccessKey: "test-access-key",
+				SecretKey: "test-secret-key",
+				Bucket:    testBucket,
+				Region:    "us-east-1",
+				UseSSL:    false,
+			}
+
+			provider := key.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
+			book, e := key.LoadPasswordBook("")
+			convey.So(e, convey.ShouldBeNil)
+			kd := key.NewKeyDerivation(provider, book)
+
+			client, e := NewS3Client(cfg, kd)
+			convey.So(e, convey.ShouldBeNil)
+			convey.So(client, convey.ShouldNotBeNil)
+
+			ctx := context.Background()
+
+			// 模拟下载：GetObject 返回 corruptData，包装为 ETag 校验流
+			rc, e := client.GetObject(ctx, testObjectKey, minio.GetObjectOptions{})
+			convey.So(e, convey.ShouldBeNil)
+			defer rc.Close()
+
+			vr, e := client.VerifyDownloadIntegrity(ctx, testObjectKey, rc)
+			convey.So(e, convey.ShouldBeNil)
+
+			// 流式读取：StatObject 返回 goodETag，但 corruptData 的 MD5 与之不匹配
+			_, e = io.ReadAll(vr)
+			convey.So(e, convey.ShouldNotBeNil)
+			convey.So(e.Error(), convey.ShouldContainSubstring, "S3 object integrity check failed")
+			convey.So(e.Error(), convey.ShouldContainSubstring, "expected ETag")
+			convey.So(e.Error(), convey.ShouldContainSubstring, "computed MD5")
+		})
+
+		convey.Convey("should return nil when downloaded data MD5 matches ETag", func() {
+			cfg := &Config{
+				Endpoint:  strings.TrimPrefix(server.URL, "http://"),
+				AccessKey: "test-access-key",
+				SecretKey: "test-secret-key",
+				Bucket:    testBucket,
+				Region:    "us-east-1",
+				UseSSL:    false,
+			}
+
+			provider := key.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
+			book, e := key.LoadPasswordBook("")
+			convey.So(e, convey.ShouldBeNil)
+			kd := key.NewKeyDerivation(provider, book)
+
+			client, e := NewS3Client(cfg, kd)
+			convey.So(e, convey.ShouldBeNil)
+
+			ctx := context.Background()
+
+			// 包装 goodData Reader，数据 MD5 与 ETag 一致
+			vr, e := client.VerifyDownloadIntegrity(ctx, testObjectKey, bytes.NewReader(goodData))
+			convey.So(e, convey.ShouldBeNil)
+
+			// 流式读取完毕，校验应通过
+			result, e := io.ReadAll(vr)
+			convey.So(e, convey.ShouldBeNil)
+			convey.So(result, convey.ShouldResemble, goodData)
 		})
 	})
 }

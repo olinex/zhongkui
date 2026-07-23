@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
@@ -140,9 +140,9 @@ func (n *ReassemblerNode[P]) run(
 	ctx context.Context,
 	logger *logging.Logger,
 	meta *n.BaseMeta,
-	wg *errgroup.Group,
+	wg *errgroupx.Group,
 	dstChan chan<- any,
-) error {
+) {
 	wg.Go(func() error {
 		defer func() {
 			if err := recover(); err != nil {
@@ -159,7 +159,6 @@ func (n *ReassemblerNode[P]) run(
 		}
 		return nil
 	})
-	return nil
 }
 
 // RouterAux 是 Router 的 JSON 序列化辅助格式，用于持久化和恢复路由器状态。
@@ -452,7 +451,7 @@ func (r *Router[P]) Default() any {
 //   - 时间复杂度：O(n) 在最坏情况下需要遍历整个链表
 //   - 空间复杂度：O(m×n) m为元数据分组数，n为每个分组的节点数
 //   - 并发安全：通过errgroup管理goroutine，确保错误传播和资源清理
-func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packet P, wg *errgroup.Group, dstChan chan<- any) (err error) {
+func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packet P, wg *errgroupx.Group, dstChan chan<- any) (err error) {
 	ctx, span := startRouterSpan(ctx, packet)
 	defer endSpan(span, &err)
 	defer recordPacket(ctx, packet)
@@ -495,9 +494,7 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 		ln = &linkedNode[P]{
 			node: node,
 		}
-		if err := node.run(ctx, logger, meta, wg, dstChan); err != nil {
-			return errors.WithStack(err)
-		}
+		node.run(ctx, logger, meta, wg, dstChan)
 		group.pushFront(ln)
 	} else if err := ln.node.Reassembler.addPacket(ctx, packet); err != nil {
 		return errors.WithStack(err)
@@ -603,7 +600,7 @@ func (r *Router[P]) cleanup(ctx context.Context, force bool) {
 //  3. 每个重组器节点有自己的清理逻辑，确保资源释放
 func (r *Router[P]) Run(ctx context.Context, logger *logging.Logger, srcChan <-chan P, dstChan chan<- any) error {
 	ctx, cancel := context.WithCancel(ctx)
-	wg, ctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroupx.WithContext(ctx)
 	ticker := time.NewTicker(r.noticeTimeout)
 	defer ticker.Stop()
 	// 进入主循环

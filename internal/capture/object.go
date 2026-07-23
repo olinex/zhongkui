@@ -30,7 +30,7 @@ import (
 //	返回: "prod/network-capture/v1.0/1745012345678_550e8400-e29b-41d4-a716-446655440000.zstd"
 func BuildObjectKey(namespace, name, version string, timestamp time.Time, sessionID serializer.HexUUID) string {
 	return fmt.Sprintf(
-		`%s/%s/%s/%d_%s.%s`,
+		`pcap/%s/%s/%s/%d_%s.%s`,
 		namespace,
 		name,
 		version,

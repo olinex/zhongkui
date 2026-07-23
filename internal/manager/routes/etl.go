@@ -10,8 +10,8 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -306,7 +306,7 @@ func etlPipelineInspectorQueueListGet(c *gin.Context) {
 	}
 	out := make(ETLPipelineInspectorQueueListOut, len(queues))
 	var mu sync.Mutex
-	wg, _ := errgroup.WithContext(c)
+	wg, _ := errgroupx.WithContext(c)
 	for _, queue := range queues {
 		func(name string) {
 			wg.Go(func() error {
@@ -425,7 +425,7 @@ func etlPipelineInspectorDailyStatListGet(c *gin.Context) {
 		return
 	}
 	collector := sync.Map{}
-	wg, _ := errgroup.WithContext(c)
+	wg, _ := errgroupx.WithContext(c)
 	f := func(name string) func() error {
 		return func() error {
 			history, err := inspector.History(name, int(in.Days))
