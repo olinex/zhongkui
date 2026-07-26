@@ -20,8 +20,9 @@ const (
 	PREFIX = "pipeline"
 )
 
-// Task 任务类型别名，表示 asynq 任务。
-// 这是 github.com/hibiken/asynq.Task 的类型别名，用于统一任务类型。
+// Task 任务类型别名，表示 asynq 任务
+// 对 github.com/hibiken/asynq.Task 的类型别名，用于统一任务类型。
+// asynq.Task 包含任务类型名称（Typename）和载荷数据（Payload），是任务队列中传递的基本单元。
 type Task = asynq.Task
 
 // ContextFunc 上下文函数类型，用于获取任务执行的上下文。
@@ -80,6 +81,7 @@ type SchedulerConfig struct {
 	ForceFlush bool `mapstructure:"forceFlush" default:"false" comment:"force flush scheduler queue on sync (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 强制刷新
 }
 
+// CustomConfig 自定义配置结构，定义任务和处理器配置映射。
 type CustomConfig struct {
 	// Tasks 任务配置映射，在任务执行时会动态注入任务函数。
 	// 默认值: 空映射 {}
@@ -89,7 +91,7 @@ type CustomConfig struct {
 	Processors map[string]map[string]any `mapstructure:"processors" default:"{}" comment:"map of processor configurations"` // 处理器配置映射
 }
 
-// Config Pipeline 配置结构，定义了任务队列服务的完整配置参数。
+// Config 配置结构，定义了任务队列服务的完整配置参数。
 // 该结构包含并发控制、队列管理、监控指标和调度器配置等各个方面。
 type Config struct {
 	// Concurrency 最大并发数，控制同时处理的任务数量。
@@ -162,10 +164,17 @@ func (c *Config) ToAsynqConfig(
 	}
 }
 
+// DescribeConfig 生成 Pipeline 配置的描述信息
+// 利用反射分析 Config 结构体的字段标签（mapstructure、default、comment），
+// 生成结构化的配置描述列表，供文档或 UI 动态展示配置项。
 func DescribeConfig() config.ConfigDescriptions {
 	return config.DescribeConfig[Config](PREFIX)
 }
 
+// ExtractConfig 从 Viper 配置中提取 Pipeline 配置
+// 以 PREFIX（"pipeline"）为键前缀从 viper.Viper 实例中读取配置，
+// 反序列化为 Config 结构体并应用 default 标签的默认值。
+// 返回 (*Config, error)：成功时返回已填充的配置指针，失败时返回错误。
 func ExtractConfig(v *viper.Viper) (*Config, error) {
 	return config.ExtractConfig[Config](v, PREFIX)
 }

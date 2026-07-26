@@ -16,7 +16,9 @@ var (
 	clusterPrefix = etcd.WithPrefix("clusters/")
 )
 
-// hashKeyToShard 计算 key 对应的分片索引。
+// HashKeyToShard 使用 FNV-1a 32 位哈希算法计算 key 对应的分片索引。
+// 对 key 取 FNV-1a 32-bit hash，然后 mod shardCount 得到 [0, shardCount) 范围内的分片索引。
+// 返回的索引可用于定位数据项应当归属的虚拟节点分片。
 func HashKeyToShard(key string, shardCount int) (int, error) {
 	h := fnv.New32a()
 	if count, err := h.Write([]byte(key)); err != nil {
@@ -27,6 +29,14 @@ func HashKeyToShard(key string, shardCount int) (int, error) {
 	return int(h.Sum32() % uint32(shardCount)), nil
 }
 
+// Orchestrator 分布式数据处理编排器。
+// 协调集群成员之间的分布式数据处理流程，使用 etcd 进行成员注册与发现，
+// 并持久化各成员的处理水位（watermark）。每个编排器实例代表集群中的一个成员，
+// 通过 ClusterHandler 接口与具体业务逻辑解耦。
+//
+// 类型参数:
+//   - Handler: 实现 ClusterHandler[Item] 接口的业务处理器
+//   - Item: 业务数据项的类型
 type Orchestrator[Handler ClusterHandler[Item], Item any] struct {
 	client   *etcd.EtcdClient
 	logger   *logging.Logger
@@ -37,6 +47,14 @@ type Orchestrator[Handler ClusterHandler[Item], Item any] struct {
 	memberID string
 }
 
+// NewOrchestrator 创建分布式编排器实例。
+//
+// 参数:
+//   - client: etcd 客户端，用于成员注册和水位持久化
+//   - logger: 结构化日志实例
+//   - config: 集群运行时配置（虚拟节点数、通道大小、轮询及持久化间隔等）
+//   - handler: 业务处理器实现，负责 Poll（拉取数据）和 Start（消费数据）
+//   - name: 集群名称，同一集群的实例共享命名空间
 func NewOrchestrator[Handler ClusterHandler[Item], Item any](
 	client *etcd.EtcdClient,
 	logger *logging.Logger,
@@ -94,6 +112,8 @@ func (o *Orchestrator[Handler, Item]) getWatermark(ctx context.Context) (time.Ti
 	return defaultWatermark, nil
 }
 
+// GetMemberID 返回当前编排器实例在 etcd 集群中的唯一成员标识。
+// 成员 ID 由 etcd.Cluster 在实例创建时分配，用于标识该实例在集群中的身份。
 func (o *Orchestrator[Handler, Item]) GetMemberID() string {
 	return o.memberID
 }
@@ -210,6 +230,9 @@ func (o *Orchestrator[Handler, Item]) Start(ctx context.Context) error {
 	})
 }
 
+// Shutdown 优雅关闭编排器。
+// 委托 handler.Shutdown() 执行业务层清理（如关闭数据库连接、等待处理中的任务完成等）。
+// 该方法不会关闭 etcd 连接或移除集群成员，仅负责业务处理器的资源释放。
 func (o *Orchestrator[Handler, Item]) Shutdown() {
 	o.handler.Shutdown()
 }

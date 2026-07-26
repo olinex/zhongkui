@@ -1,3 +1,6 @@
+// Package base 提供分布式版本化任务处理的基础 Handler 实现。
+// 包含基于 etcd 版本 CAS 机制的版本化 Handler（versionHandler）
+// 和通用的批量数据流水线 Handler（BatchHandler）。
 package base
 
 import (

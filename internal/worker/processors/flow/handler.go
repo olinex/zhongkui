@@ -1,3 +1,5 @@
+// Package flow 实现基于 TCP 流的分布式抓包处理。
+// 包含从 ClickHouse 轮询数据、TCP 流重组、批量输出到 ClickHouse 的完整流水线。
 package flow
 
 import (
@@ -12,6 +14,9 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
+// flowClusterHandler 分片级别的 TCP 流处理器，实现 distributed.ClusterHandler 接口。
+// 负责从 ClickHouse 轮询数据包，通过 TCP Router 重组 TCP 流，
+// 并将解析出的 HttpTransport 输出到 BatchWriter 进行批量写入。
 type flowClusterHandler[P tcp.TCPPacket] struct {
 	db     *database.DB
 	logger *logging.Logger

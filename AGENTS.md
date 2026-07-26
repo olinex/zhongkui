@@ -286,7 +286,7 @@ Use `mitt` event bus for cross-component communication (e.g., user state refresh
 
 1. **No dead code**: Remove unused imports, variables, and functions
 2. **Consistency first**: Follow existing patterns in the file/module you're editing
-3. **Bilingual comments**: Chinese primary with English secondary for Go code; English only for frontend
+3. **Chinese comments**: Chinese only for Go code; English only for frontend
 4. **Type safety**: Use TypeScript strict mode; use Go generics where applicable
 5. **Error handling**: Never ignore errors; always wrap with context
 6. **DI pattern**: All new dependencies go through the `provider/` → `Inject` → `Invoke` pattern

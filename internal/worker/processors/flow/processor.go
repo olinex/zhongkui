@@ -1,3 +1,5 @@
+// Package flow 实现基于 TCP 流的分布式抓包处理。
+// 包含从 ClickHouse 轮询数据、TCP 流重组、批量输出到 ClickHouse 的完整流水线。
 package flow
 
 import (
@@ -19,15 +21,15 @@ const (
 	PROC_IPV6_TCP = "ipv6-tcp"
 )
 
-// PakcetProcessor 管理 TCP 流处理的完整生命周期。
-// 包含 BatchWriter 和分布式编排器。
-type PakcetProcessor[P tcp.TCPPacket] struct {
+// PacketProcessor 管理 TCP 流处理的完整生命周期。
+// 包含 BatchWriter 和分布式编排器，协调从 ClickHouse 轮询 → TCP 流重组 → 批量写入的完整流水线。
+type PacketProcessor[P tcp.TCPPacket] struct {
 	writer *BatchWriter
 	orch   *distributed.Orchestrator[*flowClusterHandler[P], P]
 }
 
 // Start 启动处理管道，阻塞直到 ctx 取消。
-func (p *PakcetProcessor[P]) Start(ctx context.Context, name string) error {
+func (p *PacketProcessor[P]) Start(ctx context.Context, name string) error {
 	wg, ctx := errgroupx.WithContext(ctx)
 	wg.GoNamed(fmt.Sprintf("%s-output-flush", name), func() error {
 		return p.writer.Start(ctx)
@@ -42,7 +44,7 @@ func (p *PakcetProcessor[P]) Start(ctx context.Context, name string) error {
 }
 
 // Shutdown 优雅关闭处理器。
-func (p *PakcetProcessor[P]) Shutdown() {
+func (p *PacketProcessor[P]) Shutdown() {
 	p.orch.Shutdown()
 }
 
@@ -88,7 +90,7 @@ func NewPacketProcessor[P tcp.TCPPacket](
 		}
 		writer := NewBatchWriter(db, param)
 		handler := newFlowClusterHandler[P](db, logger, writer, param)
-		return &PakcetProcessor[P]{
+		return &PacketProcessor[P]{
 			writer: writer,
 			orch: distributed.NewOrchestrator(
 				client,

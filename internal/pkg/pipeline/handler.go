@@ -36,19 +36,32 @@ type Handler interface {
 
 var handlerFuncs HandlerFuncs = make(HandlerFuncs, 0)
 
-// HandlerRegister 将任务 worker 注册到全局 handler 注册表中。
-// 通过任务类型名称关联对应的处理函数。
+// HandlerRegister 将任务处理器注册到全局 handler 注册表中
+// 通过任务类型名称关联对应的处理函数。通常在 init() 函数中调用以完成自动注册，
+// 也可在 HandlerRegistry 调用前手动注册。
+//
+// 使用示例（在 init() 中）：
+//
+//	func init() {
+//	    pipeline.HandlerRegister("my_task", &MyHandler{})
+//	}
 func HandlerRegister(name string, handler Handler) {
 	handlerFuncs[name] = handler.Do
 }
 
-// GetHandlerParam 从上下文中获取任务处理器配置。
+// GetHandlerParam 从上下文中提取指定类型的任务处理器配置
+// 泛型参数 T 为目标配置结构体的类型。函数从 ctx 中按键 CONTEXT_HANDLER_PARAM_NAME
+// 查找由 HandlerRegistry 注入的配置参数，并反序列化为 *T。
+// 返回 (*T, error)：成功时返回配置指针，上下文无此键或类型不匹配时返回错误。
 func GetHandlerParam[T any](ctx context.Context) (*T, error) {
 	return getParam[T](ctx, CONTEXT_HANDLER_PARAM_NAME)
 }
 
-// HandlerRegistry 获取全局 handler 注册表。
-// 返回所有已注册的任务处理函数映射。
+// HandlerRegistry 获取带参数注入的全局 handler 注册表副本
+// 遍历所有已注册的 handler 函数，如果 params 中存在同名的配置参数，则包装 handler：
+// 在调用 handler 之前将配置参数注入上下文（键为 CONTEXT_HANDLER_PARAM_NAME），
+// 使 handler 内部可通过 GetHandlerParam 获取配置。
+// 返回的是全新创建的映射副本，不会影响全局注册表 handlerFuncs。
 func HandlerRegistry(params map[string]map[string]any) HandlerFuncs {
 	wrapped := make(HandlerFuncs, len(handlerFuncs))
 	for name, hFunc := range handlerFuncs {

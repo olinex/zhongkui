@@ -1,3 +1,6 @@
+// Package base 提供分布式版本化任务处理的基础 Handler 实现。
+// 包含基于 etcd 版本 CAS 机制的版本化 Handler（versionHandler）
+// 和通用的批量数据流水线 Handler（BatchHandler）。
 package base
 
 import (
@@ -12,6 +15,14 @@ import (
 	"zhongkui.com/zhongkui/internal/worker/totel"
 )
 
+// VersionHandlerWrapper 版本化处理器包装接口，将普通 Handler 包装为版本感知的生命周期处理器。
+// 生命周期由 versionHandler.Handle 方法编排，依次执行五个阶段：
+//
+//	Load      - 根据 lastVersion 从存储中加载数据
+//	Do        - 执行实际的业务处理逻辑（通过注入 scope 传递数据）
+//	Next      - 计算下一个版本号 nextVersion
+//	Store     - 将处理后的数据持久化到存储
+//	Clear     - 清理旧版本数据，防止数据无限增长
 type VersionHandlerWrapper[T any] interface {
 	pipeline.Handler
 	Next(ctx context.Context, name, lastVersion string) (nextVersion string, err error)
@@ -29,6 +40,10 @@ func (w *versionHandler[T]) Name() string {
 	return w.task.Type()
 }
 
+// Handle 执行版本化任务处理流程，实现 etcd.Version.Commit 所需的 Handler 接口。
+// 流程：创建 DI scope → Load 加载数据 → 注入 scope → Do 执行业务逻辑 →
+//
+//	Next 计算下一版本 → Store 持久化数据 → Clear 清理旧版本。
 func (w *versionHandler[T]) Handle(ctx context.Context, logger *logging.Logger, lastVersion string) (nextVersion string, err error) {
 	name := w.Name()
 	ctx, span := totel.StartVersionTaskSpan(ctx, name, lastVersion)
@@ -89,10 +104,15 @@ func (w *versionHandler[T]) Handle(ctx context.Context, logger *logging.Logger, 
 	return nextVersion, nil
 }
 
+// VersionHandler 分布式版本化任务处理器，使用 etcd Version 的 CAS（compare-and-swap）机制
+// 保证多实例间任务执行的互斥与幂等。每个 Handle 周期从存储加载数据版本、执行处理、
+// 计算下一版本并持久化，通过 etcd 的原子 CAS 提交确保分布式一致性。
 type VersionHandler[T any] struct {
 	wrapper VersionHandlerWrapper[T]
 }
 
+// NewVersionHandler 创建 VersionHandler 实例并初始化 OpenTelemetry 指标。
+// wrapper 必须实现 VersionHandlerWrapper[T] 接口，提供版本感知的 Load/Do/Next/Store/Clear 生命周期方法。
 func NewVersionHandler[T any](wrapper VersionHandlerWrapper[T]) *VersionHandler[T] {
 	totel.InitMetrics()
 	return &VersionHandler[T]{
@@ -100,6 +120,10 @@ func NewVersionHandler[T any](wrapper VersionHandlerWrapper[T]) *VersionHandler[
 	}
 }
 
+// Do 执行版本化任务的入口方法。
+// 流程：从 DI scope 获取 etcd client 和 logger → 创建内部 versionHandler →
+//
+//	通过 etcd.Version.Commit 提交，利用 etcd CAS 机制保证分布式互斥。
 func (w *VersionHandler[T]) Do(ctx context.Context, task *pipeline.Task) error {
 	scope := provider.GetScope(ctx)
 	defer scope.Shutdown()

@@ -89,10 +89,12 @@ func NewCluster(client *EtcdClient, name string) *Cluster {
 	}
 }
 
+// Name 返回集群名称。
 func (c *Cluster) Name() string {
 	return c.name
 }
 
+// MemberID 返回当前成员的唯一标识。
 func (c *Cluster) MemberID() string {
 	return c.memberID
 }
@@ -105,6 +107,20 @@ func (c *Cluster) key() string {
 	return fmt.Sprintf(`%s/%s`, c.prefix(), c.memberID)
 }
 
+// Transaction 在集群会话中执行事务逻辑。
+//
+// 该方法是 Cluster 的核心方法，在事务期间完成以下步骤：
+//  1. 持读锁创建 etcd Session（30s TTL），注册当前成员到 etcd
+//  2. 释放读锁，持写锁加载全量成员列表并重建一致性哈希环
+//  3. 后台启动成员变化监听（watchPeers），成员增删时自动重建哈希环
+//  4. 执行传入的 tx 事务函数
+//
+// 锁策略说明：
+//   - Session 创建和成员注册阶段仅持 RLock（读锁），确保不影响其他 goroutine
+//     正在进行的 ShouldProcess/HashesOf 等读操作
+//   - 注册完成后释放 RLock，再执行 rebuildRing（内部获取写锁），避免持有
+//     读锁时再请求写锁导致死锁
+//   - rebuildRing 重建哈希环期间写锁阻塞所有读操作，但耗时极短
 func (c *Cluster) Transaction(ctx context.Context, tx func(ctx context.Context) error) error {
 	c.mu.RLock()
 	session, err := concurrency.NewSession(
@@ -176,6 +192,8 @@ func (c *Cluster) MemberCount() int {
 	return c.ring.MemberCount()
 }
 
+// HashesOf 返回指定成员在一致性哈希环上的所有虚拟节点哈希位置。
+// 委托给内部 ConsistentHash.HashesOf 实现。
 func (c *Cluster) HashesOf(member string) []uint32 {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

@@ -8,7 +8,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// getParam 从上下文中获取自定义配置。
+// 从上下文中获取自定义配置。
 func getParam[T any](ctx context.Context, name string) (*T, error) {
 	raw, ok := ctx.Value(name).(map[string]any)
 	if !ok {

@@ -1,3 +1,5 @@
+// Package flow 实现基于 TCP 流的分布式抓包处理。
+// 包含从 ClickHouse 轮询数据、TCP 流重组、批量输出到 ClickHouse 的完整流水线。
 package flow
 
 import "time"
