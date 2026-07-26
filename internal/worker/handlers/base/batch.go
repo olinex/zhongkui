@@ -1,4 +1,4 @@
-package workers
+package base
 
 import (
 	"context"
@@ -8,19 +8,19 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
-	"zhongkui.com/zhongkui/internal/tasks/totel"
+	"zhongkui.com/zhongkui/internal/worker/totel"
 )
 
-// 编译期断言：确保 BatchTaskWorker 实现了 pipeline.TaskWorker 接口
-var _ pipeline.TaskWorker = (*BatchTaskWorker)(nil)
+// 编译期断言：确保 BatchHandler 实现了 pipeline.Handler 接口
+var _ pipeline.Handler = (*BatchHandler)(nil)
 
 func emptyLiveFunc(ctx context.Context, task *pipeline.Task) error {
 	return nil
 }
 
-// BatchTaskWorker 批量任务 worker，用于处理流水线式的批量数据处理任务。
+// BatchHandler 批量任务处理器，用于处理流水线式的批量数据处理任务。
 // 支持数据提取、转换和加载三个阶段的流水线处理。
-type BatchTaskWorker struct {
+type BatchHandler struct {
 	bufferCount   int                      // 缓冲区大小
 	bufferTimeout time.Duration            // 缓冲区超时时间
 	preE          pipeline.LiveFunc        // 数据处理前
@@ -30,10 +30,10 @@ type BatchTaskWorker struct {
 	loads         []pipeline.LoadFunc      // 数据加载函数列表
 }
 
-// NewBatchTaskWorker 创建一个新的批量任务 worker。
+// NewBatchHandler 创建一个新的批量任务处理器。
 // bufferCount 指定缓冲区大小，bufferTimeout 指定缓冲区超时时间，
 // extract 是数据提取函数，transforms 是数据转换函数列表，loads 是数据加载函数列表。
-func NewBatchTaskWorker(
+func NewBatchHandler(
 	bufferCount int,
 	bufferTimeout time.Duration,
 	extract pipeline.ExtractFunc,
@@ -41,7 +41,7 @@ func NewBatchTaskWorker(
 	loads []pipeline.LoadFunc,
 	preE pipeline.LiveFunc,
 	postE pipeline.LiveFunc,
-) *BatchTaskWorker {
+) *BatchHandler {
 	totel.InitMetrics()
 	if preE == nil {
 		preE = emptyLiveFunc
@@ -49,7 +49,7 @@ func NewBatchTaskWorker(
 	if postE == nil {
 		postE = emptyLiveFunc
 	}
-	return &BatchTaskWorker{
+	return &BatchHandler{
 		bufferCount:   bufferCount,
 		bufferTimeout: bufferTimeout,
 		preE:          preE,
@@ -62,7 +62,7 @@ func NewBatchTaskWorker(
 
 // Do 执行批量任务处理。
 // 启动数据提取、数据转换和数据加载的流水线处理流程。
-func (w *BatchTaskWorker) Do(ctx context.Context, task *pipeline.Task) (err error) {
+func (w *BatchHandler) Do(ctx context.Context, task *pipeline.Task) (err error) {
 	taskType := task.Type()
 	ctx, span := totel.StartBatchTaskSpan(ctx, taskType)
 	defer totel.EndSpan(span, &err)

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -197,31 +196,18 @@ func (s *HttpDetector) Extract(
 	var rsp *http.Response
 	wg, ctx := errgroupx.WithContext(ctx)
 	wg.GoNamed("client", func() (rErr error) {
-		if req, rErr = http.ReadRequest(clientReader); rErr == io.EOF {
-			return errors.WithStack(rErr)
-		} else if rErr != nil {
+		if req, rErr = http.ReadRequest(clientReader); rErr != nil {
 			return errors.WithStack(rErr)
 		}
-		defer req.Body.Close()
-		body, rErr := io.ReadAll(req.Body)
-		if rErr != nil {
-			return errors.WithStack(rErr)
-		}
-		req.Body = io.NopCloser(bytes.NewReader(body))
+		// 不再 io.ReadAll body，保留 req.Body 为原始流式 reader
+		// body 将由 NewHttpRequestBody 直接流式上传到 S3
 		return rErr
 	})
 	wg.GoNamed("server", func() (rErr error) {
-		if rsp, rErr = http.ReadResponse(serverReader, req); rErr == io.EOF {
-			return errors.WithStack(rErr)
-		} else if rErr != nil {
+		if rsp, rErr = http.ReadResponse(serverReader, req); rErr != nil {
 			return errors.WithStack(rErr)
 		}
-		defer rsp.Body.Close()
-		body, rErr := io.ReadAll(rsp.Body)
-		if rErr != nil {
-			return errors.WithStack(rErr)
-		}
-		rsp.Body = io.NopCloser(bytes.NewReader(body))
+		// 不再 io.ReadAll body，保留 rsp.Body 为原始流式 reader
 		return rErr
 	})
 	if err = wg.Wait(); err != nil {

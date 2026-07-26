@@ -6,7 +6,6 @@ import (
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -14,7 +13,7 @@ import (
 // 根据不同的数据包类型（Ethernet、IPv4、IPv6、TCP、UDP），分别批量插入对应的数据表。
 // 使用并发方式同时写入多种类型的包数据。
 func LoadPacketModelToTable(ctx context.Context, items []any) error {
-	scope := pipeline.GetScope(ctx)
+	scope := provider.GetScope(ctx)
 	rawDB, err := provider.InvokeRawDatabase(scope)
 	if err != nil {
 		return errors.WithStack(err)

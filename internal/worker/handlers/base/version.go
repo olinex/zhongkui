@@ -1,4 +1,4 @@
-package workers
+package base
 
 import (
 	"context"
@@ -9,27 +9,27 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
-	"zhongkui.com/zhongkui/internal/tasks/totel"
+	"zhongkui.com/zhongkui/internal/worker/totel"
 )
 
-type VersionTaskWrapper[T any] interface {
-	pipeline.TaskWorker
+type VersionHandlerWrapper[T any] interface {
+	pipeline.Handler
 	Next(ctx context.Context, name, lastVersion string) (nextVersion string, err error)
 	Load(ctx context.Context, name, lastVersion string) (*T, error)
 	Store(ctx context.Context, name, nextVersion string, data *T) error
 	Clear(ctx context.Context, name, lastVersion string) error
 }
 
-type versionTaskHandler[T any] struct {
+type versionHandler[T any] struct {
 	task    *pipeline.Task
-	wrapper VersionTaskWrapper[T]
+	wrapper VersionHandlerWrapper[T]
 }
 
-func (w *versionTaskHandler[T]) Name() string {
+func (w *versionHandler[T]) Name() string {
 	return w.task.Type()
 }
 
-func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logger, lastVersion string) (nextVersion string, err error) {
+func (w *versionHandler[T]) Handle(ctx context.Context, logger *logging.Logger, lastVersion string) (nextVersion string, err error) {
 	name := w.Name()
 	ctx, span := totel.StartVersionTaskSpan(ctx, name, lastVersion)
 	defer totel.EndSpan(span, &err)
@@ -42,7 +42,7 @@ func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logg
 	}()
 
 	// 获取注入器
-	scope := pipeline.GetScope(ctx)
+	scope := provider.GetScope(ctx)
 	defer scope.Shutdown()
 	// 加载数据
 	innerCtx, loadSpan := totel.StartVersionLoadSpan(ctx, name, lastVersion)
@@ -89,19 +89,19 @@ func (w *versionTaskHandler[T]) Handle(ctx context.Context, logger *logging.Logg
 	return nextVersion, nil
 }
 
-type VersionTaskWorker[T any] struct {
-	wrapper VersionTaskWrapper[T]
+type VersionHandler[T any] struct {
+	wrapper VersionHandlerWrapper[T]
 }
 
-func NewVersionTaskWorker[T any](wrapper VersionTaskWrapper[T]) *VersionTaskWorker[T] {
+func NewVersionHandler[T any](wrapper VersionHandlerWrapper[T]) *VersionHandler[T] {
 	totel.InitMetrics()
-	return &VersionTaskWorker[T]{
+	return &VersionHandler[T]{
 		wrapper: wrapper,
 	}
 }
 
-func (w *VersionTaskWorker[T]) Do(ctx context.Context, task *pipeline.Task) error {
-	scope := pipeline.GetScope(ctx)
+func (w *VersionHandler[T]) Do(ctx context.Context, task *pipeline.Task) error {
+	scope := provider.GetScope(ctx)
 	defer scope.Shutdown()
 	client, err := provider.InvokeEtcdClient(scope)
 	if err != nil {
@@ -111,7 +111,7 @@ func (w *VersionTaskWorker[T]) Do(ctx context.Context, task *pipeline.Task) erro
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	handler := &versionTaskHandler[T]{
+	handler := &versionHandler[T]{
 		task:    task,
 		wrapper: w.wrapper,
 	}

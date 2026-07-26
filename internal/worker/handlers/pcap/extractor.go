@@ -21,7 +21,7 @@ import (
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/provider"
-	"zhongkui.com/zhongkui/internal/tasks/totel"
+	"zhongkui.com/zhongkui/internal/worker/totel"
 )
 
 // PcapItem 表示从 PCAP 文件中提取的数据包项。
@@ -51,7 +51,7 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 		}
 	}()
 
-	scope := pipeline.GetScope(ctx)
+	scope := provider.GetScope(ctx)
 	s3, e := provider.InvokeS3(scope)
 	if e != nil {
 		err = e

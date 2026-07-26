@@ -121,7 +121,7 @@ func NewElection(
 // 返回值:
 //   - error: 选举过程中的错误，可能包括 Session 创建失败、Campaign 失败、
 //     选举通道异常关闭或 handler.Start 返回的错误
-func (e *Election) Start() error {
+func (e *Election) Start(ctx context.Context) error {
 	name := e.handler.Name()
 	// Session会在后台自动保持心跳。如果此实例挂掉，Session过期，锁自动释放。
 	session, err := concurrency.NewSession(

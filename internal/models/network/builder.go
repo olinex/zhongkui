@@ -454,11 +454,13 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 		switch info.Proto {
 		case layers.LayerTypeTCP:
 			tcp := info.Headers.(*TCPHeaders)
-			return &PacketIPv4TCP{
+			pkt := &PacketIPv4TCP{
 				PacketIPv4: *model.(*PacketIPv4),
 				TCPHeaders: *tcp,
 				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.TCPStreamID = pkt.StreamID()
+			return pkt
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
 			return &PacketIPv4UDP{
@@ -473,11 +475,13 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 		switch info.Proto {
 		case layers.LayerTypeTCP:
 			tcp := info.Headers.(*TCPHeaders)
-			return &PacketIPv6TCP{
+			pkt := &PacketIPv6TCP{
 				PacketIPv6: *model.(*PacketIPv6),
 				TCPHeaders: *tcp,
 				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.TCPStreamID = pkt.StreamID()
+			return pkt
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
 			return &PacketIPv6UDP{

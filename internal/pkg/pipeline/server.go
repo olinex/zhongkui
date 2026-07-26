@@ -5,8 +5,10 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hibiken/asynq"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/redis"
@@ -87,9 +89,10 @@ type RawConfig = asynq.Config
 //   - Server 实例是线程安全的，可以在多个 goroutine 中安全使用
 //   - Start 和 Shutdown 方法应该由同一个 goroutine 调用
 type Server struct {
-	logger *logging.Logger // 日志记录器，用于记录服务器运行状态和错误信息
-	srv    *asynq.Server   // asynq 服务器实例，负责与 Redis 交互和任务调度
-	mux    *asynq.ServeMux // 任务分发器，根据任务类型路由到对应的处理函数
+	logger *logging.Logger      // 日志记录器，用于记录服务器运行状态和错误信息
+	srv    *asynq.Server        // asynq 服务器实例，负责与 Redis 交互和任务调度
+	mux    *asynq.ServeMux      // 任务分发器，根据任务类型路由到对应的处理函数
+	procs  map[string]Processor // 长时间运行，用于处理任务
 }
 
 // NewServer 创建一个新的任务队列服务器实例。
@@ -140,7 +143,7 @@ type Server struct {
 //  2. 在生产环境中应该使用 defer server.Shutdown() 确保资源清理
 //  3. 处理函数应该是幂等的，因为任务可能会被重试
 //  4. 在 DEBUG_ENV_VAR 为 true 时会启用 panic 恢复中间件
-func NewServer(ctx context.Context, cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs HandlerFuncs, mws ...asynq.MiddlewareFunc) *Server {
+func NewServer(ctx context.Context, cli *redis.Client, cfg RawConfig, logger *logging.Logger, hFuncs HandlerFuncs, factories ProcessorFactories, mws ...asynq.MiddlewareFunc) *Server {
 	// 创建任务分发器，负责根据任务类型路由到对应的处理函数
 	mux := asynq.NewServeMux()
 
@@ -161,11 +164,24 @@ func NewServer(ctx context.Context, cli *redis.Client, cfg RawConfig, logger *lo
 		logger.Ctx(ctx).Infof("load pipeline task handle func `%s`", pattern)
 	}
 
+	procs := make(map[string]Processor, len(factories))
+	for name, factory := range factories {
+		processor, err := factory(ctx)
+		if err != nil {
+			logger.Errorf("Failed to create processor for task type `%s`: %v", name, err)
+			continue
+		}
+		procs[name] = processor
+	}
+
+	srv := asynq.NewServerFromRedisClient(cli.Client, cfg)
+
 	// 返回配置完成的服务器实例
 	return &Server{
-		logger: logger,                                          // 日志记录器，用于记录服务器运行状态
-		srv:    asynq.NewServerFromRedisClient(cli.Client, cfg), // 创建 asynq 服务器并连接到 Redis
-		mux:    mux,                                             // 配置好的任务分发器
+		logger: logger, // 日志记录器，用于记录服务器运行状态
+		srv:    srv,    // 创建 asynq 服务器并连接到 Redis
+		mux:    mux,    // 配置好的任务分发器
+		procs:  procs,  // 长时间运行，用于处理任务
 	}
 }
 
@@ -196,15 +212,30 @@ func NewServer(ctx context.Context, cli *redis.Client, cfg RawConfig, logger *lo
 //  3. 启动失败可能是由于 Redis 连接问题或配置错误
 //  4. 服务器启动后可以通过 Shutdown 方法优雅关闭
 //  5. 所有错误都会通过 errors.WithStack 包装，便于调试
-func (s *Server) Start() error {
-	// 启动 asynq 服务器，开始处理队列中的任务
-	// Run 会阻塞当前 goroutine，持续处理任务直到 Shutdown 被调用
-	if err := s.srv.Run(s.mux); err != nil {
-		// 使用 errors.WithStack 包装错误，添加堆栈跟踪信息
-		// 便于在生产环境中定位问题
+func (s *Server) Start(ctx context.Context) error {
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("task", func() error {
+		// 启动 asynq 服务器，开始处理队列中的任务
+		// Run 会阻塞当前 goroutine，持续处理任务直到 Shutdown 被调用
+		if err := s.srv.Run(s.mux); err != nil {
+			// 使用 errors.WithStack 包装错误，添加堆栈跟踪信息
+			// 便于在生产环境中定位问题
+			return errors.WithStack(err)
+		}
+		// 成功启动，返回 nil
+		return nil
+	})
+	// 启动任务处理 goroutine，负责处理任务
+	// 这里可以添加任务处理逻辑，如从队列中获取任务、调用处理函数等
+	for name, processor := range s.procs {
+		wg.GoNamed(fmt.Sprintf("proc-%s", name), func() error {
+			processor.Start(ctx, name)
+			return nil
+		})
+	}
+	if err := wg.Wait(); err != nil {
 		return errors.WithStack(err)
 	}
-	// 成功启动，返回 nil
 	return nil
 }
 
@@ -245,4 +276,8 @@ func (s *Server) Shutdown() {
 	// 调用 asynq 服务器的 Shutdown 方法
 	// 该方法会优雅关闭服务器，等待正在处理的任务完成
 	s.srv.Shutdown()
+	// 关闭所有任务处理 goroutine
+	for _, processor := range s.procs {
+		processor.Shutdown()
+	}
 }

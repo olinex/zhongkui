@@ -41,7 +41,6 @@ func coreModels() []any {
 
 func rawModels() []any {
 	return []any{
-		&netmodel.PacketEthernet{},
 		&netmodel.PacketIPv4{},
 		&netmodel.PacketIPv6{},
 		&netmodel.PacketIPv4TCP{},

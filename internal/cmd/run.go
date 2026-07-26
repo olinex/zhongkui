@@ -11,7 +11,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/provider"
 	"zhongkui.com/zhongkui/internal/reporter"
-	_ "zhongkui.com/zhongkui/internal/tasks"
+	"zhongkui.com/zhongkui/internal/worker"
 )
 
 var webCmd = &cobra.Command{
@@ -49,6 +49,7 @@ var workerCmd = &cobra.Command{
 	Short: "Run the zhongkui worker Process",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
+		worker.Registry(ctx, i)
 		server, err := provider.InvokePipelineServer(i)
 		if err != nil {
 			pterm.Error.Println(err.Error())
@@ -59,9 +60,12 @@ var workerCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
+
+		// 启动所有注册的分布式处理器
 		wg, ctx := errgroupx.WithContext(ctx)
-		wg.GoNamed("server", server.Start)
-		wg.GoNamed("scheduler", scheduler.Start)
+		wg.GoNamed("server", func() error { return server.Start(ctx) })
+		wg.GoNamed("scheduler", func() error { return scheduler.Start(ctx) })
+
 		if err := wg.Wait(); err != nil {
 			pterm.Error.Println(err.Error())
 			return

@@ -80,6 +80,15 @@ type SchedulerConfig struct {
 	ForceFlush bool `mapstructure:"forceFlush" default:"false" comment:"force flush scheduler queue on sync (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 强制刷新
 }
 
+type CustomConfig struct {
+	// Tasks 任务配置映射，在任务执行时会动态注入任务函数。
+	// 默认值: 空映射 {}
+	Tasks map[string]map[string]any `mapstructure:"tasks" default:"{}" comment:"map of task configurations"` // 任务配置映射
+	// Processors 处理器配置映射，在任务执行时会动态注入处理器函数。
+	// 默认值: 空映射 {}
+	Processors map[string]map[string]any `mapstructure:"processors" default:"{}" comment:"map of processor configurations"` // 处理器配置映射
+}
+
 // Config Pipeline 配置结构，定义了任务队列服务的完整配置参数。
 // 该结构包含并发控制、队列管理、监控指标和调度器配置等各个方面。
 type Config struct {
@@ -117,9 +126,9 @@ type Config struct {
 	// Scheduler 调度器配置，包含定时任务的相关设置。
 	Scheduler SchedulerConfig `mapstructure:"scheduler" comment:"scheduler configuration for scheduled tasks (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 调度器配置
 
-	// Params 任务配置映射，在任务执行时会动态注入任务函数。
+	// Custom 自定义配置，在任务执行时会动态注入任务和处理器函数。
 	// 默认值: 空映射 {}
-	Params map[string]map[string]any `mapstructure:"params" default:"{}" comment:"map of task configurations"` // 任务配置映射
+	Custom CustomConfig `mapstructure:"custom" comment:"custom parameters"` //
 }
 
 // ToAsynqConfig 将 pipeline 配置转换为 asynq 原生配置。

@@ -9,9 +9,9 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
+	_ "zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
-	_ "zhongkui.com/zhongkui/internal/pkg/base"
 )
 
 const (
@@ -72,6 +72,7 @@ var RootCmd = &cobra.Command{
 		provider.InjectPipelineInspector(i)
 		provider.InjectPipelineScheduler(ctx, i)
 		provider.InjectPipelineRegistry(i)
+		provider.InjectPipelineProcessorFactoriesRegistry(i)
 		provider.InjectPipelineClient(i)
 		provider.InjectPipelineServer(ctx, i)
 		provider.InjectCaptureClient(i)

@@ -21,7 +21,7 @@ import (
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/provider"
 	"zhongkui.com/zhongkui/internal/reporter/totel"
-	"zhongkui.com/zhongkui/internal/tasks/pcap"
+	"zhongkui.com/zhongkui/internal/worker/handlers/pcap"
 )
 
 // ReporterService 实现了 reporter_v1.ReporterServiceServer 接口
