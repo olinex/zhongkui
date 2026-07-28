@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"go.etcd.io/etcd/client/v3/concurrency"
-	"golang.org/x/sync/errgroup"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
@@ -121,7 +121,7 @@ func NewElection(
 // 返回值:
 //   - error: 选举过程中的错误，可能包括 Session 创建失败、Campaign 失败、
 //     选举通道异常关闭或 handler.Start 返回的错误
-func (e *Election) Start() error {
+func (e *Election) Start(ctx context.Context) error {
 	name := e.handler.Name()
 	// Session会在后台自动保持心跳。如果此实例挂掉，Session过期，锁自动释放。
 	session, err := concurrency.NewSession(
@@ -138,18 +138,18 @@ func (e *Election) Start() error {
 	electResultChan := elector.Observe(e.ctx)
 	// 参与选举，非阻塞式
 	candidateID := e.handler.CandidateID()
-	wg, innerCtx := errgroup.WithContext(e.ctx)
-	wg.Go(func() error {
+	wg, innerCtx := errgroupx.WithContext(e.ctx)
+	wg.GoNamed("campaign", func() error {
 		// Campaign方法会阻塞，直到当前session成为领导者
 		return elector.Campaign(innerCtx, candidateID)
 	})
 	// 监听选举结果（关键：用于知道何时成为领导者）
-	wg.Go(func() error {
+	wg.GoNamed("exec", func() error {
 		for {
 			select {
 			// 外部上下文结束
 			case <-innerCtx.Done():
-				e.logger.With("context", e.ctx).Info("stop observe leader election")
+				e.logger.Ctx(e.ctx).Info("stop observe leader election")
 				return nil
 			// 完成了一次选举过程
 			case rsp, open := <-electResultChan:
@@ -165,7 +165,7 @@ func (e *Election) Start() error {
 					panic("get more than one leader from election")
 				}
 				leaderID := string(rsp.Kvs[0].Value)
-				e.logger.With("context", e.ctx).Infof(
+				e.logger.Ctx(e.ctx).Infof(
 					`New leader %s %s has been elected, current candidate id is %s`,
 					name,
 					leaderID,
@@ -173,11 +173,11 @@ func (e *Election) Start() error {
 				)
 				// 本次选举的领导者不是当前进程，继续参与选举
 				if string(rsp.Kvs[0].Value) != candidateID {
-					e.logger.With("context", e.ctx).Infof(`Current candidate %s is not leader, continue campaign`, candidateID)
+					e.logger.Ctx(e.ctx).Infof(`Current candidate %s is not leader, continue campaign`, candidateID)
 					continue
 				}
 				// 本次选举成为了领导者，有权运行定时调度
-				e.logger.With("context", e.ctx).Infof(`Handler %s is running...`, name)
+				e.logger.Ctx(e.ctx).Infof(`Handler %s is running...`, name)
 				return e.handler.Start(e.ctx)
 			}
 		}

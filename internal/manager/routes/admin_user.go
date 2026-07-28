@@ -3,11 +3,11 @@ package routes
 import (
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -283,20 +283,20 @@ func userGroupJoin(c *gin.Context) {
 		var namespace core.Namespace
 
 		// 使用errgroup并发执行验证操作
-		wg, innerCtx := errgroup.WithContext(c)
+		wg, innerCtx := errgroupx.WithContext(c)
 
 		// 验证用户存在且处于激活状态
-		wg.Go(func() error {
+		wg.GoNamed("check-active", func() error {
 			return tx.WithContext(innerCtx).First(&user, "union_id = ? AND active = true", unionID).Error
 		})
 
 		// 验证用户组存在
-		wg.Go(func() error {
+		wg.GoNamed("check-name", func() error {
 			return tx.WithContext(innerCtx).First(&group, "name = ?", in.GroupName).Error
 		})
 
 		// 验证命名空间存在（除非使用通配命名空间）
-		wg.Go(func() error {
+		wg.GoNamed("check-namespace", func() error {
 			if in.Namespace == base.WIDE_MATCH_LABEL {
 				return nil
 			} else {

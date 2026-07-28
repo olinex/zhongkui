@@ -284,6 +284,10 @@ func TestModelBuilder(t *testing.T) {
 			So(tcpModel.TCPBitSYN, ShouldBeTrue)
 			So(tcpModel.TCPBitACK, ShouldBeFalse)
 			So(tcpModel.TCPSeq, ShouldEqual, 1000)
+			// 验证TCPStreamID数据库字段已正确计算并设置
+			So(tcpModel.TCPStreamID, ShouldNotBeEmpty)
+			So(len(tcpModel.TCPStreamID), ShouldEqual, 16)
+			So(tcpModel.TCPStreamID, ShouldEqual, tcpModel.StreamID())
 		})
 
 		Convey("BuildAsPacketModel should auto-select correct model type", func() {
@@ -294,6 +298,7 @@ func TestModelBuilder(t *testing.T) {
 			tcpModel, ok := model.(*PacketIPv4TCP)
 			So(ok, ShouldBeTrue)
 			So(tcpModel.TCPDstPort, ShouldEqual, layers.TCPPort(80))
+			So(tcpModel.TCPStreamID, ShouldNotBeEmpty)
 		})
 
 		Convey("BuildAsPacketApplicationModel should return nil (not implemented)", func() {

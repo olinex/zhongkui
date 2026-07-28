@@ -10,9 +10,10 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v5"
-	"golang.org/x/sync/errgroup"
+	"github.com/pterm/pterm"
 	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/capture/wire"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
@@ -58,6 +59,13 @@ type CaptureClient struct {
 	// 包含正在导入（dump）和等待上传（upload queue）的临时文件
 	// 使用 sync.Map 保证并发安全，无需额外加锁
 	pendingFiles sync.Map
+
+	// stats 抓包统计收集器，用于在开启 --stats-print 时累计全局抓包指标
+	// 当 stats 为 nil 时，不进行统计收集和打印
+	stats *CaptureStats
+
+	// statsInterval 统计信息打印间隔，仅在 stats 不为 nil 时生效
+	statsInterval time.Duration
 }
 
 // NewCaptureClient 创建新的抓包客户端实例，初始化所有必要组件和通道
@@ -97,6 +105,18 @@ func NewCaptureClient(logger *logging.Logger, client reporter_v1.ReporterService
 		s3:     s3,
 		cfg:    cfg,
 	}
+}
+
+// EnableStats 开启抓包统计收集与定时打印功能
+// 调用后会在 Run 中启动一个后台 goroutine，每隔 interval 时间打印累计统计指标到 stdout
+// 统计内容包括：累计数据包数、累计字节数、segment 数、每秒包数（pps）、每秒兆比特数（mbps）
+//
+// 参数：
+//
+//	interval - 统计信息打印间隔，例如 5*time.Second 表示每 5 秒打印一次
+func (cc *CaptureClient) EnableStats(interval time.Duration) {
+	cc.stats = NewCaptureStats()
+	cc.statsInterval = interval
 }
 
 // runWithRetry 使用指数退避算法执行函数，支持重试机制，提高系统可靠性
@@ -320,7 +340,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) (err er
 			if interval > allowInterval {
 				// 触发panic，表示严重状态不一致
 				// 需要人工干预或系统重启
-				panic(fmt.Sprintf(
+				panic(errors.Newf(
 					"heartbeat interval %s must less than or equal to allow heartbeat interval %s",
 					interval,
 					allowInterval,
@@ -340,7 +360,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) (err er
 			if snapshot.globalVersion >= resp.GlobalVersion {
 				// 触发panic，表示严重状态不一致
 				// 需要人工干预或系统重启
-				panic(fmt.Sprintf(
+				panic(errors.Newf(
 					"local global version %d must less than remote global version %d",
 					mutex.globalVersion,
 					resp.GlobalVersion,
@@ -371,7 +391,7 @@ func (cc *CaptureClient) watch(ctx context.Context, mutex *captureMutex) (err er
 				if snapshot.configVersion != content.Event.PrvSnapshot.ConfigVersion {
 					// 触发panic，表示版本不连续
 					// 可能错过了某些配置更新
-					panic(fmt.Sprintf(
+					panic(errors.Newf(
 						"config version not match, expect %d, got %d",
 						snapshot.configVersion,
 						content.Event.PrvSnapshot.ConfigVersion,
@@ -464,6 +484,7 @@ func (cc *CaptureClient) uploadPacketHandler(
 		linkType:    linkType,
 		trackFile:   cc.trackFile,
 		untrackFile: cc.untrackFile,
+		stats:       cc.stats,
 	}
 	err = tmpCapturer.capture(ctx, ws, uploadChan)
 	if err != nil {
@@ -654,22 +675,42 @@ func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) 
 	// 支持快照机制，避免在状态读取时发生数据竞争
 	mutex := newCaptureMutex()
 	uploadChan := make(chan notice, 100)
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.Go(func() error {
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("watch", func() error {
 		return cc.runWithRetry(ctx, cc.cfg.Watch.MaxRetries, func(ctx context.Context) error {
 			return cc.watch(ctx, mutex)
 		})
 	})
-	wg.Go(func() error {
+	wg.GoNamed("feedback", func() error {
 		return cc.runWithRetry(ctx, cc.cfg.Feedback.MaxRetries, func(ctx context.Context) error {
 			return cc.feedback(ctx, sessionID, mutex, uploadChan)
 		})
 	})
-	wg.Go(func() error {
+	wg.GoNamed("upload", func() error {
 		return cc.runWithRetry(ctx, cc.cfg.Upload.MaxRetries, func(ctx context.Context) error {
 			return cc.upload(ctx, sessionID, mutex, uploadChan)
 		})
 	})
+
+	// 统计打印 goroutine：定时将累计抓包指标输出到 stdout
+	// 仅在 EnableStats 被调用后启动
+	if cc.stats != nil {
+		wg.Go(func() error {
+			ticker := time.NewTicker(cc.statsInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					// 退出前打印最终统计快照
+					pterm.Debug.Printfln("[capture stats] %s", cc.stats.Snapshot())
+					return nil
+				case <-ticker.C:
+					pterm.Debug.Printfln("[capture stats] %s", cc.stats.Snapshot())
+				}
+			}
+		})
+	}
+
 	return wg.Wait()
 }
 

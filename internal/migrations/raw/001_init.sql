@@ -1,23 +1,4 @@
 -- +goose Up
-CREATE TABLE IF NOT EXISTS packet_ethernets (
-	namespace LowCardinality(String) CODEC(ZSTD(3)),
-	capture LowCardinality(String) CODEC(ZSTD(3)),
-	version LowCardinality(String) CODEC(ZSTD(3)),
-	session_id UUID CODEC(ZSTD(3)),
-	timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)),
-	truncated Bool,
-	capture_length UInt32 CODEC(ZSTD(3)),
-	layer_stack String CODEC(ZSTD(3)),
-	payload String CODEC(ZSTD(3)),
-	eth_dst_mac FixedString(6),
-	eth_src_mac FixedString(6),
-	eth_type UInt16 CODEC(ZSTD(3)),
-	eth_length UInt16 CODEC(ZSTD(3))
-) ENGINE = MergeTree()
-ORDER BY (namespace, capture, version, session_id, eth_src_mac, eth_dst_mac, eth_type, timestamp)
-PARTITION BY toStartOfHour(timestamp)
-TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
-
 CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	namespace LowCardinality(String) CODEC(ZSTD(3)),
 	capture LowCardinality(String) CODEC(ZSTD(3)),
@@ -166,6 +147,7 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	ipv4_dst FixedString(4),
 	ipv4_options String CODEC(ZSTD(3)),
 	ipv4_padding String CODEC(ZSTD(3)),
+	stream_id FixedString(16) CODEC(ZSTD(3)),
 	tcp_src_port UInt16 CODEC(ZSTD(3)),
 	tcp_dst_port UInt16 CODEC(ZSTD(3)),
 	tcp_seq UInt32 CODEC(ZSTD(3)),
@@ -186,19 +168,13 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	tcp_options String CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
 	namespace,
-	capture,
-	version,
-	session_id,
-	LEAST(tcp_src_port, tcp_dst_port),
-	GREATEST(tcp_src_port, tcp_dst_port),
-	LEAST(ipv4_src, ipv4_dst),
-	GREATEST(ipv4_src, ipv4_dst),
+	stream_id,
 	ipv4_ip_protocol,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type,
-	timestamp
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
@@ -229,6 +205,7 @@ CREATE TABLE IF NOT EXISTS fused_ipv4_tcps (
 	ipv4_dst FixedString(4),
 	ipv4_options String CODEC(ZSTD(3)),
 	ipv4_padding String CODEC(ZSTD(3)),
+	stream_id FixedString(16) CODEC(ZSTD(3)),
 	tcp_src_port UInt16 CODEC(ZSTD(3)),
 	tcp_dst_port UInt16 CODEC(ZSTD(3)),
 	tcp_seq UInt32 CODEC(ZSTD(3)),
@@ -249,19 +226,13 @@ CREATE TABLE IF NOT EXISTS fused_ipv4_tcps (
 	tcp_options String CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
 	namespace,
-	capture,
-	version,
-	session_id,
-	LEAST(tcp_src_port, tcp_dst_port),
-	GREATEST(tcp_src_port, tcp_dst_port),
-	LEAST(ipv4_src, ipv4_dst),
-	GREATEST(ipv4_src, ipv4_dst),
+	stream_id,
 	ipv4_ip_protocol,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type,
-	timestamp
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
@@ -290,6 +261,7 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	ipv6_dst FixedString(16),
 	ipv6_hop_by_hop String CODEC(ZSTD(3)),
 	ipv6_last_header UInt8 CODEC(ZSTD(3)),
+	stream_id FixedString(16) CODEC(ZSTD(3)),
 	tcp_src_port UInt16 CODEC(ZSTD(3)),
 	tcp_dst_port UInt16 CODEC(ZSTD(3)),
 	tcp_seq UInt32 CODEC(ZSTD(3)),
@@ -310,20 +282,14 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	tcp_options String CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
 	namespace,
-	capture,
-	version,
-	session_id,
-	LEAST(tcp_src_port, tcp_dst_port),
-	GREATEST(tcp_src_port, tcp_dst_port),
-	LEAST(ipv6_src, ipv6_dst),
-	GREATEST(ipv6_src, ipv6_dst),
+	stream_id,
 	ipv6_flow_label,
 	ipv6_last_header,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type,
-	timestamp
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
@@ -350,6 +316,7 @@ CREATE TABLE IF NOT EXISTS fused_ipv6_tcps (
 	ipv6_dst FixedString(16),
 	ipv6_hop_by_hop String CODEC(ZSTD(3)),
 	ipv6_last_header UInt8 CODEC(ZSTD(3)),
+	stream_id FixedString(16) CODEC(ZSTD(3)),
 	tcp_src_port UInt16 CODEC(ZSTD(3)),
 	tcp_dst_port UInt16 CODEC(ZSTD(3)),
 	tcp_seq UInt32 CODEC(ZSTD(3)),
@@ -370,20 +337,14 @@ CREATE TABLE IF NOT EXISTS fused_ipv6_tcps (
 	tcp_options String CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
 	namespace,
-	capture,
-	version,
-	session_id,
-	LEAST(tcp_src_port, tcp_dst_port),
-	GREATEST(tcp_src_port, tcp_dst_port),
-	LEAST(ipv6_src, ipv6_dst),
-	GREATEST(ipv6_src, ipv6_dst),
+	stream_id,
 	ipv6_flow_label,
 	ipv6_last_header,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type,
-	timestamp
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
@@ -422,19 +383,16 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_udps (
 	udp_checksum UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
+	namespace,
 	udp_src_port,
 	udp_dst_port,
 	ipv4_src,
 	ipv4_dst,
 	ipv4_ip_protocol,
-	eth_src_mac,
-	eth_dst_mac,
-	eth_type,
-	session_id,
-	namespace,
-	capture,
-	version,
-	timestamp
+	LEAST(eth_src_mac, eth_dst_mac),
+	GREATEST(eth_src_mac, eth_dst_mac),
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
@@ -469,20 +427,17 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_udps (
 	udp_checksum UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
+	namespace,
 	udp_src_port,
 	udp_dst_port,
 	ipv6_src,
 	ipv6_dst,
 	ipv6_flow_label,
 	ipv6_last_header,
-	eth_src_mac,
-	eth_dst_mac,
-	eth_type,
-	session_id,
-	namespace,
-	capture,
-	version,
-	timestamp
+	LEAST(eth_src_mac, eth_dst_mac),
+	GREATEST(eth_src_mac, eth_dst_mac),
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
@@ -519,19 +474,16 @@ CREATE TABLE IF NOT EXISTS fused_ipv4_udps (
 	udp_checksum UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
+	namespace,
 	udp_src_port,
 	udp_dst_port,
 	ipv4_src,
 	ipv4_dst,
 	ipv4_ip_protocol,
-	eth_src_mac,
-	eth_dst_mac,
-	eth_type,
-	session_id,
-	namespace,
-	capture,
-	version,
-	timestamp
+	LEAST(eth_src_mac, eth_dst_mac),
+	GREATEST(eth_src_mac, eth_dst_mac),
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
@@ -564,20 +516,17 @@ CREATE TABLE IF NOT EXISTS fused_ipv6_udps (
 	udp_checksum UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
+	timestamp,
+	namespace,
 	udp_src_port,
 	udp_dst_port,
 	ipv6_src,
 	ipv6_dst,
 	ipv6_flow_label,
 	ipv6_last_header,
-	eth_src_mac,
-	eth_dst_mac,
-	eth_type,
-	session_id,
-	namespace,
-	capture,
-	version,
-	timestamp
+	LEAST(eth_src_mac, eth_dst_mac),
+	GREATEST(eth_src_mac, eth_dst_mac),
+	eth_type
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
@@ -802,7 +751,6 @@ PARTITION BY toStartOfHour(minute)
 TTL toDateTime(minute) + INTERVAL 72 HOUR DELETE;
 
 -- +goose Down
-DROP TABLE IF EXISTS packet_ethernets;
 DROP TABLE IF EXISTS packet_ipv4;
 DROP TABLE IF EXISTS fused_ipv4;
 DROP TABLE IF EXISTS packet_ipv6;

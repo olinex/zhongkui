@@ -8,6 +8,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+var (
+	_ driver.Valuer = (*GRERouting)(nil)
+)
+
 // VXLANChannel 表示VXLAN隧道通道信息
 // VXLAN（Virtual Extensible LAN）是一种网络虚拟化技术，用于在现有IP网络上创建虚拟二层网络
 // 该结构体存储VXLAN头部的主要字段，便于后续分析和存储
@@ -90,7 +94,10 @@ func NewGRERouting(raw *layers.GRERouting) *GRERouting {
 //  1. 使用JSON格式序列化结构体
 //  2. 支持嵌套结构（Next字段）的递归序列化
 //  3. 符合database/sql/driver.Value接口要求
-func (g GRERouting) Value() (driver.Value, error) {
+func (g *GRERouting) Value() (driver.Value, error) {
+	if g == nil {
+		return nil, nil
+	}
 	return json.Marshal(g)
 }
 
@@ -113,14 +120,24 @@ func (g GRERouting) Value() (driver.Value, error) {
 //  4. 支持嵌套结构（Next字段）的递归反序列化
 func (g *GRERouting) Scan(value any) error {
 	if value == nil {
-		g = nil
+		if g != nil {
+			*g = GRERouting{}
+		}
 		return nil
 	}
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*g = GRERouting{}
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*g = GRERouting{}
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Routing scan failed, except []byte, got %T", value)

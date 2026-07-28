@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	"golang.org/x/sync/errgroup"
 	"zhongkui.com/zhongkui/internal/capture/totel"
 	"zhongkui.com/zhongkui/internal/capture/wire"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
@@ -53,6 +53,10 @@ type capturer struct {
 
 	// untrackFile 文件追踪回调，在 upload 阶段成功删除临时文件后调用，将文件路径从待清理集合中移除
 	untrackFile func(string)
+
+	// stats 抓包统计收集器，用于在命令行调试模式下累计全局抓包指标
+	// 当 stats 为 nil 时，不进行统计收集（默认行为）
+	stats *CaptureStats
 }
 
 // filePath 生成压缩文件的完整路径
@@ -110,14 +114,14 @@ func (c *capturer) capture(ctx context.Context, ws wire.Wire, uploadChan chan<- 
 	var err error
 	defer totel.EndSpan(span, &err)
 
-	wg, ctx := errgroup.WithContext(ctx)
+	wg, ctx := errgroupx.WithContext(ctx)
 	dumpChan := make(chan notice, 10)
-	wg.Go(func() error {
+	wg.GoNamed("dump", func() error {
 		defer close(dumpChan)
 		// 第一阶段：数据包捕获/压缩/加密到指定文件
 		return c.dump(ctx, ws, dumpChan)
 	})
-	wg.Go(func() error {
+	wg.GoNamed("upload", func() error {
 		// 第三阶段：文件上传到S3
 		return c.upload(ctx, dumpChan, uploadChan)
 	})

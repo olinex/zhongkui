@@ -12,6 +12,35 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
+var (
+	_ driver.Valuer = (*TCPOptions)(nil)
+)
+
+// computeStreamID 计算TCP流标识符
+// 对已排序的IP字节序列和端口号计算64-bit maphash 哈希，生成方向无关的唯一流标识符。
+// 同一TCP连接的双向数据包会产生相同的流ID。
+// 参数leftIP/rightIP: 已排序后的IP地址字节序列（IPv4为4字节，IPv6为16字节）
+// 参数leftPort/rightPort: 已排序后的端口号
+// 返回值: 16字符的十六进制64-bit哈希字符串
+func computeStreamID(leftIP, rightIP []byte, leftPort, rightPort uint16) string {
+	if leftPort > rightPort {
+		leftPort, rightPort = rightPort, leftPort
+	}
+	if bytes.Compare(leftIP, rightIP) > 0 {
+		leftIP, rightIP = rightIP, leftIP
+	}
+
+	h := hash.Acquire()
+	defer h.Release()
+
+	h.WriteUint16(leftPort)
+	h.WriteUint16(rightPort)
+	h.WriteBytes(leftIP)
+	h.WriteBytes(rightIP)
+
+	return h.SumHex()
+}
+
 // TCPOption 表示TCP协议选项
 // TCP选项用于在TCP连接建立和通信过程中传递额外信息
 // 每个TCP选项包含类型、长度和数据三个部分
@@ -46,6 +75,9 @@ func NewTCPOptions(options []layers.TCPOption) TCPOptions {
 // 返回值driver.Value: 序列化后的数据库值
 // 返回值error: 序列化过程中的错误
 func (o TCPOptions) Value() (driver.Value, error) {
+	if o == nil {
+		return nil, nil
+	}
 	return json.Marshal(o)
 }
 
@@ -61,8 +93,16 @@ func (o *TCPOptions) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*o = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*o = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Tcp_options scan failed, except []byte, got %T", value)
@@ -186,9 +226,10 @@ func NewTCPHeaders(tcp *layers.TCP) *TCPHeaders {
 // 组合了PacketIPv4和TCPHeaders，表示完整的IPv4 TCP数据包信息
 // 包含以太网层、IPv4层和TCP层的所有头部信息
 type PacketIPv4TCP struct {
-	PacketIPv4 // 嵌入IPv4数据包基础结构
-	TCPHeaders // 嵌入TCP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
+	PacketIPv4                     // 嵌入IPv4数据包基础结构
+	TCPHeaders                     // 嵌入TCP头部信息
+	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
+	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
 }
 
 // StreamID 返回TCP流ID
@@ -196,26 +237,9 @@ type PacketIPv4TCP struct {
 // 流ID用于识别属于同一TCP连接的所有数据包
 // 返回值: 16字符的十六进制64-bit哈希字符串
 func (p *PacketIPv4TCP) StreamID() string {
-	h := hash.Acquire()
-	defer h.Release()
-
 	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
-	leftIP := net.IP(p.IPv4Src).To4()
-	rightIP := net.IP(p.IPv4Dst).To4()
-
-	if leftPort > rightPort {
-		leftPort, rightPort = rightPort, leftPort
-	}
-	if bytes.Compare(leftIP, rightIP) > 0 {
-		leftIP, rightIP = rightIP, leftIP
-	}
-
-	h.WriteUint16(leftPort)
-	h.WriteUint16(rightPort)
-	h.WriteBytes(leftIP)
-	h.WriteBytes(rightIP)
-
-	return h.SumHex()
+	leftIP, rightIP := net.IP(p.IPv4Src).To4(), net.IP(p.IPv4Dst).To4()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
 }
 
 // Meta 返回基础元数据
@@ -235,49 +259,53 @@ func (p *PacketIPv4TCP) FrameInfo() *FrameInfo {
 	}
 }
 
+// GetPayload 返回TCP数据包的载荷数据
+// 从加密存储的 Payload 字段中获取解密后的原始载荷字节
+func (p *PacketIPv4TCP) GetPayload() []byte {
+	if p.Payload == nil {
+		return nil
+	}
+	return p.Payload.Value()
+}
+
 // FusedIPv4TCP 表示融合的IPv4 TCP数据
 // 组合了FusedIPv4和TCPHeaders，用于存储融合处理后的IPv4 TCP数据
 // 融合数据通常包含聚合统计信息，用于分析和监控
 type FusedIPv4TCP struct {
-	FusedIPv4  // 嵌入融合IPv4数据基础结构
-	TCPHeaders // 嵌入TCP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=49915,length=32"`
+	FusedIPv4                      // 嵌入融合IPv4数据基础结构
+	TCPHeaders                     // 嵌入TCP头部信息
+	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
+	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=49915,length=32"`
+}
+
+// StreamID 返回TCP流ID
+// 通过 hash/maphash 对源IP、目的IP、源端口、目的端口计算64-bit哈希，生成唯一的流标识符
+// 流ID用于识别属于同一TCP连接的所有数据包
+// 返回值: 16字符的十六进制64-bit哈希字符串
+func (p *FusedIPv4TCP) StreamID() string {
+	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
+	leftIP, rightIP := net.IP(p.IPv4Src).To4(), net.IP(p.IPv4Dst).To4()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
 }
 
 // PacketIPv6TCP 表示IPv6 TCP数据包
 // 组合了PacketIPv6和TCPHeaders，表示完整的IPv6 TCP数据包信息
 // 包含以太网层、IPv6层和TCP层的所有头部信息
 type PacketIPv6TCP struct {
-	PacketIPv6 // 嵌入IPv6数据包基础结构
-	TCPHeaders // 嵌入TCP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
+	PacketIPv6                     // 嵌入IPv6数据包基础结构
+	TCPHeaders                     // 嵌入TCP头部信息
+	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
+	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
 }
 
 // StreamID 返回TCP流ID
-// 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的MD5哈希值生成唯一的流标识符
+// 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符
 // 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址
 // 返回值: 16字符的十六进制64-bit哈希字符串
 func (p *PacketIPv6TCP) StreamID() string {
-	h := hash.Acquire()
-	defer h.Release()
-
 	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
-	leftIP := net.IP(p.IPv6Src).To16()
-	rightIP := net.IP(p.IPv6Dst).To16()
-
-	if leftPort > rightPort {
-		leftPort, rightPort = rightPort, leftPort
-	}
-	if bytes.Compare(leftIP, rightIP) > 0 {
-		leftIP, rightIP = rightIP, leftIP
-	}
-
-	h.WriteUint16(leftPort)
-	h.WriteUint16(rightPort)
-	h.WriteBytes(leftIP)
-	h.WriteBytes(rightIP)
-
-	return h.SumHex()
+	leftIP, rightIP := net.IP(p.IPv6Src).To16(), net.IP(p.IPv6Dst).To16()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
 }
 
 // Meta 返回基础元数据
@@ -297,23 +325,43 @@ func (p *PacketIPv6TCP) FrameInfo() *FrameInfo {
 	}
 }
 
+// GetPayload 返回TCP数据包的载荷数据
+// 从加密存储的 Payload 字段中获取解密后的原始载荷字节
+func (p *PacketIPv6TCP) GetPayload() []byte {
+	if p.Payload == nil {
+		return nil
+	}
+	return p.Payload.Value()
+}
+
 // FusedIPv6TCP 表示融合的IPv6 TCP数据
 // 组合了FusedIPv6和TCPHeaders，用于存储融合处理后的IPv6 TCP数据
 // 融合数据通常包含聚合统计信息，用于分析和监控
 type FusedIPv6TCP struct {
-	FusedIPv6  // 嵌入融合IPv6数据基础结构
-	TCPHeaders // 嵌入TCP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16648,length=32"`
+	FusedIPv6                      // 嵌入融合IPv6数据基础结构
+	TCPHeaders                     // 嵌入TCP头部信息
+	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
+	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16648,length=32"`
+}
+
+// StreamID 返回TCP流ID
+// 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符
+// 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址
+// 返回值: 16字符的十六进制64-bit哈希字符串
+func (p *FusedIPv6TCP) StreamID() string {
+	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
+	leftIP, rightIP := net.IP(p.IPv6Src).To16(), net.IP(p.IPv6Dst).To16()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
 }
 
 type FusedIPv4UDP struct {
-	FusedIPv4  // 嵌入融合IPv4数据基础结构
-	UDPHeaders // 嵌入UDP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=51725,length=32"`
+	FusedIPv4                     // 嵌入融合IPv4数据基础结构
+	UDPHeaders                    // 嵌入UDP头部信息
+	Payload    *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=51725,length=32"`
 }
 
 type FusedIPv6UDP struct {
-	FusedIPv6  // 嵌入融合IPv6数据基础结构
-	UDPHeaders // 嵌入UDP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=36791,length=32"`
+	FusedIPv6                     // 嵌入融合IPv6数据基础结构
+	UDPHeaders                    // 嵌入UDP头部信息
+	Payload    *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=36791,length=32"`
 }

@@ -2,18 +2,42 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/samber/do/v2"
-	// "zhongkui.com/zhongkui/internal/network/detectors"
-	// "zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 )
+
+const (
+	// CONTEXT_SCOPE_NAME 上下文中的注入器键名
+	// 用于存储任务上下文中的注入器实例
+	CONTEXT_SCOPE_NAME = "ctx_scope"
+)
+
+// TaskContext 创建任务上下文的函数。
+// 返回一个函数，用于构建包含注入器实例的上下文。
+func TaskContext(ctx context.Context, i do.Injector) pipeline.ContextFunc {
+	return func() context.Context {
+		suffix, err := crypto.GenerateRandomString(16)
+		if err != nil {
+			panic(err)
+		}
+		scope := i.Scope(fmt.Sprintf("task:%s", suffix))
+		return context.WithValue(ctx, CONTEXT_SCOPE_NAME, scope)
+	}
+}
+
+// GetScope 从上下文中获取注入器实例。
+func GetScope(ctx context.Context) *do.Scope {
+	return ctx.Value(CONTEXT_SCOPE_NAME).(*do.Scope)
+}
 
 func initDetectors(i do.Injector) error {
 	if kd, err := InvokeKeyDerivation(i); err != nil {
@@ -63,7 +87,7 @@ func newPipelineSchdulerProvider(ctx context.Context) do.Provider[*etcd.Election
 	}
 }
 
-func newPipelineRegistryProvider() do.Provider[pipeline.HandlerFuncs] {
+func newPipelineTaskRegistryProvider() do.Provider[pipeline.HandlerFuncs] {
 	return func(i do.Injector) (pipeline.HandlerFuncs, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
@@ -72,7 +96,21 @@ func newPipelineRegistryProvider() do.Provider[pipeline.HandlerFuncs] {
 		} else if err := initDetectors(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
-			return pipeline.WorkerRegistry(cfg.Params), nil
+			return pipeline.HandlerRegistry(cfg.Custom.Tasks), nil
+		}
+	}
+}
+
+func newPipelineProcessorFactoriesRegistryProvider() do.Provider[pipeline.ProcessorFactories] {
+	return func(i do.Injector) (pipeline.ProcessorFactories, error) {
+		if viper, err := InvokeViper(i); err != nil {
+			return nil, errors.WithStack(err)
+		} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
+			return nil, errors.WithStack(err)
+		} else if err := initDetectors(i); err != nil {
+			return nil, errors.WithStack(err)
+		} else {
+			return pipeline.ProcessorFactoryRegistry(cfg.Custom.Processors), nil
 		}
 	}
 }
@@ -105,12 +143,16 @@ func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		handlers, err := InvokePipelineRegistry(i)
+		handlers, err := InvokePipelineTaskRegistry(i)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		factories, err := InvokePipelineProcessorFactoriesRegistry(i)
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 
-		ctxFunc := pipeline.TaskContext(ctx, i)
+		ctxFunc := TaskContext(ctx, i)
 		rawCfg := cfg.ToAsynqConfig(ctxFunc, logger)
 
 		return pipeline.NewServer(
@@ -119,6 +161,7 @@ func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server
 			rawCfg,
 			logger,
 			handlers,
+			factories,
 			otel.AsynqServerMiddleware(),
 		), nil
 	}
@@ -132,8 +175,12 @@ func NewPipelineScheduler(ctx context.Context) do.Provider[*etcd.Election] {
 	return newPipelineSchdulerProvider(ctx)
 }
 
-func NewPipelineRegistry() do.Provider[pipeline.HandlerFuncs] {
-	return newPipelineRegistryProvider()
+func NewPipelineTaskRegistry() do.Provider[pipeline.HandlerFuncs] {
+	return newPipelineTaskRegistryProvider()
+}
+
+func NewPipelineProcessorFactoriesRegistry() do.Provider[pipeline.ProcessorFactories] {
+	return newPipelineProcessorFactoriesRegistryProvider()
 }
 
 func NewPipelineClient() do.Provider[*pipeline.Client] {
@@ -153,7 +200,11 @@ func InjectPipelineScheduler(ctx context.Context, i do.Injector) {
 }
 
 func InjectPipelineRegistry(i do.Injector) {
-	do.Provide(i, NewPipelineRegistry())
+	do.Provide(i, NewPipelineTaskRegistry())
+}
+
+func InjectPipelineProcessorFactoriesRegistry(i do.Injector) {
+	do.Provide(i, NewPipelineProcessorFactoriesRegistry())
 }
 
 func InjectPipelineClient(i do.Injector) {
@@ -172,8 +223,12 @@ func InvokePipelineScheduler(i do.Injector) (*etcd.Election, error) {
 	return do.Invoke[*etcd.Election](i)
 }
 
-func InvokePipelineRegistry(i do.Injector) (pipeline.HandlerFuncs, error) {
+func InvokePipelineTaskRegistry(i do.Injector) (pipeline.HandlerFuncs, error) {
 	return do.Invoke[pipeline.HandlerFuncs](i)
+}
+
+func InvokePipelineProcessorFactoriesRegistry(i do.Injector) (pipeline.ProcessorFactories, error) {
+	return do.Invoke[pipeline.ProcessorFactories](i)
 }
 
 func InvokePipelineClient(i do.Injector) (*pipeline.Client, error) {
@@ -188,8 +243,12 @@ func MustInvokePipelineScheduler(i do.Injector) *etcd.Election {
 	return do.MustInvoke[*etcd.Election](i)
 }
 
-func MustInvokePipelineRegistry(i do.Injector) pipeline.HandlerFuncs {
+func MustInvokePipelineTaskRegistry(i do.Injector) pipeline.HandlerFuncs {
 	return do.MustInvoke[pipeline.HandlerFuncs](i)
+}
+
+func MustInvokePipelineProcessorFactoriesRegistry(i do.Injector) pipeline.ProcessorFactories {
+	return do.MustInvoke[pipeline.ProcessorFactories](i)
 }
 
 func MustInvokePipelineClient(i do.Injector) *pipeline.Client {

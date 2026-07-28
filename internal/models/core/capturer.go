@@ -12,6 +12,10 @@ import (
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
+var (
+	REPORTER_ETCD_PREFIX = etcd.WithPrefix("reporter/")
+)
+
 // ReporterConfigKey 生成 reporter 配置在 etcd 中的存储键
 // 格式: {prefix}reporter/{namespace}/{name}/{version}/cfg
 // 参数:
@@ -20,7 +24,7 @@ import (
 // 返回:
 //   - 配置键字符串
 func ReporterConfigKey(r *reporter_v1.Resource) string {
-	return fmt.Sprintf(`%s%s/%s/%s/cfg`, etcd.WithPrefix("reporter/"), r.Namespace, r.Name, r.Version)
+	return fmt.Sprintf(`%s%s/%s/%s/cfg`, REPORTER_ETCD_PREFIX, r.Namespace, r.Name, r.Version)
 }
 
 // ReporterStatusListKey 生成 reporter 状态列表在 etcd 中的存储键
@@ -31,7 +35,7 @@ func ReporterConfigKey(r *reporter_v1.Resource) string {
 // 返回:
 //   - 状态列表键字符串
 func ReporterStatusListKey(r *reporter_v1.Resource) string {
-	return fmt.Sprintf(`%s%s/%s/%s/sts`, etcd.WithPrefix("reporter/"), r.Namespace, r.Name, r.Version)
+	return fmt.Sprintf(`%s%s/%s/%s/sts`, REPORTER_ETCD_PREFIX, r.Namespace, r.Name, r.Version)
 }
 
 // ReporterStatusDetailKey 生成 reporter 具体状态在 etcd 中的存储键
@@ -95,9 +99,9 @@ func ReporterConfigMarshalAsBytes(config *reporter_v1.Config) ([]byte, error) {
 type Capturer struct {
 	database.BaseModel
 	Namespace     Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
-	NamespaceName string `gorm:"type:VARCHAR(32)"`
-	Name          string `gorm:"type:VARCHAR(32)"`
-	Version       string `gorm:"type:VARCHAR(32)"`
+	NamespaceName string    `gorm:"type:VARCHAR(32)"`
+	Name          string    `gorm:"type:VARCHAR(32)"`
+	Version       string    `gorm:"type:VARCHAR(32)"`
 }
 
 // CreateWithConfig 创建采集器记录并存储其配置到 etcd
@@ -257,5 +261,3 @@ func (c *Capturer) GetStatusList(ctx context.Context, client *etcd.EtcdClient) (
 	}
 	return statusList, nil
 }
-
-

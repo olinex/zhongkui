@@ -3,6 +3,7 @@ package base
 import (
 	"github.com/creasty/defaults"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pterm/pterm"
 )
 
 var (
@@ -20,5 +21,8 @@ func init() {
 		panic(err)
 	} else if err := envconfig.Process(GLOBAL_PREFIX, &Env); err != nil {
 		panic(err)
+	} else if Env.Debug {
+		pterm.EnableDebugMessages()
+		pterm.Debug.Println("pterm debug is enabled")
 	}
 }

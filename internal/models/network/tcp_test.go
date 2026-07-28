@@ -154,6 +154,28 @@ func TestTCPOptions_Basic(t *testing.T) {
 			So(decoded[0].Length, ShouldEqual, 10)
 			So(decoded[0].Data, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08})
 		})
+
+		Convey("Should handle nil slice with Value method", func() {
+			var options TCPOptions // nil slice
+			value, err := options.Value()
+			So(err, ShouldBeNil)
+			// nil slice should return nil driver.Value for SQL NULL
+			So(value, ShouldBeNil)
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var options TCPOptions
+			err := options.Scan("")
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var options TCPOptions
+			err := options.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
 	})
 }
 
@@ -359,7 +381,7 @@ func TestNewTCPHeaders(t *testing.T) {
 }
 
 // TestPacketIPv4TCP_StreamID 测试PacketIPv4TCP的StreamID生成功能
-// 验证流ID的一致性和正确性
+// 验证流ID的一致性、正确性以及TCPStreamID数据库字段的赋值
 func TestPacketIPv4TCP_StreamID(t *testing.T) {
 	Convey("Test PacketIPv4TCP StreamID generation", t, func() {
 		Convey("Should generate consistent StreamID regardless of packet direction", func() {
@@ -395,12 +417,64 @@ func TestPacketIPv4TCP_StreamID(t *testing.T) {
 
 			So(streamID1, ShouldEqual, streamID2)
 			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+
+			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
+			packet1.TCPStreamID = packet1.StreamID()
+			packet2.TCPStreamID = packet2.StreamID()
+			So(packet1.TCPStreamID, ShouldEqual, streamID1)
+			So(packet2.TCPStreamID, ShouldEqual, streamID2)
+		})
+	})
+}
+
+// TestFusedIPv4TCP_StreamID 测试FusedIPv4TCP的StreamID生成功能
+// 验证融合IPv4 TCP数据的流ID一致性
+func TestFusedIPv4TCP_StreamID(t *testing.T) {
+	Convey("Test FusedIPv4TCP StreamID generation", t, func() {
+		Convey("Should generate consistent StreamID regardless of packet direction", func() {
+			packet1 := &FusedIPv4TCP{
+				FusedIPv4: FusedIPv4{
+					IPv4Headers: IPv4Headers{
+						IPv4Src: serializer.IPv4Addr{10, 0, 0, 1},
+						IPv4Dst: serializer.IPv4Addr{10, 0, 0, 2},
+					},
+				},
+				TCPHeaders: TCPHeaders{
+					TCPSrcPort: layers.TCPPort(443),
+					TCPDstPort: layers.TCPPort(54321),
+				},
+			}
+
+			packet2 := &FusedIPv4TCP{
+				FusedIPv4: FusedIPv4{
+					IPv4Headers: IPv4Headers{
+						IPv4Src: serializer.IPv4Addr{10, 0, 0, 2},
+						IPv4Dst: serializer.IPv4Addr{10, 0, 0, 1},
+					},
+				},
+				TCPHeaders: TCPHeaders{
+					TCPSrcPort: layers.TCPPort(54321),
+					TCPDstPort: layers.TCPPort(443),
+				},
+			}
+
+			streamID1 := packet1.StreamID()
+			streamID2 := packet2.StreamID()
+
+			So(streamID1, ShouldEqual, streamID2)
+			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+
+			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
+			packet1.TCPStreamID = packet1.StreamID()
+			packet2.TCPStreamID = packet2.StreamID()
+			So(packet1.TCPStreamID, ShouldEqual, streamID1)
+			So(packet2.TCPStreamID, ShouldEqual, streamID2)
 		})
 	})
 }
 
 // TestPacketIPv6TCP_StreamID 测试PacketIPv6TCP的StreamID生成功能
-// 验证IPv6流ID的一致性和正确性
+// 验证IPv6流ID的一致性、正确性以及TCPStreamID数据库字段的赋值
 func TestPacketIPv6TCP_StreamID(t *testing.T) {
 	Convey("Test PacketIPv6TCP StreamID generation", t, func() {
 		Convey("Should generate consistent StreamID for IPv6 regardless of packet direction", func() {
@@ -440,6 +514,62 @@ func TestPacketIPv6TCP_StreamID(t *testing.T) {
 
 			So(streamID1, ShouldEqual, streamID2)
 			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+
+			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
+			packet1.TCPStreamID = packet1.StreamID()
+			packet2.TCPStreamID = packet2.StreamID()
+			So(packet1.TCPStreamID, ShouldEqual, streamID1)
+			So(packet2.TCPStreamID, ShouldEqual, streamID2)
+		})
+	})
+}
+
+// TestFusedIPv6TCP_StreamID 测试FusedIPv6TCP的StreamID生成功能
+// 验证融合IPv6 TCP数据的流ID一致性
+func TestFusedIPv6TCP_StreamID(t *testing.T) {
+	Convey("Test FusedIPv6TCP StreamID generation", t, func() {
+		Convey("Should generate consistent StreamID for IPv6 regardless of packet direction", func() {
+			packet1 := &FusedIPv6TCP{
+				FusedIPv6: FusedIPv6{
+					IPv6Headers: IPv6Headers{
+						IPv6Base: IPv6Base{
+							IPv6Src: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+							IPv6Dst: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+						},
+					},
+				},
+				TCPHeaders: TCPHeaders{
+					TCPSrcPort: layers.TCPPort(54321),
+					TCPDstPort: layers.TCPPort(80),
+				},
+			}
+
+			packet2 := &FusedIPv6TCP{
+				FusedIPv6: FusedIPv6{
+					IPv6Headers: IPv6Headers{
+						IPv6Base: IPv6Base{
+							IPv6Src: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
+							IPv6Dst: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+						},
+					},
+				},
+				TCPHeaders: TCPHeaders{
+					TCPSrcPort: layers.TCPPort(80),
+					TCPDstPort: layers.TCPPort(54321),
+				},
+			}
+
+			streamID1 := packet1.StreamID()
+			streamID2 := packet2.StreamID()
+
+			So(streamID1, ShouldEqual, streamID2)
+			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+
+			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
+			packet1.TCPStreamID = packet1.StreamID()
+			packet2.TCPStreamID = packet2.StreamID()
+			So(packet1.TCPStreamID, ShouldEqual, streamID1)
+			So(packet2.TCPStreamID, ShouldEqual, streamID2)
 		})
 	})
 }

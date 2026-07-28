@@ -8,8 +8,8 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/test"
@@ -128,7 +128,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithCancel(context.Background())
-		wg, ctx := errgroup.WithContext(ctx)
+		wg, ctx := errgroupx.WithContext(ctx)
 
 		router := NewRouter[*mockTCPPacket](100, 100, time.Second)
 		dstChan := make(chan any, 100)
@@ -239,7 +239,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		ctx, cancel := context.WithCancel(context.Background())
-		wg, ctx := errgroup.WithContext(ctx)
+		wg, ctx := errgroupx.WithContext(ctx)
 
 		router := NewRouter[*mockTCPPacket](100, 100, time.Second)
 		dstChan := make(chan any, 100)

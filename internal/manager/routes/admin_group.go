@@ -5,12 +5,12 @@ package routes
 import (
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/sync/errgroup"
 	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -395,15 +395,15 @@ func groupRbacPolicyAdd(c *gin.Context) {
 		var template core.RbacPolicyTemplate
 
 		// 创建错误组用于并发执行查询
-		wg, innerCtx := errgroup.WithContext(c)
+		wg, innerCtx := errgroupx.WithContext(c)
 
 		// 并发查询1: 验证策略模板是否存在
-		wg.Go(func() error {
+		wg.GoNamed("check", func() error {
 			return tx.WithContext(innerCtx).First(&template, "target = ? AND action = ?", in.Target, in.Action).Error
 		})
 
 		// 并发查询2: 创建策略记录
-		wg.Go(func() error {
+		wg.GoNamed("create", func() error {
 			return tx.WithContext(innerCtx).Create(&policy).Error
 		})
 

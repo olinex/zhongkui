@@ -14,6 +14,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
@@ -53,9 +54,9 @@ func sortedFrameStack(reqFrameStack, rspFrameStack FrameStack) FrameStack {
 
 func objectKey(name string, req bool) string {
 	if req {
-		return fmt.Sprintf(`body/request/%s`, name)
+		return fmt.Sprintf(`body/request/%s.%s`, name, combine.FILE_EXT)
 	}
-	return fmt.Sprintf(`body/response/%s`, name)
+	return fmt.Sprintf(`body/response/%s.%s`, name, combine.FILE_EXT)
 }
 
 // parseInt32 解析字符串为 int32，解析失败返回 0
@@ -862,6 +863,7 @@ type HttpRequestBody struct {
 }
 
 func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, startTime, endTime time.Time, cryptoKey []byte) (*HttpRequestBody, error) {
+	defer req.Body.Close()
 	body, err := decompressRequestBody(req)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -893,6 +895,7 @@ type HttpResponseBody struct {
 }
 
 func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, startTime, endTime time.Time, cryptoKey []byte) (*HttpResponseBody, error) {
+	defer resp.Body.Close()
 	body, err := decompressResponseBody(resp)
 	if err != nil {
 		return nil, errors.WithStack(err)

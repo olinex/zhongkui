@@ -41,7 +41,6 @@ func coreModels() []any {
 
 func rawModels() []any {
 	return []any{
-		&netmodel.PacketEthernet{},
 		&netmodel.PacketIPv4{},
 		&netmodel.PacketIPv6{},
 		&netmodel.PacketIPv4TCP{},
@@ -66,58 +65,58 @@ func rawModels() []any {
 var migrateUpCmd = &cobra.Command{
 	Use:   "up",
 	Short: "Apply all pending migrations",
-	RunE:  runMigrateCmd("up"),
+	Run:   runMigrateCmd("up"),
 }
 
 var migrateDownCmd = &cobra.Command{
 	Use:   "down",
 	Short: "Rollback all applied migrations",
-	RunE:  runMigrateCmd("down"),
+	Run:   runMigrateCmd("down"),
 }
 
 var migrateUpToCmd = &cobra.Command{
 	Use:   "up-to [version]",
 	Short: "Migrate up to a specific version",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runMigrateCmd("up-to"),
+	Run:   runMigrateCmd("up-to"),
 }
 
 var migrateDownToCmd = &cobra.Command{
 	Use:   "down-to [version]",
 	Short: "Rollback down to a specific version",
 	Args:  cobra.ExactArgs(1),
-	RunE:  runMigrateCmd("down-to"),
+	Run:   runMigrateCmd("down-to"),
 }
 
 var migrateStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show migration status",
-	RunE:  runMigrateCmd("status"),
+	Run:   runMigrateCmd("status"),
 }
 
 var migrateDryRunCmd = &cobra.Command{
 	Use:   "dry-run",
 	Short: "Dry run migrations on a temp database",
-	RunE:  runDryRunMigrateCmd,
+	Run:   runDryRunMigrateCmd,
 }
 
 var migrateDiffCmd = &cobra.Command{
 	Use:   "diff",
 	Short: "Compare database schema differences",
-	RunE:  runDiffMigrateCmd,
+	Run:   runDiffMigrateCmd,
 }
 
 var migrateCheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Check model definitions against database schema",
-	RunE:  runCheckMigrateCmd,
+	Run:   runCheckMigrateCmd,
 }
 
 var migrateCreateCmd = &cobra.Command{
 	Use:   "create [name]",
 	Short: "Create a SQL migration file in the migrations directory",
 	Args:  cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
 		dbTarget := targetFromViper(v)
@@ -127,11 +126,10 @@ var migrateCreateCmd = &cobra.Command{
 			filePath, err := createMigrationFile(dbName, name)
 			if err != nil {
 				pterm.Error.Printf("%s: %v\n", dbName, err)
-				return err
+				return
 			}
 			pterm.Success.Printf("created %s\n", filePath)
 		}
-		return nil
 	},
 }
 
@@ -181,8 +179,8 @@ func nextMigrationVersion(dir string) int {
 	return maxVersion + 1
 }
 
-func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
+func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) {
+	return func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
@@ -202,10 +200,10 @@ func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) error 
 			pterm.DefaultSection.Printf("%s (%s)", action, dbName)
 			if err := migrateDB(ctx, v, coreDB, rawDB, dbName, args, action); err != nil {
 				pterm.Error.Printf("%s %s: %v\n", dbName, action, err)
-				return err
+				return
 			}
 		}
-		return nil
+		pterm.Success.Println("migrations completed successfully")
 	}
 }
 
@@ -266,7 +264,7 @@ func createMigratorForDB(v *viper.Viper, coreDB, rawDB *database.DB, dbName stri
 	return migrate.NewMigratorFromDB(cfg, sqlDB)
 }
 
-func runDryRunMigrateCmd(cmd *cobra.Command, args []string) error {
+func runDryRunMigrateCmd(cmd *cobra.Command, args []string) {
 	ctx, i := cmdToolBox(cmd)
 	v := provider.MustInvokeViper(i)
 
@@ -277,7 +275,6 @@ func runDryRunMigrateCmd(cmd *cobra.Command, args []string) error {
 			pterm.Error.Printf("dry-run %s: %v\n", dbName, err)
 		}
 	}
-	return nil
 }
 
 func migrateDryRunDB(ctx context.Context, v *viper.Viper, dbName string) error {
@@ -302,7 +299,7 @@ func migrateDryRunDB(ctx context.Context, v *viper.Viper, dbName string) error {
 	return nil
 }
 
-func runDiffMigrateCmd(cmd *cobra.Command, args []string) error {
+func runDiffMigrateCmd(cmd *cobra.Command, args []string) {
 	ctx, i := cmdToolBox(cmd)
 	v := provider.MustInvokeViper(i)
 
@@ -313,10 +310,9 @@ func runDiffMigrateCmd(cmd *cobra.Command, args []string) error {
 			pterm.Error.Printf("diff %s: %v\n", dbName, err)
 		}
 	}
-	return nil
 }
 
-func runCheckMigrateCmd(cmd *cobra.Command, args []string) error {
+func runCheckMigrateCmd(cmd *cobra.Command, args []string) {
 	ctx, i := cmdToolBox(cmd)
 	v := provider.MustInvokeViper(i)
 
@@ -328,7 +324,6 @@ func runCheckMigrateCmd(cmd *cobra.Command, args []string) error {
 			pterm.Error.Printf("check %s: %v\n", dbName, err)
 		}
 	}
-	return nil
 }
 
 func migrateCheckDB(ctx context.Context, v *viper.Viper, dbName string, keepTemp bool) error {

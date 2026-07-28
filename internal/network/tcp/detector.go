@@ -1,13 +1,13 @@
 package tcp
 
 import (
+	"bufio"
 	"context"
 	"net"
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // ErrDataIncomplete 表示应用层数据尚未完整到达。
@@ -41,7 +41,7 @@ type AppProtocolDetector interface {
 
 	Extract(
 		ctx context.Context,
-		clientRb, serverRb *serializer.RingBuffer,
+		clientReader, serverReader *bufio.Reader,
 	) (clientPayload, serverPayload any, err error)
 
 	Build(

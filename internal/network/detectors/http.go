@@ -4,19 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"io"
 	"net"
 	"net/http"
 	"strings"
 
 	"github.com/gopacket/gopacket/layers"
-	"golang.org/x/sync/errgroup"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 const (
@@ -189,39 +187,21 @@ func (s *HttpDetector) Detect(ctx context.Context, peek []byte, c2s bool) (ok bo
 //   - 调用者需要检查返回的clientPayload和serverPayload是否为nil来判断是否解析成功
 func (s *HttpDetector) Extract(
 	ctx context.Context,
-	clientRb, serverRb *serializer.RingBuffer,
+	clientReader, serverReader *bufio.Reader,
 ) (clientPayload, serverPayload any, err error) {
-	clientReader := bufio.NewReader(clientRb)
-	serverReader := bufio.NewReader(serverRb)
 	var req *http.Request
 	var rsp *http.Response
-	wg, ctx := errgroup.WithContext(ctx)
-	wg.Go(func() (rErr error) {
-		if req, rErr = http.ReadRequest(clientReader); rErr == io.EOF {
-			return errors.WithStack(rErr)
-		} else if rErr != nil {
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("client", func() (rErr error) {
+		if req, rErr = http.ReadRequest(clientReader); rErr != nil {
 			return errors.WithStack(rErr)
 		}
-		defer req.Body.Close()
-		body, rErr := io.ReadAll(req.Body)
-		if rErr != nil {
-			return errors.WithStack(rErr)
-		}
-		req.Body = io.NopCloser(bytes.NewReader(body))
 		return rErr
 	})
-	wg.Go(func() (rErr error) {
-		if rsp, rErr = http.ReadResponse(serverReader, req); rErr == io.EOF {
-			return errors.WithStack(rErr)
-		} else if rErr != nil {
+	wg.GoNamed("server", func() (rErr error) {
+		if rsp, rErr = http.ReadResponse(serverReader, req); rErr != nil {
 			return errors.WithStack(rErr)
 		}
-		defer rsp.Body.Close()
-		body, rErr := io.ReadAll(rsp.Body)
-		if rErr != nil {
-			return errors.WithStack(rErr)
-		}
-		rsp.Body = io.NopCloser(bytes.NewReader(body))
 		return rErr
 	})
 	if err = wg.Wait(); err != nil {

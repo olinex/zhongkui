@@ -101,6 +101,20 @@ func TestLayerStack(t *testing.T) {
 			err := stack.Scan("{invalid json")
 			So(err, ShouldNotBeNil)
 		})
+
+		Convey("Scan method should handle empty string", func() {
+			var stack LayerStack
+			err := stack.Scan("")
+			So(err, ShouldBeNil)
+			So(stack, ShouldBeNil)
+		})
+
+		Convey("Scan method should handle empty bytes", func() {
+			var stack LayerStack
+			err := stack.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(stack, ShouldBeNil)
+		})
 	})
 }
 
@@ -148,6 +162,20 @@ func TestFrameStack(t *testing.T) {
 		Convey("Scan method should handle nil value", func() {
 			var stack FrameStack
 			err := stack.Scan(nil)
+			So(err, ShouldBeNil)
+			So(stack, ShouldBeNil)
+		})
+
+		Convey("Scan method should handle empty string", func() {
+			var stack FrameStack
+			err := stack.Scan("")
+			So(err, ShouldBeNil)
+			So(stack, ShouldBeNil)
+		})
+
+		Convey("Scan method should handle empty bytes", func() {
+			var stack FrameStack
+			err := stack.Scan([]byte{})
 			So(err, ShouldBeNil)
 			So(stack, ShouldBeNil)
 		})

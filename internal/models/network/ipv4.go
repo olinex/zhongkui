@@ -10,6 +10,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
+var (
+	_ driver.Valuer = (*IPv4Options)(nil)
+)
+
 // IPv4Options 表示IPv4协议头部中的选项列表
 // IPv4选项是IPv4协议的可选扩展字段，用于提供额外的控制功能
 // 常见的IPv4选项包括：记录路由（Record Route）、时间戳（Timestamp）、
@@ -42,6 +46,9 @@ type IPv4Options []layers.IPv4Option
 // 示例:
 //   - 将IPv4Options序列化为JSON字符串存储在ClickHouse的String类型列中
 func (i IPv4Options) Value() (driver.Value, error) {
+	if i == nil {
+		return nil, nil
+	}
 	return json.Marshal(i)
 }
 
@@ -70,8 +77,16 @@ func (i *IPv4Options) Scan(value any) error {
 	var bytes []byte
 	switch raw := value.(type) {
 	case []byte:
+		if len(raw) == 0 {
+			*i = nil
+			return nil
+		}
 		bytes = raw
 	case string:
+		if raw == "" {
+			*i = nil
+			return nil
+		}
 		bytes = []byte(raw)
 	default:
 		return errors.Newf("Ipv4_options scan failed, except []byte, got %T", value)
@@ -124,7 +139,7 @@ type IPv4Headers struct {
 	IPv4Src        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4_src"`
 	IPv4Dst        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4_dst"`
 	IPv4Options    IPv4Options         `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4_options"`
-	IPv4Padding    []byte              `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4_padding"`
+	IPv4Padding    string              `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4_padding"`
 }
 
 // NewIPv4Headers 从gopacket IPv4层创建IPv4Headers结构体
@@ -171,7 +186,7 @@ func NewIPv4Headers(ipv4 *layers.IPv4) *IPv4Headers {
 		IPv4Src:        serializer.IPv4Addr(ipv4.SrcIP),
 		IPv4Dst:        serializer.IPv4Addr(ipv4.DstIP),
 		IPv4Options:    IPv4Options(ipv4.Options),
-		IPv4Padding:    ipv4.Padding,
+		IPv4Padding:    string(ipv4.Padding),
 	}
 }
 

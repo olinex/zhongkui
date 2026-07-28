@@ -93,6 +93,28 @@ func TestIPv4Options_Basic(t *testing.T) {
 			So(decoded[0].OptionLength, ShouldEqual, 4)
 			So(decoded[0].OptionData, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04})
 		})
+
+		Convey("Should handle nil slice with Value method", func() {
+			var options IPv4Options // nil slice
+			value, err := options.Value()
+			So(err, ShouldBeNil)
+			// nil slice should return nil driver.Value for SQL NULL
+			So(value, ShouldBeNil)
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var options IPv4Options
+			err := options.Scan("")
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var options IPv4Options
+			err := options.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
 	})
 }
 
@@ -118,7 +140,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4Src:        serializer.IPv4Addr(srcIP),
 				IPv4Dst:        serializer.IPv4Addr(dstIP),
 				IPv4Options:    IPv4Options{},
-				IPv4Padding:    []byte{},
+				IPv4Padding:    "",
 			}
 
 			So(headers.IPv4Version, ShouldEqual, 4)
@@ -174,7 +196,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4Src:        serializer.IPv4Addr(srcIP),
 				IPv4Dst:        serializer.IPv4Addr(dstIP),
 				IPv4Options:    IPv4Options{},
-				IPv4Padding:    []byte{},
+				IPv4Padding:    "",
 			}
 
 			// 序列化为JSON
@@ -276,7 +298,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.DstAddr().String(), ShouldEqual, "10.0.0.1")
 			So(len(headers.IPv4Options), ShouldEqual, 1)
 			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP
-			So(headers.IPv4Padding, ShouldResemble, []byte{0x00, 0x00})
+			So(headers.IPv4Padding, ShouldEqual, "\x00\x00")
 		})
 
 		Convey("Should handle IPv4 layer without options and padding", func() {
@@ -315,7 +337,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.SrcAddr().String(), ShouldEqual, "10.0.0.2")
 			So(headers.DstAddr().String(), ShouldEqual, "192.168.1.200")
 			So(headers.IPv4Options, ShouldBeNil)
-			So(headers.IPv4Padding, ShouldBeNil)
+			So(headers.IPv4Padding, ShouldBeEmpty)
 		})
 
 		Convey("Should handle IPv4 layer with multiple options", func() {

@@ -125,6 +125,20 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "except []byte")
 		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var options IPv6HeaderTLVOptions
+			err := options.Scan("")
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var options IPv6HeaderTLVOptions
+			err := options.Scan([]byte{})
+			So(err, ShouldBeNil)
+			So(options, ShouldBeNil)
+		})
 	})
 }
 
@@ -230,6 +244,36 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 			err := hbh.Scan(123)
 			So(err, ShouldNotBeNil)
 			So(err.Error(), ShouldContainSubstring, "except []byte")
+		})
+
+		Convey("Should handle nil pointer with Value method", func() {
+			var hbh *IPv6HopByHop // nil pointer
+			value, err := hbh.Value()
+			So(err, ShouldBeNil)
+			// nil pointer should return nil driver.Value for SQL NULL
+			So(value, ShouldBeNil)
+		})
+
+		Convey("Should handle empty string in Scan method", func() {
+			var hbh IPv6HopByHop
+			err := hbh.Scan("")
+			So(err, ShouldBeNil)
+			// struct should be zero-valued after empty scan
+			So(hbh.NextHeader, ShouldEqual, layers.IPProtocol(0))
+			So(hbh.HeaderLength, ShouldEqual, 0)
+			So(hbh.ActualLength, ShouldEqual, 0)
+			So(hbh.Options, ShouldBeNil)
+		})
+
+		Convey("Should handle empty bytes in Scan method", func() {
+			var hbh IPv6HopByHop
+			err := hbh.Scan([]byte{})
+			So(err, ShouldBeNil)
+			// struct should be zero-valued after empty scan
+			So(hbh.NextHeader, ShouldEqual, layers.IPProtocol(0))
+			So(hbh.HeaderLength, ShouldEqual, 0)
+			So(hbh.ActualLength, ShouldEqual, 0)
+			So(hbh.Options, ShouldBeNil)
 		})
 	})
 }

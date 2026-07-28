@@ -26,6 +26,16 @@ var (
 	_ etcd.ElectionHandler = (*Scheduler)(nil)
 )
 
+var (
+	// schedulerName 调度器名称常量，用于标识当前服务组件。
+	// 此名称会出现在日志和监控指标中，帮助识别调度器实例。
+	schedulerName = "pipeline-scheduler"
+
+	// SCHEDULER_CFG_ETCD_PREFIX etcd 键前缀常量，用于存储所有定时任务的配置。
+	// 所有定时任务配置都以此前缀存储在 etcd 中，确保配置的组织和隔离。
+	SCHEDULER_CFG_ETCD_PREFIX = etcd.WithPrefix("scheduler/cfg/")
+)
+
 // schedulerLogger 是 asynq.Logger 接口的适配器。
 // PeriodicTaskManager 与 Server 共享同一个 Redis 连接，
 // 其内部 Scheduler.Shutdown 调用 client.Close() 时会因共享连接返回错误，
@@ -35,29 +45,19 @@ type schedulerLogger struct {
 	logger *logging.Logger
 }
 
-func (l *schedulerLogger) Debug(args ...any) { l.logger.With("context", l.ctx).Debug(args...) }
-func (l *schedulerLogger) Info(args ...any)  { l.logger.With("context", l.ctx).Info(args...) }
-func (l *schedulerLogger) Warn(args ...any)  { l.logger.With("context", l.ctx).Warn(args...) }
-func (l *schedulerLogger) Fatal(args ...any) { l.logger.With("context", l.ctx).Fatal(args...) }
+func (l *schedulerLogger) Debug(args ...any) { l.logger.Ctx(l.ctx).Debug(args...) }
+func (l *schedulerLogger) Info(args ...any)  { l.logger.Ctx(l.ctx).Info(args...) }
+func (l *schedulerLogger) Warn(args ...any)  { l.logger.Ctx(l.ctx).Warn(args...) }
+func (l *schedulerLogger) Fatal(args ...any) { l.logger.Ctx(l.ctx).Fatal(args...) }
 func (l *schedulerLogger) Error(args ...any) {
 	if len(args) > 0 {
 		if s, ok := args[0].(string); ok && strings.Contains(s, "Failed to close redis client connection") {
-			l.logger.With("context", l.ctx).Debug(args...)
+			l.Debug(args...)
 			return
 		}
 	}
 	l.logger.Error(args...)
 }
-
-var (
-	// schedulerName 调度器名称常量，用于标识当前服务组件。
-	// 此名称会出现在日志和监控指标中，帮助识别调度器实例。
-	schedulerName = "pipeline-scheduler"
-
-	// cfgPrefix etcd 键前缀常量，用于存储所有定时任务的配置。
-	// 所有定时任务配置都以此前缀存储在 etcd 中，确保配置的组织和隔离。
-	cfgPrefix = etcd.WithPrefix("scheduler/cfg/")
-)
 
 // etcdBaseConfigProvider 实现了 asynq.PeriodicTaskConfigProvider 接口，
 // 为定时任务管理器提供从 etcd 读取配置的能力。
@@ -93,7 +93,7 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 			return errors.WithStack(err)
 		}
 		// 构造 etcd 键，格式为 "scheduler/cfg/<taskType>"
-		key := fmt.Sprintf(`%s%s`, cfgPrefix, taskType)
+		key := fmt.Sprintf(`%s%s`, SCHEDULER_CFG_ETCD_PREFIX, taskType)
 
 		// 序列化任务配置为 JSON
 		value, err := json.Marshal(cfg)
@@ -106,7 +106,7 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 			if _, err := e.client.Put(e.ctx, key, string(value)); err != nil {
 				return errors.WithStack(err)
 			}
-			e.logger.With("context", e.ctx).Infof(`Key %s was force flush into etcd`, key)
+			e.logger.Ctx(e.ctx).Infof(`Key %s was force flush into etcd`, key)
 		} else {
 			// 安全模式：仅当键不存在时才写入配置（事务操作）
 			rsp, err := e.client.Txn(e.ctx).
@@ -117,9 +117,9 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 				return errors.WithStack(err)
 			}
 			if rsp.Succeeded {
-				e.logger.With("context", e.ctx).Infof(`Key %s was written into etcd`, key)
+				e.logger.Ctx(e.ctx).Infof(`Key %s was written into etcd`, key)
 			} else {
-				e.logger.With("context", e.ctx).Infof(`Key %s already exists`, key)
+				e.logger.Ctx(e.ctx).Infof(`Key %s already exists`, key)
 			}
 		}
 	}
@@ -135,7 +135,7 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 //   - error: 如果获取或解析过程中出现错误则返回错误，否则返回 nil
 func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
 	// 从 etcd 中获取所有以 cfgPrefix 为前缀的键值对
-	rsp, err := e.client.Get(e.ctx, cfgPrefix, clientv3.WithPrefix())
+	rsp, err := e.client.Get(e.ctx, SCHEDULER_CFG_ETCD_PREFIX, clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -159,7 +159,7 @@ func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 		}
 
 		// 从 etcd 键中提取任务类型（去除前缀）
-		taskType := strings.TrimLeft(string(kv.Key), cfgPrefix)
+		taskType := strings.TrimLeft(string(kv.Key), SCHEDULER_CFG_ETCD_PREFIX)
 
 		// 构建 asynq 任务选项
 		opts := []asynq.Option{
