@@ -863,6 +863,7 @@ type HttpRequestBody struct {
 }
 
 func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, startTime, endTime time.Time, cryptoKey []byte) (*HttpRequestBody, error) {
+	defer req.Body.Close()
 	body, err := decompressRequestBody(req)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -894,6 +895,7 @@ type HttpResponseBody struct {
 }
 
 func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, startTime, endTime time.Time, cryptoKey []byte) (*HttpResponseBody, error) {
+	defer resp.Body.Close()
 	body, err := decompressResponseBody(resp)
 	if err != nil {
 		return nil, errors.WithStack(err)

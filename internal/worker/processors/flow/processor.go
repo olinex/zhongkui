@@ -12,6 +12,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/distributed"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
 )
@@ -24,27 +25,35 @@ const (
 // PacketProcessor 管理 TCP 流处理的完整生命周期。
 // 包含 BatchWriter 和分布式编排器，协调从 ClickHouse 轮询 → TCP 流重组 → 批量写入的完整流水线。
 type PacketProcessor[P tcp.TCPPacket] struct {
+	logger *logging.Logger
 	writer *BatchWriter
 	orch   *distributed.Orchestrator[*flowClusterHandler[P], P]
 }
 
 // Start 启动处理管道，阻塞直到 ctx 取消。
 func (p *PacketProcessor[P]) Start(ctx context.Context, name string) error {
+	p.logger.Ctx(ctx).Infof("packet processor %s starting", name)
+
 	wg, ctx := errgroupx.WithContext(ctx)
 	wg.GoNamed(fmt.Sprintf("%s-output-flush", name), func() error {
+		p.logger.Ctx(ctx).Debugf("packet processor %s writer goroutine starting", name)
 		return p.writer.Start(ctx)
 	})
 	wg.GoNamed(fmt.Sprintf("%s-input-route", name), func() error {
+		p.logger.Ctx(ctx).Debugf("packet processor %s orchestrator goroutine starting", name)
 		return p.orch.Start(ctx)
 	})
 	if err := wg.Wait(); err != nil {
+		p.logger.Ctx(ctx).Errorf("packet processor %s exited with error: %v", name, err)
 		return errors.WithStack(err)
 	}
+	p.logger.Ctx(ctx).Infof("packet processor %s stopped", name)
 	return nil
 }
 
 // Shutdown 优雅关闭处理器。
 func (p *PacketProcessor[P]) Shutdown() {
+	p.logger.Infof("packet processor shutting down")
 	p.orch.Shutdown()
 }
 
@@ -88,9 +97,10 @@ func NewPacketProcessor[P tcp.TCPPacket](
 			SaveInterval: param.SaveInterval,
 			ReplayWindow: param.ReplayWindow,
 		}
-		writer := NewBatchWriter(db, param)
+		writer := NewBatchWriter(db, logger, param)
 		handler := newFlowClusterHandler[P](db, logger, writer, param)
 		return &PacketProcessor[P]{
+			logger: logger,
 			writer: writer,
 			orch: distributed.NewOrchestrator(
 				client,

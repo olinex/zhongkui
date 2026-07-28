@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,7 +25,7 @@ import (
 )
 
 var (
-	clusterPrefix = WithPrefix("cluster/")
+	CLUSTER_ETCD_PREFIX = WithPrefix("cluster/")
 )
 
 // Cluster 基于 etcd 实现分布式集群成员发现与数据分片路由。
@@ -100,7 +101,7 @@ func (c *Cluster) MemberID() string {
 }
 
 func (c *Cluster) prefix() string {
-	return fmt.Sprintf(`%s%s`, clusterPrefix, c.name)
+	return fmt.Sprintf(`%s%s`, CLUSTER_ETCD_PREFIX, c.name)
 }
 
 func (c *Cluster) key() string {
@@ -217,14 +218,21 @@ func (c *Cluster) rebuildRing(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 
+	// 精确匹配当前集群名的 key 前缀，避免误匹配到其他前缀（如 zki/clusters/）
+	prefix := c.prefix()
+
 	members := make([]string, 0, len(resp.Kvs))
 	for _, kv := range resp.Kvs {
 		if kv == nil {
 			continue
 		}
+		// 过滤不属于当前集群的 key（如 zki/clusters/ 下的水位游标）
+		if !strings.HasPrefix(string(kv.Key), prefix) {
+			continue
+		}
 		var info ClusterMember
 		if err := json.Unmarshal(kv.Value, &info); err != nil {
-			return errors.WithStack(err)
+			continue
 		}
 		members = append(members, info.MemberID)
 	}

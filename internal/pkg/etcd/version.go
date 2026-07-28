@@ -16,15 +16,15 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
-// versionPrefix 是版本信息在 etcd 中的键前缀，
+// VERSION_ETCD_PREFIX 是版本信息在 etcd 中的键前缀，
 // 通过 WithPrefix 函数拼接全局前缀，最终格式为 "<GLOBAL_PREFIX>/version/"。
-// 所有版本信息都将存储在该前缀下，键格式为 "<versionPrefix>/<handlerName>"。
+// 所有版本信息都将存储在该前缀下，键格式为 "<VERSION_ETCD_PREFIX>/<handlerName>"。
 var (
-	versionPrefix = WithPrefix("version/")
-	// versionLockPrefix 是版本锁在 etcd 中的键前缀，
+	VERSION_ETCD_PREFIX = WithPrefix("version/")
+	// VERSION_LOCK_ETCD_PREFIX 是版本锁在 etcd 中的键前缀，
 	// 通过 WithPrefix 函数拼接全局前缀，最终格式为 "<GLOBAL_PREFIX>/version/lock/"。
 	// 用于分布式锁，确保同一时刻只有一个实例执行版本更新操作。
-	versionLockPrefix = WithPrefix("version/lock/")
+	VERSION_LOCK_ETCD_PREFIX = WithPrefix("version/lock/")
 )
 
 // VersionHandler 定义了版本更新处理器需要实现的接口。
@@ -137,7 +137,7 @@ func (v *Version) Commit(ctx context.Context) error {
 	}
 	defer session.Close()
 	// 获取锁（使用独立的短期超时 context，不影响后续业务逻辑）
-	mu := concurrency.NewMutex(session, fmt.Sprintf("%s%s", versionLockPrefix, name))
+	mu := concurrency.NewMutex(session, fmt.Sprintf("%s%s", VERSION_LOCK_ETCD_PREFIX, name))
 	lockCtx, lockCancel := context.WithTimeout(ctx, 5*time.Second)
 	defer lockCancel()
 	v.logger.Ctx(ctx).Infof("get %s's version lock...", name)
@@ -148,7 +148,7 @@ func (v *Version) Commit(ctx context.Context) error {
 	defer mu.Unlock(ctx)
 	v.logger.Ctx(ctx).Infof("get %s's version lock success", name)
 	// 获取上一个版本号
-	rsp, err := v.client.Get(ctx, fmt.Sprintf("%s%s", versionPrefix, name))
+	rsp, err := v.client.Get(ctx, fmt.Sprintf("%s%s", VERSION_ETCD_PREFIX, name))
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -162,7 +162,7 @@ func (v *Version) Commit(ctx context.Context) error {
 		return errors.WithStack(err)
 	}
 	// 写入下一个版本号
-	_, err = v.client.Put(ctx, fmt.Sprintf("%s%s", versionPrefix, name), nextVersion)
+	_, err = v.client.Put(ctx, fmt.Sprintf("%s%s", VERSION_ETCD_PREFIX, name), nextVersion)
 	if err != nil {
 		return errors.WithStack(err)
 	}

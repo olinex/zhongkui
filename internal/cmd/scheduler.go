@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/cobra"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
 )
@@ -28,10 +27,9 @@ Examples:
 		v := provider.MustInvokeViper(i)
 		names := v.GetStringSlice("name")
 		client := provider.MustInvokeEtcdClient(i)
-		prefix := etcd.WithPrefix("scheduler/cfg/")
 
 		if len(names) == 0 {
-			rsp, err := client.Get(ctx, prefix, clientv3.WithPrefix())
+			rsp, err := client.Get(ctx, pipeline.SCHEDULER_CFG_ETCD_PREFIX, clientv3.WithPrefix())
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
@@ -40,10 +38,10 @@ Examples:
 				pterm.Warning.Println("no scheduled task configs found in etcd")
 				return
 			}
-			renderSchedulerTable(prefix, rsp)
+			renderSchedulerTable(pipeline.SCHEDULER_CFG_ETCD_PREFIX, rsp)
 		}
 		for _, name := range names {
-			rsp, err := client.Get(ctx, prefix+name)
+			rsp, err := client.Get(ctx, pipeline.SCHEDULER_CFG_ETCD_PREFIX+name)
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
@@ -52,7 +50,7 @@ Examples:
 				pterm.Warning.Printf("scheduled task config not found: %s\n", name)
 				continue
 			}
-			if err := renderSchedulerTable(prefix, rsp); err != nil {
+			if err := renderSchedulerTable(pipeline.SCHEDULER_CFG_ETCD_PREFIX, rsp); err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}

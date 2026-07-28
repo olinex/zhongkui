@@ -1,14 +1,13 @@
 package tcp
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
-	"time"
 
+	"github.com/smallnest/ringbuffer"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 
 	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // TCPState 表示TCP连接的状态，遵循标准TCP状态机。
@@ -58,7 +57,13 @@ const (
 type Side[P TCPPacket] struct {
 	// buffer 单端应用层数据环形缓冲区，存储该端方向的TCP数据流。
 	// 使用环形缓冲区设计，支持高效的数据读写和滑动窗口管理。
-	buffer *serializer.RingBuffer
+	buffer *ringbuffer.RingBuffer
+
+	rw *bufio.ReadWriter
+
+	// reader 单端应用层数据读取器，用于从环形缓冲区中读取数据。
+	// 该字段用于在应用层协议检测器中提取数据，避免直接操作环形缓冲区。
+	reader *bufio.Reader
 
 	// frameStack 单端帧堆栈，记录构成当前请求数据的所有TCP帧信息。
 	// 每个FrameInfo包含时间戳和网络层堆栈信息，用于追踪数据的来源。
@@ -259,17 +264,17 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 // 注意:
 //   - 该函数假设传入的数据包是有效的SYN包
 //   - 客户端ISN应具有随机性，避免序列号预测攻击
-func newSides[P TCPPacket](ctx context.Context, first P, maxOutOrderPacketSize int, rwBufferTimeout time.Duration) (clientSide, serverSide *Side[P], err error) {
+func newSides[P TCPPacket](ctx context.Context, first P, maxOutOrderPacketSize int) (clientSide, serverSide *Side[P], err error) {
 	if !first.IsSyn() {
 		panic("first packet must be SYN")
 	}
 	seq := first.SeqNum()
+	cBuffer := getRingBuffer().
+		WithCancel(ctx).
+		SetBlocking(true)
 	clientSide = &Side[P]{
-		buffer: serializer.
-			NewRingBuffer(serializer.MiddleBufferSize).
-			WithCancel(ctx).
-			WithTimeout(rwBufferTimeout).
-			SetBlocking(true),
+		buffer:                cBuffer,
+		reader:                bufio.NewReader(cBuffer),
 		frameStack:            make(n.FrameStack, 0, 32),
 		cli2Srv:               true,
 		state:                 StateSynSent,
@@ -280,12 +285,12 @@ func newSides[P TCPPacket](ctx context.Context, first P, maxOutOrderPacketSize i
 	if err := clientSide.appendPacket(ctx, first); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
+	sBuffer := getRingBuffer().
+		WithCancel(ctx).
+		SetBlocking(true)
 	serverSide = &Side[P]{
-		buffer: serializer.
-			NewRingBuffer(serializer.MiddleBufferSize).
-			WithCancel(ctx).
-			WithTimeout(rwBufferTimeout).
-			SetBlocking(true),
+		buffer:                sBuffer,
+		reader:                bufio.NewReaderSize(sBuffer, int(RING_BUFFER_SIZE)),
 		frameStack:            make(n.FrameStack, 0, 32),
 		cli2Srv:               false,
 		state:                 StateListen,
@@ -532,62 +537,5 @@ func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (
 }
 
 func (s *Side[P]) release() {
-	s.buffer.Release()
-}
-
-// sideAux 是 Side 序列化的辅助结构体，导出 TCP 状态字段和乱序包数据。
-// 运行时字段（buffer、frameStack）不参与序列化。
-type sideAux struct {
-	Cli2Srv               bool                       `json:"cli2srv"`
-	State                 TCPState                   `json:"state"`
-	Isn                   uint32                     `json:"isn"`
-	ExpectedSeq           uint32                     `json:"expected_seq"`
-	MaxOutOrderPacketSize int                        `json:"max_out_order_packet_size"`
-	OutOrderPackets       map[uint32]json.RawMessage `json:"out_order_packets,omitempty"`
-}
-
-// MarshalJSON 实现 Side[P] 的 JSON 序列化。
-// 序列化 TCP 状态字段和乱序包数据，跳过运行时缓冲区、帧堆栈。
-func (s Side[P]) MarshalJSON() ([]byte, error) {
-	ooPackets := make(map[uint32]json.RawMessage, len(s.outOrderPackets))
-	for seq, pkt := range s.outOrderPackets {
-		raw, err := json.Marshal(pkt)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		ooPackets[seq] = raw
-	}
-	return json.Marshal(sideAux{
-		Cli2Srv:               s.cli2Srv,
-		State:                 s.state,
-		Isn:                   s.isn,
-		ExpectedSeq:           s.expectedSeq,
-		MaxOutOrderPacketSize: s.maxOutOrderPacketSize,
-		OutOrderPackets:       ooPackets,
-	})
-}
-
-// UnmarshalJSON 实现 Side[P] 的 JSON 反序列化。
-// 恢复 TCP 状态字段和乱序包数据。运行时缓冲区、帧堆栈保持零值。
-func (s *Side[P]) UnmarshalJSON(data []byte) error {
-	var aux sideAux
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return errors.WithStack(err)
-	}
-	s.cli2Srv = aux.Cli2Srv
-	s.state = aux.State
-	s.isn = aux.Isn
-	s.expectedSeq = aux.ExpectedSeq
-	s.maxOutOrderPacketSize = aux.MaxOutOrderPacketSize
-	if len(aux.OutOrderPackets) > 0 {
-		s.outOrderPackets = make(map[uint32]P, len(aux.OutOrderPackets))
-		for seq, raw := range aux.OutOrderPackets {
-			var p P
-			if err := json.Unmarshal(raw, &p); err != nil {
-				return errors.WithStack(err)
-			}
-			s.outOrderPackets[seq] = p
-		}
-	}
-	return nil
+	releaseRingBuffer(s.buffer)
 }

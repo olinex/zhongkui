@@ -15,7 +15,6 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 const (
@@ -188,10 +187,8 @@ func (s *HttpDetector) Detect(ctx context.Context, peek []byte, c2s bool) (ok bo
 //   - 调用者需要检查返回的clientPayload和serverPayload是否为nil来判断是否解析成功
 func (s *HttpDetector) Extract(
 	ctx context.Context,
-	clientRb, serverRb *serializer.RingBuffer,
+	clientReader, serverReader *bufio.Reader,
 ) (clientPayload, serverPayload any, err error) {
-	clientReader := bufio.NewReader(clientRb)
-	serverReader := bufio.NewReader(serverRb)
 	var req *http.Request
 	var rsp *http.Response
 	wg, ctx := errgroupx.WithContext(ctx)
@@ -199,15 +196,12 @@ func (s *HttpDetector) Extract(
 		if req, rErr = http.ReadRequest(clientReader); rErr != nil {
 			return errors.WithStack(rErr)
 		}
-		// 不再 io.ReadAll body，保留 req.Body 为原始流式 reader
-		// body 将由 NewHttpRequestBody 直接流式上传到 S3
 		return rErr
 	})
 	wg.GoNamed("server", func() (rErr error) {
 		if rsp, rErr = http.ReadResponse(serverReader, req); rErr != nil {
 			return errors.WithStack(rErr)
 		}
-		// 不再 io.ReadAll body，保留 rsp.Body 为原始流式 reader
 		return rErr
 	})
 	if err = wg.Wait(); err != nil {

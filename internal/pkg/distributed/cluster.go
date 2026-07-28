@@ -18,12 +18,18 @@ type ClusterHandler[Item any] interface {
 	//
 	// 实现方应在此方法内完成数据查询和过滤：
 	//   - prevWatermark: 上次处理到的水位，作为查询起点
+	//   - curWatermark: 当前处理到的水位，作为查询终点
 	//   - vnodeIndices: 当前成员在分片中所属的虚拟节点索引列表，
 	//     可用于 ClickHouse 侧按 cityHash64(key) % VNodeCount IN (indices) 预过滤
 	//   - items: 将匹配的数据项发送到此通道，方法返回前应关闭
 	//
 	// 该方法阻塞直到数据拉取完成或 ctx 取消。
-	Poll(ctx context.Context, prevWatermark time.Time, vnodeIndices []int, items chan<- Item) error
+	Poll(
+		ctx context.Context,
+		prevWatermark, curWatermark time.Time,
+		vnodeIndices []int,
+		items chan<- Item,
+	) error
 
 	// Watermark 从数据项中提取水位时间戳。
 	// 编排器使用最后处理项的时间戳作为下一次 Poll 的 prevWatermark。

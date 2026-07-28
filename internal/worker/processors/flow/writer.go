@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // BatchWriter 批量写入 HttpTransport 到 ClickHouse。
@@ -19,6 +20,7 @@ import (
 type BatchWriter struct {
 	mu     sync.Mutex
 	db     *database.DB
+	logger *logging.Logger
 	param  *Param
 	input  chan *network.HttpTransport
 	buffer []*network.HttpTransport
@@ -28,9 +30,11 @@ type BatchWriter struct {
 //
 // 参数:
 //   - db: ClickHouse GORM 连接
-func NewBatchWriter(db *database.DB, param *Param) *BatchWriter {
+//   - logger: 结构化日志实例
+func NewBatchWriter(db *database.DB, logger *logging.Logger, param *Param) *BatchWriter {
 	return &BatchWriter{
 		db:     db,
+		logger: logger,
 		param:  param,
 		input:  make(chan *network.HttpTransport, param.BatchSize*3),
 		buffer: make([]*network.HttpTransport, 0, param.BatchSize),
@@ -64,16 +68,23 @@ func (w *BatchWriter) Input() chan<- *network.HttpTransport {
 //   - 定时器触发时 flush（低流量兜底）
 //   - ctx 取消时执行最终 flush
 func (w *BatchWriter) Start(ctx context.Context) error {
+	w.logger.Ctx(ctx).Infof("batch writer started, batchSize=%d, flushInterval=%s",
+		w.param.BatchSize, w.param.FlushInterval)
+
 	ticker := time.NewTicker(w.param.FlushInterval)
 	defer ticker.Stop()
+
+	var totalFlushed int64
 
 LOOP:
 	for {
 		select {
 		case <-ctx.Done():
 			if err := w.flush(ctx); err != nil {
+				w.logger.Ctx(ctx).Errorf("batch writer final flush failed: %v", err)
 				return errors.WithStack(err)
 			}
+			w.logger.Ctx(ctx).Infof("batch writer shutting down, totalFlushed=%d", totalFlushed)
 			return nil
 		case t := <-w.input:
 			w.mu.Lock()
@@ -86,8 +97,10 @@ LOOP:
 		case <-ticker.C:
 		}
 		if err := w.flush(ctx); err != nil {
+			w.logger.Ctx(ctx).Errorf("batch writer flush failed: %v", err)
 			return errors.WithStack(err)
 		}
+		totalFlushed++
 	}
 }
 
@@ -99,12 +112,15 @@ func (w *BatchWriter) flush(ctx context.Context) error {
 		return nil
 	}
 	batch := w.buffer
+	batchSize := len(batch)
 	w.buffer = make([]*network.HttpTransport, 0, w.param.BatchSize)
 	w.mu.Unlock()
 
 	if err := w.db.WithContext(ctx).Create(batch).Error; err != nil {
+		w.logger.Ctx(ctx).Errorf("batch writer DB create failed, batchSize=%d, err=%v", batchSize, err)
 		return errors.WithStack(err)
 	}
+	w.logger.Ctx(ctx).Debugf("batch writer flushed, batchSize=%d", batchSize)
 	return nil
 }
 

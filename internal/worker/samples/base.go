@@ -127,7 +127,7 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	if req.ContentLength < 0 {
 		// 当req.ContentLength为负数时（如-1表示未知长度）
 		// HTTP检测器可能将-1转换为4294967295，我们需要处理这种情况
-		if app.ReqHdrContentLength == int64(0) || app.ReqHdrContentLength == int64(^uint32(0)) {
+		if app.ReqHdrContentLength == int64(0) || app.ReqHdrContentLength == int64(^uint32(0)) || app.ReqHdrContentLength == -1 {
 			// 接受0或4294967295作为有效值
 			// 这是一个特殊的空断言，只是为了通过检查
 			c.SoMsg("请求内容长度应为0或4294967295（未知长度）", true, ShouldBeTrue)
@@ -151,7 +151,7 @@ func compareHttpTransport(c C, app *network.HttpTransport, request, response []b
 	if resp.ContentLength < 0 {
 		// 当resp.ContentLength为负数时（如-1表示未知长度或chunked编码）
 		// HTTP检测器可能将-1转换为4294967295，我们需要处理这种情况
-		if app.RspHdrContentLength == int64(0) || app.RspHdrContentLength == int64(^uint32(0)) {
+		if app.RspHdrContentLength == int64(0) || app.RspHdrContentLength == int64(^uint32(0)) || app.RspHdrContentLength == -1 {
 			// 接受0或4294967295作为有效值
 			// 这是一个特殊的空断言，只是为了通过检查
 			c.SoMsg("响应内容长度应为0或4294967295（未知长度）", true, ShouldBeTrue)

@@ -166,6 +166,7 @@ func init() {
 	RootCmd.AddCommand(runCmd)
 	// clear
 	clearCmd.AddCommand(clearDatabaseCmd)
+	clearCmd.AddCommand(clearEtcdCmd)
 	RootCmd.AddCommand(clearCmd)
 	// migrate
 	migrateCmd.AddCommand(migrateUpCmd)

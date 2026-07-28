@@ -20,6 +20,10 @@ type ClusterConfig struct {
 	// 但会增加数据源和系统的负载。
 	PollInterval time.Duration
 
+	// PollOffset 轮询偏移量，控制轮询时间范围。
+	// 每次 Poll 从当前时间减去此偏移量开始轮询，确保数据项按时间顺序处理。
+	PollOffset time.Duration
+
 	// SaveInterval 水位持久化间隔，控制将当前处理水位写入 etcd 的频率。
 	// 频繁持久化可在故障恢复时减少重复处理，但会增加 etcd 写入压力。
 	SaveInterval time.Duration
