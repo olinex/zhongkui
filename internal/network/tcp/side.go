@@ -3,9 +3,11 @@ package tcp
 import (
 	"bufio"
 	"context"
+	"time"
 
 	"github.com/smallnest/ringbuffer"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 
 	n "zhongkui.com/zhongkui/internal/models/network"
 )
@@ -16,6 +18,12 @@ import (
 type TCPState int
 
 const (
+	// BUFFER_SIZE TCP缓冲区大小，用于存储接收和发送的数据包。
+	// 该值必须大于等于65495，这是TCP最大数据包大小。
+	// IP层限制：IP协议的理论最大数据报大小为 65535 字节。这是由IP头部的16位总长度字段决定的（2^16 - 1 = 65535）。
+	// 减去头部开销：一个标准的IPv4头部是 20 字节，一个标准的TCP头部至少也是 20 字节。
+	// 得出结果：因此，TCP Payload的最大理论值 = 65535 - 20 (IP头) - 20 (TCP头) = 65495 字节
+	BUFFER_SIZE = 65495
 	// StateClosed 表示连接已关闭
 	// 这是TCP连接的初始状态和最终状态，表示连接不存在或已完全终止。
 	// 在此状态下，不接受任何数据包，所有资源已释放。
@@ -47,6 +55,42 @@ const (
 	StateCloseWait
 )
 
+// seqLess 比较两个TCP序列号，正确处理序列号回绕情况。
+// TCP序列号是32位无符号整数，当达到最大值（2^32-1）后会回绕到0。
+// 该函数实现TCP序列号的标准比较算法，考虑回绕情况。
+//
+// 参数:
+//   - a: 第一个序列号
+//   - b: 第二个序列号
+//
+// 返回值:
+//   - bool: 如果a在b之前（考虑回绕），返回true
+//
+// 算法说明:
+//   - 如果|a-b| < 2^31，则使用正常的整数比较
+//   - 否则，a < b 当且仅当 a > b（因为回绕）
+//
+// 示例:
+//   - seqLess(1, 10) = true
+//   - seqLess(10, 1) = false
+//   - seqLess(4294967290, 5) = false（因为4294967290回绕后大于5）
+//   - seqLess(5, 4294967290) = true（因为5回绕后小于4294967290）
+func seqLess(a, b uint32) bool {
+	// TCP序列号比较的标准算法：考虑32位回转
+	// 如果两个序列号的差值的绝对值小于2^31，则正常比较
+	// 否则，反转比较结果
+	const maxSeq = 1 << 31 // 2^31
+	diff := int32(a - b)
+	if diff < 0 {
+		diff = -diff
+	}
+	if uint32(diff) < maxSeq {
+		return a < b
+	}
+	// 差值大于等于2^31，说明发生了回绕
+	return a > b
+}
+
 // Side 表示TCP流的一端（客户端或服务端），包含该端的连接状态、缓冲区和数据。
 // 该结构体使用泛型设计，支持不同类型的TCP数据包实现，如IPv4 TCP和IPv6 TCP。
 // Side负责管理TCP连接的状态转换、序列号跟踪、乱序包缓冲和数据包重组等功能，
@@ -55,15 +99,14 @@ const (
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型，用于支持不同的TCP数据包实现
 type Side[P TCPPacket] struct {
-	// buffer 单端应用层数据环形缓冲区，存储该端方向的TCP数据流。
-	// 使用环形缓冲区设计，支持高效的数据读写和滑动窗口管理。
-	buffer *ringbuffer.RingBuffer
+	logger *logging.Logger
 
-	rw *bufio.ReadWriter
+	// rb 环形缓冲区，用于存储接收到的数据包
+	rb *ringbuffer.RingBuffer
 
-	// reader 单端应用层数据读取器，用于从环形缓冲区中读取数据。
+	// brw 读写器，用于同时读取和写入环形缓冲区
 	// 该字段用于在应用层协议检测器中提取数据，避免直接操作环形缓冲区。
-	reader *bufio.Reader
+	brw *bufio.ReadWriter
 
 	// frameStack 单端帧堆栈，记录构成当前请求数据的所有TCP帧信息。
 	// 每个FrameInfo包含时间戳和网络层堆栈信息，用于追踪数据的来源。
@@ -101,40 +144,69 @@ type Side[P TCPPacket] struct {
 	maxOutOrderPacketSize int
 }
 
-// seqLess 比较两个TCP序列号，正确处理序列号回绕情况。
-// TCP序列号是32位无符号整数，当达到最大值（2^32-1）后会回绕到0。
-// 该函数实现TCP序列号的标准比较算法，考虑回绕情况。
+// newClientSide 根据第一个SYN包创建客户端流的一端。
+// 该函数用于初始化TCP连接中客户端方向的Side实例，设置初始状态和序列号。
+// 客户端ISN由第一个SYN包的序列号确定，期望序列号为ISN+1，表示已发送SYN包。
 //
 // 参数:
-//   - a: 第一个序列号
-//   - b: 第二个序列号
+//   - first: 第一个SYN包，包含客户端的初始序列号
 //
 // 返回值:
-//   - bool: 如果a在b之前（考虑回绕），返回true
+//   - *Side[P]: 初始化完成的客户端Side实例，状态为StateSynSent
 //
-// 算法说明:
-//   - 如果|a-b| < 2^31，则使用正常的整数比较
-//   - 否则，a < b 当且仅当 a > b（因为回绕）
-//
-// 示例:
-//   - seqLess(1, 10) = true
-//   - seqLess(10, 1) = false
-//   - seqLess(4294967290, 5) = false（因为4294967290回绕后大于5）
-//   - seqLess(5, 4294967290) = true（因为5回绕后小于4294967290）
-func seqLess(a, b uint32) bool {
-	// TCP序列号比较的标准算法：考虑32位回转
-	// 如果两个序列号的差值的绝对值小于2^31，则正常比较
-	// 否则，反转比较结果
-	const maxSeq = 1 << 31 // 2^31
-	diff := int32(a - b)
-	if diff < 0 {
-		diff = -diff
+// 注意:
+//   - 该函数假设传入的数据包是有效的SYN包
+//   - 客户端ISN应具有随机性，避免序列号预测攻击
+func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P, maxOutOrderPacketSize int) (clientSide, serverSide *Side[P], err error) {
+	if !first.IsSyn() {
+		panic("first packet must be SYN")
 	}
-	if uint32(diff) < maxSeq {
-		return a < b
+	seq := first.SeqNum()
+	buffer := ringbuffer.New(BUFFER_SIZE).
+		WithCancel(ctx).
+		WithTimeout(time.Second * 5).
+		SetBlocking(true)
+	reader, writer := buffer.Pipe()
+	clientSide = &Side[P]{
+		logger:                logger,
+		rb:                    buffer,
+		brw:                   bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		frameStack:            make(n.FrameStack, 0, 32),
+		cli2Srv:               true,
+		state:                 StateSynSent,
+		isn:                   seq,
+		expectedSeq:           seq + 1,
+		maxOutOrderPacketSize: maxOutOrderPacketSize,
 	}
-	// 差值大于等于2^31，说明发生了回绕
-	return a > b
+	if err := clientSide.appendPacket(ctx, first); err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	buffer = ringbuffer.New(BUFFER_SIZE).
+		WithCancel(ctx).
+		WithTimeout(time.Second * 5).
+		SetBlocking(true)
+	reader, writer = buffer.Pipe()
+	serverSide = &Side[P]{
+		logger:                logger,
+		rb:                    buffer,
+		brw:                   bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		frameStack:            make(n.FrameStack, 0, 32),
+		cli2Srv:               false,
+		state:                 StateListen,
+		isn:                   0,
+		expectedSeq:           0,
+		maxOutOrderPacketSize: maxOutOrderPacketSize,
+	}
+	return
+}
+
+func (s *Side[P]) bufferClose() {
+	s.rb.CloseWriter()
+}
+
+func (s *Side[P]) peekAll() ([]byte, error) {
+	length := min(s.brw.Reader.Buffered()+s.rb.Length(), BUFFER_SIZE)
+	return s.brw.Reader.Peek(length)
 }
 
 // isSynSent 检查当前是否为客户端且处于SynSent状态。
@@ -241,64 +313,17 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 	length := len(payload)
 	s.expectedSeq += uint32(length)
 	s.frameStack = append(s.frameStack, packet.FrameInfo())
-	recordBytesWritten(ctx, length)
 	// 将新进入的TCP包的有效载荷写入到应用层数据缓冲区中
-	if n, err := s.buffer.Write(payload); err != nil {
+	if n, err := s.brw.Write(payload); err != nil {
 		return errors.WithStack(err)
 	} else if n != length {
 		return errors.New("payload not fully written to buffer")
+	} else if err := s.brw.Flush(); err != nil {
+		return errors.WithStack(err)
+	} else {
+		recordBytesWritten(ctx, length)
 	}
 	return nil
-}
-
-// newClientSide 根据第一个SYN包创建客户端流的一端。
-// 该函数用于初始化TCP连接中客户端方向的Side实例，设置初始状态和序列号。
-// 客户端ISN由第一个SYN包的序列号确定，期望序列号为ISN+1，表示已发送SYN包。
-//
-// 参数:
-//   - first: 第一个SYN包，包含客户端的初始序列号
-//
-// 返回值:
-//   - *Side[P]: 初始化完成的客户端Side实例，状态为StateSynSent
-//
-// 注意:
-//   - 该函数假设传入的数据包是有效的SYN包
-//   - 客户端ISN应具有随机性，避免序列号预测攻击
-func newSides[P TCPPacket](ctx context.Context, first P, maxOutOrderPacketSize int) (clientSide, serverSide *Side[P], err error) {
-	if !first.IsSyn() {
-		panic("first packet must be SYN")
-	}
-	seq := first.SeqNum()
-	cBuffer := getRingBuffer().
-		WithCancel(ctx).
-		SetBlocking(true)
-	clientSide = &Side[P]{
-		buffer:                cBuffer,
-		reader:                bufio.NewReader(cBuffer),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               true,
-		state:                 StateSynSent,
-		isn:                   seq,
-		expectedSeq:           seq + 1,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
-	}
-	if err := clientSide.appendPacket(ctx, first); err != nil {
-		return nil, nil, errors.WithStack(err)
-	}
-	sBuffer := getRingBuffer().
-		WithCancel(ctx).
-		SetBlocking(true)
-	serverSide = &Side[P]{
-		buffer:                sBuffer,
-		reader:                bufio.NewReaderSize(sBuffer, int(RING_BUFFER_SIZE)),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               false,
-		state:                 StateListen,
-		isn:                   0,
-		expectedSeq:           0,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
-	}
-	return
 }
 
 // handshakeWithSecondSynAck 处理TCP三次握手的第二个SYN-ACK包。
@@ -381,6 +406,7 @@ func (s *Side[P]) handshakeWithThirdAck(ctx context.Context, third P, otherSide 
 //   - 期望序列号递增1，表示已处理RST包
 //   - 连接资源应立即释放，不再接受任何数据包
 func (s *Side[P]) reset(ctx context.Context, packet P, otherSide *Side[P]) error {
+	defer s.bufferClose()
 	s.state = StateClosed
 	otherSide.state = StateClosed
 	s.expectedSeq += 1
@@ -408,6 +434,7 @@ func (s *Side[P]) reset(ctx context.Context, packet P, otherSide *Side[P]) error
 //  3. 等待本地应用发出FIN包
 //  4. 收到对方的ACK确认，进入Closed状态
 func (s *Side[P]) handwaveWithFin(ctx context.Context, first P) error {
+	defer s.bufferClose()
 	s.state = StateCloseWait
 	s.expectedSeq += 1
 	if err := s.appendPacket(ctx, first); err != nil {
@@ -483,11 +510,15 @@ func (s *Side[P]) tryReassembly(ctx context.Context, otherSide *Side[P]) error {
 //     2. 如果当前处于Established状态且是FIN包，处理连接终止
 //     3. 否则，按正常数据包处理
 func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (err error) {
+	s.logger.Ctx(ctx).Debugf("packet ENTER  cli2Srv=%v state=%d isn=%d seq=%d expectedSeq=%d ack=%d syn=%v fin=%v rst=%v payloadLen=%d",
+		s.cli2Srv, s.state, s.isn, packet.SeqNum(), s.expectedSeq, packet.AckNum(),
+		packet.IsSyn(), packet.IsFin(), packet.IsRst(), len(packet.GetPayload()))
 	ctx, span := startSideSpan(ctx, packet, s.cli2Srv)
 	defer endSpan(span, &err)
 	defer recordPacket(ctx, packet)
 	// 若连接已关闭，直接忽略
 	if s.isCompleted() {
+		s.logger.Ctx(ctx).Debugf("packet DROP(completed) cli2Srv=%v state=%d isn=%d, seq=%d", s.cli2Srv, s.state, s.isn, packet.SeqNum())
 		return nil
 	}
 
@@ -508,9 +539,13 @@ func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (
 	// 处理乱序包
 	seq := packet.SeqNum()
 	if seqLess(seq, s.expectedSeq) {
+		s.logger.Ctx(ctx).Debugf("packet DROP(retransmit) cli2Srv=%v state=%d isn=%d, seq=%d expectedSeq=%d payloadLen=%d",
+			s.cli2Srv, s.state, s.isn, seq, s.expectedSeq, len(packet.GetPayload()))
 		recordRetransmit(ctx)
 		return nil
 	} else if seqLess(s.expectedSeq, seq) {
+		s.logger.Ctx(ctx).Debugf("packet STASH(out-of-order) cli2Srv=%v state=%d isn=%d, seq=%d expectedSeq=%d payloadLen=%d",
+			s.cli2Srv, s.state, s.isn, seq, s.expectedSeq, len(packet.GetPayload()))
 		if s.outOrderPackets == nil {
 			s.outOrderPackets = make(map[uint32]P)
 		} else if len(s.outOrderPackets) >= s.maxOutOrderPacketSize {
@@ -534,8 +569,4 @@ func (s *Side[P]) addPacket(ctx context.Context, packet P, otherSide *Side[P]) (
 		return errors.WithStack(err)
 	}
 	return nil
-}
-
-func (s *Side[P]) release() {
-	releaseRingBuffer(s.buffer)
 }

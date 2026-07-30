@@ -12,7 +12,6 @@ import (
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/network/tcp"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -46,25 +45,17 @@ func (d *testDetector) Extract(
 ) (clientPayload, serverPayload any, err error) {
 	var req *http.Request
 	var rsp *http.Response
-	wg, ctx := errgroupx.WithContext(ctx)
-	wg.GoNamed("client", func() (rErr error) {
-		if req, rErr = http.ReadRequest(clientReader); rErr != nil {
-			return errors.WithStack(rErr)
-		}
-		return rErr
-	})
-	wg.GoNamed("server", func() (rErr error) {
-		if rsp, rErr = http.ReadResponse(serverReader, req); rErr != nil {
-			return errors.WithStack(rErr)
-		}
-		return rErr
-	})
-	if err = wg.Wait(); err != nil {
-		return
+
+	// 先读取请求，再读取响应。将请求对象传给 http.ReadResponse，
+	// 当请求方法为 HEAD 时，Go 标准库会跳过响应体的读取，
+	// 避免因 Content-Length 不匹配（HEAD 响应不应有 body）而错误消费后续流量。
+	if req, err = http.ReadRequest(clientReader); err != nil {
+		return nil, nil, errors.WithStack(err)
 	}
-	clientPayload = req
-	serverPayload = rsp
-	return
+	if rsp, err = http.ReadResponse(serverReader, req); err != nil {
+		return nil, nil, errors.WithStack(err)
+	}
+	return req, rsp, nil
 }
 
 func (d *testDetector) Build(

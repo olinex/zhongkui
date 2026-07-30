@@ -1,16 +1,13 @@
 package tcp
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"net"
-	"sync/atomic"
-	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	"github.com/smallnest/ringbuffer"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 
 	n "zhongkui.com/zhongkui/internal/models/network"
 )
@@ -23,14 +20,17 @@ import (
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型，用于支持不同的TCP数据包实现
 type Reassembler[P TCPPacket] struct {
+	// logger 日志记录器，用于记录TCP Reassembler的运行时信息。
+	logger *logging.Logger
+
 	// ClientAddr 客户端IP地址
 	ClientAddr net.IP
 
 	// ClientPort 客户端端口号
 	ClientPort layers.TCPPort
 
-	// Client 客户端侧的TCP流管理
-	Client *Side[P]
+	// client 客户端侧的TCP流管理
+	client *Side[P]
 
 	// ServerAddr 服务端IP地址
 	ServerAddr net.IP
@@ -38,39 +38,36 @@ type Reassembler[P TCPPacket] struct {
 	// ServerPort 服务端端口号
 	ServerPort layers.TCPPort
 
-	// Server 服务端侧的TCP流管理
-	Server *Side[P]
-
-	signalChan     chan any
-	lastNoticeNano atomic.Int64
-	// cancel 用于取消当前流的上下文，触发环形缓冲区 WithCancel 释放阻塞的读写操作
-	cancel context.CancelFunc
+	// server 服务端侧的TCP流管理
+	server *Side[P]
 }
 
 // newReassembler 根据TCP三次握手的第一个SYN包创建一个新的TCP Reassembler。
 func newReassembler[P TCPPacket](
 	ctx context.Context,
+	logger *logging.Logger,
 	first P,
 	maxOutOrderPacketSize int,
 ) (*Reassembler[P], error) {
-	// 创建可取消的子上下文，用于 stop() 时解除环形缓冲区的阻塞读取
-	flowCtx, cancel := context.WithCancel(ctx)
-	clientSide, serverSide, err := newSides(flowCtx, first, maxOutOrderPacketSize)
+	clientSide, serverSide, err := newSides(ctx, logger, first, maxOutOrderPacketSize)
 	if err != nil {
-		cancel()
 		return nil, errors.WithStack(err)
 	}
 	recordReassemblerCreated(ctx)
 	return &Reassembler[P]{
+		logger:     logger,
 		ClientAddr: first.SrcAddr(),
 		ClientPort: first.SrcPort(),
 		ServerAddr: first.DstAddr(),
 		ServerPort: first.DstPort(),
-		Client:     clientSide,
-		Server:     serverSide,
-		signalChan: make(chan any, maxOutOrderPacketSize),
-		cancel:     cancel,
+		client:     clientSide,
+		server:     serverSide,
 	}, nil
+}
+
+func (r *Reassembler[P]) Close() {
+	r.client.bufferClose()
+	r.server.bufferClose()
 }
 
 // String 返回TCP Reassembler的字符串表示。
@@ -109,12 +106,12 @@ func (r *Reassembler[P]) addPacket(ctx context.Context, packet P) error {
 	if same, dir := r.isSameFlow(packet); !same {
 		return errors.Newf(`%s is not same flow`, tcpPacketSeq(packet))
 	} else if dir {
-		currentSide = r.Client
-		otherSide = r.Server
+		currentSide = r.client
+		otherSide = r.server
 		c2s = true
 	} else {
-		currentSide = r.Server
-		otherSide = r.Client
+		currentSide = r.server
+		otherSide = r.client
 		c2s = false
 	}
 
@@ -128,26 +125,7 @@ func (r *Reassembler[P]) addPacket(ctx context.Context, packet P) error {
 }
 
 func (r *Reassembler[P]) isCompleted() bool {
-	return r.Client.isCompleted() && r.Server.isCompleted()
-}
-
-func (r *Reassembler[P]) release() {
-	r.Client.release()
-	r.Server.release()
-	// 取消流上下文，确保环形缓冲区 WithCancel 的后台 goroutine 退出
-	if r.cancel != nil {
-		r.cancel()
-	}
-}
-
-// setLastNotice 原子性地更新最后通知时间。
-func (r *Reassembler[P]) setLastNotice(t time.Time) {
-	r.lastNoticeNano.Store(t.UnixNano())
-}
-
-// lastNotice 原子性地获取最后通知时间。
-func (r *Reassembler[P]) lastNotice() time.Time {
-	return time.Unix(0, r.lastNoticeNano.Load())
+	return r.client.isCompleted() && r.server.isCompleted()
 }
 
 // extractApplication 从当前TCP流中提取应用层协议数据，构建完整的应用层对象。
@@ -179,23 +157,18 @@ func (r *Reassembler[P]) lastNotice() time.Time {
 //   - 不同的应用层协议推测器可能返回不同类型的应用层对象
 //   - 如果提取过程中发生错误，返回AppUnknown作为错误指示
 //   - 该方法会同时处理请求侧和响应侧的数据，确保双向数据都匹配协议特征
-func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMeta, reqPeekCap, rspPeekCap []byte) (any, error) {
-	// 拼接 bufio.Reader 已有缓存 + RingBuffer 剩余数据用于协议检测
-	// bufio.Reader 中可能已缓存从 RingBuffer 读取但尚未被应用层消费的数据，
-	// 仅从 RingBuffer peek 会漏掉这部分导致数据不全。
-	// 使用 Peek(n) n≤Buffered() 只取缓存不触发 RingBuffer 读取，
-	// PeekAll 从 RingBuffer 做非破坏性查看，最终拼接两者。
-	reqPeek, err := peekCombined(r.Client.reader, r.Client.buffer, reqPeekCap)
+func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMeta) (any, error) {
+	// 无阻塞检查双方是否有数据可读取：bufio.Reader 内部缓存 + RingBuffer 剩余数据。
+	// 仅检查是否有数据，不做实际读取，避免阻塞等待不够的数据量。
+	reqPeek, err := r.client.peekAll()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	rspPeek, err := peekCombined(r.Server.reader, r.Server.buffer, rspPeekCap)
+	rspPeek, err := r.server.peekAll()
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if len(reqPeek) == 0 && len(rspPeek) == 0 {
-		return nil, nil
-	}
+
 	for protocol, supposer := range detectors {
 		innerCtx, detectSpan := startDetectSpan(ctx, protocol)
 		var dErr error
@@ -220,7 +193,11 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 
 		innerCtx, extractSpan := startExtractSpan(ctx, protocol)
 		var clientPayload, serverPayload any
-		clientPayload, serverPayload, dErr = supposer.Extract(innerCtx, r.Client.reader, r.Server.reader)
+		clientPayload, serverPayload, dErr = supposer.Extract(
+			innerCtx,
+			r.client.brw.Reader,
+			r.server.brw.Reader,
+		)
 		if dErr != nil {
 			endSpan(extractSpan, &dErr)
 			recordAppExtractionError(innerCtx)
@@ -237,8 +214,8 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 			r.ServerAddr,
 			r.ClientPort,
 			r.ServerPort,
-			r.Client.frameStack,
-			r.Server.frameStack,
+			r.client.frameStack,
+			r.server.frameStack,
 			clientPayload,
 			serverPayload,
 		)
@@ -252,45 +229,6 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 		return app, nil
 	}
 	return nil, nil
-}
-
-// peekCombined 合并 bufio.Reader 缓存与 RingBuffer 数据用于协议检测
-// bufio.Reader 可能已从 RingBuffer 读取但未被消费的数据，仅 Peek RingBuffer 会遗漏这部分。
-// 参数 cap 为预分配缓冲区，用于 RingBuffer.PeekAll 避免额外分配。
-func peekCombined(reader *bufio.Reader, buffer *ringbuffer.RingBuffer, cap []byte) ([]byte, error) {
-	var bufPeek []byte
-	if n := reader.Buffered(); n > 0 {
-		// 仅 Peek 缓冲区内已有数据，不触发底层 RingBuffer 读取
-		var err error
-		if bufPeek, err = reader.Peek(n); err != nil {
-			return nil, errors.WithStack(err)
-		}
-	}
-	rbPeek := make([]byte, buffer.Length())
-	if n, err := buffer.Peek(rbPeek); err != nil {
-		return nil, errors.WithStack(err)
-	} else {
-		rbPeek = rbPeek[:n]
-	}
-	if len(bufPeek) == 0 {
-		return rbPeek, nil
-	}
-	if len(rbPeek) == 0 {
-		return bufPeek, nil
-	}
-	combined := make([]byte, len(bufPeek)+len(rbPeek))
-	copy(combined, bufPeek)
-	copy(combined[len(bufPeek):], rbPeek)
-	return combined, nil
-}
-
-// isRetryableError 判断错误是否为可重试的非致命错误。
-// 当 Extract 阶段因数据不足或上下文超时失败时，不应终止整个 parse 循环，
-// 而应等待后续数据包到达后重试。
-func isRetryableError(err error) bool {
-	return errors.Is(err, ErrDataIncomplete) ||
-		errors.Is(err, context.DeadlineExceeded) ||
-		errors.Is(err, context.Canceled)
 }
 
 // parse 解析TCP流中的应用层数据，将提取的应用层对象发送到目标通道。
@@ -317,27 +255,20 @@ func isRetryableError(err error) bool {
 //   - 目标通道应该是缓冲通道，避免阻塞解析器的运行
 //   - 每次收到信号都会尝试提取应用层数据，即使数据可能不完整
 //   - 应用层协议推测器可能需要在多个数据包到达后才能成功识别协议
-func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, dstChan chan<- any) error {
+func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, signalChan <-chan any, dstChan chan<- any) error {
 	ctx, span := startParseSpan(ctx)
 	defer endSpan(span, nil)
 	defer recordReassemblerCompleted(ctx)
-	defer r.release()
-	reqPeek := make([]byte, r.Client.buffer.Capacity())
-	rspPeek := make([]byte, r.Server.buffer.Capacity())
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
-		case _, ok := <-r.signalChan:
+		case _, ok := <-signalChan:
 			if !ok {
 				return nil
 			}
-			app, err := r.extractApplication(ctx, meta, reqPeek, rspPeek)
+			app, err := r.extractApplication(ctx, meta)
 			if err != nil {
-				if isRetryableError(err) {
-					// 数据不足或上下文超时，不是致命错误，等待后续数据包重试
-					continue
-				}
 				return errors.WithStack(err)
 			}
 			if app != nil {
@@ -348,23 +279,5 @@ func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, dstChan ch
 				}
 			}
 		}
-	}
-}
-
-func (r *Reassembler[P]) notice(ctx context.Context) {
-	r.setLastNotice(time.Now())
-	select {
-	case <-ctx.Done():
-	case r.signalChan <- nil:
-	default:
-	}
-}
-
-func (r *Reassembler[P]) stop() {
-	close(r.signalChan)
-	// 取消流上下文以打断僵死在 ringbuffer.Read 上的协程
-	// cancel 只影响缓冲区为空、正在等待的 Read，不会中断缓冲区有数据时的正常消费
-	if r.cancel != nil {
-		r.cancel()
 	}
 }

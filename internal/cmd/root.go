@@ -46,7 +46,6 @@ var RootCmd = &cobra.Command{
 		cmd.SetContext(ctx)
 
 		provider.InjectOtelShutdowner(ctx, i)
-		_ = provider.MustInvokeOtelShutdowner(ctx, i)
 
 		provider.InjectCommand(i, cmd)
 		provider.InjectViper(i)
@@ -76,6 +75,9 @@ var RootCmd = &cobra.Command{
 		provider.InjectPipelineClient(i)
 		provider.InjectPipelineServer(ctx, i)
 		provider.InjectCaptureClient(i)
+
+		// 必须在所有服务启动完成后调用，确保所有资源都被正确初始化
+		_ = provider.MustInvokeOtelShutdowner(ctx, i)
 
 		ctx = context.WithValue(ctx, INJECTOR_CTX_NAME, i)
 		cmd.SetContext(ctx)
@@ -185,6 +187,7 @@ func init() {
 	createCmd.AddCommand(createAccessKeyCmd)
 	createCmd.AddCommand(createCapturerCmd)
 	createCmd.AddCommand(createPasswordBookCmd)
+	createCmd.AddCommand(generateTestcaseCmd)
 	RootCmd.AddCommand(createCmd)
 
 	RootCmd.AddCommand(forceResetPasswordCmd)

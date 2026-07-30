@@ -17,7 +17,7 @@ func TestBase(t *testing.T) {
 			wg, ctx := errgroupx.WithContext(context.Background())
 			wg.Go(func() error {
 				defer close(srcChan)
-				return extractPackets(ctx, "http_base.cap", srcChan)
+				return extractPackets(ctx, "http_base.pcap", srcChan)
 			})
 			wg.Go(func() error {
 				for packet := range srcChan {
@@ -32,26 +32,26 @@ func TestBase(t *testing.T) {
 
 	Convey("Test runRouter function", t, func() {
 		Convey("Should run router without error for base HTTP pcap", func(c C) {
-			err := runRouter("http_base.cap")
+			err := runRouter("http_base.pcap")
 			c.So(err, ShouldBeNil)
 		})
 
 		Convey("Should run router without error for gzipped HTTP pcap", func(c C) {
 			// 测试Gzip压缩的HTTP pcap文件，添加超时控制
-			err := runRouter("http_gzip.cap")
+			err := runRouter("http_gzip.pcap")
 			c.So(err, ShouldBeNil)
 		})
 
 		Convey("Should run router without error for chunked+gzip HTTP pcap", func(c C) {
 			// 测试Chunked+Gzip编码的HTTP pcap文件，添加超时控制
-			err := runRouter("http_chunked_gzip.cap")
+			err := runRouter("http_chunked_gzip.pcap")
 			c.So(err, ShouldBeNil)
 		})
 
 		Convey("Should handle non-existent file gracefully", func(c C) {
 			// 测试处理不存在的文件
 			// 由于runRouter内部会调用pcap.OpenOffline，对于不存在的文件会返回错误
-			err := runRouter("non_existent.cap")
+			err := runRouter("non_existent.pcap")
 			c.So(err, ShouldNotBeNil)
 		})
 	})

@@ -47,28 +47,25 @@ func TestGroupEntry_BasicOperations(t *testing.T) {
 func TestGroupEntry_PopTail(t *testing.T) {
 	Convey("Test groupEntry popTail", t, func() {
 
-		Convey("popTail on empty group returns nil", func() {
-			g := &groupEntry[*mockTCPPacket]{
-				nodes: make(map[string]*ReassemblerNode[*mockTCPPacket]),
-			}
-			So(g.popTail(), ShouldBeNil)
+		Convey("pick tail on empty group is a no-op", func() {
+			g := &groupEntry[*mockTCPPacket]{}
+			So(g.tail, ShouldBeNil)
 		})
 
-		Convey("popTail on single element empties the group", func() {
+		Convey("pick tail on single element empties the group", func() {
 			g := &groupEntry[*mockTCPPacket]{
 				nodes: make(map[string]*ReassemblerNode[*mockTCPPacket]),
 			}
 			n1 := newTestNode("flow-1")
 			g.pushFront(n1)
 
-			popped := g.popTail()
-			So(popped, ShouldEqual, n1)
+			g.pick(g.tail)
 			So(g.len(), ShouldEqual, 0)
 			So(g.head, ShouldBeNil)
 			So(g.tail, ShouldBeNil)
 		})
 
-		Convey("popTail on multiple elements returns tail", func() {
+		Convey("pick tail on multiple elements returns tail", func() {
 			g := &groupEntry[*mockTCPPacket]{
 				nodes: make(map[string]*ReassemblerNode[*mockTCPPacket]),
 			}
@@ -80,7 +77,8 @@ func TestGroupEntry_PopTail(t *testing.T) {
 			g.pushFront(n3)
 			// order: head=n3, n2, tail=n1
 
-			popped := g.popTail()
+			popped := g.tail
+			g.pick(g.tail)
 			So(popped, ShouldEqual, n1)
 			So(g.len(), ShouldEqual, 2)
 			So(g.tail, ShouldEqual, n2)
@@ -166,7 +164,7 @@ func TestGroupEntry_Remove(t *testing.T) {
 			g.pushFront(n2)
 			// head=n2, tail=n1
 
-			g.remove(n2)
+			g.pick(n2)
 			So(g.head, ShouldEqual, n1)
 			So(g.tail, ShouldEqual, n1)
 			So(g.len(), ShouldEqual, 1)
@@ -184,7 +182,7 @@ func TestGroupEntry_Remove(t *testing.T) {
 			g.pushFront(n2)
 			// head=n2, tail=n1
 
-			g.remove(n1)
+			g.pick(n1)
 			So(g.head, ShouldEqual, n2)
 			So(g.tail, ShouldEqual, n2)
 			So(g.len(), ShouldEqual, 1)
@@ -204,7 +202,7 @@ func TestGroupEntry_Remove(t *testing.T) {
 			g.pushFront(n3)
 			// head=n3, n2, tail=n1
 
-			g.remove(n2)
+			g.pick(n2)
 			So(g.head, ShouldEqual, n3)
 			So(g.tail, ShouldEqual, n1)
 			So(g.len(), ShouldEqual, 2)
@@ -224,8 +222,8 @@ func TestGroupEntry_Remove(t *testing.T) {
 			g.pushFront(n1)
 			g.pushFront(n2)
 
-			g.remove(n1)
-			g.remove(n2)
+			g.pick(n1)
+			g.pick(n2)
 			So(g.len(), ShouldEqual, 0)
 			So(g.head, ShouldBeNil)
 			So(g.tail, ShouldBeNil)
@@ -237,7 +235,7 @@ func TestGroupEntry_Remove(t *testing.T) {
 func TestGroupEntry_LRUOrdering(t *testing.T) {
 	Convey("Test groupEntry LRU ordering", t, func() {
 
-		Convey("pushFront inserts at head, popTail removes tail (FIFO-like after LRU)", func() {
+		Convey("pushFront inserts at head, pick tail removes oldest (FIFO-like after LRU)", func() {
 			g := &groupEntry[*mockTCPPacket]{
 				nodes: make(map[string]*ReassemblerNode[*mockTCPPacket]),
 			}
@@ -248,10 +246,13 @@ func TestGroupEntry_LRUOrdering(t *testing.T) {
 			g.pushFront(n2)
 			g.pushFront(n3)
 
-			// 按访问顺序 popTail 应返回最旧的
-			So(g.popTail().ID, ShouldEqual, "1")
-			So(g.popTail().ID, ShouldEqual, "2")
-			So(g.popTail().ID, ShouldEqual, "3")
+			// 按访问顺序 pick tail 应返回最旧的
+			So(g.tail.ID, ShouldEqual, "1")
+			g.pick(g.tail)
+			So(g.tail.ID, ShouldEqual, "2")
+			g.pick(g.tail)
+			So(g.tail.ID, ShouldEqual, "3")
+			g.pick(g.tail)
 		})
 
 		Convey("moveToFront promotes node, changing eviction order", func() {
@@ -268,10 +269,13 @@ func TestGroupEntry_LRUOrdering(t *testing.T) {
 			// 访问最旧的 n1，提升到头部
 			g.moveToFront(n1) // head=1, 3, tail=2
 
-			// 现在 popTail 应返回 n2（新的最旧）
-			So(g.popTail().ID, ShouldEqual, "2")
-			So(g.popTail().ID, ShouldEqual, "3")
-			So(g.popTail().ID, ShouldEqual, "1")
+			// 现在 pick tail 应返回 n2（新的最旧）
+			So(g.tail.ID, ShouldEqual, "2")
+			g.pick(g.tail)
+			So(g.tail.ID, ShouldEqual, "3")
+			g.pick(g.tail)
+			So(g.tail.ID, ShouldEqual, "1")
+			g.pick(g.tail)
 		})
 	})
 }

@@ -144,3 +144,13 @@ func NewDefaultLogger() (*Logger, error) {
 	}
 	return NewProductionLogger(cfg.ToZapConfig())
 }
+
+func NewDebugLogger() (*Logger, error) {
+	var cfg Config
+	if err := defaults.Set(&cfg); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cfg.Development = true
+	cfg.Level = "debug"
+	return NewProductionLogger(cfg.ToZapConfig())
+}

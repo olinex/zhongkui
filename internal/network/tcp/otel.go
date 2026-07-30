@@ -49,6 +49,8 @@ var (
 	cleanupFlowsRemovedCounter metric.Int64Counter
 	// cleanupFlowsEvictedCounter 统计清理时因超出容量被驱逐的流数量
 	cleanupFlowsEvictedCounter metric.Int64Counter
+	// cleanupFlowsLivingGaguge 统计清理时剩余的流数量（未超时）
+	cleanupFlowsLivingGaguge metric.Int64Gauge
 )
 
 func InitMetrics() {
@@ -124,6 +126,13 @@ func initMetrics() {
 	cleanupFlowsEvictedCounter, e = meter.Int64Counter(
 		"tcp.cleanup.flows_evicted",
 		metric.WithDescription("Total number of TCP flows evicted due to capacity overflow"),
+		metric.WithUnit("{flow}"),
+	)
+	err = errors.Join(err, e)
+
+	cleanupFlowsLivingGaguge, e = meter.Int64Gauge(
+		"tcp.cleanup.flows_living",
+		metric.WithDescription("Total number of TCP flows remaining after cleanup (not expired)"),
 		metric.WithUnit("{flow}"),
 	)
 	err = errors.Join(err, e)
@@ -301,6 +310,10 @@ func recordCleanupFlowsRemoved(ctx context.Context, count int) {
 
 func recordCleanupFlowsEvicted(ctx context.Context, count int) {
 	cleanupFlowsEvictedCounter.Add(ctx, int64(count))
+}
+
+func recordFlowsLiving(ctx context.Context, count int) {
+	cleanupFlowsLivingGaguge.Record(ctx, int64(count))
 }
 
 // ---------------------------------------------------------------------------

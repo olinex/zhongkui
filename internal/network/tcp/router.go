@@ -101,85 +101,73 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 
 	group := r.roots[*meta]
 	if group == nil {
-		group = &groupEntry[P]{
-			nodes: make(map[string]*ReassemblerNode[P], r.maxReassemblerSize),
-		}
+		group = newGroupEntry[P]()
 		r.roots[*meta] = group
 	}
 
 	node := group.nodes[streamID]
 
-	if node != nil && node.Reassembler.isCompleted() {
-		group.remove(node)
-		node.Reassembler.stop()
+	// 若新包在未清理时快速流入，需要能够就地清理已经结束的 tcp node
+	if node != nil && node.clearable(r.noticeTimeout) {
+		group.remove(node, false)
 		node = nil
 	}
 
 	if node == nil {
 		if !packet.IsSyn() {
+			group.addOOP(streamID, packet)
 			return nil
 		}
-		rsm, err := newReassembler(
-			ctx,
-			packet,
-			r.maxOutOrderPacketSize,
-		)
+		node, err = newReassemblerNode(ctx, logger, streamID, packet, r.maxOutOrderPacketSize)
 		if err != nil {
 			return errors.WithStack(err)
 		}
-		node = &ReassemblerNode[P]{
-			ID:          streamID,
-			Reassembler: rsm,
+		wg.Go(
+			func() error {
+				node.start(logger, meta, dstChan)
+				return nil
+			},
+		)
+		if err := group.flushOOP(node); err != nil {
+			return errors.WithStack(err)
 		}
-		node.run(ctx, logger, meta, wg, dstChan)
 		group.pushFront(node)
-	} else if err := node.Reassembler.addPacket(ctx, packet); err != nil {
+	} else if err := node.addPacket(packet); err != nil {
 		return errors.WithStack(err)
+	} else {
+		group.moveToFront(node)
 	}
-
-	node.Reassembler.notice(ctx)
-	group.moveToFront(node)
 
 	return nil
 }
 
-func (r *Router[P]) cleanup(ctx context.Context, force bool) {
+func (r *Router[P]) cleanup(ctx context.Context, force bool) (removedCount, evictedCount, livingCount int) {
 	ctx, span := startCleanupSpan(ctx, force)
-	var removedCount, evictedCount int
 	defer func() {
 		span.SetAttributes(
 			attribute.Int("tcp.cleanup.removed", removedCount),
 			attribute.Int("tcp.cleanup.evicted", evictedCount),
+			attribute.Int("tcp.living", livingCount),
 		)
 		recordCleanupFlowsRemoved(ctx, removedCount)
 		recordCleanupFlowsEvicted(ctx, evictedCount)
+		recordFlowsLiving(ctx, livingCount)
 		endSpan(span, nil)
 	}()
 	for _, group := range r.roots {
 		if group == nil {
 			continue
 		}
-		// 清理已完成的或明显异常的 tcp 流
-		current := group.head
-		for current != nil {
-			next := current.next
-			if force || current.Reassembler.isCompleted() ||
-				current.Reassembler.lastNotice().Add(r.noticeTimeout).Before(time.Now()) {
-				group.remove(current)
-				current.Reassembler.stop()
-				removedCount++
-			}
-			current = next
-		}
-		// 清理超出缓存的 tcp 流
-		for group.len() > r.maxReassemblerSize {
-			evicted := group.popTail()
-			if evicted != nil {
-				evicted.Reassembler.stop()
-				evictedCount++
-			}
-		}
+		removed, evicted, living := group.cleanup(
+			r.noticeTimeout,
+			r.maxReassemblerSize,
+			force,
+		)
+		removedCount += removed
+		evictedCount += evicted
+		livingCount += living
 	}
+	return
 }
 
 // Run 启动路由器的主循环，处理来自源通道的TCP数据包。
@@ -225,6 +213,7 @@ func (r *Router[P]) cleanup(ctx context.Context, force bool) {
 //  2. errgroup会等待所有goroutine完成
 //  3. 每个重组器节点有自己的清理逻辑，确保资源释放
 func (r *Router[P]) Run(ctx context.Context, logger *logging.Logger, srcChan <-chan P, dstChan chan<- any) error {
+	ctx, cancel := context.WithCancel(ctx)
 	wg, ctx := errgroupx.WithContext(ctx)
 	ticker := time.NewTicker(r.noticeTimeout)
 	defer ticker.Stop()
@@ -243,17 +232,26 @@ LOOP:
 			// 处理数据包
 			err := r.addPacket(ctx, logger, packet, wg, dstChan)
 			if err != nil {
+				cancel()
 				return errors.WithStack(err)
 			}
 		}
 	}
-	// 退出主循环后，强制清理所有残留的流，确保所有重组器 goroutine 收到 stop 信号
-	r.cleanup(ctx, true)
-	ctx, cancel := context.WithTimeout(ctx, r.noticeTimeout)
-	defer cancel()
-	// 有活跃流时，等待一个 noticeTimeout 让它们完成或超时
+	_, _, living := r.cleanup(ctx, false)
+	if living > 0 {
+		timer := time.NewTicker(r.noticeTimeout)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+		case <-timer.C:
+			cancel()
+			r.cleanup(ctx, true)
+		}
+	}
 	if err := wg.Wait(); err != nil {
+		cancel()
 		return errors.WithStack(err)
 	}
+	cancel()
 	return nil
 }

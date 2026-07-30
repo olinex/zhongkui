@@ -16,6 +16,7 @@ import (
 	"gorm.io/datatypes"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -902,7 +903,7 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 	}
 	defer body.Close()
 	id := serializer.NewHexUUIDv4()
-	key := objectKey(id.String(), true)
+	key := objectKey(id.String(), false)
 	zkcn := s3.NewZkcn(client, key, cryptoKey, 0)
 	if _, err := zkcn.Store(ctx, body); err != nil {
 		return nil, errors.WithStack(err)
@@ -1024,30 +1025,40 @@ func NewHttpTransport(
 	var uri *HttpURI
 	var requestBody *HttpRequestBody
 	var requestHeaders *HttpRequestHeaders
-	if request != nil && len(clientFrameStack) != 0 {
-		uri, err = NewHttpURI(request.URL)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		startTime := clientFrameStack[0].Timestamp
-		endTime := clientFrameStack[len(clientFrameStack)-1].Timestamp
-		requestBody, err = NewHttpRequestBody(ctx, s3Client, request, startTime, endTime, cryptoKey)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		requestHeaders = NewHttpRequestHeaders(request)
-		hBase.HttpVersion = request.Proto
-	}
 	var responseBody *HttpResponseBody
 	var responseHeaders *HttpResponseHeaders
-	if response != nil && len(serverFrameStack) != 0 {
-		startTime := serverFrameStack[0].Timestamp
-		endTime := serverFrameStack[len(serverFrameStack)-1].Timestamp
-		responseBody, err = NewHttpResponseBody(ctx, s3Client, response, startTime, endTime, cryptoKey)
-		if err != nil {
-			return nil, errors.WithStack(err)
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("req-build", func() error {
+		if request != nil && len(clientFrameStack) != 0 {
+			uri, err = NewHttpURI(request.URL)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			startTime := clientFrameStack[0].Timestamp
+			endTime := clientFrameStack[len(clientFrameStack)-1].Timestamp
+			requestBody, err = NewHttpRequestBody(ctx, s3Client, request, startTime, endTime, cryptoKey)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			requestHeaders = NewHttpRequestHeaders(request)
+			hBase.HttpVersion = request.Proto
+		}
+		return nil
+	})
+	wg.GoNamed("rsp-build", func() error {
+		if response != nil && len(serverFrameStack) != 0 {
+			startTime := serverFrameStack[0].Timestamp
+			endTime := serverFrameStack[len(serverFrameStack)-1].Timestamp
+			responseBody, err = NewHttpResponseBody(ctx, s3Client, response, startTime, endTime, cryptoKey)
+			if err != nil {
+				return errors.WithStack(err)
+			}
 		}
 		responseHeaders = NewHttpResponseHeaders(response)
+		return nil
+	})
+	if err := wg.Wait(); err != nil {
+		return nil, errors.WithStack(err)
 	}
 	if uri == nil {
 		uri = &HttpURI{}

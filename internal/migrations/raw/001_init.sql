@@ -174,7 +174,8 @@ ORDER BY (
 	ipv4_ip_protocol,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type
+	eth_type,
+	tcp_seq
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
@@ -232,7 +233,8 @@ ORDER BY (
 	ipv4_ip_protocol,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type
+	eth_type,
+	tcp_seq
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;
@@ -289,7 +291,8 @@ ORDER BY (
 	ipv6_last_header,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type
+	eth_type,
+	tcp_seq
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 24 HOUR DELETE;
@@ -344,7 +347,8 @@ ORDER BY (
 	ipv6_last_header,
 	LEAST(eth_src_mac, eth_dst_mac),
 	GREATEST(eth_src_mac, eth_dst_mac),
-	eth_type
+	eth_type,
+	tcp_seq
 )
 PARTITION BY toStartOfHour(timestamp)
 TTL toDateTime(timestamp) + INTERVAL 168 HOUR DELETE;

@@ -10,7 +10,9 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
+	"go.uber.org/zap"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // mockDetector 是用于测试的 AppProtocolDetector 实现。
@@ -99,7 +101,8 @@ func newTestReassemblerWithHandshake(_ *testing.T, sessionID byte) *testReassemb
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	rsm, err := newReassembler(ctx, syn, 10)
+	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
+	rsm, err := newReassembler(ctx, logger, syn, 10)
 	So(err, ShouldBeNil)
 
 	// 模拟三次握手完成
@@ -112,7 +115,7 @@ func newTestReassemblerWithHandshake(_ *testing.T, sessionID byte) *testReassemb
 	)
 	synAck.ackNum = 1001
 
-	err = rsm.Server.handshakeWithSecondSynAck(ctx, synAck)
+	err = rsm.server.handshakeWithSecondSynAck(ctx, synAck)
 	So(err, ShouldBeNil)
 
 	ack := newMockTCPPacketWithOptions(
@@ -124,14 +127,16 @@ func newTestReassemblerWithHandshake(_ *testing.T, sessionID byte) *testReassemb
 	)
 	ack.ackNum = 5001
 
-	err = rsm.Client.handshakeWithThirdAck(ctx, ack, rsm.Server)
+	err = rsm.client.handshakeWithThirdAck(ctx, ack, rsm.server)
 	So(err, ShouldBeNil)
 
 	// 向双方缓冲区写入测试数据，使 Detect 阶段能匹配
-	_, err = rsm.Client.buffer.Write([]byte("mock request data for detect"))
+	_, err = rsm.client.brw.Write([]byte("mock request data for detect"))
 	So(err, ShouldBeNil)
-	_, err = rsm.Server.buffer.Write([]byte("mock response data for detect"))
+	So(rsm.client.brw.Flush(), ShouldBeNil)
+	_, err = rsm.server.brw.Write([]byte("mock response data for detect"))
 	So(err, ShouldBeNil)
+	So(rsm.server.brw.Flush(), ShouldBeNil)
 
 	return &testReassemblerFixture{
 		rsm:       rsm,
@@ -162,10 +167,9 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 			fixture := newTestReassemblerWithHandshake(t, 0x01)
 			defer fixture.rsmCancel()
-			defer fixture.rsm.release()
+			defer fixture.rsm.Close()
 
-			fixture.rsm.setLastNotice(time.Now())
-
+			signalChan := make(chan any, 1)
 			dstChan := make(chan any, 10)
 
 			parseCtx, parseCancel := context.WithCancel(context.Background())
@@ -173,14 +177,14 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 			done := make(chan error, 1)
 			go func() {
-				done <- fixture.rsm.parse(parseCtx, fixture.meta, dstChan)
+				done <- fixture.rsm.parse(parseCtx, fixture.meta, signalChan, dstChan)
 			}()
 
 			// 等待 parse 协程进入 select 循环
 			time.Sleep(20 * time.Millisecond)
 
 			// 发送信号触发提取，Extract 返回 ErrDataIncomplete
-			fixture.rsm.notice(parseCtx)
+			signalChan <- nil
 			time.Sleep(50 * time.Millisecond)
 
 			// parse 不应退出（可重试错误）
@@ -207,10 +211,9 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 			fixture := newTestReassemblerWithHandshake(t, 0x03)
 			defer fixture.rsmCancel()
-			defer fixture.rsm.release()
+			defer fixture.rsm.Close()
 
-			fixture.rsm.setLastNotice(time.Now())
-
+			signalChan := make(chan any, 1)
 			dstChan := make(chan any, 10)
 
 			parseCtx, parseCancel := context.WithCancel(context.Background())
@@ -218,12 +221,12 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 			done := make(chan error, 1)
 			go func() {
-				done <- fixture.rsm.parse(parseCtx, fixture.meta, dstChan)
+				done <- fixture.rsm.parse(parseCtx, fixture.meta, signalChan, dstChan)
 			}()
 
 			time.Sleep(20 * time.Millisecond)
 
-			fixture.rsm.notice(parseCtx)
+			signalChan <- nil
 
 			select {
 			case parseErr := <-done:
@@ -247,10 +250,9 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 			fixture := newTestReassemblerWithHandshake(t, 0x04)
 			defer fixture.rsmCancel()
-			defer fixture.rsm.release()
+			defer fixture.rsm.Close()
 
-			fixture.rsm.setLastNotice(time.Now())
-
+			signalChan := make(chan any, 1)
 			dstChan := make(chan any, 10)
 
 			parseCtx, parseCancel := context.WithCancel(context.Background())
@@ -258,13 +260,13 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 			done := make(chan error, 1)
 			go func() {
-				done <- fixture.rsm.parse(parseCtx, fixture.meta, dstChan)
+				done <- fixture.rsm.parse(parseCtx, fixture.meta, signalChan, dstChan)
 			}()
 
 			time.Sleep(20 * time.Millisecond)
 
 			// 发送信号，无协议匹配 → extractApplication 返回 nil, nil
-			fixture.rsm.notice(parseCtx)
+			signalChan <- nil
 			time.Sleep(50 * time.Millisecond)
 
 			// parse 不应退出
