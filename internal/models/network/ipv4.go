@@ -275,33 +275,3 @@ type PacketIPv4 struct {
 	IPv4Headers
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16429,length=32"`
 }
-
-// FusedIPv4 表示融合的IPv4数据
-// 该结构体用于存储经过ETL处理后的融合数据，相比原始数据包进行了聚合和优化
-// 融合数据通常包含统计信息、聚合结果或经过处理的业务数据
-//
-// 结构组成:
-//   - FusedEthernet: 融合的以太网层数据，可能包含统计信息
-//   - IPv4Headers:   IPv4网络层头部信息
-//
-// 数据库特性:
-//   - 使用MergeTree引擎存储，支持高性能查询
-//   - 按时间分区（每小时），优化时间范围查询性能
-//   - 设置更长的TTL（7天），保留更长时间的历史数据
-//   - 复合排序键，优化业务查询模式
-//
-// 数据特点:
-//   - 数据量通常比原始数据包小
-//   - 包含业务相关的聚合信息
-//   - 适合长期存储和历史分析
-//
-// 使用场景:
-//   - 业务指标监控和报表
-//   - 长期趋势分析
-//   - 容量规划和性能优化
-//   - 合规性审计和报告
-type FusedIPv4 struct {
-	FusedEthernet
-	IPv4Headers
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=60580,length=32"`
-}

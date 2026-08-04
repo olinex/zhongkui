@@ -14,16 +14,16 @@ import (
 )
 
 type TLSInputs struct {
-	Name     string        `viper:"name" prompt:"please enter tls name" binding:"required,min=2,max=255,strictFileName"`
-	DirPath  string        `viper:"dir-path" prompt:"please enter directory path" binding:"required,min=2,max=1024,dirpath"`
-	TTL      time.Duration `viper:"ttl" prompt:"please enter ttl (e.g. 8760h for 1 year)" binding:"required"`
-	DNSNames []string      `viper:"dns-names" prompt:"please enter dns names" binding:"required,min=1"`
+	Name     string        `viper:"name" prompt:"请输入 TLS 名称" binding:"required,min=2,max=255,strictFileName"`
+	DirPath  string        `viper:"dir-path" prompt:"请输入目录路径" binding:"required,min=2,max=1024,dirpath"`
+	TTL      time.Duration `viper:"ttl" prompt:"请输入有效期 TTL（例如 8760h 表示 1 年）" binding:"required"`
+	DNSNames []string      `viper:"dns-names" prompt:"请输入 DNS 域名列表" binding:"required,min=1"`
 }
 
 var generateTLSCmd = &cobra.Command{
 	Use:   "tls",
-	Short: "Create tls by self Signed",
-	Long:  "Generate a self-signed TLS certificate and key pair. Parameters can be provided via command-line flags or prompted interactively.",
+	Short: "创建自签名 TLS 证书",
+	Long:  "生成自签名 TLS 证书和密钥对。参数可以通过命令行标志提供，也可以通过交互式提示输入。",
 	Run: func(cmd *cobra.Command, args []string) {
 		_, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
@@ -72,8 +72,8 @@ var generateTLSCmd = &cobra.Command{
 
 func init() {
 	flags := generateTLSCmd.Flags()
-	flags.String("name", "", "name of the tls files")
-	flags.String("dir-path", "", "dir path to store tls files")
-	flags.Duration("ttl", 0, "ttl for tls files from now (e.g. 8760h)")
-	flags.StringArray("dns-names", nil, "the domain names of the tls files (comma-separated)")
+	flags.String("name", "", "TLS 文件名称")
+	flags.String("dir-path", "", "TLS 文件存储目录路径")
+	flags.Duration("ttl", 0, "TLS 文件自当前时刻起的有效期（如 8760h）")
+	flags.StringArray("dns-names", nil, "TLS 文件的域名列表（逗号分隔）")
 }

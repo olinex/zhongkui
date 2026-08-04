@@ -22,45 +22,45 @@ type Config struct {
 	// 格式通常为: http://localhost:9000 或 https://s3.amazonaws.com
 	// 默认值: "-" (表示必须显式配置)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7#New
-	Endpoint string `mapstructure:"endpoint" default:"-" comment:"S3 compatible object storage endpoint URL (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
+	Endpoint string `mapstructure:"endpoint" default:"-" comment:"S3 兼容对象存储服务端点 URL (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
 
 	// AccessKey 是S3身份验证的访问密钥
 	// 用于访问S3兼容对象存储服务的身份验证凭证
 	// 默认值: "-" (表示必须显式配置)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static
-	AccessKey string `mapstructure:"accessKey" default:"-" comment:"access key for S3 authentication (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"`
+	AccessKey string `mapstructure:"accessKey" default:"-" comment:"S3 认证访问密钥 (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"`
 
 	// SecretKey 是S3身份验证的秘密密钥
 	// 用于访问S3兼容对象存储服务的身份验证凭证
 	// 默认值: "-" (表示必须显式配置)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static
-	SecretKey string `mapstructure:"secretKey" default:"-" comment:"secret key for S3 authentication (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"`
+	SecretKey string `mapstructure:"secretKey" default:"-" comment:"S3 认证秘密密钥 (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"`
 
 	// Bucket 是默认的存储桶名称
 	// 用于S3操作的默认存储桶，如上传、下载、列出对象等
 	// 默认值: "-" (表示必须显式配置)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7#Client-BucketExists
-	Bucket string `mapstructure:"bucket" default:"-" comment:"default bucket name for operations (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#Client-BucketExists)"`
+	Bucket string `mapstructure:"bucket" default:"-" comment:"默认存储桶名称，用于上传、下载、列出对象等操作 (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#Client-BucketExists)"`
 
 	// Region 是S3区域标识符
 	// 指定S3服务的区域，如"us-east-1"、"cn-north-1"等
 	// 如果为空字符串，minio-go会自动检测区域
 	// 默认值: "" (空字符串，表示自动检测)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7#New
-	Region string `mapstructure:"region" default:"" comment:"S3 region, auto-detected if empty (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
+	Region string `mapstructure:"region" default:"" comment:"S3 区域标识符，为空时自动检测 (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
 
 	// UseSSL 指示是否使用HTTPS进行S3连接
 	// 如果为true，使用HTTPS协议；如果为false，使用HTTP协议
 	// 默认值: true (使用HTTPS)
 	// 参考: https://pkg.go.dev/github.com/minio/minio-go/v7#New
-	UseSSL bool `mapstructure:"useSSL" default:"true" comment:"use HTTPS for S3 connections (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
+	UseSSL bool `mapstructure:"useSSL" default:"true" comment:"是否使用 HTTPS 进行 S3 连接 (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"`
 
 	// StreamingUpload 控制加密上传策略。
 	//   - true（默认）: 使用 io.Pipe 流式管道 + multipart/chunked encoding 直传，
 	//     适用于成熟的 S3 实现（AWS S3、MinIO 等）
 	//   - false: 加密到临时文件后以已知大小简单 PUT 上传，
 	//     适用于 multipart upload 支持不完整的 S3 实现（如 RustFS Alpha）
-	StreamingUpload bool `mapstructure:"streamingUpload" default:"false" comment:"use streaming pipe+multipart for encrypted upload; set false for S3 servers with incomplete multipart support (e.g., RustFS alpha)"`
+	StreamingUpload bool `mapstructure:"streamingUpload" default:"false" comment:"加密上传是否使用流式管道 + multipart；对 multipart 支持不完整的 S3 服务端（如 RustFS alpha）应设置为 false"`
 }
 
 // ExtractCryptoKey 使用密钥派生函数从配置中提取加密密钥。

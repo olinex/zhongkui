@@ -102,6 +102,7 @@ func (h *flowClusterHandler[P]) Start(ctx context.Context, items <-chan P) error
 	dstChan := make(chan any, h.param.MaxReassemblerSize)
 
 	var transportCount int64
+	var stackCount int64
 	wg, shardCtx := errgroupx.WithContext(ctx)
 	wg.GoNamed("router", func() error {
 		defer close(dstChan)
@@ -119,22 +120,28 @@ func (h *flowClusterHandler[P]) Start(ctx context.Context, items <-chan P) error
 		for {
 			select {
 			case <-shardCtx.Done():
-				h.logger.Ctx(shardCtx).Infof("flow handler output goroutine exiting, totalTransport=%d", transportCount)
+				h.logger.Ctx(shardCtx).Infof("flow handler output goroutine exiting, totalTransport=%d, totalStack=%d", transportCount, stackCount)
 				return nil
-			case transport, ok := <-dstChan:
+			case app, ok := <-dstChan:
 				if !ok {
-					h.logger.Ctx(shardCtx).Infof("flow handler dstChan closed, totalTransport=%d", transportCount)
+					h.logger.Ctx(shardCtx).Infof("flow handler dstChan closed, totalTransport=%d, totalStack=%d", transportCount, stackCount)
 					return nil
 				}
-				switch t := transport.(type) {
+				switch model := app.(type) {
 				case *network.HttpTransport:
-					if err := h.writer.Write(shardCtx, t); err != nil {
+					if err := h.writer.WriteHttpTransport(shardCtx, model); err != nil {
 						h.logger.Ctx(shardCtx).Errorf("flow handler write transport failed: %v", err)
 						return errors.WithStack(err)
 					}
 					transportCount++
+				case *network.NetworkStack:
+					if err := h.writer.WriteStack(shardCtx, model); err != nil {
+						h.logger.Ctx(shardCtx).Errorf("flow handler write stack failed: %v", err)
+						return errors.WithStack(err)
+					}
+					stackCount++
 				default:
-					h.logger.Ctx(shardCtx).Warnf("flow handler unexpected transport type: %T", transport)
+					h.logger.Ctx(shardCtx).Warnf("flow handler unexpected transport type: %T", app)
 				}
 			}
 		}

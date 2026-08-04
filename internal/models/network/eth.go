@@ -77,22 +77,3 @@ type PacketEthernet struct {
 	AsPacket
 	EthernetHeaders
 }
-
-// FusedEthernet 表示融合后的以太网数据
-// 该结构体组合了AsFused基础结构和EthernetHeaders以太网头部信息，
-// 用于存储经过融合处理的数据包。融合数据通常包含多个相关数据包的信息，
-// 用于高级分析和聚合查询。
-//
-// 结构说明:
-//   - AsFused: 提供融合数据的基础元数据，包括时间戳、帧堆栈等
-//   - EthernetHeaders: 提供以太网特定的头部信息
-//
-// 使用场景:
-//   - 网络会话重组和分析
-//   - 流量聚合统计
-//   - 长期趋势分析
-//   - 大数据查询和报表
-type FusedEthernet struct {
-	AsFused
-	EthernetHeaders
-}

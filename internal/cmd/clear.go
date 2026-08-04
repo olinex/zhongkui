@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"embed"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -26,7 +25,7 @@ import (
 
 var clearDatabaseCmd = &cobra.Command{
 	Use:   "database",
-	Short: "Clear all database tables (rollback all migrations)",
+	Short: "清空所有数据库表（回滚所有迁移）",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
@@ -107,10 +106,10 @@ func createClearMigrator(coreDB, rawDB *database.DB, dbName string, migrationFS 
 
 func init() {
 	flags := clearDatabaseCmd.Flags()
-	flags.Duration("timeout", time.Minute, "timeout for clearing database")
+	flags.Duration("timeout", time.Minute, "清空数据库的超时时间")
 
 	flags = clearEtcdCmd.Flags()
-	flags.Duration("timeout", time.Minute, "timeout for clearing etcd cache")
+	flags.Duration("timeout", time.Minute, "清空 etcd 缓存的超时时间")
 }
 
 type etcdClearCategory struct {
@@ -138,7 +137,7 @@ var etcdClearCategories = []etcdClearCategory{
 
 var clearEtcdCmd = &cobra.Command{
 	Use:   "etcd",
-	Short: "Clear etcd cache (capturer configs, watermarks, scheduler configs, version cursors)",
+	Short: "清除 etcd 缓存（抓包器配置、水印、调度器配置、版本游标）",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
@@ -215,10 +214,10 @@ var clearEtcdCmd = &cobra.Command{
 // selectKeysToDelete 交互式选择要删除的 key，返回选中 key 在 allKeys 中的索引
 func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 	total := len(allKeys)
-	prompt := fmt.Sprintf(
-		"enter key numbers to delete (e.g. 1,3,5-%d) or 'all' to delete all %d keys",
-		total,
-		total,
+	prompt := cliT(
+		"cli.etcd.select-keys",
+		"输入要删除的键编号（如 1,3,5-{{.Total}}）或输入 'all' 删除全部 {{.Total}} 个键",
+		map[string]any{"Total": total},
 	)
 	input, err := pterm.DefaultInteractiveTextInput.Show(prompt)
 	if err != nil {
@@ -228,7 +227,7 @@ func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 
 	input = strings.TrimSpace(input)
 	if input == "" {
-		pterm.Info.Println("no keys selected, nothing to do")
+		pterm.Info.Println(cliT("cli.etcd.no-keys", "未选择任何键，无需删除"))
 		return nil
 	}
 
@@ -255,7 +254,7 @@ func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 			start, err1 := strconv.Atoi(startStr)
 			end, err2 := strconv.Atoi(endStr)
 			if err1 != nil || err2 != nil || start < 1 || end > total || start > end {
-				pterm.Error.Printf("invalid range: %s\n", part)
+				pterm.Error.Println(cliT("cli.etcd.invalid-range", "无效的范围：{{.Range}}", map[string]any{"Range": part}))
 				return nil
 			}
 			for i := start; i <= end; i++ {
@@ -264,7 +263,7 @@ func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 		} else {
 			n, err := strconv.Atoi(part)
 			if err != nil || n < 1 || n > total {
-				pterm.Error.Printf("invalid key number: %s\n", part)
+				pterm.Error.Println(cliT("cli.etcd.invalid-number", "无效的键编号：{{.Number}}", map[string]any{"Number": part}))
 				return nil
 			}
 			selected = append(selected, n-1)
@@ -279,9 +278,9 @@ func confirmDeleteKeys(selected []int, allKeys []etcdKeyEntry) error {
 		return nil
 	}
 
-	pterm.Warning.Printf("will delete %d keys:\n", len(selected))
+	pterm.Warning.Println(cliT("cli.etcd.delete-count", "即将删除 {{.Count}} 个键：", map[string]any{"Count": len(selected)}))
 	for _, idx := range selected {
-		pterm.Warning.Printf("  - %s\n", allKeys[idx].key)
+		pterm.Warning.Println(cliT("cli.etcd.delete-item", "  - {{.Key}}", map[string]any{"Key": allKeys[idx].key}))
 	}
 
 	random, err := crypto.GenerateRandomString(6)

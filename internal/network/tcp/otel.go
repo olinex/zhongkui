@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -211,7 +212,7 @@ func startSideSpan(ctx context.Context, packet TCPPacket, c2s bool) (context.Con
 }
 
 // startDetectSpan 在协议检测阶段创建 span。
-func startDetectSpan(ctx context.Context, protocol AppProtocol) (context.Context, trace.Span) {
+func startDetectSpan(ctx context.Context, protocol detectors.AppProtocol) (context.Context, trace.Span) {
 	tracer := otel.Tracer(SCOPE_NAME)
 	ctx, span := tracer.Start(ctx, SPAN_DETECT,
 		trace.WithAttributes(
@@ -222,7 +223,7 @@ func startDetectSpan(ctx context.Context, protocol AppProtocol) (context.Context
 }
 
 // startExtractSpan 在协议提取阶段创建 span。
-func startExtractSpan(ctx context.Context, protocol AppProtocol) (context.Context, trace.Span) {
+func startExtractSpan(ctx context.Context, protocol detectors.AppProtocol) (context.Context, trace.Span) {
 	tracer := otel.Tracer(SCOPE_NAME)
 	ctx, span := tracer.Start(ctx, SPAN_EXTRACT,
 		trace.WithAttributes(
@@ -233,7 +234,7 @@ func startExtractSpan(ctx context.Context, protocol AppProtocol) (context.Contex
 }
 
 // startBuildSpan 在应用层构建阶段创建 span。
-func startBuildSpan(ctx context.Context, protocol AppProtocol) (context.Context, trace.Span) {
+func startBuildSpan(ctx context.Context, protocol detectors.AppProtocol) (context.Context, trace.Span) {
 	tracer := otel.Tracer(SCOPE_NAME)
 	ctx, span := tracer.Start(ctx, SPAN_BUILD,
 		trace.WithAttributes(

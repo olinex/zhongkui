@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/fatih/color"
@@ -56,18 +55,22 @@ func getDiffError(target, input string) error {
 }
 
 func staticInputDoubleCheck(input string) error {
-	first, err := pterm.DefaultInteractiveTextInput.Show(
-		fmt.Sprintf("please enter `%s` to confirm", input),
-	)
+	first, err := pterm.DefaultInteractiveTextInput.Show(cliT(
+		"cli.confirm.enter",
+		"请输入 `{{.Input}}` 以确认",
+		map[string]any{"Input": input},
+	))
 	if err != nil {
 		return errors.WithStack(err)
 	}
 	if err = getDiffError(input, first); err != nil {
 		return errors.WithStack(err)
 	}
-	second, err := pterm.DefaultInteractiveTextInput.Show(
-		fmt.Sprintf("please enter `%s` again to confirm", input),
-	)
+	second, err := pterm.DefaultInteractiveTextInput.Show(cliT(
+		"cli.confirm.reenter",
+		"请再次输入 `{{.Input}}` 以确认",
+		map[string]any{"Input": input},
+	))
 	if err != nil {
 		return errors.WithStack(err)
 	}

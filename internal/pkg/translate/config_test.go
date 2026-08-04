@@ -45,17 +45,17 @@ func TestDescribeConfig(t *testing.T) {
 					foundRootPath = true
 					So(desc.Kind, ShouldEqual, "string")
 					So(desc.Default, ShouldEqual, "locales")
-					So(desc.Comment, ShouldContainSubstring, "root path for i18n locale files")
+					So(desc.Comment, ShouldContainSubstring, "本地化文件存储的根路径")
 				case "i18n.defaultLocale":
 					foundDefaultLocale = true
 					So(desc.Kind, ShouldEqual, "struct")
 					So(desc.Default, ShouldEqual, "en")
-					So(desc.Comment, ShouldContainSubstring, "default locale/language for i18n")
+					So(desc.Comment, ShouldContainSubstring, "默认语言/区域设置")
 				case "i18n.supportLocales":
 					foundSupportLocales = true
 					So(desc.Kind, ShouldEqual, "slice")
 					So(desc.Default, ShouldEqual, `["en", "zh-Hans"]`)
-					So(desc.Comment, ShouldContainSubstring, "list of supported locales/languages")
+					So(desc.Comment, ShouldContainSubstring, "支持的语言/区域设置列表")
 				}
 			}
 

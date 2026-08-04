@@ -16,12 +16,6 @@ var (
 )
 
 const (
-	// PACKET_TTL_HOURS 定义原始数据包的生存时间（小时）
-	PACKET_TTL_HOURS = 24
-
-	// FUSED_TTL_HOURS 定义融合数据的生存时间（小时）
-	FUSED_TTL_HOURS = 24 * 7
-
 	// LayerLevelDecodeFailure 表示解码失败协议层（OSI第0层）
 	LayerLevelDecodeFailure LayerLevel = 0
 
@@ -175,6 +169,17 @@ type BaseMeta struct {
 // 包含数据包的时间戳信息，使用高精度时间格式存储
 type TimestampMeta struct {
 	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"`
+	CreatedAt time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"created_at"`
+}
+
+type TraceMeta struct {
+	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"trace_id"`
+}
+
+// DirectionMeta 表示数据包方向元数据
+// Cli2Srv 标记该数据包是否为客户端到服务端方向（true表示客户端到服务端，false表示服务端到客户端）
+type DirectionMeta struct {
+	Cli2Srv bool `gorm:"column:cli_2_srv;type:Bool" json:"cli_2_srv"`
 }
 
 // CaptureMeta 表示捕获元数据
@@ -190,12 +195,6 @@ type PacketMeta struct {
 	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layer_stack"`
 }
 
-// FusedMeta 表示融合元数据
-// 包含融合数据包的帧堆栈信息，用于存储多个相关数据包的信息
-type FusedMeta struct {
-	FrameStack FrameStack `gorm:"type:String CODEC(ZSTD(3))" json:"frame_work"`
-}
-
 // AsPacket 表示数据包的结构
 // 用于存储原始网络数据包，包含完整的元数据和载荷
 type AsPacket struct {
@@ -203,12 +202,4 @@ type AsPacket struct {
 	TimestampMeta
 	CaptureMeta
 	PacketMeta
-}
-
-// AsFused 表示融合后的数据包结构
-// 用于存储经过融合处理的数据包，包含多个相关数据包的信息
-type AsFused struct {
-	BaseMeta
-	TimestampMeta
-	FusedMeta
 }

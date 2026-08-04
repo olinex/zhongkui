@@ -14,11 +14,11 @@ import (
 
 var describeSchedulerCmd = &cobra.Command{
 	Use:   "scheduler",
-	Short: "Print scheduled task configurations from etcd",
-	Long: `Print the etcd-stored configuration of scheduled tasks. 
-Use --name to specify one or more task types. If no --name is provided, all tasks are listed.
+	Short: "从 etcd 打印定时任务配置",
+	Long: `从 etcd 打印定时任务的配置。
+使用 --name 指定一个或多个任务类型。未提供 --name 时，列出所有任务。
 
-Examples:
+示例：
   zhongkui describe scheduler
   zhongkui describe scheduler --name network:periodic:ipv4reassemble
   zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble`,
@@ -81,5 +81,5 @@ func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 }
 
 func init() {
-	describeSchedulerCmd.Flags().StringArrayP("name", "n", nil, "task type name(s) to print (can be specified multiple times)")
+	describeSchedulerCmd.Flags().StringArrayP("name", "n", nil, "要打印的任务类型名称（可多次指定）")
 }

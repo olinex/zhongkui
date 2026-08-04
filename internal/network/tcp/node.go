@@ -34,9 +34,10 @@ func newReassemblerNode[P TCPPacket](
 	streamID string,
 	first P,
 	maxOutOrderPacketSize int,
+	dstChan chan<- any,
 ) (*ReassemblerNode[P], error) {
 	ctx, cancel := context.WithCancel(ctx)
-	rsm, err := newReassembler(ctx, logger, first, maxOutOrderPacketSize)
+	rsm, err := newReassembler(ctx, logger, first, maxOutOrderPacketSize, dstChan)
 	if err != nil {
 		cancel()
 		return nil, errors.WithStack(err)

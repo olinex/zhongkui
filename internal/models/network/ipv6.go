@@ -552,18 +552,3 @@ type PacketIPv6 struct {
 	// Payload 有效载荷，包含IPv6头部之后的数据
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=31496,length=32"`
 }
-
-// FusedIPv6 表示融合的IPv6数据
-// 融合的IPv6数据包结构，包含以太网头部和IPv6头部
-// 该结构用于存储融合后的IPv6数据包信息，对应数据库中的fused_ipv6表
-// 与PacketIPv6相比，FusedIPv6可能包含额外的处理信息或聚合数据
-type FusedIPv6 struct {
-	// FusedEthernet 融合的以太网头部信息
-	FusedEthernet
-
-	// IPv6Headers IPv6头部信息，包含IPv6基础头部和扩展头部
-	IPv6Headers
-
-	// Payload 有效载荷，包含IPv6头部之后的数据
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=31406,length=32"`
-}

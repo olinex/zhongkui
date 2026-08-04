@@ -58,12 +58,12 @@ type streamMeta struct {
 
 var generateTestcaseCmd = &cobra.Command{
 	Use:   "testcase",
-	Short: "Extract HTTP test cases from pcap files",
-	Long: `Extract HTTP request/response data from a pcap file using tshark,
-and generate JSON test case files for verifying TCP reassembly and HTTP protocol detection logic.
+	Short: "从 pcap 文件中提取 HTTP 测试用例",
+	Long: `使用 tshark 从 pcap 文件中提取 HTTP 请求/响应数据，
+并生成 JSON 测试用例文件，用于验证 TCP 重组和 HTTP 协议识别逻辑。
 
-Each HTTP transaction (request-response pair) produces one JSON file.
-For HTTP/1.1 keep-alive connections, multiple transactions per TCP stream are supported.`,
+每个 HTTP 事务（请求-响应对）生成一个 JSON 文件。
+支持 HTTP/1.1 keep-alive 连接中每个 TCP 流包含多个事务的情况。`,
 	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
@@ -81,8 +81,8 @@ For HTTP/1.1 keep-alive connections, multiple transactions per TCP stream are su
 
 func init() {
 	flags := generateTestcaseCmd.Flags()
-	flags.StringP("pcap", "p", "", "pcap file path (required)")
-	flags.StringP("output", "o", "./testcases", "output directory for test case files")
+	flags.StringP("pcap", "p", "", "pcap 文件路径（必填）")
+	flags.StringP("output", "o", "./testcases", "测试用例文件的输出目录")
 	generateTestcaseCmd.MarkFlagRequired("pcap")
 }
 

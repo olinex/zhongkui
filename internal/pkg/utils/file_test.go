@@ -12,6 +12,32 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestFileExtension 测试 FileExtension 函数
+func TestFileExtension(t *testing.T) {
+	Convey("Test FileExtension function", t, func() {
+		testCases := []struct {
+			urlPath string
+			ext     string
+		}{
+			{urlPath: "/static/js/app.js", ext: "js"},
+			{urlPath: "/docs/a.txt", ext: "txt"},
+			{urlPath: "/index.html", ext: "html"},
+			{urlPath: "/app.min.js", ext: "js"},
+			{urlPath: "/download/archive.tar.gz", ext: "gz"},
+			{urlPath: "/UPLOAD/PHOTO.JPG", ext: "jpg"},
+			{urlPath: "/api/users", ext: ""},
+			{urlPath: "/api/users/", ext: ""},
+			{urlPath: "/", ext: ""},
+			{urlPath: "/.gitignore", ext: ""},
+		}
+		for _, tc := range testCases {
+			Convey(fmt.Sprintf("path %q -> ext %q", tc.urlPath, tc.ext), func() {
+				So(FileExtension(tc.urlPath), ShouldEqual, tc.ext)
+			})
+		}
+	})
+}
+
 // TestCalculateFileMD5 测试 CalculateFileMD5 函数
 func TestCalculateFileMD5(t *testing.T) {
 	Convey("Test CalculateFileMD5 function", t, func() {

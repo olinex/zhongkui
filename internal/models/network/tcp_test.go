@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
@@ -427,48 +428,80 @@ func TestPacketIPv4TCP_StreamID(t *testing.T) {
 	})
 }
 
-// TestFusedIPv4TCP_StreamID 测试FusedIPv4TCP的StreamID生成功能
-// 验证融合IPv4 TCP数据的流ID一致性
-func TestFusedIPv4TCP_StreamID(t *testing.T) {
-	Convey("Test FusedIPv4TCP StreamID generation", t, func() {
-		Convey("Should generate consistent StreamID regardless of packet direction", func() {
-			packet1 := &FusedIPv4TCP{
-				FusedIPv4: FusedIPv4{
-					IPv4Headers: IPv4Headers{
-						IPv4Src: serializer.IPv4Addr{10, 0, 0, 1},
-						IPv4Dst: serializer.IPv4Addr{10, 0, 0, 2},
+// TestPacketIPv4TCP_CaptureTimestamp 测试 PacketIPv4TCP.CaptureTimestamp 方法
+// 验证 CaptureTimestamp 正确返回 TimestampMeta 中的时间戳
+func TestPacketIPv4TCP_CaptureTimestamp(t *testing.T) {
+	Convey("Test PacketIPv4TCP CaptureTimestamp", t, func() {
+		Convey("Should return Timestamp from TimestampMeta", func() {
+			now := time.Now()
+			pkt := &PacketIPv4TCP{
+				PacketIPv4: PacketIPv4{
+					PacketEthernet: PacketEthernet{
+						AsPacket: AsPacket{
+							TimestampMeta: TimestampMeta{Timestamp: now},
+						},
 					},
 				},
-				TCPHeaders: TCPHeaders{
-					TCPSrcPort: layers.TCPPort(443),
-					TCPDstPort: layers.TCPPort(54321),
-				},
 			}
+			So(pkt.CaptureTimestamp().Equal(now), ShouldBeTrue)
+		})
+	})
+}
 
-			packet2 := &FusedIPv4TCP{
-				FusedIPv4: FusedIPv4{
-					IPv4Headers: IPv4Headers{
-						IPv4Src: serializer.IPv4Addr{10, 0, 0, 2},
-						IPv4Dst: serializer.IPv4Addr{10, 0, 0, 1},
+// TestPacketIPv6TCP_CaptureTimestamp 测试 PacketIPv6TCP.CaptureTimestamp 方法
+func TestPacketIPv6TCP_CaptureTimestamp(t *testing.T) {
+	Convey("Test PacketIPv6TCP CaptureTimestamp", t, func() {
+		Convey("Should return Timestamp from TimestampMeta", func() {
+			now := time.Now()
+			pkt := &PacketIPv6TCP{
+				PacketIPv6: PacketIPv6{
+					PacketEthernet: PacketEthernet{
+						AsPacket: AsPacket{
+							TimestampMeta: TimestampMeta{Timestamp: now},
+						},
 					},
 				},
-				TCPHeaders: TCPHeaders{
-					TCPSrcPort: layers.TCPPort(54321),
-					TCPDstPort: layers.TCPPort(443),
-				},
 			}
+			So(pkt.CaptureTimestamp().Equal(now), ShouldBeTrue)
+		})
+	})
+}
 
-			streamID1 := packet1.StreamID()
-			streamID2 := packet2.StreamID()
+// TestAppTailer 测试 AppTailer 结构体
+// 验证 AppTailer 结构体字段的正确性
+func TestAppTailer(t *testing.T) {
+	Convey("Test AppTailer structure", t, func() {
+		Convey("Should initialize with all zero values", func() {
+			tailer := AppTailer{}
+			So(tailer.ClientConsumed, ShouldEqual, uint64(0))
+			So(tailer.ServerConsumed, ShouldEqual, uint64(0))
+			So(tailer.ClientStartPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ClientEndPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ServerStartPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ServerEndPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ClientStartTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ClientEndTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ServerStartTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ServerEndTimestamp.IsZero(), ShouldBeTrue)
+		})
 
-			So(streamID1, ShouldEqual, streamID2)
-			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
-
-			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
-			packet1.TCPStreamID = packet1.StreamID()
-			packet2.TCPStreamID = packet2.StreamID()
-			So(packet1.TCPStreamID, ShouldEqual, streamID1)
-			So(packet2.TCPStreamID, ShouldEqual, streamID2)
+		Convey("Should set all fields correctly", func() {
+			now := time.Now()
+			tailer := AppTailer{
+				ClientConsumed:           100,
+				ClientStartPayloadOffset: 0,
+				ClientEndPayloadOffset:   100,
+				ClientStartTimestamp:     now,
+				ClientEndTimestamp:       now.Add(time.Second),
+				ServerConsumed:           200,
+				ServerStartPayloadOffset: 0,
+				ServerEndPayloadOffset:   200,
+				ServerStartTimestamp:     now,
+				ServerEndTimestamp:       now.Add(time.Second),
+			}
+			So(tailer.ClientConsumed, ShouldEqual, uint64(100))
+			So(tailer.ServerConsumed, ShouldEqual, uint64(200))
+			So(tailer.ClientStartTimestamp.Equal(now), ShouldBeTrue)
 		})
 	})
 }
@@ -496,56 +529,6 @@ func TestPacketIPv6TCP_StreamID(t *testing.T) {
 
 			packet2 := &PacketIPv6TCP{
 				PacketIPv6: PacketIPv6{
-					IPv6Headers: IPv6Headers{
-						IPv6Base: IPv6Base{
-							IPv6Src: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
-							IPv6Dst: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-						},
-					},
-				},
-				TCPHeaders: TCPHeaders{
-					TCPSrcPort: layers.TCPPort(80),
-					TCPDstPort: layers.TCPPort(54321),
-				},
-			}
-
-			streamID1 := packet1.StreamID()
-			streamID2 := packet2.StreamID()
-
-			So(streamID1, ShouldEqual, streamID2)
-			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
-
-			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
-			packet1.TCPStreamID = packet1.StreamID()
-			packet2.TCPStreamID = packet2.StreamID()
-			So(packet1.TCPStreamID, ShouldEqual, streamID1)
-			So(packet2.TCPStreamID, ShouldEqual, streamID2)
-		})
-	})
-}
-
-// TestFusedIPv6TCP_StreamID 测试FusedIPv6TCP的StreamID生成功能
-// 验证融合IPv6 TCP数据的流ID一致性
-func TestFusedIPv6TCP_StreamID(t *testing.T) {
-	Convey("Test FusedIPv6TCP StreamID generation", t, func() {
-		Convey("Should generate consistent StreamID for IPv6 regardless of packet direction", func() {
-			packet1 := &FusedIPv6TCP{
-				FusedIPv6: FusedIPv6{
-					IPv6Headers: IPv6Headers{
-						IPv6Base: IPv6Base{
-							IPv6Src: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							IPv6Dst: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
-						},
-					},
-				},
-				TCPHeaders: TCPHeaders{
-					TCPSrcPort: layers.TCPPort(54321),
-					TCPDstPort: layers.TCPPort(80),
-				},
-			}
-
-			packet2 := &FusedIPv6TCP{
-				FusedIPv6: FusedIPv6{
 					IPv6Headers: IPv6Headers{
 						IPv6Base: IPv6Base{
 							IPv6Src: serializer.IPv6Addr{0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},

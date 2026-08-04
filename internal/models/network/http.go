@@ -3,55 +3,49 @@ package network
 import (
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
+	"os"
 	"strconv"
-	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
-const (
-	CRYPTO_KEY_OFFSET = 41827
-	CRYPTO_KEY_LENGTH = 32
-)
-
-// sortedFrameStack 返回按时间戳排序的帧栈，合并客户端和服务端的帧信息。
-func sortedFrameStack(reqFrameStack, rspFrameStack FrameStack) FrameStack {
-	fs := make(FrameStack, 0, len(reqFrameStack)+len(rspFrameStack))
-	clientIndex, serverIndex := 0, 0
-	for {
-		if clientIndex >= len(reqFrameStack) {
-			fs = append(fs, rspFrameStack[serverIndex:]...)
-			break
-		}
-		if serverIndex >= len(rspFrameStack) {
-			fs = append(fs, reqFrameStack[clientIndex:]...)
-			break
-		}
-		clientFrameInfo := reqFrameStack[clientIndex]
-		serverFrameInfo := rspFrameStack[serverIndex]
-		if clientFrameInfo.Timestamp.Before(serverFrameInfo.Timestamp) {
-			fs = append(fs, clientFrameInfo)
-			clientIndex++
-		} else {
-			fs = append(fs, serverFrameInfo)
-			serverIndex++
-		}
-	}
-	return fs
-}
+// // sortedFrameStack 返回按时间戳排序的帧栈，合并客户端和服务端的帧信息。
+// func sortedFrameStack(reqFrameStack, rspFrameStack FrameStack) FrameStack {
+// 	fs := make(FrameStack, 0, len(reqFrameStack)+len(rspFrameStack))
+// 	clientIndex, serverIndex := 0, 0
+// 	for {
+// 		if clientIndex >= len(reqFrameStack) {
+// 			fs = append(fs, rspFrameStack[serverIndex:]...)
+// 			break
+// 		}
+// 		if serverIndex >= len(rspFrameStack) {
+// 			fs = append(fs, reqFrameStack[clientIndex:]...)
+// 			break
+// 		}
+// 		clientFrameInfo := reqFrameStack[clientIndex]
+// 		serverFrameInfo := rspFrameStack[serverIndex]
+// 		if clientFrameInfo.Timestamp.Before(serverFrameInfo.Timestamp) {
+// 			fs = append(fs, clientFrameInfo)
+// 			clientIndex++
+// 		} else {
+// 			fs = append(fs, serverFrameInfo)
+// 			serverIndex++
+// 		}
+// 	}
+// 	return fs
+// }
 
 func objectKey(name string, req bool) string {
 	if req {
@@ -135,14 +129,20 @@ type HttpBase struct {
 	ClientIP serializer.IPAddr `gorm:"type:FixedString(16)" json:"client_ip"`
 	// ClientPort 客户端端口号，发起HTTP请求的源端口
 	ClientPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"client_port"`
+	// ClientISN 客户端ISN，TCP协议中的初始序列号，用于标识客户端的连接
+	ClientISN uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"client_isn"`
 	// ServerIP 服务器IP地址，HTTP服务的目标地址
 	ServerIP serializer.IPAddr `gorm:"type:FixedString(16)" json:"server_ip"`
 	// ServerPort 服务器端口号，HTTP服务的目标端口
 	ServerPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"server_port"`
+	// ServerISN 服务器ISN，TCP协议中的初始序列号，用于标识服务器的连接
+	ServerISN uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"server_isn"`
 	// IPVersion IP协议版本，标识使用的IP协议（IPv4或IPv6）
 	IPVersion layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ip_version"`
 	// HttpVersion HTTP协议版本，如HTTP/1.0、HTTP/1.1、HTTP/2.0等
 	HttpVersion string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"http_version"`
+	// StreamIndex 流索引，用于标识当前HTTP请求或响应的流
+	StreamIndex uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"stream_index"`
 }
 
 // HttpURI 表示HTTP URI信息
@@ -156,22 +156,44 @@ type HttpURI struct {
 	Host string `gorm:"type:String CODEC(ZSTD(3))" json:"host"`
 	// Path 请求路径，URL中主机名之后的部分
 	Path string `gorm:"type:String CODEC(ZSTD(3))" json:"path"`
+	// FileExt 文件扩展名，当请求URL的资源类型为文件时（如 .js、.txt）提取文件后缀（不含点号，统一小写），否则为空字符串
+	FileExt string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"file_ext"`
 	// Queries 查询参数，URL中问号（?）后面的参数部分，以JSON格式存储
 	Queries datatypes.JSON `gorm:"type:String CODEC(ZSTD(3))" json:"queries"`
 	// Fragment 片段标识符，URL中井号（#）后面的部分
 	Fragment string `gorm:"type:String CODEC(ZSTD(3))" json:"fragment"`
 }
 
-func NewHttpURI(uri *url.URL) (*HttpURI, error) {
+// NewHttpURI 构建HTTP URI信息
+// 注意：使用 origin-form（如 GET /path HTTP/1.1）直接访问时，请求行中不含 scheme 和 host，
+// 需要借助请求头中的 Host 字段补齐，否则生成的 URL 与 Path 完全相同
+// （例如通过回环网络访问 127.0.0.1/localhost 的请求）
+func NewHttpURI(req *http.Request) (*HttpURI, error) {
+	// 复制 URL，避免修改请求对象本身
+	uri := req.URL
+	host := uri.Host
+	// 补齐 origin-form 请求缺失的 host 和 scheme
+	if host == "" {
+		host = req.Host
+	}
+	scheme := uri.Scheme
+	if scheme == "" {
+		if req.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
 	query, err := json.Marshal(uri.Query())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &HttpURI{
-		URL:      uri.String(),
-		Scheme:   uri.Scheme,
-		Host:     uri.Host,
+		URL:      fmt.Sprintf(`%s://%s%s`, scheme, host, uri.Path),
+		Scheme:   scheme,
+		Host:     host,
 		Path:     uri.Path,
+		FileExt:  utils.FileExtension(uri.Path),
 		Queries:  datatypes.JSON(query),
 		Fragment: uri.Fragment,
 	}, nil
@@ -857,30 +879,83 @@ type HttpRequestBody struct {
 	Method string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"method"`
 	// ReqBody 请求主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
 	ReqBody string `gorm:"type:String CODEC(ZSTD(3))" json:"req_body"`
-	// ReqTime 请求时间，HTTP请求开始的时间戳
-	ReqTime time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"req_time"`
-	// ReqDuration 请求持续时间，从请求开始到请求完成的时间
-	ReqDuration time.Duration `gorm:"type:Int64 CODEC(ZSTD(3))" json:"req_duration"`
+	// ReqBodyHash 请求主体内容的 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
+	ReqBodyHash string `gorm:"type:String CODEC(ZSTD(3))" json:"req_body_hash"`
+	// ReqBodyLength 请求主体内容的字节长度，空内容时为 0
+	ReqBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"req_body_length"`
 }
 
-func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, startTime, endTime time.Time, cryptoKey []byte) (*HttpRequestBody, error) {
+// bodyStoreResult 正文存储结果，包含 S3 对象键、内容摘要与内容长度
+type bodyStoreResult struct {
+	// Key S3 对象键，内容为空时为空字符串，不执行上传
+	Key string
+	// Hash 内容 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
+	Hash string
+	// Length 内容字节长度，空内容时为 0
+	Length int64
+}
+
+// storeBody 将请求/响应体内容上传至 S3，并返回对象键、内容摘要与内容长度。
+// 为避免全量缓冲正文导致内存占用不稳定，先将内容流式写入本地临时文件，
+// 写入过程中同步计算 SHA-256 摘要（内存占用恒定，与正文大小无关）。
+// 依据摘要确定最终对象键后，通过 Exists 判断是否已存在：
+//   - 已存在：跳过上传，直接复用（内容寻址去重，避免重复数据冗余存储与重复上传）
+//   - 不存在：从临时文件上传
+//
+// 内容为空时返回空对象键，不执行上传，但摘要与长度仍如实记录。
+func storeBody(ctx context.Context, client *s3.S3Client, reader io.Reader, req bool, cryptoKey []byte) (*bodyStoreResult, error) {
+	// 流式写入临时文件并同步计算哈希，磁盘暂存替代内存全量缓冲
+	h := sha256.New()
+	tmpFile, err := s3.NewStagingTempFile()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer tmpFile.Close()
+	defer os.Remove(tmpFile.Name())
+	size, err := io.Copy(io.MultiWriter(tmpFile, h), reader)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	hash := hex.EncodeToString(h.Sum(nil))
+	// 内容为空时返回空对象键，避免在 oss 内存储无效空文件
+	if size == 0 {
+		return &bodyStoreResult{Hash: hash}, nil
+	}
+	key := objectKey(hash, req)
+	// 最终键已存在时直接复用，跳过上传
+	finalZkcn := s3.NewZkcn(client, key, cryptoKey, 0)
+	if exists, err := finalZkcn.Exists(ctx); err != nil {
+		return nil, errors.WithStack(err)
+	} else if !exists {
+		// 从临时文件读取并上传，避免重复内容重复上传
+		if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if _, err := finalZkcn.Store(ctx, tmpFile); err != nil {
+			return nil, errors.WithStack(err)
+		}
+	}
+	return &bodyStoreResult{Key: key, Hash: hash, Length: size}, nil
+}
+
+// NewHttpRequestBody 构建HTTP请求正文信息
+// 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储
+func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, cryptoKey []byte) (*HttpRequestBody, error) {
 	defer req.Body.Close()
 	body, err := decompressRequestBody(req)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	defer body.Close()
-	id := serializer.NewHexUUIDv4()
-	key := objectKey(id.String(), true)
-	zkcn := s3.NewZkcn(client, key, cryptoKey, 0)
-	if _, err := zkcn.Store(ctx, body); err != nil {
-		return nil, errors.WithStack(err)
+	result, err := storeBody(ctx, client, body, true, cryptoKey)
+	if err != nil {
+		return nil, err
 	}
 	return &HttpRequestBody{
-		Method:      req.Method,
-		ReqBody:     key,
-		ReqTime:     startTime,
-		ReqDuration: endTime.Sub(startTime),
+		Method:        req.Method,
+		ReqBody:       result.Key,
+		ReqBodyHash:   result.Hash,
+		ReqBodyLength: result.Length,
 	}, nil
 }
 
@@ -889,29 +964,29 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 type HttpResponseBody struct {
 	// RspBody 响应主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
 	RspBody string `gorm:"type:String CODEC(ZSTD(3))" json:"rsp_body"`
-	// RspTime 响应时间，HTTP响应开始的时间戳
-	RspTime time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"rsp_time"`
-	// RspDuration 响应持续时间，从响应开始到响应完成的时间
-	RspDuration time.Duration `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rsp_duration"`
+	// RspBodyHash 响应主体内容的 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
+	RspBodyHash string `gorm:"type:String CODEC(ZSTD(3))" json:"rsp_body_hash"`
+	// RspBodyLength 响应主体内容的字节长度，空内容时为 0
+	RspBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rsp_body_length"`
 }
 
-func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, startTime, endTime time.Time, cryptoKey []byte) (*HttpResponseBody, error) {
+// NewHttpResponseBody 构建HTTP响应正文信息
+// 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储
+func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, cryptoKey []byte) (*HttpResponseBody, error) {
 	defer resp.Body.Close()
 	body, err := decompressResponseBody(resp)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	defer body.Close()
-	id := serializer.NewHexUUIDv4()
-	key := objectKey(id.String(), false)
-	zkcn := s3.NewZkcn(client, key, cryptoKey, 0)
-	if _, err := zkcn.Store(ctx, body); err != nil {
-		return nil, errors.WithStack(err)
+	result, err := storeBody(ctx, client, body, false, cryptoKey)
+	if err != nil {
+		return nil, err
 	}
 	return &HttpResponseBody{
-		RspBody:     key,
-		RspTime:     startTime,
-		RspDuration: endTime.Sub(startTime),
+		RspBody:       result.Key,
+		RspBodyHash:   result.Hash,
+		RspBodyLength: result.Length,
 	}, nil
 }
 
@@ -937,8 +1012,10 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 type HttpTransport struct {
 	// BaseMeta 基础元数据，提供数据隔离和会话标识
 	BaseMeta
-	// FusedMeta 融合元数据，提供帧堆栈信息
-	FusedMeta
+	// TimestampMeta 时间元数据，包含创建时间和业务时间戳
+	TimestampMeta
+	// TraceMeta 跟踪元数据，用以串联起相关的数据
+	TraceMeta
 	// HttpBase HTTP基础连接信息
 	HttpBase
 	// HttpURI HTTP请求URI信息
@@ -951,140 +1028,6 @@ type HttpTransport struct {
 	HttpResponseBody
 	// HttpResponseHeaders HTTP响应头信息
 	HttpResponseHeaders
-}
-
-// Build 构建完整的HTTP传输对象
-// 实现tcp.AppProtocolDetector接口的Build方法，用于将提取的HTTP数据构建为应用层可用的HTTP传输对象
-// 该方法将原始的HTTP请求/响应、网络层信息和时间信息整合到一个统一的HttpTransport结构中
-//
-// 参数:
-//   - ctx: 上下文对象，用于传递取消信号和超时控制
-//   - meta: 基础元数据，包含命名空间、捕获器名称、版本号等系统信息
-//   - clientAddr: 客户端IP地址
-//   - serverAddr: 服务端IP地址
-//   - clientPort: 客户端端口号
-//   - serverPort: 服务端端口号
-//   - clientFrameStack: 客户端帧栈信息，包含HTTP请求的捕获时间和网络层堆栈
-//   - serverFrameStack: 服务端帧栈信息，包含HTTP响应的捕获时间和网络层堆栈
-//   - clientPayload: 客户端负载，类型为*http.Request，从Extract方法提取的HTTP请求
-//   - serverPayload: 服务端负载，类型为*http.Response，从Extract方法提取的HTTP响应
-//
-// 返回值:
-//   - app: 构建的HTTP传输对象，类型为*n.HttpTransport
-//   - err: 构建过程中发生的错误，如数据转换失败、JSON序列化失败等
-//
-// 构建流程:
-//  1. 验证基础元数据不为nil
-//  2. 构建HTTP基础信息（网络层信息）：
-//     - 设置客户端和服务端的IP地址、端口号
-//     - 根据客户端IP地址判断IP版本（IPv4或IPv6）
-//  3. 如果有HTTP请求数据，构建HTTP请求信息：
-//     - 验证类型转换，确保clientPayload为*http.Request
-//     - 序列化HTTP头部为JSON格式
-//     - 读取HTTP请求体内容
-//     - 序列化URL查询参数为JSON格式
-//     - 计算请求持续时间和时间戳
-//     - 提取关键HTTP头部字段（User-Agent、Referer、Cookie等）
-//     - 构建URI信息（URL、协议、主机、路径、查询参数、片段）
-//     - 设置HTTP协议版本
-//  4. 如果有HTTP响应数据，构建HTTP响应信息：
-//     - 验证类型转换，确保serverPayload为*http.Response
-//     - 序列化HTTP响应头部为JSON格式
-//     - 读取HTTP响应体内容
-//     - 计算响应持续时间和时间戳
-//     - 提取关键HTTP响应头部字段（Server、Set-Cookie、Location等）
-//  5. 合并客户端和服务端的帧栈信息，按时间戳排序
-//  6. 返回完整的HttpTransport对象，包含所有HTTP传输信息
-func NewHttpTransport(
-	ctx context.Context,
-	s3Client *s3.S3Client,
-	meta *BaseMeta,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientFrameStack, serverFrameStack FrameStack,
-	request *http.Request, response *http.Response,
-	kd *key.KeyDerivation,
-) (transport *HttpTransport, err error) {
-	if meta == nil {
-		return nil, errors.New("meta is nil")
-	}
-	var hBase HttpBase
-	hBase.ClientIP = serializer.IPAddr(clientAddr)
-	hBase.ClientPort = clientPort
-	hBase.ServerIP = serializer.IPAddr(serverAddr)
-	hBase.ServerPort = serverPort
-	if clientAddr.To4() != nil {
-		hBase.IPVersion = layers.IPProtocolIPv4
-	} else {
-		hBase.IPVersion = layers.IPProtocolIPv6
-	}
-	cryptoKey, err := kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	var uri *HttpURI
-	var requestBody *HttpRequestBody
-	var requestHeaders *HttpRequestHeaders
-	var responseBody *HttpResponseBody
-	var responseHeaders *HttpResponseHeaders
-	wg, ctx := errgroupx.WithContext(ctx)
-	wg.GoNamed("req-build", func() error {
-		if request != nil && len(clientFrameStack) != 0 {
-			uri, err = NewHttpURI(request.URL)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			startTime := clientFrameStack[0].Timestamp
-			endTime := clientFrameStack[len(clientFrameStack)-1].Timestamp
-			requestBody, err = NewHttpRequestBody(ctx, s3Client, request, startTime, endTime, cryptoKey)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-			requestHeaders = NewHttpRequestHeaders(request)
-			hBase.HttpVersion = request.Proto
-		}
-		return nil
-	})
-	wg.GoNamed("rsp-build", func() error {
-		if response != nil && len(serverFrameStack) != 0 {
-			startTime := serverFrameStack[0].Timestamp
-			endTime := serverFrameStack[len(serverFrameStack)-1].Timestamp
-			responseBody, err = NewHttpResponseBody(ctx, s3Client, response, startTime, endTime, cryptoKey)
-			if err != nil {
-				return errors.WithStack(err)
-			}
-		}
-		responseHeaders = NewHttpResponseHeaders(response)
-		return nil
-	})
-	if err := wg.Wait(); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	if uri == nil {
-		uri = &HttpURI{}
-	}
-	if requestBody == nil {
-		requestBody = &HttpRequestBody{}
-	}
-	if requestHeaders == nil {
-		requestHeaders = &HttpRequestHeaders{}
-	}
-	if responseBody == nil {
-		responseBody = &HttpResponseBody{}
-	}
-	if responseHeaders == nil {
-		responseHeaders = &HttpResponseHeaders{}
-	}
-	return &HttpTransport{
-		BaseMeta: *meta,
-		FusedMeta: FusedMeta{
-			FrameStack: sortedFrameStack(clientFrameStack, serverFrameStack),
-		},
-		HttpBase:            hBase,
-		HttpURI:             *uri,
-		HttpRequestBody:     *requestBody,
-		HttpRequestHeaders:  *requestHeaders,
-		HttpResponseBody:    *responseBody,
-		HttpResponseHeaders: *responseHeaders,
-	}, nil
+	// AppTailer 应用层尾部信息
+	AppTailer
 }

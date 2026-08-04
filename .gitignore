@@ -94,3 +94,4 @@ config.toml
 testdata
 config/uptrace.yml
 certs/
+zki

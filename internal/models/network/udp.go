@@ -1,6 +1,8 @@
 package network
 
 import (
+	"net"
+
 	"github.com/gopacket/gopacket/layers"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -57,9 +59,20 @@ func NewUDPHeaders(udp *layers.UDP) *UDPHeaders {
 //   - 分析基于IPv4 UDP的应用程序协议
 //   - 网络流量监控和安全分析
 type PacketIPv4UDP struct {
-	PacketIPv4 // 嵌入IPv4数据包基础结构
-	UDPHeaders // 嵌入UDP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
+	PacketIPv4                     // 嵌入IPv4数据包基础结构
+	UDPHeaders                     // 嵌入UDP头部信息
+	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udp_stream_id"`
+	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
+}
+
+// StreamID 返回TCP流ID
+// 通过 hash/maphash 对源IP、目的IP、源端口、目的端口计算64-bit哈希，生成唯一的流标识符
+// 流ID用于识别属于同一TCP连接的所有数据包
+// 返回值: 16字符的十六进制64-bit哈希字符串
+func (p *PacketIPv4UDP) StreamID() string {
+	leftPort, rightPort := uint16(p.UDPSrcPort), uint16(p.UDPDstPort)
+	leftIP, rightIP := net.IP(p.IPv4Src).To4(), net.IP(p.IPv4Dst).To4()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
 }
 
 // PacketIPv6UDP 表示IPv6 UDP数据包
@@ -71,11 +84,18 @@ type PacketIPv4UDP struct {
 //   - 分析基于IPv6 UDP的应用程序协议（如DNS over IPv6）
 //   - IPv6网络流量监控和性能分析
 type PacketIPv6UDP struct {
-	PacketIPv6 // 嵌入IPv6数据包基础结构
-	UDPHeaders // 嵌入UDP头部信息
-	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
+	PacketIPv6                     // 嵌入IPv6数据包基础结构
+	UDPHeaders                     // 嵌入UDP头部信息
+	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udp_stream_id"`
+	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
 }
 
-
-
-
+// StreamID 返回TCP流ID
+// 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符
+// 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址
+// 返回值: 16字符的十六进制64-bit哈希字符串
+func (p *PacketIPv6UDP) StreamID() string {
+	leftPort, rightPort := uint16(p.UDPSrcPort), uint16(p.UDPDstPort)
+	leftIP, rightIP := net.IP(p.IPv6Src).To16(), net.IP(p.IPv6Dst).To16()
+	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
+}

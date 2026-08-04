@@ -7,30 +7,36 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 const (
-	// AppHTTP 表示HTTP协议。
+	// APP_HTTP 表示HTTP协议。
 	// 当识别到HTTP请求或响应时使用此值，表示Payload中包含HTTP协议数据。
 	// HTTP协议识别基于请求行、响应行、头部字段等HTTP协议特征进行判断。
-	AppHTTP tcp.AppProtocol = "http"
-	// HTTPVersion10 表示 HTTP/1.0 版本。
-	HTTPVersion10 = "HTTP/1.0"
-	// HTTPVersion11 表示 HTTP/1.1 版本。
-	HTTPVersion11 = "HTTP/1.1"
+	APP_HTTP AppProtocol = "http"
+	// HTTP_VERSION_10 表示 HTTP/1.0 版本。
+	HTTP_VERSION_10 = "HTTP/1.0"
+	// HTTP_VERSION_11 表示 HTTP/1.1 版本。
+	HTTP_VERSION_11 = "HTTP/1.1"
 	// 换行字符串
-	NewLine = "\r\n"
+	NEW_LINE = "\r\n"
+	// CRYPTO_KEY_OFFSET 加密密钥偏移量
+	CRYPTO_KEY_OFFSET = 41827
+	// CRYPTO_KEY_LENGTH 加密密钥长度
+	CRYPTO_KEY_LENGTH = 32
 )
 
 // 编译期断言：确保 HttpDetector 实现了 tcp.AppProtocolDetector 接口
-var _ tcp.AppProtocolDetector = (*HttpDetector)(nil)
+var _ AppProtocolDetector = (*HttpDetector)(nil)
 
 // HttpDetector HTTP协议检测器
 // 实现tcp.AppProtocolDetector接口，用于检测和提取TCP流中的HTTP协议数据
@@ -65,7 +71,7 @@ func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector {
 //  4. 验证协议版本是否为HTTP/1.0或HTTP/1.1
 func isClient(peek []byte) (ok bool, err error) {
 	// 从缓存中提取第一行
-	first := bytes.SplitN(peek, []byte(NewLine), 2)
+	first := bytes.SplitN(peek, []byte(NEW_LINE), 2)
 	// 尝试拆分协议
 	parts := strings.SplitN(string(first[0]), " ", 3)
 	if len(parts) != 3 {
@@ -78,8 +84,8 @@ func isClient(peek []byte) (ok bool, err error) {
 		return false, nil
 	}
 	// 匹配 http 版本
-	switch strings.TrimRight(parts[2], NewLine) {
-	case HTTPVersion10, HTTPVersion11:
+	switch strings.TrimRight(parts[2], NEW_LINE) {
+	case HTTP_VERSION_10, HTTP_VERSION_11:
 	default:
 		return false, nil
 	}
@@ -113,7 +119,7 @@ func isServer(peek []byte) (ok bool, err error) {
 	}
 	// 前 8 个字符
 	switch string(peek[:8]) {
-	case HTTPVersion10, HTTPVersion11:
+	case HTTP_VERSION_10, HTTP_VERSION_11:
 		return true, nil
 	default:
 		return false, nil
@@ -125,8 +131,7 @@ func isServer(peek []byte) (ok bool, err error) {
 //
 // 参数:
 //   - ctx: 上下文对象，用于传递取消信号和超时控制
-//   - rb: 环形缓冲区，包含待检测的TCP流数据
-//   - frameStack: 帧栈信息，包含数据包的捕获时间和网络层信息
+//   - peek: 待检测的TCP流数据（已预取，不消耗缓冲区）
 //   - c2s: 方向标识，true表示客户端到服务端方向，false表示服务端到客户端方向
 //
 // 返回值:
@@ -205,11 +210,11 @@ func (s *HttpDetector) Extract(
 
 func (s *HttpDetector) Build(
 	ctx context.Context,
-	meta *n.BaseMeta,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientFrameStack, serverFrameStack n.FrameStack,
+	baseMeta *n.BaseMeta,
+	streamMeta *StreamMeta,
+	streamIndex uint32,
 	clientPayload, serverPayload any,
+	tailer BuildTailer,
 ) (app any, err error) {
 	request, ok := clientPayload.(*http.Request)
 	if !ok {
@@ -219,22 +224,184 @@ func (s *HttpDetector) Build(
 	if !ok {
 		return nil, errors.New("serverPayload is not *http.Response")
 	}
-	transport, err := n.NewHttpTransport(
+	transport, err := NewHttpTransport(
 		ctx,
 		s.client,
-		meta,
-		clientAddr,
-		serverAddr,
-		clientPort,
-		serverPort,
-		clientFrameStack,
-		serverFrameStack,
+		baseMeta,
+		streamMeta.TraceID,
+		streamMeta.ClientAddr,
+		streamMeta.ServerAddr,
+		streamMeta.ClientPort,
+		streamMeta.ServerPort,
+		streamMeta.ClientISN,
+		streamMeta.ServerISN,
+		streamMeta.Timestamp,
+		streamIndex,
 		request,
 		response,
 		s.kd,
+		tailer,
 	)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return transport, nil
+}
+
+// Build 构建完整的HTTP传输对象
+// 实现tcp.AppProtocolDetector接口的Build方法，用于将提取的HTTP数据构建为应用层可用的HTTP传输对象
+// 该方法将原始的HTTP请求/响应、网络层信息和时间信息整合到一个统一的HttpTransport结构中
+//
+// 参数:
+//   - ctx: 上下文对象，用于传递取消信号和超时控制
+//   - meta: 基础元数据，包含命名空间、捕获器名称、版本号等系统信息
+//   - clientAddr: 客户端IP地址
+//   - serverAddr: 服务端IP地址
+//   - clientPort: 客户端端口号
+//   - serverPort: 服务端端口号
+//   - clientFrameStack: 客户端帧栈信息，包含HTTP请求的捕获时间和网络层堆栈
+//   - serverFrameStack: 服务端帧栈信息，包含HTTP响应的捕获时间和网络层堆栈
+//   - clientPayload: 客户端负载，类型为*http.Request，从Extract方法提取的HTTP请求
+//   - serverPayload: 服务端负载，类型为*http.Response，从Extract方法提取的HTTP响应
+//
+// 返回值:
+//   - app: 构建的HTTP传输对象，类型为*n.HttpTransport
+//   - err: 构建过程中发生的错误，如数据转换失败、JSON序列化失败等
+//
+// 构建流程:
+//  1. 验证基础元数据不为nil
+//  2. 构建HTTP基础信息（网络层信息）：
+//     - 设置客户端和服务端的IP地址、端口号
+//     - 根据客户端IP地址判断IP版本（IPv4或IPv6）
+//  3. 如果有HTTP请求数据，构建HTTP请求信息：
+//     - 验证类型转换，确保clientPayload为*http.Request
+//     - 序列化HTTP头部为JSON格式
+//     - 读取HTTP请求体内容
+//     - 序列化URL查询参数为JSON格式
+//     - 计算请求持续时间和时间戳
+//     - 提取关键HTTP头部字段（User-Agent、Referer、Cookie等）
+//     - 构建URI信息（URL、协议、主机、路径、查询参数、片段）
+//     - 设置HTTP协议版本
+//  4. 如果有HTTP响应数据，构建HTTP响应信息：
+//     - 验证类型转换，确保serverPayload为*http.Response
+//     - 序列化HTTP响应头部为JSON格式
+//     - 读取HTTP响应体内容
+//     - 计算响应持续时间和时间戳
+//     - 提取关键HTTP响应头部字段（Server、Set-Cookie、Location等）
+//  5. 合并客户端和服务端的帧栈信息，按时间戳排序
+//  6. 返回完整的HttpTransport对象，包含所有HTTP传输信息
+func NewHttpTransport(
+	ctx context.Context,
+	s3Client *s3.S3Client,
+	meta *n.BaseMeta,
+	traceID serializer.HexUUID,
+	clientAddr, serverAddr net.IP,
+	clientPort, serverPort layers.TCPPort,
+	clientISN, serverISN uint32,
+	timestamp time.Time, streamIndex uint32,
+	request *http.Request, response *http.Response,
+	kd *key.KeyDerivation,
+	buildTailer BuildTailer,
+) (transport *n.HttpTransport, err error) {
+	if meta == nil {
+		return nil, errors.New("meta is nil")
+	}
+	var hBase n.HttpBase
+	hBase.ClientIP = serializer.IPAddr(clientAddr)
+	hBase.ClientPort = clientPort
+	hBase.ClientISN = clientISN
+	hBase.ServerIP = serializer.IPAddr(serverAddr)
+	hBase.ServerPort = serverPort
+	hBase.ServerISN = serverISN
+	hBase.StreamIndex = streamIndex
+	if clientAddr.To4() != nil {
+		hBase.IPVersion = layers.IPProtocolIPv4
+	} else {
+		hBase.IPVersion = layers.IPProtocolIPv6
+	}
+	cryptoKey, err := kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	var uri *n.HttpURI
+	var requestBody *n.HttpRequestBody
+	var requestHeaders *n.HttpRequestHeaders
+	var responseBody *n.HttpResponseBody
+	var responseHeaders *n.HttpResponseHeaders
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("req-build", func() error {
+		if request != nil {
+			uri, err = n.NewHttpURI(request)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			requestBody, err = n.NewHttpRequestBody(ctx, s3Client, request, cryptoKey)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			requestHeaders = n.NewHttpRequestHeaders(request)
+			hBase.HttpVersion = request.Proto
+		}
+		return nil
+	})
+	wg.GoNamed("rsp-build", func() error {
+		if response != nil {
+			responseBody, err = n.NewHttpResponseBody(ctx, s3Client, response, cryptoKey)
+			if err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		responseHeaders = n.NewHttpResponseHeaders(response)
+		return nil
+	})
+	if err := wg.Wait(); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if uri == nil {
+		uri = &n.HttpURI{}
+	}
+	if requestBody == nil {
+		requestBody = &n.HttpRequestBody{}
+	}
+	if requestHeaders == nil {
+		requestHeaders = &n.HttpRequestHeaders{}
+	}
+	if responseBody == nil {
+		responseBody = &n.HttpResponseBody{}
+	}
+	if responseHeaders == nil {
+		responseHeaders = &n.HttpResponseHeaders{}
+	}
+	tailer, err := buildTailer(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &n.HttpTransport{
+		BaseMeta: *meta,
+		TimestampMeta: n.TimestampMeta{
+			Timestamp: timestamp,
+			CreatedAt: time.Now(),
+		},
+		TraceMeta: n.TraceMeta{
+			TraceID: traceID,
+		},
+		HttpBase:            hBase,
+		HttpURI:             *uri,
+		HttpRequestBody:     *requestBody,
+		HttpRequestHeaders:  *requestHeaders,
+		HttpResponseBody:    *responseBody,
+		HttpResponseHeaders: *responseHeaders,
+		AppTailer: n.AppTailer{
+			ClientConsumed:           tailer.ClientConsumed,
+			ClientStartPayloadOffset: tailer.ClientStartPayloadOffset,
+			ClientEndPayloadOffset:   tailer.ClientEndPayloadOffset,
+			ClientStartTimestamp:     tailer.ClientStartTimestamp,
+			ClientEndTimestamp:       tailer.ClientEndTimestamp,
+			ServerConsumed:           tailer.ServerConsumed,
+			ServerStartPayloadOffset: tailer.ServerStartPayloadOffset,
+			ServerEndPayloadOffset:   tailer.ServerEndPayloadOffset,
+			ServerStartTimestamp:     tailer.ServerStartTimestamp,
+			ServerEndTimestamp:       tailer.ServerEndTimestamp,
+		},
+	}, nil
 }

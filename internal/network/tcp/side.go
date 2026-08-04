@@ -3,13 +3,13 @@ package tcp
 import (
 	"bufio"
 	"context"
+	"sync"
 	"time"
 
 	"github.com/smallnest/ringbuffer"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
-
-	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // TCPState 表示TCP连接的状态，遵循标准TCP状态机。
@@ -99,6 +99,22 @@ func seqLess(a, b uint32) bool {
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型，用于支持不同的TCP数据包实现
 type Side[P TCPPacket] struct {
+	// tailerMu 用于跟踪已写入和已取数据的偏移量
+	tailerMu sync.Mutex
+
+	// Written 已写入数据的偏移量
+	Written uint64
+
+	// Readed 已读取数据的偏移量
+	Readed uint64
+
+	// PayloadOffsets 已读取数据的偏移量列表
+	PayloadOffsets []uint64
+
+	// CaptureTimestampOffsets 已读取数据的时间戳列表
+	CaptureTimestampOffsets []time.Time
+
+	// logger 日志记录器，用于记录TCP流的事件和错误信息
 	logger *logging.Logger
 
 	// rb 环形缓冲区，用于存储接收到的数据包
@@ -108,10 +124,12 @@ type Side[P TCPPacket] struct {
 	// 该字段用于在应用层协议检测器中提取数据，避免直接操作环形缓冲区。
 	brw *bufio.ReadWriter
 
-	// frameStack 单端帧堆栈，记录构成当前请求数据的所有TCP帧信息。
-	// 每个FrameInfo包含时间戳和网络层堆栈信息，用于追踪数据的来源。
-	// 在数据溯源、调试和分析场景中，frameStack提供了原始数据包的完整上下文信息。
-	frameStack n.FrameStack
+	// dstChan 目标管道，用于即时发送展平后的NetworkStack帧记录。
+	// 数据包进入缓冲区时立即写入，不在Side内累积，避免长期流导致的内存增长。
+	dstChan chan<- any
+
+	// traceID 流跟踪ID，随NetworkStack记录一并写入，用于关联数据溯源。
+	traceID serializer.HexUUID
 
 	// cli2Srv 表示数据包方向是否为客户端到服务端
 	// true表示客户端到服务端方向，false表示服务端到客户端方向
@@ -157,7 +175,7 @@ type Side[P TCPPacket] struct {
 // 注意:
 //   - 该函数假设传入的数据包是有效的SYN包
 //   - 客户端ISN应具有随机性，避免序列号预测攻击
-func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P, maxOutOrderPacketSize int) (clientSide, serverSide *Side[P], err error) {
+func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P, maxOutOrderPacketSize int, traceID serializer.HexUUID, dstChan chan<- any) (clientSide, serverSide *Side[P], err error) {
 	if !first.IsSyn() {
 		panic("first packet must be SYN")
 	}
@@ -168,15 +186,21 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 		SetBlocking(true)
 	reader, writer := buffer.Pipe()
 	clientSide = &Side[P]{
-		logger:                logger,
-		rb:                    buffer,
-		brw:                   bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               true,
-		state:                 StateSynSent,
-		isn:                   seq,
-		expectedSeq:           seq + 1,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
+		tailerMu:                sync.Mutex{},
+		Written:                 0,
+		Readed:                  0,
+		PayloadOffsets:          make([]uint64, 0, 32),
+		CaptureTimestampOffsets: make([]time.Time, 0, 32),
+		logger:                  logger,
+		rb:                      buffer,
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		dstChan:                 dstChan,
+		traceID:                 traceID,
+		cli2Srv:                 true,
+		state:                   StateSynSent,
+		isn:                     seq,
+		expectedSeq:             seq + 1,
+		maxOutOrderPacketSize:   maxOutOrderPacketSize,
 	}
 	if err := clientSide.appendPacket(ctx, first); err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -187,15 +211,21 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 		SetBlocking(true)
 	reader, writer = buffer.Pipe()
 	serverSide = &Side[P]{
-		logger:                logger,
-		rb:                    buffer,
-		brw:                   bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               false,
-		state:                 StateListen,
-		isn:                   0,
-		expectedSeq:           0,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
+		tailerMu:                sync.Mutex{},
+		Written:                 0,
+		Readed:                  0,
+		PayloadOffsets:          make([]uint64, 0, 32),
+		CaptureTimestampOffsets: make([]time.Time, 0, 32),
+		logger:                  logger,
+		rb:                      buffer,
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		dstChan:                 dstChan,
+		traceID:                 traceID,
+		cli2Srv:                 false,
+		state:                   StateListen,
+		isn:                     0,
+		expectedSeq:             0,
+		maxOutOrderPacketSize:   maxOutOrderPacketSize,
 	}
 	return
 }
@@ -312,7 +342,20 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 	payload := packet.GetPayload()
 	length := len(payload)
 	s.expectedSeq += uint32(length)
-	s.frameStack = append(s.frameStack, packet.FrameInfo())
+	// 将数据包的网络层堆栈展平为NetworkStack记录并即时发送到目标管道，
+	// 不在Side内累积，避免长期流导致的内存增长。
+	// 同一数据包的所有记录共享Seq与TopProto，但Proto/Level/Headers各不相同。
+	seq := uint32(len(s.PayloadOffsets))
+	for _, stack := range packet.NetworkFrame() {
+		stack.Seq = seq
+		stack.TraceID = s.traceID
+		stack.Cli2Srv = s.cli2Srv
+		select {
+		case <-ctx.Done():
+			return nil
+		case s.dstChan <- stack:
+		}
+	}
 	// 将新进入的TCP包的有效载荷写入到应用层数据缓冲区中
 	if n, err := s.brw.Write(payload); err != nil {
 		return errors.WithStack(err)
@@ -320,10 +363,56 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 		return errors.New("payload not fully written to buffer")
 	} else if err := s.brw.Flush(); err != nil {
 		return errors.WithStack(err)
-	} else {
-		recordBytesWritten(ctx, length)
 	}
+	s.tailerMu.Lock()
+	s.Written += uint64(length)
+	s.PayloadOffsets = append(s.PayloadOffsets, uint64(s.Written))
+	s.CaptureTimestampOffsets = append(s.CaptureTimestampOffsets, packet.CaptureTimestamp())
+	s.tailerMu.Unlock()
+	recordBytesWritten(ctx, length)
 	return nil
+}
+
+// findIndex 二分法查找给定偏移量对应的区间索引
+// 在有序的 PayloadOffsets 切片中定位 offset 所属的区间，返回区间左边界索引。
+// 区间定义为 [PayloadOffsets[i-1], PayloadOffsets[i])，第 0 个区间的左边界为 0。
+//
+// 示例（PayloadOffsets = [3, 5, 7, 9]）:
+//   - offset=2 落在 [0, 3) 区间，返回 0
+//   - offset=5 落在 [3, 5] 的右端点，返回 1
+//   - offset=11 超出最右侧区间，返回 -1 表示未找到
+func (s *Side[P]) findIndex(offset uint64) int {
+	start := 0
+	end := len(s.PayloadOffsets) - 1
+	for start <= end {
+		mid := (start + end) / 2
+		if s.PayloadOffsets[mid] >= offset {
+			end = mid - 1
+		} else {
+			start = mid + 1
+		}
+	}
+	if start >= len(s.PayloadOffsets) {
+		return -1
+	}
+	return start
+}
+
+func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayloadOffset uint64, startTimestamp, endTimestamp time.Time) {
+	s.tailerMu.Lock()
+	defer s.tailerMu.Unlock()
+	startReaded := s.Readed
+	startIndex := s.findIndex(startReaded)
+	startPayloadOffset = s.PayloadOffsets[startIndex]
+	startTimestamp = s.CaptureTimestampOffsets[startIndex]
+	remained := uint64(s.brw.Reader.Buffered() + s.rb.Length())
+	consumed = (s.Written - s.Readed) - remained
+	s.Readed += consumed
+	endReaded := s.Readed
+	endIndex := s.findIndex(endReaded)
+	endPayloadOffset = s.PayloadOffsets[endIndex]
+	endTimestamp = s.CaptureTimestampOffsets[endIndex]
+	return consumed, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
 }
 
 // handshakeWithSecondSynAck 处理TCP三次握手的第二个SYN-ACK包。

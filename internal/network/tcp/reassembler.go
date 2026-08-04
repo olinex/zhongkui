@@ -4,10 +4,13 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
+	"zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 
 	n "zhongkui.com/zhongkui/internal/models/network"
 )
@@ -20,24 +23,23 @@ import (
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型，用于支持不同的TCP数据包实现
 type Reassembler[P TCPPacket] struct {
+	// TraceID 流跟踪ID，用于关联不同数据包的元数据
+	TraceID serializer.HexUUID
+	// startTime 流的起始时间戳（首个SYN包的捕获时间），
+	// 用于Meta()中填充流的起始时间。
+	startTime time.Time
 	// logger 日志记录器，用于记录TCP Reassembler的运行时信息。
 	logger *logging.Logger
-
 	// ClientAddr 客户端IP地址
 	ClientAddr net.IP
-
 	// ClientPort 客户端端口号
 	ClientPort layers.TCPPort
-
 	// client 客户端侧的TCP流管理
 	client *Side[P]
-
 	// ServerAddr 服务端IP地址
 	ServerAddr net.IP
-
 	// ServerPort 服务端端口号
 	ServerPort layers.TCPPort
-
 	// server 服务端侧的TCP流管理
 	server *Side[P]
 }
@@ -48,13 +50,17 @@ func newReassembler[P TCPPacket](
 	logger *logging.Logger,
 	first P,
 	maxOutOrderPacketSize int,
+	dstChan chan<- any,
 ) (*Reassembler[P], error) {
-	clientSide, serverSide, err := newSides(ctx, logger, first, maxOutOrderPacketSize)
+	traceID := serializer.NewHexUUIDv4()
+	clientSide, serverSide, err := newSides(ctx, logger, first, maxOutOrderPacketSize, traceID, dstChan)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	recordReassemblerCreated(ctx)
 	return &Reassembler[P]{
+		TraceID:    traceID,
+		startTime:  first.CaptureTimestamp(),
 		logger:     logger,
 		ClientAddr: first.SrcAddr(),
 		ClientPort: first.SrcPort(),
@@ -63,6 +69,19 @@ func newReassembler[P TCPPacket](
 		client:     clientSide,
 		server:     serverSide,
 	}, nil
+}
+
+func (r *Reassembler[P]) Meta() *detectors.StreamMeta {
+	return &detectors.StreamMeta{
+		TraceID:    r.TraceID,
+		ClientAddr: r.ClientAddr,
+		ClientPort: r.ClientPort,
+		ClientISN:  r.client.isn,
+		ServerAddr: r.ServerAddr,
+		ServerPort: r.ServerPort,
+		ServerISN:  r.server.isn,
+		Timestamp:  r.startTime,
+	}
 }
 
 func (r *Reassembler[P]) Close() {
@@ -128,6 +147,23 @@ func (r *Reassembler[P]) isCompleted() bool {
 	return r.client.isCompleted() && r.server.isCompleted()
 }
 
+func (r *Reassembler[P]) buildTailer(ctx context.Context) (tailer *detectors.AppTailer, err error) {
+	ClientConsumed, clientStartPayloadOffset, clientEndPayloadOffset, clientStartTimestamp, clientEndTimestamp := r.client.UpdateComsumed()
+	serverConsumed, serverStartPayloadOffset, serverEndPayloadOffset, serverStartTimestamp, serverEndTimestamp := r.server.UpdateComsumed()
+	return &detectors.AppTailer{
+		ClientConsumed:           ClientConsumed,
+		ServerConsumed:           serverConsumed,
+		ClientStartPayloadOffset: clientStartPayloadOffset,
+		ClientEndPayloadOffset:   clientEndPayloadOffset,
+		ClientStartTimestamp:     clientStartTimestamp,
+		ClientEndTimestamp:       clientEndTimestamp,
+		ServerStartPayloadOffset: serverStartPayloadOffset,
+		ServerEndPayloadOffset:   serverEndPayloadOffset,
+		ServerStartTimestamp:     serverStartTimestamp,
+		ServerEndTimestamp:       serverEndTimestamp,
+	}, nil
+}
+
 // extractApplication 从当前TCP流中提取应用层协议数据，构建完整的应用层对象。
 // 该方法遍历所有已注册的应用层协议推测器(supposers)，尝试识别当前TCP流中传输的应用层协议。
 // 它首先使用Detect方法检查请求侧和响应侧的数据是否匹配某种应用层协议，如果匹配成功，
@@ -157,7 +193,7 @@ func (r *Reassembler[P]) isCompleted() bool {
 //   - 不同的应用层协议推测器可能返回不同类型的应用层对象
 //   - 如果提取过程中发生错误，返回AppUnknown作为错误指示
 //   - 该方法会同时处理请求侧和响应侧的数据，确保双向数据都匹配协议特征
-func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMeta) (any, error) {
+func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMeta, streamIndex uint32) (any, error) {
 	// 无阻塞检查双方是否有数据可读取：bufio.Reader 内部缓存 + RingBuffer 剩余数据。
 	// 仅检查是否有数据，不做实际读取，避免阻塞等待不够的数据量。
 	reqPeek, err := r.client.peekAll()
@@ -169,7 +205,7 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 		return nil, errors.WithStack(err)
 	}
 
-	for protocol, supposer := range detectors {
+	for protocol, supposer := range detectors.Detectors {
 		innerCtx, detectSpan := startDetectSpan(ctx, protocol)
 		var dErr error
 		var ok, ok2 bool
@@ -210,14 +246,11 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 		app, dErr = supposer.Build(
 			innerCtx,
 			meta,
-			r.ClientAddr,
-			r.ServerAddr,
-			r.ClientPort,
-			r.ServerPort,
-			r.client.frameStack,
-			r.server.frameStack,
+			r.Meta(),
+			streamIndex,
 			clientPayload,
 			serverPayload,
+			r.buildTailer,
 		)
 		if dErr != nil {
 			endSpan(buildSpan, &dErr)
@@ -255,20 +288,26 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 //   - 目标通道应该是缓冲通道，避免阻塞解析器的运行
 //   - 每次收到信号都会尝试提取应用层数据，即使数据可能不完整
 //   - 应用层协议推测器可能需要在多个数据包到达后才能成功识别协议
+//   - NetworkStack帧记录已在Side.appendPacket中即时写入dstChan，无需在此刷新
 func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, signalChan <-chan any, dstChan chan<- any) error {
 	ctx, span := startParseSpan(ctx)
 	defer endSpan(span, nil)
 	defer recordReassemblerCompleted(ctx)
+	streamIndex := uint32(0)
 	for {
 		select {
 		case <-ctx.Done():
 			return nil
 		case _, ok := <-signalChan:
 			if !ok {
+				// 流结束（signalChan被关闭），正常退出
 				return nil
 			}
-			app, err := r.extractApplication(ctx, meta)
+			app, err := r.extractApplication(ctx, meta, streamIndex)
 			if err != nil {
+				if errors.Is(err, detectors.ErrDataIncomplete) {
+					continue
+				}
 				return errors.WithStack(err)
 			}
 			if app != nil {
@@ -276,6 +315,7 @@ func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, signalChan
 				case <-ctx.Done():
 					return nil
 				case dstChan <- app:
+					streamIndex++
 				}
 			}
 		}

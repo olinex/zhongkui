@@ -334,6 +334,7 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 				},
 				TimestampMeta: TimestampMeta{
 					Timestamp: b.Timestamp,
+					CreatedAt: time.Now(),
 				},
 				CaptureMeta: CaptureMeta{
 					Truncated:     b.Truncated,
@@ -463,11 +464,13 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 			return pkt
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
-			return &PacketIPv4UDP{
+			pkt := &PacketIPv4UDP{
 				PacketIPv4: *model.(*PacketIPv4),
 				UDPHeaders: *udp,
 				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.UDPStreamID = pkt.StreamID()
+			return pkt
 		default:
 			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
 		}
@@ -484,11 +487,13 @@ func (b *ModelBuilder) BuildAsPacketTransportModel() any {
 			return pkt
 		case layers.LayerTypeUDP:
 			udp := info.Headers.(*UDPHeaders)
-			return &PacketIPv6UDP{
+			pkt := &PacketIPv6UDP{
 				PacketIPv6: *model.(*PacketIPv6),
 				UDPHeaders: *udp,
 				Payload:    serializer.NewCrypto(b.Payload),
 			}
+			pkt.UDPStreamID = pkt.StreamID()
+			return pkt
 		default:
 			panic(fmt.Sprintf("unknown transport layer protocol %s", info.Proto))
 		}

@@ -118,7 +118,7 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 			group.addOOP(streamID, packet)
 			return nil
 		}
-		node, err = newReassemblerNode(ctx, logger, streamID, packet, r.maxOutOrderPacketSize)
+		node, err = newReassemblerNode(ctx, logger, streamID, packet, r.maxOutOrderPacketSize, dstChan)
 		if err != nil {
 			return errors.WithStack(err)
 		}

@@ -14,17 +14,17 @@ type Config struct {
 	// RootPath 是本地化文件存储的根路径
 	// 默认值: "locales"
 	// 参考: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-ParseGlob
-	RootPath string `mapstructure:"rootPath" default:"locales" comment:"root path for i18n locale files (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-ParseGlob)"`
-	
+	RootPath string `mapstructure:"rootPath" default:"locales" comment:"本地化文件存储的根路径 (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-ParseGlob)"`
+
 	// DefaultLocale 是默认的语言/区域设置
 	// 默认值: "en" (英语)
 	// 参考: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale
-	DefaultLocale Language `mapstructure:"defaultLocale" default:"en" comment:"default locale/language for i18n (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"`
-	
+	DefaultLocale Language `mapstructure:"defaultLocale" default:"en" comment:"默认语言/区域设置 (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"`
+
 	// SupportLocales 是支持的语言/区域设置列表
 	// 默认值: ["en", "zh-Hans"] (英语和简体中文)
 	// 参考: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale
-	SupportLocales []Language `mapstructure:"supportLocales" default:"[\"en\", \"zh-Hans\"]" comment:"list of supported locales/languages (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"`
+	SupportLocales []Language `mapstructure:"supportLocales" default:"[\"en\", \"zh-Hans\"]" comment:"支持的语言/区域设置列表 (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"`
 }
 
 // DescribeConfig 返回配置的描述信息，用于配置文档生成
@@ -37,6 +37,7 @@ func DescribeConfig() config.ConfigDescriptions {
 // ExtractConfig 从 Viper 实例中提取国际化配置
 // 参数:
 //   - v: Viper 配置实例
+//
 // 返回值:
 //   - *Config: 提取的配置实例
 //   - error: 提取过程中的错误

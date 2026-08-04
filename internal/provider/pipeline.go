@@ -6,7 +6,6 @@ import (
 
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -45,8 +44,8 @@ func initDetectors(i do.Injector) error {
 	} else if client, err := InvokeS3(i); err != nil {
 		return errors.WithStack(err)
 	} else {
-		tcp.RegisterAppProtocolDetector(
-			detectors.AppHTTP,
+		detectors.RegisterAppProtocolDetector(
+			detectors.APP_HTTP,
 			detectors.NewHttpDetector(client, kd),
 		)
 		return nil

@@ -27,9 +27,11 @@
 package cliinput
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pterm/pterm"
@@ -40,11 +42,29 @@ import (
 
 // Tag names used in struct field tags.
 const (
-	TagViper   = "viper"
-	TagPrompt  = "prompt"
-	TagMask    = "mask"
-	TagConfirm = "confirm"
+	TAG_VIPER       = "viper"
+	TAG_PROMPT      = "prompt"
+	TAG_MASK        = "mask"
+	TAG_CONFIRM     = "confirm"
+	CLI_I18N_PREFIX = "cli.input"
 )
+
+// translatePrompt 翻译交互提示文本。
+// key 为翻译消息 ID，fallback 为中文默认文案。
+// 默认 no-op（原样返回 fallback），由使用方通过 SetTranslator 注入翻译实现，
+// 避免本包反向依赖上层 i18n 基础设施。
+var (
+	once            sync.Once
+	translatePrompt = func(key, fallback string) string { return fallback }
+)
+
+// SetTranslator 注入交互提示的翻译函数。
+// fn 接收翻译 key 与中文回退文案，返回本地化后的提示文本。
+func SetTranslator(fn func(key, fallback string) string) {
+	once.Do(func() {
+		translatePrompt = fn
+	})
+}
 
 // Extract 从 viper 配置中填充结构体指针，对于 viper 中值为空的字段，
 // 回退到 pterm 交互式输入。每个字段在提取后立即进行验证。
@@ -91,7 +111,7 @@ func extractStruct(v *viper.Viper, topLevel any, structVal reflect.Value, prefix
 		// 递归处理嵌套结构体（包括匿名嵌入和命名嵌套）。
 		// 仅当该结构体字段自身没有 viper tag 时才视为容器进行递归，
 		// 否则按普通字段处理（实际上结构体类型在 switch 中会落入 default 被跳过）。
-		if field.Type.Kind() == reflect.Struct && field.Tag.Get(TagViper) == "" {
+		if field.Type.Kind() == reflect.Struct && field.Tag.Get(TAG_VIPER) == "" {
 			subPrefix := prefix + field.Name + "."
 			if err := extractStruct(v, topLevel, fieldVal, subPrefix); err != nil {
 				return err
@@ -104,14 +124,18 @@ func extractStruct(v *viper.Viper, topLevel any, structVal reflect.Value, prefix
 			continue
 		}
 
-		viperKey := field.Tag.Get(TagViper)
+		viperKey := field.Tag.Get(TAG_VIPER)
 		if viperKey == "" {
 			continue
 		}
 
-		promptText := field.Tag.Get(TagPrompt)
-		needMask := field.Tag.Get(TagMask) == "true"
-		needConfirm := field.Tag.Get(TagConfirm) == "true"
+		promptText := field.Tag.Get(TAG_PROMPT)
+		if promptText != "" {
+			// 交互提示文本按字段级 key 翻译（中文标签为回退文案）
+			promptText = translatePrompt(fmt.Sprintf(`%s.prompt.%s.%s`, CLI_I18N_PREFIX, structType.Name(), field.Name), promptText)
+		}
+		needMask := field.Tag.Get(TAG_MASK) == "true"
+		needConfirm := field.Tag.Get(TAG_CONFIRM) == "true"
 
 		// fieldPath 用于验证器和错误消息中的字段定位
 		fieldPath := prefix + field.Name
@@ -213,7 +237,7 @@ func promptWithConfirm(promptText string, mask bool) (string, error) {
 			return "", err
 		}
 
-		confirmValue, err := promptOnce(promptText+" (confirm)", mask)
+		confirmValue, err := promptOnce(promptText+translatePrompt(fmt.Sprintf(`%s.prompt.confirm-suffix`, CLI_I18N_PREFIX), "（再次输入确认）"), mask)
 		if err != nil {
 			return "", err
 		}
@@ -221,7 +245,7 @@ func promptWithConfirm(promptText string, mask bool) (string, error) {
 		if value == confirmValue {
 			return value, nil
 		}
-		pterm.Warning.Println("values do not match, please try again!")
+		pterm.Warning.Println(translatePrompt(fmt.Sprintf(`%s.mismatch`, CLI_I18N_PREFIX), "两次输入不一致，请重新输入！"))
 	}
 }
 
@@ -329,7 +353,7 @@ func extractStringSlice(v *viper.Viper, key, promptText, fieldPath string, field
 	if promptText == "" {
 		return nil
 	}
-	raw, err := promptOnce(promptText+" (comma-separated)", false)
+	raw, err := promptOnce(promptText+translatePrompt(fmt.Sprintf(`%s.prompt.comma-separated-suffix`, CLI_I18N_PREFIX), "（逗号分隔）"), false)
 	if err != nil {
 		return errors.Newf("cliinput: cannot read %s: %w", fieldPath, err)
 	}
