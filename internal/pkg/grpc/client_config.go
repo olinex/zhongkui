@@ -73,22 +73,22 @@ type TlsClientConfig struct {
 	// Enabled 指示是否为gRPC客户端启用TLS加密。
 	// 当为false时，客户端将使用明文连接，不进行加密。
 	// 默认为false。
-	Enabled bool `mapstructure:"enabled" default:"false" comment:"enable TLS for gRPC client connection (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
+	Enabled bool `mapstructure:"enabled" default:"false" comment:"为 gRPC 客户端连接启用 TLS (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
 
 	// Domain 是TLS服务器名称验证(SNI)的域名。
 	// 在建立TLS连接时，客户端会验证服务器证书的Common Name或Subject Alternative Name是否匹配此域名。
 	// 如果为空，则不进行服务器名称验证。
-	Domain string `mapstructure:"domain" default:"-" comment:"TLS server name to verify (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
+	Domain string `mapstructure:"domain" default:"-" comment:"TLS 服务器名称验证（SNI）域名 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
 
 	// Cert 包含PEM编码的证书字节字符串(内联方式)。
 	// 直接将证书内容作为字符串配置，适用于证书内容较短或需要通过配置管理工具分发的情况。
 	// 注意：不能与CertFilePath同时使用，两者互斥。
-	Cert string `mapstructure:"cert" default:"-" comment:"PEM encoded certificate bytes (inline), cannot be used with CertFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
+	Cert string `mapstructure:"cert" default:"-" comment:"内联 PEM 编码证书内容，不能与 CertFilePath 同时使用 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
 
 	// CertFilePath 是包含PEM编码证书的文件路径。
 	// 通过文件系统路径加载证书，适用于证书文件较大或需要动态更新的情况。
 	// 注意：不能与Cert同时使用，两者互斥。
-	CertFilePath string `mapstructure:"certFilePath" default:"-" comment:"path to PEM encoded certificate file, cannot be used with Cert (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromFile)"`
+	CertFilePath string `mapstructure:"certFilePath" default:"-" comment:"PEM 编码证书文件路径，不能与 Cert 同时使用 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromFile)"`
 }
 
 // ToOption 将TlsClientConfig转换为gRPC客户端的TLS连接选项。
@@ -146,23 +146,23 @@ type AuthClientConfig struct {
 	// Enabled 指示是否为gRPC客户端启用身份验证。
 	// 当为true时，客户端会在每个RPC调用中包含身份验证信息。
 	// 默认为false。
-	Enabled bool `mapstructure:"enabled" default:"false" comment:"enable authentication for gRPC client (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"`
+	Enabled bool `mapstructure:"enabled" default:"false" comment:"为 gRPC 客户端启用身份验证 (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"`
 
 	// Authorize 指定使用的身份验证协议类型。
 	// 当前支持的协议：
 	//   - "accessKeySecret": 基于访问密钥的身份验证
 	// 此字段用于确定使用哪种身份验证机制生成凭证。
-	Authorize string `mapstructure:"authorize" default:"-" comment:"authentication protocol: 'accessKeySecret' for access key authentication (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"`
+	Authorize string `mapstructure:"authorize" default:"-" comment:"身份验证协议：accessKeySecret 表示基于访问密钥认证 (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"`
 
 	// AccessKeyID 是访问密钥ID，用于身份验证。
 	// 与AccessKeySecret配对使用，作为客户端的身份标识。
 	// 在访问密钥身份验证协议中，此ID会包含在请求头中。
-	AccessKeyID string `mapstructure:"accessKeyID" default:"-" comment:"access key ID for authentication (ref: internal/pkg/grpc/authenticator.go)"`
+	AccessKeyID string `mapstructure:"accessKeyID" default:"-" comment:"访问密钥 ID，用于身份验证 (ref: internal/pkg/grpc/authenticator.go)"`
 
 	// AccessKeySecret 是访问密钥，用于身份验证。
 	// 与AccessKeyID配对使用，用于生成身份验证令牌或签名。
 	// 注意：此密钥应妥善保管，不应硬编码在代码中或公开暴露。
-	AccessKeySecret string `mapstructure:"accessKeySecret" default:"-" comment:"access key secret for authentication (ref: internal/pkg/grpc/authenticator.go)"`
+	AccessKeySecret string `mapstructure:"accessKeySecret" default:"-" comment:"访问密钥，用于身份验证 (ref: internal/pkg/grpc/authenticator.go)"`
 }
 
 // ToOption 将AuthClientConfig转换为gRPC客户端的身份验证连接选项。
@@ -212,18 +212,18 @@ type KeepaliveClientConfig struct {
 	// Time 是客户端发送保活ping的时间间隔。
 	// 客户端每Time持续时间发送一次保活ping，以检测连接是否仍然有效。
 	// 默认为1分钟(1m)。
-	Time time.Duration `mapstructure:"time" default:"1m" comment:"client ping interval, sends keepalive pings every Time duration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Time)"`
+	Time time.Duration `mapstructure:"time" default:"1m" comment:"客户端保活 ping 发送间隔 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Time)"`
 
 	// Timeout 是保活ping的超时时间。
 	// 如果在Timeout内未收到服务器的ping响应，客户端将认为连接已断开并关闭连接。
 	// 默认为20秒(20s)。
-	Timeout time.Duration `mapstructure:"timeout" default:"20s" comment:"timeout for keepalive pings, closes connection if no response (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Timeout)"`
+	Timeout time.Duration `mapstructure:"timeout" default:"20s" comment:"保活 ping 超时时间，无响应则关闭连接 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Timeout)"`
 
 	// PermitWithoutStream 指示是否在没有活动流的情况下允许发送保活ping。
 	// 当为true时，即使没有活动的RPC流，客户端也会定期发送ping以保持连接活跃。
 	// 当为false时，只有在有活动流时才会发送ping。
 	// 默认为true。
-	PermitWithoutStream bool `mapstructure:"permitWithoutStream" default:"true" comment:"allow keepalive pings when there are no active streams (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-PermitWithoutStream)"`
+	PermitWithoutStream bool `mapstructure:"permitWithoutStream" default:"true" comment:"没有活动流时是否允许发送保活 ping (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-PermitWithoutStream)"`
 }
 
 // ToOption 将KeepaliveClientConfig转换为gRPC客户端的保活连接选项。
@@ -249,28 +249,28 @@ func (k *KeepaliveClientConfig) ToOption() g.DialOption {
 type ClientConfig struct {
 	// BaseConfig 嵌入式基础配置，包含主机地址和端口信息。
 	// 定义客户端要连接的服务器的网络地址。
-	BaseConfig
+	BaseConfig `comment:"基础配置：主机地址和端口"`
 
 	// TLS 配置用于建立安全的gRPC连接。
 	// 控制是否以及如何对客户端与服务器之间的通信进行加密。
 	// 包括证书加载方式和服务器名称验证设置。
-	TLS TlsClientConfig `mapstructure:"tls" comment:"TLS configuration for secure gRPC connection (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
+	TLS TlsClientConfig `mapstructure:"tls" comment:"TLS 安全连接配置 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"`
 
 	// Auth 配置用于向服务器提供身份验证凭证。
 	// 定义客户端使用的身份验证协议和凭证信息。
 	// 支持基于访问密钥的身份验证机制。
-	Auth AuthClientConfig `mapstructure:"auth" comment:"authentication configuration for gRPC client (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"`
+	Auth AuthClientConfig `mapstructure:"auth" comment:"身份验证配置 (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"`
 
 	// Keepalive 配置用于连接管理和健康监控。
 	// 控制客户端如何维护与服务器的连接，防止因空闲或网络问题而断开。
 	// 包括ping间隔、超时时间和无流时的ping策略。
-	Keepalive KeepaliveClientConfig `mapstructure:"keepalive" comment:"keepalive configuration for connection management (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters)"`
+	Keepalive KeepaliveClientConfig `mapstructure:"keepalive" comment:"保活连接管理配置 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters)"`
 
 	// ServiceConfig 是gRPC服务配置的JSON映射。
 	// 用于配置负载均衡策略、重试策略、超时设置等高级gRPC功能。
 	// 该配置会传递给gRPC客户端，影响RPC调用的行为。
 	// 例如：可以配置重试次数、超时时间、负载均衡算法等。
-	ServiceConfig map[string]any `mapstructure:"serviceConfig" comment:"gRPC service config JSON, used for load balancing and retry policies (ref: https://pkg.go.dev/google.golang.org/grpc#WithDefaultServiceConfig)"`
+	ServiceConfig map[string]any `mapstructure:"serviceConfig" comment:"gRPC 服务配置 JSON，用于负载均衡和重试策略 (ref: https://pkg.go.dev/google.golang.org/grpc#WithDefaultServiceConfig)"`
 }
 
 // ToOptions 将完整的客户端配置转换为gRPC连接选项和监听地址。

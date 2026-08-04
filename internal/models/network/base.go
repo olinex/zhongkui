@@ -176,8 +176,10 @@ type TraceMeta struct {
 	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"trace_id"`
 }
 
+// DirectionMeta 表示数据包方向元数据
+// Cli2Srv 标记该数据包是否为客户端到服务端方向（true表示客户端到服务端，false表示服务端到客户端）
 type DirectionMeta struct {
-	Direction uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"direction"`
+	Cli2Srv bool `gorm:"column:cli_2_srv;type:Bool" json:"cli_2_srv"`
 }
 
 // CaptureMeta 表示捕获元数据

@@ -3,6 +3,7 @@ package network
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
@@ -423,6 +424,84 @@ func TestPacketIPv4TCP_StreamID(t *testing.T) {
 			packet2.TCPStreamID = packet2.StreamID()
 			So(packet1.TCPStreamID, ShouldEqual, streamID1)
 			So(packet2.TCPStreamID, ShouldEqual, streamID2)
+		})
+	})
+}
+
+// TestPacketIPv4TCP_CaptureTimestamp 测试 PacketIPv4TCP.CaptureTimestamp 方法
+// 验证 CaptureTimestamp 正确返回 TimestampMeta 中的时间戳
+func TestPacketIPv4TCP_CaptureTimestamp(t *testing.T) {
+	Convey("Test PacketIPv4TCP CaptureTimestamp", t, func() {
+		Convey("Should return Timestamp from TimestampMeta", func() {
+			now := time.Now()
+			pkt := &PacketIPv4TCP{
+				PacketIPv4: PacketIPv4{
+					PacketEthernet: PacketEthernet{
+						AsPacket: AsPacket{
+							TimestampMeta: TimestampMeta{Timestamp: now},
+						},
+					},
+				},
+			}
+			So(pkt.CaptureTimestamp().Equal(now), ShouldBeTrue)
+		})
+	})
+}
+
+// TestPacketIPv6TCP_CaptureTimestamp 测试 PacketIPv6TCP.CaptureTimestamp 方法
+func TestPacketIPv6TCP_CaptureTimestamp(t *testing.T) {
+	Convey("Test PacketIPv6TCP CaptureTimestamp", t, func() {
+		Convey("Should return Timestamp from TimestampMeta", func() {
+			now := time.Now()
+			pkt := &PacketIPv6TCP{
+				PacketIPv6: PacketIPv6{
+					PacketEthernet: PacketEthernet{
+						AsPacket: AsPacket{
+							TimestampMeta: TimestampMeta{Timestamp: now},
+						},
+					},
+				},
+			}
+			So(pkt.CaptureTimestamp().Equal(now), ShouldBeTrue)
+		})
+	})
+}
+
+// TestAppTailer 测试 AppTailer 结构体
+// 验证 AppTailer 结构体字段的正确性
+func TestAppTailer(t *testing.T) {
+	Convey("Test AppTailer structure", t, func() {
+		Convey("Should initialize with all zero values", func() {
+			tailer := AppTailer{}
+			So(tailer.ClientConsumed, ShouldEqual, uint64(0))
+			So(tailer.ServerConsumed, ShouldEqual, uint64(0))
+			So(tailer.ClientStartPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ClientEndPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ServerStartPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ServerEndPayloadOffset, ShouldEqual, uint64(0))
+			So(tailer.ClientStartTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ClientEndTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ServerStartTimestamp.IsZero(), ShouldBeTrue)
+			So(tailer.ServerEndTimestamp.IsZero(), ShouldBeTrue)
+		})
+
+		Convey("Should set all fields correctly", func() {
+			now := time.Now()
+			tailer := AppTailer{
+				ClientConsumed:           100,
+				ClientStartPayloadOffset: 0,
+				ClientEndPayloadOffset:   100,
+				ClientStartTimestamp:     now,
+				ClientEndTimestamp:       now.Add(time.Second),
+				ServerConsumed:           200,
+				ServerStartPayloadOffset: 0,
+				ServerEndPayloadOffset:   200,
+				ServerStartTimestamp:     now,
+				ServerEndTimestamp:       now.Add(time.Second),
+			}
+			So(tailer.ClientConsumed, ShouldEqual, uint64(100))
+			So(tailer.ServerConsumed, ShouldEqual, uint64(200))
+			So(tailer.ClientStartTimestamp.Equal(now), ShouldBeTrue)
 		})
 	})
 }

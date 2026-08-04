@@ -34,12 +34,12 @@ import (
 //   - BpfExpr: BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符
 //   - Enabled: 是否启用该抓包器配置
 type CapturerConfigIn struct {
-	Device  string `json:"device" viper:"device" prompt:"please enter network device (e.g. eth0)" binding:"required,min=2,max=32"`
-	SnapLen uint32 `json:"snapLen" viper:"snap-len" prompt:"please enter snap length in bytes" binding:"required"`
-	Promisc bool   `json:"promisc" viper:"promisc" prompt:"enable promiscuous mode?"`
-	Timeout int32  `json:"timeout" viper:"read-timeout" prompt:"please enter read timeout in milliseconds" binding:"required"`
-	BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"please enter BPF filter expression (e.g. tcp port 80)" binding:"required,min=3,max=1024"`
-	Enabled bool   `json:"enabled" viper:"enabled" prompt:"enable this capturer?"`
+	Device  string `json:"device" viper:"device" prompt:"请输入网络设备名称（如 eth0）" binding:"required,min=2,max=32"`
+	SnapLen uint32 `json:"snapLen" viper:"snap-len" prompt:"请输入抓包长度（字节）" binding:"required"`
+	Promisc bool   `json:"promisc" viper:"promisc" prompt:"是否启用混杂模式？"`
+	Timeout int32  `json:"timeout" viper:"read-timeout" prompt:"请输入读超时时间（毫秒）" binding:"required"`
+	BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024"`
+	Enabled bool   `json:"enabled" viper:"enabled" prompt:"是否启用该抓包器？"`
 }
 
 // ToGRPC 将 CapturerConfigIn 转换为 gRPC 协议层定义的 Config 结构。
@@ -69,9 +69,9 @@ func (cc *CapturerConfigIn) ToGRPC() *reporter_v1.Config {
 //   - Version:   抓包器版本号，长度限制 3~32 字符
 //   - Config:    抓包器的运行配置
 type CapturerCreateIn struct {
-	Namespace string           `json:"namespace" viper:"namespace" prompt:"please enter namespace" binding:"required,min=3,max=32"`
-	Name      string           `json:"name" viper:"name" prompt:"please enter capturer name" binding:"required,min=3,max=32"`
-	Version   string           `json:"version" viper:"version" prompt:"please enter version" binding:"required,min=3,max=32"`
+	Namespace string           `json:"namespace" viper:"namespace" prompt:"请输入命名空间" binding:"required,min=3,max=32"`
+	Name      string           `json:"name" viper:"name" prompt:"请输入抓包器名称" binding:"required,min=3,max=32"`
+	Version   string           `json:"version" viper:"version" prompt:"请输入版本号" binding:"required,min=3,max=32"`
 	Config    CapturerConfigIn `json:"config"`
 }
 

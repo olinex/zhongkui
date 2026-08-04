@@ -47,6 +47,10 @@ func (m *mockTCPPacket) FrameInfo() *n.FrameInfo {
 	return m.frameInfo
 }
 
+func (m *mockTCPPacket) NetworkFrame() n.NetworkFrame {
+	return n.NewNetworkFrame(m.frameInfo.LayerStack, *m.meta, m.frameInfo.Timestamp)
+}
+
 func (m *mockTCPPacket) SrcAddr() net.IP {
 	return m.srcAddr
 }

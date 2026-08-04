@@ -35,6 +35,7 @@ func (d *testDetector) Build(
 	streamMeta *detectors.StreamMeta,
 	streamIndex uint32,
 	clientPayload, serverPayload any,
+	buildTailer detectors.BuildTailer,
 ) (app any, err error) {
 	request, ok := clientPayload.(*http.Request)
 	if !ok {

@@ -14,6 +14,8 @@ type GlobalEnv struct {
 	Environment string `envconfig:"ENVIRONMENT" default:"product"`
 	Debug       bool   `envconfig:"DEBUG" default:"false"`
 	ErrorStack  bool   `envconfig:"ERROR_STACK" default:"false"`
+	// Lang CLI 显示语言，通过 ZKI_LANG 环境变量设置（如 en / zh-Hans），默认 zh-Hans
+	Lang string `envconfig:"LANG" default:"zh-Hans"`
 }
 
 func init() {

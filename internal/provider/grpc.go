@@ -106,9 +106,9 @@ func MustInvokeReporterGrpcClient(i do.Injector) *grpc.Client {
 }
 
 func DescribeGrpcServerConfig() config.ConfigDescriptions {
-	return grpc.DescribeClientConfig(REPORTER_GRPC_PREFIX)
+	return grpc.DescribeServerConfig(REPORTER_GRPC_PREFIX)
 }
 
 func DescribeGrpcClientConfig() config.ConfigDescriptions {
-	return grpc.DescribeServerConfig(REPORTER_GRPC_PREFIX)
+	return grpc.DescribeClientConfig(REPORTER_GRPC_PREFIX)
 }

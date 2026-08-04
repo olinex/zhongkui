@@ -308,9 +308,9 @@ CREATE TABLE IF NOT EXISTS network_stacks (
 	trace_id UUID CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)),
-	direction UInt8 CODEC(ZSTD(3)),
-	parent_proto UInt64 CODEC(ZSTD(3)),
-	child_proto UInt64 CODEC(ZSTD(3)),
+	cli_2_srv Bool,
+	top_proto UInt64 CODEC(ZSTD(3)),
+	proto UInt64 CODEC(ZSTD(3)),
 	seq UInt32 CODEC(ZSTD(3)),
 	level UInt8 CODEC(ZSTD(3)),
 	headers String CODEC(ZSTD(3))
@@ -320,8 +320,8 @@ ORDER BY (
 	capture,
 	version,
 	session_id,
-	parent_proto,
-	child_proto,
+	top_proto,
+	proto,
 	level,
 	seq,
 	timestamp

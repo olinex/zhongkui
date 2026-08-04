@@ -14,8 +14,8 @@ var passwordBookOutput string
 
 var createPasswordBookCmd = &cobra.Command{
 	Use:   "password-book",
-	Short: "Generate a password book file for key derivation",
-	Long:  "Generate a cryptographically secure random password book file (65536 bytes) used for child key derivation.",
+	Short: "生成用于密钥派生的密码本文件",
+	Long:  "生成一个加密安全的随机密码本文件（65536 字节），用于子密钥派生。",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Generate PasswordBookSize (65536) random bytes using crypto/rand
 		data := make([]byte, key.PASSWORD_BOOK_SIZE)
@@ -43,5 +43,5 @@ var createPasswordBookCmd = &cobra.Command{
 }
 
 func init() {
-	createPasswordBookCmd.Flags().StringVarP(&passwordBookOutput, "output", "o", "", "Output file path (if not specified, output to stdout)")
+	createPasswordBookCmd.Flags().StringVarP(&passwordBookOutput, "output", "o", "", "输出文件路径（未指定时输出到标准输出）")
 }

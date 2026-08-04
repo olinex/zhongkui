@@ -34,27 +34,27 @@ type ContextFunc = func() context.Context
 type SchedulerTaskConfig struct {
 	// CronSpec cron 表达式，定义任务的调度时间规则。
 	// 参考: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler
-	CronSpec string `mapstructure:"cronSpec" json:"cron_spec" comment:"cron expression for scheduled task (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // cron 表达式
+	CronSpec string `mapstructure:"cronSpec" json:"cron_spec" comment:"cron 表达式，定义定时任务的调度规则 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // cron 表达式
 
 	// Queue 队列名称，指定任务被发送到的队列。
 	// 默认值: "default"
-	Queue string `mapstructure:"queue" json:"queue" default:"default" comment:"queue name for the scheduled task (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 队列名称
+	Queue string `mapstructure:"queue" json:"queue" default:"default" comment:"定时任务发送到的队列名称 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 队列名称
 
 	// Timeout 任务执行超时时间，指定任务执行的最大时间限制。
 	// 默认值: 24h (24小时)
-	Timeout time.Duration `mapstructure:"timeout" json:"timeout" default:"24h" comment:"timeout for task execution (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 任务执行超时时间
+	Timeout time.Duration `mapstructure:"timeout" json:"timeout" default:"24h" comment:"任务执行超时时间 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 任务执行超时时间
 
 	// MaxRetry 最大重试次数，指定任务失败后的重试次数。
 	// 默认值: 3
-	MaxRetry int `mapstructure:"maxRetry" json:"max_retry" default:"3" comment:"maximum number of retries on failure (ref: https://pkg.go.dev/github.com/hibiken/asynq#Task-Retry)"` // 最大重试次数
+	MaxRetry int `mapstructure:"maxRetry" json:"max_retry" default:"3" comment:"任务失败后的最大重试次数 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Task-Retry)"` // 最大重试次数
 
 	// Enabled 是否启用此定时任务。
 	// 默认值: false
-	Enabled bool `mapstructure:"enabled" json:"enabled" default:"false" comment:"whether the scheduled task is enabled (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 是否启用
+	Enabled bool `mapstructure:"enabled" json:"enabled" default:"false" comment:"是否启用该定时任务 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 是否启用
 
 	// Payload 任务载荷数据，包含任务执行时需要的参数。
 	// 默认值: 空映射 {}
-	Payload map[string]any `mapstructure:"payload" json:"payload" default:"{}" comment:"task payload data (ref: https://pkg.go.dev/github.com/hibiken/asynq#Task-Payload)"` // 任务载荷数据
+	Payload map[string]any `mapstructure:"payload" json:"payload" default:"{}" comment:"任务载荷数据 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Task-Payload)"` // 任务载荷数据
 }
 
 // SchedulerConfig 调度器配置结构，定义了定时任务调度器的全局设置。
@@ -62,33 +62,33 @@ type SchedulerTaskConfig struct {
 type SchedulerConfig struct {
 	// Tasks 定时任务配置映射，键为任务名称，值为对应的任务配置。
 	// 默认值: 空映射 {}
-	Tasks map[string]SchedulerTaskConfig `mapstructure:"tasks" default:"{}" comment:"map of scheduled task configurations (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 定时任务配置映射
+	Tasks map[string]SchedulerTaskConfig `mapstructure:"tasks" default:"{}" comment:"定时任务配置映射，键为任务名称 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 定时任务配置映射
 
 	// Location 时区位置，用于解析 cron 表达式时确定时间参考。
 	// 默认值: "UTC"
-	Location serializer.Location `mapstructure:"location" default:"UTC" comment:"timezone location for cron expressions (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 时区位置
+	Location serializer.Location `mapstructure:"location" default:"UTC" comment:"cron 表达式解析时区 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 时区位置
 
 	// SyncInterval 同步间隔，调度器从数据库同步数据的频率。
 	// 默认值: 1m (1分钟)
-	SyncInterval time.Duration `mapstructure:"syncInterval" default:"1m" comment:"interval to sync scheduler data from database (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 同步间隔
+	SyncInterval time.Duration `mapstructure:"syncInterval" default:"1m" comment:"从数据库同步调度器数据的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 同步间隔
 
 	// HeartbeatInterval 心跳间隔，调度器发送心跳信号的频率。
 	// 默认值: 10s (10秒)
-	HeartbeatInterval time.Duration `mapstructure:"heartbeatInterval" default:"10s" comment:"interval for scheduler heartbeat (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 心跳间隔
+	HeartbeatInterval time.Duration `mapstructure:"heartbeatInterval" default:"10s" comment:"调度器心跳发送间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 心跳间隔
 
 	// ForceFlush 强制刷新，在同步时是否强制刷新调度器队列。
 	// 默认值: false
-	ForceFlush bool `mapstructure:"forceFlush" default:"false" comment:"force flush scheduler queue on sync (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 强制刷新
+	ForceFlush bool `mapstructure:"forceFlush" default:"false" comment:"同步时是否强制刷新调度器队列 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 强制刷新
 }
 
 // CustomConfig 自定义配置结构，定义任务和处理器配置映射。
 type CustomConfig struct {
 	// Tasks 任务配置映射，在任务执行时会动态注入任务函数。
 	// 默认值: 空映射 {}
-	Tasks map[string]map[string]any `mapstructure:"tasks" default:"{}" comment:"map of task configurations"` // 任务配置映射
+	Tasks map[string]map[string]any `mapstructure:"tasks" default:"{}" comment:"任务配置映射，执行时动态注入任务函数"` // 任务配置映射
 	// Processors 处理器配置映射，在任务执行时会动态注入处理器函数。
 	// 默认值: 空映射 {}
-	Processors map[string]map[string]any `mapstructure:"processors" default:"{}" comment:"map of processor configurations"` // 处理器配置映射
+	Processors map[string]map[string]any `mapstructure:"processors" default:"{}" comment:"处理器配置映射，执行时动态注入处理器函数"` // 处理器配置映射
 }
 
 // Config 配置结构，定义了任务队列服务的完整配置参数。
@@ -97,40 +97,40 @@ type Config struct {
 	// Concurrency 最大并发数，控制同时处理的任务数量。
 	// -1 表示无限制，0 表示禁用并发处理。
 	// 默认值: -1
-	Concurrency int `mapstructure:"concurrency" default:"-1" comment:"maximum number of concurrent processing tasks, -1 means unlimited (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Concurrency)"` // 最大并发数，-1 表示无限制
+	Concurrency int `mapstructure:"concurrency" default:"-1" comment:"最大并发处理任务数，-1 表示无限制 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Concurrency)"` // 最大并发数，-1 表示无限制
 
 	// TaskCheckInterval 任务检查间隔，检查队列中是否有新任务的频率。
 	// 默认值: 1s (1秒)
-	TaskCheckInterval time.Duration `mapstructure:"taskCheckInterval" default:"1s" comment:"interval to check for new tasks in queues (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-TaskCheckInterval)"` // 任务检查间隔
+	TaskCheckInterval time.Duration `mapstructure:"taskCheckInterval" default:"1s" comment:"检查队列中新任务的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-TaskCheckInterval)"` // 任务检查间隔
 
 	// HealthCheckInterval 健康检查间隔，检查工作节点健康状态的频率。
 	// 默认值: 15s (15秒)
-	HealthCheckInterval time.Duration `mapstructure:"healthCheckInterval" default:"15s" comment:"interval to check for workers health (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-HealthCheckInterval)"` // 健康检查间隔
+	HealthCheckInterval time.Duration `mapstructure:"healthCheckInterval" default:"15s" comment:"检查工作节点健康状态的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-HealthCheckInterval)"` // 健康检查间隔
 
 	// DelayedTaskCheckInterval 延迟任务检查间隔，检查延迟任务的频率。
 	// 默认值: 5s (5秒)
-	DelayedTaskCheckInterval time.Duration `mapstructure:"delayedTaskCheckInterval" default:"5s" comment:"interval to check for delayed tasks (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-DelayedTaskCheckInterval)"` // 延迟任务检查间隔
+	DelayedTaskCheckInterval time.Duration `mapstructure:"delayedTaskCheckInterval" default:"5s" comment:"检查延迟任务的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-DelayedTaskCheckInterval)"` // 延迟任务检查间隔
 
 	// ShutdownTimeout 关闭超时时间，优雅关闭的最大等待时间。
 	// 默认值: 10s (10秒)
-	ShutdownTimeout time.Duration `mapstructure:"shutdownTimeout" default:"10s" comment:"timeout for graceful shutdown (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 关闭超时时间
+	ShutdownTimeout time.Duration `mapstructure:"shutdownTimeout" default:"10s" comment:"优雅关闭的最大等待时间 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 关闭超时时间
 
 	// Queues 队列优先级配置，定义不同队列的优先级权重。
 	// 数值越高表示优先级越高，格式为 {"队列名": 权重}。
 	// 默认值: {"critical": 6, "default": 3, "low": 1}
-	Queues map[string]int `mapstructure:"queues" default:"{\"critical\": 6, \"default\": 3, \"low\": 1}" comment:"queue priorities, higher number means higher priority (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Queues)"` // 队列优先级配置
+	Queues map[string]int `mapstructure:"queues" default:"{\"critical\": 6, \"default\": 3, \"low\": 1}" comment:"队列优先级，数值越高优先级越高 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Queues)"` // 队列优先级配置
 
 	// StrictPriority 严格优先级模式，是否严格按照队列优先级顺序处理任务。
 	// 如果为 true，则高优先级队列的任务会完全处理完后才处理低优先级队列。
 	// 默认值: false
-	StrictPriority bool `mapstructure:"strictPriority" default:"false" comment:"enable strict priority mode, process queues in order (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-StrictPriority)"` // 严格优先级模式
+	StrictPriority bool `mapstructure:"strictPriority" default:"false" comment:"严格优先级模式，按顺序处理队列 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-StrictPriority)"` // 严格优先级模式
 
 	// Scheduler 调度器配置，包含定时任务的相关设置。
-	Scheduler SchedulerConfig `mapstructure:"scheduler" comment:"scheduler configuration for scheduled tasks (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 调度器配置
+	Scheduler SchedulerConfig `mapstructure:"scheduler" comment:"定时任务调度器配置 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 调度器配置
 
 	// Custom 自定义配置，在任务执行时会动态注入任务和处理器函数。
 	// 默认值: 空映射 {}
-	Custom CustomConfig `mapstructure:"custom" comment:"custom parameters"` //
+	Custom CustomConfig `mapstructure:"custom" comment:"自定义参数，执行时动态注入任务和处理器函数"` //
 }
 
 // ToAsynqConfig 将 pipeline 配置转换为 asynq 原生配置。

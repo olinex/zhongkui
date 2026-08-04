@@ -111,8 +111,25 @@ All providers live under `internal/provider/` and are injected centrally in `roo
 
 - Use `mapstructure` tags with Viper
 - Use `default` struct tag for default values (`github.com/creasty/defaults`)
+- Use `comment` struct tag for config descriptions — the `comment` tag value is rendered by the `config` command (via `DescribeConfig`) and MUST be written in Chinese (中文) as the source of truth
+- Optional English translation: add `config.<path>` entries in `internal/pkg/translate/locales/en.toml` (e.g. `[config.i18n.rootPath]`); `describe config` renders via `I18n.Localize` with the Chinese `comment` as fallback
 - Type-safe extraction via `config.ExtractConfig[T]()`
 - Config prefix constants: `PREFIX = "capture"`
+
+### CLI (Cobra)
+
+- 所有命令的 `Short`/`Long` 帮助描述、flag 的 usage 描述以及交互式提示（`prompt` 标签、pterm 交互输入提示）必须使用中文书写，作为默认语言文案
+- 命令 `Use` 字段保持命令名/语法不变，不参与汉化
+- CLI 文案统一接入 go-i18n（`internal/pkg/translate`），翻译键布局：
+  - `cmd.<path>.short` / `cmd.<path>.long` — 命令帮助描述（如 `cmd.run.web.short`）
+  - `flag.<path>.<name>` — flag usage（如 `flag.create.tls.ttl`）
+  - `cli.<topic>` — 交互式提示与确认文案（如 `cli.confirm.enter`）
+  - 英文翻译维护在 `internal/pkg/translate/locales/en.toml`；未命中翻译时回退到命令定义中的中文原文
+- `prompt:"..."` 标签的交互提示由 `internal/pkg/cliinput` 渲染时按 `cli.input.prompt.<StructName>.<FieldName>` key 翻译（如 `cli.input.prompt.TLSInputs.Name`），中文标签为回退文案；`cliinput` 通过 `SetTranslator` 注入翻译实现（`internal/cmd/i18n.go` 的 `init()` 注入 `cliT`），cliinput 内部固定文案 key 为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CLI_I18N_PREFIX`）
+- 语言切换：环境变量 `ZKI_LANG`（如 `en` / `zh-Hans`），默认 `zh-Hans`；取值统一在 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GLOBAL_PREFIX` 为 `zki` + `envconfig:"LANG"`），CLI 通过 `base.Env.Lang` 读取
+- 翻译入口：`internal/cmd/i18n.go` 的 `cliLang()` / `getCliI18n()` / `cliT()`，命令树本地化在 `Execute()` 中的 `localizeCmdTree()`
+- 覆盖 cobra 内置英文命令：`internal/cmd/help.go`（中文 help 命令）、`internal/cmd/completion.go`（中文 completion 命令），根命令 `init()` 中通过 `RootCmd.SetHelpCommand(helpCmd)` 注册
+- `--help` 不会触发 `PersistentPreRunE`，因此语言切换逻辑必须放在 `Execute()` 入口的 `localizeCmdTree()` 中
 
 ### Protobuf
 

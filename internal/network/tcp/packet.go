@@ -38,6 +38,11 @@ type TCPPacket interface {
 	// 包含时间戳和网络层堆栈信息，用于记录数据包的捕获上下文。
 	FrameInfo() *n.FrameInfo
 
+	// NetworkFrame 返回数据包展平后的网络层帧信息。
+	// 将网络层堆栈平铺为多条NetworkStack记录（同一TopProto，不同Proto/Level/Headers），
+	// 用于记录payload进入TCP缓冲区后的数据来源。
+	NetworkFrame() n.NetworkFrame
+
 	// SrcAddr 返回数据包的源IP地址。
 	// 支持IPv4和IPv6地址格式。
 	SrcAddr() net.IP

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	"zhongkui.com/zhongkui/internal/network/detectors"
@@ -24,6 +25,9 @@ import (
 type Reassembler[P TCPPacket] struct {
 	// TraceID 流跟踪ID，用于关联不同数据包的元数据
 	TraceID serializer.HexUUID
+	// startTime 流的起始时间戳（首个SYN包的捕获时间），
+	// 用于Meta()中填充流的起始时间。
+	startTime time.Time
 	// logger 日志记录器，用于记录TCP Reassembler的运行时信息。
 	logger *logging.Logger
 	// ClientAddr 客户端IP地址
@@ -46,14 +50,17 @@ func newReassembler[P TCPPacket](
 	logger *logging.Logger,
 	first P,
 	maxOutOrderPacketSize int,
+	dstChan chan<- any,
 ) (*Reassembler[P], error) {
-	clientSide, serverSide, err := newSides(ctx, logger, first, maxOutOrderPacketSize)
+	traceID := serializer.NewHexUUIDv4()
+	clientSide, serverSide, err := newSides(ctx, logger, first, maxOutOrderPacketSize, traceID, dstChan)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	recordReassemblerCreated(ctx)
 	return &Reassembler[P]{
-		TraceID:    serializer.NewHexUUIDv4(),
+		TraceID:    traceID,
+		startTime:  first.CaptureTimestamp(),
 		logger:     logger,
 		ClientAddr: first.SrcAddr(),
 		ClientPort: first.SrcPort(),
@@ -73,7 +80,7 @@ func (r *Reassembler[P]) Meta() *detectors.StreamMeta {
 		ServerAddr: r.ServerAddr,
 		ServerPort: r.ServerPort,
 		ServerISN:  r.server.isn,
-		Timestamp:  r.client.frameStack[0].Timestamp,
+		Timestamp:  r.startTime,
 	}
 }
 
@@ -281,6 +288,7 @@ func (r *Reassembler[P]) extractApplication(ctx context.Context, meta *n.BaseMet
 //   - 目标通道应该是缓冲通道，避免阻塞解析器的运行
 //   - 每次收到信号都会尝试提取应用层数据，即使数据可能不完整
 //   - 应用层协议推测器可能需要在多个数据包到达后才能成功识别协议
+//   - NetworkStack帧记录已在Side.appendPacket中即时写入dstChan，无需在此刷新
 func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, signalChan <-chan any, dstChan chan<- any) error {
 	ctx, span := startParseSpan(ctx)
 	defer endSpan(span, nil)
@@ -292,6 +300,7 @@ func (r *Reassembler[P]) parse(ctx context.Context, meta *n.BaseMeta, signalChan
 			return nil
 		case _, ok := <-signalChan:
 			if !ok {
+				// 流结束（signalChan被关闭），正常退出
 				return nil
 			}
 			app, err := r.extractApplication(ctx, meta, streamIndex)

@@ -34,8 +34,8 @@ func extractUsernamePassword(v *viper.Viper) (username, password string, err err
 
 var createUserCmd = &cobra.Command{
 	Use:   "user",
-	Short: "Create user by command line",
-	Long:  "Create a new user. Parameters can be provided via command-line flags. Any missing parameters will be prompted interactively.",
+	Short: "通过命令行创建用户",
+	Long:  "创建一个新用户。参数可以通过命令行标志提供，缺失的参数将交互式提示输入。",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -78,7 +78,7 @@ var createUserCmd = &cobra.Command{
 
 var forceResetPasswordCmd = &cobra.Command{
 	Use:   "force-reset-password",
-	Short: "Force reset user's password by command line",
+	Short: "通过命令行强制重置用户密码",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -111,16 +111,16 @@ var forceResetPasswordCmd = &cobra.Command{
 }
 
 type createAccessKeyInput struct {
-	Username    string        `viper:"username" prompt:"please enter username" binding:"required,min=6,max=32,alphaunicode"`
-	Description string        `viper:"description" prompt:"please enter description" binding:"required,min=6,max=256"`
-	Enabled     bool          `viper:"enabled" prompt:"enable this access key?"`
-	TTL         time.Duration `viper:"ttl" prompt:"please enter ttl (e.g. 8760h, 0 for never)"`
+	Username    string        `viper:"username" prompt:"请输入用户名" binding:"required,min=6,max=32,alphaunicode"`
+	Description string        `viper:"description" prompt:"请输入描述" binding:"required,min=6,max=256"`
+	Enabled     bool          `viper:"enabled" prompt:"是否启用该访问密钥？"`
+	TTL         time.Duration `viper:"ttl" prompt:"请输入有效期 TTL（如 8760h，0 表示永不过期）"`
 }
 
 var createAccessKeyCmd = &cobra.Command{
 	Use:   "access-key",
-	Short: "Create access key for a user",
-	Long:  "Create an API access key for an existing user. Parameters can be provided via command-line flags or prompted interactively.",
+	Short: "为用户创建访问密钥",
+	Long:  "为已有用户创建 API 访问密钥。参数可以通过命令行标志提供，也可以通过交互式提示输入。",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -193,22 +193,22 @@ var createAccessKeyCmd = &cobra.Command{
 
 func init() {
 	flags := createUserCmd.Flags()
-	flags.StringP("username", "u", "", "username for the new user (min 6 chars)")
-	flags.StringP("password", "p", "", "password for the new user (min 8 chars)")
-	flags.StringP("nicklename", "n", "", "nicklename for the new user (min 6 chars)")
-	flags.StringP("email", "e", "", "email for the new user")
-	flags.Duration("timeout", time.Minute, "timeout for inserting data into database")
-	flags.Bool("superuser", false, "create as superuser")
+	flags.StringP("username", "u", "", "新用户的用户名（至少 6 个字符）")
+	flags.StringP("password", "p", "", "新用户的密码（至少 8 个字符）")
+	flags.StringP("nicklename", "n", "", "新用户的昵称（至少 6 个字符）")
+	flags.StringP("email", "e", "", "新用户的邮箱")
+	flags.Duration("timeout", time.Minute, "向数据库写入数据的超时时间")
+	flags.Bool("superuser", false, "以超级用户身份创建")
 
 	flags = forceResetPasswordCmd.Flags()
-	flags.StringP("username", "u", "", "username of the user to reset password for")
-	flags.StringP("password", "p", "", "new password for the user")
-	flags.Duration("timeout", time.Minute, "timeout for inserting data into database")
+	flags.StringP("username", "u", "", "要重置密码的用户名")
+	flags.StringP("password", "p", "", "用户的新密码")
+	flags.Duration("timeout", time.Minute, "向数据库写入数据的超时时间")
 
 	flags = createAccessKeyCmd.Flags()
-	flags.StringP("username", "u", "", "username of the user to create access key for")
-	flags.StringP("description", "d", "", "description of the access key")
-	flags.Bool("enabled", true, "whether the access key is enabled")
-	flags.Duration("ttl", 0, "time-to-live for the access key from now (0 means never expires)")
-	flags.Duration("timeout", time.Minute, "timeout for database operations")
+	flags.StringP("username", "u", "", "要创建访问密钥的用户名")
+	flags.StringP("description", "d", "", "访问密钥的描述")
+	flags.Bool("enabled", true, "访问密钥是否启用")
+	flags.Duration("ttl", 0, "访问密钥自当前时刻起的有效期（0 表示永不过期）")
+	flags.Duration("timeout", time.Minute, "数据库操作超时时间")
 }

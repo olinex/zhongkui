@@ -16,7 +16,7 @@ import (
 
 var webCmd = &cobra.Command{
 	Use:   "web",
-	Short: "Run the zhongkui http web api process",
+	Short: "运行 zhongkui HTTP Web API 进程",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		if err := routes.RouteRegister(ctx, i); err != nil {
@@ -32,7 +32,7 @@ var webCmd = &cobra.Command{
 
 var grpcCmd = &cobra.Command{
 	Use:   "grpc",
-	Short: "Run the zhongkui http grpc api process",
+	Short: "运行 zhongkui gRPC API 进程",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -46,7 +46,7 @@ var grpcCmd = &cobra.Command{
 
 var workerCmd = &cobra.Command{
 	Use:   "worker",
-	Short: "Run the zhongkui worker Process",
+	Short: "运行 zhongkui 工作节点进程",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		worker.Registry(ctx, i)
@@ -75,7 +75,7 @@ var workerCmd = &cobra.Command{
 
 var captureCmd = &cobra.Command{
 	Use:   "capture",
-	Short: "Run the zhongkui capture Process",
+	Short: "运行 zhongkui 抓包进程",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
@@ -100,6 +100,6 @@ var captureCmd = &cobra.Command{
 }
 
 func init() {
-	captureCmd.Flags().Bool("stats-print", false, "enable periodic capture statistics printing to stdout")
-	captureCmd.Flags().Duration("stats-interval", 5*time.Second, "interval between stats print lines (e.g. 5s, 10s, 1m)")
+	captureCmd.Flags().Bool("stats-print", false, "启用周期性抓包统计输出到标准输出")
+	captureCmd.Flags().Duration("stats-interval", 5*time.Second, "统计输出的时间间隔（如 5s、10s、1m）")
 }

@@ -14,8 +14,8 @@ import (
 
 var createCapturerCmd = &cobra.Command{
 	Use:   "capturer",
-	Short: "Create a network capturer",
-	Long:  "Create a new network capturer with device configuration. Parameters can be provided via command-line flags or prompted interactively.",
+	Short: "创建网络抓包器",
+	Long:  "创建带有设备配置的新的网络抓包器。参数可以通过命令行参数提供，或通过交互式提示输入。",
 	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -51,16 +51,16 @@ var createCapturerCmd = &cobra.Command{
 
 func init() {
 	flags := createCapturerCmd.Flags()
-	flags.String("namespace", "", "namespace for the capturer")
-	flags.String("name", "", "name of the capturer")
-	flags.String("version", "", "version of the capturer")
+	flags.String("namespace", "", "抓包器所属命名空间")
+	flags.String("name", "", "抓包器名称")
+	flags.String("version", "", "抓包器版本")
 	// CapturerConfig fields
-	flags.String("device", "", "network device name (e.g. eth0)")
-	flags.Uint32("snap-len", 0, "snap length in bytes")
-	flags.Bool("promisc", false, "enable promiscuous mode")
-	flags.Int32("read-timeout", 0, "read timeout in milliseconds")
-	flags.String("bpf-expr", "", "BPF filter expression (e.g. tcp port 80)")
-	flags.Bool("enabled", false, "enable this capturer")
+	flags.String("device", "", "网络设备名称（如 eth0）")
+	flags.Uint32("snap-len", 0, "抓包长度（字节）")
+	flags.Bool("promisc", false, "启用混杂模式")
+	flags.Int32("read-timeout", 0, "读取超时时间（毫秒）")
+	flags.String("bpf-expr", "", "BPF 过滤表达式（如 tcp port 80）")
+	flags.Bool("enabled", false, "启用该抓包器")
 	// Meta flags
-	flags.Duration("timeout", time.Minute, "timeout for database operations")
+	flags.Duration("timeout", time.Minute, "数据库操作超时时间")
 }

@@ -57,57 +57,57 @@ func rawModels() []any {
 
 var migrateUpCmd = &cobra.Command{
 	Use:   "up",
-	Short: "Apply all pending migrations",
+	Short: "应用所有待执行的迁移",
 	Run:   runMigrateCmd("up"),
 }
 
 var migrateDownCmd = &cobra.Command{
 	Use:   "down",
-	Short: "Rollback all applied migrations",
+	Short: "回滚所有已应用的迁移",
 	Run:   runMigrateCmd("down"),
 }
 
 var migrateUpToCmd = &cobra.Command{
 	Use:   "up-to [version]",
-	Short: "Migrate up to a specific version",
+	Short: "迁移到指定版本",
 	Args:  cobra.ExactArgs(1),
 	Run:   runMigrateCmd("up-to"),
 }
 
 var migrateDownToCmd = &cobra.Command{
 	Use:   "down-to [version]",
-	Short: "Rollback down to a specific version",
+	Short: "回滚到指定版本",
 	Args:  cobra.ExactArgs(1),
 	Run:   runMigrateCmd("down-to"),
 }
 
 var migrateStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "Show migration status",
+	Short: "显示迁移状态",
 	Run:   runMigrateCmd("status"),
 }
 
 var migrateDryRunCmd = &cobra.Command{
 	Use:   "dry-run",
-	Short: "Dry run migrations on a temp database",
+	Short: "在临时数据库上试运行迁移",
 	Run:   runDryRunMigrateCmd,
 }
 
 var migrateDiffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "Compare database schema differences",
+	Short: "比较数据库结构差异",
 	Run:   runDiffMigrateCmd,
 }
 
 var migrateCheckCmd = &cobra.Command{
 	Use:   "check",
-	Short: "Check model definitions against database schema",
+	Short: "检查模型定义与数据库结构是否一致",
 	Run:   runCheckMigrateCmd,
 }
 
 var migrateCreateCmd = &cobra.Command{
 	Use:   "create [name]",
-	Short: "Create a SQL migration file in the migrations directory",
+	Short: "在迁移目录中创建 SQL 迁移文件",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
@@ -413,13 +413,13 @@ func init() {
 		migrateUpCmd, migrateDownCmd, migrateUpToCmd, migrateDownToCmd,
 		migrateStatusCmd, migrateDryRunCmd, migrateDiffCmd, migrateCheckCmd, migrateCreateCmd,
 	} {
-		c.Flags().String("db", "all", "target database: core, raw, all")
-		c.Flags().Bool("verbose", false, "print migration SQL")
-		c.Flags().Duration("timeout", 0, "migration timeout (0 means no timeout)")
+		c.Flags().String("db", "all", "目标数据库：core、raw、all")
+		c.Flags().Bool("verbose", false, "打印迁移 SQL")
+		c.Flags().Duration("timeout", 0, "迁移超时时间（0 表示不超时）")
 	}
 
-	migrateDownCmd.Flags().Bool("force", false, "skip confirmation")
-	migrateDryRunCmd.Flags().Bool("keep-temp", false, "keep temp database")
-	migrateDiffCmd.Flags().Bool("keep-temp", false, "keep temp database")
-	migrateCheckCmd.Flags().Bool("keep-temp", false, "keep temp database")
+	migrateDownCmd.Flags().Bool("force", false, "跳过确认")
+	migrateDryRunCmd.Flags().Bool("keep-temp", false, "保留临时数据库")
+	migrateDiffCmd.Flags().Bool("keep-temp", false, "保留临时数据库")
+	migrateCheckCmd.Flags().Bool("keep-temp", false, "保留临时数据库")
 }

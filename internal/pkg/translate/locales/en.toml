@@ -83,3 +83,922 @@ badUrlParam = "The url param `%s` is invalid cause: %s"
 
 [validator]
 strongPassword = "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?& respectivelyw"
+
+# =============================================================================
+# CLI command descriptions (fallback: Chinese text in internal/cmd)
+# Key layout: cmd.<path>.short/long, flag.<path>.<name>, cli.<topic>
+# Set ZKI_LANG=en to enable English output.
+# =============================================================================
+
+[cmd.short]
+other = "zhongkui root command"
+
+[cmd.help.short]
+other = "Show help for any command"
+
+[cmd.help.long]
+other = "Help shows help for any command in the application.\nType zhongkui help [command path] for full details."
+
+[cmd.completion.short]
+other = "Generate the autocompletion script for the specified shell"
+
+[cmd.completion.long]
+other = "Generate the zhongkui autocompletion script for the specified shell.\nSee each sub-command's help for usage details."
+
+[cmd.completion.bash.short]
+other = "Generate the autocompletion script for the bash shell"
+
+[cmd.completion.bash.long]
+other = "Generate the autocompletion script for the bash shell.\n\nThis script depends on the 'bash-completion' package.\nIf it is not installed already, you can install it via your OS's package manager.\n\nTo load completions in your current shell session:\n\n\tsource <(zhongkui completion bash)\n\nTo load completions for every new session, execute once:\n\n#### Linux:\n\n\tzhongkui completion bash > /etc/bash_completion.d/zhongkui\n\n#### macOS:\n\n\tzhongkui completion bash > $(brew --prefix)/etc/bash_completion.d/zhongkui\n\nYou will need to start a new shell for this setup to take effect."
+
+[cmd.completion.zsh.short]
+other = "Generate the autocompletion script for the zsh shell"
+
+[cmd.completion.zsh.long]
+other = "Generate the autocompletion script for the zsh shell.\n\nIf shell completion is not already enabled in your environment you will need to enable it. You can execute the following once:\n\n\techo \"autoload -U compinit; compinit\" >> ~/.zshrc\n\nTo load completions in your current shell session:\n\n\tsource <(zhongkui completion zsh)\n\nTo load completions for every new session, execute once:\n\n#### Linux:\n\n\tzhongkui completion zsh > \"${fpath[1]}/_zhongkui\"\n\n#### macOS:\n\n\tzhongkui completion zsh > $(brew --prefix)/share/zsh/site-functions/_zhongkui\n\nYou will need to start a new shell for this setup to take effect."
+
+[cmd.completion.fish.short]
+other = "Generate the autocompletion script for the fish shell"
+
+[cmd.completion.fish.long]
+other = "Generate the autocompletion script for the fish shell.\n\nTo load completions in your current shell session:\n\n\tzhongkui completion fish | source\n\nTo load completions for every new session, execute once:\n\n\tzhongkui completion fish > ~/.config/fish/completions/zhongkui.fish\n\nYou will need to start a new shell for this setup to take effect."
+
+[cmd.completion.powershell.short]
+other = "Generate the autocompletion script for PowerShell"
+
+[cmd.completion.powershell.long]
+other = "Generate the autocompletion script for PowerShell.\n\nTo load completions in your current shell session:\n\n\tzhongkui completion powershell | Out-String | Invoke-Expression\n\nTo load completions for every new session, add the output of the above command to your PowerShell profile."
+
+[cmd.version.short]
+other = "Show version information"
+
+[cmd.version.long]
+other = "Show version information, default prints the semantic version, use --verbose for full details"
+
+[cmd.describe.short]
+other = "Show configuration details"
+
+[cmd.describe.config.short]
+other = "Show default configuration item descriptions"
+
+[cmd.describe.scheduler.short]
+other = "Print scheduler task configs from etcd"
+
+[cmd.describe.scheduler.long]
+other = "Print scheduler task configs from etcd.\nUse --name to specify one or more task types. Without --name, list all tasks.\n\nExamples:\n  zhongkui describe scheduler\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble"
+
+[cmd.run.short]
+other = "Run the zhongkui server process"
+
+[cmd.run.web.short]
+other = "Run the zhongkui HTTP Web API process"
+
+[cmd.run.grpc.short]
+other = "Run the zhongkui gRPC API process"
+
+[cmd.run.worker.short]
+other = "Run the zhongkui worker node process"
+
+[cmd.run.capture.short]
+other = "Run the zhongkui capture process"
+
+[cmd.clear.short]
+other = "Clear zhongkui data"
+
+[cmd.clear.database.short]
+other = "Truncate all database tables (rollback all migrations)"
+
+[cmd.clear.etcd.short]
+other = "Clear etcd cache (capturer configs, watermarks, scheduler configs, version cursors)"
+
+[cmd.migrate.short]
+other = "Database migration management"
+
+[cmd.migrate.up.short]
+other = "Apply all pending migrations"
+
+[cmd.migrate.down.short]
+other = "Rollback all applied migrations"
+
+[cmd.migrate.up-to.short]
+other = "Migrate to the specified version"
+
+[cmd.migrate.down-to.short]
+other = "Rollback to the specified version"
+
+[cmd.migrate.status.short]
+other = "Show migration status"
+
+[cmd.migrate.dry-run.short]
+other = "Try running migrations on a temporary database"
+
+[cmd.migrate.diff.short]
+other = "Compare database schema differences"
+
+[cmd.migrate.check.short]
+other = "Check whether model definitions match the database schema"
+
+[cmd.migrate.create.short]
+other = "Create a SQL migration file in the migration directory"
+
+[cmd.create.short]
+other = "Create resources (user, TLS cert, access key)"
+
+[cmd.create.user.short]
+other = "Create a user via the command line"
+
+[cmd.create.user.long]
+other = "Create a new user. Parameters can be provided via command-line flags; missing parameters are prompted interactively."
+
+[cmd.create.tls.short]
+other = "Create a self-signed TLS certificate"
+
+[cmd.create.tls.long]
+other = "Generate a self-signed TLS certificate and key pair. Parameters can be provided via command-line flags or interactive prompts."
+
+[cmd.create.access-key.short]
+other = "Create an access key for a user"
+
+[cmd.create.access-key.long]
+other = "Create an API access key for an existing user. Parameters can be provided via command-line flags or interactive prompts."
+
+[cmd.create.capturer.short]
+other = "Create a network capturer"
+
+[cmd.create.capturer.long]
+other = "Create a new network capturer with device configuration. Parameters can be provided via command-line flags or interactive prompts."
+
+[cmd.create.password-book.short]
+other = "Generate a password book file for key derivation"
+
+[cmd.create.password-book.long]
+other = "Generate a cryptographically secure random password book file (65536 bytes) used for sub-key derivation."
+
+[cmd.create.testcase.short]
+other = "Extract HTTP test cases from a pcap file"
+
+[cmd.create.testcase.long]
+other = "Use tshark to extract HTTP request/response data from a pcap file and generate JSON test case files for verifying TCP reassembly and HTTP protocol detection logic.\n\nEach HTTP transaction (request-response pair) generates one JSON file.\nSupports multiple transactions per TCP stream for HTTP/1.1 keep-alive connections."
+
+[cmd.force-reset-password.short]
+other = "Force reset a user's password via the command line"
+
+# =============================================================================
+# CLI flag usages
+# =============================================================================
+
+[flag.config]
+other = "config file path (e.g. /etc/zhongkui/config.toml)"
+
+[flag.help]
+other = "show help information"
+
+[flag.version.verbose]
+other = "print verbose build information"
+
+[flag.describe.scheduler.name]
+other = "task type name to print (repeatable)"
+
+[flag.migrate.db]
+other = "target database: core, raw, all"
+
+[flag.migrate.verbose]
+other = "print migration SQL"
+
+[flag.migrate.timeout]
+other = "migration timeout (0 means no timeout)"
+
+[flag.migrate.force]
+other = "skip confirmation"
+
+[flag.migrate.keep-temp]
+other = "keep the temporary database"
+
+[flag.run.capture.stats-print]
+other = "periodically print capture stats to stdout"
+
+[flag.run.capture.stats-interval]
+other = "interval for stats output (e.g. 5s, 10s, 1m)"
+
+[flag.clear.database.timeout]
+other = "timeout for clearing the database"
+
+[flag.clear.etcd.timeout]
+other = "timeout for clearing the etcd cache"
+
+[flag.create.user.username]
+other = "username of the new user (at least 6 characters)"
+
+[flag.create.user.password]
+other = "password of the new user (at least 8 characters)"
+
+[flag.create.user.nicklename]
+other = "nickname of the new user (at least 6 characters)"
+
+[flag.create.user.email]
+other = "email of the new user"
+
+[flag.create.user.timeout]
+other = "timeout for writing data to the database"
+
+[flag.create.user.superuser]
+other = "create the user as a superuser"
+
+[flag.force-reset-password.username]
+other = "username whose password to reset"
+
+[flag.force-reset-password.password]
+other = "new password of the user"
+
+[flag.force-reset-password.timeout]
+other = "timeout for writing data to the database"
+
+[flag.create.access-key.username]
+other = "username for whom to create the access key"
+
+[flag.create.access-key.description]
+other = "description of the access key"
+
+[flag.create.access-key.enabled]
+other = "whether the access key is enabled"
+
+[flag.create.access-key.ttl]
+other = "validity period of the access key from now (0 means never expires)"
+
+[flag.create.access-key.timeout]
+other = "database operation timeout"
+
+[flag.create.tls.name]
+other = "TLS file name"
+
+[flag.create.tls.dir-path]
+other = "directory path for storing TLS files"
+
+[flag.create.tls.ttl]
+other = "validity period of the TLS files from now (e.g. 8760h)"
+
+[flag.create.tls.dns-names]
+other = "domain name list of the TLS files (comma separated)"
+
+[flag.create.password-book.output]
+other = "output file path (stdout if not specified)"
+
+[flag.create.capturer.namespace]
+other = "namespace of the capturer"
+
+[flag.create.capturer.name]
+other = "name of the capturer"
+
+[flag.create.capturer.version]
+other = "version of the capturer"
+
+[flag.create.capturer.device]
+other = "network device name (e.g. eth0)"
+
+[flag.create.capturer.snap-len]
+other = "capture length in bytes"
+
+[flag.create.capturer.promisc]
+other = "enable promiscuous mode"
+
+[flag.create.capturer.read-timeout]
+other = "read timeout in milliseconds"
+
+[flag.create.capturer.bpf-expr]
+other = "BPF filter expression (e.g. tcp port 80)"
+
+[flag.create.capturer.enabled]
+other = "enable this capturer"
+
+[flag.create.capturer.timeout]
+other = "database operation timeout"
+
+[flag.create.testcase.pcap]
+other = "pcap file path (required)"
+
+[flag.create.testcase.output]
+other = "output directory for test case files"
+
+[flag.completion.bash.no-descriptions]
+other = "disable completion descriptions"
+
+[flag.completion.zsh.no-descriptions]
+other = "disable completion descriptions"
+
+[flag.completion.fish.no-descriptions]
+other = "disable completion descriptions"
+
+[flag.completion.powershell.no-descriptions]
+other = "disable completion descriptions"
+
+# =============================================================================
+# CLI interactive prompts
+# =============================================================================
+
+[cli.confirm.enter]
+other = "Please enter `{{.Input}}` to confirm"
+
+[cli.confirm.reenter]
+other = "Please re-enter `{{.Input}}` to confirm"
+
+[cli.etcd.select-keys]
+other = "Enter the key numbers to delete (e.g. 1,3,5-{{.Total}}) or 'all' to delete all {{.Total}} keys"
+
+[cli.etcd.no-keys]
+other = "No keys selected, nothing to do"
+
+[cli.etcd.invalid-range]
+other = "Invalid range: {{.Range}}"
+
+[cli.etcd.invalid-number]
+other = "Invalid key number: {{.Number}}"
+
+[cli.etcd.delete-count]
+other = "Will delete {{.Count}} keys:"
+
+[cli.etcd.delete-item]
+other = "  - {{.Key}}"
+
+# -----------------------------------------------------------------------------
+# Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
+# -----------------------------------------------------------------------------
+
+["cli.input.prompt.UserProfileChangeIn.NickleName"]
+other = "Please enter nickname"
+
+["cli.input.prompt.UserProfileChangeIn.Email"]
+other = "Please enter the user's email"
+
+["cli.input.prompt.UserPasswordLoginIn.Username"]
+other = "Please enter username"
+
+["cli.input.prompt.UserPasswordLoginIn.Password"]
+other = "Please enter password"
+
+["cli.input.prompt.CapturerConfigIn.Device"]
+other = "Please enter network device (e.g. eth0)"
+
+["cli.input.prompt.CapturerConfigIn.SnapLen"]
+other = "Please enter snap length in bytes"
+
+["cli.input.prompt.CapturerConfigIn.Promisc"]
+other = "Enable promiscuous mode?"
+
+["cli.input.prompt.CapturerConfigIn.Timeout"]
+other = "Please enter read timeout in milliseconds"
+
+["cli.input.prompt.CapturerConfigIn.BpfExpr"]
+other = "Please enter BPF filter expression (e.g. tcp port 80)"
+
+["cli.input.prompt.CapturerConfigIn.Enabled"]
+other = "Enable this capturer?"
+
+["cli.input.prompt.CapturerCreateIn.Namespace"]
+other = "Please enter namespace"
+
+["cli.input.prompt.CapturerCreateIn.Name"]
+other = "Please enter capturer name"
+
+["cli.input.prompt.CapturerCreateIn.Version"]
+other = "Please enter version"
+
+["cli.input.prompt.TLSInputs.Name"]
+other = "Please enter the TLS name"
+
+["cli.input.prompt.TLSInputs.DirPath"]
+other = "Please enter the directory path"
+
+["cli.input.prompt.TLSInputs.TTL"]
+other = "Please enter the validity TTL (e.g. 8760h means 1 year)"
+
+["cli.input.prompt.TLSInputs.DNSNames"]
+other = "Please enter the DNS domain list"
+
+["cli.input.prompt.createAccessKeyInput.Username"]
+other = "Please enter username"
+
+["cli.input.prompt.createAccessKeyInput.Description"]
+other = "Please enter description"
+
+["cli.input.prompt.createAccessKeyInput.Enabled"]
+other = "Enable this access key?"
+
+["cli.input.prompt.createAccessKeyInput.TTL"]
+other = "Please enter the validity TTL (e.g. 8760h, 0 means never expires)"
+
+["cli.input.prompt.confirm-suffix"]
+other = " (confirm)"
+
+["cli.input.prompt.comma-separated-suffix"]
+other = " (comma-separated)"
+
+["cli.input.mismatch"]
+other = "Values do not match, please try again!"
+
+# =============================================================================
+# Config comment translations (rendered by "describe config")
+# Key layout: config.<path>; Chinese comment in struct tags is the fallback.
+# Set ZKI_LANG=en to enable English output.
+# =============================================================================
+
+["config.zap.{api,database,etcd,grpc,pipeline}.level"]
+other = "Log level: debug, info, warn, error, dpanic, panic, fatal (ref: https://github.com/uber-go/zap/blob/master/level.go)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.development"]
+other = "Enable development mode, use the console encoder and add stack traces for warning and error logs (ref: https://pkg.go.dev/go.uber.org/zap#NewDevelopmentEncoderConfig)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.disableCaller"]
+other = "Disable caller information in log output; when false, file name and line number are printed (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableCaller)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.disableStacktrace"]
+other = "Disable stack traces for ErrorLevel and DPanicLevel logs; when false, stack traces are added to error logs (ref: https://pkg.go.dev/go.uber.org/zap#Config-DisableStacktrace)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.encoding"]
+other = "Log encoding format: json or console (ref: https://pkg.go.dev/go.uber.org/zap#Config-Encoding)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.outputPaths"]
+other = "List of log output targets, supports stdout, stderr and file paths (ref: https://pkg.go.dev/go.uber.org/zap#Config-OutputPaths)"
+
+["config.zap.{api,database,etcd,grpc,pipeline}.errorOutputPaths"]
+other = "List of internal log error output targets (ref: https://pkg.go.dev/go.uber.org/zap#Config-ErrorOutputPaths)"
+
+["config.api.host"]
+other = "HTTP service listen address; 0.0.0.0 listens on all network interfaces"
+
+["config.api.port"]
+other = "HTTP service listen port number"
+
+["config.api.namespace"]
+other = "Multi-namespace (multi-tenant) identification configuration"
+
+["config.api.namespace.headerName"]
+other = "HTTP request header name carrying the namespace identifier"
+
+["config.api.namespace.queryName"]
+other = "URL query parameter name carrying the namespace identifier"
+
+["config.api.namespace.namespace"]
+other = "Cookie name carrying the namespace identifier"
+
+["config.api.auth"]
+other = "JWT authentication configuration"
+
+["config.api.auth.issuer"]
+other = "JWT issuer identifier (iss claim), used to distinguish token sources"
+
+["config.api.auth.subject"]
+other = "JWT subject identifier (sub claim), identifies token purpose"
+
+["config.api.auth.audience"]
+other = "JWT audience list (aud claim), restricts token recipients"
+
+["config.api.auth.tokenPrefix"]
+other = "Token transport prefix, similar to the Bearer scheme in the Authorization header"
+
+["config.api.auth.tokenTimeout"]
+other = "JWT token validity duration; reissue or refresh after expiry"
+
+["config.api.auth.tokenRefreshTimeout"]
+other = "JWT token refresh timeout; a new login is required after timeout"
+
+["config.api.auth.headerName"]
+other = "HTTP request header name carrying the JWT token"
+
+["config.api.auth.cookie"]
+other = "Cookie storage configuration for the JWT token"
+
+["config.api.auth.cookie.name"]
+other = "Cookie name used to identify the JWT token cookie"
+
+["config.api.auth.cookie.domain"]
+other = "Cookie scope domain, restricts the cookie to be sent only under the specified domain"
+
+["config.api.auth.cookie.path"]
+other = "Cookie scope path, restricts the cookie to be sent only under the specified path"
+
+["config.api.auth.cookie.secure"]
+other = "Whether to send the cookie only over HTTPS to prevent token leakage over unencrypted connections"
+
+["config.api.auth.cookie.httpOnly"]
+other = "Whether to forbid JavaScript from accessing the cookie to prevent XSS from stealing tokens"
+
+["config.api.auth.accessKeyCount"]
+other = "Maximum number of access keys allowed per user"
+
+["config.api.secure"]
+other = "HTTP security response header configuration"
+
+["config.api.secure.frameOptions"]
+other = "Whether to allow pages to be embedded in iframes; DENY forbids, SAMEORIGIN allows only same origin"
+
+["config.api.secure.contentSecurityPolicy"]
+other = "Content Security Policy (CSP), controls loadable resource sources to defend against XSS and code injection"
+
+["config.api.secure.xssProtection"]
+other = "Browser built-in XSS filter behavior; 1; mode=block blocks rendering when an attack is detected"
+
+["config.api.secure.strictTransportSecurity"]
+other = "Force browsers to access only over HTTPS, HSTS policy"
+
+["config.api.secure.referrerPolicy"]
+other = "Policy for sending the HTTP Referer request header"
+
+["config.api.secure.contentTypeOptions"]
+other = "Prevent MIME type sniffing; nosniff forces the declared Content-Type"
+
+["config.api.secure.permissionsPolicy"]
+other = "Controls browser feature permissions (geolocation, camera, microphone, etc.)"
+
+["config.api.secure.cors"]
+other = "Cross-Origin Resource Sharing (CORS) policy configuration"
+
+["config.api.secure.cors.allowOrigin"]
+other = "Allowed cross-origin request origins; * allows all origins (not recommended for production)"
+
+["config.api.secure.cors.allowCredentials"]
+other = "Whether to allow cross-origin requests to carry credentials (cookies, HTTP auth, etc.)"
+
+["config.api.secure.cors.allowHeaders"]
+other = "List of allowed cross-origin request headers, must be declared in preflight requests"
+
+["config.api.secure.cors.allowMethods"]
+other = "List of allowed cross-origin HTTP methods"
+
+["config.crypto.source"]
+other = "Master key source: config (config file) or kms (key management service)"
+
+["config.crypto.parent_secret_key"]
+other = "Master key plaintext value (only used when source is config)"
+
+["config.crypto.password_book_path"]
+other = "Password book file path, provides the salt for key derivation"
+
+["config.database.{core,raw}.driver"]
+other = "Database driver name, supported: sqlite, postgres, clickhouse (ref: https://gorm.io/docs/connect.html)"
+
+["config.database.{core,raw}.dsn"]
+other = "Database data source name / connection string (ref: https://gorm.io/docs/connect.html#Connection-String)"
+
+["config.database.{core,raw}.meta"]
+other = "Database GORM configuration options (ref: https://pkg.go.dev/gorm.io/gorm#Config)"
+
+["config.database.{core,raw}.meta.skipDefaultTransaction"]
+other = "Skip the default transaction for each database operation (ref: https://pkg.go.dev/gorm.io/gorm#Config-SkipDefaultTransaction)"
+
+["config.database.{core,raw}.meta.fullSaveAssociations"]
+other = "Save associations when creating or updating (ref: https://pkg.go.dev/gorm.io/gorm#Config-FullSaveAssociations)"
+
+["config.database.{core,raw}.meta.dryRun"]
+other = "Generate SQL only without executing, for precompiled statements (ref: https://pkg.go.dev/gorm.io/gorm#Config-DryRun)"
+
+["config.database.{core,raw}.meta.prepareStmt"]
+other = "Cache prepared statements for subsequent calls (ref: https://pkg.go.dev/gorm.io/gorm#Config-PrepareStmt)"
+
+["config.database.{core,raw}.meta.disableAutomaticPing"]
+other = "Disable automatic ping to check database liveness (ref: https://pkg.go.dev/gorm.io/gorm#Config-DisableAutomaticPing)"
+
+["config.database.{core,raw}.meta.disableForeignKeyConstraintWhenMigrating"]
+other = "Disable foreign key constraints when migrating (ref: https://pkg.go.dev/gorm.io/gorm#Config-DisableForeignKeyConstraintWhenMigrating)"
+
+["config.database.{core,raw}.meta.ignoreRelationshipsWhenMigrating"]
+other = "Ignore relationships when migrating (ref: https://pkg.go.dev/gorm.io/gorm#Config-IgnoreRelationshipsWhenMigrating)"
+
+["config.database.{core,raw}.meta.disableNestedTransaction"]
+other = "Disable nested transactions; roll back to savepoint when already in a transaction (ref: https://pkg.go.dev/gorm.io/gorm#Config-DisableNestedTransaction)"
+
+["config.database.{core,raw}.meta.allowGlobalUpdate"]
+other = "Allow global updates without a where condition (ref: https://pkg.go.dev/gorm.io/gorm#Config-AllowGlobalUpdate)"
+
+["config.database.{core,raw}.meta.queryFields"]
+other = "Select all fields when querying (ref: https://pkg.go.dev/gorm.io/gorm#Config-QueryFields)"
+
+["config.database.{core,raw}.meta.createBatchSize"]
+other = "Batch size for create operations; 0 means no batching (ref: https://pkg.go.dev/gorm.io/gorm#Config-CreateBatchSize)"
+
+["config.database.{core,raw}.meta.translateError"]
+other = "Translate gorm errors into readable error messages (ref: https://pkg.go.dev/gorm.io/gorm#Config-TranslateError)"
+
+["config.database.{core,raw}.meta.propagateUnscoped"]
+other = "Propagate unscoped to nested queries (ref: https://pkg.go.dev/gorm.io/gorm#Config-PropagateUnscoped)"
+
+["config.etcd.endpoints"]
+other = "List of etcd server addresses (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Endpoints)"
+
+["config.etcd.username"]
+other = "etcd authentication username (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Username)"
+
+["config.etcd.password"]
+other = "etcd authentication password (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-Password)"
+
+["config.etcd.autoSyncInterval"]
+other = "Cluster member sync interval; 0 disables it (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-AutoSyncInterval)"
+
+["config.etcd.dialTimeout"]
+other = "etcd client dial timeout (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialTimeout)"
+
+["config.etcd.dialKeepAliveTime"]
+other = "Frequency of keep-alive pings (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTime)"
+
+["config.etcd.dialKeepAliveTimeout"]
+other = "Timeout for keep-alive pings (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-DialKeepAliveTimeout)"
+
+["config.etcd.maxCallSendMsgSize"]
+other = "Maximum bytes for messages sent from client to server (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallSendMsgSize)"
+
+["config.etcd.maxCallRecvMsgSize"]
+other = "Maximum bytes for messages received by client from server (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-MaxCallRecvMsgSize)"
+
+["config.etcd.rejectOldCluster"]
+other = "Reject client requests from clusters with too-old versions (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-RejectOldCluster)"
+
+["config.etcd.tls"]
+other = "TLS secure connection configuration (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.enabled"]
+other = "Enable TLS for etcd client connections (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.domain"]
+other = "TLS server name for certificate verification (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.cert"]
+other = "Inline PEM-encoded certificate content; cannot be used with CertFilePath (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.etcd.tls.certFilePath"]
+other = "PEM-encoded certificate file path; cannot be used with Cert (ref: https://pkg.go.dev/go.etcd.io/etcd/client/v3#Config-TLS)"
+
+["config.redis.{cache,pipeline}.type"]
+other = "Redis connection type: 'normal' for standalone Redis, 'sentinel' for Redis Sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#NewClient)"
+
+["config.redis.{cache,pipeline}.masterName"]
+other = "Redis Sentinel master name, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-MasterName)"
+
+["config.redis.{cache,pipeline}.sentinelAddrs"]
+other = "Sentinel address list, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-SentinelAddrs)"
+
+["config.redis.{cache,pipeline}.sentinelUsername"]
+other = "Sentinel authentication username, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-SentinelUsername)"
+
+["config.redis.{cache,pipeline}.sentinelPassword"]
+other = "Sentinel authentication password, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-SentinelPassword)"
+
+["config.redis.{cache,pipeline}.routeByLatency"]
+other = "Route commands to replicas by latency, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-RouteByLatency)"
+
+["config.redis.{cache,pipeline}.routeRandomly"]
+other = "Randomly route commands to replicas, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-RouteRandomly)"
+
+["config.redis.{cache,pipeline}.replicaOnly"]
+other = "Route read commands to replicas only, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-ReplicaOnly)"
+
+["config.redis.{cache,pipeline}.useDisconnectedReplicas"]
+other = "Use replicas even when disconnected, used when Type is sentinel (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#FailoverOptions-UseDisconnectedReplicas)"
+
+["config.redis.{cache,pipeline}.network"]
+other = "Network type: tcp or unix (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Network)"
+
+["config.redis.{cache,pipeline}.addr"]
+other = "Redis server address, used when Type is normal (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Addr)"
+
+["config.redis.{cache,pipeline}.username"]
+other = "Redis AUTH username (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Username)"
+
+["config.redis.{cache,pipeline}.password"]
+other = "Redis AUTH password (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-Password)"
+
+["config.redis.{cache,pipeline}.clientName"]
+other = "Client name, set via CLIENT SETNAME (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-ClientName)"
+
+["config.redis.{cache,pipeline}.db"]
+other = "Database number (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-DB)"
+
+["config.redis.{cache,pipeline}.poolSize"]
+other = "Maximum number of connections in the pool (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-PoolSize)"
+
+["config.redis.{cache,pipeline}.minIdleConns"]
+other = "Minimum number of idle connections in the pool (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MinIdleConns)"
+
+["config.redis.{cache,pipeline}.maxIdleConns"]
+other = "Maximum number of idle connections in the pool (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxIdleConns)"
+
+["config.redis.{cache,pipeline}.maxActiveConns"]
+other = "Maximum number of active connections in the pool; 0 means unlimited (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxActiveConns)"
+
+["config.redis.{cache,pipeline}.maxRetries"]
+other = "Maximum number of retries (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxRetries)"
+
+["config.redis.{cache,pipeline}.minRetryBackoff"]
+other = "Minimum backoff time between retries (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MinRetryBackoff)"
+
+["config.redis.{cache,pipeline}.maxRetryBackoff"]
+other = "Maximum backoff time between retries (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-MaxRetryBackoff)"
+
+["config.redis.{cache,pipeline}.dialTimeout"]
+other = "Timeout for establishing connections (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-DialTimeout)"
+
+["config.redis.{cache,pipeline}.readTimeout"]
+other = "Timeout for read operations (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-ReadTimeout)"
+
+["config.redis.{cache,pipeline}.writeTimeout"]
+other = "Timeout for write operations (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-WriteTimeout)"
+
+["config.redis.{cache,pipeline}.contextTimeoutEnabled"]
+other = "Whether pool operations use context timeouts (ref: https://pkg.go.dev/github.com/redis/go-redis/v9#Options-ContextTimeoutEnabled)"
+
+["config.s3.endpoint"]
+other = "S3-compatible object storage service endpoint URL (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"
+
+["config.s3.accessKey"]
+other = "S3 authentication access key (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"
+
+["config.s3.secretKey"]
+other = "S3 authentication secret key (ref: https://pkg.go.dev/github.com/minio/minio-go/v7/pkg/credentials#Static)"
+
+["config.s3.bucket"]
+other = "Default bucket name for upload, download, list object operations, etc. (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#Client-BucketExists)"
+
+["config.s3.region"]
+other = "S3 region identifier; auto-detected when empty (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"
+
+["config.s3.useSSL"]
+other = "Whether to use HTTPS for S3 connections (ref: https://pkg.go.dev/github.com/minio/minio-go/v7#New)"
+
+["config.s3.streamingUpload"]
+other = "Whether encrypted uploads use streaming pipeline + multipart; set to false for S3 servers with incomplete multipart support (e.g. RustFS alpha)"
+
+["config.grpc.client.{reporter}.baseconfig"]
+other = "Base configuration: host address and port"
+
+["config.grpc.client.{reporter}.baseconfig.host"]
+other = "gRPC server/client host bind address or remote server address (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.client.{reporter}.baseconfig.port"]
+other = "gRPC server/client port number (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.client.{reporter}.tls"]
+other = "TLS secure connection configuration (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.enabled"]
+other = "Enable TLS for gRPC client connections (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.domain"]
+other = "TLS server name verification (SNI) domain (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.cert"]
+other = "Inline PEM-encoded certificate content; cannot be used with CertFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromCert)"
+
+["config.grpc.client.{reporter}.tls.certFilePath"]
+other = "PEM-encoded certificate file path; cannot be used with Cert (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewClientTLSFromFile)"
+
+["config.grpc.client.{reporter}.auth"]
+other = "Authentication configuration (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"
+
+["config.grpc.client.{reporter}.auth.enabled"]
+other = "Enable authentication for gRPC clients (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"
+
+["config.grpc.client.{reporter}.auth.authorize"]
+other = "Authentication protocol: accessKeySecret means access-key-based authentication (ref: https://pkg.go.dev/google.golang.org/grpc#WithPerRPCCredentials)"
+
+["config.grpc.client.{reporter}.auth.accessKeyID"]
+other = "Access key ID for authentication (ref: internal/pkg/grpc/authenticator.go)"
+
+["config.grpc.client.{reporter}.auth.accessKeySecret"]
+other = "Access key secret for authentication (ref: internal/pkg/grpc/authenticator.go)"
+
+["config.grpc.client.{reporter}.keepalive"]
+other = "Keep-alive connection management configuration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters)"
+
+["config.grpc.client.{reporter}.keepalive.time"]
+other = "Client keep-alive ping interval (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Time)"
+
+["config.grpc.client.{reporter}.keepalive.timeout"]
+other = "Keep-alive ping timeout; closes the connection if no response (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-Timeout)"
+
+["config.grpc.client.{reporter}.keepalive.permitWithoutStream"]
+other = "Whether to allow keep-alive pings without active streams (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ClientParameters-PermitWithoutStream)"
+
+["config.grpc.client.{reporter}.serviceConfig"]
+other = "gRPC service config JSON for load balancing and retry policies (ref: https://pkg.go.dev/google.golang.org/grpc#WithDefaultServiceConfig)"
+
+["config.grpc.server.{reporter}.baseconfig"]
+other = "Base configuration: host address and port"
+
+["config.grpc.server.{reporter}.baseconfig.host"]
+other = "gRPC server/client host bind address or remote server address (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.server.{reporter}.baseconfig.port"]
+other = "gRPC server/client port number (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"
+
+["config.grpc.server.{reporter}.tls"]
+other = "TLS secure connection configuration (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.enabled"]
+other = "Enable TLS for the gRPC server (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.cert"]
+other = "Inline PEM-encoded certificate content; cannot be used with CertFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.key"]
+other = "Inline PEM-encoded private key content; cannot be used with KeyFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.certFilePath"]
+other = "PEM-encoded certificate file path; cannot be used with Cert (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.tls.keyFilePath"]
+other = "PEM-encoded private key file path; cannot be used with Key (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"
+
+["config.grpc.server.{reporter}.auth"]
+other = "gRPC server authentication configuration (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"
+
+["config.grpc.server.{reporter}.auth.accessKeyEnabled"]
+other = "Enable access key authentication (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"
+
+["config.grpc.server.{reporter}.keepalive"]
+other = "Keep-alive connection management configuration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters)"
+
+["config.grpc.server.{reporter}.keepalive.time"]
+other = "Server ping interval, sends keep-alive pings every Time duration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Time)"
+
+["config.grpc.server.{reporter}.keepalive.timeout"]
+other = "Keep-alive ping timeout; closes the connection if no response (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Timeout)"
+
+["config.grpc.server.{reporter}.keepalive.minTime"]
+other = "Minimum time a client must wait before sending keep-alive pings (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-MinTime)"
+
+["config.grpc.server.{reporter}.keepalive.maxConnectionAge"]
+other = "Maximum connection age; closes the connection after, 0 disables (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAge)"
+
+["config.grpc.server.{reporter}.keepalive.maxConnectionAgeGrace"]
+other = "Grace period before forcing connection close after MaxConnectionAge (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAgeGrace)"
+
+["config.grpc.server.{reporter}.keepalive.maxConnectionIdle"]
+other = "Maximum connection idle time; closes after, 0 disables (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionIdle)"
+
+["config.grpc.server.{reporter}.keepalive.permitWithoutStream"]
+other = "Whether to allow keep-alive pings without active streams (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-PermitWithoutStream)"
+
+["config.grpc.server.{reporter}.health"]
+other = "Health check configuration for the gRPC health protocol (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"
+
+["config.grpc.server.{reporter}.health.enabled"]
+other = "Enable the gRPC health check service (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"
+
+["config.grpc.server.{reporter}.health.serviceName"]
+other = "Service name for health checks (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"
+
+["config.pipeline.concurrency"]
+other = "Maximum number of concurrently processed tasks; -1 means unlimited (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Concurrency)"
+
+["config.pipeline.taskCheckInterval"]
+other = "Interval for checking new tasks in the queue (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-TaskCheckInterval)"
+
+["config.pipeline.healthCheckInterval"]
+other = "Interval for checking worker node health status (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-HealthCheckInterval)"
+
+["config.pipeline.delayedTaskCheckInterval"]
+other = "Interval for checking delayed tasks (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-DelayedTaskCheckInterval)"
+
+["config.pipeline.shutdownTimeout"]
+other = "Maximum wait time for graceful shutdown (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"
+
+["config.pipeline.queues"]
+other = "Queue priorities; higher values mean higher priority (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-Queues)"
+
+["config.pipeline.strictPriority"]
+other = "Strict priority mode, processes queues in order (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-StrictPriority)"
+
+["config.pipeline.scheduler"]
+other = "Scheduled task scheduler configuration (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.tasks"]
+other = "Scheduled task configuration map, keyed by task name (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.location"]
+other = "Timezone for parsing cron expressions (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.syncInterval"]
+other = "Interval for syncing scheduler data from the database (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.heartbeatInterval"]
+other = "Scheduler heartbeat interval (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.scheduler.forceFlush"]
+other = "Whether to force-flush the scheduler queue during sync (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"
+
+["config.pipeline.custom"]
+other = "Custom parameters, dynamically injecting task and handler functions at execution"
+
+["config.pipeline.custom.tasks"]
+other = "Task configuration map, dynamically injecting task functions at execution"
+
+["config.pipeline.custom.processors"]
+other = "Handler configuration map, dynamically injecting handler functions at execution"
+
+["config.i18n.rootPath"]
+other = "Root path for storing localization files (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-ParseGlob)"
+
+["config.i18n.defaultLocale"]
+other = "Default language/locale (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"
+
+["config.i18n.supportLocales"]
+other = "List of supported languages/locales (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"
+

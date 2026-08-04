@@ -33,8 +33,8 @@ func getSignalCancel(ctx context.Context) context.CancelFunc {
 }
 
 var RootCmd = &cobra.Command{
-	Use:   "help",
-	Short: "The zhongkui root command lines",
+	Use:   "zhongkui",
+	Short: "zhongkui 根命令",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		var i = do.New()
 		ctx := cmd.Context()
@@ -108,6 +108,9 @@ var RootCmd = &cobra.Command{
 }
 
 func Execute() {
+	// 在命令执行前将命令描述与标志说明本地化为 CLI 语言
+	// 因为 --help 等路径不会触发 PersistentPreRunE，这里必须提前完成翻译
+	localizeCmdTree()
 	if err := RootCmd.Execute(); err != nil {
 		pterm.Error.Println(err)
 	}
@@ -115,7 +118,7 @@ func Execute() {
 
 var describeCmd = &cobra.Command{
 	Use:   "describe",
-	Short: "Show configuration details",
+	Short: "显示配置详情",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -123,7 +126,7 @@ var describeCmd = &cobra.Command{
 
 var runCmd = &cobra.Command{
 	Use:   "run",
-	Short: "Run the zhongkui server process",
+	Short: "运行 zhongkui 服务进程",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -131,7 +134,7 @@ var runCmd = &cobra.Command{
 
 var clearCmd = &cobra.Command{
 	Use:   "clear",
-	Short: "Clear zhongkui data",
+	Short: "清除 zhongkui 数据",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -139,7 +142,7 @@ var clearCmd = &cobra.Command{
 
 var migrateCmd = &cobra.Command{
 	Use:   "migrate",
-	Short: "Database migration management",
+	Short: "数据库迁移管理",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
@@ -147,14 +150,18 @@ var migrateCmd = &cobra.Command{
 
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Create resources (user, tls, access-key)",
+	Short: "创建资源（用户、TLS 证书、访问密钥）",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	},
 }
 
 func init() {
-	RootCmd.PersistentFlags().StringP("config", "c", "", "config file path (e.g. /etc/zhongkui/config.toml)")
+	// 使用中文 help 命令替换 cobra 默认的英文版本
+	RootCmd.SetHelpCommand(helpCmd)
+	RootCmd.PersistentFlags().StringP("config", "c", "", "配置文件路径（如 /etc/zhongkui/config.toml）")
+	// 手动注册 help 标志以覆盖 cobra 自动生成的英文描述 "help for zhongkui"
+	RootCmd.PersistentFlags().BoolP("help", "h", false, "显示帮助信息")
 	RootCmd.AddCommand(versionCmd)
 	// describe
 	describeCmd.AddCommand(describeConfigCmd)

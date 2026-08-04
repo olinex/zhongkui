@@ -27,11 +27,11 @@ type BaseConfig struct {
 	// Host 是gRPC服务器绑定的网络地址。
 	// 默认为"127.0.0.1"用于本地绑定。
 	// 对于服务器：绑定地址，对于客户端：远程服务器地址。
-	Host string `mapstructure:"host" default:"127.0.0.1" comment:"gRPC server/client host bind address or remote server address (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"`
+	Host string `mapstructure:"host" default:"127.0.0.1" comment:"gRPC 服务器/客户端主机绑定地址或远程服务器地址 (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"`
 
 	// Port 是gRPC服务器监听的TCP端口号。
 	// 默认为8081。
-	Port int `mapstructure:"port" default:"8081" comment:"gRPC server/client port (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"`
+	Port int `mapstructure:"port" default:"8081" comment:"gRPC 服务器/客户端端口号 (ref: https://pkg.go.dev/google.golang.org/grpc#Server)"`
 }
 
 // TlsServerConfig 定义用于保护gRPC服务器连接的TLS配置。
@@ -39,23 +39,23 @@ type BaseConfig struct {
 type TlsServerConfig struct {
 	// Enabled 指示是否为gRPC服务器启用TLS加密。
 	// 当为false时，服务器将使用明文连接。
-	Enabled bool `mapstructure:"enabled" default:"false" comment:"enable TLS for gRPC server (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
+	Enabled bool `mapstructure:"enabled" default:"false" comment:"为 gRPC 服务器启用 TLS (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
 
 	// Cert 包含PEM编码的证书字节字符串。
 	// 不能与CertFilePath同时使用。
-	Cert string `mapstructure:"cert" default:"-" comment:"PEM encoded certificate bytes (inline), cannot be used with CertFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
+	Cert string `mapstructure:"cert" default:"-" comment:"内联 PEM 编码证书内容，不能与 CertFilePath 同时使用 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
 
 	// Key 包含PEM编码的私钥字节字符串。
 	// 不能与KeyFilePath同时使用。
-	Key string `mapstructure:"key" default:"-" comment:"PEM encoded private key bytes (inline), cannot be used with KeyFilePath (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
+	Key string `mapstructure:"key" default:"-" comment:"内联 PEM 编码私钥内容，不能与 KeyFilePath 同时使用 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
 
 	// CertFilePath 是包含PEM编码证书的文件路径。
 	// 不能与Cert同时使用。
-	CertFilePath string `mapstructure:"certFilePath" default:"-" comment:"path to PEM encoded certificate file, cannot be used with Cert (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
+	CertFilePath string `mapstructure:"certFilePath" default:"-" comment:"PEM 编码证书文件路径，不能与 Cert 同时使用 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
 
 	// KeyFilePath 是包含PEM编码私钥的文件路径。
 	// 不能与Key同时使用。
-	KeyFilePath string `mapstructure:"keyFilePath" default:"-" comment:"path to PEM encoded private key file, cannot be used with Key (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
+	KeyFilePath string `mapstructure:"keyFilePath" default:"-" comment:"PEM 编码私钥文件路径，不能与 Key 同时使用 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
 }
 
 // ToOption 将TLS配置转换为gRPC ServerOption。
@@ -97,7 +97,7 @@ func (t *TlsServerConfig) ToOption() (option g.ServerOption, err error) {
 type AuthServerConfig struct {
 	// AccessKeyEnabled 指示是否启用访问密钥身份验证。
 	// 当为true时，服务器将要求请求提供有效的访问密钥令牌。
-	AccessKeyEnabled bool `mapstructure:"accessKeyEnabled" default:"false" comment:"enable access key authentication for gRPC server (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"`
+	AccessKeyEnabled bool `mapstructure:"accessKeyEnabled" default:"false" comment:"启用访问密钥身份验证 (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"`
 }
 
 // ToOptions 将身份验证配置转换为gRPC拦截器选项。
@@ -124,36 +124,36 @@ func (a *AuthServerConfig) ToOptions(authenticators map[string]Authenticator) (g
 type KeepaliveServerConfig struct {
 	// Time 是服务器ping间隔。服务器每Time持续时间发送保活ping。
 	// 默认为30秒。
-	Time time.Duration `mapstructure:"time" default:"30s" comment:"server ping interval, sends keepalive pings every Time duration (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Time)"`
+	Time time.Duration `mapstructure:"time" default:"30s" comment:"服务器 ping 间隔，每隔 Time 时长发送保活 ping (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Time)"`
 
 	// Timeout 是保活ping的超时时间。如果在Timeout内未收到ping响应，
 	// 连接将被关闭。
 	// 默认为5秒。
-	Timeout time.Duration `mapstructure:"timeout" default:"5s" comment:"timeout for keepalive pings, closes connection if no response (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Timeout)"`
+	Timeout time.Duration `mapstructure:"timeout" default:"5s" comment:"保活 ping 超时时间，无响应则关闭连接 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-Timeout)"`
 
 	// MinTime 是客户端发送保活ping前必须等待的最短时间。
 	// 这是一个强制执行策略，防止客户端过于频繁地发送ping。
 	// 默认为5秒。
-	MinTime time.Duration `mapstructure:"minTime" default:"5s" comment:"minimum time client must wait before sending keepalive ping (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-MinTime)"`
+	MinTime time.Duration `mapstructure:"minTime" default:"5s" comment:"客户端发送保活 ping 前必须等待的最短时间 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-MinTime)"`
 
 	// MaxConnectionAge 是连接的最大年龄。超过此值的连接将被关闭。
 	// 值为0表示禁用此功能。
 	// 默认为0（禁用）。
-	MaxConnectionAge time.Duration `mapstructure:"maxConnectionAge" default:"0s" comment:"maximum age of connections, closes connection after MaxConnectionAge, 0 means disabled (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAge)"`
+	MaxConnectionAge time.Duration `mapstructure:"maxConnectionAge" default:"0s" comment:"连接最大年龄，超过后关闭连接，0 表示禁用 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAge)"`
 
 	// MaxConnectionAgeGrace 是MaxConnectionAge之后强制关闭连接之前的宽限期。
 	// 这允许现有的RPC完成。
 	// 默认为5秒。
-	MaxConnectionAgeGrace time.Duration `mapstructure:"maxConnectionAgeGrace" default:"5s" comment:"grace period after MaxConnectionAge before force closing connections (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAgeGrace)"`
+	MaxConnectionAgeGrace time.Duration `mapstructure:"maxConnectionAgeGrace" default:"5s" comment:"MaxConnectionAge 之后强制关闭连接前的宽限期 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionAgeGrace)"`
 
 	// MaxConnectionIdle 是连接的最大空闲时间。空闲时间超过此值的连接将被关闭。
 	// 值为0表示禁用此功能。
 	// 默认为5分钟。
-	MaxConnectionIdle time.Duration `mapstructure:"maxConnectionIdle" default:"5m" comment:"maximum idle time, closes connection after MaxConnectionIdle, 0 means disabled (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionIdle)"`
+	MaxConnectionIdle time.Duration `mapstructure:"maxConnectionIdle" default:"5m" comment:"连接最大空闲时间，超过后关闭，0 表示禁用 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters-MaxConnectionIdle)"`
 
 	// PermitWithoutStream 指示当连接上没有活动流时是否允许保活ping。
 	// 默认为true。
-	PermitWithoutStream bool `mapstructure:"permitWithoutStream" default:"true" comment:"allow keepalive pings when there are no active streams (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-PermitWithoutStream)"`
+	PermitWithoutStream bool `mapstructure:"permitWithoutStream" default:"true" comment:"没有活动流时是否允许保活 ping (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#EnforcementPolicy-PermitWithoutStream)"`
 }
 
 // ToOptions 将保活配置转换为gRPC ServerOptions。
@@ -184,34 +184,34 @@ func (k *KeepaliveServerConfig) ToOptions() (g.ServerOption, g.ServerOption) {
 type HealthServerConfig struct {
 	// Enabled 指示是否启用gRPC健康检查服务。
 	// 默认为true。
-	Enabled bool `mapstructure:"enabled" default:"true" comment:"enable gRPC health check service (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"`
+	Enabled bool `mapstructure:"enabled" default:"true" comment:"启用 gRPC 健康检查服务 (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"`
 
 	// ServiceName 是用于健康检查的服务名称。
 	// 在检查特定服务健康状态时使用。
 	// 默认为"healthcheck"。
-	ServiceName string `mapstructure:"serviceName" default:"healthcheck" comment:"service name for health check (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"`
+	ServiceName string `mapstructure:"serviceName" default:"healthcheck" comment:"健康检查的服务名称 (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"`
 }
 
 // ServerConfig 是gRPC服务器的主要配置结构。
 // 将所有配置方面：网络、TLS、身份验证、保活和健康检查组合成一个全面的配置。
 type ServerConfig struct {
-	BaseConfig // 嵌入式基础配置（主机和端口）
+	BaseConfig `comment:"基础配置：主机地址和端口"` // 嵌入式基础配置（主机和端口）
 
 	// TLS配置用于安全连接。
 	// 控制是否以及如何将TLS加密应用于gRPC连接。
-	TLS TlsServerConfig `mapstructure:"tls" comment:"TLS configuration for secure gRPC connection (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
+	TLS TlsServerConfig `mapstructure:"tls" comment:"TLS 安全连接配置 (ref: https://pkg.go.dev/google.golang.org/grpc/credentials#NewServerTLSFromCert)"`
 
 	// 身份验证配置用于保护对gRPC服务器的访问。
 	// 定义传入请求的身份验证方法和要求。
-	Auth AuthServerConfig `mapstructure:"auth" comment:"authentication configuration for gRPC server (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"`
+	Auth AuthServerConfig `mapstructure:"auth" comment:"gRPC 服务器身份验证配置 (ref: https://pkg.go.dev/google.golang.org/grpc#ServerOption)"`
 
 	// 保活配置用于连接管理和健康监控。
 	// 控制连接超时、ping间隔和连接生命周期。
-	Keepalive KeepaliveServerConfig `mapstructure:"keepalive" comment:"keepalive configuration for connection management (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters)"`
+	Keepalive KeepaliveServerConfig `mapstructure:"keepalive" comment:"保活连接管理配置 (ref: https://pkg.go.dev/google.golang.org/grpc/keepalive#ServerParameters)"`
 
 	// gRPC健康协议的健康检查配置。
 	// 启用对gRPC服务器的外部健康监控。
-	Health HealthServerConfig `mapstructure:"health" comment:"health check configuration for gRPC health protocol (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"`
+	Health HealthServerConfig `mapstructure:"health" comment:"gRPC 健康协议的健康检查配置 (ref: https://github.com/grpc/grpc-go/blob/master/health/server.go)"`
 }
 
 // ToOptions 将完整的服务器配置转换为gRPC服务器选项。
