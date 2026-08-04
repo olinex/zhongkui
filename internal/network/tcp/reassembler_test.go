@@ -12,6 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
@@ -53,11 +54,11 @@ func (m *mockDetector) Extract(ctx context.Context, clientReader, serverReader *
 	return clientData[:n1], serverData[:n2], nil
 }
 
-func (m *mockDetector) Build(ctx context.Context, meta *n.BaseMeta,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientFrameStack, serverFrameStack n.FrameStack,
+func (m *mockDetector) Build(ctx context.Context, baseMeta *n.BaseMeta,
+	streamMeta *detectors.StreamMeta,
+	streamIndex uint32,
 	clientPayload, serverPayload any,
+	buildTailer detectors.BuildTailer,
 ) (any, error) {
 	return map[string]any{
 		"client": clientPayload,
@@ -156,14 +157,14 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 	Convey("Test parse handles retryable errors", t, func() {
 
 		Convey("parse should continue when Extract returns ErrDataIncomplete", func() {
-			protocolKey := AppProtocol("test-retryable-incomplete")
+			protocolKey := detectors.AppProtocol("test-retryable-incomplete")
 			detector := &mockDetector{
 				matchReq:   true,
 				matchRsp:   true,
-				extractErr: ErrDataIncomplete,
+				extractErr: detectors.ErrDataIncomplete,
 			}
-			RegisterAppProtocolDetector(protocolKey, detector)
-			defer delete(detectors, protocolKey)
+			detectors.RegisterAppProtocolDetector(protocolKey, detector)
+			defer delete(detectors.Detectors, protocolKey)
 
 			fixture := newTestReassemblerWithHandshake(t, 0x01)
 			defer fixture.rsmCancel()
@@ -200,14 +201,14 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 		})
 
 		Convey("parse should return error on non-retryable error", func() {
-			protocolKey := AppProtocol("test-fatal-error")
+			protocolKey := detectors.AppProtocol("test-fatal-error")
 			detector := &mockDetector{
 				matchReq:   true,
 				matchRsp:   true,
 				extractErr: fatalError,
 			}
-			RegisterAppProtocolDetector(protocolKey, detector)
-			defer delete(detectors, protocolKey)
+			detectors.RegisterAppProtocolDetector(protocolKey, detector)
+			defer delete(detectors.Detectors, protocolKey)
 
 			fixture := newTestReassemblerWithHandshake(t, 0x03)
 			defer fixture.rsmCancel()
@@ -240,13 +241,13 @@ func TestReassemblerParse_RetryableError(t *testing.T) {
 
 		Convey("parse should not exit when no protocol matches (app is nil)", func() {
 			// 注册一个不匹配任何数据的 detector
-			protocolKey := AppProtocol("test-no-match")
+			protocolKey := detectors.AppProtocol("test-no-match")
 			detector := &mockDetector{
 				matchReq: false, // 永远不匹配
 				matchRsp: false,
 			}
-			RegisterAppProtocolDetector(protocolKey, detector)
-			defer delete(detectors, protocolKey)
+			detectors.RegisterAppProtocolDetector(protocolKey, detector)
+			defer delete(detectors.Detectors, protocolKey)
 
 			fixture := newTestReassemblerWithHandshake(t, 0x04)
 			defer fixture.rsmCancel()

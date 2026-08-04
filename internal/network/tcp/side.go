@@ -3,6 +3,7 @@ package tcp
 import (
 	"bufio"
 	"context"
+	"sync"
 	"time"
 
 	"github.com/smallnest/ringbuffer"
@@ -99,6 +100,22 @@ func seqLess(a, b uint32) bool {
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型，用于支持不同的TCP数据包实现
 type Side[P TCPPacket] struct {
+	// counter 用于跟踪已写入和已取数据的偏移量
+	lock sync.Mutex
+
+	// Written 已写入数据的偏移量
+	Written uint64
+
+	// Readed 已读取数据的偏移量
+	Readed uint64
+
+	// PayloadOffsets 已读取数据的偏移量列表
+	PayloadOffsets []uint64
+
+	// CaptureTimestampOffsets 已读取数据的时间戳列表
+	CaptureTimestampOffsets []time.Time
+
+	// logger 日志记录器，用于记录TCP流的事件和错误信息
 	logger *logging.Logger
 
 	// rb 环形缓冲区，用于存储接收到的数据包
@@ -168,15 +185,20 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 		SetBlocking(true)
 	reader, writer := buffer.Pipe()
 	clientSide = &Side[P]{
-		logger:                logger,
-		rb:                    buffer,
-		brw:                   bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               true,
-		state:                 StateSynSent,
-		isn:                   seq,
-		expectedSeq:           seq + 1,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
+		lock:                    sync.Mutex{},
+		Written:                 0,
+		Readed:                  0,
+		PayloadOffsets:          make([]uint64, 0, 32),
+		CaptureTimestampOffsets: make([]time.Time, 0, 32),
+		logger:                  logger,
+		rb:                      buffer,
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		frameStack:              make(n.FrameStack, 0, 32),
+		cli2Srv:                 true,
+		state:                   StateSynSent,
+		isn:                     seq,
+		expectedSeq:             seq + 1,
+		maxOutOrderPacketSize:   maxOutOrderPacketSize,
 	}
 	if err := clientSide.appendPacket(ctx, first); err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -187,15 +209,20 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 		SetBlocking(true)
 	reader, writer = buffer.Pipe()
 	serverSide = &Side[P]{
-		logger:                logger,
-		rb:                    buffer,
-		brw:                   bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
-		frameStack:            make(n.FrameStack, 0, 32),
-		cli2Srv:               false,
-		state:                 StateListen,
-		isn:                   0,
-		expectedSeq:           0,
-		maxOutOrderPacketSize: maxOutOrderPacketSize,
+		lock:                    sync.Mutex{},
+		Written:                 0,
+		Readed:                  0,
+		PayloadOffsets:          make([]uint64, 0, 32),
+		CaptureTimestampOffsets: make([]time.Time, 0, 32),
+		logger:                  logger,
+		rb:                      buffer,
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		frameStack:              make(n.FrameStack, 0, 32),
+		cli2Srv:                 false,
+		state:                   StateListen,
+		isn:                     0,
+		expectedSeq:             0,
+		maxOutOrderPacketSize:   maxOutOrderPacketSize,
 	}
 	return
 }
@@ -320,10 +347,48 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 		return errors.New("payload not fully written to buffer")
 	} else if err := s.brw.Flush(); err != nil {
 		return errors.WithStack(err)
-	} else {
-		recordBytesWritten(ctx, length)
 	}
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	s.Written += uint64(length)
+	s.PayloadOffsets = append(s.PayloadOffsets, uint64(s.Written))
+	s.CaptureTimestampOffsets = append(s.CaptureTimestampOffsets, packet.CaptureTimestamp())
+	recordBytesWritten(ctx, length)
 	return nil
+}
+
+// findIndex 二分法查找给定偏移量对应的索引
+// 该方法用于在PayloadOffsets切片中查找给定偏移量对应的索引
+// 如果未找到匹配项，返回-1
+func (s *Side[P]) findIndex(offset uint64) int {
+	start := 0
+	end := len(s.PayloadOffsets) - 1
+	for start <= end {
+		mid := (start + end) / 2
+		if s.PayloadOffsets[mid] >= offset {
+			end = mid - 1
+		} else {
+			start = mid + 1
+		}
+	}
+	return start
+}
+
+func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayloadOffset uint64, startTimestamp, endTimestamp time.Time) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	startReaded := s.Readed
+	startIndex := s.findIndex(startReaded)
+	startPayloadOffset = s.PayloadOffsets[startIndex]
+	startTimestamp = s.CaptureTimestampOffsets[startIndex]
+	remained := uint64(s.brw.Reader.Buffered() + s.rb.Length())
+	consumed = (s.Written - s.Readed) - remained
+	s.Readed += consumed
+	endReaded := s.Readed
+	endIndex := s.findIndex(endReaded)
+	endPayloadOffset = s.PayloadOffsets[endIndex]
+	endTimestamp = s.CaptureTimestampOffsets[endIndex]
+	return consumed, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
 }
 
 // handshakeWithSecondSynAck 处理TCP三次握手的第二个SYN-ACK包。

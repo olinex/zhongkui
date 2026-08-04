@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"io"
 	"os"
+	"path"
+	"strings"
 
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -78,4 +80,33 @@ func CalculateFileSHA256(filePath string) ([]byte, error) {
 		return nil, errors.WithStack(err)
 	}
 	return hash.Sum(nil), nil
+}
+
+// FileExtension 从 URL 路径中提取文件扩展名
+// 仅当路径末尾的文件名携带扩展名（如 /static/js/app.js -> js、/docs/a.txt -> txt）时，
+// 返回小写扩展名（不含点号）；目录路径（以 / 结尾）、无扩展名路径（如 /api/users）
+// 以及隐藏文件（如 /.gitignore）返回空字符串
+//
+// 参数:
+//
+//	urlPath - URL 路径，如 http.Request.URL.Path
+//
+// 返回值:
+//
+//	string - 文件扩展名（小写、不含点号），非文件资源时返回空字符串
+//
+// 示例:
+//
+//	ext := FileExtension("/static/js/app.js") // "js"
+func FileExtension(urlPath string) string {
+	if strings.HasSuffix(urlPath, "/") {
+		return ""
+	}
+	base := path.Base(urlPath)
+	ext := path.Ext(base)
+	// 排除无扩展名、尾点以及隐藏文件（点开头且整个文件名即为扩展名，如 .gitignore、.well-known）
+	if ext == "" || ext == "." || (strings.HasPrefix(base, ".") && ext == base) {
+		return ""
+	}
+	return strings.ToLower(strings.TrimPrefix(ext, "."))
 }

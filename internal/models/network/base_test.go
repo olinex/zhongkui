@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -245,30 +244,6 @@ func TestPacketMeta(t *testing.T) {
 	})
 }
 
-func TestFusedMeta(t *testing.T) {
-	Convey("Test FusedMeta structure", t, func() {
-		Convey("Should store frame stack", func() {
-			meta := FusedMeta{
-				FrameStack: FrameStack{
-					{
-						Timestamp: time.Now(),
-						LayerStack: LayerStack{
-							{
-								Level:   LayerLevelApplication,
-								Proto:   gopacket.LayerTypePayload,
-								Headers: map[string]any{"type": "http"},
-							},
-						},
-					},
-				},
-			}
-
-			So(len(meta.FrameStack), ShouldEqual, 1)
-			So(meta.FrameStack[0].LayerStack[0].Level, ShouldEqual, LayerLevelApplication)
-		})
-	})
-}
-
 func TestAsPacket(t *testing.T) {
 	Convey("Test AsPacket structure", t, func() {
 		Convey("Should compose all metadata correctly", func() {
@@ -303,44 +278,6 @@ func TestAsPacket(t *testing.T) {
 			So(packet.Truncated, ShouldBeFalse)
 			So(packet.CaptureLength, ShouldEqual, 1514)
 			So(len(packet.LayerStack), ShouldEqual, 1)
-		})
-	})
-}
-
-func TestAsFused(t *testing.T) {
-	Convey("Test AsFused structure", t, func() {
-		Convey("Should compose fused data correctly", func() {
-			sessionID, _ := serializer.HexUUIDv4FromString("12345678-1234-1234-1234-123456789012")
-			now := time.Now()
-
-			fused := AsFused{
-				BaseMeta: BaseMeta{
-					Namespace: "test",
-					Capture:   "eth0",
-					Version:   "v1",
-					SessionID: sessionID,
-				},
-				TimestampMeta: TimestampMeta{Timestamp: now},
-				FusedMeta: FusedMeta{
-					FrameStack: FrameStack{
-						{
-							Timestamp: now.Add(-time.Second),
-							LayerStack: LayerStack{
-								{
-									Level:   LayerLevelTransport,
-									Proto:   layers.LayerTypeTCP,
-									Headers: map[string]any{"syn": true},
-								},
-							},
-						},
-					},
-				},
-			}
-
-			So(fused.Namespace, ShouldEqual, "test")
-			So(fused.Timestamp.Unix(), ShouldEqual, now.Unix())
-			So(len(fused.FrameStack), ShouldEqual, 1)
-			So(fused.FrameStack[0].Timestamp.Unix(), ShouldEqual, now.Add(-time.Second).Unix())
 		})
 	})
 }

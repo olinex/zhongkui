@@ -39,6 +39,10 @@ func (m *mockTCPPacket) StreamID() string {
 	return m.streamID
 }
 
+func (m *mockTCPPacket) CaptureTimestamp() time.Time {
+	return m.frameInfo.Timestamp
+}
+
 func (m *mockTCPPacket) FrameInfo() *n.FrameInfo {
 	return m.frameInfo
 }

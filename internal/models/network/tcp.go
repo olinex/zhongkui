@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"net"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -228,8 +229,14 @@ func NewTCPHeaders(tcp *layers.TCP) *TCPHeaders {
 type PacketIPv4TCP struct {
 	PacketIPv4                     // 嵌入IPv4数据包基础结构
 	TCPHeaders                     // 嵌入TCP头部信息
-	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
+	TCPStreamID string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcp_stream_id"`
 	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
+}
+
+// CaptureTimestamp 返回数据包的捕获时间戳
+// 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
+func (p *PacketIPv4TCP) CaptureTimestamp() time.Time {
+	return p.Timestamp
 }
 
 // StreamID 返回TCP流ID
@@ -259,6 +266,12 @@ func (p *PacketIPv4TCP) FrameInfo() *FrameInfo {
 	}
 }
 
+// NetworkFrame 返回数据包的网络层帧信息
+// 包含数据包的网络层协议栈信息，用于记录数据包的捕获上下文
+func (p *PacketIPv4TCP) NetworkFrame() NetworkFrame {
+	return nil
+}
+
 // GetPayload 返回TCP数据包的载荷数据
 // 从加密存储的 Payload 字段中获取解密后的原始载荷字节
 func (p *PacketIPv4TCP) GetPayload() []byte {
@@ -268,34 +281,20 @@ func (p *PacketIPv4TCP) GetPayload() []byte {
 	return p.Payload.Value()
 }
 
-// FusedIPv4TCP 表示融合的IPv4 TCP数据
-// 组合了FusedIPv4和TCPHeaders，用于存储融合处理后的IPv4 TCP数据
-// 融合数据通常包含聚合统计信息，用于分析和监控
-type FusedIPv4TCP struct {
-	FusedIPv4                      // 嵌入融合IPv4数据基础结构
-	TCPHeaders                     // 嵌入TCP头部信息
-	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
-	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=49915,length=32"`
-}
-
-// StreamID 返回TCP流ID
-// 通过 hash/maphash 对源IP、目的IP、源端口、目的端口计算64-bit哈希，生成唯一的流标识符
-// 流ID用于识别属于同一TCP连接的所有数据包
-// 返回值: 16字符的十六进制64-bit哈希字符串
-func (p *FusedIPv4TCP) StreamID() string {
-	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
-	leftIP, rightIP := net.IP(p.IPv4Src).To4(), net.IP(p.IPv4Dst).To4()
-	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
-}
-
 // PacketIPv6TCP 表示IPv6 TCP数据包
 // 组合了PacketIPv6和TCPHeaders，表示完整的IPv6 TCP数据包信息
 // 包含以太网层、IPv6层和TCP层的所有头部信息
 type PacketIPv6TCP struct {
 	PacketIPv6                     // 嵌入IPv6数据包基础结构
 	TCPHeaders                     // 嵌入TCP头部信息
-	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
+	TCPStreamID string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcp_stream_id"`
 	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
+}
+
+// CaptureTimestamp 返回数据包的捕获时间戳
+// 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
+func (p *PacketIPv6TCP) CaptureTimestamp() time.Time {
+	return p.Timestamp
 }
 
 // StreamID 返回TCP流ID
@@ -334,34 +333,17 @@ func (p *PacketIPv6TCP) GetPayload() []byte {
 	return p.Payload.Value()
 }
 
-// FusedIPv6TCP 表示融合的IPv6 TCP数据
-// 组合了FusedIPv6和TCPHeaders，用于存储融合处理后的IPv6 TCP数据
-// 融合数据通常包含聚合统计信息，用于分析和监控
-type FusedIPv6TCP struct {
-	FusedIPv6                      // 嵌入融合IPv6数据基础结构
-	TCPHeaders                     // 嵌入TCP头部信息
-	TCPStreamID string             `gorm:"column:stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"stream_id"` // TCP流标识符，用于区分不同TCP流
-	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=16648,length=32"`
-}
-
-// StreamID 返回TCP流ID
-// 通过计算源IPv6地址、目的IPv6地址、源端口、目的端口的哈希值生成唯一的流标识符
-// 流ID用于识别属于同一TCP连接的所有数据包，支持IPv6地址
-// 返回值: 16字符的十六进制64-bit哈希字符串
-func (p *FusedIPv6TCP) StreamID() string {
-	leftPort, rightPort := uint16(p.TCPSrcPort), uint16(p.TCPDstPort)
-	leftIP, rightIP := net.IP(p.IPv6Src).To16(), net.IP(p.IPv6Dst).To16()
-	return computeStreamID(leftIP, rightIP, leftPort, rightPort)
-}
-
-type FusedIPv4UDP struct {
-	FusedIPv4                     // 嵌入融合IPv4数据基础结构
-	UDPHeaders                    // 嵌入UDP头部信息
-	Payload    *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=51725,length=32"`
-}
-
-type FusedIPv6UDP struct {
-	FusedIPv6                     // 嵌入融合IPv6数据基础结构
-	UDPHeaders                    // 嵌入UDP头部信息
-	Payload    *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=36791,length=32"`
+// AppTailer 表示应用层的尾部信息
+// 包含客户端和服务器端的已消耗字节数、数据偏移量、时间戳等信息
+type AppTailer struct {
+	ClientConsumed           uint64    `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"client_consumed"`
+	ClientStartPayloadOffset uint64    `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"client_start_payload_offset"`
+	ClientEndPayloadOffset   uint64    `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"client_end_payload_offset"`
+	ClientStartTimestamp     time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"client_start_timestamp"`
+	ClientEndTimestamp       time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"client_end_timestamp"`
+	ServerConsumed           uint64    `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"server_consumed"`
+	ServerStartPayloadOffset uint64    `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"server_start_payload_offset"`
+	ServerEndPayloadOffset   uint64    `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"server_end_payload_offset"`
+	ServerStartTimestamp     time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"server_start_timestamp"`
+	ServerEndTimestamp       time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(ZSTD(3))" json:"server_end_timestamp"`
 }

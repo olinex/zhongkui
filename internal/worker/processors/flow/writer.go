@@ -9,6 +9,7 @@ import (
 
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
@@ -18,12 +19,14 @@ import (
 // 多 Shard 的输出通过 input channel 汇聚，由内部 flush loop 统一批量写入，
 // 避免多个 Shard 各自写 DB 导致小事务过多。
 type BatchWriter struct {
-	mu     sync.Mutex
-	db     *database.DB
-	logger *logging.Logger
-	param  *Param
-	input  chan *network.HttpTransport
-	buffer []*network.HttpTransport
+	mu          sync.Mutex
+	db          *database.DB
+	logger      *logging.Logger
+	param       *Param
+	httpInput   chan *network.HttpTransport
+	httpBuffer  []*network.HttpTransport
+	stackInput  chan *network.NetworkStack
+	stackBuffer []*network.NetworkStack
 }
 
 // NewBatchWriter 创建批量写入器。
@@ -33,32 +36,42 @@ type BatchWriter struct {
 //   - logger: 结构化日志实例
 func NewBatchWriter(db *database.DB, logger *logging.Logger, param *Param) *BatchWriter {
 	return &BatchWriter{
-		db:     db,
-		logger: logger,
-		param:  param,
-		input:  make(chan *network.HttpTransport, param.BatchSize*3),
-		buffer: make([]*network.HttpTransport, 0, param.BatchSize),
+		db:          db,
+		logger:      logger,
+		param:       param,
+		httpInput:   make(chan *network.HttpTransport, param.BatchSize*3),
+		httpBuffer:  make([]*network.HttpTransport, 0, param.BatchSize),
+		stackInput:  make(chan *network.NetworkStack, param.BatchSize*3),
+		stackBuffer: make([]*network.NetworkStack, 0, param.BatchSize),
 	}
 }
 
-// Write 提交一条 HttpTransport 到批量写入队列。
+// WriteHttpTransport 提交一条 HttpTransport 到批量写入队列。
 // 非阻塞：通道满时丢弃（极端情况，避免阻塞 Router 输出流）。
-func (w *BatchWriter) Write(ctx context.Context, t *network.HttpTransport) error {
+func (w *BatchWriter) WriteHttpTransport(ctx context.Context, t *network.HttpTransport) error {
 	timer := time.NewTimer(w.param.FlushInterval * 2)
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():
 		return nil
-	case w.input <- t:
+	case w.httpInput <- t:
 		return nil
 	case <-timer.C:
 		return errors.New("write http transport timeout")
 	}
 }
 
-// Input 返回 input 通道，供外部直接发送数据。
-func (w *BatchWriter) Input() chan<- *network.HttpTransport {
-	return w.input
+func (w *BatchWriter) WriteStack(ctx context.Context, t *network.NetworkStack) error {
+	timer := time.NewTimer(w.param.FlushInterval * 2)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return nil
+	case w.stackInput <- t:
+		return nil
+	case <-timer.C:
+		return errors.New("write stack timeout")
+	}
 }
 
 // Run 启动批量写入主循环，阻塞直到 ctx 取消。
@@ -86,10 +99,18 @@ LOOP:
 			}
 			w.logger.Ctx(ctx).Infof("batch writer shutting down, totalFlushed=%d", totalFlushed)
 			return nil
-		case t := <-w.input:
+		case model := <-w.httpInput:
 			w.mu.Lock()
-			w.buffer = append(w.buffer, t)
-			shouldFlush := len(w.buffer) >= w.param.BatchSize
+			w.httpBuffer = append(w.httpBuffer, model)
+			shouldFlush := len(w.httpBuffer) >= w.param.BatchSize
+			w.mu.Unlock()
+			if !shouldFlush {
+				continue LOOP
+			}
+		case model := <-w.stackInput:
+			w.mu.Lock()
+			w.stackBuffer = append(w.stackBuffer, model)
+			shouldFlush := len(w.stackBuffer) >= w.param.BatchSize
 			w.mu.Unlock()
 			if !shouldFlush {
 				continue LOOP
@@ -104,26 +125,59 @@ LOOP:
 	}
 }
 
-// flush 将当前缓冲区数据批量写入 ClickHouse。
-func (w *BatchWriter) flush(ctx context.Context) error {
+func (w *BatchWriter) flushStack(ctx context.Context) error {
 	w.mu.Lock()
-	if len(w.buffer) == 0 {
+	if len(w.stackBuffer) == 0 {
 		w.mu.Unlock()
 		return nil
 	}
-	batch := w.buffer
+	batch := w.stackBuffer
 	batchSize := len(batch)
-	w.buffer = make([]*network.HttpTransport, 0, w.param.BatchSize)
+	w.stackBuffer = make([]*network.NetworkStack, 0, w.param.BatchSize)
 	w.mu.Unlock()
 
 	if err := w.db.WithContext(ctx).Create(batch).Error; err != nil {
-		w.logger.Ctx(ctx).Errorf("batch writer DB create failed, batchSize=%d, err=%v", batchSize, err)
+		w.logger.Ctx(ctx).Errorf("batch writer stack DB create failed, batchSize=%d, err=%v", batchSize, err)
 		return errors.WithStack(err)
 	}
-	w.logger.Ctx(ctx).Debugf("batch writer flushed, batchSize=%d", batchSize)
+	w.logger.Ctx(ctx).Debugf("batch writer stack flushed, batchSize=%d", batchSize)
+	return nil
+}
+
+// flush 将当前缓冲区数据批量写入 ClickHouse。
+func (w *BatchWriter) flushHttp(ctx context.Context) error {
+	w.mu.Lock()
+	if len(w.httpBuffer) == 0 {
+		w.mu.Unlock()
+		return nil
+	}
+	batch := w.httpBuffer
+	batchSize := len(batch)
+	w.httpBuffer = make([]*network.HttpTransport, 0, w.param.BatchSize)
+	w.mu.Unlock()
+
+	if err := w.db.WithContext(ctx).Create(batch).Error; err != nil {
+		w.logger.Ctx(ctx).Errorf("batch writer http DB create failed, batchSize=%d, err=%v", batchSize, err)
+		return errors.WithStack(err)
+	}
+	w.logger.Ctx(ctx).Debugf("batch writer http flushed, batchSize=%d", batchSize)
+	return nil
+}
+
+func (w *BatchWriter) flush(ctx context.Context) error {
+	wg, ctx := errgroupx.WithContext(ctx)
+	wg.GoNamed("http", func() error {
+		return w.flushHttp(ctx)
+	})
+	wg.GoNamed("stack", func() error {
+		return w.flushStack(ctx)
+	})
+	if err := wg.Wait(); err != nil {
+		return errors.WithStack(err)
+	}
 	return nil
 }
 
 func (w *BatchWriter) Shutdown() {
-	close(w.input)
+	close(w.httpInput)
 }

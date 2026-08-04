@@ -1,13 +1,15 @@
-package tcp
+package detectors
 
 import (
 	"bufio"
 	"context"
 	"net"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // ErrDataIncomplete 表示应用层数据尚未完整到达。
@@ -20,15 +22,44 @@ var ErrDataIncomplete = errors.New("application data incomplete, retry later")
 // 在TCP流重组过程中，系统会根据数据内容自动识别协议类型，并将识别结果存储在此字段中。
 type AppProtocol string
 
-// detectors 存储所有已注册的应用层协议推测器。
-var detectors map[AppProtocol]AppProtocolDetector = make(map[AppProtocol]AppProtocolDetector)
+// Detectors 存储所有已注册的应用层协议推测器。
+var Detectors map[AppProtocol]AppProtocolDetector = make(map[AppProtocol]AppProtocolDetector)
 
 // RegisterAppProtocolDetector 注册一个应用层协议推测器。
 // protocol: 要注册的协议类型
 // detector: 协议推测器实现
 func RegisterAppProtocolDetector(protocol AppProtocol, detector AppProtocolDetector) {
-	detectors[protocol] = detector
+	Detectors[protocol] = detector
 }
+
+type StreamMeta struct {
+	// TraceID 流跟踪ID，用于关联不同数据包的元数据
+	TraceID serializer.HexUUID
+	// ClientAddr 客户端IP地址
+	ClientAddr net.IP
+	// ClientPort 客户端端口号
+	ClientPort layers.TCPPort
+	// ClientISN 客户端ISN
+	ClientISN uint32
+	// ServerAddr 服务端IP地址
+	ServerAddr net.IP
+	// ServerPort 服务端端口号
+	ServerPort layers.TCPPort
+	// ServerISN 服务端ISN
+	ServerISN uint32
+	// Timestamp 重组器第一个 syn 包的时间戳
+	Timestamp time.Time
+}
+
+type AppTailer struct {
+	ClientConsumed, ServerConsumed                   uint64
+	ClientStartPayloadOffset, ClientEndPayloadOffset uint64
+	ClientStartTimestamp, ClientEndTimestamp         time.Time
+	ServerStartPayloadOffset, ServerEndPayloadOffset uint64
+	ServerStartTimestamp, ServerEndTimestamp         time.Time
+}
+
+type BuildTailer func(ctx context.Context) (tailer *AppTailer, err error)
 
 // AppProtocolDetector 应用层协议推测器接口。
 // 用于推测数据包中的应用层协议类型，并判断数据是否完整。
@@ -46,10 +77,10 @@ type AppProtocolDetector interface {
 
 	Build(
 		ctx context.Context,
-		meta *n.BaseMeta,
-		clientAddr, serverAddr net.IP,
-		clientPort, serverPort layers.TCPPort,
-		clientFrameStack, serverFrameStack n.FrameStack,
+		baseMeta *n.BaseMeta,
+		streamMeta *StreamMeta,
+		streamIndex uint32,
 		clientPayload, serverPayload any,
+		buildTailer BuildTailer,
 	) (app any, err error)
 }

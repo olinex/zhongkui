@@ -192,6 +192,33 @@ func (t *Zkcn) Clear(ctx context.Context) error {
 	return nil
 }
 
+// Exists 判断 Zkcn 关联的 S3 对象是否已存在。
+// 用于内容寻址（content-addressed）场景下跳过重复上传，节省带宽与存储。
+//
+// 参数：
+//   - ctx: 上下文，用于控制查询的生命周期和取消
+//
+// 返回值：
+//   - bool: 对象存在返回 true，不存在返回 false
+//   - error: 查询失败（对象不存在以外的错误）时返回错误
+func (t *Zkcn) Exists(ctx context.Context) (bool, error) {
+	_, err := t.client.StatObject(ctx, t.objectKey, minio.StatObjectOptions{})
+	if err == nil {
+		return true, nil
+	}
+	if IsNotExists(err) {
+		return false, nil
+	}
+	return false, errors.WithStack(err)
+}
+
+// NewStagingTempFile 创建一个可被 CleanupOrphanedTempFiles 清理的本地暂存文件。
+// 用于"先落盘、后上传"的场景（如先计算内容摘要再决定是否上传），
+// 崩溃遗留的暂存文件会在应用启动时由 CleanupOrphanedTempFiles 统一清理。
+func NewStagingTempFile() (*os.File, error) {
+	return os.CreateTemp("", zkcnTempPrefix+"*.tmp")
+}
+
 // CleanupOrphanedTempFiles 清理因进程异常退出（SIGKILL／崩溃）而残留的临时文件。
 //
 // 遍历 OS 临时目录（os.TempDir()），删除所有以 "zkcn-upload-" 为前缀的 .tmp 文件。

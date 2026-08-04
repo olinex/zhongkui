@@ -1,17 +1,13 @@
 package samples
 
 import (
-	"bufio"
 	"compress/gzip"
 	"context"
 	"io"
-	"net"
 	"net/http"
 
-	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -19,51 +15,25 @@ import (
 // init 注册测试用的 HTTP 协议检测器
 // 生产环境通过 DI 容器在 initDetectors() 中注册，测试环境需在此手动注册
 func init() {
-	tcp.RegisterAppProtocolDetector(
-		detectors.AppHTTP,
-		&testDetector{},
+	detectors.RegisterAppProtocolDetector(
+		detectors.APP_HTTP,
+		&testDetector{
+			HttpDetector: &detectors.HttpDetector{},
+		},
 	)
 }
 
 // testDetector 测试用 HTTP 协议检测器
-// Detect/Extract 复用生产代码逻辑，Build 阶段不依赖 S3 存储
-type testDetector struct{}
-
-func (d *testDetector) Detect(ctx context.Context, peek []byte, c2s bool) (ok bool, err error) {
-	if len(peek) < 15 {
-		return false, nil
-	}
-	if c2s {
-		return isClient(peek), nil
-	}
-	return isServer(peek), nil
-}
-
-func (d *testDetector) Extract(
-	ctx context.Context,
-	clientReader, serverReader *bufio.Reader,
-) (clientPayload, serverPayload any, err error) {
-	var req *http.Request
-	var rsp *http.Response
-
-	// 先读取请求，再读取响应。将请求对象传给 http.ReadResponse，
-	// 当请求方法为 HEAD 时，Go 标准库会跳过响应体的读取，
-	// 避免因 Content-Length 不匹配（HEAD 响应不应有 body）而错误消费后续流量。
-	if req, err = http.ReadRequest(clientReader); err != nil {
-		return nil, nil, errors.WithStack(err)
-	}
-	if rsp, err = http.ReadResponse(serverReader, req); err != nil {
-		return nil, nil, errors.WithStack(err)
-	}
-	return req, rsp, nil
+// 嵌入检测逻辑复用生产代码，仅覆盖 Build 阶段（不依赖 S3 存储与加密密钥）
+type testDetector struct {
+	*detectors.HttpDetector
 }
 
 func (d *testDetector) Build(
 	ctx context.Context,
-	meta *n.BaseMeta,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientFrameStack, serverFrameStack n.FrameStack,
+	baseMeta *n.BaseMeta,
+	streamMeta *detectors.StreamMeta,
+	streamIndex uint32,
 	clientPayload, serverPayload any,
 ) (app any, err error) {
 	request, ok := clientPayload.(*http.Request)
@@ -75,39 +45,39 @@ func (d *testDetector) Build(
 		return nil, errors.New("serverPayload is not *http.Response")
 	}
 	return buildTestHttpTransport(
-		meta,
-		clientAddr, serverAddr,
-		clientPort, serverPort,
-		clientFrameStack, serverFrameStack,
+		baseMeta, streamMeta, streamIndex,
 		request, response,
 	)
 }
 
 func buildTestHttpTransport(
 	meta *n.BaseMeta,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientFrameStack, serverFrameStack n.FrameStack,
+	streamMeta *detectors.StreamMeta,
+	streamIndex uint32,
 	request *http.Request, response *http.Response,
 ) (*n.HttpTransport, error) {
 	if meta == nil {
 		return nil, errors.New("meta is nil")
 	}
 	var hBase n.HttpBase
-	hBase.ClientIP = serializer.IPAddr(clientAddr)
-	hBase.ClientPort = clientPort
-	hBase.ServerIP = serializer.IPAddr(serverAddr)
-	hBase.ServerPort = serverPort
-	if clientAddr.To4() != nil {
-		hBase.IPVersion = layers.IPProtocolIPv4
+	hBase.ClientIP = serializer.IPAddr(streamMeta.ClientAddr)
+	hBase.ClientPort = streamMeta.ClientPort
+	hBase.ClientISN = streamMeta.ClientISN
+	hBase.ServerIP = serializer.IPAddr(streamMeta.ServerAddr)
+	hBase.ServerPort = streamMeta.ServerPort
+	hBase.ServerISN = streamMeta.ServerISN
+	hBase.StreamIndex = streamIndex
+
+	if streamMeta.ClientAddr.To4() != nil {
+		hBase.IPVersion = 4 // layers.IPProtocolIPv4
 	} else {
-		hBase.IPVersion = layers.IPProtocolIPv6
+		hBase.IPVersion = 6 // layers.IPProtocolIPv6
 	}
 
 	var uri n.HttpURI
 	var requestBody n.HttpRequestBody
 	var requestHeaders n.HttpRequestHeaders
-	if request != nil && len(clientFrameStack) != 0 {
+	if request != nil {
 		if u := request.URL; u != nil {
 			uri = n.HttpURI{
 				URL:    u.String(),
@@ -116,13 +86,9 @@ func buildTestHttpTransport(
 				Path:   u.Path,
 			}
 		}
-		startTime := clientFrameStack[0].Timestamp
-		endTime := clientFrameStack[len(clientFrameStack)-1].Timestamp
 		requestBody = n.HttpRequestBody{
-			Method:      request.Method,
-			ReqBody:     readAllBody(request.Body),
-			ReqTime:     startTime,
-			ReqDuration: endTime.Sub(startTime),
+			Method:  request.Method,
+			ReqBody: readAllBody(request.Body),
 		}
 		requestHeaders = *n.NewHttpRequestHeaders(request)
 		hBase.HttpVersion = request.Proto
@@ -130,20 +96,15 @@ func buildTestHttpTransport(
 
 	var responseBody n.HttpResponseBody
 	var responseHeaders n.HttpResponseHeaders
-	if response != nil && len(serverFrameStack) != 0 {
-		startTime := serverFrameStack[0].Timestamp
-		endTime := serverFrameStack[len(serverFrameStack)-1].Timestamp
+	if response != nil {
 		responseBody = n.HttpResponseBody{
-			RspBody:     readBodyWithEncoding(response.Body, response.Header.Get("Content-Encoding")),
-			RspTime:     startTime,
-			RspDuration: endTime.Sub(startTime),
+			RspBody: readBodyWithEncoding(response.Body, response.Header.Get("Content-Encoding")),
 		}
 		responseHeaders = *n.NewHttpResponseHeaders(response)
 	}
 
 	return &n.HttpTransport{
 		BaseMeta:            *meta,
-		FusedMeta:           n.FusedMeta{FrameStack: sortedFrameStack(clientFrameStack, serverFrameStack)},
 		HttpBase:            hBase,
 		HttpURI:             uri,
 		HttpRequestBody:     requestBody,
@@ -151,26 +112,6 @@ func buildTestHttpTransport(
 		HttpResponseBody:    responseBody,
 		HttpResponseHeaders: responseHeaders,
 	}, nil
-}
-
-// isClient 检查数据是否为 HTTP 请求
-func isClient(peek []byte) bool {
-	methods := []string{"GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH", "CONNECT", "TRACE"}
-	for _, method := range methods {
-		if len(peek) > len(method) && string(peek[:len(method)]) == method && peek[len(method)] == ' ' {
-			return true
-		}
-	}
-	return false
-}
-
-// isServer 检查数据是否为 HTTP 响应
-func isServer(peek []byte) bool {
-	if len(peek) < 9 {
-		return false
-	}
-	prefix := string(peek[:8])
-	return (prefix == "HTTP/1.0" || prefix == "HTTP/1.1") && peek[8] == ' '
 }
 
 func readAllBody(body io.ReadCloser) string {
@@ -191,11 +132,4 @@ func readBodyWithEncoding(body io.ReadCloser, contentEncoding string) string {
 	}
 	data, _ := io.ReadAll(reader)
 	return string(data)
-}
-
-func sortedFrameStack(clientStack, serverStack n.FrameStack) n.FrameStack {
-	result := make(n.FrameStack, 0, len(clientStack)+len(serverStack))
-	result = append(result, clientStack...)
-	result = append(result, serverStack...)
-	return result
 }

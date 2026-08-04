@@ -3,6 +3,7 @@ package tcp
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
@@ -23,6 +24,10 @@ type TCPPacket interface {
 	// 包含命名空间、捕获器名称、版本号和会话ID等元数据字段。
 	// 这些信息用于数据包溯源和系统级管理。
 	Meta() *n.BaseMeta
+
+	// Timestamp 返回数据包的时间戳。
+	// 时间戳用于记录数据包的捕获时间，用于后续的分析和处理。
+	CaptureTimestamp() time.Time
 
 	// StreamID 返回TCP流的唯一标识符。
 	// 该标识符基于源IP、目的IP、源端口和目的端口计算得出，
