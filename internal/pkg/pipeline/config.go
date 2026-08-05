@@ -17,7 +17,7 @@ import (
 const (
 	// PREFIX 配置前缀，用于在配置文件中标识 pipeline 相关配置。
 	// 例如，完整的配置路径为 "pipeline.<pipeline_name>.<config_field>"。
-	PREFIX = "pipeline"
+	Prefix = "pipeline"
 )
 
 // Task 任务类型别名，表示 asynq 任务
@@ -168,7 +168,7 @@ func (c *Config) ToAsynqConfig(
 // 利用反射分析 Config 结构体的字段标签（mapstructure、default、comment），
 // 生成结构化的配置描述列表，供文档或 UI 动态展示配置项。
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
 // ExtractConfig 从 Viper 配置中提取 Pipeline 配置
@@ -176,5 +176,5 @@ func DescribeConfig() config.ConfigDescriptions {
 // 反序列化为 Config 结构体并应用 default 标签的默认值。
 // 返回 (*Config, error)：成功时返回已填充的配置指针，失败时返回错误。
 func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+	return config.ExtractConfig[Config](v, Prefix)
 }

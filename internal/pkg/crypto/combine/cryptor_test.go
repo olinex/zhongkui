@@ -16,7 +16,7 @@ func TestAESGCMEncryptor(t *testing.T) {
 				e, err := NewAESGCMCryptor(key)
 				So(err, ShouldBeNil)
 				So(e, ShouldNotBeNil)
-				So(e.ModeID(), ShouldEqual, MODE_ENCRYPTION_AES_GCM)
+				So(e.ModeID(), ShouldEqual, ModeEncryptionAesGcm)
 			}
 		})
 

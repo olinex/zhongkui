@@ -84,7 +84,7 @@ func GetISO31661Codes() *ISO31661Codes {
 // 注意：Alpha2 索引允许条目的 Alpha2 为空（某些特殊地区可能没有 Alpha2 代码），
 // 但 Alpha3、Name、Numeric 均为必填字段，重复时将触发 panic。
 func newISO31661Codes() (*ISO31661Codes, error) {
-	file, err := embeddedStandards.Open(COUNTRY_AREA)
+	file, err := embeddedStandards.Open(CountryArea)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

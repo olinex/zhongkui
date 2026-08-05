@@ -99,6 +99,11 @@ func (m *mockTCPPacket) GetPayload() []byte {
 	return m.payload
 }
 
+// TcpFingerprint 返回模拟数据包的被动 TCP 指纹，默认无指纹返回 nil
+func (m *mockTCPPacket) TcpFingerprint() *n.PacketTCPFingerprint {
+	return nil
+}
+
 func newMockTCPPacket() *mockTCPPacket {
 	return &mockTCPPacket{
 		meta: &n.BaseMeta{

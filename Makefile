@@ -18,6 +18,12 @@ else
 SUDO := sudo
 endif
 
+# 检测 cargo 可执行文件路径（兼容 PATH 中无 cargo，但 rustup 或已安装工具链存在的情况）：
+# 1) PATH 中的 cargo
+# 2) rustup which cargo（rustup 已装但 cargo 未加入 PATH）
+# 3) $HOME/.rustup/toolchains/<toolchain>/bin/cargo（rustup 安装的工具链目录兜底）
+CARGO_BIN := $(shell command -v cargo 2>/dev/null || { command -v rustup >/dev/null 2>&1 && rustup which cargo 2>/dev/null; } || { ls $(HOME)/.rustup/toolchains/*/bin/cargo 2>/dev/null | head -n 1; })
+
 .PHONY:
 	run-dev-deps
 	stop-dev-deps
@@ -26,6 +32,8 @@ endif
 	protobuf-tools
 	ts-tools
 	pcap-tools
+	rust-tools
+	huginn-build
 	build
 	clean
 	bench-prepare
@@ -233,6 +241,27 @@ pcap-tools:
 			echo "Warning: Unsupported OS '$(UNAME_S)'. Please install libpcap manually." ;; \
 	esac
 
+# rust-tools - 安装 Rust 工具链 (cargo, rustc, rustup)
+# 用法: make rust-tools
+rust-tools:
+	@if [ -n "$(CARGO_BIN)" ]; then \
+		echo "cargo 已安装: $(CARGO_BIN)，跳过"; \
+	else \
+		echo "=== 通过 rustup 安装 Rust 工具链 (stable + minimal profile) ==="; \
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal; \
+		echo "安装完成，请重新打开终端或执行 source \$$HOME/.cargo/env"; \
+	fi
+
+# huginn-build - 构建 Huginn Net Rust FFI 静态库 (build / build-release 的前置依赖)
+# 用法: make huginn-build
+huginn-build:
+	@if [ -z "$(CARGO_BIN)" ]; then \
+		echo "未检测到 cargo/rustup，请先执行 make rust-tools 安装 Rust 工具链"; \
+		exit 1; \
+	fi
+	cd third_party/huginn-net && PATH="$(dir $(CARGO_BIN)):$$PATH" "$(CARGO_BIN)" build --release
+	@echo "Huginn Net FFI 静态库已生成: third_party/huginn-net/target/release/libhuginn_ffi.a"
+
 # clean - 删除自动生成的 protobuf 代码
 # 用法: make clean
 clean:
@@ -284,17 +313,19 @@ LDFLAGS = -X zhongkui.com/zhongkui/internal/pkg/version.SemVer=$(VERSION) \
 
 # build - 编译 zki 二进制 (开发版本，版本号自动取 git commit)
 # 用法: make build
-build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/routes/search.go
-	go build -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
+# 前置依赖: make huginn-build (构建 Huginn Net Rust FFI 静态库)
+build: huginn-build internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/routes/search.go
+	go build -tags huginn -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
 
 # build-release - 编译 release 版本 (需手动指定语义化版本号)
 # 用法: make build-release VERSION=v1.2.3
-build-release:
+# 前置依赖: make huginn-build (构建 Huginn Net Rust FFI 静态库)
+build-release: huginn-build
 	@if [ -z "$(VERSION)" ] || [ "$(VERSION)" = "unknown" ]; then \
 		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make build-release VERSION=v1.2.3"; \
 		exit 1; \
 	fi
-	go build -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
+	go build -tags huginn -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
 
 # run - 使用 go run 直接运行 zki
 # 用法: make run ARGS="version" 或 make run ARGS="run web --config=config.toml"

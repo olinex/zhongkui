@@ -99,6 +99,11 @@ type TCPPacket interface {
 	// 可能包含HTTP、TLS、DNS等应用层协议数据。
 	// 返回字节切片，如果数据包没有载荷则返回空切片。
 	GetPayload() []byte
+
+	// TcpFingerprint 返回数据包携带的被动 TCP 指纹。
+	// 指纹由 pcap 导入阶段对 SYN / SYN-ACK 握手包识别并写入 tcp 包表，
+	// 组包阶段通过本方法透传给流重组器；无指纹时返回 nil。
+	TcpFingerprint() *n.PacketTCPFingerprint
 }
 
 // tcpPacketSeq 返回TCP数据包的序列信息字符串，用于调试和日志输出。

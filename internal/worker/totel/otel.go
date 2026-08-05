@@ -15,16 +15,16 @@ import (
 )
 
 const (
-	SCOPE_NAME              = base.GLOBAL_PREFIX + "-tasks"
-	SPAN_TASK_DO            = "tasks.batch.do"
-	SPAN_TASK_EXTRACT       = "tasks.batch.extract"
-	SPAN_TASK_TRANSFORM     = "tasks.batch.transform"
-	SPAN_TASK_LOAD          = "tasks.batch.load"
-	SPAN_TASK_VERSION_DO    = "tasks.version.do"
-	SPAN_TASK_VERSION_LOAD  = "tasks.version.load"
-	SPAN_TASK_VERSION_STORE = "tasks.version.store"
-	SPAN_TASK_VERSION_NEXT  = "tasks.version.next"
-	SPAN_TASK_VERSION_CLEAR = "tasks.version.clear"
+	ScopeName            = base.GlobalPrefix + "-tasks"
+	SpanTaskDo           = "tasks.batch.do"
+	SpanTaskExtract      = "tasks.batch.extract"
+	SpanTaskTransform    = "tasks.batch.transform"
+	SpanTaskLoad         = "tasks.batch.load"
+	SpanTaskVersionDo    = "tasks.version.do"
+	SpanTaskVersionLoad  = "tasks.version.load"
+	SpanTaskVersionStore = "tasks.version.store"
+	SpanTaskVersionNext  = "tasks.version.next"
+	SpanTaskVersionClear = "tasks.version.clear"
 )
 
 var (
@@ -50,7 +50,7 @@ func InitMetrics() {
 
 func initMetrics() {
 	var err, e error
-	meter := otel.Meter(SCOPE_NAME)
+	meter := otel.Meter(ScopeName)
 
 	taskCounter, e = meter.Int64Counter(
 		"tasks.processed",
@@ -105,8 +105,8 @@ func initMetrics() {
 
 // StartBatchTaskSpan 在批量任务执行时创建 span。
 func StartBatchTaskSpan(ctx context.Context, taskType string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_DO,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskDo,
 		trace.WithAttributes(
 			attribute.String("task.type", taskType),
 		),
@@ -116,8 +116,8 @@ func StartBatchTaskSpan(ctx context.Context, taskType string) (context.Context, 
 
 // StartExtractSpan 在数据提取阶段创建 span。
 func StartExtractSpan(ctx context.Context, taskType string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_EXTRACT,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskExtract,
 		trace.WithAttributes(
 			attribute.String("task.type", taskType),
 		),
@@ -127,8 +127,8 @@ func StartExtractSpan(ctx context.Context, taskType string) (context.Context, tr
 
 // StartTransformSpan 在数据转换阶段创建 span。
 func StartTransformSpan(ctx context.Context, taskType string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_TRANSFORM,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskTransform,
 		trace.WithAttributes(
 			attribute.String("task.type", taskType),
 		),
@@ -138,8 +138,8 @@ func StartTransformSpan(ctx context.Context, taskType string) (context.Context, 
 
 // StartLoadSpan 在数据加载阶段创建 span。
 func StartLoadSpan(ctx context.Context, taskType string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_LOAD,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskLoad,
 		trace.WithAttributes(
 			attribute.String("task.type", taskType),
 		),
@@ -149,8 +149,8 @@ func StartLoadSpan(ctx context.Context, taskType string) (context.Context, trace
 
 // StartVersionTaskSpan 在版本任务执行时创建 span。
 func StartVersionTaskSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_VERSION_DO,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskVersionDo,
 		trace.WithAttributes(
 			attribute.String("task.name", name),
 			attribute.String("task.last_version", lastVersion),
@@ -161,8 +161,8 @@ func StartVersionTaskSpan(ctx context.Context, name, lastVersion string) (contex
 
 // StartVersionLoadSpan 在版本任务加载阶段创建 span。
 func StartVersionLoadSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_VERSION_LOAD,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskVersionLoad,
 		trace.WithAttributes(
 			attribute.String("task.name", name),
 			attribute.String("task.last_version", lastVersion),
@@ -173,8 +173,8 @@ func StartVersionLoadSpan(ctx context.Context, name, lastVersion string) (contex
 
 // StartVersionStoreSpan 在版本任务存储阶段创建 span。
 func StartVersionStoreSpan(ctx context.Context, name, nextVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_VERSION_STORE,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskVersionStore,
 		trace.WithAttributes(
 			attribute.String("task.name", name),
 			attribute.String("task.next_version", nextVersion),
@@ -185,8 +185,8 @@ func StartVersionStoreSpan(ctx context.Context, name, nextVersion string) (conte
 
 // StartVersionNextSpan 在版本任务计算下一版本时创建 span。
 func StartVersionNextSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_VERSION_NEXT,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskVersionNext,
 		trace.WithAttributes(
 			attribute.String("task.name", name),
 			attribute.String("task.last_version", lastVersion),
@@ -197,8 +197,8 @@ func StartVersionNextSpan(ctx context.Context, name, lastVersion string) (contex
 
 // StartVersionClearSpan 在版本任务清理阶段创建 span。
 func StartVersionClearSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_TASK_VERSION_CLEAR,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanTaskVersionClear,
 		trace.WithAttributes(
 			attribute.String("task.name", name),
 			attribute.String("task.last_version", lastVersion),

@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	CORE_DB_LABEL  = "database.core"
-	CORE_DB_PREFIX = "core"
-	RAW_DB_LABEL   = "database.raw"
-	RAW_DB_PREFIX  = "raw"
+	CoreDbLabel  = "database.core"
+	CoreDbPrefix = "core"
+	RawDbLabel   = "database.raw"
+	RawDbPrefix  = "raw"
 )
 
 func newDatabaseProvider(name string) do.Provider[*database.DB] {
@@ -45,41 +45,41 @@ func newDatabaseProvider(name string) do.Provider[*database.DB] {
 }
 
 func NewCoreDatabase() do.Provider[*database.DB] {
-	return newDatabaseProvider(CORE_DB_PREFIX)
+	return newDatabaseProvider(CoreDbPrefix)
 }
 
 func NewRawDatabase() do.Provider[*database.DB] {
-	return newDatabaseProvider(RAW_DB_PREFIX)
+	return newDatabaseProvider(RawDbPrefix)
 }
 
 func InjectCoreDatabase(i do.Injector) {
-	do.ProvideNamed(i, CORE_DB_LABEL, NewCoreDatabase())
+	do.ProvideNamed(i, CoreDbLabel, NewCoreDatabase())
 }
 func InjectRawDatabase(i do.Injector) {
-	do.ProvideNamed(i, RAW_DB_LABEL, NewRawDatabase())
+	do.ProvideNamed(i, RawDbLabel, NewRawDatabase())
 }
 
 func InvokeCoreDatabase(i do.Injector) (*database.DB, error) {
-	return do.InvokeNamed[*database.DB](i, CORE_DB_LABEL)
+	return do.InvokeNamed[*database.DB](i, CoreDbLabel)
 }
 
 func MustInvokeCoreDatabase(i do.Injector) *database.DB {
-	return do.MustInvokeNamed[*database.DB](i, CORE_DB_LABEL)
+	return do.MustInvokeNamed[*database.DB](i, CoreDbLabel)
 }
 
 func InvokeRawDatabase(i do.Injector) (*database.DB, error) {
-	return do.InvokeNamed[*database.DB](i, RAW_DB_LABEL)
+	return do.InvokeNamed[*database.DB](i, RawDbLabel)
 }
 
 func MustInvokeRawDatabase(i do.Injector) *database.DB {
-	return do.MustInvokeNamed[*database.DB](i, RAW_DB_LABEL)
+	return do.MustInvokeNamed[*database.DB](i, RawDbLabel)
 }
 
 func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error) {
 	switch dbName {
-	case CORE_DB_PREFIX:
+	case CoreDbPrefix:
 		return InvokeCoreDatabase(i)
-	case RAW_DB_PREFIX:
+	case RawDbPrefix:
 		return InvokeRawDatabase(i)
 	default:
 		return nil, errors.Newf("unknown database: %s", dbName)
@@ -88,9 +88,9 @@ func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error) {
 
 func MustInvokeDatabase(i do.Injector, dbName string) *database.DB {
 	switch dbName {
-	case CORE_DB_PREFIX:
+	case CoreDbPrefix:
 		return MustInvokeCoreDatabase(i)
-	case RAW_DB_PREFIX:
+	case RawDbPrefix:
 		return MustInvokeRawDatabase(i)
 	default:
 		panic(errors.Newf("unknown database: %s", dbName))
@@ -98,5 +98,5 @@ func MustInvokeDatabase(i do.Injector, dbName string) *database.DB {
 }
 
 func DescribeDatabaseConfig() config.ConfigDescriptions {
-	return database.DescribeConfig(CORE_DB_PREFIX, RAW_DB_PREFIX)
+	return database.DescribeConfig(CoreDbPrefix, RawDbPrefix)
 }

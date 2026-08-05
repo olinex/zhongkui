@@ -50,7 +50,7 @@ type RbacPolicy struct {
 //   - *RbacPolicy: 新创建的组策略实例
 func NewGroupPolicy(group, target, action, effect string) *RbacPolicy {
 	return &RbacPolicy{
-		Ptype: base.POLICY_LABEL,
+		Ptype: base.PolicyLabel,
 		V0:    group,
 		V1:    target,
 		V2:    action,
@@ -70,7 +70,7 @@ func NewGroupPolicy(group, target, action, effect string) *RbacPolicy {
 //   - *RbacPolicy: 新创建的用户策略实例
 func NewUserPolicy(unionID serializer.HexUUID, group, namespace string) *RbacPolicy {
 	return &RbacPolicy{
-		Ptype: base.GROUP_LABEL,
+		Ptype: base.GroupLabel,
 		V0:    unionID.String(),
 		V1:    group,
 		V2:    namespace,
@@ -106,5 +106,3 @@ func NewRbacPolicyTemplate(target, action string) *RbacPolicyTemplate {
 		Action: action,
 	}
 }
-
-

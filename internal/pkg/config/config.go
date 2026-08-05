@@ -101,7 +101,7 @@ func NewViper(
 // NewDefaultViper 创建一个使用默认参数的 Viper 实例。
 //
 // 默认参数说明：
-//   - 环境变量前缀: base.GLOBAL_PREFIX（即 "zki"）
+//   - 环境变量前缀: base.GlobalPrefix（即 "zki"）
 //   - 配置文件名:   "config"
 //   - 配置文件类型: "toml"
 //   - 默认搜索路径: "/etc/zhongkui"
@@ -112,7 +112,7 @@ func NewViper(
 // 返回值：
 //   - *viper.Viper: 使用默认参数初始化的 Viper 实例
 func NewDefaultViper(flags *pflag.FlagSet) *viper.Viper {
-	return NewViper(base.GLOBAL_PREFIX, "config", "toml", "/etc/zhongkui", flags)
+	return NewViper(base.GlobalPrefix, "config", "toml", "/etc/zhongkui", flags)
 }
 
 // NewDefaultViperWithCmd 基于 cobra.Command 创建默认的 Viper 实例。

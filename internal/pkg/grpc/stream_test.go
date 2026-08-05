@@ -78,7 +78,7 @@ func TestNewWrapperServerStream(t *testing.T) {
 			Convey("应该正确设置用户ID", func() {
 				// 由于 userID 字段是私有的，我们通过 Context 方法来验证
 				ctx := wrapper.Context()
-				extractedUserID := ctx.Value(ACCESS_KEY_USER_ID)
+				extractedUserID := ctx.Value(AccessKeyUserId)
 				So(extractedUserID, ShouldEqual, userID)
 			})
 
@@ -99,7 +99,7 @@ func TestWrapperServerStream_Context(t *testing.T) {
 
 			Convey("应该在上下文中包含用户ID", func() {
 				ctx := wrapper.Context()
-				extractedUserID := ctx.Value(ACCESS_KEY_USER_ID)
+				extractedUserID := ctx.Value(AccessKeyUserId)
 				So(extractedUserID, ShouldEqual, userID)
 			})
 
@@ -121,7 +121,7 @@ func TestWrapperServerStream_Context(t *testing.T) {
 
 				Convey("应该同时包含用户ID", func() {
 					ctx := wrapper.Context()
-					extractedUserID := ctx.Value(ACCESS_KEY_USER_ID)
+					extractedUserID := ctx.Value(AccessKeyUserId)
 					So(extractedUserID, ShouldEqual, userID)
 				})
 			})

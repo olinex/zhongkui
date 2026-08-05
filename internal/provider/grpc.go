@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	REPORTER_GRPC_SERVER_LABEL = "grpc.reporter.server"
-	REPORTER_GRPC_CLIENT_LABEL = "grpc.reporter.client"
-	REPORTER_GRPC_PREFIX       = "reporter"
+	ReporterGrpcServerLabel = "grpc.reporter.server"
+	ReporterGrpcClientLabel = "grpc.reporter.client"
+	ReporterGrpcPrefix      = "reporter"
 )
 
 var (
@@ -74,41 +74,41 @@ func grpcClientProvider(name string) do.Provider[*grpc.Client] {
 }
 
 func NewReporterGrpcServer() do.Provider[*grpc.Server] {
-	return grpcServerProvider(REPORTER_GRPC_PREFIX)
+	return grpcServerProvider(ReporterGrpcPrefix)
 }
 
 func NewReporterGrpcClient() do.Provider[*grpc.Client] {
-	return grpcClientProvider(REPORTER_GRPC_PREFIX)
+	return grpcClientProvider(ReporterGrpcPrefix)
 }
 
 func InjectReporterGrpcServer(i do.Injector) {
-	do.ProvideNamed(i, REPORTER_GRPC_SERVER_LABEL, NewReporterGrpcServer())
+	do.ProvideNamed(i, ReporterGrpcServerLabel, NewReporterGrpcServer())
 }
 
 func InjectReporterGrpcClient(i do.Injector) {
-	do.ProvideNamedTransient(i, REPORTER_GRPC_CLIENT_LABEL, NewReporterGrpcClient())
+	do.ProvideNamedTransient(i, ReporterGrpcClientLabel, NewReporterGrpcClient())
 }
 
 func InvokeReporterGrpcServer(i do.Injector) (*grpc.Server, error) {
-	return do.InvokeNamed[*grpc.Server](i, REPORTER_GRPC_SERVER_LABEL)
+	return do.InvokeNamed[*grpc.Server](i, ReporterGrpcServerLabel)
 }
 
 func InvokeReporterGrpcClient(i do.Injector) (*grpc.Client, error) {
-	return do.InvokeNamed[*grpc.Client](i, REPORTER_GRPC_CLIENT_LABEL)
+	return do.InvokeNamed[*grpc.Client](i, ReporterGrpcClientLabel)
 }
 
 func MustInvokeReporterGrpcServer(i do.Injector) *grpc.Server {
-	return do.MustInvokeNamed[*grpc.Server](i, REPORTER_GRPC_SERVER_LABEL)
+	return do.MustInvokeNamed[*grpc.Server](i, ReporterGrpcServerLabel)
 }
 
 func MustInvokeReporterGrpcClient(i do.Injector) *grpc.Client {
-	return do.MustInvokeNamed[*grpc.Client](i, REPORTER_GRPC_CLIENT_LABEL)
+	return do.MustInvokeNamed[*grpc.Client](i, ReporterGrpcClientLabel)
 }
 
 func DescribeGrpcServerConfig() config.ConfigDescriptions {
-	return grpc.DescribeServerConfig(REPORTER_GRPC_PREFIX)
+	return grpc.DescribeServerConfig(ReporterGrpcPrefix)
 }
 
 func DescribeGrpcClientConfig() config.ConfigDescriptions {
-	return grpc.DescribeClientConfig(REPORTER_GRPC_PREFIX)
+	return grpc.DescribeClientConfig(ReporterGrpcPrefix)
 }

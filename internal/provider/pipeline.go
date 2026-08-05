@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	// CONTEXT_SCOPE_NAME 上下文中的注入器键名
+	// ContextScopeName 上下文中的注入器键名
 	// 用于存储任务上下文中的注入器实例
-	CONTEXT_SCOPE_NAME = "ctx_scope"
+	ContextScopeName = "ctx_scope"
 )
 
 // TaskContext 创建任务上下文的函数。
@@ -29,13 +29,13 @@ func TaskContext(ctx context.Context, i do.Injector) pipeline.ContextFunc {
 			panic(err)
 		}
 		scope := i.Scope(fmt.Sprintf("task:%s", suffix))
-		return context.WithValue(ctx, CONTEXT_SCOPE_NAME, scope)
+		return context.WithValue(ctx, ContextScopeName, scope)
 	}
 }
 
 // GetScope 从上下文中获取注入器实例。
 func GetScope(ctx context.Context) *do.Scope {
-	return ctx.Value(CONTEXT_SCOPE_NAME).(*do.Scope)
+	return ctx.Value(ContextScopeName).(*do.Scope)
 }
 
 func initDetectors(i do.Injector) error {
@@ -45,7 +45,7 @@ func initDetectors(i do.Injector) error {
 		return errors.WithStack(err)
 	} else {
 		detectors.RegisterAppProtocolDetector(
-			detectors.APP_HTTP,
+			detectors.AppHttp,
 			detectors.NewHttpDetector(client, kd),
 		)
 		return nil

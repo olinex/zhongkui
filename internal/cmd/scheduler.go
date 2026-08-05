@@ -29,7 +29,7 @@ var describeSchedulerCmd = &cobra.Command{
 		client := provider.MustInvokeEtcdClient(i)
 
 		if len(names) == 0 {
-			rsp, err := client.Get(ctx, pipeline.SCHEDULER_CFG_ETCD_PREFIX, clientv3.WithPrefix())
+			rsp, err := client.Get(ctx, pipeline.SchedulerCfgEtcdPrefix, clientv3.WithPrefix())
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
@@ -38,10 +38,10 @@ var describeSchedulerCmd = &cobra.Command{
 				pterm.Warning.Println("no scheduled task configs found in etcd")
 				return
 			}
-			renderSchedulerTable(pipeline.SCHEDULER_CFG_ETCD_PREFIX, rsp)
+			renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp)
 		}
 		for _, name := range names {
-			rsp, err := client.Get(ctx, pipeline.SCHEDULER_CFG_ETCD_PREFIX+name)
+			rsp, err := client.Get(ctx, pipeline.SchedulerCfgEtcdPrefix+name)
 			if err != nil {
 				pterm.Error.Println(err.Error())
 				return
@@ -50,7 +50,7 @@ var describeSchedulerCmd = &cobra.Command{
 				pterm.Warning.Printf("scheduled task config not found: %s\n", name)
 				continue
 			}
-			if err := renderSchedulerTable(pipeline.SCHEDULER_CFG_ETCD_PREFIX, rsp); err != nil {
+			if err := renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp); err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}

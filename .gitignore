@@ -36,6 +36,9 @@ vendor/
 # Go test coverage
 coverage.out
 
+# Rust / Huginn Net specific
+third_party/huginn-net/target/
+
 # TypeScript / Vue specific
 node_modules/
 dist/

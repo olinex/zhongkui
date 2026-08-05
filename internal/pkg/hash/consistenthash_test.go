@@ -17,10 +17,10 @@ func TestNewConsistentHash(t *testing.T) {
 			So(ch.MemberCount(), ShouldEqual, 0)
 		})
 
-		Convey("NewConsistentHashWithDefaultVnodes 应使用 DEFAULT_VNODES(128)", func() {
+		Convey("NewConsistentHashWithDefaultVnodes 应使用 DefaultVnodes(128)", func() {
 			ch := NewConsistentHashWithDefaultVnodes()
 			So(ch, ShouldNotBeNil)
-			So(ch.vnodes, ShouldEqual, DEFAULT_VNODES)
+			So(ch.vnodes, ShouldEqual, DefaultVnodes)
 			So(ch.vnodes, ShouldEqual, 128)
 			So(ch.MemberCount(), ShouldEqual, 0)
 		})

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	PREFIX = "database"
+	Prefix = "database"
 )
 
 // MetaConfig 包含 GORM 数据库连接的元配置选项
@@ -71,9 +71,9 @@ type Config struct {
 }
 
 func DescribeConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
+	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, Prefix, strings.Join(names, ",")))
 }
 
 func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf("%s.%s", PREFIX, name))
+	return config.ExtractConfig[Config](v, fmt.Sprintf("%s.%s", Prefix, name))
 }

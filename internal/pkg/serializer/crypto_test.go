@@ -88,7 +88,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 		Convey("key length too short from tag", func() {
 			type BadModel struct {
-				// length=16 = MIN_KEY_LENGTH, should fail
+				// length=16 = MinKeyLength, should fail
 				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=16"`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})

@@ -51,20 +51,20 @@ var embeddedCollections embed.FS
 const (
 	// 以下为 ISO 标准数据文件的路径常量，用于从 embeddedStandards 中读取对应文件
 
-	// LANGUAGE 指向 ISO 639-2 语言代码数据文件，包含语言的 Alpha-2、Alpha-3 代码及名称。
-	LANGUAGE = "standards/iso_639-2.json"
+	// Language 指向 ISO 639-2 语言代码数据文件，包含语言的 Alpha-2、Alpha-3 代码及名称。
+	Language = "standards/iso_639-2.json"
 
-	// COUNTRY_AREA 指向 ISO 3166-1 国家/地区代码数据文件，包含国家/地区的 Alpha-2、Alpha-3、数字代码及名称。
-	COUNTRY_AREA = "standards/iso_3166-1.json"
+	// CountryArea 指向 ISO 3166-1 国家/地区代码数据文件，包含国家/地区的 Alpha-2、Alpha-3、数字代码及名称。
+	CountryArea = "standards/iso_3166-1.json"
 
-	// CURRENCY 指向 ISO 4217 货币代码数据文件，包含货币的 Alpha-3 代码、数字代码及名称。
-	CURRENCY = "standards/iso_4217.json"
+	// Currency 指向 ISO 4217 货币代码数据文件，包含货币的 Alpha-3 代码、数字代码及名称。
+	Currency = "standards/iso_4217.json"
 
-	// SCRIPT_LANGUAGE 指向 ISO 15924 书写系统代码数据文件，包含书写系统的 Alpha-4 代码、数字代码及名称。
-	SCRIPT_LANGUAGE = "standards/iso_15924.json"
+	// ScriptLanguage 指向 ISO 15924 书写系统代码数据文件，包含书写系统的 Alpha-4 代码、数字代码及名称。
+	ScriptLanguage = "standards/iso_15924.json"
 
 	// 以下为集合类数据文件的路径常量，用于从 embeddedCollections 中读取对应文件
 
-	// FILENAME_EXTENSION 指向文件扩展名集合数据文件，包含文件类型名称与其对应扩展名列表的映射。
-	FILENAME_EXTENSION = "collections/filename_extensions.json"
+	// FilenameExtension 指向文件扩展名集合数据文件，包含文件类型名称与其对应扩展名列表的映射。
+	FilenameExtension = "collections/filename_extensions.json"
 )

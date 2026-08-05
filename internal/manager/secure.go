@@ -32,13 +32,13 @@ import (
 //   - gin.HandlerFunc: Gin 框架中间件处理函数
 func SecureHeadersMiddleware(cfg *SecureConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header(base.HDR_CONTENT_SECURITY_POLICY, cfg.ContentSecurityPolicy)
-		c.Header(base.HDR_PERMISSIONS_POLICY, cfg.PermissionsPolicy)
-		c.Header(base.HDR_REFERRER_POLICY, cfg.ReferrerPolicy)
-		c.Header(base.HDR_STRICT_TRANSPORT_SECURITY, cfg.StrictTransportSecurity)
-		c.Header(base.HDR_X_CONTENT_TYPE_OPTIONS, cfg.XContentTypeOptions)
-		c.Header(base.HDR_X_FRAME_OPTIONS, cfg.XFrameOptions)
-		c.Header(base.HDR_X_XSS_PROTECTION, cfg.XXSSProtection)
+		c.Header(base.HdrContentSecurityPolicy, cfg.ContentSecurityPolicy)
+		c.Header(base.HdrPermissionsPolicy, cfg.PermissionsPolicy)
+		c.Header(base.HdrReferrerPolicy, cfg.ReferrerPolicy)
+		c.Header(base.HdrStrictTransportSecurity, cfg.StrictTransportSecurity)
+		c.Header(base.HdrXContentTypeOptions, cfg.XContentTypeOptions)
+		c.Header(base.HdrXFrameOptions, cfg.XFrameOptions)
+		c.Header(base.HdrXXssProtection, cfg.XXSSProtection)
 		c.Next()
 	}
 }
@@ -65,14 +65,14 @@ func SecureHeadersMiddleware(cfg *SecureConfig) gin.HandlerFunc {
 //   - gin.HandlerFunc: Gin 框架中间件处理函数
 func CORSHeadersMiddleware(cfg *CORSConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header(base.HDR_ACCESS_CONTROL_ALLOW_ORIGIN, cfg.AllowOrigin)
-		c.Header(base.HDR_ACCESS_CONTROL_ALLOW_CREDENTIALS, strconv.FormatBool(cfg.AllowCredentials))
-		c.Header(base.HDR_ACCESS_CONTROL_ALLOW_HEADERS, strings.Join(cfg.AllowHeaders, ", "))
-		c.Header(base.HDR_ACCESS_CONTROL_ALLOW_METHODS, strings.Join(cfg.AllowMethods, ", "))
+		c.Header(base.HdrAccessControlAllowOrigin, cfg.AllowOrigin)
+		c.Header(base.HdrAccessControlAllowCredentials, strconv.FormatBool(cfg.AllowCredentials))
+		c.Header(base.HdrAccessControlAllowHeaders, strings.Join(cfg.AllowHeaders, ", "))
+		c.Header(base.HdrAccessControlAllowMethods, strings.Join(cfg.AllowMethods, ", "))
 
 		if c.Request.Method != http.MethodOptions {
 			c.Next()
-		} else if requestMethod := c.Request.Header.Get(base.HDR_ACCESS_CONTROL_REQUEST_METHOD); requestMethod == "" {
+		} else if requestMethod := c.Request.Header.Get(base.HdrAccessControlRequestMethod); requestMethod == "" {
 			c.Next()
 		} else if slices.Contains(cfg.AllowMethods, requestMethod) {
 			c.AbortWithStatus(http.StatusNoContent)

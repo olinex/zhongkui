@@ -17,8 +17,8 @@ import (
 func setupNamespaceTestRouter(cfg *NamespaceConfig) *gin.Engine {
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
-		c.Set(LOCALIZER_CTX_NAME, newTestLocalizer())
-		c.Set(TRANSLATOR_CTX_NAME, newTestTranslator())
+		c.Set(LocalizerCtxName, newTestLocalizer())
+		c.Set(TranslatorCtxName, newTestTranslator())
 		c.Next()
 	})
 	router.Use(NamespaceMiddleware(cfg))
@@ -39,8 +39,8 @@ func setupNamespaceContext() (*gin.Context, *httptest.ResponseRecorder) {
 	gin.SetMode(gin.TestMode)
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
-	c.Set(LOCALIZER_CTX_NAME, newTestLocalizer())
-	c.Set(TRANSLATOR_CTX_NAME, newTestTranslator())
+	c.Set(LocalizerCtxName, newTestLocalizer())
+	c.Set(TranslatorCtxName, newTestTranslator())
 	return c, w
 }
 
@@ -59,20 +59,20 @@ func setupNamespaceCache(namespaces ...string) func() {
 	}
 }
 
-// TestDefaultNamespaceConstant 测试 DEFAULT_NAMESPACE 常量
+// TestDefaultNamespaceConstant 测试 DefaultNamespace 常量
 func TestDefaultNamespaceConstant(t *testing.T) {
-	Convey("测试 DEFAULT_NAMESPACE 常量", t, func() {
+	Convey("测试 DefaultNamespace 常量", t, func() {
 		Convey("默认命名空间应为 'default'", func() {
-			So(DEFAULT_NAMESPACE, ShouldEqual, "default")
+			So(DefaultNamespace, ShouldEqual, "default")
 		})
 	})
 }
 
-// TestNamespaceCtxNameConstant 测试 NAMESPACE_CTX_NAME 常量
+// TestNamespaceCtxNameConstant 测试 NamespaceCtxName 常量
 func TestNamespaceCtxNameConstant(t *testing.T) {
-	Convey("测试 NAMESPACE_CTX_NAME 常量", t, func() {
+	Convey("测试 NamespaceCtxName 常量", t, func() {
 		Convey("上下文键名应为 'namespace'", func() {
-			So(NAMESPACE_CTX_NAME, ShouldEqual, "namespace")
+			So(NamespaceCtxName, ShouldEqual, "namespace")
 		})
 	})
 }
@@ -111,7 +111,7 @@ func TestNamespaceMiddleware(t *testing.T) {
 		}
 
 		Convey("应使用默认命名空间当请求中未携带任何命名空间标识", func() {
-			cleanup := setupNamespaceCache(DEFAULT_NAMESPACE)
+			cleanup := setupNamespaceCache(DefaultNamespace)
 			defer cleanup()
 
 			router := setupNamespaceTestRouter(cfg)
@@ -120,7 +120,7 @@ func TestNamespaceMiddleware(t *testing.T) {
 			router.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
-			So(w.Body.String(), ShouldEqual, DEFAULT_NAMESPACE)
+			So(w.Body.String(), ShouldEqual, DefaultNamespace)
 		})
 
 		Convey("应从请求头中提取命名空间", func() {
@@ -193,7 +193,7 @@ func TestNamespaceMiddleware(t *testing.T) {
 		})
 
 		Convey("当命名空间不存在时应中断请求并返回错误", func() {
-			cleanup := setupNamespaceCache(DEFAULT_NAMESPACE)
+			cleanup := setupNamespaceCache(DefaultNamespace)
 			defer cleanup()
 
 			router := setupNamespaceTestRouter(cfg)
@@ -214,7 +214,7 @@ func TestNamespaceMiddleware(t *testing.T) {
 		})
 
 		Convey("中间件应调用 c.Next() 使后续处理函数继续执行", func() {
-			cleanup := setupNamespaceCache(DEFAULT_NAMESPACE)
+			cleanup := setupNamespaceCache(DefaultNamespace)
 			defer cleanup()
 
 			nextCalled := false
@@ -278,7 +278,7 @@ func TestGetNamespace(t *testing.T) {
 	Convey("测试 GetNamespace 函数", t, func() {
 		Convey("当上下文中存在命名空间时应正确返回", func() {
 			c, _ := gin.CreateTestContext(httptest.NewRecorder())
-			c.Set(NAMESPACE_CTX_NAME, "test-namespace")
+			c.Set(NamespaceCtxName, "test-namespace")
 
 			ns, err := GetNamespace(c)
 			So(err, ShouldBeNil)
@@ -294,9 +294,9 @@ func TestGetNamespace(t *testing.T) {
 			So(ns, ShouldEqual, "")
 		})
 
-		Convey("应返回 DEFAULT_NAMESPACE 的值", func() {
+		Convey("应返回 DefaultNamespace 的值", func() {
 			c, _ := gin.CreateTestContext(httptest.NewRecorder())
-			c.Set(NAMESPACE_CTX_NAME, DEFAULT_NAMESPACE)
+			c.Set(NamespaceCtxName, DefaultNamespace)
 
 			ns, err := GetNamespace(c)
 			So(err, ShouldBeNil)
@@ -305,7 +305,7 @@ func TestGetNamespace(t *testing.T) {
 
 		Convey("应返回自定义命名空间的值", func() {
 			c, _ := gin.CreateTestContext(httptest.NewRecorder())
-			c.Set(NAMESPACE_CTX_NAME, "my-custom-ns")
+			c.Set(NamespaceCtxName, "my-custom-ns")
 
 			ns, err := GetNamespace(c)
 			So(err, ShouldBeNil)
@@ -334,8 +334,8 @@ func TestNamespaceMiddlewareAndGetNamespace_Integration(t *testing.T) {
 
 			router := gin.New()
 			router.Use(func(c *gin.Context) {
-				c.Set(LOCALIZER_CTX_NAME, newTestLocalizer())
-				c.Set(TRANSLATOR_CTX_NAME, newTestTranslator())
+				c.Set(LocalizerCtxName, newTestLocalizer())
+				c.Set(TranslatorCtxName, newTestTranslator())
 				c.Next()
 			})
 			router.Use(NamespaceMiddleware(cfg))

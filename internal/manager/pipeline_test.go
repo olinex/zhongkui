@@ -21,15 +21,15 @@ func setupPipelineTestRouter(inspector *pipeline.Inspector) *gin.Engine {
 	return r
 }
 
-// TestPIPELINE_INSPECTOR_CTX_NAME 测试上下文键名常量
-func TestPIPELINE_INSPECTOR_CTX_NAME(t *testing.T) {
-	Convey("测试 PIPELINE_INSPECTOR_CTX_NAME 常量", t, func() {
+// TestPipelineInspectorCtxName 测试上下文键名常量
+func TestPipelineInspectorCtxName(t *testing.T) {
+	Convey("测试 PipelineInspectorCtxName 常量", t, func() {
 		Convey("常量值应为 'pipeline-inspector'", func() {
-			So(PIPELINE_INSPECTOR_CTX_NAME, ShouldEqual, "pipeline-inspector")
+			So(PipelineInspectorCtxName, ShouldEqual, "pipeline-inspector")
 		})
 
 		Convey("常量值不应为空", func() {
-			So(PIPELINE_INSPECTOR_CTX_NAME, ShouldNotBeEmpty)
+			So(PipelineInspectorCtxName, ShouldNotBeEmpty)
 		})
 	})
 }
@@ -49,7 +49,7 @@ func TestPipelineInspectorMiddleware(t *testing.T) {
 
 			var gotInspector *pipeline.Inspector
 			r.GET("/test", func(c *gin.Context) {
-				val, exists := c.Get(PIPELINE_INSPECTOR_CTX_NAME)
+				val, exists := c.Get(PipelineInspectorCtxName)
 				So(exists, ShouldBeTrue)
 				gotInspector = val.(*pipeline.Inspector)
 				c.String(http.StatusOK, "ok")
@@ -69,8 +69,8 @@ func TestPipelineInspectorMiddleware(t *testing.T) {
 			var actualKey string
 			var keyExists bool
 			r.GET("/test", func(c *gin.Context) {
-				_, keyExists = c.Get(PIPELINE_INSPECTOR_CTX_NAME)
-				actualKey = PIPELINE_INSPECTOR_CTX_NAME
+				_, keyExists = c.Get(PipelineInspectorCtxName)
+				actualKey = PipelineInspectorCtxName
 				c.String(http.StatusOK, "ok")
 			})
 
@@ -105,7 +105,7 @@ func TestPipelineInspectorMiddleware(t *testing.T) {
 			r := setupPipelineTestRouter(inspector)
 
 			r.GET("/test", func(c *gin.Context) {
-				_, _ = c.Get(PIPELINE_INSPECTOR_CTX_NAME)
+				_, _ = c.Get(PipelineInspectorCtxName)
 				c.String(http.StatusOK, "ok")
 			})
 
@@ -123,7 +123,7 @@ func TestPipelineInspectorMiddleware(t *testing.T) {
 
 			var exists bool
 			r.GET("/test", func(c *gin.Context) {
-				_, exists = c.Get(PIPELINE_INSPECTOR_CTX_NAME)
+				_, exists = c.Get(PipelineInspectorCtxName)
 				c.String(http.StatusOK, "ok")
 			})
 
@@ -144,7 +144,7 @@ func TestPipelineInspectorMiddleware(t *testing.T) {
 			r1.Use(PipelineInspectorMiddleware(inspector1))
 			var got1 *pipeline.Inspector
 			r1.GET("/test", func(c *gin.Context) {
-				val, _ := c.Get(PIPELINE_INSPECTOR_CTX_NAME)
+				val, _ := c.Get(PipelineInspectorCtxName)
 				got1 = val.(*pipeline.Inspector)
 				c.String(http.StatusOK, "ok")
 			})
@@ -153,7 +153,7 @@ func TestPipelineInspectorMiddleware(t *testing.T) {
 			r2.Use(PipelineInspectorMiddleware(inspector2))
 			var got2 *pipeline.Inspector
 			r2.GET("/test", func(c *gin.Context) {
-				val, _ := c.Get(PIPELINE_INSPECTOR_CTX_NAME)
+				val, _ := c.Get(PipelineInspectorCtxName)
 				got2 = val.(*pipeline.Inspector)
 				c.String(http.StatusOK, "ok")
 			})

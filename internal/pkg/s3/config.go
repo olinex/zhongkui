@@ -9,9 +9,9 @@ import (
 // PREFIX 是S3配置在配置文件中的前缀
 // 用于在Viper配置管理器中标识S3相关的配置项
 const (
-	PREFIX            = "s3"
-	CRYPTO_KEY_OFFSET = 43036
-	CRYPTO_KEY_LENGTH = 32
+	Prefix          = "s3"
+	CryptoKeyOffset = 43036
+	CryptoKeyLength = 32
 )
 
 // Config 是S3兼容对象存储的配置结构体
@@ -65,7 +65,7 @@ type Config struct {
 
 // ExtractCryptoKey 使用密钥派生函数从配置中提取加密密钥。
 //
-// 通过 KeyDerivation 以固定偏移量（CRYPTO_KEY_OFFSET = 43036）和固定长度（CRYPTO_KEY_LENGTH = 32）
+// 通过 KeyDerivation 以固定偏移量（CryptoKeyOffset = 43036）和固定长度（CryptoKeyLength = 32）
 // 从密码本中派生一个 AES-256 子密钥。该密钥用于构造 ZstdAESGCMPipeline 进行对象的加密解密。
 //
 // 参数：
@@ -77,7 +77,7 @@ type Config struct {
 //
 // 参考：internal/pkg/crypto/key/keyderivation.go
 func (c *Config) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error) {
-	return kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
+	return kd.DeriveChildKey(CryptoKeyOffset, CryptoKeyLength)
 }
 
 // DescribeConfig 返回 S3 配置的结构化描述信息。
@@ -88,7 +88,7 @@ func (c *Config) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error) {
 // 返回值：
 //   - config.ConfigDescriptions: 配置字段的描述列表，用于文档生成和用户提示
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
 // ExtractConfig 从 Viper 配置管理器中提取 S3 配置。
@@ -113,5 +113,5 @@ func DescribeConfig() config.ConfigDescriptions {
 //	  region: ""
 //	  useSSL: false
 func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+	return config.ExtractConfig[Config](v, Prefix)
 }

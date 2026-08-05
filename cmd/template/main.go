@@ -20,7 +20,7 @@ var (
 		"join":       strings.Join,
 		"capitalize": serializer.Capitalize,
 	})
-	STRING_ACTIONS map[string]any = map[string]any{
+	StringActions map[string]any = map[string]any{
 		"nil":   struct{}{},
 		"nnil":  struct{}{},
 		"eq":    struct{}{},
@@ -38,7 +38,7 @@ var (
 		"ictn":  struct{}{},
 		"inctn": struct{}{},
 	}
-	NUMBER_ACTIONS map[string]any = map[string]any{
+	NumberActions map[string]any = map[string]any{
 		"nil":  struct{}{},
 		"nnil": struct{}{},
 		"eq":   struct{}{},
@@ -48,14 +48,14 @@ var (
 		"gt":   struct{}{},
 		"gte":  struct{}{},
 	}
-	BOOLEAN_ACTIONS = map[string]any{
+	BooleanActions = map[string]any{
 		"nil":  struct{}{},
 		"nnil": struct{}{},
 		"eq":   struct{}{},
 	}
-	DATETIME_ACTIONS = NUMBER_ACTIONS
-	DATE_ACTIONS     = NUMBER_ACTIONS
-	TIME_ACTIONS     = NUMBER_ACTIONS
+	DatetimeActions = NumberActions
+	DateActions     = NumberActions
+	TimeActions     = NumberActions
 )
 
 type searchGenerateConfigFilterBy struct {
@@ -87,17 +87,17 @@ func actionValidate(fieldType string, actions []string) error {
 		var allowActions map[string]any
 		switch fieldType {
 		case "string":
-			allowActions = STRING_ACTIONS
+			allowActions = StringActions
 		case "int", "uint", "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64", "uint64", "float32", "float64":
-			allowActions = NUMBER_ACTIONS
+			allowActions = NumberActions
 		case "bool":
-			allowActions = BOOLEAN_ACTIONS
+			allowActions = BooleanActions
 		case "time.Time":
-			allowActions = DATETIME_ACTIONS
+			allowActions = DatetimeActions
 		case "serializer.TimeOnly":
-			allowActions = TIME_ACTIONS
+			allowActions = TimeActions
 		case "serializer.DateOnly":
-			allowActions = DATE_ACTIONS
+			allowActions = DateActions
 		default:
 			return errors.Newf("Invalid action: %s for %s type", action, fieldType)
 		}

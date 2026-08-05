@@ -11,10 +11,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// SUMMING_TTL_HOURS 定义聚合数据在 ClickHouse 中的保留时间（小时）
+// SummingTTLHours 定义聚合数据在 ClickHouse 中的保留时间（小时）
 // 默认保留 3 天（72 小时），超期数据由 ClickHouse TTL 机制自动删除
 const (
-	SUMMING_TTL_HOURS = 3 * 24
+	SummingTTLHours = 3 * 24
 )
 
 // TagSumming 表示标签聚合统计模型，对应 ClickHouse 中的 SummingMergeTree 表
@@ -68,7 +68,7 @@ func (t *TagSumming) TableOptions() map[string]any {
 			)
 			PARTITION BY toStartOfHour(minute)
 			TTL minute + INTERVAL %d HOUR DELETE`,
-			SUMMING_TTL_HOURS,
+			SummingTTLHours,
 		),
 	}
 }
@@ -181,5 +181,3 @@ func (t *TagSumming) ClearMaterialView(db *database.DB, source any) error {
 	}
 	return nil
 }
-
-

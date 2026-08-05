@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"net"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
+	huginn "zhongkui.com/zhongkui/internal/network/huginn"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -19,20 +20,20 @@ import (
 )
 
 const (
-	// APP_HTTP 表示HTTP协议。
+	// AppHttp 表示HTTP协议。
 	// 当识别到HTTP请求或响应时使用此值，表示Payload中包含HTTP协议数据。
 	// HTTP协议识别基于请求行、响应行、头部字段等HTTP协议特征进行判断。
-	APP_HTTP AppProtocol = "http"
-	// HTTP_VERSION_10 表示 HTTP/1.0 版本。
-	HTTP_VERSION_10 = "HTTP/1.0"
-	// HTTP_VERSION_11 表示 HTTP/1.1 版本。
-	HTTP_VERSION_11 = "HTTP/1.1"
+	AppHttp AppProtocol = "http"
+	// HttpVersion10 表示 HTTP/1.0 版本。
+	HttpVersion10 = "HTTP/1.0"
+	// HttpVersion11 表示 HTTP/1.1 版本。
+	HttpVersion11 = "HTTP/1.1"
 	// 换行字符串
-	NEW_LINE = "\r\n"
-	// CRYPTO_KEY_OFFSET 加密密钥偏移量
-	CRYPTO_KEY_OFFSET = 41827
-	// CRYPTO_KEY_LENGTH 加密密钥长度
-	CRYPTO_KEY_LENGTH = 32
+	NewLine = "\r\n"
+	// CryptoKeyOffset 加密密钥偏移量
+	CryptoKeyOffset = 41827
+	// CryptoKeyLength 加密密钥长度
+	CryptoKeyLength = 32
 )
 
 // 编译期断言：确保 HttpDetector 实现了 tcp.AppProtocolDetector 接口
@@ -71,7 +72,7 @@ func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector {
 //  4. 验证协议版本是否为HTTP/1.0或HTTP/1.1
 func isClient(peek []byte) (ok bool, err error) {
 	// 从缓存中提取第一行
-	first := bytes.SplitN(peek, []byte(NEW_LINE), 2)
+	first := bytes.SplitN(peek, []byte(NewLine), 2)
 	// 尝试拆分协议
 	parts := strings.SplitN(string(first[0]), " ", 3)
 	if len(parts) != 3 {
@@ -84,8 +85,8 @@ func isClient(peek []byte) (ok bool, err error) {
 		return false, nil
 	}
 	// 匹配 http 版本
-	switch strings.TrimRight(parts[2], NEW_LINE) {
-	case HTTP_VERSION_10, HTTP_VERSION_11:
+	switch strings.TrimRight(parts[2], NewLine) {
+	case HttpVersion10, HttpVersion11:
 	default:
 		return false, nil
 	}
@@ -119,7 +120,7 @@ func isServer(peek []byte) (ok bool, err error) {
 	}
 	// 前 8 个字符
 	switch string(peek[:8]) {
-	case HTTP_VERSION_10, HTTP_VERSION_11:
+	case HttpVersion10, HttpVersion11:
 		return true, nil
 	default:
 		return false, nil
@@ -196,16 +197,67 @@ func (s *HttpDetector) Extract(
 	var req *http.Request
 	var rsp *http.Response
 
+	// 通过记录型读取器捕获原始请求/响应头字节，供 Build 阶段的 Http 指纹识别使用
+	clientRec := newRecordingReader(clientReader)
+	serverRec := newRecordingReader(serverReader)
+
 	// 先读取请求，再读取响应。将请求对象传给 http.ReadResponse，
 	// 当请求方法为 HEAD 时，Go 标准库会跳过响应体的读取，
 	// 避免因 Content-Length 不匹配（HEAD 响应不应有 body）而错误消费后续流量。
-	if req, err = http.ReadRequest(clientReader); err != nil {
+	if req, err = http.ReadRequest(bufio.NewReader(clientRec)); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	if rsp, err = http.ReadResponse(serverReader, req); err != nil {
+	if rsp, err = http.ReadResponse(bufio.NewReader(serverRec), req); err != nil {
 		return nil, nil, errors.WithStack(err)
+	}
+	// 将捕获的原始头字节挂载到请求上下文，供 Build 阶段指纹识别读取；
+	// WithContext 返回的新请求与原请求共享 Body，不影响后续正文读取。
+	if clientRec.Len() > 0 || serverRec.Len() > 0 {
+		req = req.WithContext(context.WithValue(req.Context(), rawHTTPKey{}, &rawHTTP{
+			request:  clientRec.Bytes(),
+			response: serverRec.Bytes(),
+		}))
 	}
 	return req, rsp, nil
+}
+
+// rawHTTPKey 携带原始 Http 头字节（用于指纹识别）的 context 键类型
+type rawHTTPKey struct{}
+
+// rawHTTP 记录请求/响应侧的原始头字节，由 Extract 捕获、Build 消费
+type rawHTTP struct {
+	request  []byte
+	response []byte
+}
+
+// recordingReader 记录从底层读取器读出的全部字节，用于捕获原始 Http 头字节。
+// Http 指纹依赖头部字段的原始顺序与写法，无法从解析后的 map 还原，故需在解析时旁路记录。
+type recordingReader struct {
+	r   io.Reader
+	buf bytes.Buffer
+}
+
+func newRecordingReader(r io.Reader) *recordingReader {
+	return &recordingReader{r: r}
+}
+
+// Read 实现 io.Reader，同步记录读出的字节
+func (r *recordingReader) Read(p []byte) (int, error) {
+	n, err := r.r.Read(p)
+	if n > 0 {
+		r.buf.Write(p[:n])
+	}
+	return n, err
+}
+
+// Len 返回已记录的字节数
+func (r *recordingReader) Len() int {
+	return r.buf.Len()
+}
+
+// Bytes 返回已记录字节的副本
+func (r *recordingReader) Bytes() []byte {
+	return append([]byte(nil), r.buf.Bytes()...)
 }
 
 func (s *HttpDetector) Build(
@@ -224,28 +276,46 @@ func (s *HttpDetector) Build(
 	if !ok {
 		return nil, errors.New("serverPayload is not *http.Response")
 	}
-	transport, err := NewHttpTransport(
+	return NewHttpTransport(
 		ctx,
 		s.client,
 		baseMeta,
-		streamMeta.TraceID,
-		streamMeta.ClientAddr,
-		streamMeta.ServerAddr,
-		streamMeta.ClientPort,
-		streamMeta.ServerPort,
-		streamMeta.ClientISN,
-		streamMeta.ServerISN,
-		streamMeta.Timestamp,
+		streamMeta,
 		streamIndex,
 		request,
 		response,
 		s.kd,
 		tailer,
 	)
-	if err != nil {
-		return nil, errors.WithStack(err)
+}
+
+// guessDevice 基于 TCP/Http 指纹与流元数据推导设备类别猜测（启发式）。
+// 判定优先级：移动设备（客户端 OS 含移动平台关键词）> 桌面端（识别出浏览器）>
+// 服务端（识别出服务端软件/系统）> IoT（无浏览器、无客户端 OS 指纹）> 未知。
+func guessDevice(streamMeta *StreamMeta, httpFP n.HttpFingerprint) string {
+	var clientOS string
+	if fp := streamMeta.ClientFingerprint; fp != nil {
+		clientOS = strings.ToLower(fp.OS)
 	}
-	return transport, nil
+	switch {
+	case strings.Contains(clientOS, "android"),
+		strings.Contains(clientOS, "ios"),
+		strings.Contains(clientOS, "ipad"),
+		strings.Contains(clientOS, "iphone"),
+		strings.Contains(clientOS, "symbian"),
+		strings.Contains(clientOS, "blackberry"),
+		strings.Contains(clientOS, "windows phone"):
+		return "mobile"
+	case httpFP.Browser != "" && httpFP.BrowserQuality > 0:
+		return "desktop"
+	case httpFP.Server != "" && httpFP.ServerQuality > 0:
+		return "server"
+	case httpFP.Browser == "" && clientOS == "":
+		// 无浏览器与客户端 OS 指纹，通常为非浏览器客户端（脚本 / 嵌入式 / IoT 设备）
+		return "iot"
+	default:
+		return "unknown"
+	}
 }
 
 // Build 构建完整的HTTP传输对象
@@ -255,6 +325,7 @@ func (s *HttpDetector) Build(
 // 参数:
 //   - ctx: 上下文对象，用于传递取消信号和超时控制
 //   - meta: 基础元数据，包含命名空间、捕获器名称、版本号等系统信息
+//   - streamMeta: 流元数据，携带客户端/服务端 TCP 指纹，组装阶段回填到 HttpTransport
 //   - clientAddr: 客户端IP地址
 //   - serverAddr: 服务端IP地址
 //   - clientPort: 客户端端口号
@@ -294,11 +365,8 @@ func NewHttpTransport(
 	ctx context.Context,
 	s3Client *s3.S3Client,
 	meta *n.BaseMeta,
-	traceID serializer.HexUUID,
-	clientAddr, serverAddr net.IP,
-	clientPort, serverPort layers.TCPPort,
-	clientISN, serverISN uint32,
-	timestamp time.Time, streamIndex uint32,
+	streamMeta *StreamMeta,
+	streamIndex uint32,
 	request *http.Request, response *http.Response,
 	kd *key.KeyDerivation,
 	buildTailer BuildTailer,
@@ -307,19 +375,19 @@ func NewHttpTransport(
 		return nil, errors.New("meta is nil")
 	}
 	var hBase n.HttpBase
-	hBase.ClientIP = serializer.IPAddr(clientAddr)
-	hBase.ClientPort = clientPort
-	hBase.ClientISN = clientISN
-	hBase.ServerIP = serializer.IPAddr(serverAddr)
-	hBase.ServerPort = serverPort
-	hBase.ServerISN = serverISN
+	hBase.ClientIP = serializer.IPAddr(streamMeta.ClientAddr)
+	hBase.ClientPort = streamMeta.ClientPort
+	hBase.ClientISN = streamMeta.ClientISN
+	hBase.ServerIP = serializer.IPAddr(streamMeta.ServerAddr)
+	hBase.ServerPort = streamMeta.ServerPort
+	hBase.ServerISN = streamMeta.ServerISN
 	hBase.StreamIndex = streamIndex
-	if clientAddr.To4() != nil {
+	if streamMeta.ClientAddr.To4() != nil {
 		hBase.IPVersion = layers.IPProtocolIPv4
 	} else {
 		hBase.IPVersion = layers.IPProtocolIPv6
 	}
-	cryptoKey, err := kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
+	cryptoKey, err := kd.DeriveChildKey(CryptoKeyOffset, CryptoKeyLength)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -376,21 +444,57 @@ func NewHttpTransport(
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &n.HttpTransport{
+	// TCP 指纹透传：客户端来自 SYN 包，服务端来自 SYN-ACK 包
+	tcpFP := n.TcpFingerprint{}
+	if fp := streamMeta.ClientFingerprint; fp != nil {
+		tcpFP.ClientOS = fp.OS
+		tcpFP.ClientOSQuality = fp.OSQuality
+		tcpFP.ClientSig = fp.Sig
+		tcpFP.MTU = fp.MTU
+	}
+	if fp := streamMeta.ServerFingerprint; fp != nil {
+		tcpFP.ServerOS = fp.OS
+		tcpFP.ServerOSQuality = fp.OSQuality
+		tcpFP.ServerSig = fp.Sig
+		if tcpFP.MTU == 0 {
+			tcpFP.MTU = fp.MTU
+		}
+	}
+	// Http 指纹分析：使用 Extract 阶段捕获的原始头字节
+	httpFP := n.HttpFingerprint{}
+	if raw, ok := request.Context().Value(rawHTTPKey{}).(*rawHTTP); ok {
+		if len(raw.request) > 0 {
+			if fp, ferr := huginn.AnalyzeHTTPRequest(raw.request); ferr == nil && fp != nil {
+				httpFP.Browser = fp.Browser
+				httpFP.BrowserQuality = fp.Quality
+				httpFP.Language = fp.Language
+			}
+		}
+		if len(raw.response) > 0 {
+			if fp, ferr := huginn.AnalyzeHTTPResponse(raw.response); ferr == nil && fp != nil {
+				httpFP.Server = fp.Server
+				httpFP.ServerQuality = fp.Quality
+			}
+		}
+		httpFP.DeviceGuess = guessDevice(streamMeta, httpFP)
+	}
+	transport = &n.HttpTransport{
 		BaseMeta: *meta,
 		TimestampMeta: n.TimestampMeta{
-			Timestamp: timestamp,
+			Timestamp: streamMeta.Timestamp,
 			CreatedAt: time.Now(),
 		},
 		TraceMeta: n.TraceMeta{
-			TraceID: traceID,
+			TraceID: streamMeta.TraceID,
 		},
+		TcpFingerprint:      tcpFP,
 		HttpBase:            hBase,
 		HttpURI:             *uri,
 		HttpRequestBody:     *requestBody,
 		HttpRequestHeaders:  *requestHeaders,
 		HttpResponseBody:    *responseBody,
 		HttpResponseHeaders: *responseHeaders,
+		HttpFingerprint:     httpFP,
 		AppTailer: n.AppTailer{
 			ClientConsumed:           tailer.ClientConsumed,
 			ClientStartPayloadOffset: tailer.ClientStartPayloadOffset,
@@ -403,5 +507,6 @@ func NewHttpTransport(
 			ServerStartTimestamp:     tailer.ServerStartTimestamp,
 			ServerEndTimestamp:       tailer.ServerEndTimestamp,
 		},
-	}, nil
+	}
+	return transport, nil
 }

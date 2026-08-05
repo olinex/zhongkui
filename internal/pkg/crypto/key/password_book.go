@@ -8,13 +8,14 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// PASSWORD_BOOK_SIZE 定义密码本的固定大小（字节数）
+// PasswordBookSize 定义密码本的固定大小（字节数）
 // 65536 字节 = 64KB，提供足够的熵用于密钥派生
-const PASSWORD_BOOK_SIZE = 65536
+const PasswordBookSize = 65536
 
-//go:embed default_password_book.bin
 // defaultPasswordBookData 嵌入的默认密码本数据
 // 该文件在编译时被嵌入到二进制文件中，作为后备方案
+//
+//go:embed default_password_book.bin
 var defaultPasswordBookData []byte
 
 // PasswordBook 密码本，提供用于密钥派生的盐值数据。
@@ -52,14 +53,14 @@ func (p *PasswordBook) Len() int {
 //
 // 错误场景：
 //   - 文件不存在或无法读取
-//   - 文件大小不等于 PASSWORD_BOOK_SIZE（65536 字节）
+//   - 文件大小不等于 PasswordBookSize（65536 字节）
 func LoadPasswordBookFromFile(path string) (*PasswordBook, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if len(data) != PASSWORD_BOOK_SIZE {
-		return nil, errors.Newf("password book file size mismatch: expected %d bytes, got %d bytes", PASSWORD_BOOK_SIZE, len(data))
+	if len(data) != PasswordBookSize {
+		return nil, errors.Newf("password book file size mismatch: expected %d bytes, got %d bytes", PasswordBookSize, len(data))
 	}
 	return &PasswordBook{data: data}, nil
 }
@@ -110,8 +111,8 @@ func LoadPasswordBook(path string) (*PasswordBook, error) {
 //   - *PasswordBook: 内置密码本实例
 //   - error: 内置密码本大小不匹配时返回错误
 func loadEmbeddedPasswordBook() (*PasswordBook, error) {
-	if len(defaultPasswordBookData) != PASSWORD_BOOK_SIZE {
-		return nil, errors.Newf("embedded password book size mismatch: expected %d bytes, got %d bytes", PASSWORD_BOOK_SIZE, len(defaultPasswordBookData))
+	if len(defaultPasswordBookData) != PasswordBookSize {
+		return nil, errors.Newf("embedded password book size mismatch: expected %d bytes, got %d bytes", PasswordBookSize, len(defaultPasswordBookData))
 	}
 	return &PasswordBook{data: defaultPasswordBookData}, nil
 }

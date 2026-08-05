@@ -261,7 +261,7 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 
 	// 查询用户所属的用户组
 	var groups []*core.RbacPolicy
-	if err := db.Find(&groups, "ptype = ? AND v0 = ?", base.GROUP_LABEL, user.UnionID.String()).Error; err != nil {
+	if err := db.Find(&groups, "ptype = ? AND v0 = ?", base.GroupLabel, user.UnionID.String()).Error; err != nil {
 		logger.Errorf(c, nil, "bad groups, cause: %v", err)
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -275,7 +275,7 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 
 	// 查询用户组对应的策略
 	var policies []*core.RbacPolicy
-	if err := db.Find(&policies, "ptype = ? AND v0 IN ?", base.POLICY_LABEL, names).Error; err != nil {
+	if err := db.Find(&policies, "ptype = ? AND v0 IN ?", base.PolicyLabel, names).Error; err != nil {
 		logger.Errorf(c, nil, "bad policies, cause: %v", err)
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -283,7 +283,7 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 
 	// 构建返回结果
 	out := AuthorizationInfoOut{
-		Model:      base.RBAC_MODEL,
+		Model:      base.RbacModel,
 		Policies:   make([][]string, 0, len(groups)+len(policies)),
 		Namespaces: core.Cache.All(c),
 	}

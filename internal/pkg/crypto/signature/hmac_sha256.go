@@ -6,10 +6,10 @@ import (
 	"encoding/base64"
 )
 
-// PREFIX_HMACSHA256 定义 HMAC-SHA256 签名算法的前缀标识，用于签名值的格式前缀，
+// PrefixHmacsha256 定义 HMAC-SHA256 签名算法的前缀标识，用于签名值的格式前缀，
 // 签名结果格式为 "hmac-sha256:<base64编码的签名值>"
 const (
-	PREFIX_HMACSHA256 string = "hmac-sha256"
+	PrefixHmacsha256 string = "hmac-sha256"
 )
 
 // HMACSHA256Sign 使用 HMAC-SHA256 算法对值进行签名。
@@ -26,5 +26,5 @@ func HMACSHA256Sign(secret, value string) (string, error) {
 // secret: 签名密钥
 // 返回值: 配置好的 Signaturer 指针，可直接调用 Sign/Check 方法进行签名和校验
 func NewHMACSHA256Signaturer(secret string) *Signaturer {
-	return newSignaturer(PREFIX_HMACSHA256, secret, HMACSHA256Sign)
+	return newSignaturer(PrefixHmacsha256, secret, HMACSHA256Sign)
 }

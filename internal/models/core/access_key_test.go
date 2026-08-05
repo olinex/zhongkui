@@ -303,8 +303,8 @@ func TestAccessKeyPool_UpdateLastAccess(t *testing.T) {
 // TestConstants 测试常量定义
 func TestConstants(t *testing.T) {
 	convey.Convey("Test constants", t, func() {
-		convey.Convey("ACCESS_KEY_PREFIX should have correct value", func() {
-			convey.So(ACCESS_KEY_PREFIX, convey.ShouldEqual, "akp")
+		convey.Convey("AccessKeyPrefix should have correct value", func() {
+			convey.So(AccessKeyPrefix, convey.ShouldEqual, "akp")
 		})
 	})
 }

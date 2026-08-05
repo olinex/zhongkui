@@ -24,14 +24,14 @@ import (
 // 所有 API 管理层的配置项均位于 "api" 前缀之下。
 // 例如：api.host、api.port、api.auth.secretKey 等。
 const (
-	PREFIX            = "api"
-	CRYPTO_KEY_OFFSET = 9820
-	CRYPTO_KEY_LENGTH = 32
+	Prefix          = "api"
+	CryptoKeyOffset = 9820
+	CryptoKeyLength = 32
 )
 
-// CONFIG_CTX_NAME 是配置对象在 Gin 上下文中存储时使用的键名，
+// ConfigCtxName 是配置对象在 Gin 上下文中存储时使用的键名，
 // 用于 ConfigMiddleware 注入和 GetConfig 提取配置。
-const CONFIG_CTX_NAME = "config"
+const ConfigCtxName = "config"
 
 // CookieConfig 定义了 JWT 令牌在 Cookie 中的存储配置。
 //
@@ -87,7 +87,7 @@ type AuthConfig struct {
 }
 
 func (a *AuthConfig) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error) {
-	return kd.DeriveChildKey(CRYPTO_KEY_OFFSET, CRYPTO_KEY_LENGTH)
+	return kd.DeriveChildKey(CryptoKeyOffset, CryptoKeyLength)
 }
 
 // ToJwtRegisterClaims 将认证配置转换为 JWT 标准注册声明（Registered Claims）。
@@ -196,7 +196,7 @@ type Config struct {
 // ConfigMiddleware 创建一个将配置注入 Gin 上下文的中间件。
 //
 // 该中间件在每次请求处理前将 Config 对象存入 Gin 上下文中，
-// 键名为 CONFIG_CTX_NAME（"config"），后续处理器可通过 GetConfig 提取使用。
+// 键名为 ConfigCtxName（"config"），后续处理器可通过 GetConfig 提取使用。
 //
 // 参数：
 //   - cfg: 需要注入到上下文的配置对象指针
@@ -205,7 +205,7 @@ type Config struct {
 //   - gin.HandlerFunc: 可直接注册到 Gin 路由的中间件函数
 func ConfigMiddleware(cfg *Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(CONFIG_CTX_NAME, cfg)
+		c.Set(ConfigCtxName, cfg)
 		c.Next()
 	}
 }
@@ -222,7 +222,7 @@ func ConfigMiddleware(cfg *Config) gin.HandlerFunc {
 // 返回值：
 //   - *Config: 上下文中的配置对象指针
 func GetConfig(c *gin.Context) *Config {
-	if cfg, ok := c.Get(CONFIG_CTX_NAME); ok {
+	if cfg, ok := c.Get(ConfigCtxName); ok {
 		return cfg.(*Config)
 	}
 	panic("config does not exists")
@@ -243,9 +243,9 @@ func GetConfig(c *gin.Context) *Config {
 //   - *Config: 成功时返回填充并校验通过的配置结构体指针
 //   - error: 任一步骤失败时返回的错误
 func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+	return config.ExtractConfig[Config](v, Prefix)
 }
 
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }

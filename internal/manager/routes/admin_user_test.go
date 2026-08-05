@@ -57,7 +57,7 @@ func setupUserTestRouter() *gin.Engine {
 func setupUserTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupUserTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DATABASE_CTX_NAME, db)
+		c.Set(manager.DatabaseCtxName, db)
 		c.Next()
 	})
 	return r
@@ -511,7 +511,7 @@ func TestUserGroupJoin(t *testing.T) {
 			// 验证策略已创建
 			var policy core.RbacPolicy
 			err := db.First(&policy, "ptype = ? AND v0 = ? AND v1 = ? AND v2 = ?",
-				base.GROUP_LABEL, user.UnionID.String(), "testgroup", "default").Error
+				base.GroupLabel, user.UnionID.String(), "testgroup", "default").Error
 			So(err, ShouldBeNil)
 			So(policy.V0, ShouldEqual, user.UnionID.String())
 			So(policy.V1, ShouldEqual, "testgroup")
@@ -605,7 +605,7 @@ func TestUserGroupLeave(t *testing.T) {
 			// 验证策略已删除
 			var count int64
 			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ? AND v1 = ? AND v2 = ?",
-				base.GROUP_LABEL, user.UnionID.String(), "testgroup", "default").Count(&count)
+				base.GroupLabel, user.UnionID.String(), "testgroup", "default").Count(&count)
 			// 调试输出
 			t.Logf("策略删除后数量: %d", count)
 			So(count, ShouldEqual, 0)

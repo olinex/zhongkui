@@ -18,7 +18,7 @@ var createPasswordBookCmd = &cobra.Command{
 	Long:  "生成一个加密安全的随机密码本文件（65536 字节），用于子密钥派生。",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Generate PasswordBookSize (65536) random bytes using crypto/rand
-		data := make([]byte, key.PASSWORD_BOOK_SIZE)
+		data := make([]byte, key.PasswordBookSize)
 		if _, err := rand.Read(data); err != nil {
 			pterm.Error.Println(err.Error())
 			return

@@ -41,12 +41,16 @@ type StreamMeta struct {
 	ClientPort layers.TCPPort
 	// ClientISN 客户端ISN
 	ClientISN uint32
+	// ClientFingerprint 客户端被动 TCP 指纹（pcap 阶段对 SYN 包识别，组包时透传），无指纹为 nil
+	ClientFingerprint *n.PacketTCPFingerprint
 	// ServerAddr 服务端IP地址
 	ServerAddr net.IP
 	// ServerPort 服务端端口号
 	ServerPort layers.TCPPort
 	// ServerISN 服务端ISN
 	ServerISN uint32
+	// ServerFingerprint 服务端被动 TCP 指纹（pcap 阶段对 SYN-ACK 包识别，组包时透传），无指纹为 nil
+	ServerFingerprint *n.PacketTCPFingerprint
 	// Timestamp 重组器第一个 syn 包的时间戳
 	Timestamp time.Time
 }

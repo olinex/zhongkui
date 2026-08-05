@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/smallnest/ringbuffer"
+	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -18,12 +19,12 @@ import (
 type TCPState int
 
 const (
-	// BUFFER_SIZE TCP缓冲区大小，用于存储接收和发送的数据包。
+	// BufferSize TCP缓冲区大小，用于存储接收和发送的数据包。
 	// 该值必须大于等于65495，这是TCP最大数据包大小。
 	// IP层限制：IP协议的理论最大数据报大小为 65535 字节。这是由IP头部的16位总长度字段决定的（2^16 - 1 = 65535）。
 	// 减去头部开销：一个标准的IPv4头部是 20 字节，一个标准的TCP头部至少也是 20 字节。
 	// 得出结果：因此，TCP Payload的最大理论值 = 65535 - 20 (IP头) - 20 (TCP头) = 65495 字节
-	BUFFER_SIZE = 65495
+	BufferSize = 65495
 	// StateClosed 表示连接已关闭
 	// 这是TCP连接的初始状态和最终状态，表示连接不存在或已完全终止。
 	// 在此状态下，不接受任何数据包，所有资源已释放。
@@ -146,6 +147,12 @@ type Side[P TCPPacket] struct {
 	// 客户端isn由第一个SYN包确定，服务端isn由SYN-ACK包确定
 	isn uint32
 
+	// fingerprint 本端的被动 TCP 指纹（p0f 风格）。
+	// 客户端指纹来自首个 SYN 包，服务端指纹来自 SYN-ACK 包，
+	// 均由 pcap 导入阶段识别并落库后，经 TCPPacket.TcpFingerprint 透传至此；
+	// 无指纹时为 nil。
+	fingerprint *n.PacketTCPFingerprint
+
 	// expectedSeq 表示期望接收的下一个数据包的序列号
 	// 用于检测数据包顺序、处理乱序包和确认数据包完整性
 	// 根据接收到的数据包载荷长度动态更新，确保序列号连续性
@@ -180,7 +187,7 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 		panic("first packet must be SYN")
 	}
 	seq := first.SeqNum()
-	buffer := ringbuffer.New(BUFFER_SIZE).
+	buffer := ringbuffer.New(BufferSize).
 		WithCancel(ctx).
 		WithTimeout(time.Second * 5).
 		SetBlocking(true)
@@ -193,19 +200,20 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 		CaptureTimestampOffsets: make([]time.Time, 0, 32),
 		logger:                  logger,
 		rb:                      buffer,
-		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BufferSize), bufio.NewWriterSize(writer, BufferSize)),
 		dstChan:                 dstChan,
 		traceID:                 traceID,
 		cli2Srv:                 true,
 		state:                   StateSynSent,
 		isn:                     seq,
+		fingerprint:             first.TcpFingerprint(),
 		expectedSeq:             seq + 1,
 		maxOutOrderPacketSize:   maxOutOrderPacketSize,
 	}
 	if err := clientSide.appendPacket(ctx, first); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	buffer = ringbuffer.New(BUFFER_SIZE).
+	buffer = ringbuffer.New(BufferSize).
 		WithCancel(ctx).
 		WithTimeout(time.Second * 5).
 		SetBlocking(true)
@@ -218,7 +226,7 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 		CaptureTimestampOffsets: make([]time.Time, 0, 32),
 		logger:                  logger,
 		rb:                      buffer,
-		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BUFFER_SIZE), bufio.NewWriterSize(writer, BUFFER_SIZE)),
+		brw:                     bufio.NewReadWriter(bufio.NewReaderSize(reader, BufferSize), bufio.NewWriterSize(writer, BufferSize)),
 		dstChan:                 dstChan,
 		traceID:                 traceID,
 		cli2Srv:                 false,
@@ -235,7 +243,7 @@ func (s *Side[P]) bufferClose() {
 }
 
 func (s *Side[P]) peekAll() ([]byte, error) {
-	length := min(s.brw.Reader.Buffered()+s.rb.Length(), BUFFER_SIZE)
+	length := min(s.brw.Reader.Buffered()+s.rb.Length(), BufferSize)
 	return s.brw.Reader.Peek(length)
 }
 
@@ -403,15 +411,30 @@ func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayl
 	defer s.tailerMu.Unlock()
 	startReaded := s.Readed
 	startIndex := s.findIndex(startReaded)
-	startPayloadOffset = s.PayloadOffsets[startIndex]
-	startTimestamp = s.CaptureTimestampOffsets[startIndex]
+	if startIndex >= 0 {
+		startPayloadOffset = s.PayloadOffsets[startIndex]
+		startTimestamp = s.CaptureTimestampOffsets[startIndex]
+	}
 	remained := uint64(s.brw.Reader.Buffered() + s.rb.Length())
+	// 并发安全：appendPacket 先将数据 Flush 进 ring buffer，随后才在 tailerMu 下更新 Written，
+	// 因此 UpdateComsumed 可能观测到 remained 大于已记账的未消费量 (Written-Readed)。
+	// 此时无法可靠计算本次消费量，置 0 提前返回，避免 consumed 下溢破坏 Readed，
+	// 进而触发 findIndex 返回 -1 导致 PayloadOffsets[-1] 越界 panic。
+	if available := s.Written - s.Readed; remained > available {
+		endReaded := s.Readed
+		if endIndex := s.findIndex(endReaded); endIndex >= 0 {
+			endPayloadOffset = s.PayloadOffsets[endIndex]
+			endTimestamp = s.CaptureTimestampOffsets[endIndex]
+		}
+		return 0, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
+	}
 	consumed = (s.Written - s.Readed) - remained
 	s.Readed += consumed
 	endReaded := s.Readed
-	endIndex := s.findIndex(endReaded)
-	endPayloadOffset = s.PayloadOffsets[endIndex]
-	endTimestamp = s.CaptureTimestampOffsets[endIndex]
+	if endIndex := s.findIndex(endReaded); endIndex >= 0 {
+		endPayloadOffset = s.PayloadOffsets[endIndex]
+		endTimestamp = s.CaptureTimestampOffsets[endIndex]
+	}
 	return consumed, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
 }
 
@@ -437,6 +460,7 @@ func (s *Side[P]) handshakeWithSecondSynAck(ctx context.Context, second P) error
 	}
 	s.state = StateSynReceived
 	s.isn = second.SeqNum()
+	s.fingerprint = second.TcpFingerprint()
 	s.expectedSeq = s.isn + 1
 	if err := s.appendPacket(ctx, second); err != nil {
 		return errors.WithStack(err)

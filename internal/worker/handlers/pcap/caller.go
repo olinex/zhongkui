@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	// PCAP_IMPORT PCAP文件导入任务的类型名称
-	PCAP_IMPORT = "network:pcapimport"
+	// PcapImport PCAP文件导入任务的类型名称
+	PcapImport = "network:pcapimport"
 )
 
 // PcapS3Object 表示从 S3 获取的 PCAP 文件的对象信息。
@@ -45,5 +45,5 @@ func NewPcapS3ObjectTask(value *PcapS3Object) (*asynq.Task, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return asynq.NewTask(PCAP_IMPORT, bytes, asynq.MaxRetry(0)), nil
+	return asynq.NewTask(PcapImport, bytes, asynq.MaxRetry(0)), nil
 }

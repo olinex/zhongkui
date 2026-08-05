@@ -92,5 +92,5 @@ func translationRegister(trans ut.Translator, bundle *i18n.Bundle, tag, lang str
 //	  "validator.strongPassword": "密码必须包含大小写字母、数字和特殊字符"
 //	}
 func TranslationRegister(trans ut.Translator, bundle *i18n.Bundle, lang string) error {
-	return translationRegister(trans, bundle, TAG_STRONG_PASSWORD, lang)
+	return translationRegister(trans, bundle, TagStrongPassword, lang)
 }

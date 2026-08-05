@@ -74,8 +74,8 @@ func (u *User) ResetPassword(db *database.DB, password string) error {
 // 功能说明:
 //  1. 在数据库事务中执行用户创建操作，确保数据一致性
 //  2. 根据 superuser 参数决定用户的权限级别:
-//     - 如果 superuser 为 true: 分配超级用户权限 (SUPERUSER_GROUP 和 WIDE_MATCH_LABEL)
-//     - 如果 superuser 为 false: 分配默认用户权限 (DEFAULT_GROUP 和 DEFAULT_NAMESPACE)
+//     - 如果 superuser 为 true: 分配超级用户权限 (SuperuserGroup 和 WideMatchLabel)
+//     - 如果 superuser 为 false: 分配默认用户权限 (DefaultGroup 和 DefaultNamespace)
 //  3. 使用 NewUserPolicy 函数创建相应的 RBAC 策略
 //  4. 将用户和策略一起保存到数据库，确保原子性操作
 //  5. 错误处理使用 errors.WithStack 包装错误信息，便于调试
@@ -88,14 +88,14 @@ func (u *User) Create(db *database.DB, superuser bool) error {
 		if superuser {
 			policy = NewUserPolicy(
 				u.UnionID,
-				base.SUPERUSER_GROUP,
-				base.WIDE_MATCH_LABEL,
+				base.SuperuserGroup,
+				base.WideMatchLabel,
 			)
 		} else {
 			policy = NewUserPolicy(
 				u.UnionID,
-				base.DEFAULT_GROUP,
-				base.DEFAULT_NAMESPACE,
+				base.DefaultGroup,
+				base.DefaultNamespace,
 			)
 		}
 		if err := tx.Create(policy).Error; err != nil {

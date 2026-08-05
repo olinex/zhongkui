@@ -126,12 +126,12 @@ type etcdKeyEntry struct {
 }
 
 var etcdClearCategories = []etcdClearCategory{
-	{name: "capturer config", prefix: core.REPORTER_ETCD_PREFIX},
-	{name: "distributed watermark", prefix: etcd.CLUSTER_ETCD_PREFIX},
-	{name: "scheduler config", prefix: pipeline.SCHEDULER_CFG_ETCD_PREFIX},
-	{name: "version cursor", prefix: etcd.VERSION_ETCD_PREFIX, filter: func(key string) bool {
+	{name: "capturer config", prefix: core.ReporterEtcdPrefix},
+	{name: "distributed watermark", prefix: etcd.ClusterEtcdPrefix},
+	{name: "scheduler config", prefix: pipeline.SchedulerCfgEtcdPrefix},
+	{name: "version cursor", prefix: etcd.VersionEtcdPrefix, filter: func(key string) bool {
 		// 排除分布式锁键，只保留版本游标数据
-		return !strings.HasPrefix(key, etcd.VERSION_LOCK_ETCD_PREFIX)
+		return !strings.HasPrefix(key, etcd.VersionLockEtcdPrefix)
 	}},
 }
 

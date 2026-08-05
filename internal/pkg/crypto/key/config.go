@@ -25,7 +25,7 @@ import (
 
 // PREFIX 定义配置项的前缀，所有密钥相关配置项都以 "crypto." 开头
 // 例如：crypto.source, crypto.parent_secret_key 等
-const PREFIX = "crypto"
+const Prefix = "crypto"
 
 // Config 定义密钥管理相关的配置项。
 //
@@ -60,7 +60,7 @@ type Config struct {
 
 // DescribeConfig 返回配置项的描述信息，用于生成配置文档
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
 // ExtractConfig 从 viper 实例中提取密钥配置
@@ -72,5 +72,5 @@ func DescribeConfig() config.ConfigDescriptions {
 //   - *Config: 提取的配置对象
 //   - error: 配置提取或验证失败时返回错误
 func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+	return config.ExtractConfig[Config](v, Prefix)
 }

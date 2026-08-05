@@ -115,7 +115,7 @@ func setupUserSelfTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := gin.New()
 	r.Use(setupI18nMiddleware())
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DATABASE_CTX_NAME, db)
+		c.Set(manager.DatabaseCtxName, db)
 		c.Next()
 	})
 	return r
@@ -124,7 +124,7 @@ func setupUserSelfTestRouterWithDB(db *database.DB) *gin.Engine {
 func setupUserSelfTestRouterWithDBAndUser(db *database.DB, user *core.User) *gin.Engine {
 	r := setupUserSelfTestRouterWithDB(db)
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.USER_CTX_NAME, user)
+		c.Set(manager.UserCtxName, user)
 		c.Next()
 	})
 	return r
@@ -137,8 +137,8 @@ func setupUserSelfTestRouterWithFullDeps(db *database.DB, user *core.User) *gin.
 	authenticator := manager.NewJwtAuthenticator(authConfig, db, kd)
 	loggingLogger := createTestLoggingLogger()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.AUTH_CTX_NAME, authenticator)
-		c.Set(manager.CONFIG_CTX_NAME, &manager.Config{
+		c.Set(manager.AuthCtxName, authenticator)
+		c.Set(manager.ConfigCtxName, &manager.Config{
 			Auth: *authConfig,
 		})
 		c.Next()
@@ -291,14 +291,14 @@ func TestAuthorizationInfoOut_Struct(t *testing.T) {
 	Convey("测试 AuthorizationInfoOut 结构体", t, func() {
 		Convey("应正确创建并赋值", func() {
 			out := AuthorizationInfoOut{
-				Model: base.RBAC_MODEL,
+				Model: base.RbacModel,
 				Policies: [][]string{
 					{"p", "admin", "user", "read", "allow"},
 					{"g", "user-union-id", "admin", "default", ""},
 				},
 				Namespaces: []string{"default", "production"},
 			}
-			So(out.Model, ShouldEqual, base.RBAC_MODEL)
+			So(out.Model, ShouldEqual, base.RbacModel)
 			So(len(out.Policies), ShouldEqual, 2)
 			So(out.Policies[0][0], ShouldEqual, "p")
 			So(out.Namespaces, ShouldContain, "default")
@@ -307,7 +307,7 @@ func TestAuthorizationInfoOut_Struct(t *testing.T) {
 
 		Convey("应处理空策略列表", func() {
 			out := AuthorizationInfoOut{
-				Model:      base.RBAC_MODEL,
+				Model:      base.RbacModel,
 				Policies:   [][]string{},
 				Namespaces: []string{},
 			}
@@ -317,7 +317,7 @@ func TestAuthorizationInfoOut_Struct(t *testing.T) {
 
 		Convey("应正确序列化为 JSON", func() {
 			out := AuthorizationInfoOut{
-				Model:      base.RBAC_MODEL,
+				Model:      base.RbacModel,
 				Policies:   [][]string{{"g", "uid", "admin", "default", ""}},
 				Namespaces: []string{"default"},
 			}
@@ -394,9 +394,9 @@ func TestUserRegister(t *testing.T) {
 			So(createdUser.Active, ShouldBeTrue)
 
 			var policy core.RbacPolicy
-			err = db.First(&policy, "ptype = ? AND v0 = ?", base.GROUP_LABEL, createdUser.UnionID.String()).Error
+			err = db.First(&policy, "ptype = ? AND v0 = ?", base.GroupLabel, createdUser.UnionID.String()).Error
 			So(err, ShouldBeNil)
-			So(policy.V1, ShouldEqual, base.DEFAULT_GROUP)
+			So(policy.V1, ShouldEqual, base.DefaultGroup)
 		})
 
 		Convey("应返回错误当请求体缺少必需字段时", func() {
@@ -466,7 +466,7 @@ func TestUserPasswordLogin(t *testing.T) {
 		r := setupUserSelfTestRouterWithDB(db)
 		r.Use(injectLoggerMiddleware(loggingLogger))
 		r.Use(func(c *gin.Context) {
-			c.Set(manager.AUTH_CTX_NAME, authenticator)
+			c.Set(manager.AuthCtxName, authenticator)
 			c.Next()
 		})
 		r.POST("/api/v1/user/password/login", userPasswordLogin)
@@ -669,7 +669,7 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 
 		r := setupUserSelfTestRouterWithDBAndUser(db, user)
 		r.Use(func(c *gin.Context) {
-			c.Set(manager.AUTH_CTX_NAME, authenticator)
+			c.Set(manager.AuthCtxName, authenticator)
 			c.Next()
 		})
 		r.POST("/api/v1/user/self/jwt/refresh", userSelfJwtRefresh)
@@ -718,11 +718,11 @@ func TestUserSelfAuthorizationInfoGet(t *testing.T) {
 			db.Create(policy)
 
 			rbacPolicy := &core.RbacPolicy{
-				Ptype: base.POLICY_LABEL,
+				Ptype: base.PolicyLabel,
 				V0:    "testgroup",
 				V1:    "user",
 				V2:    "read",
-				V3:    base.EFFECT_ALLOW,
+				V3:    base.EffectAllow,
 			}
 			db.Create(rbacPolicy)
 

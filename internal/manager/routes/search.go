@@ -2,2098 +2,2056 @@
 package routes
 
 import (
-	"time"
-
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+    "time"
+    "zhongkui.com/zhongkui/internal/pkg/serializer"
+    "zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
 type Pagination struct {
-	Page     uint `mapstructure:"page" binding:"min=1,max=100" default:"1"`
-	PageSize uint `mapstructure:"pageSize" binding:"oneof=10 20 50 100" default:"10"`
+    Page     uint `mapstructure:"page" binding:"min=1,max=100" default:"1"`
+    PageSize uint `mapstructure:"pageSize" binding:"oneof=10 20 50 100" default:"10"`
 }
 
 func (p *Pagination) GetPage() uint {
-	return p.Page
+    return p.Page
 }
 
 func (p *Pagination) GetPageSize() uint {
-	return p.PageSize
+    return p.PageSize
 }
 
 type createdAtCapturerListGetOrderByItem int
 
 func (i *createdAtCapturerListGetOrderByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtCapturerListGetOrderByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtCapturerListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
-
 type updatedAtCapturerListGetOrderByItem int
 
 func (i *updatedAtCapturerListGetOrderByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtCapturerListGetOrderByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtCapturerListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
 
 type CapturerListGetOrderBy struct {
-	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
-	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
 }
 type createdAtCapturerListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtCapturerListGetFilterByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtCapturerListGetFilterByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtTimeCapturerListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtTimeCapturerListGetFilterByItem) GetName() string {
-	return "createdAtTime"
+    return "createdAtTime"
 }
 
 func (i *createdAtTimeCapturerListGetFilterByItem) GetColumn() string {
-	return "Time(created_at)"
+    return "Time(created_at)"
 }
 
 func (i *createdAtTimeCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtTimeCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtDateCapturerListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtDateCapturerListGetFilterByItem) GetName() string {
-	return "createdAtDate"
+    return "createdAtDate"
 }
 
 func (i *createdAtDateCapturerListGetFilterByItem) GetColumn() string {
-	return "Date(created_at)"
+    return "Date(created_at)"
 }
 
 func (i *createdAtDateCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtDateCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtCapturerListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtCapturerListGetFilterByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtCapturerListGetFilterByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtTimeCapturerListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtTimeCapturerListGetFilterByItem) GetName() string {
-	return "updatedAtTime"
+    return "updatedAtTime"
 }
 
 func (i *updatedAtTimeCapturerListGetFilterByItem) GetColumn() string {
-	return "Time(updated_at)"
+    return "Time(updated_at)"
 }
 
 func (i *updatedAtTimeCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtTimeCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtDateCapturerListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtDateCapturerListGetFilterByItem) GetName() string {
-	return "updatedAtDate"
+    return "updatedAtDate"
 }
 
 func (i *updatedAtDateCapturerListGetFilterByItem) GetColumn() string {
-	return "Date(updated_at)"
+    return "Date(updated_at)"
 }
 
 func (i *updatedAtDateCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtDateCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type namespaceCapturerListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *namespaceCapturerListGetFilterByItem) GetName() string {
-	return "namespace"
+    return "namespace"
 }
 
 func (i *namespaceCapturerListGetFilterByItem) GetColumn() string {
-	return "namespace_name"
+    return "namespace_name"
 }
 
 func (i *namespaceCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *namespaceCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type nameCapturerListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *nameCapturerListGetFilterByItem) GetName() string {
-	return "name"
+    return "name"
 }
 
 func (i *nameCapturerListGetFilterByItem) GetColumn() string {
-	return "name"
+    return "name"
 }
 
 func (i *nameCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *nameCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type versionCapturerListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *versionCapturerListGetFilterByItem) GetName() string {
-	return "version"
+    return "version"
 }
 
 func (i *versionCapturerListGetFilterByItem) GetColumn() string {
-	return "version"
+    return "version"
 }
 
 func (i *versionCapturerListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *versionCapturerListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
 
 type CapturerListGetFilterBy struct {
-	CreatedAt     *createdAtCapturerListGetFilterByItem     `mapstructure:"createdAt"`
-	CreatedAtTime *createdAtTimeCapturerListGetFilterByItem `mapstructure:"createdAtTime"`
-	CreatedAtDate *createdAtDateCapturerListGetFilterByItem `mapstructure:"createdAtDate"`
-	UpdatedAt     *updatedAtCapturerListGetFilterByItem     `mapstructure:"updatedAt"`
-	UpdatedAtTime *updatedAtTimeCapturerListGetFilterByItem `mapstructure:"updatedAtTime"`
-	UpdatedAtDate *updatedAtDateCapturerListGetFilterByItem `mapstructure:"updatedAtDate"`
-	Namespace     *namespaceCapturerListGetFilterByItem     `mapstructure:"namespace"`
-	Name          *nameCapturerListGetFilterByItem          `mapstructure:"name"`
-	Version       *versionCapturerListGetFilterByItem       `mapstructure:"version"`
+    CreatedAt *createdAtCapturerListGetFilterByItem `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeCapturerListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateCapturerListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt *updatedAtCapturerListGetFilterByItem `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeCapturerListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateCapturerListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Namespace *namespaceCapturerListGetFilterByItem `mapstructure:"namespace"`
+    Name *nameCapturerListGetFilterByItem `mapstructure:"name"`
+    Version *versionCapturerListGetFilterByItem `mapstructure:"version"`
 }
 
 type CapturerListGetSearchIn struct {
-	Pagination
-	Greedy   bool                     `mapstructure:"greedy" default:"false"`
-	OrderBy  []CapturerListGetOrderBy `mapstructure:"orderBy"`
-	FilterBy *CapturerListGetFilterBy `mapstructure:"filterBy"`
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []CapturerListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy *CapturerListGetFilterBy     `mapstructure:"filterBy"`
 }
 
 func (s *CapturerListGetSearchIn) GetGreedy() bool {
-	return s.Greedy
+    return s.Greedy
 }
 
 func (s *CapturerListGetSearchIn) GetOrderBy() []utils.OrderByItem {
-	items := make([]utils.OrderByItem, 0)
-	if s.OrderBy == nil {
-		return items
-	}
-	for _, ord := range s.OrderBy {
-		switch ord.Name {
-		case "createdAt":
-			item := createdAtCapturerListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		case "updatedAt":
-			item := updatedAtCapturerListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		}
-	}
-	return items
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "createdAt":
+            item := createdAtCapturerListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        case "updatedAt":
+            item := updatedAtCapturerListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
 }
 
 func (s *CapturerListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
-	items := make(map[string]utils.FilterByItem)
-	if s.FilterBy == nil {
-		return items
-	}
-	if s.FilterBy.CreatedAt != nil {
-		items["createdAt"] = s.FilterBy.CreatedAt
-	}
-	if s.FilterBy.CreatedAtTime != nil {
-		items["createdAtTime"] = s.FilterBy.CreatedAtTime
-	}
-	if s.FilterBy.CreatedAtDate != nil {
-		items["createdAtDate"] = s.FilterBy.CreatedAtDate
-	}
-	if s.FilterBy.UpdatedAt != nil {
-		items["updatedAt"] = s.FilterBy.UpdatedAt
-	}
-	if s.FilterBy.UpdatedAtTime != nil {
-		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
-	}
-	if s.FilterBy.UpdatedAtDate != nil {
-		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
-	}
-	if s.FilterBy.Namespace != nil {
-		items["namespace"] = s.FilterBy.Namespace
-	}
-	if s.FilterBy.Name != nil {
-		items["name"] = s.FilterBy.Name
-	}
-	if s.FilterBy.Version != nil {
-		items["version"] = s.FilterBy.Version
-	}
-	return items
+    items := make(map[string]utils.FilterByItem)
+    if s.FilterBy == nil {
+        return items
+    }
+    if s.FilterBy.CreatedAt != nil {
+        items["createdAt"] = s.FilterBy.CreatedAt
+    }
+    if s.FilterBy.CreatedAtTime != nil {
+        items["createdAtTime"] = s.FilterBy.CreatedAtTime
+    }
+    if s.FilterBy.CreatedAtDate != nil {
+        items["createdAtDate"] = s.FilterBy.CreatedAtDate
+    }
+    if s.FilterBy.UpdatedAt != nil {
+        items["updatedAt"] = s.FilterBy.UpdatedAt
+    }
+    if s.FilterBy.UpdatedAtTime != nil {
+        items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+    }
+    if s.FilterBy.UpdatedAtDate != nil {
+        items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+    }
+    if s.FilterBy.Namespace != nil {
+        items["namespace"] = s.FilterBy.Namespace
+    }
+    if s.FilterBy.Name != nil {
+        items["name"] = s.FilterBy.Name
+    }
+    if s.FilterBy.Version != nil {
+        items["version"] = s.FilterBy.Version
+    }
+    return items
 }
 
 func (s *CapturerListGetSearchIn) GetOptions() *utils.SearchOptions {
-	return &utils.SearchOptions{
-		OrderBy: []string{
-			"createdAt",
-			"updatedAt",
-		},
-		FilterBy: []*utils.FilterByOption{
-			{
-				Name: "createdAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "namespace",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-			{
-				Name: "name",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-			{
-				Name: "version",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-		},
-	}
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "createdAt",
+            "updatedAt",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "createdAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "namespace",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "name",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "version",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+        },
+    }
 }
 
 type createdAtGroupListGetOrderByItem int
 
 func (i *createdAtGroupListGetOrderByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtGroupListGetOrderByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtGroupListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
-
 type updatedAtGroupListGetOrderByItem int
 
 func (i *updatedAtGroupListGetOrderByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtGroupListGetOrderByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtGroupListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
 
 type GroupListGetOrderBy struct {
-	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
-	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
 }
 type createdAtGroupListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtGroupListGetFilterByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtGroupListGetFilterByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtGroupListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtGroupListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtTimeGroupListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtTimeGroupListGetFilterByItem) GetName() string {
-	return "createdAtTime"
+    return "createdAtTime"
 }
 
 func (i *createdAtTimeGroupListGetFilterByItem) GetColumn() string {
-	return "Time(created_at)"
+    return "Time(created_at)"
 }
 
 func (i *createdAtTimeGroupListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtTimeGroupListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtDateGroupListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtDateGroupListGetFilterByItem) GetName() string {
-	return "createdAtDate"
+    return "createdAtDate"
 }
 
 func (i *createdAtDateGroupListGetFilterByItem) GetColumn() string {
-	return "Date(created_at)"
+    return "Date(created_at)"
 }
 
 func (i *createdAtDateGroupListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtDateGroupListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtGroupListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtGroupListGetFilterByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtGroupListGetFilterByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtGroupListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtGroupListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtTimeGroupListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtTimeGroupListGetFilterByItem) GetName() string {
-	return "updatedAtTime"
+    return "updatedAtTime"
 }
 
 func (i *updatedAtTimeGroupListGetFilterByItem) GetColumn() string {
-	return "Time(updated_at)"
+    return "Time(updated_at)"
 }
 
 func (i *updatedAtTimeGroupListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtTimeGroupListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtDateGroupListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtDateGroupListGetFilterByItem) GetName() string {
-	return "updatedAtDate"
+    return "updatedAtDate"
 }
 
 func (i *updatedAtDateGroupListGetFilterByItem) GetColumn() string {
-	return "Date(updated_at)"
+    return "Date(updated_at)"
 }
 
 func (i *updatedAtDateGroupListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtDateGroupListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type nameGroupListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *nameGroupListGetFilterByItem) GetName() string {
-	return "name"
+    return "name"
 }
 
 func (i *nameGroupListGetFilterByItem) GetColumn() string {
-	return "name"
+    return "name"
 }
 
 func (i *nameGroupListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *nameGroupListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
 
 type GroupListGetFilterBy struct {
-	CreatedAt     *createdAtGroupListGetFilterByItem     `mapstructure:"createdAt"`
-	CreatedAtTime *createdAtTimeGroupListGetFilterByItem `mapstructure:"createdAtTime"`
-	CreatedAtDate *createdAtDateGroupListGetFilterByItem `mapstructure:"createdAtDate"`
-	UpdatedAt     *updatedAtGroupListGetFilterByItem     `mapstructure:"updatedAt"`
-	UpdatedAtTime *updatedAtTimeGroupListGetFilterByItem `mapstructure:"updatedAtTime"`
-	UpdatedAtDate *updatedAtDateGroupListGetFilterByItem `mapstructure:"updatedAtDate"`
-	Name          *nameGroupListGetFilterByItem          `mapstructure:"name"`
+    CreatedAt *createdAtGroupListGetFilterByItem `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeGroupListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateGroupListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt *updatedAtGroupListGetFilterByItem `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeGroupListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateGroupListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Name *nameGroupListGetFilterByItem `mapstructure:"name"`
 }
 
 type GroupListGetSearchIn struct {
-	Pagination
-	Greedy   bool                  `mapstructure:"greedy" default:"false"`
-	OrderBy  []GroupListGetOrderBy `mapstructure:"orderBy"`
-	FilterBy *GroupListGetFilterBy `mapstructure:"filterBy"`
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []GroupListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy *GroupListGetFilterBy     `mapstructure:"filterBy"`
 }
 
 func (s *GroupListGetSearchIn) GetGreedy() bool {
-	return s.Greedy
+    return s.Greedy
 }
 
 func (s *GroupListGetSearchIn) GetOrderBy() []utils.OrderByItem {
-	items := make([]utils.OrderByItem, 0)
-	if s.OrderBy == nil {
-		return items
-	}
-	for _, ord := range s.OrderBy {
-		switch ord.Name {
-		case "createdAt":
-			item := createdAtGroupListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		case "updatedAt":
-			item := updatedAtGroupListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		}
-	}
-	return items
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "createdAt":
+            item := createdAtGroupListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        case "updatedAt":
+            item := updatedAtGroupListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
 }
 
 func (s *GroupListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
-	items := make(map[string]utils.FilterByItem)
-	if s.FilterBy == nil {
-		return items
-	}
-	if s.FilterBy.CreatedAt != nil {
-		items["createdAt"] = s.FilterBy.CreatedAt
-	}
-	if s.FilterBy.CreatedAtTime != nil {
-		items["createdAtTime"] = s.FilterBy.CreatedAtTime
-	}
-	if s.FilterBy.CreatedAtDate != nil {
-		items["createdAtDate"] = s.FilterBy.CreatedAtDate
-	}
-	if s.FilterBy.UpdatedAt != nil {
-		items["updatedAt"] = s.FilterBy.UpdatedAt
-	}
-	if s.FilterBy.UpdatedAtTime != nil {
-		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
-	}
-	if s.FilterBy.UpdatedAtDate != nil {
-		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
-	}
-	if s.FilterBy.Name != nil {
-		items["name"] = s.FilterBy.Name
-	}
-	return items
+    items := make(map[string]utils.FilterByItem)
+    if s.FilterBy == nil {
+        return items
+    }
+    if s.FilterBy.CreatedAt != nil {
+        items["createdAt"] = s.FilterBy.CreatedAt
+    }
+    if s.FilterBy.CreatedAtTime != nil {
+        items["createdAtTime"] = s.FilterBy.CreatedAtTime
+    }
+    if s.FilterBy.CreatedAtDate != nil {
+        items["createdAtDate"] = s.FilterBy.CreatedAtDate
+    }
+    if s.FilterBy.UpdatedAt != nil {
+        items["updatedAt"] = s.FilterBy.UpdatedAt
+    }
+    if s.FilterBy.UpdatedAtTime != nil {
+        items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+    }
+    if s.FilterBy.UpdatedAtDate != nil {
+        items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+    }
+    if s.FilterBy.Name != nil {
+        items["name"] = s.FilterBy.Name
+    }
+    return items
 }
 
 func (s *GroupListGetSearchIn) GetOptions() *utils.SearchOptions {
-	return &utils.SearchOptions{
-		OrderBy: []string{
-			"createdAt",
-			"updatedAt",
-		},
-		FilterBy: []*utils.FilterByOption{
-			{
-				Name: "createdAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "name",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-		},
-	}
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "createdAt",
+            "updatedAt",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "createdAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "name",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+        },
+    }
 }
 
 type createdAtNamespaceListGetOrderByItem int
 
 func (i *createdAtNamespaceListGetOrderByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtNamespaceListGetOrderByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtNamespaceListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
-
 type updatedAtNamespaceListGetOrderByItem int
 
 func (i *updatedAtNamespaceListGetOrderByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtNamespaceListGetOrderByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtNamespaceListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
 
 type NamespaceListGetOrderBy struct {
-	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
-	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
 }
 type createdAtNamespaceListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtNamespaceListGetFilterByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtNamespaceListGetFilterByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtNamespaceListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtNamespaceListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtTimeNamespaceListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtTimeNamespaceListGetFilterByItem) GetName() string {
-	return "createdAtTime"
+    return "createdAtTime"
 }
 
 func (i *createdAtTimeNamespaceListGetFilterByItem) GetColumn() string {
-	return "Time(created_at)"
+    return "Time(created_at)"
 }
 
 func (i *createdAtTimeNamespaceListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtTimeNamespaceListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtDateNamespaceListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtDateNamespaceListGetFilterByItem) GetName() string {
-	return "createdAtDate"
+    return "createdAtDate"
 }
 
 func (i *createdAtDateNamespaceListGetFilterByItem) GetColumn() string {
-	return "Date(created_at)"
+    return "Date(created_at)"
 }
 
 func (i *createdAtDateNamespaceListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtDateNamespaceListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtNamespaceListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtNamespaceListGetFilterByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtNamespaceListGetFilterByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtNamespaceListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtNamespaceListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtTimeNamespaceListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtTimeNamespaceListGetFilterByItem) GetName() string {
-	return "updatedAtTime"
+    return "updatedAtTime"
 }
 
 func (i *updatedAtTimeNamespaceListGetFilterByItem) GetColumn() string {
-	return "Time(updated_at)"
+    return "Time(updated_at)"
 }
 
 func (i *updatedAtTimeNamespaceListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtTimeNamespaceListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtDateNamespaceListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtDateNamespaceListGetFilterByItem) GetName() string {
-	return "updatedAtDate"
+    return "updatedAtDate"
 }
 
 func (i *updatedAtDateNamespaceListGetFilterByItem) GetColumn() string {
-	return "Date(updated_at)"
+    return "Date(updated_at)"
 }
 
 func (i *updatedAtDateNamespaceListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtDateNamespaceListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type nameNamespaceListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *nameNamespaceListGetFilterByItem) GetName() string {
-	return "name"
+    return "name"
 }
 
 func (i *nameNamespaceListGetFilterByItem) GetColumn() string {
-	return "name"
+    return "name"
 }
 
 func (i *nameNamespaceListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *nameNamespaceListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
 
 type NamespaceListGetFilterBy struct {
-	CreatedAt     *createdAtNamespaceListGetFilterByItem     `mapstructure:"createdAt"`
-	CreatedAtTime *createdAtTimeNamespaceListGetFilterByItem `mapstructure:"createdAtTime"`
-	CreatedAtDate *createdAtDateNamespaceListGetFilterByItem `mapstructure:"createdAtDate"`
-	UpdatedAt     *updatedAtNamespaceListGetFilterByItem     `mapstructure:"updatedAt"`
-	UpdatedAtTime *updatedAtTimeNamespaceListGetFilterByItem `mapstructure:"updatedAtTime"`
-	UpdatedAtDate *updatedAtDateNamespaceListGetFilterByItem `mapstructure:"updatedAtDate"`
-	Name          *nameNamespaceListGetFilterByItem          `mapstructure:"name"`
+    CreatedAt *createdAtNamespaceListGetFilterByItem `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeNamespaceListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateNamespaceListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt *updatedAtNamespaceListGetFilterByItem `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeNamespaceListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateNamespaceListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Name *nameNamespaceListGetFilterByItem `mapstructure:"name"`
 }
 
 type NamespaceListGetSearchIn struct {
-	Pagination
-	Greedy   bool                      `mapstructure:"greedy" default:"false"`
-	OrderBy  []NamespaceListGetOrderBy `mapstructure:"orderBy"`
-	FilterBy *NamespaceListGetFilterBy `mapstructure:"filterBy"`
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []NamespaceListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy *NamespaceListGetFilterBy     `mapstructure:"filterBy"`
 }
 
 func (s *NamespaceListGetSearchIn) GetGreedy() bool {
-	return s.Greedy
+    return s.Greedy
 }
 
 func (s *NamespaceListGetSearchIn) GetOrderBy() []utils.OrderByItem {
-	items := make([]utils.OrderByItem, 0)
-	if s.OrderBy == nil {
-		return items
-	}
-	for _, ord := range s.OrderBy {
-		switch ord.Name {
-		case "createdAt":
-			item := createdAtNamespaceListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		case "updatedAt":
-			item := updatedAtNamespaceListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		}
-	}
-	return items
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "createdAt":
+            item := createdAtNamespaceListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        case "updatedAt":
+            item := updatedAtNamespaceListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
 }
 
 func (s *NamespaceListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
-	items := make(map[string]utils.FilterByItem)
-	if s.FilterBy == nil {
-		return items
-	}
-	if s.FilterBy.CreatedAt != nil {
-		items["createdAt"] = s.FilterBy.CreatedAt
-	}
-	if s.FilterBy.CreatedAtTime != nil {
-		items["createdAtTime"] = s.FilterBy.CreatedAtTime
-	}
-	if s.FilterBy.CreatedAtDate != nil {
-		items["createdAtDate"] = s.FilterBy.CreatedAtDate
-	}
-	if s.FilterBy.UpdatedAt != nil {
-		items["updatedAt"] = s.FilterBy.UpdatedAt
-	}
-	if s.FilterBy.UpdatedAtTime != nil {
-		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
-	}
-	if s.FilterBy.UpdatedAtDate != nil {
-		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
-	}
-	if s.FilterBy.Name != nil {
-		items["name"] = s.FilterBy.Name
-	}
-	return items
+    items := make(map[string]utils.FilterByItem)
+    if s.FilterBy == nil {
+        return items
+    }
+    if s.FilterBy.CreatedAt != nil {
+        items["createdAt"] = s.FilterBy.CreatedAt
+    }
+    if s.FilterBy.CreatedAtTime != nil {
+        items["createdAtTime"] = s.FilterBy.CreatedAtTime
+    }
+    if s.FilterBy.CreatedAtDate != nil {
+        items["createdAtDate"] = s.FilterBy.CreatedAtDate
+    }
+    if s.FilterBy.UpdatedAt != nil {
+        items["updatedAt"] = s.FilterBy.UpdatedAt
+    }
+    if s.FilterBy.UpdatedAtTime != nil {
+        items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+    }
+    if s.FilterBy.UpdatedAtDate != nil {
+        items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+    }
+    if s.FilterBy.Name != nil {
+        items["name"] = s.FilterBy.Name
+    }
+    return items
 }
 
 func (s *NamespaceListGetSearchIn) GetOptions() *utils.SearchOptions {
-	return &utils.SearchOptions{
-		OrderBy: []string{
-			"createdAt",
-			"updatedAt",
-		},
-		FilterBy: []*utils.FilterByOption{
-			{
-				Name: "createdAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "name",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-		},
-	}
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "createdAt",
+            "updatedAt",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "createdAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "name",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+        },
+    }
 }
 
 type createdAtRbacPolicyTmplateListGetOrderByItem int
 
 func (i *createdAtRbacPolicyTmplateListGetOrderByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtRbacPolicyTmplateListGetOrderByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtRbacPolicyTmplateListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
-
 type updatedAtRbacPolicyTmplateListGetOrderByItem int
 
 func (i *updatedAtRbacPolicyTmplateListGetOrderByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtRbacPolicyTmplateListGetOrderByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtRbacPolicyTmplateListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
 
 type RbacPolicyTmplateListGetOrderBy struct {
-	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
-	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
 }
 type createdAtRbacPolicyTmplateListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtTimeRbacPolicyTmplateListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtTimeRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "createdAtTime"
+    return "createdAtTime"
 }
 
 func (i *createdAtTimeRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "Time(created_at)"
+    return "Time(created_at)"
 }
 
 func (i *createdAtTimeRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtTimeRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtDateRbacPolicyTmplateListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtDateRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "createdAtDate"
+    return "createdAtDate"
 }
 
 func (i *createdAtDateRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "Date(created_at)"
+    return "Date(created_at)"
 }
 
 func (i *createdAtDateRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtDateRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtRbacPolicyTmplateListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtTimeRbacPolicyTmplateListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtTimeRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "updatedAtTime"
+    return "updatedAtTime"
 }
 
 func (i *updatedAtTimeRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "Time(updated_at)"
+    return "Time(updated_at)"
 }
 
 func (i *updatedAtTimeRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtTimeRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtDateRbacPolicyTmplateListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtDateRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "updatedAtDate"
+    return "updatedAtDate"
 }
 
 func (i *updatedAtDateRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "Date(updated_at)"
+    return "Date(updated_at)"
 }
 
 func (i *updatedAtDateRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtDateRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type targetRbacPolicyTmplateListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *targetRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "target"
+    return "target"
 }
 
 func (i *targetRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "target"
+    return "target"
 }
 
 func (i *targetRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *targetRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type actionRbacPolicyTmplateListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *actionRbacPolicyTmplateListGetFilterByItem) GetName() string {
-	return "action"
+    return "action"
 }
 
 func (i *actionRbacPolicyTmplateListGetFilterByItem) GetColumn() string {
-	return "action"
+    return "action"
 }
 
 func (i *actionRbacPolicyTmplateListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *actionRbacPolicyTmplateListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
 
 type RbacPolicyTmplateListGetFilterBy struct {
-	CreatedAt     *createdAtRbacPolicyTmplateListGetFilterByItem     `mapstructure:"createdAt"`
-	CreatedAtTime *createdAtTimeRbacPolicyTmplateListGetFilterByItem `mapstructure:"createdAtTime"`
-	CreatedAtDate *createdAtDateRbacPolicyTmplateListGetFilterByItem `mapstructure:"createdAtDate"`
-	UpdatedAt     *updatedAtRbacPolicyTmplateListGetFilterByItem     `mapstructure:"updatedAt"`
-	UpdatedAtTime *updatedAtTimeRbacPolicyTmplateListGetFilterByItem `mapstructure:"updatedAtTime"`
-	UpdatedAtDate *updatedAtDateRbacPolicyTmplateListGetFilterByItem `mapstructure:"updatedAtDate"`
-	Target        *targetRbacPolicyTmplateListGetFilterByItem        `mapstructure:"target"`
-	Action        *actionRbacPolicyTmplateListGetFilterByItem        `mapstructure:"action"`
+    CreatedAt *createdAtRbacPolicyTmplateListGetFilterByItem `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeRbacPolicyTmplateListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateRbacPolicyTmplateListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt *updatedAtRbacPolicyTmplateListGetFilterByItem `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeRbacPolicyTmplateListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateRbacPolicyTmplateListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Target *targetRbacPolicyTmplateListGetFilterByItem `mapstructure:"target"`
+    Action *actionRbacPolicyTmplateListGetFilterByItem `mapstructure:"action"`
 }
 
 type RbacPolicyTmplateListGetSearchIn struct {
-	Pagination
-	Greedy   bool                              `mapstructure:"greedy" default:"false"`
-	OrderBy  []RbacPolicyTmplateListGetOrderBy `mapstructure:"orderBy"`
-	FilterBy *RbacPolicyTmplateListGetFilterBy `mapstructure:"filterBy"`
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []RbacPolicyTmplateListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy *RbacPolicyTmplateListGetFilterBy     `mapstructure:"filterBy"`
 }
 
 func (s *RbacPolicyTmplateListGetSearchIn) GetGreedy() bool {
-	return s.Greedy
+    return s.Greedy
 }
 
 func (s *RbacPolicyTmplateListGetSearchIn) GetOrderBy() []utils.OrderByItem {
-	items := make([]utils.OrderByItem, 0)
-	if s.OrderBy == nil {
-		return items
-	}
-	for _, ord := range s.OrderBy {
-		switch ord.Name {
-		case "createdAt":
-			item := createdAtRbacPolicyTmplateListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		case "updatedAt":
-			item := updatedAtRbacPolicyTmplateListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		}
-	}
-	return items
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "createdAt":
+            item := createdAtRbacPolicyTmplateListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        case "updatedAt":
+            item := updatedAtRbacPolicyTmplateListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
 }
 
 func (s *RbacPolicyTmplateListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
-	items := make(map[string]utils.FilterByItem)
-	if s.FilterBy == nil {
-		return items
-	}
-	if s.FilterBy.CreatedAt != nil {
-		items["createdAt"] = s.FilterBy.CreatedAt
-	}
-	if s.FilterBy.CreatedAtTime != nil {
-		items["createdAtTime"] = s.FilterBy.CreatedAtTime
-	}
-	if s.FilterBy.CreatedAtDate != nil {
-		items["createdAtDate"] = s.FilterBy.CreatedAtDate
-	}
-	if s.FilterBy.UpdatedAt != nil {
-		items["updatedAt"] = s.FilterBy.UpdatedAt
-	}
-	if s.FilterBy.UpdatedAtTime != nil {
-		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
-	}
-	if s.FilterBy.UpdatedAtDate != nil {
-		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
-	}
-	if s.FilterBy.Target != nil {
-		items["target"] = s.FilterBy.Target
-	}
-	if s.FilterBy.Action != nil {
-		items["action"] = s.FilterBy.Action
-	}
-	return items
+    items := make(map[string]utils.FilterByItem)
+    if s.FilterBy == nil {
+        return items
+    }
+    if s.FilterBy.CreatedAt != nil {
+        items["createdAt"] = s.FilterBy.CreatedAt
+    }
+    if s.FilterBy.CreatedAtTime != nil {
+        items["createdAtTime"] = s.FilterBy.CreatedAtTime
+    }
+    if s.FilterBy.CreatedAtDate != nil {
+        items["createdAtDate"] = s.FilterBy.CreatedAtDate
+    }
+    if s.FilterBy.UpdatedAt != nil {
+        items["updatedAt"] = s.FilterBy.UpdatedAt
+    }
+    if s.FilterBy.UpdatedAtTime != nil {
+        items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+    }
+    if s.FilterBy.UpdatedAtDate != nil {
+        items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+    }
+    if s.FilterBy.Target != nil {
+        items["target"] = s.FilterBy.Target
+    }
+    if s.FilterBy.Action != nil {
+        items["action"] = s.FilterBy.Action
+    }
+    return items
 }
 
 func (s *RbacPolicyTmplateListGetSearchIn) GetOptions() *utils.SearchOptions {
-	return &utils.SearchOptions{
-		OrderBy: []string{
-			"createdAt",
-			"updatedAt",
-		},
-		FilterBy: []*utils.FilterByOption{
-			{
-				Name: "createdAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "target",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-			{
-				Name: "action",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-		},
-	}
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "createdAt",
+            "updatedAt",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "createdAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "target",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "action",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+        },
+    }
 }
 
 type createdAtUserListGetOrderByItem int
 
 func (i *createdAtUserListGetOrderByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtUserListGetOrderByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtUserListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
-
 type updatedAtUserListGetOrderByItem int
 
 func (i *updatedAtUserListGetOrderByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtUserListGetOrderByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtUserListGetOrderByItem) GetOrder() string {
-	if *i == 1 {
-		return "ASC"
-	} else {
-		return "DESC"
-	}
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
 }
 
 type UserListGetOrderBy struct {
-	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
-	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
 }
 type createdAtUserListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtUserListGetFilterByItem) GetName() string {
-	return "createdAt"
+    return "createdAt"
 }
 
 func (i *createdAtUserListGetFilterByItem) GetColumn() string {
-	return "created_at"
+    return "created_at"
 }
 
 func (i *createdAtUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtTimeUserListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtTimeUserListGetFilterByItem) GetName() string {
-	return "createdAtTime"
+    return "createdAtTime"
 }
 
 func (i *createdAtTimeUserListGetFilterByItem) GetColumn() string {
-	return "Time(created_at)"
+    return "Time(created_at)"
 }
 
 func (i *createdAtTimeUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtTimeUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type createdAtDateUserListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *createdAtDateUserListGetFilterByItem) GetName() string {
-	return "createdAtDate"
+    return "createdAtDate"
 }
 
 func (i *createdAtDateUserListGetFilterByItem) GetColumn() string {
-	return "Date(created_at)"
+    return "Date(created_at)"
 }
 
 func (i *createdAtDateUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *createdAtDateUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtUserListGetFilterByItem struct {
-	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  time.Time `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtUserListGetFilterByItem) GetName() string {
-	return "updatedAt"
+    return "updatedAt"
 }
 
 func (i *updatedAtUserListGetFilterByItem) GetColumn() string {
-	return "updated_at"
+    return "updated_at"
 }
 
 func (i *updatedAtUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtTimeUserListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtTimeUserListGetFilterByItem) GetName() string {
-	return "updatedAtTime"
+    return "updatedAtTime"
 }
 
 func (i *updatedAtTimeUserListGetFilterByItem) GetColumn() string {
-	return "Time(updated_at)"
+    return "Time(updated_at)"
 }
 
 func (i *updatedAtTimeUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtTimeUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type updatedAtDateUserListGetFilterByItem struct {
-	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
-	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
 }
 
 func (i *updatedAtDateUserListGetFilterByItem) GetName() string {
-	return "updatedAtDate"
+    return "updatedAtDate"
 }
 
 func (i *updatedAtDateUserListGetFilterByItem) GetColumn() string {
-	return "Date(updated_at)"
+    return "Date(updated_at)"
 }
 
 func (i *updatedAtDateUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *updatedAtDateUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type activeUserListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq"`
-	Value  bool   `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value bool `mapstructure:"value" binding:""`
 }
 
 func (i *activeUserListGetFilterByItem) GetName() string {
-	return "active"
+    return "active"
 }
 
 func (i *activeUserListGetFilterByItem) GetColumn() string {
-	return "active"
+    return "active"
 }
 
 func (i *activeUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *activeUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type usernameUserListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *usernameUserListGetFilterByItem) GetName() string {
-	return "username"
+    return "username"
 }
 
 func (i *usernameUserListGetFilterByItem) GetColumn() string {
-	return "username"
+    return "username"
 }
 
 func (i *usernameUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *usernameUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type nickleNameUserListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *nickleNameUserListGetFilterByItem) GetName() string {
-	return "nickleName"
+    return "nickleName"
 }
 
 func (i *nickleNameUserListGetFilterByItem) GetColumn() string {
-	return "nickle_name"
+    return "nickle_name"
 }
 
 func (i *nickleNameUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *nickleNameUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
-
 type emailUserListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-	Value  string `mapstructure:"value" binding:""`
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
 }
 
 func (i *emailUserListGetFilterByItem) GetName() string {
-	return "email"
+    return "email"
 }
 
 func (i *emailUserListGetFilterByItem) GetColumn() string {
-	return "email"
+    return "email"
 }
 
 func (i *emailUserListGetFilterByItem) GetAction() string {
-	return i.Action
+    return i.Action
 }
 
 func (i *emailUserListGetFilterByItem) GetValue() any {
-	return i.Value
+    return i.Value
 }
 
 type UserListGetFilterBy struct {
-	CreatedAt     *createdAtUserListGetFilterByItem     `mapstructure:"createdAt"`
-	CreatedAtTime *createdAtTimeUserListGetFilterByItem `mapstructure:"createdAtTime"`
-	CreatedAtDate *createdAtDateUserListGetFilterByItem `mapstructure:"createdAtDate"`
-	UpdatedAt     *updatedAtUserListGetFilterByItem     `mapstructure:"updatedAt"`
-	UpdatedAtTime *updatedAtTimeUserListGetFilterByItem `mapstructure:"updatedAtTime"`
-	UpdatedAtDate *updatedAtDateUserListGetFilterByItem `mapstructure:"updatedAtDate"`
-	Active        *activeUserListGetFilterByItem        `mapstructure:"active"`
-	Username      *usernameUserListGetFilterByItem      `mapstructure:"username"`
-	NickleName    *nickleNameUserListGetFilterByItem    `mapstructure:"nickleName"`
-	Email         *emailUserListGetFilterByItem         `mapstructure:"email"`
+    CreatedAt *createdAtUserListGetFilterByItem `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeUserListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateUserListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt *updatedAtUserListGetFilterByItem `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeUserListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateUserListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Active *activeUserListGetFilterByItem `mapstructure:"active"`
+    Username *usernameUserListGetFilterByItem `mapstructure:"username"`
+    NickleName *nickleNameUserListGetFilterByItem `mapstructure:"nickleName"`
+    Email *emailUserListGetFilterByItem `mapstructure:"email"`
 }
 
 type UserListGetSearchIn struct {
-	Pagination
-	Greedy   bool                 `mapstructure:"greedy" default:"false"`
-	OrderBy  []UserListGetOrderBy `mapstructure:"orderBy"`
-	FilterBy *UserListGetFilterBy `mapstructure:"filterBy"`
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []UserListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy *UserListGetFilterBy     `mapstructure:"filterBy"`
 }
 
 func (s *UserListGetSearchIn) GetGreedy() bool {
-	return s.Greedy
+    return s.Greedy
 }
 
 func (s *UserListGetSearchIn) GetOrderBy() []utils.OrderByItem {
-	items := make([]utils.OrderByItem, 0)
-	if s.OrderBy == nil {
-		return items
-	}
-	for _, ord := range s.OrderBy {
-		switch ord.Name {
-		case "createdAt":
-			item := createdAtUserListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		case "updatedAt":
-			item := updatedAtUserListGetOrderByItem(ord.Order)
-			items = append(items, &item)
-		}
-	}
-	return items
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "createdAt":
+            item := createdAtUserListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        case "updatedAt":
+            item := updatedAtUserListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
 }
 
 func (s *UserListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
-	items := make(map[string]utils.FilterByItem)
-	if s.FilterBy == nil {
-		return items
-	}
-	if s.FilterBy.CreatedAt != nil {
-		items["createdAt"] = s.FilterBy.CreatedAt
-	}
-	if s.FilterBy.CreatedAtTime != nil {
-		items["createdAtTime"] = s.FilterBy.CreatedAtTime
-	}
-	if s.FilterBy.CreatedAtDate != nil {
-		items["createdAtDate"] = s.FilterBy.CreatedAtDate
-	}
-	if s.FilterBy.UpdatedAt != nil {
-		items["updatedAt"] = s.FilterBy.UpdatedAt
-	}
-	if s.FilterBy.UpdatedAtTime != nil {
-		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
-	}
-	if s.FilterBy.UpdatedAtDate != nil {
-		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
-	}
-	if s.FilterBy.Active != nil {
-		items["active"] = s.FilterBy.Active
-	}
-	if s.FilterBy.Username != nil {
-		items["username"] = s.FilterBy.Username
-	}
-	if s.FilterBy.NickleName != nil {
-		items["nickleName"] = s.FilterBy.NickleName
-	}
-	if s.FilterBy.Email != nil {
-		items["email"] = s.FilterBy.Email
-	}
-	return items
+    items := make(map[string]utils.FilterByItem)
+    if s.FilterBy == nil {
+        return items
+    }
+    if s.FilterBy.CreatedAt != nil {
+        items["createdAt"] = s.FilterBy.CreatedAt
+    }
+    if s.FilterBy.CreatedAtTime != nil {
+        items["createdAtTime"] = s.FilterBy.CreatedAtTime
+    }
+    if s.FilterBy.CreatedAtDate != nil {
+        items["createdAtDate"] = s.FilterBy.CreatedAtDate
+    }
+    if s.FilterBy.UpdatedAt != nil {
+        items["updatedAt"] = s.FilterBy.UpdatedAt
+    }
+    if s.FilterBy.UpdatedAtTime != nil {
+        items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+    }
+    if s.FilterBy.UpdatedAtDate != nil {
+        items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+    }
+    if s.FilterBy.Active != nil {
+        items["active"] = s.FilterBy.Active
+    }
+    if s.FilterBy.Username != nil {
+        items["username"] = s.FilterBy.Username
+    }
+    if s.FilterBy.NickleName != nil {
+        items["nickleName"] = s.FilterBy.NickleName
+    }
+    if s.FilterBy.Email != nil {
+        items["email"] = s.FilterBy.Email
+    }
+    return items
 }
 
 func (s *UserListGetSearchIn) GetOptions() *utils.SearchOptions {
-	return &utils.SearchOptions{
-		OrderBy: []string{
-			"createdAt",
-			"updatedAt",
-		},
-		FilterBy: []*utils.FilterByOption{
-			{
-				Name: "createdAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "createdAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAt",
-				Type: "time.Time",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtTime",
-				Type: "serializer.TimeOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "updatedAtDate",
-				Type: "serializer.DateOnly",
-				Actions: []string{
-					"eq",
-					"neq",
-					"nil",
-					"lt",
-					"lte",
-					"gt",
-					"gte",
-				},
-			},
-			{
-				Name: "active",
-				Type: "bool",
-				Actions: []string{
-					"eq",
-				},
-			},
-			{
-				Name: "username",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-			{
-				Name: "nickleName",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-			{
-				Name: "email",
-				Type: "string",
-				Actions: []string{
-					"eq",
-					"neq",
-					"pfx",
-					"npfx",
-					"ipfx",
-					"inpfx",
-					"sfx",
-					"nsfx",
-					"isfx",
-					"insfx",
-					"ctn",
-					"nctn",
-					"ictn",
-					"inctn",
-				},
-			},
-		},
-	}
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "createdAt",
+            "updatedAt",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "createdAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "active",
+                Type: "bool",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "username",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "nickleName",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "email",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+        },
+    }
 }

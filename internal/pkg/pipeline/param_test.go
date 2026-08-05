@@ -16,7 +16,7 @@ type testHandlerConfig struct {
 
 func TestGetHandlerParam_Success(t *testing.T) {
 	Convey("TestGetHandlerParam 成功解析配置", t, func() {
-		ctx := context.WithValue(context.Background(), CONTEXT_HANDLER_PARAM_NAME, map[string]any{
+		ctx := context.WithValue(context.Background(), ContextHandlerParamName, map[string]any{
 			"name":     "test-task",
 			"timeout":  "10s",
 			"maxRetry": 5,
@@ -49,7 +49,7 @@ func TestGetHandlerParam_NotFound(t *testing.T) {
 
 func TestGetHandlerParam_DefaultValues(t *testing.T) {
 	Convey("TestGetHandlerParam 验证默认值", t, func() {
-		ctx := context.WithValue(context.Background(), CONTEXT_HANDLER_PARAM_NAME, map[string]any{
+		ctx := context.WithValue(context.Background(), ContextHandlerParamName, map[string]any{
 			"name": "partial-task",
 		})
 
@@ -68,7 +68,7 @@ func TestGetHandlerParam_DefaultValues(t *testing.T) {
 
 func TestGetProcParam_Success(t *testing.T) {
 	Convey("TestGetProcParam 成功解析配置", t, func() {
-		ctx := context.WithValue(context.Background(), CONTEXT_PROC_PARAM_NAME, map[string]any{
+		ctx := context.WithValue(context.Background(), ContextProcParamName, map[string]any{
 			"name":     "proc-task",
 			"timeout":  "30s",
 			"maxRetry": 10,

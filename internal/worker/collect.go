@@ -17,9 +17,9 @@ import (
 //   - 分布式 TCP 流处理器工厂（IPv4 和 IPv6）
 func Registry(ctx context.Context, injector do.Injector) {
 	// 注册 pcap 导入任务的 worker
-	pipeline.HandlerRegister(pcap.PCAP_IMPORT, pcap.NewPcapBatchHandler())
+	pipeline.HandlerRegister(pcap.PcapImport, pcap.NewPcapBatchHandler())
 
 	// 注册分布式 TCP 流处理器
-	pipeline.RegisterProcessorFactory(flow.PROC_IPV4_TCP, flow.NewIPv4PacketProcessorFactory(injector))
-	pipeline.RegisterProcessorFactory(flow.PROC_IPV6_TCP, flow.NewIPv6PacketProcessorFactory(injector))
+	pipeline.RegisterProcessorFactory(flow.ProcIpv4Tcp, flow.NewIPv4PacketProcessorFactory(injector))
+	pipeline.RegisterProcessorFactory(flow.ProcIpv6Tcp, flow.NewIPv6PacketProcessorFactory(injector))
 }

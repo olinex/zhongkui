@@ -61,7 +61,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
-			So(w.Header().Get(base.HDR_CONTENT_SECURITY_POLICY), ShouldEqual, "default-src 'self'")
+			So(w.Header().Get(base.HdrContentSecurityPolicy), ShouldEqual, "default-src 'self'")
 		})
 
 		Convey("应该设置 Permissions-Policy 响应头", func() {
@@ -69,7 +69,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
-			So(w.Header().Get(base.HDR_PERMISSIONS_POLICY), ShouldEqual, "geolocation=(),camera=()")
+			So(w.Header().Get(base.HdrPermissionsPolicy), ShouldEqual, "geolocation=(),camera=()")
 		})
 
 		Convey("应该设置 Referrer-Policy 响应头", func() {
@@ -77,7 +77,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
-			So(w.Header().Get(base.HDR_REFERRER_POLICY), ShouldEqual, "strict-origin")
+			So(w.Header().Get(base.HdrReferrerPolicy), ShouldEqual, "strict-origin")
 		})
 
 		Convey("应该设置 Strict-Transport-Security 响应头", func() {
@@ -85,7 +85,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
-			So(w.Header().Get(base.HDR_STRICT_TRANSPORT_SECURITY), ShouldEqual, "max-age=31536000; includeSubDomains")
+			So(w.Header().Get(base.HdrStrictTransportSecurity), ShouldEqual, "max-age=31536000; includeSubDomains")
 		})
 
 		Convey("应该设置 X-Content-Type-Options 响应头", func() {
@@ -93,7 +93,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
-			So(w.Header().Get(base.HDR_X_CONTENT_TYPE_OPTIONS), ShouldEqual, "nosniff")
+			So(w.Header().Get(base.HdrXContentTypeOptions), ShouldEqual, "nosniff")
 		})
 
 		Convey("应该设置 X-Frame-Options 响应头", func() {
@@ -101,7 +101,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
-			So(w.Header().Get(base.HDR_X_FRAME_OPTIONS), ShouldEqual, "DENY")
+			So(w.Header().Get(base.HdrXFrameOptions), ShouldEqual, "DENY")
 		})
 
 		Convey("应该设置 X-XSS-Protection 响应头", func() {
@@ -109,7 +109,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
-			So(w.Header().Get(base.HDR_X_XSS_PROTECTION), ShouldEqual, "1; mode=block")
+			So(w.Header().Get(base.HdrXXssProtection), ShouldEqual, "1; mode=block")
 		})
 
 		Convey("应该同时设置所有 7 个安全响应头", func() {
@@ -118,13 +118,13 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_CONTENT_SECURITY_POLICY), ShouldNotBeEmpty)
-			So(w.Header().Get(base.HDR_PERMISSIONS_POLICY), ShouldNotBeEmpty)
-			So(w.Header().Get(base.HDR_REFERRER_POLICY), ShouldNotBeEmpty)
-			So(w.Header().Get(base.HDR_STRICT_TRANSPORT_SECURITY), ShouldNotBeEmpty)
-			So(w.Header().Get(base.HDR_X_CONTENT_TYPE_OPTIONS), ShouldNotBeEmpty)
-			So(w.Header().Get(base.HDR_X_FRAME_OPTIONS), ShouldNotBeEmpty)
-			So(w.Header().Get(base.HDR_X_XSS_PROTECTION), ShouldNotBeEmpty)
+			So(w.Header().Get(base.HdrContentSecurityPolicy), ShouldNotBeEmpty)
+			So(w.Header().Get(base.HdrPermissionsPolicy), ShouldNotBeEmpty)
+			So(w.Header().Get(base.HdrReferrerPolicy), ShouldNotBeEmpty)
+			So(w.Header().Get(base.HdrStrictTransportSecurity), ShouldNotBeEmpty)
+			So(w.Header().Get(base.HdrXContentTypeOptions), ShouldNotBeEmpty)
+			So(w.Header().Get(base.HdrXFrameOptions), ShouldNotBeEmpty)
+			So(w.Header().Get(base.HdrXXssProtection), ShouldNotBeEmpty)
 		})
 
 		Convey("当配置为空字符串时应设置空值响应头", func() {
@@ -135,8 +135,8 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_CONTENT_SECURITY_POLICY), ShouldEqual, "")
-			So(w.Header().Get(base.HDR_X_FRAME_OPTIONS), ShouldEqual, "")
+			So(w.Header().Get(base.HdrContentSecurityPolicy), ShouldEqual, "")
+			So(w.Header().Get(base.HdrXFrameOptions), ShouldEqual, "")
 		})
 
 		Convey("安全响应头设置后请求应正常到达后续处理函数", func() {
@@ -169,7 +169,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_ORIGIN), ShouldEqual, "http://localhost:3000")
+			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldEqual, "http://localhost:3000")
 		})
 
 		Convey("POST 请求应设置 CORS 响应头并返回 200", func() {
@@ -180,7 +180,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_ORIGIN), ShouldEqual, "http://localhost:3000")
+			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldEqual, "http://localhost:3000")
 		})
 
 		Convey("应正确设置 Access-Control-Allow-Origin 响应头", func() {
@@ -190,7 +190,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_ORIGIN), ShouldEqual, "http://localhost:3000")
+			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldEqual, "http://localhost:3000")
 		})
 
 		Convey("应正确设置 Access-Control-Allow-Credentials 响应头", func() {
@@ -200,7 +200,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_CREDENTIALS), ShouldEqual, "true")
+			So(w.Header().Get(base.HdrAccessControlAllowCredentials), ShouldEqual, "true")
 		})
 
 		Convey("当 AllowCredentials 为 false 时应设置响应头为 false", func() {
@@ -216,7 +216,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_CREDENTIALS), ShouldEqual, "false")
+			So(w.Header().Get(base.HdrAccessControlAllowCredentials), ShouldEqual, "false")
 		})
 
 		Convey("应正确设置 Access-Control-Allow-Headers 响应头", func() {
@@ -226,7 +226,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_HEADERS), ShouldEqual, "Content-Type, Authorization")
+			So(w.Header().Get(base.HdrAccessControlAllowHeaders), ShouldEqual, "Content-Type, Authorization")
 		})
 
 		Convey("应正确设置 Access-Control-Allow-Methods 响应头", func() {
@@ -236,7 +236,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_METHODS), ShouldEqual, "GET, POST, PUT, DELETE, OPTIONS")
+			So(w.Header().Get(base.HdrAccessControlAllowMethods), ShouldEqual, "GET, POST, PUT, DELETE, OPTIONS")
 		})
 
 		Convey("OPTIONS 预检请求（允许的方法）应返回 204 No Content", func() {
@@ -244,7 +244,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodOptions, "/test", nil)
-			req.Header.Set(base.HDR_ACCESS_CONTROL_REQUEST_METHOD, "POST")
+			req.Header.Set(base.HdrAccessControlRequestMethod, "POST")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusNoContent)
@@ -255,7 +255,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodOptions, "/test", nil)
-			req.Header.Set(base.HDR_ACCESS_CONTROL_REQUEST_METHOD, "PATCH")
+			req.Header.Set(base.HdrAccessControlRequestMethod, "PATCH")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusForbidden)
@@ -276,13 +276,13 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodOptions, "/test", nil)
-			req.Header.Set(base.HDR_ACCESS_CONTROL_REQUEST_METHOD, "GET")
+			req.Header.Set(base.HdrAccessControlRequestMethod, "GET")
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_ORIGIN), ShouldEqual, "http://localhost:3000")
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_CREDENTIALS), ShouldEqual, "true")
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_HEADERS), ShouldEqual, "Content-Type, Authorization")
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_METHODS), ShouldEqual, "GET, POST, PUT, DELETE, OPTIONS")
+			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldEqual, "http://localhost:3000")
+			So(w.Header().Get(base.HdrAccessControlAllowCredentials), ShouldEqual, "true")
+			So(w.Header().Get(base.HdrAccessControlAllowHeaders), ShouldEqual, "Content-Type, Authorization")
+			So(w.Header().Get(base.HdrAccessControlAllowMethods), ShouldEqual, "GET, POST, PUT, DELETE, OPTIONS")
 		})
 
 		Convey("AllowHeaders 为空时应设置空的 Access-Control-Allow-Headers", func() {
@@ -297,7 +297,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 			r.ServeHTTP(w, req)
 
-			So(w.Header().Get(base.HDR_ACCESS_CONTROL_ALLOW_HEADERS), ShouldEqual, "")
+			So(w.Header().Get(base.HdrAccessControlAllowHeaders), ShouldEqual, "")
 		})
 
 		Convey("AllowMethods 为空时预检请求应返回 403", func() {
@@ -310,7 +310,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodOptions, "/test", nil)
-			req.Header.Set(base.HDR_ACCESS_CONTROL_REQUEST_METHOD, "GET")
+			req.Header.Set(base.HdrAccessControlRequestMethod, "GET")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusForbidden)

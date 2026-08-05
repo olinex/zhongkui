@@ -16,7 +16,7 @@ import (
 // 生产环境通过 DI 容器在 initDetectors() 中注册，测试环境需在此手动注册
 func init() {
 	detectors.RegisterAppProtocolDetector(
-		detectors.APP_HTTP,
+		detectors.AppHttp,
 		&testDetector{
 			HttpDetector: &detectors.HttpDetector{},
 		},

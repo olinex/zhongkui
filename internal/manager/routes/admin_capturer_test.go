@@ -70,7 +70,7 @@ func setupCapturerTestRouter() *gin.Engine {
 func setupCapturerTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupCapturerTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DATABASE_CTX_NAME, db)
+		c.Set(manager.DatabaseCtxName, db)
 		c.Next()
 	})
 	return r
@@ -80,8 +80,8 @@ func setupCapturerTestRouterWithDB(db *database.DB) *gin.Engine {
 func setupCapturerTestRouterWithDBAndEtcd(db *database.DB, etcdClient *etcd.EtcdClient) *gin.Engine {
 	r := setupCapturerTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DATABASE_CTX_NAME, db)
-		c.Set(manager.ETCD_CTX_NAME, etcdClient)
+		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.EtcdCtxName, etcdClient)
 		c.Next()
 	})
 	return r

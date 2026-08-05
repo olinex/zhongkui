@@ -11,13 +11,13 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 )
 
-// DEFAULT_NAMESPACE 定义默认命名空间名称。
+// DefaultNamespace 定义默认命名空间名称。
 // 当请求中未携带任何命名空间标识时，将使用此值作为当前请求所属的命名空间。
-const DEFAULT_NAMESPACE = "default"
+const DefaultNamespace = "default"
 
-// NAMESPACE_CTX_NAME 定义命名空间在 Gin 上下文中存储时使用的键名。
+// NamespaceCtxName 定义命名空间在 Gin 上下文中存储时使用的键名。
 // 通过 c.Set / c.Get 与此键名进行命名空间的存取操作。
-const NAMESPACE_CTX_NAME = "namespace"
+const NamespaceCtxName = "namespace"
 
 var (
 	// ErrNampspaceDoesNotExist 表示请求中指定的命名空间不存在的错误。
@@ -33,10 +33,10 @@ var (
 //  2. URL 查询参数（由 cfg.QueryName 指定，默认 "namespace"）
 //  3. Cookie（由 cfg.CookieName 指定，默认 "namespace"）
 //
-// 如果以上三个来源均未提供命名空间标识，则使用 DEFAULT_NAMESPACE（"default"）作为默认值。
+// 如果以上三个来源均未提供命名空间标识，则使用 DefaultNamespace（"default"）作为默认值。
 // 提取到命名空间后，会调用 core.NamespaceExist 校验其是否存在于系统缓存中；
 // 若不存在则中断请求并返回 ErrNampspaceDoesNotExist 错误响应；
-// 若存在则将命名空间名称写入 Gin 上下文（键名为 NAMESPACE_CTX_NAME），并继续执行后续处理函数。
+// 若存在则将命名空间名称写入 Gin 上下文（键名为 NamespaceCtxName），并继续执行后续处理函数。
 //
 // 参数：
 //   - cfg: 命名空间配置，定义了从请求头、查询参数和 Cookie 中获取命名空间标识的键名
@@ -47,7 +47,7 @@ func NamespaceMiddleware(cfg *NamespaceConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		_, span := StartMiddlewareSpan(c, "namespace")
 		defer span.End()
-		namespace := DEFAULT_NAMESPACE
+		namespace := DefaultNamespace
 		if temp := c.GetHeader(cfg.HeaderName); temp != "" {
 			namespace = temp
 		} else if temp, ok := c.GetQuery(cfg.QueryName); ok && temp != "" {
@@ -68,7 +68,7 @@ func NamespaceMiddleware(cfg *NamespaceConfig) gin.HandlerFunc {
 			attribute.String("namespace", namespace),
 			attribute.Bool("exists", true),
 		)
-		c.Set(NAMESPACE_CTX_NAME, namespace)
+		c.Set(NamespaceCtxName, namespace)
 		c.Next()
 	}
 }
@@ -85,7 +85,7 @@ func NamespaceMiddleware(cfg *NamespaceConfig) gin.HandlerFunc {
 //   - string: 当前请求所属的命名空间名称
 //   - *CodeError: 如果上下文中不存在命名空间信息，则返回 ErrNampspaceDoesNotExist
 func GetNamespace(c *gin.Context) (string, *CodeError) {
-	if namespace, ok := c.Get(NAMESPACE_CTX_NAME); ok {
+	if namespace, ok := c.Get(NamespaceCtxName); ok {
 		return namespace.(string), nil
 	} else {
 		return "", ErrNampspaceDoesNotExist

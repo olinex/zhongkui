@@ -7,10 +7,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 )
 
-// PIPELINE_INSPECTOR_CTX_NAME Pipeline 检查器在 Gin 上下文中存储的键名。
+// PipelineInspectorCtxName Pipeline 检查器在 Gin 上下文中存储的键名。
 // 用于在中间件和请求处理函数之间传递任务队列检查器实例。
 const (
-	PIPELINE_INSPECTOR_CTX_NAME = "pipeline-inspector"
+	PipelineInspectorCtxName = "pipeline-inspector"
 )
 
 // PipelineInspectorMiddleware 创建一个 Gin 中间件，用于将 Pipeline 检查器实例注入到请求上下文中。
@@ -31,7 +31,7 @@ const (
 //	router.Use(PipelineInspectorMiddleware(inspector))
 func PipelineInspectorMiddleware(inspector *pipeline.Inspector) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(PIPELINE_INSPECTOR_CTX_NAME, inspector)
+		c.Set(PipelineInspectorCtxName, inspector)
 		c.Next()
 	}
 }
@@ -60,7 +60,7 @@ func PipelineInspectorMiddleware(inspector *pipeline.Inspector) gin.HandlerFunc 
 //	    // 处理结果...
 //	}
 func GetPipelineInspector(c *gin.Context) *pipeline.Inspector {
-	if inspector, ok := c.Get(PIPELINE_INSPECTOR_CTX_NAME); ok {
+	if inspector, ok := c.Get(PipelineInspectorCtxName); ok {
 		return inspector.(*pipeline.Inspector)
 	}
 	panic("pipeline inspector does not exists")

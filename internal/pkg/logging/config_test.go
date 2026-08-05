@@ -368,12 +368,12 @@ zap:
 func TestConstants(t *testing.T) {
 	convey.Convey("Test constants", t, func() {
 		convey.Convey("should have correct PREFIX constant", func() {
-			convey.So(PREFIX, convey.ShouldEqual, "zap")
+			convey.So(Prefix, convey.ShouldEqual, "zap")
 		})
 
 		convey.Convey("should use PREFIX in configuration paths", func() {
 			v := viper.New()
-			configPath := fmt.Sprintf("%s.test", PREFIX)
+			configPath := fmt.Sprintf("%s.test", Prefix)
 			v.Set(configPath+".level", "debug")
 
 			cfg, err := ExtractConfig(v, "test")

@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	CLUSTER_ETCD_PREFIX = WithPrefix("cluster/")
+	ClusterEtcdPrefix = WithPrefix("cluster/")
 )
 
 // Cluster 基于 etcd 实现分布式集群成员发现与数据分片路由。
@@ -101,7 +101,7 @@ func (c *Cluster) MemberID() string {
 }
 
 func (c *Cluster) prefix() string {
-	return fmt.Sprintf(`%s%s`, CLUSTER_ETCD_PREFIX, c.name)
+	return fmt.Sprintf(`%s%s`, ClusterEtcdPrefix, c.name)
 }
 
 func (c *Cluster) key() string {

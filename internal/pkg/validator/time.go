@@ -7,15 +7,15 @@ import (
 )
 
 const (
-	// TAG_GREATER_THAN_CURRENT_TIME 是自定义验证标签，用于验证时间字段是否大于当前时间。
+	// TagGreaterThanCurrentTime 是自定义验证标签，用于验证时间字段是否大于当前时间。
 	// 该标签在结构体字段的 validate 标签中使用，例如：`validate:"gtCurrentTime"`
 	// 验证规则：检查时间字段的值是否在当前时间之后（未来时间）
-	TAG_GREATER_THAN_CURRENT_TIME = "gtCurrentTime"
+	TagGreaterThanCurrentTime = "gtCurrentTime"
 
-	// TAG_LESSER_THAN_CURRENT_TIME 是自定义验证标签，用于验证时间字段是否小于当前时间。
+	// TagLesserThanCurrentTime 是自定义验证标签，用于验证时间字段是否小于当前时间。
 	// 该标签在结构体字段的 validate 标签中使用，例如：`validate:"ltCurrentTime"`
 	// 验证规则：检查时间字段的值是否在当前时间之前（过去时间）
-	TAG_LESSER_THAN_CURRENT_TIME = "ltCurrentTime"
+	TagLesserThanCurrentTime = "ltCurrentTime"
 )
 
 // compareWithCurrentTime 是时间比较的核心函数，用于比较字段值与当前时间的关系。
@@ -99,6 +99,6 @@ func validateLtCurrentTime(fl validator.FieldLevel) bool {
 }
 
 func init() {
-	validations[TAG_GREATER_THAN_CURRENT_TIME] = validateGtCurrentTime
-	validations[TAG_LESSER_THAN_CURRENT_TIME] = validateLtCurrentTime
+	validations[TagGreaterThanCurrentTime] = validateGtCurrentTime
+	validations[TagLesserThanCurrentTime] = validateLtCurrentTime
 }

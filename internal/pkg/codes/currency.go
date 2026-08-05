@@ -73,7 +73,7 @@ func GetISO4217Codes() *ISO4217Codes {
 // 在构建索引的过程中，会检测数据中是否存在重复的键值，
 // 若发现重复将直接 panic，以保证索引数据的唯一性和正确性。
 func newISO4217Codes() (*ISO4217Codes, error) {
-	file, err := embeddedStandards.Open(CURRENCY)
+	file, err := embeddedStandards.Open(Currency)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

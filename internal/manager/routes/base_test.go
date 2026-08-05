@@ -72,8 +72,8 @@ func setupI18nMiddleware() gin.HandlerFunc {
 	// 确保自定义验证规则（如 strongPassword）已注册到 Gin 的 binding engine
 	validator.Init()
 	return func(c *gin.Context) {
-		c.Set(manager.LOCALIZER_CTX_NAME, newBaseTestLocalizer())
-		c.Set(manager.TRANSLATOR_CTX_NAME, newBaseTestTranslator())
+		c.Set(manager.LocalizerCtxName, newBaseTestLocalizer())
+		c.Set(manager.TranslatorCtxName, newBaseTestTranslator())
 		c.Next()
 	}
 }
@@ -312,8 +312,8 @@ func TestGetRawParam(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Set(manager.LOCALIZER_CTX_NAME, newBaseTestLocalizer())
-			c.Set(manager.TRANSLATOR_CTX_NAME, newBaseTestTranslator())
+			c.Set(manager.LocalizerCtxName, newBaseTestLocalizer())
+			c.Set(manager.TranslatorCtxName, newBaseTestTranslator())
 			c.Request = httptest.NewRequest(http.MethodGet, "/api/group/", nil)
 			c.Params = gin.Params{{Key: "name", Value: ""}}
 

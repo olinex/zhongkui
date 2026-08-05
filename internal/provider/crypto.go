@@ -7,7 +7,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-const CRYPTO_PREFIX = "crypto"
+const CryptoPrefix = "crypto"
 
 func newKeyDerivationProvider() do.Provider[*key.KeyDerivation] {
 	return func(i do.Injector) (*key.KeyDerivation, error) {

@@ -10,7 +10,7 @@ import (
 )
 
 func OtelMiddleware() gin.HandlerFunc {
-	return otel.GinMiddleware(PREFIX)
+	return otel.GinMiddleware(Prefix)
 }
 
 func startSpan(c *gin.Context, scope, name string) (context.Context, trace.Span) {

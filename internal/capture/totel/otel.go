@@ -15,17 +15,17 @@ import (
 )
 
 const (
-	SCOPE_NAME          = base.GLOBAL_PREFIX + "-capture"
-	SPAN_RUN            = "capture.run"
-	SPAN_WATCH          = "capture.watch"
-	SPAN_FEEDBACK       = "capture.feedback"
-	SPAN_UPLOAD         = "capture.upload"
-	SPAN_PACKET_HANDLER = "capture.packet_handler"
-	SPAN_CAPTURE        = "capture.capture"
-	SPAN_DUMP           = "capture.dump"
-	SPAN_DUMP_ONE       = "capture.dump_one"
-	SPAN_UPLOAD_FILE    = "capture.upload_file"
-	SPAN_UPLOAD_ONE     = "capture.upload_one"
+	ScopeName         = base.GlobalPrefix + "-capture"
+	SpanRun           = "capture.run"
+	SpanWatch         = "capture.watch"
+	SpanFeedback      = "capture.feedback"
+	SpanUpload        = "capture.upload"
+	SpanPacketHandler = "capture.packet_handler"
+	SpanCapture       = "capture.capture"
+	SpanDump          = "capture.dump"
+	SpanDumpOne       = "capture.dump_one"
+	SpanUploadFile    = "capture.upload_file"
+	SpanUploadOne     = "capture.upload_one"
 )
 
 var (
@@ -51,7 +51,7 @@ func InitMetrics() {
 
 func initMetrics() {
 	var err, e error
-	meter := otel.Meter(SCOPE_NAME)
+	meter := otel.Meter(ScopeName)
 
 	segmentsDumpedCounter, e = meter.Int64Counter(
 		"capture.segments.dumped",
@@ -106,8 +106,8 @@ func initMetrics() {
 
 // StartRunSpan 在 CaptureClient.Run 中创建 span。
 func StartRunSpan(ctx context.Context, resource string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_RUN,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanRun,
 		trace.WithAttributes(
 			attribute.String("capture.resource", resource),
 		),
@@ -117,8 +117,8 @@ func StartRunSpan(ctx context.Context, resource string) (context.Context, trace.
 
 // StartWatchSpan 在 watch 监控循环中创建 span。
 func StartWatchSpan(ctx context.Context, resource string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_WATCH,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanWatch,
 		trace.WithAttributes(
 			attribute.String("capture.resource", resource),
 		),
@@ -128,8 +128,8 @@ func StartWatchSpan(ctx context.Context, resource string) (context.Context, trac
 
 // StartFeedbackSpan 在 feedback 流中创建 span。
 func StartFeedbackSpan(ctx context.Context, sessionID string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_FEEDBACK,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanFeedback,
 		trace.WithAttributes(
 			attribute.String("capture.session_id", sessionID),
 		),
@@ -139,8 +139,8 @@ func StartFeedbackSpan(ctx context.Context, sessionID string) (context.Context, 
 
 // StartUploadSpan 在 upload 生命周期管理中创建 span。
 func StartUploadSpan(ctx context.Context, resource, sessionID string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_UPLOAD,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanUpload,
 		trace.WithAttributes(
 			attribute.String("capture.resource", resource),
 			attribute.String("capture.session_id", sessionID),
@@ -151,8 +151,8 @@ func StartUploadSpan(ctx context.Context, resource, sessionID string) (context.C
 
 // StartPacketHandlerSpan 在 uploadPacketHandler 中创建 span。
 func StartPacketHandlerSpan(ctx context.Context, device string, configVersion int64) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_PACKET_HANDLER,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanPacketHandler,
 		trace.WithAttributes(
 			attribute.String("capture.device", device),
 			attribute.Int64("capture.config_version", configVersion),
@@ -163,20 +163,20 @@ func StartPacketHandlerSpan(ctx context.Context, device string, configVersion in
 
 // StartCaptureSpan 在 capturer.capture 中创建 span。
 func StartCaptureSpan(ctx context.Context) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	return tracer.Start(ctx, SPAN_CAPTURE)
+	tracer := otel.Tracer(ScopeName)
+	return tracer.Start(ctx, SpanCapture)
 }
 
 // StartDumpSpan 在 dump 循环中创建 span。
 func StartDumpSpan(ctx context.Context) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	return tracer.Start(ctx, SPAN_DUMP)
+	tracer := otel.Tracer(ScopeName)
+	return tracer.Start(ctx, SpanDump)
 }
 
 // StartDumpOneSpan 在 dumpOne 中创建 span。
 func StartDumpOneSpan(ctx context.Context, filePath string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_DUMP_ONE,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanDumpOne,
 		trace.WithAttributes(
 			attribute.String("capture.file_path", filePath),
 		),
@@ -186,14 +186,14 @@ func StartDumpOneSpan(ctx context.Context, filePath string) (context.Context, tr
 
 // StartUploadFileSpan 在 upload 循环中创建 span。
 func StartUploadFileSpan(ctx context.Context) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	return tracer.Start(ctx, SPAN_UPLOAD_FILE)
+	tracer := otel.Tracer(ScopeName)
+	return tracer.Start(ctx, SpanUploadFile)
 }
 
 // StartUploadOneSpan 在 uploadOne 中创建 span。
 func StartUploadOneSpan(ctx context.Context, objectKey string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_UPLOAD_ONE,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanUploadOne,
 		trace.WithAttributes(
 			attribute.String("capture.object_key", objectKey),
 		),

@@ -44,11 +44,11 @@ func TestPasswordBook_EmptyData(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestLoadPasswordBookFromFile_ValidFile(t *testing.T) {
-	// 创建临时文件，大小恰好为 PASSWORD_BOOK_SIZE
+	// 创建临时文件，大小恰好为 PasswordBookSize
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "test_password_book.bin")
 
-	data := make([]byte, PASSWORD_BOOK_SIZE)
+	data := make([]byte, PasswordBookSize)
 	for i := range data {
 		data[i] = byte(i % 256)
 	}
@@ -60,8 +60,8 @@ func TestLoadPasswordBookFromFile_ValidFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadPasswordBookFromFile() returned error: %v", err)
 	}
-	if pb.Len() != PASSWORD_BOOK_SIZE {
-		t.Fatalf("Len() returned %d, want %d", pb.Len(), PASSWORD_BOOK_SIZE)
+	if pb.Len() != PasswordBookSize {
+		t.Fatalf("Len() returned %d, want %d", pb.Len(), PasswordBookSize)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestLoadPasswordBookFromFile_SizeMismatch_TooSmall(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "small_password_book.bin")
 
-	data := make([]byte, 100) // 远小于 PASSWORD_BOOK_SIZE
+	data := make([]byte, 100) // 远小于 PasswordBookSize
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestLoadPasswordBookFromFile_SizeMismatch_TooLarge(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "large_password_book.bin")
 
-	data := make([]byte, PASSWORD_BOOK_SIZE+1)
+	data := make([]byte, PasswordBookSize+1)
 	if err := os.WriteFile(path, data, 0600); err != nil {
 		t.Fatalf("failed to write temp file: %v", err)
 	}
@@ -125,8 +125,8 @@ func TestLoadPasswordBook_EmptyPath_FallsBackToEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadPasswordBook('') returned error: %v", err)
 	}
-	if pb.Len() != PASSWORD_BOOK_SIZE {
-		t.Fatalf("Len() returned %d, want %d", pb.Len(), PASSWORD_BOOK_SIZE)
+	if pb.Len() != PasswordBookSize {
+		t.Fatalf("Len() returned %d, want %d", pb.Len(), PasswordBookSize)
 	}
 }
 
@@ -134,7 +134,7 @@ func TestLoadPasswordBook_ValidFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	path := filepath.Join(tmpDir, "custom_password_book.bin")
 
-	data := make([]byte, PASSWORD_BOOK_SIZE)
+	data := make([]byte, PasswordBookSize)
 	for i := range data {
 		data[i] = byte(i % 256)
 	}
@@ -146,8 +146,8 @@ func TestLoadPasswordBook_ValidFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadPasswordBook() returned error: %v", err)
 	}
-	if pb.Len() != PASSWORD_BOOK_SIZE {
-		t.Fatalf("Len() returned %d, want %d", pb.Len(), PASSWORD_BOOK_SIZE)
+	if pb.Len() != PasswordBookSize {
+		t.Fatalf("Len() returned %d, want %d", pb.Len(), PasswordBookSize)
 	}
 }
 
@@ -157,8 +157,8 @@ func TestLoadPasswordBook_NonexistentFile_FallsBackToEmbedded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadPasswordBook() returned error: %v", err)
 	}
-	if pb.Len() != PASSWORD_BOOK_SIZE {
-		t.Fatalf("Len() returned %d, want %d", pb.Len(), PASSWORD_BOOK_SIZE)
+	if pb.Len() != PasswordBookSize {
+		t.Fatalf("Len() returned %d, want %d", pb.Len(), PasswordBookSize)
 	}
 }
 
@@ -187,17 +187,17 @@ func TestLoadEmbeddedPasswordBook(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadEmbeddedPasswordBook() returned error: %v", err)
 	}
-	if pb.Len() != PASSWORD_BOOK_SIZE {
-		t.Fatalf("Len() returned %d, want %d", pb.Len(), PASSWORD_BOOK_SIZE)
+	if pb.Len() != PasswordBookSize {
+		t.Fatalf("Len() returned %d, want %d", pb.Len(), PasswordBookSize)
 	}
 }
 
 // ---------------------------------------------------------------------------
-// PASSWORD_BOOK_SIZE 常量测试
+// PasswordBookSize 常量测试
 // ---------------------------------------------------------------------------
 
 func TestPasswordBookSize(t *testing.T) {
-	if PASSWORD_BOOK_SIZE != 65536 {
-		t.Fatalf("PASSWORD_BOOK_SIZE = %d, want 65536", PASSWORD_BOOK_SIZE)
+	if PasswordBookSize != 65536 {
+		t.Fatalf("PasswordBookSize = %d, want 65536", PasswordBookSize)
 	}
 }

@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	PREFIX        = "redis"    // 配置前缀，用于在配置文件中标识Redis配置
-	NORMAL_TYPE   = "normal"   // 普通Redis连接类型，用于单节点Redis
-	SENTINEL_TYPE = "sentinel" // Redis Sentinel连接类型，用于高可用Redis集群
+	Prefix       = "redis"    // 配置前缀，用于在配置文件中标识Redis配置
+	NormalType   = "normal"   // 普通Redis连接类型，用于单节点Redis
+	SentinelType = "sentinel" // Redis Sentinel连接类型，用于高可用Redis集群
 )
 
 // Config 定义了Redis客户端的配置参数
@@ -217,7 +217,7 @@ func (c *Config) ToSentinelOptions() *redis.FailoverOptions {
 //
 // 返回值: config.ConfigDescriptions - 配置描述信息
 func DescribeConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
+	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, Prefix, strings.Join(names, ",")))
 }
 
 // ExtractConfig 从Viper配置中提取Redis配置
@@ -227,5 +227,5 @@ func DescribeConfig(names ...string) config.ConfigDescriptions {
 //
 // 返回值: (*Config, error) - 提取的Redis配置和可能的错误
 func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, PREFIX, name))
+	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, Prefix, name))
 }

@@ -145,7 +145,7 @@ func userDetailGet(c *gin.Context) {
 	if err := db.Model(&core.User{}).Find(&baseOut, "union_id = ?", unionID).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
-	} else if err := db.Model(&core.RbacPolicy{}).Find(&groupsOut, "ptype = ? AND v0 = ?", base.GROUP_LABEL, baseOut.UnionID.String()).Error; err != nil {
+	} else if err := db.Model(&core.RbacPolicy{}).Find(&groupsOut, "ptype = ? AND v0 = ?", base.GroupLabel, baseOut.UnionID.String()).Error; err != nil {
 		// 查询用户关联的用户组策略
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -297,7 +297,7 @@ func userGroupJoin(c *gin.Context) {
 
 		// 验证命名空间存在（除非使用通配命名空间）
 		wg.GoNamed("check-namespace", func() error {
-			if in.Namespace == base.WIDE_MATCH_LABEL {
+			if in.Namespace == base.WideMatchLabel {
 				return nil
 			} else {
 				return tx.WithContext(innerCtx).First(&namespace, "name = ?", in.Namespace).Error
@@ -364,11 +364,11 @@ func userGroupLeave(c *gin.Context) {
 	db := manager.GetDatabase(c)
 
 	// 删除用户与用户组的关联策略
-	// 使用精确匹配：策略类型为GROUP_LABEL，用户ID、组名和命名空间完全匹配
+	// 使用精确匹配：策略类型为GroupLabel，用户ID、组名和命名空间完全匹配
 	if err := db.Delete(
 		&core.RbacPolicy{},
 		"ptype = ? AND v0 = ? AND v1 = ? AND v2 = ?",
-		base.GROUP_LABEL,
+		base.GroupLabel,
 		unionID.String(),
 		in.GroupName,
 		in.Namespace,

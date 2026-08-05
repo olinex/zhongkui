@@ -135,7 +135,11 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	tcp_window UInt16 CODEC(ZSTD(3)),
 	tcp_checksum UInt16 CODEC(ZSTD(3)),
 	tcp_urgent UInt16 CODEC(ZSTD(3)),
-	tcp_options String CODEC(ZSTD(3))
+	tcp_options String CODEC(ZSTD(3)),
+	fp_os String CODEC(ZSTD(3)),
+	fp_os_quality Float64 CODEC(ZSTD(3)),
+	fp_sig String CODEC(ZSTD(3)),
+	fp_mtu UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -193,7 +197,11 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	tcp_window UInt16 CODEC(ZSTD(3)),
 	tcp_checksum UInt16 CODEC(ZSTD(3)),
 	tcp_urgent UInt16 CODEC(ZSTD(3)),
-	tcp_options String CODEC(ZSTD(3))
+	tcp_options String CODEC(ZSTD(3)),
+	fp_os String CODEC(ZSTD(3)),
+	fp_os_quality Float64 CODEC(ZSTD(3)),
+	fp_sig String CODEC(ZSTD(3)),
+	fp_mtu UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -507,7 +515,20 @@ CREATE TABLE IF NOT EXISTS http_transports (
 	server_start_payload_offset UInt64 CODEC(ZSTD(3)),
 	server_end_payload_offset UInt64 CODEC(ZSTD(3)),
 	server_start_timestamp DateTime64(6, 'UTC') CODEC(ZSTD(3)),
-	server_end_timestamp DateTime64(6, 'UTC') CODEC(ZSTD(3))
+	server_end_timestamp DateTime64(6, 'UTC') CODEC(ZSTD(3)),
+	fp_tcp_client_os String CODEC(ZSTD(3)),
+	fp_tcp_client_os_quality Float64 CODEC(ZSTD(3)),
+	fp_tcp_client_sig String CODEC(ZSTD(3)),
+	fp_tcp_server_os String CODEC(ZSTD(3)),
+	fp_tcp_server_os_quality Float64 CODEC(ZSTD(3)),
+	fp_tcp_server_sig String CODEC(ZSTD(3)),
+	fp_tcp_mtu UInt16 CODEC(ZSTD(3)),
+	fp_http_browser String CODEC(ZSTD(3)),
+	fp_http_browser_quality Float64 CODEC(ZSTD(3)),
+	fp_http_server String CODEC(ZSTD(3)),
+	fp_http_server_quality Float64 CODEC(ZSTD(3)),
+	fp_http_language String CODEC(ZSTD(3)),
+	fp_device_guess String CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,

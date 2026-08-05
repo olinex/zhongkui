@@ -61,7 +61,7 @@ func (t *testServerStream) RecvMsg(msg any) error {
 func TestExtractUserID(t *testing.T) {
 	Convey("TestExtractUserID", t, func() {
 		Convey("当上下文包含用户ID时", func() {
-			ctx := context.WithValue(context.Background(), ACCESS_KEY_USER_ID, "test-user-123")
+			ctx := context.WithValue(context.Background(), AccessKeyUserId, "test-user-123")
 
 			userID := ExtractUserID(ctx)
 

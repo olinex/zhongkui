@@ -58,7 +58,7 @@ func setupGroupTestRouter() *gin.Engine {
 func setupGroupTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupGroupTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DATABASE_CTX_NAME, db)
+		c.Set(manager.DatabaseCtxName, db)
 		c.Next()
 	})
 	return r
@@ -309,7 +309,7 @@ func TestGroupDetailGet(t *testing.T) {
 			db.Create(&group)
 
 			// 创建关联的RBAC策略
-			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EFFECT_ALLOW)
+			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EffectAllow)
 			db.Create(policy)
 
 			w := httptest.NewRecorder()
@@ -533,7 +533,7 @@ func TestGroupDelete(t *testing.T) {
 			db.Create(&group)
 
 			// 创建关联的RBAC策略
-			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EFFECT_ALLOW)
+			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EffectAllow)
 			db.Create(policy)
 
 			w := httptest.NewRecorder()
@@ -588,7 +588,7 @@ func TestGroupRbacPolicyAdd(t *testing.T) {
 
 			// 验证数据库记录
 			var policy core.RbacPolicy
-			err := db.First(&policy, "ptype = ? AND v0 = ?", base.POLICY_LABEL, "admin").Error
+			err := db.First(&policy, "ptype = ? AND v0 = ?", base.PolicyLabel, "admin").Error
 			So(err, ShouldBeNil)
 			So(policy.V1, ShouldEqual, "/api/v1/admin/user/list")
 			So(policy.V2, ShouldEqual, "POST")
@@ -662,12 +662,12 @@ func TestGroupRbacPolicyRemove(t *testing.T) {
 			db.Create(&template)
 
 			// 创建策略
-			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EFFECT_ALLOW)
+			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EffectAllow)
 			db.Create(policy)
 
 			// 验证策略存在
 			var count int64
-			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.POLICY_LABEL, "admin").Count(&count)
+			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.PolicyLabel, "admin").Count(&count)
 			So(count, ShouldEqual, 1)
 
 			// 准备移除策略请求
@@ -686,7 +686,7 @@ func TestGroupRbacPolicyRemove(t *testing.T) {
 			So(w.Code, ShouldEqual, http.StatusOK)
 
 			// 验证策略已删除
-			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.POLICY_LABEL, "admin").Count(&count)
+			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.PolicyLabel, "admin").Count(&count)
 			So(count, ShouldEqual, 0)
 		})
 

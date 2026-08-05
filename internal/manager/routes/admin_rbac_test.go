@@ -51,7 +51,7 @@ func setupRbacTestRouter() *gin.Engine {
 	r.Use(setupI18nMiddleware())
 	r.Use(func(c *gin.Context) {
 		// 设置数据库上下文键
-		c.Set(manager.DATABASE_CTX_NAME, nil)
+		c.Set(manager.DatabaseCtxName, nil)
 		c.Next()
 	})
 	return r
@@ -61,7 +61,7 @@ func setupRbacTestRouter() *gin.Engine {
 func setupRbacTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupRbacTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DATABASE_CTX_NAME, db)
+		c.Set(manager.DatabaseCtxName, db)
 		c.Next()
 	})
 	return r

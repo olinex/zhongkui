@@ -10,13 +10,13 @@ import (
 
 // 主密钥来源常量
 const (
-	// CRYPTO_SOURCE_CONFIG 从配置文件读取主密钥
+	// CryptoSourceConfig 从配置文件读取主密钥
 	// 适用于开发环境，生产环境应使用 KMS
-	CRYPTO_SOURCE_CONFIG = "config"
+	CryptoSourceConfig = "config"
 
-	// CRYPTO_SOURCE_KMS 从密钥管理服务获取主密钥
+	// CryptoSourceKms 从密钥管理服务获取主密钥
 	// 推荐用于生产环境，提供更高的安全性
-	CRYPTO_SOURCE_KMS = "kms"
+	CryptoSourceKms = "kms"
 )
 
 var (
@@ -133,11 +133,11 @@ func (p *KMSSecretKeyProvider) GetSecretKey() ([]byte, error) {
 //	key, err := provider.GetSecretKey()
 func NewSecretKeyProvider(source string, parentSecretKey string) (SecretKeyProvider, error) {
 	switch source {
-	case CRYPTO_SOURCE_CONFIG:
+	case CryptoSourceConfig:
 		return NewConfigFileSecretKeyProvider(parentSecretKey), nil
-	case CRYPTO_SOURCE_KMS:
+	case CryptoSourceKms:
 		return NewKMSSecretKeyProvider(), nil
 	default:
-		return nil, errors.Newf(`unknown crypto.source: %s, must be '%s' or '%s'`, source, CRYPTO_SOURCE_CONFIG, CRYPTO_SOURCE_KMS)
+		return nil, errors.Newf(`unknown crypto.source: %s, must be '%s' or '%s'`, source, CryptoSourceConfig, CryptoSourceKms)
 	}
 }

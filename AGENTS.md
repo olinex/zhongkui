@@ -42,7 +42,7 @@ import (
 | Constructor functions | `NewXxx` | `NewJwtAuthenticator`, `NewProductionLogger` |
 | Getter functions | `GetXxx` | `GetUser`, `GetAuth` |
 | Receiver variables | Single lowercase letter of type | `(j *JwtAuthenticator)`, `(u *User)` |
-| Package-level constants | UPPER_SNAKE_CASE | `ANONYMOUS_USERNAME`, `AUTH_CTX_NAME` |
+| Package-level constants/variables | UpperCamelCase | `AnonymousUsername`, `AuthCtxName`, `Prefix`, `GlobalPrefix` |
 | Package-level error sentinels | `Err` prefix | `ErrUserNotExist`, `ErrJwtBadToken` |
 | Package-level zero-value variables | camelCase | `anonymous` |
 
@@ -125,8 +125,8 @@ All providers live under `internal/provider/` and are injected centrally in `roo
   - `flag.<path>.<name>` — flag usage（如 `flag.create.tls.ttl`）
   - `cli.<topic>` — 交互式提示与确认文案（如 `cli.confirm.enter`）
   - 英文翻译维护在 `internal/pkg/translate/locales/en.toml`；未命中翻译时回退到命令定义中的中文原文
-- `prompt:"..."` 标签的交互提示由 `internal/pkg/cliinput` 渲染时按 `cli.input.prompt.<StructName>.<FieldName>` key 翻译（如 `cli.input.prompt.TLSInputs.Name`），中文标签为回退文案；`cliinput` 通过 `SetTranslator` 注入翻译实现（`internal/cmd/i18n.go` 的 `init()` 注入 `cliT`），cliinput 内部固定文案 key 为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CLI_I18N_PREFIX`）
-- 语言切换：环境变量 `ZKI_LANG`（如 `en` / `zh-Hans`），默认 `zh-Hans`；取值统一在 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GLOBAL_PREFIX` 为 `zki` + `envconfig:"LANG"`），CLI 通过 `base.Env.Lang` 读取
+- `prompt:"..."` 标签的交互提示由 `internal/pkg/cliinput` 渲染时按 `cli.input.prompt.<StructName>.<FieldName>` key 翻译（如 `cli.input.prompt.TLSInputs.Name`），中文标签为回退文案；`cliinput` 通过 `SetTranslator` 注入翻译实现（`internal/cmd/i18n.go` 的 `init()` 注入 `cliT`），cliinput 内部固定文案 key 为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CliI18nPrefix`）
+- 语言切换：环境变量 `ZKI_LANG`（如 `en` / `zh-Hans`），默认 `zh-Hans`；取值统一在 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GlobalPrefix` 为 `zki` + `envconfig:"LANG"`），CLI 通过 `base.Env.Lang` 读取
 - 翻译入口：`internal/cmd/i18n.go` 的 `cliLang()` / `getCliI18n()` / `cliT()`，命令树本地化在 `Execute()` 中的 `localizeCmdTree()`
 - 覆盖 cobra 内置英文命令：`internal/cmd/help.go`（中文 help 命令）、`internal/cmd/completion.go`（中文 completion 命令），根命令 `init()` 中通过 `RootCmd.SetHelpCommand(helpCmd)` 注册
 - `--help` 不会触发 `PersistentPreRunE`，因此语言切换逻辑必须放在 `Execute()` 入口的 `localizeCmdTree()` 中

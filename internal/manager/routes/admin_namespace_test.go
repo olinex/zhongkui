@@ -55,7 +55,7 @@ func setupNamespaceTestRouter() *gin.Engine {
 func setupNamespaceTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupNamespaceTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DATABASE_CTX_NAME, db)
+		c.Set(manager.DatabaseCtxName, db)
 		c.Next()
 	})
 	return r
@@ -334,7 +334,7 @@ func TestNamespaceDelete(t *testing.T) {
 
 			// 创建引用该命名空间的RBAC策略
 			policy := core.RbacPolicy{
-				Ptype: base.GROUP_LABEL,
+				Ptype: base.GroupLabel,
 				V0:    "group1",
 				V1:    "role1",
 				V2:    "referenced-namespace",

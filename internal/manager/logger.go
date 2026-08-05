@@ -9,9 +9,9 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
-// LOGGER_CTX_NAME 是 ApiLogger 在 gin.Context 中存储的键名
+// LoggerCtxName 是 ApiLogger 在 gin.Context 中存储的键名
 // 通过此键名从请求上下文中获取 ApiLogger 实例
-const LOGGER_CTX_NAME = "logger"
+const LoggerCtxName = "logger"
 
 // ApiLogger 是对 logging.Logger（zap.SugaredLogger）的封装
 // 在记录日志时自动附加 HTTP 请求上下文信息（请求方法、路径、客户端 IP），
@@ -104,7 +104,7 @@ func (a *ApiLogger) Errorf(c *gin.Context, fields []any, template string, args .
 // ZapLoggerMiddleware 创建一个 Gin 中间件，为每个 HTTP 请求注入 ApiLogger 实例
 //
 // 该中间件执行以下操作：
-//  1. 将 ApiLogger 实例存入 gin.Context，键名为 LOGGER_CTX_NAME
+//  1. 将 ApiLogger 实例存入 gin.Context，键名为 LoggerCtxName
 //     业务处理函数可通过 GetLogger(c) 获取并使用
 //  2. 记录请求开始时间
 //  3. 调用 c.Next() 继续执行后续处理链
@@ -126,7 +126,7 @@ func (a *ApiLogger) Errorf(c *gin.Context, fields []any, template string, args .
 func ZapLoggerMiddleware(logger *logging.Logger) gin.HandlerFunc {
 	apiLogger := ApiLogger{logger: logger}
 	return func(c *gin.Context) {
-		c.Set(LOGGER_CTX_NAME, &apiLogger)
+		c.Set(LoggerCtxName, &apiLogger)
 		start := time.Now()
 		c.Next()
 		apiLogger.Infof(
@@ -152,10 +152,11 @@ func ZapLoggerMiddleware(logger *logging.Logger) gin.HandlerFunc {
 //   - *ApiLogger: 上下文中的 ApiLogger 实例
 //
 // 注意:
-//   如果上下文中不存在 logger（通常是因为未注册 ZapLoggerMiddleware），
-//   该函数会 panic，这是故意的快速失败设计，确保配置错误在开发阶段即被发现
+//
+//	如果上下文中不存在 logger（通常是因为未注册 ZapLoggerMiddleware），
+//	该函数会 panic，这是故意的快速失败设计，确保配置错误在开发阶段即被发现
 func GetLogger(c *gin.Context) *ApiLogger {
-	if logger, ok := c.Get(LOGGER_CTX_NAME); ok {
+	if logger, ok := c.Get(LoggerCtxName); ok {
 		return logger.(*ApiLogger)
 	}
 	panic("logger does not exists")

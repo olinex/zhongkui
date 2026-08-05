@@ -12,7 +12,7 @@ import (
 
 func newRbacProvider() do.Provider[*casbin.Enforcer] {
 	return func(i do.Injector) (*casbin.Enforcer, error) {
-		if mdl, err := model.NewModelFromString(base.RBAC_MODEL); err != nil {
+		if mdl, err := model.NewModelFromString(base.RbacModel); err != nil {
 			return nil, errors.WithStack(err)
 		} else if coreDB, err := InvokeCoreDatabase(i); err != nil {
 			return nil, errors.WithStack(err)

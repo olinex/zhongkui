@@ -206,7 +206,7 @@ func namespaceDelete(c *gin.Context) {
 		if err := tx.First(
 			&policy,
 			"(ptype = ? AND v2 = ?)",
-			base.GROUP_LABEL,
+			base.GroupLabel,
 			name,
 		).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {

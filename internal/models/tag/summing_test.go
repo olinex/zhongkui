@@ -8,15 +8,15 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 )
 
-// TestSUMMING_TTL_HOURS 测试聚合数据保留时间常量
-func TestSUMMING_TTL_HOURS(t *testing.T) {
+// TestSummingTtlHours 测试聚合数据保留时间常量
+func TestSummingTtlHours(t *testing.T) {
 	convey.Convey("测试聚合数据保留时间常量", t, func() {
-		convey.Convey("SUMMING_TTL_HOURS 应该为 72 小时（3天）", func() {
-			convey.So(SUMMING_TTL_HOURS, convey.ShouldEqual, 72)
+		convey.Convey("SummingTtlHours 应该为 72 小时（3天）", func() {
+			convey.So(SummingTTLHours, convey.ShouldEqual, 72)
 		})
 
-		convey.Convey("SUMMING_TTL_HOURS 应该等于 3 * 24", func() {
-			convey.So(SUMMING_TTL_HOURS, convey.ShouldEqual, 3*24)
+		convey.Convey("SummingTtlHours 应该等于 3 * 24", func() {
+			convey.So(SummingTTLHours, convey.ShouldEqual, 3*24)
 		})
 	})
 }
@@ -173,7 +173,7 @@ func TestTagSumming_TableOptions(t *testing.T) {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "HOUR DELETE")
 		})
 
-		convey.Convey("TTL 应该使用 SUMMING_TTL_HOURS 常量", func() {
+		convey.Convey("TTL 应该使用 SummingTtlHours 常量", func() {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "INTERVAL 72 HOUR DELETE")
 		})
 	})
@@ -252,7 +252,7 @@ func TestTagSumming_TableOptions_EngineSpec(t *testing.T) {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "DELETE")
 		})
 
-		convey.Convey("TTL 间隔应该匹配 SUMMING_TTL_HOURS", func() {
+		convey.Convey("TTL 间隔应该匹配 SummingTtlHours", func() {
 			expected := "INTERVAL 72 HOUR"
 			convey.So(tableOpts, convey.ShouldContainSubstring, expected)
 		})

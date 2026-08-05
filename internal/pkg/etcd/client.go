@@ -20,8 +20,8 @@ import (
 type EtcdClient = clientv3.Client
 
 // WithPrefix 为 etcd 键添加全局前缀。
-// 该函数将项目全局前缀（base.GLOBAL_PREFIX）与用户提供的 key 拼接，
-// 生成格式为 "<GLOBAL_PREFIX>/<key>" 的完整键路径，用于隔离不同应用的 etcd 命名空间。
+// 该函数将项目全局前缀（base.GlobalPrefix）与用户提供的 key 拼接，
+// 生成格式为 "<GlobalPrefix>/<key>" 的完整键路径，用于隔离不同应用的 etcd 命名空间。
 //
 // 参数 key 必须满足以下约束，否则将触发 panic：
 //   - 不能以斜杠 '/' 开头（避免与全局前缀拼接后产生双斜杠）
@@ -31,11 +31,11 @@ type EtcdClient = clientv3.Client
 //   - key: 用户定义的键前缀，必须不以 '/' 开头且以 '/' 结尾
 //
 // 返回值:
-//   - string: 拼接全局前缀后的完整键路径，格式为 "<GLOBAL_PREFIX>/<key>"
+//   - string: 拼接全局前缀后的完整键路径，格式为 "<GlobalPrefix>/<key>"
 //
 // 示例:
 //
-//	WithPrefix("myapp/")  -> "zki/myapp/"  (假设 GLOBAL_PREFIX = "zki")
+//	WithPrefix("myapp/")  -> "zki/myapp/"  (假设 GlobalPrefix = "zki")
 //	WithPrefix("config/") -> "zki/config/"
 func WithPrefix(key string) string {
 	if strings.HasPrefix(key, "/") {
@@ -44,7 +44,7 @@ func WithPrefix(key string) string {
 	if !strings.HasSuffix(key, "/") {
 		panic(fmt.Sprintf(`Etcd key %s must endswith slash '/'`, key))
 	}
-	return fmt.Sprintf(`%s/%s`, base.GLOBAL_PREFIX, key)
+	return fmt.Sprintf(`%s/%s`, base.GlobalPrefix, key)
 }
 
 // NewEtcdClient 根据提供的配置创建并返回一个新的 etcd 客户端实例。

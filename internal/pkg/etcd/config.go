@@ -18,7 +18,7 @@ import (
 )
 
 // PREFIX 是 etcd 配置在 viper 中的顶级键前缀，所有 etcd 相关配置均以此前缀开始。
-const PREFIX = "etcd"
+const Prefix = "etcd"
 
 // TLSConfig 定义了 etcd 客户端的 TLS 安全连接配置。
 // 支持两种方式提供 CA 证书：直接内联 PEM 证书内容（Cert）或指定证书文件路径（CertFilePath）。
@@ -151,9 +151,9 @@ func (c *Config) ToEtcdConfig(ctx context.Context, logger *logging.Logger) (cfg 
 }
 
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
 func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+	return config.ExtractConfig[Config](v, Prefix)
 }

@@ -152,7 +152,7 @@ func TestConfigValidation(t *testing.T) {
 func TestConfigPrefix(t *testing.T) {
 	Convey("Test config prefix constant", t, func() {
 		Convey("should have correct prefix value", func() {
-			So(PREFIX, ShouldEqual, "i18n")
+			So(Prefix, ShouldEqual, "i18n")
 		})
 
 		Convey("should use prefix in DescribeConfig", func() {
