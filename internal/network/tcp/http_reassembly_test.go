@@ -1,4 +1,4 @@
-package samples
+package tcp
 
 import (
 	"bufio"
@@ -23,7 +23,6 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"zhongkui.com/zhongkui/internal/models/network"
 	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/network/tcp"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
@@ -40,7 +39,7 @@ var (
 	SessionID serializer.HexUUID = serializer.NewHexUUIDv4()
 )
 
-func extractPackets[P tcp.TCPPacket](ctx context.Context, path string, srcChan chan<- P) error {
+func extractPackets[P TCPPacket](ctx context.Context, path string, srcChan chan<- P) error {
 	handle, err := pcap.OpenOffline(path)
 	if err != nil {
 		return errors.WithStack(err)
@@ -248,7 +247,7 @@ func runRouter(paths ...string) error {
 	})
 	wg.Go(func() error {
 		defer close(dstChan)
-		router := tcp.NewRouter[*network.PacketIPv4TCP](100, 100, time.Second)
+		router := NewRouter[*network.PacketIPv4TCP](100, 100, time.Second)
 		return router.Run(ctx, logger, srcChan, dstChan)
 	})
 	wg.Go(func() error {
@@ -340,7 +339,7 @@ func extractHttpTransports(ctx context.Context, pcapPath string) ([]*network.Htt
 
 	wg.Go(func() error {
 		defer close(dstChan)
-		router := tcp.NewRouter[*network.PacketIPv4TCP](100, 100, time.Second)
+		router := NewRouter[*network.PacketIPv4TCP](100, 100, time.Second)
 		return router.Run(ctx, logger, srcChan, dstChan)
 	})
 

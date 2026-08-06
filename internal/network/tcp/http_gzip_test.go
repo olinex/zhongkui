@@ -1,4 +1,4 @@
-package samples
+package tcp
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 func TestHttpGzipReassembly(t *testing.T) {
 	Convey("Test http_gzip reassembly vs tshark", t, func() {
 		Convey("Should match tshark output", func(c C) {
-			verifyReassemblyAgainstTshark(t, c, "http_gzip.pcap", "http_gzip")
+			verifyReassemblyAgainstTshark(t, c, "testdata/http_gzip.pcap", "testdata/http_gzip")
 		})
 	})
 }

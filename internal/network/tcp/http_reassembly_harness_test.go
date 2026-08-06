@@ -1,4 +1,4 @@
-package samples
+package tcp
 
 import (
 	"compress/gzip"

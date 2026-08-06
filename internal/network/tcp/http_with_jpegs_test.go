@@ -1,4 +1,4 @@
-package samples
+package tcp
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 func TestHttpWithJpegsReassembly(t *testing.T) {
 	Convey("Test http_with_jpegs reassembly vs tshark", t, func() {
 		Convey("Should match tshark output", func(c C) {
-			verifyReassemblyAgainstTshark(t, c, "http_with_jpegs.pcap", "http_with_jpegs")
+			verifyReassemblyAgainstTshark(t, c, "testdata/http_with_jpegs.pcap", "testdata/http_with_jpegs")
 		})
 	})
 }

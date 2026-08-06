@@ -48,6 +48,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(clientAddr), withDstAddr(serverAddr),
 		withSrcPort(clientPort), withDstPort(serverPort),
 		withSeqNum(1000),
+		withPayload(nil),
 	)
 	syn.meta = meta
 	syn.ackNum = 0
@@ -57,6 +58,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(serverAddr), withDstAddr(clientAddr),
 		withSrcPort(serverPort), withDstPort(clientPort),
 		withSeqNum(2000),
+		withPayload(nil),
 	)
 	synAck.meta = meta
 	synAck.ackNum = 1001
@@ -66,6 +68,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(clientAddr), withDstAddr(serverAddr),
 		withSrcPort(clientPort), withDstPort(serverPort),
 		withSeqNum(1001),
+		withPayload(nil),
 	)
 	ack.meta = meta
 	ack.ackNum = 2001
@@ -107,6 +110,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(clientAddr), withDstAddr(serverAddr),
 		withSrcPort(clientPort), withDstPort(serverPort),
 		withSeqNum(finSeq),
+		withPayload(nil),
 	)
 	fin.meta = meta
 	fin.ackNum = 2001
@@ -116,6 +120,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 		withSrcAddr(serverAddr), withDstAddr(clientAddr),
 		withSrcPort(serverPort), withDstPort(clientPort),
 		withSeqNum(2001),
+		withPayload(nil),
 	)
 	lastAck.meta = meta
 	lastAck.ackNum = finSeq + 1
@@ -181,6 +186,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(clientPort), withDstPort(serverPort),
 			withSeqNum(baseSeq),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		syn.meta = meta
 		syn.ackNum = 0
@@ -192,6 +198,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(serverPort), withDstPort(clientPort),
 			withSeqNum(baseSeq+1000),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		synAck.meta = meta
 		synAck.ackNum = baseSeq + 1
@@ -203,6 +210,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(clientPort), withDstPort(serverPort),
 			withSeqNum(baseSeq+1),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		ack.meta = meta
 		ack.ackNum = baseSeq + 1001
@@ -226,6 +234,7 @@ func BenchmarkRouterConcurrentFlows(b *testing.B) {
 			withSrcPort(clientPort), withDstPort(serverPort),
 			withSeqNum(baseSeq+3),
 			withStreamID(flowStreamID),
+			withPayload(nil),
 		)
 		fin.meta = meta
 		fin.ackNum = baseSeq + 1001

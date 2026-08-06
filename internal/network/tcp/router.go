@@ -139,8 +139,9 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 	} else if err := node.addPacket(packet); err != nil {
 		// 单条 TCP 流写入失败（如 RingBuffer 超时、乱序溢出），仅丢弃该流并继续路由，
 		// 避免一条僵死流导致整个 Router（乃至 worker）退出。
+		// 注意：group.remove 内部会调用 node.stop，不可在此重复 stop，
+		// 否则 signalChan 被二次 close 会触发 "close of closed channel" panic。
 		logger.Ctx(ctx).Warnf("flow %s addPacket failed, dropping flow: %v", streamID, err)
-		node.stop(true)
 		group.remove(node, true)
 		return nil
 	} else {

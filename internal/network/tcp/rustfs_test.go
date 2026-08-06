@@ -1,4 +1,4 @@
-package samples
+package tcp
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 func TestRustfsReassembly(t *testing.T) {
 	Convey("Test rustfs HTTP reassembly vs tshark", t, func() {
 		Convey("Should match tshark output", func(c C) {
-			verifyReassemblyAgainstTshark(t, c, "rustfs.pcapng", "rustfs")
+			verifyReassemblyAgainstTshark(t, c, "testdata/rustfs.pcapng", "testdata/rustfs")
 		})
 	})
 }

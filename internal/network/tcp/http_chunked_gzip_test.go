@@ -1,4 +1,4 @@
-package samples
+package tcp
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ func TestHttpChunkedGzipReassembly(t *testing.T) {
 	// than the original wire format, so we only verify the pipeline runs without error.
 	Convey("Test http_chunked_gzip reassembly vs tshark", t, func() {
 		Convey("Should process pcap without error", func(c C) {
-			err := runRouter("http_chunked_gzip.pcap")
+			err := runRouter("testdata/http_chunked_gzip.pcap")
 			c.So(err, ShouldBeNil)
 		})
 	})
