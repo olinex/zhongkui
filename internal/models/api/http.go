@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	API_NODE_TTL_HOURS = 24
+	ApiNodeTtlHours = 24
 )
 
 type HttpApiMeta struct {

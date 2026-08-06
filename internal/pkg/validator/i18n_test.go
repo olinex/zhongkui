@@ -162,11 +162,11 @@ func TestTranslationRegister(t *testing.T) {
 
 		Convey("Should handle different validation tags", func() {
 			testTags := []string{
-				TAG_STRONG_PASSWORD,
-				TAG_WINDOWS_FILE_NAME,
-				TAG_UNIX_FILE_NAME,
-				TAG_FILE_NAME,
-				TAG_STRICT_FILE_NAME,
+				TagStrongPassword,
+				TagWindowsFileName,
+				TagUnixFileName,
+				TagFileName,
+				TagStrictFileName,
 				"customTag",
 			}
 
@@ -191,10 +191,10 @@ func TestTranslationRegisterFunction(t *testing.T) {
 
 		Convey("Should call translationRegister with correct parameters", func() {
 			// TranslationRegister 是 translationRegister 的包装器
-			// 它应该使用 TAG_STRONG_PASSWORD 作为标签
+			// 它应该使用 TagStrongPassword 作为标签
 
 			// 验证常量值
-			So(TAG_STRONG_PASSWORD, ShouldEqual, "strongPassword")
+			So(TagStrongPassword, ShouldEqual, "strongPassword")
 
 			// 验证函数签名
 			// 它应该接受三个参数并返回一个错误
@@ -205,7 +205,7 @@ func TestTranslationRegisterFunction(t *testing.T) {
 			// 验证 TranslationRegister 函数与包中其他部分的集成
 
 			// 1. 验证它使用了包常量
-			So(TAG_STRONG_PASSWORD, ShouldNotBeEmpty)
+			So(TagStrongPassword, ShouldNotBeEmpty)
 
 			// 2. 验证它调用了 translationRegister 函数
 			// （通过代码审查确认）

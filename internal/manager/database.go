@@ -8,13 +8,13 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 )
 
-// DATABASE_CTX_NAME 是数据库实例在 Gin 上下文中存储的键名。
+// DatabaseCtxName 是数据库实例在 Gin 上下文中存储的键名。
 // 通过此键将 *database.DB 实例注入到请求上下文中，供后续处理函数读取。
-const DATABASE_CTX_NAME = "db"
+const DatabaseCtxName = "db"
 
-// ETCD_CTX_NAME 是 etcd 客户端在 Gin 上下文中存储的键名。
+// EtcdCtxName 是 etcd 客户端在 Gin 上下文中存储的键名。
 // 通过此键将 *etcd.EtcdClient 实例注入到请求上下文中，供后续处理函数读取。
-const ETCD_CTX_NAME = "etcd"
+const EtcdCtxName = "etcd"
 
 // DatabaseMiddleware 创建一个 Gin 中间件，将数据库连接实例注入到请求上下文中。
 // 该中间件在请求处理链的入口处调用 c.Set 将 db 实例存储到上下文中，
@@ -27,7 +27,7 @@ const ETCD_CTX_NAME = "etcd"
 //   - gin.HandlerFunc: Gin 中间件处理函数
 func DatabaseMiddleware(db *database.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(DATABASE_CTX_NAME, db)
+		c.Set(DatabaseCtxName, db)
 		c.Next()
 	}
 }
@@ -45,7 +45,7 @@ func DatabaseMiddleware(db *database.DB) gin.HandlerFunc {
 // 返回:
 //   - *database.DB: 绑定了当前请求上下文的数据库连接实例
 func GetDatabase(c *gin.Context) *database.DB {
-	if db, ok := c.Get(DATABASE_CTX_NAME); ok {
+	if db, ok := c.Get(DatabaseCtxName); ok {
 		return db.(*database.DB).WithContext(c.Request.Context())
 	}
 	panic("database does not exists")
@@ -62,7 +62,7 @@ func GetDatabase(c *gin.Context) *database.DB {
 //   - gin.HandlerFunc: Gin 中间件处理函数
 func EtcdClientMiddleware(client *etcd.EtcdClient) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(ETCD_CTX_NAME, client)
+		c.Set(EtcdCtxName, client)
 		c.Next()
 	}
 }
@@ -78,7 +78,7 @@ func EtcdClientMiddleware(client *etcd.EtcdClient) gin.HandlerFunc {
 // 返回:
 //   - *etcd.EtcdClient: etcd 客户端实例
 func GetEtcdClient(c *gin.Context) *etcd.EtcdClient {
-	if e, ok := c.Get(ETCD_CTX_NAME); ok {
+	if e, ok := c.Get(EtcdCtxName); ok {
 		return e.(*etcd.EtcdClient)
 	}
 	panic("etcd client does not exists")

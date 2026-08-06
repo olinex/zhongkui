@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	// CONTEXT_HANDLER_PARAM_NAME 上下文中的任务配置键名
+	// ContextHandlerParamName 上下文中的任务配置键名
 	// 用于存储任务上下文中的任务配置
-	CONTEXT_HANDLER_PARAM_NAME = "ctx_handler_param"
+	ContextHandlerParamName = "ctx_handler_param"
 )
 
 // LiveFunc 数据处理函数的类型定义。
@@ -50,16 +50,16 @@ func HandlerRegister(name string, handler Handler) {
 }
 
 // GetHandlerParam 从上下文中提取指定类型的任务处理器配置
-// 泛型参数 T 为目标配置结构体的类型。函数从 ctx 中按键 CONTEXT_HANDLER_PARAM_NAME
+// 泛型参数 T 为目标配置结构体的类型。函数从 ctx 中按键 ContextHandlerParamName
 // 查找由 HandlerRegistry 注入的配置参数，并反序列化为 *T。
 // 返回 (*T, error)：成功时返回配置指针，上下文无此键或类型不匹配时返回错误。
 func GetHandlerParam[T any](ctx context.Context) (*T, error) {
-	return getParam[T](ctx, CONTEXT_HANDLER_PARAM_NAME)
+	return getParam[T](ctx, ContextHandlerParamName)
 }
 
 // HandlerRegistry 获取带参数注入的全局 handler 注册表副本
 // 遍历所有已注册的 handler 函数，如果 params 中存在同名的配置参数，则包装 handler：
-// 在调用 handler 之前将配置参数注入上下文（键为 CONTEXT_HANDLER_PARAM_NAME），
+// 在调用 handler 之前将配置参数注入上下文（键为 ContextHandlerParamName），
 // 使 handler 内部可通过 GetHandlerParam 获取配置。
 // 返回的是全新创建的映射副本，不会影响全局注册表 handlerFuncs。
 func HandlerRegistry(params map[string]map[string]any) HandlerFuncs {
@@ -69,7 +69,7 @@ func HandlerRegistry(params map[string]map[string]any) HandlerFuncs {
 			wrapped[name] = hFunc
 		} else {
 			wrapped[name] = func(ctx context.Context, task *Task) error {
-				ctx = context.WithValue(ctx, CONTEXT_HANDLER_PARAM_NAME, param)
+				ctx = context.WithValue(ctx, ContextHandlerParamName, param)
 				return hFunc(ctx, task)
 			}
 		}

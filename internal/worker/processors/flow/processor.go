@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	PROC_IPV4_TCP = "ipv4-tcp"
-	PROC_IPV6_TCP = "ipv6-tcp"
+	ProcIpv4Tcp = "ipv4-tcp"
+	ProcIpv6Tcp = "ipv6-tcp"
 )
 
 // PacketProcessor 管理 TCP 流处理的完整生命周期。
@@ -62,7 +62,7 @@ func NewIPv4PacketProcessorFactory(
 	injector do.Injector,
 ) pipeline.ProcessorFactory {
 	return func(ctx context.Context) (pipeline.Processor, error) {
-		return NewPacketProcessor[*network.PacketIPv4TCP](ctx, injector, PROC_IPV4_TCP)
+		return NewPacketProcessor[*network.PacketIPv4TCP](ctx, injector, ProcIpv4Tcp)
 	}
 }
 
@@ -71,7 +71,7 @@ func NewIPv6PacketProcessorFactory(
 	injector do.Injector,
 ) pipeline.ProcessorFactory {
 	return func(ctx context.Context) (pipeline.Processor, error) {
-		return NewPacketProcessor[*network.PacketIPv6TCP](ctx, injector, PROC_IPV6_TCP)
+		return NewPacketProcessor[*network.PacketIPv6TCP](ctx, injector, ProcIpv6Tcp)
 	}
 }
 

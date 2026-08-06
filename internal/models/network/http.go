@@ -49,9 +49,9 @@ import (
 
 func objectKey(name string, req bool) string {
 	if req {
-		return fmt.Sprintf(`body/request/%s.%s`, name, combine.FILE_EXT)
+		return fmt.Sprintf(`body/request/%s.%s`, name, combine.FileExt)
 	}
-	return fmt.Sprintf(`body/response/%s.%s`, name, combine.FILE_EXT)
+	return fmt.Sprintf(`body/response/%s.%s`, name, combine.FileExt)
 }
 
 // parseInt32 解析字符串为 int32，解析失败返回 0
@@ -990,6 +990,28 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 	}, nil
 }
 
+// TcpFingerprint 表示 HttpTransport 上的 TCP 指纹（客户端/服务端），
+// 来源于 pcap 导入阶段写入 tcp 包表的指纹，经组包器 StreamMeta 透传填充。
+type TcpFingerprint struct {
+	ClientOS        string  `gorm:"column:fp_tcp_client_os;type:String CODEC(ZSTD(3))" json:"fp_tcp_client_os"`
+	ClientOSQuality float64 `gorm:"column:fp_tcp_client_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fp_tcp_client_os_quality"`
+	ClientSig       string  `gorm:"column:fp_tcp_client_sig;type:String CODEC(ZSTD(3))" json:"fp_tcp_client_sig"`
+	ServerOS        string  `gorm:"column:fp_tcp_server_os;type:String CODEC(ZSTD(3))" json:"fp_tcp_server_os"`
+	ServerOSQuality float64 `gorm:"column:fp_tcp_server_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fp_tcp_server_os_quality"`
+	ServerSig       string  `gorm:"column:fp_tcp_server_sig;type:String CODEC(ZSTD(3))" json:"fp_tcp_server_sig"`
+	MTU             uint16  `gorm:"column:fp_tcp_mtu;type:UInt16 CODEC(ZSTD(3))" json:"fp_tcp_mtu"`
+}
+
+// HttpFingerprint 表示 HttpTransport 上的 Http 指纹与设备类别猜测。
+type HttpFingerprint struct {
+	Browser        string  `gorm:"column:fp_http_browser;type:String CODEC(ZSTD(3))" json:"fp_http_browser"`
+	BrowserQuality float64 `gorm:"column:fp_http_browser_quality;type:Float64 CODEC(ZSTD(3))" json:"fp_http_browser_quality"`
+	Server         string  `gorm:"column:fp_http_server;type:String CODEC(ZSTD(3))" json:"fp_http_server"`
+	ServerQuality  float64 `gorm:"column:fp_http_server_quality;type:Float64 CODEC(ZSTD(3))" json:"fp_http_server_quality"`
+	Language       string  `gorm:"column:fp_http_language;type:String CODEC(ZSTD(3))" json:"fp_http_language"`
+	DeviceGuess    string  `gorm:"column:fp_device_guess;type:String CODEC(ZSTD(3))" json:"fp_device_guess"`
+}
+
 // HttpTransport 表示HTTP传输层信息
 // 完整的HTTP传输数据模型，组合了所有HTTP相关的元数据和内容信息
 // 该结构体对应数据库中的http_transport表，用于存储完整的HTTP会话数据
@@ -998,11 +1020,13 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 //   - BaseMeta:             基础元数据，包含命名空间、捕获器、版本和会话ID
 //   - FusedMeta:            融合元数据，包含帧堆栈信息
 //   - HttpBase:             HTTP基础信息，包含客户端/服务器IP端口和协议版本
+//   - TcpFingerprint:       TCP指纹信息，包含客户端/服务端OS、签名与MTU特征
 //   - HttpURI:              HTTP URI信息，包含URL的各个组成部分
 //   - HttpRequestBody:      HTTP请求正文信息，包含请求方法、主体和时间信息
 //   - HttpRequestHeaders:   HTTP请求头信息，以宽表形式存储所有标准请求头字段
 //   - HttpResponse:         HTTP响应正文信息，包含响应主体和时间信息
 //   - HttpResponseHeaders:  HTTP响应头信息，以宽表形式存储所有标准响应头字段
+//   - HttpFingerprint:      Http指纹信息，包含浏览器、服务端与设备类别猜测
 //
 // 使用场景:
 //   - HTTP流量分析和监控
@@ -1018,6 +1042,8 @@ type HttpTransport struct {
 	TraceMeta
 	// HttpBase HTTP基础连接信息
 	HttpBase
+	// TcpFingerprint TCP被动指纹信息
+	TcpFingerprint
 	// HttpURI HTTP请求URI信息
 	HttpURI
 	// HttpRequestBody HTTP请求正文信息
@@ -1028,6 +1054,10 @@ type HttpTransport struct {
 	HttpResponseBody
 	// HttpResponseHeaders HTTP响应头信息
 	HttpResponseHeaders
+	// HttpFingerprint Http指纹信息
+	HttpFingerprint
 	// AppTailer 应用层尾部信息
 	AppTailer
+	// TagsMeta 风险标签元数据
+	TagsMeta
 }

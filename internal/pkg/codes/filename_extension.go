@@ -42,10 +42,10 @@ func GetFilenameExtensionCodes() *FilenameExtensionCodes {
 
 // newFilenameExtensionCodes 从嵌入的集合数据文件中创建并初始化 FilenameExtensionCodes 实例。
 //
-// 该函数读取由 FILENAME_EXTENSION 常量指定的 JSON 文件，
+// 该函数读取由 FilenameExtension 常量指定的 JSON 文件，
 // 将其反序列化为 FilenameExtensionCodes 结构体并返回。
 func newFilenameExtensionCodes() (*FilenameExtensionCodes, error) {
-	file, err := embeddedCollections.Open(FILENAME_EXTENSION)
+	file, err := embeddedCollections.Open(FilenameExtension)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

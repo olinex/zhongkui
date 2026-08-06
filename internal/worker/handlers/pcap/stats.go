@@ -16,16 +16,18 @@ type pcapStatsContextKey struct{}
 // - 累计加载的各类网络模型数量（Ethernet、IPv4、IPv6、TCP、UDP）
 // - 任务启动时间，用于计算处理耗时和速率
 type PcapStats struct {
-	packets        atomic.Int64
-	bytes          atomic.Int64
-	ethCount       atomic.Int64
-	ipv4Count      atomic.Int64
-	ipv6Count      atomic.Int64
-	ipv4TCPCount   atomic.Int64
-	ipv6TCPCount   atomic.Int64
-	ipv4UDPCount   atomic.Int64
-	ipv6UDPCount   atomic.Int64
-	startTime      time.Time
+	packets             atomic.Int64
+	bytes               atomic.Int64
+	ethCount            atomic.Int64
+	ipv4Count           atomic.Int64
+	ipv6Count           atomic.Int64
+	ipv4TCPCount        atomic.Int64
+	ipv6TCPCount        atomic.Int64
+	ipv4UDPCount        atomic.Int64
+	ipv6UDPCount        atomic.Int64
+	fingerprintCount    atomic.Int64
+	fingerprintErrCount atomic.Int64
+	startTime           time.Time
 }
 
 // NewPcapStats 创建新的 PCAP 统计收集器实例，记录当前时间为启动时间
@@ -90,34 +92,48 @@ func (s *PcapStats) RecordIPv6UDP() {
 	s.ipv6UDPCount.Add(1)
 }
 
+// RecordTCPFingerprint 记录一次成功的 TCP 被动指纹识别（SYN / SYN-ACK 包）
+func (s *PcapStats) RecordTCPFingerprint() {
+	s.fingerprintCount.Add(1)
+}
+
+// RecordTCPFingerprintError 记录一次 TCP 被动指纹识别失败（FFI 不可用或解析错误）
+func (s *PcapStats) RecordTCPFingerprintError() {
+	s.fingerprintErrCount.Add(1)
+}
+
 // Snapshot 获取当前统计数据的原子快照，返回一份不可变的副本
 func (s *PcapStats) Snapshot() PcapStatsSnapshot {
 	return PcapStatsSnapshot{
-		Packets:    s.packets.Load(),
-		Bytes:      s.bytes.Load(),
-		Eth:        s.ethCount.Load(),
-		IPv4:       s.ipv4Count.Load(),
-		IPv6:       s.ipv6Count.Load(),
-		IPv4TCP:    s.ipv4TCPCount.Load(),
-		IPv6TCP:    s.ipv6TCPCount.Load(),
-		IPv4UDP:    s.ipv4UDPCount.Load(),
-		IPv6UDP:    s.ipv6UDPCount.Load(),
-		Elapsed:    time.Since(s.startTime),
+		Packets:        s.packets.Load(),
+		Bytes:          s.bytes.Load(),
+		Eth:            s.ethCount.Load(),
+		IPv4:           s.ipv4Count.Load(),
+		IPv6:           s.ipv6Count.Load(),
+		IPv4TCP:        s.ipv4TCPCount.Load(),
+		IPv6TCP:        s.ipv6TCPCount.Load(),
+		IPv4UDP:        s.ipv4UDPCount.Load(),
+		IPv6UDP:        s.ipv6UDPCount.Load(),
+		TCPFingerprint: s.fingerprintCount.Load(),
+		FingerprintErr: s.fingerprintErrCount.Load(),
+		Elapsed:        time.Since(s.startTime),
 	}
 }
 
 // PcapStatsSnapshot 统计数据的不可变快照
 type PcapStatsSnapshot struct {
-	Packets int64
-	Bytes   int64
-	Eth     int64
-	IPv4    int64
-	IPv6    int64
-	IPv4TCP int64
-	IPv6TCP int64
-	IPv4UDP int64
-	IPv6UDP int64
-	Elapsed time.Duration
+	Packets        int64
+	Bytes          int64
+	Eth            int64
+	IPv4           int64
+	IPv6           int64
+	IPv4TCP        int64
+	IPv6TCP        int64
+	IPv4UDP        int64
+	IPv6UDP        int64
+	TCPFingerprint int64
+	FingerprintErr int64
+	Elapsed        time.Duration
 }
 
 // String 格式化统计快照为人类可读的多行输出
@@ -133,8 +149,10 @@ func (s PcapStatsSnapshot) String() string {
 	mb := float64(s.Bytes) / 1_000_000
 	return fmt.Sprintf(
 		"\n[packets: %d, bytes: %.2f MB, elapsed: %v, pps: %.1f, mbps: %.2f]"+
-			"\n[eth: %d, ipv4: %d, ipv6: %d, ipv4_tcp: %d, ipv6_tcp: %d, ipv4_udp: %d, ipv6_udp: %d]",
+			"\n[eth: %d, ipv4: %d, ipv6: %d, ipv4_tcp: %d, ipv6_tcp: %d, ipv4_udp: %d, ipv6_udp: %d]"+
+			"\n[tcp_fingerprint: %d, tcp_fingerprint_err: %d]",
 		s.Packets, mb, s.Elapsed.Round(time.Millisecond), pps, mbps,
 		s.Eth, s.IPv4, s.IPv6, s.IPv4TCP, s.IPv6TCP, s.IPv4UDP, s.IPv6UDP,
+		s.TCPFingerprint, s.FingerprintErr,
 	)
 }

@@ -86,7 +86,7 @@ func GetISO15924Codes() *ISO15924Codes {
 //  3. 遍历所有书写系统条目，分别构建 Alpha4、Name 和 Numeric 三个索引；
 //  4. 在构建索引过程中检测重复键，若发现重复则 panic（数据文件不应包含重复项）。
 func newISO15924Codes() (*ISO15924Codes, error) {
-	file, err := embeddedStandards.Open(SCRIPT_LANGUAGE)
+	file, err := embeddedStandards.Open(ScriptLanguage)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

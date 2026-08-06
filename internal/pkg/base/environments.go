@@ -21,7 +21,7 @@ type GlobalEnv struct {
 func init() {
 	if err := defaults.Set(&Env); err != nil {
 		panic(err)
-	} else if err := envconfig.Process(GLOBAL_PREFIX, &Env); err != nil {
+	} else if err := envconfig.Process(GlobalPrefix, &Env); err != nil {
 		panic(err)
 	} else if Env.Debug {
 		pterm.EnableDebugMessages()

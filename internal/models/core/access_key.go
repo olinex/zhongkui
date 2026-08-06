@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	// ACCESS_KEY_PREFIX 是访问键在 Redis 缓存中的前缀
+	// AccessKeyPrefix 是访问键在 Redis 缓存中的前缀
 	// 用于构建唯一的缓存键，防止与其他缓存键冲突
-	ACCESS_KEY_PREFIX = "akp"
+	AccessKeyPrefix = "akp"
 )
 
 var (
@@ -150,7 +150,7 @@ type AccessKeyPool struct {
 // nonceKey 生成用于防重放检查的 Redis 缓存键
 // 格式: akp:{access_key_id}:{nonce}
 func nonceKey(id, nonce string) string {
-	return fmt.Sprintf("%s:%s:%s", ACCESS_KEY_PREFIX, id, nonce)
+	return fmt.Sprintf("%s:%s:%s", AccessKeyPrefix, id, nonce)
 }
 
 // NewAccessKeyPool 创建一个新的访问键池实例

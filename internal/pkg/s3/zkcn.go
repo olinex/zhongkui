@@ -88,7 +88,7 @@ func NewZkcn(client *S3Client, objectKey string, cryptoKey []byte, timeout time.
 //   - error: 上传或加密失败时返回的错误
 func (t *Zkcn) Store(ctx context.Context, reader io.Reader) (minio.UploadInfo, error) {
 	opts := minio.PutObjectOptions{
-		ContentType:  combine.COMPRESS_CONTENT_TYPE,
+		ContentType:  combine.CompressContentType,
 		AutoChecksum: minio.ChecksumSHA256,
 	}
 	if t.timeout > 0 {

@@ -1,22 +1,21 @@
-# Detect OS platform: Darwin (macOS), Linux, or Windows (MINGW/MSYS/CYGWIN)
+# 检测操作系统平台: Darwin (macOS), Linux, 或 Windows (MINGW/MSYS/CYGWIN)
 UNAME_S := $(shell uname -s)
 GOBIN := $(shell go env GOBIN)
 ifeq ($(UNAME_S),Darwin)
+# macOS: 从 en0 网卡获取局域网 IP，失败时回退到 localhost
 LAN_IP := $(shell ipconfig getifaddr en0 2>/dev/null || echo localhost)
+# gopacket/pcap (cgo) 在 macOS 上会重复链接 -lpcap，抑制 ld 警告
 CGO_LDFLAGS += -Wl,-no_warn_duplicate_libraries
 export CGO_LDFLAGS
 else ifeq ($(UNAME_S),Linux)
+# Linux: 取主机名解析出的第一个 IP，失败时回退到 localhost
 LAN_IP := $(shell hostname -I 2>/dev/null | awk '{print $$1}' || echo localhost)
 else
 LAN_IP := localhost
 endif
 
-# 需要 sudo 才能抓包的平台（可通过 SUDO= make ... 跳过）
-ifeq ($(UNAME_S),Linux)
-SUDO := sudo
-else
-SUDO := sudo
-endif
+# 抓包基准测试需要 root 权限，默认使用 sudo；可通过 SUDO= make bench-slow 显式跳过
+SUDO ?= sudo
 
 .PHONY:
 	run-dev-deps
@@ -26,13 +25,19 @@ endif
 	protobuf-tools
 	ts-tools
 	pcap-tools
+	p0f-update
 	build
+	build-release
+	run
 	clean
 	bench-prepare
 	bench-smoke
 	bench-slow
 	bench-fast
 	bench-raw
+	bench-xdp-phys
+	bench-xdp-phys-raw
+	bench-probe
 	uptrace-install
 	uptrace-config
 	uptrace-init
@@ -42,12 +47,16 @@ endif
 	uptrace-uninstall
 	uptrace-cli-help
 
+# ============================================================
+# 依赖工具构建
+# ============================================================
+
 # run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
 # 用法: make run-dev-deps
 run-dev-deps:
 	@case "$(UNAME_S)" in \
-		Darwin) \
-			echo "Starting dependencies with Orbstack (docker)..."; \
+		Darwin|MINGW*|MSYS*|CYGWIN*) \
+			echo "使用 docker 启动依赖容器..."; \
 			docker run -itd --restart unless-stopped --name redis --network host \
 				redis:8.2.1; \
 			docker run -itd --restart unless-stopped --name etcd --network host \
@@ -67,7 +76,7 @@ run-dev-deps:
 				-e RUSTFS_SECRET_KEY=rustfsadmin \
 				rustfs/rustfs:latest ;; \
 		Linux) \
-			echo "Starting dependencies with nerdctl..."; \
+			echo "使用 nerdctl 启动依赖容器..."; \
 			nerdctl run -td --restart=always --name redis --net=host \
 				redis:8.2.1; \
 			nerdctl run -td --restart=always --name etcd --net=host \
@@ -86,72 +95,52 @@ run-dev-deps:
 				-e RUSTFS_ACCESS_KEY=rustfsadmin \
 				-e RUSTFS_SECRET_KEY=rustfsadmin \
 				rustfs/rustfs:latest ;; \
-		MINGW*|MSYS*|CYGWIN*) \
-			echo "Starting dependencies with Docker Desktop..."; \
-			docker run -itd --restart unless-stopped --name redis --network host \
-				redis:8.2.1; \
-			docker run -itd --restart unless-stopped --name etcd --network host \
-				quay.io/coreos/etcd:v3.6.5; \
-			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
-				--ulimit nofile=262144:262144 \
-				clickhouse:25.3.3; \
-			docker run -itd --restart unless-stopped --name postgres --network host \
-				-e POSTGRES_PASSWORD=root_password \
-				-e POSTGRES_USER=postgres \
-				-e POSTGRES_DB=default \
-				postgres:16-alpine3.22; \
-			docker run -itd --restart unless-stopped --name rustfs --network host \
-				-e RUSTFS_ADDRESS=localhost:9002 \
-				-e RUSTFS_CONSOLE_ENABLE=true \
-				-e RUSTFS_ACCESS_KEY=rustfsadmin \
-				-e RUSTFS_SECRET_KEY=rustfsadmin \
-				rustfs/rustfs:latest ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'. Please start dependencies manually."; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动启动依赖服务。"; \
 			exit 1 ;; \
 	esac
 
 # stop-dev-deps - 停止所有开发依赖容器 (不删除容器，保留数据)
 # 用法: make stop-dev-deps
 stop-dev-deps:
-	@echo "Stopping development dependencies..."
+	@echo "停止开发依赖容器..."
 	@case "$(UNAME_S)" in \
 		Darwin|MINGW*|MSYS*|CYGWIN*) \
 			cmd=docker ;; \
 		Linux) \
 			cmd=nerdctl ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'."; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'。"; \
 			exit 1 ;; \
 	esac; \
 	for container in redis etcd clickhouse-server postgres rustfs; do \
 		if $$cmd ps --format '{{.Names}}' | grep -q "^$$container$$" 2>/dev/null; then \
-			echo "  Stopping $$container..."; \
+			echo "  正在停止 $$container..."; \
 			$$cmd stop $$container; \
 		else \
-			echo "  $$container not running, skipping"; \
+			echo "  $$container 未在运行，跳过"; \
 		fi \
 	done
 
 # remove-dev-deps - 停止并删除所有开发依赖容器 (数据将丢失)
 # 用法: make remove-dev-deps
 remove-dev-deps: stop-dev-deps
-	@echo "Removing development dependencies..."
+	@echo "删除开发依赖容器..."
 	@case "$(UNAME_S)" in \
 		Darwin|MINGW*|MSYS*|CYGWIN*) \
 			cmd=docker ;; \
 		Linux) \
 			cmd=nerdctl ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'."; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'。"; \
 			exit 1 ;; \
 	esac; \
 	for container in redis etcd clickhouse-server postgres rustfs; do \
 		if $$cmd ps -a --format '{{.Names}}' | grep -q "^$$container$$" 2>/dev/null; then \
-			echo "  Removing $$container..."; \
+			echo "  正在删除 $$container..."; \
 			$$cmd rm -f $$container; \
 		else \
-			echo "  $$container not found, skipping"; \
+			echo "  $$container 不存在，跳过"; \
 		fi \
 	done
 
@@ -171,9 +160,9 @@ protobuf-tools:
 		Linux) \
 			apt install -y protobuf-compiler ;; \
 		MINGW*|MSYS*|CYGWIN*) \
-			echo "Please install protobuf manually from https://github.com/protocolbuffers/protobuf/releases" ;; \
+			echo "请从 https://github.com/protocolbuffers/protobuf/releases 手动安装 protobuf" ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'. Please install protobuf manually." ;; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动安装 protobuf。" ;; \
 	esac
 	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
@@ -194,22 +183,22 @@ ts-tools:
 			if ! command -v node >/dev/null 2>&1; then \
 				HOMEBREW_NO_AUTO_UPDATE=1 brew install node; \
 			else \
-				echo "node already installed, skipping"; \
+				echo "node 已安装，跳过"; \
 			fi ;; \
 		Linux) \
 			if ! command -v node >/dev/null 2>&1; then \
 				curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs; \
 			else \
-				echo "node already installed, skipping"; \
+				echo "node 已安装，跳过"; \
 			fi ;; \
 		MINGW*|MSYS*|CYGWIN*) \
 			if ! command -v node >/dev/null 2>&1; then \
-				echo "Please install Node.js from https://nodejs.org and re-run this target"; \
+				echo "请从 https://nodejs.org 安装 Node.js 后重新执行该目标"; \
 				exit 1; \
 			fi ;; \
 		*) \
 			if ! command -v node >/dev/null 2>&1; then \
-				echo "Warning: Unsupported OS '$(UNAME_S)'. Please install Node.js manually from https://nodejs.org"; \
+				echo "警告: 不支持的操作系统 '$(UNAME_S)'，请从 https://nodejs.org 手动安装 Node.js"; \
 				exit 1; \
 			fi ;; \
 	esac
@@ -224,33 +213,14 @@ pcap-tools:
 	@case "$(UNAME_S)" in \
 		Darwin) \
 			xcode-select -p >/dev/null 2>&1 || xcode-select --install; \
-			echo "libpcap is included with macOS Xcode Command Line Tools" ;; \
+			echo "libpcap 已包含在 macOS Xcode Command Line Tools 中" ;; \
 		Linux) \
 			apt install -y libpcap-dev ;; \
 		MINGW*|MSYS*|CYGWIN*) \
-			echo "Please install Npcap SDK from https://npcap.com/dist/" ;; \
+			echo "请从 https://npcap.com/dist/ 安装 Npcap SDK" ;; \
 		*) \
-			echo "Warning: Unsupported OS '$(UNAME_S)'. Please install libpcap manually." ;; \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动安装 libpcap。" ;; \
 	esac
-
-# clean - 删除自动生成的 protobuf 代码
-# 用法: make clean
-clean:
-	rm -rf internal/pkg/protobuf/reporter/v1/reporter.pb.go
-	rm -rf internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go
-
-internal/pkg/protobuf/reporter/v1/reporter.pb.go: api/reporter.proto
-	PATH="$(GOBIN):$$PATH" protoc --go_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
-
-internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go: api/reporter.proto
-	PATH="$(GOBIN):$$PATH" protoc --go-grpc_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
-
-internal/manager/routes/search.go: cmd/template/main.go cmd/template/base.tmpl internal/manager/routes/search.toml
-	go run cmd/template/main.go search-generate \
-		--packageName="routes" \
-		--templatePath="cmd/template/base.tmpl" \
-		--configPath="internal/manager/routes/search.toml" \
-		--outputPath="internal/manager/routes/search.go"
 
 # ============================================================
 # 构建与版本管理
@@ -282,6 +252,43 @@ LDFLAGS = -X zhongkui.com/zhongkui/internal/pkg/version.SemVer=$(VERSION) \
           -X zhongkui.com/zhongkui/internal/pkg/version.BuildTime=$(BUILD_TIME) \
           -X zhongkui.com/zhongkui/internal/pkg/version.Builder=$(BUILDER)
 
+# p0f 指纹签名库（随 Go 包内嵌）：
+# p0f.fp 为上游基础库（可用 make p0f-update 刷新覆盖）；p0f.local.fp 为本地定制签名，
+# 不随上游更新，两者拼接后由 internal/network/huginn 内嵌加载（见 database.go 的 embed）
+P0F_FP := internal/network/huginn/p0f.fp
+
+# p0f 签名库上游源（社区维护的 p0f3 数据库；官方 p0f 已停更，此为最活跃的社区维护版）
+# 可通过 make p0f-update P0F_UPSTREAM_URL=<新地址> 覆盖
+P0F_UPSTREAM_URL ?= https://raw.githubusercontent.com/peace-maker/p0f3-database/main/p0f.fp
+
+internal/pkg/protobuf/reporter/v1/reporter.pb.go: api/reporter.proto
+	PATH="$(GOBIN):$$PATH" protoc --go_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
+
+internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go: api/reporter.proto
+	PATH="$(GOBIN):$$PATH" protoc --go-grpc_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
+
+internal/manager/routes/search.go: cmd/template/main.go cmd/template/base.tmpl internal/manager/routes/search.toml
+	go run cmd/template/main.go search-generate \
+		--packageName="routes" \
+		--templatePath="cmd/template/base.tmpl" \
+		--configPath="internal/manager/routes/search.toml" \
+		--outputPath="internal/manager/routes/search.go"
+
+# p0f-update - 从社区维护的 p0f3 签名库刷新内嵌的上游 p0f.fp，并运行指纹测试
+# 本地定制签名保存在 p0f.local.fp，不会被上游覆盖；刷新后若指纹基线变化，
+# 需人工确认 TestFingerprintFromPcap 的结果并更新 internal/network/detectors/fingerprint_pcap_test.go
+# 用法: make p0f-update
+# 自定义上游源: make p0f-update P0F_UPSTREAM_URL=<新地址>
+p0f-update:
+	@echo "=== 下载上游 p0f 签名库: $(P0F_UPSTREAM_URL) ==="
+	@curl -fsSL "$(P0F_UPSTREAM_URL)" -o "$(P0F_FP).tmp" || { echo "下载失败，请检查网络或 P0F_UPSTREAM_URL"; exit 1; }
+	@echo "=== 下载完成，校验格式（行数/首个 section）==="
+	@wc -l "$(P0F_FP).tmp"
+	@grep -m1 '^\[tcp:request\]' "$(P0F_FP).tmp" >/dev/null || { echo "校验失败：下载内容不含 [tcp:request] section，中止"; rm -f "$(P0F_FP).tmp"; exit 1; }
+	@mv "$(P0F_FP).tmp" "$(P0F_FP)"
+	@echo "=== 运行指纹测试验证 ==="
+	go test ./internal/network/detectors -run '^TestFingerprintFromPcap$$' -v
+
 # build - 编译 zki 二进制 (开发版本，版本号自动取 git commit)
 # 用法: make build
 build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/routes/search.go
@@ -300,6 +307,12 @@ build-release:
 # 用法: make run ARGS="version" 或 make run ARGS="run web --config=config.toml"
 run:
 	go run cmd/zki/main.go $(ARGS)
+
+# clean - 删除自动生成的 protobuf 代码
+# 用法: make clean
+clean:
+	rm -f internal/pkg/protobuf/reporter/v1/reporter.pb.go
+	rm -f internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go
 
 # ============================================================
 # Wire 抓包实现基线测试
@@ -426,6 +439,13 @@ else
 UPTRACE_DOCKER_CMD := docker
 endif
 
+# sed 原地编辑参数（macOS 的 BSD sed 需要 -i '' 写法，Linux GNU sed 为 -i）
+ifeq ($(UNAME_S),Darwin)
+SED_I := sed -i ''
+else
+SED_I := sed -i
+endif
+
 # uptrace-install - 下载并安装 uptrace 二进制（已安装则跳过）
 # 用法: make uptrace-install
 uptrace-install:
@@ -474,24 +494,12 @@ uptrace-config:
 		echo "=== 生成配置文件 $(UPTRACE_CONFIG) ==="; \
 		mkdir -p $$(dirname $(UPTRACE_CONFIG)); \
 		$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) config create; \
-		case "$(UNAME_S)" in \
-			Darwin) \
-				sed -i '' '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
-				sed -i '' '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
-				sed -i '' 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
-				sed -i '' 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
-				sed -i '' 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
-				sed -i '' '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
-				;; \
-			Linux) \
-				sed -i '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
-				sed -i '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
-				sed -i 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
-				sed -i 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
-				sed -i 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
-				sed -i '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
-				;; \
-		esac; \
+		$(SED_I) '/^pg:/,/^[a-z]/{s/^  user: .*/  user: postgres/;s/^  password: .*/  password: root_password/;}' $(UPTRACE_CONFIG); \
+		$(SED_I) '/^ch_cluster:/,/^[a-z]/{s/^          user: .*/          user: default/;s/^          password: .*/          password: ""/;}' $(UPTRACE_CONFIG); \
+		$(SED_I) 's|^    addr: :80|    addr: :14318|' $(UPTRACE_CONFIG); \
+		$(SED_I) 's|^  url: http://uptrace.local|  url: http://localhost:14318|' $(UPTRACE_CONFIG); \
+		$(SED_I) 's|^  dsn: http://project1_secret@uptrace.local?grpc=4317|  dsn: http://project1_secret@localhost:14318?grpc=4317|' $(UPTRACE_CONFIG); \
+		$(SED_I) '/^redis_cache:/,/^[a-z]/{s/^  password: .*/  password: ""/;}' $(UPTRACE_CONFIG); \
 		echo "  配置文件已生成 ($(UPTRACE_CONFIG))"; \
 	fi
 
@@ -535,7 +543,7 @@ uptrace-init:
 	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) ch dist
 	@echo ""
 	@echo "=== 写入种子数据 ==="
-	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) db seed 2>/dev/null || echo "  (seed data will be loaded by serve on first start)"
+	@$(UPTRACE_BIN) --config=$(UPTRACE_CONFIG) db seed 2>/dev/null || echo "  (种子数据将在 serve 首次启动时加载)"
 	@echo ""
 	@echo "数据库初始化完成"
 

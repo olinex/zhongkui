@@ -10,8 +10,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// RBAC_POLICY_CTX_NAME 是 Gin 上下文中存储 RBAC 策略的键名
-const RBAC_POLICY_CTX_NAME = "policy"
+// RbacPolicyCtxName 是 Gin 上下文中存储 RBAC 策略的键名
+const RbacPolicyCtxName = "policy"
 
 var (
 	// ErrAuthorizeBlankFullPath 表示授权时路径为空错误
@@ -25,7 +25,7 @@ var (
 // 返回: Gin 中间件函数
 func RbacPolicyMiddleware(policy *casbin.Enforcer) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(RBAC_POLICY_CTX_NAME, policy)
+		c.Set(RbacPolicyCtxName, policy)
 		c.Next()
 	}
 }
@@ -35,7 +35,7 @@ func RbacPolicyMiddleware(policy *casbin.Enforcer) gin.HandlerFunc {
 // 返回: RBAC 策略实例
 // 注意: 如果上下文不存在 RBAC 策略，会触发 panic
 func GetRbacPolicy(c *gin.Context) *casbin.Enforcer {
-	if policy, ok := c.Get(RBAC_POLICY_CTX_NAME); ok {
+	if policy, ok := c.Get(RbacPolicyCtxName); ok {
 		return policy.(*casbin.Enforcer)
 	}
 	panic("rbac policy does not exists")

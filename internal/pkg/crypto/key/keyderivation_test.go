@@ -136,6 +136,6 @@ func TestDeriveChildKey_TooShortKeyLen(t *testing.T) {
 
 	_, err := kd.DeriveChildKey(0, 16)
 	if err == nil {
-		t.Fatal("expected error for keyLen=16 (not greater than MIN_KEY_LENGTH), got nil")
+		t.Fatal("expected error for keyLen=16 (not greater than MinKeyLength), got nil")
 	}
 }

@@ -64,9 +64,9 @@ func TestPipelineWithZstd(t *testing.T) {
 			// version 应为 1
 			So(data[4], ShouldEqual, 0x01)
 			// compressID 应为 Zstd
-			So(data[5], ShouldEqual, MODE_COMPRESSION_ZSTD)
+			So(data[5], ShouldEqual, ModeCompressionZstd)
 			// encryptID 应为 AES-GCM
-			So(data[6], ShouldEqual, MODE_ENCRYPTION_AES_GCM)
+			So(data[6], ShouldEqual, ModeEncryptionAesGcm)
 		})
 
 		Convey("Should handle empty data", func() {
@@ -152,8 +152,8 @@ func TestPipelineWithGzip(t *testing.T) {
 			w.Close()
 
 			data := buf.Bytes()
-			So(data[5], ShouldEqual, MODE_COMPRESSION_GZIP)
-			So(data[6], ShouldEqual, MODE_ENCRYPTION_AES_GCM)
+			So(data[5], ShouldEqual, ModeCompressionGzip)
+			So(data[6], ShouldEqual, ModeEncryptionAesGcm)
 		})
 	})
 }
@@ -387,8 +387,8 @@ func TestDecryptDecompressCloseAllResources(t *testing.T) {
 		var records []string
 
 		// 创建带追踪的 compressor 和 encryptor
-		compressor := &trackingTransform{readerName: "decomp", algoID: MODE_COMPRESSION_ZSTD, records: &records}
-		encryptor := &trackingTransform{readerName: "enc", algoID: MODE_ENCRYPTION_AES_GCM, records: &records}
+		compressor := &trackingTransform{readerName: "decomp", algoID: ModeCompressionZstd, records: &records}
+		encryptor := &trackingTransform{readerName: "enc", algoID: ModeEncryptionAesGcm, records: &records}
 
 		pipeline, err := NewCompressEncryptPipeline(compressor, encryptor)
 		So(err, ShouldBeNil)

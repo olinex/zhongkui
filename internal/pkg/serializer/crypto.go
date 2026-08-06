@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	SECURITY_TAG_KEY = "secure"
+	SecurityTagKey = "secure"
 )
 
 type CryptoTag struct {
@@ -38,7 +38,7 @@ type CryptoSerializer struct{}
 
 func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
 	var cTag CryptoTag
-	tag := field.StructField.Tag.Get(SECURITY_TAG_KEY)
+	tag := field.StructField.Tag.Get(SecurityTagKey)
 	if err := t.Unmarshal(tag, &cTag); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -52,7 +52,7 @@ func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
 	}
 	var m mode.Mode
 	switch cTag.Mode {
-	case mode.AES_GCM:
+	case mode.AesGcm:
 		m, err = mode.NewAESGCMMode(cryptoKey, nil)
 	default:
 		return nil, errors.Newf("unknown crypto mode: %s", cTag.Mode)

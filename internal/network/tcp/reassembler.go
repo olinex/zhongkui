@@ -50,10 +50,11 @@ func newReassembler[P TCPPacket](
 	logger *logging.Logger,
 	first P,
 	maxOutOrderPacketSize int,
+	timeout time.Duration,
 	dstChan chan<- any,
 ) (*Reassembler[P], error) {
 	traceID := serializer.NewHexUUIDv4()
-	clientSide, serverSide, err := newSides(ctx, logger, first, maxOutOrderPacketSize, traceID, dstChan)
+	clientSide, serverSide, err := newSides(ctx, logger, first, maxOutOrderPacketSize, timeout, traceID, dstChan)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -73,14 +74,16 @@ func newReassembler[P TCPPacket](
 
 func (r *Reassembler[P]) Meta() *detectors.StreamMeta {
 	return &detectors.StreamMeta{
-		TraceID:    r.TraceID,
-		ClientAddr: r.ClientAddr,
-		ClientPort: r.ClientPort,
-		ClientISN:  r.client.isn,
-		ServerAddr: r.ServerAddr,
-		ServerPort: r.ServerPort,
-		ServerISN:  r.server.isn,
-		Timestamp:  r.startTime,
+		TraceID:            r.TraceID,
+		ClientAddr:         r.ClientAddr,
+		ClientPort:         r.ClientPort,
+		ClientISN:          r.client.isn,
+		ServerAddr:         r.ServerAddr,
+		ServerPort:         r.ServerPort,
+		ServerISN:          r.server.isn,
+		ClientFingerprint:  r.client.fingerprint,
+		ServerFingerprint:  r.server.fingerprint,
+		Timestamp:          r.startTime,
 	}
 }
 

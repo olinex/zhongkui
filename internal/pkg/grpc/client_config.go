@@ -20,9 +20,9 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/config"
 )
 
-// CLIENT_PREIFX 是gRPC客户端设置的配置前缀。
+// ClientPrefix 是gRPC客户端设置的配置前缀。
 // 用于在配置系统中为gRPC客户端配置命名空间。
-const CLIENT_PREIFX = "grpc.client"
+const ClientPrefix = "grpc.client"
 
 // unaryClientInterceptor 是gRPC客户端的单元拦截器。
 // 该拦截器在处理每个单元RPC调用时执行，主要作用是将调用的方法路径存储到上下文(Context)中，
@@ -357,7 +357,7 @@ func (c *ClientConfig) ToOptions() (lis string, options []g.DialOption, err erro
 //   - config.ConfigDescriptions: 配置选项的结构化描述，包含字段名称、类型、默认值和说明
 func DescribeClientConfig(names ...string) config.ConfigDescriptions {
 	// 构建配置前缀，支持描述特定名称或所有配置
-	prefix := fmt.Sprintf(`%s.{%s}`, CLIENT_PREIFX, strings.Join(names, ","))
+	prefix := fmt.Sprintf(`%s.{%s}`, ClientPrefix, strings.Join(names, ","))
 	return config.DescribeConfig[ClientConfig](prefix)
 }
 
@@ -373,6 +373,6 @@ func DescribeClientConfig(names ...string) config.ConfigDescriptions {
 //   - error: 提取过程中发生的错误，如配置不存在或反序列化失败
 func ExtractClientConfig(v *viper.Viper, name string) (*ClientConfig, error) {
 	// 构建完整的配置路径
-	path := fmt.Sprintf(`%s.%s`, CLIENT_PREIFX, name)
+	path := fmt.Sprintf(`%s.%s`, ClientPrefix, name)
 	return config.ExtractConfig[ClientConfig](v, path)
 }

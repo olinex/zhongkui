@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	SCOPE_NAME    = base.GLOBAL_PREFIX + "-reporter"
-	SPAN_RUN      = "reporter.run"
-	SPAN_WATCH    = "reporter.watch"
-	SPAN_FEEDBACK = "reporter.feedback"
+	ScopeName    = base.GlobalPrefix + "-reporter"
+	SpanRun      = "reporter.run"
+	SpanWatch    = "reporter.watch"
+	SpanFeedback = "reporter.feedback"
 )
 
 var (
@@ -44,7 +44,7 @@ func InitMetrics() {
 
 func initMetrics() {
 	var err, e error
-	meter := otel.Meter(SCOPE_NAME)
+	meter := otel.Meter(ScopeName)
 
 	watchConnectionsCounter, e = meter.Int64Counter(
 		"reporter.watch.connections",
@@ -99,14 +99,14 @@ func initMetrics() {
 
 // StartRunSpan 在 ReporterService.Run 中创建 span。
 func StartRunSpan(ctx context.Context) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	return tracer.Start(ctx, SPAN_RUN)
+	tracer := otel.Tracer(ScopeName)
+	return tracer.Start(ctx, SpanRun)
 }
 
 // StartWatchSpan 在 Watch 流式接口中创建 span。
 func StartWatchSpan(ctx context.Context, resourceKey string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_WATCH,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanWatch,
 		trace.WithAttributes(
 			attribute.String("reporter.watch.key", resourceKey),
 		),
@@ -116,8 +116,8 @@ func StartWatchSpan(ctx context.Context, resourceKey string) (context.Context, t
 
 // StartFeedbackSpan 在 Feedback 流式接口中创建 span。
 func StartFeedbackSpan(ctx context.Context) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	return tracer.Start(ctx, SPAN_FEEDBACK)
+	tracer := otel.Tracer(ScopeName)
+	return tracer.Start(ctx, SpanFeedback)
 }
 
 // ---------------------------------------------------------------------------

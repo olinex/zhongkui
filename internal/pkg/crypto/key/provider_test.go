@@ -63,7 +63,7 @@ func TestKMSSecretKeyProvider_GetSecretKey_ReturnsError(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestNewSecretKeyProvider_Config(t *testing.T) {
-	provider, err := NewSecretKeyProvider(CRYPTO_SOURCE_CONFIG, "test-key")
+	provider, err := NewSecretKeyProvider(CryptoSourceConfig, "test-key")
 	if err != nil {
 		t.Fatalf("NewSecretKeyProvider() returned error: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestNewSecretKeyProvider_Config(t *testing.T) {
 }
 
 func TestNewSecretKeyProvider_KMS(t *testing.T) {
-	provider, err := NewSecretKeyProvider(CRYPTO_SOURCE_KMS, "")
+	provider, err := NewSecretKeyProvider(CryptoSourceKms, "")
 	if err != nil {
 		t.Fatalf("NewSecretKeyProvider() returned error: %v", err)
 	}
@@ -111,11 +111,11 @@ func TestNewSecretKeyProvider_EmptySource(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCryptoSourceConstants(t *testing.T) {
-	if CRYPTO_SOURCE_CONFIG != "config" {
-		t.Fatalf("CRYPTO_SOURCE_CONFIG = %q, want %q", CRYPTO_SOURCE_CONFIG, "config")
+	if CryptoSourceConfig != "config" {
+		t.Fatalf("CryptoSourceConfig = %q, want %q", CryptoSourceConfig, "config")
 	}
-	if CRYPTO_SOURCE_KMS != "kms" {
-		t.Fatalf("CRYPTO_SOURCE_KMS = %q, want %q", CRYPTO_SOURCE_KMS, "kms")
+	if CryptoSourceKms != "kms" {
+		t.Fatalf("CryptoSourceKms = %q, want %q", CryptoSourceKms, "kms")
 	}
 }
 
@@ -125,26 +125,26 @@ func TestCryptoSourceConstants(t *testing.T) {
 
 func TestSecretKeyProvider_Integration(t *testing.T) {
 	testCases := []struct {
-		name           string
-		source         string
-		parentKey      string
-		newErr         bool // NewSecretKeyProvider 返回错误
-		getKeyErr      bool // GetSecretKey 返回错误
+		name      string
+		source    string
+		parentKey string
+		newErr    bool // NewSecretKeyProvider 返回错误
+		getKeyErr bool // GetSecretKey 返回错误
 	}{
 		{
 			name:      "valid config source",
-			source:    CRYPTO_SOURCE_CONFIG,
+			source:    CryptoSourceConfig,
 			parentKey: "my-secret-key",
 		},
 		{
 			name:      "empty config key",
-			source:    CRYPTO_SOURCE_CONFIG,
+			source:    CryptoSourceConfig,
 			parentKey: "",
 			getKeyErr: true,
 		},
 		{
 			name:      "kms source (not implemented)",
-			source:    CRYPTO_SOURCE_KMS,
+			source:    CryptoSourceKms,
 			parentKey: "",
 			getKeyErr: true,
 		},

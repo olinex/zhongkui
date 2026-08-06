@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	PREFIX            = "OTEL"
-	HTTP              = "http"
-	GRPC              = "grpc"
-	PROVIDER_OTLP     = "otlp"
-	PROVIDER_STDOUT   = "stdout"
-	SAMPLER_ALWAYS_ON = "always_on"
-	SAMPLER_HEAD      = "head"
-	SAMPLER_TAIL      = "tail"
+	Prefix          = "OTEL"
+	Http            = "http"
+	Grpc            = "grpc"
+	ProviderOtlp    = "otlp"
+	ProviderStdout  = "stdout"
+	SamplerAlwaysOn = "always_on"
+	SamplerHead     = "head"
+	SamplerTail     = "tail"
 )
 
 var (
@@ -32,7 +32,7 @@ type OtelEnv struct {
 func init() {
 	if err := defaults.Set(&Env); err != nil {
 		panic(err)
-	} else if err := envconfig.Process(PREFIX, &Env); err != nil {
+	} else if err := envconfig.Process(Prefix, &Env); err != nil {
 		panic(err)
 	}
 }

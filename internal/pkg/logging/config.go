@@ -11,7 +11,7 @@ import (
 )
 
 // PREFIX 是日志配置在配置文件中的前缀
-const PREFIX = "zap"
+const Prefix = "zap"
 
 // Config 定义了日志系统的配置结构
 // 该结构体通过 mapstructure 标签支持从配置文件自动解析
@@ -168,7 +168,7 @@ func ParseLevel(level string) zapcore.Level {
 //	// 只生成特定配置的描述
 //	descriptions := DescribeConfig("level", "encoding")
 func DescribeConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, PREFIX, strings.Join(names, ",")))
+	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, Prefix, strings.Join(names, ",")))
 }
 
 // ExtractConfig 从 Viper 配置中提取日志配置
@@ -201,5 +201,5 @@ func DescribeConfig(names ...string) config.ConfigDescriptions {
 //	    log.Fatal("Failed to extract config:", err)
 //	}
 func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, PREFIX, name))
+	return config.ExtractConfig[Config](v, fmt.Sprintf(`%s.%s`, Prefix, name))
 }

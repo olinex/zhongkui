@@ -149,7 +149,7 @@ func TestProcessorFactoryRegistry_WithParams(t *testing.T) {
 // 测试 ProcessorWrapper.Start 会将参数注入上下文并传递给内部处理器。
 func TestProcessorWrapper_Start(t *testing.T) {
 	Convey("ProcessorWrapper.Start 上下文注入", t, func() {
-		Convey("包装处理器后调用 Start，内部处理器收到的上下文应包含 CONTEXT_PROC_PARAM_NAME 参数", func() {
+		Convey("包装处理器后调用 Start，内部处理器收到的上下文应包含 ContextProcParamName 参数", func() {
 			inner := &mockProcessor{}
 			params := map[string]any{
 				"foo": "bar",
@@ -163,7 +163,7 @@ func TestProcessorWrapper_Start(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			// 内部处理器应收到注入参数的上下文
-			raw, ok := inner.capturedCtx.Value(CONTEXT_PROC_PARAM_NAME).(map[string]any)
+			raw, ok := inner.capturedCtx.Value(ContextProcParamName).(map[string]any)
 			So(ok, ShouldBeTrue)
 			So(raw["foo"], ShouldEqual, "bar")
 		})

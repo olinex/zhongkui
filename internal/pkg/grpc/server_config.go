@@ -17,9 +17,9 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// SERVER_PREIFX 是gRPC服务器设置的配置前缀。
+// ServerPrefix 是gRPC服务器设置的配置前缀。
 // 用于在配置系统中为gRPC服务器配置命名空间。
-const SERVER_PREIFX = "grpc.server"
+const ServerPrefix = "grpc.server"
 
 // BaseConfig 定义gRPC服务器的基本网络配置。
 // 指定服务器监听传入连接的主机和端口。
@@ -261,7 +261,7 @@ func (c *ServerConfig) ToOptions(authenticators map[string]Authenticator) (lis n
 // 返回：
 //   - config.ConfigDescriptions: 配置选项的结构化描述
 func DescribeServerConfig(names ...string) config.ConfigDescriptions {
-	return config.DescribeConfig[ServerConfig](fmt.Sprintf(`%s.{%s}`, SERVER_PREIFX, strings.Join(names, ",")))
+	return config.DescribeConfig[ServerConfig](fmt.Sprintf(`%s.{%s}`, ServerPrefix, strings.Join(names, ",")))
 }
 
 // ExtractServerConfig 从Viper配置源提取gRPC服务器配置。
@@ -276,5 +276,5 @@ func DescribeServerConfig(names ...string) config.ConfigDescriptions {
 //   - *ServerConfig: 指向提取的服务器配置的指针
 //   - error: 配置提取或解组期间遇到的任何错误
 func ExtractServerConfig(v *viper.Viper, name string) (*ServerConfig, error) {
-	return config.ExtractConfig[ServerConfig](v, fmt.Sprintf(`%s.%s`, SERVER_PREIFX, name))
+	return config.ExtractConfig[ServerConfig](v, fmt.Sprintf(`%s.%s`, ServerPrefix, name))
 }

@@ -10,8 +10,8 @@ import (
 
 // 压缩算法标识常量
 const (
-	MODE_COMPRESSION_ZSTD byte = 0x01
-	MODE_COMPRESSION_GZIP byte = 0x02
+	ModeCompressionZstd byte = 0x01
+	ModeCompressionGzip byte = 0x02
 )
 
 // ---------------------------------------------------------------------------
@@ -43,7 +43,7 @@ func NewZstdCompressorWithLevel(level zstd.EncoderLevel) (*ZstdCompressor, error
 }
 
 // ModeID 返回 Zstd 压缩算法的标识字节。
-func (c *ZstdCompressor) ModeID() byte { return MODE_COMPRESSION_ZSTD }
+func (c *ZstdCompressor) ModeID() byte { return ModeCompressionZstd }
 
 // WrapWriter 包装 io.Writer，返回一个写入即压缩的 WriteCloser。
 func (c *ZstdCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error) {
@@ -88,7 +88,7 @@ func NewGzipCompressorWithLevel(level int) (*GzipCompressor, error) {
 }
 
 // ModeID 返回 Gzip 压缩算法的标识字节。
-func (c *GzipCompressor) ModeID() byte { return MODE_COMPRESSION_GZIP }
+func (c *GzipCompressor) ModeID() byte { return ModeCompressionGzip }
 
 // WrapWriter 包装 io.Writer，返回一个写入即压缩的 WriteCloser。
 func (c *GzipCompressor) WrapWriter(w io.Writer) (io.WriteCloser, error) {

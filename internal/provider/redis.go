@@ -9,10 +9,10 @@ import (
 )
 
 const (
-	CACHE_REDIS_LABEL     = "cache-redis"
-	PIPELINE_REDIS_LABEL  = "pipeline-redis"
-	CACHE_REDIS_PREFIX    = "cache"
-	PIPELINE_REDIS_PREFIX = "pipeline"
+	CacheRedisLabel     = "cache-redis"
+	PipelineRedisLabel  = "pipeline-redis"
+	CacheRedisPrefix    = "cache"
+	PipelineRedisPrefix = "pipeline"
 )
 
 func redisProvider(name string) do.Provider[*redis.Client] {
@@ -35,29 +35,29 @@ func redisProvider(name string) do.Provider[*redis.Client] {
 }
 
 func NewCacheRedis() do.Provider[*redis.Client] {
-	return redisProvider(CACHE_REDIS_PREFIX)
+	return redisProvider(CacheRedisPrefix)
 }
 
 func NewPipelineRedis() do.Provider[*redis.Client] {
-	return redisProvider(PIPELINE_REDIS_PREFIX)
+	return redisProvider(PipelineRedisPrefix)
 }
 
 func InjectCacheRedis(i do.Injector) {
-	do.ProvideNamed(i, CACHE_REDIS_LABEL, NewCacheRedis())
+	do.ProvideNamed(i, CacheRedisLabel, NewCacheRedis())
 }
 
 func InjectPipelineRedis(i do.Injector) {
-	do.ProvideNamed(i, PIPELINE_REDIS_LABEL, NewPipelineRedis())
+	do.ProvideNamed(i, PipelineRedisLabel, NewPipelineRedis())
 }
 
 func InvokeCacheRedis(i do.Injector) (*redis.Client, error) {
-	return do.InvokeNamed[*redis.Client](i, CACHE_REDIS_LABEL)
+	return do.InvokeNamed[*redis.Client](i, CacheRedisLabel)
 }
 
 func InvokePipelineRedis(i do.Injector) (*redis.Client, error) {
-	return do.InvokeNamed[*redis.Client](i, PIPELINE_REDIS_LABEL)
+	return do.InvokeNamed[*redis.Client](i, PipelineRedisLabel)
 }
 
 func DescribeRedisConfig() config.ConfigDescriptions {
-	return redis.DescribeConfig(CACHE_REDIS_PREFIX, PIPELINE_REDIS_PREFIX)
+	return redis.DescribeConfig(CacheRedisPrefix, PipelineRedisPrefix)
 }

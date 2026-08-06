@@ -123,7 +123,7 @@ func TestExtractCryptoKey(t *testing.T) {
 			cryptoKey, err := cfg.ExtractCryptoKey(kd)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cryptoKey, convey.ShouldNotBeNil)
-			convey.So(len(cryptoKey), convey.ShouldEqual, CRYPTO_KEY_LENGTH) // 32 bytes
+			convey.So(len(cryptoKey), convey.ShouldEqual, CryptoKeyLength) // 32 bytes
 		})
 
 		convey.Convey("should return same key with same KeyDerivation (deterministic)", func() {
@@ -166,15 +166,15 @@ func TestExtractCryptoKey(t *testing.T) {
 func TestS3ConfigConstants(t *testing.T) {
 	convey.Convey("Test S3 config constants", t, func() {
 		convey.Convey("PREFIX should be 's3'", func() {
-			convey.So(PREFIX, convey.ShouldEqual, "s3")
+			convey.So(Prefix, convey.ShouldEqual, "s3")
 		})
 
-		convey.Convey("CRYPTO_KEY_OFFSET should be positive", func() {
-			convey.So(CRYPTO_KEY_OFFSET, convey.ShouldBeGreaterThan, 0)
+		convey.Convey("CryptoKeyOffset should be positive", func() {
+			convey.So(CryptoKeyOffset, convey.ShouldBeGreaterThan, 0)
 		})
 
-		convey.Convey("CRYPTO_KEY_LENGTH should be 32 (AES-256)", func() {
-			convey.So(CRYPTO_KEY_LENGTH, convey.ShouldEqual, 32)
+		convey.Convey("CryptoKeyLength should be 32 (AES-256)", func() {
+			convey.So(CryptoKeyLength, convey.ShouldEqual, 32)
 		})
 	})
 }

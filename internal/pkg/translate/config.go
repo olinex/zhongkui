@@ -6,7 +6,7 @@ import (
 )
 
 // PREFIX 是配置前缀，用于 Viper 配置管理
-const PREFIX = "i18n"
+const Prefix = "i18n"
 
 // Config 结构体定义了国际化（i18n）的配置参数
 // 这些参数通过 Viper 从配置文件中读取
@@ -31,7 +31,7 @@ type Config struct {
 // 返回值:
 //   - config.ConfigDescriptions: 配置描述信息
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
 // ExtractConfig 从 Viper 实例中提取国际化配置
@@ -42,5 +42,5 @@ func DescribeConfig() config.ConfigDescriptions {
 //   - *Config: 提取的配置实例
 //   - error: 提取过程中的错误
 func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+	return config.ExtractConfig[Config](v, Prefix)
 }

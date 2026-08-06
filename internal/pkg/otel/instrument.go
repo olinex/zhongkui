@@ -37,7 +37,7 @@ func AsynqServerMiddleware() asynq.MiddlewareFunc {
 	if !Env.Enabled {
 		return func(next asynq.Handler) asynq.Handler { return next }
 	}
-	tracer := otel.Tracer(fmt.Sprintf(`%s-asynq-server`, base.GLOBAL_PREFIX))
+	tracer := otel.Tracer(fmt.Sprintf(`%s-asynq-server`, base.GlobalPrefix))
 	return func(next asynq.Handler) asynq.Handler {
 		return asynq.HandlerFunc(func(ctx context.Context, task *asynq.Task) error {
 			spanName := fmt.Sprintf(`task.process.%s`, task.Type())
@@ -70,7 +70,7 @@ func WrapAsynqClient(cli *asynq.Client) *TracedAsynqClient {
 	}
 	return &TracedAsynqClient{
 		Client: cli,
-		tracer: otel.Tracer(fmt.Sprintf(`%s-asynq-client`, base.GLOBAL_PREFIX)),
+		tracer: otel.Tracer(fmt.Sprintf(`%s-asynq-client`, base.GlobalPrefix)),
 	}
 }
 

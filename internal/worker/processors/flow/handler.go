@@ -51,11 +51,11 @@ func (h *flowClusterHandler[P]) Poll(ctx context.Context, prevWatermark, curWate
 	totalSent := 0
 	query := h.db.WithContext(ctx)
 	if len(vnodeIndices) == 0 || len(vnodeIndices) == h.param.VNodeCount {
-		query = query.Where("timestamp > ? AND timestamp <= ?", prevWatermark, curWatermark)
+		query = query.Where("created_at > ? AND created_at <= ?", prevWatermark, curWatermark)
 	} else {
 		query = h.db.WithContext(ctx).
 			Where(
-				"timestamp > ? AND timestamp <= ? AND (intHash64(stream_id) % ?) IN ?",
+				"created_at > ? AND created_at <= ? AND (intHash64(tcp_stream_id) % ?) IN ?",
 				prevWatermark,
 				curWatermark,
 				h.param.VNodeCount,

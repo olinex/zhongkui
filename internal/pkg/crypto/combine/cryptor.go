@@ -12,13 +12,13 @@ import (
 
 // 加密算法标识常量
 const (
-	MODE_ENCRYPTION_AES_GCM byte = 0x01
+	ModeEncryptionAesGcm byte = 0x01
 )
 
 const (
-	// CHUNK_SIZE 控制每个明文分块的大小。
+	// ChunkSize 控制每个明文分块的大小。
 	// 每块达到此大小时立即加密并写入底层 writer，避免缓冲全部数据。
-	CHUNK_SIZE = 64 * 1024 // 64KB
+	ChunkSize = 64 * 1024 // 64KB
 )
 
 // 编译期断言：确保 AESGCMCryptor 实现了 Transform 和 ModeIDer 接口
@@ -48,7 +48,7 @@ func NewAESGCMCryptor(cryptoKey []byte) (*AESGCMCryptor, error) {
 }
 
 // ModeID 返回 AES-GCM 加密算法的标识字节。
-func (e *AESGCMCryptor) ModeID() byte { return MODE_ENCRYPTION_AES_GCM }
+func (e *AESGCMCryptor) ModeID() byte { return ModeEncryptionAesGcm }
 
 // WrapWriter 包装 io.Writer，返回一个写入即加密的 WriteCloser。
 // 采用分块加密模式，每块格式：[4B 密文长度][12B nonce][密文]。
@@ -57,7 +57,7 @@ func (e *AESGCMCryptor) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	return &aesGCMWriteCloser{
 		w:         w,
 		key:       e.key,
-		chunkSize: CHUNK_SIZE,
+		chunkSize: ChunkSize,
 	}, nil
 }
 

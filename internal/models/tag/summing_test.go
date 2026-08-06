@@ -8,15 +8,15 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 )
 
-// TestSUMMING_TTL_HOURS 测试聚合数据保留时间常量
-func TestSUMMING_TTL_HOURS(t *testing.T) {
+// TestSummingTtlHours 测试聚合数据保留时间常量
+func TestSummingTtlHours(t *testing.T) {
 	convey.Convey("测试聚合数据保留时间常量", t, func() {
-		convey.Convey("SUMMING_TTL_HOURS 应该为 72 小时（3天）", func() {
-			convey.So(SUMMING_TTL_HOURS, convey.ShouldEqual, 72)
+		convey.Convey("SummingTtlHours 应该为 72 小时（3天）", func() {
+			convey.So(SummingTTLHours, convey.ShouldEqual, 72)
 		})
 
-		convey.Convey("SUMMING_TTL_HOURS 应该等于 3 * 24", func() {
-			convey.So(SUMMING_TTL_HOURS, convey.ShouldEqual, 3*24)
+		convey.Convey("SummingTtlHours 应该等于 3 * 24", func() {
+			convey.So(SummingTTLHours, convey.ShouldEqual, 3*24)
 		})
 	})
 }
@@ -30,13 +30,17 @@ func TestTagSumming_Struct(t *testing.T) {
 
 			summing := &TagSumming{
 				Minute: now,
-				Api:    "/api/v1/login",
-				Tags:   tags,
+				Source: "HttpTransport",
+				Type:   "fp_tcp_client_sig",
+				Item:   "s0:120:0:1",
 				Cnt:    42,
 			}
+			summing.Tags = tags
 
 			convey.So(summing.Minute, convey.ShouldResemble, now)
-			convey.So(summing.Api, convey.ShouldEqual, "/api/v1/login")
+			convey.So(summing.Source, convey.ShouldEqual, "HttpTransport")
+			convey.So(summing.Type, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(summing.Item, convey.ShouldEqual, "s0:120:0:1")
 			convey.So(summing.Tags, convey.ShouldResemble, []string{"login_failed", "suspicious_ip"})
 			convey.So(summing.Cnt, convey.ShouldEqual, 42)
 		})
@@ -45,7 +49,9 @@ func TestTagSumming_Struct(t *testing.T) {
 			summing := &TagSumming{}
 
 			convey.So(summing.Minute.IsZero(), convey.ShouldBeTrue)
-			convey.So(summing.Api, convey.ShouldBeEmpty)
+			convey.So(summing.Source, convey.ShouldBeEmpty)
+			convey.So(summing.Type, convey.ShouldBeEmpty)
+			convey.So(summing.Item, convey.ShouldBeEmpty)
 			convey.So(summing.Tags, convey.ShouldBeNil)
 			convey.So(summing.Cnt, convey.ShouldEqual, 0)
 		})
@@ -64,10 +70,12 @@ func TestTagSumming_Struct(t *testing.T) {
 				convey.Convey(tc.name, func() {
 					summing := &TagSumming{
 						Minute: time.Now(),
-						Api:    "/api/test",
-						Tags:   tc.tags,
+						Source: "HttpTransport",
+						Type:   "fp_tcp_server_sig",
+						Item:   "s0:120:1:1",
 						Cnt:    1,
 					}
+					summing.Tags = tc.tags
 					convey.So(summing.Tags, convey.ShouldResemble, tc.tags)
 				})
 			}
@@ -90,15 +98,19 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 			now := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
 			summing := &TagSumming{
 				Minute: now,
-				Api:    "/api/v1/login",
-				Tags:   []string{"login_failed", "suspicious_ip"},
+				Source: "HttpTransport",
+				Type:   "fp_tcp_client_sig",
+				Item:   "s0:120:0:1",
 				Cnt:    10,
 			}
+			summing.Tags = []string{"login_failed", "suspicious_ip"}
 
 			data, err := json.Marshal(summing)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(string(data), convey.ShouldContainSubstring, `"minute"`)
-			convey.So(string(data), convey.ShouldContainSubstring, `"api"`)
+			convey.So(string(data), convey.ShouldContainSubstring, `"source"`)
+			convey.So(string(data), convey.ShouldContainSubstring, `"type"`)
+			convey.So(string(data), convey.ShouldContainSubstring, `"item"`)
 			convey.So(string(data), convey.ShouldContainSubstring, `"tags"`)
 			convey.So(string(data), convey.ShouldContainSubstring, `"cnt"`)
 		})
@@ -106,7 +118,9 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 		convey.Convey("应该正确从 JSON 反序列化", func() {
 			jsonStr := `{
 				"minute": "2024-01-15T10:30:00Z",
-				"api": "/api/v1/login",
+				"source": "HttpTransport",
+				"type": "fp_tcp_client_sig",
+				"item": "s0:120:0:1",
 				"tags": ["login_failed", "suspicious_ip"],
 				"cnt": 10
 			}`
@@ -114,7 +128,9 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 			var summing TagSumming
 			err := json.Unmarshal([]byte(jsonStr), &summing)
 			convey.So(err, convey.ShouldBeNil)
-			convey.So(summing.Api, convey.ShouldEqual, "/api/v1/login")
+			convey.So(summing.Source, convey.ShouldEqual, "HttpTransport")
+			convey.So(summing.Type, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(summing.Item, convey.ShouldEqual, "s0:120:0:1")
 			convey.So(summing.Tags, convey.ShouldHaveLength, 2)
 			convey.So(summing.Tags[0], convey.ShouldEqual, "login_failed")
 			convey.So(summing.Tags[1], convey.ShouldEqual, "suspicious_ip")
@@ -124,10 +140,12 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 		convey.Convey("空标签数组应该正确序列化", func() {
 			summing := &TagSumming{
 				Minute: time.Now(),
-				Api:    "/api/test",
-				Tags:   []string{},
+				Source: "HttpTransport",
+				Type:   "fp_tcp_server_sig",
+				Item:   "s0:120:1:1",
 				Cnt:    0,
 			}
+			summing.Tags = []string{}
 
 			data, err := json.Marshal(summing)
 			convey.So(err, convey.ShouldBeNil)
@@ -160,7 +178,9 @@ func TestTagSumming_TableOptions(t *testing.T) {
 		convey.Convey("应该包含正确的排序键", func() {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "ORDER BY")
 			convey.So(tableOpts, convey.ShouldContainSubstring, "minute")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "api")
+			convey.So(tableOpts, convey.ShouldContainSubstring, "source")
+			convey.So(tableOpts, convey.ShouldContainSubstring, "type")
+			convey.So(tableOpts, convey.ShouldContainSubstring, "item")
 			convey.So(tableOpts, convey.ShouldContainSubstring, "tags")
 		})
 
@@ -173,7 +193,7 @@ func TestTagSumming_TableOptions(t *testing.T) {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "HOUR DELETE")
 		})
 
-		convey.Convey("TTL 应该使用 SUMMING_TTL_HOURS 常量", func() {
+		convey.Convey("TTL 应该使用 SummingTtlHours 常量", func() {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "INTERVAL 72 HOUR DELETE")
 		})
 	})
@@ -182,22 +202,55 @@ func TestTagSumming_TableOptions(t *testing.T) {
 // TestTagSumming_FieldConstraints 测试 TagSumming 的字段约束
 func TestTagSumming_FieldConstraints(t *testing.T) {
 	convey.Convey("测试 TagSumming 字段约束", t, func() {
-		convey.Convey("应该支持不同的 API 路径", func() {
+		convey.Convey("应该支持不同的数据来源", func() {
 			testCases := []struct {
-				name string
-				api  string
+				name   string
+				source string
 			}{
-				{"简单路径", "/api/test"},
-				{"带版本号路径", "/api/v1/users"},
-				{"带参数路径", "/api/v2/data/query"},
-				{"根路径", "/"},
-				{"空路径", ""},
+				{"HttpTransport", "HttpTransport"},
+				{"空来源", ""},
 			}
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					summing := &TagSumming{Api: tc.api}
-					convey.So(summing.Api, convey.ShouldEqual, tc.api)
+					summing := &TagSumming{Source: tc.source}
+					convey.So(summing.Source, convey.ShouldEqual, tc.source)
+				})
+			}
+		})
+
+		convey.Convey("应该支持不同的标签维度类型", func() {
+			testCases := []struct {
+				name string
+				typ  string
+			}{
+				{"客户端指纹", "fp_tcp_client_sig"},
+				{"服务端指纹", "fp_tcp_server_sig"},
+				{"空类型", ""},
+			}
+
+			for _, tc := range testCases {
+				convey.Convey(tc.name, func() {
+					summing := &TagSumming{Type: tc.typ}
+					convey.So(summing.Type, convey.ShouldEqual, tc.typ)
+				})
+			}
+		})
+
+		convey.Convey("应该支持不同的维度值", func() {
+			testCases := []struct {
+				name string
+				item string
+			}{
+				{"客户端指纹签名", "s0:120:0:1"},
+				{"服务端指纹签名", "s0:120:1:1"},
+				{"空值", ""},
+			}
+
+			for _, tc := range testCases {
+				convey.Convey(tc.name, func() {
+					summing := &TagSumming{Item: tc.item}
+					convey.So(summing.Item, convey.ShouldEqual, tc.item)
 				})
 			}
 		})
@@ -214,7 +267,8 @@ func TestTagSumming_FieldConstraints(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					summing := &TagSumming{Tags: tc.tags}
+					summing := &TagSumming{}
+					summing.Tags = tc.tags
 					convey.So(summing.Tags, convey.ShouldHaveLength, len(tc.tags))
 				})
 			}
@@ -241,10 +295,12 @@ func TestTagSumming_TableOptions_EngineSpec(t *testing.T) {
 		options := summing.TableOptions()
 		tableOpts := options["gorm:table_options"].(string)
 
-		convey.Convey("排序键顺序应该为 minute, api, tags", func() {
+		convey.Convey("排序键顺序应该为 minute, source, type, item, tags", func() {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "ORDER BY")
 			convey.So(tableOpts, convey.ShouldContainSubstring, "minute")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "api")
+			convey.So(tableOpts, convey.ShouldContainSubstring, "source")
+			convey.So(tableOpts, convey.ShouldContainSubstring, "type")
+			convey.So(tableOpts, convey.ShouldContainSubstring, "item")
 			convey.So(tableOpts, convey.ShouldContainSubstring, "tags")
 		})
 
@@ -252,7 +308,7 @@ func TestTagSumming_TableOptions_EngineSpec(t *testing.T) {
 			convey.So(tableOpts, convey.ShouldContainSubstring, "DELETE")
 		})
 
-		convey.Convey("TTL 间隔应该匹配 SUMMING_TTL_HOURS", func() {
+		convey.Convey("TTL 间隔应该匹配 SummingTtlHours", func() {
 			expected := "INTERVAL 72 HOUR"
 			convey.So(tableOpts, convey.ShouldContainSubstring, expected)
 		})

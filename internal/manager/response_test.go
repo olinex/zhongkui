@@ -472,8 +472,8 @@ func TestAbortWithGinH(t *testing.T) {
 		Convey("应正确中断请求并返回 JSON 响应", func() {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Set(LOCALIZER_CTX_NAME, localizer)
-			c.Set(TRANSLATOR_CTX_NAME, translator)
+			c.Set(LocalizerCtxName, localizer)
+			c.Set(TranslatorCtxName, translator)
 
 			err := CreateCodeError(http.StatusNotFound, http.StatusNotFound, nil)
 			err.AbortWithGinH(c)
@@ -490,8 +490,8 @@ func TestAbortWithGinH(t *testing.T) {
 		Convey("SimpleOK 应返回 200 状态码", func() {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Set(LOCALIZER_CTX_NAME, localizer)
-			c.Set(TRANSLATOR_CTX_NAME, translator)
+			c.Set(LocalizerCtxName, localizer)
+			c.Set(TranslatorCtxName, translator)
 
 			SimpleOK.AbortWithGinH(c)
 
@@ -502,8 +502,8 @@ func TestAbortWithGinH(t *testing.T) {
 		Convey("带 LocalizedError 详情时应包含翻译后的详情", func() {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Set(LOCALIZER_CTX_NAME, localizer)
-			c.Set(TRANSLATOR_CTX_NAME, translator)
+			c.Set(LocalizerCtxName, localizer)
+			c.Set(TranslatorCtxName, translator)
 
 			err := CreateBadQueryError("pageSize", 100)
 			err.AbortWithGinH(c)
@@ -527,8 +527,8 @@ func TestAbortWithGinW(t *testing.T) {
 		Convey("应正确中断请求并返回包含 data 的 JSON 响应", func() {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Set(LOCALIZER_CTX_NAME, localizer)
-			c.Set(TRANSLATOR_CTX_NAME, translator)
+			c.Set(LocalizerCtxName, localizer)
+			c.Set(TranslatorCtxName, translator)
 
 			data := map[string]any{"id": 1, "name": "test"}
 			SimpleOK.AbortWithGinW(c, data)
@@ -546,8 +546,8 @@ func TestAbortWithGinW(t *testing.T) {
 		Convey("data 字段应为传入的数据", func() {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
-			c.Set(LOCALIZER_CTX_NAME, localizer)
-			c.Set(TRANSLATOR_CTX_NAME, translator)
+			c.Set(LocalizerCtxName, localizer)
+			c.Set(TranslatorCtxName, translator)
 
 			SimpleOK.AbortWithGinW(c, "hello")
 

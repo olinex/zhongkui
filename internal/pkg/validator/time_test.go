@@ -15,7 +15,7 @@ func TestValidateGtCurrentTime(t *testing.T) {
 		// 初始化验证器
 		binding.Validator = &defaultValidator{}
 		validate := mustValidate()
-		validate.RegisterValidation(TAG_GREATER_THAN_CURRENT_TIME, validateGtCurrentTime)
+		validate.RegisterValidation(TagGreaterThanCurrentTime, validateGtCurrentTime)
 
 		Convey("Should validate time.Time fields correctly", func() {
 			// 定义测试结构体
@@ -130,7 +130,7 @@ func TestValidateLtCurrentTime(t *testing.T) {
 		// 初始化验证器
 		binding.Validator = &defaultValidator{}
 		validate := mustValidate()
-		validate.RegisterValidation(TAG_LESSER_THAN_CURRENT_TIME, validateLtCurrentTime)
+		validate.RegisterValidation(TagLesserThanCurrentTime, validateLtCurrentTime)
 
 		Convey("Should validate time.Time fields correctly", func() {
 			// 定义测试结构体

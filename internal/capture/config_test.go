@@ -361,7 +361,7 @@ func TestConfig_EdgeCases(t *testing.T) {
 
 		Convey("配置前缀测试", func() {
 			Convey("PREFIX常量值", func() {
-				So(PREFIX, ShouldEqual, "capture")
+				So(Prefix, ShouldEqual, "capture")
 			})
 
 			Convey("配置键名格式", func() {
@@ -384,7 +384,7 @@ func TestConfig_EdgeCases(t *testing.T) {
 
 				// 这些键名应该能够被Viper正确解析
 				for _, key := range expectedKeys {
-					So(key, ShouldContainSubstring, PREFIX+".")
+					So(key, ShouldContainSubstring, Prefix+".")
 				}
 			})
 		})

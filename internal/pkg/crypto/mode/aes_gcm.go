@@ -10,16 +10,16 @@ import (
 
 // AES-GCM 相关常量
 const (
-	// AES_GCM 算法标识字符串，用于日志和配置
-	AES_GCM = "aes-gcm"
+	// AesGcm 算法标识字符串，用于日志和配置
+	AesGcm = "aes-gcm"
 
-	// AES_GCM_TAG_SIZE GCM 认证标签长度（字节）
+	// AesGcmTagSize GCM 认证标签长度（字节）
 	// GCM 模式会在密文末尾附加 16 字节的认证标签，用于验证数据完整性
-	AES_GCM_TAG_SIZE = 16
+	AesGcmTagSize = 16
 
-	// AES_GCM_NONCE_SIZE GCM nonce 长度（字节）
+	// AesGcmNonceSize GCM nonce 长度（字节）
 	// NIST SP 800-38D 推荐 nonce 长度为 12 字节，这是 GCM 的标准长度
-	AES_GCM_NONCE_SIZE = 12
+	AesGcmNonceSize = 12
 )
 
 // 编译期断言：确保 AESGCMMode 实现了 Mode 接口
@@ -99,7 +99,7 @@ func NewAESGCMMode(cryptoKey, additionalData []byte) (*AESGCMMode, error) {
 //   - nonce 不需要保密，但必须唯一（使用随机数保证）
 func (e *AESGCMMode) Encrypt(plaintext []byte) ([]byte, error) {
 	// 生成随机 nonce
-	nonce := make([]byte, AES_GCM_NONCE_SIZE)
+	nonce := make([]byte, AesGcmNonceSize)
 	if _, err := rand.Read(nonce); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -132,14 +132,14 @@ func (e *AESGCMMode) Encrypt(plaintext []byte) ([]byte, error) {
 //   - 使用了错误的密钥
 func (e *AESGCMMode) Decrypt(ciphertext []byte) ([]byte, error) {
 	// 检查密文最小长度
-	if len(ciphertext) < AES_GCM_NONCE_SIZE+AES_GCM_TAG_SIZE {
+	if len(ciphertext) < AesGcmNonceSize+AesGcmTagSize {
 		return nil, errors.Newf("ciphertext too short: expected at least %d bytes, got %d",
-			AES_GCM_NONCE_SIZE+AES_GCM_TAG_SIZE, len(ciphertext))
+			AesGcmNonceSize+AesGcmTagSize, len(ciphertext))
 	}
 
 	// 提取 nonce
-	nonce := ciphertext[:AES_GCM_NONCE_SIZE]
-	ciphertext = ciphertext[AES_GCM_NONCE_SIZE:]
+	nonce := ciphertext[:AesGcmNonceSize]
+	ciphertext = ciphertext[AesGcmNonceSize:]
 
 	// Open 方法解密并验证认证标签
 	return e.gcm.Open(nil, nonce, ciphertext, e.additionalData)

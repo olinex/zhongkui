@@ -86,7 +86,7 @@ func GetISO6392Codes() *ISO6392Codes {
 //
 // 注意：对于没有 Alpha-2 代码的语言（如古希腊语 grc），仅将其加入 Alpha-3 和名称索引。
 func newISO6392Codes() (*ISO6392Codes, error) {
-	file, err := embeddedStandards.Open(LANGUAGE)
+	file, err := embeddedStandards.Open(Language)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

@@ -13,7 +13,7 @@ import (
 const (
 	// PREFIX 配置前缀，用于在配置文件中标识抓包相关的配置项
 	// 例如：capture.watch.intervalTimeout
-	PREFIX = "capture"
+	Prefix = "capture"
 )
 
 // WatchConfig 监控配置，用于配置与远程服务器的监控连接参数
@@ -123,7 +123,7 @@ type Config struct {
 // 该方法生成配置的结构化描述，包括字段名、类型、默认值和说明
 // 返回值：config.ConfigDescriptions 配置描述集合
 func DescribeConfig() config.ConfigDescriptions {
-	return config.DescribeConfig[Config](PREFIX)
+	return config.DescribeConfig[Config](Prefix)
 }
 
 // ExtractConfig 从Viper实例中提取抓包配置
@@ -143,5 +143,5 @@ func DescribeConfig() config.ConfigDescriptions {
 //	v.ReadInConfig()
 //	cfg, err := ExtractConfig(v)
 func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, PREFIX)
+	return config.ExtractConfig[Config](v, Prefix)
 }

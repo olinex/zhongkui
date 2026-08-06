@@ -9,7 +9,7 @@ import (
 const (
 	// 是处理器参数在上下文中的键名。
 	// 编排器将处理器参数作为上下文值传递给处理器，键名为该常量。
-	CONTEXT_PROC_PARAM_NAME = "ctx_proc_param"
+	ContextProcParamName = "ctx_proc_param"
 )
 
 // Processor 长生命周期后台处理器接口
@@ -37,7 +37,7 @@ type ProcessorWrapper struct {
 }
 
 func (p *ProcessorWrapper) Start(ctx context.Context, name string) error {
-	ctx = context.WithValue(ctx, CONTEXT_PROC_PARAM_NAME, p.params)
+	ctx = context.WithValue(ctx, ContextProcParamName, p.params)
 	return p.Processor.Start(ctx, name)
 }
 
@@ -60,10 +60,10 @@ func RegisterProcessorFactory(name string, factory ProcessorFactory) {
 }
 
 // GetProcParam 从上下文中提取指定类型的处理器配置参数
-// 泛型参数 T 为目标配置结构体的类型，函数从 ctx 中按键 CONTEXT_PROC_PARAM_NAME 取值并反序列化。
+// 泛型参数 T 为目标配置结构体的类型，函数从 ctx 中按键 ContextProcParamName 取值并反序列化。
 // 返回 (*T, error)：成功时返回配置指针，上下文无此键或类型不匹配时返回错误。
 func GetProcParam[T any](ctx context.Context) (*T, error) {
-	return getParam[T](ctx, CONTEXT_PROC_PARAM_NAME)
+	return getParam[T](ctx, ContextProcParamName)
 }
 
 // ProcessorFactoryRegistry 获取带参数注入的处理器工厂注册表副本
@@ -78,7 +78,7 @@ func ProcessorFactoryRegistry(params map[string]map[string]any) ProcessorFactori
 		} else {
 			wrapped[name] = func(ctx context.Context) (Processor, error) {
 				// 注入参数到上下文，使工厂函数在创建阶段即可通过 GetProcParam 获取配置
-				ctx = context.WithValue(ctx, CONTEXT_PROC_PARAM_NAME, param)
+				ctx = context.WithValue(ctx, ContextProcParamName, param)
 				processor, err := factory(ctx)
 				if err != nil {
 					return nil, errors.WithStack(err)

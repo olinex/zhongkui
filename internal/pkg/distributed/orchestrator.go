@@ -71,7 +71,7 @@ func NewOrchestrator[Handler ClusterHandler[Item], Item any](
 }
 
 func (o *Orchestrator[Handler, Item]) memberIDPrefix() string {
-	return fmt.Sprintf(`%s%s/%s/`, etcd.CLUSTER_ETCD_PREFIX, o.name, o.memberID)
+	return fmt.Sprintf(`%s%s/%s/`, etcd.ClusterEtcdPrefix, o.name, o.memberID)
 }
 
 func (o *Orchestrator[Handler, Item]) watermarkKey() string {

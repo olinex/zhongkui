@@ -22,7 +22,7 @@ func TestNewClient_NormalType(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			// 覆盖普通Redis的配置
-			cfg.Type = NORMAL_TYPE
+			cfg.Type = NormalType
 			cfg.Addr = "localhost:6380"
 			cfg.Username = "testuser"
 			cfg.Password = "testpass"
@@ -68,7 +68,7 @@ func TestNewClient_SentinelType(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			// 覆盖Sentinel的配置
-			cfg.Type = SENTINEL_TYPE
+			cfg.Type = SentinelType
 			cfg.MasterName = "mymaster"
 			cfg.SentinelAddrs = []string{"sentinel1:26379", "sentinel2:26379"}
 			cfg.SentinelUsername = "sentineluser"
@@ -152,7 +152,7 @@ func TestNewClient_EmptyConfig(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			// 确保类型设置为normal（默认）
-			cfg.Type = NORMAL_TYPE
+			cfg.Type = NormalType
 
 			// 创建客户端
 			client := NewClient(cfg)
@@ -177,7 +177,7 @@ func TestNewClient_ContextOperations(t *testing.T) {
 			err := defaults.Set(cfg)
 			So(err, ShouldBeNil)
 
-			cfg.Type = NORMAL_TYPE
+			cfg.Type = NormalType
 			cfg.Addr = "localhost:6379" // 默认Redis地址
 
 			// 创建客户端
@@ -213,7 +213,7 @@ func TestClientTypeAlias(t *testing.T) {
 			cfg := &Config{}
 			err := defaults.Set(cfg)
 			So(err, ShouldBeNil)
-			cfg.Type = NORMAL_TYPE
+			cfg.Type = NormalType
 
 			// 测试NewClient返回正确的类型
 			createdClient := NewClient(cfg)
@@ -246,7 +246,7 @@ func TestNewClient_ConfigurationEdgeCases(t *testing.T) {
 		Convey("应该处理普通类型下的空地址", func() {
 			cfg := &Config{}
 			defaults.Set(cfg)
-			cfg.Type = NORMAL_TYPE
+			cfg.Type = NormalType
 			cfg.Addr = "" // 空地址
 
 			client := NewClient(cfg)
@@ -261,7 +261,7 @@ func TestNewClient_ConfigurationEdgeCases(t *testing.T) {
 		Convey("应该处理Sentinel类型下的空主节点名称", func() {
 			cfg := &Config{}
 			defaults.Set(cfg)
-			cfg.Type = SENTINEL_TYPE
+			cfg.Type = SentinelType
 			cfg.MasterName = ""       // 空主节点名称
 			cfg.RouteRandomly = false // NewFailoverClient需要
 
@@ -277,7 +277,7 @@ func TestNewClient_ConfigurationEdgeCases(t *testing.T) {
 		Convey("应该处理Sentinel类型下的空Sentinel地址", func() {
 			cfg := &Config{}
 			defaults.Set(cfg)
-			cfg.Type = SENTINEL_TYPE
+			cfg.Type = SentinelType
 			cfg.SentinelAddrs = []string{} // 空Sentinel地址
 			cfg.RouteRandomly = false      // NewFailoverClient需要
 
@@ -293,7 +293,7 @@ func TestNewClient_ConfigurationEdgeCases(t *testing.T) {
 		Convey("应该处理非常大的连接池大小", func() {
 			cfg := &Config{}
 			defaults.Set(cfg)
-			cfg.Type = NORMAL_TYPE
+			cfg.Type = NormalType
 			cfg.PoolSize = 10000 // 非常大的连接池大小
 
 			client := NewClient(cfg)
@@ -308,7 +308,7 @@ func TestNewClient_ConfigurationEdgeCases(t *testing.T) {
 		Convey("应该处理零超时值", func() {
 			cfg := &Config{}
 			defaults.Set(cfg)
-			cfg.Type = NORMAL_TYPE
+			cfg.Type = NormalType
 			cfg.DialTimeout = 0
 			cfg.ReadTimeout = 0
 			cfg.WriteTimeout = 0
@@ -336,7 +336,7 @@ func TestNewClient_IntegrationSmokeTest(t *testing.T) {
 			// 此测试需要真实的Redis实例才能运行
 			// 它作为集成测试的模板包含在内
 			cfg := &Config{
-				Type:     NORMAL_TYPE,
+				Type:     NormalType,
 				Addr:     "localhost:6379",
 				Password: "",
 				DB:       0,

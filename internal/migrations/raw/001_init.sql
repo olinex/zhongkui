@@ -135,7 +135,11 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	tcp_window UInt16 CODEC(ZSTD(3)),
 	tcp_checksum UInt16 CODEC(ZSTD(3)),
 	tcp_urgent UInt16 CODEC(ZSTD(3)),
-	tcp_options String CODEC(ZSTD(3))
+	tcp_options String CODEC(ZSTD(3)),
+	fp_os String CODEC(ZSTD(3)),
+	fp_os_quality Float64 CODEC(ZSTD(3)),
+	fp_sig String CODEC(ZSTD(3)),
+	fp_mtu UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -193,7 +197,11 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	tcp_window UInt16 CODEC(ZSTD(3)),
 	tcp_checksum UInt16 CODEC(ZSTD(3)),
 	tcp_urgent UInt16 CODEC(ZSTD(3)),
-	tcp_options String CODEC(ZSTD(3))
+	tcp_options String CODEC(ZSTD(3)),
+	fp_os String CODEC(ZSTD(3)),
+	fp_os_quality Float64 CODEC(ZSTD(3)),
+	fp_sig String CODEC(ZSTD(3)),
+	fp_mtu UInt16 CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -507,7 +515,21 @@ CREATE TABLE IF NOT EXISTS http_transports (
 	server_start_payload_offset UInt64 CODEC(ZSTD(3)),
 	server_end_payload_offset UInt64 CODEC(ZSTD(3)),
 	server_start_timestamp DateTime64(6, 'UTC') CODEC(ZSTD(3)),
-	server_end_timestamp DateTime64(6, 'UTC') CODEC(ZSTD(3))
+	server_end_timestamp DateTime64(6, 'UTC') CODEC(ZSTD(3)),
+	fp_tcp_client_os String CODEC(ZSTD(3)),
+	fp_tcp_client_os_quality Float64 CODEC(ZSTD(3)),
+	fp_tcp_client_sig String CODEC(ZSTD(3)),
+	fp_tcp_server_os String CODEC(ZSTD(3)),
+	fp_tcp_server_os_quality Float64 CODEC(ZSTD(3)),
+	fp_tcp_server_sig String CODEC(ZSTD(3)),
+	fp_tcp_mtu UInt16 CODEC(ZSTD(3)),
+	fp_http_browser String CODEC(ZSTD(3)),
+	fp_http_browser_quality Float64 CODEC(ZSTD(3)),
+	fp_http_server String CODEC(ZSTD(3)),
+	fp_http_server_quality Float64 CODEC(ZSTD(3)),
+	fp_http_language String CODEC(ZSTD(3)),
+	fp_device_guess String CODEC(ZSTD(3)),
+	tags Array(String)
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -564,13 +586,37 @@ TTL toDateTime(batch * 3600) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS tag_summings (
 	minute DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3)),
-	api String CODEC(ZSTD(3)),
+	source String CODEC(ZSTD(3)),
+	type String CODEC(ZSTD(3)),
+	item String CODEC(ZSTD(3)),
 	tags Array(String),
 	cnt UInt32
 ) ENGINE = SummingMergeTree()
-ORDER BY (minute, api, tags)
+ORDER BY (minute, source, type, item, tags)
 PARTITION BY toStartOfHour(minute)
 TTL toDateTime(minute) + INTERVAL 72 HOUR DELETE;
+
+-- 标签聚合物化视图：按分钟 + 来源 + 指纹类型 + 指纹值 + 标签组合聚合 HttpTransport 的标签命中次数
+-- type/item 由 fp_tcp_client_sig、fp_tcp_server_sig 两个指纹字段展开而来：字段名为 type，字段值为 item
+-- 指纹值为空的行在 ARRAY JOIN 展开前被过滤（arrayFilter 作用于元组数组）
+-- 标签为空（去重后无任何标签）的行不进入聚合，避免无意义的空标签统计
+CREATE MATERIALIZED VIEW IF NOT EXISTS http_transports_2_tag_summings_mv
+TO tag_summings
+AS
+SELECT
+	toStartOfMinute(timestamp) AS minute,
+	'HttpTransport' AS source,
+	sig.1 AS type,
+	sig.2 AS item,
+	arraySort(arrayDistinct(tags)) AS tags,
+	toUInt32(count()) AS cnt
+FROM http_transports
+ARRAY JOIN arrayFilter(x -> x.2 != '', [
+	('fp_tcp_client_sig', fp_tcp_client_sig),
+	('fp_tcp_server_sig', fp_tcp_server_sig)
+]) AS sig
+WHERE length(tags) > 0
+GROUP BY minute, source, type, item, tags;
 
 -- +goose Down
 DROP TABLE IF EXISTS packet_ipv4;
@@ -583,4 +629,5 @@ DROP TABLE IF EXISTS network_stacks;
 DROP TABLE IF EXISTS http_transports;
 DROP TABLE IF EXISTS http_api_meta;
 DROP TABLE IF EXISTS http_api_nodes;
+DROP VIEW IF EXISTS http_transports_2_tag_summings_mv;
 DROP TABLE IF EXISTS tag_summings;

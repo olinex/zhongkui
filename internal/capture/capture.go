@@ -69,7 +69,7 @@ func (c *capturer) filePath(ts time.Time) string {
 			"%d.%s.%s",
 			ts.UnixMilli(),
 			c.sessionID.String(),
-			combine.FILE_EXT,
+			combine.FileExt,
 		),
 	)
 }

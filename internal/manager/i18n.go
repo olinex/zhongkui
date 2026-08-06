@@ -8,13 +8,13 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
-// LOCALIZER_CTX_NAME 是 go-i18n Localizer 在 gin.Context 中存储的键名
+// LocalizerCtxName 是 go-i18n Localizer 在 gin.Context 中存储的键名
 // 通过此键名从请求上下文中获取 Localizer 实例，用于本地化消息翻译
-const LOCALIZER_CTX_NAME = "i18n-localizer"
+const LocalizerCtxName = "i18n-localizer"
 
-// TRANSLATOR_CTX_NAME 是 universal-translator Translator 在 gin.Context 中存储的键名
+// TranslatorCtxName 是 universal-translator Translator 在 gin.Context 中存储的键名
 // 通过此键名从请求上下文中获取 Translator 实例，用于验证器错误消息翻译
-const TRANSLATOR_CTX_NAME = "i18n-translator"
+const TranslatorCtxName = "i18n-translator"
 
 // TranslateMiddleware 创建国际化中间件，为每个 HTTP 请求初始化本地化组件
 //
@@ -46,8 +46,8 @@ func TranslateMiddleware(i *translate.I18n) gin.HandlerFunc {
 		if err != nil {
 			GetLogger(c).Warnf(c, nil, `cannot get translator cause: %v`, err)
 		}
-		c.Set(LOCALIZER_CTX_NAME, localizer)
-		c.Set(TRANSLATOR_CTX_NAME, translator)
+		c.Set(LocalizerCtxName, localizer)
+		c.Set(TranslatorCtxName, translator)
 		c.Next()
 	}
 }
@@ -69,7 +69,7 @@ func TranslateMiddleware(i *translate.I18n) gin.HandlerFunc {
 //	lang := GetLanguage(c)
 //	fmt.Println(lang.String()) // 输出: "zh-Hans" 或 "en"
 func GetLanguage(c *gin.Context) *translate.Language {
-	acceptLanguage := c.GetHeader(base.HDR_ACCEPT_LANGUAGE)
+	acceptLanguage := c.GetHeader(base.HdrAcceptLanguage)
 	lang, err := translate.ParseLanguage(acceptLanguage)
 	if err != nil {
 		return translate.DefaultLang
@@ -99,7 +99,7 @@ func GetLanguage(c *gin.Context) *translate.Language {
 //	localizer := GetLocalizer(c)
 //	msg, _ := localizer.Localize(&i18n.LocalizeConfig{MessageID: "welcome"})
 func GetLocalizer(c *gin.Context) *i18n.Localizer {
-	if localizer, ok := c.Get(LOCALIZER_CTX_NAME); ok {
+	if localizer, ok := c.Get(LocalizerCtxName); ok {
 		return localizer.(*i18n.Localizer)
 	}
 	panic("i18n localizer does not exists")
@@ -129,7 +129,7 @@ func GetLocalizer(c *gin.Context) *i18n.Localizer {
 //	errs := err.(validator.ValidationErrors)
 //	msg := errs[0].Translate(translator)
 func GetTranslator(c *gin.Context) ut.Translator {
-	if translator, ok := c.Get(TRANSLATOR_CTX_NAME); ok {
+	if translator, ok := c.Get(TranslatorCtxName); ok {
 		return translator.(ut.Translator)
 	}
 	panic("i18n translator does not exists")

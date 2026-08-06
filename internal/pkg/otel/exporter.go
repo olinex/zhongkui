@@ -26,15 +26,15 @@ var (
 
 func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 	switch Env.Provider {
-	case PROVIDER_STDOUT:
+	case ProviderStdout:
 		return stdouttrace.New(
 			stdouttrace.WithPrettyPrint(),
 		)
-	case PROVIDER_OTLP:
+	case ProviderOtlp:
 		switch Env.OtlpProtocol {
-		case HTTP:
+		case Http:
 			return otlptracehttp.New(ctx)
-		case GRPC:
+		case Grpc:
 			return otlptracegrpc.New(ctx)
 		default:
 			return nil, errInvalidOTLPProtocol
@@ -46,15 +46,15 @@ func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 
 func NewMeterExporter(ctx context.Context) (sdkmetric.Exporter, error) {
 	switch Env.Provider {
-	case PROVIDER_STDOUT:
+	case ProviderStdout:
 		return stdoutmetric.New(
 			stdoutmetric.WithPrettyPrint(),
 		)
-	case PROVIDER_OTLP:
+	case ProviderOtlp:
 		switch Env.OtlpProtocol {
-		case HTTP:
+		case Http:
 			return otlpmetrichttp.New(ctx)
-		case GRPC:
+		case Grpc:
 			return otlpmetricgrpc.New(ctx)
 		default:
 			return nil, errInvalidOTLPProtocol
@@ -66,15 +66,15 @@ func NewMeterExporter(ctx context.Context) (sdkmetric.Exporter, error) {
 
 func NewLogExporter(ctx context.Context) (sdklog.Exporter, error) {
 	switch Env.Provider {
-	case PROVIDER_STDOUT:
+	case ProviderStdout:
 		return stdoutlog.New(
 			stdoutlog.WithPrettyPrint(),
 		)
-	case PROVIDER_OTLP:
+	case ProviderOtlp:
 		switch Env.OtlpProtocol {
-		case HTTP:
+		case Http:
 			return otlploghttp.New(ctx)
-		case GRPC:
+		case Grpc:
 			return otlploggrpc.New(ctx)
 		default:
 			return nil, errInvalidOTLPProtocol

@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	// ANONYMOUS_USERNAME 定义匿名用户的用户名
-	ANONYMOUS_USERNAME = "anon"
-	// AUTH_CTX_NAME 定义在 Gin 上下文中存储认证器的键名
-	AUTH_CTX_NAME = "auth"
-	// USER_CTX_NAME 定义在 Gin 上下文中存储用户信息的键名
-	USER_CTX_NAME = "user"
+	// AnonymousUsername 定义匿名用户的用户名
+	AnonymousUsername = "anon"
+	// AuthCtxName 定义在 Gin 上下文中存储认证器的键名
+	AuthCtxName = "auth"
+	// UserCtxName 定义在 Gin 上下文中存储用户信息的键名
+	UserCtxName = "user"
 )
 
 var (
@@ -35,7 +35,7 @@ var (
 
 	// anonymous 匿名用户对象，用于处理不需要认证的请求
 	anonymous = &core.User{
-		Username: ANONYMOUS_USERNAME,
+		Username: AnonymousUsername,
 		UnionID: [16]byte{
 			0xff, 0xff, 0xff, 0xff,
 			0xff, 0xff, 0xff, 0xff,
@@ -265,7 +265,7 @@ func (j *JwtAuthenticator) TokenCookieInject(c *gin.Context, token string) {
 //   - gin.HandlerFunc: Gin 中间件函数
 func (j *JwtAuthenticator) AuthenticatorMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(AUTH_CTX_NAME, j)
+		c.Set(AuthCtxName, j)
 		c.Next()
 	}
 }
@@ -284,10 +284,10 @@ func (j *JwtAuthenticator) AuthenticateMiddleware(allowAnonymous bool) gin.Handl
 		attrs := []attribute.KeyValue{attribute.Bool("allow-anon", allowAnonymous)}
 		if user := j.Authenticate(c, j.kd); user != nil {
 			attrs = append(attrs, attribute.String("user", user.UnionID.String()))
-			c.Set(USER_CTX_NAME, user)
+			c.Set(UserCtxName, user)
 		} else if allowAnonymous {
 			attrs = append(attrs, attribute.String("user", "anon"))
-			c.Set(USER_CTX_NAME, anonymous)
+			c.Set(UserCtxName, anonymous)
 		} else {
 			span.SetAttributes(attrs...)
 			span.SetStatus(codes.Error, "auth failed")
@@ -308,7 +308,7 @@ func (j *JwtAuthenticator) AuthenticateMiddleware(allowAnonymous bool) gin.Handl
 //   - *core.User: 用户对象
 //   - *CodeError: 如果用户不存在返回错误
 func GetUser(c *gin.Context) (*core.User, *CodeError) {
-	if user, ok := c.Get(USER_CTX_NAME); ok {
+	if user, ok := c.Get(UserCtxName); ok {
 		return user.(*core.User), nil
 	} else {
 		return nil, ErrUserNotExist
@@ -322,7 +322,7 @@ func GetUser(c *gin.Context) (*core.User, *CodeError) {
 // 返回:
 //   - *JwtAuthenticator: 认证器实例，如果不存在返回 nil
 func GetAuth(c *gin.Context) *JwtAuthenticator {
-	if auth, ok := c.Get(AUTH_CTX_NAME); ok {
+	if auth, ok := c.Get(AuthCtxName); ok {
 		return auth.(*JwtAuthenticator)
 	} else {
 		return nil

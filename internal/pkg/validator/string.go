@@ -16,12 +16,12 @@ import (
 )
 
 const (
-	TAG_STRONG_PASSWORD   = "strongPassword"
-	TAG_WINDOWS_FILE_NAME = "windowsFileName"
-	TAG_UNIX_FILE_NAME    = "unixFileName"
-	TAG_FILE_NAME         = "fileName"
-	TAG_STRICT_FILE_NAME  = "strictFileName"
-	TAG_DIRPATH           = "dirpath"
+	TagStrongPassword  = "strongPassword"
+	TagWindowsFileName = "windowsFileName"
+	TagUnixFileName    = "unixFileName"
+	TagFileName        = "fileName"
+	TagStrictFileName  = "strictFileName"
+	TagDirpath         = "dirpath"
 )
 
 var (
@@ -412,10 +412,10 @@ func validateDirPath(fl validator.FieldLevel) bool {
 }
 
 func init() {
-	validations[TAG_STRONG_PASSWORD] = validateStrongPassword
-	validations[TAG_WINDOWS_FILE_NAME] = validateWindowsFileName
-	validations[TAG_UNIX_FILE_NAME] = validateUnixFileName
-	validations[TAG_FILE_NAME] = validateFileName
-	validations[TAG_STRICT_FILE_NAME] = validateStrictFileName
-	validations[TAG_DIRPATH] = validateDirPath
+	validations[TagStrongPassword] = validateStrongPassword
+	validations[TagWindowsFileName] = validateWindowsFileName
+	validations[TagUnixFileName] = validateUnixFileName
+	validations[TagFileName] = validateFileName
+	validations[TagStrictFileName] = validateStrictFileName
+	validations[TagDirpath] = validateDirPath
 }

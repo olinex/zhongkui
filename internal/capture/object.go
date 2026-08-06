@@ -36,7 +36,7 @@ func BuildObjectKey(namespace, name, version string, timestamp time.Time, sessio
 		version,
 		timestamp.UnixMilli(),
 		sessionID.String(),
-		combine.FILE_EXT,
+		combine.FileExt,
 	)
 }
 
@@ -72,10 +72,10 @@ func ParseObjectKey(objectKey string) (namespace, name, version string, timestam
 		return
 	}
 	tmp := sourceParts[4]
-	if !strings.HasSuffix(tmp, combine.FILE_DOT_EXT) {
+	if !strings.HasSuffix(tmp, combine.FileDotExt) {
 		return
 	}
-	tmp = strings.TrimRight(tmp, combine.FILE_DOT_EXT)
+	tmp = strings.TrimRight(tmp, combine.FileDotExt)
 	nameParts := strings.Split(tmp, "_")
 	if len(nameParts) != 2 {
 		return

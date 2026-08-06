@@ -159,7 +159,7 @@ func TestNewHMACSHA256Signaturer(t *testing.T) {
 			signaturer := NewHMACSHA256Signaturer("mysecret")
 			signed, err := signaturer.Sign("testvalue")
 			So(err, ShouldBeNil)
-			So(signed, ShouldStartWith, PREFIX_HMACSHA256+":")
+			So(signed, ShouldStartWith, PrefixHmacsha256+":")
 		})
 
 		Convey("Should verify valid signature", func() {
@@ -285,7 +285,7 @@ func TestNewHMACSHA256Signaturer(t *testing.T) {
 
 			parts := splitSignature(signed)
 			So(len(parts), ShouldEqual, 2)
-			So(parts[0], ShouldEqual, PREFIX_HMACSHA256)
+			So(parts[0], ShouldEqual, PrefixHmacsha256)
 
 			valid, err := signaturer.Check(signed, valueWithColon)
 			So(err, ShouldBeNil)

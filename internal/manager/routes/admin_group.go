@@ -163,7 +163,7 @@ func groupDetailGet(c *gin.Context) {
 
 	// 查询该用户组关联的RBAC策略
 	// 查询条件: ptype='p'(策略类型) 且 v0=组名
-	if err := db.Model(&core.RbacPolicy{}).Find(&policiesOut, "ptype = ? AND v0 = ?", base.POLICY_LABEL, baseOut.Name).Error; err != nil {
+	if err := db.Model(&core.RbacPolicy{}).Find(&policiesOut, "ptype = ? AND v0 = ?", base.PolicyLabel, baseOut.Name).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -308,9 +308,9 @@ func groupDelete(c *gin.Context) {
 		if err := tx.First(
 			&policy,
 			`(ptype = ? AND v0 = ?) OR (ptype = ? AND v1 = ?)`,
-			base.POLICY_LABEL,
+			base.PolicyLabel,
 			name,
-			base.GROUP_LABEL,
+			base.GroupLabel,
 			name,
 		).Error; err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -471,11 +471,11 @@ func groupRbacPolicyRemove(c *gin.Context) {
 	if err := db.Delete(
 		&core.RbacPolicy{},
 		"ptype = ? AND v0 = ? AND v1 = ? AND v2 = ? AND v3 = ?",
-		base.POLICY_LABEL, // 策略类型为'p'（组策略）
-		name,              // 组名
-		in.Target,         // 目标资源
-		in.Action,         // 操作类型
-		in.Effect,         // 效果（allow/deny）
+		base.PolicyLabel, // 策略类型为'p'（组策略）
+		name,             // 组名
+		in.Target,        // 目标资源
+		in.Action,        // 操作类型
+		in.Effect,        // 效果（allow/deny）
 	).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return

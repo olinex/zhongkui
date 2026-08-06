@@ -223,20 +223,40 @@ func NewTCPHeaders(tcp *layers.TCP) *TCPHeaders {
 	}
 }
 
+// PacketTCPFingerprint 表示单条 TCP 包记录上的被动指纹识别结果（p0f 风格）。
+// 描述该数据包发送端（源地址）的 OS / MTU 等特征，由 pcap 导入阶段计算并落库。
+type PacketTCPFingerprint struct {
+	OS        string  `gorm:"column:fp_os;type:String CODEC(ZSTD(3))" json:"fp_os"`
+	OSQuality float64 `gorm:"column:fp_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fp_os_quality"`
+	Sig       string  `gorm:"column:fp_sig;type:String CODEC(ZSTD(3))" json:"fp_sig"`
+	MTU       uint16  `gorm:"column:fp_mtu;type:UInt16 CODEC(ZSTD(3))" json:"fp_mtu"`
+}
+
 // PacketIPv4TCP 表示IPv4 TCP数据包
 // 组合了PacketIPv4和TCPHeaders，表示完整的IPv4 TCP数据包信息
 // 包含以太网层、IPv4层和TCP层的所有头部信息
 type PacketIPv4TCP struct {
-	PacketIPv4                     // 嵌入IPv4数据包基础结构
-	TCPHeaders                     // 嵌入TCP头部信息
-	TCPStreamID string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcp_stream_id"`
-	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
+	PacketIPv4                              // 嵌入IPv4数据包基础结构
+	TCPHeaders                              // 嵌入TCP头部信息
+	PacketTCPFingerprint                    // 嵌入TCP被动指纹信息
+	TCPStreamID          string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcp_stream_id"`
+	Payload              *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
 }
 
 // CaptureTimestamp 返回数据包的捕获时间戳
 // 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
 func (p *PacketIPv4TCP) CaptureTimestamp() time.Time {
 	return p.Timestamp
+}
+
+// TcpFingerprint 返回数据包携带的被动 TCP 指纹。
+// 指纹由 pcap 导入阶段对 SYN / SYN-ACK 握手包识别并落库，
+// 组包阶段通过该方法透传给流重组器；无指纹时返回 nil。
+func (p *PacketIPv4TCP) TcpFingerprint() *PacketTCPFingerprint {
+	if p.OS == "" && p.Sig == "" {
+		return nil
+	}
+	return &p.PacketTCPFingerprint
 }
 
 // StreamID 返回TCP流ID
@@ -286,16 +306,27 @@ func (p *PacketIPv4TCP) GetPayload() []byte {
 // 组合了PacketIPv6和TCPHeaders，表示完整的IPv6 TCP数据包信息
 // 包含以太网层、IPv6层和TCP层的所有头部信息
 type PacketIPv6TCP struct {
-	PacketIPv6                     // 嵌入IPv6数据包基础结构
-	TCPHeaders                     // 嵌入TCP头部信息
-	TCPStreamID string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcp_stream_id"`
-	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
+	PacketIPv6                              // 嵌入IPv6数据包基础结构
+	TCPHeaders                              // 嵌入TCP头部信息
+	PacketTCPFingerprint                    // 嵌入TCP被动指纹信息
+	TCPStreamID          string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcp_stream_id"`
+	Payload              *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
 }
 
 // CaptureTimestamp 返回数据包的捕获时间戳
 // 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
 func (p *PacketIPv6TCP) CaptureTimestamp() time.Time {
 	return p.Timestamp
+}
+
+// TcpFingerprint 返回数据包携带的被动 TCP 指纹。
+// 指纹由 pcap 导入阶段对 SYN / SYN-ACK 握手包识别并落库，
+// 组包阶段通过该方法透传给流重组器；无指纹时返回 nil。
+func (p *PacketIPv6TCP) TcpFingerprint() *PacketTCPFingerprint {
+	if p.OS == "" && p.Sig == "" {
+		return nil
+	}
+	return &p.PacketTCPFingerprint
 }
 
 // StreamID 返回TCP流ID

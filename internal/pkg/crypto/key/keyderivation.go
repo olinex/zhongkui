@@ -10,10 +10,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// MIN_KEY_LENGTH 定义派生密钥的最小长度（字节）
+// MinKeyLength 定义派生密钥的最小长度（字节）
 // 密钥长度必须大于此值，以确保足够的安全性
 const (
-	MIN_KEY_LENGTH = 16
+	MinKeyLength = 16
 )
 
 var (
@@ -92,20 +92,20 @@ func GetKeyDerivation() *KeyDerivation {
 // DeriveChildKey 从主密钥派生子密钥。
 //
 // 派生过程：
-//  1. 从密码本的 offset 位置读取 salt（长度为 max(MIN_KEY_LENGTH, length)）
+//  1. 从密码本的 offset 位置读取 salt（长度为 max(MinKeyLength, length)）
 //  2. 如果 offset+saltLen 超过密码本长度，则循环读取（从开头继续）
 //  3. 使用 HKDF-SHA256 算法派生指定长度的子密钥
 //
 // 参数：
 //   - offset: 从密码本的哪个位置开始读取 salt
-//   - length: 期望派生的子密钥长度（字节），必须大于 MIN_KEY_LENGTH
+//   - length: 期望派生的子密钥长度（字节），必须大于 MinKeyLength
 //
 // 返回值：
 //   - []byte: 派生的子密钥，长度为 length
 //   - error: 密钥长度无效、获取主密钥失败或派生失败时返回错误
 //
 // 错误场景：
-//   - length <= MIN_KEY_LENGTH：密钥长度过短
+//   - length <= MinKeyLength：密钥长度过短
 //   - 主密钥提供者返回错误
 //   - HKDF 派生过程出错
 //
@@ -118,8 +118,8 @@ func GetKeyDerivation() *KeyDerivation {
 //	// key 是 32 字节的派生密钥
 func (k *KeyDerivation) DeriveChildKey(offset, length int) ([]byte, error) {
 	// 检查密钥长度
-	if length <= MIN_KEY_LENGTH {
-		return nil, errors.Newf("key length should greater than %d, got: %d", MIN_KEY_LENGTH, length)
+	if length <= MinKeyLength {
+		return nil, errors.Newf("key length should greater than %d, got: %d", MinKeyLength, length)
 	}
 
 	// 获取主密钥
@@ -131,7 +131,7 @@ func (k *KeyDerivation) DeriveChildKey(offset, length int) ([]byte, error) {
 	// 准备 salt
 	bookBytes := k.passwordBook.Bytes()
 	bookLen := k.passwordBook.Len()
-	saltLen := int(math.Max(MIN_KEY_LENGTH, float64(length)))
+	saltLen := int(math.Max(MinKeyLength, float64(length)))
 
 	var salt []byte
 	// 如果 offset+saltLen 超过密码本长度，则循环读取

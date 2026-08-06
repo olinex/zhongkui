@@ -11,12 +11,12 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	FILE_EXT              = "zkcn"
-	FILE_DOT_EXT          = "." + FILE_EXT
-	COMPRESS_CONTENT_TYPE = "application/zkcn"
-	MAGIC_BYTES           = "\x5a\x4b\x43\x4e" // "ZKCN" — Zhongkui Crypto Notation
-	HEADER_VERSION        = 0x01
-	HEADER_SIZE           = 7 // magic(4) + version(1) + compressID(1) + encryptID(1)
+	FileExt             = "zkcn"
+	FileDotExt          = "." + FileExt
+	CompressContentType = "application/zkcn"
+	MagicBytes          = "\x5a\x4b\x43\x4e" // "ZKCN" — Zhongkui Crypto Notation
+	HeaderVersion       = 0x01
+	HeaderSize          = 7 // magic(4) + version(1) + compressID(1) + encryptID(1)
 )
 
 // Pipeline 表示一个流式变换管道，固定按 先压缩(Compress) → 后加密(Encrypt) 的顺序处理数据。
@@ -52,9 +52,9 @@ func NewCompressEncryptPipeline(compressor, cryptor Transform) (*Pipeline, error
 // 必须调用 Close() 以确保所有数据刷新到底层 writer。
 func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error) {
 	// 写入自描述头部
-	header := make([]byte, HEADER_SIZE)
-	copy(header[0:4], MAGIC_BYTES)
-	header[4] = HEADER_VERSION
+	header := make([]byte, HeaderSize)
+	copy(header[0:4], MagicBytes)
+	header[4] = HeaderVersion
 	header[5] = p.compressID
 	header[6] = p.cryptID
 
@@ -87,7 +87,7 @@ func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error) {
 // 读取完成后调用 Close() 释放资源。
 func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 	// 读取并校验自描述头部
-	header := make([]byte, HEADER_SIZE)
+	header := make([]byte, HeaderSize)
 	if _, err := io.ReadFull(r, header); err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -123,10 +123,10 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 }
 
 func (p *Pipeline) validateHeader(header []byte) error {
-	if string(header[0:4]) != MAGIC_BYTES {
+	if string(header[0:4]) != MagicBytes {
 		return errors.New("invalid magic bytes in stream header")
 	}
-	if header[4] != HEADER_VERSION {
+	if header[4] != HeaderVersion {
 		return errors.Newf("unsupported stream version: %d", header[4])
 	}
 	if header[5] != p.compressID {

@@ -58,14 +58,14 @@ type Client struct {
 //   - 返回的客户端在不再需要时应使用client.Close()正确关闭以释放资源
 func NewClient(cfg *Config) *Client {
 	switch cfg.Type {
-	case NORMAL_TYPE:
+	case NormalType:
 		// 为独立实例创建标准Redis客户端
 		return &Client{
 			Client: redis.NewClient(cfg.ToOptions()),
 			lock:   sync.Mutex{},
 			closed: false,
 		}
-	case SENTINEL_TYPE:
+	case SentinelType:
 		// 为Redis Sentinel集群创建具备故障转移感知的客户端
 		return &Client{
 			Client: redis.NewFailoverClient(cfg.ToSentinelOptions()),

@@ -9,18 +9,18 @@ import (
 )
 
 const (
-	API_LOGGER_PREFIX      = "api"
-	DATABASE_LOGGER_PREFIX = "database"
-	CAPTURE_LOGGER_PREFIX  = "capture"
-	ETCD_LOGGER_PREFIX     = "etcd"
-	GRPC_LOGGER_PREFIX     = "grpc"
-	PIPELINE_LOGGER_PREFIX = "pipeline"
-	API_LOGGER_LABEL       = "logger.api"
-	DATABASE_LOGGER_LABEL  = "logger.database"
-	CAPTURE_LOGGER_LABEL   = "logger.capture"
-	ETCD_LOGGER_LABEL      = "logger.etcd"
-	GRPC_LOGGER_LABEL      = "logger.grpc"
-	PIPELINE_LOGGER_LABEL  = "logger.pipeline"
+	ApiLoggerPrefix      = "api"
+	DatabaseLoggerPrefix = "database"
+	CaptureLoggerPrefix  = "capture"
+	EtcdLoggerPrefix     = "etcd"
+	GrpcLoggerPrefix     = "grpc"
+	PipelineLoggerPrefix = "pipeline"
+	ApiLoggerLabel       = "logger.api"
+	DatabaseLoggerLabel  = "logger.database"
+	CaptureLoggerLabel   = "logger.capture"
+	EtcdLoggerLabel      = "logger.etcd"
+	GrpcLoggerLabel      = "logger.grpc"
+	PipelineLoggerLabel  = "logger.pipeline"
 )
 
 func loggerProvider(name string) do.Provider[*logging.Logger] {
@@ -44,101 +44,101 @@ func loggerProvider(name string) do.Provider[*logging.Logger] {
 }
 
 func NewApiLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(API_LOGGER_PREFIX)
+	return loggerProvider(ApiLoggerPrefix)
 }
 
 func NewDatabaseLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(DATABASE_LOGGER_PREFIX)
+	return loggerProvider(DatabaseLoggerPrefix)
 }
 
 func NewCaptureLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(CAPTURE_LOGGER_PREFIX)
+	return loggerProvider(CaptureLoggerPrefix)
 }
 
 func NewEtcdLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(ETCD_LOGGER_PREFIX)
+	return loggerProvider(EtcdLoggerPrefix)
 }
 
 func NewGrpcLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(GRPC_LOGGER_PREFIX)
+	return loggerProvider(GrpcLoggerPrefix)
 }
 
 func NewPipelineLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(PIPELINE_LOGGER_PREFIX)
+	return loggerProvider(PipelineLoggerPrefix)
 }
 
 func InjectApiLogger(i do.Injector) {
-	do.ProvideNamed(i, API_LOGGER_LABEL, NewApiLogger())
+	do.ProvideNamed(i, ApiLoggerLabel, NewApiLogger())
 }
 
 func InjectDatabaseLogger(i do.Injector) {
-	do.ProvideNamed(i, DATABASE_LOGGER_LABEL, NewDatabaseLogger())
+	do.ProvideNamed(i, DatabaseLoggerLabel, NewDatabaseLogger())
 }
 
 func InjectCaptureLogger(i do.Injector) {
-	do.ProvideNamed(i, CAPTURE_LOGGER_LABEL, NewCaptureLogger())
+	do.ProvideNamed(i, CaptureLoggerLabel, NewCaptureLogger())
 }
 
 func InjectEtcdLogger(i do.Injector) {
-	do.ProvideNamed(i, ETCD_LOGGER_LABEL, NewEtcdLogger())
+	do.ProvideNamed(i, EtcdLoggerLabel, NewEtcdLogger())
 }
 
 func InjectGrpcLogger(i do.Injector) {
-	do.ProvideNamed(i, GRPC_LOGGER_LABEL, NewGrpcLogger())
+	do.ProvideNamed(i, GrpcLoggerLabel, NewGrpcLogger())
 }
 
 func InjectPipelineLogger(i do.Injector) {
-	do.ProvideNamed(i, PIPELINE_LOGGER_LABEL, NewPipelineLogger())
+	do.ProvideNamed(i, PipelineLoggerLabel, NewPipelineLogger())
 }
 
 func InvokeApiLogger(i do.Injector) (*logging.Logger, error) {
-	return do.InvokeNamed[*logging.Logger](i, API_LOGGER_LABEL)
+	return do.InvokeNamed[*logging.Logger](i, ApiLoggerLabel)
 }
 
 func InvokeDatabaseLogger(i do.Injector) (*logging.Logger, error) {
-	return do.InvokeNamed[*logging.Logger](i, DATABASE_LOGGER_LABEL)
+	return do.InvokeNamed[*logging.Logger](i, DatabaseLoggerLabel)
 }
 
 func InvokeCaptureLogger(i do.Injector) (*logging.Logger, error) {
-	return do.InvokeNamed[*logging.Logger](i, CAPTURE_LOGGER_LABEL)
+	return do.InvokeNamed[*logging.Logger](i, CaptureLoggerLabel)
 }
 
 func InvokeEtcdLogger(i do.Injector) (*logging.Logger, error) {
-	return do.InvokeNamed[*logging.Logger](i, ETCD_LOGGER_LABEL)
+	return do.InvokeNamed[*logging.Logger](i, EtcdLoggerLabel)
 }
 
 func InvokeGrpcLogger(i do.Injector) (*logging.Logger, error) {
-	return do.InvokeNamed[*logging.Logger](i, GRPC_LOGGER_LABEL)
+	return do.InvokeNamed[*logging.Logger](i, GrpcLoggerLabel)
 }
 
 func InvokePipelineLogger(i do.Injector) (*logging.Logger, error) {
-	return do.InvokeNamed[*logging.Logger](i, PIPELINE_LOGGER_LABEL)
+	return do.InvokeNamed[*logging.Logger](i, PipelineLoggerLabel)
 }
 
 func MustInvokeApiLogger(i do.Injector) *logging.Logger {
-	return do.MustInvokeNamed[*logging.Logger](i, API_LOGGER_LABEL)
+	return do.MustInvokeNamed[*logging.Logger](i, ApiLoggerLabel)
 }
 
 func MustInvokeDatabaseLogger(i do.Injector) *logging.Logger {
-	return do.MustInvokeNamed[*logging.Logger](i, DATABASE_LOGGER_LABEL)
+	return do.MustInvokeNamed[*logging.Logger](i, DatabaseLoggerLabel)
 }
 
 func MustInvokeCaptureLogger(i do.Injector) *logging.Logger {
-	return do.MustInvokeNamed[*logging.Logger](i, CAPTURE_LOGGER_LABEL)
+	return do.MustInvokeNamed[*logging.Logger](i, CaptureLoggerLabel)
 }
 
 func MustInvokeEtcdLogger(i do.Injector) *logging.Logger {
-	return do.MustInvokeNamed[*logging.Logger](i, ETCD_LOGGER_LABEL)
+	return do.MustInvokeNamed[*logging.Logger](i, EtcdLoggerLabel)
 }
 
 func MustInvokeGrpcLogger(i do.Injector) *logging.Logger {
-	return do.MustInvokeNamed[*logging.Logger](i, GRPC_LOGGER_LABEL)
+	return do.MustInvokeNamed[*logging.Logger](i, GrpcLoggerLabel)
 }
 
 func MustInvokePipelineLogger(i do.Injector) *logging.Logger {
-	return do.MustInvokeNamed[*logging.Logger](i, PIPELINE_LOGGER_LABEL)
+	return do.MustInvokeNamed[*logging.Logger](i, PipelineLoggerLabel)
 }
 
 func DescribeLoggerConfig() config.ConfigDescriptions {
-	return logging.DescribeConfig(API_LOGGER_PREFIX, DATABASE_LOGGER_PREFIX, ETCD_LOGGER_PREFIX, GRPC_LOGGER_PREFIX, PIPELINE_LOGGER_PREFIX)
+	return logging.DescribeConfig(ApiLoggerPrefix, DatabaseLoggerPrefix, EtcdLoggerPrefix, GrpcLoggerPrefix, PipelineLoggerPrefix)
 }

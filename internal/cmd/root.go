@@ -15,18 +15,18 @@ import (
 )
 
 const (
-	INJECTOR_CTX_NAME = "inj"
-	SIGNAL_CTX_NAME   = "sig"
+	InjectorCtxName = "inj"
+	SignalCtxName   = "sig"
 )
 
 func cmdToolBox(cmd *cobra.Command) (context.Context, do.Injector) {
 	ctx := cmd.Context()
-	return ctx, ctx.Value(INJECTOR_CTX_NAME).(do.Injector)
+	return ctx, ctx.Value(InjectorCtxName).(do.Injector)
 }
 
 // getSignalCancel 从 context 中获取信号监听停止函数
 func getSignalCancel(ctx context.Context) context.CancelFunc {
-	if cancel, ok := ctx.Value(SIGNAL_CTX_NAME).(context.CancelFunc); ok {
+	if cancel, ok := ctx.Value(SignalCtxName).(context.CancelFunc); ok {
 		return cancel
 	}
 	return nil
@@ -42,7 +42,7 @@ var RootCmd = &cobra.Command{
 		// 统一信号处理：监听 SIGINT/SIGTERM，收到信号时取消 context
 		// 所有服务通过监听 context 取消来实现优雅关闭
 		ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
-		ctx = context.WithValue(ctx, SIGNAL_CTX_NAME, stop)
+		ctx = context.WithValue(ctx, SignalCtxName, stop)
 		cmd.SetContext(ctx)
 
 		provider.InjectOtelShutdowner(ctx, i)
@@ -79,7 +79,7 @@ var RootCmd = &cobra.Command{
 		// 必须在所有服务启动完成后调用，确保所有资源都被正确初始化
 		_ = provider.MustInvokeOtelShutdowner(ctx, i)
 
-		ctx = context.WithValue(ctx, INJECTOR_CTX_NAME, i)
+		ctx = context.WithValue(ctx, InjectorCtxName, i)
 		cmd.SetContext(ctx)
 		return nil
 	},

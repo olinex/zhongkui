@@ -17,7 +17,7 @@ import (
 )
 
 // electionPrefix 是领导者选举在 etcd 中的键前缀，
-// 通过 WithPrefix 函数拼接全局前缀，最终格式为 "<GLOBAL_PREFIX>/leader-election/"。
+// 通过 WithPrefix 函数拼接全局前缀，最终格式为 "<GlobalPrefix>/leader-election/"。
 // 所有参与同一选举的竞争者都将在该前缀下创建各自的选举键。
 var (
 	electionPrefix = WithPrefix("leader-election/")

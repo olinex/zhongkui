@@ -16,7 +16,7 @@ func NewTraceProvider(exp sdktrace.SpanExporter, res *sdkresource.Resource) *sdk
 		sdktrace.WithSampler(sampler),
 	}
 
-	if Env.SamplerType == SAMPLER_TAIL {
+	if Env.SamplerType == SamplerTail {
 		// 尾部过滤模式：创建 filter processor 包裹 batch processor，
 		// 只有通过过滤条件的 Span 才会进入批处理并导出
 		batchProcessor := sdktrace.NewBatchSpanProcessor(exp)

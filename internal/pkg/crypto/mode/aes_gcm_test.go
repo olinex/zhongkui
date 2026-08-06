@@ -107,7 +107,7 @@ func TestAESGCMMode_EncryptDecrypt(t *testing.T) {
 			}
 
 			// 密文应包含 nonce + 密文 + 标签
-			expectedMinLen := AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE
+			expectedMinLen := AesGcmNonceSize + AesGcmTagSize
 			if len(ciphertext) < expectedMinLen {
 				t.Fatalf("ciphertext too short: %d < %d", len(ciphertext), expectedMinLen)
 			}
@@ -172,7 +172,7 @@ func TestAESGCMMode_CiphertextFormat(t *testing.T) {
 
 	// 密文格式：[12B nonce][密文][16B 标签]
 	// 对于 4 字节的明文，密文长度应为 12 + 4 + 16 = 32
-	expectedLen := AES_GCM_NONCE_SIZE + len(plaintext) + AES_GCM_TAG_SIZE
+	expectedLen := AesGcmNonceSize + len(plaintext) + AesGcmTagSize
 	if len(ciphertext) != expectedLen {
 		t.Fatalf("expected ciphertext length %d, got %d", expectedLen, len(ciphertext))
 	}
@@ -239,8 +239,8 @@ func TestAESGCMMode_Decrypt_TamperedCiphertext(t *testing.T) {
 	}
 
 	// 篡改密文（修改 nonce 后的第一个字节）
-	if len(ciphertext) > AES_GCM_NONCE_SIZE {
-		ciphertext[AES_GCM_NONCE_SIZE] ^= 0xFF
+	if len(ciphertext) > AesGcmNonceSize {
+		ciphertext[AesGcmNonceSize] ^= 0xFF
 	}
 
 	_, err = mode.Decrypt(ciphertext)
@@ -394,7 +394,7 @@ func TestAESGCMMode_EmptyPlaintext(t *testing.T) {
 	}
 
 	// 密文应只包含 nonce + 标签
-	expectedLen := AES_GCM_NONCE_SIZE + AES_GCM_TAG_SIZE
+	expectedLen := AesGcmNonceSize + AesGcmTagSize
 	if len(ciphertext) != expectedLen {
 		t.Fatalf("expected length %d, got %d", expectedLen, len(ciphertext))
 	}

@@ -55,12 +55,12 @@ func TestNewGroupPolicy(t *testing.T) {
 			group := "admin"
 			target := "/api/users"
 			action := "read"
-			effect := base.EFFECT_ALLOW
+			effect := base.EffectAllow
 
 			policy := NewGroupPolicy(group, target, action, effect)
-			
+
 			convey.So(policy, convey.ShouldNotBeNil)
-			convey.So(policy.Ptype, convey.ShouldEqual, base.POLICY_LABEL)
+			convey.So(policy.Ptype, convey.ShouldEqual, base.PolicyLabel)
 			convey.So(policy.V0, convey.ShouldEqual, group)
 			convey.So(policy.V1, convey.ShouldEqual, target)
 			convey.So(policy.V2, convey.ShouldEqual, action)
@@ -71,20 +71,20 @@ func TestNewGroupPolicy(t *testing.T) {
 			group := "guest"
 			target := "/api/admin"
 			action := "write"
-			effect := base.EFFECT_DENY
+			effect := base.EffectDeny
 
 			policy := NewGroupPolicy(group, target, action, effect)
-			
+
 			convey.So(policy, convey.ShouldNotBeNil)
-			convey.So(policy.Ptype, convey.ShouldEqual, base.POLICY_LABEL)
+			convey.So(policy.Ptype, convey.ShouldEqual, base.PolicyLabel)
 			convey.So(policy.V3, convey.ShouldEqual, effect)
 		})
 
 		convey.Convey("Should handle empty strings for all parameters", func() {
 			policy := NewGroupPolicy("", "", "", "")
-			
+
 			convey.So(policy, convey.ShouldNotBeNil)
-			convey.So(policy.Ptype, convey.ShouldEqual, base.POLICY_LABEL)
+			convey.So(policy.Ptype, convey.ShouldEqual, base.PolicyLabel)
 			convey.So(policy.V0, convey.ShouldEqual, "")
 			convey.So(policy.V1, convey.ShouldEqual, "")
 			convey.So(policy.V2, convey.ShouldEqual, "")
@@ -94,8 +94,8 @@ func TestNewGroupPolicy(t *testing.T) {
 		convey.Convey("Should handle long target names within limit", func() {
 			// 创建接近长度限制的目标名
 			longTarget := "/api/" + string(make([]byte, 500)) + "/resource"
-			policy := NewGroupPolicy("test", longTarget, "read", base.EFFECT_ALLOW)
-			
+			policy := NewGroupPolicy("test", longTarget, "read", base.EffectAllow)
+
 			convey.So(policy, convey.ShouldNotBeNil)
 			convey.So(len(policy.V1), convey.ShouldBeGreaterThan, 500)
 		})
@@ -112,9 +112,9 @@ func TestNewUserPolicy(t *testing.T) {
 			namespace := "default"
 
 			policy := NewUserPolicy(unionID, group, namespace)
-			
+
 			convey.So(policy, convey.ShouldNotBeNil)
-			convey.So(policy.Ptype, convey.ShouldEqual, base.GROUP_LABEL)
+			convey.So(policy.Ptype, convey.ShouldEqual, base.GroupLabel)
 			convey.So(policy.V0, convey.ShouldEqual, unionID.String())
 			convey.So(policy.V1, convey.ShouldEqual, group)
 			convey.So(policy.V2, convey.ShouldEqual, namespace)
@@ -127,7 +127,7 @@ func TestNewUserPolicy(t *testing.T) {
 			namespace := "test"
 
 			policy := NewUserPolicy(unionID, group, namespace)
-			
+
 			convey.So(policy, convey.ShouldNotBeNil)
 			convey.So(policy.V0, convey.ShouldEqual, "00000000-0000-0000-0000-000000000000")
 		})
@@ -135,7 +135,7 @@ func TestNewUserPolicy(t *testing.T) {
 		convey.Convey("Should handle empty group and namespace", func() {
 			unionID := serializer.NewHexUUIDv4()
 			policy := NewUserPolicy(unionID, "", "")
-			
+
 			convey.So(policy, convey.ShouldNotBeNil)
 			convey.So(policy.V1, convey.ShouldEqual, "")
 			convey.So(policy.V2, convey.ShouldEqual, "")
@@ -143,14 +143,14 @@ func TestNewUserPolicy(t *testing.T) {
 
 		convey.Convey("Should handle built-in namespace", func() {
 			unionID := serializer.NewHexUUIDv4()
-			group := base.DEFAULT_GROUP
-			namespace := base.DEFAULT_NAMESPACE
+			group := base.DefaultGroup
+			namespace := base.DefaultNamespace
 
 			policy := NewUserPolicy(unionID, group, namespace)
-			
+
 			convey.So(policy, convey.ShouldNotBeNil)
-			convey.So(policy.V1, convey.ShouldEqual, base.DEFAULT_GROUP)
-			convey.So(policy.V2, convey.ShouldEqual, base.DEFAULT_NAMESPACE)
+			convey.So(policy.V1, convey.ShouldEqual, base.DefaultGroup)
+			convey.So(policy.V2, convey.ShouldEqual, base.DefaultNamespace)
 		})
 	})
 }
@@ -186,7 +186,7 @@ func TestNewRbacPolicyTemplate(t *testing.T) {
 			action := "read"
 
 			template := NewRbacPolicyTemplate(target, action)
-			
+
 			convey.So(template, convey.ShouldNotBeNil)
 			convey.So(template.Target, convey.ShouldEqual, target)
 			convey.So(template.Action, convey.ShouldEqual, action)
@@ -194,7 +194,7 @@ func TestNewRbacPolicyTemplate(t *testing.T) {
 
 		convey.Convey("Should handle empty strings for parameters", func() {
 			template := NewRbacPolicyTemplate("", "")
-			
+
 			convey.So(template, convey.ShouldNotBeNil)
 			convey.So(template.Target, convey.ShouldEqual, "")
 			convey.So(template.Action, convey.ShouldEqual, "")
@@ -204,7 +204,7 @@ func TestNewRbacPolicyTemplate(t *testing.T) {
 			// 创建接近长度限制的目标名
 			longTarget := "/api/" + string(make([]byte, 500)) + "/resource"
 			template := NewRbacPolicyTemplate(longTarget, "write")
-			
+
 			convey.So(template, convey.ShouldNotBeNil)
 			convey.So(len(template.Target), convey.ShouldBeGreaterThan, 500)
 		})
@@ -225,7 +225,7 @@ func TestNewRbacPolicyTemplate(t *testing.T) {
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
 					template := NewRbacPolicyTemplate(tc.target, tc.action)
-					
+
 					convey.So(template, convey.ShouldNotBeNil)
 					convey.So(template.Target, convey.ShouldEqual, tc.target)
 					convey.So(template.Action, convey.ShouldEqual, tc.action)
@@ -239,8 +239,8 @@ func TestNewRbacPolicyTemplate(t *testing.T) {
 func TestRbacPolicy_FieldMapping(t *testing.T) {
 	convey.Convey("Test RbacPolicy field mapping for policy type", t, func() {
 		convey.Convey("Should correctly map fields for policy type 'p'", func() {
-			policy := NewGroupPolicy("admin", "/api/users", "read", base.EFFECT_ALLOW)
-			
+			policy := NewGroupPolicy("admin", "/api/users", "read", base.EffectAllow)
+
 			// 验证字段映射
 			convey.So(policy.Ptype, convey.ShouldEqual, "p")
 			convey.So(policy.V0, convey.ShouldEqual, "admin")      // group name
@@ -252,7 +252,7 @@ func TestRbacPolicy_FieldMapping(t *testing.T) {
 		convey.Convey("Should correctly map fields for policy type 'g'", func() {
 			unionID := serializer.NewHexUUIDv4()
 			policy := NewUserPolicy(unionID, "admin", "default")
-			
+
 			// 验证字段映射
 			convey.So(policy.Ptype, convey.ShouldEqual, "g")
 			convey.So(policy.V0, convey.ShouldEqual, unionID.String()) // user union id
@@ -270,17 +270,17 @@ func TestRbacPolicy_Integration(t *testing.T) {
 			// 创建用户策略
 			userID := serializer.NewHexUUIDv4()
 			userPolicy := NewUserPolicy(userID, "admin", "production")
-			
+
 			// 创建组策略
-			groupPolicy1 := NewGroupPolicy("admin", "/api/users", "read", base.EFFECT_ALLOW)
-			groupPolicy2 := NewGroupPolicy("admin", "/api/users", "write", base.EFFECT_ALLOW)
-			groupPolicy3 := NewGroupPolicy("admin", "/api/admin", "*", base.EFFECT_DENY)
-			
+			groupPolicy1 := NewGroupPolicy("admin", "/api/users", "read", base.EffectAllow)
+			groupPolicy2 := NewGroupPolicy("admin", "/api/users", "write", base.EffectAllow)
+			groupPolicy3 := NewGroupPolicy("admin", "/api/admin", "*", base.EffectDeny)
+
 			// 创建策略模板
 			template1 := NewRbacPolicyTemplate("/api/users", "read")
 			template2 := NewRbacPolicyTemplate("/api/users", "write")
 			template3 := NewRbacPolicyTemplate("/api/admin", "admin")
-			
+
 			// 验证所有对象都被正确创建
 			convey.So(userPolicy, convey.ShouldNotBeNil)
 			convey.So(groupPolicy1, convey.ShouldNotBeNil)
@@ -289,13 +289,13 @@ func TestRbacPolicy_Integration(t *testing.T) {
 			convey.So(template1, convey.ShouldNotBeNil)
 			convey.So(template2, convey.ShouldNotBeNil)
 			convey.So(template3, convey.ShouldNotBeNil)
-			
+
 			// 验证策略类型
 			convey.So(userPolicy.Ptype, convey.ShouldEqual, "g")
 			convey.So(groupPolicy1.Ptype, convey.ShouldEqual, "p")
 			convey.So(groupPolicy2.Ptype, convey.ShouldEqual, "p")
 			convey.So(groupPolicy3.Ptype, convey.ShouldEqual, "p")
-			
+
 			// 验证效果字段
 			convey.So(groupPolicy1.V3, convey.ShouldEqual, "allow")
 			convey.So(groupPolicy2.V3, convey.ShouldEqual, "allow")
@@ -305,11 +305,11 @@ func TestRbacPolicy_Integration(t *testing.T) {
 
 		convey.Convey("Should handle wildcard matching in policies", func() {
 			// 测试通配符策略
-			wildcardPolicy := NewGroupPolicy("superuser", "*", "*", base.EFFECT_ALLOW)
-			
+			wildcardPolicy := NewGroupPolicy("superuser", "*", "*", base.EffectAllow)
+
 			convey.So(wildcardPolicy, convey.ShouldNotBeNil)
-			convey.So(wildcardPolicy.V1, convey.ShouldEqual, base.WIDE_MATCH_LABEL)
-			convey.So(wildcardPolicy.V2, convey.ShouldEqual, base.WIDE_MATCH_LABEL)
+			convey.So(wildcardPolicy.V1, convey.ShouldEqual, base.WideMatchLabel)
+			convey.So(wildcardPolicy.V2, convey.ShouldEqual, base.WideMatchLabel)
 		})
 	})
 }

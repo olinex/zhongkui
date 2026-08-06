@@ -16,15 +16,15 @@ import (
 )
 
 const (
-	SCOPE_NAME     = base.GLOBAL_PREFIX + "-tcp"
-	SPAN_ROUTER    = "tcp.router"
-	SPAN_RECTIFIER = "tcp.rectifier"
-	SPAN_SIDE      = "tcp.side"
-	SPAN_DETECT    = "tcp.detector"
-	SPAN_EXTRACT   = "tcp.extractor"
-	SPAN_BUILD     = "tcp.builder"
-	SPAN_PARSE     = "tcp.parse"
-	SPAN_CLEANUP   = "tcp.cleanup"
+	ScopeName     = base.GlobalPrefix + "-tcp"
+	SpanRouter    = "tcp.router"
+	SpanRectifier = "tcp.rectifier"
+	SpanSide      = "tcp.side"
+	SpanDetect    = "tcp.detector"
+	SpanExtract   = "tcp.extractor"
+	SpanBuild     = "tcp.builder"
+	SpanParse     = "tcp.parse"
+	SpanCleanup   = "tcp.cleanup"
 )
 
 var (
@@ -60,7 +60,7 @@ func InitMetrics() {
 
 func initMetrics() {
 	var err, e error
-	meter := otel.Meter(SCOPE_NAME)
+	meter := otel.Meter(ScopeName)
 	packetCounter, e = meter.Int64Counter(
 		"tcp.packets.processed",
 		metric.WithDescription("Total number of TCP packets processed"),
@@ -168,8 +168,8 @@ func recordPacketType(packet TCPPacket) attribute.KeyValue {
 
 // startRouterSpan 在路由器 addPacket 中创建 span。
 func startRouterSpan(ctx context.Context, packet TCPPacket) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_ROUTER,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanRouter,
 		trace.WithAttributes(
 			attribute.String("tcp.stream_id", packet.StreamID()),
 			attribute.String("tcp.src_addr", packet.SrcAddr().String()),
@@ -184,8 +184,8 @@ func startRouterSpan(ctx context.Context, packet TCPPacket) (context.Context, tr
 
 // startRectifierSpan 在整流器 addPacket 中创建 span。
 func startRectifierSpan(ctx context.Context, packet TCPPacket, c2s bool) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_RECTIFIER,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanRectifier,
 		trace.WithAttributes(
 			attribute.String("tcp.stream_id", packet.StreamID()),
 			recordPacketType(packet),
@@ -198,8 +198,8 @@ func startRectifierSpan(ctx context.Context, packet TCPPacket, c2s bool) (contex
 
 // startSideSpan 在单端 addPacket 中创建 span。
 func startSideSpan(ctx context.Context, packet TCPPacket, c2s bool) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_SIDE,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanSide,
 		trace.WithAttributes(
 			recordPacketType(packet),
 			attribute.Int64("tcp.seq", int64(packet.SeqNum())),
@@ -213,8 +213,8 @@ func startSideSpan(ctx context.Context, packet TCPPacket, c2s bool) (context.Con
 
 // startDetectSpan 在协议检测阶段创建 span。
 func startDetectSpan(ctx context.Context, protocol detectors.AppProtocol) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_DETECT,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanDetect,
 		trace.WithAttributes(
 			attribute.String("tcp.app.protocol", string(protocol)),
 		),
@@ -224,8 +224,8 @@ func startDetectSpan(ctx context.Context, protocol detectors.AppProtocol) (conte
 
 // startExtractSpan 在协议提取阶段创建 span。
 func startExtractSpan(ctx context.Context, protocol detectors.AppProtocol) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_EXTRACT,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanExtract,
 		trace.WithAttributes(
 			attribute.String("tcp.app.protocol", string(protocol)),
 		),
@@ -235,8 +235,8 @@ func startExtractSpan(ctx context.Context, protocol detectors.AppProtocol) (cont
 
 // startBuildSpan 在应用层构建阶段创建 span。
 func startBuildSpan(ctx context.Context, protocol detectors.AppProtocol) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_BUILD,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanBuild,
 		trace.WithAttributes(
 			attribute.String("tcp.app.protocol", string(protocol)),
 		),
@@ -246,14 +246,14 @@ func startBuildSpan(ctx context.Context, protocol detectors.AppProtocol) (contex
 
 // startParseSpan 在解析循环中创建 span。
 func startParseSpan(ctx context.Context) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	return tracer.Start(ctx, SPAN_PARSE)
+	tracer := otel.Tracer(ScopeName)
+	return tracer.Start(ctx, SpanParse)
 }
 
 // startCleanupSpan 在清理阶段创建 span。
 func startCleanupSpan(ctx context.Context, force bool) (context.Context, trace.Span) {
-	tracer := otel.Tracer(SCOPE_NAME)
-	ctx, span := tracer.Start(ctx, SPAN_CLEANUP,
+	tracer := otel.Tracer(ScopeName)
+	ctx, span := tracer.Start(ctx, SpanCleanup,
 		trace.WithAttributes(
 			attribute.Bool("tcp.cleanup.force", force),
 		),

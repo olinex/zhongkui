@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	REPORTER_ETCD_PREFIX = etcd.WithPrefix("reporter/")
+	ReporterEtcdPrefix = etcd.WithPrefix("reporter/")
 )
 
 // ReporterConfigKey 生成 reporter 配置在 etcd 中的存储键
@@ -24,7 +24,7 @@ var (
 // 返回:
 //   - 配置键字符串
 func ReporterConfigKey(r *reporter_v1.Resource) string {
-	return fmt.Sprintf(`%s%s/%s/%s/cfg`, REPORTER_ETCD_PREFIX, r.Namespace, r.Name, r.Version)
+	return fmt.Sprintf(`%s%s/%s/%s/cfg`, ReporterEtcdPrefix, r.Namespace, r.Name, r.Version)
 }
 
 // ReporterStatusListKey 生成 reporter 状态列表在 etcd 中的存储键
@@ -35,7 +35,7 @@ func ReporterConfigKey(r *reporter_v1.Resource) string {
 // 返回:
 //   - 状态列表键字符串
 func ReporterStatusListKey(r *reporter_v1.Resource) string {
-	return fmt.Sprintf(`%s%s/%s/%s/sts`, REPORTER_ETCD_PREFIX, r.Namespace, r.Name, r.Version)
+	return fmt.Sprintf(`%s%s/%s/%s/sts`, ReporterEtcdPrefix, r.Namespace, r.Name, r.Version)
 }
 
 // ReporterStatusDetailKey 生成 reporter 具体状态在 etcd 中的存储键

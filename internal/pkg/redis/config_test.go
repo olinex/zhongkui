@@ -13,15 +13,15 @@ import (
 func TestConfigConstants(t *testing.T) {
 	Convey("测试配置常量", t, func() {
 		Convey("PREFIX应该是'redis'", func() {
-			So(PREFIX, ShouldEqual, "redis")
+			So(Prefix, ShouldEqual, "redis")
 		})
 
 		Convey("NORMAL_TYPE应该是'normal'", func() {
-			So(NORMAL_TYPE, ShouldEqual, "normal")
+			So(NormalType, ShouldEqual, "normal")
 		})
 
 		Convey("SENTINEL_TYPE应该是'sentinel'", func() {
-			So(SENTINEL_TYPE, ShouldEqual, "sentinel")
+			So(SentinelType, ShouldEqual, "sentinel")
 		})
 	})
 }
@@ -73,7 +73,7 @@ func TestToOptionsNormalConfig(t *testing.T) {
 		err := defaults.Set(cfg)
 		So(err, ShouldBeNil)
 
-		cfg.Type = NORMAL_TYPE
+		cfg.Type = NormalType
 		cfg.Network = "tcp"
 		cfg.Addr = "127.0.0.1:6380"
 		cfg.Username = "testuser"
@@ -124,7 +124,7 @@ func TestToSentinelOptionsSentinelConfig(t *testing.T) {
 		err := defaults.Set(cfg)
 		So(err, ShouldBeNil)
 
-		cfg.Type = SENTINEL_TYPE
+		cfg.Type = SentinelType
 		cfg.MasterName = "mymaster"
 		cfg.SentinelAddrs = []string{"sentinel1:26379", "sentinel2:26379"}
 		cfg.SentinelUsername = "sentineluser"

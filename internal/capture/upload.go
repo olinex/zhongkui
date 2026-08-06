@@ -45,7 +45,7 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string, n 
 		objectKey,
 		filePath,
 		minio.PutObjectOptions{
-			ContentType:    combine.COMPRESS_CONTENT_TYPE,
+			ContentType:    combine.CompressContentType,
 			SendContentMd5: true,
 			Expires:        time.Now().Add(c.uploadCfg.ExpireAge),
 		},

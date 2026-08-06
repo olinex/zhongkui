@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	// DEFAULT_VNODES 每个成员对应的虚拟节点数。
+	// DefaultVnodes 每个成员对应的虚拟节点数。
 	// 128 个虚拟节点在负载均衡和迁移成本之间取得平衡。
-	DEFAULT_VNODES = 128
+	DefaultVnodes = 128
 )
 
 // ConsistentHash 基于虚拟节点的一致性哈希环。
@@ -33,7 +33,7 @@ func NewConsistentHash(vnodes int) *ConsistentHash {
 }
 
 func NewConsistentHashWithDefaultVnodes() *ConsistentHash {
-	return NewConsistentHash(DEFAULT_VNODES)
+	return NewConsistentHash(DefaultVnodes)
 }
 
 // Update 用新的成员列表重建哈希环。

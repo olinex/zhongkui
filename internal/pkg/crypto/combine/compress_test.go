@@ -15,7 +15,7 @@ func TestZstdCompressor(t *testing.T) {
 		Convey("Should create compressor with default level", func() {
 			c, err := NewZstdCompressor()
 			So(err, ShouldBeNil)
-			So(c.ModeID(), ShouldEqual, MODE_COMPRESSION_ZSTD)
+			So(c.ModeID(), ShouldEqual, ModeCompressionZstd)
 		})
 
 		Convey("Should compress and decompress data correctly", func() {
@@ -117,7 +117,7 @@ func TestGzipCompressor(t *testing.T) {
 		Convey("Should create compressor with default level", func() {
 			c := NewGzipCompressor()
 			So(c, ShouldNotBeNil)
-			So(c.ModeID(), ShouldEqual, MODE_COMPRESSION_GZIP)
+			So(c.ModeID(), ShouldEqual, ModeCompressionGzip)
 		})
 
 		Convey("Should compress and decompress data correctly", func() {

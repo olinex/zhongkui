@@ -312,7 +312,7 @@ func TestZkcn_Store_ContentTypeValidation(t *testing.T) {
 			// StatObject 检查 ContentType
 			info, err := client.StatObject(context.Background(), objectKey, minio.StatObjectOptions{})
 			convey.So(err, convey.ShouldBeNil)
-			convey.So(info.ContentType, convey.ShouldEqual, combine.COMPRESS_CONTENT_TYPE)
+			convey.So(info.ContentType, convey.ShouldEqual, combine.CompressContentType)
 		})
 	})
 }
