@@ -118,7 +118,7 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 			group.addOOP(streamID, packet)
 			return nil
 		}
-		node, err = newReassemblerNode(ctx, logger, streamID, packet, r.maxOutOrderPacketSize, dstChan)
+		node, err = newReassemblerNode(ctx, logger, streamID, packet, r.maxOutOrderPacketSize, r.noticeTimeout, dstChan)
 		if err != nil {
 			return errors.WithStack(err)
 		}
@@ -129,11 +129,20 @@ func (r *Router[P]) addPacket(ctx context.Context, logger *logging.Logger, packe
 			},
 		)
 		if err := group.flushOOP(node); err != nil {
-			return errors.WithStack(err)
+			// OOP 数据包注入失败（如 RingBuffer 超时），仅丢弃该流，避免拖垮整个 Router
+			logger.Ctx(ctx).Warnf("flow %s flush out-of-order packets failed, dropping flow: %v", streamID, err)
+			node.stop(true)
+			delete(group.oop, streamID)
+			return nil
 		}
 		group.pushFront(node)
 	} else if err := node.addPacket(packet); err != nil {
-		return errors.WithStack(err)
+		// 单条 TCP 流写入失败（如 RingBuffer 超时、乱序溢出），仅丢弃该流并继续路由，
+		// 避免一条僵死流导致整个 Router（乃至 worker）退出。
+		logger.Ctx(ctx).Warnf("flow %s addPacket failed, dropping flow: %v", streamID, err)
+		node.stop(true)
+		group.remove(node, true)
+		return nil
 	} else {
 		group.moveToFront(node)
 	}
@@ -204,8 +213,8 @@ func (r *Router[P]) cleanup(ctx context.Context, force bool) (removedCount, evic
 //
 // 错误处理策略:
 //  1. 源通道提前关闭：返回错误，通知调用者
-//  2. 数据包处理错误：立即返回错误，终止路由器
-//  3. 重组器goroutine错误：等待所有goroutine完成后返回错误
+//  2. 单条 TCP 流处理错误（RingBuffer 超时、乱序溢出等）：丢弃该流并继续路由，不终止路由器
+//  3. 重组器节点创建失败：立即返回错误，终止路由器
 //  4. 上下文取消：正常退出，返回nil
 //
 // 资源清理:

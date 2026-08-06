@@ -17,12 +17,13 @@ import (
 // findIndex 单元测试
 // ---------------------------------------------------------------
 
-// TestSideFindIndex 测试 Side.findIndex 的区间查找语义
-// findIndex 是一个 lower-bound 二分查找，用于在 PayloadOffsets 中定位 offset 所属的区间左边界索引。
-// 区间定义为 [PayloadOffsets[i-1], PayloadOffsets[i])，第 0 个区间的左边界为 0。
-// 当 offset 超出最右侧区间时，返回 -1 表示未找到。
+// TestSideFindIndex 测试 Side.findIndex 的数据包归属语义
+// findIndex 返回包含字节 offset 的数据包索引，即第一个右边界严格大于 offset 的包。
+// 包 i 的载荷区间为 [PayloadOffsets[i-1], PayloadOffsets[i])，第 0 个包的左边界为 0；
+// 空载荷包（重复边界值）对应空区间，不包含任何字节。
+// 当 offset 超出流尾（最后一个边界值）时，返回 -1 表示未找到。
 func TestSideFindIndex(t *testing.T) {
-	Convey("Test findIndex interval semantics", t, func() {
+	Convey("Test findIndex packet-ownership semantics", t, func() {
 		Convey("With offsets [3, 5, 7, 9]", func() {
 			side := &Side[*mockTCPPacket]{
 				PayloadOffsets: []uint64{3, 5, 7, 9},
@@ -36,27 +37,27 @@ func TestSideFindIndex(t *testing.T) {
 				So(side.findIndex(2), ShouldEqual, 0)
 			})
 
-			Convey("offset=3 should fall at right edge of [0, 3), return 0", func() {
-				So(side.findIndex(3), ShouldEqual, 0)
+			Convey("offset=3 is the first byte of [3, 5), return 1", func() {
+				So(side.findIndex(3), ShouldEqual, 1)
 			})
 
 			Convey("offset=4 should fall in [3, 5), return 1", func() {
 				So(side.findIndex(4), ShouldEqual, 1)
 			})
 
-			Convey("offset=5 should fall at right edge of [3, 5], return 1", func() {
-				So(side.findIndex(5), ShouldEqual, 1)
+			Convey("offset=5 is the first byte of [5, 7), return 2", func() {
+				So(side.findIndex(5), ShouldEqual, 2)
 			})
 
-			Convey("offset=7 should fall at right edge, return 2", func() {
-				So(side.findIndex(7), ShouldEqual, 2)
+			Convey("offset=7 is the first byte of [7, 9), return 3", func() {
+				So(side.findIndex(7), ShouldEqual, 3)
 			})
 
 			Convey("offset=8 should fall in [7, 9), return 3", func() {
 				So(side.findIndex(8), ShouldEqual, 3)
 			})
 
-			Convey("offset=9 should fall at right edge, return 3", func() {
+			Convey("offset=9 at stream tail should return the last packet 3", func() {
 				So(side.findIndex(9), ShouldEqual, 3)
 			})
 
@@ -109,8 +110,8 @@ func TestSideFindIndex(t *testing.T) {
 				So(side.findIndex(15), ShouldEqual, 1)
 			})
 
-			Convey("offset=30 returns 2", func() {
-				So(side.findIndex(30), ShouldEqual, 2)
+			Convey("offset=30 is the first byte of [30, 40), return 3", func() {
+				So(side.findIndex(30), ShouldEqual, 3)
 			})
 
 			Convey("offset=40 returns 3", func() {
@@ -135,12 +136,56 @@ func TestSideFindIndex(t *testing.T) {
 				So(side.findIndex(50), ShouldEqual, 0)
 			})
 
-			Convey("offset=50000 should return 499", func() {
-				So(side.findIndex(50000), ShouldEqual, 499)
+			Convey("offset=50000 should be the first byte of the packet ending at 50100, return 500", func() {
+				So(side.findIndex(50000), ShouldEqual, 500)
 			})
 
 			Convey("offset=100001 should be beyond, return -1", func() {
 				So(side.findIndex(100001), ShouldEqual, -1)
+			})
+		})
+
+		Convey("With duplicate offsets (handshake empty packets) [0, 0, 5, 11, 13]", func() {
+			side := &Side[*mockTCPPacket]{
+				PayloadOffsets: []uint64{0, 0, 5, 11, 13},
+			}
+
+			Convey("offset=0 is the first byte of the first data packet [0, 5), return 2", func() {
+				So(side.findIndex(0), ShouldEqual, 2)
+			})
+
+			Convey("offset=3 should fall in [0, 5), return 2", func() {
+				So(side.findIndex(3), ShouldEqual, 2)
+			})
+
+			Convey("offset=5 is the first byte of [5, 11), return 3", func() {
+				So(side.findIndex(5), ShouldEqual, 3)
+			})
+
+			Convey("offset=8 should fall in [5, 11), return 3", func() {
+				So(side.findIndex(8), ShouldEqual, 3)
+			})
+
+			Convey("offset=13 at stream tail should return the last packet 4", func() {
+				So(side.findIndex(13), ShouldEqual, 4)
+			})
+
+			Convey("offset=14 should be beyond, return -1", func() {
+				So(side.findIndex(14), ShouldEqual, -1)
+			})
+		})
+
+		Convey("With mid-stream empty payload packet [0, 0, 5, 5, 11]", func() {
+			side := &Side[*mockTCPPacket]{
+				PayloadOffsets: []uint64{0, 0, 5, 5, 11},
+			}
+
+			Convey("offset=4 should fall in [0, 5), return 2", func() {
+				So(side.findIndex(4), ShouldEqual, 2)
+			})
+
+			Convey("offset=5 should skip the empty packet and fall in [5, 11), return 4", func() {
+				So(side.findIndex(5), ShouldEqual, 4)
 			})
 		})
 	})
@@ -246,10 +291,11 @@ func TestSideUpdateComsumed(t *testing.T) {
 
 			consumed, startOff, endOff, startTs, endTs := client.UpdateComsumed()
 			So(consumed, ShouldEqual, uint64(5))
-			// startOff = 0（区间左边界），endOff 指向"hello world"所在区间
+			// 段边界即实际字节偏移：段为 [0, 5)
 			So(startOff, ShouldEqual, uint64(0))
-			So(endOff, ShouldBeGreaterThan, uint64(0))
-			So(startTs.Before(endTs), ShouldBeTrue)
+			So(endOff, ShouldEqual, uint64(5))
+			// 段完全落在单个数据包内，起止时间戳取自同一包，二者相等
+			So(startTs.Equal(endTs), ShouldBeTrue)
 		})
 
 		Convey("All data consumed, consumed equals total written", func() {
@@ -301,9 +347,10 @@ func TestSideUpdateComsumed(t *testing.T) {
 
 			consumed, startOff, endOff, startTs, endTs := client.UpdateComsumed()
 			So(consumed, ShouldEqual, uint64(8))
+			// 段边界即实际字节偏移，与包边界无关：段为 [0, 8)
 			So(startOff, ShouldEqual, uint64(0))
-			// 跨了两个包，endOff 应为第二个包右边界 = 11
-			So(endOff, ShouldEqual, uint64(11))
+			So(endOff, ShouldEqual, uint64(8))
+			// 段跨越两个数据包，起止时间戳取自首尾字节各自所在的包
 			So(startTs.Before(endTs), ShouldBeTrue)
 
 			// 再读剩余 5 字节
@@ -311,11 +358,11 @@ func TestSideUpdateComsumed(t *testing.T) {
 
 			consumed2, startOff2, endOff2, _, _ := client.UpdateComsumed()
 			So(consumed2, ShouldEqual, uint64(5))
-			So(startOff2, ShouldEqual, uint64(11))
+			So(startOff2, ShouldEqual, uint64(8))
 			So(endOff2, ShouldEqual, uint64(totalWritten))
 		})
 
-		Convey("Start offset equals an existing payload offset boundary", func() {
+		Convey("Segment ends exactly at a packet boundary", func() {
 			client, _, cancel, _ := makeSideWithPayload(0x36,
 				[]byte("aaaaa"), // 5 bytes
 				[]byte("bbbbb"), // 5 bytes
@@ -323,12 +370,11 @@ func TestSideUpdateComsumed(t *testing.T) {
 			defer cancel()
 
 			// PayloadOffsets: [0, 0, 5, 10]
-			// 读 5 字节，Readed 正好落在 PayloadOffsets[2]=5 的右边界
+			// 读 5 字节，段 [0, 5) 恰好消费完第一个数据包，结束偏移等于包边界 5
 			drainReader(client.brw.Reader, 5)
 
 			consumed, startOff, endOff, _, _ := client.UpdateComsumed()
 			So(consumed, ShouldEqual, uint64(5))
-			// startOff 应该指向第一个 payload 区间的右边界 = 5
 			So(startOff, ShouldEqual, uint64(0))
 			So(endOff, ShouldEqual, uint64(5))
 		})
@@ -346,21 +392,42 @@ func TestSideUpdateComsumed(t *testing.T) {
 			So(endOff, ShouldEqual, uint64(totalWritten))
 		})
 
-		Convey("Timestamp progression: end timestamp after start timestamp", func() {
+		Convey("Timestamp progression: spanning packets takes boundary packet timestamps", func() {
 			client, _, cancel, _ := makeSideWithPayload(0x38,
-				[]byte("first"),
-				[]byte("second"),
+				[]byte("first"),  // 5 bytes → [0, 5)
+				[]byte("second"), // 6 bytes → [5, 11)
 			)
 			defer cancel()
 
-			drainReader(client.brw.Reader, 5) // 读"first"
+			// 读 6 字节，段 [0, 6) 跨越两个包：首字节在"first"，末字节在"second"
+			drainReader(client.brw.Reader, 6)
 			_, _, _, startTs, endTs := client.UpdateComsumed()
 			So(startTs.Before(endTs), ShouldBeTrue)
 
-			// 读剩余数据
-			drainReader(client.brw.Reader, 10)
+			// 读剩余 5 字节，段 [6, 11) 完全落在"second"内，起止时间戳相等
+			drainReader(client.brw.Reader, 5)
 			_, _, _, startTs2, endTs2 := client.UpdateComsumed()
-			So(startTs2.Before(endTs2), ShouldBeTrue)
+			So(startTs2.Equal(endTs2), ShouldBeTrue)
+		})
+
+		Convey("Timestamp at packet boundary: boundary offset belongs to the next packet", func() {
+			client, _, cancel, _ := makeSideWithPayload(0x3B,
+				[]byte("aaaaa"), // 5 bytes → [0, 5)
+				[]byte("bbbbb"), // 5 bytes → [5, 10)
+			)
+			defer cancel()
+
+			// 段 [0, 5)：起止均落在"aaaaa"包内
+			drainReader(client.brw.Reader, 5)
+			_, _, _, startTs1, endTs1 := client.UpdateComsumed()
+			So(startTs1.Equal(endTs1), ShouldBeTrue)
+
+			// 段 [5, 10)：起始偏移 5 恰为包边界，应归属"bbbbb"包（到达时间晚于"aaaaa"），
+			// 而非向上取整到前一个包"aaaaa"。
+			drainReader(client.brw.Reader, 5)
+			_, _, _, startTs2, endTs2 := client.UpdateComsumed()
+			So(startTs2.Equal(endTs2), ShouldBeTrue)
+			So(endTs1.Before(startTs2), ShouldBeTrue)
 		})
 
 	})

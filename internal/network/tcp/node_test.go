@@ -34,7 +34,7 @@ func newTestReassemblerNode(ctx context.Context, t *testing.T, streamID string) 
 	}
 	syn.streamID = streamID
 
-	node, err := newReassemblerNode(ctx, testLogger(), streamID, syn, 10, make(chan any, 16))
+	node, err := newReassemblerNode(ctx, testLogger(), streamID, syn, 10, time.Second*5, make(chan any, 16))
 	So(err, ShouldBeNil)
 	return node
 }

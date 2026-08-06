@@ -4,17 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
 	n "zhongkui.com/zhongkui/internal/models/network"
-	huginn "zhongkui.com/zhongkui/internal/network/huginn"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/huginn"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -197,28 +196,68 @@ func (s *HttpDetector) Extract(
 	var req *http.Request
 	var rsp *http.Response
 
-	// 通过记录型读取器捕获原始请求/响应头字节，供 Build 阶段的 Http 指纹识别使用
-	clientRec := newRecordingReader(clientReader)
-	serverRec := newRecordingReader(serverReader)
+	// 捕获当前缓冲中的原始请求/响应头字节，供 Build 阶段的 Http 指纹识别使用。
+	// 使用 Peek（不消费）捕获而非 recordingReader + bufio.NewReader 二次包裹：
+	// 二次包裹会在解析时从共享 bufio 超读最多 4096 字节并滞留于临时 buffer，
+	// 这些字节从此从共享流中消失，导致 keep-alive 流中紧随其后的请求/响应
+	// 永久丢失、请求-响应配对错位，进而引发等待永不到达数据的 5s 阻塞读
+	// （ringbuffer 被永久置为 DeadlineExceeded，最终拖垮整个 router）。
+	// 捕获结果截断至首个空行（头部结束），只传递纯头部字节给指纹识别，
+	// 避免连带 body 前段或后续请求字节。不能用 req.Header.Write() 重新序列化：
+	// http.Header 是 map，Write 按 key 字典序输出，会破坏 p0f 指纹依赖的
+	// 原始头顺序（horder 维度），导致指纹失真。
+	rawRequest := captureBuffered(clientReader)
+	rawResponse := captureBuffered(serverReader)
 
 	// 先读取请求，再读取响应。将请求对象传给 http.ReadResponse，
 	// 当请求方法为 HEAD 时，Go 标准库会跳过响应体的读取，
 	// 避免因 Content-Length 不匹配（HEAD 响应不应有 body）而错误消费后续流量。
-	if req, err = http.ReadRequest(bufio.NewReader(clientRec)); err != nil {
+	// 注意：ReadRequest/ReadResponse 接收 *bufio.Reader 时不二次包装，
+	// 超读字节仍留在共享 reader 中，供下一轮 Detect/Extract 继续消费。
+	if req, err = http.ReadRequest(clientReader); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
-	if rsp, err = http.ReadResponse(bufio.NewReader(serverRec), req); err != nil {
+	if rsp, err = http.ReadResponse(serverReader, req); err != nil {
 		return nil, nil, errors.WithStack(err)
 	}
 	// 将捕获的原始头字节挂载到请求上下文，供 Build 阶段指纹识别读取；
 	// WithContext 返回的新请求与原请求共享 Body，不影响后续正文读取。
-	if clientRec.Len() > 0 || serverRec.Len() > 0 {
+	if len(rawRequest) > 0 || len(rawResponse) > 0 {
 		req = req.WithContext(context.WithValue(req.Context(), rawHTTPKey{}, &rawHTTP{
-			request:  clientRec.Bytes(),
-			response: serverRec.Bytes(),
+			request:  rawRequest,
+			response: rawResponse,
 		}))
 	}
 	return req, rsp, nil
+}
+
+// captureBuffered 返回 bufio.Reader 当前缓冲中、截至头部结束（首个 \r\n\r\n）的原始字节副本，
+// 不消费任何字节。通过 Peek 实现，不移动读位置，不会破坏后续 http.ReadRequest/ReadResponse
+// 对共享 reader 的连续读取语义；缓冲为空或头部未完整到达缓冲时返回当前全部缓冲字节（尽力而为）。
+func captureBuffered(br *bufio.Reader) []byte {
+	n := br.Buffered()
+	if n == 0 {
+		// bufio.Reader 惰性填充：Peek(1) 触发一次填充，从底层拉取可用数据。
+		// 真实流水线中 Extract 前已由 Detect(peekAll) 填充缓冲，此分支仅在
+		// 直接调用（如单元测试）或极端时序下生效，行为与 ReadRequest 一致。
+		if _, err := br.Peek(1); err != nil {
+			return nil
+		}
+		n = br.Buffered()
+	}
+	if n <= 0 {
+		return nil
+	}
+	peeked, err := br.Peek(n)
+	if err != nil {
+		return nil
+	}
+	// 截断至头部边界（\r\n\r\n），确保只把纯头部字节交给指纹识别，
+	// 避免 body 前段或 keep-alive 流中紧随的后续请求/响应字节混入。
+	if i := bytes.Index(peeked, []byte("\r\n\r\n")); i >= 0 {
+		return append([]byte(nil), peeked[:i+4]...)
+	}
+	return append([]byte(nil), peeked...)
 }
 
 // rawHTTPKey 携带原始 Http 头字节（用于指纹识别）的 context 键类型
@@ -228,36 +267,6 @@ type rawHTTPKey struct{}
 type rawHTTP struct {
 	request  []byte
 	response []byte
-}
-
-// recordingReader 记录从底层读取器读出的全部字节，用于捕获原始 Http 头字节。
-// Http 指纹依赖头部字段的原始顺序与写法，无法从解析后的 map 还原，故需在解析时旁路记录。
-type recordingReader struct {
-	r   io.Reader
-	buf bytes.Buffer
-}
-
-func newRecordingReader(r io.Reader) *recordingReader {
-	return &recordingReader{r: r}
-}
-
-// Read 实现 io.Reader，同步记录读出的字节
-func (r *recordingReader) Read(p []byte) (int, error) {
-	n, err := r.r.Read(p)
-	if n > 0 {
-		r.buf.Write(p[:n])
-	}
-	return n, err
-}
-
-// Len 返回已记录的字节数
-func (r *recordingReader) Len() int {
-	return r.buf.Len()
-}
-
-// Bytes 返回已记录字节的副本
-func (r *recordingReader) Bytes() []byte {
-	return append([]byte(nil), r.buf.Bytes()...)
 }
 
 func (s *HttpDetector) Build(
@@ -287,6 +296,55 @@ func (s *HttpDetector) Build(
 		s.kd,
 		tailer,
 	)
+}
+
+// buildTcpFingerprint 汇总流两侧的被动 TCP 指纹（p0f 风格），供 HttpTransport.TcpFingerprint 使用。
+// 客户端指纹来自组包器透传的首个 SYN 包识别结果，服务端指纹来自 SYN-ACK 包识别结果；
+// MTU 优先取客户端，客户端缺失时回退服务端；两侧均无指纹时返回零值结构。
+func buildTcpFingerprint(streamMeta *StreamMeta) n.TcpFingerprint {
+	tcpFP := n.TcpFingerprint{}
+	if fp := streamMeta.ClientFingerprint; fp != nil {
+		tcpFP.ClientOS = fp.OS
+		tcpFP.ClientOSQuality = fp.OSQuality
+		tcpFP.ClientSig = fp.Sig
+		tcpFP.MTU = fp.MTU
+	}
+	if fp := streamMeta.ServerFingerprint; fp != nil {
+		tcpFP.ServerOS = fp.OS
+		tcpFP.ServerOSQuality = fp.OSQuality
+		tcpFP.ServerSig = fp.Sig
+		if tcpFP.MTU == 0 {
+			tcpFP.MTU = fp.MTU
+		}
+	}
+	return tcpFP
+}
+
+// buildHttpFingerprint 分析 Extract 阶段捕获的原始 Http 头字节并推导设备类别猜测。
+// 请求头识别浏览器与语言偏好（huginn.AnalyzeHTTPRequest），响应头识别服务端软件
+// （huginn.AnalyzeHTTPResponse），最终经 guessDevice 生成设备类别；
+// 请求未携带原始头字节（rawHTTPKey 缺失）或 FFI 不可用时对应字段保持零值。
+func buildHttpFingerprint(streamMeta *StreamMeta, request *http.Request) n.HttpFingerprint {
+	httpFP := n.HttpFingerprint{}
+	raw, ok := request.Context().Value(rawHTTPKey{}).(*rawHTTP)
+	if !ok {
+		return httpFP
+	}
+	if len(raw.request) > 0 {
+		if fp, ferr := huginn.AnalyzeHTTPRequest(raw.request); ferr == nil && fp != nil {
+			httpFP.Browser = fp.Browser
+			httpFP.BrowserQuality = fp.Quality
+			httpFP.Language = fp.Language
+		}
+	}
+	if len(raw.response) > 0 {
+		if fp, ferr := huginn.AnalyzeHTTPResponse(raw.response); ferr == nil && fp != nil {
+			httpFP.Server = fp.Server
+			httpFP.ServerQuality = fp.Quality
+		}
+	}
+	httpFP.DeviceGuess = guessDevice(streamMeta, httpFP)
+	return httpFP
 }
 
 // guessDevice 基于 TCP/Http 指纹与流元数据推导设备类别猜测（启发式）。
@@ -445,39 +503,9 @@ func NewHttpTransport(
 		return nil, errors.WithStack(err)
 	}
 	// TCP 指纹透传：客户端来自 SYN 包，服务端来自 SYN-ACK 包
-	tcpFP := n.TcpFingerprint{}
-	if fp := streamMeta.ClientFingerprint; fp != nil {
-		tcpFP.ClientOS = fp.OS
-		tcpFP.ClientOSQuality = fp.OSQuality
-		tcpFP.ClientSig = fp.Sig
-		tcpFP.MTU = fp.MTU
-	}
-	if fp := streamMeta.ServerFingerprint; fp != nil {
-		tcpFP.ServerOS = fp.OS
-		tcpFP.ServerOSQuality = fp.OSQuality
-		tcpFP.ServerSig = fp.Sig
-		if tcpFP.MTU == 0 {
-			tcpFP.MTU = fp.MTU
-		}
-	}
+	tcpFP := buildTcpFingerprint(streamMeta)
 	// Http 指纹分析：使用 Extract 阶段捕获的原始头字节
-	httpFP := n.HttpFingerprint{}
-	if raw, ok := request.Context().Value(rawHTTPKey{}).(*rawHTTP); ok {
-		if len(raw.request) > 0 {
-			if fp, ferr := huginn.AnalyzeHTTPRequest(raw.request); ferr == nil && fp != nil {
-				httpFP.Browser = fp.Browser
-				httpFP.BrowserQuality = fp.Quality
-				httpFP.Language = fp.Language
-			}
-		}
-		if len(raw.response) > 0 {
-			if fp, ferr := huginn.AnalyzeHTTPResponse(raw.response); ferr == nil && fp != nil {
-				httpFP.Server = fp.Server
-				httpFP.ServerQuality = fp.Quality
-			}
-		}
-		httpFP.DeviceGuess = guessDevice(streamMeta, httpFP)
-	}
+	httpFP := buildHttpFingerprint(streamMeta, request)
 	transport = &n.HttpTransport{
 		BaseMeta: *meta,
 		TimestampMeta: n.TimestampMeta{

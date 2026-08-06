@@ -1,6 +1,11 @@
 package detectors
 
 import (
+	"bufio"
+	"bytes"
+	"context"
+	"io"
+	"net/http"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -190,4 +195,106 @@ func TestHttpDetectorDetect(t *testing.T) {
 			So(ok, ShouldBeFalse)
 		})
 	})
+}
+
+// TestHttpDetectorExtractKeepAliveSequential 验证 Extract 在 keep-alive 长连接上的顺序消费语义：
+// 共享 bufio 中连续排布的多个请求/响应，每次 Extract 恰好消费一对，后续数据不丢失。
+// 回归：huginn 指纹接入曾用 bufio.NewReader(recordingReader) 二次包裹共享 reader，
+// 内层 bufio 会把随后的请求/响应字节超读并滞留于临时 buffer，导致下一次 Extract 读到 EOF、
+// 请求-响应配对错位，最终触发 ringbuffer 5s 读超时（context deadline exceeded）。
+func TestHttpDetectorExtractKeepAliveSequential(t *testing.T) {
+	Convey("Test Extract on keep-alive stream with sequential messages", t, func() {
+		detector := &HttpDetector{}
+
+		Convey("Should consume exactly one request/response pair per Extract call", func() {
+			req1 := "GET /a HTTP/1.1\r\nHost: x\r\n\r\n"
+			req2 := "GET /b HTTP/1.1\r\nHost: x\r\n\r\n"
+			rsp1 := "HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"
+			rsp2 := "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n"
+
+			clientReader := bufio.NewReader(bytes.NewBufferString(req1 + req2))
+			serverReader := bufio.NewReader(bytes.NewBufferString(rsp1 + rsp2))
+
+			// 第一次 Extract：消费 req1 + rsp1
+			clientPayload1, serverPayload1, err := detector.Extract(context.Background(), clientReader, serverReader)
+			So(err, ShouldBeNil)
+			req, ok := clientPayload1.(*http.Request)
+			So(ok, ShouldBeTrue)
+			So(req.URL.Path, ShouldEqual, "/a")
+			rsp, ok := serverPayload1.(*http.Response)
+			So(ok, ShouldBeTrue)
+			So(rsp.StatusCode, ShouldEqual, 200)
+			// 原始头字节捕获供指纹识别使用
+			raw, ok := req.Context().Value(rawHTTPKey{}).(*rawHTTP)
+			So(ok, ShouldBeTrue)
+			So(string(raw.request), ShouldContainSubstring, "GET /a")
+			So(string(raw.response), ShouldContainSubstring, "200 OK")
+			// 只捕获头部字节，不得混入紧随其后的第二个请求
+			So(string(raw.request), ShouldNotContainSubstring, "GET /b")
+			So(string(raw.response), ShouldNotContainSubstring, "404")
+
+			// 第二次 Extract：req2/rsp2 未被上一轮超读丢失，仍可完整解析
+			clientPayload2, serverPayload2, err := detector.Extract(context.Background(), clientReader, serverReader)
+			So(err, ShouldBeNil)
+			req2p, ok := clientPayload2.(*http.Request)
+			So(ok, ShouldBeTrue)
+			So(req2p.URL.Path, ShouldEqual, "/b")
+			rsp2p, ok := serverPayload2.(*http.Response)
+			So(ok, ShouldBeTrue)
+			So(rsp2p.StatusCode, ShouldEqual, 404)
+		})
+
+		Convey("Should preserve request/response pairing under over-read", func() {
+			// 单个请求 + 带头部的响应，响应体（首个分块）与头同段到达
+			req := "POST /upload HTTP/1.1\r\nHost: x\r\nContent-Length: 5\r\n\r\nhello"
+			rsp := "HTTP/1.1 200 OK\r\nContent-Length: 7\r\n\r\nwelcome"
+
+			clientReader := bufio.NewReader(bytes.NewBufferString(req))
+			serverReader := bufio.NewReader(bytes.NewBufferString(rsp))
+
+			clientPayload, serverPayload, err := detector.Extract(context.Background(), clientReader, serverReader)
+			So(err, ShouldBeNil)
+			req1, ok := clientPayload.(*http.Request)
+			So(ok, ShouldBeTrue)
+			So(req1.Method, ShouldEqual, "POST")
+			// 请求体应从共享 reader 中保留，供 Build 阶段读取
+			body, err := readAllBody(req1.Body)
+			So(err, ShouldBeNil)
+			So(string(body), ShouldEqual, "hello")
+			rsp1, ok := serverPayload.(*http.Response)
+			So(ok, ShouldBeTrue)
+			So(rsp1.StatusCode, ShouldEqual, 200)
+			body, err = readAllBody(rsp1.Body)
+			So(err, ShouldBeNil)
+			So(string(body), ShouldEqual, "welcome")
+		})
+
+		Convey("Should preserve original header order for fingerprinting", func() {
+			// p0f HTTP 指纹依赖原始头顺序（horder 维度）；
+			// http.Header 是 map，Header.Write 按 key 字典序输出会破坏顺序，
+			// 因此指纹输入必须来自原始字节流，而非重新序列化。
+			req := "GET / HTTP/1.1\r\nZ-Last: 1\r\nA-First: 2\r\nHost: x\r\n\r\n"
+			clientReader := bufio.NewReader(bytes.NewBufferString(req))
+			serverReader := bufio.NewReader(bytes.NewBufferString("HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n"))
+
+			clientPayload, _, err := detector.Extract(context.Background(), clientReader, serverReader)
+			So(err, ShouldBeNil)
+			req1, ok := clientPayload.(*http.Request)
+			So(ok, ShouldBeTrue)
+			raw, ok := req1.Context().Value(rawHTTPKey{}).(*rawHTTP)
+			So(ok, ShouldBeTrue)
+			// 原始顺序：Z-Last 必须先于 A-First 出现（与字典序相反）
+			zIdx := bytes.Index(raw.request, []byte("Z-Last"))
+			aIdx := bytes.Index(raw.request, []byte("A-First"))
+			So(zIdx >= 0, ShouldBeTrue)
+			So(aIdx >= 0, ShouldBeTrue)
+			So(zIdx < aIdx, ShouldBeTrue)
+		})
+	})
+}
+
+// readAllBody 读取并关闭响应体，测试辅助函数
+func readAllBody(r io.ReadCloser) ([]byte, error) {
+	defer r.Close()
+	return io.ReadAll(r)
 }

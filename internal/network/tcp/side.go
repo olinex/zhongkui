@@ -182,14 +182,14 @@ type Side[P TCPPacket] struct {
 // 注意:
 //   - 该函数假设传入的数据包是有效的SYN包
 //   - 客户端ISN应具有随机性，避免序列号预测攻击
-func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P, maxOutOrderPacketSize int, traceID serializer.HexUUID, dstChan chan<- any) (clientSide, serverSide *Side[P], err error) {
+func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P, maxOutOrderPacketSize int, timeout time.Duration, traceID serializer.HexUUID, dstChan chan<- any) (clientSide, serverSide *Side[P], err error) {
 	if !first.IsSyn() {
 		panic("first packet must be SYN")
 	}
 	seq := first.SeqNum()
 	buffer := ringbuffer.New(BufferSize).
 		WithCancel(ctx).
-		WithTimeout(time.Second * 5).
+		WithTimeout(timeout).
 		SetBlocking(true)
 	reader, writer := buffer.Pipe()
 	clientSide = &Side[P]{
@@ -215,7 +215,7 @@ func newSides[P TCPPacket](ctx context.Context, logger *logging.Logger, first P,
 	}
 	buffer = ringbuffer.New(BufferSize).
 		WithCancel(ctx).
-		WithTimeout(time.Second * 5).
+		WithTimeout(timeout).
 		SetBlocking(true)
 	reader, writer = buffer.Pipe()
 	serverSide = &Side[P]{
@@ -381,38 +381,53 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 	return nil
 }
 
-// findIndex 二分法查找给定偏移量对应的区间索引
-// 在有序的 PayloadOffsets 切片中定位 offset 所属的区间，返回区间左边界索引。
-// 区间定义为 [PayloadOffsets[i-1], PayloadOffsets[i])，第 0 个区间的左边界为 0。
+// findIndex 二分法查找给定字节偏移所属的数据包索引
+// 在有序（非严格递增，空载荷包会写入相同的边界值）的 PayloadOffsets 中，
+// 返回包含字节 offset 的数据包索引，即第一个右边界严格大于 offset 的包。
+// 包 i 的载荷区间为 [PayloadOffsets[i-1], PayloadOffsets[i])，第 0 个包的左边界为 0。
+// 空载荷包（如握手 SYN/SYN-ACK 包）对应空区间，不包含任何字节，会被正确跳过。
 //
-// 示例（PayloadOffsets = [3, 5, 7, 9]）:
-//   - offset=2 落在 [0, 3) 区间，返回 0
-//   - offset=5 落在 [3, 5] 的右端点，返回 1
-//   - offset=11 超出最右侧区间，返回 -1 表示未找到
+// 示例（PayloadOffsets = [0, 0, 5, 11, 13]，前两个为握手阶段空包）:
+//   - offset=0 是第一个数据包（区间 [0, 5)）的首字节，返回 2
+//   - offset=8 落在区间 [5, 11) 内，返回 3
+//   - offset=13 位于流尾（等于最后一个边界值），返回最后一个包索引 4
+//   - offset=14 超出流尾，返回 -1；PayloadOffsets 为空时也返回 -1
 func (s *Side[P]) findIndex(offset uint64) int {
-	start := 0
-	end := len(s.PayloadOffsets) - 1
+	n := len(s.PayloadOffsets)
+	if n == 0 {
+		return -1
+	}
+	if offset > s.PayloadOffsets[n-1] {
+		return -1
+	}
+	// 查找第一个 PayloadOffsets[i] > offset 的索引，该索引即包含 offset 字节的包；
+	// 空载荷包右边界等于前一个包的右边界，其索引永远不会成为答案，从而被正确跳过。
+	start, end := 0, n-1
+	ans := n
 	for start <= end {
 		mid := (start + end) / 2
-		if s.PayloadOffsets[mid] >= offset {
+		if s.PayloadOffsets[mid] > offset {
+			ans = mid
 			end = mid - 1
 		} else {
 			start = mid + 1
 		}
 	}
-	if start >= len(s.PayloadOffsets) {
-		return -1
+	if ans < n {
+		return ans
 	}
-	return start
+	// offset 等于流尾（最后一个边界值），没有任何包包含该字节，返回最后一个包以便取流尾时间戳
+	return n - 1
 }
 
 func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayloadOffset uint64, startTimestamp, endTimestamp time.Time) {
 	s.tailerMu.Lock()
 	defer s.tailerMu.Unlock()
 	startReaded := s.Readed
-	startIndex := s.findIndex(startReaded)
-	if startIndex >= 0 {
-		startPayloadOffset = s.PayloadOffsets[startIndex]
+	// 段的起止偏移即实际读取位置，可能落在某个 TCP 包载荷的中间，
+	// 不能向上取整为 PayloadOffsets 中的包边界值。
+	startPayloadOffset = startReaded
+	if startIndex := s.findIndex(startReaded); startIndex >= 0 {
 		startTimestamp = s.CaptureTimestampOffsets[startIndex]
 	}
 	remained := uint64(s.brw.Reader.Buffered() + s.rb.Length())
@@ -421,19 +436,22 @@ func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayl
 	// 此时无法可靠计算本次消费量，置 0 提前返回，避免 consumed 下溢破坏 Readed，
 	// 进而触发 findIndex 返回 -1 导致 PayloadOffsets[-1] 越界 panic。
 	if available := s.Written - s.Readed; remained > available {
-		endReaded := s.Readed
-		if endIndex := s.findIndex(endReaded); endIndex >= 0 {
-			endPayloadOffset = s.PayloadOffsets[endIndex]
-			endTimestamp = s.CaptureTimestampOffsets[endIndex]
-		}
+		endPayloadOffset = s.Readed
+		endTimestamp = startTimestamp
 		return 0, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
 	}
 	consumed = (s.Written - s.Readed) - remained
 	s.Readed += consumed
 	endReaded := s.Readed
-	if endIndex := s.findIndex(endReaded); endIndex >= 0 {
-		endPayloadOffset = s.PayloadOffsets[endIndex]
-		endTimestamp = s.CaptureTimestampOffsets[endIndex]
+	endPayloadOffset = endReaded
+	if endReaded > startReaded {
+		// 段的最后一个字节偏移为 endReaded-1，据此定位结束时间戳对应的包；
+		// 若段恰好以包边界结束，endReaded 本身已不属于本段，不能直接用于查包。
+		if endIndex := s.findIndex(endReaded - 1); endIndex >= 0 {
+			endTimestamp = s.CaptureTimestampOffsets[endIndex]
+		}
+	} else {
+		endTimestamp = startTimestamp
 	}
 	return consumed, startPayloadOffset, endPayloadOffset, startTimestamp, endTimestamp
 }

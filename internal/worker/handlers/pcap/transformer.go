@@ -6,9 +6,9 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/pterm/pterm"
-	huginn "zhongkui.com/zhongkui/internal/network/huginn"
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/huginn"
 )
 
 // TransFromPacketToModel 将数据包项转换为网络模型的数据转换函数。

@@ -1058,4 +1058,6 @@ type HttpTransport struct {
 	HttpFingerprint
 	// AppTailer 应用层尾部信息
 	AppTailer
+	// TagsMeta 风险标签元数据
+	TagsMeta
 }

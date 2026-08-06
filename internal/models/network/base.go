@@ -12,7 +12,6 @@ import (
 
 var (
 	_ driver.Valuer = (*LayerStack)(nil)
-	_ driver.Valuer = (*FrameStack)(nil)
 )
 
 const (
@@ -109,50 +108,6 @@ type FrameInfo struct {
 	LayerStack LayerStack `json:"layer_stack"` // 网络层堆栈信息
 }
 
-// FrameStack 表示帧信息的堆栈结构
-// 用于存储多个时间点的帧信息，通常用于融合数据
-type FrameStack []*FrameInfo
-
-// Value 实现数据库序列化接口
-// 将FrameStack序列化为JSON字符串存储到数据库
-func (f FrameStack) Value() (driver.Value, error) {
-	if f == nil {
-		return "[]", nil
-	}
-	if bytes, err := json.Marshal(f); err != nil {
-		return nil, err
-	} else {
-		return string(bytes), nil
-	}
-}
-
-// Scan 实现数据库反序列化接口
-// 从数据库读取JSON字符串并反序列化为FrameStack
-func (f *FrameStack) Scan(value any) error {
-	if value == nil {
-		*f = nil
-		return nil
-	}
-	var bytes []byte
-	switch raw := value.(type) {
-	case []byte:
-		if len(raw) == 0 {
-			*f = nil
-			return nil
-		}
-		bytes = raw
-	case string:
-		if raw == "" {
-			*f = nil
-			return nil
-		}
-		bytes = []byte(raw)
-	default:
-		return errors.Newf("Frame_stack scan failed, except []byte, got %T", value)
-	}
-	return json.Unmarshal(bytes, f)
-}
-
 // BaseMeta 表示基础元数据信息
 // 所有网络数据模型的基础字段，用于数据分区和查询优化
 type BaseMeta struct {
@@ -193,6 +148,12 @@ type CaptureMeta struct {
 // 包含原始数据包的网络层堆栈信息
 type PacketMeta struct {
 	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layer_stack"`
+}
+
+type TagsMeta struct {
+	// Tags 风险标签组合，存储去重排序后的标签数组
+	// ClickHouse 中使用 Array(String) 类型存储
+	Tags []string `gorm:"type:Array(String)" json:"tags"`
 }
 
 // AsPacket 表示数据包的结构

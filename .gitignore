@@ -27,6 +27,9 @@ bin-debug/
 bin-release/
 build/
 vendor/
+# 例外：huginn-net-db 的仓库内补丁副本（[patch.crates-io] 依赖，必须随工程提交）
+!third_party/huginn-net/vendor/
+!third_party/huginn-net/vendor/huginn-net-db/
 *.exe
 *.exe~
 *.dll

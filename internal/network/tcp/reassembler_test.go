@@ -123,7 +123,7 @@ func newTestReassemblerWithHandshakeWithoutBuffer(_ *testing.T, sessionID byte) 
 
 	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 	dstChan := make(chan any, 32)
-	rsm, err := newReassembler(ctx, logger, syn, 10, dstChan)
+	rsm, err := newReassembler(ctx, logger, syn, 10, time.Second*5, dstChan)
 	So(err, ShouldBeNil)
 
 	synAck := newMockTCPPacketWithOptions(
