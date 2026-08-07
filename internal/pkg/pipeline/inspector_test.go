@@ -1,5 +1,5 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能测试。
-// 此文件包含 pipeline 包中检查器创建和类型验证的单元测试。
+// Package queue 提供基于 asynq 的任务队列和调度器功能测试。
+// 此文件包含 queue 包中检查器创建和类型验证的单元测试。
 package pipeline
 
 import (

@@ -27,9 +27,20 @@ func WithContext(ctx context.Context) (*Group, context.Context) {
 	return &Group{eg: eg}, ctx
 }
 
+func (g *Group) GoPrefix(prefix string, f func() error) {
+	idx := g.nextIndex()
+	g.eg.Go(func() error {
+		if err := f(); err != nil {
+			return errors.Newf("[%s#%d]: %w", prefix, idx, err)
+		}
+		return nil
+	})
+}
+
 // Go 启动一个协程运行 f，自动分配递增的索引标识。
 // 如果 f 返回错误，错误会被包装为 "goroutine#N: <original>" 格式，
 // 使用 %w 保留原始错误链，因此 errors.Is / errors.As 仍然可用。
+// 与 GoPrefix 的差异仅在标识格式：Go 使用匿名序号，GoPrefix 使用自定义前缀。
 func (g *Group) Go(f func() error) {
 	idx := g.nextIndex()
 	g.eg.Go(func() error {

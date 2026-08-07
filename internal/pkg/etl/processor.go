@@ -1,23 +1,25 @@
-package pipeline
+package etl
 
 import (
 	"context"
 
+	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 const (
-	// 是处理器参数在上下文中的键名。
+	// ContextProcParamName 处理器参数在上下文中的键名。
 	// 编排器将处理器参数作为上下文值传递给处理器，键名为该常量。
 	ContextProcParamName = "ctx_proc_param"
 )
 
 // Processor 长生命周期后台处理器接口
-// Processor 与 Handler 的区别：
+// Processor 与队列 Handler 的区别：
 //   - Handler：处理单个任务的短期逻辑，任务执行完毕后立即返回。适用于 ETL 流水线中的 Extract/Transform/Load 阶段。
 //   - Processor：管理长期运行的后台工作协程（如定期拉取、事件监听）。调用 Start 启动后台循环，调用 Shutdown 优雅停止。
 //
 // 当业务需要持续运行而非一次性的任务处理时，应使用 Processor 而非 Handler。
+// Processor 是分布式/流式驱动的常驻处理契约，其生命周期由运行时统一编排，不隶属于任务队列。
 type Processor interface {
 	Start(ctx context.Context, name string) error
 	Shutdown()
@@ -50,45 +52,40 @@ func (p *ProcessorWrapper) Shutdown() {
 // 通过 RegisterProcessorFactory 注册，通过 ProcessorFactoryRegistry 获取带参数注入的副本。
 type ProcessorFactories = map[string]ProcessorFactory
 
-// 存储所有已注册的处理器工厂。
-var registeredProcessorFactories = make(ProcessorFactories, 0)
+// processorRegistry 全局处理器工厂注册表，通过 RegisterProcessorFactory 写入。
+var processorRegistry = newRegistry[ProcessorFactory]()
 
 // RegisterProcessorFactory 注册一个分布式处理器工厂。
 // 在 init() 中调用，将处理器名称与工厂函数关联。
 func RegisterProcessorFactory(name string, factory ProcessorFactory) {
-	registeredProcessorFactories[name] = factory
+	processorRegistry.Register(name, factory)
 }
 
 // GetProcParam 从上下文中提取指定类型的处理器配置参数
 // 泛型参数 T 为目标配置结构体的类型，函数从 ctx 中按键 ContextProcParamName 取值并反序列化。
 // 返回 (*T, error)：成功时返回配置指针，上下文无此键或类型不匹配时返回错误。
 func GetProcParam[T any](ctx context.Context) (*T, error) {
-	return getParam[T](ctx, ContextProcParamName)
+	return config.GetContextParam[T](ctx, ContextProcParamName)
 }
 
 // ProcessorFactoryRegistry 获取带参数注入的处理器工厂注册表副本
-// 遍历所有已注册的处理器工厂，如果 params 中存在同名的配置参数，则包装工厂函数：
-// 在创建 Processor 时先将配置参数注入上下文，再调用原始工厂，并将结果包装为 ProcessorWrapper。
+// 通过 Registry.Snapshot 生成副本：params 中命名的工厂被包装，
+// 在创建 Processor 时先将配置参数注入上下文（键为 ContextProcParamName），
+// 并将结果包装为 ProcessorWrapper（Start 时再次注入）。
 // 返回的是全新创建的映射副本，不会影响全局注册表。
 func ProcessorFactoryRegistry(params map[string]map[string]any) ProcessorFactories {
-	wrapped := make(ProcessorFactories, len(registeredProcessorFactories))
-	for name, factory := range registeredProcessorFactories {
-		if param, ok := params[name]; !ok {
-			wrapped[name] = factory
-		} else {
-			wrapped[name] = func(ctx context.Context) (Processor, error) {
-				// 注入参数到上下文，使工厂函数在创建阶段即可通过 GetProcParam 获取配置
-				ctx = context.WithValue(ctx, ContextProcParamName, param)
-				processor, err := factory(ctx)
-				if err != nil {
-					return nil, errors.WithStack(err)
-				}
-				return &ProcessorWrapper{
-					Processor: processor,
-					params:    param,
-				}, nil
+	return processorRegistry.Snapshot(params, func(_ string, factory ProcessorFactory, param map[string]any) ProcessorFactory {
+		return func(ctx context.Context) (Processor, error) {
+			// 注入参数到上下文，使工厂函数在创建阶段即可通过 GetProcParam 获取配置
+			ctx = withParam(ctx, ContextProcParamName, param)
+			processor, err := factory(ctx)
+			if err != nil {
+				return nil, errors.WithStack(err)
 			}
+			return &ProcessorWrapper{
+				Processor: processor,
+				params:    param,
+			}, nil
 		}
-	}
-	return wrapped
+	})
 }

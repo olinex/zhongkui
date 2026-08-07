@@ -1,6 +1,3 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能。
-// 该包包含了任务队列客户端、服务器、调度器、配置管理和中间件等功能模块，
-// 用于构建分布式任务处理系统。
 package pipeline
 
 import (
@@ -39,7 +36,7 @@ import (
 // 1. 该中间件应该在任务处理器链的最外层使用
 // 2. 始终启用，确保生产环境也能捕获错误和 panic
 // 3. panic 被捕获后，任务会正常结束，不会影响其他任务的执行
-// 4. 返回给 asynq 的错误会包含完整堆栈，可通过 ETL inspector 接口查看
+// 4. 返回给 asynq 的错误会包含完整堆栈，可通过 inspector 接口查看
 func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Handler {
 	return func(next asynq.Handler) asynq.Handler {
 		return asynq.HandlerFunc(func(ctx context.Context, task *asynq.Task) error {
@@ -74,7 +71,7 @@ func RecoverWithStack(logger *logging.Logger) func(next asynq.Handler) asynq.Han
 				)
 				// 将包含堆栈的错误返回给 asynq，
 				// asynq 会通过 err.Error() 将其存入 LastErr 字段，
-				// 从而在 ETL inspector 接口中可直接查看完整堆栈
+				// 从而在 inspector 接口中可直接查看完整堆栈
 				return fmt.Errorf("%+v", errors.WithStack(err))
 			}
 

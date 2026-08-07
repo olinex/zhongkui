@@ -153,9 +153,9 @@ func TestBoolExprParser(t *testing.T) {
 	})
 }
 
-// TestRuleCondition_TagExprValidate 测试 RuleCondition 的 TagExprValidate 方法
-func TestRuleCondition_TagExprValidate(t *testing.T) {
-	convey.Convey("测试 RuleCondition.TagExprValidate 方法", t, func() {
+// TestRiskCondition_ExprValidate 测试 RiskCondition 的 ExprValidate 方法
+func TestRiskCondition_ExprValidate(t *testing.T) {
+	convey.Convey("测试 RiskCondition.ExprValidate 方法", t, func() {
 		convey.Convey("应该验证有效的表达式", func() {
 			testCases := []struct {
 				name string
@@ -171,10 +171,10 @@ func TestRuleCondition_TagExprValidate(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					condition := &RuleCondition{
+					condition := &RiskCondition{
 						Expression: tc.expr,
 					}
-					refinedExpr, err := condition.TagExprValidate()
+					refinedExpr, err := condition.ExprValidate()
 					convey.So(err, convey.ShouldBeNil)
 					// 验证返回的精炼表达式不为空
 					convey.So(refinedExpr, convey.ShouldNotBeEmpty)
@@ -199,10 +199,10 @@ func TestRuleCondition_TagExprValidate(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					condition := &RuleCondition{
+					condition := &RiskCondition{
 						Expression: tc.expr,
 					}
-					_, err := condition.TagExprValidate()
+					_, err := condition.ExprValidate()
 					convey.So(err, convey.ShouldNotBeNil)
 				})
 			}
@@ -215,19 +215,19 @@ func TestRuleCondition_TagExprValidate(t *testing.T) {
 				for i := 0; i < 100; i++ {
 					longTag += "a"
 				}
-				condition := &RuleCondition{
+				condition := &RiskCondition{
 					Expression: longTag,
 				}
-				refinedExpr, err := condition.TagExprValidate()
+				refinedExpr, err := condition.ExprValidate()
 				convey.So(err, convey.ShouldBeNil)
 				convey.So(refinedExpr, convey.ShouldEqual, longTag)
 			})
 
 			convey.Convey("带空格但不忽略", func() {
-				condition := &RuleCondition{
+				condition := &RiskCondition{
 					Expression: "A  AND  B", // 多个空格
 				}
-				refinedExpr, err := condition.TagExprValidate()
+				refinedExpr, err := condition.ExprValidate()
 				convey.So(err, convey.ShouldBeNil) // 应该成功，因为 Elide("Whitespace") 会忽略空格
 				// 验证精炼后的表达式去除了多余空格
 				convey.So(refinedExpr, convey.ShouldEqual, "A AND B")
@@ -236,18 +236,18 @@ func TestRuleCondition_TagExprValidate(t *testing.T) {
 	})
 }
 
-// TestRuleCondition_Fields 测试 RuleCondition 结构体字段
-func TestRuleCondition_Fields(t *testing.T) {
-	convey.Convey("测试 RuleCondition 结构体字段", t, func() {
+// TestRiskCondition_Fields 测试 RiskCondition 结构体字段
+func TestRiskCondition_Fields(t *testing.T) {
+	convey.Convey("测试 RiskCondition 结构体字段", t, func() {
 		convey.Convey("应该正确设置所有字段", func() {
 			now := time.Now()
-			condition := &RuleCondition{
+			condition := &RiskCondition{
 				BaseModel: database.BaseModel{
 					ID:        1,
 					CreatedAt: now.Add(-time.Hour),
 					UpdatedAt: now,
 				},
-				TagID:       100,
+				RiskRuleID:  100,
 				Name:        "登录失败检测",
 				Window:      5 * time.Minute,
 				Threshold:   3,
@@ -257,7 +257,7 @@ func TestRuleCondition_Fields(t *testing.T) {
 			}
 
 			convey.So(condition.ID, convey.ShouldEqual, 1)
-			convey.So(condition.TagID, convey.ShouldEqual, 100)
+			convey.So(condition.RiskRuleID, convey.ShouldEqual, 100)
 			convey.So(condition.Name, convey.ShouldEqual, "登录失败检测")
 			convey.So(condition.Window, convey.ShouldEqual, 5*time.Minute)
 			convey.So(condition.Threshold, convey.ShouldEqual, 3)
@@ -268,14 +268,14 @@ func TestRuleCondition_Fields(t *testing.T) {
 
 		convey.Convey("应该验证字段约束", func() {
 			convey.Convey("必填字段不能为空", func() {
-				condition := &RuleCondition{}
+				condition := &RiskCondition{}
 				// 这里可以测试数据库约束，但单元测试中主要验证业务逻辑
 				convey.So(condition.Name, convey.ShouldBeEmpty)
 				convey.So(condition.Expression, convey.ShouldBeEmpty)
 			})
 
 			convey.Convey("默认值应该正确", func() {
-				condition := &RuleCondition{}
+				condition := &RiskCondition{}
 				// GORM 的 default:true 标签只在数据库层面有效
 				// 在 Go 结构体中，布尔字段的默认值是 false
 				convey.So(condition.Enabled, convey.ShouldBeFalse)
@@ -295,7 +295,7 @@ func TestRuleCondition_Fields(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					condition := &RuleCondition{
+					condition := &RiskCondition{
 						Window: tc.window,
 					}
 					convey.So(condition.Window, convey.ShouldEqual, tc.window)
@@ -305,12 +305,12 @@ func TestRuleCondition_Fields(t *testing.T) {
 	})
 }
 
-// TestRuleTag_Fields 测试 RuleTag 结构体字段
-func TestRuleTag_Fields(t *testing.T) {
-	convey.Convey("测试 RuleTag 结构体字段", t, func() {
+// TestRiskRule_Fields 测试 RiskRule 结构体字段
+func TestRiskRule_Fields(t *testing.T) {
+	convey.Convey("测试 RiskRule 结构体字段", t, func() {
 		convey.Convey("应该正确设置所有字段", func() {
 			now := time.Now()
-			tag := &RuleTag{
+			tag := &RiskRule{
 				BaseModel: database.BaseModel{
 					ID:        1,
 					CreatedAt: now.Add(-time.Hour),
@@ -329,12 +329,12 @@ func TestRuleTag_Fields(t *testing.T) {
 
 		convey.Convey("应该验证字段约束", func() {
 			convey.Convey("必填字段不能为空", func() {
-				tag := &RuleTag{}
+				tag := &RiskRule{}
 				convey.So(tag.Name, convey.ShouldBeEmpty)
 			})
 
 			convey.Convey("默认值应该正确", func() {
-				tag := &RuleTag{}
+				tag := &RiskRule{}
 				// GORM 的 default:true 标签只在数据库层面有效
 				// 在 Go 结构体中，布尔字段的默认值是 false
 				convey.So(tag.Enabled, convey.ShouldBeFalse)
@@ -355,7 +355,7 @@ func TestRuleTag_Fields(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					tag := &RuleTag{
+					tag := &RiskRule{
 						Name:        tc.name,
 						Description: tc.description,
 					}

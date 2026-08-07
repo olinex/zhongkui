@@ -111,12 +111,12 @@ func (a *Atom) String() string {
 	return ""
 }
 
-// RuleCondition 表示风险规则条件，定义了触发风险的逻辑条件
+// RiskCondition 表示风险规则条件，定义了触发风险的逻辑条件
 // 例如: "在5分钟内，如果标签A和标签B同时出现超过3次，则触发风险"
-type RuleCondition struct {
+type RiskCondition struct {
 	database.BaseModel
-	TagID       uint          `gorm:"column:tag_id;type:INT"`
-	Tag         RuleTag       `gorm:"foreignKey:TagID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	RiskRuleID  uint          `gorm:"column:risk_rule_id;type:INT"`
+	RiskRule    RiskRule      `gorm:"foreignKey:RiskRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Name        string        `gorm:"column:name;type:VARCHAR(255)"`
 	Window      time.Duration `gorm:"type:BIGINT"`
 	Threshold   int           `gorm:"type:INT"`
@@ -125,10 +125,10 @@ type RuleCondition struct {
 	Description string        `gorm:"type:VARCHAR(256)"`
 }
 
-// TagExprValidate 验证规则条件中的标签表达式语法是否正确
+// ExprValidate 验证风险条件中的标签表达式语法是否正确
 // 使用布尔表达式解析器检查表达式是否可以被正确解析
 // 返回精炼后的表达式字符串（去除无意义的空格和回车）和错误信息
-func (c *RuleCondition) TagExprValidate() (string, error) {
+func (c *RiskCondition) ExprValidate() (string, error) {
 	expr, err := parser.ParseString("", c.Expression)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -138,9 +138,9 @@ func (c *RuleCondition) TagExprValidate() (string, error) {
 	return refinedExpr, nil
 }
 
-// RuleTag 表示风险规则标签，用于标识特定类型的事件或属性
+// RiskRule 表示风险规则，用于定义特定类型事件或属性的风险判定规则
 // 例如: "登录失败"、"异常访问"、"高风险操作"
-type RuleTag struct {
+type RiskRule struct {
 	database.BaseModel
 	Name        string `gorm:"column:name;type:VARCHAR(255)"`
 	Enabled     bool   `gorm:"type:BOOLEAN"`

@@ -1,4 +1,4 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器配置管理功能。
+// Package queue 提供基于 asynq 的任务队列和调度器配置管理功能。
 // 该包定义了任务队列的配置结构，包括并发控制、队列优先级、调度器设置等，
 // 并提供了配置提取、描述和转换为 asynq 原生配置的方法。
 package pipeline
@@ -15,15 +15,11 @@ import (
 )
 
 const (
-	// PREFIX 配置前缀，用于在配置文件中标识 pipeline 相关配置。
-	// 例如，完整的配置路径为 "pipeline.<pipeline_name>.<config_field>"。
+	// Prefix 配置前缀，用于在配置文件中标识任务队列相关配置。
+	// 例如，完整的配置路径为 "pipeline.<queue_name>.<config_field>"。
+	// 保留 "pipeline" 原值以兼容既有配置文件与运行环境。
 	Prefix = "pipeline"
 )
-
-// Task 任务类型别名，表示 asynq 任务
-// 对 github.com/hibiken/asynq.Task 的类型别名，用于统一任务类型。
-// asynq.Task 包含任务类型名称（Typename）和载荷数据（Payload），是任务队列中传递的基本单元。
-type Task = asynq.Task
 
 // ContextFunc 上下文函数类型，用于获取任务执行的上下文。
 // 该函数在创建 asynq 配置时提供基础上下文，用于任务执行时的上下文传递。
@@ -133,8 +129,8 @@ type Config struct {
 	Custom CustomConfig `mapstructure:"custom" comment:"自定义参数，执行时动态注入任务和处理器函数"` //
 }
 
-// ToAsynqConfig 将 pipeline 配置转换为 asynq 原生配置。
-// 此方法将 pipeline.Config 中的设置转换为 github.com/hibiken/asynq.Config 格式，
+// ToAsynqConfig 将任务队列配置转换为 asynq 原生配置。
+// 此方法将 Config 中的设置转换为 github.com/hibiken/asynq.Config 格式，
 // 以便直接用于创建 asynq 服务器。
 //
 // 参数说明:
@@ -164,15 +160,15 @@ func (c *Config) ToAsynqConfig(
 	}
 }
 
-// DescribeConfig 生成 Pipeline 配置的描述信息
+// DescribeConfig 生成任务队列配置的描述信息
 // 利用反射分析 Config 结构体的字段标签（mapstructure、default、comment），
 // 生成结构化的配置描述列表，供文档或 UI 动态展示配置项。
 func DescribeConfig() config.ConfigDescriptions {
 	return config.DescribeConfig[Config](Prefix)
 }
 
-// ExtractConfig 从 Viper 配置中提取 Pipeline 配置
-// 以 PREFIX（"pipeline"）为键前缀从 viper.Viper 实例中读取配置，
+// ExtractConfig 从 Viper 配置中提取任务队列配置
+// 以 Prefix（"pipeline"）为键前缀从 viper.Viper 实例中读取配置，
 // 反序列化为 Config 结构体并应用 default 标签的默认值。
 // 返回 (*Config, error)：成功时返回已填充的配置指针，失败时返回错误。
 func ExtractConfig(v *viper.Viper) (*Config, error) {

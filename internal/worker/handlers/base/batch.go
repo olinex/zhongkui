@@ -1,36 +1,28 @@
-// Package base 提供分布式版本化任务处理的基础 Handler 实现。
-// 包含基于 etcd 版本 CAS 机制的版本化 Handler（versionHandler）
-// 和通用的批量数据流水线 Handler（BatchHandler）。
+// Package base 提供通用的批量数据流水线任务处理 Handler 实现（BatchHandler）。
 package base
 
 import (
 	"context"
 	"time"
 
-	"github.com/reactivex/rxgo/v2"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/worker/totel"
 )
 
-// 编译期断言：确保 BatchHandler 实现了 pipeline.Handler 接口
-var _ pipeline.Handler = (*BatchHandler)(nil)
+// 编译期断言：确保 BatchHandler 实现了 etl.Handler 接口
+var _ etl.Handler = (*BatchHandler)(nil)
 
-func emptyLiveFunc(ctx context.Context, task *pipeline.Task) error {
+func emptyLiveFunc(ctx context.Context, task etl.Task) error {
 	return nil
 }
 
 // BatchHandler 批量任务处理器，用于处理流水线式的批量数据处理任务。
-// 支持数据提取、转换和加载三个阶段的流水线处理。
+// 持有 etl.Chain 作为数据处理内核，在 Do 中编排任务级生命周期（指标、前后置钩子）。
 type BatchHandler struct {
-	bufferCount   int                      // 缓冲区大小
-	bufferTimeout time.Duration            // 缓冲区超时时间
-	preE          pipeline.LiveFunc        // 数据处理前
-	postE         pipeline.LiveFunc        // 数据处理后
-	extract       pipeline.ExtractFunc     // 数据提取函数
-	transforms    []pipeline.TransformFunc // 数据转换函数列表
-	loads         []pipeline.LoadFunc      // 数据加载函数列表
+	chain *etl.Chain[any] // 数据处理链（extract → transforms → buffer → loads）
+	preE  etl.LiveFunc    // 数据处理前
+	postE etl.LiveFunc    // 数据处理后
 }
 
 // NewBatchHandler 创建一个新的批量任务处理器。
@@ -39,11 +31,11 @@ type BatchHandler struct {
 func NewBatchHandler(
 	bufferCount int,
 	bufferTimeout time.Duration,
-	extract pipeline.ExtractFunc,
-	transforms []pipeline.TransformFunc,
-	loads []pipeline.LoadFunc,
-	preE pipeline.LiveFunc,
-	postE pipeline.LiveFunc,
+	extract etl.TaskExtractFunc[any],
+	transforms []etl.TaskTransformFunc[any],
+	loads []etl.TaskLoadFunc[any],
+	preE etl.LiveFunc,
+	postE etl.LiveFunc,
 ) *BatchHandler {
 	totel.InitMetrics()
 	if preE == nil {
@@ -53,19 +45,17 @@ func NewBatchHandler(
 		postE = emptyLiveFunc
 	}
 	return &BatchHandler{
-		bufferCount:   bufferCount,
-		bufferTimeout: bufferTimeout,
-		preE:          preE,
-		postE:         postE,
-		extract:       extract,
-		transforms:    transforms,
-		loads:         loads,
+		chain: etl.NewChain(bufferCount, bufferTimeout, extract, transforms, loads),
+		preE:  preE,
+		postE: postE,
 	}
 }
 
 // Do 执行批量任务处理。
-// 启动数据提取、数据转换和数据加载的流水线处理流程。
-func (w *BatchHandler) Do(ctx context.Context, task *pipeline.Task) (err error) {
+// 依次执行 preE 前置钩子、数据处理链（etl.Chain）与 postE 后置钩子。
+// 数据处理链内部使用 etl.Pipeline 以原生 channel + errgroup 编排三个阶段，
+// 不再依赖 rxgo 响应式算子。
+func (w *BatchHandler) Do(ctx context.Context, task etl.Task) (err error) {
 	taskType := task.Type()
 	ctx, span := totel.StartBatchTaskSpan(ctx, taskType)
 	defer totel.EndSpan(span, &err)
@@ -86,48 +76,10 @@ func (w *BatchHandler) Do(ctx context.Context, task *pipeline.Task) (err error) 
 			panic(pe)
 		}
 	}()
-	channel := make(chan rxgo.Item, w.bufferCount)
-	var loadedCount int
-	outterWg, outterCtx := errgroupx.WithContext(ctx)
-	outterWg.GoNamed("transform", func() error {
-		observe := rxgo.FromChannel(channel)
-		for _, transform := range w.transforms {
-			observe = observe.Map(transform)
-		}
-		observe = observe.BufferWithTimeOrCount(rxgo.WithDuration(w.bufferTimeout), w.bufferCount)
-		innerWG, innerCtx := errgroupx.WithContext(outterCtx)
-		for batch := range observe.Observe() {
-			if batch.E != nil {
-				return batch.E
-			}
-			items, ok := batch.V.([]any)
-			if !ok {
-				return errors.Newf("Batch value type error, expect []any, got %T", batch.V)
-			}
-			if len(items) == 0 {
-				continue
-			}
-			loadedCount += len(items)
-			for _, load := range w.loads {
-				func(load pipeline.LoadFunc) {
-					innerWG.GoNamed("load", func() error {
-						return load(innerCtx, items)
-					})
-				}(load)
-			}
-		}
-		if ierr := innerWG.Wait(); ierr != nil {
-			return errors.WithStack(ierr)
-		}
-		return nil
-	})
-	outterWg.GoNamed("extract", func() error {
-		defer close(channel)
-		return w.extract(outterCtx, task, channel)
-	})
-	err = outterWg.Wait()
+
+	loadedCount, err := w.chain.Run(ctx, task)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	totel.RecordItemsLoaded(ctx, taskType, loadedCount)
 	return nil

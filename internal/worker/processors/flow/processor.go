@@ -12,8 +12,8 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/distributed"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -60,8 +60,8 @@ func (p *PacketProcessor[P]) Shutdown() {
 // NewIPv4PacketProcessor 创建 IPv4 TCP 处理器
 func NewIPv4PacketProcessorFactory(
 	injector do.Injector,
-) pipeline.ProcessorFactory {
-	return func(ctx context.Context) (pipeline.Processor, error) {
+) etl.ProcessorFactory {
+	return func(ctx context.Context) (etl.Processor, error) {
 		return NewPacketProcessor[*network.PacketIPv4TCP](ctx, injector, ProcIpv4Tcp)
 	}
 }
@@ -69,8 +69,8 @@ func NewIPv4PacketProcessorFactory(
 // NewIPv6PacketProcessor 创建 IPv6 TCP 处理器
 func NewIPv6PacketProcessorFactory(
 	injector do.Injector,
-) pipeline.ProcessorFactory {
-	return func(ctx context.Context) (pipeline.Processor, error) {
+) etl.ProcessorFactory {
+	return func(ctx context.Context) (etl.Processor, error) {
 		return NewPacketProcessor[*network.PacketIPv6TCP](ctx, injector, ProcIpv6Tcp)
 	}
 }
@@ -80,14 +80,14 @@ func NewPacketProcessor[P tcp.TCPPacket](
 	ctx context.Context,
 	injector do.Injector,
 	name string,
-) (pipeline.Processor, error) {
+) (etl.Processor, error) {
 	if client, err := provider.InvokeEtcdClient(injector); err != nil {
 		return nil, errors.WithStack(err)
 	} else if db, err := provider.InvokeRawDatabase(injector); err != nil {
 		return nil, errors.WithStack(err)
 	} else if logger, err := provider.InvokePipelineLogger(injector); err != nil {
 		return nil, errors.WithStack(err)
-	} else if param, err := pipeline.GetProcParam[Param](ctx); err != nil {
+	} else if param, err := etl.GetProcParam[Param](ctx); err != nil {
 		return nil, errors.WithStack(err)
 	} else {
 		clusterCfg := &distributed.ClusterConfig{

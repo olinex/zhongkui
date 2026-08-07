@@ -12,12 +12,11 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/minio/minio-go/v7"
-	"github.com/reactivex/rxgo/v2"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/pkg/etl"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/provider"
@@ -33,8 +32,8 @@ type PcapItem struct {
 }
 
 // ExtractPacketFromPcap 从 PCAP 文件中提取数据包的提取函数。
-// 从 S3 获取 PCAP 文件，解压后解析数据包并通过 channel 输出。
-func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel chan<- rxgo.Item) error {
+// 从 S3 获取 PCAP 文件，解压后解析数据包并通过 channel 输出（golang 原生类型）。
+func ExtractPacketFromPcap(ctx context.Context, task etl.Task, channel chan<- any) error {
 	var obj PcapS3Object
 	if err := json.Unmarshal(task.Payload(), &obj); err != nil {
 		return errors.WithStack(err)
@@ -153,7 +152,7 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 			if stats := GetPcapStats(ctx); stats != nil {
 				stats.RecordPacket(len(packet.Data()))
 			}
-			channel <- rxgo.Of(&PcapItem{
+			channel <- &PcapItem{
 				SessionID: sessionID,
 				Source: reporter_v1.ResourceRaw{
 					Namespace: obj.Namespace,
@@ -161,7 +160,7 @@ func ExtractPacketFromPcap(ctx context.Context, task *pipeline.Task, channel cha
 					Version:   obj.Version,
 				},
 				Packet: packet,
-			})
+			}
 		}
 		return nil
 	})

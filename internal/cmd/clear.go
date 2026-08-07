@@ -115,7 +115,6 @@ func init() {
 type etcdClearCategory struct {
 	name   string
 	prefix string
-	filter func(key string) bool // 可选过滤函数，返回 true 表示保留该 key
 }
 
 // etcdKeyEntry 表示 etcd 缓存中的一个键值条目及其所属类别
@@ -129,15 +128,11 @@ var etcdClearCategories = []etcdClearCategory{
 	{name: "capturer config", prefix: core.ReporterEtcdPrefix},
 	{name: "distributed watermark", prefix: etcd.ClusterEtcdPrefix},
 	{name: "scheduler config", prefix: pipeline.SchedulerCfgEtcdPrefix},
-	{name: "version cursor", prefix: etcd.VersionEtcdPrefix, filter: func(key string) bool {
-		// 排除分布式锁键，只保留版本游标数据
-		return !strings.HasPrefix(key, etcd.VersionLockEtcdPrefix)
-	}},
 }
 
 var clearEtcdCmd = &cobra.Command{
 	Use:   "etcd",
-	Short: "清除 etcd 缓存（抓包器配置、水印、调度器配置、版本游标）",
+	Short: "清除 etcd 缓存（抓包器配置、水印、调度器配置）",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
@@ -156,13 +151,9 @@ var clearEtcdCmd = &cobra.Command{
 				return
 			}
 			for _, kv := range rsp.Kvs {
-				k := string(kv.Key)
-				if cat.filter != nil && !cat.filter(k) {
-					continue
-				}
 				allKeys = append(allKeys, etcdKeyEntry{
 					category: cat.name,
-					key:      k,
+					key:      string(kv.Key),
 					value:    string(kv.Value),
 				})
 			}

@@ -15,16 +15,9 @@ import (
 )
 
 const (
-	ScopeName            = base.GlobalPrefix + "-tasks"
-	SpanTaskDo           = "tasks.batch.do"
-	SpanTaskExtract      = "tasks.batch.extract"
-	SpanTaskTransform    = "tasks.batch.transform"
-	SpanTaskLoad         = "tasks.batch.load"
-	SpanTaskVersionDo    = "tasks.version.do"
-	SpanTaskVersionLoad  = "tasks.version.load"
-	SpanTaskVersionStore = "tasks.version.store"
-	SpanTaskVersionNext  = "tasks.version.next"
-	SpanTaskVersionClear = "tasks.version.clear"
+	ScopeName       = base.GlobalPrefix + "-tasks"
+	SpanTaskDo      = "tasks.batch.do"
+	SpanTaskExtract = "tasks.batch.extract"
 )
 
 var (
@@ -34,10 +27,6 @@ var (
 	taskCounter metric.Int64Counter
 	// taskErrorCounter 统计任务处理失败次数，按类型标记
 	taskErrorCounter metric.Int64Counter
-	// itemsExtractedCounter 统计从数据源提取的数据项总数
-	itemsExtractedCounter metric.Int64Counter
-	// itemsTransformedCounter 统计转换后的数据项总数
-	itemsTransformedCounter metric.Int64Counter
 	// itemsLoadedCounter 统计加载到目标的数据项总数
 	itemsLoadedCounter metric.Int64Counter
 	// packetsExtractedCounter 统计从 PCAP 提取的原始数据包总数
@@ -63,20 +52,6 @@ func initMetrics() {
 		"tasks.errors",
 		metric.WithDescription("Total number of task processing errors"),
 		metric.WithUnit("{error}"),
-	)
-	err = errors.Join(err, e)
-
-	itemsExtractedCounter, e = meter.Int64Counter(
-		"tasks.items.extracted",
-		metric.WithDescription("Total number of items extracted from data sources"),
-		metric.WithUnit("{item}"),
-	)
-	err = errors.Join(err, e)
-
-	itemsTransformedCounter, e = meter.Int64Counter(
-		"tasks.items.transformed",
-		metric.WithDescription("Total number of items transformed"),
-		metric.WithUnit("{item}"),
 	)
 	err = errors.Join(err, e)
 
@@ -125,88 +100,6 @@ func StartExtractSpan(ctx context.Context, taskType string) (context.Context, tr
 	return ctx, span
 }
 
-// StartTransformSpan 在数据转换阶段创建 span。
-func StartTransformSpan(ctx context.Context, taskType string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(ScopeName)
-	ctx, span := tracer.Start(ctx, SpanTaskTransform,
-		trace.WithAttributes(
-			attribute.String("task.type", taskType),
-		),
-	)
-	return ctx, span
-}
-
-// StartLoadSpan 在数据加载阶段创建 span。
-func StartLoadSpan(ctx context.Context, taskType string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(ScopeName)
-	ctx, span := tracer.Start(ctx, SpanTaskLoad,
-		trace.WithAttributes(
-			attribute.String("task.type", taskType),
-		),
-	)
-	return ctx, span
-}
-
-// StartVersionTaskSpan 在版本任务执行时创建 span。
-func StartVersionTaskSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(ScopeName)
-	ctx, span := tracer.Start(ctx, SpanTaskVersionDo,
-		trace.WithAttributes(
-			attribute.String("task.name", name),
-			attribute.String("task.last_version", lastVersion),
-		),
-	)
-	return ctx, span
-}
-
-// StartVersionLoadSpan 在版本任务加载阶段创建 span。
-func StartVersionLoadSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(ScopeName)
-	ctx, span := tracer.Start(ctx, SpanTaskVersionLoad,
-		trace.WithAttributes(
-			attribute.String("task.name", name),
-			attribute.String("task.last_version", lastVersion),
-		),
-	)
-	return ctx, span
-}
-
-// StartVersionStoreSpan 在版本任务存储阶段创建 span。
-func StartVersionStoreSpan(ctx context.Context, name, nextVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(ScopeName)
-	ctx, span := tracer.Start(ctx, SpanTaskVersionStore,
-		trace.WithAttributes(
-			attribute.String("task.name", name),
-			attribute.String("task.next_version", nextVersion),
-		),
-	)
-	return ctx, span
-}
-
-// StartVersionNextSpan 在版本任务计算下一版本时创建 span。
-func StartVersionNextSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(ScopeName)
-	ctx, span := tracer.Start(ctx, SpanTaskVersionNext,
-		trace.WithAttributes(
-			attribute.String("task.name", name),
-			attribute.String("task.last_version", lastVersion),
-		),
-	)
-	return ctx, span
-}
-
-// StartVersionClearSpan 在版本任务清理阶段创建 span。
-func StartVersionClearSpan(ctx context.Context, name, lastVersion string) (context.Context, trace.Span) {
-	tracer := otel.Tracer(ScopeName)
-	ctx, span := tracer.Start(ctx, SpanTaskVersionClear,
-		trace.WithAttributes(
-			attribute.String("task.name", name),
-			attribute.String("task.last_version", lastVersion),
-		),
-	)
-	return ctx, span
-}
-
 // ---------------------------------------------------------------------------
 // Metrics 记录辅助函数
 // ---------------------------------------------------------------------------
@@ -221,20 +114,6 @@ func RecordTask(ctx context.Context, taskType string) {
 // RecordTaskError 记录任务处理失败。
 func RecordTaskError(ctx context.Context, taskType string) {
 	taskErrorCounter.Add(ctx, 1, metric.WithAttributes(
-		attribute.String("task.type", taskType),
-	))
-}
-
-// RecordItemsExtracted 记录提取到的数据项数量。
-func RecordItemsExtracted(ctx context.Context, taskType string, count int) {
-	itemsExtractedCounter.Add(ctx, int64(count), metric.WithAttributes(
-		attribute.String("task.type", taskType),
-	))
-}
-
-// RecordItemsTransformed 记录转换后的数据项数量。
-func RecordItemsTransformed(ctx context.Context, taskType string, count int) {
-	itemsTransformedCounter.Add(ctx, int64(count), metric.WithAttributes(
 		attribute.String("task.type", taskType),
 	))
 }

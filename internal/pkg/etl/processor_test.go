@@ -1,4 +1,4 @@
-package pipeline
+package etl
 
 import (
 	"context"
@@ -32,8 +32,8 @@ func (m *mockProcessor) Shutdown() {
 // 测试通过 RegisterProcessorFactory 注册处理器工厂，并验证注册表内容。
 func TestRegisterProcessorFactory(t *testing.T) {
 	Convey("注册处理器工厂", t, func() {
-		Convey("注册单个工厂后应可通过 registeredProcessorFactories 访问", func() {
-			registeredProcessorFactories = make(ProcessorFactories, 0)
+		Convey("注册单个工厂后应可通过 processorRegistry 访问", func() {
+			processorRegistry = newRegistry[ProcessorFactory]()
 
 			mp := &mockProcessor{}
 			factory := func(ctx context.Context) (Processor, error) {
@@ -41,12 +41,12 @@ func TestRegisterProcessorFactory(t *testing.T) {
 			}
 			RegisterProcessorFactory("test_proc", factory)
 
-			So(len(registeredProcessorFactories), ShouldEqual, 1)
-			So(registeredProcessorFactories["test_proc"], ShouldNotBeNil)
+			So(len(processorRegistry.units), ShouldEqual, 1)
+			So(processorRegistry.units["test_proc"], ShouldNotBeNil)
 		})
 
 		Convey("注册多个不同名称的工厂，数量应正确", func() {
-			registeredProcessorFactories = make(ProcessorFactories, 0)
+			processorRegistry = newRegistry[ProcessorFactory]()
 
 			mp1 := &mockProcessor{}
 			RegisterProcessorFactory("proc_a", func(ctx context.Context) (Processor, error) {
@@ -61,10 +61,10 @@ func TestRegisterProcessorFactory(t *testing.T) {
 				return mp3, nil
 			})
 
-			So(len(registeredProcessorFactories), ShouldEqual, 3)
-			So(registeredProcessorFactories["proc_a"], ShouldNotBeNil)
-			So(registeredProcessorFactories["proc_b"], ShouldNotBeNil)
-			So(registeredProcessorFactories["proc_c"], ShouldNotBeNil)
+			So(len(processorRegistry.units), ShouldEqual, 3)
+			So(processorRegistry.units["proc_a"], ShouldNotBeNil)
+			So(processorRegistry.units["proc_b"], ShouldNotBeNil)
+			So(processorRegistry.units["proc_c"], ShouldNotBeNil)
 		})
 	})
 }
@@ -73,7 +73,7 @@ func TestRegisterProcessorFactory(t *testing.T) {
 func TestProcessorFactoryRegistry_NoParams(t *testing.T) {
 	Convey("ProcessorFactoryRegistry 无参数场景", t, func() {
 		Convey("注册 2 个工厂后，传入空 params map 应返回 2 个同名工厂，调用返回原始处理器", func() {
-			registeredProcessorFactories = make(ProcessorFactories, 0)
+			processorRegistry = newRegistry[ProcessorFactory]()
 
 			mp1 := &mockProcessor{}
 			RegisterProcessorFactory("proc_a", func(ctx context.Context) (Processor, error) {
@@ -106,7 +106,7 @@ func TestProcessorFactoryRegistry_NoParams(t *testing.T) {
 func TestProcessorFactoryRegistry_WithParams(t *testing.T) {
 	Convey("ProcessorFactoryRegistry 带参数注入", t, func() {
 		Convey("注册工厂后传入同名参数，工厂内可通过 GetProcParam 获取注入的参数", func() {
-			registeredProcessorFactories = make(ProcessorFactories, 0)
+			processorRegistry = newRegistry[ProcessorFactory]()
 
 			type myConfig struct {
 				Key string `mapstructure:"key"`

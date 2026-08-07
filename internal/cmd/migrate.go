@@ -34,8 +34,9 @@ func coreModels() []any {
 		&coremodel.AccessKey{},
 		&coremodel.RbacPolicy{},
 		&coremodel.RbacPolicyTemplate{},
-		&tagmodel.RuleTag{},
-		&tagmodel.RuleCondition{},
+		&tagmodel.RiskRule{},
+		&tagmodel.RiskCondition{},
+		&tagmodel.TagRule{},
 	}
 }
 

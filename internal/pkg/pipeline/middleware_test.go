@@ -1,5 +1,5 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能测试。
-// 此文件包含 pipeline 包中中间件功能的单元测试，重点测试 RecoverWithStack 中间件的各种场景。
+// Package queue 提供基于 asynq 的任务队列和调度器功能测试。
+// 此文件包含 queue 包中中间件功能的单元测试，重点测试 RecoverWithStack 中间件的各种场景。
 package pipeline
 
 import (

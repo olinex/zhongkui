@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 )
@@ -62,7 +63,7 @@ func newPipelineInspectorProvider() do.Provider[*pipeline.Inspector] {
 	}
 }
 
-func newPipelineSchdulerProvider(ctx context.Context) do.Provider[*etcd.Election] {
+func newPipelineSchedulerProvider(ctx context.Context) do.Provider[*etcd.Election] {
 	return func(i do.Injector) (*etcd.Election, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
@@ -86,8 +87,8 @@ func newPipelineSchdulerProvider(ctx context.Context) do.Provider[*etcd.Election
 	}
 }
 
-func newPipelineTaskRegistryProvider() do.Provider[pipeline.HandlerFuncs] {
-	return func(i do.Injector) (pipeline.HandlerFuncs, error) {
+func newPipelineTaskRegistryProvider() do.Provider[etl.HandlerFuncs] {
+	return func(i do.Injector) (etl.HandlerFuncs, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
@@ -95,13 +96,13 @@ func newPipelineTaskRegistryProvider() do.Provider[pipeline.HandlerFuncs] {
 		} else if err := initDetectors(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
-			return pipeline.HandlerRegistry(cfg.Custom.Tasks), nil
+			return etl.HandlerRegistry(cfg.Custom.Tasks), nil
 		}
 	}
 }
 
-func newPipelineProcessorFactoriesRegistryProvider() do.Provider[pipeline.ProcessorFactories] {
-	return func(i do.Injector) (pipeline.ProcessorFactories, error) {
+func newPipelineProcessorFactoriesRegistryProvider() do.Provider[etl.ProcessorFactories] {
+	return func(i do.Injector) (etl.ProcessorFactories, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
@@ -109,7 +110,7 @@ func newPipelineProcessorFactoriesRegistryProvider() do.Provider[pipeline.Proces
 		} else if err := initDetectors(i); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
-			return pipeline.ProcessorFactoryRegistry(cfg.Custom.Processors), nil
+			return etl.ProcessorFactoryRegistry(cfg.Custom.Processors), nil
 		}
 	}
 }
@@ -146,10 +147,6 @@ func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		factories, err := InvokePipelineProcessorFactoriesRegistry(i)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
 
 		ctxFunc := TaskContext(ctx, i)
 		rawCfg := cfg.ToAsynqConfig(ctxFunc, logger)
@@ -160,7 +157,6 @@ func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server
 			rawCfg,
 			logger,
 			handlers,
-			factories,
 			otel.AsynqServerMiddleware(),
 		), nil
 	}
@@ -171,14 +167,14 @@ func NewPipelineInspector() do.Provider[*pipeline.Inspector] {
 }
 
 func NewPipelineScheduler(ctx context.Context) do.Provider[*etcd.Election] {
-	return newPipelineSchdulerProvider(ctx)
+	return newPipelineSchedulerProvider(ctx)
 }
 
-func NewPipelineTaskRegistry() do.Provider[pipeline.HandlerFuncs] {
+func NewPipelineTaskRegistry() do.Provider[etl.HandlerFuncs] {
 	return newPipelineTaskRegistryProvider()
 }
 
-func NewPipelineProcessorFactoriesRegistry() do.Provider[pipeline.ProcessorFactories] {
+func NewPipelineProcessorFactoriesRegistry() do.Provider[etl.ProcessorFactories] {
 	return newPipelineProcessorFactoriesRegistryProvider()
 }
 
@@ -222,12 +218,12 @@ func InvokePipelineScheduler(i do.Injector) (*etcd.Election, error) {
 	return do.Invoke[*etcd.Election](i)
 }
 
-func InvokePipelineTaskRegistry(i do.Injector) (pipeline.HandlerFuncs, error) {
-	return do.Invoke[pipeline.HandlerFuncs](i)
+func InvokePipelineTaskRegistry(i do.Injector) (etl.HandlerFuncs, error) {
+	return do.Invoke[etl.HandlerFuncs](i)
 }
 
-func InvokePipelineProcessorFactoriesRegistry(i do.Injector) (pipeline.ProcessorFactories, error) {
-	return do.Invoke[pipeline.ProcessorFactories](i)
+func InvokePipelineProcessorFactoriesRegistry(i do.Injector) (etl.ProcessorFactories, error) {
+	return do.Invoke[etl.ProcessorFactories](i)
 }
 
 func InvokePipelineClient(i do.Injector) (*pipeline.Client, error) {
@@ -242,12 +238,12 @@ func MustInvokePipelineScheduler(i do.Injector) *etcd.Election {
 	return do.MustInvoke[*etcd.Election](i)
 }
 
-func MustInvokePipelineTaskRegistry(i do.Injector) pipeline.HandlerFuncs {
-	return do.MustInvoke[pipeline.HandlerFuncs](i)
+func MustInvokePipelineTaskRegistry(i do.Injector) etl.HandlerFuncs {
+	return do.MustInvoke[etl.HandlerFuncs](i)
 }
 
-func MustInvokePipelineProcessorFactoriesRegistry(i do.Injector) pipeline.ProcessorFactories {
-	return do.MustInvoke[pipeline.ProcessorFactories](i)
+func MustInvokePipelineProcessorFactoriesRegistry(i do.Injector) etl.ProcessorFactories {
+	return do.MustInvoke[etl.ProcessorFactories](i)
 }
 
 func MustInvokePipelineClient(i do.Injector) *pipeline.Client {

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/worker/handlers/base"
 )
 
@@ -15,7 +15,7 @@ type pcapHandler struct {
 }
 
 // Do 执行 PCAP 导入任务，在任务执行期间收集统计信息并在结束后通过 pterm.Debug 打印
-func (w *pcapHandler) Do(ctx context.Context, task *pipeline.Task) error {
+func (w *pcapHandler) Do(ctx context.Context, task etl.Task) error {
 	stats := NewPcapStats()
 	ctx = WithPcapStats(ctx, stats)
 	err := w.handler.Do(ctx, task)
@@ -32,10 +32,10 @@ func NewPcapBatchHandler() *pcapHandler {
 			100000,
 			time.Second,
 			ExtractPacketFromPcap,
-			[]pipeline.TransformFunc{
+			[]etl.TaskTransformFunc[any]{
 				TransFromPacketToModel,
 			},
-			[]pipeline.LoadFunc{
+			[]etl.TaskLoadFunc[any]{
 				LoadPacketModelToTable,
 			},
 			nil,

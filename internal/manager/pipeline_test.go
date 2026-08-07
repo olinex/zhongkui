@@ -38,7 +38,7 @@ func TestPipelineInspectorCtxName(t *testing.T) {
 func TestPipelineInspectorMiddleware(t *testing.T) {
 	Convey("测试 PipelineInspectorMiddleware 中间件", t, func() {
 		Convey("应该返回非空的中间件函数", func() {
-			inspector := &asynq.Inspector{}
+			inspector := &pipeline.Inspector{}
 			middleware := PipelineInspectorMiddleware(inspector)
 			So(middleware, ShouldNotBeNil)
 		})
@@ -63,7 +63,7 @@ func TestPipelineInspectorMiddleware(t *testing.T) {
 		})
 
 		Convey("应该将检查器存储到正确的上下文键名下", func() {
-			inspector := &asynq.Inspector{}
+			inspector := &pipeline.Inspector{}
 			r := setupPipelineTestRouter(inspector)
 
 			var actualKey string
@@ -178,7 +178,6 @@ func TestGetPipelineInspector(t *testing.T) {
 		Convey("上下文中存在检查器时应正确返回", func() {
 			inspector := &asynq.Inspector{}
 			r := setupPipelineTestRouter(inspector)
-
 			var gotInspector *pipeline.Inspector
 			r.GET("/test", func(c *gin.Context) {
 				gotInspector = GetPipelineInspector(c)
@@ -230,7 +229,6 @@ func TestGetPipelineInspector(t *testing.T) {
 		Convey("在同一个请求中多次调用应返回相同的检查器实例", func() {
 			inspector := &asynq.Inspector{}
 			r := setupPipelineTestRouter(inspector)
-
 			var first, second *pipeline.Inspector
 			r.GET("/test", func(c *gin.Context) {
 				first = GetPipelineInspector(c)

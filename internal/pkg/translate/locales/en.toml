@@ -169,7 +169,7 @@ other = "Clear zhongkui data"
 other = "Truncate all database tables (rollback all migrations)"
 
 [cmd.clear.etcd.short]
-other = "Clear etcd cache (capturer configs, watermarks, scheduler configs, version cursors)"
+other = "Clear etcd cache (capturer configs, watermarks, scheduler configs)"
 
 [cmd.migrate.short]
 other = "Database migration management"

@@ -1,6 +1,6 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能。
-// 该包包含了任务队列客户端、服务器、调度器、配置管理和中间件等功能模块，
-// 用于构建分布式任务处理系统。
+// Package queue 提供基于 asynq 的事件驱动任务队列功能。
+// 该包承载任务队列客户端、服务器、调度器、配置管理和中间件等模块，
+// 与数据处理流水线（etl 包）解耦，仅负责任务的投递与消费。
 package pipeline
 
 import (
@@ -36,7 +36,7 @@ type Client struct {
 	cli enqueuer
 }
 
-// NewClient 创建一个新的 Pipeline 客户端。
+// NewClient 创建一个新的任务队列客户端。
 // 该函数基于传入的 Redis 客户端创建一个 asynq.Client 实例。
 // asynq 客户端用于向 Redis 服务器提交异步任务。
 //
@@ -61,18 +61,18 @@ type Client struct {
 //	    Addr: "localhost:6379",
 //	})
 //
-//	// 创建 Pipeline 客户端
-//	pipelineClient := NewClient(redisClient)
+//	// 创建任务队列客户端
+//	queueClient := NewClient(redisClient)
 //
 //	// 使用客户端提交任务
 //	task := asynq.NewTask("process:data", []byte(`{"id": 123}`))
-//	info, err := pipelineClient.Enqueue(task)
+//	info, err := queueClient.Enqueue(task)
 //	if err != nil {
 //	    // 处理错误
 //	}
 //
 //	// 使用完毕后关闭客户端
-//	defer pipelineClient.Close()
+//	defer queueClient.Close()
 func NewClient(cli *redis.Client) *Client {
 	client := asynq.NewClientFromRedisClient(cli.Client)
 	if wrap := otel.WrapAsynqClient(client); wrap != nil {

@@ -28,14 +28,10 @@ var (
 	watchConnectionsCounter metric.Int64Counter
 	// watchEventsCounter 统计 Watch 推送的事件数，按事件类型标记
 	watchEventsCounter metric.Int64Counter
-	// watchErrorsCounter 统计 Watch 过程中的错误数
-	watchErrorsCounter metric.Int64Counter
 	// feedbackRequestsCounter 统计接收到的 Feedback 请求数
 	feedbackRequestsCounter metric.Int64Counter
 	// feedbackTasksEnqueuedCounter 统计 Feedback 触发的异步任务数
 	feedbackTasksEnqueuedCounter metric.Int64Counter
-	// feedbackErrorsCounter 统计 Feedback 过程中的错误数
-	feedbackErrorsCounter metric.Int64Counter
 )
 
 func InitMetrics() {
@@ -60,13 +56,6 @@ func initMetrics() {
 	)
 	err = errors.Join(err, e)
 
-	watchErrorsCounter, e = meter.Int64Counter(
-		"reporter.watch.errors",
-		metric.WithDescription("Total number of Watch stream errors"),
-		metric.WithUnit("{error}"),
-	)
-	err = errors.Join(err, e)
-
 	feedbackRequestsCounter, e = meter.Int64Counter(
 		"reporter.feedback.requests",
 		metric.WithDescription("Total number of Feedback requests received"),
@@ -78,13 +67,6 @@ func initMetrics() {
 		"reporter.feedback.tasks_enqueued",
 		metric.WithDescription("Total number of async tasks enqueued via Feedback"),
 		metric.WithUnit("{task}"),
-	)
-	err = errors.Join(err, e)
-
-	feedbackErrorsCounter, e = meter.Int64Counter(
-		"reporter.feedback.errors",
-		metric.WithDescription("Total number of Feedback stream errors"),
-		metric.WithUnit("{error}"),
 	)
 	err = errors.Join(err, e)
 
@@ -136,11 +118,6 @@ func RecordWatchEvent(ctx context.Context, eventType string) {
 	))
 }
 
-// RecordWatchError 记录一次 Watch 错误。
-func RecordWatchError(ctx context.Context) {
-	watchErrorsCounter.Add(ctx, 1)
-}
-
 // RecordFeedbackRequest 记录一次 Feedback 请求。
 func RecordFeedbackRequest(ctx context.Context) {
 	feedbackRequestsCounter.Add(ctx, 1)
@@ -149,11 +126,6 @@ func RecordFeedbackRequest(ctx context.Context) {
 // RecordFeedbackTaskEnqueued 记录一次 Feedback 触发的异步任务入队。
 func RecordFeedbackTaskEnqueued(ctx context.Context) {
 	feedbackTasksEnqueuedCounter.Add(ctx, 1)
-}
-
-// RecordFeedbackError 记录一次 Feedback 错误。
-func RecordFeedbackError(ctx context.Context) {
-	feedbackErrorsCounter.Add(ctx, 1)
 }
 
 // ---------------------------------------------------------------------------

@@ -19,6 +19,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -336,4 +337,39 @@ func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
 		return nil, errors.WithStack(err)
 	}
 	return &cfg, nil
+}
+
+// GetContextParam 从 context 中按指定键提取参数映射并解码为泛型类型。
+// 调用方（如任务/处理器参数注入）通过 context.WithValue 存入 map[string]any 参数，
+// 此处读取后经默认值填充与弱类型 mapstructure 解码得到目标配置结构体。
+//
+// 类型参数：
+//   - T: 目标配置结构体类型，支持 mapstructure 与 default 标签
+//
+// 参数：
+//   - ctx:  携带参数值的 context，参数以 name 为键存储
+//   - name: 参数在 context 中的键名
+//
+// 返回值：
+//   - *T:    成功时返回解码并填充默认值的配置结构体指针
+//   - error: 上下文无该键、键值类型不匹配或解码失败时返回错误
+func GetContextParam[T any](ctx context.Context, name string) (*T, error) {
+	raw, ok := ctx.Value(name).(map[string]any)
+	if !ok {
+		return nil, errors.Newf(`param %s not found in context`, name)
+	}
+	var target T
+	cfg := mapstructure.DecoderConfig{
+		Result:           &target,
+		WeaklyTypedInput: true,
+		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+	}
+	if err := defaults.Set(&target); err != nil {
+		return nil, errors.WithStack(err)
+	} else if decoder, err := mapstructure.NewDecoder(&cfg); err != nil {
+		return nil, errors.WithStack(err)
+	} else if err := decoder.Decode(raw); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &target, nil
 }

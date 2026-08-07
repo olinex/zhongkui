@@ -1,6 +1,3 @@
-// Package pipeline 提供基于 asynq 的任务队列和调度器功能。
-// 该包包含了任务队列客户端、服务器、调度器、配置管理和中间件等功能模块，
-// 用于构建分布式任务处理系统。
 package pipeline
 
 import (
@@ -82,7 +79,7 @@ import (
 //	}
 type Inspector = asynq.Inspector
 
-// NewInspector 创建一个新的 Pipeline 检查器。
+// NewInspector 创建一个新的任务队列检查器。
 // 该函数基于传入的 Redis 客户端创建一个 asynq.Inspector 实例。
 // asynq 检查器用于监控和管理 Redis 服务器中的异步任务队列状态。
 //

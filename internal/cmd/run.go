@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/manager/routes"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkui.com/zhongkui/internal/pkg/runtime"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/provider"
 	"zhongkui.com/zhongkui/internal/reporter"
@@ -60,13 +60,29 @@ var workerCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
+		factories, err := provider.InvokePipelineProcessorFactoriesRegistry(i)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
 
-		// 启动所有注册的分布式处理器
-		wg, ctx := errgroupx.WithContext(ctx)
-		wg.GoNamed("server", func() error { return server.Start(ctx) })
-		wg.GoNamed("scheduler", func() error { return scheduler.Start(ctx) })
+		// 统一服务生命周期：任务队列 Server、etcd 选举 Scheduler 与
+		// 分布式常驻 Processor 均通过 runtime.Group 编排启动与关闭，
+		// Redis 队列故障不再连带影响流式处理器。单个处理器创建失败仅记录并跳过。
+		services := []runtime.Service{
+			runtime.NewPipelineService(server),
+			runtime.NewElectionService(scheduler),
+		}
+		for name, factory := range factories {
+			processor, err := factory(ctx)
+			if err != nil {
+				pterm.Error.Printf("failed to create processor %s: %v\n", name, err)
+				continue
+			}
+			services = append(services, runtime.NewProcessorService(name, processor))
+		}
 
-		if err := wg.Wait(); err != nil {
+		if err := runtime.NewGroup(services...).Run(ctx); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}

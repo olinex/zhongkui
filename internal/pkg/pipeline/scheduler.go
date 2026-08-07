@@ -1,4 +1,4 @@
-// Package pipeline 提供基于 asynq 的任务队列和分布式调度器功能。
+// Package queue 提供基于 asynq 的任务队列和分布式调度器功能。
 // 该包实现了基于 etcd 分布式选举的定时任务调度器，支持多实例部署下的高可用性。
 // 调度器通过 etcd 存储定时任务配置，确保配置的一致性和持久化。
 package pipeline
@@ -29,6 +29,7 @@ var (
 var (
 	// schedulerName 调度器名称常量，用于标识当前服务组件。
 	// 此名称会出现在日志和监控指标中，帮助识别调度器实例。
+	// 保留 "pipeline-scheduler" 原值以兼容既有 etcd 选举与监控指标。
 	schedulerName = "pipeline-scheduler"
 
 	// SchedulerCfgEtcdPrefix etcd 键前缀常量，用于存储所有定时任务的配置。

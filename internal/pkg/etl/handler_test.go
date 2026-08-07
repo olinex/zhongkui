@@ -1,4 +1,4 @@
-package pipeline
+package etl
 
 import (
 	"context"
@@ -62,39 +62,6 @@ func TestGetHandlerParam_DefaultValues(t *testing.T) {
 			So(cfg.Name, ShouldEqual, "partial-task")
 			So(cfg.Timeout, ShouldEqual, 5*time.Second)
 			So(cfg.MaxRetry, ShouldEqual, 3)
-		})
-	})
-}
-
-func TestGetProcParam_Success(t *testing.T) {
-	Convey("TestGetProcParam 成功解析配置", t, func() {
-		ctx := context.WithValue(context.Background(), ContextProcParamName, map[string]any{
-			"name":     "proc-task",
-			"timeout":  "30s",
-			"maxRetry": 10,
-		})
-
-		cfg, err := GetProcParam[testHandlerConfig](ctx)
-
-		Convey("不返回错误", func() {
-			So(err, ShouldBeNil)
-		})
-		Convey("配置结构体正确解析", func() {
-			So(cfg.Name, ShouldEqual, "proc-task")
-			So(cfg.Timeout, ShouldEqual, 30*time.Second)
-			So(cfg.MaxRetry, ShouldEqual, 10)
-		})
-	})
-}
-
-func TestGetProcParam_NotFound(t *testing.T) {
-	Convey("TestGetProcParam Context中无处理器参数", t, func() {
-		ctx := context.Background()
-
-		_, err := GetProcParam[testHandlerConfig](ctx)
-
-		Convey("返回错误", func() {
-			So(err, ShouldNotBeNil)
 		})
 	})
 }

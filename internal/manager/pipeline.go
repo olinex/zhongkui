@@ -18,8 +18,8 @@ const (
 // 可以通过 GetPipelineInspector 函数获取检查器实例，用于监控和管理任务队列状态。
 //
 // 参数:
-//   - inspector: *pipeline.Inspector - Pipeline 检查器实例，用于监控和管理 asynq 任务队列。
-//     该实例通常由 pipeline.NewInspector 创建，需要传入有效的 Redis 客户端。
+//   - inspector: *queue.Inspector - 任务队列检查器实例，用于监控和管理 asynq 任务队列。
+//     该实例通常由 queue.NewInspector 创建，需要传入有效的 Redis 客户端。
 //
 // 返回:
 //   - gin.HandlerFunc - Gin 中间件处理函数，将检查器实例设置到上下文后调用后续处理函数。
@@ -44,7 +44,7 @@ func PipelineInspectorMiddleware(inspector *pipeline.Inspector) gin.HandlerFunc 
 //   - c: *gin.Context - Gin 请求上下文，必须经过 PipelineInspectorMiddleware 中间件处理。
 //
 // 返回:
-//   - *pipeline.Inspector - 从上下文中获取的 Pipeline 检查器实例。
+//   - *queue.Inspector - 从上下文中获取的任务队列检查器实例。
 //
 // 注意事项:
 //   - 如果上下文中不存在检查器实例（即未使用 PipelineInspectorMiddleware 中间件），
