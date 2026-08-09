@@ -62,6 +62,7 @@ var RootCmd = &cobra.Command{
 		provider.InjectGrpcLogger(i)
 		provider.InjectPipelineLogger(i)
 		provider.InjectCoreDatabase(i)
+		provider.InjectTagEngine(i)
 		provider.InjectRawDatabase(i)
 		provider.InjectCacheRedis(i)
 		provider.InjectPipelineRedis(i)

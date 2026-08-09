@@ -3,10 +3,13 @@ package validator
 import (
 	"encoding/base32"
 	"encoding/base64"
+	"fmt"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -22,7 +25,11 @@ const (
 	TagFileName        = "fileName"
 	TagStrictFileName  = "strictFileName"
 	TagDirpath         = "dirpath"
+	TagAlphanumSpecial = "alphanumspecial"
 )
+
+// alphanumSpecialRegexps 按特殊字符参数缓存编译后的校验正则。
+var alphanumSpecialRegexps sync.Map
 
 var (
 	windowsReservedNames = map[string]any{
@@ -363,6 +370,41 @@ func IsSlug(value string) bool {
 	return false
 }
 
+// IsValidAlphanumSpecial 判断字符串是否仅由字母数字（含 Unicode）与
+// 指定的特殊字符组成，且至少包含一个字母或数字（不允许仅有特殊符号）。
+// specialChars 为允许的特殊字符集合（如 "-_"）。
+func IsValidAlphanumSpecial(value, specialChars string) bool {
+	if value == "" {
+		return false
+	}
+	if re, ok := alphanumSpecialRegexps.Load(specialChars); ok {
+		return matchAlphanumSpecial(re.(*regexp2.Regexp), value)
+	}
+	pattern := fmt.Sprintf(`^(?=.*[\p{L}\p{N}])[\p{L}\p{N}%s]+$`, regexp.QuoteMeta(specialChars))
+	re, err := regexp2.Compile(pattern, regexp2.DefaultUnmarshalOptions)
+	if err != nil {
+		return false
+	}
+	loaded, _ := alphanumSpecialRegexps.LoadOrStore(specialChars, re)
+	return matchAlphanumSpecial(loaded.(*regexp2.Regexp), value)
+}
+
+// matchAlphanumSpecial 用编译后的正则匹配字符串。
+func matchAlphanumSpecial(re *regexp2.Regexp, value string) bool {
+	if ok, err := re.MatchString(value); err == nil && ok {
+		return true
+	}
+	return false
+}
+
+func validateAlphanumSpecial(fl validator.FieldLevel) bool {
+	if v, ok := fl.Field().Interface().(string); !ok {
+		return false
+	} else {
+		return IsValidAlphanumSpecial(v, fl.Param())
+	}
+}
+
 func validateStrongPassword(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -418,4 +460,5 @@ func init() {
 	validations[TagFileName] = validateFileName
 	validations[TagStrictFileName] = validateStrictFileName
 	validations[TagDirpath] = validateDirPath
+	validations[TagAlphanumSpecial] = validateAlphanumSpecial
 }

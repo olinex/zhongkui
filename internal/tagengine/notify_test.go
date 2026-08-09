@@ -1,0 +1,219 @@
+package tagengine
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+	mvccpb "go.etcd.io/etcd/api/v3/mvccpb"
+	clientv3 "go.etcd.io/etcd/client/v3"
+
+	"zhongkui.com/zhongkui/internal/models/tag"
+	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
+)
+
+// notifyModel 变更通知测试用的本地结构体。
+type notifyModel struct {
+	Namespace string `json:"namespace"`
+	Method    string `json:"method"`
+}
+
+// setupNotifyEngine 创建 sqlite 内存库与标签识别引擎（单连接限制）。
+func setupNotifyEngine(t *testing.T) (*Engine, *database.DB) {
+	t.Helper()
+	logger, err := logging.NewDefaultLogger()
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sqlDB, err := db.DB(); err != nil {
+		t.Fatal(err)
+	} else {
+		sqlDB.SetMaxOpenConns(1)
+	}
+	if err := db.AutoMigrate(&tag.TagRule{}); err != nil {
+		t.Fatal(err)
+	}
+	return NewEngine(db, logger, nil), db
+}
+
+// TestRuleChangeKey 测试规则变更广播键的全局前缀。
+func TestRuleChangeKey(t *testing.T) {
+	Convey("Test RuleChangeKey", t, func() {
+		Convey("规则变更键应落在全局前缀下", func() {
+			So(ruleChangeKey, ShouldEqual, "zki/tagengine/rule-change")
+		})
+	})
+}
+
+// TestEngineBroadcastChange 测试引擎广播规则变更的行为。
+func TestEngineBroadcastChange(t *testing.T) {
+	Convey("Test Engine BroadcastChange", t, func() {
+		Convey("未绑定 etcd 客户端时广播快速失败", func() {
+			engine, _ := setupNotifyEngine(t)
+			err := engine.BroadcastChange(context.Background(), "default", "t", "risk")
+			So(err, ShouldNotBeNil)
+			So(err, ShouldEqual, ErrRuleChangeUnavailable)
+		})
+	})
+}
+
+// TestEngineStartNoEtcd 未绑定 etcd 客户端时 Start 直接返回（无监听能力）。
+func TestEngineStartNoEtcd(t *testing.T) {
+	Convey("Test Engine Start without etcd", t, func() {
+		engine, _ := setupNotifyEngine(t)
+		So(engine.Start(context.Background()), ShouldBeNil)
+	})
+}
+
+// TestEngineHandleResponse 测试引擎收到变更事件后失效编译缓存。
+func TestEngineHandleResponse(t *testing.T) {
+	Convey("Test Engine HandleResponse", t, func() {
+		engine, db := setupNotifyEngine(t)
+		targetType, err := TypeKey(&notifyModel{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		insertNotifyRule(t, db, targetType, "r1", "risk", `tags contains "old" if { input.method == "GET" }`)
+		insertNotifyRule(t, db, targetType, "a1", "asset", `tags contains "asset-old" if { input.method == "GET" }`)
+
+		Convey("收到精准事件后仅失效对应分组，其他分组缓存保持", func() {
+			// 预热两个分组缓存
+			riskFirst, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			So(err, ShouldBeNil)
+			So(riskFirst, ShouldResemble, []string{"old"})
+			assetFirst, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "asset")
+			So(err, ShouldBeNil)
+			So(assetFirst, ShouldResemble, []string{"asset-old"})
+			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeTrue)
+			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeTrue)
+
+			// 直接修改 risk 组规则，未失效缓存仍返回旧结果
+			newRego := `package zki
+
+tags contains "new" if {
+    input.method == "GET"
+}`
+			if err := db.Model(&tag.TagRule{}).Where("name = ?", "r1").Update("rego", newRego).Error; err != nil {
+				t.Fatal(err)
+			}
+			cached, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			So(err, ShouldBeNil)
+			So(cached, ShouldResemble, []string{"old"})
+
+			// 引擎收到仅含 risk 分组的事件
+			So(engine.handleResponse(watchResponseOf(&RuleChangeEvent{Namespace: "default", TargetType: targetType, TagType: "risk"})), ShouldBeNil)
+
+			// 仅 risk 组缓存被失效，asset 组缓存保持（在重新识别前检查，识别会重新填充缓存）
+			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeFalse)
+			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeTrue)
+
+			// risk 组重新加载命中新规则
+			fresh, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			So(err, ShouldBeNil)
+			So(fresh, ShouldResemble, []string{"new"})
+
+			// asset 组缓存未被失效，仍命中缓存中的旧规则
+			assetAgain, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "asset")
+			So(err, ShouldBeNil)
+			So(assetAgain, ShouldResemble, []string{"asset-old"})
+		})
+
+		Convey("无事件的响应不应失效缓存", func() {
+			first, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			So(err, ShouldBeNil)
+			So(first, ShouldResemble, []string{"old"})
+
+			So(engine.handleResponse(clientv3.WatchResponse{}), ShouldBeNil)
+
+			// 缓存仍有效：返回旧结果（规则未变）
+			again, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			So(err, ShouldBeNil)
+			So(again, ShouldResemble, []string{"old"})
+		})
+
+		Convey("负载无法解析时回退全量失效", func() {
+			_, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			So(err, ShouldBeNil)
+			_, err = engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "asset")
+			So(err, ShouldBeNil)
+			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeTrue)
+			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeTrue)
+
+			// 发送不可解析负载（非 JSON 且无分组信息）
+			resp := clientv3.WatchResponse{Events: []*clientv3.Event{{
+				Type: mvccpb.PUT,
+				Kv:   &mvccpb.KeyValue{Value: []byte("not-json")},
+			}}}
+			So(engine.handleResponse(resp), ShouldBeNil)
+
+			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeFalse)
+			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeFalse)
+		})
+	})
+}
+
+// cacheHas 检查引擎缓存中是否存在指定命名空间下的分组。
+func cacheHas(engine *Engine, namespace, targetType, tagType string) bool {
+	_, ok := engine.cache.Load(groupKey(namespace, targetType, tagType))
+	return ok
+}
+
+// watchResponseOf 构造携带指定规则变更事件负载的 watch 响应。
+func watchResponseOf(event *RuleChangeEvent) clientv3.WatchResponse {
+	payload, err := json.Marshal(event)
+	if err != nil {
+		panic("failed to marshal rule change event: " + err.Error())
+	}
+	return clientv3.WatchResponse{Events: []*clientv3.Event{{
+		Type: mvccpb.PUT,
+		Kv:   &mvccpb.KeyValue{Value: payload},
+	}}}
+}
+
+// insertNotifyRule 插入一条启用的识别规则。
+func insertNotifyRule(t *testing.T, db *database.DB, targetType, name, tagType, body string) {
+	t.Helper()
+	if err := db.Create(&tag.TagRule{
+		NamespaceName: "default",
+		Name:          name,
+		TargetType:    targetType,
+		TagType:       tagType,
+		Rego:          "package zki\n\n" + body,
+		Enabled:       true,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestExtractNamespace 测试 extractNamespace 的命名空间提取与缺省回退行为。
+func TestExtractNamespace(t *testing.T) {
+	Convey("Test extractNamespace", t, func() {
+		Convey("缺失 Namespace 字段的结构体回退到默认命名空间", func() {
+			So(extractNamespace(&struct{ Method string }{Method: "GET"}), ShouldEqual, base.DefaultNamespace)
+		})
+
+		Convey("Namespace 字段为空的实例回退到默认命名空间", func() {
+			So(extractNamespace(&notifyModel{Method: "GET"}), ShouldEqual, base.DefaultNamespace)
+		})
+
+		Convey("Namespace 字段非空的实例返回其值", func() {
+			So(extractNamespace(&notifyModel{Namespace: "tenant-b", Method: "GET"}), ShouldEqual, "tenant-b")
+		})
+
+		Convey("nil 指针回退到默认命名空间", func() {
+			var m *notifyModel
+			So(extractNamespace(m), ShouldEqual, base.DefaultNamespace)
+		})
+
+		Convey("非结构体目标回退到默认命名空间", func() {
+			So(extractNamespace("not a struct"), ShouldEqual, base.DefaultNamespace)
+		})
+	})
+}

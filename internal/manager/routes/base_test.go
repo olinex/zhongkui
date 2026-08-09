@@ -55,6 +55,7 @@ code.1102 = "username or password check failed"
 code.1103 = "username or email already exist"
 code.1104 = "too many access key"
 code.200 = "ok"
+code.404 = "not found"
 error.emptyUrlParam = "empty url param: %s"
 error.badUrlParam = "bad url param: %s"
 `), "en.toml")

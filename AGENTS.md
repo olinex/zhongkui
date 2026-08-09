@@ -8,6 +8,15 @@
 
 ---
 
+## Development Status 开发阶段
+
+The project is currently in the **closed first-version development stage** (封闭首版本开发阶段).
+
+- No backward compatibility is required — database schema changes, project architecture adjustments, and other refactoring may be done freely without considering migration for existing data or external consumers.
+- 数据库调整、项目架构调整等均无需考虑向后兼容问题，可直接进行重构与变更。
+
+---
+
 ## Go Backend Conventions
 
 ### Import Organization
@@ -146,6 +155,7 @@ All providers live under `internal/provider/` and are injected centrally in `roo
 - Single-method interfaces defined at the consumer side
 - Use `errgroup` for goroutine lifecycle management
 - Custom serializer types implement `driver.Valuer` + `sql.Scanner`
+- Do not write explicit type arguments when Go can infer them from arguments: `etl.NewPipeline(extract, ...)` instead of `etl.NewPipeline[any](extract, ...)`
 
 ---
 

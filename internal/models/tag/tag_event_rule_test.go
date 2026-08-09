@@ -153,9 +153,9 @@ func TestBoolExprParser(t *testing.T) {
 	})
 }
 
-// TestRiskCondition_ExprValidate 测试 RiskCondition 的 ExprValidate 方法
-func TestRiskCondition_ExprValidate(t *testing.T) {
-	convey.Convey("测试 RiskCondition.ExprValidate 方法", t, func() {
+// TestTagEventCondition_ExprValidate 测试 TagEventCondition 的 ExprValidate 方法
+func TestTagEventCondition_ExprValidate(t *testing.T) {
+	convey.Convey("测试 TagEventCondition.ExprValidate 方法", t, func() {
 		convey.Convey("应该验证有效的表达式", func() {
 			testCases := []struct {
 				name string
@@ -171,7 +171,7 @@ func TestRiskCondition_ExprValidate(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					condition := &RiskCondition{
+					condition := &TagEventCondition{
 						Expression: tc.expr,
 					}
 					refinedExpr, err := condition.ExprValidate()
@@ -199,7 +199,7 @@ func TestRiskCondition_ExprValidate(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					condition := &RiskCondition{
+					condition := &TagEventCondition{
 						Expression: tc.expr,
 					}
 					_, err := condition.ExprValidate()
@@ -215,7 +215,7 @@ func TestRiskCondition_ExprValidate(t *testing.T) {
 				for i := 0; i < 100; i++ {
 					longTag += "a"
 				}
-				condition := &RiskCondition{
+				condition := &TagEventCondition{
 					Expression: longTag,
 				}
 				refinedExpr, err := condition.ExprValidate()
@@ -224,7 +224,7 @@ func TestRiskCondition_ExprValidate(t *testing.T) {
 			})
 
 			convey.Convey("带空格但不忽略", func() {
-				condition := &RiskCondition{
+				condition := &TagEventCondition{
 					Expression: "A  AND  B", // 多个空格
 				}
 				refinedExpr, err := condition.ExprValidate()
@@ -236,28 +236,30 @@ func TestRiskCondition_ExprValidate(t *testing.T) {
 	})
 }
 
-// TestRiskCondition_Fields 测试 RiskCondition 结构体字段
-func TestRiskCondition_Fields(t *testing.T) {
-	convey.Convey("测试 RiskCondition 结构体字段", t, func() {
+// TestTagEventCondition_Fields 测试 TagEventCondition 结构体字段
+func TestTagEventCondition_Fields(t *testing.T) {
+	convey.Convey("测试 TagEventCondition 结构体字段", t, func() {
 		convey.Convey("应该正确设置所有字段", func() {
 			now := time.Now()
-			condition := &RiskCondition{
+			condition := &TagEventCondition{
 				BaseModel: database.BaseModel{
 					ID:        1,
 					CreatedAt: now.Add(-time.Hour),
 					UpdatedAt: now,
 				},
-				RiskRuleID:  100,
-				Name:        "登录失败检测",
-				Window:      5 * time.Minute,
-				Threshold:   3,
-				Expression:  "login_failed AND suspicious_ip",
-				Enabled:     true,
-				Description: "检测5分钟内登录失败次数超过3次且IP可疑",
+				NamespaceName:  "default",
+				TagEventRuleID: 100,
+				Name:           "登录失败检测",
+				Window:         5 * time.Minute,
+				Threshold:      3,
+				Expression:     "login_failed AND suspicious_ip",
+				Enabled:        true,
+				Description:    "检测5分钟内登录失败次数超过3次且IP可疑",
 			}
 
 			convey.So(condition.ID, convey.ShouldEqual, 1)
-			convey.So(condition.RiskRuleID, convey.ShouldEqual, 100)
+			convey.So(condition.NamespaceName, convey.ShouldEqual, "default")
+			convey.So(condition.TagEventRuleID, convey.ShouldEqual, 100)
 			convey.So(condition.Name, convey.ShouldEqual, "登录失败检测")
 			convey.So(condition.Window, convey.ShouldEqual, 5*time.Minute)
 			convey.So(condition.Threshold, convey.ShouldEqual, 3)
@@ -268,14 +270,14 @@ func TestRiskCondition_Fields(t *testing.T) {
 
 		convey.Convey("应该验证字段约束", func() {
 			convey.Convey("必填字段不能为空", func() {
-				condition := &RiskCondition{}
+				condition := &TagEventCondition{}
 				// 这里可以测试数据库约束，但单元测试中主要验证业务逻辑
 				convey.So(condition.Name, convey.ShouldBeEmpty)
 				convey.So(condition.Expression, convey.ShouldBeEmpty)
 			})
 
 			convey.Convey("默认值应该正确", func() {
-				condition := &RiskCondition{}
+				condition := &TagEventCondition{}
 				// GORM 的 default:true 标签只在数据库层面有效
 				// 在 Go 结构体中，布尔字段的默认值是 false
 				convey.So(condition.Enabled, convey.ShouldBeFalse)
@@ -295,7 +297,7 @@ func TestRiskCondition_Fields(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					condition := &RiskCondition{
+					condition := &TagEventCondition{
 						Window: tc.window,
 					}
 					convey.So(condition.Window, convey.ShouldEqual, tc.window)
@@ -305,23 +307,25 @@ func TestRiskCondition_Fields(t *testing.T) {
 	})
 }
 
-// TestRiskRule_Fields 测试 RiskRule 结构体字段
-func TestRiskRule_Fields(t *testing.T) {
-	convey.Convey("测试 RiskRule 结构体字段", t, func() {
+// TestTagEventRule_Fields 测试 TagEventRule 结构体字段
+func TestTagEventRule_Fields(t *testing.T) {
+	convey.Convey("测试 TagEventRule 结构体字段", t, func() {
 		convey.Convey("应该正确设置所有字段", func() {
 			now := time.Now()
-			tag := &RiskRule{
+			tag := &TagEventRule{
 				BaseModel: database.BaseModel{
 					ID:        1,
 					CreatedAt: now.Add(-time.Hour),
 					UpdatedAt: now,
 				},
-				Name:        "login_failed",
-				Enabled:     true,
-				Description: "用户登录失败事件",
+				NamespaceName: "default",
+				Name:          "login_failed",
+				Enabled:       true,
+				Description:   "用户登录失败事件",
 			}
 
 			convey.So(tag.ID, convey.ShouldEqual, 1)
+			convey.So(tag.NamespaceName, convey.ShouldEqual, "default")
 			convey.So(tag.Name, convey.ShouldEqual, "login_failed")
 			convey.So(tag.Enabled, convey.ShouldBeTrue)
 			convey.So(tag.Description, convey.ShouldEqual, "用户登录失败事件")
@@ -329,19 +333,19 @@ func TestRiskRule_Fields(t *testing.T) {
 
 		convey.Convey("应该验证字段约束", func() {
 			convey.Convey("必填字段不能为空", func() {
-				tag := &RiskRule{}
+				tag := &TagEventRule{}
 				convey.So(tag.Name, convey.ShouldBeEmpty)
 			})
 
 			convey.Convey("默认值应该正确", func() {
-				tag := &RiskRule{}
+				tag := &TagEventRule{}
 				// GORM 的 default:true 标签只在数据库层面有效
 				// 在 Go 结构体中，布尔字段的默认值是 false
 				convey.So(tag.Enabled, convey.ShouldBeFalse)
 			})
 		})
 
-		convey.Convey("应该支持不同的标签类型", func() {
+		convey.Convey("应该支持不同的规则名称", func() {
 			testCases := []struct {
 				name        string
 				description string
@@ -355,7 +359,7 @@ func TestRiskRule_Fields(t *testing.T) {
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					tag := &RiskRule{
+					tag := &TagEventRule{
 						Name:        tc.name,
 						Description: tc.description,
 					}

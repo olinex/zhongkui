@@ -4,23 +4,19 @@ import (
 	"strings"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
+
+	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// type Atom struct {
-// 	Label *string       `@Ident`        // 标签（标识符）
-// 	Expr  *BoolExpr     `| "(" @@ ")"`  // 括号子表达式
-// }
-
-// 布尔表达式解析器，用于解析风险规则的条件表达式
+// 布尔表达式解析器，用于解析标签事件条件中的标签组合表达式
 // 支持 AND、OR、NOT 操作符和括号分组
 
 var (
-	// parser 是布尔表达式的解析器实例，用于解析风险规则的条件表达式
+	// parser 是布尔表达式的解析器实例，用于解析标签事件条件的标签组合表达式
 	parser *participle.Parser[BoolExpr]
 )
 
@@ -111,24 +107,32 @@ func (a *Atom) String() string {
 	return ""
 }
 
-// RiskCondition 表示风险规则条件，定义了触发风险的逻辑条件
-// 例如: "在5分钟内，如果标签A和标签B同时出现超过3次，则触发风险"
-type RiskCondition struct {
+// TagEventCondition 表示标签事件条件，是标签事件规则（TagEventRule）中单条触发条件的判定逻辑。
+// 在时间窗口（Window）内，若标签组合表达式（Expression）的命中次数达到阈值（Threshold），
+// 则触发该条件对应的事件。
+// Expression 为标签标识符的布尔组合（AND / OR / NOT / 括号），其中的标签由 TagRule
+// 识别产生，与具体标签维度（risk / asset / behavior）解耦。
+// 例如: "在5分钟内，如果标签A和标签B同时出现超过3次，则触发事件"
+type TagEventCondition struct {
 	database.BaseModel
-	RiskRuleID  uint          `gorm:"column:risk_rule_id;type:INT"`
-	RiskRule    RiskRule      `gorm:"foreignKey:RiskRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Name        string        `gorm:"column:name;type:VARCHAR(255)"`
-	Window      time.Duration `gorm:"type:BIGINT"`
-	Threshold   int           `gorm:"type:INT"`
-	Expression  string        `gorm:"type:VARCHAR(1024)"`
-	Enabled     bool          `gorm:"type:BOOLEAN"`
-	Description string        `gorm:"type:VARCHAR(256)"`
+	// Namespace 所属命名空间的关联模型，用于多租户隔离
+	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
+	// NamespaceName 所属命名空间名称，与所属 TagEventRule 保持一致
+	NamespaceName  string        `gorm:"column:namespace_name;type:VARCHAR(32)"`
+	TagEventRuleID uint          `gorm:"column:tag_event_rule_id;type:INT"`
+	TagEventRule   TagEventRule  `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Name           string        `gorm:"column:name;type:VARCHAR(255)"`
+	Window         time.Duration `gorm:"type:BIGINT"`
+	Threshold      int           `gorm:"type:INT"`
+	Expression     string        `gorm:"type:VARCHAR(1024)"`
+	Enabled        bool          `gorm:"type:BOOLEAN"`
+	Description    string        `gorm:"type:VARCHAR(256)"`
 }
 
-// ExprValidate 验证风险条件中的标签表达式语法是否正确
+// ExprValidate 验证标签事件条件中的标签组合表达式语法是否正确
 // 使用布尔表达式解析器检查表达式是否可以被正确解析
 // 返回精炼后的表达式字符串（去除无意义的空格和回车）和错误信息
-func (c *RiskCondition) ExprValidate() (string, error) {
+func (c *TagEventCondition) ExprValidate() (string, error) {
 	expr, err := parser.ParseString("", c.Expression)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -138,19 +142,25 @@ func (c *RiskCondition) ExprValidate() (string, error) {
 	return refinedExpr, nil
 }
 
-// RiskRule 表示风险规则，用于定义特定类型事件或属性的风险判定规则
-// 例如: "登录失败"、"异常访问"、"高风险操作"
-type RiskRule struct {
+// TagEventRule 表示标签事件规则，是基于已识别标签的高层次识别规则。
+// 由一条或多条标签事件条件（TagEventCondition）组成，条件中的标签来自
+// TagRule 的识别结果，因此该规则与具体标签维度（risk / asset / behavior）无关。
+// 规则归属命名空间（NamespaceName），不同租户的事件规则相互隔离。
+// 例如: "登录失败"、"异常访问"、"高风险操作"等事件判定
+type TagEventRule struct {
 	database.BaseModel
-	Name        string `gorm:"column:name;type:VARCHAR(255)"`
-	Enabled     bool   `gorm:"type:BOOLEAN"`
-	Description string `gorm:"type:VARCHAR(256)"`
+	// Namespace 所属命名空间的关联模型，用于多租户隔离
+	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
+	// NamespaceName 所属命名空间名称
+	NamespaceName string `gorm:"column:namespace_name;type:VARCHAR(32)"`
+	Name          string `gorm:"column:name;type:VARCHAR(255)"`
+	Enabled       bool   `gorm:"type:BOOLEAN"`
+	Description   string `gorm:"column:description;type:VARCHAR(256)"`
 }
 
-// init 函数在包初始化时执行，用于注册数据模型和初始化布尔表达式解析器
+// init 函数在包初始化时执行，用于初始化布尔表达式解析器
+// 使用 participle 库构建一个支持 AND、OR、NOT 操作符和括号的解析器
 func init() {
-	// 初始化布尔表达式解析器
-	// 使用 participle 库构建一个支持 AND、OR、NOT 操作符和括号的解析器
 	{
 		tmp, err := participle.Build[BoolExpr](
 			participle.Lexer(lexer.MustSimple([]lexer.SimpleRule{
@@ -161,7 +171,7 @@ func init() {
 			participle.Elide("Whitespace"), // 忽略空白字符
 		)
 		if err != nil {
-			// 解析器构建失败会导致程序无法启动，因为风险规则功能依赖表达式解析
+			// 解析器构建失败会导致程序无法启动，因为标签事件规则功能依赖表达式解析
 			panic(err)
 		}
 		parser = tmp

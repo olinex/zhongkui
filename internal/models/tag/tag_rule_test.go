@@ -48,14 +48,16 @@ func TestTagRule_Struct(t *testing.T) {
 					CreatedAt: now.Add(-time.Hour),
 					UpdatedAt: now,
 				},
-				Name:        "admin-panel",
-				Description: "识别管理后台登录",
-				TargetType:  "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:     "risk",
-				Rego:        "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
-				Enabled:     true,
+				NamespaceName: "default",
+				Name:          "admin-panel",
+				Description:   "识别管理后台登录",
+				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				TagType:       "risk",
+				Rego:          "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
+				Enabled:       true,
 			}
 			convey.So(rule.ID, convey.ShouldEqual, 42)
+			convey.So(rule.NamespaceName, convey.ShouldEqual, "default")
 			convey.So(rule.Name, convey.ShouldEqual, "admin-panel")
 			convey.So(rule.Description, convey.ShouldEqual, "识别管理后台登录")
 			convey.So(rule.TargetType, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
@@ -79,9 +81,9 @@ func TestTagRule_Struct(t *testing.T) {
 			})
 		})
 
-		convey.Convey("gorm tag 应包含唯一索引 uq_tag_rule_group", func() {
+		convey.Convey("gorm tag 应包含唯一索引 uq_tag_rule_group 且带命名空间", func() {
 			typ := reflect.TypeOf(TagRule{})
-			for _, name := range []string{"Name", "TargetType", "TagType"} {
+			for _, name := range []string{"NamespaceName", "Name", "TargetType", "TagType"} {
 				field, ok := typ.FieldByName(name)
 				convey.So(ok, convey.ShouldBeTrue)
 				convey.So(field.Tag.Get("gorm"), convey.ShouldContainSubstring, "uniqueIndex:uq_tag_rule_group")
@@ -101,12 +103,13 @@ func TestTagRule_JSONSerialization(t *testing.T) {
 					CreatedAt: now,
 					UpdatedAt: now,
 				},
-				Name:        "admin-panel",
-				Description: "识别管理后台登录",
-				TargetType:  "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:     "risk",
-				Rego:        "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
-				Enabled:     true,
+				NamespaceName: "default",
+				Name:          "admin-panel",
+				Description:   "识别管理后台登录",
+				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				TagType:       "risk",
+				Rego:          "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
+				Enabled:       true,
 			}
 
 			data, err := json.Marshal(rule)
@@ -136,17 +139,18 @@ func TestTagRule_TableName(t *testing.T) {
 	})
 }
 
-// TestTagRule_UniqueConstraint 测试 tag_rules 表的分组唯一约束
+// TestTagRule_UniqueConstraint 测试 tag_rules 表的分组唯一约束（含命名空间隔离）
 func TestTagRule_UniqueConstraint(t *testing.T) {
 	convey.Convey("测试 TagRule 分组唯一约束", t, func() {
-		convey.Convey("插入 (target_type, tag_type, name) 完全相同的规则应失败", func() {
+		convey.Convey("同一命名空间下 (target_type, tag_type, name) 完全相同的规则应失败", func() {
 			db := newTagRuleTestDB(t)
 			base := TagRule{
-				Name:       "dup",
-				TargetType: "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:    "risk",
-				Rego:       "package zki\n\ntags contains \"a\"",
-				Enabled:    true,
+				NamespaceName: "default",
+				Name:          "dup",
+				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				TagType:       "risk",
+				Rego:          "package zki\n\ntags contains \"a\"",
+				Enabled:       true,
 			}
 			convey.So(db.Create(&base).Error, convey.ShouldBeNil)
 
@@ -157,14 +161,33 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
 		})
 
+		convey.Convey("不同命名空间下相同 name 的规则应插入成功", func() {
+			db := newTagRuleTestDB(t)
+			base := TagRule{
+				NamespaceName: "default",
+				Name:          "dup",
+				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				TagType:       "risk",
+				Rego:          "package zki\n\ntags contains \"a\"",
+				Enabled:       true,
+			}
+			convey.So(db.Create(&base).Error, convey.ShouldBeNil)
+
+			other := base
+			other.ID = 0
+			other.NamespaceName = "tenant-b"
+			convey.So(db.Create(&other).Error, convey.ShouldBeNil)
+		})
+
 		convey.Convey("相同 name 但不同 tag_type 的规则应插入成功", func() {
 			db := newTagRuleTestDB(t)
 			base := TagRule{
-				Name:       "dup",
-				TargetType: "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:    "risk",
-				Rego:       "package zki\n\ntags contains \"a\"",
-				Enabled:    true,
+				NamespaceName: "default",
+				Name:          "dup",
+				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				TagType:       "risk",
+				Rego:          "package zki\n\ntags contains \"a\"",
+				Enabled:       true,
 			}
 			convey.So(db.Create(&base).Error, convey.ShouldBeNil)
 

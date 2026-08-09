@@ -65,11 +65,17 @@ var workerCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
-
-		// 统一服务生命周期：任务队列 Server、etcd 选举 Scheduler 与
-		// 分布式常驻 Processor 均通过 runtime.Group 编排启动与关闭，
-		// Redis 队列故障不再连带影响流式处理器。单个处理器创建失败仅记录并跳过。
+		tagEngine, err := provider.InvokeTagEngine(i)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
+		// 统一服务生命周期：任务队列 Server、etcd 选举 Scheduler、
+		// 分布式常驻 Processor 与标签识别引擎（监听规则变更）均通过
+		// runtime.Group 编排启动与关闭，Redis 队列故障不再连带影响流式处理器。
+		// 单个处理器创建失败仅记录并跳过。
 		services := []runtime.Service{
+			tagEngine,
 			runtime.NewPipelineService(server),
 			runtime.NewElectionService(scheduler),
 		}

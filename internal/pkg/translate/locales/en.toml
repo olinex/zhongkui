@@ -76,6 +76,7 @@
 1101 = "User Old Password Check Failed"
 1102 = "User Username Or Email Already Exist"
 1103 = "Too Many Access Key"
+1104 = "Tag Rule Validation Failed"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -301,9 +302,6 @@ other = "email of the new user"
 [flag.create.user.timeout]
 other = "timeout for writing data to the database"
 
-[flag.create.user.superuser]
-other = "create the user as a superuser"
-
 [flag.force-reset-password.username]
 other = "username whose password to reset"
 
@@ -485,6 +483,9 @@ other = "Enable this access key?"
 
 ["cli.input.prompt.createAccessKeyInput.TTL"]
 other = "Please enter the validity TTL (e.g. 8760h, 0 means never expires)"
+
+["cli.input.prompt.createUserInput.Superuser"]
+other = "Create this user as a superuser?"
 
 ["cli.input.prompt.confirm-suffix"]
 other = " (confirm)"

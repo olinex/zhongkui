@@ -42,6 +42,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	apiLogger := provider.MustInvokeApiLogger(i)
 	i18n := provider.MustInvokeI18n(i)
 	rbac := provider.MustInvokeRbac(i)
+	tagEngine := provider.MustInvokeTagEngine(i)
 	cfg, err := manager.ExtractConfig(viper)
 	if err != nil {
 		return errors.WithStack(err)
@@ -85,6 +86,8 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	namespaceMiddleware := manager.NamespaceMiddleware(&cfg.Namespace)
 	// authorizeMiddleware := manager.RbacPolicyAuthorizeMiddleware() - 权限验证中间件（暂未启用）
 	pipelineInspectorMiddleware := manager.PipelineInspectorMiddleware(inspector)
+	// tagRuleEngineMiddleware - 标签规则引擎中间件，将标签引擎注入请求上下文，
+	tagRuleEngineMiddleware := manager.TagRuleEngineMiddleware(tagEngine)
 
 	// ==================== 默认错误处理 ====================
 	// 重写Gin框架的默认错误响应，提供统一的错误格式和国际化支持
@@ -201,6 +204,36 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/capturer/:id/update", etcdMiddleware, capturerUpdate)
 		// 删除抓包器 - 删除指定的抓包器配置（需要etcd中间件）
 		adminGroup.POST("/capturer/:id/delete", etcdMiddleware, capturerDelete)
+
+		// ========== 标签识别规则管理接口 ==========
+		// 管理标签识别规则的增删改查、启停、校验、dry-run 与版本回滚
+
+		// 标签规则列表查询 - 支持分页、搜索和排序
+		adminGroup.POST("/tag-rule/list", tagRuleListGet)
+		// 标签规则列表选项查询 - 返回可用的搜索字段和过滤条件
+		adminGroup.OPTIONS("/tag-rule/list", ListOptionsGinHandler[*TagRuleListGetSearchIn, *TagRuleListOut])
+		// 创建标签规则 - 创建新的标签识别规则（需要标签引擎中间件）
+		adminGroup.POST("/tag-rule/create", tagRuleEngineMiddleware, tagRuleCreate)
+		// 标签规则详情查询 - 根据ID获取规则详细信息
+		adminGroup.POST("/tag-rule/:id/get", tagRuleDetailGet)
+		// 标签规则信息更新 - 更新规则描述/内容/启用状态（需要标签引擎中间件）
+		adminGroup.POST("/tag-rule/:id/update", tagRuleEngineMiddleware, tagRuleUpdate)
+		// 删除标签规则 - 删除规则及其全部历史版本（需要标签引擎中间件）
+		adminGroup.POST("/tag-rule/:id/delete", tagRuleEngineMiddleware, tagRuleDelete)
+		// 启用标签规则 - 启用指定规则（需要标签引擎中间件）
+		adminGroup.POST("/tag-rule/:id/enable", tagRuleEngineMiddleware, tagRuleSetEnabled(true))
+		// 停用标签规则 - 停用指定规则（需要标签引擎中间件）
+		adminGroup.POST("/tag-rule/:id/disable", tagRuleEngineMiddleware, tagRuleSetEnabled(false))
+		// 标签规则语法校验 - 校验 Rego 源码语法与契约，返回带行列号的错误
+		adminGroup.POST("/tag-rule/validate", tagRuleValidate)
+		// 标签规则单规则 dry-run - 对一条候选规则评估 JSON 输入文档，输出运行细节
+		adminGroup.POST("/tag-rule/single/dry-run", tagRuleDryRun)
+		// 标签规则规则组 dry-run - 对一组候选规则评估 JSON 输入文档，输出逐规则与合并标签
+		adminGroup.POST("/tag-rule/group/dry-run", tagRuleDryRunGroup)
+		// 标签规则版本列表 - 获取规则的全部历史版本
+		adminGroup.POST("/tag-rule/:id/version/list", tagRuleVersionList)
+		// 标签规则回滚 - 将规则回滚到指定历史版本（需要标签引擎中间件）
+		adminGroup.POST("/tag-rule/:id/version/:version/rollback", tagRuleEngineMiddleware, tagRuleVersionRollback)
 	}
 
 	// ==================== 用户接口组：/api/v1/user ====================

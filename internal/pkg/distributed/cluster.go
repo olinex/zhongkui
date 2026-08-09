@@ -32,7 +32,8 @@ type ClusterHandler[Item any] interface {
 	) error
 
 	// Watermark 从数据项中提取水位时间戳。
-	// 编排器使用最后处理项的时间戳作为下一次 Poll 的 prevWatermark。
+	// 编排器使用已消费数据项中最大的水位作为下一次 Poll 的 prevWatermark，
+	// 该值必须与 Poll 查询的过滤字段保持一致（例如均为 created_at）。
 	Watermark(item Item) time.Time
 
 	// Start 运行处理循环。

@@ -3,8 +3,8 @@ package routes
 
 import (
     "time"
-    "zhongkui.com/zhongkui/internal/pkg/serializer"
     "zhongkui.com/zhongkui/internal/pkg/utils"
+    "zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 type Pagination struct {
@@ -1574,6 +1574,482 @@ func (s *RbacPolicyTmplateListGetSearchIn) GetOptions() *utils.SearchOptions {
                     "nctn",
                     "ictn",
                     "inctn",
+                },
+            },
+        },
+    }
+}
+
+type createdAtTagRuleListGetOrderByItem int
+
+func (i *createdAtTagRuleListGetOrderByItem) GetName() string {
+    return "createdAt"
+}
+
+func (i *createdAtTagRuleListGetOrderByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtTagRuleListGetOrderByItem) GetOrder() string {
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
+}
+type updatedAtTagRuleListGetOrderByItem int
+
+func (i *updatedAtTagRuleListGetOrderByItem) GetName() string {
+    return "updatedAt"
+}
+
+func (i *updatedAtTagRuleListGetOrderByItem) GetColumn() string {
+    return "updated_at"
+}
+
+func (i *updatedAtTagRuleListGetOrderByItem) GetOrder() string {
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
+}
+
+type TagRuleListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type createdAtTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTagRuleListGetFilterByItem) GetName() string {
+    return "createdAt"
+}
+
+func (i *createdAtTagRuleListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtTimeTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTimeTagRuleListGetFilterByItem) GetName() string {
+    return "createdAtTime"
+}
+
+func (i *createdAtTimeTagRuleListGetFilterByItem) GetColumn() string {
+    return "Time(created_at)"
+}
+
+func (i *createdAtTimeTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtTimeTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtDateTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtDateTagRuleListGetFilterByItem) GetName() string {
+    return "createdAtDate"
+}
+
+func (i *createdAtDateTagRuleListGetFilterByItem) GetColumn() string {
+    return "Date(created_at)"
+}
+
+func (i *createdAtDateTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtDateTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type updatedAtTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTagRuleListGetFilterByItem) GetName() string {
+    return "updatedAt"
+}
+
+func (i *updatedAtTagRuleListGetFilterByItem) GetColumn() string {
+    return "updated_at"
+}
+
+func (i *updatedAtTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *updatedAtTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type updatedAtTimeTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTimeTagRuleListGetFilterByItem) GetName() string {
+    return "updatedAtTime"
+}
+
+func (i *updatedAtTimeTagRuleListGetFilterByItem) GetColumn() string {
+    return "Time(updated_at)"
+}
+
+func (i *updatedAtTimeTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *updatedAtTimeTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type updatedAtDateTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtDateTagRuleListGetFilterByItem) GetName() string {
+    return "updatedAtDate"
+}
+
+func (i *updatedAtDateTagRuleListGetFilterByItem) GetColumn() string {
+    return "Date(updated_at)"
+}
+
+func (i *updatedAtDateTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *updatedAtDateTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type nameTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *nameTagRuleListGetFilterByItem) GetName() string {
+    return "name"
+}
+
+func (i *nameTagRuleListGetFilterByItem) GetColumn() string {
+    return "name"
+}
+
+func (i *nameTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *nameTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type targetTypeTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *targetTypeTagRuleListGetFilterByItem) GetName() string {
+    return "targetType"
+}
+
+func (i *targetTypeTagRuleListGetFilterByItem) GetColumn() string {
+    return "target_type"
+}
+
+func (i *targetTypeTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *targetTypeTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type tagTypeTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *tagTypeTagRuleListGetFilterByItem) GetName() string {
+    return "tagType"
+}
+
+func (i *tagTypeTagRuleListGetFilterByItem) GetColumn() string {
+    return "tag_type"
+}
+
+func (i *tagTypeTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *tagTypeTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type enabledTagRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value bool `mapstructure:"value" binding:""`
+}
+
+func (i *enabledTagRuleListGetFilterByItem) GetName() string {
+    return "enabled"
+}
+
+func (i *enabledTagRuleListGetFilterByItem) GetColumn() string {
+    return "enabled"
+}
+
+func (i *enabledTagRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *enabledTagRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+
+type TagRuleListGetFilterBy struct {
+    CreatedAt *createdAtTagRuleListGetFilterByItem `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeTagRuleListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateTagRuleListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt *updatedAtTagRuleListGetFilterByItem `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeTagRuleListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateTagRuleListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Name *nameTagRuleListGetFilterByItem `mapstructure:"name"`
+    TargetType *targetTypeTagRuleListGetFilterByItem `mapstructure:"targetType"`
+    TagType *tagTypeTagRuleListGetFilterByItem `mapstructure:"tagType"`
+    Enabled *enabledTagRuleListGetFilterByItem `mapstructure:"enabled"`
+}
+
+type TagRuleListGetSearchIn struct {
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []TagRuleListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy *TagRuleListGetFilterBy     `mapstructure:"filterBy"`
+}
+
+func (s *TagRuleListGetSearchIn) GetGreedy() bool {
+    return s.Greedy
+}
+
+func (s *TagRuleListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "createdAt":
+            item := createdAtTagRuleListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        case "updatedAt":
+            item := updatedAtTagRuleListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
+}
+
+func (s *TagRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+    items := make(map[string]utils.FilterByItem)
+    if s.FilterBy == nil {
+        return items
+    }
+    if s.FilterBy.CreatedAt != nil {
+        items["createdAt"] = s.FilterBy.CreatedAt
+    }
+    if s.FilterBy.CreatedAtTime != nil {
+        items["createdAtTime"] = s.FilterBy.CreatedAtTime
+    }
+    if s.FilterBy.CreatedAtDate != nil {
+        items["createdAtDate"] = s.FilterBy.CreatedAtDate
+    }
+    if s.FilterBy.UpdatedAt != nil {
+        items["updatedAt"] = s.FilterBy.UpdatedAt
+    }
+    if s.FilterBy.UpdatedAtTime != nil {
+        items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+    }
+    if s.FilterBy.UpdatedAtDate != nil {
+        items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+    }
+    if s.FilterBy.Name != nil {
+        items["name"] = s.FilterBy.Name
+    }
+    if s.FilterBy.TargetType != nil {
+        items["targetType"] = s.FilterBy.TargetType
+    }
+    if s.FilterBy.TagType != nil {
+        items["tagType"] = s.FilterBy.TagType
+    }
+    if s.FilterBy.Enabled != nil {
+        items["enabled"] = s.FilterBy.Enabled
+    }
+    return items
+}
+
+func (s *TagRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "createdAt",
+            "updatedAt",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "createdAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "name",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "targetType",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "tagType",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "enabled",
+                Type: "bool",
+                Actions: []string{
+                    "eq",
                 },
             },
         },

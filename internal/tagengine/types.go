@@ -4,8 +4,19 @@
 package tagengine
 
 import (
+	"time"
+
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+)
+
+const (
+	// TagTypeRisk 风险标签维度，用于安全风险识别（如自动化工具、敏感接口）
+	TagTypeRisk = "risk"
+	// TagTypeAsset 资产标签维度，用于资产指纹识别（如服务端组件、设备类别）
+	TagTypeAsset = "asset"
+	// TagTypeBehavior 行为标签维度，用于行为画像识别（如访问频率、请求模式）
+	TagTypeBehavior = "behavior"
 )
 
 var (
@@ -21,6 +32,15 @@ type RecognizeResult struct {
 	Tags []string
 	// Matched 命中的规则名（RecognizeWithDetail 填充，Recognize 不填充）
 	Matched []string
+}
+
+// RecognizeDetailResult 标签识别详细结果。
+type RecognizeDetailResult struct {
+	RecognizeResult
+	// Error 识别过程中遇到的错误（RecognizeWithDetail 填充，Recognize 不填充）
+	Error map[string]error
+	// Duration 识别耗时
+	Duration time.Duration
 }
 
 // Inputer 输入文档提供者接口。

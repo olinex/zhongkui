@@ -16,8 +16,15 @@ import (
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
-func extractUserInput(v *viper.Viper) (routes.UserRegisterIn, error) {
-	var in routes.UserRegisterIn
+// createUserInput 定义命令行创建用户的输入结构体
+// 继承 HTTP 注册输入，并额外包含是否为超级管理员的交互式确认
+type createUserInput struct {
+	routes.UserRegisterIn
+	Superuser bool `viper:"superuser" prompt:"是否为超级管理员？"`
+}
+
+func extractUserInput(v *viper.Viper) (createUserInput, error) {
+	var in createUserInput
 	if err := cliinput.Extract(v, &in, ""); err != nil {
 		return in, err
 	}
@@ -41,7 +48,6 @@ var createUserCmd = &cobra.Command{
 		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
 		timeout := v.GetDuration("timeout")
-		superuser := v.GetBool("superuser")
 
 		userIn, err := extractUserInput(v)
 		if err != nil {
@@ -67,7 +73,7 @@ var createUserCmd = &cobra.Command{
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
-		if err := user.Create(db.WithContext(ctx), superuser); err != nil {
+		if err := user.Create(db.WithContext(ctx), userIn.Superuser); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
@@ -198,7 +204,6 @@ func init() {
 	flags.StringP("nicklename", "n", "", "新用户的昵称（至少 6 个字符）")
 	flags.StringP("email", "e", "", "新用户的邮箱")
 	flags.Duration("timeout", time.Minute, "向数据库写入数据的超时时间")
-	flags.Bool("superuser", false, "以超级用户身份创建")
 
 	flags = forceResetPasswordCmd.Flags()
 	flags.StringP("username", "u", "", "要重置密码的用户名")

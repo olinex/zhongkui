@@ -247,13 +247,19 @@ func (o *Orchestrator[Handler, Item]) Start(ctx context.Context) error {
 						dropped := 0
 						for item := range dispatchChan {
 							total++
+							itemWm := o.handler.Watermark(item)
 							select {
 							case itemChan <- item:
-								wm = o.handler.Watermark(item)
+								// 水位推进到所有已消费项中的最大值，
+								// 而非最后一个消费项，避免乱序/分批消费导致水位回退
+								if itemWm.After(wm) {
+									wm = itemWm
+								}
 								dispatched++
 							default:
 								dropped++
-								// 通道满，丢弃当前项（下次 poll 重新拉取）
+								// 通道满，丢弃当前项。被丢弃的数据项视为丢失（允许少量数据丢失），
+								// 水位仍按已消费项推进，保证下次 poll 不会重新拉取已消费数据导致重复组包
 							}
 						}
 						o.logger.Ctx(pollCtx).Infof(

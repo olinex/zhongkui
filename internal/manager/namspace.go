@@ -91,3 +91,23 @@ func GetNamespace(c *gin.Context) (string, *CodeError) {
 		return "", ErrNampspaceDoesNotExist
 	}
 }
+
+// RequireNamespace 从请求上下文获取当前请求所属的命名空间名称。
+//
+// 与 GetNamespace 的区别在于：命名空间缺失时不会返回错误值由调用方处理，
+// 而是直接中断请求并返回 false，适用于需要命名空间才能继续执行的处理器。
+//
+// 参数：
+//   - c: Gin 请求上下文
+//
+// 返回值：
+//   - string: 当前请求所属的命名空间名称；获取失败时为空串
+//   - bool: 是否成功获取；false 表示命名空间缺失，请求已被中断
+func RequireNamespace(c *gin.Context) (string, bool) {
+	namespace, err := GetNamespace(c)
+	if err != nil {
+		err.AbortWithGinH(c)
+		return "", false
+	}
+	return namespace, true
+}

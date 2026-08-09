@@ -8,15 +8,17 @@ import (
 
 func newTagEngineProvider() do.Provider[*tagengine.Engine] {
 	return func(i do.Injector) (*tagengine.Engine, error) {
-		db, err := InvokeCoreDatabase(i)
-		if err != nil {
+		if db, err := InvokeCoreDatabase(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		logger, err := InvokeDatabaseLogger(i)
-		if err != nil {
+		} else if logger, err := InvokeDatabaseLogger(i); err != nil {
 			return nil, errors.WithStack(err)
+		} else if client, err := InvokeEtcdClient(i); err != nil {
+			return nil, errors.WithStack(err)
+		} else {
+			// 绑定 etcd 客户端：引擎作为 runtime.Service 可启动协程监听
+			// 规则变更并对外广播变更事件，保证多实例下缓存一致。
+			return tagengine.NewEngine(db, logger, client), nil
 		}
-		return tagengine.NewEngine(db, logger), nil
 	}
 }
 

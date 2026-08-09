@@ -249,6 +249,12 @@ func (p *PacketIPv4TCP) CaptureTimestamp() time.Time {
 	return p.Timestamp
 }
 
+// IngestedAt 返回数据包的入库时间戳
+// 入库时间标识数据包写入数据库的时间，用于分布式编排器推进消费水位
+func (p *PacketIPv4TCP) IngestedAt() time.Time {
+	return p.CreatedAt
+}
+
 // TcpFingerprint 返回数据包携带的被动 TCP 指纹。
 // 指纹由 pcap 导入阶段对 SYN / SYN-ACK 握手包识别并落库，
 // 组包阶段通过该方法透传给流重组器；无指纹时返回 nil。
@@ -317,6 +323,12 @@ type PacketIPv6TCP struct {
 // 时间戳用于记录数据包的捕获时间，用于后续的分析和处理
 func (p *PacketIPv6TCP) CaptureTimestamp() time.Time {
 	return p.Timestamp
+}
+
+// IngestedAt 返回数据包的入库时间戳
+// 入库时间标识数据包写入数据库的时间，用于分布式编排器推进消费水位
+func (p *PacketIPv6TCP) IngestedAt() time.Time {
+	return p.CreatedAt
 }
 
 // TcpFingerprint 返回数据包携带的被动 TCP 指纹。

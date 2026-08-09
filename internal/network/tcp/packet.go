@@ -29,6 +29,11 @@ type TCPPacket interface {
 	// 时间戳用于记录数据包的捕获时间，用于后续的分析和处理。
 	CaptureTimestamp() time.Time
 
+	// IngestedAt 返回数据包的入库时间。
+	// 入库时间由 pcap 导入阶段在构建模型时写入，标识数据包写入数据库的时间，
+	// 用于分布式编排器按入库顺序推进消费水位，保证与查询过滤字段（created_at）一致。
+	IngestedAt() time.Time
+
 	// StreamID 返回TCP流的唯一标识符。
 	// 该标识符基于源IP、目的IP、源端口和目的端口计算得出，
 	// 用于将同一TCP连接的数据包关联起来进行流重组。

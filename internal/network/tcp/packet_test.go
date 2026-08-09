@@ -12,16 +12,17 @@ import (
 )
 
 type mockTCPPacket struct {
-	meta      *n.BaseMeta
-	streamID  string
-	frameInfo *n.FrameInfo
-	srcAddr   net.IP
-	dstAddr   net.IP
-	srcPort   layers.TCPPort
-	dstPort   layers.TCPPort
-	seqNum    uint32
-	ackNum    uint32
-	flags     struct {
+	meta       *n.BaseMeta
+	streamID   string
+	frameInfo  *n.FrameInfo
+	ingestedAt time.Time
+	srcAddr    net.IP
+	dstAddr    net.IP
+	srcPort    layers.TCPPort
+	dstPort    layers.TCPPort
+	seqNum     uint32
+	ackNum     uint32
+	flags      struct {
 		syn    bool
 		synAck bool
 		ack    bool
@@ -41,6 +42,10 @@ func (m *mockTCPPacket) StreamID() string {
 
 func (m *mockTCPPacket) CaptureTimestamp() time.Time {
 	return m.frameInfo.Timestamp
+}
+
+func (m *mockTCPPacket) IngestedAt() time.Time {
+	return m.ingestedAt
 }
 
 func (m *mockTCPPacket) FrameInfo() *n.FrameInfo {
@@ -123,13 +128,14 @@ func newMockTCPPacket() *mockTCPPacket {
 				},
 			},
 		},
-		srcAddr: net.ParseIP("192.168.1.100"),
-		dstAddr: net.ParseIP("10.0.0.1"),
-		srcPort: 8080,
-		dstPort: 443,
-		seqNum:  1234567890,
-		ackNum:  0,
-		payload: []byte("test payload data"),
+		ingestedAt: time.Now(),
+		srcAddr:    net.ParseIP("192.168.1.100"),
+		dstAddr:    net.ParseIP("10.0.0.1"),
+		srcPort:    8080,
+		dstPort:    443,
+		seqNum:     1234567890,
+		ackNum:     0,
+		payload:    []byte("test payload data"),
 	}
 }
 

@@ -19,9 +19,9 @@ type Param struct {
 	PollOffset time.Duration `mapstructure:"pollOffset" binding:"min=1m,max=24h" default:"5m"`
 	// VNodeCount 虚拟节点数量
 	VNodeCount int `mapstructure:"vNodeCount" binding:"min=0,max=1024" default:"128"`
-	// BatchSize BatchWriter 缓冲区大小阈值，达到后触发 flush
+	// BatchSize 批量聚合阈值（etl.Buffer），达到后触发 flush
 	BatchSize int `mapstructure:"batchSize" binding:"min=100,max=10000" default:"1000"`
-	// FlushInterval BatchWriter 定时 flush 间隔
+	// FlushInterval 批量聚合超时（etl.Buffer），低流量时兜底 flush
 	FlushInterval time.Duration `mapstructure:"flushInterval" binding:"min=5s,max=10m" default:"1m"`
 	// SaveInterval 水位保存到 etcd 的间隔
 	SaveInterval time.Duration `mapstructure:"saveInterval" binding:"min=10s,max=5m" default:"30s"`

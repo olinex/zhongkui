@@ -217,6 +217,33 @@ func TestMustValidate(t *testing.T) {
 				So(err, ShouldNotBeNil)
 			})
 		})
+
+		Convey("Should validate alphanumspecial correctly", func() {
+			// 设置 Gin 的 binding validator
+			binding.Validator = &defaultValidator{}
+
+			// 获取验证器实例，已自动注册所有自定义验证规则
+			validate := mustValidate()
+
+			// 测试 alphanumspecial 标签：字母数字（含 Unicode）+ 指定特殊字符，且不能仅有特殊符号
+			type AlphanumSpecialTest struct {
+				Value string `binding:"alphanumspecial=_-"`
+			}
+
+			Convey("Valid values should pass validation", func() {
+				for _, v := range []string{"rule-a", "rule_a", "RuleA", "123", "a1_b2-c3", "你好"} {
+					err := validate.Struct(AlphanumSpecialTest{Value: v})
+					So(err, ShouldBeNil)
+				}
+			})
+
+			Convey("Invalid values should fail validation", func() {
+				for _, v := range []string{"", "bad name", "rule@x", "rule.x", "-_", "a-b!"} {
+					err := validate.Struct(AlphanumSpecialTest{Value: v})
+					So(err, ShouldNotBeNil)
+				}
+			})
+		})
 	})
 }
 

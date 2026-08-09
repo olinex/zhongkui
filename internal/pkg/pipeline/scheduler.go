@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/creasty/defaults"
 	"github.com/hibiken/asynq"
@@ -191,6 +192,13 @@ func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 type Scheduler struct {
 	// manager asynq 定时任务管理器实例，负责调度和执行定时任务。
 	manager *asynq.PeriodicTaskManager
+
+	// shutdownOnce 保证 manager.Shutdown 仅执行一次。
+	// asynq.PeriodicTaskManager.Shutdown 会 close 内部 done 通道，
+	// 重复调用会触发 "close of closed channel" panic；
+	// 同一 Election 实例会被 runtime.Group 与 DI 容器各关闭一次，
+	// 因此需要通过 sync.Once 提供幂等保护。
+	shutdownOnce sync.Once
 }
 
 // Name 返回调度器的名称。
@@ -221,23 +229,33 @@ func (s *Scheduler) CandidateID() string {
 // 该方法实现了 etcd.ElectionService 接口，在 etcd 选举胜出后被调用。
 // 启动后，调度器会开始根据 etcd 中的配置定期调度和执行定时任务。
 //
+// asynq PeriodicTaskManager.Start 仅启动后台同步 goroutine 后立即返回，
+// 为满足 ElectionHandler 接口"Start 应阻塞至上下文取消"的契约，
+// 这里在启动后阻塞等待 ctx 取消，使调度器在选举期间持续运行；
+// 上下文取消后由 Shutdown 执行优雅关闭。
+//
 // 参数:
-//   - _ context.Context: 上下文对象（虽然当前未使用，但保持接口一致性）
+//   - ctx context.Context: 上下文对象，取消后调度器停止运行
 //
 // 返回值:
 //   - error: 如果启动过程中出现错误则返回错误，否则返回 nil
-func (s *Scheduler) Start(_ context.Context) error {
-	return s.manager.Start()
+func (s *Scheduler) Start(ctx context.Context) error {
+	if err := s.manager.Start(); err != nil {
+		return errors.WithStack(err)
+	}
+	<-ctx.Done()
+	return nil
 }
 
 // Shutdown 停止定时任务管理器。
 // 该方法实现了 etcd.ElectionService 接口，在 etcd 选举失败或服务停止时被调用。
 // 停止后，调度器将不再调度新的定时任务，但会等待正在执行的任务完成。
+// 通过 sync.Once 保证 manager 仅被关闭一次，避免重复调用触发 panic。
 //
 // 参数:
 //   - _ context.Context: 上下文对象（虽然当前未使用，但保持接口一致性）
 func (s *Scheduler) Shutdown(_ context.Context) error {
-	s.manager.Shutdown()
+	s.shutdownOnce.Do(s.manager.Shutdown)
 	return nil
 }
 
