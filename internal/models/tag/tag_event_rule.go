@@ -88,8 +88,9 @@ func (f *NotFactor) String() string {
 
 // Atom 表示一个原子项，可以是标签标识符或括号内的布尔表达式
 // 例如: "tag_name" 或 "(A OR B)"
+// Label 为值类型 string，标识符分支未匹配时保持零值空串，与 Expr 分支由 nil 区分
 type Atom struct {
-	Label *string   `parser:"@Ident"`       // 标签标识符，如 "tag_name"
+	Label string    `parser:"@Ident"`       // 标签标识符，如 "tag_name"
 	Expr  *BoolExpr `parser:"| '(' @@ ')'"` // 括号内的布尔表达式
 }
 
@@ -99,8 +100,8 @@ func (a *Atom) String() string {
 		return ""
 	}
 
-	if a.Label != nil {
-		return *a.Label
+	if a.Label != "" {
+		return a.Label
 	} else if a.Expr != nil {
 		return "(" + a.Expr.String() + ")"
 	}
@@ -118,7 +119,13 @@ type TagEventCondition struct {
 	// Namespace 所属命名空间的关联模型，用于多租户隔离
 	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
 	// NamespaceName 所属命名空间名称，与所属 TagEventRule 保持一致
-	NamespaceName  string        `gorm:"column:namespace_name;type:VARCHAR(32)"`
+	NamespaceName string `gorm:"column:namespace_name;type:VARCHAR(32)"`
+	// Model 目标模型类型键过滤条件，对应 TagSumming 的 model 维度，为空表示不限制（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	Model string `gorm:"column:model;type:VARCHAR(255)"`
+	// Dimension 标签维度类型过滤条件，对应 TagSumming 的 dimension 维度，为空表示不限制（如 "fp_tcp_client_sig"、"fp_tcp_server_sig"）
+	Dimension string `gorm:"column:dimension;type:VARCHAR(128)"`
+	// Item 标签维度具体值过滤条件，对应 TagSumming 的 item 维度，为空表示不限制（如具体的指纹签名串）
+	Item           string        `gorm:"column:item;type:VARCHAR(255)"`
 	TagEventRuleID uint          `gorm:"column:tag_event_rule_id;type:INT"`
 	TagEventRule   TagEventRule  `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Name           string        `gorm:"column:name;type:VARCHAR(255)"`
@@ -155,7 +162,9 @@ type TagEventRule struct {
 	NamespaceName string `gorm:"column:namespace_name;type:VARCHAR(32)"`
 	Name          string `gorm:"column:name;type:VARCHAR(255)"`
 	Enabled       bool   `gorm:"type:BOOLEAN"`
-	Description   string `gorm:"column:description;type:VARCHAR(256)"`
+	// MatchAll 是否要求规则下所有条件均命中才触发事件；为 false（默认）时任一条件命中即触发
+	MatchAll    bool   `gorm:"column:match_all;type:BOOLEAN;default:false"`
+	Description string `gorm:"column:description;type:VARCHAR(256)"`
 }
 
 // init 函数在包初始化时执行，用于初始化布尔表达式解析器
@@ -176,4 +185,10 @@ func init() {
 		}
 		parser = tmp
 	}
+}
+
+// ParseBoolExpr 解析标签组合布尔表达式，返回语法树。
+// 供 tagengine 将条件表达式翻译为 ClickHouse 查询谓词复用，与 ExprValidate 使用同一解析器。
+func ParseBoolExpr(expr string) (*BoolExpr, error) {
+	return parser.ParseString("", expr)
 }

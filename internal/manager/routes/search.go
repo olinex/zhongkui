@@ -1759,44 +1759,24 @@ func (i *nameTagRuleListGetFilterByItem) GetAction() string {
 func (i *nameTagRuleListGetFilterByItem) GetValue() any {
     return i.Value
 }
-type targetTypeTagRuleListGetFilterByItem struct {
+type modelTagRuleListGetFilterByItem struct {
     Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
     Value string `mapstructure:"value" binding:""`
 }
 
-func (i *targetTypeTagRuleListGetFilterByItem) GetName() string {
-    return "targetType"
+func (i *modelTagRuleListGetFilterByItem) GetName() string {
+    return "model"
 }
 
-func (i *targetTypeTagRuleListGetFilterByItem) GetColumn() string {
-    return "target_type"
+func (i *modelTagRuleListGetFilterByItem) GetColumn() string {
+    return "model"
 }
 
-func (i *targetTypeTagRuleListGetFilterByItem) GetAction() string {
+func (i *modelTagRuleListGetFilterByItem) GetAction() string {
     return i.Action
 }
 
-func (i *targetTypeTagRuleListGetFilterByItem) GetValue() any {
-    return i.Value
-}
-type tagTypeTagRuleListGetFilterByItem struct {
-    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
-    Value string `mapstructure:"value" binding:""`
-}
-
-func (i *tagTypeTagRuleListGetFilterByItem) GetName() string {
-    return "tagType"
-}
-
-func (i *tagTypeTagRuleListGetFilterByItem) GetColumn() string {
-    return "tag_type"
-}
-
-func (i *tagTypeTagRuleListGetFilterByItem) GetAction() string {
-    return i.Action
-}
-
-func (i *tagTypeTagRuleListGetFilterByItem) GetValue() any {
+func (i *modelTagRuleListGetFilterByItem) GetValue() any {
     return i.Value
 }
 type enabledTagRuleListGetFilterByItem struct {
@@ -1828,8 +1808,7 @@ type TagRuleListGetFilterBy struct {
     UpdatedAtTime *updatedAtTimeTagRuleListGetFilterByItem `mapstructure:"updatedAtTime"`
     UpdatedAtDate *updatedAtDateTagRuleListGetFilterByItem `mapstructure:"updatedAtDate"`
     Name *nameTagRuleListGetFilterByItem `mapstructure:"name"`
-    TargetType *targetTypeTagRuleListGetFilterByItem `mapstructure:"targetType"`
-    TagType *tagTypeTagRuleListGetFilterByItem `mapstructure:"tagType"`
+    Model *modelTagRuleListGetFilterByItem `mapstructure:"model"`
     Enabled *enabledTagRuleListGetFilterByItem `mapstructure:"enabled"`
 }
 
@@ -1888,11 +1867,8 @@ func (s *TagRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
     if s.FilterBy.Name != nil {
         items["name"] = s.FilterBy.Name
     }
-    if s.FilterBy.TargetType != nil {
-        items["targetType"] = s.FilterBy.TargetType
-    }
-    if s.FilterBy.TagType != nil {
-        items["tagType"] = s.FilterBy.TagType
+    if s.FilterBy.Model != nil {
+        items["model"] = s.FilterBy.Model
     }
     if s.FilterBy.Enabled != nil {
         items["enabled"] = s.FilterBy.Enabled
@@ -2006,27 +1982,7 @@ func (s *TagRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
                 },
             },
             {
-                Name: "targetType",
-                Type: "string",
-                Actions: []string{
-                    "eq",
-                    "neq",
-                    "pfx",
-                    "npfx",
-                    "ipfx",
-                    "inpfx",
-                    "sfx",
-                    "nsfx",
-                    "isfx",
-                    "insfx",
-                    "ctn",
-                    "nctn",
-                    "ictn",
-                    "inctn",
-                },
-            },
-            {
-                Name: "tagType",
+                Name: "model",
                 Type: "string",
                 Actions: []string{
                     "eq",

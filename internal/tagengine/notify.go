@@ -27,12 +27,11 @@ const (
 var ruleChangeKey = etcd.WithPrefix("tagengine/") + "rule-change"
 
 // RuleChangeEvent 规则变更事件负载。
-// 记录本次写路径影响的分组（Namespace + TargetType + TagType），供引擎精准失效
+// 记录本次写路径影响的分组（Namespace + Model），供引擎精准失效
 // 对应分组缓存，避免全量失效的高成本；解析失败时回退全量失效保证不遗漏。
 type RuleChangeEvent struct {
-	Namespace  string `json:"namespace"`
-	TargetType string `json:"targetType"`
-	TagType    string `json:"tagType"`
+	Namespace string `json:"namespace"`
+	Model     string `json:"model"`
 }
 
 // ErrRuleChangeUnavailable 规则变更广播不可用的错误。
@@ -46,11 +45,11 @@ var ErrRuleChangeUnavailable = errors.New("tagengine rule change broadcast unava
 // 发布带超时上限，失败返回错误但不影响调用方；未绑定 etcd 客户端时
 // 返回 ErrRuleChangeUnavailable。
 // 注意：DB 提交先于 etcd 发布，保证收到通知的引擎读到的必是新规则。
-func (e *Engine) BroadcastChange(ctx context.Context, namespace, targetType, tagType string) error {
+func (e *Engine) BroadcastChange(ctx context.Context, namespace, model string) error {
 	if e.client == nil {
 		return ErrRuleChangeUnavailable
 	}
-	payload, err := json.Marshal(&RuleChangeEvent{Namespace: namespace, TargetType: targetType, TagType: tagType})
+	payload, err := json.Marshal(&RuleChangeEvent{Namespace: namespace, Model: model})
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -132,7 +131,7 @@ func (e *Engine) handleResponse(resp clientv3.WatchResponse) error {
 			e.InvalidateAll()
 			return nil
 		}
-		e.Invalidate(event.Namespace, event.TargetType, event.TagType)
+		e.Invalidate(event.Namespace, event.Model)
 	}
 	e.logger.Info("tagengine rules changed, invalidating group caches")
 	return nil
@@ -145,7 +144,7 @@ func parseRuleChangeEvent(value []byte) (*RuleChangeEvent, error) {
 	if err := json.Unmarshal(value, event); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if event.TargetType == "" || event.TagType == "" {
+	if event.Model == "" {
 		return nil, errors.New("tagrule rule change event misses group info")
 	}
 	return event, nil

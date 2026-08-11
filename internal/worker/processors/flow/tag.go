@@ -13,9 +13,9 @@ import (
 
 // tagStage 基于 tagengine 的标签识别数据处理阶段。
 // 位于 routerStage 之后、批量聚合之前，仅处理 *network.HttpTransport：
-// 按本流程全局写死的标签识别组合关系（目标类型 = HttpTransport，标签维度 = tagengine.TagTypeRisk）
+// 按本流程全局写死的标签识别组合关系（目标类型 = HttpTransport）
 // 调用引擎识别并将结果写入 Tags 字段，NetworkStack 等其余产物原样透传。
-// 该组合与 tag_rules 表的 target_type + tag_type 分组约定对应，业务逻辑写死，不接受运行时配置。
+// 该组合与 tag_rules 表的 model 分组约定对应，业务逻辑写死，不接受运行时配置。
 // 标签识别为尽力而为（best-effort）：识别失败仅记录告警日志并透传，
 // 不中断流水线，避免标签规则库异常导致抓包数据入库流程整体停止。
 type tagStage struct {
@@ -51,9 +51,9 @@ func (s *tagStage) Process(ctx context.Context, in <-chan any, out chan<- any) e
 // recognize 对单个 HttpTransport 执行标签识别并写入 Tags 字段。
 // 识别失败时记录告警日志并保留原值，不中断流水线。
 func (s *tagStage) recognize(ctx context.Context, transport *network.HttpTransport) {
-	tags, err := s.engine.Recognize(ctx, transport, tagengine.TagTypeRisk)
+	tags, err := s.engine.Recognize(ctx, transport)
 	if err != nil {
-		s.logger.Ctx(ctx).Warnf("flow tag recognize failed, tagType=%s, err=%v", tagengine.TagTypeRisk, err)
+		s.logger.Ctx(ctx).Warnf("flow tag recognize failed, err=%v", err)
 		return
 	}
 	transport.Tags = tags

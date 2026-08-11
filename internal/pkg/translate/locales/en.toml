@@ -1003,3 +1003,6 @@ other = "Default language/locale (ref: https://pkg.go.dev/github.com/nicksnyder/
 ["config.i18n.supportLocales"]
 other = "List of supported languages/locales (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"
 
+["model.network.httpTransport"]
+other = "HTTP Transport"
+

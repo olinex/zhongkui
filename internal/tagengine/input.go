@@ -2,29 +2,11 @@ package tagengine
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
-
-// TypeKey 计算目标模型实例的类型键。
-// 类型键格式为 pkgpath.TypeName（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport），
-// 作为数据库规则的 TargetType 分组标识。指针自动解引用。
-func TypeKey(target any) (string, error) {
-	t := reflect.TypeOf(target)
-	if t == nil {
-		return "", ErrUnsupportedTarget
-	}
-	if t.Kind() == reflect.Pointer {
-		t = t.Elem()
-	}
-	if t.Kind() != reflect.Struct {
-		return "", ErrUnsupportedTarget
-	}
-	return fmt.Sprintf(`%s.%s`, t.PkgPath(), t.Name()), nil
-}
 
 // extractNamespace 从目标实例中提取所属命名空间。
 // 目标模型内嵌 BaseMeta（含 Namespace 字段）时返回其值（如 *network.HttpTransport）；

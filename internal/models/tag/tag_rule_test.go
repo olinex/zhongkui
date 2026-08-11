@@ -51,8 +51,7 @@ func TestTagRule_Struct(t *testing.T) {
 				NamespaceName: "default",
 				Name:          "admin-panel",
 				Description:   "识别管理后台登录",
-				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:       "risk",
+				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
 				Enabled:       true,
 			}
@@ -60,8 +59,7 @@ func TestTagRule_Struct(t *testing.T) {
 			convey.So(rule.NamespaceName, convey.ShouldEqual, "default")
 			convey.So(rule.Name, convey.ShouldEqual, "admin-panel")
 			convey.So(rule.Description, convey.ShouldEqual, "识别管理后台登录")
-			convey.So(rule.TargetType, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
-			convey.So(rule.TagType, convey.ShouldEqual, "risk")
+			convey.So(rule.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
 			convey.So(rule.Rego, convey.ShouldContainSubstring, "package zki")
 			convey.So(rule.Enabled, convey.ShouldBeTrue)
 		})
@@ -81,14 +79,33 @@ func TestTagRule_Struct(t *testing.T) {
 			})
 		})
 
-		convey.Convey("gorm tag 应包含唯一索引 uq_tag_rule_group 且带命名空间", func() {
+		convey.Convey("gorm tag 应包含唯一索引 uq_tag_rules_namespace_name_model_name 且带命名空间", func() {
 			typ := reflect.TypeOf(TagRule{})
-			for _, name := range []string{"NamespaceName", "Name", "TargetType", "TagType"} {
+			for _, name := range []string{"NamespaceName", "Name", "Model"} {
 				field, ok := typ.FieldByName(name)
 				convey.So(ok, convey.ShouldBeTrue)
-				convey.So(field.Tag.Get("gorm"), convey.ShouldContainSubstring, "uniqueIndex:uq_tag_rule_group")
+				convey.So(field.Tag.Get("gorm"), convey.ShouldContainSubstring, "uniqueIndex:uq_tag_rules_namespace_name_model_name")
 			}
 		})
+	})
+}
+
+// TestTagRule_UniqueIndexColumnOrder 验证唯一索引列顺序与 SQL 约束一致
+// 迁移文件（internal/migrations/core/001_init.sql）中的约束为 UNIQUE (namespace_name, model, name)，
+// GORM 按结构体字段声明顺序构建索引列，因此字段顺序必须保持 NamespaceName、Model、Name。
+func TestTagRule_UniqueIndexColumnOrder(t *testing.T) {
+	convey.Convey("测试 TagRule 唯一索引列顺序", t, func() {
+		db := newTagRuleTestDB(t)
+		indexes, err := db.Migrator().GetIndexes(&TagRule{})
+		convey.So(err, convey.ShouldBeNil)
+
+		var columns []string
+		for _, idx := range indexes {
+			if idx.Name() == "uq_tag_rules_namespace_name_model_name" {
+				columns = idx.Columns()
+			}
+		}
+		convey.So(columns, convey.ShouldResemble, []string{"namespace_name", "model", "name"})
 	})
 }
 
@@ -106,8 +123,7 @@ func TestTagRule_JSONSerialization(t *testing.T) {
 				NamespaceName: "default",
 				Name:          "admin-panel",
 				Description:   "识别管理后台登录",
-				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:       "risk",
+				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
 				Enabled:       true,
 			}
@@ -116,8 +132,7 @@ func TestTagRule_JSONSerialization(t *testing.T) {
 			convey.So(err, convey.ShouldBeNil)
 			// 字段未定义 json tag，Go 默认使用字段名作为 JSON 键名
 			convey.So(string(data), convey.ShouldContainSubstring, `"Name"`)
-			convey.So(string(data), convey.ShouldContainSubstring, `"TargetType"`)
-			convey.So(string(data), convey.ShouldContainSubstring, `"TagType"`)
+			convey.So(string(data), convey.ShouldContainSubstring, `"Model"`)
 			convey.So(string(data), convey.ShouldContainSubstring, `"Rego"`)
 
 			var decoded TagRule
@@ -142,13 +157,12 @@ func TestTagRule_TableName(t *testing.T) {
 // TestTagRule_UniqueConstraint 测试 tag_rules 表的分组唯一约束（含命名空间隔离）
 func TestTagRule_UniqueConstraint(t *testing.T) {
 	convey.Convey("测试 TagRule 分组唯一约束", t, func() {
-		convey.Convey("同一命名空间下 (target_type, tag_type, name) 完全相同的规则应失败", func() {
+		convey.Convey("同一命名空间下 (model, name) 完全相同的规则应失败", func() {
 			db := newTagRuleTestDB(t)
 			base := TagRule{
 				NamespaceName: "default",
 				Name:          "dup",
-				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:       "risk",
+				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 				Enabled:       true,
 			}
@@ -166,8 +180,7 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			base := TagRule{
 				NamespaceName: "default",
 				Name:          "dup",
-				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:       "risk",
+				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 				Enabled:       true,
 			}
@@ -179,13 +192,12 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			convey.So(db.Create(&other).Error, convey.ShouldBeNil)
 		})
 
-		convey.Convey("相同 name 但不同 tag_type 的规则应插入成功", func() {
+		convey.Convey("相同 name 但不同 model 的规则应插入成功", func() {
 			db := newTagRuleTestDB(t)
 			base := TagRule{
 				NamespaceName: "default",
 				Name:          "dup",
-				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:       "risk",
+				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 				Enabled:       true,
 			}
@@ -193,7 +205,7 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 
 			other := base
 			other.ID = 0
-			other.TagType = "asset"
+			other.Model = "zhongkui.com/zhongkui/internal/models/network.TcpStream"
 			convey.So(db.Create(&other).Error, convey.ShouldBeNil)
 		})
 	})

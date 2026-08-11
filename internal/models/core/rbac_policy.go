@@ -8,7 +8,7 @@ import (
 
 // RbacPolicy 表示基于角色的访问控制策略
 // 该结构体遵循Casbin RBAC模型，支持策略(policy)和组(group)两种类型
-// 数据库表名默认为"rbac_policies"，通过uniqueIndex:rbac_policy_unique_index确保唯一性
+// 数据库表名默认为"rbac_policies"，通过uniqueIndex:uq_rbac_policies_ptype_v0_v1_v2确保唯一性
 type RbacPolicy struct {
 	database.BaseModel
 
@@ -79,7 +79,7 @@ func NewUserPolicy(unionID serializer.HexUUID, group, namespace string) *RbacPol
 
 // RbacPolicyTemplate 表示RBAC策略模板
 // 用于预定义可用的目标对象和操作组合，确保策略的一致性
-// 数据库表名默认为"rbac_policy_templates"，通过uniqueIndex:unique_target_action确保唯一性
+// 数据库表名默认为"rbac_policy_templates"，通过uniqueIndex:uq_rbac_policy_templates_target_action确保唯一性
 type RbacPolicyTemplate struct {
 	database.BaseModel
 

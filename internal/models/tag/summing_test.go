@@ -8,19 +8,6 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 )
 
-// TestSummingTtlHours 测试聚合数据保留时间常量
-func TestSummingTtlHours(t *testing.T) {
-	convey.Convey("测试聚合数据保留时间常量", t, func() {
-		convey.Convey("SummingTtlHours 应该为 72 小时（3天）", func() {
-			convey.So(SummingTTLHours, convey.ShouldEqual, 72)
-		})
-
-		convey.Convey("SummingTtlHours 应该等于 3 * 24", func() {
-			convey.So(SummingTTLHours, convey.ShouldEqual, 3*24)
-		})
-	})
-}
-
 // TestTagSumming_Struct 测试 TagSumming 结构体的基本属性
 func TestTagSumming_Struct(t *testing.T) {
 	convey.Convey("测试 TagSumming 结构体", t, func() {
@@ -29,17 +16,19 @@ func TestTagSumming_Struct(t *testing.T) {
 			tags := []string{"login_failed", "suspicious_ip"}
 
 			summing := &TagSumming{
-				Minute: now,
-				Source: "HttpTransport",
-				Type:   "fp_tcp_client_sig",
-				Item:   "s0:120:0:1",
-				Cnt:    42,
+				Namespace: "default",
+				Minute:    now,
+				Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Dimension: "fp_tcp_client_sig",
+				Item:      "s0:120:0:1",
+				Cnt:       42,
 			}
 			summing.Tags = tags
 
+			convey.So(summing.Namespace, convey.ShouldEqual, "default")
 			convey.So(summing.Minute, convey.ShouldResemble, now)
-			convey.So(summing.Source, convey.ShouldEqual, "HttpTransport")
-			convey.So(summing.Type, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(summing.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			convey.So(summing.Dimension, convey.ShouldEqual, "fp_tcp_client_sig")
 			convey.So(summing.Item, convey.ShouldEqual, "s0:120:0:1")
 			convey.So(summing.Tags, convey.ShouldResemble, []string{"login_failed", "suspicious_ip"})
 			convey.So(summing.Cnt, convey.ShouldEqual, 42)
@@ -48,9 +37,10 @@ func TestTagSumming_Struct(t *testing.T) {
 		convey.Convey("零值结构体应该有合理的默认值", func() {
 			summing := &TagSumming{}
 
+			convey.So(summing.Namespace, convey.ShouldBeEmpty)
 			convey.So(summing.Minute.IsZero(), convey.ShouldBeTrue)
-			convey.So(summing.Source, convey.ShouldBeEmpty)
-			convey.So(summing.Type, convey.ShouldBeEmpty)
+			convey.So(summing.Model, convey.ShouldBeEmpty)
+			convey.So(summing.Dimension, convey.ShouldBeEmpty)
 			convey.So(summing.Item, convey.ShouldBeEmpty)
 			convey.So(summing.Tags, convey.ShouldBeNil)
 			convey.So(summing.Cnt, convey.ShouldEqual, 0)
@@ -69,11 +59,11 @@ func TestTagSumming_Struct(t *testing.T) {
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
 					summing := &TagSumming{
-						Minute: time.Now(),
-						Source: "HttpTransport",
-						Type:   "fp_tcp_server_sig",
-						Item:   "s0:120:1:1",
-						Cnt:    1,
+						Minute:    time.Now(),
+						Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+						Dimension: "fp_tcp_server_sig",
+						Item:      "s0:120:1:1",
+						Cnt:       1,
 					}
 					summing.Tags = tc.tags
 					convey.So(summing.Tags, convey.ShouldResemble, tc.tags)
@@ -97,19 +87,21 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 		convey.Convey("应该正确序列化为 JSON", func() {
 			now := time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC)
 			summing := &TagSumming{
-				Minute: now,
-				Source: "HttpTransport",
-				Type:   "fp_tcp_client_sig",
-				Item:   "s0:120:0:1",
-				Cnt:    10,
+				Namespace: "default",
+				Minute:    now,
+				Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Dimension: "fp_tcp_client_sig",
+				Item:      "s0:120:0:1",
+				Cnt:       10,
 			}
 			summing.Tags = []string{"login_failed", "suspicious_ip"}
 
 			data, err := json.Marshal(summing)
 			convey.So(err, convey.ShouldBeNil)
+			convey.So(string(data), convey.ShouldContainSubstring, `"namespace"`)
 			convey.So(string(data), convey.ShouldContainSubstring, `"minute"`)
-			convey.So(string(data), convey.ShouldContainSubstring, `"source"`)
-			convey.So(string(data), convey.ShouldContainSubstring, `"type"`)
+			convey.So(string(data), convey.ShouldContainSubstring, `"model"`)
+			convey.So(string(data), convey.ShouldContainSubstring, `"dimension"`)
 			convey.So(string(data), convey.ShouldContainSubstring, `"item"`)
 			convey.So(string(data), convey.ShouldContainSubstring, `"tags"`)
 			convey.So(string(data), convey.ShouldContainSubstring, `"cnt"`)
@@ -117,9 +109,10 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 
 		convey.Convey("应该正确从 JSON 反序列化", func() {
 			jsonStr := `{
+				"namespace": "default",
 				"minute": "2024-01-15T10:30:00Z",
-				"source": "HttpTransport",
-				"type": "fp_tcp_client_sig",
+				"model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				"dimension": "fp_tcp_client_sig",
 				"item": "s0:120:0:1",
 				"tags": ["login_failed", "suspicious_ip"],
 				"cnt": 10
@@ -128,8 +121,9 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 			var summing TagSumming
 			err := json.Unmarshal([]byte(jsonStr), &summing)
 			convey.So(err, convey.ShouldBeNil)
-			convey.So(summing.Source, convey.ShouldEqual, "HttpTransport")
-			convey.So(summing.Type, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(summing.Namespace, convey.ShouldEqual, "default")
+			convey.So(summing.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			convey.So(summing.Dimension, convey.ShouldEqual, "fp_tcp_client_sig")
 			convey.So(summing.Item, convey.ShouldEqual, "s0:120:0:1")
 			convey.So(summing.Tags, convey.ShouldHaveLength, 2)
 			convey.So(summing.Tags[0], convey.ShouldEqual, "login_failed")
@@ -139,11 +133,11 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 
 		convey.Convey("空标签数组应该正确序列化", func() {
 			summing := &TagSumming{
-				Minute: time.Now(),
-				Source: "HttpTransport",
-				Type:   "fp_tcp_server_sig",
-				Item:   "s0:120:1:1",
-				Cnt:    0,
+				Minute:    time.Now(),
+				Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Dimension: "fp_tcp_server_sig",
+				Item:      "s0:120:1:1",
+				Cnt:       0,
 			}
 			summing.Tags = []string{}
 
@@ -158,63 +152,40 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 	})
 }
 
-// TestTagSumming_TableOptions 测试 TableOptions 方法返回的表配置选项
-func TestTagSumming_TableOptions(t *testing.T) {
-	convey.Convey("测试 TagSumming 表配置选项", t, func() {
-		summing := &TagSumming{}
-		options := summing.TableOptions()
-
-		convey.Convey("应该返回包含 gorm:table_options 键的映射", func() {
-			convey.So(options, convey.ShouldContainKey, "gorm:table_options")
-		})
-
-		tableOpts, ok := options["gorm:table_options"].(string)
-		convey.So(ok, convey.ShouldBeTrue)
-
-		convey.Convey("应该使用 SummingMergeTree 引擎", func() {
-			convey.So(tableOpts, convey.ShouldContainSubstring, "SummingMergeTree")
-		})
-
-		convey.Convey("应该包含正确的排序键", func() {
-			convey.So(tableOpts, convey.ShouldContainSubstring, "ORDER BY")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "minute")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "source")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "type")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "item")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "tags")
-		})
-
-		convey.Convey("应该按小时分区", func() {
-			convey.So(tableOpts, convey.ShouldContainSubstring, "PARTITION BY toStartOfHour(minute)")
-		})
-
-		convey.Convey("应该包含正确的 TTL 配置", func() {
-			convey.So(tableOpts, convey.ShouldContainSubstring, "TTL minute + INTERVAL")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "HOUR DELETE")
-		})
-
-		convey.Convey("TTL 应该使用 SummingTtlHours 常量", func() {
-			convey.So(tableOpts, convey.ShouldContainSubstring, "INTERVAL 72 HOUR DELETE")
-		})
-	})
-}
-
 // TestTagSumming_FieldConstraints 测试 TagSumming 的字段约束
 func TestTagSumming_FieldConstraints(t *testing.T) {
 	convey.Convey("测试 TagSumming 字段约束", t, func() {
-		convey.Convey("应该支持不同的数据来源", func() {
+		convey.Convey("应该支持不同的命名空间", func() {
 			testCases := []struct {
-				name   string
-				source string
+				name      string
+				namespace string
 			}{
-				{"HttpTransport", "HttpTransport"},
-				{"空来源", ""},
+				{"默认命名空间", "default"},
+				{"自定义命名空间", "tenant-b"},
+				{"空命名空间", ""},
 			}
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					summing := &TagSumming{Source: tc.source}
-					convey.So(summing.Source, convey.ShouldEqual, tc.source)
+					summing := &TagSumming{Namespace: tc.namespace}
+					convey.So(summing.Namespace, convey.ShouldEqual, tc.namespace)
+				})
+			}
+		})
+
+		convey.Convey("应该支持不同的目标模型", func() {
+			testCases := []struct {
+				name  string
+				model string
+			}{
+				{"HttpTransport", "zhongkui.com/zhongkui/internal/models/network.HttpTransport"},
+				{"空模型", ""},
+			}
+
+			for _, tc := range testCases {
+				convey.Convey(tc.name, func() {
+					summing := &TagSumming{Model: tc.model}
+					convey.So(summing.Model, convey.ShouldEqual, tc.model)
 				})
 			}
 		})
@@ -222,17 +193,17 @@ func TestTagSumming_FieldConstraints(t *testing.T) {
 		convey.Convey("应该支持不同的标签维度类型", func() {
 			testCases := []struct {
 				name string
-				typ  string
+				dim  string
 			}{
 				{"客户端指纹", "fp_tcp_client_sig"},
 				{"服务端指纹", "fp_tcp_server_sig"},
-				{"空类型", ""},
+				{"空维度", ""},
 			}
 
 			for _, tc := range testCases {
 				convey.Convey(tc.name, func() {
-					summing := &TagSumming{Type: tc.typ}
-					convey.So(summing.Type, convey.ShouldEqual, tc.typ)
+					summing := &TagSumming{Dimension: tc.dim}
+					convey.So(summing.Dimension, convey.ShouldEqual, tc.dim)
 				})
 			}
 		})
@@ -284,33 +255,6 @@ func TestTagSumming_FieldConstraints(t *testing.T) {
 			utcTime := time.Date(2024, 6, 15, 12, 0, 0, 0, time.UTC)
 			summing := &TagSumming{Minute: utcTime}
 			convey.So(summing.Minute.Location().String(), convey.ShouldEqual, "UTC")
-		})
-	})
-}
-
-// TestTagSumming_TableOptions_EngineSpec 测试 TableOptions 中 ClickHouse 引擎规格的完整性
-func TestTagSumming_TableOptions_EngineSpec(t *testing.T) {
-	convey.Convey("测试 TableOptions ClickHouse 引擎规格完整性", t, func() {
-		summing := &TagSumming{}
-		options := summing.TableOptions()
-		tableOpts := options["gorm:table_options"].(string)
-
-		convey.Convey("排序键顺序应该为 minute, source, type, item, tags", func() {
-			convey.So(tableOpts, convey.ShouldContainSubstring, "ORDER BY")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "minute")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "source")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "type")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "item")
-			convey.So(tableOpts, convey.ShouldContainSubstring, "tags")
-		})
-
-		convey.Convey("应该配置 DELETE 类型的 TTL", func() {
-			convey.So(tableOpts, convey.ShouldContainSubstring, "DELETE")
-		})
-
-		convey.Convey("TTL 间隔应该匹配 SummingTtlHours", func() {
-			expected := "INTERVAL 72 HOUR"
-			convey.So(tableOpts, convey.ShouldContainSubstring, expected)
 		})
 	})
 }

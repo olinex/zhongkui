@@ -38,11 +38,11 @@ tags contains "admin-login" if {
 	input.method == "POST"
 }`
 
-// tagRuleTargetType 目标模型类型键，作为规则创建的 targetType 入参。
-var tagRuleTargetType = func() string {
+// tagRuleModel 目标模型类型键，作为规则创建的 model 入参。
+var tagRuleModel = func() string {
 	t, err := tagengine.TypeKey(&tagRuleTargetModel{})
 	if err != nil {
-		panic("failed to compute tag rule target type: " + err.Error())
+		panic("failed to compute tag rule target model: " + err.Error())
 	}
 	return t
 }()
@@ -141,8 +141,7 @@ func createTagRule(t *testing.T, db *database.DB, r *gin.Engine, name, rego stri
 	w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
 		"name":        name,
 		"description": "test rule",
-		"targetType":  tagRuleTargetType,
-		"tagType":     "risk",
+		"model":       tagRuleModel,
 		"rego":        rego,
 		"enabled":     true,
 	})
@@ -177,8 +176,7 @@ func TestTagRuleCreateAndDetail(t *testing.T) {
 			So(resp.Code, ShouldEqual, http.StatusOK)
 			So(resp.Data, ShouldNotBeNil)
 			So(resp.Data.Name, ShouldEqual, "rule-a")
-			So(resp.Data.TargetType, ShouldEqual, tagRuleTargetType)
-			So(resp.Data.TagType, ShouldEqual, "risk")
+			So(resp.Data.Model, ShouldEqual, tagRuleModel)
 			So(resp.Data.Enabled, ShouldBeTrue)
 			So(resp.Data.Rego, ShouldContainSubstring, "package zki")
 			So(resp.Data.Version, ShouldEqual, 0)
@@ -187,11 +185,10 @@ func TestTagRuleCreateAndDetail(t *testing.T) {
 
 		Convey("规则名不合法被拒绝", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
-				"name":       "bad name!",
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"rego":       tagRuleValidRego,
-				"enabled":    true,
+				"name":    "bad name!",
+				"model":   tagRuleModel,
+				"rego":    tagRuleValidRego,
+				"enabled": true,
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
@@ -207,11 +204,10 @@ func TestTagRuleCreateInvalidRegoRejected(t *testing.T) {
 
 		Convey("语法非法返回带行列号的错误详情", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
-				"name":       "bad-syntax",
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"rego":       "package zki\n\ntags contains if {",
-				"enabled":    true,
+				"name":    "bad-syntax",
+				"model":   tagRuleModel,
+				"rego":    "package zki\n\ntags contains if {",
+				"enabled": true,
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 			var resp struct {
@@ -231,11 +227,10 @@ func TestTagRuleCreateInvalidRegoRejected(t *testing.T) {
 		Convey("组级冲突（tags := 与 tags contains 并存）被拒绝", func() {
 			createTagRule(t, db, r, "full-assign", "package zki\n\ntags := {\"a\"}")
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
-				"name":       "partial",
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"rego":       "package zki\n\ntags contains \"b\"",
-				"enabled":    true,
+				"name":    "partial",
+				"model":   tagRuleModel,
+				"rego":    "package zki\n\ntags contains \"b\"",
+				"enabled": true,
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 			var resp struct {
@@ -497,11 +492,10 @@ func TestTagRuleDryRun(t *testing.T) {
 
 		Convey("合法候选规则命中输入文档", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"name":       "solo",
-				"rego":       tagRuleValidRego,
-				"input":      map[string]any{"method": "POST"},
+				"model": tagRuleModel,
+				"name":  "solo",
+				"rego":  tagRuleValidRego,
+				"input": map[string]any{"method": "POST"},
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
@@ -518,21 +512,19 @@ func TestTagRuleDryRun(t *testing.T) {
 
 		Convey("缺少规则名被拒绝", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"rego":       tagRuleValidRego,
-				"input":      map[string]any{"method": "POST"},
+				"model": tagRuleModel,
+				"rego":  tagRuleValidRego,
+				"input": map[string]any{"method": "POST"},
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
 
 		Convey("语法非法的候选规则返回校验错误且不评估", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"name":       "bad",
-				"rego":       "package zki\n\ntags contains if {",
-				"input":      map[string]any{"method": "POST"},
+				"model": tagRuleModel,
+				"name":  "bad",
+				"rego":  "package zki\n\ntags contains if {",
+				"input": map[string]any{"method": "POST"},
 			})
 			// 候选规则语法非法导致编译失败，走 invalidTagRuleError（HTTP 400 + CodeTagRuleInvalid），
 			// 不产出评估结果且不泄露错误堆栈
@@ -546,9 +538,8 @@ func TestTagRuleDryRun(t *testing.T) {
 
 		Convey("缺少 rego 被拒绝", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"input":      map[string]any{"method": "POST"},
+				"model": tagRuleModel,
+				"input": map[string]any{"method": "POST"},
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
@@ -565,8 +556,7 @@ func TestTagRuleDryRunGroup(t *testing.T) {
 
 		Convey("合法候选规则组命中输入文档并输出逐规则详情", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/group/dry-run", map[string]any{
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
+				"model": tagRuleModel,
 				"rules": []map[string]any{
 					{"name": "rule-hit", "rego": tagRuleValidRego},
 					{"name": "rule-miss", "rego": `package zki
@@ -594,8 +584,7 @@ tags contains "miss-tag" if {
 
 		Convey("语法非法的候选规则返回校验错误且不评估", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/group/dry-run", map[string]any{
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
+				"model": tagRuleModel,
 				"rules": []map[string]any{
 					{"name": "bad", "rego": "package zki\n\ntags contains if {"},
 				},
@@ -613,10 +602,9 @@ tags contains "miss-tag" if {
 
 		Convey("空规则列表被拒绝", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/group/dry-run", map[string]any{
-				"targetType": tagRuleTargetType,
-				"tagType":    "risk",
-				"rules":      []map[string]any{},
-				"input":      map[string]any{"method": "POST"},
+				"model": tagRuleModel,
+				"rules": []map[string]any{},
+				"input": map[string]any{"method": "POST"},
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
@@ -673,21 +661,20 @@ func TestTagRuleInvalidateAfterWrite(t *testing.T) {
 		createTagRule(t, db, r, "rule-cache", tagRuleValidRego)
 
 		// 首次识别命中 rule-cache，并填充组编译缓存
-		first, err := engine.RecognizeWithDetail(t.Context(), &tagRuleTargetModel{Namespace: "default", Method: "POST"}, "risk")
+		first, err := engine.RecognizeWithDetail(t.Context(), &tagRuleTargetModel{Namespace: "default", Method: "POST"})
 		So(err, ShouldBeNil)
 		So(first.Tags, ShouldResemble, []string{"admin-login"})
 
 		// 经接口新增同组规则后，引擎应重新按 DB 最新规则编译
 		w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
-			"name":       "rule-cache-2",
-			"targetType": tagRuleTargetType,
-			"tagType":    "risk",
-			"rego":       "package zki\n\ntags contains \"admin-cache\" if {\n\tinput.method == \"POST\"\n}",
-			"enabled":    true,
+			"name":    "rule-cache-2",
+			"model":   tagRuleModel,
+			"rego":    "package zki\n\ntags contains \"admin-cache\" if {\n\tinput.method == \"POST\"\n}",
+			"enabled": true,
 		})
 		So(w.Code, ShouldEqual, http.StatusOK)
 
-		second, err := engine.RecognizeWithDetail(t.Context(), &tagRuleTargetModel{Namespace: "default", Method: "POST"}, "risk")
+		second, err := engine.RecognizeWithDetail(t.Context(), &tagRuleTargetModel{Namespace: "default", Method: "POST"})
 		So(err, ShouldBeNil)
 		So(second.Tags, ShouldResemble, []string{"admin-cache", "admin-login"})
 	})

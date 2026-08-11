@@ -57,7 +57,7 @@ func TestEngineBroadcastChange(t *testing.T) {
 	Convey("Test Engine BroadcastChange", t, func() {
 		Convey("未绑定 etcd 客户端时广播快速失败", func() {
 			engine, _ := setupNotifyEngine(t)
-			err := engine.BroadcastChange(context.Background(), "default", "t", "risk")
+			err := engine.BroadcastChange(context.Background(), "default", "t")
 			So(err, ShouldNotBeNil)
 			So(err, ShouldEqual, ErrRuleChangeUnavailable)
 		})
@@ -80,21 +80,21 @@ func TestEngineHandleResponse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		insertNotifyRule(t, db, targetType, "r1", "risk", `tags contains "old" if { input.method == "GET" }`)
-		insertNotifyRule(t, db, targetType, "a1", "asset", `tags contains "asset-old" if { input.method == "GET" }`)
+		insertNotifyRule(t, db, "default", targetType, "r1", `tags contains "old" if { input.method == "GET" }`)
+		insertNotifyRule(t, db, "tenant-b", targetType, "r1b", `tags contains "tenant-old" if { input.method == "GET" }`)
 
 		Convey("收到精准事件后仅失效对应分组，其他分组缓存保持", func() {
-			// 预热两个分组缓存
-			riskFirst, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			// 预热两个命名空间分组缓存
+			defaultFirst, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
 			So(err, ShouldBeNil)
-			So(riskFirst, ShouldResemble, []string{"old"})
-			assetFirst, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "asset")
+			So(defaultFirst, ShouldResemble, []string{"old"})
+			tenantFirst, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "tenant-b", Method: "GET"})
 			So(err, ShouldBeNil)
-			So(assetFirst, ShouldResemble, []string{"asset-old"})
-			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeTrue)
-			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeTrue)
+			So(tenantFirst, ShouldResemble, []string{"tenant-old"})
+			So(cacheHas(engine, "default", targetType), ShouldBeTrue)
+			So(cacheHas(engine, "tenant-b", targetType), ShouldBeTrue)
 
-			// 直接修改 risk 组规则，未失效缓存仍返回旧结果
+			// 直接修改 default 组规则，未失效缓存仍返回旧结果
 			newRego := `package zki
 
 tags contains "new" if {
@@ -103,48 +103,48 @@ tags contains "new" if {
 			if err := db.Model(&tag.TagRule{}).Where("name = ?", "r1").Update("rego", newRego).Error; err != nil {
 				t.Fatal(err)
 			}
-			cached, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			cached, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
 			So(err, ShouldBeNil)
 			So(cached, ShouldResemble, []string{"old"})
 
-			// 引擎收到仅含 risk 分组的事件
-			So(engine.handleResponse(watchResponseOf(&RuleChangeEvent{Namespace: "default", TargetType: targetType, TagType: "risk"})), ShouldBeNil)
+			// 引擎收到仅含 default 分组的事件
+			So(engine.handleResponse(watchResponseOf(&RuleChangeEvent{Namespace: "default", Model: targetType})), ShouldBeNil)
 
-			// 仅 risk 组缓存被失效，asset 组缓存保持（在重新识别前检查，识别会重新填充缓存）
-			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeFalse)
-			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeTrue)
+			// 仅 default 组缓存被失效，tenant-b 组缓存保持（在重新识别前检查，识别会重新填充缓存）
+			So(cacheHas(engine, "default", targetType), ShouldBeFalse)
+			So(cacheHas(engine, "tenant-b", targetType), ShouldBeTrue)
 
-			// risk 组重新加载命中新规则
-			fresh, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			// default 组重新加载命中新规则
+			fresh, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
 			So(err, ShouldBeNil)
 			So(fresh, ShouldResemble, []string{"new"})
 
-			// asset 组缓存未被失效，仍命中缓存中的旧规则
-			assetAgain, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "asset")
+			// tenant-b 组缓存未被失效，仍命中缓存中的旧规则
+			tenantAgain, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "tenant-b", Method: "GET"})
 			So(err, ShouldBeNil)
-			So(assetAgain, ShouldResemble, []string{"asset-old"})
+			So(tenantAgain, ShouldResemble, []string{"tenant-old"})
 		})
 
 		Convey("无事件的响应不应失效缓存", func() {
-			first, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			first, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
 			So(err, ShouldBeNil)
 			So(first, ShouldResemble, []string{"old"})
 
 			So(engine.handleResponse(clientv3.WatchResponse{}), ShouldBeNil)
 
 			// 缓存仍有效：返回旧结果（规则未变）
-			again, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			again, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
 			So(err, ShouldBeNil)
 			So(again, ShouldResemble, []string{"old"})
 		})
 
 		Convey("负载无法解析时回退全量失效", func() {
-			_, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "risk")
+			_, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
 			So(err, ShouldBeNil)
-			_, err = engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"}, "asset")
+			_, err = engine.Recognize(context.Background(), &notifyModel{Namespace: "tenant-b", Method: "GET"})
 			So(err, ShouldBeNil)
-			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeTrue)
-			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeTrue)
+			So(cacheHas(engine, "default", targetType), ShouldBeTrue)
+			So(cacheHas(engine, "tenant-b", targetType), ShouldBeTrue)
 
 			// 发送不可解析负载（非 JSON 且无分组信息）
 			resp := clientv3.WatchResponse{Events: []*clientv3.Event{{
@@ -153,15 +153,15 @@ tags contains "new" if {
 			}}}
 			So(engine.handleResponse(resp), ShouldBeNil)
 
-			So(cacheHas(engine, "default", targetType, "risk"), ShouldBeFalse)
-			So(cacheHas(engine, "default", targetType, "asset"), ShouldBeFalse)
+			So(cacheHas(engine, "default", targetType), ShouldBeFalse)
+			So(cacheHas(engine, "tenant-b", targetType), ShouldBeFalse)
 		})
 	})
 }
 
 // cacheHas 检查引擎缓存中是否存在指定命名空间下的分组。
-func cacheHas(engine *Engine, namespace, targetType, tagType string) bool {
-	_, ok := engine.cache.Load(groupKey(namespace, targetType, tagType))
+func cacheHas(engine *Engine, namespace, targetType string) bool {
+	_, ok := engine.cache.Load(groupKey(namespace, targetType))
 	return ok
 }
 
@@ -177,14 +177,13 @@ func watchResponseOf(event *RuleChangeEvent) clientv3.WatchResponse {
 	}}}
 }
 
-// insertNotifyRule 插入一条启用的识别规则。
-func insertNotifyRule(t *testing.T, db *database.DB, targetType, name, tagType, body string) {
+// insertNotifyRule 插入一条指定命名空间下启用的识别规则。
+func insertNotifyRule(t *testing.T, db *database.DB, namespace, model, name, body string) {
 	t.Helper()
 	if err := db.Create(&tag.TagRule{
-		NamespaceName: "default",
+		NamespaceName: namespace,
 		Name:          name,
-		TargetType:    targetType,
-		TagType:       tagType,
+		Model:         model,
 		Rego:          "package zki\n\n" + body,
 		Enabled:       true,
 	}).Error; err != nil {

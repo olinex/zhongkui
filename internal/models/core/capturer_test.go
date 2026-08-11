@@ -321,7 +321,7 @@ func TestCapturer_ModelRegistration(t *testing.T) {
 			convey.So(capturer, convey.ShouldNotBeNil)
 
 			// 验证唯一索引约束
-			// NamespaceName, Name, Version 应该有 uniqueIndex:capturer_unique_index
+			// NamespaceName, Name, Version 应该有 uniqueIndex:uq_capturers_namespace_name_name_version
 			// 这在实际数据库操作中会体现
 		})
 	})

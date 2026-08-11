@@ -1,5 +1,5 @@
 // Package tagengine 提供基于 Open Policy Agent(OPA) 的标签识别引擎。
-// 规则以 Rego 源码形式存储于数据库，引擎按（目标模型类型键, 标签类型）分组
+// 规则以 Rego 源码形式存储于数据库，引擎按目标模型类型键分组
 // 加载、编译并缓存，对结构体实例评估后产出标签集合。
 package tagengine
 
@@ -8,15 +8,6 @@ import (
 
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-)
-
-const (
-	// TagTypeRisk 风险标签维度，用于安全风险识别（如自动化工具、敏感接口）
-	TagTypeRisk = "risk"
-	// TagTypeAsset 资产标签维度，用于资产指纹识别（如服务端组件、设备类别）
-	TagTypeAsset = "asset"
-	// TagTypeBehavior 行为标签维度，用于行为画像识别（如访问频率、请求模式）
-	TagTypeBehavior = "behavior"
 )
 
 var (

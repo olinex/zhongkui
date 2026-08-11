@@ -18,8 +18,7 @@ func TestTagRuleVersion_Struct(t *testing.T) {
 				Version:       3,
 				Name:          "admin-panel",
 				Description:   "识别管理后台登录",
-				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:       "risk",
+				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"admin_panel_login\"",
 				Enabled:       true,
 			}
@@ -27,8 +26,7 @@ func TestTagRuleVersion_Struct(t *testing.T) {
 			convey.So(v.RuleID, convey.ShouldEqual, 7)
 			convey.So(v.Version, convey.ShouldEqual, 3)
 			convey.So(v.Name, convey.ShouldEqual, "admin-panel")
-			convey.So(v.TargetType, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
-			convey.So(v.TagType, convey.ShouldEqual, "risk")
+			convey.So(v.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
 			convey.So(v.Rego, convey.ShouldContainSubstring, "package zki")
 			convey.So(v.Enabled, convey.ShouldBeTrue)
 		})
@@ -37,16 +35,16 @@ func TestTagRuleVersion_Struct(t *testing.T) {
 			convey.So(MaxTagRuleVersions, convey.ShouldEqual, 30)
 		})
 
-		convey.Convey("gorm tag 应包含唯一索引 uq_tag_rule_version 与级联删除约束", func() {
+		convey.Convey("gorm tag 应包含唯一索引 uq_tag_rule_versions_rule_id_version 与级联删除约束", func() {
 			typ := reflect.TypeOf(TagRuleVersion{})
 			ruleIDField, ok := typ.FieldByName("RuleID")
 			convey.So(ok, convey.ShouldBeTrue)
-			convey.So(ruleIDField.Tag.Get("gorm"), convey.ShouldContainSubstring, "uniqueIndex:uq_tag_rule_version")
+			convey.So(ruleIDField.Tag.Get("gorm"), convey.ShouldContainSubstring, "uniqueIndex:uq_tag_rule_versions_rule_id_version")
 			convey.So(ruleIDField.Tag.Get("gorm"), convey.ShouldContainSubstring, "OnDelete:CASCADE")
 
 			versionField, ok := typ.FieldByName("Version")
 			convey.So(ok, convey.ShouldBeTrue)
-			convey.So(versionField.Tag.Get("gorm"), convey.ShouldContainSubstring, "uniqueIndex:uq_tag_rule_version")
+			convey.So(versionField.Tag.Get("gorm"), convey.ShouldContainSubstring, "uniqueIndex:uq_tag_rule_versions_rule_id_version")
 		})
 	})
 }
@@ -79,8 +77,7 @@ func TestTagRuleVersion_UniqueConstraint(t *testing.T) {
 				RuleID:        1,
 				Version:       1,
 				Name:          "r1",
-				TargetType:    "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				TagType:       "risk",
+				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 				Enabled:       true,
 			}
@@ -98,7 +95,7 @@ func TestTagRuleVersion_UniqueConstraint(t *testing.T) {
 			if err := db.AutoMigrate(&TagRuleVersion{}); err != nil {
 				t.Fatal("failed to migrate tag_rule_versions: " + err.Error())
 			}
-			v1 := TagRuleVersion{NamespaceName: "default", RuleID: 1, Version: 1, Name: "r1", TargetType: "t", TagType: "risk", Rego: "package zki\n\ntags contains \"a\"", Enabled: true}
+			v1 := TagRuleVersion{NamespaceName: "default", RuleID: 1, Version: 1, Name: "r1", Model: "t", Rego: "package zki\n\ntags contains \"a\"", Enabled: true}
 			convey.So(db.Create(&v1).Error, convey.ShouldBeNil)
 			v2 := v1
 			v2.ID = 0

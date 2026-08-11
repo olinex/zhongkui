@@ -585,28 +585,31 @@ PARTITION BY batch
 TTL toDateTime(batch * 3600) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS tag_summings (
+	namespace LowCardinality(String) COMMENT 'the namespace of the aggregation, the primary multi-tenant grouping dimension' CODEC(ZSTD(3)),
 	minute DateTime64(6, 'UTC') COMMENT 'the minute aligned start time of the aggregation window' CODEC(DoubleDelta, ZSTD(3)),
-	source String COMMENT 'the source data type of the tags, e.g. HttpTransport' CODEC(ZSTD(3)),
-	type String COMMENT 'the tag dimension type, e.g. fp_tcp_client_sig' CODEC(ZSTD(3)),
+	model String COMMENT 'the target model type key of the tags, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport' CODEC(ZSTD(3)),
+	dimension String COMMENT 'the tag dimension type, e.g. fp_tcp_client_sig' CODEC(ZSTD(3)),
 	item String COMMENT 'the concrete value of the tag dimension' CODEC(ZSTD(3)),
 	tags Array(String) COMMENT 'the deduplicated and sorted tag array of the aggregation',
 	cnt UInt32 COMMENT 'the hit count of the tags, summed by SummingMergeTree'
 ) ENGINE = SummingMergeTree()
-ORDER BY (minute, source, type, item, tags)
+ORDER BY (namespace, minute, model, dimension, item, tags)
 PARTITION BY toStartOfHour(minute)
 TTL toDateTime(minute) + INTERVAL 72 HOUR DELETE;
 
--- 标签聚合物化视图：按分钟 + 来源 + 指纹类型 + 指纹值 + 标签组合聚合 HttpTransport 的标签命中次数
--- type/item 由 fp_tcp_client_sig、fp_tcp_server_sig 两个指纹字段展开而来：字段名为 type，字段值为 item
+-- 标签聚合物化视图：按命名空间 + 分钟 + 目标模型 + 指纹维度 + 指纹值 + 标签组合聚合 HttpTransport 的标签命中次数
+-- namespace 由 http_transports 的命名空间字段直接透传，实现多租户聚合隔离
+-- dimension/item 由 fp_tcp_client_sig、fp_tcp_server_sig 两个指纹字段展开而来：字段名为 dimension，字段值为 item
 -- 指纹值为空的行在 ARRAY JOIN 展开前被过滤（arrayFilter 作用于元组数组）
 -- 标签为空（去重后无任何标签）的行不进入聚合，避免无意义的空标签统计
 CREATE MATERIALIZED VIEW IF NOT EXISTS http_transports_2_tag_summings_mv
 TO tag_summings
 AS
 SELECT
+	namespace,
 	toStartOfMinute(timestamp) AS minute,
-	'HttpTransport' AS source,
-	sig.1 AS type,
+	'zhongkui.com/zhongkui/internal/models/network.HttpTransport' AS model,
+	sig.1 AS dimension,
 	sig.2 AS item,
 	arraySort(arrayDistinct(tags)) AS tags,
 	toUInt32(count()) AS cnt
@@ -616,7 +619,7 @@ ARRAY JOIN arrayFilter(x -> x.2 != '', [
 	('fp_tcp_server_sig', fp_tcp_server_sig)
 ]) AS sig
 WHERE length(tags) > 0
-GROUP BY minute, source, type, item, tags;
+GROUP BY namespace, minute, model, dimension, item, tags;
 
 -- +goose Down
 DROP TABLE IF EXISTS packet_ipv4;

@@ -38,7 +38,7 @@ func TestBoolExprParser(t *testing.T) {
 						convey.So(expr.Or, convey.ShouldHaveLength, 1)
 						convey.So(expr.Or[0].Not, convey.ShouldHaveLength, 1)
 						if tc.expected != "" {
-							convey.So(*expr.Or[0].Not[0].Atom.Label, convey.ShouldEqual, tc.expected)
+							convey.So(expr.Or[0].Not[0].Atom.Label, convey.ShouldEqual, tc.expected)
 						}
 					} else {
 						convey.So(err, convey.ShouldNotBeNil)
@@ -248,6 +248,9 @@ func TestTagEventCondition_Fields(t *testing.T) {
 					UpdatedAt: now,
 				},
 				NamespaceName:  "default",
+				Model:          "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Dimension:      "fp_tcp_client_sig",
+				Item:           "4:D:A+",
 				TagEventRuleID: 100,
 				Name:           "登录失败检测",
 				Window:         5 * time.Minute,
@@ -259,6 +262,9 @@ func TestTagEventCondition_Fields(t *testing.T) {
 
 			convey.So(condition.ID, convey.ShouldEqual, 1)
 			convey.So(condition.NamespaceName, convey.ShouldEqual, "default")
+			convey.So(condition.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			convey.So(condition.Dimension, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(condition.Item, convey.ShouldEqual, "4:D:A+")
 			convey.So(condition.TagEventRuleID, convey.ShouldEqual, 100)
 			convey.So(condition.Name, convey.ShouldEqual, "登录失败检测")
 			convey.So(condition.Window, convey.ShouldEqual, 5*time.Minute)
@@ -384,12 +390,12 @@ func TestBoolExpr_Structure(t *testing.T) {
 
 			// 第一个 OR 项: A AND B
 			convey.So(expr.Or[0].Not, convey.ShouldHaveLength, 2)
-			convey.So(*expr.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "A")
-			convey.So(*expr.Or[0].Not[1].Atom.Label, convey.ShouldEqual, "B")
+			convey.So(expr.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "A")
+			convey.So(expr.Or[0].Not[1].Atom.Label, convey.ShouldEqual, "B")
 
 			// 第二个 OR 项: C
 			convey.So(expr.Or[1].Not, convey.ShouldHaveLength, 1)
-			convey.So(*expr.Or[1].Not[0].Atom.Label, convey.ShouldEqual, "C")
+			convey.So(expr.Or[1].Not[0].Atom.Label, convey.ShouldEqual, "C")
 		})
 
 		convey.Convey("应该处理嵌套括号", func() {
@@ -403,10 +409,10 @@ func TestBoolExpr_Structure(t *testing.T) {
 
 			// 第一个因子应该是括号表达式
 			convey.So(expr.Or[0].Not[0].Atom.Expr, convey.ShouldNotBeNil)
-			convey.So(expr.Or[0].Not[0].Atom.Label, convey.ShouldBeNil)
+			convey.So(expr.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "")
 
 			// 第二个因子是 C
-			convey.So(*expr.Or[0].Not[1].Atom.Label, convey.ShouldEqual, "C")
+			convey.So(expr.Or[0].Not[1].Atom.Label, convey.ShouldEqual, "C")
 		})
 
 		convey.Convey("应该处理 NOT 操作符", func() {
@@ -419,11 +425,11 @@ func TestBoolExpr_Structure(t *testing.T) {
 
 			// 第一个因子: NOT A
 			convey.So(expr.Or[0].Not[0].Not, convey.ShouldBeTrue)
-			convey.So(*expr.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "A")
+			convey.So(expr.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "A")
 
 			// 第二个因子: B
 			convey.So(expr.Or[0].Not[1].Not, convey.ShouldBeFalse)
-			convey.So(*expr.Or[0].Not[1].Atom.Label, convey.ShouldEqual, "B")
+			convey.So(expr.Or[0].Not[1].Atom.Label, convey.ShouldEqual, "B")
 		})
 	})
 }
@@ -448,8 +454,8 @@ func TestParser_EdgeCases(t *testing.T) {
 			convey.So(err1, convey.ShouldBeNil)
 			convey.So(err2, convey.ShouldBeNil)
 
-			convey.So(*expr1.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "tag")
-			convey.So(*expr2.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "TAG")
+			convey.So(expr1.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "tag")
+			convey.So(expr2.Or[0].Not[0].Atom.Label, convey.ShouldEqual, "TAG")
 		})
 
 		convey.Convey("应该处理标签名称中的特殊字符", func() {

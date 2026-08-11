@@ -67,7 +67,7 @@ COMMENT ON COLUMN capturers.namespace_name IS 'the namespace capturer belongs to
 COMMENT ON COLUMN capturers.name IS 'the name of the capturer';
 COMMENT ON COLUMN capturers.version IS 'the version of the capturer';
 
-CREATE UNIQUE INDEX IF NOT EXISTS capturer_unique_index
+CREATE UNIQUE INDEX IF NOT EXISTS uq_capturers_namespace_name_name_version
     ON capturers (namespace_name, name, version);
 
 CREATE TABLE IF NOT EXISTS access_keys (
@@ -114,7 +114,7 @@ COMMENT ON COLUMN rbac_policies.v1 IS 'p(target object name) OR g(group name)';
 COMMENT ON COLUMN rbac_policies.v2 IS 'p(action name) OR g(namespace)';
 COMMENT ON COLUMN rbac_policies.v3 IS 'p(effective ''allow'' or ''deny'') OR g(blank)';
 
-CREATE UNIQUE INDEX IF NOT EXISTS rbac_policy_unique_index
+CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_policies_ptype_v0_v1_v2
     ON rbac_policies (ptype, v0, v1, v2);
 
 CREATE TABLE IF NOT EXISTS rbac_policy_templates (
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS rbac_policy_templates (
     action VARCHAR(64) NOT NULL
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS unique_target_action
+CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_policy_templates_target_action
     ON rbac_policy_templates (target, action);
 
 COMMENT ON COLUMN rbac_policy_templates.id IS 'the primary key of the policy template';
@@ -141,6 +141,7 @@ CREATE TABLE IF NOT EXISTS tag_event_rules (
     namespace_name VARCHAR(32) NOT NULL,
     name VARCHAR(255) NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT true,
+    match_all BOOLEAN NOT NULL DEFAULT false,
     description VARCHAR(256) NOT NULL
 );
 
@@ -150,6 +151,7 @@ COMMENT ON COLUMN tag_event_rules.updated_at IS 'the last update time of the tag
 COMMENT ON COLUMN tag_event_rules.namespace_name IS 'the namespace the tag event rule belongs to';
 COMMENT ON COLUMN tag_event_rules.name IS 'the unique name of the tag event rule';
 COMMENT ON COLUMN tag_event_rules.enabled IS 'enable status of the tag event rule';
+COMMENT ON COLUMN tag_event_rules.match_all IS 'whether all conditions must match to trigger the event; false (default) means any condition matches';
 COMMENT ON COLUMN tag_event_rules.description IS 'the optional description of the tag event rule';
 
 CREATE TABLE IF NOT EXISTS tag_event_conditions (
@@ -158,6 +160,9 @@ CREATE TABLE IF NOT EXISTS tag_event_conditions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     tag_event_rule_id INT NOT NULL REFERENCES tag_event_rules(id) ON DELETE CASCADE,
     namespace_name VARCHAR(32) NOT NULL,
+    model VARCHAR(255) NOT NULL DEFAULT '',
+    dimension VARCHAR(128) NOT NULL DEFAULT '',
+    item VARCHAR(255) NOT NULL DEFAULT '',
     name VARCHAR(255) NOT NULL,
     "window" BIGINT NOT NULL,
     threshold INT NOT NULL,
@@ -171,6 +176,9 @@ COMMENT ON COLUMN tag_event_conditions.created_at IS 'the creation time of the t
 COMMENT ON COLUMN tag_event_conditions.updated_at IS 'the last update time of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions.tag_event_rule_id IS 'the tag event rule this condition belongs to';
 COMMENT ON COLUMN tag_event_conditions.namespace_name IS 'the namespace the tag event condition belongs to';
+COMMENT ON COLUMN tag_event_conditions.model IS 'the target model type key filter of the condition, empty means no filter, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_event_conditions.dimension IS 'the tag dimension type filter of the condition, empty means no filter, e.g. fp_tcp_client_sig';
+COMMENT ON COLUMN tag_event_conditions.item IS 'the concrete value filter of the tag dimension, empty means no filter, e.g. a fingerprint signature';
 COMMENT ON COLUMN tag_event_conditions.name IS 'the unique name of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions."window" IS 'the time window of the condition';
 COMMENT ON COLUMN tag_event_conditions.threshold IS 'the threshold of the condition';
@@ -185,11 +193,10 @@ CREATE TABLE IF NOT EXISTS tag_rules (
     namespace_name VARCHAR(32) NOT NULL,
     name VARCHAR(128) NOT NULL,
     description VARCHAR(512) NOT NULL DEFAULT '',
-    target_type VARCHAR(255) NOT NULL,
-    tag_type VARCHAR(64) NOT NULL,
+    model VARCHAR(255) NOT NULL,
     rego TEXT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT true,
-    CONSTRAINT uq_tag_rule_group UNIQUE (namespace_name, target_type, tag_type, name)
+    CONSTRAINT uq_tag_rules_namespace_name_model_name UNIQUE (namespace_name, model, name)
 );
 
 COMMENT ON COLUMN tag_rules.id IS 'the primary key of the tag rule';
@@ -198,8 +205,7 @@ COMMENT ON COLUMN tag_rules.updated_at IS 'the last update time of the tag rule'
 COMMENT ON COLUMN tag_rules.namespace_name IS 'the namespace the tag rule belongs to';
 COMMENT ON COLUMN tag_rules.name IS 'the unique name of the rule within its group';
 COMMENT ON COLUMN tag_rules.description IS 'the description of the rule';
-COMMENT ON COLUMN tag_rules.target_type IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
-COMMENT ON COLUMN tag_rules.tag_type IS 'the tag dimension type, e.g. risk / asset / behavior';
+COMMENT ON COLUMN tag_rules.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
 COMMENT ON COLUMN tag_rules.rego IS 'the rego rule source, contract: package zk producing tags set';
 COMMENT ON COLUMN tag_rules.enabled IS 'is the rule enabled';
 
@@ -212,11 +218,10 @@ CREATE TABLE IF NOT EXISTS tag_rule_versions (
     version INT NOT NULL,
     name VARCHAR(128) NOT NULL,
     description VARCHAR(512) NOT NULL DEFAULT '',
-    target_type VARCHAR(255) NOT NULL,
-    tag_type VARCHAR(64) NOT NULL,
+    model VARCHAR(255) NOT NULL,
     rego TEXT NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT true,
-    CONSTRAINT uq_tag_rule_version UNIQUE (rule_id, version)
+    CONSTRAINT uq_tag_rule_versions_rule_id_version UNIQUE (rule_id, version)
 );
 
 CREATE INDEX IF NOT EXISTS idx_tag_rule_versions_rule_id
@@ -230,8 +235,7 @@ COMMENT ON COLUMN tag_rule_versions.namespace_name IS 'the namespace of the tag 
 COMMENT ON COLUMN tag_rule_versions.version IS 'the incremental version number of the rule, starting from 1';
 COMMENT ON COLUMN tag_rule_versions.name IS 'the name of the rule at the snapshot time';
 COMMENT ON COLUMN tag_rule_versions.description IS 'the description of the rule at the snapshot time';
-COMMENT ON COLUMN tag_rule_versions.target_type IS 'the target model type key at the snapshot time';
-COMMENT ON COLUMN tag_rule_versions.tag_type IS 'the tag dimension type at the snapshot time';
+COMMENT ON COLUMN tag_rule_versions.model IS 'the target model type key at the snapshot time';
 COMMENT ON COLUMN tag_rule_versions.rego IS 'the rego rule source at the snapshot time';
 COMMENT ON COLUMN tag_rule_versions.enabled IS 'the enabled status at the snapshot time';
 

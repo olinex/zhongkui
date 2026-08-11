@@ -36,16 +36,14 @@ func invalidTagRuleError(errs []tagengine.RegoError) *manager.CodeError {
 }
 
 // TagRuleCreateIn 定义创建标签规则的请求输入结构。
-// 规则名称在同一个命名空间内的分组（target_type + tag_type）中唯一，命名空间取自请求上下文。
+// 规则名称在同一个命名空间内的分组（model）中唯一，命名空间取自请求上下文。
 type TagRuleCreateIn struct {
 	// Name 规则名称，仅允许字母、数字、下划线、连字符，长度 1~128
 	Name string `json:"name" binding:"required,min=1,max=128,alphanumspecial=_-"`
 	// Description 规则描述，说明规则意图，最长 512 字符
 	Description string `json:"description" binding:"max=512"`
-	// TargetType 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
-	TargetType string `json:"targetType" binding:"required,max=255"`
-	// TagType 标签类型（维度），目前仅支持 risk / asset / behavior
-	TagType string `json:"tagType" binding:"required,oneof=risk asset behavior"`
+	// Model 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	Model string `json:"model" binding:"required,max=255"`
 	// Rego Rego 规则源码，遵循 package zki + tags contains 契约
 	Rego string `json:"rego" binding:"required"`
 	// Enabled 是否启用，默认启用
@@ -53,7 +51,7 @@ type TagRuleCreateIn struct {
 }
 
 // TagRuleUpdateIn 定义更新标签规则的请求输入结构。
-// 规则的分组标识（Name/TargetType/TagType）不可变，仅允许调整描述、内容与启用状态。
+// 规则的分组标识（Name/Model）不可变，仅允许调整描述、内容与启用状态。
 type TagRuleUpdateIn struct {
 	// Description 规则描述，最长 512 字符
 	Description string `json:"description" binding:"max=512"`
@@ -71,10 +69,8 @@ type TagRuleBaseDetailOut struct {
 	Name string `json:"name"`
 	// Description 规则描述
 	Description string `json:"description"`
-	// TargetType 目标模型类型键
-	TargetType string `json:"targetType"`
-	// TagType 标签类型（维度）
-	TagType string `json:"tagType"`
+	// Model 目标模型类型键
+	Model string `json:"model"`
 	// Enabled 是否启用
 	Enabled bool `json:"enabled"`
 }
@@ -110,10 +106,8 @@ type TagRuleVersionOut struct {
 	Name string `json:"name"`
 	// Description 快照时刻的规则描述
 	Description string `json:"description"`
-	// TargetType 快照时刻的目标模型类型键
-	TargetType string `json:"targetType"`
-	// TagType 快照时刻的标签类型
-	TagType string `json:"tagType"`
+	// Model 快照时刻的目标模型类型键
+	Model string `json:"model"`
 	// Rego 快照时刻的规则源码
 	Rego string `json:"rego"`
 	// Enabled 快照时刻的启用状态
@@ -147,10 +141,8 @@ type TagRuleDryRunRegoIn struct {
 // input 为规则评估所需的 JSON 输入文档。
 type TagRuleDryRunRuleIn struct {
 	TagRuleDryRunRegoIn
-	// TargetType 目标模型类型键
-	TargetType string `json:"targetType" binding:"required"`
-	// TagType 标签类型（维度）
-	TagType string `json:"tagType" binding:"required"`
+	// Model 目标模型类型键
+	Model string `json:"model" binding:"required"`
 	// Input 规则评估的 JSON 输入文档
 	Input map[string]any `json:"input" binding:"required"`
 }
@@ -159,10 +151,8 @@ type TagRuleDryRunRuleIn struct {
 // 针对一组候选规则（不落库、不影响引擎缓存），经 CompileGroup 编译后评估，
 // input 为规则评估所需的 JSON 输入文档。
 type TagRuleDryRunGroupIn struct {
-	// TargetType 目标模型类型键
-	TargetType string `json:"targetType" binding:"required"`
-	// TagType 标签类型（维度）
-	TagType string `json:"tagType" binding:"required"`
+	// Model 目标模型类型键
+	Model string `json:"model" binding:"required"`
 	// Rules 候选规则列表
 	Rules []*TagRuleDryRunRegoIn `json:"rules" binding:"required,min=1"`
 	// Input 规则评估的 JSON 输入文档
@@ -191,7 +181,7 @@ type TagRuleDryRunOut struct {
 }
 
 // tagRuleListGet 处理获取标签规则列表的请求。
-// 支持分页、排序与过滤（时间/名称/目标类型/标签类型/启用状态），仅返回当前命名空间内的规则。
+// 支持分页、排序与过滤（时间/名称/目标类型/启用状态），仅返回当前命名空间内的规则。
 func tagRuleListGet(c *gin.Context) {
 	namespace, ok := manager.RequireNamespace(c)
 	if !ok {
@@ -283,8 +273,7 @@ func tagRuleCreate(c *gin.Context) {
 		NamespaceName: namespace,
 		Name:          in.Name,
 		Description:   in.Description,
-		TargetType:    in.TargetType,
-		TagType:       in.TagType,
+		Model:         in.Model,
 		Rego:          in.Rego,
 		Enabled:       in.Enabled,
 	}
@@ -467,11 +456,10 @@ func tagRuleDryRun(c *gin.Context) {
 	}
 	name := in.Name
 	rule := &tag.TagRule{
-		Name:       name,
-		TargetType: in.TargetType,
-		TagType:    in.TagType,
-		Rego:       in.Rego,
-		Enabled:    true,
+		Name:    name,
+		Model:   in.Model,
+		Rego:    in.Rego,
+		Enabled: true,
 	}
 	if _, cr, err := tagengine.CompileRule(c, rule); err != nil {
 		invalidTagRuleError(tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
@@ -498,11 +486,10 @@ func tagRuleDryRunGroup(c *gin.Context) {
 	rules := make([]*tag.TagRule, 0, len(in.Rules))
 	for _, item := range in.Rules {
 		rules = append(rules, &tag.TagRule{
-			Name:       item.Name,
-			TargetType: in.TargetType,
-			TagType:    in.TagType,
-			Rego:       item.Rego,
-			Enabled:    true,
+			Name:    item.Name,
+			Model:   in.Model,
+			Rego:    item.Rego,
+			Enabled: true,
 		})
 	}
 	group, err := tagengine.CompileGroup(c, rules)
@@ -619,8 +606,7 @@ func tagRuleVersionRollback(c *gin.Context) {
 	candidate := instance
 	candidate.Name = target.Name
 	candidate.Description = target.Description
-	candidate.TargetType = target.TargetType
-	candidate.TagType = target.TagType
+	candidate.Model = target.Model
 	candidate.Rego = target.Rego
 	candidate.Enabled = target.Enabled
 	if !validateTagRuleCandidate(c, &candidate) {
@@ -634,8 +620,7 @@ func tagRuleVersionRollback(c *gin.Context) {
 		return tx.Model(&tag.TagRule{}).Where("id = ? AND namespace_name = ?", instance.ID, namespace).Updates(map[string]any{
 			"name":        candidate.Name,
 			"description": candidate.Description,
-			"target_type": candidate.TargetType,
-			"tag_type":    candidate.TagType,
+			"model":       candidate.Model,
 			"rego":        candidate.Rego,
 			"enabled":     candidate.Enabled,
 		}).Error
@@ -657,8 +642,7 @@ func newTagRuleBaseDetailOut(rule *tag.TagRule) TagRuleBaseDetailOut {
 		},
 		Name:        rule.Name,
 		Description: rule.Description,
-		TargetType:  rule.TargetType,
-		TagType:     rule.TagType,
+		Model:       rule.Model,
 		Enabled:     rule.Enabled,
 	}
 }
@@ -683,12 +667,12 @@ func validateTagRuleCandidate(c *gin.Context, candidate *tag.TagRule) bool {
 	return true
 }
 
-// buildTagRuleGroup 构建分组（namespace + target_type + tag_type）下"变更后"将参与编译的启用规则集合：
+// buildTagRuleGroup 构建分组（namespace + model）下"变更后"将参与编译的启用规则集合：
 // 从 DB 读取当前命名空间内同组现有启用规则（排除候选规则自身），候选规则启用时并入集合。
 // 用于写路径的组级校验，与引擎实际加载的规则集合保持一致。
 func buildTagRuleGroup(ctx *gin.Context, db *database.DB, candidate *tag.TagRule) ([]*tag.TagRule, error) {
 	query := db.WithContext(ctx).
-		Where("namespace_name = ? AND target_type = ? AND tag_type = ? AND enabled = ?", candidate.NamespaceName, candidate.TargetType, candidate.TagType, true)
+		Where("namespace_name = ? AND model = ? AND enabled = ?", candidate.NamespaceName, candidate.Model, true)
 	if candidate.ID != 0 {
 		query = query.Where("id != ?", candidate.ID)
 	}
@@ -711,8 +695,8 @@ func notifyTagRuleChange(c *gin.Context, rule *tag.TagRule) {
 		return
 	}
 	engine := manager.GetTagRuleEngine(c)
-	engine.Invalidate(namespace, rule.TargetType, rule.TagType)
-	if err := engine.BroadcastChange(c, namespace, rule.TargetType, rule.TagType); err != nil {
+	engine.Invalidate(namespace, rule.Model)
+	if err := engine.BroadcastChange(c, namespace, rule.Model); err != nil {
 		manager.GetLogger(c).Warnf(c, nil, "broadcast tag rule change failed, rule=%d, err=%v", rule.ID, err)
 	}
 }
@@ -733,8 +717,7 @@ func snapshotTagRuleVersion(tx *database.DB, rule *tag.TagRule) error {
 		Version:       maxVersion + 1,
 		Name:          rule.Name,
 		Description:   rule.Description,
-		TargetType:    rule.TargetType,
-		TagType:       rule.TagType,
+		Model:         rule.Model,
 		Rego:          rule.Rego,
 		Enabled:       rule.Enabled,
 	}

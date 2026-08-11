@@ -84,3 +84,6 @@ badUrlParam = "URL 参数`%s`不合法: %s"
 
 [validator]
 strongPassword = "字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?&）"
+
+["model.network.httpTransport"]
+other = "HTTP 传输"

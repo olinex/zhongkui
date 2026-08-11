@@ -20,17 +20,15 @@ type TagRuleVersion struct {
 	// NamespaceName 快照时所属命名空间名称
 	NamespaceName string `gorm:"type:VARCHAR(32)"`
 	// RuleID 所属规则的 ID，删除规则时级联删除其历史版本
-	RuleID uint `gorm:"column:rule_id;type:INT;index;uniqueIndex:uq_tag_rule_version;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	RuleID uint `gorm:"column:rule_id;type:INT;index;uniqueIndex:uq_tag_rule_versions_rule_id_version;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	// Version 规则内的递增版本号，从 1 开始
-	Version uint `gorm:"column:version;type:INT;uniqueIndex:uq_tag_rule_version"`
+	Version uint `gorm:"column:version;type:INT;uniqueIndex:uq_tag_rule_versions_rule_id_version"`
 	// Name 快照时的规则名称
 	Name string `gorm:"type:VARCHAR(128)"`
 	// Description 快照时的规则描述
 	Description string `gorm:"type:VARCHAR(512)"`
-	// TargetType 快照时的目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
-	TargetType string `gorm:"type:VARCHAR(255)"`
-	// TagType 快照时的标签类型（维度，如 risk / asset / behavior）
-	TagType string `gorm:"type:VARCHAR(64)"`
+	// Model 快照时的目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	Model string `gorm:"type:VARCHAR(255)"`
 	// Rego 快照时的 Rego 规则源码
 	Rego string `gorm:"type:TEXT"`
 	// Enabled 快照时的启用状态

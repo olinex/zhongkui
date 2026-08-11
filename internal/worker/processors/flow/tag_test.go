@@ -42,18 +42,17 @@ func setupTagStage(t *testing.T) (*tagStage, *database.DB) {
 	return &tagStage{engine: engine, logger: logger}, db
 }
 
-// insertHttpTransportRule 插入一条针对 HttpTransport 目标类型的启用规则。
-func insertHttpTransportRule(t *testing.T, db *database.DB, name, tagType, rego string) {
+// insertHttpTransportRule 插入一条针对 HttpTransport 目标模型的启用规则。
+func insertHttpTransportRule(t *testing.T, db *database.DB, name, rego string) {
 	t.Helper()
-	targetType, err := tagengine.TypeKey(&network.HttpTransport{})
+	model, err := tagengine.TypeKey(&network.HttpTransport{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	rule := &tag.TagRule{
 		NamespaceName: "default",
 		Name:          name,
-		TargetType:    targetType,
-		TagType:       tagType,
+		Model:         model,
 		Rego:          rego,
 		Enabled:       true,
 	}
@@ -83,7 +82,7 @@ func runStage(ctx context.Context, s *tagStage, items ...any) ([]any, error) {
 func TestTagStage_Recognize(t *testing.T) {
 	Convey("Test TagStage Recognize", t, func() {
 		stage, db := setupTagStage(t)
-		insertHttpTransportRule(t, db, "http-get", "risk", `package zki
+		insertHttpTransportRule(t, db, "http-get", `package zki
 
 tags contains "web_request" if {
     input.method == "GET"
@@ -180,41 +179,40 @@ func buildMockHttpTransport(t *testing.T) *network.HttpTransport {
 }
 
 // TestTagStage_RealisticScenario 模拟真实流量与多条标签规则，演示 tagStage 的识别效果。
-// tagStage 的组合关系为业务逻辑写死（HttpTransport + risk 维度），因此：
-//   - risk 维度规则会被评估
-//   - asset 等其他维度规则不会写入 Tags 字段
+// tagStage 的组合关系为业务逻辑写死（目标模型 = HttpTransport），同一目标模型下
+// 的全部启用规则会合并评估，命中规则产出的标签均写入 Tags 字段。
 func TestTagStage_RealisticScenario(t *testing.T) {
 	Convey("Test TagStage Realistic Scenario", t, func() {
 		stage, db := setupTagStage(t)
-		insertHttpTransportRule(t, db, "curl-automation", "risk", `package zki
+		insertHttpTransportRule(t, db, "curl-automation", `package zki
 
 tags contains "automation" if {
     contains(input.req_hdr_user_agent, "curl")
 }`)
-		insertHttpTransportRule(t, db, "method-get", "risk", `package zki
+		insertHttpTransportRule(t, db, "method-get", `package zki
 
 tags contains "web_request" if {
     input.method == "GET"
 }`)
-		insertHttpTransportRule(t, db, "api-host", "risk", `package zki
+		insertHttpTransportRule(t, db, "api-host", `package zki
 
 tags contains "api_endpoint" if {
     input.host == "api.example.com"
 }`)
-		insertHttpTransportRule(t, db, "admin-path", "risk", `package zki
+		insertHttpTransportRule(t, db, "admin-path", `package zki
 
 tags contains "sensitive_path" if {
     startswith(input.path, "/admin")
 }`)
-		insertHttpTransportRule(t, db, "nginx-asset", "asset", `package zki
+		insertHttpTransportRule(t, db, "nginx-server", `package zki
 
 tags contains "nginx" if {
     contains(input.rsp_hdr_server, "nginx")
 }`)
 
-		// 记录一：curl 访问 /admin 管理接口（命中 4 条 risk 规则）
+		// 记录一：curl 访问 /admin 管理接口（命中全部 5 条规则）
 		curlTransport := buildMockHttpTransport(t)
-		// 记录二：浏览器 POST 上传普通路径（仅命中 api-host 规则）
+		// 记录二：浏览器 POST 上传普通路径（仅命中 api-host 与 nginx-server 规则）
 		browserTransport := &network.HttpTransport{}
 		browserTransport.Namespace = "default"
 		browserTransport.Method = "POST"
@@ -237,16 +235,12 @@ tags contains "nginx" if {
 		t.Logf("curl 记录识别结果 tags=%v", curlTransport.Tags)
 		t.Logf("浏览器记录识别结果 tags=%v", browserTransport.Tags)
 
-		Convey("curl 记录命中全部 risk 维度规则", func() {
-			So(curlTransport.Tags, ShouldResemble, []string{"api_endpoint", "automation", "sensitive_path", "web_request"})
+		Convey("curl 记录命中全部规则", func() {
+			So(curlTransport.Tags, ShouldResemble, []string{"api_endpoint", "automation", "nginx", "sensitive_path", "web_request"})
 		})
 
-		Convey("浏览器记录仅命中 api-host 规则", func() {
-			So(browserTransport.Tags, ShouldResemble, []string{"api_endpoint"})
-		})
-
-		Convey("asset 维度规则不会写入 risk 维度字段", func() {
-			So(curlTransport.Tags, ShouldNotContain, "nginx")
+		Convey("浏览器记录仅命中 api-host 与 nginx-server 规则", func() {
+			So(browserTransport.Tags, ShouldResemble, []string{"api_endpoint", "nginx"})
 		})
 	})
 }

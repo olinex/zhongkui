@@ -568,31 +568,9 @@ actions = [
 ]
 
 [[TagRuleListGet.filterByFields]]
-fieldName = "targetType"
+fieldName = "model"
 fieldType = "string"
-column = "target_type"
-binding = ""
-actions = [
-    "eq",
-    "neq",
-    "pfx",
-    "npfx",
-    "ipfx",
-    "inpfx",
-    "sfx",
-    "nsfx",
-    "isfx",
-    "insfx",
-    "ctn",
-    "nctn",
-    "ictn",
-    "inctn",
-]
-
-[[TagRuleListGet.filterByFields]]
-fieldName = "tagType"
-fieldType = "string"
-column = "tag_type"
+column = "model"
 binding = ""
 actions = [
     "eq",

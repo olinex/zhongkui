@@ -2,43 +2,36 @@
 
 ## Project Overview
 
-**Module**: `zhongkui.com/zhongkui` (Go 1.26.3)
-**Type**: 网络流量抓包与数据分析平台
-**Stack**: Go (Gin + GORM + gRPC + Cobra + Viper + OpenTelemetry) + Vue 3 + Vuetify 3
-
----
+- **Module**: `zhongkui.com/zhongkui` (Go 1.26.3)
+- **Type**: 网络流量抓包与数据分析平台
+- **Stack**: Go (Gin + GORM + gRPC + Cobra + Viper + OpenTelemetry) + Vue 3 + Vuetify 3
 
 ## Development Status 开发阶段
 
-The project is currently in the **closed first-version development stage** (封闭首版本开发阶段).
-
-- No backward compatibility is required — database schema changes, project architecture adjustments, and other refactoring may be done freely without considering migration for existing data or external consumers.
-- 数据库调整、项目架构调整等均无需考虑向后兼容问题，可直接进行重构与变更。
+封闭首版本开发阶段（closed first-version development）：数据库 schema、项目架构等可自由重构，无需考虑向后兼容与既有数据迁移。
 
 ---
 
 ## Go Backend Conventions
 
-### Import Organization
+### Imports
 
-Always use three-block grouping, separated by blank lines, sorted alphabetically within each block:
+Three-block grouping, blank-line separated, alphabetical within each block: 标准库 / 第三方 / 项目内部。
 
 ```go
 import (
-    // Block 1: Standard library
-    "context"
-    "fmt"
-    "net/http"
+	// stdlib
+	"context"
+	"fmt"
 
-    // Block 2: Third-party libraries
-    "github.com/gin-gonic/gin"
-    "github.com/samber/do/v2"
-    "go.uber.org/zap"
+	// third-party
+	"github.com/gin-gonic/gin"
+	"github.com/samber/do/v2"
+	"go.uber.org/zap"
 
-    // Block 3: Internal project packages
-    "zhongkui.com/zhongkui/internal/models/core"
-    "zhongkui.com/zhongkui/internal/pkg/errors"
-    "zhongkui.com/zhongkui/internal/pkg/logging"
+	// internal
+	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 ```
 
@@ -48,114 +41,110 @@ import (
 |----------|-------|---------|
 | Exported types/functions | PascalCase | `JwtAuthenticator`, `GetUser` |
 | Unexported functions | camelCase | `filePath`, `newViperProvider` |
-| Constructor functions | `NewXxx` | `NewJwtAuthenticator`, `NewProductionLogger` |
+| Constructor functions | `NewXxx` | `NewJwtAuthenticator` |
 | Getter functions | `GetXxx` | `GetUser`, `GetAuth` |
 | Receiver variables | Single lowercase letter of type | `(j *JwtAuthenticator)`, `(u *User)` |
-| Package-level constants/variables | UpperCamelCase | `AnonymousUsername`, `AuthCtxName`, `Prefix`, `GlobalPrefix` |
+| Package-level constants/variables | UpperCamelCase | `AnonymousUsername`, `AuthCtxName`, `Prefix` |
 | Package-level error sentinels | `Err` prefix | `ErrUserNotExist`, `ErrJwtBadToken` |
 | Package-level zero-value variables | camelCase | `anonymous` |
 
 ### Error Handling
 
-- Use project's own `errors` package (`zhongkui.com/zhongkui/internal/pkg/errors`) which wraps `github.com/pkg/errors`
-- `errors.New(msg)` / `errors.Newf(format, args...)` — create new errors
-- `errors.WithStack(err)` — wrap third-party/stdlib errors with stack trace (most common pattern)
-- `errors.Is(err, target)` — error chain comparison
-- Always use `if-else` cascading style for sequential error handling:
+- Use project `errors` package（`internal/pkg/errors`，包裹 `github.com/pkg/errors`）：
+  - `errors.New(msg)` / `errors.Newf(format, args...)` — 创建错误
+  - `errors.WithStack(err)` — 包裹第三方/stdlib 错误（最常见）
+  - `errors.Is(err, target)` — 错误链比较
+- Sequential error checks use `if-else` cascading style; error 始终是最后一个返回值。
 
 ```go
 if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
-    return "", CreateAccidentError(err)
+	return "", CreateAccidentError(err)
 } else if tokenStr, err := token.SignedString(cryptoKey); err != nil {
-    return "", ErrJwtBadToken
+	return "", ErrJwtBadToken
 } else {
-    return j.appendPrefix(tokenStr), nil
+	return j.appendPrefix(tokenStr), nil
 }
 ```
 
-- Error is always the last return value
-
 ### Comments
 
-Bilingual Chinese-English comments are standard. Every exported type, function, constant, and struct field must have a comment:
+中英双语注释为标准；所有导出类型/函数/常量/结构体字段必须有注释，文件必须有 `// Package xxx` 文档注释。
 
 ```go
 // UserClaims 自定义 JWT 声明结构
 // 继承 jwt.RegisteredClaims 标准声明，并添加用户相关字段
 type UserClaims struct {
-    jwt.RegisteredClaims
-    UnionID serializer.HexUUID `json:"unionID"`
+	jwt.RegisteredClaims
+	UnionID serializer.HexUUID `json:"unionID"`
 }
 ```
 
-File-level `// Package xxx` doc comments are required and describe package responsibilities.
-
 ### Struct Organization
 
-- Use struct embedding for composition (e.g., `BaseMeta` → `TimestampMeta` → `CaptureMeta` → `AsPacket`)
-- Group fields logically with blank lines between groups
-- All struct fields must have GORM/JSON/mapstructure tags as appropriate
+- 用结构体嵌入实现组合：`BaseMeta` → `TimestampMeta` → `CaptureMeta` → `AsPacket`
+- 字段按逻辑分组，组间空行分隔；字段须带相应的 GORM/JSON/mapstructure tag
+
+### Database Index Naming
+
+Composite indexes / unique constraints use `uq`/`idx` prefix:
+
+| Index type | Format | Example |
+|-----------|--------|---------|
+| Unique index / constraint | `uq_{table}_{column1}_{column2}` | `uq_capturers_namespace_name_name_version` |
+| Regular index | `idx_{table}_{column}` | `idx_tag_rule_versions_rule_id` |
+
+- PostgreSQL 中索引名 schema 级唯一，必须带表名，否则跨表同名索引报 `relation already exists`
+- 列顺序必须与 SQL migration 定义一致；GORM 组合索引列按结构体字段声明顺序生成，字段顺序须对齐（如 `uq_tag_rules_namespace_name_model_name` 要求 `NamespaceName` 先于 `Model` 先于 `Name`）
+- 同时适用于 `internal/migrations` SQL 与 `internal/models` 中 GORM `uniqueIndex` / `index` tag
 
 ### Dependency Injection
 
-Use `samber/do/v2` with a fixed three-layer provider pattern:
+`samber/do/v2` 固定三层模式：私有 provider 工厂 → `InjectXxx` → `InvokeXxx`；`MustInvokeXxx`（panic 版）仅用于启动关键依赖。
 
 ```go
-// Layer 1: Private provider factory
+// Layer 1: private provider factory
 func newViperProvider() do.Provider[*viper.Viper] { ... }
 
-// Layer 2: Injection function
+// Layer 2: injection function
 func InjectViper(i do.Injector) { do.Provide(i, newViperProvider()) }
 
-// Layer 3: Invocation with error
-func InvokeViper(i do.Injector) (*viper.Viper, error) { return do.Invoke[*viper.Viper](i) }
+// Layer 3: invocation with error
+func InvokeViper(i do.Injector) (*viper.Viper, error) { ... }
 
-// Layer 3b: Invocation with panic (only for startup-critical deps)
-func MustInvokeViper(i do.Injector) *viper.Viper { return do.MustInvoke[*viper.Viper](i) }
+// Layer 3b: panic invocation (仅用于启动关键依赖)
+func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 ```
 
-All providers live under `internal/provider/` and are injected centrally in `root.go`'s `PersistentPreRunE`.
+所有 provider 位于 `internal/provider/`，统一在 `root.go` 的 `PersistentPreRunE` 注入。
 
 ### Configuration
 
-- Use `mapstructure` tags with Viper
-- Use `default` struct tag for default values (`github.com/creasty/defaults`)
-- Use `comment` struct tag for config descriptions — the `comment` tag value is rendered by the `config` command (via `DescribeConfig`) and MUST be written in Chinese (中文) as the source of truth
-- Optional English translation: add `config.<path>` entries in `internal/pkg/translate/locales/en.toml` (e.g. `[config.i18n.rootPath]`); `describe config` renders via `I18n.Localize` with the Chinese `comment` as fallback
-- Type-safe extraction via `config.ExtractConfig[T]()`
-- Config prefix constants: `PREFIX = "capture"`
+- Viper 绑定用 `mapstructure` tag；默认值用 `default` tag（`github.com/creasty/defaults`）
+- `comment` tag 必须用中文书写，作为 `describe config`（`DescribeConfig`）渲染的唯一事实来源；可选英文翻译加在 `internal/pkg/translate/locales/en.toml` 的 `config.<path>`（如 `[config.i18n.rootPath]`），未命中回退中文
+- 类型安全提取：`config.ExtractConfig[T]()`；配置前缀常量 `Prefix = "capture"`（`internal/capture/config.go`）
 
 ### CLI (Cobra)
 
-- 所有命令的 `Short`/`Long` 帮助描述、flag 的 usage 描述以及交互式提示（`prompt` 标签、pterm 交互输入提示）必须使用中文书写，作为默认语言文案
-- 命令 `Use` 字段保持命令名/语法不变，不参与汉化
-- CLI 文案统一接入 go-i18n（`internal/pkg/translate`），翻译键布局：
-  - `cmd.<path>.short` / `cmd.<path>.long` — 命令帮助描述（如 `cmd.run.web.short`）
-  - `flag.<path>.<name>` — flag usage（如 `flag.create.tls.ttl`）
-  - `cli.<topic>` — 交互式提示与确认文案（如 `cli.confirm.enter`）
-  - 英文翻译维护在 `internal/pkg/translate/locales/en.toml`；未命中翻译时回退到命令定义中的中文原文
-- `prompt:"..."` 标签的交互提示由 `internal/pkg/cliinput` 渲染时按 `cli.input.prompt.<StructName>.<FieldName>` key 翻译（如 `cli.input.prompt.TLSInputs.Name`），中文标签为回退文案；`cliinput` 通过 `SetTranslator` 注入翻译实现（`internal/cmd/i18n.go` 的 `init()` 注入 `cliT`），cliinput 内部固定文案 key 为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CliI18nPrefix`）
-- 语言切换：环境变量 `ZKI_LANG`（如 `en` / `zh-Hans`），默认 `zh-Hans`；取值统一在 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GlobalPrefix` 为 `zki` + `envconfig:"LANG"`），CLI 通过 `base.Env.Lang` 读取
-- 翻译入口：`internal/cmd/i18n.go` 的 `cliLang()` / `getCliI18n()` / `cliT()`，命令树本地化在 `Execute()` 中的 `localizeCmdTree()`
-- 覆盖 cobra 内置英文命令：`internal/cmd/help.go`（中文 help 命令）、`internal/cmd/completion.go`（中文 completion 命令），根命令 `init()` 中通过 `RootCmd.SetHelpCommand(helpCmd)` 注册
-- `--help` 不会触发 `PersistentPreRunE`，因此语言切换逻辑必须放在 `Execute()` 入口的 `localizeCmdTree()` 中
+- 中文为默认文案：所有 `Short`/`Long`、flag usage、交互式提示（`prompt` 标签、pterm 输入提示）必须用中文；`Use` 字段保持命令名/语法不变
+- 文案统一接入 go-i18n（`internal/pkg/translate`），翻译键：`cmd.<path>.short|long|example`、`flag.<path>.<name>`、`cli.<topic>`；英文维护在 `en.toml`，未命中回退中文原文
+- `prompt:"..."` 标签提示由 `internal/pkg/cliinput` 按 `cli.input.prompt.<StructName>.<FieldName>` 翻译，中文标签为回退；翻译经 `SetTranslator` 注入（`internal/cmd/i18n.go` 的 `init()` 注入 `cliT`）；cliinput 内部固定键为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CliI18nPrefix`）
+- 语言切换：环境变量 `ZKI_LANG`（`en` / `zh-Hans`，默认 `zh-Hans`），统一由 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GlobalPrefix` 为 `zki` + `envconfig:"LANG"`）提供，CLI 经 `base.Env.Lang` 读取
+- 翻译入口 `internal/cmd/i18n.go`：`cliLang()` / `getCliI18n()` / `cliT()`；命令树本地化在 `Execute()` 的 `localizeCmdTree()`
+- 覆盖 cobra 内置英文命令：`internal/cmd/help.go`（中文 help）、`internal/cmd/completion.go`（中文 completion），根命令 `init()` 中 `RootCmd.SetHelpCommand(helpCmd)` 注册
+- `--help` 不触发 `PersistentPreRunE`，故语言切换必须放在 `Execute()` 入口的 `localizeCmdTree()` 中
 
 ### Protobuf
 
-- `proto3` syntax, files in `api/`
-- Package naming: `{service}.v1`
-- Enum values: UPPER_CASE (`CREATED`, `MODIFIED`, `DELETED`)
-- Comments: `///` triple-slash
-- Generated code goes to `internal/pkg/protobuf/`
+- `proto3`，文件在 `api/`；包名 `{service}.v1`；枚举值 UPPER_CASE（`CREATED` 等）；注释用 `///`；生成代码输出到 `internal/pkg/protobuf/`
 
 ### General Go Rules
 
-- `context.Context` is always the first parameter
-- Function types use aliases for behavior contracts: `type LiveFunc = func(ctx context.Context, task *Task) error`
-- Single-method interfaces defined at the consumer side
-- Use `errgroup` for goroutine lifecycle management
-- Custom serializer types implement `driver.Valuer` + `sql.Scanner`
-- Do not write explicit type arguments when Go can infer them from arguments: `etl.NewPipeline(extract, ...)` instead of `etl.NewPipeline[any](extract, ...)`
+- `context.Context` 始终是第一个参数
+- 函数类型别名用于行为契约：`type LiveFunc = func(ctx context.Context, task *Task) error`
+- 单方法接口定义在使用方（consumer side）
+- goroutine 生命周期用 `errgroupx`（`internal/pkg/errgroupx`，errgroup 扩展，错误带 `goroutine#N` 溯源）
+- 自定义序列化类型实现 `driver.Valuer` + `sql.Scanner`
+- 能推断时不写显式类型参数：`etl.NewPipeline(extract, ...)` 而非 `etl.NewPipeline[any](extract, ...)`
 
 ---
 
@@ -174,11 +163,11 @@ Vue 3.5 (Composition API) + Vuetify 3 (Material Design 3) + Pinia + vue-i18n + v
 | TypeScript utilities | camelCase | `base.ts`, `i18n.ts` |
 | Stores | camelCase | `app.ts`, `user.ts` |
 | API modules | camelCase | `admin.ts`, `base.ts` |
-| Type definition files | `@types/` prefix dir | `@types/admin.ts`, `@types/base.ts` |
+| Type definition files | `@types/` dir | `@types/admin.ts` |
 
 ### Script Setup
 
-Always use `<script setup lang="ts">` with component `name` attribute:
+`<script setup lang="ts">` 必须带 `name` attribute；Vue API（`ref`、`computed`、`watch`、`onMounted` 等）已自动导入，禁止手动 import。
 
 ```vue
 <script setup lang="ts">
@@ -186,18 +175,13 @@ const searchTableRef = useTemplateRef("searchTableRef");
 </script>
 ```
 
-Vue APIs (`ref`, `computed`, `watch`, `onMounted`, etc.) are auto-imported — never manually import them.
+### Imports
 
-### Import Organization
-
-Order imports in blocks with comment labels:
+按带注释标签的块组织，类型导入一律用 `import type`：
 
 ```ts
 // Third-party
 import consola from "consola";
-
-// Composables
-// (auto-imported Vue APIs — no imports needed)
 
 // Plugins / Utilities
 import { registerPlugins } from "@/plugins";
@@ -209,29 +193,23 @@ import App from "./App.vue";
 import type { App } from "vue";
 ```
 
-Always use `import type` for type-only imports.
-
 ### API Layer
 
-- Base HTTP client via `axios.create()` in `apis/base.ts`
-- API function naming: `{resource}{Operation}` — e.g., `userListGet`, `groupCreate`, `capturerDelete`
-- Type naming: `{Entity}{Action}In` / `{Entity}{Action}Out` — e.g., `SearchIn`, `UserDetailOut`
-- All API calls use POST method (Go backend convention)
-- URL pattern: `/{resource}/{identifier}/{action}` — e.g., `/admin/user/{unionID}/get`
-- Unified response handling via `getResponse()` callback pattern with `success`/`failed`/`noResponse`/`noRequest`
-- JWT passed via custom `X-JWT-Header` header
+- 基础 HTTP 客户端：`axios.create()` 于 `apis/base.ts`
+- 函数命名 `{resource}{Operation}`（`userListGet`）；类型命名 `{Entity}{Action}In|Out`（`SearchIn`）
+- 全部使用 POST；URL 模式 `/{resource}/{identifier}/{action}`（`/admin/user/{unionID}/get`）
+- 统一响应处理：`getResponse()` 回调，含 `success` / `failed` / `noResponse` / `noRequest`
+- JWT 经自定义 `X-Jwtoken` 头传递（前端常量 `X_JWT_HEADER_NAME`，后端默认 `headerName: "X-Jwtoken"`，同时签发 Cookie `jwtoken`）
 
 ### i18n
 
-- YAML files in `src/locales/`: `en.yaml`, `zhHans.yaml`
-- Dot-separated key hierarchy: `model.user.field.username`, `action.signIn`
-- Template: `{{ $t("key.path") }}`
-- Script: `i18n.global.t("key.path")`
-- Language switching via `[language]` dynamic route segment
+- YAML 文件在 `src/locales/`：`en.yaml` / `zhHans.yaml`；点号层级 key（`model.user.field.username`）
+- 模板：`{{ $t("key.path") }}`；脚本：`i18n.global.t("key.path")`
+- 语言切换通过 `[language]` 动态路由段
 
 ### Pinia Stores
 
-Use Options Store style (`state` + `actions`):
+Options Store 风格（`state` + `actions`）：
 
 ```ts
 export const useAppStore = defineStore("app", {
@@ -247,19 +225,14 @@ export const useAppStore = defineStore("app", {
 
 ### Form Validation
 
-- `vee-validate` + `yup` with validation schemas in `@/schemas/`
-- `useForm` + `defineField` pattern with `vuetifyCfg` adapter
-- Use `handleSubmit` to wrap submission logic
+- `vee-validate` + `yup`，校验 schema 放 `@/schemas/`
+- `useForm` + `defineField` 模式，配 `vuetifyCfg` 适配器；提交逻辑用 `handleSubmit` 包裹
 
 ### Code Style
 
-- **2-space indentation** (`.editorconfig` enforced)
-- UTF-8 encoding
-- Trailing newline required at EOF
-- Trim trailing whitespace
-- ESLint v9 flat config
-- Short-circuit (`&&`) and ternary expressions allowed
-- Component auto-registration via `unplugin-vue-components` — do not manually import components from `src/components/`
+- 2-space 缩进（`.editorconfig` 强制）；UTF-8；EOF 须有换行；去除行尾空白
+- ESLint v9 flat config；允许 `&&` 短路与三元表达式
+- 组件经 `unplugin-vue-components` 自动注册，禁止手动 import `src/components/` 下的组件
 
 ### SFC Structure
 
@@ -282,7 +255,7 @@ meta:
 
 ### Event Communication
 
-Use `mitt` event bus for cross-component communication (e.g., user state refresh events).
+跨组件通信用 `mitt` 事件总线（如用户状态刷新事件）。
 
 ---
 
@@ -292,32 +265,36 @@ Use `mitt` event bus for cross-component communication (e.g., user state refresh
 
 ```
 ├── api/              # Protobuf definitions
-├── cmd/              # Application entry points
+├── cmd/
+│   ├── zki/          # 主程序入口 (main.go)
+│   ├── template/     # 代码生成器 (生成 manager/routes/search.go 等)
+│   └── nic_probe/    # 网卡 XDP 支持探测工具
 ├── internal/
 │   ├── benchmark/    # Benchmarking utilities
 │   ├── capture/      # Packet capture engine
 │   ├── cmd/          # CLI commands (Cobra)
 │   ├── manager/      # HTTP API layer (Gin)
 │   ├── migrations/   # Database migrations
-│   ├── models/       # Data models (core, network, tag)
+│   ├── models/       # Data models (core, api, network, tag)
 │   ├── network/      # Network protocol processing
 │   ├── pkg/          # Shared packages (auth, crypto, db, errors, logging, etc.)
 │   ├── provider/     # DI provider definitions
 │   ├── reporter/     # gRPC reporting service
-│   └── tasks/        # ETL task pipeline
+│   ├── tagengine/    # OPA 标签引擎
+│   └── worker/       # ETL 分布式任务处理 (pcap / tag_event handlers、flow processor)
 ├── web/              # Vue 3 frontend
 └── Makefile          # Build automation
 ```
 
 ### Key Rules
 
-1. **No dead code**: Remove unused imports, variables, and functions
-2. **Consistency first**: Follow existing patterns in the file/module you're editing
-3. **Chinese comments**: Chinese only for Go code; English only for frontend
-4. **Type safety**: Use TypeScript strict mode; use Go generics where applicable
-5. **Error handling**: Never ignore errors; always wrap with context
-6. **DI pattern**: All new dependencies go through the `provider/` → `Inject` → `Invoke` pattern
-7. **API convention**: RESTful resource naming with POST method, `{resource}/{id}/{action}` URL pattern
-8. **Test files**: Co-locate `_test.go` / `_test.ts` files next to source files
-9. **No emoji in code or comments** unless explicitly requested
-10. **Run `make lint` or check ESLint output before committing changes**
+1. 无死代码：及时清理未使用的 import、变量、函数
+2. 一致性优先：遵循所改文件/模块既有模式
+3. 注释语言：Go 代码用中文，前端用英文
+4. 类型安全：TypeScript strict mode；Go 适当使用泛型
+5. 错误处理：禁止忽略错误，始终包裹上下文
+6. DI：新依赖一律走 `provider/` → `Inject` → `Invoke`
+7. API：RESTful 资源命名 + POST，URL 模式 `{resource}/{id}/{action}`
+8. 测试文件与被测源码放在一起（`_test.go` / `_test.ts`）
+9. 代码与注释中禁止 emoji，除非显式要求
+10. 提交前运行 `pnpm lint`（web 前端 ESLint）或检查 ESLint 输出

@@ -22,7 +22,7 @@ type GroupDetailResult struct {
 	Rules map[string]*RuleDetailResult `json:"rules"`
 }
 
-// compiledGroup 一个（目标类型, 标签类型）分组的已编译查询集合。
+// compiledGroup 一个（目标类型）分组的已编译查询集合。
 type compiledGroup struct {
 	rules map[string]*compiledRule
 	group *rego.PreparedEvalQuery // 组级合并查询
