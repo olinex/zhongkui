@@ -60,7 +60,7 @@ var describeSchedulerCmd = &cobra.Command{
 
 func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 	data := pterm.TableData{
-		{"name", "cronSpec", "queue", "timeout", "maxRetry", "enabled"},
+		{"name", "cronSpec", "interval", "queue", "timeout", "maxRetry", "enabled"},
 	}
 	for _, kv := range rsp.Kvs {
 		var cfg pipeline.SchedulerTaskConfig
@@ -71,6 +71,7 @@ func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 		data = append(data, []string{
 			name,
 			cfg.CronSpec,
+			cfg.Interval.String(),
 			cfg.Queue,
 			cfg.Timeout.String(),
 			pterm.Sprintf("%d", cfg.MaxRetry),

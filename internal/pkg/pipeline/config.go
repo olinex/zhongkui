@@ -32,6 +32,15 @@ type SchedulerTaskConfig struct {
 	// 参考: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler
 	CronSpec string `mapstructure:"cronSpec" json:"cron_spec" comment:"cron 表达式，定义定时任务的调度规则 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // cron 表达式
 
+	// Interval 触发间隔，定义游标定时任务的触发周期。
+	// 当大于 0 时，该任务采用游标调度模式：调度器每次运行从 etcd 读取上一次游标，
+	// 依据当前时间计算出自游标以来所有需要触发的网格时间点，为每个时间点投递一个携带
+	// 该时间点的独立任务（载荷见 CursorTaskPayload），全部投递成功后再将最新时间点作为
+	// 新游标写回 etcd。该模式能保证积压期间错过的触发点被逐一补投、且不会重复触发同一
+	// 时间点。此时 CronSpec 字段将被忽略。
+	// 默认值: 0（0 表示未启用游标调度，任务仍按 CronSpec 调度）
+	Interval time.Duration `mapstructure:"interval" json:"interval" default:"0" comment:"游标定时任务的触发间隔，大于 0 时启用游标调度模式并忽略 cronSpec"` // 触发间隔
+
 	// Queue 队列名称，指定任务被发送到的队列。
 	// 默认值: "default"
 	Queue string `mapstructure:"queue" json:"queue" default:"default" comment:"定时任务发送到的队列名称 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 队列名称
@@ -67,6 +76,12 @@ type SchedulerConfig struct {
 	// SyncInterval 同步间隔，调度器从数据库同步数据的频率。
 	// 默认值: 1m (1分钟)
 	SyncInterval time.Duration `mapstructure:"syncInterval" default:"1m" comment:"从数据库同步调度器数据的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 同步间隔
+
+	// CursorCheckInterval 游标检查间隔，游标调度器执行一轮游标推进计算的循环间隔。
+	// 每次运行从 etcd 读取各游标任务的上一次游标，依据当前时间计算并补投错过的触发点，
+	// 再写回新游标。该间隔越小，触发延迟越低，但 etcd 读取频率也越高。
+	// 默认值: 1m (1分钟)
+	CursorCheckInterval time.Duration `mapstructure:"cursorCheckInterval" default:"1m" comment:"游标调度器检查触发点、执行游标推进计算的间隔"` // 游标检查间隔
 
 	// HeartbeatInterval 心跳间隔，调度器发送心跳信号的频率。
 	// 默认值: 10s (10秒)

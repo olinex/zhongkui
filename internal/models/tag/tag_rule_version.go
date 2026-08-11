@@ -31,6 +31,4 @@ type TagRuleVersion struct {
 	Model string `gorm:"type:VARCHAR(255)"`
 	// Rego 快照时的 Rego 规则源码
 	Rego string `gorm:"type:TEXT"`
-	// Enabled 快照时的启用状态
-	Enabled bool `gorm:"type:BOOLEAN"`
 }

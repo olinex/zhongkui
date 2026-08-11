@@ -1,12 +1,10 @@
-package tag_event
+package tagengine
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 	"time"
 
-	"github.com/hibiken/asynq"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
@@ -15,7 +13,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// DetectionCondition 标签事件检测条件的运行时形态，由 core 库 tag_event_conditions 行映射。
+// DetectionCondition 标签事件检测条件的运行时形态，由 core 库 tag_event_conditions 行或 dry-run 请求映射。
 type DetectionCondition struct {
 	RuleID        uint          // 所属规则 ID
 	RuleName      string        // 所属规则名称
@@ -41,7 +39,7 @@ type DetectionHit struct {
 	Total       uint64 `gorm:"column:total"`
 }
 
-// TagEvent 标签事件载荷，作为 tag:event:emit 异步任务发送给后续 worker 处理。
+// TagEvent 标签事件识别结果，作为 tag:event:emit 异步任务载荷或 dry-run 响应返回。
 type TagEvent struct {
 	Namespace  string        `json:"namespace"`
 	RuleID     uint          `json:"ruleID"`
@@ -61,12 +59,6 @@ type TagEventHit struct {
 	Count         uint64        `json:"count"`
 	Threshold     int           `json:"threshold"`
 	Window        time.Duration `json:"window"`
-}
-
-// eventEnqueuer 事件任务投递接口，定义在消费侧，便于单元测试注入替代实现。
-// *pipeline.Client 满足该接口。
-type eventEnqueuer interface {
-	EnqueueContext(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
 }
 
 // TranslateExpression 将标签组合布尔表达式翻译为 GORM clause 表达式树。
@@ -259,14 +251,28 @@ func toEventHit(c DetectionCondition, hit DetectionHit) TagEventHit {
 	}
 }
 
-// NewTagEventEmitTask 将标签事件编码为 tag:event:emit 异步任务。
-func NewTagEventEmitTask(ev *TagEvent) (*asynq.Task, error) {
-	if ev == nil {
-		return nil, errors.New("tag event is nil")
+// Detect 执行一次标签事件识别。
+// 条件由调用方传入（本函数不主动读取规则库），按指定时间点 now 查询聚合统计并聚合为标签事件结果；
+// 供定时检测（worker 消费 tag:event:detect）与接口层 dry-run 模式复用。
+// 非法表达式条件被静默跳过，全部条件无效时返回空结果而非错误。
+func Detect(ctx context.Context, rawDB *database.DB, conds []DetectionCondition, now time.Time) ([]*TagEvent, error) {
+	valid := make([]DetectionCondition, 0, len(conds))
+	for _, cond := range conds {
+		if _, err := TranslateExpression(cond.Expression); err != nil {
+			continue // 表达式非法跳过（调用方可预校验以便告警，此处兜底）
+		}
+		valid = append(valid, cond)
 	}
-	payload, err := json.Marshal(ev)
+	if len(valid) == 0 {
+		return nil, nil
+	}
+	query, args, err := BuildDetectionQuery(rawDB, valid, now)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return asynq.NewTask(TagEventEmitTask, payload), nil
+	var hits []DetectionHit
+	if err := rawDB.WithContext(ctx).Raw(query, args...).Scan(&hits).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return GroupEvents(valid, hits, now), nil
 }

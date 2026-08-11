@@ -115,7 +115,7 @@ func setupUserSelfTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := gin.New()
 	r.Use(setupI18nMiddleware())
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Next()
 	})
 	return r

@@ -1,18 +1,44 @@
-package tag_event
+package tagengine
 
 import (
-	"encoding/json"
+	"context"
+	"database/sql/driver"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/glebarez/go-sqlite"
 	. "github.com/smartystreets/goconvey/convey"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
+
+// registerSQLiteHasFunc 在 sqlite 驱动上注册 ClickHouse 的 has(tags, label) 标量函数，
+// 使检测 SQL 可在 sqlite 上真实执行（tags 以逗号分隔的 TEXT 存储）。
+// 注册对驱动全局生效且仅需一次，供 Detect 端到端测试使用。
+var registerSQLiteHasFunc = sync.OnceFunc(func() {
+	err := sqlite.RegisterScalarFunction("has", 2, func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+		tags, ok := args[0].(string)
+		if !ok {
+			return int64(0), nil
+		}
+		label, _ := args[1].(string)
+		for _, t := range strings.Split(tags, ",") {
+			if t == label {
+				return int64(1), nil
+			}
+		}
+		return int64(0), nil
+	})
+	if err != nil {
+		panic(errors.WithStack(err))
+	}
+})
 
 // TestTranslateExpression 表驱动验证标签组合表达式翻译为 clause 表达式树的渲染结果与参数顺序。
 func TestTranslateExpression(t *testing.T) {
@@ -241,31 +267,86 @@ func TestGroupEvents(t *testing.T) {
 	})
 }
 
-// TestNewTagEventEmitTask 验证事件载荷编码与任务类型。
-func TestNewTagEventEmitTask(t *testing.T) {
-	Convey("Test NewTagEventEmitTask", t, func() {
-		Convey("编码后的任务类型与载荷可还原原始事件", func() {
-			ev := &TagEvent{
-				Namespace:  "default",
-				RuleID:     1,
-				RuleName:   "rule-a",
-				MatchAll:   true,
-				DetectedAt: time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC),
-				Hits: []TagEventHit{
-					{ConditionID: 1, ConditionName: "cond", Model: "m", Count: 5, Threshold: 3, Window: 5 * time.Minute},
-				},
-			}
-			task, err := NewTagEventEmitTask(ev)
+// TestDetect 端到端验证核心识别函数：按传入条件与时间点查询聚合统计并聚合为标签事件。
+func TestDetect(t *testing.T) {
+	Convey("Test Detect", t, func() {
+		registerSQLiteHasFunc()
+		logger, err := logging.NewDefaultLogger()
+		So(err, ShouldBeNil)
+		db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
+		So(err, ShouldBeNil)
+		if sqlDB, err := db.DB(); err != nil {
+			t.Fatal(err)
+		} else {
+			sqlDB.SetMaxOpenConns(1)
+		}
+		// 按 raw 库迁移（001_init.sql）的 tag_summings 列定义精简建表，minute 用同一格式化字符串便于 sqlite 文本比较。
+		So(db.Exec(`CREATE TABLE tag_summings (
+			namespace varchar(32),
+			minute text,
+			model varchar(255),
+			dimension varchar(128),
+			item varchar(255),
+			tags text,
+			cnt integer
+		)`).Error, ShouldBeNil)
+		insert := func(minute, namespace, model, dimension, item, tags string, cnt int) {
+			So(db.Exec(`INSERT INTO tag_summings (namespace, minute, model, dimension, item, tags, cnt) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+				namespace, minute, model, dimension, item, tags, cnt).Error, ShouldBeNil)
+		}
+		now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+		window := 5 * time.Minute
+		// 命中组：窗口内两行合计 4 > 阈值 3
+		insert(database.ToUTCDatetime64(now.Add(-4*time.Minute), 6), "default", "m1", "d1", "i1", "A,B", 2)
+		insert(database.ToUTCDatetime64(now.Add(-2*time.Minute), 6), "default", "m1", "d1", "i1", "A,B", 2)
+		// 未命中组：缺少标签 B
+		insert(database.ToUTCDatetime64(now.Add(-3*time.Minute), 6), "default", "m2", "d2", "i2", "A", 5)
+		// 窗口外数据：应被时间边界排除
+		insert(database.ToUTCDatetime64(now.Add(-10*time.Minute), 6), "default", "m3", "d3", "i3", "A,B", 5)
+		// 不同命名空间：应被命名空间过滤排除
+		insert(database.ToUTCDatetime64(now.Add(-3*time.Minute), 6), "other", "m4", "d4", "i4", "A,B", 5)
+
+		Convey("窗口内标签组合达到阈值触发事件", func() {
+			conds := []DetectionCondition{{
+				RuleID:        10,
+				RuleName:      "rule-a",
+				MatchAll:      false,
+				ConditionID:   1,
+				ConditionName: "cond1",
+				Namespace:     "default",
+				Window:        window,
+				Threshold:     3,
+				Expression:    "A AND B",
+			}}
+			events, err := Detect(context.Background(), db, conds, now)
 			So(err, ShouldBeNil)
-			So(task.Type(), ShouldEqual, TagEventEmitTask)
-			var decoded TagEvent
-			So(json.Unmarshal(task.Payload(), &decoded), ShouldBeNil)
-			So(&decoded, ShouldResemble, ev)
+			So(events, ShouldHaveLength, 1)
+			So(events[0].RuleID, ShouldEqual, uint(10))
+			So(events[0].RuleName, ShouldEqual, "rule-a")
+			So(events[0].MatchAll, ShouldBeFalse)
+			So(events[0].DetectedAt, ShouldResemble, now)
+			So(events[0].Hits, ShouldHaveLength, 1)
+			So(events[0].Hits[0].ConditionID, ShouldEqual, uint(1))
+			So(events[0].Hits[0].Model, ShouldEqual, "m1")
+			So(events[0].Hits[0].Count, ShouldEqual, uint64(4))
 		})
 
-		Convey("nil 事件返回错误", func() {
-			_, err := NewTagEventEmitTask(nil)
-			So(err, ShouldNotBeNil)
+		Convey("空条件返回空结果", func() {
+			events, err := Detect(context.Background(), db, nil, now)
+			So(err, ShouldBeNil)
+			So(events, ShouldBeEmpty)
+		})
+
+		Convey("全部条件非法返回空结果而非错误", func() {
+			conds := []DetectionCondition{{
+				Namespace:  "default",
+				Window:     window,
+				Threshold:  3,
+				Expression: "A AND",
+			}}
+			events, err := Detect(context.Background(), db, conds, now)
+			So(err, ShouldBeNil)
+			So(events, ShouldBeEmpty)
 		})
 	})
 }

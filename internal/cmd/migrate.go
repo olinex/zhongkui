@@ -36,6 +36,7 @@ func coreModels() []any {
 		&coremodel.RbacPolicyTemplate{},
 		&tagmodel.TagEventRule{},
 		&tagmodel.TagEventCondition{},
+		&tagmodel.TagEventRuleVersion{},
 		&tagmodel.TagRule{},
 		&tagmodel.TagRuleVersion{},
 	}

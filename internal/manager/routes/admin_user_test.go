@@ -57,7 +57,7 @@ func setupUserTestRouter() *gin.Engine {
 func setupUserTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupUserTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Next()
 	})
 	return r

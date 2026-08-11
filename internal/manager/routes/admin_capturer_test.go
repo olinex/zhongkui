@@ -13,11 +13,11 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -70,7 +70,7 @@ func setupCapturerTestRouter() *gin.Engine {
 func setupCapturerTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupCapturerTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Next()
 	})
 	return r
@@ -80,7 +80,7 @@ func setupCapturerTestRouterWithDB(db *database.DB) *gin.Engine {
 func setupCapturerTestRouterWithDBAndEtcd(db *database.DB, etcdClient *etcd.EtcdClient) *gin.Engine {
 	r := setupCapturerTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Set(manager.EtcdCtxName, etcdClient)
 		c.Next()
 	})

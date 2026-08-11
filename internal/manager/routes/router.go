@@ -30,6 +30,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	kd := provider.MustInvokeKeyDerivation(i)
 	etcd := provider.MustInvokeEtcdClient(i)
 	coreDB := provider.MustInvokeCoreDatabase(i)
+	rawDB := provider.MustInvokeRawDatabase(i)
 
 	// 初始化命名空间缓存：设置数据库引用并预加载全量命名空间
 	core.Cache.SetDB(coreDB)
@@ -78,8 +79,10 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	forceAuthenticateMiddleware := authenticator.AuthenticateMiddleware(false)
 	// policyMiddleware - RBAC策略中间件，将策略引擎注入请求上下文
 	policyMiddleware := manager.RbacPolicyMiddleware(rbac)
-	// dbMiddleware - 数据库中间件，将核心数据库连接注入请求上下文
-	dbMiddleware := manager.DatabaseMiddleware(coreDB)
+	// coreDatabaseMiddleware - 数据库中间件，将核心数据库连接注入请求上下文
+	coreDatabaseMiddleware := manager.CoreDatabaseMiddleware(coreDB)
+	// rawDatabaseMiddleware - raw 库中间件，供标签事件规则 dry-run 查询 tag_summings
+	rawDatabaseMiddleware := manager.RawDatabaseMiddleware(rawDB)
 	// etcdMiddleware - etcd客户端中间件，将etcd客户端注入请求上下文
 	etcdMiddleware := manager.EtcdClientMiddleware(etcd)
 	// namespaceMiddleware - 命名空间中间件，处理多租户命名空间隔离
@@ -122,7 +125,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		authenticatorMiddleware,     // 认证器注入
 		forceAuthenticateMiddleware, // 强制JWT认证
 		policyMiddleware,            // RBAC策略引擎
-		dbMiddleware,                // 数据库连接
+		coreDatabaseMiddleware,                // 数据库连接
 		namespaceMiddleware,         // 命名空间隔离
 		// authorizeMiddleware,       // 权限验证（暂未启用）
 	)
@@ -234,6 +237,34 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/tag-rule/:id/version/list", tagRuleVersionList)
 		// 标签规则回滚 - 将规则回滚到指定历史版本（需要标签引擎中间件）
 		adminGroup.POST("/tag-rule/:id/version/:version/rollback", tagRuleEngineMiddleware, tagRuleVersionRollback)
+
+		// ========== 标签事件规则管理接口 ==========
+		// 提供标签事件规则的增删改查、启停、表达式校验、dry-run 与版本回滚
+
+		// 标签事件规则列表查询 - 支持分页、搜索和排序
+		adminGroup.POST("/tag-event-rule/list", tagEventRuleListGet)
+		// 标签事件规则列表选项查询 - 返回可用的搜索字段和过滤条件
+		adminGroup.OPTIONS("/tag-event-rule/list", ListOptionsGinHandler[*TagEventRuleListGetSearchIn, *TagEventRuleListOut])
+		// 创建标签事件规则 - 创建新的标签事件规则，创建前逐条件校验表达式语法
+		adminGroup.POST("/tag-event-rule/create", tagEventRuleCreate)
+		// 标签事件规则详情查询 - 根据ID获取规则详细信息
+		adminGroup.POST("/tag-event-rule/:id/get", tagEventRuleDetailGet)
+		// 标签事件规则信息更新 - 更新规则描述/匹配策略/启用状态/条件集合，更新前快照当前版本
+		adminGroup.POST("/tag-event-rule/:id/update", tagEventRuleUpdate)
+		// 删除标签事件规则 - 删除规则及其全部条件与历史版本
+		adminGroup.POST("/tag-event-rule/:id/delete", tagEventRuleDelete)
+		// 启用标签事件规则 - 启用指定规则
+		adminGroup.POST("/tag-event-rule/:id/enable", tagEventRuleSetEnabled(true))
+		// 停用标签事件规则 - 停用指定规则
+		adminGroup.POST("/tag-event-rule/:id/disable", tagEventRuleSetEnabled(false))
+		// 标签事件规则表达式校验 - 校验条件表达式语法，返回精炼后的标准表达式或错误消息
+		adminGroup.POST("/tag-event-rule/validate", tagEventRuleValidate)
+		// 标签事件规则 dry-run - 对一条候选规则（不落库）执行事件检测，需 raw 库中间件查询 tag_summings
+		adminGroup.POST("/tag-event-rule/dry-run", rawDatabaseMiddleware, tagEventRuleDryRun)
+		// 标签事件规则版本列表 - 获取规则的全部历史版本
+		adminGroup.POST("/tag-event-rule/:id/version/list", tagEventRuleVersionList)
+		// 标签事件规则回滚 - 将规则回滚到指定历史版本，回滚前先快照当前内容
+		adminGroup.POST("/tag-event-rule/:id/version/:version/rollback", tagEventRuleVersionRollback)
 	}
 
 	// ==================== 用户接口组：/api/v1/user ====================
@@ -248,14 +279,14 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		// 用户注册 - 创建新用户账户（需要数据库中间件）
 		userGroup.POST(
 			"/register",
-			dbMiddleware, // 数据库连接，用于创建用户记录
+			coreDatabaseMiddleware, // 数据库连接，用于创建用户记录
 			userRegister, // 用户注册处理函数
 		)
 		// 密码登录 - 使用用户名密码进行登录认证
 		userGroup.POST(
 			"/password/login",
 			authenticatorMiddleware, // 认证器注入，用于生成JWT令牌
-			dbMiddleware,            // 数据库连接，用于验证用户凭证
+			coreDatabaseMiddleware,            // 数据库连接，用于验证用户凭证
 			userPasswordLogin,       // 密码登录处理函数
 		)
 	}
@@ -271,7 +302,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/password/reset",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证，确保用户已登录
-			dbMiddleware,                // 数据库连接，用于更新密码
+			coreDatabaseMiddleware,                // 数据库连接，用于更新密码
 			userSelfPasswordReset,       // 密码重置处理函数
 		)
 		// JWT令牌刷新 - 刷新过期的JWT访问令牌
@@ -285,7 +316,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/authorization-info/get",
 			authenticatorMiddleware,      // 认证器注入
 			forceAuthenticateMiddleware,  // 强制认证
-			dbMiddleware,                 // 数据库连接，查询权限信息
+			coreDatabaseMiddleware,                 // 数据库连接，查询权限信息
 			userSelfAuthorizationInfoGet, // 授权信息获取处理函数
 		)
 		// 个人资料修改 - 更新用户的昵称、邮箱等个人信息
@@ -293,7 +324,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/profile/change",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			dbMiddleware,                // 数据库连接，更新用户信息
+			coreDatabaseMiddleware,                // 数据库连接，更新用户信息
 			userSelfProfileChange,       // 个人资料修改处理函数
 		)
 		// 访问密钥列表获取 - 获取用户的所有访问密钥
@@ -301,7 +332,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/list",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			dbMiddleware,                // 数据库连接，查询访问密钥
+			coreDatabaseMiddleware,                // 数据库连接，查询访问密钥
 			userSelfAccessKeyListGet,    // 访问密钥列表获取处理函数
 		)
 		// 创建访问密钥 - 为用户创建新的访问密钥
@@ -309,7 +340,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/create",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			dbMiddleware,                // 数据库连接，创建访问密钥
+			coreDatabaseMiddleware,                // 数据库连接，创建访问密钥
 			userSelfAccessKeyCreate,     // 访问密钥创建处理函数
 		)
 		// 删除访问密钥 - 删除指定的访问密钥
@@ -317,7 +348,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/:id/remove",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			dbMiddleware,                // 数据库连接，删除访问密钥
+			coreDatabaseMiddleware,                // 数据库连接，删除访问密钥
 			userSelfAccessKeyRemove,     // 访问密钥删除处理函数
 		)
 		// 激活访问密钥 - 启用已禁用的访问密钥
@@ -325,7 +356,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/:id/activate",
 			authenticatorMiddleware,        // 认证器注入
 			forceAuthenticateMiddleware,    // 强制认证
-			dbMiddleware,                   // 数据库连接，更新密钥状态
+			coreDatabaseMiddleware,                   // 数据库连接，更新密钥状态
 			userSelfAccessKeyEnabled(true), // 访问密钥启用处理函数
 		)
 		// 停用访问密钥 - 禁用正在使用的访问密钥
@@ -333,7 +364,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/:id/deactivate",
 			authenticatorMiddleware,         // 认证器注入
 			forceAuthenticateMiddleware,     // 强制认证
-			dbMiddleware,                    // 数据库连接，更新密钥状态
+			coreDatabaseMiddleware,                    // 数据库连接，更新密钥状态
 			userSelfAccessKeyEnabled(false), // 访问密钥停用处理函数
 		)
 	}

@@ -13,12 +13,12 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -58,7 +58,7 @@ func setupGroupTestRouter() *gin.Engine {
 func setupGroupTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupGroupTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Next()
 	})
 	return r

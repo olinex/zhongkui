@@ -1580,6 +1580,425 @@ func (s *RbacPolicyTmplateListGetSearchIn) GetOptions() *utils.SearchOptions {
     }
 }
 
+type createdAtTagEventRuleListGetOrderByItem int
+
+func (i *createdAtTagEventRuleListGetOrderByItem) GetName() string {
+    return "createdAt"
+}
+
+func (i *createdAtTagEventRuleListGetOrderByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtTagEventRuleListGetOrderByItem) GetOrder() string {
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
+}
+type updatedAtTagEventRuleListGetOrderByItem int
+
+func (i *updatedAtTagEventRuleListGetOrderByItem) GetName() string {
+    return "updatedAt"
+}
+
+func (i *updatedAtTagEventRuleListGetOrderByItem) GetColumn() string {
+    return "updated_at"
+}
+
+func (i *updatedAtTagEventRuleListGetOrderByItem) GetOrder() string {
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
+}
+
+type TagEventRuleListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type createdAtTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTagEventRuleListGetFilterByItem) GetName() string {
+    return "createdAt"
+}
+
+func (i *createdAtTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtTimeTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTimeTagEventRuleListGetFilterByItem) GetName() string {
+    return "createdAtTime"
+}
+
+func (i *createdAtTimeTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "Time(created_at)"
+}
+
+func (i *createdAtTimeTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtTimeTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtDateTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtDateTagEventRuleListGetFilterByItem) GetName() string {
+    return "createdAtDate"
+}
+
+func (i *createdAtDateTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "Date(created_at)"
+}
+
+func (i *createdAtDateTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtDateTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type updatedAtTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTagEventRuleListGetFilterByItem) GetName() string {
+    return "updatedAt"
+}
+
+func (i *updatedAtTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "updated_at"
+}
+
+func (i *updatedAtTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *updatedAtTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type updatedAtTimeTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTimeTagEventRuleListGetFilterByItem) GetName() string {
+    return "updatedAtTime"
+}
+
+func (i *updatedAtTimeTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "Time(updated_at)"
+}
+
+func (i *updatedAtTimeTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *updatedAtTimeTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type updatedAtDateTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+    Value serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtDateTagEventRuleListGetFilterByItem) GetName() string {
+    return "updatedAtDate"
+}
+
+func (i *updatedAtDateTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "Date(updated_at)"
+}
+
+func (i *updatedAtDateTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *updatedAtDateTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type nameTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *nameTagEventRuleListGetFilterByItem) GetName() string {
+    return "name"
+}
+
+func (i *nameTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "name"
+}
+
+func (i *nameTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *nameTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type enabledTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value bool `mapstructure:"value" binding:""`
+}
+
+func (i *enabledTagEventRuleListGetFilterByItem) GetName() string {
+    return "enabled"
+}
+
+func (i *enabledTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "enabled"
+}
+
+func (i *enabledTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *enabledTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type matchAllTagEventRuleListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value bool `mapstructure:"value" binding:""`
+}
+
+func (i *matchAllTagEventRuleListGetFilterByItem) GetName() string {
+    return "matchAll"
+}
+
+func (i *matchAllTagEventRuleListGetFilterByItem) GetColumn() string {
+    return "match_all"
+}
+
+func (i *matchAllTagEventRuleListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *matchAllTagEventRuleListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+
+type TagEventRuleListGetFilterBy struct {
+    CreatedAt *createdAtTagEventRuleListGetFilterByItem `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeTagEventRuleListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateTagEventRuleListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt *updatedAtTagEventRuleListGetFilterByItem `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeTagEventRuleListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateTagEventRuleListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Name *nameTagEventRuleListGetFilterByItem `mapstructure:"name"`
+    Enabled *enabledTagEventRuleListGetFilterByItem `mapstructure:"enabled"`
+    MatchAll *matchAllTagEventRuleListGetFilterByItem `mapstructure:"matchAll"`
+}
+
+type TagEventRuleListGetSearchIn struct {
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []TagEventRuleListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy *TagEventRuleListGetFilterBy     `mapstructure:"filterBy"`
+}
+
+func (s *TagEventRuleListGetSearchIn) GetGreedy() bool {
+    return s.Greedy
+}
+
+func (s *TagEventRuleListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "createdAt":
+            item := createdAtTagEventRuleListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        case "updatedAt":
+            item := updatedAtTagEventRuleListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
+}
+
+func (s *TagEventRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+    items := make(map[string]utils.FilterByItem)
+    if s.FilterBy == nil {
+        return items
+    }
+    if s.FilterBy.CreatedAt != nil {
+        items["createdAt"] = s.FilterBy.CreatedAt
+    }
+    if s.FilterBy.CreatedAtTime != nil {
+        items["createdAtTime"] = s.FilterBy.CreatedAtTime
+    }
+    if s.FilterBy.CreatedAtDate != nil {
+        items["createdAtDate"] = s.FilterBy.CreatedAtDate
+    }
+    if s.FilterBy.UpdatedAt != nil {
+        items["updatedAt"] = s.FilterBy.UpdatedAt
+    }
+    if s.FilterBy.UpdatedAtTime != nil {
+        items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+    }
+    if s.FilterBy.UpdatedAtDate != nil {
+        items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+    }
+    if s.FilterBy.Name != nil {
+        items["name"] = s.FilterBy.Name
+    }
+    if s.FilterBy.Enabled != nil {
+        items["enabled"] = s.FilterBy.Enabled
+    }
+    if s.FilterBy.MatchAll != nil {
+        items["matchAll"] = s.FilterBy.MatchAll
+    }
+    return items
+}
+
+func (s *TagEventRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "createdAt",
+            "updatedAt",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "createdAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAt",
+                Type: "time.Time",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtTime",
+                Type: "serializer.TimeOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "updatedAtDate",
+                Type: "serializer.DateOnly",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "nil",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "name",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "pfx",
+                    "npfx",
+                    "ipfx",
+                    "inpfx",
+                    "sfx",
+                    "nsfx",
+                    "isfx",
+                    "insfx",
+                    "ctn",
+                    "nctn",
+                    "ictn",
+                    "inctn",
+                },
+            },
+            {
+                Name: "enabled",
+                Type: "bool",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "matchAll",
+                Type: "bool",
+                Actions: []string{
+                    "eq",
+                },
+            },
+        },
+    }
+}
+
 type createdAtTagRuleListGetOrderByItem int
 
 func (i *createdAtTagRuleListGetOrderByItem) GetName() string {

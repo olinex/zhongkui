@@ -114,7 +114,7 @@ func userRegister(c *gin.Context) {
 		Active:     true, // 新用户默认激活
 	}
 	// 保存用户到数据库
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	if err = user.Create(db, false); err != nil {
 		ErrUsernameOrEmailAlreadyExist.AbortWithGinH(c)
 		return
@@ -135,7 +135,7 @@ func userPasswordLogin(c *gin.Context) {
 	}
 	var user core.User
 	// 从数据库查询用户（必须执行SQL查询以确保安全）
-	err := manager.GetDatabase(c).Take(&user, &core.User{Username: in.Username, Active: true}).Error
+	err := manager.GetCoreDatabase(c).Take(&user, &core.User{Username: in.Username, Active: true}).Error
 	// 验证密码
 	passwordValid := user.Password != nil && crypto.CheckPassword(user.Password.Value(), in.Password)
 	auth := manager.GetAuth(c)
@@ -170,7 +170,7 @@ func userSelfPasswordReset(c *gin.Context) {
 		codeErr.AbortWithGinH(c)
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	// 从数据库重新加载用户信息（必须执行SQL查询以确保安全）
 	err := db.Take(&user, &core.User{UnionID: user.UnionID, Active: true}).Error
 	// 验证旧密码
@@ -208,7 +208,7 @@ func userSelfProfileChange(c *gin.Context) {
 		return
 	}
 	// 更新用户个人资料
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	if err := db.Model(&user).Updates(core.User{NickleName: in.NickleName, Email: in.Email}).Error; err != nil {
 		logger := manager.GetLogger(c)
 		logger.Errorf(c, nil, "cannot change user %s's profile, cause: %v", user.UnionID.String(), err)
@@ -257,7 +257,7 @@ func userSelfAuthorizationInfoGet(c *gin.Context) {
 		return
 	}
 	logger := manager.GetLogger(c)
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 查询用户所属的用户组
 	var groups []*core.RbacPolicy
@@ -314,7 +314,7 @@ func userSelfAccessKeyListGet(c *gin.Context) {
 		return
 	}
 	logger := manager.GetLogger(c)
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 查询用户的所有访问密钥
 	var keys []*core.AccessKey
@@ -369,7 +369,7 @@ func userSelfAccessKeyCreate(c *gin.Context) {
 		return
 	}
 
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	// 创建新的访问密钥对象
 	key, err := core.NewAccessKey(user, in.Enabled, in.Description, in.ExpiredAt)
 	if err != nil {
@@ -424,7 +424,7 @@ func userSelfAccessKeyRemove(c *gin.Context) {
 	}
 
 	// 删除访问密钥
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	if err := db.Delete(&core.AccessKey{}, "id = ? AND user_id = ?", id, user.ID).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -457,7 +457,7 @@ func userSelfAccessKeyEnabled(enabled bool) gin.HandlerFunc {
 		}
 
 		// 更新访问密钥的启用状态
-		db := manager.GetDatabase(c)
+		db := manager.GetCoreDatabase(c)
 		var key core.AccessKey
 		if err := db.Model(&key).Where("id = ? AND user_id = ?", id, user.ID).Update("enabled", enabled).Scan(&key).Error; err != nil {
 			manager.CreateAccidentError(err).AbortWithGinH(c)

@@ -53,6 +53,7 @@ const (
 	CodeUsernameOrEmailAlreadyExist               // 1102: 用户名或邮箱已存在
 	CodeTooManyAccessKey                          // 1103: 访问密钥数量超出限制
 	CodeTagRuleInvalid                            // 1104: 标签规则校验失败（语法/契约/组级冲突）
+	CodeTagEventRuleInvalid                       // 1105: 标签事件规则校验失败（表达式非法）
 )
 
 // 预定义的常用错误实例

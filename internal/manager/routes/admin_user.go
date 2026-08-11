@@ -98,7 +98,7 @@ func userListGet(c *gin.Context) {
 	var items []*UserListOut
 
 	// 获取数据库连接并指定查询模型
-	db := manager.GetDatabase(c).Model(&core.User{})
+	db := manager.GetCoreDatabase(c).Model(&core.User{})
 
 	// 构建搜索查询，应用分页、排序和过滤条件
 	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
@@ -137,7 +137,7 @@ func userDetailGet(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 查询用户基本信息
 	var baseOut UserBaseDetailOut
@@ -181,7 +181,7 @@ func userUpdate(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 绑定并验证请求体
 	var in UserProfileChangeIn
@@ -221,7 +221,7 @@ func userSetActive(active bool) gin.HandlerFunc {
 		}
 
 		// 获取数据库连接
-		db := manager.GetDatabase(c)
+		db := manager.GetCoreDatabase(c)
 
 		// 更新用户的激活状态
 		if err := db.Model(&core.User{}).Where("union_id = ?", unionID).Update("active", active).Error; err != nil {
@@ -270,7 +270,7 @@ func userGroupJoin(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 创建用户策略对象
 	policy := core.NewUserPolicy(unionID, in.GroupName, in.Namespace)
@@ -361,7 +361,7 @@ func userGroupLeave(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 删除用户与用户组的关联策略
 	// 使用精确匹配：策略类型为GroupLabel，用户ID、组名和命名空间完全匹配

@@ -12,10 +12,10 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -51,7 +51,7 @@ func setupRbacTestRouter() *gin.Engine {
 	r.Use(setupI18nMiddleware())
 	r.Use(func(c *gin.Context) {
 		// 设置数据库上下文键
-		c.Set(manager.DatabaseCtxName, nil)
+		c.Set(manager.CoreDatabaseCtxName, nil)
 		c.Next()
 	})
 	return r
@@ -61,7 +61,7 @@ func setupRbacTestRouter() *gin.Engine {
 func setupRbacTestRouterWithDB(db *database.DB) *gin.Engine {
 	r := setupRbacTestRouter()
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Next()
 	})
 	return r

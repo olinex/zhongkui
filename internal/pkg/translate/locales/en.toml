@@ -77,6 +77,7 @@
 1102 = "User Username Or Email Already Exist"
 1103 = "Too Many Access Key"
 1104 = "Tag Rule Validation Failed"
+1105 = "Tag Event Rule Validation Failed"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"

@@ -109,7 +109,7 @@ func groupListGet(c *gin.Context) {
 	var items []*GroupListOut
 
 	// 获取数据库连接并指定查询模型
-	db := manager.GetDatabase(c).Model(&core.Group{})
+	db := manager.GetCoreDatabase(c).Model(&core.Group{})
 
 	// 构建搜索查询，应用分页、排序和过滤条件
 	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
@@ -148,7 +148,7 @@ func groupDetailGet(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 准备查询结果容器
 	var baseOut GroupBaseDetailOut
@@ -205,7 +205,7 @@ func groupUpdate(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 更新用户组描述信息
 	// 使用Updates方法只更新Description字段，保持其他字段不变
@@ -253,7 +253,7 @@ func groupCreate(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 创建新的用户组记录
 	// 使用core.Group模型，确保数据完整性约束
@@ -296,7 +296,7 @@ func groupDelete(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 使用事务执行删除操作，确保数据一致性
 	db.Transaction(func(tx *database.DB) error {
@@ -385,7 +385,7 @@ func groupRbacPolicyAdd(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 创建新的组策略实例
 	policy := core.NewGroupPolicy(name, in.Target, in.Action, in.Effect)
@@ -464,7 +464,7 @@ func groupRbacPolicyRemove(c *gin.Context) {
 	}
 
 	// 获取数据库连接
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 
 	// 执行策略删除操作
 	// 删除条件需要精确匹配所有字段以确保删除正确的策略

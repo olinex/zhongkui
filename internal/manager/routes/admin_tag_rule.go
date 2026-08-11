@@ -110,8 +110,6 @@ type TagRuleVersionOut struct {
 	Model string `json:"model"`
 	// Rego 快照时刻的规则源码
 	Rego string `json:"rego"`
-	// Enabled 快照时刻的启用状态
-	Enabled bool `json:"enabled"`
 }
 
 // TagRuleValidateIn 定义标签规则语法校验的请求输入结构。
@@ -197,7 +195,7 @@ func tagRuleListGet(c *gin.Context) {
 		return
 	}
 	var items []*TagRuleListOut
-	db := manager.GetDatabase(c).Model(&tag.TagRule{}).Where("namespace_name = ?", namespace)
+	db := manager.GetCoreDatabase(c).Model(&tag.TagRule{}).Where("namespace_name = ?", namespace)
 	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -219,7 +217,7 @@ func tagRuleDetailGet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	instance := tag.TagRule{}
 	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -229,27 +227,23 @@ func tagRuleDetailGet(c *gin.Context) {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	// 统计历史版本总数与最新版本号
-	var versionCount int64
-	var maxVersion uint
-	if err := db.WithContext(c).Model(&tag.TagRuleVersion{}).
-		Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).
-		Count(&versionCount).Error; err != nil {
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return
+	// 单条 SQL 同时统计历史版本总数与最新版本号（Where 条件一致，避免两次查询）
+	var stat struct {
+		VersionCount int64 `gorm:"column:version_count"`
+		MaxVersion   uint  `gorm:"column:max_version"`
 	}
 	if err := db.WithContext(c).Model(&tag.TagRuleVersion{}).
 		Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).
-		Select("COALESCE(MAX(version), 0)").
-		Scan(&maxVersion).Error; err != nil {
+		Select("COUNT(*) AS version_count, COALESCE(MAX(version), 0) AS max_version").
+		Scan(&stat).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	manager.SimpleOK.AbortWithGinW(c, TagRuleDetailOut{
 		TagRuleBaseDetailOut: newTagRuleBaseDetailOut(&instance),
 		Rego:                 instance.Rego,
-		Version:              maxVersion,
-		VersionCount:         versionCount,
+		Version:              stat.MaxVersion,
+		VersionCount:         stat.VersionCount,
 	})
 }
 
@@ -281,7 +275,7 @@ func tagRuleCreate(c *gin.Context) {
 	if !validateTagRuleCandidate(c, instance) {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	if err := db.WithContext(c).Create(instance).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -308,8 +302,8 @@ func tagRuleUpdate(c *gin.Context) {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	db := manager.GetDatabase(c)
 	instance := tag.TagRule{}
+	db := manager.GetCoreDatabase(c)
 	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			manager.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -359,7 +353,7 @@ func tagRuleDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	instance := tag.TagRule{}
 	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -396,7 +390,7 @@ func tagRuleSetEnabled(enabled bool) gin.HandlerFunc {
 		if !ok {
 			return
 		}
-		db := manager.GetDatabase(c)
+		db := manager.GetCoreDatabase(c)
 		instance := tag.TagRule{}
 		if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -539,7 +533,7 @@ func tagRuleVersionList(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	// 确认规则存在且属于当前命名空间
 	var count int64
 	if err := db.WithContext(c).Model(&tag.TagRule{}).
@@ -581,7 +575,7 @@ func tagRuleVersionRollback(c *gin.Context) {
 		manager.CreateBadUrlParamError("badUrlParam", "version", err).AbortWithGinH(c)
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	instance := tag.TagRule{}
 	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -608,7 +602,6 @@ func tagRuleVersionRollback(c *gin.Context) {
 	candidate.Description = target.Description
 	candidate.Model = target.Model
 	candidate.Rego = target.Rego
-	candidate.Enabled = target.Enabled
 	if !validateTagRuleCandidate(c, &candidate) {
 		return
 	}
@@ -622,7 +615,6 @@ func tagRuleVersionRollback(c *gin.Context) {
 			"description": candidate.Description,
 			"model":       candidate.Model,
 			"rego":        candidate.Rego,
-			"enabled":     candidate.Enabled,
 		}).Error
 	}); err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
@@ -655,7 +647,7 @@ func validateTagRuleCandidate(c *gin.Context, candidate *tag.TagRule) bool {
 		invalidTagRuleError(errs).AbortWithGinH(c)
 		return false
 	}
-	group, err := buildTagRuleGroup(c, manager.GetDatabase(c), candidate)
+	group, err := buildTagRuleGroup(c, manager.GetCoreDatabase(c), candidate)
 	if err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return false
@@ -719,7 +711,6 @@ func snapshotTagRuleVersion(tx *database.DB, rule *tag.TagRule) error {
 		Description:   rule.Description,
 		Model:         rule.Model,
 		Rego:          rule.Rego,
-		Enabled:       rule.Enabled,
 	}
 	return tx.Create(version).Error
 }

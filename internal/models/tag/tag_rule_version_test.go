@@ -20,7 +20,6 @@ func TestTagRuleVersion_Struct(t *testing.T) {
 				Description:   "识别管理后台登录",
 				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"admin_panel_login\"",
-				Enabled:       true,
 			}
 			convey.So(v.NamespaceName, convey.ShouldEqual, "default")
 			convey.So(v.RuleID, convey.ShouldEqual, 7)
@@ -28,7 +27,6 @@ func TestTagRuleVersion_Struct(t *testing.T) {
 			convey.So(v.Name, convey.ShouldEqual, "admin-panel")
 			convey.So(v.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
 			convey.So(v.Rego, convey.ShouldContainSubstring, "package zki")
-			convey.So(v.Enabled, convey.ShouldBeTrue)
 		})
 
 		convey.Convey("MaxTagRuleVersions 常量应为 30", func() {
@@ -79,7 +77,6 @@ func TestTagRuleVersion_UniqueConstraint(t *testing.T) {
 				Name:          "r1",
 				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
-				Enabled:       true,
 			}
 			convey.So(db.Create(&base).Error, convey.ShouldBeNil)
 
@@ -95,7 +92,7 @@ func TestTagRuleVersion_UniqueConstraint(t *testing.T) {
 			if err := db.AutoMigrate(&TagRuleVersion{}); err != nil {
 				t.Fatal("failed to migrate tag_rule_versions: " + err.Error())
 			}
-			v1 := TagRuleVersion{NamespaceName: "default", RuleID: 1, Version: 1, Name: "r1", Model: "t", Rego: "package zki\n\ntags contains \"a\"", Enabled: true}
+			v1 := TagRuleVersion{NamespaceName: "default", RuleID: 1, Version: 1, Name: "r1", Model: "t", Rego: "package zki\n\ntags contains \"a\""}
 			convey.So(db.Create(&v1).Error, convey.ShouldBeNil)
 			v2 := v1
 			v2.ID = 0

@@ -596,3 +596,93 @@ column = "enabled"
 binding = ""
 actions = ["eq"]
 
+# 标签事件规则
+[TagEventRuleListGet]
+timeModule = true
+
+[[TagEventRuleListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[TagEventRuleListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "matchAll"
+fieldType = "bool"
+column = "match_all"
+binding = ""
+actions = ["eq"]
+

@@ -4,11 +4,14 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/hibiken/asynq"
 	"github.com/samber/do/v2"
+
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
 const (
@@ -33,11 +36,23 @@ func NewEventEmitHandler(i do.Injector) *EventEmitHandler {
 
 // Do 消费一条标签事件：解析载荷并记录结构化日志；载荷非法返回错误触发重试。
 func (h *EventEmitHandler) Do(ctx context.Context, task etl.Task) error {
-	var ev TagEvent
+	var ev tagengine.TagEvent
 	if err := json.Unmarshal(task.Payload(), &ev); err != nil {
 		return errors.WithStack(err)
 	}
 	h.logger.Ctx(ctx).Infof("tag event emit: rule=%s namespace=%s matchAll=%v hits=%d",
 		ev.RuleName, ev.Namespace, ev.MatchAll, len(ev.Hits))
 	return nil
+}
+
+// NewTagEventEmitTask 将标签事件编码为 tag:event:emit 异步任务。
+func NewTagEventEmitTask(ev *tagengine.TagEvent) (*asynq.Task, error) {
+	if ev == nil {
+		return nil, errors.New("tag event is nil")
+	}
+	payload, err := json.Marshal(ev)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return asynq.NewTask(TagEventEmitTask, payload), nil
 }

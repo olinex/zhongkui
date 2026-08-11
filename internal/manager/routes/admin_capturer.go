@@ -133,7 +133,7 @@ func capturerListGet(c *gin.Context) {
 		return
 	}
 	var items []*CapturerListOut
-	db := manager.GetDatabase(c).Model(&core.Capturer{})
+	db := manager.GetCoreDatabase(c).Model(&core.Capturer{})
 	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -165,7 +165,7 @@ func capturerDetailGet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	instance := core.Capturer{}
 	if err := db.WithContext(c).First(&instance, id).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
@@ -228,7 +228,7 @@ func capturerCreate(c *gin.Context) {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	client := manager.GetEtcdClient(c)
 	instance := core.Capturer{
 		NamespaceName: in.Namespace,
@@ -274,7 +274,7 @@ func capturerUpdate(c *gin.Context) {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	instance := core.Capturer{}
 	if err := db.First(&instance, id).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
@@ -309,7 +309,7 @@ func capturerDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	client := manager.GetEtcdClient(c)
 	var instance core.Capturer
 	if err := db.First(&instance, "id = ?", id).Error; err != nil {

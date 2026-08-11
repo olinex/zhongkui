@@ -1,6 +1,7 @@
-// Package tagengine 提供基于 Open Policy Agent(OPA) 的标签识别引擎。
+// Package tagengine 提供基于 Open Policy Agent(OPA) 的标签识别引擎与基于标签聚合统计的标签事件识别能力。
 // 规则以 Rego 源码形式存储于数据库，引擎按目标模型类型键分组
-// 加载、编译并缓存，对结构体实例评估后产出标签集合。
+// 加载、编译并缓存，对结构体实例评估后产出标签集合；
+// 标签事件识别基于 tag_summings 聚合统计（Detect）产出标签事件结果，供定时检测与 dry-run 复用。
 package tagengine
 
 import (

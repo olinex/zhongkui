@@ -36,6 +36,10 @@ var (
 	// SchedulerCfgEtcdPrefix etcd 键前缀常量，用于存储所有定时任务的配置。
 	// 所有定时任务配置都以此前缀存储在 etcd 中，确保配置的组织和隔离。
 	SchedulerCfgEtcdPrefix = etcd.WithPrefix("scheduler/cfg/")
+
+	// SchedulerCursorEtcdPrefix etcd 键前缀常量，用于存储游标定时任务的上一次游标。
+	// 每个游标任务的游标以该前缀 + 任务类型为键存储，值为最新触发时间点（RFC3339Nano）。
+	SchedulerCursorEtcdPrefix = etcd.WithPrefix("scheduler/cursor/")
 )
 
 // schedulerLogger 是 asynq.Logger 接口的适配器。
@@ -128,23 +132,19 @@ func (e *etcdBaseConfigProvider) importTaskConfigs(cfgs map[string]SchedulerTask
 	return nil
 }
 
-// GetConfigs 从 etcd 中获取所有定时任务配置。
-// 该方法实现了 asynq.PeriodicTaskConfigProvider 接口，定时任务管理器会定期调用此方法
-// 来获取最新的任务配置，并根据配置的变化动态调整任务调度。
-//
-// 返回值:
-//   - []*asynq.PeriodicTaskConfig: 解析后的定时任务配置列表
-//   - error: 如果获取或解析过程中出现错误则返回错误，否则返回 nil
-func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
+// loadSchedulerTaskConfigs 从 etcd 读取全部定时任务配置并应用默认值。
+// 返回以任务类型为键的配置映射，包含未启用的任务，由调用方按需过滤。
+// 与 asynq.PeriodicTaskManager 的配置同步（SyncInterval）共用，保证 asynq 调度器
+// 与游标调度器看到的配置一致。
+func loadSchedulerTaskConfigs(ctx context.Context, client *etcd.EtcdClient) (map[string]SchedulerTaskConfig, error) {
 	// 从 etcd 中获取所有以 cfgPrefix 为前缀的键值对
-	rsp, err := e.client.Get(e.ctx, SchedulerCfgEtcdPrefix, clientv3.WithPrefix())
+	rsp, err := client.Get(ctx, SchedulerCfgEtcdPrefix, clientv3.WithPrefix())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	var configs []*asynq.PeriodicTaskConfig
+	configs := make(map[string]SchedulerTaskConfig, len(rsp.Kvs))
 	for _, kv := range rsp.Kvs {
-		// 解析 JSON 格式的任务配置
 		var sCfg SchedulerTaskConfig
 		// 填充默认值，确保未设置或为零值的字段有合理的默认值
 		// 例如 Timeout 默认 24h，避免 0 值导致任务立即超时
@@ -154,14 +154,43 @@ func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 		if err := json.Unmarshal(kv.Value, &sCfg); err != nil {
 			return nil, errors.WithStack(err)
 		}
+		// 从 etcd 键中提取任务类型（去除前缀）
+		taskType := strings.TrimPrefix(string(kv.Key), SchedulerCfgEtcdPrefix)
+		configs[taskType] = sCfg
+	}
+	return configs, nil
+}
 
+// GetConfigs 从 etcd 中获取所有定时任务配置。
+// 该方法实现了 asynq.PeriodicTaskConfigProvider 接口，定时任务管理器会定期调用此方法
+// 来获取最新的任务配置，并根据配置的变化动态调整任务调度。
+//
+// 返回值:
+//   - []*asynq.PeriodicTaskConfig: 解析后的定时任务配置列表
+//   - error: 如果获取或解析过程中出现错误则返回错误，否则返回 nil
+func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, error) {
+	configs, err := loadSchedulerTaskConfigs(e.ctx, e.client)
+	if err != nil {
+		return nil, err
+	}
+
+	var periodic []*asynq.PeriodicTaskConfig
+	for taskType, sCfg := range configs {
 		// 跳过未启用的任务配置
 		if !sCfg.Enabled {
 			continue
 		}
+		// 游标调度模式的任务由 CursorScheduler 负责投递，asynq cron 调度器不处理
+		if sCfg.Interval > 0 {
+			continue
+		}
 
-		// 从 etcd 键中提取任务类型（去除前缀）
-		taskType := strings.TrimLeft(string(kv.Key), SchedulerCfgEtcdPrefix)
+		// 将任务配置中的载荷参数序列化为任务载荷
+		// 载荷仅取 Payload 字段，避免将队列、超时等调度元数据透传给处理器
+		raw, err := json.Marshal(sCfg.Payload)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 
 		// 构建 asynq 任务选项
 		opts := []asynq.Option{
@@ -175,25 +204,29 @@ func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 			Cronspec: sCfg.CronSpec,
 			Task: asynq.NewTask(
 				taskType,
-				kv.Value, // 使用原始 JSON 作为任务载荷
+				raw,
 				opts...,
 			),
 		}
 
-		configs = append(configs, cfg)
+		periodic = append(periodic, cfg)
 	}
 
-	return configs, nil
+	return periodic, nil
 }
 
 // Scheduler 实现了 etcd.ElectionService 接口的调度器结构体。
-// 该结构体包装了 asynq.PeriodicTaskManager，提供了分布式选举所需的生命周期管理功能。
-// 当 etcd 选举胜出后，调度器实例将启动定时任务管理器；选举失败时则停止。
+// 该结构体包装了 asynq.PeriodicTaskManager（cron 表达式调度）与 CursorScheduler
+// （游标推进调度），提供了分布式选举所需的生命周期管理功能。
+// 当 etcd 选举胜出后，调度器实例将同时启动定时任务管理器与游标调度器；选举失败时则停止。
 type Scheduler struct {
-	// manager asynq 定时任务管理器实例，负责调度和执行定时任务。
+	// manager asynq 定时任务管理器实例，负责 CronSpec 配置任务的调度和执行。
 	manager *asynq.PeriodicTaskManager
 
-	// shutdownOnce 保证 manager.Shutdown 仅执行一次。
+	// cursor 游标定时任务调度器实例，负责 Interval 配置任务的游标推进调度。
+	cursor *CursorScheduler
+
+	// shutdownOnce 保证 manager.Shutdown 与 cursor.Shutdown 仅执行一次。
 	// asynq.PeriodicTaskManager.Shutdown 会 close 内部 done 通道，
 	// 重复调用会触发 "close of closed channel" panic；
 	// 同一 Election 实例会被 runtime.Group 与 DI 容器各关闭一次，
@@ -225,14 +258,14 @@ func (s *Scheduler) CandidateID() string {
 	return fmt.Sprintf(`%s-%d-%d`, hostname, os.Getgid(), os.Getpid())
 }
 
-// Start 启动定时任务管理器。
+// Start 启动定时任务管理器与游标调度器。
 // 该方法实现了 etcd.ElectionService 接口，在 etcd 选举胜出后被调用。
-// 启动后，调度器会开始根据 etcd 中的配置定期调度和执行定时任务。
+// 启动后，调度器会根据 etcd 中的配置调度定时任务：CronSpec 配置的任务由 asynq
+// 定时任务管理器按 cron 表达式触发，Interval 配置的任务由游标调度器按游标推进触发。
 //
-// asynq PeriodicTaskManager.Start 仅启动后台同步 goroutine 后立即返回，
-// 为满足 ElectionHandler 接口"Start 应阻塞至上下文取消"的契约，
-// 这里在启动后阻塞等待 ctx 取消，使调度器在选举期间持续运行；
-// 上下文取消后由 Shutdown 执行优雅关闭。
+// asynq PeriodicTaskManager.Start 仅启动后台同步 goroutine 后立即返回；
+// 游标调度循环随后阻塞运行至上下文取消，为满足 ElectionHandler 接口
+// "Start 应阻塞至上下文取消"的契约；上下文取消后由 Shutdown 执行优雅关闭。
 //
 // 参数:
 //   - ctx context.Context: 上下文对象，取消后调度器停止运行
@@ -243,31 +276,35 @@ func (s *Scheduler) Start(ctx context.Context) error {
 	if err := s.manager.Start(); err != nil {
 		return errors.WithStack(err)
 	}
-	<-ctx.Done()
-	return nil
+	// 游标调度循环阻塞运行至上下文取消，由 Shutdown 优雅停止
+	return s.cursor.Start(ctx)
 }
 
-// Shutdown 停止定时任务管理器。
+// Shutdown 停止定时任务管理器与游标调度器。
 // 该方法实现了 etcd.ElectionService 接口，在 etcd 选举失败或服务停止时被调用。
 // 停止后，调度器将不再调度新的定时任务，但会等待正在执行的任务完成。
-// 通过 sync.Once 保证 manager 仅被关闭一次，避免重复调用触发 panic。
+// 通过 sync.Once 保证关闭动作仅执行一次，避免重复调用触发 panic。
 //
 // 参数:
 //   - _ context.Context: 上下文对象（虽然当前未使用，但保持接口一致性）
 func (s *Scheduler) Shutdown(_ context.Context) error {
-	s.shutdownOnce.Do(s.manager.Shutdown)
+	s.shutdownOnce.Do(func() {
+		s.manager.Shutdown()
+		s.cursor.Shutdown()
+	})
 	return nil
 }
 
 // NewElectionScheduler 创建并返回一个基于 etcd 选举的调度器实例。
 // 该函数初始化调度器的核心组件，包括：
 // 1. 配置提供器（从 etcd 读取配置）
-// 2. 定时任务管理器（负责调度和执行任务）
-// 3. etcd 选举实例（确保多实例环境下的高可用性）
+// 2. 定时任务管理器（按 cron 表达式调度 CronSpec 配置的任务）
+// 3. 游标调度器（按游标推进调度 Interval 配置的任务）
+// 4. etcd 选举实例（确保多实例环境下的高可用性）
 //
 // 参数:
 //   - ctx context.Context: 上下文对象，用于控制调度器的生命周期
-//   - client *etcd.EtcdClient: etcd 客户端实例，用于配置存储和选举
+//   - client *etcd.EtcdClient: etcd 客户端实例，用于配置/游标存储和选举
 //   - redis *redis.Client: Redis 客户端实例，用于任务队列存储
 //   - cfg *SchedulerConfig: 调度器配置，包含任务配置和运行参数
 //   - logger *logging.Logger: 日志记录器，用于记录调度器运行信息
@@ -320,9 +357,15 @@ func NewElectionScheduler(
 		panic(fmt.Sprintf(`Failed to create scheduler cause: %v`, err))
 	}
 
+	// 创建游标调度器实例，负责 Interval 配置任务的游标推进调度
+	// 其内部创建的 asynq client 与 PeriodicTaskManager/Server 共享同一 Redis 连接，
+	// 故 Shutdown 时仅停止调度循环，不关闭 client，避免关闭共享连接
+	cursor := NewCursorScheduler(client, NewClient(redis), cfg.CursorCheckInterval, logger)
+
 	// 创建调度器实例
 	scheduler := Scheduler{
 		manager: manager,
+		cursor:  cursor,
 	}
 
 	// 返回 etcd 选举实例，用于多实例环境下的领导者选举

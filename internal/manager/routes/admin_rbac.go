@@ -12,9 +12,9 @@ import (
 // 用于返回组策略的详细信息，继承BaseItemOut基础字段
 type GroupRbacPolicyDetailOut struct {
 	utils.BaseItemOut
-	V1 string `json:"target"`  // 目标对象名，表示被访问的资源
-	V2 string `json:"action"`  // 操作名，表示对资源的操作类型
-	V3 string `json:"effect"`  // 效果，只能是'allow'(允许)或'deny'(拒绝)
+	V1 string `json:"target"` // 目标对象名，表示被访问的资源
+	V2 string `json:"action"` // 操作名，表示对资源的操作类型
+	V3 string `json:"effect"` // 效果，只能是'allow'(允许)或'deny'(拒绝)
 }
 
 // UserRbacPolicyDetailOut 表示用户RBAC策略详情输出结构
@@ -47,10 +47,10 @@ type RbacPolicyTemplateListOut struct {
 //   - c: Gin上下文，包含HTTP请求信息和响应方法
 //
 // 功能:
-//   1. 接收并验证查询参数
-//   2. 构建数据库查询
-//   3. 执行查询并返回结果
-//   4. 处理各种错误情况
+//  1. 接收并验证查询参数
+//  2. 构建数据库查询
+//  3. 执行查询并返回结果
+//  4. 处理各种错误情况
 //
 // 返回值: 无，通过Gin上下文返回HTTP响应
 func rbacPolicyTemplateListGet(c *gin.Context) {
@@ -67,7 +67,7 @@ func rbacPolicyTemplateListGet(c *gin.Context) {
 	}
 	var items []*RbacPolicyTemplateListOut
 	// 获取数据库实例并指定模型
-	db := manager.GetDatabase(c).Model(&core.RbacPolicyTemplate{})
+	db := manager.GetCoreDatabase(c).Model(&core.RbacPolicyTemplate{})
 	// 构建搜索查询
 	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)

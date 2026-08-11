@@ -8,15 +8,19 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 )
 
-// DatabaseCtxName 是数据库实例在 Gin 上下文中存储的键名。
+// CoreDatabaseCtxName 是数据库实例在 Gin 上下文中存储的键名。
 // 通过此键将 *database.DB 实例注入到请求上下文中，供后续处理函数读取。
-const DatabaseCtxName = "db"
+const CoreDatabaseCtxName = "db"
+
+// RawDatabaseCtxName 是 raw 库（ClickHouse）在 Gin 上下文中存储的键名。
+// 通过此键将 *database.DB 实例注入到请求上下文中，供后续处理函数读取。
+const RawDatabaseCtxName = "raw-db"
 
 // EtcdCtxName 是 etcd 客户端在 Gin 上下文中存储的键名。
 // 通过此键将 *etcd.EtcdClient 实例注入到请求上下文中，供后续处理函数读取。
 const EtcdCtxName = "etcd"
 
-// DatabaseMiddleware 创建一个 Gin 中间件，将数据库连接实例注入到请求上下文中。
+// CoreDatabaseMiddleware 创建一个 Gin 中间件，将数据库连接实例注入到请求上下文中。
 // 该中间件在请求处理链的入口处调用 c.Set 将 db 实例存储到上下文中，
 // 使得后续处理函数可以通过 GetDatabase 函数获取到同一数据库连接。
 //
@@ -25,14 +29,14 @@ const EtcdCtxName = "etcd"
 //
 // 返回:
 //   - gin.HandlerFunc: Gin 中间件处理函数
-func DatabaseMiddleware(db *database.DB) gin.HandlerFunc {
+func CoreDatabaseMiddleware(db *database.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Set(DatabaseCtxName, db)
+		c.Set(CoreDatabaseCtxName, db)
 		c.Next()
 	}
 }
 
-// GetDatabase 从 Gin 请求上下文中获取数据库连接实例。
+// GetCoreDatabase 从 Gin 请求上下文中获取数据库连接实例。
 // 该函数使用当前请求的 context.Context 调用 WithContext 方法，
 // 确保数据库操作与请求生命周期绑定，支持请求取消时的自动超时控制。
 //
@@ -44,11 +48,46 @@ func DatabaseMiddleware(db *database.DB) gin.HandlerFunc {
 //
 // 返回:
 //   - *database.DB: 绑定了当前请求上下文的数据库连接实例
-func GetDatabase(c *gin.Context) *database.DB {
-	if db, ok := c.Get(DatabaseCtxName); ok {
+func GetCoreDatabase(c *gin.Context) *database.DB {
+	if db, ok := c.Get(CoreDatabaseCtxName); ok {
 		return db.(*database.DB).WithContext(c.Request.Context())
 	}
 	panic("database does not exists")
+}
+
+// RawDatabaseMiddleware 创建一个 Gin 中间件，将 raw 库（ClickHouse）连接实例注入到请求上下文中。
+// 该中间件在请求处理链的入口处调用 c.Set 将 db 实例存储到上下文中，
+// 使得后续处理函数可以通过 GetRawDatabase 函数获取到同一数据库连接。
+//
+// 参数:
+//   - db: raw 库连接实例，通常在应用启动时创建
+//
+// 返回:
+//   - gin.HandlerFunc: Gin 中间件处理函数
+func RawDatabaseMiddleware(db *database.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Set(RawDatabaseCtxName, db)
+		c.Next()
+	}
+}
+
+// GetRawDatabase 从 Gin 请求上下文中获取 raw 库（ClickHouse）连接实例。
+// 该函数使用当前请求的 context.Context 调用 WithContext 方法，
+// 确保数据库操作与请求生命周期绑定，支持请求取消时的自动超时控制。
+//
+// 注意: 如果上下文中不存在 raw 库实例，该函数会触发 panic，
+// 这通常意味着未正确注册 RawDatabaseMiddleware 中间件。
+//
+// 参数:
+//   - c: Gin 请求上下文
+//
+// 返回:
+//   - *database.DB: 绑定了当前请求上下文的 raw 库连接实例
+func GetRawDatabase(c *gin.Context) *database.DB {
+	if db, ok := c.Get(RawDatabaseCtxName); ok {
+		return db.(*database.DB).WithContext(c.Request.Context())
+	}
+	panic("raw database does not exists")
 }
 
 // EtcdClientMiddleware 创建一个 Gin 中间件，将 etcd 客户端实例注入到请求上下文中。

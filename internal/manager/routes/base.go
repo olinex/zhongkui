@@ -44,18 +44,16 @@ type ListOptions struct {
 //   - opts: 提取到的所有字段的 HeaderOption 列表
 func getJSONTagAndType(t reflect.Type) (opts []*HeaderOption) {
 	// 如果传入的是指针类型，解引用获取实际类型
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-
+	for field := range t.Fields() {
 		// 处理匿名嵌入字段：递归展开其内部字段
 		if field.Anonymous {
 			embeddedType := field.Type
 			// 嵌入字段为指针时，解引用获取实际类型
-			if embeddedType.Kind() == reflect.Ptr {
+			if embeddedType.Kind() == reflect.Pointer {
 				embeddedType = embeddedType.Elem()
 			}
 			// 仅对结构体类型的嵌入字段递归展开
@@ -78,7 +76,7 @@ func getJSONTagAndType(t reflect.Type) (opts []*HeaderOption) {
 
 		// 获取字段类型名称，指针类型取其元素类型名称
 		fieldType := field.Type.String()
-		if field.Type.Kind() == reflect.Ptr {
+		if field.Type.Kind() == reflect.Pointer {
 			fieldType = field.Type.Elem().String()
 		}
 

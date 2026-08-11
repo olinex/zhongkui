@@ -186,6 +186,36 @@ COMMENT ON COLUMN tag_event_conditions.expression IS 'the boolean expression of 
 COMMENT ON COLUMN tag_event_conditions.enabled IS 'enable status of the condition';
 COMMENT ON COLUMN tag_event_conditions.description IS 'the optional description of the tag event condition';
 
+CREATE TABLE IF NOT EXISTS tag_event_rule_versions (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    rule_id INT NOT NULL REFERENCES tag_event_rules(id) ON DELETE CASCADE,
+    namespace_name VARCHAR(32) NOT NULL,
+    version INT NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    match_all BOOLEAN NOT NULL DEFAULT false,
+    description VARCHAR(256) NOT NULL DEFAULT '',
+    conditions TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_tag_event_rule_versions_rule_id_version
+    ON tag_event_rule_versions (rule_id, version);
+
+CREATE INDEX IF NOT EXISTS idx_tag_event_rule_versions_rule_id
+    ON tag_event_rule_versions (rule_id);
+
+COMMENT ON COLUMN tag_event_rule_versions.id IS 'the primary key of the tag event rule version';
+COMMENT ON COLUMN tag_event_rule_versions.created_at IS 'the creation time of the tag event rule version';
+COMMENT ON COLUMN tag_event_rule_versions.updated_at IS 'the last update time of the tag event rule version';
+COMMENT ON COLUMN tag_event_rule_versions.rule_id IS 'the tag event rule this version belongs to';
+COMMENT ON COLUMN tag_event_rule_versions.namespace_name IS 'the namespace of the tag event rule at the snapshot time';
+COMMENT ON COLUMN tag_event_rule_versions.version IS 'the incremental version number of the tag event rule, starting from 1';
+COMMENT ON COLUMN tag_event_rule_versions.name IS 'the name of the tag event rule at the snapshot time';
+COMMENT ON COLUMN tag_event_rule_versions.match_all IS 'whether all conditions must match to trigger the event at the snapshot time; false (default) means any condition matches';
+COMMENT ON COLUMN tag_event_rule_versions.description IS 'the description of the tag event rule at the snapshot time';
+COMMENT ON COLUMN tag_event_rule_versions.conditions IS 'the JSON text snapshot of all condition business fields at the snapshot time';
+
 CREATE TABLE IF NOT EXISTS tag_rules (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -220,7 +250,6 @@ CREATE TABLE IF NOT EXISTS tag_rule_versions (
     description VARCHAR(512) NOT NULL DEFAULT '',
     model VARCHAR(255) NOT NULL,
     rego TEXT NOT NULL,
-    enabled BOOLEAN NOT NULL DEFAULT true,
     CONSTRAINT uq_tag_rule_versions_rule_id_version UNIQUE (rule_id, version)
 );
 
@@ -237,12 +266,12 @@ COMMENT ON COLUMN tag_rule_versions.name IS 'the name of the rule at the snapsho
 COMMENT ON COLUMN tag_rule_versions.description IS 'the description of the rule at the snapshot time';
 COMMENT ON COLUMN tag_rule_versions.model IS 'the target model type key at the snapshot time';
 COMMENT ON COLUMN tag_rule_versions.rego IS 'the rego rule source at the snapshot time';
-COMMENT ON COLUMN tag_rule_versions.enabled IS 'the enabled status at the snapshot time';
 
 -- +goose Down
 DROP TABLE IF EXISTS tag_rule_versions;
 DROP TABLE IF EXISTS tag_rules;
 DROP TABLE IF EXISTS tag_event_conditions;
+DROP TABLE IF EXISTS tag_event_rule_versions;
 DROP TABLE IF EXISTS tag_event_rules;
 DROP TABLE IF EXISTS rbac_policy_templates;
 DROP TABLE IF EXISTS rbac_policies;

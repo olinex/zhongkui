@@ -104,7 +104,7 @@ func setupTagRuleTestRouter(db *database.DB, engine *tagengine.Engine) *gin.Engi
 	r.Use(setupI18nMiddleware())
 	r.Use(manager.ZapLoggerMiddleware(newTagRuleTestLogger()))
 	r.Use(func(c *gin.Context) {
-		c.Set(manager.DatabaseCtxName, db)
+		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Next()
 	})
 	// 模拟生产环境 NamespaceMiddleware：固定使用 default 命名空间

@@ -108,7 +108,7 @@ func namespaceListGet(c *gin.Context) {
 		return
 	}
 	var items []*NamespaceListOut
-	db := manager.GetDatabase(c).Model(&core.Namespace{})
+	db := manager.GetCoreDatabase(c).Model(&core.Namespace{})
 	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -150,7 +150,7 @@ func namespaceDetailGet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	var out NamespaceDetailOut
 	if err := db.Model(&core.Namespace{}).First(&out, "name = ?", name).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
@@ -199,7 +199,7 @@ func namespaceDelete(c *gin.Context) {
 	if !ok {
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	db.Transaction(func(tx *database.DB) error {
 		// 检查是否存在引用该命名空间的RBAC策略
 		var policy core.RbacPolicy
@@ -279,7 +279,7 @@ func namespaceCreate(c *gin.Context) {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	if err := db.Create(&core.Namespace{
 		Name:        in.Name,
 		Description: in.Description,
@@ -334,7 +334,7 @@ func namespaceUpdate(c *gin.Context) {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	db := manager.GetDatabase(c)
+	db := manager.GetCoreDatabase(c)
 	result := db.Model(&core.Namespace{}).Where("name = ?", name).Updates(core.Namespace{Description: in.Description})
 	if result.Error != nil {
 		manager.CreateAccidentError(result.Error).AbortWithGinH(c)
