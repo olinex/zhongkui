@@ -7,13 +7,12 @@
       <temp-editable-dialog
         ref="createAccessDialogRef"
         :title="$t(`title.accessKey`)"
-        @confirm="accessKeyCreateAction"
         :confirm-disabled="
-          !accessKeyCreateForm.meta.value.dirty ||
-          !accessKeyCreateForm.meta.value.valid
+          !accessKeyCreateForm.meta.value.dirty || !accessKeyCreateForm.meta.value.valid
         "
         prepend-icon="mdi-key"
         force-editable
+        @confirm="accessKeyCreateAction"
       >
         <template #body>
           <v-form>
@@ -50,18 +49,13 @@
         class="justify-center align-center"
         prepend-avatar="@/assets/logo.png"
         width="80%"
-        dense
+        density="compact"
       >
         <template #title>
           <span class="font-weight-black">{{ userStore.nickleName }}</span>
         </template>
         <template #subtitle>
-          <hex-string-chip
-            size="x-small"
-            :value="userStore.unionID"
-            prefix="uid: "
-            :length="32"
-          />
+          <hex-string-chip size="x-small" :value="userStore.unionID" prefix="uid: " :length="32" />
         </template>
         <v-spacer />
         <v-card-text>
@@ -85,10 +79,7 @@
                   </template>
                   <v-card-actions class="d-flex justify-center" flat>
                     <v-btn
-                      :disabled="
-                        !profileForm.meta.value.dirty ||
-                        !profileForm.meta.value.valid
-                      "
+                      :disabled="!profileForm.meta.value.dirty || !profileForm.meta.value.valid"
                       type="submit"
                       color="primary"
                       class="ma-2 pa-2"
@@ -108,9 +99,9 @@
                 <confirm-dialog
                   ref="confirmDialogRef"
                   :title="$t('model.accessKey.name')"
-                  prependIcon="mdi-key-remove"
-                  @confirm="accessKeyRemoveAction"
+                  prepend-icon="mdi-key-remove"
                   double-check
+                  @confirm="accessKeyRemoveAction"
                 >
                   <template #body="{ proxy }">
                     <confirm-alert
@@ -126,8 +117,8 @@
                 </confirm-dialog>
                 <v-card
                   v-for="key in accessKeys"
-                  variant="text"
                   :key="key.id"
+                  variant="text"
                   :subtitle="key.description"
                   density="compact"
                 >
@@ -142,67 +133,39 @@
                     <v-chip-group disabled>
                       <v-chip density="compact">
                         {{ $t("model.accessKey.field.createdAt") }}:
-                        {{
-                          localeDatetimeFormat(DateTime.fromISO(key.createdAt))
-                        }}
+                        {{ localeDatetimeFormat(DateTime.fromISO(key.createdAt)) }}
                       </v-chip>
                       <v-chip density="compact">
                         {{ $t("model.accessKey.field.updatedAt") }}:
-                        {{
-                          localeDatetimeFormat(DateTime.fromISO(key.updatedAt))
-                        }}
+                        {{ localeDatetimeFormat(DateTime.fromISO(key.updatedAt)) }}
                       </v-chip>
                       <v-chip v-if="key.expiredAt !== null" density="compact">
                         {{ $t("model.accessKey.field.expiredAt") }}:
-                        {{
-                          localeDatetimeFormat(DateTime.fromISO(key.expiredAt))
-                        }}
+                        {{ localeDatetimeFormat(DateTime.fromISO(key.expiredAt)) }}
                       </v-chip>
-                      <v-chip
-                        v-if="key.lastAccessAt !== null"
-                        density="compact"
-                      >
+                      <v-chip v-if="key.lastAccessAt !== null" density="compact">
                         {{ $t("model.accessKey.field.lastAccessAt") }}:
-                        {{
-                          localeDatetimeFormat(
-                            DateTime.fromISO(key.lastAccessAt)
-                          )
-                        }}
+                        {{ localeDatetimeFormat(DateTime.fromISO(key.lastAccessAt)) }}
                       </v-chip>
                     </v-chip-group>
                     <v-divider />
                   </v-card-item>
-                  <template #append class="flex-column align-end">
-                    <v-btn
-                      variant="text"
-                      @click="copyToClipboard(key.accessKeySecret)"
-                    >
+                  <template #append>
+                    <v-btn variant="text" @click="copyToClipboard(key.accessKeySecret)">
                       {{ $t("action.copySecret") }}
                     </v-btn>
-                    <v-btn
-                      variant="text"
-                      @click="accessKeyEnabledAction(key.id, !key.enabled)"
-                      >{{
-                        $t(
-                          key.enabled ? "action.deactivate" : "action.activate"
-                        )
-                      }}</v-btn
-                    >
-                    <v-btn
-                      variant="text"
-                      color="error"
-                      @click="openConfirmDialogAction(key)"
-                    >
+                    <v-btn variant="text" @click="accessKeyEnabledAction(key.id, !key.enabled)">{{
+                      $t(key.enabled ? "action.deactivate" : "action.activate")
+                    }}</v-btn>
+                    <v-btn variant="text" color="error" @click="openConfirmDialogAction(key)">
                       {{ $t("action.delete") }}
                     </v-btn>
                   </template>
                 </v-card>
                 <v-card-actions class="d-flex justify-center">
-                  <v-btn
-                    color="primary"
-                    @click="openCreateAccessDialogAction"
-                    >{{ $t("action.create") }}</v-btn
-                  >
+                  <v-btn color="primary" @click="openCreateAccessDialogAction">{{
+                    $t("action.create")
+                  }}</v-btn>
                 </v-card-actions>
               </template>
             </v-expansion-panel>
@@ -230,10 +193,7 @@
                   </template>
                   <v-card-actions class="d-flex justify-center" flat>
                     <v-btn
-                      :disabled="
-                        !pwdResetForm.meta.value.dirty ||
-                        !pwdResetForm.meta.value.valid
-                      "
+                      :disabled="!pwdResetForm.meta.value.dirty || !pwdResetForm.meta.value.valid"
                       type="submit"
                       color="primary"
                       class="ma-2 pa-2"
@@ -262,11 +222,7 @@ meta:
 
 <script setup lang="ts">
 import { useForm } from "vee-validate";
-import {
-  resetPasswordSchema,
-  changeProfileSchema,
-  accessKeySchema,
-} from "@/schemas/user";
+import { resetPasswordSchema, changeProfileSchema, accessKeySchema } from "@/schemas/user";
 import { useUserStore } from "@/stores/user";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import {
@@ -303,35 +259,17 @@ const accessKeyCreateForm = useForm({
   validationSchema: accessKeySchema,
 });
 
-const [nickleName, nickleNameProps] = profileForm.defineField(
-  "nickleName",
-  vuetifyCfg
-);
+const [nickleName, nickleNameProps] = profileForm.defineField("nickleName", vuetifyCfg);
 const [email, emailProps] = profileForm.defineField("email", vuetifyCfg);
-const [oldPassword, oldPasswordProps] = pwdResetForm.defineField(
-  "oldPassword",
-  vuetifyCfg
-);
-const [newPassword, newPasswordProps] = pwdResetForm.defineField(
-  "newPassword",
-  vuetifyCfg
-);
+const [oldPassword, oldPasswordProps] = pwdResetForm.defineField("oldPassword", vuetifyCfg);
+const [newPassword, newPasswordProps] = pwdResetForm.defineField("newPassword", vuetifyCfg);
 const [newPasswordAgain, newPasswordAgainProps] = pwdResetForm.defineField(
   "newPasswordAgain",
-  vuetifyCfg
+  vuetifyCfg,
 );
-const [enabled, enabledProps] = accessKeyCreateForm.defineField(
-  "enabled",
-  vuetifyCfg
-);
-const [description, descriptionProps] = accessKeyCreateForm.defineField(
-  "description",
-  vuetifyCfg
-);
-const [expiredAt, expiredAtProps] = accessKeyCreateForm.defineField(
-  "expiredAt",
-  vuetifyCfg
-);
+const [enabled, enabledProps] = accessKeyCreateForm.defineField("enabled", vuetifyCfg);
+const [description, descriptionProps] = accessKeyCreateForm.defineField("description", vuetifyCfg);
+const [expiredAt, expiredAtProps] = accessKeyCreateForm.defineField("expiredAt", vuetifyCfg);
 
 const accessKeys = ref([] as accessKeyOut[]);
 
@@ -375,7 +313,7 @@ const profileChangeSubmit = profileForm.handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 
@@ -399,7 +337,7 @@ const passwordResetSubmit = pwdResetForm.handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 
@@ -423,36 +361,34 @@ const accessKeyListGetAction = async (val: { value: boolean }) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const accessKeyCreateAction = accessKeyCreateForm.handleSubmit(
-  async (values): Promise<void> => {
-    await getResponse<accessKeyOut>(
-      accessKeyCreate({
-        enabled: values.enabled,
-        description: values.description,
-        expiredAt: values.expiredAt,
-      }),
-      async (rsp) => {
-        accessKeys.value.push(rsp.data);
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "success",
-        });
-      },
-      async (rsp) => {
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "error",
-        });
-      }
-    );
-  }
-);
+const accessKeyCreateAction = accessKeyCreateForm.handleSubmit(async (values): Promise<void> => {
+  await getResponse<accessKeyOut>(
+    accessKeyCreate({
+      enabled: values.enabled,
+      description: values.description,
+      expiredAt: values.expiredAt,
+    }),
+    async (rsp) => {
+      accessKeys.value.push(rsp.data);
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "success",
+      });
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+});
 
 const accessKeyRemoveAction = async (key: accessKeyOut): Promise<void> => {
   await getSimpleResponse(
@@ -471,20 +407,15 @@ const accessKeyRemoveAction = async (key: accessKeyOut): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const accessKeyEnabledAction = async (
-  id: number,
-  enabled: boolean
-): Promise<void> => {
+const accessKeyEnabledAction = async (id: number, enabled: boolean): Promise<void> => {
   await getResponse<accessKeyOut>(
     accessKeyEnabled(id, enabled),
     async (rsp) => {
-      accessKeys.value = accessKeys.value.map((item) =>
-        item.id !== id ? item : rsp.data
-      );
+      accessKeys.value = accessKeys.value.map((item) => (item.id !== id ? item : rsp.data));
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
@@ -497,7 +428,7 @@ const accessKeyEnabledAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 </script>

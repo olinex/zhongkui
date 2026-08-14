@@ -16,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // registerSQLiteHasFunc 在 sqlite 驱动上注册 ClickHouse 的 has(tags, label) 标量函数，
@@ -100,7 +101,7 @@ func TestBuildDetectionQuery(t *testing.T) {
 		db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
 		So(err, ShouldBeNil)
 		now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
-		window := 5 * time.Minute
+		window := serializer.DurationNS(5 * time.Minute)
 
 		Convey("单条件生成单个 SELECT 分支", func() {
 			conds := []DetectionCondition{{
@@ -118,7 +119,7 @@ func TestBuildDetectionQuery(t *testing.T) {
 			So(args, ShouldResemble, []any{
 				uint(1),
 				"default",
-				database.ToUTCDatetime64(now.Add(-window), 6),
+				database.ToUTCDatetime64(now.Add(-window.Std()), 6),
 				database.ToUTCDatetime64(now, 6),
 				"A",
 				"B",
@@ -196,7 +197,7 @@ func TestGroupEvents(t *testing.T) {
 				ConditionName: name,
 				Namespace:     "default",
 				Threshold:     3,
-				Window:        5 * time.Minute,
+				Window:        serializer.DurationNS(5 * time.Minute),
 			}
 		}
 
@@ -295,7 +296,7 @@ func TestDetect(t *testing.T) {
 				namespace, minute, model, dimension, item, tags, cnt).Error, ShouldBeNil)
 		}
 		now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
-		window := 5 * time.Minute
+		window := serializer.DurationNS(5 * time.Minute)
 		// 命中组：窗口内两行合计 4 > 阈值 3
 		insert(database.ToUTCDatetime64(now.Add(-4*time.Minute), 6), "default", "m1", "d1", "i1", "A,B", 2)
 		insert(database.ToUTCDatetime64(now.Add(-2*time.Minute), 6), "default", "m1", "d1", "i1", "A,B", 2)

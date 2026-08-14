@@ -4,22 +4,17 @@
     :label="label"
     min-width="180"
     prepend-inner-icon="mdi-clock"
-    @click:clear="update(null)"
     clearable
     readonly
+    @click:clear="update(null)"
   >
-    <v-menu
-      v-if="menu"
-      :close-on-content-click="false"
-      activator="parent"
-      min-width="0"
-    >
+    <v-menu v-if="menu" :close-on-content-click="false" activator="parent" min-width="0">
       <v-card>
         <v-card-text>
           <v-date-picker
             :model-value="modelValue"
-            @update:model-value="update"
             show-adjacent-months
+            @update:model-value="update"
           />
         </v-card-text>
         <v-card-actions>
@@ -34,8 +29,8 @@
         <v-card-text>
           <v-date-picker
             :model-value="modelValue"
-            @update:model-value="update"
             show-adjacent-months
+            @update:model-value="update"
           />
         </v-card-text>
         <v-card-actions>
@@ -49,31 +44,34 @@
 </template>
 
 <script setup lang="ts" name="date-field">
-import { DateTime } from 'luxon';
+import { DateTime } from "luxon";
 
-const update = (value: any) => {
+const update = (value: unknown) => {
   emits("update:modelValue", value);
 };
 
 const previousDate = () => {
-  update(DateTime.now().minus({days: 1}).toJSDate())
-}
+  update(DateTime.now().minus({ days: 1 }).toJSDate());
+};
 
 const currentDate = () => {
-  update(DateTime.now().toJSDate())
-}
+  update(DateTime.now().toJSDate());
+};
 
 const nextDate = () => {
-  update(DateTime.now().plus({days: 1}).toJSDate())
-}
+  update(DateTime.now().plus({ days: 1 }).toJSDate());
+};
 
-const props = defineProps({
+defineProps({
   modelValue: {
+    // Passed through to the date picker as-is.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: [Object, String, null] as PropType<any>,
     required: true,
   },
   label: {
     type: String,
+    default: "",
   },
   menu: {
     type: Boolean,

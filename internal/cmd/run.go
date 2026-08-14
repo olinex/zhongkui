@@ -82,7 +82,7 @@ var workerCmd = &cobra.Command{
 		for name, factory := range factories {
 			processor, err := factory(ctx)
 			if err != nil {
-				pterm.Error.Printf("failed to create processor %s: %v\n", name, err)
+				pterm.Error.Println(cliT("cli.run.processor-create-failed", "创建处理器 {{.Name}} 失败：{{.Err}}", map[string]any{"Name": name, "Err": err}))
 				continue
 			}
 			services = append(services, runtime.NewProcessorService(name, processor))
@@ -108,10 +108,7 @@ var captureCmd = &cobra.Command{
 		if sPrint := v.GetBool("stats-print"); sPrint {
 			sInterval := v.GetDuration("stats-interval")
 			client.EnableStats(sInterval)
-			pterm.Debug.Printf(
-				"capture stats enabled, printing every %s to stdout\n",
-				sInterval,
-			)
+			pterm.Debug.Println(cliT("cli.run.capture-stats-enabled", "已启用抓包统计，每 {{.Interval}} 输出到标准输出", map[string]any{"Interval": sInterval}))
 		}
 
 		if err := client.Run(ctx, sessionID); err != nil {

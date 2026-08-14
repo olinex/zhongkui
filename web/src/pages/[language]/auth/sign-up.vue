@@ -1,5 +1,5 @@
 <template>
-    
+  <div></div>
 </template>
 
 <route lang="yaml">
@@ -10,5 +10,4 @@ meta:
   requiresPerm: false
 </route>
 
-<script setup lang="ts">
-</script>
+<script setup lang="ts"></script>

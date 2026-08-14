@@ -5,11 +5,13 @@ package test
 
 import (
 	"fmt"
+	"io"
 	"sort"
 	"sync"
 	"time"
 
 	"github.com/pterm/pterm"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 var Tracer = NewStageTracer()
@@ -90,19 +92,28 @@ func (t *StageTracer) Report() {
 		return records[i].totalNs > records[j].totalNs
 	})
 
-	printReport(records, totalNs)
+	printReport(nil, records, totalNs)
 }
 
-func printReport(records []*stageRecord, totalNs int64) {
-	pterm.DefaultHeader.WithFullWidth().Println("阶段耗时统计报告")
+// printReport 将阶段耗时统计报告渲染到指定的 writer（nil 表示 pterm 默认输出）
+func printReport(w io.Writer, records []*stageRecord, totalNs int64) {
+	pterm.DefaultHeader.WithFullWidth().WithWriter(w).Println(translate.T("cli.tracer.report-title", nil))
 
 	if len(records) == 0 {
-		pterm.Warning.Println("无数据")
+		pterm.Warning.WithWriter(w).Println(translate.T("cli.tracer.no-data", nil))
 		return
 	}
 
 	data := pterm.TableData{
-		{"阶段名称", "调用次数", "总耗时", "平均耗时", "最小耗时", "最大耗时", "占比"},
+		{
+			translate.T("cli.tracer.col-stage", nil),
+			translate.T("cli.tracer.col-calls", nil),
+			translate.T("cli.tracer.col-total", nil),
+			translate.T("cli.tracer.col-avg", nil),
+			translate.T("cli.tracer.col-min", nil),
+			translate.T("cli.tracer.col-max", nil),
+			translate.T("cli.tracer.col-ratio", nil),
+		},
 	}
 
 	for _, rec := range records {
@@ -123,10 +134,10 @@ func printReport(records []*stageRecord, totalNs int64) {
 		})
 	}
 
-	if err := pterm.DefaultTable.WithHasHeader().WithData(data).Render(); err != nil {
-		pterm.Error.Printf("error rendering report table: %v\n", err)
+	if err := pterm.DefaultTable.WithHasHeader().WithData(data).WithWriter(w).Render(); err != nil {
+		pterm.Error.WithWriter(w).Println(translate.T("cli.tracer.render-error", map[string]any{"Err": err}))
 	}
-	pterm.Info.Printf("总记录数: %d\n", len(records))
+	pterm.Info.WithWriter(w).Println(translate.T("cli.tracer.total-records", map[string]any{"Count": len(records)}))
 }
 
 func formatNS(ns int64) string {

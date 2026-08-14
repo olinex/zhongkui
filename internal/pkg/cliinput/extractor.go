@@ -17,9 +17,9 @@
 //	    Password string `viper:"password" prompt:"please enter password" mask:"true" confirm:"true" binding:"required,min=8"`
 //	}
 //
-//	func run(v *viper.Viper) error {
+//	func run(v *viper.Viper, validate *validator.Validate) error {
 //	    var in RegisterInput
-//	    if err := cliinput.Extract(v, &in); err != nil {
+//	    if err := cliinput.Extract(v, validate, &in); err != nil {
 //	        return err
 //	    }
 //	    // in.Username and in.Password are now populated and validated
@@ -31,13 +31,14 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
+	uv "github.com/go-playground/validator/v10"
 	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 // Tag names used in struct field tags.
@@ -49,21 +50,10 @@ const (
 	CliI18nPrefix = "cli.input"
 )
 
-// translatePrompt 翻译交互提示文本。
-// key 为翻译消息 ID，fallback 为中文默认文案。
-// 默认 no-op（原样返回 fallback），由使用方通过 SetTranslator 注入翻译实现，
-// 避免本包反向依赖上层 i18n 基础设施。
-var (
-	once            sync.Once
-	translatePrompt = func(key, fallback string) string { return fallback }
-)
-
-// SetTranslator 注入交互提示的翻译函数。
-// fn 接收翻译 key 与中文回退文案，返回本地化后的提示文本。
-func SetTranslator(fn func(key, fallback string) string) {
-	once.Do(func() {
-		translatePrompt = fn
-	})
+// translatePrompt 翻译交互提示文本，统一走 internal/pkg/translate 的 T 函数。
+// 中文文案维护在 locales/zh-Hans.toml，英文在 locales/en.toml。
+func translatePrompt(key string) string {
+	return translate.T(key, nil)
 }
 
 // Extract 从 viper 配置中填充结构体指针，对于 viper 中值为空的字段，
@@ -75,6 +65,7 @@ func SetTranslator(fn func(key, fallback string) string) {
 //
 // 参数说明：
 //   - v: viper 实例，用于读取 CLI flag / 配置文件中的值
+//   - validate: 验证器实例（binding tag），用于字段赋值后的即时校验
 //   - target: 指向目标结构体的指针，结构体字段需带 viper/prompt 等 tag
 //   - prefix: 字段路径前缀，用于嵌套结构体的验证路径拼接；
 //     顶层调用时传空字符串即可
@@ -87,21 +78,20 @@ func SetTranslator(fn func(key, fallback string) string) {
 //   - time.Duration: viper 中已设置则使用，否则交互输入并解析（如 "10s", "5m"）
 //
 // 没有 "viper" struct tag 的字段会被完全跳过。
-// 如果 validator.Validate 已初始化，每个字段在赋值后会通过
-// StructPartial 进行即时校验，校验失败则立即返回错误。
-func Extract(v *viper.Viper, target any, prefix string) error {
+// 每个字段在赋值后会通过 StructPartial 进行即时校验，校验失败则立即返回错误。
+func Extract(v *viper.Viper, validate *uv.Validate, target any, prefix string) error {
 	val := reflect.ValueOf(target)
 	// 校验 target 必须是指向结构体的指针
 	if val.Kind() != reflect.Pointer || val.Elem().Kind() != reflect.Struct {
 		return errors.Newf(`cliinput: target must be a pointer to a struct, got %T`, target)
 	}
-	return extractStruct(v, target, val.Elem(), prefix)
+	return extractStruct(v, validate, target, val.Elem(), prefix)
 }
 
 // extractStruct 递归遍历结构体字段，依次从 viper 或交互式提示中提取值。
 // topLevel 参数用于传递给 validator.StructPartial 进行部分字段校验。
 // prefix 用于构建嵌套字段的验证路径（如 "Nested.Field"）。
-func extractStruct(v *viper.Viper, topLevel any, structVal reflect.Value, prefix string) error {
+func extractStruct(v *viper.Viper, validate *uv.Validate, topLevel any, structVal reflect.Value, prefix string) error {
 	structType := structVal.Type()
 
 	for i := 0; i < structType.NumField(); i++ {
@@ -113,7 +103,7 @@ func extractStruct(v *viper.Viper, topLevel any, structVal reflect.Value, prefix
 		// 否则按普通字段处理（实际上结构体类型在 switch 中会落入 default 被跳过）。
 		if field.Type.Kind() == reflect.Struct && field.Tag.Get(TagViper) == "" {
 			subPrefix := prefix + field.Name + "."
-			if err := extractStruct(v, topLevel, fieldVal, subPrefix); err != nil {
+			if err := extractStruct(v, validate, topLevel, fieldVal, subPrefix); err != nil {
 				return err
 			}
 			continue
@@ -131,8 +121,8 @@ func extractStruct(v *viper.Viper, topLevel any, structVal reflect.Value, prefix
 
 		promptText := field.Tag.Get(TagPrompt)
 		if promptText != "" {
-			// 交互提示文本按字段级 key 翻译（中文标签为回退文案）
-			promptText = translatePrompt(fmt.Sprintf(`%s.prompt.%s.%s`, CliI18nPrefix, structType.Name(), field.Name), promptText)
+			// 交互提示文本按字段级 key 翻译（中文文案维护在 zh-Hans.toml）
+			promptText = translatePrompt(fmt.Sprintf(`%s.prompt.%s.%s`, CliI18nPrefix, structType.Name(), field.Name))
 		}
 		needMask := field.Tag.Get(TagMask) == "true"
 		needConfirm := field.Tag.Get(TagConfirm) == "true"
@@ -140,9 +130,9 @@ func extractStruct(v *viper.Viper, topLevel any, structVal reflect.Value, prefix
 		// fieldPath 用于验证器和错误消息中的字段定位
 		fieldPath := prefix + field.Name
 
-		// time.Duration 的底层 Kind 是 Int64，必须在 Kind-based switch 之前
-		// 通过类型比较单独处理，否则会被 Int64 分支拦截
-		if field.Type == reflect.TypeFor[time.Duration]() {
+		// time.Duration / serializer.Duration / serializer.DurationMS 的底层 Kind 是 Int64，
+		// 必须在 Kind-based switch 之前通过类型比较单独处理，否则会被 Int64 分支拦截
+		if field.Type == reflect.TypeFor[time.Duration]() || field.Type == reflect.TypeFor[serializer.DurationNS]() || field.Type == reflect.TypeFor[serializer.DurationMS]() {
 			if err := extractDuration(v, viperKey, promptText, fieldPath, fieldVal); err != nil {
 				return err
 			}
@@ -207,11 +197,8 @@ func extractStruct(v *viper.Viper, topLevel any, structVal reflect.Value, prefix
 			}
 		}
 
-		// 赋值后立即对该字段进行校验
-		if validator.Validate != nil {
-			if err := validator.Validate.StructPartial(topLevel, fieldPath); err != nil {
-				return errors.Newf("cliinput: invalid %s: %w", fieldPath, err)
-			}
+		if err := validate.StructPartial(topLevel, fieldPath); err != nil {
+			return errors.Newf("cliinput: invalid %s: %w", fieldPath, err)
 		}
 	}
 
@@ -237,7 +224,7 @@ func promptWithConfirm(promptText string, mask bool) (string, error) {
 			return "", err
 		}
 
-		confirmValue, err := promptOnce(promptText+translatePrompt(fmt.Sprintf(`%s.prompt.confirm-suffix`, CliI18nPrefix), "（再次输入确认）"), mask)
+		confirmValue, err := promptOnce(promptText+translatePrompt(CliI18nPrefix+".prompt.confirm-suffix"), mask)
 		if err != nil {
 			return "", err
 		}
@@ -245,7 +232,7 @@ func promptWithConfirm(promptText string, mask bool) (string, error) {
 		if value == confirmValue {
 			return value, nil
 		}
-		pterm.Warning.Println(translatePrompt(fmt.Sprintf(`%s.mismatch`, CliI18nPrefix), "两次输入不一致，请重新输入！"))
+		pterm.Warning.Println(translatePrompt(CliI18nPrefix + ".mismatch"))
 	}
 }
 
@@ -318,12 +305,18 @@ func extractFloat(v *viper.Viper, key, promptText, fieldPath string, fieldVal re
 	return nil
 }
 
-// extractDuration 处理 time.Duration 类型字段。
+// extractDuration 处理 time.Duration / serializer.Duration / serializer.DurationMS 类型字段。
 // 优先从 viper 读取；若未设置且提供了 promptText，则交互式输入并解析。
-// 支持标准 duration 格式，如 "10s"、"5m"、"1h30m" 等。
+// 支持标准 duration 格式，如 "10s"、"5m"、"1h30m" 等；
+// DurationMS 字段以毫秒为单位，额外支持纯数字毫秒输入。
 func extractDuration(v *viper.Viper, key, promptText, fieldPath string, fieldVal reflect.Value) error {
+	isMS := fieldVal.Type() == reflect.TypeFor[serializer.DurationMS]()
 	if v.IsSet(key) {
-		fieldVal.SetInt(int64(v.GetDuration(key)))
+		if isMS {
+			fieldVal.SetInt(v.GetInt64(key))
+		} else {
+			fieldVal.SetInt(int64(v.GetDuration(key)))
+		}
 		return nil
 	}
 	if promptText == "" {
@@ -332,6 +325,15 @@ func extractDuration(v *viper.Viper, key, promptText, fieldPath string, fieldVal
 	raw, err := promptOnce(promptText, false)
 	if err != nil {
 		return errors.Newf("cliinput: cannot read %s: %w", fieldPath, err)
+	}
+	if isMS {
+		// DurationMS 复用 serializer 的解析：可读时长字符串（"5s"）与整数毫秒均可
+		var d serializer.DurationMS
+		if err := d.UnmarshalText([]byte(raw)); err != nil {
+			return errors.Newf("cliinput: cannot parse %s as duration (e.g. 10s, 5m or milliseconds): %w", fieldPath, err)
+		}
+		fieldVal.SetInt(int64(d))
+		return nil
 	}
 	d, err := time.ParseDuration(raw)
 	if err != nil {
@@ -353,7 +355,7 @@ func extractStringSlice(v *viper.Viper, key, promptText, fieldPath string, field
 	if promptText == "" {
 		return nil
 	}
-	raw, err := promptOnce(promptText+translatePrompt(fmt.Sprintf(`%s.prompt.comma-separated-suffix`, CliI18nPrefix), "（逗号分隔）"), false)
+	raw, err := promptOnce(promptText+translatePrompt(CliI18nPrefix+".prompt.comma-separated-suffix"), false)
 	if err != nil {
 		return errors.Newf("cliinput: cannot read %s: %w", fieldPath, err)
 	}

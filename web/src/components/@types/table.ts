@@ -2,6 +2,8 @@ import type { BackendDataType, SearchAction } from "@/types";
 
 export type Align = "start" | "end" | "center" | undefined;
 export type Fixed = boolean | "end" | "start" | undefined;
+// Table row values are heterogeneous (string / number / boolean / Date / ...).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ItemAction = (item: Record<string, any>) => void;
 export type ItemActions = Record<string, ItemAction>;
 

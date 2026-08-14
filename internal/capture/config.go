@@ -3,6 +3,7 @@ package capture
 import (
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/klauspost/compress/zstd"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
@@ -142,6 +143,6 @@ func DescribeConfig() config.ConfigDescriptions {
 //	v.SetConfigFile("config.yaml")
 //	v.ReadInConfig()
 //	cfg, err := ExtractConfig(v)
-func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, Prefix)
+func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error) {
+	return config.ExtractConfig[Config](v, validate, Prefix)
 }

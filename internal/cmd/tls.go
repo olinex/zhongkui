@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
 	tlsutil "zhongkui.com/zhongkui/internal/pkg/tls"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -29,7 +30,7 @@ var generateTLSCmd = &cobra.Command{
 		v := provider.MustInvokeViper(injector)
 
 		var inputs TLSInputs
-		if err := cliinput.Extract(v, &inputs, ""); err != nil {
+		if err := cliinput.Extract(v, validator.Validate, &inputs, ""); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
@@ -61,12 +62,12 @@ var generateTLSCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Success.Printf("tls key file %s was created\n", keyPath)
+		pterm.Success.Println(cliT("cli.tls.key-created", "TLS 密钥文件 {{.Path}} 已创建", map[string]any{"Path": keyPath}))
 		if _, err = certFile.WriteString(cert); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Success.Printf("tls cert file %s was created\n", certPath)
+		pterm.Success.Println(cliT("cli.tls.cert-created", "TLS 证书文件 {{.Path}} 已创建", map[string]any{"Path": certPath}))
 	},
 }
 

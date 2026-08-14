@@ -11,6 +11,8 @@ import (
 	"testing"
 	"text/template"
 	"time"
+
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 type benchConfig struct {
@@ -521,9 +523,9 @@ func Run(name string, fn func(), opts ...BenchOption) *BenchResult {
 		}
 		reportPath := filepath.Join(cfg.outputDir, fmt.Sprintf("benchreport_%s_%s.md", safeName, timestamp))
 		if err := result.ReportToFile(reportPath); err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to save benchmark report: %v\n", err)
+			fmt.Fprintln(os.Stderr, translate.T("cli.bench.report-save-failed", map[string]any{"Err": err}))
 		} else {
-			fmt.Fprintf(os.Stderr, "Benchmark report saved: %s\n", reportPath)
+			fmt.Fprintln(os.Stderr, translate.T("cli.bench.report-saved", map[string]any{"Path": reportPath}))
 		}
 	}
 

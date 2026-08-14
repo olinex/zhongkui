@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"embed"
 	"strconv"
 	"strings"
 	"time"
@@ -11,8 +10,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	migcore "zhongkui.com/zhongkui/internal/migrations/core"
-	migraw "zhongkui.com/zhongkui/internal/migrations/raw"
+	"zhongkui.com/zhongkui/internal/migrations"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -43,7 +41,7 @@ var clearDatabaseCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Warning.Println("rolling back all migrations...")
+		pterm.Warning.Println(cliT("cli.clear.rolling-back", "正在回滚所有迁移..."))
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
@@ -53,38 +51,33 @@ var clearDatabaseCmd = &cobra.Command{
 		}
 		var migrators []dbInfo
 
-		if m, err := createClearMigrator(coreDB, rawDB, "core", migcore.Migrations); err != nil {
-			pterm.Error.Printf("failed to connect core: %v\n", err)
+		if m, err := createClearMigrator(provider.CoreDbPrefix, coreDB); err != nil {
+			pterm.Error.Println(cliT("cli.clear.connect-failed", "连接 {{.DB}} 数据库失败：{{.Err}}", map[string]any{"DB": provider.CoreDbPrefix, "Err": err}))
 			return
 		} else {
 			migrators = append(migrators, dbInfo{"core", m})
 		}
-		if m, err := createClearMigrator(coreDB, rawDB, "raw", migraw.Migrations); err != nil {
-			pterm.Error.Printf("failed to connect raw: %v\n", err)
+		if m, err := createClearMigrator(provider.RawDbPrefix, rawDB); err != nil {
+			pterm.Error.Println(cliT("cli.clear.connect-failed", "连接 {{.DB}} 数据库失败：{{.Err}}", map[string]any{"DB": provider.RawDbPrefix, "Err": err}))
 			return
 		} else {
 			migrators = append(migrators, dbInfo{"raw", m})
 		}
 
 		for _, mi := range migrators {
-			pterm.Info.Printf("rolling back %s...\n", mi.name)
+			pterm.Info.Println(cliT("cli.clear.rolling-back-db", "正在回滚 {{.DB}}...", map[string]any{"DB": mi.name}))
 			if err := mi.db.Down(ctx); err != nil {
-				pterm.Error.Printf("%s rollback failed: %v\n", mi.name, err)
+				pterm.Error.Println(cliT("cli.clear.rollback-failed", "{{.DB}} 回滚失败：{{.Err}}", map[string]any{"DB": mi.name, "Err": err}))
 				mi.db.Close()
 				return
 			}
 			mi.db.Close()
 		}
-		pterm.Success.Println("clear database complete")
+		pterm.Success.Println(cliT("cli.clear.database-complete", "数据库清空完成"))
 	},
 }
 
-func createClearMigrator(coreDB, rawDB *database.DB, dbName string, migrationFS embed.FS) (*migrate.Migrator, error) {
-	gormDB := dbForName(coreDB, rawDB, dbName)
-	if gormDB == nil {
-		return nil, errors.Newf("unknown database: %s", dbName)
-	}
-
+func createClearMigrator(dbName string, gormDB *database.DB) (*migrate.Migrator, error) {
 	sqlDB, err := gormDB.DB()
 	if err != nil {
 		return nil, errors.Newf("failed to get database connection: %v", err)
@@ -99,17 +92,10 @@ func createClearMigrator(coreDB, rawDB *database.DB, dbName string, migrationFS 
 		driverName = "clickhouse"
 	}
 
+	migrationFS := migrations.MigrationFor(dbName)
 	goose.SetBaseFS(migrationFS)
 	cfg := migrate.NewConfig(driverName, "")
 	return migrate.NewMigratorFromDB(cfg, sqlDB)
-}
-
-func init() {
-	flags := clearDatabaseCmd.Flags()
-	flags.Duration("timeout", time.Minute, "清空数据库的超时时间")
-
-	flags = clearEtcdCmd.Flags()
-	flags.Duration("timeout", time.Minute, "清空 etcd 缓存的超时时间")
 }
 
 type etcdClearCategory struct {
@@ -147,7 +133,7 @@ var clearEtcdCmd = &cobra.Command{
 		for _, cat := range etcdClearCategories {
 			rsp, err := client.Get(ctx, cat.prefix, clientv3.WithPrefix())
 			if err != nil {
-				pterm.Error.Printf("failed to get %s keys: %v\n", cat.name, err)
+				pterm.Error.Println(cliT("cli.etcd.get-keys-failed", "获取 {{.Category}} 键失败：{{.Err}}", map[string]any{"Category": cat.name, "Err": err}))
 				return
 			}
 			for _, kv := range rsp.Kvs {
@@ -160,12 +146,12 @@ var clearEtcdCmd = &cobra.Command{
 		}
 
 		if len(allKeys) == 0 {
-			pterm.Warning.Println("no etcd cache keys found")
+			pterm.Warning.Println(cliT("cli.etcd.no-keys-found", "未找到任何 etcd 缓存键"))
 			return
 		}
 
 		// 2. 按类别分组打印
-		pterm.Info.Println("=== etcd cache keys ===")
+		pterm.Info.Println(cliT("cli.etcd.keys-header", "=== etcd 缓存键 ==="))
 		currentCat := ""
 		for i, entry := range allKeys {
 			if entry.category != currentCat {
@@ -193,12 +179,12 @@ var clearEtcdCmd = &cobra.Command{
 		for _, idx := range selected {
 			key := allKeys[idx].key
 			if _, err := client.Delete(ctx, key); err != nil {
-				pterm.Error.Printf("failed to delete %s: %v\n", key, err)
+				pterm.Error.Println(cliT("cli.etcd.delete-failed", "删除 {{.Key}} 失败：{{.Err}}", map[string]any{"Key": key, "Err": err}))
 				return
 			}
-			pterm.Success.Printf("deleted %s\n", key)
+			pterm.Success.Println(cliT("cli.etcd.deleted", "已删除 {{.Key}}", map[string]any{"Key": key}))
 		}
-		pterm.Success.Println("clear etcd cache complete")
+		pterm.Success.Println(cliT("cli.etcd.clear-complete", "etcd 缓存清除完成"))
 	},
 }
 
@@ -290,4 +276,12 @@ func truncateDisplayValue(value string, maxLen int) string {
 		return value[:maxLen] + "..."
 	}
 	return value
+}
+
+func init() {
+	flags := clearDatabaseCmd.Flags()
+	flags.Duration("timeout", time.Minute, "清空数据库的超时时间")
+
+	flags = clearEtcdCmd.Flags()
+	flags.Duration("timeout", time.Minute, "清空 etcd 缓存的超时时间")
 }

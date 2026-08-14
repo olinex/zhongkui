@@ -8,7 +8,7 @@
         :search-request="searchRequest"
       >
         <template #items="{ items, close }">
-          <slot name="search" :items="items" :close="close" :appendItem="appendItem"/>
+          <slot name="search" :items="items" :close="close" :append-item="appendItem" />
         </template>
       </scroll-search-field>
     </template>
@@ -27,7 +27,7 @@
               :item="item"
               :index="index"
               :editable="editable"
-              :removeItem="() => removeItem(index)"
+              :remove-item="() => removeItem(index)"
             />
           </td>
           <td v-for="hdr in headers" :key="hdr.key">
@@ -75,16 +75,19 @@ const exactHeaders = computed((): Array<TableHeader> => {
 const removeItem = (index: number) => {
   emits(
     "update:modelValue",
-    props.modelValue.filter((_, idx) => idx !== index)
+    props.modelValue.filter((_, idx) => idx !== index),
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const appendItem = (item: Record<string, any>) => {
   emits("update:modelValue", [...props.modelValue, item]);
 };
 
 const props = defineProps({
   modelValue: {
+    // Row payload is dynamic.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Object as PropType<Array<Record<string, any>>>,
     required: true,
   },

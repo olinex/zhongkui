@@ -25,6 +25,12 @@ func NewConfig(driver, dsn string) *Config {
 	}
 }
 
+// WithName 设置数据库名称（core / raw），用于 CLI 打印时标识目标数据库
+func (c *Config) WithName(name string) *Config {
+	c.Name = name
+	return c
+}
+
 func (c *Config) WithMigrations(fs embed.FS, dir string) *Config {
 	c.MigrationsFS = fs
 	c.MigrationsDir = dir

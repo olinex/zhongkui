@@ -22,6 +22,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -41,10 +42,9 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	engine := provider.MustInvokeGin(i)
 	inspector := provider.MustInvokePipelineInspector(i)
 	apiLogger := provider.MustInvokeApiLogger(i)
-	i18n := provider.MustInvokeI18n(i)
 	rbac := provider.MustInvokeRbac(i)
 	tagEngine := provider.MustInvokeTagEngine(i)
-	cfg, err := manager.ExtractConfig(viper)
+	cfg, err := manager.ExtractConfig(viper, validator.Validate)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -68,7 +68,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	// ZapLoggerMiddleware - 结构化日志中间件，记录请求详情和性能指标
 	engine.Use(manager.ZapLoggerMiddleware(apiLogger))
 	// TranslateMiddleware - 国际化中间件，支持多语言错误消息和界面
-	engine.Use(manager.TranslateMiddleware(i18n))
+	engine.Use(manager.TranslateMiddleware())
 
 	// ==================== 分组中间件配置 ====================
 	// 以下中间件将根据路由分组选择性应用，提供细粒度的访问控制和功能支持
@@ -125,7 +125,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		authenticatorMiddleware,     // 认证器注入
 		forceAuthenticateMiddleware, // 强制JWT认证
 		policyMiddleware,            // RBAC策略引擎
-		coreDatabaseMiddleware,                // 数据库连接
+		coreDatabaseMiddleware,      // 数据库连接
 		namespaceMiddleware,         // 命名空间隔离
 		// authorizeMiddleware,       // 权限验证（暂未启用）
 	)
@@ -280,13 +280,13 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		userGroup.POST(
 			"/register",
 			coreDatabaseMiddleware, // 数据库连接，用于创建用户记录
-			userRegister, // 用户注册处理函数
+			userRegister,           // 用户注册处理函数
 		)
 		// 密码登录 - 使用用户名密码进行登录认证
 		userGroup.POST(
 			"/password/login",
 			authenticatorMiddleware, // 认证器注入，用于生成JWT令牌
-			coreDatabaseMiddleware,            // 数据库连接，用于验证用户凭证
+			coreDatabaseMiddleware,  // 数据库连接，用于验证用户凭证
 			userPasswordLogin,       // 密码登录处理函数
 		)
 	}
@@ -302,7 +302,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/password/reset",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证，确保用户已登录
-			coreDatabaseMiddleware,                // 数据库连接，用于更新密码
+			coreDatabaseMiddleware,      // 数据库连接，用于更新密码
 			userSelfPasswordReset,       // 密码重置处理函数
 		)
 		// JWT令牌刷新 - 刷新过期的JWT访问令牌
@@ -316,7 +316,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/authorization-info/get",
 			authenticatorMiddleware,      // 认证器注入
 			forceAuthenticateMiddleware,  // 强制认证
-			coreDatabaseMiddleware,                 // 数据库连接，查询权限信息
+			coreDatabaseMiddleware,       // 数据库连接，查询权限信息
 			userSelfAuthorizationInfoGet, // 授权信息获取处理函数
 		)
 		// 个人资料修改 - 更新用户的昵称、邮箱等个人信息
@@ -324,7 +324,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/profile/change",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			coreDatabaseMiddleware,                // 数据库连接，更新用户信息
+			coreDatabaseMiddleware,      // 数据库连接，更新用户信息
 			userSelfProfileChange,       // 个人资料修改处理函数
 		)
 		// 访问密钥列表获取 - 获取用户的所有访问密钥
@@ -332,7 +332,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/list",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			coreDatabaseMiddleware,                // 数据库连接，查询访问密钥
+			coreDatabaseMiddleware,      // 数据库连接，查询访问密钥
 			userSelfAccessKeyListGet,    // 访问密钥列表获取处理函数
 		)
 		// 创建访问密钥 - 为用户创建新的访问密钥
@@ -340,7 +340,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/create",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			coreDatabaseMiddleware,                // 数据库连接，创建访问密钥
+			coreDatabaseMiddleware,      // 数据库连接，创建访问密钥
 			userSelfAccessKeyCreate,     // 访问密钥创建处理函数
 		)
 		// 删除访问密钥 - 删除指定的访问密钥
@@ -348,7 +348,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/:id/remove",
 			authenticatorMiddleware,     // 认证器注入
 			forceAuthenticateMiddleware, // 强制认证
-			coreDatabaseMiddleware,                // 数据库连接，删除访问密钥
+			coreDatabaseMiddleware,      // 数据库连接，删除访问密钥
 			userSelfAccessKeyRemove,     // 访问密钥删除处理函数
 		)
 		// 激活访问密钥 - 启用已禁用的访问密钥
@@ -356,7 +356,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/:id/activate",
 			authenticatorMiddleware,        // 认证器注入
 			forceAuthenticateMiddleware,    // 强制认证
-			coreDatabaseMiddleware,                   // 数据库连接，更新密钥状态
+			coreDatabaseMiddleware,         // 数据库连接，更新密钥状态
 			userSelfAccessKeyEnabled(true), // 访问密钥启用处理函数
 		)
 		// 停用访问密钥 - 禁用正在使用的访问密钥
@@ -364,7 +364,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 			"/access-key/:id/deactivate",
 			authenticatorMiddleware,         // 认证器注入
 			forceAuthenticateMiddleware,     // 强制认证
-			coreDatabaseMiddleware,                    // 数据库连接，更新密钥状态
+			coreDatabaseMiddleware,          // 数据库连接，更新密钥状态
 			userSelfAccessKeyEnabled(false), // 访问密钥停用处理函数
 		)
 	}

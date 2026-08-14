@@ -13,7 +13,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
@@ -23,6 +22,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
@@ -162,7 +162,7 @@ type TagRuleDryRunRuleOut struct {
 	// Tags 该规则产出的标签（去重排序）
 	Tags []string `json:"tags"`
 	// Duration 该规则评估耗时
-	Duration time.Duration `json:"duration"`
+	Duration serializer.DurationNS `json:"duration"`
 	// Error 该规则评估的错误消息，为空表示评估成功
 	Error string `json:"error"`
 }

@@ -21,11 +21,7 @@ export function passwordReset(data: PasswordResetIn): AxiosPromise {
 }
 
 export function jwtRefresh(): AxiosPromise {
-  return request.post(
-    "/user/self/jwt/refresh",
-    {},
-    { headers: getJwtHeader() }
-  );
+  return request.post("/user/self/jwt/refresh", {}, { headers: getJwtHeader() });
 }
 
 export function profileChange(data: profileChangeIn): AxiosPromise {
@@ -59,9 +55,7 @@ export function accessKeyRemove(id: number): AxiosPromise {
 }
 
 export function accessKeyEnabled(id: number, enabled: boolean): AxiosPromise {
-  return request.post(
-    `/user/self/access-key/${id}/${enabled ? "activate" : "deactivate"}`,
-    null,
-    { headers: getJwtHeader() }
-  );
+  return request.post(`/user/self/access-key/${id}/${enabled ? "activate" : "deactivate"}`, null, {
+    headers: getJwtHeader(),
+  });
 }

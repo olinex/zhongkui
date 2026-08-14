@@ -10,6 +10,7 @@ import (
 
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 const (
@@ -21,7 +22,7 @@ type RuleDetailResult struct {
 	// Tags 规则匹配的标签集合
 	Tags []string `json:"tags"`
 	// Duration 规则评估耗时
-	Duration time.Duration `json:"duration"`
+	Duration serializer.DurationNS `json:"duration"`
 	// Error 规则评估错误
 	Error error `json:"error"`
 }
@@ -59,7 +60,7 @@ func (r *compiledRule) RecognizeWithDetail(ctx context.Context, options ...rego.
 	tags, err := r.Recognize(ctx, options...)
 	return &RuleDetailResult{
 		Tags:     tags,
-		Duration: time.Since(start),
+		Duration: serializer.DurationNS(time.Since(start)),
 		Error:    err,
 	}
 }

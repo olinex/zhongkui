@@ -5,70 +5,245 @@ navbar:
     group: Group
     namespace: Namespace
     capturer: Capturer
+    tagRule: Tag Rule
+    tagEventRule: Tag Event Rule
   etl:
     self: ETL
-    queue: Queue
+    server: Server
+    task: Task
+  pin: Pin sidebar
+  unpin: Unpin sidebar
 model:
-  name:
-    user: User
-    group: Group
-    namespace: Namespace
-    capturer: Capturer
-    accessKey: Access Key
-field:
-  label:
-    __actions: Actions
+  __base:
+    field:
+      __actions: Actions
+      date: Date
+      time: Time
+      field: Field
+      action: Action
+      search: Search
+    content:
+      condition: condition(s)
+      doubleCheck: Please enter `{random}` to double check
+    value:
+      blank: blank
+      "null": "null"
+      undefined: "undefined"
+  user:
+    name: User
+    field:
+      id: ID
+      unionID: Union ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      deletedAt: Deleted At
+      deletedAtTime: Deleted At Time
+      deletedAtDate: Deleted At Date
+      active: Is Active
+      username: Username
+      password: Password
+      nickleName: Nickle Name
+      email: Email
+      oldPassword: Old Password
+      newPassword: New Password
+      newPasswordAgain: New Password Again
+  policy:
+    name: Policy
+    field:
+      namespace: Namespace
+      name: Name
+      target: Target
+      effect: Effect
+      action: Action
+      createdAt: Created At
+      updatedAt: Updated At
+  group:
+    name: Group
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+  namespace:
+    name: Namespace
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+  capturer:
+    name: Capturer
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      namespace: Namespace
+      version: Version
+      device: Device
+      bpfExpr: BPF Expression
+      snapLen: Snap Length
+      timeout: Timeout
+      promisc: Promiscuous Mode
+      enabled: Enabled
+  accessKey:
+    name: Access Key
+    field:
+      createdAt: Created At
+      updatedAt: Updated At
+      expiredAt: Expired At
+      lastAccessAt: Last Access At
+      enabled: Enabled
+      description: Description
+  server:
+    name: Server
+    field:
+      started: Started At
+      status: Status
+      queueWeights: Queue Weights
+  queue:
+    name: Queue
+    field:
+      queue: Queue
+      days: Days
+      running: Running
+      memoryUsage: Memory Usage
+      latency: Latency
+      size: Size
+      retrievalTime: Retrieval Time
+      processed: Processed
+      failed: Failed
+      active: Active
+      pending: Pending
+      retry: Retry
+      scheduled: Scheduled
+      archived: Archived
+      aggregating: Aggregating
+      completed: Completed
+  scheduler:
+    name: Scheduler
+    field:
+      id: ID
+      spec: Spec
+      next: Next Schedule At
+      prev: Previous Schedule At
+      typeName: Task Type Name
+      payload: Payload
+  task:
+    name: Task
+    field:
+      id: ID
+      type: Type
+      queue: Queue
+      state: State
+      payload: Payload
+      result: Result
+      retried: Retry Count
+      lastErr: Last Error
+      lastFailedAt: Last Failed At
+      nextProcessAt: Next Process At
+      completedAt: Completed At
+      start: Start
+      deadline: Deadline
+      timeout: Timeout
+      retention: Retention
+      group: Group Name
+      isOrphaned: Orphaned Task
+  tagRule:
+    name: Tag Rule
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      model: Target Model
+      description: Description
+      rego: Rego Rule
+      enabled: Enabled
+      version: Version
+      versionCount: Version Count
+  tagEventRule:
+    name: Tag Event Rule
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+      matchAll: Match All Conditions
+      enabled: Enabled
+      version: Version
+      versionCount: Version Count
+      conditions: Conditions
+  tagEventCondition:
+    name: Condition
+    field:
+      name: Condition Name
+      model: Target Model
+      dimension: Tag Dimension
+      item: Dimension Value
+      window: Time Window (minutes)
+      threshold: Threshold
+      expression: Tag Expression
+      enabled: Enabled
+      description: Description
+      count: Hit Count
+      detectedAt: Detected At
+  network:
+    httpTransport: HTTP Transport
+chart:
+  title:
+    queueSize: Queue Size
+    taskProcess: Task Processing
+  axis:
+    size: Size
+    count: Count
     date: Date
-    time: Time
-    id: ID
-    unionID: Union ID
-    name: Name
-    description: Description
-    createdAt: Created At
-    createdAtTime: Created At Time
-    createdAtDate: Created At Date
-    updatedAt: Updated At
-    updatedAtTime: Updated At Time
-    updatedAtDate: Updated At Date
-    deletedAt: Deleted At
-    deletedAtTime: Deleted At Time
-    deletedAtDate: Deleted At Date
-    active: Is Active
-    field: Field
-    action: Action
-    search: Search
-    username: Username
-    password: Password
-    nickleName: Nickle Name
-    email: Email
-    oldPassword: Old Password
-    newPassword: New Password
-    newPasswordAgain: New Password Again
-    namespace: Namespace
-    target: Target
-    effect: Effect
-    version: Version
-    device: Device
-    bpfExpr: BPF Expression
-    snapLen: Snap Length
-    timeout: Timeout
-    promisc: Promiscuous Mode
-    enabled: Enabled
-    expiredAt: Expired At
-    lastAccessAt: Last Access At
-  content:
-    condition: condition(s)
-    doubleCheck: Please enter `{random}` to double check
-  value:
-    null: "null"
-    undefined: "undefined"
+    queue: Queue
+  field:
+    active: Active
+    pending: Pending
+    retring: Retrying
+    scheduled: Scheduled
+    archived: Archived
+    processed: Processed
+    failed: Failed
+  serie:
+    queueSize: Queue Size
 action:
   signIn: Sign In
   signOut: Sign Out
-  signUp: Sign Up 
+  signUp: Sign Up
   language: Language
   pwdForget: Password Forget
   profile: Profile
+  expand: Expand
   reset: Reset
   create: Create
   update: Update
@@ -78,19 +253,38 @@ action:
   confirm: Confirm
   activate: Activate
   deactivate: Deactivate
+  pause: Pause
+  unpause: Resume
   add: Add
   remove: Remove
-  join: join
+  join: Join
   leave: Leave
+  copy: Copy
+  archive: Archive
+  cancel: Cancel
+  run: Run
   previousDate: Previous Date
   currentDate: Current Date
   nextDate: Next Date
   currentTime: Current Time
   copySecret: Copy Secret
+  validate: Validate
+  dryRun: Dry Run
+  version: Version
+  rollback: Rollback
+  generateSkeleton: Generate Skeleton
+  generateExpression: Generate Expression
+  reuseFields: Reuse Existing Rule Fields
+  fillSample: Fill Sample
+  addCondition: Add Condition
+  removeCondition: Remove Condition
+  validatePassed: Validation Passed
+  validateFailed: Validation Failed
 title:
   zk: Zhong Kui
   home: Home Page
   signIn: User Sign In
+  signUp: User Sign Up
   err404: Error - 404
   err401: Error - 401
   userProfile: User Profile
@@ -101,22 +295,44 @@ title:
   groupAdmin: Admin - Group
   namespaceAdmin: Admin - Namespace
   capturerAdmin: Admin - Capturer
+  tagRuleAdmin: Admin - Tag Rule
+  tagEventRuleAdmin: Admin - Tag Event Rule
   queueEtl: ETL - Queue
+  serverEtl: ETL - Server
+  taskEtl: ETL - Task
+home:
+  subtitle: Network Security Audit Platform
+  quickStart: Quick Start
 summary:
-  pageNotFound: Page Does Not Exists!
+  pageNotFound: Page Does Not Exist!
   notSignInYet: Please must sign in first.
   goingToSignIn: Going to sign in page...
   dataLoading: Data is loading...
   endOfData: No more data
+  noServerYet: There is no running {name} yet!
+  noServerYetHelp: You can try clicking the {btn} button below to fetch data again.
   unknownError: Something went wrong...
 notice:
-  wellcome: Wellcome!
+  wellcome: Welcome!
   goodBye: Good Bye!
   profileUpdated: Profile updated successfully!
   passwordReset: Password reset successfully!
   copied: Copied!
   copyFailed: Copy Failed!
+  deleteConfirm: "Confirm deleting {category} {key}?"
+  archiveConfirm: "Confirm archiving {category} {key}?"
+  cancelConfirm: "Confirm canceling {category} {key}?"
+  runConfirm: "Confirm running {category} {key}?"
+  rollbackConfirm: "Confirm rolling back {category} {key} to version {version}?"
+  dryRunConfirm: "Confirm dry running {category} {key}?"
+  enableConfirm: "Confirm enabling {category} {key}?"
+  disableConfirm: "Confirm disabling {category} {key}?"
+  regoInvalid: "Rego validation failed, cannot submit!"
+  expressionInvalid: "Expression validation failed, cannot submit!"
+  jsonInvalid: "Invalid JSON format!"
+  noEnabledRules: "No enabled tag rules in current namespace, cannot build tag pool."
 unit:
+  day: d
   second: s
   count: cnt
 option:
@@ -126,7 +342,7 @@ option:
     pfx: Prefix With
     npfx: Not Prefix With
     ipfx: Prefix With (ignore case)
-    inpfix: Not Prefix With (ignore case)
+    inpfx: Not Prefix With (ignore case)
     sfx: Suffix With
     nsfx: Not Suffix With
     isfx: Suffix With (ignore case)
@@ -143,43 +359,43 @@ option:
     gte: Greater Than Or Equal
 validation:
   mixed:
-    default: '{path} is invalid'
-    required: '{path} is a required field'
-    defined: '{path} must be defined'
-    notNull: '{path} cannot be null'
-    oneOf: '{path} must be one of the following values: {values}'
-    notOneOf: '{path} must not be one of the following values: {values}'
+    default: "{path} is invalid"
+    required: "{path} is a required field"
+    defined: "{path} must be defined"
+    notNull: "{path} cannot be null"
+    oneOf: "{path} must be one of the following values: {values}"
+    notOneOf: "{path} must not be one of the following values: {values}"
   string:
-    length: '{path} must be exactly {length} characters'
-    min: '{path} must be at least {min} characters'
-    max: '{path} must be at most {max} characters'
+    length: "{path} must be exactly {length} characters"
+    min: "{path} must be at least {min} characters"
+    max: "{path} must be at most {max} characters"
     matches: '{path} must match the following: "{regex}"'
-    email: '{path} must be a valid email'
-    url: '{path} must be a valid URL'
-    uuid: '{path} must be a valid UUID'
-    datetime: '{path} must be a valid ISO date-time'
-    datetime_precision: '{path} must be a valid ISO date-time with a sub-second precision of exactly {precision} digits'
+    email: "{path} must be a valid email"
+    url: "{path} must be a valid URL"
+    uuid: "{path} must be a valid UUID"
+    datetime: "{path} must be a valid ISO date-time"
+    datetime_precision: "{path} must be a valid ISO date-time with a sub-second precision of exactly {precision} digits"
     datetime_offset: '{path} must be a valid ISO date-time with UTC "Z" timezone'
-    trim: '{path} must be a trimmed string'
-    lowercase: '{path} must be a lowercase string'
-    uppercase: '{path} must be a upper case string'
+    trim: "{path} must be a trimmed string"
+    lowercase: "{path} must be a lowercase string"
+    uppercase: "{path} must be a upper case string"
   number:
-    min: '{path} must be greater than or equal to {min}'
-    max: '{path} must be less than or equal to {max}'
-    lessThan: '{path} must be less than {less}'
-    moreThan: '{path} must be greater than {more}'
-    positive: '{path} must be a positive number'
-    negative: '{path} must be a negative number'
-    integer: '{path} must be an integer'
+    min: "{path} must be greater than or equal to {min}"
+    max: "{path} must be less than or equal to {max}"
+    lessThan: "{path} must be less than {less}"
+    moreThan: "{path} must be greater than {more}"
+    positive: "{path} must be a positive number"
+    negative: "{path} must be a negative number"
+    integer: "{path} must be an integer"
   date:
-    min: '{path} field must be later than {min}'
-    max: '{path} field must be at earlier than {max}'
+    min: "{path} field must be later than {min}"
+    max: "{path} field must be at earlier than {max}"
   boolean:
-    isValue: '{path} field must be {value}'
+    isValue: "{path} field must be {value}"
   object:
-    noUnknown: '{path} field has unspecified keys: {unknown}'
-    exact: '{path} object contains unknown properties: {properties}'
+    noUnknown: "{path} field has unspecified keys: {unknown}"
+    exact: "{path} object contains unknown properties: {properties}"
   array:
-    min: '{path} field must have at least {min} items'
-    max: '{path} field must have less than or equal to {max} items'
-    length: '{path} must have {length} items'
+    min: "{path} field must have at least {min} items"
+    max: "{path} field must have less than or equal to {max} items"
+    length: "{path} must have {length} items"

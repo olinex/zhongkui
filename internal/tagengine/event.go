@@ -11,22 +11,23 @@ import (
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // DetectionCondition 标签事件检测条件的运行时形态，由 core 库 tag_event_conditions 行或 dry-run 请求映射。
 type DetectionCondition struct {
-	RuleID        uint          // 所属规则 ID
-	RuleName      string        // 所属规则名称
-	MatchAll      bool          // 规则是否要求所有条件命中才触发
-	ConditionID   uint          // 条件 ID
-	ConditionName string        // 条件名称
-	Namespace     string        // 条件所属命名空间
-	Model         string        // 目标模型类型键过滤，空表示不限制
-	Dimension     string        // 标签维度过滤，空表示不限制
-	Item          string        // 标签维度具体值过滤，空表示不限制
-	Window        time.Duration // 时间窗口
-	Threshold     int           // 阈值
-	Expression    string        // 标签组合布尔表达式
+	RuleID        uint                // 所属规则 ID
+	RuleName      string              // 所属规则名称
+	MatchAll      bool                // 规则是否要求所有条件命中才触发
+	ConditionID   uint                // 条件 ID
+	ConditionName string              // 条件名称
+	Namespace     string              // 条件所属命名空间
+	Model         string              // 目标模型类型键过滤，空表示不限制
+	Dimension     string              // 标签维度过滤，空表示不限制
+	Item          string              // 标签维度具体值过滤，空表示不限制
+	Window        serializer.DurationNS // 时间窗口
+	Threshold     int                 // 阈值
+	Expression    string              // 标签组合布尔表达式
 }
 
 // DetectionHit 标签事件检测查询结果行，按 (namespace, model, dimension, item) 分组聚合。
@@ -51,14 +52,14 @@ type TagEvent struct {
 
 // TagEventHit 标签事件中的单条命中分组信息。
 type TagEventHit struct {
-	ConditionID   uint          `json:"conditionID"`
-	ConditionName string        `json:"conditionName"`
-	Model         string        `json:"model"`
-	Dimension     string        `json:"dimension"`
-	Item          string        `json:"item"`
-	Count         uint64        `json:"count"`
-	Threshold     int           `json:"threshold"`
-	Window        time.Duration `json:"window"`
+	ConditionID   uint                `json:"conditionID"`
+	ConditionName string              `json:"conditionName"`
+	Model         string              `json:"model"`
+	Dimension     string              `json:"dimension"`
+	Item          string              `json:"item"`
+	Count         uint64              `json:"count"`
+	Threshold     int                 `json:"threshold"`
+	Window        serializer.DurationNS `json:"window"`
 }
 
 // TranslateExpression 将标签组合布尔表达式翻译为 GORM clause 表达式树。
@@ -147,7 +148,7 @@ func BuildDetectionQuery(db *gorm.DB, conds []DetectionCondition, now time.Time)
 		sub := db.Table("tag_summings").
 			Select("? AS condition_id, namespace, model, dimension, item, SUM(cnt) AS total", cond.ConditionID).
 			Where("namespace = ?", cond.Namespace).
-			Where("minute >= ?", database.ToUTCDatetime64(now.Add(-cond.Window), 6)).
+			Where("minute >= ?", database.ToUTCDatetime64(now.Add(-cond.Window.Std()), 6)).
 			Where("minute <= ?", database.ToUTCDatetime64(now, 6)).
 			Where(condClause)
 		if cond.Model != "" {

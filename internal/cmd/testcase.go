@@ -75,7 +75,7 @@ var generateTestcaseCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Success.Printf("Test cases generated at %s\n", outputDir)
+		pterm.Success.Println(cliT("cli.testcase.generated", "测试用例已生成到 {{.Dir}}", map[string]any{"Dir": outputDir}))
 	},
 }
 
@@ -109,17 +109,17 @@ func generateTestcase(pcapPath, outputDir string) error {
 		return fmt.Errorf("failed to list HTTP streams: %w", err)
 	}
 	if len(streams) == 0 {
-		pterm.Warning.Println("No HTTP traffic found in pcap file")
+		pterm.Warning.Println(cliT("cli.testcase.no-http", "pcap 文件中未发现 HTTP 流量"))
 		return nil
 	}
-	pterm.Info.Printf("Found %d HTTP stream(s)\n", len(streams))
+	pterm.Info.Println(cliT("cli.testcase.found-streams", "发现 {{.Count}} 条 HTTP 流", map[string]any{"Count": len(streams)}))
 
 	totalTransactions := 0
 	for _, streamID := range streams {
-		pterm.Info.Printf("Processing TCP stream %d...\n", streamID)
+		pterm.Info.Println(cliT("cli.testcase.processing-stream", "正在处理 TCP 流 {{.Stream}}...", map[string]any{"Stream": streamID}))
 		transactions, err := extractStreamTransactions(pcapPath, streamID)
 		if err != nil {
-			pterm.Warning.Printf("Failed to process stream %d: %v, skipping\n", streamID, err)
+			pterm.Warning.Println(cliT("cli.testcase.process-failed", "处理流 {{.Stream}} 失败：{{.Err}}，跳过", map[string]any{"Stream": streamID, "Err": err}))
 			continue
 		}
 
@@ -129,12 +129,12 @@ func generateTestcase(pcapPath, outputDir string) error {
 			if err := writeTransactionFixture(&tx, outputPath); err != nil {
 				return fmt.Errorf("failed to write test case file: %w", err)
 			}
-			pterm.Success.Printf("  Generated %s\n", outputPath)
+			pterm.Success.Println(cliT("cli.testcase.generated-file", "  已生成 {{.Path}}", map[string]any{"Path": outputPath}))
 			totalTransactions++
 		}
 	}
 
-	pterm.Info.Printf("Total: %d HTTP transaction(s) across %d stream(s)\n", totalTransactions, len(streams))
+	pterm.Info.Println(cliT("cli.testcase.total", "共 {{.Tx}} 个 HTTP 事务，跨 {{.Streams}} 条流", map[string]any{"Tx": totalTransactions, "Streams": len(streams)}))
 	return nil
 }
 
@@ -347,8 +347,7 @@ func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecor
 		}
 		if err != nil {
 			// If we can't parse a request but there's still data, log and stop
-			pterm.Warning.Printf("  stream %d: failed to parse HTTP request at tx %d: %v\n",
-				streamID, txID, err)
+			pterm.Warning.Println(cliT("cli.testcase.parse-request-failed", "  流 {{.Stream}}：解析第 {{.Tx}} 个 HTTP 请求失败：{{.Err}}", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 			break
 		}
 
@@ -356,12 +355,10 @@ func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecor
 		_, respRaw, err := readHTTPResponse(serverReader, req)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			// Response incomplete or missing — still record the request alone
-			pterm.Warning.Printf("  stream %d tx %d: HTTP response missing or incomplete: %v\n",
-				streamID, txID, err)
+			pterm.Warning.Println(cliT("cli.testcase.response-missing", "  流 {{.Stream}} 事务 {{.Tx}}：HTTP 响应缺失或不完整：{{.Err}}", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 		}
 		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-			pterm.Warning.Printf("  stream %d tx %d: failed to parse HTTP response: %v\n",
-				streamID, txID, err)
+			pterm.Warning.Println(cliT("cli.testcase.parse-response-failed", "  流 {{.Stream}} 事务 {{.Tx}}：解析 HTTP 响应失败：{{.Err}}", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 		}
 
 		tx := TransactionFixture{

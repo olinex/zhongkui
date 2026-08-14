@@ -7,7 +7,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
+
+// testValidate 测试用的验证器实例，绑定 binding 标签名以便验证配置结构体的校验规则
+var testValidate = validator.Validate
 
 // TestWatchConfig_TolerateIntervalTimeout 测试WatchConfig的TolerateIntervalTimeout方法
 func TestWatchConfig_TolerateIntervalTimeout(t *testing.T) {
@@ -145,7 +149,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("capture.upload.expireAge", "30m")
 			v.Set("capture.upload.maxRetries", 4)
 
-			config, err := ExtractConfig(v)
+			config, err := ExtractConfig(v, testValidate)
 
 			So(err, ShouldBeNil)
 			So(config, ShouldNotBeNil)
@@ -177,7 +181,7 @@ func TestExtractConfig(t *testing.T) {
 		Convey("当Viper为空时", func() {
 			v := viper.New()
 
-			config, err := ExtractConfig(v)
+			config, err := ExtractConfig(v, testValidate)
 
 			// 当Viper中没有capture前缀的配置时，ExtractConfig会返回错误
 			So(err, ShouldNotBeNil)
@@ -191,7 +195,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("capture.resource.name", "test")
 			v.Set("capture.watch.intervalTimeout", "invalid-duration")
 
-			config, err := ExtractConfig(v)
+			config, err := ExtractConfig(v, testValidate)
 
 			// 无效的时间格式会导致解析错误
 			So(err, ShouldNotBeNil)
@@ -350,7 +354,7 @@ func TestConfig_EdgeCases(t *testing.T) {
 			for _, tc := range testCases {
 				v.Set(tc.key, tc.value)
 
-				config, err := ExtractConfig(v)
+				config, err := ExtractConfig(v, testValidate)
 				So(err, ShouldBeNil)
 				So(config, ShouldNotBeNil)
 

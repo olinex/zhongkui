@@ -4,7 +4,7 @@
       <v-container>
         <v-row class="justify-between align-top" dense>
           <v-col cols="6">
-            <v-tabs v-model="tab" color="success" density="compact">
+            <v-tabs v-model="tab" color="primary" density="compact">
               <v-tab value="queue">{{ $t("model.queue.name") }}</v-tab>
               <v-tab value="task">{{ $t("model.task.name") }}</v-tab>
               <v-tab value="scheduler">{{ $t("model.scheduler.name") }}</v-tab>
@@ -54,11 +54,7 @@
                   <template #item="{ item }">
                     <tr class="text-no-wrap">
                       <td v-for="hdr in queueHeaders" :key="hdr.key">
-                        <adaptive-cell
-                          :header="hdr"
-                          :item="item"
-                          :actions="getQueueActions"
-                        />
+                        <adaptive-cell :header="hdr" :item="item" :actions="getQueueActions" />
                       </td>
                     </tr>
                   </template>
@@ -72,10 +68,7 @@
             <v-divider />
             <v-row dense>
               <v-col cols="12">
-                <v-data-table
-                  :headers="schedulerHeaders"
-                  :items="schedulerItems"
-                >
+                <v-data-table :headers="schedulerHeaders" :items="schedulerItems">
                   <template #item="{ item }">
                     <tr class="text-no-wrap">
                       <td v-for="hdr in schedulerHeaders" :key="hdr.key">
@@ -105,45 +98,31 @@
                   <template #top>
                     <v-toolbar :collapse="taskBtnCollapse" density="compact">
                       <template #prepend>
-                        <v-btn @click="refreshAction" icon="mdi-refresh" />
+                        <v-btn icon="mdi-refresh" @click="refreshAction" />
                         <v-btn
                           v-show="!taskBtnCollapse && taskState !== 'active'"
-                          @click="confirmStateDeleteTaskDialogRef?.open({})"
                           icon="mdi-delete-forever"
+                          @click="confirmStateDeleteTaskDialogRef?.open({})"
                         />
                         <v-btn
                           v-show="
                             !taskBtnCollapse &&
-                            [
-                              'pending',
-                              'scheduled',
-                              'retry',
-                              'aggregating',
-                            ].includes(taskState)
+                            ['pending', 'scheduled', 'retry', 'aggregating'].includes(taskState)
                           "
-                          @click="confirmStateArchiveTaskDialogRef?.open({})"
                           icon="mdi-archive"
+                          @click="confirmStateArchiveTaskDialogRef?.open({})"
                         />
                         <v-btn
                           v-show="
                             !taskBtnCollapse &&
-                            [
-                              'scheduled',
-                              'retry',
-                              'archived',
-                              'aggregating',
-                            ].includes(taskState)
+                            ['scheduled', 'retry', 'archived', 'aggregating'].includes(taskState)
                           "
-                          @click="confirmStateRunTaskDialogRef?.open({})"
                           icon="mdi-menu-right"
+                          @click="confirmStateRunTaskDialogRef?.open({})"
                         />
                         <v-btn
+                          :icon="taskBtnCollapse ? 'mdi-chevron-right' : 'mdi-chevron-left'"
                           @click="taskBtnCollapse = !taskBtnCollapse"
-                          :icon="
-                            taskBtnCollapse
-                              ? 'mdi-chevron-right'
-                              : 'mdi-chevron-left'
-                          "
                         />
                       </template>
                     </v-toolbar>
@@ -151,11 +130,7 @@
                   <template #item="{ item }">
                     <tr class="text-no-wrap">
                       <td v-for="hdr in taskHeaders" :key="hdr.key">
-                        <adaptive-cell
-                          :header="hdr"
-                          :item="item"
-                          :actions="getTaskActions"
-                        />
+                        <adaptive-cell :header="hdr" :item="item" :actions="getTaskActions" />
                       </td>
                     </tr>
                   </template>
@@ -298,7 +273,7 @@
 <route lang="yaml">
 name: ETL Task List
 meta:
-  title: title.queueEtl
+  title: title.taskEtl
   requiresAuth: true
   requiresPerm: true
 </route>
@@ -334,43 +309,23 @@ import { useAppStore } from "@/stores/app";
 import type { ItemActions, TableHeader } from "@/components/@types/table";
 import i18n, { localeDateFormat } from "@/utils/i18n";
 import { BackendDataType } from "@/types";
-import type {
-  BarsChartOption,
-  LineChartOption,
-} from "@/components/@types/charts";
-import type {
-  InspectorDailyStatIn,
-  InspectorTaskListIn,
-} from "@/apis/@types/etl";
+import type { BarsChartOption, LineChartOption } from "@/components/@types/charts";
+import type { InspectorDailyStatIn, InspectorTaskListIn } from "@/apis/@types/etl";
 import { DateTime } from "luxon";
 
-const confirmStateDeleteTaskDialogRef = useTemplateRef(
-  "confirmStateDeleteTaskDialogRef"
-);
+const confirmStateDeleteTaskDialogRef = useTemplateRef("confirmStateDeleteTaskDialogRef");
 
-const confirmStateArchiveTaskDialogRef = useTemplateRef(
-  "confirmStateArchiveTaskDialogRef"
-);
+const confirmStateArchiveTaskDialogRef = useTemplateRef("confirmStateArchiveTaskDialogRef");
 
-const confirmStateRunTaskDialogRef = useTemplateRef(
-  "confirmStateRunTaskDialogRef"
-);
+const confirmStateRunTaskDialogRef = useTemplateRef("confirmStateRunTaskDialogRef");
 
-const confirmSingleDeleteTaskDialogRef = useTemplateRef(
-  "confirmSingleDeleteTaskDialogRef"
-);
+const confirmSingleDeleteTaskDialogRef = useTemplateRef("confirmSingleDeleteTaskDialogRef");
 
-const confirmSingleArchiveTaskDialogRef = useTemplateRef(
-  "confirmSingleArchiveTaskDialogRef"
-);
+const confirmSingleArchiveTaskDialogRef = useTemplateRef("confirmSingleArchiveTaskDialogRef");
 
-const confirmSingleRunTaskDialogRef = useTemplateRef(
-  "confirmSingleRunTaskDialogRef"
-);
+const confirmSingleRunTaskDialogRef = useTemplateRef("confirmSingleRunTaskDialogRef");
 
-const confirmSingleCancelTaskDialogRef = useTemplateRef(
-  "confirmSingleCancelTaskDialogRef"
-);
+const confirmSingleCancelTaskDialogRef = useTemplateRef("confirmSingleCancelTaskDialogRef");
 
 const pageSizeOptions = [
   { title: "10", value: 10 },
@@ -668,9 +623,7 @@ const barsOption = computed((): BarsChartOption => {
     },
     yAxis: {
       type: "value",
-      name: `${i18n.global.t("chart.axis.size")} (${i18n.global.t(
-        "unit.count"
-      )})`,
+      name: `${i18n.global.t("chart.axis.size")} (${i18n.global.t("unit.count")})`,
     },
     series: queueItems.value.map((item) => {
       return {
@@ -710,15 +663,13 @@ const lineOption = computed((): LineChartOption => {
       data:
         statItems.value && statItems.value[queue.value]
           ? statItems.value[queue.value].map((item) =>
-              localeDateFormat(DateTime.fromISO(item.date))
+              localeDateFormat(DateTime.fromISO(item.date)),
             )
           : [],
     },
     yAxis: {
       type: "value",
-      name: `${i18n.global.t("chart.axis.size")} (${i18n.global.t(
-        "unit.count"
-      )})`,
+      name: `${i18n.global.t("chart.axis.size")} (${i18n.global.t("unit.count")})`,
     },
     series: [
       {
@@ -811,11 +762,6 @@ const getQueueListAction = async (): Promise<void> => {
           running: !item.paused,
         };
       });
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({
@@ -823,7 +769,7 @@ const getQueueListAction = async (): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
@@ -832,11 +778,6 @@ const getSchedulerListAction = async (): Promise<void> => {
     inspectorSchedulerListGet(),
     async (rsp) => {
       schedulerItems.value = rsp.data;
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({
@@ -844,13 +785,12 @@ const getSchedulerListAction = async (): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const pauseToggleQueueAction = async (
-  item: Record<string, any>
-): Promise<void> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pauseToggleQueueAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     inspectorQueuePauseToggle(item.name, item.running),
     async (rsp) => {
@@ -872,13 +812,11 @@ const pauseToggleQueueAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const getDailyStatAction = async (
-  data: InspectorDailyStatIn
-): Promise<void> => {
+const getDailyStatAction = async (data: InspectorDailyStatIn): Promise<void> => {
   await getResponse<InspectorDailyStatListOut>(
     inspectorDailyStatListGet(data),
     async (rsp) => {
@@ -890,7 +828,7 @@ const getDailyStatAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
@@ -906,12 +844,13 @@ const getTaskListAction = async (data: InspectorTaskListIn): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getQueueActions = (item: Record<string, any>): ItemActions => {
-  let actions: ItemActions = {};
+  const actions: ItemActions = {};
   if (item.running) {
     actions.pause = pauseToggleQueueAction;
   } else {
@@ -920,25 +859,27 @@ const getQueueActions = (item: Record<string, any>): ItemActions => {
   return actions;
 };
 
-const getTaskActions = (item: Record<string, any>): ItemActions => {
-  let actions: ItemActions = {
+const getTaskActions = (): ItemActions => {
+  const actions: ItemActions = {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
       confirmSingleDeleteTaskDialogRef.value?.open(item);
     },
   };
   if (taskState.value !== "archived") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     actions.archive = function (item: Record<string, any>): void {
       confirmSingleArchiveTaskDialogRef.value?.open(item);
     };
   }
   if (!["archived", "completed"].includes(taskState.value)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     actions.cancel = function (item: Record<string, any>): void {
       confirmSingleCancelTaskDialogRef.value?.open(item);
     };
   }
-  if (
-    ["scheduled", "retry", "archived", "aggregating"].includes(taskState.value)
-  ) {
+  if (["scheduled", "retry", "archived", "aggregating"].includes(taskState.value)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     actions.run = function (item: Record<string, any>): void {
       confirmSingleRunTaskDialogRef.value?.open(item);
     };
@@ -947,7 +888,7 @@ const getTaskActions = (item: Record<string, any>): ItemActions => {
 };
 
 const deleteStateTaskAction = async (): Promise<void> => {
-  await getResponse<Number>(
+  await getResponse<number>(
     inspectorStateTaskDelete({ queue: queue.value, state: taskState.value }),
     async (rsp) => {
       page.value = 1;
@@ -969,14 +910,15 @@ const deleteStateTaskAction = async (): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const deleteTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     inspectorTaskDelete(item.id, item.queue),
-    async (_) => {
+    async () => {
       await getQueueListAction();
       await getTaskListAction({
         page: page.value,
@@ -991,12 +933,12 @@ const deleteTaskAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
 const archiveStateTaskAction = async (): Promise<void> => {
-  await getResponse<Number>(
+  await getResponse<number>(
     inspectorStateTaskArchive({ queue: queue.value, state: taskState.value }),
     async (rsp) => {
       page.value = 1;
@@ -1018,14 +960,15 @@ const archiveStateTaskAction = async (): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const archiveTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     inspectorTaskArchive(item.id, item.queue),
-    async (_) => {
+    async () => {
       await getQueueListAction();
       await getTaskListAction({
         page: page.value,
@@ -1040,12 +983,12 @@ const archiveTaskAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
 const runStateTaskAction = async (): Promise<void> => {
-  await getResponse<Number>(
+  await getResponse<number>(
     inspectorStateTaskRun({ queue: queue.value, state: taskState.value }),
     async (rsp) => {
       page.value = 1;
@@ -1067,14 +1010,15 @@ const runStateTaskAction = async (): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const runTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     inspectorTaskRun(item.id, item.queue),
-    async (_) => {
+    async () => {
       await getQueueListAction();
       await getTaskListAction({
         page: page.value,
@@ -1089,13 +1033,12 @@ const runTaskAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const cancelPorcessingTaskAction = async (
-  item: Record<string, any>
-): Promise<void> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cancelPorcessingTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     inspectorTaskCancelProcessing(item.id),
     async (rsp) => {
@@ -1117,7 +1060,7 @@ const cancelPorcessingTaskAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 

@@ -49,7 +49,7 @@ func Newf(format string, args ...any) error {
 //
 //	result, err := someExternalLib.DoSomething()
 //	if err != nil {
-//	    return errors.WithStack(err)
+//	    return WithStack(err)
 //	}
 func WithStack(err error) error {
 	if base.Env.ErrorStack && err != nil {
@@ -57,7 +57,7 @@ func WithStack(err error) error {
 		case stackError:
 			return err
 		default:
-			return errors.WithStack(err)
+			return WithStack(err)
 		}
 	}
 	return err

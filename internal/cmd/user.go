@@ -13,6 +13,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -25,7 +26,7 @@ type createUserInput struct {
 
 func extractUserInput(v *viper.Viper) (createUserInput, error) {
 	var in createUserInput
-	if err := cliinput.Extract(v, &in, ""); err != nil {
+	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 		return in, err
 	}
 	return in, nil
@@ -33,7 +34,7 @@ func extractUserInput(v *viper.Viper) (createUserInput, error) {
 
 func extractUsernamePassword(v *viper.Viper) (username, password string, err error) {
 	var in routes.UserPasswordLoginIn
-	if err := cliinput.Extract(v, &in, ""); err != nil {
+	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 		return "", "", err
 	}
 	return in.Username, in.Password, nil
@@ -78,7 +79,7 @@ var createUserCmd = &cobra.Command{
 			return
 		}
 
-		pterm.Success.Printf("create user %s success\n", user.Username)
+		pterm.Success.Println(cliT("cli.user.create-success", "创建用户 {{.Username}} 成功", map[string]any{"Username": user.Username}))
 	},
 }
 
@@ -112,7 +113,7 @@ var forceResetPasswordCmd = &cobra.Command{
 			return
 		}
 
-		pterm.Success.Printf("reset user %s's password success\n", username)
+		pterm.Success.Println(cliT("cli.user.reset-password-success", "重置用户 {{.Username}} 的密码成功", map[string]any{"Username": username}))
 	},
 }
 
@@ -134,15 +135,15 @@ var createAccessKeyCmd = &cobra.Command{
 		timeout := v.GetDuration("timeout")
 
 		var in createAccessKeyInput
-		if err := cliinput.Extract(v, &in, ""); err != nil {
+		if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
 
 		// 从配置文件读取最大数量，通过 ExtractConfig 获取带默认值的配置
-		cfg, err := manager.ExtractConfig(v)
+		cfg, err := manager.ExtractConfig(v, validator.Validate)
 		if err != nil {
-			pterm.Error.Printf("cannot extract config: %v\n", err)
+			pterm.Error.Println(cliT("cli.user.extract-config-failed", "无法提取配置：{{.Err}}", map[string]any{"Err": err}))
 			return
 		}
 		maxCount := int(cfg.Auth.AccessKeyCount)
@@ -155,7 +156,7 @@ var createAccessKeyCmd = &cobra.Command{
 
 		var user core.User
 		if err := db.WithContext(ctx).Take(&user, &core.User{Username: in.Username}).Error; err != nil {
-			pterm.Error.Printf("cannot find user %s: %v\n", in.Username, err)
+			pterm.Error.Println(cliT("cli.user.not-found", "找不到用户 {{.Username}}：{{.Err}}", map[string]any{"Username": in.Username, "Err": err}))
 			return
 		}
 
@@ -169,30 +170,30 @@ var createAccessKeyCmd = &cobra.Command{
 		// 创建访问密钥对象
 		key, err := core.NewAccessKey(&user, in.Enabled, in.Description, expiredAt)
 		if err != nil {
-			pterm.Error.Printf("cannot create access key: %v\n", err)
+			pterm.Error.Println(cliT("cli.user.access-key-create-failed", "无法创建访问密钥：{{.Err}}", map[string]any{"Err": err}))
 			return
 		}
 
 		// 使用复用方法在事务中创建
 		if err := key.CreateWithLimit(db.WithContext(ctx), maxCount); err != nil {
 			if err == core.ErrTooManyAccessKey {
-				pterm.Error.Printf("user %s already has %d access keys (max: %d)\n", in.Username, maxCount, maxCount)
+				pterm.Error.Println(cliT("cli.user.access-key-max", "用户 {{.Username}} 已有 {{.Max}} 个访问密钥（上限：{{.Max}}）", map[string]any{"Username": in.Username, "Max": maxCount}))
 			} else {
-				pterm.Error.Printf("cannot create access key: %v\n", err)
+				pterm.Error.Println(cliT("cli.user.access-key-create-failed", "无法创建访问密钥：{{.Err}}", map[string]any{"Err": err}))
 			}
 			return
 		}
 
 		// 输出访问密钥信息
-		pterm.Success.Printf("access key created for user %s\n", in.Username)
-		pterm.Info.Printf("  AccessKeyID:     %s\n", key.AccessKeyID)
-		pterm.Info.Printf("  AccessKeySecret: %s\n", key.Secret())
-		pterm.Info.Printf("  Description:     %s\n", key.Description)
-		pterm.Info.Printf("  Enabled:         %v\n", key.Enabled)
+		pterm.Success.Println(cliT("cli.user.access-key-created", "已为用户 {{.Username}} 创建访问密钥", map[string]any{"Username": in.Username}))
+		pterm.Info.Println(cliT("cli.user.access-key-id", "  AccessKeyID:     {{.Value}}", map[string]any{"Value": key.AccessKeyID}))
+		pterm.Info.Println(cliT("cli.user.access-key-secret", "  AccessKeySecret: {{.Value}}", map[string]any{"Value": key.Secret()}))
+		pterm.Info.Println(cliT("cli.user.access-key-description", "  Description:     {{.Value}}", map[string]any{"Value": key.Description}))
+		pterm.Info.Println(cliT("cli.user.access-key-enabled", "  Enabled:         {{.Value}}", map[string]any{"Value": key.Enabled}))
 		if key.RawExpiredAt != nil {
-			pterm.Info.Printf("  ExpiredAt:       %s\n", key.RawExpiredAt.Format(time.RFC3339))
+			pterm.Info.Println(cliT("cli.user.access-key-expired-at", "  ExpiredAt:       {{.Value}}", map[string]any{"Value": key.RawExpiredAt.Format(time.RFC3339)}))
 		} else {
-			pterm.Info.Printf("  ExpiredAt:       never\n")
+			pterm.Info.Println(cliT("cli.user.access-key-never-expires", "  ExpiredAt:       never"))
 		}
 	},
 }

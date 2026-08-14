@@ -9,6 +9,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/grpc"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 const (
@@ -35,50 +36,40 @@ func grpcReporterAuthenticator(i do.Injector) map[string]grpc.Authenticator {
 	}
 }
 
-func grpcServerProvider(name string) do.Provider[*grpc.Server] {
+func newGrpcServerProvider(name string) do.Provider[*grpc.Server] {
 	return func(i do.Injector) (*grpc.Server, error) {
-		viper, err := InvokeViper(i)
-		if err != nil {
+		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		cfg, err := grpc.ExtractServerConfig(viper, name)
-		if err != nil {
+		} else if cfg, err := grpc.ExtractServerConfig(viper, validator.Validate, name); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		// 如果 OTEL 已启用，添加 gRPC 追踪的 stats handler
-		server, err := grpc.NewServer(grpcReporterAuthenticator(i), cfg, otel.GrpcServerOptions()...)
-		if err != nil {
+		} else if server, err := grpc.NewServer(grpcReporterAuthenticator(i), cfg, otel.GrpcServerOptions()...); err != nil {
 			return nil, errors.WithStack(err)
+		} else {
+			return server, nil
 		}
-		return server, nil
 	}
 }
 
-func grpcClientProvider(name string) do.Provider[*grpc.Client] {
+func newGrpcClientProvider(name string) do.Provider[*grpc.Client] {
 	return func(i do.Injector) (*grpc.Client, error) {
-		viper, err := InvokeViper(i)
-		if err != nil {
+		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		cfg, err := grpc.ExtractClientConfig(viper, name)
-		if err != nil {
+		} else if cfg, err := grpc.ExtractClientConfig(viper, validator.Validate, name); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		// 如果 OTEL 已启用，添加 gRPC 追踪的 stats handler
-		client, err := grpc.NewClient(cfg, otel.GrpcClientOptions()...)
-		if err != nil {
+		} else if client, err := grpc.NewClient(cfg, otel.GrpcClientOptions()...); err != nil {
 			return nil, errors.WithStack(err)
+		} else {
+			return client, nil
 		}
-		return client, nil
 	}
 }
 
 func NewReporterGrpcServer() do.Provider[*grpc.Server] {
-	return grpcServerProvider(ReporterGrpcPrefix)
+	return newGrpcServerProvider(ReporterGrpcPrefix)
 }
 
 func NewReporterGrpcClient() do.Provider[*grpc.Client] {
-	return grpcClientProvider(ReporterGrpcPrefix)
+	return newGrpcClientProvider(ReporterGrpcPrefix)
 }
 
 func InjectReporterGrpcServer(i do.Injector) {

@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/creasty/defaults"
+	"github.com/go-playground/validator/v10"
 	"github.com/mitchellh/mapstructure"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -32,7 +33,6 @@ import (
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 // NewViper 创建一个新的 Viper 实例，用于加载和管理配置。
@@ -170,12 +170,25 @@ func (descs *ConfigDescriptions) Join(others ConfigDescriptions) {
 // Describe 将配置描述以表格形式输出到标准输出。
 //
 // 输出包含四列：path（配置路径）、kind（类型）、default（默认值）、comment（说明）。
+// localize 用于本地化表头文本，接收翻译键与中文回退文案，返回本地化文本；
+// 传 nil 时表头直接使用中文回退文案。
 //
 // 返回值：
 //   - error: 表格写入或渲染过程中的错误，包装为 errors.WithStack
-func (descs ConfigDescriptions) Describe() error {
+func (descs ConfigDescriptions) Describe(localize func(key, fallback string) string) error {
+	header := func(key, fallback string) string {
+		if localize == nil {
+			return fallback
+		}
+		return localize(key, fallback)
+	}
 	data := pterm.TableData{
-		{"path", "kind", "default", "comment"},
+		{
+			header("cli.config.col-path", "路径"),
+			header("cli.config.col-kind", "类型"),
+			header("cli.config.col-default", "默认值"),
+			header("cli.config.col-comment", "说明"),
+		},
 	}
 	for _, desc := range descs {
 		data = append(data, []string{desc.Path, desc.Kind, desc.Default, desc.Comment})
@@ -318,8 +331,7 @@ func DescribeConfig[C any](prefix string) ConfigDescriptions {
 //	    log.Fatal(err)
 //	}
 //	fmt.Println(cfg.Host) // "10.0.0.1"
-func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
-	validator.Init()
+func ExtractConfig[C any](v *viper.Viper, validate *validator.Validate, prefix string) (*C, error) {
 	var cfg C
 	if err := defaults.Set(&cfg); err != nil {
 		return nil, errors.WithStack(err)
@@ -333,7 +345,7 @@ func ExtractConfig[C any](v *viper.Viper, prefix string) (*C, error) {
 		),
 	)); err != nil {
 		return nil, errors.WithStack(err)
-	} else if err := validator.Validate.Struct(&cfg); err != nil {
+	} else if err := validate.Struct(&cfg); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	return &cfg, nil
@@ -362,7 +374,10 @@ func GetContextParam[T any](ctx context.Context, name string) (*T, error) {
 	cfg := mapstructure.DecoderConfig{
 		Result:           &target,
 		WeaklyTypedInput: true,
-		DecodeHook:       mapstructure.StringToTimeDurationHookFunc(),
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			mapstructure.TextUnmarshallerHookFunc(),
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
 	}
 	if err := defaults.Set(&target); err != nil {
 		return nil, errors.WithStack(err)

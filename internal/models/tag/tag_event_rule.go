@@ -2,7 +2,6 @@ package tag
 
 import (
 	"strings"
-	"time"
 
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
@@ -10,6 +9,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // 布尔表达式解析器，用于解析标签事件条件中的标签组合表达式
@@ -125,15 +125,15 @@ type TagEventCondition struct {
 	// Dimension 标签维度类型过滤条件，对应 TagSumming 的 dimension 维度，为空表示不限制（如 "fp_tcp_client_sig"、"fp_tcp_server_sig"）
 	Dimension string `gorm:"column:dimension;type:VARCHAR(128)"`
 	// Item 标签维度具体值过滤条件，对应 TagSumming 的 item 维度，为空表示不限制（如具体的指纹签名串）
-	Item           string        `gorm:"column:item;type:VARCHAR(255)"`
-	TagEventRuleID uint          `gorm:"column:tag_event_rule_id;type:INT"`
-	TagEventRule   TagEventRule  `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Name           string        `gorm:"column:name;type:VARCHAR(255)"`
-	Window         time.Duration `gorm:"type:BIGINT"`
-	Threshold      int           `gorm:"type:INT"`
-	Expression     string        `gorm:"type:VARCHAR(1024)"`
-	Enabled        bool          `gorm:"type:BOOLEAN"`
-	Description    string        `gorm:"type:VARCHAR(256)"`
+	Item           string              `gorm:"column:item;type:VARCHAR(255)"`
+	TagEventRuleID uint                `gorm:"column:tag_event_rule_id;type:INT"`
+	TagEventRule   TagEventRule        `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Name           string              `gorm:"column:name;type:VARCHAR(255)"`
+	Window         serializer.DurationNS `gorm:"type:BIGINT"`
+	Threshold      int                 `gorm:"type:INT"`
+	Expression     string              `gorm:"type:VARCHAR(1024)"`
+	Enabled        bool                `gorm:"type:BOOLEAN"`
+	Description    string              `gorm:"type:VARCHAR(256)"`
 }
 
 // ExprValidate 验证标签事件条件中的标签组合表达式语法是否正确

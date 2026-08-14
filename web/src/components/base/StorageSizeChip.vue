@@ -1,6 +1,6 @@
 <template>
   <v-chip :color="color" :variant="variant" :density="density">
-    {{ humanReadableValue }}
+    <span class="font-mono">{{ humanReadableValue }}</span>
   </v-chip>
 </template>
 
@@ -27,9 +27,11 @@ const props = defineProps({
   },
   variant: {
     type: String as PropType<Variant>,
+    default: "tonal",
   },
   density: {
     type: String as PropType<Density>,
+    default: "default",
   },
   binary: {
     type: Boolean,

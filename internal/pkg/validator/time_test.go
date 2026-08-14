@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gin-gonic/gin/binding"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -12,10 +11,8 @@ import (
 // 该测试验证 validateGtCurrentTime 函数是否能正确判断时间是否大于当前时间
 func TestValidateGtCurrentTime(t *testing.T) {
 	Convey("Test gtCurrentTime validation", t, func() {
-		// 初始化验证器
-		binding.Validator = &defaultValidator{}
-		validate := mustValidate()
-		validate.RegisterValidation(TagGreaterThanCurrentTime, validateGtCurrentTime)
+		// 初始化验证器，gtCurrentTime 已注册
+		validate := newTestValidate()
 
 		Convey("Should validate time.Time fields correctly", func() {
 			// 定义测试结构体
@@ -127,10 +124,8 @@ func TestValidateGtCurrentTime(t *testing.T) {
 // 该测试验证 validateLtCurrentTime 函数是否能正确判断时间是否小于当前时间
 func TestValidateLtCurrentTime(t *testing.T) {
 	Convey("Test ltCurrentTime validation", t, func() {
-		// 初始化验证器
-		binding.Validator = &defaultValidator{}
-		validate := mustValidate()
-		validate.RegisterValidation(TagLesserThanCurrentTime, validateLtCurrentTime)
+		// 初始化验证器，ltCurrentTime 已注册
+		validate := newTestValidate()
 
 		Convey("Should validate time.Time fields correctly", func() {
 			// 定义测试结构体

@@ -6,6 +6,7 @@ import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 // LocalizerCtxName 是 go-i18n Localizer 在 gin.Context 中存储的键名
@@ -37,15 +38,11 @@ const TranslatorCtxName = "i18n-translator"
 //
 //	r := gin.New()
 //	r.Use(TranslateMiddleware(i18nInstance))
-func TranslateMiddleware(i *translate.I18n) gin.HandlerFunc {
+func TranslateMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		language := GetLanguage(c)
-		tag := language.StdTag()
-		localizer := i18n.NewLocalizer(i.Bundle, tag.String())
-		translator, err := translate.GetTranslator(i.Uni, language)
-		if err != nil {
-			GetLogger(c).Warnf(c, nil, `cannot get translator cause: %v`, err)
-		}
+		lang := GetLanguage(c)
+		localizer := translate.Localizer(lang)
+		translator := validator.MustGetTranslator(lang)
 		c.Set(LocalizerCtxName, localizer)
 		c.Set(TranslatorCtxName, translator)
 		c.Next()
@@ -68,13 +65,13 @@ func TranslateMiddleware(i *translate.I18n) gin.HandlerFunc {
 //
 //	lang := GetLanguage(c)
 //	fmt.Println(lang.String()) // 输出: "zh-Hans" 或 "en"
-func GetLanguage(c *gin.Context) *translate.Language {
+func GetLanguage(c *gin.Context) *base.Language {
 	acceptLanguage := c.GetHeader(base.HdrAcceptLanguage)
-	lang, err := translate.ParseLanguage(acceptLanguage)
-	if err != nil {
-		return translate.DefaultLang
+	if lang, err := base.ParseLanguage(acceptLanguage); err == nil {
+		return lang
+	} else {
+		return base.DefaultLanguage
 	}
-	return lang
 }
 
 // GetLocalizer 从 gin.Context 中获取 go-i18n 的 Localizer 实例

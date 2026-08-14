@@ -397,7 +397,7 @@ func matchAlphanumSpecial(re *regexp2.Regexp, value string) bool {
 	return false
 }
 
-func validateAlphanumSpecial(fl validator.FieldLevel) bool {
+func ValidateAlphanumSpecial(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -405,7 +405,7 @@ func validateAlphanumSpecial(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateStrongPassword(fl validator.FieldLevel) bool {
+func ValidateStrongPassword(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -413,7 +413,7 @@ func validateStrongPassword(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateWindowsFileName(fl validator.FieldLevel) bool {
+func ValidateWindowsFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -421,7 +421,7 @@ func validateWindowsFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateUnixFileName(fl validator.FieldLevel) bool {
+func ValidateUnixFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -429,7 +429,7 @@ func validateUnixFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateFileName(fl validator.FieldLevel) bool {
+func ValidateFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -437,7 +437,7 @@ func validateFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateStrictFileName(fl validator.FieldLevel) bool {
+func ValidateStrictFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -445,20 +445,10 @@ func validateStrictFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateDirPath(fl validator.FieldLevel) bool {
+func ValidateDirPath(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
 		return IsValidDirPath(v)
 	}
-}
-
-func init() {
-	validations[TagStrongPassword] = validateStrongPassword
-	validations[TagWindowsFileName] = validateWindowsFileName
-	validations[TagUnixFileName] = validateUnixFileName
-	validations[TagFileName] = validateFileName
-	validations[TagStrictFileName] = validateStrictFileName
-	validations[TagDirpath] = validateDirPath
-	validations[TagAlphanumSpecial] = validateAlphanumSpecial
 }

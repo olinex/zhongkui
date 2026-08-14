@@ -10,7 +10,7 @@
         model-name="capturer"
       >
         <template #top>
-          <v-btn color="success" @click="openCreateDialogAction">
+          <v-btn color="primary" @click="openCreateDialogAction">
             {{ $t("action.create") }}
           </v-btn>
         </template>
@@ -38,12 +38,10 @@
       <temp-editable-dialog
         ref="createDialogRef"
         :title="$t(`model.capturer.name`)"
-        @confirm="createAction"
-        :confirm-disabled="
-          !createForm.meta.value.dirty || !createForm.meta.value.valid
-        "
+        :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
         prepend-icon="mdi-owl"
         force-editable
+        @confirm="createAction"
       >
         <template #body>
           <v-form>
@@ -148,11 +146,9 @@
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t(`model.capturer.name`)"
-        @confirm="itemUpdateAction"
-        :confirm-disabled="
-          !updateForm.meta.value.dirty || !updateForm.meta.value.valid
-        "
+        :confirm-disabled="!updateForm.meta.value.dirty || !updateForm.meta.value.valid"
         prepend-icon="mdi-owl"
+        @confirm="itemUpdateAction"
       >
         <template #body="{ proxy, editable }">
           <v-form>
@@ -292,80 +288,35 @@ const updateForm = useForm({
   validationSchema: updateCapturerSchema,
 });
 
-const [createNamespace, createNamespaceProps] = createForm.defineField(
-  "namespace",
-  vuetifyCfg
-);
+const [createNamespace, createNamespaceProps] = createForm.defineField("namespace", vuetifyCfg);
 
-const [createName, createNameProps] = createForm.defineField(
-  "name",
-  vuetifyCfg
-);
+const [createName, createNameProps] = createForm.defineField("name", vuetifyCfg);
 
-const [createVersion, createVersionProps] = createForm.defineField(
-  "version",
-  vuetifyCfg
-);
+const [createVersion, createVersionProps] = createForm.defineField("version", vuetifyCfg);
 
-const [createDevice, createDeviceProps] = createForm.defineField(
-  "device",
-  vuetifyCfg
-);
+const [createDevice, createDeviceProps] = createForm.defineField("device", vuetifyCfg);
 
-const [createBpfExpr, createBpfExprProps] = createForm.defineField(
-  "bpfExpr",
-  vuetifyCfg
-);
+const [createBpfExpr, createBpfExprProps] = createForm.defineField("bpfExpr", vuetifyCfg);
 
-const [createSnapLen, createSnapLenProps] = createForm.defineField(
-  "snapLen",
-  vuetifyCfg
-);
+const [createSnapLen, createSnapLenProps] = createForm.defineField("snapLen", vuetifyCfg);
 
-const [createTimeout, createTimeoutProps] = createForm.defineField(
-  "timeout",
-  vuetifyCfg
-);
+const [createTimeout, createTimeoutProps] = createForm.defineField("timeout", vuetifyCfg);
 
-const [createPromisc, createPromiscProps] = createForm.defineField(
-  "promisc",
-  vuetifyCfg
-);
+const [createPromisc, createPromiscProps] = createForm.defineField("promisc", vuetifyCfg);
 
-const [createEnabled, createEnabledProps] = createForm.defineField(
-  "enabled",
-  vuetifyCfg
-);
+const [createEnabled, createEnabledProps] = createForm.defineField("enabled", vuetifyCfg);
 
-const [updateDevice, updateDeviceProps] = updateForm.defineField(
-  "device",
-  vuetifyCfg
-);
+const [updateDevice, updateDeviceProps] = updateForm.defineField("device", vuetifyCfg);
 
-const [updateBpfExpr, updateBpfExprProps] = updateForm.defineField(
-  "bpfExpr",
-  vuetifyCfg
-);
+const [updateBpfExpr, updateBpfExprProps] = updateForm.defineField("bpfExpr", vuetifyCfg);
 
-const [updateSnapLen, updateSnapLenProps] = updateForm.defineField(
-  "snapLen",
-  vuetifyCfg
-);
+const [updateSnapLen, updateSnapLenProps] = updateForm.defineField("snapLen", vuetifyCfg);
 
-const [updateTimeout, updateTimeoutProps] = updateForm.defineField(
-  "timeout",
-  vuetifyCfg
-);
+const [updateTimeout, updateTimeoutProps] = updateForm.defineField("timeout", vuetifyCfg);
 
-const [updatePromisc, updatePromiscProps] = updateForm.defineField(
-  "promisc",
-  vuetifyCfg
-);
+const [updatePromisc, updatePromiscProps] = updateForm.defineField("promisc", vuetifyCfg);
 
-const [updateEnabled, updateEnabledProps] = updateForm.defineField(
-  "enabled",
-  vuetifyCfg
-);
+const [updateEnabled, updateEnabledProps] = updateForm.defineField("enabled", vuetifyCfg);
 
 const appStore = useAppStore();
 const searchTableRef = useTemplateRef("searchTableRef");
@@ -377,9 +328,10 @@ const namespaceSearchHeaders: Record<string, SearchAction> = {
   name: SearchAction.CONTAIN,
 };
 
-const getActions = (item: Record<string, any>): ItemActions => {
-  let actions: ItemActions = {
+const getActions = (): ItemActions => {
+  const actions: ItemActions = {
     edit: detailGetAction,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
       confirmDialogRef.value?.open(item);
     },
@@ -387,6 +339,7 @@ const getActions = (item: Record<string, any>): ItemActions => {
   return actions;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<CapturerDetailOut>(
     capturerDetailGet(item.id as number),
@@ -405,10 +358,11 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     capturerDelete(item.id as number),
@@ -426,7 +380,7 @@ const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
@@ -454,6 +408,7 @@ const openCreateDialogAction = () => {
   createDialogRef.value?.open(defaults);
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemUpdateAction = (proxy: Record<string, any>) => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
@@ -472,7 +427,7 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
           timeout: 3000,
           color: "error",
         });
-      }
+      },
     );
   })();
 };
@@ -506,7 +461,7 @@ const createAction = createForm.handleSubmit(async (values): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 </script>

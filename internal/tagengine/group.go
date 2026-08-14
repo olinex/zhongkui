@@ -9,13 +9,14 @@ import (
 
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 type GroupDetailResult struct {
 	// Tags 组内所有规则识别到的去重排序后的标签集合。
 	Tags []string `json:"tags"`
 	// Duration 组级合并查询耗时。
-	Duration time.Duration `json:"duration"`
+	Duration serializer.DurationNS `json:"duration"`
 	// Error 组级合并查询错误。
 	Error error `json:"error"`
 	// Rules 组内所有规则的识别结果。
@@ -73,7 +74,7 @@ func (g *compiledGroup) RecognizeWithDetail(ctx context.Context, options ...rego
 	}
 	return &GroupDetailResult{
 		Tags:     tags,
-		Duration: duration,
+		Duration: serializer.DurationNS(duration),
 		Error:    err,
 		Rules:    rules,
 	}

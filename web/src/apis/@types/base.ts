@@ -1,4 +1,4 @@
-import { AxiosHeaders, type RawAxiosRequestHeaders } from 'axios';
+import { AxiosHeaders, type RawAxiosRequestHeaders } from "axios";
 
 export const X_JWT_HEADER_NAME: string = "X-Jwtoken";
 
@@ -26,18 +26,18 @@ export enum Status {
 
 export enum CustomCode {
   CodeUnknown = 1000,
-	// basic error code
-	CodeUserNotExist = 1001,
-	CodeBadBody = 1002,
-	CodeBadQuery = 1003,
-	CodeBadUrlParam = 1004,
-	CodeBadJwtToken = 1005,
-	CodeTimeoutJwtToken = 1006,
-	CodeAuthorizeBlankFullPath = 1007,
-	CodeAuthorizeFailed = 1008,
-	CodeNamespaceNotExist = 1009,
-	// business error code
-	CodeUsernamePasswordCheckFailed = 1100,
-	CodeOldPasswordCheckFailed = 1101,
-	CodeUsernameOrEmailAlreadyExist = 1102,
+  // basic error code
+  CodeUserNotExist = 1001,
+  CodeBadBody = 1002,
+  CodeBadQuery = 1003,
+  CodeBadUrlParam = 1004,
+  CodeBadJwtToken = 1005,
+  CodeTimeoutJwtToken = 1006,
+  CodeAuthorizeBlankFullPath = 1007,
+  CodeAuthorizeFailed = 1008,
+  CodeNamespaceNotExist = 1009,
+  // business error code
+  CodeUsernamePasswordCheckFailed = 1100,
+  CodeOldPasswordCheckFailed = 1101,
+  CodeUsernameOrEmailAlreadyExist = 1102,
 }

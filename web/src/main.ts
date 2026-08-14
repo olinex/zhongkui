@@ -6,20 +6,23 @@
 
 // buffer module global inject
 // see: vite.config.ts
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 // Composables
-import { createApp } from 'vue';
+import { createApp } from "vue";
 
 // Plugins
-import { registerPlugins } from '@/plugins';
+import { registerPlugins } from "@/plugins";
 
 // Components
-import App from './App.vue';
+import App from "./App.vue";
+
+// Styles
+import "@/styles/main.scss";
 
 window.Buffer = Buffer;
 
-const app = createApp(App)
+const app = createApp(App);
 
-registerPlugins(app)
+registerPlugins(app);
 
-app.mount('#app')
+app.mount("#app");

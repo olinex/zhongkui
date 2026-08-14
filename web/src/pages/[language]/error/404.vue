@@ -1,10 +1,7 @@
 <template>
   <central-layout>
     <template #body>
-      <v-empty-state
-        headline="404"
-        :title="$t('summary.pageNotFound')"
-      />
+      <v-empty-state headline="404" :title="$t('summary.pageNotFound')" />
     </template>
   </central-layout>
 </template>

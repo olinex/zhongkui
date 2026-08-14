@@ -26,7 +26,7 @@ func createTestSecureConfig() *SecureConfig {
 // createTestCORSConfig 创建用于测试的 CORS 配置
 func createTestCORSConfig() *CORSConfig {
 	return &CORSConfig{
-		AllowOrigin:      "http://localhost:3000",
+		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowCredentials: true,
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -166,6 +166,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+			req.Header.Set(base.HdrOrigin, "http://localhost:3000")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -177,6 +178,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodPost, "/test", nil)
+			req.Header.Set(base.HdrOrigin, "http://localhost:3000")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -188,9 +190,33 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+			req.Header.Set(base.HdrOrigin, "http://localhost:3000")
 			r.ServeHTTP(w, req)
 
 			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldEqual, "http://localhost:3000")
+		})
+
+		Convey("Origin 不在允许列表时应不设置 Access-Control-Allow-Origin", func() {
+			middleware := CORSHeadersMiddleware(cfg)
+			r := setupRouter(middleware)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+			req.Header.Set(base.HdrOrigin, "http://evil.example.com")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldBeEmpty)
+		})
+
+		Convey("请求未携带 Origin 头时应不设置 Access-Control-Allow-Origin", func() {
+			middleware := CORSHeadersMiddleware(cfg)
+			r := setupRouter(middleware)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldBeEmpty)
 		})
 
 		Convey("应正确设置 Access-Control-Allow-Credentials 响应头", func() {
@@ -205,7 +231,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 
 		Convey("当 AllowCredentials 为 false 时应设置响应头为 false", func() {
 			cfgNoCreds := &CORSConfig{
-				AllowOrigin:      "*",
+				AllowOrigins:     []string{"*"},
 				AllowCredentials: false,
 				AllowHeaders:     []string{"Content-Type"},
 				AllowMethods:     []string{"GET"},
@@ -214,9 +240,11 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodGet, "/test", nil)
+			req.Header.Set(base.HdrOrigin, "http://example.com")
 			r.ServeHTTP(w, req)
 
 			So(w.Header().Get(base.HdrAccessControlAllowCredentials), ShouldEqual, "false")
+			So(w.Header().Get(base.HdrAccessControlAllowOrigin), ShouldEqual, "http://example.com")
 		})
 
 		Convey("应正确设置 Access-Control-Allow-Headers 响应头", func() {
@@ -276,6 +304,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 			r := setupRouter(middleware)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest(http.MethodOptions, "/test", nil)
+			req.Header.Set(base.HdrOrigin, "http://localhost:3000")
 			req.Header.Set(base.HdrAccessControlRequestMethod, "GET")
 			r.ServeHTTP(w, req)
 
@@ -287,7 +316,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 
 		Convey("AllowHeaders 为空时应设置空的 Access-Control-Allow-Headers", func() {
 			cfgNoHeaders := &CORSConfig{
-				AllowOrigin:  "*",
+				AllowOrigins: []string{"*"},
 				AllowHeaders: []string{},
 				AllowMethods: []string{"GET"},
 			}
@@ -302,7 +331,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 
 		Convey("AllowMethods 为空时预检请求应返回 403", func() {
 			cfgNoMethods := &CORSConfig{
-				AllowOrigin:  "*",
+				AllowOrigins: []string{"*"},
 				AllowHeaders: []string{"Content-Type"},
 				AllowMethods: []string{},
 			}

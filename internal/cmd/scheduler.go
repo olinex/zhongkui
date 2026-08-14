@@ -35,7 +35,7 @@ var describeSchedulerCmd = &cobra.Command{
 				return
 			}
 			if len(rsp.Kvs) == 0 {
-				pterm.Warning.Println("no scheduled task configs found in etcd")
+				pterm.Warning.Println(cliT("cli.scheduler.none-found", "etcd 中未找到任何定时任务配置"))
 				return
 			}
 			renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp)
@@ -47,7 +47,7 @@ var describeSchedulerCmd = &cobra.Command{
 				return
 			}
 			if len(rsp.Kvs) == 0 {
-				pterm.Warning.Printf("scheduled task config not found: %s\n", name)
+				pterm.Warning.Println(cliT("cli.scheduler.not-found", "未找到定时任务配置：{{.Name}}", map[string]any{"Name": name}))
 				continue
 			}
 			if err := renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp); err != nil {
@@ -60,7 +60,15 @@ var describeSchedulerCmd = &cobra.Command{
 
 func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 	data := pterm.TableData{
-		{"name", "cronSpec", "interval", "queue", "timeout", "maxRetry", "enabled"},
+		{
+			cliT("cli.scheduler.col-name", "name"),
+			cliT("cli.scheduler.col-cronspec", "cronSpec"),
+			cliT("cli.scheduler.col-interval", "interval"),
+			cliT("cli.scheduler.col-queue", "queue"),
+			cliT("cli.scheduler.col-timeout", "timeout"),
+			cliT("cli.scheduler.col-maxretry", "maxRetry"),
+			cliT("cli.scheduler.col-enabled", "enabled"),
+		},
 	}
 	for _, kv := range rsp.Kvs {
 		var cfg pipeline.SchedulerTaskConfig

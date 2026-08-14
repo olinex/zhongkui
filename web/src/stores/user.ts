@@ -1,21 +1,17 @@
-import {
-  Enforcer,
-  newEnforcer,
-  newModelFromString,
-  StringAdapter,
-} from "casbin";
+import { Enforcer, newEnforcer, newModelFromString, StringAdapter } from "casbin";
 import consola from "consola";
 import { jwtDecode, type JwtPayload } from "jwt-decode";
 import { DateTime, Duration } from "luxon";
 import { defineStore } from "pinia";
 
-import { getResponse, getSimpleResponse } from "@/apis/base";
+import { getResponse } from "@/apis/base";
 import { authorizationInfoGet, jwtRefresh } from "@/apis/user";
 import { arrayToCsv } from "@/utils/base";
 
 import { localManager } from "./local";
 
 import type { Emitter } from "mitt";
+import type { UserTokenOut } from "@/apis/@types/user";
 const USER_REFRESH_EVENT: string = "base:jwt-token-refresh";
 const ZERO_DATETIME: DateTime = DateTime.fromSeconds(0);
 
@@ -51,17 +47,11 @@ export const useUserStore = defineStore("user", {
   }),
   getters: {
     timeout(): number {
-      const dur: Duration = this.expiresAt.diff(
-        DateTime.local(),
-        "milliseconds"
-      );
+      const dur: Duration = this.expiresAt.diff(DateTime.local(), "milliseconds");
       return dur.milliseconds * 0.9;
     },
     valid(): boolean {
-      return (
-        this.exists &&
-        this.expiresAt.diff(DateTime.local(), "milliseconds").milliseconds > 0
-      );
+      return this.exists && this.expiresAt.diff(DateTime.local(), "milliseconds").milliseconds > 0;
     },
   },
   actions: {
@@ -80,12 +70,12 @@ export const useUserStore = defineStore("user", {
       this.enforcer = null;
     },
     async load() {
-      let jwt = localManager.getJwt();
+      const jwt = localManager.getJwt();
       if (!jwt) {
         this.clear();
         return;
       }
-      let payload = jwtDecode<JwtClaims>(jwt);
+      const payload = jwtDecode<JwtClaims>(jwt);
       if (!payload) {
         this.clear();
         return;
@@ -105,15 +95,15 @@ export const useUserStore = defineStore("user", {
           this.email = payload.email;
           this.initial = true;
           this.namespaces = rsp.data.namespaces;
-          let model = newModelFromString(rsp.data.model);
-          let adapter = new StringAdapter(arrayToCsv(rsp.data.policies));
+          const model = newModelFromString(rsp.data.model);
+          const adapter = new StringAdapter(arrayToCsv(rsp.data.policies));
           this.enforcer = await newEnforcer(model, adapter);
           consola.info("user loaded");
         },
         async (rsp) => {
           consola.warn(`code: ${rsp.code} - ${rsp.summary}`);
           this.clear();
-        }
+        },
       );
     },
     async refresh(auto: boolean) {
@@ -122,20 +112,22 @@ export const useUserStore = defineStore("user", {
         this.clear();
         return;
       }
-      await getSimpleResponse(
+      await getResponse<UserTokenOut>(
         jwtRefresh(),
-        async () => {
+        async (rsp) => {
+          // 持久化刷新后的令牌，避免依赖受主机作用域限制的 Cookie
+          localManager.setJwt(rsp.data.token);
           this.load();
           if (!this.valid || !auto) {
             return;
           }
-          let timeout = this.timeout;
+          const timeout = this.timeout;
           setTimeout(() => this.refresh(true), timeout);
           consola.info(`refresh after ${timeout} ms`);
         },
-        async (rsp, _) => {
+        async (rsp) => {
           consola.warn(`code: ${rsp.code} - ${rsp.summary}`);
-        }
+        },
       );
     },
     signOut() {
@@ -150,13 +142,16 @@ export const useUserStore = defineStore("user", {
       if (!this.exists) {
         return;
       }
-      let timeout = this.timeout;
+      const timeout = this.timeout;
       setTimeout(() => this.refresh(true), timeout);
     },
+    // mitt events are untyped in this project.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshEventOn(mitter: Emitter<any>) {
       mitter.on(USER_REFRESH_EVENT, () => this.refresh(false));
       this.init();
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshEventOff(mitter: Emitter<any>) {
       mitter.off(USER_REFRESH_EVENT);
       this.clear();
@@ -172,9 +167,9 @@ export const useUserStore = defineStore("user", {
       if (this.enforcer === null) {
         return [];
       }
-      const policeNamespaces = (
-        await this.enforcer.getFilteredNamedGroupingPolicy("g", 0)
-      ).map((item) => item[2]);
+      const policeNamespaces = (await this.enforcer.getFilteredNamedGroupingPolicy("g", 0)).map(
+        (item) => item[2],
+      );
       if (policeNamespaces.some((name) => name === "*")) {
         return this.namespaces;
       } else {

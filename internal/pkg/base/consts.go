@@ -38,6 +38,7 @@ m = (p.obj == "*" || r.obj == p.obj) && \
 
 	// http headers
 	HdrHost                          = "Host"
+	HdrOrigin                        = "Origin"
 	HdrAccept                        = "Accept"
 	HdrAcceptEncoding                = "Accept-Encoding"
 	HdrAcceptLanguage                = "Accept-Language"

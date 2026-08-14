@@ -9,8 +9,10 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	_ "zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
+	_ "zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -50,11 +52,11 @@ var RootCmd = &cobra.Command{
 		provider.InjectCommand(i, cmd)
 		provider.InjectViper(i)
 		provider.InjectKeyDerivation(i)
+		provider.InjectUniversalTranslator(ctx, i)
 		provider.InjectS3(i)
 		provider.InjectGin(i)
-		validator.Init()
-		provider.InjectI18n(ctx, i)
 		provider.InjectRbac(i)
+		provider.InjectDefaultLogger(i)
 		provider.InjectApiLogger(i)
 		provider.InjectDatabaseLogger(i)
 		provider.InjectCaptureLogger(i)
@@ -62,8 +64,10 @@ var RootCmd = &cobra.Command{
 		provider.InjectGrpcLogger(i)
 		provider.InjectPipelineLogger(i)
 		provider.InjectCoreDatabase(i)
-		provider.InjectTagEngine(i)
 		provider.InjectRawDatabase(i)
+		provider.InjectCoreSchemaManager(i)
+		provider.InjectRawSchemaManager(i)
+		provider.InjectTagEngine(i)
 		provider.InjectCacheRedis(i)
 		provider.InjectPipelineRedis(i)
 		provider.InjectEtcdClient(ctx, i)
@@ -77,6 +81,8 @@ var RootCmd = &cobra.Command{
 		provider.InjectPipelineServer(ctx, i)
 		provider.InjectCaptureClient(i)
 
+		// 初始化翻译器
+		_ = provider.MustInvokeUniversalTranslator(i)
 		// 必须在所有服务启动完成后调用，确保所有资源都被正确初始化
 		_ = provider.MustInvokeOtelShutdowner(ctx, i)
 
@@ -100,7 +106,7 @@ var RootCmd = &cobra.Command{
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer shutdownCancel()
 		i.ShutdownWithContext(shutdownCtx)
-		pterm.Debug.Println("zhongkui server process exit")
+		pterm.Debug.Println(cliT("cli.root.process-exit", "zhongkui 服务进程已退出"))
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -158,6 +164,11 @@ var createCmd = &cobra.Command{
 }
 
 func init() {
+	if base.Env.Debug {
+		pterm.EnableDebugMessages()
+		pterm.Debug.Println(translate.T("cli.base.pterm-debug", nil))
+	}
+
 	// 使用中文 help 命令替换 cobra 默认的英文版本
 	RootCmd.SetHelpCommand(helpCmd)
 	RootCmd.PersistentFlags().StringP("config", "c", "", "配置文件路径（如 /etc/zhongkui/config.toml）")

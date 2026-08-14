@@ -6,29 +6,24 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 func newS3Provider() do.Provider[*s3.S3Client] {
 	return func(i do.Injector) (*s3.S3Client, error) {
-		viper, err := InvokeViper(i)
-		if err != nil {
+		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		cfg, err := s3.ExtractConfig(viper)
-		if err != nil {
+		} else if cfg, err := s3.ExtractConfig(viper, validator.Validate); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		kd, err := InvokeKeyDerivation(i)
-		if err != nil {
+		} else if kd, err := InvokeKeyDerivation(i); err != nil {
 			return nil, errors.WithStack(err)
+		} else {
+			client, err := s3.NewS3Client(cfg, kd, otel.S3ClientOptions()...)
+			if err != nil {
+				return nil, errors.WithStack(err)
+			}
+			return client, nil
 		}
-
-		// 如果 OTEL 已启用，为 S3 HTTP 调用添加链路追踪
-		client, err := s3.NewS3Client(cfg, kd, otel.S3ClientOptions()...)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		return client, nil
 	}
 }
 

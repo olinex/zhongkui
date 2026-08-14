@@ -1,7 +1,6 @@
 <template>
   <v-text-field
     :model-value="modelValue"
-    @update:model-value="emits('update:modelValue', $event)"
     :label="$t(`model.__base.field.search`)"
     prepend-inner-icon="mdi-magnify"
     variant="outlined"
@@ -9,6 +8,7 @@
     hide-details
     single-line
     rounded
+    @update:model-value="emits('update:modelValue', $event)"
   >
     <template #append-inner>
       <v-menu
@@ -17,25 +17,25 @@
         transition="scale-transition"
         :close-on-content-click="false"
       >
-        <template #activator="{ props }">
-          <v-icon v-bind="props" @click="more" color="success">mdi-more</v-icon>
+        <template #activator="{ props: activatorProps }">
+          <v-icon v-bind="activatorProps" color="primary" @click="more">mdi-more</v-icon>
         </template>
         <v-card>
           <v-card-text>
             <v-infinite-scroll
-              @load="load"
               load-more-text="summary.dataLoading"
               empty-text="summary.endOfData"
               side="end"
               max-height="300px"
+              @load="load"
             >
               <slot name="items" :items="items" :close="() => (open = false)" />
-              <template #error="{ props }">
+              <template #error="{ props: errorProps }">
                 <v-alert type="error" variant="tonal" density="compact">
                   <div class="d-flex justify-space-between align-center">
                     {{ $t("summary.unknownError") }}
                     <v-btn
-                      v-bind="props"
+                      v-bind="errorProps"
                       color="white"
                       size="small"
                       variant="outlined"
@@ -58,16 +58,15 @@ import { getResponse } from "@/apis/base";
 import { SearchAction } from "@/types";
 import type { AxiosPromise } from "axios";
 import type { PropType } from "vue";
-import type {
-  InfiniteScrollSide,
-  InfiniteScrollStatus,
-} from "vuetify/lib/components/VInfiniteScroll/VInfiniteScroll.mjs";
+import type { InfiniteScrollStatus } from "vuetify/lib/components/VInfiniteScroll/VInfiniteScroll.mjs";
 import type { FilterByItem, SearchIn, SearchOut } from "../@types/table";
 import { useAppStore } from "@/stores/app";
 
 const appStore = useAppStore();
 const open = ref(false);
 const page = ref(1);
+// Server response items are dynamic.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Array<Record<string, any>>);
 
 const more = () => {
@@ -76,14 +75,10 @@ const more = () => {
   open.value = true;
 };
 
-const load = ({
-  side,
-  done,
-}: {
-  side: InfiniteScrollSide;
-  done: (status: InfiniteScrollStatus) => void;
-}) => {
+const load = ({ done }: { done: (status: InfiniteScrollStatus) => void }) => {
   done("loading");
+  // Server response items are dynamic.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getResponse<SearchOut<Record<string, any>>>(
     props.searchRequest({
       greedy: true,
@@ -101,7 +96,7 @@ const load = ({
           };
           return prev;
         },
-        {} as Record<string, FilterByItem>
+        {} as Record<string, FilterByItem>,
       ),
     }),
     async (rsp) => {
@@ -120,7 +115,7 @@ const load = ({
         color: "error",
       });
       done("error");
-    }
+    },
   );
 };
 

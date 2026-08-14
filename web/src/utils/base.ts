@@ -15,7 +15,7 @@ export function arrayToCsv(data: string[][]): string {
           }
           return field;
         })
-        .join(",")
+        .join(","),
     )
     .join("\r\n"); // 使用 CRLF 换行符（CSV 标准）
 }

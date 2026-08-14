@@ -13,8 +13,8 @@
         ref="editDialogRef"
         :title="$t(`model.user.name`)"
         :confirm-disabled="!meta.dirty || !meta.valid"
-        @confirm="itemUpdateAction"
         prepend-icon="mdi-account"
+        @confirm="itemUpdateAction"
       >
         <template #body="{ proxy, editable }">
           <v-form>
@@ -56,24 +56,20 @@
                   :editable="editable"
                   order-by-field="createdAt"
                 >
-                  <template #list-item-action="{ item, editable, removeItem }">
+                  <template #list-item-action="{ item, editable: listEditable, removeItem }">
                     <v-btn
-                      @click="leaveGroupAction(proxy.unionID, item, removeItem)"
-                      :disabled="!editable"
+                      :disabled="!listEditable"
                       icon="mdi-minus"
                       variant="tonal"
                       color="error"
                       density="compact"
+                      @click="leaveGroupAction(proxy.unionID, item, removeItem)"
                     />
                   </template>
                   <template #search="{ items, close, appendItem }">
                     <v-list :items="items">
                       <v-list-item v-for="item in items" :key="item.id">
-                        <v-card
-                          color="surface-variant"
-                          variant="tonal"
-                          density="compact"
-                        >
+                        <v-card color="surface-variant" variant="tonal" density="compact">
                           <v-card-title>
                             {{ item.name }}
                           </v-card-title>
@@ -94,21 +90,21 @@
                           </v-card-text>
                           <v-card-actions>
                             <v-btn
+                              :disabled="!(editable && item.namespace)"
+                              :text="$t('action.join')"
+                              color="primary"
+                              density="compact"
+                              variant="tonal"
+                              block
                               @click="
                                 joinGroupAction(
                                   proxy.unionID,
                                   item.namespace,
                                   item.name,
                                   appendItem,
-                                  close
+                                  close,
                                 )
                               "
-                              :disabled="!(editable && item.namespace)"
-                              :text="$t('action.join')"
-                              color="success"
-                              density="compact"
-                              variant="tonal"
-                              block
                             />
                           </v-card-actions>
                         </v-card>
@@ -205,8 +201,9 @@ const namespaceOpts = computed(() => {
   return ["*", ...userStore.namespaces];
 });
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
-  let actions: ItemActions = {
+  const actions: ItemActions = {
     edit: detailGetAction,
   };
   switch (item.active) {
@@ -220,6 +217,7 @@ const getActions = (item: Record<string, any>): ItemActions => {
   return actions;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<UserDetailOut>(
     userDetailGet(item.unionID),
@@ -238,10 +236,11 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemUpdateAction = (proxy: Record<string, any>) => {
   handleSubmit(async (values) => {
     await getSimpleResponse(
@@ -263,11 +262,12 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
           timeout: 3000,
           color: "error",
         });
-      }
+      },
     );
   })();
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const activateAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     userSetActive(item.unionID, true),
@@ -285,10 +285,11 @@ const activateAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const deactivateAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     userSetActive(item.unionID, false),
@@ -306,7 +307,7 @@ const deactivateAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
@@ -314,8 +315,9 @@ const joinGroupAction = async (
   unionID: string,
   namespace: string,
   groupName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   appendItem: (item: Record<string, any>) => void,
-  close: () => void
+  close: () => void,
 ): Promise<void> => {
   await getResponse<UserRbacPolicyDetailOut>(
     userGroupJoin(unionID, {
@@ -338,14 +340,15 @@ const joinGroupAction = async (
         color: "error",
       });
       close();
-    }
+    },
   );
 };
 
 const leaveGroupAction = async (
   unionID: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   item: Record<string, any>,
-  callback: () => void
+  callback: () => void,
 ): Promise<void> => {
   await getSimpleResponse(
     userGroupLeave(unionID, {
@@ -366,7 +369,7 @@ const leaveGroupAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 </script>

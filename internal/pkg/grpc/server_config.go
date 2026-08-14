@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	g "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -275,6 +276,6 @@ func DescribeServerConfig(names ...string) config.ConfigDescriptions {
 // 返回：
 //   - *ServerConfig: 指向提取的服务器配置的指针
 //   - error: 配置提取或解组期间遇到的任何错误
-func ExtractServerConfig(v *viper.Viper, name string) (*ServerConfig, error) {
-	return config.ExtractConfig[ServerConfig](v, fmt.Sprintf(`%s.%s`, ServerPrefix, name))
+func ExtractServerConfig(viper *viper.Viper, validate *validator.Validate, name string) (*ServerConfig, error) {
+	return config.ExtractConfig[ServerConfig](viper, validate, fmt.Sprintf(`%s.%s`, ServerPrefix, name))
 }

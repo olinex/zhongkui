@@ -1,9 +1,12 @@
 import type { BaseModelOut } from "@/types";
-import { string } from "yup";
 
 export interface PasswordLoginIn {
   username: string;
   password: string;
+}
+
+export interface UserTokenOut {
+  token: string;
 }
 
 export interface PasswordResetIn {

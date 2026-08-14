@@ -1,20 +1,15 @@
 <template>
   <v-card flat>
-    <v-card-title class="d-flex align-center pe-2">
+    <v-card-title class="d-flex align-center px-4 pt-3 pb-2 text-subtitle-1 font-weight-bold">
       {{ title }}
       <v-spacer />
       <slot name="top" :refresh="tableDataRefresh" />
-      <v-btn
-        :disabled="loading"
-        icon="mdi-refresh"
-        variant="text"
-        @click="tableDataRefresh"
-      />
+      <v-btn :disabled="loading" icon="mdi-refresh" variant="text" @click="tableDataRefresh" />
     </v-card-title>
-    <v-card-text>
+    <v-card-text class="px-4 pt-0 pb-2">
       <expression-field v-model="filterBy" :headers="searchHeaders" />
     </v-card-text>
-    <v-container>
+    <v-container fluid class="px-4 pt-0 pb-4">
       <v-data-table-server
         v-model="selectItems"
         v-model:page="page"
@@ -32,9 +27,7 @@
         <template #loading>
           <v-skeleton-loader :type="`table-row@${total || pageSize}`" />
         </template>
-        <template
-          #item="{ index, item, internalItem, isSelected, toggleSelect }"
-        >
+        <template #item="{ index, item, internalItem, isSelected, toggleSelect }">
           <tr class="text-no-wrap">
             <td>
               <v-checkbox-btn
@@ -64,12 +57,7 @@ import { getResponse } from "@/apis/base";
 import i18n from "@/utils/i18n";
 import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
-import type {
-  BaseHeaders,
-  ErrorResponse,
-  Status,
-  SuccessResponse,
-} from "@/apis/@types/base";
+import type { BaseHeaders, ErrorResponse, Status, SuccessResponse } from "@/apis/@types/base";
 import type {
   Align,
   FilterByItem,
@@ -84,35 +72,22 @@ import { BackendDataType } from "@/types";
 
 async function getSearchResponse<Item>(
   request: AxiosPromise,
-  success: (
-    rsp: SuccessResponse<SearchOut<Item>>,
-    headers: BaseHeaders
-  ) => Promise<void>,
+  success: (rsp: SuccessResponse<SearchOut<Item>>, headers: BaseHeaders) => Promise<void>,
   failed?: (rsp: ErrorResponse, headers: BaseHeaders) => Promise<void>,
   noResponse?: (req: XMLHttpRequest) => Promise<void>,
   noRequest?: (msg: string) => Promise<void>,
-  final?: () => Promise<void>
+  final?: () => Promise<void>,
 ): Promise<Status> {
-  return await getResponse<SearchOut<Item>>(
-    request,
-    success,
-    failed,
-    noResponse,
-    noRequest,
-    final
-  );
+  return await getResponse<SearchOut<Item>>(request, success, failed, noResponse, noRequest, final);
 }
 
 async function getSearchOptionsResponse(
   request: AxiosPromise,
-  success: (
-    rsp: SuccessResponse<SearchOptionsOut>,
-    headers: BaseHeaders
-  ) => Promise<void>,
+  success: (rsp: SuccessResponse<SearchOptionsOut>, headers: BaseHeaders) => Promise<void>,
   failed?: (rsp: ErrorResponse, headers: BaseHeaders) => Promise<void>,
   noResponse?: (req: XMLHttpRequest) => Promise<void>,
   noRequest?: (msg: string) => Promise<void>,
-  final?: () => Promise<void>
+  final?: () => Promise<void>,
 ): Promise<Status> {
   return await getResponse<SearchOptionsOut>(
     request,
@@ -120,22 +95,23 @@ async function getSearchOptionsResponse(
     failed,
     noResponse,
     noRequest,
-    final
+    final,
   );
 }
 
-function extractSearchHeaders(
-  out: SearchOptionsOut
-): Record<string, FilterByOption> {
-  return out.filterBy.reduce((prev, cur) => {
-    prev[cur.name] = {
-      name: cur.name,
-      title: i18n.global.t(`model.${props.modelName}.field.${cur.name}`),
-      actions: cur.actions,
-      type: cur.type,
-    };
-    return prev;
-  }, {} as Record<string, FilterByOption>);
+function extractSearchHeaders(out: SearchOptionsOut): Record<string, FilterByOption> {
+  return out.filterBy.reduce(
+    (prev, cur) => {
+      prev[cur.name] = {
+        name: cur.name,
+        title: i18n.global.t(`model.${props.modelName}.field.${cur.name}`),
+        actions: cur.actions,
+        type: cur.type,
+      };
+      return prev;
+    },
+    {} as Record<string, FilterByOption>,
+  );
 }
 
 function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
@@ -173,7 +149,10 @@ const page = ref(1);
 const pageSize = ref(10);
 const orderBy = ref([] as SortItem[]);
 const filterBy = ref([] as FilterItem[]);
+// Server response items are dynamic.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Record<string, any>[]);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const selectItems = ref([] as Record<string, any>[]);
 const tableHeaders = ref([] as Array<TableHeader>);
 const searchHeaders = ref({} as Record<string, FilterByOption>);
@@ -193,13 +172,16 @@ const orderByOptions = computed(() => {
 });
 
 const filterByOptions = computed(() => {
-  return filterBy.value.reduce((prev, cur) => {
-    prev[cur.field.value] = {
-      action: cur.action.value,
-      value: cur.value.value,
-    };
-    return prev;
-  }, {} as Record<string, FilterByItem>);
+  return filterBy.value.reduce(
+    (prev, cur) => {
+      prev[cur.field.value] = {
+        action: cur.action.value,
+        value: cur.value.value,
+      };
+      return prev;
+    },
+    {} as Record<string, FilterByItem>,
+  );
 });
 
 onBeforeMount(async () => {
@@ -217,6 +199,8 @@ watch(orderBy, tableDataRefresh);
 async function tableDataRefresh() {
   try {
     loading.value = true;
+    // Server response items are dynamic.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await getSearchResponse<Record<string, any>>(
       props.listRequest({
         greedy: false,
@@ -228,7 +212,7 @@ async function tableDataRefresh() {
       async (rsp) => {
         total.value = rsp.data.total;
         items.value = rsp.data.items;
-      }
+      },
     );
   } finally {
     loading.value = false;
@@ -249,7 +233,10 @@ const props = defineProps({
     required: true,
   },
   actions: {
+    // Row payload is dynamic.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Function as PropType<(item: Record<string, any>) => ItemActions>,
+    default: undefined,
   },
   modelName: {
     type: String,

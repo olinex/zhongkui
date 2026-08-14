@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/pkg/config"
@@ -74,6 +75,6 @@ func DescribeConfig(names ...string) config.ConfigDescriptions {
 	return config.DescribeConfig[Config](fmt.Sprintf(`%s.{%s}`, Prefix, strings.Join(names, ",")))
 }
 
-func ExtractConfig(v *viper.Viper, name string) (*Config, error) {
-	return config.ExtractConfig[Config](v, fmt.Sprintf("%s.%s", Prefix, name))
+func ExtractConfig(viper *viper.Viper, validate *validator.Validate, name string) (*Config, error) {
+	return config.ExtractConfig[Config](viper, validate, fmt.Sprintf("%s.%s", Prefix, name))
 }

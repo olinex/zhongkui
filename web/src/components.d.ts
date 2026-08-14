@@ -28,6 +28,7 @@ declare module 'vue' {
     MainLayout: typeof import('./layouts/MainLayout.vue')['default']
     PasswordField: typeof import('./components/forms/PasswordField.vue')['default']
     PieChart: typeof import('./components/charts/PieChart.vue')['default']
+    RegoEditor: typeof import('./components/forms/RegoEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScrollSearchField: typeof import('./components/forms/ScrollSearchField.vue')['default']

@@ -5,12 +5,16 @@ import (
 	"strings"
 	"testing"
 
+	uv "github.com/go-playground/validator/v10"
 	"github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 )
+
+// testValidate 测试用的验证器实例
+var testValidate = uv.New()
 
 func TestConfigStruct(t *testing.T) {
 	convey.Convey("Test Config struct", t, func() {
@@ -229,7 +233,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("zap.default.outputPaths", []string{"stdout"})
 			v.Set("zap.default.errorOutputPaths", []string{"stderr"})
 
-			cfg, err := ExtractConfig(v, "default")
+			cfg, err := ExtractConfig(v, testValidate, "default")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.Level, convey.ShouldEqual, "debug")
@@ -243,7 +247,7 @@ func TestExtractConfig(t *testing.T) {
 			v := viper.New()
 			v.Set("zap.custom.level", "warn")
 
-			cfg, err := ExtractConfig(v, "custom")
+			cfg, err := ExtractConfig(v, testValidate, "custom")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.Level, convey.ShouldEqual, "warn")
@@ -256,7 +260,7 @@ func TestExtractConfig(t *testing.T) {
 		convey.Convey("should return error for non-existent config", func() {
 			v := viper.New()
 
-			cfg, err := ExtractConfig(v, "non-existent")
+			cfg, err := ExtractConfig(v, testValidate, "non-existent")
 			convey.So(err, convey.ShouldNotBeNil)
 			convey.So(cfg, convey.ShouldBeNil)
 		})
@@ -267,7 +271,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("zap.app.outputPaths", []string{"stdout", "/var/log/app.log", "/tmp/app.debug.log"})
 			v.Set("zap.app.errorOutputPaths", []string{"stderr", "/var/log/app.error.log"})
 
-			cfg, err := ExtractConfig(v, "app")
+			cfg, err := ExtractConfig(v, testValidate, "app")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.OutputPaths, convey.ShouldHaveLength, 3)
@@ -286,7 +290,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("zap.test.disableCaller", true)
 			v.Set("zap.test.disableStacktrace", true)
 
-			cfg, err := ExtractConfig(v, "test")
+			cfg, err := ExtractConfig(v, testValidate, "test")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.Development, convey.ShouldBeFalse)
@@ -319,7 +323,7 @@ func TestIntegration(t *testing.T) {
 			v.Set("zap.integration.encoding", "console")
 			v.Set("zap.integration.outputPaths", []string{"stdout"})
 
-			cfg, err := ExtractConfig(v, "integration")
+			cfg, err := ExtractConfig(v, testValidate, "integration")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 
@@ -350,7 +354,7 @@ zap:
 			err := v.ReadConfig(strings.NewReader(yamlConfig))
 			convey.So(err, convey.ShouldBeNil)
 
-			cfg, err := ExtractConfig(v, "production")
+			cfg, err := ExtractConfig(v, testValidate, "production")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 
@@ -376,7 +380,7 @@ func TestConstants(t *testing.T) {
 			configPath := fmt.Sprintf("%s.test", Prefix)
 			v.Set(configPath+".level", "debug")
 
-			cfg, err := ExtractConfig(v, "test")
+			cfg, err := ExtractConfig(v, testValidate, "test")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.Level, convey.ShouldEqual, "debug")

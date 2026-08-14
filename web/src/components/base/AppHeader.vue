@@ -1,7 +1,7 @@
 <template>
-  <v-app-bar color="grey-darken-3">
+  <v-app-bar elevation="0" class="app-header">
     <template #prepend>
-      <v-btn @click="gotoHome">
+      <v-btn variant="text" @click="gotoHome">
         <v-img src="@/assets/logo.png" size="xs" cover absolute round />
       </v-btn>
       <v-menu transition="scale-transition">
@@ -9,6 +9,8 @@
           <v-btn
             v-show="userStore.valid"
             v-bind="props"
+            variant="text"
+            append-icon="mdi-chevron-down"
             @click="refreshAvailableNamespace"
           >
             {{ appStore.namespace }}
@@ -18,9 +20,9 @@
           <v-list density="compact">
             <v-list-item
               v-for="(namespace, index) in avaliableNamespaces"
-              @click="appStore.asNamespace(namespace as string)"
-              :disabled="namespace == appStore.namespace"
               :key="index"
+              :disabled="namespace == appStore.namespace"
+              @click="appStore.asNamespace(namespace as string)"
             >
               <v-list-item-title>{{ namespace }}</v-list-item-title>
             </v-list-item>
@@ -31,7 +33,7 @@
     <template #append>
       <v-menu transition="scale-transition">
         <template #activator="{ props }">
-          <v-btn v-bind="props">
+          <v-btn v-bind="props" variant="text" prepend-icon="mdi-translate">
             {{ $t("action.language") }}
           </v-btn>
         </template>
@@ -40,8 +42,8 @@
             <v-list-item
               v-for="item in SUPPORT_LANGUAGES"
               v-show="item.value !== appStore.language"
-              @click="asLanguagePath($route, item.value)"
               :key="item.value"
+              @click="asLanguagePath($route, item.value)"
             >
               <v-list-item-title>{{ item.title }}</v-list-item-title>
             </v-list-item>
@@ -49,25 +51,25 @@
         </v-card>
       </v-menu>
       <v-btn
-        class="mr-2"
         v-model="appStore.theme"
+        class="mr-2"
+        variant="text"
+        :icon="appStore.theme === DARK_THEME ? 'mdi-weather-night' : 'mdi-weather-sunny'"
         @click="appStore.toggleTheme"
-        :icon="
-          appStore.theme === DARK_THEME
-            ? 'mdi-weather-night'
-            : 'mdi-weather-sunny'
-        "
       />
       <v-btn
-        class="mr-2"
         v-show="!userStore.valid"
-        @click="gotoSignUp"
-        variant="outlined"
-        >{{ $t("action.signUp") }}</v-btn
-      >
-      <v-btn
         class="mr-2"
+        variant="outlined"
+        color="primary"
+        @click="gotoSignUp"
+      >
+        {{ $t("action.signUp") }}
+      </v-btn>
+      <v-btn
         v-show="!userStore.valid && !loginCurrent"
+        class="mr-2"
+        variant="text"
         @click="gotoSignIn"
       >
         {{ $t("action.signIn") }}
@@ -128,18 +130,26 @@ const refreshAvailableNamespace = async () => {
 };
 
 const gotoHome = () => {
+  // route.params type does not satisfy RouteLocationRaw.params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   router.push({ name: "Home", params: route.params as any });
 };
 
 const gotoProfile = () => {
+  // route.params type does not satisfy RouteLocationRaw.params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   router.push({ name: "Profile", params: route.params as any });
 };
 
 const gotoSignUp = () => {
+  // route.params type does not satisfy RouteLocationRaw.params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   router.push({ name: "Sign Up", params: route.params as any });
 };
 
 const gotoSignIn = () => {
+  // route.params type does not satisfy RouteLocationRaw.params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   router.push({ name: "Sign In", params: route.params as any });
 };
 
@@ -153,3 +163,10 @@ const signOut = () => {
   });
 };
 </script>
+
+<style scoped>
+/* Hairline bottom border separating the app bar from page content. */
+.app-header {
+  border-bottom: 1px solid rgb(var(--v-theme-on-surface), 0.12);
+}
+</style>

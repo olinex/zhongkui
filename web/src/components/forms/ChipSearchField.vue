@@ -1,10 +1,6 @@
 <template>
   <v-autocomplete
     :model-value="modelValue"
-    @update:model-value="emits('update:modelValue', $event)"
-    @update:focused="initAction"
-    @update:search="searchAction"
-    @blur="searchAction.clear"
     :label="label"
     :items="items"
     :loading="loading"
@@ -16,12 +12,16 @@
     :clearable="clearable"
     :closable-chip="clearable"
     chips
+    @update:model-value="emits('update:modelValue', $event)"
+    @update:focused="initAction"
+    @update:search="searchAction"
+    @blur="searchAction.clear"
   >
-    <template #chip="{ props, item }">
-      <slot name="chip" :props="props" :item="item" />
+    <template #chip="{ props: chipProps, item }">
+      <slot name="chip" :props="chipProps" :item="item" />
     </template>
-    <template #item="{ props, item }">
-      <slot name="item" :props="props" :item="item" />
+    <template #item="{ props: itemProps, item }">
+      <slot name="item" :props="itemProps" :item="item" />
     </template>
   </v-autocomplete>
 </template>
@@ -37,17 +37,21 @@ import type { PropType } from "vue";
 
 const appStore = useAppStore();
 const loading = ref(false);
+// Server response items are dynamic.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Array<Record<string, any>>);
 
 const initAction = async () => {
   if (props.init && items.value.length === 0) {
     searchAction.immediate();
   }
-}
+};
 
-const searchAction = debounce(async (val: string) => {
+const searchAction = debounce(async () => {
   loading.value = true;
   items.value = [];
+  // Server response items are dynamic.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getResponse<SearchOut<Record<string, any>>>(
     props.searchRequest({
       greedy: true,
@@ -65,7 +69,7 @@ const searchAction = debounce(async (val: string) => {
           };
           return prev;
         },
-        {} as Record<string, FilterByItem>
+        {} as Record<string, FilterByItem>,
       ),
     }),
     async (rsp) => {
@@ -79,7 +83,7 @@ const searchAction = debounce(async (val: string) => {
         color: "error",
       });
       loading.value = false;
-    }
+    },
   );
 }, 3000);
 
@@ -132,7 +136,7 @@ const props = defineProps({
   init: {
     type: Boolean,
     default: false,
-  }
+  },
 });
 
 const emits = defineEmits(["update:modelValue"]);

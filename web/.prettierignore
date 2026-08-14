@@ -1,0 +1,10 @@
+dist
+node_modules
+pnpm-lock.yaml
+*.tsbuildinfo
+
+# Generated files
+.eslintrc-auto-import.json
+src/auto-imports.d.ts
+src/components.d.ts
+src/typed-router.d.ts

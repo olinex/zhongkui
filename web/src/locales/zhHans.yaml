@@ -5,10 +5,14 @@ navbar:
     group: 用户组
     namespace: 命名空间
     capturer: 采集器
+    tagRule: 标签规则
+    tagEventRule: 标签事件规则
   etl:
     self: 数据处理
     server: 服务端
     task: 任务
+  pin: 固定侧边栏
+  unpin: 取消固定
 model:
   __base:
     field:
@@ -23,7 +27,7 @@ model:
       doubleCheck: 请输入 `{random}` 以二次确认
     value:
       blank: "空白"
-      null: "空"
+      "null": "空"
       undefined: "未定义"
   user:
     name: 用户
@@ -163,6 +167,56 @@ model:
       retention: 保留时长
       group: 组名
       isOrphaned: 孤立任务
+  tagRule:
+    name: 标签规则
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      model: 目标模型
+      description: 描述
+      rego: Rego 规则
+      enabled: 启用
+      version: 版本号
+      versionCount: 版本数量
+  tagEventRule:
+    name: 标签事件规则
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      description: 描述
+      matchAll: 全部条件满足
+      enabled: 启用
+      version: 版本号
+      versionCount: 版本数量
+      conditions: 条件集合
+  tagEventCondition:
+    name: 条件
+    field:
+      name: 条件名称
+      model: 目标模型
+      dimension: 标签维度
+      item: 维度值
+      window: 时间窗口（分钟）
+      threshold: 阈值
+      expression: 标签表达式
+      enabled: 启用
+      description: 描述
+      count: 命中次数
+      detectedAt: 检测时日
+  network:
+    httpTransport: HTTP 传输
 chart:
   title:
     queueSize: 管道大小
@@ -214,10 +268,23 @@ action:
   nextDate: 下一天
   currentTime: 当前时间
   copySecret: 复制密钥
+  validate: 校验
+  dryRun: 试运行
+  version: 版本
+  rollback: 回滚
+  generateSkeleton: 生成骨架
+  generateExpression: 生成表达式
+  reuseFields: 复用已有规则字段
+  fillSample: 填入示例
+  addCondition: 添加条件
+  removeCondition: 移除条件
+  validatePassed: 校验通过
+  validateFailed: 校验未通过
 title:
   zk: Zhong Kui
-  home: 首页 
+  home: 首页
   signIn: 用户登录
+  signUp: 用户注册
   err404: 错误 - 404
   err401: 错误 - 401
   userProfile: 用户个人资料
@@ -228,7 +295,14 @@ title:
   groupAdmin: 管理 - 用户组
   namespaceAdmin: 管理 - 命名空间
   capturerAdmin: 管理 - 采集器
+  tagRuleAdmin: 管理 - 标签规则
+  tagEventRuleAdmin: 管理 - 标签事件规则
   queueEtl: 数据处理 - 管道
+  serverEtl: 数据处理 - 服务端
+  taskEtl: 数据处理 - 任务
+home:
+  subtitle: 网络安全审计平台
+  quickStart: 快速开始
 summary:
   pageNotFound: 页面不存在！
   notSignInYet: 请先登录。
@@ -237,6 +311,7 @@ summary:
   endOfData: 到头了
   noServerYet: "目前尚未有正在运行中的{name}哦！"
   noServerYetHelp: "您可以尝试点击下面的{btn}按钮，再次获取数据。"
+  unknownError: 出现未知错误...
 notice:
   wellcome: 欢迎！
   goodBye: 再见！
@@ -248,6 +323,14 @@ notice:
   archiveConfirm: "确认归档 {category} {key} 吗？"
   cancelConfirm: "确认取消 {category} {key} 吗？"
   runConfirm: "确认运行 {category} {key} 吗？"
+  rollbackConfirm: "确认回滚 {category} {key} 到版本 {version} 吗？"
+  dryRunConfirm: "确认对 {category} {key} 执行试运行吗？"
+  enableConfirm: "确认启用 {category} {key} 吗？"
+  disableConfirm: "确认禁用 {category} {key} 吗？"
+  regoInvalid: "Rego 校验未通过，无法提交！"
+  expressionInvalid: "表达式校验未通过，无法提交！"
+  jsonInvalid: "JSON 格式非法！"
+  noEnabledRules: "当前命名空间没有已启用的标签规则，无法构建标签池。"
 unit:
   day: 天
   second: 秒
@@ -276,43 +359,43 @@ option:
     gte: 大于等于
 validation:
   mixed:
-    default: '{path}不合法'
-    required: '{path}是必填项'
-    defined: '{path}必须被携带'
-    notNull: '{path}不能为空'
-    oneOf: '{path}必须是以下值之一: {values}'
-    notOneOf: '{path}必须不是以下值之一: {values}'
+    default: "{path}不合法"
+    required: "{path}是必填项"
+    defined: "{path}必须被携带"
+    notNull: "{path}不能为空"
+    oneOf: "{path}必须是以下值之一: {values}"
+    notOneOf: "{path}必须不是以下值之一: {values}"
   string:
-    length: '{path}字符长度必须为{length}'
-    min: '{path}字符最小长度必须为{min}'
-    max: '{path}字符最大长度必须为{max}'
+    length: "{path}字符长度必须为{length}"
+    min: "{path}字符最小长度必须为{min}"
+    max: "{path}字符最大长度必须为{max}"
     matches: '{path}必须匹配正则"{regex}"'
-    email: '{path}必须是合法的邮箱地址'
-    url: '{path}必须是合法的URL地址'
-    uuid: '{path}必须是合法的UUID'
-    datetime: '{path}必须为合法的ISO日期时间'
-    datetime_precision: '{path}必须为合法的ISO日期时间，精确到{precision}位小数'
+    email: "{path}必须是合法的邮箱地址"
+    url: "{path}必须是合法的URL地址"
+    uuid: "{path}必须是合法的UUID"
+    datetime: "{path}必须为合法的ISO日期时间"
+    datetime_precision: "{path}必须为合法的ISO日期时间，精确到{precision}位小数"
     datetime_offset: '{path}必须为合法的ISO日期时间，时区为UTC "Z"'
-    trim: '{path}必须为去除两端空白字符后的字符串'
-    lowercase: '{path}必须为小写字符串'
-    uppercase: '{path}必须为大写字符串'
+    trim: "{path}必须为去除两端空白字符后的字符串"
+    lowercase: "{path}必须为小写字符串"
+    uppercase: "{path}必须为大写字符串"
   number:
-    min: '{path}必须大于或等于{min}'
-    max: '{path}必须小于或等于{max}'
-    lessThan: '{path}必须小于{less}'
-    moreThan: '{path}必须大于{more}'
-    positive: '{path}必须为正数'
-    negative: '{path}必须为负数'
-    integer: '{path}必须为整数'
+    min: "{path}必须大于或等于{min}"
+    max: "{path}必须小于或等于{max}"
+    lessThan: "{path}必须小于{less}"
+    moreThan: "{path}必须大于{more}"
+    positive: "{path}必须为正数"
+    negative: "{path}必须为负数"
+    integer: "{path}必须为整数"
   date:
-    min: '{path}必须晚于{min}'
-    max: '{path}必须早于{max}'
+    min: "{path}必须晚于{min}"
+    max: "{path}必须早于{max}"
   boolean:
-    isValue: '{path}必须为{value}'
+    isValue: "{path}必须为{value}"
   object:
-    noUnknown: '{path}字段包含未指定的键：{unknown}'
-    exact: '{path}对象包含未知属性：{properties}'
+    noUnknown: "{path}字段包含未指定的键：{unknown}"
+    exact: "{path}对象包含未知属性：{properties}"
   array:
-    min: '{path}必须至少有{min}项'
-    max: '{path}必须至多有{max}项'
-    length: '{path}必须有{length}项'
+    min: "{path}必须至少有{min}项"
+    max: "{path}必须至多有{max}项"
+    length: "{path}必须有{length}项"

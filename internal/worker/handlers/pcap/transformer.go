@@ -9,6 +9,7 @@ import (
 	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/huginn"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 // TransFromPacketToModel 将数据包项转换为网络模型的数据转换函数。
@@ -24,14 +25,12 @@ func TransFromPacketToModel(ctx context.Context, i any) (any, error) {
 	if model == nil {
 		// 调试：当模型构建失败时，打印层堆栈以定位原因
 		// builder.Stack 和 builder.Level 由 ExtractLayerInfos 填充
-		pterm.Debug.Printfln(
-			"[nil model] level=%d stack_len=%d",
-			builder.Level, len(builder.Stack),
+		pterm.Debug.Println(
+			translate.T("cli.pcap.nil-model", map[string]any{"Level": builder.Level, "Len": len(builder.Stack)}),
 		)
 		for idx, info := range builder.Stack {
-			pterm.Debug.Printfln(
-				"[nil model]   stack[%d] level=%d proto=%s headers=%v",
-				idx, info.Level, info.Proto, info.Headers != nil,
+			pterm.Debug.Println(
+				translate.T("cli.pcap.nil-model-stack", map[string]any{"Index": idx, "Level": info.Level, "Proto": info.Proto, "Headers": info.Headers != nil}),
 			)
 		}
 	}

@@ -7,12 +7,11 @@
 import consola from "consola";
 import { setupLayouts } from "virtual:generated-layouts";
 // Composables
-import { createRouter, createWebHistory } from "vue-router/auto";
+import { createRouter, createWebHistory } from "vue-router";
 import { routes } from "vue-router/auto-routes";
 
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
-import { sleep } from "@/utils/base";
 import i18n from "@/utils/i18n";
 
 import { SupportLanguage } from "@/types";
@@ -40,13 +39,13 @@ router.onError((err, to) => {
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
-  let retry = 1;
-  if (!userStore.initial && retry < 5) {
-    await sleep(2 ** retry * 100);
-    retry += 1;
+  // 受保护路由需等待用户状态初始化完成后再校验登录态，
+  // 避免授权信息尚未加载完成就被误判为未登录而重定向到 401 页面
+  if (to.meta.requiresAuth && !userStore.initial) {
+    await userStore.init();
   }
   const appStore = useAppStore();
-  let params = to.params as any;
+  const params = to.params as Record<string, unknown>;
   let lang = params.language as SupportLanguage;
   if (to.path === "/") {
     lang = appStore.language;
@@ -97,13 +96,15 @@ router.isReady().then(() => {
   localStorage.removeItem("vuetify:dynamic-reload");
 });
 
+// The route object is spread into `router.push`, so its shape is intentionally loose.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const asLanguagePath = (route: any, language: SupportLanguage) => {
   router.push({
     ...route,
     params: {
       ...route.params,
       language,
-    } as any,
+    },
     query: {
       ...route.query,
     },

@@ -6,6 +6,7 @@ import (
 
 	"github.com/pterm/pterm"
 	"zhongkui.com/zhongkui/internal/pkg/etl"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/worker/handlers/base"
 )
 
@@ -19,7 +20,7 @@ func (w *pcapHandler) Do(ctx context.Context, task etl.Task) error {
 	stats := NewPcapStats()
 	ctx = WithPcapStats(ctx, stats)
 	err := w.handler.Do(ctx, task)
-	pterm.Debug.Printfln("[pcap import stats] %s", stats.Snapshot())
+	pterm.Debug.Println(translate.T("cli.pcap.import-stats", map[string]any{"Stats": stats.Snapshot()}))
 	return err
 }
 

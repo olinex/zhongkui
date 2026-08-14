@@ -30,14 +30,14 @@ var createPasswordBookCmd = &cobra.Command{
 				pterm.Error.Println(err.Error())
 				return
 			}
-			fmt.Printf("Password book generated successfully: %s (%d bytes)\n", passwordBookOutput, len(data))
+			fmt.Println(cliT("cli.crypto.book-generated-file", "密码本文件已生成：{{.Path}}（{{.Bytes}} 字节）", map[string]any{"Path": passwordBookOutput, "Bytes": len(data)}))
 		} else {
 			// Write to stdout
 			if _, err := os.Stdout.Write(data); err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}
-			fmt.Fprintf(os.Stderr, "Password book generated successfully (%d bytes). Use --output to save to a file.\n", len(data))
+			fmt.Fprintln(os.Stderr, cliT("cli.crypto.book-generated-stdout", "密码本已生成（{{.Bytes}} 字节）。使用 --output 保存到文件。", map[string]any{"Bytes": len(data)}))
 		}
 	},
 }

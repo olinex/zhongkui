@@ -10,6 +10,7 @@ import (
 	"github.com/pterm/pterm"
 	"gorm.io/gorm/schema"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 var (
@@ -77,15 +78,15 @@ const (
 func (k IssueKind) Label() string {
 	switch k {
 	case IssueKindMissingTable:
-		return "Missing Table"
+		return translate.T("cli.migrate.issue-missing-table", nil)
 	case IssueKindExtraTable:
-		return "Extra Table"
+		return translate.T("cli.migrate.issue-extra-table", nil)
 	case IssueKindMissingColumn:
-		return "Missing Column"
+		return translate.T("cli.migrate.issue-missing-column", nil)
 	case IssueKindExtraColumn:
-		return "Extra Column"
+		return translate.T("cli.migrate.issue-extra-column", nil)
 	default:
-		return "Mismatch"
+		return translate.T("cli.migrate.issue-mismatch", nil)
 	}
 }
 
@@ -98,7 +99,7 @@ type CheckIssue struct {
 }
 
 func Check(ctx context.Context, cfg *Config, models []any) error {
-	pterm.Info.Println("creating temporary database for schema check...")
+	pterm.Info.Println(translate.T("cli.migrate.check-creating", nil))
 	tempDB, err := CreateTempDB(ctx, cfg)
 	if err != nil {
 		return errors.Newf("failed to create temp database: %v", err)
@@ -120,7 +121,7 @@ func Check(ctx context.Context, cfg *Config, models []any) error {
 		return errors.Newf("failed to create migrator for temp db: %v", err)
 	}
 
-	pterm.Info.Printf("running migrations on temporary database %s...\n", tempDB.name)
+	pterm.Info.Println(translate.T("cli.migrate.check-running", map[string]any{"DB": tempDB.name}))
 	if err = migrator.Up(ctx); err != nil {
 		if !cfg.KeepTemp {
 			tempDB.Close(ctx)
@@ -128,16 +129,16 @@ func Check(ctx context.Context, cfg *Config, models []any) error {
 		return errors.Newf("migration failed: %v", err)
 	}
 
-	pterm.Info.Println("comparing model definitions with database schema...")
+	pterm.Info.Println(translate.T("cli.migrate.check-comparing", nil))
 	err = CheckModels(ctx, tempDB.db, cfg.Driver, models)
 
 	if !cfg.KeepTemp {
-		pterm.Info.Printf("cleaning up temporary database %s...\n", tempDB.name)
+		pterm.Info.Println(translate.T("cli.migrate.check-cleanup", map[string]any{"DB": tempDB.name}))
 		if closeErr := tempDB.Close(ctx); closeErr != nil {
-			pterm.Warning.Printf("warning: failed to drop temp database %s: %v\n", tempDB.name, closeErr)
+			pterm.Warning.Println(translate.T("cli.migrate.check-drop-failed", map[string]any{"DB": tempDB.name, "Err": closeErr}))
 		}
 	} else {
-		pterm.Info.Printf("temporary database %s preserved (--keep-temp)\n", tempDB.name)
+		pterm.Info.Println(translate.T("cli.migrate.check-preserved", map[string]any{"DB": tempDB.name}))
 	}
 
 	return err
@@ -171,7 +172,7 @@ func CheckModels(ctx context.Context, db *sql.DB, driver string, models []any) e
 	issues = append(issues, checkExtraTables(expectedTables, actualTables)...)
 
 	if len(issues) == 0 {
-		pterm.Success.Println("All models match the database schema, no issues found")
+		pterm.Success.Println(translate.T("cli.migrate.check-ok", nil))
 		return nil
 	}
 
@@ -286,7 +287,13 @@ func (issue CheckIssue) actualDisplay() string {
 
 func renderIssuesTable(issues []CheckIssue) {
 	data := pterm.TableData{
-		{"Issue", "Table", "Column", "Expected Type", "Actual Type"},
+		{
+			translate.T("cli.migrate.col-issue", nil),
+			translate.T("cli.migrate.col-table", nil),
+			translate.T("cli.migrate.col-column", nil),
+			translate.T("cli.migrate.col-expected-type", nil),
+			translate.T("cli.migrate.col-actual-type", nil),
+		},
 	}
 
 	for _, issue := range issues {
@@ -296,7 +303,7 @@ func renderIssuesTable(issues []CheckIssue) {
 	}
 
 	if err := pterm.DefaultTable.WithHasHeader().WithData(data).Render(); err != nil {
-		pterm.Error.Printf("error rendering issues table: %v\n", err)
+		pterm.Error.Println(translate.T("cli.migrate.issues-table-error", map[string]any{"Err": err}))
 	}
 }
 

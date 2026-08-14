@@ -190,7 +190,7 @@ func TestStageTracerReport(t *testing.T) {
 			output := buf.String()
 
 			So(output, ShouldNotBeEmpty)
-			So(strings.Contains(output, "=== 阶段耗时统计报告 ==="), ShouldBeTrue)
+			So(strings.Contains(output, "阶段耗时统计报告"), ShouldBeTrue)
 			So(strings.Contains(output, "test.stage"), ShouldBeTrue)
 			So(strings.Contains(output, "100.0%"), ShouldBeTrue)
 		})
@@ -200,7 +200,7 @@ func TestStageTracerReport(t *testing.T) {
 			printReport(&buf, nil, 0)
 			output := buf.String()
 			So(output, ShouldNotBeEmpty)
-			So(strings.Contains(output, "=== 阶段耗时统计报告 ==="), ShouldBeTrue)
+			So(strings.Contains(output, "阶段耗时统计报告"), ShouldBeTrue)
 		})
 	})
 }

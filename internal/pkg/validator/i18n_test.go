@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gin-gonic/gin/binding"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	. "github.com/smartystreets/goconvey/convey"
@@ -145,14 +144,9 @@ func (m *mockLocalizer) MustLocalizeWithData(message *i18n.Message, data map[str
 // TestTranslationRegister 测试 translationRegister 函数的核心逻辑
 func TestTranslationRegister(t *testing.T) {
 	Convey("Test translationRegister function", t, func() {
-		// 在每个测试用例前重置验证器
-		Reset(func() {
-			binding.Validator = &defaultValidator{}
-		})
-
 		Convey("Should register translation successfully", func() {
 			// 获取验证器实例
-			validate := mustValidate()
+			validate := newTestValidate()
 			So(validate, ShouldNotBeNil)
 
 			// 验证函数至少可以调用而不panic
@@ -184,10 +178,6 @@ func TestTranslationRegister(t *testing.T) {
 // TestTranslationRegisterFunction 测试 TranslationRegister 函数
 func TestTranslationRegisterFunction(t *testing.T) {
 	Convey("Test TranslationRegister function", t, func() {
-		// 在每个测试用例前重置验证器
-		Reset(func() {
-			binding.Validator = &defaultValidator{}
-		})
 
 		Convey("Should call translationRegister with correct parameters", func() {
 			// TranslationRegister 是 translationRegister 的包装器
@@ -275,13 +265,9 @@ func TestErrorHandling(t *testing.T) {
 	Convey("Test error handling in i18n functions", t, func() {
 		Convey("Should handle nil parameters gracefully", func() {
 			// 在实际代码中，函数应该处理 nil 参数
-			// 由于函数内部使用 mustValidate()，如果验证器未初始化会 panic
-
-			// 重置验证器以确保干净的状态
-			binding.Validator = &defaultValidator{}
 
 			// 获取验证器实例（确保不会 panic）
-			validate := mustValidate()
+			validate := newTestValidate()
 			So(validate, ShouldNotBeNil)
 
 			t.Log("Functions rely on properly initialized validator")
@@ -345,32 +331,29 @@ func BenchmarkTranslationRegistration(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		// 重置验证器状态
-		binding.Validator = &defaultValidator{}
-
-		// 调用 mustValidate 获取验证器实例
-		_ = mustValidate()
+		// 获取验证器实例
+		_ = newTestValidate()
 
 		// 注意：由于依赖复杂，我们无法完整测试 translationRegister
 		// 在实际基准测试中，应该设置完整的依赖
 	}
 }
 
-// ExampleTranslationRegister 使用示例
-func ExampleTranslationRegister() {
-	// 这个示例展示了如何使用 translationRegister 函数
+// ExampleRegisterTranslation 使用示例
+func ExampleRegisterTranslation() {
+	// 这个示例展示了如何使用 RegisterTranslation 函数
 	// 注意：这是一个概念示例，实际使用需要完整的设置
 
-	fmt.Println("To use translationRegister:")
+	fmt.Println("To use RegisterTranslation:")
 	fmt.Println("1. Create a translator for your language")
 	fmt.Println("2. Create an i18n bundle with validation messages")
-	fmt.Println("3. Call translationRegister with the translator, bundle, tag, and language code")
+	fmt.Println("3. Call RegisterTranslation with the validator, translator, bundle, tag, and language code")
 	fmt.Println("4. Handle any errors that occur")
 
 	// 输出:
-	// To use translationRegister:
+	// To use RegisterTranslation:
 	// 1. Create a translator for your language
 	// 2. Create an i18n bundle with validation messages
-	// 3. Call translationRegister with the translator, bundle, tag, and language code
+	// 3. Call RegisterTranslation with the validator, translator, bundle, tag, and language code
 	// 4. Handle any errors that occur
 }

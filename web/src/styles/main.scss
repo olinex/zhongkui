@@ -1,0 +1,83 @@
+/**
+ * src/styles/main.scss
+ *
+ * Global styles. All colors come from Vuetify theme CSS variables
+ * (e.g. `rgb(var(--v-theme-background))`), so light/dark themes stay in sync.
+ */
+
+@use "./tokens" as *;
+
+// Base body
+body {
+  font-family: $zk-font-family;
+  color: rgb(var(--v-theme-on-background));
+  font-variant-numeric: tabular-nums;
+}
+
+// Dark base for overscroll, matches default dark theme
+// overflow-y: auto 覆盖 Vuetify reset 的 scroll（强制常驻滚动条会在无滚动内容时
+// 于右侧留下 11px 槽位，露出 html 背景色与 app-bar 形成色差竖带）
+html {
+  background-color: #0e1116;
+  overflow-y: auto;
+}
+
+// Scrollbars (WebKit)
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--v-theme-on-surface), 0.3);
+  border-radius: 4px;
+}
+
+// Scrollbars (Firefox)
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--v-theme-on-surface), 0.3) transparent;
+}
+
+// Keyboard focus indicator
+:focus-visible {
+  outline: 2px solid rgb(var(--v-theme-primary));
+  outline-offset: 2px;
+}
+
+// Text selection
+::selection {
+  background: rgb(var(--v-theme-primary), 0.25);
+}
+
+// Monospace utility for technical values (IDs, hashes, hex, bytes)
+.font-mono {
+  font-family: $zk-font-mono;
+  font-variant-numeric: tabular-nums;
+}
+
+// Flat cards: thin border instead of heavy shadow.
+// Note: Vuetify has no `--v-theme-border` variable, so use a translucent
+// `on-surface` tint matching Vuetify's own border-opacity (0.12) semantics.
+// `.v-application` prefix wins over vite-plugin-vuetify's deferred component
+// styles in dev mode (same specificity, later injection order).
+.v-application .v-card {
+  border: 1px solid rgb(var(--v-theme-on-surface), 0.12);
+  border-radius: 12px;
+}
+
+// Data table: row hover highlight
+.v-application .v-data-table {
+  tbody tr:hover {
+    background: rgb(var(--v-theme-primary), 0.06);
+  }
+
+  // Data table: refined header
+  th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(var(--v-theme-on-surface-variant));
+  }
+}

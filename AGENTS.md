@@ -127,8 +127,8 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 - 中文为默认文案：所有 `Short`/`Long`、flag usage、交互式提示（`prompt` 标签、pterm 输入提示）必须用中文；`Use` 字段保持命令名/语法不变
 - 文案统一接入 go-i18n（`internal/pkg/translate`），翻译键：`cmd.<path>.short|long|example`、`flag.<path>.<name>`、`cli.<topic>`；英文维护在 `en.toml`，未命中回退中文原文
-- `prompt:"..."` 标签提示由 `internal/pkg/cliinput` 按 `cli.input.prompt.<StructName>.<FieldName>` 翻译，中文标签为回退；翻译经 `SetTranslator` 注入（`internal/cmd/i18n.go` 的 `init()` 注入 `cliT`）；cliinput 内部固定键为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CliI18nPrefix`）
-- 语言切换：环境变量 `ZKI_LANG`（`en` / `zh-Hans`，默认 `zh-Hans`），统一由 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GlobalPrefix` 为 `zki` + `envconfig:"LANG"`）提供，CLI 经 `base.Env.Lang` 读取
+- `prompt:"..."` 标签提示由 `internal/pkg/cliinput` 按 `cli.input.prompt.<StructName>.<FieldName>` 经 `internal/pkg/translate` 的 `T` 函数翻译，中文文案维护在 `locales/zh-Hans.toml`、英文在 `en.toml`；cliinput 内部固定键为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CliI18nPrefix`）
+- 语言切换：环境变量 `ZKI_LANG`（`en` / `zh-Hans`，默认 `zh-Hans`），统一由 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GlobalPrefix` 为 `zki` + `split_words:"true"` 映射为 `ZKI_LANG`）提供，CLI 经 `base.Env.Lang` 读取
 - 翻译入口 `internal/cmd/i18n.go`：`cliLang()` / `getCliI18n()` / `cliT()`；命令树本地化在 `Execute()` 的 `localizeCmdTree()`
 - 覆盖 cobra 内置英文命令：`internal/cmd/help.go`（中文 help）、`internal/cmd/completion.go`（中文 completion），根命令 `init()` 中 `RootCmd.SetHelpCommand(helpCmd)` 注册
 - `--help` 不触发 `PersistentPreRunE`，故语言切换必须放在 `Execute()` 入口的 `localizeCmdTree()` 中

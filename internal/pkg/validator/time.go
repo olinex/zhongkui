@@ -68,13 +68,13 @@ func compareWithCurrentTime(fl validator.FieldLevel, comparer func(a, b time.Tim
 //	type Event struct {
 //	    StartTime time.Time `validate:"gtCurrentTime"` // 必须晚于当前时间
 //	}
-func validateGtCurrentTime(fl validator.FieldLevel) bool {
+func ValidateGtCurrentTime(fl validator.FieldLevel) bool {
 	return compareWithCurrentTime(fl, func(a, b time.Time) bool {
 		return a.After(b)
 	})
 }
 
-// validateLtCurrentTime 是 ltCurrentTime 标签的验证函数，用于验证时间字段是否小于当前时间。
+// ValidateLtCurrentTime 是 ltCurrentTime 标签的验证函数，用于验证时间字段是否小于当前时间。
 // 该函数检查字段值是否在当前时间之前，即是否为过去时间。
 //
 // 使用场景：
@@ -92,13 +92,8 @@ func validateGtCurrentTime(fl validator.FieldLevel) bool {
 //	type User struct {
 //	    BirthDate time.Time `validate:"ltCurrentTime"` // 必须早于当前时间
 //	}
-func validateLtCurrentTime(fl validator.FieldLevel) bool {
+func ValidateLtCurrentTime(fl validator.FieldLevel) bool {
 	return compareWithCurrentTime(fl, func(a, b time.Time) bool {
 		return b.After(a)
 	})
-}
-
-func init() {
-	validations[TagGreaterThanCurrentTime] = validateGtCurrentTime
-	validations[TagLesserThanCurrentTime] = validateLtCurrentTime
 }

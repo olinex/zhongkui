@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	en2 "github.com/go-playground/locales/en"
 	ut "github.com/go-playground/universal-translator"
+	uv "github.com/go-playground/validator/v10"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/pelletier/go-toml/v2"
 	. "github.com/smartystreets/goconvey/convey"
@@ -31,7 +33,35 @@ func TestMain(m *testing.M) {
 	provider := key.NewConfigFileSecretKeyProvider("this-is-a-32-byte-secret-key!!")
 	key.InitGlobalKeyDerivation(provider, pb)
 
+	// 在 Gin binding 验证器上注册自定义验证规则，供请求体绑定校验使用
+	registerBindingValidations()
+
 	os.Exit(m.Run())
+}
+
+// registerBindingValidations 在 Gin binding 验证器上注册自定义验证规则
+// 测试中通过 ShouldBindJSON 等绑定的请求体包含 binding 标签（如 strongPassword、
+// alphanumspecial、gtCurrentTime），需确保这些自定义规则在测试环境已注册
+func registerBindingValidations() {
+	v, ok := binding.Validator.Engine().(*uv.Validate)
+	if !ok {
+		panic("binding validator is not valid")
+	}
+	for tag, fn := range map[string]uv.Func{
+		validator.TagStrongPassword:         validator.ValidateStrongPassword,
+		validator.TagWindowsFileName:        validator.ValidateWindowsFileName,
+		validator.TagUnixFileName:           validator.ValidateUnixFileName,
+		validator.TagFileName:               validator.ValidateFileName,
+		validator.TagStrictFileName:         validator.ValidateStrictFileName,
+		validator.TagDirpath:                validator.ValidateDirPath,
+		validator.TagAlphanumSpecial:        validator.ValidateAlphanumSpecial,
+		validator.TagGreaterThanCurrentTime: validator.ValidateGtCurrentTime,
+		validator.TagLesserThanCurrentTime:  validator.ValidateLtCurrentTime,
+	} {
+		if err := v.RegisterValidation(tag, fn); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func newBaseTestLocalizer() *i18n.Localizer {
@@ -71,8 +101,6 @@ func newBaseTestTranslator() ut.Translator {
 
 // setupI18nMiddleware 返回一个注入 Localizer 和 Translator 的 Gin 中间件
 func setupI18nMiddleware() gin.HandlerFunc {
-	// 确保自定义验证规则（如 strongPassword）已注册到 Gin 的 binding engine
-	validator.Init()
 	return func(c *gin.Context) {
 		c.Set(manager.LocalizerCtxName, newBaseTestLocalizer())
 		c.Set(manager.TranslatorCtxName, newBaseTestTranslator())

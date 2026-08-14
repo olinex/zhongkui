@@ -9,6 +9,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/routes"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -20,10 +21,11 @@ var createCapturerCmd = &cobra.Command{
 		_, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
 		v := provider.MustInvokeViper(i)
+
 		timeout := v.GetDuration("timeout")
 
 		var in routes.CapturerCreateIn
-		if err := cliinput.Extract(v, &in, ""); err != nil {
+		if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
@@ -41,11 +43,11 @@ var createCapturerCmd = &cobra.Command{
 		}
 
 		if err := instance.CreateWithConfig(db.WithContext(ctx), client, in.Config.ToGRPC()); err != nil {
-			pterm.Error.Printf("cannot create capturer: %v\n", err)
+			pterm.Error.Println(cliT("cli.capturer.create-failed", "无法创建抓包器：{{.Err}}", map[string]any{"Err": err}))
 			return
 		}
 
-		pterm.Success.Printf("capturer %s/%s (%s) created successfully\n", in.Namespace, in.Name, in.Version)
+		pterm.Success.Println(cliT("cli.capturer.created", "抓包器 {{.Namespace}}/{{.Name}}（{{.Version}}）创建成功", map[string]any{"Namespace": in.Namespace, "Name": in.Name, "Version": in.Version}))
 	},
 }
 

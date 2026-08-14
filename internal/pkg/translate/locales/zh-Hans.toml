@@ -85,6 +85,354 @@ badUrlParam = "URL 参数`%s`不合法: %s"
 
 [validator]
 strongPassword = "字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?&）"
+windowsFileName = "字段须为合法的 Windows 文件名（不能为系统保留名，不能包含非法字符，不能以空格或点结尾）"
+unixFileName = "字段须为合法的 Unix 文件名（不能以点开头，不能包含斜杠或空字符）"
+fileName = "字段须为合法的文件名"
+strictFileName = "字段须为严格合法的文件名（不能以连字符开头，不能包含空格或控制字符）"
+dirpath = "字段须为合法的目录路径"
+alphanumspecial = "字段只能包含字母、数字与指定的特殊字符"
+gtCurrentTime = "字段必须晚于当前时间"
+ltCurrentTime = "字段必须早于当前时间"
 
 ["model.network.httpTransport"]
 other = "HTTP 传输"
+
+# =============================================================================
+# Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
+# 中文为默认文案；English lives in en.toml
+# =============================================================================
+
+["cli.input.prompt.UserProfileChangeIn.NickleName"]
+other = "请输入昵称"
+
+["cli.input.prompt.UserProfileChangeIn.Email"]
+other = "请输入用户邮箱"
+
+["cli.input.prompt.UserPasswordLoginIn.Username"]
+other = "请输入用户名"
+
+["cli.input.prompt.UserPasswordLoginIn.Password"]
+other = "请输入密码"
+
+["cli.input.prompt.CapturerConfigIn.Device"]
+other = "请输入网络设备名称（如 eth0）"
+
+["cli.input.prompt.CapturerConfigIn.SnapLen"]
+other = "请输入抓包长度（字节）"
+
+["cli.input.prompt.CapturerConfigIn.Promisc"]
+other = "是否启用混杂模式？"
+
+["cli.input.prompt.CapturerConfigIn.Timeout"]
+other = "请输入读超时时间（如 5s、1m30s）"
+
+["cli.input.prompt.CapturerConfigIn.BpfExpr"]
+other = "请输入 BPF 过滤表达式（如 tcp port 80）"
+
+["cli.input.prompt.CapturerConfigIn.Enabled"]
+other = "是否启用该抓包器？"
+
+["cli.input.prompt.CapturerCreateIn.Namespace"]
+other = "请输入命名空间"
+
+["cli.input.prompt.CapturerCreateIn.Name"]
+other = "请输入抓包器名称"
+
+["cli.input.prompt.CapturerCreateIn.Version"]
+other = "请输入版本号"
+
+["cli.input.prompt.TLSInputs.Name"]
+other = "请输入 TLS 名称"
+
+["cli.input.prompt.TLSInputs.DirPath"]
+other = "请输入目录路径"
+
+["cli.input.prompt.TLSInputs.TTL"]
+other = "请输入有效期 TTL（例如 8760h 表示 1 年）"
+
+["cli.input.prompt.TLSInputs.DNSNames"]
+other = "请输入 DNS 域名列表"
+
+["cli.input.prompt.createAccessKeyInput.Username"]
+other = "请输入用户名"
+
+["cli.input.prompt.createAccessKeyInput.Description"]
+other = "请输入描述"
+
+["cli.input.prompt.createAccessKeyInput.Enabled"]
+other = "是否启用该访问密钥？"
+
+["cli.input.prompt.createAccessKeyInput.TTL"]
+other = "请输入有效期 TTL（如 8760h，0 表示永不过期）"
+
+["cli.input.prompt.createUserInput.Superuser"]
+other = "是否为超级管理员？"
+
+["cli.input.prompt.confirm-suffix"]
+other = "（再次输入确认）"
+
+["cli.input.prompt.comma-separated-suffix"]
+other = "（逗号分隔）"
+
+["cli.input.mismatch"]
+other = "两次输入不一致，请重新输入！"
+
+# =============================================================================
+# CLI print messages (pterm output) - Key layout: cli.<topic>.<message>
+# 中文为默认文案；English lives in en.toml
+# =============================================================================
+
+[cli.base.pterm-debug]
+other = "pterm 调试已启用"
+
+[cli.capture.stats]
+other = "[抓包统计] {{.Stats}}"
+
+[cli.config.col-path]
+other = "路径"
+
+[cli.config.col-kind]
+other = "类型"
+
+[cli.config.col-default]
+other = "默认值"
+
+[cli.config.col-comment]
+other = "说明"
+
+[cli.migrate.up]
+other = "在 {{.DB}} 上运行 goose up 迁移"
+
+[cli.migrate.up-to]
+other = "在 {{.DB}} 上执行 goose up-to 迁移至版本 {{.Version}}"
+
+[cli.migrate.down]
+other = "在 {{.DB}} 上回滚 goose down 迁移"
+
+[cli.migrate.down-to]
+other = "在 {{.DB}} 上执行 goose down-to 回滚至版本 {{.Version}}"
+
+[cli.migrate.down-no-current-version]
+other = "{{.DB}} 没有已应用的迁移，无需回滚"
+
+[cli.migrate.down-to-no-current-version]
+other = "{{.DB}} 没有已应用的迁移，无需回滚"
+
+[cli.migrate.goose-migrated]
+other = "数据库已成功迁移至版本 {{.Version}}"
+
+[cli.migrate.goose-no-migrations]
+other = "没有需要执行的迁移，当前版本 {{.Version}}"
+
+[cli.migrate.goose-up-to]
+other = "已迁移至版本 {{.Version}}"
+
+[cli.migrate.goose-down-to]
+other = "已回滚至版本 {{.Version}}"
+
+[cli.migrate.goose-file-not-found]
+other = "未找到当前版本（{{.Version}}）的迁移文件：{{.Err}}"
+
+[cli.migrate.goose-ok]
+other = "OK   {{.Source}}（{{.Duration}}）"
+
+[cli.migrate.goose-empty]
+other = "EMPTY {{.Source}}（{{.Duration}}）"
+
+[cli.migrate.col-version]
+other = "版本"
+
+[cli.migrate.col-migration]
+other = "迁移"
+
+[cli.migrate.col-status]
+other = "状态"
+
+[cli.migrate.col-applied-at]
+other = "应用时间"
+
+[cli.migrate.status-pending]
+other = "待执行"
+
+[cli.migrate.status-applied]
+other = "已应用"
+
+[cli.migrate.no-file]
+other = "未找到迁移文件"
+
+[cli.migrate.dry-run-creating]
+other = "正在为 dry-run 创建临时数据库..."
+
+[cli.migrate.dry-run-running]
+other = "正在临时数据库 {{.DB}} 上执行迁移..."
+
+[cli.migrate.dry-run-migration-failed]
+other = "dry-run 迁移失败：{{.Err}}"
+
+[cli.migrate.dry-run-completed]
+other = "dry-run 迁移已在 {{.DB}} 上成功完成"
+
+[cli.migrate.dry-run-cleanup]
+other = "正在清理临时数据库 {{.DB}}..."
+
+[cli.migrate.dry-run-drop-failed]
+other = "警告：删除临时数据库 {{.DB}} 失败：{{.Err}}"
+
+[cli.migrate.dry-run-preserved]
+other = "临时数据库 {{.DB}} 已保留（--keep-temp）"
+
+[cli.migrate.check-creating]
+other = "正在为结构检查创建临时数据库..."
+
+[cli.migrate.check-running]
+other = "正在临时数据库 {{.DB}} 上执行迁移..."
+
+[cli.migrate.check-comparing]
+other = "正在对比模型定义与数据库结构..."
+
+[cli.migrate.check-cleanup]
+other = "正在清理临时数据库 {{.DB}}..."
+
+[cli.migrate.check-drop-failed]
+other = "警告：删除临时数据库 {{.DB}} 失败：{{.Err}}"
+
+[cli.migrate.check-preserved]
+other = "临时数据库 {{.DB}} 已保留（--keep-temp）"
+
+[cli.migrate.check-ok]
+other = "所有模型均与数据库结构一致，未发现问题"
+
+[cli.migrate.issue-missing-table]
+other = "缺少表"
+
+[cli.migrate.issue-extra-table]
+other = "多余表"
+
+[cli.migrate.issue-missing-column]
+other = "缺少列"
+
+[cli.migrate.issue-extra-column]
+other = "多余列"
+
+[cli.migrate.issue-mismatch]
+other = "不匹配"
+
+[cli.migrate.col-issue]
+other = "问题"
+
+[cli.migrate.col-table]
+other = "表"
+
+[cli.migrate.col-column]
+other = "列"
+
+[cli.migrate.col-expected-type]
+other = "预期类型"
+
+[cli.migrate.col-actual-type]
+other = "实际类型"
+
+[cli.migrate.issues-table-error]
+other = "渲染问题表格失败：{{.Err}}"
+
+[cli.migrate.diff-identical]
+other = "数据库结构已是最新，无待变更"
+
+[cli.migrate.col-change]
+other = "变更"
+
+[cli.migrate.col-detail]
+other = "详情"
+
+[cli.migrate.diff-new-table]
+other = "新增表"
+
+[cli.migrate.diff-dropped-table]
+other = "删除表"
+
+[cli.migrate.diff-new-column]
+other = "新增列"
+
+[cli.migrate.diff-dropped-column]
+other = "删除列"
+
+[cli.migrate.diff-modified]
+other = "已修改"
+
+[cli.crypto.parent-secret-key-warning]
+other = "警告：正在使用配置文件中的父密钥，这不适用于生产环境，请尽快切换到 KMS。"
+
+[cli.crypto.password-book-warning]
+other = "警告：正在使用内置默认密码本，这不适用于生产环境，请运行 'zki create password-book' 生成自己的密码本文件。"
+
+[cli.pcap.nil-model]
+other = "[nil 模型] level={{.Level}} stack_len={{.Len}}"
+
+[cli.pcap.nil-model-stack]
+other = "[nil 模型]   stack[{{.Index}}] level={{.Level}} proto={{.Proto}} headers={{.Headers}}"
+
+[cli.pcap.import-stats]
+other = "[pcap 导入统计] {{.Stats}}"
+
+[cli.tracer.report-title]
+other = "阶段耗时统计报告"
+
+[cli.tracer.no-data]
+other = "无数据"
+
+[cli.tracer.col-stage]
+other = "阶段"
+
+[cli.tracer.col-calls]
+other = "调用次数"
+
+[cli.tracer.col-total]
+other = "总计"
+
+[cli.tracer.col-avg]
+other = "平均"
+
+[cli.tracer.col-min]
+other = "最小"
+
+[cli.tracer.col-max]
+other = "最大"
+
+[cli.tracer.col-ratio]
+other = "占比"
+
+[cli.tracer.render-error]
+other = "渲染报告表格失败：{{.Err}}"
+
+[cli.tracer.total-records]
+other = "记录总数：{{.Count}}"
+
+[cli.bench.col-name]
+other = "基准测试"
+
+[cli.bench.col-sent]
+other = "已发送"
+
+[cli.bench.col-captured]
+other = "已捕获"
+
+[cli.bench.col-lost]
+other = "已丢失"
+
+[cli.bench.col-loss-rate]
+other = "丢包率"
+
+[cli.bench.col-pps]
+other = "PPS"
+
+[cli.bench.col-bps]
+other = "BPS"
+
+[cli.bench.col-duration]
+other = "时长"
+
+[cli.bench.report-save-failed]
+other = "警告：保存基准测试报告失败：{{.Err}}"
+
+[cli.bench.report-saved]
+other = "基准测试报告已保存：{{.Path}}"

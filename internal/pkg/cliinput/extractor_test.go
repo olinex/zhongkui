@@ -8,9 +8,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
-func init() {
-	validator.Init()
-}
+// testValidate 测试共享的验证器实例（binding tag）。
+// 复用项目 validator 包导出的 Validate（从 Gin binding engine 获取），
+// 测试用例中校验 binding:"..." 标签（如 required、min）时使用。
+var testValidate = validator.Validate
 
 // ---------------------------------------------------------------------------
 // 基础错误场景
@@ -22,7 +23,7 @@ func TestExtract_NonPointerTarget(t *testing.T) {
 		Name string `viper:"name"`
 	}
 	var s S
-	err := Extract(v, s, "")
+	err := Extract(v, testValidate, s, "")
 	if err == nil {
 		t.Fatal("expected error for non-pointer target")
 	}
@@ -31,7 +32,7 @@ func TestExtract_NonPointerTarget(t *testing.T) {
 func TestExtract_PointerToNonStruct(t *testing.T) {
 	v := viper.New()
 	n := 42
-	err := Extract(v, &n, "")
+	err := Extract(v, testValidate, &n, "")
 	if err == nil {
 		t.Fatal("expected error for pointer to non-struct")
 	}
@@ -43,7 +44,7 @@ func TestExtract_NilPointer(t *testing.T) {
 		Name string `viper:"name"`
 	}
 	var s *S
-	err := Extract(v, s, "")
+	err := Extract(v, testValidate, s, "")
 	if err == nil {
 		t.Fatal("expected error for nil pointer")
 	}
@@ -61,7 +62,7 @@ func TestExtract_StringFromViper(t *testing.T) {
 		Username string `viper:"username"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Username != "alice" {
@@ -76,7 +77,7 @@ func TestExtract_StringEmptyFromViper_NoPrompt(t *testing.T) {
 		Name string `viper:"name"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Name != "" {
@@ -93,7 +94,7 @@ func TestExtract_StringFieldNoViperTag(t *testing.T) {
 		Ignored string // 没有 viper tag，应被跳过
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Ignored != "" {
@@ -113,7 +114,7 @@ func TestExtract_BoolFromViper_True(t *testing.T) {
 		Verbose bool `viper:"verbose"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !in.Verbose {
@@ -129,7 +130,7 @@ func TestExtract_BoolFromViper_False(t *testing.T) {
 		Verbose bool `viper:"verbose"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Verbose {
@@ -144,7 +145,7 @@ func TestExtract_BoolNotSet_NoPrompt(t *testing.T) {
 		Verbose bool `viper:"verbose"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Verbose {
@@ -164,7 +165,7 @@ func TestExtract_IntFromViper(t *testing.T) {
 		Count int `viper:"count"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Count != 42 {
@@ -180,7 +181,7 @@ func TestExtract_IntNegative(t *testing.T) {
 		Offset int `viper:"offset"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Offset != -10 {
@@ -196,7 +197,7 @@ func TestExtract_Int8FromViper(t *testing.T) {
 		Val int8 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != 127 {
@@ -212,7 +213,7 @@ func TestExtract_Int16FromViper(t *testing.T) {
 		Val int16 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != -32000 {
@@ -228,7 +229,7 @@ func TestExtract_Int32FromViper(t *testing.T) {
 		Val int32 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != 100000 {
@@ -244,7 +245,7 @@ func TestExtract_Int64FromViper(t *testing.T) {
 		Val int64 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != 9999999999 {
@@ -258,7 +259,7 @@ func TestExtract_IntNotSet_NoPrompt(t *testing.T) {
 		Count int `viper:"count"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Count != 0 {
@@ -274,7 +275,7 @@ func TestExtract_IntZeroFromViper(t *testing.T) {
 		Count int `viper:"count"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Count != 0 {
@@ -294,7 +295,7 @@ func TestExtract_UintFromViper(t *testing.T) {
 		Port uint `viper:"port"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Port != 8080 {
@@ -310,7 +311,7 @@ func TestExtract_Uint8FromViper(t *testing.T) {
 		Val uint8 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != 255 {
@@ -326,7 +327,7 @@ func TestExtract_Uint16FromViper(t *testing.T) {
 		Val uint16 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != 65535 {
@@ -342,7 +343,7 @@ func TestExtract_Uint32FromViper(t *testing.T) {
 		Val uint32 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != 4294967295 {
@@ -358,7 +359,7 @@ func TestExtract_Uint64FromViper(t *testing.T) {
 		Val uint64 `viper:"val"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Val != 18446744073709551615 {
@@ -372,7 +373,7 @@ func TestExtract_UintNotSet_NoPrompt(t *testing.T) {
 		Port uint `viper:"port"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Port != 0 {
@@ -392,7 +393,7 @@ func TestExtract_Float32FromViper(t *testing.T) {
 		Ratio float32 `viper:"ratio"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	// float32 精度有限，允许误差
@@ -409,7 +410,7 @@ func TestExtract_Float64FromViper(t *testing.T) {
 		Ratio float64 `viper:"ratio"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Ratio != 3.141592653589793 {
@@ -425,7 +426,7 @@ func TestExtract_Float64Zero(t *testing.T) {
 		Ratio float64 `viper:"ratio"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Ratio != 0.0 {
@@ -441,7 +442,7 @@ func TestExtract_Float64Negative(t *testing.T) {
 		Temp float64 `viper:"temp"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Temp != -273.15 {
@@ -455,7 +456,7 @@ func TestExtract_FloatNotSet_NoPrompt(t *testing.T) {
 		Ratio float64 `viper:"ratio"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Ratio != 0.0 {
@@ -475,7 +476,7 @@ func TestExtract_DurationFromViper(t *testing.T) {
 		Timeout time.Duration `viper:"timeout"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Timeout != 30*time.Second {
@@ -491,7 +492,7 @@ func TestExtract_DurationMinutes(t *testing.T) {
 		Interval time.Duration `viper:"interval"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Interval != 5*time.Minute {
@@ -507,7 +508,7 @@ func TestExtract_DurationComplex(t *testing.T) {
 		TTL time.Duration `viper:"ttl"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	expected := 1*time.Hour + 30*time.Minute
@@ -522,7 +523,7 @@ func TestExtract_DurationNotSet_NoPrompt(t *testing.T) {
 		Timeout time.Duration `viper:"timeout"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Timeout != 0 {
@@ -542,7 +543,7 @@ func TestExtract_StringSliceFromViper(t *testing.T) {
 		Tags []string `viper:"tags"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(in.Tags) != 3 || in.Tags[0] != "a" || in.Tags[1] != "b" || in.Tags[2] != "c" {
@@ -557,7 +558,7 @@ func TestExtract_StringSliceEmpty(t *testing.T) {
 		Tags []string `viper:"tags"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Tags != nil {
@@ -573,7 +574,7 @@ func TestExtract_StringSliceSingleElement(t *testing.T) {
 		Hosts []string `viper:"hosts"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(in.Hosts) != 1 || in.Hosts[0] != "localhost" {
@@ -598,7 +599,7 @@ func TestExtract_NestedStruct(t *testing.T) {
 		Server ServerConfig
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Server.Host != "localhost" {
@@ -620,7 +621,7 @@ func TestExtract_EmbeddedStruct(t *testing.T) {
 		Base // 匿名嵌入
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Base.Name != "test" {
@@ -642,7 +643,7 @@ func TestExtract_DeeplyNestedStruct(t *testing.T) {
 		A Middle
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.A.B.Value != "deep" {
@@ -672,7 +673,7 @@ func TestExtract_MixedTypes(t *testing.T) {
 		Tags    []string      `viper:"tags"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Name != "alice" {
@@ -703,7 +704,7 @@ func TestExtract_EmptyStruct(t *testing.T) {
 	v := viper.New()
 	type Input struct{}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -722,7 +723,7 @@ func TestExtract_UnsupportedFieldType(t *testing.T) {
 	}
 	v.Set("name", "alice")
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Name != "alice" {
@@ -740,7 +741,7 @@ func TestExtract_UnsupportedSliceType(t *testing.T) {
 	}
 	v.Set("name", "bob")
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Name != "bob" {
@@ -764,7 +765,7 @@ func TestExtract_WithPrefix(t *testing.T) {
 	}
 	var in Input
 	// 使用非空 prefix，验证路径会变为 "Config.Name"
-	if err := Extract(v, &in, "Config."); err != nil {
+	if err := Extract(v, testValidate, &in, "Config."); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Name != "alice" {
@@ -784,7 +785,7 @@ func TestExtract_ValidationPass(t *testing.T) {
 		Username string `viper:"username" binding:"required,min=6"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Username != "alice123" {
@@ -800,7 +801,7 @@ func TestExtract_ValidationFail(t *testing.T) {
 		Username string `viper:"username" binding:"required,min=6"`
 	}
 	var in Input
-	err := Extract(v, &in, "")
+	err := Extract(v, testValidate, &in, "")
 	if err == nil {
 		t.Fatal("expected validation error for short username")
 	}
@@ -817,7 +818,7 @@ func TestExtract_ValidationNestedField(t *testing.T) {
 		Server ServerConfig
 	}
 	var in Input
-	err := Extract(v, &in, "")
+	err := Extract(v, testValidate, &in, "")
 	if err == nil {
 		t.Fatal("expected validation error for port=0")
 	}
@@ -837,7 +838,7 @@ func TestExtract_PartialFieldsSet(t *testing.T) {
 		Age  int    `viper:"age"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Name != "alice" {
@@ -860,7 +861,7 @@ func TestExtract_StringWithSpecialChars(t *testing.T) {
 		Path string `viper:"path"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Path != "/usr/local/bin:/usr/bin" {
@@ -876,7 +877,7 @@ func TestExtract_EmptyStringFromViper(t *testing.T) {
 		Name string `viper:"name"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	// viper.GetString 返回空字符串，等同于未设置
@@ -893,7 +894,7 @@ func TestExtract_EmptyStringSliceFromViper(t *testing.T) {
 		Tags []string `viper:"tags"`
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	// 空切片 len==0，不满足 len(val) > 0，保持 nil
@@ -922,7 +923,7 @@ func TestExtract_MultipleNestedSiblings(t *testing.T) {
 		Cache    CacheConfig
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Database.Host != "db.local" {
@@ -944,7 +945,7 @@ func TestExtract_AllFieldsWithoutViperTag(t *testing.T) {
 		Age  int
 	}
 	var in Input
-	if err := Extract(v, &in, ""); err != nil {
+	if err := Extract(v, testValidate, &in, ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if in.Name != "" || in.Age != 0 {

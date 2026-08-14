@@ -1,35 +1,32 @@
 <template>
-  <v-confirm-edit
-    :model-value="props.modelValue"
-    @update:model-value="addSelection"
-  >
+  <v-confirm-edit :model-value="props.modelValue" @update:model-value="addSelection">
     <template #default="{ model: proxyModel, actions }">
       <v-card class="mx-auto">
         <template #text>
           <v-select
             :model-value="choiceField"
-            @update:model-value="(value) => updateField(proxyModel, value)"
             :items="fieldOptions"
             :disabled="props.modify"
             :label="$t('model.__base.field.field')"
             item-title="title"
             item-value="value"
             return-object
+            @update:model-value="(value) => updateField(proxyModel, value)"
           />
           <v-select
             :model-value="choiceAction"
-            @update:model-value="(value) => updateAction(proxyModel, value)"
             :items="actionOptions"
             :label="$t('model.__base.field.action')"
             item-title="title"
             item-value="value"
             return-object
+            @update:model-value="(value) => updateAction(proxyModel, value)"
           />
           <adaptive-field
             :model-value="choiceValue"
-            @update:model-value="(value) => updateValue(proxyModel, value)"
             :input-type="inputType"
             :number-props="numberProps"
+            @update:model-value="(value) => updateValue(proxyModel, value)"
           />
         </template>
         <template #actions>
@@ -44,17 +41,24 @@
 <script setup lang="ts" name="clause-field">
 import i18n, { localeDateFormat, localeDatetimeFormat } from "@/utils/i18n";
 import { DataTypeRanges } from "@/utils/options";
-import { SearchInputType, type Option, type SearchItem } from "../@types/forms";
+import {
+  SearchInputType,
+  fromBackendDataType,
+  type Option,
+  type SearchItem,
+} from "../@types/forms";
 import type { FilterByOption } from "../@types/table";
 import { BackendDataType, SearchAction, type NumberRange } from "@/types";
 import { DateTime } from "luxon";
 
 const choiceField = ref({ value: "", title: "" });
 const choiceAction = ref({ value: "", title: "" });
+// The selected value type depends on the field's backend data type.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const choiceValue = ref(null as any);
 
 const choiceOption = computed((): FilterByOption | null => {
-  let field = choiceField.value;
+  const field = choiceField.value;
   if (field.value && props.headers[field.value]) {
     return props.headers[field.value];
   } else {
@@ -64,7 +68,7 @@ const choiceOption = computed((): FilterByOption | null => {
 
 const fieldOptions = computed((): Option[] => {
   return Object.entries(props.headers)
-    .filter(([key, _]) => {
+    .filter(([key]) => {
       return (
         props.selectedFieldActions.length === 0 ||
         !props.selectedFieldActions.some((couple) => couple.field === key)
@@ -77,16 +81,14 @@ const fieldOptions = computed((): Option[] => {
 });
 
 const actionOptions = computed((): Option[] => {
-  let option = choiceOption.value;
+  const option = choiceOption.value;
   if (option) {
     return option.actions
       .filter(
         (action) =>
           !props.selectedFieldActions.some(
-            (couple) =>
-              couple.field === choiceField.value.value &&
-              couple.action === action
-          )
+            (couple) => couple.field === choiceField.value.value && couple.action === action,
+          ),
       )
       .map((action) => ({
         value: action,
@@ -97,12 +99,12 @@ const actionOptions = computed((): Option[] => {
 });
 
 const numberProps = computed((): NumberRange => {
-  let option = choiceOption.value;
-  let defaultProps = DataTypeRanges[BackendDataType.FLOAT64] as NumberRange;
+  const option = choiceOption.value;
+  const defaultProps = DataTypeRanges[BackendDataType.FLOAT64] as NumberRange;
   if (option === undefined || option === null) {
     return defaultProps;
   } else {
-    let tmp = DataTypeRanges[option.type];
+    const tmp = DataTypeRanges[option.type];
     if (tmp === null) {
       return defaultProps;
     }
@@ -111,22 +113,19 @@ const numberProps = computed((): NumberRange => {
 });
 
 const inputType = computed((): SearchInputType => {
-  let field = choiceField.value.value;
+  const field = choiceField.value.value;
   if (!field) {
     return SearchInputType.UNKNOWN;
   }
-  let action = choiceAction.value.value;
+  const action = choiceAction.value.value;
   if (!action) {
     return SearchInputType.UNKNOWN;
   }
-  let option = choiceOption.value;
+  const option = choiceOption.value;
   if (!option) {
     return SearchInputType.UNKNOWN;
   }
-  return SearchInputType.fromBackendDataType(
-    option.type,
-    action as SearchAction
-  );
+  return fromBackendDataType(option.type, action as SearchAction);
 });
 
 const addSelection = (item: SearchItem) => {
@@ -137,10 +136,7 @@ const addSelection = (item: SearchItem) => {
   });
 };
 
-const updateField = (
-  proxy: globalThis.Ref<SearchItem, SearchItem>,
-  value: Option
-) => {
+const updateField = (proxy: globalThis.Ref<SearchItem, SearchItem>, value: Option) => {
   choiceField.value = value;
   choiceAction.value = { value: "", title: "" };
   choiceValue.value = null;
@@ -152,16 +148,10 @@ const updateField = (
   proxy.value.value = { value: null, title: "" };
 };
 
-const updateAction = (
-  proxy: globalThis.Ref<SearchItem, SearchItem>,
-  value: Option
-) => {
+const updateAction = (proxy: globalThis.Ref<SearchItem, SearchItem>, value: Option) => {
   choiceAction.value = value;
   choiceValue.value = null;
-  if (
-    value.value === SearchAction.NIL ||
-    value.value === SearchAction.NOT_NIL
-  ) {
+  if (value.value === SearchAction.NIL || value.value === SearchAction.NOT_NIL) {
     proxy.value.field = choiceField.value;
     proxy.value.action = choiceAction.value;
     proxy.value.value = { value: null, title: "" };
@@ -171,22 +161,21 @@ const updateAction = (
   }
 };
 
-const updateValue = (
-  proxy: globalThis.Ref<SearchItem, SearchItem>,
-  value: any
-) => {
+// The updated value is heterogeneous: Date for datetime fields, string/number otherwise.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const updateValue = (proxy: globalThis.Ref<SearchItem, SearchItem>, value: any) => {
   if (!props.modify) {
     proxy.value.field = choiceField.value;
     proxy.value.action = choiceAction.value;
   }
-  let option = choiceOption.value;
+  const option = choiceOption.value;
   if (!option) {
     return;
   }
-  let title = value;
+  const title = value;
   switch (option.type) {
     case BackendDataType.DATE:
-      let date = localeDateFormat(DateTime.fromJSDate(value));
+      const date = localeDateFormat(DateTime.fromJSDate(value));
       proxy.value.value = {
         value: date,
         title: date,
@@ -194,7 +183,7 @@ const updateValue = (
       choiceValue.value = date;
       break;
     case BackendDataType.DATETIME:
-      let datetime = localeDatetimeFormat(DateTime.fromJSDate(value));
+      const datetime = localeDatetimeFormat(DateTime.fromJSDate(value));
       proxy.value.value = {
         value: value,
         title: datetime,
@@ -225,7 +214,7 @@ const props = defineProps({
         field: { value: "", title: "" },
         action: { value: "", title: "" },
         value: { value: null, title: "" },
-      } as SearchItem),
+      }) as SearchItem,
   },
   selectedFieldActions: {
     type: Array<{

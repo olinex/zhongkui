@@ -18,6 +18,7 @@ import (
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -25,7 +26,7 @@ func RunHttpService(ctx context.Context, i do.Injector) error {
 	viper := provider.MustInvokeViper(i)
 	engine := provider.MustInvokeGin(i)
 	apiLogger := provider.MustInvokeApiLogger(i)
-	cfg, err := ExtractConfig(viper)
+	cfg, err := ExtractConfig(viper, validator.Validate)
 	if err != nil {
 		return errors.WithStack(err)
 	}

@@ -487,6 +487,13 @@ func TestUserPasswordLogin(t *testing.T) {
 
 			So(w.Code, ShouldEqual, http.StatusOK)
 
+			// 响应体应返回 JWT 令牌，供跨源前端持久化使用
+			var rspBody map[string]any
+			So(json.Unmarshal(w.Body.Bytes(), &rspBody), ShouldBeNil)
+			data, ok := rspBody["data"].(map[string]any)
+			So(ok, ShouldBeTrue)
+			So(data["token"], ShouldNotBeEmpty)
+
 			cookie := w.Result().Cookies()
 			So(len(cookie), ShouldBeGreaterThan, 0)
 			So(cookie[0].Name, ShouldEqual, "jwt-token")

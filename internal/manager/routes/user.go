@@ -32,6 +32,13 @@ type UserProfileChangeIn struct {
 	Email      string `json:"email" viper:"email" prompt:"请输入用户邮箱" binding:"required,min=10,max=128,email"`              // 用户邮箱，必填，10-128个字符，需符合邮箱格式
 }
 
+// UserTokenOut 定义 JWT 令牌的输出结构体
+// 用于登录、令牌刷新等接口在响应体中返回 JWT 令牌，
+// 供前端在 Cookie 不可跨主机读取的场景（如 localhost 与 127.0.0.1）下持久化使用
+type UserTokenOut struct {
+	Token string `json:"token"` // JWT 令牌（含 Bearer 前缀）
+}
+
 // UserPasswordLoginIn 定义密码登录的输入结构体
 // 包含用户名和密码信息
 type UserPasswordLoginIn struct {
@@ -147,9 +154,9 @@ func userPasswordLogin(c *gin.Context) {
 		err.AbortWithGinH(c)
 		return
 	} else {
-		// 将JWT令牌注入Cookie
+		// 将JWT令牌注入Cookie，并在响应体中返回令牌，供跨源前端持久化使用
 		auth.TokenCookieInject(c, token)
-		manager.SimpleOK.AbortWithGinH(c)
+		manager.SimpleOK.AbortWithGinW(c, UserTokenOut{Token: token})
 		return
 	}
 }
@@ -241,9 +248,9 @@ func userSelfJwtRefresh(c *gin.Context) {
 		codeErr.AbortWithGinH(c)
 		return
 	}
-	// 将新令牌注入Cookie
+	// 将新令牌注入Cookie，并在响应体中返回令牌，供跨源前端持久化使用
 	auth.TokenCookieInject(c, newToken)
-	manager.SimpleOK.AbortWithGinH(c)
+	manager.SimpleOK.AbortWithGinW(c, UserTokenOut{Token: newToken})
 }
 
 // userSelfAuthorizationInfoGet 获取用户授权信息

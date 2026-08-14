@@ -29,8 +29,11 @@
 <script setup lang="ts" name="temp-editable-dialog">
 const dialog = ref(false);
 const editable = ref(false);
+// Dialog payload is dynamic.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const proxy = ref({} as Record<string, any>);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const open = (item: Record<string, any>) => {
   proxy.value = { ...item };
   dialog.value = true;
@@ -48,9 +51,10 @@ const confirm = async () => {
 
 const emits = defineEmits(["confirm"]);
 
-const props = defineProps({
+defineProps({
   prependIcon: {
     type: String,
+    default: "",
   },
   title: {
     type: String,
@@ -63,7 +67,7 @@ const props = defineProps({
   confirmDisabled: {
     type: Boolean,
     default: false,
-  }
+  },
 });
 
 defineExpose({ open });

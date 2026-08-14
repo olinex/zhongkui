@@ -1,6 +1,5 @@
 <template>
   <v-select
-    @update:model-value="emits('update:modelValue', $event)"
     :model-value="modelValue"
     :label="label"
     :items="options"
@@ -8,6 +7,7 @@
     :density="density"
     :return-object="returnObject"
     :disabled="disabled"
+    @update:model-value="emits('update:modelValue', $event)"
   />
 </template>
 
@@ -26,14 +26,14 @@ const options = computed(() => {
   ];
 });
 
-const props = defineProps({
+defineProps({
   modelValue: {
     type: Number,
     required: true,
   },
   label: {
     type: String,
-    default: ""
+    default: "",
   },
   variant: {
     type: String as PropType<FieldVariant>,
@@ -50,7 +50,7 @@ const props = defineProps({
   disabled: {
     type: Boolean,
     default: false,
-  }
+  },
 });
 
 const emits = defineEmits(["update:modelValue"]);

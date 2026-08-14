@@ -155,13 +155,13 @@ func (c *CursorScheduler) runOnce(ctx context.Context, taskType string, cfg Sche
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	triggers, next := ComputeCursorTriggers(last, time.Now(), cfg.Interval)
+	triggers, next := ComputeCursorTriggers(last, time.Now(), cfg.Interval.Std())
 	if len(triggers) == 0 {
 		return nil
 	}
 	opts := []asynq.Option{
 		asynq.Queue(cfg.Queue),
-		asynq.Timeout(cfg.Timeout),
+		asynq.Timeout(cfg.Timeout.Std()),
 		asynq.MaxRetry(cfg.MaxRetry),
 	}
 	// 固定参数透传给每个触发点；保证序列化后 "payload" 始终为对象而非 null
