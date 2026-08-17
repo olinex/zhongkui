@@ -16,63 +16,64 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/migrate"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
 var migrateUpCmd = &cobra.Command{
 	Use:   "up",
-	Short: "应用所有待执行的迁移",
+	Short: "cmd.migrate.up.short",
 	Run:   runMigrateCmd("up"),
 }
 
 var migrateDownCmd = &cobra.Command{
 	Use:   "down",
-	Short: "回滚所有已应用的迁移",
+	Short: "cmd.migrate.down.short",
 	Run:   runMigrateCmd("down"),
 }
 
 var migrateUpToCmd = &cobra.Command{
 	Use:   "up-to [version]",
-	Short: "迁移到指定版本",
+	Short: "cmd.migrate.up-to.short",
 	Args:  cobra.ExactArgs(1),
 	Run:   runMigrateCmd("up-to"),
 }
 
 var migrateDownToCmd = &cobra.Command{
 	Use:   "down-to [version]",
-	Short: "回滚到指定版本",
+	Short: "cmd.migrate.down-to.short",
 	Args:  cobra.ExactArgs(1),
 	Run:   runMigrateCmd("down-to"),
 }
 
 var migrateStatusCmd = &cobra.Command{
 	Use:   "status",
-	Short: "显示迁移状态",
+	Short: "cmd.migrate.status.short",
 	Run:   runMigrateCmd("status"),
 }
 
 var migrateDryRunCmd = &cobra.Command{
 	Use:   "dry-run",
-	Short: "在临时数据库上试运行迁移",
+	Short: "cmd.migrate.dry-run.short",
 	Run:   runDryRunMigrateCmd,
 }
 
 var migrateDiffCmd = &cobra.Command{
 	Use:   "diff",
-	Short: "比较数据库结构差异",
+	Short: "cmd.migrate.diff.short",
 	Run:   runDiffMigrateCmd,
 }
 
 var migrateCheckCmd = &cobra.Command{
 	Use:   "check",
-	Short: "检查模型定义与数据库结构是否一致",
+	Short: "cmd.migrate.check.short",
 	Run:   runCheckMigrateCmd,
 }
 
 var migrateCreateCmd = &cobra.Command{
 	Use:   "create [name]",
-	Short: "在迁移目录中创建 SQL 迁移文件",
+	Short: "cmd.migrate.create.short",
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
@@ -83,10 +84,10 @@ var migrateCreateCmd = &cobra.Command{
 		for _, dbName := range targetDBs(dbTarget) {
 			filePath, err := createMigrationFile(dbName, name)
 			if err != nil {
-				pterm.Error.Println(cliT("cli.migrate.create-failed", "{{.DB}}：{{.Err}}", map[string]any{"DB": dbName, "Err": err}))
+				pterm.Error.Println(translate.T("cli.migrate.create-failed", map[string]any{"DB": dbName, "Err": err}))
 				return
 			}
-			pterm.Success.Println(cliT("cli.migrate.created", "已创建 {{.Path}}", map[string]any{"Path": filePath}))
+			pterm.Success.Println(translate.T("cli.migrate.created", map[string]any{"Path": filePath}))
 		}
 	},
 }
@@ -154,14 +155,14 @@ func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) {
 
 		for _, dbName := range targetDBs(dbTarget) {
 			gormDB := provider.MustInvokeDatabase(i, dbName)
-			pterm.DefaultSection.Println(cliT("cli.migrate.section", "{{.Action}}（{{.DB}}）", map[string]any{"Action": action, "DB": dbName}))
+			pterm.DefaultSection.Println(translate.T("cli.migrate.section", map[string]any{"Action": action, "DB": dbName}))
 
 			if err := migrateDB(ctx, v, gormDB, dbName, args, action); err != nil {
-				pterm.Error.Println(cliT("cli.migrate.action-failed", "{{.DB}} {{.Action}} 失败：{{.Err}}", map[string]any{"DB": dbName, "Action": action, "Err": err}))
+				pterm.Error.Println(translate.T("cli.migrate.action-failed", map[string]any{"DB": dbName, "Action": action, "Err": err}))
 				return
 			}
 		}
-		pterm.Success.Println(cliT("cli.migrate.completed", "迁移全部执行成功"))
+		pterm.Success.Println(translate.T("cli.migrate.completed", nil))
 	}
 }
 
@@ -224,9 +225,9 @@ func runDryRunMigrateCmd(cmd *cobra.Command, args []string) {
 
 	dbTarget := targetFromViper(v)
 	for _, dbName := range targetDBs(dbTarget) {
-		pterm.DefaultSection.Println(cliT("cli.migrate.dry-run-section", "试运行（dry-run）{{.DB}}", map[string]any{"DB": dbName}))
+		pterm.DefaultSection.Println(translate.T("cli.migrate.dry-run-section", map[string]any{"DB": dbName}))
 		if err := migrateDryRunDB(ctx, v, dbName); err != nil {
-			pterm.Error.Println(cliT("cli.migrate.dry-run-db-failed", "dry-run {{.DB}}：{{.Err}}", map[string]any{"DB": dbName, "Err": err}))
+			pterm.Error.Println(translate.T("cli.migrate.dry-run-db-failed", map[string]any{"DB": dbName, "Err": err}))
 		}
 	}
 }
@@ -247,9 +248,9 @@ func migrateDryRunDB(ctx context.Context, v *viper.Viper, dbName string) error {
 		return errors.Newf("dry-run failed: %v", err)
 	}
 	if result.Success {
-		pterm.Success.Println(cliT("cli.migrate.dry-run-succeeded", "dry-run 执行成功"))
+		pterm.Success.Println(translate.T("cli.migrate.dry-run-succeeded", nil))
 	} else {
-		pterm.Error.Println(cliT("cli.migrate.dry-run-failed", "dry-run 失败：{{.Err}}", map[string]any{"Err": result.Error}))
+		pterm.Error.Println(translate.T("cli.migrate.dry-run-failed", map[string]any{"Err": result.Error}))
 	}
 	return nil
 }
@@ -260,9 +261,9 @@ func runDiffMigrateCmd(cmd *cobra.Command, args []string) {
 
 	dbTarget := targetFromViper(v)
 	for _, dbName := range targetDBs(dbTarget) {
-		pterm.DefaultSection.Println(cliT("cli.migrate.diff-section", "结构对比（diff）{{.DB}}", map[string]any{"DB": dbName}))
+		pterm.DefaultSection.Println(translate.T("cli.migrate.diff-section", map[string]any{"DB": dbName}))
 		if err := migrateDiffDB(ctx, v, dbName); err != nil {
-			pterm.Error.Println(cliT("cli.migrate.diff-failed", "diff {{.DB}}：{{.Err}}", map[string]any{"DB": dbName, "Err": err}))
+			pterm.Error.Println(translate.T("cli.migrate.diff-failed", map[string]any{"DB": dbName, "Err": err}))
 		}
 	}
 }
@@ -275,9 +276,9 @@ func runCheckMigrateCmd(cmd *cobra.Command, args []string) {
 	keepTemp := v.GetBool("keep-temp")
 	for _, dbName := range targetDBs(dbTarget) {
 		manager := provider.MustInvokeSchemaManager(i, dbName)
-		pterm.DefaultSection.Println(cliT("cli.migrate.check-section", "结构检查（check）{{.DB}}", map[string]any{"DB": dbName}))
+		pterm.DefaultSection.Println(translate.T("cli.migrate.check-section", map[string]any{"DB": dbName}))
 		if err := migrateCheckDB(ctx, v, dbName, keepTemp, manager.Models()); err != nil {
-			pterm.Error.Println(cliT("cli.migrate.check-failed", "check {{.DB}}：{{.Err}}", map[string]any{"DB": dbName, "Err": err}))
+			pterm.Error.Println(translate.T("cli.migrate.check-failed", map[string]any{"DB": dbName, "Err": err}))
 		}
 	}
 }
@@ -345,13 +346,13 @@ func init() {
 		migrateUpCmd, migrateDownCmd, migrateUpToCmd, migrateDownToCmd,
 		migrateStatusCmd, migrateDryRunCmd, migrateDiffCmd, migrateCheckCmd, migrateCreateCmd,
 	} {
-		c.Flags().String("db", "all", "目标数据库：core、raw、all")
-		c.Flags().Bool("verbose", false, "打印迁移 SQL")
-		c.Flags().Duration("timeout", 0, "迁移超时时间（0 表示不超时）")
+		c.Flags().String("db", "all", "flag.migrate.db")
+		c.Flags().Bool("verbose", false, "flag.migrate.verbose")
+		c.Flags().Duration("timeout", 0, "flag.migrate.timeout")
 	}
 
-	migrateDownCmd.Flags().Bool("force", false, "跳过确认")
-	migrateDryRunCmd.Flags().Bool("keep-temp", false, "保留临时数据库")
-	migrateDiffCmd.Flags().Bool("keep-temp", false, "保留临时数据库")
-	migrateCheckCmd.Flags().Bool("keep-temp", false, "保留临时数据库")
+	migrateDownCmd.Flags().Bool("force", false, "flag.migrate.force")
+	migrateDryRunCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
+	migrateDiffCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
+	migrateCheckCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
 }

@@ -10,12 +10,15 @@
 package routes
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
+	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"gorm.io/gorm"
 
@@ -28,11 +31,62 @@ import (
 )
 
 // invalidTagRuleError 构造标签规则校验失败的错误响应（HTTP 400，携带结构化校验错误详情）。
-func invalidTagRuleError(errs []tagengine.RegoError) *manager.CodeError {
+// RegoError 明细按请求语言（Accept-Language）本地化后输出。
+func invalidTagRuleError(c *gin.Context, errs []tagengine.RegoError) *manager.CodeError {
 	if errs == nil {
 		errs = []tagengine.RegoError{}
 	}
-	return manager.CreateCodeError(http.StatusBadRequest, manager.CodeTagRuleInvalid, errs)
+	return manager.CreateCodeError(http.StatusBadRequest, manager.CodeTagRuleInvalid, localizeRegoErrors(manager.GetLocalizer(c), errs))
+}
+
+// localizeRegoErrors 按请求语言的 Localizer 翻译 RegoError 列表的 Message/Hint。
+// tagengine 生成的条目 Message/Hint 为 i18n 消息键：Message 翻译后与 Args 渲染，
+// Hint 翻译后直接替换；OPA 原生消息不是消息键，翻译不命中时原样保留。
+func localizeRegoErrors(lc *i18n.Localizer, errs []tagengine.RegoError) []tagengine.RegoError {
+	out := make([]tagengine.RegoError, len(errs))
+	for i, e := range errs {
+		if localized, err := lc.Localize(&i18n.LocalizeConfig{MessageID: e.Message}); err == nil && localized != "" {
+			if len(e.Args) > 0 {
+				e.Message = fmt.Sprintf(localized, e.Args...)
+			} else {
+				e.Message = localized
+			}
+		}
+		if e.Hint != "" {
+			if hint, err := lc.Localize(&i18n.LocalizeConfig{MessageID: e.Hint}); err == nil && hint != "" {
+				e.Hint = hint
+			}
+		}
+		out[i] = e
+	}
+	return out
+}
+
+// localizeInputFields 按请求语言的 Localizer 翻译输入字段元信息的 Description。
+// tagengine 为每个字段标注 i18n 消息键（input.<typeKey>.<field>），这里按请求语言
+// 翻译后填充 Description；翻译失败时保留空串。
+func localizeInputFields(lc *i18n.Localizer, fields []tagengine.InputFieldMeta) []tagengine.InputFieldMeta {
+	out := make([]tagengine.InputFieldMeta, len(fields))
+	for i, field := range fields {
+		if field.DescriptionKey != "" {
+			if desc, err := lc.Localize(&i18n.LocalizeConfig{MessageID: field.DescriptionKey}); err == nil && desc != "" {
+				field.Description = desc
+			}
+		}
+		out[i] = field
+	}
+	return out
+}
+
+// invalidTagRuleRuntimeError 构造标签规则运行期样例校验失败的错误响应（HTTP 400，携带样例错误列表）。
+func invalidTagRuleRuntimeError(issues []tagengine.SampleRuntimeError) *manager.CodeError {
+	return manager.CreateCodeError(http.StatusBadRequest, manager.CodeTagRuleRuntimeInvalid, issues)
+}
+
+// invalidTagRuleModelNotRegisteredError 构造标签规则目标模型未注册的错误响应（HTTP 400）。
+// 未注册模型的规则引擎永不加载（按实际数据实例的类型键分组），写入时直接拒绝避免死规则。
+func invalidTagRuleModelNotRegisteredError(model string) *manager.CodeError {
+	return manager.CreateCodeError(http.StatusBadRequest, manager.CodeTagRuleModelNotRegistered, model)
 }
 
 // TagRuleCreateIn 定义创建标签规则的请求输入结构。
@@ -116,6 +170,8 @@ type TagRuleVersionOut struct {
 type TagRuleValidateIn struct {
 	// Rego Rego 规则源码
 	Rego string `json:"rego" binding:"required"`
+	// Model 目标模型类型键，可空；非空且已注册时启用字段感知 lint（未知 input 字段进入 warnings）
+	Model string `json:"model"`
 }
 
 // TagRuleValidateOut 定义标签规则语法校验的结果输出结构。
@@ -124,6 +180,47 @@ type TagRuleValidateOut struct {
 	Valid bool `json:"valid"`
 	// Errors 校验错误列表（带行列号），合法时为空数组
 	Errors []tagengine.RegoError `json:"errors"`
+	// Warnings 字段感知 lint 的告警列表（warning 级），合法时为空数组
+	Warnings []tagengine.RegoError `json:"warnings"`
+}
+
+// TagRuleModelIn 定义标签规则目标模型相关接口的请求输入结构。
+type TagRuleModelIn struct {
+	// Model 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	Model string `json:"model" binding:"required"`
+}
+
+// TagRuleModelOptionsOut 定义标签规则目标模型选项列表的输出结构。
+// Items 为已注册目标模型的 {value,label} 列表，label 已按请求语言本地化。
+type TagRuleModelOptionsOut struct {
+	// Items 已注册目标模型选项列表
+	Items []tagengine.Option `json:"items"`
+}
+
+// TagRuleModelMetadataOut 定义标签规则目标模型输入字段元信息的输出结构。
+type TagRuleModelMetadataOut struct {
+	// Model 目标模型类型键
+	Model string `json:"model"`
+	// Fields 输入文档扁平化字段元信息列表（按字段名排序）
+	Fields []tagengine.InputFieldMeta `json:"fields"`
+}
+
+// TagRuleModelSampleOut 定义标签规则目标模型系统样例的输出结构。
+type TagRuleModelSampleOut struct {
+	// Name 样例名称
+	Name string `json:"name"`
+	// Description 样例说明
+	Description string `json:"description"`
+	// Input 样例输入文档（目标模型实例的 JSON 反序列化结果）
+	Input map[string]any `json:"input"`
+}
+
+// TagRuleModelSamplesOut 定义标签规则目标模型系统样例列表的输出结构。
+type TagRuleModelSamplesOut struct {
+	// Model 目标模型类型键
+	Model string `json:"model"`
+	// Items 样例列表
+	Items []*TagRuleModelSampleOut `json:"items"`
 }
 
 // TagRuleDryRunRegoIn 定义 dry-run 的单条候选规则输入结构。
@@ -426,21 +523,109 @@ func tagRuleSetEnabled(enabled bool) gin.HandlerFunc {
 
 // tagRuleValidate 处理标签规则语法校验的请求。
 // 仅校验传入的 Rego 源码，返回结构化错误（带行列号）；HTTP 200 表达业务结果。
+// 复用公共 Rego 校验（ValidateRegoRules），与写路径/dry-run 校验语义一致。
+// 请求携带已注册的目标模型（model）时，追加字段感知 lint（LintInputRefs）：
+// 引用不存在的 input 字段产出 warning 级告警进入 Warnings，不阻断合法结果；
+// model 为空或未注册时 Warnings 为空数组。
 func tagRuleValidate(c *gin.Context) {
 	var in TagRuleValidateIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	errs, valid := tagengine.InspectRego(in.Rego)
+	rule := &tag.TagRule{Name: "candidate", Rego: in.Rego}
+	errs, valid := tagengine.ValidateRegoRules(c, []*tag.TagRule{rule})
 	if errs == nil {
 		errs = []tagengine.RegoError{}
 	}
-	manager.SimpleOK.AbortWithGinW(c, TagRuleValidateOut{Valid: valid, Errors: errs})
+	lc := manager.GetLocalizer(c)
+	out := TagRuleValidateOut{Valid: valid, Errors: localizeRegoErrors(lc, errs), Warnings: []tagengine.RegoError{}}
+	if in.Model != "" && tagengine.IsRegistered(in.Model) {
+		if fields, err := tagengine.InputMetadata(in.Model); err != nil {
+			// 元信息推导失败仅记录告警，不阻断校验结果（lint 属于增强能力）
+			manager.GetLogger(c).Warnf(c, nil,
+				"tag rule validate: load input metadata failed, model=%s, err=%v", in.Model, err)
+		} else if warnings := tagengine.LintInputRefs(in.Rego, fields); len(warnings) > 0 {
+			out.Warnings = localizeRegoErrors(lc, warnings)
+		}
+	}
+	manager.SimpleOK.AbortWithGinW(c, out)
+}
+
+// tagRuleModelOptions 处理获取标签规则目标模型选项列表的请求。
+// 返回已注册目标模型的 {value,label} 列表，label 为展示名称的 i18n 键，
+// 经请求语言本地化后输出，翻译失败时回退原键。
+func tagRuleModelOptions(c *gin.Context) {
+	options := tagengine.Options()
+	lc := manager.GetLocalizer(c)
+	items := make([]tagengine.Option, 0, len(options))
+	for _, opt := range options {
+		if label, err := lc.Localize(&i18n.LocalizeConfig{MessageID: opt.Label}); err == nil && label != "" {
+			opt.Label = label
+		}
+		items = append(items, opt)
+	}
+	manager.SimpleOK.AbortWithGinW(c, TagRuleModelOptionsOut{Items: items})
+}
+
+// tagRuleModelMetadata 处理获取标签规则目标模型输入字段元信息的请求。
+// 返回输入文档扁平化字段元信息列表（按字段名排序，Description 按请求语言翻译），
+// 供前端 Rego 编辑器自动补全与字段面板使用；未注册模型返回 400 + 错误码 1107。
+func tagRuleModelMetadata(c *gin.Context) {
+	var in TagRuleModelIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	fields, err := tagengine.InputMetadata(in.Model)
+	if err != nil {
+		if errors.Is(err, tagengine.ErrModelNotRegistered) {
+			invalidTagRuleModelNotRegisteredError(in.Model).AbortWithGinH(c)
+			return
+		}
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	manager.SimpleOK.AbortWithGinW(c, TagRuleModelMetadataOut{Model: in.Model, Fields: localizeInputFields(manager.GetLocalizer(c), fields)})
+}
+
+// tagRuleModelSamples 处理获取标签规则目标模型系统样例列表的请求。
+// 模型无样例时懒供给（default 零值文档，HttpTransport 额外预置 http-example）后返回；
+// 样例输入文档反序列化为 map；未注册模型返回 400 + 错误码 1107。
+func tagRuleModelSamples(c *gin.Context) {
+	var in TagRuleModelIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	samples, err := tagengine.EnsureModelSamples(c, manager.GetCoreDatabase(c), in.Model)
+	if err != nil {
+		if errors.Is(err, tagengine.ErrModelNotRegistered) {
+			invalidTagRuleModelNotRegisteredError(in.Model).AbortWithGinH(c)
+			return
+		}
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	items := make([]*TagRuleModelSampleOut, 0, len(samples))
+	for _, sample := range samples {
+		input := map[string]any{}
+		if err := json.Unmarshal(sample.Input, &input); err != nil {
+			manager.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+		items = append(items, &TagRuleModelSampleOut{
+			Name:        sample.Name,
+			Description: sample.Description,
+			Input:       input,
+		})
+	}
+	manager.SimpleOK.AbortWithGinW(c, TagRuleModelSamplesOut{Model: in.Model, Items: items})
 }
 
 // tagRuleDryRun 处理单规则 dry-run 的请求。
-// 仅针对一条候选规则（rego），经 CompileRule 编译后评估输入文档。
+// 仅针对一条候选规则（rego），先经公共 Rego 校验（语法 + 契约 + 组级编译），
+// 校验通过后再经 CompileRule 编译并评估输入文档。
 // 输出仅含错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 func tagRuleDryRun(c *gin.Context) {
 	var in TagRuleDryRunRuleIn
@@ -455,8 +640,12 @@ func tagRuleDryRun(c *gin.Context) {
 		Rego:    in.Rego,
 		Enabled: true,
 	}
+	if errs, ok := tagengine.ValidateRegoRules(c, []*tag.TagRule{rule}); !ok {
+		invalidTagRuleError(c, errs).AbortWithGinH(c)
+		return
+	}
 	if _, cr, err := tagengine.CompileRule(c, rule); err != nil {
-		invalidTagRuleError(tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
+		invalidTagRuleError(c, tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
 		return
 	} else {
 		res := cr.RecognizeWithDetail(c, rego.EvalInput(in.Input))
@@ -468,7 +657,8 @@ func tagRuleDryRun(c *gin.Context) {
 }
 
 // tagRuleDryRunGroup 处理规则组 dry-run 的请求。
-// 针对一组候选规则（rules），经 CompileGroup 编译后评估输入文档，
+// 针对一组候选规则（rules），先经公共 Rego 校验（逐条语法契约 + 整组语义编译），
+// 校验通过后再经 CompileGroup 编译并评估输入文档，
 // 输出逐规则详情与合并标签。
 // 输出仅含错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 func tagRuleDryRunGroup(c *gin.Context) {
@@ -486,9 +676,13 @@ func tagRuleDryRunGroup(c *gin.Context) {
 			Enabled: true,
 		})
 	}
+	if errs, ok := tagengine.ValidateRegoRules(c, rules); !ok {
+		invalidTagRuleError(c, errs).AbortWithGinH(c)
+		return
+	}
 	group, err := tagengine.CompileGroup(c, rules)
 	if err != nil {
-		invalidTagRuleError(tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
+		invalidTagRuleError(c, tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
 		return
 	}
 	result := group.RecognizeWithDetail(c, rego.EvalInput(in.Input))
@@ -639,12 +833,15 @@ func newTagRuleBaseDetailOut(rule *tag.TagRule) TagRuleBaseDetailOut {
 	}
 }
 
-// validateTagRuleCandidate 校验一条候选规则：先做语法/契约校验（InspectRego），
-// 再基于"变更后的组"（DB 现有启用规则 + 候选）做组级编译校验。
+// validateTagRuleCandidate 校验一条候选规则：先确认目标模型已注册（未注册直接拒绝），
+// 再基于"变更后的组"（DB 现有启用规则 + 候选）做 Rego 校验（语法/契约/组级编译，
+// 复用 ValidateRegoRules），最后做运行期样例校验。
 // 任一校验失败时向客户端返回带行列号的错误详情并返回 false。
 func validateTagRuleCandidate(c *gin.Context, candidate *tag.TagRule) bool {
-	if errs, ok := tagengine.InspectRego(candidate.Rego); !ok {
-		invalidTagRuleError(errs).AbortWithGinH(c)
+	// 目标模型必须已在引擎注册表中登记：未注册模型的规则引擎永不加载
+	// （按实际数据实例的类型键分组），属于死规则，写入时直接拒绝
+	if !tagengine.IsRegistered(candidate.Model) {
+		invalidTagRuleModelNotRegisteredError(candidate.Model).AbortWithGinH(c)
 		return false
 	}
 	group, err := buildTagRuleGroup(c, manager.GetCoreDatabase(c), candidate)
@@ -652,8 +849,24 @@ func validateTagRuleCandidate(c *gin.Context, candidate *tag.TagRule) bool {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return false
 	}
-	if err := tagengine.ValidateGroup(c, group); err != nil {
-		invalidTagRuleError(tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
+	// Rego 校验（语法 + 契约 + 组级语义编译），与 validate / dry-run 统一复用公共函数
+	if errs, ok := tagengine.ValidateRegoRules(c, group); !ok {
+		invalidTagRuleError(c, errs).AbortWithGinH(c)
+		return false
+	}
+	// 第二层校验：基于验证样例做运行期评估，任一样例评估报错即判定运行期不合法
+	if issues, err := tagengine.ValidateGroupRuntime(c, manager.GetCoreDatabase(c), group); err != nil {
+		if errors.Is(err, tagengine.ErrSampleNotProvisioned) {
+			// 该模型尚未预置验证样例：运行期校验降级跳过，记录告警后放行
+			// （规则仍受第一层语法/契约校验保障，样例补充后即恢复运行期保障）
+			manager.GetLogger(c).Warnf(c, nil,
+				"tag rule runtime validation skipped: no samples provisioned, model=%s", candidate.Model)
+		} else {
+			manager.CreateAccidentError(err).AbortWithGinH(c)
+			return false
+		}
+	} else if len(issues) > 0 {
+		invalidTagRuleRuntimeError(issues).AbortWithGinH(c)
 		return false
 	}
 	return true

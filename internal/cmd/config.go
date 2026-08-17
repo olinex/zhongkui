@@ -4,12 +4,13 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
 var describeConfigCmd = &cobra.Command{
 	Use:   "config",
-	Short: "显示默认配置项说明",
+	Short: "cmd.describe.config.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		descs := provider.DescribeLoggerConfig()
 		descs.Join(manager.DescribeConfig())
@@ -21,11 +22,9 @@ var describeConfigCmd = &cobra.Command{
 		descs.Join(provider.DescribeGrpcClientConfig())
 		descs.Join(provider.DescribeGrpcServerConfig())
 		descs.Join(provider.DescribePipelineConfig())
-		// 将配置项说明本地化为 CLI 语言，无对应翻译时回退为 comment 标签中的中文
-		for idx := range descs {
-			descs[idx].Comment = cliT("config."+descs[idx].Path, descs[idx].Comment)
-		}
-		if err := descs.Describe(func(key, fallback string) string { return cliT(key, fallback) }); err != nil {
+		// 表头经 translate.T 按 key 本地化（cli.config.col-*）；配置项说明以结构体
+		// comment 标签为唯一事实来源，英文翻译可追加到 en.toml 的 config.<path>
+		if err := descs.Describe(func(key, fallback string) string { return translate.T(key, nil) }); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}

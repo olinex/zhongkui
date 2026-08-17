@@ -18,6 +18,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -58,12 +59,8 @@ type streamMeta struct {
 
 var generateTestcaseCmd = &cobra.Command{
 	Use:   "testcase",
-	Short: "从 pcap 文件中提取 HTTP 测试用例",
-	Long: `使用 tshark 从 pcap 文件中提取 HTTP 请求/响应数据，
-并生成 JSON 测试用例文件，用于验证 TCP 重组和 HTTP 协议识别逻辑。
-
-每个 HTTP 事务（请求-响应对）生成一个 JSON 文件。
-支持 HTTP/1.1 keep-alive 连接中每个 TCP 流包含多个事务的情况。`,
+	Short: "cmd.create.testcase.short",
+	Long:  "cmd.create.testcase.long",
 	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
@@ -75,14 +72,14 @@ var generateTestcaseCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Success.Println(cliT("cli.testcase.generated", "测试用例已生成到 {{.Dir}}", map[string]any{"Dir": outputDir}))
+		pterm.Success.Println(translate.T("cli.testcase.generated", map[string]any{"Dir": outputDir}))
 	},
 }
 
 func init() {
 	flags := generateTestcaseCmd.Flags()
-	flags.StringP("pcap", "p", "", "pcap 文件路径（必填）")
-	flags.StringP("output", "o", "./testcases", "测试用例文件的输出目录")
+	flags.StringP("pcap", "p", "", "flag.create.testcase.pcap")
+	flags.StringP("output", "o", "./testcases", "flag.create.testcase.output")
 	generateTestcaseCmd.MarkFlagRequired("pcap")
 }
 
@@ -109,17 +106,17 @@ func generateTestcase(pcapPath, outputDir string) error {
 		return fmt.Errorf("failed to list HTTP streams: %w", err)
 	}
 	if len(streams) == 0 {
-		pterm.Warning.Println(cliT("cli.testcase.no-http", "pcap 文件中未发现 HTTP 流量"))
+		pterm.Warning.Println(translate.T("cli.testcase.no-http", nil))
 		return nil
 	}
-	pterm.Info.Println(cliT("cli.testcase.found-streams", "发现 {{.Count}} 条 HTTP 流", map[string]any{"Count": len(streams)}))
+	pterm.Info.Println(translate.T("cli.testcase.found-streams", map[string]any{"Count": len(streams)}))
 
 	totalTransactions := 0
 	for _, streamID := range streams {
-		pterm.Info.Println(cliT("cli.testcase.processing-stream", "正在处理 TCP 流 {{.Stream}}...", map[string]any{"Stream": streamID}))
+		pterm.Info.Println(translate.T("cli.testcase.processing-stream", map[string]any{"Stream": streamID}))
 		transactions, err := extractStreamTransactions(pcapPath, streamID)
 		if err != nil {
-			pterm.Warning.Println(cliT("cli.testcase.process-failed", "处理流 {{.Stream}} 失败：{{.Err}}，跳过", map[string]any{"Stream": streamID, "Err": err}))
+			pterm.Warning.Println(translate.T("cli.testcase.process-failed", map[string]any{"Stream": streamID, "Err": err}))
 			continue
 		}
 
@@ -129,12 +126,12 @@ func generateTestcase(pcapPath, outputDir string) error {
 			if err := writeTransactionFixture(&tx, outputPath); err != nil {
 				return fmt.Errorf("failed to write test case file: %w", err)
 			}
-			pterm.Success.Println(cliT("cli.testcase.generated-file", "  已生成 {{.Path}}", map[string]any{"Path": outputPath}))
+			pterm.Success.Println(translate.T("cli.testcase.generated-file", map[string]any{"Path": outputPath}))
 			totalTransactions++
 		}
 	}
 
-	pterm.Info.Println(cliT("cli.testcase.total", "共 {{.Tx}} 个 HTTP 事务，跨 {{.Streams}} 条流", map[string]any{"Tx": totalTransactions, "Streams": len(streams)}))
+	pterm.Info.Println(translate.T("cli.testcase.total", map[string]any{"Tx": totalTransactions, "Streams": len(streams)}))
 	return nil
 }
 
@@ -347,7 +344,7 @@ func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecor
 		}
 		if err != nil {
 			// If we can't parse a request but there's still data, log and stop
-			pterm.Warning.Println(cliT("cli.testcase.parse-request-failed", "  流 {{.Stream}}：解析第 {{.Tx}} 个 HTTP 请求失败：{{.Err}}", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
+			pterm.Warning.Println(translate.T("cli.testcase.parse-request-failed", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 			break
 		}
 
@@ -355,10 +352,10 @@ func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecor
 		_, respRaw, err := readHTTPResponse(serverReader, req)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			// Response incomplete or missing — still record the request alone
-			pterm.Warning.Println(cliT("cli.testcase.response-missing", "  流 {{.Stream}} 事务 {{.Tx}}：HTTP 响应缺失或不完整：{{.Err}}", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
+			pterm.Warning.Println(translate.T("cli.testcase.response-missing", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 		}
 		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-			pterm.Warning.Println(cliT("cli.testcase.parse-response-failed", "  流 {{.Stream}} 事务 {{.Tx}}：解析 HTTP 响应失败：{{.Err}}", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
+			pterm.Warning.Println(translate.T("cli.testcase.parse-response-failed", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 		}
 
 		tx := TransactionFixture{

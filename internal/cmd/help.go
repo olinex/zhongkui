@@ -12,9 +12,8 @@ import (
 // 命令查找与补全逻辑复刻自 cobra 的 InitDefaultHelpCmd 实现。
 var helpCmd = &cobra.Command{
 	Use:   "help [command]",
-	Short: "显示任意命令的帮助信息",
-	Long: `帮助命令用于显示应用程序中任意命令的帮助信息。
-直接输入 zhongkui help [命令路径] 即可查看完整帮助。`,
+	Short: "cmd.help.short",
+	Long:  "cmd.help.long",
 	ValidArgsFunction: func(c *cobra.Command, args []string, toComplete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 		var completions []cobra.Completion
 		cmd, _, e := c.Root().Find(args)

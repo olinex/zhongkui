@@ -78,6 +78,7 @@ func NewCoreSchemaManager() do.Provider[*database.SchemaManager] {
 		&tagmodel.TagEventRuleVersion{},
 		&tagmodel.TagRule{},
 		&tagmodel.TagRuleVersion{},
+		&tagmodel.TagRuleSample{},
 	)
 }
 

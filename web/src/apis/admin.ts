@@ -16,6 +16,7 @@ import type {
   TagEventRuleValidateIn,
   TagRuleCreateIn,
   TagRuleDryRunIn,
+  TagRuleModelIn,
   TagRuleUpdateIn,
   TagRuleValidateIn,
   UserGroupIn,
@@ -232,6 +233,28 @@ export function tagRuleSetEnabled(id: number, enabled: boolean): AxiosPromise {
 
 export function tagRuleValidate(data: TagRuleValidateIn): AxiosPromise {
   return request.post("/admin/tag-rule/validate", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagRuleModelOptions(): AxiosPromise {
+  return request.post(
+    "/admin/tag-rule/model/options",
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function tagRuleModelMetadata(data: TagRuleModelIn): AxiosPromise {
+  return request.post("/admin/tag-rule/model/metadata", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagRuleModelSamples(data: TagRuleModelIn): AxiosPromise {
+  return request.post("/admin/tag-rule/model/samples", data, {
     headers: getJwtHeader(),
   });
 }

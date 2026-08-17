@@ -58,6 +58,11 @@ export interface TagRuleUpdateIn {
 
 export interface TagRuleValidateIn {
   rego: string;
+  model?: string;
+}
+
+export interface TagRuleModelIn {
+  model: string;
 }
 
 export interface TagRuleDryRunIn {

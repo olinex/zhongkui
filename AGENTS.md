@@ -125,11 +125,13 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 ### CLI (Cobra)
 
-- 中文为默认文案：所有 `Short`/`Long`、flag usage、交互式提示（`prompt` 标签、pterm 输入提示）必须用中文；`Use` 字段保持命令名/语法不变
-- 文案统一接入 go-i18n（`internal/pkg/translate`），翻译键：`cmd.<path>.short|long|example`、`flag.<path>.<name>`、`cli.<topic>`；英文维护在 `en.toml`，未命中回退中文原文
+- 命令树字段即翻译键本身：所有命令的 `Short`/`Long`/`Example` 与 flag usage **必须**写成 i18n key（`cmd.<path>.short|long|example`、`flag.<path>.<name>`），禁止在代码中硬编码任何语言的字面量文案；`Use` 字段保持命令名/语法不变
+- 翻译统一接入 go-i18n（`internal/pkg/translate`）：运行文案用 `cli.<topic>` 键；代码中一律调用 `translate.T(key, data)`（缺失时返回 key 本身），禁止自定义带 fallback 的翻译辅助函数（已移除 `cliT`）
+- 回退语言固定为 `zh-Hans`：`locales/zh-Hans.toml` 必须覆盖全部 cmd.*/flag.*/cli.* 键；`locales/en.toml` 维护英文翻译，未命中时经 go-i18n 回退到 zh-Hans；两个文件都缺失时返回 key 本身
+- 键完整性由 `internal/cmd/i18n_test.go` 的 `TestCommandTreeKeysComplete` 兜底：遍历命令树断言每个 Short/Long/Example/flag usage 在 zh-Hans 下可解析（解析结果不等于 key），新增命令/标志必须同步补翻译文件
 - `prompt:"..."` 标签提示由 `internal/pkg/cliinput` 按 `cli.input.prompt.<StructName>.<FieldName>` 经 `internal/pkg/translate` 的 `T` 函数翻译，中文文案维护在 `locales/zh-Hans.toml`、英文在 `en.toml`；cliinput 内部固定键为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CliI18nPrefix`）
 - 语言切换：环境变量 `ZKI_LANG`（`en` / `zh-Hans`，默认 `zh-Hans`），统一由 `internal/pkg/base/environments.go` 的 `GlobalEnv.Lang`（`GlobalPrefix` 为 `zki` + `split_words:"true"` 映射为 `ZKI_LANG`）提供，CLI 经 `base.Env.Lang` 读取
-- 翻译入口 `internal/cmd/i18n.go`：`cliLang()` / `getCliI18n()` / `cliT()`；命令树本地化在 `Execute()` 的 `localizeCmdTree()`
+- 翻译入口 `internal/cmd/i18n.go`：命令树本地化在 `Execute()` 的 `localizeCmdTree()`（将字段值作为 key 经 `translate.T` 就地替换）
 - 覆盖 cobra 内置英文命令：`internal/cmd/help.go`（中文 help）、`internal/cmd/completion.go`（中文 completion），根命令 `init()` 中 `RootCmd.SetHelpCommand(helpCmd)` 注册
 - `--help` 不触发 `PersistentPreRunE`，故语言切换必须放在 `Execute()` 入口的 `localizeCmdTree()` 中
 

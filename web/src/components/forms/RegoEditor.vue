@@ -1,8 +1,49 @@
 <template>
-  <div ref="hostRef" class="rego-editor" :style="{ minHeight }" />
+  <div class="rego-editor-wrap">
+    <div v-if="fields.length > 0" class="input-fields-panel">
+      <div class="panel-header">
+        <span class="panel-title">{{ $t("title.inputFields") }}</span>
+        <v-btn
+          variant="text"
+          size="x-small"
+          density="comfortable"
+          :icon="panelCollapsed ? 'mdi-chevron-down' : 'mdi-chevron-up'"
+          @click="panelCollapsed = !panelCollapsed"
+        />
+      </div>
+      <div v-show="!panelCollapsed" class="panel-body">
+        <v-text-field
+          v-model="fieldFilter"
+          density="compact"
+          variant="outlined"
+          :placeholder="$t('action.searchFields')"
+          hide-details
+          clearable
+          class="field-search"
+        />
+        <div class="field-list">
+          <button
+            v-for="field in filteredFields"
+            :key="field.field"
+            type="button"
+            class="field-item"
+            @click="insertField(field)"
+          >
+            <span class="field-name">{{ field.field }}</span>
+            <v-chip size="x-small" density="comfortable" variant="tonal" class="field-type">
+              {{ inputTypeLabel(field.type) }}
+            </v-chip>
+            <v-icon v-if="field.sensitive" size="x-small">mdi-lock</v-icon>
+            <span v-if="field.description" class="field-desc">{{ field.description }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div ref="hostRef" class="rego-editor" :style="{ minHeight }" />
+  </div>
 </template>
 
-<script setup lang="ts">
+<script setup lang="ts" name="rego-editor">
 import {
   autocompletion,
   completeFromList,
@@ -21,7 +62,9 @@ import { rego } from "codemirror-lang-rego";
 
 import { useAppStore } from "@/stores/app";
 import { DARK_THEME } from "@/stores/local";
-import { INPUT_FIELD_SUGGESTIONS, type RegoValidationError } from "@/utils/rego";
+import i18n from "@/utils/i18n";
+import { fieldSnippet } from "@/utils/rego";
+import type { InputFieldMeta, RegoValidationError } from "@/utils/rego";
 
 const props = withDefaults(
   defineProps<{
@@ -29,6 +72,8 @@ const props = withDefaults(
     errors?: RegoValidationError[];
     /** extra `input.<field>` completions, e.g. fields referenced by existing rules */
     extraCompletions?: string[];
+    /** input document field metadata from backend, drives `input.` completion & fields panel */
+    fields?: InputFieldMeta[];
     /** disables editing (read-only), the component stays interactive */
     disabled?: boolean;
     minHeight?: string;
@@ -36,6 +81,7 @@ const props = withDefaults(
   {
     errors: () => [],
     extraCompletions: () => [],
+    fields: () => [],
     disabled: false,
     minHeight: "240px",
   },
@@ -69,34 +115,92 @@ function applySnippet(
   });
 }
 
+// Collapsible "input fields" panel state, expanded by default.
+const panelCollapsed = ref(false);
+const fieldFilter = ref("");
+
+/** Fields filtered by the panel search box against name and description. */
+const filteredFields = computed<InputFieldMeta[]>(() => {
+  const keyword = fieldFilter.value.trim().toLowerCase();
+  if (!keyword) {
+    return props.fields;
+  }
+  return props.fields.filter(
+    (f) =>
+      f.field.toLowerCase().includes(keyword) ||
+      (f.description ?? "").toLowerCase().includes(keyword),
+  );
+});
+
+/** Inserts a field snippet at the current cursor position, then refocuses. */
+function insertField(field: InputFieldMeta): void {
+  const editorView = view.value;
+  if (!editorView) {
+    return;
+  }
+  const head = editorView.state.selection.main.head;
+  editorView.dispatch({
+    changes: { from: head, to: head, insert: fieldSnippet(field) },
+  });
+  editorView.focus();
+}
+
+/** Localizes a semantic input type key, falling back to the raw type text. */
+function inputTypeLabel(type: string): string {
+  const key = `inputType.${type}`;
+  return i18n.global.te(key) ? i18n.global.t(key) : type;
+}
+
 /**
- * Custom completion source: completes `input.<field>` from the suggestion
- * dictionary plus `extraCompletions`, then falls back to the Rego language
- * sources (keywords, OPA built-ins) registered by `codemirror-lang-rego`.
+ * Builds `input.<field>` completions from the `fields` metadata merged with
+ * `extraCompletions` (deduplicated by field name, metadata wins). Sensitive
+ * fields get a marker in the label and a hint in the detail text.
+ */
+function inputFieldCompletions(): Completion[] {
+  const items: Completion[] = [];
+  const seen = new Set<string>();
+  for (const field of props.fields) {
+    seen.add(field.field);
+    const parts = [inputTypeLabel(field.type)];
+    if (field.description) {
+      parts.push(field.description);
+    }
+    if (field.sensitive) {
+      parts.push("sensitive");
+    }
+    items.push({
+      label: field.sensitive ? `${field.field} (sensitive)` : field.field,
+      detail: parts.join(" · "),
+      type: "variable",
+      apply: (v, c, from, to) => applySnippet(v, c, from, to, fieldSnippet(field)),
+    });
+  }
+  for (const field of props.extraCompletions) {
+    if (seen.has(field)) {
+      continue;
+    }
+    seen.add(field);
+    items.push({
+      label: field,
+      detail: "existing rule field",
+      type: "variable",
+      apply: (v, c, from, to) => applySnippet(v, c, from, to, `input.${field} == ""`),
+    });
+  }
+  return items;
+}
+
+/**
+ * Custom completion source: completes `input.<field>` from field metadata and
+ * `extraCompletions`, then falls back to the Rego language sources (keywords,
+ * OPA built-ins) registered by `codemirror-lang-rego`.
  */
 async function regoCompletion(context: CompletionContext): Promise<CompletionResult | null> {
   const line = context.state.doc.lineAt(context.pos);
   const textBefore = line.text.slice(0, context.pos - line.from);
   const dotMatch = /input\.([a-zA-Z_][a-zA-Z0-9_]*)$/.exec(textBefore);
   if (dotMatch) {
-    const items: Completion[] = [];
-    for (const field of INPUT_FIELD_SUGGESTIONS) {
-      items.push({
-        label: field.field,
-        detail: field.description,
-        type: "variable",
-        apply: (v, c, from, to) => applySnippet(v, c, from, to, field.snippet),
-      });
-    }
-    for (const field of props.extraCompletions) {
-      items.push({
-        label: field,
-        detail: "existing rule field",
-        type: "variable",
-        apply: (v, c, from, to) => applySnippet(v, c, from, to, `input.${field} == ""`),
-      });
-    }
-    const result = await completeFromList(items)(context);
+    const result = await completeFromList(inputFieldCompletions())(context);
     if (result) {
       return result;
     }
@@ -206,7 +310,13 @@ watch(
       const lineNo = Math.max(1, Math.min(err.line, doc.lines));
       const line = doc.line(lineNo);
       const from = line.from + Math.max(0, Math.min(err.column - 1, line.length));
-      return { from, to: line.to, severity: "error", message: err.message };
+      const hint = err.hint ? `\n${err.hint}` : "";
+      return {
+        from,
+        to: line.to,
+        severity: err.type === "warning" ? "warning" : "error",
+        message: err.message + hint,
+      };
     });
     editorView.dispatch(setDiagnostics(editorView.state, diagnostics));
   },
@@ -217,6 +327,84 @@ defineExpose({ focus: () => view.value?.focus() });
 </script>
 
 <style scoped>
+.rego-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Input fields panel reuses the editor border/radius/surface so both blocks
+   read as one unit and follow the app theme (light/dark). */
+.input-fields-panel {
+  border: 1px solid rgb(0 0 0 / 24%);
+  border-radius: 4px;
+  background-color: rgb(var(--v-theme-surface));
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+  padding: 0 4px 0 12px;
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+.panel-body {
+  padding: 0 12px 12px;
+}
+
+.field-search {
+  margin-bottom: 8px;
+}
+
+.field-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.field-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: rgb(var(--v-theme-on-surface));
+  text-align: left;
+  cursor: pointer;
+}
+
+.field-item:hover {
+  background: rgb(var(--v-theme-on-surface), 0.06);
+}
+
+.field-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.field-desc {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rego-editor {
   width: 100%;
 

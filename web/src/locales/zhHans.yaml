@@ -276,6 +276,8 @@ action:
   generateExpression: 生成表达式
   reuseFields: 复用已有规则字段
   fillSample: 填入示例
+  selectSample: 选择样例
+  searchFields: 搜索字段
   addCondition: 添加条件
   removeCondition: 移除条件
   validatePassed: 校验通过
@@ -300,6 +302,7 @@ title:
   queueEtl: 数据处理 - 管道
   serverEtl: 数据处理 - 服务端
   taskEtl: 数据处理 - 任务
+  inputFields: 输入字段
 home:
   subtitle: 网络安全审计平台
   quickStart: 快速开始
@@ -331,6 +334,13 @@ notice:
   expressionInvalid: "表达式校验未通过，无法提交！"
   jsonInvalid: "JSON 格式非法！"
   noEnabledRules: "当前命名空间没有已启用的标签规则，无法构建标签池。"
+  sampleLoadFailed: 样例加载失败，请手动输入
+inputType:
+  string: 字符串
+  number: 数字
+  boolean: 布尔
+  object: 对象
+  array: 数组
 unit:
   day: 天
   second: 秒

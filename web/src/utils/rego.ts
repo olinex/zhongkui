@@ -1,14 +1,18 @@
 /**
  * Rego helpers shared by the tag rule admin pages and the RegoEditor
- * component: tag/field literal extraction for heuristic expansion, a field
- * suggestion dictionary for autocomplete, Rego skeleton generation and a
- * lightweight local preflight checker.
+ * component: tag/field literal extraction for heuristic expansion, metadata
+ * driven input field snippets for autocomplete, Rego skeleton generation and
+ * a lightweight local preflight checker.
  */
 
 export interface RegoValidationError {
   line: number;
   column: number;
   message: string;
+  /** lint severity key, e.g. "warning" / "error" */
+  type?: string;
+  /** optional hint rendered alongside the message */
+  hint?: string;
 }
 
 /** Registered model type key for the HTTP transport input document. */
@@ -35,71 +39,68 @@ export const REGO_KEYWORDS = [
   "null",
 ];
 
-export interface InputFieldSuggestion {
-  /** input field name, e.g. "method" */
-  field: string;
-  /** example snippet inserted into the editor */
-  snippet: string;
-  /** brief description shown in the autocomplete popup */
-  description: string;
+/** Item metadata for array-typed fields, e.g. the element type of `items`. */
+export interface InputItemMeta {
+  type: string;
+  goType: string;
 }
 
 /**
- * Dictionary of commonly used fields of the HTTP transport input document
- * (`zhongkui.com/zhongkui/internal/models/network.HttpTransport` JSON).
+ * Field metadata of an input model document as returned by the
+ * `/admin/tag-rule/model/metadata` endpoint.
  */
-export const INPUT_FIELD_SUGGESTIONS: InputFieldSuggestion[] = [
-  {
-    field: "method",
-    snippet: `input.method == "GET"`,
-    description: "HTTP request method",
-  },
-  {
-    field: "scheme",
-    snippet: `input.scheme == "http"`,
-    description: "URL scheme",
-  },
-  {
-    field: "host",
-    snippet: `input.host == "example.com"`,
-    description: "request host",
-  },
-  {
-    field: "http_version",
-    snippet: `input.http_version == "HTTP/1.1"`,
-    description: "HTTP protocol version",
-  },
-  {
-    field: "client_ip",
-    snippet: `input.client_ip == "10.0.0.1"`,
-    description: "client IP address",
-  },
-  {
-    field: "server_ip",
-    snippet: `input.server_ip == "93.184.216.34"`,
-    description: "server IP address",
-  },
-  {
-    field: "url",
-    snippet: `input.url == "http://example.com/path"`,
-    description: "full request URL",
-  },
-  {
-    field: "path",
-    snippet: `input.path == "/api/login"`,
-    description: "request path",
-  },
-  {
-    field: "file_ext",
-    snippet: `input.file_ext == "html"`,
-    description: "path file extension",
-  },
-  {
-    field: "req_hdr_user_agent",
-    snippet: `contains(input.req_hdr_user_agent, "curl")`,
-    description: "user-agent request header",
-  },
-];
+export interface InputFieldMeta {
+  /** input field name, e.g. "method" */
+  field: string;
+  /** semantic type key, e.g. "string" | "number" | "boolean" | "object" | "array" */
+  type: string;
+  /** Go type name of the backend model field */
+  goType: string;
+  /** brief description shown in the autocomplete popup */
+  description?: string;
+  /** whether the field carries sensitive data */
+  sensitive?: boolean;
+  /** element metadata for array-typed fields */
+  items?: InputItemMeta;
+}
+
+/** A sample input document offered for dry-run previews. */
+export interface InputSample {
+  name: string;
+  description?: string;
+  input: Record<string, unknown>;
+}
+
+/** A selectable model option, e.g. rendered as a `<v-select>` item. */
+export interface ModelOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Builds an insertable Rego snippet for an input field based on its semantic
+ * type. Fields comparable with a literal become `input.<field> == <literal>`
+ * (string/number/boolean); object, array and sensitive fields cannot be
+ * compared for equality, so only the bare `input.<field>` reference is
+ * produced. Unknown types fall back to the bare reference as well.
+ */
+export function fieldSnippet(field: InputFieldMeta): string {
+  const ref = `input.${field.field}`;
+  switch (field.type) {
+    case "string":
+      return `${ref} == ""`;
+    case "number":
+      return `${ref} == 0`;
+    case "boolean":
+      return `${ref} == true`;
+    case "object":
+    case "array":
+    case "sensitive":
+      return ref;
+    default:
+      return ref;
+  }
+}
 
 const STRING_LITERAL_RE = /("(?:[^"\\]|\\.)*"|`(?:[^`]|\\.)*`)/g;
 

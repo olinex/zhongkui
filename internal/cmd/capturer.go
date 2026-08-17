@@ -9,14 +9,15 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/routes"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
 var createCapturerCmd = &cobra.Command{
 	Use:   "capturer",
-	Short: "创建网络抓包器",
-	Long:  "创建带有设备配置的新的网络抓包器。参数可以通过命令行参数提供，或通过交互式提示输入。",
+	Short: "cmd.create.capturer.short",
+	Long:  "cmd.create.capturer.long",
 	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -43,26 +44,26 @@ var createCapturerCmd = &cobra.Command{
 		}
 
 		if err := instance.CreateWithConfig(db.WithContext(ctx), client, in.Config.ToGRPC()); err != nil {
-			pterm.Error.Println(cliT("cli.capturer.create-failed", "无法创建抓包器：{{.Err}}", map[string]any{"Err": err}))
+			pterm.Error.Println(translate.T("cli.capturer.create-failed", map[string]any{"Err": err}))
 			return
 		}
 
-		pterm.Success.Println(cliT("cli.capturer.created", "抓包器 {{.Namespace}}/{{.Name}}（{{.Version}}）创建成功", map[string]any{"Namespace": in.Namespace, "Name": in.Name, "Version": in.Version}))
+		pterm.Success.Println(translate.T("cli.capturer.created", map[string]any{"Namespace": in.Namespace, "Name": in.Name, "Version": in.Version}))
 	},
 }
 
 func init() {
 	flags := createCapturerCmd.Flags()
-	flags.String("namespace", "", "抓包器所属命名空间")
-	flags.String("name", "", "抓包器名称")
-	flags.String("version", "", "抓包器版本")
+	flags.String("namespace", "", "flag.create.capturer.namespace")
+	flags.String("name", "", "flag.create.capturer.name")
+	flags.String("version", "", "flag.create.capturer.version")
 	// CapturerConfig fields
-	flags.String("device", "", "网络设备名称（如 eth0）")
-	flags.Uint32("snap-len", 0, "抓包长度（字节）")
-	flags.Bool("promisc", false, "启用混杂模式")
-	flags.Int32("read-timeout", 0, "读取超时时间（毫秒）")
-	flags.String("bpf-expr", "", "BPF 过滤表达式（如 tcp port 80）")
-	flags.Bool("enabled", false, "启用该抓包器")
+	flags.String("device", "", "flag.create.capturer.device")
+	flags.Uint32("snap-len", 0, "flag.create.capturer.snap-len")
+	flags.Bool("promisc", false, "flag.create.capturer.promisc")
+	flags.Int32("read-timeout", 0, "flag.create.capturer.read-timeout")
+	flags.String("bpf-expr", "", "flag.create.capturer.bpf-expr")
+	flags.Bool("enabled", false, "flag.create.capturer.enabled")
 	// Meta flags
-	flags.Duration("timeout", time.Minute, "数据库操作超时时间")
+	flags.Duration("timeout", time.Minute, "flag.create.capturer.timeout")
 }

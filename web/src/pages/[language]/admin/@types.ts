@@ -84,11 +84,14 @@ export interface TagRuleValidateErrorOut {
   line: number;
   column: number;
   message: string;
+  type?: string;
+  hint?: string;
 }
 
 export interface TagRuleValidateOut {
   valid: boolean;
   errors: TagRuleValidateErrorOut[];
+  warnings: TagRuleValidateErrorOut[];
 }
 
 export interface TagRuleDryRunRuleOut {
@@ -102,6 +105,45 @@ export interface TagRuleDryRunOut {
   tags: string[];
   error: string;
   rules: Record<string, TagRuleDryRunRuleOut>;
+}
+
+export interface InputItemMetaOut {
+  type: string;
+  goType: string;
+}
+
+export interface InputFieldMetaOut {
+  field: string;
+  type: string;
+  goType: string;
+  description?: string;
+  sensitive?: boolean;
+  items?: InputItemMetaOut;
+}
+
+export interface TagRuleModelMetadataOut {
+  model: string;
+  fields: InputFieldMetaOut[];
+}
+
+export interface TagRuleSampleOut {
+  name: string;
+  description?: string;
+  input: Record<string, unknown>;
+}
+
+export interface TagRuleModelSamplesOut {
+  model: string;
+  items: TagRuleSampleOut[];
+}
+
+export interface TagRuleModelOptionOut {
+  value: string;
+  label: string;
+}
+
+export interface TagRuleModelOptionsOut {
+  items: TagRuleModelOptionOut[];
 }
 
 // tag event rule

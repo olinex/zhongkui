@@ -108,6 +108,7 @@
                 <rego-editor
                   v-model="createRego"
                   :errors="createRegoErrors"
+                  :fields="createFields"
                   :extra-completions="createExtraFields"
                   min-height="260px"
                 />
@@ -188,6 +189,7 @@
                 <rego-editor
                   v-model="editRego"
                   :errors="editRegoErrors"
+                  :fields="editFields"
                   :extra-completions="editExtraFields"
                   :disabled="!editable"
                   min-height="260px"
@@ -230,7 +232,17 @@
             </v-row>
             <v-row dense>
               <v-col cols="12">
-                <rego-editor v-model="dryRunRego" min-height="200px" />
+                <v-select
+                  v-model="dryRunSample"
+                  :items="dryRunSamples.map((s) => ({ title: s.name, value: s.name }))"
+                  :label="$t('action.selectSample')"
+                  clearable
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <rego-editor v-model="dryRunRego" :fields="dryRunFields" min-height="200px" />
               </v-col>
             </v-row>
             <v-row dense align="center">
@@ -360,6 +372,9 @@ import {
   tagRuleDryRun,
   tagRuleListGet,
   tagRuleListOptions,
+  tagRuleModelMetadata,
+  tagRuleModelOptions,
+  tagRuleModelSamples,
   tagRuleSetEnabled,
   tagRuleUpdate,
   tagRuleValidate,
@@ -377,6 +392,7 @@ import {
   extractInputFields,
   HTTP_TRANSPORT_MODEL_KEY,
   preflightRego,
+  type InputFieldMeta,
   type RegoValidationError,
 } from "@/utils/rego";
 import { useForm } from "vee-validate";
@@ -385,6 +401,10 @@ import type {
   TagRuleDetailOut,
   TagRuleDryRunOut,
   TagRuleListOut,
+  TagRuleModelMetadataOut,
+  TagRuleModelOptionsOut,
+  TagRuleModelSamplesOut,
+  TagRuleSampleOut,
   TagRuleValidateOut,
   TagRuleVersionOut,
 } from "./@types";
@@ -397,25 +417,21 @@ const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const rollbackConfirmRef = useTemplateRef("rollbackConfirmRef");
 
-const modelOptions = [
+const modelOptions = ref([
   {
     title: "HTTP Transport",
     value: HTTP_TRANSPORT_MODEL_KEY,
   },
-];
+]);
 
-const sampleDryRunInput = {
-  method: "GET",
-  scheme: "http",
-  host: "example.com",
-  http_version: "HTTP/1.1",
-  client_ip: "10.0.0.1",
-  server_ip: "93.184.216.34",
-  url: "http://example.com/api/login",
-  path: "/api/login",
-  file_ext: "",
-  req_hdr_user_agent: "curl/8.1.2",
-};
+onMounted(() => {
+  void getResponse<TagRuleModelOptionsOut>(tagRuleModelOptions(), async (rsp) => {
+    const items = rsp.data.items ?? [];
+    if (items.length > 0) {
+      modelOptions.value = items.map((o) => ({ title: o.label, value: o.value }));
+    }
+  });
+});
 
 const createForm = useForm({ validationSchema: createTagRuleSchema });
 const updateForm = useForm({ validationSchema: updateTagRuleSchema });
@@ -431,10 +447,30 @@ const [createEnabled, createEnabledProps] = createForm.defineField("enabled", vu
 const [editDescription, editDescriptionProps] = updateForm.defineField("description", vuetifyCfg);
 const [editEnabled, editEnabledProps] = updateForm.defineField("enabled", vuetifyCfg);
 
+// ---- input model metadata ----
+const createFields = ref<InputFieldMeta[]>([]);
+
+const loadModelFields = async (model: string, target: Ref<InputFieldMeta[]>): Promise<void> => {
+  await getResponse<TagRuleModelMetadataOut>(
+    tagRuleModelMetadata({ model }),
+    async (rsp) => {
+      target.value = rsp.data.fields ?? [];
+    },
+    async () => {
+      target.value = [];
+    },
+  );
+};
+
+watch(createModel, (val) => {
+  void loadModelFields(val, createFields);
+});
+
 // ---- Rego editor state (create dialog) ----
 const createRego = ref("");
 const createPreflightErrors = ref<RegoValidationError[]>([]);
 const createBackendErrors = ref<RegoValidationError[]>([]);
+const createBackendWarnings = ref<RegoValidationError[]>([]);
 const createBackendValid = ref<boolean | null>(null);
 const createRegoValidating = ref(false);
 const createExtraFields = ref<string[]>([]);
@@ -445,6 +481,7 @@ const createRegoErrors = computed<RegoValidationError[]>(() => {
   if (createBackendValid.value === false) {
     errs.push(...createBackendErrors.value);
   }
+  errs.push(...createBackendWarnings.value);
   errs.push(...createPreflightErrors.value);
   const seen = new Set<string>();
   return errs.filter((e) => {
@@ -468,10 +505,11 @@ const validateCreateRego = async (src: string): Promise<void> => {
   createRegoValidating.value = true;
   try {
     await getResponse<TagRuleValidateOut>(
-      tagRuleValidate({ rego: src }),
+      tagRuleValidate({ rego: src, model: createModel.value }),
       async (rsp) => {
         createBackendValid.value = rsp.data.valid;
         createBackendErrors.value = rsp.data.errors ?? [];
+        createBackendWarnings.value = rsp.data.warnings ?? [];
       },
       async () => {
         createBackendValid.value = null;
@@ -519,9 +557,12 @@ const generateCreateSkeleton = (): void => {
 const editRego = ref("");
 const editPreflightErrors = ref<RegoValidationError[]>([]);
 const editBackendErrors = ref<RegoValidationError[]>([]);
+const editBackendWarnings = ref<RegoValidationError[]>([]);
 const editBackendValid = ref<boolean | null>(null);
 const editRegoValidating = ref(false);
 const editExtraFields = ref<string[]>([]);
+const editFields = ref<InputFieldMeta[]>([]);
+const editModel = ref("");
 let editTimer: ReturnType<typeof setTimeout> | undefined;
 let editRuleId = 0;
 
@@ -530,6 +571,7 @@ const editRegoErrors = computed<RegoValidationError[]>(() => {
   if (editBackendValid.value === false) {
     errs.push(...editBackendErrors.value);
   }
+  errs.push(...editBackendWarnings.value);
   errs.push(...editPreflightErrors.value);
   const seen = new Set<string>();
   return errs.filter((e) => {
@@ -553,10 +595,11 @@ const validateEditRego = async (src: string): Promise<void> => {
   editRegoValidating.value = true;
   try {
     await getResponse<TagRuleValidateOut>(
-      tagRuleValidate({ rego: src }),
+      tagRuleValidate({ rego: src, model: editModel.value }),
       async (rsp) => {
         editBackendValid.value = rsp.data.valid;
         editBackendErrors.value = rsp.data.errors ?? [];
+        editBackendWarnings.value = rsp.data.warnings ?? [];
       },
       async () => {
         editBackendValid.value = null;
@@ -622,10 +665,14 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
     tagRuleDetailGet(item.id),
     async (rsp) => {
       editRuleId = rsp.data.id;
+      editModel.value = rsp.data.model || HTTP_TRANSPORT_MODEL_KEY;
       updateForm.resetField("description", { value: rsp.data.description });
       updateForm.resetField("enabled", { value: rsp.data.enabled });
       editRego.value = rsp.data.rego;
       editExtraFields.value = [];
+      editFields.value = [];
+      editBackendWarnings.value = [];
+      void loadModelFields(editModel.value, editFields);
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -646,6 +693,8 @@ const openCreateDialogAction = (): void => {
   createRego.value = "";
   createExtraFields.value = [];
   createBackendValid.value = null;
+  createBackendWarnings.value = [];
+  void loadModelFields(createModel.value, createFields);
   createDialogRef.value?.open({});
   void validateCreateRego("");
 };
@@ -781,7 +830,7 @@ const reuseFieldsAction = async (): Promise<void> => {
     tagRuleListGet({ greedy: false, page: 1, pageSize: 100 }),
     async (rsp) => {
       const siblings = rsp.data.items.filter(
-        (r) => r.id !== editRuleId && r.model === HTTP_TRANSPORT_MODEL_KEY,
+        (r) => r.id !== editRuleId && r.model === editModel.value,
       );
       const fields = new Set<string>();
       for (const rule of siblings) {
@@ -812,10 +861,47 @@ const dryRunRego = ref("");
 const dryRunInput = ref("");
 const dryRunLoading = ref(false);
 const dryRunResult = ref<TagRuleDryRunOut | null>(null);
+const dryRunFields = ref<InputFieldMeta[]>([]);
+const dryRunSamples = ref<TagRuleSampleOut[]>([]);
+const dryRunSample = ref("");
 
 const fillDryRunSample = (): void => {
-  dryRunInput.value = JSON.stringify(sampleDryRunInput, null, 2);
+  const sample = dryRunSamples.value.find((s) => s.name === dryRunSample.value);
+  if (sample) {
+    dryRunInput.value = JSON.stringify(sample.input, null, 2);
+  }
 };
+
+const loadDryRunSamples = async (): Promise<void> => {
+  dryRunSamples.value = [];
+  dryRunSample.value = "";
+  await getResponse<TagRuleModelSamplesOut>(
+    tagRuleModelSamples({ model: dryRunModel.value }),
+    async (rsp) => {
+      dryRunSamples.value = rsp.data.items ?? [];
+      const first = dryRunSamples.value[0];
+      if (first) {
+        dryRunSample.value = first.name;
+        dryRunInput.value = JSON.stringify(first.input, null, 2);
+      }
+    },
+  );
+};
+
+watch(dryRunModel, (val) => {
+  void loadModelFields(val, dryRunFields);
+  void loadDryRunSamples();
+});
+
+watch(dryRunSample, (name) => {
+  if (!name) {
+    return;
+  }
+  const sample = dryRunSamples.value.find((s) => s.name === name);
+  if (sample) {
+    dryRunInput.value = JSON.stringify(sample.input, null, 2);
+  }
+});
 
 const dryRunAction = async (): Promise<void> => {
   if (!dryRunItem.value) {
@@ -863,9 +949,13 @@ const openDryRunAction = (item: Record<string, any>): void => {
   dryRunItem.value = item;
   dryRunModel.value = item.model || HTTP_TRANSPORT_MODEL_KEY;
   dryRunRego.value = "";
-  fillDryRunSample();
+  dryRunInput.value = "";
+  dryRunSamples.value = [];
+  dryRunSample.value = "";
   dryRunResult.value = null;
   dryRunDialog.value = true;
+  void loadModelFields(dryRunModel.value, dryRunFields);
+  void loadDryRunSamples();
 };
 
 // ---- version list & rollback ----

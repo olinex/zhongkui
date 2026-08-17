@@ -54,6 +54,8 @@ const (
 	CodeTooManyAccessKey                          // 1103: 访问密钥数量超出限制
 	CodeTagRuleInvalid                            // 1104: 标签规则校验失败（语法/契约/组级冲突）
 	CodeTagEventRuleInvalid                       // 1105: 标签事件规则校验失败（表达式非法）
+	CodeTagRuleRuntimeInvalid                     // 1106: 标签规则运行期样例校验失败（样例评估报错）
+	CodeTagRuleModelNotRegistered                 // 1107: 标签规则目标模型未注册（引擎不识别，写入被拒绝）
 )
 
 // 预定义的常用错误实例

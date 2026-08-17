@@ -276,6 +276,8 @@ action:
   generateExpression: Generate Expression
   reuseFields: Reuse Existing Rule Fields
   fillSample: Fill Sample
+  selectSample: Select sample
+  searchFields: Search fields
   addCondition: Add Condition
   removeCondition: Remove Condition
   validatePassed: Validation Passed
@@ -300,6 +302,7 @@ title:
   queueEtl: ETL - Queue
   serverEtl: ETL - Server
   taskEtl: ETL - Task
+  inputFields: Input Fields
 home:
   subtitle: Network Security Audit Platform
   quickStart: Quick Start
@@ -331,6 +334,13 @@ notice:
   expressionInvalid: "Expression validation failed, cannot submit!"
   jsonInvalid: "Invalid JSON format!"
   noEnabledRules: "No enabled tag rules in current namespace, cannot build tag pool."
+  sampleLoadFailed: Sample load failed, please input manually
+inputType:
+  string: String
+  number: Number
+  boolean: Boolean
+  object: Object
+  array: Array
 unit:
   day: d
   second: s

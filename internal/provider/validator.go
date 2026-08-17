@@ -33,6 +33,9 @@ func newUniversalTranslator(_ context.Context) do.Provider[*ut.UniversalTranslat
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		for tag, fn := range funcs {
+			validator.Validate.RegisterValidation(tag, fn)
+		}
 		for _, lang := range base.SupportLanguages {
 			for tag := range funcs {
 				if err := validator.RegisterTranslation(tag, &lang); err != nil {
