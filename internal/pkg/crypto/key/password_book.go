@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 // PasswordBookSize 定义密码本的固定大小（字节数）
@@ -101,7 +102,7 @@ func LoadPasswordBook(path string) (*PasswordBook, error) {
 		return nil, errors.WithStack(err)
 	}
 
-	fmt.Fprintf(os.Stderr, "WARNING: Using embedded default password book. This is NOT safe for production. Please run 'zki create password-book' to generate your own password book file.\n")
+	fmt.Fprintln(os.Stderr, translate.T("cli.crypto.password-book-warning", nil))
 	return pb, nil
 }
 

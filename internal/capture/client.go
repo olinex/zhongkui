@@ -19,6 +19,7 @@ import (
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 // CaptureClient 抓包客户端，负责管理与远程服务器的通信、监控配置变化、执行数据包捕获和上传
@@ -702,10 +703,10 @@ func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) 
 				select {
 				case <-ctx.Done():
 					// 退出前打印最终统计快照
-					pterm.Debug.Printfln("[capture stats] %s", cc.stats.Snapshot())
+					pterm.Debug.Println(translate.T("cli.capture.stats", map[string]any{"Stats": cc.stats.Snapshot()}))
 					return nil
 				case <-ticker.C:
-					pterm.Debug.Printfln("[capture stats] %s", cc.stats.Snapshot())
+					pterm.Debug.Println(translate.T("cli.capture.stats", map[string]any{"Stats": cc.stats.Snapshot()}))
 				}
 			}
 		})

@@ -76,11 +76,9 @@ export const DataTypeRanges: Record<BackendDataType, NumberRange | null> = {
   [BackendDataType.TIME]: null,
   [BackendDataType.DURATION]: null,
   [BackendDataType.ACTIONS]: null,
+  [BackendDataType.JSON]: null,
 };
 
-export function isEnumValue<T extends object>(
-  enumObj: T,
-  value: string | number
-): boolean {
+export function isEnumValue<T extends object>(enumObj: T, value: string | number): boolean {
   return Object.values(enumObj).includes(value);
 }

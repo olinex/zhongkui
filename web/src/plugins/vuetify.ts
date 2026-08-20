@@ -29,19 +29,64 @@ export default createVuetify({
     themes: {
       light: {
         colors: {
-          // 核心：更灰的背景色（推荐值）
-          background: '#EFEFEF', // 中度浅灰（比 #F5F5F5 深，不刺眼）
-          // 或 #E8E8E8（稍深）、#E0E0E0（更深，适合强质感需求）
-          
-          // 卡片/组件背景（比全局背景稍浅，形成层次）
-          surface: '#F5F5F5', // 比 background 浅一级，避免单调
-          
-          // 文本色需同步加深，确保对比度
-          'on-background': '#222222', // 深灰文本（比 #333 更深，适配深色背景）
-          'on-surface': '#222222', // 卡片上的文本色
+          background: "#E6EAF0",
+          surface: "#FFFFFF",
+          "surface-variant": "#E2E7EF",
+          primary: "#2563EB",
+          secondary: "#64748B",
+          success: "#16A34A",
+          warning: "#D97706",
+          error: "#DC2626",
+          info: "#0891B2",
+          border: "#D5DCE7",
+          outline: "#B4C0D2",
+          "on-background": "#1F2937",
+          "on-surface": "#1F2937",
+          "on-surface-variant": "#4B5563",
+          "on-primary": "#FFFFFF",
+          "on-secondary": "#FFFFFF",
+          "on-success": "#FFFFFF",
+          "on-warning": "#FFFFFF",
+          "on-error": "#FFFFFF",
+          "on-info": "#FFFFFF",
+        },
+      },
+      dark: {
+        colors: {
+          background: "#0E1116",
+          surface: "#151A21",
+          "surface-variant": "#1D242E",
+          primary: "#3B82F6",
+          secondary: "#94A3B8",
+          success: "#22C55E",
+          warning: "#FBBF24",
+          error: "#EF4444",
+          info: "#22D3EE",
+          border: "#262E3A",
+          outline: "#37404F",
+          "on-background": "#E5E7EB",
+          "on-surface": "#E6E8EC",
+          "on-surface-variant": "#9CA3AF",
+          "on-primary": "#FFFFFF",
+          "on-secondary": "#0F172A",
+          "on-success": "#052E16",
+          "on-warning": "#422006",
+          "on-error": "#FFFFFF",
+          "on-info": "#083344",
         },
       },
     },
+  },
+  defaults: {
+    VTextField: { variant: "outlined", density: "compact" },
+    VSelect: { variant: "outlined", density: "compact" },
+    VAutocomplete: { variant: "outlined", density: "compact" },
+    VCombobox: { variant: "outlined", density: "compact" },
+    VTextarea: { variant: "outlined", density: "compact" },
+    VDataTable: { density: "compact" },
+    VDataTableServer: { density: "compact" },
+    VDialog: { rounded: "lg" },
+    VCard: { elevation: 0 },
   },
   locale: {
     current: i18n.global.locale.value,

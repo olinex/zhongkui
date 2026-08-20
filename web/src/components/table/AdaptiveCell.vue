@@ -1,17 +1,9 @@
 <template>
-  <v-chip
-    v-if="
-      header.type !== BackendDataType.ACTIONS && item[header.key] === undefined
-    "
-  >
+  <v-chip v-if="header.type !== BackendDataType.ACTIONS && item[header.key] === undefined">
     {{ $t("model.__base.value.undefined") }}
   </v-chip>
 
-  <v-chip
-    v-else-if="
-      header.type !== BackendDataType.ACTIONS && item[header.key] === null
-    "
-  >
+  <v-chip v-else-if="header.type !== BackendDataType.ACTIONS && item[header.key] === null">
     {{ $t("model.__base.value.null") }}
   </v-chip>
   <hex-string-chip
@@ -20,10 +12,7 @@
     suffix="..."
     :value="item[header.key]"
   />
-  <boolean-chip
-    v-else-if="header.type === BackendDataType.BOOLEAN"
-    :value="item[header.key]"
-  />
+  <boolean-chip v-else-if="header.type === BackendDataType.BOOLEAN" :value="item[header.key]" />
   <storage-size-chip
     v-else-if="header.type === BackendDataType.BINARY_BYTE"
     :value="item[header.key]"
@@ -35,7 +24,7 @@
   />
   <json-chip
     v-else-if="header.type === BackendDataType.JSON"
-    :value="item[header.key]"
+    :value="headerJson(item[header.key])"
   />
   <div v-else-if="header.type === BackendDataType.DATETIME">
     {{ localeDatetimeFormat(DateTime.fromISO(item[header.key])) }}
@@ -55,12 +44,7 @@
     open-on-hover
   >
     <template #activator="{ props }">
-      <v-btn
-        icon="mdi-dots-vertical"
-        variant="plain"
-        density="compact"
-        v-bind="props"
-      />
+      <v-btn icon="mdi-dots-vertical" variant="plain" density="compact" v-bind="props" />
     </template>
     <v-list>
       <v-list-item
@@ -90,21 +74,37 @@ import {
 } from "@/utils/i18n";
 import { DateTime } from "luxon";
 
-const props = defineProps({
+defineProps({
   header: {
     type: Object as PropType<TableHeader>,
     required: true,
   },
   item: {
+    // Table row values are heterogeneous; column types come from `header.type`.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Object as PropType<Record<string, any>>,
     required: true,
   },
   actions: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Function as PropType<(item: Record<string, any>) => ItemActions>,
+    default: undefined,
   },
   refresh: {
     type: Function as PropType<() => void>,
-    default: Function(),
+    default: () => {},
   },
 });
+
+// headerJson 将单元格值归一化为 JSON 字符串
+// json-chip 期望接收 JSON 字符串；对象/数组等结构化值经 JSON.stringify 后展示
+const headerJson = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return JSON.stringify(value);
+};
 </script>

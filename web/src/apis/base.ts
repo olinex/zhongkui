@@ -14,8 +14,7 @@ import {
 import consola from "consola";
 
 export const current_base_url = (): string => {
-  const baseURL =
-    process.env.ZHONGKUI_BASE_URL || "http://localhost:8080/api/v1";
+  const baseURL = process.env.ZHONGKUI_BASE_URL || "http://localhost:8080/api/v1";
   consola.info("current_base_url", baseURL);
   return baseURL;
 };
@@ -53,7 +52,7 @@ export async function getResponse<Data>(
   failed?: (rsp: ErrorResponse, headers: BaseHeaders) => Promise<void>,
   noResponse?: (req: XMLHttpRequest) => Promise<void>,
   noRequest?: (msg: string) => Promise<void>,
-  final?: () => Promise<void>
+  final?: () => Promise<void>,
 ): Promise<Status> {
   let status = Status.Success;
   try {
@@ -84,21 +83,11 @@ export async function getResponse<Data>(
 
 export async function getSimpleResponse(
   request: AxiosPromise,
-  success: (
-    rsp: SuccessResponse<undefined>,
-    headers: BaseHeaders
-  ) => Promise<void>,
+  success: (rsp: SuccessResponse<undefined>, headers: BaseHeaders) => Promise<void>,
   failed?: (rsp: ErrorResponse, headers: BaseHeaders) => Promise<void>,
   noResponse?: (req: XMLHttpRequest) => Promise<void>,
   noRequest?: (msg: string) => Promise<void>,
-  final?: () => Promise<void>
+  final?: () => Promise<void>,
 ): Promise<Status> {
-  return await getResponse<undefined>(
-    request,
-    success,
-    failed,
-    noResponse,
-    noRequest,
-    final
-  );
+  return await getResponse<undefined>(request, success, failed, noResponse, noRequest, final);
 }

@@ -78,6 +78,10 @@
 1103 = "过多的访问密钥"
 1104 = "标签规则校验失败"
 1105 = "标签事件规则校验失败"
+1106 = "标签规则运行期校验失败"
+1107 = "标签规则目标模型未注册"
+1108 = "前端配置已被其他浏览器更新，请刷新后重试"
+1109 = "前端配置同步未开启"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -85,6 +89,1389 @@ badUrlParam = "URL 参数`%s`不合法: %s"
 
 [validator]
 strongPassword = "字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?&）"
+windowsFileName = "字段须为合法的 Windows 文件名（不能为系统保留名，不能包含非法字符，不能以空格或点结尾）"
+unixFileName = "字段须为合法的 Unix 文件名（不能以点开头，不能包含斜杠或空字符）"
+fileName = "字段须为合法的文件名"
+strictFileName = "字段须为严格合法的文件名（不能以连字符开头，不能包含空格或控制字符）"
+dirpath = "字段须为合法的目录路径"
+alphanumspecial = "字段只能包含字母、数字与指定的特殊字符"
+gtCurrentTime = "字段必须晚于当前时间"
+ltCurrentTime = "字段必须早于当前时间"
 
 ["model.network.httpTransport"]
 other = "HTTP 传输"
+
+# =============================================================================
+# Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
+# 中文为默认文案；English lives in en.toml
+# =============================================================================
+
+["cli.input.prompt.UserProfileChangeIn.NickleName"]
+other = "请输入昵称"
+
+["cli.input.prompt.UserProfileChangeIn.Email"]
+other = "请输入用户邮箱"
+
+["cli.input.prompt.UserPasswordLoginIn.Username"]
+other = "请输入用户名"
+
+["cli.input.prompt.UserPasswordLoginIn.Password"]
+other = "请输入密码"
+
+["cli.input.prompt.CapturerConfigIn.Device"]
+other = "请输入网络设备名称（如 eth0）"
+
+["cli.input.prompt.CapturerConfigIn.SnapLen"]
+other = "请输入抓包长度（字节）"
+
+["cli.input.prompt.CapturerConfigIn.Promisc"]
+other = "是否启用混杂模式？"
+
+["cli.input.prompt.CapturerConfigIn.Timeout"]
+other = "请输入读超时时间（如 5s、1m30s）"
+
+["cli.input.prompt.CapturerConfigIn.BpfExpr"]
+other = "请输入 BPF 过滤表达式（如 tcp port 80）"
+
+["cli.input.prompt.CapturerConfigIn.Enabled"]
+other = "是否启用该抓包器？"
+
+["cli.input.prompt.CapturerCreateIn.Namespace"]
+other = "请输入命名空间"
+
+["cli.input.prompt.CapturerCreateIn.Name"]
+other = "请输入抓包器名称"
+
+["cli.input.prompt.CapturerCreateIn.Version"]
+other = "请输入版本号"
+
+["cli.input.prompt.TLSInputs.Name"]
+other = "请输入 TLS 名称"
+
+["cli.input.prompt.TLSInputs.DirPath"]
+other = "请输入目录路径"
+
+["cli.input.prompt.TLSInputs.TTL"]
+other = "请输入有效期 TTL（例如 8760h 表示 1 年）"
+
+["cli.input.prompt.TLSInputs.DNSNames"]
+other = "请输入 DNS 域名列表"
+
+["cli.input.prompt.createAccessKeyInput.Username"]
+other = "请输入用户名"
+
+["cli.input.prompt.createAccessKeyInput.Description"]
+other = "请输入描述"
+
+["cli.input.prompt.createAccessKeyInput.Enabled"]
+other = "是否启用该访问密钥？"
+
+["cli.input.prompt.createAccessKeyInput.TTL"]
+other = "请输入有效期 TTL（如 8760h，0 表示永不过期）"
+
+["cli.input.prompt.createUserInput.Superuser"]
+other = "是否为超级管理员？"
+
+["cli.input.prompt.confirm-suffix"]
+other = "（再次输入确认）"
+
+["cli.input.prompt.comma-separated-suffix"]
+other = "（逗号分隔）"
+
+["cli.input.mismatch"]
+other = "两次输入不一致，请重新输入！"
+
+# =============================================================================
+# CLI print messages (pterm output) - Key layout: cli.<topic>.<message>
+# 中文为默认文案；English lives in en.toml
+# =============================================================================
+
+[cli.confirm.enter]
+other = "请输入 `{{.Input}}` 以确认"
+
+[cli.confirm.reenter]
+other = "请再次输入 `{{.Input}}` 以确认"
+
+[cli.etcd.select-keys]
+other = "输入要删除的键编号（如 1,3,5-{{.Total}}）或输入 'all' 删除全部 {{.Total}} 个键"
+
+[cli.etcd.no-keys]
+other = "未选择任何键，无需删除"
+
+[cli.etcd.invalid-range]
+other = "无效的范围：{{.Range}}"
+
+[cli.etcd.invalid-number]
+other = "无效的键编号：{{.Number}}"
+
+[cli.etcd.delete-count]
+other = "即将删除 {{.Count}} 个键："
+
+[cli.etcd.delete-item]
+other = "  - {{.Key}}"
+
+[cli.base.pterm-debug]
+other = "pterm 调试已启用"
+
+[cli.root.process-exit]
+other = "zhongkui 服务进程已退出"
+
+[cli.clear.rolling-back]
+other = "正在回滚所有迁移..."
+
+[cli.clear.connect-failed]
+other = "连接 {{.DB}} 数据库失败：{{.Err}}"
+
+[cli.clear.rolling-back-db]
+other = "正在回滚 {{.DB}}..."
+
+[cli.clear.rollback-failed]
+other = "{{.DB}} 回滚失败：{{.Err}}"
+
+[cli.clear.database-complete]
+other = "数据库清空完成"
+
+[cli.etcd.get-keys-failed]
+other = "获取 {{.Category}} 键失败：{{.Err}}"
+
+[cli.etcd.no-keys-found]
+other = "未找到任何 etcd 缓存键"
+
+[cli.etcd.keys-header]
+other = "=== etcd 缓存键 ==="
+
+[cli.etcd.delete-failed]
+other = "删除 {{.Key}} 失败：{{.Err}}"
+
+[cli.etcd.deleted]
+other = "已删除 {{.Key}}"
+
+[cli.etcd.clear-complete]
+other = "etcd 缓存清除完成"
+
+[cli.capture.stats]
+other = "[抓包统计] {{.Stats}}"
+
+[cli.config.col-path]
+other = "路径"
+
+[cli.config.col-kind]
+other = "类型"
+
+[cli.config.col-default]
+other = "默认值"
+
+[cli.config.col-comment]
+other = "说明"
+
+[cli.migrate.create-failed]
+other = "{{.DB}}：{{.Err}}"
+
+[cli.migrate.created]
+other = "已创建 {{.Path}}"
+
+[cli.migrate.section]
+other = "{{.Action}}（{{.DB}}）"
+
+[cli.migrate.action-failed]
+other = "{{.DB}} {{.Action}} 失败：{{.Err}}"
+
+[cli.migrate.completed]
+other = "迁移全部执行成功"
+
+[cli.migrate.dry-run-section]
+other = "试运行（dry-run）{{.DB}}"
+
+[cli.migrate.dry-run-db-failed]
+other = "dry-run {{.DB}}：{{.Err}}"
+
+[cli.migrate.dry-run-succeeded]
+other = "dry-run 执行成功"
+
+[cli.migrate.dry-run-failed]
+other = "dry-run 失败：{{.Err}}"
+
+[cli.migrate.diff-section]
+other = "结构对比（diff）{{.DB}}"
+
+[cli.migrate.diff-failed]
+other = "diff {{.DB}}：{{.Err}}"
+
+[cli.migrate.check-section]
+other = "结构检查（check）{{.DB}}"
+
+[cli.migrate.check-failed]
+other = "check {{.DB}}：{{.Err}}"
+
+[cli.migrate.up]
+other = "在 {{.DB}} 上运行 goose up 迁移"
+
+[cli.migrate.up-to]
+other = "在 {{.DB}} 上执行 goose up-to 迁移至版本 {{.Version}}"
+
+[cli.migrate.down]
+other = "在 {{.DB}} 上回滚 goose down 迁移"
+
+[cli.migrate.down-to]
+other = "在 {{.DB}} 上执行 goose down-to 回滚至版本 {{.Version}}"
+
+[cli.migrate.down-no-current-version]
+other = "{{.DB}} 没有已应用的迁移，无需回滚"
+
+[cli.migrate.down-to-no-current-version]
+other = "{{.DB}} 没有已应用的迁移，无需回滚"
+
+[cli.migrate.goose-migrated]
+other = "数据库已成功迁移至版本 {{.Version}}"
+
+[cli.migrate.goose-no-migrations]
+other = "没有需要执行的迁移，当前版本 {{.Version}}"
+
+[cli.migrate.goose-up-to]
+other = "已迁移至版本 {{.Version}}"
+
+[cli.migrate.goose-down-to]
+other = "已回滚至版本 {{.Version}}"
+
+[cli.migrate.goose-file-not-found]
+other = "未找到当前版本（{{.Version}}）的迁移文件：{{.Err}}"
+
+[cli.migrate.goose-ok]
+other = "OK   {{.Source}}（{{.Duration}}）"
+
+[cli.migrate.goose-empty]
+other = "EMPTY {{.Source}}（{{.Duration}}）"
+
+[cli.migrate.col-version]
+other = "版本"
+
+[cli.migrate.col-migration]
+other = "迁移"
+
+[cli.migrate.col-status]
+other = "状态"
+
+[cli.migrate.col-applied-at]
+other = "应用时间"
+
+[cli.migrate.status-pending]
+other = "待执行"
+
+[cli.migrate.status-applied]
+other = "已应用"
+
+[cli.migrate.no-file]
+other = "未找到迁移文件"
+
+[cli.migrate.dry-run-creating]
+other = "正在为 dry-run 创建临时数据库..."
+
+[cli.migrate.dry-run-running]
+other = "正在临时数据库 {{.DB}} 上执行迁移..."
+
+[cli.migrate.dry-run-migration-failed]
+other = "dry-run 迁移失败：{{.Err}}"
+
+[cli.migrate.dry-run-completed]
+other = "dry-run 迁移已在 {{.DB}} 上成功完成"
+
+[cli.migrate.dry-run-cleanup]
+other = "正在清理临时数据库 {{.DB}}..."
+
+[cli.migrate.dry-run-drop-failed]
+other = "警告：删除临时数据库 {{.DB}} 失败：{{.Err}}"
+
+[cli.migrate.dry-run-preserved]
+other = "临时数据库 {{.DB}} 已保留（--keep-temp）"
+
+[cli.migrate.check-creating]
+other = "正在为结构检查创建临时数据库..."
+
+[cli.migrate.check-running]
+other = "正在临时数据库 {{.DB}} 上执行迁移..."
+
+[cli.migrate.check-comparing]
+other = "正在对比模型定义与数据库结构..."
+
+[cli.migrate.check-cleanup]
+other = "正在清理临时数据库 {{.DB}}..."
+
+[cli.migrate.check-drop-failed]
+other = "警告：删除临时数据库 {{.DB}} 失败：{{.Err}}"
+
+[cli.migrate.check-preserved]
+other = "临时数据库 {{.DB}} 已保留（--keep-temp）"
+
+[cli.migrate.check-ok]
+other = "所有模型均与数据库结构一致，未发现问题"
+
+[cli.migrate.issue-missing-table]
+other = "缺少表"
+
+[cli.migrate.issue-extra-table]
+other = "多余表"
+
+[cli.migrate.issue-missing-column]
+other = "缺少列"
+
+[cli.migrate.issue-extra-column]
+other = "多余列"
+
+[cli.migrate.issue-mismatch]
+other = "不匹配"
+
+[cli.migrate.col-issue]
+other = "问题"
+
+[cli.migrate.col-table]
+other = "表"
+
+[cli.migrate.col-column]
+other = "列"
+
+[cli.migrate.col-expected-type]
+other = "预期类型"
+
+[cli.migrate.col-actual-type]
+other = "实际类型"
+
+[cli.migrate.issues-table-error]
+other = "渲染问题表格失败：{{.Err}}"
+
+[cli.migrate.diff-identical]
+other = "数据库结构已是最新，无待变更"
+
+[cli.migrate.col-change]
+other = "变更"
+
+[cli.migrate.col-detail]
+other = "详情"
+
+[cli.migrate.diff-new-table]
+other = "新增表"
+
+[cli.migrate.diff-dropped-table]
+other = "删除表"
+
+[cli.migrate.diff-new-column]
+other = "新增列"
+
+[cli.migrate.diff-dropped-column]
+other = "删除列"
+
+[cli.migrate.diff-modified]
+other = "已修改"
+
+[cli.user.create-success]
+other = "创建用户 {{.Username}} 成功"
+
+[cli.user.reset-password-success]
+other = "重置用户 {{.Username}} 的密码成功"
+
+[cli.user.extract-config-failed]
+other = "无法提取配置：{{.Err}}"
+
+[cli.user.not-found]
+other = "找不到用户 {{.Username}}：{{.Err}}"
+
+[cli.user.access-key-create-failed]
+other = "无法创建访问密钥：{{.Err}}"
+
+[cli.user.access-key-max]
+other = "用户 {{.Username}} 已有 {{.Max}} 个访问密钥（上限：{{.Max}}）"
+
+[cli.user.access-key-created]
+other = "已为用户 {{.Username}} 创建访问密钥"
+
+[cli.user.access-key-id]
+other = "  AccessKeyID:     {{.Value}}"
+
+[cli.user.access-key-secret]
+other = "  AccessKeySecret: {{.Value}}"
+
+[cli.user.access-key-description]
+other = "  Description:     {{.Value}}"
+
+[cli.user.access-key-enabled]
+other = "  Enabled:         {{.Value}}"
+
+[cli.user.access-key-expired-at]
+other = "  ExpiredAt:       {{.Value}}"
+
+[cli.user.access-key-never-expires]
+other = "  ExpiredAt:       never"
+
+[cli.tls.key-created]
+other = "TLS 密钥文件 {{.Path}} 已创建"
+
+[cli.tls.cert-created]
+other = "TLS 证书文件 {{.Path}} 已创建"
+
+[cli.testcase.generated]
+other = "测试用例已生成到 {{.Dir}}"
+
+[cli.testcase.no-http]
+other = "pcap 文件中未发现 HTTP 流量"
+
+[cli.testcase.found-streams]
+other = "发现 {{.Count}} 条 HTTP 流"
+
+[cli.testcase.processing-stream]
+other = "正在处理 TCP 流 {{.Stream}}..."
+
+[cli.testcase.process-failed]
+other = "处理流 {{.Stream}} 失败：{{.Err}}，跳过"
+
+[cli.testcase.generated-file]
+other = "  已生成 {{.Path}}"
+
+[cli.testcase.total]
+other = "共 {{.Tx}} 个 HTTP 事务，跨 {{.Streams}} 条流"
+
+[cli.testcase.parse-request-failed]
+other = "  流 {{.Stream}}：解析第 {{.Tx}} 个 HTTP 请求失败：{{.Err}}"
+
+[cli.testcase.response-missing]
+other = "  流 {{.Stream}} 事务 {{.Tx}}：HTTP 响应缺失或不完整：{{.Err}}"
+
+[cli.testcase.parse-response-failed]
+other = "  流 {{.Stream}} 事务 {{.Tx}}：解析 HTTP 响应失败：{{.Err}}"
+
+[cli.run.capture-stats-enabled]
+other = "已启用抓包统计，每 {{.Interval}} 输出到标准输出"
+
+[cli.run.processor-create-failed]
+other = "创建处理器 {{.Name}} 失败：{{.Err}}"
+
+[cli.scheduler.none-found]
+other = "etcd 中未找到任何定时任务配置"
+
+[cli.scheduler.not-found]
+other = "未找到定时任务配置：{{.Name}}"
+
+[cli.scheduler.col-name]
+other = "name"
+
+[cli.scheduler.col-cronspec]
+other = "cronSpec"
+
+[cli.scheduler.col-interval]
+other = "interval"
+
+[cli.scheduler.col-queue]
+other = "queue"
+
+[cli.scheduler.col-timeout]
+other = "timeout"
+
+[cli.scheduler.col-maxretry]
+other = "maxRetry"
+
+[cli.scheduler.col-enabled]
+other = "enabled"
+
+[cli.crypto.book-generated-file]
+other = "密码本文件已生成：{{.Path}}（{{.Bytes}} 字节）"
+
+[cli.crypto.book-generated-stdout]
+other = "密码本已生成（{{.Bytes}} 字节）。使用 --output 保存到文件。"
+
+[cli.crypto.parent-secret-key-warning]
+other = "警告：正在使用配置文件中的父密钥，这不适用于生产环境，请尽快切换到 KMS。"
+
+[cli.crypto.password-book-warning]
+other = "警告：正在使用内置默认密码本，这不适用于生产环境，请运行 'zki create password-book' 生成自己的密码本文件。"
+
+[cli.capturer.create-failed]
+other = "无法创建抓包器：{{.Err}}"
+
+[cli.capturer.created]
+other = "抓包器 {{.Namespace}}/{{.Name}}（{{.Version}}）创建成功"
+
+[cli.pcap.nil-model]
+other = "[nil 模型] level={{.Level}} stack_len={{.Len}}"
+
+[cli.pcap.nil-model-stack]
+other = "[nil 模型]   stack[{{.Index}}] level={{.Level}} proto={{.Proto}} headers={{.Headers}}"
+
+[cli.pcap.import-stats]
+other = "[pcap 导入统计] {{.Stats}}"
+
+[cli.tracer.report-title]
+other = "阶段耗时统计报告"
+
+[cli.tracer.no-data]
+other = "无数据"
+
+[cli.tracer.col-stage]
+other = "阶段"
+
+[cli.tracer.col-calls]
+other = "调用次数"
+
+[cli.tracer.col-total]
+other = "总计"
+
+[cli.tracer.col-avg]
+other = "平均"
+
+[cli.tracer.col-min]
+other = "最小"
+
+[cli.tracer.col-max]
+other = "最大"
+
+[cli.tracer.col-ratio]
+other = "占比"
+
+[cli.tracer.render-error]
+other = "渲染报告表格失败：{{.Err}}"
+
+[cli.tracer.total-records]
+other = "记录总数：{{.Count}}"
+
+[cli.bench.col-name]
+other = "基准测试"
+
+[cli.bench.col-sent]
+other = "已发送"
+
+[cli.bench.col-captured]
+other = "已捕获"
+
+[cli.bench.col-lost]
+other = "已丢失"
+
+[cli.bench.col-loss-rate]
+other = "丢包率"
+
+[cli.bench.col-pps]
+other = "PPS"
+
+[cli.bench.col-bps]
+other = "BPS"
+
+[cli.bench.col-duration]
+other = "时长"
+
+[cli.bench.report-save-failed]
+other = "警告：保存基准测试报告失败：{{.Err}}"
+
+[cli.bench.report-saved]
+other = "基准测试报告已保存：{{.Path}}"
+
+# =============================================================================
+# Interface field comments (metadata) - Key layout: model.<StructName>.field.<key>
+# 接口结构体字段注释翻译，供 OPTIONS 元信息接口按请求语言返回 comment
+# =============================================================================
+
+["model.Pagination.field.page"]
+other = "页码"
+
+["model.Pagination.field.pageSize"]
+other = "每页条数"
+
+["model.UserListGetSearchIn.field.greedy"]
+other = "是否贪婪匹配（命中任意过滤条件即返回）"
+
+["model.UserListGetSearchIn.field.orderBy"]
+other = "排序条件"
+
+["model.UserListGetSearchIn.field.filterBy"]
+other = "过滤条件"
+
+["model.UserBaseDetailOut.field.unionID"]
+other = "用户全局唯一标识符"
+
+["model.UserBaseDetailOut.field.nickleName"]
+other = "用户昵称"
+
+["model.UserBaseDetailOut.field.username"]
+other = "登录用户名"
+
+["model.UserBaseDetailOut.field.email"]
+other = "电子邮件地址"
+
+["model.UserBaseDetailOut.field.active"]
+other = "是否处于激活状态"
+
+["model.BaseItemOut.field.id"]
+other = "主键ID"
+
+["model.BaseItemOut.field.createdAt"]
+other = "创建时间"
+
+["model.BaseItemOut.field.updatedAt"]
+other = "更新时间"
+
+["model.BaseSoftDeleteItemOut.field.deletedAt"]
+other = "删除时间（软删除时使用）"
+
+["model.UserDetailOut.field.groups"]
+other = "所属用户组列表"
+
+["model.UserProfileChangeIn.field.nickleName"]
+other = "用户昵称"
+
+["model.UserProfileChangeIn.field.email"]
+other = "用户邮箱"
+
+["model.UserGroupIn.field.namespace"]
+other = "命名空间名称"
+
+["model.UserGroupIn.field.groupName"]
+other = "用户组名称"
+
+["model.UserRbacPolicyDetailOut.field.name"]
+other = "用户名或用户标识"
+
+["model.UserRbacPolicyDetailOut.field.namespace"]
+other = "命名空间，用于隔离不同环境或租户的策略"
+
+# =============================================================================
+# Tag rule Rego error/lint messages - Key layout: tagrule.*
+# 标签规则 Rego 校验错误与字段 lint 告警文案，供接口层按请求语言翻译
+# =============================================================================
+
+[tagrule]
+rego-invalid = "规则源码不符合标签识别契约，应为 package zki 且包含 tags 规则"
+lint-field-not-exist = "字段 %s 不存在于该模型的输入文档中，请检查拼写"
+lint-field-hint = "请从输入字段面板或补全列表中选择合法字段"
+
+[tagrule.hint]
+parse-unexpected = "语法错误：出现意外的符号或关键字，请检查拼写与括号/引号是否成对"
+parse-package = "语法错误：package 声明写法不正确，应为 package zki"
+parse-if = "缺少 if 关键字：规则体写法应为 tags contains <值> if { ... }"
+parse-contains = "缺少 contains 关键字：标签规则应使用 tags contains <值> 形式产出"
+parse-empty = "模块为空：请至少编写一条规则"
+parse-illegal = "语法错误：非法表达式，请检查该位置附近的写法"
+parse-fallback = "Rego 语法错误：请检查该位置附近的书写是否符合 Rego 语法"
+compile-shadow = "规则名冲突：规则名不能与其他规则或关键字重名，请换一个规则名"
+compile-import-shadow = "import 冲突：导入的包名与其他符号重名，请调整导入"
+compile-var-shadow = "变量名冲突：变量名不能与关键字或其他绑定重名，请换一个变量名"
+compile-fallback = "Rego 编译错误：规则定义存在冲突或非法，请检查规则名与赋值方式"
+type-undefined-function = "类型错误：调用了未定义的函数，请检查函数名拼写"
+type-undefined-ref = "类型错误：引用了不存在的路径，请检查字段名拼写"
+type-conflicting-rules = "类型错误：同名规则的定义方式相互冲突（如同时整体赋值与 contains），请统一写法"
+type-match-error = "类型错误：表达式两侧类型不匹配，请检查字段类型"
+type-function = "类型错误：函数调用方式不正确（参数个数或写法），请检查调用"
+type-fallback = "类型错误：表达式操作数类型不匹配，请检查字段类型与函数参数"
+unsafe-var = "未定义变量：表达式中引用了未绑定的变量，请检查变量名拼写或在 some 中声明"
+recursion = "递归错误：规则定义存在递归引用，请检查规则间的循环依赖"
+
+# =============================================================================
+# Input document field descriptions (input.<typeKey>.<field>)
+# 输入文档字段描述：注册为可打标目标模型（tagengine 注册表）的类型，
+# 必须为每个输入字段提供中英文描述；tagengine 推导 i18n 消息键并交由
+# 接口层按请求语言翻译（InputFieldMeta.Description）
+# =============================================================================
+
+# ---- BaseMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.namespace"]
+other = "所属命名空间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.capture"]
+other = "捕获器名称"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.version"]
+other = "数据版本"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.session_id"]
+other = "会话 ID"
+
+# ---- TimestampMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.timestamp"]
+other = "数据包捕获时间戳"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.created_at"]
+other = "记录创建时间"
+
+# ---- TraceMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.trace_id"]
+other = "链路追踪 ID"
+
+# ---- HttpBase ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+other = "客户端 IP 地址"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_port"]
+other = "客户端端口号"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_isn"]
+other = "客户端 ISN"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_ip"]
+other = "服务器 IP 地址"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_port"]
+other = "服务器端口号"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_isn"]
+other = "服务器 ISN"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.ip_version"]
+other = "IP 协议版本"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.http_version"]
+other = "HTTP 协议版本"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.stream_index"]
+other = "流索引"
+
+# ---- TcpFingerprint ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os"]
+other = "客户端操作系统（TCP 指纹）"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
+other = "客户端操作系统识别置信度"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_sig"]
+other = "客户端 TCP 签名"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
+other = "服务端操作系统（TCP 指纹）"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
+other = "服务端操作系统识别置信度"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_sig"]
+other = "服务端 TCP 签名"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
+other = "TCP MTU 值"
+
+# ---- HttpURI ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.url"]
+other = "完整请求 URL"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.scheme"]
+other = "协议方案"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.host"]
+other = "主机名或 IP 地址"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.path"]
+other = "请求路径"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.file_ext"]
+other = "文件扩展名"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.queries"]
+other = "查询参数"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fragment"]
+other = "片段标识符"
+
+# ---- HttpRequestBody ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.method"]
+other = "HTTP 请求方法"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body"]
+other = "请求主体内容"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body_hash"]
+other = "请求主体 SHA-256 摘要"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body_length"]
+other = "请求主体字节长度"
+
+# ---- HttpRequestHeaders ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_authorization"]
+other = "认证凭据"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_proxy_authorization"]
+other = "代理认证凭据"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cache_control"]
+other = "缓存控制指令"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_match"]
+other = "条件匹配 ETag"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_none_match"]
+other = "条件不匹配 ETag"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_modified_since"]
+other = "条件修改时间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_unmodified_since"]
+other = "条件未修改时间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_range"]
+other = "条件范围请求"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_connection"]
+other = "连接控制"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_keep_alive"]
+other = "持久连接控制"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept"]
+other = "可接受的响应内容类型"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_encoding"]
+other = "可接受的内容编码"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_language"]
+other = "可接受的自然语言"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_expect"]
+other = "期望条件"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_max_forwards"]
+other = "最大转发跳数"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cookie"]
+other = "HTTP Cookie"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_origin"]
+other = "请求源"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_headers"]
+other = "CORS 预检请求头"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_method"]
+other = "CORS 预检方法"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_type"]
+other = "请求内容类型"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_length"]
+other = "请求内容长度"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_encoding"]
+other = "请求内容编码"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_language"]
+other = "请求内容语言"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_forwarded"]
+other = "转发信息"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_via"]
+other = "代理链信息"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_range"]
+other = "范围请求"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_from"]
+other = "发送者邮箱"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_host"]
+other = "目标主机"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referer"]
+other = "引用来源"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referrer_policy"]
+other = "引用策略"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_user_agent"]
+other = "用户代理字符串"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_te"]
+other = "传输编码接受"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_transfer_encoding"]
+other = "传输编码"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_trailer"]
+other = "尾部字段声明"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_key"]
+other = "WebSocket 握手密钥"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_version"]
+other = "WebSocket 协议版本"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_protocol"]
+other = "WebSocket 子协议"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_extensions"]
+other = "WebSocket 扩展"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_site"]
+other = "Fetch 源关系"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_mode"]
+other = "Fetch 请求模式"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_user"]
+other = "Fetch 用户激活"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_dest"]
+other = "Fetch 请求目标"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_purpose"]
+other = "请求目的"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_service_worker_navigation_preload"]
+other = "SW 导航预加载"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua"]
+other = "用户代理品牌与版本"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_arch"]
+other = "用户代理 CPU 架构"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_bitness"]
+other = "用户代理 CPU 位数"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version"]
+other = "用户代理完整版本"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version_list"]
+other = "用户代理品牌完整版本列表"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_mobile"]
+other = "移动设备标记"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_model"]
+other = "设备型号"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform"]
+other = "底层平台"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform_version"]
+other = "平台版本"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_wow64"]
+other = "WoW64 运行标记"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_color_scheme"]
+other = "深色/浅色模式偏好"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_motion"]
+other = "减少动画偏好"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_transparency"]
+other = "降低透明度偏好"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_content_digest"]
+other = "期望内容摘要"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_repr_digest"]
+other = "期望表示摘要"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade_insecure_requests"]
+other = "升级不安全请求"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_date"]
+other = "请求日期"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_link"]
+other = "链接关系"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade"]
+other = "协议升级"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_priority"]
+other = "资源优先级"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_alt_used"]
+other = "使用的替代服务"
+
+# ---- HttpResponseBody ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body"]
+other = "响应主体内容"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body_hash"]
+other = "响应主体 SHA-256 摘要"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body_length"]
+other = "响应主体字节长度"
+
+# ---- HttpResponseHeaders ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_www_authenticate"]
+other = "认证质询"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_proxy_authenticate"]
+other = "代理认证质询"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_age"]
+other = "缓存年龄"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cache_control"]
+other = "缓存控制指令"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_clear_site_data"]
+other = "清除站点数据"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expires"]
+other = "过期时间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_no_vary_search"]
+other = "无变化搜索"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_last_modified"]
+other = "最后修改时间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_etag"]
+other = "实体标签"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_vary"]
+other = "响应变化依据"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_connection"]
+other = "连接控制"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_keep_alive"]
+other = "持久连接控制"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_patch"]
+other = "可接受的 PATCH 媒体类型"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_post"]
+other = "可接受的 POST 媒体类型"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_set_cookie"]
+other = "设置 Cookie"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_credentials"]
+other = "CORS 允许凭据"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_headers"]
+other = "CORS 允许标头"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_methods"]
+other = "CORS 允许方法"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_origin"]
+other = "CORS 允许源"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_expose_headers"]
+other = "CORS 暴露标头"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_max_age"]
+other = "CORS 最大缓存时间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_timing_allow_origin"]
+other = "时间允许源"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_disposition"]
+other = "内容处置"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_digest"]
+other = "内容摘要"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_repr_digest"]
+other = "表示摘要"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_type"]
+other = "响应内容类型"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_length"]
+other = "响应内容长度"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_encoding"]
+other = "响应内容编码"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_language"]
+other = "响应内容语言"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_location"]
+other = "内容位置"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_forwarded"]
+other = "转发信息"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_via"]
+other = "代理链信息"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ranges"]
+other = "接受范围请求"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_range"]
+other = "内容范围"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_location"]
+other = "重定向位置"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_refresh"]
+other = "刷新/重定向"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_allow"]
+other = "允许的方法"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server"]
+other = "服务器标识"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_embedder_policy"]
+other = "跨源嵌入器策略"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_opener_policy"]
+other = "跨源打开器策略"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_resource_policy"]
+other = "跨源资源策略"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy"]
+other = "内容安全策略"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy_report_only"]
+other = "CSP 仅报告模式"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expect_ct"]
+other = "证书透明度期望"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_permissions_policy"]
+other = "权限策略"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_strict_transport_security"]
+other = "严格传输安全"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_content_type_options"]
+other = "内容类型选项"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_frame_options"]
+other = "框架选项"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_permitted_cross_domain_policies"]
+other = "允许的跨域策略"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_powered_by"]
+other = "技术引擎标识"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_xss_protection"]
+other = "XSS 保护"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_reporting_endpoints"]
+other = "报告端点"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_report_to"]
+other = "报告目标"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_transfer_encoding"]
+other = "传输编码"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_trailer"]
+other = "尾部字段声明"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_accept"]
+other = "WebSocket 握手接受"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_protocol"]
+other = "WebSocket 子协议"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_extensions"]
+other = "WebSocket 扩展"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ch"]
+other = "接受客户端提示"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_critical_ch"]
+other = "关键客户端提示"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_eligible"]
+other = "归因报告资格"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_source"]
+other = "归因报告注册来源"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_trigger"]
+other = "归因报告注册触发器"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_date"]
+other = "响应日期"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_link"]
+other = "链接关系"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_retry_after"]
+other = "重试时间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server_timing"]
+other = "服务器时间"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker"]
+other = "Service Worker 标识"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker_allowed"]
+other = "SW 允许路径"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_source_map"]
+other = "源代码映射"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_upgrade"]
+other = "协议升级"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_alt_svc"]
+other = "替代服务"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_priority"]
+other = "资源优先级"
+
+# ---- HttpFingerprint ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser"]
+other = "浏览器识别"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser_quality"]
+other = "浏览器识别置信度"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_server"]
+other = "服务端识别"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_server_quality"]
+other = "服务端识别置信度"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_language"]
+other = "语言识别"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_device_guess"]
+other = "设备类别猜测"
+
+# ---- AppTailer ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_consumed"]
+other = "客户端已消耗字节数"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_start_payload_offset"]
+other = "客户端起始载荷偏移"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_end_payload_offset"]
+other = "客户端结束载荷偏移"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_start_timestamp"]
+other = "客户端起始时间戳"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_end_timestamp"]
+other = "客户端结束时间戳"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_consumed"]
+other = "服务端已消耗字节数"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_start_payload_offset"]
+other = "服务端起始载荷偏移"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_end_payload_offset"]
+other = "服务端结束载荷偏移"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_start_timestamp"]
+other = "服务端起始时间戳"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_end_timestamp"]
+other = "服务端结束时间戳"
+
+# ---- TagsMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
+other = "风险标签组合"
+
+# =============================================================================
+# CLI 命令描述与标志说明 - Key 布局：cmd.<path>.short/long、flag.<path>.<name>
+# 命令树字段（Short/Long/Example）与标志 usage 存储的即翻译键本身，经 translate.T
+# 解析后渲染；zh-Hans 为指定回退语言，必须覆盖全部 cmd.*/flag.* 键，缺失时返回 key
+# =============================================================================
+
+[cmd.short]
+other = "zhongkui 根命令"
+
+[cmd.help.short]
+other = "显示任意命令的帮助信息"
+
+[cmd.help.long]
+other = "帮助命令用于显示应用程序中任意命令的帮助信息。\n直接输入 zhongkui help [命令路径] 即可查看完整帮助。"
+
+[cmd.completion.short]
+other = "生成指定 shell 的自动补全脚本"
+
+[cmd.completion.long]
+other = "生成 zhongkui 在指定 shell 下的自动补全脚本。\n\n各子命令的帮助信息中说明了生成脚本的使用方法。"
+
+[cmd.completion.bash.short]
+other = "生成 bash shell 的自动补全脚本"
+
+[cmd.completion.bash.long]
+other = "生成 bash shell 的自动补全脚本。\n\n该脚本依赖 'bash-completion' 软件包。\n如果尚未安装，可以通过操作系统自带的包管理器进行安装。\n\n要在当前 shell 会话中加载补全：\n\n\tsource <(zhongkui completion bash)\n\n要为每个新的会话加载补全，请执行一次：\n\n#### Linux:\n\n\tzhongkui completion bash > /etc/bash_completion.d/zhongkui\n\n#### macOS:\n\n\tzhongkui completion bash > $(brew --prefix)/etc/bash_completion.d/zhongkui\n\n重启 shell 后配置生效。"
+
+[cmd.completion.zsh.short]
+other = "生成 zsh shell 的自动补全脚本"
+
+[cmd.completion.zsh.long]
+other = "生成 zsh shell 的自动补全脚本。\n\n如果当前环境尚未启用 shell 补全，需要先执行一次：\n\n\techo \"autoload -U compinit; compinit\" >> ~/.zshrc\n\n要在当前 shell 会话中加载补全：\n\n\tsource <(zhongkui completion zsh)\n\n要为每个新的会话加载补全，请执行一次：\n\n#### Linux:\n\n\tzhongkui completion zsh > \"${fpath[1]}/_zhongkui\"\n\n#### macOS:\n\n\tzhongkui completion zsh > $(brew --prefix)/share/zsh/site-functions/_zhongkui\n\n重启 shell 后配置生效。"
+
+[cmd.completion.fish.short]
+other = "生成 fish shell 的自动补全脚本"
+
+[cmd.completion.fish.long]
+other = "生成 fish shell 的自动补全脚本。\n\n要在当前 shell 会话中加载补全：\n\n\tzhongkui completion fish | source\n\n要为每个新的会话加载补全，请执行一次：\n\n\tzhongkui completion fish > ~/.config/fish/completions/zhongkui.fish\n\n重启 shell 后配置生效。"
+
+[cmd.completion.powershell.short]
+other = "生成 PowerShell 的自动补全脚本"
+
+[cmd.completion.powershell.long]
+other = "生成 PowerShell 的自动补全脚本。\n\n要在当前 shell 会话中加载补全：\n\n\tzhongkui completion powershell | Out-String | Invoke-Expression\n\n要为每个新的会话加载补全，请将上述命令的输出添加到 PowerShell 配置文件中。"
+
+[cmd.version.short]
+other = "显示版本信息"
+
+[cmd.version.long]
+other = "显示版本信息，默认输出语义化版本号，使用 --verbose 输出完整信息"
+
+[cmd.describe.short]
+other = "显示配置详情"
+
+[cmd.describe.config.short]
+other = "显示默认配置项说明"
+
+[cmd.describe.scheduler.short]
+other = "从 etcd 打印定时任务配置"
+
+[cmd.describe.scheduler.long]
+other = "从 etcd 打印定时任务的配置。\n使用 --name 指定一个或多个任务类型。未提供 --name 时，列出所有任务。\n\n示例：\n  zhongkui describe scheduler\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble"
+
+[cmd.run.short]
+other = "运行 zhongkui 服务进程"
+
+[cmd.run.web.short]
+other = "运行 zhongkui HTTP Web API 进程"
+
+[cmd.run.grpc.short]
+other = "运行 zhongkui gRPC API 进程"
+
+[cmd.run.worker.short]
+other = "运行 zhongkui 工作节点进程"
+
+[cmd.run.capture.short]
+other = "运行 zhongkui 抓包进程"
+
+[cmd.clear.short]
+other = "清除 zhongkui 数据"
+
+[cmd.clear.database.short]
+other = "清空所有数据库表（回滚所有迁移）"
+
+[cmd.clear.etcd.short]
+other = "清除 etcd 缓存（抓包器配置、水印、调度器配置）"
+
+[cmd.migrate.short]
+other = "数据库迁移管理"
+
+[cmd.migrate.up.short]
+other = "应用所有待执行的迁移"
+
+[cmd.migrate.down.short]
+other = "回滚所有已应用的迁移"
+
+[cmd.migrate.up-to.short]
+other = "迁移到指定版本"
+
+[cmd.migrate.down-to.short]
+other = "回滚到指定版本"
+
+[cmd.migrate.status.short]
+other = "显示迁移状态"
+
+[cmd.migrate.dry-run.short]
+other = "在临时数据库上试运行迁移"
+
+[cmd.migrate.diff.short]
+other = "比较数据库结构差异"
+
+[cmd.migrate.check.short]
+other = "检查模型定义与数据库结构是否一致"
+
+[cmd.migrate.create.short]
+other = "在迁移目录中创建 SQL 迁移文件"
+
+[cmd.create.short]
+other = "创建资源（用户、TLS 证书、访问密钥）"
+
+[cmd.create.user.short]
+other = "通过命令行创建用户"
+
+[cmd.create.user.long]
+other = "创建一个新用户。参数可以通过命令行标志提供，缺失的参数将交互式提示输入。"
+
+[cmd.create.tls.short]
+other = "创建自签名 TLS 证书"
+
+[cmd.create.tls.long]
+other = "生成自签名 TLS 证书和密钥对。参数可以通过命令行标志提供，也可以通过交互式提示输入。"
+
+[cmd.create.access-key.short]
+other = "为用户创建访问密钥"
+
+[cmd.create.access-key.long]
+other = "为已有用户创建 API 访问密钥。参数可以通过命令行标志提供，也可以通过交互式提示输入。"
+
+[cmd.create.capturer.short]
+other = "创建网络抓包器"
+
+[cmd.create.capturer.long]
+other = "创建带有设备配置的新的网络抓包器。参数可以通过命令行参数提供，或通过交互式提示输入。"
+
+[cmd.create.password-book.short]
+other = "生成用于密钥派生的密码本文件"
+
+[cmd.create.password-book.long]
+other = "生成一个加密安全的随机密码本文件（65536 字节），用于子密钥派生。"
+
+[cmd.create.testcase.short]
+other = "从 pcap 文件中提取 HTTP 测试用例"
+
+[cmd.create.testcase.long]
+other = "使用 tshark 从 pcap 文件中提取 HTTP 请求/响应数据，\n并生成 JSON 测试用例文件，用于验证 TCP 重组和 HTTP 协议识别逻辑。\n\n每个 HTTP 事务（请求-响应对）生成一个 JSON 文件。\n支持 HTTP/1.1 keep-alive 连接中每个 TCP 流包含多个事务的情况。"
+
+[cmd.force-reset-password.short]
+other = "通过命令行强制重置用户密码"
+
+[flag.config]
+other = "配置文件路径（如 /etc/zhongkui/config.toml）"
+
+[flag.help]
+other = "显示帮助信息"
+
+[flag.version.verbose]
+other = "输出详细的构建信息"
+
+[flag.describe.scheduler.name]
+other = "要打印的任务类型名称（可多次指定）"
+
+[flag.migrate.db]
+other = "目标数据库：core、raw、all"
+
+[flag.migrate.verbose]
+other = "打印迁移 SQL"
+
+[flag.migrate.timeout]
+other = "迁移超时时间（0 表示不超时）"
+
+[flag.migrate.force]
+other = "跳过确认"
+
+[flag.migrate.keep-temp]
+other = "保留临时数据库"
+
+[flag.run.capture.stats-print]
+other = "启用周期性抓包统计输出到标准输出"
+
+[flag.run.capture.stats-interval]
+other = "统计输出的时间间隔（如 5s、10s、1m）"
+
+[flag.clear.database.timeout]
+other = "清空数据库的超时时间"
+
+[flag.clear.etcd.timeout]
+other = "清空 etcd 缓存的超时时间"
+
+[flag.create.user.username]
+other = "新用户的用户名（至少 6 个字符）"
+
+[flag.create.user.password]
+other = "新用户的密码（至少 8 个字符）"
+
+[flag.create.user.nicklename]
+other = "新用户的昵称（至少 6 个字符）"
+
+[flag.create.user.email]
+other = "新用户的邮箱"
+
+[flag.create.user.timeout]
+other = "向数据库写入数据的超时时间"
+
+[flag.force-reset-password.username]
+other = "要重置密码的用户名"
+
+[flag.force-reset-password.password]
+other = "用户的新密码"
+
+[flag.force-reset-password.timeout]
+other = "向数据库写入数据的超时时间"
+
+[flag.create.access-key.username]
+other = "要创建访问密钥的用户名"
+
+[flag.create.access-key.description]
+other = "访问密钥的描述"
+
+[flag.create.access-key.enabled]
+other = "访问密钥是否启用"
+
+[flag.create.access-key.ttl]
+other = "访问密钥自当前时刻起的有效期（0 表示永不过期）"
+
+[flag.create.access-key.timeout]
+other = "数据库操作超时时间"
+
+[flag.create.tls.name]
+other = "TLS 文件名称"
+
+[flag.create.tls.dir-path]
+other = "TLS 文件存储目录路径"
+
+[flag.create.tls.ttl]
+other = "TLS 文件自当前时刻起的有效期（如 8760h）"
+
+[flag.create.tls.dns-names]
+other = "TLS 文件的域名列表（逗号分隔）"
+
+[flag.create.password-book.output]
+other = "输出文件路径（未指定时输出到标准输出）"
+
+[flag.create.capturer.namespace]
+other = "抓包器所属命名空间"
+
+[flag.create.capturer.name]
+other = "抓包器名称"
+
+[flag.create.capturer.version]
+other = "抓包器版本"
+
+[flag.create.capturer.device]
+other = "网络设备名称（如 eth0）"
+
+[flag.create.capturer.snap-len]
+other = "抓包长度（字节）"
+
+[flag.create.capturer.promisc]
+other = "启用混杂模式"
+
+[flag.create.capturer.read-timeout]
+other = "读取超时时间（毫秒）"
+
+[flag.create.capturer.bpf-expr]
+other = "BPF 过滤表达式（如 tcp port 80）"
+
+[flag.create.capturer.enabled]
+other = "启用该抓包器"
+
+[flag.create.capturer.timeout]
+other = "数据库操作超时时间"
+
+[flag.create.testcase.pcap]
+other = "pcap 文件路径（必填）"
+
+[flag.create.testcase.output]
+other = "测试用例文件的输出目录"
+
+[flag.completion.bash.no-descriptions]
+other = "禁用补全描述"
+
+[flag.completion.zsh.no-descriptions]
+other = "禁用补全描述"
+
+[flag.completion.fish.no-descriptions]
+other = "禁用补全描述"
+
+[flag.completion.powershell.no-descriptions]
+other = "禁用补全描述"

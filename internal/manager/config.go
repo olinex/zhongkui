@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
@@ -129,9 +130,9 @@ type NamespaceConfig struct {
 // CORS 策略控制浏览器如何处理跨源 HTTP 请求，
 // 是前后端分离架构中不可或缺的安全配置项。
 type CORSConfig struct {
-	// AllowOrigin 是允许的跨域请求来源地址，
-	// 只有来自此地址的跨域请求才会被接受，支持使用 * 允许所有来源（不推荐生产环境使用）
-	AllowOrigin string `mapstructure:"allowOrigin" default:"http://localhost:8081" comment:"允许的跨域请求来源地址，* 表示允许所有来源（不推荐生产使用）"`
+	// AllowOrigins 是允许的跨域请求来源地址列表，
+	// 只有来自列表内地址的跨域请求才会被接受，支持使用 * 允许所有来源（不推荐生产环境使用）
+	AllowOrigins []string `mapstructure:"allowOrigins" default:"[\"http://127.0.0.1:8000\", \"http://localhost:8000\"]" comment:"允许的跨域请求来源地址列表，* 表示允许所有来源（不推荐生产使用）"`
 	// AllowCredentials 控制是否允许跨域请求携带凭证（Cookie、HTTP 认证等），
 	// 开启后浏览器会在跨域请求中包含认证信息
 	AllowCredentials bool `mapstructure:"allowCredentials" default:"true" comment:"是否允许跨域请求携带凭证（Cookie、HTTP 认证等）"`
@@ -242,8 +243,8 @@ func GetConfig(c *gin.Context) *Config {
 // 返回值：
 //   - *Config: 成功时返回填充并校验通过的配置结构体指针
 //   - error: 任一步骤失败时返回的错误
-func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, Prefix)
+func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error) {
+	return config.ExtractConfig[Config](v, validate, Prefix)
 }
 
 func DescribeConfig() config.ConfigDescriptions {

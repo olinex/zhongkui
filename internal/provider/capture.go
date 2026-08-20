@@ -5,6 +5,7 @@ import (
 	"zhongkui.com/zhongkui/internal/capture"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 func newCaptureClientProvider(i do.Injector) (*capture.CaptureClient, error) {
 	if viper, err := InvokeViper(i); err != nil {
 		return nil, errors.WithStack(err)
-	} else if cfg, err := capture.ExtractConfig(viper); err != nil {
+	} else if cfg, err := capture.ExtractConfig(viper, validator.Validate); err != nil {
 		return nil, errors.WithStack(err)
 	} else if logger, err := InvokeCaptureLogger(i); err != nil {
 		return nil, errors.WithStack(err)

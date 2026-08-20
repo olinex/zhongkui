@@ -214,6 +214,23 @@ func (j *JwtAuthenticator) Sign(user *core.User) (string, *CodeError) {
 	}
 }
 
+// parseWithoutTimeValidation 解析 JWT 令牌但不校验时间类声明（exp/nbf/iat），
+// 仅供 Refresh 使用：过期令牌在刷新窗口内仍可被解析并重新签发，
+// 从而支持"持续访问则令牌持续有效"的滑动过期策略。
+func (j *JwtAuthenticator) parseWithoutTimeValidation(token string) (*jwt.Token, *UserClaims, error) {
+	claims := UserClaims{}
+	jToken, err := jwt.ParseWithClaims(token, &claims, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, jwt.ErrHashUnavailable
+		} else if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
+			return nil, errors.WithStack(err)
+		} else {
+			return cryptoKey, nil
+		}
+	}, jwt.WithoutClaimsValidation())
+	return jToken, &claims, errors.WithStack(err)
+}
+
 // Refresh 刷新 JWT 令牌
 // 检查当前令牌是否有效且在可刷新时间范围内，返回新令牌或原令牌
 // 参数:
@@ -223,7 +240,9 @@ func (j *JwtAuthenticator) Sign(user *core.User) (string, *CodeError) {
 //   - string: 新的或原始的 JWT 令牌字符串
 //   - *CodeError: 刷新过程中出现的错误
 func (j *JwtAuthenticator) Refresh(c *gin.Context) (string, *CodeError) {
-	token, claims, err := j.Parse(j.getPureToken(c))
+	// 使用不校验时间声明的解析，否则过期令牌会在解析阶段被拒绝，
+	// 导致"过期后在刷新窗口内重新签发"的分支永远不可达
+	token, claims, err := j.parseWithoutTimeValidation(j.getPureToken(c))
 	if err != nil ||
 		!token.Valid ||
 		!j.managable(claims) {

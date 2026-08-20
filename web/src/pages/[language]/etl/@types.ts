@@ -1,11 +1,5 @@
 export type TaskState =
-  | "pending"
-  | "active"
-  | "aggregating"
-  | "scheduled"
-  | "retry"
-  | "archived"
-  | "completed";
+  "pending" | "active" | "aggregating" | "scheduled" | "retry" | "archived" | "completed";
 
 export interface ProcessingTask {
   id: string;
@@ -104,8 +98,8 @@ export interface InspectorTaskListItem {
   nextProcessAt: string | null;
   completedAt: string | null;
   deadline: string | null;
-  timeout: number;
-  retention: number;
+  timeout: string;
+  retention: string;
   group: string;
   isOrphaned: boolean;
 }
@@ -116,9 +110,6 @@ export type InspectorSchedulerListOut = InspectorSchedulerListItem[];
 
 export type InspectorQueueListOut = Record<string, InspectorQueueItem>;
 
-export type InspectorDailyStatListOut = Record<
-  string,
-  InspectorDailyStatItem[]
->;
+export type InspectorDailyStatListOut = Record<string, InspectorDailyStatItem[]>;
 
 export type InspectorTaskListOut = InspectorTaskListItem[];

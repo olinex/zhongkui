@@ -1,9 +1,5 @@
 <template>
-  <v-chip
-    :color="value ? 'success' : 'error'"
-    :variant="variant"
-    :density="density"
-  >
+  <v-chip :color="value ? 'success' : 'error'" :variant="variant" :density="density">
     <v-icon>
       {{ value ? "mdi-check" : "mdi-close" }}
     </v-icon>
@@ -14,19 +10,22 @@
 <script setup lang="ts" name="boolean-chip">
 import type { Density, Variant } from "../@types/base";
 
-const props = defineProps({
+defineProps({
   value: {
     type: Boolean,
     required: true,
   },
   variant: {
     type: String as PropType<Variant>,
+    default: "tonal",
   },
   density: {
     type: String as PropType<Density>,
+    default: "default",
   },
   label: {
-    type: String
-  }
+    type: String,
+    default: "",
+  },
 });
 </script>

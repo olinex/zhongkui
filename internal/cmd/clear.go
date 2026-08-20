@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"embed"
 	"strconv"
 	"strings"
 	"time"
@@ -11,8 +10,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	migcore "zhongkui.com/zhongkui/internal/migrations/core"
-	migraw "zhongkui.com/zhongkui/internal/migrations/raw"
+	"zhongkui.com/zhongkui/internal/migrations"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -20,12 +18,13 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/migrate"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
 var clearDatabaseCmd = &cobra.Command{
 	Use:   "database",
-	Short: "清空所有数据库表（回滚所有迁移）",
+	Short: "cmd.clear.database.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
@@ -43,7 +42,7 @@ var clearDatabaseCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Warning.Println("rolling back all migrations...")
+		pterm.Warning.Println(translate.T("cli.clear.rolling-back", nil))
 		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
@@ -53,38 +52,33 @@ var clearDatabaseCmd = &cobra.Command{
 		}
 		var migrators []dbInfo
 
-		if m, err := createClearMigrator(coreDB, rawDB, "core", migcore.Migrations); err != nil {
-			pterm.Error.Printf("failed to connect core: %v\n", err)
+		if m, err := createClearMigrator(provider.CoreDbPrefix, coreDB); err != nil {
+			pterm.Error.Println(translate.T("cli.clear.connect-failed", map[string]any{"DB": provider.CoreDbPrefix, "Err": err}))
 			return
 		} else {
 			migrators = append(migrators, dbInfo{"core", m})
 		}
-		if m, err := createClearMigrator(coreDB, rawDB, "raw", migraw.Migrations); err != nil {
-			pterm.Error.Printf("failed to connect raw: %v\n", err)
+		if m, err := createClearMigrator(provider.RawDbPrefix, rawDB); err != nil {
+			pterm.Error.Println(translate.T("cli.clear.connect-failed", map[string]any{"DB": provider.RawDbPrefix, "Err": err}))
 			return
 		} else {
 			migrators = append(migrators, dbInfo{"raw", m})
 		}
 
 		for _, mi := range migrators {
-			pterm.Info.Printf("rolling back %s...\n", mi.name)
+			pterm.Info.Println(translate.T("cli.clear.rolling-back-db", map[string]any{"DB": mi.name}))
 			if err := mi.db.Down(ctx); err != nil {
-				pterm.Error.Printf("%s rollback failed: %v\n", mi.name, err)
+				pterm.Error.Println(translate.T("cli.clear.rollback-failed", map[string]any{"DB": mi.name, "Err": err}))
 				mi.db.Close()
 				return
 			}
 			mi.db.Close()
 		}
-		pterm.Success.Println("clear database complete")
+		pterm.Success.Println(translate.T("cli.clear.database-complete", nil))
 	},
 }
 
-func createClearMigrator(coreDB, rawDB *database.DB, dbName string, migrationFS embed.FS) (*migrate.Migrator, error) {
-	gormDB := dbForName(coreDB, rawDB, dbName)
-	if gormDB == nil {
-		return nil, errors.Newf("unknown database: %s", dbName)
-	}
-
+func createClearMigrator(dbName string, gormDB *database.DB) (*migrate.Migrator, error) {
 	sqlDB, err := gormDB.DB()
 	if err != nil {
 		return nil, errors.Newf("failed to get database connection: %v", err)
@@ -99,17 +93,10 @@ func createClearMigrator(coreDB, rawDB *database.DB, dbName string, migrationFS 
 		driverName = "clickhouse"
 	}
 
+	migrationFS := migrations.MigrationFor(dbName)
 	goose.SetBaseFS(migrationFS)
 	cfg := migrate.NewConfig(driverName, "")
 	return migrate.NewMigratorFromDB(cfg, sqlDB)
-}
-
-func init() {
-	flags := clearDatabaseCmd.Flags()
-	flags.Duration("timeout", time.Minute, "清空数据库的超时时间")
-
-	flags = clearEtcdCmd.Flags()
-	flags.Duration("timeout", time.Minute, "清空 etcd 缓存的超时时间")
 }
 
 type etcdClearCategory struct {
@@ -132,7 +119,7 @@ var etcdClearCategories = []etcdClearCategory{
 
 var clearEtcdCmd = &cobra.Command{
 	Use:   "etcd",
-	Short: "清除 etcd 缓存（抓包器配置、水印、调度器配置）",
+	Short: "cmd.clear.etcd.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
@@ -147,7 +134,7 @@ var clearEtcdCmd = &cobra.Command{
 		for _, cat := range etcdClearCategories {
 			rsp, err := client.Get(ctx, cat.prefix, clientv3.WithPrefix())
 			if err != nil {
-				pterm.Error.Printf("failed to get %s keys: %v\n", cat.name, err)
+				pterm.Error.Println(translate.T("cli.etcd.get-keys-failed", map[string]any{"Category": cat.name, "Err": err}))
 				return
 			}
 			for _, kv := range rsp.Kvs {
@@ -160,12 +147,12 @@ var clearEtcdCmd = &cobra.Command{
 		}
 
 		if len(allKeys) == 0 {
-			pterm.Warning.Println("no etcd cache keys found")
+			pterm.Warning.Println(translate.T("cli.etcd.no-keys-found", nil))
 			return
 		}
 
 		// 2. 按类别分组打印
-		pterm.Info.Println("=== etcd cache keys ===")
+		pterm.Info.Println(translate.T("cli.etcd.keys-header", nil))
 		currentCat := ""
 		for i, entry := range allKeys {
 			if entry.category != currentCat {
@@ -193,21 +180,20 @@ var clearEtcdCmd = &cobra.Command{
 		for _, idx := range selected {
 			key := allKeys[idx].key
 			if _, err := client.Delete(ctx, key); err != nil {
-				pterm.Error.Printf("failed to delete %s: %v\n", key, err)
+				pterm.Error.Println(translate.T("cli.etcd.delete-failed", map[string]any{"Key": key, "Err": err}))
 				return
 			}
-			pterm.Success.Printf("deleted %s\n", key)
+			pterm.Success.Println(translate.T("cli.etcd.deleted", map[string]any{"Key": key}))
 		}
-		pterm.Success.Println("clear etcd cache complete")
+		pterm.Success.Println(translate.T("cli.etcd.clear-complete", nil))
 	},
 }
 
 // selectKeysToDelete 交互式选择要删除的 key，返回选中 key 在 allKeys 中的索引
 func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 	total := len(allKeys)
-	prompt := cliT(
+	prompt := translate.T(
 		"cli.etcd.select-keys",
-		"输入要删除的键编号（如 1,3,5-{{.Total}}）或输入 'all' 删除全部 {{.Total}} 个键",
 		map[string]any{"Total": total},
 	)
 	input, err := pterm.DefaultInteractiveTextInput.Show(prompt)
@@ -218,7 +204,7 @@ func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 
 	input = strings.TrimSpace(input)
 	if input == "" {
-		pterm.Info.Println(cliT("cli.etcd.no-keys", "未选择任何键，无需删除"))
+		pterm.Info.Println(translate.T("cli.etcd.no-keys", nil))
 		return nil
 	}
 
@@ -245,7 +231,7 @@ func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 			start, err1 := strconv.Atoi(startStr)
 			end, err2 := strconv.Atoi(endStr)
 			if err1 != nil || err2 != nil || start < 1 || end > total || start > end {
-				pterm.Error.Println(cliT("cli.etcd.invalid-range", "无效的范围：{{.Range}}", map[string]any{"Range": part}))
+				pterm.Error.Println(translate.T("cli.etcd.invalid-range", map[string]any{"Range": part}))
 				return nil
 			}
 			for i := start; i <= end; i++ {
@@ -254,7 +240,7 @@ func selectKeysToDelete(allKeys []etcdKeyEntry) []int {
 		} else {
 			n, err := strconv.Atoi(part)
 			if err != nil || n < 1 || n > total {
-				pterm.Error.Println(cliT("cli.etcd.invalid-number", "无效的键编号：{{.Number}}", map[string]any{"Number": part}))
+				pterm.Error.Println(translate.T("cli.etcd.invalid-number", map[string]any{"Number": part}))
 				return nil
 			}
 			selected = append(selected, n-1)
@@ -269,9 +255,9 @@ func confirmDeleteKeys(selected []int, allKeys []etcdKeyEntry) error {
 		return nil
 	}
 
-	pterm.Warning.Println(cliT("cli.etcd.delete-count", "即将删除 {{.Count}} 个键：", map[string]any{"Count": len(selected)}))
+	pterm.Warning.Println(translate.T("cli.etcd.delete-count", map[string]any{"Count": len(selected)}))
 	for _, idx := range selected {
-		pterm.Warning.Println(cliT("cli.etcd.delete-item", "  - {{.Key}}", map[string]any{"Key": allKeys[idx].key}))
+		pterm.Warning.Println(translate.T("cli.etcd.delete-item", map[string]any{"Key": allKeys[idx].key}))
 	}
 
 	random, err := crypto.GenerateRandomString(6)
@@ -290,4 +276,12 @@ func truncateDisplayValue(value string, maxLen int) string {
 		return value[:maxLen] + "..."
 	}
 	return value
+}
+
+func init() {
+	flags := clearDatabaseCmd.Flags()
+	flags.Duration("timeout", time.Minute, "flag.clear.database.timeout")
+
+	flags = clearEtcdCmd.Flags()
+	flags.Duration("timeout", time.Minute, "flag.clear.etcd.timeout")
 }

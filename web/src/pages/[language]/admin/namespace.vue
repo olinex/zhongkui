@@ -3,18 +3,12 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t(`model.namespace.name`)"
         :list-request="namespaceListGet"
         :options-request="namespaceListOptions"
         :actions="getActions"
+        :create="openCreateDialogAction"
         model-name="namespace"
-      >
-        <template #top>
-          <v-btn color="success" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
       <confirm-dialog
         ref="confirmDialogRef"
         :title="$t(`model.namespace.name`)"
@@ -36,12 +30,10 @@
       <temp-editable-dialog
         ref="createDialogRef"
         :title="$t(`model.namespace.name`)"
-        @confirm="createAction"
-        :confirm-disabled="
-          !createForm.meta.value.dirty || !createForm.meta.value.valid
-        "
+        :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
         force-editable
         prepend-icon="mdi-group"
+        @confirm="createAction"
       >
         <template #body>
           <v-form>
@@ -69,11 +61,9 @@
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t(`model.namespace.name`)"
-        @confirm="itemUpdateAction"
-        :confirm-disabled="
-          !updateForm.meta.value.dirty || !updateForm.meta.value.valid
-        "
+        :confirm-disabled="!updateForm.meta.value.dirty || !updateForm.meta.value.valid"
         prepend-icon="mdi-group"
+        @confirm="itemUpdateAction"
       >
         <template #body="{ proxy, editable }">
           <v-form>
@@ -123,12 +113,10 @@ import {
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { ItemActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
+import { useUserStore } from "@/stores/user";
 import type { NamespaceDetailOut } from "./@types";
 import { useForm } from "vee-validate";
-import {
-  createNamespaceSchema,
-  updateNamespaceSchema,
-} from "@/schemas/namespace";
+import { createNamespaceSchema, updateNamespaceSchema } from "@/schemas/namespace";
 import { vuetifyCfg } from "@/utils/form";
 
 const updateForm = useForm({
@@ -141,28 +129,27 @@ const createForm = useForm({
 
 const [updateDescription, updateDescriptionProps] = updateForm.defineField(
   "description",
-  vuetifyCfg
+  vuetifyCfg,
 );
 
-const [createName, createNameProps] = createForm.defineField(
-  "name",
-  vuetifyCfg
-);
+const [createName, createNameProps] = createForm.defineField("name", vuetifyCfg);
 
 const [createDescription, createDescriptionProps] = createForm.defineField(
   "description",
-  vuetifyCfg
+  vuetifyCfg,
 );
 
 const appStore = useAppStore();
+const userStore = useUserStore();
 const searchTableRef = useTemplateRef("searchTableRef");
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 
-const getActions = (item: Record<string, any>): ItemActions => {
-  let actions: ItemActions = {
+const getActions = (): ItemActions => {
+  const actions: ItemActions = {
     edit: detailGetAction,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
       confirmDialogRef.value?.open(item);
     },
@@ -170,6 +157,7 @@ const getActions = (item: Record<string, any>): ItemActions => {
   return actions;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<NamespaceDetailOut>(
     namespaceDetailGet(item.name as string),
@@ -183,10 +171,11 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemUpdateAction = (proxy: Record<string, any>) => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
@@ -195,6 +184,8 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
       }),
       async (rsp) => {
         await searchTableRef.value?.refresh();
+        // 刷新授权快照，保证右上角命名空间切换列表实时反映增删改结果
+        await userStore.refreshAuthorization();
         appStore.notify({
           text: rsp.summary,
           timeout: 3000,
@@ -207,16 +198,19 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
           timeout: 3000,
           color: "error",
         });
-      }
+      },
     );
   })();
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     namespaceDelete(item.name as string),
     async (rsp) => {
       await searchTableRef.value?.refresh();
+      // 刷新授权快照，保证右上角命名空间切换列表实时反映增删改结果
+      await userStore.refreshAuthorization();
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
@@ -229,7 +223,7 @@ const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
@@ -247,6 +241,8 @@ const createAction = createForm.handleSubmit(async (values) => {
     }),
     async (rsp) => {
       await searchTableRef.value?.refresh();
+      // 刷新授权快照，保证右上角命名空间切换列表实时反映增删改结果
+      await userStore.refreshAuthorization();
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
@@ -259,7 +255,7 @@ const createAction = createForm.handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 </script>

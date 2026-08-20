@@ -7,7 +7,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/tls"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
+
+// testValidate 测试用的验证器实例
+var testValidate = validator.Validate
 
 // TestTlsServerConfig_ToOption_NilConfig tests the behavior when the TlsServerConfig is nil.
 func TestTlsServerConfig_ToOption_NilConfig(t *testing.T) {
@@ -416,7 +420,7 @@ func TestExtractServerConfig(t *testing.T) {
 			v := viper.New()
 
 			// Test with empty config
-			config, err := ExtractServerConfig(v, "test-server")
+			config, err := ExtractServerConfig(v, testValidate, "test-server")
 			So(err, ShouldNotBeNil) // Should fail because sub-config is nil
 			So(config, ShouldBeNil)
 		})

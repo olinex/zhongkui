@@ -1,27 +1,18 @@
 <template>
-  <v-chart :style="{ height, width }" :option="option" />
+  <v-chart :style="{ height, width }" :option="mergedOption" />
 </template>
 
 <script setup lang="ts" name="pie-chart">
 import { use } from "echarts/core";
 import { PieChart } from "echarts/charts";
-import {
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-} from "echarts/components";
+import { TitleComponent, TooltipComponent, LegendComponent } from "echarts/components";
 import VChart from "vue-echarts";
 import { CanvasRenderer } from "echarts/renderers";
 import type { PropType } from "vue";
+import { useChartTheme, withChartTheme } from "@/utils/chartTheme";
 import type { PiesChartOption } from "../@types/charts";
 
-use([
-  CanvasRenderer,
-  PieChart,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-]);
+use([CanvasRenderer, PieChart, TitleComponent, TooltipComponent, LegendComponent]);
 
 const props = defineProps({
   option: {
@@ -34,6 +25,11 @@ const props = defineProps({
   },
   width: {
     type: [Number, String],
+    default: "100%",
   },
 });
+
+const chartTheme = useChartTheme();
+// Merge theme defaults so the chart follows light/dark switching immediately.
+const mergedOption = computed(() => withChartTheme(props.option, chartTheme.value));
 </script>

@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 // 主密钥来源常量
@@ -80,7 +81,7 @@ func (p *ConfigFileSecretKeyProvider) GetSecretKey() ([]byte, error) {
 		return nil, errors.New("parent secret key is empty in config file")
 	}
 	p.warnOnce.Do(func() {
-		fmt.Fprintf(os.Stderr, "WARNING: Using parent secret key from config file. This is NOT safe for production. Please switch to KMS as soon as possible.\n")
+		fmt.Fprintln(os.Stderr, translate.T("cli.crypto.parent-secret-key-warning", nil))
 	})
 	return []byte(p.parentSecretKey), nil
 }

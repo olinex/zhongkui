@@ -2,6 +2,8 @@ import type { BackendDataType, SearchAction } from "@/types";
 
 export type Align = "start" | "end" | "center" | undefined;
 export type Fixed = boolean | "end" | "start" | undefined;
+// Table row values are heterogeneous (string / number / boolean / Date / ...).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ItemAction = (item: Record<string, any>) => void;
 export type ItemActions = Record<string, ItemAction>;
 
@@ -12,6 +14,8 @@ export interface TableHeader {
   align?: Align;
   sortable?: boolean;
   fixed?: Fixed;
+  // 默认可见性：无本地保存配置时新增列默认是否展示，缺省 true（展示）
+  defaultVisible?: boolean;
 }
 
 export interface OrderByItem {

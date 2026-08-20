@@ -1,9 +1,11 @@
 package validator
 
 import (
+	"crypto/rand"
 	"encoding/base32"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -16,6 +18,7 @@ import (
 	"github.com/dlclark/regexp2"
 	"github.com/go-playground/validator/v10"
 	"zhongkui.com/zhongkui/internal/pkg/codes"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 const (
@@ -81,6 +84,72 @@ func IsValidStrongPassword(value string) bool {
 		return true
 	}
 	return false
+}
+
+// strongPasswordCharsets 定义生成强密码的字符集分组，
+// 与 strongPasswordRegex 允许的字符集保持一致，
+// 保证生成的随机密码总能通过强密码校验。
+var strongPasswordCharsets = []string{
+	"abcdefghijklmnopqrstuvwxyz",
+	"ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+	"0123456789",
+	"@$!%*?&#",
+}
+
+// GenerateStrongPassword 生成指定长度且符合强密码要求的随机密码。
+//
+// 该函数从 strongPasswordCharsets 的每个字符集分组中至少选取一个字符，
+// 保证密码同时包含小写字母、大写字母、数字与特殊字符，
+// 其余字符从全字符集中随机选取，最后通过 Fisher-Yates 洗牌打乱顺序，
+// 避免出现可预测的前缀模式。随机数源为 crypto/rand，
+// 生成的密码具备密码学安全性，且始终能通过 IsValidStrongPassword 校验。
+//
+// 参数：
+//   - length: 期望生成的密码长度，必须不小于 6（strongPasswordRegex 允许的最小长度）。
+//
+// 返回值：
+//   - string: 符合强密码要求的随机密码，长度为 length。
+//   - error: 如果 length 小于 6 或随机数生成失败，则返回错误。
+func GenerateStrongPassword(length int) (string, error) {
+	if length < 6 {
+		return "", errors.Newf("validator: strong password length must be at least 6, got %d", length)
+	}
+	all := strings.Join(strongPasswordCharsets, "")
+	password := make([]byte, 0, length)
+	// 每类字符集至少选取一个字符，确保满足强密码要求
+	for _, charset := range strongPasswordCharsets {
+		idx, err := randomIndex(len(charset))
+		if err != nil {
+			return "", err
+		}
+		password = append(password, charset[idx])
+	}
+	// 填充剩余字符
+	for len(password) < length {
+		idx, err := randomIndex(len(all))
+		if err != nil {
+			return "", err
+		}
+		password = append(password, all[idx])
+	}
+	// Fisher-Yates 洗牌，打乱固定前缀顺序
+	for i := len(password) - 1; i > 0; i-- {
+		j, err := randomIndex(i + 1)
+		if err != nil {
+			return "", err
+		}
+		password[i], password[j] = password[j], password[i]
+	}
+	return string(password), nil
+}
+
+// randomIndex 使用密码学安全随机数生成器返回 [0, max) 范围内的随机索引。
+func randomIndex(max int) (int, error) {
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(max)))
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+	return int(n.Int64()), nil
 }
 
 func IsValidWindowsFileName(value string) bool {
@@ -397,7 +466,7 @@ func matchAlphanumSpecial(re *regexp2.Regexp, value string) bool {
 	return false
 }
 
-func validateAlphanumSpecial(fl validator.FieldLevel) bool {
+func ValidateAlphanumSpecial(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -405,7 +474,7 @@ func validateAlphanumSpecial(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateStrongPassword(fl validator.FieldLevel) bool {
+func ValidateStrongPassword(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -413,7 +482,7 @@ func validateStrongPassword(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateWindowsFileName(fl validator.FieldLevel) bool {
+func ValidateWindowsFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -421,7 +490,7 @@ func validateWindowsFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateUnixFileName(fl validator.FieldLevel) bool {
+func ValidateUnixFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -429,7 +498,7 @@ func validateUnixFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateFileName(fl validator.FieldLevel) bool {
+func ValidateFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -437,7 +506,7 @@ func validateFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateStrictFileName(fl validator.FieldLevel) bool {
+func ValidateStrictFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
@@ -445,20 +514,10 @@ func validateStrictFileName(fl validator.FieldLevel) bool {
 	}
 }
 
-func validateDirPath(fl validator.FieldLevel) bool {
+func ValidateDirPath(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
 	} else {
 		return IsValidDirPath(v)
 	}
-}
-
-func init() {
-	validations[TagStrongPassword] = validateStrongPassword
-	validations[TagWindowsFileName] = validateWindowsFileName
-	validations[TagUnixFileName] = validateUnixFileName
-	validations[TagFileName] = validateFileName
-	validations[TagStrictFileName] = validateStrictFileName
-	validations[TagDirpath] = validateDirPath
-	validations[TagAlphanumSpecial] = validateAlphanumSpecial
 }

@@ -1,5 +1,5 @@
 <template>
-  <v-chart :style="{ height, width }" :option="option" />
+  <v-chart :style="{ height, width }" :option="mergedOption" />
 </template>
 
 <script setup lang="ts" name="bars-chart">
@@ -11,24 +11,13 @@ import {
   LegendComponent,
   GridComponent,
 } from "echarts/components";
-import VChart, { THEME_KEY } from "vue-echarts";
+import VChart from "vue-echarts";
 import { CanvasRenderer } from "echarts/renderers";
 import { type BarsChartOption } from "../@types/charts";
-import { type PropType, provide } from "vue";
-import { useTheme } from "vuetify";
+import { type PropType } from "vue";
+import { useChartTheme, withChartTheme } from "@/utils/chartTheme";
 
-const theme = useTheme();
-
-use([
-  BarChart,
-  CanvasRenderer,
-  TitleComponent,
-  TooltipComponent,
-  LegendComponent,
-  GridComponent,
-]);
-
-provide(THEME_KEY, theme.current.value.dark ? "dark" : "primary");
+use([BarChart, CanvasRenderer, TitleComponent, TooltipComponent, LegendComponent, GridComponent]);
 
 const props = defineProps({
   option: {
@@ -41,6 +30,11 @@ const props = defineProps({
   },
   width: {
     type: [Number, String],
+    default: "100%",
   },
 });
+
+const chartTheme = useChartTheme();
+// Merge theme defaults so the chart follows light/dark switching immediately.
+const mergedOption = computed(() => withChartTheme(props.option, chartTheme.value));
 </script>

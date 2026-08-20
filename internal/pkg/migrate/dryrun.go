@@ -5,6 +5,7 @@ import (
 
 	"github.com/pterm/pterm"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 type DryRunResult struct {
@@ -15,7 +16,7 @@ type DryRunResult struct {
 }
 
 func DryRun(ctx context.Context, cfg *Config) (*DryRunResult, error) {
-	pterm.Info.Println("creating temporary database for dry-run...")
+	pterm.Info.Println(translate.T("cli.migrate.dry-run-creating", nil))
 	tempDB, err := CreateTempDB(ctx, cfg)
 	if err != nil {
 		return nil, errors.Newf("failed to create temp database: %v", err)
@@ -41,23 +42,23 @@ func DryRun(ctx context.Context, cfg *Config) (*DryRunResult, error) {
 		TempDBName: tempDB.name,
 	}
 
-	pterm.Info.Printf("running migrations on temporary database %s...\n", tempDB.name)
+	pterm.Info.Println(translate.T("cli.migrate.dry-run-running", map[string]any{"DB": tempDB.name}))
 	if err := migrator.Up(ctx); err != nil {
 		result.Error = err
 		result.Success = false
-		pterm.Error.Printf("dry-run migration failed: %v\n", err)
+		pterm.Error.Println(translate.T("cli.migrate.dry-run-migration-failed", map[string]any{"Err": err}))
 	} else {
 		result.Success = true
-		pterm.Success.Printf("dry-run migration completed successfully on %s\n", tempDB.name)
+		pterm.Success.Println(translate.T("cli.migrate.dry-run-completed", map[string]any{"DB": tempDB.name}))
 	}
 
 	if !cfg.KeepTemp {
-		pterm.Info.Printf("cleaning up temporary database %s...\n", tempDB.name)
+		pterm.Info.Println(translate.T("cli.migrate.dry-run-cleanup", map[string]any{"DB": tempDB.name}))
 		if err := tempDB.Close(context.Background()); err != nil {
-			pterm.Warning.Printf("warning: failed to drop temp database %s: %v\n", tempDB.name, err)
+			pterm.Warning.Println(translate.T("cli.migrate.dry-run-drop-failed", map[string]any{"DB": tempDB.name, "Err": err}))
 		}
 	} else {
-		pterm.Info.Printf("temporary database %s preserved (--keep-temp)\n", tempDB.name)
+		pterm.Info.Println(translate.T("cli.migrate.dry-run-preserved", map[string]any{"DB": tempDB.name}))
 	}
 
 	return result, nil

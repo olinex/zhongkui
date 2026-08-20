@@ -8,6 +8,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 func etcdClientProvider(ctx context.Context) do.Provider[*etcd.EtcdClient] {
@@ -16,7 +17,7 @@ func etcdClientProvider(ctx context.Context) do.Provider[*etcd.EtcdClient] {
 			return nil, errors.WithStack(err)
 		} else if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		} else if cfg, err := etcd.ExtractConfig(viper); err != nil {
+		} else if cfg, err := etcd.ExtractConfig(viper, validator.Validate); err != nil {
 			return nil, errors.WithStack(err)
 		} else {
 			client, err := etcd.NewEtcdClient(ctx, cfg, logger, otel.EtcdDialOptions()...)

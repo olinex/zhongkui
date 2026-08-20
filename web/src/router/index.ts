@@ -7,12 +7,12 @@
 import consola from "consola";
 import { setupLayouts } from "virtual:generated-layouts";
 // Composables
-import { createRouter, createWebHistory } from "vue-router/auto";
+import { createRouter, createWebHistory } from "vue-router";
 import { routes } from "vue-router/auto-routes";
 
 import { useAppStore } from "@/stores/app";
+import { useConfigSyncStore } from "@/stores/configSync";
 import { useUserStore } from "@/stores/user";
-import { sleep } from "@/utils/base";
 import i18n from "@/utils/i18n";
 
 import { SupportLanguage } from "@/types";
@@ -40,13 +40,13 @@ router.onError((err, to) => {
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
-  let retry = 1;
-  if (!userStore.initial && retry < 5) {
-    await sleep(2 ** retry * 100);
-    retry += 1;
+  // 受保护路由需等待用户状态初始化完成后再校验登录态，
+  // 避免授权信息尚未加载完成就被误判为未登录而重定向到 401 页面
+  if (to.meta.requiresAuth && !userStore.initial) {
+    await userStore.init();
   }
   const appStore = useAppStore();
-  let params = to.params as any;
+  const params = to.params as Record<string, unknown>;
   let lang = params.language as SupportLanguage;
   if (to.path === "/") {
     lang = appStore.language;
@@ -70,7 +70,9 @@ router.beforeEach(async (to, from, next) => {
         redirect: to.fullPath,
       },
     });
-  } else if (to.meta.requiresAuth && !userStore.valid) {
+  } else if (to.meta.requiresAuth && !(await userStore.ensureValid())) {
+    // ensureValid 会在令牌过期但本地仍有会话时先尝试刷新恢复（滑动过期），
+    // 刷新失败才视为会话失效，跳转 401 页面
     consola.warn("user not valid, redirect to 401");
     await router.replace({
       name: "401",
@@ -82,6 +84,10 @@ router.beforeEach(async (to, from, next) => {
         redirect: to.fullPath,
       },
     });
+  }
+  // 登录态有效时初始化前端配置同步：拉取服务端配置并开始监听本地变更
+  if (to.meta.requiresAuth && userStore.exists) {
+    await useConfigSyncStore().init();
   }
   if (lang !== i18n.global.locale.value) {
     consola.info(`change language from ${i18n.global.locale.value} to ${lang}`);
@@ -97,13 +103,15 @@ router.isReady().then(() => {
   localStorage.removeItem("vuetify:dynamic-reload");
 });
 
+// The route object is spread into `router.push`, so its shape is intentionally loose.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const asLanguagePath = (route: any, language: SupportLanguage) => {
   router.push({
     ...route,
     params: {
       ...route.params,
       language,
-    } as any,
+    },
     query: {
       ...route.query,
     },

@@ -38,6 +38,20 @@ var targets = []Target{
 // registeredTargets 全局模型注册表索引：类型键 → 目标模型元信息。
 var registeredTargets sync.Map
 
+// Register 运行时注册一个可打标目标模型。
+// 注册表默认由静态清单（targets）在包初始化时构建；本函数供测试注入自定义
+// 模型或未来运行时扩展使用。类型键无法计算或重复注册时直接 panic，
+// 与静态注册语义保持一致，避免静默的未知模型。
+func Register(target Target) {
+	typeKey, err := TypeKey(target.Type)
+	if err != nil {
+		panic(fmt.Sprintf("tagengine: register target failed: %v", err))
+	}
+	if _, loaded := registeredTargets.LoadOrStore(typeKey, &target); loaded {
+		panic(fmt.Sprintf("tagengine: duplicate target type key: %s", typeKey))
+	}
+}
+
 // TypeKey 计算目标模型实例的类型键。
 // 类型键格式为 pkgpath.TypeName（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport），
 // 作为数据库规则的模型分组标识（TagRule.Model 等模型字段的取值）。
@@ -99,12 +113,6 @@ func Options() []Option {
 // 避免启动后出现静默的未知模型，保证注册表恒为合法状态的单一事实来源。
 func init() {
 	for _, target := range targets {
-		typeKey, err := TypeKey(target.Type)
-		if err != nil {
-			panic(fmt.Sprintf("tagengine: register target failed: %v", err))
-		}
-		if _, loaded := registeredTargets.LoadOrStore(typeKey, &target); loaded {
-			panic(fmt.Sprintf("tagengine: duplicate target type key: %s", typeKey))
-		}
+		Register(target)
 	}
 }

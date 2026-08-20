@@ -105,7 +105,7 @@ func (l *LayerStack) Scan(value any) error {
 // 包含时间戳和对应的网络层堆栈信息
 type FrameInfo struct {
 	Timestamp  time.Time  `json:"timestamp"`   // 数据包捕获时间戳
-	LayerStack LayerStack `json:"layer_stack"` // 网络层堆栈信息
+	LayerStack LayerStack `json:"layerStack"` // 网络层堆栈信息
 }
 
 // BaseMeta 表示基础元数据信息
@@ -117,37 +117,37 @@ type BaseMeta struct {
 	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"`
 	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`
 	Version   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"version"`
-	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"session_id"`
+	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"sessionId"`
 }
 
-// TimestampMeta 表示时间戳元数据
-// 包含数据包的时间戳信息，使用高精度时间格式存储
+// TimestampMeta 表示时间元数据
+// 包含采集时间与入库时间，使用高精度时间格式存储
 type TimestampMeta struct {
-	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"`
-	CreatedAt time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"created_at"`
+	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"`  // 采集时间：数据包被捕获的时刻
+	CreatedAt time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"createdAt"` // 入库时间：数据写入数据库的时刻
 }
 
 type TraceMeta struct {
-	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"trace_id"`
+	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"traceId"`
 }
 
 // DirectionMeta 表示数据包方向元数据
 // Cli2Srv 标记该数据包是否为客户端到服务端方向（true表示客户端到服务端，false表示服务端到客户端）
 type DirectionMeta struct {
-	Cli2Srv bool `gorm:"column:cli_2_srv;type:Bool" json:"cli_2_srv"`
+	Cli2Srv bool `gorm:"column:cli_2_srv;type:Bool" json:"cli2Srv"`
 }
 
 // CaptureMeta 表示捕获元数据
 // 包含数据包捕获时的状态信息
 type CaptureMeta struct {
 	Truncated     bool   `gorm:"type:Bool" json:"truncated"`
-	CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"capture_length"`
+	CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"captureLength"`
 }
 
 // PacketMeta 表示数据包元数据
 // 包含原始数据包的网络层堆栈信息
 type PacketMeta struct {
-	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layer_stack"`
+	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layerStack"`
 }
 
 type TagsMeta struct {

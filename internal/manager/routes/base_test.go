@@ -10,8 +10,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-gonic/gin/binding"
 	en2 "github.com/go-playground/locales/en"
 	ut "github.com/go-playground/universal-translator"
+	uv "github.com/go-playground/validator/v10"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/pelletier/go-toml/v2"
 	. "github.com/smartystreets/goconvey/convey"
@@ -31,7 +33,35 @@ func TestMain(m *testing.M) {
 	provider := key.NewConfigFileSecretKeyProvider("this-is-a-32-byte-secret-key!!")
 	key.InitGlobalKeyDerivation(provider, pb)
 
+	// 在 Gin binding 验证器上注册自定义验证规则，供请求体绑定校验使用
+	registerBindingValidations()
+
 	os.Exit(m.Run())
+}
+
+// registerBindingValidations 在 Gin binding 验证器上注册自定义验证规则
+// 测试中通过 ShouldBindJSON 等绑定的请求体包含 binding 标签（如 strongPassword、
+// alphanumspecial、gtCurrentTime），需确保这些自定义规则在测试环境已注册
+func registerBindingValidations() {
+	v, ok := binding.Validator.Engine().(*uv.Validate)
+	if !ok {
+		panic("binding validator is not valid")
+	}
+	for tag, fn := range map[string]uv.Func{
+		validator.TagStrongPassword:         validator.ValidateStrongPassword,
+		validator.TagWindowsFileName:        validator.ValidateWindowsFileName,
+		validator.TagUnixFileName:           validator.ValidateUnixFileName,
+		validator.TagFileName:               validator.ValidateFileName,
+		validator.TagStrictFileName:         validator.ValidateStrictFileName,
+		validator.TagDirpath:                validator.ValidateDirPath,
+		validator.TagAlphanumSpecial:        validator.ValidateAlphanumSpecial,
+		validator.TagGreaterThanCurrentTime: validator.ValidateGtCurrentTime,
+		validator.TagLesserThanCurrentTime:  validator.ValidateLtCurrentTime,
+	} {
+		if err := v.RegisterValidation(tag, fn); err != nil {
+			panic(err)
+		}
+	}
 }
 
 func newBaseTestLocalizer() *i18n.Localizer {
@@ -55,10 +85,23 @@ code.1102 = "username or password check failed"
 code.1103 = "username or email already exist"
 code.1104 = "too many access key"
 code.1105 = "tag event rule invalid"
+code.1106 = "tag rule runtime invalid"
+code.1107 = "tag rule target model not registered"
+code.1108 = "frontend config conflict"
+code.1109 = "frontend config sync disabled"
 code.200 = "ok"
 code.404 = "not found"
 error.emptyUrlParam = "empty url param: %s"
 error.badUrlParam = "bad url param: %s"
+tagrule.rego-invalid = "Rego rule violates the tag rule contract: it must be package zki with a tags rule"
+tagrule.lint-field-not-exist = "Field %s does not exist in the input document of this model, please check the spelling"
+tagrule.lint-field-hint = "Please choose a valid field from the input field panel or the completion list"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.method"]
+other = "HTTP request method"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+other = "Client IP address"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
+other = "Risk tag combination"
 `), "en.toml")
 	return i18n.NewLocalizer(bundle, "en")
 }
@@ -71,8 +114,6 @@ func newBaseTestTranslator() ut.Translator {
 
 // setupI18nMiddleware 返回一个注入 Localizer 和 Translator 的 Gin 中间件
 func setupI18nMiddleware() gin.HandlerFunc {
-	// 确保自定义验证规则（如 strongPassword）已注册到 Gin 的 binding engine
-	validator.Init()
 	return func(c *gin.Context) {
 		c.Set(manager.LocalizerCtxName, newBaseTestLocalizer())
 		c.Set(manager.TranslatorCtxName, newBaseTestTranslator())
@@ -162,10 +203,10 @@ func TestHeaderOption(t *testing.T) {
 	})
 }
 
-func TestListOptions(t *testing.T) {
-	Convey("测试 ListOptions 结构体", t, func() {
-		Convey("应正确嵌入 SearchOptions", func() {
-			opts := ListOptions{
+func TestListMeta(t *testing.T) {
+	Convey("测试 ListMeta 结构体", t, func() {
+		Convey("应正确嵌入 SearchOptions 并包含 Meta", func() {
+			meta := ListMeta{
 				SearchOptions: utils.SearchOptions{
 					OrderBy:  []string{"name", "createdAt"},
 					FilterBy: []*utils.FilterByOption{{Name: "name", Type: "string", Actions: []string{"eq", "ctn"}}},
@@ -174,14 +215,20 @@ func TestListOptions(t *testing.T) {
 					{Name: "id", Type: "uint"},
 					{Name: "name", Type: "string"},
 				},
+				Meta: ApiMeta{
+					http.MethodPost: &MethodMeta{
+						BodyInput: &StructMeta{Name: "testSearcherIn"},
+					},
+				},
 			}
-			So(opts.OrderBy, ShouldResemble, []string{"name", "createdAt"})
-			So(len(opts.FilterBy), ShouldEqual, 1)
-			So(len(opts.Headers), ShouldEqual, 2)
+			So(meta.OrderBy, ShouldResemble, []string{"name", "createdAt"})
+			So(len(meta.FilterBy), ShouldEqual, 1)
+			So(len(meta.Headers), ShouldEqual, 2)
+			So(len(meta.Meta), ShouldEqual, 1)
 		})
 
 		Convey("应正确序列化为 JSON", func() {
-			opts := ListOptions{
+			meta := ListMeta{
 				SearchOptions: utils.SearchOptions{
 					OrderBy:  []string{"name"},
 					FilterBy: []*utils.FilterByOption{},
@@ -189,8 +236,11 @@ func TestListOptions(t *testing.T) {
 				Headers: []*HeaderOption{
 					{Name: "id", Type: "uint"},
 				},
+				Meta: ApiMeta{
+					http.MethodPost: &MethodMeta{},
+				},
 			}
-			data, err := json.Marshal(opts)
+			data, err := json.Marshal(meta)
 			So(err, ShouldBeNil)
 
 			var result map[string]any
@@ -198,6 +248,7 @@ func TestListOptions(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(result["orderBy"], ShouldNotBeNil)
 			So(result["headers"], ShouldNotBeNil)
+			So(result["meta"], ShouldNotBeNil)
 		})
 	})
 }
@@ -452,13 +503,13 @@ func TestGetUUIDParam(t *testing.T) {
 	})
 }
 
-func TestListOptionsGinHandler(t *testing.T) {
-	Convey("测试 ListOptionsGinHandler 泛型处理器", t, func() {
+func TestListMetaGinHandler(t *testing.T) {
+	Convey("测试 ListMetaGinHandler 泛型处理器", t, func() {
 		Convey("应正确返回列表选项配置", func() {
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
-			r.GET("/api/options", ListOptionsGinHandler[*testSearcherIn, *testTotalOut])
+			r.GET("/api/options", ListMetaGinHandler[*testSearcherIn, *testTotalOut]())
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/options", nil)
@@ -484,7 +535,7 @@ func TestListOptionsGinHandler(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
-			r.GET("/api/options", ListOptionsGinHandler[*testSearcherIn, *testTotalOut])
+			r.GET("/api/options", ListMetaGinHandler[*testSearcherIn, *testTotalOut]())
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/options", nil)
@@ -517,7 +568,7 @@ func TestListOptionsGinHandler(t *testing.T) {
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
-			r.GET("/api/options", ListOptionsGinHandler[*testSearcherIn, *testTotalOut])
+			r.GET("/api/options", ListMetaGinHandler[*testSearcherIn, *testTotalOut]())
 
 			_ = searchOpts
 
@@ -532,6 +583,29 @@ func TestListOptionsGinHandler(t *testing.T) {
 			data := resp["data"].(map[string]any)
 			So(data["orderBy"], ShouldNotBeNil)
 			So(data["filterBy"], ShouldNotBeNil)
+		})
+
+		Convey("meta 应包含自动注册的 POST 方法元信息", func() {
+			gin.SetMode(gin.TestMode)
+			r := gin.New()
+			r.Use(setupI18nMiddleware())
+			r.GET("/api/options", ListMetaGinHandler[*testSearcherIn, *testTotalOut]())
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/options", nil)
+			r.ServeHTTP(w, req)
+
+			var resp map[string]any
+			err := json.Unmarshal(w.Body.Bytes(), &resp)
+			So(err, ShouldBeNil)
+
+			data := resp["data"].(map[string]any)
+			meta := data["meta"].(map[string]any)
+			post := meta["POST"].(map[string]any)
+			bodyInput := post["bodyInput"].(map[string]any)
+			So(bodyInput["name"], ShouldEqual, "testSearcherIn")
+			bodyOutput := post["bodyOutput"].(map[string]any)
+			So(bodyOutput["name"], ShouldEqual, "testTotalOut")
 		})
 	})
 }

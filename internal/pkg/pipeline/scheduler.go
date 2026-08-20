@@ -195,7 +195,7 @@ func (e *etcdBaseConfigProvider) GetConfigs() ([]*asynq.PeriodicTaskConfig, erro
 		// 构建 asynq 任务选项
 		opts := []asynq.Option{
 			asynq.Queue(sCfg.Queue),
-			asynq.Timeout(sCfg.Timeout),
+			asynq.Timeout(sCfg.Timeout.Std()),
 			asynq.MaxRetry(sCfg.MaxRetry),
 		}
 
@@ -345,9 +345,9 @@ func NewElectionScheduler(
 		asynq.PeriodicTaskManagerOpts{
 			RedisUniversalClient:       redis.Client,
 			PeriodicTaskConfigProvider: &provider,
-			SyncInterval:               cfg.SyncInterval,
+			SyncInterval:               cfg.SyncInterval.Std(),
 			SchedulerOpts: &asynq.SchedulerOpts{
-				HeartbeatInterval: cfg.HeartbeatInterval,
+				HeartbeatInterval: cfg.HeartbeatInterval.Std(),
 				Logger:            &schedulerLogger{ctx: ctx, logger: logger},
 				Location:          loc,
 			},
@@ -360,7 +360,7 @@ func NewElectionScheduler(
 	// 创建游标调度器实例，负责 Interval 配置任务的游标推进调度
 	// 其内部创建的 asynq client 与 PeriodicTaskManager/Server 共享同一 Redis 连接，
 	// 故 Shutdown 时仅停止调度循环，不关闭 client，避免关闭共享连接
-	cursor := NewCursorScheduler(client, NewClient(redis), cfg.CursorCheckInterval, logger)
+	cursor := NewCursorScheduler(client, NewClient(redis), cfg.CursorCheckInterval.Std(), logger)
 
 	// 创建调度器实例
 	scheduler := Scheduler{

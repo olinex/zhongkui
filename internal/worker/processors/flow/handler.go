@@ -142,7 +142,13 @@ func (h *flowClusterHandler[P]) Start(ctx context.Context, items <-chan P) error
 		[]etl.LoadFunc[any]{h.loadBatch},
 		h.param.MaxReassemblerSize,
 	)
+	// context.Canceled 是正常关机路径：外部取消会触发 buffer 冲刷后返回该错误
+	//（etl 库语义，见 TestBufferFlushOnCancel），此处按干净停止处理，不向上冒泡为错误。
 	if _, err := pipeline.Run(ctx); err != nil {
+		if errors.Is(err, context.Canceled) {
+			h.logger.Ctx(ctx).Infof("flow handler pipeline stopped (context canceled)")
+			return nil
+		}
 		h.logger.Ctx(ctx).Errorf("flow handler pipeline exited with error: %v", err)
 		return errors.WithStack(err)
 	}

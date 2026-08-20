@@ -58,7 +58,7 @@ onMounted(() => {
           redirect: route.query.redirect || "",
         },
       }),
-    SIGN_IN_TIMEOUT_MS
+    SIGN_IN_TIMEOUT_MS,
   );
 });
 

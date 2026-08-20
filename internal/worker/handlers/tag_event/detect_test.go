@@ -13,6 +13,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // fakeEnqueuer 实现 eventEnqueuer 接口，追加记录投递的任务供断言使用。
@@ -106,7 +107,7 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 			NamespaceName:  "default",
 			TagEventRuleID: enabledRule.ID,
 			Name:           "enabled-cond",
-			Window:         5 * time.Minute,
+			Window:         serializer.DurationNS(5 * time.Minute),
 			Threshold:      3,
 			Expression:     "A AND B",
 			Enabled:        true,
@@ -116,7 +117,7 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 			NamespaceName:  "default",
 			TagEventRuleID: enabledRule.ID,
 			Name:           "disabled-cond",
-			Window:         5 * time.Minute,
+			Window:         serializer.DurationNS(5 * time.Minute),
 			Threshold:      3,
 			Expression:     "A",
 			Enabled:        false,
@@ -129,7 +130,7 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 			NamespaceName:  "default",
 			TagEventRuleID: disabledRule.ID,
 			Name:           "orphan-enabled-cond",
-			Window:         5 * time.Minute,
+			Window:         serializer.DurationNS(5 * time.Minute),
 			Threshold:      3,
 			Expression:     "B",
 			Enabled:        true,

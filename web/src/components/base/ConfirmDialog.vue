@@ -4,11 +4,7 @@
       <v-card :prepend-icon="prependIcon" :title="title">
         <v-card-text>
           <slot name="body" :proxy="proxy" />
-          <v-text-field
-            v-show="doubleCheck"
-            v-model="value"
-            variant="underlined"
-          >
+          <v-text-field v-show="doubleCheck" v-model="value" variant="underlined">
             <template #append-inner>
               <v-chip variant="text">
                 {{ $t("model.__base.content.doubleCheck", { random }) }}
@@ -20,11 +16,7 @@
           <v-btn @click="close">
             {{ $t("action.close") }}
           </v-btn>
-          <v-btn
-            color="info"
-            @click="confirm"
-            :disabled="doubleCheck && random !== value"
-          >
+          <v-btn color="info" :disabled="doubleCheck && random !== value" @click="confirm">
             {{ $t("action.confirm") }}
           </v-btn>
         </v-card-actions>
@@ -37,11 +29,11 @@
 import { generateRandomString } from "@/utils/base";
 
 const dialog = ref(false);
-const proxy = ref({} as Record<string, any>);
+const proxy = ref({} as Record<string, unknown>);
 const value = ref("");
 const random = ref("");
 
-const open = (item: Record<string, any>) => {
+const open = (item: object) => {
   proxy.value = { ...item };
   dialog.value = true;
   value.value = "";
@@ -59,9 +51,10 @@ const confirm = async () => {
 
 const emits = defineEmits(["confirm"]);
 
-const props = defineProps({
+defineProps({
   prependIcon: {
     type: String,
+    default: "",
   },
   title: {
     type: String,

@@ -7,6 +7,7 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 func getDiffError(target, input string) error {
@@ -55,9 +56,8 @@ func getDiffError(target, input string) error {
 }
 
 func staticInputDoubleCheck(input string) error {
-	first, err := pterm.DefaultInteractiveTextInput.Show(cliT(
+	first, err := pterm.DefaultInteractiveTextInput.Show(translate.T(
 		"cli.confirm.enter",
-		"请输入 `{{.Input}}` 以确认",
 		map[string]any{"Input": input},
 	))
 	if err != nil {
@@ -66,9 +66,8 @@ func staticInputDoubleCheck(input string) error {
 	if err = getDiffError(input, first); err != nil {
 		return errors.WithStack(err)
 	}
-	second, err := pterm.DefaultInteractiveTextInput.Show(cliT(
+	second, err := pterm.DefaultInteractiveTextInput.Show(translate.T(
 		"cli.confirm.reenter",
-		"请再次输入 `{{.Input}}` 以确认",
 		map[string]any{"Input": input},
 	))
 	if err != nil {

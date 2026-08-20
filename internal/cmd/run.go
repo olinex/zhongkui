@@ -9,6 +9,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/routes"
 	"zhongkui.com/zhongkui/internal/pkg/runtime"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/provider"
 	"zhongkui.com/zhongkui/internal/reporter"
 	"zhongkui.com/zhongkui/internal/worker"
@@ -16,7 +17,7 @@ import (
 
 var webCmd = &cobra.Command{
 	Use:   "web",
-	Short: "运行 zhongkui HTTP Web API 进程",
+	Short: "cmd.run.web.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		if err := routes.RouteRegister(ctx, i); err != nil {
@@ -32,7 +33,7 @@ var webCmd = &cobra.Command{
 
 var grpcCmd = &cobra.Command{
 	Use:   "grpc",
-	Short: "运行 zhongkui gRPC API 进程",
+	Short: "cmd.run.grpc.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -46,7 +47,7 @@ var grpcCmd = &cobra.Command{
 
 var workerCmd = &cobra.Command{
 	Use:   "worker",
-	Short: "运行 zhongkui 工作节点进程",
+	Short: "cmd.run.worker.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		worker.Registry(ctx, i)
@@ -82,7 +83,7 @@ var workerCmd = &cobra.Command{
 		for name, factory := range factories {
 			processor, err := factory(ctx)
 			if err != nil {
-				pterm.Error.Printf("failed to create processor %s: %v\n", name, err)
+				pterm.Error.Println(translate.T("cli.run.processor-create-failed", map[string]any{"Name": name, "Err": err}))
 				continue
 			}
 			services = append(services, runtime.NewProcessorService(name, processor))
@@ -97,7 +98,7 @@ var workerCmd = &cobra.Command{
 
 var captureCmd = &cobra.Command{
 	Use:   "capture",
-	Short: "运行 zhongkui 抓包进程",
+	Short: "cmd.run.capture.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
@@ -108,10 +109,7 @@ var captureCmd = &cobra.Command{
 		if sPrint := v.GetBool("stats-print"); sPrint {
 			sInterval := v.GetDuration("stats-interval")
 			client.EnableStats(sInterval)
-			pterm.Debug.Printf(
-				"capture stats enabled, printing every %s to stdout\n",
-				sInterval,
-			)
+			pterm.Debug.Println(translate.T("cli.run.capture-stats-enabled", map[string]any{"Interval": sInterval}))
 		}
 
 		if err := client.Run(ctx, sessionID); err != nil {
@@ -122,6 +120,6 @@ var captureCmd = &cobra.Command{
 }
 
 func init() {
-	captureCmd.Flags().Bool("stats-print", false, "启用周期性抓包统计输出到标准输出")
-	captureCmd.Flags().Duration("stats-interval", 5*time.Second, "统计输出的时间间隔（如 5s、10s、1m）")
+	captureCmd.Flags().Bool("stats-print", false, "flag.run.capture.stats-print")
+	captureCmd.Flags().Duration("stats-interval", 5*time.Second, "flag.run.capture.stats-interval")
 }

@@ -98,7 +98,7 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 		})
 
 		Convey("Should handle string value in Scan method", func() {
-			jsonStr := `[{"option_type":5,"option_length":4,"actual_length":8,"option_data":"AAEAAQ=="}]`
+			jsonStr := `[{"optionType":5,"optionLength":4,"actualLength":8,"optionData":"AAEAAQ=="}]`
 			var options IPv6HeaderTLVOptions
 
 			err := options.Scan(jsonStr)
@@ -110,7 +110,7 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 		})
 
 		Convey("Should handle []byte value in Scan method", func() {
-			jsonData := []byte(`[{"option_type":194,"option_length":4,"actual_length":8,"option_data":"AAECAw=="}]`)
+			jsonData := []byte(`[{"optionType":194,"optionLength":4,"actualLength":8,"optionData":"AAECAw=="}]`)
 			var options IPv6HeaderTLVOptions
 
 			err := options.Scan(jsonData)
@@ -228,7 +228,7 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 		})
 
 		Convey("Should handle database deserialization with Scan method", func() {
-			jsonData := `{"next_header":6,"header_length":1,"actual_length":16,"options":[]}`
+			jsonData := `{"nextHeader":6,"headerLength":1,"actualLength":16,"options":[]}`
 			var hbh IPv6HopByHop
 
 			err := hbh.Scan(jsonData)

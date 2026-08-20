@@ -5,70 +5,588 @@ navbar:
     group: Group
     namespace: Namespace
     capturer: Capturer
+    tagRule: Tag Rule
+    tagEventRule: Tag Event Rule
   etl:
     self: ETL
+    server: Server
     queue: Queue
+    task: Task
+    scheduler: Scheduler
+  traffic:
+    self: Traffic
+    ipv4Tcp: IPv4 TCP
+    ipv6Tcp: IPv6 TCP
+    httpTransport: HTTP Transport
+  pin: Pin sidebar
+  unpin: Unpin sidebar
 model:
-  name:
-    user: User
-    group: Group
-    namespace: Namespace
-    capturer: Capturer
-    accessKey: Access Key
-field:
-  label:
-    __actions: Actions
+  __base:
+    field:
+      __actions: Actions
+      date: Date
+      time: Time
+      startTime: Start Time
+      endTime: End Time
+      field: Field
+      action: Action
+      search: Search
+      value: Value
+      encrypted: Encrypted
+      # Generic time range filter labels (shared fields, not model-specific)
+      timestampRange: Capture Time Range
+      createdAtRange: Ingestion Time Range
+    content:
+      condition: condition(s)
+      doubleCheck: Please enter `{random}` to double check
+    value:
+      blank: blank
+      "null": "null"
+      undefined: "undefined"
+  user:
+    name: User
+    field:
+      id: ID
+      unionID: Union ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      deletedAt: Deleted At
+      deletedAtTime: Deleted At Time
+      deletedAtDate: Deleted At Date
+      active: Is Active
+      username: Username
+      password: Password
+      passwordAgain: Confirm Password
+      nickleName: Nickle Name
+      email: Email
+      oldPassword: Old Password
+      newPassword: New Password
+      newPasswordAgain: New Password Again
+      randomPassword: Random Generate
+      specifyPassword: Specify Password
+      passwordResetNotice: Please securely inform the target user of the new password
+      frontendConfigSyncEnabled: Enable Frontend Config Sync
+  policy:
+    name: Policy
+    field:
+      namespace: Namespace
+      name: Name
+      target: Target
+      effect: Effect
+      action: Action
+      createdAt: Created At
+      updatedAt: Updated At
+  group:
+    name: Group
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+  namespace:
+    name: Namespace
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+  capturer:
+    name: Capturer
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      namespace: Namespace
+      version: Version
+      device: Device
+      bpfExpr: BPF Expression
+      snapLen: Snap Length
+      timeout: Timeout
+      promisc: Promiscuous Mode
+      enabled: Enabled
+  accessKey:
+    name: Access Key
+    field:
+      createdAt: Created At
+      updatedAt: Updated At
+      expiredAt: Expired At
+      lastAccessAt: Last Access At
+      enabled: Enabled
+      description: Description
+  server:
+    name: Server
+    field:
+      started: Started At
+      status: Status
+      queueWeights: Queue Weights
+  queue:
+    name: Queue
+    field:
+      queue: Queue
+      days: Days
+      running: Running
+      memoryUsage: Memory Usage
+      latency: Latency
+      size: Size
+      retrievalTime: Retrieval Time
+      processed: Processed
+      failed: Failed
+      active: Active
+      pending: Pending
+      retry: Retry
+      scheduled: Scheduled
+      archived: Archived
+      aggregating: Aggregating
+      completed: Completed
+  scheduler:
+    name: Scheduler
+    field:
+      id: ID
+      spec: Spec
+      next: Next Schedule At
+      prev: Previous Schedule At
+      typeName: Task Type Name
+      payload: Payload
+  task:
+    name: Task
+    field:
+      id: ID
+      type: Type
+      queue: Queue
+      state: State
+      payload: Payload
+      result: Result
+      retried: Retry Count
+      lastErr: Last Error
+      lastFailedAt: Last Failed At
+      nextProcessAt: Next Process At
+      completedAt: Completed At
+      start: Start
+      deadline: Deadline
+      timeout: Timeout
+      retention: Retention
+      group: Group Name
+      isOrphaned: Orphaned Task
+  tagRule:
+    name: Tag Rule
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      model: Target Model
+      description: Description
+      rego: Rego Rule
+      enabled: Enabled
+      version: Version
+      versionCount: Version Count
+  tagEventRule:
+    name: Tag Event Rule
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      description: Description
+      matchAll: Match All Conditions
+      enabled: Enabled
+      version: Version
+      versionCount: Version Count
+      conditions: Conditions
+  tagEventCondition:
+    name: Condition
+    field:
+      name: Condition Name
+      model: Target Model
+      dimension: Tag Dimension
+      item: Dimension Value
+      window: Time Window (minutes)
+      threshold: Threshold
+      expression: Tag Expression
+      enabled: Enabled
+      description: Description
+      count: Hit Count
+      detectedAt: Detected At
+  # Traffic audit consists of three independent data types, each with its own complete field set
+  ipv4Tcp:
+    name: IPv4 TCP
+    field:
+      # Base audit columns
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionId: Session ID
+      tcpStreamId: TCP Stream ID
+      capture: Capturer
+      version: Version
+      traceId: Trace ID
+      # IPv4 address & ports
+      ipv4Src: IPv4 Source Address
+      ipv4Dst: IPv4 Destination Address
+      srcPort: Source Port
+      dstPort: Destination Port
+      # TCP audit columns
+      seq: Sequence Number
+      ack: Acknowledgment Number
+      bitFin: FIN Flag
+      bitSyn: SYN Flag
+      bitRst: RST Flag
+      bitPsh: PSH Flag
+      bitAck: ACK Flag
+      bitUrg: URG Flag
+      window: Window Size
+      ipv4Ttl: IPv4 TTL
+      ipv4IpProtocol: IPv4 Protocol
+      ipv4Length: IPv4 Length
+      # TCP passive fingerprint (p0f style)
+      fpOs: OS Fingerprint
+      fpSig: TCP Fingerprint Signature
+      fpMtu: MTU
+      # ---- Full field set for column settings (hidden by default) ----
+      # Capture & link layer
+      truncated: Truncated
+      captureLength: Capture Length
+      layerStack: Protocol Stack
+      payload: Payload
+      ethDstMac: Destination MAC
+      ethSrcMac: Source MAC
+      ethType: Ethernet Type
+      ethLength: Ethernet Length
+      # IPv4
+      ipv4Version: IPv4 Version
+      ipv4Ihl: IPv4 Header Length
+      ipv4Tos: Type of Service
+      ipv4Id: Fragment ID
+      ipv4Flags: Fragment Flags
+      ipv4FragOffset: Fragment Offset
+      ipv4Checksum: Header Checksum
+      ipv4Options: IPv4 Options
+      ipv4Padding: IPv4 Padding
+      # TCP
+      dataOffset: Data Offset
+      bitEce: ECE Flag
+      bitCwr: CWR Flag
+      bitNs: NS Flag
+      checksum: Checksum
+      urgent: Urgent Pointer
+      options: TCP Options
+      fpOsQuality: OS Fingerprint Confidence
+  ipv6Tcp:
+    name: IPv6 TCP
+    field:
+      # Base audit columns
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionId: Session ID
+      tcpStreamId: TCP Stream ID
+      capture: Capturer
+      version: Version
+      traceId: Trace ID
+      # IPv6 address & ports
+      ipv6Src: IPv6 Source Address
+      ipv6Dst: IPv6 Destination Address
+      srcPort: Source Port
+      dstPort: Destination Port
+      # TCP audit columns
+      seq: Sequence Number
+      ack: Acknowledgment Number
+      bitFin: FIN Flag
+      bitSyn: SYN Flag
+      bitRst: RST Flag
+      bitPsh: PSH Flag
+      bitAck: ACK Flag
+      bitUrg: URG Flag
+      window: Window Size
+      ipv6HopLimit: IPv6 Hop Limit
+      ipv6NextHeader: IPv6 Next Header
+      ipv6Length: IPv6 Length
+      # TCP passive fingerprint (p0f style)
+      fpOs: OS Fingerprint
+      fpSig: TCP Fingerprint Signature
+      fpMtu: MTU
+      # ---- Full field set for column settings (hidden by default) ----
+      # Capture & link layer
+      truncated: Truncated
+      captureLength: Capture Length
+      layerStack: Protocol Stack
+      payload: Payload
+      ethDstMac: Destination MAC
+      ethSrcMac: Source MAC
+      ethType: Ethernet Type
+      ethLength: Ethernet Length
+      # IPv6
+      ipv6Version: IPv6 Version
+      ipv6TrafficClass: Traffic Class
+      ipv6FlowLabel: Flow Label
+      ipv6HopByHop: Hop-by-Hop Extension Header
+      ipv6LastHeader: Last Header
+      # TCP
+      dataOffset: Data Offset
+      bitEce: ECE Flag
+      bitCwr: CWR Flag
+      bitNs: NS Flag
+      checksum: Checksum
+      urgent: Urgent Pointer
+      options: TCP Options
+      fpOsQuality: OS Fingerprint Confidence
+  httpTransport:
+    name: HTTP Transport
+    field:
+      # Base audit columns
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionId: Session ID
+      tcpStreamId: TCP Stream ID
+      capture: Capturer
+      version: Version
+      traceId: Trace ID
+      # HTTP audit columns
+      method: Request Method
+      host: Host
+      path: Path
+      clientIp: Client IP
+      serverIp: Server IP
+      clientPort: Client Port
+      serverPort: Server Port
+      httpVersion: HTTP Version
+      reqBodyLength: Request Body Length
+      rspBodyLength: Response Body Length
+      # HTTP fingerprint
+      fpTcpClientOs: Client OS Fingerprint
+      fpTcpServerOs: Server OS Fingerprint
+      fpHttpBrowser: Browser Fingerprint
+      fpHttpServer: Server Fingerprint
+      fpDeviceGuess: Device Type
+      # ---- Full field set for column settings (hidden by default) ----
+      clientIsn: Client Initial Sequence Number
+      serverIsn: Server Initial Sequence Number
+      streamIndex: Stream Index
+      ipVersion: IP Version
+      url: Request URL
+      scheme: Scheme
+      fileExt: File Extension
+      queries: Query Parameters
+      fragment: URL Fragment
+      reqBody: Request Body
+      rspBody: Response Body
+      reqBodyHash: Request Body Hash
+      rspBodyHash: Response Body Hash
+      clientConsumed: Client Consumed Bytes
+      clientStartPayloadOffset: Client Payload Start Offset
+      clientEndPayloadOffset: Client Payload End Offset
+      clientStartTimestamp: Client Start Time
+      clientEndTimestamp: Client End Time
+      serverConsumed: Server Consumed Bytes
+      serverStartPayloadOffset: Server Payload Start Offset
+      serverEndPayloadOffset: Server Payload End Offset
+      serverStartTimestamp: Server Start Time
+      serverEndTimestamp: Server End Time
+      fpTcpClientOsQuality: Client OS Fingerprint Confidence
+      fpTcpClientSig: Client Fingerprint Signature
+      fpTcpServerOsQuality: Server OS Fingerprint Confidence
+      fpTcpServerSig: Server Fingerprint Signature
+      fpTcpMtu: TCP MTU
+      fpHttpBrowserQuality: Browser Fingerprint Confidence
+      fpHttpServerQuality: Server Fingerprint Confidence
+      fpHttpLanguage: Language Preference
+      tags: Tags
+      # Request headers
+      reqHdrAuthorization: Request Header Authorization
+      reqHdrProxyAuthorization: Request Header Proxy-Authorization
+      reqHdrCacheControl: Request Header Cache-Control
+      reqHdrIfMatch: Request Header If-Match
+      reqHdrIfNoneMatch: Request Header If-None-Match
+      reqHdrIfModifiedSince: Request Header If-Modified-Since
+      reqHdrIfUnmodifiedSince: Request Header If-Unmodified-Since
+      reqHdrIfRange: Request Header If-Range
+      reqHdrConnection: Request Header Connection
+      reqHdrKeepAlive: Request Header Keep-Alive
+      reqHdrAccept: Request Header Accept
+      reqHdrAcceptEncoding: Request Header Accept-Encoding
+      reqHdrAcceptLanguage: Request Header Accept-Language
+      reqHdrExpect: Request Header Expect
+      reqHdrMaxForwards: Request Header Max-Forwards
+      reqHdrCookie: Request Header Cookie
+      reqHdrOrigin: Request Header Origin
+      reqHdrAccessControlRequestHeaders: Request Header Access-Control-Request-Headers
+      reqHdrAccessControlRequestMethod: Request Header Access-Control-Request-Method
+      reqHdrContentType: Request Header Content-Type
+      reqHdrContentLength: Request Header Content-Length
+      reqHdrContentEncoding: Request Header Content-Encoding
+      reqHdrContentLanguage: Request Header Content-Language
+      reqHdrForwarded: Request Header Forwarded
+      reqHdrVia: Request Header Via
+      reqHdrRange: Request Header Range
+      reqHdrFrom: Request Header From
+      reqHdrHost: Request Header Host
+      reqHdrReferer: Request Header Referer
+      reqHdrReferrerPolicy: Request Header Referrer-Policy
+      reqHdrUserAgent: Request Header User-Agent
+      reqHdrTe: Request Header TE
+      reqHdrTransferEncoding: Request Header Transfer-Encoding
+      reqHdrTrailer: Request Header Trailer
+      reqHdrSecWebsocketKey: Request Header Sec-Websocket-Key
+      reqHdrSecWebsocketVersion: Request Header Sec-Websocket-Version
+      reqHdrSecWebsocketProtocol: Request Header Sec-Websocket-Protocol
+      reqHdrSecWebsocketExtensions: Request Header Sec-Websocket-Extensions
+      reqHdrSecFetchSite: Request Header Sec-Fetch-Site
+      reqHdrSecFetchMode: Request Header Sec-Fetch-Mode
+      reqHdrSecFetchUser: Request Header Sec-Fetch-User
+      reqHdrSecFetchDest: Request Header Sec-Fetch-Dest
+      reqHdrSecPurpose: Request Header Sec-Purpose
+      reqHdrServiceWorkerNavigationPreload: Request Header Service-Worker-Navigation-Preload
+      reqHdrSecChUa: Request Header Sec-CH-UA
+      reqHdrSecChUaArch: Request Header Sec-CH-UA-Arch
+      reqHdrSecChUaBitness: Request Header Sec-CH-UA-Bitness
+      reqHdrSecChUaFullVersion: Request Header Sec-CH-UA-Full-Version
+      reqHdrSecChUaFullVersionList: Request Header Sec-CH-UA-Full-Version-List
+      reqHdrSecChUaMobile: Request Header Sec-CH-UA-Mobile
+      reqHdrSecChUaModel: Request Header Sec-CH-UA-Model
+      reqHdrSecChUaPlatform: Request Header Sec-CH-UA-Platform
+      reqHdrSecChUaPlatformVersion: Request Header Sec-CH-UA-Platform-Version
+      reqHdrSecChUaWow64: Request Header Sec-CH-UA-Wow64
+      reqHdrSecChPrefersColorScheme: Request Header Sec-CH-Prefers-Color-Scheme
+      reqHdrSecChPrefersReducedMotion: Request Header Sec-CH-Prefers-Reduced-Motion
+      reqHdrSecChPrefersReducedTransparency: Request Header Sec-CH-Prefers-Reduced-Transparency
+      reqHdrWantContentDigest: Request Header Want-Content-Digest
+      reqHdrWantReprDigest: Request Header Want-Repr-Digest
+      reqHdrUpgradeInsecureRequests: Request Header Upgrade-Insecure-Requests
+      reqHdrDate: Request Header Date
+      reqHdrLink: Request Header Link
+      reqHdrUpgrade: Request Header Upgrade
+      reqHdrPriority: Request Header Priority
+      reqHdrAltUsed: Request Header Alt-Used
+      # Response headers
+      rspHdrWwwAuthenticate: Response Header WWW-Authenticate
+      rspHdrProxyAuthenticate: Response Header Proxy-Authenticate
+      rspHdrAge: Response Header Age
+      rspHdrCacheControl: Response Header Cache-Control
+      rspHdrClearSiteData: Response Header Clear-Site-Data
+      rspHdrExpires: Response Header Expires
+      rspHdrNoVarySearch: Response Header No-Vary-Search
+      rspHdrLastModified: Response Header Last-Modified
+      rspHdrEtag: Response Header ETag
+      rspHdrVary: Response Header Vary
+      rspHdrConnection: Response Header Connection
+      rspHdrKeepAlive: Response Header Keep-Alive
+      rspHdrAcceptPatch: Response Header Accept-Patch
+      rspHdrAcceptPost: Response Header Accept-Post
+      rspHdrSetCookie: Response Header Set-Cookie
+      rspHdrAccessControlAllowCredentials: Response Header Access-Control-Allow-Credentials
+      rspHdrAccessControlAllowHeaders: Response Header Access-Control-Allow-Headers
+      rspHdrAccessControlAllowMethods: Response Header Access-Control-Allow-Methods
+      rspHdrAccessControlAllowOrigin: Response Header Access-Control-Allow-Origin
+      rspHdrAccessControlExposeHeaders: Response Header Access-Control-Expose-Headers
+      rspHdrAccessControlMaxAge: Response Header Access-Control-Max-Age
+      rspHdrTimingAllowOrigin: Response Header Timing-Allow-Origin
+      rspHdrContentDisposition: Response Header Content-Disposition
+      rspHdrContentDigest: Response Header Content-Digest
+      rspHdrReprDigest: Response Header Repr-Digest
+      rspHdrContentType: Response Header Content-Type
+      rspHdrContentLength: Response Header Content-Length
+      rspHdrContentEncoding: Response Header Content-Encoding
+      rspHdrContentLanguage: Response Header Content-Language
+      rspHdrContentLocation: Response Header Content-Location
+      rspHdrForwarded: Response Header Forwarded
+      rspHdrVia: Response Header Via
+      rspHdrAcceptRanges: Response Header Accept-Ranges
+      rspHdrContentRange: Response Header Content-Range
+      rspHdrLocation: Response Header Location
+      rspHdrRefresh: Response Header Refresh
+      rspHdrAllow: Response Header Allow
+      rspHdrServer: Response Header Server
+      rspHdrCrossOriginEmbedderPolicy: Response Header Cross-Origin-Embedder-Policy
+      rspHdrCrossOriginOpenerPolicy: Response Header Cross-Origin-Opener-Policy
+      rspHdrCrossOriginResourcePolicy: Response Header Cross-Origin-Resource-Policy
+      rspHdrContentSecurityPolicy: Response Header Content-Security-Policy
+      rspHdrContentSecurityPolicyReportOnly: Response Header Content-Security-Policy-Report-Only
+      rspHdrExpectCt: Response Header Expect-Ct
+      rspHdrPermissionsPolicy: Response Header Permissions-Policy
+      rspHdrStrictTransportSecurity: Response Header Strict-Transport-Security
+      rspHdrXContentTypeOptions: Response Header X-Content-Type-Options
+      rspHdrXFrameOptions: Response Header X-Frame-Options
+      rspHdrXPermittedCrossDomainPolicies: Response Header X-Permitted-Cross-Domain-Policies
+      rspHdrXPoweredBy: Response Header X-Powered-By
+      rspHdrXXssProtection: Response Header X-Xss-Protection
+      rspHdrReportingEndpoints: Response Header Reporting-Endpoints
+      rspHdrReportTo: Response Header Report-To
+      rspHdrTransferEncoding: Response Header Transfer-Encoding
+      rspHdrTrailer: Response Header Trailer
+      rspHdrSecWebsocketAccept: Response Header Sec-Websocket-Accept
+      rspHdrSecWebsocketProtocol: Response Header Sec-Websocket-Protocol
+      rspHdrSecWebsocketExtensions: Response Header Sec-Websocket-Extensions
+      rspHdrAcceptCh: Response Header Accept-CH
+      rspHdrCriticalCh: Response Header Critical-CH
+      rspHdrAttributionReportingEligible: Response Header Attribution-Reporting-Eligible
+      rspHdrAttributionReportingRegisterSource: Response Header Attribution-Reporting-Register-Source
+      rspHdrAttributionReportingRegisterTrigger: Response Header Attribution-Reporting-Register-Trigger
+      rspHdrDate: Response Header Date
+      rspHdrLink: Response Header Link
+      rspHdrRetryAfter: Response Header Retry-After
+      rspHdrServerTiming: Response Header Server-Timing
+      rspHdrServiceWorker: Response Header Service-Worker
+      rspHdrServiceWorkerAllowed: Response Header Service-Worker-Allowed
+      rspHdrSourceMap: Response Header SourceMap
+      rspHdrUpgrade: Response Header Upgrade
+      rspHdrAltSvc: Response Header Alt-Svc
+      rspHdrPriority: Response Header Priority
+chart:
+  title:
+    queueSize: Queue Size
+    taskProcess: Task Processing
+  axis:
+    size: Size
+    count: Count
     date: Date
-    time: Time
-    id: ID
-    unionID: Union ID
-    name: Name
-    description: Description
-    createdAt: Created At
-    createdAtTime: Created At Time
-    createdAtDate: Created At Date
-    updatedAt: Updated At
-    updatedAtTime: Updated At Time
-    updatedAtDate: Updated At Date
-    deletedAt: Deleted At
-    deletedAtTime: Deleted At Time
-    deletedAtDate: Deleted At Date
-    active: Is Active
-    field: Field
-    action: Action
-    search: Search
-    username: Username
-    password: Password
-    nickleName: Nickle Name
-    email: Email
-    oldPassword: Old Password
-    newPassword: New Password
-    newPasswordAgain: New Password Again
-    namespace: Namespace
-    target: Target
-    effect: Effect
-    version: Version
-    device: Device
-    bpfExpr: BPF Expression
-    snapLen: Snap Length
-    timeout: Timeout
-    promisc: Promiscuous Mode
-    enabled: Enabled
-    expiredAt: Expired At
-    lastAccessAt: Last Access At
-  content:
-    condition: condition(s)
-    doubleCheck: Please enter `{random}` to double check
-  value:
-    null: "null"
-    undefined: "undefined"
+    queue: Queue
+  field:
+    active: Active
+    pending: Pending
+    retring: Retrying
+    scheduled: Scheduled
+    archived: Archived
+    processed: Processed
+    failed: Failed
+  serie:
+    queueSize: Queue Size
 action:
   signIn: Sign In
   signOut: Sign Out
-  signUp: Sign Up 
+  signUp: Sign Up
   language: Language
   pwdForget: Password Forget
   profile: Profile
+  expand: Expand
+  collapse: Collapse
   reset: Reset
   create: Create
   update: Update
@@ -78,45 +596,136 @@ action:
   confirm: Confirm
   activate: Activate
   deactivate: Deactivate
+  resetPassword: Reset Password
+  pause: Pause
+  unpause: Resume
   add: Add
   remove: Remove
-  join: join
+  join: Join
   leave: Leave
+  copy: Copy
+  archive: Archive
+  cancel: Cancel
+  run: Run
   previousDate: Previous Date
   currentDate: Current Date
   nextDate: Next Date
   currentTime: Current Time
   copySecret: Copy Secret
+  validate: Validate
+  dryRun: Dry Run
+  version: Version
+  rollback: Rollback
+  generateSkeleton: Generate Skeleton
+  generateExpression: Generate Expression
+  reuseFields: Reuse Existing Rule Fields
+  fillSample: Fill Sample
+  selectSample: Select sample
+  searchFields: Search fields
+  addCondition: Add Condition
+  removeCondition: Remove Condition
+  validatePassed: Validation Passed
+  validateFailed: Validation Failed
+  viewPlaintext: View Plaintext
+  viewDetail: View Details
+  resetFrontendConfig: Reset Frontend Config
+  download: Download
+  back: Back
+  refresh: Refresh
+  query: Query
+  columns: Columns
+  selectAll: Select All
+  systemDefault: System Default
 title:
   zk: Zhong Kui
   home: Home Page
   signIn: User Sign In
+  signUp: User Sign Up
   err404: Error - 404
   err401: Error - 401
   userProfile: User Profile
   profileInfo: Profile Info
+  frontendConfigSync: Frontend Config Sync
   accessKey: Access Key
   passwordReset: Password Reset
   userAdmin: Admin - User
   groupAdmin: Admin - Group
   namespaceAdmin: Admin - Namespace
   capturerAdmin: Admin - Capturer
+  tagRuleAdmin: Admin - Tag Rule
+  tagEventRuleAdmin: Admin - Tag Event Rule
   queueEtl: ETL - Queue
+  serverEtl: ETL - Server
+  schedulerEtl: ETL - Scheduler
+  taskEtl: ETL - Task
+  traffic: Traffic Audit - List
+  trafficDetail: Traffic Audit - Detail
+  inputFields: Input Fields
+home:
+  subtitle: Network Security Audit Platform
+  quickStart:
+    self: Quick Start
+    addGroup: New Group
+    newGroup: New Group
+    groupName: Group Name
+    renameGroup: Rename Group
+    deleteGroup: Delete Group
+    deleteGroupConfirm: Delete group "{group}"?
+    addLink: Add Link
+    searchNav: Search navigation
+    emptyGroup: Drag or add a navigation link
+    dropHere: Drop here
+    defaultGroup: Default
+profile:
+  pageSubtitle: Manage your account details, access keys and password security
+  infoSubtitle: Update your nickname and email, then click "Update" to save
+  accessKeySubtitle: Access keys enable programmatic API access; keep them safe after creation
+  passwordSubtitle: Change your sign-in password. Prefer a strong password and rotate it regularly
+  emptyAccessKeys: No access keys yet. Click "Create" at the top right to add one
+  configSyncSubtitle: Keep browser page configuration (theme, language, sidebar, etc.) in sync across hosts
+  configSyncHint: When enabled, page configuration changes are uploaded immediately; on sync failure the last synced configuration is restored
 summary:
-  pageNotFound: Page Does Not Exists!
+  pageNotFound: Page Does Not Exist!
   notSignInYet: Please must sign in first.
   goingToSignIn: Going to sign in page...
   dataLoading: Data is loading...
   endOfData: No more data
+  noServerYet: There is no running {name} yet!
+  noServerYetHelp: You can try clicking the {btn} button below to fetch data again.
   unknownError: Something went wrong...
 notice:
-  wellcome: Wellcome!
+  wellcome: Welcome!
   goodBye: Good Bye!
   profileUpdated: Profile updated successfully!
   passwordReset: Password reset successfully!
+  frontendConfigSyncFailed: Frontend config sync failed, the last synced configuration has been restored
   copied: Copied!
   copyFailed: Copy Failed!
+  deleteConfirm: "Confirm deleting {category} {key}?"
+  archiveConfirm: "Confirm archiving {category} {key}?"
+  cancelConfirm: "Confirm canceling {category} {key}?"
+  runConfirm: "Confirm running {category} {key}?"
+  rollbackConfirm: "Confirm rolling back {category} {key} to version {version}?"
+  dryRunConfirm: "Confirm dry running {category} {key}?"
+  enableConfirm: "Confirm enabling {category} {key}?"
+  disableConfirm: "Confirm disabling {category} {key}?"
+  regoInvalid: "Rego validation failed, cannot submit!"
+  expressionInvalid: "Expression validation failed, cannot submit!"
+  jsonInvalid: "Invalid JSON format!"
+  noEnabledRules: "No enabled tag rules in current namespace, cannot build tag pool."
+  sampleLoadFailed: Sample load failed, please input manually
+  plaintextLoadFailed: Failed to load plaintext
+  plaintextEmpty: No plaintext content in this field
+  plaintextBinary: Binary content, hex preview below
+  plaintextTruncated: Content is too long, preview truncated
+inputType:
+  string: String
+  number: Number
+  boolean: Boolean
+  object: Object
+  array: Array
 unit:
+  day: d
   second: s
   count: cnt
 option:
@@ -126,7 +735,7 @@ option:
     pfx: Prefix With
     npfx: Not Prefix With
     ipfx: Prefix With (ignore case)
-    inpfix: Not Prefix With (ignore case)
+    inpfx: Not Prefix With (ignore case)
     sfx: Suffix With
     nsfx: Not Suffix With
     isfx: Suffix With (ignore case)
@@ -143,43 +752,43 @@ option:
     gte: Greater Than Or Equal
 validation:
   mixed:
-    default: '{path} is invalid'
-    required: '{path} is a required field'
-    defined: '{path} must be defined'
-    notNull: '{path} cannot be null'
-    oneOf: '{path} must be one of the following values: {values}'
-    notOneOf: '{path} must not be one of the following values: {values}'
+    default: "{path} is invalid"
+    required: "{path} is a required field"
+    defined: "{path} must be defined"
+    notNull: "{path} cannot be null"
+    oneOf: "{path} must be one of the following values: {values}"
+    notOneOf: "{path} must not be one of the following values: {values}"
   string:
-    length: '{path} must be exactly {length} characters'
-    min: '{path} must be at least {min} characters'
-    max: '{path} must be at most {max} characters'
+    length: "{path} must be exactly {length} characters"
+    min: "{path} must be at least {min} characters"
+    max: "{path} must be at most {max} characters"
     matches: '{path} must match the following: "{regex}"'
-    email: '{path} must be a valid email'
-    url: '{path} must be a valid URL'
-    uuid: '{path} must be a valid UUID'
-    datetime: '{path} must be a valid ISO date-time'
-    datetime_precision: '{path} must be a valid ISO date-time with a sub-second precision of exactly {precision} digits'
+    email: "{path} must be a valid email"
+    url: "{path} must be a valid URL"
+    uuid: "{path} must be a valid UUID"
+    datetime: "{path} must be a valid ISO date-time"
+    datetime_precision: "{path} must be a valid ISO date-time with a sub-second precision of exactly {precision} digits"
     datetime_offset: '{path} must be a valid ISO date-time with UTC "Z" timezone'
-    trim: '{path} must be a trimmed string'
-    lowercase: '{path} must be a lowercase string'
-    uppercase: '{path} must be a upper case string'
+    trim: "{path} must be a trimmed string"
+    lowercase: "{path} must be a lowercase string"
+    uppercase: "{path} must be a upper case string"
   number:
-    min: '{path} must be greater than or equal to {min}'
-    max: '{path} must be less than or equal to {max}'
-    lessThan: '{path} must be less than {less}'
-    moreThan: '{path} must be greater than {more}'
-    positive: '{path} must be a positive number'
-    negative: '{path} must be a negative number'
-    integer: '{path} must be an integer'
+    min: "{path} must be greater than or equal to {min}"
+    max: "{path} must be less than or equal to {max}"
+    lessThan: "{path} must be less than {less}"
+    moreThan: "{path} must be greater than {more}"
+    positive: "{path} must be a positive number"
+    negative: "{path} must be a negative number"
+    integer: "{path} must be an integer"
   date:
-    min: '{path} field must be later than {min}'
-    max: '{path} field must be at earlier than {max}'
+    min: "{path} field must be later than {min}"
+    max: "{path} field must be at earlier than {max}"
   boolean:
-    isValue: '{path} field must be {value}'
+    isValue: "{path} field must be {value}"
   object:
-    noUnknown: '{path} field has unspecified keys: {unknown}'
-    exact: '{path} object contains unknown properties: {properties}'
+    noUnknown: "{path} field has unspecified keys: {unknown}"
+    exact: "{path} object contains unknown properties: {properties}"
   array:
-    min: '{path} field must have at least {min} items'
-    max: '{path} field must have less than or equal to {max} items'
-    length: '{path} must have {length} items'
+    min: "{path} field must have at least {min} items"
+    max: "{path} field must have less than or equal to {max} items"
+    length: "{path} must have {length} items"

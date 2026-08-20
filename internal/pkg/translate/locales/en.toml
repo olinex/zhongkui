@@ -78,17 +78,31 @@
 1103 = "Too Many Access Key"
 1104 = "Tag Rule Validation Failed"
 1105 = "Tag Event Rule Validation Failed"
+1106 = "Tag Rule Runtime Validation Failed"
+1107 = "Tag Rule Target Model Not Registered"
+1108 = "Frontend Config Has Been Updated By Another Browser, Please Refresh And Retry"
+1109 = "Frontend Config Sync Is Not Enabled"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
 badUrlParam = "The url param `%s` is invalid cause: %s"
 
 [validator]
-strongPassword = "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?& respectivelyw"
+strongPassword = "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?& respectively)"
+windowsFileName = "The field must be a valid Windows file name (must not be a reserved name, must not contain illegal characters, and must not end with a space or dot)"
+unixFileName = "The field must be a valid Unix file name (must not start with a dot, and must not contain a slash or NUL)"
+fileName = "The field must be a valid file name"
+strictFileName = "The field must be a strictly valid file name (must not start with a hyphen, and must not contain spaces or control characters)"
+dirpath = "The field must be a valid directory path"
+alphanumspecial = "The field must contain only letters, numbers and the specified special characters"
+gtCurrentTime = "The field must be a time later than the current time"
+ltCurrentTime = "The field must be a time earlier than the current time"
 
 # =============================================================================
-# CLI command descriptions (fallback: Chinese text in internal/cmd)
+# CLI command descriptions & flag usages
 # Key layout: cmd.<path>.short/long, flag.<path>.<name>, cli.<topic>
+# Command tree fields store the i18n key itself; translate.T resolves them and
+# returns the key when missing (zh-Hans.toml is the fallback locale).
 # Set ZKI_LANG=en to enable English output.
 # =============================================================================
 
@@ -444,7 +458,7 @@ other = "Please enter snap length in bytes"
 other = "Enable promiscuous mode?"
 
 ["cli.input.prompt.CapturerConfigIn.Timeout"]
-other = "Please enter read timeout in milliseconds"
+other = "Please enter read timeout (e.g. 5s, 1m30s)"
 
 ["cli.input.prompt.CapturerConfigIn.BpfExpr"]
 other = "Please enter BPF filter expression (e.g. tcp port 80)"
@@ -496,6 +510,461 @@ other = " (comma-separated)"
 
 ["cli.input.mismatch"]
 other = "Values do not match, please try again!"
+
+# -----------------------------------------------------------------------------
+# CLI print messages (pterm output) - Key layout: cli.<topic>.<message>
+# Missing keys return the key itself; zh-Hans.toml is the fallback locale.
+# -----------------------------------------------------------------------------
+
+[cli.base.pterm-debug]
+other = "pterm debug is enabled"
+
+[cli.root.process-exit]
+other = "zhongkui server process exit"
+
+[cli.clear.rolling-back]
+other = "Rolling back all migrations..."
+
+[cli.clear.connect-failed]
+other = "Failed to connect {{.DB}} database: {{.Err}}"
+
+[cli.clear.rolling-back-db]
+other = "Rolling back {{.DB}}..."
+
+[cli.clear.rollback-failed]
+other = "{{.DB}} rollback failed: {{.Err}}"
+
+[cli.clear.database-complete]
+other = "Clear database complete"
+
+[cli.etcd.get-keys-failed]
+other = "Failed to get {{.Category}} keys: {{.Err}}"
+
+[cli.etcd.no-keys-found]
+other = "No etcd cache keys found"
+
+[cli.etcd.keys-header]
+other = "=== etcd cache keys ==="
+
+[cli.etcd.delete-failed]
+other = "Failed to delete {{.Key}}: {{.Err}}"
+
+[cli.etcd.deleted]
+other = "Deleted {{.Key}}"
+
+[cli.etcd.clear-complete]
+other = "Clear etcd cache complete"
+
+[cli.migrate.create-failed]
+other = "{{.DB}}: {{.Err}}"
+
+[cli.migrate.created]
+other = "Created {{.Path}}"
+
+[cli.migrate.section]
+other = "{{.Action}} ({{.DB}})"
+
+[cli.migrate.action-failed]
+other = "{{.DB}} {{.Action}} failed: {{.Err}}"
+
+[cli.migrate.completed]
+other = "Migrations completed successfully"
+
+[cli.migrate.dry-run-section]
+other = "dry-run {{.DB}}"
+
+[cli.migrate.dry-run-db-failed]
+other = "dry-run {{.DB}}: {{.Err}}"
+
+[cli.migrate.dry-run-succeeded]
+other = "dry-run succeeded"
+
+[cli.migrate.dry-run-failed]
+other = "dry-run failed: {{.Err}}"
+
+[cli.migrate.diff-section]
+other = "diff {{.DB}}"
+
+[cli.migrate.diff-failed]
+other = "diff {{.DB}}: {{.Err}}"
+
+[cli.migrate.check-section]
+other = "check {{.DB}}"
+
+[cli.migrate.check-failed]
+other = "check {{.DB}}: {{.Err}}"
+
+[cli.migrate.up]
+other = "Running goose up on {{.DB}}"
+
+[cli.migrate.up-to]
+other = "Running goose up-to to version {{.Version}} on {{.DB}}"
+
+[cli.migrate.down]
+other = "Running goose down on {{.DB}}"
+
+[cli.migrate.down-to]
+other = "Running goose down-to to version {{.Version}} on {{.DB}}"
+
+[cli.migrate.down-no-current-version]
+other = "{{.DB}} has no applied migrations, nothing to roll back"
+
+[cli.migrate.down-to-no-current-version]
+other = "{{.DB}} has no applied migrations, nothing to roll back"
+
+[cli.migrate.goose-migrated]
+other = "Database successfully migrated to version {{.Version}}"
+
+[cli.migrate.goose-no-migrations]
+other = "No migrations to run, current version {{.Version}}"
+
+[cli.migrate.goose-up-to]
+other = "Migrations up to version {{.Version}}"
+
+[cli.migrate.goose-down-to]
+other = "Rolled back to version {{.Version}}"
+
+[cli.migrate.goose-file-not-found]
+other = "Migration file for current version ({{.Version}}) not found: {{.Err}}"
+
+[cli.migrate.goose-ok]
+other = "OK   {{.Source}} ({{.Duration}})"
+
+[cli.migrate.goose-empty]
+other = "EMPTY {{.Source}} ({{.Duration}})"
+
+[cli.migrate.col-version]
+other = "Version"
+
+[cli.migrate.col-migration]
+other = "Migration"
+
+[cli.migrate.col-status]
+other = "Status"
+
+[cli.migrate.col-applied-at]
+other = "Applied At"
+
+[cli.migrate.status-pending]
+other = "Pending"
+
+[cli.migrate.status-applied]
+other = "Applied"
+
+[cli.migrate.no-file]
+other = "No migration file found"
+
+[cli.migrate.dry-run-creating]
+other = "Creating temporary database for dry-run..."
+
+[cli.migrate.dry-run-running]
+other = "Running migrations on temporary database {{.DB}}..."
+
+[cli.migrate.dry-run-migration-failed]
+other = "Dry-run migration failed: {{.Err}}"
+
+[cli.migrate.dry-run-completed]
+other = "Dry-run migration completed successfully on {{.DB}}"
+
+[cli.migrate.dry-run-cleanup]
+other = "Cleaning up temporary database {{.DB}}..."
+
+[cli.migrate.dry-run-drop-failed]
+other = "Warning: failed to drop temp database {{.DB}}: {{.Err}}"
+
+[cli.migrate.dry-run-preserved]
+other = "Temporary database {{.DB}} preserved (--keep-temp)"
+
+[cli.migrate.check-creating]
+other = "Creating temporary database for schema check..."
+
+[cli.migrate.check-running]
+other = "Running migrations on temporary database {{.DB}}..."
+
+[cli.migrate.check-comparing]
+other = "Comparing model definitions with database schema..."
+
+[cli.migrate.check-cleanup]
+other = "Cleaning up temporary database {{.DB}}..."
+
+[cli.migrate.check-drop-failed]
+other = "Warning: failed to drop temp database {{.DB}}: {{.Err}}"
+
+[cli.migrate.check-preserved]
+other = "Temporary database {{.DB}} preserved (--keep-temp)"
+
+[cli.migrate.check-ok]
+other = "All models match the database schema, no issues found"
+
+[cli.migrate.issue-missing-table]
+other = "Missing Table"
+
+[cli.migrate.issue-extra-table]
+other = "Extra Table"
+
+[cli.migrate.issue-missing-column]
+other = "Missing Column"
+
+[cli.migrate.issue-extra-column]
+other = "Extra Column"
+
+[cli.migrate.issue-mismatch]
+other = "Mismatch"
+
+[cli.migrate.col-issue]
+other = "Issue"
+
+[cli.migrate.col-table]
+other = "Table"
+
+[cli.migrate.col-column]
+other = "Column"
+
+[cli.migrate.col-expected-type]
+other = "Expected Type"
+
+[cli.migrate.col-actual-type]
+other = "Actual Type"
+
+[cli.migrate.issues-table-error]
+other = "Error rendering issues table: {{.Err}}"
+
+[cli.migrate.diff-identical]
+other = "Database schema is up to date, no changes pending"
+
+[cli.migrate.col-change]
+other = "Change"
+
+[cli.migrate.col-detail]
+other = "Detail"
+
+[cli.migrate.diff-new-table]
+other = "New Table"
+
+[cli.migrate.diff-dropped-table]
+other = "Dropped Table"
+
+[cli.migrate.diff-new-column]
+other = "New Column"
+
+[cli.migrate.diff-dropped-column]
+other = "Dropped Column"
+
+[cli.migrate.diff-modified]
+other = "Modified"
+
+[cli.user.create-success]
+other = "User {{.Username}} created successfully"
+
+[cli.user.reset-password-success]
+other = "Password of user {{.Username}} reset successfully"
+
+[cli.user.extract-config-failed]
+other = "Cannot extract config: {{.Err}}"
+
+[cli.user.not-found]
+other = "Cannot find user {{.Username}}: {{.Err}}"
+
+[cli.user.access-key-create-failed]
+other = "Cannot create access key: {{.Err}}"
+
+[cli.user.access-key-max]
+other = "User {{.Username}} already has {{.Max}} access keys (max: {{.Max}})"
+
+[cli.user.access-key-created]
+other = "Access key created for user {{.Username}}"
+
+[cli.user.access-key-id]
+other = "  AccessKeyID:     {{.Value}}"
+
+[cli.user.access-key-secret]
+other = "  AccessKeySecret: {{.Value}}"
+
+[cli.user.access-key-description]
+other = "  Description:     {{.Value}}"
+
+[cli.user.access-key-enabled]
+other = "  Enabled:         {{.Value}}"
+
+[cli.user.access-key-expired-at]
+other = "  ExpiredAt:       {{.Value}}"
+
+[cli.user.access-key-never-expires]
+other = "  ExpiredAt:       never"
+
+[cli.tls.key-created]
+other = "TLS key file {{.Path}} was created"
+
+[cli.tls.cert-created]
+other = "TLS cert file {{.Path}} was created"
+
+[cli.testcase.generated]
+other = "Test cases generated at {{.Dir}}"
+
+[cli.testcase.no-http]
+other = "No HTTP traffic found in pcap file"
+
+[cli.testcase.found-streams]
+other = "Found {{.Count}} HTTP stream(s)"
+
+[cli.testcase.processing-stream]
+other = "Processing TCP stream {{.Stream}}..."
+
+[cli.testcase.process-failed]
+other = "Failed to process stream {{.Stream}}: {{.Err}}, skipping"
+
+[cli.testcase.generated-file]
+other = "  Generated {{.Path}}"
+
+[cli.testcase.total]
+other = "Total: {{.Tx}} HTTP transaction(s) across {{.Streams}} stream(s)"
+
+[cli.testcase.parse-request-failed]
+other = "  stream {{.Stream}}: failed to parse HTTP request at tx {{.Tx}}: {{.Err}}"
+
+[cli.testcase.response-missing]
+other = "  stream {{.Stream}} tx {{.Tx}}: HTTP response missing or incomplete: {{.Err}}"
+
+[cli.testcase.parse-response-failed]
+other = "  stream {{.Stream}} tx {{.Tx}}: failed to parse HTTP response: {{.Err}}"
+
+[cli.run.capture-stats-enabled]
+other = "Capture stats enabled, printing every {{.Interval}} to stdout"
+
+[cli.run.processor-create-failed]
+other = "Failed to create processor {{.Name}}: {{.Err}}"
+
+[cli.scheduler.none-found]
+other = "No scheduled task configs found in etcd"
+
+[cli.scheduler.not-found]
+other = "Scheduled task config not found: {{.Name}}"
+
+[cli.crypto.book-generated-file]
+other = "Password book generated successfully: {{.Path}} ({{.Bytes}} bytes)"
+
+[cli.crypto.book-generated-stdout]
+other = "Password book generated ({{.Bytes}} bytes). Use --output to save to a file."
+
+[cli.crypto.parent-secret-key-warning]
+other = "WARNING: Using parent secret key from config file. This is NOT safe for production. Please switch to KMS as soon as possible."
+
+[cli.crypto.password-book-warning]
+other = "WARNING: Using embedded default password book. This is NOT safe for production. Please run 'zki create password-book' to generate your own password book file."
+
+[cli.capturer.create-failed]
+other = "Cannot create capturer: {{.Err}}"
+
+[cli.capturer.created]
+other = "Capturer {{.Namespace}}/{{.Name}} ({{.Version}}) created successfully"
+
+[cli.tracer.report-title]
+other = "Stage Timing Statistics Report"
+
+[cli.tracer.no-data]
+other = "No data"
+
+[cli.tracer.col-stage]
+other = "Stage"
+
+[cli.tracer.col-calls]
+other = "Calls"
+
+[cli.tracer.col-total]
+other = "Total"
+
+[cli.tracer.col-avg]
+other = "Avg"
+
+[cli.tracer.col-min]
+other = "Min"
+
+[cli.tracer.col-max]
+other = "Max"
+
+[cli.tracer.col-ratio]
+other = "Ratio"
+
+[cli.tracer.render-error]
+other = "Error rendering report table: {{.Err}}"
+
+[cli.tracer.total-records]
+other = "Total records: {{.Count}}"
+
+[cli.scheduler.col-name]
+other = "name"
+
+[cli.scheduler.col-cronspec]
+other = "cronSpec"
+
+[cli.scheduler.col-interval]
+other = "interval"
+
+[cli.scheduler.col-queue]
+other = "queue"
+
+[cli.scheduler.col-timeout]
+other = "timeout"
+
+[cli.scheduler.col-maxretry]
+other = "maxRetry"
+
+[cli.scheduler.col-enabled]
+other = "enabled"
+
+[cli.config.col-path]
+other = "path"
+
+[cli.config.col-kind]
+other = "kind"
+
+[cli.config.col-default]
+other = "default"
+
+[cli.config.col-comment]
+other = "comment"
+
+[cli.capture.stats]
+other = "[capture stats] {{.Stats}}"
+
+[cli.pcap.nil-model]
+other = "[nil model] level={{.Level}} stack_len={{.Len}}"
+
+[cli.pcap.nil-model-stack]
+other = "[nil model]   stack[{{.Index}}] level={{.Level}} proto={{.Proto}} headers={{.Headers}}"
+
+[cli.pcap.import-stats]
+other = "[pcap import stats] {{.Stats}}"
+
+[cli.bench.col-name]
+other = "Benchmark"
+
+[cli.bench.col-sent]
+other = "Sent"
+
+[cli.bench.col-captured]
+other = "Captured"
+
+[cli.bench.col-lost]
+other = "Lost"
+
+[cli.bench.col-loss-rate]
+other = "Loss Rate"
+
+[cli.bench.col-pps]
+other = "PPS"
+
+[cli.bench.col-bps]
+other = "BPS"
+
+[cli.bench.col-duration]
+other = "Duration"
+
+[cli.bench.report-save-failed]
+other = "Warning: failed to save benchmark report: {{.Err}}"
+
+[cli.bench.report-saved]
+other = "Benchmark report saved: {{.Path}}"
 
 # =============================================================================
 # Config comment translations (rendered by "describe config")
@@ -614,8 +1083,8 @@ other = "Controls browser feature permissions (geolocation, camera, microphone, 
 ["config.api.secure.cors"]
 other = "Cross-Origin Resource Sharing (CORS) policy configuration"
 
-["config.api.secure.cors.allowOrigin"]
-other = "Allowed cross-origin request origins; * allows all origins (not recommended for production)"
+["config.api.secure.cors.allowOrigins"]
+other = "List of allowed cross-origin request origins; * allows all origins (not recommended for production)"
 
 ["config.api.secure.cors.allowCredentials"]
 other = "Whether to allow cross-origin requests to carry credentials (cookies, HTTP auth, etc.)"
@@ -1007,3 +1476,519 @@ other = "List of supported languages/locales (ref: https://pkg.go.dev/github.com
 ["model.network.httpTransport"]
 other = "HTTP Transport"
 
+# =============================================================================
+# Interface field comments (metadata) - Key layout: model.<StructName>.field.<key>
+# 接口结构体字段注释翻译，供 OPTIONS 元信息接口按请求语言返回 comment
+# =============================================================================
+
+["model.Pagination.field.page"]
+other = "Page number"
+
+["model.Pagination.field.pageSize"]
+other = "Page size"
+
+["model.UserListGetSearchIn.field.greedy"]
+other = "Whether to greedily match (return on any matching filter)"
+
+["model.UserListGetSearchIn.field.orderBy"]
+other = "Order conditions"
+
+["model.UserListGetSearchIn.field.filterBy"]
+other = "Filter conditions"
+
+["model.UserBaseDetailOut.field.unionID"]
+other = "Global unique user identifier"
+
+["model.UserBaseDetailOut.field.nickleName"]
+other = "User nickname"
+
+["model.UserBaseDetailOut.field.username"]
+other = "Login username"
+
+["model.UserBaseDetailOut.field.email"]
+other = "Email address"
+
+["model.UserBaseDetailOut.field.active"]
+other = "Whether the account is active"
+
+["model.BaseItemOut.field.id"]
+other = "Primary key ID"
+
+["model.BaseItemOut.field.createdAt"]
+other = "Created time"
+
+["model.BaseItemOut.field.updatedAt"]
+other = "Updated time"
+
+["model.BaseSoftDeleteItemOut.field.deletedAt"]
+other = "Deleted time (used for soft delete)"
+
+["model.UserDetailOut.field.groups"]
+other = "List of groups the user belongs to"
+
+["model.UserProfileChangeIn.field.nickleName"]
+other = "User nickname"
+
+["model.UserProfileChangeIn.field.email"]
+other = "User email"
+
+["model.UserGroupIn.field.namespace"]
+other = "Namespace name"
+
+["model.UserGroupIn.field.groupName"]
+other = "Group name"
+
+["model.UserRbacPolicyDetailOut.field.name"]
+other = "Username or user identifier"
+
+["model.UserRbacPolicyDetailOut.field.namespace"]
+other = "Namespace for isolating policies of different environments or tenants"
+
+# =============================================================================
+# Tag rule Rego error/lint messages - Key layout: tagrule.*
+# 标签规则 Rego 校验错误与字段 lint 告警文案，供接口层按请求语言翻译
+# =============================================================================
+
+[tagrule]
+rego-invalid = "Rego rule violates the tag rule contract: it must be package zki with a tags rule"
+lint-field-not-exist = "Field %s does not exist in the input document of this model, please check the spelling"
+lint-field-hint = "Please choose a valid field from the input field panel or the completion list"
+
+[tagrule.hint]
+parse-unexpected = "Syntax error: unexpected token or keyword, please check the spelling and paired brackets/quotes"
+parse-package = "Syntax error: invalid package declaration, expected: package zki"
+parse-if = "Missing if keyword: rule body should be written as tags contains <value> if { ... }"
+parse-contains = "Missing contains keyword: tag rules should be written as tags contains <value>"
+parse-empty = "Empty module: please write at least one rule"
+parse-illegal = "Syntax error: illegal expression, please check the code near this position"
+parse-fallback = "Rego syntax error: please check whether the code near this position is valid Rego"
+compile-shadow = "Rule name conflict: a rule name cannot shadow other rules or keywords, please rename it"
+compile-import-shadow = "Import conflict: the imported package name shadows another symbol, please adjust the import"
+compile-var-shadow = "Variable name conflict: the variable name shadows a keyword or another binding, please rename it"
+compile-fallback = "Rego compile error: rule definitions conflict or are invalid, please check rule names and assignment style"
+type-undefined-function = "Type error: calling an undefined function, please check the function name spelling"
+type-undefined-ref = "Type error: referencing a non-existent path, please check the field name spelling"
+type-conflicting-rules = "Type error: conflicting definitions of the same rule (e.g. full assignment coexists with contains), please unify the style"
+type-match-error = "Type error: operands on both sides of the expression do not match, please check the field types"
+type-function = "Type error: incorrect function call (argument count or syntax), please check the call"
+type-fallback = "Type error: operand types of the expression do not match, please check field types and function arguments"
+unsafe-var = "Undefined variable: the expression references an unbound variable, please check the spelling or declare it with some"
+recursion = "Recursion error: the rule references itself recursively, please check circular dependencies between rules"
+
+# =============================================================================
+# Input document field descriptions (input.<typeKey>.<field>)
+# Input document field descriptions: types registered as taggable target models
+# (tagengine registry) must provide Chinese/English descriptions for every input
+# field; tagengine derives the i18n message key and the API layer translates it
+# by request language (InputFieldMeta.Description)
+# =============================================================================
+
+# ---- BaseMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.namespace"]
+other = "Namespace the record belongs to"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.capture"]
+other = "Capturer name"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.version"]
+other = "Data version"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.session_id"]
+other = "Session ID"
+
+# ---- TimestampMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.timestamp"]
+other = "Packet capture timestamp"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.created_at"]
+other = "Record creation time"
+
+# ---- TraceMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.trace_id"]
+other = "Trace ID"
+
+# ---- HttpBase ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+other = "Client IP address"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_port"]
+other = "Client port number"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_isn"]
+other = "Client ISN"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_ip"]
+other = "Server IP address"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_port"]
+other = "Server port number"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_isn"]
+other = "Server ISN"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.ip_version"]
+other = "IP protocol version"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.http_version"]
+other = "HTTP protocol version"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.stream_index"]
+other = "Stream index"
+
+# ---- TcpFingerprint ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os"]
+other = "Client operating system (TCP fingerprint)"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
+other = "Client OS identification quality"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_sig"]
+other = "Client TCP signature"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
+other = "Server operating system (TCP fingerprint)"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
+other = "Server OS identification quality"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_sig"]
+other = "Server TCP signature"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
+other = "TCP MTU value"
+
+# ---- HttpURI ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.url"]
+other = "Full request URL"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.scheme"]
+other = "Protocol scheme"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.host"]
+other = "Host name or IP address"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.path"]
+other = "Request path"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.file_ext"]
+other = "File extension"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.queries"]
+other = "Query parameters"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fragment"]
+other = "Fragment identifier"
+
+# ---- HttpRequestBody ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.method"]
+other = "HTTP request method"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body"]
+other = "Request body content"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body_hash"]
+other = "SHA-256 digest of the request body"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body_length"]
+other = "Request body length in bytes"
+
+# ---- HttpRequestHeaders ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_authorization"]
+other = "Authorization credentials"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_proxy_authorization"]
+other = "Proxy authorization credentials"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cache_control"]
+other = "Cache control directives"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_match"]
+other = "Conditional match ETag"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_none_match"]
+other = "Conditional no-match ETag"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_modified_since"]
+other = "Conditional modified-since time"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_unmodified_since"]
+other = "Conditional unmodified-since time"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_range"]
+other = "Conditional range request"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_connection"]
+other = "Connection control"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_keep_alive"]
+other = "Persistent connection control"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept"]
+other = "Acceptable response content types"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_encoding"]
+other = "Acceptable content encodings"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_language"]
+other = "Acceptable natural languages"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_expect"]
+other = "Expected conditions"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_max_forwards"]
+other = "Maximum forwarding hops"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cookie"]
+other = "HTTP cookie"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_origin"]
+other = "Request origin"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_headers"]
+other = "CORS preflight request headers"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_method"]
+other = "CORS preflight method"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_type"]
+other = "Request content type"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_length"]
+other = "Request content length"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_encoding"]
+other = "Request content encoding"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_language"]
+other = "Request content language"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_forwarded"]
+other = "Forwarded information"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_via"]
+other = "Proxy chain information"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_range"]
+other = "Range request"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_from"]
+other = "Sender email address"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_host"]
+other = "Target host"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referer"]
+other = "Referrer source"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referrer_policy"]
+other = "Referrer policy"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_user_agent"]
+other = "User agent string"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_te"]
+other = "Transfer encoding acceptance"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_transfer_encoding"]
+other = "Transfer encoding"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_trailer"]
+other = "Trailer field declaration"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_key"]
+other = "WebSocket handshake key"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_version"]
+other = "WebSocket protocol version"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_protocol"]
+other = "WebSocket subprotocol"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_extensions"]
+other = "WebSocket extensions"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_site"]
+other = "Fetch site relation"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_mode"]
+other = "Fetch request mode"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_user"]
+other = "Fetch user activation"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_dest"]
+other = "Fetch request destination"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_purpose"]
+other = "Request purpose"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_service_worker_navigation_preload"]
+other = "Service worker navigation preload"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua"]
+other = "User agent brand and version"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_arch"]
+other = "User agent CPU architecture"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_bitness"]
+other = "User agent CPU bitness"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version"]
+other = "User agent full version"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version_list"]
+other = "User agent brand full version list"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_mobile"]
+other = "Mobile device flag"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_model"]
+other = "Device model"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform"]
+other = "Underlying platform"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform_version"]
+other = "Platform version"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_wow64"]
+other = "WoW64 execution flag"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_color_scheme"]
+other = "Dark/light color scheme preference"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_motion"]
+other = "Reduced motion preference"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_transparency"]
+other = "Reduced transparency preference"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_content_digest"]
+other = "Content digest request"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_repr_digest"]
+other = "Representation digest request"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade_insecure_requests"]
+other = "Upgrade insecure requests"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_date"]
+other = "Request date"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_link"]
+other = "Link relations"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade"]
+other = "Protocol upgrade"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_priority"]
+other = "Resource priority"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_alt_used"]
+other = "Alternative service in use"
+
+# ---- HttpResponseBody ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body"]
+other = "Response body content"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body_hash"]
+other = "SHA-256 digest of the response body"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body_length"]
+other = "Response body length in bytes"
+
+# ---- HttpResponseHeaders ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_www_authenticate"]
+other = "Authentication challenge"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_proxy_authenticate"]
+other = "Proxy authentication challenge"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_age"]
+other = "Cache age"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cache_control"]
+other = "Cache control directives"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_clear_site_data"]
+other = "Clear site data"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expires"]
+other = "Expiration time"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_no_vary_search"]
+other = "No-Vary-Search"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_last_modified"]
+other = "Last modified time"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_etag"]
+other = "Entity tag"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_vary"]
+other = "Response variance basis"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_connection"]
+other = "Connection control"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_keep_alive"]
+other = "Persistent connection control"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_patch"]
+other = "Acceptable PATCH media types"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_post"]
+other = "Acceptable POST media types"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_set_cookie"]
+other = "Set-Cookie"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_credentials"]
+other = "CORS allow credentials"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_headers"]
+other = "CORS allowed headers"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_methods"]
+other = "CORS allowed methods"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_origin"]
+other = "CORS allowed origin"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_expose_headers"]
+other = "CORS exposed headers"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_max_age"]
+other = "CORS max cache time"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_timing_allow_origin"]
+other = "Timing allow origin"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_disposition"]
+other = "Content disposition"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_digest"]
+other = "Content digest"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_repr_digest"]
+other = "Representation digest"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_type"]
+other = "Response content type"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_length"]
+other = "Response content length"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_encoding"]
+other = "Response content encoding"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_language"]
+other = "Response content language"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_location"]
+other = "Content location"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_forwarded"]
+other = "Forwarded information"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_via"]
+other = "Proxy chain information"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ranges"]
+other = "Acceptable ranges"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_range"]
+other = "Content range"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_location"]
+other = "Redirect location"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_refresh"]
+other = "Refresh/redirect"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_allow"]
+other = "Allowed methods"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server"]
+other = "Server identifier"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_embedder_policy"]
+other = "Cross-origin embedder policy"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_opener_policy"]
+other = "Cross-origin opener policy"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_resource_policy"]
+other = "Cross-origin resource policy"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy"]
+other = "Content security policy"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy_report_only"]
+other = "CSP report-only mode"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expect_ct"]
+other = "Certificate transparency expectation"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_permissions_policy"]
+other = "Permissions policy"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_strict_transport_security"]
+other = "Strict transport security"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_content_type_options"]
+other = "Content type options"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_frame_options"]
+other = "Frame options"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_permitted_cross_domain_policies"]
+other = "Permitted cross-domain policies"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_powered_by"]
+other = "Technology engine identifier"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_xss_protection"]
+other = "XSS protection"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_reporting_endpoints"]
+other = "Reporting endpoints"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_report_to"]
+other = "Report-to destination"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_transfer_encoding"]
+other = "Transfer encoding"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_trailer"]
+other = "Trailer field declaration"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_accept"]
+other = "WebSocket handshake accept"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_protocol"]
+other = "WebSocket subprotocol"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_extensions"]
+other = "WebSocket extensions"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ch"]
+other = "Accept client hints"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_critical_ch"]
+other = "Critical client hints"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_eligible"]
+other = "Attribution reporting eligibility"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_source"]
+other = "Attribution reporting register source"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_trigger"]
+other = "Attribution reporting register trigger"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_date"]
+other = "Response date"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_link"]
+other = "Link relations"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_retry_after"]
+other = "Retry time"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server_timing"]
+other = "Server timing"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker"]
+other = "Service worker identifier"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker_allowed"]
+other = "Service worker allowed paths"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_source_map"]
+other = "Source map"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_upgrade"]
+other = "Protocol upgrade"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_alt_svc"]
+other = "Alternative service"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_priority"]
+other = "Resource priority"
+
+# ---- HttpFingerprint ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser"]
+other = "Browser identification"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser_quality"]
+other = "Browser identification quality"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_server"]
+other = "Server identification"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_server_quality"]
+other = "Server identification quality"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_language"]
+other = "Language identification"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_device_guess"]
+other = "Device category guess"
+
+# ---- AppTailer ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_consumed"]
+other = "Bytes consumed by the client"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_start_payload_offset"]
+other = "Client start payload offset"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_end_payload_offset"]
+other = "Client end payload offset"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_start_timestamp"]
+other = "Client start timestamp"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_end_timestamp"]
+other = "Client end timestamp"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_consumed"]
+other = "Bytes consumed by the server"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_start_payload_offset"]
+other = "Server start payload offset"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_end_payload_offset"]
+other = "Server end payload offset"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_start_timestamp"]
+other = "Server start timestamp"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_end_timestamp"]
+other = "Server end timestamp"
+
+# ---- TagsMeta ----
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
+other = "Risk tag combination"

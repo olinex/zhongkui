@@ -62,7 +62,7 @@ type PipelineGroupInfo struct {
 // 包含队列的统计数据和当前状态，用于监控和诊断队列健康状况
 type PipelineQueueInfo struct {
 	MemoryUsage    int64                `json:"memoryUsage"`    // 队列内存使用量（字节）
-	Latency        time.Duration        `json:"latency"`        // 队列处理延迟
+	Latency        serializer.DurationNS  `json:"latency"`        // 队列处理延迟
 	Size           int                  `json:"size"`           // 队列中任务总数
 	Groups         []*PipelineGroupInfo `json:"groups"`         // 队列中的任务分组列表
 	Pending        int                  `json:"pending"`        // 等待处理的任务数量
@@ -83,23 +83,23 @@ type PipelineQueueInfo struct {
 // PipelineTaskInfo 表示单个异步任务的详细信息
 // 包含任务的完整生命周期信息，用于任务监控和管理
 type PipelineTaskInfo struct {
-	ID            serializer.HexUUID `json:"id"`            // 任务唯一标识符
-	Queue         string             `json:"queue"`         // 任务所属队列名称
-	Type          string             `json:"type"`          // 任务类型标识符
-	Payload       string             `json:"payload"`       // 任务负载数据（JSON字符串）
-	Result        string             `json:"result"`        // 任务处理结果（JSON字符串）
-	State         string             `json:"state"`         // 任务当前状态（pending, active, completed等）
-	MaxRetry      int                `json:"maxRetry"`      // 最大重试次数
-	Retried       int                `json:"retried"`       // 已重试次数
-	LastErr       string             `json:"lastErr"`       // 最后一次错误信息
-	LastFailedAt  *time.Time         `json:"lastFailedAt"`  // 最后一次失败时间
-	NextProcessAt *time.Time         `json:"nextProcessAt"` // 下一次处理时间
-	CompletedAt   *time.Time         `json:"completedAt"`   // 完成时间
-	Deadline      *time.Time         `json:"deadline"`      // 任务截止时间
-	Timeout       time.Duration      `json:"timeout"`       // 任务超时时间
-	Retention     time.Duration      `json:"retention"`     // 任务保留时间
-	Group         string             `json:"group"`         // 任务分组标识符
-	IsOrphaned    bool               `json:"isOrphaned"`    // 是否为孤儿任务（无关联的工作进程）
+	ID            serializer.HexUUID  `json:"id"`            // 任务唯一标识符
+	Queue         string              `json:"queue"`         // 任务所属队列名称
+	Type          string              `json:"type"`          // 任务类型标识符
+	Payload       string              `json:"payload"`       // 任务负载数据（JSON字符串）
+	Result        string              `json:"result"`        // 任务处理结果（JSON字符串）
+	State         string              `json:"state"`         // 任务当前状态（pending, active, completed等）
+	MaxRetry      int                 `json:"maxRetry"`      // 最大重试次数
+	Retried       int                 `json:"retried"`       // 已重试次数
+	LastErr       string              `json:"lastErr"`       // 最后一次错误信息
+	LastFailedAt  *time.Time          `json:"lastFailedAt"`  // 最后一次失败时间
+	NextProcessAt *time.Time          `json:"nextProcessAt"` // 下一次处理时间
+	CompletedAt   *time.Time          `json:"completedAt"`   // 完成时间
+	Deadline      *time.Time          `json:"deadline"`      // 任务截止时间
+	Timeout       serializer.DurationNS `json:"timeout"`       // 任务超时时间
+	Retention     serializer.DurationNS `json:"retention"`     // 任务保留时间
+	Group         string              `json:"group"`         // 任务分组标识符
+	IsOrphaned    bool                `json:"isOrphaned"`    // 是否为孤儿任务（无关联的工作进程）
 }
 
 // NewPipelineTaskInfo 将 asynq 库的原始任务信息转换为 API 友好的结构体
@@ -139,8 +139,8 @@ func NewPipelineTaskInfo(raw *asynq.TaskInfo) *PipelineTaskInfo {
 		NextProcessAt: nextProcessAt,
 		CompletedAt:   completedAt,
 		Deadline:      deadline,
-		Timeout:       raw.Timeout,
-		Retention:     raw.Retention,
+		Timeout:       serializer.DurationNS(raw.Timeout),
+		Retention:     serializer.DurationNS(raw.Retention),
 		Group:         raw.Group,
 		IsOrphaned:    raw.IsOrphaned,
 	}
@@ -328,7 +328,7 @@ func etlPipelineInspectorQueueListGet(c *gin.Context) {
 				mu.Lock()
 				out[name] = &PipelineQueueInfo{
 					MemoryUsage:    queueInfo.MemoryUsage,
-					Latency:        queueInfo.Latency,
+					Latency:        serializer.DurationNS(queueInfo.Latency),
 					Size:           queueInfo.Size,
 					Groups:         groupInfos,
 					Pending:        queueInfo.Pending,

@@ -52,6 +52,13 @@ func SecureHeadersMiddleware(cfg *SecureConfig) gin.HandlerFunc {
 //   - OPTIONS 预检请求（请求方法在允许列表中）: 返回 204 No Content，告知浏览器预检通过
 //   - OPTIONS 预检请求（请求方法不在允许列表中）: 返回 403 Forbidden，拒绝跨域访问
 //
+// 对于 Access-Control-Allow-Origin，中间件检查请求的 Origin 头：
+//   - Origin 位于 AllowOrigins 允许列表（或列表包含 *）时，回显该 Origin。
+//     由于 AllowCredentials 开启时浏览器禁止使用 *，回显具体来源是
+//     允许携带凭证的跨域请求的唯一正确方式，同时可支持多个允许来源
+//   - Origin 不在允许列表或请求未携带 Origin 头时，不设置该响应头，
+//     浏览器将据此阻止跨域访问
+//
 // 设置的 CORS 响应头包括:
 //   - Access-Control-Allow-Origin: 允许的跨域请求来源
 //   - Access-Control-Allow-Credentials: 是否允许携带凭证
@@ -65,10 +72,14 @@ func SecureHeadersMiddleware(cfg *SecureConfig) gin.HandlerFunc {
 //   - gin.HandlerFunc: Gin 框架中间件处理函数
 func CORSHeadersMiddleware(cfg *CORSConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Header(base.HdrAccessControlAllowOrigin, cfg.AllowOrigin)
 		c.Header(base.HdrAccessControlAllowCredentials, strconv.FormatBool(cfg.AllowCredentials))
 		c.Header(base.HdrAccessControlAllowHeaders, strings.Join(cfg.AllowHeaders, ", "))
 		c.Header(base.HdrAccessControlAllowMethods, strings.Join(cfg.AllowMethods, ", "))
+
+		if origin := c.Request.Header.Get(base.HdrOrigin); origin != "" &&
+			(slices.Contains(cfg.AllowOrigins, origin) || slices.Contains(cfg.AllowOrigins, "*")) {
+			c.Header(base.HdrAccessControlAllowOrigin, origin)
+		}
 
 		if c.Request.Method != http.MethodOptions {
 			c.Next()

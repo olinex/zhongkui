@@ -7,6 +7,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
@@ -21,7 +22,7 @@ func TestNewTagEventEmitTask(t *testing.T) {
 				MatchAll:   true,
 				DetectedAt: time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC),
 				Hits: []tagengine.TagEventHit{
-					{ConditionID: 1, ConditionName: "cond", Model: "m", Count: 5, Threshold: 3, Window: 5 * time.Minute},
+					{ConditionID: 1, ConditionName: "cond", Model: "m", Count: 5, Threshold: 3, Window: serializer.DurationNS(5 * time.Minute)},
 				},
 			}
 			task, err := NewTagEventEmitTask(ev)

@@ -1,255 +1,377 @@
 <template>
-  <central-layout>
-    <template #prepend>
-      <app-header />
-    </template>
-    <template #body>
-      <temp-editable-dialog
-        ref="createAccessDialogRef"
-        :title="$t(`title.accessKey`)"
-        @confirm="accessKeyCreateAction"
-        :confirm-disabled="
-          !accessKeyCreateForm.meta.value.dirty ||
-          !accessKeyCreateForm.meta.value.valid
-        "
-        prepend-icon="mdi-key"
-        force-editable
-      >
-        <template #body>
-          <v-form>
-            <v-row dense>
-              <v-col cols="9">
-                <datetime-field
-                  v-model="expiredAt"
-                  v-bind="expiredAtProps"
-                  :label="$t('model.accessKey.field.expiredAt')"
-                />
-              </v-col>
-              <v-col cols="3" align-self="center">
-                <v-switch
-                  v-model="enabled"
-                  v-bind="enabledProps"
-                  color="success"
-                  :label="$t('model.accessKey.field.enabled')"
-                />
-              </v-col>
-            </v-row>
-            <v-row dense>
-              <v-col cols="12">
-                <v-textarea
-                  v-model="description"
-                  v-bind="descriptionProps"
-                  :label="$t('model.accessKey.field.description')"
-                />
-              </v-col>
-            </v-row>
-          </v-form>
-        </template>
-      </temp-editable-dialog>
-      <v-card
-        class="justify-center align-center"
-        prepend-avatar="@/assets/logo.png"
-        width="80%"
-        dense
-      >
-        <template #title>
-          <span class="font-weight-black">{{ userStore.nickleName }}</span>
-        </template>
-        <template #subtitle>
-          <hex-string-chip
-            size="x-small"
-            :value="userStore.unionID"
-            prefix="uid: "
-            :length="32"
+  <v-layout>
+    <app-header />
+    <v-main class="d-flex mb-6">
+      <v-container class="mx-auto pa-4 pa-md-6" style="max-width: 1200px">
+        <temp-editable-dialog
+          ref="createAccessDialogRef"
+          :title="$t(`title.accessKey`)"
+          :confirm-disabled="
+            !accessKeyCreateForm.meta.value.dirty || !accessKeyCreateForm.meta.value.valid
+          "
+          prepend-icon="mdi-key"
+          force-editable
+          @confirm="accessKeyCreateAction"
+        >
+          <template #body>
+            <v-form>
+              <v-row dense>
+                <v-col cols="9">
+                  <datetime-field
+                    v-model="expiredAt"
+                    v-bind="expiredAtProps"
+                    :label="$t('model.accessKey.field.expiredAt')"
+                  />
+                </v-col>
+                <v-col cols="3" align-self="center">
+                  <v-switch
+                    v-model="enabled"
+                    v-bind="enabledProps"
+                    color="success"
+                    :label="$t('model.accessKey.field.enabled')"
+                  />
+                </v-col>
+              </v-row>
+              <v-row dense>
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="description"
+                    v-bind="descriptionProps"
+                    :label="$t('model.accessKey.field.description')"
+                  />
+                </v-col>
+              </v-row>
+            </v-form>
+          </template>
+        </temp-editable-dialog>
+
+        <confirm-dialog
+          ref="confirmDialogRef"
+          :title="$t('model.accessKey.name')"
+          prepend-icon="mdi-key-remove"
+          double-check
+          @confirm="accessKeyRemoveAction"
+        >
+          <template #body="{ proxy }">
+            <confirm-alert
+              :action="$t('action.delete')"
+              :text="
+                $t(`notice.deleteConfirm`, {
+                  category: $t(`model.accessKey.name`),
+                  key: proxy.accessKeyID,
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
+
+        <div class="d-flex align-center mb-5">
+          <div>
+            <h1 class="text-h5 font-weight-bold mb-0">{{ $t("title.userProfile") }}</h1>
+            <p class="text-body-2 text-medium-emphasis mb-0">{{ $t("profile.pageSubtitle") }}</p>
+          </div>
+          <v-spacer />
+          <v-btn
+            icon="mdi-arrow-left"
+            variant="text"
+            size="large"
+            :title="$t('action.back')"
+            @click="goBack"
           />
-        </template>
-        <v-spacer />
-        <v-card-text>
-          <v-expansion-panels flat>
-            <v-expansion-panel :title="$t('title.profileInfo')">
-              <template #text>
-                <v-card flat>
-                  <template #text>
-                    <v-form>
-                      <v-text-field
-                        v-model="nickleName"
-                        v-bind="nickleNameProps"
-                        :label="$t('model.user.field.nickleName')"
-                      />
-                      <v-text-field
-                        v-model="email"
-                        v-bind="emailProps"
-                        :label="$t('model.user.field.email')"
-                      />
-                    </v-form>
-                  </template>
-                  <v-card-actions class="d-flex justify-center" flat>
+          <v-btn
+            icon="mdi-home-outline"
+            variant="text"
+            size="large"
+            :title="$t('title.home')"
+            @click="gotoHome"
+          />
+        </div>
+
+        <v-row>
+          <!-- Profile summary -->
+          <v-col cols="12" md="4" xl="3">
+            <v-card class="profile-summary">
+              <div class="text-center pa-6">
+                <v-avatar size="96" color="primary" variant="tonal" class="mx-auto mb-4">
+                  <v-img src="@/assets/logo.png" cover />
+                </v-avatar>
+                <div class="text-h6 font-weight-bold text-truncate">{{ userStore.nickleName }}</div>
+                <div class="text-body-2 text-medium-emphasis text-truncate mb-3">
+                  {{ userStore.email || "—" }}
+                </div>
+                <hex-string-chip
+                  size="x-small"
+                  :value="userStore.unionID"
+                  prefix="uid: "
+                  :length="32"
+                />
+              </div>
+            </v-card>
+          </v-col>
+
+          <!-- Settings sections -->
+          <v-col cols="12" md="8" xl="9">
+            <v-expansion-panels variant="accordion" class="mb-6">
+              <!-- 个人信息 -->
+              <v-expansion-panel eager>
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center ga-3">
+                    <v-avatar color="primary" variant="tonal" size="40" rounded>
+                      <v-icon size="small">mdi-account-outline</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-subtitle-1 font-weight-bold">
+                        {{ $t("title.profileInfo") }}
+                      </div>
+                      <div class="text-body-2 text-medium-emphasis">
+                        {{ $t("profile.infoSubtitle") }}
+                      </div>
+                    </div>
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-form>
+                    <v-row dense>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="nickleName"
+                          v-bind="nickleNameProps"
+                          :label="$t('model.user.field.nickleName')"
+                        />
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="email"
+                          v-bind="emailProps"
+                          :label="$t('model.user.field.email')"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-form>
+                  <div class="d-flex justify-end pt-3">
                     <v-btn
-                      :disabled="
-                        !profileForm.meta.value.dirty ||
-                        !profileForm.meta.value.valid
-                      "
-                      type="submit"
+                      :disabled="!profileForm.meta.value.dirty || !profileForm.meta.value.valid"
                       color="primary"
-                      class="ma-2 pa-2"
+                      prepend-icon="mdi-content-save-outline"
                       @click="profileChangeSubmit"
                     >
                       {{ $t("action.update") }}
                     </v-btn>
-                  </v-card-actions>
-                </v-card>
-              </template>
-            </v-expansion-panel>
-            <v-expansion-panel
-              :title="$t('title.accessKey')"
-              @group:selected="accessKeyListGetAction"
-            >
-              <template #text>
-                <confirm-dialog
-                  ref="confirmDialogRef"
-                  :title="$t('model.accessKey.name')"
-                  prependIcon="mdi-key-remove"
-                  @confirm="accessKeyRemoveAction"
-                  double-check
-                >
-                  <template #body="{ proxy }">
-                    <confirm-alert
-                      :action="$t('action.delete')"
-                      :text="
-                        $t(`notice.deleteConfirm`, {
-                          category: $t(`model.accessKey.name`),
-                          key: proxy.accessKeyID,
-                        })
-                      "
-                    />
-                  </template>
-                </confirm-dialog>
-                <v-card
-                  v-for="key in accessKeys"
-                  variant="text"
-                  :key="key.id"
-                  :subtitle="key.description"
-                  density="compact"
-                >
-                  <template #prepend>
-                    <boolean-chip :value="key.enabled" />
-                  </template>
-                  <template #title>
-                    {{ key.accessKeyID }}
-                    <copy-btn :value="key.accessKeyID" />
-                  </template>
-                  <v-card-item>
-                    <v-chip-group disabled>
-                      <v-chip density="compact">
-                        {{ $t("model.accessKey.field.createdAt") }}:
-                        {{
-                          localeDatetimeFormat(DateTime.fromISO(key.createdAt))
-                        }}
-                      </v-chip>
-                      <v-chip density="compact">
-                        {{ $t("model.accessKey.field.updatedAt") }}:
-                        {{
-                          localeDatetimeFormat(DateTime.fromISO(key.updatedAt))
-                        }}
-                      </v-chip>
-                      <v-chip v-if="key.expiredAt !== null" density="compact">
-                        {{ $t("model.accessKey.field.expiredAt") }}:
-                        {{
-                          localeDatetimeFormat(DateTime.fromISO(key.expiredAt))
-                        }}
-                      </v-chip>
-                      <v-chip
-                        v-if="key.lastAccessAt !== null"
-                        density="compact"
-                      >
-                        {{ $t("model.accessKey.field.lastAccessAt") }}:
-                        {{
-                          localeDatetimeFormat(
-                            DateTime.fromISO(key.lastAccessAt)
-                          )
-                        }}
-                      </v-chip>
-                    </v-chip-group>
-                    <v-divider />
-                  </v-card-item>
-                  <template #append class="flex-column align-end">
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <!-- 访问密钥 -->
+              <v-expansion-panel eager>
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center ga-3">
+                    <v-avatar color="primary" variant="tonal" size="40" rounded>
+                      <v-icon size="small">mdi-key-outline</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-subtitle-1 font-weight-bold">
+                        {{ $t("title.accessKey") }}
+                      </div>
+                      <div class="text-body-2 text-medium-emphasis">
+                        {{ $t("profile.accessKeySubtitle") }}
+                      </div>
+                    </div>
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <div class="d-flex justify-end mb-2">
                     <v-btn
-                      variant="text"
-                      @click="copyToClipboard(key.accessKeySecret)"
-                    >
-                      {{ $t("action.copySecret") }}
-                    </v-btn>
-                    <v-btn
-                      variant="text"
-                      @click="accessKeyEnabledAction(key.id, !key.enabled)"
-                      >{{
-                        $t(
-                          key.enabled ? "action.deactivate" : "action.activate"
-                        )
-                      }}</v-btn
-                    >
-                    <v-btn
-                      variant="text"
-                      color="error"
-                      @click="openConfirmDialogAction(key)"
-                    >
-                      {{ $t("action.delete") }}
-                    </v-btn>
-                  </template>
-                </v-card>
-                <v-card-actions class="d-flex justify-center">
-                  <v-btn
-                    color="primary"
-                    @click="openCreateAccessDialogAction"
-                    >{{ $t("action.create") }}</v-btn
-                  >
-                </v-card-actions>
-              </template>
-            </v-expansion-panel>
-            <v-expansion-panel :title="$t('title.passwordReset')">
-              <template #text>
-                <v-card flat>
-                  <template #text>
-                    <v-form>
-                      <password-field
-                        v-model="oldPassword"
-                        v-bind="oldPasswordProps"
-                        :label="$t('model.user.field.oldPassword')"
-                      />
-                      <password-field
-                        v-model="newPassword"
-                        v-bind="newPasswordProps"
-                        :label="$t('model.user.field.newPassword')"
-                      />
-                      <password-field
-                        v-model="newPasswordAgain"
-                        v-bind="newPasswordAgainProps"
-                        :label="$t('model.user.field.newPasswordAgain')"
-                      />
-                    </v-form>
-                  </template>
-                  <v-card-actions class="d-flex justify-center" flat>
-                    <v-btn
-                      :disabled="
-                        !pwdResetForm.meta.value.dirty ||
-                        !pwdResetForm.meta.value.valid
-                      "
-                      type="submit"
                       color="primary"
-                      class="ma-2 pa-2"
+                      size="small"
+                      prepend-icon="mdi-plus"
+                      @click="openCreateAccessDialogAction"
+                    >
+                      {{ $t("action.create") }}
+                    </v-btn>
+                  </div>
+
+                  <!-- Empty state -->
+                  <div v-if="accessKeys.length === 0" class="text-center pa-8">
+                    <v-icon size="48" class="mb-3 text-medium-emphasis">mdi-key-off-outline</v-icon>
+                    <div class="text-body-2 text-medium-emphasis">
+                      {{ $t("profile.emptyAccessKeys") }}
+                    </div>
+                  </div>
+
+                  <!-- Access key list -->
+                  <template v-else>
+                    <template v-for="(key, index) in accessKeys" :key="key.id">
+                      <v-divider v-if="index > 0" />
+                      <div class="py-4">
+                        <div class="d-flex align-center ga-3 flex-wrap">
+                          <boolean-chip :value="key.enabled" density="compact" />
+                          <span class="font-mono text-body-2 font-weight-medium">{{
+                            key.accessKeyID
+                          }}</span>
+                          <copy-btn :value="key.accessKeyID" />
+                          <v-spacer />
+                          <v-btn
+                            size="small"
+                            variant="text"
+                            prepend-icon="mdi-content-copy"
+                            @click="copyToClipboard(key.accessKeySecret)"
+                          >
+                            {{ $t("action.copySecret") }}
+                          </v-btn>
+                          <v-btn
+                            size="small"
+                            variant="text"
+                            :color="key.enabled ? undefined : 'success'"
+                            @click="accessKeyEnabledAction(key.id, !key.enabled)"
+                          >
+                            {{ $t(key.enabled ? "action.deactivate" : "action.activate") }}
+                          </v-btn>
+                          <v-btn
+                            size="small"
+                            variant="text"
+                            color="error"
+                            prepend-icon="mdi-delete-outline"
+                            @click="openConfirmDialogAction(key)"
+                          >
+                            {{ $t("action.delete") }}
+                          </v-btn>
+                        </div>
+                        <div v-if="key.description" class="text-body-2 text-medium-emphasis mt-2">
+                          {{ key.description }}
+                        </div>
+                        <div class="d-flex flex-wrap ga-2 mt-2">
+                          <v-chip
+                            size="small"
+                            density="compact"
+                            prepend-icon="mdi-calendar-outline"
+                          >
+                            {{ $t("model.accessKey.field.createdAt") }}:
+                            {{ localeDatetimeFormat(DateTime.fromISO(key.createdAt)) }}
+                          </v-chip>
+                          <v-chip
+                            v-if="key.updatedAt"
+                            size="small"
+                            density="compact"
+                            prepend-icon="mdi-calendar-refresh-outline"
+                          >
+                            {{ $t("model.accessKey.field.updatedAt") }}:
+                            {{ localeDatetimeFormat(DateTime.fromISO(key.updatedAt)) }}
+                          </v-chip>
+                          <v-chip
+                            v-if="key.expiredAt !== null"
+                            size="small"
+                            density="compact"
+                            prepend-icon="mdi-calendar-clock-outline"
+                          >
+                            {{ $t("model.accessKey.field.expiredAt") }}:
+                            {{ localeDatetimeFormat(DateTime.fromISO(key.expiredAt)) }}
+                          </v-chip>
+                          <v-chip
+                            v-if="key.lastAccessAt !== null"
+                            size="small"
+                            density="compact"
+                            prepend-icon="mdi-history"
+                          >
+                            {{ $t("model.accessKey.field.lastAccessAt") }}:
+                            {{ localeDatetimeFormat(DateTime.fromISO(key.lastAccessAt)) }}
+                          </v-chip>
+                        </div>
+                      </div>
+                    </template>
+                  </template>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <!-- 页面配置同步 -->
+              <v-expansion-panel eager>
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center ga-3">
+                    <v-avatar color="primary" variant="tonal" size="40" rounded>
+                      <v-icon size="small">mdi-cloud-sync-outline</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-subtitle-1 font-weight-bold">
+                        {{ $t("title.frontendConfigSync") }}
+                      </div>
+                      <div class="text-body-2 text-medium-emphasis">
+                        {{ $t("profile.configSyncSubtitle") }}
+                      </div>
+                    </div>
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-switch
+                    :model-value="configSyncStore.enabled"
+                    color="success"
+                    :label="$t('model.user.field.frontendConfigSyncEnabled')"
+                    :hint="$t('profile.configSyncHint')"
+                    persistent-hint
+                    @update:model-value="configSyncEnabledChange"
+                  />
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+
+              <!-- 重置密码 -->
+              <v-expansion-panel eager>
+                <v-expansion-panel-title>
+                  <div class="d-flex align-center ga-3">
+                    <v-avatar color="primary" variant="tonal" size="40" rounded>
+                      <v-icon size="small">mdi-lock-reset</v-icon>
+                    </v-avatar>
+                    <div>
+                      <div class="text-subtitle-1 font-weight-bold">
+                        {{ $t("title.passwordReset") }}
+                      </div>
+                      <div class="text-body-2 text-medium-emphasis">
+                        {{ $t("profile.passwordSubtitle") }}
+                      </div>
+                    </div>
+                  </div>
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-form>
+                    <v-row dense>
+                      <v-col cols="12">
+                        <password-field
+                          v-model="oldPassword"
+                          v-bind="oldPasswordProps"
+                          :label="$t('model.user.field.oldPassword')"
+                        />
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <password-field
+                          v-model="newPassword"
+                          v-bind="newPasswordProps"
+                          :label="$t('model.user.field.newPassword')"
+                        />
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <password-field
+                          v-model="newPasswordAgain"
+                          v-bind="newPasswordAgainProps"
+                          :label="$t('model.user.field.newPasswordAgain')"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-form>
+                  <div class="d-flex justify-end pt-3">
+                    <v-btn
+                      :disabled="!pwdResetForm.meta.value.dirty || !pwdResetForm.meta.value.valid"
+                      color="primary"
+                      prepend-icon="mdi-lock-reset"
                       @click="passwordResetSubmit"
                     >
                       {{ $t("action.reset") }}
                     </v-btn>
-                  </v-card-actions>
-                </v-card>
-              </template>
-            </v-expansion-panel>
-          </v-expansion-panels>
-        </v-card-text>
-      </v-card>
-    </template>
-  </central-layout>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </v-col>
+        </v-row>
+      </v-container>
+    </v-main>
+  </v-layout>
 </template>
 
 <route lang="yaml">
@@ -262,12 +384,9 @@ meta:
 
 <script setup lang="ts">
 import { useForm } from "vee-validate";
-import {
-  resetPasswordSchema,
-  changeProfileSchema,
-  accessKeySchema,
-} from "@/schemas/user";
+import { resetPasswordSchema, changeProfileSchema, accessKeySchema } from "@/schemas/user";
 import { useUserStore } from "@/stores/user";
+import { useConfigSyncStore } from "@/stores/configSync";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import {
   passwordReset,
@@ -280,12 +399,15 @@ import {
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 import { vuetifyCfg } from "@/utils/form";
 import { useAppStore } from "@/stores/app";
+import router from "@/router";
 import type { accessKeyOut } from "@/apis/@types/user";
 import { DateTime } from "luxon";
 import { copyToClipboard } from "@/utils/clipboard";
 
+const route = useRoute();
 const appStore = useAppStore();
 const userStore = useUserStore();
+const configSyncStore = useConfigSyncStore();
 const createAccessDialogRef = useTemplateRef("createAccessDialogRef");
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
 
@@ -303,37 +425,33 @@ const accessKeyCreateForm = useForm({
   validationSchema: accessKeySchema,
 });
 
-const [nickleName, nickleNameProps] = profileForm.defineField(
-  "nickleName",
-  vuetifyCfg
-);
+const [nickleName, nickleNameProps] = profileForm.defineField("nickleName", vuetifyCfg);
 const [email, emailProps] = profileForm.defineField("email", vuetifyCfg);
-const [oldPassword, oldPasswordProps] = pwdResetForm.defineField(
-  "oldPassword",
-  vuetifyCfg
-);
-const [newPassword, newPasswordProps] = pwdResetForm.defineField(
-  "newPassword",
-  vuetifyCfg
-);
+const [oldPassword, oldPasswordProps] = pwdResetForm.defineField("oldPassword", vuetifyCfg);
+const [newPassword, newPasswordProps] = pwdResetForm.defineField("newPassword", vuetifyCfg);
 const [newPasswordAgain, newPasswordAgainProps] = pwdResetForm.defineField(
   "newPasswordAgain",
-  vuetifyCfg
+  vuetifyCfg,
 );
-const [enabled, enabledProps] = accessKeyCreateForm.defineField(
-  "enabled",
-  vuetifyCfg
-);
-const [description, descriptionProps] = accessKeyCreateForm.defineField(
-  "description",
-  vuetifyCfg
-);
-const [expiredAt, expiredAtProps] = accessKeyCreateForm.defineField(
-  "expiredAt",
-  vuetifyCfg
-);
+const [enabled, enabledProps] = accessKeyCreateForm.defineField("enabled", vuetifyCfg);
+const [description, descriptionProps] = accessKeyCreateForm.defineField("description", vuetifyCfg);
+const [expiredAt, expiredAtProps] = accessKeyCreateForm.defineField("expiredAt", vuetifyCfg);
 
 const accessKeys = ref([] as accessKeyOut[]);
+
+onMounted(() => {
+  accessKeyListGetAction();
+});
+
+const goBack = () => {
+  router.back();
+};
+
+const gotoHome = () => {
+  // route.params type does not satisfy RouteLocationRaw.params
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  router.push({ name: "Home", params: route.params as any });
+};
 
 const openConfirmDialogAction = (key: accessKeyOut) => {
   confirmDialogRef.value?.open(key);
@@ -375,7 +493,7 @@ const profileChangeSubmit = profileForm.handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 
@@ -399,18 +517,39 @@ const passwordResetSubmit = pwdResetForm.handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 
-const accessKeyListGetAction = async (val: { value: boolean }) => {
-  if (!val.value) {
-    return;
-  }
+const accessKeyListGetAction = async () => {
   await getResponse<accessKeyOut[]>(
     accessKeyListGet(),
     async (rsp) => {
       accessKeys.value = rsp.data;
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
+const configSyncEnabledChange = async (enabled: boolean | null): Promise<void> => {
+  await configSyncStore.setEnabled(enabled === true);
+};
+
+const accessKeyCreateAction = accessKeyCreateForm.handleSubmit(async (values): Promise<void> => {
+  await getResponse<accessKeyOut>(
+    accessKeyCreate({
+      enabled: values.enabled,
+      description: values.description,
+      expiredAt: values.expiredAt,
+    }),
+    async (rsp) => {
+      accessKeys.value.push(rsp.data);
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
@@ -423,36 +562,9 @@ const accessKeyListGetAction = async (val: { value: boolean }) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
-};
-
-const accessKeyCreateAction = accessKeyCreateForm.handleSubmit(
-  async (values): Promise<void> => {
-    await getResponse<accessKeyOut>(
-      accessKeyCreate({
-        enabled: values.enabled,
-        description: values.description,
-        expiredAt: values.expiredAt,
-      }),
-      async (rsp) => {
-        accessKeys.value.push(rsp.data);
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "success",
-        });
-      },
-      async (rsp) => {
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "error",
-        });
-      }
-    );
-  }
-);
+});
 
 const accessKeyRemoveAction = async (key: accessKeyOut): Promise<void> => {
   await getSimpleResponse(
@@ -471,20 +583,15 @@ const accessKeyRemoveAction = async (key: accessKeyOut): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
-const accessKeyEnabledAction = async (
-  id: number,
-  enabled: boolean
-): Promise<void> => {
+const accessKeyEnabledAction = async (id: number, enabled: boolean): Promise<void> => {
   await getResponse<accessKeyOut>(
     accessKeyEnabled(id, enabled),
     async (rsp) => {
-      accessKeys.value = accessKeys.value.map((item) =>
-        item.id !== id ? item : rsp.data
-      );
+      accessKeys.value = accessKeys.value.map((item) => (item.id !== id ? item : rsp.data));
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
@@ -497,7 +604,7 @@ const accessKeyEnabledAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 </script>

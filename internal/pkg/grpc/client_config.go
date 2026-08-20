@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	g "google.golang.org/grpc"
@@ -371,8 +372,8 @@ func DescribeClientConfig(names ...string) config.ConfigDescriptions {
 // 返回：
 //   - *ClientConfig: 提取的客户端配置实例
 //   - error: 提取过程中发生的错误，如配置不存在或反序列化失败
-func ExtractClientConfig(v *viper.Viper, name string) (*ClientConfig, error) {
+func ExtractClientConfig(viper *viper.Viper, validate *validator.Validate, name string) (*ClientConfig, error) {
 	// 构建完整的配置路径
 	path := fmt.Sprintf(`%s.%s`, ClientPrefix, name)
-	return config.ExtractConfig[ClientConfig](v, path)
+	return config.ExtractConfig[ClientConfig](viper, validate, path)
 }

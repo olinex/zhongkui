@@ -6,7 +6,6 @@ import (
 	"context"
 
 	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
@@ -26,12 +25,14 @@ type tagStage struct {
 // Process 实现 etl.Stage[any, any] 接口。
 // 消费 routerStage 产出的 any 项，HttpTransport 打标签后写入 out，
 // 其余类型透传，保持聚合产物类型不变。
+// ctx 取消视为正常退出返回 nil（与 extract / routerStage 的干净退出语义一致），
+// 避免流水线把关机误报为阶段错误。
 func (s *tagStage) Process(ctx context.Context, in <-chan any, out chan<- any) error {
 	defer close(out)
 	for {
 		select {
 		case <-ctx.Done():
-			return errors.WithStack(ctx.Err())
+			return nil
 		case v, ok := <-in:
 			if !ok {
 				return nil
@@ -42,7 +43,7 @@ func (s *tagStage) Process(ctx context.Context, in <-chan any, out chan<- any) e
 			select {
 			case out <- v:
 			case <-ctx.Done():
-				return errors.WithStack(ctx.Err())
+				return nil
 			}
 		}
 	}

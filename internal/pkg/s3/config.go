@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
@@ -112,6 +113,6 @@ func DescribeConfig() config.ConfigDescriptions {
 //	  bucket: "my-bucket"
 //	  region: ""
 //	  useSSL: false
-func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, Prefix)
+func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error) {
+	return config.ExtractConfig[Config](viper, validate, Prefix)
 }

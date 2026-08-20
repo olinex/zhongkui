@@ -1,12 +1,8 @@
 <template>
   <div>
-    <v-chip
-      @click="dialog = true"
-      :color="color"
-      :variant="variant"
-      :density="density"
-      >{{ short }}</v-chip
-    >
+    <v-chip :color="color" :variant="variant" :density="density" @click="dialog = true">
+      <span class="font-mono">{{ short }}</span>
+    </v-chip>
     <v-dialog v-model="dialog" max-width="600">
       <template #default>
         <v-card>
@@ -72,9 +68,11 @@ const props = defineProps({
   },
   variant: {
     type: String as PropType<Variant>,
+    default: "tonal",
   },
   density: {
     type: String as PropType<Density>,
+    default: "default",
   },
 });
 </script>

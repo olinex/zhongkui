@@ -3,18 +3,12 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t('model.group.name')"
         :list-request="groupListGet"
         :options-request="groupListOptions"
         :actions="getActions"
+        :create="openCreateDialogAction"
         model-name="group"
-      >
-        <template #top>
-          <v-btn color="success" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
       <confirm-dialog
         ref="confirmDialogRef"
         :title="$t(`model.group.name`)"
@@ -36,12 +30,10 @@
       <temp-editable-dialog
         ref="createDialogRef"
         :title="$t('model.group.name')"
-        @confirm="createAction"
-        :confirm-disabled="
-          !createForm.meta.value.dirty || !createForm.meta.value.valid
-        "
+        :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
         force-editable
         prepend-icon="mdi-account-multiple"
+        @confirm="createAction"
       >
         <template #body>
           <v-form>
@@ -69,21 +61,15 @@
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t('model.group.name')"
-        @confirm="itemUpdateAction"
-        :confirm-disabled="
-          !updateForm.meta.value.dirty || !updateForm.meta.value.valid
-        "
+        :confirm-disabled="!updateForm.meta.value.dirty || !updateForm.meta.value.valid"
         prepend-icon="mdi-account-multiple"
+        @confirm="itemUpdateAction"
       >
         <template #body="{ proxy, editable }">
           <v-form>
             <v-row dense>
               <v-col cols="12">
-                <v-text-field
-                  v-model="proxy.name"
-                  :label="$t('model.group.field.name')"
-                  disabled
-                />
+                <v-text-field v-model="proxy.name" :label="$t('model.group.field.name')" disabled />
               </v-col>
             </v-row>
             <v-row dense>
@@ -107,27 +93,21 @@
                   :editable="editable"
                   order-by-field="createdAt"
                 >
-                  <template #list-item-action="{ item, editable, removeItem }">
+                  <template #list-item-action="{ item, editable: listEditable, removeItem }">
                     <v-btn
-                      @click="removePolicyAction(proxy.name, item, removeItem)"
-                      :disabled="!editable"
+                      :disabled="!listEditable"
                       icon="mdi-minus"
                       variant="tonal"
                       color="error"
                       density="compact"
+                      @click="removePolicyAction(proxy.name, item, removeItem)"
                     />
                   </template>
                   <template #search="{ items, close, appendItem }">
                     <v-list :items="items">
                       <v-list-item v-for="item in items" :key="item.id">
-                        <v-card
-                          color="surface-variant"
-                          variant="tonal"
-                          density="compact"
-                        >
-                          <v-card-title>
-                            {{ item.action }} {{ item.target }}
-                          </v-card-title>
+                        <v-card color="surface-variant" variant="tonal" density="compact">
+                          <v-card-title> {{ item.action }} {{ item.target }} </v-card-title>
                           <v-card-text>
                             <v-form>
                               <v-select
@@ -142,6 +122,12 @@
                           </v-card-text>
                           <v-card-actions>
                             <v-btn
+                              :disabled="!(editable && item.effect)"
+                              :text="$t('action.add')"
+                              color="primary"
+                              density="compact"
+                              variant="tonal"
+                              block
                               @click="
                                 addPolicyAction(
                                   proxy.name,
@@ -149,15 +135,9 @@
                                   item.action,
                                   item.effect,
                                   appendItem,
-                                  close
+                                  close,
                                 )
                               "
-                              :disabled="!(editable && item.effect)"
-                              :text="$t('action.add')"
-                              color="success"
-                              density="compact"
-                              variant="tonal"
-                              block
                             />
                           </v-card-actions>
                         </v-card>
@@ -214,17 +194,14 @@ const createForm = useForm({
 
 const [updateDescription, updateDescriptionProps] = updateForm.defineField(
   "description",
-  vuetifyCfg
+  vuetifyCfg,
 );
 
-const [createName, createNameProps] = createForm.defineField(
-  "name",
-  vuetifyCfg
-);
+const [createName, createNameProps] = createForm.defineField("name", vuetifyCfg);
 
 const [createDescription, createDescriptionProps] = createForm.defineField(
   "description",
-  vuetifyCfg
+  vuetifyCfg,
 );
 
 const appStore = useAppStore();
@@ -275,15 +252,17 @@ const groupPolicySearchHeaders: Record<string, SearchAction> = {
   action: SearchAction.CONTAIN,
 };
 
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   return {
     edit: detailGetAction,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
       confirmDialogRef.value?.open(item);
     },
   };
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<GroupDetailOut>(
     groupDetailGet(item.name),
@@ -297,10 +276,11 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemUpdateAction = (proxy: Record<string, any>) => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
@@ -321,11 +301,12 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
           timeout: 3000,
           color: "error",
         });
-      }
+      },
     );
   })();
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
     groupDelete(item.name as string),
@@ -343,7 +324,7 @@ const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 
@@ -373,7 +354,7 @@ const createAction = createForm.handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 
@@ -382,8 +363,9 @@ const addPolicyAction = async (
   target: string,
   action: string,
   effect: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   appendItem: (item: Record<string, any>) => void,
-  close: () => void
+  close: () => void,
 ): Promise<void> => {
   await getResponse<GroupRbacPolicyDetailOut>(
     groupRbacPolicyAdd(groupName, {
@@ -407,14 +389,15 @@ const addPolicyAction = async (
         color: "error",
       });
       close();
-    }
+    },
   );
 };
 
 const removePolicyAction = async (
   groupName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   item: Record<string, any>,
-  callback: () => void
+  callback: () => void,
 ): Promise<void> => {
   await getSimpleResponse(
     groupRbacPolicyRemove(groupName, {
@@ -436,7 +419,7 @@ const removePolicyAction = async (
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 </script>

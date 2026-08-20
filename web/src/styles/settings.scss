@@ -1,10 +1,15 @@
 /**
  * src/styles/settings.scss
  *
- * Configures SASS variables and Vuetify overwrites
+ * Overrides Vuetify SASS variables. This file is injected into every SCSS
+ * compilation by vite-plugin-vuetify, so it must ONLY contain @use rules and
+ * variable overrides — no plain CSS rules here.
  */
 
-// https://vuetifyjs.com/features/sass-variables/`
-// @use 'vuetify/settings' with (
-//   $color-pack: false
-// );
+// https://vuetifyjs.com/features/sass-variables/
+// prettier-ignore
+@use "vuetify/settings" with (
+  $border-radius-root: 6px,
+  $body-font-family: ("Roboto", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif),
+  $heading-font-family: ("Roboto", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif)
+);

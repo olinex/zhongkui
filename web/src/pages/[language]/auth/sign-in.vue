@@ -4,11 +4,7 @@
       <app-header />
     </template>
     <template #body>
-      <v-card
-        class="justify-center align-center"
-        prepend-avatar="@/assets/logo.png"
-        width="30%"
-      >
+      <v-card prepend-avatar="@/assets/logo.png" style="width: min(420px, 100%)">
         <template #title>
           <span class="font-weight-black">{{ $t("title.zk") }}</span>
         </template>
@@ -30,16 +26,17 @@
         </template>
 
         <v-card-actions class="d-flex justify-space-between">
-          <v-btn color="third" class="ma-2 pa-2">{{
+          <v-btn variant="text" color="primary" class="ma-2 pa-2">{{
             $t("action.pwdForget")
           }}</v-btn>
           <v-btn
             :disabled="!meta.dirty || !meta.valid"
-            @click="submit"
-            @keyup.enter="submit"
             type="submit"
             color="primary"
+            variant="flat"
             class="ma-2 pa-2"
+            @click="submit"
+            @keyup.enter="submit"
             >{{ $t("action.signIn") }}</v-btn
           >
         </v-card-actions>
@@ -61,11 +58,15 @@ import { useForm } from "vee-validate";
 import router from "@/router";
 import { loginSchema } from "@/schemas/user";
 import { passwordLogin } from "@/apis/user";
-import { getSimpleResponse } from "@/apis/base";
+import { getResponse } from "@/apis/base";
 import { useUserStore } from "@/stores/user";
+import { localManager } from "@/stores/local";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
 import { useAppStore } from "@/stores/app";
+
+// Types
+import type { UserTokenOut } from "@/apis/@types/user";
 
 const route = useRoute();
 const { defineField, handleSubmit, setFieldError, meta } = useForm({
@@ -79,16 +80,19 @@ const appStore = useAppStore();
 const userStore = useUserStore();
 
 const submit = handleSubmit(async (values) => {
-  await getSimpleResponse(
+  await getResponse<UserTokenOut>(
     passwordLogin({
       username: values.username as string,
       password: values.password as string,
     }),
-    async () => {
-      let redirect = route.query.redirect as string;
-      let next = redirect || "/";
-      setTimeout(() => {
-        userStore.load();
+    async (rsp) => {
+      const redirect = route.query.redirect as string;
+      const next = redirect || "/";
+      setTimeout(async () => {
+        // 将登录返回的令牌持久化到本地存储，避免依赖受主机作用域限制的 Cookie
+        localManager.setJwt(rsp.data.token);
+        // 等待用户信息加载完成后再跳转，否则路由守卫会误判未登录而跳转 401
+        await userStore.load();
         router.push(next);
         appStore.notify({
           text: i18n.global.t("notice.wellcome"),
@@ -112,7 +116,7 @@ const submit = handleSubmit(async (values) => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 });
 </script>

@@ -22,6 +22,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
@@ -55,7 +56,7 @@ type TagEventRuleConditionIn struct {
 	// Name 条件名称，必填，长度 1~255
 	Name string `json:"name" binding:"required,min=1,max=255"`
 	// Window 时间窗口，必须大于 0
-	Window time.Duration `json:"window" binding:"gt=0"`
+	Window serializer.DurationNS `json:"window" binding:"gt=0"`
 	// Threshold 阈值，必须大于 0
 	Threshold int `json:"threshold" binding:"gt=0"`
 	// Expression 标签组合布尔表达式，必填，最长 1024 字符
@@ -107,7 +108,7 @@ type TagEventRuleConditionOut struct {
 	// Name 条件名称
 	Name string `json:"name"`
 	// Window 时间窗口
-	Window time.Duration `json:"window"`
+	Window serializer.DurationNS `json:"window"`
 	// Threshold 阈值
 	Threshold int `json:"threshold"`
 	// Expression 标签组合布尔表达式
@@ -809,15 +810,15 @@ func validateTagEventRuleConditions(c *gin.Context, conds []*TagEventRuleConditi
 // tagEventConditionSnapshot 标签事件条件的 JSON 快照结构。
 // json tag 与 TagEventRuleConditionOut 的业务字段一致，仅记录业务字段，不含审计字段。
 type tagEventConditionSnapshot struct {
-	Model       string        `json:"model"`
-	Dimension   string        `json:"dimension"`
-	Item        string        `json:"item"`
-	Name        string        `json:"name"`
-	Window      time.Duration `json:"window"`
-	Threshold   int           `json:"threshold"`
-	Expression  string        `json:"expression"`
-	Enabled     bool          `json:"enabled"`
-	Description string        `json:"description"`
+	Model       string              `json:"model"`
+	Dimension   string              `json:"dimension"`
+	Item        string              `json:"item"`
+	Name        string              `json:"name"`
+	Window      serializer.DurationNS `json:"window"`
+	Threshold   int                 `json:"threshold"`
+	Expression  string              `json:"expression"`
+	Enabled     bool                `json:"enabled"`
+	Description string              `json:"description"`
 }
 
 // marshalConditions 将条件模型列表序列化为 JSON 文本快照。

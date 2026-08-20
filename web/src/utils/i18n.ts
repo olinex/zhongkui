@@ -5,11 +5,12 @@ import { setLocale } from "yup";
 
 import { DEFAULT_LOCALE, localManager } from "@/stores/local";
 import { SupportLanguage } from "@/types";
+import { durationToMillis } from "@/utils/duration";
 import messages from "@intlify/unplugin-vue-i18n/messages";
 
 const typedMessages = messages as {
-  en: Record<string, any>;
-  zhHans: Record<string, any>;
+  en: Record<string, unknown>;
+  zhHans: Record<string, unknown>;
 };
 
 export const i18n = createI18n({
@@ -41,10 +42,10 @@ const createDefaultMessage =
 
 const createOneMessage =
   (key: string, nameOne: string) =>
-  ({ path, [nameOne]: one }: { path: string; [nameOne]: any }) =>
+  <T extends { path: string }>(params: T) =>
     i18n.global.t(`validation.${key}`, {
-      path: i18n.global.t(path),
-      [nameOne]: one,
+      path: i18n.global.t(params.path),
+      [nameOne]: (params as T & Record<string, unknown>)[nameOne],
     });
 
 const createOptionMessage =
@@ -52,9 +53,7 @@ const createOptionMessage =
   ({ path, values }: { path: string; values: string[] }) =>
     i18n.global.t(`validation.${key}`, {
       path: i18n.global.t(path),
-      values: values.map((v: string) =>
-        i18n.global.t(`input.options.${path}.${v}`)
-      ),
+      values: values.map((v: string) => i18n.global.t(`input.options.${path}.${v}`)),
     });
 
 setLocale({
@@ -75,10 +74,7 @@ setLocale({
     url: createDefaultMessage("string.url"),
     uuid: createDefaultMessage("string.uuid"),
     datetime: createDefaultMessage("string.datetime"),
-    datetime_precision: createOneMessage(
-      "string.datetime_precision",
-      "precision"
-    ),
+    datetime_precision: createOneMessage("string.datetime_precision", "precision"),
     datetime_offset: createDefaultMessage("string.datetime_offset"),
     trim: createDefaultMessage("string.trim"),
     lowercase: createDefaultMessage("string.lowercase"),
@@ -112,15 +108,11 @@ setLocale({
 });
 
 export const localeDateFormat = (date: DateTime): string => {
-  return date
-    .setLocale(i18n.global.locale.value)
-    .toLocaleString(DateTime.DATE_SHORT);
+  return date.setLocale(i18n.global.locale.value).toLocaleString(DateTime.DATE_SHORT);
 };
 
 export const localeTimeFormat = (time: DateTime): string => {
-  return time
-    .setLocale(i18n.global.locale.value)
-    .toLocaleString(DateTime.TIME_24_WITH_SECONDS);
+  return time.setLocale(i18n.global.locale.value).toLocaleString(DateTime.TIME_24_WITH_SECONDS);
 };
 
 export const localeDatetimeFormat = (dt: DateTime): string => {
@@ -129,8 +121,14 @@ export const localeDatetimeFormat = (dt: DateTime): string => {
     .toLocaleString(DateTime.DATETIME_SHORT_WITH_SECONDS);
 };
 
-export const localDurationFormat = (nanoSeconds: number): string => {
-  return Duration.fromMillis(nanoSeconds / 1e6, {
+// localDurationFormat 将时长格式化为本地化的人类可读文本。
+// 支持 Go time.Duration 字符串（如 "5s"）与纳秒整数两种输入。
+export const localDurationFormat = (duration: string | number): string => {
+  const millis = typeof duration === "number" ? duration / 1e6 : durationToMillis(duration);
+  if (Number.isNaN(millis)) {
+    return String(duration);
+  }
+  return Duration.fromMillis(millis, {
     locale: i18n.global.locale.value,
   }).toHuman();
 };

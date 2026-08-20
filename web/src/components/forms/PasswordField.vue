@@ -11,10 +11,10 @@
 </template>
 
 <script setup lang="ts" name="password-field">
-let showPwd = ref(false);
+const showPwd = ref(false);
 
 const props = defineProps({
-  modelValue: String,
+  modelValue: { type: String, default: "" },
   label: { type: String, default: "Password" },
   errorMessages: { type: String, default: "" },
 });

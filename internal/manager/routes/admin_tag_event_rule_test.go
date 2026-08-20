@@ -135,7 +135,7 @@ func registerTagEventRuleTestRoutes(r *gin.Engine, rawDB *database.DB) {
 	admin := r.Group("/admin")
 	{
 		admin.POST("/tag-event-rule/list", tagEventRuleListGet)
-		admin.OPTIONS("/tag-event-rule/list", ListOptionsGinHandler[*TagEventRuleListGetSearchIn, *TagEventRuleListOut])
+		admin.OPTIONS("/tag-event-rule/list", ListMetaGinHandler[*TagEventRuleListGetSearchIn, *TagEventRuleListOut]())
 		admin.POST("/tag-event-rule/create", tagEventRuleCreate)
 		admin.POST("/tag-event-rule/:id/get", tagEventRuleDetailGet)
 		admin.POST("/tag-event-rule/:id/update", tagEventRuleUpdate)
@@ -659,7 +659,7 @@ func TestTagEventRuleList(t *testing.T) {
 			w := doTagEventRuleRequest(r, http.MethodOptions, "/admin/tag-event-rule/list", nil)
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
-				Data *ListOptions `json:"data"`
+				Data *ListMeta `json:"data"`
 			}
 			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
 			So(len(resp.Data.OrderBy), ShouldEqual, 2)

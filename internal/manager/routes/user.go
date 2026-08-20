@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
@@ -23,6 +25,12 @@ var (
 	ErrUsernameOrEmailAlreadyExist = manager.CreateCodeError(http.StatusBadRequest, manager.CodeUsernameOrEmailAlreadyExist, nil)
 	// ErrTooManyAccessKey 表示用户创建的访问密钥数量已达上限
 	ErrTooManyAccessKey = manager.CreateCodeError(http.StatusBadRequest, manager.CodeTooManyAccessKey, nil)
+	// ErrFrontendConfigConflict 表示前端配置更新冲突（上传的哈希或版本号与服务端不一致）
+	// 多浏览器端登录时，其他浏览器已抢先更新则触发该错误
+	ErrFrontendConfigConflict = manager.CreateCodeError(http.StatusConflict, manager.CodeFrontendConfigConflict, nil)
+	// ErrFrontendConfigSyncDisabled 表示前端配置同步未开启
+	// 用户关闭同步开关后，后端拒绝接收配置上传
+	ErrFrontendConfigSyncDisabled = manager.CreateCodeError(http.StatusBadRequest, manager.CodeFrontendConfigSyncDisabled, nil)
 )
 
 // UserProfileChangeIn 定义用户个人资料修改的输入结构体
@@ -30,6 +38,13 @@ var (
 type UserProfileChangeIn struct {
 	NickleName string `json:"nickleName" viper:"nicklename" prompt:"请输入昵称" binding:"required,min=6,max=32,alphaunicode"` // 用户昵称，必填，6-32个字符，支持Unicode字母
 	Email      string `json:"email" viper:"email" prompt:"请输入用户邮箱" binding:"required,min=10,max=128,email"`              // 用户邮箱，必填，10-128个字符，需符合邮箱格式
+}
+
+// UserTokenOut 定义 JWT 令牌的输出结构体
+// 用于登录、令牌刷新等接口在响应体中返回 JWT 令牌，
+// 供前端在 Cookie 不可跨主机读取的场景（如 localhost 与 127.0.0.1）下持久化使用
+type UserTokenOut struct {
+	Token string `json:"token"` // JWT 令牌（含 Bearer 前缀）
 }
 
 // UserPasswordLoginIn 定义密码登录的输入结构体
@@ -79,6 +94,36 @@ type UserAccessKeyOut struct {
 	Description     string     `json:"description"`     // 描述信息
 	ExpiredAt       *time.Time `json:"expiredAt"`       // 过期时间
 	LastAccessAt    *time.Time `json:"lastAccessAt"`    // 最后访问时间
+}
+
+// UserFrontendConfigOut 定义用户前端页面配置的输出结构体
+// 用于查询/同步接口返回用户当前的配置内容与并发校验元数据
+type UserFrontendConfigOut struct {
+	SyncEnabled bool   `json:"syncEnabled"` // 是否开启前端配置同步
+	Hash        string `json:"hash"`        // 配置内容的 SHA-256 十六进制摘要
+	Version     uint64 `json:"version"`     // 配置版本号，每次成功同步递增
+	Config      string `json:"config"`      // 配置内容（JSON 文本）
+}
+
+// UserFrontendConfigSyncIn 定义前端配置同步上传的输入结构体
+// 携带上一次同步的哈希与版本号，用于乐观锁并发校验：
+// 任一不一致说明其他浏览器已抢先更新，后端拒绝本次写入
+type UserFrontendConfigSyncIn struct {
+	PrevHash    string `json:"prevHash"`                            // 上一次同步的配置哈希，首次同步为空字符串
+	PrevVersion uint64 `json:"prevVersion"`                         // 上一次同步的配置版本号，首次同步为 0
+	Config      string `json:"config" binding:"required,max=65536"` // 新的配置内容（JSON 文本），必填且不超过 64KB
+}
+
+// UserFrontendConfigSyncEnabledIn 定义前端配置同步开关的输入结构体
+type UserFrontendConfigSyncEnabledIn struct {
+	Enabled bool `json:"enabled"` // 是否开启前端配置同步
+}
+
+// frontendConfigHash 计算前端配置内容的 SHA-256 十六进制摘要
+// 配置内容相同时摘要相同，用于乐观锁并发校验
+func frontendConfigHash(config string) string {
+	sum := sha256.Sum256([]byte(config))
+	return hex.EncodeToString(sum[:])
 }
 
 // userRegister 处理用户注册请求
@@ -147,9 +192,9 @@ func userPasswordLogin(c *gin.Context) {
 		err.AbortWithGinH(c)
 		return
 	} else {
-		// 将JWT令牌注入Cookie
+		// 将JWT令牌注入Cookie，并在响应体中返回令牌，供跨源前端持久化使用
 		auth.TokenCookieInject(c, token)
-		manager.SimpleOK.AbortWithGinH(c)
+		manager.SimpleOK.AbortWithGinW(c, UserTokenOut{Token: token})
 		return
 	}
 }
@@ -241,9 +286,9 @@ func userSelfJwtRefresh(c *gin.Context) {
 		codeErr.AbortWithGinH(c)
 		return
 	}
-	// 将新令牌注入Cookie
+	// 将新令牌注入Cookie，并在响应体中返回令牌，供跨源前端持久化使用
 	auth.TokenCookieInject(c, newToken)
-	manager.SimpleOK.AbortWithGinH(c)
+	manager.SimpleOK.AbortWithGinW(c, UserTokenOut{Token: newToken})
 }
 
 // userSelfAuthorizationInfoGet 获取用户授权信息
@@ -479,4 +524,125 @@ func userSelfAccessKeyEnabled(enabled bool) gin.HandlerFunc {
 			LastAccessAt:    key.LastAccessAt,
 		})
 	}
+}
+
+// userSelfFrontendConfigGet 获取当前用户的前端页面配置
+// 路由：POST /api/v1/user/self/frontend-config/get
+// 功能：返回用户保存的配置内容、哈希、版本号与同步开关状态，
+// 前端登录后据此恢复跨主机的页面配置
+func userSelfFrontendConfigGet(c *gin.Context) {
+	// 从上下文中获取当前用户
+	user, codeErr := manager.GetUser(c)
+	if codeErr != nil {
+		codeErr.AbortWithGinH(c)
+		return
+	}
+	logger := manager.GetLogger(c)
+	db := manager.GetCoreDatabase(c)
+	// 从数据库重新加载用户配置（必须执行 SQL 查询以确保安全）
+	var target core.User
+	if err := db.Take(&target, &core.User{UnionID: user.UnionID}).Error; err != nil {
+		logger.Errorf(c, nil, "cannot load frontend config of user %s, cause: %v", user.UnionID.String(), err)
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	// 返回配置状态
+	manager.SimpleOK.AbortWithGinW(c, UserFrontendConfigOut{
+		SyncEnabled: target.FrontendConfigSyncEnabled,
+		Hash:        target.FrontendConfigHash,
+		Version:     target.FrontendConfigVersion,
+		Config:      target.FrontendConfig,
+	})
+}
+
+// userSelfFrontendConfigSync 同步上传当前用户的前端页面配置
+// 路由：POST /api/v1/user/self/frontend-config/sync
+// 功能：使用乐观锁条件更新保存配置，并发安全：
+//   - 必须携带上一次同步的哈希与版本号，与数据库任一不一致则拒绝写入（其他浏览器已抢先更新）
+//   - 同步开关未开启时拒绝接收配置
+//
+// 响应：返回同步后的最新配置状态（哈希、版本号、配置内容）
+func userSelfFrontendConfigSync(c *gin.Context) {
+	var in UserFrontendConfigSyncIn
+	// 绑定并验证请求体
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	// 从上下文中获取当前用户
+	user, codeErr := manager.GetUser(c)
+	if codeErr != nil {
+		codeErr.AbortWithGinH(c)
+		return
+	}
+	logger := manager.GetLogger(c)
+	db := manager.GetCoreDatabase(c)
+	// 从数据库重新加载用户配置（必须执行 SQL 查询以确保安全）
+	var target core.User
+	if err := db.Take(&target, &core.User{UnionID: user.UnionID}).Error; err != nil {
+		logger.Errorf(c, nil, "cannot load frontend config of user %s, cause: %v", user.UnionID.String(), err)
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	// 校验同步开关，未开启时拒绝接收配置上传
+	if !target.FrontendConfigSyncEnabled {
+		ErrFrontendConfigSyncDisabled.AbortWithGinH(c)
+		return
+	}
+	// 计算新配置的哈希与版本号
+	newHash := frontendConfigHash(in.Config)
+	newVersion := target.FrontendConfigVersion + 1
+	// 乐观锁条件更新：哈希与版本号任一不一致（其他浏览器已更新）则 RowsAffected 为 0
+	result := db.Model(&core.User{}).
+		Where("union_id = ? AND frontend_config_hash = ? AND frontend_config_version = ?",
+			user.UnionID.String(), in.PrevHash, in.PrevVersion).
+		Updates(map[string]any{
+			"frontend_config":         in.Config,
+			"frontend_config_hash":    newHash,
+			"frontend_config_version": newVersion,
+		})
+	if result.Error != nil {
+		logger.Errorf(c, nil, "cannot sync frontend config of user %s, cause: %v", user.UnionID.String(), result.Error)
+		manager.CreateAccidentError(result.Error).AbortWithGinH(c)
+		return
+	} else if result.RowsAffected == 0 {
+		// 并发竞态：其他浏览器已抢先更新，拒绝本次写入
+		ErrFrontendConfigConflict.AbortWithGinH(c)
+		return
+	}
+	// 返回同步后的最新配置状态
+	manager.SimpleOK.AbortWithGinW(c, UserFrontendConfigOut{
+		SyncEnabled: true,
+		Hash:        newHash,
+		Version:     newVersion,
+		Config:      in.Config,
+	})
+}
+
+// userSelfFrontendConfigSyncEnabledSet 设置当前用户的前端配置同步开关
+// 路由：POST /api/v1/user/self/frontend-config/sync-enabled/set
+// 功能：开启后允许浏览器上传配置，关闭后后端拒绝接收配置上传
+func userSelfFrontendConfigSyncEnabledSet(c *gin.Context) {
+	var in UserFrontendConfigSyncEnabledIn
+	// 绑定并验证请求体
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	// 从上下文中获取当前用户
+	user, codeErr := manager.GetUser(c)
+	if codeErr != nil {
+		codeErr.AbortWithGinH(c)
+		return
+	}
+	logger := manager.GetLogger(c)
+	db := manager.GetCoreDatabase(c)
+	if err := db.Model(&core.User{}).Where("union_id = ?", user.UnionID.String()).
+		Update("frontend_config_sync_enabled", in.Enabled).Error; err != nil {
+		logger.Errorf(c, nil, "cannot set frontend config sync enabled of user %s, cause: %v", user.UnionID.String(), err)
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	// 返回成功响应
+	manager.SimpleOK.AbortWithGinH(c)
 }

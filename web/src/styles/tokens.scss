@@ -1,0 +1,64 @@
+/**
+ * src/styles/tokens.scss
+ *
+ * Design token layer. Defines SASS variables ($zk-*) and the matching CSS
+ * custom properties (--zk-*) exported on :root.
+ *
+ * NOTE: Color palettes are intentionally NOT defined here. The single source
+ * of truth for colors is the Vuetify theme (`--v-theme-*` CSS variables),
+ * which is defined in the Vuetify theme configuration (src/plugins/vuetify.ts).
+ * Consume colors via `rgb(var(--v-theme-xxx))` instead.
+ */
+
+// Font families
+$zk-font-family:
+  "Roboto",
+  "PingFang SC",
+  "Hiragino Sans GB",
+  "Microsoft YaHei",
+  "Noto Sans SC",
+  system-ui,
+  -apple-system,
+  "Segoe UI",
+  sans-serif;
+// stylelint-disable-next-line scss/dollar-variable-colon-space-after
+$zk-font-mono:
+  ui-monospace, "SF Mono", sfmono-regular, menlo, consolas, "Liberation Mono", monospace;
+
+// Border radius
+$zk-radius-sm: 4px;
+$zk-radius-md: 6px;
+$zk-radius-lg: 12px;
+
+// Spacing (4px base scale)
+$zk-space-1: 4px;
+$zk-space-2: 8px;
+$zk-space-3: 12px;
+$zk-space-4: 16px;
+$zk-space-5: 24px;
+$zk-space-6: 32px;
+
+// Elevation shadows tuned for the dark theme (subtle instead of heavy)
+$zk-shadow-sm:
+  0 1px 2px rgb(0 0 0 / 20%),
+  0 1px 3px rgb(0 0 0 / 30%);
+$zk-shadow-md:
+  0 2px 4px rgb(0 0 0 / 24%),
+  0 4px 12px rgb(0 0 0 / 32%);
+
+// Export the same tokens as CSS custom properties
+:root {
+  --zk-font-family: #{$zk-font-family};
+  --zk-font-mono: #{$zk-font-mono};
+  --zk-radius-sm: #{$zk-radius-sm};
+  --zk-radius-md: #{$zk-radius-md};
+  --zk-radius-lg: #{$zk-radius-lg};
+  --zk-space-1: #{$zk-space-1};
+  --zk-space-2: #{$zk-space-2};
+  --zk-space-3: #{$zk-space-3};
+  --zk-space-4: #{$zk-space-4};
+  --zk-space-5: #{$zk-space-5};
+  --zk-space-6: #{$zk-space-6};
+  --zk-shadow-sm: #{$zk-shadow-sm};
+  --zk-shadow-md: #{$zk-shadow-md};
+}

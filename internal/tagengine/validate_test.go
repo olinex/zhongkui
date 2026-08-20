@@ -64,11 +64,14 @@ func TestInspectRego(t *testing.T) {
 			So(errs[0].Line, ShouldBeGreaterThan, 0)
 		})
 
-		Convey("包名非 zki 应返回 ErrInvalidRego 描述且无行列定位", func() {
+		Convey("包名非 zki 应返回契约错误消息键且无行列定位", func() {
 			errs, ok := InspectRego("package other\n" + `tags contains "x"`)
 			So(ok, ShouldBeFalse)
 			So(errs, ShouldHaveLength, 1)
-			So(errs[0].Message, ShouldContainSubstring, ErrInvalidRego.Error())
+			// Message 为 i18n 消息键，文案由接口层按请求语言翻译后输出
+			So(errs[0].Message, ShouldEqual, "tagrule.rego-invalid")
+			So(errs[0].Line, ShouldEqual, 0)
+			So(errs[0].Column, ShouldEqual, 0)
 		})
 
 		Convey("空字符串应返回 false", func() {

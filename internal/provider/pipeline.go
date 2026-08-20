@@ -13,6 +13,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 const (
@@ -67,7 +68,7 @@ func newPipelineSchedulerProvider(ctx context.Context) do.Provider[*etcd.Electio
 	return func(i do.Injector) (*etcd.Election, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
+		} else if cfg, err := pipeline.ExtractConfig(viper, validator.Validate); err != nil {
 			return nil, errors.WithStack(err)
 		} else if redis, err := InvokePipelineRedis(i); err != nil {
 			return nil, errors.WithStack(err)
@@ -91,7 +92,7 @@ func newPipelineTaskRegistryProvider() do.Provider[etl.HandlerFuncs] {
 	return func(i do.Injector) (etl.HandlerFuncs, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
+		} else if cfg, err := pipeline.ExtractConfig(viper, validator.Validate); err != nil {
 			return nil, errors.WithStack(err)
 		} else if err := initDetectors(i); err != nil {
 			return nil, errors.WithStack(err)
@@ -105,7 +106,7 @@ func newPipelineProcessorFactoriesRegistryProvider() do.Provider[etl.ProcessorFa
 	return func(i do.Injector) (etl.ProcessorFactories, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		} else if cfg, err := pipeline.ExtractConfig(viper); err != nil {
+		} else if cfg, err := pipeline.ExtractConfig(viper, validator.Validate); err != nil {
 			return nil, errors.WithStack(err)
 		} else if err := initDetectors(i); err != nil {
 			return nil, errors.WithStack(err)
@@ -127,38 +128,29 @@ func newPipelineClientProvider() do.Provider[*pipeline.Client] {
 
 func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server] {
 	return func(i do.Injector) (*pipeline.Server, error) {
-		viper, err := InvokeViper(i)
-		if err != nil {
+		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		cfg, err := pipeline.ExtractConfig(viper)
-		if err != nil {
+		} else if cfg, err := pipeline.ExtractConfig(viper, validator.Validate); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		redisClient, err := InvokePipelineRedis(i)
-		if err != nil {
+		} else if redisClient, err := InvokePipelineRedis(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		logger, err := InvokePipelineLogger(i)
-		if err != nil {
+		} else if logger, err := InvokePipelineLogger(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
-		handlers, err := InvokePipelineTaskRegistry(i)
-		if err != nil {
+		} else if handlers, err := InvokePipelineTaskRegistry(i); err != nil {
 			return nil, errors.WithStack(err)
-		}
+		} else {
+			ctxFunc := TaskContext(ctx, i)
+			rawCfg := cfg.ToAsynqConfig(ctxFunc, logger)
 
-		ctxFunc := TaskContext(ctx, i)
-		rawCfg := cfg.ToAsynqConfig(ctxFunc, logger)
-
-		return pipeline.NewServer(
-			ctx,
-			redisClient,
-			rawCfg,
-			logger,
-			handlers,
-			otel.AsynqServerMiddleware(),
-		), nil
+			return pipeline.NewServer(
+				ctx,
+				redisClient,
+				rawCfg,
+				logger,
+				handlers,
+				otel.AsynqServerMiddleware(),
+			), nil
+		}
 	}
 }
 

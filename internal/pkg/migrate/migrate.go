@@ -12,6 +12,7 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/pterm/pterm"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 var (
@@ -19,22 +20,49 @@ var (
 	resetColor = "\033[00m"
 )
 
+// ptermGooseLogger 将 goose 库的日志输出转发到 pterm
+// goose 是第三方库，其日志文本为英文硬编码，通过 SetLogger 注入后在此统一翻译，
+// 避免逐个发现未翻译文本再修补
 type ptermGooseLogger struct{}
 
 func (l ptermGooseLogger) Printf(format string, v ...any) {
-	msg := strings.TrimSpace(fmt.Sprintf(format, v...))
+	msg := translateGooseLog(format, v...)
 	if msg == "" {
 		return
 	}
-	msg = strings.TrimPrefix(msg, grayColor)
-	msg = strings.TrimSuffix(msg, resetColor)
-
 	pterm.Info.Println(msg)
 }
 
 func (l ptermGooseLogger) Fatalf(format string, v ...any) {
-	msg := strings.TrimSpace(fmt.Sprintf(format, v...))
-	pterm.Fatal.Println(msg)
+	pterm.Fatal.Println(translateGooseLog(format, v...))
+}
+
+// translateGooseLog 统一翻译 goose 库日志消息
+// 通过匹配 goose 库内的固定格式串（库内常量，长期稳定）实现集中翻译；
+// 未匹配的消息（如 verbose 模式输出的 SQL 语句原文）原样透传
+func translateGooseLog(format string, v ...any) string {
+	switch format {
+	case "goose: successfully migrated database to version: %d":
+		return translate.T("cli.migrate.goose-migrated", map[string]any{"Version": v[0]})
+	case "goose: no migrations to run. current version: %d":
+		return translate.T("cli.migrate.goose-no-migrations", map[string]any{"Version": v[0]})
+	case "goose: up to current file version: %d":
+		return translate.T("cli.migrate.goose-up-to", map[string]any{"Version": v[0]})
+	case "goose: down to current file version: %d":
+		return translate.T("cli.migrate.goose-down-to", map[string]any{"Version": v[0]})
+	case "goose: migration file not found for current version (%d), error: %s":
+		return translate.T("cli.migrate.goose-file-not-found", map[string]any{"Version": v[0], "Err": v[1]})
+	case "OK   %s (%s)":
+		return translate.T("cli.migrate.goose-ok", map[string]any{"Source": v[0], "Duration": v[1]})
+	case "EMPTY %s (%s)":
+		return translate.T("cli.migrate.goose-empty", map[string]any{"Source": v[0], "Duration": v[1]})
+	default:
+		// 未匹配的消息（如 verbose 模式输出的 SQL 语句）原样透传
+		msg := strings.TrimSpace(fmt.Sprintf(format, v...))
+		msg = strings.TrimPrefix(msg, grayColor)
+		msg = strings.TrimSuffix(msg, resetColor)
+		return msg
+	}
 }
 
 type Migrator struct {
@@ -125,7 +153,7 @@ func (m *Migrator) Close() error {
 }
 
 func (m *Migrator) Up(ctx context.Context) error {
-	pterm.Info.Printf("running goose up on %s\n", m.cfg.Name)
+	pterm.Info.Println(translate.T("cli.migrate.up", map[string]any{"DB": m.cfg.Name}))
 	if err := goose.UpContext(ctx, m.db, m.cfg.MigrationsDir); err != nil {
 		return errors.WithStack(err)
 	}
@@ -133,7 +161,7 @@ func (m *Migrator) Up(ctx context.Context) error {
 }
 
 func (m *Migrator) UpTo(ctx context.Context, version int64) error {
-	pterm.Info.Printf("running goose up-to %d on %s\n", version, m.cfg.Name)
+	pterm.Info.Println(translate.T("cli.migrate.up-to", map[string]any{"DB": m.cfg.Name, "Version": version}))
 	if err := goose.UpToContext(ctx, m.db, m.cfg.MigrationsDir, version); err != nil {
 		return errors.WithStack(err)
 	}
@@ -141,16 +169,26 @@ func (m *Migrator) UpTo(ctx context.Context, version int64) error {
 }
 
 func (m *Migrator) Down(ctx context.Context) error {
-	pterm.Warning.Printf("running goose down on %s\n", m.cfg.Name)
+	pterm.Warning.Println(translate.T("cli.migrate.down", map[string]any{"DB": m.cfg.Name}))
 	if err := goose.DownContext(ctx, m.db, m.cfg.MigrationsDir); err != nil {
+		// 数据库尚无已应用的迁移时，goose 返回 no current version found，属正常边界而非错误
+		if errors.Is(err, goose.ErrNoCurrentVersion) {
+			pterm.Warning.Println(translate.T("cli.migrate.down-no-current-version", map[string]any{"DB": m.cfg.Name}))
+			return nil
+		}
 		return errors.WithStack(err)
 	}
 	return nil
 }
 
 func (m *Migrator) DownTo(ctx context.Context, version int64) error {
-	pterm.Warning.Printf("running goose down-to %d on %s\n", version, m.cfg.Name)
+	pterm.Warning.Println(translate.T("cli.migrate.down-to", map[string]any{"DB": m.cfg.Name, "Version": version}))
 	if err := goose.DownToContext(ctx, m.db, m.cfg.MigrationsDir, version); err != nil {
+		// 数据库尚无已应用的迁移时，goose 返回 no current version found，属正常边界而非错误
+		if errors.Is(err, goose.ErrNoCurrentVersion) {
+			pterm.Warning.Println(translate.T("cli.migrate.down-to-no-current-version", map[string]any{"DB": m.cfg.Name}))
+			return nil
+		}
 		return errors.WithStack(err)
 	}
 	return nil
@@ -168,14 +206,19 @@ func (m *Migrator) Status(ctx context.Context) error {
 	appliedVersions := m.getAppliedVersions(ctx)
 
 	data := pterm.TableData{
-		{"Version", "Migration", "Status", "Applied At"},
+		{
+			translate.T("cli.migrate.col-version", nil),
+			translate.T("cli.migrate.col-migration", nil),
+			translate.T("cli.migrate.col-status", nil),
+			translate.T("cli.migrate.col-applied-at", nil),
+		},
 	}
 
 	for _, migration := range migrations {
-		status := "Pending"
+		status := translate.T("cli.migrate.status-pending", nil)
 		appliedAt := "-"
 		if record, ok := appliedVersions[migration.Version]; ok {
-			status = "Applied"
+			status = translate.T("cli.migrate.status-applied", nil)
 			appliedAt = record.Format(time.RFC3339)
 		}
 		filename := filepath.Base(migration.Source)
@@ -185,7 +228,7 @@ func (m *Migrator) Status(ctx context.Context) error {
 	}
 
 	if len(migrations) == 0 {
-		pterm.Warning.Println("no migration file found")
+		pterm.Warning.Println(translate.T("cli.migrate.no-file", nil))
 		return nil
 	}
 

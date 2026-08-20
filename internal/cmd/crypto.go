@@ -8,14 +8,15 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 var passwordBookOutput string
 
 var createPasswordBookCmd = &cobra.Command{
 	Use:   "password-book",
-	Short: "生成用于密钥派生的密码本文件",
-	Long:  "生成一个加密安全的随机密码本文件（65536 字节），用于子密钥派生。",
+	Short: "cmd.create.password-book.short",
+	Long:  "cmd.create.password-book.long",
 	Run: func(cmd *cobra.Command, args []string) {
 		// Generate PasswordBookSize (65536) random bytes using crypto/rand
 		data := make([]byte, key.PasswordBookSize)
@@ -30,18 +31,18 @@ var createPasswordBookCmd = &cobra.Command{
 				pterm.Error.Println(err.Error())
 				return
 			}
-			fmt.Printf("Password book generated successfully: %s (%d bytes)\n", passwordBookOutput, len(data))
+			fmt.Println(translate.T("cli.crypto.book-generated-file", map[string]any{"Path": passwordBookOutput, "Bytes": len(data)}))
 		} else {
 			// Write to stdout
 			if _, err := os.Stdout.Write(data); err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}
-			fmt.Fprintf(os.Stderr, "Password book generated successfully (%d bytes). Use --output to save to a file.\n", len(data))
+			fmt.Fprintln(os.Stderr, translate.T("cli.crypto.book-generated-stdout", map[string]any{"Bytes": len(data)}))
 		}
 	},
 }
 
 func init() {
-	createPasswordBookCmd.Flags().StringVarP(&passwordBookOutput, "output", "o", "", "输出文件路径（未指定时输出到标准输出）")
+	createPasswordBookCmd.Flags().StringVarP(&passwordBookOutput, "output", "o", "", "flag.create.password-book.output")
 }

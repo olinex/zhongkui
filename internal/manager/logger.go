@@ -42,9 +42,10 @@ func (a *ApiLogger) logf(lvl zapcore.Level, c *gin.Context, fields []any, templa
 		zap.String("method", c.Request.Method),
 		zap.String("path", c.Request.URL.Path),
 		zap.String("ip", c.ClientIP()),
-		zap.Any("context", c.Request.Context()),
 	)
-	a.logger.With(fields...).WithOptions(
+	// Ctx 仅在 OTEL 启用时注入 context 字段供 otelzap trace 关联，
+	// 且会被 contextStrippingCore 从输出中剥离；未启用时为零开销 no-op
+	a.logger.Ctx(c.Request.Context()).With(fields...).WithOptions(
 		zap.AddCallerSkip(2),
 	).Logf(
 		lvl,

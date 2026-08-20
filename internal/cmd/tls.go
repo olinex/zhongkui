@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
 	tlsutil "zhongkui.com/zhongkui/internal/pkg/tls"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -22,14 +24,14 @@ type TLSInputs struct {
 
 var generateTLSCmd = &cobra.Command{
 	Use:   "tls",
-	Short: "创建自签名 TLS 证书",
-	Long:  "生成自签名 TLS 证书和密钥对。参数可以通过命令行标志提供，也可以通过交互式提示输入。",
+	Short: "cmd.create.tls.short",
+	Long:  "cmd.create.tls.long",
 	Run: func(cmd *cobra.Command, args []string) {
 		_, injector := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(injector)
 
 		var inputs TLSInputs
-		if err := cliinput.Extract(v, &inputs, ""); err != nil {
+		if err := cliinput.Extract(v, validator.Validate, &inputs, ""); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
@@ -61,19 +63,19 @@ var generateTLSCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Success.Printf("tls key file %s was created\n", keyPath)
+		pterm.Success.Println(translate.T("cli.tls.key-created", map[string]any{"Path": keyPath}))
 		if _, err = certFile.WriteString(cert); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
-		pterm.Success.Printf("tls cert file %s was created\n", certPath)
+		pterm.Success.Println(translate.T("cli.tls.cert-created", map[string]any{"Path": certPath}))
 	},
 }
 
 func init() {
 	flags := generateTLSCmd.Flags()
-	flags.String("name", "", "TLS 文件名称")
-	flags.String("dir-path", "", "TLS 文件存储目录路径")
-	flags.Duration("ttl", 0, "TLS 文件自当前时刻起的有效期（如 8760h）")
-	flags.StringArray("dns-names", nil, "TLS 文件的域名列表（逗号分隔）")
+	flags.String("name", "", "flag.create.tls.name")
+	flags.String("dir-path", "", "flag.create.tls.dir-path")
+	flags.Duration("ttl", 0, "flag.create.tls.ttl")
+	flags.StringArray("dns-names", nil, "flag.create.tls.dns-names")
 }

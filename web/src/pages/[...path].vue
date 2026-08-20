@@ -1,4 +1,6 @@
-<template></template>
+<template>
+  <div></div>
+</template>
 
 <route lang="yaml">
 name: "404 Wide Match"

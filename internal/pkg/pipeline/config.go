@@ -5,8 +5,8 @@ package pipeline
 
 import (
 	"context"
-	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/hibiken/asynq"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
@@ -39,7 +39,7 @@ type SchedulerTaskConfig struct {
 	// 新游标写回 etcd。该模式能保证积压期间错过的触发点被逐一补投、且不会重复触发同一
 	// 时间点。此时 CronSpec 字段将被忽略。
 	// 默认值: 0（0 表示未启用游标调度，任务仍按 CronSpec 调度）
-	Interval time.Duration `mapstructure:"interval" json:"interval" default:"0" comment:"游标定时任务的触发间隔，大于 0 时启用游标调度模式并忽略 cronSpec"` // 触发间隔
+	Interval serializer.DurationNS `mapstructure:"interval" json:"interval" default:"0" comment:"游标定时任务的触发间隔，大于 0 时启用游标调度模式并忽略 cronSpec"` // 触发间隔
 
 	// Queue 队列名称，指定任务被发送到的队列。
 	// 默认值: "default"
@@ -47,7 +47,7 @@ type SchedulerTaskConfig struct {
 
 	// Timeout 任务执行超时时间，指定任务执行的最大时间限制。
 	// 默认值: 24h (24小时)
-	Timeout time.Duration `mapstructure:"timeout" json:"timeout" default:"24h" comment:"任务执行超时时间 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 任务执行超时时间
+	Timeout serializer.DurationNS `mapstructure:"timeout" json:"timeout" default:"24h" comment:"任务执行超时时间 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 任务执行超时时间
 
 	// MaxRetry 最大重试次数，指定任务失败后的重试次数。
 	// 默认值: 3
@@ -75,17 +75,17 @@ type SchedulerConfig struct {
 
 	// SyncInterval 同步间隔，调度器从数据库同步数据的频率。
 	// 默认值: 1m (1分钟)
-	SyncInterval time.Duration `mapstructure:"syncInterval" default:"1m" comment:"从数据库同步调度器数据的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 同步间隔
+	SyncInterval serializer.DurationNS `mapstructure:"syncInterval" default:"1m" comment:"从数据库同步调度器数据的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 同步间隔
 
 	// CursorCheckInterval 游标检查间隔，游标调度器执行一轮游标推进计算的循环间隔。
 	// 每次运行从 etcd 读取各游标任务的上一次游标，依据当前时间计算并补投错过的触发点，
 	// 再写回新游标。该间隔越小，触发延迟越低，但 etcd 读取频率也越高。
 	// 默认值: 1m (1分钟)
-	CursorCheckInterval time.Duration `mapstructure:"cursorCheckInterval" default:"1m" comment:"游标调度器检查触发点、执行游标推进计算的间隔"` // 游标检查间隔
+	CursorCheckInterval serializer.DurationNS `mapstructure:"cursorCheckInterval" default:"1m" comment:"游标调度器检查触发点、执行游标推进计算的间隔"` // 游标检查间隔
 
 	// HeartbeatInterval 心跳间隔，调度器发送心跳信号的频率。
 	// 默认值: 10s (10秒)
-	HeartbeatInterval time.Duration `mapstructure:"heartbeatInterval" default:"10s" comment:"调度器心跳发送间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 心跳间隔
+	HeartbeatInterval serializer.DurationNS `mapstructure:"heartbeatInterval" default:"10s" comment:"调度器心跳发送间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 心跳间隔
 
 	// ForceFlush 强制刷新，在同步时是否强制刷新调度器队列。
 	// 默认值: false
@@ -112,19 +112,19 @@ type Config struct {
 
 	// TaskCheckInterval 任务检查间隔，检查队列中是否有新任务的频率。
 	// 默认值: 1s (1秒)
-	TaskCheckInterval time.Duration `mapstructure:"taskCheckInterval" default:"1s" comment:"检查队列中新任务的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-TaskCheckInterval)"` // 任务检查间隔
+	TaskCheckInterval serializer.DurationNS `mapstructure:"taskCheckInterval" default:"1s" comment:"检查队列中新任务的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-TaskCheckInterval)"` // 任务检查间隔
 
 	// HealthCheckInterval 健康检查间隔，检查工作节点健康状态的频率。
 	// 默认值: 15s (15秒)
-	HealthCheckInterval time.Duration `mapstructure:"healthCheckInterval" default:"15s" comment:"检查工作节点健康状态的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-HealthCheckInterval)"` // 健康检查间隔
+	HealthCheckInterval serializer.DurationNS `mapstructure:"healthCheckInterval" default:"15s" comment:"检查工作节点健康状态的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-HealthCheckInterval)"` // 健康检查间隔
 
 	// DelayedTaskCheckInterval 延迟任务检查间隔，检查延迟任务的频率。
 	// 默认值: 5s (5秒)
-	DelayedTaskCheckInterval time.Duration `mapstructure:"delayedTaskCheckInterval" default:"5s" comment:"检查延迟任务的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-DelayedTaskCheckInterval)"` // 延迟任务检查间隔
+	DelayedTaskCheckInterval serializer.DurationNS `mapstructure:"delayedTaskCheckInterval" default:"5s" comment:"检查延迟任务的间隔 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-DelayedTaskCheckInterval)"` // 延迟任务检查间隔
 
 	// ShutdownTimeout 关闭超时时间，优雅关闭的最大等待时间。
 	// 默认值: 10s (10秒)
-	ShutdownTimeout time.Duration `mapstructure:"shutdownTimeout" default:"10s" comment:"优雅关闭的最大等待时间 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 关闭超时时间
+	ShutdownTimeout serializer.DurationNS `mapstructure:"shutdownTimeout" default:"10s" comment:"优雅关闭的最大等待时间 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Config-ShutdownTimeout)"` // 关闭超时时间
 
 	// Queues 队列优先级配置，定义不同队列的优先级权重。
 	// 数值越高表示优先级越高，格式为 {"队列名": 权重}。
@@ -166,9 +166,9 @@ func (c *Config) ToAsynqConfig(
 	return asynq.Config{
 		BaseContext:         ctxFunc,
 		Concurrency:         c.Concurrency,
-		TaskCheckInterval:   c.TaskCheckInterval,
-		HealthCheckInterval: c.HealthCheckInterval,
-		ShutdownTimeout:     c.ShutdownTimeout,
+		TaskCheckInterval:   c.TaskCheckInterval.Std(),
+		HealthCheckInterval: c.HealthCheckInterval.Std(),
+		ShutdownTimeout:     c.ShutdownTimeout.Std(),
 		Queues:              c.Queues,
 		StrictPriority:      c.StrictPriority,
 		Logger:              logger,
@@ -186,6 +186,6 @@ func DescribeConfig() config.ConfigDescriptions {
 // 以 Prefix（"pipeline"）为键前缀从 viper.Viper 实例中读取配置，
 // 反序列化为 Config 结构体并应用 default 标签的默认值。
 // 返回 (*Config, error)：成功时返回已填充的配置指针，失败时返回错误。
-func ExtractConfig(v *viper.Viper) (*Config, error) {
-	return config.ExtractConfig[Config](v, Prefix)
+func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error) {
+	return config.ExtractConfig[Config](viper, validate, Prefix)
 }

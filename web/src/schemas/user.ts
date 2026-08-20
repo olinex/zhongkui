@@ -32,11 +32,7 @@ const email = yup
   .label("model.user.field.email");
 
 // access key field
-const enabled = yup
-  .bool()
-  .nonNullable()
-  .required()
-  .label("model.accessKey.field.enabled");
+const enabled = yup.bool().nonNullable().required().label("model.accessKey.field.enabled");
 const description = yup
   .string()
   .nonNullable()
@@ -44,11 +40,7 @@ const description = yup
   .min(6)
   .max(256)
   .label("model.accessKey.field.description");
-const expiredAt = yup
-  .date()
-  .default(null)
-  .nullable()
-  .label("model.accessKey.field.description");
+const expiredAt = yup.date().default(null).nullable().label("model.accessKey.field.description");
 
 export const loginSchema = yup.object({
   username,
@@ -64,6 +56,19 @@ export const resetPasswordSchema = yup.object({
 export const changeProfileSchema = yup.object({
   nickleName,
   email,
+});
+
+export const createUserSchema = yup.object({
+  username,
+  password,
+  passwordAgain: password.equals([yup.ref("password")]),
+  nickleName,
+  email,
+});
+
+export const adminResetPasswordSchema = yup.object({
+  newPassword: password,
+  newPasswordAgain: password.equals([yup.ref("newPassword")]),
 });
 
 export const accessKeySchema = yup.object({

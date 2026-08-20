@@ -9,19 +9,14 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
 var describeSchedulerCmd = &cobra.Command{
 	Use:   "scheduler",
-	Short: "从 etcd 打印定时任务配置",
-	Long: `从 etcd 打印定时任务的配置。
-使用 --name 指定一个或多个任务类型。未提供 --name 时，列出所有任务。
-
-示例：
-  zhongkui describe scheduler
-  zhongkui describe scheduler --name network:periodic:ipv4reassemble
-  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble`,
+	Short: "cmd.describe.scheduler.short",
+	Long:  "cmd.describe.scheduler.long",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
@@ -35,7 +30,7 @@ var describeSchedulerCmd = &cobra.Command{
 				return
 			}
 			if len(rsp.Kvs) == 0 {
-				pterm.Warning.Println("no scheduled task configs found in etcd")
+				pterm.Warning.Println(translate.T("cli.scheduler.none-found", nil))
 				return
 			}
 			renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp)
@@ -47,7 +42,7 @@ var describeSchedulerCmd = &cobra.Command{
 				return
 			}
 			if len(rsp.Kvs) == 0 {
-				pterm.Warning.Printf("scheduled task config not found: %s\n", name)
+				pterm.Warning.Println(translate.T("cli.scheduler.not-found", map[string]any{"Name": name}))
 				continue
 			}
 			if err := renderSchedulerTable(pipeline.SchedulerCfgEtcdPrefix, rsp); err != nil {
@@ -60,7 +55,15 @@ var describeSchedulerCmd = &cobra.Command{
 
 func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 	data := pterm.TableData{
-		{"name", "cronSpec", "interval", "queue", "timeout", "maxRetry", "enabled"},
+		{
+			translate.T("cli.scheduler.col-name", nil),
+			translate.T("cli.scheduler.col-cronspec", nil),
+			translate.T("cli.scheduler.col-interval", nil),
+			translate.T("cli.scheduler.col-queue", nil),
+			translate.T("cli.scheduler.col-timeout", nil),
+			translate.T("cli.scheduler.col-maxretry", nil),
+			translate.T("cli.scheduler.col-enabled", nil),
+		},
 	}
 	for _, kv := range rsp.Kvs {
 		var cfg pipeline.SchedulerTaskConfig
@@ -82,5 +85,5 @@ func renderSchedulerTable(prefix string, rsp *clientv3.GetResponse) error {
 }
 
 func init() {
-	describeSchedulerCmd.Flags().StringArrayP("name", "n", nil, "要打印的任务类型名称（可多次指定）")
+	describeSchedulerCmd.Flags().StringArrayP("name", "n", nil, "flag.describe.scheduler.name")
 }

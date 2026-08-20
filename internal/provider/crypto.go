@@ -5,6 +5,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
 const CryptoPrefix = "crypto"
@@ -13,7 +14,7 @@ func newKeyDerivationProvider() do.Provider[*key.KeyDerivation] {
 	return func(i do.Injector) (*key.KeyDerivation, error) {
 		if viper, err := InvokeViper(i); err != nil {
 			return nil, errors.WithStack(err)
-		} else if cfg, err := key.ExtractConfig(viper); err != nil {
+		} else if cfg, err := key.ExtractConfig(viper, validator.Validate); err != nil {
 			return nil, errors.WithStack(err)
 		} else if pb, err := key.LoadPasswordBook(cfg.PasswordBookPath); err != nil {
 			return nil, errors.WithStack(err)

@@ -9,6 +9,7 @@ import (
 
 	"github.com/pterm/pterm"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 type ColumnInfo struct {
@@ -98,34 +99,39 @@ func Diff(ctx context.Context, currentCfg, tempCfg *Config) error {
 
 	result := compareTableSets(currentTables, targetTables)
 	if result.Identical {
-		pterm.Success.Println("Database schema is up to date, no changes pending")
+		pterm.Success.Println(translate.T("cli.migrate.diff-identical", nil))
 		return nil
 	}
 
 	data := pterm.TableData{
-		{"Change", "Table", "Column", "Detail"},
+		{
+			translate.T("cli.migrate.col-change", nil),
+			translate.T("cli.migrate.col-table", nil),
+			translate.T("cli.migrate.col-column", nil),
+			translate.T("cli.migrate.col-detail", nil),
+		},
 	}
 
 	for _, t := range result.NewTables {
 		for _, col := range t.Columns {
-			data = append(data, []string{"New Table", t.Name, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
+			data = append(data, []string{translate.T("cli.migrate.diff-new-table", nil), t.Name, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
 		}
 	}
 	for _, t := range result.DroppedTables {
 		for _, col := range t.Columns {
-			data = append(data, []string{"Dropped Table", t.Name, col.Name, col.DataType})
+			data = append(data, []string{translate.T("cli.migrate.diff-dropped-table", nil), t.Name, col.Name, col.DataType})
 		}
 	}
 	for _, t := range result.ModifiedTables {
 		for _, col := range t.NewColumns {
-			data = append(data, []string{"New Column", t.TableName, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
+			data = append(data, []string{translate.T("cli.migrate.diff-new-column", nil), t.TableName, col.Name, fmt.Sprintf("%s %s", col.DataType, col.Nullable)})
 		}
 		for _, col := range t.DroppedColumns {
-			data = append(data, []string{"Dropped Column", t.TableName, col.Name, col.DataType})
+			data = append(data, []string{translate.T("cli.migrate.diff-dropped-column", nil), t.TableName, col.Name, col.DataType})
 		}
 		for _, col := range t.ModifiedColumns {
 			detail := fmt.Sprintf("%s → %s", col.OldType, col.NewType)
-			data = append(data, []string{"Modified", t.TableName, col.ColumnName, detail})
+			data = append(data, []string{translate.T("cli.migrate.diff-modified", nil), t.TableName, col.ColumnName, detail})
 		}
 	}
 

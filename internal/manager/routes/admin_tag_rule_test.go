@@ -16,8 +16,10 @@ import (
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
+	"gorm.io/datatypes"
 
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
@@ -47,6 +49,21 @@ var tagRuleModel = func() string {
 	return t
 }()
 
+// httpTransportTypeKey *network.HttpTransport 的类型键，作为模型选项/元信息/样例接口的入参。
+var httpTransportTypeKey = func() string {
+	t, err := tagengine.TypeKey(&network.HttpTransport{})
+	if err != nil {
+		panic("failed to compute http transport type key: " + err.Error())
+	}
+	return t
+}()
+
+// init 将测试用目标模型注册进引擎注册表，使写路径的模型注册校验（未注册即拒绝）放行。
+// 注册表为包级全局状态且重复注册会 panic，故仅在此 init 注册一次。
+func init() {
+	tagengine.Register(tagengine.Target{Type: &tagRuleTargetModel{}, DisplayName: "model.test.tagRuleTarget"})
+}
+
 // newTagRuleTestLogger 创建测试用日志记录器。
 func newTagRuleTestLogger() *logging.Logger {
 	config := zap.NewProductionConfig()
@@ -68,7 +85,7 @@ func createTagRuleTestDB() *database.DB {
 	} else {
 		sqlDB.SetMaxOpenConns(1)
 	}
-	if err := db.AutoMigrate(&tag.TagRule{}, &tag.TagRuleVersion{}); err != nil {
+	if err := db.AutoMigrate(&tag.TagRule{}, &tag.TagRuleVersion{}, &tag.TagRuleSample{}); err != nil {
 		panic("failed to migrate test database: " + err.Error())
 	}
 	return db
@@ -81,7 +98,7 @@ func registerTagRuleTestRoutes(r *gin.Engine, engine *tagengine.Engine) {
 	admin := r.Group("/admin")
 	{
 		admin.POST("/tag-rule/list", tagRuleListGet)
-		admin.OPTIONS("/tag-rule/list", ListOptionsGinHandler[*TagRuleListGetSearchIn, *TagRuleListOut])
+		admin.OPTIONS("/tag-rule/list", ListMetaGinHandler[*TagRuleListGetSearchIn, *TagRuleListOut]())
 		admin.POST("/tag-rule/create", engineMiddleware, tagRuleCreate)
 		admin.POST("/tag-rule/:id/get", tagRuleDetailGet)
 		admin.POST("/tag-rule/:id/update", engineMiddleware, tagRuleUpdate)
@@ -89,6 +106,9 @@ func registerTagRuleTestRoutes(r *gin.Engine, engine *tagengine.Engine) {
 		admin.POST("/tag-rule/:id/enable", engineMiddleware, tagRuleSetEnabled(true))
 		admin.POST("/tag-rule/:id/disable", engineMiddleware, tagRuleSetEnabled(false))
 		admin.POST("/tag-rule/validate", tagRuleValidate)
+		admin.POST("/tag-rule/model/options", tagRuleModelOptions)
+		admin.POST("/tag-rule/model/metadata", tagRuleModelMetadata)
+		admin.POST("/tag-rule/model/samples", tagRuleModelSamples)
 		admin.POST("/tag-rule/single/dry-run", tagRuleDryRun)
 		admin.POST("/tag-rule/group/dry-run", tagRuleDryRunGroup)
 		admin.POST("/tag-rule/:id/version/list", tagRuleVersionList)
@@ -479,6 +499,159 @@ func TestTagRuleValidate(t *testing.T) {
 			So(resp.Data.Errors[0].Line, ShouldBeGreaterThan, 0)
 			So(resp.Data.Errors[0].Message, ShouldNotBeEmpty)
 		})
+
+		Convey("携带 model 时未知 input 字段进入 warnings 且不阻断合法结果", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/validate", map[string]any{
+				"rego":  "package zki\n\ntags contains \"admin-login\" if {\n\tinput.methodd == \"POST\"\n}",
+				"model": tagRuleModel,
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data TagRuleValidateOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Valid, ShouldBeTrue)
+			So(len(resp.Data.Errors), ShouldEqual, 0)
+			So(len(resp.Data.Warnings), ShouldEqual, 1)
+			So(resp.Data.Warnings[0].Type, ShouldEqual, "warning")
+			// 告警明细经接口层按请求语言（测试 localizer 为 en）翻译为英文
+			So(resp.Data.Warnings[0].Message, ShouldEqual, "Field methodd does not exist in the input document of this model, please check the spelling")
+			So(resp.Data.Warnings[0].Hint, ShouldEqual, "Please choose a valid field from the input field panel or the completion list")
+		})
+
+		Convey("不携带 model 时 warnings 为空数组", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/validate", map[string]any{
+				"rego": "package zki\n\ntags contains \"admin-login\" if {\n\tinput.methodd == \"POST\"\n}",
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data TagRuleValidateOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Valid, ShouldBeTrue)
+			So(resp.Data.Warnings, ShouldNotBeNil)
+			So(len(resp.Data.Warnings), ShouldEqual, 0)
+		})
+	})
+}
+
+// TestTagRuleModelOptions 目标模型选项接口返回已注册模型列表。
+func TestTagRuleModelOptions(t *testing.T) {
+	Convey("测试标签规则目标模型选项接口", t, func() {
+		db := createTagRuleTestDB()
+		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
+		r := setupTagRuleTestRouter(db, engine)
+
+		Convey("返回已注册模型且含 HttpTransport", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/options", nil)
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data TagRuleModelOptionsOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(len(resp.Data.Items), ShouldBeGreaterThan, 0)
+			var found bool
+			for _, item := range resp.Data.Items {
+				if item.Value == httpTransportTypeKey {
+					found = true
+					So(item.Label, ShouldNotBeEmpty)
+				}
+			}
+			So(found, ShouldBeTrue)
+		})
+	})
+}
+
+// TestTagRuleModelMetadata 目标模型元信息接口返回字段列表，未注册模型返回错误码 1107。
+func TestTagRuleModelMetadata(t *testing.T) {
+	Convey("测试标签规则目标模型元信息接口", t, func() {
+		db := createTagRuleTestDB()
+		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
+		r := setupTagRuleTestRouter(db, engine)
+
+		Convey("HttpTransport 返回字段列表且含 method", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/metadata", map[string]any{
+				"model": httpTransportTypeKey,
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data TagRuleModelMetadataOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Model, ShouldEqual, httpTransportTypeKey)
+			So(len(resp.Data.Fields), ShouldBeGreaterThan, 0)
+			var found bool
+			for _, field := range resp.Data.Fields {
+				if field.Field == "method" {
+					found = true
+					So(field.Type, ShouldEqual, "string")
+					// Description 由接口层按请求语言（测试 localizer 为 en）翻译 DescriptionKey 填充
+					So(field.Description, ShouldEqual, "HTTP request method")
+				}
+				if field.Field == "client_ip" {
+					So(field.Description, ShouldEqual, "Client IP address")
+				}
+				if field.Field == "tags" {
+					So(field.Description, ShouldEqual, "Risk tag combination")
+				}
+			}
+			So(found, ShouldBeTrue)
+		})
+
+		Convey("未注册模型返回错误码 1107", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/metadata", map[string]any{
+				"model": "zhongkui.com/zhongkui/internal/models/network.NotExist",
+			})
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var resp struct {
+				Code int `json:"code"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Code, ShouldEqual, manager.CodeTagRuleModelNotRegistered)
+		})
+	})
+}
+
+// TestTagRuleModelSamples 目标模型样例接口懒供给样例并返回，未注册模型返回错误码 1107。
+func TestTagRuleModelSamples(t *testing.T) {
+	Convey("测试标签规则目标模型样例接口", t, func() {
+		db := createTagRuleTestDB()
+		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
+		r := setupTagRuleTestRouter(db, engine)
+
+		Convey("HttpTransport 懒供给样例且含 http-example", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/samples", map[string]any{
+				"model": httpTransportTypeKey,
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data TagRuleModelSamplesOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Model, ShouldEqual, httpTransportTypeKey)
+			So(len(resp.Data.Items), ShouldBeGreaterThan, 0)
+			var found bool
+			for _, item := range resp.Data.Items {
+				if item.Name == "http-example" {
+					found = true
+					So(item.Input, ShouldNotBeNil)
+					So(item.Input["method"], ShouldEqual, "POST")
+				}
+			}
+			So(found, ShouldBeTrue)
+		})
+
+		Convey("未注册模型返回错误码 1107", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/samples", map[string]any{
+				"model": "zhongkui.com/zhongkui/internal/models/network.NotExist",
+			})
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var resp struct {
+				Code int `json:"code"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Code, ShouldEqual, manager.CodeTagRuleModelNotRegistered)
+		})
 	})
 }
 
@@ -542,6 +715,22 @@ func TestTagRuleDryRun(t *testing.T) {
 				"input": map[string]any{"method": "POST"},
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+
+		Convey("违反契约（非 zki 包）的候选规则被拒绝，与写路径校验语义一致", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
+				"model": tagRuleModel,
+				"name":  "other-package",
+				"rego":  "package other\n\ntags contains \"x\" if {\n\tinput.method == \"POST\"\n}",
+				"input": map[string]any{"method": "POST"},
+			})
+			// 契约不满足（包名非 zki）走公共 Rego 校验失败，返回 400 + CodeTagRuleInvalid
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var resp struct {
+				Code int `json:"code"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Code, ShouldEqual, manager.CodeTagRuleInvalid)
 		})
 	})
 }
@@ -642,7 +831,7 @@ func TestTagRuleListGet(t *testing.T) {
 			w := doTagRuleRequest(r, http.MethodOptions, "/admin/tag-rule/list", nil)
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
-				Data *ListOptions `json:"data"`
+				Data *ListMeta `json:"data"`
 			}
 			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
 			So(len(resp.Data.OrderBy), ShouldEqual, 2)
@@ -677,5 +866,83 @@ func TestTagRuleInvalidateAfterWrite(t *testing.T) {
 		second, err := engine.RecognizeWithDetail(t.Context(), &tagRuleTargetModel{Namespace: "default", Method: "POST"})
 		So(err, ShouldBeNil)
 		So(second.Tags, ShouldResemble, []string{"admin-cache", "admin-login"})
+	})
+}
+
+// TestTagRuleCreateRuntimeInvalidRejected 第二层运行期样例校验失败的规则被拒绝落库。
+func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
+	Convey("测试运行期样例校验的拒绝逻辑", t, func() {
+		db := createTagRuleTestDB()
+		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
+		r := setupTagRuleTestRouter(db, engine)
+
+		// 预置一条 HttpTransport 验证样例（已注册模型），字段类型与真实模型一致
+		targetType, err := tagengine.TypeKey(&network.HttpTransport{})
+		So(err, ShouldBeNil)
+		sample := &tag.TagRuleSample{
+			Model: targetType,
+			Name:  "browser-post",
+			Input: datatypes.JSON(`{
+				"namespace": "default",
+				"method": "POST",
+				"path": "/v1/orders",
+				"req_hdr_user_agent": "Mozilla/5.0",
+				"req_hdr_content_length": 42
+			}`),
+			Description: "test sample",
+		}
+		So(db.Create(sample).Error, ShouldBeNil)
+
+		Convey("运行期报错的规则创建被拒绝并返回错误码 1106", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+				"name":    "runtime-bad",
+				"model":   targetType,
+				"rego":    "package zki\n\ntags contains \"oops\" if {\n\tcount(input.req_hdr_content_length) > 10\n}",
+				"enabled": true,
+			})
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var resp struct {
+				Code    int    `json:"code"`
+				Summary string `json:"summary"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Code, ShouldEqual, manager.CodeTagRuleRuntimeInvalid)
+		})
+
+		Convey("运行期合法的规则创建成功", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+				"name":    "runtime-ok",
+				"model":   targetType,
+				"rego":    "package zki\n\ntags contains \"post\" if {\n\tinput.method == \"POST\"\n}",
+				"enabled": true,
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+		})
+	})
+}
+
+// TestTagRuleCreateModelNotRegisteredRejected 未注册目标模型的规则创建被拒绝（错误码 1107）。
+// 未注册模型的规则引擎永不加载（按实际数据实例的类型键分组），属于死规则，写入时应拒绝。
+func TestTagRuleCreateModelNotRegisteredRejected(t *testing.T) {
+	Convey("测试未注册目标模型的拒绝逻辑", t, func() {
+		db := createTagRuleTestDB()
+		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
+		r := setupTagRuleTestRouter(db, engine)
+
+		Convey("未注册模型的规则创建被拒绝并返回错误码 1107", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+				"name":    "unregistered-model",
+				"model":   "unregistered.model.Type",
+				"rego":    tagRuleValidRego,
+				"enabled": true,
+			})
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var resp struct {
+				Code    int    `json:"code"`
+				Summary string `json:"summary"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Code, ShouldEqual, manager.CodeTagRuleModelNotRegistered)
+		})
 	})
 }

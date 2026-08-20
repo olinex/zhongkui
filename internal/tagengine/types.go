@@ -5,17 +5,16 @@
 package tagengine
 
 import (
-	"time"
-
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 var (
-	// ErrUnsupportedTarget 目标不是（可解引用的）结构体时返回
-	ErrUnsupportedTarget = errors.New("unsupported tag recognition target, expected a struct or pointer to struct")
 	// ErrInvalidRego 规则源码不符合标签识别契约时返回
 	ErrInvalidRego = errors.Newf("invalid rego rule, contract: package %s with a tags rule", base.GlobalPrefix)
+	// ErrUnsupportedTarget 目标类型不支持（空类型或非结构体）时返回
+	ErrUnsupportedTarget = errors.New("tagengine: unsupported target type")
 )
 
 // RecognizeResult 标签识别结果。
@@ -32,7 +31,7 @@ type RecognizeDetailResult struct {
 	// Error 识别过程中遇到的错误（RecognizeWithDetail 填充，Recognize 不填充）
 	Error map[string]error
 	// Duration 识别耗时
-	Duration time.Duration
+	Duration serializer.DurationNS
 }
 
 // Inputer 输入文档提供者接口。

@@ -9,7 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/benchmark/capture"
+	bench "zhongkui.com/zhongkui/internal/benchmark/capture"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
@@ -19,6 +19,16 @@ var (
 	funcMaps template.FuncMap = template.FuncMap(map[string]any{
 		"join":       strings.Join,
 		"capitalize": serializer.Capitalize,
+		// hasRequired 判断过滤字段集合中是否存在必选字段（Required=true）。
+		// 存在时生成的 SearchIn.FilterBy 为非指针值类型，使必选校验在请求省略 filterBy 时同样生效。
+		"hasRequired": func(fields []searchGenerateConfigFilterBy) bool {
+			for _, field := range fields {
+				if field.Required {
+					return true
+				}
+			}
+			return false
+		},
 	})
 	StringActions map[string]any = map[string]any{
 		"nil":   struct{}{},
@@ -53,6 +63,12 @@ var (
 		"nnil": struct{}{},
 		"eq":   struct{}{},
 	}
+	// HexUUIDActions 定义 serializer.HexUUID 类型支持的过滤动作。
+	// UUID 为等值标识，仅支持精确匹配与不匹配。
+	HexUUIDActions = map[string]any{
+		"eq":  struct{}{},
+		"neq": struct{}{},
+	}
 	DatetimeActions = NumberActions
 	DateActions     = NumberActions
 	TimeActions     = NumberActions
@@ -60,10 +76,11 @@ var (
 
 type searchGenerateConfigFilterBy struct {
 	FieldName string   `toml:"fieldName" validate:"required"`
-	FieldType string   `toml:"fieldType" validate:"required,oneof=string int uint int8 uint8 int16 uint16 int32 uint32 int64 uint64 float32 float64 bool time.Time serializer.TimeOnly serializer.DateOnly"`
+	FieldType string   `toml:"fieldType" validate:"required,oneof=string int uint int8 uint8 int16 uint16 int32 uint32 int64 uint64 float32 float64 bool time.Time serializer.TimeOnly serializer.DateOnly serializer.HexUUID"`
 	Column    string   `toml:"column"`
 	Actions   []string `toml:"actions" validate:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn nil nnil lt lte gt gte"`
 	Binding   string   `toml:"binding" validate:"required"`
+	Required  bool     `toml:"required"` // 必选过滤字段：生成的 FilterBy 字段为非指针并带 binding:"required"
 }
 
 type searchGenerateConfigOrderBy struct {
@@ -92,6 +109,8 @@ func actionValidate(fieldType string, actions []string) error {
 			allowActions = NumberActions
 		case "bool":
 			allowActions = BooleanActions
+		case "serializer.HexUUID":
+			allowActions = HexUUIDActions
 		case "time.Time":
 			allowActions = DatetimeActions
 		case "serializer.TimeOnly":

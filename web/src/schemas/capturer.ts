@@ -49,16 +49,8 @@ const timeout = yup
   .min(1)
   .max(24 * 60 * 60)
   .label("model.capturer.field.timeout");
-const promisc = yup
-  .bool()
-  .nonNullable()
-  .required()
-  .label("model.capturer.field.promisc");
-const enabled = yup
-  .bool()
-  .nonNullable()
-  .required()
-  .label("model.capturer.field.enabled");
+const promisc = yup.bool().nonNullable().required().label("model.capturer.field.promisc");
+const enabled = yup.bool().nonNullable().required().label("model.capturer.field.enabled");
 
 export const updateCapturerSchema = yup.object({
   device,

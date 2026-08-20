@@ -9,22 +9,13 @@
         :action-text="$t('action.reset')"
         @click:action="getServerListAction"
       />
-      <v-card
-        v-for="server in servers"
-        :key="server.id"
-        dense
-      >
+      <v-card v-for="server in servers" :key="server.id">
         <template #title>
           <span class="font-weight-black">{{ server.host }}</span>
         </template>
         <template #subtitle>
-          <v-chip-group>
-            <hex-string-chip
-              size="x-small"
-              :value="server.id"
-              prefix="id: "
-              :length="32"
-            />
+          <div class="d-flex flex-wrap ga-2">
+            <hex-string-chip size="x-small" :value="server.id" prefix="id: " :length="32" />
             <v-chip size="x-small"> pid: {{ server.pid }} </v-chip>
             <v-chip size="x-small">
               {{ $t("model.server.field.status") }}: {{ server.status }}
@@ -33,15 +24,16 @@
               {{ $t("model.server.field.started") }}:
               {{ localeDatetimeFormat(DateTime.fromISO(server.started)) }}
             </v-chip>
-          </v-chip-group>
+          </div>
         </template>
         <template #actions>
           <v-btn
-            @click="server.show = !server.show"
-            :color="server.show ? 'text' : 'success'"
+            :variant="server.show ? 'flat' : 'tonal'"
+            color="primary"
             :text="server.show ? $t('action.close') : $t('action.expand')"
             :append-icon="server.show ? 'mdi-chevron-up' : 'mdi-chevron-down'"
             block
+            @click="server.show = !server.show"
           />
         </template>
         <template #text>
@@ -59,10 +51,7 @@
               </v-row>
               <v-row>
                 <v-col cols="12">
-                  <v-data-table
-                    :headers="taskHeaders"
-                    :items="server.processingTasks"
-                  >
+                  <v-data-table :headers="taskHeaders" :items="server.processingTasks">
                   </v-data-table>
                 </v-col>
               </v-row>
@@ -174,11 +163,6 @@ const getServerListAction = async (): Promise<void> => {
     inspectorServerListGet(),
     async (rsp) => {
       servers.value = rsp.data;
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({
@@ -186,7 +170,7 @@ const getServerListAction = async (): Promise<void> => {
         timeout: 3000,
         color: "error",
       });
-    }
+    },
   );
 };
 </script>

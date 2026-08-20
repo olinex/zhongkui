@@ -1,23 +1,33 @@
-package translate
+package base
 
 import (
+	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/creasty/defaults"
 	"golang.org/x/text/language"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-// DefaultLang 是默认的语言实例，使用英语作为默认语言
-// 这个变量在应用程序启动时初始化，可以在需要默认语言的地方直接使用
-// 示例:
-//
-//	lang := translate.DefaultLang
-//	fmt.Println(lang.String()) // 输出: "en"
 var (
-	DefaultLang = &Language{tag: language.English}
+	// SupportLanguages 应用支持的语言列表，与内置 locales 目录下的翻译文件一一对应
+	SupportLanguages = []Language{
+		*MustParseLanguage(language.SimplifiedChinese.String()),
+		*MustParseLanguage(language.English.String()),
+	}
+	// DefaultLanguage 应用默认语言，取自 Env.Lang（ZKI_LANG 环境变量，默认 zh-Hans）。
+	// 必须在 init() 中赋值：包级变量初始化先于 init() 执行，
+	// 若在此处直接引用 Env.Lang，会取到默认值尚未填充的空字符串。
+	DefaultLanguage *Language
 )
+
+// init 初始化 DefaultLanguage。
+// environments.go 的 init() 按文件词法顺序先于本文件执行，
+// 故此时 Env.Lang 已由 defaults.Set + envconfig.Process 填充默认值。
+func init() {
+	DefaultLanguage = MustParseLanguage(Env.Lang)
+}
 
 // Language 结构体封装了语言标签，提供了语言相关的操作方法
 // 它使用 golang.org/x/text/language 包中的 Tag 类型作为内部表示
@@ -27,6 +37,8 @@ var (
 //   - encoding.JSONMarshaler
 //   - encoding.JSONUnmarshaler
 //   - defaults.Setter
+//   - database/sql/driver.Valuer
+//   - database/sql.Scanner
 //
 // 示例:
 //
@@ -67,9 +79,19 @@ type Language struct {
 func ParseLanguage(lang string) (*Language, error) {
 	tag, err := language.Parse(lang)
 	if err != nil {
-		return nil, errors.WithStack(err)
+		return nil, fmt.Errorf("parse language %q: %w", lang, err)
 	}
 	return &Language{tag: tag}, nil
+}
+
+// MustParseLanguage 解析语言字符串并返回 Language 实例
+// 如果解析失败，会 panic 并包含堆栈信息
+func MustParseLanguage(lang string) *Language {
+	l, err := ParseLanguage(lang)
+	if err != nil {
+		panic(err)
+	}
+	return l
 }
 
 // String 返回内部的语言标签字符串表示
@@ -139,7 +161,7 @@ func (l *Language) UnderscoreLocale() string {
 // 示例:
 //
 //	type Config struct {
-//	    DefaultLang translate.Language `default:""`
+//	    DefaultLang base.Language `default:""`
 //	}
 //
 //	var cfg Config
@@ -171,19 +193,19 @@ func (l *Language) SetDefaults() {
 //	// 在 YAML 配置中
 //	// default_lang: "zh-Hans"
 //	var cfg struct {
-//	    DefaultLang translate.Language `yaml:"default_lang"`
+//	    DefaultLang base.Language `yaml:"default_lang"`
 //	}
 //
 //	// 在 TOML 配置中
 //	// default_lang = "zh-Hans"
 //	var cfg struct {
-//	    DefaultLang translate.Language `toml:"default_lang"`
+//	    DefaultLang base.Language `toml:"default_lang"`
 //	}
 func (l *Language) UnmarshalText(data []byte) error {
 	if len(data) == 0 {
 		return nil
 	} else if tag, err := language.Parse(string(data)); err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("parse language %q: %w", string(data), err)
 	} else {
 		l.tag = tag
 		return nil
@@ -210,7 +232,7 @@ func (l *Language) UnmarshalText(data []byte) error {
 //
 //	// 在 YAML 序列化中
 //	type Config struct {
-//	    DefaultLang translate.Language `yaml:"default_lang"`
+//	    DefaultLang base.Language `yaml:"default_lang"`
 //	}
 //	cfg := Config{DefaultLang: *lang}
 //	yamlData, _ := yaml.Marshal(cfg)
@@ -239,7 +261,7 @@ func (l Language) MarshalText() ([]byte, error) {
 //
 //	// JSON 数据: {"language": "zh-Hans"}
 //	type Config struct {
-//	    Language translate.Language `json:"language"`
+//	    Language base.Language `json:"language"`
 //	}
 //
 //	var cfg Config
@@ -251,7 +273,7 @@ func (l Language) MarshalText() ([]byte, error) {
 func (l *Language) UnmarshalJSON(data []byte) error {
 	var raw string
 	if err := json.Unmarshal(data, &raw); err != nil {
-		return errors.WithStack(err)
+		return fmt.Errorf("unmarshal language json: %w", err)
 	}
 	return l.UnmarshalText([]byte(raw))
 }
@@ -280,15 +302,40 @@ func (l *Language) UnmarshalJSON(data []byte) error {
 //
 //	// 在结构体序列化中
 //	type Config struct {
-//	    Language translate.Language `json:"language"`
+//	    Language base.Language `json:"language"`
 //	}
 //	cfg := Config{Language: *lang}
 //	jsonData, _ := json.Marshal(cfg)
 //	// 输出: {"language":"zh-Hans"}
 func (l Language) MarshalJSON() ([]byte, error) {
 	if raw, err := l.MarshalText(); err != nil {
-		return nil, errors.WithStack(err)
+		return nil, fmt.Errorf("marshal language json: %w", err)
 	} else {
 		return json.Marshal(string(raw))
+	}
+}
+
+// Value 实现 driver.Valuer，数据库以字符串（VARCHAR）存储语言标签。
+// 未设置（零值 und）时返回 nil，数据库存储 NULL。
+func (l Language) Value() (driver.Value, error) {
+	if l.tag == language.Und {
+		return nil, nil
+	}
+	return l.String(), nil
+}
+
+// Scan 实现 sql.Scanner，兼容字符串语言标签、字节数组与 NULL。
+// NULL 将 Language 重置为零值（und）。
+func (l *Language) Scan(value any) error {
+	switch v := value.(type) {
+	case nil:
+		l.tag = language.Und
+		return nil
+	case string:
+		return l.UnmarshalText([]byte(v))
+	case []byte:
+		return l.UnmarshalText(v)
+	default:
+		return fmt.Errorf("unsupported language value type: %T", value)
 	}
 }

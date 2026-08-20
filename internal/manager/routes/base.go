@@ -1,8 +1,7 @@
 // Package routes 提供 API 路由层的通用基础设施，包括：
-//   - 列表选项的元数据描述（HeaderOption、ListOptions）
+//   - 列表视图列的元数据描述（HeaderOption）
 //   - 通过反射提取结构体 JSON 标签与类型的工具函数（getJSONTagAndType）
 //   - URL 路径参数解析的辅助函数（getRawParam、getUint64Param、getUUIDParam）
-//   - 列表选项查询接口的 Gin 处理器（ListOptionsGinHandler）
 package routes
 
 import (
@@ -13,7 +12,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
 // HeaderOption 描述列表视图中单个列的元数据信息。
@@ -21,16 +19,6 @@ import (
 type HeaderOption struct {
 	Name string `json:"name"` // 列名，对应输出结构体中字段的 JSON 标签名
 	Type string `json:"type"` // 列的数据类型，如 string、int、time.Time 等
-}
-
-// ListOptions 描述列表查询接口的完整选项配置。
-// 嵌入了 SearchOptions 以提供排序和过滤的元数据，
-// 并额外包含 Headers 用于描述输出结构体各字段的列信息。
-// 典型场景：前端在发起列表查询前，先调用 ListOptionsGinHandler 获取此配置，
-// 以动态渲染表格列和搜索/过滤控件。
-type ListOptions struct {
-	utils.SearchOptions                 // 嵌入搜索选项，包含可排序字段（OrderBy）和可过滤字段（FilterBy）
-	Headers             []*HeaderOption `json:"headers"` // 列表列的元数据信息列表
 }
 
 // getJSONTagAndType 通过反射递归提取结构体中所有字段的 JSON 标签名和 Go 类型名。
@@ -118,7 +106,7 @@ func getRawParam(c *gin.Context, name string) (string, bool) {
 //   - uint64: 解析后的参数值
 //   - bool: 是否成功解析（true 表示参数有效，false 表示解析失败且请求已被中断）
 func getUint64Param(c *gin.Context, name string) (uint64, bool) {
-	idStr := c.Param("id")
+	idStr := c.Param(name)
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
 		manager.CreateBadUrlParamError("badUrlParam", name, err).AbortWithGinH(c)
@@ -146,34 +134,4 @@ func getUUIDParam(c *gin.Context, name string) (serializer.HexUUID, bool) {
 		return binUUID, false
 	}
 	return binUUID, true
-}
-
-// ListOptionsGinHandler 是一个泛型 Gin 处理器，用于返回列表查询接口的选项配置。
-// 前端在发起列表查询前，先调用此处理器获取列定义（Headers）和搜索配置（SearchOptions），
-// 以便动态渲染表格列和搜索/过滤控件。
-//
-// 类型参数：
-//   - M: 实现了 utils.SearcherIn 接口的搜索输入类型，用于获取搜索选项配置
-//   - N: 实现了 utils.TotalOut 接口的列表输出项类型，用于通过反射提取列元数据
-//
-// 响应体结构：
-//
-//	{
-//	  "code": 200,
-//	  "data": {
-//	    "orderBy": ["field1", "field2"],
-//	    "filterBy": [{"name": "field1", "type": "string", "actions": ["eq", "ctn"]}],
-//	    "headers": [{"name": "id", "type": "uint"}, {"name": "createdAt", "type": "time.Time"}]
-//	  }
-//	}
-func ListOptionsGinHandler[M utils.SearcherIn, N utils.TotalOut](c *gin.Context) {
-	var in M
-	var out N
-	itemType := reflect.TypeOf(out)
-	headers := getJSONTagAndType(itemType)
-	searchOpts := in.GetOptions()
-	manager.SimpleOK.AbortWithGinW(c, ListOptions{
-		SearchOptions: *searchOpts,
-		Headers:       headers,
-	})
 }

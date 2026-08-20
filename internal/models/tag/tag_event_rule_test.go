@@ -6,6 +6,7 @@ import (
 
 	"github.com/smartystreets/goconvey/convey"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestBoolExprParser 测试布尔表达式解析器的功能
@@ -253,7 +254,7 @@ func TestTagEventCondition_Fields(t *testing.T) {
 				Item:           "4:D:A+",
 				TagEventRuleID: 100,
 				Name:           "登录失败检测",
-				Window:         5 * time.Minute,
+				Window:         serializer.DurationNS(5 * time.Minute),
 				Threshold:      3,
 				Expression:     "login_failed AND suspicious_ip",
 				Enabled:        true,
@@ -267,7 +268,7 @@ func TestTagEventCondition_Fields(t *testing.T) {
 			convey.So(condition.Item, convey.ShouldEqual, "4:D:A+")
 			convey.So(condition.TagEventRuleID, convey.ShouldEqual, 100)
 			convey.So(condition.Name, convey.ShouldEqual, "登录失败检测")
-			convey.So(condition.Window, convey.ShouldEqual, 5*time.Minute)
+			convey.So(condition.Window, convey.ShouldEqual, serializer.DurationNS(5*time.Minute))
 			convey.So(condition.Threshold, convey.ShouldEqual, 3)
 			convey.So(condition.Expression, convey.ShouldEqual, "login_failed AND suspicious_ip")
 			convey.So(condition.Enabled, convey.ShouldBeTrue)
@@ -293,12 +294,12 @@ func TestTagEventCondition_Fields(t *testing.T) {
 		convey.Convey("应该支持不同的时间窗口", func() {
 			testCases := []struct {
 				name   string
-				window time.Duration
+				window serializer.DurationNS
 			}{
-				{"秒级窗口", 30 * time.Second},
-				{"分钟级窗口", 5 * time.Minute},
-				{"小时级窗口", 1 * time.Hour},
-				{"天级窗口", 24 * time.Hour},
+				{"秒级窗口", serializer.DurationNS(30 * time.Second)},
+				{"分钟级窗口", serializer.DurationNS(5 * time.Minute)},
+				{"小时级窗口", serializer.DurationNS(1 * time.Hour)},
+				{"天级窗口", serializer.DurationNS(24 * time.Hour)},
 			}
 
 			for _, tc := range testCases {

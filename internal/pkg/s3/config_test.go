@@ -6,7 +6,11 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
+
+// testValidate 测试用的验证器实例
+var testValidate = validator.Validate
 
 func TestExtractConfig(t *testing.T) {
 	convey.Convey("Test ExtractConfig", t, func() {
@@ -19,7 +23,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("s3.region", "us-west-2")
 			v.Set("s3.useSSL", true)
 
-			cfg, err := ExtractConfig(v)
+			cfg, err := ExtractConfig(v, testValidate)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.Endpoint, convey.ShouldEqual, "https://s3.amazonaws.com")
@@ -37,7 +41,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("s3.secretKey", "minioadmin")
 			v.Set("s3.bucket", "test-bucket")
 
-			cfg, err := ExtractConfig(v)
+			cfg, err := ExtractConfig(v, testValidate)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.Endpoint, convey.ShouldEqual, "http://localhost:9000")
@@ -57,7 +61,7 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("s3.bucket", "test-bucket")
 			v.Set("s3.useSSL", false)
 
-			cfg, err := ExtractConfig(v)
+			cfg, err := ExtractConfig(v, testValidate)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg.UseSSL, convey.ShouldBeFalse)
 		})
@@ -65,7 +69,7 @@ func TestExtractConfig(t *testing.T) {
 		convey.Convey("should return error when no s3 config is set at all", func() {
 			v := viper.New()
 			// viper 中完全没有 s3 前缀的配置，ExtractConfig 可能返回错误
-			cfg, err := ExtractConfig(v)
+			cfg, err := ExtractConfig(v, testValidate)
 			if err != nil {
 				convey.So(cfg, convey.ShouldBeNil)
 			} else {

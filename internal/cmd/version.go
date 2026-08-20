@@ -9,8 +9,8 @@ import (
 
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "显示版本信息",
-	Long:  "显示版本信息，默认输出语义化版本号，使用 --verbose 输出完整信息",
+	Short: "cmd.version.short",
+	Long:  "cmd.version.long",
 	Run: func(cmd *cobra.Command, args []string) {
 		_, i := cmdToolBox(cmd)
 		v := provider.MustInvokeViper(i)
@@ -20,5 +20,5 @@ var versionCmd = &cobra.Command{
 }
 
 func init() {
-	versionCmd.Flags().BoolP("verbose", "v", false, "输出详细的构建信息")
+	versionCmd.Flags().BoolP("verbose", "v", false, "flag.version.verbose")
 }

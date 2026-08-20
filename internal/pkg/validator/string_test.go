@@ -70,6 +70,42 @@ func TestIsValidStrongPassword(t *testing.T) {
 	})
 }
 
+// TestGenerateStrongPassword tests the strong password generation function
+func TestGenerateStrongPassword(t *testing.T) {
+	Convey("Test strong password generation", t, func() {
+		Convey("Valid lengths", func() {
+			lengths := []int{6, 8, 16, 32, 64}
+			for _, length := range lengths {
+				Convey(fmt.Sprintf("Length %d should generate a valid strong password", length), func() {
+					password, err := GenerateStrongPassword(length)
+					So(err, ShouldBeNil)
+					So(len(password), ShouldEqual, length)
+					So(IsValidStrongPassword(password), ShouldBeTrue)
+				})
+			}
+		})
+
+		Convey("Invalid lengths", func() {
+			invalidLengths := []int{-1, 0, 4, 5}
+			for _, length := range invalidLengths {
+				Convey(fmt.Sprintf("Length %d should return an error", length), func() {
+					password, err := GenerateStrongPassword(length)
+					So(err, ShouldNotBeNil)
+					So(password, ShouldEqual, "")
+				})
+			}
+		})
+
+		Convey("Generated passwords should differ", func() {
+			p1, err1 := GenerateStrongPassword(16)
+			p2, err2 := GenerateStrongPassword(16)
+			So(err1, ShouldBeNil)
+			So(err2, ShouldBeNil)
+			So(p1, ShouldNotEqual, p2)
+		})
+	})
+}
+
 // TestIsValidWindowsFileName tests Windows filename validation
 func TestIsValidWindowsFileName(t *testing.T) {
 	Convey("Test Windows filename validation", t, func() {

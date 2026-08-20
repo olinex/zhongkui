@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 type CaptureMetrics struct {
@@ -57,7 +58,16 @@ func PrintResultsTable() {
 	}
 
 	data := pterm.TableData{
-		{"Benchmark", "Sent", "Captured", "Lost", "Loss Rate", "PPS", "BPS", "Duration"},
+		{
+			translate.T("cli.bench.col-name", nil),
+			translate.T("cli.bench.col-sent", nil),
+			translate.T("cli.bench.col-captured", nil),
+			translate.T("cli.bench.col-lost", nil),
+			translate.T("cli.bench.col-loss-rate", nil),
+			translate.T("cli.bench.col-pps", nil),
+			translate.T("cli.bench.col-bps", nil),
+			translate.T("cli.bench.col-duration", nil),
+		},
 	}
 
 	for _, m := range results {

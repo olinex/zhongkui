@@ -1,9 +1,6 @@
 <template>
   <v-combobox
     :model-value="modelValue"
-    @update:modelValue="clearSelections"
-    @click:clear="clearSelections"
-    @click="addMenuOpened = true"
     :label="$t('model.__base.field.search')"
     density="compact"
     variant="outlined"
@@ -11,7 +8,9 @@
     multiple
     readonly
     clearable
-    rounded
+    @update:model-value="clearSelections"
+    @click:clear="clearSelections"
+    @click="addMenuOpened = true"
   >
     <template #selection="{ item, index }">
       <v-menu
@@ -21,26 +20,24 @@
         transition="scale-transition"
         :close-on-content-click="false"
       >
-        <template #activator="{ props }">
+        <template #activator="{ props: activatorProps }">
           <v-chip
-            v-bind="props"
-            @click:close="removeSelection(index)"
+            v-bind="activatorProps"
             color="info"
             rounded
             closable
+            @click:close="removeSelection(index)"
           >
             `{{ item.raw.field.title }}`&nbsp;{{ item.raw.action.title }}
-            <span v-show="item.raw.value.value !== null"
-              >&nbsp;`{{ item.raw.value.title }}`</span
-            >
+            <span v-show="item.raw.value.value !== null">&nbsp;`{{ item.raw.value.title }}`</span>
           </v-chip>
         </template>
         <clause-field
           :model-value="item.raw"
-          @update:modelValue="(item) => updateSelection(item, index)"
           :selected-field-actions="selectedFieldActions"
           :headers="props.headers"
           :modify="true"
+          @update:model-value="(item) => updateSelection(item, index)"
         />
       </v-menu>
     </template>
@@ -53,19 +50,15 @@
         :close-on-content-click="false"
       >
         <template #activator="{ props: actProps }">
-          <v-chip
-            color="success"
-            v-bind="actProps"
-            append-icon="mdi-plus-circle"
-          >
+          <v-chip color="primary" v-bind="actProps" append-icon="mdi-plus-circle">
             <v-avatar>{{ props.modelValue.length }}</v-avatar>
             {{ $t("model.__base.content.condition") }}
           </v-chip>
         </template>
         <clause-field
-          @update:modelValue="addSelection"
           :selected-field-actions="selectedFieldActions"
           :headers="headers"
+          @update:model-value="addSelection"
         >
         </clause-field>
       </v-menu>
@@ -79,6 +72,8 @@ import type { FilterByOption } from "../@types/table";
 export interface FilterItem {
   field: { value: string; title: string };
   action: { value: string; title: string };
+  // Value is dynamic and only passed through.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: { value: any; title: string };
 }
 
@@ -86,7 +81,7 @@ const addMenuOpened = ref(false);
 
 const selectedFieldActions = computed(() => {
   return props.modelValue.map((item) =>
-    Object({ field: item.field.value, action: item.action.value })
+    Object({ field: item.field.value, action: item.action.value }),
   );
 });
 
@@ -97,14 +92,14 @@ const clearSelections = () => {
 const removeSelection = (index: number) => {
   emits(
     "update:modelValue",
-    props.modelValue.filter((_, i) => i !== index)
+    props.modelValue.filter((_, i) => i !== index),
   );
 };
 
 const updateSelection = (item: FilterItem, index: number) => {
   emits(
     "update:modelValue",
-    props.modelValue.map((i, j) => (j === index ? item : i))
+    props.modelValue.map((i, j) => (j === index ? item : i)),
   );
 };
 

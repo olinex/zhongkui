@@ -149,7 +149,7 @@ func TestPipelineQueueInfo_Struct(t *testing.T) {
 			now := time.Now()
 			queue := &PipelineQueueInfo{
 				MemoryUsage: 1024 * 1024, // 1MB
-				Latency:     1500 * time.Millisecond,
+				Latency:     serializer.DurationNS(1500 * time.Millisecond),
 				Size:        100,
 				Groups: []*PipelineGroupInfo{
 					{Group: "group1", Size: 50},
