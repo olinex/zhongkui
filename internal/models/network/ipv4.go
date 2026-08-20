@@ -126,20 +126,20 @@ func (i *IPv4Options) Scan(value any) error {
 //   - 路径追踪：通过TTL递减分析网络路径
 //   - QoS分析：根据TOS字段分析服务质量
 type IPv4Headers struct {
-	IPv4Version    uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_version"`
-	IPv4IHL        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_ihl"`
-	IPv4TOS        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_tos"`
-	IPv4Length     uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_length"`
-	IPv4Id         uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_id"`
-	IPv4Flags      layers.IPv4Flag     `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_flags"`
-	IPv4FragOffset uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_frag_offset"`
-	IPv4TTL        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_ttl"`
-	IPv4IPProtocol layers.IPProtocol   `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4_ip_protocol"`
-	IPv4Checksum   uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4_checksum"`
-	IPv4Src        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4_src"`
-	IPv4Dst        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4_dst"`
-	IPv4Options    IPv4Options         `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4_options"`
-	IPv4Padding    string              `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4_padding"`
+	IPv4Version    uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Version"`
+	IPv4IHL        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Ihl"`
+	IPv4TOS        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Tos"`
+	IPv4Length     uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Length"`
+	IPv4Id         uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Id"`
+	IPv4Flags      layers.IPv4Flag     `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Flags"`
+	IPv4FragOffset uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4FragOffset"`
+	IPv4TTL        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Ttl"`
+	IPv4IPProtocol layers.IPProtocol   `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4IpProtocol"`
+	IPv4Checksum   uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Checksum"`
+	IPv4Src        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4Src"`
+	IPv4Dst        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4Dst"`
+	IPv4Options    IPv4Options         `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Options"`
+	IPv4Padding    string              `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Padding"`
 }
 
 // NewIPv4Headers 从gopacket IPv4层创建IPv4Headers结构体

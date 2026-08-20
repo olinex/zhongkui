@@ -36,7 +36,7 @@ func extractNamespace(target any) string {
 // BuildInput 构建规则评估的输入文档。
 // 目标模型实现 Inputer 接口时使用其自定义文档；否则将结构体 JSON 序列化
 // 后反序列化为 map 作为输入文档（字段名即 json tag，Crypto 加密字段序列化为
-// 空对象，不向规则暴露明文）。
+// 空字符串，不向规则暴露明文）。
 func BuildInput(target any) (map[string]any, error) {
 	if inputer, ok := target.(Inputer); ok {
 		return inputer.TagRecogInput()

@@ -63,7 +63,7 @@ import { rego } from "codemirror-lang-rego";
 import { useAppStore } from "@/stores/app";
 import { DARK_THEME } from "@/stores/local";
 import i18n from "@/utils/i18n";
-import { fieldSnippet } from "@/utils/rego";
+import { classifyRegoCompletionContext, fieldSnippet, isRegoExpressionKeyword } from "@/utils/rego";
 import type { InputFieldMeta, RegoValidationError } from "@/utils/rego";
 
 const props = withDefaults(
@@ -193,7 +193,10 @@ function inputFieldCompletions(): Completion[] {
 /**
  * Custom completion source: completes `input.<field>` from field metadata and
  * `extraCompletions`, then falls back to the Rego language sources (keywords,
- * OPA built-ins) registered by `codemirror-lang-rego`.
+ * OPA built-ins) registered by `codemirror-lang-rego`. The fallback is
+ * position-aware: no completion is offered where the next word would be a
+ * syntax error (e.g. right after `input.field == "..."`), and term positions
+ * (e.g. after `==`) drop statement-starting keywords like `if`/`else`.
  */
 async function regoCompletion(context: CompletionContext): Promise<CompletionResult | null> {
   const line = context.state.doc.lineAt(context.pos);
@@ -205,10 +208,21 @@ async function regoCompletion(context: CompletionContext): Promise<CompletionRes
       return result;
     }
   }
+  const kind = classifyRegoCompletionContext(textBefore);
+  if (kind === "block") {
+    return null;
+  }
   const sources = context.state.languageDataAt<CompletionSource>("autocomplete", context.pos);
   for (const source of sources) {
     const result = await source(context);
     if (result) {
+      if (kind === "term") {
+        return {
+          from: result.from,
+          validFor: result.validFor,
+          options: result.options.filter((c) => !isRegoExpressionKeyword(c.label)),
+        };
+      }
       return result;
     }
   }

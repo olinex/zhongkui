@@ -3,12 +3,66 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t(`model.user.name`)"
         :list-request="userListGet"
         :options-request="userListOptions"
         :actions="getActions"
+        :create="openCreateDialogAction"
         model-name="user"
       />
+      <temp-editable-dialog
+        ref="createDialogRef"
+        :title="$t('model.user.name')"
+        :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
+        force-editable
+        prepend-icon="mdi-account-plus"
+        @confirm="createAction"
+      >
+        <template #body>
+          <v-form>
+            <v-row dense>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="createUsername"
+                  v-bind="createUsernameProps"
+                  :label="$t('model.user.field.username')"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <password-field
+                  v-model="createPassword"
+                  v-bind="createPasswordProps"
+                  :label="$t('model.user.field.password')"
+                />
+              </v-col>
+              <v-col cols="6">
+                <password-field
+                  v-model="createPasswordAgain"
+                  v-bind="createPasswordAgainProps"
+                  :label="$t('model.user.field.passwordAgain')"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createNickleName"
+                  v-bind="createNickleNameProps"
+                  :label="$t('model.user.field.nickleName')"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createEmail"
+                  v-bind="createEmailProps"
+                  :label="$t('model.user.field.email')"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </template>
+      </temp-editable-dialog>
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t(`model.user.name`)"
@@ -117,6 +171,66 @@
           </v-form>
         </template>
       </temp-editable-dialog>
+      <temp-editable-dialog
+        ref="resetPasswordDialogRef"
+        :title="$t('action.resetPassword')"
+        :confirm-disabled="resetConfirmDisabled"
+        force-editable
+        prepend-icon="mdi-lock-reset"
+        @confirm="resetPasswordSubmit"
+      >
+        <template #body>
+          <v-form>
+            <v-row dense>
+              <v-col cols="12">
+                <v-radio-group v-model="resetMode" inline>
+                  <v-radio :label="$t('model.user.field.randomPassword')" value="random" />
+                  <v-radio :label="$t('model.user.field.specifyPassword')" value="manual" />
+                </v-radio-group>
+              </v-col>
+            </v-row>
+            <v-row v-if="resetMode === 'manual'" dense>
+              <v-col cols="6">
+                <password-field
+                  v-model="resetNewPassword"
+                  v-bind="resetNewPasswordProps"
+                  :label="$t('model.user.field.newPassword')"
+                />
+              </v-col>
+              <v-col cols="6">
+                <password-field
+                  v-model="resetNewPasswordAgain"
+                  v-bind="resetNewPasswordAgainProps"
+                  :label="$t('model.user.field.newPasswordAgain')"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </template>
+      </temp-editable-dialog>
+      <v-dialog v-model="resetResultDialog" max-width="500">
+        <v-card prepend-icon="mdi-lock-reset" :title="$t('action.resetPassword')">
+          <v-card-text>
+            <v-text-field
+              :model-value="resetResultPassword"
+              :label="$t('model.user.field.newPassword')"
+              readonly
+            >
+              <template #append-inner>
+                <copy-btn :value="resetResultPassword" />
+              </template>
+            </v-text-field>
+            <p class="text-body-2 text-medium-emphasis mt-2">
+              {{ $t("model.user.field.passwordResetNotice") }}
+            </p>
+          </v-card-text>
+          <v-divider />
+          <v-card-actions>
+            <v-spacer />
+            <v-btn :text="$t('action.close')" variant="plain" @click="resetResultDialog = false" />
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </template>
   </main-layout>
 </template>
@@ -132,8 +246,11 @@ meta:
 <script setup lang="ts">
 import {
   groupListGet,
+  userCreate,
+  userPasswordReset,
   userSetActive,
   userDetailGet,
+  userFrontendConfigReset,
   userGroupJoin,
   userGroupLeave,
   userListGet,
@@ -145,23 +262,38 @@ import type { ItemActions, TableHeader } from "@/components/@types/table";
 import TempEditableDialog from "@/components/forms/TempEditableDialog.vue";
 import { useAppStore } from "@/stores/app";
 import type { UserDetailOut, UserRbacPolicyDetailOut } from "./@types";
+import type { UserPasswordResetOut } from "@/apis/@types/admin";
 import i18n from "@/utils/i18n";
 import { BackendDataType, SearchAction } from "@/types";
 import { useUserStore } from "@/stores/user";
 import { useForm } from "vee-validate";
-import { changeProfileSchema } from "@/schemas/user";
+import { adminResetPasswordSchema, changeProfileSchema, createUserSchema } from "@/schemas/user";
 import { vuetifyCfg } from "@/utils/form";
 
 const { defineField, handleSubmit, meta, resetField } = useForm({
   validationSchema: changeProfileSchema,
 });
 
+const createForm = useForm({
+  validationSchema: createUserSchema,
+});
+
 const [nickleName, nickleNameProps] = defineField("nickleName", vuetifyCfg);
 const [email, emailProps] = defineField("email", vuetifyCfg);
+
+const [createUsername, createUsernameProps] = createForm.defineField("username", vuetifyCfg);
+const [createPassword, createPasswordProps] = createForm.defineField("password", vuetifyCfg);
+const [createPasswordAgain, createPasswordAgainProps] = createForm.defineField(
+  "passwordAgain",
+  vuetifyCfg,
+);
+const [createNickleName, createNickleNameProps] = createForm.defineField("nickleName", vuetifyCfg);
+const [createEmail, createEmailProps] = createForm.defineField("email", vuetifyCfg);
 
 const appStore = useAppStore();
 const userStore = useUserStore();
 const searchTableRef = useTemplateRef("searchTableRef");
+const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 const userPolicyHeaders: Array<TableHeader> = [
   {
@@ -205,6 +337,8 @@ const namespaceOpts = computed(() => {
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
+    resetPassword: resetPasswordAction,
+    resetFrontendConfig: resetFrontendConfigAction,
   };
   switch (item.active) {
     case false:
@@ -267,6 +401,47 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
   })();
 };
 
+const openCreateDialogAction = () => {
+  createForm.resetField("username", { value: "" });
+  createForm.resetField("password", { value: "" });
+  createForm.resetField("passwordAgain", { value: "" });
+  createForm.resetField("nickleName", { value: "" });
+  createForm.resetField("email", { value: "" });
+  createDialogRef.value?.open({
+    username: "",
+    password: "",
+    passwordAgain: "",
+    nickleName: "",
+    email: "",
+  });
+};
+
+const createAction = createForm.handleSubmit(async (values) => {
+  await getSimpleResponse(
+    userCreate({
+      username: values.username,
+      password: values.password,
+      nickleName: values.nickleName,
+      email: values.email,
+    }),
+    async (rsp) => {
+      await searchTableRef.value?.refresh();
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "success",
+      });
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+});
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const activateAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
@@ -310,6 +485,92 @@ const deactivateAction = async (item: Record<string, any>): Promise<void> => {
     },
   );
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const resetFrontendConfigAction = async (item: Record<string, any>): Promise<void> => {
+  await getSimpleResponse(
+    userFrontendConfigReset(item.unionID),
+    async (rsp) => {
+      await searchTableRef.value?.refresh();
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "success",
+      });
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
+const resetMode = ref("random");
+
+const resetPasswordForm = useForm({
+  // 仅指定密码模式需要强密码校验；随机生成模式无需填写密码直接提交
+  validationSchema: computed(() =>
+    resetMode.value === "manual" ? adminResetPasswordSchema : undefined,
+  ),
+});
+
+const [resetNewPassword, resetNewPasswordProps] = resetPasswordForm.defineField(
+  "newPassword",
+  vuetifyCfg,
+);
+const [resetNewPasswordAgain, resetNewPasswordAgainProps] = resetPasswordForm.defineField(
+  "newPasswordAgain",
+  vuetifyCfg,
+);
+
+const resetPasswordDialogRef = useTemplateRef("resetPasswordDialogRef");
+const resetUnionID = ref("");
+const resetResultDialog = ref(false);
+const resetResultPassword = ref("");
+
+const resetConfirmDisabled = computed(() => {
+  // 随机生成模式无需表单校验；指定密码模式必须填写且通过强密码校验
+  return (
+    resetMode.value === "manual" &&
+    (!resetPasswordForm.meta.value.dirty || !resetPasswordForm.meta.value.valid)
+  );
+});
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const resetPasswordAction = async (item: Record<string, any>): Promise<void> => {
+  resetMode.value = "random";
+  resetPasswordForm.resetField("newPassword", { value: "" });
+  resetPasswordForm.resetField("newPasswordAgain", { value: "" });
+  resetUnionID.value = item.unionID;
+  resetPasswordDialogRef.value?.open({});
+};
+
+const resetPasswordSubmit = resetPasswordForm.handleSubmit(async () => {
+  await getResponse<UserPasswordResetOut>(
+    userPasswordReset(resetUnionID.value, {
+      password: resetMode.value === "manual" ? resetNewPassword.value : undefined,
+    }),
+    async (rsp) => {
+      resetResultPassword.value = rsp.data.password;
+      resetResultDialog.value = true;
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "success",
+      });
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+});
 
 const joinGroupAction = async (
   unionID: string,

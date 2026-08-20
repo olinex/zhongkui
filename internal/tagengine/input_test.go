@@ -73,8 +73,9 @@ func TestBuildInput(t *testing.T) {
 			input, err := BuildInput(transport)
 			So(err, ShouldBeNil)
 			So(input["method"], ShouldEqual, "GET")
-			So(input["req_hdr_user_agent"], ShouldEqual, "curl/8.0")
-			So(input["req_hdr_authorization"], ShouldResemble, map[string]any{})
+			So(input["reqHdrUserAgent"], ShouldEqual, "curl/8.0")
+			// 写库侧构造的 Crypto 无密文，序列化为空字符串，不向规则暴露明文
+			So(input["reqHdrAuthorization"], ShouldEqual, "")
 		})
 	})
 }

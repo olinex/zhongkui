@@ -74,7 +74,17 @@ func TestIPAddr_Database(t *testing.T) {
 			ipAddr := IPAddr(ip)
 			value, err := ipAddr.Value()
 			So(err, ShouldBeNil)
-			So(value, ShouldEqual, ipStr)
+			// 统一以 16 字节原始二进制写入（IPv4 提升为 IPv4-mapped IPv6）
+			So(value, ShouldResemble, []byte(ip.To16()))
+		})
+
+		Convey("Value method with IPv6", func() {
+			ipStr := "2001:db8::1"
+			ip := net.ParseIP(ipStr)
+			ipAddr := IPAddr(ip)
+			value, err := ipAddr.Value()
+			So(err, ShouldBeNil)
+			So(value, ShouldResemble, []byte(ip.To16()))
 		})
 
 		Convey("Value method with empty IP", func() {
@@ -118,6 +128,21 @@ func TestIPAddr_Database(t *testing.T) {
 			err := scannedIP.Scan("invalid")
 			So(err, ShouldBeNil)
 			So(scannedIP.String(), ShouldEqual, "<nil>")
+		})
+
+		Convey("Scan FixedString(16) raw binary IPv4-mapped IPv6", func() {
+			// 原生 16 字节二进制：::ffff:127.0.0.1，String() 按 IPv4 渲染
+			var scannedIP IPAddr
+			err := scannedIP.Scan([]byte(net.ParseIP("127.0.0.1").To16()))
+			So(err, ShouldBeNil)
+			So(scannedIP.String(), ShouldEqual, "127.0.0.1")
+		})
+
+		Convey("Scan FixedString(16) raw binary IPv6", func() {
+			var scannedIP IPAddr
+			err := scannedIP.Scan([]byte(net.ParseIP("::1").To16()))
+			So(err, ShouldBeNil)
+			So(scannedIP.String(), ShouldEqual, "::1")
 		})
 	})
 }

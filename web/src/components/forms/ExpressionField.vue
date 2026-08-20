@@ -8,7 +8,6 @@
     multiple
     readonly
     clearable
-    rounded
     @update:model-value="clearSelections"
     @click:clear="clearSelections"
     @click="addMenuOpened = true"

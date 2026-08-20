@@ -316,7 +316,7 @@ func TestUDPHeaders_JSONCompatibility(t *testing.T) {
 
 		Convey("Should handle JSON with missing optional fields gracefully", func() {
 			// 模拟可能缺少某些字段的JSON数据
-			jsonStr := `{"src_port": 53, "dst_port": 53, "length": 512}`
+			jsonStr := `{"srcPort": 53, "dstPort": 53, "length": 512}`
 
 			var headers UDPHeaders
 			err := json.Unmarshal([]byte(jsonStr), &headers)

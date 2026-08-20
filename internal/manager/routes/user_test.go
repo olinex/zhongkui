@@ -701,6 +701,46 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 
 			So(w.Code, ShouldEqual, http.StatusOK)
 		})
+
+		Convey("应成功刷新已过期但在刷新窗口内的令牌", func() {
+			expiredConfig := createUserSelfTestAuthConfig()
+			expiredConfig.TokenTimeout = -time.Second // 签发即过期
+			expiredAuth := manager.NewJwtAuthenticator(expiredConfig, db, kd)
+			token, codeErr := expiredAuth.Sign(user)
+			So(codeErr, ShouldBeNil)
+			So(token, ShouldNotBeEmpty)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/jwt/refresh", nil)
+			req.Header.Set(expiredConfig.HeaderName, token)
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var rspBody map[string]any
+			So(json.Unmarshal(w.Body.Bytes(), &rspBody), ShouldBeNil)
+			data, ok := rspBody["data"].(map[string]any)
+			So(ok, ShouldBeTrue)
+			newToken, ok := data["token"].(string)
+			So(ok, ShouldBeTrue)
+			// 过期令牌应被重新签发，而非原样返回
+			So(newToken, ShouldNotBeEmpty)
+			So(newToken, ShouldNotEqual, token)
+		})
+
+		Convey("应返回错误当令牌已过期且超过刷新窗口时", func() {
+			expiredConfig := createUserSelfTestAuthConfig()
+			expiredConfig.TokenTimeout = -1 * 25 * time.Hour // 过期远超刷新窗口（24h）
+			expiredAuth := manager.NewJwtAuthenticator(expiredConfig, db, kd)
+			token, codeErr := expiredAuth.Sign(user)
+			So(codeErr, ShouldBeNil)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/jwt/refresh", nil)
+			req.Header.Set(expiredConfig.HeaderName, token)
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusUnauthorized)
+		})
 	})
 }
 
@@ -1035,6 +1075,191 @@ func TestErrVariables(t *testing.T) {
 
 		Convey("ErrTooManyAccessKey 应不为nil", func() {
 			So(ErrTooManyAccessKey, ShouldNotBeNil)
+		})
+
+		Convey("ErrFrontendConfigConflict 应不为nil", func() {
+			So(ErrFrontendConfigConflict, ShouldNotBeNil)
+		})
+
+		Convey("ErrFrontendConfigSyncDisabled 应不为nil", func() {
+			So(ErrFrontendConfigSyncDisabled, ShouldNotBeNil)
+		})
+	})
+}
+
+func TestUserSelfFrontendConfig(t *testing.T) {
+	Convey("测试前端配置同步接口", t, func() {
+		db := createUserSelfTestDB()
+		user := createTestUserInDB(db, "fcsyncuser", "配置同步用户", "fcsync@example.com", "Str0ngP@ss", true)
+		loggingLogger := createTestLoggingLogger()
+
+		r := setupUserSelfTestRouterWithDBAndUser(db, user)
+		r.Use(injectLoggerMiddleware(loggingLogger))
+		r.POST("/api/v1/user/self/frontend-config/get", userSelfFrontendConfigGet)
+		r.POST("/api/v1/user/self/frontend-config/sync", userSelfFrontendConfigSync)
+		r.POST("/api/v1/user/self/frontend-config/sync-enabled/set", userSelfFrontendConfigSyncEnabledSet)
+
+		Convey("未同步过时 get 应返回默认空状态", func() {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/get", nil)
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var response map[string]any
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			data, ok := response["data"].(map[string]any)
+			So(ok, ShouldBeTrue)
+			So(data["syncEnabled"], ShouldEqual, false)
+			So(data["hash"], ShouldEqual, "")
+			So(data["version"], ShouldEqual, float64(0))
+			So(data["config"], ShouldEqual, "")
+		})
+
+		Convey("同步开关未开启时 sync 应返回 400", func() {
+			body, _ := json.Marshal(map[string]any{
+				"prevHash":    "",
+				"prevVersion": 0,
+				"config":      `{"theme":"light"}`,
+			})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var response map[string]any
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			So(response["code"], ShouldEqual, float64(manager.CodeFrontendConfigSyncDisabled))
+		})
+
+		Convey("开启同步开关后首次 sync 应成功并返回新哈希与版本", func() {
+			body, _ := json.Marshal(map[string]any{"enabled": true})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync-enabled/set", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			config := `{"theme":"light","navPinned":true}`
+			body, _ = json.Marshal(map[string]any{
+				"prevHash":    "",
+				"prevVersion": 0,
+				"config":      config,
+			})
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var response map[string]any
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			data, ok := response["data"].(map[string]any)
+			So(ok, ShouldBeTrue)
+			So(data["version"], ShouldEqual, float64(1))
+			So(data["hash"], ShouldEqual, frontendConfigHash(config))
+			So(data["config"], ShouldEqual, config)
+
+			// 再次 get 应返回已保存的配置
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/get", nil)
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusOK)
+			response = map[string]any{}
+			err = json.Unmarshal(w.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			data, ok = response["data"].(map[string]any)
+			So(ok, ShouldBeTrue)
+			So(data["syncEnabled"], ShouldEqual, true)
+			So(data["version"], ShouldEqual, float64(1))
+		})
+
+		Convey("版本号不匹配时 sync 应返回 409 冲突", func() {
+			body, _ := json.Marshal(map[string]any{"enabled": true})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync-enabled/set", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			// 首次同步成功，版本号变为 1
+			body, _ = json.Marshal(map[string]any{
+				"prevHash":    "",
+				"prevVersion": 0,
+				"config":      `{"theme":"light"}`,
+			})
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			// 携带过期版本号 0 再次同步应冲突
+			body, _ = json.Marshal(map[string]any{
+				"prevHash":    frontendConfigHash(`{"theme":"light"}`),
+				"prevVersion": 0,
+				"config":      `{"theme":"dark"}`,
+			})
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusConflict)
+			var response map[string]any
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			So(err, ShouldBeNil)
+			So(response["code"], ShouldEqual, float64(manager.CodeFrontendConfigConflict))
+		})
+
+		Convey("哈希不匹配时 sync 应返回 409 冲突", func() {
+			body, _ := json.Marshal(map[string]any{"enabled": true})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync-enabled/set", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			// 首次同步成功
+			body, _ = json.Marshal(map[string]any{
+				"prevHash":    "",
+				"prevVersion": 0,
+				"config":      `{"theme":"light"}`,
+			})
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			// 携带错误哈希但正确版本号 1 再次同步应冲突
+			body, _ = json.Marshal(map[string]any{
+				"prevHash":    "wronghash",
+				"prevVersion": 1,
+				"config":      `{"theme":"dark"}`,
+			})
+			w = httptest.NewRecorder()
+			req = httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusConflict)
+		})
+
+		Convey("请求体缺少 config 时 sync 应返回 400", func() {
+			body, _ := json.Marshal(map[string]any{
+				"prevHash":    "",
+				"prevVersion": 0,
+			})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/frontend-config/sync", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
 	})
 }

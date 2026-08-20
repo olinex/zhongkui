@@ -643,3 +643,171 @@ func TestUserGroupLeave(t *testing.T) {
 		})
 	})
 }
+
+// TestUserCreateIn_Struct 测试 UserCreateIn 结构体
+func TestUserCreateIn_Struct(t *testing.T) {
+	Convey("测试 UserCreateIn 结构体", t, func() {
+		Convey("应正确创建并赋值", func() {
+			in := UserCreateIn{
+				UserProfileChangeIn: UserProfileChangeIn{
+					NickleName: "测试昵称",
+					Email:      "test@example.com",
+				},
+				UserPasswordLoginIn: UserPasswordLoginIn{
+					Username: "testuser",
+					Password: "password123",
+				},
+			}
+			So(in.NickleName, ShouldEqual, "测试昵称")
+			So(in.Email, ShouldEqual, "test@example.com")
+			So(in.Username, ShouldEqual, "testuser")
+			So(in.Password, ShouldEqual, "password123")
+		})
+
+		Convey("应正确序列化为 JSON", func() {
+			in := UserCreateIn{
+				UserProfileChangeIn: UserProfileChangeIn{
+					NickleName: "张三",
+					Email:      "zhangsan@example.com",
+				},
+				UserPasswordLoginIn: UserPasswordLoginIn{
+					Username: "zhangsan",
+					Password: "password123",
+				},
+			}
+			data, err := json.Marshal(in)
+			So(err, ShouldBeNil)
+			So(string(data), ShouldContainSubstring, `"nickleName":"张三"`)
+			So(string(data), ShouldContainSubstring, `"email":"zhangsan@example.com"`)
+			So(string(data), ShouldContainSubstring, `"username":"zhangsan"`)
+			So(string(data), ShouldContainSubstring, `"password":"password123"`)
+		})
+	})
+}
+
+// TestUserCreate 测试 userCreate 函数
+func TestUserCreate(t *testing.T) {
+	Convey("测试 userCreate 函数", t, func() {
+		// 创建测试数据库和路由
+		db := createUserTestDB()
+		r := setupUserTestRouterWithDB(db)
+
+		// 注册测试路由
+		r.POST("/api/v1/admin/user/create", userCreate)
+
+		Convey("应成功创建用户", func() {
+			reqBody := map[string]any{
+				"username":   "newuser",
+				"password":   "Str0ngP@ssw0rd",
+				"nickleName": "新用户昵称测试",
+				"email":      "new@example.com",
+			}
+			body, _ := json.Marshal(reqBody)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/create", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			// 验证用户已落库且默认激活
+			var user core.User
+			err := db.First(&user, "username = ?", "newuser").Error
+			So(err, ShouldBeNil)
+			So(user.NickleName, ShouldEqual, "新用户昵称测试")
+			So(user.Email, ShouldEqual, "new@example.com")
+			So(user.Active, ShouldBeTrue)
+			So(user.Password, ShouldNotBeNil)
+		})
+
+		Convey("应返回错误当用户名或邮箱已存在时", func() {
+			// 预先创建同名用户
+			existing := &core.User{
+				UnionID:    serializer.NewHexUUIDv4(),
+				NickleName: "已存在用户",
+				Username:   "duplicate",
+				Password:   serializer.NewCrypto([]byte("hashed_password")),
+				Email:      "duplicate@example.com",
+				Active:     true,
+			}
+			db.Create(existing)
+
+			reqBody := map[string]any{
+				"username":   "duplicate",
+				"password":   "Str0ngP@ssw0rd",
+				"nickleName": "重复用户昵称",
+				"email":      "other@example.com",
+			}
+			body, _ := json.Marshal(reqBody)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/create", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+
+		Convey("应返回错误当请求体缺少必需字段时", func() {
+			// 发送缺少 nickleName 字段的请求
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/create", bytes.NewReader([]byte(`{"username":"nofield","password":"password123","email":"nofield@example.com"}`)))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+	})
+}
+
+// TestUserFrontendConfigReset 测试管理员重置用户前端配置接口
+func TestUserFrontendConfigReset(t *testing.T) {
+	Convey("测试 userFrontendConfigReset 函数", t, func() {
+		db := createUserTestDB()
+		user := &core.User{
+			UnionID:                   serializer.NewHexUUIDv4(),
+			NickleName:                "重置配置用户",
+			Username:                  "fcresetuser",
+			Password:                  serializer.NewCrypto([]byte("hashedpassword")),
+			Email:                     "fcreset@example.com",
+			Active:                    true,
+			FrontendConfig:            `{"theme":"dark"}`,
+			FrontendConfigHash:        frontendConfigHash(`{"theme":"dark"}`),
+			FrontendConfigVersion:     3,
+			FrontendConfigSyncEnabled: true,
+		}
+		if err := db.Create(user).Error; err != nil {
+			panic("failed to create test user: " + err.Error())
+		}
+
+		r := setupUserTestRouterWithDB(db)
+		r.POST("/api/v1/admin/user/:unionID/frontend-config/reset", userFrontendConfigReset)
+
+		Convey("应成功重置用户的前端配置", func() {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/"+user.UnionID.String()+"/frontend-config/reset", nil)
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			// 验证数据库中的配置已被清空，版本号重置为 0
+			var target core.User
+			err := db.First(&target, "union_id = ?", user.UnionID.String()).Error
+			So(err, ShouldBeNil)
+			So(target.FrontendConfig, ShouldEqual, "")
+			So(target.FrontendConfigHash, ShouldEqual, "")
+			So(target.FrontendConfigVersion, ShouldEqual, uint64(0))
+			// 同步开关状态保留不变
+			So(target.FrontendConfigSyncEnabled, ShouldBeTrue)
+		})
+
+		Convey("无效 unionID 应返回 400", func() {
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/invalid-uuid/frontend-config/reset", nil)
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+	})
+}

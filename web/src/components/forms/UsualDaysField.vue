@@ -37,7 +37,7 @@ defineProps({
   },
   variant: {
     type: String as PropType<FieldVariant>,
-    default: "filled",
+    default: "outlined",
   },
   density: {
     type: String as PropType<Density>,

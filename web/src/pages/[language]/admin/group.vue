@@ -3,18 +3,12 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t('model.group.name')"
         :list-request="groupListGet"
         :options-request="groupListOptions"
         :actions="getActions"
+        :create="openCreateDialogAction"
         model-name="group"
-      >
-        <template #top>
-          <v-btn color="primary" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
       <confirm-dialog
         ref="confirmDialogRef"
         :title="$t(`model.group.name`)"

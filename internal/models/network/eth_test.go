@@ -73,7 +73,7 @@ func TestEthernetHeaders_Basic(t *testing.T) {
 
 		Convey("Should handle empty MAC addresses in JSON", func() {
 			var headers EthernetHeaders
-			err := json.Unmarshal([]byte(`{"eth_dst_mac": "", "eth_src_mac": ""}`), &headers)
+			err := json.Unmarshal([]byte(`{"ethDstMac": "", "ethSrcMac": ""}`), &headers)
 			So(err, ShouldBeNil)
 			So(headers.EthDstMAC, ShouldBeNil)
 			So(headers.EthSrcMAC, ShouldBeNil)
@@ -81,7 +81,7 @@ func TestEthernetHeaders_Basic(t *testing.T) {
 
 		Convey("Should handle null values in JSON", func() {
 			var headers EthernetHeaders
-			err := json.Unmarshal([]byte(`{"eth_dst_mac": null, "eth_src_mac": null}`), &headers)
+			err := json.Unmarshal([]byte(`{"ethDstMac": null, "ethSrcMac": null}`), &headers)
 			So(err, ShouldBeNil)
 			So(headers.EthDstMAC, ShouldBeNil)
 			So(headers.EthSrcMAC, ShouldBeNil)
@@ -295,10 +295,10 @@ func TestEthernetHeaders_FieldTags(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			// 验证JSON字段名
-			So(decoded, ShouldContainKey, "eth_dst_mac")
-			So(decoded, ShouldContainKey, "eth_src_mac")
-			So(decoded, ShouldContainKey, "eth_type")
-			So(decoded, ShouldContainKey, "eth_length")
+			So(decoded, ShouldContainKey, "ethDstMac")
+			So(decoded, ShouldContainKey, "ethSrcMac")
+			So(decoded, ShouldContainKey, "ethType")
+			So(decoded, ShouldContainKey, "ethLength")
 		})
 	})
 }

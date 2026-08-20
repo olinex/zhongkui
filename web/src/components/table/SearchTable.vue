@@ -3,8 +3,18 @@
     <v-card-title class="d-flex align-center px-4 pt-3 pb-2 text-subtitle-1 font-weight-bold">
       {{ title }}
       <v-spacer />
-      <slot name="top" :refresh="tableDataRefresh" />
-      <v-btn :disabled="loading" icon="mdi-refresh" variant="text" @click="tableDataRefresh" />
+      <action-button-group
+        :refresh="tableDataRefresh"
+        :create="create"
+        :loading="loading"
+        collapsible
+      >
+        <column-visibility-menu
+          v-model="visibleKeys"
+          v-model:order="columnOrder"
+          :headers="allToggleable"
+        />
+      </action-button-group>
     </v-card-title>
     <v-card-text class="px-4 pt-0 pb-2">
       <expression-field v-model="filterBy" :headers="searchHeaders" />
@@ -18,7 +28,7 @@
         :items="items"
         :items-length="total"
         :items-per-page-options="pageSizeOptions"
-        :headers="tableHeaders"
+        :headers="selectTableHeaders"
         :loading="loading"
         select-strategy="page"
         show-select
@@ -29,14 +39,23 @@
         </template>
         <template #item="{ index, item, internalItem, isSelected, toggleSelect }">
           <tr class="text-no-wrap">
-            <td>
+            <td class="v-data-table-column--fixed v-data-table-column--last-fixed">
               <v-checkbox-btn
                 :model-value="isSelected(internalItem)"
                 color="primary"
+                density="compact"
                 @update:model-value="toggleSelect(internalItem, index)"
               ></v-checkbox-btn>
             </td>
-            <td v-for="hdr in tableHeaders" :key="hdr.key">
+            <td
+              v-for="hdr in visibleHeaders"
+              :key="hdr.key"
+              :class="
+                hdr.fixed === 'end'
+                  ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
+                  : undefined
+              "
+            >
               <adaptive-cell
                 :header="hdr"
                 :item="item"
@@ -55,6 +74,7 @@
 import type { AxiosPromise } from "axios";
 import { getResponse } from "@/apis/base";
 import i18n from "@/utils/i18n";
+import { useColumnVisibility } from "@/utils/column";
 import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
 import type { BaseHeaders, ErrorResponse, Status, SuccessResponse } from "@/apis/@types/base";
@@ -115,7 +135,7 @@ function extractSearchHeaders(out: SearchOptionsOut): Record<string, FilterByOpt
 }
 
 function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
-  const headers = out.headers.map((hdr, idx) => {
+  const headers: Array<TableHeader> = out.headers.map((hdr, idx) => {
     let align: Align = "center";
     switch (idx) {
       case 0:
@@ -138,6 +158,7 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
       type: BackendDataType.ACTIONS,
       align: "center",
       sortable: false,
+      fixed: "end",
     });
   }
   return headers;
@@ -156,6 +177,18 @@ const items = ref([] as Record<string, any>[]);
 const selectItems = ref([] as Record<string, any>[]);
 const tableHeaders = ref([] as Array<TableHeader>);
 const searchHeaders = ref({} as Record<string, FilterByOption>);
+
+// selectHeader 定义最左侧多选列的配置，fixed: "start" 使其冻结在表格左边缘。
+const selectHeader: TableHeader = {
+  key: "data-table-select",
+  title: "",
+  type: BackendDataType.ACTIONS,
+  fixed: "start",
+  sortable: false,
+};
+
+// selectTableHeaders 将多选列置于字段列之前，供 v-data-table-server 渲染表头。
+const selectTableHeaders = computed(() => [selectHeader, ...visibleHeaders.value]);
 
 const pageSizeOptions = [
   { title: "10", value: 10 },
@@ -222,7 +255,7 @@ async function tableDataRefresh() {
 const props = defineProps({
   title: {
     type: String,
-    required: true,
+    default: "",
   },
   optionsRequest: {
     type: Function as PropType<() => AxiosPromise>,
@@ -238,11 +271,26 @@ const props = defineProps({
     type: Function as PropType<(item: Record<string, any>) => ItemActions>,
     default: undefined,
   },
+  create: {
+    type: Function as PropType<() => void>,
+    default: undefined,
+  },
   modelName: {
     type: String,
     required: true,
   },
+  storageKey: {
+    type: String,
+    default: undefined,
+  },
 });
+
+// 列显示配置：固定列始终展示，其余列按用户勾选显隐，并按 storageKey（缺省为 modelName）
+// 持久化到 localStorage；表头加载完成后自动应用已保存配置
+const { allToggleable, columnOrder, visibleKeys, visibleHeaders } = useColumnVisibility(
+  props.storageKey ?? `model:${props.modelName}`,
+  tableHeaders,
+);
 
 defineExpose({
   refresh: tableDataRefresh,

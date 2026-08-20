@@ -29,9 +29,12 @@ declare module 'vue-router/auto-routes' {
     'Sign Up': RouteRecordInfo<'Sign Up', '/:language/auth/sign-up', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     '401': RouteRecordInfo<'401', '/:language/error/401', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     '404': RouteRecordInfo<'404', '/:language/error/404', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'ETL Queue List': RouteRecordInfo<'ETL Queue List', '/:language/etl/queue', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'ETL Scheduler List': RouteRecordInfo<'ETL Scheduler List', '/:language/etl/scheduler', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'ETL Server List': RouteRecordInfo<'ETL Server List', '/:language/etl/server', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'ETL Task List': RouteRecordInfo<'ETL Task List', '/:language/etl/task', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Profile': RouteRecordInfo<'Profile', '/:language/profile', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'Traffic List': RouteRecordInfo<'Traffic List', '/:language/traffic/:type', { language: ParamValue<true>, type: ParamValue<true> }, { language: ParamValue<false>, type: ParamValue<false> }>,
     '404 Wide Match': RouteRecordInfo<'404 Wide Match', '/:path(.*)', { path: ParamValue<true> }, { path: ParamValue<false> }>,
   }
 }

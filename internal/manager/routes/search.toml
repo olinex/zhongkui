@@ -686,3 +686,218 @@ column = "match_all"
 binding = ""
 actions = ["eq"]
 
+# 原始流量审计 - IPv4 TCP 包
+# 过滤字段：timestamp / created_at 两个时间范围必填（required = true，命中 ORDER BY 首键，防全表扫描）；
+# namespace 精确过滤；session_id 按 UUID 精确过滤；tcp_stream_id 流标识过滤。
+[Ipv4TcpListGet]
+[[Ipv4TcpListGet.orderByFields]]
+fieldName = "timestamp"
+column = "timestamp"
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "timestampFrom"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "timestampTo"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "createdAtFrom"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "createdAtTo"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "sessionId"
+fieldType = "serializer.HexUUID"
+column = "session_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "tcpStreamId"
+fieldType = "string"
+column = "tcp_stream_id"
+binding = ""
+actions = ["eq"]
+
+# 原始流量审计 - IPv6 TCP 包
+# 过滤字段与 IPv4 TCP 包一致（timestamp / created_at 必填、namespace 精确、session_id、tcp_stream_id）。
+[Ipv6TcpListGet]
+[[Ipv6TcpListGet.orderByFields]]
+fieldName = "timestamp"
+column = "timestamp"
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "timestampFrom"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "timestampTo"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "createdAtFrom"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "createdAtTo"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "sessionId"
+fieldType = "serializer.HexUUID"
+column = "session_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "tcpStreamId"
+fieldType = "string"
+column = "tcp_stream_id"
+binding = ""
+actions = ["eq"]
+
+# 原始流量审计 - HTTP 传输
+# 过滤字段：timestamp / created_at 必填、namespace 精确、session_id、四元组端口与请求行/URI 低基数字段。
+[HttpTransportListGet]
+[[HttpTransportListGet.orderByFields]]
+fieldName = "timestamp"
+column = "timestamp"
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "timestampFrom"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "timestampTo"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "createdAtFrom"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "createdAtTo"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace"
+binding = ""
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "sessionId"
+fieldType = "serializer.HexUUID"
+column = "session_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "clientPort"
+fieldType = "uint16"
+column = "client_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "serverPort"
+fieldType = "uint16"
+column = "server_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "method"
+fieldType = "string"
+column = "method"
+binding = ""
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "host"
+fieldType = "string"
+column = "host"
+binding = ""
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "path"
+fieldType = "string"
+column = "path"
+binding = ""
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "fileExt"
+fieldType = "string"
+column = "file_ext"
+binding = ""
+actions = ["eq"]

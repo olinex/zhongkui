@@ -33,3 +33,16 @@ export interface accessKeyOut extends BaseModelOut {
   expiredAt: string;
   lastAccessAt: string;
 }
+
+export interface FrontendConfigOut {
+  syncEnabled: boolean;
+  hash: string;
+  version: number;
+  config: string;
+}
+
+export interface FrontendConfigSyncIn {
+  prevHash: string;
+  prevVersion: number;
+  config: string;
+}

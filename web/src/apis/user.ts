@@ -3,6 +3,7 @@ import { getJwtHeader, request } from "./base";
 
 import type {
   accessKeyCreateIn,
+  FrontendConfigSyncIn,
   PasswordLoginIn,
   PasswordResetIn,
   profileChangeIn,
@@ -58,4 +59,20 @@ export function accessKeyEnabled(id: number, enabled: boolean): AxiosPromise {
   return request.post(`/user/self/access-key/${id}/${enabled ? "activate" : "deactivate"}`, null, {
     headers: getJwtHeader(),
   });
+}
+
+export function frontendConfigGet(): AxiosPromise {
+  return request.post("/user/self/frontend-config/get", {}, { headers: getJwtHeader() });
+}
+
+export function frontendConfigSync(data: FrontendConfigSyncIn): AxiosPromise {
+  return request.post("/user/self/frontend-config/sync", data, { headers: getJwtHeader() });
+}
+
+export function frontendConfigSyncEnabledSet(enabled: boolean): AxiosPromise {
+  return request.post(
+    "/user/self/frontend-config/sync-enabled/set",
+    { enabled },
+    { headers: getJwtHeader() },
+  );
 }

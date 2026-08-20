@@ -209,6 +209,24 @@ import type { App } from "vue";
 - 模板：`{{ $t("key.path") }}`；脚本：`i18n.global.t("key.path")`
 - 语言切换通过 `[language]` 动态路由段
 
+### i18n 模型翻译组织规范（model.*）
+
+语言文件以 `model` 顶层键组织模型翻译，结构如下：
+
+- `model.__base`：跨模型通用键，按用途分子结构：
+  - `field`：通用字段（如 `date`、`action`、`field`、`startTime`、`value`、`encrypted`、`timestampRange`、`createdAtRange`）
+  - `content`：通用文案（如 `condition`、`doubleCheck`）
+  - `value`：通用值（如 `blank`、`null`、`undefined`）
+- `model.<entity>`：每个模型实体一个块（`user`、`task`、`ipv4Tcp` 等），块内固定子结构：
+  - `name`：模型名称（必填）
+  - `field`：模型字段，键与 API JSON 字段一致（必填）
+  - `type`：模型枚举/子类型，键为枚举值（仅当模型具有类型属性时）
+- 不设模型组层级：同属一个业务域的数据类型（如流量审计的 ipv4-tcp / ipv6-tcp / http-transport）是三个独立模型实体 `model.ipv4Tcp` / `model.ipv6Tcp` / `model.httpTransport`，与 `user`、`tagEventCondition` 等同级，各自含完整 `name` + `field` 子结构；组名（如 `traffic`）不得作为 model 下的中间层，页面级通用标签（如时间范围筛选）归入 `model.__base.field`
+- 字段键命名：一律与 API JSON 字段名对齐，采用开头小写驼峰命名法（`createdAt`、`sessionId`、`ipv4Src`、`reqHdrUserAgent`）；网络模型（`internal/models/network` 下 PacketIPv4TCP / PacketIPv6TCP / HttpTransport 等）的 Go json tag、前端语言包字段键、权限点模板（`plaintext:{crypto|s3}:{model}:{field}`）与明文查看接口的 field 参数必须使用同一套 camelCase 键，仅数据库列名（gorm `column` tag、ClickHouse SQL、`search.toml` 的 `column`）保留 snake_case
+- 块内可用 `# 注释` 对字段分组（如 `# ---- 列设置全量字段（默认隐藏）----`）
+- 禁止裸键：`model.<entity>` 下不得出现脱离 name/field/type 子结构的孤立键（曾出现 `model.network.httpTransport` 裸键，已并入 `model.httpTransport`）
+- 中英文语言文件结构必须一一对应，新增/删除/重命名键需同步维护
+
 ### Pinia Stores
 
 Options Store 风格（`state` + `actions`）：

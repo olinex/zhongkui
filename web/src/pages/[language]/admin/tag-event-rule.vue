@@ -3,18 +3,12 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t('model.tagEventRule.name')"
         :list-request="tagEventRuleListGet"
         :options-request="tagEventRuleListOptions"
         :actions="getActions"
+        :create="openCreateDialogAction"
         model-name="tagEventRule"
-      >
-        <template #top>
-          <v-btn color="primary" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
 
       <confirm-dialog
         ref="deleteConfirmRef"

@@ -3,6 +3,21 @@ export interface UserGroupIn {
   groupName: string;
 }
 
+export interface UserCreateIn {
+  username: string;
+  password: string;
+  nickleName: string;
+  email: string;
+}
+
+export interface UserPasswordResetIn {
+  password?: string;
+}
+
+export interface UserPasswordResetOut {
+  password: string;
+}
+
 export interface GroupRbacPolicyIn {
   target: string;
   action: string;

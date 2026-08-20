@@ -105,6 +105,7 @@
 <script setup lang="ts" name="app-header">
 import { DARK_THEME } from "@/stores/local";
 import { useAppStore } from "@/stores/app";
+import { useConfigSyncStore } from "@/stores/configSync";
 import router from "@/router";
 import { useUserStore } from "@/stores/user";
 import { SUPPORT_LANGUAGES } from "@/utils/options";
@@ -148,14 +149,19 @@ const gotoSignUp = () => {
 };
 
 const gotoSignIn = () => {
-  // route.params type does not satisfy RouteLocationRaw.params
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  router.push({ name: "Sign In", params: route.params as any });
+  // 显式携带当前语言参数，避免透传 route.params 中与目标路由无关的
+  // 多余参数（如流量页的 type）被 vue-router 丢弃并产生告警
+  router.push({ name: "Sign In", params: { language: appStore.language } });
 };
 
 const signOut = () => {
-  userStore.signOut();
-  gotoSignIn();
+  try {
+    userStore.signOut();
+    useConfigSyncStore().reset();
+  } finally {
+    // 无论状态清理是否异常，退出后都必须离开当前页面
+    gotoSignIn();
+  }
   appStore.notify({
     text: i18n.global.t("notice.goodBye"),
     timeout: 3000,

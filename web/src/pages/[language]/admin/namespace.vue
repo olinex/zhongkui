@@ -3,18 +3,12 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t(`model.namespace.name`)"
         :list-request="namespaceListGet"
         :options-request="namespaceListOptions"
         :actions="getActions"
+        :create="openCreateDialogAction"
         model-name="namespace"
-      >
-        <template #top>
-          <v-btn color="primary" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
       <confirm-dialog
         ref="confirmDialogRef"
         :title="$t(`model.namespace.name`)"
@@ -119,6 +113,7 @@ import {
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { ItemActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
+import { useUserStore } from "@/stores/user";
 import type { NamespaceDetailOut } from "./@types";
 import { useForm } from "vee-validate";
 import { createNamespaceSchema, updateNamespaceSchema } from "@/schemas/namespace";
@@ -145,6 +140,7 @@ const [createDescription, createDescriptionProps] = createForm.defineField(
 );
 
 const appStore = useAppStore();
+const userStore = useUserStore();
 const searchTableRef = useTemplateRef("searchTableRef");
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
@@ -188,6 +184,8 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
       }),
       async (rsp) => {
         await searchTableRef.value?.refresh();
+        // 刷新授权快照，保证右上角命名空间切换列表实时反映增删改结果
+        await userStore.refreshAuthorization();
         appStore.notify({
           text: rsp.summary,
           timeout: 3000,
@@ -211,6 +209,8 @@ const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
     namespaceDelete(item.name as string),
     async (rsp) => {
       await searchTableRef.value?.refresh();
+      // 刷新授权快照，保证右上角命名空间切换列表实时反映增删改结果
+      await userStore.refreshAuthorization();
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
@@ -241,6 +241,8 @@ const createAction = createForm.handleSubmit(async (values) => {
     }),
     async (rsp) => {
       await searchTableRef.value?.refresh();
+      // 刷新授权快照，保证右上角命名空间切换列表实时反映增删改结果
+      await userStore.refreshAuthorization();
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,

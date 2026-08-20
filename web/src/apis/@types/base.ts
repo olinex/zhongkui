@@ -40,4 +40,6 @@ export enum CustomCode {
   CodeUsernamePasswordCheckFailed = 1100,
   CodeOldPasswordCheckFailed = 1101,
   CodeUsernameOrEmailAlreadyExist = 1102,
+  CodeFrontendConfigConflict = 1108,
+  CodeFrontendConfigSyncDisabled = 1109,
 }

@@ -37,6 +37,23 @@ type User struct {
 	// Active 表示用户是否处于激活状态
 	// 当用户被禁用时，该字段为 false，用户将无法登录系统
 	Active bool `gorm:"type:BOOLEAN"`
+
+	// FrontendConfig 是用户的前端页面配置
+	// 以 JSON 文本形式存储，由浏览器端在配置变化时自动上传，
+	// 便于用户跨主机登录时保持相同的前端页面配置
+	FrontendConfig string `gorm:"type:TEXT"`
+
+	// FrontendConfigHash 是前端配置内容的 SHA-256 十六进制摘要
+	// 配合 FrontendConfigVersion 实现跨浏览器端更新时的乐观锁并发校验
+	FrontendConfigHash string `gorm:"type:CHAR(64)"`
+
+	// FrontendConfigVersion 是前端配置的版本号
+	// 每次成功同步递增 1，用于检测多浏览器端登录时的更新竞态
+	FrontendConfigVersion uint64 `gorm:"type:BIGINT"`
+
+	// FrontendConfigSyncEnabled 表示是否开启前端配置同步
+	// 由用户个人资料页的开关控制，关闭时后端拒绝接收配置上传
+	FrontendConfigSyncEnabled bool `gorm:"type:BOOLEAN"`
 }
 
 // ResetPassword 重置用户密码

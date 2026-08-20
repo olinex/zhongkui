@@ -19,7 +19,9 @@ import type {
   TagRuleModelIn,
   TagRuleUpdateIn,
   TagRuleValidateIn,
+  UserCreateIn,
   UserGroupIn,
+  UserPasswordResetIn,
 } from "./@types/admin";
 import type { profileChangeIn } from "./@types/user";
 
@@ -30,6 +32,10 @@ export function userListGet(data: SearchIn): AxiosPromise {
 
 export function userListOptions(): AxiosPromise {
   return request.options("/admin/user/list", { headers: getJwtHeader() });
+}
+
+export function userCreate(data: UserCreateIn): AxiosPromise {
+  return request.post("/admin/user/create", data, { headers: getJwtHeader() });
 }
 
 export function userDetailGet(unionID: string): AxiosPromise {
@@ -48,6 +54,12 @@ export function userSetActive(unionID: string, active: boolean): AxiosPromise {
   });
 }
 
+export function userPasswordReset(unionID: string, data: UserPasswordResetIn): AxiosPromise {
+  return request.post(`/admin/user/${unionID}/password/reset`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
 export function userGroupJoin(unionID: string, data: UserGroupIn): AxiosPromise {
   return request.post(`/admin/user/${unionID}/join-group`, data, {
     headers: getJwtHeader(),
@@ -56,6 +68,12 @@ export function userGroupJoin(unionID: string, data: UserGroupIn): AxiosPromise 
 
 export function userGroupLeave(unionID: string, data: UserGroupIn): AxiosPromise {
   return request.post(`/admin/user/${unionID}/leave-group`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function userFrontendConfigReset(unionID: string): AxiosPromise {
+  return request.post(`/admin/user/${unionID}/frontend-config/reset`, {}, {
     headers: getJwtHeader(),
   });
 }
@@ -121,7 +139,7 @@ export function namespaceDetailGet(name: string): AxiosPromise {
 }
 
 export function namespaceDelete(name: string): AxiosPromise {
-  return request.post(`/admin/namespace/${name}/create`, {
+  return request.post(`/admin/namespace/${name}/delete`, null, {
     headers: getJwtHeader(),
   });
 }

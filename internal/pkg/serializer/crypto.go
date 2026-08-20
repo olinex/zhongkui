@@ -2,6 +2,8 @@ package serializer
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"reflect"
 	"unsafe"
 
@@ -22,8 +24,12 @@ type CryptoTag struct {
 	Length int    `tag:"length"`
 }
 
+// Crypto 持有加密字段的明文与密文
+//   - value: 明文，读写库时由 crypto serializer 加解密，GetPayload 等业务读取明文
+//   - cipher: 密文，Scan 读库时保留，供 MarshalJSON 输出 base64 密文（详情展示），避免明文泄露
 type Crypto struct {
-	value []byte
+	value  []byte
+	cipher []byte
 }
 
 func NewCrypto(value []byte) *Crypto {
@@ -32,6 +38,26 @@ func NewCrypto(value []byte) *Crypto {
 
 func (c *Crypto) Value() []byte {
 	return c.value
+}
+
+// setBytesField 通过 unsafe.Pointer 绕过只读检查，设置 Crypto 的 unexported 字节字段
+// 注意：value/cipher 均为 unexported 字段，在 Go 1.22+ 中 reflect.Set 会因 flagRO 被拒绝
+func setBytesField(cryptoValue reflect.Value, fieldName string, data []byte) {
+	valueField := cryptoValue.FieldByName(fieldName)
+	if !valueField.IsValid() {
+		return
+	}
+	reflect.NewAt(valueField.Type(), unsafe.Pointer(valueField.UnsafeAddr())).Elem().Set(reflect.ValueOf(data))
+}
+
+// MarshalJSON 将 Crypto 序列化为 base64 密文
+// 读库场景（详情接口）经 Scan 保留密文后输出密文，前端可回传明文接口解密；
+// 密文为空（如空数据或写库侧构造的 Crypto）时输出空字符串，避免泄露明文。
+func (c *Crypto) MarshalJSON() ([]byte, error) {
+	if c == nil || len(c.cipher) == 0 {
+		return []byte(`""`), nil
+	}
+	return json.Marshal(base64.StdEncoding.EncodeToString(c.cipher))
 }
 
 type CryptoSerializer struct{}
@@ -105,14 +131,11 @@ func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst re
 	if fieldValue.Kind() != reflect.Struct {
 		return errors.New("crypto: field must be a struct (Crypto)")
 	}
-	// 设置解密后的字节数组到 value 字段
-	// 注意：value 是 unexported 字段，在 Go 1.22+ 中 reflect.Set 会因 flagRO 被拒绝
+	// 设置解密后的明文与原始密文
+	// 注意：value/cipher 是 unexported 字段，在 Go 1.22+ 中 reflect.Set 会因 flagRO 被拒绝
 	// 因此通过 unsafe.Pointer 绕过只读检查
-	valueField := fieldValue.FieldByName("value")
-	if !valueField.IsValid() {
-		return errors.New("crypto: Crypto missing value field")
-	}
-	reflect.NewAt(valueField.Type(), unsafe.Pointer(valueField.UnsafeAddr())).Elem().Set(reflect.ValueOf(plainText))
+	setBytesField(fieldValue, "value", plainText)
+	setBytesField(fieldValue, "cipher", raw)
 	return nil
 }
 

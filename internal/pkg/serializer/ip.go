@@ -57,7 +57,9 @@ func (i IPAddr) Value() (driver.Value, error) {
 	if len(i) == 0 {
 		return nil, nil
 	}
-	return i.String(), nil
+	// 统一以 net.IP 底层 16 字节原始字节数组写入（IPv4 提升为 IPv4-mapped IPv6 形式），
+	// 与 IPv6Addr 的 FixedString(16) 写入格式保持一致，避免定长文本的容量限制
+	return []byte(net.IP(i).To16()), nil
 }
 
 func (i *IPAddr) Scan(value any) error {
@@ -68,9 +70,18 @@ func (i *IPAddr) Scan(value any) error {
 	var ip net.IP
 	switch v := value.(type) {
 	case string:
-		ip = net.ParseIP(v)
+		if len(v) == 16 {
+			// ClickHouse FixedString(16) 驱动返回原生 16 字节二进制（IPv4 为 IPv4-mapped IPv6）
+			ip = net.IP(v).To16()
+		} else {
+			ip = net.ParseIP(v)
+		}
 	case []byte:
-		ip = net.ParseIP(string(v))
+		if len(v) == 16 {
+			ip = net.IP(v).To16()
+		} else {
+			ip = net.ParseIP(string(v))
+		}
 	case net.IP:
 		ip = v
 	default:

@@ -58,6 +58,19 @@ export const changeProfileSchema = yup.object({
   email,
 });
 
+export const createUserSchema = yup.object({
+  username,
+  password,
+  passwordAgain: password.equals([yup.ref("password")]),
+  nickleName,
+  email,
+});
+
+export const adminResetPasswordSchema = yup.object({
+  newPassword: password,
+  newPasswordAgain: password.equals([yup.ref("newPassword")]),
+});
+
 export const accessKeySchema = yup.object({
   enabled,
   description,

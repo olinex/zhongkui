@@ -66,6 +66,15 @@ html {
   border-radius: 12px;
 }
 
+// Light theme: strengthen the hairline card border so white surfaces stand out
+// clearly against the slightly darker page background.
+// `.v-theme--light` is a Vuetify BEM modifier class (double hyphen), so it is
+// exempted from the kebab-case class pattern rule.
+/* stylelint-disable-next-line selector-class-pattern */
+.v-application.v-theme--light .v-card {
+  border-color: rgb(var(--v-theme-on-surface), 0.16);
+}
+
 // Data table: row hover highlight
 .v-application .v-data-table {
   tbody tr:hover {
@@ -79,5 +88,31 @@ html {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: rgb(var(--v-theme-on-surface-variant));
+  }
+
+  // Data table: header select-all checkbox icon inherits the reduced th
+  // font-size (0.75rem → 18px icon), while row checkboxes render at 21px
+  // (1.5em × 14px td font). Pin the header icon to 21px so header and row
+  // checkboxes stay visually identical.
+  /* stylelint-disable-next-line selector-class-pattern */
+  .v-data-table__th .v-checkbox-btn .v-icon {
+    font-size: 1.3125rem;
+  }
+
+  // Data table: the header cell is taller than body rows (compact density:
+  // header 40px vs row 36px), so the centered select-all checkbox sits off
+  // the row grid. Shift it down by half the height difference to align the
+  // header checkbox with each row's checkbox.
+  /* stylelint-disable-next-line selector-class-pattern */
+  .v-data-table__th .v-checkbox-btn {
+    margin-top: calc((var(--v-table-header-height, 56px) - var(--v-table-row-height, 52px)) / 2);
+  }
+
+  // Data table: the select-all header cell uses 8px side padding while body
+  // cells use 16px, pushing the header checkbox left of the row checkboxes.
+  // Match the body padding so all checkboxes line up in a straight column.
+  /* stylelint-disable-next-line selector-class-pattern */
+  .v-data-table__th.v-data-table-column--no-padding {
+    padding-inline: 16px;
   }
 }

@@ -78,15 +78,15 @@ func sampleRules(rego string) []*tag.TagRule {
 const validSampleRego = `package zki
 
 tags contains "browser" if {
-	contains(input.req_hdr_user_agent, "Mozilla")
+	contains(input.reqHdrUserAgent, "Mozilla")
 }`
 
 // runtimeErrorRego 编译通过但评估时必然报错的规则源码：
-// count 仅接受容器/字符串，样例中 req_hdr_content_length 为数字，评估时抛类型错误。
+// count 仅接受容器/字符串，样例中 reqHdrContentLength 为数字，评估时抛类型错误。
 const runtimeErrorRego = `package zki
 
 tags contains "oops" if {
-	count(input.req_hdr_content_length) > 10
+	count(input.reqHdrContentLength) > 10
 }`
 
 func TestValidateGroupRuntime(t *testing.T) {
@@ -98,25 +98,25 @@ func TestValidateGroupRuntime(t *testing.T) {
 			"url": "https://api.example.com/v1/orders",
 			"path": "/v1/orders",
 			"host": "api.example.com",
-			"req_hdr_user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36",
-			"req_hdr_content_length": 42,
-			"client_ip": "10.0.0.55",
-			"server_ip": "142.250.72.14",
-			"session_id": "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
-			"trace_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+			"reqHdrUserAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36",
+			"reqHdrContentLength": 42,
+			"clientIp": "10.0.0.55",
+			"serverIp": "142.250.72.14",
+			"sessionId": "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
+			"traceId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
 			"timestamp": "2026-08-15T03:12:34Z"
 		}`)
-		// 该样例不含 req_hdr_content_length，反序列化后字段为零值 0，
+		// 该样例不含 reqHdrContentLength，反序列化后字段为零值 0，
 		// count(0) 同样触发类型错误（与 browser-post 一样评估报错）
 		insertSample(t, db, "curl-get", `{
 			"namespace": "default",
 			"method": "GET",
 			"url": "https://example.com/api/v1/health",
 			"path": "/api/v1/health",
-			"req_hdr_user_agent": "curl/8.0.1",
-			"client_ip": "192.168.1.10",
-			"server_ip": "93.184.216.34",
-			"session_id": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+			"reqHdrUserAgent": "curl/8.0.1",
+			"clientIp": "192.168.1.10",
+			"serverIp": "93.184.216.34",
+			"sessionId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
 		}`)
 
 		Convey("合法规则运行期校验通过", func() {
@@ -128,7 +128,7 @@ func TestValidateGroupRuntime(t *testing.T) {
 		Convey("运行期报错规则返回对应样例的错误列表", func() {
 			issues, err := tagengine.ValidateGroupRuntime(context.Background(), db, sampleRules(runtimeErrorRego))
 			So(err, ShouldBeNil)
-			// 两条样例的 req_hdr_content_length 均为数字（curl-get 反序列化后为零值 0），
+			// 两条样例的 reqHdrContentLength 均为数字（curl-get 反序列化后为零值 0），
 			// count 不接受数字，规则对两条样例评估均报类型错误
 			So(len(issues), ShouldEqual, 2)
 			So(issues[0].SampleName, ShouldEqual, "browser-post")
@@ -139,7 +139,7 @@ func TestValidateGroupRuntime(t *testing.T) {
 
 		Convey("样例无法反序列化为目标模型时返回错误", func() {
 			insertSample(t, db, "bad-session", `{
-				"session_id": "not-a-uuid",
+				"sessionId": "not-a-uuid",
 				"method": "GET"
 			}`)
 			issues, err := tagengine.ValidateGroupRuntime(context.Background(), db, sampleRules(validSampleRego))

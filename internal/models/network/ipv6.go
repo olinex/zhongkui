@@ -21,27 +21,27 @@ var (
 type IPv6HeaderTLVOption struct {
 	// OptionType 选项类型，标识选项的具体类型
 	// 常见类型包括：0（Pad1）、1（PadN）、5（Router Alert）、194（Jumbo Payload）等
-	OptionType uint8 `json:"option_type"`
+	OptionType uint8 `json:"optionType"`
 
 	// OptionLength 选项长度，表示OptionData字段的长度（以字节为单位）
 	// 注意：对于Pad1选项（类型0），该字段不存在，长度为0
-	OptionLength uint8 `json:"option_length"`
+	OptionLength uint8 `json:"optionLength"`
 
 	// ActualLength 实际长度，表示选项在数据包中的实际字节长度
 	// 由于对齐要求，实际长度可能与OptionLength不同
-	ActualLength int `json:"actual_length"`
+	ActualLength int `json:"actualLength"`
 
 	// OptionData 选项数据，存储选项的具体内容
 	// 对于不同类型的选项，该字段包含不同的数据
-	OptionData []byte `json:"option_data"`
+	OptionData []byte `json:"optionData"`
 
 	// OptionAlignmentX 选项对齐要求X分量
 	// 表示选项需要对齐的边界，格式为x+n*y，其中x是OptionAlignmentX，y是OptionAlignmentY
-	OptionAlignmentX uint8 `json:"option_alignment_x"`
+	OptionAlignmentX uint8 `json:"optionAlignmentX"`
 
 	// OptionAlignmentY 选项对齐要求Y分量
 	// 表示选项需要对齐的边界，格式为x+n*y，其中x是OptionAlignmentX，y是OptionAlignmentY
-	OptionAlignmentY uint8 `json:"option_alignment_y"`
+	OptionAlignmentY uint8 `json:"optionAlignmentY"`
 }
 
 // NewIPv6HeaderTLVOptionByHBH 从逐跳选项创建IPv6HeaderTLVOption
@@ -160,15 +160,15 @@ func (i *IPv6HeaderTLVOptions) Scan(value any) error {
 type IPv6HopByHop struct {
 	// NextHeader 下一个头部类型，标识紧接在该扩展头部之后的下一个头部
 	// 使用layers.IPProtocol类型表示，如TCP、UDP、ICMPv6等
-	NextHeader layers.IPProtocol `json:"next_header"`
+	NextHeader layers.IPProtocol `json:"nextHeader"`
 
 	// HeaderLength 头部长度，以8字节为单位，不包括前8个字节
 	// 实际头部长度 = (HeaderLength + 1) * 8 字节
-	HeaderLength uint8 `json:"header_length"`
+	HeaderLength uint8 `json:"headerLength"`
 
 	// ActualLength 实际长度，表示头部在数据包中的实际字节长度
 	// 由于对齐要求，实际长度可能与计算出的长度不同
-	ActualLength int `json:"actual_length"`
+	ActualLength int `json:"actualLength"`
 
 	// Options TLV选项列表，包含逐跳选项头部中的所有选项
 	// 使用IPv6HeaderTLVOptions类型存储多个TLV选项
@@ -274,15 +274,15 @@ func (h *IPv6HopByHop) Scan(value any) error {
 type IPv6Destination struct {
 	// NextHeader 下一个头部类型，标识紧接在该扩展头部之后的下一个头部
 	// 使用layers.IPProtocol类型表示，如TCP、UDP、ICMPv6或其他扩展头部
-	NextHeader layers.IPProtocol `json:"next_header"`
+	NextHeader layers.IPProtocol `json:"nextHeader"`
 
 	// HeaderLength 头部长度，以8字节为单位，不包括前8个字节
 	// 实际头部长度 = (HeaderLength + 1) * 8 字节
-	HeaderLength uint8 `json:"header_length"`
+	HeaderLength uint8 `json:"headerLength"`
 
 	// ActualLength 实际长度，表示头部在数据包中的实际字节长度
 	// 由于对齐要求，实际长度可能与计算出的长度不同
-	ActualLength int `json:"actual_length"`
+	ActualLength int `json:"actualLength"`
 
 	// Options TLV选项列表，包含目标选项头部中的所有选项
 	// 使用IPv6HeaderTLVOptions类型存储多个TLV选项
@@ -325,7 +325,7 @@ func NewIPv6Destination(ipv6 *layers.IPv6Destination) *IPv6Destination {
 type IPv6Fragment struct {
 	// NextHeader 下一个头部类型，标识紧接在该扩展头部之后的下一个头部
 	// 使用layers.IPProtocol类型表示，通常是传输层协议或其他扩展头部
-	NextHeader layers.IPProtocol `json:"next_header"`
+	NextHeader layers.IPProtocol `json:"nextHeader"`
 
 	// Reserved1 保留字段1，必须设置为0
 	// 在RFC 8200中定义，保留供未来使用
@@ -334,7 +334,7 @@ type IPv6Fragment struct {
 	// FragmentOffset 分片偏移量，以8字节为单位
 	// 表示该分片在原始数据包中的位置
 	// 范围：0-8191（对应0-65528字节）
-	FragmentOffset uint16 `json:"fragment_offset"`
+	FragmentOffset uint16 `json:"fragmentOffset"`
 
 	// Reserved2 保留字段2，必须设置为0
 	// 在RFC 8200中定义，保留供未来使用
@@ -343,7 +343,7 @@ type IPv6Fragment struct {
 	// MoreFragments 更多分片标志
 	// true: 表示后面还有更多分片
 	// false: 表示这是最后一个分片
-	MoreFragments bool `json:"more_fragments"`
+	MoreFragments bool `json:"moreFragments"`
 
 	// Identification 标识符，用于关联属于同一原始数据包的所有分片
 	// 源节点为每个需要分片的数据包生成唯一的标识符
@@ -383,15 +383,15 @@ type IPv6Routing struct {
 
 	// HeaderLength 头部长度，以8字节为单位，不包括前8个字节
 	// 实际头部长度 = (HeaderLength + 1) * 8 字节
-	HeaderLength uint8 `json:"header_length"`
+	HeaderLength uint8 `json:"headerLength"`
 
 	// ActualLength 实际长度，表示头部在数据包中的实际字节长度
 	// 由于对齐要求，实际长度可能与计算出的长度不同
-	ActualLength int `json:"actual_length"`
+	ActualLength int `json:"actualLength"`
 
 	// RoutingType 路由类型，标识路由头部的具体类型
 	// 常见类型：0（已弃用）、2（移动IPv6）、3（RPL源路由）等
-	RoutingType uint8 `json:"routing_type"`
+	RoutingType uint8 `json:"routingType"`
 
 	// Reserved 保留字段，具体含义取决于路由类型
 	// 对于某些路由类型，该字段可能包含特定信息
@@ -400,7 +400,7 @@ type IPv6Routing struct {
 	// SourceRoutingIPs 源路由IP地址列表
 	// 包含数据包需要经过的中间节点的IPv6地址
 	// 列表顺序表示数据包经过这些节点的顺序
-	SourceRoutingIPs []net.IP `json:"source_routing_ips"`
+	SourceRoutingIPs []net.IP `json:"sourceRoutingIps"`
 }
 
 // NewIPv6Routing 从gopacket创建IPv6Routing
@@ -431,40 +431,40 @@ func NewIPv6Routing(ipv6 *layers.IPv6Routing) *IPv6Routing {
 type IPv6Base struct {
 	// IPv6Version IPv6版本号，固定为6
 	// 用于标识IP协议版本，IPv6的版本号始终为6
-	IPv6Version uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_version"`
+	IPv6Version uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6Version"`
 
 	// IPv6TrafficClass 流量类别，用于QoS（服务质量）区分
 	// 对应IPv4中的TOS字段，用于区分数据包的优先级和服务类型
-	IPv6TrafficClass uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_traffic_class"`
+	IPv6TrafficClass uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6TrafficClass"`
 
 	// IPv6FlowLabel 流标签，用于标识属于同一流的数据包
 	// 用于支持需要特殊处理的数据流，如实时音视频流
-	IPv6FlowLabel uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"ipv6_flow_label"`
+	IPv6FlowLabel uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"ipv6FlowLabel"`
 
 	// IPv6Length 有效载荷长度，表示IPv6头部之后的数据长度（以字节为单位）
 	// 不包括IPv6头部本身的40字节，但包括扩展头部
-	IPv6Length uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv6_length"`
+	IPv6Length uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv6Length"`
 
 	// IPv6NextHeader 下一个头部类型，标识紧接在IPv6头部之后的内容
 	// 可以是传输层协议（如TCP、UDP、ICMPv6）或扩展头部
-	IPv6NextHeader layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_next_header"`
+	IPv6NextHeader layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6NextHeader"`
 
 	// IPv6HopLimit 跳数限制，对应IPv4中的TTL字段
 	// 每经过一个路由器减1，当减到0时数据包被丢弃
-	IPv6HopLimit uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_hop_limit"`
+	IPv6HopLimit uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6HopLimit"`
 
 	// IPv6Src 源IPv6地址，数据包的发送方地址
 	// 使用serializer.IPv6Addr类型进行序列化和数据库存储
-	IPv6Src serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6_src"`
+	IPv6Src serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6Src"`
 
 	// IPv6Dst 目的IPv6地址，数据包的接收方地址
 	// 使用serializer.IPv6Addr类型进行序列化和数据库存储
-	IPv6Dst serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6_dst"`
+	IPv6Dst serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6Dst"`
 
 	// IPv6HopByHop IPv6逐跳选项扩展头部
 	// 包含需要在数据包传输路径上每个路由器处理的选项
 	// 使用JSON序列化存储到数据库中
-	IPv6HopByHop *IPv6HopByHop `gorm:"type:String CODEC(ZSTD(3))" json:"ipv6_hop_by_hop"`
+	IPv6HopByHop *IPv6HopByHop `gorm:"type:String CODEC(ZSTD(3))" json:"ipv6HopByHop"`
 }
 
 // NewIPv6Base 从gopacket IPv6层创建IPv6Base
@@ -507,7 +507,7 @@ type IPv6Headers struct {
 	// IPv6LastHeader 最后一个头部类型，标识数据包最终的协议类型
 	// 在IPv6中，数据包可能包含多个扩展头部，该字段表示最后一个头部
 	// 通常是传输层协议（TCP、UDP、ICMPv6）或应用层协议
-	IPv6LastHeader layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6_last_header"`
+	IPv6LastHeader layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv6LastHeader"`
 }
 
 // SrcAddr 返回源IP地址

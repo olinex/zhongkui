@@ -21,7 +21,11 @@
     >
       <template #item="{ item, index }">
         <tr class="text-no-wrap">
-          <td v-show="listItemAction" key="__actions">
+          <td
+            v-show="listItemAction"
+            key="__actions"
+            :class="listItemAction ? 'v-data-table-column--fixed v-data-table-column--last-fixed' : undefined"
+          >
             <slot
               name="list-item-action"
               :item="item"
@@ -64,6 +68,7 @@ const exactHeaders = computed((): Array<TableHeader> => {
         type: BackendDataType.ACTIONS,
         align: "start",
         sortable: false,
+        fixed: "start",
       },
       ...props.headers,
     ];

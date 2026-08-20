@@ -15,7 +15,7 @@ import (
 // lintFields 字段感知 lint 测试使用的样例输入字段元信息。
 var lintFields = []tagengine.InputFieldMeta{
 	{Field: "method", Type: "string"},
-	{Field: "client_ip", Type: "string"},
+	{Field: "clientIp", Type: "string"},
 	{Field: "tags", Type: "array"},
 }
 

@@ -1,16 +1,26 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
+
+// randomPasswordLength 定义管理员重置用户密码时随机生成密码的长度，
+// 该长度满足 AdminUserPasswordResetIn 的 min=8 约束。
+const randomPasswordLength = 10
 
 // UserGroupIn 定义用户加入/离开用户组的输入参数结构体
 // 用于处理用户与用户组关系的操作，包含命名空间和组名信息
@@ -22,6 +32,30 @@ type UserGroupIn struct {
 	// GroupName 表示用户组名称，标识用户要加入或离开的组
 	// 必须提供，长度限制为3-32个字符
 	GroupName string `json:"groupName" binding:"required,min=3,max=32"`
+}
+
+// UserCreateIn 定义管理员创建用户的输入结构体
+// 继承个人资料与登录凭据结构，包含用户名、密码、昵称和邮箱
+type UserCreateIn struct {
+	UserProfileChangeIn
+	UserPasswordLoginIn
+}
+
+// AdminUserPasswordResetIn 定义管理员重置用户密码的输入结构体
+//
+// 该结构体用于接收管理员强制重置用户密码的请求参数，包含以下字段：
+//   - Password: 新密码，可选。若提供则必须满足强密码要求（8-64个ASCII字符）；
+//     若为空或省略，则由系统自动生成符合强密码要求的随机密码
+type AdminUserPasswordResetIn struct {
+	Password string `json:"password" binding:"omitempty,min=8,max=64,ascii,strongPassword"`
+}
+
+// AdminUserPasswordResetOut 定义管理员重置用户密码的输出结构体
+//
+// 该结构体用于返回重置后的明文密码（仅一次性展示），
+// 管理员须将新密码安全地告知目标用户。
+type AdminUserPasswordResetOut struct {
+	Password string `json:"password"`
 }
 
 // UserBaseDetailOut 定义用户基础详情输出结构体
@@ -48,6 +82,10 @@ type UserBaseDetailOut struct {
 	// Active 表示用户是否处于激活状态
 	// 当用户被禁用时，该字段为false，用户将无法登录系统
 	Active bool `json:"active"`
+
+	// FrontendConfigSyncEnabled 表示用户是否开启了前端配置同步
+	// 供管理员在列表中识别已启用配置同步的用户
+	FrontendConfigSyncEnabled bool `json:"frontendConfigSyncEnabled"`
 }
 
 // UserDetailOut 定义用户完整详情输出结构体
@@ -115,6 +153,63 @@ func userListGet(c *gin.Context) {
 
 	// 返回成功的JSON响应
 	manager.SimpleOK.AbortWithGinW(c, out)
+}
+
+// userCreate 处理管理员创建用户请求
+// 路由：POST /api/v1/admin/user/create
+// 功能：创建新用户账户，新用户默认激活并加入默认用户组
+//
+// 参数:
+//   - c *gin.Context: Gin框架的上下文对象，包含HTTP请求和响应信息
+//
+// 请求体:
+//   - 使用UserCreateIn结构体，包含用户名、密码、昵称和邮箱
+//
+// 响应:
+//   - 成功: 返回操作成功的响应
+//   - 失败: 返回相应的错误信息（如用户名或邮箱已存在、验证失败）
+func userCreate(c *gin.Context) {
+	// 初始化创建输入参数，设置默认值
+	var in UserCreateIn
+	if err := defaults.Set(&in); err != nil {
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 绑定并验证JSON请求体
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 对密码进行哈希处理
+	hashPassword, err := crypto.HashPassword(in.Password)
+	if err != nil {
+		logger := manager.GetLogger(c)
+		logger.Errorf(c, nil, "cannot hash password, cause: %v", err)
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 创建用户对象
+	user := core.User{
+		UnionID:    serializer.NewHexUUIDv4(), // 生成唯一标识符
+		Username:   in.Username,
+		NickleName: in.NickleName,
+		Password:   serializer.NewCrypto(hashPassword),
+		Email:      in.Email,
+		Active:     true, // 新用户默认激活
+	}
+
+	// 保存用户到数据库，并分配默认用户组策略
+	db := manager.GetCoreDatabase(c)
+	if err = user.Create(db, false); err != nil {
+		ErrUsernameOrEmailAlreadyExist.AbortWithGinH(c)
+		return
+	}
+
+	// 返回成功响应
+	manager.SimpleOK.AbortWithGinH(c)
 }
 
 // userDetailGet 处理获取用户详情请求
@@ -232,6 +327,74 @@ func userSetActive(active bool) gin.HandlerFunc {
 		// 返回操作成功的响应
 		manager.SimpleOK.AbortWithGinH(c)
 	}
+}
+
+// userPasswordReset 处理管理员强制重置用户密码请求
+// 路由：POST /api/v1/admin/user/:unionID/password/reset
+// 功能：管理员为指定用户重置登录密码，可自行指定新密码或由系统随机生成
+//
+// 参数:
+//   - c *gin.Context: Gin框架的上下文对象，包含HTTP请求和响应信息
+//
+// URL参数:
+//   - unionID: 用户的全局唯一标识符，必须为有效的UUID格式
+//
+// 请求体:
+//   - 使用AdminUserPasswordResetIn结构体，Password字段可选：
+//   - 提供时使用该密码（需满足强密码要求）
+//   - 为空时系统自动生成随机密码
+//
+// 响应:
+//   - 成功: 返回重置后的明文密码（一次性展示），管理员须安全告知目标用户
+//   - 失败: 返回相应的错误信息（如用户不存在、密码强度不足）
+func userPasswordReset(c *gin.Context) {
+	// 从URL参数中获取用户unionID并验证
+	unionID, ok := getUUIDParam(c, "unionID")
+	if !ok {
+		return
+	}
+
+	// 绑定并验证请求体
+	var in AdminUserPasswordResetIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 查询目标用户
+	db := manager.GetCoreDatabase(c)
+	var user core.User
+	if err := db.First(&user, "union_id = ?", unionID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			manager.CreateCodeError(http.StatusNotFound, manager.CodeUserNotExist, nil).AbortWithGinH(c)
+		} else {
+			manager.CreateAccidentError(err).AbortWithGinH(c)
+		}
+		return
+	}
+
+	// 确定新密码：优先使用管理员指定的密码，否则随机生成
+	password := in.Password
+	if password == "" {
+		var err error
+		if password, err = validator.GenerateStrongPassword(randomPasswordLength); err != nil {
+			logger := manager.GetLogger(c)
+			logger.Errorf(c, nil, "cannot generate random password for user %s, cause: %v", unionID.String(), err)
+			manager.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+	}
+
+	// 更新用户密码
+	if err := user.ResetPassword(db, password); err != nil {
+		logger := manager.GetLogger(c)
+		logger.Errorf(c, nil, "cannot reset user %s's password, cause: %v", unionID.String(), err)
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 返回重置后的明文密码（仅一次性展示）
+	manager.SimpleOK.AbortWithGinW(c, AdminUserPasswordResetOut{Password: password})
 }
 
 // userGroupJoin 处理用户加入用户组请求
@@ -373,6 +536,45 @@ func userGroupLeave(c *gin.Context) {
 		in.GroupName,
 		in.Namespace,
 	).Error; err != nil {
+		manager.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 返回操作成功的响应
+	manager.SimpleOK.AbortWithGinH(c)
+}
+
+// userFrontendConfigReset 管理员重置指定用户的前端页面配置
+// 路由：POST /api/v1/admin/user/:unionID/frontend-config/reset
+// 功能：清空用户的配置内容与哈希，并将版本号重置为 0；
+// 同步开关状态保留不变，由用户自行决定是否继续同步
+//
+// 参数:
+//   - c *gin.Context: Gin框架的上下文对象，包含HTTP请求和响应信息
+//
+// URL参数:
+//   - unionID: 用户的全局唯一标识符，必须为有效的UUID格式
+//
+// 响应:
+//   - 成功: 返回操作成功的响应
+//   - 失败: 返回相应的错误信息
+func userFrontendConfigReset(c *gin.Context) {
+	// 从URL参数中获取用户unionID并验证
+	unionID, ok := getUUIDParam(c, "unionID")
+	if !ok {
+		return
+	}
+
+	// 获取数据库连接
+	db := manager.GetCoreDatabase(c)
+
+	// 清空配置内容与哈希并重置版本号
+	if err := db.Model(&core.User{}).Where("union_id = ?", unionID).
+		Updates(map[string]any{
+			"frontend_config":         "",
+			"frontend_config_hash":    "",
+			"frontend_config_version": 0,
+		}).Error; err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}

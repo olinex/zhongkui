@@ -9,7 +9,11 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(64) NOT NULL UNIQUE,
     password BYTEA NOT NULL,
     email VARCHAR(128) NOT NULL UNIQUE,
-    active BOOLEAN NOT NULL DEFAULT true
+    active BOOLEAN NOT NULL DEFAULT true,
+    frontend_config TEXT NOT NULL DEFAULT '',
+    frontend_config_hash CHAR(64) NOT NULL DEFAULT '',
+    frontend_config_version BIGINT NOT NULL DEFAULT 0,
+    frontend_config_sync_enabled BOOLEAN NOT NULL DEFAULT true
 );
 
 COMMENT ON COLUMN users.id IS 'the primary key of the user';
@@ -22,6 +26,10 @@ COMMENT ON COLUMN users.username IS 'the username of the user';
 COMMENT ON COLUMN users.password IS 'the encrypted password of the user';
 COMMENT ON COLUMN users.email IS 'the email address of the user';
 COMMENT ON COLUMN users.active IS 'is the user active';
+COMMENT ON COLUMN users.frontend_config IS 'the user frontend page config, JSON text uploaded by the browser';
+COMMENT ON COLUMN users.frontend_config_hash IS 'the sha256 hex digest of the frontend config, used for optimistic lock';
+COMMENT ON COLUMN users.frontend_config_version IS 'the version of the frontend config, incremented on each successful sync';
+COMMENT ON COLUMN users.frontend_config_sync_enabled IS 'whether the frontend config sync is enabled by the user';
 
 CREATE TABLE IF NOT EXISTS groups (
     id SERIAL PRIMARY KEY,

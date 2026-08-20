@@ -43,17 +43,17 @@ any color, so light/dark themes always stay in sync.
 
 | Token | Hex | Usage |
 |-------|-----|-------|
-| `background` | `#F4F6F9` | Page background |
+| `background` | `#E6EAF0` | Page background (darker so white surfaces stand out) |
 | `surface` | `#FFFFFF` | Cards, sheets, app bar, tooltip background |
-| `surface-variant` | `#EDF0F5` | Tooltip border, subtle surfaces |
+| `surface-variant` | `#E2E7EF` | Tooltip border, subtle surfaces |
 | `primary` | `#2563EB` | Primary actions, selection, active nav |
 | `secondary` | `#64748B` | Secondary actions, neutral accents |
 | `success` | `#16A34A` | Success state |
 | `warning` | `#D97706` | Warning state |
 | `error` | `#DC2626` | Error / destructive state |
 | `info` | `#0891B2` | Informational state |
-| `border` | `#E3E8EF` | Custom border color (see note below) |
-| `outline` | `#C6D0DC` | Custom outline color (see note below) |
+| `border` | `#D5DCE7` | Custom border color (see note below) |
+| `outline` | `#B4C0D2` | Custom outline color (see note below) |
 | `on-background` | `#1F2937` | Primary text on `background` |
 | `on-surface` | `#1F2937` | Primary text on `surface` |
 | `on-surface-variant` | `#4B5563` | Secondary text (captions, table headers) |
@@ -276,6 +276,18 @@ Additional rules:
   for the prominent sign-up action).
 - **Global focus**: `:focus-visible` renders a 2px `primary` outline with 2px
   offset (`main.scss`); never suppress or replace it.
+- **Form / list page layout** — Every list page is composed of (in order): tab
+  bar, filter row(s), action button group, then the table:
+  - The tab bar sits alone at the very top of the page sheet on its own row.
+  - Simple single-condition filters (single `v-select` / date field) sit at the
+    left of one row; complex multi-condition filters (expression / condition
+    chips, e.g. `ExpressionField`) get their own row.
+  - The action button group (`ActionButtonGroup`) sits at the right of the
+    filter row and defaults to icon-only buttons: `variant="text"` so the
+    outline matches the sheet/card surface, with the button name shown via
+    `:title` tooltip on hover. When `collapsible` and collapsed, the resident
+    refresh / create buttons stay visible and secondary buttons are hidden
+    behind the chevron toggle.
 
 ## 9. Charts
 

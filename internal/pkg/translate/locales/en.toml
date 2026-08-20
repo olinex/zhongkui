@@ -80,6 +80,8 @@
 1105 = "Tag Event Rule Validation Failed"
 1106 = "Tag Rule Runtime Validation Failed"
 1107 = "Tag Rule Target Model Not Registered"
+1108 = "Frontend Config Has Been Updated By Another Browser, Please Refresh And Retry"
+1109 = "Frontend Config Sync Is Not Enabled"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"

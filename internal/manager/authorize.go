@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/casbin/casbin/v2"
@@ -8,6 +9,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 )
 
 // RbacPolicyCtxName 是 Gin 上下文中存储 RBAC 策略的键名
@@ -66,12 +68,14 @@ func Authorize(c *gin.Context, span trace.Span) *CodeError {
 		return err
 	}
 	attrs = append(attrs, attribute.String("user", user.UnionID.String()))
-	object := c.FullPath()
-	if object == "" {
+	// 接口层权限点 object = api:{FullPath}（规范见 internal/pkg/base/consts.go）
+	path := c.FullPath()
+	if path == "" {
 		span.SetAttributes(attrs...)
 		span.SetStatus(codes.Error, "object is blank")
 		return ErrAuthorizeBlankFullPath
 	}
+	object := fmt.Sprintf(`%s:%s`, base.APIPrefix, path)
 	attrs = append(attrs, attribute.String("object", object))
 	if ok, err := policy.Enforce(
 		user.UnionID.String(), // 用户标识
@@ -102,10 +106,11 @@ func Authorize(c *gin.Context, span trace.Span) *CodeError {
 // StaticAuthorize 执行静态授权检查，使用指定的命名空间、对象和操作进行权限验证
 // 参数 c: Gin 上下文
 // 参数 namespace: 命名空间
-// 参数 object: 资源对象
-// 参数 action: 操作类型
+// 参数 object: 资源对象（权限点 object）
+// 参数 action: 操作类型（语义动作，如 READ / WRITE）
 // 返回: 授权错误码，nil 表示授权成功
-// 注意: 此函数用于固定资源的授权检查，不依赖于请求路径
+// 注意: 此函数用于固定资源的授权检查，不依赖于请求路径；
+// 与 Casbin 模型 r = sub, obj, act, nsp 对应，Enforce 参数顺序为 (sub, obj, act, nsp)
 func StaticAuthorize(c *gin.Context, span trace.Span, namespace, object, action string) *CodeError {
 	attrs := []attribute.KeyValue{
 		attribute.String("action", action),
@@ -118,10 +123,10 @@ func StaticAuthorize(c *gin.Context, span trace.Span, namespace, object, action 
 		span.SetStatus(codes.Error, "user does not exist")
 		return err
 	} else if ok, err := policy.Enforce(
-		user.UnionID.String(),
-		namespace,
-		object,
-		action,
+		user.UnionID.String(), // 用户标识
+		object,                // 资源对象（权限点 object）
+		action,                // 操作类型（语义动作）
+		namespace,             // 命名空间
 	); err != nil {
 		span.SetAttributes(attrs...)
 		span.SetStatus(codes.Error, err.Error())

@@ -36,9 +36,11 @@ type NamespaceUpdateIn struct {
 //   - binding:"required,min=3,max=32": Gin绑定验证规则，要求必填且长度在3-32字符之间
 //
 // 注意：命名空间名称一旦创建不可修改，具有唯一性约束。
+// 名称限制为 Unicode 字母数字与 _-（alphanumspecial），
+// 保证名称可作为 URL 路径参数安全传递（如 /admin/namespace/:name/delete）。
 type NamespaceCreateIn struct {
 	NamespaceUpdateIn
-	Name string `json:"name" binding:"required,min=3,max=32"`
+	Name string `json:"name" binding:"required,min=3,max=32,alphanumspecial=_-"`
 }
 
 // NamespaceDetailOut 定义命名空间详情输出结构体。
@@ -211,16 +213,21 @@ func namespaceDelete(c *gin.Context) {
 		).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				// 没有引用关系，可以删除
-				result := tx.Delete(&core.Namespace{}, "name = ?", name)
-				if result.Error != nil {
-					manager.CreateAccidentError(result.Error).AbortWithGinH(c)
-					return errors.WithStack(result.Error)
+				// 先查出记录再按主键删除，确保触发 Namespace.AfterDelete 钩子，
+				// 同步清理命名空间缓存（批量 Delete 不触发 GORM 钩子）
+				var ns core.Namespace
+				if err := tx.First(&ns, "name = ?", name).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						// 没有找到指定的命名空间
+						manager.CreateAccidentError(gorm.ErrRecordNotFound).AbortWithGinH(c)
+						return errors.WithStack(gorm.ErrRecordNotFound)
+					}
+					manager.CreateAccidentError(err).AbortWithGinH(c)
+					return errors.WithStack(err)
 				}
-				// 检查是否有行被删除
-				if result.RowsAffected == 0 {
-					// 没有找到指定的命名空间
-					manager.CreateAccidentError(gorm.ErrRecordNotFound).AbortWithGinH(c)
-					return errors.WithStack(gorm.ErrRecordNotFound)
+				if err := tx.Delete(&ns).Error; err != nil {
+					manager.CreateAccidentError(err).AbortWithGinH(c)
+					return errors.WithStack(err)
 				}
 				manager.SimpleOK.AbortWithGinH(c)
 				return nil

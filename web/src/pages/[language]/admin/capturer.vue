@@ -3,18 +3,12 @@
     <template #body>
       <search-table
         ref="searchTableRef"
-        :title="$t('model.capturer.name')"
         :list-request="capturerListGet"
         :options-request="capturerListOptions"
         :actions="getActions"
+        :create="openCreateDialogAction"
         model-name="capturer"
-      >
-        <template #top>
-          <v-btn color="primary" @click="openCreateDialogAction">
-            {{ $t("action.create") }}
-          </v-btn>
-        </template>
-      </search-table>
+      />
       <confirm-dialog
         ref="confirmDialogRef"
         :title="$t(`model.capturer.name`)"

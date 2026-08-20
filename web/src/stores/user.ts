@@ -117,13 +117,45 @@ export const useUserStore = defineStore("user", {
         async (rsp) => {
           // 持久化刷新后的令牌，避免依赖受主机作用域限制的 Cookie
           localManager.setJwt(rsp.data.token);
-          this.load();
+          await this.load();
           if (!this.valid || !auto) {
             return;
           }
           const timeout = this.timeout;
           setTimeout(() => this.refresh(true), timeout);
           consola.info(`refresh after ${timeout} ms`);
+        },
+        async (rsp) => {
+          consola.warn(`code: ${rsp.code} - ${rsp.summary}`);
+        },
+      );
+    },
+    // ensureValid 确保当前会话有效，供路由守卫在切换页面时调用。
+    // 令牌已过期但本地仍持有会话时，先尝试刷新恢复（滑动过期），
+    // 刷新失败仅返回 false，不主动清除本地令牌与初始化状态，
+    // 避免瞬时网络异常导致用户被强制登出。
+    async ensureValid(): Promise<boolean> {
+      if (this.valid) {
+        return true;
+      }
+      if (!localManager.getJwt()) {
+        return false;
+      }
+      await this.refresh(false);
+      return this.valid;
+    },
+    // 重新拉取授权信息并重建 RBAC 执行器，
+    // 用于命名空间/用户组等授权相关数据变更后刷新前端权限快照；
+    // 失败时仅告警不清空会话，避免瞬时接口异常导致用户掉线
+    async refreshAuthorization() {
+      await getResponse<AuthorizationInfo>(
+        authorizationInfoGet(),
+        async (rsp) => {
+          this.namespaces = rsp.data.namespaces;
+          const model = newModelFromString(rsp.data.model);
+          const adapter = new StringAdapter(arrayToCsv(rsp.data.policies));
+          this.enforcer = await newEnforcer(model, adapter);
+          consola.info("authorization refreshed");
         },
         async (rsp) => {
           consola.warn(`code: ${rsp.code} - ${rsp.summary}`);

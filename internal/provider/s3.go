@@ -39,6 +39,14 @@ func InvokeS3(i do.Injector) (*s3.S3Client, error) {
 	return do.Invoke[*s3.S3Client](i)
 }
 
+func MustInvokeS3(i do.Injector) *s3.S3Client {
+	client, err := InvokeS3(i)
+	if err != nil {
+		panic(err)
+	}
+	return client
+}
+
 func DescribeS3Config() config.ConfigDescriptions {
 	return s3.DescribeConfig()
 }

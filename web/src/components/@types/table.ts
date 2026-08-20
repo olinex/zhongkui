@@ -14,6 +14,8 @@ export interface TableHeader {
   align?: Align;
   sortable?: boolean;
   fixed?: Fixed;
+  // 默认可见性：无本地保存配置时新增列默认是否展示，缺省 true（展示）
+  defaultVisible?: boolean;
 }
 
 export interface OrderByItem {

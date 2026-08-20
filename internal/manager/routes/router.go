@@ -33,6 +33,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	etcd := provider.MustInvokeEtcdClient(i)
 	coreDB := provider.MustInvokeCoreDatabase(i)
 	rawDB := provider.MustInvokeRawDatabase(i)
+	s3Client := provider.MustInvokeS3(i)
 
 	// 初始化命名空间缓存：设置数据库引用并预加载全量命名空间
 	core.Cache.SetDB(coreDB)
@@ -84,6 +85,8 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	coreDatabaseMiddleware := manager.CoreDatabaseMiddleware(coreDB)
 	// rawDatabaseMiddleware - raw 库中间件，供标签事件规则 dry-run 查询 tag_summings
 	rawDatabaseMiddleware := manager.RawDatabaseMiddleware(rawDB)
+	// s3Middleware - S3 客户端中间件，供原始流量 body 明文读取
+	s3Middleware := manager.S3ClientMiddleware(s3Client)
 	// etcdMiddleware - etcd客户端中间件，将etcd客户端注入请求上下文
 	etcdMiddleware := manager.EtcdClientMiddleware(etcd)
 	// namespaceMiddleware - 命名空间中间件，处理多租户命名空间隔离
@@ -138,6 +141,10 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/user/list", userListGet)
 		// 用户列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
 		adminGroup.OPTIONS("/user/list", ListMetaGinHandler[*UserListGetSearchIn, *UserListOut]())
+		// 创建用户 - 管理员创建新用户账户
+		adminGroup.POST("/user/create", userCreate)
+		// 创建用户元信息
+		adminGroup.OPTIONS("/user/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[UserCreateIn]())))
 		// 用户详情查询 - 根据unionID获取用户详细信息
 		adminGroup.POST("/user/:unionID/get", userDetailGet)
 		// 用户详情元信息
@@ -154,6 +161,12 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/user/:unionID/deactivate", userSetActive(false))
 		// 用户停用元信息
 		adminGroup.OPTIONS("/user/:unionID/deactivate", StructMetaGinHandler(WithMethod(http.MethodPost)))
+		// 管理员重置用户密码 - 强制重置指定用户的登录密码，可指定新密码或随机生成
+		adminGroup.POST("/user/:unionID/password/reset", userPasswordReset)
+		// 管理员重置用户密码元信息
+		adminGroup.OPTIONS("/user/:unionID/password/reset", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[AdminUserPasswordResetIn](), WithBodyOutput[AdminUserPasswordResetOut]()),
+		))
 		// 用户加入用户组 - 将用户添加到指定用户组
 		adminGroup.POST("/user/:unionID/join-group", userGroupJoin)
 		// 用户加入用户组元信息
@@ -164,6 +177,10 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/user/:unionID/leave-group", userGroupLeave)
 		// 用户离开用户组元信息
 		adminGroup.OPTIONS("/user/:unionID/leave-group", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[UserGroupIn]())))
+		// 重置用户前端配置 - 清空指定用户保存的前端页面配置
+		adminGroup.POST("/user/:unionID/frontend-config/reset", userFrontendConfigReset)
+		// 重置用户前端配置元信息
+		adminGroup.OPTIONS("/user/:unionID/frontend-config/reset", StructMetaGinHandler(WithMethod(http.MethodPost)))
 		// ========== 用户组管理接口 ==========
 		// 管理用户组及其RBAC权限策略
 
@@ -376,6 +393,79 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.OPTIONS("/tag-event-rule/:id/version/:version/rollback", StructMetaGinHandler(WithMethod(http.MethodPost)))
 	}
 
+	// ==================== 原始流量审计接口组：/api/v1/traffic ====================
+	// 只读查询 raw 库（ClickHouse）中的原始流量数据。
+	// 三种数据类型（ipv4-tcp / ipv6-tcp / http-transport）的数据结构与业务逻辑差异较大，
+	// 拆分为三组独立路由各自演进；认证 / RBAC / raw 库 / S3 / 命名空间等公共中间件挂在父组上继承。
+	// 每组仅提供：
+	//   - POST /list      分页查询流量全字段（payload/body 已转存 S3，单条返回字节量可控）
+	//
+	// 三种流量数据均无唯一性 ID，条件查询无法可靠定位单条记录，故不提供 detail 接口；
+	// 加密字段以 base64 密文、S3 body 以对象键形式返回，
+	// 明文查看走全局通用接口 /api/v1/plaintext/crypto 与 /api/v1/plaintext/s3（见下方明文组）。
+
+	trafficGroup := v1Group.Group(
+		"/traffic",                  // 流量审计接口路径前缀
+		authenticatorMiddleware,     // 认证器注入
+		forceAuthenticateMiddleware, // 强制JWT认证
+		policyMiddleware,            // RBAC策略引擎
+		rawDatabaseMiddleware,       // raw 库（ClickHouse）连接
+		s3Middleware,                // S3 客户端（body 明文读取）
+		namespaceMiddleware,         // 命名空间隔离
+	)
+
+	// ========== IPv4 TCP 包：/api/v1/traffic/ipv4-tcp ==========
+	{
+		ipv4TcpGroup := trafficGroup.Group("/ipv4-tcp")
+		// 流量列表查询 - 分页查询 IPv4 TCP 包全字段
+		ipv4TcpGroup.POST("/list", ipv4TcpListGet)
+		// 流量列表元信息
+		ipv4TcpGroup.OPTIONS("/list", ListMetaGinHandler[*Ipv4TcpListGetSearchIn, *Ipv4TcpListGetListItemOut]())
+	}
+
+	// ========== IPv6 TCP 包：/api/v1/traffic/ipv6-tcp ==========
+	{
+		ipv6TcpGroup := trafficGroup.Group("/ipv6-tcp")
+		// 流量列表查询 - 分页查询 IPv6 TCP 包全字段
+		ipv6TcpGroup.POST("/list", ipv6TcpListGet)
+		// 流量列表元信息
+		ipv6TcpGroup.OPTIONS("/list", ListMetaGinHandler[*Ipv6TcpListGetSearchIn, *Ipv6TcpListGetListItemOut]())
+	}
+
+	// ========== HTTP 传输：/api/v1/traffic/http-transport ==========
+	{
+		httpTransportGroup := trafficGroup.Group("/http-transport")
+		// 流量列表查询 - 分页查询 HTTP 传输全字段
+		httpTransportGroup.POST("/list", httpTransportListGet)
+		// 流量列表元信息
+		httpTransportGroup.OPTIONS("/list", ListMetaGinHandler[*HttpTransportListGetSearchIn, *HttpTransportListGetListItemOut]())
+	}
+
+	// ==================== 通用明文查看接口组：/api/v1/plaintext ====================
+	// 全局通用接口：解密加密字段密文 / 读取 S3 body 明文，响应原始字节流。
+	// 权限点 object = plaintext:{crypto|s3}:{model}:{field}，action = READ（规范见 internal/pkg/base/consts.go）。
+	// 新增模型的加密/S3 字段：RegisterPlaintextModel 注册模型 + 补模板种子即可，无需新增接口。
+	plaintextGroup := v1Group.Group(
+		"/plaintext",                // 明文查看接口路径前缀
+		authenticatorMiddleware,     // 认证器注入
+		forceAuthenticateMiddleware, // 强制JWT认证
+		policyMiddleware,            // RBAC策略引擎
+		s3Middleware,                // S3 客户端（S3 body 明文读取）
+		namespaceMiddleware,         // 命名空间隔离
+	)
+	// 加密字段明文解密 - 请求携带模型注册名 + 字段 + base64 密文，按字段权限点静态授权后返回明文
+	plaintextGroup.POST("/crypto", manager.CryptoPlaintextGet)
+	// 加密字段明文解密元信息
+	plaintextGroup.OPTIONS("/crypto", StructMetaGinHandler(
+		WithMethod(http.MethodPost, WithBodyInput[manager.CryptoPlaintextIn]()),
+	))
+	// S3 body 明文读取 - 请求携带模型注册名 + 字段 + 对象键，按字段权限点静态授权后返回明文
+	plaintextGroup.POST("/s3", manager.S3PlaintextGet)
+	// S3 body 明文读取元信息
+	plaintextGroup.OPTIONS("/s3", StructMetaGinHandler(
+		WithMethod(http.MethodPost, WithBodyInput[manager.S3PlaintextIn]()),
+	))
+
 	// ==================== 用户接口组：/api/v1/user ====================
 	// 用户相关接口，包括公共接口和个人接口
 
@@ -502,6 +592,42 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		)
 		// 停用访问密钥元信息
 		selfGroup.OPTIONS("/access-key/:id/deactivate", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[UserAccessKeyOut]())))
+		// 前端配置查询 - 获取当前用户保存的前端页面配置
+		selfGroup.POST(
+			"/frontend-config/get",
+			authenticatorMiddleware,     // 认证器注入
+			forceAuthenticateMiddleware, // 强制认证
+			coreDatabaseMiddleware,      // 数据库连接，查询配置
+			userSelfFrontendConfigGet,   // 前端配置查询处理函数
+		)
+		// 前端配置查询元信息
+		selfGroup.OPTIONS("/frontend-config/get", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyOutput[UserFrontendConfigOut]()),
+		))
+		// 前端配置同步 - 上传当前用户的前端页面配置（乐观锁并发校验）
+		selfGroup.POST(
+			"/frontend-config/sync",
+			authenticatorMiddleware,     // 认证器注入
+			forceAuthenticateMiddleware, // 强制认证
+			coreDatabaseMiddleware,      // 数据库连接，保存配置
+			userSelfFrontendConfigSync,  // 前端配置同步处理函数
+		)
+		// 前端配置同步元信息
+		selfGroup.OPTIONS("/frontend-config/sync", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[UserFrontendConfigSyncIn](), WithBodyOutput[UserFrontendConfigOut]()),
+		))
+		// 前端配置同步开关 - 设置当前用户是否开启前端配置同步
+		selfGroup.POST(
+			"/frontend-config/sync-enabled/set",
+			authenticatorMiddleware,              // 认证器注入
+			forceAuthenticateMiddleware,          // 强制认证
+			coreDatabaseMiddleware,               // 数据库连接，更新开关
+			userSelfFrontendConfigSyncEnabledSet, // 同步开关设置处理函数
+		)
+		// 前端配置同步开关元信息
+		selfGroup.OPTIONS("/frontend-config/sync-enabled/set", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[UserFrontendConfigSyncEnabledIn]()),
+		))
 	}
 	// ==================== ETL管道监控接口组：/api/v1/etl ====================
 	// 提供ETL（Extract-Transform-Load）任务管道的监控和管理功能

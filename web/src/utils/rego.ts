@@ -39,6 +39,72 @@ export const REGO_KEYWORDS = [
   "null",
 ];
 
+/**
+ * Completion position classification for the Rego editor autocomplete.
+ * The editor suppresses or filters options that would be invalid at the
+ * cursor location, so that e.g. `and`/`abs`/`any` are not suggested right
+ * after a completed expression like `input.file_ext == ""`.
+ */
+export type RegoCompletionKind = "block" | "term" | "allowAll";
+
+/** Keywords that can only start a statement/expression, never a term. */
+const EXPRESSION_START_KEYWORDS = new Set([
+  "package",
+  "import",
+  "default",
+  "some",
+  "every",
+  "if",
+  "else",
+  "contains",
+  "with",
+  "in",
+  "not",
+  "as",
+]);
+
+/** Matches a fully closed string literal at the line end: `""`, `"..."` or `` `...` ``. */
+const CLOSED_LITERAL_TAIL_RE =
+  /(?:""|"(?:[^"\\]|\\.)*"|`(?:[^`]|\\.)*`|\d+(?:\.\d+)?|true|false|null)$/;
+
+/** Comparison / assignment operators, looked up anywhere on the line. */
+const COMPARISON_OP_RE = /(?:==|!=|<=|>=|<|>|:=|=)/;
+
+/** Line endings that expect a term value: operators, commas or open brackets. */
+const TERM_POSITION_RE = /(?:==|!=|<=|>=|<|>|:=|=|,|\[|\{|\()\s*$/;
+
+/** Keywords that expect a following term on the same line. */
+const TERM_KEYWORD_RE = /(?:\bif\b|\bin\b|\bnot\b|\bsome\b|\bevery\b|\bcontains\b)\s*$/;
+
+/**
+ * Classifies the completion context at the cursor given the line text before
+ * the cursor (including any partial word being typed):
+ * - "block": a completed expression/literal precedes the cursor, so any word
+ *   typed here is a syntax error and no completion should be offered.
+ * - "term": only a term (value) is expected here; statement-starting keywords
+ *   must be filtered out of the completion list.
+ * - "allowAll": no positional constraint, keep the default completions.
+ */
+export function classifyRegoCompletionContext(lineTextBefore: string): RegoCompletionKind {
+  // Drop the partial word being typed so we classify the position itself.
+  const before = lineTextBefore.replace(/[a-zA-Z_][a-zA-Z0-9_]*$/, "");
+
+  // A closed literal right after a comparison/assignment completes the
+  // expression: any further word on this line is a syntax error.
+  if (CLOSED_LITERAL_TAIL_RE.test(before.trimEnd()) && COMPARISON_OP_RE.test(before)) {
+    return "block";
+  }
+  if (TERM_POSITION_RE.test(before) || TERM_KEYWORD_RE.test(before)) {
+    return "term";
+  }
+  return "allowAll";
+}
+
+/** Returns true when the completion label is a statement-starting keyword. */
+export function isRegoExpressionKeyword(label: string): boolean {
+  return EXPRESSION_START_KEYWORDS.has(label);
+}
+
 /** Item metadata for array-typed fields, e.g. the element type of `items`. */
 export interface InputItemMeta {
   type: string;

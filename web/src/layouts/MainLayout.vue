@@ -27,7 +27,7 @@
           open-strategy="single" 保证手风琴互斥（同一时间仅一个分组展开）；
           opened 记录展开分组，路由变化时由 watch 自动展开当前页面所属分组
         -->
-        <template v-for="(parent, index) in navigation" :key="parent.value">
+        <template v-for="(parent, index) in navigationGroups" :key="parent.value">
           <v-list-group :value="parent.value" color="primary">
             <template #activator="{ props: groupProps }">
               <v-list-item
@@ -46,12 +46,12 @@
               v-for="(child, cindex) in parent.childrens"
               :key="`${index}-${cindex}`"
               :title="$t(child.title)"
-              :active="route.name === child.routeName"
+              :active="isChildActive(child)"
               color="primary"
               variant="tonal"
               class="nav-child"
               nav
-              :to="{ name: child.routeName, params: route.params }"
+              :to="childTo(child)"
             />
           </v-list-group>
         </template>
@@ -60,6 +60,11 @@
     <v-main class="d-flex mb-6">
       <v-container class="pa-4 pa-md-6" style="max-width: 1440px">
         <slot name="prepend" />
+        <!--
+          页面标题以面包屑形式展示：首页可点击返回，导航树匹配到的祖先层级
+          （如流量审计/管理）暂为纯文本，未来多级路径加深时自动跟随导航树增深
+        -->
+        <breadcrumbs />
         <!--
           v-sheet 圆角与全局 .v-card 的 12px 圆角对齐（见 main.scss），
           避免直角容器内嵌圆角卡片时四角出现月牙形色差空缺
@@ -74,6 +79,9 @@
 </template>
 
 <script setup lang="ts" name="main-layout">
+import { navigationGroups } from "@/navigation";
+import type { NavChild } from "@/navigation";
+import { useConfigSyncStore } from "@/stores/configSync";
 import { localManager } from "@/stores/local";
 
 const route = useRoute();
@@ -85,6 +93,21 @@ const props = defineProps({
   },
 });
 
+// 子项路由目标：继承当前路由参数（语言段）并合并子项自身参数（如流量模型 type）
+const childTo = (child: NavChild) => {
+  return { name: child.routeName, params: { ...route.params, ...child.params } };
+};
+
+// 子项激活判断：路由名一致且参数一致（同名路由的不同参数子项互斥高亮）
+const isChildActive = (child: NavChild): boolean => {
+  if (route.name !== child.routeName) {
+    return false;
+  }
+  return Object.entries(child.params ?? {}).every(([key, value]) => {
+    return route.params[key] === value;
+  });
+};
+
 // 固定展开状态：固定时禁用 hover 展开并保持展开，初始值从本地偏好恢复。
 const pinned = ref(localManager.getNavPinned());
 // Whether the navigation drawer is collapsed into a rail (expands on hover).
@@ -95,6 +118,8 @@ const togglePinned = () => {
   pinned.value = !pinned.value;
   localManager.setNavPinned(pinned.value);
   rail.value = !pinned.value;
+  // 页面配置变更：通知前端配置同步 store 防抖上传
+  useConfigSyncStore().notifyLocalChange();
 };
 
 const mainNav = ref(props.currentNav);
@@ -122,62 +147,13 @@ watch(
   { immediate: true },
 );
 
-const navigation = ref([
-  {
-    title: "navbar.etl.self",
-    icon: "mdi-timetable",
-    value: "etl",
-    childrens: [
-      {
-        title: "navbar.etl.server",
-        routeName: "ETL Server List",
-      },
-      {
-        title: "navbar.etl.task",
-        routeName: "ETL Task List",
-      },
-    ],
-  },
-  {
-    title: "navbar.admin.self",
-    icon: "mdi-wrench",
-    value: "admin",
-    childrens: [
-      {
-        title: "navbar.admin.user",
-        routeName: "Admin User List",
-      },
-      {
-        title: "navbar.admin.group",
-        routeName: "Admin Group List",
-      },
-      {
-        title: "navbar.admin.namespace",
-        routeName: "Admin Namespace List",
-      },
-      {
-        title: "navbar.admin.capturer",
-        routeName: "Admin Capturer List",
-      },
-      {
-        title: "navbar.admin.tagRule",
-        routeName: "Admin Tag Rule List",
-      },
-      {
-        title: "navbar.admin.tagEventRule",
-        routeName: "Admin Tag Event Rule List",
-      },
-    ],
-  },
-]);
-
 // Keep the active group heading in sync with the current route so the parent
 // highlight stays consistent after navigating through a child item.
 // 路由变化时同时展开对应一级菜单，保证"当前子页面对应的一级导航栏打开"
 watch(
   () => route.name,
   (name) => {
-    const parent = navigation.value.find((group) =>
+    const parent = navigationGroups.find((group) =>
       group.childrens.some((child) => child.routeName === String(name)),
     );
     if (parent) {

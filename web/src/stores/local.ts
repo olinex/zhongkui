@@ -15,6 +15,9 @@ const JWT_KEY: string = "jwtoken";
 // 侧边栏固定展开偏好（true 时导航抽屉固定展开，不随鼠标悬停收起）
 const NAV_PINNED_KEY: string = "nav-pinned";
 
+// 首页快速开始清单配置（分组与导航入口，JSON 字符串）
+const QUICK_START_KEY: string = "quick-start";
+
 const LANGUAGE_KEY: string = "locale";
 const AVAILABLE_LOCALES: SupportLanguage[] = [SupportLanguage.English, SupportLanguage.ZhHans];
 export const DEFAULT_LOCALE: SupportLanguage = SupportLanguage.English;
@@ -22,6 +25,9 @@ export const DEFAULT_LOCALE: SupportLanguage = SupportLanguage.English;
 export const localManager = {
   getTheme(): string {
     return localStorage.getItem(THEME_STORAGE_KEY) || DARK_THEME;
+  },
+  setTheme(theme: string) {
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   },
   toggleTheme() {
     const theme = this.getTheme();
@@ -44,6 +50,13 @@ export const localManager = {
   },
   setNavPinned(pinned: boolean) {
     localStorage.setItem(NAV_PINNED_KEY, String(pinned));
+  },
+
+  getQuickStartGroups(): string | null {
+    return localStorage.getItem(QUICK_START_KEY);
+  },
+  setQuickStartGroups(groupsJson: string) {
+    localStorage.setItem(QUICK_START_KEY, groupsJson);
   },
 
   getJwt(): string | void {

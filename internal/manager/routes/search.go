@@ -822,6 +822,1002 @@ func (s *GroupListGetSearchIn) GetOptions() *utils.SearchOptions {
     }
 }
 
+type timestampHttpTransportListGetOrderByItem int
+
+func (i *timestampHttpTransportListGetOrderByItem) GetName() string {
+    return "timestamp"
+}
+
+func (i *timestampHttpTransportListGetOrderByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampHttpTransportListGetOrderByItem) GetOrder() string {
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
+}
+
+type HttpTransportListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=timestamp"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type timestampFromHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *timestampFromHttpTransportListGetFilterByItem) GetName() string {
+    return "timestampFrom"
+}
+
+func (i *timestampFromHttpTransportListGetFilterByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampFromHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *timestampFromHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type timestampToHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=lte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *timestampToHttpTransportListGetFilterByItem) GetName() string {
+    return "timestampTo"
+}
+
+func (i *timestampToHttpTransportListGetFilterByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampToHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *timestampToHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtFromHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtFromHttpTransportListGetFilterByItem) GetName() string {
+    return "createdAtFrom"
+}
+
+func (i *createdAtFromHttpTransportListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtFromHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtFromHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtToHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=lte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtToHttpTransportListGetFilterByItem) GetName() string {
+    return "createdAtTo"
+}
+
+func (i *createdAtToHttpTransportListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtToHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtToHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type namespaceHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *namespaceHttpTransportListGetFilterByItem) GetName() string {
+    return "namespace"
+}
+
+func (i *namespaceHttpTransportListGetFilterByItem) GetColumn() string {
+    return "namespace"
+}
+
+func (i *namespaceHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *namespaceHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type sessionIdHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq"`
+    Value serializer.HexUUID `mapstructure:"value" binding:""`
+}
+
+func (i *sessionIdHttpTransportListGetFilterByItem) GetName() string {
+    return "sessionId"
+}
+
+func (i *sessionIdHttpTransportListGetFilterByItem) GetColumn() string {
+    return "session_id"
+}
+
+func (i *sessionIdHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *sessionIdHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type clientPortHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq lt lte gt gte"`
+    Value uint16 `mapstructure:"value" binding:""`
+}
+
+func (i *clientPortHttpTransportListGetFilterByItem) GetName() string {
+    return "clientPort"
+}
+
+func (i *clientPortHttpTransportListGetFilterByItem) GetColumn() string {
+    return "client_port"
+}
+
+func (i *clientPortHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *clientPortHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type serverPortHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq lt lte gt gte"`
+    Value uint16 `mapstructure:"value" binding:""`
+}
+
+func (i *serverPortHttpTransportListGetFilterByItem) GetName() string {
+    return "serverPort"
+}
+
+func (i *serverPortHttpTransportListGetFilterByItem) GetColumn() string {
+    return "server_port"
+}
+
+func (i *serverPortHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *serverPortHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type methodHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *methodHttpTransportListGetFilterByItem) GetName() string {
+    return "method"
+}
+
+func (i *methodHttpTransportListGetFilterByItem) GetColumn() string {
+    return "method"
+}
+
+func (i *methodHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *methodHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type hostHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *hostHttpTransportListGetFilterByItem) GetName() string {
+    return "host"
+}
+
+func (i *hostHttpTransportListGetFilterByItem) GetColumn() string {
+    return "host"
+}
+
+func (i *hostHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *hostHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type pathHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *pathHttpTransportListGetFilterByItem) GetName() string {
+    return "path"
+}
+
+func (i *pathHttpTransportListGetFilterByItem) GetColumn() string {
+    return "path"
+}
+
+func (i *pathHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *pathHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type fileExtHttpTransportListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *fileExtHttpTransportListGetFilterByItem) GetName() string {
+    return "fileExt"
+}
+
+func (i *fileExtHttpTransportListGetFilterByItem) GetColumn() string {
+    return "file_ext"
+}
+
+func (i *fileExtHttpTransportListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *fileExtHttpTransportListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+
+type HttpTransportListGetFilterBy struct {
+    TimestampFrom timestampFromHttpTransportListGetFilterByItem `mapstructure:"timestampFrom" binding:"required"`
+    TimestampTo timestampToHttpTransportListGetFilterByItem `mapstructure:"timestampTo" binding:"required"`
+    CreatedAtFrom createdAtFromHttpTransportListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
+    CreatedAtTo createdAtToHttpTransportListGetFilterByItem `mapstructure:"createdAtTo" binding:"required"`
+    Namespace *namespaceHttpTransportListGetFilterByItem `mapstructure:"namespace"`
+    SessionId *sessionIdHttpTransportListGetFilterByItem `mapstructure:"sessionId"`
+    ClientPort *clientPortHttpTransportListGetFilterByItem `mapstructure:"clientPort"`
+    ServerPort *serverPortHttpTransportListGetFilterByItem `mapstructure:"serverPort"`
+    Method *methodHttpTransportListGetFilterByItem `mapstructure:"method"`
+    Host *hostHttpTransportListGetFilterByItem `mapstructure:"host"`
+    Path *pathHttpTransportListGetFilterByItem `mapstructure:"path"`
+    FileExt *fileExtHttpTransportListGetFilterByItem `mapstructure:"fileExt"`
+}
+
+type HttpTransportListGetSearchIn struct {
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []HttpTransportListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy HttpTransportListGetFilterBy       `mapstructure:"filterBy"`
+}
+
+func (s *HttpTransportListGetSearchIn) GetGreedy() bool {
+    return s.Greedy
+}
+
+func (s *HttpTransportListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "timestamp":
+            item := timestampHttpTransportListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
+}
+
+func (s *HttpTransportListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+    items := make(map[string]utils.FilterByItem)
+    items["timestampFrom"] = &s.FilterBy.TimestampFrom
+    items["timestampTo"] = &s.FilterBy.TimestampTo
+    items["createdAtFrom"] = &s.FilterBy.CreatedAtFrom
+    items["createdAtTo"] = &s.FilterBy.CreatedAtTo
+    if s.FilterBy.Namespace != nil {
+        items["namespace"] = s.FilterBy.Namespace
+    }
+    if s.FilterBy.SessionId != nil {
+        items["sessionId"] = s.FilterBy.SessionId
+    }
+    if s.FilterBy.ClientPort != nil {
+        items["clientPort"] = s.FilterBy.ClientPort
+    }
+    if s.FilterBy.ServerPort != nil {
+        items["serverPort"] = s.FilterBy.ServerPort
+    }
+    if s.FilterBy.Method != nil {
+        items["method"] = s.FilterBy.Method
+    }
+    if s.FilterBy.Host != nil {
+        items["host"] = s.FilterBy.Host
+    }
+    if s.FilterBy.Path != nil {
+        items["path"] = s.FilterBy.Path
+    }
+    if s.FilterBy.FileExt != nil {
+        items["fileExt"] = s.FilterBy.FileExt
+    }
+    return items
+}
+
+func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions {
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "timestamp",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "timestampFrom",
+                Type: "time.Time",
+                Actions: []string{
+                    "gte",
+                },
+            },
+            {
+                Name: "timestampTo",
+                Type: "time.Time",
+                Actions: []string{
+                    "lte",
+                },
+            },
+            {
+                Name: "createdAtFrom",
+                Type: "time.Time",
+                Actions: []string{
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTo",
+                Type: "time.Time",
+                Actions: []string{
+                    "lte",
+                },
+            },
+            {
+                Name: "namespace",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "sessionId",
+                Type: "serializer.HexUUID",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                },
+            },
+            {
+                Name: "clientPort",
+                Type: "uint16",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "serverPort",
+                Type: "uint16",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                    "lt",
+                    "lte",
+                    "gt",
+                    "gte",
+                },
+            },
+            {
+                Name: "method",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "host",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "path",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "fileExt",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+        },
+    }
+}
+
+type timestampIpv4TcpListGetOrderByItem int
+
+func (i *timestampIpv4TcpListGetOrderByItem) GetName() string {
+    return "timestamp"
+}
+
+func (i *timestampIpv4TcpListGetOrderByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampIpv4TcpListGetOrderByItem) GetOrder() string {
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
+}
+
+type Ipv4TcpListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=timestamp"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type timestampFromIpv4TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *timestampFromIpv4TcpListGetFilterByItem) GetName() string {
+    return "timestampFrom"
+}
+
+func (i *timestampFromIpv4TcpListGetFilterByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampFromIpv4TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *timestampFromIpv4TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type timestampToIpv4TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=lte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *timestampToIpv4TcpListGetFilterByItem) GetName() string {
+    return "timestampTo"
+}
+
+func (i *timestampToIpv4TcpListGetFilterByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampToIpv4TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *timestampToIpv4TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtFromIpv4TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtFromIpv4TcpListGetFilterByItem) GetName() string {
+    return "createdAtFrom"
+}
+
+func (i *createdAtFromIpv4TcpListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtFromIpv4TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtFromIpv4TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtToIpv4TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=lte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtToIpv4TcpListGetFilterByItem) GetName() string {
+    return "createdAtTo"
+}
+
+func (i *createdAtToIpv4TcpListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtToIpv4TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtToIpv4TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type namespaceIpv4TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *namespaceIpv4TcpListGetFilterByItem) GetName() string {
+    return "namespace"
+}
+
+func (i *namespaceIpv4TcpListGetFilterByItem) GetColumn() string {
+    return "namespace"
+}
+
+func (i *namespaceIpv4TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *namespaceIpv4TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type sessionIdIpv4TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq"`
+    Value serializer.HexUUID `mapstructure:"value" binding:""`
+}
+
+func (i *sessionIdIpv4TcpListGetFilterByItem) GetName() string {
+    return "sessionId"
+}
+
+func (i *sessionIdIpv4TcpListGetFilterByItem) GetColumn() string {
+    return "session_id"
+}
+
+func (i *sessionIdIpv4TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *sessionIdIpv4TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type tcpStreamIdIpv4TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetName() string {
+    return "tcpStreamId"
+}
+
+func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetColumn() string {
+    return "tcp_stream_id"
+}
+
+func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+
+type Ipv4TcpListGetFilterBy struct {
+    TimestampFrom timestampFromIpv4TcpListGetFilterByItem `mapstructure:"timestampFrom" binding:"required"`
+    TimestampTo timestampToIpv4TcpListGetFilterByItem `mapstructure:"timestampTo" binding:"required"`
+    CreatedAtFrom createdAtFromIpv4TcpListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
+    CreatedAtTo createdAtToIpv4TcpListGetFilterByItem `mapstructure:"createdAtTo" binding:"required"`
+    Namespace *namespaceIpv4TcpListGetFilterByItem `mapstructure:"namespace"`
+    SessionId *sessionIdIpv4TcpListGetFilterByItem `mapstructure:"sessionId"`
+    TcpStreamId *tcpStreamIdIpv4TcpListGetFilterByItem `mapstructure:"tcpStreamId"`
+}
+
+type Ipv4TcpListGetSearchIn struct {
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []Ipv4TcpListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy Ipv4TcpListGetFilterBy       `mapstructure:"filterBy"`
+}
+
+func (s *Ipv4TcpListGetSearchIn) GetGreedy() bool {
+    return s.Greedy
+}
+
+func (s *Ipv4TcpListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "timestamp":
+            item := timestampIpv4TcpListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
+}
+
+func (s *Ipv4TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+    items := make(map[string]utils.FilterByItem)
+    items["timestampFrom"] = &s.FilterBy.TimestampFrom
+    items["timestampTo"] = &s.FilterBy.TimestampTo
+    items["createdAtFrom"] = &s.FilterBy.CreatedAtFrom
+    items["createdAtTo"] = &s.FilterBy.CreatedAtTo
+    if s.FilterBy.Namespace != nil {
+        items["namespace"] = s.FilterBy.Namespace
+    }
+    if s.FilterBy.SessionId != nil {
+        items["sessionId"] = s.FilterBy.SessionId
+    }
+    if s.FilterBy.TcpStreamId != nil {
+        items["tcpStreamId"] = s.FilterBy.TcpStreamId
+    }
+    return items
+}
+
+func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "timestamp",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "timestampFrom",
+                Type: "time.Time",
+                Actions: []string{
+                    "gte",
+                },
+            },
+            {
+                Name: "timestampTo",
+                Type: "time.Time",
+                Actions: []string{
+                    "lte",
+                },
+            },
+            {
+                Name: "createdAtFrom",
+                Type: "time.Time",
+                Actions: []string{
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTo",
+                Type: "time.Time",
+                Actions: []string{
+                    "lte",
+                },
+            },
+            {
+                Name: "namespace",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "sessionId",
+                Type: "serializer.HexUUID",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                },
+            },
+            {
+                Name: "tcpStreamId",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+        },
+    }
+}
+
+type timestampIpv6TcpListGetOrderByItem int
+
+func (i *timestampIpv6TcpListGetOrderByItem) GetName() string {
+    return "timestamp"
+}
+
+func (i *timestampIpv6TcpListGetOrderByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampIpv6TcpListGetOrderByItem) GetOrder() string {
+    if *i == 1 {
+        return "ASC"
+    } else {
+        return "DESC"
+    }
+}
+
+type Ipv6TcpListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=timestamp"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type timestampFromIpv6TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *timestampFromIpv6TcpListGetFilterByItem) GetName() string {
+    return "timestampFrom"
+}
+
+func (i *timestampFromIpv6TcpListGetFilterByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampFromIpv6TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *timestampFromIpv6TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type timestampToIpv6TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=lte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *timestampToIpv6TcpListGetFilterByItem) GetName() string {
+    return "timestampTo"
+}
+
+func (i *timestampToIpv6TcpListGetFilterByItem) GetColumn() string {
+    return "timestamp"
+}
+
+func (i *timestampToIpv6TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *timestampToIpv6TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtFromIpv6TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=gte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtFromIpv6TcpListGetFilterByItem) GetName() string {
+    return "createdAtFrom"
+}
+
+func (i *createdAtFromIpv6TcpListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtFromIpv6TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtFromIpv6TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type createdAtToIpv6TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=lte"`
+    Value time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtToIpv6TcpListGetFilterByItem) GetName() string {
+    return "createdAtTo"
+}
+
+func (i *createdAtToIpv6TcpListGetFilterByItem) GetColumn() string {
+    return "created_at"
+}
+
+func (i *createdAtToIpv6TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *createdAtToIpv6TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type namespaceIpv6TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *namespaceIpv6TcpListGetFilterByItem) GetName() string {
+    return "namespace"
+}
+
+func (i *namespaceIpv6TcpListGetFilterByItem) GetColumn() string {
+    return "namespace"
+}
+
+func (i *namespaceIpv6TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *namespaceIpv6TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type sessionIdIpv6TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq neq"`
+    Value serializer.HexUUID `mapstructure:"value" binding:""`
+}
+
+func (i *sessionIdIpv6TcpListGetFilterByItem) GetName() string {
+    return "sessionId"
+}
+
+func (i *sessionIdIpv6TcpListGetFilterByItem) GetColumn() string {
+    return "session_id"
+}
+
+func (i *sessionIdIpv6TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *sessionIdIpv6TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+type tcpStreamIdIpv6TcpListGetFilterByItem struct {
+    Action string          `mapstructure:"action" binding:"required,oneof=eq"`
+    Value string `mapstructure:"value" binding:""`
+}
+
+func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetName() string {
+    return "tcpStreamId"
+}
+
+func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetColumn() string {
+    return "tcp_stream_id"
+}
+
+func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetAction() string {
+    return i.Action
+}
+
+func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetValue() any {
+    return i.Value
+}
+
+type Ipv6TcpListGetFilterBy struct {
+    TimestampFrom timestampFromIpv6TcpListGetFilterByItem `mapstructure:"timestampFrom" binding:"required"`
+    TimestampTo timestampToIpv6TcpListGetFilterByItem `mapstructure:"timestampTo" binding:"required"`
+    CreatedAtFrom createdAtFromIpv6TcpListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
+    CreatedAtTo createdAtToIpv6TcpListGetFilterByItem `mapstructure:"createdAtTo" binding:"required"`
+    Namespace *namespaceIpv6TcpListGetFilterByItem `mapstructure:"namespace"`
+    SessionId *sessionIdIpv6TcpListGetFilterByItem `mapstructure:"sessionId"`
+    TcpStreamId *tcpStreamIdIpv6TcpListGetFilterByItem `mapstructure:"tcpStreamId"`
+}
+
+type Ipv6TcpListGetSearchIn struct {
+    Pagination
+    Greedy   bool                         `mapstructure:"greedy" default:"false"`
+    OrderBy  []Ipv6TcpListGetOrderBy     `mapstructure:"orderBy"`
+    FilterBy Ipv6TcpListGetFilterBy       `mapstructure:"filterBy"`
+}
+
+func (s *Ipv6TcpListGetSearchIn) GetGreedy() bool {
+    return s.Greedy
+}
+
+func (s *Ipv6TcpListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+    items := make([]utils.OrderByItem, 0)
+    if s.OrderBy == nil {
+        return items
+    }
+    for _, ord := range s.OrderBy {
+        switch ord.Name {
+        case "timestamp":
+            item := timestampIpv6TcpListGetOrderByItem(ord.Order)
+            items = append(items, &item)
+        }
+    }
+    return items
+}
+
+func (s *Ipv6TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+    items := make(map[string]utils.FilterByItem)
+    items["timestampFrom"] = &s.FilterBy.TimestampFrom
+    items["timestampTo"] = &s.FilterBy.TimestampTo
+    items["createdAtFrom"] = &s.FilterBy.CreatedAtFrom
+    items["createdAtTo"] = &s.FilterBy.CreatedAtTo
+    if s.FilterBy.Namespace != nil {
+        items["namespace"] = s.FilterBy.Namespace
+    }
+    if s.FilterBy.SessionId != nil {
+        items["sessionId"] = s.FilterBy.SessionId
+    }
+    if s.FilterBy.TcpStreamId != nil {
+        items["tcpStreamId"] = s.FilterBy.TcpStreamId
+    }
+    return items
+}
+
+func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
+    return &utils.SearchOptions{
+        OrderBy: []string{
+            "timestamp",
+        },
+        FilterBy: []*utils.FilterByOption{
+            {
+                Name: "timestampFrom",
+                Type: "time.Time",
+                Actions: []string{
+                    "gte",
+                },
+            },
+            {
+                Name: "timestampTo",
+                Type: "time.Time",
+                Actions: []string{
+                    "lte",
+                },
+            },
+            {
+                Name: "createdAtFrom",
+                Type: "time.Time",
+                Actions: []string{
+                    "gte",
+                },
+            },
+            {
+                Name: "createdAtTo",
+                Type: "time.Time",
+                Actions: []string{
+                    "lte",
+                },
+            },
+            {
+                Name: "namespace",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+            {
+                Name: "sessionId",
+                Type: "serializer.HexUUID",
+                Actions: []string{
+                    "eq",
+                    "neq",
+                },
+            },
+            {
+                Name: "tcpStreamId",
+                Type: "string",
+                Actions: []string{
+                    "eq",
+                },
+            },
+        },
+    }
+}
+
 type createdAtNamespaceListGetOrderByItem int
 
 func (i *createdAtNamespaceListGetOrderByItem) GetName() string {

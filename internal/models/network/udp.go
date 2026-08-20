@@ -22,8 +22,8 @@ import (
 //   - 分析DNS、DHCP、NTP等基于UDP的协议
 //   - 监控网络流量和性能分析
 type UDPHeaders struct {
-	UDPSrcPort  layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"src_port"`
-	UDPDstPort  layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"dst_port"`
+	UDPSrcPort  layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"srcPort"`
+	UDPDstPort  layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"dstPort"`
 	UDPLength   uint16         `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"length"`
 	UDPChecksum uint16         `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"checksum"`
 }
@@ -61,7 +61,7 @@ func NewUDPHeaders(udp *layers.UDP) *UDPHeaders {
 type PacketIPv4UDP struct {
 	PacketIPv4                     // 嵌入IPv4数据包基础结构
 	UDPHeaders                     // 嵌入UDP头部信息
-	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udp_stream_id"`
+	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
 	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
 }
 
@@ -86,7 +86,7 @@ func (p *PacketIPv4UDP) StreamID() string {
 type PacketIPv6UDP struct {
 	PacketIPv6                     // 嵌入IPv6数据包基础结构
 	UDPHeaders                     // 嵌入UDP头部信息
-	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udp_stream_id"`
+	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
 	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
 }
 

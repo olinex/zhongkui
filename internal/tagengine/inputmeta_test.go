@@ -67,10 +67,10 @@ func TestInputMeta(t *testing.T) {
 			}
 		})
 
-		Convey("client_port 字段：数字类型", func() {
+		Convey("clientPort 字段：数字类型", func() {
 			metas, err := tagengine.InputMetadata(httpTransportType)
 			So(err, ShouldBeNil)
-			meta := findMeta(metas, "client_port")
+			meta := findMeta(metas, "clientPort")
 			So(meta, ShouldNotBeNil)
 			So(meta.Type, ShouldEqual, "number")
 		})
@@ -85,10 +85,10 @@ func TestInputMeta(t *testing.T) {
 			So(meta.Items.Type, ShouldEqual, "string")
 		})
 
-		Convey("req_hdr_authorization 字段：敏感对象", func() {
+		Convey("reqHdrAuthorization 字段：敏感对象", func() {
 			metas, err := tagengine.InputMetadata(httpTransportType)
 			So(err, ShouldBeNil)
-			meta := findMeta(metas, "req_hdr_authorization")
+			meta := findMeta(metas, "reqHdrAuthorization")
 			So(meta, ShouldNotBeNil)
 			So(meta.Sensitive, ShouldBeTrue)
 			So(meta.Type, ShouldEqual, "object")

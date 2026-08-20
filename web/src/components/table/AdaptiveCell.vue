@@ -22,7 +22,10 @@
     v-else-if="header.type === BackendDataType.DECIMAL_BYTE"
     :value="item[header.key]"
   />
-  <json-chip v-else-if="header.type === BackendDataType.JSON" :value="item[header.key]" />
+  <json-chip
+    v-else-if="header.type === BackendDataType.JSON"
+    :value="headerJson(item[header.key])"
+  />
   <div v-else-if="header.type === BackendDataType.DATETIME">
     {{ localeDatetimeFormat(DateTime.fromISO(item[header.key])) }}
   </div>
@@ -92,4 +95,16 @@ defineProps({
     default: () => {},
   },
 });
+
+// headerJson 将单元格值归一化为 JSON 字符串
+// json-chip 期望接收 JSON 字符串；对象/数组等结构化值经 JSON.stringify 后展示
+const headerJson = (value: unknown): string => {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return JSON.stringify(value);
+};
 </script>

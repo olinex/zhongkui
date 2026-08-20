@@ -73,7 +73,11 @@ func (i *{{ .FieldName }}{{ $typeName }}FilterByItem) GetValue() any {
 
 type {{ $typeName }}FilterBy struct {
     {{- range $item.FilterByFields }}
+    {{- if .Required }}
+    {{ .FieldName | capitalize }} {{ .FieldName }}{{ $typeName }}FilterByItem `mapstructure:"{{ .FieldName }}" binding:"required"`
+    {{- else }}
     {{ .FieldName | capitalize }} *{{ .FieldName }}{{ $typeName }}FilterByItem `mapstructure:"{{ .FieldName }}"`
+    {{- end }}
     {{- end }}
 }
 
@@ -81,7 +85,11 @@ type {{ $typeName }}SearchIn struct {
     Pagination
     Greedy   bool                         `mapstructure:"greedy" default:"false"`
     OrderBy  []{{ $typeName }}OrderBy     `mapstructure:"orderBy"`
+    {{- if hasRequired $item.FilterByFields }}
+    FilterBy {{ $typeName }}FilterBy       `mapstructure:"filterBy"`
+    {{- else }}
     FilterBy *{{ $typeName }}FilterBy     `mapstructure:"filterBy"`
+    {{- end }}
 }
 
 func (s *{{ $typeName }}SearchIn) GetGreedy() bool {
@@ -107,13 +115,19 @@ func (s *{{ $typeName }}SearchIn) GetOrderBy() []utils.OrderByItem {
 
 func (s *{{ $typeName }}SearchIn) GetFilterBy() map[string]utils.FilterByItem {
     items := make(map[string]utils.FilterByItem)
+    {{- if not (hasRequired $item.FilterByFields) }}
     if s.FilterBy == nil {
         return items
     }
+    {{- end }}
     {{- range $item.FilterByFields }}
+    {{- if .Required }}
+    items["{{ .FieldName }}"] = &s.FilterBy.{{ .FieldName | capitalize }}
+    {{- else }}
     if s.FilterBy.{{ .FieldName | capitalize }} != nil {
         items["{{ .FieldName }}"] = s.FilterBy.{{ .FieldName | capitalize }}
     }
+    {{- end }}
     {{- end }}
     return items
 }

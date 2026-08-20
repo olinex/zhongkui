@@ -2,270 +2,195 @@
   <main-layout current-nav="etl">
     <template #body>
       <v-container>
-        <v-row class="justify-between align-top" dense>
-          <v-col cols="6">
-            <v-tabs v-model="tab" color="primary" density="compact">
-              <v-tab value="queue">{{ $t("model.queue.name") }}</v-tab>
-              <v-tab value="task">{{ $t("model.task.name") }}</v-tab>
-              <v-tab value="scheduler">{{ $t("model.scheduler.name") }}</v-tab>
-            </v-tabs>
-          </v-col>
-          <v-spacer />
-          <v-col v-show="tab !== 'scheduler'" cols="2">
-            <v-select
-              v-model="queue"
-              :label="$t('model.queue.field.queue')"
-              :items="queueOptions"
-              density="compact"
-            />
-          </v-col>
-          <v-col v-show="tab === 'queue'" cols="2">
-            <usual-days-field
-              v-model="days"
-              :label="$t('model.queue.field.days')"
-              density="compact"
-            />
-          </v-col>
-          <v-col v-show="tab === 'task'" cols="2">
-            <v-select
-              v-model="taskState"
-              :label="$t('model.task.field.state')"
-              :items="taskTypeOptions"
-              density="compact"
-            />
+        <v-form class="filter-form">
+          <v-row dense align-center>
+            <v-col cols="auto">
+              <v-select
+                v-model="queue"
+                :label="$t('model.queue.field.queue')"
+                :items="queueOptions"
+                density="compact"
+              />
+            </v-col>
+            <v-col cols="auto">
+              <v-select
+                v-model="taskState"
+                :label="$t('model.task.field.state')"
+                :items="taskTypeOptions"
+                density="compact"
+              />
+            </v-col>
+            <action-button-group
+              class="ml-auto"
+              :refresh="refreshAction"
+              :actions="taskToolbarActions"
+              collapsible
+            >
+              <column-visibility-menu
+                v-model="taskVisibleKeys"
+                v-model:order="taskColumnOrder"
+                :headers="taskAllToggleable"
+              />
+            </action-button-group>
+          </v-row>
+        </v-form>
+        <v-divider class="my-2" />
+        <v-row dense>
+          <v-col cols="12">
+            <v-data-table-server
+              v-model:page="page"
+              v-model:items-per-page="pageSize"
+              :headers="taskVisibleHeaders"
+              :items="taskItems"
+              :items-length="taskTotal"
+              :items-per-page-options="pageSizeOptions"
+              select-strategy="page"
+            >
+              <template #item="{ item }">
+                <tr class="text-no-wrap">
+                  <td
+                    v-for="hdr in taskVisibleHeaders"
+                    :key="hdr.key"
+                    :class="
+                      hdr.fixed === 'end'
+                        ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
+                        : undefined
+                    "
+                  >
+                    <adaptive-cell :header="hdr" :item="item" :actions="getTaskActions" />
+                  </td>
+                </tr>
+              </template>
+            </v-data-table-server>
           </v-col>
         </v-row>
-        <v-row v-if="tab === 'queue'" dense>
-          <v-col cols="6">
-            <bars-chart :option="barsOption" />
-          </v-col>
-          <v-col cols="6">
-            <line-chart :option="lineOption" />
-          </v-col>
-        </v-row>
+        <confirm-dialog
+          ref="confirmStateDeleteTaskDialogRef"
+          :title="$t(`model.task.name`)"
+          prepend-icon="mdi-format-list-bulleted"
+          @confirm="deleteStateTaskAction"
+        >
+          <template #body>
+            <confirm-alert
+              :action="$t('action.delete')"
+              :text="
+                $t(`notice.deleteConfirm`, {
+                  category: $t(`model.queue.field.${taskState}`),
+                  key: $t(`model.task.name`),
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
+        <confirm-dialog
+          ref="confirmStateArchiveTaskDialogRef"
+          :title="$t(`model.task.name`)"
+          prepend-icon="mdi-format-list-bulleted"
+          @confirm="archiveStateTaskAction"
+        >
+          <template #body>
+            <confirm-alert
+              :action="$t(`action.archive`)"
+              :text="
+                $t(`notice.archiveConfirm`, {
+                  category: $t(`model.queue.field.${taskState}`),
+                  key: $t(`model.task.name`),
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
+        <confirm-dialog
+          ref="confirmStateRunTaskDialogRef"
+          :title="$t(`model.task.name`)"
+          prepend-icon="mdi-format-list-bulleted"
+          @confirm="runStateTaskAction"
+        >
+          <template #body>
+            <confirm-alert
+              :action="$t(`action.run`)"
+              :text="
+                $t(`notice.runConfirm`, {
+                  category: $t(`model.queue.field.${taskState}`),
+                  key: $t(`model.task.name`),
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
+        <confirm-dialog
+          ref="confirmSingleDeleteTaskDialogRef"
+          :title="$t(`model.task.name`)"
+          prepend-icon="mdi-format-list-bulleted"
+          @confirm="deleteTaskAction"
+        >
+          <template #body="{ proxy }">
+            <confirm-alert
+              :action="$t(`action.delete`)"
+              :text="
+                $t(`notice.deleteConfirm`, {
+                  category: $t(`model.task.name`),
+                  key: proxy.id,
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
+        <confirm-dialog
+          ref="confirmSingleArchiveTaskDialogRef"
+          :title="$t(`model.task.name`)"
+          prepend-icon="mdi-format-list-bulleted"
+          @confirm="archiveTaskAction"
+        >
+          <template #body="{ proxy }">
+            <confirm-alert
+              :action="$t(`action.archive`)"
+              :text="
+                $t(`notice.archiveConfirm`, {
+                  category: $t(`model.task.name`),
+                  key: proxy.id,
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
+        <confirm-dialog
+          ref="confirmSingleRunTaskDialogRef"
+          :title="$t(`model.task.name`)"
+          prepend-icon="mdi-format-list-bulleted"
+          @confirm="runTaskAction"
+        >
+          <template #body="{ proxy }">
+            <confirm-alert
+              :action="$t(`action.run`)"
+              :text="
+                $t(`notice.runConfirm`, {
+                  category: $t(`model.task.name`),
+                  key: proxy.id,
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
+        <confirm-dialog
+          ref="confirmSingleCancelTaskDialogRef"
+          :title="$t(`model.task.name`)"
+          prepend-icon="mdi-format-list-bulleted"
+          @confirm="cancelPorcessingTaskAction"
+        >
+          <template #body="{ proxy }">
+            <confirm-alert
+              :action="$t(`action.cancel`)"
+              :text="
+                $t(`notice.cancelConfirm`, {
+                  category: $t(`model.task.name`),
+                  key: proxy.id,
+                })
+              "
+            />
+          </template>
+        </confirm-dialog>
       </v-container>
-      <v-tabs-window v-model="tab">
-        <v-tabs-window-item value="queue">
-          <v-container>
-            <v-divider />
-            <v-row dense>
-              <v-col cols="12">
-                <v-data-table :headers="queueHeaders" :items="queueItems">
-                  <template #item="{ item }">
-                    <tr class="text-no-wrap">
-                      <td v-for="hdr in queueHeaders" :key="hdr.key">
-                        <adaptive-cell :header="hdr" :item="item" :actions="getQueueActions" />
-                      </td>
-                    </tr>
-                  </template>
-                </v-data-table>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-tabs-window-item>
-        <v-tabs-window-item value="scheduler">
-          <v-container>
-            <v-divider />
-            <v-row dense>
-              <v-col cols="12">
-                <v-data-table :headers="schedulerHeaders" :items="schedulerItems">
-                  <template #item="{ item }">
-                    <tr class="text-no-wrap">
-                      <td v-for="hdr in schedulerHeaders" :key="hdr.key">
-                        <adaptive-cell :header="hdr" :item="item" />
-                      </td>
-                    </tr>
-                  </template>
-                </v-data-table>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-tabs-window-item>
-        <v-tabs-window-item value="task">
-          <v-container>
-            <v-divider />
-            <v-row dense>
-              <v-col cols="12">
-                <v-data-table-server
-                  v-model:page="page"
-                  v-model:items-per-page="pageSize"
-                  :headers="taskHeaders"
-                  :items="taskItems"
-                  :items-length="taskTotal"
-                  :items-per-page-options="pageSizeOptions"
-                  select-strategy="page"
-                >
-                  <template #top>
-                    <v-toolbar :collapse="taskBtnCollapse" density="compact">
-                      <template #prepend>
-                        <v-btn icon="mdi-refresh" @click="refreshAction" />
-                        <v-btn
-                          v-show="!taskBtnCollapse && taskState !== 'active'"
-                          icon="mdi-delete-forever"
-                          @click="confirmStateDeleteTaskDialogRef?.open({})"
-                        />
-                        <v-btn
-                          v-show="
-                            !taskBtnCollapse &&
-                            ['pending', 'scheduled', 'retry', 'aggregating'].includes(taskState)
-                          "
-                          icon="mdi-archive"
-                          @click="confirmStateArchiveTaskDialogRef?.open({})"
-                        />
-                        <v-btn
-                          v-show="
-                            !taskBtnCollapse &&
-                            ['scheduled', 'retry', 'archived', 'aggregating'].includes(taskState)
-                          "
-                          icon="mdi-menu-right"
-                          @click="confirmStateRunTaskDialogRef?.open({})"
-                        />
-                        <v-btn
-                          :icon="taskBtnCollapse ? 'mdi-chevron-right' : 'mdi-chevron-left'"
-                          @click="taskBtnCollapse = !taskBtnCollapse"
-                        />
-                      </template>
-                    </v-toolbar>
-                  </template>
-                  <template #item="{ item }">
-                    <tr class="text-no-wrap">
-                      <td v-for="hdr in taskHeaders" :key="hdr.key">
-                        <adaptive-cell :header="hdr" :item="item" :actions="getTaskActions" />
-                      </td>
-                    </tr>
-                  </template>
-                </v-data-table-server>
-              </v-col>
-            </v-row>
-          </v-container>
-          <confirm-dialog
-            ref="confirmStateDeleteTaskDialogRef"
-            :title="$t(`model.task.name`)"
-            prepend-icon="mdi-format-list-bulleted"
-            @confirm="deleteStateTaskAction"
-          >
-            <template #body>
-              <confirm-alert
-                :action="$t('action.delete')"
-                :text="
-                  $t(`notice.deleteConfirm`, {
-                    category: $t(`model.queue.field.${taskState}`),
-                    key: $t(`model.task.name`),
-                  })
-                "
-              />
-            </template>
-          </confirm-dialog>
-          <confirm-dialog
-            ref="confirmStateArchiveTaskDialogRef"
-            :title="$t(`model.task.name`)"
-            prepend-icon="mdi-format-list-bulleted"
-            @confirm="archiveStateTaskAction"
-          >
-            <template #body>
-              <confirm-alert
-                :action="$t(`action.archive`)"
-                :text="
-                  $t(`notice.archiveConfirm`, {
-                    category: $t(`model.queue.field.${taskState}`),
-                    key: $t(`model.task.name`),
-                  })
-                "
-              />
-            </template>
-          </confirm-dialog>
-          <confirm-dialog
-            ref="confirmStateRunTaskDialogRef"
-            :title="$t(`model.task.name`)"
-            prepend-icon="mdi-format-list-bulleted"
-            @confirm="runStateTaskAction"
-          >
-            <template #body>
-              <confirm-alert
-                :action="$t(`action.run`)"
-                :text="
-                  $t(`notice.runConfirm`, {
-                    category: $t(`model.queue.field.${taskState}`),
-                    key: $t(`model.task.name`),
-                  })
-                "
-              />
-            </template>
-          </confirm-dialog>
-          <confirm-dialog
-            ref="confirmSingleDeleteTaskDialogRef"
-            :title="$t(`model.task.name`)"
-            prepend-icon="mdi-format-list-bulleted"
-            @confirm="deleteTaskAction"
-          >
-            <template #body="{ proxy }">
-              <confirm-alert
-                :action="$t(`action.delete`)"
-                :text="
-                  $t(`notice.deleteConfirm`, {
-                    category: $t(`model.task.name`),
-                    key: proxy.id,
-                  })
-                "
-              />
-            </template>
-          </confirm-dialog>
-          <confirm-dialog
-            ref="confirmSingleArchiveTaskDialogRef"
-            :title="$t(`model.task.name`)"
-            prepend-icon="mdi-format-list-bulleted"
-            @confirm="archiveTaskAction"
-          >
-            <template #body="{ proxy }">
-              <confirm-alert
-                :action="$t(`action.archive`)"
-                :text="
-                  $t(`notice.archiveConfirm`, {
-                    category: $t(`model.task.name`),
-                    key: proxy.id,
-                  })
-                "
-              />
-            </template>
-          </confirm-dialog>
-          <confirm-dialog
-            ref="confirmSingleRunTaskDialogRef"
-            :title="$t(`model.task.name`)"
-            prepend-icon="mdi-format-list-bulleted"
-            @confirm="runTaskAction"
-          >
-            <template #body="{ proxy }">
-              <confirm-alert
-                :action="$t(`action.run`)"
-                :text="
-                  $t(`notice.runConfirm`, {
-                    category: $t(`model.task.name`),
-                    key: proxy.id,
-                  })
-                "
-              />
-            </template>
-          </confirm-dialog>
-          <confirm-dialog
-            ref="confirmSingleCancelTaskDialogRef"
-            :title="$t(`model.task.name`)"
-            prepend-icon="mdi-format-list-bulleted"
-            @confirm="cancelPorcessingTaskAction"
-          >
-            <template #body="{ proxy }">
-              <confirm-alert
-                :action="$t(`action.cancel`)"
-                :text="
-                  $t(`notice.cancelConfirm`, {
-                    category: $t(`model.task.name`),
-                    key: proxy.id,
-                  })
-                "
-              />
-            </template>
-          </confirm-dialog>
-        </v-tabs-window-item>
-      </v-tabs-window>
     </template>
   </main-layout>
 </template>
@@ -280,22 +205,18 @@ meta:
 
 <script setup lang="ts">
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import {
-  type InspectorQueueListOut,
-  type InspectorQueueListItem,
-  type InspectorDailyStatListOut,
-  type InspectorDailyStatItem,
-  type InspectorTaskListItem,
-  type TaskState,
-  type InspectorTaskListOut,
-  type InspectorSchedulerListOut,
-  type InspectorSchedulerListItem,
+import type {
+  InspectorDailyStatItem,
+  InspectorDailyStatListOut,
+  InspectorQueueListItem,
+  InspectorQueueListOut,
+  InspectorTaskListItem,
+  InspectorTaskListOut,
+  TaskState,
 } from "./@types";
 import {
   inspectorDailyStatListGet,
   inspectorQueueListGet,
-  inspectorQueuePauseToggle,
-  inspectorSchedulerListGet,
   inspectorStateTaskArchive,
   inspectorStateTaskDelete,
   inspectorStateTaskRun,
@@ -307,11 +228,11 @@ import {
 } from "@/apis/etl";
 import { useAppStore } from "@/stores/app";
 import type { ItemActions, TableHeader } from "@/components/@types/table";
-import i18n, { localeDateFormat } from "@/utils/i18n";
+import type { ActionButton } from "@/components/base/ActionButtonGroup.vue";
+import i18n from "@/utils/i18n";
+import { useColumnVisibility } from "@/utils/column";
 import { BackendDataType } from "@/types";
-import type { BarsChartOption, LineChartOption } from "@/components/@types/charts";
 import type { InspectorDailyStatIn, InspectorTaskListIn } from "@/apis/@types/etl";
-import { DateTime } from "luxon";
 
 const confirmStateDeleteTaskDialogRef = useTemplateRef("confirmStateDeleteTaskDialogRef");
 
@@ -335,77 +256,11 @@ const pageSizeOptions = [
 ];
 
 const appStore = useAppStore();
-const tab = ref("chart");
 const days = ref(7);
 const queue = ref("default");
 const taskState = ref("archived" as TaskState);
 const page = ref(1);
 const pageSize = ref(10);
-const taskBtnCollapse = ref(true);
-const queueHeaders = ref([
-  {
-    key: "name",
-    title: i18n.global.t("model.queue.field.queue"),
-    type: BackendDataType.STRING,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "running",
-    title: i18n.global.t("model.queue.field.running"),
-    type: BackendDataType.BOOLEAN,
-    align: "start",
-    sortable: false,
-  },
-  {
-    key: "memoryUsage",
-    title: i18n.global.t("model.queue.field.memoryUsage"),
-    type: BackendDataType.BINARY_BYTE,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "latency",
-    title: i18n.global.t("model.queue.field.latency"),
-    type: BackendDataType.DURATION,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "processed",
-    title: i18n.global.t("model.queue.field.processed"),
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "size",
-    title: i18n.global.t("model.queue.field.size"),
-    type: BackendDataType.INT64,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "failed",
-    title: i18n.global.t("model.queue.field.failed"),
-    type: BackendDataType.INT64,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "retrievalTime",
-    title: i18n.global.t("model.queue.field.retrievalTime"),
-    type: BackendDataType.DATETIME,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "__actions",
-    title: i18n.global.t("model.__base.field.__actions"),
-    type: BackendDataType.ACTIONS,
-    align: "start",
-    sortable: false,
-  },
-] as Array<TableHeader>);
 const taskHeaders = ref([
   {
     key: "id",
@@ -518,64 +373,29 @@ const taskHeaders = ref([
     type: BackendDataType.ACTIONS,
     align: "start",
     sortable: false,
+    fixed: "end",
   },
 ] as Array<TableHeader>);
-const schedulerHeaders = ref([
-  {
-    key: "id",
-    title: i18n.global.t("model.scheduler.field.id"),
-    type: BackendDataType.UUID,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "spec",
-    title: i18n.global.t("model.scheduler.field.spec"),
-    type: BackendDataType.STRING,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "next",
-    title: i18n.global.t("model.scheduler.field.next"),
-    type: BackendDataType.DATETIME,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "prev",
-    title: i18n.global.t("model.scheduler.field.prev"),
-    type: BackendDataType.DATETIME,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "typeName",
-    title: i18n.global.t("model.scheduler.field.typeName"),
-    type: BackendDataType.STRING,
-    align: "start",
-    sortable: true,
-  },
-  {
-    key: "payload",
-    title: i18n.global.t("model.scheduler.field.payload"),
-    type: BackendDataType.JSON,
-    align: "start",
-    sortable: true,
-  },
-] as Array<TableHeader>);
+// 任务表格的列显示配置：持久化到 localStorage，表头/行渲染统一使用 visibleHeaders
+const {
+  allToggleable: taskAllToggleable,
+  columnOrder: taskColumnOrder,
+  visibleKeys: taskVisibleKeys,
+  visibleHeaders: taskVisibleHeaders,
+} = useColumnVisibility("model:task", taskHeaders);
+// 队列列表（各状态计数）用于计算任务总数；每日统计键用于队列筛选项
 const statItems = ref({} as Record<string, InspectorDailyStatItem[]>);
 const queueItems = ref([] as InspectorQueueListItem[]);
 const taskItems = ref([] as InspectorTaskListItem[]);
-const schedulerItems = ref([] as InspectorSchedulerListItem[]);
 const taskTotal = computed(() => {
+  // 队列数据未返回（或尚无队列）时队列列表为空，reduce 必须带初始值以免空数组抛 TypeError
   return queueItems.value
     .map((item) => {
       return item[taskState.value];
     })
     .reduce((total, cur) => {
       return total + cur;
-    });
+    }, 0);
 });
 const queueOptions = computed(() => {
   return Object.keys(statItems.value).map((key) => {
@@ -596,102 +416,31 @@ const taskTypeOptions = computed(() => {
     { title: i18n.global.t("model.queue.field.completed"), value: "completed" },
   ];
 });
-const barsOption = computed((): BarsChartOption => {
-  const active = i18n.global.t("chart.field.active");
-  const pending = i18n.global.t("chart.field.pending");
-  const retring = i18n.global.t("chart.field.retring");
-  const scheduled = i18n.global.t("chart.field.scheduled");
-  const archived = i18n.global.t("chart.field.archived");
-  return {
-    title: {
-      text: i18n.global.t("chart.title.queueSize"),
-      left: "center",
-    },
-    tooltip: {
-      trigger: "item",
-      formatter: "{a} <br/>{b} : {c}",
-    },
-    legend: {
-      orient: "horizontal",
-      left: "center",
-      data: queueItems.value.map((item) => item.name),
-    },
-    xAxis: {
-      type: "category",
-      name: i18n.global.t("chart.axis.queue"),
-      data: queueItems.value.map((item) => item.name),
-    },
-    yAxis: {
-      type: "value",
-      name: `${i18n.global.t("chart.axis.size")} (${i18n.global.t("unit.count")})`,
-    },
-    series: queueItems.value.map((item) => {
-      return {
-        name: item.name,
-        type: "bar",
-        data: [
-          { name: active, value: item.active },
-          { name: pending, value: item.pending },
-          { name: retring, value: item.retry },
-          { name: scheduled, value: item.scheduled },
-          { name: archived, value: item.archived },
-        ],
-      };
-    }),
-  };
-});
-const lineOption = computed((): LineChartOption => {
-  const processed = i18n.global.t("chart.field.processed");
-  const failed = i18n.global.t("chart.field.failed");
-  return {
-    title: {
-      text: i18n.global.t("chart.title.taskProcess"),
-      left: "center",
-    },
-    tooltip: {
-      trigger: "item",
-      formatter: "{a} <br/>{b} : {c}",
-    },
-    legend: {
-      orient: "horizontal",
-      left: "center",
-      data: [processed, failed],
-    },
-    xAxis: {
-      type: "category",
-      name: i18n.global.t("chart.axis.date"),
-      data:
-        statItems.value && statItems.value[queue.value]
-          ? statItems.value[queue.value].map((item) =>
-              localeDateFormat(DateTime.fromISO(item.date)),
-            )
-          : [],
-    },
-    yAxis: {
-      type: "value",
-      name: `${i18n.global.t("chart.axis.size")} (${i18n.global.t("unit.count")})`,
-    },
-    series: [
-      {
-        name: processed,
-        type: "line",
-        smooth: true,
-        data:
-          statItems.value && statItems.value[queue.value]
-            ? statItems.value[queue.value].map((item) => item.processed)
-            : [],
-      },
-      {
-        name: failed,
-        type: "line",
-        smooth: true,
-        data:
-          statItems.value && statItems.value[queue.value]
-            ? statItems.value[queue.value].map((item) => item.failed)
-            : [],
-      },
-    ],
-  };
+// 任务页的次级操作按钮：随任务状态动态展示，收起时隐藏（刷新按钮常驻）
+const taskToolbarActions = computed<ActionButton[]>(() => {
+  const actions: ActionButton[] = [];
+  if (taskState.value !== "active") {
+    actions.push({
+      icon: "mdi-delete-forever",
+      title: i18n.global.t("action.delete"),
+      onClick: () => confirmStateDeleteTaskDialogRef.value?.open({}),
+    });
+  }
+  if (["pending", "scheduled", "retry", "aggregating"].includes(taskState.value)) {
+    actions.push({
+      icon: "mdi-archive",
+      title: i18n.global.t("action.archive"),
+      onClick: () => confirmStateArchiveTaskDialogRef.value?.open({}),
+    });
+  }
+  if (["scheduled", "retry", "archived", "aggregating"].includes(taskState.value)) {
+    actions.push({
+      icon: "mdi-menu-right",
+      title: i18n.global.t("action.run"),
+      onClick: () => confirmStateRunTaskDialogRef.value?.open({}),
+    });
+  }
+  return actions;
 });
 
 watch(days, (value) => {
@@ -740,7 +489,6 @@ watch(taskState, (value) => {
 const refreshAction = async (): Promise<void> => {
   await Promise.all([
     getQueueListAction(),
-    getSchedulerListAction(),
     getDailyStatAction({ days: days.value }),
     getTaskListAction({
       page: page.value,
@@ -761,49 +509,6 @@ const getQueueListAction = async (): Promise<void> => {
           ...item,
           running: !item.paused,
         };
-      });
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-};
-
-const getSchedulerListAction = async (): Promise<void> => {
-  await getResponse<InspectorSchedulerListOut>(
-    inspectorSchedulerListGet(),
-    async (rsp) => {
-      schedulerItems.value = rsp.data;
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pauseToggleQueueAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    inspectorQueuePauseToggle(item.name, item.running),
-    async (rsp) => {
-      queueItems.value = queueItems.value.map((queue) => {
-        return {
-          ...queue,
-          running: queue.name === item.name ? !item.running : item.running,
-        };
-      });
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
       });
     },
     async (rsp) => {
@@ -846,17 +551,6 @@ const getTaskListAction = async (data: InspectorTaskListIn): Promise<void> => {
       });
     },
   );
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getQueueActions = (item: Record<string, any>): ItemActions => {
-  const actions: ItemActions = {};
-  if (item.running) {
-    actions.pause = pauseToggleQueueAction;
-  } else {
-    actions.unpause = pauseToggleQueueAction;
-  }
-  return actions;
 };
 
 const getTaskActions = (): ItemActions => {
@@ -1066,3 +760,17 @@ const cancelPorcessingTaskAction = async (item: Record<string, any>): Promise<vo
 
 onMounted(refreshAction);
 </script>
+
+<style scoped>
+/* 折叠筛选输入的空消息区，使按钮组与输入控件保持同一水平线，
+   与流量页 filter-form 的垂直间距保持一致 */
+/* stylelint-disable-next-line selector-class-pattern */
+.filter-form :deep(.v-input__details:has(.v-messages:empty)) {
+  min-height: 0;
+  padding-top: 0;
+}
+
+.filter-form :deep(.v-messages:empty) {
+  min-height: 0;
+}
+</style>

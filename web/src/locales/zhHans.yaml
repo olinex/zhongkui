@@ -10,7 +10,14 @@ navbar:
   etl:
     self: 数据处理
     server: 服务端
+    queue: 管道
     task: 任务
+    scheduler: 定时任务
+  traffic:
+    self: 流量审计
+    ipv4Tcp: IPv4 TCP
+    ipv6Tcp: IPv6 TCP
+    httpTransport: HTTP 传输
   pin: 固定侧边栏
   unpin: 取消固定
 model:
@@ -19,9 +26,16 @@ model:
       __actions: 操作
       date: 日期
       time: 时间
+      startTime: 起始时间
+      endTime: 截止时间
       field: 字段
       action: 操作
       search: 搜索
+      value: 值
+      encrypted: 已加密
+      # 时间范围筛选标签（通用字段，非具体模型字段）
+      timestampRange: 采集时间范围
+      createdAtRange: 入库时间范围
     content:
       condition: 条件
       doubleCheck: 请输入 `{random}` 以二次确认
@@ -46,11 +60,16 @@ model:
       active: 是否可用
       username: 用户名
       password: 密码
+      passwordAgain: 确认密码
       nickleName: 昵称
       email: 邮箱
       oldPassword: 旧密码
       newPassword: 新密码
       newPasswordAgain: 新密码二次确认
+      randomPassword: 随机生成
+      specifyPassword: 指定密码
+      passwordResetNotice: 请将新密码安全地告知目标用户
+      frontendConfigSyncEnabled: 开启前端配置同步
   policy:
     name: 规则
     field:
@@ -215,8 +234,331 @@ model:
       description: 描述
       count: 命中次数
       detectedAt: 检测时日
-  network:
-    httpTransport: HTTP 传输
+  # 流量审计由三种独立数据类型组成，各自完整翻译字段
+  ipv4Tcp:
+    name: IPv4 TCP
+    field:
+      # 基础审计列
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionId: 会话 ID
+      tcpStreamId: TCP 流 ID
+      capture: 采集器
+      version: 版本号
+      traceId: 追踪 ID
+      # IPv4 地址与端口
+      ipv4Src: IPv4 源地址
+      ipv4Dst: IPv4 目的地址
+      srcPort: 源端口
+      dstPort: 目的端口
+      # TCP 审计列
+      seq: 序列号
+      ack: 确认号
+      bitFin: FIN 标志
+      bitSyn: SYN 标志
+      bitRst: RST 标志
+      bitPsh: PSH 标志
+      bitAck: ACK 标志
+      bitUrg: URG 标志
+      window: 窗口大小
+      ipv4Ttl: IPv4 TTL
+      ipv4IpProtocol: IPv4 协议
+      ipv4Length: IPv4 长度
+      # TCP 被动指纹（p0f 风格）
+      fpOs: OS 指纹
+      fpSig: TCP 指纹签名
+      fpMtu: MTU
+      # ---- 列设置全量字段（默认隐藏）----
+      # 采集与链路层
+      truncated: 截断
+      captureLength: 采集长度
+      layerStack: 协议栈
+      payload: 负载
+      ethDstMac: 目的 MAC
+      ethSrcMac: 源 MAC
+      ethType: 以太网类型
+      ethLength: 以太网长度
+      # IPv4
+      ipv4Version: IPv4 版本
+      ipv4Ihl: IPv4 头部长度
+      ipv4Tos: 服务类型
+      ipv4Id: 分片标识
+      ipv4Flags: 分片标志
+      ipv4FragOffset: 分片偏移
+      ipv4Checksum: 头部校验和
+      ipv4Options: IPv4 选项
+      ipv4Padding: IPv4 填充
+      # TCP
+      dataOffset: 数据偏移
+      bitEce: ECE 标志
+      bitCwr: CWR 标志
+      bitNs: NS 标志
+      checksum: 校验和
+      urgent: 紧急指针
+      options: TCP 选项
+      fpOsQuality: OS 指纹置信度
+  ipv6Tcp:
+    name: IPv6 TCP
+    field:
+      # 基础审计列
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionId: 会话 ID
+      tcpStreamId: TCP 流 ID
+      capture: 采集器
+      version: 版本号
+      traceId: 追踪 ID
+      # IPv6 地址与端口
+      ipv6Src: IPv6 源地址
+      ipv6Dst: IPv6 目的地址
+      srcPort: 源端口
+      dstPort: 目的端口
+      # TCP 审计列
+      seq: 序列号
+      ack: 确认号
+      bitFin: FIN 标志
+      bitSyn: SYN 标志
+      bitRst: RST 标志
+      bitPsh: PSH 标志
+      bitAck: ACK 标志
+      bitUrg: URG 标志
+      window: 窗口大小
+      ipv6HopLimit: IPv6 跳数限制
+      ipv6NextHeader: IPv6 下一头部
+      ipv6Length: IPv6 长度
+      # TCP 被动指纹（p0f 风格）
+      fpOs: OS 指纹
+      fpSig: TCP 指纹签名
+      fpMtu: MTU
+      # ---- 列设置全量字段（默认隐藏）----
+      # 采集与链路层
+      truncated: 截断
+      captureLength: 采集长度
+      layerStack: 协议栈
+      payload: 负载
+      ethDstMac: 目的 MAC
+      ethSrcMac: 源 MAC
+      ethType: 以太网类型
+      ethLength: 以太网长度
+      # IPv6
+      ipv6Version: IPv6 版本
+      ipv6TrafficClass: 流量类别
+      ipv6FlowLabel: 流标签
+      ipv6HopByHop: 逐跳扩展头
+      ipv6LastHeader: 末级头部
+      # TCP
+      dataOffset: 数据偏移
+      bitEce: ECE 标志
+      bitCwr: CWR 标志
+      bitNs: NS 标志
+      checksum: 校验和
+      urgent: 紧急指针
+      options: TCP 选项
+      fpOsQuality: OS 指纹置信度
+  httpTransport:
+    name: HTTP 传输
+    field:
+      # 基础审计列
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionId: 会话 ID
+      tcpStreamId: TCP 流 ID
+      capture: 采集器
+      version: 版本号
+      traceId: 追踪 ID
+      # HTTP 审计列
+      method: 请求方法
+      host: 主机
+      path: 路径
+      clientIp: 客户端 IP
+      serverIp: 服务端 IP
+      clientPort: 客户端端口
+      serverPort: 服务端端口
+      httpVersion: HTTP 版本
+      reqBodyLength: 请求体长度
+      rspBodyLength: 响应体长度
+      # HTTP 指纹
+      fpTcpClientOs: 客户端 OS 指纹
+      fpTcpServerOs: 服务端 OS 指纹
+      fpHttpBrowser: 浏览器指纹
+      fpHttpServer: 服务端指纹
+      fpDeviceGuess: 设备类型
+      # ---- 列设置全量字段（默认隐藏）----
+      clientIsn: 客户端初始序列号
+      serverIsn: 服务端初始序列号
+      streamIndex: 流序号
+      ipVersion: IP 版本
+      url: 请求 URL
+      scheme: 协议方案
+      fileExt: 文件扩展名
+      queries: 查询参数
+      fragment: URL 片段
+      reqBody: 请求体
+      rspBody: 响应体
+      reqBodyHash: 请求体哈希
+      rspBodyHash: 响应体哈希
+      clientConsumed: 客户端消费字节数
+      clientStartPayloadOffset: 客户端负载起始偏移
+      clientEndPayloadOffset: 客户端负载结束偏移
+      clientStartTimestamp: 客户端开始时间
+      clientEndTimestamp: 客户端结束时间
+      serverConsumed: 服务端消费字节数
+      serverStartPayloadOffset: 服务端负载起始偏移
+      serverEndPayloadOffset: 服务端负载结束偏移
+      serverStartTimestamp: 服务端开始时间
+      serverEndTimestamp: 服务端结束时间
+      fpTcpClientOsQuality: 客户端 OS 指纹置信度
+      fpTcpClientSig: 客户端指纹签名
+      fpTcpServerOsQuality: 服务端 OS 指纹置信度
+      fpTcpServerSig: 服务端指纹签名
+      fpTcpMtu: TCP MTU
+      fpHttpBrowserQuality: 浏览器指纹置信度
+      fpHttpServerQuality: 服务端指纹置信度
+      fpHttpLanguage: 语言偏好
+      tags: 标签
+      # 请求头
+      reqHdrAuthorization: 请求头 Authorization
+      reqHdrProxyAuthorization: 请求头 Proxy-Authorization
+      reqHdrCacheControl: 请求头 Cache-Control
+      reqHdrIfMatch: 请求头 If-Match
+      reqHdrIfNoneMatch: 请求头 If-None-Match
+      reqHdrIfModifiedSince: 请求头 If-Modified-Since
+      reqHdrIfUnmodifiedSince: 请求头 If-Unmodified-Since
+      reqHdrIfRange: 请求头 If-Range
+      reqHdrConnection: 请求头 Connection
+      reqHdrKeepAlive: 请求头 Keep-Alive
+      reqHdrAccept: 请求头 Accept
+      reqHdrAcceptEncoding: 请求头 Accept-Encoding
+      reqHdrAcceptLanguage: 请求头 Accept-Language
+      reqHdrExpect: 请求头 Expect
+      reqHdrMaxForwards: 请求头 Max-Forwards
+      reqHdrCookie: 请求头 Cookie
+      reqHdrOrigin: 请求头 Origin
+      reqHdrAccessControlRequestHeaders: 请求头 Access-Control-Request-Headers
+      reqHdrAccessControlRequestMethod: 请求头 Access-Control-Request-Method
+      reqHdrContentType: 请求头 Content-Type
+      reqHdrContentLength: 请求头 Content-Length
+      reqHdrContentEncoding: 请求头 Content-Encoding
+      reqHdrContentLanguage: 请求头 Content-Language
+      reqHdrForwarded: 请求头 Forwarded
+      reqHdrVia: 请求头 Via
+      reqHdrRange: 请求头 Range
+      reqHdrFrom: 请求头 From
+      reqHdrHost: 请求头 Host
+      reqHdrReferer: 请求头 Referer
+      reqHdrReferrerPolicy: 请求头 Referrer-Policy
+      reqHdrUserAgent: 请求头 User-Agent
+      reqHdrTe: 请求头 TE
+      reqHdrTransferEncoding: 请求头 Transfer-Encoding
+      reqHdrTrailer: 请求头 Trailer
+      reqHdrSecWebsocketKey: 请求头 Sec-WebSocket-Key
+      reqHdrSecWebsocketVersion: 请求头 Sec-WebSocket-Version
+      reqHdrSecWebsocketProtocol: 请求头 Sec-WebSocket-Protocol
+      reqHdrSecWebsocketExtensions: 请求头 Sec-WebSocket-Extensions
+      reqHdrSecFetchSite: 请求头 Sec-Fetch-Site
+      reqHdrSecFetchMode: 请求头 Sec-Fetch-Mode
+      reqHdrSecFetchUser: 请求头 Sec-Fetch-User
+      reqHdrSecFetchDest: 请求头 Sec-Fetch-Dest
+      reqHdrSecPurpose: 请求头 Sec-Purpose
+      reqHdrServiceWorkerNavigationPreload: 请求头 Service-Worker-Navigation-Preload
+      reqHdrSecChUa: 请求头 Sec-CH-UA
+      reqHdrSecChUaArch: 请求头 Sec-CH-UA-Arch
+      reqHdrSecChUaBitness: 请求头 Sec-CH-UA-Bitness
+      reqHdrSecChUaFullVersion: 请求头 Sec-CH-UA-Full-Version
+      reqHdrSecChUaFullVersionList: 请求头 Sec-CH-UA-Full-Version-List
+      reqHdrSecChUaMobile: 请求头 Sec-CH-UA-Mobile
+      reqHdrSecChUaModel: 请求头 Sec-CH-UA-Model
+      reqHdrSecChUaPlatform: 请求头 Sec-CH-UA-Platform
+      reqHdrSecChUaPlatformVersion: 请求头 Sec-CH-UA-Platform-Version
+      reqHdrSecChUaWow64: 请求头 Sec-CH-UA-WoW64
+      reqHdrSecChPrefersColorScheme: 请求头 Sec-CH-Prefers-Color-Scheme
+      reqHdrSecChPrefersReducedMotion: 请求头 Sec-CH-Prefers-Reduced-Motion
+      reqHdrSecChPrefersReducedTransparency: 请求头 Sec-CH-Prefers-Reduced-Transparency
+      reqHdrWantContentDigest: 请求头 Want-Content-Digest
+      reqHdrWantReprDigest: 请求头 Want-Repr-Digest
+      reqHdrUpgradeInsecureRequests: 请求头 Upgrade-Insecure-Requests
+      reqHdrDate: 请求头 Date
+      reqHdrLink: 请求头 Link
+      reqHdrUpgrade: 请求头 Upgrade
+      reqHdrPriority: 请求头 Priority
+      reqHdrAltUsed: 请求头 Alt-Used
+      # 响应头
+      rspHdrWwwAuthenticate: 响应头 WWW-Authenticate
+      rspHdrProxyAuthenticate: 响应头 Proxy-Authenticate
+      rspHdrAge: 响应头 Age
+      rspHdrCacheControl: 响应头 Cache-Control
+      rspHdrClearSiteData: 响应头 Clear-Site-Data
+      rspHdrExpires: 响应头 Expires
+      rspHdrNoVarySearch: 响应头 No-Vary-Search
+      rspHdrLastModified: 响应头 Last-Modified
+      rspHdrEtag: 响应头 ETag
+      rspHdrVary: 响应头 Vary
+      rspHdrConnection: 响应头 Connection
+      rspHdrKeepAlive: 响应头 Keep-Alive
+      rspHdrAcceptPatch: 响应头 Accept-Patch
+      rspHdrAcceptPost: 响应头 Accept-Post
+      rspHdrSetCookie: 响应头 Set-Cookie
+      rspHdrAccessControlAllowCredentials: 响应头 Access-Control-Allow-Credentials
+      rspHdrAccessControlAllowHeaders: 响应头 Access-Control-Allow-Headers
+      rspHdrAccessControlAllowMethods: 响应头 Access-Control-Allow-Methods
+      rspHdrAccessControlAllowOrigin: 响应头 Access-Control-Allow-Origin
+      rspHdrAccessControlExposeHeaders: 响应头 Access-Control-Expose-Headers
+      rspHdrAccessControlMaxAge: 响应头 Access-Control-Max-Age
+      rspHdrTimingAllowOrigin: 响应头 Timing-Allow-Origin
+      rspHdrContentDisposition: 响应头 Content-Disposition
+      rspHdrContentDigest: 响应头 Content-Digest
+      rspHdrReprDigest: 响应头 Repr-Digest
+      rspHdrContentType: 响应头 Content-Type
+      rspHdrContentLength: 响应头 Content-Length
+      rspHdrContentEncoding: 响应头 Content-Encoding
+      rspHdrContentLanguage: 响应头 Content-Language
+      rspHdrContentLocation: 响应头 Content-Location
+      rspHdrForwarded: 响应头 Forwarded
+      rspHdrVia: 响应头 Via
+      rspHdrAcceptRanges: 响应头 Accept-Ranges
+      rspHdrContentRange: 响应头 Content-Range
+      rspHdrLocation: 响应头 Location
+      rspHdrRefresh: 响应头 Refresh
+      rspHdrAllow: 响应头 Allow
+      rspHdrServer: 响应头 Server
+      rspHdrCrossOriginEmbedderPolicy: 响应头 Cross-Origin-Embedder-Policy
+      rspHdrCrossOriginOpenerPolicy: 响应头 Cross-Origin-Opener-Policy
+      rspHdrCrossOriginResourcePolicy: 响应头 Cross-Origin-Resource-Policy
+      rspHdrContentSecurityPolicy: 响应头 Content-Security-Policy
+      rspHdrContentSecurityPolicyReportOnly: 响应头 Content-Security-Policy-Report-Only
+      rspHdrExpectCt: 响应头 Expect-CT
+      rspHdrPermissionsPolicy: 响应头 Permissions-Policy
+      rspHdrStrictTransportSecurity: 响应头 Strict-Transport-Security
+      rspHdrXContentTypeOptions: 响应头 X-Content-Type-Options
+      rspHdrXFrameOptions: 响应头 X-Frame-Options
+      rspHdrXPermittedCrossDomainPolicies: 响应头 X-Permitted-Cross-Domain-Policies
+      rspHdrXPoweredBy: 响应头 X-Powered-By
+      rspHdrXXssProtection: 响应头 X-XSS-Protection
+      rspHdrReportingEndpoints: 响应头 Reporting-Endpoints
+      rspHdrReportTo: 响应头 Report-To
+      rspHdrTransferEncoding: 响应头 Transfer-Encoding
+      rspHdrTrailer: 响应头 Trailer
+      rspHdrSecWebsocketAccept: 响应头 Sec-WebSocket-Accept
+      rspHdrSecWebsocketProtocol: 响应头 Sec-WebSocket-Protocol
+      rspHdrSecWebsocketExtensions: 响应头 Sec-WebSocket-Extensions
+      rspHdrAcceptCh: 响应头 Accept-CH
+      rspHdrCriticalCh: 响应头 Critical-CH
+      rspHdrAttributionReportingEligible: 响应头 Attribution-Reporting-Eligible
+      rspHdrAttributionReportingRegisterSource: 响应头 Attribution-Reporting-Register-Source
+      rspHdrAttributionReportingRegisterTrigger: 响应头 Attribution-Reporting-Register-Trigger
+      rspHdrDate: 响应头 Date
+      rspHdrLink: 响应头 Link
+      rspHdrRetryAfter: 响应头 Retry-After
+      rspHdrServerTiming: 响应头 Server-Timing
+      rspHdrServiceWorker: 响应头 Service-Worker
+      rspHdrServiceWorkerAllowed: 响应头 Service-Worker-Allowed
+      rspHdrSourceMap: 响应头 SourceMap
+      rspHdrUpgrade: 响应头 Upgrade
+      rspHdrAltSvc: 响应头 Alt-Svc
+      rspHdrPriority: 响应头 Priority
 chart:
   title:
     queueSize: 管道大小
@@ -244,6 +586,7 @@ action:
   pwdForget: 忘记密码
   profile: 个人资料
   expand: 展开
+  collapse: 收起
   reset: 重置
   create: 创建
   update: 更新
@@ -253,6 +596,7 @@ action:
   confirm: 确认
   activate: 启用
   deactivate: 禁用
+  resetPassword: 重置密码
   pause: 暂停
   unpause: 继续
   add: 添加
@@ -282,6 +626,16 @@ action:
   removeCondition: 移除条件
   validatePassed: 校验通过
   validateFailed: 校验未通过
+  viewPlaintext: 查看明文
+  viewDetail: 查看详情
+  resetFrontendConfig: 重置前端配置
+  download: 下载
+  back: 返回
+  refresh: 刷新
+  query: 查询
+  columns: 列设置
+  selectAll: 全选
+  systemDefault: 系统默认
 title:
   zk: Zhong Kui
   home: 首页
@@ -291,6 +645,7 @@ title:
   err401: 错误 - 401
   userProfile: 用户个人资料
   profileInfo: 个人信息
+  frontendConfigSync: 页面配置同步
   accessKey: 访问密钥
   passwordReset: 重置密码
   userAdmin: 管理 - 用户
@@ -301,11 +656,34 @@ title:
   tagEventRuleAdmin: 管理 - 标签事件规则
   queueEtl: 数据处理 - 管道
   serverEtl: 数据处理 - 服务端
+  schedulerEtl: 数据处理 - 定时任务
   taskEtl: 数据处理 - 任务
+  traffic: 流量审计 - 列表
+  trafficDetail: 流量审计 - 详情
   inputFields: 输入字段
 home:
   subtitle: 网络安全审计平台
-  quickStart: 快速开始
+  quickStart:
+    self: 快速开始
+    addGroup: 新建分组
+    newGroup: 新分组
+    groupName: 分组名称
+    renameGroup: 重命名分组
+    deleteGroup: 删除分组
+    deleteGroupConfirm: 确定删除分组「{group}」吗？
+    addLink: 添加入口
+    searchNav: 搜索导航路径
+    emptyGroup: 拖入或添加导航入口
+    dropHere: 松开放入此处
+    defaultGroup: 默认
+profile:
+  pageSubtitle: 管理你的账号信息、访问密钥与密码安全
+  infoSubtitle: 修改昵称与邮箱后点击「更新」保存
+  accessKeySubtitle: 访问密钥用于以程序化方式调用 API，创建后请妥善保存
+  passwordSubtitle: 修改登录密码，建议使用强密码并定期更换
+  emptyAccessKeys: 暂无访问密钥，点击右上角「创建」添加
+  configSyncSubtitle: 将浏览器中的页面配置（主题、语言、侧边栏等）同步到服务端，跨主机登录时保持一致
+  configSyncHint: 开启后，页面配置调整会立即上传；同步失败时恢复为最近一次同步的配置
 summary:
   pageNotFound: 页面不存在！
   notSignInYet: 请先登录。
@@ -320,6 +698,7 @@ notice:
   goodBye: 再见！
   profileUpdated: 个人资料更新成功！
   passwordReset: 密码重置成功！
+  frontendConfigSyncFailed: 前端配置同步失败，已恢复最近一次同步的配置
   copied: 已复制！
   copyFailed: 复制失败！
   deleteConfirm: "确认删除 {category} {key} 吗？"
@@ -335,6 +714,10 @@ notice:
   jsonInvalid: "JSON 格式非法！"
   noEnabledRules: "当前命名空间没有已启用的标签规则，无法构建标签池。"
   sampleLoadFailed: 样例加载失败，请手动输入
+  plaintextLoadFailed: 明文获取失败
+  plaintextEmpty: 该字段无明文内容
+  plaintextBinary: 二进制内容，以下为十六进制预览
+  plaintextTruncated: 内容过长，已截断预览
 inputType:
   string: 字符串
   number: 数字

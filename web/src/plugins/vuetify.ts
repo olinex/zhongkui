@@ -29,17 +29,17 @@ export default createVuetify({
     themes: {
       light: {
         colors: {
-          background: "#F4F6F9",
+          background: "#E6EAF0",
           surface: "#FFFFFF",
-          "surface-variant": "#EDF0F5",
+          "surface-variant": "#E2E7EF",
           primary: "#2563EB",
           secondary: "#64748B",
           success: "#16A34A",
           warning: "#D97706",
           error: "#DC2626",
           info: "#0891B2",
-          border: "#E3E8EF",
-          outline: "#C6D0DC",
+          border: "#D5DCE7",
+          outline: "#B4C0D2",
           "on-background": "#1F2937",
           "on-surface": "#1F2937",
           "on-surface-variant": "#4B5563",

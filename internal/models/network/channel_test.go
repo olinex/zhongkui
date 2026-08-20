@@ -114,7 +114,7 @@ func TestGRERouting(t *testing.T) {
 		})
 
 		Convey("GRERouting Scan should deserialize from string", func() {
-			jsonData := `{"address_family":2,"sre_length":4,"routing_information":"wKgB","next":null}`
+			jsonData := `{"addressFamily":2,"sreLength":4,"routingInformation":"wKgB","next":null}`
 			var routing GRERouting
 
 			err := routing.Scan(jsonData)
@@ -124,7 +124,7 @@ func TestGRERouting(t *testing.T) {
 		})
 
 		Convey("GRERouting Scan should deserialize from []byte", func() {
-			jsonData := []byte(`{"address_family":2,"sre_length":4,"routing_information":"wKgB","next":null}`)
+			jsonData := []byte(`{"addressFamily":2,"sreLength":4,"routingInformation":"wKgB","next":null}`)
 			var routing GRERouting
 
 			err := routing.Scan(jsonData)
