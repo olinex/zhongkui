@@ -36,6 +36,7 @@ model:
       # Generic time range filter labels (shared fields, not model-specific)
       timestampRange: Capture Time Range
       createdAtRange: Ingestion Time Range
+      advancedFilter: Advanced Filters
     content:
       condition: condition(s)
       doubleCheck: Please enter `{random}` to double check
@@ -203,6 +204,20 @@ model:
       enabled: Enabled
       version: Version
       versionCount: Version Count
+  tagRuleSample:
+    name: Tag Rule Sample
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+      name: Name
+      model: Target Model
+      description: Description
+      input: Input Document
   tagEventRule:
     name: Tag Event Rule
     field:
@@ -559,6 +574,159 @@ model:
       rspHdrUpgrade: Response Header Upgrade
       rspHdrAltSvc: Response Header Alt-Svc
       rspHdrPriority: Response Header Priority
+  networkStack:
+    name: Network Stack
+    field:
+      namespace: Namespace
+      timestamp: Capture Time
+      createdAt: Ingestion Time
+      sessionId: Session ID
+      traceId: Trace ID
+      capture: Capturer
+      version: Version
+      cli2Srv: Client to Server
+      topProto: Top Protocol
+      proto: Protocol
+      seq: Packet Index
+      level: Layer Level
+      headers: Protocol Headers
+      payloadStartOffset: Payload Start Offset
+      payloadEndOffset: Payload End Offset
+    level:
+      link: Data Link
+      network: Network
+      transport: Transport
+      application: Application
+      unknown: Unknown
+    packet:
+      request: Request Packet
+      response: Response Packet
+      other: Other
+    direction:
+      clientToServer: Client → Server
+      serverToClient: Server → Client
+    summary:
+      packets: Total Packets
+      requests: Request Packets
+      responses: Response Packets
+      loaded: Loaded
+      loadMore: Load More
+      empty: No network stack data for this transport
+      noTraceId: This record has no traceId to associate a network stack
+      error: Failed to load network stack
+    # Human-readable protocol headers: per-field name/value/description (header.field.<key> and header.desc.<key> keys match JSON field names)
+    header:
+      title: Protocol Header Details
+      rawJson: View Raw JSON
+      loopbackNote: Loopback traffic, no real link-layer header information
+      col:
+        field: Field
+        value: Value
+        desc: Description
+      field:
+        ethDstMac: Dest MAC
+        ethSrcMac: Source MAC
+        ethType: Ethernet Type
+        ethLength: Frame Length
+        ipv4Version: IP Version
+        ipv4Ihl: Header Length
+        ipv4Tos: Type of Service
+        ipv4Length: Total Length
+        ipv4Id: Identification
+        ipv4Flags: Flags
+        ipv4FragOffset: Fragment Offset
+        ipv4Ttl: Time to Live
+        ipv4IpProtocol: Upper Protocol
+        ipv4Checksum: Header Checksum
+        ipv4Src: Source IP
+        ipv4Dst: Dest IP
+        ipv4Options: IP Options
+        ipv4Padding: Padding
+        ipv6Version: IP Version
+        ipv6TrafficClass: Traffic Class
+        ipv6FlowLabel: Flow Label
+        ipv6Length: Payload Length
+        ipv6NextHeader: Next Header
+        ipv6HopLimit: Hop Limit
+        ipv6Src: Source IP
+        ipv6Dst: Dest IP
+        ipv6HopByHop: Hop-by-Hop Options
+        ipv6LastHeader: Last Header
+        srcPort: Source Port
+        dstPort: Dest Port
+        seq: Sequence Number
+        ack: Acknowledgment Number
+        dataOffset: Header Length
+        bitFin: FIN Flag
+        bitSyn: SYN Flag
+        bitRst: RST Flag
+        bitPsh: PSH Flag
+        bitAck: ACK Flag
+        bitUrg: URG Flag
+        bitEce: ECE Flag
+        bitCwr: CWR Flag
+        bitNs: NS Flag
+        window: Window Size
+        checksum: Checksum
+        urgent: Urgent Pointer
+        options: TCP Options
+        length: Data Length
+      desc:
+        ethDstMac: Destination MAC address of the data frame
+        ethSrcMac: Source MAC address of the data frame
+        ethType: Ethernet type identifying the upper-layer protocol (IPv4, IPv6, ARP, etc.)
+        ethLength: Ethernet frame length in bytes
+        ipv4Version: IP protocol version, always 4 for IPv4
+        ipv4Ihl: IPv4 header length in 32-bit words
+        ipv4Tos: Type of service for QoS prioritization
+        ipv4Length: Total IP datagram length (header + data) in bytes
+        ipv4Id: Identification used for fragment reassembly
+        ipv4Flags: "Fragment flags: DF (don't fragment), MF (more fragments)"
+        ipv4FragOffset: Fragment offset in 8-byte units
+        ipv4Ttl: Time to live, decremented by one per hop; packet is dropped at 0
+        ipv4IpProtocol: Upper-layer protocol number (TCP=6, UDP=17, ICMP=1, etc.)
+        ipv4Checksum: Header checksum for error detection
+        ipv4Src: Source IP address of the packet
+        ipv4Dst: Destination IP address of the packet
+        ipv4Options: IP options (rarely used, usually empty)
+        ipv4Padding: Padding bytes to align the header length
+        ipv6Version: IP protocol version, always 6 for IPv6
+        ipv6TrafficClass: Traffic class for QoS differentiation
+        ipv6FlowLabel: Flow label identifying packets of the same flow
+        ipv6Length: Payload length excluding the IPv6 header, in bytes
+        ipv6NextHeader: Next header type (extension header or transport protocol)
+        ipv6HopLimit: Hop limit, equivalent to IPv4 TTL
+        ipv6Src: Source IPv6 address of the packet
+        ipv6Dst: Destination IPv6 address of the packet
+        ipv6HopByHop: Hop-by-hop options extension header, processed by every router
+        ipv6LastHeader: Last header type (usually TCP/UDP)
+        srcPort: Source port identifying the sending application
+        dstPort: Destination port identifying the receiving application
+        seq: TCP sequence number of the first byte in the stream
+        ack: TCP acknowledgment number of the next expected byte
+        dataOffset: TCP header length in 32-bit words
+        bitFin: "FIN flag: sender has finished sending data"
+        bitSyn: "SYN flag: synchronizes sequence numbers to establish a connection"
+        bitRst: "RST flag: abnormally resets the connection"
+        bitPsh: "PSH flag: receiver should deliver data immediately"
+        bitAck: "ACK flag: the acknowledgment number is valid"
+        bitUrg: "URG flag: the urgent pointer is valid"
+        bitEce: "ECE flag: explicit congestion notification echo"
+        bitCwr: "CWR flag: congestion window reduced"
+        bitNs: "NS flag: nonce sum protection for random sequence numbers"
+        window: Receive window size for flow control
+        checksum: Checksum for error detection
+        urgent: Urgent pointer offset, used with the URG flag
+        options: TCP option list (MSS, window scale, timestamps, etc.)
+        length: Total UDP datagram length (header + data) in bytes
+      value:
+        yes: "Yes"
+        no: "No"
+        none: none
+      flag:
+        evil: Reserved
+        df: Don't Fragment (DF)
+        mf: More Fragments (MF)
 chart:
   title:
     queueSize: Queue Size
@@ -628,6 +796,8 @@ action:
   validateFailed: Validation Failed
   viewPlaintext: View Plaintext
   viewDetail: View Details
+  viewStack: View Network Stack
+  favoriteSample: Save as Sample
   resetFrontendConfig: Reset Frontend Config
   download: Download
   back: Back

@@ -87,6 +87,19 @@ export interface TagRuleDryRunIn {
   input: Record<string, unknown>;
 }
 
+// tag rule sample
+export interface TagRuleSampleCreateIn {
+  model: string;
+  name: string;
+  description?: string;
+  input: Record<string, unknown>;
+}
+
+export interface TagRuleSampleUpdateIn {
+  name: string;
+  description: string;
+}
+
 // tag event rule
 export interface TagEventRuleConditionIn {
   model: string;

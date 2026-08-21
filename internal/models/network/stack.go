@@ -56,8 +56,14 @@ type NetworkStack struct {
 	TimestampMeta
 	DirectionMeta
 	TopProto gopacket.LayerType `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"topProto"` // 顶层协议类型（如Ethernet、IPv4、TCP等）
-	Proto    gopacket.LayerType `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"proto"`     // 当前协议类型（如Ethernet、IPv4、TCP等）
-	Seq      uint32             `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"seq"`       // 帧序号，保持帧在 FrameStack 中的顺序
-	Level    LayerLevel         `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"level"`      // 协议层级（如链路层、网络层等）
-	Headers  string             `gorm:"type:String CODEC(ZSTD(3))" json:"headers"`   // 协议头部信息，具体类型由Proto决定
+	Proto    gopacket.LayerType `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"proto"`    // 当前协议类型（如Ethernet、IPv4、TCP等）
+	Seq      uint32             `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"seq"`      // 帧序号，保持帧在 FrameStack 中的顺序
+	Level    LayerLevel         `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"level"`     // 协议层级（如链路层、网络层等）
+	Headers  string             `gorm:"type:String CODEC(ZSTD(3))" json:"headers"`  // 协议头部信息，具体类型由Proto决定
+	// PayloadStartOffset 该帧所在TCP包的载荷在所属方向字节流中的起始偏移（字节）
+	// 与 HttpTransport.AppTailer 的 Client/ServerStartPayloadOffset 配合，
+	// 用于定位请求/响应分别由哪些包构成；空载荷包 start == end
+	PayloadStartOffset uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"payloadStartOffset"`
+	// PayloadEndOffset 该帧所在TCP包的载荷在所属方向字节流中的结束偏移（独占，字节）
+	PayloadEndOffset uint64 `gorm:"type:UInt64 CODEC(ZSTD(3))" json:"payloadEndOffset"`
 }

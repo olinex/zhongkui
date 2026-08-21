@@ -26,7 +26,7 @@ type SearchOptions struct {
 // OrderByItem 定义了排序项的接口
 // 实现此接口的类型可以提供排序所需的字段信息
 type OrderByItem interface {
-	GetName() string  // 获取排序项名称
+	GetName() string   // 获取排序项名称
 	GetColumn() string // 获取数据库列名
 	GetOrder() string  // 获取排序方向（ASC/DESC）
 }
@@ -43,12 +43,12 @@ type FilterByItem interface {
 // SearcherIn 定义了搜索输入参数的接口
 // 实现此接口的类型可以提供搜索所需的所有参数
 type SearcherIn interface {
-	GetGreedy() bool                       // 获取是否使用贪婪模式（OR 连接过滤条件）
-	GetPage() uint                         // 获取页码（从1开始）
-	GetPageSize() uint                     // 获取每页大小
-	GetOrderBy() []OrderByItem             // 获取排序项列表
-	GetFilterBy() map[string]FilterByItem  // 获取过滤项映射表
-	GetOptions() *SearchOptions            // 获取搜索选项配置
+	GetGreedy() bool                      // 获取是否使用贪婪模式（OR 连接过滤条件）
+	GetPage() uint                        // 获取页码（从1开始）
+	GetPageSize() uint                    // 获取每页大小
+	GetOrderBy() []OrderByItem            // 获取排序项列表
+	GetFilterBy() map[string]FilterByItem // 获取过滤项映射表
+	GetOptions() *SearchOptions           // 获取搜索选项配置
 }
 
 // convertFilterClause 将过滤项转换为数据库查询条件
@@ -59,20 +59,20 @@ func convertFilterClause(item FilterByItem, f func(query any, args ...any) (tx *
 	column := item.GetColumn()
 	action := item.GetAction()
 	value := item.GetValue()
-	
+
 	switch action {
 	case "eq": // 等于
 		return f(column+" = ?", value), nil
 	case "neq": // 不等于
 		return f(column+" != ?", value), nil
-		
+
 	// 前缀匹配相关操作
 	case "pfx", "npfx", "ipfx", "inpfx":
 		switch v := value.(type) {
 		case string:
 			var clause string
 			switch action {
-			case "pfx":  // 前缀匹配（区分大小写）
+			case "pfx": // 前缀匹配（区分大小写）
 				clause = " LIKE ?"
 			case "npfx": // 非前缀匹配（区分大小写）
 				clause = " NOT LIKE ?"
@@ -85,14 +85,14 @@ func convertFilterClause(item FilterByItem, f func(query any, args ...any) (tx *
 		default:
 			return nil, errors.Newf("Invalid value type: %T for action: %s", value, action)
 		}
-		
+
 	// 后缀匹配相关操作
 	case "sfx", "nsfx", "isfx", "insfx":
 		switch v := value.(type) {
 		case string:
 			var clause string
 			switch action {
-			case "sfx":  // 后缀匹配（区分大小写）
+			case "sfx": // 后缀匹配（区分大小写）
 				clause = " LIKE ?"
 			case "nsfx": // 非后缀匹配（区分大小写）
 				clause = " NOT LIKE ?"
@@ -105,14 +105,14 @@ func convertFilterClause(item FilterByItem, f func(query any, args ...any) (tx *
 		default:
 			return nil, errors.Newf("Invalid value type: %T for action: %s", value, action)
 		}
-		
+
 	// 包含匹配相关操作
 	case "ctn", "nctn", "ictn", "inctn":
 		switch v := value.(type) {
 		case string:
 			var clause string
 			switch action {
-			case "ctn":  // 包含匹配（区分大小写）
+			case "ctn": // 包含匹配（区分大小写）
 				clause = " LIKE ?"
 			case "nctn": // 不包含匹配（区分大小写）
 				clause = " NOT LIKE ?"
@@ -125,18 +125,18 @@ func convertFilterClause(item FilterByItem, f func(query any, args ...any) (tx *
 		default:
 			return nil, errors.Newf("Invalid value type: %T for action: %s", value, action)
 		}
-		
-	case "nil":  // 为空
+
+	case "nil": // 为空
 		return f(column + " IS NULL"), nil
 	case "nnil": // 不为空
 		return f(column + " IS NOT NULL"), nil
-	case "lt":   // 小于
+	case "lt": // 小于
 		return f(column+" < ?", value), nil
-	case "lte":  // 小于等于
+	case "lte": // 小于等于
 		return f(column+" <= ?", value), nil
-	case "gt":   // 大于
+	case "gt": // 大于
 		return f(column+" > ?", value), nil
-	case "gte":  // 大于等于
+	case "gte": // 大于等于
 		return f(column+" >= ?", value), nil
 	default:
 		return nil, errors.Newf("Invalid action: %s", action)
@@ -195,7 +195,7 @@ func BuildSearchQuery(db *database.DB, searcher SearcherIn) (builder *database.D
 	// 添加总计数查询
 	builder = db.Select("*, COUNT(*) OVER() AS total")
 	filterBy := searcher.GetFilterBy()
-	
+
 	// 根据贪婪模式选择不同的过滤条件注入方式
 	if searcher.GetGreedy() {
 		builder, err = injectMultiGreedyFilterClauses(builder, filterBy)
@@ -208,10 +208,10 @@ func BuildSearchQuery(db *database.DB, searcher SearcherIn) (builder *database.D
 			return nil, errors.WithStack(err)
 		}
 	}
-	
+
 	// 注入排序条件
 	builder = injectOrderClauses(builder, searcher.GetOrderBy())
-	
+
 	// 添加分页限制
 	page := searcher.GetPage()
 	pageSize := searcher.GetPageSize()

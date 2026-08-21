@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
@@ -30,7 +31,8 @@ import (
 //	返回: "pcap/prod/network-capture/v1.0/1745012345678_550e8400-e29b-41d4-a716-446655440000.zkcn"
 func BuildObjectKey(namespace, name, version string, timestamp time.Time, sessionID serializer.HexUUID) string {
 	return fmt.Sprintf(
-		`pcap/%s/%s/%s/%d_%s.%s`,
+		`%s%s/%s/%s/%d_%s.%s`,
+		s3.PcapPrefix,
 		namespace,
 		name,
 		version,

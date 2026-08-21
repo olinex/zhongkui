@@ -68,6 +68,37 @@ export interface TrafficListOut {
   items: TrafficListItem[];
 }
 
+// NetworkStackListItem HTTP 传输关联网络堆栈列表项
+// 对应后端 network.NetworkStack 模型（POST /traffic/http-transport/stack/list 返回），
+// 一包可能展开为多条记录（链路/网络/传输各一层），payloadStart/EndOffset 为该帧所在
+// TCP 包载荷在所属方向字节流中的 [start, end) 区间，用于与 HttpTransport.AppTailer
+// 的 Client/Server*PayloadOffset 相交定位请求/响应包
+export interface NetworkStackListItem {
+  namespace: string;
+  timestamp: string;
+  createdAt: string;
+  sessionId: string;
+  traceId: string;
+  capture?: string | null;
+  version?: string | null;
+  cli2Srv: boolean;
+  topProto?: number | null;
+  proto?: number | null;
+  seq?: number | null;
+  level?: number | null;
+  headers?: string | null;
+  payloadStartOffset?: number | null;
+  payloadEndOffset?: number | null;
+  // 其余全字段（BaseTotalOut 的分页计数等），键为模型字段 json 名
+  [key: string]: unknown;
+}
+
+// NetworkStackListOut 网络堆栈列表响应
+export interface NetworkStackListOut {
+  total: number;
+  items: NetworkStackListItem[];
+}
+
 // PlaintextCryptoIn 加密字段明文查看请求
 // model 为后端模型注册名（如 "ipv4-tcp"、"http-transport"，与 TrafficType 一致），
 // field 为字段 json 名，二者与后端权限点 object（plaintext:crypto:{model}:{field}）对应

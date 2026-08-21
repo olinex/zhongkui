@@ -2,6 +2,7 @@ import type { AxiosPromise } from "axios";
 import { getJwtHeader, request } from "./base";
 
 import type { SearchIn } from "@/components/@types/table";
+import { HTTP_TRANSPORT_MODEL_KEY } from "@/utils/rego";
 import type { PlaintextCryptoIn, PlaintextS3In, TrafficType } from "./@types/traffic";
 
 // TrafficCryptoFields 各类型加密字段清单
@@ -29,9 +30,33 @@ export const TrafficS3Fields: Record<TrafficType, string[]> = {
   "http-transport": ["reqBody", "rspBody"],
 };
 
+// TrafficModelKeys 流量类型 → 目标模型类型键（tagengine 注册名），供“收藏样例”使用；
+// 仅登记 tagengine 已注册模型，未登记类型不显示收藏入口
+export const TrafficModelKeys: Partial<Record<TrafficType, string>> = {
+  "http-transport": HTTP_TRANSPORT_MODEL_KEY,
+};
+
+// trafficTypeFromModelKey 目标模型类型键 → 流量类型（TrafficModelKeys 的逆映射）；
+// 未知类型返回 undefined，调用方据此跳过加密/S3 字段识别
+export function trafficTypeFromModelKey(typeKey: string): TrafficType | undefined {
+  return (Object.keys(TrafficModelKeys) as TrafficType[]).find(
+    (trafficType) => TrafficModelKeys[trafficType] === typeKey,
+  );
+}
+
 // trafficListGet 流量列表（分页 + 排序 + 过滤）
 export function trafficListGet(type: TrafficType, data: SearchIn): AxiosPromise {
   return request.post(`/traffic/${type}/list`, data, { headers: getJwtHeader() });
+}
+
+// trafficStackListGet HTTP 传输关联网络堆栈列表（分页 + 排序 + 过滤）
+// 以 HttpTransport 的 traceId + 时间范围查询组成该 TCP 流的全部网络堆栈记录；
+// 前端借助 HttpTransport.AppTailer 的 payload offset 与记录的
+// payloadStartOffset/payloadEndOffset 相交，高亮请求/响应对应的数据包
+export function trafficStackListGet(data: SearchIn): AxiosPromise {
+  return request.post("/traffic/http-transport/stack/list", data, {
+    headers: getJwtHeader(),
+  });
 }
 
 // plaintextCryptoGet 加密字段明文解密（全局通用接口）

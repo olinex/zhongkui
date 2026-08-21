@@ -354,10 +354,20 @@ func (s *Side[P]) appendPacket(ctx context.Context, packet P) error {
 	// 不在Side内累积，避免长期流导致的内存增长。
 	// 同一数据包的所有记录共享Seq与TopProto，但Proto/Level/Headers各不相同。
 	seq := uint32(len(s.PayloadOffsets))
+	// 载荷字节区间：包 i 的载荷区间为 (PayloadOffsets[i-1], PayloadOffsets[i]]，
+	// 起始偏移即前一包的累计字节数（第 0 包为 0），结束偏移为起始偏移加本包载荷长度，
+	// 与 appendPacket 末尾追加的 PayloadOffsets[seq] 边界一致；空载荷包区间为空。
+	var startOffset uint64
+	if seq > 0 {
+		startOffset = s.PayloadOffsets[seq-1]
+	}
+	endOffset := startOffset + uint64(length)
 	for _, stack := range packet.NetworkFrame() {
 		stack.Seq = seq
 		stack.TraceID = s.traceID
 		stack.Cli2Srv = s.cli2Srv
+		stack.PayloadStartOffset = startOffset
+		stack.PayloadEndOffset = endOffset
 		select {
 		case <-ctx.Done():
 			return nil

@@ -455,11 +455,11 @@ type IPv6Base struct {
 
 	// IPv6Src 源IPv6地址，数据包的发送方地址
 	// 使用serializer.IPv6Addr类型进行序列化和数据库存储
-	IPv6Src serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6Src"`
+	IPv6Src serializer.IPv6Addr `gorm:"type:IPv6" json:"ipv6Src"`
 
 	// IPv6Dst 目的IPv6地址，数据包的接收方地址
 	// 使用serializer.IPv6Addr类型进行序列化和数据库存储
-	IPv6Dst serializer.IPv6Addr `gorm:"type:FixedString(16)" json:"ipv6Dst"`
+	IPv6Dst serializer.IPv6Addr `gorm:"type:IPv6" json:"ipv6Dst"`
 
 	// IPv6HopByHop IPv6逐跳选项扩展头部
 	// 包含需要在数据包传输路径上每个路由器处理的选项

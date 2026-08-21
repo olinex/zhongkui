@@ -131,6 +131,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		policyMiddleware,            // RBAC策略引擎
 		coreDatabaseMiddleware,      // 数据库连接
 		namespaceMiddleware,         // 命名空间隔离
+		s3Middleware,                // S3 客户端（样例 body 副本复制/删除）
 		// authorizeMiddleware,       // 权限验证（暂未启用）
 	)
 	{
@@ -340,6 +341,30 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		// 标签规则目标模型样例元信息
 		adminGroup.OPTIONS("/tag-rule/model/samples", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleModelIn](), WithBodyOutput[TagRuleModelSamplesOut]())))
 
+		// ========== 标签规则样例管理接口 ==========
+		// 管理标签规则验证样例的增删改查（样例为全局数据，model/input 创建后不可变）
+
+		// 标签规则样例列表查询 - 支持分页、搜索和排序
+		adminGroup.POST("/tag-rule-sample/list", tagRuleSampleListGet)
+		// 标签规则样例列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
+		adminGroup.OPTIONS("/tag-rule-sample/list", ListMetaGinHandler[*TagRuleSampleListGetSearchIn, *TagRuleSampleListOut]())
+		// 创建标签规则样例 - 创建新的验证样例（model/input 创建后不可变）
+		adminGroup.POST("/tag-rule-sample/create", tagRuleSampleCreate)
+		// 创建标签规则样例元信息
+		adminGroup.OPTIONS("/tag-rule-sample/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleSampleCreateIn]())))
+		// 标签规则样例详情查询 - 根据ID获取样例完整信息
+		adminGroup.POST("/tag-rule-sample/:id/get", tagRuleSampleDetailGet)
+		// 标签规则样例详情元信息
+		adminGroup.OPTIONS("/tag-rule-sample/:id/get", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagRuleSampleDetailOut]())))
+		// 标签规则样例信息更新 - 仅允许更新样例名称与说明（model/input 不可变）
+		adminGroup.POST("/tag-rule-sample/:id/update", tagRuleSampleUpdate)
+		// 标签规则样例信息更新元信息
+		adminGroup.OPTIONS("/tag-rule-sample/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleSampleUpdateIn]())))
+		// 删除标签规则样例 - 删除指定样例
+		adminGroup.POST("/tag-rule-sample/:id/delete", tagRuleSampleDelete)
+		// 删除标签规则样例元信息
+		adminGroup.OPTIONS("/tag-rule-sample/:id/delete", StructMetaGinHandler(WithMethod(http.MethodPost)))
+
 		// ========== 标签事件规则管理接口 ==========
 		// 提供标签事件规则的增删改查、启停、表达式校验、dry-run 与版本回滚
 
@@ -439,6 +464,10 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		httpTransportGroup.POST("/list", httpTransportListGet)
 		// 流量列表元信息
 		httpTransportGroup.OPTIONS("/list", ListMetaGinHandler[*HttpTransportListGetSearchIn, *HttpTransportListGetListItemOut]())
+		// 关联网络堆栈列表查询 - 以 HttpTransport 的 traceId 分页查询组成该 TCP 流的网络堆栈
+		httpTransportGroup.POST("/stack/list", httpTransportStackListGet)
+		// 关联网络堆栈列表元信息
+		httpTransportGroup.OPTIONS("/stack/list", ListMetaGinHandler[*NetworkStackListGetSearchIn, *NetworkStackListGetListItemOut]())
 	}
 
 	// ==================== 通用明文查看接口组：/api/v1/plaintext ====================

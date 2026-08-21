@@ -26,47 +26,38 @@ const (
 	httpExampleSampleName = "http-example"
 )
 
-// httpTransportTypeKey *network.HttpTransport 的类型键，用于判定预置样例的供给对象。
-var httpTransportTypeKey = func() string {
-	key, err := TypeKey(&network.HttpTransport{})
-	if err != nil {
-		panic("tagengine: failed to compute http transport type key: " + err.Error())
-	}
-	return key
-}()
-
 // httpTransportExample HttpTransport 预置真实样例的输入文档。
 // 模拟一条真实 HTTP 登录请求，键为 HttpTransport 的 json tag 名，
 // 可反序列化回 *network.HttpTransport（加密字段 reqHdrAuthorization 为 {}）。
 var httpTransportExample = map[string]any{
-	"namespace":              "default",
-	"capture":                "eth0",
-	"version":                "1",
-	"sessionId":             "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
-	"traceId":               "f47ac10b-58cc-4372-a567-0e02b2c3d479",
-	"timestamp":              "2026-08-16T10:00:00+08:00",
-	"clientIp":              "192.168.1.10",
-	"clientPort":            53452,
-	"serverIp":              "93.184.216.34",
-	"serverPort":            443,
-	"httpVersion":           "HTTP/1.1",
-	"method":                 "POST",
-	"url":                    "https://api.example.com/v1/login",
-	"scheme":                 "https",
-	"host":                   "api.example.com",
-	"path":                   "/v1/login",
-	"fileExt":               "json",
-	"reqBodyHash":          "4a2e3f9c1b8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f",
-	"reqBodyLength":        86,
+	"namespace":           "default",
+	"capture":             "eth0",
+	"version":             "1",
+	"sessionId":           "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
+	"traceId":             "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+	"timestamp":           "2026-08-16T10:00:00+08:00",
+	"clientIp":            "192.168.1.10",
+	"clientPort":          53452,
+	"serverIp":            "93.184.216.34",
+	"serverPort":          443,
+	"httpVersion":         "HTTP/1.1",
+	"method":              "POST",
+	"url":                 "https://api.example.com/v1/login",
+	"scheme":              "https",
+	"host":                "api.example.com",
+	"path":                "/v1/login",
+	"fileExt":             "json",
+	"reqBodyHash":         "4a2e3f9c1b8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f",
+	"reqBodyLength":       86,
 	"reqHdrUserAgent":     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 	"reqHdrContentType":   "application/json",
-	"reqHdrAccept":         "application/json",
-	"reqHdrAuthorization":  map[string]any{},
-	"reqHdrHost":           "api.example.com",
+	"reqHdrAccept":        "application/json",
+	"reqHdrAuthorization": map[string]any{},
+	"reqHdrHost":          "api.example.com",
 	"rspHdrContentType":   "application/json",
-	"rspHdrServer":         "nginx",
+	"rspHdrServer":        "nginx",
 	"rspHdrContentLength": 2048,
-	"tags":                   []string{"http", "login"},
+	"tags":                []string{"http", "login"},
 }
 
 // ListModelSamples 列出目标模型全部系统样例（按 name 排序）。
@@ -112,7 +103,7 @@ func EnsureModelSamples(ctx context.Context, db *database.DB, typeKey string) ([
 			Description: "目标模型零值输入文档",
 		})
 	}
-	if typeKey == httpTransportTypeKey {
+	if typeKey == MustTypeKey(&network.HttpTransport{}) {
 		if exists, err := sampleExists(ctx, db, typeKey, httpExampleSampleName); err != nil {
 			return nil, err
 		} else if !exists {

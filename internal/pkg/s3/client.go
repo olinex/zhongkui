@@ -367,6 +367,27 @@ func (s *S3Client) RemoveObject(ctx context.Context, objectKey string, opts mini
 	return s.cli.RemoveObject(ctx, s.bucket, objectKey, opts)
 }
 
+// CopyObject 在默认桶内执行服务端复制，将源对象完整复制为新的目标对象。
+// 对象为客户端加密密文（zkcn），复制保持字节不变，下载侧仍用同一密钥解密，无需在此加解密。
+// 源对象不存在时返回 NoSuchKey 错误（可用 IsNotExists 判断）。
+//
+// 参数:
+//   - ctx: 上下文，用于控制请求的生命周期和取消
+//   - srcKey: 源对象键
+//   - dstKey: 目标对象键
+//
+// 返回值:
+//   - error: 复制失败时返回的错误，如源对象不存在、权限不足或网络错误
+func (s *S3Client) CopyObject(ctx context.Context, srcKey, dstKey string) error {
+	if _, err := s.cli.CopyObject(ctx,
+		minio.CopyDestOptions{Bucket: s.bucket, Object: dstKey},
+		minio.CopySrcOptions{Bucket: s.bucket, Object: srcKey},
+	); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
 // ListObjects 列出S3存储桶中的对象
 // 返回一个只读通道，通过该通道可以接收存储桶中的对象信息
 // 通道会在所有对象列出后自动关闭，或者当上下文取消时提前关闭

@@ -25,6 +25,7 @@ export enum HttpHeader {
 export enum BackendDataType {
   ACTIONS = "actions",
   UUID = "datatypes.BinUUID",
+  HEX = "hex",
   STRING = "string",
   INT = "int",
   UINT = "uint",

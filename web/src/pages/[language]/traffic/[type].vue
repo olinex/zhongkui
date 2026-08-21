@@ -24,6 +24,17 @@
             </v-col>
             <v-col cols="auto" class="ml-auto">
               <div class="d-flex align-center ga-2">
+                <!-- 高级筛选开关：紧凑文本按钮内联于操作区，不再独占整行；
+                     与其他图标按钮同高（variant=text + density=compact），hover 高亮保持一致 -->
+                <v-btn
+                  :append-icon="advancedFilterOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                  variant="text"
+                  density="compact"
+                  :aria-label="$t('model.__base.field.advancedFilter')"
+                  @click="advancedFilterOpen = !advancedFilterOpen"
+                >
+                  {{ $t("model.__base.field.advancedFilter") }}
+                </v-btn>
                 <!-- 查询按钮常驻展示：收起状态下仍可直接发起查询 -->
                 <v-btn
                   :loading="loading"
@@ -46,6 +57,30 @@
               </div>
             </v-col>
           </v-row>
+          <!-- 高级筛选字段：可选重要字段（五元组/URI 等），仅精确匹配 eq；
+               后端配套 bloom_filter/set 跳过索引，在必填时间窗口内按数据块剪枝 -->
+          <v-expand-transition>
+            <div v-if="advancedFilterOpen" class="mt-2">
+              <v-row dense>
+                <v-col
+                  v-for="field in optionalFilterFields"
+                  :key="field.key"
+                  cols="12"
+                  sm="6"
+                  md="4"
+                  lg="3"
+                >
+                  <v-text-field
+                    v-model="optionalFilters[field.key]"
+                    :label="trafficFieldTitle(field.key)"
+                    :type="field.kind"
+                    density="compact"
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+            </div>
+          </v-expand-transition>
         </v-form>
         <v-divider class="my-2" />
         <v-row dense>
@@ -114,107 +149,20 @@
 
       <!-- 行详情对话框：列表已返回全字段，直接展示行数据，无需再发起详情请求；
            只读明细以全屏对话框展示，便于浏览大字段与长报文 -->
-      <v-dialog v-model="detailDialog" fullscreen transition="dialog-bottom-transition">
-        <v-card>
-          <v-toolbar density="compact">
-            <v-toolbar-title class="text-no-wrap">
-              {{ $t("title.trafficDetail") }}
-            </v-toolbar-title>
-            <v-spacer />
-            <v-btn icon="mdi-close" variant="text" @click="detailDialog = false" />
-          </v-toolbar>
-          <div class="px-6 py-4 overflow-y-auto" style="height: calc(100vh - 48px)">
-            <v-table density="compact">
-              <thead>
-                <tr>
-                  <th class="text-no-wrap">{{ $t("model.__base.field.field") }}</th>
-                  <th>{{ $t("model.__base.field.value") }}</th>
-                  <th class="text-no-wrap">{{ $t("model.__base.field.action") }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="field in detailFields" :key="field.key">
-                  <td class="text-no-wrap">
-                    {{ field.label }}
-                  </td>
-                  <td>
-                    <template v-if="field.kind === 'crypto'">
-                      <v-chip color="warning" variant="tonal" size="small">
-                        {{ $t("model.__base.field.encrypted") }}
-                      </v-chip>
-                    </template>
-                    <template v-else-if="field.kind === 's3'">
-                      <span class="font-mono">{{ field.display }}</span>
-                      <storage-size-chip
-                        class="ml-2"
-                        :value="field.length"
-                        binary
-                        density="comfortable"
-                      />
-                    </template>
-                    <template v-else>
-                      {{ field.display }}
-                    </template>
-                  </td>
-                  <td class="text-no-wrap">
-                    <template
-                      v-if="field.kind === 'crypto' || (field.kind === 's3' && field.length > 0)"
-                    >
-                      <v-btn
-                        :text="$t('action.viewPlaintext')"
-                        size="small"
-                        variant="tonal"
-                        color="primary"
-                        :loading="plaintextLoading === field.key"
-                        @click="viewPlaintextAction(field)"
-                      />
-                    </template>
-                    <template v-else-if="field.kind === 's3'">
-                      <v-chip size="small">{{ $t("notice.plaintextEmpty") }}</v-chip>
-                    </template>
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
-          </div>
-        </v-card>
-      </v-dialog>
+      <model-detail-dialog
+        v-model="detailDialog"
+        :title="$t('title.trafficDetail')"
+        :fields="detailFields"
+        :plaintext-loading="plaintextLoading"
+        @view-plaintext="viewPlaintextAction"
+      />
 
-      <!-- 明文查看对话框 -->
-      <v-dialog v-model="plaintextDialog" max-width="900">
-        <v-card>
-          <v-card-title class="text-no-wrap">
-            {{ trafficFieldTitle(plaintextField) }}
-          </v-card-title>
-          <v-card-text>
-            <v-alert
-              v-if="!plaintextIsText"
-              type="info"
-              variant="tonal"
-              density="compact"
-              class="mb-2"
-            >
-              {{ $t("notice.plaintextBinary") }}
-            </v-alert>
-            <div class="plaintext-preview">
-              <pre class="font-mono">{{ plaintextIsText ? plaintextText : plaintextHex }}</pre>
-            </div>
-            <div v-if="plaintextTruncated" class="text-caption text-medium-emphasis mt-1">
-              {{ $t("notice.plaintextTruncated") }}
-            </div>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn
-              :text="$t('action.download')"
-              prepend-icon="mdi-download"
-              variant="tonal"
-              @click="downloadAction"
-            />
-            <v-btn :text="$t('action.close')" variant="text" @click="plaintextDialog = false" />
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <!-- 明文查看对话框（共享组件：加密/S3 字段解密展示与下载） -->
+      <plaintext-dialog ref="plaintextDialogRef" />
+
+      <!-- 网络堆栈对话框：以选中传输的 traceId 展示其所在 TCP 流的网络堆栈，
+           并按 AppTailer payload offset 相交高亮请求/响应包 -->
+      <network-stack-dialog v-model="stackDialog" :transport="stackTransport" />
     </template>
   </main-layout>
 </template>
@@ -228,39 +176,63 @@ meta:
 </route>
 
 <script setup lang="ts">
-import axios from "axios";
 import { DateTime } from "luxon";
 import { useForm } from "vee-validate";
 
-import { getResponse } from "@/apis/base";
+import { getResponse, getSimpleResponse } from "@/apis/base";
+import { tagRuleSampleCreate } from "@/apis/admin";
 import {
   TrafficCryptoFields,
+  TrafficModelKeys,
   TrafficS3Fields,
-  plaintextCryptoGet,
-  plaintextS3Get,
   trafficListGet,
 } from "@/apis/traffic";
 import type { TrafficListOut, TrafficListItem, TrafficType } from "@/apis/@types/traffic";
+import type { DetailField } from "@/components/@types/detail";
 import type { FilterByItem, ItemActions, SearchIn, TableHeader } from "@/components/@types/table";
 import { trafficFilterSchema } from "@/schemas/traffic";
 import { useAppStore } from "@/stores/app";
 import { BackendDataType, SearchAction } from "@/types";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
+import { modelFieldTitle } from "@/utils/modelField";
 import { useColumnVisibility } from "@/utils/column";
 
-const TEXT_PREVIEW_LIMIT = 100000;
-const HEX_PREVIEW_LIMIT = 1024;
 const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
 
-interface DetailField {
-  key: string;
-  label: string;
-  display: string;
-  kind: "plain" | "crypto" | "s3";
-  length: number;
-  value: unknown;
-}
+// 高级筛选可选字段配置：按流量类型罗列常用重要字段（五元组 / 会话 ID / URI 等）。
+// 与后端 search.toml 的 filterBy 名称一致，仅精确匹配（eq）——配合 bloom_filter/set 跳过索引，
+// 在必填时间窗口内按数据块剪枝，避免十亿级数据逐行扫描。
+const OPTIONAL_FILTER_FIELDS: Record<
+  TrafficType,
+  Array<{ key: string; kind: "text" | "number" }>
+> = {
+  "ipv4-tcp": [
+    { key: "ipv4Src", kind: "text" },
+    { key: "ipv4Dst", kind: "text" },
+    { key: "srcPort", kind: "number" },
+    { key: "dstPort", kind: "number" },
+    { key: "sessionId", kind: "text" },
+  ],
+  "ipv6-tcp": [
+    { key: "ipv6Src", kind: "text" },
+    { key: "ipv6Dst", kind: "text" },
+    { key: "srcPort", kind: "number" },
+    { key: "dstPort", kind: "number" },
+    { key: "sessionId", kind: "text" },
+  ],
+  "http-transport": [
+    { key: "clientIp", kind: "text" },
+    { key: "serverIp", kind: "text" },
+    { key: "clientPort", kind: "number" },
+    { key: "serverPort", kind: "number" },
+    { key: "method", kind: "text" },
+    { key: "host", kind: "text" },
+    { key: "path", kind: "text" },
+    { key: "httpVersion", kind: "text" },
+    { key: "fileExt", kind: "text" },
+  ],
+};
 
 // 流量模型类型与路由段一一对应（/traffic/:type），侧边栏各模型入口分别携带 type 参数
 const isTrafficType = (value: unknown): value is TrafficType => {
@@ -306,14 +278,21 @@ const sortBy = ref<Array<{ key: string; order?: boolean | "asc" | "desc" }>>([
 const detailDialog = ref(false);
 const detailItem = ref<Record<string, unknown> | null>(null);
 
-const plaintextDialog = ref(false);
-const plaintextField = ref("");
-const plaintextText = ref("");
-const plaintextHex = ref("");
-const plaintextIsText = ref(true);
-const plaintextTruncated = ref(false);
-const plaintextBlobUrl = ref("");
+// 网络堆栈对话框：选中 http-transport 行（携带 traceId 与 AppTailer offset）后打开
+const stackDialog = ref(false);
+const stackTransport = ref<Record<string, unknown> | null>(null);
+const openStack = (item: Record<string, unknown>): void => {
+  stackTransport.value = item;
+  stackDialog.value = true;
+};
+
+const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 const plaintextLoading = ref("");
+
+// 高级筛选状态：面板开合 + 可选字段值（按 type 动态渲染，仅非空值参与查询）
+const advancedFilterOpen = ref(false);
+const optionalFilters = reactive<Record<string, string>>({});
+const optionalFilterFields = computed(() => OPTIONAL_FILTER_FIELDS[type.value]);
 
 // 初始查询范围：近一天（起始 ~ 截止）
 const initialRange = (): [DateTime, DateTime] => {
@@ -628,17 +607,9 @@ const typeKey = computed(() => {
 });
 
 // trafficFieldTitle 列标题：按当前流量类型取该类型独立字段翻译（model.<type>.field.<key>）；
-// 未命中（语言包缺键）时去 reqHdr/rspHdr 前缀、驼峰转单词并按单词大写兜底
+// 委托共享工具 modelFieldTitle，行为与统一标签解析保持一致
 const trafficFieldTitle = (key: string): string => {
-  const typeTpl = `model.${typeKey.value}.field.${key}`;
-  const t = i18n.global.t(typeTpl);
-  if (t !== typeTpl) {
-    return t;
-  }
-  return key
-    .replace(/^(reqHdr|rspHdr)/, "")
-    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return modelFieldTitle(typeKey.value, key);
 };
 
 // h 便捷构造表头：defaultVisible 控制默认是否展示（非常用字段显式传 false）
@@ -721,7 +692,7 @@ const headers = computed((): Array<TableHeader> => {
   const ipv4 = type.value === "ipv4-tcp";
   return [
     ...common,
-    h("tcpStreamId"),
+    h("tcpStreamId", BackendDataType.HEX),
     h(ipv4 ? "ipv4Src" : "ipv6Src"),
     h(ipv4 ? "ipv4Dst" : "ipv6Dst"),
     h("srcPort", BackendDataType.UINT16),
@@ -791,6 +762,17 @@ const buildSearchIn = (from: {
       value: appStore.namespace,
     },
   };
+  // 可选筛选字段：仅注入非空值（精确匹配 eq）；端口等数值字段转 Number 保证后端 uint16 绑定成功
+  for (const { key, kind } of OPTIONAL_FILTER_FIELDS[type.value]) {
+    const raw = optionalFilters[key];
+    if (raw === undefined || raw === null || raw === "") {
+      continue;
+    }
+    filterBy[key] = {
+      action: SearchAction.EQUAL,
+      value: kind === "number" ? Number(raw) : raw,
+    };
+  }
   return {
     greedy: false,
     page: page.value,
@@ -848,6 +830,10 @@ const submitQuery = handleSubmit(async () => {
 watch(type, async () => {
   detailDialog.value = false;
   page.value = 1;
+  // 高级筛选值按类型独立，切换类型时清空，避免残留脏值参与查询
+  for (const key of Object.keys(optionalFilters)) {
+    delete optionalFilters[key];
+  }
   await refreshAction();
 });
 
@@ -883,11 +869,51 @@ const openDetail = (item: Record<string, unknown>): void => {
   detailDialog.value = true;
 };
 
-// 行操作菜单：当前仅“查看详情”，后续可按需扩展；菜单项文案经 action.<name> 翻译
+// favoriteSampleAction 收藏样例：将当前行数据原样收录为标签规则样例。
+// 加密字段（base64 密文）与 S3 body 字段（对象键）一并保留，保证样例 JSON 可反序列化回
+// 目标模型，规则测试结果不因字段缺失而受影响；名称自动生成避免重复收藏冲突。
+const favoriteSampleAction = async (item: Record<string, unknown>): Promise<void> => {
+  const modelKey = TrafficModelKeys[type.value];
+  const input = { ...item };
+  // 列表分页计数（BaseTotalOut）非模型字段，从样例文档中剔除
+  delete input.total;
+  await getSimpleResponse(
+    tagRuleSampleCreate({
+      model: modelKey!,
+      name: `traffic-${DateTime.now().toFormat("yyyyMMddHHmmssSSS")}`,
+      description: "",
+      input,
+    }),
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "success",
+      });
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
+// 行操作菜单：查看详情 + 收藏样例（仅已注册样例模型的类型显示）；菜单项文案经 action.<name> 翻译
 const rowActions = (item: Record<string, unknown>): ItemActions => {
-  return {
+  const actions: ItemActions = {
     viewDetail: () => openDetail(item),
   };
+  if (TrafficModelKeys[type.value]) {
+    actions.favoriteSample = () => void favoriteSampleAction(item);
+  }
+  // http-transport 携带 traceId 时提供网络堆栈下钻入口（前端按 payload offset 高亮请求/响应包）
+  if (type.value === "http-transport" && item.traceId) {
+    actions.viewStack = () => openStack(item);
+  }
+  return actions;
 };
 
 const onClickRow = (
@@ -967,35 +993,7 @@ const detailFields = computed((): DetailField[] => {
   });
 });
 
-const parseErrorBody = (text: string): string => {
-  try {
-    const json = JSON.parse(text) as { summary?: string };
-    return json.summary || text;
-  } catch {
-    return text;
-  }
-};
-
-const parsePlaintextError = (err: unknown): string => {
-  if (axios.isAxiosError(err) && err.response) {
-    const data = err.response.data;
-    if (data instanceof ArrayBuffer) {
-      return parseErrorBody(new TextDecoder("utf-8").decode(data));
-    }
-    if (typeof data === "string") {
-      return parseErrorBody(data);
-    }
-  }
-  return i18n.global.t("notice.plaintextLoadFailed");
-};
-
-const toHex = (bytes: Uint8Array, limit: number): string => {
-  return Array.from(bytes.slice(0, limit), (byte) => {
-    return byte.toString(16).padStart(2, "0");
-  }).join(" ");
-};
-
-// viewPlaintextCrypto 列表单元格直接解密加密字段：构造 DetailField 复用详情页解密与明文展示流程
+// viewPlaintextCrypto 列表单元格直接解密加密字段：构造 DetailField 复用明文对话框解密流程
 const viewPlaintextCrypto = async (item: Record<string, unknown>, key: string): Promise<void> => {
   const ciphertext = item[key];
   if (typeof ciphertext !== "string" || ciphertext === "") {
@@ -1012,7 +1010,7 @@ const viewPlaintextCrypto = async (item: Record<string, unknown>, key: string): 
   await viewPlaintextAction(field);
 };
 
-// viewPlaintextS3 列表单元格直接解密 S3 body 字段：按对象键从存储读取明文，复用详情页流程
+// viewPlaintextS3 列表单元格直接解密 S3 body 字段：按对象键从存储读取明文，复用明文对话框流程
 const viewPlaintextS3 = async (item: Record<string, unknown>, key: string): Promise<void> => {
   const objectKey = item[key];
   if (typeof objectKey !== "string" || objectKey === "") {
@@ -1029,84 +1027,21 @@ const viewPlaintextS3 = async (item: Record<string, unknown>, key: string): Prom
   await viewPlaintextAction(field);
 };
 
+// viewPlaintextAction 统一入口：构造 DetailField 后交共享明文对话框解密展示，
+// loading 反馈给调用方（列表单元格/详情行按钮）以标记正在加载的字段
 const viewPlaintextAction = async (field: DetailField): Promise<void> => {
-  const typeName = type.value;
-  if (!typeName) {
-    return;
-  }
+  plaintextLoading.value = field.key;
   try {
-    plaintextLoading.value = field.key;
-    // model 复用当前类型名（与后端 RegisterPlaintextModel 注册名一致）
-    const rsp =
-      field.kind === "s3"
-        ? await plaintextS3Get({
-            model: typeName,
-            field: field.key,
-            object_key: String(field.value),
-          })
-        : await plaintextCryptoGet({
-            model: typeName,
-            field: field.key,
-            ciphertext: String(field.value),
-          });
-    const bytes = new Uint8Array(rsp.data as ArrayBuffer);
-    const text = new TextDecoder("utf-8").decode(bytes.slice(0, TEXT_PREVIEW_LIMIT));
-    plaintextIsText.value =
-      !text.includes("\uFFFD") && !/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(text);
-    plaintextText.value = text;
-    plaintextHex.value = toHex(bytes, HEX_PREVIEW_LIMIT);
-    plaintextTruncated.value =
-      bytes.length > TEXT_PREVIEW_LIMIT || bytes.length > HEX_PREVIEW_LIMIT;
-    plaintextField.value = field.key;
-    if (plaintextBlobUrl.value) {
-      URL.revokeObjectURL(plaintextBlobUrl.value);
-    }
-    plaintextBlobUrl.value = URL.createObjectURL(new Blob([bytes]));
-    plaintextDialog.value = true;
-  } catch (err) {
-    appStore.notify({
-      text: parsePlaintextError(err),
-      timeout: 3000,
-      color: "error",
-    });
+    await plaintextDialogRef.value?.open(field, type.value, field.label);
   } finally {
     plaintextLoading.value = "";
   }
 };
 
-const downloadAction = (): void => {
-  const url = plaintextBlobUrl.value;
-  if (!url) {
-    return;
-  }
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `${plaintextField.value}.bin`;
-  anchor.click();
-};
-
-watch(plaintextDialog, (open) => {
-  if (!open && plaintextBlobUrl.value) {
-    URL.revokeObjectURL(plaintextBlobUrl.value);
-    plaintextBlobUrl.value = "";
-  }
-});
-
 onMounted(refreshAction);
 </script>
 
 <style scoped>
-/* Plaintext preview area with vertical scrolling for long contents. */
-.plaintext-preview {
-  max-height: 480px;
-  overflow-y: auto;
-}
-
-.plaintext-preview pre {
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
 /* Collapse the empty message slot of filter inputs so the action buttons
    align with the input control line; validation errors still expand it.
    `.v-input__details` is a Vuetify BEM element class (double underscore),

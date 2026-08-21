@@ -58,6 +58,7 @@ const (
 	CodeTagRuleModelNotRegistered                 // 1107: 标签规则目标模型未注册（引擎不识别，写入被拒绝）
 	CodeFrontendConfigConflict                    // 1108: 前端配置更新冲突（上传的哈希或版本号与服务端不一致）
 	CodeFrontendConfigSyncDisabled                // 1109: 前端配置同步未开启（拒绝接收配置上传）
+	CodeTagRuleSampleInputInvalid                 // 1110: 标签规则样例输入无法反序列化为目标模型
 )
 
 // 预定义的常用错误实例

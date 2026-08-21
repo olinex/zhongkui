@@ -294,7 +294,8 @@ func (p *PacketIPv4TCP) FrameInfo() *FrameInfo {
 
 // NetworkFrame 返回数据包的网络层帧信息
 // 将数据包的网络层堆栈展平为NetworkStack记录列表，用于记录数据包的捕获上下文。
-// 每条记录的 Seq 与 TraceID、Direction 由TCP流侧在数据包进入缓冲区时补充设置。
+// 每条记录的 Seq、TraceID、Direction 与载荷字节偏移（PayloadStart/EndOffset）
+// 由TCP流侧在数据包进入缓冲区时补充设置。
 func (p *PacketIPv4TCP) NetworkFrame() NetworkFrame {
 	return NewNetworkFrame(p.LayerStack, p.BaseMeta, p.Timestamp)
 }
@@ -370,7 +371,8 @@ func (p *PacketIPv6TCP) FrameInfo() *FrameInfo {
 
 // NetworkFrame 返回数据包的网络层帧信息
 // 将数据包的网络层堆栈展平为NetworkStack记录列表，用于记录数据包的捕获上下文。
-// 每条记录的 Seq 与 TraceID、Direction 由TCP流侧在数据包进入缓冲区时补充设置。
+// 每条记录的 Seq、TraceID、Direction 与载荷字节偏移（PayloadStart/EndOffset）
+// 由TCP流侧在数据包进入缓冲区时补充设置。
 func (p *PacketIPv6TCP) NetworkFrame() NetworkFrame {
 	return NewNetworkFrame(p.LayerStack, p.BaseMeta, p.Timestamp)
 }

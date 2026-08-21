@@ -12,6 +12,12 @@
     suffix="..."
     :value="item[header.key]"
   />
+  <hex-string-chip
+    v-else-if="header.type === BackendDataType.HEX"
+    color="info"
+    suffix="..."
+    :value="item[header.key]"
+  />
   <boolean-chip v-else-if="header.type === BackendDataType.BOOLEAN" :value="item[header.key]" />
   <storage-size-chip
     v-else-if="header.type === BackendDataType.BINARY_BYTE"

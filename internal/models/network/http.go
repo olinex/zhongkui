@@ -21,37 +21,11 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
-// // sortedFrameStack 返回按时间戳排序的帧栈，合并客户端和服务端的帧信息。
-// func sortedFrameStack(reqFrameStack, rspFrameStack FrameStack) FrameStack {
-// 	fs := make(FrameStack, 0, len(reqFrameStack)+len(rspFrameStack))
-// 	clientIndex, serverIndex := 0, 0
-// 	for {
-// 		if clientIndex >= len(reqFrameStack) {
-// 			fs = append(fs, rspFrameStack[serverIndex:]...)
-// 			break
-// 		}
-// 		if serverIndex >= len(rspFrameStack) {
-// 			fs = append(fs, reqFrameStack[clientIndex:]...)
-// 			break
-// 		}
-// 		clientFrameInfo := reqFrameStack[clientIndex]
-// 		serverFrameInfo := rspFrameStack[serverIndex]
-// 		if clientFrameInfo.Timestamp.Before(serverFrameInfo.Timestamp) {
-// 			fs = append(fs, clientFrameInfo)
-// 			clientIndex++
-// 		} else {
-// 			fs = append(fs, serverFrameInfo)
-// 			serverIndex++
-// 		}
-// 	}
-// 	return fs
-// }
-
 func objectKey(name string, req bool) string {
 	if req {
-		return fmt.Sprintf(`body/request/%s.%s`, name, combine.FileExt)
+		return fmt.Sprintf(`%s%s.%s`, s3.BodyRequestPrefix, name, combine.FileExt)
 	}
-	return fmt.Sprintf(`body/response/%s.%s`, name, combine.FileExt)
+	return fmt.Sprintf(`%s%s.%s`, s3.BodyResponsePrefix, name, combine.FileExt)
 }
 
 // parseInt32 解析字符串为 int32，解析失败返回 0
@@ -126,13 +100,13 @@ func decompressResponseBody(resp *http.Response) (io.ReadCloser, error) {
 // 包含HTTP通信的基础网络连接信息，用于标识通信的端点和协议版本
 type HttpBase struct {
 	// ClientIP 客户端IP地址，发起HTTP请求的源地址
-	ClientIP serializer.IPAddr `gorm:"type:FixedString(16)" json:"clientIp"`
+	ClientIP serializer.IPAddr `gorm:"type:IPv6" json:"clientIp"`
 	// ClientPort 客户端端口号，发起HTTP请求的源端口
 	ClientPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"clientPort"`
 	// ClientISN 客户端ISN，TCP协议中的初始序列号，用于标识客户端的连接
 	ClientISN uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"clientIsn"`
 	// ServerIP 服务器IP地址，HTTP服务的目标地址
-	ServerIP serializer.IPAddr `gorm:"type:FixedString(16)" json:"serverIp"`
+	ServerIP serializer.IPAddr `gorm:"type:IPv6" json:"serverIp"`
 	// ServerPort 服务器端口号，HTTP服务的目标端口
 	ServerPort layers.TCPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"serverPort"`
 	// ServerISN 服务器ISN，TCP协议中的初始序列号，用于标识服务器的连接

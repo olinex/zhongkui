@@ -147,6 +147,13 @@ export interface TagRuleModelOptionsOut {
   items: TagRuleModelOptionOut[];
 }
 
+export interface TagRuleSampleDetailOut extends NormalModelOut {
+  model: string;
+  name: string;
+  description: string;
+  input: Record<string, unknown>;
+}
+
 // tag event rule
 export interface TagEventRuleConditionOut extends NormalModelOut {
   model: string;

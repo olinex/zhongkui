@@ -82,6 +82,7 @@
 1107 = "Tag Rule Target Model Not Registered"
 1108 = "Frontend Config Has Been Updated By Another Browser, Please Refresh And Retry"
 1109 = "Frontend Config Sync Is Not Enabled"
+1110 = "Tag Rule Sample Input Cannot Be Deserialized Into Target Model"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -258,6 +259,39 @@ other = "Use tshark to extract HTTP request/response data from a pcap file and g
 
 [cmd.force-reset-password.short]
 other = "Force reset a user's password via the command line"
+
+[cmd.s3.short]
+other = "S3 object storage management"
+
+[cmd.s3.long]
+other = "S3 object storage management commands, including bucket lifecycle rule management"
+
+[cmd.s3.lifecycle.short]
+other = "Lifecycle rule management"
+
+[cmd.s3.lifecycle.long]
+other = "Inspect, apply and remove lifecycle rules of the default bucket; rules are executed by the S3 platform"
+
+[cmd.s3.lifecycle.apply.short]
+other = "Apply lifecycle rules"
+
+[cmd.s3.lifecycle.apply.long]
+other = "Collect lifecycle rules interactively and apply them to the default bucket as a whole (fully replacing the platform's existing rules).\n\nFlow: pick a target prefix from the built-in object path prefix enumeration, enter the expiration days, and optionally add more rules; preview and confirm before applying."
+
+[cmd.s3.lifecycle.apply.example]
+other = "  zki s3 lifecycle apply"
+
+[cmd.s3.lifecycle.status.short]
+other = "Show lifecycle rules"
+
+[cmd.s3.lifecycle.status.long]
+other = "Show the lifecycle rules currently configured on the default bucket, or a notice when none are configured"
+
+[cmd.s3.lifecycle.remove.short]
+other = "Remove lifecycle rules"
+
+[cmd.s3.lifecycle.remove.long]
+other = "Remove all lifecycle rules from the default bucket, restoring no automatic expiration"
 
 # =============================================================================
 # CLI flag usages
@@ -827,6 +861,57 @@ other = "  stream {{.Stream}} tx {{.Tx}}: HTTP response missing or incomplete: {
 
 [cli.testcase.parse-response-failed]
 other = "  stream {{.Stream}} tx {{.Tx}}: failed to parse HTTP response: {{.Err}}"
+
+[cli.s3.lifecycle.applied]
+other = "Applied {{.Count}} lifecycle rule(s) to bucket {{.Bucket}}"
+
+[cli.s3.lifecycle.removed]
+other = "Removed all lifecycle rules from bucket {{.Bucket}}"
+
+[cli.s3.lifecycle.no-rules]
+other = "Bucket {{.Bucket}} has no lifecycle rules configured"
+
+[cli.s3.lifecycle.rule-preview]
+other = "The following {{.Count}} lifecycle rule(s) will be applied to bucket {{.Bucket}}:"
+
+[cli.s3.lifecycle.prompt-prefix]
+other = "Select the object path prefix to configure expiration"
+
+[cli.s3.lifecycle.action-save]
+other = "Save and apply"
+
+[cli.s3.lifecycle.action-exit]
+other = "Exit"
+
+[cli.s3.lifecycle.prompt-expire-days]
+other = "Enter the number of days after object creation before expiry (positive integer)"
+
+[cli.s3.lifecycle.prompt-confirm-apply]
+other = "Apply the {{.Count}} rule(s) above to bucket {{.Bucket}}? This fully replaces the existing rules"
+
+[cli.s3.lifecycle.duplicate-prefix]
+other = "Prefix {{.Prefix}} already has a rule, please select another"
+
+[cli.s3.lifecycle.invalid-days]
+other = "Expiration days must be a positive integer, please try again"
+
+[cli.s3.lifecycle.no-rules-selected]
+other = "No lifecycle rule selected, aborted"
+
+[cli.s3.lifecycle.cancelled]
+other = "Cancelled, nothing was changed"
+
+[cli.s3.lifecycle.table-id]
+other = "ID"
+
+[cli.s3.lifecycle.table-status]
+other = "STATUS"
+
+[cli.s3.lifecycle.table-prefix]
+other = "PREFIX"
+
+[cli.s3.lifecycle.table-expire-days]
+other = "EXPIRE DAYS"
 
 [cli.run.capture-stats-enabled]
 other = "Capture stats enabled, printing every {{.Interval}} to stdout"

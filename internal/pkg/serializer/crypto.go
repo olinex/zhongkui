@@ -60,6 +60,37 @@ func (c *Crypto) MarshalJSON() ([]byte, error) {
 	return json.Marshal(base64.StdEncoding.EncodeToString(c.cipher))
 }
 
+// UnmarshalJSON 从 JSON 恢复 Crypto 实例，支持两种取值形式：
+//   - 字符串：base64 密文（与 MarshalJSON 输出一致），解码后回填 cipher，不触碰明文；
+//   - 其他取值（如 {}、null 占位）：视为无密文，恢复零值 Crypto。
+//
+// 该能力使标签规则样例等持久化 JSON 文档可反序列化回目标模型
+// （如 *network.HttpTransport 的加密字段），与规则运行期样例校验的反序列化路径保持一致。
+func (c *Crypto) UnmarshalJSON(data []byte) error {
+	// 非字符串取值（{} / null 等占位形式）按零值处理
+	if len(data) == 0 || data[0] != '"' {
+		c.cipher = nil
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err != nil {
+		return errors.WithStack(err)
+	}
+	if s == "" {
+		c.cipher = nil
+		return nil
+	}
+	raw, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		// 兼容无 padding 的 base64 编码（RawStdEncoding）
+		if raw, err = base64.RawStdEncoding.DecodeString(s); err != nil {
+			return errors.WithStack(err)
+		}
+	}
+	c.cipher = raw
+	return nil
+}
+
 type CryptoSerializer struct{}
 
 func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {

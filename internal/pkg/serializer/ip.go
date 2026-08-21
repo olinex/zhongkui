@@ -47,7 +47,9 @@ func (i IPAddr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	case "postgres":
 		return "INET"
 	case "clickhouse":
-		return "FixedString(16) CODEC(ZSTD(3))"
+		// IPv6 原生类型：16 字节定长（IPv4 写入时提升为 IPv4-mapped IPv6），
+		// 支持文本渲染与字符串隐式比较，可读性优于 FixedString(16) 原始二进制
+		return "IPv6"
 	default:
 		return ""
 	}
@@ -57,9 +59,9 @@ func (i IPAddr) Value() (driver.Value, error) {
 	if len(i) == 0 {
 		return nil, nil
 	}
-	// 统一以 net.IP 底层 16 字节原始字节数组写入（IPv4 提升为 IPv4-mapped IPv6 形式），
-	// 与 IPv6Addr 的 FixedString(16) 写入格式保持一致，避免定长文本的容量限制
-	return []byte(net.IP(i).To16()), nil
+	// 统一以 net.IP 底层 16 字节原始字节（IPv4 提升为 IPv4-mapped IPv6 形式）写入，
+	// 与 IPv6Addr 的写入格式保持一致，兼容 ClickHouse IPv6 原生类型列
+	return net.IP(i).To16(), nil
 }
 
 func (i *IPAddr) Scan(value any) error {
@@ -127,7 +129,8 @@ func (i IPv4Addr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	case "postgres":
 		return "INET"
 	case "clickhouse":
-		return "FixedString(4)"
+		// IPv4 原生类型：4 字节定长（UInt32 封装），支持文本渲染与字符串隐式比较
+		return "IPv4"
 	default:
 		return ""
 	}
@@ -137,7 +140,7 @@ func (i IPv4Addr) Value() (driver.Value, error) {
 	if len(i) == 0 {
 		return nil, nil
 	}
-	return []byte(net.IP(i).To4()), nil
+	return net.IP(i).To4(), nil
 }
 
 func (i *IPv4Addr) Scan(value any) error {
@@ -208,7 +211,8 @@ func (i IPv6Addr) GormDBDataType(db *database.DB, field *schema.Field) string {
 	case "postgres":
 		return "INET"
 	case "clickhouse":
-		return "FixedString(16)"
+		// IPv6 原生类型：16 字节定长，支持文本渲染与字符串隐式比较
+		return "IPv6"
 	default:
 		return ""
 	}
@@ -218,7 +222,7 @@ func (i IPv6Addr) Value() (driver.Value, error) {
 	if len(i) == 0 {
 		return nil, nil
 	}
-	return []byte(net.IP(i).To16()), nil
+	return net.IP(i).To16(), nil
 }
 
 func (i *IPv6Addr) Scan(value any) error {

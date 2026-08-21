@@ -36,6 +36,7 @@ model:
       # 时间范围筛选标签（通用字段，非具体模型字段）
       timestampRange: 采集时间范围
       createdAtRange: 入库时间范围
+      advancedFilter: 高级筛选
     content:
       condition: 条件
       doubleCheck: 请输入 `{random}` 以二次确认
@@ -203,6 +204,20 @@ model:
       enabled: 启用
       version: 版本号
       versionCount: 版本数量
+  tagRuleSample:
+    name: 标签规则样例
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      model: 目标模型
+      description: 描述
+      input: 输入文档
   tagEventRule:
     name: 标签事件规则
     field:
@@ -559,6 +574,159 @@ model:
       rspHdrUpgrade: 响应头 Upgrade
       rspHdrAltSvc: 响应头 Alt-Svc
       rspHdrPriority: 响应头 Priority
+  networkStack:
+    name: 网络堆栈
+    field:
+      namespace: 命名空间
+      timestamp: 采集时间
+      createdAt: 入库时间
+      sessionId: 会话 ID
+      traceId: 追踪 ID
+      capture: 采集器
+      version: 版本号
+      cli2Srv: 客户端到服务端
+      topProto: 顶层协议
+      proto: 协议
+      seq: 包序号
+      level: 协议层级
+      headers: 协议头部
+      payloadStartOffset: 载荷起始偏移
+      payloadEndOffset: 载荷结束偏移
+    level:
+      link: 链路层
+      network: 网络层
+      transport: 传输层
+      application: 应用层
+      unknown: 未知
+    packet:
+      request: 请求包
+      response: 响应包
+      other: 其他
+    direction:
+      clientToServer: 客户端 → 服务端
+      serverToClient: 服务端 → 客户端
+    summary:
+      packets: 包总数
+      requests: 请求包
+      responses: 响应包
+      loaded: 已加载
+      loadMore: 加载更多
+      empty: 该传输暂无网络堆栈数据
+      noTraceId: 该记录缺少 traceId，无法关联网络堆栈
+      error: 网络堆栈加载失败
+    # 协议头部可读化：逐字段名/值/说明（header.field.<key> 与 header.desc.<key> 的 key 与 JSON 字段名一致）
+    header:
+      title: 协议头部详情
+      rawJson: 查看原始 JSON
+      loopbackNote: 本机回环（Loopback）流量，无真实链路层信息
+      col:
+        field: 字段
+        value: 值
+        desc: 说明
+      field:
+        ethDstMac: 目的 MAC
+        ethSrcMac: 源 MAC
+        ethType: 以太网类型
+        ethLength: 帧长度
+        ipv4Version: IP 版本
+        ipv4Ihl: 头部长度
+        ipv4Tos: 服务类型
+        ipv4Length: 总长度
+        ipv4Id: 标识符
+        ipv4Flags: 标志位
+        ipv4FragOffset: 分片偏移
+        ipv4Ttl: 生存时间
+        ipv4IpProtocol: 上层协议
+        ipv4Checksum: 头部校验和
+        ipv4Src: 源 IP
+        ipv4Dst: 目的 IP
+        ipv4Options: IP 选项
+        ipv4Padding: 填充字节
+        ipv6Version: IP 版本
+        ipv6TrafficClass: 流量类别
+        ipv6FlowLabel: 流标签
+        ipv6Length: 载荷长度
+        ipv6NextHeader: 下一头部
+        ipv6HopLimit: 跳数限制
+        ipv6Src: 源 IP
+        ipv6Dst: 目的 IP
+        ipv6HopByHop: 逐跳选项
+        ipv6LastHeader: 最后头部
+        srcPort: 源端口
+        dstPort: 目的端口
+        seq: 序列号
+        ack: 确认号
+        dataOffset: 头部长度
+        bitFin: 结束标志
+        bitSyn: 同步标志
+        bitRst: 重置标志
+        bitPsh: 推送标志
+        bitAck: 确认标志
+        bitUrg: 紧急标志
+        bitEce: ECE 标志
+        bitCwr: CWR 标志
+        bitNs: NS 标志
+        window: 窗口大小
+        checksum: 校验和
+        urgent: 紧急指针
+        options: TCP 选项
+        length: 数据长度
+      desc:
+        ethDstMac: 目的 MAC 地址，标识数据帧的目标网卡
+        ethSrcMac: 源 MAC 地址，标识数据帧的发送网卡
+        ethType: 以太网类型，标识上层协议（如 IPv4、IPv6、ARP）
+        ethLength: 以太网帧的长度（字节）
+        ipv4Version: IP 协议版本，IPv4 固定为 4
+        ipv4Ihl: IPv4 头部长度（单位：4 字节）
+        ipv4Tos: 服务类型，用于 QoS 优先级控制
+        ipv4Length: IP 数据报总长度（头部 + 数据，字节）
+        ipv4Id: 标识符，用于分片重组
+        ipv4Flags: 分片标志位：DF（不分片）、MF（更多分片）
+        ipv4FragOffset: 分片偏移（单位：8 字节）
+        ipv4Ttl: 生存时间，每经过一跳减 1，为 0 时丢弃
+        ipv4IpProtocol: 上层协议类型（如 TCP=6、UDP=17、ICMP=1）
+        ipv4Checksum: 头部校验和，用于差错检测
+        ipv4Src: 源 IP 地址，数据包的发送方
+        ipv4Dst: 目的 IP 地址，数据包的接收方
+        ipv4Options: IP 选项（可选，通常为空）
+        ipv4Padding: 填充字节，保证头部长度对齐
+        ipv6Version: IP 协议版本，IPv6 固定为 6
+        ipv6TrafficClass: 流量类别，用于 QoS 区分
+        ipv6FlowLabel: 流标签，标识同一条数据流
+        ipv6Length: 有效载荷长度（不含 IPv6 头部，字节）
+        ipv6NextHeader: 下一头部类型（扩展头或传输层协议）
+        ipv6HopLimit: 跳数限制，等价于 IPv4 的 TTL
+        ipv6Src: 源 IPv6 地址，数据包的发送方
+        ipv6Dst: 目的 IPv6 地址，数据包的接收方
+        ipv6HopByHop: 逐跳选项扩展头，由沿途每个路由器处理
+        ipv6LastHeader: 最后一个头部类型（通常是 TCP/UDP）
+        srcPort: 源端口号，标识发送数据的应用
+        dstPort: 目的端口号，标识接收数据的应用
+        seq: TCP 序列号，标识字节流中第一个字节的位置
+        ack: TCP 确认号，期望接收的下一个字节序号
+        dataOffset: TCP 头部长度（单位：4 字节）
+        bitFin: FIN 标志：发送方数据已发送完毕
+        bitSyn: SYN 标志：用于建立连接时同步序列号
+        bitRst: RST 标志：异常中断连接
+        bitPsh: PSH 标志：接收方应立即交付数据
+        bitAck: ACK 标志：确认号有效
+        bitUrg: URG 标志：紧急指针有效
+        bitEce: ECE 标志：显式拥塞通知回显
+        bitCwr: CWR 标志：拥塞窗口已减小
+        bitNs: NS 标志：随机序列号保护（Nonce Sum）
+        window: 接收窗口大小，用于流量控制
+        checksum: 校验和，用于差错检测
+        urgent: 紧急指针，配合 URG 标志使用
+        options: TCP 选项列表（MSS、窗口缩放、时间戳等）
+        length: UDP 数据报总长度（头部 + 数据，字节）
+      value:
+        yes: 是
+        no: 否
+        none: 无
+      flag:
+        evil: 保留位
+        df: 不分片（DF）
+        mf: 更多分片（MF）
 chart:
   title:
     queueSize: 管道大小
@@ -628,6 +796,8 @@ action:
   validateFailed: 校验未通过
   viewPlaintext: 查看明文
   viewDetail: 查看详情
+  viewStack: 查看网络堆栈
+  favoriteSample: 收藏样例
   resetFrontendConfig: 重置前端配置
   download: 下载
   back: 返回

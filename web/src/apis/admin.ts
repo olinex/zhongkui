@@ -17,6 +17,8 @@ import type {
   TagRuleCreateIn,
   TagRuleDryRunIn,
   TagRuleModelIn,
+  TagRuleSampleCreateIn,
+  TagRuleSampleUpdateIn,
   TagRuleUpdateIn,
   TagRuleValidateIn,
   UserCreateIn,
@@ -73,9 +75,13 @@ export function userGroupLeave(unionID: string, data: UserGroupIn): AxiosPromise
 }
 
 export function userFrontendConfigReset(unionID: string): AxiosPromise {
-  return request.post(`/admin/user/${unionID}/frontend-config/reset`, {}, {
-    headers: getJwtHeader(),
-  });
+  return request.post(
+    `/admin/user/${unionID}/frontend-config/reset`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }
 
 // group
@@ -295,6 +301,47 @@ export function tagRuleVersionList(id: number): AxiosPromise {
 
 export function tagRuleVersionRollback(id: number, version: number): AxiosPromise {
   return request.post(`/admin/tag-rule/${id}/version/${version}/rollback`, null, {
+    headers: getJwtHeader(),
+  });
+}
+
+// tag rule sample
+export function tagRuleSampleCreate(data: TagRuleSampleCreateIn): AxiosPromise {
+  return request.post("/admin/tag-rule-sample/create", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagRuleSampleListGet(data: SearchIn): AxiosPromise {
+  return request.post("/admin/tag-rule-sample/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagRuleSampleListOptions(): AxiosPromise {
+  return request.options("/admin/tag-rule-sample/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagRuleSampleDetailGet(id: number): AxiosPromise {
+  return request.post(
+    `/admin/tag-rule-sample/${id}/get`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function tagRuleSampleUpdate(id: number, data: TagRuleSampleUpdateIn): AxiosPromise {
+  return request.post(`/admin/tag-rule-sample/${id}/update`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagRuleSampleDelete(id: number): AxiosPromise {
+  return request.post(`/admin/tag-rule-sample/${id}/delete`, null, {
     headers: getJwtHeader(),
   });
 }

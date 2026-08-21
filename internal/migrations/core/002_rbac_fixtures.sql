@@ -32,7 +32,18 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/admin/group/:name/add-rbac-policy', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/group/:name/remove-rbac-policy', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/rbac-policy-template/list', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/admin/rbac-policy-template/list', 'OPTIONS', 'allow')
+    ('p', 'admin', 'api:/api/v1/admin/rbac-policy-template/list', 'OPTIONS', 'allow'),
+    -- 管理接口：标签规则样例
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/create', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/create', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/update', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/update', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/delete', 'OPTIONS', 'allow')
 ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 
 -- RbacPolicyTemplate
@@ -126,6 +137,17 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/admin/tag-rule/model/metadata', 'OPTIONS'),
     ('api:/api/v1/admin/tag-rule/model/samples', 'POST'),
     ('api:/api/v1/admin/tag-rule/model/samples', 'OPTIONS'),
+    -- 管理接口：标签规则样例
+    ('api:/api/v1/admin/tag-rule-sample/list', 'POST'),
+    ('api:/api/v1/admin/tag-rule-sample/list', 'OPTIONS'),
+    ('api:/api/v1/admin/tag-rule-sample/create', 'POST'),
+    ('api:/api/v1/admin/tag-rule-sample/create', 'OPTIONS'),
+    ('api:/api/v1/admin/tag-rule-sample/:id/get', 'POST'),
+    ('api:/api/v1/admin/tag-rule-sample/:id/get', 'OPTIONS'),
+    ('api:/api/v1/admin/tag-rule-sample/:id/update', 'POST'),
+    ('api:/api/v1/admin/tag-rule-sample/:id/update', 'OPTIONS'),
+    ('api:/api/v1/admin/tag-rule-sample/:id/delete', 'POST'),
+    ('api:/api/v1/admin/tag-rule-sample/:id/delete', 'OPTIONS'),
     -- 管理接口：标签事件规则
     ('api:/api/v1/admin/tag-event-rule/list', 'POST'),
     ('api:/api/v1/admin/tag-event-rule/list', 'OPTIONS'),

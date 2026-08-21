@@ -408,3 +408,69 @@ func TestVerifyDownloadIntegrity(t *testing.T) {
 		})
 	})
 }
+
+func TestCopyObject(t *testing.T) {
+	endpoint := os.Getenv("S3_TEST_ENDPOINT")
+	accessKey := os.Getenv("S3_TEST_ACCESS_KEY")
+	secretKey := os.Getenv("S3_TEST_SECRET_KEY")
+	bucket := os.Getenv("S3_TEST_BUCKET")
+	cryptoKeyEnv := os.Getenv("S3_TEST_CRYPTO_KEY")
+
+	if endpoint == "" || accessKey == "" || secretKey == "" || bucket == "" {
+		t.Skip("Skipping integration test: set S3_TEST_ENDPOINT, S3_TEST_ACCESS_KEY, S3_TEST_SECRET_KEY, S3_TEST_BUCKET to run")
+	}
+
+	convey.Convey("Test CopyObject server-side copy roundtrip with real S3", t, func() {
+		cfg := &Config{
+			Endpoint:  endpoint,
+			AccessKey: accessKey,
+			SecretKey: secretKey,
+			Bucket:    bucket,
+			Region:    "us-east-1",
+			UseSSL:    false,
+		}
+
+		provider := key.NewConfigFileSecretKeyProvider(cryptoKeyEnv)
+		book, err := key.LoadPasswordBook("")
+		convey.So(err, convey.ShouldBeNil)
+		kd := key.NewKeyDerivation(provider, book)
+
+		client, err := NewS3Client(cfg, kd)
+		convey.So(err, convey.ShouldBeNil)
+		convey.So(client, convey.ShouldNotBeNil)
+
+		cryptoKey := []byte(cryptoKeyEnv)
+		ctx := context.Background()
+		srcKey := "test/copy-object/source.zkcn"
+		dstKey := "test/copy-object/destination.zkcn"
+
+		convey.Convey("server-side copy should preserve encrypted bytes exactly", func() {
+			original := []byte(`{"name":"copy-integration-test","data":"hello zhongkui copy"}`)
+
+			// 上传加密源对象
+			uploadInfo, err := client.CPutObject(ctx, srcKey, cryptoKey, bytes.NewReader(original), -1, minio.PutObjectOptions{})
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(uploadInfo.Size, convey.ShouldBeGreaterThan, 0)
+			defer client.RemoveObject(ctx, srcKey, minio.RemoveObjectOptions{})
+			defer client.RemoveObject(ctx, dstKey, minio.RemoveObjectOptions{})
+
+			// 服务端复制到目标键
+			convey.So(client.CopyObject(ctx, srcKey, dstKey), convey.ShouldBeNil)
+
+			// 下载目标对象解密解压，内容应与源一致
+			rc, err := client.CGetOject(ctx, dstKey, cryptoKey, minio.GetObjectOptions{})
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(rc, convey.ShouldNotBeNil)
+			defer rc.Close()
+			downloaded, err := io.ReadAll(rc)
+			convey.So(err, convey.ShouldBeNil)
+			convey.So(downloaded, convey.ShouldResemble, original)
+		})
+
+		convey.Convey("CopyObject on non-existent source should return error", func() {
+			err := client.CopyObject(ctx, "test/copy-object/not-exists", dstKey)
+			convey.So(err, convey.ShouldNotBeNil)
+			convey.So(IsNotExists(err), convey.ShouldBeTrue)
+		})
+	})
+}

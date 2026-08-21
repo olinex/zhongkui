@@ -43,10 +43,7 @@ var registeredTargets sync.Map
 // 模型或未来运行时扩展使用。类型键无法计算或重复注册时直接 panic，
 // 与静态注册语义保持一致，避免静默的未知模型。
 func Register(target Target) {
-	typeKey, err := TypeKey(target.Type)
-	if err != nil {
-		panic(fmt.Sprintf("tagengine: register target failed: %v", err))
-	}
+	typeKey := MustTypeKey(target.Type)
 	if _, loaded := registeredTargets.LoadOrStore(typeKey, &target); loaded {
 		panic(fmt.Sprintf("tagengine: duplicate target type key: %s", typeKey))
 	}
@@ -68,6 +65,15 @@ func TypeKey(target any) (string, error) {
 		return "", ErrUnsupportedTarget
 	}
 	return fmt.Sprintf(`%s.%s`, t.PkgPath(), t.Name()), nil
+}
+
+// MustTypeKey 计算目标模型实例的类型键，失败即 panic。
+func MustTypeKey(target any) string {
+	typeKey, err := TypeKey(target)
+	if err != nil {
+		panic(err)
+	}
+	return typeKey
 }
 
 // IsRegistered 判断模型类型键是否已注册。

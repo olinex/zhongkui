@@ -69,6 +69,12 @@ var (
 		"eq":  struct{}{},
 		"neq": struct{}{},
 	}
+	// IPAddrActions 定义 serializer.IPv4Addr / IPv6Addr / IPAddr 类型支持的过滤动作。
+	// IP 地址为等值标识，仅支持精确匹配与不匹配。
+	IPAddrActions = map[string]any{
+		"eq":  struct{}{},
+		"neq": struct{}{},
+	}
 	DatetimeActions = NumberActions
 	DateActions     = NumberActions
 	TimeActions     = NumberActions
@@ -76,11 +82,14 @@ var (
 
 type searchGenerateConfigFilterBy struct {
 	FieldName string   `toml:"fieldName" validate:"required"`
-	FieldType string   `toml:"fieldType" validate:"required,oneof=string int uint int8 uint8 int16 uint16 int32 uint32 int64 uint64 float32 float64 bool time.Time serializer.TimeOnly serializer.DateOnly serializer.HexUUID"`
+	FieldType string   `toml:"fieldType" validate:"required,oneof=string int uint int8 uint8 int16 uint16 int32 uint32 int64 uint64 float32 float64 bool time.Time serializer.TimeOnly serializer.DateOnly serializer.HexUUID serializer.IPv4Addr serializer.IPv6Addr serializer.IPAddr"`
 	Column    string   `toml:"column"`
 	Actions   []string `toml:"actions" validate:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn nil nnil lt lte gt gte"`
 	Binding   string   `toml:"binding" validate:"required"`
 	Required  bool     `toml:"required"` // 必选过滤字段：生成的 FilterBy 字段为非指针并带 binding:"required"
+	// TextValue 是否以文本形式传值：为 true 时生成的 GetValue 返回值的 String() 文本。
+	// 用于 ClickHouse 原生 IPv4/IPv6 类型列的字符串隐式比较（列存二进制，比较时自动提升/转换）
+	TextValue bool `toml:"textValue"`
 }
 
 type searchGenerateConfigOrderBy struct {
@@ -111,6 +120,8 @@ func actionValidate(fieldType string, actions []string) error {
 			allowActions = BooleanActions
 		case "serializer.HexUUID":
 			allowActions = HexUUIDActions
+		case "serializer.IPv4Addr", "serializer.IPv6Addr", "serializer.IPAddr":
+			allowActions = IPAddrActions
 		case "time.Time":
 			allowActions = DatetimeActions
 		case "serializer.TimeOnly":

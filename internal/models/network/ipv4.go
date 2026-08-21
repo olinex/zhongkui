@@ -136,8 +136,8 @@ type IPv4Headers struct {
 	IPv4TTL        uint8               `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Ttl"`
 	IPv4IPProtocol layers.IPProtocol   `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4IpProtocol"`
 	IPv4Checksum   uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Checksum"`
-	IPv4Src        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4Src"`
-	IPv4Dst        serializer.IPv4Addr `gorm:"type:FixedString(4)" json:"ipv4Dst"`
+	IPv4Src        serializer.IPv4Addr `gorm:"type:IPv4" json:"ipv4Src"`
+	IPv4Dst        serializer.IPv4Addr `gorm:"type:IPv4" json:"ipv4Dst"`
 	IPv4Options    IPv4Options         `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Options"`
 	IPv4Padding    string              `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Padding"`
 }

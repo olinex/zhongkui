@@ -30,6 +30,26 @@ var ErrModelNotRegistered = errors.New("target model is not registered")
 // 属于降级放行：调用方应记录告警后继续（规则仅有第一层语法/契约保障）。
 var ErrSampleNotProvisioned = errors.New("no validation samples provisioned for target model")
 
+// newTargetInstance 基于注册目标元信息创建目标模型的新实例（指针）。
+// 兼容指针与值类型注册：指针自动解引用后新建，返回指针实例，供样例反序列化使用。
+func newTargetInstance(target *Target) any {
+	typ := reflect.TypeOf(target.Type)
+	if typ.Kind() == reflect.Pointer {
+		typ = typ.Elem()
+	}
+	return reflect.New(typ).Interface()
+}
+
+// NewTargetInstance 基于类型键创建目标模型的新实例（指针）。
+// 供样例反序列化等复用注册目标类型信息的场景使用；未注册模型返回 ErrModelNotRegistered。
+func NewTargetInstance(typeKey string) (any, error) {
+	target, ok := TargetInfo(typeKey)
+	if !ok {
+		return nil, errors.WithStack(ErrModelNotRegistered)
+	}
+	return newTargetInstance(target), nil
+}
+
 // ValidateGroupRuntime 对候选规则组执行运行期样例校验（第二层合法性）。
 // 依据组内规则的目标模型类型键（model）从 tag_rule_samples 表读取全部验证样例，
 // 将每条样例 JSON 反序列化为目标模型实例，经 BuildInput 构建输入文档后
@@ -64,14 +84,10 @@ func ValidateGroupRuntime(ctx context.Context, db *database.DB, rules []*tag.Tag
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	// 基于注册目标的零值实例类型新建目标实例（指针自动解引用，兼容值类型注册）
-	typ := reflect.TypeOf(target.Type)
-	if typ.Kind() == reflect.Pointer {
-		typ = typ.Elem()
-	}
+	// 基于注册目标的类型新建目标实例（指针自动解引用，兼容值类型注册）
 	issues := make([]SampleRuntimeError, 0, len(samples))
 	for _, sample := range samples {
-		instance := reflect.New(typ).Interface()
+		instance := newTargetInstance(target)
 		if err := json.Unmarshal(sample.Input, instance); err != nil {
 			issues = append(issues, SampleRuntimeError{
 				SampleName: sample.Name,

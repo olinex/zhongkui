@@ -117,7 +117,6 @@ func TestConfig_DefaultValues(t *testing.T) {
 			So(config.EncoderLevel, ShouldEqual, 0)
 			So(config.IntervalTimeout, ShouldEqual, 0)
 			So(config.PacketBufferSize, ShouldEqual, 0)
-			So(config.ExpireAge, ShouldEqual, 0)
 			So(config.MaxRetries, ShouldEqual, 0)
 		})
 	})
@@ -146,7 +145,6 @@ func TestExtractConfig(t *testing.T) {
 			v.Set("capture.upload.encoderLevel", 4)
 			v.Set("capture.upload.intervalTimeout", "2m")
 			v.Set("capture.upload.packetBufferSize", 500000)
-			v.Set("capture.upload.expireAge", "30m")
 			v.Set("capture.upload.maxRetries", 4)
 
 			config, err := ExtractConfig(v, testValidate)
@@ -174,7 +172,6 @@ func TestExtractConfig(t *testing.T) {
 			So(config.Upload.EncoderLevel, ShouldEqual, 4)
 			So(config.Upload.IntervalTimeout, ShouldEqual, 2*time.Minute)
 			So(config.Upload.PacketBufferSize, ShouldEqual, int32(500000))
-			So(config.Upload.ExpireAge, ShouldEqual, 30*time.Minute)
 			So(config.Upload.MaxRetries, ShouldEqual, uint(4))
 		})
 
@@ -266,7 +263,6 @@ func TestConfig_Integration(t *testing.T) {
 					EncoderLevel:     3,
 					IntervalTimeout:  90 * time.Second,
 					PacketBufferSize: 2000000,
-					ExpireAge:        2 * time.Hour,
 					MaxRetries:       5,
 				},
 			}
@@ -347,8 +343,6 @@ func TestConfig_EdgeCases(t *testing.T) {
 				{"capture.watch.intervalTimeout", "1h30m"},
 				{"capture.watch.intervalTimeout", "500ms"},
 				{"capture.watch.intervalTimeout", "0s"},
-				{"capture.upload.expireAge", "24h"},
-				{"capture.upload.expireAge", "1.5h"}, // 小数小时
 			}
 
 			for _, tc := range testCases {
@@ -382,7 +376,6 @@ func TestConfig_EdgeCases(t *testing.T) {
 					"capture.upload.encoderLevel",
 					"capture.upload.intervalTimeout",
 					"capture.upload.packetBufferSize",
-					"capture.upload.expireAge",
 					"capture.upload.maxRetries",
 				}
 

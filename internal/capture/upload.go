@@ -3,7 +3,6 @@ package capture
 import (
 	"context"
 	"os"
-	"time"
 
 	"github.com/minio/minio-go/v7"
 	"zhongkui.com/zhongkui/internal/capture/totel"
@@ -39,6 +38,8 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string, n 
 	// SendContentMd5 使 SDK 自动计算文件 MD5 并通过 Content-MD5 头发送，
 	// 服务端校验通过后将 MD5 作为 ETag 返回。此机制在所有 S3 兼容存储上通用。
 	// 下载侧可通过 StatObject 获取 ETag 并计算下载数据 MD5 进行一致性比对。
+	// 注意：对象过期策略统一由 `zki s3 lifecycle` 工具按桶生命周期规则管理，
+	// 代码层不再设置对象级 Expires。
 	var info minio.UploadInfo
 	info, err = c.s3.FPutObject(
 		ctx,
@@ -47,7 +48,6 @@ func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string, n 
 		minio.PutObjectOptions{
 			ContentType:    combine.CompressContentType,
 			SendContentMd5: true,
-			Expires:        time.Now().Add(c.uploadCfg.ExpireAge),
 		},
 	)
 	if err != nil {

@@ -209,5 +209,12 @@ func init() {
 	createCmd.AddCommand(generateTestcaseCmd)
 	RootCmd.AddCommand(createCmd)
 
+	// s3
+	s3LifecycleCmd.AddCommand(s3LifecycleApplyCmd)
+	s3LifecycleCmd.AddCommand(s3LifecycleStatusCmd)
+	s3LifecycleCmd.AddCommand(s3LifecycleRemoveCmd)
+	s3Cmd.AddCommand(s3LifecycleCmd)
+	RootCmd.AddCommand(s3Cmd)
+
 	RootCmd.AddCommand(forceResetPasswordCmd)
 }

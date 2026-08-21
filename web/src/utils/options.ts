@@ -67,6 +67,7 @@ export const DataTypeRanges: Record<BackendDataType, NumberRange | null> = {
     precision: null,
   },
   [BackendDataType.UUID]: null,
+  [BackendDataType.HEX]: null,
   [BackendDataType.BOOLEAN]: null,
   [BackendDataType.BINARY_BYTE]: null,
   [BackendDataType.DECIMAL_BYTE]: null,

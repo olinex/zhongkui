@@ -67,7 +67,11 @@ func (i *{{ .FieldName }}{{ $typeName }}FilterByItem) GetAction() string {
 }
 
 func (i *{{ .FieldName }}{{ $typeName }}FilterByItem) GetValue() any {
+    {{- if .TextValue }}
+    return i.Value.String()
+    {{- else }}
     return i.Value
+    {{- end }}
 }
 {{- end }}
 

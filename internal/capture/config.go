@@ -94,10 +94,6 @@ type UploadConfig struct {
 	// 默认值：1000000，根据可用内存和网络流量进行调整
 	PacketCount uint `mapstructure:"packetCount" default:"1000000"`
 
-	// ExpireAge S3对象过期时间，定义了上传到S3的文件在多长时间后自动删除
-	// 默认值：1h，根据数据保留策略进行调整
-	ExpireAge time.Duration `mapstructure:"expireAge" default:"1h"`
-
 	// MaxRetries 最大重试次数，当上传失败时的重试次数
 	// 达到最大重试次数后，数据包可能被丢弃或延迟上传
 	MaxRetries uint `mapstructure:"maxRetries" default:"5"`

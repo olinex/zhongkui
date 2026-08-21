@@ -82,6 +82,7 @@
 1107 = "标签规则目标模型未注册"
 1108 = "前端配置已被其他浏览器更新，请刷新后重试"
 1109 = "前端配置同步未开启"
+1110 = "标签规则样例输入无法反序列化为目标模型"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -536,6 +537,57 @@ other = "  流 {{.Stream}} 事务 {{.Tx}}：HTTP 响应缺失或不完整：{{.E
 
 [cli.testcase.parse-response-failed]
 other = "  流 {{.Stream}} 事务 {{.Tx}}：解析 HTTP 响应失败：{{.Err}}"
+
+[cli.s3.lifecycle.applied]
+other = "已应用 {{.Count}} 条生命周期规则到存储桶 {{.Bucket}}"
+
+[cli.s3.lifecycle.removed]
+other = "已移除存储桶 {{.Bucket}} 的全部生命周期规则"
+
+[cli.s3.lifecycle.no-rules]
+other = "存储桶 {{.Bucket}} 当前未配置生命周期规则"
+
+[cli.s3.lifecycle.rule-preview]
+other = "即将应用到存储桶 {{.Bucket}} 的 {{.Count}} 条生命周期规则："
+
+[cli.s3.lifecycle.prompt-prefix]
+other = "请选择要配置过期策略的对象路径前缀"
+
+[cli.s3.lifecycle.action-save]
+other = "保存并应用"
+
+[cli.s3.lifecycle.action-exit]
+other = "退出"
+
+[cli.s3.lifecycle.prompt-expire-days]
+other = "请输入对象创建后的过期天数（正整数，到期自动删除）"
+
+[cli.s3.lifecycle.prompt-confirm-apply]
+other = "确认将以上 {{.Count}} 条规则应用到存储桶 {{.Bucket}}？此操作将全量替换既有规则"
+
+[cli.s3.lifecycle.duplicate-prefix]
+other = "前缀 {{.Prefix}} 已添加过规则，请选择其他前缀"
+
+[cli.s3.lifecycle.invalid-days]
+other = "过期天数必须为正整数，请重新输入"
+
+[cli.s3.lifecycle.no-rules-selected]
+other = "未选择任何生命周期规则，已中止"
+
+[cli.s3.lifecycle.cancelled]
+other = "已取消，未做任何修改"
+
+[cli.s3.lifecycle.table-id]
+other = "ID"
+
+[cli.s3.lifecycle.table-status]
+other = "STATUS"
+
+[cli.s3.lifecycle.table-prefix]
+other = "PREFIX"
+
+[cli.s3.lifecycle.table-expire-days]
+other = "EXPIRE DAYS"
 
 [cli.run.capture-stats-enabled]
 other = "已启用抓包统计，每 {{.Interval}} 输出到标准输出"
@@ -1334,6 +1386,39 @@ other = "使用 tshark 从 pcap 文件中提取 HTTP 请求/响应数据，\n并
 
 [cmd.force-reset-password.short]
 other = "通过命令行强制重置用户密码"
+
+[cmd.s3.short]
+other = "S3 对象存储管理"
+
+[cmd.s3.long]
+other = "S3 对象存储管理命令，包含存储桶生命周期规则管理等能力"
+
+[cmd.s3.lifecycle.short]
+other = "生命周期规则管理"
+
+[cmd.s3.lifecycle.long]
+other = "查看、应用与移除默认存储桶的生命周期规则；规则由 S3 平台侧统一执行"
+
+[cmd.s3.lifecycle.apply.short]
+other = "应用生命周期规则"
+
+[cmd.s3.lifecycle.apply.long]
+other = "交互式采集生命周期规则，并整体应用到默认存储桶（全量替换平台既有规则）。\n\n交互流程：从内置对象路径前缀枚举中选择目标前缀，输入对象过期天数，可继续添加多条规则；采集完成后预览确认再应用。"
+
+[cmd.s3.lifecycle.apply.example]
+other = "  zki s3 lifecycle apply"
+
+[cmd.s3.lifecycle.status.short]
+other = "查看生命周期规则"
+
+[cmd.s3.lifecycle.status.long]
+other = "查看默认存储桶当前配置的生命周期规则，未配置时输出提示"
+
+[cmd.s3.lifecycle.remove.short]
+other = "移除生命周期规则"
+
+[cmd.s3.lifecycle.remove.long]
+other = "移除默认存储桶的全部生命周期规则，恢复为不自动过期"
 
 [flag.config]
 other = "配置文件路径（如 /etc/zhongkui/config.toml）"

@@ -30,16 +30,16 @@ CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	ipv4_padding String COMMENT 'the padding bytes of the IPv4 header' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
-	namespace, 
-	capture, 
-	version, 
-	session_id, 
-	ipv4_src, 
-	ipv4_dst, 
-	ipv4_ip_protocol, 
-	eth_src_mac, 
-	eth_dst_mac, 
-	eth_type, 
+	namespace,
+	capture,
+	version,
+	session_id,
+	ipv4_src,
+	ipv4_dst,
+	ipv4_ip_protocol,
+	eth_src_mac,
+	eth_dst_mac,
+	eth_type,
 	timestamp
 )
 PARTITION BY toStartOfHour(created_at)
@@ -72,17 +72,17 @@ CREATE TABLE IF NOT EXISTS packet_ipv6 (
 	ipv6_last_header UInt8 COMMENT 'the last header type of the IPv6 packet, usually the transport layer protocol' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
 ORDER BY (
-	namespace, 
-	capture, 
-	version, 
-	session_id, 
-	ipv6_src, 
-	ipv6_dst, 
-	ipv6_flow_label, 
-	ipv6_last_header, 
-	eth_src_mac, 
-	eth_dst_mac, 
-	eth_type, 
+	namespace,
+	capture,
+	version,
+	session_id,
+	ipv6_src,
+	ipv6_dst,
+	ipv6_flow_label,
+	ipv6_last_header,
+	eth_src_mac,
+	eth_dst_mac,
+	eth_type,
 	timestamp
 )
 PARTITION BY toStartOfHour(created_at)
@@ -113,8 +113,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	ipv4_ttl UInt8 COMMENT 'the time to live of the IPv4 packet' CODEC(ZSTD(3)),
 	ipv4_ip_protocol UInt8 COMMENT 'the upper layer protocol of the IPv4 packet' CODEC(ZSTD(3)),
 	ipv4_checksum UInt16 COMMENT 'the header checksum of the IPv4 packet' CODEC(ZSTD(3)),
-	ipv4_src FixedString(4) COMMENT 'the source IPv4 address',
-	ipv4_dst FixedString(4) COMMENT 'the destination IPv4 address',
+	ipv4_src IPv4 COMMENT 'the source IPv4 address',
+	ipv4_dst IPv4 COMMENT 'the destination IPv4 address',
 	ipv4_options String COMMENT 'the options of the IPv4 header' CODEC(ZSTD(3)),
 	ipv4_padding String COMMENT 'the padding bytes of the IPv4 header' CODEC(ZSTD(3)),
 	tcp_stream_id FixedString(16) COMMENT 'the stream id of the TCP connection' CODEC(ZSTD(3)),
@@ -139,7 +139,12 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	fp_os String COMMENT 'the passive fingerprint guessed OS of the packet sender' CODEC(ZSTD(3)),
 	fp_os_quality Float64 COMMENT 'the match quality of the guessed OS fingerprint' CODEC(ZSTD(3)),
 	fp_sig String COMMENT 'the passive fingerprint signature of the packet sender' CODEC(ZSTD(3)),
-	fp_mtu UInt16 COMMENT 'the MTU derived from the passive fingerprint' CODEC(ZSTD(3))
+	fp_mtu UInt16 COMMENT 'the MTU derived from the passive fingerprint' CODEC(ZSTD(3)),
+	INDEX idx_ipv4_tcps_session_id session_id TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_ipv4_src ipv4_src TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_ipv4_dst ipv4_dst TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_tcp_src_port tcp_src_port TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv4_tcps_tcp_dst_port tcp_dst_port TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -175,8 +180,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	ipv6_length UInt16 COMMENT 'the payload length of the IPv6 packet excluding the base header' CODEC(ZSTD(3)),
 	ipv6_next_header UInt8 COMMENT 'the next header type following the IPv6 base header' CODEC(ZSTD(3)),
 	ipv6_hop_limit UInt8 COMMENT 'the hop limit of the IPv6 packet' CODEC(ZSTD(3)),
-	ipv6_src FixedString(16) COMMENT 'the source IPv6 address',
-	ipv6_dst FixedString(16) COMMENT 'the destination IPv6 address',
+	ipv6_src IPv6 COMMENT 'the source IPv6 address',
+	ipv6_dst IPv6 COMMENT 'the destination IPv6 address',
 	ipv6_hop_by_hop String COMMENT 'the hop-by-hop options extension header of the IPv6 packet' CODEC(ZSTD(3)),
 	ipv6_last_header UInt8 COMMENT 'the last header type of the IPv6 packet, usually the transport layer protocol' CODEC(ZSTD(3)),
 	tcp_stream_id FixedString(16) COMMENT 'the stream id of the TCP connection' CODEC(ZSTD(3)),
@@ -201,7 +206,12 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	fp_os String COMMENT 'the passive fingerprint guessed OS of the packet sender' CODEC(ZSTD(3)),
 	fp_os_quality Float64 COMMENT 'the match quality of the guessed OS fingerprint' CODEC(ZSTD(3)),
 	fp_sig String COMMENT 'the passive fingerprint signature of the packet sender' CODEC(ZSTD(3)),
-	fp_mtu UInt16 COMMENT 'the MTU derived from the passive fingerprint' CODEC(ZSTD(3))
+	fp_mtu UInt16 COMMENT 'the MTU derived from the passive fingerprint' CODEC(ZSTD(3)),
+	INDEX idx_ipv6_tcps_session_id session_id TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_ipv6_src ipv6_src TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_ipv6_dst ipv6_dst TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_tcp_src_port tcp_src_port TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_ipv6_tcps_tcp_dst_port tcp_dst_port TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -320,6 +330,8 @@ CREATE TABLE IF NOT EXISTS network_stacks (
 	top_proto UInt64 COMMENT 'the top layer protocol of the packet' CODEC(ZSTD(3)),
 	proto UInt64 COMMENT 'the protocol of the current layer' CODEC(ZSTD(3)),
 	seq UInt32 COMMENT 'the sequence of the frame keeping its order in the layer stack' CODEC(ZSTD(3)),
+	payload_start_offset UInt64 COMMENT 'the payload start byte offset of the packet in its direction stream' CODEC(ZSTD(3)),
+	payload_end_offset UInt64 COMMENT 'the payload end byte offset (exclusive) of the packet in its direction stream' CODEC(ZSTD(3)),
 	level UInt8 COMMENT 'the protocol level of the layer (link, network, transport, application)' CODEC(ZSTD(3)),
 	headers String COMMENT 'the JSON serialized header info of the layer' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
@@ -345,10 +357,10 @@ CREATE TABLE IF NOT EXISTS http_transports (
 	trace_id UUID COMMENT 'the trace id linking the HTTP transport to its related records' CODEC(ZSTD(3)),
 	timestamp DateTime64(6, 'UTC') COMMENT 'the capture timestamp of the HTTP transport' CODEC(DoubleDelta, ZSTD(3)),
 	created_at DateTime64(6, 'UTC') COMMENT 'the time the record is created' CODEC(DoubleDelta, ZSTD(3)),
-	client_ip FixedString(16) COMMENT 'the IP address of the HTTP client',
+	client_ip IPv6 COMMENT 'the IP address of the HTTP client',
 	client_port UInt16 COMMENT 'the source port of the HTTP client' CODEC(ZSTD(3)),
 	client_isn UInt32 COMMENT 'the initial sequence number of the client TCP connection' CODEC(ZSTD(3)),
-	server_ip FixedString(16) COMMENT 'the IP address of the HTTP server',
+	server_ip IPv6 COMMENT 'the IP address of the HTTP server',
 	server_port UInt16 COMMENT 'the destination port of the HTTP server' CODEC(ZSTD(3)),
 	server_isn UInt32 COMMENT 'the initial sequence number of the server TCP connection' CODEC(ZSTD(3)),
 	stream_index UInt32 COMMENT 'the index of the stream the HTTP request or response belongs to' CODEC(ZSTD(3)),
@@ -529,15 +541,24 @@ CREATE TABLE IF NOT EXISTS http_transports (
 	fp_http_server_quality Float64 COMMENT 'the match quality of the guessed server' CODEC(ZSTD(3)),
 	fp_http_language String COMMENT 'the guessed language from the HTTP fingerprint' CODEC(ZSTD(3)),
 	fp_device_guess String COMMENT 'the guessed device category from the HTTP fingerprint' CODEC(ZSTD(3)),
-	tags Array(String) COMMENT 'the deduplicated and sorted risk tags of the transport'
+	tags Array(String) COMMENT 'the deduplicated and sorted risk tags of the transport',
+	INDEX idx_http_transports_client_ip client_ip TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_http_transports_server_ip server_ip TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_http_transports_client_port client_port TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_http_transports_server_port server_port TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_http_transports_method method TYPE set(32) GRANULARITY 1,
+	INDEX idx_http_transports_host host TYPE bloom_filter(0.02) GRANULARITY 4,
+	INDEX idx_http_transports_path path TYPE bloom_filter(0.01) GRANULARITY 4,
+	INDEX idx_http_transports_http_version http_version TYPE set(16) GRANULARITY 1,
+	INDEX idx_http_transports_file_ext file_ext TYPE bloom_filter(0.02) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
-	namespace, 
-	client_port, 
-	server_port, 
-	ip_version, 
-	client_ip, 
+	namespace,
+	client_port,
+	server_port,
+	ip_version,
+	client_ip,
 	server_ip
 )
 PARTITION BY toStartOfHour(created_at)

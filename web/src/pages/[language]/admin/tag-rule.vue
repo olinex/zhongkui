@@ -1,14 +1,28 @@
 <template>
   <main-layout current-nav="admin">
     <template #body>
-      <search-table
-        ref="searchTableRef"
-        :list-request="tagRuleListGet"
-        :options-request="tagRuleListOptions"
-        :actions="getActions"
-        :create="openCreateDialogAction"
-        model-name="tagRule"
-      />
+      <v-card flat>
+        <v-tabs v-model="activeTab" color="primary">
+          <v-tab value="rules">{{ $t("model.tagRule.name") }}</v-tab>
+          <v-tab value="samples">{{ $t("model.tagRuleSample.name") }}</v-tab>
+        </v-tabs>
+        <v-divider />
+        <v-tabs-window v-model="activeTab">
+          <v-tabs-window-item value="rules">
+            <search-table
+              ref="searchTableRef"
+              :list-request="tagRuleListGet"
+              :options-request="tagRuleListOptions"
+              :actions="getActions"
+              :create="openCreateDialogAction"
+              model-name="tagRule"
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item value="samples">
+            <tag-rule-sample-panel />
+          </v-tabs-window-item>
+        </v-tabs-window>
+      </v-card>
 
       <confirm-dialog
         ref="deleteConfirmRef"
@@ -404,6 +418,10 @@ import type {
 } from "./@types";
 
 const appStore = useAppStore();
+
+// 规则 / 样例两个内容区由 tab 分页栏切换，默认停在规则页
+const activeTab = ref("rules");
+
 const searchTableRef = useTemplateRef("searchTableRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
@@ -1006,6 +1024,14 @@ const itemRollbackAction = async (proxy: Record<string, any>): Promise<void> => 
 </script>
 
 <style scoped>
+/* tabs 窗口内的通用列表卡片（search-table 自带 v-card）平铺融入外层卡片：
+   覆盖全局 .v-card 的边框/圆角/背景，避免「tabs 悬空 + 独立圆角卡片」的割裂观感 */
+.v-tabs-window :deep(.v-card) {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
 .monospace :deep(textarea) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
