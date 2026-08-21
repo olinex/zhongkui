@@ -37,6 +37,7 @@ declare module 'vue' {
     PasswordField: typeof import('./components/forms/PasswordField.vue')['default']
     PieChart: typeof import('./components/charts/PieChart.vue')['default']
     PlaintextDialog: typeof import('./components/detail/PlaintextDialog.vue')['default']
+    RegoDryRunPanel: typeof import('./components/admin/RegoDryRunPanel.vue')['default']
     RegoEditor: typeof import('./components/forms/RegoEditor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

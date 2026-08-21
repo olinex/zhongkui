@@ -1,11 +1,11 @@
 import * as yup from "yup";
 
-// 与后端 TagRuleSampleUpdateIn 约束一致：name 支持字母数字及 `_`/`-`，1~128
+// 与后端 TagRuleSampleUpdateIn 约束一致：name 支持 Unicode 字母数字及 `_`/`-`，1~128
 const name = yup
   .string()
   .nonNullable()
   .required()
-  .matches(/^[a-zA-Z0-9_-]+$/)
+  .matches(/^[\p{L}\p{N}_-]+$/u)
   .min(1)
   .max(128)
   .label("model.tagRuleSample.field.name");
