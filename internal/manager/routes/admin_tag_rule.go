@@ -224,9 +224,10 @@ type TagRuleModelSamplesOut struct {
 }
 
 // TagRuleDryRunRegoIn 定义 dry-run 的单条候选规则输入结构。
+// Name 允许为空：dry-run 面向草稿阶段，规则可能尚未命名，为空时经 defaults 库以占位名兜底。
 type TagRuleDryRunRegoIn struct {
-	// Name 候选规则名称
-	Name string `json:"name" binding:"required,min=1,max=128,alphanumspecial=_-"`
+	// Name 候选规则名称（可为空，dry-run 不落库，缺省以 "draft" 兜底）
+	Name string `json:"name" default:"draft" binding:"omitempty,min=1,max=128,alphanumspecial=_-"`
 	// Rego 候选规则 Rego 源码
 	Rego string `json:"rego" binding:"required"`
 }
@@ -633,9 +634,13 @@ func tagRuleDryRun(c *gin.Context) {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	name := in.Name
+	// 草稿阶段规则可能尚未命名，name 缺省经 defaults 库以 "draft" 兜底（仅用于输出键，不落库）
+	if err := defaults.Set(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
 	rule := &tag.TagRule{
-		Name:    name,
+		Name:    in.Name,
 		Model:   in.Model,
 		Rego:    in.Rego,
 		Enabled: true,
@@ -651,7 +656,7 @@ func tagRuleDryRun(c *gin.Context) {
 		res := cr.RecognizeWithDetail(c, rego.EvalInput(in.Input))
 		manager.SimpleOK.AbortWithGinW(c, &TagRuleDryRunOut{
 			Tags:  res.Tags,
-			Rules: map[string]*TagRuleDryRunRuleOut{name: newTagRuleDryRunRuleOut(res)},
+			Rules: map[string]*TagRuleDryRunRuleOut{in.Name: newTagRuleDryRunRuleOut(res)},
 		})
 	}
 }

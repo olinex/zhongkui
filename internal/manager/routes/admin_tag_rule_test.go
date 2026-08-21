@@ -683,13 +683,20 @@ func TestTagRuleDryRun(t *testing.T) {
 			So(resp.Data.Rules["solo"].Duration, ShouldBeGreaterThanOrEqualTo, int64(0))
 		})
 
-		Convey("缺少规则名被拒绝", func() {
+		Convey("缺少规则名时以占位名兜底并正常评估", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"rego":  tagRuleValidRego,
 				"input": map[string]any{"method": "POST"},
 			})
-			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			// dry-run 面向草稿阶段，规则可能尚未命名，name 允许为空，经 defaults 库以 "draft" 兜底
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data *TagRuleDryRunOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Tags, ShouldResemble, []string{"admin-login"})
+			So(resp.Data.Rules, ShouldContainKey, "draft")
 		})
 
 		Convey("语法非法的候选规则返回校验错误且不评估", func() {
