@@ -108,6 +108,8 @@
                   v-bind="createEnabledProps"
                   :label="$t('model.tagRule.field.enabled')"
                   color="primary"
+                  hide-details
+                  class="switch-narrow"
                 />
               </v-col>
             </v-row>
@@ -118,7 +120,10 @@
                   :errors="createRegoErrors"
                   :fields="createFields"
                   :extra-completions="createExtraFields"
+                  :samples="createSamples"
                   min-height="260px"
+                  @update:sample-input="createSampleInput = $event"
+                  @view-input="createDryRunRef?.openInput()"
                 />
               </v-col>
             </v-row>
@@ -126,6 +131,7 @@
               <v-col cols="auto">
                 <v-btn
                   variant="tonal"
+                  size="small"
                   :loading="createRegoValidating"
                   @click="validateCreateRegoNow"
                 >
@@ -133,11 +139,27 @@
                 </v-btn>
               </v-col>
               <v-col cols="auto">
-                <v-btn variant="tonal" @click="generateCreateSkeleton">
+                <v-btn variant="tonal" size="small" @click="generateCreateSkeleton">
                   {{ $t("action.generateSkeleton") }}
                 </v-btn>
               </v-col>
+              <v-col cols="auto">
+                <v-btn
+                  color="primary"
+                  size="small"
+                  :loading="createDryRunRef?.loading"
+                  @click="createDryRunRef?.run()"
+                >
+                  {{ $t("action.run") }}
+                </v-btn>
+              </v-col>
             </v-row>
+            <rego-dry-run-panel
+              ref="createDryRunRef"
+              :model="createModel"
+              :rego="createRego"
+              :sample-input="createSampleInput"
+            />
           </v-form>
         </template>
       </temp-editable-dialog>
@@ -189,6 +211,8 @@
                   :label="$t('model.tagRule.field.enabled')"
                   color="primary"
                   :disabled="!editable"
+                  hide-details
+                  class="switch-narrow"
                 />
               </v-col>
             </v-row>
@@ -199,8 +223,11 @@
                   :errors="editRegoErrors"
                   :fields="editFields"
                   :extra-completions="editExtraFields"
+                  :samples="editSamples"
                   :disabled="!editable"
                   min-height="260px"
+                  @update:sample-input="editSampleInput = $event"
+                  @view-input="editDryRunRef?.openInput()"
                 />
               </v-col>
             </v-row>
@@ -208,6 +235,7 @@
               <v-col cols="auto">
                 <v-btn
                   variant="tonal"
+                  size="small"
                   :loading="editRegoValidating"
                   :disabled="!editable"
                   @click="validateEditRegoNow"
@@ -216,87 +244,36 @@
                 </v-btn>
               </v-col>
               <v-col cols="auto">
-                <v-btn variant="tonal" :disabled="!editable" @click="reuseFieldsAction">
+                <v-btn
+                  variant="tonal"
+                  size="small"
+                  :disabled="!editable"
+                  @click="reuseFieldsAction"
+                >
                   {{ $t("action.reuseFields") }}
                 </v-btn>
               </v-col>
-            </v-row>
-          </v-form>
-        </template>
-      </temp-editable-dialog>
-
-      <v-dialog v-model="dryRunDialog" max-width="800">
-        <v-card>
-          <v-card-title>{{ $t("action.dryRun") }}</v-card-title>
-          <v-card-text>
-            <v-row dense>
-              <v-col cols="12">
-                <v-select
-                  v-model="dryRunModel"
-                  :items="modelOptions"
-                  :label="$t('model.tagRule.field.model')"
-                />
-              </v-col>
-            </v-row>
-            <v-row dense>
-              <v-col cols="12">
-                <v-select
-                  v-model="dryRunSample"
-                  :items="dryRunSamples.map((s) => ({ title: s.name, value: s.name }))"
-                  :label="$t('action.selectSample')"
-                  clearable
-                />
-              </v-col>
-            </v-row>
-            <v-row dense>
-              <v-col cols="12">
-                <rego-editor v-model="dryRunRego" :fields="dryRunFields" min-height="200px" />
-              </v-col>
-            </v-row>
-            <v-row dense align="center">
-              <v-col cols="12">
-                <v-textarea v-model="dryRunInput" label="input (JSON)" rows="8" class="monospace" />
-              </v-col>
               <v-col cols="auto">
-                <v-btn variant="tonal" @click="fillDryRunSample">
-                  {{ $t("action.fillSample") }}
+                <v-btn
+                  color="primary"
+                  size="small"
+                  :disabled="!editable"
+                  :loading="editDryRunRef?.loading"
+                  @click="editDryRunRef?.run()"
+                >
+                  {{ $t("action.run") }}
                 </v-btn>
               </v-col>
             </v-row>
-            <v-alert
-              v-if="dryRunResult?.error"
-              type="error"
-              :text="dryRunResult.error"
-              class="mt-2"
+            <rego-dry-run-panel
+              ref="editDryRunRef"
+              :model="editModel"
+              :rego="editRego"
+              :sample-input="editSampleInput"
             />
-            <v-chip v-for="tag in dryRunResult?.tags" :key="tag" color="primary" class="me-1 my-1">
-              {{ tag }}
-            </v-chip>
-            <v-expansion-panels v-if="dryRunResult?.rules" class="mt-2">
-              <v-expansion-panel v-for="(rule, name) in dryRunResult.rules" :key="name">
-                <v-expansion-panel-title>
-                  {{ name }} ({{ localDurationFormat(rule.duration) }})
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <v-alert v-if="rule.error" type="error" :text="rule.error" class="mb-2" />
-                  <v-chip v-for="tag in rule.tags" :key="tag" class="me-1" size="small">
-                    {{ tag }}
-                  </v-chip>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="plain" @click="dryRunDialog = false">
-              {{ $t("action.close") }}
-            </v-btn>
-            <v-btn color="primary" :loading="dryRunLoading" @click="dryRunAction">
-              {{ $t("action.run") }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+          </v-form>
+        </template>
+      </temp-editable-dialog>
 
       <v-dialog v-model="versionDialog" max-width="800">
         <v-card>
@@ -377,7 +354,6 @@ import {
   tagRuleCreate,
   tagRuleDelete,
   tagRuleDetailGet,
-  tagRuleDryRun,
   tagRuleListGet,
   tagRuleListOptions,
   tagRuleModelMetadata,
@@ -394,7 +370,7 @@ import type { ItemActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import { createTagRuleSchema, updateTagRuleSchema } from "@/schemas/tagRule";
 import { vuetifyCfg } from "@/utils/form";
-import i18n, { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
+import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 import {
   buildRegoSkeleton,
   extractInputFields,
@@ -407,12 +383,10 @@ import { useForm } from "vee-validate";
 
 import type {
   TagRuleDetailOut,
-  TagRuleDryRunOut,
   TagRuleListOut,
   TagRuleModelMetadataOut,
   TagRuleModelOptionsOut,
   TagRuleModelSamplesOut,
-  TagRuleSampleOut,
   TagRuleValidateOut,
   TagRuleVersionOut,
 } from "./@types";
@@ -425,6 +399,8 @@ const activeTab = ref("rules");
 const searchTableRef = useTemplateRef("searchTableRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
+const createDryRunRef = useTemplateRef("createDryRunRef");
+const editDryRunRef = useTemplateRef("editDryRunRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const rollbackConfirmRef = useTemplateRef("rollbackConfirmRef");
@@ -478,6 +454,26 @@ watch(createModel, (val) => {
   void loadModelFields(val, createFields);
 });
 
+// ---- input model samples ----
+// 样例与 rego 编辑器联动：按 model 加载样例（含完整 input），编辑器内预选样例后
+// 对 `input.<field>` 的补全/悬停提示展示实际值，试运行面板同步该 input。
+type SampleOption = { name: string; input: Record<string, unknown> };
+
+const loadModelSamples = async (model: string, target: Ref<SampleOption[]>): Promise<void> => {
+  await getResponse<TagRuleModelSamplesOut>(
+    tagRuleModelSamples({ model }),
+    async (rsp) => {
+      target.value = (rsp.data.items ?? []).map((s) => ({
+        name: s.name,
+        input: s.input ?? {},
+      }));
+    },
+    async () => {
+      target.value = [];
+    },
+  );
+};
+
 // ---- Rego editor state (create dialog) ----
 const createRego = ref("");
 const createPreflightErrors = ref<RegoValidationError[]>([]);
@@ -486,6 +482,8 @@ const createBackendWarnings = ref<RegoValidationError[]>([]);
 const createBackendValid = ref<boolean | null>(null);
 const createRegoValidating = ref(false);
 const createExtraFields = ref<string[]>([]);
+const createSamples = ref<SampleOption[]>([]);
+const createSampleInput = ref<Record<string, unknown> | null>(null);
 let createTimer: ReturnType<typeof setTimeout> | undefined;
 
 const createRegoErrors = computed<RegoValidationError[]>(() => {
@@ -558,6 +556,10 @@ watch(createRego, (val) => {
   createTimer = setTimeout(() => void validateCreateRego(val), 800);
 });
 
+watch(createModel, (val) => {
+  void loadModelSamples(val, createSamples);
+});
+
 const generateCreateSkeleton = (): void => {
   const skeleton = buildRegoSkeleton(createName.value || "tag");
   createRego.value = createRego.value.trim()
@@ -574,6 +576,8 @@ const editBackendValid = ref<boolean | null>(null);
 const editRegoValidating = ref(false);
 const editExtraFields = ref<string[]>([]);
 const editFields = ref<InputFieldMeta[]>([]);
+const editSamples = ref<SampleOption[]>([]);
+const editSampleInput = ref<Record<string, unknown> | null>(null);
 const editModel = ref("");
 let editTimer: ReturnType<typeof setTimeout> | undefined;
 let editRuleId = 0;
@@ -648,13 +652,16 @@ watch(editRego, (val) => {
   editTimer = setTimeout(() => void validateEditRego(val), 800);
 });
 
+watch(editModel, (val) => {
+  void loadModelSamples(val, editSamples);
+});
+
 // ---- list actions ----
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     version: versionAction,
-    dryRun: openDryRunAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: (i: Record<string, any>) => deleteConfirmRef.value?.open(i),
   };
@@ -683,8 +690,12 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
       editRego.value = rsp.data.rego;
       editExtraFields.value = [];
       editFields.value = [];
+      editSamples.value = [];
+      editSampleInput.value = null;
       editBackendWarnings.value = [];
       void loadModelFields(editModel.value, editFields);
+      // 显式加载样例：editModel 若与上次相同，watch 不会触发，须主动拉取
+      void loadModelSamples(editModel.value, editSamples);
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -704,9 +715,13 @@ const openCreateDialogAction = (): void => {
   createForm.resetField("enabled", { value: true });
   createRego.value = "";
   createExtraFields.value = [];
+  createSamples.value = [];
+  createSampleInput.value = null;
   createBackendValid.value = null;
   createBackendWarnings.value = [];
   void loadModelFields(createModel.value, createFields);
+  // 显式加载样例：createModel 若与上次相同，watch 不会触发，须主动拉取
+  void loadModelSamples(createModel.value, createSamples);
   createDialogRef.value?.open({});
   void validateCreateRego("");
 };
@@ -864,112 +879,6 @@ const reuseFieldsAction = async (): Promise<void> => {
   );
 };
 
-// ---- dry run ----
-const dryRunDialog = ref(false);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const dryRunItem = ref<Record<string, any> | null>(null);
-const dryRunModel = ref(HTTP_TRANSPORT_MODEL_KEY);
-const dryRunRego = ref("");
-const dryRunInput = ref("");
-const dryRunLoading = ref(false);
-const dryRunResult = ref<TagRuleDryRunOut | null>(null);
-const dryRunFields = ref<InputFieldMeta[]>([]);
-const dryRunSamples = ref<TagRuleSampleOut[]>([]);
-const dryRunSample = ref("");
-
-const fillDryRunSample = (): void => {
-  const sample = dryRunSamples.value.find((s) => s.name === dryRunSample.value);
-  if (sample) {
-    dryRunInput.value = JSON.stringify(sample.input, null, 2);
-  }
-};
-
-const loadDryRunSamples = async (): Promise<void> => {
-  dryRunSamples.value = [];
-  dryRunSample.value = "";
-  await getResponse<TagRuleModelSamplesOut>(
-    tagRuleModelSamples({ model: dryRunModel.value }),
-    async (rsp) => {
-      dryRunSamples.value = rsp.data.items ?? [];
-      const first = dryRunSamples.value[0];
-      if (first) {
-        dryRunSample.value = first.name;
-        dryRunInput.value = JSON.stringify(first.input, null, 2);
-      }
-    },
-  );
-};
-
-watch(dryRunModel, (val) => {
-  void loadModelFields(val, dryRunFields);
-  void loadDryRunSamples();
-});
-
-watch(dryRunSample, (name) => {
-  if (!name) {
-    return;
-  }
-  const sample = dryRunSamples.value.find((s) => s.name === name);
-  if (sample) {
-    dryRunInput.value = JSON.stringify(sample.input, null, 2);
-  }
-});
-
-const dryRunAction = async (): Promise<void> => {
-  if (!dryRunItem.value) {
-    return;
-  }
-  dryRunResult.value = null;
-  let input: Record<string, unknown>;
-  try {
-    input = JSON.parse(dryRunInput.value || "{}") as Record<string, unknown>;
-  } catch {
-    appStore.notify({
-      text: i18n.global.t("notice.jsonInvalid"),
-      timeout: 3000,
-      color: "error",
-    });
-    return;
-  }
-  dryRunLoading.value = true;
-  try {
-    await getResponse<TagRuleDryRunOut>(
-      tagRuleDryRun({
-        name: dryRunItem.value.name,
-        model: dryRunModel.value,
-        rego: dryRunRego.value,
-        input,
-      }),
-      async (rsp) => {
-        dryRunResult.value = rsp.data;
-      },
-      async (rsp) => {
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "error",
-        });
-      },
-    );
-  } finally {
-    dryRunLoading.value = false;
-  }
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const openDryRunAction = (item: Record<string, any>): void => {
-  dryRunItem.value = item;
-  dryRunModel.value = item.model || HTTP_TRANSPORT_MODEL_KEY;
-  dryRunRego.value = "";
-  dryRunInput.value = "";
-  dryRunSamples.value = [];
-  dryRunSample.value = "";
-  dryRunResult.value = null;
-  dryRunDialog.value = true;
-  void loadModelFields(dryRunModel.value, dryRunFields);
-  void loadDryRunSamples();
-};
-
 // ---- version list & rollback ----
 const versionDialog = ref(false);
 const versionItems = ref<TagRuleVersionOut[]>([]);
@@ -1035,6 +944,12 @@ const itemRollbackAction = async (proxy: Record<string, any>): Promise<void> => 
 .monospace :deep(textarea) {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 13px;
+}
+
+/* 启用开关独占一行但收缩到内容宽度，避免整行铺满留白 */
+.switch-narrow {
+  flex: 0 1 auto;
+  width: fit-content;
 }
 
 .rego-view {

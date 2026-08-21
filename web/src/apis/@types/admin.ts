@@ -81,7 +81,8 @@ export interface TagRuleModelIn {
 }
 
 export interface TagRuleDryRunIn {
-  name: string;
+  /** 候选规则名称，草稿阶段可为空（后端以占位名兜底） */
+  name?: string;
   model: string;
   rego: string;
   input: Record<string, unknown>;

@@ -787,7 +787,6 @@ action:
   generateSkeleton: Generate Skeleton
   generateExpression: Generate Expression
   reuseFields: Reuse Existing Rule Fields
-  fillSample: Fill Sample
   selectSample: Select sample
   searchFields: Search fields
   addCondition: Add Condition
@@ -797,6 +796,7 @@ action:
   viewPlaintext: View Plaintext
   viewDetail: View Details
   viewStack: View Network Stack
+  viewInput: View input
   favoriteSample: Save as Sample
   resetFrontendConfig: Reset Frontend Config
   download: Download
@@ -831,6 +831,8 @@ title:
   traffic: Traffic Audit - List
   trafficDetail: Traffic Audit - Detail
   inputFields: Input Fields
+  dryRunTags: Tags Result
+  dryRunRules: Rule Details
 home:
   subtitle: Network Security Audit Platform
   quickStart:
@@ -881,9 +883,7 @@ notice:
   disableConfirm: "Confirm disabling {category} {key}?"
   regoInvalid: "Rego validation failed, cannot submit!"
   expressionInvalid: "Expression validation failed, cannot submit!"
-  jsonInvalid: "Invalid JSON format!"
   noEnabledRules: "No enabled tag rules in current namespace, cannot build tag pool."
-  sampleLoadFailed: Sample load failed, please input manually
   plaintextLoadFailed: Failed to load plaintext
   plaintextEmpty: No plaintext content in this field
   plaintextBinary: Binary content, hex preview below

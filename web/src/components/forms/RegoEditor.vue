@@ -1,5 +1,31 @@
 <template>
   <div class="rego-editor-wrap">
+    <div v-if="samples.length > 0" class="sample-selector">
+      <div class="panel-header">
+        <span class="panel-title">{{ $t("action.selectSample") }}</span>
+      </div>
+      <div class="sample-selector-body">
+        <v-select
+          v-model="selectedSampleName"
+          :items="samples.map((s) => ({ title: s.name, value: s.name }))"
+          density="compact"
+          variant="outlined"
+          hide-details
+          clearable
+        >
+          <template #append-inner>
+            <v-btn
+              variant="text"
+              size="small"
+              icon="mdi-eye-outline"
+              :disabled="!selectedSampleName"
+              :title="$t('action.viewInput')"
+              @click.stop="emit('viewInput')"
+            />
+          </template>
+        </v-select>
+      </div>
+    </div>
     <div v-if="fields.length > 0" class="input-fields-panel">
       <div class="panel-header">
         <span class="panel-title">{{ $t("title.inputFields") }}</span>
@@ -56,7 +82,13 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { linter, lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { EditorState, Compartment, type Extension } from "@codemirror/state";
-import { EditorView, highlightActiveLine, keymap, lineNumbers } from "@codemirror/view";
+import {
+  EditorView,
+  highlightActiveLine,
+  hoverTooltip,
+  keymap,
+  lineNumbers,
+} from "@codemirror/view";
 import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { rego } from "codemirror-lang-rego";
 
@@ -74,6 +106,8 @@ const props = withDefaults(
     extraCompletions?: string[];
     /** input document field metadata from backend, drives `input.` completion & fields panel */
     fields?: InputFieldMeta[];
+    /** available samples for the current model, drives the sample selector */
+    samples?: { name: string; input: Record<string, unknown> }[];
     /** disables editing (read-only), the component stays interactive */
     disabled?: boolean;
     minHeight?: string;
@@ -82,17 +116,69 @@ const props = withDefaults(
     errors: () => [],
     extraCompletions: () => [],
     fields: () => [],
+    samples: () => [],
     disabled: false,
     minHeight: "240px",
   },
 );
 
-const emit = defineEmits<{ (e: "update:modelValue", value: string): void }>();
+const emit = defineEmits<{
+  (e: "update:modelValue", value: string): void;
+  (e: "update:sampleInput", value: Record<string, unknown> | null): void;
+  (e: "viewInput"): void;
+}>();
 
 const appStore = useAppStore();
 
 const hostRef = useTemplateRef<HTMLDivElement>("hostRef");
 const view = shallowRef<EditorView>();
+
+// ---- sample selector state ----
+// 试运行样例与编辑器联动：用户预先选择一个样例后，编辑器对 `input.<field>`
+// 的补全与悬停提示会展示该字段在样例中的实际值，便于快速判断规则合法性。
+const selectedSampleName = ref("");
+const selectedSampleInput = shallowRef<Record<string, unknown> | null>(null);
+
+/** Formats a sample value for display in completion/hover hints. */
+function formatSampleValue(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+  if (value === undefined) {
+    return "undefined";
+  }
+  if (typeof value === "string") {
+    return JSON.stringify(value);
+  }
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+/** Looks up the sample value of an `input.<field>` reference, if any. */
+function sampleValueFor(field: string): unknown {
+  return selectedSampleInput.value?.[field];
+}
+
+/** Finds the `input.<field>` token covering the given document position. */
+function inputFieldAt(
+  editorView: EditorView,
+  pos: number,
+): { field: string; from: number; to: number } | null {
+  const line = editorView.state.doc.lineAt(pos);
+  const rel = pos - line.from;
+  const re = /input\.([a-zA-Z_][a-zA-Z0-9_]*)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(line.text)) !== null) {
+    const start = m.index;
+    const end = m.index + m[0].length;
+    if (rel >= start && rel <= end) {
+      return { field: m[1], from: line.from + start, to: line.from + end };
+    }
+  }
+  return null;
+}
 
 // 语法高亮随主题切换：light 用 CM 默认浅色配色，dark 用 One Dark 配色，
 // 避免深色字压在深色背景上对比度不足（如错误标记内的关键字/字符串）
@@ -154,7 +240,9 @@ function inputTypeLabel(type: string): string {
 /**
  * Builds `input.<field>` completions from the `fields` metadata merged with
  * `extraCompletions` (deduplicated by field name, metadata wins). Sensitive
- * fields get a marker in the label and a hint in the detail text.
+ * fields get a marker in the label and a hint in the detail text. When a
+ * sample is selected, the field's actual value is appended to the detail so
+ * the user can judge rule correctness while typing.
  */
 function inputFieldCompletions(): Completion[] {
   const items: Completion[] = [];
@@ -168,6 +256,10 @@ function inputFieldCompletions(): Completion[] {
     if (field.sensitive) {
       parts.push("sensitive");
     }
+    const sampleValue = sampleValueFor(field.field);
+    if (sampleValue !== undefined) {
+      parts.push(`= ${formatSampleValue(sampleValue)}`);
+    }
     items.push({
       label: field.sensitive ? `${field.field} (sensitive)` : field.field,
       detail: parts.join(" · "),
@@ -180,9 +272,14 @@ function inputFieldCompletions(): Completion[] {
       continue;
     }
     seen.add(field);
+    const parts = ["existing rule field"];
+    const sampleValue = sampleValueFor(field);
+    if (sampleValue !== undefined) {
+      parts.push(`= ${formatSampleValue(sampleValue)}`);
+    }
     items.push({
       label: field,
-      detail: "existing rule field",
+      detail: parts.join(" · "),
       type: "variable",
       apply: (v, c, from, to) => applySnippet(v, c, from, to, `input.${field} == ""`),
     });
@@ -233,6 +330,37 @@ async function regoCompletion(context: CompletionContext): Promise<CompletionRes
 // the user switches to edit mode).
 const editableCompartment = new Compartment();
 
+// Hover tooltip: when a sample is selected, hovering an `input.<field>`
+// reference shows the field's actual value from the sample, so the user can
+// judge rule correctness without running a dry-run.
+const sampleHover = hoverTooltip((editorView, pos) => {
+  const hit = inputFieldAt(editorView, pos);
+  if (!hit) {
+    return null;
+  }
+  const value = sampleValueFor(hit.field);
+  if (value === undefined) {
+    return null;
+  }
+  return {
+    pos: hit.from,
+    end: hit.to,
+    above: true,
+    create: () => {
+      const dom = document.createElement("div");
+      dom.className = "cm-sample-hover";
+      const label = document.createElement("span");
+      label.className = "cm-sample-hover-label";
+      label.textContent = hit.field;
+      const val = document.createElement("span");
+      val.className = "cm-sample-hover-value";
+      val.textContent = formatSampleValue(value);
+      dom.append(label, val);
+      return { dom };
+    },
+  };
+});
+
 const extensions: Extension[] = [
   rego({ autocomplete: true, hover: true }),
   lineNumbers(),
@@ -240,6 +368,7 @@ const extensions: Extension[] = [
   highlightCompartment.of(highlightFor(appStore.theme)),
   bracketMatching(),
   autocompletion({ override: [regoCompletion] }),
+  sampleHover,
   // Stub linter so external diagnostics pushed via `setDiagnostics` render.
   linter(() => []),
   lintGutter(),
@@ -275,6 +404,23 @@ onMounted(() => {
 onBeforeUnmount(() => {
   view.value?.destroy();
   view.value = undefined;
+});
+
+// Reset the sample selection when the sample list changes (e.g. model switch).
+watch(
+  () => props.samples,
+  (list) => {
+    selectedSampleName.value = list[0] ? list[0].name : "";
+  },
+  { immediate: true },
+);
+
+// Emit the selected sample's input so the parent can share it with the
+// dry-run panel, keeping the editor and the dry-run feature in sync.
+watch(selectedSampleName, (name) => {
+  const found = props.samples.find((s) => s.name === name);
+  selectedSampleInput.value = found ? found.input : null;
+  emit("update:sampleInput", selectedSampleInput.value);
 });
 
 // Sync external content changes (e.g. skeleton generation, snippet chips).
@@ -345,6 +491,38 @@ defineExpose({ focus: () => view.value?.focus() });
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Sample selector sits above the editor as a bordered section matching the
+   input-fields panel and the editor box, so the user can pre-select a sample
+   while writing the rule; the selected sample drives input value hints. */
+.sample-selector {
+  border: 1px solid rgb(0 0 0 / 24%);
+  border-radius: 4px;
+  background-color: rgb(var(--v-theme-surface));
+}
+
+.sample-selector-body {
+  padding: 0 12px 12px;
+}
+
+/* Hover tooltip content for `input.<field>` sample values. */
+:deep(.cm-sample-hover) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+:deep(.cm-sample-hover-label) {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+:deep(.cm-sample-hover-value) {
+  font-weight: 600;
+  color: rgb(var(--v-theme-primary));
 }
 
 /* Input fields panel reuses the editor border/radius/surface so both blocks

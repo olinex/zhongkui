@@ -787,7 +787,6 @@ action:
   generateSkeleton: 生成骨架
   generateExpression: 生成表达式
   reuseFields: 复用已有规则字段
-  fillSample: 填入示例
   selectSample: 选择样例
   searchFields: 搜索字段
   addCondition: 添加条件
@@ -797,6 +796,7 @@ action:
   viewPlaintext: 查看明文
   viewDetail: 查看详情
   viewStack: 查看网络堆栈
+  viewInput: 查看 input
   favoriteSample: 收藏样例
   resetFrontendConfig: 重置前端配置
   download: 下载
@@ -831,6 +831,8 @@ title:
   traffic: 流量审计 - 列表
   trafficDetail: 流量审计 - 详情
   inputFields: 输入字段
+  dryRunTags: 标签结果
+  dryRunRules: 规则明细
 home:
   subtitle: 网络安全审计平台
   quickStart:
@@ -881,9 +883,7 @@ notice:
   disableConfirm: "确认禁用 {category} {key} 吗？"
   regoInvalid: "Rego 校验未通过，无法提交！"
   expressionInvalid: "表达式校验未通过，无法提交！"
-  jsonInvalid: "JSON 格式非法！"
   noEnabledRules: "当前命名空间没有已启用的标签规则，无法构建标签池。"
-  sampleLoadFailed: 样例加载失败，请手动输入
   plaintextLoadFailed: 明文获取失败
   plaintextEmpty: 该字段无明文内容
   plaintextBinary: 二进制内容，以下为十六进制预览
