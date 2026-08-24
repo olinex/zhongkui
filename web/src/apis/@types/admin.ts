@@ -140,3 +140,18 @@ export interface TagEventRuleDryRunIn {
   enabled: boolean;
   conditions: TagEventRuleConditionIn[];
 }
+
+// batch action
+export type FlexIDs = number | number[];
+export type FlexUnionIds = string | string[];
+export type FlexNames = string | string[];
+
+export interface BatchFailureOut {
+  id: string;
+  reason: string;
+}
+
+export interface BatchResultOut {
+  succeeded: number;
+  failed: BatchFailureOut[];
+}

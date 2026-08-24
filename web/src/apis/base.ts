@@ -37,6 +37,11 @@ request.interceptors.request.use((config) => {
   if (!config.headers[HttpHeader.CONTENT_LANGUAGE]) {
     config.headers[HttpHeader.CONTENT_LANGUAGE] = store.language;
   }
+  // 全局携带当前命名空间：后端 NamespaceMiddleware 据此做多租户隔离。
+  // 登录/注册等未挂命名空间中间件的接口会忽略该头，无副作用。
+  if (!config.headers[HttpHeader.NAMESPACE]) {
+    config.headers[HttpHeader.NAMESPACE] = store.namespace;
+  }
   return config;
 });
 

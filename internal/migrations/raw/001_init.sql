@@ -609,7 +609,7 @@ CREATE TABLE IF NOT EXISTS tag_summings (
 	namespace LowCardinality(String) COMMENT 'the namespace of the aggregation, the primary multi-tenant grouping dimension' CODEC(ZSTD(3)),
 	minute DateTime64(6, 'UTC') COMMENT 'the minute aligned start time of the aggregation window' CODEC(DoubleDelta, ZSTD(3)),
 	model String COMMENT 'the target model type key of the tags, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport' CODEC(ZSTD(3)),
-	dimension String COMMENT 'the tag dimension type, e.g. fp_tcp_client_sig' CODEC(ZSTD(3)),
+	dimension String COMMENT 'the tag dimension type, e.g. fpTcpClientSig' CODEC(ZSTD(3)),
 	item String COMMENT 'the concrete value of the tag dimension' CODEC(ZSTD(3)),
 	tags Array(String) COMMENT 'the deduplicated and sorted tag array of the aggregation',
 	cnt UInt32 COMMENT 'the hit count of the tags, summed by SummingMergeTree'
@@ -620,7 +620,8 @@ TTL toDateTime(minute) + INTERVAL 72 HOUR DELETE;
 
 -- 标签聚合物化视图：按命名空间 + 分钟 + 目标模型 + 指纹维度 + 指纹值 + 标签组合聚合 HttpTransport 的标签命中次数
 -- namespace 由 http_transports 的命名空间字段直接透传，实现多租户聚合隔离
--- dimension/item 由 fp_tcp_client_sig、fp_tcp_server_sig 两个指纹字段展开而来：字段名为 dimension，字段值为 item
+-- dimension/item 由客户端/服务端指纹两列展开而来：dimension 为字段的驼峰标识（fpTcpClientSig/fpTcpServerSig，
+-- 与 gorm json 字段名一致），item 为字段值
 -- 指纹值为空的行在 ARRAY JOIN 展开前被过滤（arrayFilter 作用于元组数组）
 -- 标签为空（去重后无任何标签）的行不进入聚合，避免无意义的空标签统计
 CREATE MATERIALIZED VIEW IF NOT EXISTS http_transports_2_tag_summings_mv
@@ -636,8 +637,8 @@ SELECT
 	toUInt32(count()) AS cnt
 FROM http_transports
 ARRAY JOIN arrayFilter(x -> x.2 != '', [
-	('fp_tcp_client_sig', fp_tcp_client_sig),
-	('fp_tcp_server_sig', fp_tcp_server_sig)
+	('fpTcpClientSig', fp_tcp_client_sig),
+	('fpTcpServerSig', fp_tcp_server_sig)
 ]) AS sig
 WHERE length(tags) > 0
 GROUP BY namespace, minute, model, dimension, item, tags;

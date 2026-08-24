@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
-// 与后端 TagEventRuleConditionIn 约束一致（window 在前端以分钟数输入）
+// 与后端 TagEventRuleConditionIn 约束一致（window 在前端以分钟数输入）：
+// window 上限 7 天（10080 分钟），threshold 上限 1000000
 export const tagEventConditionSchema = () =>
   yup.object({
     name: yup
@@ -13,11 +14,17 @@ export const tagEventConditionSchema = () =>
     model: yup.string().nonNullable().max(255).label("model.tagEventCondition.field.model"),
     dimension: yup.string().nonNullable().max(128).label("model.tagEventCondition.field.dimension"),
     item: yup.string().nonNullable().max(255).label("model.tagEventCondition.field.item"),
-    window: yup.number().nonNullable().positive().label("model.tagEventCondition.field.window"),
+    window: yup
+      .number()
+      .nonNullable()
+      .positive()
+      .max(7 * 24 * 60)
+      .label("model.tagEventCondition.field.window"),
     threshold: yup
       .number()
       .nonNullable()
       .positive()
+      .max(1000000)
       .label("model.tagEventCondition.field.threshold"),
     expression: yup
       .string()

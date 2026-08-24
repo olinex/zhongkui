@@ -138,7 +138,7 @@ type CORSConfig struct {
 	AllowCredentials bool `mapstructure:"allowCredentials" default:"true" comment:"是否允许跨域请求携带凭证（Cookie、HTTP 认证等）"`
 	// AllowHeaders 是允许的跨域请求头列表，
 	// 客户端在预检请求（OPTIONS）中声明的自定义请求头必须在此列表中
-	AllowHeaders []string `mapstructure:"allowHeaders" default:"[\"Content-Type\", \"Content-Length\", \"Accept\", \"Accept-Encoding\", \"X-CSRF-Token\", \"Authorization\", \"Cache-Control\", \"X-Jwtoken\"]" comment:"允许的跨域请求头列表，需在预检请求中声明"`
+	AllowHeaders []string `mapstructure:"allowHeaders" default:"[\"Content-Type\", \"Content-Length\", \"Accept\", \"Accept-Encoding\", \"X-CSRF-Token\", \"Authorization\", \"Cache-Control\", \"X-Jwtoken\", \"X-Namespace\"]" comment:"允许的跨域请求头列表，需在预检请求中声明"`
 	// AllowMethods 是允许的跨域 HTTP 方法列表，
 	// 不在列表中的方法将被浏览器拒绝
 	AllowMethods []string `mapstructure:"allowMethods" default:"[\"GET\", \"POST\", \"PUT\", \"DELETE\", \"OPTIONS\"]" comment:"允许的跨域 HTTP 方法列表"`

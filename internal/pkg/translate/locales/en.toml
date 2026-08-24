@@ -1713,13 +1713,13 @@ other = "Stream index"
 other = "Client operating system (TCP fingerprint)"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
 other = "Client OS identification quality"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_sig"]
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
 other = "Client TCP signature"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
 other = "Server operating system (TCP fingerprint)"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
 other = "Server OS identification quality"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_sig"]
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
 other = "Server TCP signature"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
 other = "TCP MTU value"

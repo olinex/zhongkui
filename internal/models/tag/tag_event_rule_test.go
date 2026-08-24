@@ -168,6 +168,9 @@ func TestTagEventCondition_ExprValidate(t *testing.T) {
 				{"NOT表达式", "NOT trusted_device"},
 				{"复杂表达式", "(login_failed AND suspicious_ip) OR NOT trusted_device"},
 				{"多层嵌套", "((A OR B) AND (C OR D))"},
+				{"中文标签", "脚本文件"},
+				{"中文标签组合", "登录失败 AND 异常访问"},
+				{"中英文混合", "(脚本文件 OR 登录失败) AND NOT trusted_device"},
 			}
 
 			for _, tc := range testCases {
@@ -248,9 +251,8 @@ func TestTagEventCondition_Fields(t *testing.T) {
 					CreatedAt: now.Add(-time.Hour),
 					UpdatedAt: now,
 				},
-				NamespaceName:  "default",
 				Model:          "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				Dimension:      "fp_tcp_client_sig",
+				Dimension:      "fpTcpClientSig",
 				Item:           "4:D:A+",
 				TagEventRuleID: 100,
 				Name:           "登录失败检测",
@@ -262,9 +264,8 @@ func TestTagEventCondition_Fields(t *testing.T) {
 			}
 
 			convey.So(condition.ID, convey.ShouldEqual, 1)
-			convey.So(condition.NamespaceName, convey.ShouldEqual, "default")
 			convey.So(condition.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
-			convey.So(condition.Dimension, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(condition.Dimension, convey.ShouldEqual, "fpTcpClientSig")
 			convey.So(condition.Item, convey.ShouldEqual, "4:D:A+")
 			convey.So(condition.TagEventRuleID, convey.ShouldEqual, 100)
 			convey.So(condition.Name, convey.ShouldEqual, "登录失败检测")
@@ -460,7 +461,7 @@ func TestParser_EdgeCases(t *testing.T) {
 		})
 
 		convey.Convey("应该处理标签名称中的特殊字符", func() {
-			// 根据规则，只允许字母、数字、下划线、连字符
+			// 根据规则，只允许 Unicode 字母、数字、下划线、连字符（中文标签合法）
 			testCases := []struct {
 				name  string
 				expr  string
@@ -471,7 +472,7 @@ func TestParser_EdgeCases(t *testing.T) {
 				{"点号", "tag.name", false},
 				{"@符号", "tag@name", false},
 				{"空格", "tag name", false},
-				{"中文", "标签", false},
+				{"中文", "标签", true},
 			}
 
 			for _, tc := range testCases {

@@ -47,14 +47,15 @@ func setupSampleDB(t *testing.T) *database.DB {
 	return db
 }
 
-// insertSample 为目标模型插入一条验证样例。
+// insertSample 为目标模型插入一条验证样例（归属 default 命名空间，与 sampleRules 规则一致）。
 func insertSample(t *testing.T, db *database.DB, name, input string) {
 	t.Helper()
 	sample := &tag.TagRuleSample{
-		Model:       httpTransportType,
-		Name:        name,
-		Input:       datatypes.JSON(input),
-		Description: "test sample",
+		NamespaceName: "default",
+		Model:         httpTransportType,
+		Name:          name,
+		Input:         datatypes.JSON(input),
+		Description:   "test sample",
 	}
 	if err := db.Create(sample).Error; err != nil {
 		t.Fatal(err)

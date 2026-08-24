@@ -863,13 +863,13 @@ other = "流索引"
 other = "客户端操作系统（TCP 指纹）"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
 other = "客户端操作系统识别置信度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_sig"]
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
 other = "客户端 TCP 签名"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
 other = "服务端操作系统（TCP 指纹）"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
 other = "服务端操作系统识别置信度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_sig"]
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
 other = "服务端 TCP 签名"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
 other = "TCP MTU 值"

@@ -4,8 +4,14 @@
     :list-request="tagRuleSampleListGet"
     :options-request="tagRuleSampleListOptions"
     :actions="getSampleActions"
+    :batch-actions="getBatchActions"
     model-name="tagRuleSample"
-  />
+  >
+    <!-- 目标模型列显示可读名称（与表单下拉一致），而非原始类型键 -->
+    <template #cell-model="{ value }">
+      {{ modelTypeKeyLabel(String(value ?? "")) || $t("model.__base.value.blank") }}
+    </template>
+  </search-table>
 
   <confirm-dialog
     ref="deleteConfirmRef"
@@ -15,6 +21,12 @@
   >
     <template #body="{ proxy }">
       <confirm-alert
+        v-if="batchState"
+        :action="$t('action.delete')"
+        :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+      />
+      <confirm-alert
+        v-else
         :action="$t('action.delete')"
         :text="
           $t(`notice.deleteConfirm`, {
@@ -102,17 +114,20 @@ import {
   tagRuleSampleListGet,
   tagRuleSampleListOptions,
   tagRuleSampleUpdate,
-} from "@/apis/admin";
+  TrafficCryptoFields,
+  TrafficS3Fields,
+  trafficTypeFromModelKey,
+} from "@/apis/traffic";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import { TrafficCryptoFields, TrafficS3Fields, trafficTypeFromModelKey } from "@/apis/traffic";
+import type { BatchResultOut } from "@/apis/@types/admin";
 import type { DetailField } from "@/components/@types/detail";
-import type { ItemActions } from "@/components/@types/table";
-import type { TagRuleSampleDetailOut } from "@/pages/[language]/admin/@types";
+import type { BatchActions, ItemActions } from "@/components/@types/table";
+import type { TagRuleSampleDetailOut } from "@/pages/[language]/traffic/@types";
 import { updateTagRuleSampleSchema } from "@/schemas/tagRuleSample";
 import { useAppStore } from "@/stores/app";
 import { vuetifyCfg } from "@/utils/form";
-import { localeDatetimeFormat } from "@/utils/i18n";
-import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
+import i18n, { localeDatetimeFormat } from "@/utils/i18n";
+import { modelFieldTitle, modelTypeKeyLabel, modelTypeKeyToI18nKey } from "@/utils/modelField";
 
 const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
 
@@ -228,7 +243,10 @@ const getSampleActions = (item: Record<string, any>): ItemActions => {
     viewDetail: () => void openDetailAction(item),
     edit: editAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete: (i: Record<string, any>) => deleteConfirmRef.value?.open(i),
+    delete: (i: Record<string, any>) => {
+      batchState.value = null;
+      deleteConfirmRef.value?.open(i);
+    },
   };
 };
 
@@ -282,18 +300,74 @@ const itemUpdateAction = () => {
   })();
 };
 
-// ---- delete ----
+// ---- 批量删除 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    tagRuleSampleDelete(item.id),
+type BatchState = { items: Record<string, any>[] };
+const batchState = ref<BatchState | null>(null);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    delete: () => {
+      batchState.value = { items };
+      deleteConfirmRef.value?.open({});
+    },
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
+  const ids = items.map((i) => i.id as number);
+  await getResponse<BatchResultOut>(
+    tagRuleSampleDelete(ids),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      sampleTableRef.value?.clearSelection?.();
       await sampleTableRef.value?.refresh();
+    },
+    async (rsp) => {
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
-        color: "success",
+        color: "error",
       });
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchDeleteAction(state.items);
+    return;
+  }
+  await getResponse<BatchResultOut>(
+    tagRuleSampleDelete(proxy.id),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      await sampleTableRef.value?.refresh();
     },
     async (rsp) => {
       appStore.notify({

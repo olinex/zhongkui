@@ -26,45 +26,6 @@
         </v-select>
       </div>
     </div>
-    <div v-if="fields.length > 0" class="input-fields-panel">
-      <div class="panel-header">
-        <span class="panel-title">{{ $t("title.inputFields") }}</span>
-        <v-btn
-          variant="text"
-          size="x-small"
-          density="comfortable"
-          :icon="panelCollapsed ? 'mdi-chevron-down' : 'mdi-chevron-up'"
-          @click="panelCollapsed = !panelCollapsed"
-        />
-      </div>
-      <div v-show="!panelCollapsed" class="panel-body">
-        <v-text-field
-          v-model="fieldFilter"
-          density="compact"
-          variant="outlined"
-          :placeholder="$t('action.searchFields')"
-          hide-details
-          clearable
-          class="field-search"
-        />
-        <div class="field-list">
-          <button
-            v-for="field in filteredFields"
-            :key="field.field"
-            type="button"
-            class="field-item"
-            @click="insertField(field)"
-          >
-            <span class="field-name">{{ field.field }}</span>
-            <v-chip size="x-small" density="comfortable" variant="tonal" class="field-type">
-              {{ inputTypeLabel(field.type) }}
-            </v-chip>
-            <v-icon v-if="field.sensitive" size="x-small">mdi-lock</v-icon>
-            <span v-if="field.description" class="field-desc">{{ field.description }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
     <div ref="hostRef" class="rego-editor" :style="{ minHeight }" />
   </div>
 </template>
@@ -79,7 +40,12 @@ import {
   type CompletionSource,
 } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { bracketMatching, defaultHighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import {
+  bracketMatching,
+  defaultHighlightStyle,
+  syntaxHighlighting,
+  syntaxTree,
+} from "@codemirror/language";
 import { linter, lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { EditorState, Compartment, type Extension } from "@codemirror/state";
 import {
@@ -88,6 +54,7 @@ import {
   hoverTooltip,
   keymap,
   lineNumbers,
+  placeholder,
 } from "@codemirror/view";
 import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { rego } from "codemirror-lang-rego";
@@ -97,6 +64,7 @@ import { DARK_THEME } from "@/stores/local";
 import i18n from "@/utils/i18n";
 import { classifyRegoCompletionContext, fieldSnippet, isRegoExpressionKeyword } from "@/utils/rego";
 import type { InputFieldMeta, RegoValidationError } from "@/utils/rego";
+import { findSlashPos, slashKeyBinding, withSlashApply } from "@/utils/slashTrigger";
 
 const props = withDefaults(
   defineProps<{
@@ -104,7 +72,7 @@ const props = withDefaults(
     errors?: RegoValidationError[];
     /** extra `input.<field>` completions, e.g. fields referenced by existing rules */
     extraCompletions?: string[];
-    /** input document field metadata from backend, drives `input.` completion & fields panel */
+    /** input document field metadata from backend, drives `input.` & "/" completions */
     fields?: InputFieldMeta[];
     /** available samples for the current model, drives the sample selector */
     samples?: { name: string; input: Record<string, unknown> }[];
@@ -201,36 +169,6 @@ function applySnippet(
   });
 }
 
-// Collapsible "input fields" panel state, expanded by default.
-const panelCollapsed = ref(false);
-const fieldFilter = ref("");
-
-/** Fields filtered by the panel search box against name and description. */
-const filteredFields = computed<InputFieldMeta[]>(() => {
-  const keyword = fieldFilter.value.trim().toLowerCase();
-  if (!keyword) {
-    return props.fields;
-  }
-  return props.fields.filter(
-    (f) =>
-      f.field.toLowerCase().includes(keyword) ||
-      (f.description ?? "").toLowerCase().includes(keyword),
-  );
-});
-
-/** Inserts a field snippet at the current cursor position, then refocuses. */
-function insertField(field: InputFieldMeta): void {
-  const editorView = view.value;
-  if (!editorView) {
-    return;
-  }
-  const head = editorView.state.selection.main.head;
-  editorView.dispatch({
-    changes: { from: head, to: head, insert: fieldSnippet(field) },
-  });
-  editorView.focus();
-}
-
 /** Localizes a semantic input type key, falling back to the raw type text. */
 function inputTypeLabel(type: string): string {
   const key = `inputType.${type}`;
@@ -243,10 +181,13 @@ function inputTypeLabel(type: string): string {
  * fields get a marker in the label and a hint in the detail text. When a
  * sample is selected, the field's actual value is appended to the detail so
  * the user can judge rule correctness while typing.
+ * `prefix` 用于 "/" 触发的「输入即筛选」：斜杠补全走 filter:false 由本函数
+ * 按前缀过滤（与 CM 内置前缀匹配一致，大小写不敏感）；语言补全等场景传 ""。
  */
-function inputFieldCompletions(): Completion[] {
+function inputFieldCompletions(prefix: string): Completion[] {
   const items: Completion[] = [];
   const seen = new Set<string>();
+  const matches = (label: string): boolean => label.toLowerCase().startsWith(prefix.toLowerCase());
   for (const field of props.fields) {
     seen.add(field.field);
     const parts = [inputTypeLabel(field.type)];
@@ -260,8 +201,12 @@ function inputFieldCompletions(): Completion[] {
     if (sampleValue !== undefined) {
       parts.push(`= ${formatSampleValue(sampleValue)}`);
     }
+    const label = field.sensitive ? `${field.field} (sensitive)` : field.field;
+    if (!matches(label)) {
+      continue;
+    }
     items.push({
-      label: field.sensitive ? `${field.field} (sensitive)` : field.field,
+      label,
       detail: parts.join(" · "),
       type: "variable",
       apply: (v, c, from, to) => applySnippet(v, c, from, to, fieldSnippet(field)),
@@ -272,6 +217,9 @@ function inputFieldCompletions(): Completion[] {
       continue;
     }
     seen.add(field);
+    if (!matches(field)) {
+      continue;
+    }
     const parts = ["existing rule field"];
     const sampleValue = sampleValueFor(field);
     if (sampleValue !== undefined) {
@@ -287,6 +235,21 @@ function inputFieldCompletions(): Completion[] {
   return items;
 }
 
+// 判断光标是否位于 Rego 字符串 / 原始字符串 / 注释内（"/" 触发在这些字面量
+// 内部一律不生效，避免 "http://..." 等误弹字段下拉）
+function inRegoLiteral(state: EditorState, pos: number): boolean {
+  const innermost = syntaxTree(state).resolveInner(pos, -1);
+  let node: typeof innermost | null = innermost;
+  while (node) {
+    const name = node.name;
+    if (name === "String" || name === "RawString" || name === "LineComment") {
+      return true;
+    }
+    node = node.parent;
+  }
+  return false;
+}
+
 /**
  * Custom completion source: completes `input.<field>` from field metadata and
  * `extraCompletions`, then falls back to the Rego language sources (keywords,
@@ -298,9 +261,32 @@ function inputFieldCompletions(): Completion[] {
 async function regoCompletion(context: CompletionContext): Promise<CompletionResult | null> {
   const line = context.state.doc.lineAt(context.pos);
   const textBefore = line.text.slice(0, context.pos - line.from);
+
+  // 1. "/" 字段触发器：弹出字段下拉并随输入实时过滤。from 指向触发斜杠本身，
+  //    使孤立 "/"（空查询）也满足 from < to 立即弹层；filter:false 关闭 CM 内置
+  //    过滤（过滤由 inputFieldCompletions 按斜杠后查询完成），不设 validFor 让
+  //    每次输入都重查实现「输入即筛选」；选中时经 withSlashApply 把斜杠与查询
+  //    一并替换为字段片段。第二个 "/"（取消触发）在 keymap 层被吞掉。
+  const slashFrom = findSlashPos(context.state, context.pos, inRegoLiteral);
+  if (slashFrom !== null) {
+    const query = textBefore.slice(slashFrom - line.from + 1);
+    if (/^[a-zA-Z0-9_]*$/.test(query)) {
+      const options = withSlashApply(inputFieldCompletions(query));
+      if (options.length > 0) {
+        return { from: slashFrom, options, filter: false };
+      }
+    }
+    // 触发斜杠存在但查询含非词字符（粘贴等场景）：不弹下拉，也不落到语言补全
+    return null;
+  }
+  // "//" 视为字面量斜杠：不弹任何下拉
+  if (/\/\/$/.test(textBefore)) {
+    return null;
+  }
+
   const dotMatch = /input\.([a-zA-Z_][a-zA-Z0-9_]*)$/.exec(textBefore);
   if (dotMatch) {
-    const result = await completeFromList(inputFieldCompletions())(context);
+    const result = await completeFromList(inputFieldCompletions(""))(context);
     if (result) {
       return result;
     }
@@ -367,12 +353,17 @@ const extensions: Extension[] = [
   highlightActiveLine(),
   highlightCompartment.of(highlightFor(appStore.theme)),
   bracketMatching(),
+  // 空文档时显示 "/" 用法提示（点击输入后自动隐藏）
+  placeholder(i18n.global.t("action.regoFieldHint")),
   autocompletion({ override: [regoCompletion] }),
   sampleHover,
   // Stub linter so external diagnostics pushed via `setDiagnostics` render.
   linter(() => []),
   lintGutter(),
   history(),
+  // "/" 输入规则见 slashTrigger.ts：前一字符为 "/" 且下拉已打开时该斜杠仅作为
+  // 关闭信号被吞掉；其余情况按正常输入（打开下拉由补全源负责）。
+  keymap.of([slashKeyBinding]),
   keymap.of([...defaultKeymap, ...historyKeymap]),
   editableCompartment.of(EditorState.readOnly.of(props.disabled)),
   EditorView.lineWrapping,
@@ -494,8 +485,8 @@ defineExpose({ focus: () => view.value?.focus() });
 }
 
 /* Sample selector sits above the editor as a bordered section matching the
-   input-fields panel and the editor box, so the user can pre-select a sample
-   while writing the rule; the selected sample drives input value hints. */
+   editor box, so the user can pre-select a sample while writing the rule;
+   the selected sample drives input value hints. */
 .sample-selector {
   border: 1px solid rgb(0 0 0 / 24%);
   border-radius: 4px;
@@ -525,14 +516,7 @@ defineExpose({ focus: () => view.value?.focus() });
   color: rgb(var(--v-theme-primary));
 }
 
-/* Input fields panel reuses the editor border/radius/surface so both blocks
-   read as one unit and follow the app theme (light/dark). */
-.input-fields-panel {
-  border: 1px solid rgb(0 0 0 / 24%);
-  border-radius: 4px;
-  background-color: rgb(var(--v-theme-surface));
-}
-
+/* 样例选择器头部与编辑器主题一致 */
 .panel-header {
   display: flex;
   align-items: center;
@@ -547,56 +531,6 @@ defineExpose({ focus: () => view.value?.focus() });
   color: rgb(var(--v-theme-on-surface));
 }
 
-.panel-body {
-  padding: 0 12px 12px;
-}
-
-.field-search {
-  margin-bottom: 8px;
-}
-
-.field-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 180px;
-  overflow-y: auto;
-}
-
-.field-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: rgb(var(--v-theme-on-surface));
-  text-align: left;
-  cursor: pointer;
-}
-
-.field-item:hover {
-  background: rgb(var(--v-theme-on-surface), 0.06);
-}
-
-.field-name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
-.field-desc {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  font-size: 12px;
-  color: rgb(var(--v-theme-on-surface-variant));
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .rego-editor {
   width: 100%;
 
@@ -606,6 +540,11 @@ defineExpose({ focus: () => view.value?.focus() });
   border: 1px solid rgb(0 0 0 / 24%);
   border-radius: 4px;
   background-color: rgb(var(--v-theme-surface));
+}
+
+/* 空文档时显示 "/" 用法提示，颜色与弱化文字一致，避免干扰编辑 */
+:deep(.cm-placeholder) {
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 /* CodeMirror tooltip（lint 错误消息 / 补全菜单）跟随 Vuetify 主题。

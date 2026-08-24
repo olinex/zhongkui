@@ -132,16 +132,16 @@ func createTagEventRuleRawDB() *database.DB {
 // dry-run 需要 raw 库中间件注入 tag_summings 查询连接。
 func registerTagEventRuleTestRoutes(r *gin.Engine, rawDB *database.DB) {
 	rawDatabaseMiddleware := manager.RawDatabaseMiddleware(rawDB)
-	admin := r.Group("/admin")
+	admin := r.Group("/traffic")
 	{
 		admin.POST("/tag-event-rule/list", tagEventRuleListGet)
 		admin.OPTIONS("/tag-event-rule/list", ListMetaGinHandler[*TagEventRuleListGetSearchIn, *TagEventRuleListOut]())
 		admin.POST("/tag-event-rule/create", tagEventRuleCreate)
 		admin.POST("/tag-event-rule/:id/get", tagEventRuleDetailGet)
 		admin.POST("/tag-event-rule/:id/update", tagEventRuleUpdate)
-		admin.POST("/tag-event-rule/:id/delete", tagEventRuleDelete)
-		admin.POST("/tag-event-rule/:id/enable", tagEventRuleSetEnabled(true))
-		admin.POST("/tag-event-rule/:id/disable", tagEventRuleSetEnabled(false))
+		admin.POST("/tag-event-rule/delete", tagEventRuleBatchDelete)
+		admin.POST("/tag-event-rule/enable", tagEventRuleBatchSetEnabled(true))
+		admin.POST("/tag-event-rule/disable", tagEventRuleBatchSetEnabled(false))
 		admin.POST("/tag-event-rule/validate", tagEventRuleValidate)
 		admin.POST("/tag-event-rule/dry-run", rawDatabaseMiddleware, tagEventRuleDryRun)
 		admin.POST("/tag-event-rule/:id/version/list", tagEventRuleVersionList)
@@ -196,7 +196,7 @@ func doTagEventRuleRequest(r *gin.Engine, method, path string, body any) *httpte
 // createTagEventRule 通过创建接口落库一条标签事件规则，返回规则 ID。
 func createTagEventRule(t *testing.T, db *database.DB, r *gin.Engine, name string, matchAll, enabled bool, conds []map[string]any) uint {
 	t.Helper()
-	w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/create", map[string]any{
+	w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/create", map[string]any{
 		"name":        name,
 		"description": "test rule",
 		"matchAll":    matchAll,
@@ -222,7 +222,7 @@ func tagEventRuleCondition(expr string) map[string]any {
 
 // tagEventRuleIDPath 拼接标签事件规则路由路径。
 func tagEventRuleIDPath(action string, id uint) string {
-	return "/admin/tag-event-rule/" + strconv.FormatUint(uint64(id), 10) + action
+	return "/traffic/tag-event-rule/" + strconv.FormatUint(uint64(id), 10) + action
 }
 
 // TestTagEventRuleCreateAndDetail 创建与详情查询全链路。
@@ -260,12 +260,49 @@ func TestTagEventRuleCreateAndDetail(t *testing.T) {
 		})
 
 		Convey("条件名称不合法被拒绝", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/create", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/create", map[string]any{
 				"name": "bad-cond-name",
 				"conditions": []map[string]any{{
 					"name":       "",
 					"window":     tagEventRuleWindow,
 					"threshold":  1,
+					"expression": tagEventRuleValidExpr,
+					"enabled":    true,
+				}},
+			})
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+	})
+}
+
+// TestTagEventRuleConditionBoundsRejected 条件窗口/阈值超出上限被拒绝。
+func TestTagEventRuleConditionBoundsRejected(t *testing.T) {
+	Convey("测试条件窗口与阈值上下限校验", t, func() {
+		db := createTagEventRuleTestDB()
+		rawDB := createTagEventRuleRawDB()
+		r := setupTagEventRuleTestRouter(db, rawDB)
+
+		Convey("窗口超过 7 天上限被拒绝", func() {
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/create", map[string]any{
+				"name": "bad-window",
+				"conditions": []map[string]any{{
+					"name":       "cond-1",
+					"window":     (8 * 24 * time.Hour).Nanoseconds(),
+					"threshold":  1,
+					"expression": tagEventRuleValidExpr,
+					"enabled":    true,
+				}},
+			})
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+
+		Convey("阈值超过 1000000 上限被拒绝", func() {
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/create", map[string]any{
+				"name": "bad-threshold",
+				"conditions": []map[string]any{{
+					"name":       "cond-1",
+					"window":     tagEventRuleWindow,
+					"threshold":  1000001,
 					"expression": tagEventRuleValidExpr,
 					"enabled":    true,
 				}},
@@ -283,7 +320,7 @@ func TestTagEventRuleCreateInvalidExpressionRejected(t *testing.T) {
 		r := setupTagEventRuleTestRouter(db, rawDB)
 
 		Convey("表达式语法非法返回带下标与消息的错误详情且不落库", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/create", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/create", map[string]any{
 				"name": "bad-expr",
 				"conditions": []map[string]any{{
 					"name":       "cond-1",
@@ -310,7 +347,7 @@ func TestTagEventRuleCreateInvalidExpressionRejected(t *testing.T) {
 		})
 
 		Convey("对照：合法表达式创建成功", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/create", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/create", map[string]any{
 				"name":       "good-expr",
 				"conditions": []map[string]any{tagEventRuleCondition(tagEventRuleValidExpr)},
 			})
@@ -473,7 +510,7 @@ func TestTagEventRuleRollback(t *testing.T) {
 
 			// 条件恢复为版本 1 内容
 			var conds []*tag.TagEventCondition
-			So(db.Where("tag_event_rule_id = ? AND namespace_name = ?", ruleID, manager.DefaultNamespace).Order("id ASC").Find(&conds).Error, ShouldBeNil)
+			So(db.Where("tag_event_rule_id = ?", ruleID).Order("id ASC").Find(&conds).Error, ShouldBeNil)
 			So(conds, ShouldHaveLength, 1)
 			So(conds[0].Expression, ShouldEqual, tagEventRuleValidExpr)
 
@@ -521,8 +558,16 @@ func TestTagEventRuleDeleteCascade(t *testing.T) {
 		})
 		So(w.Code, ShouldEqual, http.StatusOK)
 
-		w = doTagEventRuleRequest(r, http.MethodPost, tagEventRuleIDPath("/delete", ruleID), nil)
+		w = doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/delete", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
+		var resp struct {
+			Code int            `json:"code"`
+			Data BatchResultOut `json:"data"`
+		}
+		So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+		So(resp.Code, ShouldEqual, http.StatusOK)
+		So(resp.Data.Succeeded, ShouldEqual, 1)
+		So(len(resp.Data.Failed), ShouldEqual, 0)
 
 		var ruleCount, condCount, versionCount int64
 		So(db.Model(&tag.TagEventRule{}).Where("id = ?", ruleID).Count(&ruleCount).Error, ShouldBeNil)
@@ -532,14 +577,16 @@ func TestTagEventRuleDeleteCascade(t *testing.T) {
 		So(condCount, ShouldEqual, 0)
 		So(versionCount, ShouldEqual, 0)
 
-		Convey("重复删除返回 400 业务错误", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, tagEventRuleIDPath("/delete", ruleID), nil)
-			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		Convey("重复删除幂等成功", func() {
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/delete", map[string]any{"ids": []uint64{uint64(ruleID)}})
+			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
-				Code int `json:"code"`
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
 			}
 			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
-			So(resp.Code, ShouldEqual, manager.CodeCannotDeleteCauseRelateRecord)
+			So(resp.Code, ShouldEqual, http.StatusOK)
+			So(resp.Data.Succeeded, ShouldEqual, 1)
 		})
 	})
 }
@@ -554,23 +601,29 @@ func TestTagEventRuleSetEnabled(t *testing.T) {
 			tagEventRuleCondition(tagEventRuleValidExpr),
 		})
 
-		w := doTagEventRuleRequest(r, http.MethodPost, tagEventRuleIDPath("/disable", ruleID), nil)
+		w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/disable", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
+		var resp struct {
+			Code int            `json:"code"`
+			Data BatchResultOut `json:"data"`
+		}
+		So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+		So(resp.Data.Succeeded, ShouldEqual, 1)
 		var rule tag.TagEventRule
 		So(db.First(&rule, ruleID).Error, ShouldBeNil)
 		So(rule.Enabled, ShouldBeFalse)
 
 		// 重复停用幂等返回成功
-		w = doTagEventRuleRequest(r, http.MethodPost, tagEventRuleIDPath("/disable", ruleID), nil)
+		w = doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/disable", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 
-		w = doTagEventRuleRequest(r, http.MethodPost, tagEventRuleIDPath("/enable", ruleID), nil)
+		w = doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/enable", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 		So(db.First(&rule, ruleID).Error, ShouldBeNil)
 		So(rule.Enabled, ShouldBeTrue)
 
 		// 重复启用幂等返回成功
-		w = doTagEventRuleRequest(r, http.MethodPost, tagEventRuleIDPath("/enable", ruleID), nil)
+		w = doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/enable", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 	})
 }
@@ -586,7 +639,7 @@ func TestTagEventRuleList(t *testing.T) {
 		createTagEventRule(t, db, r, "rule-c", false, true, []map[string]any{tagEventRuleCondition("geo")})
 
 		Convey("按名称等值过滤", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/list", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/list", map[string]any{
 				"filterBy": map[string]any{
 					"name": map[string]any{"action": "eq", "value": "rule-a"},
 				},
@@ -605,7 +658,7 @@ func TestTagEventRuleList(t *testing.T) {
 		})
 
 		Convey("按启用状态等值过滤", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/list", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/list", map[string]any{
 				"filterBy": map[string]any{
 					"enabled": map[string]any{"action": "eq", "value": true},
 				},
@@ -622,7 +675,7 @@ func TestTagEventRuleList(t *testing.T) {
 		})
 
 		Convey("按匹配策略等值过滤", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/list", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/list", map[string]any{
 				"filterBy": map[string]any{
 					"matchAll": map[string]any{"action": "eq", "value": true},
 				},
@@ -640,7 +693,7 @@ func TestTagEventRuleList(t *testing.T) {
 		})
 
 		Convey("默认分页返回全量列表且 total 来自 items 嵌入的 BaseTotalOut", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/list", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/list", map[string]any{
 				"pageSize": 10,
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -656,7 +709,7 @@ func TestTagEventRuleList(t *testing.T) {
 		})
 
 		Convey("列表选项接口返回过滤与列元数据", func() {
-			w := doTagEventRuleRequest(r, http.MethodOptions, "/admin/tag-event-rule/list", nil)
+			w := doTagEventRuleRequest(r, http.MethodOptions, "/traffic/tag-event-rule/list", nil)
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
 				Data *ListMeta `json:"data"`
@@ -677,7 +730,7 @@ func TestTagEventRuleValidate(t *testing.T) {
 		r := setupTagEventRuleTestRouter(db, rawDB)
 
 		Convey("合法表达式返回 valid=true 且 refined 不含多余空格", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/validate", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/validate", map[string]any{
 				"expression": "A AND B OR NOT C",
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -692,7 +745,7 @@ func TestTagEventRuleValidate(t *testing.T) {
 		})
 
 		Convey("非法表达式返回 valid=false 且 error 非空", func() {
-			w := doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/validate", map[string]any{
+			w := doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/validate", map[string]any{
 				"expression": tagEventRuleInvalidExpr,
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -726,7 +779,7 @@ func TestTagEventRuleDryRun(t *testing.T) {
 			for k, v := range overrides {
 				body[k] = v
 			}
-			return doTagEventRuleRequest(r, http.MethodPost, "/admin/tag-event-rule/dry-run", body)
+			return doTagEventRuleRequest(r, http.MethodPost, "/traffic/tag-event-rule/dry-run", body)
 		}
 
 		Convey("窗口内累计命中阈值触发事件且 hits 含分组详情", func() {

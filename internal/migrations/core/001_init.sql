@@ -167,7 +167,6 @@ CREATE TABLE IF NOT EXISTS tag_event_conditions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     tag_event_rule_id INT NOT NULL REFERENCES tag_event_rules(id) ON DELETE CASCADE,
-    namespace_name VARCHAR(32) NOT NULL,
     model VARCHAR(255) NOT NULL DEFAULT '',
     dimension VARCHAR(128) NOT NULL DEFAULT '',
     item VARCHAR(255) NOT NULL DEFAULT '',
@@ -183,9 +182,8 @@ COMMENT ON COLUMN tag_event_conditions.id IS 'the primary key of the tag event c
 COMMENT ON COLUMN tag_event_conditions.created_at IS 'the creation time of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions.updated_at IS 'the last update time of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions.tag_event_rule_id IS 'the tag event rule this condition belongs to';
-COMMENT ON COLUMN tag_event_conditions.namespace_name IS 'the namespace the tag event condition belongs to';
 COMMENT ON COLUMN tag_event_conditions.model IS 'the target model type key filter of the condition, empty means no filter, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
-COMMENT ON COLUMN tag_event_conditions.dimension IS 'the tag dimension type filter of the condition, empty means no filter, e.g. fp_tcp_client_sig';
+COMMENT ON COLUMN tag_event_conditions.dimension IS 'the tag dimension type filter of the condition, empty means no filter, e.g. fpTcpClientSig';
 COMMENT ON COLUMN tag_event_conditions.item IS 'the concrete value filter of the tag dimension, empty means no filter, e.g. a fingerprint signature';
 COMMENT ON COLUMN tag_event_conditions.name IS 'the unique name of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions."window" IS 'the time window of the condition';

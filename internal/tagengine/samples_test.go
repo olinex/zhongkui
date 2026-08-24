@@ -46,19 +46,36 @@ func TestListModelSamples(t *testing.T) {
 		db := setupSampleDB(t)
 
 		Convey("未注册模型返回 ErrModelNotRegistered", func() {
-			_, err := tagengine.ListModelSamples(context.Background(), db, "unregistered.model.Type")
+			_, err := tagengine.ListModelSamples(context.Background(), db, "default", "unregistered.model.Type")
 			So(errors.Is(err, tagengine.ErrModelNotRegistered), ShouldBeTrue)
 		})
 
 		Convey("供给后按 name 排序返回样例列表", func() {
-			_, err := tagengine.EnsureModelSamples(context.Background(), db, httpTransportType)
+			_, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
 			So(err, ShouldBeNil)
 
-			samples, err := tagengine.ListModelSamples(context.Background(), db, httpTransportType)
+			samples, err := tagengine.ListModelSamples(context.Background(), db, "default", httpTransportType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 2)
 			So(samples[0].Name, ShouldEqual, "default")
 			So(samples[1].Name, ShouldEqual, "http-example")
+		})
+
+		Convey("样例按命名空间隔离", func() {
+			_, err := tagengine.EnsureModelSamples(context.Background(), db, "tenant-a", httpTransportType)
+			So(err, ShouldBeNil)
+
+			// tenant-b 未供给样例，列表为空
+			samples, err := tagengine.ListModelSamples(context.Background(), db, "tenant-b", httpTransportType)
+			So(err, ShouldBeNil)
+			So(len(samples), ShouldEqual, 0)
+
+			// 命名空间隔离的懒供给互不干扰
+			_, err = tagengine.EnsureModelSamples(context.Background(), db, "tenant-b", httpTransportType)
+			So(err, ShouldBeNil)
+			samplesB, err := tagengine.ListModelSamples(context.Background(), db, "tenant-b", httpTransportType)
+			So(err, ShouldBeNil)
+			So(len(samplesB), ShouldEqual, 2)
 		})
 	})
 }
@@ -68,12 +85,12 @@ func TestEnsureModelSamples(t *testing.T) {
 		db := setupSampleDB(t)
 
 		Convey("未注册模型返回 ErrModelNotRegistered", func() {
-			_, err := tagengine.EnsureModelSamples(context.Background(), db, "unregistered.model.Type")
+			_, err := tagengine.EnsureModelSamples(context.Background(), db, "default", "unregistered.model.Type")
 			So(errors.Is(err, tagengine.ErrModelNotRegistered), ShouldBeTrue)
 		})
 
 		Convey("HttpTransport 懒供给 default 与 http-example 两条样例", func() {
-			samples, err := tagengine.EnsureModelSamples(context.Background(), db, httpTransportType)
+			samples, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 2)
 
@@ -102,22 +119,22 @@ func TestEnsureModelSamples(t *testing.T) {
 		})
 
 		Convey("重复调用 EnsureModelSamples 幂等（样例数量不变）", func() {
-			_, err := tagengine.EnsureModelSamples(context.Background(), db, httpTransportType)
+			_, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
 			So(err, ShouldBeNil)
-			samples, err := tagengine.EnsureModelSamples(context.Background(), db, httpTransportType)
+			samples, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 2)
 		})
 
 		Convey("无预置样例模型首次供给 default，再次调用不新增", func() {
 			registerCustomModel()
-			samples, err := tagengine.EnsureModelSamples(context.Background(), db, customModelType)
+			samples, err := tagengine.EnsureModelSamples(context.Background(), db, "default", customModelType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 1)
 			So(samples[0].Name, ShouldEqual, "default")
 			So(string(samples[0].Input), ShouldEqual, `{"foo":""}`)
 
-			samples, err = tagengine.EnsureModelSamples(context.Background(), db, customModelType)
+			samples, err = tagengine.EnsureModelSamples(context.Background(), db, "default", customModelType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 1)
 		})

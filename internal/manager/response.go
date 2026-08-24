@@ -375,3 +375,13 @@ func (c *CodeError) AbortWithGinW(ctx *gin.Context, data any) {
 		c.ToGinW(GetLocalizer(ctx), GetTranslator(ctx), data),
 	)
 }
+
+// Error 实现 error 接口，返回可读的错误描述（业务码 + 详情）。
+// 供批量操作等将 CodeError 作为失败原因（BatchFailureOut.Reason）使用的场景；
+// 常规错误响应仍通过 AbortWithGinH / AbortWithGinW 输出本地化 JSON。
+func (c *CodeError) Error() string {
+	if c.details == nil {
+		return fmt.Sprintf("code=%d", c.code)
+	}
+	return fmt.Sprintf("code=%d, details=%v", c.code, c.details)
+}

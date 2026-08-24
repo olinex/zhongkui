@@ -389,17 +389,17 @@ func TestUserUpdate(t *testing.T) {
 	})
 }
 
-// TestUserSetActive 测试 userSetActive 函数
+// TestUserSetActive 测试 userBatchSetActive 函数
 func TestUserSetActive(t *testing.T) {
-	Convey("测试 userSetActive 函数", t, func() {
+	Convey("测试 userBatchSetActive 函数", t, func() {
 		// 创建测试数据库和路由
 		db := createUserTestDB()
 		r := setupUserTestRouterWithDB(db)
 
-		// 注册测试路由 - 测试激活用户
-		r.PUT("/api/v1/admin/user/:unionID/activate", userSetActive(true))
-		// 注册测试路由 - 测试禁用用户
-		r.PUT("/api/v1/admin/user/:unionID/deactivate", userSetActive(false))
+		// 注册测试路由 - 批量激活用户
+		r.POST("/api/v1/admin/user/activate", userBatchSetActive(true))
+		// 注册测试路由 - 批量禁用用户
+		r.POST("/api/v1/admin/user/deactivate", userBatchSetActive(false))
 
 		Convey("应成功激活用户", func() {
 			// 创建禁用状态的测试用户
@@ -414,7 +414,9 @@ func TestUserSetActive(t *testing.T) {
 			db.Create(user)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/user/"+user.UnionID.String()+"/activate", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/activate",
+				bytes.NewReader([]byte(`{"unionIds":"`+user.UnionID.String()+`"}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -438,7 +440,9 @@ func TestUserSetActive(t *testing.T) {
 			db.Create(user)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/user/"+user.UnionID.String()+"/deactivate", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/deactivate",
+				bytes.NewReader([]byte(`{"unionIds":["`+user.UnionID.String()+`"]}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -449,9 +453,11 @@ func TestUserSetActive(t *testing.T) {
 			So(deactivatedUser.Active, ShouldBeFalse)
 		})
 
-		Convey("应返回错误当unionID格式无效时", func() {
+		Convey("应返回错误当 unionIds 为空数组时", func() {
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPut, "/api/v1/admin/user/invalid-uuid/activate", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/activate",
+				bytes.NewReader([]byte(`{"unionIds":[]}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusBadRequest)

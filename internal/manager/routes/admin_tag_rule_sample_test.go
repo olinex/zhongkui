@@ -37,8 +37,8 @@ func createTagRuleSampleTestDB() *database.DB {
 	return db
 }
 
-// setupTagRuleSampleTestRouter 创建测试路由引擎，注入 i18n、日志与数据库中间件。
-// 样例为全局数据（不归属命名空间），无需注入命名空间中间件。
+// setupTagRuleSampleTestRouter 创建测试路由引擎，注入 i18n、日志、数据库与命名空间中间件
+// （模拟生产环境 NamespaceMiddleware：固定使用 default 命名空间）。
 func setupTagRuleSampleTestRouter(db *database.DB) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -48,26 +48,30 @@ func setupTagRuleSampleTestRouter(db *database.DB) *gin.Engine {
 		c.Set(manager.CoreDatabaseCtxName, db)
 		c.Next()
 	})
+	r.Use(func(c *gin.Context) {
+		c.Set(manager.NamespaceCtxName, manager.DefaultNamespace)
+		c.Next()
+	})
 	registerTagRuleSampleTestRoutes(r)
 	return r
 }
 
 // registerTagRuleSampleTestRoutes 注册标签规则样例管理路由（与 router.go 的注册保持一致）。
 func registerTagRuleSampleTestRoutes(r *gin.Engine) {
-	admin := r.Group("/admin")
+	admin := r.Group("/traffic")
 	{
 		admin.POST("/tag-rule-sample/list", tagRuleSampleListGet)
 		admin.OPTIONS("/tag-rule-sample/list", ListMetaGinHandler[*TagRuleSampleListGetSearchIn, *TagRuleSampleListOut]())
 		admin.POST("/tag-rule-sample/create", tagRuleSampleCreate)
 		admin.POST("/tag-rule-sample/:id/get", tagRuleSampleDetailGet)
 		admin.POST("/tag-rule-sample/:id/update", tagRuleSampleUpdate)
-		admin.POST("/tag-rule-sample/:id/delete", tagRuleSampleDelete)
+		admin.POST("/tag-rule-sample/delete", tagRuleSampleBatchDelete)
 	}
 }
 
 // sampleIDPath 拼接样例路由路径。
 func sampleIDPath(action string, id uint) string {
-	return "/admin/tag-rule-sample/" + strconv.FormatUint(uint64(id), 10) + action
+	return "/traffic/tag-rule-sample/" + strconv.FormatUint(uint64(id), 10) + action
 }
 
 // TestTagRuleSampleCreateAndDetail 样例创建与详情查询全链路。
@@ -77,7 +81,7 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 		r := setupTagRuleSampleTestRouter(db)
 
 		Convey("合法样例创建成功且详情一致", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model":       tagRuleModel,
 				"name":        "sample-a",
 				"description": "test sample",
@@ -111,7 +115,7 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 		})
 
 		Convey("未注册目标模型的样例被拒绝", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": "zhongkui.com/zhongkui/internal/models/unknown.Foo",
 				"name":  "sample-bad",
 				"input": map[string]any{},
@@ -125,7 +129,7 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 		})
 
 		Convey("输入文档无法反序列化为目标模型被拒绝", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": tagRuleModel,
 				"name":  "sample-bad-input",
 				// method 为字符串字段，数值取值反序列化失败
@@ -140,7 +144,7 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 		})
 
 		Convey("HttpTransport 样例输入含加密密文字符串可创建成功", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": httpTransportTypeKey,
 				"name":  "sample-crypto",
 				"input": map[string]any{
@@ -153,7 +157,7 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 		})
 
 		Convey("样例名不合法被拒绝", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": tagRuleModel,
 				"name":  "bad name!",
 				"input": map[string]any{},
@@ -167,9 +171,9 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 				"name":  "dup-name",
 				"input": map[string]any{"method": "GET"},
 			}
-			So(doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", body).Code, ShouldEqual, http.StatusOK)
-			// 重名撞唯一索引 uq_tag_rule_samples_model_name，按仓库惯例经 500 意外错误返回
-			So(doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", body).Code, ShouldEqual, http.StatusInternalServerError)
+			So(doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", body).Code, ShouldEqual, http.StatusOK)
+			// 重名撞唯一索引 uq_tag_rule_samples_namespace_name_model_name，按仓库惯例经 500 意外错误返回
+			So(doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", body).Code, ShouldEqual, http.StatusInternalServerError)
 		})
 	})
 }
@@ -181,7 +185,7 @@ func TestTagRuleSampleUpdateImmutability(t *testing.T) {
 		r := setupTagRuleSampleTestRouter(db)
 
 		input := map[string]any{"namespace": "default", "method": "POST", "path": "/login"}
-		w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+		w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 			"model": tagRuleModel,
 			"name":  "sample-up",
 			"input": input,
@@ -207,7 +211,7 @@ func TestTagRuleSampleUpdateImmutability(t *testing.T) {
 		})
 
 		Convey("重命名与既有样例冲突被拒绝", func() {
-			So(doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			So(doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": tagRuleModel,
 				"name":  "existing-name",
 				"input": map[string]any{},
@@ -228,14 +232,14 @@ func TestTagRuleSampleUpdateImmutability(t *testing.T) {
 	})
 }
 
-// TestTagRuleSampleDelete 样例删除成功与 404 分支。
+// TestTagRuleSampleDelete 样例删除成功与幂等分支。
 func TestTagRuleSampleDelete(t *testing.T) {
 	Convey("测试标签规则样例删除", t, func() {
 		db := createTagRuleSampleTestDB()
 		r := setupTagRuleSampleTestRouter(db)
 
 		Convey("删除成功且数据落库消失", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": tagRuleModel,
 				"name":  "sample-del",
 				"input": map[string]any{"method": "DELETE"},
@@ -244,16 +248,30 @@ func TestTagRuleSampleDelete(t *testing.T) {
 			var sample tag.TagRuleSample
 			So(db.Where("name = ?", "sample-del").First(&sample).Error, ShouldBeNil)
 
-			w = doTagRuleRequest(r, http.MethodPost, sampleIDPath("/delete", sample.ID), nil)
+			w = doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/delete", map[string]any{"ids": []uint64{uint64(sample.ID)}})
 			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Code, ShouldEqual, http.StatusOK)
+			So(resp.Data.Succeeded, ShouldEqual, 1)
+			So(len(resp.Data.Failed), ShouldEqual, 0)
 			var count int64
 			So(db.Model(&tag.TagRuleSample{}).Where("id = ?", sample.ID).Count(&count).Error, ShouldBeNil)
 			So(count, ShouldEqual, 0)
 		})
 
-		Convey("删除不存在的样例返回 404", func() {
-			w := doTagRuleRequest(r, http.MethodPost, sampleIDPath("/delete", 99999), nil)
-			So(w.Code, ShouldEqual, http.StatusNotFound)
+		Convey("删除不存在的样例幂等成功", func() {
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/delete", map[string]any{"ids": []uint64{99999}})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 1)
 		})
 	})
 }
@@ -265,24 +283,24 @@ func TestTagRuleSampleList(t *testing.T) {
 		r := setupTagRuleSampleTestRouter(db)
 
 		Convey("列表返回全部样例且可按模型过滤", func() {
-			So(doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			So(doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": tagRuleModel,
 				"name":  "list-a",
 				"input": map[string]any{"method": "GET"},
 			}).Code, ShouldEqual, http.StatusOK)
-			So(doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			So(doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": tagRuleModel,
 				"name":  "list-b",
 				"input": map[string]any{"method": "POST"},
 			}).Code, ShouldEqual, http.StatusOK)
-			So(doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/create", map[string]any{
+			So(doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/create", map[string]any{
 				"model": httpTransportTypeKey,
 				"name":  "list-c",
 				"input": map[string]any{"method": "PUT"},
 			}).Code, ShouldEqual, http.StatusOK)
 
 			Convey("不带过滤返回全量", func() {
-				w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/list", map[string]any{
+				w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/list", map[string]any{
 					"page":     1,
 					"pageSize": 10,
 				})
@@ -301,7 +319,7 @@ func TestTagRuleSampleList(t *testing.T) {
 			})
 
 			Convey("按 model 过滤只返回对应样例", func() {
-				w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule-sample/list", map[string]any{
+				w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule-sample/list", map[string]any{
 					"page":     1,
 					"pageSize": 10,
 					"filterBy": map[string]any{

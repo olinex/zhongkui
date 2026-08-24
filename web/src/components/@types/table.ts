@@ -6,6 +6,10 @@ export type Fixed = boolean | "end" | "start" | undefined;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ItemAction = (item: Record<string, any>) => void;
 export type ItemActions = Record<string, ItemAction>;
+// Batch row values are heterogeneous, same as ItemAction.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type BatchAction = (items: Record<string, any>[]) => void;
+export type BatchActions = Record<string, BatchAction>;
 
 export interface TableHeader {
   key: string;

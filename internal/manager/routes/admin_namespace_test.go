@@ -297,12 +297,12 @@ func TestNamespaceUpdate(t *testing.T) {
 	})
 }
 
-// TestNamespaceDelete 测试 namespaceDelete 函数
+// TestNamespaceDelete 测试 namespaceBatchDelete 函数
 func TestNamespaceDelete(t *testing.T) {
-	Convey("测试 namespaceDelete 函数", t, func() {
+	Convey("测试 namespaceBatchDelete 函数", t, func() {
 		db := createNamespaceTestDB()
 		r := setupNamespaceTestRouterWithDB(db)
-		r.DELETE("/api/v1/admin/namespace/:name/delete", namespaceDelete)
+		r.POST("/api/v1/admin/namespace/delete", namespaceBatchDelete)
 
 		Convey("应成功删除命名空间当没有引用时", func() {
 			// 先创建测试数据
@@ -313,10 +313,19 @@ func TestNamespaceDelete(t *testing.T) {
 			db.Create(&ns)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/namespace/test-namespace/delete", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/namespace/delete",
+				bytes.NewReader([]byte(`{"names":"test-namespace"}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 1)
+			So(len(resp.Data.Failed), ShouldEqual, 0)
 
 			// 验证数据库中的记录已删除
 			var deletedNs core.Namespace
@@ -324,7 +333,7 @@ func TestNamespaceDelete(t *testing.T) {
 			So(err, ShouldEqual, gorm.ErrRecordNotFound)
 		})
 
-		Convey("应返回错误当命名空间被RBAC策略引用时", func() {
+		Convey("应记入失败当命名空间被RBAC策略引用时", func() {
 			// 先创建命名空间
 			ns := core.Namespace{
 				Name:        "referenced-namespace",
@@ -342,18 +351,37 @@ func TestNamespaceDelete(t *testing.T) {
 			db.Create(&policy)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/namespace/referenced-namespace/delete", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/namespace/delete",
+				bytes.NewReader([]byte(`{"names":["referenced-namespace"]}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
-			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 0)
+			So(len(resp.Data.Failed), ShouldEqual, 1)
+			So(resp.Data.Failed[0].ID, ShouldEqual, "referenced-namespace")
+			So(resp.Data.Failed[0].Reason, ShouldNotBeEmpty)
 		})
 
-		Convey("应返回错误当命名空间不存在时", func() {
+		Convey("命名空间不存在时幂等成功", func() {
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodDelete, "/api/v1/admin/namespace/nonexistent/delete", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/namespace/delete",
+				bytes.NewReader([]byte(`{"names":"nonexistent"}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
-			So(w.Code, ShouldEqual, http.StatusInternalServerError)
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 1)
 		})
 	})
 }

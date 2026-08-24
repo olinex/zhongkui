@@ -6,6 +6,7 @@
         :list-request="namespaceListGet"
         :options-request="namespaceListOptions"
         :actions="getActions"
+        :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
         model-name="namespace"
       />
@@ -17,6 +18,12 @@
       >
         <template #body="{ proxy }">
           <confirm-alert
+            v-if="batchState"
+            :action="$t('action.delete')"
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+          <confirm-alert
+            v-else
             :action="$t('action.delete')"
             :text="
               $t(`notice.deleteConfirm`, {
@@ -111,10 +118,12 @@ import {
   namespaceUpdate,
 } from "@/apis/admin";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import type { ItemActions } from "@/components/@types/table";
+import type { BatchActions, ItemActions } from "@/components/@types/table";
+import type { BatchResultOut } from "@/apis/@types/admin";
 import { useAppStore } from "@/stores/app";
 import { useUserStore } from "@/stores/user";
 import type { NamespaceDetailOut } from "./@types";
+import i18n from "@/utils/i18n";
 import { useForm } from "vee-validate";
 import { createNamespaceSchema, updateNamespaceSchema } from "@/schemas/namespace";
 import { vuetifyCfg } from "@/utils/form";
@@ -151,6 +160,7 @@ const getActions = (): ItemActions => {
     edit: detailGetAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
+      batchState.value = null;
       confirmDialogRef.value?.open(item);
     },
   };
@@ -203,19 +213,80 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
   })();
 };
 
+// ---- 批量删除 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    namespaceDelete(item.name as string),
+type BatchState = { items: Record<string, any>[] };
+const batchState = ref<BatchState | null>(null);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    delete: () => {
+      batchState.value = { items };
+      confirmDialogRef.value?.open({});
+    },
+  };
+};
+
+// refreshAfterNamespaceChange 刷新列表并同步授权快照（命名空间增删影响右上角切换列表）
+const refreshAfterNamespaceChange = async (): Promise<void> => {
+  await searchTableRef.value?.refresh();
+  await userStore.refreshAuthorization();
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
+  const names = items.map((i) => i.name as string);
+  await getResponse<BatchResultOut>(
+    namespaceDelete(names),
     async (rsp) => {
-      await searchTableRef.value?.refresh();
-      // 刷新授权快照，保证右上角命名空间切换列表实时反映增删改结果
-      await userStore.refreshAuthorization();
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
+      await refreshAfterNamespaceChange();
+    },
+    async (rsp) => {
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
-        color: "success",
+        color: "error",
       });
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchDeleteAction(state.items);
+    return;
+  }
+  await getResponse<BatchResultOut>(
+    namespaceDelete(proxy.name as string),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      await refreshAfterNamespaceChange();
     },
     async (rsp) => {
       appStore.notify({

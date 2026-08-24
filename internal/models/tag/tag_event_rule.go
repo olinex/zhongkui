@@ -90,7 +90,7 @@ func (f *NotFactor) String() string {
 // 例如: "tag_name" 或 "(A OR B)"
 // Label 为值类型 string，标识符分支未匹配时保持零值空串，与 Expr 分支由 nil 区分
 type Atom struct {
-	Label string    `parser:"@Ident"`       // 标签标识符，如 "tag_name"
+	Label string    `parser:"@Ident"`       // 标签标识符，如 "tag_name"、"登录失败"（支持中文）
 	Expr  *BoolExpr `parser:"| '(' @@ ')'"` // 括号内的布尔表达式
 }
 
@@ -113,27 +113,24 @@ func (a *Atom) String() string {
 // 则触发该条件对应的事件。
 // Expression 为标签标识符的布尔组合（AND / OR / NOT / 括号），其中的标签由 TagRule
 // 识别产生，与具体标签维度（risk / asset / behavior）解耦。
+// 条件与规则为多对一关系，命名空间由所属 TagEventRule 承载，条件自身不冗余存储。
 // 例如: "在5分钟内，如果标签A和标签B同时出现超过3次，则触发事件"
 type TagEventCondition struct {
 	database.BaseModel
-	// Namespace 所属命名空间的关联模型，用于多租户隔离
-	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
-	// NamespaceName 所属命名空间名称，与所属 TagEventRule 保持一致
-	NamespaceName string `gorm:"column:namespace_name;type:VARCHAR(32)"`
 	// Model 目标模型类型键过滤条件，对应 TagSumming 的 model 维度，为空表示不限制（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `gorm:"column:model;type:VARCHAR(255)"`
-	// Dimension 标签维度类型过滤条件，对应 TagSumming 的 dimension 维度，为空表示不限制（如 "fp_tcp_client_sig"、"fp_tcp_server_sig"）
+	// Dimension 标签维度类型过滤条件，对应 TagSumming 的 dimension 维度，为空表示不限制（如 "fpTcpClientSig"、"fpTcpServerSig"）
 	Dimension string `gorm:"column:dimension;type:VARCHAR(128)"`
 	// Item 标签维度具体值过滤条件，对应 TagSumming 的 item 维度，为空表示不限制（如具体的指纹签名串）
-	Item           string              `gorm:"column:item;type:VARCHAR(255)"`
-	TagEventRuleID uint                `gorm:"column:tag_event_rule_id;type:INT"`
-	TagEventRule   TagEventRule        `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Name           string              `gorm:"column:name;type:VARCHAR(255)"`
+	Item           string                `gorm:"column:item;type:VARCHAR(255)"`
+	TagEventRuleID uint                  `gorm:"column:tag_event_rule_id;type:INT"`
+	TagEventRule   TagEventRule          `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Name           string                `gorm:"column:name;type:VARCHAR(255)"`
 	Window         serializer.DurationNS `gorm:"type:BIGINT"`
-	Threshold      int                 `gorm:"type:INT"`
-	Expression     string              `gorm:"type:VARCHAR(1024)"`
-	Enabled        bool                `gorm:"type:BOOLEAN"`
-	Description    string              `gorm:"type:VARCHAR(256)"`
+	Threshold      int                   `gorm:"type:INT"`
+	Expression     string                `gorm:"type:VARCHAR(1024)"`
+	Enabled        bool                  `gorm:"type:BOOLEAN"`
+	Description    string                `gorm:"type:VARCHAR(256)"`
 }
 
 // ExprValidate 验证标签事件条件中的标签组合表达式语法是否正确
@@ -173,9 +170,11 @@ func init() {
 	{
 		tmp, err := participle.Build[BoolExpr](
 			participle.Lexer(lexer.MustSimple([]lexer.SimpleRule{
-				{Name: "Ident", Pattern: `[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?`}, // 标识符规则: 字母开头，可包含字母、数字、下划线和连字符，不能以下划线或连字符结尾
-				{Name: "Punct", Pattern: `[()]`},                                 // 标点符号规则: 括号
-				{Name: "Whitespace", Pattern: `\s+`},                             // 空白字符规则: 用于忽略空格
+				// 标识符规则: 以 Unicode 字母开头（含中文），可包含字母、数字、下划线和连字符，不能以连字符结尾。
+				// 标签名可能为中文（如 "登录失败"），故用 \p{L}/\p{N} 而非仅 ASCII
+				{Name: "Ident", Pattern: `[\p{L}]([\p{L}\p{N}_-]*[\p{L}\p{N}])?`},
+				{Name: "Punct", Pattern: `[()]`},     // 标点符号规则: 括号
+				{Name: "Whitespace", Pattern: `\s+`}, // 空白字符规则: 用于忽略空格
 			})),
 			participle.Elide("Whitespace"), // 忽略空白字符
 		)

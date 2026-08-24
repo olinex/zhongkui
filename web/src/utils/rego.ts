@@ -113,7 +113,7 @@ export interface InputItemMeta {
 
 /**
  * Field metadata of an input model document as returned by the
- * `/admin/tag-rule/model/metadata` endpoint.
+ * `/traffic/tag-rule/model/metadata` endpoint.
  */
 export interface InputFieldMeta {
   /** input field name, e.g. "method" */
@@ -319,6 +319,10 @@ export function preflightRego(src: string): RegoValidationError[] {
   }
   if (!/tags\s+(contains|:=)/.test(src)) {
     push("missing `tags` output declaration", 1, 1);
+  }
+  // 与后端 TagRuleCreateIn.Rego 的 max=65536（64KiB）保持一致
+  if (src.length > 65536) {
+    push("rego exceeds the maximum length of 65536 characters", 1, 1);
   }
 
   errors.sort((a, b) => a.line - b.line || a.column - b.column);

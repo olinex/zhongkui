@@ -5,22 +5,14 @@ import type { SearchIn } from "@/components/@types/table";
 import type {
   CapturerConfigIn,
   CapturerCreateIn,
+  FlexIDs,
+  FlexNames,
+  FlexUnionIds,
   GroupCreateIn,
   GroupRbacPolicyIn,
   GroupUpdateIn,
   NamespaceCreateIn,
   NamespaceUpdateIn,
-  TagEventRuleCreateIn,
-  TagEventRuleDryRunIn,
-  TagEventRuleUpdateIn,
-  TagEventRuleValidateIn,
-  TagRuleCreateIn,
-  TagRuleDryRunIn,
-  TagRuleModelIn,
-  TagRuleSampleCreateIn,
-  TagRuleSampleUpdateIn,
-  TagRuleUpdateIn,
-  TagRuleValidateIn,
   UserCreateIn,
   UserGroupIn,
   UserPasswordResetIn,
@@ -50,10 +42,14 @@ export function userUpdate(unionID: string, data: profileChangeIn): AxiosPromise
   });
 }
 
-export function userSetActive(unionID: string, active: boolean): AxiosPromise {
-  return request.post(`/admin/user/${unionID}/${active ? "activate" : "deactivate"}`, null, {
-    headers: getJwtHeader(),
-  });
+export function userSetActive(unionIds: FlexUnionIds, active: boolean): AxiosPromise {
+  return request.post(
+    `/admin/user/${active ? "activate" : "deactivate"}`,
+    { unionIds },
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }
 
 export function userPasswordReset(unionID: string, data: UserPasswordResetIn): AxiosPromise {
@@ -109,10 +105,14 @@ export function groupCreate(data: GroupCreateIn): AxiosPromise {
   });
 }
 
-export function groupDelete(name: string): AxiosPromise {
-  return request.post(`/admin/group/${name}/delete`, null, {
-    headers: getJwtHeader(),
-  });
+export function groupDelete(names: FlexNames): AxiosPromise {
+  return request.post(
+    "/admin/group/delete",
+    { names },
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }
 
 export function groupRbacPolicyAdd(groupName: string, data: GroupRbacPolicyIn): AxiosPromise {
@@ -144,10 +144,14 @@ export function namespaceDetailGet(name: string): AxiosPromise {
   });
 }
 
-export function namespaceDelete(name: string): AxiosPromise {
-  return request.post(`/admin/namespace/${name}/delete`, null, {
-    headers: getJwtHeader(),
-  });
+export function namespaceDelete(names: FlexNames): AxiosPromise {
+  return request.post(
+    "/admin/namespace/delete",
+    { names },
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }
 
 export function namespaceCreate(data: NamespaceCreateIn): AxiosPromise {
@@ -206,217 +210,12 @@ export function capturerUpdate(id: number, data: CapturerConfigIn): AxiosPromise
   });
 }
 
-export function capturerDelete(id: number): AxiosPromise {
-  return request.post(`/admin/capturer/${id}/delete`, null, {
-    headers: getJwtHeader(),
-  });
-}
-
-// tag rule
-export function tagRuleListGet(data: SearchIn): AxiosPromise {
-  return request.post("/admin/tag-rule/list", data, { headers: getJwtHeader() });
-}
-
-export function tagRuleListOptions(): AxiosPromise {
-  return request.options("/admin/tag-rule/list", { headers: getJwtHeader() });
-}
-
-export function tagRuleDetailGet(id: number): AxiosPromise {
+export function capturerDelete(ids: FlexIDs): AxiosPromise {
   return request.post(
-    `/admin/tag-rule/${id}/get`,
-    {},
+    "/admin/capturer/delete",
+    { ids },
     {
       headers: getJwtHeader(),
     },
   );
-}
-
-export function tagRuleCreate(data: TagRuleCreateIn): AxiosPromise {
-  return request.post("/admin/tag-rule/create", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleUpdate(id: number, data: TagRuleUpdateIn): AxiosPromise {
-  return request.post(`/admin/tag-rule/${id}/update`, data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleDelete(id: number): AxiosPromise {
-  return request.post(`/admin/tag-rule/${id}/delete`, null, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleSetEnabled(id: number, enabled: boolean): AxiosPromise {
-  return request.post(`/admin/tag-rule/${id}/${enabled ? "enable" : "disable"}`, null, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleValidate(data: TagRuleValidateIn): AxiosPromise {
-  return request.post("/admin/tag-rule/validate", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleModelOptions(): AxiosPromise {
-  return request.post(
-    "/admin/tag-rule/model/options",
-    {},
-    {
-      headers: getJwtHeader(),
-    },
-  );
-}
-
-export function tagRuleModelMetadata(data: TagRuleModelIn): AxiosPromise {
-  return request.post("/admin/tag-rule/model/metadata", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleModelSamples(data: TagRuleModelIn): AxiosPromise {
-  return request.post("/admin/tag-rule/model/samples", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleDryRun(data: TagRuleDryRunIn): AxiosPromise {
-  return request.post("/admin/tag-rule/single/dry-run", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleVersionList(id: number): AxiosPromise {
-  return request.post(
-    `/admin/tag-rule/${id}/version/list`,
-    {},
-    {
-      headers: getJwtHeader(),
-    },
-  );
-}
-
-export function tagRuleVersionRollback(id: number, version: number): AxiosPromise {
-  return request.post(`/admin/tag-rule/${id}/version/${version}/rollback`, null, {
-    headers: getJwtHeader(),
-  });
-}
-
-// tag rule sample
-export function tagRuleSampleCreate(data: TagRuleSampleCreateIn): AxiosPromise {
-  return request.post("/admin/tag-rule-sample/create", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleSampleListGet(data: SearchIn): AxiosPromise {
-  return request.post("/admin/tag-rule-sample/list", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleSampleListOptions(): AxiosPromise {
-  return request.options("/admin/tag-rule-sample/list", {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleSampleDetailGet(id: number): AxiosPromise {
-  return request.post(
-    `/admin/tag-rule-sample/${id}/get`,
-    {},
-    {
-      headers: getJwtHeader(),
-    },
-  );
-}
-
-export function tagRuleSampleUpdate(id: number, data: TagRuleSampleUpdateIn): AxiosPromise {
-  return request.post(`/admin/tag-rule-sample/${id}/update`, data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagRuleSampleDelete(id: number): AxiosPromise {
-  return request.post(`/admin/tag-rule-sample/${id}/delete`, null, {
-    headers: getJwtHeader(),
-  });
-}
-
-// tag event rule
-export function tagEventRuleListGet(data: SearchIn): AxiosPromise {
-  return request.post("/admin/tag-event-rule/list", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleListOptions(): AxiosPromise {
-  return request.options("/admin/tag-event-rule/list", {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleDetailGet(id: number): AxiosPromise {
-  return request.post(
-    `/admin/tag-event-rule/${id}/get`,
-    {},
-    {
-      headers: getJwtHeader(),
-    },
-  );
-}
-
-export function tagEventRuleCreate(data: TagEventRuleCreateIn): AxiosPromise {
-  return request.post("/admin/tag-event-rule/create", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleUpdate(id: number, data: TagEventRuleUpdateIn): AxiosPromise {
-  return request.post(`/admin/tag-event-rule/${id}/update`, data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleDelete(id: number): AxiosPromise {
-  return request.post(`/admin/tag-event-rule/${id}/delete`, null, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleSetEnabled(id: number, enabled: boolean): AxiosPromise {
-  return request.post(`/admin/tag-event-rule/${id}/${enabled ? "enable" : "disable"}`, null, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleValidate(data: TagEventRuleValidateIn): AxiosPromise {
-  return request.post("/admin/tag-event-rule/validate", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleDryRun(data: TagEventRuleDryRunIn): AxiosPromise {
-  return request.post("/admin/tag-event-rule/dry-run", data, {
-    headers: getJwtHeader(),
-  });
-}
-
-export function tagEventRuleVersionList(id: number): AxiosPromise {
-  return request.post(
-    `/admin/tag-event-rule/${id}/version/list`,
-    {},
-    {
-      headers: getJwtHeader(),
-    },
-  );
-}
-
-export function tagEventRuleVersionRollback(id: number, version: number): AxiosPromise {
-  return request.post(`/admin/tag-event-rule/${id}/version/${version}/rollback`, null, {
-    headers: getJwtHeader(),
-  });
 }

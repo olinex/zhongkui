@@ -180,8 +180,8 @@ import { DateTime } from "luxon";
 import { useForm } from "vee-validate";
 
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import { tagRuleSampleCreate } from "@/apis/admin";
 import {
+  tagRuleSampleCreate,
   TrafficCryptoFields,
   TrafficModelKeys,
   TrafficS3Fields,
@@ -877,6 +877,9 @@ const favoriteSampleAction = async (item: Record<string, unknown>): Promise<void
   const input = { ...item };
   // 列表分页计数（BaseTotalOut）非模型字段，从样例文档中剔除
   delete input.total;
+  // 样例归属当前请求命名空间：将输入文档的 namespace 归一为当前命名空间，
+  // 保证样例与命名空间自洽（流量记录经命名空间过滤查询，通常一致，此处兜底）
+  input.namespace = appStore.namespace;
   await getSimpleResponse(
     tagRuleSampleCreate({
       model: modelKey!,

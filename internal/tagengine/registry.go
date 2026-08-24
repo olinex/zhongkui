@@ -19,6 +19,10 @@ type Target struct {
 	// DisplayName 展示名称的 i18n 键（如 model.network.httpTransport），
 	// 翻译文案维护在 internal/pkg/translate/locales 下
 	DisplayName string
+	// Dimensions 该模型合法标签维度取值列表（snake_case 列名，对应
+	// tag_summings.dimension 的存储值，须与 ClickHouse 物化视图的展开列保持一致）。
+	// 未登记任何维度的模型不参与标签维度统计，dimension 下拉不出选项。
+	Dimensions []string
 }
 
 // Option 表示注册表导出的选项项，供接口层作为参数校验（options 列表）与下拉选择的数据源。
@@ -30,9 +34,17 @@ type Option struct {
 }
 
 // targets 可打标目标模型的静态注册清单，包初始化时构建索引。
-// 新增可打标模型时在此登记，并补充对应的 i18n displayname 文案。
+// 新增可打标模型时在此登记，并补充对应的 i18n displayname 文案；
+// 参与标签维度统计的模型须同时登记 Dimensions（与 ClickHouse 物化视图展开列一致）。
 var targets = []Target{
-	{Type: &network.HttpTransport{}, DisplayName: "model.network.httpTransport"},
+	{
+		Type:        &network.HttpTransport{},
+		DisplayName: "model.network.httpTransport",
+		Dimensions: []string{
+			"fpTcpClientSig",
+			"fpTcpServerSig",
+		},
+	},
 }
 
 // registeredTargets 全局模型注册表索引：类型键 → 目标模型元信息。
@@ -98,6 +110,16 @@ func DisplayName(typeKey string) string {
 		return target.DisplayName
 	}
 	return ""
+}
+
+// Dimensions 返回已注册模型合法标签维度取值列表（snake_case 列名，
+// 对应 tag_summings.dimension 的存储值），未注册模型返回 nil。
+// 供接口层作为 dimension 下拉选择的数据源，保证前后端维度配置同步。
+func Dimensions(typeKey string) []string {
+	if target, ok := TargetInfo(typeKey); ok {
+		return target.Dimensions
+	}
+	return nil
 }
 
 // Options 返回全部已注册目标模型的选项列表，按类型键排序。

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -95,16 +96,16 @@ func createTagRuleTestDB() *database.DB {
 func registerTagRuleTestRoutes(r *gin.Engine, engine *tagengine.Engine) {
 	// 测试引擎未绑定 etcd：写路径 BroadcastChange 快速失败，验证广播降级不阻断响应
 	engineMiddleware := manager.TagRuleEngineMiddleware(engine)
-	admin := r.Group("/admin")
+	admin := r.Group("/traffic")
 	{
 		admin.POST("/tag-rule/list", tagRuleListGet)
 		admin.OPTIONS("/tag-rule/list", ListMetaGinHandler[*TagRuleListGetSearchIn, *TagRuleListOut]())
 		admin.POST("/tag-rule/create", engineMiddleware, tagRuleCreate)
 		admin.POST("/tag-rule/:id/get", tagRuleDetailGet)
 		admin.POST("/tag-rule/:id/update", engineMiddleware, tagRuleUpdate)
-		admin.POST("/tag-rule/:id/delete", engineMiddleware, tagRuleDelete)
-		admin.POST("/tag-rule/:id/enable", engineMiddleware, tagRuleSetEnabled(true))
-		admin.POST("/tag-rule/:id/disable", engineMiddleware, tagRuleSetEnabled(false))
+		admin.POST("/tag-rule/delete", engineMiddleware, tagRuleBatchDelete)
+		admin.POST("/tag-rule/enable", engineMiddleware, tagRuleBatchSetEnabled(true))
+		admin.POST("/tag-rule/disable", engineMiddleware, tagRuleBatchSetEnabled(false))
 		admin.POST("/tag-rule/validate", tagRuleValidate)
 		admin.POST("/tag-rule/model/options", tagRuleModelOptions)
 		admin.POST("/tag-rule/model/metadata", tagRuleModelMetadata)
@@ -158,7 +159,7 @@ func doTagRuleRequest(r *gin.Engine, method, path string, body any) *httptest.Re
 // createTagRule 通过创建接口落库一条规则，返回规则 ID。
 func createTagRule(t *testing.T, db *database.DB, r *gin.Engine, name, rego string) uint {
 	t.Helper()
-	w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+	w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 		"name":        name,
 		"description": "test rule",
 		"model":       tagRuleModel,
@@ -173,7 +174,7 @@ func createTagRule(t *testing.T, db *database.DB, r *gin.Engine, name, rego stri
 
 // ruleIDPath 拼接规则路由路径。
 func ruleIDPath(action string, id uint) string {
-	return "/admin/tag-rule/" + strconv.FormatUint(uint64(id), 10) + action
+	return "/traffic/tag-rule/" + strconv.FormatUint(uint64(id), 10) + action
 }
 
 // TestTagRuleCreateAndDetail 创建与详情查询全链路。
@@ -204,7 +205,7 @@ func TestTagRuleCreateAndDetail(t *testing.T) {
 		})
 
 		Convey("规则名不合法被拒绝", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 				"name":    "bad name!",
 				"model":   tagRuleModel,
 				"rego":    tagRuleValidRego,
@@ -223,7 +224,7 @@ func TestTagRuleCreateInvalidRegoRejected(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("语法非法返回带行列号的错误详情", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 				"name":    "bad-syntax",
 				"model":   tagRuleModel,
 				"rego":    "package zki\n\ntags contains if {",
@@ -246,7 +247,7 @@ func TestTagRuleCreateInvalidRegoRejected(t *testing.T) {
 
 		Convey("组级冲突（tags := 与 tags contains 并存）被拒绝", func() {
 			createTagRule(t, db, r, "full-assign", "package zki\n\ntags := {\"a\"}")
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 				"name":    "partial",
 				"model":   tagRuleModel,
 				"rego":    "package zki\n\ntags contains \"b\"",
@@ -261,6 +262,27 @@ func TestTagRuleCreateInvalidRegoRejected(t *testing.T) {
 
 			var count int64
 			So(db.Model(&tag.TagRule{}).Where("name = ?", "partial").Count(&count).Error, ShouldBeNil)
+			So(count, ShouldEqual, 0)
+		})
+
+		Convey("Rego 超过 64KiB 上限被拒绝", func() {
+			// 合法的 Rego 头部 + 超长注释撑满 64KiB，触发 binding max=65536
+			oversized := "package zki\n\ntags contains \"a\" if {\n\t# " + strings.Repeat("x", 65536) + "\n}"
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
+				"name":    "oversized",
+				"model":   tagRuleModel,
+				"rego":    oversized,
+				"enabled": true,
+			})
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var resp struct {
+				Code int `json:"code"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Code, ShouldEqual, manager.CodeBadBody)
+
+			var count int64
+			So(db.Model(&tag.TagRule{}).Where("name = ?", "oversized").Count(&count).Error, ShouldBeNil)
 			So(count, ShouldEqual, 0)
 		})
 	})
@@ -429,8 +451,16 @@ func TestTagRuleDeleteCascade(t *testing.T) {
 			"enabled": true,
 		})
 
-		w := doTagRuleRequest(r, http.MethodPost, ruleIDPath("/delete", ruleID), nil)
+		w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/delete", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
+		var resp struct {
+			Code int            `json:"code"`
+			Data BatchResultOut `json:"data"`
+		}
+		So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+		So(resp.Code, ShouldEqual, http.StatusOK)
+		So(resp.Data.Succeeded, ShouldEqual, 1)
+		So(len(resp.Data.Failed), ShouldEqual, 0)
 
 		var ruleCount, versionCount int64
 		So(db.Model(&tag.TagRule{}).Where("id = ?", ruleID).Count(&ruleCount).Error, ShouldBeNil)
@@ -448,17 +478,23 @@ func TestTagRuleEnableDisable(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 		ruleID := createTagRule(t, db, r, "rule-io", tagRuleValidRego)
 
-		w := doTagRuleRequest(r, http.MethodPost, ruleIDPath("/disable", ruleID), nil)
+		w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/disable", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
+		var resp struct {
+			Code int            `json:"code"`
+			Data BatchResultOut `json:"data"`
+		}
+		So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+		So(resp.Data.Succeeded, ShouldEqual, 1)
 		var rule tag.TagRule
 		So(db.First(&rule, ruleID).Error, ShouldBeNil)
 		So(rule.Enabled, ShouldBeFalse)
 
 		// 重复停用幂等返回成功
-		w = doTagRuleRequest(r, http.MethodPost, ruleIDPath("/disable", ruleID), nil)
+		w = doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/disable", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 
-		w = doTagRuleRequest(r, http.MethodPost, ruleIDPath("/enable", ruleID), nil)
+		w = doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/enable", map[string]any{"ids": []uint64{uint64(ruleID)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 		So(db.First(&rule, ruleID).Error, ShouldBeNil)
 		So(rule.Enabled, ShouldBeTrue)
@@ -473,7 +509,7 @@ func TestTagRuleValidate(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("合法规则返回 valid=true 且 errors 为空数组", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/validate", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/validate", map[string]any{
 				"rego": tagRuleValidRego,
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -486,7 +522,7 @@ func TestTagRuleValidate(t *testing.T) {
 		})
 
 		Convey("非法规则返回 valid=false 且错误带行列号", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/validate", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/validate", map[string]any{
 				"rego": "package zki\n\ntags contains if {",
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -501,7 +537,7 @@ func TestTagRuleValidate(t *testing.T) {
 		})
 
 		Convey("携带 model 时未知 input 字段进入 warnings 且不阻断合法结果", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/validate", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/validate", map[string]any{
 				"rego":  "package zki\n\ntags contains \"admin-login\" if {\n\tinput.methodd == \"POST\"\n}",
 				"model": tagRuleModel,
 			})
@@ -520,7 +556,7 @@ func TestTagRuleValidate(t *testing.T) {
 		})
 
 		Convey("不携带 model 时 warnings 为空数组", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/validate", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/validate", map[string]any{
 				"rego": "package zki\n\ntags contains \"admin-login\" if {\n\tinput.methodd == \"POST\"\n}",
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -543,7 +579,7 @@ func TestTagRuleModelOptions(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("返回已注册模型且含 HttpTransport", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/options", nil)
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/model/options", nil)
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
 				Data TagRuleModelOptionsOut `json:"data"`
@@ -570,7 +606,7 @@ func TestTagRuleModelMetadata(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("HttpTransport 返回字段列表且含 method", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/metadata", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/model/metadata", map[string]any{
 				"model": httpTransportTypeKey,
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -596,10 +632,16 @@ func TestTagRuleModelMetadata(t *testing.T) {
 				}
 			}
 			So(found, ShouldBeTrue)
+			// 合法标签维度来自 tagengine 注册表（与物化视图展开列一致），
+			// Description 按请求语言（en）复用字段描述文案
+			So(resp.Data.Dimensions, ShouldResemble, []TagRuleModelDimensionOut{
+				{Value: "fpTcpClientSig", Description: "Client TCP signature"},
+				{Value: "fpTcpServerSig", Description: "Server TCP signature"},
+			})
 		})
 
 		Convey("未注册模型返回错误码 1107", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/metadata", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/model/metadata", map[string]any{
 				"model": "zhongkui.com/zhongkui/internal/models/network.NotExist",
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -620,7 +662,7 @@ func TestTagRuleModelSamples(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("HttpTransport 懒供给样例且含 http-example", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/samples", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/model/samples", map[string]any{
 				"model": httpTransportTypeKey,
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -642,7 +684,7 @@ func TestTagRuleModelSamples(t *testing.T) {
 		})
 
 		Convey("未注册模型返回错误码 1107", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/model/samples", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/model/samples", map[string]any{
 				"model": "zhongkui.com/zhongkui/internal/models/network.NotExist",
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -664,7 +706,7 @@ func TestTagRuleDryRun(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("合法候选规则命中输入文档", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/single/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"name":  "solo",
 				"rego":  tagRuleValidRego,
@@ -684,7 +726,7 @@ func TestTagRuleDryRun(t *testing.T) {
 		})
 
 		Convey("缺少规则名时以占位名兜底并正常评估", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/single/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"rego":  tagRuleValidRego,
 				"input": map[string]any{"method": "POST"},
@@ -700,7 +742,7 @@ func TestTagRuleDryRun(t *testing.T) {
 		})
 
 		Convey("语法非法的候选规则返回校验错误且不评估", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/single/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"name":  "bad",
 				"rego":  "package zki\n\ntags contains if {",
@@ -717,7 +759,7 @@ func TestTagRuleDryRun(t *testing.T) {
 		})
 
 		Convey("缺少 rego 被拒绝", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/single/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"input": map[string]any{"method": "POST"},
 			})
@@ -725,7 +767,7 @@ func TestTagRuleDryRun(t *testing.T) {
 		})
 
 		Convey("违反契约（非 zki 包）的候选规则被拒绝，与写路径校验语义一致", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/single/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/single/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"name":  "other-package",
 				"rego":  "package other\n\ntags contains \"x\" if {\n\tinput.method == \"POST\"\n}",
@@ -751,7 +793,7 @@ func TestTagRuleDryRunGroup(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("合法候选规则组命中输入文档并输出逐规则详情", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/group/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/group/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"rules": []map[string]any{
 					{"name": "rule-hit", "rego": tagRuleValidRego},
@@ -779,7 +821,7 @@ tags contains "miss-tag" if {
 		})
 
 		Convey("语法非法的候选规则返回校验错误且不评估", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/group/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/group/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"rules": []map[string]any{
 					{"name": "bad", "rego": "package zki\n\ntags contains if {"},
@@ -797,7 +839,7 @@ tags contains "miss-tag" if {
 		})
 
 		Convey("空规则列表被拒绝", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/group/dry-run", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/group/dry-run", map[string]any{
 				"model": tagRuleModel,
 				"rules": []map[string]any{},
 				"input": map[string]any{"method": "POST"},
@@ -817,7 +859,7 @@ func TestTagRuleListGet(t *testing.T) {
 		createTagRule(t, db, r, "rule-b", "package zki\n\ntags contains \"b\" if {\n\tinput.method == \"GET\"\n}")
 
 		Convey("按名称前缀过滤", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/list", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/list", map[string]any{
 				"filterBy": map[string]any{
 					"name": map[string]any{"action": "pfx", "value": "rule-a"},
 				},
@@ -835,7 +877,7 @@ func TestTagRuleListGet(t *testing.T) {
 		})
 
 		Convey("列表选项接口返回列与搜索元数据", func() {
-			w := doTagRuleRequest(r, http.MethodOptions, "/admin/tag-rule/list", nil)
+			w := doTagRuleRequest(r, http.MethodOptions, "/traffic/tag-rule/list", nil)
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
 				Data *ListMeta `json:"data"`
@@ -862,7 +904,7 @@ func TestTagRuleInvalidateAfterWrite(t *testing.T) {
 		So(first.Tags, ShouldResemble, []string{"admin-login"})
 
 		// 经接口新增同组规则后，引擎应重新按 DB 最新规则编译
-		w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+		w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 			"name":    "rule-cache-2",
 			"model":   tagRuleModel,
 			"rego":    "package zki\n\ntags contains \"admin-cache\" if {\n\tinput.method == \"POST\"\n}",
@@ -887,8 +929,9 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 		targetType, err := tagengine.TypeKey(&network.HttpTransport{})
 		So(err, ShouldBeNil)
 		sample := &tag.TagRuleSample{
-			Model: targetType,
-			Name:  "browser-post",
+			NamespaceName: "default",
+			Model:         targetType,
+			Name:          "browser-post",
 			Input: datatypes.JSON(`{
 				"namespace": "default",
 				"method": "POST",
@@ -901,7 +944,7 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 		So(db.Create(sample).Error, ShouldBeNil)
 
 		Convey("运行期报错的规则创建被拒绝并返回错误码 1106", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 				"name":    "runtime-bad",
 				"model":   targetType,
 				"rego":    "package zki\n\ntags contains \"oops\" if {\n\tcount(input.req_hdr_content_length) > 10\n}",
@@ -917,7 +960,7 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 		})
 
 		Convey("运行期合法的规则创建成功", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 				"name":    "runtime-ok",
 				"model":   targetType,
 				"rego":    "package zki\n\ntags contains \"post\" if {\n\tinput.method == \"POST\"\n}",
@@ -937,7 +980,7 @@ func TestTagRuleCreateModelNotRegisteredRejected(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		Convey("未注册模型的规则创建被拒绝并返回错误码 1107", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/admin/tag-rule/create", map[string]any{
+			w := doTagRuleRequest(r, http.MethodPost, "/traffic/tag-rule/create", map[string]any{
 				"name":    "unregistered-model",
 				"model":   "unregistered.model.Type",
 				"rego":    tagRuleValidRego,

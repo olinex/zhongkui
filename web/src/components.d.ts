@@ -44,6 +44,8 @@ declare module 'vue' {
     ScrollSearchField: typeof import('./components/forms/ScrollSearchField.vue')['default']
     SearchTable: typeof import('./components/table/SearchTable.vue')['default']
     StorageSizeChip: typeof import('./components/base/StorageSizeChip.vue')['default']
+    TagExprEditor: typeof import('./components/forms/TagExprEditor.vue')['default']
+    TagExpressionField: typeof import('./components/forms/TagExpressionField.vue')['default']
     TagRuleSamplePanel: typeof import('./components/admin/TagRuleSamplePanel.vue')['default']
     TempEditableDialog: typeof import('./components/forms/TempEditableDialog.vue')['default']
     TimeField: typeof import('./components/forms/TimeField.vue')['default']

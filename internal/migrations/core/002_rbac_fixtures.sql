@@ -22,8 +22,8 @@ ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/admin/user/list', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/user/list', 'OPTIONS', 'allow'),
-    ('p', 'admin', 'api:/api/v1/admin/user/:unionID/activate', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/admin/user/:unionID/deactivate', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/user/activate', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/user/deactivate', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/user/:unionID/join-group', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/user/:unionID/leave-group', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/group/list', 'POST', 'allow'),
@@ -42,8 +42,8 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/get', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/update', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/update', 'OPTIONS', 'allow'),
-    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/delete', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/delete', 'OPTIONS', 'allow')
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/delete', 'OPTIONS', 'allow')
 ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 
 -- RbacPolicyTemplate
@@ -58,10 +58,10 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/admin/user/:unionID/get', 'OPTIONS'),
     ('api:/api/v1/admin/user/:unionID/update', 'POST'),
     ('api:/api/v1/admin/user/:unionID/update', 'OPTIONS'),
-    ('api:/api/v1/admin/user/:unionID/activate', 'POST'),
-    ('api:/api/v1/admin/user/:unionID/activate', 'OPTIONS'),
-    ('api:/api/v1/admin/user/:unionID/deactivate', 'POST'),
-    ('api:/api/v1/admin/user/:unionID/deactivate', 'OPTIONS'),
+    ('api:/api/v1/admin/user/activate', 'POST'),
+    ('api:/api/v1/admin/user/activate', 'OPTIONS'),
+    ('api:/api/v1/admin/user/deactivate', 'POST'),
+    ('api:/api/v1/admin/user/deactivate', 'OPTIONS'),
     ('api:/api/v1/admin/user/:unionID/join-group', 'POST'),
     ('api:/api/v1/admin/user/:unionID/join-group', 'OPTIONS'),
     ('api:/api/v1/admin/user/:unionID/leave-group', 'POST'),
@@ -75,8 +75,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/admin/group/:name/get', 'OPTIONS'),
     ('api:/api/v1/admin/group/:name/update', 'POST'),
     ('api:/api/v1/admin/group/:name/update', 'OPTIONS'),
-    ('api:/api/v1/admin/group/:name/delete', 'POST'),
-    ('api:/api/v1/admin/group/:name/delete', 'OPTIONS'),
+    ('api:/api/v1/admin/group/delete', 'POST'),
+    ('api:/api/v1/admin/group/delete', 'OPTIONS'),
     ('api:/api/v1/admin/group/:name/add-rbac-policy', 'POST'),
     ('api:/api/v1/admin/group/:name/add-rbac-policy', 'OPTIONS'),
     ('api:/api/v1/admin/group/:name/remove-rbac-policy', 'POST'),
@@ -93,8 +93,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/admin/namespace/:name/get', 'OPTIONS'),
     ('api:/api/v1/admin/namespace/:name/update', 'POST'),
     ('api:/api/v1/admin/namespace/:name/update', 'OPTIONS'),
-    ('api:/api/v1/admin/namespace/:name/delete', 'POST'),
-    ('api:/api/v1/admin/namespace/:name/delete', 'OPTIONS'),
+    ('api:/api/v1/admin/namespace/delete', 'POST'),
+    ('api:/api/v1/admin/namespace/delete', 'OPTIONS'),
     -- 管理接口：抓包器
     ('api:/api/v1/admin/capturer/list', 'POST'),
     ('api:/api/v1/admin/capturer/list', 'OPTIONS'),
@@ -104,73 +104,73 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/admin/capturer/:id/get', 'OPTIONS'),
     ('api:/api/v1/admin/capturer/:id/update', 'POST'),
     ('api:/api/v1/admin/capturer/:id/update', 'OPTIONS'),
-    ('api:/api/v1/admin/capturer/:id/delete', 'POST'),
-    ('api:/api/v1/admin/capturer/:id/delete', 'OPTIONS'),
-    -- 管理接口：标签规则
-    ('api:/api/v1/admin/tag-rule/list', 'POST'),
-    ('api:/api/v1/admin/tag-rule/list', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/create', 'POST'),
-    ('api:/api/v1/admin/tag-rule/create', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/:id/get', 'POST'),
-    ('api:/api/v1/admin/tag-rule/:id/get', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/:id/update', 'POST'),
-    ('api:/api/v1/admin/tag-rule/:id/update', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/:id/delete', 'POST'),
-    ('api:/api/v1/admin/tag-rule/:id/delete', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/:id/enable', 'POST'),
-    ('api:/api/v1/admin/tag-rule/:id/enable', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/:id/disable', 'POST'),
-    ('api:/api/v1/admin/tag-rule/:id/disable', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/validate', 'POST'),
-    ('api:/api/v1/admin/tag-rule/validate', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/single/dry-run', 'POST'),
-    ('api:/api/v1/admin/tag-rule/single/dry-run', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/group/dry-run', 'POST'),
-    ('api:/api/v1/admin/tag-rule/group/dry-run', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/:id/version/list', 'POST'),
-    ('api:/api/v1/admin/tag-rule/:id/version/list', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/:id/version/:version/rollback', 'POST'),
-    ('api:/api/v1/admin/tag-rule/:id/version/:version/rollback', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/model/options', 'POST'),
-    ('api:/api/v1/admin/tag-rule/model/options', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/model/metadata', 'POST'),
-    ('api:/api/v1/admin/tag-rule/model/metadata', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule/model/samples', 'POST'),
-    ('api:/api/v1/admin/tag-rule/model/samples', 'OPTIONS'),
-    -- 管理接口：标签规则样例
-    ('api:/api/v1/admin/tag-rule-sample/list', 'POST'),
-    ('api:/api/v1/admin/tag-rule-sample/list', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule-sample/create', 'POST'),
-    ('api:/api/v1/admin/tag-rule-sample/create', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule-sample/:id/get', 'POST'),
-    ('api:/api/v1/admin/tag-rule-sample/:id/get', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule-sample/:id/update', 'POST'),
-    ('api:/api/v1/admin/tag-rule-sample/:id/update', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-rule-sample/:id/delete', 'POST'),
-    ('api:/api/v1/admin/tag-rule-sample/:id/delete', 'OPTIONS'),
-    -- 管理接口：标签事件规则
-    ('api:/api/v1/admin/tag-event-rule/list', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/list', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/create', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/create', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/:id/get', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/:id/get', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/:id/update', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/:id/update', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/:id/delete', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/:id/delete', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/:id/enable', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/:id/enable', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/:id/disable', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/:id/disable', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/validate', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/validate', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/dry-run', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/dry-run', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/:id/version/list', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/:id/version/list', 'OPTIONS'),
-    ('api:/api/v1/admin/tag-event-rule/:id/version/:version/rollback', 'POST'),
-    ('api:/api/v1/admin/tag-event-rule/:id/version/:version/rollback', 'OPTIONS'),
+    ('api:/api/v1/admin/capturer/delete', 'POST'),
+    ('api:/api/v1/admin/capturer/delete', 'OPTIONS'),
+    -- 流量审计接口：标签规则
+    ('api:/api/v1/traffic/tag-rule/list', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/create', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/create', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/:id/get', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/:id/get', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/:id/update', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/:id/update', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/delete', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/delete', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/enable', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/enable', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/disable', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/disable', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/validate', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/validate', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/single/dry-run', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/single/dry-run', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/group/dry-run', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/group/dry-run', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/:id/version/list', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/:id/version/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/:id/version/:version/rollback', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/:id/version/:version/rollback', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/model/options', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/model/options', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/model/metadata', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/model/metadata', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule/model/samples', 'POST'),
+    ('api:/api/v1/traffic/tag-rule/model/samples', 'OPTIONS'),
+    -- 流量审计接口：标签规则样例
+    ('api:/api/v1/traffic/tag-rule-sample/list', 'POST'),
+    ('api:/api/v1/traffic/tag-rule-sample/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule-sample/create', 'POST'),
+    ('api:/api/v1/traffic/tag-rule-sample/create', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule-sample/:id/get', 'POST'),
+    ('api:/api/v1/traffic/tag-rule-sample/:id/get', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule-sample/:id/update', 'POST'),
+    ('api:/api/v1/traffic/tag-rule-sample/:id/update', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-rule-sample/delete', 'POST'),
+    ('api:/api/v1/traffic/tag-rule-sample/delete', 'OPTIONS'),
+    -- 流量审计接口：标签事件规则
+    ('api:/api/v1/traffic/tag-event-rule/list', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/create', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/create', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/get', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/get', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/update', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/update', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/delete', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/delete', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/enable', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/enable', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/disable', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/disable', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/validate', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/validate', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/dry-run', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/dry-run', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/version/list', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/version/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/version/:version/rollback', 'POST'),
+    ('api:/api/v1/traffic/tag-event-rule/:id/version/:version/rollback', 'OPTIONS'),
     -- 原始流量审计接口（无唯一性 ID，不提供 detail 接口，list 返回全字段）
     ('api:/api/v1/traffic/ipv4-tcp/list', 'POST'),
     ('api:/api/v1/traffic/ipv4-tcp/list', 'OPTIONS'),
@@ -251,48 +251,55 @@ CREATE TABLE IF NOT EXISTS tag_rule_samples (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    namespace_name VARCHAR(32) NOT NULL,
     model VARCHAR(255) NOT NULL,
     name VARCHAR(128) NOT NULL,
     input JSONB NOT NULL,
     description VARCHAR(512) NOT NULL DEFAULT '',
-    CONSTRAINT uq_tag_rule_samples_model_name UNIQUE (model, name)
+    CONSTRAINT uq_tag_rule_samples_namespace_name_model_name UNIQUE (namespace_name, model, name)
 );
 
 COMMENT ON COLUMN tag_rule_samples.id IS 'the primary key of the tag rule sample';
 COMMENT ON COLUMN tag_rule_samples.created_at IS 'the creation time of the tag rule sample';
 COMMENT ON COLUMN tag_rule_samples.updated_at IS 'the last update time of the tag rule sample';
+COMMENT ON COLUMN tag_rule_samples.namespace_name IS 'the namespace the tag rule sample belongs to';
 COMMENT ON COLUMN tag_rule_samples.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
-COMMENT ON COLUMN tag_rule_samples.name IS 'the unique name of the sample within the model';
+COMMENT ON COLUMN tag_rule_samples.name IS 'the unique name of the sample within the namespace and the model';
 COMMENT ON COLUMN tag_rule_samples.input IS 'the sample input document, a JSON serialization of the target model instance';
 COMMENT ON COLUMN tag_rule_samples.description IS 'the description of the sample';
 
 -- TagRuleSample fixtures: HttpTransport 模型验证样例（覆盖典型请求形态，供运行期合法性校验使用）
-INSERT INTO tag_rule_samples (model, name, input, description) VALUES
+-- 种子样例归属 default 命名空间；其它命名空间由 tagengine EnsureModelSamples 懒供给
+INSERT INTO tag_rule_samples (namespace_name, model, name, input, description) VALUES
     (
+        'default',
         'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
         'curl-get',
         '{"namespace":"default","capture":"eth0","version":"v1","sessionId":"3f2504e0-4f89-11d3-9a0c-0305e82c3301","timestamp":"2026-08-15T02:01:00Z","createdAt":"2026-08-15T02:01:00Z","traceId":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","clientIp":"192.168.1.10","clientPort":51820,"clientIsn":1820150330,"serverIp":"93.184.216.34","serverPort":443,"serverIsn":3896702403,"ipVersion":4,"httpVersion":"HTTP/1.1","streamIndex":3,"method":"GET","url":"https://example.com/api/v1/health","scheme":"https","host":"example.com","path":"/api/v1/health","queries":{"verbose":["1"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"curl/8.0.1","reqHdrHost":"example.com","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"curl","fpTcpClientOs":"Linux","fpTcpClientSig":"65535:120:1:60:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
         'command line curl GET request to a health check endpoint'
     ),
     (
+        'default',
         'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
         'browser-post',
         '{"namespace":"default","capture":"en0","version":"v1","sessionId":"c81d4e2e-bcf2-11e6-869b-7df92533d2db","timestamp":"2026-08-15T03:12:34Z","createdAt":"2026-08-15T03:12:34Z","traceId":"f47ac10b-58cc-4372-a567-0e02b2c3d479","clientIp":"10.0.0.55","clientPort":53210,"clientIsn":2147483648,"serverIp":"142.250.72.14","serverPort":443,"serverIsn":1500000000,"ipVersion":4,"httpVersion":"HTTP/2","streamIndex":7,"method":"POST","url":"https://api.example.com/v1/orders","scheme":"https","host":"api.example.com","path":"/v1/orders","queries":{},"reqBody":"body/request/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.zkc","reqBodyHash":"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08","reqBodyLength":42,"reqHdrUserAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36","reqHdrHost":"api.example.com","reqHdrAccept":"application/json","reqHdrContentType":"application/json","reqHdrContentLength":42,"reqHdrOrigin":"https://example.com","reqHdrReferer":"https://example.com/cart","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"Chrome","fpHttpBrowserQuality":0.98,"fpHttpServer":"nginx","fpHttpServerQuality":0.9,"fpTcpClientOs":"macOS","fpTcpClientSig":"65535:120:2:60:M1460,S,T,N,W8","fpTcpServerOs":"Linux","fpTcpServerSig":"65535:1440:1:60:M1460,S,N","fpTcpMtu":1460,"tags":[]}',
         'browser POST request with fingerprints and JSON body to an api endpoint'
     ),
     (
+        'default',
         'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
         'scanner-crawler',
         '{"namespace":"default","capture":"eth0","version":"v1","sessionId":"1e8efd8e-6d34-4a1e-b6b1-4f2e1a3c9d0f","timestamp":"2026-08-15T04:45:00Z","createdAt":"2026-08-15T04:45:00Z","traceId":"9f9c1b5e-3f7a-4c2d-8b5e-2a1b3c4d5e6f","clientIp":"203.0.113.7","clientPort":40021,"clientIsn":1020304050,"serverIp":"192.0.2.10","serverPort":80,"serverIsn":2030405060,"ipVersion":4,"httpVersion":"HTTP/1.0","streamIndex":1,"method":"GET","url":"http://192.0.2.10/wp-login.php?action=login","scheme":"http","host":"","path":"/wp-login.php","fileExt":"php","queries":{"action":["login"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"python-requests/2.31.0","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpTcpClientOs":"Windows","fpTcpClientSig":"65535:14600:2:64:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
         'scanner or crawler request with missing host and query params'
     ),
     (
+        'default',
         'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
         'sparse-minimal',
         '{"namespace":"default","sessionId":"00000000-0000-0000-0000-000000000000","method":"HEAD","url":"https://example.com/","scheme":"https","host":"example.com","path":"/","clientIp":"192.168.1.1","clientPort":51515,"serverIp":"93.184.216.34","serverPort":443,"ipVersion":4,"httpVersion":"HTTP/1.1","reqHdrUserAgent":"","reqHdrAuthorization":{},"reqHdrCookie":{},"tags":[]}',
         'sparse request with minimal fields and empty user agent'
     )
-ON CONFLICT (model, name) DO NOTHING;
+ON CONFLICT (namespace_name, model, name) DO NOTHING;
 
 -- +goose Down
 DROP TABLE IF EXISTS tag_rule_samples;

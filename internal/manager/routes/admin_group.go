@@ -270,77 +270,65 @@ func groupCreate(c *gin.Context) {
 	manager.SimpleOK.AbortWithGinH(c)
 }
 
-// groupDelete 处理删除用户组请求。
-// 删除指定用户组，在删除前检查是否存在关联的RBAC策略记录。
-// 使用数据库事务确保操作的原子性。
+// GroupBatchDeleteIn 批量删除用户组的请求输入结构。
+// Names 接受标量（单个组名）或数组（多个组名）。
+type GroupBatchDeleteIn struct {
+	Names FlexList[string] `json:"names"`
+}
+
+// groupBatchDelete 批量删除用户组。
+// 逐条复用原 groupDelete 的引用校验与事务删除语义：
+//   - 组被 RBAC 策略引用（ptype='p' v0=组名 或 ptype='g' v1=组名）→ 该条记入 Failed；
+//   - 组不存在 → 视为成功跳过（幂等）；
+//   - 其他数据库错误 → 该条记入 Failed。
 //
 // 参数:
 //   - c *gin.Context: Gin框架的上下文对象，包含HTTP请求和响应信息
 //
-// URL参数:
-//   - name: 要删除的用户组的唯一名称
+// 请求体:
+//   - 使用GroupBatchDeleteIn结构体，Names字段接受标量或数组
 //
 // 响应:
-//   - 成功: 返回操作成功的响应
-//   - 失败: 返回相应的错误信息（如组不存在、存在关联记录）
-//
-// 注意:
-//   - 删除操作会检查用户组是否关联了RBAC策略
-//   - 使用事务确保数据一致性
-//   - 如果存在关联记录，返回特定错误提示
-func groupDelete(c *gin.Context) {
-	// 从URL路径参数中获取要删除的组名
-	name, ok := getRawParam(c, "name")
-	if !ok {
-		return // getRawParam内部已处理错误响应
+//   - 成功: 返回BatchResultOut汇总（succeeded + failed明细）
+func groupBatchDelete(c *gin.Context) {
+	var in GroupBatchDeleteIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
 	}
-
-	// 获取数据库连接
+	names := []string(in.Names)
+	if !validFlexLen(c, names) {
+		return
+	}
 	db := manager.GetCoreDatabase(c)
-
-	// 使用事务执行删除操作，确保数据一致性
-	db.Transaction(func(tx *database.DB) error {
-		// 检查用户组是否关联了RBAC策略记录
-		// 查询条件:
-		// 1. ptype='p' AND v0=组名: 组定义的策略
-		// 2. ptype='g' AND v1=组名: 用户属于该组的关联关系
-		var policy core.RbacPolicy
-		if err := tx.First(
-			&policy,
-			`(ptype = ? AND v0 = ?) OR (ptype = ? AND v1 = ?)`,
-			base.PolicyLabel,
-			name,
-			base.GroupLabel,
-			name,
-		).Error; err != nil {
-			if !errors.Is(err, gorm.ErrRecordNotFound) {
-				// 处理查询错误（非"记录不存在"错误）
-				if errors.Is(err, gorm.ErrForeignKeyViolated) {
-					// 外键约束冲突，表示存在关联记录
-					manager.ErrCannotDeleteCauseRelateRecord.AbortWithGinH(c)
-				} else {
-					// 其他数据库错误
-					manager.CreateAccidentError(err).AbortWithGinH(c)
+	batchExecute(c, names,
+		func(name string) string { return name },
+		func(name string) error {
+			return db.Transaction(func(tx *database.DB) error {
+				// 检查用户组是否关联了RBAC策略记录：
+				// 1. ptype='p' AND v0=组名: 组定义的策略
+				// 2. ptype='g' AND v1=组名: 用户属于该组的关联关系
+				var policy core.RbacPolicy
+				if err := tx.First(
+					&policy,
+					`(ptype = ? AND v0 = ?) OR (ptype = ? AND v1 = ?)`,
+					base.PolicyLabel,
+					name,
+					base.GroupLabel,
+					name,
+				).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						// 无引用关系，可以删除；组不存在时 Delete 0 行，视为成功跳过
+						return tx.Delete(&core.Group{}, "name = ?", name).Error
+					}
+					// 其他数据库错误（含外键约束冲突）作为失败原因
+					return errors.WithStack(err)
 				}
-				return errors.WithStack(err)
-			}
-			// 记录不存在，表示没有关联策略，可以继续删除
-		} else {
-			// 找到关联策略，阻止删除
-			manager.ErrCannotDeleteCauseRelateRecord.AbortWithGinH(c)
-			return errors.WithStack(gorm.ErrRecordNotFound) // 返回一个错误以回滚事务
-		}
-
-		// 执行删除操作
-		if err := tx.Delete(&core.Group{}, "name = ?", name).Error; err != nil {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return errors.WithStack(err)
-		}
-
-		// 返回操作成功的响应
-		manager.SimpleOK.AbortWithGinH(c)
-		return nil
-	})
+				// 找到关联策略，阻止删除
+				return manager.ErrCannotDeleteCauseRelateRecord
+			})
+		},
+	)
 }
 
 // groupRbacPolicyAdd 处理为组添加RBAC策略请求。

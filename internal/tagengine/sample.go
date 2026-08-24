@@ -9,6 +9,7 @@ import (
 	"github.com/open-policy-agent/opa/v1/rego"
 
 	"zhongkui.com/zhongkui/internal/models/tag"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -51,14 +52,16 @@ func NewTargetInstance(typeKey string) (any, error) {
 }
 
 // ValidateGroupRuntime 对候选规则组执行运行期样例校验（第二层合法性）。
-// 依据组内规则的目标模型类型键（model）从 tag_rule_samples 表读取全部验证样例，
+// 依据组内规则的目标模型类型键（model）与所属命名空间（NamespaceName，缺失回退
+// base.DefaultNamespace）从 tag_rule_samples 表读取全部验证样例，
 // 将每条样例 JSON 反序列化为目标模型实例，经 BuildInput 构建输入文档后
 // 以组级合并查询（与引擎 Recognize 的评估方式一致）逐一评估；
 // 任一样例反序列化失败或评估报错，即认为规则运行期不合法，返回对应错误列表。
+// 样例按命名空间隔离：仅使用与规则组同命名空间的样例做校验。
 // 返回值语义：
 //   - 规则组为空：返回 nil, nil（无校验对象）；
 //   - 目标模型未注册：返回 nil, ErrModelNotRegistered（无法校验）；
-//   - 该模型无样例数据：返回 nil, ErrSampleNotProvisioned（降级，由调用方决定是否放行）；
+//   - 该模型在该命名空间下无样例数据：返回 nil, ErrSampleNotProvisioned（降级，由调用方决定是否放行）；
 //   - 正常校验：返回出错样例列表（空表示全部通过）与 nil 错误。
 func ValidateGroupRuntime(ctx context.Context, db *database.DB, rules []*tag.TagRule) ([]SampleRuntimeError, error) {
 	if len(rules) == 0 {
@@ -68,9 +71,13 @@ func ValidateGroupRuntime(ctx context.Context, db *database.DB, rules []*tag.Tag
 	if !ok {
 		return nil, errors.WithStack(ErrModelNotRegistered)
 	}
+	namespace := rules[0].NamespaceName
+	if namespace == "" {
+		namespace = base.DefaultNamespace
+	}
 	var samples []*tag.TagRuleSample
 	if err := db.WithContext(ctx).Model(&tag.TagRuleSample{}).
-		Where("model = ?", rules[0].Model).
+		Where("namespace_name = ? AND model = ?", namespace, rules[0].Model).
 		Find(&samples).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}

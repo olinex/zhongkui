@@ -11,7 +11,6 @@ package routes
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -25,6 +24,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 	"zhongkui.com/zhongkui/internal/tagengine"
@@ -78,6 +78,21 @@ func localizeInputFields(lc *i18n.Localizer, fields []tagengine.InputFieldMeta) 
 	return out
 }
 
+// localizeDimensionOptions 把模型注册的合法维度取值列表转换为带本地化描述的下拉选项。
+// 描述复用字段描述文案键 input.<typeKey>.<dimension>（dimension 即 snake_case 列名），
+// 翻译失败时 Description 为空串，由前端回退展示取值本身。
+func localizeDimensionOptions(lc *i18n.Localizer, typeKey string, dims []string) []TagRuleModelDimensionOut {
+	out := make([]TagRuleModelDimensionOut, 0, len(dims))
+	for _, d := range dims {
+		desc := ""
+		if text, err := lc.Localize(&i18n.LocalizeConfig{MessageID: "input." + typeKey + "." + d}); err == nil && text != "" {
+			desc = text
+		}
+		out = append(out, TagRuleModelDimensionOut{Value: d, Description: desc})
+	}
+	return out
+}
+
 // invalidTagRuleRuntimeError 构造标签规则运行期样例校验失败的错误响应（HTTP 400，携带样例错误列表）。
 func invalidTagRuleRuntimeError(issues []tagengine.SampleRuntimeError) *manager.CodeError {
 	return manager.CreateCodeError(http.StatusBadRequest, manager.CodeTagRuleRuntimeInvalid, issues)
@@ -98,8 +113,8 @@ type TagRuleCreateIn struct {
 	Description string `json:"description" binding:"max=512"`
 	// Model 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `json:"model" binding:"required,max=255"`
-	// Rego Rego 规则源码，遵循 package zki + tags contains 契约
-	Rego string `json:"rego" binding:"required"`
+	// Rego Rego 规则源码，遵循 package zki + tags contains 契约，最长 64KiB
+	Rego string `json:"rego" binding:"required,max=65536"`
 	// Enabled 是否启用，默认启用
 	Enabled bool `json:"enabled" default:"true"`
 }
@@ -109,8 +124,8 @@ type TagRuleCreateIn struct {
 type TagRuleUpdateIn struct {
 	// Description 规则描述，最长 512 字符
 	Description string `json:"description" binding:"max=512"`
-	// Rego Rego 规则源码，遵循 package zki + tags contains 契约
-	Rego string `json:"rego" binding:"required"`
+	// Rego Rego 规则源码，遵循 package zki + tags contains 契约，最长 64KiB
+	Rego string `json:"rego" binding:"required,max=65536"`
 	// Enabled 是否启用
 	Enabled bool `json:"enabled"`
 }
@@ -168,8 +183,8 @@ type TagRuleVersionOut struct {
 
 // TagRuleValidateIn 定义标签规则语法校验的请求输入结构。
 type TagRuleValidateIn struct {
-	// Rego Rego 规则源码
-	Rego string `json:"rego" binding:"required"`
+	// Rego Rego 规则源码，最长 64KiB
+	Rego string `json:"rego" binding:"required,max=65536"`
 	// Model 目标模型类型键，可空；非空且已注册时启用字段感知 lint（未知 input 字段进入 warnings）
 	Model string `json:"model"`
 }
@@ -203,6 +218,17 @@ type TagRuleModelMetadataOut struct {
 	Model string `json:"model"`
 	// Fields 输入文档扁平化字段元信息列表（按字段名排序）
 	Fields []tagengine.InputFieldMeta `json:"fields"`
+	// Dimensions 该模型合法标签维度选项列表（供前端 dimension 下拉使用），
+	// 与 tagengine 注册表及 ClickHouse 物化视图的展开列保持一致的单一事实来源
+	Dimensions []TagRuleModelDimensionOut `json:"dimensions"`
+}
+
+// TagRuleModelDimensionOut 标签维度下拉选项：Value 为 dimension 取值
+// （snake_case 列名，对应 tag_summings.dimension 的存储值），
+// Description 为按请求语言翻译的字段描述（未命中时为空串）。
+type TagRuleModelDimensionOut struct {
+	Value       string `json:"value"`
+	Description string `json:"description"`
 }
 
 // TagRuleModelSampleOut 定义标签规则目标模型系统样例的输出结构。
@@ -228,8 +254,8 @@ type TagRuleModelSamplesOut struct {
 type TagRuleDryRunRegoIn struct {
 	// Name 候选规则名称（可为空，dry-run 不落库，缺省以 "draft" 兜底）
 	Name string `json:"name" default:"draft" binding:"omitempty,min=1,max=128,alphanumspecial=_-"`
-	// Rego 候选规则 Rego 源码
-	Rego string `json:"rego" binding:"required"`
+	// Rego 候选规则 Rego 源码，最长 64KiB
+	Rego string `json:"rego" binding:"required,max=65536"`
 }
 
 // TagRuleDryRunRuleIn 定义标签规则单规则 dry-run 的请求输入结构。
@@ -439,86 +465,108 @@ func tagRuleUpdate(c *gin.Context) {
 	manager.SimpleOK.AbortWithGinH(c)
 }
 
-// tagRuleDelete 处理删除标签规则的请求。
-// 在事务内先删除历史版本再删除规则本身，成功后失效缓存并广播变更。
-// 仅允许删除当前命名空间内的规则。
-func tagRuleDelete(c *gin.Context) {
+// TagRuleBatchIn 批量操作标签规则的请求输入结构。
+// Ids 接受标量（单个 ID）或数组（多个 ID）。
+type TagRuleBatchIn struct {
+	Ids FlexList[uint64] `json:"ids"`
+}
+
+// tagRuleBatchDelete 批量删除标签规则。
+// 逐条复用原 tagRuleDelete 的事务级联删版本 + notifyTagRuleChange 语义；
+// 规则不存在（或不属于当前命名空间）视为成功跳过（幂等）。
+func tagRuleBatchDelete(c *gin.Context) {
 	namespace, ok := manager.RequireNamespace(c)
 	if !ok {
 		return
 	}
-	id, ok := getUint64Param(c, "id")
-	if !ok {
+	var in TagRuleBatchIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	ids := []uint64(in.Ids)
+	if !validFlexLen(c, ids) {
 		return
 	}
 	db := manager.GetCoreDatabase(c)
-	instance := tag.TagRule{}
-	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			manager.ErrCannotDeleteCauseRelateRecord.AbortWithGinH(c)
-			return
-		}
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
-		// 显式级联删除历史版本，兼容未开启外键约束的数据库（如测试用 sqlite 内存库）
-		if err := tx.Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagRuleVersion{}).Error; err != nil {
-			return err
-		}
-		return tx.Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagRule{}).Error
-	}); err != nil {
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	notifyTagRuleChange(c, &instance)
-	manager.SimpleOK.AbortWithGinH(c)
+	batchExecute(c, ids,
+		func(id uint64) string { return strconv.FormatUint(id, 10) },
+		func(id uint64) error {
+			instance := tag.TagRule{}
+			if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return nil // 不存在视为成功跳过
+				}
+				return errors.WithStack(err)
+			}
+			if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
+				// 显式级联删除历史版本，兼容未开启外键约束的数据库（如测试用 sqlite 内存库）
+				if err := tx.Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagRuleVersion{}).Error; err != nil {
+					return err
+				}
+				return tx.Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagRule{}).Error
+			}); err != nil {
+				return err
+			}
+			notifyTagRuleChange(c, &instance)
+			return nil
+		},
+	)
 }
 
-// tagRuleSetEnabled 返回启用/停用标签规则的处理函数。
-// 启用时需校验"变更后的组"可编译；停用仅从启用集合移除，无需校验。
-// 仅允许操作当前命名空间内的规则。
-func tagRuleSetEnabled(enabled bool) gin.HandlerFunc {
+// tagRuleBatchSetEnabled 批量启用/停用标签规则。
+// 逐条复用原 tagRuleSetEnabled 语义：
+//   - 规则不存在（或不属于当前命名空间）→ 视为成功跳过（幂等）；
+//   - 已处于目标状态 → 幂等成功；
+//   - 启用时校验"变更后的组"可编译，校验失败该条记入 Failed（跳过）；
+//   - 更新成功后 notifyTagRuleChange。
+func tagRuleBatchSetEnabled(enabled bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		namespace, ok := manager.RequireNamespace(c)
 		if !ok {
 			return
 		}
-		id, ok := getUint64Param(c, "id")
-		if !ok {
+		var in TagRuleBatchIn
+		if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+			manager.CreateBadBodyError(err).AbortWithGinH(c)
+			return
+		}
+		ids := []uint64(in.Ids)
+		if !validFlexLen(c, ids) {
 			return
 		}
 		db := manager.GetCoreDatabase(c)
-		instance := tag.TagRule{}
-		if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				manager.ErrDefaultPageNotFound.AbortWithGinH(c)
-				return
-			}
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-		if instance.Enabled == enabled {
-			manager.SimpleOK.AbortWithGinH(c)
-			return
-		}
-		// 启用时该规则将进入组编译集合，需校验合并组可编译
-		if enabled {
-			candidate := instance
-			candidate.Enabled = true
-			if !validateTagRuleCandidate(c, &candidate) {
-				return
-			}
-		}
-		if err := db.WithContext(c).Model(&tag.TagRule{}).
-			Where("id = ? AND namespace_name = ?", instance.ID, namespace).
-			Update("enabled", enabled).Error; err != nil {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-		instance.Enabled = enabled
-		notifyTagRuleChange(c, &instance)
-		manager.SimpleOK.AbortWithGinH(c)
+		batchExecute(c, ids,
+			func(id uint64) string { return strconv.FormatUint(id, 10) },
+			func(id uint64) error {
+				instance := tag.TagRule{}
+				if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						return nil // 不存在视为成功跳过
+					}
+					return errors.WithStack(err)
+				}
+				if instance.Enabled == enabled {
+					return nil // 幂等短路
+				}
+				// 启用时该规则将进入组编译集合，需校验合并组可编译；校验失败记入失败原因
+				if enabled {
+					candidate := instance
+					candidate.Enabled = true
+					if err := validateTagRuleCandidateBatch(c, &candidate); err != nil {
+						return err
+					}
+				}
+				if err := db.WithContext(c).Model(&tag.TagRule{}).
+					Where("id = ? AND namespace_name = ?", instance.ID, namespace).
+					Update("enabled", enabled).Error; err != nil {
+					return err
+				}
+				instance.Enabled = enabled
+				notifyTagRuleChange(c, &instance)
+				return nil
+			},
+		)
 	}
 }
 
@@ -570,8 +618,9 @@ func tagRuleModelOptions(c *gin.Context) {
 }
 
 // tagRuleModelMetadata 处理获取标签规则目标模型输入字段元信息的请求。
-// 返回输入文档扁平化字段元信息列表（按字段名排序，Description 按请求语言翻译），
-// 供前端 Rego 编辑器自动补全与字段面板使用；未注册模型返回 400 + 错误码 1107。
+// 返回输入文档扁平化字段元信息列表（按字段名排序，Description 按请求语言翻译）
+// 与合法标签维度选项列表；供前端 Rego 编辑器自动补全与 dimension 下拉使用；
+// 未注册模型返回 400 + 错误码 1107。
 func tagRuleModelMetadata(c *gin.Context) {
 	var in TagRuleModelIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
@@ -587,19 +636,29 @@ func tagRuleModelMetadata(c *gin.Context) {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	manager.SimpleOK.AbortWithGinW(c, TagRuleModelMetadataOut{Model: in.Model, Fields: localizeInputFields(manager.GetLocalizer(c), fields)})
+	lc := manager.GetLocalizer(c)
+	manager.SimpleOK.AbortWithGinW(c, TagRuleModelMetadataOut{
+		Model:      in.Model,
+		Fields:     localizeInputFields(lc, fields),
+		Dimensions: localizeDimensionOptions(lc, in.Model, tagengine.Dimensions(in.Model)),
+	})
 }
 
 // tagRuleModelSamples 处理获取标签规则目标模型系统样例列表的请求。
-// 模型无样例时懒供给（default 零值文档，HttpTransport 额外预置 http-example）后返回；
+// 模型在当前命名空间下无样例时懒供给（default 零值文档，HttpTransport 额外预置 http-example）后返回；
+// 样例按命名空间隔离，仅返回当前请求命名空间的样例；
 // 样例输入文档反序列化为 map；未注册模型返回 400 + 错误码 1107。
 func tagRuleModelSamples(c *gin.Context) {
+	namespace, ok := manager.RequireNamespace(c)
+	if !ok {
+		return
+	}
 	var in TagRuleModelIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	samples, err := tagengine.EnsureModelSamples(c, manager.GetCoreDatabase(c), in.Model)
+	samples, err := tagengine.EnsureModelSamples(c, manager.GetCoreDatabase(c), namespace, in.Model)
 	if err != nil {
 		if errors.Is(err, tagengine.ErrModelNotRegistered) {
 			invalidTagRuleModelNotRegisteredError(in.Model).AbortWithGinH(c)
@@ -843,38 +902,50 @@ func newTagRuleBaseDetailOut(rule *tag.TagRule) TagRuleBaseDetailOut {
 // 复用 ValidateRegoRules），最后做运行期样例校验。
 // 任一校验失败时向客户端返回带行列号的错误详情并返回 false。
 func validateTagRuleCandidate(c *gin.Context, candidate *tag.TagRule) bool {
+	if err := validateTagRuleCandidateBatch(c, candidate); err != nil {
+		if ce, ok := err.(*manager.CodeError); ok {
+			// 结构化错误（未注册模型 / Rego 校验失败 / 运行期样例失败）按原样响应
+			ce.AbortWithGinH(c)
+		} else {
+			manager.CreateAccidentError(err).AbortWithGinH(c)
+		}
+		return false
+	}
+	return true
+}
+
+// validateTagRuleCandidateBatch 校验一条候选规则并返回错误（nil 表示通过）。
+// 逻辑与 validateTagRuleCandidate 完全一致，但以 error 形式返回失败原因，
+// 供批量启停等"失败汇总"场景使用，避免直接中断请求。
+func validateTagRuleCandidateBatch(c *gin.Context, candidate *tag.TagRule) error {
 	// 目标模型必须已在引擎注册表中登记：未注册模型的规则引擎永不加载
 	// （按实际数据实例的类型键分组），属于死规则，写入时直接拒绝
 	if !tagengine.IsRegistered(candidate.Model) {
-		invalidTagRuleModelNotRegisteredError(candidate.Model).AbortWithGinH(c)
-		return false
+		return invalidTagRuleModelNotRegisteredError(candidate.Model)
 	}
-	group, err := buildTagRuleGroup(c, manager.GetCoreDatabase(c), candidate)
+	db := manager.GetCoreDatabase(c)
+	group, err := buildTagRuleGroup(c, db, candidate)
 	if err != nil {
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return false
+		return err
 	}
 	// Rego 校验（语法 + 契约 + 组级语义编译），与 validate / dry-run 统一复用公共函数
 	if errs, ok := tagengine.ValidateRegoRules(c, group); !ok {
-		invalidTagRuleError(c, errs).AbortWithGinH(c)
-		return false
+		return invalidTagRuleError(c, errs)
 	}
 	// 第二层校验：基于验证样例做运行期评估，任一样例评估报错即判定运行期不合法
-	if issues, err := tagengine.ValidateGroupRuntime(c, manager.GetCoreDatabase(c), group); err != nil {
+	if issues, err := tagengine.ValidateGroupRuntime(c, db, group); err != nil {
 		if errors.Is(err, tagengine.ErrSampleNotProvisioned) {
 			// 该模型尚未预置验证样例：运行期校验降级跳过，记录告警后放行
 			// （规则仍受第一层语法/契约校验保障，样例补充后即恢复运行期保障）
 			manager.GetLogger(c).Warnf(c, nil,
 				"tag rule runtime validation skipped: no samples provisioned, model=%s", candidate.Model)
 		} else {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return false
+			return err
 		}
 	} else if len(issues) > 0 {
-		invalidTagRuleRuntimeError(issues).AbortWithGinH(c)
-		return false
+		return invalidTagRuleRuntimeError(issues)
 	}
-	return true
+	return nil
 }
 
 // buildTagRuleGroup 构建分组（namespace + model）下"变更后"将参与编译的启用规则集合：

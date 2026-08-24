@@ -2,9 +2,11 @@
   <v-chip v-if="header.type !== BackendDataType.ACTIONS && item[header.key] === undefined">
     {{ $t("model.__base.value.undefined") }}
   </v-chip>
-
   <v-chip v-else-if="header.type !== BackendDataType.ACTIONS && item[header.key] === null">
     {{ $t("model.__base.value.null") }}
+  </v-chip>
+  <v-chip v-else-if="header.type !== BackendDataType.ACTIONS && item[header.key] === ''">
+    {{ $t("model.__base.value.blank") }}
   </v-chip>
   <hex-string-chip
     v-else-if="header.type === BackendDataType.UUID"

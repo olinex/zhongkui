@@ -154,14 +154,18 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/user/:unionID/update", userUpdate)
 		// 用户信息更新元信息
 		adminGroup.OPTIONS("/user/:unionID/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[UserProfileChangeIn]())))
-		// 用户激活 - 启用用户账户
-		adminGroup.POST("/user/:unionID/activate", userSetActive(true))
+		// 用户激活 - 批量启用用户账户
+		adminGroup.POST("/user/activate", userBatchSetActive(true))
 		// 用户激活元信息
-		adminGroup.OPTIONS("/user/:unionID/activate", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 用户停用 - 禁用用户账户
-		adminGroup.POST("/user/:unionID/deactivate", userSetActive(false))
+		adminGroup.OPTIONS("/user/activate", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[UserBatchActiveIn](), WithBodyOutput[BatchResultOut]()),
+		))
+		// 用户停用 - 批量禁用用户账户
+		adminGroup.POST("/user/deactivate", userBatchSetActive(false))
 		// 用户停用元信息
-		adminGroup.OPTIONS("/user/:unionID/deactivate", StructMetaGinHandler(WithMethod(http.MethodPost)))
+		adminGroup.OPTIONS("/user/deactivate", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[UserBatchActiveIn](), WithBodyOutput[BatchResultOut]()),
+		))
 		// 管理员重置用户密码 - 强制重置指定用户的登录密码，可指定新密码或随机生成
 		adminGroup.POST("/user/:unionID/password/reset", userPasswordReset)
 		// 管理员重置用户密码元信息
@@ -201,10 +205,12 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/group/:name/update", groupUpdate)
 		// 用户组信息更新元信息
 		adminGroup.OPTIONS("/group/:name/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[GroupUpdateIn]())))
-		// 删除用户组 - 删除指定的用户组
-		adminGroup.POST("/group/:name/delete", groupDelete)
+		// 删除用户组 - 批量删除指定的用户组
+		adminGroup.POST("/group/delete", groupBatchDelete)
 		// 删除用户组元信息
-		adminGroup.OPTIONS("/group/:name/delete", StructMetaGinHandler(WithMethod(http.MethodPost)))
+		adminGroup.OPTIONS("/group/delete", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[GroupBatchDeleteIn](), WithBodyOutput[BatchResultOut]()),
+		))
 		// 添加RBAC策略到用户组 - 为用户组分配权限策略
 		adminGroup.POST("/group/:name/add-rbac-policy", groupRbacPolicyAdd)
 		// 添加RBAC策略到用户组元信息
@@ -242,10 +248,12 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/namespace/:name/update", namespaceUpdate)
 		// 命名空间信息更新元信息
 		adminGroup.OPTIONS("/namespace/:name/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[NamespaceUpdateIn]())))
-		// 删除命名空间 - 删除指定的命名空间
-		adminGroup.POST("/namespace/:name/delete", namespaceDelete)
+		// 删除命名空间 - 批量删除指定的命名空间
+		adminGroup.POST("/namespace/delete", namespaceBatchDelete)
 		// 删除命名空间元信息
-		adminGroup.OPTIONS("/namespace/:name/delete", StructMetaGinHandler(WithMethod(http.MethodPost)))
+		adminGroup.OPTIONS("/namespace/delete", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[NamespaceBatchDeleteIn](), WithBodyOutput[BatchResultOut]()),
+		))
 
 		// ========== 抓包器管理接口 ==========
 		// 管理网络数据包抓取器配置，需要etcd中间件进行配置同步
@@ -266,156 +274,12 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		adminGroup.POST("/capturer/:id/update", etcdMiddleware, capturerUpdate)
 		// 抓包器信息更新元信息
 		adminGroup.OPTIONS("/capturer/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[CapturerConfigIn]())))
-		// 删除抓包器 - 删除指定的抓包器配置（需要etcd中间件）
-		adminGroup.POST("/capturer/:id/delete", etcdMiddleware, capturerDelete)
+		// 删除抓包器 - 批量删除指定的抓包器配置（需要etcd中间件）
+		adminGroup.POST("/capturer/delete", etcdMiddleware, capturerBatchDelete)
 		// 删除抓包器元信息
-		adminGroup.OPTIONS("/capturer/:id/delete", StructMetaGinHandler(WithMethod(http.MethodPost)))
-
-		// ========== 标签识别规则管理接口 ==========
-		// 管理标签识别规则的增删改查、启停、校验、dry-run 与版本回滚
-
-		// 标签规则列表查询 - 支持分页、搜索和排序
-		adminGroup.POST("/tag-rule/list", tagRuleListGet)
-		// 标签规则列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
-		adminGroup.OPTIONS("/tag-rule/list", ListMetaGinHandler[*TagRuleListGetSearchIn, *TagRuleListOut]())
-		// 创建标签规则 - 创建新的标签识别规则（需要标签引擎中间件）
-		adminGroup.POST("/tag-rule/create", tagRuleEngineMiddleware, tagRuleCreate)
-		// 创建标签规则元信息
-		adminGroup.OPTIONS("/tag-rule/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleCreateIn]())))
-		// 标签规则详情查询 - 根据ID获取规则详细信息
-		adminGroup.POST("/tag-rule/:id/get", tagRuleDetailGet)
-		// 标签规则详情元信息
-		adminGroup.OPTIONS("/tag-rule/:id/get", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagRuleDetailOut]())))
-		// 标签规则信息更新 - 更新规则描述/内容/启用状态（需要标签引擎中间件）
-		adminGroup.POST("/tag-rule/:id/update", tagRuleEngineMiddleware, tagRuleUpdate)
-		// 标签规则信息更新元信息
-		adminGroup.OPTIONS("/tag-rule/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleUpdateIn]())))
-		// 删除标签规则 - 删除规则及其全部历史版本（需要标签引擎中间件）
-		adminGroup.POST("/tag-rule/:id/delete", tagRuleEngineMiddleware, tagRuleDelete)
-		// 删除标签规则元信息
-		adminGroup.OPTIONS("/tag-rule/:id/delete", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 启用标签规则 - 启用指定规则（需要标签引擎中间件）
-		adminGroup.POST("/tag-rule/:id/enable", tagRuleEngineMiddleware, tagRuleSetEnabled(true))
-		// 启用标签规则元信息
-		adminGroup.OPTIONS("/tag-rule/:id/enable", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 停用标签规则 - 停用指定规则（需要标签引擎中间件）
-		adminGroup.POST("/tag-rule/:id/disable", tagRuleEngineMiddleware, tagRuleSetEnabled(false))
-		// 停用标签规则元信息
-		adminGroup.OPTIONS("/tag-rule/:id/disable", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 标签规则语法校验 - 校验 Rego 源码语法与契约，返回带行列号的错误
-		adminGroup.POST("/tag-rule/validate", tagRuleValidate)
-		// 标签规则语法校验元信息
-		adminGroup.OPTIONS("/tag-rule/validate", StructMetaGinHandler(
-			WithMethod(http.MethodPost, WithBodyInput[TagRuleValidateIn](), WithBodyOutput[TagRuleValidateOut]()),
+		adminGroup.OPTIONS("/capturer/delete", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[CapturerBatchDeleteIn](), WithBodyOutput[BatchResultOut]()),
 		))
-		// 标签规则单规则 dry-run - 对一条候选规则评估 JSON 输入文档，输出运行细节
-		adminGroup.POST("/tag-rule/single/dry-run", tagRuleDryRun)
-		// 标签规则单规则 dry-run 元信息
-		adminGroup.OPTIONS("/tag-rule/single/dry-run", StructMetaGinHandler(
-			WithMethod(http.MethodPost, WithBodyInput[TagRuleDryRunRuleIn](), WithBodyOutput[TagRuleDryRunOut]()),
-		))
-		// 标签规则规则组 dry-run - 对一组候选规则评估 JSON 输入文档，输出逐规则与合并标签
-		adminGroup.POST("/tag-rule/group/dry-run", tagRuleDryRunGroup)
-		// 标签规则规则组 dry-run 元信息
-		adminGroup.OPTIONS("/tag-rule/group/dry-run", StructMetaGinHandler(
-			WithMethod(http.MethodPost, WithBodyInput[TagRuleDryRunGroupIn](), WithBodyOutput[TagRuleDryRunOut]()),
-		))
-		// 标签规则版本列表 - 获取规则的全部历史版本
-		adminGroup.POST("/tag-rule/:id/version/list", tagRuleVersionList)
-		// 标签规则版本列表元信息
-		adminGroup.OPTIONS("/tag-rule/:id/version/list", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 标签规则回滚 - 将规则回滚到指定历史版本（需要标签引擎中间件）
-		adminGroup.POST("/tag-rule/:id/version/:version/rollback", tagRuleEngineMiddleware, tagRuleVersionRollback)
-		// 标签规则回滚元信息
-		adminGroup.OPTIONS("/tag-rule/:id/version/:version/rollback", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 标签规则目标模型选项 - 返回已注册目标模型的下拉选项列表
-		adminGroup.POST("/tag-rule/model/options", tagRuleModelOptions)
-		// 标签规则目标模型选项元信息
-		adminGroup.OPTIONS("/tag-rule/model/options", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagRuleModelOptionsOut]())))
-		// 标签规则目标模型元信息 - 返回输入文档字段元信息，供 Rego 编辑器补全与字段面板
-		adminGroup.POST("/tag-rule/model/metadata", tagRuleModelMetadata)
-		// 标签规则目标模型元信息元信息
-		adminGroup.OPTIONS("/tag-rule/model/metadata", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleModelIn](), WithBodyOutput[TagRuleModelMetadataOut]())))
-		// 标签规则目标模型样例 - 返回系统样例列表，缺失时懒供给
-		adminGroup.POST("/tag-rule/model/samples", tagRuleModelSamples)
-		// 标签规则目标模型样例元信息
-		adminGroup.OPTIONS("/tag-rule/model/samples", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleModelIn](), WithBodyOutput[TagRuleModelSamplesOut]())))
-
-		// ========== 标签规则样例管理接口 ==========
-		// 管理标签规则验证样例的增删改查（样例为全局数据，model/input 创建后不可变）
-
-		// 标签规则样例列表查询 - 支持分页、搜索和排序
-		adminGroup.POST("/tag-rule-sample/list", tagRuleSampleListGet)
-		// 标签规则样例列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
-		adminGroup.OPTIONS("/tag-rule-sample/list", ListMetaGinHandler[*TagRuleSampleListGetSearchIn, *TagRuleSampleListOut]())
-		// 创建标签规则样例 - 创建新的验证样例（model/input 创建后不可变）
-		adminGroup.POST("/tag-rule-sample/create", tagRuleSampleCreate)
-		// 创建标签规则样例元信息
-		adminGroup.OPTIONS("/tag-rule-sample/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleSampleCreateIn]())))
-		// 标签规则样例详情查询 - 根据ID获取样例完整信息
-		adminGroup.POST("/tag-rule-sample/:id/get", tagRuleSampleDetailGet)
-		// 标签规则样例详情元信息
-		adminGroup.OPTIONS("/tag-rule-sample/:id/get", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagRuleSampleDetailOut]())))
-		// 标签规则样例信息更新 - 仅允许更新样例名称与说明（model/input 不可变）
-		adminGroup.POST("/tag-rule-sample/:id/update", tagRuleSampleUpdate)
-		// 标签规则样例信息更新元信息
-		adminGroup.OPTIONS("/tag-rule-sample/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleSampleUpdateIn]())))
-		// 删除标签规则样例 - 删除指定样例
-		adminGroup.POST("/tag-rule-sample/:id/delete", tagRuleSampleDelete)
-		// 删除标签规则样例元信息
-		adminGroup.OPTIONS("/tag-rule-sample/:id/delete", StructMetaGinHandler(WithMethod(http.MethodPost)))
-
-		// ========== 标签事件规则管理接口 ==========
-		// 提供标签事件规则的增删改查、启停、表达式校验、dry-run 与版本回滚
-
-		// 标签事件规则列表查询 - 支持分页、搜索和排序
-		adminGroup.POST("/tag-event-rule/list", tagEventRuleListGet)
-		// 标签事件规则列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
-		adminGroup.OPTIONS("/tag-event-rule/list", ListMetaGinHandler[*TagEventRuleListGetSearchIn, *TagEventRuleListOut]())
-		// 创建标签事件规则 - 创建新的标签事件规则，创建前逐条件校验表达式语法
-		adminGroup.POST("/tag-event-rule/create", tagEventRuleCreate)
-		// 创建标签事件规则元信息
-		adminGroup.OPTIONS("/tag-event-rule/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagEventRuleCreateIn]())))
-		// 标签事件规则详情查询 - 根据ID获取规则详细信息
-		adminGroup.POST("/tag-event-rule/:id/get", tagEventRuleDetailGet)
-		// 标签事件规则详情元信息
-		adminGroup.OPTIONS("/tag-event-rule/:id/get", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagEventRuleDetailOut]())))
-		// 标签事件规则信息更新 - 更新规则描述/匹配策略/启用状态/条件集合，更新前快照当前版本
-		adminGroup.POST("/tag-event-rule/:id/update", tagEventRuleUpdate)
-		// 标签事件规则信息更新元信息
-		adminGroup.OPTIONS("/tag-event-rule/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagEventRuleUpdateIn]())))
-		// 删除标签事件规则 - 删除规则及其全部条件与历史版本
-		adminGroup.POST("/tag-event-rule/:id/delete", tagEventRuleDelete)
-		// 删除标签事件规则元信息
-		adminGroup.OPTIONS("/tag-event-rule/:id/delete", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 启用标签事件规则 - 启用指定规则
-		adminGroup.POST("/tag-event-rule/:id/enable", tagEventRuleSetEnabled(true))
-		// 启用标签事件规则元信息
-		adminGroup.OPTIONS("/tag-event-rule/:id/enable", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 停用标签事件规则 - 停用指定规则
-		adminGroup.POST("/tag-event-rule/:id/disable", tagEventRuleSetEnabled(false))
-		// 停用标签事件规则元信息
-		adminGroup.OPTIONS("/tag-event-rule/:id/disable", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 标签事件规则表达式校验 - 校验条件表达式语法，返回精炼后的标准表达式或错误消息
-		adminGroup.POST("/tag-event-rule/validate", tagEventRuleValidate)
-		// 标签事件规则表达式校验元信息
-		adminGroup.OPTIONS("/tag-event-rule/validate", StructMetaGinHandler(
-			WithMethod(http.MethodPost, WithBodyInput[TagEventRuleValidateIn](), WithBodyOutput[TagEventRuleValidateOut]()),
-		))
-		// 标签事件规则 dry-run - 对一条候选规则（不落库）执行事件检测，需 raw 库中间件查询 tag_summings
-		adminGroup.POST("/tag-event-rule/dry-run", rawDatabaseMiddleware, tagEventRuleDryRun)
-		// 标签事件规则 dry-run 元信息
-		adminGroup.OPTIONS("/tag-event-rule/dry-run", StructMetaGinHandler(
-			WithMethod(http.MethodPost, WithBodyInput[TagEventRuleDryRunIn](), WithBodyOutput[TagEventRuleDryRunOut]()),
-		))
-		// 标签事件规则版本列表 - 获取规则的全部历史版本
-		adminGroup.POST("/tag-event-rule/:id/version/list", tagEventRuleVersionList)
-		// 标签事件规则版本列表元信息
-		adminGroup.OPTIONS("/tag-event-rule/:id/version/list", StructMetaGinHandler(WithMethod(http.MethodPost)))
-		// 标签事件规则回滚 - 将规则回滚到指定历史版本，回滚前先快照当前内容
-		adminGroup.POST("/tag-event-rule/:id/version/:version/rollback", tagEventRuleVersionRollback)
-		// 标签事件规则回滚元信息
-		adminGroup.OPTIONS("/tag-event-rule/:id/version/:version/rollback", StructMetaGinHandler(WithMethod(http.MethodPost)))
 	}
 
 	// ==================== 原始流量审计接口组：/api/v1/traffic ====================
@@ -468,6 +332,174 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		httpTransportGroup.POST("/stack/list", httpTransportStackListGet)
 		// 关联网络堆栈列表元信息
 		httpTransportGroup.OPTIONS("/stack/list", ListMetaGinHandler[*NetworkStackListGetSearchIn, *NetworkStackListGetListItemOut]())
+	}
+
+	// ========== 标签识别规则：/api/v1/traffic/tag-rule ==========
+	// 流量审计命名空间下的标签识别规则管理（增删改查、启停、校验、dry-run 与版本回滚）。
+	// 命名空间化：规则归属请求命名空间；写路径需要标签引擎中间件失效缓存与广播变更。
+	{
+		tagRuleGroup := trafficGroup.Group("/tag-rule", coreDatabaseMiddleware, tagRuleEngineMiddleware)
+		// 标签规则列表查询 - 支持分页、搜索和排序
+		tagRuleGroup.POST("/list", tagRuleListGet)
+		// 标签规则列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
+		tagRuleGroup.OPTIONS("/list", ListMetaGinHandler[*TagRuleListGetSearchIn, *TagRuleListOut]())
+		// 创建标签规则 - 创建新的标签识别规则（归属当前请求命名空间）
+		tagRuleGroup.POST("/create", tagRuleCreate)
+		// 创建标签规则元信息
+		tagRuleGroup.OPTIONS("/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleCreateIn]())))
+		// 标签规则详情查询 - 根据ID获取规则详细信息
+		tagRuleGroup.POST("/:id/get", tagRuleDetailGet)
+		// 标签规则详情元信息
+		tagRuleGroup.OPTIONS("/:id/get", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagRuleDetailOut]())))
+		// 标签规则信息更新 - 更新规则描述/内容/启用状态
+		tagRuleGroup.POST("/:id/update", tagRuleUpdate)
+		// 标签规则信息更新元信息
+		tagRuleGroup.OPTIONS("/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleUpdateIn]())))
+		// 删除标签规则 - 批量删除规则及其全部历史版本
+		tagRuleGroup.POST("/delete", tagRuleBatchDelete)
+		// 删除标签规则元信息
+		tagRuleGroup.OPTIONS("/delete", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagRuleBatchIn](), WithBodyOutput[BatchResultOut]()),
+		))
+		// 启用标签规则 - 批量启用规则
+		tagRuleGroup.POST("/enable", tagRuleBatchSetEnabled(true))
+		// 启用标签规则元信息
+		tagRuleGroup.OPTIONS("/enable", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagRuleBatchIn](), WithBodyOutput[BatchResultOut]()),
+		))
+		// 停用标签规则 - 批量停用规则
+		tagRuleGroup.POST("/disable", tagRuleBatchSetEnabled(false))
+		// 停用标签规则元信息
+		tagRuleGroup.OPTIONS("/disable", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagRuleBatchIn](), WithBodyOutput[BatchResultOut]()),
+		))
+		// 标签规则语法校验 - 校验 Rego 源码语法与契约，返回带行列号的错误
+		tagRuleGroup.POST("/validate", tagRuleValidate)
+		// 标签规则语法校验元信息
+		tagRuleGroup.OPTIONS("/validate", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagRuleValidateIn](), WithBodyOutput[TagRuleValidateOut]()),
+		))
+		// 标签规则单规则 dry-run - 对一条候选规则评估 JSON 输入文档，输出运行细节
+		tagRuleGroup.POST("/single/dry-run", tagRuleDryRun)
+		// 标签规则单规则 dry-run 元信息
+		tagRuleGroup.OPTIONS("/single/dry-run", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagRuleDryRunRuleIn](), WithBodyOutput[TagRuleDryRunOut]()),
+		))
+		// 标签规则规则组 dry-run - 对一组候选规则评估 JSON 输入文档，输出逐规则与合并标签
+		tagRuleGroup.POST("/group/dry-run", tagRuleDryRunGroup)
+		// 标签规则规则组 dry-run 元信息
+		tagRuleGroup.OPTIONS("/group/dry-run", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagRuleDryRunGroupIn](), WithBodyOutput[TagRuleDryRunOut]()),
+		))
+		// 标签规则版本列表 - 获取规则的全部历史版本
+		tagRuleGroup.POST("/:id/version/list", tagRuleVersionList)
+		// 标签规则版本列表元信息
+		tagRuleGroup.OPTIONS("/:id/version/list", StructMetaGinHandler(WithMethod(http.MethodPost)))
+		// 标签规则回滚 - 将规则回滚到指定历史版本
+		tagRuleGroup.POST("/:id/version/:version/rollback", tagRuleVersionRollback)
+		// 标签规则回滚元信息
+		tagRuleGroup.OPTIONS("/:id/version/:version/rollback", StructMetaGinHandler(WithMethod(http.MethodPost)))
+		// 标签规则目标模型选项 - 返回已注册目标模型的下拉选项列表
+		tagRuleGroup.POST("/model/options", tagRuleModelOptions)
+		// 标签规则目标模型选项元信息
+		tagRuleGroup.OPTIONS("/model/options", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagRuleModelOptionsOut]())))
+		// 标签规则目标模型元信息 - 返回输入文档字段元信息，供 Rego 编辑器补全与字段面板
+		tagRuleGroup.POST("/model/metadata", tagRuleModelMetadata)
+		// 标签规则目标模型元信息元信息
+		tagRuleGroup.OPTIONS("/model/metadata", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleModelIn](), WithBodyOutput[TagRuleModelMetadataOut]())))
+		// 标签规则目标模型样例 - 返回当前命名空间下的系统样例列表，缺失时懒供给
+		tagRuleGroup.POST("/model/samples", tagRuleModelSamples)
+		// 标签规则目标模型样例元信息
+		tagRuleGroup.OPTIONS("/model/samples", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleModelIn](), WithBodyOutput[TagRuleModelSamplesOut]())))
+	}
+
+	// ========== 标签规则样例：/api/v1/traffic/tag-rule-sample ==========
+	// 流量审计命名空间下的标签规则验证样例管理（样例归属命名空间，model/input 创建后不可变）
+	{
+		tagRuleSampleGroup := trafficGroup.Group("/tag-rule-sample", coreDatabaseMiddleware)
+		// 标签规则样例列表查询 - 支持分页、搜索和排序
+		tagRuleSampleGroup.POST("/list", tagRuleSampleListGet)
+		// 标签规则样例列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
+		tagRuleSampleGroup.OPTIONS("/list", ListMetaGinHandler[*TagRuleSampleListGetSearchIn, *TagRuleSampleListOut]())
+		// 创建标签规则样例 - 创建新的验证样例（归属当前请求命名空间，model/input 创建后不可变）
+		tagRuleSampleGroup.POST("/create", tagRuleSampleCreate)
+		// 创建标签规则样例元信息
+		tagRuleSampleGroup.OPTIONS("/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleSampleCreateIn]())))
+		// 标签规则样例详情查询 - 根据ID获取样例完整信息
+		tagRuleSampleGroup.POST("/:id/get", tagRuleSampleDetailGet)
+		// 标签规则样例详情元信息
+		tagRuleSampleGroup.OPTIONS("/:id/get", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagRuleSampleDetailOut]())))
+		// 标签规则样例信息更新 - 仅允许更新样例名称与说明（model/input 不可变）
+		tagRuleSampleGroup.POST("/:id/update", tagRuleSampleUpdate)
+		// 标签规则样例信息更新元信息
+		tagRuleSampleGroup.OPTIONS("/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagRuleSampleUpdateIn]())))
+		// 删除标签规则样例 - 批量删除指定样例
+		tagRuleSampleGroup.POST("/delete", tagRuleSampleBatchDelete)
+		// 删除标签规则样例元信息
+		tagRuleSampleGroup.OPTIONS("/delete", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagRuleSampleBatchIn](), WithBodyOutput[BatchResultOut]()),
+		))
+	}
+
+	// ========== 标签事件规则：/api/v1/traffic/tag-event-rule ==========
+	// 流量审计命名空间下的标签事件规则管理（增删改查、启停、表达式校验、dry-run 与版本回滚）。
+	// dry-run 查询 tag_summings 所需 raw 库中间件已由 trafficGroup 父组提供。
+	{
+		tagEventRuleGroup := trafficGroup.Group("/tag-event-rule", coreDatabaseMiddleware)
+		// 标签事件规则列表查询 - 支持分页、搜索和排序
+		tagEventRuleGroup.POST("/list", tagEventRuleListGet)
+		// 标签事件规则列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
+		tagEventRuleGroup.OPTIONS("/list", ListMetaGinHandler[*TagEventRuleListGetSearchIn, *TagEventRuleListOut]())
+		// 创建标签事件规则 - 创建新的标签事件规则，创建前逐条件校验表达式语法
+		tagEventRuleGroup.POST("/create", tagEventRuleCreate)
+		// 创建标签事件规则元信息
+		tagEventRuleGroup.OPTIONS("/create", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagEventRuleCreateIn]())))
+		// 标签事件规则详情查询 - 根据ID获取规则详细信息
+		tagEventRuleGroup.POST("/:id/get", tagEventRuleDetailGet)
+		// 标签事件规则详情元信息
+		tagEventRuleGroup.OPTIONS("/:id/get", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyOutput[TagEventRuleDetailOut]())))
+		// 标签事件规则信息更新 - 更新规则描述/匹配策略/启用状态/条件集合，更新前快照当前版本
+		tagEventRuleGroup.POST("/:id/update", tagEventRuleUpdate)
+		// 标签事件规则信息更新元信息
+		tagEventRuleGroup.OPTIONS("/:id/update", StructMetaGinHandler(WithMethod(http.MethodPost, WithBodyInput[TagEventRuleUpdateIn]())))
+		// 删除标签事件规则 - 批量删除规则及其全部条件与历史版本
+		tagEventRuleGroup.POST("/delete", tagEventRuleBatchDelete)
+		// 删除标签事件规则元信息
+		tagEventRuleGroup.OPTIONS("/delete", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagEventRuleBatchIn](), WithBodyOutput[BatchResultOut]()),
+		))
+		// 启用标签事件规则 - 批量启用规则
+		tagEventRuleGroup.POST("/enable", tagEventRuleBatchSetEnabled(true))
+		// 启用标签事件规则元信息
+		tagEventRuleGroup.OPTIONS("/enable", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagEventRuleBatchIn](), WithBodyOutput[BatchResultOut]()),
+		))
+		// 停用标签事件规则 - 批量停用规则
+		tagEventRuleGroup.POST("/disable", tagEventRuleBatchSetEnabled(false))
+		// 停用标签事件规则元信息
+		tagEventRuleGroup.OPTIONS("/disable", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagEventRuleBatchIn](), WithBodyOutput[BatchResultOut]()),
+		))
+		// 标签事件规则表达式校验 - 校验条件表达式语法，返回精炼后的标准表达式或错误消息
+		tagEventRuleGroup.POST("/validate", tagEventRuleValidate)
+		// 标签事件规则表达式校验元信息
+		tagEventRuleGroup.OPTIONS("/validate", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagEventRuleValidateIn](), WithBodyOutput[TagEventRuleValidateOut]()),
+		))
+		// 标签事件规则 dry-run - 对一条候选规则（不落库）执行事件检测，查询 tag_summings
+		tagEventRuleGroup.POST("/dry-run", tagEventRuleDryRun)
+		// 标签事件规则 dry-run 元信息
+		tagEventRuleGroup.OPTIONS("/dry-run", StructMetaGinHandler(
+			WithMethod(http.MethodPost, WithBodyInput[TagEventRuleDryRunIn](), WithBodyOutput[TagEventRuleDryRunOut]()),
+		))
+		// 标签事件规则版本列表 - 获取规则的全部历史版本
+		tagEventRuleGroup.POST("/:id/version/list", tagEventRuleVersionList)
+		// 标签事件规则版本列表元信息
+		tagEventRuleGroup.OPTIONS("/:id/version/list", StructMetaGinHandler(WithMethod(http.MethodPost)))
+		// 标签事件规则回滚 - 将规则回滚到指定历史版本，回滚前先快照当前内容
+		tagEventRuleGroup.POST("/:id/version/:version/rollback", tagEventRuleVersionRollback)
+		// 标签事件规则回滚元信息
+		tagEventRuleGroup.OPTIONS("/:id/version/:version/rollback", StructMetaGinHandler(WithMethod(http.MethodPost)))
 	}
 
 	// ==================== 通用明文查看接口组：/api/v1/plaintext ====================

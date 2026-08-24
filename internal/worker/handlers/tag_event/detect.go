@@ -129,7 +129,8 @@ func (h *EventDetectHandler) loadConditions(ctx context.Context) ([]tagengine.De
 			MatchAll:      row.TagEventRule.MatchAll,
 			ConditionID:   row.ID,
 			ConditionName: row.Name,
-			Namespace:     row.NamespaceName,
+			// 命名空间由所属规则承载（条件与规则多对一，条件自身不冗余存储）
+			Namespace:     row.TagEventRule.NamespaceName,
 			Model:         row.Model,
 			Dimension:     row.Dimension,
 			Item:          row.Item,

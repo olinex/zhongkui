@@ -20,6 +20,7 @@ export enum HttpHeader {
   CONTENT_LANGUAGE = "Content-Language",
   AUTHORIZATION = "Authorization",
   CONTENT_TYPE = "Content-Type",
+  NAMESPACE = "X-Namespace",
 }
 
 export enum BackendDataType {

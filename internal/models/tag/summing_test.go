@@ -19,7 +19,7 @@ func TestTagSumming_Struct(t *testing.T) {
 				Namespace: "default",
 				Minute:    now,
 				Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				Dimension: "fp_tcp_client_sig",
+				Dimension: "fpTcpClientSig",
 				Item:      "s0:120:0:1",
 				Cnt:       42,
 			}
@@ -28,7 +28,7 @@ func TestTagSumming_Struct(t *testing.T) {
 			convey.So(summing.Namespace, convey.ShouldEqual, "default")
 			convey.So(summing.Minute, convey.ShouldResemble, now)
 			convey.So(summing.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
-			convey.So(summing.Dimension, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(summing.Dimension, convey.ShouldEqual, "fpTcpClientSig")
 			convey.So(summing.Item, convey.ShouldEqual, "s0:120:0:1")
 			convey.So(summing.Tags, convey.ShouldResemble, []string{"login_failed", "suspicious_ip"})
 			convey.So(summing.Cnt, convey.ShouldEqual, 42)
@@ -61,7 +61,7 @@ func TestTagSumming_Struct(t *testing.T) {
 					summing := &TagSumming{
 						Minute:    time.Now(),
 						Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-						Dimension: "fp_tcp_server_sig",
+						Dimension: "fpTcpServerSig",
 						Item:      "s0:120:1:1",
 						Cnt:       1,
 					}
@@ -90,7 +90,7 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 				Namespace: "default",
 				Minute:    now,
 				Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				Dimension: "fp_tcp_client_sig",
+				Dimension: "fpTcpClientSig",
 				Item:      "s0:120:0:1",
 				Cnt:       10,
 			}
@@ -112,7 +112,7 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 				"namespace": "default",
 				"minute": "2024-01-15T10:30:00Z",
 				"model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				"dimension": "fp_tcp_client_sig",
+				"dimension": "fpTcpClientSig",
 				"item": "s0:120:0:1",
 				"tags": ["login_failed", "suspicious_ip"],
 				"cnt": 10
@@ -123,7 +123,7 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(summing.Namespace, convey.ShouldEqual, "default")
 			convey.So(summing.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
-			convey.So(summing.Dimension, convey.ShouldEqual, "fp_tcp_client_sig")
+			convey.So(summing.Dimension, convey.ShouldEqual, "fpTcpClientSig")
 			convey.So(summing.Item, convey.ShouldEqual, "s0:120:0:1")
 			convey.So(summing.Tags, convey.ShouldHaveLength, 2)
 			convey.So(summing.Tags[0], convey.ShouldEqual, "login_failed")
@@ -135,7 +135,7 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 			summing := &TagSumming{
 				Minute:    time.Now(),
 				Model:     "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
-				Dimension: "fp_tcp_server_sig",
+				Dimension: "fpTcpServerSig",
 				Item:      "s0:120:1:1",
 				Cnt:       0,
 			}
@@ -195,8 +195,8 @@ func TestTagSumming_FieldConstraints(t *testing.T) {
 				name string
 				dim  string
 			}{
-				{"客户端指纹", "fp_tcp_client_sig"},
-				{"服务端指纹", "fp_tcp_server_sig"},
+				{"客户端指纹", "fpTcpClientSig"},
+				{"服务端指纹", "fpTcpServerSig"},
 				{"空维度", ""},
 			}
 

@@ -157,7 +157,7 @@ func TestBuildDetectionQuery(t *testing.T) {
 			conds := []DetectionCondition{{
 				ConditionID: 1,
 				Namespace:   "default",
-				Dimension:   "fp_tcp_client_sig",
+				Dimension:   "fpTcpClientSig",
 				Window:      window,
 				Threshold:   3,
 				Expression:  "A",

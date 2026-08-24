@@ -159,7 +159,8 @@ function axisDefaults(theme: ChartTheme): Record<string, unknown> {
 /**
  * Merge theme defaults into an ECharts option. Explicit values in `option`
  * always win (deep merged, arrays replaced). `grid` is intentionally left to
- * the page defaults.
+ * the page defaults; 坐标轴主题默认值仅注入到自带坐标轴的图表（折线/柱状），
+ * 饼图等无坐标轴图表不注入，避免凭空引入 grid 组件触发未注册报错。
  */
 export function withChartTheme<T extends object>(option: T, theme: ChartTheme): T {
   const themeDefaults: Record<string, unknown> = {
@@ -172,8 +173,10 @@ export function withChartTheme<T extends object>(option: T, theme: ChartTheme): 
       borderColor: theme.tooltipBorder,
       textStyle: { color: theme.textColor },
     },
-    xAxis: axisDefaults(theme),
-    yAxis: axisDefaults(theme),
   };
+  if (isPlainObject(option) && ("xAxis" in option || "yAxis" in option)) {
+    themeDefaults.xAxis = axisDefaults(theme);
+    themeDefaults.yAxis = axisDefaults(theme);
+  }
   return deepMerge(themeDefaults, option) as T;
 }

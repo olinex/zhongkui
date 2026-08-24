@@ -30,3 +30,14 @@ export const modelTypeKeyToI18nKey = (typeKey: string): string => {
   const last = typeKey.split(".").pop() ?? typeKey;
   return last.charAt(0).toLowerCase() + last.slice(1);
 };
+
+// modelTypeKeyLabel 目标模型类型键 → 可读模型名称：优先取 model.<modelKey>.name 翻译
+// （如 …/network.HttpTransport → "HTTP 传输"）；未命中时回退返回原始类型键。
+export const modelTypeKeyLabel = (typeKey: string): string => {
+  const nameTpl = `model.${modelTypeKeyToI18nKey(typeKey)}.name`;
+  const t = i18n.global.t(nameTpl);
+  if (t !== nameTpl) {
+    return t;
+  }
+  return typeKey;
+};

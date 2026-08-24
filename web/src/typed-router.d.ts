@@ -22,8 +22,6 @@ declare module 'vue-router/auto-routes' {
     'Admin Capturer List': RouteRecordInfo<'Admin Capturer List', '/:language/admin/capturer', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Admin Group List': RouteRecordInfo<'Admin Group List', '/:language/admin/group', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Admin Namespace List': RouteRecordInfo<'Admin Namespace List', '/:language/admin/namespace', { language: ParamValue<true> }, { language: ParamValue<false> }>,
-    'Admin Tag Event Rule List': RouteRecordInfo<'Admin Tag Event Rule List', '/:language/admin/tag-event-rule', { language: ParamValue<true> }, { language: ParamValue<false> }>,
-    'Admin Tag Rule List': RouteRecordInfo<'Admin Tag Rule List', '/:language/admin/tag-rule', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Admin User List': RouteRecordInfo<'Admin User List', '/:language/admin/user', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Sign In': RouteRecordInfo<'Sign In', '/:language/auth/sign-in', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Sign Up': RouteRecordInfo<'Sign Up', '/:language/auth/sign-up', { language: ParamValue<true> }, { language: ParamValue<false> }>,
@@ -35,6 +33,8 @@ declare module 'vue-router/auto-routes' {
     'ETL Task List': RouteRecordInfo<'ETL Task List', '/:language/etl/task', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Profile': RouteRecordInfo<'Profile', '/:language/profile', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Traffic List': RouteRecordInfo<'Traffic List', '/:language/traffic/:type', { language: ParamValue<true>, type: ParamValue<true> }, { language: ParamValue<false>, type: ParamValue<false> }>,
+    'Traffic Tag Event Rule List': RouteRecordInfo<'Traffic Tag Event Rule List', '/:language/traffic/tag-event-rule', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'Traffic Tag Rule List': RouteRecordInfo<'Traffic Tag Rule List', '/:language/traffic/tag-rule', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     '404 Wide Match': RouteRecordInfo<'404 Wide Match', '/:path(.*)', { path: ParamValue<true> }, { path: ParamValue<false> }>,
   }
 }

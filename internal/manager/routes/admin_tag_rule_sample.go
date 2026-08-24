@@ -3,7 +3,8 @@
 // 提供样例的列表查询、详情获取、创建、更新与删除能力。
 //
 // 一致性设计：
-//   - 样例为全局数据（不归属命名空间），所有 handler 不读取请求命名空间；
+//   - 样例归属命名空间（与标签规则同租户隔离），所有 handler 读取请求命名空间并按
+//     namespace_name 过滤；创建时写入当前请求命名空间；
 //   - 样例的 Model 与 Input 创建后不可变，更新仅允许调整 Name 与 Description
 //     （DTO 不暴露 Model/Input，落库仅写 name/description 两列，双重保证）；
 //   - 创建时校验目标模型已注册（tagengine.IsRegistered），未注册返回 400 + 1107。
@@ -11,8 +12,8 @@ package routes
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,7 @@ import (
 
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/tag"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
@@ -28,7 +30,7 @@ import (
 )
 
 // TagRuleSampleCreateIn 定义创建标签规则样例的请求输入结构。
-// 样例为全局数据（不归属命名空间）；model 必须是已注册的目标模型类型键
+// 样例归属当前请求命名空间（经命名空间中间件解析）；model 必须是已注册的目标模型类型键
 // （如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）。
 type TagRuleSampleCreateIn struct {
 	// Model 目标模型类型键
@@ -85,8 +87,12 @@ func invalidTagRuleSampleInputError(err error) *manager.CodeError {
 }
 
 // tagRuleSampleListGet 处理获取标签规则样例列表的请求。
-// 支持分页、排序与过滤（时间/名称/目标模型）；样例为全局数据，不过滤命名空间。
+// 支持分页、排序与过滤（时间/名称/目标模型）；仅返回当前命名空间内的样例。
 func tagRuleSampleListGet(c *gin.Context) {
+	namespace, ok := manager.RequireNamespace(c)
+	if !ok {
+		return
+	}
 	var in TagRuleSampleListGetSearchIn
 	if err := defaults.Set(&in); err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
@@ -97,7 +103,7 @@ func tagRuleSampleListGet(c *gin.Context) {
 		return
 	}
 	var items []*TagRuleSampleListOut
-	db := manager.GetCoreDatabase(c).Model(&tag.TagRuleSample{})
+	db := manager.GetCoreDatabase(c).Model(&tag.TagRuleSample{}).Where("namespace_name = ?", namespace)
 	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -113,6 +119,10 @@ func tagRuleSampleListGet(c *gin.Context) {
 // 反序列化为目标模型实例验证（与规则运行期样例校验的反序列化路径一致），
 // 失败拒绝落库；通过后输入文档序列化为 JSONB 落库。
 func tagRuleSampleCreate(c *gin.Context) {
+	namespace, ok := manager.RequireNamespace(c)
+	if !ok {
+		return
+	}
 	var in TagRuleSampleCreateIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
 		manager.CreateBadBodyError(err).AbortWithGinH(c)
@@ -172,10 +182,11 @@ func tagRuleSampleCreate(c *gin.Context) {
 		return
 	}
 	instance := &tag.TagRuleSample{
-		Model:       in.Model,
-		Name:        in.Name,
-		Description: in.Description,
-		Input:       datatypes.JSON(raw),
+		NamespaceName: namespace,
+		Model:         in.Model,
+		Name:          in.Name,
+		Description:   in.Description,
+		Input:         datatypes.JSON(raw),
 	}
 	if err := manager.GetCoreDatabase(c).WithContext(c).Create(instance).Error; err != nil {
 		if rollback != nil {
@@ -188,14 +199,19 @@ func tagRuleSampleCreate(c *gin.Context) {
 }
 
 // tagRuleSampleDetailGet 处理获取标签规则样例详情的请求。
-// 返回样例完整内容，输入文档反序列化为 map 后输出。
+// 返回样例完整内容，输入文档反序列化为 map 后输出；仅允许访问当前命名空间内的样例。
 func tagRuleSampleDetailGet(c *gin.Context) {
+	namespace, ok := manager.RequireNamespace(c)
+	if !ok {
+		return
+	}
 	id, ok := getUint64Param(c, "id")
 	if !ok {
 		return
 	}
 	instance := tag.TagRuleSample{}
-	if err := manager.GetCoreDatabase(c).WithContext(c).First(&instance, id).Error; err != nil {
+	if err := manager.GetCoreDatabase(c).WithContext(c).
+		Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			manager.ErrDefaultPageNotFound.AbortWithGinH(c)
 			return
@@ -216,8 +232,12 @@ func tagRuleSampleDetailGet(c *gin.Context) {
 
 // tagRuleSampleUpdate 处理更新标签规则样例的请求。
 // 样例的 Model 与 Input 创建后不可变，仅允许调整 Name 与 Description；
-// 落库仅写 name/description 两列，不触碰 model/input。
+// 落库仅写 name/description 两列，不触碰 model/input。仅允许更新当前命名空间内的样例。
 func tagRuleSampleUpdate(c *gin.Context) {
+	namespace, ok := manager.RequireNamespace(c)
+	if !ok {
+		return
+	}
 	id, ok := getUint64Param(c, "id")
 	if !ok {
 		return
@@ -229,7 +249,7 @@ func tagRuleSampleUpdate(c *gin.Context) {
 	}
 	instance := tag.TagRuleSample{}
 	db := manager.GetCoreDatabase(c)
-	if err := db.WithContext(c).First(&instance, id).Error; err != nil {
+	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			manager.ErrDefaultPageNotFound.AbortWithGinH(c)
 			return
@@ -247,43 +267,55 @@ func tagRuleSampleUpdate(c *gin.Context) {
 	manager.SimpleOK.AbortWithGinH(c)
 }
 
-// tagRuleSampleDelete 处理删除标签规则样例的请求。
-// 先同步删除样例引用的 S3 body 对象，再删除数据库记录；
-// S3 删除失败时保留记录返回错误（可重试），避免残留孤儿对象。
+// TagRuleSampleBatchIn 批量操作标签规则样例的请求输入结构。
+// Ids 接受标量（单个 ID）或数组（多个 ID）。
+type TagRuleSampleBatchIn struct {
+	Ids FlexList[uint64] `json:"ids"`
+}
+
+// tagRuleSampleBatchDelete 批量删除标签规则样例。
+// 逐条复用原 tagRuleSampleDelete 的 S3 body 清理 + 删除语义；
+// 样例不存在（或不属于当前命名空间）视为成功跳过（幂等）。
 // 删除后若该模型后续触发懒供给，缺失的系统样例（default 等）会被重新生成。
-func tagRuleSampleDelete(c *gin.Context) {
-	id, ok := getUint64Param(c, "id")
+func tagRuleSampleBatchDelete(c *gin.Context) {
+	namespace, ok := manager.RequireNamespace(c)
 	if !ok {
 		return
 	}
-	instance := tag.TagRuleSample{}
+	var in TagRuleSampleBatchIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	ids := []uint64(in.Ids)
+	if !validFlexLen(c, ids) {
+		return
+	}
 	db := manager.GetCoreDatabase(c)
-	if err := db.WithContext(c).First(&instance, id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			manager.ErrDefaultPageNotFound.AbortWithGinH(c)
-			return
-		}
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	// 模型含 S3 body 字段时，先同步删除样例引用的对象，再删除数据库记录；
-	// 删除失败时保留记录返回错误（可重试），避免残留孤儿对象。无 S3 字段的模型跳过。
-	if len(manager.SampleS3Fields[instance.Model]) > 0 {
-		input := map[string]any{}
-		if err := json.Unmarshal(instance.Input, &input); err != nil {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-		if err := manager.DeleteSampleS3Objects(c.Request.Context(), manager.GetS3Client(c), instance.Model, input); err != nil {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-	}
-	if err := db.WithContext(c).Where("id = ?", instance.ID).Delete(&tag.TagRuleSample{}).Error; err != nil {
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	manager.SimpleOK.AbortWithGinH(c)
+	batchExecute(c, ids,
+		func(id uint64) string { return strconv.FormatUint(id, 10) },
+		func(id uint64) error {
+			instance := tag.TagRuleSample{}
+			if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return nil // 不存在视为成功跳过
+				}
+				return errors.WithStack(err)
+			}
+			// 模型含 S3 body 字段时，先同步删除样例引用的对象，再删除数据库记录；
+			// 删除失败时该条记入 Failed（可重试），避免残留孤儿对象。无 S3 字段的模型跳过。
+			if len(manager.SampleS3Fields[instance.Model]) > 0 {
+				input := map[string]any{}
+				if err := json.Unmarshal(instance.Input, &input); err != nil {
+					return errors.WithStack(err)
+				}
+				if err := manager.DeleteSampleS3Objects(c.Request.Context(), manager.GetS3Client(c), instance.Model, input); err != nil {
+					return errors.WithStack(err)
+				}
+			}
+			return db.WithContext(c).Where("id = ?", instance.ID).Delete(&tag.TagRuleSample{}).Error
+		},
+	)
 }
 
 // newTagRuleSampleBaseDetailOut 将样例模型转换为基础详情输出结构。

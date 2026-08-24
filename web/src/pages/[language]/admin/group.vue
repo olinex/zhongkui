@@ -6,6 +6,7 @@
         :list-request="groupListGet"
         :options-request="groupListOptions"
         :actions="getActions"
+        :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
         model-name="group"
       />
@@ -17,6 +18,12 @@
       >
         <template #body="{ proxy }">
           <confirm-alert
+            v-if="batchState"
+            :action="$t('action.delete')"
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+          <confirm-alert
+            v-else
             :action="$t('action.delete')"
             :text="
               $t(`notice.deleteConfirm`, {
@@ -175,8 +182,9 @@ import {
   rbacPolicyTemplateListGet,
 } from "@/apis/admin";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import type { ItemActions, TableHeader } from "@/components/@types/table";
+import type { BatchActions, ItemActions, TableHeader } from "@/components/@types/table";
 import type { GroupDetailOut, GroupRbacPolicyDetailOut } from "./@types";
+import type { BatchResultOut } from "@/apis/@types/admin";
 import { useAppStore } from "@/stores/app";
 import { BackendDataType, SearchAction } from "@/types";
 import i18n from "@/utils/i18n";
@@ -257,6 +265,7 @@ const getActions = (): ItemActions => {
     edit: detailGetAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: function (item: Record<string, any>): void {
+      batchState.value = null;
       confirmDialogRef.value?.open(item);
     },
   };
@@ -306,17 +315,74 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
   })();
 };
 
+// ---- 批量删除 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    groupDelete(item.name as string),
+type BatchState = { items: Record<string, any>[] };
+const batchState = ref<BatchState | null>(null);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    delete: () => {
+      batchState.value = { items };
+      confirmDialogRef.value?.open({});
+    },
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
+  const names = items.map((i) => i.name as string);
+  await getResponse<BatchResultOut>(
+    groupDelete(names),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
       await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
-        color: "success",
+        color: "error",
       });
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchDeleteAction(state.items);
+    return;
+  }
+  await getResponse<BatchResultOut>(
+    groupDelete(proxy.name as string),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      await searchTableRef.value?.refresh();
     },
     async (rsp) => {
       appStore.notify({

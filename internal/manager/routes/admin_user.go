@@ -295,37 +295,39 @@ func userUpdate(c *gin.Context) {
 	manager.SimpleOK.AbortWithGinH(c)
 }
 
-// userSetActive 创建用户激活/禁用状态设置的处理函数
-// 这是一个高阶函数，根据传入的active参数返回具体的Gin处理函数
+// UserBatchActiveIn 批量设置用户激活状态的请求输入结构。
+// UnionIds 接受标量（单个 unionID 字符串）或数组（多个 unionID 字符串）。
+type UserBatchActiveIn struct {
+	UnionIds FlexList[serializer.HexUUID] `json:"unionIds"`
+}
+
+// userBatchSetActive 批量设置用户激活/禁用状态的处理函数工厂。
+// 逐条幂等更新：目标用户不存在（0 行更新）视为成功。
 //
 // 参数:
 //   - active bool: 要设置的用户状态，true表示激活，false表示禁用
 //
 // 返回值:
-//   - gin.HandlerFunc: 处理用户状态设置的Gin处理函数
-//
-// 处理函数功能:
-//   - 根据用户unionID设置用户的激活状态
-//   - 支持激活用户（active=true）或禁用用户（active=false）
-func userSetActive(active bool) gin.HandlerFunc {
+//   - gin.HandlerFunc: 批量处理用户状态设置的Gin处理函数
+func userBatchSetActive(active bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 从URL参数中获取用户unionID并验证
-		unionID, ok := getUUIDParam(c, "unionID")
-		if !ok {
+		var in UserBatchActiveIn
+		if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+			manager.CreateBadBodyError(err).AbortWithGinH(c)
 			return
 		}
-
-		// 获取数据库连接
+		unionIds := []serializer.HexUUID(in.UnionIds)
+		if !validFlexLen(c, unionIds) {
+			return
+		}
 		db := manager.GetCoreDatabase(c)
-
-		// 更新用户的激活状态
-		if err := db.Model(&core.User{}).Where("union_id = ?", unionID).Update("active", active).Error; err != nil {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-
-		// 返回操作成功的响应
-		manager.SimpleOK.AbortWithGinH(c)
+		batchExecute(c, unionIds,
+			func(u serializer.HexUUID) string { return u.String() },
+			func(u serializer.HexUUID) error {
+				// 不存在即 0 行更新，视为成功幂等
+				return db.Model(&core.User{}).Where("union_id = ?", u).Update("active", active).Error
+			},
+		)
 	}
 }
 

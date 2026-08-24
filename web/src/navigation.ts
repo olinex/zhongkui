@@ -41,6 +41,16 @@ export const navigationGroups: NavGroup[] = [
         routeName: "Traffic List",
         params: { type: "http-transport" },
       },
+      {
+        title: "navbar.traffic.tagRule",
+        icon: "mdi-label",
+        routeName: "Traffic Tag Rule List",
+      },
+      {
+        title: "navbar.traffic.tagEventRule",
+        icon: "mdi-alert-decagram",
+        routeName: "Traffic Tag Event Rule List",
+      },
     ],
   },
   {
@@ -94,16 +104,6 @@ export const navigationGroups: NavGroup[] = [
         title: "navbar.admin.capturer",
         icon: "mdi-lan",
         routeName: "Admin Capturer List",
-      },
-      {
-        title: "navbar.admin.tagRule",
-        icon: "mdi-label",
-        routeName: "Admin Tag Rule List",
-      },
-      {
-        title: "navbar.admin.tagEventRule",
-        icon: "mdi-alert-decagram",
-        routeName: "Admin Tag Event Rule List",
       },
     ],
   },

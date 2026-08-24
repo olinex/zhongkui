@@ -1,11 +1,12 @@
 <template>
-  <main-layout current-nav="admin">
+  <main-layout current-nav="traffic">
     <template #body>
       <search-table
         ref="searchTableRef"
         :list-request="tagEventRuleListGet"
         :options-request="tagEventRuleListOptions"
         :actions="getActions"
+        :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
         model-name="tagEventRule"
       />
@@ -18,6 +19,12 @@
       >
         <template #body="{ proxy }">
           <confirm-alert
+            v-if="batchState"
+            :action="$t('action.delete')"
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+          <confirm-alert
+            v-else
             :action="$t('action.delete')"
             :text="
               $t(`notice.deleteConfirm`, {
@@ -37,6 +44,14 @@
       >
         <template #body="{ proxy }">
           <confirm-alert
+            v-if="batchState"
+            :action="
+              $t(batchState?.action === 'activate' ? 'action.activate' : 'action.deactivate')
+            "
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+          <confirm-alert
+            v-else
             :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
             :text="
               $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
@@ -135,7 +150,8 @@
                     <v-text-field
                       v-model="cond.name"
                       :label="$t('model.tagEventCondition.field.name')"
-                      :error="!cond.name.trim()"
+                      :error-messages="cond.touched ? cond.fieldErrors.name : ''"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                   <v-col cols="6">
@@ -143,22 +159,27 @@
                       v-model="cond.model"
                       :items="modelOptions"
                       :label="$t('model.tagEventCondition.field.model')"
+                      :error-messages="cond.touched ? cond.fieldErrors.model : ''"
                       clearable
                     />
                   </v-col>
                 </v-row>
                 <v-row dense>
                   <v-col cols="6">
-                    <v-text-field
-                      v-model="cond.dimension"
+                    <v-select
+                      :model-value="cond.dimension"
+                      :items="dimensionOptions(cond.model)"
                       :label="$t('model.tagEventCondition.field.dimension')"
-                      placeholder="fp_tcp_client_sig / fp_tcp_server_sig ..."
+                      :error-messages="cond.touched ? cond.fieldErrors.dimension : ''"
+                      clearable
+                      @update:model-value="onDimensionChange(cond, $event)"
                     />
                   </v-col>
                   <v-col cols="6">
                     <v-text-field
                       v-model="cond.item"
                       :label="$t('model.tagEventCondition.field.item')"
+                      :error-messages="cond.touched ? cond.fieldErrors.item : ''"
                     />
                   </v-col>
                 </v-row>
@@ -168,7 +189,8 @@
                       v-model.number="cond.window"
                       type="number"
                       :label="$t('model.tagEventCondition.field.window')"
-                      :error="!(cond.window > 0)"
+                      :error-messages="cond.touched ? cond.fieldErrors.window : ''"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                   <v-col cols="6">
@@ -176,18 +198,32 @@
                       v-model.number="cond.threshold"
                       type="number"
                       :label="$t('model.tagEventCondition.field.threshold')"
-                      :error="!((cond.threshold ?? 0) > 0)"
+                      :error-messages="cond.touched ? cond.fieldErrors.threshold : ''"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                 </v-row>
                 <v-row dense>
                   <v-col cols="12">
-                    <v-text-field
+                    <v-textarea
+                      v-model="cond.description"
+                      :label="$t('model.tagEventCondition.field.description')"
+                      :error-messages="cond.touched ? cond.fieldErrors.description : ''"
+                      rows="1"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row dense>
+                  <v-col cols="12">
+                    <tag-expr-editor
                       v-model="cond.expression"
-                      :label="$t('model.tagEventCondition.field.expression')"
-                      :error="!!cond.localError"
-                      :error-messages="cond.localError || ''"
-                      :append-inner-icon="cond.localValid ? 'mdi-check-circle' : ''"
+                      :tags="tagPool"
+                      :valid="cond.touched && cond.localValid && !cond.fieldErrors.expression"
+                      :error-message="
+                        cond.touched ? cond.localError || cond.fieldErrors.expression : ''
+                      "
+                      min-height="260px"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                 </v-row>
@@ -201,69 +237,6 @@
                     >
                       {{ $t("action.validate") }}
                     </v-btn>
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-radio-group v-model="cond.connector" inline density="compact" hide-details>
-                      <v-radio label="AND" value="AND" />
-                      <v-radio label="OR" value="OR" />
-                    </v-radio-group>
-                  </v-col>
-                </v-row>
-                <v-row dense>
-                  <v-col cols="12">
-                    <v-label>{{ $t("action.generateExpression") }}</v-label>
-                    <v-chip
-                      v-for="tag in tagPool"
-                      :key="tag"
-                      size="small"
-                      variant="tonal"
-                      :color="cond.selectedTags.includes(tag) ? 'primary' : ''"
-                      class="me-1 my-1"
-                      @click="toggleTag(cond, tag)"
-                    >
-                      {{ tag }}
-                    </v-chip>
-                    <v-chip
-                      v-if="tagPool.length === 0 && !tagPoolLoading"
-                      size="small"
-                      variant="tonal"
-                      disabled
-                      class="my-1"
-                    >
-                      {{ $t("notice.noEnabledRules") }}
-                    </v-chip>
-                    <v-btn
-                      size="small"
-                      variant="tonal"
-                      class="ms-2"
-                      :disabled="cond.selectedTags.length === 0"
-                      @click="generateExpression(cond)"
-                    >
-                      {{ $t("action.generateExpression") }}
-                    </v-btn>
-                  </v-col>
-                </v-row>
-                <v-row v-if="suggestTagsFor(cond).length" dense>
-                  <v-col cols="12">
-                    <v-chip
-                      v-for="s in suggestTagsFor(cond)"
-                      :key="s"
-                      size="small"
-                      variant="outlined"
-                      class="me-1"
-                      @click="appendTag(cond, s)"
-                    >
-                      {{ s }}
-                    </v-chip>
-                  </v-col>
-                </v-row>
-                <v-row dense>
-                  <v-col cols="12">
-                    <v-textarea
-                      v-model="cond.description"
-                      :label="$t('model.tagEventCondition.field.description')"
-                      rows="1"
-                    />
                   </v-col>
                 </v-row>
                 <v-switch
@@ -370,7 +343,8 @@
                       v-model="cond.name"
                       :label="$t('model.tagEventCondition.field.name')"
                       :disabled="!editable"
-                      :error="!cond.name.trim()"
+                      :error-messages="cond.touched ? cond.fieldErrors.name : ''"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                   <v-col cols="6">
@@ -379,17 +353,21 @@
                       :items="modelOptions"
                       :label="$t('model.tagEventCondition.field.model')"
                       :disabled="!editable"
+                      :error-messages="cond.touched ? cond.fieldErrors.model : ''"
                       clearable
                     />
                   </v-col>
                 </v-row>
                 <v-row dense>
                   <v-col cols="6">
-                    <v-text-field
-                      v-model="cond.dimension"
+                    <v-select
+                      :model-value="cond.dimension"
+                      :items="dimensionOptions(cond.model)"
                       :label="$t('model.tagEventCondition.field.dimension')"
                       :disabled="!editable"
-                      placeholder="fp_tcp_client_sig / fp_tcp_server_sig ..."
+                      :error-messages="cond.touched ? cond.fieldErrors.dimension : ''"
+                      clearable
+                      @update:model-value="onDimensionChange(cond, $event)"
                     />
                   </v-col>
                   <v-col cols="6">
@@ -397,6 +375,7 @@
                       v-model="cond.item"
                       :label="$t('model.tagEventCondition.field.item')"
                       :disabled="!editable"
+                      :error-messages="cond.touched ? cond.fieldErrors.item : ''"
                     />
                   </v-col>
                 </v-row>
@@ -407,7 +386,8 @@
                       type="number"
                       :label="$t('model.tagEventCondition.field.window')"
                       :disabled="!editable"
-                      :error="!(cond.window > 0)"
+                      :error-messages="cond.touched ? cond.fieldErrors.window : ''"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                   <v-col cols="6">
@@ -416,19 +396,34 @@
                       type="number"
                       :label="$t('model.tagEventCondition.field.threshold')"
                       :disabled="!editable"
-                      :error="!((cond.threshold ?? 0) > 0)"
+                      :error-messages="cond.touched ? cond.fieldErrors.threshold : ''"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                 </v-row>
                 <v-row dense>
                   <v-col cols="12">
-                    <v-text-field
-                      v-model="cond.expression"
-                      :label="$t('model.tagEventCondition.field.expression')"
+                    <v-textarea
+                      v-model="cond.description"
+                      :label="$t('model.tagEventCondition.field.description')"
                       :disabled="!editable"
-                      :error="!!cond.localError"
-                      :error-messages="cond.localError || ''"
-                      :append-inner-icon="cond.localValid ? 'mdi-check-circle' : ''"
+                      :error-messages="cond.touched ? cond.fieldErrors.description : ''"
+                      rows="1"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row dense>
+                  <v-col cols="12">
+                    <tag-expr-editor
+                      v-model="cond.expression"
+                      :tags="tagPool"
+                      :valid="cond.touched && cond.localValid && !cond.fieldErrors.expression"
+                      :error-message="
+                        cond.touched ? cond.localError || cond.fieldErrors.expression : ''
+                      "
+                      :disabled="!editable"
+                      min-height="260px"
+                      @update:model-value="markTouched(cond)"
                     />
                   </v-col>
                 </v-row>
@@ -443,78 +438,6 @@
                     >
                       {{ $t("action.validate") }}
                     </v-btn>
-                  </v-col>
-                  <v-col cols="auto">
-                    <v-radio-group
-                      v-model="cond.connector"
-                      inline
-                      density="compact"
-                      hide-details
-                      :disabled="!editable"
-                    >
-                      <v-radio label="AND" value="AND" />
-                      <v-radio label="OR" value="OR" />
-                    </v-radio-group>
-                  </v-col>
-                </v-row>
-                <v-row dense>
-                  <v-col cols="12">
-                    <v-label>{{ $t("action.generateExpression") }}</v-label>
-                    <v-chip
-                      v-for="tag in tagPool"
-                      :key="tag"
-                      size="small"
-                      variant="tonal"
-                      :color="cond.selectedTags.includes(tag) ? 'primary' : ''"
-                      :disabled="!editable"
-                      class="me-1 my-1"
-                      @click="toggleTag(cond, tag)"
-                    >
-                      {{ tag }}
-                    </v-chip>
-                    <v-chip
-                      v-if="tagPool.length === 0 && !tagPoolLoading"
-                      size="small"
-                      variant="tonal"
-                      disabled
-                      class="my-1"
-                    >
-                      {{ $t("notice.noEnabledRules") }}
-                    </v-chip>
-                    <v-btn
-                      size="small"
-                      variant="tonal"
-                      class="ms-2"
-                      :disabled="!editable || cond.selectedTags.length === 0"
-                      @click="generateExpression(cond)"
-                    >
-                      {{ $t("action.generateExpression") }}
-                    </v-btn>
-                  </v-col>
-                </v-row>
-                <v-row v-if="suggestTagsFor(cond).length" dense>
-                  <v-col cols="12">
-                    <v-chip
-                      v-for="s in suggestTagsFor(cond)"
-                      :key="s"
-                      size="small"
-                      variant="outlined"
-                      :disabled="!editable"
-                      class="me-1"
-                      @click="appendTag(cond, s)"
-                    >
-                      {{ s }}
-                    </v-chip>
-                  </v-col>
-                </v-row>
-                <v-row dense>
-                  <v-col cols="12">
-                    <v-textarea
-                      v-model="cond.description"
-                      :label="$t('model.tagEventCondition.field.description')"
-                      :disabled="!editable"
-                      rows="1"
-                    />
                   </v-col>
                 </v-row>
                 <v-switch
@@ -719,9 +642,9 @@
 </template>
 
 <route lang="yaml">
-name: Admin Tag Event Rule List
+name: Traffic Tag Event Rule List
 meta:
-  title: title.tagEventRuleAdmin
+  title: title.tagEventRuleTraffic
   requiresAuth: true
   requiresPerm: true
 </route>
@@ -729,6 +652,7 @@ meta:
 <script setup lang="ts">
 import { reactive } from "vue";
 import { DateTime } from "luxon";
+import * as yup from "yup";
 
 import {
   tagEventRuleCreate,
@@ -744,12 +668,17 @@ import {
   tagEventRuleVersionRollback,
   tagRuleDetailGet,
   tagRuleListGet,
-} from "@/apis/admin";
-import type { TagEventRuleConditionIn } from "@/apis/@types/admin";
+  tagRuleModelMetadata,
+} from "@/apis/traffic";
+import type { BatchResultOut, TagEventRuleConditionIn } from "@/apis/@types/admin";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import type { ItemActions } from "@/components/@types/table";
+import type { BatchActions, ItemActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
-import { createTagEventRuleSchema, updateTagEventRuleSchema } from "@/schemas/tagEventRule";
+import {
+  createTagEventRuleSchema,
+  tagEventConditionSchema,
+  updateTagEventRuleSchema,
+} from "@/schemas/tagEventRule";
 import { parseBooleanExpr } from "@/utils/booleanExpr";
 import { durationToMinutes, minutesToDurationString } from "@/utils/duration";
 import { vuetifyCfg } from "@/utils/form";
@@ -764,6 +693,7 @@ import type {
   TagEventRuleVersionOut,
   TagRuleDetailOut,
   TagRuleListOut,
+  TagRuleModelMetadataOut,
 } from "./@types";
 
 interface ConditionDraft {
@@ -782,8 +712,10 @@ interface ConditionDraft {
   localError: string;
   backendValid: boolean | null;
   validating: boolean;
-  selectedTags: string[];
-  connector: "AND" | "OR";
+  /** 用户是否已与条件交互或尝试提交；为 false 时不展示字段错误，避免空表单一进来就标红 */
+  touched: boolean;
+  /** 各字段的 yup 校验错误信息（expression 除外，由 localError 独立展示） */
+  fieldErrors: Record<string, string>;
 }
 
 const appStore = useAppStore();
@@ -819,9 +751,101 @@ const newCondition = (): ConditionDraft =>
     localError: "",
     backendValid: null,
     validating: false,
-    selectedTags: [] as string[],
-    connector: "AND" as const,
+    touched: false,
+    fieldErrors: {},
   });
+
+// 用户编辑过字段或触发校验后，条件进入 touched 状态，错误才展示
+const markTouched = (cond: ConditionDraft): void => {
+  cond.touched = true;
+};
+
+// 提交失败时将所有条件标记为 touched，使校验错误可见
+const markConditionsTouched = (list: ConditionDraft[]): void => {
+  list.forEach((c) => {
+    c.touched = true;
+  });
+};
+
+// ---- dimension 下拉可选项：目标模型元信息中的合法维度（与 tagengine 注册表/物化视图一致）----
+const modelMetaCache = reactive<Record<string, TagRuleModelMetadataOut>>({});
+
+// 按模型拉取元信息并缓存（一次拉取后复用），模型为空或已缓存时跳过
+const loadModelMetadata = async (model: string): Promise<void> => {
+  if (!model || modelMetaCache[model]) {
+    return;
+  }
+  await getResponse<TagRuleModelMetadataOut>(
+    tagRuleModelMetadata({ model }),
+    async (rsp) => {
+      modelMetaCache[model] = rsp.data;
+    },
+    async () => {
+      modelMetaCache[model] = { model, fields: [], dimensions: [] };
+    },
+  );
+};
+
+/** dimension 下拉选项：后端登记的目标模型合法标签维度（描述缺失时回退取值本身）。 */
+const dimensionOptions = (model: string): Array<{ title: string; value: string }> =>
+  (modelMetaCache[model]?.dimensions ?? []).map((d) => ({
+    title: d.description || d.value,
+    value: d.value,
+  }));
+
+// 清除下拉时 v-select 回传 null，统一落回空串（空串表示维度不限制，符合后端语义）
+const onDimensionChange = (cond: ConditionDraft, value: string | null): void => {
+  cond.dimension = value ?? "";
+  markTouched(cond);
+};
+
+// 用 tagEventConditionSchema 校验条件字段，将各字段错误信息写入 cond.fieldErrors。
+// expression 同样纳入 fieldErrors（required/max 约束），编辑器展示时优先取语法错误
+// localError，其次回退到 schema 错误。
+const validateConditionFields = (cond: ConditionDraft): void => {
+  const errors: Record<string, string> = {};
+  try {
+    // 校验对象浅拷贝，避免 yup 的默认 cast 副作用污染响应式草稿
+    tagEventConditionSchema().validateSync({ ...cond }, { abortEarly: false });
+  } catch (err) {
+    if (err instanceof yup.ValidationError && err.inner) {
+      for (const e of err.inner) {
+        if (e.path && !errors[e.path]) {
+          errors[e.path] = e.message;
+        }
+      }
+    }
+  }
+  cond.fieldErrors = errors;
+};
+
+// 条件数据变化时（含加载编辑数据）实时校验字段约束；
+// 含 expression 以同步其 required/max 约束（语法由 watchConditionExpression 负责）
+const watchConditionFields = (cond: ConditionDraft): void => {
+  watch(
+    () => [
+      cond.name,
+      cond.model,
+      cond.dimension,
+      cond.item,
+      cond.window,
+      cond.threshold,
+      cond.enabled,
+      cond.description,
+      cond.expression,
+    ],
+    () => validateConditionFields(cond),
+    { immediate: true },
+  );
+  // 模型变化（或编辑加载时 immediate）→ 拉取该模型的元信息（dimension 可选项）
+  watch(
+    () => cond.model,
+    (model) => {
+      void loadModelMetadata(model);
+    },
+    { immediate: true },
+  );
+};
 
 const toConditionIn = (c: ConditionDraft): TagEventRuleConditionIn => ({
   name: c.name,
@@ -890,45 +914,10 @@ const loadTagPool = async (): Promise<void> => {
   }
 };
 
-// ---- condition helpers ----
-const toggleTag = (cond: ConditionDraft, tag: string): void => {
-  const idx = cond.selectedTags.indexOf(tag);
-  if (idx >= 0) {
-    cond.selectedTags.splice(idx, 1);
-  } else {
-    cond.selectedTags.push(tag);
-  }
-};
-
-const appendTag = (cond: ConditionDraft, tag: string): void => {
-  const expr = cond.expression;
-  const tail = /([a-zA-Z][a-zA-Z0-9_-]*)$/.exec(expr);
-  if (tail && expr.slice(0, tail.index).trim()) {
-    cond.expression = `${expr.slice(0, tail.index)}${tag}`;
-    return;
-  }
-  const sep = expr && !/[\s(]$/.test(expr) ? ` ${cond.connector} ` : "";
-  cond.expression = `${expr}${sep}${tag}`;
-};
-
-const generateExpression = (cond: ConditionDraft): void => {
-  if (cond.selectedTags.length === 0) {
-    return;
-  }
-  cond.expression = cond.selectedTags.join(` ${cond.connector} `);
-  void validateConditionExpression(cond);
-};
-
-const suggestTagsFor = (cond: ConditionDraft): string[] => {
-  const tail = /(?:^|[\s(]+)([a-zA-Z][a-zA-Z0-9_-]*)$/.exec(cond.expression);
-  if (!tail) {
-    return [];
-  }
-  return tagPool.value.filter((t) => t.startsWith(tail[1])).slice(0, 8);
-};
-
 const validateConditionExpression = async (cond: ConditionDraft): Promise<void> => {
   cond.validating = true;
+  // 主动触发校验也视为已交互，校验结果（含错误）立即展示
+  markTouched(cond);
   try {
     await getResponse<TagEventRuleValidateOut>(
       tagEventRuleValidate({ expression: cond.expression }),
@@ -979,6 +968,7 @@ const createConditions = ref<ConditionDraft[]>([]);
 const addCreateCondition = (): void => {
   const cond = newCondition();
   watchConditionExpression(cond);
+  watchConditionFields(cond);
   createConditions.value.push(cond);
 };
 
@@ -989,14 +979,7 @@ const removeCreateCondition = (idx: number): void => {
 const createConditionsValid = computed<boolean>(
   () =>
     createConditions.value.length > 0 &&
-    createConditions.value.every(
-      (c) =>
-        c.name.trim() !== "" &&
-        c.expression.trim() !== "" &&
-        c.window > 0 &&
-        (c.threshold ?? 0) > 0 &&
-        c.localValid,
-    ),
+    createConditions.value.every((c) => Object.keys(c.fieldErrors).length === 0 && c.localValid),
 );
 
 const openCreateDialogAction = (): void => {
@@ -1012,6 +995,8 @@ const openCreateDialogAction = (): void => {
 
 const createAction = createForm.handleSubmit(async (values) => {
   if (!createConditionsValid.value) {
+    // 提交失败：展示各条件字段的校验错误
+    markConditionsTouched(createConditions.value);
     appStore.notify({
       text: i18n.global.t("notice.expressionInvalid"),
       timeout: 3000,
@@ -1052,6 +1037,7 @@ const editConditions = ref<ConditionDraft[]>([]);
 const addEditCondition = (): void => {
   const cond = newCondition();
   watchConditionExpression(cond);
+  watchConditionFields(cond);
   editConditions.value.push(cond);
 };
 
@@ -1062,14 +1048,7 @@ const removeEditCondition = (idx: number): void => {
 const editConditionsValid = computed<boolean>(
   () =>
     editConditions.value.length > 0 &&
-    editConditions.value.every(
-      (c) =>
-        c.name.trim() !== "" &&
-        c.expression.trim() !== "" &&
-        c.window > 0 &&
-        (c.threshold ?? 0) > 0 &&
-        c.localValid,
-    ),
+    editConditions.value.every((c) => Object.keys(c.fieldErrors).length === 0 && c.localValid),
 );
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1094,6 +1073,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
         cond.enabled = c.enabled;
         cond.description = c.description;
         watchConditionExpression(cond);
+        watchConditionFields(cond);
         return cond;
       });
       if (editConditions.value.length === 0) {
@@ -1114,6 +1094,8 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
 const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     if (!editConditionsValid.value) {
+      // 提交失败：展示各条件字段的校验错误
+      markConditionsTouched(editConditions.value);
       appStore.notify({
         text: i18n.global.t("notice.expressionInvalid"),
         timeout: 3000,
@@ -1155,7 +1137,10 @@ const getActions = (item: Record<string, any>): ItemActions => {
     version: versionAction,
     dryRun: openDryRunAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete: (i: Record<string, any>) => deleteConfirmRef.value?.open(i),
+    delete: (i: Record<string, any>) => {
+      batchState.value = null;
+      deleteConfirmRef.value?.open(i);
+    },
   };
   switch (item.enabled) {
     case false:
@@ -1170,17 +1155,102 @@ const getActions = (item: Record<string, any>): ItemActions => {
   return actions;
 };
 
+// ---- 批量删除/启用/禁用 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    tagEventRuleDelete(item.id),
+type BatchState = { items: Record<string, any>[]; action: "delete" | "activate" | "deactivate" };
+const batchState = ref<BatchState | null>(null);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    delete: () => {
+      batchState.value = { items, action: "delete" };
+      deleteConfirmRef.value?.open({});
+    },
+    activate: () => {
+      batchState.value = { items, action: "activate" };
+      toggleConfirmRef.value?.open({});
+    },
+    deactivate: () => {
+      batchState.value = { items, action: "deactivate" };
+      toggleConfirmRef.value?.open({});
+    },
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
+  const ids = items.map((i) => i.id as number);
+  await getResponse<BatchResultOut>(
+    tagEventRuleDelete(ids),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
       await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
-        color: "success",
+        color: "error",
       });
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchToggleAction = async (items: Record<string, any>[], enabled: boolean): Promise<void> => {
+  const ids = items.map((i) => i.id as number);
+  await getResponse<BatchResultOut>(
+    tagEventRuleSetEnabled(ids, enabled),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
+      await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchDeleteAction(state.items);
+    return;
+  }
+  await getResponse<BatchResultOut>(
+    tagEventRuleDelete(proxy.id),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      await searchTableRef.value?.refresh();
     },
     async (rsp) => {
       appStore.notify({
@@ -1196,24 +1266,27 @@ const toggleTarget = ref<boolean | null>(null);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
+  batchState.value = null;
   toggleTarget.value = enabled;
   toggleConfirmRef.value?.open(item);
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (item: Record<string, any>): Promise<void> => {
+const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchToggleAction(state.items, state.action === "activate");
+    return;
+  }
   if (toggleTarget.value === null) {
     return;
   }
-  await getSimpleResponse(
-    tagEventRuleSetEnabled(item.id, toggleTarget.value),
+  await getResponse<BatchResultOut>(
+    tagEventRuleSetEnabled(proxy.id, toggleTarget.value),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
       await searchTableRef.value?.refresh();
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({

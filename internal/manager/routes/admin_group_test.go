@@ -485,15 +485,15 @@ func TestGroupCreate(t *testing.T) {
 	})
 }
 
-// TestGroupDelete 测试 groupDelete 函数
+// TestGroupDelete 测试 groupBatchDelete 函数
 func TestGroupDelete(t *testing.T) {
-	Convey("测试 groupDelete 函数", t, func() {
+	Convey("测试 groupBatchDelete 函数", t, func() {
 		// 创建测试数据库和路由
 		db := createGroupTestDB()
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由
-		r.POST("/api/v1/admin/group/:name/delete", groupDelete)
+		r.POST("/api/v1/admin/group/delete", groupBatchDelete)
 
 		Convey("应成功删除用户组", func() {
 			// 创建测试数据
@@ -504,10 +504,19 @@ func TestGroupDelete(t *testing.T) {
 			db.Create(&group)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/tobedeleted/delete", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/delete",
+				bytes.NewReader([]byte(`{"names":"tobedeleted"}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 1)
+			So(len(resp.Data.Failed), ShouldEqual, 0)
 
 			// 验证数据库记录已删除
 			var deletedGroup core.Group
@@ -517,14 +526,21 @@ func TestGroupDelete(t *testing.T) {
 
 		Convey("应返回成功当用户组不存在时（幂等性）", func() {
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/nonexistent/delete", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/delete",
+				bytes.NewReader([]byte(`{"names":"nonexistent"}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
-			// 删除不存在的资源返回成功是符合HTTP DELETE幂等性的
+			// 删除不存在的资源视为成功（批量汇总 succeeded=1）
 			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 1)
 		})
 
-		Convey("应返回错误当用户组有关联策略时", func() {
+		Convey("应记入失败当用户组有关联策略时", func() {
 			// 创建测试数据
 			group := core.Group{
 				Name:        "admin",
@@ -537,11 +553,22 @@ func TestGroupDelete(t *testing.T) {
 			db.Create(policy)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/delete", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/delete",
+				bytes.NewReader([]byte(`{"names":["admin"]}`)))
+			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
-			// ErrCannotDeleteCauseRelateRecord 的 HTTP 状态码是 400 (BadRequest)
-			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			// 有引用时该条记入失败明细，HTTP 200 表达批量结果
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int            `json:"code"`
+				Data BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 0)
+			So(len(resp.Data.Failed), ShouldEqual, 1)
+			So(resp.Data.Failed[0].ID, ShouldEqual, "admin")
+			So(resp.Data.Failed[0].Reason, ShouldNotBeEmpty)
 		})
 	})
 }

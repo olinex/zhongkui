@@ -11,13 +11,14 @@
 package routes
 
 import (
-	"errors"
+	"strconv"
 
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
@@ -290,46 +291,47 @@ func capturerUpdate(c *gin.Context) {
 	manager.SimpleOK.AbortWithGinH(c)
 }
 
-// capturerDelete 处理删除抓包器的请求。
+// CapturerBatchDeleteIn 批量删除抓包器的请求输入结构。
+// Ids 接受标量（单个 ID）或数组（多个 ID）。
+type CapturerBatchDeleteIn struct {
+	Ids FlexList[uint64] `json:"ids"`
+}
+
+// capturerBatchDelete 批量删除抓包器。
+// 逐条复用原 capturerDelete 的 DeleteWithConfig 语义（数据库事务删除记录 + etcd 配置同步）；
+// 抓包器不存在视为成功跳过（幂等）。
 //
-// 请求方式：DELETE
-// URL 路径参数：:id — 抓包器的数据库主键 ID（uint64）
-//
-// 处理流程：
-//  1. 从 URL 路径中解析抓包器 ID
-//  2. 从数据库中查询抓包器记录（确认存在）
-//  3. 调用 DeleteWithConfig 在数据库事务中同时删除数据库记录和 etcd 配置
-//  4. 成功后返回 200 OK
+// 请求方式：POST
+// 请求体：CapturerBatchDeleteIn（批量抓包器 ID）
 //
 // 错误处理：
-//   - ID 解析失败 → 400 URL 参数错误
-//   - 抓包器不存在（ErrRecordNotFound） → 400 关联记录错误
-//   - 删除过程中记录不存在 → 400 关联记录错误
-//   - 其他数据库或 etcd 错误 → 500 意外错误
-func capturerDelete(c *gin.Context) {
-	id, ok := getUint64Param(c, "id")
-	if !ok {
+//   - 请求体绑定失败 → 400 请求体错误
+//   - 批量长度非法 → 400 请求体错误
+//   - 单条删除失败（数据库或 etcd 错误）→ 记入失败明细，不中断其他条目
+func capturerBatchDelete(c *gin.Context) {
+	var in CapturerBatchDeleteIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	ids := []uint64(in.Ids)
+	if !validFlexLen(c, ids) {
 		return
 	}
 	db := manager.GetCoreDatabase(c)
 	client := manager.GetEtcdClient(c)
-	var instance core.Capturer
-	if err := db.First(&instance, "id = ?", id).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			manager.ErrCannotDeleteCauseRelateRecord.AbortWithGinH(c)
-			return
-		} else {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-	} else if err := instance.DeleteWithConfig(db, client); err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			manager.ErrCannotDeleteCauseRelateRecord.AbortWithGinH(c)
-			return
-		} else {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-	}
-	manager.SimpleOK.AbortWithGinH(c)
+	batchExecute(c, ids,
+		func(id uint64) string { return strconv.FormatUint(id, 10) },
+		func(id uint64) error {
+			var instance core.Capturer
+			if err := db.First(&instance, "id = ?", id).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					// 不存在视为成功跳过
+					return nil
+				}
+				return errors.WithStack(err)
+			}
+			return instance.DeleteWithConfig(db, client)
+		},
+	)
 }

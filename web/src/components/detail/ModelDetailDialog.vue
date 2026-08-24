@@ -40,7 +40,8 @@
                   />
                 </template>
                 <template v-else>
-                  {{ field.display }}
+                  <!-- 空字符串展示空白标记，避免整行视觉错位 -->
+                  {{ field.display || $t("model.__base.value.blank") }}
                 </template>
               </td>
               <td class="text-no-wrap">

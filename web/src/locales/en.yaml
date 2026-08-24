@@ -5,8 +5,6 @@ navbar:
     group: Group
     namespace: Namespace
     capturer: Capturer
-    tagRule: Tag Rule
-    tagEventRule: Tag Event Rule
   etl:
     self: ETL
     server: Server
@@ -18,6 +16,8 @@ navbar:
     ipv4Tcp: IPv4 TCP
     ipv6Tcp: IPv6 TCP
     httpTransport: HTTP Transport
+    tagRule: Tag Rule
+    tagEventRule: Tag Event Rule
   pin: Pin sidebar
   unpin: Unpin sidebar
 model:
@@ -785,10 +785,10 @@ action:
   version: Version
   rollback: Rollback
   generateSkeleton: Generate Skeleton
-  generateExpression: Generate Expression
   reuseFields: Reuse Existing Rule Fields
   selectSample: Select sample
-  searchFields: Search fields
+  regoFieldHint: Type "/" to open the field list, "//" to insert a literal "/"
+  tagExprFieldHint: Type "/" to open the tag list, "//" to insert a literal "/"
   addCondition: Add Condition
   removeCondition: Remove Condition
   validatePassed: Validation Passed
@@ -830,8 +830,7 @@ title:
   taskEtl: ETL - Task
   traffic: Traffic Audit - List
   trafficDetail: Traffic Audit - Detail
-  inputFields: Input Fields
-  dryRunTags: Tags Result
+  dryRunTags: Tag Results
   dryRunRules: Rule Details
 home:
   subtitle: Network Security Audit Platform
@@ -883,11 +882,13 @@ notice:
   disableConfirm: "Confirm disabling {category} {key}?"
   regoInvalid: "Rego validation failed, cannot submit!"
   expressionInvalid: "Expression validation failed, cannot submit!"
-  noEnabledRules: "No enabled tag rules in current namespace, cannot build tag pool."
   plaintextLoadFailed: Failed to load plaintext
   plaintextEmpty: No plaintext content in this field
   plaintextBinary: Binary content, hex preview below
   plaintextTruncated: Content is too long, preview truncated
+  selectedCount: "Selected {count} item(s)"
+  batchConfirm: "Perform the operation on the selected {count} item(s)"
+  batchResult: "{succeeded} succeeded, {failed} failed"
 inputType:
   string: String
   number: Number

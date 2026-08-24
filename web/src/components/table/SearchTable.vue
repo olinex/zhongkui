@@ -1,24 +1,45 @@
 <template>
   <v-card flat>
-    <v-card-title class="d-flex align-center px-4 pt-3 pb-2 text-subtitle-1 font-weight-bold">
+    <v-card-title class="px-4 pt-3 pb-2 text-subtitle-1 font-weight-bold">
       {{ title }}
-      <v-spacer />
-      <action-button-group
-        :refresh="tableDataRefresh"
-        :create="create"
-        :loading="loading"
-        collapsible
-      >
-        <column-visibility-menu
-          v-model="visibleKeys"
-          v-model:order="columnOrder"
-          :headers="allToggleable"
-        />
-      </action-button-group>
     </v-card-title>
     <v-card-text class="px-4 pt-0 pb-2">
       <expression-field v-model="filterBy" :headers="searchHeaders" />
     </v-card-text>
+    <!-- 操作按钮行：独占一行、右对齐、紧贴列表上方；批量模式就地切换为批量操作（v-btn-group），不额外插入一行，避免列表垂直位移 -->
+    <div class="px-4 pb-2 d-flex justify-end align-center ga-2">
+      <template v-if="batchActions && selectItems.length > 0">
+        <span class="text-body-2 text-no-wrap">{{
+          $t("notice.selectedCount", { count: selectItems.length })
+        }}</span>
+        <v-btn-group variant="tonal" color="primary" density="compact" divided>
+          <v-btn
+            v-for="(action, key) in batchActions(selectItems)"
+            :key="key"
+            @click="action(selectItems)"
+          >
+            {{ $t(`action.${key}`) }}
+          </v-btn>
+        </v-btn-group>
+        <v-btn density="compact" variant="text" @click="clearSelection">
+          {{ $t("action.clearSelection") }}
+        </v-btn>
+      </template>
+      <template v-else>
+        <action-button-group
+          :refresh="tableDataRefresh"
+          :create="create"
+          :loading="loading"
+          collapsible
+        >
+          <column-visibility-menu
+            v-model="visibleKeys"
+            v-model:order="columnOrder"
+            :headers="allToggleable"
+          />
+        </action-button-group>
+      </template>
+    </div>
     <v-container fluid class="px-4 pt-0 pb-4">
       <v-data-table-server
         v-model="selectItems"
@@ -31,7 +52,7 @@
         :headers="selectTableHeaders"
         :loading="loading"
         select-strategy="page"
-        show-select
+        :show-select="!!batchActions"
         return-object
       >
         <template #loading>
@@ -39,7 +60,10 @@
         </template>
         <template #item="{ index, item, internalItem, isSelected, toggleSelect }">
           <tr class="text-no-wrap">
-            <td class="v-data-table-column--fixed v-data-table-column--last-fixed">
+            <td
+              v-if="batchActions"
+              class="v-data-table-column--fixed v-data-table-column--last-fixed"
+            >
               <v-checkbox-btn
                 :model-value="isSelected(internalItem)"
                 color="primary"
@@ -56,12 +80,15 @@
                   : undefined
               "
             >
-              <adaptive-cell
-                :header="hdr"
-                :item="item"
-                :actions="actions"
-                :refresh="tableDataRefresh"
-              />
+              <!-- 允许页面按列名提供 cell-<key> 具名插槽覆盖默认渲染（如 model 列显示可读名称） -->
+              <slot :name="`cell-${hdr.key}`" :item="item" :value="item[hdr.key]">
+                <adaptive-cell
+                  :header="hdr"
+                  :item="item"
+                  :actions="actions"
+                  :refresh="tableDataRefresh"
+                />
+              </slot>
             </td>
           </tr>
         </template>
@@ -80,6 +107,7 @@ import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sor
 import type { BaseHeaders, ErrorResponse, Status, SuccessResponse } from "@/apis/@types/base";
 import type {
   Align,
+  BatchActions,
   FilterByItem,
   FilterByOption,
   ItemActions,
@@ -271,6 +299,12 @@ const props = defineProps({
     type: Function as PropType<(item: Record<string, any>) => ItemActions>,
     default: undefined,
   },
+  batchActions: {
+    // Selected rows payload is dynamic.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type: Function as PropType<(items: Record<string, any>[]) => BatchActions>,
+    default: undefined,
+  },
   create: {
     type: Function as PropType<() => void>,
     default: undefined,
@@ -292,7 +326,14 @@ const { allToggleable, columnOrder, visibleKeys, visibleHeaders } = useColumnVis
   tableHeaders,
 );
 
+// clearSelection 清空勾选（批量操作完成后复位勾选状态）
+const clearSelection = (): void => {
+  selectItems.value = [];
+};
+
 defineExpose({
   refresh: tableDataRefresh,
+  clearSelection,
+  selectItems,
 });
 </script>

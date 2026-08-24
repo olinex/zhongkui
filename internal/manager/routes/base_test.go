@@ -103,6 +103,10 @@ other = "HTTP request method"
 other = "Client IP address"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
 other = "Risk tag combination"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
+other = "Client TCP signature"
+["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
+other = "Server TCP signature"
 `), "en.toml")
 	return i18n.NewLocalizer(bundle, "en")
 }

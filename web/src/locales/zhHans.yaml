@@ -5,8 +5,6 @@ navbar:
     group: 用户组
     namespace: 命名空间
     capturer: 采集器
-    tagRule: 标签规则
-    tagEventRule: 标签事件规则
   etl:
     self: 数据处理
     server: 服务端
@@ -18,6 +16,8 @@ navbar:
     ipv4Tcp: IPv4 TCP
     ipv6Tcp: IPv6 TCP
     httpTransport: HTTP 传输
+    tagRule: 标签规则
+    tagEventRule: 标签事件规则
   pin: 固定侧边栏
   unpin: 取消固定
 model:
@@ -785,10 +785,10 @@ action:
   version: 版本
   rollback: 回滚
   generateSkeleton: 生成骨架
-  generateExpression: 生成表达式
   reuseFields: 复用已有规则字段
   selectSample: 选择样例
-  searchFields: 搜索字段
+  regoFieldHint: 输入 / 打开字段列表，输入 // 输入字面量 /
+  tagExprFieldHint: 输入 / 打开标签列表，输入 // 输入字面量 /
   addCondition: 添加条件
   removeCondition: 移除条件
   validatePassed: 校验通过
@@ -806,6 +806,12 @@ action:
   columns: 列设置
   selectAll: 全选
   systemDefault: 系统默认
+  batchActivate: 批量启用
+  batchDeactivate: 批量禁用
+  batchDelete: 批量删除
+  batchDisable: 批量禁用
+  batchEnable: 批量启用
+  clearSelection: 清空选择
 title:
   zk: Zhong Kui
   home: 首页
@@ -822,15 +828,14 @@ title:
   groupAdmin: 管理 - 用户组
   namespaceAdmin: 管理 - 命名空间
   capturerAdmin: 管理 - 采集器
-  tagRuleAdmin: 管理 - 标签规则
-  tagEventRuleAdmin: 管理 - 标签事件规则
+  tagRuleTraffic: 流量审计 - 标签规则
+  tagEventRuleTraffic: 流量审计 - 标签事件规则
   queueEtl: 数据处理 - 管道
   serverEtl: 数据处理 - 服务端
   schedulerEtl: 数据处理 - 定时任务
   taskEtl: 数据处理 - 任务
   traffic: 流量审计 - 列表
   trafficDetail: 流量审计 - 详情
-  inputFields: 输入字段
   dryRunTags: 标签结果
   dryRunRules: 规则明细
 home:
@@ -883,11 +888,13 @@ notice:
   disableConfirm: "确认禁用 {category} {key} 吗？"
   regoInvalid: "Rego 校验未通过，无法提交！"
   expressionInvalid: "表达式校验未通过，无法提交！"
-  noEnabledRules: "当前命名空间没有已启用的标签规则，无法构建标签池。"
   plaintextLoadFailed: 明文获取失败
   plaintextEmpty: 该字段无明文内容
   plaintextBinary: 二进制内容，以下为十六进制预览
   plaintextTruncated: 内容过长，已截断预览
+  selectedCount: "已选 {count} 项"
+  batchConfirm: "将对选中的 {count} 项执行操作"
+  batchResult: "成功 {succeeded} 项，失败 {failed} 项"
 inputType:
   string: 字符串
   number: 数字

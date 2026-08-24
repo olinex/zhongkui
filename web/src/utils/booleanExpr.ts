@@ -9,8 +9,9 @@
  *   NotFactor := 'NOT'? Atom
  *   Atom      := Ident | '(' BoolExpr ')'
  *
- * Ident is `[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?`, whitespace is elided, and
- * the tokens AND / OR / NOT are reserved as operators (matched by value).
+ * Ident is `[\p{L}]([\p{L}\p{N}_-]*[\p{L}\p{N}])?` (Unicode letters, so Chinese
+ * tag names like "登录失败" are accepted), whitespace is elided, and the tokens
+ * AND / OR / NOT are reserved as operators (matched by value).
  *
  * `parseBooleanExpr` performs a full grammar parse and returns the same
  * "refined" normalization as the backend `BoolExpr.String()` so the frontend
@@ -35,7 +36,7 @@ interface BoolExprToken {
   offset: number;
 }
 
-const IDENT_RE = /^[a-zA-Z]([a-zA-Z0-9_-]*[a-zA-Z0-9])?/;
+const IDENT_RE = /^[\p{L}]([\p{L}\p{N}_-]*[\p{L}\p{N}])?/u;
 const KEYWORD_SET = new Set(["AND", "OR", "NOT"]);
 
 function tokenize(src: string): {
@@ -61,7 +62,7 @@ function tokenize(src: string): {
       i += 1;
       continue;
     }
-    if (/[a-zA-Z]/.test(ch)) {
+    if (/[\p{L}]/u.test(ch)) {
       const m = IDENT_RE.exec(src.slice(i));
       if (m) {
         const value = m[0];

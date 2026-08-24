@@ -6,9 +6,25 @@
         :list-request="userListGet"
         :options-request="userListOptions"
         :actions="getActions"
+        :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
         model-name="user"
       />
+      <confirm-dialog
+        ref="batchConfirmRef"
+        :title="$t('model.user.name')"
+        prepend-icon="mdi-account-multiple-check"
+        @confirm="batchAction"
+      >
+        <template #body>
+          <confirm-alert
+            :action="
+              $t(batchState?.action === 'activate' ? 'action.activate' : 'action.deactivate')
+            "
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+        </template>
+      </confirm-dialog>
       <temp-editable-dialog
         ref="createDialogRef"
         :title="$t('model.user.name')"
@@ -258,11 +274,11 @@ import {
   userUpdate,
 } from "@/apis/admin";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import type { ItemActions, TableHeader } from "@/components/@types/table";
+import type { BatchActions, ItemActions, TableHeader } from "@/components/@types/table";
 import TempEditableDialog from "@/components/forms/TempEditableDialog.vue";
 import { useAppStore } from "@/stores/app";
 import type { UserDetailOut, UserRbacPolicyDetailOut } from "./@types";
-import type { UserPasswordResetOut } from "@/apis/@types/admin";
+import type { BatchResultOut, UserPasswordResetOut } from "@/apis/@types/admin";
 import i18n from "@/utils/i18n";
 import { BackendDataType, SearchAction } from "@/types";
 import { useUserStore } from "@/stores/user";
@@ -444,15 +460,11 @@ const createAction = createForm.handleSubmit(async (values) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const activateAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
+  await getResponse<BatchResultOut>(
     userSetActive(item.unionID, true),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
       await searchTableRef.value?.refresh();
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({
@@ -466,15 +478,75 @@ const activateAction = async (item: Record<string, any>): Promise<void> => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const deactivateAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
+  await getResponse<BatchResultOut>(
     userSetActive(item.unionID, false),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
       await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
-        color: "success",
+        color: "error",
       });
+    },
+  );
+};
+
+// ---- 批量启用/禁用 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BatchState = { items: Record<string, any>[]; action: "activate" | "deactivate" };
+const batchState = ref<BatchState | null>(null);
+const batchConfirmRef = useTemplateRef("batchConfirmRef");
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    activate: () => {
+      batchState.value = { items, action: "activate" };
+      batchConfirmRef.value?.open({});
+    },
+    deactivate: () => {
+      batchState.value = { items, action: "deactivate" };
+      batchConfirmRef.value?.open({});
+    },
+  };
+};
+
+const batchAction = async (): Promise<void> => {
+  const state = batchState.value;
+  if (!state) {
+    return;
+  }
+  batchState.value = null;
+  const unionIds = state.items.map((i) => i.unionID as string);
+  await getResponse<BatchResultOut>(
+    userSetActive(unionIds, state.action === "activate"),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
+      await searchTableRef.value?.refresh();
     },
     async (rsp) => {
       appStore.notify({

@@ -88,7 +88,6 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 			created_at datetime NOT NULL,
 			updated_at datetime NOT NULL,
 			tag_event_rule_id integer NOT NULL,
-			namespace_name varchar(32) NOT NULL,
 			model varchar(255) NOT NULL DEFAULT '',
 			dimension varchar(128) NOT NULL DEFAULT '',
 			item varchar(255) NOT NULL DEFAULT '',
@@ -104,7 +103,6 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 		enabledRule := &tag.TagEventRule{NamespaceName: "default", Name: "enabled-rule", Enabled: true}
 		So(db.Create(enabledRule).Error, ShouldBeNil)
 		enabledCond := &tag.TagEventCondition{
-			NamespaceName:  "default",
 			TagEventRuleID: enabledRule.ID,
 			Name:           "enabled-cond",
 			Window:         serializer.DurationNS(5 * time.Minute),
@@ -114,7 +112,6 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 		}
 		So(db.Create(enabledCond).Error, ShouldBeNil)
 		So(db.Create(&tag.TagEventCondition{
-			NamespaceName:  "default",
 			TagEventRuleID: enabledRule.ID,
 			Name:           "disabled-cond",
 			Window:         serializer.DurationNS(5 * time.Minute),
@@ -127,7 +124,6 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 		disabledRule := &tag.TagEventRule{NamespaceName: "default", Name: "disabled-rule", Enabled: false}
 		So(db.Create(disabledRule).Error, ShouldBeNil)
 		So(db.Create(&tag.TagEventCondition{
-			NamespaceName:  "default",
 			TagEventRuleID: disabledRule.ID,
 			Name:           "orphan-enabled-cond",
 			Window:         serializer.DurationNS(5 * time.Minute),

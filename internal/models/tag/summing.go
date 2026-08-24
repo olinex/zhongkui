@@ -17,7 +17,7 @@ import (
 //   - minute: 按分钟对齐的时间窗口
 //   - model:  目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport），
 //     标识标签由哪个模型的识别规则产出，与 TagRule.Model 取值一致
-//   - dimension: 标签维度类型（如 "fp_tcp_client_sig"、"fp_tcp_server_sig"）
+//   - dimension: 标签维度类型（如 "fpTcpClientSig"、"fpTcpServerSig"）
 //   - item:      标签维度类型对应的具体值（如指纹签名串）
 //   - tags:   风险标签组合（去重排序后的标签数组）
 //
@@ -37,7 +37,7 @@ type TagSumming struct {
 	Minute time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"minute"`
 	// Model 目标模型类型键，标识标签由哪个模型的识别规则产出（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `gorm:"type:String CODEC(ZSTD(3))" json:"model"`
-	// Dimension 标签维度类型，标识标签命中的指纹维度（如 "fp_tcp_client_sig"、"fp_tcp_server_sig"）
+	// Dimension 标签维度类型，标识标签命中的指纹维度（如 "fpTcpClientSig"、"fpTcpServerSig"）
 	Dimension string `gorm:"type:String CODEC(ZSTD(3))" json:"dimension"`
 	// Item 标签维度类型对应的具体值（如具体的指纹签名串）
 	Item string `gorm:"type:String CODEC(ZSTD(3))" json:"item"`

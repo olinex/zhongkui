@@ -162,86 +162,71 @@ func namespaceDetailGet(c *gin.Context) {
 	}
 }
 
-// namespaceDelete 处理删除命名空间请求。
+// NamespaceBatchDeleteIn 批量删除命名空间的请求输入结构。
+// Names 接受标量（单个命名空间名）或数组（多个命名空间名）。
+type NamespaceBatchDeleteIn struct {
+	Names FlexList[string] `json:"names"`
+}
+
+// namespaceBatchDelete 批量删除命名空间。
+// 逐条复用原 namespaceDelete 的引用校验与缓存钩子语义：
+//   - 被 RBAC 策略引用（ptype='g' v2=命名空间名）→ 该条记入 Failed；
+//   - 命名空间不存在 → 视为成功跳过（幂等）；
+//   - 其他数据库错误 → 该条记入 Failed。
+// 删除前先查出记录再按主键删除，确保触发 Namespace.AfterDelete 钩子，
+// 同步清理命名空间缓存（批量 Delete 不触发 GORM 钩子）。
 //
-// 该函数删除指定的命名空间，但在删除前会进行安全检查：
-//  1. 检查该命名空间是否被RBAC策略引用
-//  2. 如果存在引用关系，则拒绝删除并返回错误
-//  3. 如果不存在引用关系，则执行删除操作
+// 参数:
+//   - c *gin.Context: Gin框架的上下文对象，包含HTTP请求和响应信息
 //
-// 注意：由于命名空间在多租户架构中的重要性，删除操作需要特别谨慎。
-// 命名空间一旦删除，相关的权限策略、用户组等关联数据将无法正常工作。
+// 请求体:
+//   - 使用NamespaceBatchDeleteIn结构体，Names字段接受标量或数组
 //
-// 请求流程：
-//  1. 从URL路径参数中获取命名空间名称
-//  2. 验证名称参数是否有效
-//  3. 在数据库事务中执行以下操作：
-//     a. 检查该命名空间是否被RBAC策略引用（ptype为group_label，v2为命名空间名称）
-//     b. 如果存在引用，返回CannotDeleteCauseRelateRecord错误
-//     c. 如果不存在引用，执行删除操作
-//  4. 提交事务或回滚事务
-//
-// 参数：
-//   - c: Gin请求上下文，包含请求参数和数据库连接等信息
-//
-// URL路径参数：
-//   - name: 命名空间名称，作为URL路径参数传递
-//
-// 错误处理：
-//   - 名称参数缺失：由getRawParam函数处理，返回相应的错误响应
-//   - 存在引用关系：返回CannotDeleteCauseRelateRecord错误（HTTP 400）
-//   - 数据库查询错误：返回AccidentError错误（HTTP 500）
-//   - 删除操作错误：返回AccidentError错误（HTTP 500）
-//
-// 成功响应：
-//   - HTTP 200状态码
-//   - 简单的成功响应，不包含数据体
-func namespaceDelete(c *gin.Context) {
-	name, ok := getRawParam(c, "name")
-	if !ok {
+// 响应:
+//   - 成功: 返回BatchResultOut汇总（succeeded + failed明细）
+func namespaceBatchDelete(c *gin.Context) {
+	var in NamespaceBatchDeleteIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	names := []string(in.Names)
+	if !validFlexLen(c, names) {
 		return
 	}
 	db := manager.GetCoreDatabase(c)
-	db.Transaction(func(tx *database.DB) error {
-		// 检查是否存在引用该命名空间的RBAC策略
-		var policy core.RbacPolicy
-		if err := tx.First(
-			&policy,
-			"(ptype = ? AND v2 = ?)",
-			base.GroupLabel,
-			name,
-		).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				// 没有引用关系，可以删除
-				// 先查出记录再按主键删除，确保触发 Namespace.AfterDelete 钩子，
-				// 同步清理命名空间缓存（批量 Delete 不触发 GORM 钩子）
-				var ns core.Namespace
-				if err := tx.First(&ns, "name = ?", name).Error; err != nil {
+	batchExecute(c, names,
+		func(name string) string { return name },
+		func(name string) error {
+			return db.Transaction(func(tx *database.DB) error {
+				// 检查是否存在引用该命名空间的RBAC策略（ptype='g'，v2为命名空间名）
+				var policy core.RbacPolicy
+				if err := tx.First(
+					&policy,
+					"(ptype = ? AND v2 = ?)",
+					base.GroupLabel,
+					name,
+				).Error; err != nil {
 					if errors.Is(err, gorm.ErrRecordNotFound) {
-						// 没有找到指定的命名空间
-						manager.CreateAccidentError(gorm.ErrRecordNotFound).AbortWithGinH(c)
-						return errors.WithStack(gorm.ErrRecordNotFound)
+						// 没有引用关系，可以删除
+						var ns core.Namespace
+						if err := tx.First(&ns, "name = ?", name).Error; err != nil {
+							if errors.Is(err, gorm.ErrRecordNotFound) {
+								// 命名空间不存在，视为成功跳过
+								return nil
+							}
+							return errors.WithStack(err)
+						}
+						return tx.Delete(&ns).Error
 					}
-					manager.CreateAccidentError(err).AbortWithGinH(c)
+					// 其他数据库错误作为失败原因
 					return errors.WithStack(err)
 				}
-				if err := tx.Delete(&ns).Error; err != nil {
-					manager.CreateAccidentError(err).AbortWithGinH(c)
-					return errors.WithStack(err)
-				}
-				manager.SimpleOK.AbortWithGinH(c)
-				return nil
-			} else {
-				// 其他数据库错误
-				manager.CreateAccidentError(err).AbortWithGinH(c)
-				return errors.WithStack(err)
-			}
-		} else {
-			// 找到引用关系，不允许删除
-			manager.ErrCannotDeleteCauseRelateRecord.AbortWithGinH(c)
-			return errors.WithStack(gorm.ErrRecordNotFound) // 返回一个错误以回滚事务
-		}
-	})
+				// 找到引用关系，不允许删除
+				return manager.ErrCannotDeleteCauseRelateRecord
+			})
+		},
+	)
 }
 
 // namespaceCreate 处理创建命名空间请求。

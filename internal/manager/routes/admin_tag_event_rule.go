@@ -46,19 +46,21 @@ func invalidTagEventRuleError(errs []TagEventRuleValidationError) *manager.CodeE
 
 // TagEventRuleConditionIn 定义单条标签事件条件的请求输入结构。
 // 表达式为标签标识符的布尔组合（AND / OR / NOT / 括号），标签由 TagRule 识别产生。
+// Window 上限 7 天（纳秒），Threshold 上限 1000000：防止异常值导致检测查询扫描
+// 过大的时间范围或产生无意义计数，与前端 tagEventConditionSchema 保持一致。
 type TagEventRuleConditionIn struct {
 	// Model 目标模型类型键过滤条件，为空表示不限制（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `json:"model" binding:"max=255"`
-	// Dimension 标签维度类型过滤条件，为空表示不限制（如 "fp_tcp_client_sig"）
+	// Dimension 标签维度类型过滤条件，为空表示不限制（如 "fpTcpClientSig"）
 	Dimension string `json:"dimension" binding:"max=128"`
 	// Item 标签维度具体值过滤条件，为空表示不限制（如具体的指纹签名串）
 	Item string `json:"item" binding:"max=255"`
 	// Name 条件名称，必填，长度 1~255
 	Name string `json:"name" binding:"required,min=1,max=255"`
-	// Window 时间窗口，必须大于 0
-	Window serializer.DurationNS `json:"window" binding:"gt=0"`
-	// Threshold 阈值，必须大于 0
-	Threshold int `json:"threshold" binding:"gt=0"`
+	// Window 时间窗口，必须大于 0 且不超过 7 天（604800000000000 纳秒）
+	Window serializer.DurationNS `json:"window" binding:"gt=0,lte=604800000000000"`
+	// Threshold 阈值，必须大于 0 且不超过 1000000
+	Threshold int `json:"threshold" binding:"gt=0,max=1000000"`
 	// Expression 标签组合布尔表达式，必填，最长 1024 字符
 	Expression string `json:"expression" binding:"required,max=1024"`
 	// Enabled 是否启用该条件，默认启用
@@ -262,7 +264,7 @@ func tagEventRuleDetailGet(c *gin.Context) {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	conds, err := loadTagEventRuleConditions(db, instance.ID, namespace)
+	conds, err := loadTagEventRuleConditions(db, instance.ID)
 	if err != nil {
 		manager.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -327,7 +329,6 @@ func tagEventRuleCreate(c *gin.Context) {
 		}
 		for _, cond := range conds {
 			cond.TagEventRuleID = instance.ID
-			cond.NamespaceName = namespace
 			if err := tx.Create(cond).Error; err != nil {
 				return err
 			}
@@ -378,7 +379,7 @@ func tagEventRuleUpdate(c *gin.Context) {
 	newConds := newTagEventRuleConditions(in.Conditions)
 	// 事务内：快照当前内容 → 更新规则头 → 重建条件集合 → 裁剪超限版本
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
-		currentConds, err := loadTagEventRuleConditions(tx, instance.ID, namespace)
+		currentConds, err := loadTagEventRuleConditions(tx, instance.ID)
 		if err != nil {
 			return err
 		}
@@ -393,12 +394,11 @@ func tagEventRuleUpdate(c *gin.Context) {
 			return err
 		}
 		// 显式删除既有条件（兼容未开启外键约束的数据库，如测试用 sqlite 内存库）
-		if err := tx.Where("tag_event_rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventCondition{}).Error; err != nil {
+		if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
 			return err
 		}
 		for _, cond := range newConds {
 			cond.TagEventRuleID = instance.ID
-			cond.NamespaceName = namespace
 		}
 		if err := tx.Create(&newConds).Error; err != nil {
 			return err
@@ -411,78 +411,92 @@ func tagEventRuleUpdate(c *gin.Context) {
 	manager.SimpleOK.AbortWithGinH(c)
 }
 
-// tagEventRuleDelete 处理删除标签事件规则的请求。
-// 在事务内先显式删除条件与历史版本，再删除规则本身。
-// 仅允许删除当前命名空间内的规则。
-func tagEventRuleDelete(c *gin.Context) {
+// TagEventRuleBatchIn 批量操作标签事件规则的请求输入结构。
+// Ids 接受标量（单个 ID）或数组（多个 ID）。
+type TagEventRuleBatchIn struct {
+	Ids FlexList[uint64] `json:"ids"`
+}
+
+// tagEventRuleBatchDelete 批量删除标签事件规则。
+// 逐条复用原 tagEventRuleDelete 的事务级联（条件 + 版本）语义；
+// 规则不存在（或不属于当前命名空间）视为成功跳过（幂等）。
+func tagEventRuleBatchDelete(c *gin.Context) {
 	namespace, ok := manager.RequireNamespace(c)
 	if !ok {
 		return
 	}
-	id, ok := getUint64Param(c, "id")
-	if !ok {
+	var in TagEventRuleBatchIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		manager.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	ids := []uint64(in.Ids)
+	if !validFlexLen(c, ids) {
 		return
 	}
 	db := manager.GetCoreDatabase(c)
-	instance := tag.TagEventRule{}
-	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			manager.ErrCannotDeleteCauseRelateRecord.AbortWithGinH(c)
-			return
-		}
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
-		// 显式级联删除条件与历史版本，兼容未开启外键约束的数据库（如测试用 sqlite 内存库）
-		if err := tx.Where("tag_event_rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventCondition{}).Error; err != nil {
-			return err
-		}
-		if err := tx.Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventRuleVersion{}).Error; err != nil {
-			return err
-		}
-		return tx.Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventRule{}).Error
-	}); err != nil {
-		manager.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	manager.SimpleOK.AbortWithGinH(c)
+	batchExecute(c, ids,
+		func(id uint64) string { return strconv.FormatUint(id, 10) },
+		func(id uint64) error {
+			instance := tag.TagEventRule{}
+			if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return nil // 不存在视为成功跳过
+				}
+				return errors.WithStack(err)
+			}
+			return db.WithContext(c).Transaction(func(tx *database.DB) error {
+				// 显式级联删除条件与历史版本，兼容未开启外键约束的数据库（如测试用 sqlite 内存库）
+				if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
+					return err
+				}
+				if err := tx.Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventRuleVersion{}).Error; err != nil {
+					return err
+				}
+				return tx.Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventRule{}).Error
+			})
+		},
+	)
 }
 
-// tagEventRuleSetEnabled 返回启用/停用标签事件规则的处理函数。
-// 幂等返回：规则已处于目标状态时直接成功；事件规则不涉及引擎编译，直接更新启用状态。
-// 仅允许操作当前命名空间内的规则。
-func tagEventRuleSetEnabled(enabled bool) gin.HandlerFunc {
+// tagEventRuleBatchSetEnabled 批量启用/停用标签事件规则。
+// 逐条复用原 tagEventRuleSetEnabled 语义：幂等短路（已处于目标状态直接成功）+ Update；
+// 规则不存在（或不属于当前命名空间）视为成功跳过（幂等）。
+// 事件规则不涉及引擎编译，直接更新启用状态。
+func tagEventRuleBatchSetEnabled(enabled bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		namespace, ok := manager.RequireNamespace(c)
 		if !ok {
 			return
 		}
-		id, ok := getUint64Param(c, "id")
-		if !ok {
+		var in TagEventRuleBatchIn
+		if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+			manager.CreateBadBodyError(err).AbortWithGinH(c)
+			return
+		}
+		ids := []uint64(in.Ids)
+		if !validFlexLen(c, ids) {
 			return
 		}
 		db := manager.GetCoreDatabase(c)
-		instance := tag.TagEventRule{}
-		if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				manager.ErrDefaultPageNotFound.AbortWithGinH(c)
-				return
-			}
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-		if instance.Enabled == enabled {
-			manager.SimpleOK.AbortWithGinH(c)
-			return
-		}
-		if err := db.WithContext(c).Model(&tag.TagEventRule{}).
-			Where("id = ? AND namespace_name = ?", instance.ID, namespace).
-			Update("enabled", enabled).Error; err != nil {
-			manager.CreateAccidentError(err).AbortWithGinH(c)
-			return
-		}
-		manager.SimpleOK.AbortWithGinH(c)
+		batchExecute(c, ids,
+			func(id uint64) string { return strconv.FormatUint(id, 10) },
+			func(id uint64) error {
+				instance := tag.TagEventRule{}
+				if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						return nil // 不存在视为成功跳过
+					}
+					return errors.WithStack(err)
+				}
+				if instance.Enabled == enabled {
+					return nil // 幂等短路
+				}
+				return db.WithContext(c).Model(&tag.TagEventRule{}).
+					Where("id = ? AND namespace_name = ?", instance.ID, namespace).
+					Update("enabled", enabled).Error
+			},
+		)
 	}
 }
 
@@ -631,7 +645,7 @@ func tagEventRuleVersionRollback(c *gin.Context) {
 	newConds := newTagEventRuleConditions(condIns)
 	// 事务内：快照当前内容 → 回滚目标版本内容 → 重建条件集合 → 裁剪超限版本
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
-		currentConds, err := loadTagEventRuleConditions(tx, instance.ID, namespace)
+		currentConds, err := loadTagEventRuleConditions(tx, instance.ID)
 		if err != nil {
 			return err
 		}
@@ -645,12 +659,11 @@ func tagEventRuleVersionRollback(c *gin.Context) {
 		}).Error; err != nil {
 			return err
 		}
-		if err := tx.Where("tag_event_rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventCondition{}).Error; err != nil {
+		if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
 			return err
 		}
 		for _, cond := range newConds {
 			cond.TagEventRuleID = instance.ID
-			cond.NamespaceName = namespace
 		}
 		if err := tx.Create(&newConds).Error; err != nil {
 			return err
@@ -771,7 +784,7 @@ func newTagEventRuleConditionOut(cond *tag.TagEventCondition) TagEventRuleCondit
 }
 
 // newTagEventRuleConditions 将请求输入的条件列表转换为标签事件条件模型列表。
-// 归属字段（TagEventRuleID / NamespaceName）由调用方在落库前填充。
+// 归属字段（TagEventRuleID）由调用方在落库前填充；命名空间随所属规则承载，条件不冗余存储。
 func newTagEventRuleConditions(in []*TagEventRuleConditionIn) []*tag.TagEventCondition {
 	conds := make([]*tag.TagEventCondition, 0, len(in))
 	for _, cond := range in {
@@ -810,15 +823,15 @@ func validateTagEventRuleConditions(c *gin.Context, conds []*TagEventRuleConditi
 // tagEventConditionSnapshot 标签事件条件的 JSON 快照结构。
 // json tag 与 TagEventRuleConditionOut 的业务字段一致，仅记录业务字段，不含审计字段。
 type tagEventConditionSnapshot struct {
-	Model       string              `json:"model"`
-	Dimension   string              `json:"dimension"`
-	Item        string              `json:"item"`
-	Name        string              `json:"name"`
+	Model       string                `json:"model"`
+	Dimension   string                `json:"dimension"`
+	Item        string                `json:"item"`
+	Name        string                `json:"name"`
 	Window      serializer.DurationNS `json:"window"`
-	Threshold   int                 `json:"threshold"`
-	Expression  string              `json:"expression"`
-	Enabled     bool                `json:"enabled"`
-	Description string              `json:"description"`
+	Threshold   int                   `json:"threshold"`
+	Expression  string                `json:"expression"`
+	Enabled     bool                  `json:"enabled"`
+	Description string                `json:"description"`
 }
 
 // marshalConditions 将条件模型列表序列化为 JSON 文本快照。
@@ -898,9 +911,10 @@ func pruneTagEventRuleVersions(tx *database.DB, ruleID uint, namespace string) e
 }
 
 // loadTagEventRuleConditions 加载规则下的全部条件，按 ID 升序返回。
-func loadTagEventRuleConditions(db *database.DB, ruleID uint, namespace string) ([]*tag.TagEventCondition, error) {
+// 条件与规则为多对一关系，命名空间经规则（调用方已按命名空间加载）限定，无需再过滤。
+func loadTagEventRuleConditions(db *database.DB, ruleID uint) ([]*tag.TagEventCondition, error) {
 	var conds []*tag.TagEventCondition
-	if err := db.Where("tag_event_rule_id = ? AND namespace_name = ?", ruleID, namespace).
+	if err := db.Where("tag_event_rule_id = ?", ruleID).
 		Order("id ASC").
 		Find(&conds).Error; err != nil {
 		return nil, errors.WithStack(err)

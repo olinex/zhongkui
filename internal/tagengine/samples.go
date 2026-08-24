@@ -60,32 +60,37 @@ var httpTransportExample = map[string]any{
 	"tags":                []string{"http", "login"},
 }
 
-// ListModelSamples 列出目标模型全部系统样例（按 name 排序）。
+// ListModelSamples 列出目标模型在指定命名空间下的全部系统样例（按 name 排序）。
 // 未注册模型返回 ErrModelNotRegistered。
-// ListModelSamples lists all system samples of the target model ordered by name;
-// unregistered models return ErrModelNotRegistered.
-func ListModelSamples(ctx context.Context, db *database.DB, typeKey string) ([]*tag.TagRuleSample, error) {
+// ListModelSamples lists all system samples of the target model under the given
+// namespace ordered by name; unregistered models return ErrModelNotRegistered.
+func ListModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error) {
 	if !IsRegistered(typeKey) {
 		return nil, errors.WithStack(ErrModelNotRegistered)
 	}
-	return listModelSamples(ctx, db, typeKey)
+	return listModelSamples(ctx, db, namespace, typeKey)
 }
 
-// EnsureModelSamples 确保目标模型已有系统样例，无样例时懒供给并落库，返回最新样例列表。
+// EnsureModelSamples 确保目标模型在指定命名空间下已有系统样例，无样例时懒供给并落库，
+// 返回最新样例列表。
 // 懒供给内容：模型零值实例经 BuildInput 得到的输入文档 JSON，作为 name="default" 的样例；
 // 模型有预置样例（如 HttpTransport 的 http-example）时一并供给。
-// 并发幂等：插入遇唯一约束冲突（uq_tag_rule_samples_model_name）时忽略错误后重查，保证不重复。
+// 每个命名空间各自懒供给，样例归属命名空间，租户间相互隔离。
+// 并发幂等：插入遇唯一约束冲突（uq_tag_rule_samples_namespace_name_model_name）时
+// 忽略错误后重查，保证不重复。
 // 未注册模型返回 ErrModelNotRegistered。
-// EnsureModelSamples ensures the target model has system samples, lazily provisioning
-// and persisting them when missing, then returns the latest sample list.
-func EnsureModelSamples(ctx context.Context, db *database.DB, typeKey string) ([]*tag.TagRuleSample, error) {
+// EnsureModelSamples ensures the target model has system samples under the given
+// namespace, lazily provisioning and persisting them when missing, then returns
+// the latest sample list. Samples are provisioned per namespace and isolated
+// between tenants.
+func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error) {
 	target, ok := TargetInfo(typeKey)
 	if !ok {
 		return nil, errors.WithStack(ErrModelNotRegistered)
 	}
 	// 收集缺失的系统样例：default 恒需供给；HttpTransport 额外供给 http-example
 	pending := make([]*tag.TagRuleSample, 0, 2)
-	if exists, err := sampleExists(ctx, db, typeKey, defaultSampleName); err != nil {
+	if exists, err := sampleExists(ctx, db, namespace, typeKey, defaultSampleName); err != nil {
 		return nil, errors.WithStack(err)
 	} else if !exists {
 		input, err := BuildInput(target.Type)
@@ -97,14 +102,15 @@ func EnsureModelSamples(ctx context.Context, db *database.DB, typeKey string) ([
 			return nil, errors.WithStack(err)
 		}
 		pending = append(pending, &tag.TagRuleSample{
-			Model:       typeKey,
-			Name:        defaultSampleName,
-			Input:       datatypes.JSON(raw),
-			Description: "目标模型零值输入文档",
+			NamespaceName: namespace,
+			Model:         typeKey,
+			Name:          defaultSampleName,
+			Input:         datatypes.JSON(raw),
+			Description:   "目标模型零值输入文档",
 		})
 	}
 	if typeKey == MustTypeKey(&network.HttpTransport{}) {
-		if exists, err := sampleExists(ctx, db, typeKey, httpExampleSampleName); err != nil {
+		if exists, err := sampleExists(ctx, db, namespace, typeKey, httpExampleSampleName); err != nil {
 			return nil, err
 		} else if !exists {
 			raw, err := json.Marshal(httpTransportExample)
@@ -112,32 +118,33 @@ func EnsureModelSamples(ctx context.Context, db *database.DB, typeKey string) ([
 				return nil, errors.WithStack(err)
 			}
 			pending = append(pending, &tag.TagRuleSample{
-				Model:       typeKey,
-				Name:        httpExampleSampleName,
-				Input:       datatypes.JSON(raw),
-				Description: "HTTP 登录请求真实样例（模拟典型流量字段）",
+				NamespaceName: namespace,
+				Model:         typeKey,
+				Name:          httpExampleSampleName,
+				Input:         datatypes.JSON(raw),
+				Description:   "HTTP 登录请求真实样例（模拟典型流量字段）",
 			})
 		}
 	}
 	for _, sample := range pending {
 		if err := db.WithContext(ctx).Create(sample).Error; err != nil {
-			// 并发幂等：唯一约束冲突（uq_tag_rule_samples_model_name）说明其他调用方
-			// 已供给同名样例，忽略该错误后以重查结果为准；若重查仍无此样例则视为真实错误返回
-			if exists, existsErr := sampleExists(ctx, db, typeKey, sample.Name); existsErr != nil {
+			// 并发幂等：唯一约束冲突说明其他调用方已供给同名样例，
+			// 忽略该错误后以重查结果为准；若重查仍无此样例则视为真实错误返回
+			if exists, existsErr := sampleExists(ctx, db, namespace, typeKey, sample.Name); existsErr != nil {
 				return nil, existsErr
 			} else if !exists {
 				return nil, errors.WithStack(err)
 			}
 		}
 	}
-	return listModelSamples(ctx, db, typeKey)
+	return listModelSamples(ctx, db, namespace, typeKey)
 }
 
-// listModelSamples 按 name 排序查询目标模型的全部系统样例。
-func listModelSamples(ctx context.Context, db *database.DB, typeKey string) ([]*tag.TagRuleSample, error) {
+// listModelSamples 按 name 排序查询目标模型在指定命名空间下的全部系统样例。
+func listModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error) {
 	var samples []*tag.TagRuleSample
 	if err := db.WithContext(ctx).Model(&tag.TagRuleSample{}).
-		Where("model = ?", typeKey).
+		Where("namespace_name = ? AND model = ?", namespace, typeKey).
 		Order("name").
 		Find(&samples).Error; err != nil {
 		return nil, errors.WithStack(err)
@@ -145,11 +152,11 @@ func listModelSamples(ctx context.Context, db *database.DB, typeKey string) ([]*
 	return samples, nil
 }
 
-// sampleExists 判断目标模型下指定名称的样例是否已存在。
-func sampleExists(ctx context.Context, db *database.DB, typeKey, name string) (bool, error) {
+// sampleExists 判断目标模型在指定命名空间下指定名称的样例是否已存在。
+func sampleExists(ctx context.Context, db *database.DB, namespace, typeKey, name string) (bool, error) {
 	var count int64
 	if err := db.WithContext(ctx).Model(&tag.TagRuleSample{}).
-		Where("model = ? AND name = ?", typeKey, name).
+		Where("namespace_name = ? AND model = ? AND name = ?", namespace, typeKey, name).
 		Count(&count).Error; err != nil {
 		return false, errors.WithStack(err)
 	}

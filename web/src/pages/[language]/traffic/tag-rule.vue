@@ -1,5 +1,5 @@
 <template>
-  <main-layout current-nav="admin">
+  <main-layout current-nav="traffic">
     <template #body>
       <v-card flat>
         <v-tabs v-model="activeTab" color="primary">
@@ -14,9 +14,15 @@
               :list-request="tagRuleListGet"
               :options-request="tagRuleListOptions"
               :actions="getActions"
+              :batch-actions="getBatchActions"
               :create="openCreateDialogAction"
               model-name="tagRule"
-            />
+            >
+              <!-- 目标模型列显示可读名称（与表单下拉一致），而非原始类型键 -->
+              <template #cell-model="{ value }">
+                {{ modelTypeKeyLabel(String(value ?? "")) || $t("model.__base.value.blank") }}
+              </template>
+            </search-table>
           </v-tabs-window-item>
           <v-tabs-window-item value="samples">
             <tag-rule-sample-panel />
@@ -32,6 +38,12 @@
       >
         <template #body="{ proxy }">
           <confirm-alert
+            v-if="batchState"
+            :action="$t('action.delete')"
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+          <confirm-alert
+            v-else
             :action="$t('action.delete')"
             :text="
               $t(`notice.deleteConfirm`, {
@@ -51,6 +63,14 @@
       >
         <template #body="{ proxy }">
           <confirm-alert
+            v-if="batchState"
+            :action="
+              $t(batchState?.action === 'activate' ? 'action.activate' : 'action.deactivate')
+            "
+            :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
+          />
+          <confirm-alert
+            v-else
             :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
             :text="
               $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
@@ -340,9 +360,9 @@
 </template>
 
 <route lang="yaml">
-name: Admin Tag Rule List
+name: Traffic Tag Rule List
 meta:
-  title: title.tagRuleAdmin
+  title: title.tagRuleTraffic
   requiresAuth: true
   requiresPerm: true
 </route>
@@ -364,13 +384,15 @@ import {
   tagRuleValidate,
   tagRuleVersionList,
   tagRuleVersionRollback,
-} from "@/apis/admin";
+} from "@/apis/traffic";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import type { ItemActions } from "@/components/@types/table";
+import type { BatchActions, ItemActions } from "@/components/@types/table";
+import type { BatchResultOut } from "@/apis/@types/admin";
 import { useAppStore } from "@/stores/app";
 import { createTagRuleSchema, updateTagRuleSchema } from "@/schemas/tagRule";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
+import { modelTypeKeyLabel } from "@/utils/modelField";
 import {
   buildRegoSkeleton,
   extractInputFields,
@@ -663,7 +685,10 @@ const getActions = (item: Record<string, any>): ItemActions => {
     edit: detailGetAction,
     version: versionAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    delete: (i: Record<string, any>) => deleteConfirmRef.value?.open(i),
+    delete: (i: Record<string, any>) => {
+      batchState.value = null;
+      deleteConfirmRef.value?.open(i);
+    },
   };
   switch (item.enabled) {
     case false:
@@ -796,17 +821,102 @@ const itemUpdateAction = () => {
   })();
 };
 
+// ---- 批量删除/启用/禁用 ----
+// applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
+const applyBatchResult = (summary: string, result: BatchResultOut): void => {
+  if (result.failed.length > 0) {
+    appStore.notify({
+      text: i18n.global.t("notice.batchResult", {
+        succeeded: result.succeeded,
+        failed: result.failed.length,
+      }),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  appStore.notify({
+    text: summary,
+    timeout: 3000,
+    color: "success",
+  });
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemDeleteAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    tagRuleDelete(item.id),
+type BatchState = { items: Record<string, any>[]; action: "delete" | "activate" | "deactivate" };
+const batchState = ref<BatchState | null>(null);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getBatchActions = (items: Record<string, any>[]): BatchActions => {
+  return {
+    delete: () => {
+      batchState.value = { items, action: "delete" };
+      deleteConfirmRef.value?.open({});
+    },
+    activate: () => {
+      batchState.value = { items, action: "activate" };
+      toggleConfirmRef.value?.open({});
+    },
+    deactivate: () => {
+      batchState.value = { items, action: "deactivate" };
+      toggleConfirmRef.value?.open({});
+    },
+  };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
+  const ids = items.map((i) => i.id as number);
+  await getResponse<BatchResultOut>(
+    tagRuleDelete(ids),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
       await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
-        color: "success",
+        color: "error",
       });
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const batchToggleAction = async (items: Record<string, any>[], enabled: boolean): Promise<void> => {
+  const ids = items.map((i) => i.id as number);
+  await getResponse<BatchResultOut>(
+    tagRuleSetEnabled(ids, enabled),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      searchTableRef.value?.clearSelection?.();
+      await searchTableRef.value?.refresh();
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchDeleteAction(state.items);
+    return;
+  }
+  await getResponse<BatchResultOut>(
+    tagRuleDelete(proxy.id),
+    async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
+      await searchTableRef.value?.refresh();
     },
     async (rsp) => {
       appStore.notify({
@@ -822,24 +932,27 @@ const toggleTarget = ref<boolean | null>(null);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
+  batchState.value = null;
   toggleTarget.value = enabled;
   toggleConfirmRef.value?.open(item);
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (item: Record<string, any>): Promise<void> => {
+const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
+  const state = batchState.value;
+  if (state) {
+    batchState.value = null;
+    await batchToggleAction(state.items, state.action === "activate");
+    return;
+  }
   if (toggleTarget.value === null) {
     return;
   }
-  await getSimpleResponse(
-    tagRuleSetEnabled(item.id, toggleTarget.value),
+  await getResponse<BatchResultOut>(
+    tagRuleSetEnabled(proxy.id, toggleTarget.value),
     async (rsp) => {
+      applyBatchResult(rsp.summary, rsp.data);
       await searchTableRef.value?.refresh();
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
     },
     async (rsp) => {
       appStore.notify({
