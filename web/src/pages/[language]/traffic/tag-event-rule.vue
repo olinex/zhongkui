@@ -248,6 +248,25 @@
                 />
               </v-card-text>
             </v-card>
+            <v-divider class="my-2" />
+            <v-row dense align="center">
+              <v-col cols="auto">
+                <v-btn
+                  color="primary"
+                  size="small"
+                  :loading="createDryRunRef?.loading"
+                  @click="createDryRunRef?.run()"
+                >
+                  {{ $t("action.dryRun") }}
+                </v-btn>
+              </v-col>
+            </v-row>
+            <tag-event-rule-dry-run-panel
+              ref="createDryRunRef"
+              :rule-name="createName"
+              :match-all="createMatchAll"
+              :conditions="createDryRunConditions"
+            />
           </v-form>
         </template>
       </temp-editable-dialog>
@@ -450,131 +469,42 @@
                 />
               </v-card-text>
             </v-card>
-          </v-form>
-        </template>
-      </temp-editable-dialog>
-
-      <v-dialog v-model="dryRunDialog" max-width="900">
-        <v-card>
-          <v-card-title>{{ $t("action.dryRun") }}</v-card-title>
-          <v-card-text>
-            <v-row dense>
-              <v-col cols="6">
-                <v-text-field v-model="dryRunName" :label="$t('model.tagEventRule.field.name')" />
-              </v-col>
-              <v-col cols="6">
-                <v-switch
-                  v-model="dryRunMatchAll"
-                  :label="$t('model.tagEventRule.field.matchAll')"
-                  color="primary"
-                />
-              </v-col>
-            </v-row>
+            <v-divider class="my-2" />
             <v-row dense align="center">
-              <v-col>
-                <v-label>{{ $t("model.tagEventRule.field.conditions") }}</v-label>
-              </v-col>
               <v-col cols="auto">
                 <v-btn
-                  variant="tonal"
+                  color="primary"
                   size="small"
-                  prepend-icon="mdi-plus"
-                  @click="dryRunAddCondition"
+                  :disabled="!editable"
+                  :loading="editDryRunRef?.loading"
+                  @click="editDryRunRef?.run()"
                 >
-                  {{ $t("action.addCondition") }}
+                  {{ $t("action.dryRun") }}
                 </v-btn>
               </v-col>
             </v-row>
-            <v-card
-              v-for="(cond, idx) in dryRunConditions"
-              :key="cond.key"
-              variant="tonal"
-              class="my-2"
-            >
-              <v-card-title class="d-flex align-center text-subtitle-2">
-                {{ $t("model.tagEventCondition.name") }} #{{ idx + 1 }}
-                <v-spacer />
-                <v-btn
-                  icon="mdi-minus"
-                  density="compact"
-                  variant="tonal"
-                  color="error"
-                  @click="dryRunConditions.splice(idx, 1)"
-                />
-              </v-card-title>
-              <v-card-text>
-                <v-row dense>
-                  <v-col cols="6">
-                    <v-text-field
-                      v-model="cond.name"
-                      :label="$t('model.tagEventCondition.field.name')"
-                    />
-                  </v-col>
-                  <v-col cols="6">
-                    <v-text-field
-                      v-model="cond.expression"
-                      :label="$t('model.tagEventCondition.field.expression')"
-                    />
-                  </v-col>
-                </v-row>
-                <v-row dense>
-                  <v-col cols="6">
-                    <v-text-field
-                      v-model.number="cond.window"
-                      type="number"
-                      :label="$t('model.tagEventCondition.field.window')"
-                    />
-                  </v-col>
-                  <v-col cols="6">
-                    <v-text-field
-                      v-model.number="cond.threshold"
-                      type="number"
-                      :label="$t('model.tagEventCondition.field.threshold')"
-                    />
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-card>
-            <v-alert v-if="dryRunResult" type="success" class="mt-2">
-              {{ dryRunResult.ruleName }}
-              ({{ $t("model.tagEventRule.field.matchAll") }}: {{ dryRunResult.matchAll }})
-            </v-alert>
-            <v-list v-if="dryRunResult?.events?.length" density="compact">
-              <v-list-item v-for="ev in dryRunResult.events" :key="`${ev.ruleID}-${ev.detectedAt}`">
-                <template #title>
-                  {{ ev.ruleName }} ({{ localeDatetimeFormat(DateTime.fromISO(ev.detectedAt)) }})
-                </template>
-                <template #append>
-                  <v-chip v-for="hit in ev.hits" :key="hit.conditionID" size="small" class="me-1">
-                    {{ hit.conditionName }}: {{ hit.count }}/{{ hit.threshold }}
-                  </v-chip>
-                </template>
-              </v-list-item>
-            </v-list>
-            <v-alert
-              v-else-if="dryRunResult"
-              type="info"
-              class="mt-2"
-              :text="$t('summary.endOfData')"
+            <tag-event-rule-dry-run-panel
+              ref="editDryRunRef"
+              :rule-name="proxy.name"
+              :match-all="editMatchAll"
+              :conditions="editDryRunConditions"
             />
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="plain" @click="dryRunDialog = false">
-              {{ $t("action.close") }}
-            </v-btn>
-            <v-btn color="primary" :loading="dryRunLoading" @click="runDryRun">
-              {{ $t("action.run") }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+          </v-form>
+        </template>
+      </temp-editable-dialog>
 
       <v-dialog v-model="versionDialog" max-width="800">
         <v-card>
           <v-card-title>{{ $t("action.version") }}</v-card-title>
           <v-card-text>
-            <v-list>
+            <v-alert
+              v-if="versionItems.length === 0"
+              type="info"
+              variant="tonal"
+              density="compact"
+              :text="$t('notice.noVersion')"
+            />
+            <v-list v-else>
               <v-list-item v-for="v in versionItems" :key="v.id">
                 <template #title>
                   <v-chip size="small" class="me-2">v{{ v.version }}</v-chip>
@@ -658,7 +588,6 @@ import {
   tagEventRuleCreate,
   tagEventRuleDelete,
   tagEventRuleDetailGet,
-  tagEventRuleDryRun,
   tagEventRuleListGet,
   tagEventRuleListOptions,
   tagEventRuleSetEnabled,
@@ -688,7 +617,6 @@ import { useForm } from "vee-validate";
 
 import type {
   TagEventRuleDetailOut,
-  TagEventRuleDryRunOut,
   TagEventRuleValidateOut,
   TagEventRuleVersionOut,
   TagRuleDetailOut,
@@ -722,6 +650,8 @@ const appStore = useAppStore();
 const searchTableRef = useTemplateRef("searchTableRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
+const createDryRunRef = useTemplateRef("createDryRunRef");
+const editDryRunRef = useTemplateRef("editDryRunRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const rollbackConfirmRef = useTemplateRef("rollbackConfirmRef");
@@ -990,6 +920,7 @@ const openCreateDialogAction = (): void => {
   createConditions.value = [];
   addCreateCondition();
   void loadTagPool();
+  createDryRunRef.value?.reset();
   createDialogRef.value?.open({});
 };
 
@@ -1051,9 +982,18 @@ const editConditionsValid = computed<boolean>(
     editConditions.value.every((c) => Object.keys(c.fieldErrors).length === 0 && c.localValid),
 );
 
+// ---- 试运行入参：直接取自表单当前草稿，随表单编辑实时变化 ----
+const createDryRunConditions = computed<TagEventRuleConditionIn[]>(() =>
+  createConditions.value.map(toConditionIn),
+);
+const editDryRunConditions = computed<TagEventRuleConditionIn[]>(() =>
+  editConditions.value.map(toConditionIn),
+);
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   void loadTagPool();
+  editDryRunRef.value?.reset();
   await getResponse<TagEventRuleDetailOut>(
     tagEventRuleDetailGet(item.id),
     async (rsp) => {
@@ -1135,7 +1075,6 @@ const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     version: versionAction,
-    dryRun: openDryRunAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete: (i: Record<string, any>) => {
       batchState.value = null;
@@ -1296,58 +1235,6 @@ const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
       });
     },
   );
-};
-
-// ---- dry run ----
-const dryRunDialog = ref(false);
-const dryRunName = ref("");
-const dryRunMatchAll = ref(false);
-const dryRunConditions = ref<ConditionDraft[]>([]);
-const dryRunLoading = ref(false);
-const dryRunResult = ref<TagEventRuleDryRunOut | null>(null);
-
-const dryRunAddCondition = (): void => {
-  dryRunConditions.value.push(newCondition());
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const openDryRunAction = (item: Record<string, any>): void => {
-  dryRunName.value = item.name || "";
-  dryRunMatchAll.value = !!item.matchAll;
-  dryRunConditions.value = [];
-  dryRunAddCondition();
-  dryRunResult.value = null;
-  dryRunDialog.value = true;
-};
-
-const runDryRun = async (): Promise<void> => {
-  if (dryRunConditions.value.length === 0) {
-    return;
-  }
-  dryRunResult.value = null;
-  dryRunLoading.value = true;
-  try {
-    await getResponse<TagEventRuleDryRunOut>(
-      tagEventRuleDryRun({
-        name: dryRunName.value,
-        matchAll: dryRunMatchAll.value,
-        enabled: true,
-        conditions: dryRunConditions.value.map(toConditionIn),
-      }),
-      async (rsp) => {
-        dryRunResult.value = rsp.data;
-      },
-      async (rsp) => {
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "error",
-        });
-      },
-    );
-  } finally {
-    dryRunLoading.value = false;
-  }
 };
 
 // ---- version list & rollback ----

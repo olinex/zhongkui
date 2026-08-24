@@ -44,6 +44,8 @@ model:
       blank: blank
       "null": "null"
       undefined: "undefined"
+      yes: Yes
+      no: No
   user:
     name: User
     field:
@@ -832,6 +834,8 @@ title:
   trafficDetail: Traffic Audit - Detail
   dryRunTags: Tag Results
   dryRunRules: Rule Details
+  dryRunSummary: Rule Summary
+  dryRunEvents: Detected Events
 home:
   subtitle: Network Security Audit Platform
   quickStart:
@@ -861,6 +865,8 @@ summary:
   goingToSignIn: Going to sign in page...
   dataLoading: Data is loading...
   endOfData: No more data
+  noEventDetected: No events detected
+  noTagMatched: No tags matched
   noServerYet: There is no running {name} yet!
   noServerYetHelp: You can try clicking the {btn} button below to fetch data again.
   unknownError: Something went wrong...
@@ -877,6 +883,7 @@ notice:
   cancelConfirm: "Confirm canceling {category} {key}?"
   runConfirm: "Confirm running {category} {key}?"
   rollbackConfirm: "Confirm rolling back {category} {key} to version {version}?"
+  noVersion: This rule has no historical versions yet
   dryRunConfirm: "Confirm dry running {category} {key}?"
   enableConfirm: "Confirm enabling {category} {key}?"
   disableConfirm: "Confirm disabling {category} {key}?"

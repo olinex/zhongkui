@@ -170,7 +170,7 @@
                   :loading="createDryRunRef?.loading"
                   @click="createDryRunRef?.run()"
                 >
-                  {{ $t("action.run") }}
+                  {{ $t("action.dryRun") }}
                 </v-btn>
               </v-col>
             </v-row>
@@ -281,7 +281,7 @@
                   :loading="editDryRunRef?.loading"
                   @click="editDryRunRef?.run()"
                 >
-                  {{ $t("action.run") }}
+                  {{ $t("action.dryRun") }}
                 </v-btn>
               </v-col>
             </v-row>
@@ -299,7 +299,14 @@
         <v-card>
           <v-card-title>{{ $t("action.version") }}</v-card-title>
           <v-card-text>
-            <v-list>
+            <v-alert
+              v-if="versionItems.length === 0"
+              type="info"
+              variant="tonal"
+              density="compact"
+              :text="$t('notice.noVersion')"
+            />
+            <v-list v-else>
               <v-list-item v-for="v in versionItems" :key="v.id">
                 <template #title>
                   <v-chip size="small" class="me-2"> v{{ v.version }} </v-chip>

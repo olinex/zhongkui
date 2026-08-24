@@ -1,8 +1,5 @@
 <template>
   <div v-if="result !== null || loading" class="rego-dry-run-panel">
-    <div class="dry-run-header">
-      <span class="dry-run-title">{{ $t("action.dryRun") }}</span>
-    </div>
     <div v-if="loading" class="dry-run-body">
       <v-progress-linear indeterminate color="primary" class="mt-1" />
     </div>
@@ -16,14 +13,21 @@
         :text="result.error"
         class="mb-2"
       />
-      <!-- 标签结果：全部规则命中的标签汇总 -->
-      <div v-if="tagList.length" class="result-block">
+      <!-- 标签结果：全部规则命中的标签汇总；未命中任何标签时提示 -->
+      <div class="result-block">
         <div class="result-label">{{ $t("title.dryRunTags") }}</div>
-        <div class="d-flex flex-wrap">
+        <div v-if="tagList.length" class="d-flex flex-wrap">
           <v-chip v-for="tag in tagList" :key="tag" color="primary" size="small" class="me-1 my-1">
             {{ tag }}
           </v-chip>
         </div>
+        <v-alert
+          v-else
+          type="info"
+          density="compact"
+          variant="tonal"
+          :text="$t('summary.noTagMatched')"
+        />
       </div>
       <!-- 规则明细：每条规则的状态、耗时与命中的标签 -->
       <div v-if="ruleEntries.length" class="result-block">
@@ -232,21 +236,8 @@ defineExpose({ run, loading, openInput });
   background-color: rgb(var(--v-theme-surface));
 }
 
-.dry-run-header {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 4px 0 12px;
-}
-
-.dry-run-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface));
-}
-
 .dry-run-body {
-  padding: 0 12px 12px;
+  padding: 12px;
 }
 
 /* 结果分区：标签汇总 / 规则明细，用标题分隔并明确各元素含义 */
