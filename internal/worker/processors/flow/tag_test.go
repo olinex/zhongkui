@@ -187,7 +187,7 @@ func TestTagStage_RealisticScenario(t *testing.T) {
 		insertHttpTransportRule(t, db, "curl-automation", `package zki
 
 tags contains "automation" if {
-    contains(input.req_hdr_user_agent, "curl")
+    contains(input.reqHdrUserAgent, "curl")
 }`)
 		insertHttpTransportRule(t, db, "method-get", `package zki
 
@@ -207,7 +207,7 @@ tags contains "sensitive_path" if {
 		insertHttpTransportRule(t, db, "nginx-server", `package zki
 
 tags contains "nginx" if {
-    contains(input.rsp_hdr_server, "nginx")
+    contains(input.rspHdrServer, "nginx")
 }`)
 
 		// 记录一：curl 访问 /admin 管理接口（命中全部 5 条规则）
@@ -226,7 +226,7 @@ tags contains "nginx" if {
 		input, err := tagengine.BuildInput(curlTransport)
 		So(err, ShouldBeNil)
 		t.Logf("recognition input (key fields): method=%v host=%v path=%v user_agent=%v rsp_hdr_server=%v",
-			input["method"], input["host"], input["path"], input["req_hdr_user_agent"], input["rsp_hdr_server"])
+			input["method"], input["host"], input["path"], input["reqHdrUserAgent"], input["rspHdrServer"])
 
 		got, err := runStage(context.Background(), stage, curlTransport, browserTransport)
 		So(err, ShouldBeNil)

@@ -1,4 +1,4 @@
-import { DateTime, Duration } from "luxon";
+import { DateTime } from "luxon";
 import { createI18n } from "vue-i18n";
 import { en, zhHans } from "vuetify/locale";
 import { setLocale } from "yup";
@@ -121,16 +121,43 @@ export const localeDatetimeFormat = (dt: DateTime): string => {
     .toLocaleString(DateTime.DATETIME_SHORT_WITH_SECONDS);
 };
 
-// localDurationFormat 将时长格式化为本地化的人类可读文本。
-// 支持 Go time.Duration 字符串（如 "5s"）与纳秒整数两种输入。
+// durationToCompact 将毫秒数格式化为紧凑的 Go 风格时长字符串，
+// 省略零值低位单位（如 "2m0s" → "2m"、"3h0m0s" → "3h"）。
+const durationToCompact = (millis: number): string => {
+  const total = Math.round(millis);
+  if (total === 0) {
+    return "0s";
+  }
+  const sign = total < 0 ? "-" : "";
+  const abs = Math.abs(total);
+  if (abs < 1000) {
+    return `${sign}${abs}ms`;
+  }
+  const h = Math.floor(abs / 3600000);
+  const m = Math.floor((abs % 3600000) / 60000);
+  const s = (abs % 60000) / 1000;
+  let out = "";
+  if (h > 0) {
+    out += `${h}h`;
+  }
+  if (m > 0) {
+    out += `${m}m`;
+  }
+  if (s > 0) {
+    out += `${Number.isInteger(s) ? s : +s.toFixed(3)}s`;
+  }
+  return sign + out;
+};
+
+// localDurationFormat 将时长格式化为便于人类阅读的紧凑格式（如 "2m"、"5s"、"3h"），
+// 与后端 serializer.Duration 的 JSON 契约对齐：
+// 字符串输入为 Go time.Duration 文本（如 "5s"、"1m30s"），数字输入为毫秒。
 export const localDurationFormat = (duration: string | number): string => {
-  const millis = typeof duration === "number" ? duration / 1e6 : durationToMillis(duration);
+  const millis = typeof duration === "number" ? duration : durationToMillis(duration);
   if (Number.isNaN(millis)) {
     return String(duration);
   }
-  return Duration.fromMillis(millis, {
-    locale: i18n.global.locale.value,
-  }).toHuman();
+  return durationToCompact(millis);
 };
 
 export default i18n;

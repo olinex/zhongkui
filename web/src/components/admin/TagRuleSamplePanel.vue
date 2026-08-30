@@ -114,15 +114,13 @@ import {
   tagRuleSampleListGet,
   tagRuleSampleListOptions,
   tagRuleSampleUpdate,
-  TrafficCryptoFields,
-  TrafficS3Fields,
-  trafficTypeFromModelKey,
-} from "@/apis/traffic";
+} from "@/apis/tagEvent";
+import { TrafficCryptoFields, TrafficS3Fields, trafficTypeFromModelKey } from "@/apis/traffic";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { BatchResultOut } from "@/apis/@types/admin";
 import type { DetailField } from "@/components/@types/detail";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
-import type { TagRuleSampleDetailOut } from "@/pages/[language]/traffic/@types";
+import type { TagRuleSampleDetailOut } from "@/pages/[language]/tag-event/@types";
 import { updateTagRuleSampleSchema } from "@/schemas/tagRuleSample";
 import { useAppStore } from "@/stores/app";
 import { vuetifyCfg } from "@/utils/form";
@@ -278,7 +276,8 @@ const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
       tagRuleSampleUpdate(editSampleId, {
-        name: values.name,
+        // 名称单行文本提交前去除首尾空白，避免误输入空白创建出看似相同实则不同的记录
+        name: (values.name as string).trim(),
         description: values.description,
       }),
       async (rsp) => {

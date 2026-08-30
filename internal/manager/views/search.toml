@@ -1,0 +1,1550 @@
+# 用户
+[UserListGet]
+timeModule = true
+
+[[UserListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[UserListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[UserListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[UserListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[UserListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[UserListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[UserListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[UserListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[UserListGet.filterByFields]]
+fieldName = "active"
+fieldType = "bool"
+column = "active"
+binding = ""
+actions = ["eq"]
+
+[[UserListGet.filterByFields]]
+fieldName = "username"
+fieldType = "string"
+column = "username"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[UserListGet.filterByFields]]
+fieldName = "nickleName"
+fieldType = "string"
+column = "nickle_name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[UserListGet.filterByFields]]
+fieldName = "email"
+fieldType = "string"
+column = "email"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+# 权限模板
+[RbacPolicyTmplateListGet]
+timeModule = true
+
+[[RbacPolicyTmplateListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[RbacPolicyTmplateListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "target"
+fieldType = "string"
+column = "target"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[RbacPolicyTmplateListGet.filterByFields]]
+fieldName = "action"
+fieldType = "string"
+column = "action"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+# 用户组
+[GroupListGet]
+timeModule = true
+
+[[GroupListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[GroupListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[GroupListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[GroupListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[GroupListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[GroupListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[GroupListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[GroupListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[GroupListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+# 命名空间
+[NamespaceListGet]
+[[NamespaceListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[NamespaceListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[NamespaceListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NamespaceListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NamespaceListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NamespaceListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NamespaceListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NamespaceListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NamespaceListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+# 采集器
+[CapturerListGet]
+[[CapturerListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[CapturerListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[CapturerListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace_name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[CapturerListGet.filterByFields]]
+fieldName = "version"
+fieldType = "string"
+column = "version"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+# 标签识别规则
+[TagRuleListGet]
+timeModule = true
+
+[[TagRuleListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[TagRuleListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "model"
+fieldType = "string"
+column = "model"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "httpTransport", value = "zhongkui.com/zhongkui/internal/models/network.HttpTransport" },
+]
+
+[[TagRuleListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+# 标签规则验证样例
+[TagRuleSampleListGet]
+timeModule = true
+
+[[TagRuleSampleListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[TagRuleSampleListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[TagRuleSampleListGet.filterByFields]]
+fieldName = "model"
+fieldType = "string"
+column = "model"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "httpTransport", value = "zhongkui.com/zhongkui/internal/models/network.HttpTransport" },
+]
+
+# 标签事件规则
+[TagEventRuleListGet]
+timeModule = true
+
+[[TagEventRuleListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[TagEventRuleListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[TagEventRuleListGet.filterByFields]]
+fieldName = "matchAll"
+fieldType = "bool"
+column = "match_all"
+binding = ""
+actions = ["eq"]
+
+# 原始流量审计 - IPv4 TCP 包
+# 过滤字段：timestamp / created_at / namespace 必填（required = true；双时间范围命中分区键与 ORDER BY 首键，
+# namespace 由前端全局命名空间提供）；可选字段仅精确匹配（eq），配合 bloom_filter 跳过索引在十亿级数据上按数据块剪枝。
+[Ipv4TcpListGet]
+[[Ipv4TcpListGet.orderByFields]]
+fieldName = "timestamp"
+column = "timestamp"
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "timestampFrom"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "timestampTo"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "createdAtFrom"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "createdAtTo"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace"
+binding = "required"
+required = true
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "sessionId"
+fieldType = "serializer.HexUUID"
+column = "session_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "tcpStreamId"
+fieldType = "string"
+column = "tcp_stream_id"
+binding = ""
+actions = ["eq"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "ipv4Src"
+fieldType = "serializer.IPv4Addr"
+column = "ipv4_src"
+binding = ""
+actions = ["eq", "neq"]
+# IPv4 原生列：以文本传值（127.0.0.1），ClickHouse 字符串隐式比较
+textValue = true
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "ipv4Dst"
+fieldType = "serializer.IPv4Addr"
+column = "ipv4_dst"
+binding = ""
+actions = ["eq", "neq"]
+textValue = true
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "srcPort"
+fieldType = "uint16"
+column = "tcp_src_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+[[Ipv4TcpListGet.filterByFields]]
+fieldName = "dstPort"
+fieldType = "uint16"
+column = "tcp_dst_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+# 原始流量审计 - IPv6 TCP 包
+# 过滤字段与 IPv4 TCP 包一致（timestamp / created_at / namespace 必填，可选五元组与 session_id）。
+[Ipv6TcpListGet]
+[[Ipv6TcpListGet.orderByFields]]
+fieldName = "timestamp"
+column = "timestamp"
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "timestampFrom"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "timestampTo"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "createdAtFrom"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "createdAtTo"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace"
+binding = "required"
+required = true
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "sessionId"
+fieldType = "serializer.HexUUID"
+column = "session_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "tcpStreamId"
+fieldType = "string"
+column = "tcp_stream_id"
+binding = ""
+actions = ["eq"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "ipv6Src"
+fieldType = "serializer.IPv6Addr"
+column = "ipv6_src"
+binding = ""
+actions = ["eq", "neq"]
+textValue = true
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "ipv6Dst"
+fieldType = "serializer.IPv6Addr"
+column = "ipv6_dst"
+binding = ""
+actions = ["eq", "neq"]
+textValue = true
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "srcPort"
+fieldType = "uint16"
+column = "tcp_src_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+[[Ipv6TcpListGet.filterByFields]]
+fieldName = "dstPort"
+fieldType = "uint16"
+column = "tcp_dst_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+# 原始流量审计 - HTTP 传输
+# 过滤字段：timestamp / created_at / namespace 必填；可选 client/server IP 与端口、请求行/URI 与 HTTP 版本低基数字段。
+[HttpTransportListGet]
+[[HttpTransportListGet.orderByFields]]
+fieldName = "timestamp"
+column = "timestamp"
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "timestampFrom"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "timestampTo"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "createdAtFrom"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "createdAtTo"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace"
+binding = "required"
+required = true
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "sessionId"
+fieldType = "serializer.HexUUID"
+column = "session_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "clientIp"
+fieldType = "serializer.IPAddr"
+column = "client_ip"
+binding = ""
+actions = ["eq", "neq"]
+textValue = true
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "serverIp"
+fieldType = "serializer.IPAddr"
+column = "server_ip"
+binding = ""
+actions = ["eq", "neq"]
+textValue = true
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "clientPort"
+fieldType = "uint16"
+column = "client_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "serverPort"
+fieldType = "uint16"
+column = "server_port"
+binding = ""
+actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "method"
+fieldType = "string"
+column = "method"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "GET", value = "GET" },
+    { title = "POST", value = "POST" },
+    { title = "PUT", value = "PUT" },
+    { title = "DELETE", value = "DELETE" },
+    { title = "PATCH", value = "PATCH" },
+    { title = "HEAD", value = "HEAD" },
+    { title = "OPTIONS", value = "OPTIONS" },
+    { title = "TRACE", value = "TRACE" },
+    { title = "CONNECT", value = "CONNECT" },
+]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "host"
+fieldType = "string"
+column = "host"
+binding = ""
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "path"
+fieldType = "string"
+column = "path"
+binding = ""
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "fileExt"
+fieldType = "string"
+column = "file_ext"
+binding = ""
+actions = ["eq"]
+
+[[HttpTransportListGet.filterByFields]]
+fieldName = "httpVersion"
+fieldType = "string"
+column = "http_version"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "HTTP/1.0", value = "HTTP/1.0" },
+    { title = "HTTP/1.1", value = "HTTP/1.1" },
+    { title = "HTTP/2", value = "HTTP/2" },
+    { title = "HTTP/3", value = "HTTP/3" },
+]
+
+# 原始流量审计 - 网络堆栈（HTTP 传输关联下钻）
+# 以 HttpTransport 的 traceId 为键查询组成该 TCP 流的全部网络堆栈记录；
+# timestamp / created_at 双时间范围必填，命中分区键防全表扫描。
+[NetworkStackListGet]
+[[NetworkStackListGet.orderByFields]]
+fieldName = "timestamp"
+column = "timestamp"
+
+[[NetworkStackListGet.orderByFields]]
+fieldName = "seq"
+column = "seq"
+
+[[NetworkStackListGet.orderByFields]]
+fieldName = "cli2Srv"
+column = "cli_2_srv"
+
+[[NetworkStackListGet.orderByFields]]
+fieldName = "level"
+column = "level"
+
+[[NetworkStackListGet.orderByFields]]
+fieldName = "proto"
+column = "proto"
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "timestampFrom"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "timestampTo"
+fieldType = "time.Time"
+column = "timestamp"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "createdAtFrom"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["gte"]
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "createdAtTo"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+required = true
+actions = ["lte"]
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "traceId"
+fieldType = "serializer.HexUUID"
+column = "trace_id"
+binding = "required"
+required = true
+actions = ["eq"]
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "namespace"
+fieldType = "string"
+column = "namespace"
+binding = ""
+actions = ["eq"]
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "sessionId"
+fieldType = "serializer.HexUUID"
+column = "session_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[NetworkStackListGet.filterByFields]]
+fieldName = "cli2Srv"
+fieldType = "bool"
+column = "cli_2_srv"
+binding = ""
+actions = ["eq"]
+
+# 通知渠道
+[NotificationChannelListGet]
+timeModule = true
+
+[[NotificationChannelListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[NotificationChannelListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "type"
+fieldType = "string"
+column = "type"
+binding = ""
+actions = ["eq", "neq"]
+enum = true
+options = [
+    { title = "email", value = "email" },
+    { title = "webhook", value = "webhook" },
+]
+
+[[NotificationChannelListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+# 通知目标
+[NotificationTargetListGet]
+timeModule = true
+
+[[NotificationTargetListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[NotificationTargetListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "channelId"
+fieldType = "uint"
+column = "channel_id"
+binding = ""
+actions = ["eq", "neq"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "type"
+fieldType = "string"
+column = "type"
+binding = ""
+actions = ["eq", "neq"]
+enum = true
+options = [
+    { title = "email", value = "email" },
+    { title = "webhook", value = "webhook" },
+]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[NotificationTargetListGet.filterByFields]]
+fieldName = "language"
+fieldType = "string"
+column = "language"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "en", value = "en" },
+    { title = "zh-Hans", value = "zh-Hans" },
+]
+
+# 通知组
+[NotificationGroupListGet]
+timeModule = true
+
+[[NotificationGroupListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[NotificationGroupListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[NotificationGroupListGet.filterByFields]]
+fieldName = "isDefault"
+fieldType = "bool"
+column = "is_default"
+binding = ""
+actions = ["eq"]
+
+# 通知发送记录
+[NotificationRecordListGet]
+timeModule = true
+
+[[NotificationRecordListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[NotificationRecordListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "status"
+fieldType = "string"
+column = "status"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "pending", value = "pending" },
+    { title = "success", value = "success" },
+    { title = "failed", value = "failed" },
+]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "eventType"
+fieldType = "string"
+column = "event_type"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [{ title = "tag_event_record", value = "tag_event_record" }]
+
+[[NotificationRecordListGet.filterByFields]]
+fieldName = "channelType"
+fieldType = "string"
+column = "channel_type"
+binding = ""
+actions = ["eq", "neq"]
+enum = true
+options = [
+    { title = "email", value = "email" },
+    { title = "webhook", value = "webhook" },
+]

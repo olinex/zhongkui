@@ -40,6 +40,18 @@ func (c *Crypto) Value() []byte {
 	return c.value
 }
 
+// Cipher 返回原始密文字节（Scan 读库时保留），供详情输出编码为 base64 密文文本；
+// 写库侧构造或未读库的 Crypto（cipher 为空）返回 nil，避免泄露明文。
+// Cipher returns the raw ciphertext bytes retained on Scan, used by detail output to
+// encode a base64 ciphertext; returns nil for a write-side or un-scanned Crypto (empty
+// cipher), preventing plaintext leakage.
+func (c *Crypto) Cipher() []byte {
+	if c == nil {
+		return nil
+	}
+	return c.cipher
+}
+
 // setBytesField 通过 unsafe.Pointer 绕过只读检查，设置 Crypto 的 unexported 字节字段
 // 注意：value/cipher 均为 unexported 字段，在 Go 1.22+ 中 reflect.Set 会因 flagRO 被拒绝
 func setBytesField(cryptoValue reflect.Value, fieldName string, data []byte) {

@@ -94,6 +94,31 @@ func MustParseLanguage(lang string) *Language {
 	return l
 }
 
+// Normalize 将当前语言归一化为最近的支持语言（SupportLanguages 之一）。
+//
+// 该方法基于 BCP-47 匹配器计算与 SupportLanguages 的最近匹配：
+//   - 完全/高度匹配时返回对应的支持语言（如 "zh-CN" → "zh-Hans"）
+//   - 无法合理匹配时回退到 DefaultLanguage
+//
+// 返回值始终属于 SupportLanguages，保证后续 UniversalTranslator 查询、
+// 语言文件查找等操作必然成功（不会因请求头携带未注册语言而 panic）。
+//
+// 使用场景:
+//   - 中间件解析 Accept-Language 后，将请求语言归一化到受支持集合
+func (l *Language) Normalize() *Language {
+	// 空引用或零值语言直接回退默认语言
+	if l == nil || l.tag == language.Und {
+		return DefaultLanguage
+	}
+	tags := make([]language.Tag, 0, len(SupportLanguages))
+	for i := range SupportLanguages {
+		tags = append(tags, SupportLanguages[i].StdTag())
+	}
+	matcher := language.NewMatcher(tags)
+	_, idx, _ := matcher.Match(l.tag)
+	return &SupportLanguages[idx]
+}
+
 // String 返回内部的语言标签字符串表示
 // 这个方法实现了 fmt.Stringer 接口，使得 Language 实例可以直接用于字符串格式化
 // 返回的字符串格式与输入到 ParseLanguage 的格式相同

@@ -1,7 +1,7 @@
 <template>
   <v-confirm-edit :model-value="props.modelValue" @update:model-value="addSelection">
     <template #default="{ model: proxyModel, actions }">
-      <v-card class="mx-auto">
+      <v-card class="clause-filter-card mx-auto">
         <template #text>
           <v-select
             :model-value="choiceField"
@@ -26,6 +26,8 @@
             :model-value="choiceValue"
             :input-type="inputType"
             :number-props="numberProps"
+            :options="choiceOptions"
+            density="compact"
             @update:model-value="(value) => updateValue(proxyModel, value)"
           />
         </template>
@@ -65,6 +67,9 @@ const choiceOption = computed((): FilterByOption | null => {
     return null;
   }
 });
+
+// 枚举字段的下拉可选项（title 为 i18n 键，展示时经翻译）
+const choiceOptions = computed<Option[]>(() => choiceOption.value?.options ?? []);
 
 const fieldOptions = computed((): Option[] => {
   return Object.entries(props.headers)
@@ -141,6 +146,11 @@ const updateField = (proxy: globalThis.Ref<SearchItem, SearchItem>, value: Optio
   choiceAction.value = { value: "", title: "" };
   choiceValue.value = null;
   if (!props.modify) {
+    // 字段确定后，若该字段剩余可选动作唯一，则自动勾选该动作并直接展示值输入
+    if (actionOptions.value.length === 1) {
+      choiceAction.value = actionOptions.value[0];
+      proxy.value.action = choiceAction.value;
+    }
     return;
   }
   proxy.value.field = choiceField.value;
@@ -190,6 +200,24 @@ const updateValue = (proxy: globalThis.Ref<SearchItem, SearchItem>, value: any) 
       };
       choiceValue.value = value;
       break;
+    case BackendDataType.ENUM:
+      // value 为 v-select 选中的选项对象（title 为 i18n 键），保存原始键与翻译后的展示名
+      proxy.value.value = {
+        value: value?.value,
+        title: i18n.global.t(String(value?.title ?? "")),
+      };
+      choiceValue.value = value?.value;
+      break;
+    case BackendDataType.BOOLEAN:
+      // 布尔筛选值保存原始布尔值，title 统一存翻译后的“是/否”，使 chip 展示与其他类型一致
+      proxy.value.value = {
+        value: value,
+        title: i18n.global.t(
+          value === true || value === "true" ? "model.__base.value.yes" : "model.__base.value.no",
+        ),
+      };
+      choiceValue.value = value;
+      break;
     default:
       proxy.value.value = { value: value, title: title };
       choiceValue.value = value;
@@ -204,6 +232,13 @@ onMounted(() => {
   choiceField.value.title = props.modelValue.field.title;
   choiceAction.value.value = props.modelValue.action.value;
   choiceAction.value.title = props.modelValue.action.title;
+  // 枚举/布尔字段在编辑时回填当前选中值，使下拉框展示已有过滤条件
+  if (
+    choiceOption.value?.type === BackendDataType.ENUM ||
+    choiceOption.value?.type === BackendDataType.BOOLEAN
+  ) {
+    choiceValue.value = props.modelValue.value.value;
+  }
 });
 
 const props = defineProps({
@@ -232,3 +267,21 @@ const props = defineProps({
 
 const emits = defineEmits(["update:modelValue"]);
 </script>
+
+<style scoped>
+/* 字段/动作/值三段输入控件统一宽度：
+   v-menu 内容按内容收缩时，值输入可能因 min-width（如日期 180px、日期时间 245px）
+   或内容撑宽而与其他两段不一致；给卡片设定最小宽度并让所有输入控件撑满，
+   保证三段（字段/动作/值）始终等宽 */
+.clause-filter-card {
+  min-width: 340px;
+  max-width: 100%;
+}
+
+.clause-filter-card :deep(.v-input) {
+  width: 100%;
+
+  /* 统一输入控件高度（compact=40px），保证字段/动作/值三段等高的兜底约束 */
+  --v-input-control-height: 40px;
+}
+</style>

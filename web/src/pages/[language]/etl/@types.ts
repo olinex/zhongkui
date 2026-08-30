@@ -23,12 +23,17 @@ export interface InspectorServerListItem {
 }
 
 export interface InspectorSchedulerListItem {
-  id: string;
-  spec: string;
-  next: string;
-  prev: string | null;
   typeName: string;
-  payload: string;
+  cronSpec: string;
+  interval: string;
+  queue: string;
+  timeout: string;
+  maxRetry: number;
+  enabled: boolean;
+  payload: Record<string, unknown>;
+  backlogEnabled: boolean;
+  backlogWindow: string;
+  backlogLimit: number;
 }
 
 export interface InspectorQueueItem {

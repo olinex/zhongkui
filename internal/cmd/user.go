@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/manager"
-	"zhongkui.com/zhongkui/internal/manager/routes"
+	"zhongkui.com/zhongkui/internal/manager/views"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
@@ -21,7 +21,7 @@ import (
 // createUserInput 定义命令行创建用户的输入结构体
 // 继承 HTTP 注册输入，并额外包含是否为超级管理员的交互式确认
 type createUserInput struct {
-	routes.UserRegisterIn
+	views.UserRegisterIn
 	Superuser bool `viper:"superuser" prompt:"是否为超级管理员？"`
 }
 
@@ -34,7 +34,7 @@ func extractUserInput(v *viper.Viper) (createUserInput, error) {
 }
 
 func extractUsernamePassword(v *viper.Viper) (username, password string, err error) {
-	var in routes.UserPasswordLoginIn
+	var in views.UserPasswordLoginIn
 	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 		return "", "", err
 	}

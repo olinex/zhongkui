@@ -272,8 +272,7 @@ Additional rules:
   in pages; do not exceed the 1440px cap.
 - **App bar** (`AppHeader.vue`): `elevation="0"` with a hairline bottom border
   (`border-bottom: 1px solid rgb(var(--v-theme-on-surface), 0.12)`) separating
-  it from page content. Toolbar buttons use `variant="text"` (or `outlined`
-  for the prominent sign-up action).
+  it from page content. Toolbar buttons use `variant="text"`.
 - **Global focus**: `:focus-visible` renders a 2px `primary` outline with 2px
   offset (`main.scss`); never suppress or replace it.
 - **Form / list page layout** — Every list page is composed of (in order): tab

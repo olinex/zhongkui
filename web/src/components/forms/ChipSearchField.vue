@@ -60,12 +60,15 @@ const searchAction = debounce(async () => {
       orderBy: [{ name: props.orderByField, order: 1 }],
       filterBy: Object.entries(props.searchHeaders).reduce(
         (prev, [field, action]) => {
-          if (props.modelValue === "") {
+          // 搜索关键字去除首尾空白，避免误输入空白导致查询无结果
+          const keyword =
+            typeof props.modelValue === "string" ? props.modelValue.trim() : props.modelValue;
+          if (keyword === "" || keyword === undefined || keyword === null) {
             return prev;
           }
           prev[field] = {
             action: action,
-            value: props.modelValue,
+            value: keyword,
           };
           return prev;
         },

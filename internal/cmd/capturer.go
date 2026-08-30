@@ -6,7 +6,7 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/manager/routes"
+	"zhongkui.com/zhongkui/internal/manager/views"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
@@ -25,7 +25,7 @@ var createCapturerCmd = &cobra.Command{
 
 		timeout := v.GetDuration("timeout")
 
-		var in routes.CapturerCreateIn
+		var in views.CapturerCreateIn
 		if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 			pterm.Error.Println(err.Error())
 			return

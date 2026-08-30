@@ -113,7 +113,7 @@ export interface InputItemMeta {
 
 /**
  * Field metadata of an input model document as returned by the
- * `/traffic/tag-rule/model/metadata` endpoint.
+ * `/tag-event/tag-rule/model/metadata` endpoint.
  */
 export interface InputFieldMeta {
   /** input field name, e.g. "method" */

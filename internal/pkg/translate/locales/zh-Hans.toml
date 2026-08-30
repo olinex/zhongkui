@@ -83,10 +83,16 @@
 1108 = "前端配置已被其他浏览器更新，请刷新后重试"
 1109 = "前端配置同步未开启"
 1110 = "标签规则样例输入无法反序列化为目标模型"
+1111 = "通知发送失败"
+1112 = "定时任务配置非法"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
 badUrlParam = "URL 参数`%s`不合法: %s"
+schedulerScheduleConflict = "cronSpec 与 interval 不能同时设置，请二选一"
+schedulerScheduleEmpty = "cronSpec 与 interval 至少需设置一个"
+schedulerTaskCreateExist = "定时任务类型 %s 已存在"
+schedulerTaskUpdateNotExist = "定时任务类型 %s 不存在"
 
 [validator]
 strongPassword = "字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?&）"
@@ -711,74 +717,6 @@ other = "警告：保存基准测试报告失败：{{.Err}}"
 
 [cli.bench.report-saved]
 other = "基准测试报告已保存：{{.Path}}"
-
-# =============================================================================
-# Interface field comments (metadata) - Key layout: model.<StructName>.field.<key>
-# 接口结构体字段注释翻译，供 OPTIONS 元信息接口按请求语言返回 comment
-# =============================================================================
-
-["model.Pagination.field.page"]
-other = "页码"
-
-["model.Pagination.field.pageSize"]
-other = "每页条数"
-
-["model.UserListGetSearchIn.field.greedy"]
-other = "是否贪婪匹配（命中任意过滤条件即返回）"
-
-["model.UserListGetSearchIn.field.orderBy"]
-other = "排序条件"
-
-["model.UserListGetSearchIn.field.filterBy"]
-other = "过滤条件"
-
-["model.UserBaseDetailOut.field.unionID"]
-other = "用户全局唯一标识符"
-
-["model.UserBaseDetailOut.field.nickleName"]
-other = "用户昵称"
-
-["model.UserBaseDetailOut.field.username"]
-other = "登录用户名"
-
-["model.UserBaseDetailOut.field.email"]
-other = "电子邮件地址"
-
-["model.UserBaseDetailOut.field.active"]
-other = "是否处于激活状态"
-
-["model.BaseItemOut.field.id"]
-other = "主键ID"
-
-["model.BaseItemOut.field.createdAt"]
-other = "创建时间"
-
-["model.BaseItemOut.field.updatedAt"]
-other = "更新时间"
-
-["model.BaseSoftDeleteItemOut.field.deletedAt"]
-other = "删除时间（软删除时使用）"
-
-["model.UserDetailOut.field.groups"]
-other = "所属用户组列表"
-
-["model.UserProfileChangeIn.field.nickleName"]
-other = "用户昵称"
-
-["model.UserProfileChangeIn.field.email"]
-other = "用户邮箱"
-
-["model.UserGroupIn.field.namespace"]
-other = "命名空间名称"
-
-["model.UserGroupIn.field.groupName"]
-other = "用户组名称"
-
-["model.UserRbacPolicyDetailOut.field.name"]
-other = "用户名或用户标识"
-
-["model.UserRbacPolicyDetailOut.field.namespace"]
-other = "命名空间，用于隔离不同环境或租户的策略"
 
 # =============================================================================
 # Tag rule Rego error/lint messages - Key layout: tagrule.*

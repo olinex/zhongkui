@@ -28,20 +28,19 @@ import {
   type CompletionResult,
 } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import {
-  bracketMatching,
-  defaultHighlightStyle,
-  StreamLanguage,
-  syntaxHighlighting,
-  type StreamParser,
-} from "@codemirror/language";
+import { bracketMatching, StreamLanguage, type StreamParser } from "@codemirror/language";
 import { linter } from "@codemirror/lint";
 import { Compartment, EditorState, type Extension } from "@codemirror/state";
-import { EditorView, highlightActiveLine, keymap, placeholder } from "@codemirror/view";
-import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
+import {
+  EditorView,
+  highlightActiveLine,
+  keymap,
+  lineNumbers,
+  placeholder,
+} from "@codemirror/view";
 
 import { useAppStore } from "@/stores/app";
-import { DARK_THEME } from "@/stores/local";
+import { highlightFor } from "@/utils/editorHighlight";
 import { parseBooleanExpr } from "@/utils/booleanExpr";
 import { findSlashPos, slashKeyBinding, withSlashApply } from "@/utils/slashTrigger";
 import i18n from "@/utils/i18n";
@@ -75,11 +74,8 @@ const appStore = useAppStore();
 const hostRef = useTemplateRef<HTMLDivElement>("hostRef");
 const view = shallowRef<EditorView>();
 
-// 语法高亮随主题切换：light 用 CM 默认浅色配色，dark 用 One Dark 配色，
-// 与 rego 编辑器保持一致的实现方式
+// 语法高亮随主题切换，配色统一走 utils/editorHighlight 的共享方案。
 const highlightCompartment = new Compartment();
-const highlightFor = (theme: string): Extension =>
-  syntaxHighlighting(theme === DARK_THEME ? oneDarkHighlightStyle : defaultHighlightStyle);
 
 // 表达式词法流：空白 → 关键词（AND/OR/NOT）→ 括号 → 标签标识符（Unicode）→ 其余视为非法
 const exprStreamParser: StreamParser<unknown> = {
@@ -210,6 +206,7 @@ async function exprCompletion(context: CompletionContext): Promise<CompletionRes
 const editableCompartment = new Compartment();
 
 const extensions: Extension[] = [
+  lineNumbers(),
   exprLanguage,
   highlightCompartment.of(highlightFor(appStore.theme)),
   highlightActiveLine(),

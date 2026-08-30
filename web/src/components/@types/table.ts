@@ -1,4 +1,5 @@
 import type { BackendDataType, SearchAction } from "@/types";
+import type { Option } from "./forms";
 
 export type Align = "start" | "end" | "center" | undefined;
 export type Fixed = boolean | "end" | "start" | undefined;
@@ -50,11 +51,16 @@ export interface FilterByOption {
   title: string;
   type: BackendDataType;
   actions: SearchAction[];
+  // 枚举字段的下拉可选项（title 为 i18n 键，渲染时经翻译展示）
+  options?: Option[];
 }
 
 export interface HeaderOption {
   name: string;
   type: BackendDataType;
+  // 默认可见性：无本地保存配置时新增列默认是否展示，缺省 true（展示）；
+  // 长度不固定的长文本列（如通知模板标题/正文）可显式设 false 默认隐藏
+  defaultVisible?: boolean;
 }
 
 export interface SearchOptionsOut {

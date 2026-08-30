@@ -4,9 +4,11 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/manager"
-	"zhongkui.com/zhongkui/internal/manager/routes"
+	"zhongkui.com/zhongkui/internal/manager/router"
+	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/runtime"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
@@ -20,7 +22,8 @@ var webCmd = &cobra.Command{
 	Short: "cmd.run.web.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
-		if err := routes.RouteRegister(ctx, i); err != nil {
+		seedNotificationTemplates(i)
+		if err := router.RouteRegister(ctx, i); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
@@ -50,6 +53,7 @@ var workerCmd = &cobra.Command{
 	Short: "cmd.run.worker.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
+		seedNotificationTemplates(i)
 		worker.Registry(ctx, i)
 		server, err := provider.InvokePipelineServer(i)
 		if err != nil {
@@ -122,4 +126,19 @@ var captureCmd = &cobra.Command{
 func init() {
 	captureCmd.Flags().Bool("stats-print", false, "flag.run.capture.stats-print")
 	captureCmd.Flags().Duration("stats-interval", 5*time.Second, "flag.run.capture.stats-interval")
+}
+
+// seedNotificationTemplates 在服务启动前，为既有命名空间幂等回填事件模板注册表中的内置
+// 默认通知模板（source=default），保证老命名空间具备可用的默认模板。失败仅记录警告，不
+// 阻断启动；回填本身幂等（ON CONFLICT DO NOTHING），可安全重复执行。
+// seedNotificationTemplates backfills, before a serving command starts, the built-in
+// default notification templates (source=default) for all existing namespaces so older
+// namespaces have usable defaults. A failure is only logged as a warning and does not
+// block startup; the backfill is idempotent (ON CONFLICT DO NOTHING) and safe to rerun.
+func seedNotificationTemplates(i do.Injector) {
+	db := provider.MustInvokeCoreDatabase(i)
+	logger := provider.MustInvokeDatabaseLogger(i)
+	if err := notify.BackfillDefaultTemplates(db, logger); err != nil {
+		logger.Warnf("notify: failed to backfill default templates: %v", err)
+	}
 }

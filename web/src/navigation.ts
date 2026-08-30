@@ -19,6 +19,23 @@ export interface NavGroup {
 
 export const navigationGroups: NavGroup[] = [
   {
+    title: "navbar.tagEvent.self",
+    icon: "mdi-tag-multiple",
+    value: "tagEvent",
+    childrens: [
+      {
+        title: "navbar.tagEvent.tagRule",
+        icon: "mdi-label",
+        routeName: "Tag Rule List",
+      },
+      {
+        title: "navbar.tagEvent.tagEventRule",
+        icon: "mdi-alert-decagram",
+        routeName: "Tag Event Rule List",
+      },
+    ],
+  },
+  {
     title: "navbar.traffic.self",
     icon: "mdi-wifi-marker",
     value: "traffic",
@@ -41,15 +58,37 @@ export const navigationGroups: NavGroup[] = [
         routeName: "Traffic List",
         params: { type: "http-transport" },
       },
+    ],
+  },
+  {
+    title: "navbar.notification.self",
+    icon: "mdi-bell-outline",
+    value: "notification",
+    childrens: [
       {
-        title: "navbar.traffic.tagRule",
-        icon: "mdi-label",
-        routeName: "Traffic Tag Rule List",
+        title: "navbar.notification.channel",
+        icon: "mdi-email-multiple",
+        routeName: "Notification Channel List",
       },
       {
-        title: "navbar.traffic.tagEventRule",
-        icon: "mdi-alert-decagram",
-        routeName: "Traffic Tag Event Rule List",
+        title: "navbar.notification.target",
+        icon: "mdi-account-arrow-right-outline",
+        routeName: "Notification Target List",
+      },
+      {
+        title: "navbar.notification.group",
+        icon: "mdi-account-group-outline",
+        routeName: "Notification Group List",
+      },
+      {
+        title: "navbar.notification.template",
+        icon: "mdi-file-document-edit-outline",
+        routeName: "Notification Template List",
+      },
+      {
+        title: "navbar.notification.record",
+        icon: "mdi-history",
+        routeName: "Notification Record List",
       },
     ],
   },

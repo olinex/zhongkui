@@ -39,8 +39,12 @@ request.interceptors.request.use((config) => {
   }
   // 全局携带当前命名空间：后端 NamespaceMiddleware 据此做多租户隔离。
   // 登录/注册等未挂命名空间中间件的接口会忽略该头，无副作用。
+  // 命名空间名称可能包含中文等非 ASCII 字符，而 HTTP 请求头值仅允许
+  // ISO-8859-1（Latin-1）字符，直接写入会触发浏览器
+  // "String contains non ISO-8859-1 code point" 异常导致请求从未发出；
+  // 故此处先做 URL 编码（后端 NamespaceMiddleware 会相应解码）。
   if (!config.headers[HttpHeader.NAMESPACE]) {
-    config.headers[HttpHeader.NAMESPACE] = store.namespace;
+    config.headers[HttpHeader.NAMESPACE] = encodeURIComponent(store.namespace);
   }
   return config;
 });

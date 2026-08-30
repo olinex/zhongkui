@@ -25,6 +25,7 @@ export enum SearchInputType {
   DATE = "date",
   TIME = "time",
   BOOLEAN = "boolean",
+  SELECT = "select",
   EMPTY = "empty",
   UNKNOWN = "unknown",
 }
@@ -60,6 +61,8 @@ export function fromBackendDataType(btype: BackendDataType, action: SearchAction
           return SearchInputType.TIME;
         case BackendDataType.STRING:
           return SearchInputType.STRING;
+        case BackendDataType.ENUM:
+          return SearchInputType.SELECT;
         default:
           return SearchInputType.UNKNOWN;
       }

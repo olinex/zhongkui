@@ -84,18 +84,14 @@
 <script setup lang="ts" name="rego-dry-run-panel">
 import { DateTime } from "luxon";
 
-import {
-  tagRuleDryRun,
-  TrafficCryptoFields,
-  TrafficS3Fields,
-  trafficTypeFromModelKey,
-} from "@/apis/traffic";
+import { tagRuleDryRun } from "@/apis/tagEvent";
+import { TrafficCryptoFields, TrafficS3Fields, trafficTypeFromModelKey } from "@/apis/traffic";
 import { getResponse } from "@/apis/base";
 import type { DetailField } from "@/components/@types/detail";
 import { useAppStore } from "@/stores/app";
 import { localDurationFormat, localeDatetimeFormat } from "@/utils/i18n";
 import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
-import type { TagRuleDryRunOut, TagRuleDryRunRuleOut } from "@/pages/[language]/traffic/@types";
+import type { TagRuleDryRunOut, TagRuleDryRunRuleOut } from "@/pages/[language]/tag-event/@types";
 
 const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
 

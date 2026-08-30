@@ -307,7 +307,8 @@ const openCreateDialogAction = () => {
 const createAction = createForm.handleSubmit(async (values) => {
   await getSimpleResponse(
     namespaceCreate({
-      name: values.name,
+      // 名称单行文本提交前去除首尾空白，避免误输入空白创建出看似相同实则不同的记录
+      name: (values.name as string).trim(),
       description: values.description,
     }),
     async (rsp) => {

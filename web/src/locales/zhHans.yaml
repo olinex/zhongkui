@@ -1,6 +1,6 @@
 navbar:
   admin:
-    self: 管理
+    self: 系统管理
     user: 用户
     group: 用户组
     namespace: 命名空间
@@ -11,11 +11,20 @@ navbar:
     queue: 管道
     task: 任务
     scheduler: 定时任务
+  notification:
+    self: 通知管理
+    channel: 通知渠道
+    target: 通知目标
+    group: 通知组
+    template: 通知模板
+    record: 发送记录
   traffic:
     self: 流量审计
     ipv4Tcp: IPv4 TCP
     ipv6Tcp: IPv6 TCP
     httpTransport: HTTP 传输
+  tagEvent:
+    self: 标签事件
     tagRule: 标签规则
     tagEventRule: 标签事件规则
   pin: 固定侧边栏
@@ -36,7 +45,6 @@ model:
       # 时间范围筛选标签（通用字段，非具体模型字段）
       timestampRange: 采集时间范围
       createdAtRange: 入库时间范围
-      advancedFilter: 高级筛选
     content:
       condition: 条件
       doubleCheck: 请输入 `{random}` 以二次确认
@@ -46,6 +54,132 @@ model:
       undefined: "未定义"
       yes: 是
       no: 否
+  notificationChannel:
+    name: 通知渠道
+    field:
+      id: ID
+      name: 名称
+      type: 类型
+      enabled: 启用
+      config: 配置
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+    type:
+      email: 邮件
+      webhook: Webhook
+    option:
+      email: 邮件
+      webhook: Webhook
+  notificationTarget:
+    name: 通知目标
+    field:
+      id: ID
+      name: 名称
+      channelId: 渠道
+      channelName: 所属渠道
+      channelType: 渠道类型
+      channelEnabled: 渠道状态
+      type: 类型
+      enabled: 启用
+      config: 配置
+      language: 语言
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+    type:
+      email: 邮件
+      webhook: Webhook
+    option:
+      email: 邮件
+      webhook: Webhook
+      en: 英语
+      zh-Hans: 简体中文
+  notificationGroup:
+    name: 通知组
+    field:
+      id: ID
+      name: 名称
+      isDefault: 默认组
+      description: 描述
+      targetCount: 目标数
+      targets: 绑定目标
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  notificationTemplate:
+    name: 通知模板
+    field:
+      id: ID
+      namespaceName: 命名空间
+      event: 事件
+      channelType: 渠道类型
+      language: 语言
+      title: 标题
+      content: 正文
+      source: 来源
+      description: 描述
+      params: 模板参数
+    # 事件枚举值展示名（键为后端事件注册表返回的 event 键）
+    type:
+      event:
+        tag_event_record: 标签事件告警
+      # 模板来源枚举值展示名（default 内置默认 / override 用户覆盖）
+      source:
+        default: 默认
+        override: 覆盖
+  notificationRecord:
+    name: 发送记录
+    field:
+      id: ID
+      eventType: 事件类型
+      eventId: 事件 ID
+      groupId: 通知组 ID
+      targetId: 目标 ID
+      targetName: 目标名称
+      channelId: 渠道 ID
+      channelName: 渠道名称
+      channelType: 渠道类型
+      status: 状态
+      error: 错误信息
+      messageId: 消息 ID
+      payload: 消息内容
+      notifiedAt: 发送时间
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+    type:
+      status:
+        pending: 待发送
+        success: 成功
+        failed: 失败
+      channelType:
+        email: 邮件
+        webhook: Webhook
+      # 事件类型枚举值展示名（键为后端事件注册表返回的 event 键）
+      eventType:
+        tag_event_record: 标签事件告警
+    option:
+      pending: 待发送
+      success: 成功
+      failed: 失败
+      email: 邮件
+      webhook: Webhook
+      tag_event_record: 标签事件告警
   user:
     name: 用户
     field:
@@ -82,7 +216,14 @@ model:
       effect: 影响
       action: 动作
       createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
       updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+    value:
+      allow: 允许
+      deny: 禁止
   group:
     name: 用户组
     field:
@@ -163,12 +304,17 @@ model:
   scheduler:
     name: 定时任务
     field:
-      id: ID
-      spec: 规划
-      next: 下一次调度时日
-      prev: 上一次调度时日
       typeName: 任务类型名称
+      cronSpec: Cron 表达式
+      interval: 触发间隔
+      queue: 管道
+      timeout: 超时时长
+      maxRetry: 最大重试次数
+      enabled: 是否启用
       payload: 请求负载
+      backlogEnabled: 补投历史触发点
+      backlogWindow: 历史回溯窗口
+      backlogLimit: 单次补投上限
   task:
     name: 任务
     field:
@@ -206,6 +352,8 @@ model:
       enabled: 启用
       version: 版本号
       versionCount: 版本数量
+    option:
+      httpTransport: HTTP 传输
   tagRuleSample:
     name: 标签规则样例
     field:
@@ -220,6 +368,8 @@ model:
       model: 目标模型
       description: 描述
       input: 输入文档
+    option:
+      httpTransport: HTTP 传输
   tagEventRule:
     name: 标签事件规则
     field:
@@ -237,6 +387,12 @@ model:
       version: 版本号
       versionCount: 版本数量
       conditions: 条件集合
+      suppressWindow: 抑制窗口（分钟）
+      notification: 通知方式
+    content:
+      notificationDefault: 使用命名空间默认通知组
+      notificationGroup: 通知组
+      notificationTarget: 通知目标
   tagEventCondition:
     name: 条件
     field:
@@ -751,7 +907,6 @@ chart:
 action:
   signIn: 登录
   signOut: 退出
-  signUp: 注册
   language: 语言
   pwdForget: 忘记密码
   profile: 个人资料
@@ -807,18 +962,24 @@ action:
   query: 查询
   columns: 列设置
   selectAll: 全选
+  setDefault: 设为默认
   systemDefault: 系统默认
+  detail: 详情
   batchActivate: 批量启用
   batchDeactivate: 批量禁用
   batchDelete: 批量删除
   batchDisable: 批量禁用
   batchEnable: 批量启用
   clearSelection: 清空选择
+  testSend: 测试发送
+  restoreDefault: 恢复默认
+  renderTest: 渲染测试
+  templateValidate: 语法校验
+  templateDryRun: 试运行
 title:
   zk: Zhong Kui
   home: 首页
   signIn: 用户登录
-  signUp: 用户注册
   err404: 错误 - 404
   err401: 错误 - 401
   userProfile: 用户个人资料
@@ -830,8 +991,14 @@ title:
   groupAdmin: 管理 - 用户组
   namespaceAdmin: 管理 - 命名空间
   capturerAdmin: 管理 - 采集器
-  tagRuleTraffic: 流量审计 - 标签规则
-  tagEventRuleTraffic: 流量审计 - 标签事件规则
+  notification:
+    channel: 通知渠道
+    target: 通知目标
+    group: 通知组
+    template: 通知模板
+    record: 发送记录
+  tagRuleTagEvent: 标签事件 - 标签规则
+  tagEventRuleTagEvent: 标签事件 - 标签事件规则
   queueEtl: 数据处理 - 管道
   serverEtl: 数据处理 - 服务端
   schedulerEtl: 数据处理 - 定时任务
@@ -852,6 +1019,7 @@ home:
     renameGroup: 重命名分组
     deleteGroup: 删除分组
     deleteGroupConfirm: 确定删除分组「{group}」吗？
+    removeLink: 移除入口
     addLink: 添加入口
     searchNav: 搜索导航路径
     emptyGroup: 拖入或添加导航入口
@@ -902,6 +1070,16 @@ notice:
   selectedCount: "已选 {count} 项"
   batchConfirm: "将对选中的 {count} 项执行操作"
   batchResult: "成功 {succeeded} 项，失败 {failed} 项"
+  schedulerScheduleConflict: Cron 表达式与触发间隔只能二选一
+  schedulerScheduleEmpty: 触发间隔与 Cron 表达式至少填写一项
+  payloadInvalid: 请求负载 JSON 格式不正确
+  notification:
+    testSendSuccess: 测试消息发送成功
+    setDefaultSuccess: 已设为默认组
+    setDefaultConfirm: "确认将 {category} {key} 设为默认通知组吗？"
+    noTargets: 该通知组暂未绑定任何目标
+    restoreDefaultConfirm: "确认将事件 {event}（{language}）的通知模板恢复为内置默认吗？"
+    restoreDefaultSuccess: 已恢复为内置默认模板
 inputType:
   string: 字符串
   number: 数字
@@ -934,6 +1112,12 @@ option:
     lte: 小于等于
     gt: 大于
     gte: 大于等于
+  language:
+    "*": 全部语言
+    en: 英语
+    zh-Hans: 简体中文
+  channel:
+    "*": 全部渠道
 validation:
   mixed:
     default: "{path}不合法"
@@ -976,3 +1160,18 @@ validation:
     min: "{path}必须至少有{min}项"
     max: "{path}必须至多有{max}项"
     length: "{path}必须有{length}项"
+# 通知渠道/目标配置字段标签：由后端 /notification/channel/types 返回 key，前端 $t(f.label) 渲染
+notify:
+  channel:
+    email:
+      field:
+        host: SMTP 主机
+        port: 端口
+        username: 用户名
+        password: 密码
+        from: 发件人
+        to: 收件人邮箱
+    webhook:
+      field:
+        url: Webhook URL
+        headers: 请求头

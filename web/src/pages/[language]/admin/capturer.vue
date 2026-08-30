@@ -472,7 +472,12 @@ const openCreateDialogAction = () => {
 const itemUpdateAction = (proxy: Record<string, any>) => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
-      capturerUpdate(proxy.id, values as CapturerConfigIn),
+      // 单行文本提交前去除首尾空白，避免误输入空白导致数据异常
+      capturerUpdate(proxy.id, {
+        ...values,
+        device: (values.device as string).trim(),
+        bpfExpr: (values.bpfExpr as string).trim(),
+      } as CapturerConfigIn),
       async (rsp) => {
         await searchTableRef.value?.refresh();
         appStore.notify({
@@ -495,15 +500,16 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
 const createAction = createForm.handleSubmit(async (values): Promise<void> => {
   await getSimpleResponse(
     capturerCreate({
-      namespace: values.namespace,
-      name: values.name,
-      version: values.version,
+      // 单行文本提交前去除首尾空白，避免误输入空白导致查询失败或数据异常
+      namespace: (values.namespace as string).trim(),
+      name: (values.name as string).trim(),
+      version: (values.version as string).trim(),
       config: {
-        device: values.device,
+        device: (values.device as string).trim(),
         snapLen: values.snapLen,
         promisc: values.promisc,
         timeout: values.timeout,
-        bpfExpr: values.bpfExpr,
+        bpfExpr: (values.bpfExpr as string).trim(),
         enabled: values.enabled,
       },
     }),

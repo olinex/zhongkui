@@ -1,6 +1,13 @@
 import type { AxiosPromise } from "axios";
 import { getJwtHeader, request } from "./base";
-import type { InspectorDailyStatIn, InspectorStateTaskIn, InspectorTaskListIn } from "./@types/etl";
+import type {
+  InspectorDailyStatIn,
+  InspectorStateTaskIn,
+  InspectorTaskListIn,
+  SchedulerTaskIn,
+  SchedulerTaskKeyIn,
+  SchedulerTaskToggleIn,
+} from "./@types/etl";
 
 export function inspectorServerListGet(): AxiosPromise {
   return request.post("/etl/inspector/server/list", null, {
@@ -82,6 +89,36 @@ export function inspectorTaskRun(id: string, queue: string): AxiosPromise {
 
 export function inspectorTaskCancelProcessing(id: string): AxiosPromise {
   return request.post(`/etl/inspector/task/${id}/cancel-processing`, null, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function schedulerTaskCreate(data: SchedulerTaskIn): AxiosPromise {
+  return request.post("/etl/scheduler/task/create", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function schedulerTaskUpdate(data: SchedulerTaskIn): AxiosPromise {
+  return request.post("/etl/scheduler/task/update", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function schedulerTaskToggle(data: SchedulerTaskToggleIn): AxiosPromise {
+  return request.post("/etl/scheduler/task/toggle", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function schedulerTaskDelete(data: SchedulerTaskKeyIn): AxiosPromise {
+  return request.post("/etl/scheduler/task/delete", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function schedulerTaskRun(data: SchedulerTaskKeyIn): AxiosPromise {
+  return request.post("/etl/scheduler/task/run", data, {
     headers: getJwtHeader(),
   });
 }

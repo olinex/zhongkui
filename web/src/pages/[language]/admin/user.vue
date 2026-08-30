@@ -395,8 +395,9 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
   handleSubmit(async (values) => {
     await getSimpleResponse(
       userUpdate(proxy.unionID, {
-        nickleName: values.nickleName,
-        email: values.email,
+        // 单行文本提交前去除首尾空白，避免误输入空白导致数据异常
+        nickleName: (values.nickleName as string).trim(),
+        email: (values.email as string).trim(),
       }),
       async (rsp) => {
         await searchTableRef.value?.refresh();
@@ -435,10 +436,12 @@ const openCreateDialogAction = () => {
 const createAction = createForm.handleSubmit(async (values) => {
   await getSimpleResponse(
     userCreate({
-      username: values.username,
+      // 单行文本提交前去除首尾空白，避免误输入空白导致登录失败或数据异常
+      // （密码字段按规范豁免 trim：首尾空白是密码的合法字符）
+      username: (values.username as string).trim(),
       password: values.password,
-      nickleName: values.nickleName,
-      email: values.email,
+      nickleName: (values.nickleName as string).trim(),
+      email: (values.email as string).trim(),
     }),
     async (rsp) => {
       await searchTableRef.value?.refresh();

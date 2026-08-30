@@ -3,6 +3,7 @@ package tag
 import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // MaxTagEventRuleVersions 每条标签事件规则最多保留的历史版本数。
@@ -28,6 +29,9 @@ type TagEventRuleVersion struct {
 	Name string `gorm:"type:VARCHAR(255)"`
 	// MatchAll 快照时是否要求规则下所有条件均命中才触发事件；为 false 时任一条件命中即触发
 	MatchAll bool `gorm:"column:match_all;type:BOOLEAN"`
+	// SuppressWindow 快照时的规则级抑制窗口（纳秒），0 表示不抑制
+	// 显式零值必须原样落库，故模型不设 default tag
+	SuppressWindow serializer.DurationNS `gorm:"column:suppress_window;type:BIGINT"`
 	// Description 快照时的规则描述
 	Description string `gorm:"type:VARCHAR(256)"`
 	// Conditions 快照时全部条件业务字段（model/dimension/item/name/window/threshold/expression/enabled/description）的 JSON 文本快照

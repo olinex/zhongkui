@@ -3,6 +3,8 @@ import * as yup from "yup";
 // use field
 const username = yup
   .string()
+  // 单行文本统一去除首尾空白，避免用户误输入不可见空白字符导致登录失败
+  .trim()
   .nonNullable()
   .required()
   .min(6)
@@ -10,6 +12,7 @@ const username = yup
   .label("model.user.field.username");
 const password = yup
   .string()
+  // 密码不做 trim：首尾空白是密码的合法字符，trim 会改变凭据本身
   .nonNullable()
   .required()
   .min(8)
@@ -17,6 +20,7 @@ const password = yup
   .label("model.user.field.password");
 const nickleName = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(6)
@@ -24,6 +28,7 @@ const nickleName = yup
   .label("model.user.field.nickleName");
 const email = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(10)

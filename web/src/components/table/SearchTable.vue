@@ -101,6 +101,7 @@
 import type { AxiosPromise } from "axios";
 import { getResponse } from "@/apis/base";
 import i18n from "@/utils/i18n";
+import { filterOptionTitle } from "@/utils/options";
 import { useColumnVisibility } from "@/utils/column";
 import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
@@ -155,6 +156,12 @@ function extractSearchHeaders(out: SearchOptionsOut): Record<string, FilterByOpt
         title: i18n.global.t(`model.${props.modelName}.field.${cur.name}`),
         actions: cur.actions,
         type: cur.type,
+        // 枚举筛选项 title 为后端返回的枚举值本身，此处按 model.<Name>.option.<title>
+        // 统一解析为可读展示名（未配置翻译时回退为枚举值，如 HTTP 方法）
+        options: cur.options?.map((option) => ({
+          ...option,
+          title: filterOptionTitle(props.modelName, option.title),
+        })),
       };
       return prev;
     },
@@ -177,6 +184,7 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
       type: hdr.type,
       align: align,
       sortable: out.orderBy.includes(hdr.name),
+      defaultVisible: hdr.defaultVisible,
     };
   });
   if (props.actions) {
@@ -216,7 +224,11 @@ const selectHeader: TableHeader = {
 };
 
 // selectTableHeaders 将多选列置于字段列之前，供 v-data-table-server 渲染表头。
-const selectTableHeaders = computed(() => [selectHeader, ...visibleHeaders.value]);
+// 仅当存在批量操作（batchActions）时才插入多选列，与 #item 模板中的复选框单元格
+// （v-if="batchActions"）保持一致，避免无批量操作页面表头多出一列导致列错位。
+const selectTableHeaders = computed(() =>
+  props.batchActions ? [selectHeader, ...visibleHeaders.value] : visibleHeaders.value,
+);
 
 const pageSizeOptions = [
   { title: "10", value: 10 },
@@ -245,6 +257,8 @@ const filterByOptions = computed(() => {
   );
 });
 
+// 筛选查询快照：序列化的实际查询载荷（action + value），用于识别筛选条件的“实际变更”，
+// 从而忽略仅重开/重确认但仍产生等价模型值（如引用变化、Date 实例不一致）的无效变更。
 onBeforeMount(async () => {
   await getSearchOptionsResponse(props.optionsRequest(), async (rsp) => {
     searchHeaders.value = extractSearchHeaders(rsp.data);
@@ -256,6 +270,24 @@ onMounted(tableDataRefresh);
 watch(page, tableDataRefresh);
 watch(pageSize, tableDataRefresh);
 watch(orderBy, tableDataRefresh);
+
+// 筛选条件发生实际变更时立即刷新：排序（orderBy）与每页个数（pageSize）保持不变，
+// 仅将页码重置为 1。仅当查询载荷真正变化时（比对 lastFilterBy 快照）才触发，
+// 避免仅重开/重确认筛选菜单产生的等价变更导致无谓刷新。
+watch(
+  () => JSON.stringify(filterByOptions.value),
+  (next, prev) => {
+    if (next === prev) {
+      return;
+    }
+    const wasFirstPage = page.value === 1;
+    page.value = 1;
+    if (wasFirstPage) {
+      // 页码本就为 1（不会触发 watch(page)），需手动刷新；否则由 watch(page) 触发
+      tableDataRefresh();
+    }
+  },
+);
 
 async function tableDataRefresh() {
   try {

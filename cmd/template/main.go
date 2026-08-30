@@ -80,6 +80,11 @@ var (
 	TimeActions     = NumberActions
 )
 
+type searchGenerateConfigOption struct {
+	Title string `toml:"title" validate:"required"`
+	Value string `toml:"value" validate:"required"`
+}
+
 type searchGenerateConfigFilterBy struct {
 	FieldName string   `toml:"fieldName" validate:"required"`
 	FieldType string   `toml:"fieldType" validate:"required,oneof=string int uint int8 uint8 int16 uint16 int32 uint32 int64 uint64 float32 float64 bool time.Time serializer.TimeOnly serializer.DateOnly serializer.HexUUID serializer.IPv4Addr serializer.IPv6Addr serializer.IPAddr"`
@@ -90,6 +95,10 @@ type searchGenerateConfigFilterBy struct {
 	// TextValue 是否以文本形式传值：为 true 时生成的 GetValue 返回值的 String() 文本。
 	// 用于 ClickHouse 原生 IPv4/IPv6 类型列的字符串隐式比较（列存二进制，比较时自动提升/转换）
 	TextValue bool `toml:"textValue"`
+	// Enum 是否为枚举字段：为 true 时生成的 Type 为 "enum"，并携带 Options 下拉可选值。
+	// fieldType 仍保持 "string"（枚举值以字符串存储），仅过滤 UI 形态变化。
+	Enum    bool                         `toml:"enum"`
+	Options []searchGenerateConfigOption `toml:"options"`
 }
 
 type searchGenerateConfigOrderBy struct {
@@ -199,6 +208,13 @@ var searchGenerateCmd = &cobra.Command{
 			for _, field := range item.FilterByFields {
 				if err = actionValidate(field.FieldType, field.Actions); err != nil {
 					panic(fmt.Sprintf("Invalid action for field %s: %v", fieldName, err))
+				}
+				// 枚举字段必须携带下拉可选值，非枚举字段不得携带
+				if field.Enum && len(field.Options) == 0 {
+					panic(fmt.Sprintf("Enum field %s must define options", fieldName))
+				}
+				if !field.Enum && len(field.Options) > 0 {
+					panic(fmt.Sprintf("Options defined for non-enum field %s", fieldName))
 				}
 			}
 		}

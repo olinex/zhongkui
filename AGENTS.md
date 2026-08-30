@@ -148,6 +148,21 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - 自定义序列化类型实现 `driver.Valuer` + `sql.Scanner`
 - 能推断时不写显式类型参数：`etl.NewPipeline(extract, ...)` 而非 `etl.NewPipeline[any](extract, ...)`
 
+### View Layer In/Out Decoupling 视图层解耦强约束
+
+- 强约束：视图层（`internal/manager/views`）的 In/Out 结构体**禁止直接引用模型层**（`internal/models` 下的 `core` / `network` / `tag`）的结构体 —— 不得通过结构体嵌入（struct embedding）引用，不得作为字段类型引用；即使两个结构体字段完全相同，也必须独立定义。
+- 允许出现在 In/Out 结构体字段中的类型：基本类型、标准库类型（如 `time.Time`）、第三方类型（gopacket/layers、`gorm.io/datatypes.JSON` 等）、`internal/pkg` 共享类型（`serializer.*`、`utils.BaseTotalOut` 等）、视图层自定义类型（如 `TcpOptionOut` / `LayerInfoOut`）。
+- 模型层专属类型（`network.LayerLevel` / `network.TCPOptions` / `network.LayerStack` 等）同样不得出现在 In/Out 结构体字段中，一律用视图层等价类型替换（如 `uint8`、`[]TcpOptionOut`、`[]LayerInfoOut`）。
+- 数据流：处理器以模型查询数据库，再经显式映射函数（`newXxxOut`，入参为模型指针）逐字段转换为独立 Out；JSON 字段名（json tag）须与映射来源字段保持一致，避免破坏前端契约。
+- 例外：**局部匿名扫描容器**（`var rows []struct { network.Xxx; utils.BaseTotalOut }`）仅作 GORM 扫描用途，不属于 In/Out 结构体，允许内嵌模型，沿用 notification 模块既有模式。
+
+### Search.toml 枚举筛选配置（search-generate 规范）
+
+- 枚举筛选字段（`enum = true`）的可选项必须以内联数组形式直接写在字段上：`options = [{title = "...", value = "..."}, ...]`；**禁止**使用 `[[<List>ListGet.filterByFields.options]]` 的独立表格列表写法。
+- 每个 option 的 `title` 直接等于 `value`（即枚举值本身，如 `pending`、`email`），不得写成完整 i18n 键（如 `model.notificationRecord.type.status.pending`）。
+- 展示名由前端按 `model.<modelName>.option.<title>` 定位 i18n 翻译（`web/src/utils/options.ts` 的 `filterOptionTitle`，SearchTable.vue 与流量审计页统一接入）；未配置翻译的枚举（如 HTTP 方法 GET、版本 HTTP/1.1）回退显示原始 title。
+- `title`/`value` 顺序固定 `{title, value}`；新增枚举选项须同步补充 zhHans.yaml / en.yaml 的 `model.<modelName>.option.<value>` 键。
+
 ---
 
 ## Vue Frontend Conventions
@@ -248,6 +263,15 @@ export const useAppStore = defineStore("app", {
 - `vee-validate` + `yup`，校验 schema 放 `@/schemas/`
 - `useForm` + `defineField` 模式，配 `vuetifyCfg` 适配器；提交逻辑用 `handleSubmit` 包裹
 
+### String Input Trimming 字符串输入去空白
+
+- 所有单行文本输入框（用户名、邮箱、昵称、名称、标题、Cron 表达式、搜索关键字等）在提交或作为查询条件前**必须去除首尾空白字符**（trim），避免用户误输入不可见的空白字符导致登录失败、查询无结果或创建出看似相同实则不同的记录。
+- 强制豁免（禁止 trim）：
+  - **密码字段**：密码可合法包含首尾空格，trim 会改变凭据本身
+  - **多行文本域（`v-textarea`）**：内容中的空白具有语义（模板正文、表达式/代码、长描述）
+  - **校验性输入**（如 `ConfirmDialog` 的双重确认随机串）：仅用于精确比对，不属于数据输入
+- 推荐实现方式：优先在 `@/schemas/` 的 yup schema 上对单行字符串字段统一使用 `.transform((v) => v?.trim())` 做规范化，避免散落在各页面提交逻辑中；未走 schema 的搜索/筛选字符串输入（`AdaptiveField`、`ScrollSearchField` 等）同样应在使用前 trim。
+
 ### Code Style
 
 - 2-space 缩进（`.editorconfig` 强制）；UTF-8；EOF 须有换行；去除行尾空白
@@ -287,13 +311,13 @@ meta:
 ├── api/              # Protobuf definitions
 ├── cmd/
 │   ├── zki/          # 主程序入口 (main.go)
-│   ├── template/     # 代码生成器 (生成 manager/routes/search.go 等)
+│   ├── template/     # 代码生成器 (生成 manager/views/search.go 等)
 │   └── nic_probe/    # 网卡 XDP 支持探测工具
 ├── internal/
 │   ├── benchmark/    # Benchmarking utilities
 │   ├── capture/      # Packet capture engine
 │   ├── cmd/          # CLI commands (Cobra)
-│   ├── manager/      # HTTP API layer (Gin)
+│   ├── manager/      # HTTP API layer (Gin)，子包：middlewares（中间件）、router（路由注册）、views（视图 In/Out 与处理器）、response（统一响应与错误体系）
 │   ├── migrations/   # Database migrations
 │   ├── models/       # Data models (core, api, network, tag)
 │   ├── network/      # Network protocol processing

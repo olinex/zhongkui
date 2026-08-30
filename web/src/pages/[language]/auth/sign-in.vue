@@ -10,7 +10,7 @@
         </template>
         <template #text>
           <v-spacer />
-          <v-form>
+          <v-form @submit.prevent="submit">
             <v-text-field
               v-model="username"
               v-bind="usernameProps"
@@ -22,24 +22,23 @@
               v-bind="passwordProps"
               :label="$t('model.user.field.password')"
             />
+            <!-- 将提交按钮放入表单内，使其成为默认按钮，
+                 这样在任一输入框内按回车即可隐式提交表单 -->
+            <v-card-actions class="d-flex justify-space-between">
+              <v-btn type="button" variant="text" color="primary" class="ma-2 pa-2">{{
+                $t("action.pwdForget")
+              }}</v-btn>
+              <v-btn
+                :disabled="!meta.dirty || !meta.valid"
+                type="submit"
+                color="primary"
+                variant="flat"
+                class="ma-2 pa-2"
+                >{{ $t("action.signIn") }}</v-btn
+              >
+            </v-card-actions>
           </v-form>
         </template>
-
-        <v-card-actions class="d-flex justify-space-between">
-          <v-btn variant="text" color="primary" class="ma-2 pa-2">{{
-            $t("action.pwdForget")
-          }}</v-btn>
-          <v-btn
-            :disabled="!meta.dirty || !meta.valid"
-            type="submit"
-            color="primary"
-            variant="flat"
-            class="ma-2 pa-2"
-            @click="submit"
-            @keyup.enter="submit"
-            >{{ $t("action.signIn") }}</v-btn
-          >
-        </v-card-actions>
       </v-card>
     </template>
   </central-layout>
@@ -82,7 +81,9 @@ const userStore = useUserStore();
 const submit = handleSubmit(async (values) => {
   await getResponse<UserTokenOut>(
     passwordLogin({
-      username: values.username as string,
+      // 用户名单行文本提交前去除首尾空白，避免误输入空白导致登录失败
+      // （密码字段按规范豁免 trim：首尾空白是密码的合法字符）
+      username: (values.username as string).trim(),
       password: values.password as string,
     }),
     async (rsp) => {

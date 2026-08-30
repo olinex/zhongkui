@@ -22,7 +22,7 @@
               v-for="(namespace, index) in avaliableNamespaces"
               :key="index"
               :disabled="namespace == appStore.namespace"
-              @click="appStore.asNamespace(namespace as string)"
+              @click="onNamespaceChange(namespace as string)"
             >
               <v-list-item-title>{{ namespace }}</v-list-item-title>
             </v-list-item>
@@ -45,7 +45,7 @@
               :key="item.value"
               @click="asLanguagePath($route, item.value)"
             >
-              <v-list-item-title>{{ item.title }}</v-list-item-title>
+              <v-list-item-title>{{ $t(item.titleKey) }}</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-card>
@@ -57,15 +57,6 @@
         :icon="appStore.theme === DARK_THEME ? 'mdi-weather-night' : 'mdi-weather-sunny'"
         @click="appStore.toggleTheme"
       />
-      <v-btn
-        v-show="!userStore.valid"
-        class="mr-2"
-        variant="outlined"
-        color="primary"
-        @click="gotoSignUp"
-      >
-        {{ $t("action.signUp") }}
-      </v-btn>
       <v-btn
         v-show="!userStore.valid && !loginCurrent"
         class="mr-2"
@@ -130,6 +121,13 @@ const refreshAvailableNamespace = async () => {
   avaliableNamespaces.value = await userStore.getAvailableNamespaces();
 };
 
+// onNamespaceChange 切换命名空间：asNamespace 仅更新 store 与 localStorage，页面命名空间化
+// 数据（列表、下拉、store 等）不会自动刷新；此处统一重载当前页，保证所有页面按新命名空间重新拉取。
+const onNamespaceChange = (namespace: string): void => {
+  appStore.asNamespace(namespace);
+  window.location.reload();
+};
+
 const gotoHome = () => {
   // route.params type does not satisfy RouteLocationRaw.params
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -140,12 +138,6 @@ const gotoProfile = () => {
   // route.params type does not satisfy RouteLocationRaw.params
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   router.push({ name: "Profile", params: route.params as any });
-};
-
-const gotoSignUp = () => {
-  // route.params type does not satisfy RouteLocationRaw.params
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  router.push({ name: "Sign Up", params: route.params as any });
 };
 
 const gotoSignIn = () => {

@@ -8,12 +8,20 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// FilterByOptionItem 定义了枚举过滤条件的可选值结构
+// Title 为展示名的 i18n 键，由前端渲染时翻译
+type FilterByOptionItem struct {
+	Title string `json:"title"` // 展示名 i18n 键
+	Value string `json:"value"` // 枚举值（与数据库存储值一致）
+}
+
 // FilterByOption 定义了过滤选项的配置结构
 // 用于描述前端可以使用的过滤条件
 type FilterByOption struct {
-	Name    string   `json:"name"`    // 过滤条件名称，用于显示
-	Type    string   `json:"type"`    // 数据类型，如 string、number、date 等
-	Actions []string `json:"actions"` // 支持的操作列表，如 eq、neq、ctn 等
+	Name    string                `json:"name"`             // 过滤条件名称，用于显示
+	Type    string                `json:"type"`             // 数据类型，如 string、number、date、enum 等
+	Actions []string              `json:"actions"`          // 支持的操作列表，如 eq、neq、ctn 等
+	Options []*FilterByOptionItem `json:"options,omitempty"` // 枚举字段的下拉可选值列表（仅 Type 为 enum 时提供）
 }
 
 // SearchOptions 定义了搜索选项的配置结构

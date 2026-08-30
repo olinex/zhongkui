@@ -1,15 +1,14 @@
 // Package tag_event 提供标签事件相关的 asynq 任务处理器。
 // EventDetectHandler 消费游标调度器（CursorScheduler）按触发间隔投递的 tag:event:detect 任务：
 // 从 core 库加载启用条件，以任务载荷携带的游标时间点（TriggerAt）为检测时间，
-// 调用 tagengine 的标签事件识别能力（Detect）完成检测，并将命中事件以 tag:event:emit 任务异步投递；
-// EventEmitHandler 消费检测命中后投递的 tag:event:emit 任务。
+// 调用 tagengine 的标签事件识别能力（Detect）完成检测，并将命中事件直接批量入库（status=pending）；
+// 抑制评估由 EventSuppressHandler 消费 tag:event:suppress 定时任务完成。
 package tag_event
 
 import (
 	"context"
 	"time"
 
-	"github.com/hibiken/asynq"
 	"github.com/samber/do/v2"
 
 	"zhongkui.com/zhongkui/internal/models/tag"
@@ -28,22 +27,15 @@ const (
 	TagEventDetectTask = "tag:event:detect"
 )
 
-// eventEnqueuer 事件任务投递接口，定义在消费侧，便于单元测试注入替代实现。
-// *pipeline.Client 满足该接口。
-type eventEnqueuer interface {
-	EnqueueContext(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error)
-}
-
 // 编译期断言：确保 EventDetectHandler 实现了 etl.Handler 接口。
 var _ etl.Handler = (*EventDetectHandler)(nil)
 
 // EventDetectHandler 标签事件检测处理器，消费游标调度器投递的 tag:event:detect 任务。
 // 流程：解析任务载荷中的游标时间点 -> 加载启用条件 -> 过滤非法表达式
-// -> tagengine.Detect 单条 UNION ALL SQL 查询 tag_summings -> 聚合事件 -> 以 tag:event:emit 任务异步投递。
+// -> tagengine.Detect 单条 UNION ALL SQL 查询 tag_summings -> 聚合事件 -> 将命中事件批量入库（status=pending）。
 type EventDetectHandler struct {
-	coreDB *database.DB    // core 库，读取标签事件规则与条件
+	coreDB *database.DB    // core 库，读取标签事件规则与条件并写入检测结果
 	rawDB  *database.DB    // raw 库（ClickHouse），查询 tag_summings 聚合统计
-	client eventEnqueuer   // 事件任务投递客户端
 	logger *logging.Logger // 日志记录器
 }
 
@@ -52,16 +44,15 @@ type EventDetectHandler struct {
 func NewEventDetectHandler(i do.Injector) *EventDetectHandler {
 	coreDB := provider.MustInvokeCoreDatabase(i)
 	rawDB := provider.MustInvokeRawDatabase(i)
-	client := provider.MustInvokePipelineClient(i)
 	logger := provider.MustInvokeDatabaseLogger(i)
-	return &EventDetectHandler{coreDB: coreDB, rawDB: rawDB, client: client, logger: logger}
+	return &EventDetectHandler{coreDB: coreDB, rawDB: rawDB, logger: logger}
 }
 
 // Do 执行一次标签事件检测。
 // 检测时间取自任务载荷中的游标时间点（CursorTaskPayload.TriggerAt），由 CursorScheduler
 // 按游标推进投递：即使积压补投或多个触发点并行执行，每个触发点也使用自身时间窗口计算，
 // 不会因实际执行时刻漂移而重复或遗漏。载荷解析失败时回退到当前时间并记录告警。
-// 表达式非法仅记录告警日志并跳过对应条件，投递失败记录告警日志，不中断整次检测；
+// 表达式非法仅记录告警日志并跳过对应条件，入库失败返回错误触发 asynq 重试；
 // 加载/查询错误返回错误触发 asynq 重试。
 func (h *EventDetectHandler) Do(ctx context.Context, task etl.Task) error {
 	now, _, err := pipeline.ParseCursorTaskPayload(task.Payload())
@@ -93,18 +84,11 @@ func (h *EventDetectHandler) Do(ctx context.Context, task etl.Task) error {
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	for _, ev := range events {
-		emitTask, err := NewTagEventEmitTask(ev)
-		if err != nil {
-			h.logger.Ctx(ctx).Warnf("tag event detect: build emit task failed: %v", err)
-			continue
+	if len(events) > 0 {
+		if err := h.persistEvents(ctx, events); err != nil {
+			return errors.WithStack(err)
 		}
-		if _, err := h.client.EnqueueContext(ctx, emitTask, asynq.MaxRetry(3)); err != nil {
-			h.logger.Ctx(ctx).Warnf("tag event detect: enqueue emit task failed: %v", err)
-			continue
-		}
-		h.logger.Ctx(ctx).Infof("tag event detect: enqueued emit task rule=%s namespace=%s matchAll=%v hits=%d",
-			ev.RuleName, ev.Namespace, ev.MatchAll, len(ev.Hits))
+		h.logger.Ctx(ctx).Infof("tag event detect: persisted %d events", len(events))
 	}
 	return nil
 }
@@ -124,20 +108,62 @@ func (h *EventDetectHandler) loadConditions(ctx context.Context) ([]tagengine.De
 			continue
 		}
 		conds = append(conds, tagengine.DetectionCondition{
-			RuleID:        row.TagEventRule.ID,
-			RuleName:      row.TagEventRule.Name,
-			MatchAll:      row.TagEventRule.MatchAll,
-			ConditionID:   row.ID,
-			ConditionName: row.Name,
+			RuleID:         row.TagEventRule.ID,
+			RuleName:       row.TagEventRule.Name,
+			MatchAll:       row.TagEventRule.MatchAll,
+			SuppressWindow: row.TagEventRule.SuppressWindow,
+			ConditionID:    row.ID,
+			ConditionName:  row.Name,
 			// 命名空间由所属规则承载（条件与规则多对一，条件自身不冗余存储）
-			Namespace:     row.TagEventRule.NamespaceName,
-			Model:         row.Model,
-			Dimension:     row.Dimension,
-			Item:          row.Item,
-			Window:        row.Window,
-			Threshold:     row.Threshold,
-			Expression:    row.Expression,
+			Namespace:  row.TagEventRule.NamespaceName,
+			Model:      row.Model,
+			Dimension:  row.Dimension,
+			Item:       row.Item,
+			Window:     row.Window,
+			Threshold:  row.Threshold,
+			Expression: row.Expression,
 		})
 	}
 	return conds, nil
+}
+
+// persistEvents 将检测命中的标签事件记录批量写入 core 库：记录与其命中明细在同一事务内提交，状态固定为 pending。
+func (h *EventDetectHandler) persistEvents(ctx context.Context, events []*tagengine.TagEventRecord) error {
+	records := make([]*tag.TagEventRecord, 0, len(events))
+	for _, ev := range events {
+		records = append(records, toEventModel(ev))
+	}
+	if len(records) == 0 {
+		return nil
+	}
+	return h.coreDB.WithContext(ctx).Transaction(func(tx *database.DB) error {
+		return tx.Create(&records).Error
+	})
+}
+
+// toEventModel 将检测结果 TagEventRecord 映射为持久化模型：计算 DedupKey、状态置 pending、DetectedAt 透传，命中明细映射为 TagEventRecordHit。
+func toEventModel(ev *tagengine.TagEventRecord) *tag.TagEventRecord {
+	hits := make([]tag.TagEventRecordHit, 0, len(ev.Hits))
+	for _, hit := range ev.Hits {
+		hits = append(hits, tag.TagEventRecordHit{
+			ConditionID:   hit.ConditionID,
+			ConditionName: hit.ConditionName,
+			Model:         hit.Model,
+			Dimension:     hit.Dimension,
+			Item:          hit.Item,
+			Count:         hit.Count,
+			Threshold:     hit.Threshold,
+			Window:        hit.Window,
+		})
+	}
+	return &tag.TagEventRecord{
+		NamespaceName: ev.Namespace,
+		RuleID:        ev.RuleID,
+		RuleName:      ev.RuleName,
+		MatchAll:      ev.MatchAll,
+		DedupKey:      DedupKey(ev),
+		Status:        tag.EventStatusPending,
+		DetectedAt:    ev.DetectedAt,
+		Hits:          hits,
+	}
 }

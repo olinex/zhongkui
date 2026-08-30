@@ -474,8 +474,9 @@ const openCreateAccessDialogAction = () => {
 const profileChangeSubmit = profileForm.handleSubmit(async (values) => {
   await getSimpleResponse(
     profileChange({
-      nickleName: values.nickleName as string,
-      email: values.email as string,
+      // 单行文本提交前去除首尾空白，避免误输入空白导致数据异常
+      nickleName: (values.nickleName as string).trim(),
+      email: (values.email as string).trim(),
     }),
     async () => {
       appStore.notify({

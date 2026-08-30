@@ -87,12 +87,12 @@
 // 调用后端 dry-run 接口，按「规则概要 + 检测事件」两分区展示检测结果。
 import { DateTime } from "luxon";
 
-import { tagEventRuleDryRun } from "@/apis/traffic";
+import { tagEventRuleDryRun } from "@/apis/tagEvent";
 import { getResponse } from "@/apis/base";
 import type { TagEventRuleConditionIn } from "@/apis/@types/admin";
 import { useAppStore } from "@/stores/app";
 import { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
-import type { TagEventRuleDryRunOut } from "@/pages/[language]/traffic/@types";
+import type { TagEventRuleDryRunOut } from "@/pages/[language]/tag-event/@types";
 
 const props = defineProps<{
   /** 规则名（草稿阶段可为空，后端兜底） */

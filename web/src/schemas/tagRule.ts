@@ -4,13 +4,20 @@ import * as yup from "yup";
 // 仅含 Unicode 字母数字及 `_`/`-`，且至少包含一个字母或数字（不允许仅有特殊符号），长度 1~128
 const name = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .matches(/^(?=.*[\p{L}\p{N}])[\p{L}\p{N}_-]+$/u)
   .min(1)
   .max(128)
   .label("model.tagRule.field.name");
-const model = yup.string().nonNullable().required().max(255).label("model.tagRule.field.model");
+const model = yup
+  .string()
+  .trim()
+  .nonNullable()
+  .required()
+  .max(255)
+  .label("model.tagRule.field.model");
 const description = yup.string().nonNullable().max(512).label("model.tagRule.field.description");
 const enabled = yup.bool().nonNullable().required().label("model.tagRule.field.enabled");
 

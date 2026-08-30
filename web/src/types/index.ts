@@ -48,6 +48,7 @@ export enum BackendDataType {
   DATE = "serializer.DateOnly",
   TIME = "serializer.TimeOnly",
   DURATION = "time.Duration",
+  ENUM = "enum",
 }
 
 export enum SearchAction {

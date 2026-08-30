@@ -22,30 +22,20 @@
         </template>
         <v-card>
           <v-card-text>
-            <v-infinite-scroll
-              load-more-text="summary.dataLoading"
-              empty-text="summary.endOfData"
-              side="end"
-              max-height="300px"
-              @load="load"
-            >
+            <!-- 自有滚动容器：仅在真正滚动到底时按下拉加载下一页，避免无限触发请求 -->
+            <div ref="scrollEl" class="pt-0" :style="{ maxHeight: '300px', overflowY: 'auto' }">
               <slot name="items" :items="items" :close="() => (open = false)" />
-              <template #error="{ props: errorProps }">
-                <v-alert type="error" variant="tonal" density="compact">
-                  <div class="d-flex justify-space-between align-center">
-                    {{ $t("summary.unknownError") }}
-                    <v-btn
-                      v-bind="errorProps"
-                      color="white"
-                      size="small"
-                      variant="outlined"
-                      icon="mdi-refresh"
-                      density="compact"
-                    />
-                  </div>
-                </v-alert>
-              </template>
-            </v-infinite-scroll>
+              <div ref="sentinelEl" class="d-flex align-center justify-center pa-2">
+                <span v-if="loading" class="text-body-2 text-medium-emphasis">{{
+                  $t("summary.dataLoading")
+                }}</span>
+                <span
+                  v-else-if="!hasMore && items.length > 0"
+                  class="text-body-2 text-medium-emphasis"
+                  >{{ $t("summary.endOfData") }}</span
+                >
+              </div>
+            </div>
           </v-card-text>
         </v-card>
       </v-menu>
@@ -58,41 +48,60 @@ import { getResponse } from "@/apis/base";
 import { SearchAction } from "@/types";
 import type { AxiosPromise } from "axios";
 import type { PropType } from "vue";
-import type { InfiniteScrollStatus } from "vuetify/lib/components/VInfiniteScroll/VInfiniteScroll.mjs";
 import type { FilterByItem, SearchIn, SearchOut } from "../@types/table";
 import { useAppStore } from "@/stores/app";
 
 const appStore = useAppStore();
 const open = ref(false);
 const page = ref(1);
+const scrollEl = ref<HTMLElement | null>(null);
+const sentinelEl = ref<HTMLElement | null>(null);
+const loading = ref(false);
+const hasMore = ref(true);
 // Server response items are dynamic.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Array<Record<string, any>>);
 
+let observer: IntersectionObserver | null = null;
+
 const more = () => {
   page.value = 1;
   items.value = [];
+  // 重置 hasMore：否则首次加载拉满后 hasMore 变 false，再次打开因守卫直接返回而无数据
+  hasMore.value = true;
   open.value = true;
+  setupScroll();
 };
 
-const load = ({ done }: { done: (status: InfiniteScrollStatus) => void }) => {
-  done("loading");
+// 首屏加载 + 兜底：菜单打开时初始化一次
+watch(open, (val) => {
+  if (val) setupScroll();
+});
+
+// 仅在哨兵进入滚动容器可视区时加载下一页
+const loadMore = () => {
+  if (loading.value || !hasMore.value) {
+    return;
+  }
+  loading.value = true;
   // Server response items are dynamic.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getResponse<SearchOut<Record<string, any>>>(
     props.searchRequest({
       greedy: true,
       page: page.value,
-      pageSize: 10,
+      pageSize: props.pageSize,
       orderBy: [{ name: props.orderByField, order: 1 }],
       filterBy: Object.entries(props.searchHeaders).reduce(
         (prev, [field, action]) => {
-          if (props.modelValue === "") {
+          // 搜索关键字去除首尾空白，避免误输入空白导致查询无结果
+          const keyword = props.modelValue.trim();
+          if (keyword === "") {
             return prev;
           }
           prev[field] = {
             action: action,
-            value: props.modelValue,
+            value: keyword,
           };
           return prev;
         },
@@ -100,23 +109,50 @@ const load = ({ done }: { done: (status: InfiniteScrollStatus) => void }) => {
       ),
     }),
     async (rsp) => {
-      if (rsp.data.items.length === 0 || rsp.data.total === 0) {
-        done("empty");
+      loading.value = false;
+      if (rsp.data.items.length === 0) {
+        hasMore.value = false;
         return;
       }
       items.value = items.value.concat(rsp.data.items);
       page.value++;
-      done("ok");
+      if (items.value.length >= rsp.data.total) {
+        hasMore.value = false;
+      }
     },
     async (rsp) => {
+      loading.value = false;
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,
         color: "error",
       });
-      done("error");
     },
   );
+};
+
+// 重建观察器：以滚动容器为 root，哨兵相交即触发加载
+const setupScroll = () => {
+  observer?.disconnect();
+  observer = null;
+  if (!open.value) {
+    return;
+  }
+  nextTick(() => {
+    if (!scrollEl.value || !sentinelEl.value) {
+      return;
+    }
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { root: scrollEl.value, rootMargin: "100px" },
+    );
+    observer.observe(sentinelEl.value);
+    loadMore();
+  });
 };
 
 const props = defineProps({
@@ -127,6 +163,10 @@ const props = defineProps({
   orderByField: {
     type: String,
     default: "id",
+  },
+  pageSize: {
+    type: Number,
+    default: 10,
   },
   searchHeaders: {
     type: Object as PropType<Record<string, SearchAction>>,

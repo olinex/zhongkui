@@ -57,6 +57,22 @@ type SchedulerTaskConfig struct {
 	// 默认值: false
 	Enabled bool `mapstructure:"enabled" json:"enabled" default:"false" comment:"是否启用该定时任务 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Scheduler)"` // 是否启用
 
+	// BacklogEnabled 是否补投积压期间错过的历史触发点。
+	// 长时间停机或游标异常会形成积压 (last, now]；为 false 时跳过全部积压，
+	// 不生成任何历史任务，并直接推进游标到下一次未来触发点（cron）或当前网格点（interval）。
+	// 默认值: true（补投积压，保持与既有语义一致）
+	BacklogEnabled bool `mapstructure:"backlogEnabled" json:"backlog_enabled" default:"true" comment:"是否补投积压期间错过的历史触发点，false 时跳过全部积压"` // 是否补投积压
+
+	// BacklogWindow 历史触发点的最大回溯窗口期。
+	// 大于 0 时仅补投 [now-BacklogWindow, now] 内的触发点，更早的积压直接丢弃并推进游标；
+	// 0 表示不限窗口（按 last 完整回溯）。
+	// 默认值: 0（不限）
+	BacklogWindow serializer.DurationNS `mapstructure:"backlogWindow" json:"backlog_window" default:"0" comment:"历史触发点最大回溯窗口期，超过该窗口的积压将丢弃，0 表示不限"` // 最大回溯窗口期
+
+	// BacklogLimit 单次最多补投的历史触发点个数。
+	// 默认值: 1000
+	BacklogLimit uint `mapstructure:"backlogLimit" json:"backlog_limit" default:"1000" comment:"单次最多补投的历史触发点个数"` // 单次最多补投个数
+
 	// Payload 任务载荷数据，包含任务执行时需要的参数。
 	// 默认值: 空映射 {}
 	Payload map[string]any `mapstructure:"payload" json:"payload" default:"{}" comment:"任务载荷数据 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Task-Payload)"` // 任务载荷数据

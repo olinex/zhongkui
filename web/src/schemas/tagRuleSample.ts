@@ -3,6 +3,7 @@ import * as yup from "yup";
 // 与后端 TagRuleSampleUpdateIn 约束一致：name 支持 Unicode 字母数字及 `_`/`-`，1~128
 const name = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .matches(/^[\p{L}\p{N}_-]+$/u)

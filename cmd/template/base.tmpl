@@ -147,12 +147,19 @@ func (s *{{ $typeName }}SearchIn) GetOptions() *utils.SearchOptions {
         {{- range $item.FilterByFields }}
             {
                 Name: "{{ .FieldName }}",
-                Type: "{{ .FieldType }}",
+                Type: "{{ if .Enum }}enum{{ else }}{{ .FieldType }}{{ end }}",
                 Actions: []string{
                 {{- range .Actions }}
                     "{{ . }}",
                 {{- end }}
                 },
+                {{- if .Enum }}
+                Options: []*utils.FilterByOptionItem{
+                {{- range .Options }}
+                    {Value: "{{ .Value }}", Title: "{{ .Title }}"},
+                {{- end }}
+                },
+                {{- end }}
             },
         {{- end }}
         },

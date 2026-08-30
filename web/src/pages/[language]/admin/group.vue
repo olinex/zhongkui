@@ -111,30 +111,34 @@
                     />
                   </template>
                   <template #search="{ items, close, appendItem }">
-                    <v-list :items="items">
-                      <v-list-item v-for="item in items" :key="item.id">
-                        <v-card color="surface-variant" variant="tonal" density="compact">
-                          <v-card-title> {{ item.action }} {{ item.target }} </v-card-title>
-                          <v-card-text>
-                            <v-form>
-                              <v-select
-                                v-model="item.effect"
-                                :items="['allow', 'deny']"
-                                :disabled="!editable"
-                                variant="outlined"
-                                density="compact"
-                                rounded
-                              />
-                            </v-form>
-                          </v-card-text>
-                          <v-card-actions>
+                    <v-list :items="items" density="compact" class="py-0">
+                      <v-list-item v-for="item in items" :key="item.id" class="px-1">
+                        <v-list-item-title class="text-body-2">
+                          <span class="font-weight-medium">{{ item.action }}</span>
+                          &nbsp;{{ item.target }}
+                        </v-list-item-title>
+                        <template #append>
+                          <div class="d-flex align-center ga-1">
+                            <v-select
+                              v-model="item.effect"
+                              :items="[
+                                { title: $t('model.policy.value.allow'), value: 'allow' },
+                                { title: $t('model.policy.value.deny'), value: 'deny' },
+                              ]"
+                              :disabled="!editable"
+                              variant="outlined"
+                              density="compact"
+                              hide-details
+                              single-line
+                              style="width: 108px"
+                            />
                             <v-btn
                               :disabled="!(editable && item.effect)"
                               :text="$t('action.add')"
                               color="primary"
-                              density="compact"
                               variant="tonal"
-                              block
+                              size="small"
+                              density="compact"
                               @click="
                                 addPolicyAction(
                                   proxy.name,
@@ -146,8 +150,8 @@
                                 )
                               "
                             />
-                          </v-card-actions>
-                        </v-card>
+                          </div>
+                        </template>
                       </v-list-item>
                     </v-list>
                   </template>
@@ -403,7 +407,8 @@ const openCreateDialogAction = () => {
 const createAction = createForm.handleSubmit(async (values) => {
   await getSimpleResponse(
     groupCreate({
-      name: values.name,
+      // 名称单行文本提交前去除首尾空白，避免误输入空白创建出看似相同实则不同的记录
+      name: (values.name as string).trim(),
       description: values.description,
     }),
     async (rsp) => {

@@ -24,8 +24,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	ipv4_ttl UInt8 COMMENT 'the time to live of the IPv4 packet' CODEC(ZSTD(3)),
 	ipv4_ip_protocol UInt8 COMMENT 'the upper layer protocol of the IPv4 packet' CODEC(ZSTD(3)),
 	ipv4_checksum UInt16 COMMENT 'the header checksum of the IPv4 packet' CODEC(ZSTD(3)),
-	ipv4_src FixedString(4) COMMENT 'the source IPv4 address',
-	ipv4_dst FixedString(4) COMMENT 'the destination IPv4 address',
+	ipv4_src IPv4 COMMENT 'the source IPv4 address',
+	ipv4_dst IPv4 COMMENT 'the destination IPv4 address',
 	ipv4_options String COMMENT 'the options of the IPv4 header' CODEC(ZSTD(3)),
 	ipv4_padding String COMMENT 'the padding bytes of the IPv4 header' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
@@ -66,8 +66,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv6 (
 	ipv6_length UInt16 COMMENT 'the payload length of the IPv6 packet excluding the base header' CODEC(ZSTD(3)),
 	ipv6_next_header UInt8 COMMENT 'the next header type following the IPv6 base header' CODEC(ZSTD(3)),
 	ipv6_hop_limit UInt8 COMMENT 'the hop limit of the IPv6 packet' CODEC(ZSTD(3)),
-	ipv6_src FixedString(16) COMMENT 'the source IPv6 address',
-	ipv6_dst FixedString(16) COMMENT 'the destination IPv6 address',
+	ipv6_src IPv6 COMMENT 'the source IPv6 address',
+	ipv6_dst IPv6 COMMENT 'the destination IPv6 address',
 	ipv6_hop_by_hop String COMMENT 'the hop-by-hop options extension header of the IPv6 packet' CODEC(ZSTD(3)),
 	ipv6_last_header UInt8 COMMENT 'the last header type of the IPv6 packet, usually the transport layer protocol' CODEC(ZSTD(3))
 ) ENGINE = MergeTree()
@@ -252,8 +252,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_udps (
 	ipv4_ttl UInt8 COMMENT 'the time to live of the IPv4 packet' CODEC(ZSTD(3)),
 	ipv4_ip_protocol UInt8 COMMENT 'the upper layer protocol of the IPv4 packet' CODEC(ZSTD(3)),
 	ipv4_checksum UInt16 COMMENT 'the header checksum of the IPv4 packet' CODEC(ZSTD(3)),
-	ipv4_src FixedString(4) COMMENT 'the source IPv4 address',
-	ipv4_dst FixedString(4) COMMENT 'the destination IPv4 address',
+	ipv4_src IPv4 COMMENT 'the source IPv4 address',
+	ipv4_dst IPv4 COMMENT 'the destination IPv4 address',
 	ipv4_options String COMMENT 'the options of the IPv4 header' CODEC(ZSTD(3)),
 	ipv4_padding String COMMENT 'the padding bytes of the IPv4 header' CODEC(ZSTD(3)),
 	udp_stream_id FixedString(16) COMMENT 'the stream id of the UDP flow' CODEC(ZSTD(3)),
@@ -295,8 +295,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_udps (
 	ipv6_length UInt16 COMMENT 'the payload length of the IPv6 packet excluding the base header' CODEC(ZSTD(3)),
 	ipv6_next_header UInt8 COMMENT 'the next header type following the IPv6 base header' CODEC(ZSTD(3)),
 	ipv6_hop_limit UInt8 COMMENT 'the hop limit of the IPv6 packet' CODEC(ZSTD(3)),
-	ipv6_src FixedString(16) COMMENT 'the source IPv6 address',
-	ipv6_dst FixedString(16) COMMENT 'the destination IPv6 address',
+	ipv6_src IPv6 COMMENT 'the source IPv6 address',
+	ipv6_dst IPv6 COMMENT 'the destination IPv6 address',
 	ipv6_hop_by_hop String COMMENT 'the hop-by-hop options extension header of the IPv6 packet' CODEC(ZSTD(3)),
 	ipv6_last_header UInt8 COMMENT 'the last header type of the IPv6 packet, usually the transport layer protocol' CODEC(ZSTD(3)),
 	udp_stream_id FixedString(16) COMMENT 'the stream id of the UDP flow' CODEC(ZSTD(3)),

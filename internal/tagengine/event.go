@@ -16,18 +16,20 @@ import (
 
 // DetectionCondition 标签事件检测条件的运行时形态，由 core 库 tag_event_conditions 行或 dry-run 请求映射。
 type DetectionCondition struct {
-	RuleID        uint                // 所属规则 ID
-	RuleName      string              // 所属规则名称
-	MatchAll      bool                // 规则是否要求所有条件命中才触发
-	ConditionID   uint                // 条件 ID
-	ConditionName string              // 条件名称
-	Namespace     string              // 条件所属命名空间
-	Model         string              // 目标模型类型键过滤，空表示不限制
-	Dimension     string              // 标签维度过滤，空表示不限制
-	Item          string              // 标签维度具体值过滤，空表示不限制
+	RuleID        uint                  // 所属规则 ID
+	RuleName      string                // 所属规则名称
+	MatchAll      bool                  // 规则是否要求所有条件命中才触发
+	ConditionID   uint                  // 条件 ID
+	ConditionName string                // 条件名称
+	Namespace     string                // 条件所属命名空间
+	Model         string                // 目标模型类型键过滤，空表示不限制
+	Dimension     string                // 标签维度过滤，空表示不限制
+	Item          string                // 标签维度具体值过滤，空表示不限制
 	Window        serializer.DurationNS // 时间窗口
-	Threshold     int                 // 阈值
-	Expression    string              // 标签组合布尔表达式
+	Threshold     int                   // 阈值
+	// SuppressWindow 规则级抑制窗口（纳秒），0 表示不抑制；dry-run 候选规则为零值不参与判定
+	SuppressWindow serializer.DurationNS // 抑制窗口
+	Expression     string                // 标签组合布尔表达式
 }
 
 // DetectionHit 标签事件检测查询结果行，按 (namespace, model, dimension, item) 分组聚合。
@@ -40,25 +42,25 @@ type DetectionHit struct {
 	Total       uint64 `gorm:"column:total"`
 }
 
-// TagEvent 标签事件识别结果，作为 tag:event:emit 异步任务载荷或 dry-run 响应返回。
-type TagEvent struct {
-	Namespace  string        `json:"namespace"`
-	RuleID     uint          `json:"ruleID"`
-	RuleName   string        `json:"ruleName"`
-	MatchAll   bool          `json:"matchAll"`
-	DetectedAt time.Time     `json:"detectedAt"`
-	Hits       []TagEventHit `json:"hits"`
+// TagEventRecord 标签事件记录识别结果，作为检测入库的持久化数据源或 dry-run 响应返回。
+type TagEventRecord struct {
+	Namespace  string              `json:"namespace"`
+	RuleID     uint                `json:"ruleID"`
+	RuleName   string              `json:"ruleName"`
+	MatchAll   bool                `json:"matchAll"`
+	DetectedAt time.Time           `json:"detectedAt"`
+	Hits       []TagEventRecordHit `json:"hits"`
 }
 
-// TagEventHit 标签事件中的单条命中分组信息。
-type TagEventHit struct {
-	ConditionID   uint                `json:"conditionID"`
-	ConditionName string              `json:"conditionName"`
-	Model         string              `json:"model"`
-	Dimension     string              `json:"dimension"`
-	Item          string              `json:"item"`
-	Count         uint64              `json:"count"`
-	Threshold     int                 `json:"threshold"`
+// TagEventRecordHit 标签事件记录中的单条命中分组信息。
+type TagEventRecordHit struct {
+	ConditionID   uint                  `json:"conditionID"`
+	ConditionName string                `json:"conditionName"`
+	Model         string                `json:"model"`
+	Dimension     string                `json:"dimension"`
+	Item          string                `json:"item"`
+	Count         uint64                `json:"count"`
+	Threshold     int                   `json:"threshold"`
 	Window        serializer.DurationNS `json:"window"`
 }
 
@@ -174,7 +176,7 @@ func BuildDetectionQuery(db *gorm.DB, conds []DetectionCondition, now time.Time)
 // GroupEvents 将检测命中的分组按规则/条件聚合为标签事件。
 // match_all=false：任一条件命中即触发，每个 (条件, 命中分组) 生成一条事件（Hits 仅含该分组）；
 // match_all=true：仅当规则下所有启用条件均至少有一个命中分组时触发一次，Hits 汇总全部命中分组。
-func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time) []*TagEvent {
+func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time) []*TagEventRecord {
 	hitsByCond := make(map[uint][]DetectionHit)
 	for _, hit := range hits {
 		hitsByCond[hit.ConditionID] = append(hitsByCond[hit.ConditionID], hit)
@@ -188,12 +190,12 @@ func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time)
 		condsByRule[c.RuleID] = append(condsByRule[c.RuleID], c)
 	}
 
-	var events []*TagEvent
+	var events []*TagEventRecord
 	for _, ruleID := range ruleOrder {
 		ruleConds := condsByRule[ruleID]
 		rule := ruleConds[0]
 		if rule.MatchAll {
-			var evHits []TagEventHit
+			var evHits []TagEventRecordHit
 			allHit := true
 			for _, c := range ruleConds {
 				groupHits := hitsByCond[c.ConditionID]
@@ -204,7 +206,7 @@ func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time)
 				evHits = append(evHits, toEventHits(c, groupHits)...)
 			}
 			if allHit {
-				events = append(events, &TagEvent{
+				events = append(events, &TagEventRecord{
 					Namespace:  rule.Namespace,
 					RuleID:     rule.RuleID,
 					RuleName:   rule.RuleName,
@@ -216,13 +218,13 @@ func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time)
 		} else {
 			for _, c := range ruleConds {
 				for _, hit := range hitsByCond[c.ConditionID] {
-					events = append(events, &TagEvent{
+					events = append(events, &TagEventRecord{
 						Namespace:  hit.Namespace,
 						RuleID:     rule.RuleID,
 						RuleName:   rule.RuleName,
 						MatchAll:   false,
 						DetectedAt: now,
-						Hits:       []TagEventHit{toEventHit(c, hit)},
+						Hits:       []TagEventRecordHit{toEventHit(c, hit)},
 					})
 				}
 			}
@@ -231,16 +233,16 @@ func GroupEvents(conds []DetectionCondition, hits []DetectionHit, now time.Time)
 	return events
 }
 
-func toEventHits(c DetectionCondition, hits []DetectionHit) []TagEventHit {
-	out := make([]TagEventHit, 0, len(hits))
+func toEventHits(c DetectionCondition, hits []DetectionHit) []TagEventRecordHit {
+	out := make([]TagEventRecordHit, 0, len(hits))
 	for _, hit := range hits {
 		out = append(out, toEventHit(c, hit))
 	}
 	return out
 }
 
-func toEventHit(c DetectionCondition, hit DetectionHit) TagEventHit {
-	return TagEventHit{
+func toEventHit(c DetectionCondition, hit DetectionHit) TagEventRecordHit {
+	return TagEventRecordHit{
 		ConditionID:   c.ConditionID,
 		ConditionName: c.ConditionName,
 		Model:         hit.Model,
@@ -256,7 +258,7 @@ func toEventHit(c DetectionCondition, hit DetectionHit) TagEventHit {
 // 条件由调用方传入（本函数不主动读取规则库），按指定时间点 now 查询聚合统计并聚合为标签事件结果；
 // 供定时检测（worker 消费 tag:event:detect）与接口层 dry-run 模式复用。
 // 非法表达式条件被静默跳过，全部条件无效时返回空结果而非错误。
-func Detect(ctx context.Context, rawDB *database.DB, conds []DetectionCondition, now time.Time) ([]*TagEvent, error) {
+func Detect(ctx context.Context, rawDB *database.DB, conds []DetectionCondition, now time.Time) ([]*TagEventRecord, error) {
 	valid := make([]DetectionCondition, 0, len(conds))
 	for _, cond := range conds {
 		if _, err := TranslateExpression(cond.Expression); err != nil {

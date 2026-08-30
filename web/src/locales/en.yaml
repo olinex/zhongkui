@@ -1,6 +1,6 @@
 navbar:
   admin:
-    self: Admin
+    self: System Admin
     user: User
     group: Group
     namespace: Namespace
@@ -11,11 +11,20 @@ navbar:
     queue: Queue
     task: Task
     scheduler: Scheduler
+  notification:
+    self: Notifications
+    channel: Notification Channels
+    target: Notification Targets
+    group: Notification Groups
+    template: Templates
+    record: Send Records
   traffic:
     self: Traffic
     ipv4Tcp: IPv4 TCP
     ipv6Tcp: IPv6 TCP
     httpTransport: HTTP Transport
+  tagEvent:
+    self: Tag Events
     tagRule: Tag Rule
     tagEventRule: Tag Event Rule
   pin: Pin sidebar
@@ -36,7 +45,6 @@ model:
       # Generic time range filter labels (shared fields, not model-specific)
       timestampRange: Capture Time Range
       createdAtRange: Ingestion Time Range
-      advancedFilter: Advanced Filters
     content:
       condition: condition(s)
       doubleCheck: Please enter `{random}` to double check
@@ -46,6 +54,132 @@ model:
       undefined: "undefined"
       yes: Yes
       no: No
+  notificationChannel:
+    name: Notification Channel
+    field:
+      id: ID
+      name: Name
+      type: Type
+      enabled: Enabled
+      config: Config
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+    type:
+      email: Email
+      webhook: Webhook
+    option:
+      email: Email
+      webhook: Webhook
+  notificationTarget:
+    name: Notification Target
+    field:
+      id: ID
+      name: Name
+      channelId: Channel
+      channelName: Channel Name
+      channelType: Channel Type
+      channelEnabled: Channel Status
+      type: Type
+      enabled: Enabled
+      config: Config
+      language: Language
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+    type:
+      email: Email
+      webhook: Webhook
+    option:
+      email: Email
+      webhook: Webhook
+      en: English
+      zh-Hans: Simplified Chinese
+  notificationGroup:
+    name: Notification Group
+    field:
+      id: ID
+      name: Name
+      isDefault: Default Group
+      description: Description
+      targetCount: Target Count
+      targets: Bound Targets
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  notificationTemplate:
+    name: Notification Template
+    field:
+      id: ID
+      namespaceName: Namespace
+      event: Event
+      channelType: Channel Type
+      language: Language
+      title: Title
+      content: Content
+      source: Source
+      description: Description
+      params: Template Params
+    # Event enum display names (keyed by the event key returned from the backend registry)
+    type:
+      event:
+        tag_event_record: Tag Event Alert
+      # Template source enum display names (default built-in / override user-customized)
+      source:
+        default: Default
+        override: Override
+  notificationRecord:
+    name: Send Record
+    field:
+      id: ID
+      eventType: Event Type
+      eventId: Event ID
+      groupId: Notification Group ID
+      targetId: Target ID
+      targetName: Target Name
+      channelId: Channel ID
+      channelName: Channel Name
+      channelType: Channel Type
+      status: Status
+      error: Error Message
+      messageId: Message ID
+      payload: Message Content
+      notifiedAt: Sent At
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+    type:
+      status:
+        pending: Pending
+        success: Success
+        failed: Failed
+      channelType:
+        email: Email
+        webhook: Webhook
+      # Event type enum display names (keyed by the event key returned from the backend registry)
+      eventType:
+        tag_event_record: Tag Event Alert
+    option:
+      pending: Pending
+      success: Success
+      failed: Failed
+      email: Email
+      webhook: Webhook
+      tag_event_record: Tag Event Alert
   user:
     name: User
     field:
@@ -82,7 +216,14 @@ model:
       effect: Effect
       action: Action
       createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
       updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated Date
+    value:
+      allow: allow
+      deny: deny
   group:
     name: Group
     field:
@@ -163,12 +304,17 @@ model:
   scheduler:
     name: Scheduler
     field:
-      id: ID
-      spec: Spec
-      next: Next Schedule At
-      prev: Previous Schedule At
       typeName: Task Type Name
+      cronSpec: Cron Expression
+      interval: Interval
+      queue: Queue
+      timeout: Timeout
+      maxRetry: Max Retry
+      enabled: Enabled
       payload: Payload
+      backlogEnabled: Catch Up Backlog
+      backlogWindow: Backlog Window
+      backlogLimit: Backlog Limit
   task:
     name: Task
     field:
@@ -206,6 +352,8 @@ model:
       enabled: Enabled
       version: Version
       versionCount: Version Count
+    option:
+      httpTransport: HTTP Transport
   tagRuleSample:
     name: Tag Rule Sample
     field:
@@ -220,6 +368,8 @@ model:
       model: Target Model
       description: Description
       input: Input Document
+    option:
+      httpTransport: HTTP Transport
   tagEventRule:
     name: Tag Event Rule
     field:
@@ -237,6 +387,12 @@ model:
       version: Version
       versionCount: Version Count
       conditions: Conditions
+      suppressWindow: Suppress Window (minutes)
+      notification: Notification Method
+    content:
+      notificationDefault: Use namespace default notification group
+      notificationGroup: Notification Group
+      notificationTarget: Notification Target
   tagEventCondition:
     name: Condition
     field:
@@ -751,7 +907,6 @@ chart:
 action:
   signIn: Sign In
   signOut: Sign Out
-  signUp: Sign Up
   language: Language
   pwdForget: Password Forget
   profile: Profile
@@ -766,6 +921,12 @@ action:
   confirm: Confirm
   activate: Activate
   deactivate: Deactivate
+  batchActivate: Batch Activate
+  batchDeactivate: Batch Deactivate
+  batchDelete: Batch Delete
+  batchDisable: Batch Disable
+  batchEnable: Batch Enable
+  clearSelection: Clear Selection
   resetPassword: Reset Password
   pause: Pause
   unpause: Resume
@@ -807,12 +968,18 @@ action:
   query: Query
   columns: Columns
   selectAll: Select All
+  setDefault: Set Default
   systemDefault: System Default
+  detail: Detail
+  testSend: Test Send
+  restoreDefault: Restore Default
+  renderTest: Render Test
+  templateValidate: Validate Syntax
+  templateDryRun: Dry Run
 title:
   zk: Zhong Kui
   home: Home Page
   signIn: User Sign In
-  signUp: User Sign Up
   err404: Error - 404
   err401: Error - 401
   userProfile: User Profile
@@ -824,8 +991,14 @@ title:
   groupAdmin: Admin - Group
   namespaceAdmin: Admin - Namespace
   capturerAdmin: Admin - Capturer
-  tagRuleAdmin: Admin - Tag Rule
-  tagEventRuleAdmin: Admin - Tag Event Rule
+  notification:
+    channel: Notification Channels
+    target: Notification Targets
+    group: Notification Groups
+    template: Notification Templates
+    record: Send Records
+  tagRuleTagEvent: Tag Events - Tag RulesRule
+  tagEventRuleTagEvent: Tag Event - Tag Event Rule
   queueEtl: ETL - Queue
   serverEtl: ETL - Server
   schedulerEtl: ETL - Scheduler
@@ -846,6 +1019,7 @@ home:
     renameGroup: Rename Group
     deleteGroup: Delete Group
     deleteGroupConfirm: Delete group "{group}"?
+    removeLink: Remove Link
     addLink: Add Link
     searchNav: Search navigation
     emptyGroup: Drag or add a navigation link
@@ -896,6 +1070,16 @@ notice:
   selectedCount: "Selected {count} item(s)"
   batchConfirm: "Perform the operation on the selected {count} item(s)"
   batchResult: "{succeeded} succeeded, {failed} failed"
+  schedulerScheduleConflict: Choose either a cron expression or an interval, not both
+  schedulerScheduleEmpty: Provide either an interval or a cron expression
+  payloadInvalid: Payload is not valid JSON
+  notification:
+    testSendSuccess: Test message sent successfully
+    setDefaultSuccess: Set as default group
+    setDefaultConfirm: "Confirm to set {category} {key} as the default notification group?"
+    noTargets: This group has no bound targets yet
+    restoreDefaultConfirm: "Confirm to restore templates of event {event} ({language}) to built-in defaults?"
+    restoreDefaultSuccess: Restored to built-in default templates
 inputType:
   string: String
   number: Number
@@ -928,6 +1112,12 @@ option:
     lte: Less Than Or Equal
     gt: Greater Than
     gte: Greater Than Or Equal
+  language:
+    "*": All Languages
+    en: English
+    zh-Hans: Simplified Chinese
+  channel:
+    "*": All Channels
 validation:
   mixed:
     default: "{path} is invalid"
@@ -970,3 +1160,19 @@ validation:
     min: "{path} field must have at least {min} items"
     max: "{path} field must have less than or equal to {max} items"
     length: "{path} must have {length} items"
+# Notification channel/target config field labels. These keys are returned by the
+# backend /notification/channel/types endpoint and rendered via $t(f.label).
+notify:
+  channel:
+    email:
+      field:
+        host: SMTP Host
+        port: Port
+        username: Username
+        password: Password
+        from: From
+        to: Recipient Email
+    webhook:
+      field:
+        url: Webhook URL
+        headers: Headers

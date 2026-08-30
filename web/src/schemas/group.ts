@@ -1,6 +1,13 @@
 import * as yup from "yup";
 
-const name = yup.string().nonNullable().required().min(3).max(32).label("model.group.field.name");
+const name = yup
+  .string()
+  .trim()
+  .nonNullable()
+  .required()
+  .min(3)
+  .max(32)
+  .label("model.group.field.name");
 const description = yup
   .string()
   .nonNullable()

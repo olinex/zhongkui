@@ -83,10 +83,16 @@
 1108 = "Frontend Config Has Been Updated By Another Browser, Please Refresh And Retry"
 1109 = "Frontend Config Sync Is Not Enabled"
 1110 = "Tag Rule Sample Input Cannot Be Deserialized Into Target Model"
+1111 = "Notification Send Failed"
+1112 = "Invalid Scheduler Task Config"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
 badUrlParam = "The url param `%s` is invalid cause: %s"
+schedulerScheduleConflict = "cronSpec and interval are mutually exclusive, set only one"
+schedulerScheduleEmpty = "either cronSpec or interval must be set"
+schedulerTaskCreateExist = "Scheduler task type %s already exists"
+schedulerTaskUpdateNotExist = "Scheduler task type %s does not exist"
 
 [validator]
 strongPassword = "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?& respectively)"
@@ -1560,74 +1566,6 @@ other = "List of supported languages/locales (ref: https://pkg.go.dev/github.com
 
 ["model.network.httpTransport"]
 other = "HTTP Transport"
-
-# =============================================================================
-# Interface field comments (metadata) - Key layout: model.<StructName>.field.<key>
-# 接口结构体字段注释翻译，供 OPTIONS 元信息接口按请求语言返回 comment
-# =============================================================================
-
-["model.Pagination.field.page"]
-other = "Page number"
-
-["model.Pagination.field.pageSize"]
-other = "Page size"
-
-["model.UserListGetSearchIn.field.greedy"]
-other = "Whether to greedily match (return on any matching filter)"
-
-["model.UserListGetSearchIn.field.orderBy"]
-other = "Order conditions"
-
-["model.UserListGetSearchIn.field.filterBy"]
-other = "Filter conditions"
-
-["model.UserBaseDetailOut.field.unionID"]
-other = "Global unique user identifier"
-
-["model.UserBaseDetailOut.field.nickleName"]
-other = "User nickname"
-
-["model.UserBaseDetailOut.field.username"]
-other = "Login username"
-
-["model.UserBaseDetailOut.field.email"]
-other = "Email address"
-
-["model.UserBaseDetailOut.field.active"]
-other = "Whether the account is active"
-
-["model.BaseItemOut.field.id"]
-other = "Primary key ID"
-
-["model.BaseItemOut.field.createdAt"]
-other = "Created time"
-
-["model.BaseItemOut.field.updatedAt"]
-other = "Updated time"
-
-["model.BaseSoftDeleteItemOut.field.deletedAt"]
-other = "Deleted time (used for soft delete)"
-
-["model.UserDetailOut.field.groups"]
-other = "List of groups the user belongs to"
-
-["model.UserProfileChangeIn.field.nickleName"]
-other = "User nickname"
-
-["model.UserProfileChangeIn.field.email"]
-other = "User email"
-
-["model.UserGroupIn.field.namespace"]
-other = "Namespace name"
-
-["model.UserGroupIn.field.groupName"]
-other = "Group name"
-
-["model.UserRbacPolicyDetailOut.field.name"]
-other = "Username or user identifier"
-
-["model.UserRbacPolicyDetailOut.field.namespace"]
-other = "Namespace for isolating policies of different environments or tenants"
 
 # =============================================================================
 # Tag rule Rego error/lint messages - Key layout: tagrule.*

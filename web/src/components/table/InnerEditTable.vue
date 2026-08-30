@@ -18,6 +18,9 @@
       :headers="exactHeaders"
       :search="search"
       density="compact"
+      virtual-scrolling
+      fixed-header
+      max-height="360px"
     >
       <template #item="{ item, index }">
         <tr class="text-no-wrap">

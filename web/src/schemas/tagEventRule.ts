@@ -6,14 +6,20 @@ export const tagEventConditionSchema = () =>
   yup.object({
     name: yup
       .string()
+      .trim()
       .nonNullable()
       .required()
       .min(1)
       .max(255)
       .label("model.tagEventCondition.field.name"),
-    model: yup.string().nonNullable().max(255).label("model.tagEventCondition.field.model"),
-    dimension: yup.string().nonNullable().max(128).label("model.tagEventCondition.field.dimension"),
-    item: yup.string().nonNullable().max(255).label("model.tagEventCondition.field.item"),
+    model: yup.string().trim().nonNullable().max(255).label("model.tagEventCondition.field.model"),
+    dimension: yup
+      .string()
+      .trim()
+      .nonNullable()
+      .max(128)
+      .label("model.tagEventCondition.field.dimension"),
+    item: yup.string().trim().nonNullable().max(255).label("model.tagEventCondition.field.item"),
     window: yup
       .number()
       .nonNullable()
@@ -42,6 +48,7 @@ export const tagEventConditionSchema = () =>
 
 const name = yup
   .string()
+  .trim()
   .nonNullable()
   .required()
   .min(1)
@@ -53,6 +60,13 @@ const description = yup
   .max(256)
   .label("model.tagEventRule.field.description");
 const matchAll = yup.bool().nonNullable().required().label("model.tagEventRule.field.matchAll");
+const suppressWindow = yup
+  .number()
+  .nonNullable()
+  .min(0)
+  .max(7 * 24 * 60)
+  .default(60)
+  .label("model.tagEventRule.field.suppressWindow");
 const enabled = yup.bool().nonNullable().required().label("model.tagEventRule.field.enabled");
 
 // 条件集合至少一条，后端 conditions 亦要求 min=1
@@ -60,6 +74,7 @@ export const createTagEventRuleSchema = yup.object({
   name,
   description,
   matchAll,
+  suppressWindow,
   enabled,
   conditions: yup
     .array()
@@ -71,6 +86,7 @@ export const createTagEventRuleSchema = yup.object({
 export const updateTagEventRuleSchema = yup.object({
   description,
   matchAll,
+  suppressWindow,
   enabled,
   conditions: yup
     .array()

@@ -119,14 +119,26 @@ export interface TagEventRuleCreateIn {
   name: string;
   description: string;
   matchAll: boolean;
+  /** suppressWindow in nanoseconds (frontend converts from minutes) */
+  suppressWindow: number;
   enabled: boolean;
+  /** notificationGroupId 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
+  notificationGroupId?: number;
+  /** notificationTargetId 规则直绑的通知目标 ID，缺省表示未直绑目标；与通知组互斥 */
+  notificationTargetId?: number;
   conditions: TagEventRuleConditionIn[];
 }
 
 export interface TagEventRuleUpdateIn {
   description: string;
   matchAll: boolean;
+  /** suppressWindow in nanoseconds (frontend converts from minutes) */
+  suppressWindow: number;
   enabled: boolean;
+  /** notificationGroupId 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
+  notificationGroupId?: number;
+  /** notificationTargetId 规则直绑的通知目标 ID，缺省表示未直绑目标；与通知组互斥 */
+  notificationTargetId?: number;
   conditions: TagEventRuleConditionIn[];
 }
 

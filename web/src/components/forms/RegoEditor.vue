@@ -40,13 +40,8 @@ import {
   type CompletionSource,
 } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import {
-  bracketMatching,
-  defaultHighlightStyle,
-  syntaxHighlighting,
-  syntaxTree,
-} from "@codemirror/language";
-import { linter, lintGutter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
+import { bracketMatching, syntaxTree } from "@codemirror/language";
+import { linter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
 import { EditorState, Compartment, type Extension } from "@codemirror/state";
 import {
   EditorView,
@@ -56,11 +51,10 @@ import {
   lineNumbers,
   placeholder,
 } from "@codemirror/view";
-import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { rego } from "codemirror-lang-rego";
 
 import { useAppStore } from "@/stores/app";
-import { DARK_THEME } from "@/stores/local";
+import { highlightFor } from "@/utils/editorHighlight";
 import i18n from "@/utils/i18n";
 import { classifyRegoCompletionContext, fieldSnippet, isRegoExpressionKeyword } from "@/utils/rego";
 import type { InputFieldMeta, RegoValidationError } from "@/utils/rego";
@@ -148,11 +142,8 @@ function inputFieldAt(
   return null;
 }
 
-// 语法高亮随主题切换：light 用 CM 默认浅色配色，dark 用 One Dark 配色，
-// 避免深色字压在深色背景上对比度不足（如错误标记内的关键字/字符串）
+// 语法高亮随主题切换，配色统一走 utils/editorHighlight 的共享方案。
 const highlightCompartment = new Compartment();
-const highlightFor = (theme: string): Extension =>
-  syntaxHighlighting(theme === DARK_THEME ? oneDarkHighlightStyle : defaultHighlightStyle);
 
 /** Inserts the full snippet and places the cursor inside its quotes. */
 function applySnippet(
@@ -358,8 +349,9 @@ const extensions: Extension[] = [
   autocompletion({ override: [regoCompletion] }),
   sampleHover,
   // Stub linter so external diagnostics pushed via `setDiagnostics` render.
+  // 不启用 lintGutter：避免行号区右侧渲染空的 lint 占位列，与其它编辑器一致；
+  // 错误下划线、悬停提示与校验逻辑均不受影响。
   linter(() => []),
-  lintGutter(),
   history(),
   // "/" 输入规则见 slashTrigger.ts：前一字符为 "/" 且下拉已打开时该斜杠仅作为
   // 关闭信号被吞掉；其余情况按正常输入（打开下拉由补全源负责）。

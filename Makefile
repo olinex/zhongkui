@@ -267,12 +267,12 @@ internal/pkg/protobuf/reporter/v1/reporter.pb.go: api/reporter.proto
 internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go: api/reporter.proto
 	PATH="$(GOBIN):$$PATH" protoc --go-grpc_out=internal/pkg/protobuf/reporter/v1 api/reporter.proto
 
-internal/manager/routes/search.go: cmd/template/main.go cmd/template/base.tmpl internal/manager/routes/search.toml
+internal/manager/views/search.go: cmd/template/main.go cmd/template/base.tmpl internal/manager/views/search.toml
 	go run cmd/template/main.go search-generate \
-		--packageName="routes" \
+		--packageName="views" \
 		--templatePath="cmd/template/base.tmpl" \
-		--configPath="internal/manager/routes/search.toml" \
-		--outputPath="internal/manager/routes/search.go"
+		--configPath="internal/manager/views/search.toml" \
+		--outputPath="internal/manager/views/search.go"
 
 # p0f-update - 从社区维护的 p0f3 签名库刷新内嵌的上游 p0f.fp，并运行指纹测试
 # 本地定制签名保存在 p0f.local.fp，不会被上游覆盖；刷新后若指纹基线变化，
@@ -291,7 +291,7 @@ p0f-update:
 
 # build - 编译 zki 二进制 (开发版本，版本号自动取 git commit)
 # 用法: make build
-build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/routes/search.go
+build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/views/search.go
 	go build -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
 
 # build-release - 编译 release 版本 (需手动指定语义化版本号)

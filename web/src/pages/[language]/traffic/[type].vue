@@ -3,7 +3,10 @@
     <template #body>
       <v-container>
         <v-form class="filter-form">
-          <v-row dense align-center>
+          <!-- 高级筛选条件编辑器：字段/动作/值由后端 OPTIONS 元数据驱动，常驻独立一行置于查询操作区上方，
+               复用全项目统一的搜索体验；时间窗口与命名空间不在其中暴露（由 buildSearchIn 强制注入） -->
+          <expression-field v-model="filterConditions" :headers="searchHeaders" />
+          <v-row dense align-center class="mt-2">
             <!-- Time range filters: capture time (timestamp) and ingestion time (createdAt),
                  each a single Vuetify range picker (start ~ end). 245px min-width range
                  fields cannot fit 25% columns until the lg breakpoint (container ≥ 1200px),
@@ -24,18 +27,7 @@
             </v-col>
             <v-col cols="auto" class="ml-auto">
               <div class="d-flex align-center ga-2">
-                <!-- 高级筛选开关：紧凑文本按钮内联于操作区，不再独占整行；
-                     与其他图标按钮同高（variant=text + density=compact），hover 高亮保持一致 -->
-                <v-btn
-                  :append-icon="advancedFilterOpen ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-                  variant="text"
-                  density="compact"
-                  :aria-label="$t('model.__base.field.advancedFilter')"
-                  @click="advancedFilterOpen = !advancedFilterOpen"
-                >
-                  {{ $t("model.__base.field.advancedFilter") }}
-                </v-btn>
-                <!-- 查询按钮常驻展示：收起状态下仍可直接发起查询 -->
+                <!-- 查询按钮常驻展示 -->
                 <v-btn
                   :loading="loading"
                   icon="mdi-magnify"
@@ -57,30 +49,6 @@
               </div>
             </v-col>
           </v-row>
-          <!-- 高级筛选字段：可选重要字段（五元组/URI 等），仅精确匹配 eq；
-               后端配套 bloom_filter/set 跳过索引，在必填时间窗口内按数据块剪枝 -->
-          <v-expand-transition>
-            <div v-if="advancedFilterOpen" class="mt-2">
-              <v-row dense>
-                <v-col
-                  v-for="field in optionalFilterFields"
-                  :key="field.key"
-                  cols="12"
-                  sm="6"
-                  md="4"
-                  lg="3"
-                >
-                  <v-text-field
-                    v-model="optionalFilters[field.key]"
-                    :label="trafficFieldTitle(field.key)"
-                    :type="field.kind"
-                    density="compact"
-                    hide-details
-                  />
-                </v-col>
-              </v-row>
-            </div>
-          </v-expand-transition>
         </v-form>
         <v-divider class="my-2" />
         <v-row dense>
@@ -110,34 +78,14 @@
                   >
                     <!-- 加密字段与详情页展示形式统一：占位“已加密”，可点击直接解密查看明文；
                          S3 字段展示对象键与存储大小，均不直接暴露 base64 密文 -->
-                    <template v-if="cryptoKeys.has(hdr.key)">
-                      <v-btn
-                        :text="$t('model.__base.field.encrypted')"
-                        size="small"
-                        variant="tonal"
-                        color="warning"
-                        :loading="plaintextLoading === hdr.key"
-                        @click.stop="viewPlaintextCrypto(item, hdr.key)"
-                      />
-                    </template>
-                    <template v-else-if="s3Keys.has(hdr.key)">
-                      <span class="font-mono">{{ item[hdr.key] }}</span>
-                      <storage-size-chip
-                        class="ml-2"
-                        :value="Number(item[`${hdr.key}Length`] ?? 0)"
-                        binary
-                        density="comfortable"
-                      />
-                      <v-btn
-                        :text="$t('action.viewPlaintext')"
-                        class="ml-2"
-                        size="small"
-                        variant="tonal"
-                        color="primary"
-                        :loading="plaintextLoading === hdr.key"
-                        @click.stop="viewPlaintextS3(item, hdr.key)"
-                      />
-                    </template>
+                    <encrypted-value-cell
+                      v-if="cryptoKeys.has(hdr.key) || s3Keys.has(hdr.key)"
+                      :kind="cryptoKeys.has(hdr.key) ? 'crypto' : 's3'"
+                      :item="item"
+                      :field-key="hdr.key"
+                      :loading="plaintextLoading === hdr.key"
+                      @view-plaintext="onViewPlaintext"
+                    />
                     <adaptive-cell v-else :header="hdr" :item="item" :actions="rowActions" />
                   </td>
                 </tr>
@@ -180,59 +128,36 @@ import { DateTime } from "luxon";
 import { useForm } from "vee-validate";
 
 import { getResponse, getSimpleResponse } from "@/apis/base";
+import { tagRuleSampleCreate } from "@/apis/tagEvent";
 import {
-  tagRuleSampleCreate,
   TrafficCryptoFields,
   TrafficModelKeys,
   TrafficS3Fields,
   trafficListGet,
+  trafficListOptions,
 } from "@/apis/traffic";
 import type { TrafficListOut, TrafficListItem, TrafficType } from "@/apis/@types/traffic";
 import type { DetailField } from "@/components/@types/detail";
-import type { FilterByItem, ItemActions, SearchIn, TableHeader } from "@/components/@types/table";
+import type { FilterItem } from "@/components/forms/ExpressionField.vue";
+import type {
+  FilterByItem,
+  FilterByOption,
+  ItemActions,
+  SearchIn,
+  SearchOptionsOut,
+  TableHeader,
+} from "@/components/@types/table";
 import { trafficFilterSchema } from "@/schemas/traffic";
 import { useAppStore } from "@/stores/app";
 import { BackendDataType, SearchAction } from "@/types";
 import { vuetifyCfg } from "@/utils/form";
+import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 import { modelFieldTitle } from "@/utils/modelField";
+import { filterOptionTitle } from "@/utils/options";
 import { useColumnVisibility } from "@/utils/column";
 
 const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
-
-// 高级筛选可选字段配置：按流量类型罗列常用重要字段（五元组 / 会话 ID / URI 等）。
-// 与后端 search.toml 的 filterBy 名称一致，仅精确匹配（eq）——配合 bloom_filter/set 跳过索引，
-// 在必填时间窗口内按数据块剪枝，避免十亿级数据逐行扫描。
-const OPTIONAL_FILTER_FIELDS: Record<
-  TrafficType,
-  Array<{ key: string; kind: "text" | "number" }>
-> = {
-  "ipv4-tcp": [
-    { key: "ipv4Src", kind: "text" },
-    { key: "ipv4Dst", kind: "text" },
-    { key: "srcPort", kind: "number" },
-    { key: "dstPort", kind: "number" },
-    { key: "sessionId", kind: "text" },
-  ],
-  "ipv6-tcp": [
-    { key: "ipv6Src", kind: "text" },
-    { key: "ipv6Dst", kind: "text" },
-    { key: "srcPort", kind: "number" },
-    { key: "dstPort", kind: "number" },
-    { key: "sessionId", kind: "text" },
-  ],
-  "http-transport": [
-    { key: "clientIp", kind: "text" },
-    { key: "serverIp", kind: "text" },
-    { key: "clientPort", kind: "number" },
-    { key: "serverPort", kind: "number" },
-    { key: "method", kind: "text" },
-    { key: "host", kind: "text" },
-    { key: "path", kind: "text" },
-    { key: "httpVersion", kind: "text" },
-    { key: "fileExt", kind: "text" },
-  ],
-};
 
 // 流量模型类型与路由段一一对应（/traffic/:type），侧边栏各模型入口分别携带 type 参数
 const isTrafficType = (value: unknown): value is TrafficType => {
@@ -289,10 +214,11 @@ const openStack = (item: Record<string, unknown>): void => {
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 const plaintextLoading = ref("");
 
-// 高级筛选状态：面板开合 + 可选字段值（按 type 动态渲染，仅非空值参与查询）
-const advancedFilterOpen = ref(false);
-const optionalFilters = reactive<Record<string, string>>({});
-const optionalFilterFields = computed(() => OPTIONAL_FILTER_FIELDS[type.value]);
+// 高级筛选条件编辑器：filterConditions 与 ExpressionField 双向绑定，
+// 条件集合经 buildSearchIn 序列化进 filterBy
+const filterConditions = ref<FilterItem[]>([]);
+// searchHeaders 高级筛选可选字段元数据（由后端 OPTIONS 返回，已过滤时间窗口与命名空间）
+const searchHeaders = ref<Record<string, FilterByOption>>({});
 
 // 初始查询范围：近一天（起始 ~ 截止）
 const initialRange = (): [DateTime, DateTime] => {
@@ -762,15 +688,12 @@ const buildSearchIn = (from: {
       value: appStore.namespace,
     },
   };
-  // 可选筛选字段：仅注入非空值（精确匹配 eq）；端口等数值字段转 Number 保证后端 uint16 绑定成功
-  for (const { key, kind } of OPTIONAL_FILTER_FIELDS[type.value]) {
-    const raw = optionalFilters[key];
-    if (raw === undefined || raw === null || raw === "") {
-      continue;
-    }
-    filterBy[key] = {
-      action: SearchAction.EQUAL,
-      value: kind === "number" ? Number(raw) : raw,
+  // 高级筛选条件：逐条序列化 ExpressionField 的条件（字段/动作/值）；
+  // 可选字段均非时间字段，值类型与后端绑定一致（字符串/数字原样透传）
+  for (const item of filterConditions.value) {
+    filterBy[item.field.value] = {
+      action: item.action.value,
+      value: item.value.value,
     };
   }
   return {
@@ -827,13 +750,70 @@ const submitQuery = handleSubmit(async () => {
   }
 });
 
+// 排除字段：时间窗口与命名空间由顶部必填时间范围与强制注入处理，不暴露在条件编辑器中
+const EXCLUDED_FILTER_FIELDS = new Set([
+  "timestampFrom",
+  "timestampTo",
+  "createdAtFrom",
+  "createdAtTo",
+  "namespace",
+]);
+
+// normalizeFilterType 后端 Go 类型名 → 前端 BackendDataType；
+// 无对应枚举的 serializer 类型（UUID / IP 地址）以字符串形式渲染输入
+const normalizeFilterType = (goType: string): BackendDataType => {
+  switch (goType) {
+    case "serializer.HexUUID":
+    case "serializer.IPv4Addr":
+    case "serializer.IPv6Addr":
+      return BackendDataType.STRING;
+    default:
+      return goType as BackendDataType;
+  }
+};
+
+// loadSearchOptions 拉取当前类型可筛选字段元数据，构造高级筛选条件编辑器的字段/动作选项
+const loadSearchOptions = async (): Promise<void> => {
+  await getResponse<SearchOptionsOut>(
+    trafficListOptions(type.value),
+    async (rsp) => {
+      searchHeaders.value = rsp.data.filterBy
+        .filter((item) => !EXCLUDED_FILTER_FIELDS.has(item.name))
+        .reduce(
+          (prev, cur) => {
+            prev[cur.name] = {
+              name: cur.name,
+              title: trafficFieldTitle(cur.name),
+              actions: cur.actions,
+              type: normalizeFilterType(cur.type),
+              // 枚举筛选项 title 为后端返回的枚举值本身，此处按 model.<Name>.option.<title>
+              // 统一解析为可读展示名（未配置翻译时回退为枚举值，如 HTTP 方法）
+              options: cur.options?.map((option) => ({
+                ...option,
+                title: filterOptionTitle(typeKey.value, option.title),
+              })),
+            };
+            return prev;
+          },
+          {} as Record<string, FilterByOption>,
+        );
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
 watch(type, async () => {
   detailDialog.value = false;
   page.value = 1;
-  // 高级筛选值按类型独立，切换类型时清空，避免残留脏值参与查询
-  for (const key of Object.keys(optionalFilters)) {
-    delete optionalFilters[key];
-  }
+  // 高级筛选条件按类型独立，切换类型时清空并重载字段元数据，避免残留脏值参与查询
+  filterConditions.value = [];
+  await loadSearchOptions();
   await refreshAction();
 });
 
@@ -999,7 +979,7 @@ const detailFields = computed((): DetailField[] => {
 // viewPlaintextCrypto 列表单元格直接解密加密字段：构造 DetailField 复用明文对话框解密流程
 const viewPlaintextCrypto = async (item: Record<string, unknown>, key: string): Promise<void> => {
   const ciphertext = item[key];
-  if (typeof ciphertext !== "string" || ciphertext === "") {
+  if (isEmptyCiphertext(ciphertext)) {
     return;
   }
   const field: DetailField = {
@@ -1030,6 +1010,15 @@ const viewPlaintextS3 = async (item: Record<string, unknown>, key: string): Prom
   await viewPlaintextAction(field);
 };
 
+// onViewPlaintext EncryptedValueCell 统一派发入口：按 key 所属集合分发到 crypto/s3 查看流程
+const onViewPlaintext = (item: Record<string, unknown>, key: string): void => {
+  if (cryptoKeys.value.has(key)) {
+    void viewPlaintextCrypto(item, key);
+  } else if (s3Keys.value.has(key)) {
+    void viewPlaintextS3(item, key);
+  }
+};
+
 // viewPlaintextAction 统一入口：构造 DetailField 后交共享明文对话框解密展示，
 // loading 反馈给调用方（列表单元格/详情行按钮）以标记正在加载的字段
 const viewPlaintextAction = async (field: DetailField): Promise<void> => {
@@ -1041,7 +1030,10 @@ const viewPlaintextAction = async (field: DetailField): Promise<void> => {
   }
 };
 
-onMounted(refreshAction);
+onMounted(async () => {
+  await loadSearchOptions();
+  await refreshAction();
+});
 </script>
 
 <style scoped>

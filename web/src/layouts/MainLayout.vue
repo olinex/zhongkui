@@ -93,9 +93,11 @@ const props = defineProps({
   },
 });
 
-// 子项路由目标：继承当前路由参数（语言段）并合并子项自身参数（如流量模型 type）
+// 子项路由目标：合并共享的语言段参数与子项自身参数（如流量模型 type）。
+// 不保留当前路由的其它参数（如 /traffic/:type 的 type），避免把不匹配的参数带入
+// 目标路由触发 Vue Router "Discarded invalid param(s)" 告警。
 const childTo = (child: NavChild) => {
-  return { name: child.routeName, params: { ...route.params, ...child.params } };
+  return { name: child.routeName, params: { language: route.params.language, ...child.params } };
 };
 
 // 子项激活判断：路由名一致且参数一致（同名路由的不同参数子项互斥高亮）

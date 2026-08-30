@@ -160,8 +160,25 @@ type TagEventRule struct {
 	Name          string `gorm:"column:name;type:VARCHAR(255)"`
 	Enabled       bool   `gorm:"type:BOOLEAN"`
 	// MatchAll 是否要求规则下所有条件均命中才触发事件；为 false（默认）时任一条件命中即触发
-	MatchAll    bool   `gorm:"column:match_all;type:BOOLEAN;default:false"`
-	Description string `gorm:"column:description;type:VARCHAR(256)"`
+	MatchAll bool `gorm:"column:match_all;type:BOOLEAN;default:false"`
+	// NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定，此时使用命名空间默认通知组；
+	// 通知组删除时置空（ON DELETE SET NULL）
+	// NotificationGroupID the ID of the bound notification group, nil means not bound
+	// and the namespace default group is used; it is set to NULL when the group is deleted
+	NotificationGroupID *uint `gorm:"column:notification_group_id;type:INT;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	// NotificationTargetID 规则直绑的通知目标 ID，nil 表示未直绑目标；用于向单个目标直接发送通知而无需建组。
+	// 通知目标删除时置空（ON DELETE SET NULL）
+	// NotificationTargetID the ID of a directly-bound notification target, nil means
+	// not directly bound; used to notify a single target without creating a group. It
+	// is set to NULL when the target is deleted
+	NotificationTargetID *uint `gorm:"column:notification_target_id;type:INT;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	// SuppressWindow 规则级抑制窗口（纳秒），同一事件键在此窗口内不重复告警；0 表示不抑制（每个事件都告警）
+	// 显式零值必须原样落库，故模型不设 default tag（业务默认 1 小时由 API 输入层 defaults 填充）
+	// SuppressWindow the suppression window of the rule in nanoseconds, 0 means no suppression;
+	// explicit zero must be persisted as-is, so no default tag here (the 1h business default is
+	// filled by the API input layer defaults)
+	SuppressWindow serializer.DurationNS `gorm:"column:suppress_window;type:BIGINT"`
+	Description    string                `gorm:"column:description;type:VARCHAR(256)"`
 }
 
 // init 函数在包初始化时执行，用于初始化布尔表达式解析器
