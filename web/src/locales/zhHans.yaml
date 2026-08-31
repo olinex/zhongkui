@@ -562,6 +562,18 @@ model:
       # ---- 列设置全量字段（默认隐藏）----
       clientIsn: 客户端初始序列号
       serverIsn: 服务端初始序列号
+      seq: 序列号
+      ack: 确认号
+      bitFin: FIN 标志
+      bitSyn: SYN 标志
+      bitRst: RST 标志
+      bitPsh: PSH 标志
+      bitAck: ACK 标志
+      bitUrg: URG 标志
+      window: 窗口大小
+      fpOs: OS 指纹
+      fpSig: TCP 指纹签名
+      fpMtu: MTU
       streamIndex: 流序号
       ipVersion: IP 版本
       url: 请求 URL

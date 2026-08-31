@@ -16,10 +16,10 @@
         />
         <v-btn
           v-show="forceEditable || editable"
+          v-request="confirm"
           color="primary"
           :text="$t(`action.confirm`)"
           :disabled="confirmDisabled"
-          @click="confirm"
         />
       </v-card-actions>
     </v-card>
@@ -44,8 +44,11 @@ const close = () => {
   dialog.value = false;
 };
 
+// confirm 等待父级 @confirm 处理器返回的 Promise（若为异步请求）结束后再关窗，
+// 配合 v-request 指令实现"点击后禁用 + 加载中动画"，防止慢接口重复提交。
 const confirm = async () => {
-  emits("confirm", proxy.value);
+  const result = emits("confirm", proxy.value);
+  await Promise.resolve(result);
   close();
 };
 

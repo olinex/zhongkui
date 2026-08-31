@@ -129,15 +129,14 @@ const onNamespaceChange = (namespace: string): void => {
 };
 
 const gotoHome = () => {
-  // route.params type does not satisfy RouteLocationRaw.params
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  router.push({ name: "Home", params: route.params as any });
+  // 显式携带当前语言参数，避免透传 route.params 中与目标路由无关的
+  // 多余参数（如流量页的 type）被 vue-router 丢弃并产生告警
+  router.push({ name: "Home", params: { language: route.params.language } });
 };
 
 const gotoProfile = () => {
-  // route.params type does not satisfy RouteLocationRaw.params
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  router.push({ name: "Profile", params: route.params as any });
+  // 同上：仅携带语言参数，避免多余参数（如流量页的 type）触发丢弃告警
+  router.push({ name: "Profile", params: { language: route.params.language } });
 };
 
 const gotoSignIn = () => {

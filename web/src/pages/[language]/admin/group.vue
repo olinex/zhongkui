@@ -133,22 +133,23 @@
                               style="width: 108px"
                             />
                             <v-btn
+                              v-request="
+                                () =>
+                                  addPolicyAction(
+                                    proxy.name,
+                                    item.target,
+                                    item.action,
+                                    item.effect,
+                                    appendItem,
+                                    close,
+                                  )
+                              "
                               :disabled="!(editable && item.effect)"
                               :text="$t('action.add')"
                               color="primary"
                               variant="tonal"
                               size="small"
                               density="compact"
-                              @click="
-                                addPolicyAction(
-                                  proxy.name,
-                                  item.target,
-                                  item.action,
-                                  item.effect,
-                                  appendItem,
-                                  close,
-                                )
-                              "
                             />
                           </div>
                         </template>

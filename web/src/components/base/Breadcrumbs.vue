@@ -56,7 +56,9 @@ const crumbs = computed<BreadcrumbItem[]>(() => {
   const items: BreadcrumbItem[] = [
     {
       title: i18n.global.t("title.home"),
-      to: { name: "Home", params: { ...route.params } },
+      // 仅携带语言参数，避免透传 route.params 中与目标路由无关的多余参数
+      // （如流量页的 type）被 vue-router 丢弃并产生告警
+      to: { name: "Home", params: { language: route.params.language } },
     },
   ];
   const path = findNavPath(navigationGroups, String(route.name), route.params);

@@ -132,11 +132,10 @@
               <v-col cols="12">
                 <div class="d-flex align-center ga-2">
                   <v-btn
+                    v-request="createValidateAction"
                     size="small"
                     variant="tonal"
                     color="primary"
-                    :loading="tmplValidateLoading"
-                    @click="createValidateAction"
                   >
                     {{ $t("action.templateValidate") }}
                   </v-btn>
@@ -362,11 +361,10 @@
             <v-divider class="my-3" />
             <div class="d-flex ga-2">
               <v-btn
+                v-request="renderTestAction"
                 color="primary"
                 variant="tonal"
-                :loading="renderLoading"
                 :disabled="!renderEvent"
-                @click="renderTestAction"
               >
                 {{ $t("action.renderTest") }}
               </v-btn>

@@ -150,10 +150,10 @@
                   </v-form>
                   <div class="d-flex justify-end pt-3">
                     <v-btn
+                      v-request="profileChangeSubmit"
                       :disabled="!profileForm.meta.value.dirty || !profileForm.meta.value.valid"
                       color="primary"
                       prepend-icon="mdi-content-save-outline"
-                      @click="profileChangeSubmit"
                     >
                       {{ $t("action.update") }}
                     </v-btn>
@@ -356,10 +356,10 @@
                   </v-form>
                   <div class="d-flex justify-end pt-3">
                     <v-btn
+                      v-request="passwordResetSubmit"
                       :disabled="!pwdResetForm.meta.value.dirty || !pwdResetForm.meta.value.valid"
                       color="primary"
                       prepend-icon="mdi-lock-reset"
-                      @click="passwordResetSubmit"
                     >
                       {{ $t("action.reset") }}
                     </v-btn>

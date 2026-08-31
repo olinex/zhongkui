@@ -29,6 +29,7 @@
                 $t("action.pwdForget")
               }}</v-btn>
               <v-btn
+                v-request="submit"
                 :disabled="!meta.dirty || !meta.valid"
                 type="submit"
                 color="primary"

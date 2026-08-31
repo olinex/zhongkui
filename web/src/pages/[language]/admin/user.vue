@@ -160,21 +160,22 @@
                           </v-card-text>
                           <v-card-actions>
                             <v-btn
+                              v-request="
+                                () =>
+                                  joinGroupAction(
+                                    proxy.unionID,
+                                    item.namespace,
+                                    item.name,
+                                    appendItem,
+                                    close,
+                                  )
+                              "
                               :disabled="!(editable && item.namespace)"
                               :text="$t('action.join')"
                               color="primary"
                               density="compact"
                               variant="tonal"
                               block
-                              @click="
-                                joinGroupAction(
-                                  proxy.unionID,
-                                  item.namespace,
-                                  item.name,
-                                  appendItem,
-                                  close,
-                                )
-                              "
                             />
                           </v-card-actions>
                         </v-card>

@@ -562,6 +562,18 @@ model:
       # ---- Full field set for column settings (hidden by default) ----
       clientIsn: Client Initial Sequence Number
       serverIsn: Server Initial Sequence Number
+      seq: Sequence Number
+      ack: Acknowledgment Number
+      bitFin: FIN Flag
+      bitSyn: SYN Flag
+      bitRst: RST Flag
+      bitPsh: PSH Flag
+      bitAck: ACK Flag
+      bitUrg: URG Flag
+      window: Window Size
+      fpOs: OS Fingerprint
+      fpSig: TCP Fingerprint Signature
+      fpMtu: MTU
       streamIndex: Stream Index
       ipVersion: IP Version
       url: Request URL

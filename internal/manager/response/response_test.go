@@ -178,10 +178,13 @@ func TestCreateBadBodyError(t *testing.T) {
 			So(codeErr.details, ShouldEqual, vErr)
 		})
 
-		Convey("传入非 ValidationErrors 类型应触发 panic", func() {
-			So(func() {
-				CreateBadBodyError(errors.New("not a validation error"))
-			}, ShouldPanicWith, "error is not validator.ValidationErrors type")
+		Convey("传入非 ValidationErrors 类型应返回 400 CodeBadBody 而非 panic", func() {
+			plainErr := errors.New("not a validation error")
+			codeErr := CreateBadBodyError(plainErr)
+			So(codeErr, ShouldNotBeNil)
+			So(codeErr.statusCode, ShouldEqual, http.StatusBadRequest)
+			So(codeErr.code, ShouldEqual, CodeBadBody)
+			So(codeErr.details, ShouldEqual, plainErr)
 		})
 	})
 }

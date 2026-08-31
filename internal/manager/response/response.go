@@ -191,21 +191,24 @@ func CreateCodeError(statusCode, code int, details any) *CodeError {
 }
 
 // CreateBadBodyError 创建一个请求体验证失败的错误
-// 仅接受 validator.ValidationErrors 类型的错误，用于处理请求体 JSON 绑定后的字段验证失败场景。
-// 如果传入的 error 不是 validator.ValidationErrors 类型，会触发 panic。
+// 用于处理请求体 JSON 绑定后的失败场景：
+//   - validator.ValidationErrors: 字段验证失败，详情为字段名到翻译消息的映射
+//   - 其他绑定错误（JSON 反序列化失败、自定义 UnmarshalJSON 校验失败等）：
+//     统一返回 HTTP 400 + CodeBadBody，详情为错误消息（经 ToGinH 的 case error 分支转为字符串），
+//     避免对非校验错误 panic 导致请求返回 500。
+//
 // 该函数通常在 ShouldBindBodyWithJSON 返回错误后调用。
 //
 // 参数：
-//   - err: 验证错误，必须为 validator.ValidationErrors 类型
+//   - err: 请求体绑定/验证错误
 //
 // 返回值：
-//   - *CodeError: 包含验证错误详情的 CodeError，HTTP 状态码为 400，业务码为 CodeBadBody
+//   - *CodeError: HTTP 状态码为 400，业务码为 CodeBadBody
 func CreateBadBodyError(err error) *CodeError {
 	if vErr, ok := err.(validator.ValidationErrors); ok {
 		return CreateCodeError(http.StatusBadRequest, CodeBadBody, vErr)
-	} else {
-		panic("error is not validator.ValidationErrors type")
 	}
+	return CreateCodeError(http.StatusBadRequest, CodeBadBody, nil)
 }
 
 // CreateBadQueryError 创建一个查询参数错误的 CodeError

@@ -1,6 +1,17 @@
 <template>
   <div class="d-flex align-center ga-2">
-    <!-- 常驻按钮：收起时也保持展示（刷新 / 创建） -->
+    <!-- 常驻按钮：收起时也保持展示（查询 / 刷新 / 创建） -->
+    <v-btn
+      v-if="query"
+      :loading="loading"
+      icon="mdi-magnify"
+      color="primary"
+      variant="text"
+      density="compact"
+      :title="$t('action.query')"
+      :aria-label="$t('action.query')"
+      @click="query"
+    />
     <v-btn
       v-if="refresh"
       :disabled="loading"
@@ -72,6 +83,8 @@ export interface ActionButton {
 
 withDefaults(
   defineProps<{
+    /** 查询操作，显式查询模式下发起查询；收起时始终展示（不传则不渲染） */
+    query?: () => void;
     /** 刷新操作，收起时始终展示（不传则不渲染） */
     refresh?: () => void;
     /** 创建操作，收起时始终展示（不传则不渲染） */
@@ -84,6 +97,7 @@ withDefaults(
     loading?: boolean;
   }>(),
   {
+    query: undefined,
     refresh: undefined,
     create: undefined,
     actions: () => [],

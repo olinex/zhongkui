@@ -251,10 +251,9 @@
                 <v-row dense align="center">
                   <v-col cols="auto">
                     <v-btn
+                      v-request="async () => { await validateConditionExpression(cond); }"
                       variant="tonal"
                       size="small"
-                      :loading="cond.validating"
-                      @click="validateConditionExpression(cond)"
                     >
                       {{ $t("action.validate") }}
                     </v-btn>
@@ -517,11 +516,10 @@
             <v-row dense align="center">
               <v-col cols="auto">
                 <v-btn
+                  v-request="async () => { await editDryRunRef?.run(); }"
                   color="primary"
                   size="small"
                   :disabled="!editable"
-                  :loading="editDryRunRef?.loading"
-                  @click="editDryRunRef?.run()"
                 >
                   {{ $t("action.dryRun") }}
                 </v-btn>

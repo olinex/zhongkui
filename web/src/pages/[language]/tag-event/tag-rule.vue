@@ -149,12 +149,7 @@
             </v-row>
             <v-row dense align="center">
               <v-col cols="auto">
-                <v-btn
-                  variant="tonal"
-                  size="small"
-                  :loading="createRegoValidating"
-                  @click="validateCreateRegoNow"
-                >
+                <v-btn v-request="validateCreateRegoNow" variant="tonal" size="small">
                   {{ $t("action.validate") }}
                 </v-btn>
               </v-col>
@@ -275,11 +270,14 @@
               </v-col>
               <v-col cols="auto">
                 <v-btn
+                  v-request="
+                    async () => {
+                      await editDryRunRef?.run();
+                    }
+                  "
                   color="primary"
                   size="small"
                   :disabled="!editable"
-                  :loading="editDryRunRef?.loading"
-                  @click="editDryRunRef?.run()"
                 >
                   {{ $t("action.dryRun") }}
                 </v-btn>

@@ -3,8 +3,11 @@
     <v-card-title class="px-4 pt-3 pb-2 text-subtitle-1 font-weight-bold">
       {{ title }}
     </v-card-title>
+    <!-- 筛选区：高级条件编辑器常驻一行；页面可通过 extra-filters 插槽追加额外筛选字段（如流量时间窗口）。
+         查询按钮统一收纳在下方操作按钮组（action-button-group）第一顺位，保持列表页行为一致 -->
     <v-card-text class="px-4 pt-0 pb-2">
       <expression-field v-model="filterBy" :headers="searchHeaders" />
+      <slot name="extra-filters" />
     </v-card-text>
     <!-- 操作按钮行：独占一行、右对齐、紧贴列表上方；批量模式就地切换为批量操作（v-btn-group），不额外插入一行，避免列表垂直位移 -->
     <div class="px-4 pb-2 d-flex justify-end align-center ga-2">
@@ -27,6 +30,7 @@
       </template>
       <template v-else>
         <action-button-group
+          :query="triggerQuery"
           :refresh="tableDataRefresh"
           :create="create"
           :loading="loading"
@@ -51,15 +55,17 @@
         :items-per-page-options="pageSizeOptions"
         :headers="selectTableHeaders"
         :loading="loading"
+        :hover="!!rowClick"
         select-strategy="page"
         :show-select="!!batchActions"
         return-object
+        @click:row="onRowClick"
       >
         <template #loading>
           <v-skeleton-loader :type="`table-row@${total || pageSize}`" />
         </template>
         <template #item="{ index, item, internalItem, isSelected, toggleSelect }">
-          <tr class="text-no-wrap">
+          <tr class="text-no-wrap" :class="{ 'row-clickable': !!rowClick }">
             <td
               v-if="batchActions"
               class="v-data-table-column--fixed v-data-table-column--last-fixed"
@@ -80,14 +86,17 @@
                   : undefined
               "
             >
-              <!-- 允许页面按列名提供 cell-<key> 具名插槽覆盖默认渲染（如 model 列显示可读名称） -->
+              <!-- 允许页面按列名提供 cell-<key> 具名插槽覆盖默认渲染（如 model 列显示可读名称）；
+                   或经通用 cell 插槽统一接管全部单元格（如流量页加密/S3 单元格分发） -->
               <slot :name="`cell-${hdr.key}`" :item="item" :value="item[hdr.key]">
-                <adaptive-cell
-                  :header="hdr"
-                  :item="item"
-                  :actions="actions"
-                  :refresh="tableDataRefresh"
-                />
+                <slot name="cell" :item="item" :header="hdr">
+                  <adaptive-cell
+                    :header="hdr"
+                    :item="item"
+                    :actions="actions"
+                    :refresh="tableDataRefresh"
+                  />
+                </slot>
               </slot>
             </td>
           </tr>
@@ -200,19 +209,112 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
   return headers;
 }
 
+const props = defineProps({
+  title: {
+    type: String,
+    default: "",
+  },
+  optionsRequest: {
+    // 缺省时列表表头/筛选字段元数据由页面经 headers / filterHeaders 自定义源提供
+    type: Function as PropType<() => AxiosPromise>,
+    default: undefined,
+  },
+  listRequest: {
+    type: Function as PropType<(req: SearchIn) => AxiosPromise>,
+    required: true,
+  },
+  actions: {
+    // Row payload is dynamic.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type: Function as PropType<(item: Record<string, any>) => ItemActions>,
+    default: undefined,
+  },
+  batchActions: {
+    // Selected rows payload is dynamic.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type: Function as PropType<(items: Record<string, any>[]) => BatchActions>,
+    default: undefined,
+  },
+  create: {
+    type: Function as PropType<() => void>,
+    default: undefined,
+  },
+  modelName: {
+    // 经 OPTIONS 派生表头/筛选字段时用于 model.<modelName>.field.* 翻译；自定义源页面无需提供
+    type: String,
+    default: "",
+  },
+  storageKey: {
+    type: String,
+    default: undefined,
+  },
+  // 自定义查询触发：页面可传 vee-validate handleSubmit 等先做表单校验再发起查询；缺省直接执行默认查询
+  query: {
+    type: Function as PropType<() => void | Promise<void>>,
+    default: undefined,
+  },
+  // 查询载荷过滤器：在默认 filterBy 基础上追加/改写筛选条件（如流量页注入时间窗口与命名空间）；
+  // 返回 null 表示当前条件不合法（如必填时间范围缺失），跳过本次查询
+  buildFilter: {
+    type: Function as PropType<
+      (filterBy: Record<string, FilterByItem>) => Record<string, FilterByItem> | null
+    >,
+    default: undefined,
+  },
+  // 自定义表格表头源（覆盖 OPTIONS 派生）：数组、ref 或函数，供需要定制列类型/顺序/默认可见性的页面使用
+  headers: {
+    type: [Object, Function] as PropType<
+      Array<TableHeader> | Ref<Array<TableHeader>> | (() => Array<TableHeader>)
+    >,
+    default: undefined,
+  },
+  // 自定义高级筛选字段元数据源（覆盖 OPTIONS 派生）：对象、ref 或函数
+  filterHeaders: {
+    type: [Object, Function] as PropType<
+      | Record<string, FilterByOption>
+      | Ref<Record<string, FilterByOption>>
+      | (() => Record<string, FilterByOption>)
+    >,
+    default: undefined,
+  },
+  // 默认排序：初始生效，用户在表头调整后由组件内部接管
+  defaultOrderBy: {
+    type: Array as PropType<SortItem[]>,
+    default: () => [],
+  },
+  // 行点击回调：提供后表格行可点击（hover 高亮 + pointer 光标），用于行详情下钻
+  rowClick: {
+    // Table row values are heterogeneous.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    type: Function as PropType<(item: Record<string, any>) => void>,
+    default: undefined,
+  },
+});
+
 const loading = ref(false);
 const total = ref(0);
 const page = ref(1);
 const pageSize = ref(10);
-const orderBy = ref([] as SortItem[]);
+// 默认排序克隆自 props.defaultOrderBy，避免列表排序时原地改写传入数组
+const orderBy = ref([...(props.defaultOrderBy ?? [])]);
 const filterBy = ref([] as FilterItem[]);
 // Server response items are dynamic.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Record<string, any>[]);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const selectItems = ref([] as Record<string, any>[]);
-const tableHeaders = ref([] as Array<TableHeader>);
-const searchHeaders = ref({} as Record<string, FilterByOption>);
+// OPTIONS 派生的表头/筛选字段元数据（无自定义源时使用）
+const optionsTableHeaders = ref([] as Array<TableHeader>);
+const optionsSearchHeaders = ref({} as Record<string, FilterByOption>);
+
+// 表格表头：优先取页面自定义源（headers prop），否则由 OPTIONS 派生
+const tableHeaders = computed((): Array<TableHeader> => {
+  return props.headers ? toValue(props.headers) : optionsTableHeaders.value;
+});
+// 高级筛选字段元数据：优先取页面自定义源（filterHeaders prop），否则由 OPTIONS 派生
+const searchHeaders = computed((): Record<string, FilterByOption> => {
+  return props.filterHeaders ? toValue(props.filterHeaders) : optionsSearchHeaders.value;
+});
 
 // selectHeader 定义最左侧多选列的配置，fixed: "start" 使其冻结在表格左边缘。
 const selectHeader: TableHeader = {
@@ -257,12 +359,14 @@ const filterByOptions = computed(() => {
   );
 });
 
-// 筛选查询快照：序列化的实际查询载荷（action + value），用于识别筛选条件的“实际变更”，
-// 从而忽略仅重开/重确认但仍产生等价模型值（如引用变化、Date 实例不一致）的无效变更。
+// 拉取 OPTIONS：仅当未提供自定义表头/筛选字段源时执行，结果用于派生表格表头与高级筛选字段
 onBeforeMount(async () => {
+  if (!props.optionsRequest) {
+    return;
+  }
   await getSearchOptionsResponse(props.optionsRequest(), async (rsp) => {
-    searchHeaders.value = extractSearchHeaders(rsp.data);
-    tableHeaders.value = extractTableHeaders(rsp.data);
+    optionsSearchHeaders.value = extractSearchHeaders(rsp.data);
+    optionsTableHeaders.value = extractTableHeaders(rsp.data);
   });
 });
 
@@ -271,25 +375,17 @@ watch(page, tableDataRefresh);
 watch(pageSize, tableDataRefresh);
 watch(orderBy, tableDataRefresh);
 
-// 筛选条件发生实际变更时立即刷新：排序（orderBy）与每页个数（pageSize）保持不变，
-// 仅将页码重置为 1。仅当查询载荷真正变化时（比对 lastFilterBy 快照）才触发，
-// 避免仅重开/重确认筛选菜单产生的等价变更导致无谓刷新。
-watch(
-  () => JSON.stringify(filterByOptions.value),
-  (next, prev) => {
-    if (next === prev) {
-      return;
-    }
-    const wasFirstPage = page.value === 1;
-    page.value = 1;
-    if (wasFirstPage) {
-      // 页码本就为 1（不会触发 watch(page)），需手动刷新；否则由 watch(page) 触发
-      tableDataRefresh();
-    }
-  },
-);
-
 async function tableDataRefresh() {
+  // 默认查询载荷：高级条件编辑器序列化的筛选条件；自定义载荷过滤器可追加/改写
+  const baseFilter = filterByOptions.value;
+  let queryFilterBy: Record<string, FilterByItem> | null = baseFilter;
+  if (props.buildFilter) {
+    queryFilterBy = props.buildFilter(baseFilter);
+  }
+  // 自定义载荷过滤器返回 null 表示当前条件不合法（如必填时间范围缺失），跳过查询
+  if (queryFilterBy === null) {
+    return;
+  }
   try {
     loading.value = true;
     // Server response items are dynamic.
@@ -300,7 +396,7 @@ async function tableDataRefresh() {
         page: page.value,
         pageSize: pageSize.value,
         orderBy: orderByOptions.value,
-        filterBy: filterByOptions.value,
+        filterBy: queryFilterBy,
       }),
       async (rsp) => {
         total.value = rsp.data.total;
@@ -312,49 +408,40 @@ async function tableDataRefresh() {
   }
 }
 
-const props = defineProps({
-  title: {
-    type: String,
-    default: "",
-  },
-  optionsRequest: {
-    type: Function as PropType<() => AxiosPromise>,
-    required: true,
-  },
-  listRequest: {
-    type: Function as PropType<(req: SearchIn) => AxiosPromise>,
-    required: true,
-  },
-  actions: {
-    // Row payload is dynamic.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    type: Function as PropType<(item: Record<string, any>) => ItemActions>,
-    default: undefined,
-  },
-  batchActions: {
-    // Selected rows payload is dynamic.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    type: Function as PropType<(items: Record<string, any>[]) => BatchActions>,
-    default: undefined,
-  },
-  create: {
-    type: Function as PropType<() => void>,
-    default: undefined,
-  },
-  modelName: {
-    type: String,
-    required: true,
-  },
-  storageKey: {
-    type: String,
-    default: undefined,
-  },
-});
+// doQuery 显式查询：筛选条件实际变更后由查询按钮触发，页码重置为 1 再刷新；
+// 页码本就为 1（不会触发 watch(page)）时需手动刷新，否则由 watch(page) 触发
+async function doQuery() {
+  const wasFirstPage = page.value === 1;
+  page.value = 1;
+  if (wasFirstPage) {
+    await tableDataRefresh();
+  }
+}
+
+// triggerQuery 查询按钮统一入口：优先执行页面自定义查询（可含表单校验），否则默认查询
+const triggerQuery = async (): Promise<void> => {
+  if (props.query) {
+    await props.query();
+  } else {
+    await doQuery();
+  }
+};
+
+// onRowClick 行点击统一处理：仅在提供 rowClick 回调时下钻行详情等操作
+const onRowClick = (
+  _event: Event,
+  // Table row values are heterogeneous.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: { item: Record<string, any> },
+): void => {
+  props.rowClick?.(data.item);
+};
 
 // 列显示配置：固定列始终展示，其余列按用户勾选显隐，并按 storageKey（缺省为 modelName）
-// 持久化到 localStorage；表头加载完成后自动应用已保存配置
+// 持久化到 localStorage；表头加载完成后自动应用已保存配置。storageKey 以 getter 传入，
+// 页面切换类型等场景（如流量页 traffic:<type>）可随 prop 变化切换各自保存的列配置。
 const { allToggleable, columnOrder, visibleKeys, visibleHeaders } = useColumnVisibility(
-  props.storageKey ?? `model:${props.modelName}`,
+  () => props.storageKey ?? `model:${props.modelName}`,
   tableHeaders,
 );
 
@@ -365,7 +452,16 @@ const clearSelection = (): void => {
 
 defineExpose({
   refresh: tableDataRefresh,
+  query: doQuery,
   clearSelection,
   selectItems,
+  filterBy,
 });
 </script>
+
+<style scoped>
+/* 行可点击（rowClick）时展示 pointer 光标，提示可下钻行详情 */
+.row-clickable {
+  cursor: pointer;
+}
+</style>

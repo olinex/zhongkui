@@ -75,6 +75,30 @@ html {
   border-color: rgb(var(--v-theme-on-surface), 0.16);
 }
 
+// v-request 指令加载态：隐藏原内容并展示居中的旋转 spinner
+// 复用 Vuetify 的 mdi-loading / mdi-spin 动画，保证与现有小按钮加载反馈一致。
+.zk-request-loading {
+  // 保持按钮占用原有尺寸，避免加载时布局跳动
+  pointer-events: none;
+
+  /* stylelint-disable-next-line selector-class-pattern */
+  .v-btn__content {
+    visibility: hidden;
+  }
+}
+
+// 注入的加载 spinner 覆盖层：居中定位在按钮内容容器内
+.zk-request-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  visibility: visible;
+
+  .mdi-spin {
+    animation: mdi-spin 2s linear infinite;
+  }
+}
+
 // Data table: row hover highlight
 .v-application .v-data-table {
   tbody tr:hover {

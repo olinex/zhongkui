@@ -2,97 +2,49 @@
   <main-layout current-nav="traffic">
     <template #body>
       <v-container>
-        <v-form class="filter-form">
-          <!-- 高级筛选条件编辑器：字段/动作/值由后端 OPTIONS 元数据驱动，常驻独立一行置于查询操作区上方，
-               复用全项目统一的搜索体验；时间窗口与命名空间不在其中暴露（由 buildSearchIn 强制注入） -->
-          <expression-field v-model="filterConditions" :headers="searchHeaders" />
-          <v-row dense align-center class="mt-2">
-            <!-- Time range filters: capture time (timestamp) and ingestion time (createdAt),
-                 each a single Vuetify range picker (start ~ end). 245px min-width range
-                 fields cannot fit 25% columns until the lg breakpoint (container ≥ 1200px),
-                 so keep the row inline only from lg up and stack below to avoid overlapping -->
-            <v-col cols="12" sm="6" lg="4">
+        <!-- 复用全项目统一的 SearchTable：显式查询按钮 + 高级条件编辑器常驻；
+             抓包/入库时间窗口经 extra-filters 插槽置于筛选区，随查询载荷统一注入（buildFilter） -->
+        <search-table
+          ref="searchTableRef"
+          :title="$t(`model.${typeKey}.name`)"
+          :list-request="trafficListRequest"
+          :filter-headers="searchHeaders"
+          :headers="headers"
+          :query="submitQuery"
+          :build-filter="buildFilter"
+          :default-order-by="defaultOrderBy"
+          :row-click="openDetail"
+          :storage-key="`traffic:${type}`"
+        >
+          <!-- 额外筛选区：抓包时间（timestamp）与入库时间（createdAt）两个必填时间范围，
+               不参与高级条件编辑器（由 buildFilter 强制注入） -->
+          <template #extra-filters>
+            <div class="extra-filters d-flex flex-wrap align-center ga-2 mt-2">
               <date-time-range-field
                 v-model="timestampRange"
                 v-bind="timestampRangeProps"
                 :label="$t('model.__base.field.timestampRange')"
               />
-            </v-col>
-            <v-col cols="12" sm="6" lg="4">
               <date-time-range-field
                 v-model="createdAtRange"
                 v-bind="createdAtRangeProps"
                 :label="$t('model.__base.field.createdAtRange')"
               />
-            </v-col>
-            <v-col cols="auto" class="ml-auto">
-              <div class="d-flex align-center ga-2">
-                <!-- 查询按钮常驻展示 -->
-                <v-btn
-                  :loading="loading"
-                  icon="mdi-magnify"
-                  color="primary"
-                  variant="text"
-                  density="compact"
-                  :title="$t('action.query')"
-                  :aria-label="$t('action.query')"
-                  @click="submitQuery"
-                />
-                <!-- 其余操作默认收起：刷新常驻，列设置展开后显示 -->
-                <action-button-group :refresh="refreshAction" :loading="loading" collapsible>
-                  <column-visibility-menu
-                    v-model="visibleKeys"
-                    v-model:order="columnOrder"
-                    :headers="allToggleable"
-                  />
-                </action-button-group>
-              </div>
-            </v-col>
-          </v-row>
-        </v-form>
-        <v-divider class="my-2" />
-        <v-row dense>
-          <v-col cols="12">
-            <v-data-table-server
-              v-model:page="page"
-              v-model:items-per-page="pageSize"
-              v-model:sort-by="sortBy"
-              :headers="visibleHeaders"
-              :items="items"
-              :items-length="total"
-              :items-per-page-options="pageSizeOptions"
-              :loading="loading"
-              hover
-              @click:row="onClickRow"
-            >
-              <template #item="{ item }">
-                <tr class="text-no-wrap" style="cursor: pointer">
-                  <td
-                    v-for="hdr in visibleHeaders"
-                    :key="hdr.key"
-                    :class="
-                      hdr.fixed === 'end'
-                        ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
-                        : undefined
-                    "
-                  >
-                    <!-- 加密字段与详情页展示形式统一：占位“已加密”，可点击直接解密查看明文；
-                         S3 字段展示对象键与存储大小，均不直接暴露 base64 密文 -->
-                    <encrypted-value-cell
-                      v-if="cryptoKeys.has(hdr.key) || s3Keys.has(hdr.key)"
-                      :kind="cryptoKeys.has(hdr.key) ? 'crypto' : 's3'"
-                      :item="item"
-                      :field-key="hdr.key"
-                      :loading="plaintextLoading === hdr.key"
-                      @view-plaintext="onViewPlaintext"
-                    />
-                    <adaptive-cell v-else :header="hdr" :item="item" :actions="rowActions" />
-                  </td>
-                </tr>
-              </template>
-            </v-data-table-server>
-          </v-col>
-        </v-row>
+            </div>
+          </template>
+          <!-- 通用单元格接管：加密/S3 字段展示占位与明文入口，其余交 AdaptiveCell 按类型渲染 -->
+          <template #cell="{ item, header }">
+            <encrypted-value-cell
+              v-if="cryptoKeys.has(header.key) || s3Keys.has(header.key)"
+              :kind="cryptoKeys.has(header.key) ? 'crypto' : 's3'"
+              :item="item"
+              :field-key="header.key"
+              :loading="plaintextLoading === header.key"
+              @view-plaintext="onViewPlaintext"
+            />
+            <adaptive-cell v-else :header="header" :item="item" :actions="rowActions" />
+          </template>
+        </search-table>
       </v-container>
 
       <!-- 行详情对话框：列表已返回全字段，直接展示行数据，无需再发起详情请求；
@@ -124,8 +76,10 @@ meta:
 </route>
 
 <script setup lang="ts">
+import type { AxiosPromise } from "axios";
 import { DateTime } from "luxon";
 import { useForm } from "vee-validate";
+import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
 
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import { tagRuleSampleCreate } from "@/apis/tagEvent";
@@ -136,9 +90,8 @@ import {
   trafficListGet,
   trafficListOptions,
 } from "@/apis/traffic";
-import type { TrafficListOut, TrafficListItem, TrafficType } from "@/apis/@types/traffic";
+import type { TrafficType } from "@/apis/@types/traffic";
 import type { DetailField } from "@/components/@types/detail";
-import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type {
   FilterByItem,
   FilterByOption,
@@ -155,7 +108,6 @@ import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 import { modelFieldTitle } from "@/utils/modelField";
 import { filterOptionTitle } from "@/utils/options";
-import { useColumnVisibility } from "@/utils/column";
 
 const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
 
@@ -182,23 +134,11 @@ watch(
   { immediate: true },
 );
 
-const pageSizeOptions = [
-  { title: "10", value: 10 },
-  { title: "20", value: 20 },
-  { title: "50", value: 50 },
-  { title: "100", value: 100 },
-];
-
 const appStore = useAppStore();
+const searchTableRef = useTemplateRef("searchTableRef");
 
-const page = ref(1);
-const pageSize = ref(10);
-const loading = ref(false);
-const items = ref([] as TrafficListItem[]);
-const total = ref(0);
-const sortBy = ref<Array<{ key: string; order?: boolean | "asc" | "desc" }>>([
-  { key: "timestamp", order: "desc" },
-]);
+// 默认排序：按抓包时间倒序，最新记录置顶
+const defaultOrderBy: SortItem[] = [{ key: "timestamp", order: "desc" }];
 
 const detailDialog = ref(false);
 const detailItem = ref<Record<string, unknown> | null>(null);
@@ -214,10 +154,8 @@ const openStack = (item: Record<string, unknown>): void => {
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 const plaintextLoading = ref("");
 
-// 高级筛选条件编辑器：filterConditions 与 ExpressionField 双向绑定，
-// 条件集合经 buildSearchIn 序列化进 filterBy
-const filterConditions = ref<FilterItem[]>([]);
-// searchHeaders 高级筛选可选字段元数据（由后端 OPTIONS 返回，已过滤时间窗口与命名空间）
+// searchHeaders 高级筛选可选字段元数据（由后端 OPTIONS 返回，已过滤时间窗口与命名空间），
+// 经 filter-headers 传入 SearchTable 供高级条件编辑器（ExpressionField）动态渲染
 const searchHeaders = ref<Record<string, FilterByOption>>({});
 
 // 初始查询范围：近一天（起始 ~ 截止）
@@ -636,12 +574,7 @@ const headers = computed((): Array<TableHeader> => {
   ];
 });
 
-// 列显示配置：按流量类型区分持久化到 localStorage，切换类型自动应用各自的保存配置
-const { allToggleable, columnOrder, visibleKeys, visibleHeaders } = useColumnVisibility(
-  () => `traffic:${type.value}`,
-  headers,
-);
-
+// currentFrom 当前两个时间范围二元组；任一时间范围不完整（未选/被清除）时返回 null
 const currentFrom = (): {
   timestampRange: [DateTime, DateTime];
   createdAtRange: [DateTime, DateTime];
@@ -659,14 +592,18 @@ const currentFrom = (): {
   return null;
 };
 
-const buildSearchIn = (from: {
-  timestampRange: [DateTime, DateTime];
-  createdAtRange: [DateTime, DateTime];
-}): SearchIn => {
-  // 范围精确到分钟（DateRangeField 内部已处理秒级边界），直接按原值发送
+// buildFilter 查询载荷过滤器：在高级条件基础上强制注入时间窗口与命名空间；
+// 任一时间范围缺失时返回 null，SearchTable 跳过本次查询（如翻页/切换类型时兜底）
+const buildFilter = (base: Record<string, FilterByItem>): Record<string, FilterByItem> | null => {
+  const from = currentFrom();
+  if (!from) {
+    return null;
+  }
+  // 范围精确到分钟（DateTimeRangeField 内部已处理秒级边界），直接按原值发送
   const [tsStart, tsEnd] = from.timestampRange;
   const [caStart, caEnd] = from.createdAtRange;
-  const filterBy: Record<string, FilterByItem> = {
+  return {
+    ...base,
     timestampFrom: {
       action: SearchAction.GREATER_EQUAL,
       value: tsStart.toUTC().toISO(),
@@ -688,67 +625,17 @@ const buildSearchIn = (from: {
       value: appStore.namespace,
     },
   };
-  // 高级筛选条件：逐条序列化 ExpressionField 的条件（字段/动作/值）；
-  // 可选字段均非时间字段，值类型与后端绑定一致（字符串/数字原样透传）
-  for (const item of filterConditions.value) {
-    filterBy[item.field.value] = {
-      action: item.action.value,
-      value: item.value.value,
-    };
-  }
-  return {
-    greedy: false,
-    page: page.value,
-    pageSize: pageSize.value,
-    orderBy: sortBy.value.map((s) => {
-      return {
-        name: s.key,
-        order: s.order === "asc" || s.order === true ? 1 : -1,
-      };
-    }),
-    filterBy,
-  };
 };
 
-const getListAction = async (from: {
-  timestampRange: [DateTime, DateTime];
-  createdAtRange: [DateTime, DateTime];
-}): Promise<void> => {
-  try {
-    loading.value = true;
-    await getResponse<TrafficListOut>(
-      trafficListGet(type.value, buildSearchIn(from)),
-      async (rsp) => {
-        items.value = rsp.data.items;
-        total.value = rsp.data.total;
-      },
-      async (rsp) => {
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "error",
-        });
-      },
-    );
-  } finally {
-    loading.value = false;
-  }
-};
+// trafficListRequest 列表请求：当前类型 + SearchTable 统一构建的查询载荷
+const trafficListRequest = (req: SearchIn): AxiosPromise => trafficListGet(type.value, req);
 
-const refreshAction = async (): Promise<void> => {
-  const from = currentFrom();
-  if (from) {
-    await getListAction(from);
-  }
+// submitQuery 显式查询：经 vee-validate 校验两个必填时间范围后，交由 SearchTable 重置页码并刷新
+const submitQuery = async (): Promise<void> => {
+  await handleSubmit(async () => {
+    await searchTableRef.value?.query();
+  })();
 };
-
-const submitQuery = handleSubmit(async () => {
-  page.value = 1;
-  const from = currentFrom();
-  if (from) {
-    await getListAction(from);
-  }
-});
 
 // 排除字段：时间窗口与命名空间由顶部必填时间范围与强制注入处理，不暴露在条件编辑器中
 const EXCLUDED_FILTER_FIELDS = new Set([
@@ -810,38 +697,22 @@ const loadSearchOptions = async (): Promise<void> => {
 
 watch(type, async () => {
   detailDialog.value = false;
-  page.value = 1;
-  // 高级筛选条件按类型独立，切换类型时清空并重载字段元数据，避免残留脏值参与查询
-  filterConditions.value = [];
+  stackDialog.value = false;
+  // 高级筛选条件按类型独立：切换类型时清空 SearchTable 内部条件并重载字段元数据，避免残留脏值参与查询
+  if (searchTableRef.value) {
+    searchTableRef.value.filterBy = [];
+  }
   await loadSearchOptions();
-  await refreshAction();
+  await searchTableRef.value?.query();
 });
 
 // 命名空间由全局按钮统一切换（appStore.namespace）：切换后回到第一页并刷新列表
 watch(
   () => appStore.namespace,
   async () => {
-    page.value = 1;
-    await refreshAction();
+    await searchTableRef.value?.query();
   },
 );
-
-watch(page, async () => {
-  await refreshAction();
-});
-
-watch(pageSize, async () => {
-  if (page.value !== 1) {
-    page.value = 1;
-  } else {
-    await refreshAction();
-  }
-});
-
-watch(sortBy, async () => {
-  page.value = 1;
-  await refreshAction();
-});
 
 // openDetail 打开行详情全屏对话框（列表已返回全字段，直接展示行数据）
 const openDetail = (item: Record<string, unknown>): void => {
@@ -897,15 +768,6 @@ const rowActions = (item: Record<string, unknown>): ItemActions => {
     actions.viewStack = () => openStack(item);
   }
   return actions;
-};
-
-const onClickRow = (
-  _event: Event,
-  // Table row values are heterogeneous.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: { item: Record<string, any> },
-): void => {
-  openDetail(data.item);
 };
 
 const formatValue = (value: unknown): string => {
@@ -1031,23 +893,23 @@ const viewPlaintextAction = async (field: DetailField): Promise<void> => {
 };
 
 onMounted(async () => {
+  // 拉取当前类型可筛选字段元数据；列表初查由 SearchTable onMounted 完成
   await loadSearchOptions();
-  await refreshAction();
 });
 </script>
 
 <style scoped>
-/* Collapse the empty message slot of filter inputs so the action buttons
-   align with the input control line; validation errors still expand it.
+/* Collapse the empty message slot of time range filter inputs so the extra filter row
+   keeps compact; validation errors still expand it.
    `.v-input__details` is a Vuetify BEM element class (double underscore),
    exempted from the kebab-case class pattern rule. */
 /* stylelint-disable-next-line selector-class-pattern */
-.filter-form :deep(.v-input__details:has(.v-messages:empty)) {
+.extra-filters :deep(.v-input__details:has(.v-messages:empty)) {
   min-height: 0;
   padding-top: 0;
 }
 
-.filter-form :deep(.v-messages:empty) {
+.extra-filters :deep(.v-messages:empty) {
   min-height: 0;
 }
 </style>

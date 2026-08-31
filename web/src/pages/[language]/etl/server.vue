@@ -3,11 +3,11 @@
     <template #body>
       <v-empty-state
         v-show="servers.length === 0"
+        v-request="getServerListAction"
         icon="mdi-magnify"
         :headline="$t('summary.noServerYet', { name: $t('model.server.name') })"
         :text="$t('summary.noServerYetHelp', { btn: $t('action.reset') })"
         :action-text="$t('action.reset')"
-        @click:action="getServerListAction"
       />
       <v-card v-for="server in servers" :key="server.id">
         <template #title>
