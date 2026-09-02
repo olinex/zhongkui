@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
@@ -20,26 +21,15 @@ type recogModel struct {
 	UserAgent string `json:"user_agent"`
 }
 
-// setupEngine 创建内存 sqlite 数据库与标签识别引擎。
-// :memory: sqlite 每个连接独立，限制单连接保证读写指向同一数据库。
+// setupEngine 创建共享已迁移的 PostgreSQL 测试库与标签识别引擎（testdb.Core）。
+// tag_rules 表已由 testdb 统一迁移。
 func setupEngine(t *testing.T) (*tagengine.Engine, *database.DB) {
 	t.Helper()
 	logger, err := logging.NewDefaultLogger()
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal(err)
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&tag.TagRule{}); err != nil {
-		t.Fatal(err)
-	}
+	db := testdb.Core(t)
 	return tagengine.NewEngine(db, logger, nil), db
 }
 

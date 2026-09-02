@@ -306,12 +306,15 @@ func (s *UnifiedScheduler) cronRunOnce(ctx context.Context, taskType string, cfg
 // 流程：读取游标 → 计算触发时间点 → 逐点入队 → CAS 写回新游标。
 // 只有全部触发点入队成功后才推进游标；中途失败时游标保持不变，下一轮会重新计算补投。
 // 重复投递的任务载荷一致（携带相同触发时间点），处理器具备幂等性即可保证结果一致。
+// 触发基准时刻取 now - Lookback：目标分钟为"已结束的完整分钟"，避免读取仍在写入/未聚合
+// 完成的当前分钟导致事件遗漏；Lookback 由配置指定（默认 5m），按任务可调。
 func (s *UnifiedScheduler) cursorRunOnce(ctx context.Context, taskType string, cfg SchedulerTaskConfig) error {
 	last, err := s.getCursor(ctx, taskType)
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	triggers, next := ComputeCursorTriggers(last, time.Now(), cfg.Interval.Std(), backlogPolicy(cfg))
+	now := time.Now().Add(-cfg.Lookback.Std())
+	triggers, next := ComputeCursorTriggers(last, now, cfg.Interval.Std(), backlogPolicy(cfg))
 	if len(triggers) == 0 {
 		// 无触发点：若游标已推进（如禁用积压补投时直接对齐到当前网格点），
 		// 仍需写回，否则积压会反复被跳过而游标永不走位

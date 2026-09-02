@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/migrations"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/migrate"
@@ -204,8 +205,6 @@ func createMigratorForDB(v *viper.Viper, gormDB *database.DB, dbName string) (*m
 		driverName = "postgres"
 	case "clickhouse":
 		driverName = "clickhouse"
-	case "sqlite":
-		driverName = "sqlite3"
 	}
 
 	verbose := v.GetBool("verbose")
@@ -275,9 +274,8 @@ func runCheckMigrateCmd(cmd *cobra.Command, args []string) {
 	dbTarget := targetFromViper(v)
 	keepTemp := v.GetBool("keep-temp")
 	for _, dbName := range targetDBs(dbTarget) {
-		manager := provider.MustInvokeSchemaManager(i, dbName)
 		pterm.DefaultSection.Println(translate.T("cli.migrate.check-section", map[string]any{"DB": dbName}))
-		if err := migrateCheckDB(ctx, v, dbName, keepTemp, manager.Models()); err != nil {
+		if err := migrateCheckDB(ctx, v, dbName, keepTemp, provider.Models(dbName)); err != nil {
 			pterm.Error.Println(translate.T("cli.migrate.check-failed", map[string]any{"DB": dbName, "Err": err}))
 		}
 	}
@@ -313,12 +311,12 @@ func migrateDiffDB(ctx context.Context, v *viper.Viper, dbName string) error {
 
 func targetDBs(target string) []string {
 	switch target {
-	case provider.CoreDbPrefix:
-		return []string{provider.CoreDbPrefix}
-	case provider.RawDbPrefix:
-		return []string{provider.RawDbPrefix}
+	case base.CoreDbName:
+		return []string{base.CoreDbName}
+	case base.RawDbName:
+		return []string{base.RawDbName}
 	default:
-		return []string{provider.CoreDbPrefix, provider.RawDbPrefix}
+		return []string{base.CoreDbName, base.RawDbName}
 	}
 }
 

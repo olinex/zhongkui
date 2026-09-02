@@ -25,6 +25,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
@@ -74,23 +75,9 @@ func newTagRuleTestLogger() *logging.Logger {
 	return &logging.Logger{SugaredLogger: zapLogger.Sugar()}
 }
 
-// createTagRuleTestDB 创建 sqlite 内存库并迁移 tag_rules / tag_rule_versions 表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createTagRuleTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&tag.TagRule{}, &tag.TagRuleVersion{}, &tag.TagRuleSample{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createTagRuleTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createTagRuleTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // registerTagRuleTestRoutes 注册标签规则管理路由（与 router.go 的注册保持一致）。
@@ -181,7 +168,12 @@ func ruleIDPath(action string, id uint) string {
 // TestTagRuleCreateAndDetail 创建与详情查询全链路。
 func TestTagRuleCreateAndDetail(t *testing.T) {
 	Convey("测试标签规则创建与详情查询", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -220,7 +212,12 @@ func TestTagRuleCreateAndDetail(t *testing.T) {
 // TestTagRuleCreateInvalidRegoRejected 非法语法与组级冲突的规则被拒绝落库。
 func TestTagRuleCreateInvalidRegoRejected(t *testing.T) {
 	Convey("测试非法规则的拒绝逻辑", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -292,7 +289,12 @@ func TestTagRuleCreateInvalidRegoRejected(t *testing.T) {
 // TestTagRuleUpdateAndVersion 更新生成版本快照且内容正确。
 func TestTagRuleUpdateAndVersion(t *testing.T) {
 	Convey("测试标签规则更新与版本快照", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 		ruleID := createTagRule(t, db, r, "rule-up", tagRuleValidRego)
@@ -354,7 +356,12 @@ tags contains "admin-updated" if {
 // TestTagRulePruneVersions 历史版本超过上限时裁剪最旧版本。
 func TestTagRulePruneVersions(t *testing.T) {
 	Convey("测试历史版本裁剪", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 		ruleID := createTagRule(t, db, r, "rule-prune", tagRuleValidRego)
@@ -392,7 +399,12 @@ func TestTagRulePruneVersions(t *testing.T) {
 // TestTagRuleRollback 回滚恢复目标版本内容，且回滚前内容成为新版本。
 func TestTagRuleRollback(t *testing.T) {
 	Convey("测试标签规则回滚", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 		ruleID := createTagRule(t, db, r, "rule-rb", tagRuleValidRego)
@@ -442,7 +454,12 @@ func TestTagRuleRollback(t *testing.T) {
 // TestTagRuleDeleteCascade 删除规则时级联删除其全部历史版本。
 func TestTagRuleDeleteCascade(t *testing.T) {
 	Convey("测试标签规则删除级联", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 		ruleID := createTagRule(t, db, r, "rule-del", tagRuleValidRego)
@@ -474,7 +491,12 @@ func TestTagRuleDeleteCascade(t *testing.T) {
 // TestTagRuleEnableDisable 启用/停用规则状态切换。
 func TestTagRuleEnableDisable(t *testing.T) {
 	Convey("测试标签规则启停", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 		ruleID := createTagRule(t, db, r, "rule-io", tagRuleValidRego)
@@ -505,7 +527,12 @@ func TestTagRuleEnableDisable(t *testing.T) {
 // TestTagRuleValidate 语法校验接口返回结构化结果。
 func TestTagRuleValidate(t *testing.T) {
 	Convey("测试标签规则语法校验接口", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -575,7 +602,12 @@ func TestTagRuleValidate(t *testing.T) {
 // TestTagRuleModelOptions 目标模型选项接口返回已注册模型列表。
 func TestTagRuleModelOptions(t *testing.T) {
 	Convey("测试标签规则目标模型选项接口", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -602,7 +634,12 @@ func TestTagRuleModelOptions(t *testing.T) {
 // TestTagRuleModelMetadata 目标模型元信息接口返回字段列表，未注册模型返回错误码 1107。
 func TestTagRuleModelMetadata(t *testing.T) {
 	Convey("测试标签规则目标模型元信息接口", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -658,7 +695,12 @@ func TestTagRuleModelMetadata(t *testing.T) {
 // TestTagRuleModelSamples 目标模型样例接口懒供给样例并返回，未注册模型返回错误码 1107。
 func TestTagRuleModelSamples(t *testing.T) {
 	Convey("测试标签规则目标模型样例接口", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -702,7 +744,12 @@ func TestTagRuleModelSamples(t *testing.T) {
 // 输出仅含错误消息不泄露堆栈。
 func TestTagRuleDryRun(t *testing.T) {
 	Convey("测试标签规则单规则 dry-run 接口", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -789,7 +836,12 @@ func TestTagRuleDryRun(t *testing.T) {
 // 输出逐规则详情与合并标签，错误仅含消息不泄露堆栈。
 func TestTagRuleDryRunGroup(t *testing.T) {
 	Convey("测试标签规则规则组 dry-run 接口", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -853,7 +905,12 @@ tags contains "miss-tag" if {
 // TestTagRuleListGet 列表查询与过滤。
 func TestTagRuleListGet(t *testing.T) {
 	Convey("测试标签规则列表查询", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 		createTagRule(t, db, r, "rule-a", tagRuleValidRego)
@@ -894,7 +951,12 @@ func TestTagRuleListGet(t *testing.T) {
 // TestTagRuleInvalidateAfterWrite 写路径后本地引擎缓存被失效。
 func TestTagRuleInvalidateAfterWrite(t *testing.T) {
 	Convey("测试写路径后引擎缓存失效", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 		createTagRule(t, db, r, "rule-cache", tagRuleValidRego)
@@ -922,7 +984,12 @@ func TestTagRuleInvalidateAfterWrite(t *testing.T) {
 // TestTagRuleCreateRuntimeInvalidRejected 第二层运行期样例校验失败的规则被拒绝落库。
 func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 	Convey("测试运行期样例校验的拒绝逻辑", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
@@ -976,7 +1043,12 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 // 未注册模型的规则引擎永不加载（按实际数据实例的类型键分组），属于死规则，写入时应拒绝。
 func TestTagRuleCreateModelNotRegisteredRejected(t *testing.T) {
 	Convey("测试未注册目标模型的拒绝逻辑", t, func() {
-		db := createTagRuleTestDB()
+		db := createTagRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 

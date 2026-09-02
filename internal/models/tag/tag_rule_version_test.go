@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
+	"zhongkui.com/zhongkui/internal/pkg/database"
 )
 
 // TestTagRuleVersion_Struct 测试 TagRuleVersion 结构体的基本属性
@@ -52,9 +53,6 @@ func TestTagRuleVersion_TableName(t *testing.T) {
 	convey.Convey("测试 TagRuleVersion 表名", t, func() {
 		convey.Convey("GORM 默认表名应为 tag_rule_versions", func() {
 			db := newTagRuleTestDB(t)
-			if err := db.AutoMigrate(&TagRuleVersion{}); err != nil {
-				t.Fatal("failed to migrate tag_rule_versions: " + err.Error())
-			}
 			stmt := db.Model(&TagRuleVersion{})
 			convey.So(stmt.Statement.Parse(&TagRuleVersion{}), convey.ShouldBeNil)
 			convey.So(stmt.Statement.Table, convey.ShouldEqual, "tag_rule_versions")
@@ -65,14 +63,18 @@ func TestTagRuleVersion_TableName(t *testing.T) {
 // TestTagRuleVersion_UniqueConstraint 测试 tag_rule_versions 表的 (rule_id, version) 唯一约束
 func TestTagRuleVersion_UniqueConstraint(t *testing.T) {
 	convey.Convey("测试 TagRuleVersion 唯一约束", t, func() {
+		// 版本对 rule_id 有级联外键约束，需先创建一条真实规则作为父行并复用其 ID。
+		seedRule := func(db *database.DB) uint {
+			rule := &TagRule{NamespaceName: "default", Name: "r-parent", Model: "t", Rego: "package zki\n\ntags contains \"a\"", Enabled: true}
+			convey.So(db.Create(rule).Error, convey.ShouldBeNil)
+			return rule.ID
+		}
+
 		convey.Convey("插入 (rule_id, version) 完全相同的版本应失败", func() {
 			db := newTagRuleTestDB(t)
-			if err := db.AutoMigrate(&TagRuleVersion{}); err != nil {
-				t.Fatal("failed to migrate tag_rule_versions: " + err.Error())
-			}
 			base := TagRuleVersion{
 				NamespaceName: "default",
-				RuleID:        1,
+				RuleID:        seedRule(db),
 				Version:       1,
 				Name:          "r1",
 				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
@@ -84,15 +86,14 @@ func TestTagRuleVersion_UniqueConstraint(t *testing.T) {
 			dup.ID = 0
 			err := db.Create(&dup).Error
 			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
+			// 不同数据库方言错误文案不同：PostgreSQL 报 duplicate key，SQLite 报 UNIQUE constraint failed；
+			// 统一以 "unique" 关键字判定唯一约束冲突。
+			convey.So(strings.ToLower(err.Error()), convey.ShouldContainSubstring, "unique")
 		})
 
 		convey.Convey("相同 rule_id 不同 version 应插入成功", func() {
 			db := newTagRuleTestDB(t)
-			if err := db.AutoMigrate(&TagRuleVersion{}); err != nil {
-				t.Fatal("failed to migrate tag_rule_versions: " + err.Error())
-			}
-			v1 := TagRuleVersion{NamespaceName: "default", RuleID: 1, Version: 1, Name: "r1", Model: "t", Rego: "package zki\n\ntags contains \"a\""}
+			v1 := TagRuleVersion{NamespaceName: "default", RuleID: seedRule(db), Version: 1, Name: "r1", Model: "t", Rego: "package zki\n\ntags contains \"a\""}
 			convey.So(db.Create(&v1).Error, convey.ShouldBeNil)
 			v2 := v1
 			v2.ID = 0

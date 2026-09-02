@@ -5,15 +5,15 @@ import (
 
 	migcore "zhongkui.com/zhongkui/internal/migrations/core"
 	migraw "zhongkui.com/zhongkui/internal/migrations/raw"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/provider"
 )
 
 func MigrationFor(dbName string) embed.FS {
 	switch dbName {
-	case provider.CoreDbPrefix:
+	case base.CoreDbName, base.CoreTestDbName:
 		return migcore.Migrations
-	case provider.RawDbPrefix:
+	case base.RawDbName, base.RawTestDbName:
 		return migraw.Migrations
 	default:
 		panic(errors.Newf(`unknown db name: %s`, dbName))

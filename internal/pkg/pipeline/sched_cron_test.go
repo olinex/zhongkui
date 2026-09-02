@@ -37,33 +37,33 @@ func TestComputeCronTriggers(t *testing.T) {
 		}
 
 		Convey("首次运行：无 stamp 时立即投递下一次触发点并以之为新 stamp", func() {
-			triggers, next := ComputeCronTriggers(time.Time{}, at(9, 5), hourly, BacklogPolicy{})
+			triggers, next := ComputeCronTriggers(time.Time{}, at(9, 5), hourly, BacklogPolicy{Enabled: true})
 			So(len(triggers), ShouldEqual, 1)
 			So(triggers[0].Equal(at(10, 0)), ShouldBeTrue)
 			So(next.Equal(at(10, 0)), ShouldBeTrue)
 		})
 
 		Convey("积压场景：stamp 08:00、当前 10:30，应补投 09:00 与 10:00 两个触发点", func() {
-			triggers, next := ComputeCronTriggers(at(8, 0), at(10, 30), hourly, BacklogPolicy{})
+			triggers, next := ComputeCronTriggers(at(8, 0), at(10, 30), hourly, BacklogPolicy{Enabled: true})
 			equalTriggers(triggers, at(9, 0), at(10, 0))
 			So(next.Equal(at(10, 0)), ShouldBeTrue)
 		})
 
 		Convey("same 触发点：stamp 10:00、当前 10:30（未跨越新整点），无需补投且 stamp 不变", func() {
-			triggers, next := ComputeCronTriggers(at(10, 0), at(10, 30), hourly, BacklogPolicy{})
+			triggers, next := ComputeCronTriggers(at(10, 0), at(10, 30), hourly, BacklogPolicy{Enabled: true})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(10, 0)), ShouldBeTrue)
 		})
 
 		Convey("stamp 已指向未来触发点，尚未到点：不触发", func() {
-			first, _ := ComputeCronTriggers(time.Time{}, at(9, 5), hourly, BacklogPolicy{}) // first = 10:00
-			triggers, next := ComputeCronTriggers(first[0], at(9, 30), hourly, BacklogPolicy{})
+			first, _ := ComputeCronTriggers(time.Time{}, at(9, 5), hourly, BacklogPolicy{Enabled: true}) // first = 10:00
+			triggers, next := ComputeCronTriggers(first[0], at(9, 30), hourly, BacklogPolicy{Enabled: true})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(first[0]), ShouldBeTrue)
 		})
 
 		Convey("schedule 为空：返回空触发并保持 stamp 不变", func() {
-			triggers, next := ComputeCronTriggers(at(9, 0), at(10, 30), nil, BacklogPolicy{})
+			triggers, next := ComputeCronTriggers(at(9, 0), at(10, 30), nil, BacklogPolicy{Enabled: true})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(9, 0)), ShouldBeTrue)
 		})
@@ -76,20 +76,20 @@ func TestComputeCronTriggers(t *testing.T) {
 
 		Convey("窗口裁剪：仅补投窗口期内的触发点，超窗积压直接丢弃", func() {
 			// stamp 08:00、当前 10:30、窗口 90m：仅补投 09:00 与 10:00，丢弃更早积压
-			triggers, next := ComputeCronTriggers(at(8, 0), at(10, 30), hourly, BacklogPolicy{Window: 90 * time.Minute})
+			triggers, next := ComputeCronTriggers(at(8, 0), at(10, 30), hourly, BacklogPolicy{Enabled: true, Window: 90 * time.Minute})
 			equalTriggers(triggers, at(9, 0), at(10, 0))
 			So(next.Equal(at(10, 0)), ShouldBeTrue)
 		})
 
 		Convey("窗口裁剪后无触发点：保持 stamp 不变", func() {
 			// stamp 08:00、当前 10:30、窗口 10m：窗口起点 10:20 之后的下一整点为 11:00，超过 now
-			triggers, next := ComputeCronTriggers(at(8, 0), at(10, 30), hourly, BacklogPolicy{Window: 10 * time.Minute})
+			triggers, next := ComputeCronTriggers(at(8, 0), at(10, 30), hourly, BacklogPolicy{Enabled: true, Window: 10 * time.Minute})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(8, 0)), ShouldBeTrue)
 		})
 
 		Convey("生成上限：积压过大时截断本轮，stamp 推进到最后一个生成触发点", func() {
-			triggers, next := ComputeCronTriggers(at(8, 0), at(13, 0), hourly, BacklogPolicy{Limit: 3})
+			triggers, next := ComputeCronTriggers(at(8, 0), at(13, 0), hourly, BacklogPolicy{Enabled: true, Limit: 3})
 			equalTriggers(triggers, at(9, 0), at(10, 0), at(11, 0))
 			So(next.Equal(at(11, 0)), ShouldBeTrue)
 		})

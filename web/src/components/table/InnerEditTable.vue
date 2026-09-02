@@ -8,7 +8,47 @@
         :search-request="searchRequest"
       >
         <template #items="{ items, close }">
-          <slot name="search" :items="items" :close="close" :append-item="appendItem" />
+          <slot name="search" :items="items" :close="close" :append-item="appendItem">
+            <!-- 统一候选条目渲染：紧凑 v-list-item 风格，通过 item-title / item-subtitle / item-append 插槽定制 -->
+            <v-list :items="items">
+              <v-list-item v-for="item in items" :key="item[itemKeyField]" class="px-1">
+                <v-list-item-title class="text-body-2">
+                  <slot name="item-title" :item="item">
+                    <span class="font-weight-medium">{{ item.name }}</span>
+                  </slot>
+                </v-list-item-title>
+                <template v-if="subtitleField || $slots['item-subtitle']">
+                  <v-list-item-subtitle>
+                    <slot name="item-subtitle" :item="item">
+                      {{ item[subtitleField] }}
+                    </slot>
+                  </v-list-item-subtitle>
+                </template>
+                <template #append>
+                  <div class="d-flex align-center ga-1">
+                    <slot
+                      name="item-append"
+                      :item="item"
+                      :append-item="appendItem"
+                      :close="close"
+                      :editable="editable"
+                      :bound="isBound(item)"
+                    >
+                      <v-btn
+                        :disabled="!editable || isBound(item)"
+                        :text="$t('action.add')"
+                        color="primary"
+                        variant="tonal"
+                        size="small"
+                        density="compact"
+                        @click="appendItem(item)"
+                      />
+                    </slot>
+                  </div>
+                </template>
+              </v-list-item>
+            </v-list>
+          </slot>
         </template>
       </scroll-search-field>
     </template>
@@ -27,7 +67,11 @@
           <td
             v-show="listItemAction"
             key="__actions"
-            :class="listItemAction ? 'v-data-table-column--fixed v-data-table-column--last-fixed' : undefined"
+            :class="
+              listItemAction
+                ? 'v-data-table-column--fixed v-data-table-column--last-fixed'
+                : undefined
+            "
           >
             <slot
               name="list-item-action"
@@ -123,7 +167,24 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  // 候选条目循环与去重使用的唯一键字段
+  itemKeyField: {
+    type: String,
+    default: "id",
+  },
+  // 默认候选条目副标题字段名（未配置且未提供 item-subtitle 插槽时不显示副标题）
+  subtitleField: {
+    type: String,
+    default: "",
+  },
 });
 
 const emits = defineEmits(["update:modelValue"]);
+
+// 候选条目是否已被选（按 itemKeyField 比对），供默认「添加」按钮与 item-append 插槽使用
+// Row payload is dynamic.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isBound = (item: Record<string, any>): boolean => {
+  return props.modelValue.some((x) => x[props.itemKeyField] === item[props.itemKeyField]);
+};
 </script>

@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
@@ -10,20 +11,13 @@ import (
 )
 
 const (
-	DefaultLoggerPrefix  = "default"
-	ApiLoggerPrefix      = "api"
-	DatabaseLoggerPrefix = "database"
-	CaptureLoggerPrefix  = "capture"
-	EtcdLoggerPrefix     = "etcd"
-	GrpcLoggerPrefix     = "grpc"
-	PipelineLoggerPrefix = "pipeline"
-	DefaultLoggerLabel   = "logger.default"
-	ApiLoggerLabel       = "logger.api"
-	DatabaseLoggerLabel  = "logger.database"
-	CaptureLoggerLabel   = "logger.capture"
-	EtcdLoggerLabel      = "logger.etcd"
-	GrpcLoggerLabel      = "logger.grpc"
-	PipelineLoggerLabel  = "logger.pipeline"
+	DefaultLoggerLabel  = "logger." + base.DefaultLoggerName
+	ApiLoggerLabel      = "logger." + base.ApiLoggerName
+	DatabaseLoggerLabel = "logger." + base.DatabaseLoggerName
+	CaptureLoggerLabel  = "logger." + base.CaptureLoggerName
+	EtcdLoggerLabel     = "logger." + base.EtcdLoggerName
+	GrpcLoggerLabel     = "logger." + base.GrpcLoggerName
+	PipelineLoggerLabel = "logger." + base.PipelineLoggerName
 )
 
 func loggerProvider(name string) do.Provider[*logging.Logger] {
@@ -42,31 +36,31 @@ func loggerProvider(name string) do.Provider[*logging.Logger] {
 }
 
 func NewDefaultLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(DefaultLoggerPrefix)
+	return loggerProvider(base.DefaultLoggerName)
 }
 
 func NewApiLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(ApiLoggerPrefix)
+	return loggerProvider(base.ApiLoggerName)
 }
 
 func NewDatabaseLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(DatabaseLoggerPrefix)
+	return loggerProvider(base.DatabaseLoggerName)
 }
 
 func NewCaptureLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(CaptureLoggerPrefix)
+	return loggerProvider(base.CaptureLoggerName)
 }
 
 func NewEtcdLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(EtcdLoggerPrefix)
+	return loggerProvider(base.EtcdLoggerName)
 }
 
 func NewGrpcLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(GrpcLoggerPrefix)
+	return loggerProvider(base.GrpcLoggerName)
 }
 
 func NewPipelineLogger() do.Provider[*logging.Logger] {
-	return loggerProvider(PipelineLoggerPrefix)
+	return loggerProvider(base.PipelineLoggerName)
 }
 
 func InjectDefaultLogger(i do.Injector) {
@@ -154,5 +148,11 @@ func MustInvokePipelineLogger(i do.Injector) *logging.Logger {
 }
 
 func DescribeLoggerConfig() config.ConfigDescriptions {
-	return logging.DescribeConfig(ApiLoggerPrefix, DatabaseLoggerPrefix, EtcdLoggerPrefix, GrpcLoggerPrefix, PipelineLoggerPrefix)
+	return logging.DescribeConfig(
+		base.ApiLoggerName,
+		base.DatabaseLoggerName,
+		base.EtcdLoggerName,
+		base.GrpcLoggerName,
+		base.PipelineLoggerName,
+	)
 }

@@ -394,6 +394,7 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import { useNotificationChannelStore } from "@/stores/notificationChannel";
+import { BackendDataType } from "@/types";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
 import { languageNameKey, languageSelectOptions } from "@/utils/options";
@@ -690,7 +691,15 @@ const viewConfigPlaintext = async (item: Record<string, unknown>): Promise<void>
   }
   const label = i18n.global.t("model.notificationTarget.field.config");
   await plaintextDialogRef.value?.open(
-    { key: "config", label, display: "", kind: "crypto", length: 0, value: ciphertext },
+    {
+      key: "config",
+      label,
+      display: "",
+      kind: "crypto",
+      length: 0,
+      value: ciphertext,
+      type: BackendDataType.STRING,
+    },
     "notification-target",
     label,
   );

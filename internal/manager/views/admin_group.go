@@ -6,12 +6,12 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -306,6 +306,17 @@ func GroupBatchDelete(c *gin.Context) {
 		func(name string) string { return name },
 		func(name string) error {
 			return db.Transaction(func(tx *database.DB) error {
+				// 以 FOR UPDATE 行锁锁定用户组行，与 UserGroupJoin 的组行校验串行化，
+				// 避免"校验无引用后，并发加入引用再删除组"导致的悬挂引用（SQLite 退化为普通读）
+				var group core.Group
+				if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&group, "name = ?", name).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						// 组不存在，视为成功跳过（幂等）
+						return nil
+					}
+					return errors.WithStack(err)
+				}
+
 				// 检查用户组是否关联了RBAC策略记录：
 				// 1. ptype='p' AND v0=组名: 组定义的策略
 				// 2. ptype='g' AND v1=组名: 用户属于该组的关联关系
@@ -319,7 +330,7 @@ func GroupBatchDelete(c *gin.Context) {
 					name,
 				).Error; err != nil {
 					if errors.Is(err, gorm.ErrRecordNotFound) {
-						// 无引用关系，可以删除；组不存在时 Delete 0 行，视为成功跳过
+						// 无引用关系，可以删除
 						return tx.Delete(&core.Group{}, "name = ?", name).Error
 					}
 					// 其他数据库错误（含外键约束冲突）作为失败原因
@@ -334,7 +345,6 @@ func GroupBatchDelete(c *gin.Context) {
 
 // GroupRbacPolicyAdd 处理为组添加RBAC策略请求。
 // 为指定用户组添加新的权限策略，同时验证策略模板是否存在。
-// 使用事务和并发查询确保操作的原子性和性能。
 //
 // 参数:
 //   - c *gin.Context: Gin框架的上下文对象，包含HTTP请求和响应信息
@@ -350,9 +360,9 @@ func GroupBatchDelete(c *gin.Context) {
 //   - 失败: 返回相应的错误信息（如策略模板不存在、验证失败）
 //
 // 注意:
-//   - 策略添加前会验证对应的策略模板是否存在
-//   - 使用事务确保模板验证和策略创建的原子性
-//   - 使用并发查询提高性能
+//   - 策略添加前会验证用户组与对应的策略模板均存在
+//   - 事务内以 FOR UPDATE 行锁校验组与模板，锁保持到 enforcer 写入完成后再提交，
+//     避免"校验通过后被并发删除组/模板"的竞态（SQLite 测试环境无 FOR UPDATE，退化为普通读）
 func GroupRbacPolicyAdd(c *gin.Context) {
 	// 从URL路径参数中获取组名
 	name, ok := getRawParam(c, "name")
@@ -373,35 +383,40 @@ func GroupRbacPolicyAdd(c *gin.Context) {
 		return
 	}
 
-	// 获取数据库连接
+	// 获取数据库连接与 Casbin enforcer
 	db := middlewares.GetCoreDatabase(c)
+	enforcer := middlewares.GetRbacPolicy(c)
 
-	// 创建新的组策略实例
-	policy := core.NewGroupPolicy(name, in.Target, in.Action, in.Effect)
+	// 在事务内以 FOR UPDATE 行锁校验模板，并在行锁保持期间执行 enforcer 增量写入，
+	// 使内存与 rbac_policies 表同步（O(1)），同时杜绝校验与写入之间的并发修改
+	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
+		// 以 FOR UPDATE 行锁校验用户组存在（防并发删除组，与 GroupBatchDelete 串行化，
+		// 杜绝"组删除瞬间仍写入策略"的悬挂引用；SQLite 退化为普通读）
+		var group core.Group
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&group, "name = ?", name).Error; err != nil {
+			return err
+		}
 
-	// 使用事务执行策略添加操作
-	err := db.Transaction(func(tx *database.DB) error {
+		// 校验策略模板存在（行锁防并发删除模板）
 		var template core.RbacPolicyTemplate
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&template, "target = ? AND action = ?", in.Target, in.Action).Error; err != nil {
+			return err
+		}
 
-		// 创建错误组用于并发执行查询
-		wg, innerCtx := errgroupx.WithContext(c)
+		// 行锁保持期间通过 enforcer 增量写入策略（独立连接写入，锁由本事务持有直至提交）
+		if _, err := enforcer.AddPolicy(name, in.Target, in.Action, in.Effect); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
 
-		// 并发查询1: 验证策略模板是否存在
-		wg.GoNamed("check", func() error {
-			return tx.WithContext(innerCtx).First(&template, "target = ? AND action = ?", in.Target, in.Action).Error
-		})
-
-		// 并发查询2: 创建策略记录
-		wg.GoNamed("create", func() error {
-			return tx.WithContext(innerCtx).Create(&policy).Error
-		})
-
-		// 等待所有并发操作完成
-		return wg.Wait()
-	})
-
-	// 处理事务执行错误
-	if err != nil {
+	// 回查落库行填充系统字段（ID/CreatedAt/UpdatedAt），保持前端响应契约
+	var policy core.RbacPolicy
+	if err := db.First(&policy, "ptype = ? AND v0 = ? AND v1 = ? AND v2 = ? AND v3 = ?",
+		base.PolicyLabel, name, in.Target, in.Action, in.Effect).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -452,20 +467,9 @@ func GroupRbacPolicyRemove(c *gin.Context) {
 		return
 	}
 
-	// 获取数据库连接
-	db := middlewares.GetCoreDatabase(c)
-
-	// 执行策略删除操作
-	// 删除条件需要精确匹配所有字段以确保删除正确的策略
-	if err := db.Delete(
-		&core.RbacPolicy{},
-		"ptype = ? AND v0 = ? AND v1 = ? AND v2 = ? AND v3 = ?",
-		base.PolicyLabel, // 策略类型为'p'（组策略）
-		name,             // 组名
-		in.Target,        // 目标资源
-		in.Action,        // 操作类型
-		in.Effect,        // 效果（allow/deny）
-	).Error; err != nil {
+	// 通过 Casbin enforcer 增量移除策略，使内存与 rbac_policies 表同步（O(1)，无需全量重载）
+	// 策略不存在时返回 (false, nil)，与原有 Delete 0 行视为成功的幂等语义一致
+	if _, err := middlewares.GetRbacPolicy(c).RemovePolicy(name, in.Target, in.Action, in.Effect); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}

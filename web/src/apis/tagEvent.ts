@@ -245,3 +245,26 @@ export function tagEventRuleVersionRollback(id: number, version: number): AxiosP
     headers: getJwtHeader(),
   });
 }
+
+// ---- 标签事件记录（命名空间化，归属当前请求命名空间）----
+export function tagEventRecordListGet(data: SearchIn): AxiosPromise {
+  return request.post("/tag-event/record/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagEventRecordListOptions(): AxiosPromise {
+  return request.options("/tag-event/record/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+export function tagEventRecordDetailGet(id: number): AxiosPromise {
+  return request.post(
+    `/tag-event/record/${id}/get`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}

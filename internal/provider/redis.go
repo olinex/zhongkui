@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
@@ -10,10 +11,8 @@ import (
 )
 
 const (
-	CacheRedisLabel     = "cache-redis"
-	PipelineRedisLabel  = "pipeline-redis"
-	CacheRedisPrefix    = "cache"
-	PipelineRedisPrefix = "pipeline"
+	CacheRedisLabel    = "redis." + base.CacheRedisName
+	PipelineRedisLabel = "redis." + base.PipelineRedisName
 )
 
 func redisProvider(name string) do.Provider[*redis.Client] {
@@ -33,11 +32,11 @@ func redisProvider(name string) do.Provider[*redis.Client] {
 }
 
 func NewCacheRedis() do.Provider[*redis.Client] {
-	return redisProvider(CacheRedisPrefix)
+	return redisProvider(base.CacheRedisName)
 }
 
 func NewPipelineRedis() do.Provider[*redis.Client] {
-	return redisProvider(PipelineRedisPrefix)
+	return redisProvider(base.PipelineRedisName)
 }
 
 func InjectCacheRedis(i do.Injector) {
@@ -57,5 +56,5 @@ func InvokePipelineRedis(i do.Injector) (*redis.Client, error) {
 }
 
 func DescribeRedisConfig() config.ConfigDescriptions {
-	return redis.DescribeConfig(CacheRedisPrefix, PipelineRedisPrefix)
+	return redis.DescribeConfig(base.CacheRedisName, base.PipelineRedisName)
 }

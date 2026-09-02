@@ -35,6 +35,14 @@ type RbacPolicy struct {
 	// 当Ptype='p'时：表示效果(effect)，只能是'allow'或'deny'
 	// 当Ptype='g'时：留空
 	V3 string `gorm:"type:VARCHAR(64)"`
+
+	// V4 策略的第五个参数
+	// 为 gorm-adapter 的 CasbinRule 结构预留（INSERT 会携带 v4 列），当前模型不使用，留空
+	V4 string `gorm:"type:VARCHAR(64)"`
+
+	// V5 策略的第六个参数
+	// 为 gorm-adapter 的 CasbinRule 结构预留（INSERT 会携带 v5 列），当前模型不使用，留空
+	V5 string `gorm:"type:VARCHAR(64)"`
 }
 
 // NewGroupPolicy 创建新的组策略实例

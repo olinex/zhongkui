@@ -27,6 +27,7 @@ navbar:
     self: Tag Events
     tagRule: Tag Rule
     tagEventRule: Tag Event Rule
+    record: Tag Event Record
   pin: Pin sidebar
   unpin: Unpin sidebar
 model:
@@ -54,6 +55,8 @@ model:
       undefined: "undefined"
       yes: Yes
       no: No
+      "true": Yes
+      "false": No
   notificationChannel:
     name: Notification Channel
     field:
@@ -310,6 +313,8 @@ model:
       queue: Queue
       timeout: Timeout
       maxRetry: Max Retry
+      retention: Completion Retention
+      lookback: Lookback Offset
       enabled: Enabled
       payload: Payload
       backlogEnabled: Catch Up Backlog
@@ -393,6 +398,52 @@ model:
       notificationDefault: Use namespace default notification group
       notificationGroup: Notification Group
       notificationTarget: Notification Target
+  tagEventRecord:
+    name: Tag Event Record
+    field:
+      id: ID
+      createdAt: Created At
+      updatedAt: Updated At
+      ruleId: Rule ID
+      ruleName: Rule Name
+      matchAll: Match All Conditions
+      status: Status
+      dedupKey: Dedup Key
+      detectedAt: Detected At
+    type:
+      status:
+        pending: Pending
+        alerting: Alerting
+        suppressed: Suppressed
+        closed: Closed
+    option:
+      pending: Pending
+      alerting: Alerting
+      suppressed: Suppressed
+      closed: Closed
+    content:
+      info: Event Info
+      hits: Hit Details
+      sends: Related Send Records
+  tagEventRecordHit:
+    name: Hit Detail
+    field:
+      conditionName: Condition Name
+      model: Target Model
+      dimension: Tag Dimension
+      item: Dimension Value
+      count: Hit Count
+      threshold: Condition Threshold
+      window: Time Window
+  tagEventRecordSend:
+    name: Send Record
+    field:
+      targetName: Notification Target
+      channelName: Notification Channel
+      channelType: Channel Type
+      status: Status
+      messageId: Message ID
+      notifiedAt: Notified At
   tagEventCondition:
     name: Condition
     field:
@@ -1010,6 +1061,9 @@ title:
     template: Notification Templates
     record: Send Records
   tagRuleTagEvent: Tag Events - Tag RulesRule
+  tagEvent:
+    record: Tag Event Record
+    recordDetail: Tag Event Record Detail
   tagEventRuleTagEvent: Tag Event - Tag Event Rule
   queueEtl: ETL - Queue
   serverEtl: ETL - Server

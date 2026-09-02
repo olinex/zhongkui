@@ -1,7 +1,7 @@
 <template>
   <main-layout current-nav="etl">
     <template #body>
-      <v-container>
+      <v-container fluid>
         <div class="d-flex justify-end my-2">
           <action-button-group
             :refresh="getSchedulerListAction"
@@ -98,6 +98,22 @@
                 </v-col>
               </v-row>
               <v-row dense>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="createRetention"
+                    v-bind="createRetentionProps"
+                    :label="$t('model.scheduler.field.retention')"
+                  />
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="createLookback"
+                    v-bind="createLookbackProps"
+                    :label="$t('model.scheduler.field.lookback')"
+                  />
+                </v-col>
+              </v-row>
+              <v-row dense>
                 <v-col cols="12">
                   <v-switch
                     v-model="createEnabled"
@@ -155,7 +171,7 @@
           prepend-icon="mdi-calendar-edit"
           @confirm="itemUpdateAction"
         >
-          <template #body>
+          <template #body="{ editable }">
             <v-form>
               <v-row dense>
                 <v-col cols="12">
@@ -172,6 +188,7 @@
                     v-model="editCronSpec"
                     v-bind="editCronSpecProps"
                     :label="$t('model.scheduler.field.cronSpec')"
+                    :disabled="!editable"
                   />
                 </v-col>
                 <v-col cols="6">
@@ -179,6 +196,7 @@
                     v-model="editInterval"
                     v-bind="editIntervalProps"
                     :label="$t('model.scheduler.field.interval')"
+                    :disabled="!editable"
                   />
                 </v-col>
               </v-row>
@@ -188,6 +206,7 @@
                     v-model="editQueue"
                     v-bind="editQueueProps"
                     :label="$t('model.scheduler.field.queue')"
+                    :disabled="!editable"
                   />
                 </v-col>
               </v-row>
@@ -197,6 +216,7 @@
                     v-model="editTimeout"
                     v-bind="editTimeoutProps"
                     :label="$t('model.scheduler.field.timeout')"
+                    :disabled="!editable"
                   />
                 </v-col>
                 <v-col cols="6">
@@ -205,6 +225,25 @@
                     v-bind="editMaxRetryProps"
                     type="number"
                     :label="$t('model.scheduler.field.maxRetry')"
+                    :disabled="!editable"
+                  />
+                </v-col>
+              </v-row>
+              <v-row dense>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="editRetention"
+                    v-bind="editRetentionProps"
+                    :label="$t('model.scheduler.field.retention')"
+                    :disabled="!editable"
+                  />
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="editLookback"
+                    v-bind="editLookbackProps"
+                    :label="$t('model.scheduler.field.lookback')"
+                    :disabled="!editable"
                   />
                 </v-col>
               </v-row>
@@ -216,6 +255,7 @@
                     :label="$t('model.scheduler.field.enabled')"
                     color="primary"
                     hide-details
+                    :disabled="!editable"
                   />
                 </v-col>
               </v-row>
@@ -225,6 +265,7 @@
                     v-model="editPayload"
                     :label="$t('model.scheduler.field.payload')"
                     rows="3"
+                    :disabled="!editable"
                   />
                 </v-col>
               </v-row>
@@ -236,6 +277,7 @@
                     :label="$t('model.scheduler.field.backlogEnabled')"
                     color="primary"
                     hide-details
+                    :disabled="!editable"
                   />
                 </v-col>
               </v-row>
@@ -245,6 +287,7 @@
                     v-model="editBacklogWindow"
                     v-bind="editBacklogWindowProps"
                     :label="$t('model.scheduler.field.backlogWindow')"
+                    :disabled="!editable"
                   />
                 </v-col>
                 <v-col cols="6">
@@ -253,6 +296,7 @@
                     v-bind="editBacklogLimitProps"
                     type="number"
                     :label="$t('model.scheduler.field.backlogLimit')"
+                    :disabled="!editable"
                   />
                 </v-col>
               </v-row>
@@ -342,6 +386,8 @@ const [createInterval, createIntervalProps] = createForm.defineField("interval",
 const [createQueue, createQueueProps] = createForm.defineField("queue", vuetifyCfg);
 const [createTimeout, createTimeoutProps] = createForm.defineField("timeout", vuetifyCfg);
 const [createMaxRetry, createMaxRetryProps] = createForm.defineField("maxRetry", vuetifyCfg);
+const [createRetention, createRetentionProps] = createForm.defineField("retention", vuetifyCfg);
+const [createLookback, createLookbackProps] = createForm.defineField("lookback", vuetifyCfg);
 const [createEnabled, createEnabledProps] = createForm.defineField("enabled", vuetifyCfg);
 const [createBacklogEnabled, createBacklogEnabledProps] = createForm.defineField(
   "backlogEnabled",
@@ -364,6 +410,8 @@ const [editInterval, editIntervalProps] = editForm.defineField("interval", vueti
 const [editQueue, editQueueProps] = editForm.defineField("queue", vuetifyCfg);
 const [editTimeout, editTimeoutProps] = editForm.defineField("timeout", vuetifyCfg);
 const [editMaxRetry, editMaxRetryProps] = editForm.defineField("maxRetry", vuetifyCfg);
+const [editRetention, editRetentionProps] = editForm.defineField("retention", vuetifyCfg);
+const [editLookback, editLookbackProps] = editForm.defineField("lookback", vuetifyCfg);
 const [editEnabled, editEnabledProps] = editForm.defineField("enabled", vuetifyCfg);
 const [editBacklogEnabled, editBacklogEnabledProps] = editForm.defineField(
   "backlogEnabled",
@@ -418,6 +466,20 @@ const schedulerHeaders = ref([
     key: "maxRetry",
     title: i18n.global.t("model.scheduler.field.maxRetry"),
     type: BackendDataType.INT,
+    align: "start",
+    sortable: true,
+  },
+  {
+    key: "retention",
+    title: i18n.global.t("model.scheduler.field.retention"),
+    type: BackendDataType.DURATION,
+    align: "start",
+    sortable: true,
+  },
+  {
+    key: "lookback",
+    title: i18n.global.t("model.scheduler.field.lookback"),
+    type: BackendDataType.DURATION,
     align: "start",
     sortable: true,
   },
@@ -522,6 +584,8 @@ const openCreateDialogAction = (): void => {
   createForm.resetField("queue", { value: "" });
   createForm.resetField("timeout", { value: "" });
   createForm.resetField("maxRetry", { value: 0 });
+  createForm.resetField("retention", { value: "1h" });
+  createForm.resetField("lookback", { value: "5m" });
   createForm.resetField("enabled", { value: true });
   createForm.resetField("backlogEnabled", { value: true });
   createForm.resetField("backlogWindow", { value: "0" });
@@ -567,6 +631,8 @@ const createAction = createForm.handleSubmit(async (values) => {
     backlogEnabled: values.backlogEnabled ?? true,
     backlogWindow: (values.backlogWindow as string)?.trim() ?? "0",
     backlogLimit: values.backlogLimit ?? 1000,
+    retention: (values.retention as string)?.trim() || "1h",
+    lookback: (values.lookback as string)?.trim() || "5m",
   };
   await getSimpleResponse(
     schedulerTaskCreate(data),
@@ -595,6 +661,8 @@ const openEditDialogAction = (item: InspectorSchedulerListItem): void => {
   editForm.resetField("queue", { value: item.queue ?? "" });
   editForm.resetField("timeout", { value: item.timeout ?? "" });
   editForm.resetField("maxRetry", { value: item.maxRetry ?? 0 });
+  editForm.resetField("retention", { value: item.retention ?? "1h" });
+  editForm.resetField("lookback", { value: item.lookback ?? "5m" });
   editForm.resetField("enabled", { value: item.enabled ?? true });
   editForm.resetField("backlogEnabled", { value: item.backlogEnabled ?? true });
   editForm.resetField("backlogWindow", { value: item.backlogWindow ?? "0" });
@@ -639,6 +707,8 @@ const itemUpdateAction = editForm.handleSubmit(async (values) => {
     backlogEnabled: values.backlogEnabled ?? true,
     backlogWindow: (values.backlogWindow as string)?.trim() ?? "0",
     backlogLimit: values.backlogLimit ?? 1000,
+    retention: (values.retention as string)?.trim() || "1h",
+    lookback: (values.lookback as string)?.trim() || "5m",
   };
   await getSimpleResponse(
     schedulerTaskUpdate(data),

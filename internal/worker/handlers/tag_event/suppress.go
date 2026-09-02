@@ -96,13 +96,13 @@ func NewEventSuppressHandler(i do.Injector) *EventSuppressHandler {
 // 单事务内处理全部 pending 事件，完成批量状态变更（覆盖抑制 / 新告警 / window0 全告警 / 其余抑制 / 自动关闭）；
 // 无 pending 事件时直接返回；notify 任务投递失败返回错误触发重试（事务回滚，事件保持 pending，下轮重估）。
 func (h *EventSuppressHandler) Do(ctx context.Context, task etl.Task) error {
-	coverSQL := buildSuppressCoverSQL(h.coreDB)
+	coverSQL := buildSuppressCoverSQL()
 
 	var alertingIDs []uint
 	if err := h.coreDB.WithContext(ctx).Transaction(func(tx *database.DB) error {
 		// 单条 group-select 按 dedup_key 聚合（ROW_NUMBER 取每键最早 pending）：最早 pending / 最早 alerting 锚 / 规则窗口 / 首条 pending ID
 		var aggs []keyAgg
-		groupSQL := buildSuppressGroupSQL(h.coreDB)
+		groupSQL := buildSuppressGroupSQL()
 
 		if err := tx.
 			Raw(groupSQL, tag.EventStatusAlerting, tag.EventStatusPending).
@@ -222,18 +222,14 @@ func classifyAggs(aggs []keyAgg) (window0Keys, newAlertKeys []string, minPendIDs
 	return window0Keys, newAlertKeys, minPendIDs
 }
 
-// epochExpr 返回将 SQL 表达式转为 Unix 秒数的表达式，按数据库方言适配：
-// PostgreSQL 用 EXTRACT(EPOCH FROM …)，测试用 SQLite 用 UNIXEPOCH(…)。
-func epochExpr(db *database.DB, expr string) string {
-	if db.Dialector.Name() == "sqlite" {
-		return "UNIXEPOCH(" + expr + ")"
-	}
+// epochExpr 返回将 SQL 表达式转为 Unix 秒数的表达式：EXTRACT(EPOCH FROM …)。
+func epochExpr(expr string) string {
 	return "EXTRACT(EPOCH FROM " + expr + ")"
 }
 
 // buildSuppressCoverSQL 生成"覆盖窗口抑制"SQL：将落在 alerting 锚覆盖窗口（最早锚 detected_at + suppress_window）
 // 内的 pending 置为 suppressed。
-func buildSuppressCoverSQL(db *database.DB) string {
+func buildSuppressCoverSQL() string {
 	return fmt.Sprintf(`
 UPDATE tag_event_records AS E
 SET status = ?
@@ -249,12 +245,12 @@ FROM (
 WHERE E.status = ?
   AND E.dedup_key = agg.dedup_key
   AND %s <= agg.coverage_epoch`,
-		epochExpr(db, "MIN(a.detected_at)"),
-		epochExpr(db, "E.detected_at"),
+		epochExpr("MIN(a.detected_at)"),
+		epochExpr("E.detected_at"),
 	)
 }
 
-func buildSuppressGroupSQL(db *database.DB) string {
+func buildSuppressGroupSQL() string {
 	return fmt.Sprintf(`
 WITH alrt AS (
   SELECT
@@ -284,9 +280,9 @@ FROM pend p
 LEFT JOIN alrt a ON a.dedup_key = p.dedup_key
 JOIN tag_event_rules r ON r.id = p.rule_id
 WHERE p.rn = 1`,
-		epochExpr(db, "a.detected_at"),
-		epochExpr(db, "p.detected_at"),
-		epochExpr(db, "p.detected_at"),
+		epochExpr("a.detected_at"),
+		epochExpr("p.detected_at"),
+		epochExpr("p.detected_at"),
 	)
 }
 

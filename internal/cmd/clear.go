@@ -12,6 +12,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"zhongkui.com/zhongkui/internal/migrations"
 	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -52,14 +53,14 @@ var clearDatabaseCmd = &cobra.Command{
 		}
 		var migrators []dbInfo
 
-		if m, err := createClearMigrator(provider.CoreDbPrefix, coreDB); err != nil {
-			pterm.Error.Println(translate.T("cli.clear.connect-failed", map[string]any{"DB": provider.CoreDbPrefix, "Err": err}))
+		if m, err := createClearMigrator(base.CoreDbName, coreDB); err != nil {
+			pterm.Error.Println(translate.T("cli.clear.connect-failed", map[string]any{"DB": base.CoreDbName, "Err": err}))
 			return
 		} else {
 			migrators = append(migrators, dbInfo{"core", m})
 		}
-		if m, err := createClearMigrator(provider.RawDbPrefix, rawDB); err != nil {
-			pterm.Error.Println(translate.T("cli.clear.connect-failed", map[string]any{"DB": provider.RawDbPrefix, "Err": err}))
+		if m, err := createClearMigrator(base.RawDbName, rawDB); err != nil {
+			pterm.Error.Println(translate.T("cli.clear.connect-failed", map[string]any{"DB": base.RawDbName, "Err": err}))
 			return
 		} else {
 			migrators = append(migrators, dbInfo{"raw", m})

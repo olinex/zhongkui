@@ -30,6 +30,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
 // mockNotificationChannelType 测试用 mock 渠道类型键，仅在本测试文件内注册。
@@ -54,23 +55,14 @@ func init() {
 	})
 }
 
-// createNotificationTargetTestDB 创建 sqlite 内存库并迁移 notification_channels / notification_targets 表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createNotificationTargetTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&core.NotificationChannel{}, &core.NotificationTarget{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createNotificationTargetTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createNotificationTargetTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
+}
+
+// insertTestNamespace 直接落库一个命名空间，供依赖 namespace_name 外键的渠道/目标/记录测试建立父行。
+func insertTestNamespace(db *database.DB, name string) {
+	So(db.Create(&core.Namespace{Name: name}).Error, ShouldBeNil)
 }
 
 // registerNotificationTargetTestRoutes 注册通知目标管理路由（与 router.go 的注册保持一致）。
@@ -170,7 +162,12 @@ func notificationTargetIDPath(action string, id uint) string {
 // TestNotificationTargetCreateAndDetail 创建与详情查询全链路。
 func TestNotificationTargetCreateAndDetail(t *testing.T) {
 	Convey("测试通知目标创建与详情查询", t, func() {
-		db := createNotificationTargetTestDB()
+		db := createNotificationTargetTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		ch := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-email", notify.TypeEmail, `{"host":"smtp.example.com","from":"alert@example.com"}`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
 
@@ -217,7 +214,12 @@ func TestNotificationTargetCreateAndDetail(t *testing.T) {
 // TestNotificationTargetList 列表查询与分页过滤。
 func TestNotificationTargetList(t *testing.T) {
 	Convey("测试通知目标列表查询", t, func() {
-		db := createNotificationTargetTestDB()
+		db := createNotificationTargetTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		chA := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", notify.TypeEmail, `{}`, true)
 		chB := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-b", notify.TypeWebhook, `{}`, false)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
@@ -322,7 +324,12 @@ func notificationTargetIDByName(r *gin.Engine, name string) uint {
 // TestNotificationTargetUpdate 更新配置/语言生效且渠道不可变。
 func TestNotificationTargetUpdate(t *testing.T) {
 	Convey("测试通知目标更新", t, func() {
-		db := createNotificationTargetTestDB()
+		db := createNotificationTargetTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		chA := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", notify.TypeEmail, `{}`, true)
 		chB := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-b", notify.TypeWebhook, `{}`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
@@ -353,7 +360,12 @@ func TestNotificationTargetUpdate(t *testing.T) {
 // TestNotificationTargetBatchDeleteAndSetEnabled 批量删除与批量启停。
 func TestNotificationTargetBatchDeleteAndSetEnabled(t *testing.T) {
 	Convey("测试通知目标批量删除与批量启停", t, func() {
-		db := createNotificationTargetTestDB()
+		db := createNotificationTargetTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		ch := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", notify.TypeEmail, `{}`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
 		id1 := createNotificationTargetTarget(r, "tg-d1", ch.ID, true, "zh-Hans")
@@ -402,7 +414,13 @@ func TestNotificationTargetBatchDeleteAndSetEnabled(t *testing.T) {
 // TestNotificationTargetNamespaceIsolation 目标按命名空间隔离，跨命名空间访问视为不存在。
 func TestNotificationTargetNamespaceIsolation(t *testing.T) {
 	Convey("测试通知目标命名空间隔离", t, func() {
-		db := createNotificationTargetTestDB()
+		db := createNotificationTargetTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		insertTestNamespace(db, "ns-a")
 		ch := insertNotificationTargetTestChannel(db, "ns-a", "ch-a", notify.TypeEmail, `{}`, true)
 		rA := setupNotificationTargetTestRouter(db, "ns-a")
 		rB := setupNotificationTargetTestRouter(db, "ns-b")
@@ -421,7 +439,12 @@ func TestNotificationTargetNamespaceIsolation(t *testing.T) {
 // TestNotificationTargetTestSend test-send 成功路径与失败路径。
 func TestNotificationTargetTestSend(t *testing.T) {
 	Convey("测试通知目标 test-send", t, func() {
-		db := createNotificationTargetTestDB()
+		db := createNotificationTargetTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		mockCh := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-mock", mockNotificationChannelType, `{}`, true)
 		badCh := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-bad", notify.TypeEmail, `not-json`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
@@ -560,7 +583,12 @@ func insertNotificationTargetTestTarget(db *database.DB, namespace, name string,
 // TestNotificationTargetSend 向单个通知目标发送通知：成功投递 / 目标缺失 / 目标被禁用。
 func TestNotificationTargetSend(t *testing.T) {
 	Convey("测试通知目标单目标发送", t, func() {
-		db := createNotificationTargetTestDB()
+		db := createNotificationTargetTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		chEnabled := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-on", notify.TypeEmail, `{}`, true)
 		chDisabled := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-off", notify.TypeEmail, `{}`, false)
 		okTarget := insertNotificationTargetTestTarget(db, middlewares.DefaultNamespace, "tg-send-ok", chEnabled, true)

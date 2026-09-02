@@ -51,6 +51,29 @@ SUDO ?= sudo
 # 依赖工具构建
 # ============================================================
 
+# create-test-dbs - 在 dev-deps (postgres/clickhouse) 内创建测试库 core_test / raw_test（幂等）
+# 用法: make create-test-dbs
+create-test-dbs:
+	@echo "创建测试数据库 core_test (postgres) 与 raw_test (clickhouse)..."
+	@case "$(UNAME_S)" in \
+		Darwin|MINGW*|MSYS*|CYGWIN*) \
+			cmd=docker; \
+			clickhouse_cli="$$cmd exec clickhouse-server clickhouse-client"; \
+			psql_cli="PGPASSWORD=root_password $$cmd exec postgres psql -U postgres";; \
+		Linux) \
+			cmd=nerdctl; \
+			clickhouse_cli="$$cmd exec clickhouse-server clickhouse-client"; \
+			psql_cli="PGPASSWORD=root_password $$cmd exec postgres psql -U postgres";; \
+		*) \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'，请手动执行 psql/clickhouse-client 创建测试库。"; \
+			exit 1 ;; \
+	esac; \
+	$$psql_cli -tAc "SELECT 1 FROM pg_database WHERE datname='core_test'" | grep -q 1 \
+		&& echo "  core_test 已存在" \
+		|| $$psql_cli -c "CREATE DATABASE core_test"; \
+	$$clickhouse_cli -q "CREATE DATABASE IF NOT EXISTS raw_test"; \
+	echo "测试库就绪 (core_test@postgres, raw_test@clickhouse)"
+
 # run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
 # 用法: make run-dev-deps
 run-dev-deps:

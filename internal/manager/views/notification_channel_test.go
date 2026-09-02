@@ -24,25 +24,12 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// createNotificationChannelTestDB 创建 sqlite 内存库并迁移 notification_channels 表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createNotificationChannelTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&core.NotificationChannel{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createNotificationChannelTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createNotificationChannelTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // registerNotificationChannelTestRoutes 注册通知渠道管理路由（与 router.go 的注册保持一致）。
@@ -135,7 +122,12 @@ func notificationChannelIDPath(action string, id uint) string {
 // TestNotificationChannelTypes 渠道类型枚举返回 email 与 webhook 及其配置 schema。
 func TestNotificationChannelTypes(t *testing.T) {
 	Convey("测试通知渠道类型枚举", t, func() {
-		db := createNotificationChannelTestDB()
+		db := createNotificationChannelTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationChannelTestRouter(db)
 
 		w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/types", nil)
@@ -178,7 +170,12 @@ func TestNotificationChannelTypes(t *testing.T) {
 // TestNotificationChannelCreateAndDetail 创建与详情查询全链路。
 func TestNotificationChannelCreateAndDetail(t *testing.T) {
 	Convey("测试通知渠道创建与详情查询", t, func() {
-		db := createNotificationChannelTestDB()
+		db := createNotificationChannelTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationChannelTestRouter(db)
 
 		Convey("合法渠道创建成功且 Config 以字符串原样返回", func() {
@@ -244,7 +241,12 @@ func TestNotificationChannelCreateAndDetail(t *testing.T) {
 // TestNotificationChannelList 列表查询与分页过滤。
 func TestNotificationChannelList(t *testing.T) {
 	Convey("测试通知渠道列表查询", t, func() {
-		db := createNotificationChannelTestDB()
+		db := createNotificationChannelTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationChannelTestRouter(db)
 		createNotificationChannelByName(db, r, "email-a", map[string]any{"name": "email-a", "type": notify.TypeEmail, "enabled": true, "config": `{"host":"h1"}`})
 		// 注意：模型 Enabled 列的 gorm tag 带 default:true，GORM Create 会跳过零值（false），
@@ -329,7 +331,12 @@ func TestNotificationChannelList(t *testing.T) {
 // TestNotificationChannelUpdate 更新配置与启用状态生效，且名称不可变。
 func TestNotificationChannelUpdate(t *testing.T) {
 	Convey("测试通知渠道更新", t, func() {
-		db := createNotificationChannelTestDB()
+		db := createNotificationChannelTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationChannelTestRouter(db)
 		id := createNotificationChannelByName(db, r, "email-update", map[string]any{
 			"name":    "email-update",
@@ -362,7 +369,12 @@ func TestNotificationChannelUpdate(t *testing.T) {
 // TestNotificationChannelBatchDelete 批量删除成功且幂等；占位符渠道（webhook）禁止删除。
 func TestNotificationChannelBatchDelete(t *testing.T) {
 	Convey("测试通知渠道批量删除", t, func() {
-		db := createNotificationChannelTestDB()
+		db := createNotificationChannelTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationChannelTestRouter(db)
 		id1 := createNotificationChannelByName(db, r, "del-1", map[string]any{"name": "del-1", "type": notify.TypeEmail, "config": `{}`})
 		// 占位符渠道（webhook）前端禁止创建，直接经数据库种子一条以验证其不可删除
@@ -420,7 +432,12 @@ func TestNotificationChannelBatchDelete(t *testing.T) {
 // TestNotificationChannelBatchSetEnabled 批量启用/停用状态切换且幂等。
 func TestNotificationChannelBatchSetEnabled(t *testing.T) {
 	Convey("测试通知渠道批量启停", t, func() {
-		db := createNotificationChannelTestDB()
+		db := createNotificationChannelTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationChannelTestRouter(db)
 		id := createNotificationChannelByName(db, r, "io-1", map[string]any{"name": "io-1", "type": notify.TypeEmail, "enabled": true, "config": `{}`})
 
@@ -449,7 +466,12 @@ func TestNotificationChannelBatchSetEnabled(t *testing.T) {
 // TestNotificationChannelNamespaceIsolation 渠道按命名空间隔离，跨命名空间不可见。
 func TestNotificationChannelNamespaceIsolation(t *testing.T) {
 	Convey("测试通知渠道命名空间隔离", t, func() {
-		db := createNotificationChannelTestDB()
+		db := createNotificationChannelTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationChannelTestRouter(db)
 		id := createNotificationChannelByName(db, r, "ns-1", map[string]any{"name": "ns-1", "type": notify.TypeEmail, "config": `{}`})
 

@@ -47,13 +47,19 @@ func newTriggerTask(taskType string, trigger time.Time, params map[string]any, o
 	return asynq.NewTask(taskType, payload, opts...), nil
 }
 
-// taskOptions 构建 asynq 任务选项（队列/超时/最大重试）。
+// taskOptions 构建 asynq 任务选项（队列/超时/最大重试/保留时长）。
+// Retention 大于 0 时附加 asynq.Retention，使任务成功（completed）/失败（archived）后
+// 在队列中保留 cfg.Retention 时长，从而在任务列表中可查看到执行记录。
 func taskOptions(cfg SchedulerTaskConfig) []asynq.Option {
-	return []asynq.Option{
+	opts := []asynq.Option{
 		asynq.Queue(cfg.Queue),
 		asynq.Timeout(cfg.Timeout.Std()),
 		asynq.MaxRetry(cfg.MaxRetry),
 	}
+	if cfg.Retention > 0 {
+		opts = append(opts, asynq.Retention(cfg.Retention.Std()))
+	}
+	return opts
 }
 
 // payloadParams 返回任务配置中的固定参数，保证为可序列化的非 null 对象。
@@ -119,7 +125,8 @@ func ComputeCursorTriggers(last, now time.Time, interval time.Duration, p Backlo
 	}
 	var triggers []time.Time
 	for t := prev.Add(interval); !t.After(gridNow); t = t.Add(interval) {
-		if uint(len(triggers)) >= p.Limit {
+		// Limit 为 0 表示不设上限
+		if p.Limit > 0 && uint(len(triggers)) >= p.Limit {
 			break
 		}
 		triggers = append(triggers, t)

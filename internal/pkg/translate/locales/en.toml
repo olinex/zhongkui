@@ -1196,7 +1196,7 @@ other = "Master key plaintext value (only used when source is config)"
 other = "Password book file path, provides the salt for key derivation"
 
 ["config.database.{core,raw}.driver"]
-other = "Database driver name, supported: sqlite, postgres, clickhouse (ref: https://gorm.io/docs/connect.html)"
+other = "Database driver name, supported: postgres, clickhouse (ref: https://gorm.io/docs/connect.html)"
 
 ["config.database.{core,raw}.dsn"]
 other = "Database data source name / connection string (ref: https://gorm.io/docs/connect.html#Connection-String)"

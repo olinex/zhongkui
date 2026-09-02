@@ -1,7 +1,7 @@
 <template>
   <main-layout current-nav="etl">
     <template #body>
-      <v-container>
+      <v-container fluid>
         <v-form class="filter-form">
           <v-row dense align-center>
             <v-col cols="auto">

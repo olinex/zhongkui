@@ -13,6 +13,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
 // notifyModel 变更通知测试用的本地结构体。
@@ -21,25 +22,14 @@ type notifyModel struct {
 	Method    string `json:"method"`
 }
 
-// setupNotifyEngine 创建 sqlite 内存库与标签识别引擎（单连接限制）。
+// setupNotifyEngine 创建共享已迁移的 PostgreSQL 测试库与标签识别引擎（testdb.Core）。
 func setupNotifyEngine(t *testing.T) (*Engine, *database.DB) {
 	t.Helper()
 	logger, err := logging.NewDefaultLogger()
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal(err)
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&tag.TagRule{}); err != nil {
-		t.Fatal(err)
-	}
+	db := testdb.Core(t)
 	return NewEngine(db, logger, nil), db
 }
 

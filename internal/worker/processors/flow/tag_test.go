@@ -15,29 +15,18 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
-// setupTagStage 创建内存 sqlite 数据库与基于 tagengine 的标签阶段。
-// :memory: sqlite 每个连接独立，限制单连接保证读写指向同一数据库。
+// setupTagStage 创建共享已迁移的 PostgreSQL 测试库与基于 tagengine 的标签阶段。
 func setupTagStage(t *testing.T) (*tagStage, *database.DB) {
 	t.Helper()
 	logger, err := logging.NewDefaultLogger()
 	if err != nil {
 		t.Fatal(err)
 	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal(err)
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&tag.TagRule{}); err != nil {
-		t.Fatal(err)
-	}
+	db := testdb.Core(t)
 	engine := tagengine.NewEngine(db, logger, nil)
 	return &tagStage{engine: engine, logger: logger}, db
 }

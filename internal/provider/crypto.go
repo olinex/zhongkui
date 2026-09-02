@@ -8,8 +8,6 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
-const CryptoPrefix = "crypto"
-
 func newKeyDerivationProvider() do.Provider[*key.KeyDerivation] {
 	return func(i do.Injector) (*key.KeyDerivation, error) {
 		if viper, err := InvokeViper(i); err != nil {

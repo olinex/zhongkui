@@ -34,6 +34,8 @@ export interface InspectorSchedulerListItem {
   backlogEnabled: boolean;
   backlogWindow: string;
   backlogLimit: number;
+  retention: string;
+  lookback: string;
 }
 
 export interface InspectorQueueItem {

@@ -88,16 +88,9 @@ func ComputeCronTriggers(last, now time.Time, schedule cron.Schedule, p BacklogP
 	if !p.Enabled {
 		return nil, schedule.Next(now)
 	}
-	// 窗口裁剪：超窗积压直接丢弃，仅从窗口起点开始回溯
-	start := last
-	if p.Window > 0 {
-		windowStart := now.Add(-p.Window)
-		if start.Before(windowStart) {
-			start = windowStart
-		}
-	}
+	// 窗口裁剪：超窗积压直接丢弃，仅保留窗口期 [now-Window, now] 内的触发点（含边界）
 	var triggers []time.Time
-	t := start
+	t := last
 	for {
 		next := schedule.Next(t)
 		// 严格递增守卫：cron 库应保证 next 晚于 t；若不前进则立即退出，避免死循环
@@ -107,8 +100,13 @@ func ComputeCronTriggers(last, now time.Time, schedule cron.Schedule, p BacklogP
 		if next.After(now) {
 			break
 		}
-		// 生成上限：积压过大时截断本轮，剩余触发点由后续轮次追赶
-		if uint(len(triggers)) >= p.Limit {
+		// 窗口裁剪：窗口起点之前的积压触发点直接跳过
+		if p.Window > 0 && next.Before(now.Add(-p.Window)) {
+			t = next
+			continue
+		}
+		// 生成上限：积压过大时截断本轮，剩余触发点由后续轮次追赶（Limit 为 0 表示不设上限）
+		if p.Limit > 0 && uint(len(triggers)) >= p.Limit {
 			break
 		}
 		triggers = append(triggers, next)

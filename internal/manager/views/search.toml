@@ -1548,3 +1548,109 @@ options = [
     { title = "email", value = "email" },
     { title = "webhook", value = "webhook" },
 ]
+
+[TagEventRecordListGet]
+timeModule = true
+
+[[TagEventRecordListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[TagEventRecordListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[TagEventRecordListGet.orderByFields]]
+fieldName = "detectedAt"
+column = "detected_at"
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "detectedAt"
+fieldType = "time.Time"
+column = "detected_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "detectedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(detected_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "detectedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(detected_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "ruleName"
+fieldType = "string"
+column = "rule_name"
+binding = ""
+actions = ["eq", "neq", "pfx", "ctn"]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "status"
+fieldType = "string"
+column = "status"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "pending", value = "pending" },
+    { title = "alerting", value = "alerting" },
+    { title = "suppressed", value = "suppressed" },
+    { title = "closed", value = "closed" },
+]
+
+[[TagEventRecordListGet.filterByFields]]
+fieldName = "matchAll"
+fieldType = "bool"
+column = "match_all"
+binding = ""
+actions = ["eq"]

@@ -11,37 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
-// createCapturerTestDB 创建用于抓包器路由测试的 SQLite 内存数据库实例
-// 并自动迁移所需的表结构（Namespace 和 Capturer）
-func createCapturerTestDB() *database.DB {
-	cfg := &database.Config{
-		Driver: "sqlite",
-		DSN:    ":memory:",
-	}
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{}
-	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	zapLogger, _ := config.Build()
-	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
-
-	db, err := database.NewDatabase(cfg, logger)
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if err := db.AutoMigrate(&core.Namespace{}, &core.Capturer{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createCapturerTestDB 创建用于抓包器路由测试的共享 PostgreSQL 测试数据库
+func createCapturerTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // createCapturerTestEtcdClient 创建用于抓包器路由测试的 etcd 客户端
@@ -495,23 +474,21 @@ func TestCapturerListOut_Struct(t *testing.T) {
 // TestCapturerListGet_Handler 测试 CapturerListGet 处理器的参数校验
 func TestCapturerListGet_Handler(t *testing.T) {
 	Convey("测试 CapturerListGet 处理器", t, func() {
-		db := createCapturerTestDB()
-		defer func() {
-			sqlDB, _ := db.DB()
-			if sqlDB != nil {
-				sqlDB.Close()
-			}
-		}()
+		db := createCapturerTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 
-		Convey("无请求体时应触发 panic（JSON 解析失败不是 ValidationErrors）", func() {
+		Convey("无请求体时应返回 400 参数错误（JSON 解析失败不是 ValidationErrors）", func() {
 			r := setupCapturerTestRouterWithDB(db)
 			r.POST("/api/v1/admin/capturer/list", CapturerListGet)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/capturer/list", nil)
-			So(func() {
-				r.ServeHTTP(w, req)
-			}, ShouldPanic)
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
 
 		Convey("空 JSON 对象应成功返回空列表", func() {
@@ -560,13 +537,14 @@ func TestCapturerListGet_Handler(t *testing.T) {
 // TestCapturerDetailGet_Handler 测试 CapturerDetailGet 处理器
 func TestCapturerDetailGet_Handler(t *testing.T) {
 	Convey("测试 CapturerDetailGet 处理器", t, func() {
-		db := createCapturerTestDB()
+		db := createCapturerTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		etcdClient := createCapturerTestEtcdClient()
 		defer func() {
-			sqlDB, _ := db.DB()
-			if sqlDB != nil {
-				sqlDB.Close()
-			}
 			etcdClient.Close()
 		}()
 
@@ -597,13 +575,14 @@ func TestCapturerDetailGet_Handler(t *testing.T) {
 // TestCapturerUpdate_Handler 测试 CapturerUpdate 处理器
 func TestCapturerUpdate_Handler(t *testing.T) {
 	Convey("测试 CapturerUpdate 处理器", t, func() {
-		db := createCapturerTestDB()
+		db := createCapturerTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		etcdClient := createCapturerTestEtcdClient()
 		defer func() {
-			sqlDB, _ := db.DB()
-			if sqlDB != nil {
-				sqlDB.Close()
-			}
 			etcdClient.Close()
 		}()
 
@@ -633,15 +612,14 @@ func TestCapturerUpdate_Handler(t *testing.T) {
 			So(w.Code, ShouldEqual, http.StatusInternalServerError)
 		})
 
-		Convey("无请求体时应触发 panic（JSON 解析失败不是 ValidationErrors）", func() {
+		Convey("无请求体时应返回 400 参数错误（JSON 解析失败不是 ValidationErrors）", func() {
 			r := setupCapturerTestRouterWithDBAndEtcd(db, etcdClient)
 			r.POST("/api/v1/admin/capturer/:id/update", CapturerUpdate)
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/capturer/1/update", nil)
-			So(func() {
-				r.ServeHTTP(w, req)
-			}, ShouldPanic)
+			r.ServeHTTP(w, req)
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
 	})
 }

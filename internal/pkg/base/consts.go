@@ -88,3 +88,35 @@ m = (p.obj == "*" || r.obj == p.obj) && \
 	HdrXFrameOptions                 = "X-Frame-Options"
 	HdrXXssProtection                = "X-XSS-Protection"
 )
+
+// 数据库名（database 配置节点名 / migration 归属统一标识）：核心库、原始库及其测试库。
+// 作为单一事实来源，供 migrations 与 provider 共同引用，避免重复字面量引发不一致。
+const (
+	CoreDbName     = "core"
+	CoreTestDbName = "core_test"
+	RawDbName      = "raw"
+	RawTestDbName  = "raw_test"
+)
+
+// logger 配置前缀，作为单一事实来源供 provider 引用。
+const (
+	DefaultLoggerName  = "default"
+	ApiLoggerName      = "api"
+	DatabaseLoggerName = "database"
+	CaptureLoggerName  = "capture"
+	EtcdLoggerName     = "etcd"
+	GrpcLoggerName     = "grpc"
+	PipelineLoggerName = "pipeline"
+)
+
+// redis 配置前缀，作为单一事实来源供 provider 引用。
+const (
+	CacheRedisName    = "cache"
+	PipelineRedisName = "pipeline"
+)
+
+// 上报服务 gRPC 配置前缀，作为单一事实来源供 provider 引用。
+const ReporterGrpcName = "reporter"
+
+// 注入器上下文键名，用于在任务上下文或注入器中定位 do.Scope。
+const ContextScopeName = "ctx_scope"

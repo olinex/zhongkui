@@ -20,43 +20,12 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// createNotificationRecordTestDB 创建 sqlite 内存库并迁移 notify 相关模型表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createNotificationRecordTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&core.NotificationTarget{}, &core.NotificationChannel{}, &core.NotificationRecord{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	if err := convertNotificationRecordNotifiedAtColumn(db); err != nil {
-		panic("failed to convert notified_at column: " + err.Error())
-	}
-	return db
-}
-
-// convertNotificationRecordNotifiedAtColumn 将 notification_records.notified_at 列从
-// TIMESTAMPTZ 改为 datetime。glebarez/sqlite 驱动仅在列声明类型为 DATE/DATETIME/TIMESTAMP
-// 时才把文本值解析为 time.Time，而模型对 PostgreSQL 声明为 TIMESTAMPTZ，导致 sqlite 下
-// 无法把字符串扫描进 *time.Time；测试库改为 datetime 以复用驱动的时间解析能力。
-// 在 AutoMigrate 之后、写入数据之前执行，此时表为空，无需迁移存量数据。
-func convertNotificationRecordNotifiedAtColumn(db *database.DB) error {
-	if err := db.Exec("ALTER TABLE notification_records RENAME COLUMN notified_at TO notified_at_tmp").Error; err != nil {
-		return err
-	}
-	if err := db.Exec("ALTER TABLE notification_records ADD COLUMN notified_at datetime").Error; err != nil {
-		return err
-	}
-	return db.Exec("ALTER TABLE notification_records DROP COLUMN notified_at_tmp").Error
+// createNotificationRecordTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createNotificationRecordTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // registerNotificationRecordTestRoutes 注册通知记录测试路由（与 router.go 的注册保持一致）。
@@ -108,8 +77,15 @@ func doNotificationRecordRequest(r *gin.Engine, method, path string, body any) *
 }
 
 // insertNotificationTarget 直接落库一个通知目标，返回其 ID。
+// PostgreSQL 下目标必须引用已存在的渠道（channel_id 外键），故内部先创建一条
+// 命名空间内的渠道作为父行并回填 ChannelID，避免外键约束失败。
 func insertNotificationTarget(db *database.DB, namespace, name string) uint {
-	target := &core.NotificationTarget{NamespaceName: namespace, Name: name, Type: "webhook", Enabled: true}
+	channel := &core.NotificationChannel{NamespaceName: namespace, Name: name + "-channel", Type: "email", Enabled: true}
+	So(db.Create(channel).Error, ShouldBeNil)
+	target := &core.NotificationTarget{
+		NamespaceName: namespace, Name: name, Type: "webhook",
+		ChannelID: channel.ID, Enabled: true,
+	}
 	So(db.Create(target).Error, ShouldBeNil)
 	return target.ID
 }
@@ -137,7 +113,12 @@ func notificationRecordIDPath(action string, id uint) string {
 // TestNotificationRecordListAndEnrich 列表查询、目标名称补全与过滤。
 func TestNotificationRecordListAndEnrich(t *testing.T) {
 	Convey("测试通知记录列表、目标名称补全与过滤", t, func() {
-		db := createNotificationRecordTestDB()
+		db := createNotificationRecordTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationRecordTestRouter(db, middlewares.DefaultNamespace)
 
 		// 预置一个目标与一个渠道，供名称补全
@@ -239,7 +220,12 @@ func TestNotificationRecordListAndEnrich(t *testing.T) {
 // TestNotificationRecordCreatedAtRange 按创建时间范围过滤。
 func TestNotificationRecordCreatedAtRange(t *testing.T) {
 	Convey("测试按创建时间范围过滤", t, func() {
-		db := createNotificationRecordTestDB()
+		db := createNotificationRecordTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationRecordTestRouter(db, middlewares.DefaultNamespace)
 
 		base := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
@@ -298,7 +284,12 @@ func TestNotificationRecordCreatedAtRange(t *testing.T) {
 // TestNotificationRecordDetail 详情返回完整字段。
 func TestNotificationRecordDetail(t *testing.T) {
 	Convey("测试通知记录详情", t, func() {
-		db := createNotificationRecordTestDB()
+		db := createNotificationRecordTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationRecordTestRouter(db, middlewares.DefaultNamespace)
 
 		targetID := insertNotificationTarget(db, middlewares.DefaultNamespace, "ops-email")
@@ -344,14 +335,20 @@ func TestNotificationRecordDetail(t *testing.T) {
 // TestNotificationRecordDeletedTarget 目标已删除时列表与详情仍可用。
 func TestNotificationRecordDeletedTarget(t *testing.T) {
 	Convey("测试目标已删除时的尽力补全", t, func() {
-		db := createNotificationRecordTestDB()
+		db := createNotificationRecordTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationRecordTestRouter(db, middlewares.DefaultNamespace)
 
 		// 删除前先落库目标，再删除该目标，使记录引用已不存在的目标
+		channelID := insertNotificationRecordChannel(db, middlewares.DefaultNamespace, "main-channel", "email")
 		targetID := insertNotificationTarget(db, middlewares.DefaultNamespace, "gone-target")
 		recordID := insertNotificationRecord(db, &core.NotificationRecord{
 			NamespaceName: middlewares.DefaultNamespace,
-			EventType:     core.EventTypeTagEventRecord, EventID: 1, TargetID: targetID, ChannelID: 1,
+			EventType:     core.EventTypeTagEventRecord, EventID: 1, TargetID: targetID, ChannelID: channelID,
 			ChannelType: "email", Status: core.RecordStatusSuccess,
 		})
 		So(db.Where("id = ?", targetID).Delete(&core.NotificationTarget{}).Error, ShouldBeNil)
@@ -390,11 +387,17 @@ func TestNotificationRecordDeletedTarget(t *testing.T) {
 // TestNotificationRecordNamespaceIsolation 记录按命名空间隔离。
 func TestNotificationRecordNamespaceIsolation(t *testing.T) {
 	Convey("测试通知记录命名空间隔离", t, func() {
-		db := createNotificationRecordTestDB()
+		db := createNotificationRecordTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		channelID := insertNotificationRecordChannel(db, middlewares.DefaultNamespace, "main-channel", "email")
 		targetID := insertNotificationTarget(db, middlewares.DefaultNamespace, "ops-email")
 		recordID := insertNotificationRecord(db, &core.NotificationRecord{
 			NamespaceName: middlewares.DefaultNamespace,
-			EventType:     core.EventTypeTagEventRecord, EventID: 1, TargetID: targetID, ChannelID: 1,
+			EventType:     core.EventTypeTagEventRecord, EventID: 1, TargetID: targetID, ChannelID: channelID,
 			ChannelType: "email", Status: core.RecordStatusSuccess,
 		})
 

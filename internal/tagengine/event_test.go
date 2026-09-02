@@ -2,52 +2,25 @@ package tagengine
 
 import (
 	"context"
-	"database/sql/driver"
+	"regexp"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/glebarez/go-sqlite"
 	. "github.com/smartystreets/goconvey/convey"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
+	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
-
-// registerSQLiteHasFunc 在 sqlite 驱动上注册 ClickHouse 的 has(tags, label) 标量函数，
-// 使检测 SQL 可在 sqlite 上真实执行（tags 以逗号分隔的 TEXT 存储）。
-// 注册对驱动全局生效且仅需一次，供 Detect 端到端测试使用。
-var registerSQLiteHasFunc = sync.OnceFunc(func() {
-	err := sqlite.RegisterScalarFunction("has", 2, func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
-		tags, ok := args[0].(string)
-		if !ok {
-			return int64(0), nil
-		}
-		label, _ := args[1].(string)
-		for _, t := range strings.Split(tags, ",") {
-			if t == label {
-				return int64(1), nil
-			}
-		}
-		return int64(0), nil
-	})
-	if err != nil {
-		panic(errors.WithStack(err))
-	}
-})
 
 // TestTranslateExpression 表驱动验证标签组合表达式翻译为 clause 表达式树的渲染结果与参数顺序。
 func TestTranslateExpression(t *testing.T) {
 	Convey("Test TranslateExpression", t, func() {
-		logger, err := logging.NewDefaultLogger()
-		So(err, ShouldBeNil)
-		db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-		So(err, ShouldBeNil)
+		db := testdb.Core(t)
 		testCases := []struct {
 			name      string
 			expr      string
@@ -70,7 +43,7 @@ func TestTranslateExpression(t *testing.T) {
 					So(err, ShouldBeNil)
 					So(expr, ShouldNotBeNil)
 					predicate, vars := renderClause(db, expr)
-					So(predicate, ShouldEqual, tc.predicate)
+					So(normalizePlaceholders(predicate), ShouldEqual, tc.predicate)
 					args := make([]any, len(tc.args))
 					for i, a := range tc.args {
 						args[i] = a
@@ -93,13 +66,17 @@ func renderClause(db *gorm.DB, e clause.Expression) (string, []any) {
 	return stmt.SQL.String(), stmt.Vars
 }
 
+// normalizePlaceholders 将 SQL 中的数据库占位符统一为 '?'。
+// PostgreSQL 驱动的 gorm 会渲染成 $N 形式的占位符（如 $1、$5），而 SQLite/MySQL 渲染为 '?'，
+// 该函数在断言前归一化，使 SQL 片段断言不受所在测试库方言影响。
+func normalizePlaceholders(sql string) string {
+	return regexp.MustCompile(`\$\d+`).ReplaceAllString(sql, "?")
+}
+
 // TestBuildDetectionQuery 验证 UNION ALL 查询组装与参数顺序。
 func TestBuildDetectionQuery(t *testing.T) {
 	Convey("Test BuildDetectionQuery", t, func() {
-		logger, err := logging.NewDefaultLogger()
-		So(err, ShouldBeNil)
-		db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-		So(err, ShouldBeNil)
+		db := testdb.Core(t)
 		now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 		window := serializer.DurationNS(5 * time.Minute)
 
@@ -113,9 +90,9 @@ func TestBuildDetectionQuery(t *testing.T) {
 			}}
 			query, args, err := BuildDetectionQuery(db, conds, now)
 			So(err, ShouldBeNil)
-			So(query, ShouldContainSubstring, "SELECT ? AS condition_id")
+			So(normalizePlaceholders(query), ShouldContainSubstring, "SELECT ? AS condition_id")
 			So(query, ShouldNotContainSubstring, "UNION ALL")
-			So(query, ShouldContainSubstring, "GROUP BY namespace, model, dimension, item HAVING SUM(cnt) > ?")
+			So(normalizePlaceholders(query), ShouldContainSubstring, "GROUP BY namespace, model, dimension, item HAVING SUM(cnt) > ?")
 			So(args, ShouldResemble, []any{
 				uint(1),
 				"default",
@@ -135,7 +112,7 @@ func TestBuildDetectionQuery(t *testing.T) {
 			query, _, err := BuildDetectionQuery(db, conds, now)
 			So(err, ShouldBeNil)
 			So(query, ShouldContainSubstring, "UNION ALL")
-			So(strings.Count(query, "SELECT ? AS condition_id"), ShouldEqual, 2)
+			So(strings.Count(normalizePlaceholders(query), "SELECT ? AS condition_id"), ShouldEqual, 2)
 		})
 
 		Convey("过滤条件为空时不附加等值过滤", func() {
@@ -164,7 +141,7 @@ func TestBuildDetectionQuery(t *testing.T) {
 			}}
 			query, _, err := BuildDetectionQuery(db, conds, now)
 			So(err, ShouldBeNil)
-			So(query, ShouldContainSubstring, " AND dimension = ?")
+			So(normalizePlaceholders(query), ShouldContainSubstring, " AND dimension = ?")
 		})
 
 		Convey("空条件列表返回错误", func() {
@@ -179,7 +156,7 @@ func TestBuildDetectionQuery(t *testing.T) {
 			}
 			query, _, err := BuildDetectionQuery(db, conds, now)
 			So(err, ShouldBeNil)
-			So(strings.Count(query, "SELECT ? AS condition_id"), ShouldEqual, 1)
+			So(strings.Count(normalizePlaceholders(query), "SELECT ? AS condition_id"), ShouldEqual, 1)
 		})
 	})
 }
@@ -271,41 +248,32 @@ func TestGroupEvents(t *testing.T) {
 // TestDetect 端到端验证核心识别函数：按传入条件与时间点查询聚合统计并聚合为标签事件。
 func TestDetect(t *testing.T) {
 	Convey("Test Detect", t, func() {
-		registerSQLiteHasFunc()
-		logger, err := logging.NewDefaultLogger()
-		So(err, ShouldBeNil)
-		db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-		So(err, ShouldBeNil)
-		if sqlDB, err := db.DB(); err != nil {
-			t.Fatal(err)
-		} else {
-			sqlDB.SetMaxOpenConns(1)
+		db := testdb.Raw(t)
+		// tag_summings 表已由 raw 库迁移（001_init.sql）建好（ClickHouse SummingMergeTree，
+		// tags 为 Array(String)），此处按模型 TagSumming 写入测试数据。
+		insert := func(minute time.Time, namespace, model, dimension, item string, tags []string, cnt uint) {
+			sum := &tag.TagSumming{
+				Namespace: namespace,
+				Minute:    minute,
+				Model:     model,
+				Dimension: dimension,
+				Item:      item,
+				Cnt:       cnt,
+			}
+			sum.Tags = tags
+			So(db.Create(sum).Error, ShouldBeNil)
 		}
-		// 按 raw 库迁移（001_init.sql）的 tag_summings 列定义精简建表，minute 用同一格式化字符串便于 sqlite 文本比较。
-		So(db.Exec(`CREATE TABLE tag_summings (
-			namespace varchar(32),
-			minute text,
-			model varchar(255),
-			dimension varchar(128),
-			item varchar(255),
-			tags text,
-			cnt integer
-		)`).Error, ShouldBeNil)
-		insert := func(minute, namespace, model, dimension, item, tags string, cnt int) {
-			So(db.Exec(`INSERT INTO tag_summings (namespace, minute, model, dimension, item, tags, cnt) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-				namespace, minute, model, dimension, item, tags, cnt).Error, ShouldBeNil)
-		}
-		now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+		var now = time.Now().UTC().Add(-6 * time.Minute).Truncate(time.Minute)
 		window := serializer.DurationNS(5 * time.Minute)
 		// 命中组：窗口内两行合计 4 > 阈值 3
-		insert(database.ToUTCDatetime64(now.Add(-4*time.Minute), 6), "default", "m1", "d1", "i1", "A,B", 2)
-		insert(database.ToUTCDatetime64(now.Add(-2*time.Minute), 6), "default", "m1", "d1", "i1", "A,B", 2)
+		insert(now.Add(-4*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2)
+		insert(now.Add(-2*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2)
 		// 未命中组：缺少标签 B
-		insert(database.ToUTCDatetime64(now.Add(-3*time.Minute), 6), "default", "m2", "d2", "i2", "A", 5)
+		insert(now.Add(-3*time.Minute), "default", "m2", "d2", "i2", []string{"A"}, 5)
 		// 窗口外数据：应被时间边界排除
-		insert(database.ToUTCDatetime64(now.Add(-10*time.Minute), 6), "default", "m3", "d3", "i3", "A,B", 5)
+		insert(now.Add(-10*time.Minute), "default", "m3", "d3", "i3", []string{"A", "B"}, 5)
 		// 不同命名空间：应被命名空间过滤排除
-		insert(database.ToUTCDatetime64(now.Add(-3*time.Minute), 6), "other", "m4", "d4", "i4", "A,B", 5)
+		insert(now.Add(-3*time.Minute), "other", "m4", "d4", "i4", []string{"A", "B"}, 5)
 
 		Convey("窗口内标签组合达到阈值触发事件", func() {
 			conds := []DetectionCondition{{

@@ -16,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 	notifyhandler "zhongkui.com/zhongkui/internal/worker/handlers/notify"
 )
@@ -28,66 +29,11 @@ func (failEnqueuer) EnqueueContext(_ context.Context, _ *asynq.Task, _ ...asynq.
 	return nil, errors.New("enqueue failed")
 }
 
-// createTagEventStoreTestDB 创建 sqlite 内存库并手写建表 tag_event_rules / tag_event_records / tag_event_record_hits。
-// 与 detect_test 一致：sqlite 下 GORM AutoMigrate 处理多级关联会触发 nil 指针 panic，
-// 因此按 core 迁移（001_init.sql）的列定义手写建表；内存库必须限制为单连接。
+// createTagEventStoreTestDB 共享已迁移的 PostgreSQL 测试库（testdb.Core），
+// tag_event_rules / tag_event_records / tag_event_record_hits 等全部业务表已迁移。
 func createTagEventStoreTestDB(t *testing.T) *database.DB {
 	t.Helper()
-	logger, err := logging.NewDefaultLogger()
-	if err != nil {
-		t.Fatal(err)
-	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal(err)
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	// 启用外键约束，使 tag_event_record_hits 对 records 的级联删除与生产 PG 迁移一致（superfluous in-memory PRAGMA）
-	So(db.Exec("PRAGMA foreign_keys = ON").Error, ShouldBeNil)
-	So(db.Exec(`CREATE TABLE tag_event_rules (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		created_at datetime NOT NULL,
-		updated_at datetime NOT NULL,
-		namespace_name varchar(32) NOT NULL,
-		name varchar(255) NOT NULL,
-		enabled boolean NOT NULL DEFAULT true,
-		notification_group_id int,
-		notification_target_id int,
-		match_all boolean NOT NULL DEFAULT false,
-		suppress_window bigint NOT NULL DEFAULT 0,
-		description varchar(256) NOT NULL
-	)`).Error, ShouldBeNil)
-	So(db.Exec(`CREATE TABLE tag_event_records (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		created_at datetime NOT NULL,
-		updated_at datetime NOT NULL,
-		namespace_name varchar(32) NOT NULL,
-		rule_id int,
-		rule_name varchar(255),
-		match_all boolean,
-		dedup_key char(64),
-		status varchar(16),
-		detected_at datetime
-	)`).Error, ShouldBeNil)
-	So(db.Exec(`CREATE TABLE tag_event_record_hits (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		created_at datetime NOT NULL,
-		updated_at datetime NOT NULL,
-		tag_event_record_id bigint REFERENCES tag_event_records(id) ON DELETE CASCADE,
-		condition_id int,
-		condition_name varchar(255),
-		model varchar(255),
-		dimension varchar(128),
-		item varchar(255),
-		count bigint,
-		threshold int,
-		"window" bigint
-	)`).Error, ShouldBeNil)
-	return db
+	return testdb.Core(t)
 }
 
 // insertSuppressRule 写入一条命名空间 default 的规则并返回其 ID。
@@ -184,6 +130,11 @@ func TestEventSuppressHandler(t *testing.T) {
 		logger, err := logging.NewDefaultLogger()
 		So(err, ShouldBeNil)
 		db := createTagEventStoreTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 
 		Convey("持续事件仅首条告警：同键 alerting 锚点内 pending 被抑制且不投递", func() {
 			ruleID := insertSuppressRule(db, time.Hour)
@@ -288,14 +239,40 @@ func insertSuppressRuleWithBinding(db *database.DB, groupID, targetID *uint) uin
 	return rule.ID
 }
 
+// seedNotificationChannel 创建一条命名空间 default 的渠道并返回其 ID。
+func seedNotificationChannel(db *database.DB) uint {
+	ch := &core.NotificationChannel{NamespaceName: "default", Name: "cfg-channel", Type: "webhook", Enabled: true}
+	So(db.Create(ch).Error, ShouldBeNil)
+	return ch.ID
+}
+
+// seedNotificationTarget 创建归属于 channelID 的目标并返回其 ID。
+func seedNotificationTarget(db *database.DB, channelID uint) uint {
+	t := &core.NotificationTarget{NamespaceName: "default", Name: "cfg-target", ChannelID: channelID, Type: "webhook", Enabled: true}
+	So(db.Create(t).Error, ShouldBeNil)
+	return t.ID
+}
+
+// seedNotificationGroup 创建一条非默认的组并返回其 ID。
+func seedNotificationGroup(db *database.DB) uint {
+	g := &core.NotificationGroup{NamespaceName: "default", Name: "cfg-group", IsDefault: false}
+	So(db.Create(g).Error, ShouldBeNil)
+	return g.ID
+}
+
 // TestBuildSendTasks 验证 buildSendTasks 依据规则绑定关系分派发送任务：
 // 直绑目标 -> notify:send:target（目标 ID 透传）；绑定通知组或未绑定 -> notify:send:group。
 func TestBuildSendTasks(t *testing.T) {
 	Convey("Test buildSendTasks", t, func() {
 		db := createTagEventStoreTestDB(t)
+		// 每个叶子外层体重建各自事务，叶子末尾回滚释放行锁，避免 PostgreSQL 下事务重叠挂死。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 
 		Convey("规则直绑通知目标：构建单目标直接发送任务", func() {
-			targetID := uint(42)
+			channelID := seedNotificationChannel(db)
+			targetID := seedNotificationTarget(db, channelID)
 			ruleID := insertSuppressRuleWithBinding(db, nil, &targetID)
 			eventID := insertEvent(db, newEvent(ruleID, "K", tag.EventStatusAlerting))
 
@@ -313,7 +290,7 @@ func TestBuildSendTasks(t *testing.T) {
 		})
 
 		Convey("规则绑定通知组：仍构建通知组发送任务", func() {
-			groupID := uint(7)
+			groupID := seedNotificationGroup(db)
 			ruleID := insertSuppressRuleWithBinding(db, &groupID, nil)
 			eventID := insertEvent(db, newEvent(ruleID, "K", tag.EventStatusAlerting))
 

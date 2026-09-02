@@ -190,9 +190,20 @@ func registerTagEventRoutes(ctx *RegisterContext) {
 	}
 
 	// ========== 标签事件记录：/api/v1/tag-event/record ==========
-	// 标签事件记录管理：手动关闭记录（置为 closed），后续记录列表/详情等能力在此扩展。
+	// 标签事件记录管理：记录列表/详情查询与手动关闭（置为 closed），
+	// 详情关联展示该事件触发的多条通知发送记录。
 	{
 		eventGroup := tagEventGroup.Group("/record", ctx.coreDatabaseMiddleware)
+		// 标签事件记录列表 - 支持分页、搜索、排序与筛选
+		eventGroup.POST("/list", views.TagEventRecordListGet)
+		// 标签事件记录列表自省信息 - 返回搜索选项、表格列与出参结构体定义
+		eventGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.TagEventRecordListGetSearchIn, *views.TagEventRecordListOut]())
+		// 标签事件记录详情 - 返回事件基础信息、命中明细与关联发送记录
+		eventGroup.POST("/:id/get", views.TagEventRecordDetailGet)
+		// 标签事件记录详情元信息
+		eventGroup.OPTIONS("/:id/get", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[views.TagEventRecordDetailOut]()),
+		))
 		// 批量关闭标签事件记录 - 将当前命名空间下未关闭的事件记录置为 closed
 		eventGroup.POST("/close", views.TagEventRecordBatchClose)
 		// 批量关闭标签事件记录元信息

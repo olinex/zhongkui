@@ -17,25 +17,12 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// createTagRuleSampleTestDB 创建 sqlite 内存库并迁移 tag_rule_samples 表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createTagRuleSampleTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&tag.TagRuleSample{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createTagRuleSampleTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createTagRuleSampleTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // setupTagRuleSampleTestRouter 创建测试路由引擎，注入 i18n、日志、数据库与命名空间中间件
@@ -78,7 +65,12 @@ func sampleIDPath(action string, id uint) string {
 // TestTagRuleSampleCreateAndDetail 样例创建与详情查询全链路。
 func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 	Convey("测试标签规则样例创建与详情查询", t, func() {
-		db := createTagRuleSampleTestDB()
+		db := createTagRuleSampleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupTagRuleSampleTestRouter(db)
 
 		Convey("合法样例创建成功且详情一致", func() {
@@ -182,7 +174,12 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 // TestTagRuleSampleUpdateImmutability 更新仅允许修改 name/description，model/input 不可变。
 func TestTagRuleSampleUpdateImmutability(t *testing.T) {
 	Convey("测试标签规则样例更新（model/input 不可变）", t, func() {
-		db := createTagRuleSampleTestDB()
+		db := createTagRuleSampleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupTagRuleSampleTestRouter(db)
 
 		input := map[string]any{"namespace": "default", "method": "POST", "path": "/login"}
@@ -236,7 +233,12 @@ func TestTagRuleSampleUpdateImmutability(t *testing.T) {
 // TestTagRuleSampleDelete 样例删除成功与幂等分支。
 func TestTagRuleSampleDelete(t *testing.T) {
 	Convey("测试标签规则样例删除", t, func() {
-		db := createTagRuleSampleTestDB()
+		db := createTagRuleSampleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupTagRuleSampleTestRouter(db)
 
 		Convey("删除成功且数据落库消失", func() {
@@ -280,7 +282,12 @@ func TestTagRuleSampleDelete(t *testing.T) {
 // TestTagRuleSampleList 样例列表分页与按模型过滤。
 func TestTagRuleSampleList(t *testing.T) {
 	Convey("测试标签规则样例列表查询", t, func() {
-		db := createTagRuleSampleTestDB()
+		db := createTagRuleSampleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupTagRuleSampleTestRouter(db)
 
 		Convey("列表返回全部样例且可按模型过滤", func() {

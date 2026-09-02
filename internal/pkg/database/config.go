@@ -66,7 +66,7 @@ func (m *MetaConfig) ToGormConfig(logger *logging.Logger) *gorm.Config {
 // Config 是数据库连接的主配置结构
 // 包含驱动类型、连接字符串和元配置
 type Config struct {
-	Driver string     `mapstructure:"driver" default:"sqlite" comment:"数据库驱动名称，支持：sqlite、postgres、clickhouse (ref: https://gorm.io/docs/connect.html)"`
+	Driver string     `mapstructure:"driver" default:"postgres" comment:"数据库驱动名称，支持：postgres、clickhouse (ref: https://gorm.io/docs/connect.html)"`
 	DSN    string     `mapstructure:"dsn" default:"test.db" comment:"数据库数据源名称 / 连接字符串 (ref: https://gorm.io/docs/connect.html#Connection-String)"`
 	Meta   MetaConfig `mapstructure:"meta" comment:"数据库 GORM 配置选项 (ref: https://pkg.go.dev/gorm.io/gorm#Config)"`
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/grpc"
@@ -13,9 +14,8 @@ import (
 )
 
 const (
-	ReporterGrpcServerLabel = "grpc.reporter.server"
-	ReporterGrpcClientLabel = "grpc.reporter.client"
-	ReporterGrpcPrefix      = "reporter"
+	ReporterGrpcServerLabel = "grpc.server." + base.ReporterGrpcName
+	ReporterGrpcClientLabel = "grpc.client." + base.ReporterGrpcName
 )
 
 var (
@@ -65,11 +65,11 @@ func newGrpcClientProvider(name string) do.Provider[*grpc.Client] {
 }
 
 func NewReporterGrpcServer() do.Provider[*grpc.Server] {
-	return newGrpcServerProvider(ReporterGrpcPrefix)
+	return newGrpcServerProvider(base.ReporterGrpcName)
 }
 
 func NewReporterGrpcClient() do.Provider[*grpc.Client] {
-	return newGrpcClientProvider(ReporterGrpcPrefix)
+	return newGrpcClientProvider(base.ReporterGrpcName)
 }
 
 func InjectReporterGrpcServer(i do.Injector) {
@@ -97,9 +97,9 @@ func MustInvokeReporterGrpcClient(i do.Injector) *grpc.Client {
 }
 
 func DescribeGrpcServerConfig() config.ConfigDescriptions {
-	return grpc.DescribeServerConfig(ReporterGrpcPrefix)
+	return grpc.DescribeServerConfig(base.ReporterGrpcName)
 }
 
 func DescribeGrpcClientConfig() config.ConfigDescriptions {
-	return grpc.DescribeClientConfig(ReporterGrpcPrefix)
+	return grpc.DescribeClientConfig(base.ReporterGrpcName)
 }

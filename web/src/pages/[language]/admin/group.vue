@@ -110,51 +110,43 @@
                       @click="removePolicyAction(proxy.name, item, removeItem)"
                     />
                   </template>
-                  <template #search="{ items, close, appendItem }">
-                    <v-list :items="items" density="compact" class="py-0">
-                      <v-list-item v-for="item in items" :key="item.id" class="px-1">
-                        <v-list-item-title class="text-body-2">
-                          <span class="font-weight-medium">{{ item.action }}</span>
-                          &nbsp;{{ item.target }}
-                        </v-list-item-title>
-                        <template #append>
-                          <div class="d-flex align-center ga-1">
-                            <v-select
-                              v-model="item.effect"
-                              :items="[
-                                { title: $t('model.policy.value.allow'), value: 'allow' },
-                                { title: $t('model.policy.value.deny'), value: 'deny' },
-                              ]"
-                              :disabled="!editable"
-                              variant="outlined"
-                              density="compact"
-                              hide-details
-                              single-line
-                              style="width: 108px"
-                            />
-                            <v-btn
-                              v-request="
-                                () =>
-                                  addPolicyAction(
-                                    proxy.name,
-                                    item.target,
-                                    item.action,
-                                    item.effect,
-                                    appendItem,
-                                    close,
-                                  )
-                              "
-                              :disabled="!(editable && item.effect)"
-                              :text="$t('action.add')"
-                              color="primary"
-                              variant="tonal"
-                              size="small"
-                              density="compact"
-                            />
-                          </div>
-                        </template>
-                      </v-list-item>
-                    </v-list>
+                  <template #item-title="{ item }">
+                    <span class="font-weight-medium">{{ item.action }}</span>
+                    &nbsp;{{ item.target }}
+                  </template>
+                  <template #item-append="{ item, appendItem, close, editable: listEditable }">
+                    <v-select
+                      v-model="item.effect"
+                      :items="[
+                        { title: $t('model.policy.value.allow'), value: 'allow' },
+                        { title: $t('model.policy.value.deny'), value: 'deny' },
+                      ]"
+                      :disabled="!listEditable"
+                      variant="outlined"
+                      density="compact"
+                      hide-details
+                      single-line
+                      style="width: 108px"
+                    />
+                    <v-btn
+                      v-request="
+                        () =>
+                          addPolicyAction(
+                            proxy.name,
+                            item.target,
+                            item.action,
+                            item.effect,
+                            appendItem,
+                            close,
+                          )
+                      "
+                      :disabled="!(listEditable && item.effect)"
+                      :text="$t('action.add')"
+                      color="primary"
+                      variant="tonal"
+                      size="small"
+                      density="compact"
+                    />
                   </template>
                 </inner-edit-table>
               </v-col>

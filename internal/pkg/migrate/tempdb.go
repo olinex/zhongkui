@@ -56,6 +56,41 @@ func sqlDriverName(gormDriver string) string {
 	}
 }
 
+// EnsureDatabase 确保目标数据库存在，不存在则创建。
+// 复用 tempdb 的 dialect 与 DSN 解析逻辑，供测试助手（internal/pkg/testdb）在连接测试库前调用。
+// PostgreSQL 的 CREATE DATABASE 不支持 IF NOT EXISTS，目标已存在时报错视为正常（幂等）。
+func EnsureDatabase(ctx context.Context, driver, dsn string) error {
+	d, err := dialectFor(driver)
+	if err != nil {
+		return err
+	}
+
+	adminDSN, dbName, err := parseDSN(dsn, d)
+	if err != nil {
+		return err
+	}
+
+	adminDB, err := sql.Open(sqlDriverName(driver), adminDSN)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	defer adminDB.Close()
+
+	if _, err := adminDB.ExecContext(ctx, d.createSQL(dbName)); err != nil {
+		if databaseAlreadyExists(err) {
+			return nil
+		}
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// databaseAlreadyExists 判断数据库创建失败是否因目标已存在（幂等场景的预期情况）。
+func databaseAlreadyExists(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "already exists")
+}
+
 func dialectFor(driver string) (dbDialect, error) {
 	switch driver {
 	case "postgres":

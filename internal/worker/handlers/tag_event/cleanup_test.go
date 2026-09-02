@@ -56,20 +56,22 @@ func TestEventCleanupHandler(t *testing.T) {
 		logger, err := logging.NewDefaultLogger()
 		So(err, ShouldBeNil)
 		db := createTagEventStoreTestDB(t)
+		// 事件记录对 rule_id 有级联外键约束，需先创建一条真实规则作为父行。
+		ruleID := insertSuppressRule(db, time.Hour)
 
 		// 超过默认保留期（7 天）的 suppressed 事件：应删除
-		oldSuppressedID := insertEvent(db, newEvent(1, "Kold", tag.EventStatusSuppressed))
+		oldSuppressedID := insertEvent(db, newEvent(ruleID, "Kold", tag.EventStatusSuppressed))
 		setEventDetectedAt(db, oldSuppressedID, time.Now().Add(-8*24*time.Hour))
-		So(db.Exec("INSERT INTO tag_event_record_hits (created_at, updated_at, tag_event_record_id) VALUES (?, ?, ?)", time.Now(), time.Now(), oldSuppressedID).Error, ShouldBeNil)
+		So(db.Create(&tag.TagEventRecordHit{TagEventRecordID: oldSuppressedID, ConditionID: 1, ConditionName: "cleanup-cond"}).Error, ShouldBeNil)
 
 		// 保留期内的 suppressed 事件：应保留
-		recentSuppressedID := insertEvent(db, newEvent(1, "Krecent", tag.EventStatusSuppressed))
+		recentSuppressedID := insertEvent(db, newEvent(ruleID, "Krecent", tag.EventStatusSuppressed))
 		setEventDetectedAt(db, recentSuppressedID, time.Now().Add(-1*24*time.Hour))
-		So(db.Exec("INSERT INTO tag_event_record_hits (created_at, updated_at, tag_event_record_id) VALUES (?, ?, ?)", time.Now(), time.Now(), recentSuppressedID).Error, ShouldBeNil)
+		So(db.Create(&tag.TagEventRecordHit{TagEventRecordID: recentSuppressedID, ConditionID: 1, ConditionName: "cleanup-cond"}).Error, ShouldBeNil)
 
 		// 告警中 / 已关闭（已通知历史）事件：应保留
-		alertID := insertEvent(db, newEvent(1, "Ka", tag.EventStatusAlerting))
-		closedID := insertEvent(db, newEvent(1, "Kc", tag.EventStatusClosed))
+		alertID := insertEvent(db, newEvent(ruleID, "Ka", tag.EventStatusAlerting))
+		closedID := insertEvent(db, newEvent(ruleID, "Kc", tag.EventStatusClosed))
 
 		handler := &EventCleanupHandler{coreDB: db, logger: logger}
 		So(handler.Do(context.Background(), cleanupStubTask{}), ShouldBeNil)

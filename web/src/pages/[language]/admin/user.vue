@@ -125,6 +125,7 @@
                   :list-item-action="true"
                   :editable="editable"
                   order-by-field="createdAt"
+                  item-key-field="name"
                 >
                   <template #list-item-action="{ item, editable: listEditable, removeItem }">
                     <v-btn
@@ -136,51 +137,37 @@
                       @click="leaveGroupAction(proxy.unionID, item, removeItem)"
                     />
                   </template>
-                  <template #search="{ items, close, appendItem }">
-                    <v-list :items="items">
-                      <v-list-item v-for="item in items" :key="item.id">
-                        <v-card color="surface-variant" variant="tonal" density="compact">
-                          <v-card-title>
-                            {{ item.name }}
-                          </v-card-title>
-                          <v-card-subtitle>
-                            {{ item.description }}
-                          </v-card-subtitle>
-                          <v-card-text>
-                            <v-form>
-                              <v-select
-                                v-model="item.namespace"
-                                :items="namespaceOpts"
-                                :disabled="!editable"
-                                variant="outlined"
-                                density="compact"
-                                rounded
-                              />
-                            </v-form>
-                          </v-card-text>
-                          <v-card-actions>
-                            <v-btn
-                              v-request="
-                                () =>
-                                  joinGroupAction(
-                                    proxy.unionID,
-                                    item.namespace,
-                                    item.name,
-                                    appendItem,
-                                    close,
-                                  )
-                              "
-                              :disabled="!(editable && item.namespace)"
-                              :text="$t('action.join')"
-                              color="primary"
-                              density="compact"
-                              variant="tonal"
-                              block
-                            />
-                          </v-card-actions>
-                        </v-card>
-                      </v-list-item>
-                    </v-list>
+                  <template #item-subtitle="{ item }">
+                    {{ item.description }}
+                  </template>
+                  <template #item-append="{ item, appendItem, close, editable: listEditable }">
+                    <v-select
+                      v-model="item.namespace"
+                      :items="namespaceOpts"
+                      :disabled="!listEditable"
+                      variant="outlined"
+                      hide-details
+                      single-line
+                      style="width: 140px"
+                    />
+                    <v-btn
+                      v-request="
+                        () =>
+                          joinGroupAction(
+                            proxy.unionID,
+                            item.namespace,
+                            item.name,
+                            appendItem,
+                            close,
+                          )
+                      "
+                      :disabled="!(listEditable && item.namespace)"
+                      :text="$t('action.join')"
+                      color="primary"
+                      variant="tonal"
+                      size="small"
+                      density="compact"
+                    />
                   </template>
                 </inner-edit-table>
               </v-col>

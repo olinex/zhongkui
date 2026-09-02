@@ -6,13 +6,14 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
@@ -417,10 +418,8 @@ func UserPasswordReset(c *gin.Context) {
 //   - 失败: 返回相应的错误信息
 //
 // 事务处理:
-//   - 验证用户存在且处于激活状态
-//   - 验证用户组存在
-//   - 验证命名空间存在（除非使用通配命名空间）
-//   - 创建用户与用户组的关联策略
+//   - 事务内以 FOR UPDATE 行锁校验用户、用户组与命名空间，锁保持到 enforcer 写入完成后再提交，
+//     避免"校验通过后被并发禁用用户/删除命名空间"的竞态（SQLite 测试环境无 FOR UPDATE，退化为普通读）
 func UserGroupJoin(c *gin.Context) {
 	// 从URL参数中获取用户unionID并验证
 	unionID, ok := getUUIDParam(c, "unionID")
@@ -435,52 +434,47 @@ func UserGroupJoin(c *gin.Context) {
 		return
 	}
 
-	// 获取数据库连接
+	// 获取数据库连接与 Casbin enforcer
 	db := middlewares.GetCoreDatabase(c)
+	enforcer := middlewares.GetRbacPolicy(c)
 
-	// 创建用户策略对象
-	policy := core.NewUserPolicy(unionID, in.GroupName, in.Namespace)
-
-	// 在事务中执行所有验证和创建操作
-	err := db.Transaction(func(tx *database.DB) error {
-		// 定义要验证的实体
+	// 在事务内以 FOR UPDATE 行锁完成校验，并在行锁保持期间执行 enforcer 增量写入，
+	// 使内存与 rbac_policies 表同步（O(1)），同时杜绝校验与写入之间的并发修改
+	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
+		// 验证用户存在且处于激活状态（行锁防并发禁用）
 		var user core.User
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, "union_id = ? AND active = true", unionID).Error; err != nil {
+			return err
+		}
+
+		// 验证用户组存在（行锁防并发删除）
 		var group core.Group
-		var namespace core.Namespace
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&group, "name = ?", in.GroupName).Error; err != nil {
+			return err
+		}
 
-		// 使用errgroup并发执行验证操作
-		wg, innerCtx := errgroupx.WithContext(c)
-
-		// 验证用户存在且处于激活状态
-		wg.GoNamed("check-active", func() error {
-			return tx.WithContext(innerCtx).First(&user, "union_id = ? AND active = true", unionID).Error
-		})
-
-		// 验证用户组存在
-		wg.GoNamed("check-name", func() error {
-			return tx.WithContext(innerCtx).First(&group, "name = ?", in.GroupName).Error
-		})
-
-		// 验证命名空间存在（除非使用通配命名空间）
-		wg.GoNamed("check-namespace", func() error {
-			if in.Namespace == base.WideMatchLabel {
-				return nil
-			} else {
-				return tx.WithContext(innerCtx).First(&namespace, "name = ?", in.Namespace).Error
+		// 验证命名空间存在（行锁防并发删除；通配命名空间跳过）
+		if in.Namespace != base.WideMatchLabel {
+			var namespace core.Namespace
+			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&namespace, "name = ?", in.Namespace).Error; err != nil {
+				return err
 			}
-		})
+		}
 
-		// 创建用户与用户组的关联策略
-		wg.Go(func() error {
-			return tx.WithContext(innerCtx).Create(&policy).Error
-		})
+		// 行锁保持期间通过 enforcer 增量写入用户组关联（独立连接写入，锁由本事务持有直至提交）
+		if _, err := enforcer.AddGroupingPolicy(unionID.String(), in.GroupName, in.Namespace); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
 
-		// 等待所有并发操作完成
-		return wg.Wait()
-	})
-
-	// 处理事务执行结果
-	if err != nil {
+	// 回查落库行填充系统字段（ID/CreatedAt/UpdatedAt），保持前端响应契约
+	var policy core.RbacPolicy
+	if err := db.First(&policy, "ptype = ? AND v0 = ? AND v1 = ? AND v2 = ?",
+		base.GroupLabel, unionID.String(), in.GroupName, in.Namespace).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -526,19 +520,9 @@ func UserGroupLeave(c *gin.Context) {
 		return
 	}
 
-	// 获取数据库连接
-	db := middlewares.GetCoreDatabase(c)
-
-	// 删除用户与用户组的关联策略
-	// 使用精确匹配：策略类型为GroupLabel，用户ID、组名和命名空间完全匹配
-	if err := db.Delete(
-		&core.RbacPolicy{},
-		"ptype = ? AND v0 = ? AND v1 = ? AND v2 = ?",
-		base.GroupLabel,
-		unionID.String(),
-		in.GroupName,
-		in.Namespace,
-	).Error; err != nil {
+	// 通过 Casbin enforcer 增量移除用户组关联，使内存与 rbac_policies 表同步（O(1)，无需全量重载）
+	// 策略不存在时返回 (false, nil)，与原有 Delete 0 行视为成功的幂等语义一致
+	if _, err := middlewares.GetRbacPolicy(c).RemoveGroupingPolicy(unionID.String(), in.GroupName, in.Namespace); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}

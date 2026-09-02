@@ -36,6 +36,8 @@ declare module 'vue-router/auto-routes' {
     'Notification Target List': RouteRecordInfo<'Notification Target List', '/:language/notification/target', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Notification Template List': RouteRecordInfo<'Notification Template List', '/:language/notification/template', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Profile': RouteRecordInfo<'Profile', '/:language/profile', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'Tag Event Record List': RouteRecordInfo<'Tag Event Record List', '/:language/tag-event/record', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'Tag Event Record Detail': RouteRecordInfo<'Tag Event Record Detail', '/:language/tag-event/record-detail', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Tag Event Rule List': RouteRecordInfo<'Tag Event Rule List', '/:language/tag-event/tag-event-rule', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Tag Rule List': RouteRecordInfo<'Tag Rule List', '/:language/tag-event/tag-rule', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Traffic List': RouteRecordInfo<'Traffic List', '/:language/traffic/:type', { language: ParamValue<true>, type: ParamValue<true> }, { language: ParamValue<false>, type: ParamValue<false> }>,

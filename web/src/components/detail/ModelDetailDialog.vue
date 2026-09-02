@@ -1,7 +1,8 @@
 <template>
-  <!-- 行详情对话框：只读明细以全屏对话框展示，便于浏览大字段与长报文；
-       字段按 kind 分支渲染，crypto/s3 提供明文查看（通过 view-plaintext 事件交给调用方） -->
-  <v-dialog :model-value="modelValue" fullscreen transition="dialog-bottom-transition" @update:model-value="onUpdate">
+  <!-- 行详情对话框：只读明细以紧凑卡片对话框展示（与发送记录详情一致，便于聚焦字段）；
+       字段按 kind 分支渲染；存在加密/S3 等操作字段时保留操作列，否则退化为两列；
+       plain 字段按列表页方式（AdaptiveCell）依 type 渲染，而非纯文本 -->
+  <v-dialog :model-value="modelValue" max-width="760" @update:model-value="onUpdate">
     <v-card>
       <v-toolbar density="compact">
         <v-toolbar-title class="text-no-wrap">
@@ -10,9 +11,9 @@
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" @click="onUpdate(false)" />
       </v-toolbar>
-      <div class="px-6 py-4 overflow-y-auto" style="height: calc(100vh - 48px)">
+      <div class="px-6 py-4 overflow-y-auto" style="max-height: 70vh">
         <v-table density="compact">
-          <thead>
+          <thead v-if="showActions">
             <tr>
               <th class="text-no-wrap">{{ $t("model.__base.field.field") }}</th>
               <th>{{ $t("model.__base.field.value") }}</th>
@@ -21,10 +22,10 @@
           </thead>
           <tbody>
             <tr v-for="field in fields" :key="field.key">
-              <td class="text-no-wrap">
+              <td class="text-no-wrap font-weight-medium">
                 {{ field.label }}
               </td>
-              <td>
+              <td class="detail-value">
                 <template v-if="field.kind === 'crypto'">
                   <v-chip color="warning" variant="tonal" size="small">
                     {{ $t("model.__base.field.encrypted") }}
@@ -40,11 +41,10 @@
                   />
                 </template>
                 <template v-else>
-                  <!-- 空字符串展示空白标记，避免整行视觉错位 -->
-                  {{ field.display || $t("model.__base.value.blank") }}
+                  <adaptive-cell :header="plainHeader(field)" :item="plainItem(field)" />
                 </template>
               </td>
-              <td class="text-no-wrap">
+              <td v-if="showActions" class="text-no-wrap">
                 <template
                   v-if="field.kind === 'crypto' || (field.kind === 's3' && field.length > 0)"
                 >
@@ -71,8 +71,9 @@
 
 <script setup lang="ts" name="model-detail-dialog">
 import type { DetailField } from "@/components/@types/detail";
+import type { TableHeader } from "@/components/@types/table";
 
-defineProps<{
+const props = defineProps<{
   modelValue: boolean;
   title: string;
   fields: DetailField[];
@@ -87,4 +88,26 @@ const emits = defineEmits<{
 const onUpdate = (value: boolean): void => {
   emits("update:modelValue", value);
 };
+
+// showActions 是否需要操作列：存在加密/S3 字段（有查看明文等操作）时保留操作列
+const showActions = computed(() => {
+  return props.fields.some((field) => field.kind === "crypto" || field.kind === "s3");
+});
+
+// plainHeader 构造 plain 字段的表头（key/title/type），供 AdaptiveCell 按列表页方式渲染
+const plainHeader = (field: DetailField): TableHeader => {
+  return { key: field.key, title: field.label, type: field.type };
+};
+
+// plainItem 构造 plain 字段的单字段行数据（{ [key]: value }），供 AdaptiveCell 取值
+const plainItem = (field: DetailField): Record<string, unknown> => {
+  return { [field.key]: field.value };
+};
 </script>
+
+<style scoped>
+/* 详情值单元格：长文本（如 base64 报文、请求头）自动换行，避免撑破紧凑对话框 */
+.detail-value {
+  word-break: break-all;
+}
+</style>

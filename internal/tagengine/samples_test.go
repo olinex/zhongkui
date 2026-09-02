@@ -132,7 +132,11 @@ func TestEnsureModelSamples(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 1)
 			So(samples[0].Name, ShouldEqual, "default")
-			So(string(samples[0].Input), ShouldEqual, `{"foo":""}`)
+			// PostgreSQL jsonb 规范输出会为冒号后补充空格（如 {"foo": ""}），
+			// 故按语义反序列化比较而非断言字节级 JSON，避免受方言空白规范化影响。
+			var actualInput map[string]any
+			So(json.Unmarshal(samples[0].Input, &actualInput), ShouldBeNil)
+			So(actualInput, ShouldResemble, map[string]any{"foo": ""})
 
 			samples, err = tagengine.EnsureModelSamples(context.Background(), db, "default", customModelType)
 			So(err, ShouldBeNil)

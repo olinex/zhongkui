@@ -5,6 +5,7 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
@@ -202,6 +203,17 @@ func NamespaceBatchDelete(c *gin.Context) {
 		func(name string) string { return name },
 		func(name string) error {
 			return db.Transaction(func(tx *database.DB) error {
+				// 以 FOR UPDATE 行锁锁定命名空间行，与 UserGroupJoin 的命名空间校验串行化，
+				// 避免"校验无引用后，并发加入引用再删除命名空间"导致的悬挂引用（SQLite 退化为普通读）
+				var ns core.Namespace
+				if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&ns, "name = ?", name).Error; err != nil {
+					if errors.Is(err, gorm.ErrRecordNotFound) {
+						// 命名空间不存在，视为成功跳过（幂等）
+						return nil
+					}
+					return errors.WithStack(err)
+				}
+
 				// 检查是否存在引用该命名空间的RBAC策略（ptype='g'，v2为命名空间名）
 				var policy core.RbacPolicy
 				if err := tx.First(
@@ -212,14 +224,6 @@ func NamespaceBatchDelete(c *gin.Context) {
 				).Error; err != nil {
 					if errors.Is(err, gorm.ErrRecordNotFound) {
 						// 没有引用关系，可以删除
-						var ns core.Namespace
-						if err := tx.First(&ns, "name = ?", name).Error; err != nil {
-							if errors.Is(err, gorm.ErrRecordNotFound) {
-								// 命名空间不存在，视为成功跳过
-								return nil
-							}
-							return errors.WithStack(err)
-						}
 						return tx.Delete(&ns).Error
 					}
 					// 其他数据库错误作为失败原因

@@ -11,7 +11,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
@@ -24,27 +24,11 @@ var httpTransportType = func() string {
 	return t
 }()
 
-// setupSampleDB 创建内存 sqlite 库并迁移 tag_rule_samples 表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
+// setupSampleDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
+// tag_rule_samples 表已由 testdb 统一迁移。
 func setupSampleDB(t *testing.T) *database.DB {
 	t.Helper()
-	logger, err := logging.NewDefaultLogger()
-	if err != nil {
-		t.Fatal(err)
-	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal(err)
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&tag.TagRuleSample{}); err != nil {
-		t.Fatal(err)
-	}
-	return db
+	return testdb.Core(t)
 }
 
 // insertSample 为目标模型插入一条验证样例（归属 default 命名空间，与 sampleRules 规则一致）。

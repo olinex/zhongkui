@@ -20,6 +20,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
 var initServiceTestKeyOnce sync.Once
@@ -37,37 +38,12 @@ func initServiceTestKeyDerivation() {
 	})
 }
 
-// newServiceTestDB 创建 sqlite 内存库并迁移通知相关的五张表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-// newServiceTestDB creates a sqlite in-memory DB and migrates the five notification
-// tables. The in-memory DB must be limited to a single connection.
+// newServiceTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
+// newServiceTestDB creates a shared, pre-migrated PostgreSQL test DB (testdb.Core).
 func newServiceTestDB(t *testing.T) *database.DB {
 	t.Helper()
 	initServiceTestKeyDerivation()
-	logger, err := logging.NewDefaultLogger()
-	if err != nil {
-		t.Fatal("failed to create default logger: " + err.Error())
-	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(
-		&core.NotificationChannel{},
-		&core.NotificationTarget{},
-		&core.NotificationGroup{},
-		&core.NotificationGroupTarget{},
-		&core.NotificationRecord{},
-		&core.NotificationTemplate{},
-	); err != nil {
-		t.Fatal("failed to migrate test database: " + err.Error())
-	}
-	return db
+	return testdb.Core(t)
 }
 
 // newTestService 创建测试用的通知服务实例。

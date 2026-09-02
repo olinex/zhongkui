@@ -14,6 +14,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
@@ -65,43 +66,7 @@ func TestEventDetectHandler_LoadConditions(t *testing.T) {
 	Convey("Test EventDetectHandler LoadConditions", t, func() {
 		logger, err := logging.NewDefaultLogger()
 		So(err, ShouldBeNil)
-		db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-		So(err, ShouldBeNil)
-		if sqlDB, err := db.DB(); err != nil {
-			t.Fatal(err)
-		} else {
-			sqlDB.SetMaxOpenConns(1)
-		}
-		// sqlite 下 GORM AutoMigrate 处理多级 belongs-to 关联（tag_event_rules -> tag_event_conditions）
-		// 会触发 nil 指针 panic，因此按 core 迁移（001_init.sql）的列定义手写建表。
-		So(db.Exec(`CREATE TABLE tag_event_rules (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			created_at datetime NOT NULL,
-			updated_at datetime NOT NULL,
-			namespace_name varchar(32) NOT NULL,
-			name varchar(255) NOT NULL,
-			enabled boolean NOT NULL DEFAULT true,
-			notification_group_id int,
-			notification_target_id int,
-			match_all boolean NOT NULL DEFAULT false,
-			suppress_window bigint NOT NULL DEFAULT 0,
-			description varchar(256) NOT NULL
-		)`).Error, ShouldBeNil)
-		So(db.Exec(`CREATE TABLE tag_event_conditions (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			created_at datetime NOT NULL,
-			updated_at datetime NOT NULL,
-			tag_event_rule_id integer NOT NULL,
-			model varchar(255) NOT NULL DEFAULT '',
-			dimension varchar(128) NOT NULL DEFAULT '',
-			item varchar(255) NOT NULL DEFAULT '',
-			name varchar(255) NOT NULL,
-			"window" bigint NOT NULL,
-			threshold int NOT NULL,
-			expression varchar(1024) NOT NULL,
-			enabled boolean NOT NULL DEFAULT true,
-			description varchar(256) NOT NULL
-		)`).Error, ShouldBeNil)
+		db := testdb.Core(t)
 
 		// 启用规则：含 1 个启用条件 + 1 个禁用条件
 		enabledRule := &tag.TagEventRule{
@@ -161,20 +126,30 @@ func TestEventDetectHandler_PersistEvents(t *testing.T) {
 		logger, err := logging.NewDefaultLogger()
 		So(err, ShouldBeNil)
 		db := createTagEventStoreTestDB(t)
+		// 每个叶子外层体重建各自事务（含规则、事件与命中明细），叶子末尾回滚释放行锁，
+		// 避免 goconvey 多叶子在 PostgreSQL 下事务重叠持有行锁导致挂死。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		// 种入规则行以满足 tag_event_records.rule_id 外键约束，事件引用其真实 ID
+		ruleA := &tag.TagEventRule{NamespaceName: "default", Name: "rule-a", Enabled: true}
+		So(db.Create(ruleA).Error, ShouldBeNil)
+		ruleB := &tag.TagEventRule{NamespaceName: "default", Name: "rule-b", Enabled: true}
+		So(db.Create(ruleB).Error, ShouldBeNil)
 		// 构造不含 client 的处理器：编译期即证明检测处理器不再有任何任务投递能力
 		handler := &EventDetectHandler{coreDB: db, logger: logger}
 
 		detectedAt := time.Date(2026, 8, 11, 9, 5, 0, 0, time.UTC)
 		events := []*tagengine.TagEventRecord{
 			{
-				Namespace: "default", RuleID: 1, RuleName: "rule-a", MatchAll: false,
+				Namespace: "default", RuleID: ruleA.ID, RuleName: "rule-a", MatchAll: false,
 				DetectedAt: detectedAt,
 				Hits: []tagengine.TagEventRecordHit{
 					{ConditionID: 1, ConditionName: "cond-1", Model: "m1", Dimension: "d1", Item: "i1", Count: 5, Threshold: 3, Window: serializer.DurationNS(5 * time.Minute)},
 				},
 			},
 			{
-				Namespace: "default", RuleID: 2, RuleName: "rule-b", MatchAll: true,
+				Namespace: "default", RuleID: ruleB.ID, RuleName: "rule-b", MatchAll: true,
 				DetectedAt: detectedAt.Add(time.Minute),
 				Hits: []tagengine.TagEventRecordHit{
 					{ConditionID: 2, ConditionName: "cond-2", Model: "m2", Dimension: "d2", Item: "i2", Count: 8, Threshold: 4, Window: serializer.DurationNS(10 * time.Minute)},

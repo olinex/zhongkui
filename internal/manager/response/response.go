@@ -208,7 +208,7 @@ func CreateBadBodyError(err error) *CodeError {
 	if vErr, ok := err.(validator.ValidationErrors); ok {
 		return CreateCodeError(http.StatusBadRequest, CodeBadBody, vErr)
 	}
-	return CreateCodeError(http.StatusBadRequest, CodeBadBody, nil)
+	return CreateCodeError(http.StatusBadRequest, CodeBadBody, err)
 }
 
 // CreateBadQueryError 创建一个查询参数错误的 CodeError

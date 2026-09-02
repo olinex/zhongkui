@@ -121,10 +121,16 @@ const refreshAvailableNamespace = async () => {
   avaliableNamespaces.value = await userStore.getAvailableNamespaces();
 };
 
-// onNamespaceChange 切换命名空间：asNamespace 仅更新 store 与 localStorage，页面命名空间化
-// 数据（列表、下拉、store 等）不会自动刷新；此处统一重载当前页，保证所有页面按新命名空间重新拉取。
-const onNamespaceChange = (namespace: string): void => {
+// onNamespaceChange 切换命名空间：asNamespace 更新 store 与 localStorage，并通知配置同步。
+// 已开启配置同步（syncEnabled）时必须先等待远端保存成功再重载页面：
+// 否则 reload 会打断 500ms 防抖的异步 push，服务端仍存旧命名空间，
+// reload 后 configSync 拉回旧配置覆盖本地 localStorage，导致跳回原命名空间。
+const onNamespaceChange = async (namespace: string): Promise<void> => {
   appStore.asNamespace(namespace);
+  const configSync = useConfigSyncStore();
+  if (configSync.enabled) {
+    await configSync.push();
+  }
   window.location.reload();
 };
 

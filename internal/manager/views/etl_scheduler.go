@@ -28,6 +28,8 @@ type EtlSchedulerTaskIn struct {
 	BacklogEnabled bool                  `json:"backlogEnabled"`              // 是否补投积压期间错过的历史触发点
 	BacklogWindow  serializer.DurationNS `json:"backlogWindow"`               // 历史触发点最大回溯窗口期，0 表示不限
 	BacklogLimit   uint                  `json:"backlogLimit"`                // 单次最多补投历史触发点个数，默认 1000
+	Retention      serializer.DurationNS `json:"retention"`                   // 任务完成/失败后的保留时长，大于 0 时成功完成后保留以便查看执行记录
+	Lookback       serializer.DurationNS `json:"lookback"`                    // interval 任务触发基准时刻前移的回看偏移，确保读取已聚合完整的分钟，默认 5m
 }
 
 // EtlSchedulerTaskToggleIn 是定时任务启停的输入参数结构体。
@@ -75,6 +77,8 @@ func etlSchedulerTaskInToConfig(in EtlSchedulerTaskIn) pipeline.SchedulerTaskCon
 		BacklogEnabled: in.BacklogEnabled,
 		BacklogWindow:  in.BacklogWindow,
 		BacklogLimit:   in.BacklogLimit,
+		Retention:      in.Retention,
+		Lookback:       in.Lookback,
 	}
 }
 

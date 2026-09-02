@@ -1,3 +1,5 @@
+import type { SearchIn } from "@/components/@types/table";
+
 export interface UserGroupIn {
   namespace: string;
   groupName: string;
@@ -166,4 +168,77 @@ export interface BatchFailureOut {
 export interface BatchResultOut {
   succeeded: number;
   failed: BatchFailureOut[];
+}
+
+// ---- 标签事件记录 ----
+// TagEventRecordItem 标签事件记录项
+export interface TagEventRecordItem {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  ruleId: number;
+  ruleName: string;
+  matchAll: boolean;
+  status: string;
+  detectedAt: string;
+}
+
+// TagEventRecordListOut 标签事件记录列表出参
+export interface TagEventRecordListOut {
+  items: TagEventRecordItem[];
+  total: number;
+}
+
+// TagEventRecordHitOut 标签事件命中明细项
+export interface TagEventRecordHitOut {
+  id: number;
+  conditionName: string;
+  model: string;
+  dimension: string;
+  item: string;
+  count: number;
+  threshold: number;
+  window: string;
+}
+
+// TagEventRecordSendOut 标签事件关联的通知发送记录项
+export interface TagEventRecordSendOut {
+  id: number;
+  targetId: number;
+  targetName: string;
+  channelId: number;
+  channelName: string;
+  channelType: string;
+  status: string;
+  messageId: string;
+  error: string;
+  payload: string;
+  notifiedAt: string | null;
+}
+
+// TagEventRecordDetailOut 标签事件记录详情出参
+export interface TagEventRecordDetailOut {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  ruleId: number;
+  ruleName: string;
+  matchAll: boolean;
+  status: string;
+  dedupKey: string;
+  detectedAt: string;
+  hits: TagEventRecordHitOut[];
+  sends: TagEventRecordSendOut[];
+}
+
+// TagEventRecordSearchIn 标签事件记录搜索入参
+// 过滤字段命名与后端 search.go 的 TagEventRecordListGetFilterBy 一致
+export interface TagEventRecordSearchIn extends SearchIn {
+  search?: string;
+  status?: string;
+  matchAll?: boolean;
+  ruleName?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  detectedAt?: string;
 }

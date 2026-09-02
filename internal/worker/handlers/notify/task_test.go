@@ -22,6 +22,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
 // fakeETLTask 实现 etl.Task 接口的测试替身。
@@ -225,36 +226,12 @@ func initTaskTestKeyDerivation() {
 	})
 }
 
-// newServiceTestDB 创建 sqlite 内存库并迁移通知相关的五张表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-// newServiceTestDB creates a sqlite in-memory DB and migrates the five notification
-// tables. The in-memory DB must be limited to a single connection.
+// newServiceTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
+// newServiceTestDB creates a shared, pre-migrated PostgreSQL test DB (testdb.Core).
 func newServiceTestDB(t *testing.T) *database.DB {
 	t.Helper()
 	initTaskTestKeyDerivation()
-	logger, err := logging.NewDefaultLogger()
-	if err != nil {
-		t.Fatal("failed to create default logger: " + err.Error())
-	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(
-		&core.NotificationChannel{},
-		&core.NotificationTarget{},
-		&core.NotificationGroup{},
-		&core.NotificationGroupTarget{},
-		&core.NotificationRecord{},
-	); err != nil {
-		t.Fatal("failed to migrate test database: " + err.Error())
-	}
-	return db
+	return testdb.Core(t)
 }
 
 // newTestService 创建测试用的通知服务实例。
@@ -264,6 +241,14 @@ func newTestService(db *database.DB) *notifybase.Service {
 	return notifybase.NewService(db, logger)
 }
 
+// ensureTestNamespace 确保命名空间在测试库中存在（FirstOrCreate 幂等创建），
+// 以满足 notification_* 表上 namespace_name 的外键约束。
+// ensureTestNamespace makes sure the namespace row exists (idempotent FirstOrCreate)
+// to satisfy the namespace_name foreign keys on the notification_* tables.
+func ensureTestNamespace(db *database.DB, namespace string) {
+	db.FirstOrCreate(&core.Namespace{Name: namespace})
+}
+
 // seedWebhook 在指定命名空间下构造一个启用状态的 webhook 渠道、目标与默认通知组，
 // 并将目标加入该组；返回组与目标实体（含 ID）。
 // seedWebhook creates an enabled webhook channel, target and default group in the
@@ -271,6 +256,7 @@ func newTestService(db *database.DB) *notifybase.Service {
 // target entities (with IDs).
 func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.NotificationGroup, *core.NotificationTarget) {
 	t.Helper()
+	ensureTestNamespace(db, namespace)
 	channel := &core.NotificationChannel{
 		NamespaceName: namespace,
 		Name:          "webhook-channel",
@@ -317,6 +303,7 @@ func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.No
 // namespace via the group ID and a sequence. It returns the target entity (with ID).
 func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, groupID uint, seq int) *core.NotificationTarget {
 	t.Helper()
+	ensureTestNamespace(db, namespace)
 	channel := &core.NotificationChannel{
 		NamespaceName: namespace,
 		Name:          fmt.Sprintf("webhook-channel-%d-%d", groupID, seq),

@@ -111,6 +111,7 @@
                   :search-request="notificationTargetListGet"
                   :list-item-action="true"
                   order-by-field="id"
+                  item-key-field="id"
                   editable
                 >
                   <template #list-item-action="{ removeItem }">
@@ -122,23 +123,18 @@
                       @click="removeItem"
                     />
                   </template>
-                  <template #search="{ items, appendItem }">
-                    <v-list :items="items">
-                      <v-list-item v-for="item in items" :key="item.id">
-                        <v-list-item-title>{{ item.name }}</v-list-item-title>
-                        <v-list-item-subtitle>{{ item.channelName }}</v-list-item-subtitle>
-                        <template #append>
-                          <v-btn
-                            :disabled="isTargetBound(item.id, createTargetItems)"
-                            :text="$t('action.add')"
-                            color="primary"
-                            density="compact"
-                            variant="tonal"
-                            @click="appendItem(item)"
-                          />
-                        </template>
-                      </v-list-item>
-                    </v-list>
+                  <template #item-subtitle="{ item }">
+                    {{ item.channelName }}
+                  </template>
+                  <template #item-append="{ item, appendItem, editable: listEditable, bound }">
+                    <v-btn
+                      :disabled="!listEditable || bound"
+                      :text="$t('action.add')"
+                      color="primary"
+                      density="compact"
+                      variant="tonal"
+                      @click="appendItem(item)"
+                    />
                   </template>
                 </inner-edit-table>
               </v-col>
@@ -199,6 +195,7 @@
                   :list-item-action="true"
                   :editable="editable"
                   order-by-field="id"
+                  item-key-field="id"
                 >
                   <template #list-item-action="{ removeItem }">
                     <v-btn
@@ -210,23 +207,18 @@
                       @click="removeItem"
                     />
                   </template>
-                  <template #search="{ items, appendItem }">
-                    <v-list :items="items">
-                      <v-list-item v-for="item in items" :key="item.id">
-                        <v-list-item-title>{{ item.name }}</v-list-item-title>
-                        <v-list-item-subtitle>{{ item.channelName }}</v-list-item-subtitle>
-                        <template #append>
-                          <v-btn
-                            :disabled="!editable || isTargetBound(item.id, editTargetItems)"
-                            :text="$t('action.add')"
-                            color="primary"
-                            density="compact"
-                            variant="tonal"
-                            @click="appendItem(item)"
-                          />
-                        </template>
-                      </v-list-item>
-                    </v-list>
+                  <template #item-subtitle="{ item }">
+                    {{ item.channelName }}
+                  </template>
+                  <template #item-append="{ item, appendItem, editable: listEditable, bound }">
+                    <v-btn
+                      :disabled="!listEditable || bound"
+                      :text="$t('action.add')"
+                      color="primary"
+                      density="compact"
+                      variant="tonal"
+                      @click="appendItem(item)"
+                    />
                   </template>
                 </inner-edit-table>
               </v-col>
@@ -345,10 +337,6 @@ const targetHeaders: Array<TableHeader> = [
 ];
 // 追加候选目标：按名称服务端关键字搜索
 const targetSearchHeaders: Record<string, SearchAction> = { name: SearchAction.CONTAIN };
-
-// 判重：候选目标是否已被绑定（用于禁用「追加已绑定目标」）
-const isTargetBound = (id: number, items: NotificationGroupTargetItem[]): boolean =>
-  items.some((t) => t.id === id);
 
 // ---- 创建分组 ----
 const createTargetItems = ref<NotificationGroupTargetItem[]>([]);

@@ -27,6 +27,7 @@ navbar:
     self: 标签事件
     tagRule: 标签规则
     tagEventRule: 标签事件规则
+    record: 标签事件记录
   pin: 固定侧边栏
   unpin: 取消固定
 model:
@@ -54,6 +55,8 @@ model:
       undefined: "未定义"
       yes: 是
       no: 否
+      "true": 是
+      "false": 否
   notificationChannel:
     name: 通知渠道
     field:
@@ -310,6 +313,8 @@ model:
       queue: 管道
       timeout: 超时时长
       maxRetry: 最大重试次数
+      retention: 完成保留时长
+      lookback: 回看偏移
       enabled: 是否启用
       payload: 请求负载
       backlogEnabled: 补投历史触发点
@@ -393,6 +398,52 @@ model:
       notificationDefault: 使用命名空间默认通知组
       notificationGroup: 通知组
       notificationTarget: 通知目标
+  tagEventRecord:
+    name: 标签事件记录
+    field:
+      id: ID
+      createdAt: 创建时日
+      updatedAt: 更新时日
+      ruleId: 规则 ID
+      ruleName: 规则名称
+      matchAll: 全部条件满足
+      status: 状态
+      dedupKey: 抑制指纹
+      detectedAt: 检测时间
+    type:
+      status:
+        pending: 待处理
+        alerting: 告警中
+        suppressed: 已抑制
+        closed: 已关闭
+    option:
+      pending: 待处理
+      alerting: 告警中
+      suppressed: 已抑制
+      closed: 已关闭
+    content:
+      info: 事件基础信息
+      hits: 命中明细
+      sends: 关联发送记录
+  tagEventRecordHit:
+    name: 命中明细
+    field:
+      conditionName: 条件名称
+      model: 目标模型
+      dimension: 标签维度
+      item: 维度取值
+      count: 命中次数
+      threshold: 条件阈值
+      window: 时间窗口
+  tagEventRecordSend:
+    name: 发送记录
+    field:
+      targetName: 通知目标
+      channelName: 通知渠道
+      channelType: 渠道类型
+      status: 状态
+      messageId: 消息 ID
+      notifiedAt: 发送时间
   tagEventCondition:
     name: 条件
     field:
@@ -1009,6 +1060,9 @@ title:
     group: 通知组
     template: 通知模板
     record: 发送记录
+  tagEvent:
+    record: 标签事件记录
+    recordDetail: 标签事件记录详情
   tagRuleTagEvent: 标签事件 - 标签规则
   tagEventRuleTagEvent: 标签事件 - 标签事件规则
   queueEtl: 数据处理 - 管道

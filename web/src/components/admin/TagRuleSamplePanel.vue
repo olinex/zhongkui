@@ -105,7 +105,6 @@
 </template>
 
 <script setup lang="ts" name="tag-rule-sample-panel">
-import { DateTime } from "luxon";
 import { useForm } from "vee-validate";
 
 import {
@@ -115,7 +114,12 @@ import {
   tagRuleSampleListOptions,
   tagRuleSampleUpdate,
 } from "@/apis/tagEvent";
-import { TrafficCryptoFields, TrafficS3Fields, trafficTypeFromModelKey } from "@/apis/traffic";
+import {
+  TrafficCryptoFields,
+  TrafficFieldTypes,
+  TrafficS3Fields,
+  trafficTypeFromModelKey,
+} from "@/apis/traffic";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { BatchResultOut } from "@/apis/@types/admin";
 import type { DetailField } from "@/components/@types/detail";
@@ -123,11 +127,10 @@ import type { BatchActions, ItemActions } from "@/components/@types/table";
 import type { TagRuleSampleDetailOut } from "@/pages/[language]/tag-event/@types";
 import { updateTagRuleSampleSchema } from "@/schemas/tagRuleSample";
 import { useAppStore } from "@/stores/app";
+import { BackendDataType } from "@/types";
 import { vuetifyCfg } from "@/utils/form";
-import i18n, { localeDatetimeFormat } from "@/utils/i18n";
+import i18n from "@/utils/i18n";
 import { modelFieldTitle, modelTypeKeyLabel, modelTypeKeyToI18nKey } from "@/utils/modelField";
-
-const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
 
 const appStore = useAppStore();
 const sampleTableRef = useTemplateRef("sampleTableRef");
@@ -149,19 +152,9 @@ const [editName, editNameProps] = updateForm.defineField("name", vuetifyCfg);
 const [editDescription, editDescriptionProps] = updateForm.defineField("description", vuetifyCfg);
 
 // ---- detail ----
-const formatValue = (value: unknown): string => {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-  return String(value);
-};
-
 // detailFields 样例详情字段：遍历 input 文档按模型类型翻译字段名；
-// 加密/S3 字段经模型类型键逆映射识别后提供明文查看，其余字段对象值
-// JSON 序列化，timestamp/createdAt 等 ISO 串本地化格式化
+// 加密/S3 字段经模型类型键逆映射识别后提供明文查看，其余字段按流量模型类型
+// （TrafficFieldTypes）由 AdaptiveCell 以列表页方式渲染
 const detailFields = computed<DetailField[]>(() => {
   const item = detailItem.value;
   if (!item) {
@@ -172,12 +165,23 @@ const detailFields = computed<DetailField[]>(() => {
   const trafficType = trafficTypeFromModelKey(String(item.model));
   const cryptoKeys = new Set(trafficType ? (TrafficCryptoFields[trafficType] ?? []) : []);
   const s3Keys = new Set(trafficType ? (TrafficS3Fields[trafficType] ?? []) : []);
+  // 字段渲染类型：按流量类型查 TrafficFieldTypes，未知类型/字段回退 STRING
+  const fieldTypes = trafficType ? TrafficFieldTypes[trafficType] : {};
   const input = (item.input ?? {}) as Record<string, unknown>;
   return Object.entries(input).map(([key, value]) => {
     const label = modelFieldTitle(modelKey, key);
+    const fieldType = fieldTypes[key] ?? BackendDataType.STRING;
     // 加密字段：密文须为非空字符串才提供明文查看（预置样例空对象 {} 按普通值展示）
     if (cryptoKeys.has(key) && typeof value === "string" && value !== "") {
-      return { key, label, display: "", kind: "crypto" as const, length: 0, value };
+      return {
+        key,
+        label,
+        display: "",
+        kind: "crypto" as const,
+        length: 0,
+        value,
+        type: fieldType,
+      };
     }
     // S3 字段：对象键须为非空字符串才提供明文查看；长度取 input 中 {key}Length 字段
     if (s3Keys.has(key) && typeof value === "string" && value !== "") {
@@ -188,16 +192,10 @@ const detailFields = computed<DetailField[]>(() => {
         kind: "s3" as const,
         length: Number(input[`${key}Length`] ?? 0),
         value,
+        type: fieldType,
       };
     }
-    let display = formatValue(value);
-    if (DATETIME_FIELD_KEYS.has(key) && typeof value === "string") {
-      const dt = DateTime.fromISO(value);
-      if (dt.isValid) {
-        display = localeDatetimeFormat(dt);
-      }
-    }
-    return { key, label, display, kind: "plain" as const, length: 0, value };
+    return { key, label, display: "", kind: "plain" as const, length: 0, value, type: fieldType };
   });
 });
 

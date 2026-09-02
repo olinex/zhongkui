@@ -73,6 +73,18 @@ type SchedulerTaskConfig struct {
 	// 默认值: 1000
 	BacklogLimit uint `mapstructure:"backlogLimit" json:"backlog_limit" default:"1000" comment:"单次最多补投的历史触发点个数"` // 单次最多补投个数
 
+	// Retention 任务完成/失败后的保留时长。
+	// 大于 0 时，任务成功（completed）或失败（archived）后会在 asynq 队列中保留该时长，
+	// 便于在"数据处理-任务列表"查看执行记录；0 表示完成任务成功即被清理（不进 completed）。
+	// 默认值: 1h
+	Retention serializer.DurationNS `mapstructure:"retention" json:"retention" default:"1h" comment:"任务完成/失败后的保留时长，大于 0 时成功完成后保留以便查看执行记录"` // 任务保留时长
+
+	// Lookback 游标触发基准时刻的回看偏移。
+	// interval 任务的目标分钟取 now - Lookback，确保读取的是已结束且聚合完整的分钟，
+	// 而非仍在写入中的当前分钟，避免检测事件遗漏；0 表示不偏移（保持原行为）。
+	// 默认值: 5m
+	Lookback serializer.DurationNS `mapstructure:"lookback" json:"lookback" default:"5m" comment:"interval 任务触发基准时刻前移的回看偏移，确保读取已聚合完整的分钟，0 表示不偏移"` // 回看偏移时长
+
 	// Payload 任务载荷数据，包含任务执行时需要的参数。
 	// 默认值: 空映射 {}
 	Payload map[string]any `mapstructure:"payload" json:"payload" default:"{}" comment:"任务载荷数据 (ref: https://pkg.go.dev/github.com/hibiken/asynq#Task-Payload)"` // 任务载荷数据

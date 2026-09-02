@@ -75,7 +75,7 @@ func TestIPAddr_Database(t *testing.T) {
 			value, err := ipAddr.Value()
 			So(err, ShouldBeNil)
 			// 统一以 16 字节原始二进制写入（IPv4 提升为 IPv4-mapped IPv6）
-			So(value, ShouldResemble, []byte(ip.To16()))
+			So(value, ShouldResemble, ip.To16())
 		})
 
 		Convey("Value method with IPv6", func() {
@@ -84,7 +84,7 @@ func TestIPAddr_Database(t *testing.T) {
 			ipAddr := IPAddr(ip)
 			value, err := ipAddr.Value()
 			So(err, ShouldBeNil)
-			So(value, ShouldResemble, []byte(ip.To16()))
+			So(value, ShouldResemble, ip.To16())
 		})
 
 		Convey("Value method with empty IP", func() {
@@ -204,7 +204,7 @@ func TestIPv4Addr_Database(t *testing.T) {
 			ipv4Addr := IPv4Addr(ip)
 			value, err := ipv4Addr.Value()
 			So(err, ShouldBeNil)
-			So(value, ShouldResemble, []byte(ip))
+			So(value, ShouldResemble, ip)
 		})
 
 		Convey("Scan from string", func() {
@@ -269,7 +269,7 @@ func TestIPv6Addr_Database(t *testing.T) {
 			ipv6Addr := IPv6Addr(ip)
 			value, err := ipv6Addr.Value()
 			So(err, ShouldBeNil)
-			So(value, ShouldResemble, []byte(ip))
+			So(value, ShouldResemble, ip)
 		})
 
 		Convey("Scan from string", func() {

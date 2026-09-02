@@ -57,7 +57,7 @@ func WithStack(err error) error {
 		case stackError:
 			return err
 		default:
-			return WithStack(err)
+			return errors.WithStack(err)
 		}
 	}
 	return err

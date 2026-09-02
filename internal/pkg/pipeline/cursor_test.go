@@ -25,43 +25,43 @@ func TestComputeCursorTriggers(t *testing.T) {
 		}
 
 		Convey("积压场景：游标 09:00、当前 09:05:45、间隔 1m，应补投 09:01~09:05 共 5 个触发点", func() {
-			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 5, 45), time.Minute, BacklogPolicy{})
+			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 5, 45), time.Minute, BacklogPolicy{Enabled: true})
 			equalTriggers(triggers, at(9, 1, 0), at(9, 2, 0), at(9, 3, 0), at(9, 4, 0), at(9, 5, 0))
 			So(next.Equal(at(9, 5, 0)), ShouldBeTrue)
 		})
 
 		Convey("首次运行：无游标时立即触发当前网格点", func() {
-			triggers, next := ComputeCursorTriggers(time.Time{}, at(9, 5, 45), time.Minute, BacklogPolicy{})
+			triggers, next := ComputeCursorTriggers(time.Time{}, at(9, 5, 45), time.Minute, BacklogPolicy{Enabled: true})
 			equalTriggers(triggers, at(9, 5, 0))
 			So(next.Equal(at(9, 5, 0)), ShouldBeTrue)
 		})
 
 		Convey("无新增触发点：游标与当前时间处于同一网格点内", func() {
-			triggers, next := ComputeCursorTriggers(at(9, 5, 0), at(9, 5, 30), time.Minute, BacklogPolicy{})
+			triggers, next := ComputeCursorTriggers(at(9, 5, 0), at(9, 5, 30), time.Minute, BacklogPolicy{Enabled: true})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(9, 5, 0)), ShouldBeTrue)
 		})
 
 		Convey("间隔为 0：返回空触发并保持游标不变", func() {
-			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 5, 0), 0, BacklogPolicy{})
+			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 5, 0), 0, BacklogPolicy{Enabled: true})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(9, 0, 0)), ShouldBeTrue)
 		})
 
 		Convey("游标晚于当前时间（时钟回拨）：不触发且游标保持不变", func() {
-			triggers, next := ComputeCursorTriggers(at(9, 6, 0), at(9, 5, 0), time.Minute, BacklogPolicy{})
+			triggers, next := ComputeCursorTriggers(at(9, 6, 0), at(9, 5, 0), time.Minute, BacklogPolicy{Enabled: true})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(9, 6, 0)), ShouldBeTrue)
 		})
 
 		Convey("非对齐游标：游标被向下取整到网格点后计算", func() {
-			triggers, next := ComputeCursorTriggers(at(9, 0, 30), at(9, 2, 0), time.Minute, BacklogPolicy{})
+			triggers, next := ComputeCursorTriggers(at(9, 0, 30), at(9, 2, 0), time.Minute, BacklogPolicy{Enabled: true})
 			equalTriggers(triggers, at(9, 1, 0), at(9, 2, 0))
 			So(next.Equal(at(9, 2, 0)), ShouldBeTrue)
 		})
 
 		Convey("小于分钟间隔：按 30s 网格推进", func() {
-			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 1, 0), 30*time.Second, BacklogPolicy{})
+			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 1, 0), 30*time.Second, BacklogPolicy{Enabled: true})
 			equalTriggers(triggers, at(9, 0, 30), at(9, 1, 0))
 			So(next.Equal(at(9, 1, 0)), ShouldBeTrue)
 		})
@@ -74,13 +74,13 @@ func TestComputeCursorTriggers(t *testing.T) {
 
 		Convey("窗口裁剪：仅补投窗口期内的触发点", func() {
 			// 游标 09:00、当前 09:10:45、窗口 2m：窗口起点 09:08:45 -> 网格 09:08；仅补投 09:09、09:10
-			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 10, 45), time.Minute, BacklogPolicy{Window: 2 * time.Minute})
+			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 10, 45), time.Minute, BacklogPolicy{Enabled: true, Window: 2 * time.Minute})
 			equalTriggers(triggers, at(9, 9, 0), at(9, 10, 0))
 			So(next.Equal(at(9, 10, 0)), ShouldBeTrue)
 		})
 
 		Convey("生成上限：积压过大时截断本轮，游标推进到最后一个生成触发点", func() {
-			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 20, 0), time.Minute, BacklogPolicy{Limit: 3})
+			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 20, 0), time.Minute, BacklogPolicy{Enabled: true, Limit: 3})
 			equalTriggers(triggers, at(9, 1, 0), at(9, 2, 0), at(9, 3, 0))
 			So(next.Equal(at(9, 3, 0)), ShouldBeTrue)
 		})

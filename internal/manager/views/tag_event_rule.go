@@ -436,7 +436,7 @@ func TagEventRuleUpdate(c *gin.Context) {
 		}).Error; err != nil {
 			return err
 		}
-		// 显式删除既有条件（兼容未开启外键约束的数据库，如测试用 sqlite 内存库）
+		// 显式删除既有条件
 		if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
 			return err
 		}
@@ -489,7 +489,7 @@ func TagEventRuleBatchDelete(c *gin.Context) {
 				return errors.WithStack(err)
 			}
 			return db.WithContext(c).Transaction(func(tx *database.DB) error {
-				// 显式级联删除条件与历史版本，兼容未开启外键约束的数据库（如测试用 sqlite 内存库）
+				// 显式级联删除条件与历史版本
 				if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
 					return err
 				}

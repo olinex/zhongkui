@@ -10,31 +10,14 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// newTagRuleTestDB 创建 sqlite 内存库并迁移 tag_rules 表
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库
+// newTagRuleTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
+// 全部业务表已由 testdb 统一迁移，每次调用前对业务表做 TRUNCATE 保证测试隔离。
 func newTagRuleTestDB(t *testing.T) *database.DB {
 	t.Helper()
-	logger, err := logging.NewDefaultLogger()
-	if err != nil {
-		t.Fatal("failed to create default logger: " + err.Error())
-	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		// sqlite 内存库强制单连接，避免多连接各自持有独立的内存数据库
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&TagRule{}); err != nil {
-		t.Fatal("failed to migrate test database: " + err.Error())
-	}
-	return db
+	return testdb.Core(t)
 }
 
 // TestTagRule_Struct 测试 TagRule 结构体的基本属性
@@ -93,19 +76,23 @@ func TestTagRule_Struct(t *testing.T) {
 // TestTagRule_UniqueIndexColumnOrder 验证唯一索引列顺序与 SQL 约束一致
 // 迁移文件（internal/migrations/core/001_init.sql）中的约束为 UNIQUE (namespace_name, model, name)，
 // GORM 按结构体字段声明顺序构建索引列，因此字段顺序必须保持 NamespaceName、Model、Name。
+// 说明：约束以内联表级 UNIQUE 创建，GORM 的 GetIndexes().Columns() 在 PostgreSQL 下
+// 无法解析其列顺序（返回空），故直接查询 pg_get_indexdef 取回真实列顺序。
 func TestTagRule_UniqueIndexColumnOrder(t *testing.T) {
 	convey.Convey("测试 TagRule 唯一索引列顺序", t, func() {
 		db := newTagRuleTestDB(t)
-		indexes, err := db.Migrator().GetIndexes(&TagRule{})
+		var indexDef string
+		err := db.Raw(`SELECT pg_get_indexdef(ic.oid)
+			 FROM pg_class t
+			 JOIN pg_index i ON i.indrelid = t.oid
+			 JOIN pg_class ic ON ic.oid = i.indexrelid
+			 WHERE t.relname = 'tag_rules'
+			   AND ic.relname = 'uq_tag_rules_namespace_name_model_name'`).
+			Scan(&indexDef).Error
 		convey.So(err, convey.ShouldBeNil)
-
-		var columns []string
-		for _, idx := range indexes {
-			if idx.Name() == "uq_tag_rules_namespace_name_model_name" {
-				columns = idx.Columns()
-			}
-		}
-		convey.So(columns, convey.ShouldResemble, []string{"namespace_name", "model", "name"})
+		// pg_get_indexdef 返回形如 "... USING btree (namespace_name, model, name)"，
+		// 括号内列顺序即索引列顺序，须与 SQL 约束一致。
+		convey.So(strings.Contains(indexDef, "(namespace_name, model, name)"), convey.ShouldBeTrue)
 	})
 }
 
@@ -172,7 +159,9 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			dup.ID = 0
 			err := db.Create(&dup).Error
 			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
+			// 不同数据库方言错误文案不同（PostgreSQL: duplicate key，SQLite: UNIQUE constraint failed），
+			// 统一以 "unique" 关键字判定唯一约束冲突。
+			convey.So(strings.ToLower(err.Error()), convey.ShouldContainSubstring, "unique")
 		})
 
 		convey.Convey("不同命名空间下相同 name 的规则应插入成功", func() {

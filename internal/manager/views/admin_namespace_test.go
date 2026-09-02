@@ -10,38 +10,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
-// createNamespaceTestDB 创建用于命名空间路由测试的 SQLite 内存数据库实例
-func createNamespaceTestDB() *database.DB {
-	cfg := &database.Config{
-		Driver: "sqlite",
-		DSN:    ":memory:",
-	}
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{}
-	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	zapLogger, _ := config.Build()
-	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
-
-	db, err := database.NewDatabase(cfg, logger)
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if err := db.AutoMigrate(&core.Namespace{}, &core.RbacPolicy{}, &core.NotificationChannel{}, &core.NotificationTemplate{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createNamespaceTestDB 创建用于命名空间路由测试的共享 PostgreSQL 测试数据库
+func createNamespaceTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // setupNamespaceTestRouter 创建用于命名空间路由测试的 Gin 路由引擎
@@ -108,7 +89,12 @@ func TestNamespaceDetailOut_Struct(t *testing.T) {
 // TestNamespaceListGet 测试 NamespaceListGet 函数
 func TestNamespaceListGet(t *testing.T) {
 	Convey("测试 NamespaceListGet 函数", t, func() {
-		db := createNamespaceTestDB()
+		db := createNamespaceTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNamespaceTestRouterWithDB(db)
 		r.POST("/api/v1/admin/namespace/list", NamespaceListGet)
 
@@ -129,7 +115,7 @@ func TestNamespaceListGet(t *testing.T) {
 
 		Convey("应返回包含数据的列表当数据库有记录时", func() {
 			namespaces := []core.Namespace{
-				{Name: "default", Description: "默认命名空间"},
+				{Name: "staging", Description: "预发布环境"},
 				{Name: "development", Description: "开发环境"},
 			}
 			for _, ns := range namespaces {
@@ -155,19 +141,24 @@ func TestNamespaceListGet(t *testing.T) {
 // TestNamespaceDetailGet 测试 NamespaceDetailGet 函数
 func TestNamespaceDetailGet(t *testing.T) {
 	Convey("测试 NamespaceDetailGet 函数", t, func() {
-		db := createNamespaceTestDB()
+		db := createNamespaceTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNamespaceTestRouterWithDB(db)
 		r.GET("/api/v1/admin/namespace/:name/get", NamespaceDetailGet)
 
 		Convey("应返回命名空间详情当命名空间存在时", func() {
 			ns := core.Namespace{
-				Name:        "default",
-				Description: "默认命名空间",
+				Name:        "development",
+				Description: "开发环境",
 			}
 			db.Create(&ns)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/namespace/default/get", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/namespace/development/get", nil)
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -186,7 +177,12 @@ func TestNamespaceDetailGet(t *testing.T) {
 // TestNamespaceCreate 测试 NamespaceCreate 函数
 func TestNamespaceCreate(t *testing.T) {
 	Convey("测试 NamespaceCreate 函数", t, func() {
-		db := createNamespaceTestDB()
+		db := createNamespaceTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNamespaceTestRouterWithDB(db)
 		r.POST("/api/v1/admin/namespace/create", NamespaceCreate)
 
@@ -245,14 +241,19 @@ func TestNamespaceCreate(t *testing.T) {
 // TestNamespaceUpdate 测试 NamespaceUpdate 函数
 func TestNamespaceUpdate(t *testing.T) {
 	Convey("测试 NamespaceUpdate 函数", t, func() {
-		db := createNamespaceTestDB()
+		db := createNamespaceTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNamespaceTestRouterWithDB(db)
 		r.POST("/api/v1/admin/namespace/:name/update", NamespaceUpdate)
 
 		Convey("应成功更新命名空间描述", func() {
 			// 先创建测试数据
 			ns := core.Namespace{
-				Name:        "default",
+				Name:        "development",
 				Description: "原始描述",
 			}
 			db.Create(&ns)
@@ -264,7 +265,7 @@ func TestNamespaceUpdate(t *testing.T) {
 			body, _ := json.Marshal(reqBody)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/namespace/default/update", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/namespace/development/update", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -272,7 +273,7 @@ func TestNamespaceUpdate(t *testing.T) {
 
 			// 验证数据库中的记录已更新
 			var updatedNs core.Namespace
-			db.First(&updatedNs, "name = ?", "default")
+			db.First(&updatedNs, "name = ?", "development")
 			So(updatedNs.Description, ShouldEqual, "更新后的描述")
 		})
 
@@ -315,7 +316,12 @@ func TestNamespaceUpdate(t *testing.T) {
 // TestNamespaceDelete 测试 NamespaceBatchDelete 函数
 func TestNamespaceDelete(t *testing.T) {
 	Convey("测试 NamespaceBatchDelete 函数", t, func() {
-		db := createNamespaceTestDB()
+		db := createNamespaceTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNamespaceTestRouterWithDB(db)
 		r.POST("/api/v1/admin/namespace/delete", NamespaceBatchDelete)
 

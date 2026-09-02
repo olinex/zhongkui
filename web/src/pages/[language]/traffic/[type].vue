@@ -1,51 +1,49 @@
 <template>
   <main-layout current-nav="traffic">
     <template #body>
-      <v-container>
-        <!-- 复用全项目统一的 SearchTable：显式查询按钮 + 高级条件编辑器常驻；
+      <!-- 复用全项目统一的 SearchTable：显式查询按钮 + 高级条件编辑器常驻；
              抓包/入库时间窗口经 extra-filters 插槽置于筛选区，随查询载荷统一注入（buildFilter） -->
-        <search-table
-          ref="searchTableRef"
-          :title="$t(`model.${typeKey}.name`)"
-          :list-request="trafficListRequest"
-          :filter-headers="searchHeaders"
-          :headers="headers"
-          :query="submitQuery"
-          :build-filter="buildFilter"
-          :default-order-by="defaultOrderBy"
-          :row-click="openDetail"
-          :storage-key="`traffic:${type}`"
-        >
-          <!-- 额外筛选区：抓包时间（timestamp）与入库时间（createdAt）两个必填时间范围，
+      <search-table
+        ref="searchTableRef"
+        :title="$t(`model.${typeKey}.name`)"
+        :list-request="trafficListRequest"
+        :filter-headers="searchHeaders"
+        :headers="headers"
+        :query="submitQuery"
+        :build-filter="buildFilter"
+        :default-order-by="defaultOrderBy"
+        :row-click="openDetail"
+        :storage-key="`traffic:${type}`"
+      >
+        <!-- 额外筛选区：抓包时间（timestamp）与入库时间（createdAt）两个必填时间范围，
                不参与高级条件编辑器（由 buildFilter 强制注入） -->
-          <template #extra-filters>
-            <div class="extra-filters d-flex flex-wrap align-center ga-2 mt-2">
-              <date-time-range-field
-                v-model="timestampRange"
-                v-bind="timestampRangeProps"
-                :label="$t('model.__base.field.timestampRange')"
-              />
-              <date-time-range-field
-                v-model="createdAtRange"
-                v-bind="createdAtRangeProps"
-                :label="$t('model.__base.field.createdAtRange')"
-              />
-            </div>
-          </template>
-          <!-- 通用单元格接管：加密/S3 字段展示占位与明文入口，其余交 AdaptiveCell 按类型渲染 -->
-          <template #cell="{ item, header }">
-            <encrypted-value-cell
-              v-if="cryptoKeys.has(header.key) || s3Keys.has(header.key)"
-              :kind="cryptoKeys.has(header.key) ? 'crypto' : 's3'"
-              :item="item"
-              :field-key="header.key"
-              :loading="plaintextLoading === header.key"
-              @view-plaintext="onViewPlaintext"
+        <template #extra-filters>
+          <div class="extra-filters d-flex flex-wrap align-center ga-2 mt-2">
+            <date-time-range-field
+              v-model="timestampRange"
+              v-bind="timestampRangeProps"
+              :label="$t('model.__base.field.timestampRange')"
             />
-            <adaptive-cell v-else :header="header" :item="item" :actions="rowActions" />
-          </template>
-        </search-table>
-      </v-container>
+            <date-time-range-field
+              v-model="createdAtRange"
+              v-bind="createdAtRangeProps"
+              :label="$t('model.__base.field.createdAtRange')"
+            />
+          </div>
+        </template>
+        <!-- 通用单元格接管：加密/S3 字段展示占位与明文入口，其余交 AdaptiveCell 按类型渲染 -->
+        <template #cell="{ item, header }">
+          <encrypted-value-cell
+            v-if="cryptoKeys.has(header.key) || s3Keys.has(header.key)"
+            :kind="cryptoKeys.has(header.key) ? 'crypto' : 's3'"
+            :item="item"
+            :field-key="header.key"
+            :loading="plaintextLoading === header.key"
+            @view-plaintext="onViewPlaintext"
+          />
+          <adaptive-cell v-else :header="header" :item="item" :actions="rowActions" />
+        </template>
+      </search-table>
 
       <!-- 行详情对话框：列表已返回全字段，直接展示行数据，无需再发起详情请求；
            只读明细以全屏对话框展示，便于浏览大字段与长报文 -->
@@ -85,6 +83,7 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import { tagRuleSampleCreate } from "@/apis/tagEvent";
 import {
   TrafficCryptoFields,
+  TrafficExtraFieldTypes,
   TrafficModelKeys,
   TrafficS3Fields,
   trafficListGet,
@@ -105,11 +104,9 @@ import { useAppStore } from "@/stores/app";
 import { BackendDataType, SearchAction } from "@/types";
 import { vuetifyCfg } from "@/utils/form";
 import { isEmptyCiphertext } from "@/utils/encrypted";
-import i18n, { localeDatetimeFormat } from "@/utils/i18n";
+import i18n from "@/utils/i18n";
 import { modelFieldTitle } from "@/utils/modelField";
 import { filterOptionTitle } from "@/utils/options";
-
-const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
 
 // 流量模型类型与路由段一一对应（/traffic/:type），侧边栏各模型入口分别携带 type 参数
 const isTrafficType = (value: unknown): value is TrafficType => {
@@ -172,68 +169,6 @@ const { defineField, handleSubmit } = useForm({
 });
 const [timestampRange, timestampRangeProps] = defineField("timestampRange", vuetifyCfg);
 const [createdAtRange, createdAtRangeProps] = defineField("createdAtRange", vuetifyCfg);
-
-// 字段渲染类型补充表：仅覆盖需要特殊渲染的非常用字段，其余缺省 STRING
-// 类型依据 internal/models/network 下三个模型（PacketIPv4TCP / PacketIPv6TCP / HttpTransport）的 JSON tag 逐一核对
-const EXTRA_TYPES: Partial<Record<string, BackendDataType>> = {
-  // 布尔标志：捕获状态与 TCP 扩展标志
-  truncated: BackendDataType.BOOLEAN,
-  bitEce: BackendDataType.BOOLEAN,
-  bitCwr: BackendDataType.BOOLEAN,
-  bitNs: BackendDataType.BOOLEAN,
-  // 复合结构：JSON 预览
-  tags: BackendDataType.JSON,
-  options: BackendDataType.JSON,
-  queries: BackendDataType.JSON,
-  layerStack: BackendDataType.JSON,
-  ipv4Options: BackendDataType.JSON,
-  ipv6HopByHop: BackendDataType.JSON,
-  // 时间戳
-  clientStartTimestamp: BackendDataType.DATETIME,
-  clientEndTimestamp: BackendDataType.DATETIME,
-  serverStartTimestamp: BackendDataType.DATETIME,
-  serverEndTimestamp: BackendDataType.DATETIME,
-  // 字节数与负载偏移（uint32 / uint64）
-  captureLength: BackendDataType.UINT32,
-  clientConsumed: BackendDataType.UINT64,
-  clientStartPayloadOffset: BackendDataType.UINT64,
-  clientEndPayloadOffset: BackendDataType.UINT64,
-  serverConsumed: BackendDataType.UINT64,
-  serverStartPayloadOffset: BackendDataType.UINT64,
-  serverEndPayloadOffset: BackendDataType.UINT64,
-  // TCP 数值字段
-  dataOffset: BackendDataType.UINT8,
-  checksum: BackendDataType.UINT16,
-  urgent: BackendDataType.UINT16,
-  // IPv4 数值字段
-  ipv4Version: BackendDataType.UINT8,
-  ipv4Ihl: BackendDataType.UINT8,
-  ipv4Tos: BackendDataType.UINT8,
-  ipv4Id: BackendDataType.UINT16,
-  ipv4Flags: BackendDataType.UINT8,
-  ipv4FragOffset: BackendDataType.UINT16,
-  ipv4Checksum: BackendDataType.UINT16,
-  // IPv6 数值字段
-  ipv6Version: BackendDataType.UINT8,
-  ipv6TrafficClass: BackendDataType.UINT8,
-  ipv6FlowLabel: BackendDataType.UINT32,
-  ipv6LastHeader: BackendDataType.UINT8,
-  // 链路层数值字段
-  ethType: BackendDataType.UINT16,
-  ethLength: BackendDataType.UINT16,
-  // HTTP 传输数值字段
-  clientIsn: BackendDataType.UINT32,
-  serverIsn: BackendDataType.UINT32,
-  streamIndex: BackendDataType.UINT32,
-  ipVersion: BackendDataType.UINT8,
-  fpTcpMtu: BackendDataType.UINT16,
-  // 指纹置信度（float64，0-1 区间）
-  fpOsQuality: BackendDataType.FLOAT64,
-  fpTcpClientOsQuality: BackendDataType.FLOAT64,
-  fpTcpServerOsQuality: BackendDataType.FLOAT64,
-  fpHttpBrowserQuality: BackendDataType.FLOAT64,
-  fpHttpServerQuality: BackendDataType.FLOAT64,
-};
 
 // 加密与 S3 body 字段清单（随类型切换）：列表单元格与详情页统一占位展示，不直接暴露密文
 const cryptoKeys = computed(() => new Set(TrafficCryptoFields[type.value] ?? []));
@@ -549,7 +484,7 @@ const headers = computed((): Array<TableHeader> => {
       h("fpHttpServer"),
       h("fpDeviceGuess"),
       ...commonTail,
-      ...HTTP_EXTRA_KEYS.map((key) => h(key, EXTRA_TYPES[key], false)),
+      ...HTTP_EXTRA_KEYS.map((key) => h(key, TrafficExtraFieldTypes[key], false)),
       actionsHeader,
     ];
   }
@@ -568,7 +503,7 @@ const headers = computed((): Array<TableHeader> => {
     ...tcpFingerprint,
     ...commonTail,
     ...(ipv4 ? IPV4_TCP_EXTRA_KEYS : IPV6_TCP_EXTRA_KEYS).map((key) =>
-      h(key, EXTRA_TYPES[key], false),
+      h(key, TrafficExtraFieldTypes[key], false),
     ),
     actionsHeader,
   ];
@@ -702,6 +637,9 @@ watch(type, async () => {
   if (searchTableRef.value) {
     searchTableRef.value.filterBy = [];
   }
+  // 立即清空旧数据并进入加载态：表头已随类型即时更新，旧类型数据驻留会错位/空值展示，
+  // 加载期间仅显示骨架屏，待字段元数据与真实数据就绪后一次刷新到位
+  searchTableRef.value?.startLoading();
   await loadSearchOptions();
   await searchTableRef.value?.query();
 });
@@ -770,15 +708,15 @@ const rowActions = (item: Record<string, unknown>): ItemActions => {
   return actions;
 };
 
-const formatValue = (value: unknown): string => {
-  if (value === null || value === undefined) {
-    return "";
+// detailFieldTypes 详情字段渲染类型：由 headers 表头定义推导（含通用/特有/非常用字段），
+// 未知字段回退 STRING；plain 字段经 AdaptiveCell 按列表页方式渲染
+const detailFieldTypes = computed(() => {
+  const map: Record<string, BackendDataType> = {};
+  for (const hdr of headers.value) {
+    map[hdr.key] = hdr.type;
   }
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-  return String(value);
-};
+  return map;
+});
 
 // detailFields 行详情字段列表：列表已返回全字段，直接由行数据渲染
 // crypto/s3 字段清单复用顶层 cryptoKeys / s3Keys（与列表单元格展示一致）
@@ -814,8 +752,17 @@ const detailFields = computed((): DetailField[] => {
   return [...meta, ...rest].map(([key, value]) => {
     // 字段标签统一走 trafficFieldTitle：按类型取模型字段翻译，避免界面露出原始 key
     const label = trafficFieldTitle(key);
+    const fieldType = detailFieldTypes.value[key] ?? BackendDataType.STRING;
     if (cryptoKeys.value.has(key)) {
-      return { key, label, display: "", kind: "crypto" as const, length: 0, value };
+      return {
+        key,
+        label,
+        display: "",
+        kind: "crypto" as const,
+        length: 0,
+        value,
+        type: fieldType,
+      };
     }
     if (s3Keys.value.has(key)) {
       return {
@@ -825,16 +772,10 @@ const detailFields = computed((): DetailField[] => {
         kind: "s3" as const,
         length: Number(item[`${key}_length`] ?? 0),
         value,
+        type: fieldType,
       };
     }
-    let display = formatValue(value);
-    if (DATETIME_FIELD_KEYS.has(key) && typeof value === "string") {
-      const dt = DateTime.fromISO(value);
-      if (dt.isValid) {
-        display = localeDatetimeFormat(dt);
-      }
-    }
-    return { key, label, display, kind: "plain" as const, length: 0, value };
+    return { key, label, display: "", kind: "plain" as const, length: 0, value, type: fieldType };
   });
 });
 
@@ -851,6 +792,7 @@ const viewPlaintextCrypto = async (item: Record<string, unknown>, key: string): 
     kind: "crypto",
     length: 0,
     value: ciphertext,
+    type: BackendDataType.STRING,
   };
   await viewPlaintextAction(field);
 };
@@ -868,6 +810,7 @@ const viewPlaintextS3 = async (item: Record<string, unknown>, key: string): Prom
     kind: "s3",
     length: Number(item[`${key}Length`] ?? 0),
     value: objectKey,
+    type: BackendDataType.STRING,
   };
   await viewPlaintextAction(field);
 };

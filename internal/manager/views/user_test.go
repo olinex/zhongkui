@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,33 +24,11 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-func createUserSelfTestDB() *database.DB {
-	cfg := &database.Config{
-		Driver: "sqlite",
-		DSN:    ":memory:",
-	}
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{}
-	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	zapLogger, _ := config.Build()
-	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
-
-	db, err := database.NewDatabase(cfg, logger)
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if err := db.AutoMigrate(
-		&core.User{},
-		&core.Group{},
-		&core.Namespace{},
-		&core.RbacPolicy{},
-		&core.AccessKey{},
-	); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+func createUserSelfTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 func createTestUserInDB(db *database.DB, username, nickleName, email, password string, active bool) *core.User {
@@ -368,7 +347,12 @@ func TestUserAccessKeyOut_Struct(t *testing.T) {
 
 func TestUserPasswordLogin(t *testing.T) {
 	Convey("测试 UserPasswordLogin 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		authConfig := createUserSelfTestAuthConfig()
 		kd := createTestKeyDerivation()
 		authenticator := middlewares.NewJwtAuthenticator(authConfig, db, kd)
@@ -478,7 +462,12 @@ func TestUserPasswordLogin(t *testing.T) {
 
 func TestUserSelfPasswordReset(t *testing.T) {
 	Convey("测试 UserSelfPasswordReset 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "resetuser", "重置用户", "reset@example.com", "OldP@ssw0rd", true)
 		r := setupUserSelfTestRouterWithDBAndUser(db, user)
 		r.POST("/api/v1/user/self/password/reset", UserSelfPasswordReset)
@@ -535,7 +524,12 @@ func TestUserSelfPasswordReset(t *testing.T) {
 
 func TestUserSelfProfileChange(t *testing.T) {
 	Convey("测试 UserSelfProfileChange 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "profileuser", "原始昵称", "original@example.com", "Str0ngP@ss", true)
 		r := setupUserSelfTestRouterWithFullDeps(db, user)
 		r.POST("/api/v1/user/self/profile/change", UserSelfProfileChange)
@@ -578,7 +572,12 @@ func TestUserSelfProfileChange(t *testing.T) {
 
 func TestUserSelfJwtRefresh(t *testing.T) {
 	Convey("测试 UserSelfJwtRefresh 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "refreshuser", "刷新用户", "refresh@example.com", "Str0ngP@ss", true)
 		authConfig := createUserSelfTestAuthConfig()
 		kd := createTestKeyDerivation()
@@ -656,7 +655,12 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 
 func TestUserSelfAuthorizationInfoGet(t *testing.T) {
 	Convey("测试 UserSelfAuthorizationInfoGet 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "authuser", "授权用户", "auth@example.com", "Str0ngP@ss", true)
 		loggingLogger := createTestLoggingLogger()
 
@@ -724,7 +728,12 @@ func TestUserSelfAuthorizationInfoGet(t *testing.T) {
 
 func TestUserSelfAccessKeyListGet(t *testing.T) {
 	Convey("测试 UserSelfAccessKeyListGet 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "aklistuser", "密钥用户", "aklist@example.com", "Str0ngP@ss", true)
 		loggingLogger := createTestLoggingLogger()
 
@@ -776,7 +785,12 @@ func TestUserSelfAccessKeyListGet(t *testing.T) {
 
 func TestUserSelfAccessKeyCreate(t *testing.T) {
 	Convey("测试 UserSelfAccessKeyCreate 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "akcreateuser", "创建密钥用户", "akcreate@example.com", "Str0ngP@ss", true)
 
 		r := setupUserSelfTestRouterWithFullDeps(db, user)
@@ -869,7 +883,12 @@ func TestUserSelfAccessKeyCreate(t *testing.T) {
 
 func TestUserSelfAccessKeyRemove(t *testing.T) {
 	Convey("测试 UserSelfAccessKeyRemove 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "akrmuser", "删除密钥用户", "akrm@example.com", "Str0ngP@ss", true)
 
 		r := setupUserSelfTestRouterWithDBAndUser(db, user)
@@ -911,7 +930,12 @@ func TestUserSelfAccessKeyRemove(t *testing.T) {
 
 func TestUserSelfAccessKeyEnabled(t *testing.T) {
 	Convey("测试 UserSelfAccessKeyEnabled 函数", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "akenableuser", "启用密钥用户", "akenable@example.com", "Str0ngP@ss", true)
 
 		r := setupUserSelfTestRouterWithDBAndUser(db, user)
@@ -999,7 +1023,12 @@ func TestErrVariables(t *testing.T) {
 
 func TestUserSelfFrontendConfig(t *testing.T) {
 	Convey("测试前端配置同步接口", t, func() {
-		db := createUserSelfTestDB()
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := createTestUserInDB(db, "fcsyncuser", "配置同步用户", "fcsync@example.com", "Str0ngP@ss", true)
 		loggingLogger := createTestLoggingLogger()
 
@@ -1021,7 +1050,8 @@ func TestUserSelfFrontendConfig(t *testing.T) {
 			data, ok := response["data"].(map[string]any)
 			So(ok, ShouldBeTrue)
 			So(data["syncEnabled"], ShouldEqual, false)
-			So(data["hash"], ShouldEqual, "")
+			// PostgreSQL 的 CHAR(64)（bpchar）会把空哈希补成 64 个空格，按去空白后为空断言
+			So(strings.TrimSpace(data["hash"].(string)), ShouldEqual, "")
 			So(data["version"], ShouldEqual, float64(0))
 			So(data["config"], ShouldEqual, "")
 		})

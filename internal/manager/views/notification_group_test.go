@@ -22,25 +22,12 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// createNotificationGroupTestDB 创建 sqlite 内存库并迁移通知渠道/目标/组/组目标关联表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createNotificationGroupTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&core.NotificationChannel{}, &core.NotificationTarget{}, &core.NotificationGroup{}, &core.NotificationGroupTarget{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createNotificationGroupTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createNotificationGroupTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // registerNotificationGroupTestRoutes 注册通知目标组管理路由（与 router.go 的注册保持一致）。
@@ -143,7 +130,12 @@ func notificationGroupCountRows(db *database.DB, where string, args ...any) int6
 // TestNotificationGroupCreateAndDetail 创建与详情查询全链路（无绑定目标）。
 func TestNotificationGroupCreateAndDetail(t *testing.T) {
 	Convey("测试通知目标组创建与详情查询", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 
 		Convey("合法组创建成功且详情返回空目标列表", func() {
@@ -183,7 +175,12 @@ func TestNotificationGroupCreateAndDetail(t *testing.T) {
 // TestNotificationGroupDefaultUniqueness 创建默认组 A 后再创建默认组 B，A 的默认标记应被取消。
 func TestNotificationGroupDefaultUniqueness(t *testing.T) {
 	Convey("测试默认组唯一性维护", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 
 		idA := createNotificationGroup(r, db, "group-a", true)
@@ -200,7 +197,12 @@ func TestNotificationGroupDefaultUniqueness(t *testing.T) {
 // TestNotificationGroupSetDefault 通过 set-default 接口切换默认组。
 func TestNotificationGroupSetDefault(t *testing.T) {
 	Convey("测试默认组切换", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 
 		idA := createNotificationGroup(r, db, "group-a", true)
@@ -225,7 +227,12 @@ func TestNotificationGroupSetDefault(t *testing.T) {
 // TestNotificationGroupList 列表查询：isDefault 过滤、目标计数与列表选项。
 func TestNotificationGroupList(t *testing.T) {
 	Convey("测试通知目标组列表查询", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 
 		idA := createNotificationGroup(r, db, "group-a", true)
@@ -300,7 +307,12 @@ func TestNotificationGroupList(t *testing.T) {
 // 创建随组绑定、创建时跨命名空间目标回滚、编辑整集替换、缺省不改动、空数组解绑全部。
 func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 	Convey("测试通知目标组创建/编辑的目标绑定", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 		channelID := dbCreateNotificationChannel(db, "default", "main-channel")
 		t1 := createNotificationTarget(db, "default", "target-1", channelID)
@@ -319,6 +331,7 @@ func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 		})
 
 		Convey("创建时绑定跨命名空间目标返回 400 且组未创建（事务回滚）", func() {
+			insertTestNamespace(db, "other-ns")
 			otherChannelID := dbCreateNotificationChannel(db, "other-ns", "other-channel")
 			otherTarget := createNotificationTarget(db, "other-ns", "other-target", otherChannelID)
 			w := doNotificationGroupRequest(r, http.MethodPost, "/notification/group/create", map[string]any{
@@ -368,7 +381,12 @@ func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 // TestNotificationGroupUpdateDescription 仅更新描述，名称与默认标记保持不变。
 func TestNotificationGroupUpdateDescription(t *testing.T) {
 	Convey("测试通知目标组描述更新", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 		id := createNotificationGroup(r, db, "group-up", true)
 
@@ -388,7 +406,12 @@ func TestNotificationGroupUpdateDescription(t *testing.T) {
 // TestNotificationGroupBatchDeleteCascade 批量删除组时同时删除其目标关联行。
 func TestNotificationGroupBatchDeleteCascade(t *testing.T) {
 	Convey("测试通知目标组批量删除级联", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 		id := createNotificationGroup(r, db, "group-del", false)
 		channelID := dbCreateNotificationChannel(db, "default", "del-channel")
@@ -427,7 +450,12 @@ func TestNotificationGroupBatchDeleteCascade(t *testing.T) {
 // TestNotificationGroupNamespaceIsolation 组按命名空间隔离，跨命名空间访问视为不存在。
 func TestNotificationGroupNamespaceIsolation(t *testing.T) {
 	Convey("测试通知目标组命名空间隔离", t, func() {
-		db := createNotificationGroupTestDB()
+		db := createNotificationGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationGroupTestRouter(db)
 		id := createNotificationGroup(r, db, "ns-group", false)
 

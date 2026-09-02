@@ -1,6 +1,7 @@
 import type { AxiosPromise } from "axios";
 import { getJwtHeader, request } from "./base";
 
+import { BackendDataType } from "@/types";
 import type { SearchIn } from "@/components/@types/table";
 import { HTTP_TRANSPORT_MODEL_KEY } from "@/utils/rego";
 import type { PlaintextCryptoIn, PlaintextS3In, TrafficType } from "./@types/traffic";
@@ -28,6 +29,129 @@ export const TrafficS3Fields: Record<TrafficType, string[]> = {
   "ipv4-tcp": [],
   "ipv6-tcp": [],
   "http-transport": ["reqBody", "rspBody"],
+};
+
+// TrafficExtraFieldTypes 流量模型非 STRING 字段渲染类型（按字段 json 名，缺省 STRING）：
+// 仅覆盖需要特殊渲染的非常用字段，供列表/详情/样例文档按列表页方式（AdaptiveCell）统一渲染；
+// 类型依据 internal/models/network 下三个模型（PacketIPv4TCP / PacketIPv6TCP / HttpTransport）的 JSON tag 逐一核对
+export const TrafficExtraFieldTypes: Record<string, BackendDataType> = {
+  // 布尔标志：捕获状态与 TCP 扩展标志
+  truncated: BackendDataType.BOOLEAN,
+  bitEce: BackendDataType.BOOLEAN,
+  bitCwr: BackendDataType.BOOLEAN,
+  bitNs: BackendDataType.BOOLEAN,
+  // 复合结构：JSON 预览
+  tags: BackendDataType.JSON,
+  options: BackendDataType.JSON,
+  queries: BackendDataType.JSON,
+  layerStack: BackendDataType.JSON,
+  ipv4Options: BackendDataType.JSON,
+  ipv6HopByHop: BackendDataType.JSON,
+  // 时间戳
+  clientStartTimestamp: BackendDataType.DATETIME,
+  clientEndTimestamp: BackendDataType.DATETIME,
+  serverStartTimestamp: BackendDataType.DATETIME,
+  serverEndTimestamp: BackendDataType.DATETIME,
+  // 字节数与负载偏移（uint32 / uint64）
+  captureLength: BackendDataType.UINT32,
+  clientConsumed: BackendDataType.UINT64,
+  clientStartPayloadOffset: BackendDataType.UINT64,
+  clientEndPayloadOffset: BackendDataType.UINT64,
+  serverConsumed: BackendDataType.UINT64,
+  serverStartPayloadOffset: BackendDataType.UINT64,
+  serverEndPayloadOffset: BackendDataType.UINT64,
+  // TCP 数值字段
+  dataOffset: BackendDataType.UINT8,
+  checksum: BackendDataType.UINT16,
+  urgent: BackendDataType.UINT16,
+  // IPv4 数值字段
+  ipv4Version: BackendDataType.UINT8,
+  ipv4Ihl: BackendDataType.UINT8,
+  ipv4Tos: BackendDataType.UINT8,
+  ipv4Id: BackendDataType.UINT16,
+  ipv4Flags: BackendDataType.UINT8,
+  ipv4FragOffset: BackendDataType.UINT16,
+  ipv4Checksum: BackendDataType.UINT16,
+  // IPv6 数值字段
+  ipv6Version: BackendDataType.UINT8,
+  ipv6TrafficClass: BackendDataType.UINT8,
+  ipv6FlowLabel: BackendDataType.UINT32,
+  ipv6LastHeader: BackendDataType.UINT8,
+  // 链路层数值字段
+  ethType: BackendDataType.UINT16,
+  ethLength: BackendDataType.UINT16,
+  // HTTP 传输数值字段
+  clientIsn: BackendDataType.UINT32,
+  serverIsn: BackendDataType.UINT32,
+  streamIndex: BackendDataType.UINT32,
+  ipVersion: BackendDataType.UINT8,
+  fpTcpMtu: BackendDataType.UINT16,
+  // 指纹置信度（float64，0-1 区间）
+  fpOsQuality: BackendDataType.FLOAT64,
+  fpTcpClientOsQuality: BackendDataType.FLOAT64,
+  fpTcpServerOsQuality: BackendDataType.FLOAT64,
+  fpHttpBrowserQuality: BackendDataType.FLOAT64,
+  fpHttpServerQuality: BackendDataType.FLOAT64,
+};
+
+// TrafficFieldTypes 各类型流量模型字段渲染类型（含通用/特有字段，缺省 STRING）：
+// 供样例文档、Rego 试运行等无法从表头推导类型的场景，按列表页方式（AdaptiveCell）渲染字段值
+export const TrafficFieldTypes: Record<TrafficType, Record<string, BackendDataType>> = {
+  "ipv4-tcp": {
+    ...TrafficExtraFieldTypes,
+    timestamp: BackendDataType.DATETIME,
+    createdAt: BackendDataType.DATETIME,
+    sessionId: BackendDataType.UUID,
+    tcpStreamId: BackendDataType.HEX,
+    srcPort: BackendDataType.UINT16,
+    dstPort: BackendDataType.UINT16,
+    seq: BackendDataType.UINT32,
+    ack: BackendDataType.UINT32,
+    bitFin: BackendDataType.BOOLEAN,
+    bitSyn: BackendDataType.BOOLEAN,
+    bitRst: BackendDataType.BOOLEAN,
+    bitPsh: BackendDataType.BOOLEAN,
+    bitAck: BackendDataType.BOOLEAN,
+    bitUrg: BackendDataType.BOOLEAN,
+    window: BackendDataType.UINT16,
+    ipv4Ttl: BackendDataType.UINT8,
+    ipv4IpProtocol: BackendDataType.UINT8,
+    ipv4Length: BackendDataType.UINT16,
+    fpMtu: BackendDataType.UINT16,
+  },
+  "ipv6-tcp": {
+    ...TrafficExtraFieldTypes,
+    timestamp: BackendDataType.DATETIME,
+    createdAt: BackendDataType.DATETIME,
+    sessionId: BackendDataType.UUID,
+    tcpStreamId: BackendDataType.HEX,
+    srcPort: BackendDataType.UINT16,
+    dstPort: BackendDataType.UINT16,
+    seq: BackendDataType.UINT32,
+    ack: BackendDataType.UINT32,
+    bitFin: BackendDataType.BOOLEAN,
+    bitSyn: BackendDataType.BOOLEAN,
+    bitRst: BackendDataType.BOOLEAN,
+    bitPsh: BackendDataType.BOOLEAN,
+    bitAck: BackendDataType.BOOLEAN,
+    bitUrg: BackendDataType.BOOLEAN,
+    window: BackendDataType.UINT16,
+    ipv6HopLimit: BackendDataType.UINT8,
+    ipv6NextHeader: BackendDataType.UINT8,
+    ipv6Length: BackendDataType.UINT16,
+    fpMtu: BackendDataType.UINT16,
+  },
+  "http-transport": {
+    ...TrafficExtraFieldTypes,
+    timestamp: BackendDataType.DATETIME,
+    createdAt: BackendDataType.DATETIME,
+    sessionId: BackendDataType.UUID,
+    traceId: BackendDataType.UUID,
+    clientPort: BackendDataType.UINT16,
+    serverPort: BackendDataType.UINT16,
+    reqBodyLength: BackendDataType.DECIMAL_BYTE,
+    rspBodyLength: BackendDataType.DECIMAL_BYTE,
+  },
 };
 
 // TrafficModelKeys 流量类型 → 目标模型类型键（tagengine 注册名），供“收藏样例”使用；

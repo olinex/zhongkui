@@ -110,7 +110,9 @@ CREATE TABLE IF NOT EXISTS rbac_policies (
     v0 VARCHAR(36) NOT NULL,
     v1 VARCHAR(512) NOT NULL,
     v2 VARCHAR(32) NOT NULL,
-    v3 VARCHAR(64) NOT NULL DEFAULT ''
+    v3 VARCHAR(64) NOT NULL DEFAULT '',
+    v4 VARCHAR(64) NOT NULL DEFAULT '',
+    v5 VARCHAR(64) NOT NULL DEFAULT ''
 );
 
 COMMENT ON COLUMN rbac_policies.id IS 'the primary key of the policy';
@@ -121,6 +123,8 @@ COMMENT ON COLUMN rbac_policies.v0 IS 'p(group name) OR g(user union id)';
 COMMENT ON COLUMN rbac_policies.v1 IS 'p(target object name) OR g(group name)';
 COMMENT ON COLUMN rbac_policies.v2 IS 'p(action name) OR g(namespace)';
 COMMENT ON COLUMN rbac_policies.v3 IS 'p(effective ''allow'' or ''deny'') OR g(blank)';
+COMMENT ON COLUMN rbac_policies.v4 IS 'reserved column for gorm-adapter, blank';
+COMMENT ON COLUMN rbac_policies.v5 IS 'reserved column for gorm-adapter, blank';
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_rbac_policies_ptype_v0_v1_v2
     ON rbac_policies (ptype, v0, v1, v2);

@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	// third-party
+	"gorm.io/gorm/clause"
+
+	// internal
 	"zhongkui.com/zhongkui/internal/pkg/auth"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -124,6 +128,11 @@ func NewAccessKey(user *User, enabled bool, description string, expiredAt *time.
 //   - error: 创建过程中发生的错误，如果超出数量限制返回 ErrTooManyAccessKey
 func (a *AccessKey) CreateWithLimit(db *database.DB, maxCount int) error {
 	return db.Transaction(func(tx *database.DB) error {
+		// 以 FOR UPDATE 行锁锁定用户行，按用户串行化创建，
+		// 避免"计数检查通过后被并发创建超限"的竞态
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&User{}, "id = ?", a.RawUserID).Error; err != nil {
+			return errors.WithStack(err)
+		}
 		var count int64
 		if err := tx.Model(&AccessKey{}).Where("user_id = ?", a.RawUserID).Count(&count).Error; err != nil {
 			return errors.WithStack(err)

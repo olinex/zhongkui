@@ -5,43 +5,24 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
-// createUserTestDB 创建用于用户路由测试的 SQLite 内存数据库实例
-// 并自动迁移所需的表结构（User、Group、Namespace、RbacPolicy）
-func createUserTestDB() *database.DB {
-	cfg := &database.Config{
-		Driver: "sqlite",
-		DSN:    ":memory:",
-	}
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{}
-	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	zapLogger, _ := config.Build()
-	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
-
-	db, err := database.NewDatabase(cfg, logger)
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if err := db.AutoMigrate(&core.User{}, &core.Group{}, &core.Namespace{}, &core.RbacPolicy{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createUserTestDB 创建用于用户路由测试的共享 PostgreSQL 测试数据库
+func createUserTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // setupUserTestRouter 创建用于用户路由测试的 Gin 路由引擎
@@ -60,6 +41,8 @@ func setupUserTestRouterWithDB(db *database.DB) *gin.Engine {
 		c.Set(middlewares.CoreDatabaseCtxName, db)
 		c.Next()
 	})
+	// 注入 RBAC enforcer，供 UserGroupJoin/Leave 等 handler 经 GetRbacPolicy 使用
+	r.Use(middlewares.RbacPolicyMiddleware(newTestRbacEnforcer(db)))
 	return r
 }
 
@@ -243,7 +226,12 @@ func TestUserListOut_Struct(t *testing.T) {
 func TestUserDetailGet(t *testing.T) {
 	Convey("测试 UserDetailGet 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createUserTestDB()
+		db := createUserTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupUserTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -316,7 +304,12 @@ func TestUserDetailGet(t *testing.T) {
 func TestUserUpdate(t *testing.T) {
 	Convey("测试 UserUpdate 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createUserTestDB()
+		db := createUserTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupUserTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -393,7 +386,12 @@ func TestUserUpdate(t *testing.T) {
 func TestUserSetActive(t *testing.T) {
 	Convey("测试 UserBatchSetActive 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createUserTestDB()
+		db := createUserTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupUserTestRouterWithDB(db)
 
 		// 注册测试路由 - 批量激活用户
@@ -469,7 +467,12 @@ func TestUserSetActive(t *testing.T) {
 func TestUserGroupJoin(t *testing.T) {
 	Convey("测试 UserGroupJoin 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createUserTestDB()
+		db := createUserTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupUserTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -496,13 +499,13 @@ func TestUserGroupJoin(t *testing.T) {
 
 			// 创建测试命名空间
 			namespace := &core.Namespace{
-				Name: "default",
+				Name: "prod",
 			}
 			db.Create(namespace)
 
 			// 准备加入请求
 			reqBody := map[string]any{
-				"namespace": "default",
+				"namespace": "prod",
 				"groupName": "testgroup",
 			}
 			body, _ := json.Marshal(reqBody)
@@ -517,11 +520,11 @@ func TestUserGroupJoin(t *testing.T) {
 			// 验证策略已创建
 			var policy core.RbacPolicy
 			err := db.First(&policy, "ptype = ? AND v0 = ? AND v1 = ? AND v2 = ?",
-				base.GroupLabel, user.UnionID.String(), "testgroup", "default").Error
+				base.GroupLabel, user.UnionID.String(), "testgroup", "prod").Error
 			So(err, ShouldBeNil)
 			So(policy.V0, ShouldEqual, user.UnionID.String())
 			So(policy.V1, ShouldEqual, "testgroup")
-			So(policy.V2, ShouldEqual, "default")
+			So(policy.V2, ShouldEqual, "prod")
 		})
 
 		Convey("应返回错误当用户不存在时", func() {
@@ -572,7 +575,12 @@ func TestUserGroupJoin(t *testing.T) {
 func TestUserGroupLeave(t *testing.T) {
 	Convey("测试 UserGroupLeave 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createUserTestDB()
+		db := createUserTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupUserTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -695,7 +703,12 @@ func TestUserCreateIn_Struct(t *testing.T) {
 func TestUserCreate(t *testing.T) {
 	Convey("测试 UserCreate 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createUserTestDB()
+		db := createUserTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupUserTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -770,7 +783,12 @@ func TestUserCreate(t *testing.T) {
 // TestUserFrontendConfigReset 测试管理员重置用户前端配置接口
 func TestUserFrontendConfigReset(t *testing.T) {
 	Convey("测试 UserFrontendConfigReset 函数", t, func() {
-		db := createUserTestDB()
+		db := createUserTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		user := &core.User{
 			UnionID:                   serializer.NewHexUUIDv4(),
 			NickleName:                "重置配置用户",
@@ -802,7 +820,8 @@ func TestUserFrontendConfigReset(t *testing.T) {
 			err := db.First(&target, "union_id = ?", user.UnionID.String()).Error
 			So(err, ShouldBeNil)
 			So(target.FrontendConfig, ShouldEqual, "")
-			So(target.FrontendConfigHash, ShouldEqual, "")
+			// PostgreSQL 的 CHAR(64)（bpchar）会用空格补齐空值，读取侧按去空白后为空断言
+			So(strings.TrimSpace(target.FrontendConfigHash), ShouldEqual, "")
 			So(target.FrontendConfigVersion, ShouldEqual, uint64(0))
 			// 同步开关状态保留不变
 			So(target.FrontendConfigSyncEnabled, ShouldBeTrue)

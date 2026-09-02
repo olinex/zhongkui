@@ -11,23 +11,16 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// newSeedTestDB 创建 sqlite 内存库并迁移命名空间与通知模板表（复用 service_test 的
-// newServiceTestDB 单连接 sqlite 模式）。newServiceTestDB 已迁移通知相关五表，此处补齐
-// NotificationTemplate 与 Namespace 两张测试所需的表。
-// newSeedTestDB creates an sqlite in-memory DB and migrates the namespace and
-// notification template tables (reusing the single-connection sqlite pattern from
-// newServiceTestDB). newServiceTestDB already migrates the five notification tables;
-// this additionally migrates NotificationTemplate and Namespace, which the seeding test
-// needs.
+// newSeedTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core），
+// 命名空间与通知模板等全部业务表已由 testdb 统一迁移。
+// newSeedTestDB creates a shared, pre-migrated PostgreSQL test DB (testdb.Core);
+// the namespace and notification template tables are migrated by testdb already.
 func newSeedTestDB(t *testing.T) *database.DB {
 	t.Helper()
-	db := newServiceTestDB(t)
-	if err := db.AutoMigrate(&core.NotificationTemplate{}, &core.Namespace{}); err != nil {
-		t.Fatal("failed to migrate seed test database: " + err.Error())
-	}
-	return db
+	return testdb.Core(t)
 }
 
 // expectedDefaultRows 汇总注册表在单命名空间下应种子化的默认模板行，(event, lang) 去重集合
@@ -55,7 +48,6 @@ func TestSeedDefaultTemplates(t *testing.T) {
 	convey.Convey("SeedDefaultTemplates 默认模板种子化", t, func() {
 		convey.Convey("写入每个 (event,*,lang) 一行，Source=default、Title/Content 取自注册表", func() {
 			db := newSeedTestDB(t)
-			convey.So(db.Create(&core.Namespace{Name: "default", Description: "default"}).Error, convey.ShouldBeNil)
 
 			convey.So(SeedDefaultTemplates(db, "default"), convey.ShouldBeNil)
 
@@ -85,7 +77,6 @@ func TestSeedDefaultTemplates(t *testing.T) {
 
 		convey.Convey("二次调用幂等，不产生重复行", func() {
 			db := newSeedTestDB(t)
-			convey.So(db.Create(&core.Namespace{Name: "default", Description: "default"}).Error, convey.ShouldBeNil)
 
 			convey.So(SeedDefaultTemplates(db, "default"), convey.ShouldBeNil)
 			var count int64
@@ -99,7 +90,6 @@ func TestSeedDefaultTemplates(t *testing.T) {
 
 		convey.Convey("已存在的用户覆盖（override）行不被回填覆盖", func() {
 			db := newSeedTestDB(t)
-			convey.So(db.Create(&core.Namespace{Name: "default", Description: "default"}).Error, convey.ShouldBeNil)
 
 			// 为 zh-Hans 预置一条用户覆盖行，其标题/正文与注册表默认值不同
 			spec := TemplateSpecs()[0]
@@ -146,7 +136,6 @@ func TestBackfillDefaultTemplates(t *testing.T) {
 
 		convey.Convey("为每个存量命名空间写入注册表全部默认行", func() {
 			db := newSeedTestDB(t)
-			convey.So(db.Create(&core.Namespace{Name: "default", Description: "default"}).Error, convey.ShouldBeNil)
 			convey.So(db.Create(&core.Namespace{Name: "ns2", Description: "ns2"}).Error, convey.ShouldBeNil)
 
 			convey.So(BackfillDefaultTemplates(db, logger), convey.ShouldBeNil)
@@ -165,7 +154,6 @@ func TestBackfillDefaultTemplates(t *testing.T) {
 
 		convey.Convey("二次调用幂等，不产生重复行", func() {
 			db := newSeedTestDB(t)
-			convey.So(db.Create(&core.Namespace{Name: "default", Description: "default"}).Error, convey.ShouldBeNil)
 
 			convey.So(BackfillDefaultTemplates(db, logger), convey.ShouldBeNil)
 			var first int64

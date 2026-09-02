@@ -10,37 +10,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
-// createRbacTestDB 创建用于RBAC路由测试的SQLite内存数据库实例
-// 返回配置好的数据库连接，包含必要的表结构迁移
-func createRbacTestDB() *database.DB {
-	cfg := &database.Config{
-		Driver: "sqlite",
-		DSN:    ":memory:",
-	}
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{}
-	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	zapLogger, _ := config.Build()
-	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
-
-	db, err := database.NewDatabase(cfg, logger)
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	// 迁移RBAC相关表结构
-	if err := db.AutoMigrate(&core.RbacPolicyTemplate{}, &core.RbacPolicy{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createRbacTestDB 创建用于 RBAC 路由测试的共享 PostgreSQL 测试数据库
+func createRbacTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // setupRbacTestRouter 创建用于RBAC路由测试的Gin路由引擎
@@ -71,7 +50,7 @@ func setupRbacTestRouterWithDB(db *database.DB) *gin.Engine {
 // 验证RbacPolicyTemplateListGet函数的正确性和健壮性
 func TestRbacPolicyTemplateListGet(t *testing.T) {
 	// 创建测试数据库
-	db := createRbacTestDB()
+	db := createRbacTestDB(t)
 	// 创建测试数据
 	testTemplates := []*core.RbacPolicyTemplate{
 		core.NewRbacPolicyTemplate("user", "read"),
@@ -200,16 +179,15 @@ func TestRbacPolicyTemplateListGet(t *testing.T) {
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
 
-		Convey("处理空数据库的情况", func() {
-			// 创建新的空数据库
-			emptyDB := createRbacTestDB()
-
-			r := setupRbacTestRouterWithDB(emptyDB)
+		Convey("处理贪婪搜索模式", func() {
+			r := setupRbacTestRouterWithDB(db)
 			r.POST("/rbac-policy-template/list", RbacPolicyTemplateListGet)
 
+			// 使用贪婪搜索模式
 			reqBody := map[string]any{
 				"page":     1,
 				"pageSize": 10,
+				"greedy":   true,
 			}
 			body, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/rbac-policy-template/list", bytes.NewBuffer(body))
@@ -221,15 +199,18 @@ func TestRbacPolicyTemplateListGet(t *testing.T) {
 			So(w.Code, ShouldEqual, http.StatusOK)
 		})
 
-		Convey("处理贪婪搜索模式", func() {
-			r := setupRbacTestRouterWithDB(db)
+		Convey("处理空数据库的情况", func() {
+			// 创建新的空数据库。
+			// 注意：testdb.Core 按同一测试复用事务句柄并在下次调用时回滚上一个，
+			// 故此子测试必须放在使用共享 db 的其他子测试之后，避免提前回滚共享事务。
+			emptyDB := createRbacTestDB(t)
+
+			r := setupRbacTestRouterWithDB(emptyDB)
 			r.POST("/rbac-policy-template/list", RbacPolicyTemplateListGet)
 
-			// 使用贪婪搜索模式
 			reqBody := map[string]any{
 				"page":     1,
 				"pageSize": 10,
-				"greedy":   true,
 			}
 			body, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/rbac-policy-template/list", bytes.NewBuffer(body))

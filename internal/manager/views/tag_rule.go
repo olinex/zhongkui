@@ -501,7 +501,7 @@ func TagRuleBatchDelete(c *gin.Context) {
 				return errors.WithStack(err)
 			}
 			if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
-				// 显式级联删除历史版本，兼容未开启外键约束的数据库（如测试用 sqlite 内存库）
+				// 显式级联删除历史版本
 				if err := tx.Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagRuleVersion{}).Error; err != nil {
 					return err
 				}

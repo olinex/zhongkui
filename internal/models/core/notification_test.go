@@ -12,34 +12,53 @@ import (
 
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// newNotificationTestDB 创建 sqlite 内存库并迁移通知相关的五张表：
-// notification_channels / notification_targets / notification_groups /
-// notification_group_targets / notification_records
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库
+// newNotificationTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
+// 通知相关五张表（notification_channels / notification_targets / notification_groups /
+// notification_group_targets / notification_records）已由 testdb 统一迁移，
+// 每次调用前对业务表做 TRUNCATE 保证测试隔离。
 func newNotificationTestDB(t *testing.T) *database.DB {
 	t.Helper()
-	logger, err := logging.NewDefaultLogger()
-	if err != nil {
-		t.Fatal("failed to create default logger: " + err.Error())
+	return testdb.Core(t)
+}
+
+// ensureTestNamespace 确保指定名称的命名空间在测试库中存在（幂等）。
+// 注意不能使用 GORM 的 FirstOrCreate：其内部 Create 在独立事务中执行，
+// 后续语句在同一事务内看不到该行，导致父键/外键校验失败（PostgreSQL 下报
+// xxx_namespace_name_fkey）。此处用 Count + Create 保证在同一事务内可见。
+func ensureTestNamespace(db *database.DB, name string) {
+	var count int64
+	if db.Model(&Namespace{}).Where("name = ?", name).Count(&count).Error == nil && count == 0 {
+		_ = db.Create(&Namespace{Name: name}).Error
 	}
-	db, err := database.NewDatabase(&database.Config{Driver: "sqlite", DSN: ":memory:"}, logger)
-	if err != nil {
-		t.Fatal("failed to create test database: " + err.Error())
+}
+
+// isUniqueViolation 判断错误是否为数据库唯一约束冲突。
+// PostgreSQL 报错为 'duplicate key value violates unique constraint'，
+// SQLite 报错为 'UNIQUE constraint failed'，此处兼容两方言。
+func isUniqueViolation(err error) bool {
+	if err == nil {
+		return false
 	}
-	if sqlDB, err := db.DB(); err != nil {
-		t.Fatal("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		// sqlite 内存库强制单连接，避免多连接各自持有独立的内存数据库
-		sqlDB.SetMaxOpenConns(1)
+	msg := err.Error()
+	return strings.Contains(msg, "duplicate key value violates unique constraint") ||
+		strings.Contains(msg, "UNIQUE constraint failed")
+}
+
+// seedNotificationChannel 在指定事务中创建一条通知渠道并返回其 ID，
+// 以满足 notification_targets.channel_id 的外键约束。
+func seedNotificationChannel(db *database.DB) uint {
+	channel := &NotificationChannel{
+		NamespaceName: "default",
+		Name:          "parent-channel",
+		Type:          "email",
+		Enabled:       true,
 	}
-	if err := db.AutoMigrate(&NotificationChannel{}, &NotificationTarget{}, &NotificationGroup{}, &NotificationGroupTarget{}, &NotificationRecord{}); err != nil {
-		t.Fatal("failed to migrate test database: " + err.Error())
-	}
-	return db
+	convey.So(db.Create(channel).Error, convey.ShouldBeNil)
+	return channel.ID
 }
 
 // TestNotification_TableName 测试 GORM 默认命名策略生成的表名与迁移 SQL 的
@@ -117,6 +136,7 @@ func TestNotificationChannel_UniqueConstraint(t *testing.T) {
 	convey.Convey("测试 NotificationChannel 唯一约束", t, func() {
 		convey.Convey("同一命名空间下相同 name 的渠道应插入失败", func() {
 			db := newNotificationTestDB(t)
+			ensureTestNamespace(db, "default")
 			base := NotificationChannel{
 				NamespaceName: "default",
 				Name:          "alert-email",
@@ -129,11 +149,12 @@ func TestNotificationChannel_UniqueConstraint(t *testing.T) {
 			dup.ID = 0
 			err := db.Create(&dup).Error
 			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
+			convey.So(strings.Contains(err.Error(), "uq_notification_channels_namespace_name"), convey.ShouldBeTrue)
 		})
 
 		convey.Convey("不同命名空间下相同 name 的渠道应插入成功", func() {
 			db := newNotificationTestDB(t)
+			ensureTestNamespace(db, "default")
 			base := NotificationChannel{
 				NamespaceName: "default",
 				Name:          "alert-email",
@@ -145,6 +166,7 @@ func TestNotificationChannel_UniqueConstraint(t *testing.T) {
 			other := base
 			other.ID = 0
 			other.NamespaceName = "tenant-b"
+			ensureTestNamespace(db, "tenant-b")
 			convey.So(db.Create(&other).Error, convey.ShouldBeNil)
 		})
 	})
@@ -200,10 +222,12 @@ func TestNotificationTarget_UniqueConstraint(t *testing.T) {
 	convey.Convey("测试 NotificationTarget 唯一约束", t, func() {
 		convey.Convey("同一命名空间下相同 name 的目标应插入失败", func() {
 			db := newNotificationTestDB(t)
+			ensureTestNamespace(db, "default")
+			parentChannelID := seedNotificationChannel(db)
 			base := NotificationTarget{
 				NamespaceName: "default",
 				Name:          "ops-email",
-				ChannelID:     3,
+				ChannelID:     parentChannelID,
 				Type:          "email",
 				Enabled:       true,
 			}
@@ -213,15 +237,17 @@ func TestNotificationTarget_UniqueConstraint(t *testing.T) {
 			dup.ID = 0
 			err := db.Create(&dup).Error
 			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
+			convey.So(isUniqueViolation(err), convey.ShouldBeTrue)
 		})
 
 		convey.Convey("不同命名空间下相同 name 的目标应插入成功", func() {
 			db := newNotificationTestDB(t)
+			ensureTestNamespace(db, "default")
+			parentChannelID := seedNotificationChannel(db)
 			base := NotificationTarget{
 				NamespaceName: "default",
 				Name:          "ops-email",
-				ChannelID:     3,
+				ChannelID:     parentChannelID,
 				Type:          "email",
 				Enabled:       true,
 			}
@@ -230,6 +256,7 @@ func TestNotificationTarget_UniqueConstraint(t *testing.T) {
 			other := base
 			other.ID = 0
 			other.NamespaceName = "tenant-b"
+			ensureTestNamespace(db, "tenant-b")
 			convey.So(db.Create(&other).Error, convey.ShouldBeNil)
 		})
 	})
@@ -283,11 +310,12 @@ func TestNotificationGroup_UniqueConstraint(t *testing.T) {
 			dup.ID = 0
 			err := db.Create(&dup).Error
 			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
+			convey.So(isUniqueViolation(err), convey.ShouldBeTrue)
 		})
 
 		convey.Convey("不同命名空间下相同 name 的组应插入成功", func() {
 			db := newNotificationTestDB(t)
+			ensureTestNamespace(db, "tenant-b")
 			base := NotificationGroup{
 				NamespaceName: "default",
 				Name:          "group-a",
@@ -346,7 +374,7 @@ func TestNotificationGroupTarget_UniqueConstraint(t *testing.T) {
 			dup.ID = 0
 			err := db.Create(&dup).Error
 			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
+			convey.So(isUniqueViolation(err), convey.ShouldBeTrue)
 		})
 
 		convey.Convey("同一目标加入不同组应插入成功", func() {
@@ -447,7 +475,7 @@ func TestNotificationRecord_UniqueConstraint(t *testing.T) {
 			dup.ID = 0
 			err := db.Create(&dup).Error
 			convey.So(err, convey.ShouldNotBeNil)
-			convey.So(strings.Contains(err.Error(), "UNIQUE constraint failed"), convey.ShouldBeTrue)
+			convey.So(isUniqueViolation(err), convey.ShouldBeTrue)
 		})
 
 		convey.Convey("不同 target_id 的相同 event_id 记录应插入成功", func() {

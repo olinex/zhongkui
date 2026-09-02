@@ -408,6 +408,16 @@ async function tableDataRefresh() {
   }
 }
 
+// startLoading 立即清空旧列表并进入加载态（骨架屏）：
+// 数据源切换（如流量页切换类型）时表头已即时更新，但旧数据仍驻留列表，
+// 在新表头下会错位/空值展示；故先清空并置加载态，加载期间仅显示骨架，
+// 真实查询由调用方随后触发（refresh/query），加载态持续至数据返回
+function startLoading() {
+  items.value = [];
+  total.value = 0;
+  loading.value = true;
+}
+
 // doQuery 显式查询：筛选条件实际变更后由查询按钮触发，页码重置为 1 再刷新；
 // 页码本就为 1（不会触发 watch(page)）时需手动刷新，否则由 watch(page) 触发
 async function doQuery() {
@@ -454,6 +464,7 @@ defineExpose({
   refresh: tableDataRefresh,
   query: doQuery,
   clearSelection,
+  startLoading,
   selectItems,
   filterBy,
 });

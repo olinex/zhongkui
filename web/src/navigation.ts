@@ -33,6 +33,11 @@ export const navigationGroups: NavGroup[] = [
         icon: "mdi-alert-decagram",
         routeName: "Tag Event Rule List",
       },
+      {
+        title: "navbar.tagEvent.record",
+        icon: "mdi-history",
+        routeName: "Tag Event Record List",
+      },
     ],
   },
   {

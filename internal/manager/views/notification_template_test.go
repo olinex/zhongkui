@@ -23,25 +23,12 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
-// createNotificationTemplateTestDB 创建 sqlite 内存库并迁移 notification_templates 表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createNotificationTemplateTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&core.NotificationTemplate{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createNotificationTemplateTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createNotificationTemplateTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // registerNotificationTemplateTestRoutes 注册通知模板管理路由（与 router.go 的注册保持一致）。
@@ -114,7 +101,12 @@ func notificationTemplateListItems(r *gin.Engine, body map[string]any) (total ui
 // TestNotificationTemplateEventsGet 事件模板枚举返回注册表内容。
 func TestNotificationTemplateEventsGet(t *testing.T) {
 	Convey("测试通知模板事件枚举", t, func() {
-		db := createNotificationTemplateTestDB()
+		db := createNotificationTemplateTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupNotificationTemplateTestRouter(db, middlewares.DefaultNamespace)
 
 		w := doNotificationTemplateRequest(r, http.MethodPost, "/notification/template/events", nil)
@@ -145,7 +137,12 @@ func TestNotificationTemplateEventsGet(t *testing.T) {
 // TestNotificationTemplateList 列表查询与事件/来源过滤。
 func TestNotificationTemplateList(t *testing.T) {
 	Convey("测试通知模板列表查询", t, func() {
-		db := createNotificationTemplateTestDB()
+		db := createNotificationTemplateTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
 		// 种子化内置默认模板（source=default，zh-Hans 与 en 两行）
@@ -197,7 +194,12 @@ func TestNotificationTemplateList(t *testing.T) {
 // TestNotificationTemplateCreate 创建成功、重复 400 与非法事件/渠道 400。
 func TestNotificationTemplateCreate(t *testing.T) {
 	Convey("测试通知模板创建", t, func() {
-		db := createNotificationTemplateTestDB()
+		db := createNotificationTemplateTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
 
@@ -250,7 +252,12 @@ func TestNotificationTemplateCreate(t *testing.T) {
 // TestNotificationTemplateUpdate 更新生效且强制 override，不存在的模板返回 404。
 func TestNotificationTemplateUpdate(t *testing.T) {
 	Convey("测试通知模板更新", t, func() {
-		db := createNotificationTemplateTestDB()
+		db := createNotificationTemplateTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
 		So(notify.SeedDefaultTemplates(db, ns), ShouldBeNil)
@@ -289,7 +296,12 @@ func TestNotificationTemplateUpdate(t *testing.T) {
 // TestNotificationTemplateRestoreDefault 恢复默认将事件模板重置为代码内置默认。
 func TestNotificationTemplateRestoreDefault(t *testing.T) {
 	Convey("测试通知模板恢复默认", t, func() {
-		db := createNotificationTemplateTestDB()
+		db := createNotificationTemplateTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
 		So(notify.SeedDefaultTemplates(db, ns), ShouldBeNil)
@@ -324,7 +336,12 @@ func TestNotificationTemplateRestoreDefault(t *testing.T) {
 // TestNotificationTemplateRenderTest 渲染预览成功与失败路径。
 func TestNotificationTemplateRenderTest(t *testing.T) {
 	Convey("测试通知模板渲染预览", t, func() {
-		db := createNotificationTemplateTestDB()
+		db := createNotificationTemplateTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
 		So(notify.SeedDefaultTemplates(db, ns), ShouldBeNil)

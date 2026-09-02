@@ -23,6 +23,8 @@ export const schedulerTaskSchema = yup.object({
   queue,
   timeout,
   maxRetry,
+  retention: yup.string().trim().label("model.scheduler.field.retention"),
+  lookback: yup.string().trim().label("model.scheduler.field.lookback"),
   enabled: yup.bool().nullable().label("model.scheduler.field.enabled"),
   payload: yup.mixed().nullable().label("model.scheduler.field.payload"),
   backlogEnabled: yup.bool().nullable().label("model.scheduler.field.backlogEnabled"),

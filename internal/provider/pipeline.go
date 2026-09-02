@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/network/detectors"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/config"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -14,12 +15,6 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
-)
-
-const (
-	// ContextScopeName 上下文中的注入器键名
-	// 用于存储任务上下文中的注入器实例
-	ContextScopeName = "ctx_scope"
 )
 
 // TaskContext 创建任务上下文的函数。
@@ -31,13 +26,13 @@ func TaskContext(ctx context.Context, i do.Injector) pipeline.ContextFunc {
 			panic(err)
 		}
 		scope := i.Scope(fmt.Sprintf("task:%s", suffix))
-		return context.WithValue(ctx, ContextScopeName, scope)
+		return context.WithValue(ctx, base.ContextScopeName, scope)
 	}
 }
 
 // GetScope 从上下文中获取注入器实例。
 func GetScope(ctx context.Context) *do.Scope {
-	return ctx.Value(ContextScopeName).(*do.Scope)
+	return ctx.Value(base.ContextScopeName).(*do.Scope)
 }
 
 func initDetectors(i do.Injector) error {

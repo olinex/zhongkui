@@ -1,34 +1,32 @@
 // Package routes 提供 HTTP 路由注册和管理功能。
 // 本文件包含标签事件规则管理路由的集成测试：
-// 覆盖规则 CRUD、启停、表达式语法校验、dry-run（在 sqlite 的 tag_summings 上真实执行检测）、
+// 覆盖规则 CRUD、启停、表达式语法校验、dry-run（在 raw 库的 tag_summings 上真实执行检测）、
 // 版本快照/裁剪/回滚、删除级联与命名空间隔离。
 package views
 
 import (
 	// stdlib
 	"bytes"
-	"database/sql/driver"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	// third-party
 	"github.com/gin-gonic/gin"
-	sqlite3 "github.com/glebarez/go-sqlite"
 	. "github.com/smartystreets/goconvey/convey"
 
 	// internal
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
 // tagEventRuleValidExpr 可通过 has(tags, ?) 命中的单标签合法表达式。
@@ -40,94 +38,20 @@ const tagEventRuleInvalidExpr = "admin AND ("
 // tagEventRuleWindow dry-run 检测使用的默认时间窗口。
 const tagEventRuleWindow = 10 * time.Minute
 
-// tagEventRuleDryRunNow dry-run 测试的固定检测时间点（UTC）。
-// raw 库预置数据的 minute 与该时刻对齐，dry-run 请求显式携带该时间，保证窗口边界确定性。
-var tagEventRuleDryRunNow = time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
+// tagEventRuleDryRunNow dry-run 测试的检测时间点（UTC），相对当前时刻向后偏移并分钟对齐。
+// raw 库 tag_summings 表带 72 小时 TTL，种子数据 minute 须落在当前时刻附近，
+// 否则插入即被 TTL 清除导致任何条件都不命中；dry-run 请求显式携带该时间，保证窗口边界确定性。
+var tagEventRuleDryRunNow = time.Now().UTC().Add(-2 * time.Minute).Truncate(time.Minute)
 
-// registerSQLiteHasFunc 在 sqlite 驱动上注册 ClickHouse 的 has(tags, label) 标量函数，
-// 使检测 SQL 可在 sqlite 上真实执行（tags 以逗号分隔的 TEXT 存储）。
-// 注册对驱动全局生效且仅需一次，用 sync.OnceFunc 保证幂等。
-// 实现思路复制自 tagengine 包测试（包内私有函数无法直接复用）。
-var registerSQLiteHasFunc = sync.OnceFunc(func() {
-	err := sqlite3.RegisterScalarFunction("has", 2, func(_ *sqlite3.FunctionContext, args []driver.Value) (driver.Value, error) {
-		tags, ok := args[0].(string)
-		if !ok {
-			return int64(0), nil
-		}
-		label, _ := args[1].(string)
-		for _, t := range strings.Split(tags, ",") {
-			if t == label {
-				return int64(1), nil
-			}
-		}
-		return int64(0), nil
-	})
-	if err != nil {
-		panic(err)
-	}
-})
-
-// createTagEventRuleTestDB 创建 sqlite 内存库并迁移 tag_event_rules / tag_event_conditions / tag_event_rule_versions 表。
-// 内存库必须限制为单连接，避免多个连接各自持有独立的内存数据库。
-func createTagEventRuleTestDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	if err := db.AutoMigrate(&tag.TagEventRule{}, &tag.TagEventCondition{}, &tag.TagEventRuleVersion{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createTagEventRuleTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
+func createTagEventRuleTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
-// createTagEventRuleRawDB 创建 raw 库（tag_summings）测试库：先注册 sqlite has 标量函数，
-// 再按 raw 库的 tag_summings 列定义精简建表，并以固定检测时间点预置确定性命中/未命中数据。
-// 返回的库经 RawDatabaseMiddleware 注入，供 dry-run 接口的检测 SQL 真实执行。
-func createTagEventRuleRawDB() *database.DB {
-	cfg := &database.Config{Driver: "sqlite", DSN: ":memory:"}
-	db, err := database.NewDatabase(cfg, newTagRuleTestLogger())
-	if err != nil {
-		panic("failed to create raw test database: " + err.Error())
-	}
-	if sqlDB, err := db.DB(); err != nil {
-		panic("failed to get underlying sql.DB: " + err.Error())
-	} else {
-		sqlDB.SetMaxOpenConns(1)
-	}
-	registerSQLiteHasFunc()
-	// 按 raw 库（001_init.sql）的 tag_summings 列定义精简建表，minute 用同一格式化字符串便于 sqlite 文本比较
-	So(db.Exec(`CREATE TABLE tag_summings (
-		namespace varchar(32),
-		minute text,
-		model varchar(255),
-		dimension varchar(128),
-		item varchar(255),
-		tags text,
-		cnt integer
-	)`).Error, ShouldBeNil)
-	now := tagEventRuleDryRunNow
-	insert := func(minute, namespace, model, dimension, item, tags string, cnt int) {
-		So(db.Exec(`INSERT INTO tag_summings (namespace, minute, model, dimension, item, tags, cnt) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-			namespace, minute, model, dimension, item, tags, cnt).Error, ShouldBeNil)
-	}
-	// 命中组（m1/d1/i1）：窗口内两行合计 5 > 阈值 3
-	insert(database.ToUTCDatetime64(now.Add(-4*time.Minute), 6), "default", "m1", "d1", "i1", "admin-login,risk", 2)
-	insert(database.ToUTCDatetime64(now.Add(-2*time.Minute), 6), "default", "m1", "d1", "i1", "risk,admin-login,geo", 3)
-	// 命中组（m2/d2/i2）：单行 4 > 阈值 3，供任一条件命中场景
-	insert(database.ToUTCDatetime64(now.Add(-3*time.Minute), 6), "default", "m2", "d2", "i2", "admin-login", 4)
-	// 未命中组（m3/d3/i3）：累计 2 ≤ 阈值 5
-	insert(database.ToUTCDatetime64(now.Add(-3*time.Minute), 6), "default", "m3", "d3", "i3", "admin-login", 2)
-	// 窗口外数据（m4）：应被时间边界排除
-	insert(database.ToUTCDatetime64(now.Add(-30*time.Minute), 6), "default", "m4", "d4", "i4", "admin-login", 100)
-	// 其他命名空间（other-ns）：应被命名空间过滤排除
-	insert(database.ToUTCDatetime64(now.Add(-3*time.Minute), 6), "other-ns", "m5", "d5", "i5", "admin-login", 100)
-	return db
+// createTagEventRuleRawDB 返回共享 ClickHouse 测试库（testdb.Raw 迁移并清空全部业务表），
+// 含 raw 迁移定义的 tag_summings 表，供 dry-run 接口的真实检测 SQL 执行。
+func createTagEventRuleRawDB(t *testing.T) *database.DB {
+	return testdb.Raw(t)
 }
 
 // registerTagEventRuleTestRoutes 注册标签事件规则管理路由（与 router.go 的注册保持一致），
@@ -231,8 +155,13 @@ func tagEventRuleIDPath(action string, id uint) string {
 // TestTagEventRuleCreateAndDetail 创建与详情查询全链路。
 func TestTagEventRuleCreateAndDetail(t *testing.T) {
 	Convey("测试标签事件规则创建与详情查询", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 
 		Convey("合法规则创建成功且详情返回嵌套条件与零版本统计", func() {
@@ -281,8 +210,13 @@ func TestTagEventRuleCreateAndDetail(t *testing.T) {
 // TestTagEventRuleConditionBoundsRejected 条件窗口/阈值超出上限被拒绝。
 func TestTagEventRuleConditionBoundsRejected(t *testing.T) {
 	Convey("测试条件窗口与阈值上下限校验", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 
 		Convey("窗口超过 7 天上限被拒绝", func() {
@@ -318,8 +252,13 @@ func TestTagEventRuleConditionBoundsRejected(t *testing.T) {
 // TestTagEventRuleCreateInvalidExpressionRejected 非法表达式被拒绝落库。
 func TestTagEventRuleCreateInvalidExpressionRejected(t *testing.T) {
 	Convey("测试非法表达式的创建拒绝逻辑", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 
 		Convey("表达式语法非法返回带下标与消息的错误详情且不落库", func() {
@@ -365,8 +304,13 @@ func TestTagEventRuleCreateInvalidExpressionRejected(t *testing.T) {
 // TestTagEventRuleUpdateAndVersion 更新生成版本快照且内容正确。
 func TestTagEventRuleUpdateAndVersion(t *testing.T) {
 	Convey("测试标签事件规则更新与版本快照", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 		ruleID := createTagEventRule(t, db, r, "rule-up", false, true, []map[string]any{
 			tagEventRuleCondition(tagEventRuleValidExpr),
@@ -440,8 +384,13 @@ func TestTagEventRuleUpdateAndVersion(t *testing.T) {
 // TestTagEventRulePruneVersions 历史版本超过上限时裁剪最旧版本。
 func TestTagEventRulePruneVersions(t *testing.T) {
 	Convey("测试历史版本裁剪", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 		ruleID := createTagEventRule(t, db, r, "rule-prune", false, true, []map[string]any{
 			tagEventRuleCondition(tagEventRuleValidExpr),
@@ -476,8 +425,13 @@ func TestTagEventRulePruneVersions(t *testing.T) {
 // TestTagEventRuleRollback 回滚恢复目标版本内容，且回滚前内容成为新版本。
 func TestTagEventRuleRollback(t *testing.T) {
 	Convey("测试标签事件规则回滚", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 		ruleID := createTagEventRule(t, db, r, "rule-rb", false, true, []map[string]any{
 			tagEventRuleCondition(tagEventRuleValidExpr),
@@ -548,8 +502,13 @@ func TestTagEventRuleRollback(t *testing.T) {
 // TestTagEventRuleDeleteCascade 删除规则时级联删除其全部条件与历史版本。
 func TestTagEventRuleDeleteCascade(t *testing.T) {
 	Convey("测试标签事件规则删除级联", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 		ruleID := createTagEventRule(t, db, r, "rule-del", false, true, []map[string]any{
 			tagEventRuleCondition(tagEventRuleValidExpr),
@@ -597,8 +556,13 @@ func TestTagEventRuleDeleteCascade(t *testing.T) {
 // TestTagEventRuleSetEnabled 启用/停用规则状态切换且幂等。
 func TestTagEventRuleSetEnabled(t *testing.T) {
 	Convey("测试标签事件规则启停", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 		ruleID := createTagEventRule(t, db, r, "rule-io", false, true, []map[string]any{
 			tagEventRuleCondition(tagEventRuleValidExpr),
@@ -634,8 +598,13 @@ func TestTagEventRuleSetEnabled(t *testing.T) {
 // TestTagEventRuleList 列表查询与分页过滤。
 func TestTagEventRuleList(t *testing.T) {
 	Convey("测试标签事件规则列表查询", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 		createTagEventRule(t, db, r, "rule-a", false, true, []map[string]any{tagEventRuleCondition(tagEventRuleValidExpr)})
 		createTagEventRule(t, db, r, "rule-b", true, false, []map[string]any{tagEventRuleCondition("risk")})
@@ -728,8 +697,13 @@ func TestTagEventRuleList(t *testing.T) {
 // TestTagEventRuleValidate 表达式语法校验接口返回结构化结果。
 func TestTagEventRuleValidate(t *testing.T) {
 	Convey("测试标签事件规则表达式校验接口", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 
 		Convey("合法表达式返回 valid=true 且 refined 不含多余空格", func() {
@@ -766,9 +740,31 @@ func TestTagEventRuleValidate(t *testing.T) {
 // raw 库预置数据与请求时间对齐（固定 UTC 时刻），窗口边界由 minute 文本比较保证确定性。
 func TestTagEventRuleDryRun(t *testing.T) {
 	Convey("测试标签事件规则 dry-run 接口", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
+
+		// 在 raw 库种入 tag_summings 检测数据：m1/d1/i1 在检测窗口（now-10min 内）累计命中 5 次，
+		// 达到阈值 3 触发事件。testdb.Raw 每次调用都会 TRUNCATE，故需在每个叶子外层体重新种入。
+		seedSumming := func(minute time.Time, model, dimension, item string, cnt uint) {
+			sum := &tag.TagSumming{
+				Namespace: middlewares.DefaultNamespace,
+				Minute:    minute,
+				Model:     model,
+				Dimension: dimension,
+				Item:      item,
+				Cnt:       cnt,
+			}
+			sum.Tags = []string{tagEventRuleValidExpr}
+			So(rawDB.Create(sum).Error, ShouldBeNil)
+		}
+		seedSumming(tagEventRuleDryRunNow.Add(-5*time.Minute), "m1", "d1", "i1", 3)
+		seedSumming(tagEventRuleDryRunNow.Add(-2*time.Minute), "m1", "d1", "i1", 2)
 
 		// dryRun 构造一次 dry-run 请求，overrides 可覆盖默认字段
 		dryRun := func(conds []map[string]any, overrides map[string]any) *httptest.ResponseRecorder {
@@ -894,8 +890,13 @@ func TestTagEventRuleDryRun(t *testing.T) {
 // TestTagEventRuleNamespaceIsolation 规则按命名空间隔离，跨命名空间访问视为不存在。
 func TestTagEventRuleNamespaceIsolation(t *testing.T) {
 	Convey("测试标签事件规则命名空间隔离", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 		ruleID := createTagEventRule(t, db, r, "ns-rule", false, true, []map[string]any{
 			tagEventRuleCondition(tagEventRuleValidExpr),
@@ -931,8 +932,13 @@ func TestTagEventRuleNamespaceIsolation(t *testing.T) {
 // TestTagEventRuleSuppressWindowLifecycle 验证 suppressWindow 在创建/详情/更新/版本快照/回滚全链路保持一致。
 func TestTagEventRuleSuppressWindowLifecycle(t *testing.T) {
 	Convey("测试 suppressWindow 全链路一致性", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
 
 		Convey("创建时传 30m，详情返回 30m", func() {
@@ -1031,8 +1037,9 @@ func TestTagEventRuleSuppressWindowLifecycle(t *testing.T) {
 }
 
 // insertTagEventRecordRow 直接落库一条标签事件（CreatedAt 由 GORM 自动填充），返回其 ID。
-func insertTagEventRecordRow(db *database.DB, namespace, status string) uint {
-	ev := &tag.TagEventRecord{NamespaceName: namespace, RuleID: 1, RuleName: "rule", DedupKey: namespace + ":" + status, Status: status}
+// ruleID 必须是当前事务内真实存在的标签事件规则（tag_event_records 对 rule_id 有级联外键约束）。
+func insertTagEventRecordRow(db *database.DB, ruleID uint, namespace, status string) uint {
+	ev := &tag.TagEventRecord{NamespaceName: namespace, RuleID: ruleID, RuleName: "rule", DedupKey: namespace + ":" + status, Status: status}
 	So(db.Create(ev).Error, ShouldBeNil)
 	return ev.ID
 }
@@ -1047,27 +1054,23 @@ func tagEventRecordStatus(db *database.DB, id uint) string {
 // TestTagEventRecordBatchClose 验证标签事件批量关闭：批量关闭、幂等跳过与命名空间隔离。
 func TestTagEventRecordBatchClose(t *testing.T) {
 	Convey("测试标签事件批量关闭", t, func() {
-		db := createTagEventRuleTestDB()
-		rawDB := createTagEventRuleRawDB()
+		db := createTagEventRuleTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		rawDB := createTagEventRuleRawDB(t)
 		r := setupTagEventRuleTestRouter(db, rawDB)
-		// tag_event_records 表手写建表（与 worker 的 detect/suppress 测试一致：AutoMigrate 对多级关联在 sqlite 下有 nil panic 风险）
-		So(db.Exec(`CREATE TABLE tag_event_records (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			created_at datetime NOT NULL,
-			updated_at datetime NOT NULL,
-			namespace_name varchar(32),
-			rule_id int,
-			rule_name varchar(255),
-			match_all boolean,
-			dedup_key char(64),
-			status varchar(16),
-			detected_at datetime
-		)`).Error, ShouldBeNil)
-
+		// tag_event_records 表由共享测试库的 core 迁移提供（testdb.Core），无需手动建表
+		// 事件记录对 rule_id 有级联外键约束，故先创建一条真实规则作为父行；
+		// 命名空间 FK 要求 other-ns 命名空间真实存在，一并种入。
+		ruleID := createTagEventRule(t, db, r, "record-rule", false, true, []map[string]any{tagEventRuleCondition(tagEventRuleValidExpr)})
+		So(db.Create(&core.Namespace{Name: "other-ns"}).Error, ShouldBeNil)
 		// 预置：当前命名空间 alerting 1 条、closed 1 条；其他命名空间 alerting 1 条
-		alertID := insertTagEventRecordRow(db, middlewares.DefaultNamespace, tag.EventStatusAlerting)
-		closedID := insertTagEventRecordRow(db, middlewares.DefaultNamespace, tag.EventStatusClosed)
-		otherID := insertTagEventRecordRow(db, "other-ns", tag.EventStatusAlerting)
+		alertID := insertTagEventRecordRow(db, ruleID, middlewares.DefaultNamespace, tag.EventStatusAlerting)
+		closedID := insertTagEventRecordRow(db, ruleID, middlewares.DefaultNamespace, tag.EventStatusClosed)
+		otherID := insertTagEventRecordRow(db, ruleID, "other-ns", tag.EventStatusAlerting)
 
 		Convey("批量关闭：alerting 事件被置为 closed 且返回成功汇总", func() {
 			w := doTagEventRuleRequest(r, http.MethodPost, "/tag-event/record/close", map[string]any{"ids": []uint64{uint64(alertID)}})

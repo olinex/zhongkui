@@ -11,38 +11,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
-// createGroupTestDB 创建用于用户组路由测试的 SQLite 内存数据库实例
-// 并自动迁移所需的表结构（Group、RbacPolicy、RbacPolicyTemplate）
-func createGroupTestDB() *database.DB {
-	cfg := &database.Config{
-		Driver: "sqlite",
-		DSN:    ":memory:",
-	}
-	config := zap.NewProductionConfig()
-	config.OutputPaths = []string{}
-	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
-	zapLogger, _ := config.Build()
-	logger := &logging.Logger{SugaredLogger: zapLogger.Sugar()}
-
-	db, err := database.NewDatabase(cfg, logger)
-	if err != nil {
-		panic("failed to create test database: " + err.Error())
-	}
-	if err := db.AutoMigrate(&core.Group{}, &core.RbacPolicy{}, &core.RbacPolicyTemplate{}); err != nil {
-		panic("failed to migrate test database: " + err.Error())
-	}
-	return db
+// createGroupTestDB 创建用于用户组路由测试的共享 PostgreSQL 测试数据库
+func createGroupTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
 }
 
 // setupGroupTestRouter 创建用于用户组路由测试的 Gin 路由引擎
@@ -61,6 +41,8 @@ func setupGroupTestRouterWithDB(db *database.DB) *gin.Engine {
 		c.Set(middlewares.CoreDatabaseCtxName, db)
 		c.Next()
 	})
+	// 注入 RBAC enforcer，供 GroupRbacPolicyAdd/Remove 等 handler 经 GetRbacPolicy 使用
+	r.Use(middlewares.RbacPolicyMiddleware(newTestRbacEnforcer(db)))
 	return r
 }
 
@@ -167,7 +149,12 @@ func TestGroupBaseDetailOut_Struct(t *testing.T) {
 func TestGroupListGet(t *testing.T) {
 	Convey("测试 GroupListGet 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createGroupTestDB()
+		db := createGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -286,7 +273,12 @@ func TestGroupListGet(t *testing.T) {
 func TestGroupDetailGet(t *testing.T) {
 	Convey("测试 GroupDetailGet 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createGroupTestDB()
+		db := createGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -345,7 +337,13 @@ func TestGroupDetailGet(t *testing.T) {
 func TestGroupUpdate(t *testing.T) {
 	Convey("测试 GroupUpdate 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createGroupTestDB()
+		db := createGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁（如重复插入同名的 admin 组），
+		// 引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -418,7 +416,12 @@ func TestGroupUpdate(t *testing.T) {
 func TestGroupCreate(t *testing.T) {
 	Convey("测试 GroupCreate 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createGroupTestDB()
+		db := createGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -489,7 +492,12 @@ func TestGroupCreate(t *testing.T) {
 func TestGroupDelete(t *testing.T) {
 	Convey("测试 GroupBatchDelete 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createGroupTestDB()
+		db := createGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -577,7 +585,12 @@ func TestGroupDelete(t *testing.T) {
 func TestGroupRbacPolicyAdd(t *testing.T) {
 	Convey("测试 GroupRbacPolicyAdd 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createGroupTestDB()
+		db := createGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由
@@ -667,7 +680,12 @@ func TestGroupRbacPolicyAdd(t *testing.T) {
 func TestGroupRbacPolicyRemove(t *testing.T) {
 	Convey("测试 GroupRbacPolicyRemove 函数", t, func() {
 		// 创建测试数据库和路由
-		db := createGroupTestDB()
+		db := createGroupTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
 		r := setupGroupTestRouterWithDB(db)
 
 		// 注册测试路由

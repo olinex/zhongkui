@@ -358,8 +358,7 @@ func NotificationGroupUpdate(c *gin.Context) {
 }
 
 // NotificationGroupBatchDelete 批量删除通知目标组。
-// 逐条复用事务删除语义：先显式删除组目标关联行，再删除组本身（兼容未开启
-// 外键约束的数据库，如测试用 sqlite 内存库）；组不存在（或不属于当前命名空间）
+// 逐条复用事务删除语义：先显式删除组目标关联行，再删除组本身；组不存在（或不属于当前命名空间）
 // 视为成功跳过（幂等）。
 func NotificationGroupBatchDelete(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
@@ -387,7 +386,7 @@ func NotificationGroupBatchDelete(c *gin.Context) {
 				return errors.WithStack(err)
 			}
 			return db.WithContext(c).Transaction(func(tx *database.DB) error {
-				// 显式删除组目标关联行，兼容未开启外键约束的数据库（如测试用 sqlite 内存库）
+				// 显式删除组目标关联行
 				if err := tx.Where("group_id = ?", instance.ID).Delete(&core.NotificationGroupTarget{}).Error; err != nil {
 					return err
 				}

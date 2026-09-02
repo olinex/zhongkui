@@ -82,18 +82,20 @@
 </template>
 
 <script setup lang="ts" name="rego-dry-run-panel">
-import { DateTime } from "luxon";
-
 import { tagRuleDryRun } from "@/apis/tagEvent";
-import { TrafficCryptoFields, TrafficS3Fields, trafficTypeFromModelKey } from "@/apis/traffic";
+import {
+  TrafficCryptoFields,
+  TrafficFieldTypes,
+  TrafficS3Fields,
+  trafficTypeFromModelKey,
+} from "@/apis/traffic";
 import { getResponse } from "@/apis/base";
 import type { DetailField } from "@/components/@types/detail";
 import { useAppStore } from "@/stores/app";
-import { localDurationFormat, localeDatetimeFormat } from "@/utils/i18n";
+import { BackendDataType } from "@/types";
+import { localDurationFormat } from "@/utils/i18n";
 import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
 import type { TagRuleDryRunOut, TagRuleDryRunRuleOut } from "@/pages/[language]/tag-event/@types";
-
-const DATETIME_FIELD_KEYS = new Set(["timestamp", "createdAt"]);
 
 const props = defineProps<{
   model: string;
@@ -126,28 +128,29 @@ const ruleEntries = computed<[string, TagRuleDryRunRuleOut][]>(() =>
   Object.entries(result.value?.rules ?? {}),
 );
 
-const formatValue = (value: unknown): string => {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  if (typeof value === "object") {
-    return JSON.stringify(value);
-  }
-  return String(value);
-};
-
 // detailFields 试运行 input 字段：遍历 input 文档按模型类型翻译字段名；
-// 加密/S3 字段经模型类型键逆映射识别后提供明文查看，其余字段对象值
-// JSON 序列化，timestamp/createdAt 等 ISO 串本地化格式化
+// 加密/S3 字段经模型类型键逆映射识别后提供明文查看，其余字段按流量模型类型
+// （TrafficFieldTypes）由 AdaptiveCell 以列表页方式渲染
 const detailFields = computed<DetailField[]>(() => {
   const modelKey = modelTypeKeyToI18nKey(props.model);
   const trafficType = trafficTypeFromModelKey(props.model);
   const cryptoKeys = new Set(trafficType ? (TrafficCryptoFields[trafficType] ?? []) : []);
   const s3Keys = new Set(trafficType ? (TrafficS3Fields[trafficType] ?? []) : []);
+  // 字段渲染类型：按流量类型查 TrafficFieldTypes，未知类型/字段回退 STRING
+  const fieldTypes = trafficType ? TrafficFieldTypes[trafficType] : {};
   return Object.entries(inputData.value).map(([key, value]) => {
     const label = modelFieldTitle(modelKey, key);
+    const fieldType = fieldTypes[key] ?? BackendDataType.STRING;
     if (cryptoKeys.has(key) && typeof value === "string" && value !== "") {
-      return { key, label, display: "", kind: "crypto" as const, length: 0, value };
+      return {
+        key,
+        label,
+        display: "",
+        kind: "crypto" as const,
+        length: 0,
+        value,
+        type: fieldType,
+      };
     }
     if (s3Keys.has(key) && typeof value === "string" && value !== "") {
       return {
@@ -157,16 +160,10 @@ const detailFields = computed<DetailField[]>(() => {
         kind: "s3" as const,
         length: Number(inputData.value[`${key}Length`] ?? 0),
         value,
+        type: fieldType,
       };
     }
-    let display = formatValue(value);
-    if (DATETIME_FIELD_KEYS.has(key) && typeof value === "string") {
-      const dt = DateTime.fromISO(value);
-      if (dt.isValid) {
-        display = localeDatetimeFormat(dt);
-      }
-    }
-    return { key, label, display, kind: "plain" as const, length: 0, value };
+    return { key, label, display: "", kind: "plain" as const, length: 0, value, type: fieldType };
   });
 });
 
