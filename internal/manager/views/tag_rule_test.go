@@ -993,13 +993,15 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
 		r := setupTagRuleTestRouter(db, engine)
 
-		// 预置一条 HttpTransport 验证样例（已注册模型），字段类型与真实模型一致
+		// 预置一条 HttpTransport 验证样例（已注册模型），字段类型与真实模型一致；
+		// 禁用与迁移种子同名的 browser-post（002_rbac_fixtures.sql 已种入 default 命名空间），
+		// 避免撞 uq_tag_rule_samples_namespace_name_model_name 唯一约束
 		targetType, err := tagengine.TypeKey(&network.HttpTransport{})
 		So(err, ShouldBeNil)
 		sample := &tag.TagRuleSample{
 			NamespaceName: "default",
 			Model:         targetType,
-			Name:          "browser-post",
+			Name:          "runtime-spec-sample",
 			Input: datatypes.JSON(`{
 				"namespace": "default",
 				"method": "POST",

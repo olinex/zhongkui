@@ -1,4 +1,4 @@
-package notify
+package message
 
 import (
 	// stdlib
@@ -16,9 +16,28 @@ import (
 )
 
 // webhookHTTPClient Webhook 渠道使用的 HTTP 客户端，带整体超时避免拖垮任务执行。
+// 其 Transport 配置了连接池（MaxIdleConns/MaxIdleConnsPerHost/IdleConnTimeout），
+// 使 HTTP 连接由标准库自动复用并在闲置超时后回收——即 webhook 渠道底层外部资源的
+// 生命周期管理，由统一资源池之外的 net/http 运输层负责。webhook 通道自身无长期
+// 服务端连接，因此不实现 resourcepool.Lifespan，按纯对象复用处理。
 // webhookHTTPClient is the HTTP client used by the webhook channel with an overall
-// timeout to avoid blocking task execution.
-var webhookHTTPClient = &http.Client{Timeout: 10 * time.Second}
+// timeout to avoid blocking task execution. Its Transport configures a connection
+// pool (MaxIdleConns/MaxIdleConnsPerHost/IdleConnTimeout) so HTTP connections are
+// reused by the stdlib and reclaimed after idling out—that is, the lifecycle of the
+// webhook channel's underlying external resource is handled by net/http's transport
+// layer outside the unified pool. The webhook channel holds no long-lived server
+// connection, so it does not implement resourcepool.Lifespan and is reused as a
+// plain object.
+var webhookHTTPClient = &http.Client{
+	Transport: &http.Transport{
+		MaxIdleConns:          32,
+		MaxIdleConnsPerHost:   8,
+		IdleConnTimeout:       30 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+	},
+	Timeout: 10 * time.Second,
+}
 
 // webhookChannel Webhook 渠道实现：以 HTTP POST 将消息 JSON 投递到目标配置的 URL。
 // 渠道级配置（notification_channels.config）当前为空对象 {}（Webhook 地址在目标级配置中）；

@@ -2,7 +2,7 @@
 // 每个渠道在 init() 中注册其渠道级/目标级配置结构体类型（reflect.Type），
 // 与渠道工厂强绑定、不分离；管理接口据此反射生成前端表单 schema。
 // 仅暴露 reflect.Type，不依赖本项目的 routes 元信息反射逻辑，避免依赖循环。
-package notify
+package message
 
 import (
 	// stdlib

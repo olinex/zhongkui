@@ -21,6 +21,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	message "zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
@@ -82,7 +83,7 @@ func TestNewSendGroupTask(t *testing.T) {
 				GroupID:   &gid,
 				EventType: "tag_event_record",
 				EventID:   42,
-				Message:   notifybase.Message{Template: notifybase.TemplateTagEventAlert, Params: map[string]any{"RuleName": "r"}},
+				Message:   message.Message{Template: notifybase.TemplateTagEventAlert, Params: map[string]any{"RuleName": "r"}},
 			})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(task, convey.ShouldNotBeNil)
@@ -108,12 +109,12 @@ func TestNewSendGroupTask(t *testing.T) {
 		})
 
 		convey.Convey("缺失消息模板返回错误", func() {
-			_, err := NewSendGroupTask(notifybase.SendGroupInput{Namespace: "default", EventType: "tag_event_record", EventID: 1, Message: notifybase.Message{Params: map[string]any{"RuleName": "r"}}})
+			_, err := NewSendGroupTask(notifybase.SendGroupInput{Namespace: "default", EventType: "tag_event_record", EventID: 1, Message: message.Message{Params: map[string]any{"RuleName": "r"}}})
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 
 		convey.Convey("缺失事件 ID 返回错误", func() {
-			_, err := NewSendGroupTask(notifybase.SendGroupInput{Namespace: "default", EventType: "tag_event_record", Message: notifybase.Message{Template: notifybase.TemplateTagEventAlert}})
+			_, err := NewSendGroupTask(notifybase.SendGroupInput{Namespace: "default", EventType: "tag_event_record", Message: message.Message{Template: notifybase.TemplateTagEventAlert}})
 			convey.So(err, convey.ShouldNotBeNil)
 		})
 
@@ -134,7 +135,7 @@ func TestNewSendTargetTask(t *testing.T) {
 				EventType: "tag_event_record",
 				EventID:   42,
 				TargetID:  7,
-				Message:   notifybase.Message{Template: notifybase.TemplateTagEventAlert, Params: map[string]any{"RuleName": "r"}},
+				Message:   message.Message{Template: notifybase.TemplateTagEventAlert, Params: map[string]any{"RuleName": "r"}},
 			})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(task, convey.ShouldNotBeNil)
@@ -151,7 +152,7 @@ func TestNewSendTargetTask(t *testing.T) {
 		convey.Convey("缺失命名空间返回错误", func() {
 			_, err := NewSendTargetTask(notifybase.SendTargetInput{
 				EventType: "tag_event_record", EventID: 1, TargetID: 1,
-				Message: notifybase.Message{Template: notifybase.TemplateTagEventAlert},
+				Message: message.Message{Template: notifybase.TemplateTagEventAlert},
 			})
 			convey.So(err, convey.ShouldNotBeNil)
 		})
@@ -159,7 +160,7 @@ func TestNewSendTargetTask(t *testing.T) {
 		convey.Convey("缺失事件类型返回错误", func() {
 			_, err := NewSendTargetTask(notifybase.SendTargetInput{
 				Namespace: "default", EventID: 1, TargetID: 1,
-				Message: notifybase.Message{Template: notifybase.TemplateTagEventAlert},
+				Message: message.Message{Template: notifybase.TemplateTagEventAlert},
 			})
 			convey.So(err, convey.ShouldNotBeNil)
 		})
@@ -167,7 +168,7 @@ func TestNewSendTargetTask(t *testing.T) {
 		convey.Convey("缺失目标 ID 返回错误", func() {
 			_, err := NewSendTargetTask(notifybase.SendTargetInput{
 				Namespace: "default", EventType: "tag_event_record", EventID: 1,
-				Message: notifybase.Message{Template: notifybase.TemplateTagEventAlert},
+				Message: message.Message{Template: notifybase.TemplateTagEventAlert},
 			})
 			convey.So(err, convey.ShouldNotBeNil)
 		})
@@ -260,7 +261,7 @@ func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.No
 	channel := &core.NotificationChannel{
 		NamespaceName: namespace,
 		Name:          "webhook-channel",
-		Type:          notifybase.TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto([]byte(`{}`)),
 	}
@@ -275,7 +276,7 @@ func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.No
 		NamespaceName: namespace,
 		Name:          "webhook-target",
 		ChannelID:     channel.ID,
-		Type:          notifybase.TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto(targetCfg),
 	}
@@ -307,7 +308,7 @@ func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, gro
 	channel := &core.NotificationChannel{
 		NamespaceName: namespace,
 		Name:          fmt.Sprintf("webhook-channel-%d-%d", groupID, seq),
-		Type:          notifybase.TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto([]byte(`{}`)),
 	}
@@ -322,7 +323,7 @@ func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, gro
 		NamespaceName: namespace,
 		Name:          fmt.Sprintf("webhook-target-%d-%d", groupID, seq),
 		ChannelID:     channel.ID,
-		Type:          notifybase.TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto(targetCfg),
 	}
@@ -340,8 +341,8 @@ func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, gro
 // testMessage builds a structured message pinned to the real tag_event.alert
 // template key so the full delivery flow renders concrete text via the locale
 // templates instead of hardcoded titles and content.
-func testMessage() notifybase.Message {
-	return notifybase.Message{
+func testMessage() message.Message {
+	return message.Message{
 		Template: notifybase.TemplateTagEventAlert,
 		Params:   map[string]any{"Namespace": "default", "RuleName": "alert-rule", "DetectedAt": "2026-01-01T00:00:00Z"},
 	}

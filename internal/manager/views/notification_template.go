@@ -25,6 +25,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	message "zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -541,12 +542,12 @@ func NotificationTemplateDryRun(c *gin.Context) {
 	if params == nil {
 		params = make(map[string]any)
 	}
-	renderedTitle, err := notify.RenderTemplateString(in.Title, params)
+	renderedTitle, err := message.RenderTemplateString(in.Title, params)
 	if err != nil {
 		notificationTemplateBadInput(c, errors.WithStack(err))
 		return
 	}
-	renderedContent, err := notify.RenderTemplateString(in.Content, params)
+	renderedContent, err := message.RenderTemplateString(in.Content, params)
 	if err != nil {
 		notificationTemplateBadInput(c, errors.WithStack(err))
 		return

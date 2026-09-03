@@ -16,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
@@ -68,7 +69,7 @@ type sendEvent struct {
 	Namespace string
 	EventType string
 	EventID   uint
-	Message   Message
+	Message   message.Message
 }
 
 // SendGroupInput 一次向通知组发送的请求，为 notify:send:group 任务载荷的持久化形态。
@@ -93,7 +94,7 @@ type SendGroupInput struct {
 	EventID uint `json:"eventID" binding:"required"`
 	// Message 通用消息内容（必填，模板键另须非空）
 	// Message the generic message content (required; the template key must be non-empty)
-	Message Message `json:"message" binding:"required"`
+	Message message.Message `json:"message" binding:"required"`
 }
 
 // SendTargetInput 一次不经通知组、直接投递单个目标的通知发送请求，为 notify:send:target
@@ -116,7 +117,7 @@ type SendTargetInput struct {
 	EventID uint `json:"eventID" binding:"required"`
 	// Message 通用消息内容（必填，模板键另须非空）
 	// Message the generic message content (required; the template key must be non-empty)
-	Message Message `json:"message" binding:"required"`
+	Message message.Message `json:"message" binding:"required"`
 	// TargetID 直接投递的目标 ID（必填，须为已存在且启用、所属渠道启用的目标）
 	// TargetID the target ID to deliver to directly (required; must resolve to an
 	// existing target whose channel is present and enabled, and that is itself enabled)
@@ -239,13 +240,9 @@ func (s *Service) sendOne(ctx context.Context, ev *sendEvent, group *core.Notifi
 	if err != nil {
 		return s.finalize(ctx, ev, group, target, nil, "", err)
 	}
-	// 3) 以渠道实际类型构建实例（渠道级配置）；未注册类型/配置非法记录失败但不阻断
-	channel, err := New(target.Channel.Type, json.RawMessage(target.Channel.ConfigData()))
-	if err != nil {
-		return s.finalize(ctx, ev, group, target, rendered, "", err)
-	}
-	// 4) 经渠道发送并落终态（成功/失败）
-	msgID, sendErr := channel.Send(ctx, &Target{Name: target.Name, Language: target.Language, Config: json.RawMessage(target.ConfigData())}, rendered)
+	// 3) 经统一资源池借出/归还渠道实例发送并落终态（成功/失败）；
+	//    未注册类型/配置非法或借出/发送失败记录失败但不阻断
+	msgID, sendErr := message.Send(ctx, target.Channel.Type, json.RawMessage(target.Channel.ConfigData()), &message.Target{Name: target.Name, Language: target.Language, Config: json.RawMessage(target.ConfigData())}, rendered)
 	return s.finalize(ctx, ev, group, target, rendered, msgID, sendErr)
 }
 
@@ -405,31 +402,31 @@ func (s *Service) resolveTemplate(ctx context.Context, namespace string, event, 
 // template row is resolved. It returns a descriptive error when either template is missing
 // or fails to render in that language, keeping registered event templates free of the
 // locales notify.* keys.
-func renderSpecDefault(spec *EventTemplateSpec, lang string, params map[string]any) (*RenderedMessage, error) {
+func renderSpecDefault(spec *EventTemplateSpec, lang string, params map[string]any) (*message.RenderedMessage, error) {
 	title, okT := spec.TitleByLang[lang]
 	content, okC := spec.ContentByLang[lang]
 	if !okT || !okC || title == "" || content == "" {
 		return nil, errors.Newf("notify: no registry default template for event %q (lang %q)", spec.Event, lang)
 	}
-	rTitle, err := renderTemplateText(title, params)
+	rTitle, err := message.RenderTemplateString(title, params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	rContent, err := renderTemplateText(content, params)
+	rContent, err := message.RenderTemplateString(content, params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &RenderedMessage{Title: rTitle, Content: rContent}, nil
+	return &message.RenderedMessage{Title: rTitle, Content: rContent}, nil
 }
 
 // renderMessage 依据目标偏好的语言与所属渠道类型将结构化消息渲染为具体文本
-// （RenderedMessage）。模板内容以 NotificationTemplate 表为唯一事实来源：先按消息模板键
+// （message.RenderedMessage）。模板内容以 NotificationTemplate 表为唯一事实来源：先按消息模板键
 // 在注册表中查找事件规格（TemplateSpecOf），命中则调用 resolveTemplate 按
 // (事件, 渠道, 语言) 解析持久化模板并渲染；无持久化行时回退该事件注册表内置默认模板
 // （renderSpecDefault，内容与种子化默认一致）。两者皆不可用时返回错误，由 sendOne
 // 记录失败。对未注册到注册表的通用模板（非事件来源）保留 locales 回退
 // （notify.<template>.title/content）。
-// renderMessage renders a structured Message into concrete text (RenderedMessage) in the
+// renderMessage renders a structured Message into concrete text (message.RenderedMessage) in the
 // target-preferred language and channel type, treating the NotificationTemplate table as the
 // single source of truth. It looks up the event spec by the message template key (TemplateSpecOf);
 // on a hit it calls resolveTemplate to resolve the persisted template by (event, channel, language)
@@ -437,7 +434,7 @@ func renderSpecDefault(spec *EventTemplateSpec, lang string, params map[string]a
 // default template (renderSpecDefault, identical to the seeded default). It errors only when both
 // sources are unusable, and sendOne records the failure. Generic templates not registered to the
 // registry (non-event sources) keep the locale fallback (notify.<template>.title/content).
-func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTarget, channelType string, msg *Message) (*RenderedMessage, error) {
+func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTarget, channelType string, msg *message.Message) (*message.RenderedMessage, error) {
 	if msg.Template == "" {
 		return nil, errors.New("notify: message template is required")
 	}
@@ -454,10 +451,10 @@ func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTa
 		if tmpl, err := s.resolveTemplate(ctx, target.NamespaceName, spec.Event, channelType, lang.String()); err != nil {
 			s.logger.Ctx(ctx).Warnf("notify: resolve persisted template for event %q channel %q lang %q: %v", spec.Event, channelType, lang, err)
 		} else if tmpl != nil {
-			title, tErr := renderTemplateText(tmpl.Title, msg.Params)
-			content, cErr := renderTemplateText(tmpl.Content, msg.Params)
+			title, tErr := message.RenderTemplateString(tmpl.Title, msg.Params)
+			content, cErr := message.RenderTemplateString(tmpl.Content, msg.Params)
 			if tErr == nil && cErr == nil {
-				return &RenderedMessage{Title: title, Content: content}, nil
+				return &message.RenderedMessage{Title: title, Content: content}, nil
 			}
 			if tErr != nil {
 				s.logger.Ctx(ctx).Warnf("notify: render persisted title template for event %q: %v", spec.Event, tErr)
@@ -476,7 +473,7 @@ func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTa
 		return nil, errors.Newf("notify: no usable template for message %q (lang %q)", msg.Template, lang)
 	}
 	// 未注册到注册表的通用模板：回退 locales notify.* 以兼容既有通用/测试模板
-	return &RenderedMessage{
+	return &message.RenderedMessage{
 		Title:   translate.Localize(lang, msg.TitleTemplate(), msg.Params),
 		Content: translate.Localize(lang, msg.ContentTemplate(), msg.Params),
 	}, nil
@@ -493,7 +490,7 @@ func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTa
 // renders via renderTemplateText and returns the error detail (the manager surfaces it as a
 // 400); without a persisted row it falls back to the spec default via renderSpecDefault (the
 // registry built-in default). An empty or invalid lang is normalized to the platform default.
-func (s *Service) RenderPreview(ctx context.Context, namespace, event string, channelType, lang string, params map[string]any) (*RenderedMessage, error) {
+func (s *Service) RenderPreview(ctx context.Context, namespace, event string, channelType, lang string, params map[string]any) (*message.RenderedMessage, error) {
 	spec, ok := EventSpecOf(event)
 	if !ok {
 		return nil, errors.Newf("notify: no notification template spec for event %q", event)
@@ -503,15 +500,15 @@ func (s *Service) RenderPreview(ctx context.Context, namespace, event string, ch
 		return nil, errors.WithStack(err)
 	}
 	if tmpl != nil {
-		title, tErr := renderTemplateText(tmpl.Title, params)
+		title, tErr := message.RenderTemplateString(tmpl.Title, params)
 		if tErr != nil {
 			return nil, errors.Newf("notify: render preview title for event %q: %v", event, tErr)
 		}
-		content, cErr := renderTemplateText(tmpl.Content, params)
+		content, cErr := message.RenderTemplateString(tmpl.Content, params)
 		if cErr != nil {
 			return nil, errors.Newf("notify: render preview content for event %q: %v", event, cErr)
 		}
-		return &RenderedMessage{Title: title, Content: content}, nil
+		return &message.RenderedMessage{Title: title, Content: content}, nil
 	}
 	parsed := base.DefaultLanguage
 	if lang != "" {
@@ -535,7 +532,7 @@ func (s *Service) RenderPreview(ctx context.Context, namespace, event string, ch
 // delivery propagates sendErr after persisting the failure so the notify:send:target
 // task is retried; on retry successful targets are skipped while failed ones are
 // re-claimed.
-func (s *Service) finalize(ctx context.Context, ev *sendEvent, group *core.NotificationGroup, target *core.NotificationTarget, rendered *RenderedMessage, msgID string, sendErr error) error {
+func (s *Service) finalize(ctx context.Context, ev *sendEvent, group *core.NotificationGroup, target *core.NotificationTarget, rendered *message.RenderedMessage, msgID string, sendErr error) error {
 	payload := []byte("{}")
 	if rendered != nil {
 		var err error

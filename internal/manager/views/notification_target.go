@@ -23,6 +23,7 @@ import (
 	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	message "zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
@@ -483,12 +484,6 @@ func NotificationTargetTestSend(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	// 渠道构建失败（类型未注册、渠道级配置非法）同样作为通知行为报错正常返回
-	ch, err := notify.New(target.Channel.Type, json.RawMessage(target.Channel.ConfigData()))
-	if err != nil {
-		notificationTestSendFailed(c, err)
-		return
-	}
 	// 按目标偏好的语言渲染测试消息，语言缺失或非法时回退平台默认语言
 	lang := base.DefaultLanguage
 	if target.Language != "" {
@@ -503,11 +498,13 @@ func NotificationTargetTestSend(c *gin.Context) {
 	}
 	title := translate.Localize(lang, "notify.test.title", params)
 	content := translate.Localize(lang, "notify.test.content", params)
-	msgID, err := ch.Send(c, &notify.Target{
+	// 经统一资源池借出/归还渠道实例发送；类型未注册/配置非法/借出失败/投递失败
+	// 均以通知行为报错正常返回
+	msgID, err := message.Send(c, target.Channel.Type, json.RawMessage(target.Channel.ConfigData()), &message.Target{
 		Name:     target.Name,
 		Language: target.Language,
 		Config:   json.RawMessage(target.ConfigData()),
-	}, &notify.RenderedMessage{Title: title, Content: content})
+	}, &message.RenderedMessage{Title: title, Content: content})
 	if err != nil {
 		notificationTestSendFailed(c, err)
 		return
@@ -587,7 +584,7 @@ func NotificationTargetSend(c *gin.Context) {
 		TargetID:  target.ID,
 		EventType: in.EventType,
 		EventID:   in.EventID,
-		Message: notify.Message{
+		Message: message.Message{
 			Template: in.Template,
 			Params:   in.Params,
 		},

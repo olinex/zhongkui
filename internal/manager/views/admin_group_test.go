@@ -145,6 +145,13 @@ func TestGroupBaseDetailOut_Struct(t *testing.T) {
 	})
 }
 
+// groupTestNamePrefix 本测试专用用户组名前缀，用于与迁移基线种子组
+// （superuser / admin / default，见 002_rbac_fixtures.sql）隔离：
+// 基线组为已提交的持久行，测试若直接断言「表为空」或插入同名 admin 组
+// 会撞唯一约束而失败（且仅当数据库被重新迁移时才暴露）。
+// 各子测试统一经 filterBy.name 前缀过滤操作自身数据。
+const groupTestNamePrefix = "zk-test-group-"
+
 // TestGroupListGet 测试 GroupListGet 函数
 func TestGroupListGet(t *testing.T) {
 	Convey("测试 GroupListGet 函数", t, func() {
@@ -160,12 +167,15 @@ func TestGroupListGet(t *testing.T) {
 		// 注册测试路由
 		r.POST("/api/v1/admin/group/list", GroupListGet)
 
-		Convey("应返回空列表当数据库为空时", func() {
-			// 准备请求体
+		Convey("应返回空列表当无匹配数据时", func() {
+			// 准备请求体：按测试专用前缀过滤（groups 表存在基线种子组，非空）
 			reqBody := map[string]any{
 				"page":     1,
 				"pageSize": 10,
 				"greedy":   false,
+				"filterBy": map[string]any{
+					"name": map[string]any{"action": "pfx", "value": groupTestNamePrefix},
+				},
 			}
 			body, _ := json.Marshal(reqBody)
 
@@ -188,12 +198,12 @@ func TestGroupListGet(t *testing.T) {
 			So(data["total"], ShouldEqual, 0)
 		})
 
-		Convey("应返回用户组列表当数据库有数据时", func() {
-			// 创建测试数据
+		Convey("应返回用户组列表当有匹配数据时", func() {
+			// 创建测试数据（使用测试专用前缀，避开基线种子组）
 			groups := []core.Group{
-				{Name: "admin", Description: "管理员组"},
-				{Name: "users", Description: "普通用户组"},
-				{Name: "guests", Description: "访客组"},
+				{Name: groupTestNamePrefix + "admin", Description: "管理员组"},
+				{Name: groupTestNamePrefix + "users", Description: "普通用户组"},
+				{Name: groupTestNamePrefix + "guests", Description: "访客组"},
 			}
 			for _, group := range groups {
 				db.Create(&group)
@@ -204,6 +214,9 @@ func TestGroupListGet(t *testing.T) {
 				"page":     1,
 				"pageSize": 10,
 				"greedy":   false,
+				"filterBy": map[string]any{
+					"name": map[string]any{"action": "pfx", "value": groupTestNamePrefix},
+				},
 			}
 			body, _ := json.Marshal(reqBody)
 
@@ -228,10 +241,10 @@ func TestGroupListGet(t *testing.T) {
 		})
 
 		Convey("应支持分页查询", func() {
-			// 创建测试数据
+			// 创建测试数据（使用测试专用前缀）
 			for i := 1; i <= 15; i++ {
 				db.Create(&core.Group{
-					Name:        fmt.Sprintf("group-%02d", i), // 生成group-01, group-02,...作为组名
+					Name:        fmt.Sprintf("%s%02d", groupTestNamePrefix, i), // 生成 zk-test-group-01, ... 作为组名
 					Description: "测试组",
 				})
 			}
@@ -241,6 +254,9 @@ func TestGroupListGet(t *testing.T) {
 				"page":     1,
 				"pageSize": 10,
 				"greedy":   false,
+				"filterBy": map[string]any{
+					"name": map[string]any{"action": "pfx", "value": groupTestNamePrefix},
+				},
 			}
 			body, _ := json.Marshal(reqBody)
 
@@ -293,19 +309,20 @@ func TestGroupDetailGet(t *testing.T) {
 		})
 
 		Convey("应返回用户组详情当用户组存在时", func() {
-			// 创建测试数据
+			// 使用测试专用前缀的组名（避开基线种子组 admin，避免唯一约束冲突导致事务中止）
+			groupName := groupTestNamePrefix + "admin"
 			group := core.Group{
-				Name:        "admin",
+				Name:        groupName,
 				Description: "管理员用户组",
 			}
 			db.Create(&group)
 
 			// 创建关联的RBAC策略
-			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EffectAllow)
+			policy := core.NewGroupPolicy(groupName, "/api/v1/admin/user/list", "POST", base.EffectAllow)
 			db.Create(policy)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/get", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/"+groupName+"/get", nil)
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -316,7 +333,7 @@ func TestGroupDetailGet(t *testing.T) {
 			So(response["code"], ShouldEqual, 200)
 
 			data := response["data"].(map[string]any)
-			So(data["name"], ShouldEqual, "admin")
+			So(data["name"], ShouldEqual, groupName)
 			So(data["description"], ShouldEqual, "管理员用户组")
 
 			policies := data["policies"].([]any)
@@ -350,9 +367,10 @@ func TestGroupUpdate(t *testing.T) {
 		r.POST("/api/v1/admin/group/:name/update", GroupUpdate)
 
 		Convey("应更新用户组描述信息", func() {
-			// 创建测试数据
+			// 使用测试专用前缀的组名（避开基线种子组 admin，避免唯一约束冲突导致事务中止）
+			groupName := groupTestNamePrefix + "admin"
 			group := core.Group{
-				Name:        "admin",
+				Name:        groupName,
 				Description: "原始描述",
 			}
 			db.Create(&group)
@@ -364,7 +382,7 @@ func TestGroupUpdate(t *testing.T) {
 			body, _ := json.Marshal(reqBody)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/update", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/"+groupName+"/update", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -372,7 +390,7 @@ func TestGroupUpdate(t *testing.T) {
 
 			// 验证数据库更新
 			var updatedGroup core.Group
-			db.First(&updatedGroup, "name = ?", "admin")
+			db.First(&updatedGroup, "name = ?", groupName)
 			So(updatedGroup.Description, ShouldEqual, "更新后的描述信息")
 		})
 
@@ -391,9 +409,10 @@ func TestGroupUpdate(t *testing.T) {
 		})
 
 		Convey("应验证请求体格式", func() {
-			// 创建测试数据
+			// 使用测试专用前缀的组名（避开基线种子组 admin，避免唯一约束冲突导致事务中止）
+			groupName := groupTestNamePrefix + "admin"
 			group := core.Group{
-				Name:        "admin",
+				Name:        groupName,
 				Description: "原始描述",
 			}
 			db.Create(&group)
@@ -403,7 +422,7 @@ func TestGroupUpdate(t *testing.T) {
 			body, _ := json.Marshal(reqBody)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/update", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/"+groupName+"/update", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -597,9 +616,10 @@ func TestGroupRbacPolicyAdd(t *testing.T) {
 		r.POST("/api/v1/admin/group/:name/add-rbac-policy", GroupRbacPolicyAdd)
 
 		Convey("应成功添加RBAC策略", func() {
-			// 创建测试数据
+			// 使用测试专用前缀的组名（避开基线种子组 admin，避免唯一约束冲突导致事务中止）
+			groupName := groupTestNamePrefix + "admin"
 			group := core.Group{
-				Name:        "admin",
+				Name:        groupName,
 				Description: "管理员组",
 			}
 			db.Create(&group)
@@ -620,7 +640,7 @@ func TestGroupRbacPolicyAdd(t *testing.T) {
 			body, _ := json.Marshal(reqBody)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/add-rbac-policy", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/"+groupName+"/add-rbac-policy", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -628,7 +648,7 @@ func TestGroupRbacPolicyAdd(t *testing.T) {
 
 			// 验证数据库记录
 			var policy core.RbacPolicy
-			err := db.First(&policy, "ptype = ? AND v0 = ?", base.PolicyLabel, "admin").Error
+			err := db.First(&policy, "ptype = ? AND v0 = ?", base.PolicyLabel, groupName).Error
 			So(err, ShouldBeNil)
 			So(policy.V1, ShouldEqual, "/api/v1/admin/user/list")
 			So(policy.V2, ShouldEqual, "POST")
@@ -636,9 +656,10 @@ func TestGroupRbacPolicyAdd(t *testing.T) {
 		})
 
 		Convey("应返回错误当策略模板不存在时", func() {
-			// 创建测试数据
+			// 使用测试专用前缀的组名（避开基线种子组 admin，避免唯一约束冲突导致事务中止）
+			groupName := groupTestNamePrefix + "admin"
 			group := core.Group{
-				Name:        "admin",
+				Name:        groupName,
 				Description: "管理员组",
 			}
 			db.Create(&group)
@@ -651,7 +672,7 @@ func TestGroupRbacPolicyAdd(t *testing.T) {
 			body, _ := json.Marshal(reqBody)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/add-rbac-policy", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/"+groupName+"/add-rbac-policy", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -692,9 +713,10 @@ func TestGroupRbacPolicyRemove(t *testing.T) {
 		r.POST("/api/v1/admin/group/:name/remove-rbac-policy", GroupRbacPolicyRemove)
 
 		Convey("应成功移除RBAC策略", func() {
-			// 创建测试数据
+			// 使用测试专用前缀的组名（避开基线种子组 admin，避免唯一约束冲突导致事务中止）
+			groupName := groupTestNamePrefix + "admin"
 			group := core.Group{
-				Name:        "admin",
+				Name:        groupName,
 				Description: "管理员组",
 			}
 			db.Create(&group)
@@ -707,12 +729,12 @@ func TestGroupRbacPolicyRemove(t *testing.T) {
 			db.Create(&template)
 
 			// 创建策略
-			policy := core.NewGroupPolicy("admin", "/api/v1/admin/user/list", "POST", base.EffectAllow)
+			policy := core.NewGroupPolicy(groupName, "/api/v1/admin/user/list", "POST", base.EffectAllow)
 			db.Create(policy)
 
 			// 验证策略存在
 			var count int64
-			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.PolicyLabel, "admin").Count(&count)
+			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.PolicyLabel, groupName).Count(&count)
 			So(count, ShouldEqual, 1)
 
 			// 准备移除策略请求
@@ -724,21 +746,22 @@ func TestGroupRbacPolicyRemove(t *testing.T) {
 			body, _ := json.Marshal(reqBody)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/remove-rbac-policy", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/"+groupName+"/remove-rbac-policy", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusOK)
 
 			// 验证策略已删除
-			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.PolicyLabel, "admin").Count(&count)
+			db.Model(&core.RbacPolicy{}).Where("ptype = ? AND v0 = ?", base.PolicyLabel, groupName).Count(&count)
 			So(count, ShouldEqual, 0)
 		})
 
 		Convey("应返回错误当策略不存在时", func() {
-			// 创建测试数据
+			// 使用测试专用前缀的组名（避开基线种子组 admin，避免唯一约束冲突导致事务中止）
+			groupName := groupTestNamePrefix + "admin"
 			group := core.Group{
-				Name:        "admin",
+				Name:        groupName,
 				Description: "管理员组",
 			}
 			db.Create(&group)
@@ -751,7 +774,7 @@ func TestGroupRbacPolicyRemove(t *testing.T) {
 			body, _ := json.Marshal(reqBody)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/admin/remove-rbac-policy", bytes.NewReader(body))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/group/"+groupName+"/remove-rbac-policy", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
