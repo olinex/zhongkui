@@ -212,6 +212,12 @@ func NotificationChannelCreate(c *gin.Context) {
 		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
 		return
 	}
+	// 渠道级配置须能被渠道工厂反序列化并校验通过（如 email 的 port 必须是数字、
+	// host/from 必填），避免非法配置（如以字符串 "465" 存 port）落库导致后继发送失败
+	if _, err := message.New(in.Type, []byte(in.Config)); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
 	instance := &core.NotificationChannel{
 		NamespaceName: namespace,
 		Name:          in.Name,
@@ -275,6 +281,12 @@ func NotificationChannelUpdate(c *gin.Context) {
 	}
 	var in NotificationChannelUpdateIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	// 更新的配置同样须通过渠道工厂校验（类型不可变，沿用库内实例的类型），
+	// 禁止非法配置（如字符串 port）覆盖已入库内容
+	if _, err := message.New(instance.Type, []byte(in.Config)); err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}

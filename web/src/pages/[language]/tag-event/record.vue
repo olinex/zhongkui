@@ -5,6 +5,7 @@
         :list-request="tagEventRecordListGet"
         :options-request="tagEventRecordListOptions"
         :actions="getActions"
+        :row-click="openDetail"
         model-name="tagEventRecord"
       >
         <!-- 状态列：按事件状态着色（告警=error / 抑制=warning / 待处理与关闭=默认） -->
@@ -14,6 +15,9 @@
           </v-chip>
         </template>
       </search-table>
+
+      <!-- 记录详情对话框（只读）；与流量审计等列表一致，通过 row 点击/操作按钮打开 -->
+      <tag-event-record-detail-dialog v-model="detailDialog" :record-id="detailId" />
     </template>
   </main-layout>
 </template>
@@ -27,22 +31,21 @@ meta:
 </route>
 
 <script setup lang="ts" name="tag-event-record">
-import { useRoute, useRouter } from "vue-router";
-
 import { tagEventRecordListGet, tagEventRecordListOptions } from "@/apis/tagEvent";
 
 import type { ItemActions } from "@/components/@types/table";
 
-const router = useRouter();
-const route = useRoute();
+// 详情对话框可见性与当前查看的记录 ID
+const detailDialog = ref(false);
+const detailId = ref(0);
 
-// 当前语言参数（自动路由下各页面 params 形态不一，统一取 language，缺省留空由 i18n 兜底）
-const language = (route.params as { language?: string }).language ?? "";
-
-// ---- 行操作：仅查看详情（只读页面，点击跳转独立详情路由页）----
+// ---- 行操作：仅查看详情（只读页面，点击打开展示在对话框而非独立路由页）----
 const getActions = (): ItemActions => {
   return {
-    viewDetail: viewDetailAction,
+    viewDetail: (
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      item: Record<string, any>,
+    ) => openDetail(item),
   };
 };
 
@@ -58,13 +61,10 @@ const statusColor = (status: string | undefined): string | undefined => {
   }
 };
 
-// 跳转详情：记录 ID 经 query.recordId 传递给独立详情路由页
+// 打开详情对话框：记录 ID 由行数据提供
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const viewDetailAction = (item: Record<string, any>): void => {
-  void router.push({
-    name: "Tag Event Record Detail",
-    params: { language },
-    query: { recordId: item.id },
-  });
+const openDetail = (item: Record<string, any>): void => {
+  detailId.value = Number(item.id);
+  detailDialog.value = true;
 };
 </script>

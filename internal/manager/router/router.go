@@ -20,6 +20,7 @@ package router
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
@@ -27,6 +28,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkui.com/zhongkui/internal/manager/views"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
@@ -50,6 +52,7 @@ type RegisterContext struct {
 	pipelineInspectorMiddleware gin.HandlerFunc
 	pipelineClientMiddleware    gin.HandlerFunc
 	tagRuleEngineMiddleware     gin.HandlerFunc
+	featureRegistryMiddleware   gin.HandlerFunc
 }
 
 // RouteRegister 注册全部 HTTP 路由：初始化全局中间件链后，
@@ -74,6 +77,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	apiLogger := provider.MustInvokeApiLogger(i)
 	rbac := provider.MustInvokeRbac(i)
 	tagEngine := provider.MustInvokeTagEngine(i)
+	featureRegistry := provider.MustInvokeFeatureRegistry(i)
 	cfg, err := manager.ExtractConfig(viper, validator.Validate)
 	if err != nil {
 		return errors.WithStack(err)
@@ -125,6 +129,9 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	pipelineClientMiddleware := middlewares.PipelineClientMiddleware(pipelineClient)
 	// tagRuleEngineMiddleware - 标签规则引擎中间件，将标签引擎注入请求上下文，
 	tagRuleEngineMiddleware := middlewares.TagRuleEngineMiddleware(tagEngine)
+	// featureRegistryMiddleware - 全局功能开关注册表中间件，将功能开关注入请求上下文，
+	// 供公共接口（功能开关列表、密码重置申请等）统一判断功能可用性
+	featureRegistryMiddleware := middlewares.FeatureRegistryMiddleware(featureRegistry)
 
 	// ==================== 默认错误处理 ====================
 	// 重写Gin框架的默认错误响应，提供统一的错误格式和国际化支持
@@ -163,7 +170,21 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		pipelineInspectorMiddleware: pipelineInspectorMiddleware,
 		pipelineClientMiddleware:    pipelineClientMiddleware,
 		tagRuleEngineMiddleware:     tagRuleEngineMiddleware,
+		featureRegistryMiddleware:   featureRegistryMiddleware,
 	}
+
+	// ==================== 全局功能开关端点 ====================
+	// /features/list - 公共接口（无需认证）：返回全部功能开关（key + enabled），
+	// 供前端获知某项功能是否开启以决定是否展示相关组件。
+	rc.v1Group.POST(
+		"/features/list",
+		rc.featureRegistryMiddleware, // 注入功能开关注册表，读取各功能启停状态
+		views.FeaturesListGet,        // 功能开关列表处理函数
+	)
+	// 功能开关列表元信息（仅输出，无请求体）
+	rc.v1Group.OPTIONS("/features/list", views.StructMetaGinHandler(
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[views.FeaturesListGetOut]()),
+	))
 
 	registerAdminRoutes(rc)
 	registerTrafficRoutes(rc)

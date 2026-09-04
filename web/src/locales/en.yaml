@@ -206,6 +206,7 @@ model:
       oldPassword: Old Password
       newPassword: New Password
       newPasswordAgain: New Password Again
+      token: Reset Token
       randomPassword: Random Generate
       specifyPassword: Specify Password
       passwordResetNotice: Please securely inform the target user of the new password
@@ -403,13 +404,19 @@ model:
     field:
       id: ID
       createdAt: Created At
+      createdAtTime: Created Time
+      createdAtDate: Created Date
       updatedAt: Updated At
+      updatedAtTime: Updated Time
+      updatedAtDate: Updated Date
       ruleId: Rule ID
       ruleName: Rule Name
       matchAll: Match All Conditions
       status: Status
       dedupKey: Dedup Key
       detectedAt: Detected At
+      detectedAtTime: Detected Time
+      detectedAtDate: Detected Date
     type:
       status:
         pending: Pending
@@ -971,10 +978,14 @@ action:
   signIn: Sign In
   signOut: Sign Out
   language: Language
-  pwdForget: Password Forget
+  pwdForget: Forgot Password
+  forgotSend: Send Reset Email
+  forgotBackToSignIn: Back to Sign In
+  resetSubmit: Reset Password
   profile: Profile
   expand: Expand
   collapse: Collapse
+  scrollToBottom: Jump to Bottom
   reset: Reset
   create: Create
   update: Update
@@ -1043,6 +1054,7 @@ title:
   zk: Zhong Kui
   home: Home Page
   signIn: User Sign In
+  pwdForget: Forgot Password
   err404: Error - 404
   err401: Error - 401
   userProfile: User Profile
@@ -1112,10 +1124,19 @@ summary:
   unknownError: Something went wrong...
 notice:
   wellcome: Welcome!
+  forgotEmailSent: "If the account and email match, a reset email has been sent to your inbox."
+  resetTokenMissing: "The reset link is invalid or missing a valid token, please request a new password reset"
   goodBye: Good Bye!
   profileUpdated: Profile updated successfully!
   passwordReset: Password reset successfully!
   frontendConfigSyncFailed: Frontend config sync failed, the last synced configuration has been restored
+  tagExpr:
+    empty: Expression is empty
+    unexpectedChar: 'Unexpected character "{char}"'
+    unexpectedToken: 'Unexpected token "{token}"'
+    unexpectedEnd: Unexpected end of expression
+    missingClose: Missing closing ")"
+    expectedOperand: 'Expected a label or "(", but found "{token}"'
   copied: Copied!
   copyFailed: Copy Failed!
   deleteConfirm: "Confirm deleting {category} {key}?"
@@ -1190,6 +1211,7 @@ validation:
     required: "{path} is a required field"
     defined: "{path} must be defined"
     notNull: "{path} cannot be null"
+    notType: "{path} must be a {type} type"
     oneOf: "{path} must be one of the following values: {values}"
     notOneOf: "{path} must not be one of the following values: {values}"
   string:

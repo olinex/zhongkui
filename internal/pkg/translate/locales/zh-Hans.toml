@@ -85,6 +85,8 @@
 1110 = "标签规则样例输入无法反序列化为目标模型"
 1111 = "通知发送失败"
 1112 = "定时任务配置非法"
+1113 = "重置密码功能不可用，请联系管理员或稍后再试"
+1114 = "重置密码链接无效或已过期，请重新申请"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -1498,3 +1500,7 @@ other = "禁用补全描述"
 
 [flag.completion.powershell.no-descriptions]
 other = "禁用补全描述"
+
+[notify.password.reset]
+title = "重置账户密码"
+content = "@emails/password-reset-content.zh-Hans.html"

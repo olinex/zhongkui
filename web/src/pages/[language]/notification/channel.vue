@@ -413,12 +413,16 @@ const createChannelConfigState = (getType: () => string): ChannelConfigState => 
     errors.value = {};
   };
   // toJson 序列化为配置 JSON：密码/多行文本（object/textarea）字段保留原始输入，
+  // number 字段强制转为数字（v-model 对 number 输入框返回字符串，直接透传会把 port 存成
+  // "465" 字符串，导致后端 EmailChannelConfig.Port(int) 反序列化失败），
   // 其余单行字符串字段去除首尾空白（避免误输入不可见空白）
   const toJson = (): string => {
     const config: Record<string, string | number> = {};
     for (const f of fields.value) {
       const v = values.value[f.name];
-      if (f.kind === "password" || f.kind === "object" || f.kind === "textarea") {
+      if (f.kind === "number") {
+        config[f.name] = v === "" || v === undefined ? "" : Number(v);
+      } else if (f.kind === "password" || f.kind === "object" || f.kind === "textarea") {
         config[f.name] = v;
       } else {
         config[f.name] = typeof v === "string" ? v.trim() : v;

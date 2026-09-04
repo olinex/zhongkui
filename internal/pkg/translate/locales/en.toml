@@ -85,6 +85,8 @@
 1110 = "Tag Rule Sample Input Cannot Be Deserialized Into Target Model"
 1111 = "Notification Send Failed"
 1112 = "Invalid Scheduler Task Config"
+1113 = "Password reset is unavailable. Please contact the administrator or try again later"
+1114 = "The password reset link is invalid or expired, please request a new one"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -2015,3 +2017,7 @@ other = "Server end timestamp"
 # ---- TagsMeta ----
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
 other = "Risk tag combination"
+
+[notify.password.reset]
+title = "Reset Your Account Password"
+content = "@emails/password-reset-content.en.html"

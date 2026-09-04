@@ -46,6 +46,15 @@ func TestLocalize(t *testing.T) {
 			// 未命中 key 时回退为 key 本身，由调用方（如 cliT）处理中文 fallback
 			So(Localize(zhLang, "missing.key", nil), ShouldEqual, "missing.key")
 		})
+
+		Convey("external @file reference should be expanded into the template", func() {
+			// notify.password.reset.content 声明为 "@emails/password-reset-content.zh-Hans.html"，
+			// 解析时应收敛为外部 HTML 模板内容，并通过 go-i18n 渲染 {{.ResetURL}} 占位符。
+			rendered := Localize(zhLang, "notify.password.reset.content", map[string]any{"ResetURL": "https://example.com/reset?token=abc"})
+			So(rendered, ShouldNotEqual, "@emails/password-reset-content.zh-Hans.html")
+			So(rendered, ShouldContainSubstring, "https://example.com/reset?token=abc")
+			So(rendered, ShouldContainSubstring, "<html")
+		})
 	})
 }
 

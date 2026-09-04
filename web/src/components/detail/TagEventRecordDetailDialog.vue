@@ -1,21 +1,16 @@
 <template>
-  <main-layout current-nav="tag-event">
-    <template #body>
-      <v-container fluid class="pa-4">
-        <!-- 顶部工具栏：返回列表 + 标题 -->
-        <div class="d-flex align-center mb-4">
-          <v-btn
-            icon="mdi-arrow-left"
-            variant="text"
-            size="small"
-            :title="$t('action.back')"
-            @click="goBack"
-          />
-          <div class="text-h6 font-weight-medium ms-2">
-            {{ $t("title.tagEvent.recordDetail") }}
-          </div>
-        </div>
-
+  <!-- 标签事件记录详情对话框：与流量审计等列表详情一致，通过 dialog 展示而非独立路由页；
+       内容分三块呈卡片（事件基础信息 / 命中明细 / 关联发送记录）。 -->
+  <v-dialog :model-value="modelValue" max-width="900" @update:model-value="onUpdate">
+    <v-card>
+      <v-toolbar density="compact">
+        <v-toolbar-title class="text-no-wrap">
+          {{ $t("title.tagEvent.recordDetail") }}
+        </v-toolbar-title>
+        <v-spacer />
+        <v-btn icon="mdi-close" variant="text" @click="onUpdate(false)" />
+      </v-toolbar>
+      <div class="pa-4 overflow-y-auto" style="max-height: 72vh">
         <v-skeleton-loader v-if="loading" type="article" min-height="220" />
         <v-alert v-else-if="errorText" type="error" variant="tonal" density="compact">
           {{ errorText }}
@@ -52,7 +47,7 @@
                 type="info"
                 variant="tonal"
                 density="compact"
-                :text="$t('model.__base.content.blank')"
+                :text="$t('model.__base.value.blank')"
               />
               <v-table v-else density="compact">
                 <thead>
@@ -92,7 +87,7 @@
                 type="info"
                 variant="tonal"
                 density="compact"
-                :text="$t('model.__base.content.blank')"
+                :text="$t('model.__base.value.blank')"
               />
               <v-table v-else density="compact">
                 <thead>
@@ -127,20 +122,12 @@
             </v-card-text>
           </v-card>
         </template>
-      </v-container>
-    </template>
-  </main-layout>
+      </div>
+    </v-card>
+  </v-dialog>
 </template>
 
-<route lang="yaml">
-name: Tag Event Record Detail
-meta:
-  title: title.tagEvent.recordDetail
-  requiresAuth: true
-  requiresPerm: true
-</route>
-
-<script setup lang="ts" name="tag-event-record-detail">
+<script setup lang="ts" name="tag-event-record-detail-dialog">
 import { DateTime } from "luxon";
 
 import { getResponse } from "@/apis/base";
@@ -149,30 +136,61 @@ import { tagEventRecordDetailGet } from "@/apis/tagEvent";
 import type { TagEventRecordDetailOut } from "@/apis/@types/admin";
 
 import { useAppStore } from "@/stores/app";
-import { useRoute, useRouter } from "vue-router";
 import i18n, { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
 
+const props = defineProps<{
+  modelValue: boolean;
+  recordId: number;
+}>();
+
+const emits = defineEmits<{
+  "update:modelValue": [value: boolean];
+}>();
+
 const appStore = useAppStore();
-const route = useRoute();
-const router = useRouter();
+
+const onUpdate = (value: boolean): void => {
+  emits("update:modelValue", value);
+};
 
 const detail = ref<TagEventRecordDetailOut | null>(null);
 const loading = ref(true);
 const errorText = ref("");
 
-// 记录 ID：优先从 query.recordId 读取，兜底回退到列表页
-const recordId = Number(route.query.recordId ?? 0);
-
-// 当前语言参数（自动路由下各页面 params 形态不一，统一取 language，缺省留空由 i18n 兜底）
-const language = (route.params as { language?: string }).language ?? "";
-
-// 返回列表页（保留当前语言参数）
-const goBack = (): void => {
-  void router.push({
-    name: "Tag Event Record List",
-    params: { language },
-  });
-};
+// 打开且携带有效记录 ID 时拉取详情；切换记录（并行打开另一个）时重新请求
+watch(
+  () => [props.modelValue, props.recordId] as const,
+  ([open, id]) => {
+    if (!open) {
+      return;
+    }
+    if (!id) {
+      loading.value = false;
+      errorText.value = i18n.global.t("notice.missingParam");
+      return;
+    }
+    loading.value = true;
+    errorText.value = "";
+    detail.value = null;
+    void getResponse<TagEventRecordDetailOut>(
+      tagEventRecordDetailGet(id),
+      async (rsp) => {
+        detail.value = rsp.data;
+        loading.value = false;
+      },
+      async (rsp) => {
+        loading.value = false;
+        errorText.value = rsp.summary ?? "";
+        appStore.notify({
+          text: rsp.summary,
+          timeout: 3000,
+          color: "error",
+        });
+      },
+    );
+  },
+  { immediate: true },
+);
 
 // 可空时间字段统一格式化；空值展示 null 占位
 const formatDatetime = (value: string | null | undefined): string => {
@@ -228,28 +246,4 @@ const sendStatusColor = (status: string | undefined): string | undefined => {
       return undefined;
   }
 };
-
-onMounted(async () => {
-  if (!recordId) {
-    loading.value = false;
-    errorText.value = i18n.global.t("notice.missingParam");
-    return;
-  }
-  await getResponse<TagEventRecordDetailOut>(
-    tagEventRecordDetailGet(recordId),
-    async (rsp) => {
-      detail.value = rsp.data;
-      loading.value = false;
-    },
-    async (rsp) => {
-      loading.value = false;
-      errorText.value = rsp.summary ?? "";
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-});
 </script>

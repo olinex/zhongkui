@@ -14,6 +14,16 @@ export interface PasswordResetIn {
   newPassword: string;
 }
 
+export interface PasswordForgotIn {
+  username: string;
+  email: string;
+}
+
+export interface PasswordResetByTokenIn {
+  token: string;
+  newPassword: string;
+}
+
 export interface profileChangeIn {
   nickleName: string;
   email: string;

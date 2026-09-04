@@ -245,8 +245,13 @@ func buildMailBody(from, to string, msg *RenderedMessage) []byte {
 	fmt.Fprintf(&b, "From: %s\r\n", from)
 	fmt.Fprintf(&b, "To: %s\r\n", to)
 	fmt.Fprintf(&b, "Subject: %s\r\n", msg.Title)
+	// 按消息内容类型生成 MIME 头；未显式指定时回退 text/plain（与既有行为一致）
+	ct := msg.ContentType
+	if ct == "" {
+		ct = "text/plain"
+	}
 	b.WriteString("MIME-Version: 1.0\r\n")
-	b.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	fmt.Fprintf(&b, "Content-Type: %s; charset=UTF-8\r\n", ct)
 	b.WriteString("\r\n")
 	b.WriteString(msg.Content)
 	return []byte(b.String())

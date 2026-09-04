@@ -647,6 +647,16 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 			convey.So(rendered.Title, convey.ShouldEqual, "RANGE-TITLE")
 			convey.So(rendered.Content, convey.ShouldEqual, "[a][b]")
 		})
+
+		convey.Convey("未注册的模板键直接返回错误（不经 locales notify.* 兜底）", func() {
+			db := newServiceTestDB(t)
+			svc := newTestService(db)
+			target := renderTestTarget("default", "zh-Hans")
+			msg := message.Message{Template: "notify.some_unregistered_template"}
+			rendered, err := svc.renderMessage(context.Background(), target, message.TypeWebhook, &msg)
+			convey.So(err, convey.ShouldNotBeNil)
+			convey.So(rendered, convey.ShouldBeNil)
+		})
 	})
 }
 

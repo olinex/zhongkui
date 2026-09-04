@@ -35,6 +35,8 @@ const email = yup
   .max(128)
   .email()
   .label("model.user.field.email");
+// 重置令牌，由邮件链接携带，必填且满足长度下限
+const token = yup.string().trim().nonNullable().required().min(16).label("model.user.field.token");
 
 // access key field
 const enabled = yup.bool().nonNullable().required().label("model.accessKey.field.enabled");
@@ -50,6 +52,22 @@ const expiredAt = yup.date().default(null).nullable().label("model.accessKey.fie
 export const loginSchema = yup.object({
   username,
   password,
+});
+
+export const forgotPasswordSchema = yup.object({
+  username,
+  email,
+});
+
+export const forgotResetPasswordSchema = yup.object({
+  newPassword: password,
+  newPasswordAgain: password.equals([yup.ref("newPassword")]),
+});
+
+export const resetPasswordByTokenSchema = yup.object({
+  token,
+  newPassword: password,
+  newPasswordAgain: password.equals([yup.ref("newPassword")]),
 });
 
 export const resetPasswordSchema = yup.object({

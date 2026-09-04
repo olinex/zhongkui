@@ -25,9 +25,18 @@
             <!-- 将提交按钮放入表单内，使其成为默认按钮，
                  这样在任一输入框内按回车即可隐式提交表单 -->
             <v-card-actions class="d-flex justify-space-between">
-              <v-btn type="button" variant="text" color="primary" class="ma-2 pa-2">{{
-                $t("action.pwdForget")
-              }}</v-btn>
+              <v-btn
+                v-if="showForgot"
+                type="button"
+                variant="text"
+                color="primary"
+                class="ma-2 pa-2"
+                @click="$router.push(`/${appStore.language}/auth/forgot-password`)"
+                >{{ $t("action.pwdForget") }}</v-btn
+              >
+              <template v-else>
+                <span></span>
+              </template>
               <v-btn
                 v-request="submit"
                 :disabled="!meta.dirty || !meta.valid"
@@ -64,6 +73,7 @@ import { localManager } from "@/stores/local";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
 import { useAppStore } from "@/stores/app";
+import { useFeaturesStore, FEATURE_PASSWORD_RESET } from "@/stores/features";
 
 // Types
 import type { UserTokenOut } from "@/apis/@types/user";
@@ -78,6 +88,14 @@ const [password, passwordProps] = defineField("password", vuetifyCfg);
 
 const appStore = useAppStore();
 const userStore = useUserStore();
+const featuresStore = useFeaturesStore();
+
+// 密码重置功能开启时才展示"忘记密码"入口：系统未配置 SMTP 时后端该功能关闭，
+// 前端据此隐藏组件，避免开放无意义的功能入口。
+const showForgot = computed(() => featuresStore.isEnable(FEATURE_PASSWORD_RESET));
+onMounted(() => {
+  featuresStore.load();
+});
 
 const submit = handleSubmit(async (values) => {
   await getResponse<UserTokenOut>(

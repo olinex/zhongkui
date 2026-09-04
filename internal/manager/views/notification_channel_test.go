@@ -255,10 +255,10 @@ func TestNotificationChannelList(t *testing.T) {
 		// 使用测试专用命名空间，与 default 命名空间的基线占位渠道（webhook）隔离
 		So(db.Create(&core.Namespace{Name: notificationChannelTestNamespace}).Error, ShouldBeNil)
 		r := setupNotificationChannelTestRouterWithNamespace(db, notificationChannelTestNamespace)
-		createNotificationChannelByName(db, r, "email-a", map[string]any{"name": "email-a", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h1"}`})
+		createNotificationChannelByName(db, r, "email-a", map[string]any{"name": "email-a", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h1","from":"a@example.com"}`})
 		// 注意：模型 Enabled 列的 gorm tag 带 default:true，GORM Create 会跳过零值（false），
 		// 因此禁用态经批量停用接口（显式 Update）设置，而非在创建时传 false
-		emailB := createNotificationChannelByName(db, r, "email-b", map[string]any{"name": "email-b", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h2"}`})
+		emailB := createNotificationChannelByName(db, r, "email-b", map[string]any{"name": "email-b", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h2","from":"a@example.com"}`})
 		w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/disable", map[string]any{"ids": []uint64{uint64(emailB)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 		// webhook 为占位符渠道，前端禁止创建，直接经数据库种子一条以参与列表过滤
@@ -349,7 +349,7 @@ func TestNotificationChannelUpdate(t *testing.T) {
 			"name":    "email-update",
 			"type":    message.TypeEmail,
 			"enabled": true,
-			"config":  `{"host":"old"}`,
+			"config":  `{"host":"old","from":"a@example.com"}`,
 		})
 
 		w := doNotificationChannelRequest(r, http.MethodPost, notificationChannelIDPath("/update", id), map[string]any{
@@ -357,7 +357,7 @@ func TestNotificationChannelUpdate(t *testing.T) {
 			"name":        "renamed",
 			"type":        message.TypeWebhook,
 			"enabled":     false,
-			"config":      `{"host":"new"}`,
+			"config":      `{"host":"new","from":"a@example.com"}`,
 			"description": "updated",
 		})
 		So(w.Code, ShouldEqual, http.StatusOK)
@@ -368,7 +368,7 @@ func TestNotificationChannelUpdate(t *testing.T) {
 		So(channel.Type, ShouldEqual, message.TypeEmail)
 		So(channel.Enabled, ShouldBeFalse)
 		// 数据库中的 config 已加密存储；经模型解密读取得到更新后的明文
-		So(channel.ConfigData(), ShouldEqual, []byte(`{"host":"new"}`))
+		So(channel.ConfigData(), ShouldEqual, []byte(`{"host":"new","from":"a@example.com"}`))
 		So(channel.Description, ShouldEqual, "updated")
 	})
 }
@@ -385,7 +385,7 @@ func TestNotificationChannelBatchDelete(t *testing.T) {
 		// 使用测试专用命名空间，与 default 命名空间的基线占位渠道（webhook）隔离
 		So(db.Create(&core.Namespace{Name: notificationChannelTestNamespace}).Error, ShouldBeNil)
 		r := setupNotificationChannelTestRouterWithNamespace(db, notificationChannelTestNamespace)
-		id1 := createNotificationChannelByName(db, r, "del-1", map[string]any{"name": "del-1", "type": message.TypeEmail, "config": `{}`})
+		id1 := createNotificationChannelByName(db, r, "del-1", map[string]any{"name": "del-1", "type": message.TypeEmail, "config": `{"host":"h1","from":"a@example.com"}`})
 		// 占位符渠道（webhook）前端禁止创建，直接经数据库种子一条以验证其不可删除
 		whID := seedNotificationChannelByName(db, notificationChannelTestNamespace, "del-wh", message.TypeWebhook)
 
@@ -451,7 +451,7 @@ func TestNotificationChannelBatchSetEnabled(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		r := setupNotificationChannelTestRouter(db)
-		id := createNotificationChannelByName(db, r, "io-1", map[string]any{"name": "io-1", "type": message.TypeEmail, "enabled": true, "config": `{}`})
+		id := createNotificationChannelByName(db, r, "io-1", map[string]any{"name": "io-1", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h1","from":"a@example.com"}`})
 
 		w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/disable", map[string]any{"ids": []uint64{uint64(id)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
@@ -485,7 +485,7 @@ func TestNotificationChannelNamespaceIsolation(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		r := setupNotificationChannelTestRouter(db)
-		id := createNotificationChannelByName(db, r, "ns-1", map[string]any{"name": "ns-1", "type": message.TypeEmail, "config": `{}`})
+		id := createNotificationChannelByName(db, r, "ns-1", map[string]any{"name": "ns-1", "type": message.TypeEmail, "config": `{"host":"h1","from":"a@example.com"}`})
 
 		Convey("其他命名空间列表不可见 default 命名空间渠道", func() {
 			rOther := setupNotificationChannelTestRouterWithNamespace(db, "other-ns")

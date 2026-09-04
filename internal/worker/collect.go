@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/pkg/etl"
+	"zhongkui.com/zhongkui/internal/worker/handlers/mail"
 	"zhongkui.com/zhongkui/internal/worker/handlers/notify"
 	"zhongkui.com/zhongkui/internal/worker/handlers/pcap"
 	"zhongkui.com/zhongkui/internal/worker/handlers/tag_event"
@@ -27,6 +28,10 @@ func Registry(ctx context.Context, injector do.Injector) {
 	etl.HandlerRegister(tag_event.TagEventDetectTask, tag_event.NewEventDetectHandler(injector))
 	etl.HandlerRegister(tag_event.TagEventSuppressTask, tag_event.NewEventSuppressHandler(injector))
 	etl.HandlerRegister(tag_event.TagEventCleanupTask, tag_event.NewEventCleanupHandler(injector))
+
+	// 注册系统级邮件直发 worker（mail:send），按系统 smtp 配置直接向指定收件人投递，
+	// 不经过数据库通知渠道/目标
+	etl.HandlerRegister(mail.MailSendTask, mail.NewMailSendHandler(injector))
 
 	// 注册通用通知组发送与单目标直投 worker
 	etl.HandlerRegister(notify.SendGroupTask, notify.NewSendGroupHandler(injector))

@@ -17,7 +17,6 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/message"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
 // Service 通用通知服务：将一次通知请求（事件引用 + 通知组 + 消息）解析为具体目标，
@@ -402,7 +401,7 @@ func (s *Service) resolveTemplate(ctx context.Context, namespace string, event, 
 // template row is resolved. It returns a descriptive error when either template is missing
 // or fails to render in that language, keeping registered event templates free of the
 // locales notify.* keys.
-func renderSpecDefault(spec *EventTemplateSpec, lang string, params map[string]any) (*message.RenderedMessage, error) {
+func renderSpecDefault(spec *EventTemplateSpec, lang string, params map[string]any, contentType string) (*message.RenderedMessage, error) {
 	title, okT := spec.TitleByLang[lang]
 	content, okC := spec.ContentByLang[lang]
 	if !okT || !okC || title == "" || content == "" {
@@ -416,7 +415,7 @@ func renderSpecDefault(spec *EventTemplateSpec, lang string, params map[string]a
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return &message.RenderedMessage{Title: rTitle, Content: rContent}, nil
+	return &message.RenderedMessage{Title: rTitle, Content: rContent, ContentType: contentType}, nil
 }
 
 // renderMessage 依据目标偏好的语言与所属渠道类型将结构化消息渲染为具体文本
@@ -424,16 +423,18 @@ func renderSpecDefault(spec *EventTemplateSpec, lang string, params map[string]a
 // 在注册表中查找事件规格（TemplateSpecOf），命中则调用 resolveTemplate 按
 // (事件, 渠道, 语言) 解析持久化模板并渲染；无持久化行时回退该事件注册表内置默认模板
 // （renderSpecDefault，内容与种子化默认一致）。两者皆不可用时返回错误，由 sendOne
-// 记录失败。对未注册到注册表的通用模板（非事件来源）保留 locales 回退
-// （notify.<template>.title/content）。
+// 记录失败。模板必须先注册到事件注册表：未注册的模板键无持久化行也无可预知的内容，
+// 后端文件/语言包无法预知前端会配置什么模板键，故直接返回错误，不经 locales notify.* 兜底。
 // renderMessage renders a structured Message into concrete text (message.RenderedMessage) in the
 // target-preferred language and channel type, treating the NotificationTemplate table as the
 // single source of truth. It looks up the event spec by the message template key (TemplateSpecOf);
 // on a hit it calls resolveTemplate to resolve the persisted template by (event, channel, language)
 // and renders it; when no persisted row exists it falls back to the event's registry built-in
-// default template (renderSpecDefault, identical to the seeded default). It errors only when both
-// sources are unusable, and sendOne records the failure. Generic templates not registered to the
-// registry (non-event sources) keep the locale fallback (notify.<template>.title/content).
+// default template (renderSpecDefault, identical to the seeded default). It errors when both
+// sources are unusable, and sendOne records the failure. A template key must first be registered in
+// the event registry: an unregistered key has no persisted row and no predictable content (the
+// backend files/locales cannot foresee what template keys the frontend will configure), so it
+// errors directly rather than falling back to locales notify.*.
 func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTarget, channelType string, msg *message.Message) (*message.RenderedMessage, error) {
 	if msg.Template == "" {
 		return nil, errors.New("notify: message template is required")
@@ -454,7 +455,7 @@ func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTa
 			title, tErr := message.RenderTemplateString(tmpl.Title, msg.Params)
 			content, cErr := message.RenderTemplateString(tmpl.Content, msg.Params)
 			if tErr == nil && cErr == nil {
-				return &message.RenderedMessage{Title: title, Content: content}, nil
+				return &message.RenderedMessage{Title: title, Content: content, ContentType: msg.ContentType}, nil
 			}
 			if tErr != nil {
 				s.logger.Ctx(ctx).Warnf("notify: render persisted title template for event %q: %v", spec.Event, tErr)
@@ -465,18 +466,16 @@ func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTa
 		}
 		// 无可用持久化模板时，回退事件注册表内置默认模板（内容与种子化默认一致），
 		// 使事件模板渲染不依赖 locales notify.* 键。
-		if rendered, rErr := renderSpecDefault(spec, lang.Normalize().String(), msg.Params); rErr == nil {
+		if rendered, rErr := renderSpecDefault(spec, lang.Normalize().String(), msg.Params, msg.ContentType); rErr == nil {
 			return rendered, nil
 		} else {
 			s.logger.Ctx(ctx).Warnf("notify: render registry default template for event %q lang %q: %v", spec.Event, lang, rErr)
 		}
 		return nil, errors.Newf("notify: no usable template for message %q (lang %q)", msg.Template, lang)
 	}
-	// 未注册到注册表的通用模板：回退 locales notify.* 以兼容既有通用/测试模板
-	return &message.RenderedMessage{
-		Title:   translate.Localize(lang, msg.TitleTemplate(), msg.Params),
-		Content: translate.Localize(lang, msg.ContentTemplate(), msg.Params),
-	}, nil
+	// 未注册到事件注册表的模板键：无持久化行可解析、也无注册表默认内容可渲染，
+	// 且后端无法预知前端会配置的模板键，故不经 locales notify.* 兜底，直接报错。
+	return nil, errors.Newf("notify: no notification template spec for message %q", msg.Template)
 }
 
 // RenderPreview 按事件在指定命名空间下渲染模板预览（供管理端 render-test 使用），
@@ -516,7 +515,7 @@ func (s *Service) RenderPreview(ctx context.Context, namespace, event string, ch
 			parsed = p
 		}
 	}
-	return renderSpecDefault(spec, parsed.Normalize().String(), params)
+	return renderSpecDefault(spec, parsed.Normalize().String(), params, "")
 }
 
 // finalize 将已占位（status=pending）的通知记录更新为发送终态：rendered 为实际发送的

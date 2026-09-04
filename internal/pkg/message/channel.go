@@ -26,7 +26,6 @@ import (
 	// stdlib
 	"context"
 	"encoding/json"
-	"fmt"
 	"slices"
 
 	// internal
@@ -70,14 +69,12 @@ type Message struct {
 	// Params 模板参数，供 locales 模板渲染
 	// Params the template params used to render the locale template
 	Params map[string]any `json:"params,omitempty"`
-}
-
-func (m *Message) TitleTemplate() string {
-	return fmt.Sprintf(`notify.%s.title`, m.Template)
-}
-
-func (m *Message) ContentTemplate() string {
-	return fmt.Sprintf(`notify.%s.content`, m.Template)
+	// ContentType 消息正文 MIME 类型，由消息定义层声明要发送的正文格式；
+	// 空值交由发送方按默认处理（系统邮件直发默认 text/html，渲染渠道默认 text/plain）
+	// ContentType the MIME type of the message body, declared by the message definition
+	// to state what body format will be sent; empty lets the sender use its default
+	// (text/html for the system direct-send, text/plain for rendered channels)
+	ContentType string `json:"contentType,omitempty"`
 }
 
 // RenderedMessage 渲染完成的具体通知消息（标题 + 正文），由 Service 依据目标语言
@@ -92,6 +89,10 @@ type RenderedMessage struct {
 	// Content 消息正文
 	// Content the body of the message
 	Content string `json:"content"`
+	// ContentType 消息正文 MIME 类型，空值视为 text/plain（与既有行为一致）
+	// ContentType the MIME type of the message body; empty means text/plain
+	// (consistent with the existing behavior)
+	ContentType string `json:"contentType,omitempty"`
 }
 
 // Result 渠道投递结果。

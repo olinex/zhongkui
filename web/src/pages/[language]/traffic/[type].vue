@@ -633,6 +633,10 @@ const loadSearchOptions = async (): Promise<void> => {
 watch(type, async () => {
   detailDialog.value = false;
   stackDialog.value = false;
+  // 时间筛选默认值随类型切换刷新：两处必填时间范围重置为"近一天"计算出的最新区间，
+  // 避免沿用上一模型固定的起止时刻（数据源不同，历史默认区间无意义）
+  timestampRange.value = initialRange();
+  createdAtRange.value = initialRange();
   // 高级筛选条件按类型独立：切换类型时清空 SearchTable 内部条件并重载字段元数据，避免残留脏值参与查询
   if (searchTableRef.value) {
     searchTableRef.value.filterBy = [];

@@ -78,6 +78,8 @@ var RootCmd = &cobra.Command{
 		provider.InjectPipelineClient(i)
 		provider.InjectPipelineServer(ctx, i)
 		provider.InjectCaptureClient(i)
+		provider.InjectMailSender(i)
+		provider.InjectFeatureRegistry(i)
 		provider.InjectMessagePoolShutdowner(i)
 
 		// 初始化翻译器

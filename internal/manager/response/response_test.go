@@ -82,6 +82,8 @@ func TestErrorCodeConstants(t *testing.T) {
 			So(CodeOldPasswordCheckFailed, ShouldEqual, 1101)
 			So(CodeUsernameOrEmailAlreadyExist, ShouldEqual, 1102)
 			So(CodeTooManyAccessKey, ShouldEqual, 1103)
+			So(CodePasswordResetUnavailable, ShouldEqual, 1113)
+			So(CodePasswordResetTokenInvalid, ShouldEqual, 1114)
 		})
 	})
 }
