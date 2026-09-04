@@ -21,6 +21,7 @@ SUDO ?= sudo
 	run-dev-deps
 	stop-dev-deps
 	remove-dev-deps
+	pull-dev-deps
 	dev-tools
 	protobuf-tools
 	ts-tools
@@ -74,6 +75,43 @@ create-test-dbs:
 	$$clickhouse_cli -q "CREATE DATABASE IF NOT EXISTS raw_test"; \
 	echo "测试库就绪 (core_test@postgres, raw_test@clickhouse)"
 
+# pull-dev-deps - 按本机 CPU 架构重新拉取开发依赖镜像 (解决 platform 不匹配 warning)
+# 通过 uname -m 探测宿主架构并显式指定 --platform，避免拉取到架构不匹配的镜像
+# 用法: make pull-dev-deps
+pull-dev-deps:
+	@case "$(UNAME_S)" in \
+		Darwin|MINGW*|MSYS*|CYGWIN*) \
+			cmd=docker ;; \
+		Linux) \
+			cmd=nerdctl ;; \
+		*) \
+			echo "警告: 不支持的操作系统 '$(UNAME_S)'。" ; \
+			exit 1 ;; \
+	esac; \
+	arch=$$(uname -m); \
+	case "$$arch" in \
+		arm64|aarch64) \
+			platform=linux/arm64 ;; \
+		x86_64|amd64) \
+			platform=linux/amd64 ;; \
+		*) \
+			echo "警告: 无法识别的架构 '$$arch'，缺省使用 linux/amd64"; \
+			platform=linux/amd64 ;; \
+	esac; \
+	echo "检测到宿主架构: $$arch，拉取平台: $$platform"; \
+	for item in \
+		"redis redis:8.2.1" \
+		"etcd quay.io/coreos/etcd:v3.6.5" \
+		"clickhouse clickhouse:25.3.3" \
+		"postgres postgres:16-alpine3.22" \
+		"rustfs rustfs/rustfs:latest"; \
+	do \
+		set -- $$item; \
+		name=$$1; img=$$2; \
+		echo "=== 拉取 $$name ($$platform) ==="; \
+		$$cmd pull --platform "$$platform" "$$img" || echo "  !! 拉取 $$name 失败，镜像可能不提供 $$platform 架构"; \
+	done
+
 # run-dev-deps - 启动开发依赖容器 (redis, etcd, clickhouse, postgres, rustfs)
 # 用法: make run-dev-deps
 run-dev-deps:
@@ -86,6 +124,7 @@ run-dev-deps:
 				quay.io/coreos/etcd:v3.6.5; \
 			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
 				--ulimit nofile=262144:262144 \
+				-e CLICKHOUSE_PASSWORD=root_password \
 				clickhouse:25.3.3; \
 			docker run -itd --restart unless-stopped --name postgres --network host \
 				-e POSTGRES_PASSWORD=root_password \
@@ -106,6 +145,7 @@ run-dev-deps:
 				quay.io/coreos/etcd:v3.6.5; \
 			nerdctl run -td --restart=always --name clickhouse-server --net=host \
 				--ulimit nofile=262144:262144 \
+				-e CLICKHOUSE_PASSWORD=root_password \
 				clickhouse:25.3.3; \
 			nerdctl run -td --restart=always --name postgres --net=host \
 				-e POSTGRES_PASSWORD=root_password \

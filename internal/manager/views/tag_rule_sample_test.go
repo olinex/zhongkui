@@ -20,6 +20,11 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
+// tagRuleSampleTestNamespace 标签规则样例测试专用命名空间，
+// 与迁移种子的 default 命名空间 HttpTransport 基线样例（002_rbac_fixtures.sql）隔离，
+// 使列表全量计数类断言不受基线数据影响。
+const tagRuleSampleTestNamespace = "tag-rule-sample-test"
+
 // createTagRuleSampleTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
 func createTagRuleSampleTestDB(t *testing.T) *database.DB {
 	return testdb.Core(t)
@@ -28,6 +33,12 @@ func createTagRuleSampleTestDB(t *testing.T) *database.DB {
 // setupTagRuleSampleTestRouter 创建测试路由引擎，注入 i18n、日志、数据库与命名空间中间件
 // （模拟生产环境 NamespaceMiddleware：固定使用 default 命名空间）。
 func setupTagRuleSampleTestRouter(db *database.DB) *gin.Engine {
+	return setupTagRuleSampleTestRouterWithNamespace(db, middlewares.DefaultNamespace)
+}
+
+// setupTagRuleSampleTestRouterWithNamespace 创建测试路由引擎，注入 i18n、日志、
+// 数据库与指定命名空间，用于多命名空间隔离场景。
+func setupTagRuleSampleTestRouterWithNamespace(db *database.DB, namespace string) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(setupI18nMiddleware())
@@ -37,7 +48,7 @@ func setupTagRuleSampleTestRouter(db *database.DB) *gin.Engine {
 		c.Next()
 	})
 	r.Use(func(c *gin.Context) {
-		c.Set(middlewares.NamespaceCtxName, middlewares.DefaultNamespace)
+		c.Set(middlewares.NamespaceCtxName, namespace)
 		c.Next()
 	})
 	registerTagRuleSampleTestRoutes(r)
@@ -288,7 +299,7 @@ func TestTagRuleSampleList(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		r := setupTagRuleSampleTestRouter(db)
+		r := setupTagRuleSampleTestRouterWithNamespace(db, tagRuleSampleTestNamespace)
 
 		Convey("列表返回全部样例且可按模型过滤", func() {
 			So(doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule-sample/create", map[string]any{

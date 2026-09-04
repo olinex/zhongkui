@@ -18,15 +18,24 @@
  * can provide instant validation feedback without a server round-trip.
  */
 
+import i18n from "@/utils/i18n";
+
 export interface BooleanExprParseResult {
   ok: boolean;
   /** normalized expression, present when ok */
   refined?: string;
-  /** human-readable error message, present when not ok */
+  /** human-readable error message (已本地化), present when not ok */
   error?: string;
   /** character offset where parsing failed, when locatable */
   offset?: number;
 }
+
+// exprMessage 将解析错误文案本地化：以 notice.tagExpr.<key> 命名的翻译键渲染，
+// 避免把英文原文（如 "expression is empty"）直接暴露给用户。
+// exprMessage localizes parse-error messages via the notice.tagExpr.<key> keys,
+// so raw English strings (e.g. "expression is empty") are not shown to users.
+const exprMessage = (key: string, params?: Record<string, unknown>): string =>
+  i18n.global.t(`notice.tagExpr.${key}`, params ?? {});
 
 type BoolExprTokenType = "ident" | "keyword" | "lparen" | "rparen";
 
@@ -77,7 +86,7 @@ function tokenize(src: string): {
     }
     return {
       tokens,
-      error: { message: `unexpected character '${ch}'`, offset: i },
+      error: { message: exprMessage("unexpectedChar", { char: ch }), offset: i },
     };
   }
   return { tokens };
@@ -102,7 +111,10 @@ class BoolExprParser {
     const refined = this.parseOr();
     if (this.pos < this.tokens.length) {
       const tok = this.tokens[this.pos];
-      throw new BoolExprParseError(`unexpected token '${tok.value}'`, tok.offset);
+      throw new BoolExprParseError(
+        exprMessage("unexpectedToken", { token: tok.value }),
+        tok.offset,
+      );
     }
     return refined;
   }
@@ -136,7 +148,7 @@ class BoolExprParser {
   private parseAtom(): string {
     const tok = this.peek();
     if (!tok) {
-      throw new BoolExprParseError("unexpected end of expression");
+      throw new BoolExprParseError(exprMessage("unexpectedEnd"));
     }
     if (tok.type === "ident") {
       this.pos += 1;
@@ -147,12 +159,12 @@ class BoolExprParser {
       const inner = this.parseOr();
       const close = this.peek();
       if (!close || close.type !== "rparen") {
-        throw new BoolExprParseError("missing closing ')'", close ? close.offset : undefined);
+        throw new BoolExprParseError(exprMessage("missingClose"), close ? close.offset : undefined);
       }
       this.pos += 1;
       return `(${inner})`;
     }
-    throw new BoolExprParseError(`expected label or '(' but found '${tok.value}'`, tok.offset);
+    throw new BoolExprParseError(exprMessage("expectedOperand", { token: tok.value }), tok.offset);
   }
 
   private peek(): BoolExprToken | undefined {
@@ -171,7 +183,7 @@ class BoolExprParser {
  */
 export function parseBooleanExpr(src: string): BooleanExprParseResult {
   if (!src.trim()) {
-    return { ok: false, error: "expression is empty", offset: 0 };
+    return { ok: false, error: exprMessage("empty"), offset: 0 };
   }
   const { tokens, error } = tokenize(src);
   if (error) {

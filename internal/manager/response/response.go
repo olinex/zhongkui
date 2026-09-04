@@ -57,6 +57,8 @@ const (
 	CodeTagRuleSampleInputInvalid                 // 1110: 标签规则样例输入无法反序列化为目标模型
 	CodeNotificationSendFailed                    // 1111: 通知发送失败（test-send 等实际投递动作未成功）
 	CodeSchedulerTaskInvalid                      // 1112: 定时任务配置非法（cronSpec 与 interval 未满足互斥要求、任务已存在或不存在等）
+	CodePasswordResetUnavailable                  // 1113: 重置密码功能不可用（系统未启用或未配置 SMTP）
+	CodePasswordResetTokenInvalid                 // 1114: 重置密码令牌无效或已过期
 )
 
 // 预定义的常用错误实例

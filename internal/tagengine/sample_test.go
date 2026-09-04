@@ -24,6 +24,13 @@ var httpTransportType = func() string {
 	return t
 }()
 
+// sampleTestNamespace 本测试专用命名空间，用于与迁移基线种子样例隔离。
+// 基线样例（browser-post / curl-get / scanner-crawler / sparse-minimal）以已提交
+// 的持久行归置于 default 命名空间，测试若插入同名样例将撞唯一约束
+// uq_tag_rule_samples_namespace_name_model_name 而失败（且仅在数据库被重新迁移时
+// 才暴露，具有环境/时序相关性）。故本测试改用独立命名空间操作自身的数据。
+const sampleTestNamespace = "sample-unit-test"
+
 // setupSampleDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
 // tag_rule_samples 表已由 testdb 统一迁移。
 func setupSampleDB(t *testing.T) *database.DB {
@@ -31,11 +38,11 @@ func setupSampleDB(t *testing.T) *database.DB {
 	return testdb.Core(t)
 }
 
-// insertSample 为目标模型插入一条验证样例（归属 default 命名空间，与 sampleRules 规则一致）。
+// insertSample 为目标模型插入一条验证样例（归属 sampleTestNamespace，与 sampleRules 规则一致）。
 func insertSample(t *testing.T, db *database.DB, name, input string) {
 	t.Helper()
 	sample := &tag.TagRuleSample{
-		NamespaceName: "default",
+		NamespaceName: sampleTestNamespace,
 		Model:         httpTransportType,
 		Name:          name,
 		Input:         datatypes.JSON(input),
@@ -50,7 +57,7 @@ func insertSample(t *testing.T, db *database.DB, name, input string) {
 func sampleRules(rego string) []*tag.TagRule {
 	return []*tag.TagRule{
 		{
-			NamespaceName: "default",
+			NamespaceName: sampleTestNamespace,
 			Name:          "candidate",
 			Model:         httpTransportType,
 			Rego:          rego,
@@ -142,7 +149,7 @@ func TestValidateGroupRuntime(t *testing.T) {
 
 		Convey("未注册的目标模型返回 ErrModelNotRegistered", func() {
 			rules := []*tag.TagRule{{
-				NamespaceName: "default",
+				NamespaceName: sampleTestNamespace,
 				Name:          "unregistered",
 				Model:         "unregistered.model.Type",
 				Rego:          validSampleRego,

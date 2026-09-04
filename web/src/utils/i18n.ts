@@ -56,12 +56,24 @@ const createOptionMessage =
       values: values.map((v: string) => i18n.global.t(`input.options.${path}.${v}`)),
     });
 
+// createNotTypeMessage 生成类型不匹配（notType）消息：
+// yup 在发生类型转换失败（如数字字段收到空串→NaN）时触发，需本地化模板，
+// 否则回退到 yup 内置英文文案（raw label 键 + "must be a ... type"）。
+const createNotTypeMessage =
+  (key: string) =>
+  ({ path, type }: { path: string; type: string }) =>
+    i18n.global.t(`validation.${key}`, {
+      path: i18n.global.t(path),
+      type,
+    });
+
 setLocale({
   mixed: {
     default: createDefaultMessage("mixed.default"),
     required: createDefaultMessage("mixed.required"),
     defined: createDefaultMessage("mixed.defined"),
     notNull: createDefaultMessage("mixed.notNull"),
+    notType: createNotTypeMessage("mixed.notType"),
     oneOf: createOptionMessage("mixed.oneOf"),
     notOneOf: createOptionMessage("mixed.notOneOf"),
   },

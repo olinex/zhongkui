@@ -21,6 +21,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/provider"
 	"zhongkui.com/zhongkui/internal/tagengine"
@@ -344,7 +345,7 @@ func buildSendTasks(db *database.DB, eventIDs []uint) ([]*asynq.Task, error) {
 // key plus params. The concrete text is rendered by the notify service in the target
 // language via the locale templates (notify.tag_event.alert.title/content); the event
 // source only pins the template key and params (keys matching the placeholders).
-func buildEventMessage(ev *tag.TagEventRecord) notify.Message {
+func buildEventMessage(ev *tag.TagEventRecord) message.Message {
 	hits := make([]map[string]any, 0, len(ev.Hits))
 	for _, hit := range ev.Hits {
 		hits = append(hits, map[string]any{
@@ -355,7 +356,7 @@ func buildEventMessage(ev *tag.TagEventRecord) notify.Message {
 			"Threshold":     hit.Threshold,
 		})
 	}
-	return notify.Message{
+	return message.Message{
 		Template: notify.TemplateTagEventAlert,
 		Params: map[string]any{
 			"Namespace":  ev.NamespaceName,

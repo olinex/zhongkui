@@ -13,9 +13,9 @@ import (
 	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -201,7 +201,7 @@ func TestNamespaceCreate(t *testing.T) {
 			So(w.Code, ShouldEqual, http.StatusOK)
 
 			// 命名空间创建后应自动种子化全部占位符通知渠道（如 webhook），每个占位类型一条
-			for _, typ := range notify.PlaceholderTypes() {
+			for _, typ := range message.PlaceholderTypes() {
 				var channel core.NotificationChannel
 				err := db.Where("namespace_name = ? AND type = ?", "test-namespace", typ).First(&channel).Error
 				So(err, ShouldBeNil)

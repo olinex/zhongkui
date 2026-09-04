@@ -31,6 +31,30 @@ COMMENT ON COLUMN users.frontend_config_hash IS 'the sha256 hex digest of the fr
 COMMENT ON COLUMN users.frontend_config_version IS 'the version of the frontend config, incremented on each successful sync';
 COMMENT ON COLUMN users.frontend_config_sync_enabled IS 'whether the frontend config sync is enabled by the user';
 
+CREATE TABLE IF NOT EXISTS user_password_resets (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email VARCHAR(128) NOT NULL,
+    token_hash CHAR(64) NOT NULL UNIQUE,
+    expired_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE INDEX idx_user_password_resets_user_id ON user_password_resets(user_id);
+
+COMMENT ON COLUMN user_password_resets.id IS 'the primary key of the password reset record';
+COMMENT ON COLUMN user_password_resets.created_at IS 'the creation time of the reset record';
+COMMENT ON COLUMN user_password_resets.updated_at IS 'the last update time of the reset record';
+COMMENT ON COLUMN user_password_resets.deleted_at IS 'the soft delete time of the reset record, null means not deleted';
+COMMENT ON COLUMN user_password_resets.user_id IS 'the user requesting the password reset, cascade delete with the user';
+COMMENT ON COLUMN user_password_resets.email IS 'the email requesting the password reset';
+COMMENT ON COLUMN user_password_resets.token_hash IS 'the sha256 hex digest of the reset token, unique';
+COMMENT ON COLUMN user_password_resets.expired_at IS 'the expiry time of the reset token';
+COMMENT ON COLUMN user_password_resets.used IS 'whether the reset token has been used';
+
 CREATE TABLE IF NOT EXISTS groups (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

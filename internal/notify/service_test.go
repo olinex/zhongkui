@@ -19,6 +19,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
@@ -58,8 +59,8 @@ func newTestService(db *database.DB) *Service {
 // testMessage builds a structured message pinned to the real tag_event.alert
 // template key so the full delivery flow renders concrete text via the locale
 // templates instead of hardcoded titles and content.
-func testMessage() Message {
-	return Message{
+func testMessage() message.Message {
+	return message.Message{
 		Template: TemplateTagEventAlert,
 		Params:   map[string]any{"Namespace": "default", "RuleName": "alert-rule", "DetectedAt": "2026-01-01T00:00:00Z"},
 	}
@@ -75,7 +76,7 @@ func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.No
 	channel := &core.NotificationChannel{
 		NamespaceName: namespace,
 		Name:          "webhook-channel",
-		Type:          TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto([]byte(`{}`)),
 	}
@@ -90,7 +91,7 @@ func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.No
 		NamespaceName: namespace,
 		Name:          "webhook-target",
 		ChannelID:     channel.ID,
-		Type:          TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto(targetCfg),
 	}
@@ -121,7 +122,7 @@ func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, gro
 	channel := &core.NotificationChannel{
 		NamespaceName: namespace,
 		Name:          fmt.Sprintf("webhook-channel-%d-%d", groupID, seq),
-		Type:          TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto([]byte(`{}`)),
 	}
@@ -136,7 +137,7 @@ func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, gro
 		NamespaceName: namespace,
 		Name:          fmt.Sprintf("webhook-target-%d-%d", groupID, seq),
 		ChannelID:     channel.ID,
-		Type:          TypeWebhook,
+		Type:          message.TypeWebhook,
 		Enabled:       true,
 		Config:        serializer.NewCrypto(targetCfg),
 	}
@@ -491,14 +492,14 @@ func TestService_ResolveTemplate(t *testing.T) {
 			seedTemplate(t, db, &core.NotificationTemplate{
 				NamespaceName: "default",
 				Event:         core.EventTypeTagEventRecord,
-				ChannelType:   TypeWebhook,
+				ChannelType:   message.TypeWebhook,
 				Language:      "zh-Hans",
 				Title:         "EXACT-TITLE",
 				Content:       "EXACT-CONTENT",
 				Source:        core.TemplateSourceDefault,
 			})
 
-			got, err := svc.resolveTemplate(context.Background(), "default", core.EventTypeTagEventRecord, TypeWebhook, "zh-Hans")
+			got, err := svc.resolveTemplate(context.Background(), "default", core.EventTypeTagEventRecord, message.TypeWebhook, "zh-Hans")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(got, convey.ShouldNotBeNil)
 			convey.So(got.Title, convey.ShouldEqual, "EXACT-TITLE")
@@ -519,14 +520,14 @@ func TestService_ResolveTemplate(t *testing.T) {
 			seedTemplate(t, db, &core.NotificationTemplate{
 				NamespaceName: "default",
 				Event:         core.EventTypeTagEventRecord,
-				ChannelType:   TypeWebhook,
+				ChannelType:   message.TypeWebhook,
 				Language:      "*",
 				Title:         "LANG-WILD-TITLE",
 				Content:       "LANG-WILD-CONTENT",
 				Source:        core.TemplateSourceDefault,
 			})
 
-			got, err := svc.resolveTemplate(context.Background(), "default", core.EventTypeTagEventRecord, TypeWebhook, "zh-Hans")
+			got, err := svc.resolveTemplate(context.Background(), "default", core.EventTypeTagEventRecord, message.TypeWebhook, "zh-Hans")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(got, convey.ShouldNotBeNil)
 			convey.So(got.Title, convey.ShouldEqual, "LANG-WILD-TITLE")
@@ -535,7 +536,7 @@ func TestService_ResolveTemplate(t *testing.T) {
 		convey.Convey("无匹配行时返回 nil", func() {
 			db := newServiceTestDB(t)
 			svc := newTestService(db)
-			got, err := svc.resolveTemplate(context.Background(), "empty", core.EventTypeTagEventRecord, TypeWebhook, "zh-Hans")
+			got, err := svc.resolveTemplate(context.Background(), "empty", core.EventTypeTagEventRecord, message.TypeWebhook, "zh-Hans")
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(got, convey.ShouldBeNil)
 		})
@@ -556,7 +557,7 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 			seedTemplate(t, db, &core.NotificationTemplate{
 				NamespaceName: "default",
 				Event:         core.EventTypeTagEventRecord,
-				ChannelType:   TypeWebhook,
+				ChannelType:   message.TypeWebhook,
 				Language:      "zh-Hans",
 				Title:         "P-TITLE {{.RuleName}}",
 				Content:       "P-CONTENT {{.RuleName}}",
@@ -565,7 +566,7 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 
 			target := renderTestTarget("default", "zh-Hans")
 			msg := testMessage()
-			rendered, err := svc.renderMessage(context.Background(), target, TypeWebhook, &msg)
+			rendered, err := svc.renderMessage(context.Background(), target, message.TypeWebhook, &msg)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rendered.Title, convey.ShouldEqual, "P-TITLE alert-rule")
 			convey.So(rendered.Content, convey.ShouldEqual, "P-CONTENT alert-rule")
@@ -586,7 +587,7 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 
 			target := renderTestTarget("default", "zh-Hans")
 			msg := testMessage()
-			rendered, err := svc.renderMessage(context.Background(), target, TypeWebhook, &msg)
+			rendered, err := svc.renderMessage(context.Background(), target, message.TypeWebhook, &msg)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rendered.Title, convey.ShouldEqual, "CH-WILD-TITLE alert-rule")
 			convey.So(rendered.Content, convey.ShouldEqual, "CH-WILD-CONTENT")
@@ -598,7 +599,7 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 			seedTemplate(t, db, &core.NotificationTemplate{
 				NamespaceName: "default",
 				Event:         core.EventTypeTagEventRecord,
-				ChannelType:   TypeWebhook,
+				ChannelType:   message.TypeWebhook,
 				Language:      "*",
 				Title:         "LANG-WILD-TITLE {{.RuleName}}",
 				Content:       "LANG-WILD-CONTENT",
@@ -607,7 +608,7 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 
 			target := renderTestTarget("default", "zh-Hans")
 			msg := testMessage()
-			rendered, err := svc.renderMessage(context.Background(), target, TypeWebhook, &msg)
+			rendered, err := svc.renderMessage(context.Background(), target, message.TypeWebhook, &msg)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rendered.Title, convey.ShouldEqual, "LANG-WILD-TITLE alert-rule")
 			convey.So(rendered.Content, convey.ShouldEqual, "LANG-WILD-CONTENT")
@@ -618,7 +619,7 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 			svc := newTestService(db)
 			target := renderTestTarget("empty", "zh-Hans")
 			msg := testMessage()
-			rendered, err := svc.renderMessage(context.Background(), target, TypeWebhook, &msg)
+			rendered, err := svc.renderMessage(context.Background(), target, message.TypeWebhook, &msg)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rendered.Title, convey.ShouldContainSubstring, "标签事件告警")
 		})
@@ -629,22 +630,32 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 			seedTemplate(t, db, &core.NotificationTemplate{
 				NamespaceName: "default",
 				Event:         core.EventTypeTagEventRecord,
-				ChannelType:   TypeWebhook,
+				ChannelType:   message.TypeWebhook,
 				Language:      "zh-Hans",
 				Title:         "RANGE-TITLE",
 				Content:       "{{range .Hits}}[{{.Name}}]{{end}}",
 				Source:        core.TemplateSourceDefault,
 			})
 
-			msg := Message{
+			msg := message.Message{
 				Template: TemplateTagEventAlert,
 				Params:   map[string]any{"Hits": []map[string]any{{"Name": "a"}, {"Name": "b"}}},
 			}
 			target := renderTestTarget("default", "zh-Hans")
-			rendered, err := svc.renderMessage(context.Background(), target, TypeWebhook, &msg)
+			rendered, err := svc.renderMessage(context.Background(), target, message.TypeWebhook, &msg)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rendered.Title, convey.ShouldEqual, "RANGE-TITLE")
 			convey.So(rendered.Content, convey.ShouldEqual, "[a][b]")
+		})
+
+		convey.Convey("未注册的模板键直接返回错误（不经 locales notify.* 兜底）", func() {
+			db := newServiceTestDB(t)
+			svc := newTestService(db)
+			target := renderTestTarget("default", "zh-Hans")
+			msg := message.Message{Template: "notify.some_unregistered_template"}
+			rendered, err := svc.renderMessage(context.Background(), target, message.TypeWebhook, &msg)
+			convey.So(err, convey.ShouldNotBeNil)
+			convey.So(rendered, convey.ShouldBeNil)
 		})
 	})
 }
@@ -660,14 +671,14 @@ func TestService_RenderPreview(t *testing.T) {
 			seedTemplate(t, db, &core.NotificationTemplate{
 				NamespaceName: "default",
 				Event:         core.EventTypeTagEventRecord,
-				ChannelType:   TypeWebhook,
+				ChannelType:   message.TypeWebhook,
 				Language:      "zh-Hans",
 				Title:         "PREVIEW-TITLE {{.RuleName}}",
 				Content:       "PREVIEW-CONTENT {{.RuleName}}",
 				Source:        core.TemplateSourceDefault,
 			})
 
-			rendered, err := svc.RenderPreview(context.Background(), "default", core.EventTypeTagEventRecord, TypeWebhook, "zh-Hans", map[string]any{"RuleName": "alert-rule"})
+			rendered, err := svc.RenderPreview(context.Background(), "default", core.EventTypeTagEventRecord, message.TypeWebhook, "zh-Hans", map[string]any{"RuleName": "alert-rule"})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rendered.Title, convey.ShouldEqual, "PREVIEW-TITLE alert-rule")
 			convey.So(rendered.Content, convey.ShouldEqual, "PREVIEW-CONTENT alert-rule")
@@ -676,7 +687,7 @@ func TestService_RenderPreview(t *testing.T) {
 		convey.Convey("无持久化行时回退规格默认（locales 文本）", func() {
 			db := newServiceTestDB(t)
 			svc := newTestService(db)
-			rendered, err := svc.RenderPreview(context.Background(), "empty", core.EventTypeTagEventRecord, TypeWebhook, "zh-Hans", map[string]any{"RuleName": "alert-rule"})
+			rendered, err := svc.RenderPreview(context.Background(), "empty", core.EventTypeTagEventRecord, message.TypeWebhook, "zh-Hans", map[string]any{"RuleName": "alert-rule"})
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(rendered.Title, convey.ShouldContainSubstring, "标签事件告警")
 		})
@@ -684,7 +695,7 @@ func TestService_RenderPreview(t *testing.T) {
 		convey.Convey("未知事件返回错误", func() {
 			db := newServiceTestDB(t)
 			svc := newTestService(db)
-			rendered, err := svc.RenderPreview(context.Background(), "default", "no_such_event", TypeWebhook, "zh-Hans", nil)
+			rendered, err := svc.RenderPreview(context.Background(), "default", "no_such_event", message.TypeWebhook, "zh-Hans", nil)
 			convey.So(err, convey.ShouldNotBeNil)
 			convey.So(rendered, convey.ShouldBeNil)
 		})

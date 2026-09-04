@@ -1,25 +1,31 @@
-// Package notify 提供通用的消息通知基础设施。
+// Package message 提供消息发送能力基座。
 // 核心是渠道基座：Channel 抽象接口 + 工厂注册表，将「渠道类型」与「渠道实现」解耦，
 // 支持未来持续添加新的渠道类型（如企业微信、钉钉、Slack、短信等）。
 // 上层通过 Service 依据命名空间下的通知组解析目标，并经渠道基座将通用消息
-// （Message，与事件类型解耦）投递到目标，同时维护 notification_records 发送记录。
+// （Message，与事件类型/模板渲染解耦）投递到目标，同时维护消息目标记录。
+// 本包与 GORM / asynq 解耦，仅依赖 stdlib 与 internal/pkg 内共享包（errors、validator）。
 //
-// 渠道类型键常量（Type）定义在本包而非 models/core，以避免 notify 包与
-// models/core 包之间的 import cycle（notify 包依赖 models/core）。
+// 渠道类型键常量（Type）定义在本包而非 models/core，以避免 message 包与
+// models/core 包之间的 import cycle（message 包不依赖 models/core）。
 //
-// Package notify provides the generic notification infrastructure. Its core is the
+// 统一发送入口 Send 基于独立的 generic 资源池基座 internal/pkg/resourcepool 实现：
+// 按「渠道类型 + 规范化渠道级配置」维护相互独立的连接池，复用 SMTP 等有状态连接、
+// 失效自动重建、闲置定时回收，进程退出时经 ClosePools 释放全部存活连接。
+//
+// Package message provides the message-sending capability base. Its core is the
 // channel base: the Channel interface plus a factory registry that decouples channel
-// types from implementations, so new channel types can be added continuously. The
-// Service resolves targets by the namespace-scoped notification group and delivers
-// the generic Message (decoupled from event types) via the channel base, while
-// maintaining notification_records.
-package notify
+// types from implementations, so new channel types can be added continuously. Upper
+// layers resolve targets by the namespace-scoped notification group and deliver the
+// generic Message (decoupled from event types and template rendering) via the channel
+// base, while maintaining the message target records. This package is decoupled from
+// GORM and asynq, depending only on the stdlib and shared internal/pkg packages
+// (errors, validator).
+package message
 
 import (
 	// stdlib
 	"context"
 	"encoding/json"
-	"fmt"
 	"slices"
 
 	// internal
@@ -38,18 +44,15 @@ const (
 	TypeWebhook = "webhook"
 )
 
-// 消息模板键常量，由事件源在代码中固化并随 Message 携带，渲染时按
+// 模板键常量属业务层，由各个事件源在各自层（如 internal/notify）中定义，
+// 本基座包不定义具体模板键，仅通过 Message.Template 承载并在渲染时按
 // `notify.<template>.title` / `notify.<template>.content` 在 locales 翻译文件中
 // 查找对应语言的文本模板（含参数占位符），实现文案自定义与 i18n。
-// Message template keys are pinned in code by event sources and carried in Message;
-// rendering looks up `notify.<template>.title` / `notify.<template>.content` in the
-// locale files for the target language (with parameter placeholders), enabling text
-// customization and i18n.
-const (
-	// TemplateTagEventAlert 标签事件告警消息模板（tag_event 事件源）
-	// TemplateTagEventAlert the tag event alert message template (tag_event source)
-	TemplateTagEventAlert = "tag_event.alert"
-)
+// Message template keys are business-scoped and pinned by each event source in its own
+// layer (e.g. internal/notify); this base package defines no concrete template keys. It
+// only carries Message.Template and looks up `notify.<template>.title` /
+// `notify.<template>.content` in the locale files for the target language (with
+// parameter placeholders), enabling text customization and i18n.
 
 // Message 通用结构化通知消息，与事件类型解耦：由事件源构造（模板键 + 参数），
 // 在发送时由 Service 按目标语言经 locales 模板渲染为具体文本（RenderedMessage）。
@@ -59,20 +62,19 @@ const (
 // concrete text (RenderedMessage) via locale templates in the target language. The
 // Params keys match the template placeholders ({{.Key}}) in UpperCamelCase.
 type Message struct {
-	// Template 消息模板键，取值定义在模板键常量（如 TemplateTagEventAlert）（必填）
-	// Template the message template key, e.g. one of the template constants (required)
+	// Template 消息模板键，取值由业务层定义（如 notify 下的模板键常量）（必填）
+	// Template the message template key, defined at the business layer
+	// (e.g. the template key constants under notify) (required)
 	Template string `json:"template" binding:"required"`
 	// Params 模板参数，供 locales 模板渲染
 	// Params the template params used to render the locale template
 	Params map[string]any `json:"params,omitempty"`
-}
-
-func (m *Message) TitleTemplate() string {
-	return fmt.Sprintf(`notify.%s.title`, m.Template)
-}
-
-func (m *Message) ContentTemplate() string {
-	return fmt.Sprintf(`notify.%s.content`, m.Template)
+	// ContentType 消息正文 MIME 类型，由消息定义层声明要发送的正文格式；
+	// 空值交由发送方按默认处理（系统邮件直发默认 text/html，渲染渠道默认 text/plain）
+	// ContentType the MIME type of the message body, declared by the message definition
+	// to state what body format will be sent; empty lets the sender use its default
+	// (text/html for the system direct-send, text/plain for rendered channels)
+	ContentType string `json:"contentType,omitempty"`
 }
 
 // RenderedMessage 渲染完成的具体通知消息（标题 + 正文），由 Service 依据目标语言
@@ -87,6 +89,10 @@ type RenderedMessage struct {
 	// Content 消息正文
 	// Content the body of the message
 	Content string `json:"content"`
+	// ContentType 消息正文 MIME 类型，空值视为 text/plain（与既有行为一致）
+	// ContentType the MIME type of the message body; empty means text/plain
+	// (consistent with the existing behavior)
+	ContentType string `json:"contentType,omitempty"`
 }
 
 // Result 渠道投递结果。
@@ -156,7 +162,7 @@ var registry = map[string]Factory{}
 // Registering the same type key twice is treated as a programming error (panic).
 func Register(typ string, factory Factory) {
 	if _, ok := registry[typ]; ok {
-		panic(errors.Newf("notify: channel type %q already registered", typ))
+		panic(errors.Newf("message: channel type %q already registered", typ))
 	}
 	registry[typ] = factory
 }
@@ -167,7 +173,7 @@ func Register(typ string, factory Factory) {
 func New(typ string, config json.RawMessage) (Channel, error) {
 	factory, ok := registry[typ]
 	if !ok {
-		return nil, errors.Newf("notify: channel type %q not registered", typ)
+		return nil, errors.Newf("message: channel type %q not registered", typ)
 	}
 	return factory(config)
 }

@@ -2,6 +2,8 @@ package views
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +17,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/features"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	resp "zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
@@ -23,8 +26,10 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/mail"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	mailhandler "zhongkui.com/zhongkui/internal/worker/handlers/mail"
 )
 
 func createUserSelfTestDB(t *testing.T) *database.DB {
@@ -1202,4 +1207,199 @@ func TestUserSelfFrontendConfig(t *testing.T) {
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
 	})
+}
+
+// setupPasswordResetRouter 创建一个用于密码重置接口（forgot/reset）的测试引擎，
+// 注入核心数据库、日志、功能开关注册表（由 [smtp] 配置派生）、项目级配置与假 pipeline 投递客户端。
+func setupPasswordResetRouter(db *database.DB, enq *fakePipelineEnqueuer, mailCfg *mail.Config) *gin.Engine {
+	r := setupUserSelfTestRouterWithDB(db)
+	r.Use(injectLoggerMiddleware(createTestLoggingLogger()))
+	r.Use(middlewares.PipelineClientMiddleware(newFakePipelineClient(enq)))
+	r.Use(middlewares.FeatureRegistryMiddleware(features.NewRegistry(features.PasswordReset(mail.NewSender(mailCfg, createTestLoggingLogger())))))
+	r.Use(func(c *gin.Context) {
+		c.Set(manager.ConfigCtxName, &manager.Config{
+			FrontendBaseURL: "http://127.0.0.1:8000",
+			PasswordReset:   manager.PasswordResetConfig{TokenTTL: 30 * time.Minute},
+		})
+		c.Next()
+	})
+	return r
+}
+
+func TestUserPasswordForgot(t *testing.T) {
+	Convey("测试 UserPasswordForgot 函数", t, func() {
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		user := createTestUserInDB(db, "forgotuser", "忘记密码用户", "forgot@example.com", "OldP@ssw0rd", true)
+		enq := &fakePipelineEnqueuer{}
+		enabledCfg := &mail.Config{Enabled: true, Host: "smtp.example.com", From: "no-reply@example.com"}
+		r := setupPasswordResetRouter(db, enq, enabledCfg)
+		r.POST("/api/v1/user/password/forgot", UserPasswordForgot)
+
+		Convey("SMTP 未启用时返回 400 CodePasswordResetUnavailable", func() {
+			disabledCfg := &mail.Config{Enabled: false}
+			r2 := setupPasswordResetRouter(db, enq, disabledCfg)
+			r2.POST("/api/v1/user/password/forgot", UserPasswordForgot)
+
+			body, _ := json.Marshal(map[string]any{"username": user.Username, "email": user.Email})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/forgot", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r2.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var rsp map[string]any
+			So(json.Unmarshal(w.Body.Bytes(), &rsp), ShouldBeNil)
+			So(rsp["code"], ShouldEqual, float64(resp.CodePasswordResetUnavailable))
+		})
+
+		Convey("账号名邮箱一致时返回成功并创建重置记录且入队邮件任务", func() {
+			body, _ := json.Marshal(map[string]any{"username": user.Username, "email": user.Email})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/forgot", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			var count int64
+			db.Model(&core.UserPasswordReset{}).Where("user_id = ?", user.ID).Count(&count)
+			So(count, ShouldEqual, 1)
+
+			// 应入队 mail:send 任务，携带 password.reset 模板与收件人
+			So(enq.lastTask, ShouldNotBeNil)
+			var input mailhandler.MailSendInput
+			So(json.Unmarshal(enq.lastTask.Payload(), &input), ShouldBeNil)
+			So(input.To, ShouldEqual, user.Email)
+			So(input.Message.Template, ShouldEqual, "password.reset")
+			So(input.Message.Params, ShouldContainKey, "ResetURL")
+		})
+
+		Convey("账号名邮箱不一致时统一返回成功且不创建重置记录（避免账号枚举）", func() {
+			body, _ := json.Marshal(map[string]any{"username": user.Username, "email": "wrong@example.com"})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/forgot", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			var count int64
+			db.Model(&core.UserPasswordReset{}).Where("user_id = ?", user.ID).Count(&count)
+			So(count, ShouldEqual, 0)
+		})
+
+		Convey("请求体缺少必需字段时返回 400", func() {
+			body, _ := json.Marshal(map[string]any{"username": user.Username})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/forgot", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+		})
+	})
+}
+
+func TestUserPasswordResetByToken(t *testing.T) {
+	Convey("测试 UserPasswordResetByToken 函数", t, func() {
+		db := createUserSelfTestDB(t)
+		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
+		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		user := createTestUserInDB(db, "resettokenuser", "令牌重置用户", "resettoken@example.com", "OldP@ssw0rd", true)
+		r := setupPasswordResetRouter(db, &fakePipelineEnqueuer{}, &mail.Config{Enabled: true, Host: "smtp.example.com", From: "no-reply@example.com"})
+		r.POST("/api/v1/user/password/reset", UserPasswordResetByToken)
+
+		// 生成有效令牌并入库；仅哈希入库
+		createReset := func(token string, expiredAt time.Time, used bool) {
+			sum := sha256.Sum256([]byte(token))
+			reset := core.UserPasswordReset{
+				UserID:    user.ID,
+				Email:     user.Email,
+				TokenHash: hex.EncodeToString(sum[:]),
+				ExpiredAt: expiredAt,
+				Used:      used,
+			}
+			So(db.Create(&reset).Error, ShouldBeNil)
+		}
+
+		Convey("有效令牌应成功重置密码且令牌标记为已使用", func() {
+			token := "abcdef1234567890-valid-token"
+			createReset(token, time.Now().Add(time.Hour), false)
+
+			body, _ := json.Marshal(map[string]any{"token": token, "newPassword": "NewP@ssw0rd"})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/reset", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+
+			var updatedUser core.User
+			db.First(&updatedUser, "union_id = ?", user.UnionID)
+			So(crypto.CheckPassword(updatedUser.Password.Value(), "NewP@ssw0rd"), ShouldBeTrue)
+
+			var reset core.UserPasswordReset
+			db.First(&reset, "token_hash = ?", userPasswordResetTokenHash(token))
+			So(reset.Used, ShouldBeTrue)
+		})
+
+		Convey("令牌不存在时返回 400 CodePasswordResetTokenInvalid", func() {
+			body, _ := json.Marshal(map[string]any{"token": "totally-missing-token-1234567890", "newPassword": "NewP@ssw0rd"})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/reset", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var rsp map[string]any
+			So(json.Unmarshal(w.Body.Bytes(), &rsp), ShouldBeNil)
+			So(rsp["code"], ShouldEqual, float64(resp.CodePasswordResetTokenInvalid))
+		})
+
+		Convey("令牌已过期时返回 400 CodePasswordResetTokenInvalid", func() {
+			token := "expired-token-1234567890-abcd"
+			createReset(token, time.Now().Add(-time.Minute), false)
+
+			body, _ := json.Marshal(map[string]any{"token": token, "newPassword": "NewP@ssw0rd"})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/reset", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var rsp map[string]any
+			So(json.Unmarshal(w.Body.Bytes(), &rsp), ShouldBeNil)
+			So(rsp["code"], ShouldEqual, float64(resp.CodePasswordResetTokenInvalid))
+		})
+
+		Convey("令牌已使用时不返回重复启用密码（单次有效）", func() {
+			token := "used-token-1234567890-efgh"
+			createReset(token, time.Now().Add(time.Hour), true)
+
+			body, _ := json.Marshal(map[string]any{"token": token, "newPassword": "NewP@ssw0rd"})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/reset", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusBadRequest)
+			var rsp map[string]any
+			So(json.Unmarshal(w.Body.Bytes(), &rsp), ShouldBeNil)
+			So(rsp["code"], ShouldEqual, float64(resp.CodePasswordResetTokenInvalid))
+		})
+	})
+}
+
+// userPasswordResetTokenHash 计算令牌的 SHA-256 十六进制摘要，与视图层保持一致。
+func userPasswordResetTokenHash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
 }

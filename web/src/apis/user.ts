@@ -4,7 +4,9 @@ import { getJwtHeader, request } from "./base";
 import type {
   accessKeyCreateIn,
   FrontendConfigSyncIn,
+  PasswordForgotIn,
   PasswordLoginIn,
+  PasswordResetByTokenIn,
   PasswordResetIn,
   profileChangeIn,
 } from "./@types/user";
@@ -13,6 +15,14 @@ export function passwordLogin(data: PasswordLoginIn): AxiosPromise {
   return request.post("/user/password/login", data, {
     headers: getJwtHeader(),
   });
+}
+
+export function passwordForgot(data: PasswordForgotIn): AxiosPromise {
+  return request.post("/user/password/forgot", data);
+}
+
+export function passwordResetByToken(data: PasswordResetByTokenIn): AxiosPromise {
+  return request.post("/user/password/reset", data);
 }
 
 export function passwordReset(data: PasswordResetIn): AxiosPromise {

@@ -58,12 +58,12 @@ const (
 )
 
 // NotificationChannel 表示一个告警通知渠道，如邮件（email）、Webhook 等。
-// 渠道类型键（Type）定义在 internal/notify/channel.go，不在本文件定义，
-// 以避免 notify 包与 models/core 包之间的 import cycle（notify 包依赖 models/core）。
+// 渠道类型键（Type）与渠道基座定义在 internal/pkg/message，不在本文件定义，
+// 以避免 message 包与 models/core 包之间的 import cycle（message 包依赖内部 pkg，不依赖 models）。
 // 对应表为 notification_channels。
 // NotificationChannel represents an alert notification channel such as email or webhook.
-// The channel type keys are defined in internal/notify/channel.go to avoid an import
-// cycle between the notify package and the models/core package.
+// The channel type keys and the channel base are defined in internal/pkg/message to avoid an import
+// cycle between the message package and the models/core package.
 type NotificationChannel struct {
 	database.BaseModel
 
@@ -78,8 +78,8 @@ type NotificationChannel struct {
 	// Name 渠道名称，与 NamespaceName 组合唯一
 	// Name the name of the channel, unique together with NamespaceName
 	Name string `gorm:"column:name;type:VARCHAR(128);uniqueIndex:uq_notification_channels_namespace_name"`
-	// Type 渠道类型键（如 email、webhook），取值定义在 internal/notify/channel.go
-	// Type the channel type key (e.g. email, webhook), defined in internal/notify/channel.go
+	// Type 渠道类型键（如 email、webhook），取值定义在 internal/pkg/message
+	// Type the channel type key (e.g. email, webhook), defined in internal/pkg/message
 	Type string `gorm:"column:type;type:VARCHAR(32)"`
 	// Enabled 是否启用，禁用的渠道不参与通知发送
 	// Enabled whether the channel is enabled, disabled channels are skipped when
@@ -111,11 +111,11 @@ func (c *NotificationChannel) ConfigData() []byte {
 
 // NotificationTarget 表示一个通知目标，是通知的实际接收者（如某个邮箱地址、
 // Webhook URL、企业微信群机器人等），归属于某个通知渠道（ChannelID）。
-// Type 为渠道类型键快照，取值定义在 internal/notify/channel.go。
+// Type 为渠道类型键快照，取值定义在 internal/pkg/message。
 // 对应表为 notification_targets。
 // NotificationTarget represents a notification target, the actual receiver of a
 // notification (e.g. an email address or a webhook URL), belonging to a
-// notification channel. The channel type keys are defined in internal/notify/channel.go.
+// notification channel. The channel type keys are defined in internal/pkg/message.
 type NotificationTarget struct {
 	database.BaseModel
 
@@ -136,9 +136,9 @@ type NotificationTarget struct {
 	// ChannelID 目标所属的通知渠道 ID
 	// ChannelID the ID of the notification channel the target belongs to
 	ChannelID uint `gorm:"column:channel_id;type:INT;index:idx_notification_targets_channel_id"`
-	// Type 渠道类型键快照（如 email、webhook），取值定义在 internal/notify/channel.go
+	// Type 渠道类型键快照（如 email、webhook），取值定义在 internal/pkg/message
 	// Type the snapshot of the channel type key (e.g. email, webhook), defined in
-	// internal/notify/channel.go
+	// internal/pkg/message
 	Type string `gorm:"column:type;type:VARCHAR(32)"`
 	// Enabled 是否启用，禁用的目标不参与通知发送
 	// Enabled whether the target is enabled, disabled targets are skipped when

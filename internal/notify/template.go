@@ -16,9 +16,9 @@ package notify
 
 import (
 	// stdlib
-	"maps"
 	_ "embed"
 	"fmt"
+	"maps"
 	"slices"
 	"text/template"
 
@@ -29,6 +29,19 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+)
+
+// 消息模板键常量（业务相关）。模板键由各事件源在通知层固化，随 message.Message
+// 携带并在渲染时按 `notify.<template>.title` / `notify.<template>.content` 在 locales
+// 翻译文件中查找对应语言的文本模板。此处隶属业务层，故定义在 notify 而非 message 基座。
+// Message template keys (business-scoped). They are pinned by event sources in the
+// notify layer and carried in message.Message; rendering looks up
+// `notify.<template>.title` / `notify.<template>.content` in the locale files. They
+// live in the business notify layer rather than the message base package.
+const (
+	// TemplateTagEventAlert 标签事件告警消息模板（tag_event 事件源）
+	// TemplateTagEventAlert the tag event alert message template (tag_event source)
+	TemplateTagEventAlert = "tag_event.alert"
 )
 
 // defaultTemplatesFile 内嵌的默认通知模板注册表文件（TOML），启动时解析为

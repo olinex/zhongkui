@@ -18,6 +18,9 @@ const NAV_PINNED_KEY: string = "nav-pinned";
 // 首页快速开始清单配置（分组与导航入口，JSON 字符串）
 const QUICK_START_KEY: string = "quick-start";
 
+// 直达底部悬浮按钮拖动后的位置（JSON 字符串 {left, top}，单位为 px）
+const SCROLL_FAB_POS_KEY: string = "scroll-fab-pos";
+
 const LANGUAGE_KEY: string = "locale";
 const AVAILABLE_LOCALES: SupportLanguage[] = [SupportLanguage.English, SupportLanguage.ZhHans];
 export const DEFAULT_LOCALE: SupportLanguage = SupportLanguage.English;
@@ -57,6 +60,26 @@ export const localManager = {
   },
   setQuickStartGroups(groupsJson: string) {
     localStorage.setItem(QUICK_START_KEY, groupsJson);
+  },
+
+  // 读取直达底部悬浮按钮位置；未拖动过或数据损坏时返回 null（组件回退右下角贴靠）
+  getScrollFabPos(): { left: number; top: number } | null {
+    const raw = localStorage.getItem(SCROLL_FAB_POS_KEY);
+    if (!raw) {
+      return null;
+    }
+    try {
+      const pos = JSON.parse(raw) as { left: number; top: number };
+      if (typeof pos.left === "number" && typeof pos.top === "number") {
+        return pos;
+      }
+    } catch {
+      // 损坏的本地数据忽略，回退默认位置
+    }
+    return null;
+  },
+  setScrollFabPos(pos: { left: number; top: number }): void {
+    localStorage.setItem(SCROLL_FAB_POS_KEY, JSON.stringify(pos));
   },
 
   getJwt(): string | void {

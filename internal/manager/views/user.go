@@ -3,18 +3,27 @@ package views
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
+	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/features"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
+	mailhandler "zhongkui.com/zhongkui/internal/worker/handlers/mail"
 )
 
 var (
@@ -32,6 +41,12 @@ var (
 	// ErrFrontendConfigSyncDisabled 表示前端配置同步未开启
 	// 用户关闭同步开关后，后端拒绝接收配置上传
 	ErrFrontendConfigSyncDisabled = response.CreateCodeError(http.StatusBadRequest, response.CodeFrontendConfigSyncDisabled, nil)
+	// ErrPasswordResetUnavailable 表示密码重置功能不可用
+	// 系统未启用或未配置 SMTP 时自动禁用，避免开放无意义的密码重置功能
+	ErrPasswordResetUnavailable = response.CreateCodeError(http.StatusBadRequest, response.CodePasswordResetUnavailable, nil)
+	// ErrPasswordResetTokenInvalid 表示密码重置令牌无效或已过期
+	// 令牌不存在、已使用或超过有效期时触发
+	ErrPasswordResetTokenInvalid = response.CreateCodeError(http.StatusBadRequest, response.CodePasswordResetTokenInvalid, nil)
 )
 
 // UserProfileChangeIn 定义用户个人资料修改的输入结构体
@@ -67,6 +82,20 @@ type UserRegisterIn struct {
 type UserPasswordResetIn struct {
 	OldPassword string `json:"oldPassword" binding:"required,min=8,max=64,ascii"`          // 旧密码，必填，8-64个ASCII字符
 	NewPassword string `json:"newPassword" binding:"required,min=8,max=64,strongPassword"` // 新密码，必填，8-64个ASCII字符，需满足强密码要求
+}
+
+// UserPasswordForgotIn 定义忘记密码申请的输入结构体
+// 用户在未登录态提交账号名与邮箱地址，后端校验两者与库内一致后才发送重置邮件
+type UserPasswordForgotIn struct {
+	Username string `json:"username" viper:"username" prompt:"请输入账号名" binding:"required,min=6,max=32,alphaunicode"` // 账号名，必填，6-32个字符，支持Unicode字母
+	Email    string `json:"email" viper:"email" prompt:"请输入邮箱地址" binding:"required,min=10,max=128,email"`           // 邮箱地址，必填，10-128个字符，需符合邮箱格式
+}
+
+// UserPasswordResetByTokenIn 定义通过邮件链接令牌重置密码的输入结构体
+// 令牌由 forgot 接口生成并随邮件链接发送，过期或使用后失效
+type UserPasswordResetByTokenIn struct {
+	Token       string `json:"token" binding:"required,min=16" prompt:"请输入重置令牌"`                           // 重置令牌，必填
+	NewPassword string `json:"newPassword" binding:"required,min=8,max=64,strongPassword" prompt:"请输入新密码"` // 新密码，必填，8-64个ASCII字符，需满足强密码要求
 }
 
 // UserAccessKeyCreateIn 定义创建访问密钥的输入结构体
@@ -156,6 +185,131 @@ func UserPasswordLogin(c *gin.Context) {
 		response.SimpleOK.AbortWithGinW(c, UserTokenOut{Token: token})
 		return
 	}
+}
+
+// UserPasswordForgot 处理忘记密码申请请求
+// 路由：POST /api/v1/user/password/forgot
+// 功能：系统未启用或未配置 SMTP 时直接禁止（避免开放无意义功能）；校验账号名与
+// 邮箱与库内一致后，生成带有效期的重置令牌并异步发送一封含重置链接的邮件至用户邮箱。
+// 为避免账号枚举，无论校验结果如何，均统一返回成功响应。
+func UserPasswordForgot(c *gin.Context) {
+	var in UserPasswordForgotIn
+	// 绑定并验证请求体
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	logger := middlewares.GetLogger(c)
+	// 通过全局功能开关注册表判断密码重置功能是否可用：系统邮件未启用或配置不完整时自动禁用
+	if !middlewares.GetFeatureRegistry(c).IsEnabled(features.PasswordResetKey) {
+		ErrPasswordResetUnavailable.AbortWithGinH(c)
+		return
+	}
+	db := middlewares.GetCoreDatabase(c)
+	// 校验账号名与邮箱与库内一致；不一致或不存在时不发送邮件，但统一返回成功，避免账号枚举
+	var user core.User
+	if err := db.Take(&user, &core.User{Username: in.Username, Email: in.Email, Active: true}).Error; err != nil || user.ID == 0 {
+		response.SimpleOK.AbortWithGinH(c)
+		return
+	}
+	// 生成高熵随机令牌，仅将 SHA-256 摘要入库，防止数据库泄露后令牌被直接使用
+	token, err := crypto.GenerateRandomBase64String(48)
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	sum := sha256.Sum256([]byte(token))
+	cfg := manager.GetConfig(c)
+	reset := core.UserPasswordReset{
+		UserID:    user.ID,
+		Email:     user.Email,
+		TokenHash: hex.EncodeToString(sum[:]),
+		ExpiredAt: time.Now().Add(cfg.PasswordReset.TokenTTL),
+	}
+	if err := db.Create(&reset).Error; err != nil {
+		logger.Errorf(c, nil, "cannot create password reset record for user %s, cause: %v", user.UnionID.String(), err)
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	// 组装前端重置链接（含语言段与令牌参数），供用户点击或在浏览器中复制访问
+	lang := base.DefaultLanguage.String()
+	resetURL := fmt.Sprintf(
+		"%s/%s/auth/reset-password?token=%s",
+		strings.TrimRight(cfg.FrontendBaseURL, "/"),
+		lang,
+		token,
+	)
+	// 入队 mail:send 异步任务，经 locale 模板渲染标题/正文并投递 HTML 邮件
+	task, err := mailhandler.NewMailSendTask(mailhandler.MailSendInput{
+		To: user.Email,
+		Message: message.Message{
+			Template:    "password.reset",
+			ContentType: "text/html", // 重置密码邮件在消息定义层声明为 HTML 正文
+			Params: map[string]any{
+				"Username": user.Username,
+				"ResetURL": resetURL,
+				"TokenTTL": cfg.PasswordReset.TokenTTL.String(),
+			},
+		},
+		Language: lang,
+	})
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	if _, err = middlewares.GetPipelineClient(c).EnqueueContext(c, task, asynq.MaxRetry(3)); err != nil {
+		logger.Errorf(c, nil, "cannot enqueue password reset mail for user %s, cause: %v", user.UnionID.String(), err)
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	response.SimpleOK.AbortWithGinH(c)
+}
+
+// UserPasswordResetByToken 处理通过邮件链接令牌重置密码请求
+// 路由：POST /api/v1/user/password/reset
+// 功能：校验令牌存在、未使用且未过期，在同一事务中标记令牌已使用并更新用户密码。
+func UserPasswordResetByToken(c *gin.Context) {
+	var in UserPasswordResetByTokenIn
+	// 绑定并验证请求体
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	logger := middlewares.GetLogger(c)
+	db := middlewares.GetCoreDatabase(c)
+	// 计算令牌摘要并查询有效的重置记录（未使用且未过期）
+	sum := sha256.Sum256([]byte(in.Token))
+	var reset core.UserPasswordReset
+	err := db.Where("token_hash = ? AND used = ? AND expired_at > ?", hex.EncodeToString(sum[:]), false, time.Now()).First(&reset).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) || reset.ID == 0 {
+		ErrPasswordResetTokenInvalid.AbortWithGinH(c)
+		return
+	} else if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	// 加载目标用户（用户已在上次申请后删除时视为令牌无效）
+	var user core.User
+	if err := db.Take(&user, "id = ?", reset.UserID).Error; err != nil {
+		ErrPasswordResetTokenInvalid.AbortWithGinH(c)
+		return
+	}
+	// 同一事务内作废该用户全部可用的重置令牌并更新密码，保证单次有效与数据一致。
+	// 一个用户可能已发送多封有效的重置邮件，任一个链接使用后其余链接应自动失效：
+	// 因此将同一用户所有尚未使用的令牌统一标记为已使用，而非仅当前令牌。
+	if err := db.Transaction(func(tx *database.DB) error {
+		if err := tx.Model(&core.UserPasswordReset{}).
+			Where("user_id = ? AND used = ?", user.ID, false).
+			Update("used", true).Error; err != nil {
+			return errors.WithStack(err)
+		}
+		return user.ResetPassword(tx, in.NewPassword)
+	}); err != nil {
+		logger.Errorf(c, nil, "cannot reset password of user %s, cause: %v", user.UnionID.String(), err)
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	response.SimpleOK.AbortWithGinH(c)
 }
 
 // UserSelfPasswordReset 处理用户密码重置请求

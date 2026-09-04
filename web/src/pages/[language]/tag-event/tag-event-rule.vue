@@ -705,7 +705,7 @@ const rollbackConfirmRef = useTemplateRef("rollbackConfirmRef");
 
 const modelOptions = [
   {
-    title: "HTTP Transport",
+    title: i18n.global.t("model.httpTransport.name"),
     value: HTTP_TRANSPORT_MODEL_KEY,
   },
 ];

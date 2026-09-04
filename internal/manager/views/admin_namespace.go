@@ -13,6 +13,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	message "zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -289,7 +290,7 @@ func NamespaceCreate(c *gin.Context) {
 		}).Error; err != nil {
 			return errors.WithStack(err)
 		}
-		for _, typ := range notify.PlaceholderTypes() {
+		for _, typ := range message.PlaceholderTypes() {
 			if err := tx.Create(&core.NotificationChannel{
 				NamespaceName: in.Name,
 				Name:          typ,

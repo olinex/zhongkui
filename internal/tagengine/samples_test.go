@@ -51,10 +51,10 @@ func TestListModelSamples(t *testing.T) {
 		})
 
 		Convey("供给后按 name 排序返回样例列表", func() {
-			_, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
+			_, err := tagengine.EnsureModelSamples(context.Background(), db, sampleTestNamespace, httpTransportType)
 			So(err, ShouldBeNil)
 
-			samples, err := tagengine.ListModelSamples(context.Background(), db, "default", httpTransportType)
+			samples, err := tagengine.ListModelSamples(context.Background(), db, sampleTestNamespace, httpTransportType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 2)
 			So(samples[0].Name, ShouldEqual, "default")
@@ -90,7 +90,7 @@ func TestEnsureModelSamples(t *testing.T) {
 		})
 
 		Convey("HttpTransport 懒供给 default 与 http-example 两条样例", func() {
-			samples, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
+			samples, err := tagengine.EnsureModelSamples(context.Background(), db, sampleTestNamespace, httpTransportType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 2)
 
@@ -119,9 +119,9 @@ func TestEnsureModelSamples(t *testing.T) {
 		})
 
 		Convey("重复调用 EnsureModelSamples 幂等（样例数量不变）", func() {
-			_, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
+			_, err := tagengine.EnsureModelSamples(context.Background(), db, sampleTestNamespace, httpTransportType)
 			So(err, ShouldBeNil)
-			samples, err := tagengine.EnsureModelSamples(context.Background(), db, "default", httpTransportType)
+			samples, err := tagengine.EnsureModelSamples(context.Background(), db, sampleTestNamespace, httpTransportType)
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 2)
 		})

@@ -186,12 +186,23 @@ type Config struct {
 	Host string `mapstructure:"host" default:"0.0.0.0" comment:"HTTP 服务监听地址，0.0.0.0 表示监听所有网络接口"`
 	// Port 是 HTTP 服务的监听端口号
 	Port int `mapstructure:"port" default:"8080" comment:"HTTP 服务监听端口号"`
+	// FrontendBaseURL 是前端站点的基础地址（含协议与端口），项目级配置，
+	// 用于构造外部可访问的前端链接（如密码重置链接）
+	FrontendBaseURL string `mapstructure:"frontendBaseURL" default:"http://127.0.0.1:8000" comment:"前端站点基础地址（含协议与端口），项目级配置"`
 	// Namespace 是多命名空间（多租户）识别配置
 	Namespace NamespaceConfig `mapstructure:"namespace" comment:"多命名空间（多租户）识别配置"`
 	// Auth 是 JWT 认证相关配置
 	Auth AuthConfig `mapstructure:"auth" comment:"JWT 认证相关配置"`
 	// Secure 是 HTTP 安全响应头配置
 	Secure SecureConfig `mapstructure:"secure" comment:"HTTP 安全响应头配置"`
+	// PasswordReset 是用户强制重置密码相关配置
+	PasswordReset PasswordResetConfig `mapstructure:"passwordReset" comment:"密码重置配置"`
+}
+
+// PasswordResetConfig 定义了用户强制重置密码的配置（密码重置专属项）。
+type PasswordResetConfig struct {
+	// TokenTTL 是重置令牌的有效时长，过期后用户需重新发起申请
+	TokenTTL time.Duration `mapstructure:"tokenTTL" default:"30m" comment:"重置密码令牌有效时长，过期后需重新申请"`
 }
 
 // ConfigMiddleware 创建一个将配置注入 Gin 上下文的中间件。

@@ -515,6 +515,13 @@ func EtlPipelineInspectorTaskListGet(c *gin.Context) {
 		panic(fmt.Sprintf("bad state %s does not support", in.State))
 	}
 	if rawTasks, err := lister(in.Queue, page, pageSize); err != nil {
+		// 队列不存在（如尚未有任务入队、或工作进程未运行）时，asynq 返回
+		// ErrQueueNotFound；对只读的任务列表应将此视为"空"，返回空列表而非未知错误，
+		// 避免前端在加载到真实队列前误报。
+		if errors.Is(err, asynq.ErrQueueNotFound) {
+			response.SimpleOK.AbortWithGinW(c, ETLPipelineInspectorTaskListOut{})
+			return
+		}
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else {

@@ -52,6 +52,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
 	go.uber.org/zap v1.28.0
+	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	gorm.io/driver/clickhouse v0.7.0
 	gorm.io/plugin/opentelemetry v0.1.16
 )

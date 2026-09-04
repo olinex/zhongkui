@@ -22,10 +22,15 @@ import (
 	// internal
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
+
+// notificationChannelTestNamespace 通知渠道测试专用命名空间，
+// 与迁移种子的 default 命名空间占位渠道（webhook）隔离，
+// 使整表计数类断言不受基线数据影响。
+const notificationChannelTestNamespace = "notification-channel-test"
 
 // createNotificationChannelTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
 func createNotificationChannelTestDB(t *testing.T) *database.DB {
@@ -103,9 +108,9 @@ func createNotificationChannelByName(db *database.DB, r *gin.Engine, name string
 
 // seedNotificationChannelByName 直接经数据库落库一条渠道，用于不可经创建接口产生的固定数据
 // （如占位符渠道 webhook，前端禁止创建、仅由命名空间种子化）。
-func seedNotificationChannelByName(db *database.DB, name, typ string) uint {
+func seedNotificationChannelByName(db *database.DB, namespace, name, typ string) uint {
 	channel := core.NotificationChannel{
-		NamespaceName: middlewares.DefaultNamespace,
+		NamespaceName: namespace,
 		Name:          name,
 		Type:          typ,
 		Enabled:       true,
@@ -143,7 +148,7 @@ func TestNotificationChannelTypes(t *testing.T) {
 			byType[typ.Type] = typ
 		}
 
-		email, ok := byType[notify.TypeEmail]
+		email, ok := byType[message.TypeEmail]
 		So(ok, ShouldBeTrue)
 		So(email.Placeholder, ShouldBeFalse)
 		So(email.Config.Channel, ShouldHaveLength, 5)
@@ -156,7 +161,7 @@ func TestNotificationChannelTypes(t *testing.T) {
 		So(email.Config.Target[0].Name, ShouldEqual, "to")
 		So(email.Config.Target[0].Required, ShouldBeTrue)
 
-		wh, ok := byType[notify.TypeWebhook]
+		wh, ok := byType[message.TypeWebhook]
 		So(ok, ShouldBeTrue)
 		// webhook 渠道级配置无字段，为占位符渠道（前端禁止创建、不可删除）
 		So(wh.Placeholder, ShouldBeTrue)
@@ -182,7 +187,7 @@ func TestNotificationChannelCreateAndDetail(t *testing.T) {
 			cfg := `{"host":"smtp.example.com","port":465,"username":"alice","password":"secret","from":"alert@example.com"}`
 			id := createNotificationChannelByName(db, r, "email-main", map[string]any{
 				"name":        "email-main",
-				"type":        notify.TypeEmail,
+				"type":        message.TypeEmail,
 				"enabled":     true,
 				"config":      cfg,
 				"description": "primary email channel",
@@ -196,7 +201,7 @@ func TestNotificationChannelCreateAndDetail(t *testing.T) {
 			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
 			So(resp.Data, ShouldNotBeNil)
 			So(resp.Data.Name, ShouldEqual, "email-main")
-			So(resp.Data.Type, ShouldEqual, notify.TypeEmail)
+			So(resp.Data.Type, ShouldEqual, message.TypeEmail)
 			So(resp.Data.Enabled, ShouldBeTrue)
 			// 详情接口返回 base64 密文而非明文；密文可 base64 解码且不等于原明文
 			var raw struct {
@@ -227,7 +232,7 @@ func TestNotificationChannelCreateAndDetail(t *testing.T) {
 		Convey("占位符渠道类型被拒绝创建且不落库", func() {
 			w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/create", map[string]any{
 				"name":   "placeholder-webhook",
-				"type":   notify.TypeWebhook,
+				"type":   message.TypeWebhook,
 				"config": `{}`,
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -247,15 +252,17 @@ func TestNotificationChannelList(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		r := setupNotificationChannelTestRouter(db)
-		createNotificationChannelByName(db, r, "email-a", map[string]any{"name": "email-a", "type": notify.TypeEmail, "enabled": true, "config": `{"host":"h1"}`})
+		// 使用测试专用命名空间，与 default 命名空间的基线占位渠道（webhook）隔离
+		So(db.Create(&core.Namespace{Name: notificationChannelTestNamespace}).Error, ShouldBeNil)
+		r := setupNotificationChannelTestRouterWithNamespace(db, notificationChannelTestNamespace)
+		createNotificationChannelByName(db, r, "email-a", map[string]any{"name": "email-a", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h1","from":"a@example.com"}`})
 		// 注意：模型 Enabled 列的 gorm tag 带 default:true，GORM Create 会跳过零值（false），
 		// 因此禁用态经批量停用接口（显式 Update）设置，而非在创建时传 false
-		emailB := createNotificationChannelByName(db, r, "email-b", map[string]any{"name": "email-b", "type": notify.TypeEmail, "enabled": true, "config": `{"host":"h2"}`})
+		emailB := createNotificationChannelByName(db, r, "email-b", map[string]any{"name": "email-b", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h2","from":"a@example.com"}`})
 		w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/disable", map[string]any{"ids": []uint64{uint64(emailB)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 		// webhook 为占位符渠道，前端禁止创建，直接经数据库种子一条以参与列表过滤
-		seedNotificationChannelByName(db, "wh-c", notify.TypeWebhook)
+		seedNotificationChannelByName(db, notificationChannelTestNamespace, "wh-c", message.TypeWebhook)
 
 		Convey("按名称等值过滤", func() {
 			w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/list", map[string]any{
@@ -279,7 +286,7 @@ func TestNotificationChannelList(t *testing.T) {
 		Convey("按类型等值过滤", func() {
 			w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/list", map[string]any{
 				"filterBy": map[string]any{
-					"type": map[string]any{"action": "eq", "value": notify.TypeEmail},
+					"type": map[string]any{"action": "eq", "value": message.TypeEmail},
 				},
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
@@ -340,17 +347,17 @@ func TestNotificationChannelUpdate(t *testing.T) {
 		r := setupNotificationChannelTestRouter(db)
 		id := createNotificationChannelByName(db, r, "email-update", map[string]any{
 			"name":    "email-update",
-			"type":    notify.TypeEmail,
+			"type":    message.TypeEmail,
 			"enabled": true,
-			"config":  `{"host":"old"}`,
+			"config":  `{"host":"old","from":"a@example.com"}`,
 		})
 
 		w := doNotificationChannelRequest(r, http.MethodPost, notificationChannelIDPath("/update", id), map[string]any{
 			// name/type 字段虽传入，但更新不接受，应保持不变
 			"name":        "renamed",
-			"type":        notify.TypeWebhook,
+			"type":        message.TypeWebhook,
 			"enabled":     false,
-			"config":      `{"host":"new"}`,
+			"config":      `{"host":"new","from":"a@example.com"}`,
 			"description": "updated",
 		})
 		So(w.Code, ShouldEqual, http.StatusOK)
@@ -358,10 +365,10 @@ func TestNotificationChannelUpdate(t *testing.T) {
 		var channel core.NotificationChannel
 		So(db.First(&channel, id).Error, ShouldBeNil)
 		So(channel.Name, ShouldEqual, "email-update")
-		So(channel.Type, ShouldEqual, notify.TypeEmail)
+		So(channel.Type, ShouldEqual, message.TypeEmail)
 		So(channel.Enabled, ShouldBeFalse)
 		// 数据库中的 config 已加密存储；经模型解密读取得到更新后的明文
-		So(channel.ConfigData(), ShouldEqual, []byte(`{"host":"new"}`))
+		So(channel.ConfigData(), ShouldEqual, []byte(`{"host":"new","from":"a@example.com"}`))
 		So(channel.Description, ShouldEqual, "updated")
 	})
 }
@@ -375,10 +382,12 @@ func TestNotificationChannelBatchDelete(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		r := setupNotificationChannelTestRouter(db)
-		id1 := createNotificationChannelByName(db, r, "del-1", map[string]any{"name": "del-1", "type": notify.TypeEmail, "config": `{}`})
+		// 使用测试专用命名空间，与 default 命名空间的基线占位渠道（webhook）隔离
+		So(db.Create(&core.Namespace{Name: notificationChannelTestNamespace}).Error, ShouldBeNil)
+		r := setupNotificationChannelTestRouterWithNamespace(db, notificationChannelTestNamespace)
+		id1 := createNotificationChannelByName(db, r, "del-1", map[string]any{"name": "del-1", "type": message.TypeEmail, "config": `{"host":"h1","from":"a@example.com"}`})
 		// 占位符渠道（webhook）前端禁止创建，直接经数据库种子一条以验证其不可删除
-		whID := seedNotificationChannelByName(db, "del-wh", notify.TypeWebhook)
+		whID := seedNotificationChannelByName(db, notificationChannelTestNamespace, "del-wh", message.TypeWebhook)
 
 		Convey("非占位渠道批量删除成功", func() {
 			w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/delete", map[string]any{"ids": []uint64{uint64(id1)}})
@@ -392,7 +401,9 @@ func TestNotificationChannelBatchDelete(t *testing.T) {
 			So(len(resp.Data.Failed), ShouldEqual, 0)
 
 			var count int64
-			So(db.Model(&core.NotificationChannel{}).Count(&count).Error, ShouldBeNil)
+			// 计数需按测试命名空间过滤：default 命名空间的基线占位渠道（webhook）
+			// 为已提交数据，对每个测试事务均可见，全表计数会被其污染
+			So(db.Model(&core.NotificationChannel{}).Where("namespace_name = ?", notificationChannelTestNamespace).Count(&count).Error, ShouldBeNil)
 			So(count, ShouldEqual, 1) // 仅剩占位渠道
 		})
 
@@ -413,7 +424,8 @@ func TestNotificationChannelBatchDelete(t *testing.T) {
 
 			// 占位渠道未被删除（id1 已删，仅剩占位渠道）
 			var count int64
-			So(db.Model(&core.NotificationChannel{}).Count(&count).Error, ShouldBeNil)
+			// 计数按测试命名空间过滤，避免 default 命名空间基线占位渠道污染
+			So(db.Model(&core.NotificationChannel{}).Where("namespace_name = ?", notificationChannelTestNamespace).Count(&count).Error, ShouldBeNil)
 			So(count, ShouldEqual, 1)
 		})
 
@@ -439,7 +451,7 @@ func TestNotificationChannelBatchSetEnabled(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		r := setupNotificationChannelTestRouter(db)
-		id := createNotificationChannelByName(db, r, "io-1", map[string]any{"name": "io-1", "type": notify.TypeEmail, "enabled": true, "config": `{}`})
+		id := createNotificationChannelByName(db, r, "io-1", map[string]any{"name": "io-1", "type": message.TypeEmail, "enabled": true, "config": `{"host":"h1","from":"a@example.com"}`})
 
 		w := doNotificationChannelRequest(r, http.MethodPost, "/notification/channel/disable", map[string]any{"ids": []uint64{uint64(id)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
@@ -473,7 +485,7 @@ func TestNotificationChannelNamespaceIsolation(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		r := setupNotificationChannelTestRouter(db)
-		id := createNotificationChannelByName(db, r, "ns-1", map[string]any{"name": "ns-1", "type": notify.TypeEmail, "config": `{}`})
+		id := createNotificationChannelByName(db, r, "ns-1", map[string]any{"name": "ns-1", "type": message.TypeEmail, "config": `{"host":"h1","from":"a@example.com"}`})
 
 		Convey("其他命名空间列表不可见 default 命名空间渠道", func() {
 			rOther := setupNotificationChannelTestRouterWithNamespace(db, "other-ns")

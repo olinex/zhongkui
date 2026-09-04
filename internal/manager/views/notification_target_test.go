@@ -26,8 +26,8 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	core "zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/pipeline"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
@@ -43,14 +43,14 @@ type mockNotificationChannel struct{}
 func (m *mockNotificationChannel) Type() string { return mockNotificationChannelType }
 
 // Send 固定返回消息 ID "mock-msg-1"，用于验证 test-send 成功路径。
-func (m *mockNotificationChannel) Send(ctx context.Context, target *notify.Target, msg *notify.RenderedMessage) (string, error) {
+func (m *mockNotificationChannel) Send(ctx context.Context, target *message.Target, msg *message.RenderedMessage) (string, error) {
 	return "mock-msg-1", nil
 }
 
 // init 将测试用 mock 渠道注册进 notify 注册表。
 // 注册表为包级全局状态且重复注册会 panic，故仅在 init 注册一次。
 func init() {
-	notify.Register(mockNotificationChannelType, func(_ json.RawMessage) (notify.Channel, error) {
+	message.Register(mockNotificationChannelType, func(_ json.RawMessage) (message.Channel, error) {
 		return &mockNotificationChannel{}, nil
 	})
 }
@@ -168,7 +168,7 @@ func TestNotificationTargetCreateAndDetail(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		ch := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-email", notify.TypeEmail, `{"host":"smtp.example.com","from":"alert@example.com"}`, true)
+		ch := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-email", message.TypeEmail, `{"host":"smtp.example.com","from":"alert@example.com"}`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
 
 		Convey("目标创建成功且详情返回派生 Type 与渠道信息", func() {
@@ -178,7 +178,7 @@ func TestNotificationTargetCreateAndDetail(t *testing.T) {
 
 			var target core.NotificationTarget
 			So(db.Where("name = ?", "target-a").First(&target).Error, ShouldBeNil)
-			So(target.Type, ShouldEqual, notify.TypeEmail)
+			So(target.Type, ShouldEqual, message.TypeEmail)
 			So(target.Language, ShouldEqual, "zh-Hans")
 
 			w = doNotificationTargetRequest(r, http.MethodPost, notificationTargetIDPath("/get", target.ID), nil)
@@ -192,9 +192,9 @@ func TestNotificationTargetCreateAndDetail(t *testing.T) {
 			So(resp.Data.Name, ShouldEqual, "target-a")
 			So(resp.Data.ChannelID, ShouldEqual, ch.ID)
 			So(resp.Data.ChannelName, ShouldEqual, "ch-email")
-			So(resp.Data.ChannelType, ShouldEqual, notify.TypeEmail)
+			So(resp.Data.ChannelType, ShouldEqual, message.TypeEmail)
 			So(resp.Data.ChannelEnabled, ShouldBeTrue)
-			So(resp.Data.Type, ShouldEqual, notify.TypeEmail)
+			So(resp.Data.Type, ShouldEqual, message.TypeEmail)
 			So(resp.Data.Enabled, ShouldBeTrue)
 			So(resp.Data.Language, ShouldEqual, "zh-Hans")
 		})
@@ -220,8 +220,8 @@ func TestNotificationTargetList(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		chA := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", notify.TypeEmail, `{}`, true)
-		chB := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-b", notify.TypeWebhook, `{}`, false)
+		chA := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", message.TypeEmail, `{}`, true)
+		chB := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-b", message.TypeWebhook, `{}`, false)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
 		createNotificationTargetTarget(r, "tg-a", chA.ID, true, "zh-Hans")
 		createNotificationTargetTarget(r, "tg-b", chB.ID, false, "en")
@@ -243,7 +243,7 @@ func TestNotificationTargetList(t *testing.T) {
 			So(resp.Data.Items, ShouldHaveLength, 1)
 			So(resp.Data.Items[0].Name, ShouldEqual, "tg-b")
 			So(resp.Data.Items[0].ChannelName, ShouldEqual, "ch-b")
-			So(resp.Data.Items[0].ChannelType, ShouldEqual, notify.TypeWebhook)
+			So(resp.Data.Items[0].ChannelType, ShouldEqual, message.TypeWebhook)
 		})
 
 		Convey("按渠道 ID 等值过滤", func() {
@@ -330,8 +330,8 @@ func TestNotificationTargetUpdate(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		chA := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", notify.TypeEmail, `{}`, true)
-		chB := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-b", notify.TypeWebhook, `{}`, true)
+		chA := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", message.TypeEmail, `{}`, true)
+		chB := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-b", message.TypeWebhook, `{}`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
 		targetID := createNotificationTargetTarget(r, "tg-up", chA.ID, true, "zh-Hans")
 
@@ -348,7 +348,7 @@ func TestNotificationTargetUpdate(t *testing.T) {
 			var target core.NotificationTarget
 			So(db.First(&target, targetID).Error, ShouldBeNil)
 			So(target.ChannelID, ShouldEqual, chA.ID) // 渠道未变更
-			So(target.Type, ShouldEqual, notify.TypeEmail)
+			So(target.Type, ShouldEqual, message.TypeEmail)
 			So(target.Enabled, ShouldBeFalse)
 			So(target.Language, ShouldEqual, "en")
 			So(target.Description, ShouldEqual, "updated desc")
@@ -366,7 +366,7 @@ func TestNotificationTargetBatchDeleteAndSetEnabled(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		ch := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", notify.TypeEmail, `{}`, true)
+		ch := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-a", message.TypeEmail, `{}`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
 		id1 := createNotificationTargetTarget(r, "tg-d1", ch.ID, true, "zh-Hans")
 		id2 := createNotificationTargetTarget(r, "tg-d2", ch.ID, true, "zh-Hans")
@@ -421,7 +421,7 @@ func TestNotificationTargetNamespaceIsolation(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		insertTestNamespace(db, "ns-a")
-		ch := insertNotificationTargetTestChannel(db, "ns-a", "ch-a", notify.TypeEmail, `{}`, true)
+		ch := insertNotificationTargetTestChannel(db, "ns-a", "ch-a", message.TypeEmail, `{}`, true)
 		rA := setupNotificationTargetTestRouter(db, "ns-a")
 		rB := setupNotificationTargetTestRouter(db, "ns-b")
 		targetID := createNotificationTargetTarget(rA, "tg-ns", ch.ID, true, "zh-Hans")
@@ -446,7 +446,7 @@ func TestNotificationTargetTestSend(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		mockCh := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-mock", mockNotificationChannelType, `{}`, true)
-		badCh := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-bad", notify.TypeEmail, `not-json`, true)
+		badCh := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-bad", message.TypeEmail, `not-json`, true)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)
 		mockTarget := createNotificationTargetTarget(r, "tg-mock", mockCh.ID, true, "zh-Hans")
 		badTarget := createNotificationTargetTarget(r, "tg-bad", badCh.ID, true, "zh-Hans")
@@ -589,8 +589,8 @@ func TestNotificationTargetSend(t *testing.T) {
 		Reset(func() {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
-		chEnabled := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-on", notify.TypeEmail, `{}`, true)
-		chDisabled := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-off", notify.TypeEmail, `{}`, false)
+		chEnabled := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-on", message.TypeEmail, `{}`, true)
+		chDisabled := insertNotificationTargetTestChannel(db, middlewares.DefaultNamespace, "ch-off", message.TypeEmail, `{}`, false)
 		okTarget := insertNotificationTargetTestTarget(db, middlewares.DefaultNamespace, "tg-send-ok", chEnabled, true)
 		disabledTarget := insertNotificationTargetTestTarget(db, middlewares.DefaultNamespace, "tg-send-off", chEnabled, false)
 		r := setupNotificationTargetTestRouter(db, middlewares.DefaultNamespace)

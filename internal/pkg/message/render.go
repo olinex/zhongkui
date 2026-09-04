@@ -1,4 +1,4 @@
-package notify
+package message
 
 import (
 	// stdlib
@@ -19,11 +19,11 @@ import (
 func renderTemplateText(text string, params map[string]any) (string, error) {
 	tmpl, err := template.New("render").Option("missingkey=zero").Parse(text)
 	if err != nil {
-		return "", fmt.Errorf("notify: parse template %q: %w", text, err)
+		return "", fmt.Errorf("message: parse template %q: %w", text, err)
 	}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, params); err != nil {
-		return "", fmt.Errorf("notify: execute template %q: %w", text, err)
+		return "", fmt.Errorf("message: execute template %q: %w", text, err)
 	}
 	return buf.String(), nil
 }

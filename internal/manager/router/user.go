@@ -26,6 +26,28 @@ func registerUserRoutes(ctx *RegisterContext) {
 		userGroup.OPTIONS("/password/login", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserPasswordLoginIn](), views.WithBodyOutput[views.UserTokenOut]()),
 		))
+		// 忘记密码 - 未登录态提交账号名与邮箱，校验一致后发送带重置链接的邮件
+		userGroup.POST(
+			"/password/forgot",
+			ctx.coreDatabaseMiddleware,    // 数据库连接，校验账号名/邮箱并落重置令牌
+			ctx.featureRegistryMiddleware, // 功能开关注册表，判断密码重置功能是否可用
+			ctx.pipelineClientMiddleware,  // 管道投递客户端，入队 mail:send 异步任务
+			views.UserPasswordForgot,      // 忘记密码处理函数
+		)
+		// 忘记密码元信息
+		userGroup.OPTIONS("/password/forgot", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserPasswordForgotIn]()),
+		))
+		// 重置密码 - 通过邮件链接携带的令牌设置新密码
+		userGroup.POST(
+			"/password/reset",
+			ctx.coreDatabaseMiddleware,     // 数据库连接，校验令牌并更新密码
+			views.UserPasswordResetByToken, // 重置密码处理函数
+		)
+		// 重置密码元信息
+		userGroup.OPTIONS("/password/reset", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserPasswordResetByTokenIn]()),
+		))
 	}
 	{
 		// ========== 个人接口（需要认证） ==========

@@ -78,11 +78,16 @@ var RootCmd = &cobra.Command{
 		provider.InjectPipelineClient(i)
 		provider.InjectPipelineServer(ctx, i)
 		provider.InjectCaptureClient(i)
+		provider.InjectMailSender(i)
+		provider.InjectFeatureRegistry(i)
+		provider.InjectMessagePoolShutdowner(i)
 
 		// 初始化翻译器
 		_ = provider.MustInvokeUniversalTranslator(i)
 		// 必须在所有服务启动完成后调用，确保所有资源都被正确初始化
 		_ = provider.MustInvokeOtelShutdowner(ctx, i)
+		// 预解析消息渠道资源池关闭器，确保其在优雅关闭阶段被 samber/do 驱动
+		_ = provider.MustInvokeMessagePoolShutdowner(i)
 
 		ctx = context.WithValue(ctx, InjectorCtxName, i)
 		cmd.SetContext(ctx)

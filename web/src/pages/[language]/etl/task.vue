@@ -486,6 +486,20 @@ watch(taskState, (value) => {
   });
 });
 
+// 队列列表加载后，若当前选中的队列并非真实存在的队列（如硬编码的默认 "default"
+// 与 asynq 实际队列不符），自动切换到第一个真实队列，避免持续查询不存在的队列。
+watch(
+  queueItems,
+  (items) => {
+    if (items.length === 0) return;
+    const names = items.map((item) => item.name);
+    if (!names.includes(queue.value)) {
+      queue.value = names[0];
+    }
+  },
+  { immediate: true },
+);
+
 const refreshAction = async (): Promise<void> => {
   await Promise.all([
     getQueueListAction(),

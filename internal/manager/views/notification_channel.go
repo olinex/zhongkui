@@ -1,7 +1,7 @@
 // Package routes 提供 HTTP 路由注册和管理功能。
 // 本文件包含通知渠道（NotificationChannel）管理相关的 API 路由处理器，
 // 提供渠道类型枚举、CRUD、批量启停与批量删除能力。
-// 渠道类型与各类型的渠道级/目标级配置 schema 定义在 internal/notify 包。
+// 渠道类型与各类型的渠道级/目标级配置 schema 定义在 internal/pkg/message 包。
 package views
 
 import (
@@ -21,15 +21,15 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	message "zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
 // NotificationChannelCreateIn 定义创建通知渠道的请求输入结构。
 // 命名空间取自请求上下文，渠道名称在同一命名空间内唯一；渠道类型必须为
-// notify.Types() 中已注册的类型之一；Config 为渠道级配置的 JSON 文本。
+// message.Types() 中已注册的类型之一；Config 为渠道级配置的 JSON 文本。
 type NotificationChannelCreateIn struct {
 	// Name 渠道名称，必填，长度 1~128
 	Name string `json:"name" binding:"required,min=1,max=128"`
@@ -120,20 +120,20 @@ type NotificationChannelTypesOut struct {
 }
 
 // NotificationChannelTypesGet 处理获取通知渠道类型枚举的请求。
-// 返回 notify.Types() 中已注册的每个类型及其渠道级/目标级配置 schema，供前端
-// 动态渲染创建/编辑表单。schema 依据 notify 包各配置结构体的 binding/form 标签
+// 返回 message.Types() 中已注册的每个类型及其渠道级/目标级配置 schema，供前端
+// 动态渲染创建/编辑表单。schema 依据 message 包各配置结构体的 binding/form 标签
 // 经 views.getStructFields 反射生成（与 OPTIONS 元信息同一事实来源）；字段展示
 // 文案由前端依据字段名与渠道类型自行翻译。
 func NotificationChannelTypesGet(c *gin.Context) {
-	types := notify.Types()
+	types := message.Types()
 	results := make([]NotificationChannelTypeOut, 0, len(types))
 	for _, typ := range types {
 		out := NotificationChannelTypeOut{
 			Type:        typ,
 			Name:        typ,
-			Placeholder: notify.IsPlaceholderType(typ),
+			Placeholder: message.IsPlaceholderType(typ),
 		}
-		if fs, ok := notify.FormStructsFor(typ); ok {
+		if fs, ok := message.FormStructsFor(typ); ok {
 			out.Config.Channel = getStructFields(fs.Channel)
 			out.Config.Target = getStructFields(fs.Target)
 		}
@@ -188,7 +188,7 @@ func NotificationChannelListGet(c *gin.Context) {
 }
 
 // NotificationChannelCreate 处理创建通知渠道的请求。
-// 创建前校验渠道类型必须为 notify.Types() 中已注册的类型；渠道归属当前请求命名空间。
+// 创建前校验渠道类型必须为 message.Types() 中已注册的类型；渠道归属当前请求命名空间。
 func NotificationChannelCreate(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -207,9 +207,15 @@ func NotificationChannelCreate(c *gin.Context) {
 		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
 		return
 	}
-	if notify.IsPlaceholderType(in.Type) {
+	if message.IsPlaceholderType(in.Type) {
 		// 占位符渠道（如 webhook）为系统固定数据，随命名空间自动种子化，禁止前端重复创建
 		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
+		return
+	}
+	// 渠道级配置须能被渠道工厂反序列化并校验通过（如 email 的 port 必须是数字、
+	// host/from 必填），避免非法配置（如以字符串 "465" 存 port）落库导致后继发送失败
+	if _, err := message.New(in.Type, []byte(in.Config)); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
 	instance := &core.NotificationChannel{
@@ -278,6 +284,12 @@ func NotificationChannelUpdate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
+	// 更新的配置同样须通过渠道工厂校验（类型不可变，沿用库内实例的类型），
+	// 禁止非法配置（如字符串 port）覆盖已入库内容
+	if _, err := message.New(instance.Type, []byte(in.Config)); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
 	// 采用结构体 Select 更新以触发 crypto 序列化器加密存储（map 更新不会走序列化器）
 	update := core.NotificationChannel{
 		Enabled:     in.Enabled,
@@ -322,7 +334,7 @@ func NotificationChannelBatchDelete(c *gin.Context) {
 				}
 				return errors.WithStack(err)
 			}
-			if notify.IsPlaceholderType(instance.Type) {
+			if message.IsPlaceholderType(instance.Type) {
 				// 占位符渠道为系统固定数据，禁止删除
 				return errors.Newf("channel %q is a builtin placeholder and cannot be deleted", instance.Name)
 			}
@@ -371,9 +383,9 @@ func NotificationChannelBatchSetEnabled(enabled bool) gin.HandlerFunc {
 	}
 }
 
-// isSupportedNotificationChannelType 判断渠道类型是否为 notify.Types() 中已注册的类型。
+// isSupportedNotificationChannelType 判断渠道类型是否为 message.Types() 中已注册的类型。
 func isSupportedNotificationChannelType(typ string) bool {
-	return slices.Contains(notify.Types(), typ)
+	return slices.Contains(message.Types(), typ)
 }
 
 // newNotificationChannelDetailOut 将 NotificationChannel 转换为基础的详情输出结构。

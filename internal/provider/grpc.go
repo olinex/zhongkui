@@ -77,7 +77,9 @@ func InjectReporterGrpcServer(i do.Injector) {
 }
 
 func InjectReporterGrpcClient(i do.Injector) {
-	do.ProvideNamedTransient(i, ReporterGrpcClientLabel, NewReporterGrpcClient())
+	// 单例长连接：gRPC 官方推荐复用单条 ClientConn；且作为单例，
+	// 进程优雅关闭时会被 do 的 ShutdownWithContext 调用 Client.Shutdown 关闭连接
+	do.ProvideNamed(i, ReporterGrpcClientLabel, NewReporterGrpcClient())
 }
 
 func InvokeReporterGrpcServer(i do.Injector) (*grpc.Server, error) {
