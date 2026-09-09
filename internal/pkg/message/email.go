@@ -260,24 +260,28 @@ func buildMailBody(from, to string, msg *RenderedMessage) []byte {
 // init 注册邮件渠道工厂，并注册其配置结构体类型供表单元信息抽取。
 // init registers the email channel factory and its config struct types.
 func init() {
-	Register(TypeEmail, func(config json.RawMessage) (Channel, error) {
-		var cfg EmailChannelConfig
-		if err := json.Unmarshal(config, &cfg); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		if err := validator.Validate.Struct(&cfg); err != nil {
-			return nil, errors.WithStack(err)
-		}
-		if cfg.Port == 0 {
-			cfg.Port = 25
-		}
-		return &emailChannel{
-			host:     cfg.Host,
-			port:     cfg.Port,
-			username: cfg.Username,
-			password: cfg.Password,
-			from:     cfg.From,
-		}, nil
-	})
-	registerFormStructs(TypeEmail, reflect.TypeFor[EmailChannelConfig](), reflect.TypeFor[EmailTarget]())
+	RegisterChannel(
+		TypeEmail,
+		func(config json.RawMessage) (Channel, error) {
+			var cfg EmailChannelConfig
+			if err := json.Unmarshal(config, &cfg); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			if err := validator.Validate.Struct(&cfg); err != nil {
+				return nil, errors.WithStack(err)
+			}
+			if cfg.Port == 0 {
+				cfg.Port = 25
+			}
+			return &emailChannel{
+				host:     cfg.Host,
+				port:     cfg.Port,
+				username: cfg.Username,
+				password: cfg.Password,
+				from:     cfg.From,
+			}, nil
+		},
+		reflect.TypeFor[EmailChannelConfig](),
+		reflect.TypeFor[EmailTarget](),
+	)
 }

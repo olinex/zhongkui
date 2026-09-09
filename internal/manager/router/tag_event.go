@@ -16,9 +16,11 @@ func registerTagEventRoutes(ctx *RegisterContext) {
 		ctx.authenticatorMiddleware,     // 认证器注入
 		ctx.forceAuthenticateMiddleware, // 强制JWT认证
 		ctx.policyMiddleware,            // RBAC策略引擎
-		ctx.rawDatabaseMiddleware,       // raw 库（ClickHouse）连接（标签事件规则 dry-run）
-		ctx.s3Middleware,                // S3 客户端
 		ctx.namespaceMiddleware,         // 命名空间隔离
+		ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.rawDatabaseMiddleware,       // raw 库（ClickHouse）连接（标签事件规则 dry-run）
+		ctx.s3Middleware,                // S3 客户端（tag-rule-sample body 副本）
+		ctx.sqliteVTabPoolsMiddleware,   // SQLite vtable 池（数据源 CRUD 及规则 dry-run 查询裸名 vtable）
 	)
 
 	// ========== 标签识别规则：/api/v1/tag-event/tag-rule ==========
@@ -98,6 +100,14 @@ func registerTagEventRoutes(ctx *RegisterContext) {
 		tagRuleGroup.POST("/model/samples", views.TagRuleModelSamples)
 		// 标签规则目标模型样例元信息
 		tagRuleGroup.OPTIONS("/model/samples", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[views.TagRuleModelIn](), views.WithBodyOutput[views.TagRuleModelSamplesOut]())))
+		// 标签规则自定义 OPA 内置函数元信息 - 供 Rego 编辑器函数补全/悬停提示
+		tagRuleGroup.POST("/functions", views.TagRuleFunctions)
+		// 标签规则自定义 OPA 内置函数元信息
+		tagRuleGroup.OPTIONS("/functions", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.TagRuleFunctionsOut]())))
+		// 标签规则 sqlite 语句元信息 - 返回当前命名空间已注册数据源 schema，供 Rego 编辑器 SQL 补全/提示
+		tagRuleGroup.POST("/sqlite/meta", views.TagRuleSqliteMeta)
+		// 标签规则 sqlite 语句元信息
+		tagRuleGroup.OPTIONS("/sqlite/meta", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.TagRuleSqliteMetaOut]())))
 	}
 
 	// ========== 标签规则样例：/api/v1/tag-event/tag-rule-sample ==========

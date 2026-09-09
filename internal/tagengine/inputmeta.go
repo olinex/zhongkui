@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	// internal
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // InputFieldMeta 输入文档单个字段的元信息。
@@ -166,10 +166,10 @@ func jsonNameOf(sf reflect.StructField) string {
 // 命名类型先解引用指针、再依据基础 kind 与已知特判类型分类：
 // time.Time 与 serializer.IPAddr/IPv4Addr/HexUUID 序列化为 string，
 // datatypes.JSON（本质 []byte）为 object，serializer.Crypto 为 object 且敏感；
-// struct tag 含 secure（serializer.SecurityTagKey）或类型为 serializer.Crypto 时 Sensitive=true。
+// struct tag 含 secure（crypto.SecurityTagKey）或类型为 serializer.Crypto 时 Sensitive=true。
 func classifyType(typ reflect.Type, tag reflect.StructTag) (jsonType string, items *InputItemMeta, sensitive bool) {
 	// struct tag 含 secure 即视为敏感字段
-	if tag.Get(serializer.SecurityTagKey) != "" {
+	if tag.Get(crypto.SecurityTagKey) != "" {
 		sensitive = true
 	}
 	// 指针解引用（如 *serializer.Crypto → serializer.Crypto）

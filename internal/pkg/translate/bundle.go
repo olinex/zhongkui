@@ -69,7 +69,9 @@ func resolveExternalLocales(data []byte, getFile readFile) ([]byte, error) {
 // 3. 如果两种文件都不存在，则 panic
 //
 // 每个语言文件在解析前会经 resolveExternalLocales 展开其中 `key = "@path"` 的
-// 外部模板引用，使超长模板（如邮件 HTML）可直接维护在独立文件而非 TOML 内。
+// 外部模板引用，使超长模板（如邮件 HTML / 通知正文）可直接维护在独立文件而非 TOML 内。
+// 模板字符串（含占位符）作为普通 i18n 消息加载进 Bundle；需要渲染最终文案时，由
+// 调用方将参数直接传入 Localize（见 localize.go）渲染，无需事后取回原始模板串。
 //
 // 返回值:
 //   - *i18n.Bundle: 初始化完成的消息包，包含所有加载的翻译资源
@@ -101,8 +103,8 @@ func newBundle() *i18n.Bundle {
 		tag := lang.StdTag()
 		langStr := tag.String()
 
-		// 构建文件路径
-		buildinPath := fmt.Sprintf("locales/%s.toml", langStr) // 内置文件路径
+		// 构建内置文件路径（仅用于命名解析，避免 TOML 格式误判）
+		buildinPath := fmt.Sprintf("locales/%s.toml", langStr)
 
 		// 统一文件读取：自定义目录优先，回退内置嵌入文件。key 为相对 locales 目录的路径。
 		getFile := func(key string) ([]byte, bool) {
@@ -113,28 +115,21 @@ func newBundle() *i18n.Bundle {
 			return data, err == nil
 		}
 
-		// 读取并展开外部引用后解析；自定义文件优先
+		// 读取本地化文件（自定义优先）；两者都不存在则此语言无法加载，属于启动期严重错误
 		data, ok := getFile(langStr + ".toml")
 		if !ok {
-			// 如果两种文件都不存在，则抛出异常
-			// 这通常表示配置错误或缺少必要的翻译文件
 			panic(errors.Newf("translate: no locale file found for language %q", langStr))
 		}
-		maybeLoadMessageFileBytes(bundle, data, buildinPath, getFile)
+		// 展开外部模板引用（`key = "@path"`）后解析进消息包
+		expanded, err := resolveExternalLocales(data, getFile)
+		if err != nil {
+			panic(err)
+		}
+		if _, err := bundle.ParseMessageFileBytes(expanded, buildinPath); err != nil {
+			panic(err)
+		}
 	}
 	return bundle
-}
-
-// maybeLoadMessageFileBytes 读取本地化文件原文，展开外部模板引用后解析进消息包。
-// 若展开或解析失败则 panic（本地化资源缺失属于启动期严重错误）。
-func maybeLoadMessageFileBytes(bundle *i18n.Bundle, data []byte, name string, getFile readFile) {
-	expanded, err := resolveExternalLocales(data, getFile)
-	if err != nil {
-		panic(err)
-	}
-	if _, err := bundle.ParseMessageFileBytes(expanded, name); err != nil {
-		panic(err)
-	}
 }
 
 func init() {

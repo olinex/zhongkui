@@ -1,0 +1,5 @@
+Namespace: {{.Namespace}}
+Event rule: {{.RuleName}}
+Detected at: {{.DetectedAt}}
+{{range .Hits}}- Condition {{.ConditionName}}: {{.Dimension}}/{{.Item}} = {{.Count}} (threshold {{.Threshold}})
+{{end}}

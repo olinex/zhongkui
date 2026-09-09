@@ -1461,6 +1461,114 @@ column = "is_default"
 binding = ""
 actions = ["eq"]
 
+# 通知模板
+[NotificationTemplateListGet]
+timeModule = true
+
+[[NotificationTemplateListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[NotificationTemplateListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "event"
+fieldType = "string"
+column = "event"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "source"
+fieldType = "string"
+column = "source"
+binding = ""
+actions = ["eq", "neq"]
+enum = true
+options = [
+    { title = "default", value = "default" },
+    { title = "override", value = "override" },
+]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "language"
+fieldType = "string"
+column = "language"
+binding = ""
+actions = ["eq", "neq"]
+
+[[NotificationTemplateListGet.filterByFields]]
+fieldName = "channelType"
+fieldType = "string"
+column = "channel_type"
+binding = ""
+actions = ["eq", "neq"]
+enum = true
+options = [
+    { title = "*", value = "*" },
+    { title = "email", value = "email" },
+    { title = "webhook", value = "webhook" },
+]
+
 # 通知发送记录
 [NotificationRecordListGet]
 timeModule = true
@@ -1652,5 +1760,100 @@ options = [
 fieldName = "matchAll"
 fieldType = "bool"
 column = "match_all"
+binding = ""
+actions = ["eq"]
+
+# 标签事件第三方数据源
+[DatasourceListGet]
+timeModule = true
+
+[[DatasourceListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[DatasourceListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "type"
+fieldType = "string"
+column = "type"
+binding = ""
+actions = ["eq"]
+enum = true
+options = [
+    { title = "redis", value = "redis" },
+    { title = "mysql", value = "mysql" },
+]
+
+[[DatasourceListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
 binding = ""
 actions = ["eq"]

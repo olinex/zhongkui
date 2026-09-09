@@ -8,9 +8,9 @@
 // 渠道类型键常量（Type）定义在本包而非 models/core，以避免 message 包与
 // models/core 包之间的 import cycle（message 包不依赖 models/core）。
 //
-// 统一发送入口 Send 基于独立的 generic 资源池基座 internal/pkg/resourcepool 实现：
+// 统一发送入口 Pool.Send 基于独立的 generic 资源池基座 internal/pkg/resourcepool 实现：
 // 按「渠道类型 + 规范化渠道级配置」维护相互独立的连接池，复用 SMTP 等有状态连接、
-// 失效自动重建、闲置定时回收，进程退出时经 ClosePools 释放全部存活连接。
+// 失效自动重建、闲置定时回收，进程退出时经 Pool.Shutdown 释放全部存活连接。
 //
 // Package message provides the message-sending capability base. Its core is the
 // channel base: the Channel interface plus a factory registry that decouples channel
@@ -26,6 +26,7 @@ import (
 	// stdlib
 	"context"
 	"encoding/json"
+	"reflect"
 	"slices"
 
 	// internal
@@ -156,15 +157,28 @@ type Factory func(config json.RawMessage) (Channel, error)
 // registry maps channel type keys to their factories.
 var registry = map[string]Factory{}
 
-// Register 注册渠道类型工厂，供各渠道实现 init() 调用。
+// register 注册渠道类型工厂，供 RegisterChannel 及各渠道包内注册调用。
 // 同一类型键重复注册视为编程错误（panic）。
-// Register registers a channel factory; it is called by each channel's init().
-// Registering the same type key twice is treated as a programming error (panic).
-func Register(typ string, factory Factory) {
+// register registers a channel factory to the registry; it is called by
+// RegisterChannel and the channel packages' init(). Registering the same type key
+// twice is treated as a programming error (panic).
+func register(typ string, factory Factory) {
 	if _, ok := registry[typ]; ok {
 		panic(errors.Newf("message: channel type %q already registered", typ))
 	}
 	registry[typ] = factory
+}
+
+// RegisterChannel 注册渠道类型工厂，并同步注册其渠道级/目标级配置结构体类型供表单元信息抽取。
+// 工厂负责依据渠道级配置构建渠道实例，各渠道在 init() 中调用；外部包也可经此新增渠道类型。
+// channel/target 为渠道级/目标级配置结构体类型。同一类型键重复注册视为编程错误（panic）。
+// RegisterChannel registers the channel factory and its channel-level/target-level config
+// struct types in one call; it is the registration entry point called by each channel in
+// init(), and is also available for external packages to add new channel types. Registering
+// the same type key twice is treated as a programming error (panic).
+func RegisterChannel(typ string, factory Factory, channel, target reflect.Type) {
+	register(typ, factory)
+	registerFormStructs(typ, channel, target)
 }
 
 // New 依据渠道类型键与渠道级配置构建渠道实例；类型未注册时返回错误。

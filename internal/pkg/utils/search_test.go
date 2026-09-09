@@ -1,10 +1,15 @@
 package utils
 
 import (
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	. "github.com/smartystreets/goconvey/convey"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
+
 	"zhongkui.com/zhongkui/internal/pkg/database"
 )
 
@@ -893,6 +898,87 @@ func TestBaseSoftDeleteItemOut(t *testing.T) {
 			So(item.CreatedAt, ShouldEqual, now)
 			So(item.UpdatedAt, ShouldEqual, now)
 			So(item.DeletedAt, ShouldBeNil)
+		})
+	})
+}
+
+// testSearchTarget 测试双查询拆分用的最小目标模型，仅用于 GORM 表名解析。
+type testSearchTarget struct {
+	ID uint
+}
+
+// TestBuildSearchSplitQueries 验证双查询拆分（BuildSearchCountQuery / BuildSearchDataQuery）
+// 与 BuildSearchQuery 的 SQL 构成：
+//   - count 查询仅含过滤条件（无排序/分页/窗口总数列），供 ClickHouse 列表先轻量统计总数；
+//   - data 查询含过滤 + 排序 + 分页且无窗口总数列，ORDER BY 命中 MergeTree 排序键时可倒序读 + LIMIT 早停；
+//   - BuildSearchQuery 回归保持不变（仍注入 COUNT(*) OVER() AS total），Postgres 列表接口行为不受影响。
+//
+// 使用 DryRun 模式的 sqlite 内存库（纯 Go 实现）仅生成 SQL 不执行，无需外部数据库。
+func TestBuildSearchSplitQueries(t *testing.T) {
+	Convey("Test BuildSearchSplitQueries SQL composition", t, func() {
+		gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+			DryRun: true,
+			Logger: logger.Discard,
+		})
+		So(err, ShouldBeNil)
+
+		searcher := &testSearcherIn{
+			greedy:   false,
+			page:     1,
+			pageSize: 10,
+			orderBy: []OrderByItem{
+				&testOrderByItem{column: "timestamp", order: "DESC"},
+			},
+			filterBy: map[string]FilterByItem{
+				"namespace": &testFilterByItem{column: "namespace", action: "eq", value: "default"},
+				"timestamp": &testFilterByItem{
+					column: "timestamp",
+					action: "gte",
+					value:  time.Date(2026, 9, 8, 2, 11, 0, 0, time.UTC),
+				},
+			},
+		}
+
+		Convey("count 查询仅含过滤条件，无排序/分页/总数列", func() {
+			q, err := BuildSearchCountQuery(gdb.Model(&testSearchTarget{}), searcher)
+			So(err, ShouldBeNil)
+			var total int64
+			So(q.Count(&total).Error, ShouldBeNil)
+			sql := q.Statement.SQL.String()
+			So(sql, ShouldContainSubstring, "count(*)")
+			So(sql, ShouldContainSubstring, "namespace = ?")
+			So(sql, ShouldContainSubstring, "timestamp >= ?")
+			So(sql, ShouldNotContainSubstring, "COUNT(*) OVER()")
+			So(sql, ShouldNotContainSubstring, "ORDER BY")
+			So(sql, ShouldNotContainSubstring, "LIMIT")
+			So(sql, ShouldNotContainSubstring, "OFFSET")
+		})
+
+		Convey("data 查询含过滤 + 排序 + 分页，无总数列", func() {
+			// 与 count 链复用同一 base 实例构建，验证条件不重复注入（GORM clone:0 实例原地追加的陷阱）
+			q, err := BuildSearchDataQuery(gdb.Model(&testSearchTarget{}), searcher)
+			So(err, ShouldBeNil)
+			var rows []testSearchTarget
+			So(q.Find(&rows).Error, ShouldBeNil)
+			sql := q.Statement.SQL.String()
+			So(sql, ShouldContainSubstring, "namespace = ?")
+			So(sql, ShouldContainSubstring, "timestamp >= ?")
+			So(sql, ShouldContainSubstring, "ORDER BY timestamp DESC")
+			So(sql, ShouldContainSubstring, "LIMIT 10")
+			So(sql, ShouldNotContainSubstring, "COUNT(*) OVER()")
+			So(strings.Count(sql, "namespace = ?"), ShouldEqual, 1)
+			So(strings.Count(sql, "timestamp >= ?"), ShouldEqual, 1)
+		})
+
+		Convey("BuildSearchQuery 回归：仍注入窗口总数列", func() {
+			q, err := BuildSearchQuery(gdb.Model(&testSearchTarget{}), searcher)
+			So(err, ShouldBeNil)
+			var rows []testSearchTarget
+			So(q.Find(&rows).Error, ShouldBeNil)
+			sql := q.Statement.SQL.String()
+			So(sql, ShouldContainSubstring, "COUNT(*) OVER() AS total")
+			So(sql, ShouldContainSubstring, "ORDER BY timestamp DESC")
+			So(sql, ShouldContainSubstring, "LIMIT 10")
 		})
 	})
 }

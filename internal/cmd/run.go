@@ -4,11 +4,10 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
-	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
+	"zhongkui.com/zhongkui/internal/datasource"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/manager/router"
-	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/runtime"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
@@ -22,7 +21,6 @@ var webCmd = &cobra.Command{
 	Short: "cmd.run.web.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
-		seedNotificationTemplates(i)
 		if err := router.RouteRegister(ctx, i); err != nil {
 			pterm.Error.Println(err.Error())
 			return
@@ -53,8 +51,19 @@ var workerCmd = &cobra.Command{
 	Short: "cmd.run.worker.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
-		seedNotificationTemplates(i)
 		worker.Registry(ctx, i)
+		// 与 web 进程一致，启动时重载第三方数据源：扫描已启用数据源注册为各命名空间的
+		// SQLite vtable，保证 worker 进程内 sqlite.query 可按裸名查询。缺失该步骤时
+		// 规则中的第三方数据源查询全部失败（no such table），标签识别报错后透传、
+		// 真实运行无法命中标签（试运行走 web 进程故正常）。
+		// Mirror the web process: reload third-party datasources at startup so tag rules
+		// can resolve bare-named vtables via sqlite.query inside the worker process.
+		sqliteVTabPools := provider.MustInvokeSQLiteVTabPools(i)
+		coreDB := provider.MustInvokeCoreDatabase(i)
+		if err := datasource.Reload(ctx, coreDB, sqliteVTabPools); err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
 		server, err := provider.InvokePipelineServer(i)
 		if err != nil {
 			pterm.Error.Println(err.Error())
@@ -75,12 +84,19 @@ var workerCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
+		datasourceWatcher, err := provider.InvokeDatasourceWatcher(i)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
 		// 统一服务生命周期：任务队列 Server、etcd 选举 Scheduler、
-		// 分布式常驻 Processor 与标签识别引擎（监听规则变更）均通过
+		// 分布式常驻 Processor、标签识别引擎（监听规则变更）与数据源变更
+		// Watcher（同步 web 进程数据源增删改/启停到本地 vtable 池）均通过
 		// runtime.Group 编排启动与关闭，Redis 队列故障不再连带影响流式处理器。
 		// 单个处理器创建失败仅记录并跳过。
 		services := []runtime.Service{
 			tagEngine,
+			datasourceWatcher,
 			runtime.NewPipelineService(server),
 			runtime.NewElectionService(scheduler),
 		}
@@ -126,19 +142,4 @@ var captureCmd = &cobra.Command{
 func init() {
 	captureCmd.Flags().Bool("stats-print", false, "flag.run.capture.stats-print")
 	captureCmd.Flags().Duration("stats-interval", 5*time.Second, "flag.run.capture.stats-interval")
-}
-
-// seedNotificationTemplates 在服务启动前，为既有命名空间幂等回填事件模板注册表中的内置
-// 默认通知模板（source=default），保证老命名空间具备可用的默认模板。失败仅记录警告，不
-// 阻断启动；回填本身幂等（ON CONFLICT DO NOTHING），可安全重复执行。
-// seedNotificationTemplates backfills, before a serving command starts, the built-in
-// default notification templates (source=default) for all existing namespaces so older
-// namespaces have usable defaults. A failure is only logged as a warning and does not
-// block startup; the backfill is idempotent (ON CONFLICT DO NOTHING) and safe to rerun.
-func seedNotificationTemplates(i do.Injector) {
-	db := provider.MustInvokeCoreDatabase(i)
-	logger := provider.MustInvokeDatabaseLogger(i)
-	if err := notify.BackfillDefaultTemplates(db, logger); err != nil {
-		logger.Warnf("notify: failed to backfill default templates: %v", err)
-	}
 }

@@ -27,6 +27,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/mail"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	mailhandler "zhongkui.com/zhongkui/internal/worker/handlers/mail"
@@ -593,11 +594,11 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 			c.Set(middlewares.AuthCtxName, authenticator)
 			c.Next()
 		})
-		r.POST("/api/v1/user/self/jwt/refresh", UserSelfJwtRefresh)
+		r.POST("/api/v1/user/jwt/refresh", UserSelfJwtRefresh)
 
 		Convey("应返回错误当请求中没有有效JWT时", func() {
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/jwt/refresh", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/jwt/refresh", nil)
 			r.ServeHTTP(w, req)
 
 			So(w.Code, ShouldEqual, http.StatusUnauthorized)
@@ -609,7 +610,7 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 			So(token, ShouldNotBeEmpty)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/jwt/refresh", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/jwt/refresh", nil)
 			req.Header.Set(authConfig.HeaderName, token)
 			r.ServeHTTP(w, req)
 
@@ -625,7 +626,7 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 			So(token, ShouldNotBeEmpty)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/jwt/refresh", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/jwt/refresh", nil)
 			req.Header.Set(expiredConfig.HeaderName, token)
 			r.ServeHTTP(w, req)
 
@@ -649,7 +650,7 @@ func TestUserSelfJwtRefresh(t *testing.T) {
 			So(codeErr, ShouldBeNil)
 
 			w := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/self/jwt/refresh", nil)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/jwt/refresh", nil)
 			req.Header.Set(expiredConfig.HeaderName, token)
 			r.ServeHTTP(w, req)
 
@@ -1215,7 +1216,7 @@ func setupPasswordResetRouter(db *database.DB, enq *fakePipelineEnqueuer, mailCf
 	r := setupUserSelfTestRouterWithDB(db)
 	r.Use(injectLoggerMiddleware(createTestLoggingLogger()))
 	r.Use(middlewares.PipelineClientMiddleware(newFakePipelineClient(enq)))
-	r.Use(middlewares.FeatureRegistryMiddleware(features.NewRegistry(features.PasswordReset(mail.NewSender(mailCfg, createTestLoggingLogger())))))
+	r.Use(middlewares.FeatureRegistryMiddleware(features.NewRegistry(features.PasswordReset(mail.NewSender(mailCfg, createTestLoggingLogger(), message.NewPool())))))
 	r.Use(func(c *gin.Context) {
 		c.Set(manager.ConfigCtxName, &manager.Config{
 			FrontendBaseURL: "http://127.0.0.1:8000",

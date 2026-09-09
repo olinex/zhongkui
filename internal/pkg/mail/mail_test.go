@@ -19,7 +19,7 @@ func newTestLogger() *logging.Logger {
 // TestSender_Send_Disabled verifies Send returns an error containing "disabled"
 // when the config is disabled.
 func TestSender_Send_Disabled(t *testing.T) {
-	s := NewSender(&Config{Enabled: false}, newTestLogger())
+	s := NewSender(&Config{Enabled: false}, newTestLogger(), message.NewPool())
 	err := s.Send(context.Background(), "ops@example.com", message.Message{Template: "test"}, "")
 	if err == nil {
 		t.Fatalf("Send() error = nil, want a disabled error")
@@ -43,7 +43,7 @@ func TestSender_Send_NotConfigured(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewSender(tt.cfg, newTestLogger())
+			s := NewSender(tt.cfg, newTestLogger(), message.NewPool())
 			err := s.Send(context.Background(), "ops@example.com", message.Message{Template: "test"}, "")
 			if err == nil {
 				t.Fatalf("Send() error = nil, want a not-configured error")

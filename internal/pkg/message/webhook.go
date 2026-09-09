@@ -115,8 +115,12 @@ func (c *webhookChannel) Send(ctx context.Context, target *Target, msg *Rendered
 // init registers the webhook factory and its config struct types; the channel-level
 // config is currently unused (empty object).
 func init() {
-	Register(TypeWebhook, func(_ json.RawMessage) (Channel, error) {
-		return &webhookChannel{}, nil
-	})
-	registerFormStructs(TypeWebhook, reflect.TypeFor[WebhookChannelConfig](), reflect.TypeFor[WebhookTarget]())
+	RegisterChannel(
+		TypeWebhook,
+		func(_ json.RawMessage) (Channel, error) {
+			return &webhookChannel{}, nil
+		},
+		reflect.TypeFor[WebhookChannelConfig](),
+		reflect.TypeFor[WebhookTarget](),
+	)
 }

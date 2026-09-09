@@ -6,12 +6,11 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	mvccpb "go.etcd.io/etcd/api/v3/mvccpb"
-	clientv3 "go.etcd.io/etcd/client/v3"
 
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
@@ -49,7 +48,7 @@ func TestEngineBroadcastChange(t *testing.T) {
 			engine, _ := setupNotifyEngine(t)
 			err := engine.BroadcastChange(context.Background(), "default", "t")
 			So(err, ShouldNotBeNil)
-			So(err, ShouldEqual, ErrRuleChangeUnavailable)
+			So(err, ShouldEqual, etcd.ErrChangeUnavailable)
 		})
 	})
 }
@@ -57,15 +56,25 @@ func TestEngineBroadcastChange(t *testing.T) {
 // TestEngineStartNoEtcd 未绑定 etcd 客户端时 Start 直接返回（无监听能力）。
 func TestEngineStartNoEtcd(t *testing.T) {
 	Convey("Test Engine Start without etcd", t, func() {
-		engine, _ := setupNotifyEngine(t)
-		So(engine.Start(context.Background()), ShouldBeNil)
+		Convey("watcher 存在但未绑定 etcd 客户端时 Start 直接返回", func() {
+			engine, _ := setupNotifyEngine(t)
+			So(engine.watcher, ShouldNotBeNil)
+			So(engine.Start(context.Background()), ShouldBeNil)
+		})
+
+		Convey("watcher 为 nil 时 Start 跳过并返回 nil", func() {
+			engine, _ := setupNotifyEngine(t)
+			engine.watcher = nil
+			So(engine.Start(context.Background()), ShouldBeNil)
+		})
 	})
 }
 
-// TestEngineHandleResponse 测试引擎收到变更事件后失效编译缓存。
-func TestEngineHandleResponse(t *testing.T) {
-	Convey("Test Engine HandleResponse", t, func() {
+// TestRuleChangeHandler 测试规则变更事件处理器失效编译缓存的行为。
+func TestRuleChangeHandler(t *testing.T) {
+	Convey("Test RuleChangeHandler", t, func() {
 		engine, db := setupNotifyEngine(t)
+		handler := &ruleChangeHandler{e: engine}
 		targetType, err := TypeKey(&notifyModel{})
 		if err != nil {
 			t.Fatal(err)
@@ -97,8 +106,8 @@ tags contains "new" if {
 			So(err, ShouldBeNil)
 			So(cached, ShouldResemble, []string{"old"})
 
-			// 引擎收到仅含 default 分组的事件
-			So(engine.handleResponse(watchResponseOf(&RuleChangeEvent{Namespace: "default", Model: targetType})), ShouldBeNil)
+			// 处理器收到仅含 default 分组的事件
+			So(handler.HandleChange(context.Background(), eventPayload(&RuleChangeEvent{Namespace: "default", Model: targetType})), ShouldBeNil)
 
 			// 仅 default 组缓存被失效，tenant-b 组缓存保持（在重新识别前检查，识别会重新填充缓存）
 			So(cacheHas(engine, "default", targetType), ShouldBeFalse)
@@ -115,19 +124,6 @@ tags contains "new" if {
 			So(tenantAgain, ShouldResemble, []string{"tenant-old"})
 		})
 
-		Convey("无事件的响应不应失效缓存", func() {
-			first, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
-			So(err, ShouldBeNil)
-			So(first, ShouldResemble, []string{"old"})
-
-			So(engine.handleResponse(clientv3.WatchResponse{}), ShouldBeNil)
-
-			// 缓存仍有效：返回旧结果（规则未变）
-			again, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
-			So(err, ShouldBeNil)
-			So(again, ShouldResemble, []string{"old"})
-		})
-
 		Convey("负载无法解析时回退全量失效", func() {
 			_, err := engine.Recognize(context.Background(), &notifyModel{Namespace: "default", Method: "GET"})
 			So(err, ShouldBeNil)
@@ -136,12 +132,8 @@ tags contains "new" if {
 			So(cacheHas(engine, "default", targetType), ShouldBeTrue)
 			So(cacheHas(engine, "tenant-b", targetType), ShouldBeTrue)
 
-			// 发送不可解析负载（非 JSON 且无分组信息）
-			resp := clientv3.WatchResponse{Events: []*clientv3.Event{{
-				Type: mvccpb.PUT,
-				Kv:   &mvccpb.KeyValue{Value: []byte("not-json")},
-			}}}
-			So(engine.handleResponse(resp), ShouldBeNil)
+			// 发送不可解析负载（非 JSON 且无分组信息），处理返回 nil 且全量失效
+			So(handler.HandleChange(context.Background(), []byte("not-json")), ShouldBeNil)
 
 			So(cacheHas(engine, "default", targetType), ShouldBeFalse)
 			So(cacheHas(engine, "tenant-b", targetType), ShouldBeFalse)
@@ -155,16 +147,13 @@ func cacheHas(engine *Engine, namespace, targetType string) bool {
 	return ok
 }
 
-// watchResponseOf 构造携带指定规则变更事件负载的 watch 响应。
-func watchResponseOf(event *RuleChangeEvent) clientv3.WatchResponse {
+// eventPayload 序列化规则变更事件为处理器负载。
+func eventPayload(event *RuleChangeEvent) []byte {
 	payload, err := json.Marshal(event)
 	if err != nil {
 		panic("failed to marshal rule change event: " + err.Error())
 	}
-	return clientv3.WatchResponse{Events: []*clientv3.Event{{
-		Type: mvccpb.PUT,
-		Kv:   &mvccpb.KeyValue{Value: payload},
-	}}}
+	return payload
 }
 
 // insertNotifyRule 插入一条指定命名空间下启用的识别规则。
@@ -190,6 +179,16 @@ func TestExtractNamespace(t *testing.T) {
 
 		Convey("Namespace 字段为空的实例回退到默认命名空间", func() {
 			So(extractNamespace(&notifyModel{Method: "GET"}), ShouldEqual, base.DefaultNamespace)
+		})
+
+		Convey("NamespaceName 字符串字段优先返回其值", func() {
+			// GORM 模型以嵌入 Struct 的 Namespace 表达关联，真正的命名空间字符串在
+			// NamespaceName 列上；本用例以 Namespace 为结构体、NamespaceName 为字符串模拟。
+			type gormModel struct {
+				Namespace     struct{}
+				NamespaceName string
+			}
+			So(extractNamespace(&gormModel{NamespaceName: "tenant-c"}), ShouldEqual, "tenant-c")
 		})
 
 		Convey("Namespace 字段非空的实例返回其值", func() {

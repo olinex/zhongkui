@@ -22,6 +22,9 @@ var (
 
 	// keyDerivationOnce 确保全局实例只初始化一次
 	keyDerivationOnce sync.Once
+
+	// ErrNotInitialized 表示密钥派生器未初始化
+	ErrNotInitialized = errors.New("crypto: KeyDerivation not initialized")
 )
 
 // KeyDerivation 密钥派生器，使用 HKDF 算法从主密钥派生子密钥。
@@ -80,13 +83,16 @@ func InitGlobalKeyDerivation(secretKeyProvider SecretKeyProvider, passwordBook *
 
 // GetKeyDerivation 返回全局唯一的密钥派生器实例。
 //
-// 如果尚未调用 InitGlobalKeyDerivation 初始化，则返回 nil。
-// 调用方应检查返回值是否为 nil。
+// 如果尚未调用 InitGlobalKeyDerivation 初始化，返回错误，调用方无需再做 nil 判断。
 //
 // 返回值：
-//   - *KeyDerivation: 全局密钥派生器实例，未初始化时返回 nil
-func GetKeyDerivation() *KeyDerivation {
-	return globalKeyDerivation
+//   - *KeyDerivation: 全局密钥派生器实例
+//   - error: 未初始化时返回 "crypto: KeyDerivation not initialized"
+func GetKeyDerivation() (*KeyDerivation, error) {
+	if globalKeyDerivation == nil {
+		return nil, ErrNotInitialized
+	}
+	return globalKeyDerivation, nil
 }
 
 // DeriveChildKey 从主密钥派生子密钥。

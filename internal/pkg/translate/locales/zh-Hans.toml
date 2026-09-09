@@ -737,6 +737,7 @@ parse-if = "缺少 if 关键字：规则体写法应为 tags contains <值> if {
 parse-contains = "缺少 contains 关键字：标签规则应使用 tags contains <值> 形式产出"
 parse-empty = "模块为空：请至少编写一条规则"
 parse-illegal = "语法错误：非法表达式，请检查该位置附近的写法"
+parse-builtin-conflict = "内置函数名不能作为裸调用：请用变量接收返回值，例如 x := sqlite.query(\"SELECT 1 AS x\", [])"
 parse-fallback = "Rego 语法错误：请检查该位置附近的书写是否符合 Rego 语法"
 compile-shadow = "规则名冲突：规则名不能与其他规则或关键字重名，请换一个规则名"
 compile-import-shadow = "import 冲突：导入的包名与其他符号重名，请调整导入"
@@ -1504,3 +1505,16 @@ other = "禁用补全描述"
 [notify.password.reset]
 title = "重置账户密码"
 content = "@emails/password-reset-content.zh-Hans.html"
+
+[notify.tag_event.alert]
+title = "标签事件告警: {{.RuleName}}"
+content = "@notify/tag-event-alert-content.zh-Hans.txt"
+
+# =============================================================================
+# Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)
+# 自定义 OPA 内置函数说明：接口层按请求语言翻译后随函数元信息返回，
+# 供前端 Rego 编辑器悬停提示与补全展示
+# =============================================================================
+
+[tagengine.custom-functions.sqlite.query.description]
+other = "查询第三方数据源：对注册为 sqlite vtable 的第三方数据源执行 SELECT 语句并返回行对象数组。\n参数：第一参数为查询语句（支持 ? 占位符），第二参数为按顺序绑定到占位符的参数数组。\n返回值：每行是以列名为键的对象，经下标加列名访问（如 rows[0].value）；无匹配行时返回空数组，下标访问会使规则体不满足，可先用 count(rows) > 0 判断"

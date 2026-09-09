@@ -8,6 +8,9 @@ export interface NavChild {
   icon: string;
   routeName: string;
   params?: Record<string, string>;
+  // 是否受命名空间影响：为 true 时在侧边栏子项上叠加 Namespace 标识，
+  // 指明该页面随命名空间切换而变化；false 或缺省表示与命名空间无关
+  namespaceScoped?: boolean;
 }
 
 export interface NavGroup {
@@ -27,16 +30,19 @@ export const navigationGroups: NavGroup[] = [
         title: "navbar.tagEvent.tagRule",
         icon: "mdi-label",
         routeName: "Tag Rule List",
+        namespaceScoped: true,
       },
       {
         title: "navbar.tagEvent.tagEventRule",
         icon: "mdi-alert-decagram",
         routeName: "Tag Event Rule List",
+        namespaceScoped: true,
       },
       {
         title: "navbar.tagEvent.record",
         icon: "mdi-history",
         routeName: "Tag Event Record List",
+        namespaceScoped: true,
       },
     ],
   },
@@ -50,18 +56,21 @@ export const navigationGroups: NavGroup[] = [
         icon: "mdi-ip-network",
         routeName: "Traffic List",
         params: { type: "ipv4-tcp" },
+        namespaceScoped: true,
       },
       {
         title: "navbar.traffic.ipv6Tcp",
         icon: "mdi-ip-network-outline",
         routeName: "Traffic List",
         params: { type: "ipv6-tcp" },
+        namespaceScoped: true,
       },
       {
         title: "navbar.traffic.httpTransport",
         icon: "mdi-web",
         routeName: "Traffic List",
         params: { type: "http-transport" },
+        namespaceScoped: true,
       },
     ],
   },
@@ -74,26 +83,31 @@ export const navigationGroups: NavGroup[] = [
         title: "navbar.notification.channel",
         icon: "mdi-email-multiple",
         routeName: "Notification Channel List",
+        namespaceScoped: true,
       },
       {
         title: "navbar.notification.target",
         icon: "mdi-account-arrow-right-outline",
         routeName: "Notification Target List",
+        namespaceScoped: true,
       },
       {
         title: "navbar.notification.group",
         icon: "mdi-account-group-outline",
         routeName: "Notification Group List",
+        namespaceScoped: true,
       },
       {
         title: "navbar.notification.template",
         icon: "mdi-file-document-edit-outline",
         routeName: "Notification Template List",
+        namespaceScoped: true,
       },
       {
         title: "navbar.notification.record",
         icon: "mdi-history",
         routeName: "Notification Record List",
+        namespaceScoped: true,
       },
     ],
   },
@@ -148,6 +162,12 @@ export const navigationGroups: NavGroup[] = [
         title: "navbar.admin.capturer",
         icon: "mdi-lan",
         routeName: "Admin Capturer List",
+      },
+      {
+        title: "navbar.datasource.self",
+        icon: "mdi-database-import-outline",
+        routeName: "Datasource List",
+        namespaceScoped: true,
       },
     ],
   },

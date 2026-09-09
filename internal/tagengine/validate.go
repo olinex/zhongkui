@@ -181,6 +181,7 @@ type regoHintRule struct {
 var regoHintRules = map[string][]regoHintRule{
 	ast.ParseErr: {
 		{prefix: "unexpected", key: "tagrule.hint.parse-unexpected"},
+		{prefix: "rule name conflicts with built-in function", key: "tagrule.hint.parse-builtin-conflict"},
 		{prefix: "package", key: "tagrule.hint.parse-package"},
 		{prefix: "`if` keyword is required", key: "tagrule.hint.parse-if"},
 		{prefix: "`contains` keyword is required", key: "tagrule.hint.parse-contains"},

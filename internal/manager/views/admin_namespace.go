@@ -9,7 +9,6 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -300,11 +299,6 @@ func NamespaceCreate(c *gin.Context) {
 			}).Error; err != nil {
 				return errors.WithStack(err)
 			}
-		}
-		// 为新命名空间种子化事件模板注册表中的内置默认通知模板（source=default），
-		// 幂等写入（已存在行不覆盖）；任一步失败整事务回滚。
-		if err := notify.SeedDefaultTemplates(tx, in.Name); err != nil {
-			return errors.WithStack(err)
 		}
 		return nil
 	}); err != nil {

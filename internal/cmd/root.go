@@ -66,6 +66,8 @@ var RootCmd = &cobra.Command{
 		provider.InjectCoreDatabase(i)
 		provider.InjectRawDatabase(i)
 		provider.InjectTagEngine(i)
+		provider.InjectSQLiteVTabPools(i)
+		provider.InjectDatasourceWatcher(i)
 		provider.InjectCacheRedis(i)
 		provider.InjectPipelineRedis(i)
 		provider.InjectEtcdClient(ctx, i)
@@ -80,14 +82,19 @@ var RootCmd = &cobra.Command{
 		provider.InjectCaptureClient(i)
 		provider.InjectMailSender(i)
 		provider.InjectFeatureRegistry(i)
-		provider.InjectMessagePoolShutdowner(i)
+		provider.InjectMessagePool(i)
 
+		// 初始化密钥派生器
+		_ = provider.MustInvokeKeyDerivation(i)
 		// 初始化翻译器
 		_ = provider.MustInvokeUniversalTranslator(i)
 		// 必须在所有服务启动完成后调用，确保所有资源都被正确初始化
 		_ = provider.MustInvokeOtelShutdowner(ctx, i)
-		// 预解析消息渠道资源池关闭器，确保其在优雅关闭阶段被 samber/do 驱动
-		_ = provider.MustInvokeMessagePoolShutdowner(i)
+		// 预解析消息渠道连接池，确保其在优雅关闭阶段由 samber/do 驱动其 Shutdown 关闭
+		_ = provider.MustInvokeMessagePool(i)
+		// 预解析 sqlite vtable 连接池（含激活），确保 sqlite.query 内置函数
+		// 在启动后立即可用且池在优雅关闭阶段由 samber/do 驱动其 Shutdown 关闭
+		_ = provider.MustInvokeSQLiteVTabPools(i)
 
 		ctx = context.WithValue(ctx, InjectorCtxName, i)
 		cmd.SetContext(ctx)

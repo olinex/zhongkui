@@ -25,6 +25,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
@@ -106,14 +107,19 @@ func registerTagRuleTestRoutes(r *gin.Engine, engine *tagengine.Engine) {
 }
 
 // setupTagRuleTestRouter 创建测试路由引擎，注入 i18n、日志、数据库、
-// 命名空间（固定 default）与标签引擎中间件。
+// 命名空间（固定 default）、sqlite vtable 池与标签引擎中间件。
+// 写路径运行期样例校验（withTagRuleSQLitePool）依赖请求命名空间的数据源池，
+// 未注入会经 GetSQLiteVTabPools panic；测试未注册任何数据源，池保持空，
+// sqlite.query 按未绑池语义处理。
 func setupTagRuleTestRouter(db *database.DB, engine *tagengine.Engine) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.Use(setupI18nMiddleware())
 	r.Use(middlewares.ZapLoggerMiddleware(newTagRuleTestLogger()))
+	pools := vtab.NewPools()
 	r.Use(func(c *gin.Context) {
 		c.Set(middlewares.CoreDatabaseCtxName, db)
+		c.Set(middlewares.SQLiteVTabPoolsCtxName, pools)
 		c.Next()
 	})
 	// 模拟生产环境 NamespaceMiddleware：固定使用 default 命名空间
@@ -994,7 +1000,7 @@ func TestTagRuleCreateRuntimeInvalidRejected(t *testing.T) {
 		r := setupTagRuleTestRouter(db, engine)
 
 		// 预置一条 HttpTransport 验证样例（已注册模型），字段类型与真实模型一致；
-		// 禁用与迁移种子同名的 browser-post（002_rbac_fixtures.sql 已种入 default 命名空间），
+		// 禁用与迁移种子同名的 browser-post（002_fixtures.sql 已种入 default 命名空间），
 		// 避免撞 uq_tag_rule_samples_namespace_name_model_name 唯一约束
 		targetType, err := tagengine.TypeKey(&network.HttpTransport{})
 		So(err, ShouldBeNil)

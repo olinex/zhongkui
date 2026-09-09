@@ -141,8 +141,20 @@
                   <v-text-field
                     v-else
                     v-model="createConfigValues[f.name]"
-                    :type="configFieldType(f.kind)"
+                    :type="
+                      f.kind === 'password' && isRevealed('create', f.name)
+                        ? 'text'
+                        : configFieldType(f.kind)
+                    "
+                    :append-inner-icon="
+                      f.kind === 'password'
+                        ? isRevealed('create', f.name)
+                          ? 'mdi-eye'
+                          : 'mdi-eye-off'
+                        : undefined
+                    "
                     :error-messages="createConfigErrors[f.name] || ''"
+                    @click:append-inner="f.kind === 'password' && toggleReveal('create', f.name)"
                   >
                     <template #label>
                       {{ $t(channelFieldLabel(createType, f.name))
@@ -226,9 +238,22 @@
                   <v-text-field
                     v-else
                     v-model="editConfigValues[f.name]"
-                    :type="configFieldType(f.kind)"
+                    :type="
+                      f.kind === 'password' && isRevealed('edit', f.name)
+                        ? 'text'
+                        : configFieldType(f.kind)
+                    "
+                    :append-inner-icon="
+                      f.kind === 'password'
+                        ? isRevealed('edit', f.name)
+                          ? 'mdi-eye'
+                          : 'mdi-eye-off'
+                        : undefined
+                    "
                     :error-messages="editConfigErrors[f.name] || ''"
-                    :disabled="!editable"
+                    :disabled="f.kind === 'password' ? undefined : !editable"
+                    :readonly="f.kind === 'password' ? !editable : undefined"
+                    @click:append-inner="f.kind === 'password' && toggleReveal('edit', f.name)"
                   >
                     <template #label>
                       {{ $t(channelFieldLabel(editType, f.name))
@@ -473,6 +498,19 @@ const {
   toJson: dumpEditConfigJson,
   validate: validateEditConfig,
 } = createChannelConfigState(() => editType.value);
+
+// ---- 密码字段明文展示开关 ----
+// 按字段名与表单项（create/edit）分别记录是否明文展示，避免创建/编辑两套表单串扰
+const createRevealed = ref<Record<string, boolean>>({});
+const editRevealed = ref<Record<string, boolean>>({});
+// isRevealed 判断某字段当前是否明文展示，用于决定 input type 与眼睛图标状态（仅密码类字段使用）
+const isRevealed = (group: "create" | "edit", field: string): boolean =>
+  group === "create" ? !!createRevealed.value[field] : !!editRevealed.value[field];
+// toggleReveal 切换字段是否明文展示：替换对象触发响应式更新
+const toggleReveal = (group: "create" | "edit", field: string): void => {
+  const store = group === "create" ? createRevealed : editRevealed;
+  store.value = { ...store.value, [field]: !store.value[field] };
+};
 
 // ---- 创建对话框 ----
 const openCreateDialogAction = (): void => {

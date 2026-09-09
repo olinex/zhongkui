@@ -27,6 +27,7 @@ declare module 'vue-router/auto-routes' {
     'Reset Password': RouteRecordInfo<'Reset Password', '/:language/auth/reset-password', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Password Reset Success': RouteRecordInfo<'Password Reset Success', '/:language/auth/reset-success', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Sign In': RouteRecordInfo<'Sign In', '/:language/auth/sign-in', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'Datasource List': RouteRecordInfo<'Datasource List', '/:language/datasource', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     '401': RouteRecordInfo<'401', '/:language/error/401', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     '404': RouteRecordInfo<'404', '/:language/error/404', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'ETL Queue List': RouteRecordInfo<'ETL Queue List', '/:language/etl/queue', { language: ParamValue<true> }, { language: ParamValue<false> }>,

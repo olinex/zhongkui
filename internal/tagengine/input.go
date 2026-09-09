@@ -9,8 +9,9 @@ import (
 )
 
 // extractNamespace 从目标实例中提取所属命名空间。
-// 目标模型内嵌 BaseMeta（含 Namespace 字段）时返回其值（如 *network.HttpTransport）；
-// 目标缺失 Namespace 字段、字段为空串或字段类型非字符串时，回退到全局默认命名空间
+// 优先读取 NamespaceName 字符串字段（GORM 模型以嵌入 Struct 形式表达 Namespace 关联，
+// 真正的命名空间字符串在 NamespaceName 列上）；其次尝试 Namespace 字段若其本身为字符串
+// （无 NamespaceName 的简单模型），任一字段缺失/为空串时回退到全局默认命名空间
 // base.DefaultNamespace，保证未显式归属租户的数据落入默认租户的规则分组。
 func extractNamespace(target any) string {
 	v := reflect.ValueOf(target)
@@ -23,12 +24,13 @@ func extractNamespace(target any) string {
 	if !v.IsValid() || v.Kind() != reflect.Struct {
 		return base.DefaultNamespace
 	}
-	field := v.FieldByName("Namespace")
-	if !field.IsValid() || field.Kind() != reflect.String {
-		return base.DefaultNamespace
-	}
-	if ns := field.String(); ns != "" {
-		return ns
+	for _, name := range []string{"NamespaceName", "Namespace"} {
+		field := v.FieldByName(name)
+		if field.IsValid() && field.Kind() == reflect.String {
+			if ns := field.String(); ns != "" {
+				return ns
+			}
+		}
 	}
 	return base.DefaultNamespace
 }

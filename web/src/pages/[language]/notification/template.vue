@@ -521,12 +521,15 @@ const editDialogRef = useTemplateRef("editDialogRef");
 // ---- 事件枚举：驱动创建对话框与渲染测试对话框的下拉选项 ----
 const eventItems = ref<NotificationTemplateEventItemOut[]>([]);
 // EventOption 事件下拉可选项：title 为 i18n 翻译展示名（model.notificationTemplate.type.event.<event>），
-// value 保持后端事件注册表返回的技术键（如 tag_event_record）；新增事件仅需后端注册 + 补充翻译
+// value 保持后端事件注册表返回的技术键（如 tag_event_record）；新增事件仅需后端注册 + 补充翻译。
+// 展示顺序由前端自行决定（按展示名升序 + 事件键兜底），不依赖后端返回顺序。
 const eventOptions = computed<{ title: string; value: string }[]>(() =>
-  eventItems.value.map((e) => ({
-    title: i18n.global.t(`model.notificationTemplate.type.event.${e.event}`),
-    value: e.event,
-  })),
+  eventItems.value
+    .map((e) => ({
+      title: i18n.global.t(`model.notificationTemplate.type.event.${e.event}`),
+      value: e.event,
+    }))
+    .sort((a, b) => (a.title === b.title ? a.value.localeCompare(b.value) : a.title.localeCompare(b.title))),
 );
 
 const eventItemOf = (event: string): NotificationTemplateEventItemOut | undefined =>

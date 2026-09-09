@@ -32,7 +32,7 @@ export function passwordReset(data: PasswordResetIn): AxiosPromise {
 }
 
 export function jwtRefresh(): AxiosPromise {
-  return request.post("/user/self/jwt/refresh", {}, { headers: getJwtHeader() });
+  return request.post("/user/jwt/refresh", {}, { headers: getJwtHeader() });
 }
 
 export function profileChange(data: profileChangeIn): AxiosPromise {

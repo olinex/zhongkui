@@ -48,136 +48,83 @@ func registerUserRoutes(ctx *RegisterContext) {
 		userGroup.OPTIONS("/password/reset", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserPasswordResetByTokenIn]()),
 		))
-	}
-	{
-		// ========== 个人接口（需要认证） ==========
-		// 这些接口需要用户已登录认证，用于管理个人账户和资源
 
-		// 创建个人接口子组：/api/v1/user/self
-		selfGroup := userGroup.Group("/self")
-
-		// 密码重置 - 用户修改自己的登录密码
-		selfGroup.POST(
-			"/password/reset",
-			ctx.authenticatorMiddleware,     // 认证器注入
-			ctx.forceAuthenticateMiddleware, // 强制认证，确保用户已登录
-			ctx.coreDatabaseMiddleware,      // 数据库连接，用于更新密码
-			views.UserSelfPasswordReset,     // 密码重置处理函数
-		)
-		// 密码重置元信息
-		selfGroup.OPTIONS("/password/reset", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserPasswordResetIn]())))
-		// JWT令牌刷新 - 刷新过期的JWT访问令牌
-		selfGroup.POST(
+		// JWT令牌刷新 - 刷新过期的JWT访问令牌（豁免强制认证与授权：
+		// 刷新窗口内用过期 access token 换发，强制认证会拒绝，且授权依赖的 GetUser 不可达）
+		// 注册在 /user 组下的全局路径 /api/v1/user/jwt/refresh，与命名空间隔离的 /self 子组无关
+		userGroup.POST(
 			"/jwt/refresh",
 			ctx.authenticatorMiddleware, // 认证器注入，用于生成新令牌
 			views.UserSelfJwtRefresh,    // JWT刷新处理函数
 		)
 		// JWT令牌刷新元信息
-		selfGroup.OPTIONS("/jwt/refresh", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.UserTokenOut]())))
-		// 授权信息获取 - 获取用户的RBAC权限和可访问的命名空间
-		selfGroup.POST(
-			"/authorization-info/get",
-			ctx.authenticatorMiddleware,        // 认证器注入
-			ctx.forceAuthenticateMiddleware,    // 强制认证
-			ctx.coreDatabaseMiddleware,         // 数据库连接，查询权限信息
-			views.UserSelfAuthorizationInfoGet, // 授权信息获取处理函数
+		userGroup.OPTIONS("/jwt/refresh", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.UserTokenOut]())))
+	}
+
+	{
+		// ========== 个人接口（需要认证） ==========
+		// 这些接口需要用户已登录认证，用于管理个人账户和资源
+
+		// 创建个人接口子组：/api/v1/user/self
+		// 统一挂载认证 + RBAC 授权链：authenticator → forceAuthenticate → policy → namespace → authorize → coreDatabase
+		selfGroup := userGroup.Group(
+			"/self",
+			ctx.authenticatorMiddleware,     // 认证器注入
+			ctx.forceAuthenticateMiddleware, // 强制认证，确保用户已登录
+			ctx.policyMiddleware,            // RBAC策略引擎
+			ctx.namespaceMiddleware,         // 命名空间隔离
+			ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+			ctx.coreDatabaseMiddleware,      // 数据库连接
 		)
+
+		// 密码重置 - 用户修改自己的登录密码
+		selfGroup.POST("/password/reset", views.UserSelfPasswordReset)
+		// 密码重置元信息
+		selfGroup.OPTIONS("/password/reset", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserPasswordResetIn]())))
+		// 授权信息获取 - 获取用户的RBAC权限和可访问的命名空间
+		selfGroup.POST("/authorization-info/get", views.UserSelfAuthorizationInfoGet)
 		// 授权信息获取元信息
 		selfGroup.OPTIONS("/authorization-info/get", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.AuthorizationInfoOut]())))
 		// 个人资料修改 - 更新用户的昵称、邮箱等个人信息
-		selfGroup.POST(
-			"/profile/change",
-			ctx.authenticatorMiddleware,     // 认证器注入
-			ctx.forceAuthenticateMiddleware, // 强制认证
-			ctx.coreDatabaseMiddleware,      // 数据库连接，更新用户信息
-			views.UserSelfProfileChange,     // 个人资料修改处理函数
-		)
+		selfGroup.POST("/profile/change", views.UserSelfProfileChange)
 		// 个人资料修改元信息
 		selfGroup.OPTIONS("/profile/change", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserProfileChangeIn]())))
 		// 访问密钥列表获取 - 获取用户的所有访问密钥
-		selfGroup.POST(
-			"/access-key/list",
-			ctx.authenticatorMiddleware,     // 认证器注入
-			ctx.forceAuthenticateMiddleware, // 强制认证
-			ctx.coreDatabaseMiddleware,      // 数据库连接，查询访问密钥
-			views.UserSelfAccessKeyListGet,  // 访问密钥列表获取处理函数
-		)
+		selfGroup.POST("/access-key/list", views.UserSelfAccessKeyListGet)
 		// 访问密钥列表元信息
 		selfGroup.OPTIONS("/access-key/list", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.UserAccessKeyOut]())))
 		// 创建访问密钥 - 为用户创建新的访问密钥
-		selfGroup.POST(
-			"/access-key/create",
-			ctx.authenticatorMiddleware,     // 认证器注入
-			ctx.forceAuthenticateMiddleware, // 强制认证
-			ctx.coreDatabaseMiddleware,      // 数据库连接，创建访问密钥
-			views.UserSelfAccessKeyCreate,   // 访问密钥创建处理函数
-		)
+		selfGroup.POST("/access-key/create", views.UserSelfAccessKeyCreate)
 		// 创建访问密钥元信息
 		selfGroup.OPTIONS("/access-key/create", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserAccessKeyCreateIn](), views.WithBodyOutput[views.UserAccessKeyOut]()),
 		))
 		// 删除访问密钥 - 删除指定的访问密钥
-		selfGroup.POST(
-			"/access-key/:id/remove",
-			ctx.authenticatorMiddleware,     // 认证器注入
-			ctx.forceAuthenticateMiddleware, // 强制认证
-			ctx.coreDatabaseMiddleware,      // 数据库连接，删除访问密钥
-			views.UserSelfAccessKeyRemove,   // 访问密钥删除处理函数
-		)
+		selfGroup.POST("/access-key/:id/remove", views.UserSelfAccessKeyRemove)
 		// 删除访问密钥元信息
 		selfGroup.OPTIONS("/access-key/:id/remove", views.StructMetaGinHandler(views.WithMethod(http.MethodPost)))
 		// 激活访问密钥 - 启用已禁用的访问密钥
-		selfGroup.POST(
-			"/access-key/:id/activate",
-			ctx.authenticatorMiddleware,          // 认证器注入
-			ctx.forceAuthenticateMiddleware,      // 强制认证
-			ctx.coreDatabaseMiddleware,           // 数据库连接，更新密钥状态
-			views.UserSelfAccessKeyEnabled(true), // 访问密钥启用处理函数
-		)
+		selfGroup.POST("/access-key/:id/activate", views.UserSelfAccessKeyEnabled(true))
 		// 激活访问密钥元信息
 		selfGroup.OPTIONS("/access-key/:id/activate", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.UserAccessKeyOut]())))
 		// 停用访问密钥 - 禁用正在使用的访问密钥
-		selfGroup.POST(
-			"/access-key/:id/deactivate",
-			ctx.authenticatorMiddleware,           // 认证器注入
-			ctx.forceAuthenticateMiddleware,       // 强制认证
-			ctx.coreDatabaseMiddleware,            // 数据库连接，更新密钥状态
-			views.UserSelfAccessKeyEnabled(false), // 访问密钥停用处理函数
-		)
+		selfGroup.POST("/access-key/:id/deactivate", views.UserSelfAccessKeyEnabled(false))
 		// 停用访问密钥元信息
 		selfGroup.OPTIONS("/access-key/:id/deactivate", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.UserAccessKeyOut]())))
 		// 前端配置查询 - 获取当前用户保存的前端页面配置
-		selfGroup.POST(
-			"/frontend-config/get",
-			ctx.authenticatorMiddleware,     // 认证器注入
-			ctx.forceAuthenticateMiddleware, // 强制认证
-			ctx.coreDatabaseMiddleware,      // 数据库连接，查询配置
-			views.UserSelfFrontendConfigGet, // 前端配置查询处理函数
-		)
+		selfGroup.POST("/frontend-config/get", views.UserSelfFrontendConfigGet)
 		// 前端配置查询元信息
 		selfGroup.OPTIONS("/frontend-config/get", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyOutput[views.UserFrontendConfigOut]()),
 		))
 		// 前端配置同步 - 上传当前用户的前端页面配置（乐观锁并发校验）
-		selfGroup.POST(
-			"/frontend-config/sync",
-			ctx.authenticatorMiddleware,      // 认证器注入
-			ctx.forceAuthenticateMiddleware,  // 强制认证
-			ctx.coreDatabaseMiddleware,       // 数据库连接，保存配置
-			views.UserSelfFrontendConfigSync, // 前端配置同步处理函数
-		)
+		selfGroup.POST("/frontend-config/sync", views.UserSelfFrontendConfigSync)
 		// 前端配置同步元信息
 		selfGroup.OPTIONS("/frontend-config/sync", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserFrontendConfigSyncIn](), views.WithBodyOutput[views.UserFrontendConfigOut]()),
 		))
 		// 前端配置同步开关 - 设置当前用户是否开启前端配置同步
-		selfGroup.POST(
-			"/frontend-config/sync-enabled/set",
-			ctx.authenticatorMiddleware,                // 认证器注入
-			ctx.forceAuthenticateMiddleware,            // 强制认证
-			ctx.coreDatabaseMiddleware,                 // 数据库连接，更新开关
-			views.UserSelfFrontendConfigSyncEnabledSet, // 同步开关设置处理函数
-		)
+		selfGroup.POST("/frontend-config/sync-enabled/set", views.UserSelfFrontendConfigSyncEnabledSet)
 		// 前端配置同步开关元信息
 		selfGroup.OPTIONS("/frontend-config/sync-enabled/set", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.UserFrontendConfigSyncEnabledIn]()),

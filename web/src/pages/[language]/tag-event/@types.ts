@@ -106,6 +106,28 @@ export interface TagRuleSampleDetailOut extends NormalModelOut {
   input: Record<string, unknown>;
 }
 
+// ---- 标签规则自定义 OPA 内置函数 / sqlite vtable 元信息（供 Rego 编辑器补全与提示）----
+export interface TagRuleFunctionOut {
+  name: string;
+  description: string;
+  signature: string;
+  example?: string;
+}
+
+export interface TagRuleSqliteColumnOut {
+  name: string;
+  type: string;
+}
+
+export interface TagRuleSqliteDatasourceOut {
+  name: string;
+  columns: TagRuleSqliteColumnOut[];
+}
+
+export interface TagRuleSqliteMetaOut {
+  datasources: TagRuleSqliteDatasourceOut[];
+}
+
 // ---- 标签事件规则（标签事件命名空间化）----
 export interface TagEventRuleConditionOut extends NormalModelOut {
   model: string;

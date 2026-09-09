@@ -111,10 +111,24 @@ const emitRange = (): void => {
   const [startHour, startMinute] = parseTime(startTimeStr.value, [0, 0]);
   const [endHour, endMinute] = parseTime(endTimeStr.value, [23, 59]);
   const [startDay, endDay] = pickedDates.value.map((day) => DateTime.fromJSDate(day));
-  emits("update:modelValue", [
-    startDay.set({ hour: startHour, minute: startMinute, second: 0, millisecond: 0 }),
-    endDay.set({ hour: endHour, minute: endMinute, second: 59, millisecond: 999 }),
-  ]);
+  const start = startDay.set({ hour: startHour, minute: startMinute, second: 0, millisecond: 0 });
+  const end = endDay.set({ hour: endHour, minute: endMinute, second: 59, millisecond: 999 });
+  // 值相同（仅引用更换）时不重复 emit，切断「组件 → vee-validate → 组件」回声环。
+  // 注意：syncing 仅在该同步的 pre-flush 之内生效，而 pickedDates watcher 会批量派发到其后执行，
+  // 此时 syncing 已复位；若仅依赖它防回显不可靠。故按值比较短路：构造出的区间与当前
+  // props.modelValue 逐值相等时不 emit，保证外部回显不会再次触发 update:modelValue。
+  const current = props.modelValue;
+  if (
+    current &&
+    current.length === 2 &&
+    DateTime.isDateTime(current[0]) &&
+    DateTime.isDateTime(current[1]) &&
+    current[0].equals(start) &&
+    current[1].equals(end)
+  ) {
+    return;
+  }
+  emits("update:modelValue", [start, end]);
 };
 
 const updateDates = (value: unknown): void => {

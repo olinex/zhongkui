@@ -1,0 +1,52 @@
+package provider
+
+import (
+	// third-party
+	"github.com/samber/do/v2"
+
+	// internal
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+)
+
+// newSQLiteVTabPoolsProvider 创建按命名空间隔离的 sqlite vtable 池持有者（vtab.Pools）。
+// 每个命名空间独立持有一个 SQLitePool，vtable 以裸名注册；tagengine 作为消费方自行
+// 解析该持有者并按命名空间绑定到求值 ctx，避免 provider 反向依赖消费方（依赖方向倒置）。
+// newSQLiteVTabPoolsProvider creates the namespace-isolated sqlite vtable pools holder
+// (vtab.Pools). Each namespace owns an independent SQLitePool and vtables are registered
+// under their bare names; the tagengine consumer resolves this holder itself and binds the
+// per-namespace pool to the evaluation ctx, so the provider never depends back on its
+// consumer (no inverted dependency direction).
+func newSQLiteVTabPoolsProvider() do.Provider[*vtab.Pools] {
+	return func(_ do.Injector) (*vtab.Pools, error) {
+		return vtab.NewPools(), nil
+	}
+}
+
+// InjectSQLiteVTabPools 注册 sqlite vtable 池持有者 provider。
+// *vtab.Pools 自身实现 do.ShutdownerWithContextAndError（Shutdown 转发
+// Close 关闭全部命名空间池），故启动期经 MustInvokeSQLiteVTabPools 预解析后，
+// 优雅关闭阶段由 samber/do 直接驱动其关闭，无需额外的关闭器 provider。
+// InjectSQLiteVTabPools registers the sqlite vtable pools holder provider.
+// *vtab.Pools itself implements do.ShutdownerWithContextAndError (Shutdown forwards
+// to Close closing all namespace pools), so once eagerly resolved via
+// MustInvokeSQLiteVTabPools at startup, samber/do drives its shutdown during graceful
+// shutdown without an extra closer provider.
+func InjectSQLiteVTabPools(i do.Injector) {
+	do.Provide(i, newSQLiteVTabPoolsProvider())
+}
+
+// InvokeSQLiteVTabPools 取得 sqlite vtable 池持有者（供第三方注册数据源）。
+// InvokeSQLiteVTabPools resolves the sqlite vtable pools holder (for third-party
+// datasource registration).
+func InvokeSQLiteVTabPools(i do.Injector) (*vtab.Pools, error) {
+	return do.Invoke[*vtab.Pools](i)
+}
+
+// MustInvokeSQLiteVTabPools panic 版本取得 sqlite vtable 池持有者
+// （用于启动期预解析，确保其被实例化后 Shutdown 在优雅关闭阶段被 samber/do 驱动）。
+// MustInvokeSQLiteVTabPools is the panicking variant to resolve the sqlite vtable
+// pools holder (eagerly resolved at startup so its Shutdown is driven during
+// samber/do graceful shutdown).
+func MustInvokeSQLiteVTabPools(i do.Injector) *vtab.Pools {
+	return do.MustInvoke[*vtab.Pools](i)
+}

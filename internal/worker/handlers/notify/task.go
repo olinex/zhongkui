@@ -91,7 +91,8 @@ func NewSendGroupHandler(i do.Injector) *SendGroupHandler {
 	coreDB := provider.MustInvokeCoreDatabase(i)
 	logger := provider.MustInvokeDatabaseLogger(i)
 	client := provider.MustInvokePipelineClient(i)
-	return &SendGroupHandler{service: notifybase.NewService(coreDB, logger), client: client, logger: logger}
+	pool := provider.MustInvokeMessagePool(i)
+	return &SendGroupHandler{service: notifybase.NewService(coreDB, logger, pool), client: client, logger: logger}
 }
 
 // Do 消费一条 notify:send:group 任务：解析 SendGroupInput 载荷，解析通知组并扇出为
@@ -173,7 +174,8 @@ type SendTargetHandler struct {
 func NewSendTargetHandler(i do.Injector) *SendTargetHandler {
 	coreDB := provider.MustInvokeCoreDatabase(i)
 	logger := provider.MustInvokeDatabaseLogger(i)
-	return &SendTargetHandler{service: notifybase.NewService(coreDB, logger), logger: logger}
+	pool := provider.MustInvokeMessagePool(i)
+	return &SendTargetHandler{service: notifybase.NewService(coreDB, logger, pool), logger: logger}
 }
 
 // Do 消费一条 notify:send:target 任务：解析 SendTargetInput 载荷并执行直投；载荷非法返回错误触发重试。

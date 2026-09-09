@@ -42,22 +42,40 @@ import {
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { bracketMatching, syntaxTree } from "@codemirror/language";
 import { linter, setDiagnostics, type Diagnostic } from "@codemirror/lint";
-import { EditorState, Compartment, type Extension } from "@codemirror/state";
 import {
+  Compartment,
+  EditorState,
+  StateField,
+  type Extension,
+  type Range,
+} from "@codemirror/state";
+import {
+  Decoration,
   EditorView,
   highlightActiveLine,
   hoverTooltip,
   keymap,
   lineNumbers,
   placeholder,
+  type DecorationSet,
 } from "@codemirror/view";
 import { rego } from "codemirror-lang-rego";
 
 import { useAppStore } from "@/stores/app";
 import { highlightFor } from "@/utils/editorHighlight";
 import i18n from "@/utils/i18n";
-import { classifyRegoCompletionContext, fieldSnippet, isRegoExpressionKeyword } from "@/utils/rego";
-import type { InputFieldMeta, RegoValidationError } from "@/utils/rego";
+import {
+  classifyRegoCompletionContext,
+  fieldSnippet,
+  isRegoExpressionKeyword,
+  SQL_KEYWORDS,
+} from "@/utils/rego";
+import type {
+  InputFieldMeta,
+  RegoFunctionMeta,
+  RegoValidationError,
+  SqliteDatasourceMeta,
+} from "@/utils/rego";
 import { findSlashPos, slashKeyBinding, withSlashApply } from "@/utils/slashTrigger";
 
 const props = withDefaults(
@@ -68,6 +86,10 @@ const props = withDefaults(
     extraCompletions?: string[];
     /** input document field metadata from backend, drives `input.` & "/" completions */
     fields?: InputFieldMeta[];
+    /** custom OPA builtin metadata from backend, drives function completion & hover */
+    functions?: RegoFunctionMeta[];
+    /** sqlite vtable datasource schemas, drives SQL completion inside `sqlite.query` strings */
+    sqliteDatasources?: SqliteDatasourceMeta[];
     /** available samples for the current model, drives the sample selector */
     samples?: { name: string; input: Record<string, unknown> }[];
     /** disables editing (read-only), the component stays interactive */
@@ -78,6 +100,8 @@ const props = withDefaults(
     errors: () => [],
     extraCompletions: () => [],
     fields: () => [],
+    functions: () => [],
+    sqliteDatasources: () => [],
     samples: () => [],
     disabled: false,
     minHeight: "240px",
@@ -241,6 +265,440 @@ function inRegoLiteral(state: EditorState, pos: number): boolean {
   return false;
 }
 
+// ---- custom OPA builtins & nested sqlite.query support ----
+
+/**
+ * 最小语法节点结构：只声明本组件用到的字段，避免依赖 @lezer/common 类型
+ * （pnpm 严格模式下不可直接 import 传递依赖）。
+ */
+interface NodeLike {
+  from: number;
+  to: number;
+  name: string;
+  parent: NodeLike | null;
+  firstChild: NodeLike | null;
+}
+
+/** 判断语法节点是否为 sqlite.query 调用的第一参数字符串（String/RawString）。 */
+function isSqliteQueryFirstArg(state: EditorState, node: NodeLike): boolean {
+  let parent = node.parent;
+  while (parent && parent.name !== "ArgList") {
+    parent = parent.parent;
+  }
+  if (!parent) {
+    return false;
+  }
+  const call = parent.parent;
+  if (!call || call.name !== "CallExpression") {
+    return false;
+  }
+  const callee = call.firstChild;
+  if (!callee) {
+    return false;
+  }
+  return state.doc.sliceString(callee.from, callee.to) === "sqlite.query";
+}
+
+/**
+ * 定位覆盖给定位置的 sqlite.query(...) 第一参数字符串，返回字符串节点边界与
+ * 内部 SQL 文本。非 sqlite.query 调用或位置在引号外时返回 null。
+ */
+function sqliteQueryStringAt(
+  state: EditorState,
+  pos: number,
+): { from: number; to: number; sql: string } | null {
+  const inner = syntaxTree(state).resolveInner(pos, -1);
+  let node: typeof inner | null = inner;
+  while (node && node.name !== "String" && node.name !== "RawString") {
+    node = node.parent;
+  }
+  if (!node) {
+    return null;
+  }
+  // 光标须位于字符串引号内部（空字符串 "" 时两引号之间同样合法）
+  if (pos < node.from + 1 || pos > node.to - 1) {
+    return null;
+  }
+  if (!isSqliteQueryFirstArg(state, node)) {
+    return null;
+  }
+  return {
+    from: node.from,
+    to: node.to,
+    sql: state.doc.sliceString(node.from + 1, node.to - 1),
+  };
+}
+
+/** 定位覆盖给定位置的 sqlite.query 调用，返回函数元信息与调用名范围。 */
+function customFunctionAt(
+  state: EditorState,
+  pos: number,
+): { fn: RegoFunctionMeta; from: number; to: number } | null {
+  const inner = syntaxTree(state).resolveInner(pos, -1);
+  let node: typeof inner | null = inner;
+  while (node && node.name !== "CallExpression") {
+    node = node.parent;
+  }
+  if (!node) {
+    return null;
+  }
+  const callee = node.firstChild;
+  if (!callee) {
+    return null;
+  }
+  const text = state.doc.sliceString(callee.from, callee.to);
+  const fn = props.functions.find((f) => f.name === text);
+  if (!fn) {
+    return null;
+  }
+  return { fn, from: callee.from, to: callee.to };
+}
+
+/** 构造单个自定义函数的补全项（label 可为全名或局部名，slash 模式用全名）。 */
+function functionCompletionOption(fn: RegoFunctionMeta, label: string): Completion {
+  const detailParts = [fn.signature];
+  if (fn.description) {
+    detailParts.push(fn.description);
+  }
+  return {
+    label,
+    type: "function",
+    // boost 置顶：斜杠菜单中字段项众多，sqlite.query 若排在末尾会被淹没
+    boost: 1,
+    detail: detailParts.join(" · "),
+    info: fn.example
+      ? () => {
+          const dom = document.createElement("pre");
+          dom.className = "cm-function-info";
+          dom.textContent = fn.example ?? "";
+          return dom;
+        }
+      : undefined,
+    apply: (v, _c, from, to) => {
+      const insert = `${fn.name}(`;
+      v.dispatch({
+        changes: { from, to, insert },
+        selection: { anchor: from + insert.length },
+      });
+    },
+  };
+}
+
+/**
+ * 自定义 OPA 内置函数补全：输入 `sqlite` / `sqlite.` 时给出完整函数名或局部名，
+ * 选中后补出调用括号并把光标定位到括号后等待输入参数。
+ */
+function customFunctionCompletion(context: CompletionContext): CompletionResult | null {
+  if (props.functions.length === 0) {
+    return null;
+  }
+  const line = context.state.doc.lineAt(context.pos);
+  const textBefore = line.text.slice(0, context.pos - line.from);
+  const word = /[a-zA-Z_][a-zA-Z0-9_.]*$/.exec(textBefore)?.[0] ?? "";
+  if (!word) {
+    return null;
+  }
+  const options: Completion[] = [];
+  for (const fn of props.functions) {
+    const dot = fn.name.lastIndexOf(".");
+    const ns = fn.name.slice(0, dot);
+    const local = fn.name.slice(dot + 1);
+    let label: string | null = null;
+    if (word.startsWith(`${ns}.`)) {
+      // 已输入命名空间点号（sqlite.）：补局部名（匹配局部名前缀）
+      if (local.startsWith(word.slice(ns.length + 1))) {
+        label = local;
+      }
+    } else if (fn.name.startsWith(word)) {
+      label = fn.name;
+    }
+    if (label === null) {
+      continue;
+    }
+    options.push(functionCompletionOption(fn, label));
+  }
+  if (options.length === 0) {
+    return null;
+  }
+  return { from: context.pos - word.length, options };
+}
+
+/** "/" 触发模式下按查询前缀过滤的自定义函数补全项（与字段项合并展示）。 */
+function functionSlashOptions(query: string): Completion[] {
+  const options: Completion[] = [];
+  for (const fn of props.functions) {
+    if (!fn.name.toLowerCase().startsWith(query.toLowerCase())) {
+      continue;
+    }
+    options.push(functionCompletionOption(fn, fn.name));
+  }
+  return options;
+}
+
+/** SQL 关键词的补全项，全小写关键字。 */
+function sqliteKeywordOptions(): Completion[] {
+  return SQL_KEYWORDS.map((kw) => ({ label: kw, type: "keyword" }));
+}
+
+/** 数据源列补全项（不含表名前缀）。 */
+function sqliteColumnOptions(ds: SqliteDatasourceMeta): Completion[] {
+  return ds.columns.map((col) => ({
+    label: col.name,
+    type: "property",
+    detail: col.type,
+  }));
+}
+
+/** 数据源表名补全项。 */
+function sqliteTableOptions(): Completion[] {
+  return props.sqliteDatasources.map((ds) => ({
+    label: ds.name,
+    type: "table",
+  }));
+}
+
+/**
+ * sqlite.query("...") 字符串内的 SQL 补全：FROM/JOIN 后补表名、`table.` 前缀补该表
+ * 列名、已出现 FROM 表时补列名 + 关键词，其余位置补关键词 + 表名。SQLite 只读
+ * SELECT 子集，补全内容全部来自后端元信息与内置关键词。
+ */
+function sqliteCompletion(context: CompletionContext): CompletionResult | null {
+  const hit = sqliteQueryStringAt(context.state, context.pos);
+  if (!hit) {
+    return null;
+  }
+  const before = context.state.doc.sliceString(hit.from + 1, context.pos);
+  const word = /[a-zA-Z_][a-zA-Z0-9_]*$/.exec(before)?.[0] ?? "";
+  const wordFrom = context.pos - word.length;
+  const beforeWord = before.slice(0, -word.length);
+
+  // 1. `table.col` 列引用 → 该表列名
+  const dotMatch = /([a-zA-Z_][a-zA-Z0-9_]*)\.[a-zA-Z_][a-zA-Z0-9_]*$/.exec(before);
+  if (dotMatch) {
+    const ds = props.sqliteDatasources.find((d) => d.name === dotMatch[1]);
+    if (ds) {
+      return { from: wordFrom, options: sqliteColumnOptions(ds) };
+    }
+  }
+
+  // 2. FROM / JOIN 等关键词后 → 表名
+  if (/(?:^|[\s,(])(?:from|join|into|update|table)\s+[a-zA-Z_][a-zA-Z0-9_]*$/i.test(beforeWord)) {
+    return { from: wordFrom, options: sqliteTableOptions() };
+  }
+
+  // 3. 已出现 FROM 表 → 该表列名 + 关键词
+  const fromMatch = /\bfrom\s+([a-zA-Z_][a-zA-Z0-9_]*)/i.exec(before);
+  if (fromMatch) {
+    const ds = props.sqliteDatasources.find((d) => d.name === fromMatch[1]);
+    if (ds) {
+      return {
+        from: wordFrom,
+        options: [...sqliteColumnOptions(ds), ...sqliteKeywordOptions()],
+      };
+    }
+  }
+
+  // 4. 兜底：关键词 + 表名
+  return { from: wordFrom, options: [...sqliteKeywordOptions(), ...sqliteTableOptions()] };
+}
+
+// SQL 关键词/表名/字符串字面量高亮：仅在 sqlite.query("...") 参数字符串内部叠加
+// 装饰器，与 Rego 语法高亮共存，随文档编辑增量重建。
+const sqliteHighlightField = StateField.define<DecorationSet>({
+  create(state) {
+    return computeSqliteHighlights(state);
+  },
+  update(deco, tr) {
+    if (!tr.docChanged) {
+      return deco.map(tr.changes);
+    }
+    return computeSqliteHighlights(tr.state);
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
+function computeSqliteHighlights(state: EditorState): DecorationSet {
+  const decos: Range<Decoration>[] = [];
+  const cursor = syntaxTree(state).cursor();
+  while (cursor.next()) {
+    if (cursor.name !== "String" && cursor.name !== "RawString") {
+      continue;
+    }
+    const node = cursor.node;
+    if (!isSqliteQueryFirstArg(state, node)) {
+      continue;
+    }
+    const innerFrom = node.from + 1;
+    const innerTo = node.to - 1;
+    if (innerTo <= innerFrom) {
+      continue;
+    }
+    const sql = state.doc.sliceString(innerFrom, innerTo);
+
+    // SQL 关键词
+    const keywordRe = new RegExp(`\\b(?:${SQL_KEYWORDS.join("|")})\\b`, "gi");
+    let m: RegExpExecArray | null;
+    while ((m = keywordRe.exec(sql)) !== null) {
+      decos.push(
+        Decoration.mark({ class: "cm-sql-keyword" }).range(
+          innerFrom + m.index,
+          innerFrom + m.index + m[0].length,
+        ),
+      );
+    }
+    // 单引号字符串字面量（'' 转义）
+    const strRe = /'(?:[^']|'')*'/g;
+    let sm: RegExpExecArray | null;
+    while ((sm = strRe.exec(sql)) !== null) {
+      decos.push(
+        Decoration.mark({ class: "cm-sql-string" }).range(
+          innerFrom + sm.index,
+          innerFrom + sm.index + sm[0].length,
+        ),
+      );
+    }
+    // FROM / JOIN 后已注册的表名
+    const tableRe = /\b(?:from|join)\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi;
+    let tm: RegExpExecArray | null;
+    while ((tm = tableRe.exec(sql)) !== null) {
+      const name = tm[1];
+      if (!props.sqliteDatasources.some((d) => d.name === name)) {
+        continue;
+      }
+      const relFrom = tm.index + tm[0].lastIndexOf(name);
+      decos.push(
+        Decoration.mark({ class: "cm-sql-table" }).range(
+          innerFrom + relFrom,
+          innerFrom + relFrom + name.length,
+        ),
+      );
+    }
+  }
+  // Decoration.set 的 sort=true 要求按 from（同 from 按 to）升序排列
+  decos.sort((a, b) => a.from - b.from || a.to - b.to);
+  return Decoration.set(decos, true);
+}
+
+/**
+ * sqlite.query("...") 内 SQL 的轻量语法提示：仅允许只读 SELECT、引用的表必须已注册、
+ * 括号与单引号字符串必须配对闭合。与后端校验诊断合并后统一经 lint 渲染。
+ */
+function sqliteSqlDiagnostics(state: EditorState): Diagnostic[] {
+  const diagnostics: Diagnostic[] = [];
+  const cursor = syntaxTree(state).cursor();
+  while (cursor.next()) {
+    if (cursor.name !== "String" && cursor.name !== "RawString") {
+      continue;
+    }
+    const node = cursor.node;
+    if (!isSqliteQueryFirstArg(state, node)) {
+      continue;
+    }
+    const innerFrom = node.from + 1;
+    const innerTo = node.to - 1;
+    if (innerTo <= innerFrom) {
+      continue;
+    }
+    const sql = state.doc.sliceString(innerFrom, innerTo);
+    const trimmed = sql.trim();
+
+    if (trimmed && !/^select\b/i.test(trimmed)) {
+      diagnostics.push({
+        from: innerFrom,
+        to: innerTo,
+        severity: "warning",
+        message: i18n.global.t("action.regoSqlMustStartSelect"),
+      });
+    }
+
+    // 单引号字符串闭合检查
+    let strIdx = sql.indexOf("'");
+    while (strIdx !== -1) {
+      let j = strIdx + 1;
+      while (j < sql.length) {
+        if (sql[j] === "'") {
+          if (sql[j + 1] === "'") {
+            j += 2;
+            continue;
+          }
+          break;
+        }
+        j++;
+      }
+      if (j >= sql.length) {
+        diagnostics.push({
+          from: innerFrom + strIdx,
+          to: innerTo,
+          severity: "error",
+          message: i18n.global.t("action.regoSqlUnclosedString"),
+        });
+      }
+      strIdx = sql.indexOf("'", j + 1);
+    }
+
+    // 括号配对检查（跳过单引号字符串内部）
+    const stack: { ch: string; index: number }[] = [];
+    let inStr = false;
+    for (let i = 0; i < sql.length; i++) {
+      const ch = sql[i];
+      if (ch === "'") {
+        if (inStr) {
+          if (sql[i + 1] === "'") {
+            i++;
+            continue;
+          }
+          inStr = false;
+        } else {
+          inStr = true;
+        }
+        continue;
+      }
+      if (inStr) {
+        continue;
+      }
+      if (ch === "(") {
+        stack.push({ ch, index: i });
+      } else if (ch === ")") {
+        const open = stack.pop();
+        if (!open) {
+          diagnostics.push({
+            from: innerFrom + i,
+            to: innerFrom + i + 1,
+            severity: "error",
+            message: i18n.global.t("action.regoSqlUnmatchedParen"),
+          });
+        }
+      }
+    }
+    for (const open of stack) {
+      diagnostics.push({
+        from: innerFrom + open.index,
+        to: innerFrom + open.index + 1,
+        severity: "error",
+        message: i18n.global.t("action.regoSqlUnmatchedParen"),
+      });
+    }
+
+    // FROM 引用的表必须已注册
+    const tableRe = /\bfrom\s+([a-zA-Z_][a-zA-Z0-9_]*)/gi;
+    let tm: RegExpExecArray | null;
+    while ((tm = tableRe.exec(sql)) !== null) {
+      const name = tm[1];
+      if (props.sqliteDatasources.some((d) => d.name === name)) {
+        continue;
+      }
+      const from = innerFrom + tm.index + tm[0].lastIndexOf(name);
+      diagnostics.push({
+        from,
+        to: from + name.length,
+        severity: "warning",
+        message: i18n.global.t("action.regoSqlUnknownTable", { table: name }),
+      });
+    }
+  }
+  return diagnostics;
+}
+
 /**
  * Custom completion source: completes `input.<field>` from field metadata and
  * `extraCompletions`, then falls back to the Rego language sources (keywords,
@@ -253,16 +711,22 @@ async function regoCompletion(context: CompletionContext): Promise<CompletionRes
   const line = context.state.doc.lineAt(context.pos);
   const textBefore = line.text.slice(0, context.pos - line.from);
 
-  // 1. "/" 字段触发器：弹出字段下拉并随输入实时过滤。from 指向触发斜杠本身，
-  //    使孤立 "/"（空查询）也满足 from < to 立即弹层；filter:false 关闭 CM 内置
-  //    过滤（过滤由 inputFieldCompletions 按斜杠后查询完成），不设 validFor 让
-  //    每次输入都重查实现「输入即筛选」；选中时经 withSlashApply 把斜杠与查询
-  //    一并替换为字段片段。第二个 "/"（取消触发）在 keymap 层被吞掉。
+  // 1. "/" 字段/函数触发器：弹出字段与自定义函数下拉并随输入实时过滤。from 指向
+  //    触发斜杠本身，使孤立 "/"（空查询）也满足 from < to 立即弹层；filter:false
+  //    关闭 CM 内置过滤（过滤由 inputFieldCompletions / functionSlashOptions 按斜杠
+  //    后查询完成），不设 validFor 让每次输入都重查实现「输入即筛选」；选中时经
+  //    withSlashApply 把斜杠与查询一并替换为字段片段或函数调用。第二个 "/"（取消
+  //    触发）在 keymap 层被吞掉。
   const slashFrom = findSlashPos(context.state, context.pos, inRegoLiteral);
   if (slashFrom !== null) {
     const query = textBefore.slice(slashFrom - line.from + 1);
     if (/^[a-zA-Z0-9_]*$/.test(query)) {
-      const options = withSlashApply(inputFieldCompletions(query));
+      const options = withSlashApply([
+        // 函数项在前：filter:false 下 CM 不按 boost 排序，仅按数组顺序展示，
+        // 字段项众多，函数（sqlite.query）置顶避免被淹没
+        ...functionSlashOptions(query),
+        ...inputFieldCompletions(query),
+      ]);
       if (options.length > 0) {
         return { from: slashFrom, options, filter: false };
       }
@@ -273,6 +737,17 @@ async function regoCompletion(context: CompletionContext): Promise<CompletionRes
   // "//" 视为字面量斜杠：不弹任何下拉
   if (/\/\/$/.test(textBefore)) {
     return null;
+  }
+
+  // 2. sqlite.query("...") 字符串内部 → SQL 补全（表名/列名/关键词）
+  if (sqliteQueryStringAt(context.state, context.pos)) {
+    return sqliteCompletion(context);
+  }
+
+  // 3. 自定义 OPA 内置函数名补全（如 sqlite / sqlite.）
+  const fnResult = customFunctionCompletion(context);
+  if (fnResult) {
+    return fnResult;
   }
 
   const dotMatch = /input\.([a-zA-Z_][a-zA-Z0-9_]*)$/.exec(textBefore);
@@ -338,6 +813,66 @@ const sampleHover = hoverTooltip((editorView, pos) => {
   };
 });
 
+// Hover tooltip: hovering a custom OPA builtin call (e.g. sqlite.query) shows
+// its localized description, signature and usage example from the backend
+// metadata, so the user can inspect the call contract without leaving the editor.
+const functionHover = hoverTooltip((editorView, pos) => {
+  const hit = customFunctionAt(editorView.state, pos);
+  if (!hit) {
+    return null;
+  }
+  return {
+    pos: hit.from,
+    end: hit.to,
+    above: true,
+    create: () => {
+      const dom = document.createElement("div");
+      dom.className = "cm-function-hover";
+      const sig = document.createElement("div");
+      sig.className = "cm-function-hover-signature";
+      sig.textContent = hit.fn.signature;
+      dom.append(sig);
+      if (hit.fn.description) {
+        const desc = document.createElement("div");
+        desc.className = "cm-function-hover-description";
+        desc.textContent = hit.fn.description;
+        dom.append(desc);
+      }
+      if (hit.fn.example) {
+        const example = document.createElement("pre");
+        example.className = "cm-function-hover-example";
+        example.textContent = hit.fn.example;
+        dom.append(example);
+      }
+      return { dom };
+    },
+  };
+});
+
+/** 合并后端校验诊断与 sqlite.query 内 SQL 轻量提示，统一推入 lint 状态。 */
+function updateDiagnostics(): void {
+  const editorView = view.value;
+  if (!editorView) {
+    return;
+  }
+  const state = editorView.state;
+  const doc = state.doc;
+  const diagnostics: Diagnostic[] = (props.errors ?? []).map((err) => {
+    const lineNo = Math.max(1, Math.min(err.line, doc.lines));
+    const line = doc.line(lineNo);
+    const from = line.from + Math.max(0, Math.min(err.column - 1, line.length));
+    const hint = err.hint ? `\n${err.hint}` : "";
+    return {
+      from,
+      to: line.to,
+      severity: err.type === "warning" ? "warning" : "error",
+      message: err.message + hint,
+    };
+  });
+  diagnostics.push(...sqliteSqlDiagnostics(state));
+  editorView.dispatch(setDiagnostics(state, diagnostics));
+}
+
 const extensions: Extension[] = [
   rego({ autocomplete: true, hover: true }),
   lineNumbers(),
@@ -348,6 +883,8 @@ const extensions: Extension[] = [
   placeholder(i18n.global.t("action.regoFieldHint")),
   autocompletion({ override: [regoCompletion] }),
   sampleHover,
+  functionHover,
+  sqliteHighlightField,
   // Stub linter so external diagnostics pushed via `setDiagnostics` render.
   // 不启用 lintGutter：避免行号区右侧渲染空的 lint 占位列，与其它编辑器一致；
   // 错误下划线、悬停提示与校验逻辑均不受影响。
@@ -370,6 +907,8 @@ const extensions: Extension[] = [
   EditorView.updateListener.of((update) => {
     if (update.docChanged) {
       emit("update:modelValue", update.state.doc.toString());
+      // sqlite.query 内 SQL 轻量提示随文档编辑实时刷新；后端校验诊断由 props.errors 驱动
+      updateDiagnostics();
     }
   }),
 ];
@@ -440,29 +979,11 @@ watch(
   },
 );
 
-// Push validation diagnostics (line/column) into the CodeMirror lint state.
+// Push validation diagnostics (backend + sqlite SQL hints) into the CodeMirror
+// lint state whenever the parent revalidates the rule.
 watch(
   () => props.errors,
-  (errs) => {
-    const editorView = view.value;
-    if (!editorView) {
-      return;
-    }
-    const doc = editorView.state.doc;
-    const diagnostics: Diagnostic[] = (errs ?? []).map((err) => {
-      const lineNo = Math.max(1, Math.min(err.line, doc.lines));
-      const line = doc.line(lineNo);
-      const from = line.from + Math.max(0, Math.min(err.column - 1, line.length));
-      const hint = err.hint ? `\n${err.hint}` : "";
-      return {
-        from,
-        to: line.to,
-        severity: err.type === "warning" ? "warning" : "error",
-        message: err.message + hint,
-      };
-    });
-    editorView.dispatch(setDiagnostics(editorView.state, diagnostics));
-  },
+  () => updateDiagnostics(),
   { immediate: true },
 );
 
@@ -553,5 +1074,74 @@ defineExpose({ focus: () => view.value?.focus() });
 /* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
 :deep(.cm-tooltip .cm-diagnosticText) {
   color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+/* sqlite.query("...") 字符串内的 SQL 语义高亮：关键词/表名/单引号字面量，
+   配色与 utils/editorHighlight 的语义色一致，深浅主题各一套 */
+:deep(.cm-sql-keyword) {
+  color: #cf222e;
+  font-weight: 600;
+}
+
+:deep(.cm-sql-table) {
+  color: #0550ae;
+}
+
+:deep(.cm-sql-string) {
+  color: #0a7d22;
+}
+
+/* Vuetify 深色主题类名（v-theme--dark）不在 kebab-case 规范内，需逐条豁免 */
+/* stylelint-disable-next-line selector-class-pattern */
+:global(.v-theme--dark .cm-sql-keyword) {
+  color: #c678dd;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+:global(.v-theme--dark .cm-sql-table) {
+  color: #61afef;
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+:global(.v-theme--dark .cm-sql-string) {
+  color: #98c379;
+}
+
+/* 自定义 OPA 内置函数悬停提示：签名 / 说明 / 示例，配色与样例提示一致 */
+:deep(.cm-function-hover) {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+:deep(.cm-function-hover-signature) {
+  font-weight: 600;
+  color: rgb(var(--v-theme-primary));
+}
+
+:deep(.cm-function-hover-description) {
+  color: rgb(var(--v-theme-on-surface-variant));
+  white-space: pre-wrap;
+}
+
+:deep(.cm-function-hover-example) {
+  margin: 0;
+  padding: 4px 6px;
+  white-space: pre-wrap;
+  border-radius: 4px;
+  background-color: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface));
+}
+
+/* 补全弹窗内的示例代码块（info 区域） */
+:deep(.cm-function-info) {
+  margin: 0;
+  padding: 6px 8px;
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
 }
 </style>

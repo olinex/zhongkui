@@ -140,6 +140,8 @@
                   :errors="createRegoErrors"
                   :fields="createFields"
                   :extra-completions="createExtraFields"
+                  :functions="customFunctions"
+                  :sqlite-datasources="sqliteDatasources"
                   :samples="createSamples"
                   min-height="260px"
                   @update:sample-input="createSampleInput = $event"
@@ -238,6 +240,8 @@
                   :errors="editRegoErrors"
                   :fields="editFields"
                   :extra-completions="editExtraFields"
+                  :functions="customFunctions"
+                  :sqlite-datasources="sqliteDatasources"
                   :samples="editSamples"
                   :disabled="!editable"
                   min-height="260px"
@@ -379,12 +383,14 @@ import {
   tagRuleCreate,
   tagRuleDelete,
   tagRuleDetailGet,
+  tagRuleFunctions,
   tagRuleListGet,
   tagRuleListOptions,
   tagRuleModelMetadata,
   tagRuleModelOptions,
   tagRuleModelSamples,
   tagRuleSetEnabled,
+  tagRuleSqliteMeta,
   tagRuleUpdate,
   tagRuleValidate,
   tagRuleVersionList,
@@ -404,16 +410,20 @@ import {
   HTTP_TRANSPORT_MODEL_KEY,
   preflightRego,
   type InputFieldMeta,
+  type RegoFunctionMeta,
   type RegoValidationError,
+  type SqliteDatasourceMeta,
 } from "@/utils/rego";
 import { useForm } from "vee-validate";
 
 import type {
   TagRuleDetailOut,
+  TagRuleFunctionOut,
   TagRuleListOut,
   TagRuleModelMetadataOut,
   TagRuleModelOptionsOut,
   TagRuleModelSamplesOut,
+  TagRuleSqliteMetaOut,
   TagRuleValidateOut,
   TagRuleVersionOut,
 } from "./@types";
@@ -439,7 +449,41 @@ const modelOptions = ref([
   },
 ]);
 
+// ---- 自定义 OPA 内置函数 / sqlite vtable 元信息（Rego 编辑器补全、悬停与 SQL 提示）----
+const customFunctions = ref<RegoFunctionMeta[]>([]);
+const sqliteDatasources = ref<SqliteDatasourceMeta[]>([]);
+
+const loadRegoMeta = async (): Promise<void> => {
+  await getResponse<{ functions: TagRuleFunctionOut[] }>(
+    tagRuleFunctions(),
+    async (rsp) => {
+      customFunctions.value = (rsp.data.functions ?? []).map((f) => ({
+        name: f.name,
+        description: f.description,
+        signature: f.signature,
+        example: f.example,
+      }));
+    },
+    async () => {
+      customFunctions.value = [];
+    },
+  );
+  await getResponse<TagRuleSqliteMetaOut>(
+    tagRuleSqliteMeta(),
+    async (rsp) => {
+      sqliteDatasources.value = (rsp.data.datasources ?? []).map((d) => ({
+        name: d.name,
+        columns: d.columns,
+      }));
+    },
+    async () => {
+      sqliteDatasources.value = [];
+    },
+  );
+};
+
 onMounted(() => {
+  void loadRegoMeta();
   void getResponse<TagRuleModelOptionsOut>(tagRuleModelOptions(), async (rsp) => {
     const items = rsp.data.items ?? [];
     if (items.length > 0) {
@@ -579,6 +623,13 @@ watch(createRego, (val) => {
   createPreflightErrors.value = preflightRego(val);
   if (createTimer) {
     clearTimeout(createTimer);
+  }
+  // 空/空白规则仅做本地 preflight，不发起后端验证（空串必然校验失败，属无意义请求）
+  if (!val.trim()) {
+    createBackendValid.value = null;
+    createBackendErrors.value = [];
+    createBackendWarnings.value = [];
+    return;
   }
   createTimer = setTimeout(() => void validateCreateRego(val), 800);
 });
@@ -748,12 +799,12 @@ const openCreateDialogAction = (): void => {
   createSamples.value = [];
   createSampleInput.value = null;
   createBackendValid.value = null;
+  createBackendErrors.value = [];
   createBackendWarnings.value = [];
   void loadModelFields(createModel.value, createFields);
   // 显式加载样例：createModel 若与上次相同，watch 不会触发，须主动拉取
   void loadModelSamples(createModel.value, createSamples);
   createDialogRef.value?.open({});
-  void validateCreateRego("");
 };
 
 const createAction = createForm.handleSubmit(async (values) => {

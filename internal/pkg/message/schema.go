@@ -9,6 +9,10 @@ import (
 	"reflect"
 )
 
+// formStructs 渠道类型键 -> 配置结构体类型注册表。
+// formStructs maps channel type keys to their config struct types.
+var formStructs = map[string]FormStructs{}
+
 // FormStructs 描述某渠道类型的渠道级/目标级配置结构体类型。
 // 由表单元信息抽取方（routes 层）通过反射读取结构体标签生成前端表单 schema。
 // FormStructs carries the channel-level/target-level config struct types of a
@@ -22,10 +26,6 @@ type FormStructs struct {
 	// Target the target-level config struct type
 	Target reflect.Type
 }
-
-// formStructs 渠道类型键 -> 配置结构体类型注册表。
-// formStructs maps channel type keys to their config struct types.
-var formStructs = map[string]FormStructs{}
 
 // registerFormStructs 注册渠道类型对应的渠道级/目标级配置结构体类型。
 // 各渠道在 init() 中与注册工厂一并调用。

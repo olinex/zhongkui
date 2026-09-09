@@ -65,7 +65,7 @@
                   <tr v-for="hit in detail.hits" :key="hit.id">
                     <td>{{ hit.conditionName }}</td>
                     <td>{{ hit.model }}</td>
-                    <td>{{ hit.dimension }}</td>
+                    <td>{{ dimensionTitle(hit.dimension, hit.model) }}</td>
                     <td>{{ hit.item }}</td>
                     <td>{{ hit.count }}</td>
                     <td>{{ hit.threshold }}</td>
@@ -137,6 +137,7 @@ import type { TagEventRecordDetailOut } from "@/apis/@types/admin";
 
 import { useAppStore } from "@/stores/app";
 import i18n, { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
+import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -199,6 +200,12 @@ const formatDatetime = (value: string | null | undefined): string => {
   }
   return localeDatetimeFormat(DateTime.fromISO(value));
 };
+
+// dimensionTitle 标签维度列展示名：维度为枚举类型，前端按 model.<modelKey>.field.<dimension>
+// 复用对应字段翻译作为 option 的 title（如 fpTcpClientSig → "客户端指纹签名"），
+// 未命中时回退为模型字段标题兜底（去前缀/驼峰分词），不再直接显示原始 value。
+const dimensionTitle = (dimension: string, model: string): string =>
+  modelFieldTitle(modelTypeKeyToI18nKey(model), dimension);
 
 // 事件基础信息字段（标签经 i18n，状态值含枚举翻译）
 interface DetailField {

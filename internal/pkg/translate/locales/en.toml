@@ -1586,6 +1586,7 @@ parse-if = "Missing if keyword: rule body should be written as tags contains <va
 parse-contains = "Missing contains keyword: tag rules should be written as tags contains <value>"
 parse-empty = "Empty module: please write at least one rule"
 parse-illegal = "Syntax error: illegal expression, please check the code near this position"
+parse-builtin-conflict = "A built-in function name cannot be used as a bare call: assign the result to a variable, e.g. x := sqlite.query(\"SELECT 1 AS x\", [])"
 parse-fallback = "Rego syntax error: please check whether the code near this position is valid Rego"
 compile-shadow = "Rule name conflict: a rule name cannot shadow other rules or keywords, please rename it"
 compile-import-shadow = "Import conflict: the imported package name shadows another symbol, please adjust the import"
@@ -2021,3 +2022,17 @@ other = "Risk tag combination"
 [notify.password.reset]
 title = "Reset Your Account Password"
 content = "@emails/password-reset-content.en.html"
+
+[notify.tag_event.alert]
+title = "Tag Event Alert: {{.RuleName}}"
+content = "@notify/tag-event-alert-content.en.txt"
+
+# =============================================================================
+# Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)
+# Custom OPA builtin descriptions: localized by the view layer per request
+# language and returned with the function metadata, powering the frontend Rego
+# editor's hover hints and completion details
+# =============================================================================
+
+[tagengine.custom-functions.sqlite.query.description]
+other = "Query a third-party datasource: run a SELECT statement against a datasource registered as an sqlite vtable and return an array of row objects.\nArguments: the first argument is the query statement (supporting ? placeholders), the second is the array of parameters bound in order.\nResult: each row is an object keyed by column name, accessed by index plus column name (e.g. rows[0].value); an empty array is returned when nothing matches and indexing it makes the rule body undefined, so guard with count(rows) > 0 first"

@@ -24,7 +24,6 @@ import (
 	"zhongkui.com/zhongkui/internal/models/tag"
 )
 
-
 // TagEventRecordListOut 定义标签事件记录列表的输出项结构。
 // 嵌入 BaseItemOut 携带审计字段、BaseTotalOut 支持分页总数统计；
 // 展示触发规则快照、是否全命中与事件状态等核心信息。

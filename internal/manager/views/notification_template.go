@@ -3,7 +3,7 @@
 // 提供事件模板枚举（events）、模板列表、创建/更新、恢复默认（restore-default）
 // 与渲染预览（render-test）能力。通知模板为命名空间级资源，
 // 同一命名空间下（event + channel_type + language）组合唯一。
-// 内置默认模板由 internal/notify/template.go 注册表种子生成（source=default），
+// 事件默认标题/正文不再落库（已迁至翻译包 i18n 键 notify.<template>.title/.content），
 // 用户覆盖模板在此管理接口维护（source=override）。
 package views
 
@@ -26,6 +26,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	message "zhongkui.com/zhongkui/internal/pkg/message"
+	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -44,28 +45,15 @@ type NotificationTemplateEventItemOut struct {
 	Template string `json:"template"`
 	// Channels 该事件支持的渠道类型键列表（可能含 "*" 通配）
 	Channels []string `json:"channels"`
-	// Languages 该事件支持的语言键列表（可能含 "*" 通配）
-	Languages []string `json:"languages"`
-	// DefaultTitle 平台默认语言下的默认标题模板
+	// Languages 该事件支持的语言（base.Language，JSON 序列化为语言标签字符串）。
+	// 不支持 "*" 通配，"对所有语言生效"由前端在枚举时另行追加。
+	Languages []base.Language `json:"languages"`
+	// DefaultTitle 平台默认语言下默认标题（以事件样例参数渲染出的代表性文案）
 	DefaultTitle string `json:"defaultTitle"`
-	// DefaultContent 平台默认语言下的默认正文模板
+	// DefaultContent 平台默认语言下默认正文（以事件样例参数渲染出的代表性文案）
 	DefaultContent string `json:"defaultContent"`
 	// Fields 该事件的可选模板变量名清单（供前端智能补全）
 	Fields []string `json:"fields"`
-}
-
-// NotificationTemplateListGetSearchIn 定义通知模板列表查询的请求输入结构。
-// 支持按事件、来源、语言与渠道类型过滤；分页使用工作区统一的 Pagination 结构。
-type NotificationTemplateListGetSearchIn struct {
-	Pagination
-	// Event 事件类型键，可选，精确过滤
-	Event string `json:"event"`
-	// Source 模板来源，可选，仅允许 default / override
-	Source string `json:"source" binding:"omitempty,oneof=default override"`
-	// Language 语言键，可选，精确过滤
-	Language string `json:"language"`
-	// ChannelType 渠道类型键，可选，精确过滤
-	ChannelType string `json:"channelType"`
 }
 
 // NotificationTemplateItemOut 定义通知模板列表的输出项结构。
@@ -79,8 +67,8 @@ type NotificationTemplateItemOut struct {
 	Event string `json:"event"`
 	// ChannelType 渠道类型键
 	ChannelType string `json:"channelType"`
-	// Language 语言键
-	Language string `json:"language"`
+	// Language 语言（base.Language），可为 "*" 通配
+	Language base.Language `json:"language"`
 	// Title 标题模板
 	Title string `json:"title"`
 	// Content 正文模板
@@ -104,8 +92,8 @@ type NotificationTemplateCreateIn struct {
 	Event string `json:"event" binding:"required"`
 	// ChannelType 渠道类型键，必填，必须为 notify.SupportedChannels() 之一
 	ChannelType string `json:"channelType" binding:"required"`
-	// Language 语言键，必填，必须为 notify.SupportedLanguages() 之一
-	Language string `json:"language" binding:"required"`
+	// Language 语言（base.Language），必填，必须为 notify.SupportedLanguages() 之一（可为 "*"）
+	Language base.Language `json:"language" binding:"required"`
 	// Title 标题模板，必填
 	Title string `json:"title" binding:"required"`
 	// Content 正文模板，必填
@@ -132,8 +120,8 @@ type NotificationTemplateUpdateIn struct {
 type NotificationTemplateRestoreDefaultIn struct {
 	// Event 事件类型键，必填，恢复该事件全部模板为默认
 	Event string `json:"event" binding:"required"`
-	// Language 语言键，可选（语义按事件整体恢复，忽略语言）
-	Language string `json:"language" binding:"required"`
+	// Language 语言（base.Language），必填（语义按事件整体恢复，忽略语言）
+	Language base.Language `json:"language" binding:"required"`
 }
 
 // NotificationTemplateRenderTestIn 定义模板渲染预览的请求输入结构。
@@ -142,8 +130,8 @@ type NotificationTemplateRenderTestIn struct {
 	Event string `json:"event" binding:"required"`
 	// ChannelType 渠道类型键，缺省使用 "*" 通配
 	ChannelType string `json:"channelType"`
-	// Language 语言键，缺省使用平台默认语言
-	Language string `json:"language"`
+	// Language 语言（base.Language），缺省使用平台默认语言
+	Language base.Language `json:"language"`
 	// Params 模板参数，供 Go text/template 渲染
 	Params map[string]any `json:"params"`
 }
@@ -154,8 +142,8 @@ type NotificationTemplateRenderTestOut struct {
 	Event string `json:"event"`
 	// ChannelType 实际使用的渠道类型键
 	ChannelType string `json:"channelType"`
-	// Language 实际使用的语言键
-	Language string `json:"language"`
+	// Language 实际使用的语言（base.Language）
+	Language base.Language `json:"language"`
 	// Title 渲染后的标题
 	Title string `json:"title"`
 	// Content 渲染后的正文
@@ -191,8 +179,8 @@ type NotificationTemplateDryRunIn struct {
 	Event string `json:"event" binding:"required"`
 	// ChannelType 渠道类型键，仅回显，缺省使用 "*" 通配
 	ChannelType string `json:"channelType"`
-	// Language 语言键，仅回显，缺省使用平台默认语言
-	Language string `json:"language"`
+	// Language 语言（base.Language），仅回显，缺省使用平台默认语言
+	Language base.Language `json:"language"`
 	// Title 标题模板
 	Title string `json:"title"`
 	// Content 正文模板
@@ -205,8 +193,8 @@ type NotificationTemplateDryRunOut struct {
 	Event string `json:"event"`
 	// ChannelType 实际使用的渠道类型键
 	ChannelType string `json:"channelType"`
-	// Language 实际使用的语言键
-	Language string `json:"language"`
+	// Language 实际使用的语言（base.Language）
+	Language base.Language `json:"language"`
 	// Title 渲染后的标题
 	Title string `json:"title"`
 	// Content 渲染后的正文
@@ -224,28 +212,33 @@ var notificationTemplateRenderLogger = func() *logging.Logger {
 }()
 
 // NotificationTemplateEventsGet 处理获取通知模板事件枚举的请求。
-// 依据 notify.TemplateSpecs() 注册表返回各事件的支持渠道/语言与默认标题/正文。
+// 依据 notify.TemplateSpecs() 注册表返回各事件的支持渠道/语言与默认标题/正文；
+// 默认标题/正文取自翻译包 i18n 键 notify.<template>.title/.content，并以事件样例参数
+// 渲染出一份代表性文案（含 {{range}} 等动作），供前端展示各事件的默认模板能力。
 func NotificationTemplateEventsGet(c *gin.Context) {
 	specs := notify.TemplateSpecs()
 	events := make([]NotificationTemplateEventItemOut, 0, len(specs))
-	defLang := base.DefaultLanguage.String()
-	for _, spec := range specs {
+	for event, spec := range specs {
+		defaultParams, _ := notify.EventSampleParams(event)
+		if defaultParams == nil {
+			defaultParams = map[string]any{}
+		}
 		events = append(events, NotificationTemplateEventItemOut{
-			Event:          spec.Event,
+			Event:          event,
 			Template:       spec.Template,
 			Channels:       slices.Clone(spec.Channels),
 			Languages:      slices.Clone(spec.Languages),
-			DefaultTitle:   spec.TitleByLang[defLang],
-			DefaultContent: spec.ContentByLang[defLang],
-			Fields:         notify.EventFields(spec.Event),
+			DefaultTitle:   translate.Localize(base.DefaultLanguage, spec.TitleKey(), defaultParams),
+			DefaultContent: translate.Localize(base.DefaultLanguage, spec.ContentKey(), defaultParams),
+			Fields:         notify.EventFields(event),
 		})
 	}
 	response.SimpleOK.AbortWithGinW(c, NotificationTemplateEventsOut{Events: events})
 }
 
 // NotificationTemplateListGet 处理获取通知模板列表的请求。
-// 支持按事件/来源/语言/渠道类型精确过滤，显式分页（Count + Offset/Limit）并映射为 Out；
-// 仅返回当前命名空间内的模板。
+// 基于统一搜索基座 BuildSearchQuery 支持分页、排序与多字段过滤（事件/来源/语言/渠道类型/
+// 创建/更新时间），仅返回当前命名空间内的模板。
 func NotificationTemplateListGet(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -260,39 +253,17 @@ func NotificationTemplateListGet(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	db := middlewares.GetCoreDatabase(c).WithContext(c).Model(&core.NotificationTemplate{}).
-		Where("namespace_name = ?", namespace)
-	if in.Event != "" {
-		db = db.Where("event = ?", in.Event)
-	}
-	if in.Source != "" {
-		db = db.Where("source = ?", in.Source)
-	}
-	if in.Language != "" {
-		db = db.Where("language = ?", in.Language)
-	}
-	if in.ChannelType != "" {
-		db = db.Where("channel_type = ?", in.ChannelType)
-	}
-	var total int64
-	if err := db.Count(&total).Error; err != nil {
+	var items []*NotificationTemplateListOut
+	if query, err := utils.BuildSearchQuery(
+		middlewares.GetCoreDatabase(c).Model(&core.NotificationTemplate{}).
+			Where("namespace_name = ?", namespace), &in); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	} else if err := query.Find(&items).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	var rows []core.NotificationTemplate
-	offset := int((in.Page - 1) * in.PageSize)
-	if err := db.Order("created_at DESC").Offset(offset).Limit(int(in.PageSize)).Find(&rows).Error; err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	items := make([]*NotificationTemplateListOut, 0, len(rows))
-	for i := range rows {
-		items = append(items, &NotificationTemplateListOut{
-			NotificationTemplateItemOut: newNotificationTemplateItemOut(&rows[i]),
-			BaseTotalOut:                utils.BaseTotalOut{Total: uint(total)},
-		})
-	}
-	response.SimpleOK.AbortWithGinW(c, &utils.SearchOut[*NotificationTemplateListOut]{Total: uint(total), Items: items})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchOut(items))
 }
 
 // NotificationTemplateCreate 处理创建通知模板的请求。
@@ -321,8 +292,8 @@ func NotificationTemplateCreate(c *gin.Context) {
 		notificationTemplateBadInput(c, errors.Newf("notification template: unsupported channel type %q", in.ChannelType))
 		return
 	}
-	if !slices.Contains(notify.SupportedLanguages(), in.Language) {
-		notificationTemplateBadInput(c, errors.Newf("notification template: unsupported language %q", in.Language))
+	if !slices.Contains(notify.SupportedLanguages(), in.Language.String()) {
+		notificationTemplateBadInput(c, errors.Newf("notification template: unsupported language %q", in.Language.String()))
 		return
 	}
 	if err := notify.ValidateTemplateSyntax("title", in.Title); err != nil {
@@ -345,14 +316,14 @@ func NotificationTemplateCreate(c *gin.Context) {
 	if conflict > 0 {
 		notificationTemplateBadInput(c, errors.Newf(
 			"notification template for event %q, channel %q, language %q already exists",
-			in.Event, in.ChannelType, in.Language))
+			in.Event, in.ChannelType, in.Language.String()))
 		return
 	}
 	instance := &core.NotificationTemplate{
 		NamespaceName: namespace,
 		Event:         in.Event,
 		ChannelType:   in.ChannelType,
-		Language:      in.Language,
+		Language:      in.Language.String(),
 		Title:         in.Title,
 		Content:       in.Content,
 		Source:        core.TemplateSourceOverride,
@@ -419,7 +390,8 @@ func NotificationTemplateUpdate(c *gin.Context) {
 }
 
 // NotificationTemplateRestoreDefault 恢复整个事件在该命名空间下的模板为内置默认。
-// 先删除该事件在该命名空间的全部模板行，再调用 notify.SeedDefaultTemplates 重新种子化。
+// 删除该事件在该命名空间的全部持久化模板行即可：默认标题/正文不再落库，渲染时若该
+// 命名空间无对应模板行，将自动回退到翻译包 i18n 键 notify.<template>.title/.content。
 func NotificationTemplateRestoreDefault(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -433,10 +405,6 @@ func NotificationTemplateRestoreDefault(c *gin.Context) {
 	db := middlewares.GetCoreDatabase(c)
 	if err := db.WithContext(c).Where("namespace_name = ? AND event = ?", namespace, in.Event).
 		Delete(&core.NotificationTemplate{}).Error; err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	if err := notify.SeedDefaultTemplates(db.WithContext(c), namespace); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -465,11 +433,11 @@ func NotificationTemplateRenderTest(c *gin.Context) {
 		channelType = "*"
 	}
 	lang := in.Language
-	if lang == "" {
-		lang = base.DefaultLanguage.String()
+	if lang.String() == "" {
+		lang = *base.DefaultLanguage
 	}
-	service := notify.NewService(middlewares.GetCoreDatabase(c), notificationTemplateRenderLogger)
-	rendered, err := service.RenderPreview(c, namespace, in.Event, channelType, lang, in.Params)
+	service := notify.NewService(middlewares.GetCoreDatabase(c), notificationTemplateRenderLogger, middlewares.GetMessagePool(c))
+	rendered, err := service.RenderPreview(c, namespace, in.Event, channelType, lang.String(), in.Params)
 	if err != nil {
 		// 渲染失败（未知事件、模板非法）作为正常业务错误返回，details 携带具体原因
 		notificationTestSendFailed(c, err)
@@ -526,8 +494,8 @@ func NotificationTemplateDryRun(c *gin.Context) {
 		channelType = "*"
 	}
 	lang := in.Language
-	if lang == "" {
-		lang = base.DefaultLanguage.String()
+	if lang.String() == "" {
+		lang = *base.DefaultLanguage
 	}
 	if err := notify.ValidateTemplateSyntax("title", in.Title); err != nil {
 		notificationTemplateBadInput(c, errors.Newf("notification template title invalid: %v", err))
@@ -565,19 +533,4 @@ func NotificationTemplateDryRun(c *gin.Context) {
 // details 为具体原因，供前端直接向用户展示。
 func notificationTemplateBadInput(c *gin.Context, err error) {
 	response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
-}
-
-// newNotificationTemplateItemOut 将 NotificationTemplate 转换为列表输出项结构。
-func newNotificationTemplateItemOut(template *core.NotificationTemplate) NotificationTemplateItemOut {
-	return NotificationTemplateItemOut{
-		Id:            template.ID,
-		NamespaceName: template.NamespaceName,
-		Event:         template.Event,
-		ChannelType:   template.ChannelType,
-		Language:      template.Language,
-		Title:         template.Title,
-		Content:       template.Content,
-		Source:        template.Source,
-		Description:   template.Description,
-	}
 }

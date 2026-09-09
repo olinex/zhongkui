@@ -389,7 +389,7 @@ func UserSelfProfileChange(c *gin.Context) {
 }
 
 // UserSelfJwtRefresh 处理JWT令牌刷新请求
-// 路由：POST /api/v1/user/self/jwt/refresh
+// 路由：POST /api/v1/user/jwt/refresh（豁免强制认证与授权，用过期 access token 换发）
 // 功能：刷新当前用户的JWT令牌
 func UserSelfJwtRefresh(c *gin.Context) {
 	auth := middlewares.GetAuth(c)

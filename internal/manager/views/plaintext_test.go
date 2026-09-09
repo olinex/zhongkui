@@ -4,13 +4,14 @@ import (
 	"testing"
 
 	"zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 )
 
-// TestExtractCryptoFieldTagPayload 验证 PacketIPv4TCP / PacketIPv6TCP 内嵌的基础包结构
-// （PacketIPv4 / PacketIPv6）与自身均声明 Payload 字段时的字段解析：
+// TestCryptoFieldTagPayload 验证 PacketIPv4TCP / PacketIPv6TCP 内嵌的基础包结构
+// （PacketIPv4 / PacketIPv6）与自身均声明 Payload 字段时的字段解析（crypto.FieldTag）：
 //   - 单段路径 "payload" 必须解析到最外层（直接声明）字段（offset=38278 / 50359）；
 //   - 多段路径（如 "PacketIPv6.Payload"）必须按显式路径解析到内层嵌入字段（offset=31496）。
-func TestExtractCryptoFieldTagPayload(t *testing.T) {
+func TestCryptoFieldTagPayload(t *testing.T) {
 	cases := []struct {
 		name   string
 		model  any
@@ -24,9 +25,9 @@ func TestExtractCryptoFieldTagPayload(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			spec, err := extractCryptoFieldTag(tc.model, tc.path)
+			spec, err := crypto.FieldTag(tc.model, tc.path, "json")
 			if err != nil {
-				t.Fatalf("extractCryptoFieldTag(%q) failed: %v", tc.path, err)
+				t.Fatalf("crypto.FieldTag(%q) failed: %v", tc.path, err)
 			}
 			if spec.Offset != tc.offset {
 				t.Fatalf("%s offset mismatch: got %d, want %d", tc.path, spec.Offset, tc.offset)

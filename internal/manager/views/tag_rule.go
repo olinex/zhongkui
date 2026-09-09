@@ -10,23 +10,29 @@
 package views
 
 import (
+	// stdlib
+
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
+	// third-party
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"gorm.io/gorm"
 
+	// internal
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
@@ -248,6 +254,49 @@ type TagRuleModelSamplesOut struct {
 	Model string `json:"model"`
 	// Items 样例列表
 	Items []*TagRuleModelSampleOut `json:"items"`
+}
+
+// TagRuleFunctionOut 定义自定义 OPA 内置函数的元信息输出项。
+// Description 已按请求语言翻译；Example 为可插入编辑器的用法示例文本。
+type TagRuleFunctionOut struct {
+	// Name 函数全名（如 sqlite.query），rego 规则中直接引用
+	Name string `json:"name"`
+	// Description 函数说明（按请求语言翻译后的文本）
+	Description string `json:"description"`
+	// Signature 人类可读的调用签名（如 sqlite.query(sql, params)）
+	Signature string `json:"signature"`
+	// Example 用法示例文本
+	Example string `json:"example"`
+}
+
+// TagRuleFunctionsOut 定义自定义 OPA 内置函数元信息列表的输出结构。
+// 供前端 Rego 编辑器实现自定义函数的关键词高亮、悬停签名提示与自动补全。
+type TagRuleFunctionsOut struct {
+	// Functions 自定义函数元信息列表
+	Functions []TagRuleFunctionOut `json:"functions"`
+}
+
+// TagRuleSqliteColumnOut 定义 sqlite vtable 数据源的一个列元信息。
+type TagRuleSqliteColumnOut struct {
+	// Name 列名（与数据源 schema 声明一致）
+	Name string `json:"name"`
+	// Type 值类型（string/number/boolean/blob/any）
+	Type string `json:"type"`
+}
+
+// TagRuleSqliteDatasourceOut 定义已注册为 sqlite vtable 的第三方数据源元信息。
+type TagRuleSqliteDatasourceOut struct {
+	// Name 数据源名（rego 中 sqlite.query 引用的裸名表名）
+	Name string `json:"name"`
+	// Columns 该数据源的列定义列表
+	Columns []TagRuleSqliteColumnOut `json:"columns"`
+}
+
+// TagRuleSqliteMetaOut 定义 sqlite 语句编辑器元信息的输出结构。
+// 供前端 Rego 编辑器对 sqlite.query 内的 SQL 语句实现表名/列名补全与提示。
+type TagRuleSqliteMetaOut struct {
+	// Datasources 当前命名空间已注册数据源的 schema 列表
+	Datasources []TagRuleSqliteDatasourceOut `json:"datasources"`
 }
 
 // TagRuleDryRunRegoIn 定义 dry-run 的单条候选规则输入结构。
@@ -684,9 +733,79 @@ func TagRuleModelSamples(c *gin.Context) {
 	response.SimpleOK.AbortWithGinW(c, TagRuleModelSamplesOut{Model: in.Model, Items: items})
 }
 
+// TagRuleFunctions 处理获取 rego 规则可调用的自定义 OPA 内置函数元信息的请求。
+// 返回函数名、说明（按请求语言翻译）、调用签名与用法示例；
+// 供前端 Rego 编辑器实现自定义函数的关键词高亮、悬停签名提示与自动补全。
+func TagRuleFunctions(c *gin.Context) {
+	funcs := tagengine.CustomFunctions()
+	lc := response.GetLocalizer(c)
+	items := make([]TagRuleFunctionOut, 0, len(funcs))
+	for _, f := range funcs {
+		desc := f.Description
+		if text, err := lc.Localize(&i18n.LocalizeConfig{MessageID: f.Description}); err == nil && text != "" {
+			desc = text
+		}
+		items = append(items, TagRuleFunctionOut{
+			Name:        f.Name,
+			Description: desc,
+			Signature:   f.Signature,
+			Example:     f.Example,
+		})
+	}
+	response.SimpleOK.AbortWithGinW(c, TagRuleFunctionsOut{Functions: items})
+}
+
+// TagRuleSqliteMeta 处理获取当前命名空间 sqlite vtable 数据源 schema 元信息的请求。
+// 返回已注册数据源的 {name, columns} 列表，供前端 Rego 编辑器对 sqlite.query 内的
+// SQL 语句实现表名/列名补全与提示。
+func TagRuleSqliteMeta(c *gin.Context) {
+	namespace, ok := middlewares.RequireNamespace(c)
+	if !ok {
+		return
+	}
+	pool := middlewares.GetSQLiteVTabPools(c).Pool(namespace)
+	schemas := pool.DatasourceSchemas()
+	items := make([]TagRuleSqliteDatasourceOut, 0, len(schemas))
+	for _, s := range schemas {
+		cols := make([]TagRuleSqliteColumnOut, 0, len(s.Columns))
+		for _, col := range s.Columns {
+			cols = append(cols, TagRuleSqliteColumnOut{Name: col.Name, Type: sqliteValueTypeName(col.ValueType)})
+		}
+		items = append(items, TagRuleSqliteDatasourceOut{Name: s.Name, Columns: cols})
+	}
+	response.SimpleOK.AbortWithGinW(c, TagRuleSqliteMetaOut{Datasources: items})
+}
+
+// sqliteValueTypeName 将 sqlitevtab.ValueType 映射为前端展示用类型名。
+// 整型/浮点/布尔统一归为 number（对规则作者而言都是数值比较）。
+func sqliteValueTypeName(t sqlitevtab.ValueType) string {
+	switch t {
+	case sqlitevtab.ValueTypeString:
+		return "string"
+	case sqlitevtab.ValueTypeInt64, sqlitevtab.ValueTypeFloat64, sqlitevtab.ValueTypeBool:
+		return "number"
+	case sqlitevtab.ValueTypeBlob:
+		return "blob"
+	default:
+		return "any"
+	}
+}
+
+// withTagRuleSQLitePool 将当前请求命名空间的 sqlite vtable 池绑定到 ctx，
+// 使 dry-run / 写路径运行期样例校验中的 sqlite.query 可查询该命名空间的裸名 vtable。
+// 命名空间缺失或池不可用时原样返回（sqlite.query 将按未绑池语义处理）。
+func withTagRuleSQLitePool(c *gin.Context) context.Context {
+	namespace, err := middlewares.GetNamespace(c)
+	if err != nil {
+		return c
+	}
+	return tagengine.WithDatasourcePool(c, middlewares.GetSQLiteVTabPools(c).Pool(namespace))
+}
+
 // TagRuleDryRun 处理单规则 dry-run 的请求。
 // 仅针对一条候选规则（rego），先经公共 Rego 校验（语法 + 契约 + 组级编译），
 // 校验通过后再经 CompileRule 编译并评估输入文档。
+// 评估前按请求命名空间绑定第三方数据源池，规则内的 sqlite.query 可查询裸名 vtable。
 // 输出仅含错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 func TagRuleDryRun(c *gin.Context) {
 	var in TagRuleDryRunRuleIn
@@ -709,11 +828,12 @@ func TagRuleDryRun(c *gin.Context) {
 		invalidTagRuleError(c, errs).AbortWithGinH(c)
 		return
 	}
-	if _, cr, err := tagengine.CompileRule(c, rule); err != nil {
+	ctx := withTagRuleSQLitePool(c)
+	if _, cr, err := tagengine.CompileRule(ctx, rule); err != nil {
 		invalidTagRuleError(c, tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
 		return
 	} else {
-		res := cr.RecognizeWithDetail(c, rego.EvalInput(in.Input))
+		res := cr.RecognizeWithDetail(ctx, rego.EvalInput(in.Input))
 		response.SimpleOK.AbortWithGinW(c, &TagRuleDryRunOut{
 			Tags:  res.Tags,
 			Rules: map[string]*TagRuleDryRunRuleOut{in.Name: newTagRuleDryRunRuleOut(res)},
@@ -724,6 +844,7 @@ func TagRuleDryRun(c *gin.Context) {
 // TagRuleDryRunGroup 处理规则组 dry-run 的请求。
 // 针对一组候选规则（rules），先经公共 Rego 校验（逐条语法契约 + 整组语义编译），
 // 校验通过后再经 CompileGroup 编译并评估输入文档，
+// 评估前按请求命名空间绑定第三方数据源池，规则内的 sqlite.query 可查询裸名 vtable。
 // 输出逐规则详情与合并标签。
 // 输出仅含错误消息文本，不返回错误对象，避免错误堆栈等实现细节泄露。
 func TagRuleDryRunGroup(c *gin.Context) {
@@ -745,12 +866,13 @@ func TagRuleDryRunGroup(c *gin.Context) {
 		invalidTagRuleError(c, errs).AbortWithGinH(c)
 		return
 	}
-	group, err := tagengine.CompileGroup(c, rules)
+	ctx := withTagRuleSQLitePool(c)
+	group, err := tagengine.CompileGroup(ctx, rules)
 	if err != nil {
 		invalidTagRuleError(c, tagengine.ExtractRegoErrors(err)).AbortWithGinH(c)
 		return
 	}
-	result := group.RecognizeWithDetail(c, rego.EvalInput(in.Input))
+	result := group.RecognizeWithDetail(ctx, rego.EvalInput(in.Input))
 	response.SimpleOK.AbortWithGinW(c, newTagRuleDryRunOut(result))
 }
 
@@ -933,8 +1055,10 @@ func validateTagRuleCandidateBatch(c *gin.Context, candidate *tag.TagRule) error
 	if errs, ok := tagengine.ValidateRegoRules(c, group); !ok {
 		return invalidTagRuleError(c, errs)
 	}
-	// 第二层校验：基于验证样例做运行期评估，任一样例评估报错即判定运行期不合法
-	if issues, err := tagengine.ValidateGroupRuntime(c, db, group); err != nil {
+	// 第二层校验：基于验证样例做运行期评估，任一样例评估报错即判定运行期不合法。
+	// 评估前按命名空间绑定第三方数据源池，使含 sqlite.query 的规则在样例校验时可查询
+	// 该命名空间的裸名 vtable。
+	if issues, err := tagengine.ValidateGroupRuntime(withTagRuleSQLitePool(c), db, group); err != nil {
 		if errors.Is(err, tagengine.ErrSampleNotProvisioned) {
 			// 该模型尚未预置验证样例：运行期校验降级跳过，记录告警后放行
 			// （规则仍受第一层语法/契约校验保障，样例补充后即恢复运行期保障）

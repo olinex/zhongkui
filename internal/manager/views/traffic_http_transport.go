@@ -478,32 +478,35 @@ func HttpTransportListGet(c *gin.Context) {
 		return
 	}
 
-	// 以局部扫描行承载 gorm 模型与注入的 total 列（用于分页总数），随后映射为 Out 结构
-	var rows []struct {
-		network.HttpTransport
-		utils.BaseTotalOut
-	}
-
 	// 获取 raw 库（ClickHouse）连接并指定查询模型
 	db := middlewares.GetRawDatabase(c).Model(&network.HttpTransport{})
 
-	// 构建搜索查询，应用分页、排序和过滤条件
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	// 先以轻量 count 统计总数：ClickHouse 只扫过滤列与 granule 标记，
+	// 避免 COUNT(*) OVER() 窗口函数在 LIMIT 前物化全部命中行的所有列（body/headers 等宽列）。
+	var total int64
+	if countQuery, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
-	} else if err := query.Find(&rows).Error; err != nil {
+	} else if err := countQuery.Count(&total).Error; err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 再查询当前页数据：ORDER BY timestamp 命中 MergeTree 排序键，可倒序读 + LIMIT 早停，
+	// 仅物化当前页行；扫描容器与模型同型，避免 GORM 按目的地枚举额外列（如 total）。
+	var rows []network.HttpTransport
+	if dataQuery, err := utils.BuildSearchDataQuery(db, &in); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	} else if err := dataQuery.Find(&rows).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 
 	items := make([]*HttpTransportListGetListItemOut, 0, len(rows))
-	var total uint
 	for i := range rows {
-		if i == 0 {
-			total = rows[i].Total
-		}
-		out := newHttpTransportListGetListItemOut(&rows[i].HttpTransport)
-		out.Total = total
+		out := newHttpTransportListGetListItemOut(&rows[i])
+		out.Total = uint(total)
 		items = append(items, out)
 	}
 
@@ -533,32 +536,35 @@ func HttpTransportStackListGet(c *gin.Context) {
 		return
 	}
 
-	// 以局部扫描行承载 gorm 模型与注入的 total 列（用于分页总数），随后映射为 Out 结构
-	var rows []struct {
-		network.NetworkStack
-		utils.BaseTotalOut
-	}
-
 	// 获取 raw 库（ClickHouse）连接并指定查询模型
 	db := middlewares.GetRawDatabase(c).Model(&network.NetworkStack{})
 
-	// 构建搜索查询，应用分页、排序和过滤条件
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	// 先以轻量 count 统计总数：ClickHouse 只扫过滤列与 granule 标记，
+	// 避免 COUNT(*) OVER() 窗口函数在 LIMIT 前物化全部命中行的所有列（payload 等宽列）。
+	var total int64
+	if countQuery, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
-	} else if err := query.Find(&rows).Error; err != nil {
+	} else if err := countQuery.Count(&total).Error; err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 再查询当前页数据：ORDER BY timestamp 命中 MergeTree 排序键，可倒序读 + LIMIT 早停，
+	// 仅物化当前页行；扫描容器与模型同型，避免 GORM 按目的地枚举额外列（如 total）。
+	var rows []network.NetworkStack
+	if dataQuery, err := utils.BuildSearchDataQuery(db, &in); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	} else if err := dataQuery.Find(&rows).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 
 	items := make([]*NetworkStackListGetListItemOut, 0, len(rows))
-	var total uint
 	for i := range rows {
-		if i == 0 {
-			total = rows[i].Total
-		}
-		out := newNetworkStackListGetListItemOut(&rows[i].NetworkStack)
-		out.Total = total
+		out := newNetworkStackListGetListItemOut(&rows[i])
+		out.Total = uint(total)
 		items = append(items, out)
 	}
 

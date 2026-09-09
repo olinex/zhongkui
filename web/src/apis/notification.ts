@@ -23,7 +23,6 @@ import type {
   NotificationTemplateValidateIn,
 } from "./@types/notification";
 import type {
-  FilterByItem,
   FilterByOption,
   HeaderOption,
   SearchIn,
@@ -257,34 +256,19 @@ export function notificationTemplateEventsGet(): AxiosPromise {
   );
 }
 
-// search-table 以通用 SearchIn（filterBy 对象）提交过滤条件；后端模板列表接口将
-// event/source/language/channelType 作为顶层字段接收，故在此显式转换后提交。
+// search-table 以通用 SearchIn（filterBy 对象）提交过滤条件；后端模板列表接口已接入
+// 统一搜索基座（BuildSearchQuery / ListMetaGinHandler），直接透传即可。
 export function notificationTemplateListGet(data: SearchIn): AxiosPromise {
-  const filterValue = (key: string): string => {
-    const f = data.filterBy?.[key] as FilterByItem | undefined;
-    return typeof f?.value === "string" ? f.value : "";
-  };
-  return request.post(
-    "/notification/template/list",
-    {
-      page: data.page,
-      pageSize: data.pageSize,
-      event: filterValue("event") || undefined,
-      source: filterValue("source") || undefined,
-      language: filterValue("language") || undefined,
-      channelType: filterValue("channelType") || undefined,
-    },
-    {
-      headers: getJwtHeader(),
-    },
-  );
+  return request.post("/notification/template/list", data, {
+    headers: getJwtHeader(),
+  });
 }
 
-// 后端 /template/list OPTIONS 使用 StructMetaGinHandler（返回 ApiMeta）而非
-// ListMetaGinHandler（返回搜索选项），无法直接驱动 search-table。此处按模板模型
-// 前端本地组装搜索选项（表格列 + 可过滤字段），保证分页、过滤与列展示可用。
-// event/channelType/language/source 均为枚举字段：先拉取事件与渠道类型注册表，
-// 将过滤字段构建为下拉选项（title 为 i18n 键，渲染时经翻译展示）。
+// 后端 /template/list OPTIONS 虽已接入 ListMetaGinHandler（提供静态搜索选项），但模板的
+// event/channelType/language 为动态枚举（来自事件与渠道类型注册表），静态选项无法覆盖
+// 存量未收录的渠道/事件。此处仍前端本地组装搜索选项（表格列 + 可过滤字段）以保证筛选
+// 跟随注册表实时变化：先拉取事件与渠道类型注册表，将过滤字段构建为下拉选项
+// （title 为 i18n 键，渲染时经翻译展示）。
 export function notificationTemplateListOptions(): AxiosPromise {
   // 事件/渠道类型枚举拉取失败时回退为空列表，保证表格列与其余过滤字段仍可用（下拉退化为空选项）
   const eventsPromise = notificationTemplateEventsGet()
@@ -302,16 +286,22 @@ export function notificationTemplateListOptions(): AxiosPromise {
         ),
       ),
     ];
+    // 事件过滤可选项：按展示名（i18n 键）升序保证确定顺序（事件键兜底），不依赖后端返回顺序
+    const eventFilterOptions = events
+      .map((e) => ({
+        value: e.event,
+        title: `model.notificationTemplate.type.event.${e.event}`,
+      }))
+      .sort((a, b) =>
+        a.title === b.title ? a.value.localeCompare(b.value) : a.title.localeCompare(b.title),
+      );
     const filterBy: FilterByOption[] = [
       {
         name: "event",
         title: "",
         type: BackendDataType.ENUM,
         actions: [SearchAction.EQUAL],
-        options: events.map((e) => ({
-          value: e.event,
-          title: `model.notificationTemplate.type.event.${e.event}`,
-        })),
+        options: eventFilterOptions,
       },
       {
         name: "channelType",

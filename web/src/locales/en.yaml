@@ -28,6 +28,9 @@ navbar:
     tagRule: Tag Rule
     tagEventRule: Tag Event Rule
     record: Tag Event Record
+  datasource:
+    self: Datasource
+  namespaceScoped: Namespace-scoped
   pin: Pin sidebar
   unpin: Unpin sidebar
 model:
@@ -399,6 +402,41 @@ model:
       notificationDefault: Use namespace default notification group
       notificationGroup: Notification Group
       notificationTarget: Notification Target
+  datasource:
+    name: Third-party Datasource
+    field:
+      id: ID
+      createdAt: Created At
+      createdAtTime: Created Time
+      createdAtDate: Created Date
+      updatedAt: Updated At
+      updatedAtTime: Updated Time
+      updatedAtDate: Updated Date
+      name: Name
+      type: Type
+      enabled: Enabled
+      config: Connection Config
+      description: Description
+    type:
+      redis: Redis
+      mysql: MySQL
+    configField:
+      addr: Host Address
+      port: Port
+      password: Password
+      db: Logical DB
+      struct: Data Structure
+      user: Username
+      dbName: Database
+      table: Table
+    option:
+      redis: Redis
+      mysql: MySQL
+      string: String
+      hash: Hash
+      list: List
+      set: Set
+      zset: ZSet
   tagEventRecord:
     name: Tag Event Record
     field:
@@ -1025,6 +1063,10 @@ action:
   reuseFields: Reuse Existing Rule Fields
   selectSample: Select sample
   regoFieldHint: Type "/" to open the field list, "//" to insert a literal "/"
+  regoSqlMustStartSelect: sqlite.query only supports read-only queries; the SQL must start with SELECT
+  regoSqlUnclosedString: Unterminated single-quoted string in SQL
+  regoSqlUnmatchedParen: Unbalanced parentheses in SQL
+  regoSqlUnknownTable: "Unregistered datasource table: {table} (connect it under third-party datasources first)"
   tagExprFieldHint: Type "/" to open the tag list, "//" to insert a literal "/"
   addCondition: Add Condition
   removeCondition: Remove Condition
@@ -1072,6 +1114,8 @@ title:
     group: Notification Groups
     template: Notification Templates
     record: Send Records
+  datasource:
+    self: Third-party Datasource
   tagRuleTagEvent: Tag Events - Tag RulesRule
   tagEvent:
     record: Tag Event Record

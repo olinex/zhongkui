@@ -8,21 +8,10 @@ import (
 	"unsafe"
 
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	t "zhongkui.com/zhongkui/internal/pkg/tag"
 )
-
-const (
-	SecurityTagKey = "secure"
-)
-
-type CryptoTag struct {
-	Mode   string `tag:"mode"`
-	Offset int    `tag:"offset"`
-	Length int    `tag:"length"`
-}
 
 // Crypto 持有加密字段的明文与密文
 //   - value: 明文，读写库时由 crypto serializer 加解密，GetPayload 等业务读取明文
@@ -106,30 +95,8 @@ func (c *Crypto) UnmarshalJSON(data []byte) error {
 type CryptoSerializer struct{}
 
 func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
-	var cTag CryptoTag
-	tag := field.StructField.Tag.Get(SecurityTagKey)
-	if err := t.Unmarshal(tag, &cTag); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	kd := key.GetKeyDerivation()
-	if kd == nil {
-		return nil, errors.New("crypto: KeyDerivation not initialized, call key.InitGlobalKeyDerivation first")
-	}
-	cryptoKey, err := kd.DeriveChildKey(cTag.Offset, cTag.Length)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	var m mode.Mode
-	switch cTag.Mode {
-	case mode.AesGcm:
-		m, err = mode.NewAESGCMMode(cryptoKey, nil)
-	default:
-		return nil, errors.Newf("unknown crypto mode: %s", cTag.Mode)
-	}
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return m, nil
+	// 标签解析、密钥派生与模式构造统一走 crypto 层，与视图层明文查看链路一致
+	return crypto.ModeFromTag(field.StructField.Tag.Get(crypto.SecurityTagKey))
 }
 
 func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error {

@@ -143,6 +143,89 @@ export interface ModelOption {
   label: string;
 }
 
+// ---- custom OPA builtins & sqlite vtable metadata ----
+
+/**
+ * Metadata of a custom OPA builtin callable inside rego rules, as returned by
+ * the `/tag-event/tag-rule/functions` endpoint. Drives the Rego editor's
+ * function keyword highlight, hover signature hints and autocomplete.
+ */
+export interface RegoFunctionMeta {
+  /** full function name, e.g. "sqlite.query" */
+  name: string;
+  /** localized description shown in the autocomplete popup / hover tooltip */
+  description: string;
+  /** human-readable call signature, e.g. "sqlite.query(sql, params)" */
+  signature: string;
+  /** optional usage example text */
+  example?: string;
+}
+
+/** Metadata of a single column of a sqlite vtable datasource. */
+export interface SqliteColumnMeta {
+  name: string;
+  /** value type name, e.g. "text" | "integer" | "real" | "blob" | "any" */
+  type: string;
+}
+
+/**
+ * Metadata of a third-party datasource registered as an sqlite vtable, as
+ * returned by the `/tag-event/tag-rule/sqlite/meta` endpoint. Drives SQL
+ * table/column completion inside `sqlite.query(...)` strings.
+ */
+export interface SqliteDatasourceMeta {
+  /** bare table name referenced by sqlite.query, e.g. "ip_geo" */
+  name: string;
+  columns: SqliteColumnMeta[];
+}
+
+/**
+ * SQL keywords offered by the editor for keyword highlight and autocomplete
+ * inside `sqlite.query("...")` strings. SQLite read-only SELECT subset.
+ */
+export const SQL_KEYWORDS = [
+  "select",
+  "from",
+  "where",
+  "and",
+  "or",
+  "not",
+  "null",
+  "as",
+  "join",
+  "left",
+  "right",
+  "inner",
+  "outer",
+  "cross",
+  "on",
+  "order",
+  "by",
+  "group",
+  "having",
+  "limit",
+  "offset",
+  "distinct",
+  "count",
+  "sum",
+  "avg",
+  "min",
+  "max",
+  "case",
+  "when",
+  "then",
+  "else",
+  "end",
+  "between",
+  "like",
+  "in",
+  "is",
+  "true",
+  "false",
+  "asc",
+  "desc",
+];
+
 /**
  * Builds an insertable Rego snippet for an input field based on its semantic
  * type. Fields comparable with a literal become `input.<field> == <literal>`

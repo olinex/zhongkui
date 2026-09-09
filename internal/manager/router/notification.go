@@ -15,8 +15,9 @@ func registerNotificationRoutes(ctx *RegisterContext) {
 		ctx.authenticatorMiddleware,     // 认证器注入
 		ctx.forceAuthenticateMiddleware, // 强制JWT认证
 		ctx.policyMiddleware,            // RBAC策略引擎
-		ctx.coreDatabaseMiddleware,      // 核心库（GORM）连接
 		ctx.namespaceMiddleware,         // 命名空间隔离
+		ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.coreDatabaseMiddleware,      // 核心库（GORM）连接
 	)
 
 	// ========== 通知渠道：/api/v1/notification/channel ==========
@@ -66,7 +67,7 @@ func registerNotificationRoutes(ctx *RegisterContext) {
 	// ========== 通知目标：/api/v1/notification/target ==========
 	// 通知目标管理（增删改查、启停、批量删除与测试发送）。
 	{
-		targetGroup := notificationGroup.Group("/target")
+		targetGroup := notificationGroup.Group("/target", ctx.messagePoolMiddleware)
 		// 通知目标列表查询 - 支持分页、搜索和排序（含所属渠道信息）
 		targetGroup.POST("/list", views.NotificationTargetListGet)
 		targetGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.NotificationTargetListGetSearchIn, *views.NotificationTargetListOut]())
@@ -131,7 +132,7 @@ func registerNotificationRoutes(ctx *RegisterContext) {
 	// ========== 通知模板：/api/v1/notification/template ==========
 	// 通知模板管理（事件枚举、列表、创建/更新、恢复默认与渲染预览）。
 	{
-		templateGroup := notificationGroup.Group("/template")
+		templateGroup := notificationGroup.Group("/template", ctx.messagePoolMiddleware)
 		// 通知模板事件枚举 - 返回各事件支持渠道/语言与默认标题/正文
 		templateGroup.POST("/events", views.NotificationTemplateEventsGet)
 		// 通知模板事件枚举元信息
@@ -139,9 +140,7 @@ func registerNotificationRoutes(ctx *RegisterContext) {
 		// 通知模板列表查询 - 支持事件/来源/语言/渠道类型过滤与分页
 		templateGroup.POST("/list", views.NotificationTemplateListGet)
 		// 通知模板列表元信息
-		templateGroup.OPTIONS("/list", views.StructMetaGinHandler(
-			views.WithMethod(http.MethodPost, views.WithBodyInput[views.NotificationTemplateListGetSearchIn](), views.WithBodyOutput[views.NotificationTemplateListOut]()),
-		))
+		templateGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.NotificationTemplateListGetSearchIn, *views.NotificationTemplateListOut]())
 		// 创建通知模板（用户覆盖模板，source=override）
 		templateGroup.POST("/create", views.NotificationTemplateCreate)
 		// 创建通知模板元信息
@@ -162,11 +161,13 @@ func registerNotificationRoutes(ctx *RegisterContext) {
 		))
 		// 模板语法校验（校验编辑器内尚未保存的标题/正文）
 		templateGroup.POST("/validate", views.NotificationTemplateValidate)
+		// 模板语法校验元信息
 		templateGroup.OPTIONS("/validate", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.NotificationTemplateValidateIn](), views.WithBodyOutput[views.NotificationTemplateValidateOut]()),
 		))
 		// 模板试运行（使用事件内置样例参数渲染编辑器内尚未保存的标题/正文）
 		templateGroup.POST("/dry-run", views.NotificationTemplateDryRun)
+		// 模板试运行元信息
 		templateGroup.OPTIONS("/dry-run", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.NotificationTemplateDryRunIn](), views.WithBodyOutput[views.NotificationTemplateDryRunOut]()),
 		))
@@ -178,9 +179,11 @@ func registerNotificationRoutes(ctx *RegisterContext) {
 		recordGroup := notificationGroup.Group("/record")
 		// 通知记录列表查询 - 支持分页、搜索和排序（状态/事件/渠道/时间过滤）
 		recordGroup.POST("/list", views.NotificationRecordListGet)
+		// 通知记录列表元信息
 		recordGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.NotificationRecordListGetSearchIn, *views.NotificationRecordListOut]())
 		// 通知记录详情查询 - 含 payload/error/messageId/notifiedAt
 		recordGroup.POST("/:id/get", views.NotificationRecordDetailGet)
+		// 通知记录详情元信息
 		recordGroup.OPTIONS("/:id/get", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.NotificationRecordDetailOut]())))
 	}
 }

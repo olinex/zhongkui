@@ -1,0 +1,5 @@
+命名空间: {{.Namespace}}
+事件规则: {{.RuleName}}
+检测时间: {{.DetectedAt}}
+{{range .Hits}}- 条件 {{.ConditionName}}: {{.Dimension}}/{{.Item}} = {{.Count}} (阈值 {{.Threshold}})
+{{end}}

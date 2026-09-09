@@ -43,8 +43,8 @@ type NotificationTargetCreateIn struct {
 	Enabled bool `json:"enabled" default:"true"`
 	// Config 目标级配置（JSON 文本），必填
 	Config string `json:"config" binding:"required"`
-	// Language 目标偏好的消息语言（如 en、zh-Hans），最长 32 字符，空表示平台默认
-	Language string `json:"language" binding:"max=32"`
+	// Language 目标偏好的消息语言（base.Language），空表示平台默认
+	Language base.Language `json:"language"`
 	// Description 目标描述，最长 256 字符
 	Description string `json:"description" binding:"max=256"`
 }
@@ -56,8 +56,8 @@ type NotificationTargetUpdateIn struct {
 	Enabled bool `json:"enabled"`
 	// Config 目标级配置（JSON 文本）
 	Config string `json:"config" binding:"required"`
-	// Language 目标偏好的消息语言，最长 32 字符
-	Language string `json:"language" binding:"max=32"`
+	// Language 目标偏好的消息语言（base.Language），空表示平台默认
+	Language base.Language `json:"language"`
 	// Description 目标描述，最长 256 字符
 	Description string `json:"description" binding:"max=256"`
 }
@@ -84,8 +84,8 @@ type NotificationTargetDetailOut struct {
 	// 本 Out 结构直接复用模型 *serializer.Crypto，经其 MarshalJSON 输出 base64 密文；
 	// 字段经 form 标签标记为 crypto，由 meta options 告知前端该字段已加密（明文经明文权限接口查看）
 	Config *serializer.Crypto `json:"config" form:"kind:crypto"`
-	// Language 目标偏好的消息语言，空表示平台默认
-	Language string `json:"language"`
+	// Language 目标偏好的消息语言（base.Language），空表示平台默认
+	Language base.Language `json:"language"`
 	// Description 目标描述
 	Description string `json:"description"`
 }
@@ -153,7 +153,7 @@ type NotificationTargetTestSendOut struct {
 	// Content 渲染后的消息正文
 	Content string `json:"content"`
 	// Language 本次发送实际使用的消息语言
-	Language string `json:"language"`
+	Language base.Language `json:"language"`
 	// Channel 本次使用的渠道参数
 	Channel NotificationTargetTestSendChannelOut `json:"channel"`
 	// Target 本次使用的目标参数
@@ -177,7 +177,7 @@ type NotificationTargetTestSendTargetOut struct {
 	// Name 目标名称
 	Name string `json:"name"`
 	// Language 目标偏好语言
-	Language string `json:"language"`
+	Language base.Language `json:"language"`
 	// Enabled 目标是否启用
 	Enabled bool `json:"enabled"`
 	// Config 目标级配置密文（base64），前端可经 plaintext 接口解密
@@ -305,7 +305,7 @@ func NotificationTargetCreate(c *gin.Context) {
 		Type:          channel.Type,
 		Enabled:       in.Enabled,
 		Config:        serializer.NewCrypto([]byte(in.Config)),
-		Language:      in.Language,
+		Language:      in.Language.String(),
 		Description:   in.Description,
 	}
 	if err := db.WithContext(c).Create(instance).Error; err != nil {
@@ -373,7 +373,7 @@ func NotificationTargetUpdate(c *gin.Context) {
 	update := core.NotificationTarget{
 		Enabled:     in.Enabled,
 		Config:      serializer.NewCrypto([]byte(in.Config)),
-		Language:    in.Language,
+		Language:    in.Language.String(),
 		Description: in.Description,
 	}
 	if err := db.WithContext(c).Model(&core.NotificationTarget{}).Where("id = ? AND namespace_name = ?", instance.ID, namespace).
@@ -500,7 +500,7 @@ func NotificationTargetTestSend(c *gin.Context) {
 	content := translate.Localize(lang, "notify.test.content", params)
 	// 经统一资源池借出/归还渠道实例发送；类型未注册/配置非法/借出失败/投递失败
 	// 均以通知行为报错正常返回
-	msgID, err := message.Send(c, target.Channel.Type, json.RawMessage(target.Channel.ConfigData()), &message.Target{
+	msgID, err := middlewares.GetMessagePool(c).Send(c, target.Channel.Type, json.RawMessage(target.Channel.ConfigData()), &message.Target{
 		Name:     target.Name,
 		Language: target.Language,
 		Config:   json.RawMessage(target.ConfigData()),
@@ -513,7 +513,7 @@ func NotificationTargetTestSend(c *gin.Context) {
 		MessageID: msgID,
 		Title:     title,
 		Content:   content,
-		Language:  lang.String(),
+		Language:  *lang,
 		Channel: NotificationTargetTestSendChannelOut{
 			Name:    target.Channel.Name,
 			Type:    target.Channel.Type,
@@ -522,7 +522,7 @@ func NotificationTargetTestSend(c *gin.Context) {
 		},
 		Target: NotificationTargetTestSendTargetOut{
 			Name:     target.Name,
-			Language: target.Language,
+			Language: parseTargetLanguage(target.Language),
 			Enabled:  target.Enabled,
 			Config:   target.Config,
 		},
@@ -619,7 +619,7 @@ func notificationTargetDetailOut(target *core.NotificationTarget, channel *core.
 		Type:        target.Type,
 		Enabled:     target.Enabled,
 		Config:      target.Config,
-		Language:    target.Language,
+		Language:    parseTargetLanguage(target.Language),
 		Description: target.Description,
 	}
 	if channel != nil && channel.ID != 0 {
@@ -628,4 +628,16 @@ func notificationTargetDetailOut(target *core.NotificationTarget, channel *core.
 		out.ChannelEnabled = channel.Enabled
 	}
 	return out
+}
+
+// parseTargetLanguage 将数据库/模型中以字符串存储的目标偏好语言解析为 base.Language；
+// 空字符串回退为零值（平台默认），非法标签回退为空，避免破坏输出结构。
+// parseTargetLanguage parses the target's stored string language into a base.Language;
+// an empty string yields the zero value (platform default) and an invalid tag also
+// falls back to empty, keeping the output struct well-formed.
+func parseTargetLanguage(lang string) base.Language {
+	if l, err := base.ParseLanguage(lang); err == nil {
+		return *l
+	}
+	return base.Language{}
 }

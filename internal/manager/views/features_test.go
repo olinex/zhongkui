@@ -14,6 +14,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/features"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/pkg/mail"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 )
 
 func TestFeaturesListGet(t *testing.T) {
@@ -21,7 +22,7 @@ func TestFeaturesListGet(t *testing.T) {
 		db := createUserSelfTestDB(t)
 		route := func(cfg *mail.Config) *gin.Engine {
 			r := setupUserSelfTestRouterWithDB(db)
-			r.Use(middlewares.FeatureRegistryMiddleware(features.NewRegistry(features.PasswordReset(mail.NewSender(cfg, createTestLoggingLogger())))))
+			r.Use(middlewares.FeatureRegistryMiddleware(features.NewRegistry(features.PasswordReset(mail.NewSender(cfg, createTestLoggingLogger(), message.NewPool())))))
 			r.POST("/api/v1/features/list", FeaturesListGet)
 			return r
 		}

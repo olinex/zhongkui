@@ -28,6 +28,9 @@ navbar:
     tagRule: 标签规则
     tagEventRule: 标签事件规则
     record: 标签事件记录
+  datasource:
+    self: 数据源
+  namespaceScoped: 受命名空间影响
   pin: 固定侧边栏
   unpin: 取消固定
 model:
@@ -399,6 +402,41 @@ model:
       notificationDefault: 使用命名空间默认通知组
       notificationGroup: 通知组
       notificationTarget: 通知目标
+  datasource:
+    name: 第三方数据源
+    field:
+      id: ID
+      createdAt: 创建时日
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时日
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+      name: 名称
+      type: 类型
+      enabled: 启用
+      config: 连接配置
+      description: 描述
+    type:
+      redis: Redis
+      mysql: MySQL
+    configField:
+      addr: 主机地址
+      port: 端口
+      password: 密码
+      db: 逻辑库
+      struct: 数据结构
+      user: 用户名
+      dbName: 库名
+      table: 表
+    option:
+      redis: Redis
+      mysql: MySQL
+      string: 字符串
+      hash: 哈希
+      list: 列表
+      set: 集合
+      zset: 有序集合
   tagEventRecord:
     name: 标签事件记录
     field:
@@ -1019,6 +1057,10 @@ action:
   reuseFields: 复用已有规则字段
   selectSample: 选择样例
   regoFieldHint: 输入 / 打开字段列表，输入 // 输入字面量 /
+  regoSqlMustStartSelect: sqlite.query 仅支持只读查询，SQL 须以 SELECT 开头
+  regoSqlUnclosedString: SQL 单引号字符串未闭合
+  regoSqlUnmatchedParen: SQL 括号不配对
+  regoSqlUnknownTable: 未注册的数据源表：{table}（请先在第三方数据源中接入）
   tagExprFieldHint: 输入 / 打开标签列表，输入 // 输入字面量 /
   addCondition: 添加条件
   removeCondition: 移除条件
@@ -1072,6 +1114,8 @@ title:
     group: 通知组
     template: 通知模板
     record: 发送记录
+  datasource:
+    self: 第三方数据源
   tagEvent:
     record: 标签事件记录
     recordDetail: 标签事件记录详情

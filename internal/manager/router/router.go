@@ -2,7 +2,7 @@
 //
 // 本包负责：
 //  1. 初始化全局与分组中间件链
-//  2. 按 path 拆分注册各组 API 路由（admin / traffic / tag-event / plaintext / user / notification / etl），
+//  2. 按 path 拆分注册各组 API 路由（admin / traffic / tag-event / datasource / plaintext / user / notification / etl），
 //     路由处理函数与元信息定义于 internal/manager/views 包
 //
 // 路由分组结构：
@@ -10,6 +10,7 @@
 //     ├── /admin                管理接口（需要认证和授权）
 //     ├── /traffic              原始流量审计接口
 //     ├── /tag-event            标签事件接口
+//     ├── /datasource           第三方数据源通用管理接口（通用能力，当前由标签事件消费）
 //     ├── /plaintext            通用明文查看接口
 //     ├── /user                 用户接口
 //     │   ├── 公共接口          注册、登录等无需认证的接口
@@ -25,6 +26,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 
+	"zhongkui.com/zhongkui/internal/datasource"
 	"zhongkui.com/zhongkui/internal/manager"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
@@ -44,6 +46,7 @@ type RegisterContext struct {
 	authenticatorMiddleware     gin.HandlerFunc
 	forceAuthenticateMiddleware gin.HandlerFunc
 	policyMiddleware            gin.HandlerFunc
+	authorizeMiddleware         gin.HandlerFunc
 	coreDatabaseMiddleware      gin.HandlerFunc
 	rawDatabaseMiddleware       gin.HandlerFunc
 	s3Middleware                gin.HandlerFunc
@@ -53,6 +56,8 @@ type RegisterContext struct {
 	pipelineClientMiddleware    gin.HandlerFunc
 	tagRuleEngineMiddleware     gin.HandlerFunc
 	featureRegistryMiddleware   gin.HandlerFunc
+	messagePoolMiddleware       gin.HandlerFunc
+	sqliteVTabPoolsMiddleware   gin.HandlerFunc
 }
 
 // RouteRegister 注册全部 HTTP 路由：初始化全局中间件链后，
@@ -71,6 +76,13 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		return errors.WithStack(err)
 	}
 
+	// 启动重载标签事件第三方数据源：扫描已启用数据源注册为 SQLite vtable，
+	// 使前端动态配置在重启后恢复注册状态（rego sqlite.query 立即可查）
+	sqliteVTabPools := provider.MustInvokeSQLiteVTabPools(i)
+	if err := datasource.Reload(ctx, coreDB, sqliteVTabPools); err != nil {
+		return err
+	}
+
 	engine := provider.MustInvokeGin(i)
 	inspector := provider.MustInvokePipelineInspector(i)
 	pipelineClient := provider.MustInvokePipelineClient(i)
@@ -78,6 +90,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	rbac := provider.MustInvokeRbac(i)
 	tagEngine := provider.MustInvokeTagEngine(i)
 	featureRegistry := provider.MustInvokeFeatureRegistry(i)
+	messagePool := provider.MustInvokeMessagePool(i)
 	cfg, err := manager.ExtractConfig(viper, validator.Validate)
 	if err != nil {
 		return errors.WithStack(err)
@@ -113,6 +126,9 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	forceAuthenticateMiddleware := authenticator.AuthenticateMiddleware(false)
 	// policyMiddleware - RBAC策略中间件，将策略引擎注入请求上下文
 	policyMiddleware := middlewares.RbacPolicyMiddleware(rbac)
+	// authorizeMiddleware - 权限验证中间件：基于请求路径（api:{FullPath}）+ HTTP 方法
+	// 动态授权，权限点由 rbac_policy_templates 模板校验合法范围、用户组策略生效
+	authorizeMiddleware := middlewares.RbacPolicyAuthorizeMiddleware()
 	// coreDatabaseMiddleware - 数据库中间件，将核心数据库连接注入请求上下文
 	coreDatabaseMiddleware := middlewares.CoreDatabaseMiddleware(coreDB)
 	// rawDatabaseMiddleware - raw 库中间件，供标签事件规则 dry-run 查询 tag_summings
@@ -123,7 +139,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	etcdMiddleware := middlewares.EtcdClientMiddleware(etcd)
 	// namespaceMiddleware - 命名空间中间件，处理多租户命名空间隔离
 	namespaceMiddleware := middlewares.NamespaceMiddleware(&cfg.Namespace)
-	// authorizeMiddleware := middlewares.RbacPolicyAuthorizeMiddleware() - 权限验证中间件（暂未启用）
+	// pipelineInspectorMiddleware - 管道检查中间件，将管道检查器注入请求上下文，供标签事件规则 dry-run 查询 tag_summings
 	pipelineInspectorMiddleware := middlewares.PipelineInspectorMiddleware(inspector)
 	// pipelineClientMiddleware - 管道投递客户端中间件，将 asynq 投递客户端注入请求上下文，供定时任务"立即执行"
 	pipelineClientMiddleware := middlewares.PipelineClientMiddleware(pipelineClient)
@@ -132,6 +148,12 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	// featureRegistryMiddleware - 全局功能开关注册表中间件，将功能开关注入请求上下文，
 	// 供公共接口（功能开关列表、密码重置申请等）统一判断功能可用性
 	featureRegistryMiddleware := middlewares.FeatureRegistryMiddleware(featureRegistry)
+	// messagePoolMiddleware - 消息渠道连接池中间件，将统一渠道资源池注入请求上下文，
+	// 供通知 test-send、模板渲染预览等处理器经池实际投递/渲染
+	messagePoolMiddleware := middlewares.MessagePoolMiddleware(messagePool)
+	// sqliteVTabPoolsMiddleware - SQLite vtable 池持有者中间件，将按命名空间隔离的
+	// vtable 池注入请求上下文，供标签事件第三方数据源 CRUD 处理器在请求内注册/注销 vtable
+	sqliteVTabPoolsMiddleware := middlewares.SQLiteVTabPoolsMiddleware(sqliteVTabPools)
 
 	// ==================== 默认错误处理 ====================
 	// 重写Gin框架的默认错误响应，提供统一的错误格式和国际化支持
@@ -162,6 +184,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		authenticatorMiddleware:     authenticatorMiddleware,
 		forceAuthenticateMiddleware: forceAuthenticateMiddleware,
 		policyMiddleware:            policyMiddleware,
+		authorizeMiddleware:         authorizeMiddleware,
 		coreDatabaseMiddleware:      coreDatabaseMiddleware,
 		rawDatabaseMiddleware:       rawDatabaseMiddleware,
 		s3Middleware:                s3Middleware,
@@ -171,6 +194,8 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		pipelineClientMiddleware:    pipelineClientMiddleware,
 		tagRuleEngineMiddleware:     tagRuleEngineMiddleware,
 		featureRegistryMiddleware:   featureRegistryMiddleware,
+		messagePoolMiddleware:       messagePoolMiddleware,
+		sqliteVTabPoolsMiddleware:   sqliteVTabPoolsMiddleware,
 	}
 
 	// ==================== 全局功能开关端点 ====================
@@ -189,6 +214,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	registerAdminRoutes(rc)
 	registerTrafficRoutes(rc)
 	registerTagEventRoutes(rc)
+	registerDatasourceRoutes(rc)
 	registerPlaintextRoutes(rc)
 	registerUserRoutes(rc)
 	registerNotificationRoutes(rc)

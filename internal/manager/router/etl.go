@@ -10,7 +10,16 @@ import (
 // 提供ETL（Extract-Transform-Load）任务管道的监控和管理功能。
 func registerEtlRoutes(ctx *RegisterContext) {
 	// 创建ETL接口组
-	etlGroup := ctx.v1Group.Group("/etl")
+	// ETL 为全局资源（无命名空间隔离需求），认证链挂载后命名空间中间件
+	// 在无请求头/查询参数/Cookie 时回落默认命名空间 "default"，授权按该命名空间执行。
+	etlGroup := ctx.v1Group.Group(
+		"/etl",                          // ETL 接口路径前缀
+		ctx.authenticatorMiddleware,     // 认证器注入
+		ctx.forceAuthenticateMiddleware, // 强制JWT认证
+		ctx.policyMiddleware,            // RBAC策略引擎
+		ctx.namespaceMiddleware,         // 命名空间隔离（回落 default）
+		ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+	)
 	{
 		// ========== 检查器子组：/api/v1/etl/inspector ==========
 		// 提供异步任务队列的监控和管理，需要管道检查器中间件

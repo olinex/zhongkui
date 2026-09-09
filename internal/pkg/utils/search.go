@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"gorm.io/gorm"
+
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -18,9 +20,9 @@ type FilterByOptionItem struct {
 // FilterByOption 定义了过滤选项的配置结构
 // 用于描述前端可以使用的过滤条件
 type FilterByOption struct {
-	Name    string                `json:"name"`             // 过滤条件名称，用于显示
-	Type    string                `json:"type"`             // 数据类型，如 string、number、date、enum 等
-	Actions []string              `json:"actions"`          // 支持的操作列表，如 eq、neq、ctn 等
+	Name    string                `json:"name"`              // 过滤条件名称，用于显示
+	Type    string                `json:"type"`              // 数据类型，如 string、number、date、enum 等
+	Actions []string              `json:"actions"`           // 支持的操作列表，如 eq、neq、ctn 等
 	Options []*FilterByOptionItem `json:"options,omitempty"` // 枚举字段的下拉可选值列表（仅 Type 为 enum 时提供）
 }
 
@@ -202,19 +204,42 @@ func injectOrderClauses(db *database.DB, items []OrderByItem) *database.DB {
 func BuildSearchQuery(db *database.DB, searcher SearcherIn) (builder *database.DB, err error) {
 	// 添加总计数查询
 	builder = db.Select("*, COUNT(*) OVER() AS total")
+	if builder, err = BuildSearchDataQuery(builder, searcher); err != nil {
+		return nil, err
+	}
+	return builder, nil
+}
+
+// BuildSearchCountQuery 构建仅含过滤条件的 count 查询（无排序/分页/总数列）。
+// 供 ClickHouse 等大宽表列表接口使用：先以 count(*) 轻量统计总数，
+// 避免 COUNT(*) OVER() 窗口函数在 LIMIT 前强制物化全部命中行的所有列。
+//
+// 以独立 Session 隔离构建链：GORM 的 clone:0 实例上 Where 会原地追加条件，
+// 若调用方复用同一 db 实例先后构建 count 与 data 两条链，条件会被重复注入。
+func BuildSearchCountQuery(db *database.DB, searcher SearcherIn) (*database.DB, error) {
+	builder := db.Session(&gorm.Session{})
 	filterBy := searcher.GetFilterBy()
+	var err error
 
 	// 根据贪婪模式选择不同的过滤条件注入方式
 	if searcher.GetGreedy() {
 		builder, err = injectMultiGreedyFilterClauses(builder, filterBy)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
 	} else {
 		builder, err = injectMultiModerateFilterClauses(builder, filterBy)
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return builder, nil
+}
+
+// BuildSearchDataQuery 构建数据查询（过滤 + 排序 + 分页，无总数列）。
+// 与 BuildSearchCountQuery 配套：ORDER BY 命中 ClickHouse 排序键时可倒序读 + LIMIT 早停，
+// 仅物化当前页行数据；总数由配套 count 查询提供，避免窗口函数全量物化。
+func BuildSearchDataQuery(db *database.DB, searcher SearcherIn) (*database.DB, error) {
+	builder, err := BuildSearchCountQuery(db, searcher)
+	if err != nil {
+		return nil, err
 	}
 
 	// 注入排序条件

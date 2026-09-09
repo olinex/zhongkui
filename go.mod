@@ -3,7 +3,9 @@ module zhongkui.com/zhongkui
 go 1.26.3
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/alecthomas/participle/v2 v2.1.4
+	github.com/alicebob/miniredis/v2 v2.39.0
 	github.com/casbin/casbin/v2 v2.103.0
 	github.com/casbin/gorm-adapter/v3 v3.32.0
 	github.com/cenkalti/backoff/v5 v5.0.3
@@ -13,9 +15,11 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/gopacket/gopacket v1.6.0
 	github.com/hibiken/asynq v0.25.1
+	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.19.0
 	github.com/minio/minio-go/v7 v7.0.95
+	github.com/ncruces/go-sqlite3 v0.35.4
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
 	github.com/open-policy-agent/opa v1.19.0
 	github.com/pkg/errors v0.9.1
@@ -52,7 +56,6 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
 	go.uber.org/zap v1.28.0
-	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	gorm.io/driver/clickhouse v0.7.0
 	gorm.io/plugin/opentelemetry v0.1.16
 )
@@ -60,6 +63,9 @@ require (
 require (
 	github.com/glebarez/go-sqlite v1.20.3 // indirect
 	github.com/glebarez/sqlite v1.7.0 // indirect
+	github.com/ncruces/go-sqlite3-wasm/v5 v5.0.35304 // indirect
+	github.com/ncruces/julianday v1.0.0 // indirect
+	github.com/yuin/gopher-lua v1.1.1 // indirect
 	modernc.org/libc v1.72.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
@@ -169,7 +175,7 @@ require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
 	github.com/go-playground/validator/v10 v10.30.2
-	github.com/go-sql-driver/mysql v1.9.3 // indirect
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/google/pprof v0.0.0-20250317173921-a4b03ec1a45e
 	github.com/google/uuid v1.6.0
@@ -198,11 +204,11 @@ require (
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/arch v0.27.0 // indirect
-	golang.org/x/crypto v0.53.0
-	golang.org/x/net v0.56.0
+	golang.org/x/crypto v0.55.0
+	golang.org/x/net v0.57.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.47.0
-	golang.org/x/text v0.40.0
+	golang.org/x/text v0.41.0
 	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.11
 	gorm.io/datatypes v1.2.5

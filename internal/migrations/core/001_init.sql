@@ -556,11 +556,58 @@ COMMENT ON COLUMN tag_rule_versions.description IS 'the description of the rule 
 COMMENT ON COLUMN tag_rule_versions.model IS 'the target model type key at the snapshot time';
 COMMENT ON COLUMN tag_rule_versions.rego IS 'the rego rule source at the snapshot time';
 
+CREATE TABLE IF NOT EXISTS tag_rule_samples (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    namespace_name VARCHAR(32) NOT NULL,
+    model VARCHAR(255) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    input JSONB NOT NULL,
+    description VARCHAR(512) NOT NULL DEFAULT '',
+    CONSTRAINT uq_tag_rule_samples_namespace_name_model_name UNIQUE (namespace_name, model, name)
+);
+
+COMMENT ON COLUMN tag_rule_samples.id IS 'the primary key of the tag rule sample';
+COMMENT ON COLUMN tag_rule_samples.created_at IS 'the creation time of the tag rule sample';
+COMMENT ON COLUMN tag_rule_samples.updated_at IS 'the last update time of the tag rule sample';
+COMMENT ON COLUMN tag_rule_samples.namespace_name IS 'the namespace the tag rule sample belongs to';
+COMMENT ON COLUMN tag_rule_samples.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_rule_samples.name IS 'the unique name of the sample within the namespace and the model';
+COMMENT ON COLUMN tag_rule_samples.input IS 'the sample input document, a JSON serialization of the target model instance';
+COMMENT ON COLUMN tag_rule_samples.description IS 'the description of the sample';
+
+CREATE TABLE IF NOT EXISTS datasources (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    name VARCHAR(128) NOT NULL,
+    type VARCHAR(16) NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    config BYTEA,
+    description VARCHAR(256) NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_datasources_namespace_name ON datasources (namespace_name, name);
+CREATE INDEX IF NOT EXISTS idx_datasources_namespace ON datasources (namespace_name);
+
+COMMENT ON COLUMN datasources.id IS 'the primary key of the datasource';
+COMMENT ON COLUMN datasources.created_at IS 'the creation time of the datasource';
+COMMENT ON COLUMN datasources.updated_at IS 'the last update time of the datasource';
+COMMENT ON COLUMN datasources.namespace_name IS 'the namespace the datasource belongs to';
+COMMENT ON COLUMN datasources.name IS 'the unique name of the datasource within its namespace, used as the bare-name vtable';
+COMMENT ON COLUMN datasources.type IS 'the datasource type key, e.g. redis or mysql';
+COMMENT ON COLUMN datasources.enabled IS 'is the datasource enabled';
+COMMENT ON COLUMN datasources.config IS 'the connection config (JSON text, may contain credentials), encrypted at rest as BYTEA';
+COMMENT ON COLUMN datasources.description IS 'the optional description of the datasource';
+
 -- +goose Down
 DROP TABLE IF EXISTS tag_event_record_hits;
 DROP TABLE IF EXISTS tag_event_records;
 DROP TABLE IF EXISTS tag_rule_versions;
 DROP TABLE IF EXISTS tag_rules;
+DROP TABLE IF EXISTS tag_rule_samples;
 DROP TABLE IF EXISTS tag_event_conditions;
 DROP TABLE IF EXISTS tag_event_rule_versions;
 DROP TABLE IF EXISTS tag_event_rules;
@@ -573,7 +620,9 @@ DROP TABLE IF EXISTS notification_channels;
 DROP TABLE IF EXISTS rbac_policy_templates;
 DROP TABLE IF EXISTS rbac_policies;
 DROP TABLE IF EXISTS access_keys;
+DROP TABLE IF EXISTS user_password_resets;
 DROP TABLE IF EXISTS capturers;
+DROP TABLE IF EXISTS datasources;
 DROP TABLE IF EXISTS namespaces;
 DROP TABLE IF EXISTS groups;
 DROP TABLE IF EXISTS users;

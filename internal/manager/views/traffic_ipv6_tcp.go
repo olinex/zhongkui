@@ -139,32 +139,35 @@ func Ipv6TcpListGet(c *gin.Context) {
 		return
 	}
 
-	// 以局部扫描行承载 gorm 模型与注入的 total 列（用于分页总数），随后映射为 Out 结构
-	var rows []struct {
-		network.PacketIPv6TCP
-		utils.BaseTotalOut
-	}
-
 	// 获取 raw 库（ClickHouse）连接并指定查询模型
 	db := middlewares.GetRawDatabase(c).Model(&network.PacketIPv6TCP{})
 
-	// 构建搜索查询，应用分页、排序和过滤条件
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	// 先以轻量 count 统计总数：ClickHouse 只扫过滤列与 granule 标记，
+	// 避免 COUNT(*) OVER() 窗口函数在 LIMIT 前物化全部命中行的所有列（payload/layer_stack 等宽列）。
+	var total int64
+	if countQuery, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
-	} else if err := query.Find(&rows).Error; err != nil {
+	} else if err := countQuery.Count(&total).Error; err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+
+	// 再查询当前页数据：ORDER BY timestamp 命中 MergeTree 排序键，可倒序读 + LIMIT 早停，
+	// 仅物化当前页行；扫描容器与模型同型，避免 GORM 按目的地枚举额外列（如 total）。
+	var rows []network.PacketIPv6TCP
+	if dataQuery, err := utils.BuildSearchDataQuery(db, &in); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	} else if err := dataQuery.Find(&rows).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 
 	items := make([]*Ipv6TcpListGetListItemOut, 0, len(rows))
-	var total uint
 	for i := range rows {
-		if i == 0 {
-			total = rows[i].Total
-		}
-		out := newIpv6TcpListGetListItemOut(&rows[i].PacketIPv6TCP)
-		out.Total = total
+		out := newIpv6TcpListGetListItemOut(&rows[i])
+		out.Total = uint(total)
 		items = append(items, out)
 	}
 

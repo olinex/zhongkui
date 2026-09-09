@@ -1,49 +1,44 @@
 package provider
 
 import (
-	"context"
-
 	"github.com/samber/do/v2"
+
 	"zhongkui.com/zhongkui/internal/pkg/message"
 )
 
-// MessagePoolShutdowner 在进程优雅关闭时关闭消息渠道资源池，
-// 释放全部存活连接（如 SMTP 长连接），作为 DI 生命周期服务接入 do 的关闭阶段。
-// MessagePoolShutdowner closes the message channel pools on graceful process
-// shutdown, releasing all live connections (e.g. SMTP long connections), and is
-// wired into do's shutdown phase as a DI lifecycle service.
-type MessagePoolShutdowner struct{}
-
-// Shutdown 关闭全部消息渠道资源池并销毁存活连接。
-// Shutdown closes all message channel pools and destroys live connections.
-func (s *MessagePoolShutdowner) Shutdown(ctx context.Context) error {
-	message.ClosePools(ctx)
-	return nil
-}
-
-// newMessagePoolShutdownerProvider 提供进程级单例的渠道资源池关闭器（关闭操作幂等）。
-// newMessagePoolShutdownerProvider provides a process-wide singleton channel-pool
-// closer (the underlying close is idempotent).
-func newMessagePoolShutdownerProvider() do.Provider[*MessagePoolShutdowner] {
-	return func(_ do.Injector) (*MessagePoolShutdowner, error) {
-		return &MessagePoolShutdowner{}, nil
+// newMessagePoolProvider 创建进程级消息渠道连接池单例。
+// newMessagePoolProvider creates the process-wide message channel pool singleton.
+func newMessagePoolProvider() do.Provider[*message.Pool] {
+	return func(_ do.Injector) (*message.Pool, error) {
+		return message.NewPool(), nil
 	}
 }
 
-// InjectMessagePoolShutdowner 注册渠道资源池关闭器 provider。
-// InjectMessagePoolShutdowner registers the channel-pool closer provider.
-func InjectMessagePoolShutdowner(i do.Injector) {
-	do.Provide(i, newMessagePoolShutdownerProvider())
+// InjectMessagePool 注册消息渠道连接池 provider。
+// *message.Pool 自身实现 do.ShutdownerWithContextAndError（Shutdown 转发
+// CloseAll），故启动期经 MustInvokeMessagePool 预解析后，优雅关闭阶段由
+// samber/do 直接驱动池自身关闭，无需额外的关闭器 provider。
+// InjectMessagePool registers the message channel pool provider.
+// *message.Pool itself implements do.ShutdownerWithContextAndError (Shutdown
+// forwards to CloseAll), so once eagerly resolved via MustInvokeMessagePool at
+// startup, samber/do drives the pool's own shutdown during graceful shutdown
+// without an extra closer provider.
+func InjectMessagePool(i do.Injector) {
+	do.Provide(i, newMessagePoolProvider())
 }
 
-// InvokeMessagePoolShutdowner 取得渠道资源池关闭器（用于启动期解析）。
-// InvokeMessagePoolShutdowner resolves the channel-pool closer (for eager resolve at startup).
-func InvokeMessagePoolShutdowner(i do.Injector) (*MessagePoolShutdowner, error) {
-	return do.Invoke[*MessagePoolShutdowner](i)
+// InvokeMessagePool 取得消息渠道连接池（供通知投递 / 邮件直发 / 测试发送使用）。
+// InvokeMessagePool resolves the message channel pool (used by notification
+// delivery, system email direct-send and test-send).
+func InvokeMessagePool(i do.Injector) (*message.Pool, error) {
+	return do.Invoke[*message.Pool](i)
 }
 
-// MustInvokeMessagePoolShutdowner panic 版本取得渠道资源池关闭器。
-// MustInvokeMessagePoolShutdowner is the panicking variant to resolve the closer.
-func MustInvokeMessagePoolShutdowner(i do.Injector) *MessagePoolShutdowner {
-	return do.MustInvoke[*MessagePoolShutdowner](i)
+// MustInvokeMessagePool panic 版本取得消息渠道连接池
+// （用于启动期预解析，确保池被实例化后其 Shutdown 在优雅关闭阶段被 samber/do 驱动）。
+// MustInvokeMessagePool is the panicking variant to resolve the message channel
+// pool (eagerly resolved at startup so its Shutdown is driven during samber/do
+// graceful shutdown).
+func MustInvokeMessagePool(i do.Injector) *message.Pool {
+	return do.MustInvoke[*message.Pool](i)
 }

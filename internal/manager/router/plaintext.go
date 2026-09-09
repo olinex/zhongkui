@@ -16,8 +16,9 @@ func registerPlaintextRoutes(ctx *RegisterContext) {
 		ctx.authenticatorMiddleware,     // 认证器注入
 		ctx.forceAuthenticateMiddleware, // 强制JWT认证
 		ctx.policyMiddleware,            // RBAC策略引擎
-		ctx.s3Middleware,                // S3 客户端（S3 body 明文读取）
 		ctx.namespaceMiddleware,         // 命名空间隔离
+		ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.s3Middleware,                // S3 客户端（S3 body 明文读取）
 	)
 	// 加密字段明文解密 - 请求携带模型注册名 + 字段 + base64 密文，按字段权限点静态授权后返回明文
 	plaintextGroup.POST("/crypto", views.CryptoPlaintextGet)

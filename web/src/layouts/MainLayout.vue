@@ -52,7 +52,22 @@
               class="nav-child"
               nav
               :to="childTo(child)"
-            />
+            >
+              <!-- 仅对受命名空间影响的子项叠加 Namespace 标识：区分该页面是否随命名空间切换而变化 -->
+              <template v-if="child.namespaceScoped" #append>
+                <v-tooltip location="top">
+                  <template #activator="{ props: tooltipProps }">
+                    <v-icon
+                      v-bind="tooltipProps"
+                      icon="mdi-alpha-n-box-outline"
+                      size="small"
+                      color="primary"
+                    />
+                  </template>
+                  <span>{{ $t("navbar.namespaceScoped") }}</span>
+                </v-tooltip>
+              </template>
+            </v-list-item>
           </v-list-group>
         </template>
       </v-list>

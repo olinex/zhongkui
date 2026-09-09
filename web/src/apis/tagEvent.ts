@@ -102,6 +102,26 @@ export function tagRuleDryRun(data: TagRuleDryRunIn): AxiosPromise {
   });
 }
 
+export function tagRuleFunctions(): AxiosPromise {
+  return request.post(
+    "/tag-event/tag-rule/functions",
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function tagRuleSqliteMeta(): AxiosPromise {
+  return request.post(
+    "/tag-event/tag-rule/sqlite/meta",
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
 export function tagRuleVersionList(id: number): AxiosPromise {
   return request.post(
     `/tag-event/tag-rule/${id}/version/list`,

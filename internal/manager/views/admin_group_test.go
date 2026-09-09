@@ -146,7 +146,7 @@ func TestGroupBaseDetailOut_Struct(t *testing.T) {
 }
 
 // groupTestNamePrefix 本测试专用用户组名前缀，用于与迁移基线种子组
-// （superuser / admin / default，见 002_rbac_fixtures.sql）隔离：
+// （superuser / admin / default，见 002_fixtures.sql）隔离：
 // 基线组为已提交的持久行，测试若直接断言「表为空」或插入同名 admin 组
 // 会撞唯一约束而失败（且仅当数据库被重新迁移时才暴露）。
 // 各子测试统一经 filterBy.name 前缀过滤操作自身数据。

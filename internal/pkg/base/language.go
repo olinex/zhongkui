@@ -11,15 +11,23 @@ import (
 )
 
 var (
+	// LangSimplifiedChinese 简体中文
+	LangSimplifiedChinese Language = *MustParseLanguage(language.SimplifiedChinese.String())
+	// LangEnglish 英文
+	LangEnglish Language = *MustParseLanguage(language.English.String())
 	// SupportLanguages 应用支持的语言列表，与内置 locales 目录下的翻译文件一一对应
 	SupportLanguages = []Language{
-		*MustParseLanguage(language.SimplifiedChinese.String()),
-		*MustParseLanguage(language.English.String()),
+		LangSimplifiedChinese,
+		LangEnglish,
 	}
 	// DefaultLanguage 应用默认语言，取自 Env.Lang（ZKI_LANG 环境变量，默认 zh-Hans）。
 	// 必须在 init() 中赋值：包级变量初始化先于 init() 执行，
 	// 若在此处直接引用 Env.Lang，会取到默认值尚未填充的空字符串。
 	DefaultLanguage *Language
+	// LanguageWildcard 通配所有语言的标记（String() 返回 "*"），用于模板等以
+	// "*" 表示"对所有语言生效"的场景。LanguageWildcard the wildcard-all marker
+	// whose String() returns "*", used where "*" means "applies to all languages".
+	LanguageWildcard = Language{wildcard: true}
 )
 
 // init 初始化 DefaultLanguage。
@@ -50,10 +58,13 @@ func init() {
 //	fmt.Println(lang.String()) // 输出: "zh-Hans"
 //	fmt.Println(lang.UnderscoreLocale()) // 输出: "zh_Hans"
 type Language struct {
-	tag language.Tag
+	tag      language.Tag
+	wildcard bool // true 表示通配所有语言（"*"）
 }
 
 // ParseLanguage 解析语言字符串并返回 Language 实例
+// 空字符串表示"未指定/平台默认"（解析为零值 Language），"*" 表示通配所有语言，
+// 其余按 golang.org/x/text/language 标准解析。
 // 这个函数使用 golang.org/x/text/language 包的 Parse 方法进行解析
 // 支持的语言格式包括:
 //   - ISO 639-1 代码: "en", "zh", "fr", "ja", "ko"
@@ -61,9 +72,11 @@ type Language struct {
 //   - 语言-地区组合: "en-US", "zh-CN", "zh-TW", "fr-FR"
 //   - 语言-脚本组合: "zh-Hans", "zh-Hant", "sr-Cyrl", "sr-Latn"
 //   - 完整格式: "zh-Hans-CN", "en-US-u-ca-gregory"
+//   - "*" 通配：所有语言
+//   - "" 空字符串：未指定（平台默认）
 //
 // 参数:
-//   - lang: 语言字符串，如 "en", "zh-Hans", "zh-Hant", "en-US" 等
+//   - lang: 语言字符串，如 ""、"*"、"en"、"zh-Hans"、"zh-Hant"、"en-US" 等
 //
 // 返回值:
 //   - *Language: 解析成功的 Language 实例
@@ -77,6 +90,12 @@ type Language struct {
 //	}
 //	fmt.Println(lang.String()) // 输出: "zh-Hans"
 func ParseLanguage(lang string) (*Language, error) {
+	if lang == "" {
+		return &Language{}, nil
+	}
+	if lang == "*" {
+		return &Language{wildcard: true}, nil
+	}
 	tag, err := language.Parse(lang)
 	if err != nil {
 		return nil, fmt.Errorf("parse language %q: %w", lang, err)
@@ -106,8 +125,14 @@ func MustParseLanguage(lang string) *Language {
 // 使用场景:
 //   - 中间件解析 Accept-Language 后，将请求语言归一化到受支持集合
 func (l *Language) Normalize() *Language {
-	// 空引用或零值语言直接回退默认语言
-	if l == nil || l.tag == language.Und {
+	// 空引用或零值（空）语言直接回退默认语言；通配 "*" 保持通配不变
+	if l == nil {
+		return DefaultLanguage
+	}
+	if l.wildcard {
+		return &LanguageWildcard
+	}
+	if l.tag == language.Und {
 		return DefaultLanguage
 	}
 	tags := make([]language.Tag, 0, len(SupportLanguages))
@@ -132,6 +157,15 @@ func (l *Language) Normalize() *Language {
 //	fmt.Println(lang.String()) // 输出: "zh-Hans"
 //	fmt.Printf("Language: %s\n", lang) // 输出: Language: zh-Hans
 func (l *Language) String() string {
+	if l == nil {
+		return ""
+	}
+	if l.wildcard {
+		return "*"
+	}
+	if l.tag == language.Und {
+		return ""
+	}
 	return l.tag.String()
 }
 
@@ -227,12 +261,18 @@ func (l *Language) SetDefaults() {
 //	    DefaultLang base.Language `toml:"default_lang"`
 //	}
 func (l *Language) UnmarshalText(data []byte) error {
+	text := string(data)
 	if len(data) == 0 {
 		return nil
-	} else if tag, err := language.Parse(string(data)); err != nil {
-		return fmt.Errorf("parse language %q: %w", string(data), err)
+	} else if text == "*" {
+		l.tag = language.Und
+		l.wildcard = true
+		return nil
+	} else if tag, err := language.Parse(text); err != nil {
+		return fmt.Errorf("parse language %q: %w", text, err)
 	} else {
 		l.tag = tag
+		l.wildcard = false
 		return nil
 	}
 }
@@ -343,6 +383,9 @@ func (l Language) MarshalJSON() ([]byte, error) {
 // Value 实现 driver.Valuer，数据库以字符串（VARCHAR）存储语言标签。
 // 未设置（零值 und）时返回 nil，数据库存储 NULL。
 func (l Language) Value() (driver.Value, error) {
+	if l.wildcard {
+		return "*", nil
+	}
 	if l.tag == language.Und {
 		return nil, nil
 	}
@@ -355,6 +398,7 @@ func (l *Language) Scan(value any) error {
 	switch v := value.(type) {
 	case nil:
 		l.tag = language.Und
+		l.wildcard = false
 		return nil
 	case string:
 		return l.UnmarshalText([]byte(v))

@@ -14,18 +14,34 @@ import (
 // 本文件基于独立的 generic 资源池基座 resourcepool 提供消息渠道的统一生命周期入口：
 // 按「渠道类型 + 规范化渠道级配置」维护相互独立的连接池，Send 走统一的借出/归还路径，
 // 使 SMTP 等有状态渠道复用底层连接、失效时自动重建、闲置时被定时回收。
-// 进程优雅关闭时调用 ClosePools 释放全部存活连接。
+// Pool 作为 DI 注入对象，Shutdown 实现 do 生命周期接口（池自身即关闭器），进程优雅
+// 关闭时由 samber/do 驱动释放全部存活连接。
 
-// channelManager 消息渠道生命周期管理器：资源类型为 message.Channel，
-// 依据 Key（类型 + 规范化配置）惰性建池并由 go-commons-pool 托管连接复用与回收。
-// channelManager is the channel lifecycle manager over message.Channel: it lazily
-// builds pools keyed by (type + canonicalized config) and lets go-commons-pool
-// handle connection reuse and reclamation.
-var channelManager = resourcepool.NewManager(func(key resourcepool.Key) (Channel, error) {
-	typ, config := decodeKey(key)
-	// 复用既有工厂注册表：未注册类型/配置非法原样返回错误
-	return New(typ, config)
-}, resourcepool.NewDefaultConfig())
+// Pool 消息渠道连接池的统一入口：持有按渠道 Key 惰性建池的渠道生命周期管理器。
+// 作为 DI 注入对象注册为进程级单例；Shutdown 使池自身即关闭器，provider 层无需再包
+// 一层 shutdowner 结构体，提升内聚性。
+// Pool is the unified entry point of the message channel pool: it holds the channel
+// lifecycle manager that lazily builds pools per channel Key. Registered as a
+// process-wide singleton via DI; Shutdown makes the pool itself the closer, so the
+// provider layer no longer needs a shutdowner wrapper, improving cohesion.
+type Pool struct {
+	manager *resourcepool.Manager[Channel]
+}
+
+// NewPool 创建消息渠道连接池。资源类型为 message.Channel，依据 Key（类型 + 规范化
+// 配置）惰性建池并由 go-commons-pool 托管连接复用与回收。
+// NewPool creates the message channel pool over message.Channel: it lazily builds
+// pools keyed by (type + canonicalized config) and lets go-commons-pool handle
+// connection reuse and reclamation.
+func NewPool() *Pool {
+	return &Pool{
+		manager: resourcepool.NewManager(func(key resourcepool.Key) (Channel, error) {
+			typ, config := decodeKey(key)
+			// 复用既有工厂注册表：未注册类型/配置非法原样返回错误
+			return New(typ, config)
+		}, resourcepool.NewDefaultConfig()),
+	}
+}
 
 // keySep 分隔渠道类型与配置的边界字节。JSON 不包含 NUL 字节，故用作安全分隔符。
 // keySep delimits the channel type from its config. JSON never contains a NUL byte,
@@ -93,19 +109,21 @@ func canonicalJSON(config json.RawMessage) string {
 // connect/validation) or a send failure is returned as-is. A send failure still
 // returns the object; the next borrow validates it via testOnBorrow and rebuilds
 // the underlying connection once it is stale.
-func Send(ctx context.Context, typ string, config json.RawMessage, target *Target, msg *RenderedMessage) (string, error) {
+func (p *Pool) Send(ctx context.Context, typ string, config json.RawMessage, target *Target, msg *RenderedMessage) (string, error) {
 	key := makeKey(typ, config)
-	ch, err := channelManager.Acquire(ctx, key)
+	ch, err := p.manager.Acquire(ctx, key)
 	if err != nil {
 		return "", err
 	}
-	defer channelManager.Release(ctx, key, ch)
+	defer p.manager.Release(ctx, key, ch)
 	return ch.Send(ctx, target, msg)
 }
 
-// ClosePools 关闭全部渠道资源池并销毁存活连接，供进程优雅关闭时调用。
-// ClosePools closes all channel pools and destroys live connections; call it on
-// graceful process shutdown.
-func ClosePools(ctx context.Context) {
-	channelManager.CloseAll(ctx)
+// Shutdown 关闭全部渠道资源池并销毁存活连接，实现 do.ShutdownerWithContextAndError，
+// 进程优雅关闭时由 samber/do 驱动调用。
+// Shutdown closes all channel pools and destroys live connections, implementing
+// do.ShutdownerWithContextAndError, driven by samber/do on graceful shutdown.
+func (p *Pool) Shutdown(ctx context.Context) error {
+	p.manager.CloseAll(ctx)
+	return nil
 }

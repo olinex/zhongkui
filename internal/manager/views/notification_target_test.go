@@ -36,6 +36,17 @@ import (
 // mockNotificationChannelType 测试用 mock 渠道类型键，仅在本测试文件内注册。
 const mockNotificationChannelType = "test-send-mock"
 
+// mockNotificationChannelConfig 测试用 mock 渠道级配置，工厂忽略其内容；
+// 带字段以保持非占位符渠道语义（避免被命名空间自动种子化）。
+type mockNotificationChannelConfig struct {
+	Mock string `json:"mock" form:"kind=string"`
+}
+
+// mockNotificationTargetConfig 测试用 mock 目标级配置。
+type mockNotificationTargetConfig struct {
+	To string `json:"to" form:"kind=string"`
+}
+
 // mockNotificationChannel 测试用 mock 渠道实现，Send 固定返回消息 ID "mock-msg-1"。
 type mockNotificationChannel struct{}
 
@@ -45,14 +56,6 @@ func (m *mockNotificationChannel) Type() string { return mockNotificationChannel
 // Send 固定返回消息 ID "mock-msg-1"，用于验证 test-send 成功路径。
 func (m *mockNotificationChannel) Send(ctx context.Context, target *message.Target, msg *message.RenderedMessage) (string, error) {
 	return "mock-msg-1", nil
-}
-
-// init 将测试用 mock 渠道注册进 notify 注册表。
-// 注册表为包级全局状态且重复注册会 panic，故仅在 init 注册一次。
-func init() {
-	message.Register(mockNotificationChannelType, func(_ json.RawMessage) (message.Channel, error) {
-		return &mockNotificationChannel{}, nil
-	})
 }
 
 // createNotificationTargetTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
@@ -97,6 +100,7 @@ func setupNotificationTargetTestRouter(db *database.DB, namespace string) *gin.E
 		c.Set(middlewares.NamespaceCtxName, namespace)
 		c.Next()
 	})
+	r.Use(middlewares.MessagePoolMiddleware(message.NewPool()))
 	registerNotificationTargetTestRoutes(r)
 	return r
 }
@@ -196,7 +200,7 @@ func TestNotificationTargetCreateAndDetail(t *testing.T) {
 			So(resp.Data.ChannelEnabled, ShouldBeTrue)
 			So(resp.Data.Type, ShouldEqual, message.TypeEmail)
 			So(resp.Data.Enabled, ShouldBeTrue)
-			So(resp.Data.Language, ShouldEqual, "zh-Hans")
+			So(resp.Data.Language.String(), ShouldEqual, "zh-Hans")
 		})
 
 		Convey("目标引用不存在的渠道被拒绝（404）且不落库", func() {
@@ -463,14 +467,14 @@ func TestNotificationTargetTestSend(t *testing.T) {
 			So(resp.Data.MessageID, ShouldEqual, "mock-msg-1")
 			So(resp.Data.Title, ShouldNotBeEmpty)
 			So(resp.Data.Content, ShouldNotBeEmpty)
-			So(resp.Data.Language, ShouldEqual, "zh-Hans")
+			So(resp.Data.Language.String(), ShouldEqual, "zh-Hans")
 			// 本次通知行为所用参数回显：渠道与目标信息 + 配置密文（base64，可经 plaintext 解密）
 			So(resp.Data.Channel.Name, ShouldEqual, "ch-mock")
 			So(resp.Data.Channel.Type, ShouldEqual, mockNotificationChannelType)
 			So(resp.Data.Channel.Enabled, ShouldBeTrue)
 			So(resp.Data.Channel.Config, ShouldNotBeNil)
 			So(resp.Data.Target.Name, ShouldEqual, "tg-mock")
-			So(resp.Data.Target.Language, ShouldEqual, "zh-Hans")
+			So(resp.Data.Target.Language.String(), ShouldEqual, "zh-Hans")
 			So(resp.Data.Target.Enabled, ShouldBeTrue)
 			So(resp.Data.Target.Config, ShouldNotBeNil)
 		})
@@ -649,4 +653,12 @@ func TestNotificationTargetSend(t *testing.T) {
 			So(string(task.Payload()), ShouldContainSubstring, `"targetID":`+strconv.FormatUint(uint64(okTarget.ID), 10))
 		})
 	})
+}
+
+// init 将测试用 mock 渠道注册进 notify 注册表。
+// 注册表为包级全局状态且重复注册会 panic，故仅在 init 注册一次。
+func init() {
+	message.RegisterChannel(mockNotificationChannelType, func(_ json.RawMessage) (message.Channel, error) {
+		return &mockNotificationChannel{}, nil
+	}, reflect.TypeFor[mockNotificationChannelConfig](), reflect.TypeFor[mockNotificationTargetConfig]())
 }

@@ -1,23 +1,37 @@
 -- +goose Up
 
--- Groups: superuser, admin, default
+-- =====================================================================
+-- 全局种子数据与权限点（fixtures）
+-- 本文件合并迁移 002~008 的 fixtures 内容，无向后兼容负担：
+-- 权限点模板已合并补齐全部需认证接口且移除已废弃的 jwt/refresh；
+-- 标签规则样例表 DDL 与种子数据随本文件一起迁移（无外键依赖）。
+-- =====================================================================
+
+-- -------------------------------------------------------------
+-- 1) 用户组
+-- -------------------------------------------------------------
 INSERT INTO groups (name, description) VALUES
     ('superuser', 'superuser group users who have all right to do anything'),
     ('admin', 'admin group users who have the most right to do very much things'),
     ('default', 'default group users who have all default right')
 ON CONFLICT (name) DO NOTHING;
 
--- Namespace: default
+-- -------------------------------------------------------------
+-- 2) 命名空间
+-- -------------------------------------------------------------
 INSERT INTO namespaces (name, description) VALUES
     ('default', 'default namespace')
 ON CONFLICT (name) DO NOTHING;
 
--- RbacPolicy: superuser wildcard
+-- -------------------------------------------------------------
+-- 3) RBAC 策略：superuser / admin
+-- -------------------------------------------------------------
+-- superuser 通配放行
 INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'superuser', '*', '*', 'allow')
 ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 
--- RbacPolicy: admin group policies
+-- admin 组策略
 -- 接口层权限点 object = api:{FullPath} + action = HTTP 方法（规范见 internal/pkg/base/consts.go）
 INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/admin/user/list', 'POST', 'allow'),
@@ -43,21 +57,47 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/update', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/:id/update', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/delete', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/delete', 'OPTIONS', 'allow')
+    ('p', 'admin', 'api:/api/v1/admin/tag-rule-sample/delete', 'OPTIONS', 'allow'),
+    -- 第三方数据源接口
+    ('p', 'admin', 'api:/api/v1/datasource/types', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/types', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/create', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/create', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/:id/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/:id/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/:id/update', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/:id/update', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/delete', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/enable', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/enable', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/disable', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/disable', 'OPTIONS', 'allow')
 ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 
--- RbacPolicyTemplate
+-- -------------------------------------------------------------
+-- 4) RBAC 策略模板
+-- -------------------------------------------------------------
 -- 接口层模板：target = api:{FullPath} + action = HTTP 方法（POST / OPTIONS），覆盖全部需认证接口；
 -- 明文查看权限点模板：target = plaintext:{crypto|s3}:{model}:{field} + action = READ
--- （格式规范见 internal/pkg/base/consts.go），供 group/:name/add-rbac-policy 校验 target 合法范围
+-- （格式规范见 internal/pkg/base/consts.go），供 group/:name/add-rbac-policy 校验 target 合法范围。
+-- jwt/refresh 豁免强制认证与授权，不注册模板。
 INSERT INTO rbac_policy_templates (target, action) VALUES
     -- 管理接口：用户管理
     ('api:/api/v1/admin/user/list', 'POST'),
     ('api:/api/v1/admin/user/list', 'OPTIONS'),
+    ('api:/api/v1/admin/user/create', 'POST'),
+    ('api:/api/v1/admin/user/create', 'OPTIONS'),
     ('api:/api/v1/admin/user/:unionID/get', 'POST'),
     ('api:/api/v1/admin/user/:unionID/get', 'OPTIONS'),
     ('api:/api/v1/admin/user/:unionID/update', 'POST'),
     ('api:/api/v1/admin/user/:unionID/update', 'OPTIONS'),
+    ('api:/api/v1/admin/user/:unionID/password/reset', 'POST'),
+    ('api:/api/v1/admin/user/:unionID/password/reset', 'OPTIONS'),
+    ('api:/api/v1/admin/user/:unionID/frontend-config/reset', 'POST'),
+    ('api:/api/v1/admin/user/:unionID/frontend-config/reset', 'OPTIONS'),
     ('api:/api/v1/admin/user/activate', 'POST'),
     ('api:/api/v1/admin/user/activate', 'OPTIONS'),
     ('api:/api/v1/admin/user/deactivate', 'POST'),
@@ -171,6 +211,30 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/tag-event/tag-event-rule/:id/version/list', 'OPTIONS'),
     ('api:/api/v1/tag-event/tag-event-rule/:id/version/:version/rollback', 'POST'),
     ('api:/api/v1/tag-event/tag-event-rule/:id/version/:version/rollback', 'OPTIONS'),
+    -- 标签事件接口：事件记录
+    ('api:/api/v1/tag-event/record/list', 'POST'),
+    ('api:/api/v1/tag-event/record/list', 'OPTIONS'),
+    ('api:/api/v1/tag-event/record/:id/get', 'POST'),
+    ('api:/api/v1/tag-event/record/:id/get', 'OPTIONS'),
+    ('api:/api/v1/tag-event/record/close', 'POST'),
+    ('api:/api/v1/tag-event/record/close', 'OPTIONS'),
+    -- 第三方数据源接口
+    ('api:/api/v1/datasource/types', 'POST'),
+    ('api:/api/v1/datasource/types', 'OPTIONS'),
+    ('api:/api/v1/datasource/list', 'POST'),
+    ('api:/api/v1/datasource/list', 'OPTIONS'),
+    ('api:/api/v1/datasource/create', 'POST'),
+    ('api:/api/v1/datasource/create', 'OPTIONS'),
+    ('api:/api/v1/datasource/:id/get', 'POST'),
+    ('api:/api/v1/datasource/:id/get', 'OPTIONS'),
+    ('api:/api/v1/datasource/:id/update', 'POST'),
+    ('api:/api/v1/datasource/:id/update', 'OPTIONS'),
+    ('api:/api/v1/datasource/delete', 'POST'),
+    ('api:/api/v1/datasource/delete', 'OPTIONS'),
+    ('api:/api/v1/datasource/enable', 'POST'),
+    ('api:/api/v1/datasource/enable', 'OPTIONS'),
+    ('api:/api/v1/datasource/disable', 'POST'),
+    ('api:/api/v1/datasource/disable', 'OPTIONS'),
     -- 原始流量审计接口（无唯一性 ID，不提供 detail 接口，list 返回全字段）
     ('api:/api/v1/traffic/ipv4-tcp/list', 'POST'),
     ('api:/api/v1/traffic/ipv4-tcp/list', 'OPTIONS'),
@@ -178,16 +242,16 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/traffic/ipv6-tcp/list', 'OPTIONS'),
     ('api:/api/v1/traffic/http-transport/list', 'POST'),
     ('api:/api/v1/traffic/http-transport/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/http-transport/stack/list', 'POST'),
+    ('api:/api/v1/traffic/http-transport/stack/list', 'OPTIONS'),
     -- 通用明文查看接口
     ('api:/api/v1/plaintext/crypto', 'POST'),
     ('api:/api/v1/plaintext/crypto', 'OPTIONS'),
     ('api:/api/v1/plaintext/s3', 'POST'),
     ('api:/api/v1/plaintext/s3', 'OPTIONS'),
-    -- 个人接口
+    -- 个人接口（default 组自管资源）
     ('api:/api/v1/user/self/password/reset', 'POST'),
     ('api:/api/v1/user/self/password/reset', 'OPTIONS'),
-    ('api:/api/v1/user/self/jwt/refresh', 'POST'),
-    ('api:/api/v1/user/self/jwt/refresh', 'OPTIONS'),
     ('api:/api/v1/user/self/authorization-info/get', 'POST'),
     ('api:/api/v1/user/self/authorization-info/get', 'OPTIONS'),
     ('api:/api/v1/user/self/profile/change', 'POST'),
@@ -202,7 +266,84 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/user/self/access-key/:id/activate', 'OPTIONS'),
     ('api:/api/v1/user/self/access-key/:id/deactivate', 'POST'),
     ('api:/api/v1/user/self/access-key/:id/deactivate', 'OPTIONS'),
-    -- ETL 管道监控接口
+    ('api:/api/v1/user/self/frontend-config/get', 'POST'),
+    ('api:/api/v1/user/self/frontend-config/get', 'OPTIONS'),
+    ('api:/api/v1/user/self/frontend-config/sync', 'POST'),
+    ('api:/api/v1/user/self/frontend-config/sync', 'OPTIONS'),
+    ('api:/api/v1/user/self/frontend-config/sync-enabled/set', 'POST'),
+    ('api:/api/v1/user/self/frontend-config/sync-enabled/set', 'OPTIONS'),
+    -- 通知管理：渠道
+    ('api:/api/v1/notification/channel/types', 'POST'),
+    ('api:/api/v1/notification/channel/types', 'OPTIONS'),
+    ('api:/api/v1/notification/channel/list', 'POST'),
+    ('api:/api/v1/notification/channel/list', 'OPTIONS'),
+    ('api:/api/v1/notification/channel/create', 'POST'),
+    ('api:/api/v1/notification/channel/create', 'OPTIONS'),
+    ('api:/api/v1/notification/channel/:id/get', 'POST'),
+    ('api:/api/v1/notification/channel/:id/get', 'OPTIONS'),
+    ('api:/api/v1/notification/channel/:id/update', 'POST'),
+    ('api:/api/v1/notification/channel/:id/update', 'OPTIONS'),
+    ('api:/api/v1/notification/channel/delete', 'POST'),
+    ('api:/api/v1/notification/channel/delete', 'OPTIONS'),
+    ('api:/api/v1/notification/channel/enable', 'POST'),
+    ('api:/api/v1/notification/channel/enable', 'OPTIONS'),
+    ('api:/api/v1/notification/channel/disable', 'POST'),
+    ('api:/api/v1/notification/channel/disable', 'OPTIONS'),
+    -- 通知管理：目标
+    ('api:/api/v1/notification/target/list', 'POST'),
+    ('api:/api/v1/notification/target/list', 'OPTIONS'),
+    ('api:/api/v1/notification/target/create', 'POST'),
+    ('api:/api/v1/notification/target/create', 'OPTIONS'),
+    ('api:/api/v1/notification/target/:id/get', 'POST'),
+    ('api:/api/v1/notification/target/:id/get', 'OPTIONS'),
+    ('api:/api/v1/notification/target/:id/update', 'POST'),
+    ('api:/api/v1/notification/target/:id/update', 'OPTIONS'),
+    ('api:/api/v1/notification/target/:id/test-send', 'POST'),
+    ('api:/api/v1/notification/target/:id/test-send', 'OPTIONS'),
+    ('api:/api/v1/notification/target/:id/send', 'POST'),
+    ('api:/api/v1/notification/target/:id/send', 'OPTIONS'),
+    ('api:/api/v1/notification/target/delete', 'POST'),
+    ('api:/api/v1/notification/target/delete', 'OPTIONS'),
+    ('api:/api/v1/notification/target/enable', 'POST'),
+    ('api:/api/v1/notification/target/enable', 'OPTIONS'),
+    ('api:/api/v1/notification/target/disable', 'POST'),
+    ('api:/api/v1/notification/target/disable', 'OPTIONS'),
+    -- 通知管理：组
+    ('api:/api/v1/notification/group/list', 'POST'),
+    ('api:/api/v1/notification/group/list', 'OPTIONS'),
+    ('api:/api/v1/notification/group/create', 'POST'),
+    ('api:/api/v1/notification/group/create', 'OPTIONS'),
+    ('api:/api/v1/notification/group/:id/get', 'POST'),
+    ('api:/api/v1/notification/group/:id/get', 'OPTIONS'),
+    ('api:/api/v1/notification/group/:id/update', 'POST'),
+    ('api:/api/v1/notification/group/:id/update', 'OPTIONS'),
+    ('api:/api/v1/notification/group/:id/set-default', 'POST'),
+    ('api:/api/v1/notification/group/:id/set-default', 'OPTIONS'),
+    ('api:/api/v1/notification/group/delete', 'POST'),
+    ('api:/api/v1/notification/group/delete', 'OPTIONS'),
+    -- 通知管理：模板
+    ('api:/api/v1/notification/template/events', 'POST'),
+    ('api:/api/v1/notification/template/events', 'OPTIONS'),
+    ('api:/api/v1/notification/template/list', 'POST'),
+    ('api:/api/v1/notification/template/list', 'OPTIONS'),
+    ('api:/api/v1/notification/template/create', 'POST'),
+    ('api:/api/v1/notification/template/create', 'OPTIONS'),
+    ('api:/api/v1/notification/template/update', 'POST'),
+    ('api:/api/v1/notification/template/update', 'OPTIONS'),
+    ('api:/api/v1/notification/template/restore-default', 'POST'),
+    ('api:/api/v1/notification/template/restore-default', 'OPTIONS'),
+    ('api:/api/v1/notification/template/render-test', 'POST'),
+    ('api:/api/v1/notification/template/render-test', 'OPTIONS'),
+    ('api:/api/v1/notification/template/validate', 'POST'),
+    ('api:/api/v1/notification/template/validate', 'OPTIONS'),
+    ('api:/api/v1/notification/template/dry-run', 'POST'),
+    ('api:/api/v1/notification/template/dry-run', 'OPTIONS'),
+    -- 通知管理：发送记录
+    ('api:/api/v1/notification/record/list', 'POST'),
+    ('api:/api/v1/notification/record/list', 'OPTIONS'),
+    ('api:/api/v1/notification/record/:id/get', 'POST'),
+    ('api:/api/v1/notification/record/:id/get', 'OPTIONS'),
+    -- ETL 管道：监控接口（inspector）
     ('api:/api/v1/etl/inspector/server/list', 'POST'),
     ('api:/api/v1/etl/inspector/server/list', 'OPTIONS'),
     ('api:/api/v1/etl/inspector/scheduler/list', 'POST'),
@@ -231,6 +372,17 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/etl/inspector/task/:id/run', 'OPTIONS'),
     ('api:/api/v1/etl/inspector/task/:id/cancel-processing', 'POST'),
     ('api:/api/v1/etl/inspector/task/:id/cancel-processing', 'OPTIONS'),
+    -- ETL 管道：定时任务管理
+    ('api:/api/v1/etl/scheduler/task/create', 'POST'),
+    ('api:/api/v1/etl/scheduler/task/create', 'OPTIONS'),
+    ('api:/api/v1/etl/scheduler/task/update', 'POST'),
+    ('api:/api/v1/etl/scheduler/task/update', 'OPTIONS'),
+    ('api:/api/v1/etl/scheduler/task/toggle', 'POST'),
+    ('api:/api/v1/etl/scheduler/task/toggle', 'OPTIONS'),
+    ('api:/api/v1/etl/scheduler/task/delete', 'POST'),
+    ('api:/api/v1/etl/scheduler/task/delete', 'OPTIONS'),
+    ('api:/api/v1/etl/scheduler/task/run', 'POST'),
+    ('api:/api/v1/etl/scheduler/task/run', 'OPTIONS'),
     -- 明文查看权限点（数据层）
     ('plaintext:crypto:ipv4-tcp:payload', 'READ'),
     ('plaintext:crypto:ipv6-tcp:payload', 'READ'),
@@ -244,33 +396,45 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('plaintext:crypto:http-transport:rspHdrSecWebsocketAccept', 'READ'),
     ('plaintext:crypto:notification-channel:config', 'READ'),
     ('plaintext:crypto:notification-target:config', 'READ'),
+    ('plaintext:crypto:datasource:config', 'READ'),
     ('plaintext:s3:http-transport:reqBody', 'READ'),
     ('plaintext:s3:http-transport:rspBody', 'READ')
 ON CONFLICT (target, action) DO NOTHING;
 
--- TagRuleSample: 标签规则验证样例数据（第二层运行期合法性校验用）
-CREATE TABLE IF NOT EXISTS tag_rule_samples (
-    id SERIAL PRIMARY KEY,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    namespace_name VARCHAR(32) NOT NULL,
-    model VARCHAR(255) NOT NULL,
-    name VARCHAR(128) NOT NULL,
-    input JSONB NOT NULL,
-    description VARCHAR(512) NOT NULL DEFAULT '',
-    CONSTRAINT uq_tag_rule_samples_namespace_name_model_name UNIQUE (namespace_name, model, name)
-);
+-- -------------------------------------------------------------
+-- 5) default 组默认策略：普通用户对 user/self 自管资源拥有全部权限
+-- -------------------------------------------------------------
+-- 生效域由用户创建时绑定的 g(user, default, default) 限定在 default 命名空间；
+-- jwt/refresh 已豁免授权，不在其中。
+INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
+    ('p', 'default', 'api:/api/v1/user/self/password/reset', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/password/reset', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/authorization-info/get', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/authorization-info/get', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/profile/change', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/profile/change', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/list', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/list', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/create', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/create', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/:id/remove', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/:id/remove', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/:id/activate', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/:id/activate', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/:id/deactivate', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/access-key/:id/deactivate', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/frontend-config/get', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/frontend-config/get', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/frontend-config/sync', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/frontend-config/sync', 'OPTIONS', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/frontend-config/sync-enabled/set', 'POST', 'allow'),
+    ('p', 'default', 'api:/api/v1/user/self/frontend-config/sync-enabled/set', 'OPTIONS', 'allow')
+ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 
-COMMENT ON COLUMN tag_rule_samples.id IS 'the primary key of the tag rule sample';
-COMMENT ON COLUMN tag_rule_samples.created_at IS 'the creation time of the tag rule sample';
-COMMENT ON COLUMN tag_rule_samples.updated_at IS 'the last update time of the tag rule sample';
-COMMENT ON COLUMN tag_rule_samples.namespace_name IS 'the namespace the tag rule sample belongs to';
-COMMENT ON COLUMN tag_rule_samples.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
-COMMENT ON COLUMN tag_rule_samples.name IS 'the unique name of the sample within the namespace and the model';
-COMMENT ON COLUMN tag_rule_samples.input IS 'the sample input document, a JSON serialization of the target model instance';
-COMMENT ON COLUMN tag_rule_samples.description IS 'the description of the sample';
-
--- TagRuleSample fixtures: HttpTransport 模型验证样例（覆盖典型请求形态，供运行期合法性校验使用）
+-- -------------------------------------------------------------
+-- 6) 标签规则样例
+-- -------------------------------------------------------------
+-- 建表语句见 001_init.sql（schema 层），此处仅种入基线样例数据。
 -- 种子样例归属 default 命名空间；其它命名空间由 tagengine EnsureModelSamples 懒供给
 INSERT INTO tag_rule_samples (namespace_name, model, name, input, description) VALUES
     (
@@ -303,6 +467,9 @@ INSERT INTO tag_rule_samples (namespace_name, model, name, input, description) V
     )
 ON CONFLICT (namespace_name, model, name) DO NOTHING;
 
+-- -------------------------------------------------------------
+-- 7) 占位符通知渠道
+-- -------------------------------------------------------------
 -- 占位符通知渠道（如 webhook：渠道级配置无参数，仅标明通知目标类型）作为固定数据
 -- 种子化。此处为迁移时已存在的每个命名空间补齐占位渠道（name=type 键、config 置空、
 -- enabled=true）；新命名空间的占位渠道由命名空间创建逻辑（code）在其事务内自动种子化。
@@ -315,12 +482,24 @@ CROSS JOIN (VALUES ('webhook')) AS v(type)
 ON CONFLICT (namespace_name, name) DO NOTHING;
 
 -- +goose Down
+
+-- 占位符通知渠道
 DELETE FROM notification_channels
 WHERE type IN ('webhook')
   AND namespace_name IN (SELECT name FROM namespaces);
-DROP TABLE IF EXISTS tag_rule_samples;
-DELETE FROM rbac_policy_templates WHERE target LIKE 'api:%';
+
+-- default 组 user/self 自管策略
+DELETE FROM rbac_policies WHERE ptype = 'p' AND v0 = 'default' AND v1 LIKE 'api:/api/v1/user/self/%';
+
+-- RBAC 策略模板
 DELETE FROM rbac_policy_templates WHERE target LIKE 'plaintext:%';
+DELETE FROM rbac_policy_templates WHERE target LIKE 'api:%';
+
+-- admin / superuser 策略
 DELETE FROM rbac_policies WHERE v0 IN ('superuser', 'admin') AND ptype = 'p';
+
+-- 命名空间
 DELETE FROM namespaces WHERE name = 'default';
+
+-- 用户组
 DELETE FROM groups WHERE name IN ('superuser', 'admin', 'default');

@@ -14,10 +14,9 @@ func registerAdminRoutes(ctx *RegisterContext) {
 		ctx.authenticatorMiddleware,     // 认证器注入
 		ctx.forceAuthenticateMiddleware, // 强制JWT认证
 		ctx.policyMiddleware,            // RBAC策略引擎
-		ctx.coreDatabaseMiddleware,      // 数据库连接
 		ctx.namespaceMiddleware,         // 命名空间隔离
-		ctx.s3Middleware,                // S3 客户端（样例 body 副本复制/删除）
-		// authorizeMiddleware,       // 权限验证（暂未启用）
+		ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.coreDatabaseMiddleware,      // 数据库连接
 	)
 	{
 		// ========== 用户管理接口 ==========

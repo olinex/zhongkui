@@ -21,8 +21,8 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/message"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
 
@@ -59,6 +59,7 @@ func setupNotificationTemplateTestRouter(db *database.DB, namespace string) *gin
 		c.Set(middlewares.NamespaceCtxName, namespace)
 		c.Next()
 	})
+	r.Use(middlewares.MessagePoolMiddleware(message.NewPool()))
 	registerNotificationTemplateTestRoutes(r.Group(""))
 	return r
 }
@@ -145,8 +146,25 @@ func TestNotificationTemplateList(t *testing.T) {
 		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
-		// 种子化内置默认模板（source=default，zh-Hans 与 en 两行）
-		So(notify.SeedDefaultTemplates(db, ns), ShouldBeNil)
+		// 手工创建默认模板行（source=default，zh-Hans 与 en 两行），模拟历史落库数据以验证列表过滤
+		So(db.Create(&core.NotificationTemplate{
+			NamespaceName: ns,
+			Event:         core.EventTypeTagEventRecord,
+			ChannelType:   "*",
+			Language:      "zh-Hans",
+			Title:         "标签事件告警: {{.RuleName}}",
+			Content:       "命名空间: {{.Namespace}}\n事件规则: {{.RuleName}}",
+			Source:        core.TemplateSourceDefault,
+		}).Error, ShouldBeNil)
+		So(db.Create(&core.NotificationTemplate{
+			NamespaceName: ns,
+			Event:         core.EventTypeTagEventRecord,
+			ChannelType:   "*",
+			Language:      "en",
+			Title:         "Tag Event Alert: {{.RuleName}}",
+			Content:       "Namespace: {{.Namespace}}\nEvent rule: {{.RuleName}}",
+			Source:        core.TemplateSourceDefault,
+		}).Error, ShouldBeNil)
 
 		Convey("默认列表返回全部默认模板行", func() {
 			total, items := notificationTemplateListItems(r, map[string]any{"pageSize": 100})
@@ -159,15 +177,22 @@ func TestNotificationTemplateList(t *testing.T) {
 		})
 
 		Convey("按事件过滤", func() {
-			total, _ := notificationTemplateListItems(r, map[string]any{"event": core.EventTypeTagEventRecord, "pageSize": 100})
+			total, _ := notificationTemplateListItems(r, map[string]any{
+				"pageSize": 100,
+				"filterBy": map[string]any{
+					"event": map[string]any{"action": "eq", "value": core.EventTypeTagEventRecord},
+				},
+			})
 			So(total, ShouldEqual, 2)
 		})
 
 		Convey("按事件 + 来源过滤返回若干默认模板", func() {
 			total, items := notificationTemplateListItems(r, map[string]any{
-				"event":    core.EventTypeTagEventRecord,
-				"source":   core.TemplateSourceDefault,
 				"pageSize": 100,
+				"filterBy": map[string]any{
+					"event":  map[string]any{"action": "eq", "value": core.EventTypeTagEventRecord},
+					"source": map[string]any{"action": "eq", "value": core.TemplateSourceDefault},
+				},
 			})
 			So(total, ShouldEqual, 2)
 			So(items, ShouldHaveLength, 2)
@@ -183,9 +208,14 @@ func TestNotificationTemplateList(t *testing.T) {
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
 
-			total, items := notificationTemplateListItems(r, map[string]any{"source": core.TemplateSourceOverride, "pageSize": 100})
+			total, items := notificationTemplateListItems(r, map[string]any{
+				"pageSize": 100,
+				"filterBy": map[string]any{
+					"source": map[string]any{"action": "eq", "value": core.TemplateSourceOverride},
+				},
+			})
 			So(total, ShouldEqual, 1)
-			So(items[0].Language, ShouldEqual, "*")
+			So(items[0].Language.String(), ShouldEqual, "*")
 			So(items[0].Source, ShouldEqual, core.TemplateSourceOverride)
 		})
 	})
@@ -260,7 +290,16 @@ func TestNotificationTemplateUpdate(t *testing.T) {
 		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
-		So(notify.SeedDefaultTemplates(db, ns), ShouldBeNil)
+		// 手工创建一条默认模板行供更新测试
+		So(db.Create(&core.NotificationTemplate{
+			NamespaceName: ns,
+			Event:         core.EventTypeTagEventRecord,
+			ChannelType:   "*",
+			Language:      "zh-Hans",
+			Title:         "标签事件告警: {{.RuleName}}",
+			Content:       "命名空间: {{.Namespace}}",
+			Source:        core.TemplateSourceDefault,
+		}).Error, ShouldBeNil)
 
 		var defaultTmpl core.NotificationTemplate
 		So(db.Where("namespace_name = ? AND language = ?", ns, "zh-Hans").First(&defaultTmpl).Error, ShouldBeNil)
@@ -304,13 +343,16 @@ func TestNotificationTemplateRestoreDefault(t *testing.T) {
 		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
-		So(notify.SeedDefaultTemplates(db, ns), ShouldBeNil)
-
-		// 覆盖 en 语言默认模板，使其 source=override
-		var enTmpl core.NotificationTemplate
-		So(db.Where("namespace_name = ? AND language = ?", ns, "en").First(&enTmpl).Error, ShouldBeNil)
-		So(db.Model(&core.NotificationTemplate{}).Where("id = ?", enTmpl.ID).
-			Updates(map[string]any{"title": "CUSTOM TITLE", "source": core.TemplateSourceOverride}).Error, ShouldBeNil)
+		// 手工创建一条 override 模板行，验证恢复默认会将其删除
+		So(db.Create(&core.NotificationTemplate{
+			NamespaceName: ns,
+			Event:         core.EventTypeTagEventRecord,
+			ChannelType:   "*",
+			Language:      "en",
+			Title:         "CUSTOM TITLE {{.RuleName}}",
+			Content:       "custom content",
+			Source:        core.TemplateSourceOverride,
+		}).Error, ShouldBeNil)
 
 		w := doNotificationTemplateRequest(r, http.MethodPost, "/notification/template/restore-default", map[string]any{
 			"event":    core.EventTypeTagEventRecord,
@@ -318,14 +360,13 @@ func TestNotificationTemplateRestoreDefault(t *testing.T) {
 		})
 		So(w.Code, ShouldEqual, http.StatusOK)
 
-		// 恢复后 en 语言重新成为默认模板（标题回退到注册表默认）
-		var restored core.NotificationTemplate
-		So(db.Where("namespace_name = ? AND language = ?", ns, "en").First(&restored).Error, ShouldBeNil)
-		So(restored.Source, ShouldEqual, core.TemplateSourceDefault)
-		So(restored.Title, ShouldNotEqual, "CUSTOM TITLE")
-		So(restored.Title, ShouldNotBeEmpty)
+		// 恢复后该事件全部持久化模板行被删除，渲染回退到 i18n 默认（不再落库）
+		var count int64
+		So(db.Model(&core.NotificationTemplate{}).Where("namespace_name = ? AND event = ?",
+			ns, core.EventTypeTagEventRecord).Count(&count).Error, ShouldBeNil)
+		So(count, ShouldEqual, 0)
 
-		// 无 override 残留，仅剩该事件的默认模板行
+		// 无 override 残留
 		var overrideCount int64
 		So(db.Model(&core.NotificationTemplate{}).Where("namespace_name = ? AND event = ? AND source = ?",
 			ns, core.EventTypeTagEventRecord, core.TemplateSourceOverride).Count(&overrideCount).Error, ShouldBeNil)
@@ -344,9 +385,8 @@ func TestNotificationTemplateRenderTest(t *testing.T) {
 		})
 		ns := middlewares.DefaultNamespace
 		r := setupNotificationTemplateTestRouter(db, ns)
-		So(notify.SeedDefaultTemplates(db, ns), ShouldBeNil)
 
-		Convey("成功路径：按默认语言渲染内置默认模板", func() {
+		Convey("成功路径：按默认语言渲染内置 i18n 默认模板", func() {
 			w := doNotificationTemplateRequest(r, http.MethodPost, "/notification/template/render-test", map[string]any{
 				"event":  core.EventTypeTagEventRecord,
 				"params": map[string]any{"RuleName": "告警规则", "Namespace": ns},
@@ -377,8 +417,7 @@ func TestNotificationTemplateRenderTest(t *testing.T) {
 		})
 
 		Convey("非法模板返回 400 + CodeNotificationSendFailed", func() {
-			// 删除默认 en 行后插入一条非法模板（ChannelType/Language 与默认 zh-Hans 相区分）
-			So(db.Where("namespace_name = ? AND language = ?", ns, "en").Delete(&core.NotificationTemplate{}).Error, ShouldBeNil)
+			// 插入一条非法的 en 覆盖模板（无需先删默认行，默认模板已不再落库）
 			So(db.Create(&core.NotificationTemplate{
 				NamespaceName: ns,
 				Event:         core.EventTypeTagEventRecord,

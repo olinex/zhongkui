@@ -20,9 +20,9 @@ func registerTrafficRoutes(ctx *RegisterContext) {
 		ctx.authenticatorMiddleware,     // 认证器注入
 		ctx.forceAuthenticateMiddleware, // 强制JWT认证
 		ctx.policyMiddleware,            // RBAC策略引擎
-		ctx.rawDatabaseMiddleware,       // raw 库（ClickHouse）连接
-		ctx.s3Middleware,                // S3 客户端（body 明文读取）
 		ctx.namespaceMiddleware,         // 命名空间隔离
+		ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.rawDatabaseMiddleware,       // raw 库（ClickHouse）连接
 	)
 
 	// ========== IPv4 TCP 包：/api/v1/traffic/ipv4-tcp ==========

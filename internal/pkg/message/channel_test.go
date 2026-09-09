@@ -36,7 +36,7 @@ func (c *testChannel) Send(ctx context.Context, _ *Target, _ *RenderedMessage) (
 // instance can be built via New.
 func TestChannel_RegisterAndNew(t *testing.T) {
 	convey.Convey("注册自定义测试渠道后可通过 New 构建实例", t, func() {
-		Register(testType, func(_ json.RawMessage) (Channel, error) {
+		register(testType, func(_ json.RawMessage) (Channel, error) {
 			return &testChannel{}, nil
 		})
 		ch, err := New(testType, json.RawMessage(`{}`))
@@ -61,7 +61,7 @@ func TestChannel_New_Unregistered(t *testing.T) {
 func TestChannel_Register_Duplicate(t *testing.T) {
 	convey.Convey("重复注册同一渠道类型应 panic", t, func() {
 		const dupType = "test:duplicate"
-		Register(dupType, func(_ json.RawMessage) (Channel, error) {
+		register(dupType, func(_ json.RawMessage) (Channel, error) {
 			return &testChannel{}, nil
 		})
 		defer func() {
@@ -71,7 +71,7 @@ func TestChannel_Register_Duplicate(t *testing.T) {
 				convey.So(strings.Contains(e.Error(), "already registered"), convey.ShouldBeTrue)
 			}
 		}()
-		Register(dupType, func(_ json.RawMessage) (Channel, error) {
+		register(dupType, func(_ json.RawMessage) (Channel, error) {
 			return &testChannel{}, nil
 		})
 	})

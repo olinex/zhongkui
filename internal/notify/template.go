@@ -1,29 +1,22 @@
-// 本文件定义消息事件模板注册表（event template registry），作为命名空间级默认通知
-// 模板（NotificationTemplate，source=default）的种子来源。每个事件（Event）声明其
-// 支持的消息模板（Template）、渠道类型（Channels）、语言（Languages）以及各语言下
-// 的标题/正文 Go text/template 模板（TitleByLang/ContentByLang）。种子回填逻辑即按
-// 此注册表为各命名空间写入默认模板行（Task 3 实现），此处仅声明规格并给出枚举辅助
-// 函数。
+// 本文件定义消息事件模板注册表（event template registry）。注册表仅声明每个事件
+// （Event）支持的模板键（Template）、渠道类型（Channels）与语言（Languages）等元数据，
+// 不承载具体标题/正文内容——各语言默认模板标题/正文已迁至翻译包 i18n 键
+// notify.<template>.title / notify.<template>.content（见 internal/pkg/translate/locales）。
+// 发送消息渲染时，若命名空间下无对应持久化模板行，回退到该 i18n 默认模板。
 //
-// This file defines the event template registry, the seed source of the default
-// namespace-scoped notification templates (NotificationTemplate, source=default).
-// Each event declares its message template key (Template), supported channel types
-// (Channels), languages (Languages) and the per-language Go text/template title and
-// content templates (TitleByLang/ContentByLang). The seeding/backfill logic that
-// writes default template rows for each namespace from this registry is implemented
-// elsewhere (Task 3); this file only declares the specs and enumeration helpers.
+// This file defines the event template registry metadata. The registry only declares
+// per-event template key (Template), supported channel types (Channels) and languages
+// (Languages); the concrete default title/content templates live in the i18n locale
+// keys notify.<template>.title / notify.<template>.content (see
+// internal/pkg/translate/locales). When rendering a message for a namespace without a
+// matching persisted template row, the renderer falls back to that i18n default.
 package notify
 
 import (
 	// stdlib
-	_ "embed"
 	"fmt"
-	"maps"
 	"slices"
 	"text/template"
-
-	// third-party
-	"github.com/pelletier/go-toml/v2"
 
 	// internal
 	"zhongkui.com/zhongkui/internal/models/core"
@@ -44,87 +37,46 @@ const (
 	TemplateTagEventAlert = "tag_event.alert"
 )
 
-// defaultTemplatesFile 内嵌的默认通知模板注册表文件（TOML），启动时解析为
-// defaultTemplateSpecs。默认模板内容与代码分离，便于独立维护。
+// eventTemplateSpecs 事件模板注册表，键为事件类型键（Event key），是注册表的唯一事实来源。
+// 每条规格声明该事件支持的模板键（Template）、渠道类型（Channels）、语言（Languages）与
+// 样例渲染参数（SampleParams）。标题/正文默认内容不在此：已迁至 i18n 语言文件
+// notify.<template>.title / notify.<template>.content，发送渲染时持久化模板行缺位回退到该键。
+// SampleParams 用于前端试运行（以内置样例值渲染编辑器内标题/正文）并作为智能补全字段清单
+// （EventFields）的数据源。
 //
-// defaultTemplatesFile is the embedded default notification template registry file
-// (TOML), parsed into defaultTemplateSpecs at init. Default template content is kept
-// separate from code for easier maintenance.
-//
-//go:embed default_templates.toml
-var defaultTemplatesFile []byte
-
-// sampleParamsByEvent 各事件（Event key）的样例渲染参数，键为事件类型键。这些参数
-// 用于前端试运行：用内置样例值渲染编辑器内的标题/正文，让用户无需手填参数即可预览
-// 效果；其键也作为智能补全的可选变量清单（EventFields）的数据源。
-//
-// sampleParamsByEvent holds the sample render params per event (keyed by event type key).
-// They back the frontend dry-run: the in-editor title/content is rendered against these
-// built-in sample values so users can preview without filling params manually; their keys
-// also seed the smart-completion field list (EventFields).
-var sampleParamsByEvent = map[string]map[string]any{
+// eventTemplateSpecs is the event template registry keyed by event type key and the single
+// source of truth. Each spec declares the event's template key (Template), supported channel
+// types (Channels), languages (Languages) and sample render params (SampleParams). The default
+// title/content no longer live here (moved to the i18n keys notify.<template>.title/.content);
+// Send-time render falls back to those keys when no persisted template row exists. SampleParams
+// back the frontend dry-run and seed the smart-completion field list (EventFields).
+var eventTemplateSpecs = map[string]EventTemplateSpec{
 	core.EventTypeTagEventRecord: {
-		"Namespace":  "示例命名空间",
-		"RuleName":   "示例规则名",
-		"DetectedAt": "2026-01-01T00:00:00Z",
-		"Hits": []any{
-			map[string]any{"ConditionName": "条件A", "Dimension": "src_ip", "Item": "10.0.0.1", "Count": 5, "Threshold": 3},
-			map[string]any{"ConditionName": "条件B", "Dimension": "dst_port", "Item": "443", "Count": 128, "Threshold": 50},
+		Template:  TemplateTagEventAlert,
+		Channels:  []string{"*"},
+		Languages: []base.Language{base.LangSimplifiedChinese, base.LangEnglish},
+		SampleParams: map[string]any{
+			"Namespace":  "示例命名空间",
+			"RuleName":   "示例规则名",
+			"DetectedAt": "2026-01-01T00:00:00Z",
+			"Hits": []any{
+				map[string]any{"ConditionName": "条件A", "Dimension": "src_ip", "Item": "10.0.0.1", "Count": 5, "Threshold": 3},
+				map[string]any{"ConditionName": "条件B", "Dimension": "dst_port", "Item": "443", "Count": 128, "Threshold": 50},
+			},
 		},
 	},
 }
 
-// defaultTemplateSpecs 内置默认事件模板规格注册表，由内嵌的 default_templates.toml
-// 在初始化时加载生成；种子回填（Task 3）据此为各命名空间写入 source=default 的
-// 默认通知模板行。文件解析或模板语法非法时 panic（启动即失败，快速暴露）。
-// defaultTemplateSpecs is the built-in default event template spec registry, loaded
-// from the embedded default_templates.toml at init; the seed backfill (Task 3) writes
-// source=default notification template rows per namespace from it. A parse failure or
-// invalid template syntax panics at init to surface errors early.
-var defaultTemplateSpecs = mustLoadEventTemplateSpecs()
-
-// eventTemplateFile 默认通知模板注册表文件的 TOML 结构，仅用于解析，与
-// EventTemplateSpec 分离（前者是磁盘形态，后者是内存规格）。
-//
-// eventTemplateFile is the TOML structure of the default template registry file, used
-// only for parsing; it is decoupled from EventTemplateSpec (the former is the on-disk
-// shape, the latter the in-memory spec).
-type eventTemplateFile struct {
-	// Events 事件模板条目数组
-	// Events the array of event template entries
-	Events []eventTemplateFileEvent `toml:"event"`
-}
-
-// eventTemplateFileEvent 单条事件模板的 TOML 结构。
-// eventTemplateFileEvent is the TOML structure of a single event template entry.
-type eventTemplateFileEvent struct {
-	// Event 事件类型键
-	// Event the event type key
-	Event string `toml:"event"`
-	// Template 消息模板键
-	// Template the message template key
-	Template string `toml:"template"`
-	// Channels 渠道类型键并集
-	// Channels the union of channel type keys
-	Channels []string `toml:"channels"`
-	// Languages 语言键并集
-	// Languages the union of language keys
-	Languages []string `toml:"languages"`
-	// Title 各语言下的标题模板，键为语言
-	// Title the per-language title templates, keyed by language
-	Title map[string]string `toml:"title"`
-	// Content 各语言下的正文模板，键为语言
-	// Content the per-language content templates, keyed by language
-	Content map[string]string `toml:"content"`
-}
-
-// EventTemplateSpec 描述一个事件（Event）的默认通知模板规格。
-// EventTemplateSpec describes the default notification template spec of an event.
+// EventTemplateSpec 描述一个事件（Event）的默认通知模板元信息规格。
+// 标题/正文默认内容不再挂在此处：已迁至 i18n 语言文件（键 notify.<template>.title/.content，
+// 见 internal/pkg/translate），发送渲染时若持久化模板行缺位，回退按该键查找。
+// 事件类型键（Event key）由注册表 map 的键承载，故本结构体不重复声明 Event 字段。
+// EventTemplateSpec describes the metadata spec of an event's notification template.
+// The default title/content no longer live here: they moved to the i18n locale files
+// (keys notify.<template>.title/.content, see internal/pkg/translate); when no persisted
+// template row exists the send-time render falls back to those keys. The event type key is
+// carried by the registry map key, so the struct does not duplicate an Event field.
 type EventTemplateSpec struct {
-	// Event 事件类型键，取值定义在 core.EventTypeXxx 常量（如 core.EventTypeTagEventRecord）
-	// Event the event type key, e.g. one of the core.EventTypeXxx constants
-	// (core.EventTypeTagEventRecord)
-	Event string
 	// Template 消息模板键，取值定义在 notify.TemplateXxx 常量（如 notify.TemplateTagEventAlert）
 	// Template the message template key, e.g. one of the notify.TemplateXxx constants
 	// (notify.TemplateTagEventAlert)
@@ -132,79 +84,34 @@ type EventTemplateSpec struct {
 	// Channels 渠道类型键的并集（支持的类型），"*" 表示对所有渠道生效
 	// Channels the supported channel type keys, "*" means all channels
 	Channels []string
-	// Languages 语言键的并集（支持的语言），"*" 表示对所有语言生效
-	// Languages the supported language keys, "*" means all languages
-	Languages []string
-	// TitleByLang 各语言下的标题模板（Go text/template），键为语言（如 zh-Hans、en）
-	// TitleByLang the per-language title template (Go text/template), keyed by language
-	TitleByLang map[string]string
-	// ContentByLang 各语言下的正文模板（Go text/template），键为语言（如 zh-Hans、en）
-	// ContentByLang the per-language content template (Go text/template), keyed by language
-	ContentByLang map[string]string
+	// Languages 该事件支持的语言（base.Language 强类型），供前端枚举该事件的可用语言。
+	// 注意：与 Channels 不同，语言不支持 "*" 通配——"对所有语言生效"由
+	// SupportedLanguages 在并集时统一追加 * 表示。
+	// Languages the languages supported by this event, typed as base.Language so callers
+	// get a validated BCP-47 tag. Unlike Channels, "*" wildcard is not allowed here; the
+	// "available in all languages" notion is expressed by SupportedLanguages appending "*".
+	Languages []base.Language
+	// SampleParams 该事件的样例渲染参数：供前端试运行预览，并作为智能补全字段
+	// 清单（EventFields）的数据源；键为模板占位符（大驼峰）。
+	// SampleParams the sample render params of this event, backing the frontend dry-run
+	// and seeding the smart-completion field list (EventFields); keys match the template
+	// placeholders in UpperCamelCase.
+	SampleParams map[string]any
 }
 
-// mustLoadEventTemplateSpecs 解析内嵌的 default_templates.toml 并转换为
-// EventTemplateSpec 切片，同时校验每条标题/正文模板语法合法。任一失败即 panic。
-//
-// mustLoadEventTemplateSpecs parses the embedded default_templates.toml into a slice of
-// EventTemplateSpec, validating that every title/content template has valid syntax.
-// Any failure panics.
-func mustLoadEventTemplateSpecs() []EventTemplateSpec {
-	var file eventTemplateFile
-	if err := toml.Unmarshal(defaultTemplatesFile, &file); err != nil {
-		panic("notify: failed to parse embedded default_templates.toml: " + err.Error())
-	}
-
-	specs := make([]EventTemplateSpec, 0, len(file.Events))
-	for _, e := range file.Events {
-		spec := EventTemplateSpec{
-			Event:         e.Event,
-			Template:      e.Template,
-			Channels:      slices.Clone(e.Channels),
-			Languages:     slices.Clone(e.Languages),
-			TitleByLang:   e.Title,
-			ContentByLang: e.Content,
-		}
-		if err := validateEventTemplateSpec(&spec); err != nil {
-			panic(fmt.Sprintf("notify: invalid default template for event %q: %v", e.Event, err))
-		}
-		specs = append(specs, spec)
-	}
-	return specs
+func (spec *EventTemplateSpec) TitleKey() string {
+	return fmt.Sprintf(`notify.%s.title`, spec.Template)
 }
 
-// validateEventTemplateSpec 校验单条事件规格的所有标题/正文模板语法合法；
-// Event 与 Template 键缺失也视为非法。lang 为出错语言（用于报错定位）。
-//
-// validateEventTemplateSpec checks that every title/content template of a spec has valid
-// Go text/template syntax; a missing Event or Template key is also invalid.
-func validateEventTemplateSpec(spec *EventTemplateSpec) error {
-	if spec.Event == "" {
-		return errors.New("event key is empty")
-	}
-	if spec.Template == "" {
-		return errors.New("template key is empty")
-	}
-	for _, lang := range spec.Languages {
-		if _, ok := spec.TitleByLang[lang]; ok {
-			if err := validateTemplateSyntax("title", spec.TitleByLang[lang]); err != nil {
-				return errors.WithStack(fmt.Errorf("lang %q title: %w", lang, err))
-			}
-		}
-		if _, ok := spec.ContentByLang[lang]; ok {
-			if err := validateTemplateSyntax("content", spec.ContentByLang[lang]); err != nil {
-				return errors.WithStack(fmt.Errorf("lang %q content: %w", lang, err))
-			}
-		}
-	}
-	return nil
+func (spec *EventTemplateSpec) ContentKey() string {
+	return fmt.Sprintf(`notify.%s.content`, spec.Template)
 }
 
 // validateTemplateSyntax 校验单条模板字符串的 Go text/template 语法。
 // validateTemplateSyntax checks the Go text/template syntax of a single template string.
 func validateTemplateSyntax(kind, text string) error {
 	if _, err := template.New("default").Option("missingkey=zero").Parse(text); err != nil {
-		return errors.WithStack(fmt.Errorf("invalid %s template: %w", kind, err))
+		return errors.Newf("invalid %s template: %w", kind, err)
 	}
 	return nil
 }
@@ -224,11 +131,11 @@ func ValidateTemplateSyntax(kind, text string) error {
 // (nil, false) for unknown events; the dry-run API may fall back to an empty map and
 // still render when no sample params are registered.
 func EventSampleParams(event string) (map[string]any, bool) {
-	params, ok := sampleParamsByEvent[event]
+	spec, ok := eventTemplateSpecs[event]
 	if !ok {
 		return nil, false
 	}
-	return params, true
+	return spec.SampleParams, true
 }
 
 // EventFields 返回某事件的可用模板变量名清单：顶层键 + 数组元素对象的嵌套键（以供
@@ -237,15 +144,13 @@ func EventSampleParams(event string) (map[string]any, bool) {
 // plus the nested keys of array element objects (for completing references inside
 // {{range .Hits}} such as .ConditionName), deduplicated and sorted ascending.
 func EventFields(event string) []string {
-	params, ok := sampleParamsByEvent[event]
+	spec, ok := eventTemplateSpecs[event]
 	if !ok {
 		return nil
 	}
-	set := make(map[string]bool, len(params))
-	for k := range params {
+	set := make(map[string]bool, len(spec.SampleParams))
+	for k, v := range spec.SampleParams {
 		set[k] = true
-	}
-	for _, v := range params {
 		if arr, ok := v.([]any); ok {
 			for _, item := range arr {
 				if m, ok := item.(map[string]any); ok {
@@ -264,65 +169,77 @@ func EventFields(event string) []string {
 	return fields
 }
 
-// TemplateSpecs 返回事件模板注册表的规格副本，调用方可安全修改而不会污染注册表。
-// TemplateSpecs returns a copy of the event template spec registry so callers can
-// mutate it safely without affecting the registry.
-func TemplateSpecs() []EventTemplateSpec {
-	specs := make([]EventTemplateSpec, 0, len(defaultTemplateSpecs))
-	for _, s := range defaultTemplateSpecs {
+// TemplateSpecs 返回事件模板注册表的安全副本（键为事件类型键），调用方可安全修改
+// 而不会污染注册表。事件类型键取决于注册表定义，暴露顺序不作保证：set 语义下顺序不构成
+// 契约，展示顺序由调用方/前端按自身展示键决定。
+// TemplateSpecs returns a safe copy of the event template spec registry keyed by the event
+// type key, so callers can mutate it without affecting the registry. The set has no
+// meaningful order: the order of iteration is not part of the contract, and presentation
+// ordering is left to callers/the frontend according to their own display key.
+func TemplateSpecs() map[string]EventTemplateSpec {
+	specs := make(map[string]EventTemplateSpec, len(eventTemplateSpecs))
+	for event, s := range eventTemplateSpecs {
 		spec := EventTemplateSpec{
-			Event:         s.Event,
-			Template:      s.Template,
-			Channels:      slices.Clone(s.Channels),
-			Languages:     slices.Clone(s.Languages),
-			TitleByLang:   make(map[string]string, len(s.TitleByLang)),
-			ContentByLang: make(map[string]string, len(s.ContentByLang)),
+			Template:     s.Template,
+			Channels:     slices.Clone(s.Channels),
+			Languages:    slices.Clone(s.Languages),
+			SampleParams: cloneParams(s.SampleParams),
 		}
-		maps.Copy(spec.TitleByLang, s.TitleByLang)
-		maps.Copy(spec.ContentByLang, s.ContentByLang)
-		specs = append(specs, spec)
+		specs[event] = spec
 	}
 	return specs
 }
 
-// TemplateSpecOf 依据消息模板键在注册表中查找并返回对应规格；未找到时返回 (nil, false)。
-// TemplateSpecOf returns the spec whose Template key matches templateKey, or (nil, false)
-// when no spec matches.
-func TemplateSpecOf(templateKey string) (*EventTemplateSpec, bool) {
-	for _, s := range defaultTemplateSpecs {
-		if s.Template == templateKey {
-			return &s, true
+// cloneParams 深拷贝样例渲染参数（map[string]any），内部嵌套的 []any 元素 map 同样拷贝，
+// 保证调用方经 TemplateSpecs 取得的副本可安全修改而不污染注册表。
+// cloneParams deep-copies the sample render params map, recursing into []any of maps, so
+// callers can safely mutate copies obtained from TemplateSpecs without affecting the registry.
+func cloneParams(in map[string]any) map[string]any {
+	if in == nil {
+		return nil
+	}
+	out := make(map[string]any, len(in))
+	for k, v := range in {
+		switch tv := v.(type) {
+		case []any:
+			cloned := make([]any, len(tv))
+			for i, item := range tv {
+				if m, ok := item.(map[string]any); ok {
+					cloned[i] = cloneParams(m)
+				} else {
+					cloned[i] = item
+				}
+			}
+			out[k] = cloned
+		default:
+			out[k] = tv
 		}
 	}
-	return nil, false
+	return out
+}
+
+// TemplateSpecOf 依据消息模板键在注册表中查找并返回对应的事件类型键（key）与规格；
+// 未找到时返回 ("", nil, false)。
+// TemplateSpecOf returns the event type key and spec whose Template key matches templateKey,
+// or ("", nil, false) when no spec matches.
+func TemplateSpecOf(templateKey string) (string, *EventTemplateSpec, bool) {
+	for event, s := range eventTemplateSpecs {
+		if s.Template == templateKey {
+			return event, &s, true
+		}
+	}
+	return "", nil, false
 }
 
 // EventSpecOf 依据事件类型键在注册表中查找并返回对应规格；未找到时返回 (nil, false)。
 // EventSpecOf returns the spec whose Event key matches event, or (nil, false) when no
 // spec matches.
 func EventSpecOf(event string) (*EventTemplateSpec, bool) {
-	for _, s := range defaultTemplateSpecs {
-		if s.Event == event {
-			return &s, true
-		}
+	spec, ok := eventTemplateSpecs[event]
+	if ok {
+		return &spec, true
 	}
 	return nil, false
-}
-
-// EventTypes 返回注册表中出现的去重事件类型键（升序），供管理接口枚举可选事件类型。
-// EventTypes returns the distinct event type keys present in the registry in ascending
-// order, for management APIs to enumerate available event types.
-func EventTypes() []string {
-	seen := make(map[string]bool, len(defaultTemplateSpecs))
-	types := make([]string, 0, len(defaultTemplateSpecs))
-	for _, s := range defaultTemplateSpecs {
-		if !seen[s.Event] {
-			seen[s.Event] = true
-			types = append(types, s.Event)
-		}
-	}
-	slices.Sort(types)
-	return types
 }
 
 // SupportedChannels 返回注册表支持的渠道类型键的并集（升序），并保证包含 "*"，
@@ -331,7 +248,7 @@ func EventTypes() []string {
 // registry in ascending order, always including "*", for management APIs to enumerate.
 func SupportedChannels() []string {
 	seen := map[string]bool{"*": true}
-	for _, s := range defaultTemplateSpecs {
+	for _, s := range eventTemplateSpecs {
 		for _, c := range s.Channels {
 			seen[c] = true
 		}
@@ -354,9 +271,9 @@ func SupportedLanguages() []string {
 	for _, l := range base.SupportLanguages {
 		seen[l.String()] = true
 	}
-	for _, s := range defaultTemplateSpecs {
+	for _, s := range eventTemplateSpecs {
 		for _, l := range s.Languages {
-			seen[l] = true
+			seen[l.String()] = true
 		}
 	}
 	languages := make([]string, 0, len(seen))

@@ -147,6 +147,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - goroutine 生命周期用 `errgroupx`（`internal/pkg/errgroupx`，errgroup 扩展，错误带 `goroutine#N` 溯源）
 - 自定义序列化类型实现 `driver.Valuer` + `sql.Scanner`
 - 能推断时不写显式类型参数：`etl.NewPipeline(extract, ...)` 而非 `etl.NewPipeline[any](extract, ...)`
+- 配置结构体的默认值必须依赖 `github.com/creasty/defaults` 的 `default` tag，并在**反序列化前**调用 `defaults.Set(&cfg)` 填充，再由实际传入数据（如 JSON 解码）覆盖，缺省字段保持默认值；禁止用 if-else 手写默认值分支（如 `if port == 0 { port = 6379 }`）。该规则同样适用于不含 Viper 绑定、仅经 JSON 反序列化的配置结构体。
 
 ### View Layer In/Out Decoupling 视图层解耦强约束
 

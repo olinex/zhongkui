@@ -21,7 +21,7 @@ import (
 )
 
 // tagRuleSampleTestNamespace 标签规则样例测试专用命名空间，
-// 与迁移种子的 default 命名空间 HttpTransport 基线样例（002_rbac_fixtures.sql）隔离，
+// 与迁移种子的 default 命名空间 HttpTransport 基线样例（002_fixtures.sql）隔离，
 // 使列表全量计数类断言不受基线数据影响。
 const tagRuleSampleTestNamespace = "tag-rule-sample-test"
 

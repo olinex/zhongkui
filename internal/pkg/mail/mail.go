@@ -14,21 +14,23 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
-// Sender 系统层邮件直发器：持有 [smtp] 配置与日志器，经 message 邮件渠道直接发送。
-// 与 notify.Service 不同，Sender 不落库、不解析 notification_targets，仅按系统配置直接投递。
-// Sender is the system-level email direct-sender: it holds the [smtp] config and logger
-// and sends emails directly via the message email channel. Unlike notify.Service it
-// persists nothing and resolves no notification_targets; it delivers straight to the
-// given recipient with the system config.
+// Sender 系统层邮件直发器：持有 [smtp] 配置、日志器与消息渠道连接池，经 message
+// 邮件渠道直接发送。与 notify.Service 不同，Sender 不落库、不解析 notification_targets，
+// 仅按系统配置直接投递。
+// Sender is the system-level email direct-sender: it holds the [smtp] config, logger
+// and the message channel pool and sends emails directly via the message email channel.
+// Unlike notify.Service it persists nothing and resolves no notification_targets; it
+// delivers straight to the given recipient with the system config.
 type Sender struct {
 	cfg    *Config
 	logger *logging.Logger
+	pool   *message.Pool
 }
 
 // NewSender 构造一个系统层邮件直发器。
 // NewSender builds a system-level email direct-sender.
-func NewSender(cfg *Config, logger *logging.Logger) *Sender {
-	return &Sender{cfg: cfg, logger: logger}
+func NewSender(cfg *Config, logger *logging.Logger, pool *message.Pool) *Sender {
+	return &Sender{cfg: cfg, logger: logger, pool: pool}
 }
 
 // ready 返回系统邮件直发的前置检查结果：未启用或必备配置（host/from）不完整时
@@ -59,13 +61,14 @@ func (s *Sender) Enabled() bool { return s.ready() == nil }
 //
 // 流程：先做启用 / 配置完整性守卫；再解析目标语言（非法时回退默认并告警）；
 // 经 locale i18n 模板（notify.<template>.title/content）渲染标题与正文；
-// 组装邮件渠道级与目标级 JSON 配置，最终调用 message.Send 投递。
+// 组装邮件渠道级与目标级 JSON 配置，最终调用注入的消息渠道连接池（Pool.Send）投递。
 // Send delivers a structured notification message (message.Message) to the given recipient.
 //
 // Flow: guard on enabled / config completeness; resolve the target language (falling
 // back to default with a warning when invalid); render the title and content via the
 // locale i18n templates (notify.<template>.title/content); assemble the email
-// channel-level and target-level JSON configs; finally call message.Send.
+// channel-level and target-level JSON configs; finally deliver via the injected
+// message channel pool (Pool.Send).
 func (s *Sender) Send(ctx context.Context, to string, msg message.Message, lang string) error {
 	if err := s.ready(); err != nil {
 		return err
@@ -120,9 +123,10 @@ func (s *Sender) Send(ctx context.Context, to string, msg message.Message, lang 
 		contentType = "text/html"
 	}
 
-	// message.Send 返回的已是项目 errors 链，直接透传给调用方。
-	// message.Send already returns the project error chain; pass it through.
-	_, err = message.Send(ctx, message.TypeEmail, channelJSON, &message.Target{Name: to, Config: targetJSON}, &message.RenderedMessage{
+	// 最终调用注入的消息渠道连接池 Send 投递，返回的已是项目 errors 链，直接透传。
+	// The injected message channel pool Send delivers; its return is already the
+	// project error chain and is passed through as-is.
+	_, err = s.pool.Send(ctx, message.TypeEmail, channelJSON, &message.Target{Name: to, Config: targetJSON}, &message.RenderedMessage{
 		Title:       title,
 		Content:     content,
 		ContentType: contentType,

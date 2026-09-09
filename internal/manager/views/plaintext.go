@@ -13,13 +13,10 @@ import (
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/detectors"
 	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/tag"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
 // 明文查看模型注册表：
@@ -74,29 +71,14 @@ func CryptoPlaintextGet(c *gin.Context) {
 		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
 		return
 	}
-	spec, err := extractCryptoFieldTag(model, in.Field)
+	m, err := crypto.ModeForField(model, in.Field, "json")
 	if err != nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
+		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	raw, err := base64.StdEncoding.DecodeString(in.Ciphertext)
 	if err != nil {
 		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
-		return
-	}
-	kd := key.GetKeyDerivation()
-	if kd == nil {
-		response.CreateAccidentError(errors.New("crypto: KeyDerivation not initialized")).AbortWithGinH(c)
-		return
-	}
-	cryptoKey, err := kd.DeriveChildKey(spec.Offset, spec.Length)
-	if err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
-		return
-	}
-	m, err := mode.NewAESGCMMode(cryptoKey, nil)
-	if err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	plain, err := m.Decrypt(raw)
@@ -126,9 +108,9 @@ func S3PlaintextGet(c *gin.Context) {
 		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
 		return
 	}
-	kd := key.GetKeyDerivation()
-	if kd == nil {
-		response.CreateAccidentError(errors.New("crypto: KeyDerivation not initialized")).AbortWithGinH(c)
+	kd, err := key.GetKeyDerivation()
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	cryptoKey, err := kd.DeriveChildKey(detectors.CryptoKeyOffset, detectors.CryptoKeyLength)
@@ -172,30 +154,6 @@ func authorizePlaintext(c *gin.Context, scope, model, field string) *response.Co
 	return middlewares.StaticAuthorize(c, span, namespace, plaintextObject(scope, model, field), base.ActionRead)
 }
 
-// extractCryptoFieldTag 从模型中解析字段路径对应的 secure 标签（加密参数）。
-// 字段解析委托 internal/pkg/utils.ExtractFieldTag：
-//   - 单段（如 "payload"）：浅层优先递归查找，始终返回最外层（直接声明）字段的 secure 标签，
-//     与落库列一致（内嵌结构的同名嵌入字段被外层遮蔽，不参与列映射）；
-//   - 多段（如 "PacketIPv6.Payload"）：按显式路径逐层下降，精确定位内层嵌入字段。
-//
-// 背景：结构体嵌入会导致内外层同 json 名字段并存（如 PacketIPv6TCP 内嵌 PacketIPv6 且
-// 两者均声明 Payload）。单段路径解析到最外层，多段路径可定位内层，从而消除歧义。
-func extractCryptoFieldTag(model any, path string) (serializer.CryptoTag, error) {
-	// nameTag 传 "json"：明文接口的 field 参数即字段 json 名（与权限点 object、前端契约一致）
-	secure, err := utils.ExtractFieldTag(model, path, "json", serializer.SecurityTagKey)
-	if err != nil {
-		return serializer.CryptoTag{}, err
-	}
-	if secure == "" {
-		return serializer.CryptoTag{}, errors.Newf("field %s is not a secure field", path)
-	}
-	var spec serializer.CryptoTag
-	if err := tag.Unmarshal(secure, &spec); err != nil {
-		return serializer.CryptoTag{}, errors.WithStack(err)
-	}
-	return spec, nil
-}
-
 func init() {
 	// 注册支持明文查看的流量模型（注册名即权限点 object 的 model 段，与前端 type slug 一致）
 	registerPlaintextModel("ipv4-tcp", &network.PacketIPv4TCP{})
@@ -204,4 +162,6 @@ func init() {
 	// 通知渠道/目标配置含传输凭据，经 crypto 序列化器加密存储；明文查看经全局明文接口解密
 	registerPlaintextModel("notification-channel", &core.NotificationChannel{})
 	registerPlaintextModel("notification-target", &core.NotificationTarget{})
+	// 第三方数据源连接配置含凭据（如密码），经 crypto 序列化器加密存储；明文查看经全局明文接口解密
+	registerPlaintextModel("datasource", &core.Datasource{})
 }

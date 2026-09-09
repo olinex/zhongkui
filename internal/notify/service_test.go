@@ -51,7 +51,7 @@ func newServiceTestDB(t *testing.T) *database.DB {
 // newTestService creates a notification service for tests.
 func newTestService(db *database.DB) *Service {
 	logger, _ := logging.NewDefaultLogger()
-	return NewService(db, logger)
+	return NewService(db, logger, message.NewPool())
 }
 
 // testMessage 构造一个基于真实模板键 tag_event.alert 的结构化通知消息，

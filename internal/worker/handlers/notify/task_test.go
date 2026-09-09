@@ -239,7 +239,7 @@ func newServiceTestDB(t *testing.T) *database.DB {
 // newTestService creates a notification service for tests.
 func newTestService(db *database.DB) *notifybase.Service {
 	logger, _ := logging.NewDefaultLogger()
-	return notifybase.NewService(db, logger)
+	return notifybase.NewService(db, logger, message.NewPool())
 }
 
 // ensureTestNamespace 确保命名空间在测试库中存在（FirstOrCreate 幂等创建），

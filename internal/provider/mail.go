@@ -26,7 +26,11 @@ func newMailSenderProvider() do.Provider[*mail.Sender] {
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
-		return mail.NewSender(cfg, MustInvokeDatabaseLogger(i)), nil
+		if pool, err := InvokeMessagePool(i); err != nil {
+			return nil, errors.WithStack(err)
+		} else {
+			return mail.NewSender(cfg, MustInvokeDatabaseLogger(i), pool), nil
+		}
 	}
 }
 

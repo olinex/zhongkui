@@ -125,6 +125,21 @@ func (m *Manager[T]) Invalidate(ctx context.Context, key Key, v T) {
 	}
 }
 
+// Clear 销毁指定 Key 池中全部闲置对象（借出的对象不受影响）。
+// 用于资源"已过期"的场景（如数据源被覆盖/注销）：闲置实例立即销毁，
+// 借出的实例由调用方结合版本校验在归还时选择 Invalidate 而非 Release，
+// 使下次借出必然经 Make 重建新实例。
+// Clear destroys all idle objects in the pool for a key (borrowed objects are
+// unaffected). It targets "instance is stale" scenarios (e.g. datasource
+// overwrite/unregister): idle instances are destroyed immediately, and borrowed
+// instances are invalidated instead of released by callers doing a version check
+// on return, so the next borrow always rebuilds via Make.
+func (m *Manager[T]) Clear(ctx context.Context, key Key) {
+	if p, ok := m.pools.Load(key); ok {
+		p.(*gpool.ObjectPool).Clear(ctx)
+	}
+}
+
 // CloseAll 关闭全部对象池并销毁存活（闲置）对象，释放底层外部资源。
 // CloseAll closes every pool and destroys live (idle) objects, releasing the
 // underlying external resources.

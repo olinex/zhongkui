@@ -19,6 +19,7 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
@@ -65,8 +66,8 @@ type NotificationGroupTargetOut struct {
 	ChannelType string `json:"channelType"`
 	// Enabled 目标是否启用
 	Enabled bool `json:"enabled"`
-	// Language 目标偏好的消息语言
-	Language string `json:"language"`
+	// Language 目标偏好的消息语言（base.Language）
+	Language base.Language `json:"language"`
 }
 
 // NotificationGroupDetailOut 定义通知目标组详情的输出结构，
@@ -228,7 +229,7 @@ func NotificationGroupDetailGet(c *gin.Context) {
 				Type:      tgt.Type,
 				ChannelID: tgt.ChannelID,
 				Enabled:   tgt.Enabled,
-				Language:  tgt.Language,
+				Language:  parseTargetLanguage(tgt.Language),
 			}
 			if ch := channelByID[tgt.ChannelID]; ch != nil {
 				out.ChannelName = ch.Name
