@@ -106,9 +106,18 @@ type searchGenerateConfigOrderBy struct {
 	Column    string `toml:"column"`
 }
 
+// searchGenerateConfigSelect 定义字段投影（selectFields）配置。
+// FieldName 为输出 JSON 键（camelCase，与列表 Out 结构体字段一致），
+// Column 为对应的数据库列名；两者共同构成字段投影的白名单。
+type searchGenerateConfigSelect struct {
+	FieldName string `toml:"fieldName" validate:"required"`
+	Column    string `toml:"column"`
+}
+
 type searchGenerateItem struct {
 	OrderByFields  []searchGenerateConfigOrderBy  `toml:"orderByFields"`
 	FilterByFields []searchGenerateConfigFilterBy `toml:"filterByFields"`
+	SelectFields   []searchGenerateConfigSelect   `toml:"selectFields"`
 }
 
 type searchGenerateConfig struct {
@@ -216,6 +225,18 @@ var searchGenerateCmd = &cobra.Command{
 				if !field.Enum && len(field.Options) > 0 {
 					panic(fmt.Sprintf("Options defined for non-enum field %s", fieldName))
 				}
+			}
+			// selectFields 必填校验：字段投影为接口层必需能力，每个搜索类型必须配置非空白名单
+			if len(item.SelectFields) == 0 {
+				panic(fmt.Sprintf("Search %s must define selectFields", fieldName))
+			}
+			// selectFields 校验：fieldName 非空（validate 已保证）且在同一类型内不得重复
+			seenSelect := make(map[string]struct{}, len(item.SelectFields))
+			for _, field := range item.SelectFields {
+				if _, dup := seenSelect[field.FieldName]; dup {
+					panic(fmt.Sprintf("Duplicate selectField %s in %s", field.FieldName, fieldName))
+				}
+				seenSelect[field.FieldName] = struct{}{}
 			}
 		}
 		outputFile, err := os.OpenFile(outputPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)

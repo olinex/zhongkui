@@ -570,6 +570,7 @@ model:
   ipv6Tcp:
     name: IPv6 TCP
     field:
+      id: ID
       # 基础审计列
       namespace: 命名空间
       timestamp: 采集时间
@@ -629,6 +630,7 @@ model:
   httpTransport:
     name: HTTP 传输
     field:
+      id: ID
       # 基础审计列
       namespace: 命名空间
       timestamp: 采集时间

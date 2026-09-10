@@ -261,6 +261,12 @@ const props = defineProps({
     >,
     default: undefined,
   },
+  // 字段投影：默认按当前可见列 + id 生成 fields 请求参数；
+  // 页面可覆写以补充行操作所需的隐藏字段（如用户页 unionID、流量页 namespace/traceId）
+  projectFields: {
+    type: Function as PropType<(visibleKeys: string[]) => string[]>,
+    default: (visible: string[]) => ["id", ...visible],
+  },
   // 自定义表格表头源（覆盖 OPTIONS 派生）：数组、ref 或函数，供需要定制列类型/顺序/默认可见性的页面使用
   headers: {
     type: [Object, Function] as PropType<
@@ -386,6 +392,8 @@ async function tableDataRefresh() {
   if (queryFilterBy === null) {
     return;
   }
+  // 字段投影：按当前可见列 + 页面补充字段生成 fields 请求参数，列表仅返回所需字段
+  const fields = props.projectFields(visibleKeys.value);
   try {
     loading.value = true;
     // Server response items are dynamic.
@@ -397,6 +405,8 @@ async function tableDataRefresh() {
         pageSize: pageSize.value,
         orderBy: orderByOptions.value,
         filterBy: queryFilterBy,
+        // 字段投影：仅查询所需字段（结果非空时附加）
+        ...(fields.length > 0 ? { fields } : {}),
       }),
       async (rsp) => {
         total.value = rsp.data.total;

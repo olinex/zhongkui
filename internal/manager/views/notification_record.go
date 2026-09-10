@@ -108,7 +108,7 @@ func NotificationRecordListGet(c *gin.Context) {
 	}
 	var items []*NotificationRecordListOut
 	db := middlewares.GetCoreDatabase(c).Model(&core.NotificationRecord{}).Where("namespace_name = ?", namespace)
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := query.Find(&items).Error; err != nil {
@@ -116,7 +116,15 @@ func NotificationRecordListGet(c *gin.Context) {
 		return
 	}
 	enrichNotificationRecordListTargetNames(c, namespace, items)
-	response.SimpleOK.AbortWithGinW(c, utils.NewSearchOut(items))
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	var total uint
+	if len(items) > 0 {
+		total = items[0].GetTotal()
+	}
+	projected := utils.ProjectSearchItems(items, &in, func(o **NotificationRecordListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
 // enrichNotificationRecordListTargetNames 批量补全通知记录列表的目标名称。

@@ -6,6 +6,7 @@
         :options-request="tagEventRecordListOptions"
         :actions="getActions"
         :row-click="openDetail"
+        :project-fields="projectFields"
         model-name="tagEventRecord"
       >
         <!-- 状态列：按事件状态着色（告警=error / 抑制=warning / 待处理与关闭=默认） -->
@@ -38,6 +39,9 @@ import type { ItemActions } from "@/components/@types/table";
 // 详情对话框可见性与当前查看的记录 ID
 const detailDialog = ref(false);
 const detailId = ref(0);
+
+// projectFields 字段投影：行操作依赖字段恒定投影（id 定位详情），避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", ...visible];
 
 // ---- 行操作：仅查看详情（只读页面，点击打开展示在对话框而非独立路由页）----
 const getActions = (): ItemActions => {

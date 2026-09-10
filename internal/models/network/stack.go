@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 type NetworkFrame []*NetworkStack
@@ -40,6 +41,10 @@ func NewNetworkFrame(stack LayerStack, meta BaseMeta, timestamp time.Time) Netwo
 				Timestamp: timestamp,
 				CreatedAt: time.Now(),
 			},
+			// 行详情接口依赖非空的全局唯一 ID，构造时即生成，落库路径无需再补
+			RowMeta: RowMeta{
+				ID: serializer.NewHexUUIDv4(),
+			},
 			TopProto: topProto,
 			Proto:    info.Proto,
 			Level:    info.Level,
@@ -51,6 +56,8 @@ func NewNetworkFrame(stack LayerStack, meta BaseMeta, timestamp time.Time) Netwo
 
 // NetworkStack 表示网络协议栈中的一个帧，包含协议类型、头部信息等。
 type NetworkStack struct {
+	// RowMeta 行唯一标识元数据，提供全局唯一 ID
+	RowMeta
 	BaseMeta
 	TraceMeta
 	TimestampMeta

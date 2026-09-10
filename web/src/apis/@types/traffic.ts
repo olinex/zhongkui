@@ -115,3 +115,9 @@ export interface PlaintextS3In {
   field: string;
   object_key: string;
 }
+
+// TrafficDetailIn 流量行详情查询入参（按 namespace + id 获取单条全字段记录）
+export interface TrafficDetailIn {
+  namespace: string;
+  id: string;
+}

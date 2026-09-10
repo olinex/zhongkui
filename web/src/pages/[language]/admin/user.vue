@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="user"
       />
       <confirm-dialog
@@ -336,6 +337,10 @@ const userPolicySearchHeaders: Record<string, SearchAction> = {
 const namespaceOpts = computed(() => {
   return ["*", ...userStore.namespaces];
 });
+
+// projectFields 字段投影：行操作依赖字段恒定投影（unionID 定位、active 启用态开关），
+// 避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", "unionID", "active", ...visible];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {

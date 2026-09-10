@@ -13,6 +13,7 @@
         :build-filter="buildFilter"
         :default-order-by="defaultOrderBy"
         :row-click="openDetail"
+        :project-fields="projectFields"
         :storage-key="`traffic:${type}`"
       >
         <!-- 额外筛选区：抓包时间（timestamp）与入库时间（createdAt）两个必填时间范围，
@@ -45,7 +46,7 @@
         </template>
       </search-table>
 
-      <!-- 行详情对话框：列表已返回全字段，直接展示行数据，无需再发起详情请求；
+      <!-- 行详情：列表行仅含投影字段，经 detail 接口拉取全字段后展示；
            只读明细以全屏对话框展示，便于浏览大字段与长报文 -->
       <model-detail-dialog
         v-model="detailDialog"
@@ -86,6 +87,7 @@ import {
   TrafficExtraFieldTypes,
   TrafficModelKeys,
   TrafficS3Fields,
+  trafficDetailGet,
   trafficListGet,
   trafficListOptions,
 } from "@/apis/traffic";
@@ -137,15 +139,38 @@ const searchTableRef = useTemplateRef("searchTableRef");
 // 默认排序：按抓包时间倒序，最新记录置顶
 const defaultOrderBy: SortItem[] = [{ key: "timestamp", order: "desc" }];
 
+// projectFields 字段投影：列表仅返回可见列 + 行操作定位字段（id/namespace，http-transport 另含 traceId），
+// 行详情/收藏样例/堆栈下钻经 detail 接口拉取全字段
+const projectFields = (visible: string[]): string[] => {
+  return ["id", "namespace", ...(type.value === "http-transport" ? ["traceId"] : []), ...visible];
+};
+
 const detailDialog = ref(false);
+const detailLoading = ref(false);
 const detailItem = ref<Record<string, unknown> | null>(null);
 
 // 网络堆栈对话框：选中 http-transport 行（携带 traceId 与 AppTailer offset）后打开
 const stackDialog = ref(false);
 const stackTransport = ref<Record<string, unknown> | null>(null);
-const openStack = (item: Record<string, unknown>): void => {
-  stackTransport.value = item;
-  stackDialog.value = true;
+// openStack 打开网络堆栈对话框：经 detail 接口拉取全字段（含 AppTailer payload offset）后下钻
+const openStack = async (item: Record<string, unknown>): Promise<void> => {
+  await getSimpleResponse(
+    trafficDetailGet(type.value, {
+      namespace: String(item.namespace ?? ""),
+      id: String(item.id ?? ""),
+    }),
+    async (rsp) => {
+      stackTransport.value = rsp.data ?? null;
+      stackDialog.value = true;
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
 };
 
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
@@ -656,36 +681,78 @@ watch(
   },
 );
 
-// openDetail 打开行详情全屏对话框（列表已返回全字段，直接展示行数据）
-const openDetail = (item: Record<string, unknown>): void => {
-  detailItem.value = item;
-  detailDialog.value = true;
+// openDetail 打开行详情全屏对话框：列表行仅含投影字段，经 detail 接口拉取全字段
+const openDetail = async (item: Record<string, unknown>): Promise<void> => {
+  if (detailLoading.value) {
+    return;
+  }
+  detailLoading.value = true;
+  try {
+    await getResponse<Record<string, unknown>>(
+      trafficDetailGet(type.value, {
+        namespace: String(item.namespace ?? ""),
+        id: String(item.id ?? ""),
+      }),
+      async (rsp) => {
+        detailItem.value = rsp.data;
+        detailDialog.value = true;
+      },
+      async (rsp) => {
+        appStore.notify({
+          text: rsp.summary,
+          timeout: 3000,
+          color: "error",
+        });
+      },
+    );
+  } finally {
+    detailLoading.value = false;
+  }
 };
 
-// favoriteSampleAction 收藏样例：将当前行数据原样收录为标签规则样例。
+// favoriteSampleAction 收藏样例：列表行仅含投影字段，先经 detail 接口拉取全字段再收录为样例。
 // 加密字段（base64 密文）与 S3 body 字段（对象键）一并保留，保证样例 JSON 可反序列化回
 // 目标模型，规则测试结果不因字段缺失而受影响；名称自动生成避免重复收藏冲突。
 const favoriteSampleAction = async (item: Record<string, unknown>): Promise<void> => {
   const modelKey = TrafficModelKeys[type.value];
-  const input = { ...item };
-  // 列表分页计数（BaseTotalOut）非模型字段，从样例文档中剔除
-  delete input.total;
-  // 样例归属当前请求命名空间：将输入文档的 namespace 归一为当前命名空间，
-  // 保证样例与命名空间自洽（流量记录经命名空间过滤查询，通常一致，此处兜底）
-  input.namespace = appStore.namespace;
+  if (!modelKey) {
+    return;
+  }
   await getSimpleResponse(
-    tagRuleSampleCreate({
-      model: modelKey!,
-      name: `traffic-${DateTime.now().toFormat("yyyyMMddHHmmssSSS")}`,
-      description: "",
-      input,
+    trafficDetailGet(type.value, {
+      namespace: String(item.namespace ?? ""),
+      id: String(item.id ?? ""),
     }),
     async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
+      const input = { ...(rsp.data as Record<string, unknown>) };
+      // 行定位字段（id）与分页计数（total）非模型字段，从样例文档中剔除
+      delete input.id;
+      delete input.total;
+      // 样例归属当前请求命名空间：将输入文档的 namespace 归一为当前命名空间，
+      // 保证样例与命名空间自洽（流量记录经命名空间过滤查询，通常一致，此处兜底）
+      input.namespace = appStore.namespace;
+      await getSimpleResponse(
+        tagRuleSampleCreate({
+          model: modelKey,
+          name: `traffic-${DateTime.now().toFormat("yyyyMMddHHmmssSSS")}`,
+          description: "",
+          input,
+        }),
+        async (rsp) => {
+          appStore.notify({
+            text: rsp.summary,
+            timeout: 3000,
+            color: "success",
+          });
+        },
+        async (rsp) => {
+          appStore.notify({
+            text: rsp.summary,
+            timeout: 3000,
+            color: "error",
+          });
+        },
+      );
     },
     async (rsp) => {
       appStore.notify({

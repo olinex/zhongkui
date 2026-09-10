@@ -254,7 +254,7 @@ func NotificationTemplateListGet(c *gin.Context) {
 		return
 	}
 	var items []*NotificationTemplateListOut
-	if query, err := utils.BuildSearchQuery(
+	if query, err := utils.BuildSearchCountQuery(
 		middlewares.GetCoreDatabase(c).Model(&core.NotificationTemplate{}).
 			Where("namespace_name = ?", namespace), &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -263,7 +263,15 @@ func NotificationTemplateListGet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	response.SimpleOK.AbortWithGinW(c, utils.NewSearchOut(items))
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	var total uint
+	if len(items) > 0 {
+		total = items[0].GetTotal()
+	}
+	projected := utils.ProjectSearchItems(items, &in, func(o **NotificationTemplateListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
 // NotificationTemplateCreate 处理创建通知模板的请求。

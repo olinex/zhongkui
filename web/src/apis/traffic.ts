@@ -4,7 +4,12 @@ import { getJwtHeader, request } from "./base";
 import { BackendDataType } from "@/types";
 import type { SearchIn } from "@/components/@types/table";
 import { HTTP_TRANSPORT_MODEL_KEY } from "@/utils/rego";
-import type { PlaintextCryptoIn, PlaintextS3In, TrafficType } from "./@types/traffic";
+import type {
+  PlaintextCryptoIn,
+  PlaintextS3In,
+  TrafficDetailIn,
+  TrafficType,
+} from "./@types/traffic";
 
 // TrafficCryptoFields 各类型加密字段清单
 // 对应模型 secure:"serializer:crypto" 字段，列表返回 base64 密文
@@ -171,6 +176,12 @@ export function trafficTypeFromModelKey(typeKey: string): TrafficType | undefine
 // trafficListGet 流量列表（分页 + 排序 + 过滤）
 export function trafficListGet(type: TrafficType, data: SearchIn): AxiosPromise {
   return request.post(`/traffic/${type}/list`, data, { headers: getJwtHeader() });
+}
+
+// trafficDetailGet 流量行详情查询（按 namespace + id 获取单条全字段记录），
+// 列表仅返回投影字段，行详情对话框/收藏样例/堆栈下钻经此接口补齐全字段
+export function trafficDetailGet(type: TrafficType, data: TrafficDetailIn): AxiosPromise {
+  return request.post(`/traffic/${type}/detail`, data, { headers: getJwtHeader() });
 }
 
 // trafficListOptions 流量列表元信息（可过滤字段/可排序字段），

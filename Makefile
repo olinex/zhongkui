@@ -336,6 +336,7 @@ internal/manager/views/search.go: cmd/template/main.go cmd/template/base.tmpl in
 		--templatePath="cmd/template/base.tmpl" \
 		--configPath="internal/manager/views/search.toml" \
 		--outputPath="internal/manager/views/search.go"
+	gofmt -w internal/manager/views/search.go
 
 # p0f-update - 从社区维护的 p0f3 签名库刷新内嵌的上游 p0f.fp，并运行指纹测试
 # 本地定制签名保存在 p0f.local.fp，不会被上游覆盖；刷新后若指纹基线变化，

@@ -125,6 +125,46 @@ actions = [
     "inctn",
 ]
 
+[[UserListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[UserListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[UserListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[UserListGet.selectFields]]
+fieldName = "deletedAt"
+column = "deleted_at"
+
+[[UserListGet.selectFields]]
+fieldName = "unionID"
+column = "union_id"
+
+[[UserListGet.selectFields]]
+fieldName = "nickleName"
+column = "nickle_name"
+
+[[UserListGet.selectFields]]
+fieldName = "username"
+column = "username"
+
+[[UserListGet.selectFields]]
+fieldName = "email"
+column = "email"
+
+[[UserListGet.selectFields]]
+fieldName = "active"
+column = "active"
+
+[[UserListGet.selectFields]]
+fieldName = "frontendConfigSyncEnabled"
+column = "frontend_config_sync_enabled"
+
 # 权限模板
 [RbacPolicyTmplateListGet]
 timeModule = true
@@ -223,6 +263,25 @@ actions = [
     "inctn",
 ]
 
+
+[[RbacPolicyTmplateListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[RbacPolicyTmplateListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[RbacPolicyTmplateListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[RbacPolicyTmplateListGet.selectFields]]
+fieldName = "target"
+column = "target"
+[[RbacPolicyTmplateListGet.selectFields]]
+fieldName = "action"
+column = "action"
+# GroupListGet
+
+
 # 用户组
 [GroupListGet]
 timeModule = true
@@ -299,6 +358,25 @@ actions = [
     "inctn",
 ]
 
+
+[[GroupListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[GroupListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[GroupListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[GroupListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[GroupListGet.selectFields]]
+fieldName = "description"
+column = "description"
+# NamespaceListGet
+
+
 # 命名空间
 [NamespaceListGet]
 [[NamespaceListGet.orderByFields]]
@@ -372,6 +450,25 @@ actions = [
     "ictn",
     "inctn",
 ]
+
+
+[[NamespaceListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[NamespaceListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[NamespaceListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[NamespaceListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[NamespaceListGet.selectFields]]
+fieldName = "description"
+column = "description"
+# CapturerListGet
+
 
 # 采集器
 [CapturerListGet]
@@ -491,6 +588,28 @@ actions = [
     "inctn",
 ]
 
+
+[[CapturerListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[CapturerListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[CapturerListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[CapturerListGet.selectFields]]
+fieldName = "namespace"
+column = "namespace_name"
+[[CapturerListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[CapturerListGet.selectFields]]
+fieldName = "version"
+column = "version"
+# TagRuleListGet
+
+
 # 标签识别规则
 [TagRuleListGet]
 timeModule = true
@@ -585,6 +704,31 @@ column = "enabled"
 binding = ""
 actions = ["eq"]
 
+
+[[TagRuleListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[TagRuleListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[TagRuleListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[TagRuleListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[TagRuleListGet.selectFields]]
+fieldName = "description"
+column = "description"
+[[TagRuleListGet.selectFields]]
+fieldName = "model"
+column = "model"
+[[TagRuleListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+# TagRuleSampleListGet
+
+
 # 标签规则验证样例
 [TagRuleSampleListGet]
 timeModule = true
@@ -671,6 +815,28 @@ enum = true
 options = [
     { title = "httpTransport", value = "zhongkui.com/zhongkui/internal/models/network.HttpTransport" },
 ]
+
+
+[[TagRuleSampleListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[TagRuleSampleListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[TagRuleSampleListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[TagRuleSampleListGet.selectFields]]
+fieldName = "model"
+column = "model"
+[[TagRuleSampleListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[TagRuleSampleListGet.selectFields]]
+fieldName = "description"
+column = "description"
+# TagEventRuleListGet
+
 
 # 标签事件规则
 [TagEventRuleListGet]
@@ -761,6 +927,34 @@ fieldType = "bool"
 column = "match_all"
 binding = ""
 actions = ["eq"]
+
+
+[[TagEventRuleListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[TagEventRuleListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[TagEventRuleListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[TagEventRuleListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[TagEventRuleListGet.selectFields]]
+fieldName = "description"
+column = "description"
+[[TagEventRuleListGet.selectFields]]
+fieldName = "matchAll"
+column = "match_all"
+[[TagEventRuleListGet.selectFields]]
+fieldName = "suppressWindow"
+column = "suppress_window"
+[[TagEventRuleListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+# Ipv4TcpListGet
+
 
 # 原始流量审计 - IPv4 TCP 包
 # 过滤字段：timestamp / created_at / namespace 必填（required = true；双时间范围命中分区键与 ORDER BY 首键，
@@ -855,6 +1049,166 @@ column = "tcp_dst_port"
 binding = ""
 actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
 
+
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "namespace"
+column = "namespace"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "capture"
+column = "capture"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "version"
+column = "version"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "sessionId"
+column = "session_id"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "timestamp"
+column = "timestamp"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "truncated"
+column = "truncated"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "captureLength"
+column = "capture_length"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "layerStack"
+column = "layer_stack"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ethDstMac"
+column = "eth_dst_mac"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ethSrcMac"
+column = "eth_src_mac"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ethType"
+column = "eth_type"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ethLength"
+column = "eth_length"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Version"
+column = "ipv4_version"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Ihl"
+column = "ipv4_ihl"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Tos"
+column = "ipv4_tos"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Length"
+column = "ipv4_length"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Id"
+column = "ipv4_id"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Flags"
+column = "ipv4_flags"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4FragOffset"
+column = "ipv4_frag_offset"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Ttl"
+column = "ipv4_ttl"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4IpProtocol"
+column = "ipv4_ip_protocol"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Checksum"
+column = "ipv4_checksum"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Src"
+column = "ipv4_src"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Dst"
+column = "ipv4_dst"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Options"
+column = "ipv4_options"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ipv4Padding"
+column = "ipv4_padding"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "srcPort"
+column = "tcp_src_port"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "dstPort"
+column = "tcp_dst_port"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "seq"
+column = "tcp_seq"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "ack"
+column = "tcp_ack"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "dataOffset"
+column = "tcp_data_offset"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitFin"
+column = "tcp_bit_fin"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitSyn"
+column = "tcp_bit_syn"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitRst"
+column = "tcp_bit_rst"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitPsh"
+column = "tcp_bit_psh"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitAck"
+column = "tcp_bit_ack"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitUrg"
+column = "tcp_bit_urg"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitEce"
+column = "tcp_bit_ece"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitCwr"
+column = "tcp_bit_cwr"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "bitNs"
+column = "tcp_bit_ns"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "window"
+column = "tcp_window"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "checksum"
+column = "tcp_checksum"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "urgent"
+column = "tcp_urgent"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "options"
+column = "tcp_options"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "fpOs"
+column = "fp_os"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "fpOsQuality"
+column = "fp_os_quality"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "fpSig"
+column = "fp_sig"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "fpMtu"
+column = "fp_mtu"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "tcpStreamId"
+column = "tcp_stream_id"
+[[Ipv4TcpListGet.selectFields]]
+fieldName = "payload"
+column = "payload"
+# Ipv6TcpListGet
+
+
 # 原始流量审计 - IPv6 TCP 包
 # 过滤字段与 IPv4 TCP 包一致（timestamp / created_at / namespace 必填，可选五元组与 session_id）。
 [Ipv6TcpListGet]
@@ -945,6 +1299,151 @@ fieldType = "uint16"
 column = "tcp_dst_port"
 binding = ""
 actions = ["eq", "neq", "lt", "lte", "gt", "gte"]
+
+
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "namespace"
+column = "namespace"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "capture"
+column = "capture"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "version"
+column = "version"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "sessionId"
+column = "session_id"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "timestamp"
+column = "timestamp"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "truncated"
+column = "truncated"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "captureLength"
+column = "capture_length"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "layerStack"
+column = "layer_stack"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ethDstMac"
+column = "eth_dst_mac"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ethSrcMac"
+column = "eth_src_mac"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ethType"
+column = "eth_type"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ethLength"
+column = "eth_length"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6Version"
+column = "ipv6_version"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6TrafficClass"
+column = "ipv6_traffic_class"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6FlowLabel"
+column = "ipv6_flow_label"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6Length"
+column = "ipv6_length"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6NextHeader"
+column = "ipv6_next_header"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6HopLimit"
+column = "ipv6_hop_limit"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6Src"
+column = "ipv6_src"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6Dst"
+column = "ipv6_dst"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ipv6LastHeader"
+column = "ipv6_last_header"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "srcPort"
+column = "tcp_src_port"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "dstPort"
+column = "tcp_dst_port"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "seq"
+column = "tcp_seq"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "ack"
+column = "tcp_ack"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "dataOffset"
+column = "tcp_data_offset"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitFin"
+column = "tcp_bit_fin"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitSyn"
+column = "tcp_bit_syn"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitRst"
+column = "tcp_bit_rst"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitPsh"
+column = "tcp_bit_psh"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitAck"
+column = "tcp_bit_ack"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitUrg"
+column = "tcp_bit_urg"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitEce"
+column = "tcp_bit_ece"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitCwr"
+column = "tcp_bit_cwr"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "bitNs"
+column = "tcp_bit_ns"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "window"
+column = "tcp_window"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "checksum"
+column = "tcp_checksum"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "urgent"
+column = "tcp_urgent"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "options"
+column = "tcp_options"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "fpOs"
+column = "fp_os"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "fpOsQuality"
+column = "fp_os_quality"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "fpSig"
+column = "fp_sig"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "fpMtu"
+column = "fp_mtu"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "tcpStreamId"
+column = "tcp_stream_id"
+[[Ipv6TcpListGet.selectFields]]
+fieldName = "payload"
+column = "payload"
+# HttpTransportListGet
+
 
 # 原始流量审计 - HTTP 传输
 # 过滤字段：timestamp / created_at / namespace 必填；可选 client/server IP 与端口、请求行/URI 与 HTTP 版本低基数字段。
@@ -1084,6 +1583,589 @@ options = [
     { title = "HTTP/3", value = "HTTP/3" },
 ]
 
+
+[[HttpTransportListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[HttpTransportListGet.selectFields]]
+fieldName = "namespace"
+column = "namespace"
+[[HttpTransportListGet.selectFields]]
+fieldName = "capture"
+column = "capture"
+[[HttpTransportListGet.selectFields]]
+fieldName = "version"
+column = "version"
+[[HttpTransportListGet.selectFields]]
+fieldName = "sessionId"
+column = "session_id"
+[[HttpTransportListGet.selectFields]]
+fieldName = "timestamp"
+column = "timestamp"
+[[HttpTransportListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[HttpTransportListGet.selectFields]]
+fieldName = "traceId"
+column = "trace_id"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientIp"
+column = "client_ip"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientPort"
+column = "client_port"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientIsn"
+column = "client_isn"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverIp"
+column = "server_ip"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverPort"
+column = "server_port"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverIsn"
+column = "server_isn"
+[[HttpTransportListGet.selectFields]]
+fieldName = "ipVersion"
+column = "ip_version"
+[[HttpTransportListGet.selectFields]]
+fieldName = "httpVersion"
+column = "http_version"
+[[HttpTransportListGet.selectFields]]
+fieldName = "streamIndex"
+column = "stream_index"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpTcpClientOs"
+column = "fp_tcp_client_os"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpTcpClientOsQuality"
+column = "fp_tcp_client_os_quality"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpTcpClientSig"
+column = "fp_tcp_client_sig"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpTcpServerOs"
+column = "fp_tcp_server_os"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpTcpServerOsQuality"
+column = "fp_tcp_server_os_quality"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpTcpServerSig"
+column = "fp_tcp_server_sig"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpTcpMtu"
+column = "fp_tcp_mtu"
+[[HttpTransportListGet.selectFields]]
+fieldName = "url"
+column = "url"
+[[HttpTransportListGet.selectFields]]
+fieldName = "scheme"
+column = "scheme"
+[[HttpTransportListGet.selectFields]]
+fieldName = "host"
+column = "host"
+[[HttpTransportListGet.selectFields]]
+fieldName = "path"
+column = "path"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fileExt"
+column = "file_ext"
+[[HttpTransportListGet.selectFields]]
+fieldName = "queries"
+column = "queries"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fragment"
+column = "fragment"
+[[HttpTransportListGet.selectFields]]
+fieldName = "method"
+column = "method"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqBody"
+column = "req_body"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqBodyHash"
+column = "req_body_hash"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqBodyLength"
+column = "req_body_length"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrAuthorization"
+column = "req_hdr_authorization"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrProxyAuthorization"
+column = "req_hdr_proxy_authorization"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrCacheControl"
+column = "req_hdr_cache_control"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrIfMatch"
+column = "req_hdr_if_match"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrIfNoneMatch"
+column = "req_hdr_if_none_match"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrIfModifiedSince"
+column = "req_hdr_if_modified_since"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrIfUnmodifiedSince"
+column = "req_hdr_if_unmodified_since"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrIfRange"
+column = "req_hdr_if_range"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrConnection"
+column = "req_hdr_connection"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrKeepAlive"
+column = "req_hdr_keep_alive"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrAccept"
+column = "req_hdr_accept"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrAcceptEncoding"
+column = "req_hdr_accept_encoding"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrAcceptLanguage"
+column = "req_hdr_accept_language"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrExpect"
+column = "req_hdr_expect"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrMaxForwards"
+column = "req_hdr_max_forwards"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrCookie"
+column = "req_hdr_cookie"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrOrigin"
+column = "req_hdr_origin"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrAccessControlRequestHeaders"
+column = "req_hdr_access_control_request_headers"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrAccessControlRequestMethod"
+column = "req_hdr_access_control_request_method"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrContentType"
+column = "req_hdr_content_type"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrContentLength"
+column = "req_hdr_content_length"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrContentEncoding"
+column = "req_hdr_content_encoding"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrContentLanguage"
+column = "req_hdr_content_language"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrForwarded"
+column = "req_hdr_forwarded"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrVia"
+column = "req_hdr_via"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrRange"
+column = "req_hdr_range"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrFrom"
+column = "req_hdr_from"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrHost"
+column = "req_hdr_host"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrReferer"
+column = "req_hdr_referer"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrReferrerPolicy"
+column = "req_hdr_referrer_policy"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrUserAgent"
+column = "req_hdr_user_agent"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrTe"
+column = "req_hdr_te"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrTransferEncoding"
+column = "req_hdr_transfer_encoding"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrTrailer"
+column = "req_hdr_trailer"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecWebsocketKey"
+column = "req_hdr_sec_websocket_key"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecWebsocketVersion"
+column = "req_hdr_sec_websocket_version"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecWebsocketProtocol"
+column = "req_hdr_sec_websocket_protocol"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecWebsocketExtensions"
+column = "req_hdr_sec_websocket_extensions"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecFetchSite"
+column = "req_hdr_sec_fetch_site"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecFetchMode"
+column = "req_hdr_sec_fetch_mode"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecFetchUser"
+column = "req_hdr_sec_fetch_user"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecFetchDest"
+column = "req_hdr_sec_fetch_dest"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecPurpose"
+column = "req_hdr_sec_purpose"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrServiceWorkerNavigationPreload"
+column = "req_hdr_service_worker_navigation_preload"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUa"
+column = "req_hdr_sec_ch_ua"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaArch"
+column = "req_hdr_sec_ch_ua_arch"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaBitness"
+column = "req_hdr_sec_ch_ua_bitness"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaFullVersion"
+column = "req_hdr_sec_ch_ua_full_version"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaFullVersionList"
+column = "req_hdr_sec_ch_ua_full_version_list"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaMobile"
+column = "req_hdr_sec_ch_ua_mobile"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaModel"
+column = "req_hdr_sec_ch_ua_model"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaPlatform"
+column = "req_hdr_sec_ch_ua_platform"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaPlatformVersion"
+column = "req_hdr_sec_ch_ua_platform_version"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChUaWow64"
+column = "req_hdr_sec_ch_ua_wow64"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChPrefersColorScheme"
+column = "req_hdr_sec_ch_prefers_color_scheme"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChPrefersReducedMotion"
+column = "req_hdr_sec_ch_prefers_reduced_motion"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrSecChPrefersReducedTransparency"
+column = "req_hdr_sec_ch_prefers_reduced_transparency"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrWantContentDigest"
+column = "req_hdr_want_content_digest"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrWantReprDigest"
+column = "req_hdr_want_repr_digest"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrUpgradeInsecureRequests"
+column = "req_hdr_upgrade_insecure_requests"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrDate"
+column = "req_hdr_date"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrLink"
+column = "req_hdr_link"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrUpgrade"
+column = "req_hdr_upgrade"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrPriority"
+column = "req_hdr_priority"
+[[HttpTransportListGet.selectFields]]
+fieldName = "reqHdrAltUsed"
+column = "req_hdr_alt_used"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspBody"
+column = "rsp_body"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspBodyHash"
+column = "rsp_body_hash"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspBodyLength"
+column = "rsp_body_length"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrWwwAuthenticate"
+column = "rsp_hdr_www_authenticate"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrProxyAuthenticate"
+column = "rsp_hdr_proxy_authenticate"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAge"
+column = "rsp_hdr_age"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrCacheControl"
+column = "rsp_hdr_cache_control"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrClearSiteData"
+column = "rsp_hdr_clear_site_data"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrExpires"
+column = "rsp_hdr_expires"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrNoVarySearch"
+column = "rsp_hdr_no_vary_search"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrLastModified"
+column = "rsp_hdr_last_modified"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrEtag"
+column = "rsp_hdr_etag"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrVary"
+column = "rsp_hdr_vary"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrConnection"
+column = "rsp_hdr_connection"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrKeepAlive"
+column = "rsp_hdr_keep_alive"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAcceptPatch"
+column = "rsp_hdr_accept_patch"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAcceptPost"
+column = "rsp_hdr_accept_post"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrSetCookie"
+column = "rsp_hdr_set_cookie"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAccessControlAllowCredentials"
+column = "rsp_hdr_access_control_allow_credentials"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAccessControlAllowHeaders"
+column = "rsp_hdr_access_control_allow_headers"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAccessControlAllowMethods"
+column = "rsp_hdr_access_control_allow_methods"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAccessControlAllowOrigin"
+column = "rsp_hdr_access_control_allow_origin"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAccessControlExposeHeaders"
+column = "rsp_hdr_access_control_expose_headers"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAccessControlMaxAge"
+column = "rsp_hdr_access_control_max_age"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrTimingAllowOrigin"
+column = "rsp_hdr_timing_allow_origin"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentDisposition"
+column = "rsp_hdr_content_disposition"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentDigest"
+column = "rsp_hdr_content_digest"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrReprDigest"
+column = "rsp_hdr_repr_digest"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentType"
+column = "rsp_hdr_content_type"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentLength"
+column = "rsp_hdr_content_length"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentEncoding"
+column = "rsp_hdr_content_encoding"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentLanguage"
+column = "rsp_hdr_content_language"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentLocation"
+column = "rsp_hdr_content_location"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrForwarded"
+column = "rsp_hdr_forwarded"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrVia"
+column = "rsp_hdr_via"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAcceptRanges"
+column = "rsp_hdr_accept_ranges"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentRange"
+column = "rsp_hdr_content_range"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrLocation"
+column = "rsp_hdr_location"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrRefresh"
+column = "rsp_hdr_refresh"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAllow"
+column = "rsp_hdr_allow"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrServer"
+column = "rsp_hdr_server"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrCrossOriginEmbedderPolicy"
+column = "rsp_hdr_cross_origin_embedder_policy"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrCrossOriginOpenerPolicy"
+column = "rsp_hdr_cross_origin_opener_policy"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrCrossOriginResourcePolicy"
+column = "rsp_hdr_cross_origin_resource_policy"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentSecurityPolicy"
+column = "rsp_hdr_content_security_policy"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrContentSecurityPolicyReportOnly"
+column = "rsp_hdr_content_security_policy_report_only"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrExpectCt"
+column = "rsp_hdr_expect_ct"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrPermissionsPolicy"
+column = "rsp_hdr_permissions_policy"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrStrictTransportSecurity"
+column = "rsp_hdr_strict_transport_security"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrXContentTypeOptions"
+column = "rsp_hdr_x_content_type_options"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrXFrameOptions"
+column = "rsp_hdr_x_frame_options"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrXPermittedCrossDomainPolicies"
+column = "rsp_hdr_x_permitted_cross_domain_policies"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrXPoweredBy"
+column = "rsp_hdr_x_powered_by"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrXXssProtection"
+column = "rsp_hdr_x_xss_protection"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrReportingEndpoints"
+column = "rsp_hdr_reporting_endpoints"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrReportTo"
+column = "rsp_hdr_report_to"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrTransferEncoding"
+column = "rsp_hdr_transfer_encoding"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrTrailer"
+column = "rsp_hdr_trailer"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrSecWebsocketAccept"
+column = "rsp_hdr_sec_websocket_accept"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrSecWebsocketProtocol"
+column = "rsp_hdr_sec_websocket_protocol"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrSecWebsocketExtensions"
+column = "rsp_hdr_sec_websocket_extensions"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAcceptCh"
+column = "rsp_hdr_accept_ch"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrCriticalCh"
+column = "rsp_hdr_critical_ch"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAttributionReportingEligible"
+column = "rsp_hdr_attribution_reporting_eligible"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAttributionReportingRegisterSource"
+column = "rsp_hdr_attribution_reporting_register_source"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAttributionReportingRegisterTrigger"
+column = "rsp_hdr_attribution_reporting_register_trigger"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrDate"
+column = "rsp_hdr_date"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrLink"
+column = "rsp_hdr_link"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrRetryAfter"
+column = "rsp_hdr_retry_after"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrServerTiming"
+column = "rsp_hdr_server_timing"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrServiceWorker"
+column = "rsp_hdr_service_worker"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrServiceWorkerAllowed"
+column = "rsp_hdr_service_worker_allowed"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrSourceMap"
+column = "rsp_hdr_source_map"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrUpgrade"
+column = "rsp_hdr_upgrade"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrAltSvc"
+column = "rsp_hdr_alt_svc"
+[[HttpTransportListGet.selectFields]]
+fieldName = "rspHdrPriority"
+column = "rsp_hdr_priority"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpHttpBrowser"
+column = "fp_http_browser"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpHttpBrowserQuality"
+column = "fp_http_browser_quality"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpHttpServer"
+column = "fp_http_server"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpHttpServerQuality"
+column = "fp_http_server_quality"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpHttpLanguage"
+column = "fp_http_language"
+[[HttpTransportListGet.selectFields]]
+fieldName = "fpDeviceGuess"
+column = "fp_device_guess"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientConsumed"
+column = "client_consumed"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientStartPayloadOffset"
+column = "client_start_payload_offset"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientEndPayloadOffset"
+column = "client_end_payload_offset"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientStartTimestamp"
+column = "client_start_timestamp"
+[[HttpTransportListGet.selectFields]]
+fieldName = "clientEndTimestamp"
+column = "client_end_timestamp"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverConsumed"
+column = "server_consumed"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverStartPayloadOffset"
+column = "server_start_payload_offset"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverEndPayloadOffset"
+column = "server_end_payload_offset"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverStartTimestamp"
+column = "server_start_timestamp"
+[[HttpTransportListGet.selectFields]]
+fieldName = "serverEndTimestamp"
+column = "server_end_timestamp"
+[[HttpTransportListGet.selectFields]]
+fieldName = "tags"
+column = "tags"
+# NetworkStackListGet
+
+
 # 原始流量审计 - 网络堆栈（HTTP 传输关联下钻）
 # 以 HttpTransport 的 traceId 为键查询组成该 TCP 流的全部网络堆栈记录；
 # timestamp / created_at 双时间范围必填，命中分区键防全表扫描。
@@ -1168,6 +2250,55 @@ fieldType = "bool"
 column = "cli_2_srv"
 binding = ""
 actions = ["eq"]
+
+
+[[NetworkStackListGet.selectFields]]
+fieldName = "namespace"
+column = "namespace"
+[[NetworkStackListGet.selectFields]]
+fieldName = "capture"
+column = "capture"
+[[NetworkStackListGet.selectFields]]
+fieldName = "version"
+column = "version"
+[[NetworkStackListGet.selectFields]]
+fieldName = "sessionId"
+column = "session_id"
+[[NetworkStackListGet.selectFields]]
+fieldName = "traceId"
+column = "trace_id"
+[[NetworkStackListGet.selectFields]]
+fieldName = "timestamp"
+column = "timestamp"
+[[NetworkStackListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[NetworkStackListGet.selectFields]]
+fieldName = "cli2Srv"
+column = "cli_2_srv"
+[[NetworkStackListGet.selectFields]]
+fieldName = "topProto"
+column = "top_proto"
+[[NetworkStackListGet.selectFields]]
+fieldName = "proto"
+column = "proto"
+[[NetworkStackListGet.selectFields]]
+fieldName = "seq"
+column = "seq"
+[[NetworkStackListGet.selectFields]]
+fieldName = "level"
+column = "level"
+[[NetworkStackListGet.selectFields]]
+fieldName = "headers"
+column = "headers"
+[[NetworkStackListGet.selectFields]]
+fieldName = "payloadStartOffset"
+column = "payload_start_offset"
+[[NetworkStackListGet.selectFields]]
+fieldName = "payloadEndOffset"
+column = "payload_end_offset"
+# NotificationChannelListGet
+
 
 # 通知渠道
 [NotificationChannelListGet]
@@ -1263,6 +2394,34 @@ fieldType = "bool"
 column = "enabled"
 binding = ""
 actions = ["eq"]
+
+
+[[NotificationChannelListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[NotificationChannelListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[NotificationChannelListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[NotificationChannelListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[NotificationChannelListGet.selectFields]]
+fieldName = "type"
+column = "type"
+[[NotificationChannelListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+[[NotificationChannelListGet.selectFields]]
+fieldName = "config"
+column = "config"
+[[NotificationChannelListGet.selectFields]]
+fieldName = "description"
+column = "description"
+# NotificationTargetListGet
+
 
 # 通知目标
 [NotificationTargetListGet]
@@ -1378,6 +2537,51 @@ options = [
     { title = "zh-Hans", value = "zh-Hans" },
 ]
 
+
+[[NotificationTargetListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "channelId"
+column = "channel_id"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "type"
+column = "type"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "config"
+column = "config"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "language"
+column = "language"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "description"
+column = "description"
+# 以下渠道快照字段由处理器第二趟回填（按 channel_id 查询渠道表），
+# column 取回填所依赖的关联键列 channel_id，避免投影 SELECT 引用不存在于本表的列
+[[NotificationTargetListGet.selectFields]]
+fieldName = "channelName"
+column = "channel_id"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "channelType"
+column = "channel_id"
+[[NotificationTargetListGet.selectFields]]
+fieldName = "channelEnabled"
+column = "channel_id"
+# NotificationGroupListGet
+
+
 # 通知组
 [NotificationGroupListGet]
 timeModule = true
@@ -1460,6 +2664,33 @@ fieldType = "bool"
 column = "is_default"
 binding = ""
 actions = ["eq"]
+
+
+[[NotificationGroupListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[NotificationGroupListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[NotificationGroupListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[NotificationGroupListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[NotificationGroupListGet.selectFields]]
+fieldName = "isDefault"
+column = "is_default"
+[[NotificationGroupListGet.selectFields]]
+fieldName = "description"
+column = "description"
+# 目标计数由处理器第二趟聚合回填（按组 id 查询组目标关联表），
+# column 取回填所依赖的关联键列 id，避免投影 SELECT 引用不存在于本表的列
+[[NotificationGroupListGet.selectFields]]
+fieldName = "targetCount"
+column = "id"
+# NotificationTemplateListGet
+
 
 # 通知模板
 [NotificationTemplateListGet]
@@ -1569,6 +2800,37 @@ options = [
     { title = "webhook", value = "webhook" },
 ]
 
+
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "namespaceName"
+column = "namespace_name"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "event"
+column = "event"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "channelType"
+column = "channel_type"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "language"
+column = "language"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "title"
+column = "title"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "content"
+column = "content"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "source"
+column = "source"
+[[NotificationTemplateListGet.selectFields]]
+fieldName = "description"
+column = "description"
+# NotificationRecordListGet
+
+
 # 通知发送记录
 [NotificationRecordListGet]
 timeModule = true
@@ -1656,6 +2918,45 @@ options = [
     { title = "email", value = "email" },
     { title = "webhook", value = "webhook" },
 ]
+
+
+[[NotificationRecordListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "eventType"
+column = "event_type"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "eventId"
+column = "event_id"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "targetId"
+column = "target_id"
+# 目标名称由处理器第二趟尽力回填（按 target_id 查询目标表），
+# column 取回填所依赖的关联键列 target_id，避免投影 SELECT 引用不存在于本表的列
+[[NotificationRecordListGet.selectFields]]
+fieldName = "targetName"
+column = "target_id"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "channelType"
+column = "channel_type"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "status"
+column = "status"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "messageId"
+column = "message_id"
+[[NotificationRecordListGet.selectFields]]
+fieldName = "notifiedAt"
+column = "notified_at"
+# TagEventRecordListGet
+
 
 [TagEventRecordListGet]
 timeModule = true
@@ -1763,6 +3064,34 @@ column = "match_all"
 binding = ""
 actions = ["eq"]
 
+
+[[TagEventRecordListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[TagEventRecordListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[TagEventRecordListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[TagEventRecordListGet.selectFields]]
+fieldName = "ruleId"
+column = "rule_id"
+[[TagEventRecordListGet.selectFields]]
+fieldName = "ruleName"
+column = "rule_name"
+[[TagEventRecordListGet.selectFields]]
+fieldName = "matchAll"
+column = "match_all"
+[[TagEventRecordListGet.selectFields]]
+fieldName = "status"
+column = "status"
+[[TagEventRecordListGet.selectFields]]
+fieldName = "detectedAt"
+column = "detected_at"
+# DatasourceListGet
+
+
 # 标签事件第三方数据源
 [DatasourceListGet]
 timeModule = true
@@ -1857,3 +3186,29 @@ fieldType = "bool"
 column = "enabled"
 binding = ""
 actions = ["eq"]
+
+
+[[DatasourceListGet.selectFields]]
+fieldName = "id"
+column = "id"
+[[DatasourceListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+[[DatasourceListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+[[DatasourceListGet.selectFields]]
+fieldName = "name"
+column = "name"
+[[DatasourceListGet.selectFields]]
+fieldName = "type"
+column = "type"
+[[DatasourceListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+[[DatasourceListGet.selectFields]]
+fieldName = "config"
+column = "config"
+[[DatasourceListGet.selectFields]]
+fieldName = "description"
+column = "description"

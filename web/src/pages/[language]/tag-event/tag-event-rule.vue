@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="tagEventRule"
       />
 
@@ -251,7 +252,11 @@
                 <v-row dense align="center">
                   <v-col cols="auto">
                     <v-btn
-                      v-request="async () => { await validateConditionExpression(cond); }"
+                      v-request="
+                        async () => {
+                          await validateConditionExpression(cond);
+                        }
+                      "
                       variant="tonal"
                       size="small"
                     >
@@ -516,7 +521,11 @@
             <v-row dense align="center">
               <v-col cols="auto">
                 <v-btn
-                  v-request="async () => { await editDryRunRef?.run(); }"
+                  v-request="
+                    async () => {
+                      await editDryRunRef?.run();
+                    }
+                  "
                   color="primary"
                   size="small"
                   :disabled="!editable"
@@ -1215,6 +1224,9 @@ const itemUpdateAction = () => {
 };
 
 // ---- list actions ----
+// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", ...visible];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {

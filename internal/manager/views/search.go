@@ -266,6 +266,7 @@ type CapturerListGetSearchIn struct {
 	Greedy   bool                     `mapstructure:"greedy" default:"false"`
 	OrderBy  []CapturerListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *CapturerListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                 `mapstructure:"fields"`
 }
 
 func (s *CapturerListGetSearchIn) GetGreedy() bool {
@@ -323,6 +324,42 @@ func (s *CapturerListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 		items["version"] = s.FilterBy.Version
 	}
 	return items
+}
+
+func (s *CapturerListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *CapturerListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "namespace":
+			add("namespace_name")
+		case "name":
+			add("name")
+		case "version":
+			add("version")
+		}
+	}
+	return columns
 }
 
 func (s *CapturerListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -470,6 +507,14 @@ func (s *CapturerListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"inctn",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"namespace",
+			"name",
+			"version",
 		},
 	}
 }
@@ -720,6 +765,7 @@ type DatasourceListGetSearchIn struct {
 	Greedy   bool                       `mapstructure:"greedy" default:"false"`
 	OrderBy  []DatasourceListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *DatasourceListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                   `mapstructure:"fields"`
 }
 
 func (s *DatasourceListGetSearchIn) GetGreedy() bool {
@@ -777,6 +823,46 @@ func (s *DatasourceListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem 
 		items["enabled"] = s.FilterBy.Enabled
 	}
 	return items
+}
+
+func (s *DatasourceListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *DatasourceListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "type":
+			add("type")
+		case "enabled":
+			add("enabled")
+		case "config":
+			add("config")
+		case "description":
+			add("description")
+		}
+	}
+	return columns
 }
 
 func (s *DatasourceListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -902,6 +988,16 @@ func (s *DatasourceListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"eq",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"type",
+			"enabled",
+			"config",
+			"description",
 		},
 	}
 }
@@ -1108,6 +1204,7 @@ type GroupListGetSearchIn struct {
 	Greedy   bool                  `mapstructure:"greedy" default:"false"`
 	OrderBy  []GroupListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *GroupListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string              `mapstructure:"fields"`
 }
 
 func (s *GroupListGetSearchIn) GetGreedy() bool {
@@ -1159,6 +1256,40 @@ func (s *GroupListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 		items["name"] = s.FilterBy.Name
 	}
 	return items
+}
+
+func (s *GroupListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *GroupListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "description":
+			add("description")
+		}
+	}
+	return columns
 }
 
 func (s *GroupListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -1266,6 +1397,13 @@ func (s *GroupListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"inctn",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"description",
 		},
 	}
 }
@@ -1630,6 +1768,7 @@ type HttpTransportListGetSearchIn struct {
 	Greedy   bool                          `mapstructure:"greedy" default:"false"`
 	OrderBy  []HttpTransportListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy HttpTransportListGetFilterBy  `mapstructure:"filterBy"`
+	Fields   []string                      `mapstructure:"fields"`
 }
 
 func (s *HttpTransportListGetSearchIn) GetGreedy() bool {
@@ -1689,6 +1828,416 @@ func (s *HttpTransportListGetSearchIn) GetFilterBy() map[string]utils.FilterByIt
 		items["httpVersion"] = s.FilterBy.HttpVersion
 	}
 	return items
+}
+
+func (s *HttpTransportListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *HttpTransportListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "namespace":
+			add("namespace")
+		case "capture":
+			add("capture")
+		case "version":
+			add("version")
+		case "sessionId":
+			add("session_id")
+		case "timestamp":
+			add("timestamp")
+		case "createdAt":
+			add("created_at")
+		case "traceId":
+			add("trace_id")
+		case "clientIp":
+			add("client_ip")
+		case "clientPort":
+			add("client_port")
+		case "clientIsn":
+			add("client_isn")
+		case "serverIp":
+			add("server_ip")
+		case "serverPort":
+			add("server_port")
+		case "serverIsn":
+			add("server_isn")
+		case "ipVersion":
+			add("ip_version")
+		case "httpVersion":
+			add("http_version")
+		case "streamIndex":
+			add("stream_index")
+		case "fpTcpClientOs":
+			add("fp_tcp_client_os")
+		case "fpTcpClientOsQuality":
+			add("fp_tcp_client_os_quality")
+		case "fpTcpClientSig":
+			add("fp_tcp_client_sig")
+		case "fpTcpServerOs":
+			add("fp_tcp_server_os")
+		case "fpTcpServerOsQuality":
+			add("fp_tcp_server_os_quality")
+		case "fpTcpServerSig":
+			add("fp_tcp_server_sig")
+		case "fpTcpMtu":
+			add("fp_tcp_mtu")
+		case "url":
+			add("url")
+		case "scheme":
+			add("scheme")
+		case "host":
+			add("host")
+		case "path":
+			add("path")
+		case "fileExt":
+			add("file_ext")
+		case "queries":
+			add("queries")
+		case "fragment":
+			add("fragment")
+		case "method":
+			add("method")
+		case "reqBody":
+			add("req_body")
+		case "reqBodyHash":
+			add("req_body_hash")
+		case "reqBodyLength":
+			add("req_body_length")
+		case "reqHdrAuthorization":
+			add("req_hdr_authorization")
+		case "reqHdrProxyAuthorization":
+			add("req_hdr_proxy_authorization")
+		case "reqHdrCacheControl":
+			add("req_hdr_cache_control")
+		case "reqHdrIfMatch":
+			add("req_hdr_if_match")
+		case "reqHdrIfNoneMatch":
+			add("req_hdr_if_none_match")
+		case "reqHdrIfModifiedSince":
+			add("req_hdr_if_modified_since")
+		case "reqHdrIfUnmodifiedSince":
+			add("req_hdr_if_unmodified_since")
+		case "reqHdrIfRange":
+			add("req_hdr_if_range")
+		case "reqHdrConnection":
+			add("req_hdr_connection")
+		case "reqHdrKeepAlive":
+			add("req_hdr_keep_alive")
+		case "reqHdrAccept":
+			add("req_hdr_accept")
+		case "reqHdrAcceptEncoding":
+			add("req_hdr_accept_encoding")
+		case "reqHdrAcceptLanguage":
+			add("req_hdr_accept_language")
+		case "reqHdrExpect":
+			add("req_hdr_expect")
+		case "reqHdrMaxForwards":
+			add("req_hdr_max_forwards")
+		case "reqHdrCookie":
+			add("req_hdr_cookie")
+		case "reqHdrOrigin":
+			add("req_hdr_origin")
+		case "reqHdrAccessControlRequestHeaders":
+			add("req_hdr_access_control_request_headers")
+		case "reqHdrAccessControlRequestMethod":
+			add("req_hdr_access_control_request_method")
+		case "reqHdrContentType":
+			add("req_hdr_content_type")
+		case "reqHdrContentLength":
+			add("req_hdr_content_length")
+		case "reqHdrContentEncoding":
+			add("req_hdr_content_encoding")
+		case "reqHdrContentLanguage":
+			add("req_hdr_content_language")
+		case "reqHdrForwarded":
+			add("req_hdr_forwarded")
+		case "reqHdrVia":
+			add("req_hdr_via")
+		case "reqHdrRange":
+			add("req_hdr_range")
+		case "reqHdrFrom":
+			add("req_hdr_from")
+		case "reqHdrHost":
+			add("req_hdr_host")
+		case "reqHdrReferer":
+			add("req_hdr_referer")
+		case "reqHdrReferrerPolicy":
+			add("req_hdr_referrer_policy")
+		case "reqHdrUserAgent":
+			add("req_hdr_user_agent")
+		case "reqHdrTe":
+			add("req_hdr_te")
+		case "reqHdrTransferEncoding":
+			add("req_hdr_transfer_encoding")
+		case "reqHdrTrailer":
+			add("req_hdr_trailer")
+		case "reqHdrSecWebsocketKey":
+			add("req_hdr_sec_websocket_key")
+		case "reqHdrSecWebsocketVersion":
+			add("req_hdr_sec_websocket_version")
+		case "reqHdrSecWebsocketProtocol":
+			add("req_hdr_sec_websocket_protocol")
+		case "reqHdrSecWebsocketExtensions":
+			add("req_hdr_sec_websocket_extensions")
+		case "reqHdrSecFetchSite":
+			add("req_hdr_sec_fetch_site")
+		case "reqHdrSecFetchMode":
+			add("req_hdr_sec_fetch_mode")
+		case "reqHdrSecFetchUser":
+			add("req_hdr_sec_fetch_user")
+		case "reqHdrSecFetchDest":
+			add("req_hdr_sec_fetch_dest")
+		case "reqHdrSecPurpose":
+			add("req_hdr_sec_purpose")
+		case "reqHdrServiceWorkerNavigationPreload":
+			add("req_hdr_service_worker_navigation_preload")
+		case "reqHdrSecChUa":
+			add("req_hdr_sec_ch_ua")
+		case "reqHdrSecChUaArch":
+			add("req_hdr_sec_ch_ua_arch")
+		case "reqHdrSecChUaBitness":
+			add("req_hdr_sec_ch_ua_bitness")
+		case "reqHdrSecChUaFullVersion":
+			add("req_hdr_sec_ch_ua_full_version")
+		case "reqHdrSecChUaFullVersionList":
+			add("req_hdr_sec_ch_ua_full_version_list")
+		case "reqHdrSecChUaMobile":
+			add("req_hdr_sec_ch_ua_mobile")
+		case "reqHdrSecChUaModel":
+			add("req_hdr_sec_ch_ua_model")
+		case "reqHdrSecChUaPlatform":
+			add("req_hdr_sec_ch_ua_platform")
+		case "reqHdrSecChUaPlatformVersion":
+			add("req_hdr_sec_ch_ua_platform_version")
+		case "reqHdrSecChUaWow64":
+			add("req_hdr_sec_ch_ua_wow64")
+		case "reqHdrSecChPrefersColorScheme":
+			add("req_hdr_sec_ch_prefers_color_scheme")
+		case "reqHdrSecChPrefersReducedMotion":
+			add("req_hdr_sec_ch_prefers_reduced_motion")
+		case "reqHdrSecChPrefersReducedTransparency":
+			add("req_hdr_sec_ch_prefers_reduced_transparency")
+		case "reqHdrWantContentDigest":
+			add("req_hdr_want_content_digest")
+		case "reqHdrWantReprDigest":
+			add("req_hdr_want_repr_digest")
+		case "reqHdrUpgradeInsecureRequests":
+			add("req_hdr_upgrade_insecure_requests")
+		case "reqHdrDate":
+			add("req_hdr_date")
+		case "reqHdrLink":
+			add("req_hdr_link")
+		case "reqHdrUpgrade":
+			add("req_hdr_upgrade")
+		case "reqHdrPriority":
+			add("req_hdr_priority")
+		case "reqHdrAltUsed":
+			add("req_hdr_alt_used")
+		case "rspBody":
+			add("rsp_body")
+		case "rspBodyHash":
+			add("rsp_body_hash")
+		case "rspBodyLength":
+			add("rsp_body_length")
+		case "rspHdrWwwAuthenticate":
+			add("rsp_hdr_www_authenticate")
+		case "rspHdrProxyAuthenticate":
+			add("rsp_hdr_proxy_authenticate")
+		case "rspHdrAge":
+			add("rsp_hdr_age")
+		case "rspHdrCacheControl":
+			add("rsp_hdr_cache_control")
+		case "rspHdrClearSiteData":
+			add("rsp_hdr_clear_site_data")
+		case "rspHdrExpires":
+			add("rsp_hdr_expires")
+		case "rspHdrNoVarySearch":
+			add("rsp_hdr_no_vary_search")
+		case "rspHdrLastModified":
+			add("rsp_hdr_last_modified")
+		case "rspHdrEtag":
+			add("rsp_hdr_etag")
+		case "rspHdrVary":
+			add("rsp_hdr_vary")
+		case "rspHdrConnection":
+			add("rsp_hdr_connection")
+		case "rspHdrKeepAlive":
+			add("rsp_hdr_keep_alive")
+		case "rspHdrAcceptPatch":
+			add("rsp_hdr_accept_patch")
+		case "rspHdrAcceptPost":
+			add("rsp_hdr_accept_post")
+		case "rspHdrSetCookie":
+			add("rsp_hdr_set_cookie")
+		case "rspHdrAccessControlAllowCredentials":
+			add("rsp_hdr_access_control_allow_credentials")
+		case "rspHdrAccessControlAllowHeaders":
+			add("rsp_hdr_access_control_allow_headers")
+		case "rspHdrAccessControlAllowMethods":
+			add("rsp_hdr_access_control_allow_methods")
+		case "rspHdrAccessControlAllowOrigin":
+			add("rsp_hdr_access_control_allow_origin")
+		case "rspHdrAccessControlExposeHeaders":
+			add("rsp_hdr_access_control_expose_headers")
+		case "rspHdrAccessControlMaxAge":
+			add("rsp_hdr_access_control_max_age")
+		case "rspHdrTimingAllowOrigin":
+			add("rsp_hdr_timing_allow_origin")
+		case "rspHdrContentDisposition":
+			add("rsp_hdr_content_disposition")
+		case "rspHdrContentDigest":
+			add("rsp_hdr_content_digest")
+		case "rspHdrReprDigest":
+			add("rsp_hdr_repr_digest")
+		case "rspHdrContentType":
+			add("rsp_hdr_content_type")
+		case "rspHdrContentLength":
+			add("rsp_hdr_content_length")
+		case "rspHdrContentEncoding":
+			add("rsp_hdr_content_encoding")
+		case "rspHdrContentLanguage":
+			add("rsp_hdr_content_language")
+		case "rspHdrContentLocation":
+			add("rsp_hdr_content_location")
+		case "rspHdrForwarded":
+			add("rsp_hdr_forwarded")
+		case "rspHdrVia":
+			add("rsp_hdr_via")
+		case "rspHdrAcceptRanges":
+			add("rsp_hdr_accept_ranges")
+		case "rspHdrContentRange":
+			add("rsp_hdr_content_range")
+		case "rspHdrLocation":
+			add("rsp_hdr_location")
+		case "rspHdrRefresh":
+			add("rsp_hdr_refresh")
+		case "rspHdrAllow":
+			add("rsp_hdr_allow")
+		case "rspHdrServer":
+			add("rsp_hdr_server")
+		case "rspHdrCrossOriginEmbedderPolicy":
+			add("rsp_hdr_cross_origin_embedder_policy")
+		case "rspHdrCrossOriginOpenerPolicy":
+			add("rsp_hdr_cross_origin_opener_policy")
+		case "rspHdrCrossOriginResourcePolicy":
+			add("rsp_hdr_cross_origin_resource_policy")
+		case "rspHdrContentSecurityPolicy":
+			add("rsp_hdr_content_security_policy")
+		case "rspHdrContentSecurityPolicyReportOnly":
+			add("rsp_hdr_content_security_policy_report_only")
+		case "rspHdrExpectCt":
+			add("rsp_hdr_expect_ct")
+		case "rspHdrPermissionsPolicy":
+			add("rsp_hdr_permissions_policy")
+		case "rspHdrStrictTransportSecurity":
+			add("rsp_hdr_strict_transport_security")
+		case "rspHdrXContentTypeOptions":
+			add("rsp_hdr_x_content_type_options")
+		case "rspHdrXFrameOptions":
+			add("rsp_hdr_x_frame_options")
+		case "rspHdrXPermittedCrossDomainPolicies":
+			add("rsp_hdr_x_permitted_cross_domain_policies")
+		case "rspHdrXPoweredBy":
+			add("rsp_hdr_x_powered_by")
+		case "rspHdrXXssProtection":
+			add("rsp_hdr_x_xss_protection")
+		case "rspHdrReportingEndpoints":
+			add("rsp_hdr_reporting_endpoints")
+		case "rspHdrReportTo":
+			add("rsp_hdr_report_to")
+		case "rspHdrTransferEncoding":
+			add("rsp_hdr_transfer_encoding")
+		case "rspHdrTrailer":
+			add("rsp_hdr_trailer")
+		case "rspHdrSecWebsocketAccept":
+			add("rsp_hdr_sec_websocket_accept")
+		case "rspHdrSecWebsocketProtocol":
+			add("rsp_hdr_sec_websocket_protocol")
+		case "rspHdrSecWebsocketExtensions":
+			add("rsp_hdr_sec_websocket_extensions")
+		case "rspHdrAcceptCh":
+			add("rsp_hdr_accept_ch")
+		case "rspHdrCriticalCh":
+			add("rsp_hdr_critical_ch")
+		case "rspHdrAttributionReportingEligible":
+			add("rsp_hdr_attribution_reporting_eligible")
+		case "rspHdrAttributionReportingRegisterSource":
+			add("rsp_hdr_attribution_reporting_register_source")
+		case "rspHdrAttributionReportingRegisterTrigger":
+			add("rsp_hdr_attribution_reporting_register_trigger")
+		case "rspHdrDate":
+			add("rsp_hdr_date")
+		case "rspHdrLink":
+			add("rsp_hdr_link")
+		case "rspHdrRetryAfter":
+			add("rsp_hdr_retry_after")
+		case "rspHdrServerTiming":
+			add("rsp_hdr_server_timing")
+		case "rspHdrServiceWorker":
+			add("rsp_hdr_service_worker")
+		case "rspHdrServiceWorkerAllowed":
+			add("rsp_hdr_service_worker_allowed")
+		case "rspHdrSourceMap":
+			add("rsp_hdr_source_map")
+		case "rspHdrUpgrade":
+			add("rsp_hdr_upgrade")
+		case "rspHdrAltSvc":
+			add("rsp_hdr_alt_svc")
+		case "rspHdrPriority":
+			add("rsp_hdr_priority")
+		case "fpHttpBrowser":
+			add("fp_http_browser")
+		case "fpHttpBrowserQuality":
+			add("fp_http_browser_quality")
+		case "fpHttpServer":
+			add("fp_http_server")
+		case "fpHttpServerQuality":
+			add("fp_http_server_quality")
+		case "fpHttpLanguage":
+			add("fp_http_language")
+		case "fpDeviceGuess":
+			add("fp_device_guess")
+		case "clientConsumed":
+			add("client_consumed")
+		case "clientStartPayloadOffset":
+			add("client_start_payload_offset")
+		case "clientEndPayloadOffset":
+			add("client_end_payload_offset")
+		case "clientStartTimestamp":
+			add("client_start_timestamp")
+		case "clientEndTimestamp":
+			add("client_end_timestamp")
+		case "serverConsumed":
+			add("server_consumed")
+		case "serverStartPayloadOffset":
+			add("server_start_payload_offset")
+		case "serverEndPayloadOffset":
+			add("server_end_payload_offset")
+		case "serverStartTimestamp":
+			add("server_start_timestamp")
+		case "serverEndTimestamp":
+			add("server_end_timestamp")
+		case "tags":
+			add("tags")
+		}
+	}
+	return columns
 }
 
 func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -1832,6 +2381,201 @@ func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions {
 					{Value: "HTTP/3", Title: "HTTP/3"},
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"namespace",
+			"capture",
+			"version",
+			"sessionId",
+			"timestamp",
+			"createdAt",
+			"traceId",
+			"clientIp",
+			"clientPort",
+			"clientIsn",
+			"serverIp",
+			"serverPort",
+			"serverIsn",
+			"ipVersion",
+			"httpVersion",
+			"streamIndex",
+			"fpTcpClientOs",
+			"fpTcpClientOsQuality",
+			"fpTcpClientSig",
+			"fpTcpServerOs",
+			"fpTcpServerOsQuality",
+			"fpTcpServerSig",
+			"fpTcpMtu",
+			"url",
+			"scheme",
+			"host",
+			"path",
+			"fileExt",
+			"queries",
+			"fragment",
+			"method",
+			"reqBody",
+			"reqBodyHash",
+			"reqBodyLength",
+			"reqHdrAuthorization",
+			"reqHdrProxyAuthorization",
+			"reqHdrCacheControl",
+			"reqHdrIfMatch",
+			"reqHdrIfNoneMatch",
+			"reqHdrIfModifiedSince",
+			"reqHdrIfUnmodifiedSince",
+			"reqHdrIfRange",
+			"reqHdrConnection",
+			"reqHdrKeepAlive",
+			"reqHdrAccept",
+			"reqHdrAcceptEncoding",
+			"reqHdrAcceptLanguage",
+			"reqHdrExpect",
+			"reqHdrMaxForwards",
+			"reqHdrCookie",
+			"reqHdrOrigin",
+			"reqHdrAccessControlRequestHeaders",
+			"reqHdrAccessControlRequestMethod",
+			"reqHdrContentType",
+			"reqHdrContentLength",
+			"reqHdrContentEncoding",
+			"reqHdrContentLanguage",
+			"reqHdrForwarded",
+			"reqHdrVia",
+			"reqHdrRange",
+			"reqHdrFrom",
+			"reqHdrHost",
+			"reqHdrReferer",
+			"reqHdrReferrerPolicy",
+			"reqHdrUserAgent",
+			"reqHdrTe",
+			"reqHdrTransferEncoding",
+			"reqHdrTrailer",
+			"reqHdrSecWebsocketKey",
+			"reqHdrSecWebsocketVersion",
+			"reqHdrSecWebsocketProtocol",
+			"reqHdrSecWebsocketExtensions",
+			"reqHdrSecFetchSite",
+			"reqHdrSecFetchMode",
+			"reqHdrSecFetchUser",
+			"reqHdrSecFetchDest",
+			"reqHdrSecPurpose",
+			"reqHdrServiceWorkerNavigationPreload",
+			"reqHdrSecChUa",
+			"reqHdrSecChUaArch",
+			"reqHdrSecChUaBitness",
+			"reqHdrSecChUaFullVersion",
+			"reqHdrSecChUaFullVersionList",
+			"reqHdrSecChUaMobile",
+			"reqHdrSecChUaModel",
+			"reqHdrSecChUaPlatform",
+			"reqHdrSecChUaPlatformVersion",
+			"reqHdrSecChUaWow64",
+			"reqHdrSecChPrefersColorScheme",
+			"reqHdrSecChPrefersReducedMotion",
+			"reqHdrSecChPrefersReducedTransparency",
+			"reqHdrWantContentDigest",
+			"reqHdrWantReprDigest",
+			"reqHdrUpgradeInsecureRequests",
+			"reqHdrDate",
+			"reqHdrLink",
+			"reqHdrUpgrade",
+			"reqHdrPriority",
+			"reqHdrAltUsed",
+			"rspBody",
+			"rspBodyHash",
+			"rspBodyLength",
+			"rspHdrWwwAuthenticate",
+			"rspHdrProxyAuthenticate",
+			"rspHdrAge",
+			"rspHdrCacheControl",
+			"rspHdrClearSiteData",
+			"rspHdrExpires",
+			"rspHdrNoVarySearch",
+			"rspHdrLastModified",
+			"rspHdrEtag",
+			"rspHdrVary",
+			"rspHdrConnection",
+			"rspHdrKeepAlive",
+			"rspHdrAcceptPatch",
+			"rspHdrAcceptPost",
+			"rspHdrSetCookie",
+			"rspHdrAccessControlAllowCredentials",
+			"rspHdrAccessControlAllowHeaders",
+			"rspHdrAccessControlAllowMethods",
+			"rspHdrAccessControlAllowOrigin",
+			"rspHdrAccessControlExposeHeaders",
+			"rspHdrAccessControlMaxAge",
+			"rspHdrTimingAllowOrigin",
+			"rspHdrContentDisposition",
+			"rspHdrContentDigest",
+			"rspHdrReprDigest",
+			"rspHdrContentType",
+			"rspHdrContentLength",
+			"rspHdrContentEncoding",
+			"rspHdrContentLanguage",
+			"rspHdrContentLocation",
+			"rspHdrForwarded",
+			"rspHdrVia",
+			"rspHdrAcceptRanges",
+			"rspHdrContentRange",
+			"rspHdrLocation",
+			"rspHdrRefresh",
+			"rspHdrAllow",
+			"rspHdrServer",
+			"rspHdrCrossOriginEmbedderPolicy",
+			"rspHdrCrossOriginOpenerPolicy",
+			"rspHdrCrossOriginResourcePolicy",
+			"rspHdrContentSecurityPolicy",
+			"rspHdrContentSecurityPolicyReportOnly",
+			"rspHdrExpectCt",
+			"rspHdrPermissionsPolicy",
+			"rspHdrStrictTransportSecurity",
+			"rspHdrXContentTypeOptions",
+			"rspHdrXFrameOptions",
+			"rspHdrXPermittedCrossDomainPolicies",
+			"rspHdrXPoweredBy",
+			"rspHdrXXssProtection",
+			"rspHdrReportingEndpoints",
+			"rspHdrReportTo",
+			"rspHdrTransferEncoding",
+			"rspHdrTrailer",
+			"rspHdrSecWebsocketAccept",
+			"rspHdrSecWebsocketProtocol",
+			"rspHdrSecWebsocketExtensions",
+			"rspHdrAcceptCh",
+			"rspHdrCriticalCh",
+			"rspHdrAttributionReportingEligible",
+			"rspHdrAttributionReportingRegisterSource",
+			"rspHdrAttributionReportingRegisterTrigger",
+			"rspHdrDate",
+			"rspHdrLink",
+			"rspHdrRetryAfter",
+			"rspHdrServerTiming",
+			"rspHdrServiceWorker",
+			"rspHdrServiceWorkerAllowed",
+			"rspHdrSourceMap",
+			"rspHdrUpgrade",
+			"rspHdrAltSvc",
+			"rspHdrPriority",
+			"fpHttpBrowser",
+			"fpHttpBrowserQuality",
+			"fpHttpServer",
+			"fpHttpServerQuality",
+			"fpHttpLanguage",
+			"fpDeviceGuess",
+			"clientConsumed",
+			"clientStartPayloadOffset",
+			"clientEndPayloadOffset",
+			"clientStartTimestamp",
+			"clientEndTimestamp",
+			"serverConsumed",
+			"serverStartPayloadOffset",
+			"serverEndPayloadOffset",
+			"serverStartTimestamp",
+			"serverEndTimestamp",
+			"tags",
 		},
 	}
 }
@@ -2108,6 +2852,7 @@ type Ipv4TcpListGetSearchIn struct {
 	Greedy   bool                    `mapstructure:"greedy" default:"false"`
 	OrderBy  []Ipv4TcpListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy Ipv4TcpListGetFilterBy  `mapstructure:"filterBy"`
+	Fields   []string                `mapstructure:"fields"`
 }
 
 func (s *Ipv4TcpListGetSearchIn) GetGreedy() bool {
@@ -2155,6 +2900,134 @@ func (s *Ipv4TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 		items["dstPort"] = s.FilterBy.DstPort
 	}
 	return items
+}
+
+func (s *Ipv4TcpListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "namespace":
+			add("namespace")
+		case "capture":
+			add("capture")
+		case "version":
+			add("version")
+		case "sessionId":
+			add("session_id")
+		case "timestamp":
+			add("timestamp")
+		case "createdAt":
+			add("created_at")
+		case "truncated":
+			add("truncated")
+		case "captureLength":
+			add("capture_length")
+		case "layerStack":
+			add("layer_stack")
+		case "ethDstMac":
+			add("eth_dst_mac")
+		case "ethSrcMac":
+			add("eth_src_mac")
+		case "ethType":
+			add("eth_type")
+		case "ethLength":
+			add("eth_length")
+		case "ipv4Version":
+			add("ipv4_version")
+		case "ipv4Ihl":
+			add("ipv4_ihl")
+		case "ipv4Tos":
+			add("ipv4_tos")
+		case "ipv4Length":
+			add("ipv4_length")
+		case "ipv4Id":
+			add("ipv4_id")
+		case "ipv4Flags":
+			add("ipv4_flags")
+		case "ipv4FragOffset":
+			add("ipv4_frag_offset")
+		case "ipv4Ttl":
+			add("ipv4_ttl")
+		case "ipv4IpProtocol":
+			add("ipv4_ip_protocol")
+		case "ipv4Checksum":
+			add("ipv4_checksum")
+		case "ipv4Src":
+			add("ipv4_src")
+		case "ipv4Dst":
+			add("ipv4_dst")
+		case "ipv4Options":
+			add("ipv4_options")
+		case "ipv4Padding":
+			add("ipv4_padding")
+		case "srcPort":
+			add("tcp_src_port")
+		case "dstPort":
+			add("tcp_dst_port")
+		case "seq":
+			add("tcp_seq")
+		case "ack":
+			add("tcp_ack")
+		case "dataOffset":
+			add("tcp_data_offset")
+		case "bitFin":
+			add("tcp_bit_fin")
+		case "bitSyn":
+			add("tcp_bit_syn")
+		case "bitRst":
+			add("tcp_bit_rst")
+		case "bitPsh":
+			add("tcp_bit_psh")
+		case "bitAck":
+			add("tcp_bit_ack")
+		case "bitUrg":
+			add("tcp_bit_urg")
+		case "bitEce":
+			add("tcp_bit_ece")
+		case "bitCwr":
+			add("tcp_bit_cwr")
+		case "bitNs":
+			add("tcp_bit_ns")
+		case "window":
+			add("tcp_window")
+		case "checksum":
+			add("tcp_checksum")
+		case "urgent":
+			add("tcp_urgent")
+		case "options":
+			add("tcp_options")
+		case "fpOs":
+			add("fp_os")
+		case "fpOsQuality":
+			add("fp_os_quality")
+		case "fpSig":
+			add("fp_sig")
+		case "fpMtu":
+			add("fp_mtu")
+		case "tcpStreamId":
+			add("tcp_stream_id")
+		case "payload":
+			add("payload")
+		}
+	}
+	return columns
 }
 
 func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -2253,6 +3126,60 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"gte",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"namespace",
+			"capture",
+			"version",
+			"sessionId",
+			"timestamp",
+			"createdAt",
+			"truncated",
+			"captureLength",
+			"layerStack",
+			"ethDstMac",
+			"ethSrcMac",
+			"ethType",
+			"ethLength",
+			"ipv4Version",
+			"ipv4Ihl",
+			"ipv4Tos",
+			"ipv4Length",
+			"ipv4Id",
+			"ipv4Flags",
+			"ipv4FragOffset",
+			"ipv4Ttl",
+			"ipv4IpProtocol",
+			"ipv4Checksum",
+			"ipv4Src",
+			"ipv4Dst",
+			"ipv4Options",
+			"ipv4Padding",
+			"srcPort",
+			"dstPort",
+			"seq",
+			"ack",
+			"dataOffset",
+			"bitFin",
+			"bitSyn",
+			"bitRst",
+			"bitPsh",
+			"bitAck",
+			"bitUrg",
+			"bitEce",
+			"bitCwr",
+			"bitNs",
+			"window",
+			"checksum",
+			"urgent",
+			"options",
+			"fpOs",
+			"fpOsQuality",
+			"fpSig",
+			"fpMtu",
+			"tcpStreamId",
+			"payload",
 		},
 	}
 }
@@ -2529,6 +3456,7 @@ type Ipv6TcpListGetSearchIn struct {
 	Greedy   bool                    `mapstructure:"greedy" default:"false"`
 	OrderBy  []Ipv6TcpListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy Ipv6TcpListGetFilterBy  `mapstructure:"filterBy"`
+	Fields   []string                `mapstructure:"fields"`
 }
 
 func (s *Ipv6TcpListGetSearchIn) GetGreedy() bool {
@@ -2576,6 +3504,124 @@ func (s *Ipv6TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 		items["dstPort"] = s.FilterBy.DstPort
 	}
 	return items
+}
+
+func (s *Ipv6TcpListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *Ipv6TcpListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "namespace":
+			add("namespace")
+		case "capture":
+			add("capture")
+		case "version":
+			add("version")
+		case "sessionId":
+			add("session_id")
+		case "timestamp":
+			add("timestamp")
+		case "createdAt":
+			add("created_at")
+		case "truncated":
+			add("truncated")
+		case "captureLength":
+			add("capture_length")
+		case "layerStack":
+			add("layer_stack")
+		case "ethDstMac":
+			add("eth_dst_mac")
+		case "ethSrcMac":
+			add("eth_src_mac")
+		case "ethType":
+			add("eth_type")
+		case "ethLength":
+			add("eth_length")
+		case "ipv6Version":
+			add("ipv6_version")
+		case "ipv6TrafficClass":
+			add("ipv6_traffic_class")
+		case "ipv6FlowLabel":
+			add("ipv6_flow_label")
+		case "ipv6Length":
+			add("ipv6_length")
+		case "ipv6NextHeader":
+			add("ipv6_next_header")
+		case "ipv6HopLimit":
+			add("ipv6_hop_limit")
+		case "ipv6Src":
+			add("ipv6_src")
+		case "ipv6Dst":
+			add("ipv6_dst")
+		case "ipv6LastHeader":
+			add("ipv6_last_header")
+		case "srcPort":
+			add("tcp_src_port")
+		case "dstPort":
+			add("tcp_dst_port")
+		case "seq":
+			add("tcp_seq")
+		case "ack":
+			add("tcp_ack")
+		case "dataOffset":
+			add("tcp_data_offset")
+		case "bitFin":
+			add("tcp_bit_fin")
+		case "bitSyn":
+			add("tcp_bit_syn")
+		case "bitRst":
+			add("tcp_bit_rst")
+		case "bitPsh":
+			add("tcp_bit_psh")
+		case "bitAck":
+			add("tcp_bit_ack")
+		case "bitUrg":
+			add("tcp_bit_urg")
+		case "bitEce":
+			add("tcp_bit_ece")
+		case "bitCwr":
+			add("tcp_bit_cwr")
+		case "bitNs":
+			add("tcp_bit_ns")
+		case "window":
+			add("tcp_window")
+		case "checksum":
+			add("tcp_checksum")
+		case "urgent":
+			add("tcp_urgent")
+		case "options":
+			add("tcp_options")
+		case "fpOs":
+			add("fp_os")
+		case "fpOsQuality":
+			add("fp_os_quality")
+		case "fpSig":
+			add("fp_sig")
+		case "fpMtu":
+			add("fp_mtu")
+		case "tcpStreamId":
+			add("tcp_stream_id")
+		case "payload":
+			add("payload")
+		}
+	}
+	return columns
 }
 
 func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -2674,6 +3720,55 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"gte",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"namespace",
+			"capture",
+			"version",
+			"sessionId",
+			"timestamp",
+			"createdAt",
+			"truncated",
+			"captureLength",
+			"layerStack",
+			"ethDstMac",
+			"ethSrcMac",
+			"ethType",
+			"ethLength",
+			"ipv6Version",
+			"ipv6TrafficClass",
+			"ipv6FlowLabel",
+			"ipv6Length",
+			"ipv6NextHeader",
+			"ipv6HopLimit",
+			"ipv6Src",
+			"ipv6Dst",
+			"ipv6LastHeader",
+			"srcPort",
+			"dstPort",
+			"seq",
+			"ack",
+			"dataOffset",
+			"bitFin",
+			"bitSyn",
+			"bitRst",
+			"bitPsh",
+			"bitAck",
+			"bitUrg",
+			"bitEce",
+			"bitCwr",
+			"bitNs",
+			"window",
+			"checksum",
+			"urgent",
+			"options",
+			"fpOs",
+			"fpOsQuality",
+			"fpSig",
+			"fpMtu",
+			"tcpStreamId",
+			"payload",
 		},
 	}
 }
@@ -2880,6 +3975,7 @@ type NamespaceListGetSearchIn struct {
 	Greedy   bool                      `mapstructure:"greedy" default:"false"`
 	OrderBy  []NamespaceListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *NamespaceListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                  `mapstructure:"fields"`
 }
 
 func (s *NamespaceListGetSearchIn) GetGreedy() bool {
@@ -2931,6 +4027,40 @@ func (s *NamespaceListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 		items["name"] = s.FilterBy.Name
 	}
 	return items
+}
+
+func (s *NamespaceListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *NamespaceListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "description":
+			add("description")
+		}
+	}
+	return columns
 }
 
 func (s *NamespaceListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -3038,6 +4168,13 @@ func (s *NamespaceListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"inctn",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"description",
 		},
 	}
 }
@@ -3320,6 +4457,7 @@ type NetworkStackListGetSearchIn struct {
 	Greedy   bool                         `mapstructure:"greedy" default:"false"`
 	OrderBy  []NetworkStackListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy NetworkStackListGetFilterBy  `mapstructure:"filterBy"`
+	Fields   []string                     `mapstructure:"fields"`
 }
 
 func (s *NetworkStackListGetSearchIn) GetGreedy() bool {
@@ -3370,6 +4508,60 @@ func (s *NetworkStackListGetSearchIn) GetFilterBy() map[string]utils.FilterByIte
 		items["cli2Srv"] = s.FilterBy.Cli2Srv
 	}
 	return items
+}
+
+func (s *NetworkStackListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *NetworkStackListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "namespace":
+			add("namespace")
+		case "capture":
+			add("capture")
+		case "version":
+			add("version")
+		case "sessionId":
+			add("session_id")
+		case "traceId":
+			add("trace_id")
+		case "timestamp":
+			add("timestamp")
+		case "createdAt":
+			add("created_at")
+		case "cli2Srv":
+			add("cli_2_srv")
+		case "topProto":
+			add("top_proto")
+		case "proto":
+			add("proto")
+		case "seq":
+			add("seq")
+		case "level":
+			add("level")
+		case "headers":
+			add("headers")
+		case "payloadStartOffset":
+			add("payload_start_offset")
+		case "payloadEndOffset":
+			add("payload_end_offset")
+		}
+	}
+	return columns
 }
 
 func (s *NetworkStackListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -3439,6 +4631,23 @@ func (s *NetworkStackListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"eq",
 				},
 			},
+		},
+		Fields: []string{
+			"namespace",
+			"capture",
+			"version",
+			"sessionId",
+			"traceId",
+			"timestamp",
+			"createdAt",
+			"cli2Srv",
+			"topProto",
+			"proto",
+			"seq",
+			"level",
+			"headers",
+			"payloadStartOffset",
+			"payloadEndOffset",
 		},
 	}
 }
@@ -3689,6 +4898,7 @@ type NotificationChannelListGetSearchIn struct {
 	Greedy   bool                                `mapstructure:"greedy" default:"false"`
 	OrderBy  []NotificationChannelListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *NotificationChannelListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                            `mapstructure:"fields"`
 }
 
 func (s *NotificationChannelListGetSearchIn) GetGreedy() bool {
@@ -3746,6 +4956,46 @@ func (s *NotificationChannelListGetSearchIn) GetFilterBy() map[string]utils.Filt
 		items["enabled"] = s.FilterBy.Enabled
 	}
 	return items
+}
+
+func (s *NotificationChannelListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *NotificationChannelListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "type":
+			add("type")
+		case "enabled":
+			add("enabled")
+		case "config":
+			add("config")
+		case "description":
+			add("description")
+		}
+	}
+	return columns
 }
 
 func (s *NotificationChannelListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -3872,6 +5122,16 @@ func (s *NotificationChannelListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"eq",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"type",
+			"enabled",
+			"config",
+			"description",
 		},
 	}
 }
@@ -4100,6 +5360,7 @@ type NotificationGroupListGetSearchIn struct {
 	Greedy   bool                              `mapstructure:"greedy" default:"false"`
 	OrderBy  []NotificationGroupListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *NotificationGroupListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                          `mapstructure:"fields"`
 }
 
 func (s *NotificationGroupListGetSearchIn) GetGreedy() bool {
@@ -4154,6 +5415,44 @@ func (s *NotificationGroupListGetSearchIn) GetFilterBy() map[string]utils.Filter
 		items["isDefault"] = s.FilterBy.IsDefault
 	}
 	return items
+}
+
+func (s *NotificationGroupListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *NotificationGroupListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "isDefault":
+			add("is_default")
+		case "description":
+			add("description")
+		case "targetCount":
+			add("id")
+		}
+	}
+	return columns
 }
 
 func (s *NotificationGroupListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -4268,6 +5567,15 @@ func (s *NotificationGroupListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"eq",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"isDefault",
+			"description",
+			"targetCount",
 		},
 	}
 }
@@ -4518,6 +5826,7 @@ type NotificationRecordListGetSearchIn struct {
 	Greedy   bool                               `mapstructure:"greedy" default:"false"`
 	OrderBy  []NotificationRecordListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *NotificationRecordListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                           `mapstructure:"fields"`
 }
 
 func (s *NotificationRecordListGetSearchIn) GetGreedy() bool {
@@ -4575,6 +5884,52 @@ func (s *NotificationRecordListGetSearchIn) GetFilterBy() map[string]utils.Filte
 		items["channelType"] = s.FilterBy.ChannelType
 	}
 	return items
+}
+
+func (s *NotificationRecordListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *NotificationRecordListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "eventType":
+			add("event_type")
+		case "eventId":
+			add("event_id")
+		case "targetId":
+			add("target_id")
+		case "targetName":
+			add("target_id")
+		case "channelType":
+			add("channel_type")
+		case "status":
+			add("status")
+		case "messageId":
+			add("message_id")
+		case "notifiedAt":
+			add("notified_at")
+		}
+	}
+	return columns
 }
 
 func (s *NotificationRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -4696,6 +6051,19 @@ func (s *NotificationRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
 					{Value: "webhook", Title: "webhook"},
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"eventType",
+			"eventId",
+			"targetId",
+			"targetName",
+			"channelType",
+			"status",
+			"messageId",
+			"notifiedAt",
 		},
 	}
 }
@@ -4990,6 +6358,7 @@ type NotificationTargetListGetSearchIn struct {
 	Greedy   bool                               `mapstructure:"greedy" default:"false"`
 	OrderBy  []NotificationTargetListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *NotificationTargetListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                           `mapstructure:"fields"`
 }
 
 func (s *NotificationTargetListGetSearchIn) GetGreedy() bool {
@@ -5053,6 +6422,56 @@ func (s *NotificationTargetListGetSearchIn) GetFilterBy() map[string]utils.Filte
 		items["language"] = s.FilterBy.Language
 	}
 	return items
+}
+
+func (s *NotificationTargetListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *NotificationTargetListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "channelId":
+			add("channel_id")
+		case "type":
+			add("type")
+		case "enabled":
+			add("enabled")
+		case "config":
+			add("config")
+		case "language":
+			add("language")
+		case "description":
+			add("description")
+		case "channelName":
+			add("channel_id")
+		case "channelType":
+			add("channel_id")
+		case "channelEnabled":
+			add("channel_id")
+		}
+	}
+	return columns
 }
 
 func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -5198,6 +6617,21 @@ func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions {
 					{Value: "zh-Hans", Title: "zh-Hans"},
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"channelId",
+			"type",
+			"enabled",
+			"config",
+			"language",
+			"description",
+			"channelName",
+			"channelType",
+			"channelEnabled",
 		},
 	}
 }
@@ -5470,6 +6904,7 @@ type NotificationTemplateListGetSearchIn struct {
 	Greedy   bool                                 `mapstructure:"greedy" default:"false"`
 	OrderBy  []NotificationTemplateListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *NotificationTemplateListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                             `mapstructure:"fields"`
 }
 
 func (s *NotificationTemplateListGetSearchIn) GetGreedy() bool {
@@ -5530,6 +6965,48 @@ func (s *NotificationTemplateListGetSearchIn) GetFilterBy() map[string]utils.Fil
 		items["channelType"] = s.FilterBy.ChannelType
 	}
 	return items
+}
+
+func (s *NotificationTemplateListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *NotificationTemplateListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "namespaceName":
+			add("namespace_name")
+		case "event":
+			add("event")
+		case "channelType":
+			add("channel_type")
+		case "language":
+			add("language")
+		case "title":
+			add("title")
+		case "content":
+			add("content")
+		case "source":
+			add("source")
+		case "description":
+			add("description")
+		}
+	}
+	return columns
 }
 
 func (s *NotificationTemplateListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -5670,6 +7147,17 @@ func (s *NotificationTemplateListGetSearchIn) GetOptions() *utils.SearchOptions 
 					{Value: "webhook", Title: "webhook"},
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"namespaceName",
+			"event",
+			"channelType",
+			"language",
+			"title",
+			"content",
+			"source",
+			"description",
 		},
 	}
 }
@@ -5898,6 +7386,7 @@ type RbacPolicyTmplateListGetSearchIn struct {
 	Greedy   bool                              `mapstructure:"greedy" default:"false"`
 	OrderBy  []RbacPolicyTmplateListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *RbacPolicyTmplateListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                          `mapstructure:"fields"`
 }
 
 func (s *RbacPolicyTmplateListGetSearchIn) GetGreedy() bool {
@@ -5952,6 +7441,40 @@ func (s *RbacPolicyTmplateListGetSearchIn) GetFilterBy() map[string]utils.Filter
 		items["action"] = s.FilterBy.Action
 	}
 	return items
+}
+
+func (s *RbacPolicyTmplateListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *RbacPolicyTmplateListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "target":
+			add("target")
+		case "action":
+			add("action")
+		}
+	}
+	return columns
 }
 
 func (s *RbacPolicyTmplateListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -6079,6 +7602,13 @@ func (s *RbacPolicyTmplateListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"inctn",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"target",
+			"action",
 		},
 	}
 }
@@ -6413,6 +7943,7 @@ type TagEventRecordListGetSearchIn struct {
 	Greedy   bool                           `mapstructure:"greedy" default:"false"`
 	OrderBy  []TagEventRecordListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *TagEventRecordListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                       `mapstructure:"fields"`
 }
 
 func (s *TagEventRecordListGetSearchIn) GetGreedy() bool {
@@ -6482,6 +8013,46 @@ func (s *TagEventRecordListGetSearchIn) GetFilterBy() map[string]utils.FilterByI
 		items["matchAll"] = s.FilterBy.MatchAll
 	}
 	return items
+}
+
+func (s *TagEventRecordListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *TagEventRecordListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "ruleId":
+			add("rule_id")
+		case "ruleName":
+			add("rule_name")
+		case "matchAll":
+			add("match_all")
+		case "status":
+			add("status")
+		case "detectedAt":
+			add("detected_at")
+		}
+	}
+	return columns
 }
 
 func (s *TagEventRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -6639,6 +8210,16 @@ func (s *TagEventRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"eq",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"ruleId",
+			"ruleName",
+			"matchAll",
+			"status",
+			"detectedAt",
 		},
 	}
 }
@@ -6889,6 +8470,7 @@ type TagEventRuleListGetSearchIn struct {
 	Greedy   bool                         `mapstructure:"greedy" default:"false"`
 	OrderBy  []TagEventRuleListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *TagEventRuleListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                     `mapstructure:"fields"`
 }
 
 func (s *TagEventRuleListGetSearchIn) GetGreedy() bool {
@@ -6946,6 +8528,46 @@ func (s *TagEventRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByIte
 		items["matchAll"] = s.FilterBy.MatchAll
 	}
 	return items
+}
+
+func (s *TagEventRuleListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *TagEventRuleListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "description":
+			add("description")
+		case "matchAll":
+			add("match_all")
+		case "suppressWindow":
+			add("suppress_window")
+		case "enabled":
+			add("enabled")
+		}
+	}
+	return columns
 }
 
 func (s *TagEventRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -7067,6 +8689,16 @@ func (s *TagEventRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"eq",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"description",
+			"matchAll",
+			"suppressWindow",
+			"enabled",
 		},
 	}
 }
@@ -7317,6 +8949,7 @@ type TagRuleListGetSearchIn struct {
 	Greedy   bool                    `mapstructure:"greedy" default:"false"`
 	OrderBy  []TagRuleListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *TagRuleListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                `mapstructure:"fields"`
 }
 
 func (s *TagRuleListGetSearchIn) GetGreedy() bool {
@@ -7374,6 +9007,44 @@ func (s *TagRuleListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 		items["enabled"] = s.FilterBy.Enabled
 	}
 	return items
+}
+
+func (s *TagRuleListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *TagRuleListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "name":
+			add("name")
+		case "description":
+			add("description")
+		case "model":
+			add("model")
+		case "enabled":
+			add("enabled")
+		}
+	}
+	return columns
 }
 
 func (s *TagRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -7498,6 +9169,15 @@ func (s *TagRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"eq",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"name",
+			"description",
+			"model",
+			"enabled",
 		},
 	}
 }
@@ -7726,6 +9406,7 @@ type TagRuleSampleListGetSearchIn struct {
 	Greedy   bool                          `mapstructure:"greedy" default:"false"`
 	OrderBy  []TagRuleSampleListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *TagRuleSampleListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                      `mapstructure:"fields"`
 }
 
 func (s *TagRuleSampleListGetSearchIn) GetGreedy() bool {
@@ -7780,6 +9461,42 @@ func (s *TagRuleSampleListGetSearchIn) GetFilterBy() map[string]utils.FilterByIt
 		items["model"] = s.FilterBy.Model
 	}
 	return items
+}
+
+func (s *TagRuleSampleListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *TagRuleSampleListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "model":
+			add("model")
+		case "name":
+			add("name")
+		case "description":
+			add("description")
+		}
+	}
+	return columns
 }
 
 func (s *TagRuleSampleListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -7897,6 +9614,14 @@ func (s *TagRuleSampleListGetSearchIn) GetOptions() *utils.SearchOptions {
 					{Value: "zhongkui.com/zhongkui/internal/models/network.HttpTransport", Title: "httpTransport"},
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"model",
+			"name",
+			"description",
 		},
 	}
 }
@@ -8169,6 +9894,7 @@ type UserListGetSearchIn struct {
 	Greedy   bool                 `mapstructure:"greedy" default:"false"`
 	OrderBy  []UserListGetOrderBy `mapstructure:"orderBy"`
 	FilterBy *UserListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string             `mapstructure:"fields"`
 }
 
 func (s *UserListGetSearchIn) GetGreedy() bool {
@@ -8229,6 +9955,50 @@ func (s *UserListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 		items["email"] = s.FilterBy.Email
 	}
 	return items
+}
+
+func (s *UserListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *UserListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		case "deletedAt":
+			add("deleted_at")
+		case "unionID":
+			add("union_id")
+		case "nickleName":
+			add("nickle_name")
+		case "username":
+			add("username")
+		case "email":
+			add("email")
+		case "active":
+			add("active")
+		case "frontendConfigSyncEnabled":
+			add("frontend_config_sync_enabled")
+		}
+	}
+	return columns
 }
 
 func (s *UserListGetSearchIn) GetOptions() *utils.SearchOptions {
@@ -8383,6 +10153,18 @@ func (s *UserListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"inctn",
 				},
 			},
+		},
+		Fields: []string{
+			"id",
+			"createdAt",
+			"updatedAt",
+			"deletedAt",
+			"unionID",
+			"nickleName",
+			"username",
+			"email",
+			"active",
+			"frontendConfigSyncEnabled",
 		},
 	}
 }

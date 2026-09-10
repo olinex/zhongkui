@@ -1008,6 +1008,8 @@ type HttpFingerprint struct {
 //   - API调用追踪和调试
 //   - 安全审计和入侵检测
 type HttpTransport struct {
+	// RowMeta 行唯一标识元数据，提供全局唯一 ID
+	RowMeta
 	// BaseMeta 基础元数据，提供数据隔离和会话标识
 	BaseMeta
 	// TimestampMeta 时间元数据，包含创建时间和业务时间戳

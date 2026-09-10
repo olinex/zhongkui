@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="capturer"
       />
       <confirm-dialog
@@ -329,6 +330,15 @@ const createDialogRef = useTemplateRef("createDialogRef");
 const namespaceSearchHeaders: Record<string, SearchAction> = {
   name: SearchAction.CONTAIN,
 };
+
+// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => [
+  "id",
+  "namespace",
+  "name",
+  "version",
+  ...visible,
+];
 
 const getActions = (): ItemActions => {
   const actions: ItemActions = {

@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -940,7 +941,7 @@ func TestBuildSearchSplitQueries(t *testing.T) {
 		}
 
 		Convey("count 查询仅含过滤条件，无排序/分页/总数列", func() {
-			q, err := BuildSearchCountQuery(gdb.Model(&testSearchTarget{}), searcher)
+			q, err := BuildSearchCondQuery(gdb.Model(&testSearchTarget{}), searcher)
 			So(err, ShouldBeNil)
 			var total int64
 			So(q.Count(&total).Error, ShouldBeNil)
@@ -971,7 +972,7 @@ func TestBuildSearchSplitQueries(t *testing.T) {
 		})
 
 		Convey("BuildSearchQuery 回归：仍注入窗口总数列", func() {
-			q, err := BuildSearchQuery(gdb.Model(&testSearchTarget{}), searcher)
+			q, err := BuildSearchCountQuery(gdb.Model(&testSearchTarget{}), searcher)
 			So(err, ShouldBeNil)
 			var rows []testSearchTarget
 			So(q.Find(&rows).Error, ShouldBeNil)
@@ -979,6 +980,279 @@ func TestBuildSearchSplitQueries(t *testing.T) {
 			So(sql, ShouldContainSubstring, "COUNT(*) OVER() AS total")
 			So(sql, ShouldContainSubstring, "ORDER BY timestamp DESC")
 			So(sql, ShouldContainSubstring, "LIMIT 10")
+		})
+	})
+}
+
+// ========== 字段投影（FieldProjector）相关测试 ==========
+
+// testProjectEmbedded 字段投影测试用的匿名嵌入结构体（值类型嵌入）
+type testProjectEmbedded struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+}
+
+// testProjectEmbedPtr 字段投影测试用的匿名嵌入结构体（指针类型嵌入）
+type testProjectEmbedPtr struct {
+	Title string `json:"title"`
+}
+
+// testProjectInner 字段投影测试用的内层结构体（指针字段指向的类型）
+type testProjectInner struct {
+	Level int `json:"level"`
+}
+
+// testProjectItem 字段投影测试用的输出项结构体
+// 覆盖：匿名值类型嵌入、匿名指针类型嵌入、json:"-"，与外层重复的 id/name 键（验证外层键优先）
+type testProjectItem struct {
+	testProjectEmbedded
+	ID       uint              `json:"id"`
+	Name     string            `json:"name"`
+	Nick     string            `json:"nick"`
+	Password string            `json:"-"`
+	Extra    string            `json:"extra,omitempty"`
+	Inner    *testProjectInner `json:"inner"`
+	*testProjectEmbedPtr
+}
+
+// testProjectNoID 字段投影测试用的无 id 结构体
+type testProjectNoID struct {
+	Name string `json:"name"`
+}
+
+// testProjectMarshaler 指针接收器实现 json.Marshaler 的测试类型
+// 模拟 serializer.Crypto：投影取值时若被解引用为值类型，自定义序列化会丢失，
+// encoding/json 将退化为默认结构体序列化（unexported 字段被跳过，输出 {}）。
+type testProjectMarshaler struct {
+	cipher string
+}
+
+func (m *testProjectMarshaler) MarshalJSON() ([]byte, error) {
+	return json.Marshal("cipher:" + m.cipher)
+}
+
+// testProjectItemMarshaler 含指针接收器 MarshalJSON 字段的投影测试结构体
+type testProjectItemMarshaler struct {
+	// Crypto 指针接收器 MarshalJSON 字段
+	Crypto *testProjectMarshaler `json:"crypto"`
+}
+
+// TestProjectItemFields 测试 ProjectItemFields 函数
+func TestProjectItemFields(t *testing.T) {
+	Convey("Test ProjectItemFields function", t, func() {
+		item := &testProjectItem{
+			testProjectEmbedded: testProjectEmbedded{ID: 100, Name: "embedded-name", Age: 30},
+			ID:                  1,
+			Name:                "outer-name",
+			Nick:                "nickname",
+			Password:            "secret",
+			Extra:               "extra-value",
+			Inner:               &testProjectInner{Level: 3},
+			testProjectEmbedPtr: &testProjectEmbedPtr{Title: "t"},
+		}
+
+		Convey("仅返回请求键，展开匿名嵌入字段，未知键忽略", func() {
+			result := ProjectItemFields(item, []string{"nick", "extra", "age", "title", "unknown", "password"})
+
+			So(result, ShouldHaveLength, 4)
+			So(result["nick"], ShouldEqual, "nickname")
+			So(result["extra"], ShouldEqual, "extra-value")
+			So(result["age"], ShouldEqual, 30)    // 匿名值类型嵌入字段展开
+			So(result["title"], ShouldEqual, "t") // 匿名指针类型嵌入字段展开
+		})
+
+		Convey("外层键优先：重复键仅保留浅层字段", func() {
+			result := ProjectItemFields(item, []string{"name", "id"})
+
+			So(result, ShouldHaveLength, 2)
+			So(result["id"], ShouldEqual, uint(1))        // 外层 ID，非嵌入层 100
+			So(result["name"], ShouldEqual, "outer-name") // 外层 Name，非嵌入层 embedded-name
+		})
+
+		Convey("请求字段去重：重复键只输出一次", func() {
+			result := ProjectItemFields(item, []string{"nick", "nick", "id", "id"})
+
+			So(result, ShouldHaveLength, 2)
+			So(result["id"], ShouldEqual, uint(1))
+			So(result["nick"], ShouldEqual, "nickname")
+		})
+
+		Convey("nil 指针字段返回 nil，且不强制输出 id", func() {
+			nilItem := &testProjectItem{
+				testProjectEmbedded: testProjectEmbedded{ID: 100, Name: "embedded-name"},
+				ID:                  2,
+				Name:                "n",
+			}
+			result := ProjectItemFields(nilItem, []string{"inner", "title"})
+
+			So(result, ShouldHaveLength, 2)
+			So(result["inner"], ShouldBeNil)
+			So(result["title"], ShouldBeNil)
+		})
+
+		Convey("无 id 字段的结构体不输出 id", func() {
+			result := ProjectItemFields(&testProjectNoID{Name: "a"}, []string{"name"})
+
+			So(result, ShouldHaveLength, 1)
+			So(result["name"], ShouldEqual, "a")
+			_, hasID := result["id"]
+			So(hasID, ShouldBeFalse)
+		})
+
+		Convey("支持值类型输入与 nil 输入", func() {
+			result := ProjectItemFields(testProjectNoID{Name: "b"}, []string{"name", "id"})
+			So(result["name"], ShouldEqual, "b")
+			_, hasID := result["id"]
+			So(hasID, ShouldBeFalse)
+
+			So(ProjectItemFields(nil, []string{"name"}), ShouldHaveLength, 0)
+		})
+
+		Convey("指针接收器 MarshalJSON 字段保留指针，序列化触发自定义方法而非 {} ", func() {
+			item := &testProjectItemMarshaler{Crypto: &testProjectMarshaler{cipher: "abc"}}
+			result := ProjectItemFields(item, []string{"crypto"})
+
+			So(result, ShouldHaveLength, 1)
+			b, err := json.Marshal(result)
+			So(err, ShouldBeNil)
+			So(string(b), ShouldEqual, `{"crypto":"cipher:abc"}`)
+		})
+
+		Convey("指针接收器 MarshalJSON 字段为 nil 指针时输出 null", func() {
+			result := ProjectItemFields(&testProjectItemMarshaler{}, []string{"crypto"})
+
+			So(result, ShouldHaveLength, 1)
+			b, err := json.Marshal(result)
+			So(err, ShouldBeNil)
+			So(string(b), ShouldEqual, `{"crypto":null}`)
+		})
+	})
+}
+
+// TestProjectSearchItemsAndNewSearchProjectedOut 测试 ProjectSearchItems 泛型与 NewSearchProjectedOut
+func TestProjectSearchItemsAndNewSearchProjectedOut(t *testing.T) {
+	Convey("Test ProjectSearchItems and NewSearchProjectedOut", t, func() {
+		rows := []testProjectItem{
+			{ID: 1, Name: "a", Nick: "nick-a"},
+			{ID: 2, Name: "b", Nick: "nick-b"},
+		}
+
+		Convey("指定 fields 时仅投影请求字段（去重）", func() {
+			searcher := &testProjectorSearcher{fields: []string{"name", "name"}}
+			items := ProjectSearchItems(rows, searcher, func(r *testProjectItem) any { return r })
+
+			So(items, ShouldHaveLength, 2)
+			So(items[0], ShouldResemble, map[string]any{"name": "a"})
+			So(items[1], ShouldResemble, map[string]any{"name": "b"})
+		})
+
+		Convey("fields 为空时回退全部白名单字段（GetOptions().Fields）", func() {
+			searcher := &testProjectorSearcher{
+				testSearcherIn: testSearcherIn{
+					options: &SearchOptions{Fields: []string{"id", "nick"}},
+				},
+			}
+			items := ProjectSearchItems(rows, searcher, func(r *testProjectItem) any { return r })
+
+			So(items, ShouldHaveLength, 2)
+			So(items[0], ShouldResemble, map[string]any{"id": uint(1), "nick": "nick-a"})
+			So(items[1], ShouldResemble, map[string]any{"id": uint(2), "nick": "nick-b"})
+		})
+
+		Convey("NewSearchProjectedOut 承接总数与投影项", func() {
+			out := NewSearchProjectedOut(42, []map[string]any{{"name": "a"}})
+			So(out, ShouldNotBeNil)
+			So(out.Total, ShouldEqual, 42)
+			So(out.Items, ShouldHaveLength, 1)
+		})
+	})
+}
+
+// testProjectionModel 字段投影测试用的 GORM 模型
+type testProjectionModel struct {
+	ID   uint   `gorm:"column:id"`
+	Name string `gorm:"column:name"`
+	Age  int    `gorm:"column:age"`
+}
+
+// testProjectorSearcher 实现了 SearcherIn + FieldProjector 的测试结构体
+type testProjectorSearcher struct {
+	testSearcherIn
+	fields []string
+}
+
+func (t *testProjectorSearcher) GetFields() []string { return t.fields }
+
+func (t *testProjectorSearcher) ResolveSelectColumns() []string {
+	return []string{"id", "name"}
+}
+
+// TestBuildSearchProjection 验证字段投影时 BuildSearchDataQuery / BuildSearchQuery 的 SQL 构成
+// 使用 DryRun 模式的 sqlite 内存库（纯 Go 实现）仅生成 SQL 不执行，无需外部数据库
+func TestBuildSearchProjection(t *testing.T) {
+	Convey("Test field projection SQL composition", t, func() {
+		gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{
+			DryRun: true,
+			Logger: logger.Discard,
+		})
+		So(err, ShouldBeNil)
+
+		searcher := &testProjectorSearcher{
+			testSearcherIn: testSearcherIn{
+				greedy:   false,
+				page:     1,
+				pageSize: 10,
+				orderBy: []OrderByItem{
+					&testOrderByItem{column: "created_at", order: "DESC"},
+				},
+				filterBy: map[string]FilterByItem{
+					"name": &testFilterByItem{column: "name", action: "eq", value: "test"},
+				},
+			},
+			fields: []string{"name", "age"},
+		}
+
+		Convey("BuildSearchDataQuery 投影时仅 SELECT 投影列", func() {
+			q, err := BuildSearchDataQuery(gdb.Model(&testProjectionModel{}), searcher)
+			So(err, ShouldBeNil)
+			var rows []testProjectionModel
+			So(q.Find(&rows).Error, ShouldBeNil)
+			sql := strings.ReplaceAll(q.Statement.SQL.String(), "`", "")
+			So(sql, ShouldContainSubstring, "SELECT id,name")
+			So(sql, ShouldNotContainSubstring, "age")
+			So(sql, ShouldContainSubstring, "ORDER BY created_at DESC")
+			So(sql, ShouldContainSubstring, "LIMIT 10")
+			So(sql, ShouldNotContainSubstring, "COUNT(*) OVER()")
+		})
+
+		Convey("BuildSearchQuery 投影时列尾追加 total 列", func() {
+			q, err := BuildSearchCountQuery(gdb.Model(&testProjectionModel{}), searcher)
+			So(err, ShouldBeNil)
+			var rows []testProjectionModel
+			So(q.Find(&rows).Error, ShouldBeNil)
+			sql := strings.ReplaceAll(q.Statement.SQL.String(), "`", "")
+			So(sql, ShouldContainSubstring, "SELECT id,name,COUNT(*) OVER() AS total")
+			So(sql, ShouldContainSubstring, "ORDER BY created_at DESC")
+			So(sql, ShouldContainSubstring, "LIMIT 10")
+		})
+
+		Convey("未实现 FieldProjector 时 BuildSearchQuery 保持 SELECT *, COUNT(*) OVER() AS total", func() {
+			plain := &testSearcherIn{
+				greedy:   false,
+				page:     1,
+				pageSize: 10,
+				orderBy: []OrderByItem{
+					&testOrderByItem{column: "created_at", order: "DESC"},
+				},
+				filterBy: map[string]FilterByItem{},
+			}
+			q, err := BuildSearchCountQuery(gdb.Model(&testProjectionModel{}), plain)
+			So(err, ShouldBeNil)
+			var rows []testProjectionModel
+			So(q.Find(&rows).Error, ShouldBeNil)
+			sql := strings.ReplaceAll(q.Statement.SQL.String(), "`", "")
+			So(sql, ShouldContainSubstring, "SELECT *, COUNT(*) OVER() AS total")
 		})
 	})
 }

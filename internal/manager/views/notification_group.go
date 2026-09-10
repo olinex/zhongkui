@@ -126,7 +126,7 @@ func NotificationGroupListGet(c *gin.Context) {
 	}
 	db := middlewares.GetCoreDatabase(c)
 	var items []*NotificationGroupListOut
-	if query, err := utils.BuildSearchQuery(db.Model(&core.NotificationGroup{}).Where("namespace_name = ?", namespace), &in); err != nil {
+	if query, err := utils.BuildSearchCountQuery(db.Model(&core.NotificationGroup{}).Where("namespace_name = ?", namespace), &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := query.Find(&items).Error; err != nil {
@@ -159,7 +159,15 @@ func NotificationGroupListGet(c *gin.Context) {
 			item.TargetCount = countByGroup[item.ID]
 		}
 	}
-	response.SimpleOK.AbortWithGinW(c, utils.NewSearchOut(items))
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	var total uint
+	if len(items) > 0 {
+		total = items[0].GetTotal()
+	}
+	projected := utils.ProjectSearchItems(items, &in, func(o **NotificationGroupListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
 // NotificationGroupDetailGet 处理获取通知目标组详情的请求。

@@ -344,6 +344,11 @@ func (b *ModelBuilder) BuildAsPacketLinkModel() any {
 					LayerStack: b.Stack,
 				},
 			},
+			// 行详情接口依赖非空的全局唯一 ID，构造时即生成，落库路径无需再补；
+			// 作为最底层模型，其 ID 经嵌入传递被 IPv4/IPv6/UDP/TCP 各上层数据包模型继承
+			RowMeta: RowMeta{
+				ID: serializer.NewHexUUIDv4(),
+			},
 			EthernetHeaders: *eth,
 		}
 	default:

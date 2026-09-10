@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="namespace"
       />
       <confirm-dialog
@@ -154,6 +155,9 @@ const searchTableRef = useTemplateRef("searchTableRef");
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 const createDialogRef = useTemplateRef("createDialogRef");
+
+// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", "name", ...visible];
 
 const getActions = (): ItemActions => {
   const actions: ItemActions = {

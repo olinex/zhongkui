@@ -16,6 +16,7 @@
               :actions="getActions"
               :batch-actions="getBatchActions"
               :create="openCreateDialogAction"
+              :project-fields="projectFields"
               model-name="tagRule"
             >
               <!-- 目标模型列显示可读名称（与表单下拉一致），而非原始类型键 -->
@@ -735,6 +736,9 @@ watch(editModel, (val) => {
 });
 
 // ---- list actions ----
+// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", ...visible];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {

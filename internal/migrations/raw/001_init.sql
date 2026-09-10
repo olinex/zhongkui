@@ -1,5 +1,6 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS packet_ipv4 (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -27,7 +28,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv4 (
 	ipv4_src IPv4 COMMENT 'the source IPv4 address',
 	ipv4_dst IPv4 COMMENT 'the destination IPv4 address',
 	ipv4_options String COMMENT 'the options of the IPv4 header' CODEC(ZSTD(3)),
-	ipv4_padding String COMMENT 'the padding bytes of the IPv4 header' CODEC(ZSTD(3))
+	ipv4_padding String COMMENT 'the padding bytes of the IPv4 header' CODEC(ZSTD(3)),
+	INDEX idx_packet_ipv4_id id TYPE bloom_filter(0.01) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	namespace,
@@ -46,6 +48,7 @@ PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv6 (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -69,7 +72,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv6 (
 	ipv6_src IPv6 COMMENT 'the source IPv6 address',
 	ipv6_dst IPv6 COMMENT 'the destination IPv6 address',
 	ipv6_hop_by_hop String COMMENT 'the hop-by-hop options extension header of the IPv6 packet' CODEC(ZSTD(3)),
-	ipv6_last_header UInt8 COMMENT 'the last header type of the IPv6 packet, usually the transport layer protocol' CODEC(ZSTD(3))
+	ipv6_last_header UInt8 COMMENT 'the last header type of the IPv6 packet, usually the transport layer protocol' CODEC(ZSTD(3)),
+	INDEX idx_packet_ipv6_id id TYPE bloom_filter(0.01) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	namespace,
@@ -89,6 +93,7 @@ PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -140,6 +145,7 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_tcps (
 	fp_os_quality Float64 COMMENT 'the match quality of the guessed OS fingerprint' CODEC(ZSTD(3)),
 	fp_sig String COMMENT 'the passive fingerprint signature of the packet sender' CODEC(ZSTD(3)),
 	fp_mtu UInt16 COMMENT 'the MTU derived from the passive fingerprint' CODEC(ZSTD(3)),
+	INDEX idx_ipv4_tcps_id id TYPE bloom_filter(0.01) GRANULARITY 4,
 	INDEX idx_ipv4_tcps_session_id session_id TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv4_tcps_ipv4_src ipv4_src TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv4_tcps_ipv4_dst ipv4_dst TYPE bloom_filter(0.02) GRANULARITY 4,
@@ -160,6 +166,7 @@ PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -207,6 +214,7 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_tcps (
 	fp_os_quality Float64 COMMENT 'the match quality of the guessed OS fingerprint' CODEC(ZSTD(3)),
 	fp_sig String COMMENT 'the passive fingerprint signature of the packet sender' CODEC(ZSTD(3)),
 	fp_mtu UInt16 COMMENT 'the MTU derived from the passive fingerprint' CODEC(ZSTD(3)),
+	INDEX idx_ipv6_tcps_id id TYPE bloom_filter(0.01) GRANULARITY 4,
 	INDEX idx_ipv6_tcps_session_id session_id TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv6_tcps_ipv6_src ipv6_src TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_ipv6_tcps_ipv6_dst ipv6_dst TYPE bloom_filter(0.02) GRANULARITY 4,
@@ -228,6 +236,7 @@ PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv4_udps (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -260,7 +269,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv4_udps (
 	udp_src_port UInt16 COMMENT 'the source port of the UDP header' CODEC(ZSTD(3)),
 	udp_dst_port UInt16 COMMENT 'the destination port of the UDP header' CODEC(ZSTD(3)),
 	udp_length UInt16 COMMENT 'the total length of the UDP datagram including the header and data' CODEC(ZSTD(3)),
-	udp_checksum UInt16 COMMENT 'the checksum of the UDP header' CODEC(ZSTD(3))
+	udp_checksum UInt16 COMMENT 'the checksum of the UDP header' CODEC(ZSTD(3)),
+	INDEX idx_packet_ipv4_udps_id id TYPE bloom_filter(0.01) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -275,6 +285,7 @@ PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS packet_ipv6_udps (
+	id UUID COMMENT 'the globally unique id of the row' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the packet belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -303,7 +314,8 @@ CREATE TABLE IF NOT EXISTS packet_ipv6_udps (
 	udp_src_port UInt16 COMMENT 'the source port of the UDP header' CODEC(ZSTD(3)),
 	udp_dst_port UInt16 COMMENT 'the destination port of the UDP header' CODEC(ZSTD(3)),
 	udp_length UInt16 COMMENT 'the total length of the UDP datagram including the header and data' CODEC(ZSTD(3)),
-	udp_checksum UInt16 COMMENT 'the checksum of the UDP header' CODEC(ZSTD(3))
+	udp_checksum UInt16 COMMENT 'the checksum of the UDP header' CODEC(ZSTD(3)),
+	INDEX idx_packet_ipv6_udps_id id TYPE bloom_filter(0.01) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	timestamp,
@@ -319,6 +331,7 @@ PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 24 HOUR DELETE;
 
 CREATE TABLE IF NOT EXISTS network_stacks (
+	id UUID COMMENT 'the globally unique id of the frame' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the frame belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -333,7 +346,8 @@ CREATE TABLE IF NOT EXISTS network_stacks (
 	payload_start_offset UInt64 COMMENT 'the payload start byte offset of the packet in its direction stream' CODEC(ZSTD(3)),
 	payload_end_offset UInt64 COMMENT 'the payload end byte offset (exclusive) of the packet in its direction stream' CODEC(ZSTD(3)),
 	level UInt8 COMMENT 'the protocol level of the layer (link, network, transport, application)' CODEC(ZSTD(3)),
-	headers String COMMENT 'the JSON serialized header info of the layer' CODEC(ZSTD(3))
+	headers String COMMENT 'the JSON serialized header info of the layer' CODEC(ZSTD(3)),
+	INDEX idx_network_stacks_id id TYPE bloom_filter(0.01) GRANULARITY 4
 ) ENGINE = MergeTree()
 ORDER BY (
 	namespace,
@@ -350,6 +364,7 @@ PARTITION BY toStartOfHour(created_at)
 TTL toDateTime(created_at) + INTERVAL 180 DAY DELETE;
 
 CREATE TABLE IF NOT EXISTS http_transports (
+	id UUID COMMENT 'the globally unique id of the HTTP transport' CODEC(ZSTD(3)),
 	namespace LowCardinality(String) COMMENT 'the namespace the HTTP transport belongs to' CODEC(ZSTD(3)),
 	capture LowCardinality(String) COMMENT 'the name of the capturer' CODEC(ZSTD(3)),
 	version LowCardinality(String) COMMENT 'the version of the capturer' CODEC(ZSTD(3)),
@@ -542,6 +557,7 @@ CREATE TABLE IF NOT EXISTS http_transports (
 	fp_http_language String COMMENT 'the guessed language from the HTTP fingerprint' CODEC(ZSTD(3)),
 	fp_device_guess String COMMENT 'the guessed device category from the HTTP fingerprint' CODEC(ZSTD(3)),
 	tags Array(String) COMMENT 'the deduplicated and sorted risk tags of the transport',
+	INDEX idx_http_transports_id id TYPE bloom_filter(0.01) GRANULARITY 4,
 	INDEX idx_http_transports_client_ip client_ip TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_http_transports_server_ip server_ip TYPE bloom_filter(0.02) GRANULARITY 4,
 	INDEX idx_http_transports_client_port client_port TYPE bloom_filter(0.02) GRANULARITY 4,

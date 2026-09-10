@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="notificationGroup"
       >
         <!-- 默认分组列：默认分组以彩色 chip 高亮展示 -->
@@ -459,6 +460,10 @@ const itemSetDefaultAction = async (proxy: Record<string, any>): Promise<void> =
 };
 
 // ---- 行操作 ----
+// projectFields 字段投影：行操作依赖字段恒定投影（isDefault 决定「设为默认」入口），
+// 避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", "isDefault", ...visible];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {

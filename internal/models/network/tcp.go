@@ -236,7 +236,7 @@ type PacketTCPFingerprint struct {
 // 组合了PacketIPv4和TCPHeaders，表示完整的IPv4 TCP数据包信息
 // 包含以太网层、IPv4层和TCP层的所有头部信息
 type PacketIPv4TCP struct {
-	PacketIPv4                              // 嵌入IPv4数据包基础结构
+	PacketIPv4                              // 嵌入IPv4数据包基础结构（含 RowMeta 行唯一标识）
 	TCPHeaders                              // 嵌入TCP头部信息
 	PacketTCPFingerprint                    // 嵌入TCP被动指纹信息
 	TCPStreamID          string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamId"`
@@ -313,7 +313,8 @@ func (p *PacketIPv4TCP) GetPayload() []byte {
 // 组合了PacketIPv6和TCPHeaders，表示完整的IPv6 TCP数据包信息
 // 包含以太网层、IPv6层和TCP层的所有头部信息
 type PacketIPv6TCP struct {
-	PacketIPv6                              // 嵌入IPv6数据包基础结构
+	// PacketIPv6 嵌入IPv6数据包基础结构（含经 PacketEthernet 继承的 RowMeta 行唯一标识）
+	PacketIPv6
 	TCPHeaders                              // 嵌入TCP头部信息
 	PacketTCPFingerprint                    // 嵌入TCP被动指纹信息
 	TCPStreamID          string             `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamId"`

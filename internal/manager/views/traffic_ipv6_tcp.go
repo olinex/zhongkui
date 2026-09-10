@@ -6,9 +6,11 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"github.com/gopacket/gopacket/layers"
+	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -17,6 +19,8 @@ import (
 // 独立扁平结构体，逐一镜像 network.PacketIPv6TCP 的全部顶层 json 字段
 // （payload 已转存 S3，单条返回字节量可控），BaseTotalOut 承接 COUNT(*) OVER() 的总数
 type Ipv6TcpListGetListItemOut struct {
+	// ID 行全局唯一标识，供行详情接口按 namespace + id 定位
+	ID serializer.HexUUID `json:"id"`
 	utils.BaseTotalOut
 	// ---- BaseMeta ----
 	// Namespace 命名空间
@@ -145,7 +149,7 @@ func Ipv6TcpListGet(c *gin.Context) {
 	// 先以轻量 count 统计总数：ClickHouse 只扫过滤列与 granule 标记，
 	// 避免 COUNT(*) OVER() 窗口函数在 LIMIT 前物化全部命中行的所有列（payload/layer_stack 等宽列）。
 	var total int64
-	if countQuery, err := utils.BuildSearchCountQuery(db, &in); err != nil {
+	if countQuery, err := utils.BuildSearchCondQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := countQuery.Count(&total).Error; err != nil {
@@ -164,24 +168,19 @@ func Ipv6TcpListGet(c *gin.Context) {
 		return
 	}
 
-	items := make([]*Ipv6TcpListGetListItemOut, 0, len(rows))
-	for i := range rows {
-		out := newIpv6TcpListGetListItemOut(&rows[i])
-		out.Total = uint(total)
-		items = append(items, out)
-	}
-
-	// 构建搜索输出结果，包含数据和分页信息
-	out := utils.NewSearchOut(items)
-
-	// 返回成功的 JSON 响应
-	response.SimpleOK.AbortWithGinW(c, out)
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	projected := utils.ProjectSearchItems(rows, &in, func(o *network.PacketIPv6TCP) any {
+		return newIpv6TcpListGetListItemOut(o)
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(uint(total), projected))
 }
 
 // newIpv6TcpListGetListItemOut 将 network.PacketIPv6TCP 映射为独立 Out 结构。
 // 模型层专属类型（LayerStack/TCPOptions）在此转换为视图层等价类型。
 func newIpv6TcpListGetListItemOut(p *network.PacketIPv6TCP) *Ipv6TcpListGetListItemOut {
 	return &Ipv6TcpListGetListItemOut{
+		// RowMeta
+		ID: p.ID,
 		// BaseMeta
 		Namespace: p.Namespace,
 		Capture:   p.Capture,
@@ -239,4 +238,35 @@ func newIpv6TcpListGetListItemOut(p *network.PacketIPv6TCP) *Ipv6TcpListGetListI
 		TcpStreamID: p.TCPStreamID,
 		Payload:     p.Payload,
 	}
+}
+
+// Ipv6TcpDetailGetIn IPv6 TCP 包详情查询入参
+// 按命名空间 + 行唯一 ID 精确查询单条 IPv6 TCP 包记录
+type Ipv6TcpDetailGetIn struct {
+	// Namespace 命名空间
+	Namespace string `json:"namespace" binding:"required"`
+	// ID 行全局唯一标识
+	ID serializer.HexUUID `json:"id" binding:"required"`
+}
+
+// Ipv6TcpDetailGet 处理 IPv6 TCP 包详情查询请求
+// 以 namespace + id 精确定位单条记录；列表投影后行详情/收藏样例/堆栈下钻等
+// 消费方经此接口补齐全量字段
+func Ipv6TcpDetailGet(c *gin.Context) {
+	var in Ipv6TcpDetailGetIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	db := middlewares.GetRawDatabase(c).Model(&network.PacketIPv6TCP{})
+	var row network.PacketIPv6TCP
+	if err := db.Where("namespace = ? AND id = ?", in.Namespace, in.ID).Take(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.ErrDefaultPageNotFound.AbortWithGinH(c)
+			return
+		}
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	response.SimpleOK.AbortWithGinW(c, newIpv6TcpListGetListItemOut(&row))
 }

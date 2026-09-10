@@ -570,6 +570,7 @@ model:
   ipv6Tcp:
     name: IPv6 TCP
     field:
+      id: ID
       # Base audit columns
       namespace: Namespace
       timestamp: Capture Time
@@ -629,6 +630,7 @@ model:
   httpTransport:
     name: HTTP Transport
     field:
+      id: ID
       # Base audit columns
       namespace: Namespace
       timestamp: Capture Time

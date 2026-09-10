@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="group"
       />
       <confirm-dialog
@@ -256,6 +257,9 @@ const groupPolicySearchHeaders: Record<string, SearchAction> = {
   target: SearchAction.CONTAIN,
   action: SearchAction.CONTAIN,
 };
+
+// projectFields 字段投影：行操作依赖字段恒定投影（name 定位），避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", "name", ...visible];
 
 const getActions = (): ItemActions => {
   return {

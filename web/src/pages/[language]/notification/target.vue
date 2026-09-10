@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="notificationTarget"
       >
         <!-- 渠道列显示渠道名称（与创建/编辑表单一致），而非渠道 ID -->
@@ -768,6 +769,18 @@ const testSendAction = async (item: Record<string, any>): Promise<void> => {
 };
 
 // ---- list actions ----
+// projectFields 字段投影：编辑对话框直接回填列表项字段，恒定投影避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => [
+  "id",
+  "name",
+  "channelType",
+  "enabled",
+  "language",
+  "description",
+  "config",
+  ...visible,
+];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {

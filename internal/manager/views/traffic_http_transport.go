@@ -8,9 +8,11 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
+	"gorm.io/gorm"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -20,6 +22,8 @@ import (
 // （body 已转存 S3，单条返回字节量可控），BaseTotalOut 承接 COUNT(*) OVER() 的总数
 type HttpTransportListGetListItemOut struct {
 	utils.BaseTotalOut
+	// ID 行全局唯一标识，供行详情接口按 namespace + id 定位
+	ID serializer.HexUUID `json:"id"`
 	// ---- BaseMeta ----
 	// Namespace 命名空间
 	Namespace string `json:"namespace"`
@@ -484,7 +488,7 @@ func HttpTransportListGet(c *gin.Context) {
 	// 先以轻量 count 统计总数：ClickHouse 只扫过滤列与 granule 标记，
 	// 避免 COUNT(*) OVER() 窗口函数在 LIMIT 前物化全部命中行的所有列（body/headers 等宽列）。
 	var total int64
-	if countQuery, err := utils.BuildSearchCountQuery(db, &in); err != nil {
+	if countQuery, err := utils.BuildSearchCondQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := countQuery.Count(&total).Error; err != nil {
@@ -503,18 +507,11 @@ func HttpTransportListGet(c *gin.Context) {
 		return
 	}
 
-	items := make([]*HttpTransportListGetListItemOut, 0, len(rows))
-	for i := range rows {
-		out := newHttpTransportListGetListItemOut(&rows[i])
-		out.Total = uint(total)
-		items = append(items, out)
-	}
-
-	// 构建搜索输出结果，包含数据和分页信息
-	out := utils.NewSearchOut(items)
-
-	// 返回成功的 JSON 响应
-	response.SimpleOK.AbortWithGinW(c, out)
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	projected := utils.ProjectSearchItems(rows, &in, func(o *network.HttpTransport) any {
+		return newHttpTransportListGetListItemOut(o)
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(uint(total), projected))
 }
 
 // HttpTransportStackListGet 处理 HTTP 传输关联网络堆栈列表查询请求
@@ -542,7 +539,7 @@ func HttpTransportStackListGet(c *gin.Context) {
 	// 先以轻量 count 统计总数：ClickHouse 只扫过滤列与 granule 标记，
 	// 避免 COUNT(*) OVER() 窗口函数在 LIMIT 前物化全部命中行的所有列（payload 等宽列）。
 	var total int64
-	if countQuery, err := utils.BuildSearchCountQuery(db, &in); err != nil {
+	if countQuery, err := utils.BuildSearchCondQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := countQuery.Count(&total).Error; err != nil {
@@ -561,24 +558,19 @@ func HttpTransportStackListGet(c *gin.Context) {
 		return
 	}
 
-	items := make([]*NetworkStackListGetListItemOut, 0, len(rows))
-	for i := range rows {
-		out := newNetworkStackListGetListItemOut(&rows[i])
-		out.Total = uint(total)
-		items = append(items, out)
-	}
-
-	// 构建搜索输出结果，包含数据和分页信息
-	out := utils.NewSearchOut(items)
-
-	// 返回成功的 JSON 响应
-	response.SimpleOK.AbortWithGinW(c, out)
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	projected := utils.ProjectSearchItems(rows, &in, func(o *network.NetworkStack) any {
+		return newNetworkStackListGetListItemOut(o)
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(uint(total), projected))
 }
 
 // newHttpTransportListGetListItemOut 将 network.HttpTransport 映射为独立 Out 结构。
 // 模型字段均为共享/第三方类型，逐字段直接复制，无类型转换。
 func newHttpTransportListGetListItemOut(p *network.HttpTransport) *HttpTransportListGetListItemOut {
 	return &HttpTransportListGetListItemOut{
+		// RowMeta
+		ID: p.ID,
 		// BaseMeta
 		Namespace: p.Namespace,
 		Capture:   p.Capture,
@@ -813,4 +805,35 @@ func newNetworkStackListGetListItemOut(p *network.NetworkStack) *NetworkStackLis
 		PayloadStartOffset: p.PayloadStartOffset,
 		PayloadEndOffset:   p.PayloadEndOffset,
 	}
+}
+
+// HttpTransportDetailGetIn HTTP 传输详情查询入参
+// 按命名空间 + 行唯一 ID 精确查询单条 HTTP 传输记录
+type HttpTransportDetailGetIn struct {
+	// Namespace 命名空间
+	Namespace string `json:"namespace" binding:"required"`
+	// ID 行全局唯一标识
+	ID serializer.HexUUID `json:"id" binding:"required"`
+}
+
+// HttpTransportDetailGet 处理 HTTP 传输详情查询请求
+// 以 namespace + id 精确定位单条记录；列表投影后行详情/收藏样例/堆栈下钻等
+// 消费方经此接口补齐全量字段
+func HttpTransportDetailGet(c *gin.Context) {
+	var in HttpTransportDetailGetIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	db := middlewares.GetRawDatabase(c).Model(&network.HttpTransport{})
+	var row network.HttpTransport
+	if err := db.Where("namespace = ? AND id = ?", in.Namespace, in.ID).Take(&row).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.ErrDefaultPageNotFound.AbortWithGinH(c)
+			return
+		}
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	response.SimpleOK.AbortWithGinW(c, newHttpTransportListGetListItemOut(&row))
 }

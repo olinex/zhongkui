@@ -8,6 +8,7 @@
         :actions="getActions"
         :batch-actions="getBatchActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="notificationChannel"
       >
         <!-- config 为加密字段，列表统一用加密字段组件展示（提供明文查看入口） -->
@@ -649,6 +650,16 @@ const itemUpdateAction = () => {
 };
 
 // ---- 列表操作 ----
+// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => [
+  "id",
+  "name",
+  "type",
+  "enabled",
+  "config",
+  ...visible,
+];
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {

@@ -7,6 +7,7 @@
         :options-request="notificationTemplateListOptions"
         :actions="getActions"
         :create="openCreateDialogAction"
+        :project-fields="projectFields"
         model-name="notificationTemplate"
       >
         <!-- 事件列：展示事件的可读名称（i18n 翻译），而非后端注册表原始键 -->
@@ -529,7 +530,9 @@ const eventOptions = computed<{ title: string; value: string }[]>(() =>
       title: i18n.global.t(`model.notificationTemplate.type.event.${e.event}`),
       value: e.event,
     }))
-    .sort((a, b) => (a.title === b.title ? a.value.localeCompare(b.value) : a.title.localeCompare(b.title))),
+    .sort((a, b) =>
+      a.title === b.title ? a.value.localeCompare(b.value) : a.title.localeCompare(b.title),
+    ),
 );
 
 const eventItemOf = (event: string): NotificationTemplateEventItemOut | undefined =>
@@ -906,6 +909,19 @@ const renderTestAction = async (): Promise<void> => {
 
 // ---- 行操作 ----
 // 模板行操作：编辑 + 恢复默认 + 渲染测试（模板不可单独删除，恢复默认以重置）
+// projectFields 字段投影：编辑/渲染测试对话框由行数据直接填充表单，所需字段恒定投影，
+// 避免用户隐藏对应列后对话框内容缺失
+const projectFields = (visible: string[]): string[] => [
+  "id",
+  "event",
+  "channelType",
+  "language",
+  "title",
+  "content",
+  "description",
+  ...visible,
+];
+
 const getActions = (): ItemActions => {
   return {
     edit: detailGetAction,

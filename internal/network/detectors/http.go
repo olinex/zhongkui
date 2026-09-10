@@ -507,6 +507,10 @@ func NewHttpTransport(
 	// Http 指纹分析：使用 Extract 阶段捕获的原始头字节
 	httpFP := buildHttpFingerprint(streamMeta, request)
 	transport = &n.HttpTransport{
+		// 行详情接口依赖非空的全局唯一 ID，构造时即生成，落库路径无需再补
+		RowMeta: n.RowMeta{
+			ID: serializer.NewHexUUIDv4(),
+		},
 		BaseMeta: *meta,
 		TimestampMeta: n.TimestampMeta{
 			Timestamp: streamMeta.Timestamp,

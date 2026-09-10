@@ -370,14 +370,22 @@ func TagRuleListGet(c *gin.Context) {
 	}
 	var items []*TagRuleListOut
 	db := middlewares.GetCoreDatabase(c).Model(&tag.TagRule{}).Where("namespace_name = ?", namespace)
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := query.Find(&items).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	response.SimpleOK.AbortWithGinW(c, utils.NewSearchOut(items))
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	var total uint
+	if len(items) > 0 {
+		total = items[0].GetTotal()
+	}
+	projected := utils.ProjectSearchItems(items, &in, func(o **TagRuleListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
 // TagRuleDetailGet 处理获取标签规则详情的请求。

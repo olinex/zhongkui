@@ -120,6 +120,12 @@ type BaseMeta struct {
 	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"sessionId"`
 }
 
+// RowMeta 行唯一标识元数据
+// 为流量数据行提供全局唯一 ID，供行详情接口按 namespace + id 定位单行
+type RowMeta struct {
+	ID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"id"` // 全局唯一 ID
+}
+
 // TimestampMeta 表示时间元数据
 // 包含采集时间与入库时间，使用高精度时间格式存储
 type TimestampMeta struct {

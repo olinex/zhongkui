@@ -39,6 +39,8 @@ export interface SearchIn {
   pageSize?: number | undefined;
   orderBy?: OrderByItem[] | undefined;
   filterBy?: Record<string, FilterByItem>;
+  // 字段投影：仅返回指定字段（后端按白名单过滤，未知字段忽略；缺省返回全量白名单字段）
+  fields?: string[] | undefined;
 }
 
 export interface SearchOut<Item> {

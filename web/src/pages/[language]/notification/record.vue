@@ -6,6 +6,7 @@
         :list-request="notificationRecordListGet"
         :options-request="notificationRecordListOptions"
         :actions="getActions"
+        :project-fields="projectFields"
         model-name="notificationRecord"
       >
         <!-- 状态列：按发送状态着色（成功=success / 失败=error / 待处理=默认） -->
@@ -86,6 +87,9 @@ import type { NotificationRecordDetailOut } from "@/apis/@types/notification";
 import type { ItemActions } from "@/components/@types/table";
 
 const appStore = useAppStore();
+
+// projectFields 字段投影：行操作依赖字段恒定投影（id 定位详情），避免用户隐藏对应列后行操作失效
+const projectFields = (visible: string[]): string[] => ["id", ...visible];
 
 // ---- 行操作：仅查看详情（只读页面，无创建/批量操作）----
 const getActions = (): ItemActions => {

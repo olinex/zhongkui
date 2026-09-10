@@ -114,15 +114,22 @@ func NamespaceListGet(c *gin.Context) {
 	}
 	var items []*NamespaceListOut
 	db := middlewares.GetCoreDatabase(c).Model(&core.Namespace{})
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := query.Find(&items).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	out := utils.NewSearchOut(items)
-	response.SimpleOK.AbortWithGinW(c, out)
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	var total uint
+	if len(items) > 0 {
+		total = items[0].GetTotal()
+	}
+	projected := utils.ProjectSearchItems(items, &in, func(o **NamespaceListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
 // NamespaceDetailGet 处理获取命名空间详情请求。

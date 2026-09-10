@@ -66,6 +66,8 @@ func NewLoopbackHeaders() *EthernetHeaders {
 //
 // 结构说明:
 //   - AsPacket: 提供数据包的基础元数据，包括时间戳、捕获信息、层堆栈等
+//   - RowMeta: 提供行级全局唯一 ID，供行详情接口按 namespace + id 定位单行；
+//     作为最底层的数据包模型，其 ID 经嵌入传递被 IPv4/IPv6/UDP/TCP 各上层数据包模型继承
 //   - EthernetHeaders: 提供以太网特定的头部信息
 //
 // 使用场景:
@@ -75,5 +77,6 @@ func NewLoopbackHeaders() *EthernetHeaders {
 //   - 网络故障排查
 type PacketEthernet struct {
 	AsPacket
+	RowMeta
 	EthernetHeaders
 }

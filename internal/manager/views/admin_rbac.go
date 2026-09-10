@@ -70,14 +70,20 @@ func RbacPolicyTemplateListGet(c *gin.Context) {
 	// 获取数据库实例并指定模型
 	db := middlewares.GetCoreDatabase(c).Model(&core.RbacPolicyTemplate{})
 	// 构建搜索查询
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := query.Find(&items).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	// 创建搜索输出响应
-	out := utils.NewSearchOut(items)
-	response.SimpleOK.AbortWithGinW(c, out)
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	var total uint
+	if len(items) > 0 {
+		total = items[0].GetTotal()
+	}
+	projected := utils.ProjectSearchItems(items, &in, func(o **RbacPolicyTemplateListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }

@@ -165,7 +165,7 @@ func NotificationChannelListGet(c *gin.Context) {
 		utils.BaseTotalOut
 	}
 	db := middlewares.GetCoreDatabase(c).Model(&core.NotificationChannel{}).Where("namespace_name = ?", namespace)
-	if query, err := utils.BuildSearchQuery(db, &in); err != nil {
+	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	} else if err := query.Find(&rows).Error; err != nil {
@@ -184,7 +184,11 @@ func NotificationChannelListGet(c *gin.Context) {
 			BaseTotalOut:                 utils.BaseTotalOut{Total: total},
 		})
 	}
-	response.SimpleOK.AbortWithGinW(c, utils.NewSearchOut(items))
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	projected := utils.ProjectSearchItems(items, &in, func(o **NotificationChannelListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
 // NotificationChannelCreate 处理创建通知渠道的请求。
