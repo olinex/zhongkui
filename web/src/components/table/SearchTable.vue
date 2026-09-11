@@ -92,6 +92,7 @@
                 <slot name="cell" :item="item" :header="hdr">
                   <adaptive-cell
                     :header="hdr"
+                    :model-name="props.modelName"
                     :item="item"
                     :actions="actions"
                     :refresh="tableDataRefresh"
@@ -110,7 +111,7 @@
 import type { AxiosPromise } from "axios";
 import { getResponse } from "@/apis/base";
 import i18n from "@/utils/i18n";
-import { filterOptionTitle } from "@/utils/options";
+import { enumFieldOptionsFromMeta, enumMetaOptions } from "@/utils/options";
 import { useColumnVisibility } from "@/utils/column";
 import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
@@ -126,6 +127,7 @@ import type {
   SearchOut,
   TableHeader,
 } from "../@types/table";
+import type { MetaOut } from "@/components/@types/meta";
 import { BackendDataType } from "@/types";
 
 async function getSearchResponse<Item>(
@@ -141,36 +143,29 @@ async function getSearchResponse<Item>(
 
 async function getSearchOptionsResponse(
   request: AxiosPromise,
-  success: (rsp: SuccessResponse<SearchOptionsOut>, headers: BaseHeaders) => Promise<void>,
+  success: (rsp: SuccessResponse<MetaOut>, headers: BaseHeaders) => Promise<void>,
   failed?: (rsp: ErrorResponse, headers: BaseHeaders) => Promise<void>,
   noResponse?: (req: XMLHttpRequest) => Promise<void>,
   noRequest?: (msg: string) => Promise<void>,
   final?: () => Promise<void>,
 ): Promise<Status> {
-  return await getResponse<SearchOptionsOut>(
-    request,
-    success,
-    failed,
-    noResponse,
-    noRequest,
-    final,
-  );
+  return await getResponse<MetaOut>(request, success, failed, noResponse, noRequest, final);
 }
 
-function extractSearchHeaders(out: SearchOptionsOut): Record<string, FilterByOption> {
+function extractSearchHeaders(out: MetaOut): Record<string, FilterByOption> {
   return out.filterBy.reduce(
     (prev, cur) => {
+      // 枚举筛选项已不再由后端 SearchOptionsOut.filterBy 携带，改为从同一自省
+      // 响应中 bodyOutput 的 enumOptions 解析（[[enums]] 单一事实来源）；
+      // 命中则为枚举下拉，未命中（非枚举字段）保持后端字段类型（如字符串文本框）
+      const opts = enumFieldOptionsFromMeta(out.meta, cur.name);
       prev[cur.name] = {
         name: cur.name,
         title: i18n.global.t(`model.${props.modelName}.field.${cur.name}`),
         actions: cur.actions,
-        type: cur.type,
-        // 枚举筛选项 title 为后端返回的枚举值本身，此处按 model.<Name>.option.<title>
-        // 统一解析为可读展示名（未配置翻译时回退为枚举值，如 HTTP 方法）
-        options: cur.options?.map((option) => ({
-          ...option,
-          title: filterOptionTitle(props.modelName, option.title),
-        })),
+        type: opts ? BackendDataType.ENUM : cur.type,
+        // 枚举选项 title 经 enumMetaOptions 按 model.<Name>.option.<key> 统一翻译
+        options: opts ? enumMetaOptions(props.modelName, opts) : cur.options,
       };
       return prev;
     },
@@ -374,9 +369,18 @@ onBeforeMount(async () => {
     optionsSearchHeaders.value = extractSearchHeaders(rsp.data);
     optionsTableHeaders.value = extractTableHeaders(rsp.data);
   });
+  // 表头（含默认可见列）就绪后再发起首次查询：onMounted 早于 OPTIONS 返回，
+  // 可见列尚未填充会使字段投影遗漏 createdAt/updatedAt 等默认可见列，导致列表返回字段不全
+  await nextTick();
+  tableDataRefresh();
 });
 
-onMounted(tableDataRefresh);
+// 无 OPTIONS（页面自定义表头/筛选字段源，如流量页）时表头在挂载即就绪，按挂载即查
+onMounted(() => {
+  if (!props.optionsRequest) {
+    tableDataRefresh();
+  }
+});
 watch(page, tableDataRefresh);
 watch(pageSize, tableDataRefresh);
 watch(orderBy, tableDataRefresh);

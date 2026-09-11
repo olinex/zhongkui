@@ -11,6 +11,7 @@ import (
 	// stdlib
 	"net/http"
 	"slices"
+	"sort"
 
 	// third-party
 	"github.com/creasty/defaults"
@@ -541,4 +542,24 @@ func NotificationTemplateDryRun(c *gin.Context) {
 // details 为具体原因，供前端直接向用户展示。
 func notificationTemplateBadInput(c *gin.Context, err error) {
 	response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
+}
+
+// init 注册通知模板事件字段的运行时枚举 provider：
+// NotificationTemplateCreateIn.event 的可选值来自 notify.TemplateSpecs() 注册表（运行时动态，
+// 无法静态声明进 enumFieldOptions）。Key/Value 均取原始事件键（不烤入命名空间前缀），
+// 前端在渲染时按自身选择的 i18n 命名空间拼键翻译（如 model.notificationTemplate.option.event.<key>）。
+func init() {
+	runtimeEnumProviders["NotificationTemplateCreateIn.event"] = func() []utils.EnumOption {
+		specs := notify.TemplateSpecs()
+		events := make([]string, 0, len(specs))
+		for event := range specs {
+			events = append(events, event)
+		}
+		sort.Strings(events)
+		options := make([]utils.EnumOption, 0, len(events))
+		for _, event := range events {
+			options = append(options, utils.EnumOption{Key: event, Value: event})
+		}
+		return options
+	}
 }

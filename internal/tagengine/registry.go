@@ -7,12 +7,26 @@ import (
 	"sync"
 
 	"zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
+)
+
+var (
+	// registeredTargets 全局模型注册表索引：类型键 → 目标模型元信息。
+	registeredTargets sync.Map
+
+	// expectedIDType 目标模型 ID 字段的共享类型锚点（UUID）。
+	// 所有可打标目标模型必须具有唯一 ID 字段且类型必须为该锚点，
+	// 保证 tag_summings.ids（Array(UUID)）列类型跨模型统一。
+	expectedIDType = reflect.TypeFor[serializer.HexUUID]()
 )
 
 // Target 表示一个已注册的可打标目标模型。
 // 目标模型在全局注册表中登记后，其类型键（pkgpath.TypeName 完整路径）
 // 方可作为 TagRule.Model / TagSumming.Model / TagEventCondition.Model 等
 // 模型字段的合法取值；DisplayName 为展示名称的 i18n 键，供接口层本地化展示。
+// 每个目标模型必须具有唯一 ID 字段且类型为 serializer.HexUUID（共享类型锚点），
+// 与 ClickHouse tag_summings.ids（Array(UUID)）列类型保持一致，保证打标结果
+// 跨模型统一以 UUID 锚定数据行。
 type Target struct {
 	// Type 目标模型的零值实例（指针），用于计算类型键（如 *network.HttpTransport）
 	Type any
@@ -36,6 +50,8 @@ type Option struct {
 // targets 可打标目标模型的静态注册清单，包初始化时构建索引。
 // 新增可打标模型时在此登记，并补充对应的 i18n displayname 文案；
 // 参与标签维度统计的模型须同时登记 Dimensions（与 ClickHouse 物化视图展开列一致）。
+// 所有登记模型必须满足 Register 的 ID 约束：具有唯一 ID 字段且类型为
+// serializer.HexUUID（对应 ClickHouse tag_summings.ids Array(UUID) 列）。
 var targets = []Target{
 	{
 		Type:        &network.HttpTransport{},
@@ -47,15 +63,25 @@ var targets = []Target{
 	},
 }
 
-// registeredTargets 全局模型注册表索引：类型键 → 目标模型元信息。
-var registeredTargets sync.Map
-
 // Register 运行时注册一个可打标目标模型。
 // 注册表默认由静态清单（targets）在包初始化时构建；本函数供测试注入自定义
-// 模型或未来运行时扩展使用。类型键无法计算或重复注册时直接 panic，
+// 模型或未来运行时扩展使用。目标模型必须具有唯一 ID 字段且类型为
+// serializer.HexUUID（与 ClickHouse tag_summings.ids Array(UUID) 列对齐），
+// 否则直接 panic。类型键无法计算或重复注册时同样 panic，
 // 与静态注册语义保持一致，避免静默的未知模型。
 func Register(target Target) {
 	typeKey := MustTypeKey(target.Type)
+	t := reflect.TypeOf(target.Type)
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	idField, ok := t.FieldByName("ID")
+	if !ok {
+		panic(fmt.Sprintf("tagengine: target %s must have a unique ID field", typeKey))
+	}
+	if idField.Type != expectedIDType {
+		panic(fmt.Sprintf("tagengine: target %s ID field type %s must be %s", typeKey, idField.Type, expectedIDType))
+	}
 	if _, loaded := registeredTargets.LoadOrStore(typeKey, &target); loaded {
 		panic(fmt.Sprintf("tagengine: duplicate target type key: %s", typeKey))
 	}

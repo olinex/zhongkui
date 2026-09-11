@@ -117,4 +117,9 @@ type TagEventRecordHit struct {
 	// Window 条件时间窗口
 	// Window the time window of the condition
 	Window serializer.DurationNS `gorm:"column:window;type:BIGINT"`
+	// IDs 命中分组对应的原始记录 ID 列表（如 http_transports.id），
+	// 由检测查询去重聚合而来，JSONB 序列化存储。
+	// IDs the record ID list of the hit group, aggregated and deduplicated by the
+	// detection query, persisted as JSONB via the json serializer.
+	IDs serializer.HexUUIDs `gorm:"type:JSONB;serializer:json" json:"ids"`
 }

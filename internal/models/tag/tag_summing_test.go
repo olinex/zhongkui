@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/smartystreets/goconvey/convey"
+
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestTagSumming_Struct 测试 TagSumming 结构体的基本属性
@@ -22,6 +24,7 @@ func TestTagSumming_Struct(t *testing.T) {
 				Dimension: "fpTcpClientSig",
 				Item:      "s0:120:0:1",
 				Cnt:       42,
+				IDs:       serializer.HexUUIDs{serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")},
 			}
 			summing.Tags = tags
 
@@ -32,6 +35,7 @@ func TestTagSumming_Struct(t *testing.T) {
 			convey.So(summing.Item, convey.ShouldEqual, "s0:120:0:1")
 			convey.So(summing.Tags, convey.ShouldResemble, []string{"login_failed", "suspicious_ip"})
 			convey.So(summing.Cnt, convey.ShouldEqual, 42)
+			convey.So(summing.IDs, convey.ShouldResemble, serializer.HexUUIDs{serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")})
 		})
 
 		convey.Convey("零值结构体应该有合理的默认值", func() {
@@ -115,7 +119,8 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 				"dimension": "fpTcpClientSig",
 				"item": "s0:120:0:1",
 				"tags": ["login_failed", "suspicious_ip"],
-				"cnt": 10
+				"cnt": 10,
+				"ids": ["11111111-2222-3333-4444-555555555555", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"]
 			}`
 
 			var summing TagSumming
@@ -129,6 +134,8 @@ func TestTagSumming_JSONSerialization(t *testing.T) {
 			convey.So(summing.Tags[0], convey.ShouldEqual, "login_failed")
 			convey.So(summing.Tags[1], convey.ShouldEqual, "suspicious_ip")
 			convey.So(summing.Cnt, convey.ShouldEqual, 10)
+			convey.So(summing.IDs, convey.ShouldHaveLength, 2)
+			convey.So(summing.IDs[0], convey.ShouldEqual, serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555"))
 		})
 
 		convey.Convey("空标签数组应该正确序列化", func() {

@@ -118,6 +118,54 @@ func (h HexUUID) GormDBDataType(db *database.DB, field *schema.Field) string {
 	}
 }
 
+// HexUUIDs 是 HexUUID 的切片类型，实现 sql.Scanner 与 driver.Valuer，
+// 用于 ClickHouse Array(UUID)（驱动返回 []uuid.UUID）与 PostgreSQL JSONB
+// （JSON 数组文本）之间的双向转换；JSON 序列化行为与 []HexUUID 完全一致
+// （元素各自按 UUID 字符串编码）。
+// HexUUIDs is a slice of HexUUID implementing sql.Scanner and driver.Valuer,
+// bridging ClickHouse Array(UUID) (returned as []uuid.UUID) and PostgreSQL
+// JSONB (JSON array text); its JSON encoding is identical to []HexUUID.
+type HexUUIDs []HexUUID
+
+// Scan 实现 sql.Scanner，支持 ClickHouse Array(UUID)（[]uuid.UUID）、
+// JSON 数组文本（[]byte / string，如 PostgreSQL JSONB 经驱动返回）与 nil。
+func (h *HexUUIDs) Scan(value any) error {
+	switch v := value.(type) {
+	case nil:
+		*h = nil
+	case []uuid.UUID:
+		out := make(HexUUIDs, 0, len(v))
+		for _, u := range v {
+			out = append(out, HexUUID(u))
+		}
+		*h = out
+	case []byte:
+		return json.Unmarshal(v, h)
+	case string:
+		return json.Unmarshal([]byte(v), h)
+	default:
+		return errors.Newf("unsupported scan type: %T", value)
+	}
+	return nil
+}
+
+// Value 实现 driver.Valuer，返回 []uuid.UUID 以匹配 ClickHouse Array(UUID)
+// 列的原生驱动类型（Go 侧经 database/sql 透传给驱动的数组绑定）。
+func (h HexUUIDs) Value() (driver.Value, error) {
+	out := make([]uuid.UUID, 0, len(h))
+	for _, id := range h {
+		out = append(out, uuid.UUID(id))
+	}
+	return out, nil
+}
+
+// GormDataType 实现 GormDataTypeInterface，返回 string 占位类型，
+// 使 GORM 不将该字段当作关联关系解析（切片字段默认会被当作 has-many 关联尝试解析）；
+// 实际列类型由字段 gorm tag 的 type 显式指定（如 Array(UUID) / JSONB）。
+func (HexUUIDs) GormDataType() string {
+	return string(schema.String)
+}
+
 func Capitalize(s string) string {
 	if s == "" {
 		return ""

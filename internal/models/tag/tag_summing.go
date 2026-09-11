@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"zhongkui.com/zhongkui/internal/models/network"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // TagSumming 表示标签聚合统计模型，对应 ClickHouse 中的 SummingMergeTree 表
@@ -42,4 +43,12 @@ type TagSumming struct {
 	Item string `gorm:"type:String CODEC(ZSTD(3))" json:"item"`
 	// Cnt 命中次数，SummingMergeTree 引擎会自动对相同排序键的 cnt 值求和
 	Cnt uint `gorm:"type:UInt32" json:"cnt"`
+	// IDs 该聚合分组对应的原始记录 ID 列表（如 http_transports.id）。
+	// 由物化视图 groupArray(id) 收集，SummingMergeTree 合并相同排序键行时拼接数组，
+	// 恒满足 length(ids) == cnt；借此在聚合层保留与原始记录的追溯关系。
+	// IDs the record ID list of the aggregation group (e.g., http_transports.id),
+	// collected by the materialized view via groupArray(id); arrays are concatenated
+	// on SummingMergeTree merges so length(ids) == cnt always holds, keeping the
+	// aggregation traceable back to the raw records.
+	IDs serializer.HexUUIDs `gorm:"type:Array(UUID)" json:"ids"`
 }

@@ -40,6 +40,8 @@ type DetectionHit struct {
 	Dimension   string `gorm:"column:dimension"`
 	Item        string `gorm:"column:item"`
 	Total       uint64 `gorm:"column:total"`
+	// IDs 该命中分组去重聚合后的原始记录 ID 列表（如 http_transports.id）
+	IDs serializer.HexUUIDs `gorm:"column:ids"`
 }
 
 // TagEventRecord 标签事件记录识别结果，作为检测入库的持久化数据源或 dry-run 响应返回。
@@ -62,6 +64,8 @@ type TagEventRecordHit struct {
 	Count         uint64                `json:"count"`
 	Threshold     int                   `json:"threshold"`
 	Window        serializer.DurationNS `json:"window"`
+	// IDs 命中分组去重聚合后的原始记录 ID 列表
+	IDs serializer.HexUUIDs `json:"ids"`
 }
 
 // TranslateExpression 将标签组合布尔表达式翻译为 GORM clause 表达式树。
@@ -132,7 +136,9 @@ func atomToClause(a *tag.Atom) (clause.Expression, error) {
 
 // BuildDetectionQuery 将全部启用条件组装为单条 UNION ALL SQL，一次查询返回所有命中分组。
 // 每个条件一个 SELECT 分支：按 (namespace, model, dimension, item) 分组，SUM(cnt) > threshold 视为命中；
-// 时间窗口为 minute >= now-window AND minute <= now，边界用 database.ToUTCDatetime64 格式化为 UTC 微秒精度字符串。
+// 每个分组额外以 arrayDistinct(arrayFlatten(groupArray(ids))) 去重聚合窗口内各分组的原始记录 ID（ids 列），
+// 供命中明细回溯到原始记录；时间窗口为 minute >= now-window AND minute <= now，
+// 边界用 database.ToUTCDatetime64 格式化为 UTC 微秒精度字符串。
 // 各分支由 GORM 链式 API 构造（Select/Where/Group/Having），表达式谓词以 clause 表达式树传入，
 // 再通过 db.Raw("? UNION ALL ?", ...) 将子查询展开合并为单条 SQL，避免手工拼接整条查询字符串。
 // 条件 model/dimension/item 非空时附加等值过滤；表达式翻译失败的条件跳过。
@@ -148,7 +154,7 @@ func BuildDetectionQuery(db *gorm.DB, conds []DetectionCondition, now time.Time)
 			continue // 表达式非法跳过该分支（调用方已预校验，此处兜底）
 		}
 		sub := db.Table("tag_summings").
-			Select("? AS condition_id, namespace, model, dimension, item, SUM(cnt) AS total", cond.ConditionID).
+			Select("? AS condition_id, namespace, model, dimension, item, SUM(cnt) AS total, arrayDistinct(arrayFlatten(groupArray(ids))) AS ids", cond.ConditionID).
 			Where("namespace = ?", cond.Namespace).
 			Where("minute >= ?", database.ToUTCDatetime64(now.Add(-cond.Window.Std()), 6)).
 			Where("minute <= ?", database.ToUTCDatetime64(now, 6)).
@@ -251,6 +257,7 @@ func toEventHit(c DetectionCondition, hit DetectionHit) TagEventRecordHit {
 		Count:         hit.Total,
 		Threshold:     c.Threshold,
 		Window:        c.Window,
+		IDs:           hit.IDs,
 	}
 }
 

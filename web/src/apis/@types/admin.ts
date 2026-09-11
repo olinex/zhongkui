@@ -199,6 +199,24 @@ export interface TagEventRecordHitOut {
   count: number;
   threshold: number;
   window: string;
+  ids: string[];
+}
+
+// TagEventRecordHitRecordsIn 标签事件命中条件原始数据反查入参
+// model/ids 来自详情命中明细；createdAtFrom/createdAtTo 为原始记录入库时间预筛范围
+// （前端由事件检测时间 detectedAt 与条件窗口 window 推导），
+// 用于后端 ClickHouse created_at 分区裁剪（http_transports 按小时分区）
+export interface TagEventRecordHitRecordsIn {
+  model: string;
+  ids: string[];
+  createdAtFrom: string;
+  createdAtTo: string;
+}
+
+// TagEventRecordHitRecordsOut 标签事件命中条件原始数据反查出参
+// items 为命中条件对应的原始数据明细行（http_transports 全字段，键与流量列表一致）
+export interface TagEventRecordHitRecordsOut {
+  items: Record<string, unknown>[];
 }
 
 // TagEventRecordSendOut 标签事件关联的通知发送记录项

@@ -140,12 +140,14 @@ func TestEventDetectHandler_PersistEvents(t *testing.T) {
 		handler := &EventDetectHandler{coreDB: db, logger: logger}
 
 		detectedAt := time.Date(2026, 8, 11, 9, 5, 0, 0, time.UTC)
+		u1 := serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")
+		u2 := serializer.MustHexUUIDv4FromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
 		events := []*tagengine.TagEventRecord{
 			{
 				Namespace: "default", RuleID: ruleA.ID, RuleName: "rule-a", MatchAll: false,
 				DetectedAt: detectedAt,
 				Hits: []tagengine.TagEventRecordHit{
-					{ConditionID: 1, ConditionName: "cond-1", Model: "m1", Dimension: "d1", Item: "i1", Count: 5, Threshold: 3, Window: serializer.DurationNS(5 * time.Minute)},
+					{ConditionID: 1, ConditionName: "cond-1", Model: "m1", Dimension: "d1", Item: "i1", Count: 5, Threshold: 3, Window: serializer.DurationNS(5 * time.Minute), IDs: serializer.HexUUIDs{u1, u2}},
 				},
 			},
 			{
@@ -188,10 +190,14 @@ func TestEventDetectHandler_PersistEvents(t *testing.T) {
 			So(hits[0].Count, ShouldEqual, uint64(5))
 			So(hits[0].Threshold, ShouldEqual, 3)
 			So(hits[0].Window, ShouldEqual, serializer.DurationNS(5*time.Minute))
+			// IDs 经 JSONB 序列化落库后读回，与 DTO 命中 IDs 一致
+			So(hits[0].IDs, ShouldResemble, serializer.HexUUIDs{u1, u2})
 
 			So(hits[1].TagEventRecordID, ShouldEqual, rowsID(db, 2))
 			So(hits[1].ConditionID, ShouldEqual, uint(2))
 			So(hits[1].Model, ShouldEqual, "m2")
+			// 未携带 IDs 的命中落库读回为空
+			So(hits[1].IDs, ShouldBeEmpty)
 
 			So(hits[2].TagEventRecordID, ShouldEqual, rowsID(db, 2))
 			So(hits[2].ConditionID, ShouldEqual, uint(3))

@@ -98,7 +98,6 @@ import type {
   FilterByOption,
   ItemActions,
   SearchIn,
-  SearchOptionsOut,
   TableHeader,
 } from "@/components/@types/table";
 import { trafficFilterSchema } from "@/schemas/traffic";
@@ -108,7 +107,8 @@ import { vuetifyCfg } from "@/utils/form";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
 import { modelFieldTitle } from "@/utils/modelField";
-import { filterOptionTitle } from "@/utils/options";
+import { enumFieldOptionsFromMeta, enumMetaOptions } from "@/utils/options";
+import type { MetaOut } from "@/components/@types/meta";
 
 // 流量模型类型与路由段一一对应（/traffic/:type），侧边栏各模型入口分别携带 type 参数
 const isTrafficType = (value: unknown): value is TrafficType => {
@@ -621,24 +621,24 @@ const normalizeFilterType = (goType: string): BackendDataType => {
 
 // loadSearchOptions 拉取当前类型可筛选字段元数据，构造高级筛选条件编辑器的字段/动作选项
 const loadSearchOptions = async (): Promise<void> => {
-  await getResponse<SearchOptionsOut>(
+  await getResponse<MetaOut>(
     trafficListOptions(type.value),
     async (rsp) => {
       searchHeaders.value = rsp.data.filterBy
         .filter((item) => !EXCLUDED_FILTER_FIELDS.has(item.name))
         .reduce(
           (prev, cur) => {
+            // 枚举筛选项已不再由后端 SearchOptionsOut.filterBy 携带，改为从同一自省
+            // 响应中 bodyOutput 的 enumOptions 解析（[[enums]] 单一事实来源）；
+            // 命中则为枚举下拉，未命中（非枚举字段）保持后端字段类型（如字符串文本框）
+            const opts = enumFieldOptionsFromMeta(rsp.data.meta, cur.name);
             prev[cur.name] = {
               name: cur.name,
               title: trafficFieldTitle(cur.name),
               actions: cur.actions,
-              type: normalizeFilterType(cur.type),
-              // 枚举筛选项 title 为后端返回的枚举值本身，此处按 model.<Name>.option.<title>
-              // 统一解析为可读展示名（未配置翻译时回退为枚举值，如 HTTP 方法）
-              options: cur.options?.map((option) => ({
-                ...option,
-                title: filterOptionTitle(typeKey.value, option.title),
-              })),
+              type: opts ? BackendDataType.ENUM : normalizeFilterType(cur.type),
+              // 枚举筛选项 title 经 enumMetaOptions 按 model.<Name>.option.<key> 统一翻译
+              options: opts ? enumMetaOptions(typeKey.value, opts) : cur.options,
             };
             return prev;
           },

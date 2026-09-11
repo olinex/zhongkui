@@ -220,5 +220,12 @@ func registerTagEventRoutes(ctx *RegisterContext) {
 		eventGroup.OPTIONS("/close", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.TagEventRuleBatchIn](), views.WithBodyOutput[views.BatchResultOut]()),
 		))
+		// 命中条件原始数据反查 - 前端透传命中明细的模型、原始记录 ID 列表与入库时间范围，
+		// 后端按 created_at 分区预筛查询对应明细行（不再回查命中明细归属）
+		eventGroup.POST("/hit/records", views.TagEventRecordHitRecordsGet)
+		// 命中条件原始数据反查元信息
+		eventGroup.OPTIONS("/hit/records", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyInput[views.TagEventRecordHitRecordsIn](), views.WithBodyOutput[views.TagEventRecordHitRecordsOut]()),
+		))
 	}
 }

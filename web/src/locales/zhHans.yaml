@@ -75,9 +75,6 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    type:
-      email: 邮件
-      webhook: Webhook
     option:
       email: 邮件
       webhook: Webhook
@@ -101,9 +98,6 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    type:
-      email: 邮件
-      webhook: Webhook
     option:
       email: 邮件
       webhook: Webhook
@@ -137,11 +131,11 @@ model:
       source: 来源
       description: 描述
       params: 模板参数
-    # 事件枚举值展示名（键为后端事件注册表返回的 event 键）
-    type:
+    # 事件/来源枚举值展示名（event 键为后端事件注册表返回的 event 键；
+    # source 为 default 内置默认 / override 用户覆盖）
+    option:
       event:
         tag_event_record: 标签事件告警
-      # 模板来源枚举值展示名（default 内置默认 / override 用户覆盖）
       source:
         default: 默认
         override: 覆盖
@@ -168,17 +162,6 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    type:
-      status:
-        pending: 待发送
-        success: 成功
-        failed: 失败
-      channelType:
-        email: 邮件
-        webhook: Webhook
-      # 事件类型枚举值展示名（键为后端事件注册表返回的 event 键）
-      eventType:
-        tag_event_record: 标签事件告警
     option:
       pending: 待发送
       success: 成功
@@ -228,7 +211,7 @@ model:
       updatedAt: 更新时日
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    value:
+    option:
       allow: 允许
       deny: 禁止
   group:
@@ -417,9 +400,14 @@ model:
       enabled: 启用
       config: 连接配置
       description: 描述
-    type:
+    option:
       redis: Redis
       mysql: MySQL
+      string: 字符串
+      hash: 哈希
+      list: 列表
+      set: 集合
+      zset: 有序集合
     configField:
       addr: 主机地址
       port: 端口
@@ -429,14 +417,6 @@ model:
       user: 用户名
       dbName: 库名
       table: 表
-    option:
-      redis: Redis
-      mysql: MySQL
-      string: 字符串
-      hash: 哈希
-      list: 列表
-      set: 集合
-      zset: 有序集合
   tagEventRecord:
     name: 标签事件记录
     field:
@@ -455,12 +435,7 @@ model:
       detectedAt: 检测时日
       detectedAtTime: 检测时间
       detectedAtDate: 检测日期
-    type:
-      status:
-        pending: 待处理
-        alerting: 告警中
-        suppressed: 已抑制
-        closed: 已关闭
+    type: 状态
     option:
       pending: 待处理
       alerting: 告警中
@@ -480,6 +455,7 @@ model:
       count: 命中次数
       threshold: 条件阈值
       window: 时间窗口
+      ids: 原始记录 ID
   tagEventRecordSend:
     name: 发送记录
     field:
@@ -1069,6 +1045,7 @@ action:
   validatePassed: 校验通过
   validateFailed: 校验未通过
   viewPlaintext: 查看明文
+  viewRecords: 查看原始数据
   viewDetail: 查看详情
   viewStack: 查看网络堆栈
   viewInput: 查看 input
@@ -1121,6 +1098,7 @@ title:
   tagEvent:
     record: 标签事件记录
     recordDetail: 标签事件记录详情
+    hitRecords: 命中条件原始数据
   tagRuleTagEvent: 标签事件 - 标签规则
   tagEventRuleTagEvent: 标签事件 - 标签事件规则
   queueEtl: 数据处理 - 管道

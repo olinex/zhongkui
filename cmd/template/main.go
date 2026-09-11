@@ -80,11 +80,6 @@ var (
 	TimeActions     = NumberActions
 )
 
-type searchGenerateConfigOption struct {
-	Title string `toml:"title" validate:"required"`
-	Value string `toml:"value" validate:"required"`
-}
-
 type searchGenerateConfigFilterBy struct {
 	FieldName string   `toml:"fieldName" validate:"required"`
 	FieldType string   `toml:"fieldType" validate:"required,oneof=string int uint int8 uint8 int16 uint16 int32 uint32 int64 uint64 float32 float64 bool time.Time serializer.TimeOnly serializer.DateOnly serializer.HexUUID serializer.IPv4Addr serializer.IPv6Addr serializer.IPAddr"`
@@ -95,10 +90,6 @@ type searchGenerateConfigFilterBy struct {
 	// TextValue 是否以文本形式传值：为 true 时生成的 GetValue 返回值的 String() 文本。
 	// 用于 ClickHouse 原生 IPv4/IPv6 类型列的字符串隐式比较（列存二进制，比较时自动提升/转换）
 	TextValue bool `toml:"textValue"`
-	// Enum 是否为枚举字段：为 true 时生成的 Type 为 "enum"，并携带 Options 下拉可选值。
-	// fieldType 仍保持 "string"（枚举值以字符串存储），仅过滤 UI 形态变化。
-	Enum    bool                         `toml:"enum"`
-	Options []searchGenerateConfigOption `toml:"options"`
 }
 
 type searchGenerateConfigOrderBy struct {
@@ -124,6 +115,63 @@ type searchGenerateConfig struct {
 	PackageName string
 	TimeModule  bool                          `toml:"timeModule"`
 	Searchs     map[string]searchGenerateItem `toml:"searchs"`
+	// EnumSets 命名的可选枚举值集合（search.toml 顶层 [[enumSets]] 数组）。
+	// 同一集合可被多个 [[enums]] 字段声明通过 set 引用，避免跨 typeName/field 重复声明 options。
+	// dive 使校验递归进入数组元素（go-playground/validator 对 slice/map 需显式 dive）。
+	EnumSets []enumGenerateConfigSet `toml:"enumSets" validate:"dive"`
+	// EnumFields 可选枚举值声明（search.toml 顶层 [[enums]] 数组）。
+	// 按结构体类型名组织，其字段通过 set 引用 EnumSets 中的命名集合。
+	// 与 Searchs 同属视图层声明式配置：经 enum.tmpl 渲染为 enum_options.go，
+	// 由 meta.go 反射字段元信息时附带 enumOptions 下发给前端。
+	EnumFields []enumGenerateConfigType `toml:"enums" validate:"dive"`
+}
+
+// enumGenerateConfigOption 声明单个可选枚举值项：Key 为字段内唯一标识（前端借此翻译 i18n），
+// Value 为提交/存储值（多数与 Key 相同，个别富枚举允许不同）。
+type enumGenerateConfigOption struct {
+	Key   string `toml:"key" validate:"required"`
+	Value string `toml:"value" validate:"required"`
+}
+
+// enumGenerateConfigSet 声明一组命名的可选枚举值集合。
+// Name 为集合唯一标识，供 [[enums]] 字段声明的 Set 引用。
+type enumGenerateConfigSet struct {
+	Name    string                     `toml:"name" validate:"required"`
+	Options []enumGenerateConfigOption `toml:"options" validate:"required,min=1,dive"`
+}
+
+// enumGenerateConfigField 声明结构体中某个枚举字段与命名集合的绑定关系。
+// Set 引用 EnumSets 中已声明的集合名，可选项由该集合统一定义（一次声明、多处引用）。
+type enumGenerateConfigField struct {
+	Field string `toml:"field" validate:"required"`
+	Set   string `toml:"set" validate:"required"`
+}
+
+// enumGenerateConfigType 声明某个视图层结构体类型的全部枚举字段。
+// TypeName 必须与视图层结构体 reflect.Type.Name() 精确一致（含匿名嵌入字段
+// 递归展开时也按外层结构体类型名匹配）。
+type enumGenerateConfigType struct {
+	TypeName string                    `toml:"typeName" validate:"required"`
+	Fields   []enumGenerateConfigField `toml:"fields" validate:"required,min=1,dive"`
+}
+
+// enumGenerateTemplateData 是 enum.tmpl 的渲染数据：命名集合已解析为各字段的
+// Options（引用解除后的实际可选值列表），模板只负责输出而无需感知引用关系。
+type enumGenerateTemplateData struct {
+	PackageName string
+	Types       []enumGenerateTemplateType
+}
+
+// enumGenerateTemplateType 模板渲染用的结构体类型声明。
+type enumGenerateTemplateType struct {
+	TypeName string
+	Fields   []enumGenerateTemplateField
+}
+
+// enumGenerateTemplateField 模板渲染用的字段声明，Options 为解析后的可选值。
+type enumGenerateTemplateField struct {
+	Field   string
+	Options []enumGenerateConfigOption
 }
 
 func actionValidate(fieldType string, actions []string) error {
@@ -189,6 +237,17 @@ var searchGenerateCmd = &cobra.Command{
 		if outputPath == "" {
 			panic("output path is required")
 		}
+		enumTmplPath, err := flags.GetString("enumTemplatePath")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid enum template path: %v", err))
+		}
+		enumOutputPath, err := flags.GetString("enumOutputPath")
+		if err != nil {
+			panic(fmt.Sprintf("Invalid enum output path: %v", err))
+		}
+		// 枚举模板与输出路径须同时提供：仅当两者齐全时才生成 enum_options.go
+		genEnum := enumTmplPath != "" && enumOutputPath != ""
+
 		tempBytes, err := os.ReadFile(tmplPath)
 		if err != nil {
 			panic(fmt.Sprintf("Invalid template file: %v", err))
@@ -196,6 +255,17 @@ var searchGenerateCmd = &cobra.Command{
 		tmpl, err := template.New("search-generate").Funcs(funcMaps).Parse(string(tempBytes))
 		if err != nil {
 			panic(fmt.Sprintf("Invalid template file: %v", err))
+		}
+		var enumTmpl *template.Template
+		if genEnum {
+			enumBytes, err := os.ReadFile(enumTmplPath)
+			if err != nil {
+				panic(fmt.Sprintf("Invalid enum template file: %v", err))
+			}
+			enumTmpl, err = template.New("enum-generate").Parse(string(enumBytes))
+			if err != nil {
+				panic(fmt.Sprintf("Invalid enum template file: %v", err))
+			}
 		}
 		cfgBytes, err := os.ReadFile(cfgPath)
 		if err != nil {
@@ -205,25 +275,46 @@ var searchGenerateCmd = &cobra.Command{
 			PackageName: packageName,
 			TimeModule:  true,
 		}
-		err = toml.Unmarshal(cfgBytes, &cfg.Searchs)
-		if err != nil {
+		// Searchs 与 EnumFields/EnumSets 分两次解析：go-toml 无法在同一文档中混排
+		// 顶层命名表（[XxxListGet]）与 [[enums]]/[[enumSets]] 数组表，故：
+		//   - EnumFields/EnumSets 经 wrapper 结构体直接解析（其余顶层表被宽松忽略）
+		//   - Searchs 先按通用 map 解码、剔除 enums/enumSets 键后回写再解析
+		var enumsDoc struct {
+			EnumSets []enumGenerateConfigSet  `toml:"enumSets"`
+			Enums    []enumGenerateConfigType `toml:"enums"`
+		}
+		if err = toml.Unmarshal(cfgBytes, &enumsDoc); err != nil {
 			panic(fmt.Sprintf("Invalid toml config: %v", err))
 		}
-		err = validate.Struct(&cfg)
-		if err != nil {
+		cfg.EnumSets = enumsDoc.EnumSets
+		cfg.EnumFields = enumsDoc.Enums
+		var doc map[string]any
+		if err = toml.Unmarshal(cfgBytes, &doc); err != nil {
+			panic(fmt.Sprintf("Invalid toml config: %v", err))
+		}
+		delete(doc, "enums")
+		delete(doc, "enumSets")
+		if searchBytes, err := toml.Marshal(doc); err != nil {
+			panic(fmt.Sprintf("Invalid toml config: %v", err))
+		} else if err = toml.Unmarshal(searchBytes, &cfg.Searchs); err != nil {
+			panic(fmt.Sprintf("Invalid toml config: %v", err))
+		}
+		if err = validate.Struct(&cfg); err != nil {
 			panic(fmt.Sprintf("Invalid configs: %v", err))
 		}
+		// 命名集合名校验去重；构建集合引用映射（filterByFields 与 [[enums]] 共用）
+		optionsBySet := make(map[string][]enumGenerateConfigOption, len(cfg.EnumSets))
+		for _, set := range cfg.EnumSets {
+			if _, dup := optionsBySet[set.Name]; dup {
+				panic(fmt.Sprintf("Duplicate enum set %q", set.Name))
+			}
+			optionsBySet[set.Name] = set.Options
+		}
 		for fieldName, item := range cfg.Searchs {
-			for _, field := range item.FilterByFields {
+			for i := range item.FilterByFields {
+				field := &item.FilterByFields[i]
 				if err = actionValidate(field.FieldType, field.Actions); err != nil {
 					panic(fmt.Sprintf("Invalid action for field %s: %v", fieldName, err))
-				}
-				// 枚举字段必须携带下拉可选值，非枚举字段不得携带
-				if field.Enum && len(field.Options) == 0 {
-					panic(fmt.Sprintf("Enum field %s must define options", fieldName))
-				}
-				if !field.Enum && len(field.Options) > 0 {
-					panic(fmt.Sprintf("Options defined for non-enum field %s", fieldName))
 				}
 			}
 			// selectFields 必填校验：字段投影为接口层必需能力，每个搜索类型必须配置非空白名单
@@ -239,14 +330,56 @@ var searchGenerateCmd = &cobra.Command{
 				seenSelect[field.FieldName] = struct{}{}
 			}
 		}
+		// 同一结构体类型内字段名去重，避免生成的枚举注册表产生歧义；
+		// 解析各字段引用的命名集合，引用不存在时 panic。
+		templateTypes := make([]enumGenerateTemplateType, 0, len(cfg.EnumFields))
+		for _, t := range cfg.EnumFields {
+			seen := make(map[string]struct{}, len(t.Fields))
+			templateFields := make([]enumGenerateTemplateField, 0, len(t.Fields))
+			for _, f := range t.Fields {
+				if _, dup := seen[f.Field]; dup {
+					panic(fmt.Sprintf("Duplicate enum field %q in type %s", f.Field, t.TypeName))
+				}
+				seen[f.Field] = struct{}{}
+				options, ok := optionsBySet[f.Set]
+				if !ok {
+					panic(fmt.Sprintf("Enum set %q referenced by %s.%s is not declared", f.Set, t.TypeName, f.Field))
+				}
+				templateFields = append(templateFields, enumGenerateTemplateField{
+					Field:   f.Field,
+					Options: options,
+				})
+			}
+			templateTypes = append(templateTypes, enumGenerateTemplateType{
+				TypeName: t.TypeName,
+				Fields:   templateFields,
+			})
+		}
 		outputFile, err := os.OpenFile(outputPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
 		if err != nil {
 			panic(fmt.Sprintf("Invalid output file: %v", err))
 		}
-		defer outputFile.Close()
 		err = tmpl.Execute(outputFile, cfg)
 		if err != nil {
+			outputFile.Close()
 			panic(fmt.Sprintf("Failed to execute template: %v", err))
+		}
+		outputFile.Close()
+		// 可选：渲染枚举注册表 enum_options.go（由 search.toml 的 [[enums]] 声明驱动）
+		if !genEnum {
+			return
+		}
+		enumOutputFile, err := os.OpenFile(enumOutputPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
+		if err != nil {
+			panic(fmt.Sprintf("Invalid enum output file: %v", err))
+		}
+		defer enumOutputFile.Close()
+		err = enumTmpl.Execute(enumOutputFile, enumGenerateTemplateData{
+			PackageName: packageName,
+			Types:       templateTypes,
+		})
+		if err != nil {
+			panic(fmt.Sprintf("Failed to execute enum template: %v", err))
 		}
 	},
 }
@@ -294,6 +427,9 @@ func init() {
 	flags.String("templatePath", "", "Path to the template file")
 	flags.String("configPath", "", "Path to the toml configs file")
 	flags.String("outputPath", "", "Path to the directory where the models will be generated")
+	// 枚举注册表生成（可选）：同时提供时才渲染 enum_options.go，数据源为同一 configPath 的 [[enums]] 声明
+	flags.String("enumTemplatePath", "", "Path to the enum template file")
+	flags.String("enumOutputPath", "", "Path where enum options will be generated")
 
 	genFallbackFlags := genFallbackPcapCmd.Flags()
 	genFallbackFlags.String("output", "", "Output path for the pcap file")

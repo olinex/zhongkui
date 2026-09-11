@@ -70,7 +70,6 @@ export interface InputFieldMetaOut {
 
 export interface TagRuleModelDimensionOut {
   value: string;
-  description: string;
 }
 
 export interface TagRuleModelMetadataOut {

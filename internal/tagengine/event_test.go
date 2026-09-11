@@ -3,6 +3,7 @@ package tagengine
 import (
 	"context"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -91,6 +92,7 @@ func TestBuildDetectionQuery(t *testing.T) {
 			query, args, err := BuildDetectionQuery(db, conds, now)
 			So(err, ShouldBeNil)
 			So(normalizePlaceholders(query), ShouldContainSubstring, "SELECT ? AS condition_id")
+			So(normalizePlaceholders(query), ShouldContainSubstring, "SUM(cnt) AS total, arrayDistinct(arrayFlatten(groupArray(ids))) AS ids")
 			So(query, ShouldNotContainSubstring, "UNION ALL")
 			So(normalizePlaceholders(query), ShouldContainSubstring, "GROUP BY namespace, model, dimension, item HAVING SUM(cnt) > ?")
 			So(args, ShouldResemble, []any{
@@ -250,8 +252,8 @@ func TestDetect(t *testing.T) {
 	Convey("Test Detect", t, func() {
 		db := testdb.Raw(t)
 		// tag_summings 表已由 raw 库迁移（001_init.sql）建好（ClickHouse SummingMergeTree，
-		// tags 为 Array(String)），此处按模型 TagSumming 写入测试数据。
-		insert := func(minute time.Time, namespace, model, dimension, item string, tags []string, cnt uint) {
+		// tags 为 Array(String)，ids 为 Array(UUID)），此处按模型 TagSumming 写入测试数据。
+		insert := func(minute time.Time, namespace, model, dimension, item string, tags []string, cnt uint, ids serializer.HexUUIDs) {
 			sum := &tag.TagSumming{
 				Namespace: namespace,
 				Minute:    minute,
@@ -259,21 +261,26 @@ func TestDetect(t *testing.T) {
 				Dimension: dimension,
 				Item:      item,
 				Cnt:       cnt,
+				IDs:       ids,
 			}
 			sum.Tags = tags
 			So(db.Create(sum).Error, ShouldBeNil)
 		}
 		var now = time.Now().UTC().Add(-6 * time.Minute).Truncate(time.Minute)
 		window := serializer.DurationNS(5 * time.Minute)
-		// 命中组：窗口内两行合计 4 > 阈值 3
-		insert(now.Add(-4*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2)
-		insert(now.Add(-2*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2)
+		// 确定性 UUID：两组内 u2 重复出现，用于验证命中 IDs 的去重聚合
+		u1 := serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")
+		u2 := serializer.MustHexUUIDv4FromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
+		u3 := serializer.MustHexUUIDv4FromString("bbbbbbbb-cccc-dddd-eeee-ffffffffffff")
+		// 命中组：窗口内两行合计 4 > 阈值 3，ids 为 {u1,u2} 与 {u2,u3}，去重后应得 {u1,u2,u3}
+		insert(now.Add(-4*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2, serializer.HexUUIDs{u1, u2})
+		insert(now.Add(-2*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2, serializer.HexUUIDs{u2, u3})
 		// 未命中组：缺少标签 B
-		insert(now.Add(-3*time.Minute), "default", "m2", "d2", "i2", []string{"A"}, 5)
+		insert(now.Add(-3*time.Minute), "default", "m2", "d2", "i2", []string{"A"}, 5, nil)
 		// 窗口外数据：应被时间边界排除
-		insert(now.Add(-10*time.Minute), "default", "m3", "d3", "i3", []string{"A", "B"}, 5)
+		insert(now.Add(-10*time.Minute), "default", "m3", "d3", "i3", []string{"A", "B"}, 5, nil)
 		// 不同命名空间：应被命名空间过滤排除
-		insert(now.Add(-3*time.Minute), "other", "m4", "d4", "i4", []string{"A", "B"}, 5)
+		insert(now.Add(-3*time.Minute), "other", "m4", "d4", "i4", []string{"A", "B"}, 5, nil)
 
 		Convey("窗口内标签组合达到阈值触发事件", func() {
 			conds := []DetectionCondition{{
@@ -298,6 +305,37 @@ func TestDetect(t *testing.T) {
 			So(events[0].Hits[0].ConditionID, ShouldEqual, uint(1))
 			So(events[0].Hits[0].Model, ShouldEqual, "m1")
 			So(events[0].Hits[0].Count, ShouldEqual, uint64(4))
+			// IDs 去重聚合：{u1,u2} + {u2,u3} -> {u1,u2,u3}，ClickHouse 不保证数组顺序，按集合断言
+			So(events[0].Hits[0].IDs, ShouldHaveLength, 3)
+			So(sortedHexUUIDStrings(events[0].Hits[0].IDs), ShouldResemble, []string{
+				u1.String(), u2.String(), u3.String(),
+			})
+		})
+
+		Convey("命中分组无 ids 时命中 IDs 为空", func() {
+			insert(now.Add(-1*time.Minute), "default", "m5", "d5", "i5", []string{"A"}, 2, nil)
+			conds := []DetectionCondition{{
+				RuleID:        10,
+				RuleName:      "rule-a",
+				MatchAll:      false,
+				ConditionID:   2,
+				ConditionName: "cond2",
+				Namespace:     "default",
+				// 限定仅命中 m5 分组：该分组种入的 ids 为 nil，验证命中 IDs 为空；
+				// 不加过滤时 m1（cnt 4）与 m2（cnt 5）同样满足 has(tags,'A') 且 SUM(cnt)>1
+				Model:      "m5",
+				Dimension:  "d5",
+				Item:       "i5",
+				Window:     window,
+				Threshold:  1,
+				Expression: "A",
+			}}
+			events, err := Detect(context.Background(), db, conds, now)
+			So(err, ShouldBeNil)
+			So(events, ShouldHaveLength, 1)
+			So(events[0].Hits, ShouldHaveLength, 1)
+			So(events[0].Hits[0].Count, ShouldEqual, uint64(2))
+			So(events[0].Hits[0].IDs, ShouldHaveLength, 0)
 		})
 
 		Convey("空条件返回空结果", func() {
@@ -318,4 +356,15 @@ func TestDetect(t *testing.T) {
 			So(events, ShouldBeEmpty)
 		})
 	})
+}
+
+// sortedHexUUIDStrings 将 IDs 转为排序后的字符串切片，供集合相等断言使用
+// （ClickHouse 不保证 groupArray 的数组顺序）。
+func sortedHexUUIDStrings(ids []serializer.HexUUID) []string {
+	out := make([]string, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, id.String())
+	}
+	sort.Strings(out)
+	return out
 }

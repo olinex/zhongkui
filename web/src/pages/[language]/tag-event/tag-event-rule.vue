@@ -668,6 +668,7 @@ import { parseBooleanExpr } from "@/utils/booleanExpr";
 import { durationToMinutes, minutesToDurationString } from "@/utils/duration";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
+import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
 import { extractTagLiterals, HTTP_TRANSPORT_MODEL_KEY } from "@/utils/rego";
 import { useForm } from "vee-validate";
 
@@ -772,10 +773,12 @@ const loadModelMetadata = async (model: string): Promise<void> => {
   );
 };
 
-/** dimension 下拉选项：后端登记的目标模型合法标签维度（描述缺失时回退取值本身）。 */
+/** dimension 下拉选项：后端登记的目标模型合法标签维度。展示名按维度取值经 i18n 翻译
+ *（model.<modelKey>.field.<dimension>，与标签事件记录详情的维度列一致）；
+ * 不再依赖后端返回的易读描述，未命中翻译时由 modelFieldTitle 兜底为可读字段名。 */
 const dimensionOptions = (model: string): Array<{ title: string; value: string }> =>
   (modelMetaCache[model]?.dimensions ?? []).map((d) => ({
-    title: d.description || d.value,
+    title: modelFieldTitle(modelTypeKeyToI18nKey(model), d.value),
     value: d.value,
   }));
 

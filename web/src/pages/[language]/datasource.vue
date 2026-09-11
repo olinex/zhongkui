@@ -127,6 +127,7 @@
                     v-if="f.name === 'struct'"
                     v-model="createConfigValues[f.name]"
                     :items="structFieldItems"
+                    :item-title="structOptionTitle"
                     :error-messages="createConfigErrors[f.name] || ''"
                   >
                     <template #label>
@@ -233,6 +234,7 @@
                   v-if="f.name === 'struct'"
                   v-model="editConfigValues[f.name]"
                   :items="structFieldItems"
+                  :item-title="structOptionTitle"
                   :error-messages="editConfigErrors[f.name] || ''"
                   :disabled="!editable"
                 >
@@ -334,6 +336,9 @@ import { isEmptyCiphertext } from "@/utils/encrypted";
 import { vuetifyCfg } from "@/utils/form";
 import { BackendDataType } from "@/types";
 import i18n from "@/utils/i18n";
+import { DynamicEnums, dynamicEnumOptions } from "@/constants/dynamicEnums";
+import { datasourceStructOptions } from "@/constants/enums";
+import { enumValueTitle } from "@/utils/options";
 
 // ---- 表单校验 schema（配置字段由动态 schema 单独校验）----
 const createForm = useForm({ validationSchema: createDatasourceSchema() });
@@ -368,24 +373,14 @@ const typeMap = computed<Record<string, DatasourceTypeItem>>(() => {
   return map;
 });
 const datasourceTypeOptions = computed(() =>
-  typeItems.value.map((t) => ({ title: datasourceTypeTitle(t.type), value: t.type })),
+  dynamicEnumOptions(DynamicEnums.datasourceType, typeItems.value, "type"),
 );
 
-// datasourceTypeTitle 翻译数据源类型枚举展示名：优先 model.datasource.type.<值>，
-// 未配置翻译（如后端动态注册的新类型）时回退为枚举值本身，避免渲染裸键
-const datasourceTypeTitle = (type: string): string => {
-  const key = `model.datasource.type.${type}`;
-  return i18n.global.te(key) ? i18n.global.t(key) : type;
-};
-
-// redis 数据结构下拉选项（title 已翻译，value 为枚举值）
-const structFieldItems = [
-  { title: i18n.global.t("model.datasource.option.string"), value: "string" },
-  { title: i18n.global.t("model.datasource.option.hash"), value: "hash" },
-  { title: i18n.global.t("model.datasource.option.list"), value: "list" },
-  { title: i18n.global.t("model.datasource.option.set"), value: "set" },
-  { title: i18n.global.t("model.datasource.option.zset"), value: "zset" },
-];
+// redis 数据结构下拉选项（字面量来自 constants/enums，title 与 value 一致为枚举值，
+// 渲染期经 enumValueTitle("datasource", ...) 翻译，语言切换即时刷新）
+const structFieldItems = datasourceStructOptions;
+const structOptionTitle = (option: { title: string; value: string }): string =>
+  enumValueTitle("datasource", option.value);
 
 onMounted(() => {
   void getResponse<{ types: DatasourceTypeItem[] }>(datasourceTypesGet(), async (rsp) => {
@@ -664,7 +659,13 @@ const loadDatasourceConfigPlaintext = async (cipher: string): Promise<string> =>
 // ---- 列表操作 ----
 // projectFields 字段投影：行操作依赖字段恒定投影（name 定位、enabled 开关、config 密文单元格），
 // 避免用户隐藏对应列后行操作失效
-const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", "config", ...visible];
+const projectFields = (visible: string[]): string[] => [
+  "id",
+  "name",
+  "enabled",
+  "config",
+  ...visible,
+];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {

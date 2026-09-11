@@ -59,17 +59,28 @@
                     <th>{{ $t("model.tagEventRecordHit.field.count") }}</th>
                     <th>{{ $t("model.tagEventRecordHit.field.threshold") }}</th>
                     <th>{{ $t("model.tagEventRecordHit.field.window") }}</th>
+                    <th class="text-no-wrap">{{ $t("model.__base.field.__actions") }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="hit in detail.hits" :key="hit.id">
                     <td>{{ hit.conditionName }}</td>
-                    <td>{{ hit.model }}</td>
+                    <td>{{ modelTypeKeyLabel(hit.model) }}</td>
                     <td>{{ dimensionTitle(hit.dimension, hit.model) }}</td>
                     <td>{{ hit.item }}</td>
                     <td>{{ hit.count }}</td>
                     <td>{{ hit.threshold }}</td>
                     <td>{{ localDurationFormat(hit.window) }}</td>
+                    <td>
+                      <v-btn
+                        :disabled="hit.ids.length === 0"
+                        :title="$t('action.viewRecords')"
+                        icon="mdi-eye"
+                        size="small"
+                        variant="tonal"
+                        @click="openHitRecords(hit)"
+                      />
+                    </td>
                   </tr>
                 </tbody>
               </v-table>
@@ -106,15 +117,17 @@
                     <td>{{ send.channelName }}</td>
                     <td>
                       <v-chip size="small" variant="tonal">
-                        {{ send.channelType }}
+                        {{ enumValueTitle("notificationChannel", send.channelType) }}
                       </v-chip>
                     </td>
                     <td>
                       <v-chip size="small" :color="sendStatusColor(send.status)">
-                        {{ $t(`model.notificationRecord.type.status.${send.status}`) }}
+                        {{ enumValueTitle("notificationRecord", send.status) }}
                       </v-chip>
                     </td>
-                    <td>{{ send.messageId }}</td>
+                    <td>
+                      {{ send.messageId || $t("model.__base.value.null") }}
+                    </td>
                     <td>{{ formatDatetime(send.notifiedAt) }}</td>
                   </tr>
                 </tbody>
@@ -125,6 +138,14 @@
       </div>
     </v-card>
   </v-dialog>
+
+  <!-- 命中条件原始数据反查：展示该条件命中的 http_transports 明细；
+       detectedAt 随详情传入，供反查弹窗推导入库时间预筛范围 -->
+  <tag-event-hit-records-dialog
+    v-model="hitRecordsOpen"
+    :hit="selectedHit"
+    :detected-at="detail?.detectedAt ?? ''"
+  />
 </template>
 
 <script setup lang="ts" name="tag-event-record-detail-dialog">
@@ -133,11 +154,12 @@ import { DateTime } from "luxon";
 import { getResponse } from "@/apis/base";
 import { tagEventRecordDetailGet } from "@/apis/tagEvent";
 
-import type { TagEventRecordDetailOut } from "@/apis/@types/admin";
+import type { TagEventRecordDetailOut, TagEventRecordHitOut } from "@/apis/@types/admin";
 
 import { useAppStore } from "@/stores/app";
 import i18n, { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
-import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
+import { enumValueTitle } from "@/utils/options";
+import { modelFieldTitle, modelTypeKeyLabel, modelTypeKeyToI18nKey } from "@/utils/modelField";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -233,7 +255,7 @@ const baseFields = computed<DetailField[]>(() => {
     {
       key: "status",
       label: label("status"),
-      display: i18n.global.t(`model.tagEventRecord.type.status.${item.status}`),
+      display: enumValueTitle("tagEventRecord", item.status),
     },
     { key: "dedupKey", label: label("dedupKey"), display: item.dedupKey || "" },
     { key: "detectedAt", label: label("detectedAt"), display: formatDatetime(item.detectedAt) },
@@ -252,5 +274,15 @@ const sendStatusColor = (status: string | undefined): string | undefined => {
     default:
       return undefined;
   }
+};
+
+// 命中条件原始数据反查弹窗：选中命中明细后打开，弹窗内按条件 ID 拉取并浏览原始记录
+const hitRecordsOpen = ref(false);
+const selectedHit = ref<TagEventRecordHitOut | null>(null);
+
+// openHitRecords 打开原始数据反查弹窗：传入命中明细，按钮在 ids 非空时可用
+const openHitRecords = (hit: TagEventRecordHitOut): void => {
+  selectedHit.value = hit;
+  hitRecordsOpen.value = true;
 };
 </script>

@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strconv"
 	"testing"
 	"time"
@@ -73,6 +74,7 @@ func registerTagEventRuleTestRoutes(r *gin.Engine, rawDB *database.DB) {
 		admin.POST("/tag-event-rule/:id/version/list", TagEventRuleVersionList)
 		admin.POST("/tag-event-rule/:id/version/:version/rollback", TagEventRuleVersionRollback)
 		admin.POST("/record/close", TagEventRecordBatchClose)
+		admin.POST("/record/hit/records", rawDatabaseMiddleware, TagEventRecordHitRecordsGet)
 	}
 }
 
@@ -751,7 +753,11 @@ func TestTagEventRuleDryRun(t *testing.T) {
 
 		// 在 raw 库种入 tag_summings 检测数据：m1/d1/i1 在检测窗口（now-10min 内）累计命中 5 次，
 		// 达到阈值 3 触发事件。testdb.Raw 每次调用都会 TRUNCATE，故需在每个叶子外层体重新种入。
-		seedSumming := func(minute time.Time, model, dimension, item string, cnt uint) {
+		// 两行的 ids 含重叠的 v2，用于验证 dry-run 响应的命中 IDs 去重聚合。
+		v1 := serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")
+		v2 := serializer.MustHexUUIDv4FromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
+		v3 := serializer.MustHexUUIDv4FromString("bbbbbbbb-cccc-dddd-eeee-ffffffffffff")
+		seedSumming := func(minute time.Time, model, dimension, item string, cnt uint, ids []serializer.HexUUID) {
 			sum := &tag.TagSumming{
 				Namespace: middlewares.DefaultNamespace,
 				Minute:    minute,
@@ -759,12 +765,13 @@ func TestTagEventRuleDryRun(t *testing.T) {
 				Dimension: dimension,
 				Item:      item,
 				Cnt:       cnt,
+				IDs:       ids,
 			}
 			sum.Tags = []string{tagEventRuleValidExpr}
 			So(rawDB.Create(sum).Error, ShouldBeNil)
 		}
-		seedSumming(tagEventRuleDryRunNow.Add(-5*time.Minute), "m1", "d1", "i1", 3)
-		seedSumming(tagEventRuleDryRunNow.Add(-2*time.Minute), "m1", "d1", "i1", 2)
+		seedSumming(tagEventRuleDryRunNow.Add(-5*time.Minute), "m1", "d1", "i1", 3, serializer.HexUUIDs{v1, v2})
+		seedSumming(tagEventRuleDryRunNow.Add(-2*time.Minute), "m1", "d1", "i1", 2, serializer.HexUUIDs{v2, v3})
 
 		// dryRun 构造一次 dry-run 请求，overrides 可覆盖默认字段
 		dryRun := func(conds []map[string]any, overrides map[string]any) *httptest.ResponseRecorder {
@@ -801,6 +808,14 @@ func TestTagEventRuleDryRun(t *testing.T) {
 			So(hit.Model, ShouldEqual, "m1")
 			So(hit.Count, ShouldEqual, uint64(5))
 			So(hit.Count > uint64(hit.Threshold), ShouldBeTrue)
+			// 命中 IDs 去重聚合：{v1,v2} + {v2,v3} -> {v1,v2,v3}，ClickHouse 不保证数组顺序，按集合断言
+			So(hit.IDs, ShouldHaveLength, 3)
+			hitIDs := make([]string, 0, len(hit.IDs))
+			for _, id := range hit.IDs {
+				hitIDs = append(hitIDs, id.String())
+			}
+			sort.Strings(hitIDs)
+			So(hitIDs, ShouldResemble, []string{v1.String(), v2.String(), v3.String()})
 		})
 
 		Convey("matchAll=false 时任一条件命中即触发", func() {

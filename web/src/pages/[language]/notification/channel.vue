@@ -22,7 +22,7 @@
         </template>
         <!-- 渠道类型列显示可读名称（与创建/编辑表单及筛选下拉一致），而非原始类型键 -->
         <template #cell-type="{ value }">
-          {{ $t(`model.notificationChannel.type.${String(value ?? "")}`) }}
+          {{ enumValueTitle("notificationChannel", String(value ?? "")) }}
         </template>
       </search-table>
 
@@ -317,6 +317,7 @@ import { useNotificationChannelStore } from "@/stores/notificationChannel";
 import { vuetifyCfg } from "@/utils/form";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
+import { enumValueTitle } from "@/utils/options";
 
 // ---- 表单校验 schema（配置字段由动态 schema 单独校验）----
 const createChannelSchema = yup.object({

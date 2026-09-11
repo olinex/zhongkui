@@ -12,13 +12,19 @@
         <!-- 状态列：按发送状态着色（成功=success / 失败=error / 待处理=默认） -->
         <template #cell-status="{ item }">
           <v-chip size="small" :color="statusColor(item.status)">
-            {{ $t(`model.notificationRecord.type.status.${item.status}`) }}
+            {{ enumValueTitle("notificationRecord", item.status) }}
           </v-chip>
         </template>
         <!-- 渠道类型列：展示可读的渠道类型名 -->
         <template #cell-channelType="{ item }">
           <v-chip size="small" variant="tonal">
-            {{ $t(`model.notificationRecord.type.channelType.${item.channelType}`) }}
+            {{ enumValueTitle("notificationRecord", item.channelType) }}
+          </v-chip>
+        </template>
+        <!-- 事件类型列：展示经过 i18n 翻译的枚举 label（键为事件注册表返回的 event 键） -->
+        <template #cell-eventType="{ item }">
+          <v-chip size="small" variant="tonal">
+            {{ enumValueTitle("notificationRecord", item.eventType) }}
           </v-chip>
         </template>
       </search-table>
@@ -82,6 +88,7 @@ import {
 } from "@/apis/notification";
 import { useAppStore } from "@/stores/app";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
+import { enumValueTitle } from "@/utils/options";
 
 import type { NotificationRecordDetailOut } from "@/apis/@types/notification";
 import type { ItemActions } from "@/components/@types/table";
@@ -143,7 +150,7 @@ interface DetailField {
 
 // eventTypeLabel 事件类型展示名（键为后端事件注册表返回的 event 键，如 tag_event_record）
 const eventTypeLabel = (eventType: string): string =>
-  i18n.global.t(`model.notificationRecord.type.eventType.${eventType}`);
+  enumValueTitle("notificationRecord", eventType);
 
 const detailFields = computed<DetailField[]>(() => {
   const item = detailItem.value;
@@ -159,12 +166,12 @@ const detailFields = computed<DetailField[]>(() => {
     {
       key: "channelType",
       label: label("channelType"),
-      display: i18n.global.t(`model.notificationRecord.type.channelType.${item.channelType}`),
+      display: enumValueTitle("notificationRecord", item.channelType),
     },
     {
       key: "status",
       label: label("status"),
-      display: i18n.global.t(`model.notificationRecord.type.status.${item.status}`),
+      display: enumValueTitle("notificationRecord", item.status),
     },
     { key: "messageId", label: label("messageId"), display: item.messageId },
     { key: "notifiedAt", label: label("notifiedAt"), display: formatDatetime(item.notifiedAt) },

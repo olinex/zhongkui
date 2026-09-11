@@ -75,9 +75,6 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
-    type:
-      email: Email
-      webhook: Webhook
     option:
       email: Email
       webhook: Webhook
@@ -101,9 +98,6 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
-    type:
-      email: Email
-      webhook: Webhook
     option:
       email: Email
       webhook: Webhook
@@ -137,11 +131,11 @@ model:
       source: Source
       description: Description
       params: Template Params
-    # Event enum display names (keyed by the event key returned from the backend registry)
-    type:
+    # Event/source enum display names (event keyed by backend event registry;
+    # source: default built-in / override user-customized)
+    option:
       event:
         tag_event_record: Tag Event Alert
-      # Template source enum display names (default built-in / override user-customized)
       source:
         default: Default
         override: Override
@@ -168,17 +162,6 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
-    type:
-      status:
-        pending: Pending
-        success: Success
-        failed: Failed
-      channelType:
-        email: Email
-        webhook: Webhook
-      # Event type enum display names (keyed by the event key returned from the backend registry)
-      eventType:
-        tag_event_record: Tag Event Alert
     option:
       pending: Pending
       success: Success
@@ -228,7 +211,7 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated Date
-    value:
+    option:
       allow: allow
       deny: deny
   group:
@@ -417,9 +400,14 @@ model:
       enabled: Enabled
       config: Connection Config
       description: Description
-    type:
+    option:
       redis: Redis
       mysql: MySQL
+      string: String
+      hash: Hash
+      list: List
+      set: Set
+      zset: Sorted Set
     configField:
       addr: Host Address
       port: Port
@@ -429,14 +417,6 @@ model:
       user: Username
       dbName: Database
       table: Table
-    option:
-      redis: Redis
-      mysql: MySQL
-      string: String
-      hash: Hash
-      list: List
-      set: Set
-      zset: ZSet
   tagEventRecord:
     name: Tag Event Record
     field:
@@ -455,12 +435,7 @@ model:
       detectedAt: Detected At
       detectedAtTime: Detected Time
       detectedAtDate: Detected Date
-    type:
-      status:
-        pending: Pending
-        alerting: Alerting
-        suppressed: Suppressed
-        closed: Closed
+    type: Status
     option:
       pending: Pending
       alerting: Alerting
@@ -480,6 +455,7 @@ model:
       count: Hit Count
       threshold: Condition Threshold
       window: Time Window
+      ids: Record IDs
   tagEventRecordSend:
     name: Send Record
     field:
@@ -1075,6 +1051,7 @@ action:
   validatePassed: Validation Passed
   validateFailed: Validation Failed
   viewPlaintext: View Plaintext
+  viewRecords: View Raw Records
   viewDetail: View Details
   viewStack: View Network Stack
   viewInput: View input
@@ -1122,6 +1099,7 @@ title:
   tagEvent:
     record: Tag Event Record
     recordDetail: Tag Event Record Detail
+    hitRecords: Hit Raw Records
   tagEventRuleTagEvent: Tag Event - Tag Event Rule
   queueEtl: ETL - Queue
   serverEtl: ETL - Server

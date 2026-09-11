@@ -1,6 +1,7 @@
 import { HttpStatusCode } from "axios";
 import type { AxiosPromise } from "axios";
 import { getJwtHeader, request } from "./base";
+import { DynamicEnums, dynamicEnumOptionKey } from "@/constants/dynamicEnums";
 
 import type {
   NotificationChannelCreateIn,
@@ -290,7 +291,7 @@ export function notificationTemplateListOptions(): AxiosPromise {
     const eventFilterOptions = events
       .map((e) => ({
         value: e.event,
-        title: `model.notificationTemplate.type.event.${e.event}`,
+        title: dynamicEnumOptionKey(DynamicEnums.notificationEvent, e.event),
       }))
       .sort((a, b) =>
         a.title === b.title ? a.value.localeCompare(b.value) : a.title.localeCompare(b.title),
@@ -313,7 +314,7 @@ export function notificationTemplateListOptions(): AxiosPromise {
           { value: "*", title: "option.channel.*" },
           ...channelTypes.map((t) => ({
             value: t.type,
-            title: `model.notificationChannel.type.${t.type}`,
+            title: dynamicEnumOptionKey(DynamicEnums.channelType, t.type),
           })),
         ],
       },
@@ -333,8 +334,14 @@ export function notificationTemplateListOptions(): AxiosPromise {
         type: BackendDataType.ENUM,
         actions: [SearchAction.EQUAL],
         options: [
-          { value: "default", title: "model.notificationTemplate.type.source.default" },
-          { value: "override", title: "model.notificationTemplate.type.source.override" },
+          {
+            value: "default",
+            title: dynamicEnumOptionKey(DynamicEnums.notificationSource, "default"),
+          },
+          {
+            value: "override",
+            title: dynamicEnumOptionKey(DynamicEnums.notificationSource, "override"),
+          },
         ],
       },
     ];

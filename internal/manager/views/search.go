@@ -972,13 +972,9 @@ func (s *DatasourceListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "type",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "redis", Title: "redis"},
-					{Value: "mysql", Title: "mysql"},
 				},
 			},
 			{
@@ -2331,20 +2327,9 @@ func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "method",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "GET", Title: "GET"},
-					{Value: "POST", Title: "POST"},
-					{Value: "PUT", Title: "PUT"},
-					{Value: "DELETE", Title: "DELETE"},
-					{Value: "PATCH", Title: "PATCH"},
-					{Value: "HEAD", Title: "HEAD"},
-					{Value: "OPTIONS", Title: "OPTIONS"},
-					{Value: "TRACE", Title: "TRACE"},
-					{Value: "CONNECT", Title: "CONNECT"},
 				},
 			},
 			{
@@ -2370,15 +2355,9 @@ func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "httpVersion",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "HTTP/1.0", Title: "HTTP/1.0"},
-					{Value: "HTTP/1.1", Title: "HTTP/1.1"},
-					{Value: "HTTP/2", Title: "HTTP/2"},
-					{Value: "HTTP/3", Title: "HTTP/3"},
 				},
 			},
 		},
@@ -5105,14 +5084,10 @@ func (s *NotificationChannelListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "type",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
 					"neq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "email", Title: "email"},
-					{Value: "webhook", Title: "webhook"},
 				},
 			},
 			{
@@ -6019,36 +5994,24 @@ func (s *NotificationRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "status",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "pending", Title: "pending"},
-					{Value: "success", Title: "success"},
-					{Value: "failed", Title: "failed"},
 				},
 			},
 			{
 				Name: "eventType",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "tag_event_record", Title: "tag_event_record"},
 				},
 			},
 			{
 				Name: "channelType",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
 					"neq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "email", Title: "email"},
-					{Value: "webhook", Title: "webhook"},
 				},
 			},
 		},
@@ -6589,14 +6552,10 @@ func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "type",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
 					"neq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "email", Title: "email"},
-					{Value: "webhook", Title: "webhook"},
 				},
 			},
 			{
@@ -6608,13 +6567,9 @@ func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "language",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "en", Title: "en"},
-					{Value: "zh-Hans", Title: "zh-Hans"},
 				},
 			},
 		},
@@ -7116,14 +7071,10 @@ func (s *NotificationTemplateListGetSearchIn) GetOptions() *utils.SearchOptions 
 			},
 			{
 				Name: "source",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
 					"neq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "default", Title: "default"},
-					{Value: "override", Title: "override"},
 				},
 			},
 			{
@@ -7136,15 +7087,10 @@ func (s *NotificationTemplateListGetSearchIn) GetOptions() *utils.SearchOptions 
 			},
 			{
 				Name: "channelType",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
 					"neq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "*", Title: "*"},
-					{Value: "email", Title: "email"},
-					{Value: "webhook", Title: "webhook"},
 				},
 			},
 		},
@@ -8192,15 +8138,9 @@ func (s *TagEventRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "status",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "pending", Title: "pending"},
-					{Value: "alerting", Title: "alerting"},
-					{Value: "suppressed", Title: "suppressed"},
-					{Value: "closed", Title: "closed"},
 				},
 			},
 			{
@@ -9154,12 +9094,9 @@ func (s *TagRuleListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "model",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "zhongkui.com/zhongkui/internal/models/network.HttpTransport", Title: "httpTransport"},
 				},
 			},
 			{
@@ -9606,12 +9543,9 @@ func (s *TagRuleSampleListGetSearchIn) GetOptions() *utils.SearchOptions {
 			},
 			{
 				Name: "model",
-				Type: "enum",
+				Type: "string",
 				Actions: []string{
 					"eq",
-				},
-				Options: []*utils.FilterByOptionItem{
-					{Value: "zhongkui.com/zhongkui/internal/models/network.HttpTransport", Title: "httpTransport"},
 				},
 			},
 		},

@@ -32,6 +32,15 @@ import (
 // Kind describes the semantic type of a field for frontend form control selection.
 type Kind string
 
+// EnumProvider 返回某字段当前可用的可选枚举取值集合。
+// 供来源为注册表/运行时的动态字段（无法静态声明进 enumFieldOptions）在自省时按需取值。
+type EnumProvider = func() []utils.EnumOption
+
+// runtimeEnumProviders 运行时枚举 provider 注册表：
+// key 格式 "{TypeName}.{FieldJSONName}"（与静态 enumFieldOptions 的外键/字段命名一致），
+// 供 meta 自省在静态注册表未命中时兜底为字段填充可选枚举值。
+var runtimeEnumProviders = map[string]EnumProvider{}
+
 const (
 	// KindString 单行文本
 	// KindString single-line text
@@ -73,6 +82,11 @@ type FieldMeta struct {
 	Required bool `json:"required"`
 	// DefaultValue 默认值，取自 default 标签（按 Kind 解析），可选
 	DefaultValue any `json:"defaultValue,omitempty"`
+	// Enum 是否为可选枚举值字段：为 true 时前端应以下拉形式展示，并通过 enumOptions 取可选项
+	Enum bool `json:"enum,omitempty"`
+	// EnumOptions 该枚举字段的可选值列表（仅 Enum 为 true 时提供），形状统一为 [{key, value}]；
+	// key 为字段内唯一标识（前端经 model.<...>.option.<key> 翻译展示），value 为提交/存储值
+	EnumOptions []utils.EnumOption `json:"enumOptions,omitempty"`
 }
 
 // StructMeta 描述单个接口结构体的元信息。
@@ -285,6 +299,8 @@ func getStructMeta(t reflect.Type) *StructMeta {
 //   - Required：binding 标签包含 "required" 即 true。
 //   - DefaultValue：取 default 标签，按 Kind 解析为数值/布尔/字符串。
 //   - Type：字段 Go 类型字符串，指针类型取其元素类型。
+//   - Enum/EnumOptions：按结构体类型名查 enumFieldOptions 注册表，命中则标记为枚举字段、
+//     附带可选项。
 //
 // 未指定结构体类型或类型非结构体时返回 nil。
 func getStructFields(t reflect.Type) []*FieldMeta {
@@ -298,7 +314,26 @@ func getStructFields(t reflect.Type) []*FieldMeta {
 	if tt.Kind() != reflect.Struct {
 		return nil
 	}
+	// 枚举注册表按结构体类型名索引；匿名嵌入字段递归时沿用外层类型名，以保证
+	// 注册表声明以具体（外层）结构体类型名为准。
+	return getStructFieldsNamed(tt, tt.Name())
+}
 
+// getStructFieldsNamed 提取结构体字段元信息，并以 enumTypeName 为外键查询枚举注册表。
+// 匿名嵌入字段递归展开时沿用传入的 enumTypeName（即外层结构体类型名）。
+func getStructFieldsNamed(t reflect.Type, enumTypeName string) []*FieldMeta {
+	if t == nil {
+		return nil
+	}
+	tt := t
+	if tt.Kind() == reflect.Pointer {
+		tt = tt.Elem()
+	}
+	if tt.Kind() != reflect.Struct {
+		return nil
+	}
+
+	enumDecls := enumFieldOptions[enumTypeName]
 	fields := make([]*FieldMeta, 0, tt.NumField())
 	for field := range tt.Fields() {
 		// 处理匿名嵌入字段：递归展开其内部字段
@@ -310,7 +345,7 @@ func getStructFields(t reflect.Type) []*FieldMeta {
 			}
 			// 仅对结构体类型的嵌入字段递归展开
 			if embeddedType.Kind() == reflect.Struct {
-				fields = append(fields, getStructFields(embeddedType)...)
+				fields = append(fields, getStructFieldsNamed(embeddedType, enumTypeName)...)
 				continue
 			}
 		}
@@ -337,14 +372,33 @@ func getStructFields(t reflect.Type) []*FieldMeta {
 			fieldType = field.Type.Elem().String()
 		}
 
-		fields = append(fields, &FieldMeta{
+		meta := &FieldMeta{
 			Name:         fieldKey,
 			Type:         fieldType,
 			Binding:      binding,
 			Kind:         kind,
 			Required:     strings.Contains(binding, "required"),
 			DefaultValue: def,
-		})
+		}
+		// 按 JSON 字段名查枚举注册表，命中则标注为枚举字段并附带可选项
+		for _, decl := range enumDecls {
+			if decl.Field == fieldKey && len(decl.EnumOptions) > 0 {
+				meta.Enum = true
+				meta.EnumOptions = decl.EnumOptions
+				break
+			}
+		}
+		// 静态注册表未命中时，回退到运行时枚举 provider（来源为注册表/动态，无法静态声明）。
+		// key 格式 "{TypeName}.{FieldJSONName}"；provider 返回空集合时不标注为枚举。
+		if !meta.Enum {
+			if provider, ok := runtimeEnumProviders[enumTypeName+"."+fieldKey]; ok {
+				if options := provider(); len(options) > 0 {
+					meta.Enum = true
+					meta.EnumOptions = options
+				}
+			}
+		}
+		fields = append(fields, meta)
 	}
 	return fields
 }

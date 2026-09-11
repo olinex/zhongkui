@@ -1,6 +1,7 @@
 import type { AxiosPromise } from "axios";
 import { HttpStatusCode } from "axios";
 import { getJwtHeader, request } from "./base";
+import { DynamicEnums, dynamicEnumOptionKey } from "@/constants/dynamicEnums";
 
 import type { FilterByOption, HeaderOption, SearchOptionsOut } from "@/components/@types/table";
 import type {
@@ -44,8 +45,8 @@ export function datasourceListOptions(): AxiosPromise {
       type: BackendDataType.ENUM,
       actions: [SearchAction.EQUAL],
       options: [
-        { value: "redis", title: "model.datasource.option.redis" },
-        { value: "mysql", title: "model.datasource.option.mysql" },
+        { value: "redis", title: dynamicEnumOptionKey(DynamicEnums.datasourceType, "redis") },
+        { value: "mysql", title: dynamicEnumOptionKey(DynamicEnums.datasourceType, "mysql") },
       ],
     },
     {

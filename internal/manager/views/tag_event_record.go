@@ -16,11 +16,14 @@ import (
 	// internal
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkui.com/zhongkui/internal/tagengine"
 
 	core "zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/models/tag"
 )
 
@@ -61,6 +64,8 @@ type TagEventRecordHitOut struct {
 	Threshold int `json:"threshold"`
 	// Window 条件时间窗口（可读字符串，如 "5s"）
 	Window serializer.DurationNS `json:"window"`
+	// IDs 原始记录 ID 列表
+	IDs serializer.HexUUIDs `json:"ids"`
 }
 
 // TagEventRecordSendOut 定义标签事件关联的通知发送记录输出项。
@@ -231,6 +236,7 @@ func newTagEventRecordHitOut(hit *tag.TagEventRecordHit) TagEventRecordHitOut {
 		Count:         hit.Count,
 		Threshold:     hit.Threshold,
 		Window:        hit.Window,
+		IDs:           hit.IDs,
 	}
 }
 
@@ -328,4 +334,93 @@ func TagEventRecordBatchClose(c *gin.Context) {
 		return
 	}
 	response.SimpleOK.AbortWithGinW(c, BatchResultOut{Succeeded: len(ids), Failed: []BatchFailureOut{}})
+}
+
+// TagEventRecordHitRecordsIn 定义标签事件记录命中条件原始数据反查入参。
+// Model/IDs 来自详情命中明细（TagEventRecordHitOut），CreatedAtFrom/CreatedAtTo 为原始记录
+// 入库时间预筛范围（前端由事件检测时间 detectedAt 与条件窗口 window 推导），
+// 供后端在 ClickHouse 查询时按 created_at 分区裁剪；两端时间字段零值表示不限制。
+type TagEventRecordHitRecordsIn struct {
+	// Model 目标模型类型键（来自命中明细）
+	Model string `json:"model"`
+	// IDs 原始记录 ID 列表（来自命中明细）
+	IDs serializer.HexUUIDs `json:"ids"`
+	// CreatedAtFrom 原始记录入库时间范围下界（检测时间 - 条件窗口），零值不限制
+	CreatedAtFrom time.Time `json:"createdAtFrom"`
+	// CreatedAtTo 原始记录入库时间范围上界（检测时间），零值不限制
+	CreatedAtTo time.Time `json:"createdAtTo"`
+}
+
+// TagEventRecordHitRecordsOut 定义标签事件记录命中条件原始数据反查输出。
+// Items 为该命中条件对应的原始数据明细（当前为 http_transports 全字段行）。
+type TagEventRecordHitRecordsOut struct {
+	Items []*HttpTransportListGetListItemOut `json:"items"`
+}
+
+// TagEventRecordHitRecordsGet 处理标签事件记录命中条件原始数据反查的请求。
+// 入参由前端从标签事件详情透传（详情接口已校验事件记录归属当前命名空间），
+// 后端不再回查 TagEventRecordHit 与 TagEventRecord，仅按模型与 ID 列表从 raw 库查询明细行。
+// 查询附带 created_at 范围预筛：http_transports 按 toStartOfHour(created_at) 分区，
+// 时间范围限定后 ClickHouse 仅扫描命中分区，避免全表扫描。
+// 未知/未注册模型的命中返回空列表（200，命中模型为历史快照，目标模型注册表可能已变更）。
+func TagEventRecordHitRecordsGet(c *gin.Context) {
+	namespace, ok := middlewares.RequireNamespace(c)
+	if !ok {
+		return
+	}
+	var in TagEventRecordHitRecordsIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	out := TagEventRecordHitRecordsOut{Items: []*HttpTransportListGetListItemOut{}}
+	if len(in.IDs) == 0 {
+		response.SimpleOK.AbortWithGinW(c, out)
+		return
+	}
+	// 转字符串切片绑定，规避 HexUUIDs 实现 driver.Valuer 在 GORM IN ? 展开时的不确定性
+	ids := make([]string, 0, len(in.IDs))
+	for _, id := range in.IDs {
+		ids = append(ids, id.String())
+	}
+	// 防御性截断：单条件原始记录过多时限制单次查询量
+	if len(ids) > 500 {
+		ids = ids[:500]
+	}
+	switch in.Model {
+	case tagengine.MustTypeKey(&network.HttpTransport{}):
+		// 当前唯一注册目标模型：http_transports，逐行复用流量列表全字段映射；
+		// 新增目标模型时再抽出 recordQuerier 函数类型按模型分发
+		query := middlewares.GetRawDatabase(c).WithContext(c).Model(&network.HttpTransport{}).
+			Where("namespace = ?", namespace)
+		// 精确过滤（正确性）：检测窗口 minute ∈ [now-window, now] 由 toStartOfMinute(timestamp)
+		// 对齐，故原始记录时间戳满足 timestamp ∈ [now-window, now+1min)（上界 +1 分钟补偿分钟桶边界）。
+		// 必须基于 timestamp（流量时间）而非 created_at（入库时间）：created_at 为行构造/写入时刻，
+		// 与 timestamp 存在毫秒~分钟级偏差（实时处理延迟、pcap 回放），按 created_at 过滤会把
+		// 窗口边界记录误排（如 timestamp 14:18:59 的包 created_at 已越过 14:19:00 上界）。
+		if !in.CreatedAtFrom.IsZero() {
+			query = query.Where("timestamp >= ?", database.ToUTCDatetime64(in.CreatedAtFrom, 6))
+		}
+		if !in.CreatedAtTo.IsZero() {
+			query = query.Where("timestamp < ?", database.ToUTCDatetime64(in.CreatedAtTo.Add(time.Minute), 6))
+		}
+		// 分区预筛（性能）：http_transports 按 toStartOfHour(created_at) 分区，仅以 created_at 下界
+		// 裁剪早于窗口的分区。created_at >= timestamp 恒成立（行构造时刻不早于捕获时刻），
+		// 故 from 下界不会误裁；上界不可用 created_at 约束（与 timestamp 偏差无上限），否则会漏数据。
+		if !in.CreatedAtFrom.IsZero() {
+			query = query.Where("created_at >= ?", database.ToUTCDatetime64(in.CreatedAtFrom, 6))
+		}
+		var rows []network.HttpTransport
+		if err := query.Where("id IN ?", ids).Find(&rows).Error; err != nil {
+			response.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+		out.Items = make([]*HttpTransportListGetListItemOut, 0, len(rows))
+		for i := range rows {
+			out.Items = append(out.Items, newHttpTransportListGetListItemOut(&rows[i]))
+		}
+	default:
+		// 未知/未注册模型：返回空列表（200）
+	}
+	response.SimpleOK.AbortWithGinW(c, out)
 }

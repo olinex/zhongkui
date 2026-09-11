@@ -85,17 +85,13 @@ func localizeInputFields(lc *i18n.Localizer, fields []tagengine.InputFieldMeta) 
 	return out
 }
 
-// localizeDimensionOptions 把模型注册的合法维度取值列表转换为带本地化描述的下拉选项。
-// 描述复用字段描述文案键 input.<typeKey>.<dimension>（dimension 即 snake_case 列名），
-// 翻译失败时 Description 为空串，由前端回退展示取值本身。
-func localizeDimensionOptions(lc *i18n.Localizer, typeKey string, dims []string) []TagRuleModelDimensionOut {
+// localizeDimensionOptions 把模型注册的合法维度取值列表转换为下拉选项。
+// 仅返回 dimension 取值本身（Value，即 snake_case 列名）；展示名由前端按目标模型
+// 的 i18n 命名空间 + Value 自行拼键翻译，未命中时由前端回退展示取值。
+func localizeDimensionOptions(dims []string) []TagRuleModelDimensionOut {
 	out := make([]TagRuleModelDimensionOut, 0, len(dims))
 	for _, d := range dims {
-		desc := ""
-		if text, err := lc.Localize(&i18n.LocalizeConfig{MessageID: "input." + typeKey + "." + d}); err == nil && text != "" {
-			desc = text
-		}
-		out = append(out, TagRuleModelDimensionOut{Value: d, Description: desc})
+		out = append(out, TagRuleModelDimensionOut{Value: d})
 	}
 	return out
 }
@@ -231,11 +227,11 @@ type TagRuleModelMetadataOut struct {
 }
 
 // TagRuleModelDimensionOut 标签维度下拉选项：Value 为 dimension 取值
-// （snake_case 列名，对应 tag_summings.dimension 的存储值），
-// Description 为按请求语言翻译的字段描述（未命中时为空串）。
+// （snake_case 列名，对应 tag_summings.dimension 的存储值）。
+// 展示名不在此输出：前端持有目标模型对应的 i18n 命名空间，按 Value 自行拼键翻译，
+// 避免后端烤入具体命名空间前缀造成前后端耦合。
 type TagRuleModelDimensionOut struct {
-	Value       string `json:"value"`
-	Description string `json:"description"`
+	Value string `json:"value"`
 }
 
 // TagRuleModelSampleOut 定义标签规则目标模型系统样例的输出结构。
@@ -660,19 +656,11 @@ func TagRuleValidate(c *gin.Context) {
 }
 
 // TagRuleModelOptions 处理获取标签规则目标模型选项列表的请求。
-// 返回已注册目标模型的 {value,label} 列表，label 为展示名称的 i18n 键，
-// 经请求语言本地化后输出，翻译失败时回退原键。
+// 返回已注册目标模型的 {value,label} 列表。value 为模型类型键，label 为展示名称的
+// i18n 键本身（不再按请求语言本地化）：展示名统一由前端按 value 经 i18n 翻译，
+// 支持前端语言切换即时生效，无需重新请求。
 func TagRuleModelOptions(c *gin.Context) {
-	options := tagengine.Options()
-	lc := response.GetLocalizer(c)
-	items := make([]tagengine.Option, 0, len(options))
-	for _, opt := range options {
-		if label, err := lc.Localize(&i18n.LocalizeConfig{MessageID: opt.Label}); err == nil && label != "" {
-			opt.Label = label
-		}
-		items = append(items, opt)
-	}
-	response.SimpleOK.AbortWithGinW(c, TagRuleModelOptionsOut{Items: items})
+	response.SimpleOK.AbortWithGinW(c, TagRuleModelOptionsOut{Items: tagengine.Options()})
 }
 
 // TagRuleModelMetadata 处理获取标签规则目标模型输入字段元信息的请求。
@@ -698,7 +686,7 @@ func TagRuleModelMetadata(c *gin.Context) {
 	response.SimpleOK.AbortWithGinW(c, TagRuleModelMetadataOut{
 		Model:      in.Model,
 		Fields:     localizeInputFields(lc, fields),
-		Dimensions: localizeDimensionOptions(lc, in.Model, tagengine.Dimensions(in.Model)),
+		Dimensions: localizeDimensionOptions(tagengine.Dimensions(in.Model)),
 	})
 }
 

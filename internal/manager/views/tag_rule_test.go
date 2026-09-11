@@ -25,16 +25,19 @@ import (
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
 // tagRuleTargetModel 引擎识别测试用的目标模型，其字段经 BuildInput 序列化为输入文档。
+// ID 字段为共享类型锚点 serializer.HexUUID，满足注册表的 ID 约束。
 type tagRuleTargetModel struct {
-	Namespace string `json:"namespace"`
-	Method    string `json:"method"`
-	Path      string `json:"path"`
+	ID        serializer.HexUUID `json:"id"`
+	Namespace string             `json:"namespace"`
+	Method    string             `json:"method"`
+	Path      string             `json:"path"`
 }
 
 // tagRuleValidRego 通过语法与契约校验的合法 Rego 规则源码。
@@ -677,10 +680,10 @@ func TestTagRuleModelMetadata(t *testing.T) {
 			}
 			So(found, ShouldBeTrue)
 			// 合法标签维度来自 tagengine 注册表（与物化视图展开列一致），
-			// Description 按请求语言（en）复用字段描述文案
+			// 仅返回维度的 Value（snake_case 列名），展示名由前端按模型 i18n 命名空间 + Value 拼键翻译
 			So(resp.Data.Dimensions, ShouldResemble, []TagRuleModelDimensionOut{
-				{Value: "fpTcpClientSig", Description: "Client TCP signature"},
-				{Value: "fpTcpServerSig", Description: "Server TCP signature"},
+				{Value: "fpTcpClientSig"},
+				{Value: "fpTcpServerSig"},
 			})
 		})
 

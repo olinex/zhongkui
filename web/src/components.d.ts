@@ -47,6 +47,7 @@ declare module 'vue' {
     ScrollToBottomFab: typeof import('./components/base/ScrollToBottomFab.vue')['default']
     SearchTable: typeof import('./components/table/SearchTable.vue')['default']
     StorageSizeChip: typeof import('./components/base/StorageSizeChip.vue')['default']
+    TagEventHitRecordsDialog: typeof import('./components/detail/TagEventHitRecordsDialog.vue')['default']
     TagEventRecordDetailDialog: typeof import('./components/detail/TagEventRecordDetailDialog.vue')['default']
     TagEventRuleDryRunPanel: typeof import('./components/admin/TagEventRuleDryRunPanel.vue')['default']
     TagExprEditor: typeof import('./components/forms/TagExprEditor.vue')['default']

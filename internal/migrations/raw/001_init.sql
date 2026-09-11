@@ -628,7 +628,8 @@ CREATE TABLE IF NOT EXISTS tag_summings (
 	dimension String COMMENT 'the tag dimension type, e.g. fpTcpClientSig' CODEC(ZSTD(3)),
 	item String COMMENT 'the concrete value of the tag dimension' CODEC(ZSTD(3)),
 	tags Array(String) COMMENT 'the deduplicated and sorted tag array of the aggregation',
-	cnt UInt32 COMMENT 'the hit count of the tags, summed by SummingMergeTree'
+	cnt UInt32 COMMENT 'the hit count of the tags, summed by SummingMergeTree',
+	ids Array(UUID) COMMENT 'the record id list of the aggregation group, collected by the materialized view via groupArray(id), concatenated on SummingMergeTree merges'
 ) ENGINE = SummingMergeTree()
 ORDER BY (namespace, minute, model, dimension, item, tags)
 PARTITION BY toStartOfHour(minute)
@@ -640,6 +641,7 @@ TTL toDateTime(minute) + INTERVAL 72 HOUR DELETE;
 -- 与 gorm json 字段名一致），item 为字段值
 -- 指纹值为空的行在 ARRAY JOIN 展开前被过滤（arrayFilter 作用于元组数组）
 -- 标签为空（去重后无任何标签）的行不进入聚合，避免无意义的空标签统计
+-- ids 收集每个聚合分组下原始记录（http_transports）的 ID，与 cnt 等长，合并时拼接，保留聚合到原始记录的追溯关系
 CREATE MATERIALIZED VIEW IF NOT EXISTS http_transports_2_tag_summings_mv
 TO tag_summings
 AS
@@ -650,7 +652,8 @@ SELECT
 	sig.1 AS dimension,
 	sig.2 AS item,
 	arraySort(arrayDistinct(tags)) AS tags,
-	toUInt32(count()) AS cnt
+	toUInt32(count()) AS cnt,
+	groupArray(id) AS ids
 FROM http_transports
 ARRAY JOIN arrayFilter(x -> x.2 != '', [
 	('fpTcpClientSig', fp_tcp_client_sig),

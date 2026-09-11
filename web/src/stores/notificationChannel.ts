@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 
 import { getResponse } from "@/apis/base";
 import { notificationChannelTypesGet } from "@/apis/notification";
+import { DynamicEnums, dynamicEnumOptions } from "@/constants/dynamicEnums";
 
 // Types
 import type {
@@ -11,20 +12,13 @@ import type {
 } from "@/apis/@types/notification";
 
 import { useAppStore } from "./app";
-import i18n from "@/utils/i18n";
 
-// ChannelTypeOption 渠道类型下拉可选项：title 为已翻译文案，value 为渠道类型键。
-// 供 channel / target / template 三个页面统一消费后端渠道类型注册表。
+// ChannelTypeOption 渠道类型下拉可选项：title 为经 i18n 翻译的展示名（经动态枚举注册表），
+// value 为渠道类型键。供 channel / target / template 三个页面统一消费后端渠道类型注册表。
 export interface ChannelTypeOption {
   title: string;
   value: string;
 }
-
-// channelTypeToOption 将渠道类型条目转换为下拉选项（标题经 i18n 翻译）
-const channelTypeToOption = (t: NotificationChannelTypeItem): ChannelTypeOption => ({
-  title: i18n.global.t(`model.notificationChannel.type.${t.type}`),
-  value: t.type,
-});
 
 // useNotificationChannelStore 通知渠道类型注册表共享 store（Options Store 风格）。
 // 单一数据源：仅首访问时拉取后端 /notification/channel/types，成功后缓存，
@@ -42,14 +36,18 @@ export const useNotificationChannelStore = defineStore("notificationChannel", {
       return Object.fromEntries(this.channelTypes.map((t) => [t.type, t]));
     },
     // channelTypeOptions 渠道类型下拉选项：过滤占位符渠道（系统固定数据，前端不提供创建入口），
-    // 供 channel / target 创建与编辑下拉使用
+    // 供 channel / target 创建与编辑下拉使用；展示名经动态枚举注册表统一翻译
     channelTypeOptions(): ChannelTypeOption[] {
-      return this.channelTypes.filter((t) => !t.placeholder).map(channelTypeToOption);
+      return dynamicEnumOptions(
+        DynamicEnums.channelType,
+        this.channelTypes.filter((t) => !t.placeholder),
+        "type",
+      );
     },
     // allChannelTypeOptions 全量渠道类型下拉选项（含占位符渠道），
     // 供 template 页创建/渲染测试模板使用（模板渠道类型需覆盖全部渠道，如 webhook）
     allChannelTypeOptions(): ChannelTypeOption[] {
-      return this.channelTypes.map(channelTypeToOption);
+      return dynamicEnumOptions(DynamicEnums.channelType, this.channelTypes, "type");
     },
   },
   actions: {

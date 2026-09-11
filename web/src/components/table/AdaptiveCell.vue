@@ -46,6 +46,15 @@
   <div v-else-if="header.type === BackendDataType.DURATION">
     {{ localDurationFormat(item[header.key]) }}
   </div>
+  <div
+    v-else-if="
+      header.type === BackendDataType.ENUM &&
+      item[header.key] !== undefined &&
+      item[header.key] !== null
+    "
+  >
+    {{ enumValueTitle(modelName, item[header.key]) }}
+  </div>
   <v-menu
     v-else-if="header.type === BackendDataType.ACTIONS && actions"
     location="bottom right"
@@ -80,12 +89,18 @@ import {
   localeDatetimeFormat,
   localeTimeFormat,
 } from "@/utils/i18n";
+import { enumValueTitle } from "@/utils/options";
 import { DateTime } from "luxon";
 
 defineProps({
   header: {
     type: Object as PropType<TableHeader>,
     required: true,
+  },
+  modelName: {
+    // 枚举列单元格展示名经 model.<modelName>.option.<value> 翻译所需
+    type: String,
+    default: "",
   },
   item: {
     // Table row values are heterogeneous; column types come from `header.type`.

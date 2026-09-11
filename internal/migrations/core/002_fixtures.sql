@@ -218,6 +218,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/tag-event/record/:id/get', 'OPTIONS'),
     ('api:/api/v1/tag-event/record/close', 'POST'),
     ('api:/api/v1/tag-event/record/close', 'OPTIONS'),
+    ('api:/api/v1/tag-event/record/hit/records', 'POST'),
+    ('api:/api/v1/tag-event/record/hit/records', 'OPTIONS'),
     -- 第三方数据源接口
     ('api:/api/v1/datasource/types', 'POST'),
     ('api:/api/v1/datasource/types', 'OPTIONS'),

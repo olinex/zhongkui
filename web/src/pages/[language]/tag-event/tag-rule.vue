@@ -108,6 +108,7 @@
                   v-model="createModel"
                   v-bind="createModelProps"
                   :items="modelOptions"
+                  :item-title="modelOptionTitle"
                   :label="$t('model.tagRule.field.model')"
                 />
               </v-col>
@@ -205,6 +206,7 @@
                 <v-select
                   :model-value="proxy.model"
                   :items="modelOptions"
+                  :item-title="modelOptionTitle"
                   :label="$t('model.tagRule.field.model')"
                   disabled
                 />
@@ -443,12 +445,18 @@ const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const rollbackConfirmRef = useTemplateRef("rollbackConfirmRef");
 
+// 模型下拉选项：title 统一保留为模型类型键，渲染时经 modelOptionTitle 按值 i18n 翻译
+// （model.<modelKey>.name），后端 /model/options 仅提供 {value,label} 的 value 键。
 const modelOptions = ref([
   {
-    title: "HTTP Transport",
+    title: HTTP_TRANSPORT_MODEL_KEY,
     value: HTTP_TRANSPORT_MODEL_KEY,
   },
 ]);
+
+// modelOptionTitle 模型下拉展示名：按模型类型键经 i18n 翻译（语言切换即时生效）。
+const modelOptionTitle = (option: { title: string; value: string }): string =>
+  modelTypeKeyLabel(option.value);
 
 // ---- 自定义 OPA 内置函数 / sqlite vtable 元信息（Rego 编辑器补全、悬停与 SQL 提示）----
 const customFunctions = ref<RegoFunctionMeta[]>([]);
@@ -488,7 +496,9 @@ onMounted(() => {
   void getResponse<TagRuleModelOptionsOut>(tagRuleModelOptions(), async (rsp) => {
     const items = rsp.data.items ?? [];
     if (items.length > 0) {
-      modelOptions.value = items.map((o) => ({ title: o.label, value: o.value }));
+      // 仅采用后端返回的 value 键；展示名由 modelOptionTitle 按 value 经 i18n 翻译，
+      // 不再依赖后端本地化/易读 label
+      modelOptions.value = items.map((o) => ({ title: o.value, value: o.value }));
     }
   });
 });

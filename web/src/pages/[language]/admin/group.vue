@@ -118,10 +118,8 @@
                   <template #item-append="{ item, appendItem, close, editable: listEditable }">
                     <v-select
                       v-model="item.effect"
-                      :items="[
-                        { title: $t('model.policy.value.allow'), value: 'allow' },
-                        { title: $t('model.policy.value.deny'), value: 'deny' },
-                      ]"
+                      :items="policyEffectOptions"
+                      :item-title="policyEffectTitle"
                       :disabled="!listEditable"
                       variant="outlined"
                       density="compact"
@@ -189,6 +187,12 @@ import i18n from "@/utils/i18n";
 import { useForm } from "vee-validate";
 import { updateGroupSchema, createGroupSchema } from "@/schemas/group";
 import { vuetifyCfg } from "@/utils/form";
+import { policyEffectOptions } from "@/constants/enums";
+import { enumValueTitle } from "@/utils/options";
+
+// policyEffectTitle 权限 effect 下拉项展示名：value 为枚举值，渲染期经 option 命名空间翻译
+const policyEffectTitle = (option: { title: string; value: string }): string =>
+  enumValueTitle("policy", option.value);
 
 const updateForm = useForm({
   validationSchema: updateGroupSchema,

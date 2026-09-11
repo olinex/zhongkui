@@ -486,7 +486,8 @@ CREATE TABLE IF NOT EXISTS tag_event_record_hits (
     item VARCHAR(255) NOT NULL DEFAULT '',
     count BIGINT NOT NULL,
     threshold INT NOT NULL,
-    "window" BIGINT NOT NULL
+    "window" BIGINT NOT NULL,
+    ids JSONB DEFAULT '[]'
 );
 
 COMMENT ON COLUMN tag_event_record_hits.id IS 'the primary key of the tag event record hit';
@@ -501,6 +502,7 @@ COMMENT ON COLUMN tag_event_record_hits.item IS 'the concrete value filter of th
 COMMENT ON COLUMN tag_event_record_hits.count IS 'the hit count of the condition within the window';
 COMMENT ON COLUMN tag_event_record_hits.threshold IS 'the threshold of the condition';
 COMMENT ON COLUMN tag_event_record_hits."window" IS 'the time window of the condition in nanoseconds';
+COMMENT ON COLUMN tag_event_record_hits.ids IS 'the JSONB array of the original record ids of the hit group, aggregated and deduplicated by the detection query';
 
 CREATE INDEX IF NOT EXISTS idx_tag_event_record_hits_tag_event_record_id
     ON tag_event_record_hits (tag_event_record_id);

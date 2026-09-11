@@ -14,12 +14,15 @@ import (
 	// internal
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/models/tag"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 
 // testSampleModel 测试用的自定义目标模型（无预置样例，验证懒供给 default）。
+// ID 字段为共享类型锚点 serializer.HexUUID，满足注册表的 ID 约束。
 type testSampleModel struct {
-	Foo string `json:"foo"`
+	ID  serializer.HexUUID `json:"id"`
+	Foo string             `json:"foo"`
 }
 
 // customModelType 自定义模型 testSampleModel 的类型键。
@@ -132,11 +135,15 @@ func TestEnsureModelSamples(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(len(samples), ShouldEqual, 1)
 			So(samples[0].Name, ShouldEqual, "default")
-			// PostgreSQL jsonb 规范输出会为冒号后补充空格（如 {"foo": ""}），
+			// PostgreSQL jsonb 规范输出会为冒号后补充空格（如 {"id": "..."}），
 			// 故按语义反序列化比较而非断言字节级 JSON，避免受方言空白规范化影响。
+			// 零值实例序列化后 id 为全零 UUID 字符串。
 			var actualInput map[string]any
 			So(json.Unmarshal(samples[0].Input, &actualInput), ShouldBeNil)
-			So(actualInput, ShouldResemble, map[string]any{"foo": ""})
+			So(actualInput, ShouldResemble, map[string]any{
+				"id":  "00000000-0000-0000-0000-000000000000",
+				"foo": "",
+			})
 
 			samples, err = tagengine.EnsureModelSamples(context.Background(), db, "default", customModelType)
 			So(err, ShouldBeNil)

@@ -4,6 +4,7 @@ import { getJwtHeader, request } from "./base";
 import type { SearchIn } from "@/components/@types/table";
 import type {
   FlexIDs,
+  TagEventRecordHitRecordsIn,
   TagEventRuleCreateIn,
   TagEventRuleDryRunIn,
   TagEventRuleUpdateIn,
@@ -287,4 +288,12 @@ export function tagEventRecordDetailGet(id: number): AxiosPromise {
       headers: getJwtHeader(),
     },
   );
+}
+
+// tagEventRecordHitRecordsGet 命中条件原始数据反查：前端从详情透传命中明细的
+// 模型/原始记录 ID 列表与入库时间范围，后端按 created_at 分区预筛查询明细行
+export function tagEventRecordHitRecordsGet(data: TagEventRecordHitRecordsIn): AxiosPromise {
+  return request.post("/tag-event/record/hit/records", data, {
+    headers: getJwtHeader(),
+  });
 }

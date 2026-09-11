@@ -154,6 +154,7 @@ func toEventModel(ev *tagengine.TagEventRecord) *tag.TagEventRecord {
 			Count:         hit.Count,
 			Threshold:     hit.Threshold,
 			Window:        hit.Window,
+			IDs:           hit.IDs,
 		})
 	}
 	return &tag.TagEventRecord{
