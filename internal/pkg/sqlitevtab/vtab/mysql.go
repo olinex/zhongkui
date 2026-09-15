@@ -37,20 +37,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 
 	// third-party
+
+	"github.com/creasty/defaults"
 	"github.com/go-sql-driver/mysql"
 
 	// internal
-	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
-
-// defaultMySQLPort 未显式指定端口时使用的 MySQL 默认端口。
-// defaultMySQLPort is the default MySQL port when none is specified.
-const defaultMySQLPort = 3306
 
 // mysqlIdentPattern 合法标识符（表名/列名）校验模式，与 sqlitevtab 的列名校验一致。
 // mysqlIdentPattern validates legal identifiers (table/column names), consistent with
@@ -68,7 +64,7 @@ type MySQLConfig struct {
 	Addr string
 	// Port 端口，默认 3306。
 	// Port the port, default 3306.
-	Port int
+	Port int `default:"3306"`
 	// User 用户名。
 	// User the user name.
 	User string
@@ -86,13 +82,12 @@ type MySQLConfig struct {
 	Namespace string
 }
 
-// mysqlClients 是进程级 mysql db 池注册表：共享 Manager、Key→驱动配置映射与测试
-// 用的 db 覆盖表。前端配置经 NewMySQLPool 注入后，对应 Key 的 *sql.DB 即可在任意
-// datasource 中借出。
-// mysqlClients is the process-wide mysql db pool registry: a shared Manager, a
-// Key→driver-config map, and a test-only db override map. Once a front-end config is
-// injected via NewMySQLPool, *sql.DB for that Key become borrowable from any datasource.
-var mysqlClients = newMySQLClientRegistry()
+// mysqlClients 是进程级 mysql db 池注册表（独立 Key 空间，复用通用 *sql.DB 基座）。
+// 前端配置经 NewMySQLPool 注入后，对应 Key 的 *sql.DB 即可在任意 datasource 中借出。
+// mysqlClients is the mysql db pool registry (its own Key space, reusing the generic
+// *sql.DB base). Once a front-end config is injected via NewMySQLPool, *sql.DB for that
+// Key become borrowable from any datasource.
+var mysqlClients = newSQLDBRegistry()
 
 // mysqlBase 是各 MySQL vtable 数据源的共享基座：持有连接池、schema、列值类型与
 // 可下推（非 Any）列索引。
@@ -111,90 +106,25 @@ func (b *mysqlBase) datasourceSchema() sqlitevtab.Schema {
 	return b.schema
 }
 
-// MySQLPool 是基于 resourcepool 的 mysql db 池句柄，绑定一个实例配置派生的 Key。
-// 底层为进程级共享的 resourcepool.Manager[*sql.DB]：按 Key 维护相互独立的
-// database/sql 句柄池。对 database/sql 而言一个 *sql.DB 内部已池化物理连接，这里
-// 池化的是「*sql.DB 实例」：前端配置可能存在多个 mysql/mariadb 实例，每个配置对应
-// 一个 Key 一个 db 池，做到跨实例复用、失效自动重建与闲置回收。*sql.DB 并发安全，
-// 池内可驻留多个实例以服务并发查询。
-// MySQLPool is a resourcepool-backed mysql db pool handle bound to a Key derived from
-// an instance configuration. Under the hood is a process-wide
-// resourcepool.Manager[*sql.DB]: each Key maintains an independent database/sql handle
-// pool. For database/sql one *sql.DB already pools physical connections, and this
-// layer pools *sql.DB instances: front-end config may declare multiple mysql/mariadb
-// instances, each mapping to a Key and a dedicated db pool that is reused, auto-rebuilt
-// on staleness and reclaimed when idle. *sql.DB values are concurrency-safe, so a pool
-// can hold several instances to serve concurrent queries.
+// MySQLPool 是 mysql 的 sqlDBPool 句柄，绑定一个实例配置派生的 Key（复用通用 *sql.DB
+// 基座）。*sql.DB 并发安全，可被局部借出使用；数据源自省表结构时以 pool.db 限定到库。
+// MySQLPool is the mysql sqlDBPool handle bound to a Key derived from an instance config
+// (reusing the generic *sql.DB base). *sql.DB values are concurrency-safe and may be
+// borrowed and used locally; datasources scope introspection to the database via pool.db.
 type MySQLPool struct {
-	key resourcepool.Key
-	db  string
-}
-
-// mysqlClientRegistry 按 Key 维护 mysql db 池与配置。
-// mysqlClientRegistry maintains mysql db pools and their config by Key.
-type mysqlClientRegistry struct {
-	mu       sync.RWMutex
-	manager  *resourcepool.Manager[*sql.DB]
-	cfgs     map[resourcepool.Key]*mysql.Config
-	override map[resourcepool.Key]*sql.DB // 仅供测试注入 mock db
-}
-
-// newMySQLClientRegistry 创建注册表并装配进程级 Manager。Manager 采用默认资源池
-// 配置（testOnBorrow 探活、失效自动重建、闲置驱逐），与其他池一致。
-// newMySQLClientRegistry builds the registry and its process-wide Manager with the
-// default resourcepool config, consistent with other pools.
-func newMySQLClientRegistry() *mysqlClientRegistry {
-	r := &mysqlClientRegistry{cfgs: make(map[resourcepool.Key]*mysql.Config), override: make(map[resourcepool.Key]*sql.DB)}
-	r.manager = resourcepool.NewManager(r.makeDBFor, resourcepool.NewDefaultConfig())
-	return r
-}
-
-// makeDBFor 依据 Key 从注册表取配置并懒创建 *sql.DB（resourcepool.Make）；测试通过
-// override 注入 mock db 时直接返回之。返回的 *sql.DB 不实现 resourcepool.Lifespan
-// （内部自愈连接），故仅按纯对象复用，销毁时由 resourcepool 调用其 io.Closer。
-// makeDBFor looks up the config for a Key and lazily creates a *sql.DB
-// (resourcepool.Make); tests bypass it by overriding with a mock db. The returned
-// *sql.DB does not implement resourcepool.Lifespan (it self-heals connections), so it
-// is reused as a plain object and closed by resourcepool via io.Closer.
-func (r *mysqlClientRegistry) makeDBFor(key resourcepool.Key) (*sql.DB, error) {
-	r.mu.RLock()
-	if db, ok := r.override[key]; ok {
-		r.mu.RUnlock()
-		return db, nil
-	}
-	cfg := r.cfgs[key]
-	r.mu.RUnlock()
-	if cfg == nil {
-		return nil, errors.Newf("mysql: config not registered for key %q", key)
-	}
-	return sql.Open("mysql", cfg.FormatDSN())
-}
-
-// overrideDB 设置/清除指定 Key 的 mock db 注入（仅供测试）。
-// overrideDB sets/clears a mocked db override for a Key (test only).
-func (r *mysqlClientRegistry) overrideDB(key resourcepool.Key, db *sql.DB) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if db == nil {
-		delete(r.override, key)
-	} else {
-		r.override[key] = db
-	}
+	sqlDBPool
+	db string
 }
 
 // toDriverConfig 将组件化配置编为 go-sql-driver 的 *mysql.Config，用于 FormatDSN。
 // toDriverConfig compiles the component config into go-sql-driver's *mysql.Config for
 // FormatDSN.
 func (c *MySQLConfig) toDriverConfig() *mysql.Config {
-	port := c.Port
-	if port == 0 {
-		port = defaultMySQLPort
-	}
 	return &mysql.Config{
 		User:   c.User,
 		Passwd: c.Password,
 		Net:    "tcp",
-		Addr:   fmt.Sprintf("%s:%d", c.Addr, port),
+		Addr:   fmt.Sprintf("%s:%d", c.Addr, c.Port),
 		DBName: c.DBName,
 	}
 }
@@ -217,46 +147,24 @@ func mysqlKey(c *mysql.Config, namespace string) resourcepool.Key {
 // handle. Databases are created lazily on borrow, so construction initiates no network
 // connection. Re-injecting the same instance config (Key) overwrites it.
 func NewMySQLPool(cfg *MySQLConfig) *MySQLPool {
+	// 先应用 default tag 填充默认端口 3306，再由调用方显式设置覆盖；
+	// defaults.Set 仅在缺省（零值）字段上生效，失败即为 default tag 格式错误（致命不变量）。
+	if err := defaults.Set(cfg); err != nil {
+		panic(fmt.Sprintf("mysql: apply defaults: %v", err))
+	}
 	dc := cfg.toDriverConfig()
 	key := mysqlKey(dc, cfg.Namespace)
-	mysqlClients.mu.Lock()
-	mysqlClients.cfgs[key] = dc
-	mysqlClients.mu.Unlock()
-	return &MySQLPool{key: key, db: dc.DBName}
+	mysqlClients.register(key, func() (*sql.DB, error) {
+		return sql.Open("mysql", dc.FormatDSN())
+	})
+	return &MySQLPool{sqlDBPool: sqlDBPool{reg: mysqlClients, key: key}, db: dc.DBName}
 }
 
-// Acquire 从该实例的池中借出并返回一个可用的 *sql.DB（懒建连）。*sql.DB 并发安全，
-// 可被局部借出使用。返回非 nil 错误表示借出失败。
-// Acquire borrows a usable *sql.DB from this instance's pool (lazily connecting).
-// *sql.DB values are concurrency-safe and may be borrowed and used locally. A non-nil
-// error means the borrow failed.
-func (p *MySQLPool) Acquire(ctx context.Context) (*sql.DB, error) {
-	return mysqlClients.manager.Acquire(ctx, p.key)
-}
-
-// Release 将 *sql.DB 归还该实例的池以便复用。
-// Release returns the *sql.DB to this instance's pool for reuse.
-func (p *MySQLPool) Release(ctx context.Context, db *sql.DB) {
-	mysqlClients.manager.Release(ctx, p.key, db)
-}
-
-// Close 销毁该实例池内的闲置 db（借出中的不受影响），用于配置删除/连接失效场景。
-// 透传 ctx 以维护取消/超时语义。进程级全部 db 池的优雅关闭由接入方统一触发
-// CloseAllMySQLClients。
-// Close destroys idle databases in this instance's pool (borrowed ones are unaffected),
-// for config-removal or connection-staleness scenarios. ctx is propagated to preserve
-// cancel/timeout semantics. Graceful close of every process-wide db pool is triggered
-// by the integrator via CloseAllMySQLClients.
-func (p *MySQLPool) Close(ctx context.Context) {
-	mysqlClients.manager.Clear(ctx, p.key)
-}
-
-// CloseAllMySQLClients 关闭全部 mysql db 池并销毁存活对象，释放底层连接。供接入方
-// 在进程优雅关闭阶段调用。
+// CloseAllMySQLClients 关闭全部 mysql db 池并释放底层连接。供接入方在进程优雅关闭阶段调用。
 // CloseAllMySQLClients closes every mysql db pool and destroys live objects, releasing
 // underlying connections. It is meant for graceful shutdown.
 func CloseAllMySQLClients(ctx context.Context) {
-	mysqlClients.manager.CloseAll(ctx)
+	mysqlClients.closeAll(ctx)
 }
 
 // quoteIdent 用反引号包裹标识符（表名/列名），并转义其中的反引号，用于把数据源与列名

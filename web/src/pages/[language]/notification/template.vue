@@ -416,7 +416,7 @@ import { useForm } from "vee-validate";
 import {
   notificationTemplateCreate,
   notificationTemplateDryRun,
-  notificationTemplateEventsGet,
+  notificationTemplateEventsMetaGet,
   notificationTemplateListGet,
   notificationTemplateListOptions,
   notificationTemplateRenderTest,
@@ -428,15 +428,15 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import type {
   NotificationTemplateDryRunIn,
   NotificationTemplateDryRunOut,
-  NotificationTemplateEventsOut,
-  NotificationTemplateEventItemOut,
+  NotificationTemplateEventMetaItemOut,
+  NotificationTemplateEventMetaOut,
   NotificationTemplateRenderTestOut,
   NotificationTemplateValidateOut,
 } from "@/apis/@types/notification";
 import type { ItemActions } from "@/components/@types/table";
-import { DynamicEnums, dynamicEnumOptions, dynamicEnumTitle } from "@/constants/dynamicEnums";
 import { useAppStore } from "@/stores/app";
 import { useNotificationChannelStore } from "@/stores/notificationChannel";
+import { EnumClass, enumLabelOf, enumOptionsOf } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
 import {
@@ -494,43 +494,41 @@ const updateTemplateSchema = yup.object({
 const appStore = useAppStore();
 const channelStore = useNotificationChannelStore();
 
-// ---- 枚举展示名辅助：事件/渠道类型均为后端注册表决定的技术键，展示名经动态枚举注册表统一翻译 ----
-// eventNameKey 事件展示名（model.notificationTemplate.option.event.<event>，如 tag_event_record）
-const eventNameKey = (event: string): string =>
-  dynamicEnumTitle(DynamicEnums.notificationEvent, event);
+// ---- 枚举展示名辅助：事件/渠道类型均为后端注册表决定的技术键，展示名经统一枚举注册表翻译 ----
+// eventNameKey 事件展示名（notificationEvent 枚举类 label，如 tag_event_record）
+const eventNameKey = (event: string): string => enumLabelOf(EnumClass.notificationEvent, event);
 
 // channelTypeNameKey 渠道类型展示名：* 表示全部渠道（option.channel.* 翻译），
-// 其余经动态枚举注册表统一翻译锁定 model.notificationChannel.option.<type>
+// 其余经统一枚举注册表统一翻译（channelType 枚举类）
 const channelTypeNameKey = (channelType: string): string => {
   if (channelType === "*") {
     return i18n.global.t(CHANNEL_TYPE_ALL_KEY);
   }
-  return dynamicEnumTitle(DynamicEnums.channelType, channelType);
+  return enumLabelOf(EnumClass.channelType, channelType);
 };
 
-// sourceNameKey 模板来源展示名（model.notificationTemplate.option.source.<source>，
-// 如 default / override），与筛选下拉选项的 i18n 键保持一致
-const sourceNameKey = (source: string): string =>
-  dynamicEnumTitle(DynamicEnums.notificationSource, source);
+// sourceNameKey 模板来源展示名（notificationSource 枚举类 label，如 default / override），
+// 与筛选下拉选项保持一致
+const sourceNameKey = (source: string): string => enumLabelOf(EnumClass.notificationSource, source);
 
 const searchTableRef = useTemplateRef("searchTableRef");
 const restoreConfirmRef = useTemplateRef("restoreConfirmRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 
-// ---- 事件枚举：驱动创建对话框与渲染测试对话框的下拉选项 ----
-const eventItems = ref<NotificationTemplateEventItemOut[]>([]);
-// EventOption 事件下拉可选项：value 保持后端事件注册表返回的技术键（如 tag_event_record），
-// title 经动态枚举注册表统一翻译（model.notificationTemplate.option.event.<event>）；
-// 新增事件仅需后端注册 + 补充翻译。展示顺序由前端自行决定（按展示名升序 + 事件键兜底），
+// ---- 事件元数据：事件的语言与变量字段清单（供语言下拉与编辑器补全），事件枚举值经统一枚举注册表获取 ----
+const eventItems = ref<NotificationTemplateEventMetaItemOut[]>([]);
+// EventOption 事件下拉可选项：value 为事件枚举存储值（如 tag_event_record），
+// title 经统一枚举注册表翻译（notificationEvent 枚举类）；
+// 新增事件仅需后端注册。展示顺序由前端自行决定（按展示名升序 + 事件键兜底），
 // 不依赖后端返回顺序。
 const eventOptions = computed<{ title: string; value: string }[]>(() =>
-  dynamicEnumOptions(DynamicEnums.notificationEvent, eventItems.value, "event").sort((a, b) =>
+  enumOptionsOf(EnumClass.notificationEvent).sort((a, b) =>
     a.title === b.title ? a.value.localeCompare(b.value) : a.title.localeCompare(b.title),
   ),
 );
 
-const eventItemOf = (event: string): NotificationTemplateEventItemOut | undefined =>
+const eventItemOf = (event: string): NotificationTemplateEventMetaItemOut | undefined =>
   eventItems.value.find((e) => e.event === event);
 
 // mergeOptions 合并多个字符串列表并去重，用于组合渠道/语言可选项（含 "*" 通配）
@@ -693,8 +691,8 @@ watch(
 
 onMounted(() => {
   void channelStore.loadChannelTypes();
-  void getResponse<NotificationTemplateEventsOut>(
-    notificationTemplateEventsGet(),
+  void getResponse<NotificationTemplateEventMetaOut>(
+    notificationTemplateEventsMetaGet(),
     async (rsp) => {
       eventItems.value = rsp.data.events ?? [];
     },

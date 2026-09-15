@@ -341,10 +341,15 @@ func buildSendTasks(db *database.DB, eventIDs []uint) ([]*asynq.Task, error) {
 // buildEventMessage 将标签事件构造为结构化通知消息：模板键 + 参数。
 // 具体文案由 notify 服务按目标语言经 locales 模板（notify.tag_event.alert.title/content）
 // 渲染，事件源不关心最终文本，仅固化模板键与参数（Params 键与模板占位符一一对应）。
+// 除基础字段外，额外携带人读格式的检测时间（DetectedAtFmt）与命中明细的模型/时间窗口/
+// 涉及原始记录数（Model/Window/RecordCount），供默认与持久化模板丰富展示。
 // buildEventMessage maps a tag event to a structured notification message: a template
 // key plus params. The concrete text is rendered by the notify service in the target
 // language via the locale templates (notify.tag_event.alert.title/content); the event
 // source only pins the template key and params (keys matching the placeholders).
+// Beyond the basic fields it also carries a human-readable detected time (DetectedAtFmt)
+// and per-hit model/time-window/record count (Model/Window/RecordCount) to enrich both
+// the default and persisted template rendering.
 func buildEventMessage(ev *tag.TagEventRecord) message.Message {
 	hits := make([]map[string]any, 0, len(ev.Hits))
 	for _, hit := range ev.Hits {
@@ -354,15 +359,19 @@ func buildEventMessage(ev *tag.TagEventRecord) message.Message {
 			"Item":          hit.Item,
 			"Count":         hit.Count,
 			"Threshold":     hit.Threshold,
+			"Model":         hit.Model,
+			"Window":        hit.Window.String(),
+			"RecordCount":   len(hit.IDs),
 		})
 	}
 	return message.Message{
 		Template: notify.TemplateTagEventAlert,
 		Params: map[string]any{
-			"Namespace":  ev.NamespaceName,
-			"RuleName":   ev.RuleName,
-			"DetectedAt": ev.DetectedAt.Format(time.RFC3339),
-			"Hits":       hits,
+			"Namespace":     ev.NamespaceName,
+			"RuleName":      ev.RuleName,
+			"DetectedAt":    ev.DetectedAt.Format(time.RFC3339),
+			"DetectedAtFmt": ev.DetectedAt.Format("2006-01-02 15:04:05 MST"),
+			"Hits":          hits,
 		},
 	}
 }

@@ -75,9 +75,6 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
-    option:
-      email: Email
-      webhook: Webhook
   notificationTarget:
     name: Notification Target
     field:
@@ -98,11 +95,6 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
-    option:
-      email: Email
-      webhook: Webhook
-      en: English
-      zh-Hans: Simplified Chinese
   notificationGroup:
     name: Notification Group
     field:
@@ -131,14 +123,6 @@ model:
       source: Source
       description: Description
       params: Template Params
-    # Event/source enum display names (event keyed by backend event registry;
-    # source: default built-in / override user-customized)
-    option:
-      event:
-        tag_event_record: Tag Event Alert
-      source:
-        default: Default
-        override: Override
   notificationRecord:
     name: Send Record
     field:
@@ -162,13 +146,6 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
-    option:
-      pending: Pending
-      success: Success
-      failed: Failed
-      email: Email
-      webhook: Webhook
-      tag_event_record: Tag Event Alert
   user:
     name: User
     field:
@@ -211,9 +188,6 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated Date
-    option:
-      allow: allow
-      deny: deny
   group:
     name: Group
     field:
@@ -344,8 +318,7 @@ model:
       enabled: Enabled
       version: Version
       versionCount: Version Count
-    option:
-      httpTransport: HTTP Transport
+
   tagRuleSample:
     name: Tag Rule Sample
     field:
@@ -360,8 +333,7 @@ model:
       model: Target Model
       description: Description
       input: Input Document
-    option:
-      httpTransport: HTTP Transport
+
   tagEventRule:
     name: Tag Event Rule
     field:
@@ -400,14 +372,7 @@ model:
       enabled: Enabled
       config: Connection Config
       description: Description
-    option:
-      redis: Redis
-      mysql: MySQL
-      string: String
-      hash: Hash
-      list: List
-      set: Set
-      zset: Sorted Set
+
     configField:
       addr: Host Address
       port: Port
@@ -415,8 +380,27 @@ model:
       db: Logical DB
       struct: Data Structure
       user: Username
+      username: Username
       dbName: Database
       table: Table
+      path: Database File (.db)
+      fileHint: Upload the SQLite database file (.db/.sqlite/.sqlite3), stored encrypted in S3
+      uri: Connection URI
+      collection: Collection Name
+      endpoints: Endpoints
+      schema: Manual Schema
+      schemaHint: When there is no privilege to introspect the table structure, specify the
+        column names and types manually; leave empty to introspect automatically
+      addColumn: Add Column
+      columnName: Column Name
+      columnType: Type
+    columnType:
+      any: Any
+      integer: Integer
+      float: Float
+      string: String
+      blob: Blob
+      bool: Boolean
   tagEventRecord:
     name: Tag Event Record
     field:
@@ -436,11 +420,7 @@ model:
       detectedAtTime: Detected Time
       detectedAtDate: Detected Date
     type: Status
-    option:
-      pending: Pending
-      alerting: Alerting
-      suppressed: Suppressed
-      closed: Closed
+
     content:
       info: Event Info
       hits: Hit Details
@@ -1071,6 +1051,22 @@ action:
   renderTest: Render Test
   templateValidate: Validate Syntax
   templateDryRun: Dry Run
+guide:
+  title: Third-party Data Query
+  datasource: Datasource Cheatsheet
+  datasourceEmpty: No datasource registered in this namespace yet. Create a datasource first to query it in rego
+  insertSelect: Insert SELECT
+  clickInsertColumn: Click to insert table.column
+  samples: Scenarios
+  sampleEmpty: Register and connect a datasource to generate runnable samples
+  clickInsertSample: Click to insert a runnable sample into the editor
+  sample:
+    exists: Existence check
+    existsDesc: Use COUNT(*)>0 to test whether third-party data matches
+    value: Fetch a single value
+    valueDesc: Read a field of the SQL result row via rows[0].column
+    aggregate: Aggregation
+    aggregateDesc: Aggregate third-party data with COUNT(DISTINCT) / SUM / AVG
 title:
   zk: Zhong Kui
   home: Home Page

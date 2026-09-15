@@ -75,16 +75,6 @@ export function tagRuleValidate(data: TagRuleValidateIn): AxiosPromise {
   });
 }
 
-export function tagRuleModelOptions(): AxiosPromise {
-  return request.post(
-    "/tag-event/tag-rule/model/options",
-    {},
-    {
-      headers: getJwtHeader(),
-    },
-  );
-}
-
 export function tagRuleModelMetadata(data: TagRuleModelIn): AxiosPromise {
   return request.post("/tag-event/tag-rule/model/metadata", data, {
     headers: getJwtHeader(),

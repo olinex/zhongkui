@@ -20,9 +20,8 @@ import (
 //go:embed locales
 var embeddedLocales embed.FS
 
-var (
-	Bundle *i18n.Bundle
-)
+// Bundle 全局 i18n 消息包，供 Localize 等函数经其取回各语言文案。
+var Bundle *i18n.Bundle
 
 // extRefRe 匹配 TOML 中形如 `key = "@相对路径"` 的外部文件引用行。
 // 命中后会将整个行的字符串值替换为该外部文件的内容，从而避免在 TOML 中
@@ -125,6 +124,9 @@ func newBundle() *i18n.Bundle {
 		if err != nil {
 			panic(err)
 		}
+		// 遍历 ParseMessageFileBytes 返回的 MessageFile 仅用于解析进消息包；
+		// 枚举 label 键（enum.*）无需另行收集：键形如 enum.<类名>.<key>，可直接经
+		// 枚举注册表（internal/pkg/enum）推导，由 EnumLabel 按需 Localize。
 		if _, err := bundle.ParseMessageFileBytes(expanded, buildinPath); err != nil {
 			panic(err)
 		}

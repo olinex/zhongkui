@@ -4,6 +4,8 @@ import (
 	// stdlib
 	"context"
 	"encoding/json"
+	"strings"
+	"text/template"
 	"time"
 
 	// third-party
@@ -14,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/enum"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/message"
@@ -395,26 +398,104 @@ func (s *Service) resolveTemplate(ctx context.Context, namespace string, event, 
 	return best, nil
 }
 
+// renderFuncs 构造按目标语言渲染通知模板的自定义函数映射，注入三个语义互斥的模板函数，
+// 避免原先被过度重载的单函数 t 造成的歧义：
+//   - T "<i18n键>"：对完整 i18n 键直接翻译（translate.Localize），缺失键回退为键本身；
+//   - TenumKey "<类名>" "<key>"：按枚举 key 经 enum.<类名>.<key> 翻译 label，未注册类
+//     或未命中 key 时回退 key 本身；
+//   - TenumValue "<类名>" "<value>"：先按 value 命中条目（enum 注册表 Resolve 语义，
+//     value 优先、key 其次），再经 enum.<类名>.<key> 翻译 label，未注册类或未命中 value
+//     时回退原 value。
+//
+// 三者类名均兼容 "enum." 前缀写法。lang 为 nil 时由 translate 层回退默认语言。
+// renderFuncs builds the custom function map that renders notification templates in a
+// target language, injecting three semantically exclusive template functions to avoid the
+// ambiguity of the former overloaded single t:
+//   - T "<i18nKey>": directly localizes a full i18n key (translate.Localize), falling back
+//     to the key itself on a miss;
+//   - TenumKey "<className>" "<key>": localizes the enum label via enum.<className>.<key>,
+//     falling back to the key itself when the class or key is unresolved;
+//   - TenumValue "<className>" "<value>": resolves the entry by value first (the enum
+//     registry Resolve contract, value before key) then localizes via enum.<className>.<key>,
+//     falling back to the original value on a miss.
+//
+// All three accept an optional "enum." prefix on the class name. A nil lang falls back to
+// the default language inside the translate layer.
+func renderFuncs(lang *base.Language) template.FuncMap {
+	return template.FuncMap{
+		"T": func(key string) string {
+			return translate.Localize(lang, key, nil)
+		},
+		"TenumKey": func(className, key string) string {
+			name := strings.TrimPrefix(className, "enum.")
+			return translate.EnumLabel(lang, name, key)
+		},
+		"TenumValue": func(className, val string) string {
+			name := strings.TrimPrefix(className, "enum.")
+			if typ, exists := enum.Get(name); exists {
+				if entry, ok := typ.Resolve(val); ok {
+					return translate.EnumLabel(lang, name, entry.Key)
+				}
+			}
+			return val
+		},
+	}
+}
+
 // renderI18nDefault 依据语言在翻译包（internal/pkg/translate）中按
-// notify.<template>.title / notify.<template>.content 键查找并渲染默认标题/正文，作为
-// 持久化模板行解析缺位时的回退。参数直接交由 translate.Localize 渲染出最终文案（支持
-// {{range}} 等 text/template 动作）。缺失的 i18n 键会回退为 key 本身（见 translate.Localize），
-// 据此判断默认模板不可用并返回描述性错误，由调用方记录失败。
-// renderI18nDefault looks up and renders the default title/content by the i18n keys
-// notify.<template>.title / notify.<template>.content in the translate package as the
-// fallback when no persisted template row is resolved. Params are passed straight to
-// translate.Localize to produce the final text ({{range}} etc. supported). A missing i18n
-// key falls back to the key itself (see translate.Localize) and is treated as an unavailable
-// default template, returning a descriptive error for the caller to record.
+// notify.<template>.title / notify.<template>.content 键取回默认标题/正文，作为持久化模板
+// 解析缺位时的回退。notify.* 默认模板因含 {{...}} 函数调用一律经 text/template 渲染：translate 的
+// 全局数据定界符为 [[ / ]]（dataDelimParser），这些源串不含 [[，go-i18n fast-path 原样透出
+// 未渲染原文，故此处经 Localize(lang, key, nil) 拿到的即原始模板串（保留 {{...}} 占位符），
+// 再经 message.RenderTemplateWithFuncs 以 renderFuncs 注入的模板函数（T/TenumKey/TenumValue）
+// 渲染枚举 label。键缺失时
+// Localize 回退返回键本身，据此判定默认模板是否可用。渲染得到的结构体仍为
+// *message.RenderedMessage{Title, Content, ContentType}。
+// renderI18nDefault looks up and renders the default title/content from the i18n keys
+// notify.<template>.title / notify.<template>.content as the fallback when no persisted
+// template row is resolved. Since notify.* defaults are rendered via text/template (they
+// contain {{...}} function calls), translate's global data delimiter is [[ / ]] (dataDelimParser), and
+// these sources contain no [[, so go-i18n fast-paths and returns the unrendered original
+// verbatim; thus Localize(lang, key, nil) here yields the raw template string (with {{...}}
+// placeholders), rendered via message.RenderTemplateWithFuncs with the
+// custom template functions (T/TenumKey/TenumValue from renderFuncs) to resolve enum labels.
+// A missing key makes Localize
+// return the key itself, which signals whether the default template is usable. The result is
+// still a *message.RenderedMessage{Title, Content, ContentType}.
 func renderI18nDefault(lang *base.Language, spec *EventTemplateSpec, params map[string]any, contentType string) (*message.RenderedMessage, error) {
 	titleKey := spec.TitleKey()
 	contentKey := spec.ContentKey()
-	title := translate.Localize(lang, titleKey, params)
-	content := translate.Localize(lang, contentKey, params)
-	if title == titleKey || content == contentKey || title == "" || content == "" {
+	rawTitle := translate.Localize(lang, titleKey, nil)
+	rawContent := translate.Localize(lang, contentKey, nil)
+	if rawTitle == titleKey || rawContent == contentKey || rawTitle == "" || rawContent == "" {
 		return nil, errors.Newf("notify: no i18n default template for message %q (lang %q)", spec.Template, lang)
 	}
+	fn := renderFuncs(lang)
+	title, tErr := message.RenderTemplateWithFuncs(rawTitle, params, fn)
+	if tErr != nil {
+		return nil, errors.Newf("notify: render i18n default title for message %q (lang %q): %v", spec.Template, lang, tErr)
+	}
+	content, cErr := message.RenderTemplateWithFuncs(rawContent, params, fn)
+	if cErr != nil {
+		return nil, errors.Newf("notify: render i18n default content for message %q (lang %q): %v", spec.Template, lang, cErr)
+	}
 	return &message.RenderedMessage{Title: title, Content: content, ContentType: contentType}, nil
+}
+
+// RenderDefaultMessage 依据模板键与语言渲染 notify 内置默认模板（标题+正文），供管理端
+// 事件枚举等场景用事件样例参数展示事件的默认模板能力。模板内容同样经模板函数 t 渲染枚举
+// label（与发送路径一致）。模板键未注册到事件注册表时返回错误。
+// RenderDefaultMessage renders the built-in default template (title+content) for a template
+// key in a language, backing management pages (e.g. the event enum) that demonstrate an
+// event's default template capability with the sample params. The content is rendered through
+// the template function t for enum labels as well (matching the send path). It returns an
+// error when the template key is not registered in the event registry.
+func RenderDefaultMessage(lang *base.Language, templateKey string, params map[string]any, contentType string) (*message.RenderedMessage, error) {
+	_, spec, ok := TemplateSpecOf(templateKey)
+	if !ok {
+		return nil, errors.Newf("notify: no notification template spec for %q", templateKey)
+	}
+	return renderI18nDefault(lang, spec, params, contentType)
 }
 
 // renderMessage 依据目标偏好的语言与所属渠道类型将结构化消息渲染为具体文本
@@ -451,8 +532,8 @@ func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTa
 		if tmpl, err := s.resolveTemplate(ctx, target.NamespaceName, event, channelType, lang.String()); err != nil {
 			s.logger.Ctx(ctx).Warnf("notify: resolve persisted template for event %q channel %q lang %q: %v", event, channelType, lang, err)
 		} else if tmpl != nil {
-			title, tErr := message.RenderTemplateString(tmpl.Title, msg.Params)
-			content, cErr := message.RenderTemplateString(tmpl.Content, msg.Params)
+			title, tErr := message.RenderTemplateWithFuncs(tmpl.Title, msg.Params, renderFuncs(lang))
+			content, cErr := message.RenderTemplateWithFuncs(tmpl.Content, msg.Params, renderFuncs(lang))
 			if tErr == nil && cErr == nil {
 				return &message.RenderedMessage{Title: title, Content: content, ContentType: msg.ContentType}, nil
 			}
@@ -498,24 +579,25 @@ func (s *Service) RenderPreview(ctx context.Context, namespace, event string, ch
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if tmpl != nil {
-		title, tErr := message.RenderTemplateString(tmpl.Title, params)
-		if tErr != nil {
-			return nil, errors.Newf("notify: render preview title for event %q: %v", event, tErr)
-		}
-		content, cErr := message.RenderTemplateString(tmpl.Content, params)
-		if cErr != nil {
-			return nil, errors.Newf("notify: render preview content for event %q: %v", event, cErr)
-		}
-		return &message.RenderedMessage{Title: title, Content: content}, nil
-	}
 	parsed := base.DefaultLanguage
 	if lang != "" {
 		if p, perr := base.ParseLanguage(lang); perr == nil {
 			parsed = p
 		}
 	}
-	return renderI18nDefault(parsed.Normalize(), spec, params, "")
+	parsed = parsed.Normalize()
+	if tmpl != nil {
+		title, tErr := message.RenderTemplateWithFuncs(tmpl.Title, params, renderFuncs(parsed))
+		if tErr != nil {
+			return nil, errors.Newf("notify: render preview title for event %q: %v", event, tErr)
+		}
+		content, cErr := message.RenderTemplateWithFuncs(tmpl.Content, params, renderFuncs(parsed))
+		if cErr != nil {
+			return nil, errors.Newf("notify: render preview content for event %q: %v", event, cErr)
+		}
+		return &message.RenderedMessage{Title: title, Content: content}, nil
+	}
+	return renderI18nDefault(parsed, spec, params, "")
 }
 
 // finalize 将已占位（status=pending）的通知记录更新为发送终态：rendered 为实际发送的

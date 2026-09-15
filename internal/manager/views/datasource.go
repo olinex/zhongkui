@@ -8,10 +8,13 @@ package views
 
 import (
 	// stdlib
+
+	"io"
 	"net/http"
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 
 	// third-party
 	"github.com/creasty/defaults"
@@ -31,12 +34,12 @@ import (
 
 // DatasourceCreateIn 定义创建第三方数据源的请求输入结构。
 // 命名空间取自请求上下文，数据源名称在同一命名空间内唯一（本地身份）；类型必须为
-// vtab.DatasourceTypeRedis / vtab.DatasourceTypeMySQL 之一；Config 为连接配置的 JSON
-// 文本，结构随类型不同而不同（redis 结构 / mysql 表）。
+// vtab 支持的类型（redis / mysql / postgres / clickhouse / sqlite_file / etcd / mongo）
+// 之一；Config 为连接配置的 JSON 文本，结构随类型不同而不同。
 type DatasourceCreateIn struct {
 	// Name 数据源名称，必填，长度 1~128；注册为该命名空间池内的裸名 vtable
 	Name string `json:"name" binding:"required,min=1,max=128"`
-	// Type 数据源类型键，必填，长度 1~16，必须为 redis / mysql 之一
+	// Type 数据源类型键，必填，长度 1~16，必须为支持的类型之一
 	Type string `json:"type" binding:"required,max=16"`
 	// Enabled 是否启用，默认为启用
 	Enabled bool `json:"enabled" default:"true"`
@@ -107,9 +110,9 @@ type DatasourceTypesOut struct {
 }
 
 // DatasourceTypeConfigGet 处理获取第三方数据源类型枚举的请求。
-// 返回 redis / mysql 类型及其配置字段 schema，供前端动态渲染创建/编辑表单。
-// schema 依据 vtab.RedisConfig / vtab.MySQLTableConfig 的 binding/default 标签
-// 经 views.getStructFields 反射生成（与 OPTIONS 元信息同一事实来源）。
+// 返回 redis / mysql / postgres / clickhouse / sqlite_file / etcd / mongo 类型及其
+// 配置字段 schema，供前端动态渲染创建/编辑表单。schema 依据对应 vtab 前端配置结构体的
+// binding/default 标签经 views.getStructFields 反射生成（与 OPTIONS 元信息同一事实来源）。
 func DatasourceTypeConfigGet(c *gin.Context) {
 	results := []DatasourceTypeOut{
 		{
@@ -121,6 +124,31 @@ func DatasourceTypeConfigGet(c *gin.Context) {
 			Type:   vtab.DatasourceTypeMySQL,
 			Name:   vtab.DatasourceTypeMySQL,
 			Config: getStructFields(reflect.TypeFor[vtab.MySQLTableConfig]()),
+		},
+		{
+			Type:   vtab.DatasourceTypePostgres,
+			Name:   vtab.DatasourceTypePostgres,
+			Config: getStructFields(reflect.TypeFor[vtab.PostgresTableConfig]()),
+		},
+		{
+			Type:   vtab.DatasourceTypeClickHouse,
+			Name:   vtab.DatasourceTypeClickHouse,
+			Config: getStructFields(reflect.TypeFor[vtab.ClickHouseTableConfig]()),
+		},
+		{
+			Type:   vtab.DatasourceTypeSQLiteFile,
+			Name:   vtab.DatasourceTypeSQLiteFile,
+			Config: getStructFields(reflect.TypeFor[vtab.SQLiteFileTableConfig]()),
+		},
+		{
+			Type:   vtab.DatasourceTypeEtcd,
+			Name:   vtab.DatasourceTypeEtcd,
+			Config: getStructFields(reflect.TypeFor[vtab.EtcdTableConfig]()),
+		},
+		{
+			Type:   vtab.DatasourceTypeMongo,
+			Name:   vtab.DatasourceTypeMongo,
+			Config: getStructFields(reflect.TypeFor[vtab.MongoCollectionConfig]()),
 		},
 	}
 	response.SimpleOK.AbortWithGinW(c, DatasourceTypesOut{Types: results})
@@ -178,6 +206,9 @@ func DatasourceListGet(c *gin.Context) {
 // DatasourceCreate 处理创建第三方数据源的请求。
 // 创建前先经 pools.Register 校验配置并在当前命名空间池注册为裸名 vtable（MySQL 注册期间
 // 自省一次表结构），成功后再落库；落库失败则回滚注销刚注册的 vtable，保证内存池与 DB 一致。
+// sqlite_file 类型以 multipart/form-data 提交：.db 文件先经 S3 加密上传（Store），随后
+// Register 依赖 Materialize 从 S3 拉取解密建表；任一环节失败都清理已上传对象与已注册
+// vtable，保证「S3 对象 ↔ 配置」共存亡、不泄露无归属文件。
 // 数据源归属当前请求命名空间。
 func DatasourceCreate(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
@@ -189,7 +220,32 @@ func DatasourceCreate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+	// sqlite_file 前端以 multipart/form-data 提交（含 .db 文件流），其余类型仍为 JSON 体。
+	// 仅 sqlite 需要 file 字段；readDatasourceMultipart 流式返回 file 部分，避免整文件缓冲。
+	var file io.Reader
+	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
+		var err error
+		if file, err = readDatasourceMultipart(c, func(name string, body []byte) {
+			switch name {
+			case "name":
+				in.Name = string(body)
+			case "type":
+				in.Type = string(body)
+			case "enabled":
+				in.Enabled, _ = strconv.ParseBool(string(body))
+			case "config":
+				in.Config = string(body)
+			case "description":
+				in.Description = string(body)
+			}
+		}); err != nil {
+			response.CreateBadBodyError(err).AbortWithGinH(c)
+			return
+		}
+		if closer, ok := file.(io.ReadCloser); ok {
+			defer closer.Close()
+		}
+	} else if err := c.ShouldBindBodyWithJSON(&in); err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
@@ -201,9 +257,30 @@ func DatasourceCreate(c *gin.Context) {
 		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
 		return
 	}
-	// 先注册（即校验）：配置非法或 MySQL 建数据源自省失败时在此报错，不落库
 	pools := middlewares.GetSQLiteVTabPools(c)
+	// sqlite_file：先把 .db 文件加密上传到 S3，再由 Register 的 Materialize 拉取建表；
+	// 后续注册/落库任一失败都要清理该对象（对象键由命名空间+数据源名派生，随配置共存亡）。
+	objectKey := ""
+	if in.Type == vtab.DatasourceTypeSQLiteFile {
+		if file == nil {
+			response.CreateBadBodyError(errors.New("创建 sqlite 数据源必须上传 .db 文件")).AbortWithGinH(c)
+			return
+		}
+		objectKey = vtab.SQLiteObjectKey(namespace, in.Name)
+		if err := pools.StoreSQLiteObject(c, namespace, in.Name, file); err != nil {
+			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
+				response.CreateBadBodyError(errors.New("创建 sqlite 数据源需要启用 S3 对象存储")).AbortWithGinH(c)
+			} else {
+				response.CreateAccidentError(err).AbortWithGinH(c)
+			}
+			return
+		}
+	}
+	// 先注册（即校验）：配置非法或建数据源自省失败时在此报错，不落库
 	if err := pools.Register(c, namespace, in.Name, in.Type, []byte(in.Config)); err != nil {
+		if objectKey != "" {
+			_ = pools.RemoveSQLiteObject(c, namespace, in.Name)
+		}
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
@@ -216,8 +293,11 @@ func DatasourceCreate(c *gin.Context) {
 		Description:   in.Description,
 	}
 	if err := middlewares.GetCoreDatabase(c).WithContext(c).Create(instance).Error; err != nil {
-		// 落库失败时回滚已注册的 vtable，保持内存池与 DB 一致
+		// 落库失败时回滚已注册的 vtable 与已上传的 S3 对象，保持内存池/对象与 DB 一致
 		_ = pools.Unregister(c, namespace, in.Name)
+		if objectKey != "" {
+			_ = pools.RemoveSQLiteObject(c, namespace, in.Name)
+		}
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -279,11 +359,44 @@ func DatasourceUpdate(c *gin.Context) {
 		return
 	}
 	var in DatasourceUpdateIn
-	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+	// sqlite_file 类型可经 multipart/form-data 携带新的 .db 文件（覆盖同一 S3 对象）；
+	// 其余字段与类型仍为 JSON 体。
+	var file io.Reader
+	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
+		var err error
+		if file, err = readDatasourceMultipart(c, func(name string, body []byte) {
+			switch name {
+			case "enabled":
+				in.Enabled, _ = strconv.ParseBool(string(body))
+			case "config":
+				in.Config = string(body)
+			case "description":
+				in.Description = string(body)
+			}
+		}); err != nil {
+			response.CreateBadBodyError(err).AbortWithGinH(c)
+			return
+		}
+		if closer, ok := file.(io.ReadCloser); ok {
+			defer closer.Close()
+		}
+	} else if err := c.ShouldBindBodyWithJSON(&in); err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
 	pools := middlewares.GetSQLiteVTabPools(c)
+	// sqlite_file 且提供了新的 .db 文件：先加密上传覆盖同一对象键，再走 Register 的
+	// Materialize 以新文件重注册；上传失败即中止（对象键稳定，未造成无归属残留）。
+	if instance.Type == vtab.DatasourceTypeSQLiteFile && file != nil {
+		if err := pools.StoreSQLiteObject(c, namespace, instance.Name, file); err != nil {
+			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
+				response.CreateBadBodyError(errors.New("更新 sqlite 数据源需要启用 S3 对象存储")).AbortWithGinH(c)
+			} else {
+				response.CreateAccidentError(err).AbortWithGinH(c)
+			}
+			return
+		}
+	}
 	if in.Enabled {
 		// 启用/保持启用：先注册新配置（即校验），成功后落库
 		if err := pools.Register(c, namespace, instance.Name, instance.Type, []byte(in.Config)); err != nil {
@@ -360,6 +473,13 @@ func DatasourceBatchDelete(c *gin.Context) {
 			// 先删库再注销 vtable（best-effort，忽略未注册）
 			if err := pools.Unregister(c, namespace, instance.Name); err != nil {
 				return errors.WithStack(err)
+			}
+			// sqlite_file：注销后清理其 S3 加密对象，避免无归属文件泄露（对象与配置共存亡）
+			if instance.Type == vtab.DatasourceTypeSQLiteFile {
+				if err := pools.RemoveSQLiteObject(c, namespace, instance.Name); err != nil &&
+					!errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
+					return errors.WithStack(err)
+				}
 			}
 			// 广播变更事件，通知 worker 等消费进程同步本地 vtable 池（best-effort）
 			broadcastDatasourceChange(c, namespace, instance.Name)
@@ -444,9 +564,51 @@ func broadcastDatasourceChange(c *gin.Context, namespace, name string) {
 	}
 }
 
-// isSupportedDatasourceType 判断数据源类型是否为 vtab 支持的类型（redis / mysql）。
+// isSupportedDatasourceType 判断数据源类型是否为 vtab 支持的类型。
+// 支持：redis / mysql / postgres / clickhouse / sqlite_file / etcd / mongo。
 func isSupportedDatasourceType(typ string) bool {
-	return slices.Contains([]string{vtab.DatasourceTypeRedis, vtab.DatasourceTypeMySQL}, typ)
+	return slices.Contains([]string{
+		vtab.DatasourceTypeRedis, vtab.DatasourceTypeMySQL, vtab.DatasourceTypePostgres,
+		vtab.DatasourceTypeClickHouse, vtab.DatasourceTypeSQLiteFile,
+		vtab.DatasourceTypeEtcd, vtab.DatasourceTypeMongo,
+	}, typ)
+}
+
+// readDatasourceMultipart 流式解析 multipart/form-data 请求：把 file 字段之前出现的普通
+// 表单字段经 cb(name, body) 回调交给调用方填充，并把 file 部分的读取流原样返回给调用方
+// 直通 S3 加密上传（避免整文件缓冲/落盘）。约定 file 字段须位于最后一个 part（前端保证
+// 顺序），因此返回的流在回调完成后即可安全读取。未携带 file 时返回 nil。
+// readDatasourceMultipart streams a multipart/form-data request: it feeds ordinary form
+// fields before "file" to cb(name, body), and returns the "file" part as a raw reader for
+// the caller to stream straight into S3 encrypting upload (no whole-file buffering/spilling).
+// It assumes "file" is the last part (guaranteed by the frontend) so the returned stream is
+// safe to read after the callback loop. Returns nil when no file part is present.
+func readDatasourceMultipart(c *gin.Context, cb func(name string, body []byte)) (io.Reader, error) {
+	mr, err := c.Request.MultipartReader()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	for {
+		part, err := mr.NextPart()
+		if err == io.EOF {
+			return nil, nil
+		}
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		if name := part.FormName(); name == "file" {
+			// 将整个 file 部分作为读取流返回（不预读），由存储层流式消费。
+			return part, nil
+		}
+		body, err := io.ReadAll(part)
+		if cErr := part.Close(); cErr != nil {
+			return nil, errors.WithStack(cErr)
+		}
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		cb(part.FormName(), body)
+	}
 }
 
 // newDatasourceDetailOut 将 Datasource 转换为基础上的详情输出结构。
@@ -463,4 +625,10 @@ func newDatasourceDetailOut(ds *core.Datasource) DatasourceDetailOut {
 		Config:      ds.Config,
 		Description: ds.Description,
 	}
+}
+
+// init 注册第三方数据源列表出参（DatasourceListOut.type）的数据源类型枚举类绑定，
+// 枚举类由 enum_registry.go 从 vtab 包类型常量注册（类名 datasourceType）。
+func init() {
+	AddEnumBinding("DatasourceListOut", "type", "datasourceType")
 }

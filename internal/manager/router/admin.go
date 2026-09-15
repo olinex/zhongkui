@@ -164,5 +164,19 @@ func registerAdminRoutes(ctx *RegisterContext) {
 		adminGroup.OPTIONS("/capturer/delete", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.CapturerBatchDeleteIn](), views.WithBodyOutput[views.BatchResultOut]()),
 		))
+
+		// ========== 统一枚举获取接口 ==========
+		// 前端获取枚举值（key/value）与可读 label 的唯一通道，值来源为 enum 注册表
+		adminGroup.POST("/enum/get", views.EnumGet)
+		// 枚举类查询元信息
+		adminGroup.OPTIONS("/enum/get", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyInput[views.EnumGetIn](), views.WithBodyOutput[views.EnumTypeOut]()),
+		))
+		// 枚举全量类查询 - 按语言返回全部枚举类条目
+		adminGroup.POST("/enum/list", views.EnumList)
+		// 枚举全量类查询元信息
+		adminGroup.OPTIONS("/enum/list", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyInput[views.EnumListIn](), views.WithBodyOutput[views.EnumListOut]()),
+		))
 	}
 }

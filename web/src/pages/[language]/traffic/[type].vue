@@ -107,7 +107,7 @@ import { vuetifyCfg } from "@/utils/form";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
 import { modelFieldTitle } from "@/utils/modelField";
-import { enumFieldOptionsFromMeta, enumMetaOptions } from "@/utils/options";
+import { enumFieldTypeOfMeta, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import type { MetaOut } from "@/components/@types/meta";
 
 // 流量模型类型与路由段一一对应（/traffic/:type），侧边栏各模型入口分别携带 type 参数
@@ -624,21 +624,34 @@ const loadSearchOptions = async (): Promise<void> => {
   await getResponse<MetaOut>(
     trafficListOptions(type.value),
     async (rsp) => {
+      // 统一枚举接口按类名获取：先遍历 filterBy 收集命中枚举类的字段（enumFieldTypeOfMeta
+      // 自省 bodyOutput 的 enumType），全部 ensureEnum 确保选项按当前语言缓存，
+      // enumOptionsOf 才能立即返回完整下拉选项（不 await 会导致首屏选项为空）
+      const enumTypes = new Set<string>();
+      for (const item of rsp.data.filterBy) {
+        if (EXCLUDED_FILTER_FIELDS.has(item.name)) {
+          continue;
+        }
+        const enumType = enumFieldTypeOfMeta(rsp.data.meta, item.name);
+        if (enumType) {
+          enumTypes.add(enumType);
+        }
+      }
+      await Promise.all([...enumTypes].map((t) => ensureEnum(t)));
       searchHeaders.value = rsp.data.filterBy
         .filter((item) => !EXCLUDED_FILTER_FIELDS.has(item.name))
         .reduce(
           (prev, cur) => {
-            // 枚举筛选项已不再由后端 SearchOptionsOut.filterBy 携带，改为从同一自省
-            // 响应中 bodyOutput 的 enumOptions 解析（[[enums]] 单一事实来源）；
-            // 命中则为枚举下拉，未命中（非枚举字段）保持后端字段类型（如字符串文本框）
-            const opts = enumFieldOptionsFromMeta(rsp.data.meta, cur.name);
+            // 枚举筛选项经统一枚举注册表按类名获取：命中则为枚举下拉，未命中
+            // （非枚举字段）保持后端字段类型（如字符串文本框）
+            const enumType = enumFieldTypeOfMeta(rsp.data.meta, cur.name);
             prev[cur.name] = {
               name: cur.name,
               title: trafficFieldTitle(cur.name),
               actions: cur.actions,
-              type: opts ? BackendDataType.ENUM : normalizeFilterType(cur.type),
-              // 枚举筛选项 title 经 enumMetaOptions 按 model.<Name>.option.<key> 统一翻译
-              options: opts ? enumMetaOptions(typeKey.value, opts) : cur.options,
+              type: enumType ? BackendDataType.ENUM : normalizeFilterType(cur.type),
+              options: enumType ? enumOptionsOf(enumType) : cur.options,
+              enumType,
             };
             return prev;
           },
@@ -718,13 +731,13 @@ const favoriteSampleAction = async (item: Record<string, unknown>): Promise<void
   if (!modelKey) {
     return;
   }
-  await getSimpleResponse(
+  await getResponse<Record<string, unknown>>(
     trafficDetailGet(type.value, {
       namespace: String(item.namespace ?? ""),
       id: String(item.id ?? ""),
     }),
     async (rsp) => {
-      const input = { ...(rsp.data as Record<string, unknown>) };
+      const input = { ...rsp.data };
       // 行定位字段（id）与分页计数（total）非模型字段，从样例文档中剔除
       delete input.id;
       delete input.total;

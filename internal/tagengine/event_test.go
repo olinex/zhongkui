@@ -268,13 +268,16 @@ func TestDetect(t *testing.T) {
 		}
 		var now = time.Now().UTC().Add(-6 * time.Minute).Truncate(time.Minute)
 		window := serializer.DurationNS(5 * time.Minute)
+		// hitModelTypeKey 命中分组使用的完整类型键（数据库存储语义），
+		// 验证 toEventHit 对 Model 不做 value→key 收敛、直接存完整类型键。
+		const hitModelTypeKey = "zhongkui.com/zhongkui/internal/models/network.HttpTransport"
 		// 确定性 UUID：两组内 u2 重复出现，用于验证命中 IDs 的去重聚合
 		u1 := serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")
 		u2 := serializer.MustHexUUIDv4FromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
 		u3 := serializer.MustHexUUIDv4FromString("bbbbbbbb-cccc-dddd-eeee-ffffffffffff")
 		// 命中组：窗口内两行合计 4 > 阈值 3，ids 为 {u1,u2} 与 {u2,u3}，去重后应得 {u1,u2,u3}
-		insert(now.Add(-4*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2, serializer.HexUUIDs{u1, u2})
-		insert(now.Add(-2*time.Minute), "default", "m1", "d1", "i1", []string{"A", "B"}, 2, serializer.HexUUIDs{u2, u3})
+		insert(now.Add(-4*time.Minute), "default", hitModelTypeKey, "d1", "i1", []string{"A", "B"}, 2, serializer.HexUUIDs{u1, u2})
+		insert(now.Add(-2*time.Minute), "default", hitModelTypeKey, "d1", "i1", []string{"A", "B"}, 2, serializer.HexUUIDs{u2, u3})
 		// 未命中组：缺少标签 B
 		insert(now.Add(-3*time.Minute), "default", "m2", "d2", "i2", []string{"A"}, 5, nil)
 		// 窗口外数据：应被时间边界排除
@@ -303,7 +306,8 @@ func TestDetect(t *testing.T) {
 			So(events[0].DetectedAt, ShouldResemble, now)
 			So(events[0].Hits, ShouldHaveLength, 1)
 			So(events[0].Hits[0].ConditionID, ShouldEqual, uint(1))
-			So(events[0].Hits[0].Model, ShouldEqual, "m1")
+			// Model 存完整类型键（value），不做短键收敛
+			So(events[0].Hits[0].Model, ShouldEqual, hitModelTypeKey)
 			So(events[0].Hits[0].Count, ShouldEqual, uint64(4))
 			// IDs 去重聚合：{u1,u2} + {u2,u3} -> {u1,u2,u3}，ClickHouse 不保证数组顺序，按集合断言
 			So(events[0].Hits[0].IDs, ShouldHaveLength, 3)

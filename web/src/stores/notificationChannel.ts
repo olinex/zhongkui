@@ -3,7 +3,7 @@ import { defineStore } from "pinia";
 
 import { getResponse } from "@/apis/base";
 import { notificationChannelTypesGet } from "@/apis/notification";
-import { DynamicEnums, dynamicEnumOptions } from "@/constants/dynamicEnums";
+import { EnumClass, enumOptionsOf } from "@/utils/enums";
 
 // Types
 import type {
@@ -13,7 +13,7 @@ import type {
 
 import { useAppStore } from "./app";
 
-// ChannelTypeOption 渠道类型下拉可选项：title 为经 i18n 翻译的展示名（经动态枚举注册表），
+// ChannelTypeOption 渠道类型下拉可选项：title 为经 i18n 翻译的展示名（经统一枚举注册表），
 // value 为渠道类型键。供 channel / target / template 三个页面统一消费后端渠道类型注册表。
 export interface ChannelTypeOption {
   title: string;
@@ -36,18 +36,17 @@ export const useNotificationChannelStore = defineStore("notificationChannel", {
       return Object.fromEntries(this.channelTypes.map((t) => [t.type, t]));
     },
     // channelTypeOptions 渠道类型下拉选项：过滤占位符渠道（系统固定数据，前端不提供创建入口），
-    // 供 channel / target 创建与编辑下拉使用；展示名经动态枚举注册表统一翻译
+    // 供 channel / target 创建与编辑下拉使用；展示名经统一枚举注册表统一翻译
     channelTypeOptions(): ChannelTypeOption[] {
-      return dynamicEnumOptions(
-        DynamicEnums.channelType,
-        this.channelTypes.filter((t) => !t.placeholder),
-        "type",
+      const placeholders = new Set(
+        this.channelTypes.filter((t) => t.placeholder).map((t) => t.type),
       );
+      return enumOptionsOf(EnumClass.channelType).filter((o) => !placeholders.has(o.value));
     },
     // allChannelTypeOptions 全量渠道类型下拉选项（含占位符渠道），
     // 供 template 页创建/渲染测试模板使用（模板渠道类型需覆盖全部渠道，如 webhook）
     allChannelTypeOptions(): ChannelTypeOption[] {
-      return dynamicEnumOptions(DynamicEnums.channelType, this.channelTypes, "type");
+      return enumOptionsOf(EnumClass.channelType);
     },
   },
   actions: {

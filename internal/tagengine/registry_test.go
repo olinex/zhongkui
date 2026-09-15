@@ -39,15 +39,20 @@ var registryValidTypeKey = func() string {
 func TestRegister(t *testing.T) {
 	Convey("Test Register", t, func() {
 		Convey("含唯一 ID 字段（serializer.HexUUID）的模型注册成功", func() {
-			tagengine.Register(tagengine.Target{Type: &registryValidModel{}, DisplayName: "model.test.registryValid"})
+			tagengine.Register(tagengine.Target{Type: &registryValidModel{}})
 			target, ok := tagengine.TargetInfo(registryValidTypeKey)
 			So(ok, ShouldBeTrue)
-			So(target.DisplayName, ShouldEqual, "model.test.registryValid")
+			So(target.Type, ShouldNotBeNil)
+			So(target.Dimensions, ShouldBeEmpty)
+
+			// TypeKeys 返回已注册模型的类型键（不含 label；模型展示 label 由 tagRuleModel
+			// 枚举类推导键 enum.tagRuleModel.<ModelKey> 经统一枚举接口本地化）
+			So(tagengine.TypeKeys(), ShouldContain, registryValidTypeKey)
 		})
 
 		Convey("缺少 ID 字段的模型注册时 panic", func() {
 			recovered := recoverPanic(func() {
-				tagengine.Register(tagengine.Target{Type: &registryNoIDModel{}, DisplayName: "model.test.registryNoID"})
+				tagengine.Register(tagengine.Target{Type: &registryNoIDModel{}})
 			})
 			So(recovered, ShouldNotBeNil)
 			msg, ok := recovered.(string)
@@ -57,7 +62,7 @@ func TestRegister(t *testing.T) {
 
 		Convey("ID 字段类型不为 serializer.HexUUID 的模型注册时 panic", func() {
 			recovered := recoverPanic(func() {
-				tagengine.Register(tagengine.Target{Type: &registryWrongIDModel{}, DisplayName: "model.test.registryWrongID"})
+				tagengine.Register(tagengine.Target{Type: &registryWrongIDModel{}})
 			})
 			So(recovered, ShouldNotBeNil)
 			msg, ok := recovered.(string)
@@ -72,4 +77,27 @@ func recoverPanic(fn func()) (recovered any) {
 	defer func() { recovered = recover() }()
 	fn()
 	return nil
+}
+
+// TestModelKey 校验 ModelKey 从完整类型键推导 camelCase 短展示键（枚举 Option.Key 唯一来源）。
+func TestModelKey(t *testing.T) {
+	Convey("Test ModelKey", t, func() {
+		Convey("完整类型键取末段并转小驼峰", func() {
+			So(tagengine.ModelKey("zhongkui.com/zhongkui/internal/models/network.HttpTransport"), ShouldEqual, "httpTransport")
+		})
+
+		Convey("已是枚举短键时幂等", func() {
+			So(tagengine.ModelKey("httpTransport"), ShouldEqual, "httpTransport")
+		})
+
+		Convey("无点段时回退原串转小驼峰", func() {
+			So(tagengine.ModelKey("HttpTransport"), ShouldEqual, "httpTransport")
+			So(tagengine.ModelKey("m1"), ShouldEqual, "m1")
+		})
+
+		Convey("空键返回空串", func() {
+			So(tagengine.ModelKey(""), ShouldEqual, "")
+			So(tagengine.ModelKey("abc."), ShouldEqual, "")
+		})
+	})
 }

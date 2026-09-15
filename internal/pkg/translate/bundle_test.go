@@ -1,10 +1,14 @@
 package translate
 
 import (
+	"bytes"
+	"strings"
 	"testing"
+	"text/template"
 
 	. "github.com/smartystreets/goconvey/convey"
 	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkui.com/zhongkui/internal/pkg/enum"
 )
 
 // TestSupportLanguages 测试应用支持的语言列表
@@ -47,13 +51,15 @@ func TestLocalize(t *testing.T) {
 			So(Localize(zhLang, "missing.key", nil), ShouldEqual, "missing.key")
 		})
 
-		Convey("external @file reference should be expanded into the template", func() {
+		Convey("external @file reference is expanded and passed through verbatim under the [[ ]] data delimiter", func() {
 			// notify.password.reset.content 声明为 "@emails/password-reset-content.zh-Hans.html"，
-			// 解析时应收敛为外部 HTML 模板内容，并通过 go-i18n 渲染 {{.ResetURL}} 占位符。
-			rendered := Localize(zhLang, "notify.password.reset.content", map[string]any{"ResetURL": "https://example.com/reset?token=abc"})
-			So(rendered, ShouldNotEqual, "@emails/password-reset-content.zh-Hans.html")
-			So(rendered, ShouldContainSubstring, "https://example.com/reset?token=abc")
-			So(rendered, ShouldContainSubstring, "<html")
+			// 全局数据定界符为 [[ / ]]（dataDelimParser），该源串含 {{.ResetURL}} 不含 [[，go-i18n
+			// 原样透出"未渲染的原始 HTML 模板"；通知默认模板统一经 text/template 渲染，而非 go-i18n
+			// 数据渲染。
+			raw := Localize(zhLang, "notify.password.reset.content", map[string]any{"ResetURL": "https://example.com/reset?token=abc"})
+			So(raw, ShouldNotEqual, "@emails/password-reset-content.zh-Hans.html")
+			So(raw, ShouldContainSubstring, "{{.ResetURL}}")
+			So(raw, ShouldContainSubstring, "<html")
 		})
 	})
 }
@@ -75,50 +81,132 @@ func TestLocalizer(t *testing.T) {
 	})
 }
 
-// TestRenderNotifyTemplateWithParams 验证"直接传参从 i18n 取最终文案"的渲染路径：
-// 以事件模板键为消息键，参数直接交由 Localize 渲染（含 {{range}} 循环）；缺失键回退为 key 本身。
-func TestRenderNotifyTemplateWithParams(t *testing.T) {
-	Convey("Test Render Notify Template With Params", t, func() {
+// ensureTestEnumClasses 幂等注册本测试用枚举类（translate 测试二进制不链接 views 包，
+// 其 init() 才注册全量 enum 类；此处按同一契约注册 tagRuleModel / channelType，已存在则跳过）。
+func ensureTestEnumClasses() {
+	for _, t := range []enum.Type{
+		{
+			Name: "channelType",
+			Entries: []enum.Entry{
+				{Key: "email", Value: "email"},
+				{Key: "webhook", Value: "webhook"},
+			},
+		},
+		{
+			Name: "tagRuleModel",
+			Entries: []enum.Entry{
+				{Key: "httpTransport", Value: "zhongkui.com/zhongkui/internal/models/network.HttpTransport"},
+			},
+		},
+		{
+			Name: "tagEventDimension",
+			Entries: []enum.Entry{
+				{Key: "fpTcpClientSig", Value: "fpTcpClientSig"},
+				{Key: "fpTcpServerSig", Value: "fpTcpServerSig"},
+			},
+		},
+	} {
+		if !enum.Exists(t.Name) {
+			enum.Register(t)
+		}
+	}
+}
+
+// renderNotifyRaw 以目标语言渲染 notify 默认模板的“原始模板串”：注入与 notify 层
+// renderFuncs 一致的三个模板函数（T 直接翻译 i18n 键，TenumKey/TenumValue 按枚举
+// key/value 经 enum 注册表解析 label），供本包测试验证带函数调用的默认模板渲染路径。
+// renderNotifyRaw renders the raw string of a notify default template in a language by
+// injecting the three template functions that match notify.renderFuncs (T translates a
+// full i18n key directly; TenumKey/TenumValue resolve the enum label by key/value via the
+// enum registry), so package tests verify the function-call rendering path.
+func renderNotifyRaw(lang *base.Language, raw string, params map[string]any) string {
+	tmpl, err := template.New("render").Option("missingkey=zero").Funcs(template.FuncMap{
+		"T": func(key string) string {
+			return Localize(lang, key, nil)
+		},
+		"TenumKey": func(className, key string) string {
+			name := strings.TrimPrefix(className, "enum.")
+			return EnumLabel(lang, name, key)
+		},
+		"TenumValue": func(className, val string) string {
+			name := strings.TrimPrefix(className, "enum.")
+			if typ, exists := enum.Get(name); exists {
+				if entry, ok := typ.Resolve(val); ok {
+					return EnumLabel(lang, name, entry.Key)
+				}
+			}
+			return val
+		},
+	}).Parse(raw)
+	if err != nil {
+		return ""
+	}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, params); err != nil {
+		return ""
+	}
+	return buf.String()
+}
+
+// TestRenderNotifyTemplateWithFuncs 验证 notify 默认模板经“原始模板串 + 模板函数”的渲染路径：
+// 模板内 TenumValue 调用按目标语言解析枚举 label（目标模型 httpTransport、标签维度 fpTcp*Sig 等），
+// 缺失键回退为 key 本身。对应 notify 层 renderFuncs/renderI18nDefault 的实现。
+func TestRenderNotifyTemplateWithFuncs(t *testing.T) {
+	Convey("Test Render Notify Template With Funcs", t, func() {
+		ensureTestEnumClasses()
 		zhLang, err := base.ParseLanguage("zh-Hans")
 		So(err, ShouldBeNil)
 		enLang, err := base.ParseLanguage("en")
 		So(err, ShouldBeNil)
 
-		Convey("标题按参数渲染出最终文案", func() {
-			// notify.tag_event.alert.title = "标签事件告警: {{.RuleName}}"
-			rendered := Localize(zhLang, "notify.tag_event.alert.title", map[string]any{"RuleName": "告警规则"})
-			So(rendered, ShouldEqual, "标签事件告警: 告警规则")
+		Convey("标题经原始串按参数渲染出最终文案（不含 t 调用，与旧路径一致）", func() {
+			raw := Localize(zhLang, "notify.tag_event.alert.title", nil)
+			So(raw, ShouldNotEqual, "notify.tag_event.alert.title")
+			So(renderNotifyRaw(zhLang, raw, map[string]any{"RuleName": "告警规则"}), ShouldEqual, "标签事件告警: 告警规则")
 		})
 
-		Convey("正文经外部文件引用展开并支持 {{range}} 渲染", func() {
-			rendered := Localize(zhLang, "notify.tag_event.alert.content", map[string]any{
+		Convey("正文经 TenumValue 把目标模型与维度 value 解析为可读 label", func() {
+			raw := Localize(zhLang, "notify.tag_event.alert.content", nil)
+			So(raw, ShouldNotEqual, "notify.tag_event.alert.content")
+			rendered := renderNotifyRaw(zhLang, raw, map[string]any{
 				"Namespace":  "default",
 				"RuleName":   "告警规则",
 				"DetectedAt": "2026-01-01T00:00:00Z",
 				"Hits": []map[string]any{
-					{"ConditionName": "C1", "Dimension": "src", "Item": "ip", "Count": 12, "Threshold": 10},
-					{"ConditionName": "C2", "Dimension": "src", "Item": "ip", "Count": 8, "Threshold": 5},
+					{"ConditionName": "C1", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 12, "Threshold": 10, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
+					{"ConditionName": "C2", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 8, "Threshold": 5, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport"},
 				},
 			})
-			So(rendered, ShouldContainSubstring, "命名空间: default")
+			So(rendered, ShouldContainSubstring, "命名空间 : default")
 			So(rendered, ShouldContainSubstring, "告警规则")
-			So(rendered, ShouldContainSubstring, "- 条件 C1")
-			So(rendered, ShouldContainSubstring, "= 12 (阈值 10)")
-			So(rendered, ShouldContainSubstring, "- 条件 C2")
+			So(rendered, ShouldContainSubstring, "条件「C1」")
+			So(rendered, ShouldContainSubstring, "维度/项 : 客户端指纹签名 / 10.0.0.1")
+			So(rendered, ShouldContainSubstring, "目标模型 : HTTP 传输")
+			So(rendered, ShouldContainSubstring, "维度/项 : 服务端指纹签名 / 443")
+			// 缺失 Model 字段条件分支时跳过目标模型行，不渲染空行
+			So(rendered, ShouldContainSubstring, "涉及记录 : 5 条")
 		})
 
-		Convey("英语经外部内容文件渲染", func() {
-			rendered := Localize(enLang, "notify.tag_event.alert.content", map[string]any{
+		Convey("英语经 TenumValue 渲染出英文 label", func() {
+			raw := Localize(enLang, "notify.tag_event.alert.content", nil)
+			So(raw, ShouldNotEqual, "notify.tag_event.alert.content")
+			rendered := renderNotifyRaw(enLang, raw, map[string]any{
 				"Namespace":  "default",
 				"RuleName":   "rule",
 				"DetectedAt": "2026-01-01T00:00:00Z",
-				"Hits":       []map[string]any{},
+				"Hits": []map[string]any{
+					{"ConditionName": "C1", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 8, "Threshold": 5, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s"},
+				},
 			})
-			So(rendered, ShouldContainSubstring, "Namespace: default")
+			So(rendered, ShouldContainSubstring, "Namespace   : default")
+			So(rendered, ShouldContainSubstring, "Dimension/Item : Server Fingerprint Signature / 443")
+			So(rendered, ShouldContainSubstring, "Target model   : HTTP Transport")
 		})
 
 		Convey("缺失键回退为 key 本身", func() {
-			So(Localize(zhLang, "notify.no.such.key", nil), ShouldEqual, "notify.no.such.key")
+			// T 对未配置的 i18n 键回退为键本身，符合回退契约
+			rendered := renderNotifyRaw(zhLang, `{{ T "model.no.such.key" }}`, nil)
+			So(rendered, ShouldEqual, "model.no.such.key")
 		})
 	})
 }

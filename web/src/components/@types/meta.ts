@@ -1,17 +1,11 @@
 // 接口元信息（OPTIONS）类型定义：与后端 internal/manager/views/meta.go 的
 // FieldMeta / StructMeta / MethodMeta / ApiMeta / ListMeta 序列化形状一一对应，
-// 供前端元信息缓存 store（@/stores/meta）与表单/表格通用渲染消费。
+// 供前端表单/表格通用渲染消费。
 import type { SearchOptionsOut } from "./table";
 
-// EnumOption 可选枚举值项：Key 为字段内唯一标识（前端借此翻译 i18n），
-// Value 为提交/存储值（多数与 Key 相同，个别富枚举允许不同）。
-export interface EnumOption {
-  key: string;
-  value: string;
-}
-
 // FieldMeta 接口结构体单个字段元信息。
-// 可选枚举值字段（enum=true）以下拉展示，可选项经 enumOptions 取。
+// 可选枚举值字段（enum=true）以下拉展示，条目经 enumType 指定的枚举类名，
+// 通过统一枚举接口（/admin/enum/get）按类名获取；label 由 key 经 enum.<类名>.<key> 翻译。
 export interface FieldMeta {
   name: string;
   type: string;
@@ -20,7 +14,7 @@ export interface FieldMeta {
   required: boolean;
   defaultValue?: unknown;
   enum?: boolean;
-  enumOptions?: EnumOption[];
+  enumType?: string;
 }
 
 // StructMeta 单个接口结构体元信息。

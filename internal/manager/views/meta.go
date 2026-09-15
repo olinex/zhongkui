@@ -32,15 +32,6 @@ import (
 // Kind describes the semantic type of a field for frontend form control selection.
 type Kind string
 
-// EnumProvider 返回某字段当前可用的可选枚举取值集合。
-// 供来源为注册表/运行时的动态字段（无法静态声明进 enumFieldOptions）在自省时按需取值。
-type EnumProvider = func() []utils.EnumOption
-
-// runtimeEnumProviders 运行时枚举 provider 注册表：
-// key 格式 "{TypeName}.{FieldJSONName}"（与静态 enumFieldOptions 的外键/字段命名一致），
-// 供 meta 自省在静态注册表未命中时兜底为字段填充可选枚举值。
-var runtimeEnumProviders = map[string]EnumProvider{}
-
 const (
 	// KindString 单行文本
 	// KindString single-line text
@@ -57,6 +48,10 @@ const (
 	// KindObject 对象/结构化数据（通常以 JSON 文本编辑）
 	// KindObject object/structured (usually edited as JSON text)
 	KindObject Kind = "object"
+	// KindColumns 列定义列表：形如 [{name, type}] 的手动 schema 编辑器（数据源接入用）
+	// KindColumns a list of column definitions, e.g. [{name, type}], rendered as a manual
+	// schema editor (used for datasource access)
+	KindColumns Kind = "columns"
 	// KindBoolean 布尔开关
 	// KindBoolean boolean switch
 	KindBoolean Kind = "boolean"
@@ -82,11 +77,12 @@ type FieldMeta struct {
 	Required bool `json:"required"`
 	// DefaultValue 默认值，取自 default 标签（按 Kind 解析），可选
 	DefaultValue any `json:"defaultValue,omitempty"`
-	// Enum 是否为可选枚举值字段：为 true 时前端应以下拉形式展示，并通过 enumOptions 取可选项
+	// Enum 是否为可选枚举值字段：为 true 时前端应以下拉形式展示，并通过 EnumType 指定的枚举类获取条目
 	Enum bool `json:"enum,omitempty"`
-	// EnumOptions 该枚举字段的可选值列表（仅 Enum 为 true 时提供），形状统一为 [{key, value}]；
-	// key 为字段内唯一标识（前端经 model.<...>.option.<key> 翻译展示），value 为提交/存储值
-	EnumOptions []utils.EnumOption `json:"enumOptions,omitempty"`
+	// EnumType 该枚举字段的枚举类名（仅 Enum 为 true 时提供）；
+	// 条目经统一枚举接口 /admin/enum/get 按类名获取（形状统一为 [{key, value}]），
+	// label 由 key 经 enum.<类名>.<key> 翻译展示，value 为提交/存储值。
+	EnumType string `json:"enumType,omitempty"`
 }
 
 // StructMeta 描述单个接口结构体的元信息。
@@ -299,8 +295,7 @@ func getStructMeta(t reflect.Type) *StructMeta {
 //   - Required：binding 标签包含 "required" 即 true。
 //   - DefaultValue：取 default 标签，按 Kind 解析为数值/布尔/字符串。
 //   - Type：字段 Go 类型字符串，指针类型取其元素类型。
-//   - Enum/EnumOptions：按结构体类型名查 enumFieldOptions 注册表，命中则标记为枚举字段、
-//     附带可选项。
+//   - Enum/EnumType：按结构体类型名查 enumBindings 绑定表（typeName → field → 枚举类名），命中则标记为枚举字段并附带枚举类名。
 //
 // 未指定结构体类型或类型非结构体时返回 nil。
 func getStructFields(t reflect.Type) []*FieldMeta {
@@ -333,7 +328,7 @@ func getStructFieldsNamed(t reflect.Type, enumTypeName string) []*FieldMeta {
 		return nil
 	}
 
-	enumDecls := enumFieldOptions[enumTypeName]
+	classBindings := enumBindings[enumTypeName]
 	fields := make([]*FieldMeta, 0, tt.NumField())
 	for field := range tt.Fields() {
 		// 处理匿名嵌入字段：递归展开其内部字段
@@ -380,23 +375,10 @@ func getStructFieldsNamed(t reflect.Type, enumTypeName string) []*FieldMeta {
 			Required:     strings.Contains(binding, "required"),
 			DefaultValue: def,
 		}
-		// 按 JSON 字段名查枚举注册表，命中则标注为枚举字段并附带可选项
-		for _, decl := range enumDecls {
-			if decl.Field == fieldKey && len(decl.EnumOptions) > 0 {
-				meta.Enum = true
-				meta.EnumOptions = decl.EnumOptions
-				break
-			}
-		}
-		// 静态注册表未命中时，回退到运行时枚举 provider（来源为注册表/动态，无法静态声明）。
-		// key 格式 "{TypeName}.{FieldJSONName}"；provider 返回空集合时不标注为枚举。
-		if !meta.Enum {
-			if provider, ok := runtimeEnumProviders[enumTypeName+"."+fieldKey]; ok {
-				if options := provider(); len(options) > 0 {
-					meta.Enum = true
-					meta.EnumOptions = options
-				}
-			}
+		// 按 JSON 字段名查枚举类绑定表，命中则标注为枚举字段并附带枚举类名
+		if className, ok := classBindings[fieldKey]; ok && className != "" {
+			meta.Enum = true
+			meta.EnumType = className
 		}
 		fields = append(fields, meta)
 	}

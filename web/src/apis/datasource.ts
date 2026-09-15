@@ -1,7 +1,6 @@
 import type { AxiosPromise } from "axios";
 import { HttpStatusCode } from "axios";
 import { getJwtHeader, request } from "./base";
-import { DynamicEnums, dynamicEnumOptionKey } from "@/constants/dynamicEnums";
 
 import type { FilterByOption, HeaderOption, SearchOptionsOut } from "@/components/@types/table";
 import type {
@@ -23,6 +22,27 @@ export function datasourceTypesGet(): AxiosPromise {
 }
 
 // ---- 第三方数据源（命名空间化，归属当前请求命名空间）----
+// buildCreateForm 当 sqlite_file 携带 .db 文件时以 multipart/form-data 提交（Streaming 直通后端
+// S3 加密上传）；未携带文件时仍为 JSON 体。
+function buildCreateForm(
+  data: DatasourceCreateIn,
+  file: File | null,
+): FormData | DatasourceCreateIn {
+  if (!file) {
+    return data;
+  }
+  const form = new FormData();
+  form.append("name", data.name);
+  form.append("type", data.type);
+  form.append("enabled", String(data.enabled));
+  form.append("config", data.config);
+  if (data.description) {
+    form.append("description", data.description);
+  }
+  form.append("file", file);
+  return form;
+}
+
 export function datasourceListGet(data: DatasourceSearchIn): AxiosPromise {
   return request.post("/datasource/list", data, {
     headers: getJwtHeader(),
@@ -30,7 +50,7 @@ export function datasourceListGet(data: DatasourceSearchIn): AxiosPromise {
 }
 
 // 本地组装列表搜索选项（与后端 OPTIONS 契约一致），确保展示 name / config（密文）等列表列，
-// 并让 type 过滤以枚举筛选框呈现（option 渲染走 i18n）。
+// 并让 type 过滤以枚举筛选框呈现（经 enumType 指定的 datasourceType 枚举类解析可选项）。
 export function datasourceListOptions(): AxiosPromise {
   const filterBy: FilterByOption[] = [
     {
@@ -43,11 +63,8 @@ export function datasourceListOptions(): AxiosPromise {
       name: "type",
       title: "",
       type: BackendDataType.ENUM,
+      enumType: "datasourceType",
       actions: [SearchAction.EQUAL],
-      options: [
-        { value: "redis", title: dynamicEnumOptionKey(DynamicEnums.datasourceType, "redis") },
-        { value: "mysql", title: dynamicEnumOptionKey(DynamicEnums.datasourceType, "mysql") },
-      ],
     },
     {
       name: "enabled",
@@ -61,7 +78,7 @@ export function datasourceListOptions(): AxiosPromise {
     { name: "createdAt", type: BackendDataType.DATETIME },
     { name: "updatedAt", type: BackendDataType.DATETIME },
     { name: "name", type: BackendDataType.STRING },
-    { name: "type", type: BackendDataType.ENUM },
+    { name: "type", type: BackendDataType.ENUM, enumType: "datasourceType" },
     { name: "enabled", type: BackendDataType.BOOLEAN },
     // config 为密文，列表默认隐藏（可在列设置中开启）
     { name: "config", type: BackendDataType.STRING, defaultVisible: false },
@@ -77,8 +94,8 @@ export function datasourceListOptions(): AxiosPromise {
   } as unknown as AxiosPromise;
 }
 
-export function datasourceCreate(data: DatasourceCreateIn): AxiosPromise {
-  return request.post("/datasource/create", data, {
+export function datasourceCreate(data: DatasourceCreateIn, file: File | null = null): AxiosPromise {
+  return request.post("/datasource/create", buildCreateForm(data, file), {
     headers: getJwtHeader(),
   });
 }
@@ -93,8 +110,25 @@ export function datasourceDetailGet(id: number): AxiosPromise {
   );
 }
 
-export function datasourceUpdate(id: number, data: DatasourceUpdateIn): AxiosPromise {
-  return request.post(`/datasource/${id}/update`, data, {
+export function datasourceUpdate(
+  id: number,
+  data: DatasourceUpdateIn,
+  file: File | null = null,
+): AxiosPromise {
+  // 更新时仅当传入了新的 .db 文件才走 multipart（覆盖同一 S3 对象），否则为 JSON 体
+  const payload: FormData | DatasourceUpdateIn = file
+    ? (() => {
+        const form = new FormData();
+        form.append("enabled", String(data.enabled));
+        form.append("config", data.config);
+        if (data.description) {
+          form.append("description", data.description);
+        }
+        form.append("file", file);
+        return form;
+      })()
+    : data;
+  return request.post(`/datasource/${id}/update`, payload, {
     headers: getJwtHeader(),
   });
 }

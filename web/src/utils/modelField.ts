@@ -1,4 +1,3 @@
-import { HTTP_TRANSPORT_MODEL_KEY } from "@/utils/rego";
 import i18n from "@/utils/i18n";
 
 // modelFieldTitle 模型字段标题：优先取 model.<modelKey>.field.<key> 翻译；
@@ -15,29 +14,11 @@ export const modelFieldTitle = (modelKey: string, key: string): string => {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 };
 
-// 已知模型类型键 → i18n 模型段（如 …/network.HttpTransport → httpTransport）
-const KNOWN_MODEL_KEYS: Record<string, string> = {
-  [HTTP_TRANSPORT_MODEL_KEY]: "httpTransport",
-};
-
-// modelTypeKeyToI18nKey 目标模型类型键 → i18n 模型段：已知模型显式映射；
-// 未知模型取类型名末段转小驼峰兜底，保证后续新增模型自动切换展示格式。
+// modelTypeKeyToI18nKey 目标模型类型键 → i18n 枚举模型段（camelCase）。
+// 纯推导：取最后一段并将首字母转小写（…/network.HttpTransport → httpTransport；
+// 对已是 httpTransport 的键幂等）。与后端 tagengine.ModelKey 保持同一规则，前后端单源一致，
+// 新增模型时无需维护人工映射表。
 export const modelTypeKeyToI18nKey = (typeKey: string): string => {
-  const known = KNOWN_MODEL_KEYS[typeKey];
-  if (known) {
-    return known;
-  }
   const last = typeKey.split(".").pop() ?? typeKey;
   return last.charAt(0).toLowerCase() + last.slice(1);
-};
-
-// modelTypeKeyLabel 目标模型类型键 → 可读模型名称：优先取 model.<modelKey>.name 翻译
-// （如 …/network.HttpTransport → "HTTP 传输"）；未命中时回退返回原始类型键。
-export const modelTypeKeyLabel = (typeKey: string): string => {
-  const nameTpl = `model.${modelTypeKeyToI18nKey(typeKey)}.name`;
-  const t = i18n.global.t(nameTpl);
-  if (t !== nameTpl) {
-    return t;
-  }
-  return typeKey;
 };

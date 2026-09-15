@@ -17,7 +17,7 @@
         </template>
         <!-- 目标类型列显示可读名称（与渠道类型一致），而非原始类型键 -->
         <template #cell-type="{ value }">
-          {{ enumValueTitle("notificationTarget", String(value ?? "")) }}
+          {{ enumLabelOf(EnumClass.channelType, String(value ?? "")) }}
         </template>
         <!-- 语言列显示可读名称（与创建/编辑表单及筛选下拉一致），而非原始语言键 -->
         <template #cell-language="{ value }">
@@ -163,7 +163,7 @@
               </v-col>
               <v-col v-if="createChannelType" cols="auto">
                 <v-chip size="small" variant="tonal">
-                  {{ enumValueTitle("notificationTarget", createChannelType) }}
+                  {{ enumLabelOf(EnumClass.channelType, createChannelType) }}
                 </v-chip>
               </v-col>
             </v-row>
@@ -275,7 +275,7 @@
               </v-col>
               <v-col v-if="editChannelType" cols="auto">
                 <v-chip size="small" variant="tonal">
-                  {{ enumValueTitle("notificationTarget", editChannelType) }}
+                  {{ enumLabelOf(EnumClass.channelType, editChannelType) }}
                 </v-chip>
               </v-col>
             </v-row>
@@ -398,7 +398,8 @@ import { useNotificationChannelStore } from "@/stores/notificationChannel";
 import { BackendDataType } from "@/types";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import i18n from "@/utils/i18n";
-import { enumValueTitle, languageNameKey, languageSelectOptions } from "@/utils/options";
+import { EnumClass, enumLabelOf } from "@/utils/enums";
+import { languageNameKey, languageSelectOptions } from "@/utils/options";
 
 const appStore = useAppStore();
 const channelStore = useNotificationChannelStore();

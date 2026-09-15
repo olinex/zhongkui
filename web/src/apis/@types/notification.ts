@@ -300,23 +300,17 @@ export interface NotificationRecordSearchIn extends SearchIn {
 }
 
 // ---- 通知模板 ----
-// NotificationTemplateEventItemOut 单条事件模板枚举项（events 接口出参项）
-export interface NotificationTemplateEventItemOut {
+// NotificationTemplateEventMetaItemOut 单条事件元数据（events/meta 接口出参项）：
+// 仅编辑器语言提示与变量补全所需，不承载枚举值集合（事件枚举值经统一枚举接口 notificationEvent 类获取）
+export interface NotificationTemplateEventMetaItemOut {
   event: string;
-  template: string;
-  // channels 该事件支持的渠道类型键列表（可能含 "*" 通配）
-  channels: string[];
-  // languages 该事件支持的语言键列表（可能含 "*" 通配）
   languages: string[];
-  defaultTitle: string;
-  defaultContent: string;
-  // fields 该事件的可选模板变量名清单（供智能补全）
   fields: string[];
 }
 
-// NotificationTemplateEventsOut 事件模板枚举出参
-export interface NotificationTemplateEventsOut {
-  events: NotificationTemplateEventItemOut[];
+// NotificationTemplateEventMetaOut 事件元数据出参
+export interface NotificationTemplateEventMetaOut {
+  events: NotificationTemplateEventMetaItemOut[];
 }
 
 // NotificationTemplateItem 通知模板列表项

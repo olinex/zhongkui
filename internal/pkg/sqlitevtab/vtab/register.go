@@ -1,8 +1,8 @@
 // Package vtab（本文件）提供第三方数据源的前端配置驱动的统一注册逻辑。
 // 每个数据源行对应一张 sqlite vtable，归属到命名空间池（vtab.Pools）并以裸名注册；
-// registerInto 解析配置（redis 结构 / mysql 表）、按命名空间隔离地建立连接池并构造
-// 数据源。CRUD 处理器与启动重载统一经 Pools.Register/Unregister 收敛到本文件，保证
-// 建立/注销逻辑一致且可测。
+// registerInto 解析配置（redis 结构 / mysql、postgres、clickhouse 表 / sqlite 文件表 /
+// etcd 键值 / mongo 集合）、按命名空间隔离地建立连接池并构造数据源。CRUD 处理器与启动
+// 重载统一经 Pools.Register/Unregister 收敛到本文件，保证建立/注销逻辑一致且可测。
 //
 // 命名空间隔离：连接池 Key 派生含命名空间维度（MySQLConfig.Namespace 与
 // NewRedisPoolScoped），同一外部实例在不同命名空间下派生不同连接池；vtable 以裸名
@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 
 	// third-party
 	"github.com/creasty/defaults"
@@ -37,6 +38,7 @@ import (
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
@@ -50,6 +52,21 @@ const (
 	// DatasourceTypeMySQL MySQL/MariaDB 业务表数据源
 	// DatasourceTypeMySQL the MySQL/MariaDB table datasource
 	DatasourceTypeMySQL = "mysql"
+	// DatasourceTypePostgres PostgreSQL 业务表数据源
+	// DatasourceTypePostgres the PostgreSQL table datasource
+	DatasourceTypePostgres = "postgres"
+	// DatasourceTypeClickHouse ClickHouse 业务表数据源
+	// DatasourceTypeClickHouse the ClickHouse table datasource
+	DatasourceTypeClickHouse = "clickhouse"
+	// DatasourceTypeSQLiteFile SQLite 文件业务表数据源
+	// DatasourceTypeSQLiteFile the SQLite-file table datasource
+	DatasourceTypeSQLiteFile = "sqlite_file"
+	// DatasourceTypeEtcd etcd 键值数据源
+	// DatasourceTypeEtcd the etcd key-value datasource
+	DatasourceTypeEtcd = "etcd"
+	// DatasourceTypeMongo MongoDB 集合数据源
+	// DatasourceTypeMongo the MongoDB collection datasource
+	DatasourceTypeMongo = "mongo"
 )
 
 // localNamePattern 合法本地数据源名模式，与 sqlitevtab 的列名/数据源名校验一致。
@@ -103,6 +120,195 @@ type MySQLTableConfig struct {
 	// Table 要暴露的业务表名
 	// Table the business table name to expose
 	Table string `json:"table" binding:"required"`
+	// Schema 手动指定的列定义（可选）。提供时跳过 SHOW COLUMNS 自省，按此 schema 注册；
+	// 缺省时回退自省。适用于账号无表结构查看权限、需客户自行提供数据结构的场景。
+	// Schema the manually-specified column definitions (optional). When provided, SHOW
+	// COLUMNS introspection is skipped and the vtable registers with this schema; when
+	// absent, introspection is used. Intended for accounts lacking table-structure
+	// privileges, where the customer supplies the schema themselves.
+	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
+}
+
+// PostgresTableConfig 描述一个 PostgreSQL 单表数据源的前端配置。
+// Table 为该实例 DBName 库下（默认 schema）要暴露的业务表，注册时经
+// information_schema.columns 自省建 schema。
+// PostgresTableConfig describes the front-end config of a PostgreSQL single-table
+// datasource. Table is the business table under the instance's DBName (default schema)
+// to expose; the schema is built by information_schema.columns introspection on
+// registration.
+type PostgresTableConfig struct {
+	// Addr 主机地址（不含端口），如 127.0.0.1
+	// Addr the host address without port, e.g. 127.0.0.1
+	Addr string `json:"addr" binding:"required"`
+	// Port 端口，默认 5432
+	// Port the port, default 5432
+	Port int `json:"port" default:"5432"`
+	// User 用户名
+	// User the user name
+	User string `json:"user" binding:"required"`
+	// Password 密码（可选）
+	// Password the password (optional)
+	Password string `json:"password"`
+	// DBName 默认数据库名，查询限定于该库
+	// DBName the default database, queries scoped to it
+	DBName string `json:"dbName" binding:"required"`
+	// Table 要暴露的业务表名
+	// Table the business table name to expose
+	Table string `json:"table" binding:"required"`
+	// Schema 同 MySQLTableConfig.Schema 语义：提供时跳过 information_schema 自省。
+	// Schema has the same semantics as MySQLTableConfig.Schema: introspection is skipped
+	// when provided.
+	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
+}
+
+// ClickHouseTableConfig 描述一个 ClickHouse 单表数据源的前端配置。
+// Table 为该实例 DBName 库下要暴露的业务表，注册时经 DESCRIBE TABLE 自省建 schema。
+// ClickHouseTableConfig describes the front-end config of a ClickHouse single-table
+// datasource. Table is the business table under the instance's DBName to expose; the
+// schema is built by DESCRIBE TABLE introspection on registration.
+type ClickHouseTableConfig struct {
+	// Addr 主机地址（不含端口），如 127.0.0.1
+	// Addr the host address without port, e.g. 127.0.0.1
+	Addr string `json:"addr" binding:"required"`
+	// Port 端口，默认 9000（原生协议）
+	// Port the port, default 9000 (native protocol)
+	Port int `json:"port" default:"9000"`
+	// User 用户名
+	// User the user name
+	User string `json:"user" binding:"required"`
+	// Password 密码（可选）
+	// Password the password (optional)
+	Password string `json:"password"`
+	// DBName 默认数据库名，查询限定于该库
+	// DBName the default database, queries scoped to it
+	DBName string `json:"dbName" binding:"required"`
+	// Table 要暴露的业务表名
+	// Table the business table name to expose
+	Table string `json:"table" binding:"required"`
+	// Schema 同 MySQLTableConfig.Schema 语义：提供时跳过 DESCRIBE TABLE 自省。
+	// Schema has the same semantics as MySQLTableConfig.Schema: introspection is skipped
+	// when provided.
+	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
+}
+
+// SQLiteFileTableConfig 描述一个 SQLite 文件业务表数据源的前端配置。
+// .db 文件由前端上传、经 S3 对象存储加密持久化（对象键由命名空间+数据源名派生，见
+// SQLiteObjectKey）；Table 为该文件内要暴露的表，注册时经 PRAGMA table_info 自省。
+// SQLiteFileTableConfig describes the front-end config of a SQLite-file table
+// datasource. The .db file is uploaded by the frontend and stored encrypted in S3 (object
+// key derived from namespace + datasource name, see SQLiteObjectKey); Table is the table
+// to expose, and the schema is built by PRAGMA table_info introspection on registration.
+type SQLiteFileTableConfig struct {
+	// Table 要暴露的业务表名
+	// Table the business table name to expose
+	Table string `json:"table" binding:"required"`
+	// Schema 同 MySQLTableConfig.Schema 语义：提供时跳过 PRAGMA table_info 自省。
+	// Schema has the same semantics as MySQLTableConfig.Schema: introspection is skipped
+	// when provided.
+	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
+}
+
+// MongoCollectionConfig 描述一个 MongoDB 集合数据源的前端配置。
+// MongoDB 在数据库层面无固定 schema，故数据源以「一个集合」为一张 vtable 时，
+// schema 必须由前端在注册时完整提供（必填）；查询只能引用 schema 中声明的列。
+// MongoCollectionConfig describes the front-end config of a MongoDB collection
+// datasource. As MongoDB has no fixed schema, the schema must be fully provided by
+// the frontend at registration (required) when one collection is exposed as a vtable;
+// queries may only reference the schema-declared columns.
+type MongoCollectionConfig struct {
+	// URI 连接串（含认证），如 mongodb://user:pass@127.0.0.1:27017
+	// URI the connection string (with auth), e.g. mongodb://user:pass@127.0.0.1:27017
+	URI string `json:"uri" binding:"required"`
+	// DB 数据库名
+	// DB the database name
+	DB string `json:"db" binding:"required"`
+	// Collection 集合名
+	// Collection the collection name
+	Collection string `json:"collection" binding:"required"`
+	// Schema 列定义（必填）：声明列名与 ValueType，作为该集合 vtable 的唯一 schema 来源。
+	// Schema the column definitions (required): declares names and ValueTypes, serving as the
+	// only schema source of the collection vtable.
+	Schema []DatasourceColumn `json:"schema" form:"kind=columns" binding:"required"`
+}
+
+// EtcdTableConfig 描述一个 etcd 键值数据源的前端配置。etcd 无业务表概念，一个数据源
+// 即一张 key/value vtable；Endpoints 为逗号分隔的 host:port 列表。
+// EtcdTableConfig describes the front-end config of an etcd key-value datasource. etcd
+// has no business-table concept; one datasource is a single key/value vtable. Endpoints
+// is a comma-separated list of host:port.
+type EtcdTableConfig struct {
+	// Endpoints 逗号分隔的端点列表，如 127.0.0.1:2379
+	// Endpoints the comma-separated endpoint list, e.g. 127.0.0.1:2379
+	Endpoints string `json:"endpoints" binding:"required"`
+	// Username 用户名（可选）
+	// Username the user name (optional)
+	Username string `json:"username"`
+	// Password 密码（可选）
+	// Password the password (optional)
+	Password string `json:"password"`
+}
+
+// DatasourceColumn 手动指定的一列：Name 为暴露到 vtable 的列名（合法 SQL 标识符），
+// Type 为该列值的类型键（any/integer/float/string/blob/bool 之一）。
+// DatasourceColumn is one manually-specified column: Name is the column name exposed to
+// the vtable (a valid SQL identifier), Type is the value type key
+// (one of any/integer/float/string/blob/bool).
+type DatasourceColumn struct {
+	// Name 列名，须为合法 SQL 标识符
+	// Name the column name, must be a valid SQL identifier
+	Name string `json:"name" binding:"required"`
+	// Type 列值类型键：any/intger/float/string/blob/bool
+	// Type the column value type key: any/integer/float/string/blob/bool
+	Type string `json:"type" binding:"required"`
+}
+
+// parseDatasourceColumns 把前端手动下发的列定义转换为 vtable 注册用 schema。校验列名
+// 为合法 SQL 标识符且不重复，类型键映射到 sqlitevtab.ValueType；失败上抛带上下文的错误。
+// parseDatasourceColumns converts front-end-submitted column definitions into the schema
+// used for vtable registration. It validates that names are unique valid SQL identifiers
+// and maps type keys to sqlitevtab.ValueType, returning contextual errors on failure.
+func parseDatasourceColumns(cols []DatasourceColumn) ([]sqlitevtab.Column, error) {
+	if len(cols) == 0 {
+		return nil, errors.New("tag datasource: manual schema requires at least one column")
+	}
+	out := make([]sqlitevtab.Column, 0, len(cols))
+	seen := make(map[string]struct{}, len(cols))
+	for _, c := range cols {
+		if !localNamePattern.MatchString(c.Name) {
+			return nil, errors.Newf("tag datasource: invalid column identifier %q", c.Name)
+		}
+		if _, ok := seen[c.Name]; ok {
+			return nil, errors.Newf("tag datasource: duplicate column %q", c.Name)
+		}
+		seen[c.Name] = struct{}{}
+		vt, err := columnValueType(c.Type)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, sqlitevtab.Column{Name: c.Name, ValueType: vt})
+	}
+	return out, nil
+}
+
+// columnValueType 把手动 schema 的类型键映射到 sqlitevtab.ValueType；未知键报错。
+// columnValueType maps a manual-schema type key to sqlitevtab.ValueType; unknown keys error.
+func columnValueType(typ string) (sqlitevtab.ValueType, error) {
+	switch typ {
+	case "any":
+		return sqlitevtab.ValueTypeAny, nil
+	case "integer":
+		return sqlitevtab.ValueTypeInt64, nil
+	case "float":
+		return sqlitevtab.ValueTypeFloat64, nil
+	case "string":
+		return sqlitevtab.ValueTypeString, nil
+	case "blob":
+		return sqlitevtab.ValueTypeBlob, nil
+	case "bool":
+		return sqlitevtab.ValueTypeBool, nil
+	default:
+		return 0, errors.Newf("tag datasource: unsupported column type %q", typ)
+	}
 }
 
 // ValidateLocalName 校验数据源的本地 name：合法 SQL 标识符。vtable 以裸名注册到各自
@@ -153,7 +359,7 @@ func redisDatasourceFactory(pool *RedisPool, structType string) (sqlitevtab.Data
 // done by ValidateLocalName (local name) + RegisterDatasource (bare name/schema) + the
 // constructors; MySQL introspects the table once during registration (a connection-level
 // check).
-func registerInto(ctx context.Context, pool *sqlitevtab.SQLitePool, namespace, name, typ string, cfgData []byte) error {
+func registerInto(ctx context.Context, pool *sqlitevtab.SQLitePool, store *s3.ObjectCache, namespace, name, typ string, cfgData []byte) error {
 	if err := ValidateLocalName(name); err != nil {
 		return err
 	}
@@ -193,7 +399,125 @@ func registerInto(ctx context.Context, pool *sqlitevtab.SQLitePool, namespace, n
 			Namespace: namespace,
 		})
 		var err error
-		if ds, err = NewMySQLDatasource(ctx, poolHandle, cfg.Table); err != nil {
+		if len(cfg.Schema) > 0 {
+			var cols []sqlitevtab.Column
+			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
+				return err
+			}
+			if ds, err = NewMySQLDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
+				return err
+			}
+		} else if ds, err = NewMySQLDatasource(ctx, poolHandle, cfg.Table); err != nil {
+			return err
+		}
+	case DatasourceTypePostgres:
+		var cfg PostgresTableConfig
+		// 先应用 default tag 填充默认值（含默认端口 5432），再由实际传入的 JSON 覆盖。
+		if err := defaults.Set(&cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: apply defaults: %v", err))
+		}
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid postgres config: %v", err))
+		}
+		poolHandle := NewPostgresPool(&PostgresConfig{
+			Addr:      cfg.Addr,
+			Port:      cfg.Port,
+			User:      cfg.User,
+			Password:  cfg.Password,
+			DBName:    cfg.DBName,
+			Namespace: namespace,
+		})
+		var err error
+		if len(cfg.Schema) > 0 {
+			var cols []sqlitevtab.Column
+			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
+				return err
+			}
+			if ds, err = NewPostgresDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
+				return err
+			}
+		} else if ds, err = NewPostgresDatasource(ctx, poolHandle, cfg.Table); err != nil {
+			return err
+		}
+	case DatasourceTypeClickHouse:
+		var cfg ClickHouseTableConfig
+		if err := defaults.Set(&cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: apply defaults: %v", err))
+		}
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid clickhouse config: %v", err))
+		}
+		poolHandle := NewClickHousePool(&ClickHouseConfig{
+			Addr: cfg.Addr, Port: cfg.Port, User: cfg.User, Password: cfg.Password,
+			DBName: cfg.DBName, Namespace: namespace,
+		})
+		var err error
+		if len(cfg.Schema) > 0 {
+			var cols []sqlitevtab.Column
+			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
+				return err
+			}
+			if ds, err = NewClickHouseDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
+				return err
+			}
+		} else if ds, err = NewClickHouseDatasource(ctx, poolHandle, cfg.Table); err != nil {
+			return err
+		}
+	case DatasourceTypeSQLiteFile:
+		var cfg SQLiteFileTableConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid sqlite_file config: %v", err))
+		}
+		if store == nil {
+			return errors.New("tag datasource: sqlite_file requires S3 object storage (ObjectCache) to be enabled")
+		}
+		// 先从 S3 拉取并解密为本地明文文件（内存优先、超阈落盘，见 internal/pkg/s3/objectcache.go），
+		// 再把该明文路径交给连接池打开；对象键由命名空间+数据源名派生，随生命周期稳定。
+		objectKey := SQLiteObjectKey(namespace, name)
+		var path string
+		if p, err := store.Materialize(ctx, objectKey); err != nil {
+			return err
+		} else {
+			path = p
+		}
+		poolHandle := NewSQLiteFilePool(&SQLiteFileConfig{Path: path, Namespace: namespace})
+		var err error
+		if len(cfg.Schema) > 0 {
+			var cols []sqlitevtab.Column
+			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
+				return err
+			}
+			if ds, err = NewSQLiteFileDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
+				return err
+			}
+		} else if ds, err = NewSQLiteFileDatasource(ctx, poolHandle, cfg.Table); err != nil {
+			return err
+		}
+	case DatasourceTypeEtcd:
+		var cfg EtcdTableConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid etcd config: %v", err))
+		}
+		ds = NewEtcdDatasource(NewEtcdPool(&EtcdConfig{
+			Endpoints: splitEndpoints(cfg.Endpoints), Username: cfg.Username,
+			Password: cfg.Password, Namespace: namespace,
+		}))
+	case DatasourceTypeMongo:
+		var cfg MongoCollectionConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid mongo config: %v", err))
+		}
+		if len(cfg.Schema) == 0 {
+			return errors.New("mongo: schema must be provided during registration")
+		}
+		var err error
+		var cols []sqlitevtab.Column
+		if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
+			return err
+		}
+		if ds, err = NewMongoDatasourceWithSchema(NewMongoPool(&MongoConfig{
+			URI: cfg.URI, DB: cfg.DB, Collection: cfg.Collection, Namespace: namespace,
+		}), cols); err != nil {
 			return err
 		}
 	default:
@@ -245,8 +569,50 @@ func ValidateConfigJSON(typ string, cfgData []byte) error {
 		if err := json.Unmarshal(cfgData, &cfg); err != nil {
 			return errors.WithStack(errors.Newf("tag datasource: invalid mysql config: %v", err))
 		}
+	case DatasourceTypePostgres:
+		var cfg PostgresTableConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid postgres config: %v", err))
+		}
+	case DatasourceTypeClickHouse:
+		var cfg ClickHouseTableConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid clickhouse config: %v", err))
+		}
+	case DatasourceTypeSQLiteFile:
+		var cfg SQLiteFileTableConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid sqlite_file config: %v", err))
+		}
+	case DatasourceTypeEtcd:
+		var cfg EtcdTableConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid etcd config: %v", err))
+		}
+	case DatasourceTypeMongo:
+		var cfg MongoCollectionConfig
+		if err := json.Unmarshal(cfgData, &cfg); err != nil {
+			return errors.WithStack(errors.Newf("tag datasource: invalid mongo config: %v", err))
+		}
 	default:
 		return errors.Newf("tag datasource: unsupported type %q", typ)
 	}
 	return nil
+}
+
+// splitEndpoints 把逗号分隔的端点串拆成列表并去掉空项/空白。
+// splitEndpoints splits a comma-separated endpoint string into a list, dropping empty/
+// whitespace entries.
+func splitEndpoints(s string) []string {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	parts := strings.Split(s, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }

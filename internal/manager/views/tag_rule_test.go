@@ -68,7 +68,7 @@ var httpTransportTypeKey = func() string {
 // init 将测试用目标模型注册进引擎注册表，使写路径的模型注册校验（未注册即拒绝）放行。
 // 注册表为包级全局状态且重复注册会 panic，故仅在此 init 注册一次。
 func init() {
-	tagengine.Register(tagengine.Target{Type: &tagRuleTargetModel{}, DisplayName: "model.test.tagRuleTarget"})
+	tagengine.Register(tagengine.Target{Type: &tagRuleTargetModel{}})
 }
 
 // newTagRuleTestLogger 创建测试用日志记录器。
@@ -99,7 +99,6 @@ func registerTagRuleTestRoutes(r *gin.Engine, engine *tagengine.Engine) {
 		admin.POST("/tag-rule/enable", engineMiddleware, TagRuleBatchSetEnabled(true))
 		admin.POST("/tag-rule/disable", engineMiddleware, TagRuleBatchSetEnabled(false))
 		admin.POST("/tag-rule/validate", TagRuleValidate)
-		admin.POST("/tag-rule/model/options", TagRuleModelOptions)
 		admin.POST("/tag-rule/model/metadata", TagRuleModelMetadata)
 		admin.POST("/tag-rule/model/samples", TagRuleModelSamples)
 		admin.POST("/tag-rule/single/dry-run", TagRuleDryRun)
@@ -119,7 +118,7 @@ func setupTagRuleTestRouter(db *database.DB, engine *tagengine.Engine) *gin.Engi
 	r := gin.New()
 	r.Use(setupI18nMiddleware())
 	r.Use(middlewares.ZapLoggerMiddleware(newTagRuleTestLogger()))
-	pools := vtab.NewPools()
+	pools := vtab.NewPools(nil)
 	r.Use(func(c *gin.Context) {
 		c.Set(middlewares.CoreDatabaseCtxName, db)
 		c.Set(middlewares.SQLiteVTabPoolsCtxName, pools)
@@ -604,38 +603,6 @@ func TestTagRuleValidate(t *testing.T) {
 			So(resp.Data.Valid, ShouldBeTrue)
 			So(resp.Data.Warnings, ShouldNotBeNil)
 			So(len(resp.Data.Warnings), ShouldEqual, 0)
-		})
-	})
-}
-
-// TestTagRuleModelOptions 目标模型选项接口返回已注册模型列表。
-func TestTagRuleModelOptions(t *testing.T) {
-	Convey("测试标签规则目标模型选项接口", t, func() {
-		db := createTagRuleTestDB(t)
-		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
-		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
-		Reset(func() {
-			So(db.Rollback().Error, ShouldBeNil)
-		})
-		engine := tagengine.NewEngine(db, newTagRuleTestLogger(), nil)
-		r := setupTagRuleTestRouter(db, engine)
-
-		Convey("返回已注册模型且含 HttpTransport", func() {
-			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/model/options", nil)
-			So(w.Code, ShouldEqual, http.StatusOK)
-			var resp struct {
-				Data TagRuleModelOptionsOut `json:"data"`
-			}
-			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
-			So(len(resp.Data.Items), ShouldBeGreaterThan, 0)
-			var found bool
-			for _, item := range resp.Data.Items {
-				if item.Value == httpTransportTypeKey {
-					found = true
-					So(item.Label, ShouldNotBeEmpty)
-				}
-			}
-			So(found, ShouldBeTrue)
 		})
 	})
 }

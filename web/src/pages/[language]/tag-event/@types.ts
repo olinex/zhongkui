@@ -89,15 +89,6 @@ export interface TagRuleModelSamplesOut {
   items: TagRuleSampleOut[];
 }
 
-export interface TagRuleModelOptionOut {
-  value: string;
-  label: string;
-}
-
-export interface TagRuleModelOptionsOut {
-  items: TagRuleModelOptionOut[];
-}
-
 export interface TagRuleSampleDetailOut extends NormalModelOut {
   model: string;
   name: string;

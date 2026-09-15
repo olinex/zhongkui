@@ -387,8 +387,10 @@ func TagEventRecordHitRecordsGet(c *gin.Context) {
 	if len(ids) > 500 {
 		ids = ids[:500]
 	}
-	switch in.Model {
-	case tagengine.MustTypeKey(&network.HttpTransport{}):
+	// 目标模型匹配统一用 tagengine.ModelKey（幂等处理完整类型键/枚举短键），
+	// 兼容历史命中明细与前端旧传参的枚举短键；新数据命中明细的 Model 存完整类型键。
+	switch tagengine.ModelKey(in.Model) {
+	case tagengine.ModelKey(tagengine.MustTypeKey(&network.HttpTransport{})):
 		// 当前唯一注册目标模型：http_transports，逐行复用流量列表全字段映射；
 		// 新增目标模型时再抽出 recordQuerier 函数类型按模型分发
 		query := middlewares.GetRawDatabase(c).WithContext(c).Model(&network.HttpTransport{}).

@@ -50,7 +50,7 @@ func setupWatcher(t *testing.T) (*Watcher, *vtab.Pools, *database.DB) {
 	if err := db.Where(core.Namespace{Name: datasourceTestNamespace}).FirstOrCreate(&ns).Error; err != nil {
 		t.Fatalf("seed datasource test namespace: %v", err)
 	}
-	pools := vtab.NewPools()
+	pools := vtab.NewPools(nil)
 	t.Cleanup(func() { pools.Close(context.Background()) })
 	return NewWatcher(db, pools, nil, logger), pools, db
 }

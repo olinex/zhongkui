@@ -142,12 +142,15 @@ func TestEventDetectHandler_PersistEvents(t *testing.T) {
 		detectedAt := time.Date(2026, 8, 11, 9, 5, 0, 0, time.UTC)
 		u1 := serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")
 		u2 := serializer.MustHexUUIDv4FromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
+		// hitModelTypeKey 命中明细携带的完整类型键（数据库存储语义），
+		// 验证 toEventModel 原样透传、不做短键收敛。
+		const hitModelTypeKey = "zhongkui.com/zhongkui/internal/models/network.HttpTransport"
 		events := []*tagengine.TagEventRecord{
 			{
 				Namespace: "default", RuleID: ruleA.ID, RuleName: "rule-a", MatchAll: false,
 				DetectedAt: detectedAt,
 				Hits: []tagengine.TagEventRecordHit{
-					{ConditionID: 1, ConditionName: "cond-1", Model: "m1", Dimension: "d1", Item: "i1", Count: 5, Threshold: 3, Window: serializer.DurationNS(5 * time.Minute), IDs: serializer.HexUUIDs{u1, u2}},
+					{ConditionID: 1, ConditionName: "cond-1", Model: hitModelTypeKey, Dimension: "d1", Item: "i1", Count: 5, Threshold: 3, Window: serializer.DurationNS(5 * time.Minute), IDs: serializer.HexUUIDs{u1, u2}},
 				},
 			},
 			{
@@ -186,7 +189,8 @@ func TestEventDetectHandler_PersistEvents(t *testing.T) {
 			So(hits[0].TagEventRecordID, ShouldEqual, rowsID(db, 1))
 			So(hits[0].ConditionID, ShouldEqual, uint(1))
 			So(hits[0].ConditionName, ShouldEqual, "cond-1")
-			So(hits[0].Model, ShouldEqual, "m1")
+			// Model 原样落库完整类型键（value），不做短键收敛
+			So(hits[0].Model, ShouldEqual, hitModelTypeKey)
 			So(hits[0].Count, ShouldEqual, uint64(5))
 			So(hits[0].Threshold, ShouldEqual, 3)
 			So(hits[0].Window, ShouldEqual, serializer.DurationNS(5*time.Minute))

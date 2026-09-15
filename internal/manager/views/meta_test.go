@@ -15,7 +15,6 @@ import (
 	"golang.org/x/text/language"
 
 	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
 type metaTestHeader struct {
@@ -51,9 +50,9 @@ type metaTestSearchIn struct {
 
 // metaTestForm 覆盖 form 标签 kind 覆盖、default 解析与 required 的测试结构体
 type metaTestForm struct {
-	Host     string            `json:"host" binding:"required" form:"kind=string"`
-	Port     int               `json:"port" form:"kind=number" default:"25"`
-	Enabled  bool              `json:"enabled" form:"kind=boolean"`
+	Host     string            `json:"host" binding:"required"`
+	Port     int               `json:"port" default:"25"`
+	Enabled  bool              `json:"enabled"`
 	Password string            `json:"password" form:"kind=password"`
 	Headers  map[string]string `json:"headers"`
 	Skip     string            // 无 json 标签，应被忽略
@@ -189,21 +188,13 @@ func TestGetStructMeta(t *testing.T) {
 			So(getStructFields(nil), ShouldBeNil)
 		})
 
-		Convey("命中枚举注册表的字段应附带 enumOptions 并标记为枚举", func() {
+		Convey("命中枚举类绑定表的字段应附带 enumType 并标记为枚举", func() {
 			typeName := reflect.TypeOf(metaTestEnumIn{}).Name()
-			registry := enumFieldOptions
-			enumFieldOptions = map[string][]EnumFieldDecl{
-				typeName: {
-					{
-						Field: "model",
-						EnumOptions: []utils.EnumOption{
-							{Key: "keyA", Value: "valA"},
-							{Key: "keyB", Value: "valB"},
-						},
-					},
-				},
+			registry := enumBindings
+			enumBindings = map[string]map[string]string{
+				typeName: {"model": "testEnumClass"},
 			}
-			defer func() { enumFieldOptions = registry }()
+			defer func() { enumBindings = registry }()
 
 			meta := getStructMeta(reflect.TypeOf(metaTestEnumIn{}))
 			fields := make(map[string]*FieldMeta)
@@ -211,42 +202,11 @@ func TestGetStructMeta(t *testing.T) {
 				fields[f.Name] = f
 			}
 			So(fields["model"].Enum, ShouldBeTrue)
-			So(len(fields["model"].EnumOptions), ShouldEqual, 2)
-			So(fields["model"].EnumOptions[0].Key, ShouldEqual, "keyA")
-			So(fields["model"].EnumOptions[0].Value, ShouldEqual, "valA")
+			So(fields["model"].EnumType, ShouldEqual, "testEnumClass")
 			// 未声明字段保持非枚举形态
 			So(fields["nonEnum"].Enum, ShouldBeFalse)
-			So(fields["nonEnum"].EnumOptions, ShouldBeNil)
+			So(fields["nonEnum"].EnumType, ShouldEqual, "")
 		})
-	})
-}
-
-func TestGetStructFieldsRuntimeEnumProvider(t *testing.T) {
-	Convey("运行时枚举 provider 兜底：静态表未命中时按 TypeName.Field 查 runtimeEnumProviders", t, func() {
-		typeName := reflect.TypeOf(metaTestEnumIn{}).Name()
-
-		// 清空静态注册表，仅保留运行时 provider，验证回退路径（非叠加）
-		registry := enumFieldOptions
-		enumFieldOptions = map[string][]EnumFieldDecl{}
-		defer func() { enumFieldOptions = registry }()
-		providers := runtimeEnumProviders
-		runtimeEnumProviders = map[string]EnumProvider{
-			typeName + ".model": func() []utils.EnumOption {
-				return []utils.EnumOption{{Key: "runtimeKey", Value: "runtimeVal"}}
-			},
-		}
-		defer func() { runtimeEnumProviders = providers }()
-
-		meta := getStructMeta(reflect.TypeOf(metaTestEnumIn{}))
-		fields := make(map[string]*FieldMeta)
-		for _, f := range meta.Fields {
-			fields[f.Name] = f
-		}
-		So(fields["model"].Enum, ShouldBeTrue)
-		So(fields["model"].EnumOptions, ShouldResemble, []utils.EnumOption{{Key: "runtimeKey", Value: "runtimeVal"}})
-		// 未注册字段保持非枚举形态
-		So(fields["nonEnum"].Enum, ShouldBeFalse)
-		So(fields["nonEnum"].EnumOptions, ShouldBeNil)
 	})
 }
 

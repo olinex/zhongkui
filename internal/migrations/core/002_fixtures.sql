@@ -171,8 +171,6 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/tag-event/tag-rule/:id/version/list', 'OPTIONS'),
     ('api:/api/v1/tag-event/tag-rule/:id/version/:version/rollback', 'POST'),
     ('api:/api/v1/tag-event/tag-rule/:id/version/:version/rollback', 'OPTIONS'),
-    ('api:/api/v1/tag-event/tag-rule/model/options', 'POST'),
-    ('api:/api/v1/tag-event/tag-rule/model/options', 'OPTIONS'),
     ('api:/api/v1/tag-event/tag-rule/model/metadata', 'POST'),
     ('api:/api/v1/tag-event/tag-rule/model/metadata', 'OPTIONS'),
     ('api:/api/v1/tag-event/tag-rule/model/samples', 'POST'),
@@ -324,8 +322,6 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/notification/group/delete', 'POST'),
     ('api:/api/v1/notification/group/delete', 'OPTIONS'),
     -- 通知管理：模板
-    ('api:/api/v1/notification/template/events', 'POST'),
-    ('api:/api/v1/notification/template/events', 'OPTIONS'),
     ('api:/api/v1/notification/template/list', 'POST'),
     ('api:/api/v1/notification/template/list', 'OPTIONS'),
     ('api:/api/v1/notification/template/create', 'POST'),

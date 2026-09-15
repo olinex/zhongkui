@@ -668,8 +668,8 @@ import { parseBooleanExpr } from "@/utils/booleanExpr";
 import { durationToMinutes, minutesToDurationString } from "@/utils/duration";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
-import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
-import { extractTagLiterals, HTTP_TRANSPORT_MODEL_KEY } from "@/utils/rego";
+import { EnumClass, enumLabelOf, enumOptionsOf, ensureEnum } from "@/utils/enums";
+import { extractTagLiterals } from "@/utils/rego";
 import { useForm } from "vee-validate";
 
 import type {
@@ -713,12 +713,14 @@ const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const rollbackConfirmRef = useTemplateRef("rollbackConfirmRef");
 
-const modelOptions = [
-  {
-    title: i18n.global.t("model.httpTransport.name"),
-    value: HTTP_TRANSPORT_MODEL_KEY,
-  },
-];
+// 模型下拉选项：统一经 tagRuleModel 枚举类从枚举 store 解析（value 为完整类型键，
+// title 为按当前语言翻译的 label）
+const modelOptions = computed(() => enumOptionsOf(EnumClass.tagRuleModel));
+
+// 页面依赖 tagRuleModel 枚举类（模型下拉选项）；仅需确保缓存，store 响应式驱动下拉刷新
+onMounted(() => {
+  void ensureEnum(EnumClass.tagRuleModel);
+});
 
 let condKeySeq = 1;
 
@@ -773,12 +775,12 @@ const loadModelMetadata = async (model: string): Promise<void> => {
   );
 };
 
-/** dimension 下拉选项：后端登记的目标模型合法标签维度。展示名按维度取值经 i18n 翻译
- *（model.<modelKey>.field.<dimension>，与标签事件记录详情的维度列一致）；
- * 不再依赖后端返回的易读描述，未命中翻译时由 modelFieldTitle 兜底为可读字段名。 */
+/** dimension 下拉选项：后端登记的目标模型合法标签维度（选项值仍按模型从元信息接口取，
+ * 展示名统一经 tagEventDimension 枚举类按 enum.tagEventDimension.<取值> 翻译，
+ * 与标签事件记录详情的维度列、通知模板一致）。 */
 const dimensionOptions = (model: string): Array<{ title: string; value: string }> =>
   (modelMetaCache[model]?.dimensions ?? []).map((d) => ({
-    title: modelFieldTitle(modelTypeKeyToI18nKey(model), d.value),
+    title: enumLabelOf(EnumClass.tagEventDimension, d.value),
     value: d.value,
   }));
 

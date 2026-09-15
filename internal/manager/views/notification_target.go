@@ -645,3 +645,9 @@ func parseTargetLanguage(lang string) base.Language {
 	}
 	return base.Language{}
 }
+
+// init 注册通知目标列表出参（NotificationTargetListOut.type）的渠道类型枚举类绑定，
+// 枚举类由 enum_registry.go 从 message.Types() 注册（类名 channelType）。
+func init() {
+	AddEnumBinding("NotificationTargetListOut", "type", "channelType")
+}

@@ -89,6 +89,28 @@ func NewMySQLDatasource(ctx context.Context, pool *MySQLPool, table string) (*My
 	return newMySQLDatasource(pool, pool.db, table, cols), nil
 }
 
+// NewMySQLDatasourceWithSchema 以手动指定的列构建数据源，跳过 SHOW COLUMNS 自省。
+// 适用于接入账号无表结构查看权限、由客户自行提供数据结构的场景；table 仍须为合法 SQL
+// 标识符，columns 至少一列（名称/类型键已在 registerInto 经 parseDatasourceColumns 校验）。
+// NewMySQLDatasourceWithSchema builds a datasource with manually-specified columns,
+// skipping SHOW COLUMNS introspection. Intended for accounts without table-structure
+// privileges where the customer supplies the schema; table must still be a valid SQL
+// identifier and columns must be non-empty (names/type keys are validated by
+// parseDatasourceColumns in registerInto).
+func NewMySQLDatasourceWithSchema(pool *MySQLPool, table string, columns []sqlitevtab.Column) (*MySQLDatasource, error) {
+	if !mysqlIdentPattern.MatchString(table) {
+		return nil, errors.Newf("mysql: invalid table identifier %q", table)
+	}
+	if len(columns) == 0 {
+		return nil, errors.New("mysql: manual schema requires at least one column")
+	}
+	cols := make([]mysqlColumn, len(columns))
+	for i, c := range columns {
+		cols[i] = mysqlColumn{name: c.Name, vt: c.ValueType}
+	}
+	return newMySQLDatasource(pool, pool.db, table, cols), nil
+}
+
 // newMySQLDatasource 以给定列构建数据源（也供测试直接注入列，无需真实 MySQL）。
 // newMySQLDatasource builds a datasource with the given columns (also used by tests to
 // inject columns directly without a real MySQL).
@@ -103,6 +125,10 @@ func newMySQLDatasource(pool *MySQLPool, db, table string, cols []mysqlColumn) *
 			filterable = append(filterable, i)
 		}
 	}
+	// Filterable 也要写回 schema，sqlitevtab 的 BestIndex 才会据此生成并下推约束。
+	// Filterable is written back into the schema so sqlitevtab's BestIndex emits and
+	// pushes down the constraints.
+	schema.Filterable = filterable
 	return &MySQLDatasource{
 		mysqlBase: mysqlBase{pool: pool, schema: schema, valueTypes: valueTypes, filterable: filterable},
 		tableRef:  quoteIdent(db) + "." + quoteIdent(table),

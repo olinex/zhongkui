@@ -109,7 +109,7 @@ func datasourceIDPath(action string, id uint) string {
 // newDatasourceTestPools 创建并登记清理的按命名空间 sqlite vtable 池持有者。
 func newDatasourceTestPools(t *testing.T) *vtab.Pools {
 	t.Helper()
-	pools := vtab.NewPools()
+	pools := vtab.NewPools(nil)
 	t.Cleanup(func() { pools.Close(context.Background()) })
 	return pools
 }
@@ -157,7 +157,23 @@ func TestDatasourceTypes(t *testing.T) {
 		for _, f := range mysql.Config {
 			names = append(names, f.Name)
 		}
-		So(names, ShouldResemble, []string{"addr", "port", "user", "password", "dbName", "table"})
+		So(names, ShouldResemble, []string{"addr", "port", "user", "password", "dbName", "table", "schema"})
+		// schema 为手动列定义字段，须以 columns 语义 kind 下发前端渲染列编辑器
+		for _, f := range mysql.Config {
+			if f.Name == "schema" {
+				So(f.Kind, ShouldEqual, KindColumns)
+			}
+		}
+
+		// sqlite_file 配置字段不得再含本地路径 path（文件经 S3 上传），仅保留 table 与 schema
+		sqlite, ok := byType[vtab.DatasourceTypeSQLiteFile]
+		So(ok, ShouldBeTrue)
+		sqliteNames := make([]string, 0, len(sqlite.Config))
+		for _, f := range sqlite.Config {
+			sqliteNames = append(sqliteNames, f.Name)
+		}
+		So(sqliteNames, ShouldResemble, []string{"table", "schema"})
+		So(slices.Contains(sqliteNames, "path"), ShouldBeFalse)
 	})
 }
 

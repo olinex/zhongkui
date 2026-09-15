@@ -88,10 +88,6 @@ func registerTagEventRoutes(ctx *RegisterContext) {
 		tagRuleGroup.POST("/:id/version/:version/rollback", views.TagRuleVersionRollback)
 		// 标签规则回滚元信息
 		tagRuleGroup.OPTIONS("/:id/version/:version/rollback", views.StructMetaGinHandler(views.WithMethod(http.MethodPost)))
-		// 标签规则目标模型选项 - 返回已注册目标模型的下拉选项列表
-		tagRuleGroup.POST("/model/options", views.TagRuleModelOptions)
-		// 标签规则目标模型选项元信息
-		tagRuleGroup.OPTIONS("/model/options", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.TagRuleModelOptionsOut]())))
 		// 标签规则目标模型元信息 - 返回输入文档字段元信息，供 Rego 编辑器补全与字段面板
 		tagRuleGroup.POST("/model/metadata", views.TagRuleModelMetadata)
 		// 标签规则目标模型元信息元信息

@@ -16,7 +16,67 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/redis/go-redis/v9"
 	. "github.com/smartystreets/goconvey/convey"
+
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
+
+func TestParseDatasourceColumns(t *testing.T) {
+	Convey("parseDatasourceColumns 合法列映射", t, func() {
+		cols, err := parseDatasourceColumns([]DatasourceColumn{
+			{Name: "id", Type: "integer"},
+			{Name: "score", Type: "float"},
+			{Name: "name", Type: "string"},
+			{Name: "ok", Type: "bool"},
+			{Name: "data", Type: "blob"},
+			{Name: "raw", Type: "any"},
+		})
+		So(err, ShouldBeNil)
+		So(cols, ShouldResemble, []sqlitevtab.Column{
+			{Name: "id", ValueType: sqlitevtab.ValueTypeInt64},
+			{Name: "score", ValueType: sqlitevtab.ValueTypeFloat64},
+			{Name: "name", ValueType: sqlitevtab.ValueTypeString},
+			{Name: "ok", ValueType: sqlitevtab.ValueTypeBool},
+			{Name: "data", ValueType: sqlitevtab.ValueTypeBlob},
+			{Name: "raw", ValueType: sqlitevtab.ValueTypeAny},
+		})
+	})
+
+	Convey("parseDatasourceColumns 拒绝空/非法列", t, func() {
+		_, err := parseDatasourceColumns(nil)
+		So(err, ShouldNotBeNil)
+		_, err = parseDatasourceColumns([]DatasourceColumn{{Name: "a-b", Type: "string"}})
+		So(err, ShouldNotBeNil)
+		_, err = parseDatasourceColumns([]DatasourceColumn{{Name: "1a", Type: "string"}})
+		So(err, ShouldNotBeNil)
+		_, err = parseDatasourceColumns([]DatasourceColumn{{Name: "a", Type: "nope"}})
+		So(err, ShouldNotBeNil)
+		_, err = parseDatasourceColumns([]DatasourceColumn{
+			{Name: "a", Type: "string"}, {Name: "a", Type: "string"},
+		})
+		So(err, ShouldNotBeNil)
+	})
+}
+
+func TestRegisterMySQLWithManualSchema(t *testing.T) {
+	Convey("mysql 手动 schema 注册跳过 SHOW COLUMNS", t, func() {
+		ctx := context.Background()
+		pools := NewPools(nil)
+		t.Cleanup(func() { pools.Close(ctx) })
+		// 无需注入 mock db：手动 schema 路径不做任何建连自省
+		cfg := []byte(`{"addr":"127.0.0.1","port":3306,"user":"u","dbName":"app","table":"users",
+			"schema":[{"name":"id","type":"integer"},{"name":"name","type":"string"}]}`)
+		So(pools.Register(ctx, "prod", "users_manual", DatasourceTypeMySQL, cfg), ShouldBeNil)
+		So(pools.Pool("prod").Datasources(), ShouldContain, "users_manual")
+	})
+
+	Convey("mysql 手动 schema 非法列报错", t, func() {
+		ctx := context.Background()
+		pools := NewPools(nil)
+		t.Cleanup(func() { pools.Close(ctx) })
+		cfg := []byte(`{"addr":"127.0.0.1","table":"users","schema":[{"name":"a-b","type":"string"}]}`)
+		So(pools.Register(ctx, "prod", "x", DatasourceTypeMySQL, cfg), ShouldNotBeNil)
+	})
+}
 
 func TestValidateLocalName(t *testing.T) {
 	Convey("ValidateLocalName 通过合法标识符", t, func() {
@@ -35,7 +95,7 @@ func TestRegisterRedis(t *testing.T) {
 	for _, structType := range []string{"string", "hash", "list", "set", "zset"} {
 		Convey("redis 结构 "+structType+" 以裸名注册成功", t, func() {
 			ctx := context.Background()
-			pools := NewPools()
+			pools := NewPools(nil)
 			t.Cleanup(func() { pools.Close(ctx) })
 
 			cfg := []byte(`{"addr":"127.0.0.1","port":6379,"db":0,"struct":"` + structType + `"}`)
@@ -49,7 +109,7 @@ func TestRegisterRedis(t *testing.T) {
 
 	Convey("非法 redis struct 报错", t, func() {
 		ctx := context.Background()
-		pools := NewPools()
+		pools := NewPools(nil)
 		t.Cleanup(func() { pools.Close(ctx) })
 		cfg := []byte(`{"addr":"127.0.0.1","struct":"stream"}`)
 		So(pools.Register(ctx, "prod", "x", DatasourceTypeRedis, cfg), ShouldNotBeNil)
@@ -57,7 +117,7 @@ func TestRegisterRedis(t *testing.T) {
 
 	Convey("redis 配置非 JSON 报错", t, func() {
 		ctx := context.Background()
-		pools := NewPools()
+		pools := NewPools(nil)
 		t.Cleanup(func() { pools.Close(ctx) })
 		So(pools.Register(ctx, "prod", "x", DatasourceTypeRedis, []byte("{bad")), ShouldNotBeNil)
 	})
@@ -66,7 +126,7 @@ func TestRegisterRedis(t *testing.T) {
 func TestRegisterMySQL(t *testing.T) {
 	Convey("mysql 表以裸名注册成功", t, func() {
 		ctx := context.Background()
-		pools := NewPools()
+		pools := NewPools(nil)
 		t.Cleanup(func() { pools.Close(ctx) })
 		db, mock, err := sqlmock.New()
 		So(err, ShouldBeNil)
@@ -91,7 +151,7 @@ func TestRegisterMySQL(t *testing.T) {
 
 	Convey("非法数据源类型报错", t, func() {
 		ctx := context.Background()
-		pools := NewPools()
+		pools := NewPools(nil)
 		t.Cleanup(func() { pools.Close(ctx) })
 		So(pools.Register(ctx, "prod", "x", "oracle", []byte(`{}`)), ShouldNotBeNil)
 	})
@@ -100,7 +160,7 @@ func TestRegisterMySQL(t *testing.T) {
 func TestRegisterNamespaceIsolation(t *testing.T) {
 	Convey("同名列跨命名空间各自注册成独立裸名 vtable", t, func() {
 		ctx := context.Background()
-		pools := NewPools()
+		pools := NewPools(nil)
 		t.Cleanup(func() { pools.Close(ctx) })
 
 		cfg := []byte(`{"addr":"127.0.0.1","port":6379,"db":0,"struct":"string"}`)
@@ -128,7 +188,7 @@ func TestRegisterNamespaceIsolation(t *testing.T) {
 func TestUnregister(t *testing.T) {
 	Convey("Unregister 注销已注册数据源（裸名）", t, func() {
 		ctx := context.Background()
-		pools := NewPools()
+		pools := NewPools(nil)
 		t.Cleanup(func() { pools.Close(ctx) })
 		cfg := []byte(`{"addr":"127.0.0.1","struct":"string"}`)
 		So(pools.Register(ctx, "prod", "x", DatasourceTypeRedis, cfg), ShouldBeNil)

@@ -2,19 +2,19 @@
 #
 # 本文件同时驱动两类生成产物：
 #   1. [[XxxListGet]] 表 → search.go（列表搜索选项 / 筛选字段 / 字段投影）
-#   2. [[enumSets]] + [[enums]] → enum_options.go（可选枚举值注册表，meta.go 反射
-#      In/Out 结构体字段元信息时附带 enumOptions 下发给前端）
+#   2. [enumSets] 映射表 + [[enums]] → enum_classes.go（静态枚举类注册 + 结构体字段
+#      与枚举类绑定表 enumBindings；meta.go 反射 In/Out 结构体字段元信息时输出
+#      FieldMeta.EnumType 供前端定位枚举类）
 #
-# 可选枚举值两层声明：可选项只写在命名集合（[[enumSets]]）中一次；[[enums]] 按结构体字段
-# 引用命名集合，作为"字段 → 枚举集合"绑定的单一事实来源。搜索筛选下拉不再在
-# filterByFields 中枚举选项，改由前端按列表 bodyOutput 结构体的 meta enumOptions 解析：
-#   # 1) 命名的枚举值集合（一次声明、多处复用）
-#   [[enumSets]]
-#   name = "notificationChannelType"
-#
-#   [[enumSets.options]]
-#   key = "email"      # 集合内唯一标识（前端经 model.<...>.option.<key> 翻译展示）
-#   value = "email"    # 提交/存储值（多数与 key 相同）
+# 可选枚举值两层声明：可选项只写在命名集合（enumSets 映射表，集合名即 key、value 即 options 数组）
+# 中一次；[[enums]] 按结构体字段引用命名集合，作为"字段 → 枚举类名"绑定的单一事实来源。
+# 可选项本身不随 meta 下发，前端经统一枚举接口（/admin/enum/get|list）按枚举类获取（出参 {key, value, label}）：
+#   # 1) 命名的枚举值集合（一次声明、多处复用；集合名即映射 key，value 为该集合 options 数组）
+#   [enumSets]
+#   notificationChannelType = [
+#     { key = "email", value = "email" },   # key：集合内唯一标识（i18n 经 enum.<类名>.<key> 翻译展示）
+#     { key = "webhook", value = "webhook" },  # value：提交/存储值（多数与 key 相同）
+#   ]
 #
 #   # 2) 结构体字段引用命名集合
 #   [[enums]]
@@ -22,131 +22,66 @@
 #
 #   [[enums.fields]]
 #   field = "type"     # 结构体字段的 JSON 字段名
-#   set = "notificationChannelType"            # 引用 [[enumSets]] 中已声明的集合名
+#   set = "notificationChannelType"            # 引用 [enumSets] 中已声明的集合名（即映射 key）
 
-# ---- 命名枚举值集合（可选枚举值唯一来源）：[[enums]] 以此引用解析可选项 ----
+# ---- 命名枚举值集合（静态枚举类唯一来源）：search-generate 据此生成 enum 注册表注册代码 ----
+# 说明：
+#   - 每个命名集合注册为一个枚举类（类名即映射 key），供统一枚举接口
+#     POST /admin/enum/get|list 与 meta 自省（enumType）使用；
+#   - 业务注册表来源的枚举类（channelType / notificationEvent / datasourceType /
+#     tagRuleModel）不在此声明，由视图层 init() 从对应业务注册表组装注册（单一来源）；
+#   - [[enums]] 的 set 仅作为"字段 → 枚举类名"绑定引用，不要求本处声明。
 
-[[enumSets]]
-name = "tagRuleModel"
-[[enumSets.options]]
-key = "httpTransport"
-value = "zhongkui.com/zhongkui/internal/models/network.HttpTransport"
+[enumSets]
+httpMethod = [
+    { key = "GET", value = "GET" },
+    { key = "POST", value = "POST" },
+    { key = "PUT", value = "PUT" },
+    { key = "DELETE", value = "DELETE" },
+    { key = "PATCH", value = "PATCH" },
+    { key = "HEAD", value = "HEAD" },
+    { key = "OPTIONS", value = "OPTIONS" },
+    { key = "TRACE", value = "TRACE" },
+    { key = "CONNECT", value = "CONNECT" },
+]
+httpVersion = [
+    { key = "HTTP/1.0", value = "HTTP/1.0" },
+    { key = "HTTP/1.1", value = "HTTP/1.1" },
+    { key = "HTTP/2", value = "HTTP/2" },
+    { key = "HTTP/3", value = "HTTP/3" },
+]
+language = [
+    { key = "en", value = "en" },
+    { key = "zh-Hans", value = "zh-Hans" },
+]
+notificationSource = [
+    { key = "default", value = "default" },
+    { key = "override", value = "override" },
+]
+notificationRecordStatus = [
+    { key = "pending", value = "pending" },
+    { key = "success", value = "success" },
+    { key = "failed", value = "failed" },
+]
+tagAlertStatus = [
+    { key = "pending", value = "pending" },
+    { key = "alerting", value = "alerting" },
+    { key = "suppressed", value = "suppressed" },
+    { key = "closed", value = "closed" },
+]
+policyEffect = [
+    { key = "allow", value = "allow" },
+    { key = "deny", value = "deny" },
+]
+datasourceStruct = [
+    { key = "string", value = "string" },
+    { key = "hash", value = "hash" },
+    { key = "list", value = "list" },
+    { key = "set", value = "set" },
+    { key = "zset", value = "zset" },
+]
 
-[[enumSets]]
-name = "httpMethod"
-[[enumSets.options]]
-key = "GET"
-value = "GET"
-[[enumSets.options]]
-key = "POST"
-value = "POST"
-[[enumSets.options]]
-key = "PUT"
-value = "PUT"
-[[enumSets.options]]
-key = "DELETE"
-value = "DELETE"
-[[enumSets.options]]
-key = "PATCH"
-value = "PATCH"
-[[enumSets.options]]
-key = "HEAD"
-value = "HEAD"
-[[enumSets.options]]
-key = "OPTIONS"
-value = "OPTIONS"
-[[enumSets.options]]
-key = "TRACE"
-value = "TRACE"
-[[enumSets.options]]
-key = "CONNECT"
-value = "CONNECT"
-
-[[enumSets]]
-name = "httpVersion"
-[[enumSets.options]]
-key = "HTTP/1.0"
-value = "HTTP/1.0"
-[[enumSets.options]]
-key = "HTTP/1.1"
-value = "HTTP/1.1"
-[[enumSets.options]]
-key = "HTTP/2"
-value = "HTTP/2"
-[[enumSets.options]]
-key = "HTTP/3"
-value = "HTTP/3"
-
-[[enumSets]]
-name = "channelType"
-[[enumSets.options]]
-key = "email"
-value = "email"
-[[enumSets.options]]
-key = "webhook"
-value = "webhook"
-
-[[enumSets]]
-name = "language"
-[[enumSets.options]]
-key = "en"
-value = "en"
-[[enumSets.options]]
-key = "zh-Hans"
-value = "zh-Hans"
-
-[[enumSets]]
-name = "notificationSource"
-[[enumSets.options]]
-key = "default"
-value = "default"
-[[enumSets.options]]
-key = "override"
-value = "override"
-
-[[enumSets]]
-name = "notificationRecordStatus"
-[[enumSets.options]]
-key = "pending"
-value = "pending"
-[[enumSets.options]]
-key = "success"
-value = "success"
-[[enumSets.options]]
-key = "failed"
-value = "failed"
-
-[[enumSets]]
-name = "notificationEventType"
-[[enumSets.options]]
-key = "tag_event_record"
-value = "tag_event_record"
-
-[[enumSets]]
-name = "tagAlertStatus"
-[[enumSets.options]]
-key = "pending"
-value = "pending"
-[[enumSets.options]]
-key = "alerting"
-value = "alerting"
-[[enumSets.options]]
-key = "suppressed"
-value = "suppressed"
-[[enumSets.options]]
-key = "closed"
-value = "closed"
-
-[[enumSets]]
-name = "datasourceType"
-[[enumSets.options]]
-key = "redis"
-value = "redis"
-[[enumSets.options]]
-key = "mysql"
-value = "mysql"
-
-# ---- 结构体字段枚举绑定（[[enumSets]] 集合的引用声明，meta 自省按此下发 enumOptions）----
+# ---- 结构体字段枚举绑定（enumSets 集合的引用声明，meta 自省按此下发 enumType）----
 # typeName 必须与列表 OPTIONS 的 bodyOutput 结构体 reflect.Type.Name() 精确一致；
 # field 为 ListOut 结构体字段的 JSON 字段名，与 filterByFields.fieldName 保持一致。
 
@@ -172,16 +107,7 @@ field = "httpVersion"
 set = "httpVersion"
 
 [[enums]]
-typeName = "NotificationChannelListOut"
-[[enums.fields]]
-field = "type"
-set = "channelType"
-
-[[enums]]
 typeName = "NotificationTargetListOut"
-[[enums.fields]]
-field = "type"
-set = "channelType"
 [[enums.fields]]
 field = "language"
 set = "language"
@@ -191,33 +117,18 @@ typeName = "NotificationTemplateListOut"
 [[enums.fields]]
 field = "source"
 set = "notificationSource"
-[[enums.fields]]
-field = "channelType"
-set = "channelType"
 
 [[enums]]
 typeName = "NotificationRecordListOut"
 [[enums.fields]]
 field = "status"
 set = "notificationRecordStatus"
-[[enums.fields]]
-field = "eventType"
-set = "notificationEventType"
-[[enums.fields]]
-field = "channelType"
-set = "channelType"
 
 [[enums]]
 typeName = "TagEventRecordListOut"
 [[enums.fields]]
 field = "status"
 set = "tagAlertStatus"
-
-[[enums]]
-typeName = "DatasourceListOut"
-[[enums.fields]]
-field = "type"
-set = "datasourceType"
 
 # 用户
 [UserListGet]

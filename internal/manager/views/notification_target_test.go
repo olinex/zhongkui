@@ -39,12 +39,12 @@ const mockNotificationChannelType = "test-send-mock"
 // mockNotificationChannelConfig 测试用 mock 渠道级配置，工厂忽略其内容；
 // 带字段以保持非占位符渠道语义（避免被命名空间自动种子化）。
 type mockNotificationChannelConfig struct {
-	Mock string `json:"mock" form:"kind=string"`
+	Mock string `json:"mock"`
 }
 
 // mockNotificationTargetConfig 测试用 mock 目标级配置。
 type mockNotificationTargetConfig struct {
-	To string `json:"to" form:"kind=string"`
+	To string `json:"to"`
 }
 
 // mockNotificationChannel 测试用 mock 渠道实现，Send 固定返回消息 ID "mock-msg-1"。

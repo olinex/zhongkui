@@ -75,9 +75,6 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    option:
-      email: 邮件
-      webhook: Webhook
   notificationTarget:
     name: 通知目标
     field:
@@ -98,11 +95,6 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    option:
-      email: 邮件
-      webhook: Webhook
-      en: 英语
-      zh-Hans: 简体中文
   notificationGroup:
     name: 通知组
     field:
@@ -131,14 +123,6 @@ model:
       source: 来源
       description: 描述
       params: 模板参数
-    # 事件/来源枚举值展示名（event 键为后端事件注册表返回的 event 键；
-    # source 为 default 内置默认 / override 用户覆盖）
-    option:
-      event:
-        tag_event_record: 标签事件告警
-      source:
-        default: 默认
-        override: 覆盖
   notificationRecord:
     name: 发送记录
     field:
@@ -162,13 +146,6 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    option:
-      pending: 待发送
-      success: 成功
-      failed: 失败
-      email: 邮件
-      webhook: Webhook
-      tag_event_record: 标签事件告警
   user:
     name: 用户
     field:
@@ -211,9 +188,6 @@ model:
       updatedAt: 更新时日
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-    option:
-      allow: 允许
-      deny: 禁止
   group:
     name: 用户组
     field:
@@ -344,8 +318,7 @@ model:
       enabled: 启用
       version: 版本号
       versionCount: 版本数量
-    option:
-      httpTransport: HTTP 传输
+
   tagRuleSample:
     name: 标签规则样例
     field:
@@ -360,8 +333,7 @@ model:
       model: 目标模型
       description: 描述
       input: 输入文档
-    option:
-      httpTransport: HTTP 传输
+
   tagEventRule:
     name: 标签事件规则
     field:
@@ -400,14 +372,7 @@ model:
       enabled: 启用
       config: 连接配置
       description: 描述
-    option:
-      redis: Redis
-      mysql: MySQL
-      string: 字符串
-      hash: 哈希
-      list: 列表
-      set: 集合
-      zset: 有序集合
+
     configField:
       addr: 主机地址
       port: 端口
@@ -415,8 +380,26 @@ model:
       db: 逻辑库
       struct: 数据结构
       user: 用户名
+      username: 用户名
       dbName: 库名
       table: 表
+      path: 数据库文件 (.db)
+      fileHint: 上传 SQLite 数据库文件（.db/.sqlite/.sqlite3），加密存储于 S3
+      uri: 连接串
+      collection: 集合名
+      endpoints: 端点地址
+      schema: 手动表结构
+      schemaHint: 无表结构自省权限时，可在此手动填写列名与类型；留空则自动自省
+      addColumn: 添加列
+      columnName: 列名
+      columnType: 类型
+    columnType:
+      any: 任意
+      integer: 整数
+      float: 浮点
+      string: 字符串
+      blob: 二进制
+      bool: 布尔
   tagEventRecord:
     name: 标签事件记录
     field:
@@ -436,11 +419,7 @@ model:
       detectedAtTime: 检测时间
       detectedAtDate: 检测日期
     type: 状态
-    option:
-      pending: 待处理
-      alerting: 告警中
-      suppressed: 已抑制
-      closed: 已关闭
+
     content:
       info: 事件基础信息
       hits: 命中明细
@@ -1071,6 +1050,22 @@ action:
   renderTest: 渲染测试
   templateValidate: 语法校验
   templateDryRun: 试运行
+guide:
+  title: 第三方数据查询
+  datasource: 数据源速查
+  datasourceEmpty: 该命名空间暂无已注册的数据源，请先创建第三方数据源后再在 rego 中查询
+  insertSelect: 插入 SELECT
+  clickInsertColumn: 点击插入 表.列
+  samples: 场景样例
+  sampleEmpty: 请先创建并接入数据源，即可一键生成可运行样例
+  clickInsertSample: 点击把可运行样例插入编辑器
+  sample:
+    exists: 存在性判断
+    existsDesc: 用 COUNT(*)>0 判断第三方数据是否命中
+    value: 取单值回填
+    valueDesc: 用 rows[0].列 读取 SQL 结果的字段值
+    aggregate: 聚合统计
+    aggregateDesc: 用 COUNT(DISTINCT) / SUM / AVG 统计第三方数据
 title:
   zk: Zhong Kui
   home: 首页

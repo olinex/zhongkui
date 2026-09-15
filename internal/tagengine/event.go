@@ -251,13 +251,17 @@ func toEventHit(c DetectionCondition, hit DetectionHit) TagEventRecordHit {
 	return TagEventRecordHit{
 		ConditionID:   c.ConditionID,
 		ConditionName: c.ConditionName,
-		Model:         hit.Model,
-		Dimension:     hit.Dimension,
-		Item:          hit.Item,
-		Count:         hit.Total,
-		Threshold:     c.Threshold,
-		Window:        c.Window,
-		IDs:           hit.IDs,
+		// Model 直接存完整类型键（数据库存储语义，与 TagRule.Model /
+		// TagSumming.Model / TagEventCondition.Model 一致）；展示 label 由消费方
+		// 经 tagRuleModel 枚举类按 enum.tagRuleModel.<ModelKey> 推导，
+		// 命中明细不做 value→key 的预转换。
+		Model:     hit.Model,
+		Dimension: hit.Dimension,
+		Item:      hit.Item,
+		Count:     hit.Total,
+		Threshold: c.Threshold,
+		Window:    c.Window,
+		IDs:       hit.IDs,
 	}
 }
 

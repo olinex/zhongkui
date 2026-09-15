@@ -21,6 +21,8 @@ export interface TableHeader {
   fixed?: Fixed;
   // 默认可见性：无本地保存配置时新增列默认是否展示，缺省 true（展示）
   defaultVisible?: boolean;
+  // 枚举类名引用：枚举列单元格经 enumLabelOf(enumType, value) 渲染 label
+  enumType?: string;
 }
 
 export interface OrderByItem {
@@ -55,6 +57,8 @@ export interface FilterByOption {
   actions: SearchAction[];
   // 枚举字段的下拉可选项（title 为 i18n 键，渲染时经翻译展示）
   options?: Option[];
+  // 枚举类名引用：供 SearchTable 经枚举 store 解析可选项；携带 options 时以 options 为准
+  enumType?: string;
 }
 
 export interface HeaderOption {
@@ -63,6 +67,8 @@ export interface HeaderOption {
   // 默认可见性：无本地保存配置时新增列默认是否展示，缺省 true（展示）；
   // 长度不固定的长文本列（如通知模板标题/正文）可显式设 false 默认隐藏
   defaultVisible?: boolean;
+  // 枚举类名引用：枚举列单元格经 enumLabelOf(enumType, value) 渲染 label
+  enumType?: string;
 }
 
 export interface SearchOptionsOut {

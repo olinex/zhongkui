@@ -127,6 +127,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 - 命令树字段即翻译键本身：所有命令的 `Short`/`Long`/`Example` 与 flag usage **必须**写成 i18n key（`cmd.<path>.short|long|example`、`flag.<path>.<name>`），禁止在代码中硬编码任何语言的字面量文案；`Use` 字段保持命令名/语法不变
 - 翻译统一接入 go-i18n（`internal/pkg/translate`）：运行文案用 `cli.<topic>` 键；代码中一律调用 `translate.T(key, data)`（缺失时返回 key 本身），禁止自定义带 fallback 的翻译辅助函数（已移除 `cliT`）
+- go-i18n 数据定界符约定：translate 层全局注入 `[[ / ]]` 定界符（`localize.go` 的 `dataDelimParser`），普通翻译消息的数据占位符统一写作 `[[.X]]`；`{{ }}` 仅用于 text/template 渲染的 notify.* 模板正文（其源串不含 `[[`，go-i18n fast-path 原样透出）。新增带数据占位的翻译文案必须用 `[[.X]]`，勿用 `{{.X}}`
 - 回退语言固定为 `zh-Hans`：`locales/zh-Hans.toml` 必须覆盖全部 cmd.*/flag.*/cli.* 键；`locales/en.toml` 维护英文翻译，未命中时经 go-i18n 回退到 zh-Hans；两个文件都缺失时返回 key 本身
 - 键完整性由 `internal/cmd/i18n_test.go` 的 `TestCommandTreeKeysComplete` 兜底：遍历命令树断言每个 Short/Long/Example/flag usage 在 zh-Hans 下可解析（解析结果不等于 key），新增命令/标志必须同步补翻译文件
 - `prompt:"..."` 标签提示由 `internal/pkg/cliinput` 按 `cli.input.prompt.<StructName>.<FieldName>` 经 `internal/pkg/translate` 的 `T` 函数翻译，中文文案维护在 `locales/zh-Hans.toml`、英文在 `en.toml`；cliinput 内部固定键为 `cli.input.prompt.confirm-suffix` / `cli.input.prompt.comma-separated-suffix` / `cli.input.mismatch`（前缀常量 `CliI18nPrefix`）
@@ -157,12 +158,17 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - 数据流：处理器以模型查询数据库，再经显式映射函数（`newXxxOut`，入参为模型指针）逐字段转换为独立 Out；JSON 字段名（json tag）须与映射来源字段保持一致，避免破坏前端契约。
 - 例外：**局部匿名扫描容器**（`var rows []struct { network.Xxx; utils.BaseTotalOut }`）仅作 GORM 扫描用途，不属于 In/Out 结构体，允许内嵌模型，沿用 notification 模块既有模式。
 
-### Search.toml 枚举筛选配置（search-generate 规范）
+### 枚举统一注册表（enum 注册表 / search-generate 规范）
 
-- 枚举筛选字段（`enum = true`）的可选项必须以内联数组形式直接写在字段上：`options = [{title = "...", value = "..."}, ...]`；**禁止**使用 `[[<List>ListGet.filterByFields.options]]` 的独立表格列表写法。
-- 每个 option 的 `title` 直接等于 `value`（即枚举值本身，如 `pending`、`email`），不得写成完整 i18n 键（如 `model.notificationRecord.type.status.pending`）。
-- 展示名由前端按 `model.<modelName>.option.<title>` 定位 i18n 翻译（`web/src/utils/options.ts` 的 `filterOptionTitle`，SearchTable.vue 与流量审计页统一接入）；未配置翻译的枚举（如 HTTP 方法 GET、版本 HTTP/1.1）回退显示原始 title。
-- `title`/`value` 顺序固定 `{title, value}`；新增枚举选项须同步补充 zhHans.yaml / en.yaml 的 `model.<modelName>.option.<value>` 键。
+- **单一数据来源**：所有枚举值统一注册进 `internal/pkg/enum` 注册表（`enum.Register(enum.Type{Name, Entries})`，条目 `enum.Entry{Key, Value}`），每个枚举类（类名如 `channelType`、`httpMethod`）有且仅有一个注册点，类内 key 互斥唯一、value 互斥唯一。数据库内存储该字段枚举值时一律存 **value**（不可存 key）。
+- **注册来源两类**：
+  - 静态枚举类：在 `search.toml` 的 `[enumSets]` 映射表中声明（集合名即映射 key，value 为该集合的内联 `options` 数组），由 `search-generate` 生成 `enum_classes.go`（`init()` 中 `enum.Register` 注册 + `enumBindings` 结构体字段绑定表）；类名即映射 key。
+  - 业务注册表来源（channelType / notificationEvent / datasourceType / tagRuleModel）：值空间随业务注册表在代码内固定，在视图层 `enum_registry.go` 的 `init()` 中从对应业务注册表组装注册（与 `/channel/types`、`/template/events`、`/datasource/types`、tagengine 注册表共用单一来源）。
+- **字段与枚举类绑定**：`search.toml` `[[enums]]` 仅作「结构体类型 + 字段 JSON 名 → 枚举类名」绑定引用（`type` / `field` / `set`），`search-generate` 生成进 `enumBindings`，meta.go 反射输出 `FieldMeta.EnumType`；运行时字段（如 `NotificationTemplateCreateIn.event`）经 `views.AddEnumBinding(typeName, field, className)` 在模块 `init()` 补充。`set` 类名仅为引用，不携带可选项——可选项唯一来源是 enum 注册表。
+- **i18n label 键**：统一前缀 `enum.<类名>.<key>`（如 `enum.notificationEvent.tag_event_record`、`enum.httpMethod.GET`），只允许经 **key** 翻译 label，禁止经 value 翻译；中英文 `zh-Hans.toml` / `en.toml` 结构一一对应，新增枚举条目（含注册表来源的新渠道/事件）必须同步补两语言键，未命中回退显示 key 本身。**禁止**任何 `model.*.option.*` 平铺或分组键。
+- **统一枚举接口**：`POST /admin/enum/get`（按 `{type, lang}` 返回单类条目）与 `POST /admin/enum/list`（按 `lang` 返回全量类条目），出参条目均为 `{key, value, label}`，label 跟随请求语言。前端按（枚举类, 语言）组合缓存（`stores/enums.ts`），仅后端进程重启才可能更新，页面间不重复请求。
+- **前端消费契约**：类名常量集中在 `utils/enums.ts` 的 `EnumClass`；`enumFieldTypeOfMeta` 从 meta `bodyOutput` 取字段 `enumType`，`ensureEnum` / `enumEntriesOf` / `enumLabelOf`（value/key 双解析优先 value）/ `enumOptionsOf` 统一经枚举 store；表头/筛选（SearchTable.vue、AdaptiveCell.vue）与页面下拉一律按 `enumType` 定位枚举类，禁止手工维护选项字面量。通知模板 `t` 函数类感知：`t "<类名>" <key|value>` 优先按 value 匹配再按 key 匹配，经 `enum.<类名>.<key>` 渲染 label。
+- **目标模型枚举（tagRuleModel）**：Key 为 `tagengine.ModelKey` 推导的短展示键（camelCase，如 `httpTransport`），Value 为完整类型键（数据库存储语义，驱动 `WHERE model = ?` 匹配 tag_summings）；`TagEventRecordHit.Model` 落库存枚举短键（`toEventHit` 收敛），通知模板 `t "tagRuleModel" .Model` 与展示经同一枚举类收敛；S3 明文查看接口的模型 `switch` 经 `tagengine.ModelKey` 幂等匹配（兼容完整类型键/枚举键两种入参）。禁止 snake_case 与完整类型键作为展示键双写。
 
 ---
 

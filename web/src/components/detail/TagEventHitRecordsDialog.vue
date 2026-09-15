@@ -142,8 +142,9 @@ import type { TableHeader } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import { BackendDataType } from "@/types";
 import { durationToMillis } from "@/utils/duration";
+import { EnumClass, enumLabelOf } from "@/utils/enums";
 import i18n, { localDurationFormat } from "@/utils/i18n";
-import { modelFieldTitle, modelTypeKeyLabel, modelTypeKeyToI18nKey } from "@/utils/modelField";
+import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
 
 const props = defineProps<{
   modelValue: boolean;
@@ -238,11 +239,15 @@ const summaryFields = computed<SummaryField[]>(() => {
   const label = (key: string): string => i18n.global.t(`model.tagEventRecordHit.field.${key}`);
   return [
     { key: "conditionName", label: label("conditionName"), display: hit.conditionName },
-    { key: "model", label: label("model"), display: modelTypeKeyLabel(hit.model) },
+    {
+      key: "model",
+      label: label("model"),
+      display: enumLabelOf(EnumClass.tagRuleModel, hit.model),
+    },
     {
       key: "dimension",
       label: label("dimension"),
-      display: modelFieldTitle(modelTypeKeyToI18nKey(hit.model), hit.dimension),
+      display: enumLabelOf(EnumClass.tagEventDimension, hit.dimension),
     },
     { key: "item", label: label("item"), display: hit.item },
     { key: "count", label: label("count"), display: String(hit.count) },

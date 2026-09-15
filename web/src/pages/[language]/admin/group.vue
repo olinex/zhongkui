@@ -187,12 +187,15 @@ import i18n from "@/utils/i18n";
 import { useForm } from "vee-validate";
 import { updateGroupSchema, createGroupSchema } from "@/schemas/group";
 import { vuetifyCfg } from "@/utils/form";
-import { policyEffectOptions } from "@/constants/enums";
-import { enumValueTitle } from "@/utils/options";
+import { EnumClass, enumLabelOf, enumOptionsOf } from "@/utils/enums";
 
-// policyEffectTitle 权限 effect 下拉项展示名：value 为枚举值，渲染期经 option 命名空间翻译
+// policyEffectOptions 权限 effect 下拉可选项：来自统一枚举注册表 policyEffect，
+// title 为 label、value 为枚举值，语言切换即时刷新
+const policyEffectOptions = computed(() => enumOptionsOf(EnumClass.policyEffect));
+
+// policyEffectTitle 权限 effect 下拉项展示名：value 为枚举值，渲染期经统一枚举注册表 policyEffect 翻译
 const policyEffectTitle = (option: { title: string; value: string }): string =>
-  enumValueTitle("policy", option.value);
+  enumLabelOf(EnumClass.policyEffect, option.value);
 
 const updateForm = useForm({
   validationSchema: updateGroupSchema,

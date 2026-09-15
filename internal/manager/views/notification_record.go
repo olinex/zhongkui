@@ -248,3 +248,11 @@ func loadNotificationChannelName(c *gin.Context, db *gorm.DB, namespace string, 
 	}
 	return channel.Name
 }
+
+// init 注册通知记录列表出参（NotificationRecordListOut.channelType / eventType）的枚举类绑定：
+// channelType 对应 enum 注册表 channelType 类（message.Types()）、
+// eventType 对应 notificationEvent 类（notify.TemplateSpecs()）。
+func init() {
+	AddEnumBinding("NotificationRecordListOut", "channelType", "channelType")
+	AddEnumBinding("NotificationRecordListOut", "eventType", "notificationEvent")
+}

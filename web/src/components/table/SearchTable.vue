@@ -92,7 +92,6 @@
                 <slot name="cell" :item="item" :header="hdr">
                   <adaptive-cell
                     :header="hdr"
-                    :model-name="props.modelName"
                     :item="item"
                     :actions="actions"
                     :refresh="tableDataRefresh"
@@ -111,7 +110,7 @@
 import type { AxiosPromise } from "axios";
 import { getResponse } from "@/apis/base";
 import i18n from "@/utils/i18n";
-import { enumFieldOptionsFromMeta, enumMetaOptions } from "@/utils/options";
+import { enumFieldTypeOfMeta, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { useColumnVisibility } from "@/utils/column";
 import type { FilterItem } from "@/components/forms/ExpressionField.vue";
 import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
@@ -152,21 +151,32 @@ async function getSearchOptionsResponse(
   return await getResponse<MetaOut>(request, success, failed, noResponse, noRequest, final);
 }
 
-function extractSearchHeaders(out: MetaOut): Record<string, FilterByOption> {
+async function extractSearchHeaders(out: MetaOut): Promise<Record<string, FilterByOption>> {
+  // 枚举字段经 enumType（filterBy 显式声明，缺省回退 bodyOutput 自省）确定枚举类名，
+  // 先统一 ensure 全部枚举类按当前语言缓存，再构造筛选元数据
+  const enumTypes = new Set<string>();
+  for (const cur of out.filterBy) {
+    const enumType = cur.enumType ?? enumFieldTypeOfMeta(out.meta, cur.name);
+    if (enumType) enumTypes.add(enumType);
+  }
+  await Promise.all([...enumTypes].map((t) => ensureEnum(t)));
   return out.filterBy.reduce(
     (prev, cur) => {
-      // 枚举筛选项已不再由后端 SearchOptionsOut.filterBy 携带，改为从同一自省
-      // 响应中 bodyOutput 的 enumOptions 解析（[[enums]] 单一事实来源）；
-      // 命中则为枚举下拉，未命中（非枚举字段）保持后端字段类型（如字符串文本框）
-      const opts = enumFieldOptionsFromMeta(out.meta, cur.name);
-      prev[cur.name] = {
-        name: cur.name,
-        title: i18n.global.t(`model.${props.modelName}.field.${cur.name}`),
-        actions: cur.actions,
-        type: opts ? BackendDataType.ENUM : cur.type,
-        // 枚举选项 title 经 enumMetaOptions 按 model.<Name>.option.<key> 统一翻译
-        options: opts ? enumMetaOptions(props.modelName, opts) : cur.options,
-      };
+      // 枚举类名命中则为枚举下拉（options 经枚举 store 解析），未命中保持后端字段类型
+      const enumType = cur.enumType ?? enumFieldTypeOfMeta(out.meta, cur.name);
+      prev[cur.name] = enumType
+        ? {
+            ...cur,
+            title: i18n.global.t(`model.${props.modelName}.field.${cur.name}`),
+            type: BackendDataType.ENUM,
+            // 显式 options（如通配 "*"）优先；否则经枚举 store 按类解析
+            options: cur.options?.length ? cur.options : enumOptionsOf(enumType),
+          }
+        : {
+            ...cur,
+            title: i18n.global.t(`model.${props.modelName}.field.${cur.name}`),
+            options: cur.options,
+          };
       return prev;
     },
     {} as Record<string, FilterByOption>,
@@ -182,7 +192,10 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
       case out.headers.length:
         align = "end";
     }
-    return {
+    // 枚举列 class 名：header 显式声明优先，缺省回退 bodyOutput 自省的 enumType；
+    // 仅存在时写入，避免 undefined 键污染
+    const enumType = hdr.enumType ?? enumFieldTypeOfMeta((out as MetaOut).meta, hdr.name);
+    const header: TableHeader = {
       key: hdr.name,
       title: i18n.global.t(`model.${props.modelName}.field.${hdr.name}`),
       type: hdr.type,
@@ -190,6 +203,10 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
       sortable: out.orderBy.includes(hdr.name),
       defaultVisible: hdr.defaultVisible,
     };
+    if (enumType) {
+      header.enumType = enumType;
+    }
+    return header;
   });
   if (props.actions) {
     headers.push({
@@ -210,8 +227,9 @@ const props = defineProps({
     default: "",
   },
   optionsRequest: {
-    // 缺省时列表表头/筛选字段元数据由页面经 headers / filterHeaders 自定义源提供
-    type: Function as PropType<() => AxiosPromise>,
+    // 缺省时列表表头/筛选字段元数据由页面经 headers / filterHeaders 自定义源提供；
+    // 允许异步：页面可先 await 枚举类缓存（如 notificationTemplateListOptions）再返回选项
+    type: Function as PropType<() => AxiosPromise | Promise<AxiosPromise>>,
     default: undefined,
   },
   listRequest: {
@@ -365,8 +383,10 @@ onBeforeMount(async () => {
   if (!props.optionsRequest) {
     return;
   }
-  await getSearchOptionsResponse(props.optionsRequest(), async (rsp) => {
-    optionsSearchHeaders.value = extractSearchHeaders(rsp.data);
+  // optionsRequest 允许返回 Promise（异步预取枚举类后返回选项）；Promise.resolve 统一归一：
+  // 真 AxiosPromise（axios）原样透传，页面返回的包装 Promise 解包为响应对象后走同一解析路径
+  await getSearchOptionsResponse(Promise.resolve(props.optionsRequest()), async (rsp) => {
+    optionsSearchHeaders.value = await extractSearchHeaders(rsp.data);
     optionsTableHeaders.value = extractTableHeaders(rsp.data);
   });
   // 表头（含默认可见列）就绪后再发起首次查询：onMounted 早于 OPTIONS 返回，

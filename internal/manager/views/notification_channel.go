@@ -407,3 +407,9 @@ func newNotificationChannelDetailOut(channel *core.NotificationChannel) Notifica
 		Description: channel.Description,
 	}
 }
+
+// init 注册通知渠道列表出参（NotificationChannelListOut.type）的渠道类型枚举类绑定，
+// 枚举类由 enum_registry.go 从 message.Types() 注册（类名 channelType）。
+func init() {
+	AddEnumBinding("NotificationChannelListOut", "type", "channelType")
+}

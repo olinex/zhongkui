@@ -86,8 +86,9 @@ func localizeInputFields(lc *i18n.Localizer, fields []tagengine.InputFieldMeta) 
 }
 
 // localizeDimensionOptions 把模型注册的合法维度取值列表转换为下拉选项。
-// 仅返回 dimension 取值本身（Value，即 snake_case 列名）；展示名由前端按目标模型
-// 的 i18n 命名空间 + Value 自行拼键翻译，未命中时由前端回退展示取值。
+// 仅返回 dimension 取值本身（Value，即 snake_case 列名）；展示 label 由前端统一经
+// tagEventDimension 枚举类按 enum.tagEventDimension.<取值> 翻译（与详情列/通知模板一致），
+// 未命中时由前端回退展示取值。
 func localizeDimensionOptions(dims []string) []TagRuleModelDimensionOut {
 	out := make([]TagRuleModelDimensionOut, 0, len(dims))
 	for _, d := range dims {
@@ -206,13 +207,6 @@ type TagRuleValidateOut struct {
 type TagRuleModelIn struct {
 	// Model 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `json:"model" binding:"required"`
-}
-
-// TagRuleModelOptionsOut 定义标签规则目标模型选项列表的输出结构。
-// Items 为已注册目标模型的 {value,label} 列表，label 已按请求语言本地化。
-type TagRuleModelOptionsOut struct {
-	// Items 已注册目标模型选项列表
-	Items []tagengine.Option `json:"items"`
 }
 
 // TagRuleModelMetadataOut 定义标签规则目标模型输入字段元信息的输出结构。
@@ -653,14 +647,6 @@ func TagRuleValidate(c *gin.Context) {
 		}
 	}
 	response.SimpleOK.AbortWithGinW(c, out)
-}
-
-// TagRuleModelOptions 处理获取标签规则目标模型选项列表的请求。
-// 返回已注册目标模型的 {value,label} 列表。value 为模型类型键，label 为展示名称的
-// i18n 键本身（不再按请求语言本地化）：展示名统一由前端按 value 经 i18n 翻译，
-// 支持前端语言切换即时生效，无需重新请求。
-func TagRuleModelOptions(c *gin.Context) {
-	response.SimpleOK.AbortWithGinW(c, TagRuleModelOptionsOut{Items: tagengine.Options()})
 }
 
 // TagRuleModelMetadata 处理获取标签规则目标模型输入字段元信息的请求。

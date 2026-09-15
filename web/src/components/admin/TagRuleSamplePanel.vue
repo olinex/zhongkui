@@ -10,7 +10,9 @@
   >
     <!-- 目标模型列显示可读名称（与表单下拉一致），而非原始类型键 -->
     <template #cell-model="{ value }">
-      {{ modelTypeKeyLabel(String(value ?? "")) || $t("model.__base.value.blank") }}
+      {{
+        enumLabelOf(EnumClass.tagRuleModel, String(value ?? "")) || $t("model.__base.value.blank")
+      }}
     </template>
   </search-table>
 
@@ -129,9 +131,10 @@ import type { TagRuleSampleDetailOut } from "@/pages/[language]/tag-event/@types
 import { updateTagRuleSampleSchema } from "@/schemas/tagRuleSample";
 import { useAppStore } from "@/stores/app";
 import { BackendDataType } from "@/types";
+import { EnumClass, enumLabelOf } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
-import { modelFieldTitle, modelTypeKeyLabel, modelTypeKeyToI18nKey } from "@/utils/modelField";
+import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
 
 const appStore = useAppStore();
 const sampleTableRef = useTemplateRef("sampleTableRef");

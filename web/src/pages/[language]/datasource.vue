@@ -79,7 +79,11 @@
       <temp-editable-dialog
         ref="createDialogRef"
         :title="$t('model.datasource.name')"
-        :confirm-disabled="!createForm.meta.value.valid || !createConfigValid"
+        :confirm-disabled="
+          !createForm.meta.value.valid ||
+          !createConfigValid ||
+          (isCreateSQLite && !createSqliteFile)
+        "
         force-editable
         prepend-icon="mdi-database-import-outline"
         @confirm="createAction"
@@ -114,6 +118,18 @@
                 />
               </v-col>
             </v-row>
+            <v-row v-if="isCreateSQLite" dense>
+              <v-col cols="12">
+                <v-file-input
+                  v-model="createSqliteFile"
+                  accept=".db,.sqlite,.sqlite3"
+                  :label="`${$t('model.datasource.configField.path')} *`"
+                  :hint="$t('model.datasource.configField.fileHint')"
+                  persistent-hint
+                  show-size
+                />
+              </v-col>
+            </v-row>
             <template v-if="createConfigFields.length > 0">
               <v-divider class="my-2" />
               <v-row dense>
@@ -135,6 +151,19 @@
                       }}<span v-if="f.required" class="text-error"> *</span>
                     </template>
                   </v-select>
+                  <template v-else-if="f.kind === 'columns'">
+                    <v-label class="d-block mb-1">
+                      {{ $t(configFieldLabel(createType, f.name))
+                      }}<span v-if="f.required" class="text-error"> *</span>
+                    </v-label>
+                    <datasource-schema-editor
+                      :model-value="createConfigValues[f.name] as DatasourceColumn[]"
+                      @update:model-value="createConfigValues[f.name] = $event"
+                    />
+                    <div v-if="createConfigErrors[f.name]" class="text-error text-body-2 mt-1">
+                      {{ createConfigErrors[f.name] }}
+                    </div>
+                  </template>
                   <v-textarea
                     v-else-if="f.kind === 'object' || f.kind === 'textarea'"
                     v-model="createConfigValues[f.name]"
@@ -222,6 +251,19 @@
                 />
               </v-col>
             </v-row>
+            <v-row v-if="isEditSQLite" dense>
+              <v-col cols="12">
+                <v-file-input
+                  v-model="editSqliteFile"
+                  accept=".db,.sqlite,.sqlite3"
+                  :label="$t('model.datasource.configField.path')"
+                  :hint="$t('model.datasource.configField.fileHint')"
+                  persistent-hint
+                  show-size
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
             <v-divider class="my-2" />
             <v-row dense>
               <v-col cols="12">
@@ -243,6 +285,23 @@
                     }}<span v-if="f.required" class="text-error"> *</span>
                   </template>
                 </v-select>
+                <template v-else-if="f.kind === 'columns'">
+                  <v-label class="d-block mb-1">
+                    {{ $t(configFieldLabel(editType, f.name))
+                    }}<span v-if="f.required" class="text-error"> *</span>
+                  </v-label>
+                  <datasource-schema-editor
+                    :model-value="editConfigValues[f.name] as DatasourceColumn[]"
+                    :disabled="!editable"
+                    @update:model-value="editConfigValues[f.name] = $event"
+                  />
+                  <div
+                    v-if="editConfigErrors[f.name] && editable"
+                    class="text-error text-body-2 mt-1"
+                  >
+                    {{ editConfigErrors[f.name] }}
+                  </div>
+                </template>
                 <v-textarea
                   v-else-if="f.kind === 'object' || f.kind === 'textarea'"
                   v-model="editConfigValues[f.name]"
@@ -336,9 +395,7 @@ import { isEmptyCiphertext } from "@/utils/encrypted";
 import { vuetifyCfg } from "@/utils/form";
 import { BackendDataType } from "@/types";
 import i18n from "@/utils/i18n";
-import { DynamicEnums, dynamicEnumOptions } from "@/constants/dynamicEnums";
-import { datasourceStructOptions } from "@/constants/enums";
-import { enumValueTitle } from "@/utils/options";
+import { EnumClass, enumLabelOf, enumOptionsOf, ensureEnum } from "@/utils/enums";
 
 // ---- 表单校验 schema（配置字段由动态 schema 单独校验）----
 const createForm = useForm({ validationSchema: createDatasourceSchema() });
@@ -363,6 +420,13 @@ const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 
+// ---- sqlite_file 数据源：.db 文件上传（创建必填、更新可选换新）----
+const createSqliteFile = ref<File | null>(null);
+const editSqliteFile = ref<File | null>(null);
+// isCreateSQLite / isEditSQLite 判断当前创建/编辑表单选中的数据源是否为 sqlite_file 类型
+const isCreateSQLite = computed(() => createType.value === "sqlite_file");
+const isEditSQLite = computed(() => editType.value === "sqlite_file");
+
 // ---- 数据源类型注册表（含各类型配置 schema），经 /types 动态拉取 ----
 const typeItems = ref<DatasourceTypeItem[]>([]);
 const typeMap = computed<Record<string, DatasourceTypeItem>>(() => {
@@ -372,26 +436,33 @@ const typeMap = computed<Record<string, DatasourceTypeItem>>(() => {
   }
   return map;
 });
-const datasourceTypeOptions = computed(() =>
-  dynamicEnumOptions(DynamicEnums.datasourceType, typeItems.value, "type"),
-);
+const datasourceTypeOptions = computed(() => enumOptionsOf(EnumClass.datasourceType));
 
-// redis 数据结构下拉选项（字面量来自 constants/enums，title 与 value 一致为枚举值，
-// 渲染期经 enumValueTitle("datasource", ...) 翻译，语言切换即时刷新）
-const structFieldItems = datasourceStructOptions;
+// redis 数据结构下拉选项（来自统一枚举注册表 datasourceStruct，title 为 label、value 为枚举值，
+// 渲染期经 enumLabelOf 翻译，语言切换即时刷新）
+const structFieldItems = computed(() => enumOptionsOf(EnumClass.datasourceStruct));
 const structOptionTitle = (option: { title: string; value: string }): string =>
-  enumValueTitle("datasource", option.value);
+  enumLabelOf(EnumClass.datasourceStruct, option.value);
 
 onMounted(() => {
   void getResponse<{ types: DatasourceTypeItem[] }>(datasourceTypesGet(), async (rsp) => {
     typeItems.value = rsp.data.types ?? [];
   });
+  // 预取统一枚举注册表选项：ensureEnum 确保按当前语言缓存，enumOptionsOf 为响应式，缓存到达自动刷新
+  void ensureEnum(EnumClass.datasourceType);
+  void ensureEnum(EnumClass.datasourceStruct);
 });
 
 // ---- 配置动态表单 ----
 // configFieldLabel 依据数据源类型与字段名拼接配置字段的 i18n label key
 const configFieldLabel = (_type: string, field: string): string =>
   `model.datasource.configField.${field}`;
+
+// DatasourceColumn 手动 schema 的一列（与后端 DatasourceColumn JSON 结构一致）
+interface DatasourceColumn {
+  name: string;
+  type: string;
+}
 
 // configFieldType 将配置字段 schema 的 kind 映射为输入框的 type 属性
 const configFieldType = (kind: string): string => {
@@ -407,7 +478,7 @@ const configFieldType = (kind: string): string => {
 
 // DatasourceConfigState 数据源配置动态表单状态（值与错误分开管理）
 interface DatasourceConfigState {
-  values: Ref<Record<string, string | number>>;
+  values: Ref<Record<string, string | number | DatasourceColumn[]>>;
   errors: Ref<Record<string, string>>;
   fields: ComputedRef<DatasourceTypeField[]>;
   valid: ComputedRef<boolean>;
@@ -419,21 +490,21 @@ interface DatasourceConfigState {
 
 // makeConfigState 生成配置表单状态，字段 schema 随 getType() 返回的数据源类型变化
 const makeConfigState = (getType: () => string): DatasourceConfigState => {
-  const values = ref<Record<string, string | number>>({});
+  const values = ref<Record<string, string | number | DatasourceColumn[]>>({});
   const errors = ref<Record<string, string>>({});
   const fields = computed<DatasourceTypeField[]>(() => typeMap.value[getType()]?.config ?? []);
-  // 按字段 schema 生成初始值：number 用 defaultValue 兜底，其余空串
+  // 按字段 schema 生成初始值：number 用 defaultValue 兜底，columns 默认空数组，其余空串
   const reset = (): void => {
-    const next: Record<string, string | number> = {};
+    const next: Record<string, string | number | DatasourceColumn[]> = {};
     for (const f of fields.value) {
       const d = f.defaultValue;
-      next[f.name] = typeof d === "number" ? d : "";
+      next[f.name] = f.kind === "columns" ? [] : typeof d === "number" ? d : "";
     }
     values.value = next;
     errors.value = {};
   };
   // fromJson 用已解密的配置明文 JSON 回填表单：number 字段保留数值，字符串字段填充字符串，
-  // 缺失或类型不符的字段回退为空，并清空上轮错误
+  // columns 字段回填列定义数组，缺失或类型不符的字段回退为空，并清空上轮错误
   const fromJson = (json: string): void => {
     const parsed: Record<string, unknown> = {};
     try {
@@ -441,19 +512,42 @@ const makeConfigState = (getType: () => string): DatasourceConfigState => {
     } catch {
       // 非法 JSON 按空配置处理
     }
-    const next: Record<string, string | number> = {};
+    const next: Record<string, string | number | DatasourceColumn[]> = {};
     for (const f of fields.value) {
       const v = parsed[f.name];
+      if (f.kind === "columns") {
+        next[f.name] = Array.isArray(v)
+          ? (v as DatasourceColumn[]).filter(
+              (c) => c && typeof c.name === "string" && typeof c.type === "string",
+            )
+          : [];
+        continue;
+      }
       next[f.name] = typeof v === "number" ? v : typeof v === "string" ? v : "";
     }
     values.value = next;
     errors.value = {};
   };
-  // 必填字段非空校验，错误信息展示在对应输入框
+  // 必填字段非空校验（columns 为可选字段时跳过；required 的 columns 要求至少一列），
+  // 错误信息展示在对应输入框
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
     for (const f of fields.value) {
-      if (f.required && (values.value[f.name] === "" || values.value[f.name] === undefined)) {
+      if (!f.required) {
+        continue;
+      }
+      if (f.kind === "columns") {
+        if (
+          !Array.isArray(values.value[f.name]) ||
+          (values.value[f.name] as DatasourceColumn[]).length === 0
+        ) {
+          errs[f.name] = i18n.global.t("validation.mixed.required", {
+            path: i18n.global.t(configFieldLabel(getType(), f.name)),
+          });
+        }
+        continue;
+      }
+      if (values.value[f.name] === "" || values.value[f.name] === undefined) {
         errs[f.name] = i18n.global.t("validation.mixed.required", {
           path: i18n.global.t(configFieldLabel(getType(), f.name)),
         });
@@ -462,13 +556,18 @@ const makeConfigState = (getType: () => string): DatasourceConfigState => {
     errors.value = errs;
     return Object.keys(errs).length === 0;
   };
-  // toJson 序列化为配置 JSON：number 字段强制转数字，其余单行字符串字段去除首尾空白，
-  // password 字段保留原始输入（trim 会破坏凭据）
+  // toJson 序列化为配置 JSON：number 字段强制转数字，columns 字段仅非空时输出成数组，
+  // 其余单行字符串字段去除首尾空白；password 字段保留原始输入（trim 会破坏凭据）
   const toJson = (): string => {
-    const config: Record<string, string | number> = {};
+    const config: Record<string, string | number | DatasourceColumn[]> = {};
     for (const f of fields.value) {
       const v = values.value[f.name];
-      if (f.kind === "number") {
+      if (f.kind === "columns") {
+        // 空 schema 省略字段，后端 len(Schema) > 0 判定自动回退自省
+        if (Array.isArray(v) && v.length > 0) {
+          config[f.name] = v.map((c) => ({ name: c.name.trim(), type: c.type }));
+        }
+      } else if (f.kind === "number") {
         config[f.name] = v === "" || v === undefined ? "" : Number(v);
       } else if (f.kind === "password") {
         config[f.name] = v;
@@ -479,9 +578,15 @@ const makeConfigState = (getType: () => string): DatasourceConfigState => {
     return JSON.stringify(config);
   };
   const valid = computed<boolean>(() =>
-    fields.value.every(
-      (f) => !f.required || (values.value[f.name] !== "" && values.value[f.name] !== undefined),
-    ),
+    fields.value.every((f) => {
+      if (!f.required) {
+        return true;
+      }
+      if (f.kind === "columns") {
+        return ((values.value[f.name] as DatasourceColumn[]) ?? []).length > 0;
+      }
+      return values.value[f.name] !== "" && values.value[f.name] !== undefined;
+    }),
   );
   return { values, errors, fields, valid, reset, fromJson, toJson, validate };
 };
@@ -526,12 +631,14 @@ const openCreateDialogAction = (): void => {
   createForm.resetField("type", { value: "" });
   createForm.resetField("enabled", { value: true });
   createForm.resetField("description", { value: "" });
+  createSqliteFile.value = null;
   resetCreateConfig();
   createDialogRef.value?.open({});
 };
 
-// 数据源类型切换时重置配置表单（按新类型 schema 生成默认值）
+// 数据源类型切换时重置配置表单与 sqlite 文件选择（按新类型 schema 生成默认值）
 const onCreateTypeChange = (): void => {
+  createSqliteFile.value = null;
   resetCreateConfig();
 };
 
@@ -539,14 +646,18 @@ const createAction = createForm.handleSubmit(async (values) => {
   // 防御性校验：确认按钮已按 valid 禁用，此处兜底并让字段错误可见
   validateCreateConfig();
   await getSimpleResponse(
-    datasourceCreate({
-      // 名称单行文本提交前去除首尾空白，避免误输入空白创建出看似相同实则不同的记录
-      name: (values.name as string).trim(),
-      type: values.type,
-      enabled: values.enabled,
-      config: dumpCreateConfigJson(),
-      description: values.description,
-    }),
+    datasourceCreate(
+      {
+        // 名称单行文本提交前去除首尾空白，避免误输入空白创建出看似相同实则不同的记录
+        name: (values.name as string).trim(),
+        type: values.type,
+        enabled: values.enabled,
+        config: dumpCreateConfigJson(),
+        description: values.description,
+      },
+      // sqlite_file 携带 .db 文件以 multipart 上传（后端加密直传 S3），其余类型为 JSON
+      isCreateSQLite.value ? createSqliteFile.value : null,
+    ),
     async (rsp) => {
       await searchTableRef.value?.refresh();
       appStore.notify({
@@ -575,6 +686,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
     async (rsp) => {
       editDatasourceId = rsp.data.id;
       editType.value = rsp.data.type;
+      editSqliteFile.value = null;
       updateForm.resetField("enabled", { value: rsp.data.enabled });
       updateForm.resetField("description", { value: rsp.data.description });
       // config 为 base64 密文，需经明文接口解密后再回填编辑表单
@@ -596,11 +708,16 @@ const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     validateEditConfig();
     await getSimpleResponse(
-      datasourceUpdate(editDatasourceId, {
-        enabled: values.enabled,
-        config: dumpEditConfigJson(),
-        description: values.description,
-      }),
+      datasourceUpdate(
+        editDatasourceId,
+        {
+          enabled: values.enabled,
+          config: dumpEditConfigJson(),
+          description: values.description,
+        },
+        // sqlite_file 选择新 .db 文件时以 multipart 覆盖上传同一 S3 对象，未选则保持既有文件
+        isEditSQLite.value ? editSqliteFile.value : null,
+      ),
       async (rsp) => {
         await searchTableRef.value?.refresh();
         appStore.notify({

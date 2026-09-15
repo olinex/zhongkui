@@ -21,7 +21,10 @@
             >
               <!-- 目标模型列显示可读名称（与表单下拉一致），而非原始类型键 -->
               <template #cell-model="{ value }">
-                {{ modelTypeKeyLabel(String(value ?? "")) || $t("model.__base.value.blank") }}
+                {{
+                  enumLabelOf(EnumClass.tagRuleModel, String(value ?? "")) ||
+                  $t("model.__base.value.blank")
+                }}
               </template>
             </search-table>
           </v-tabs-window-item>
@@ -138,6 +141,7 @@
             <v-row dense>
               <v-col cols="12">
                 <rego-editor
+                  ref="createRegoEditorRef"
                   v-model="createRego"
                   :errors="createRegoErrors"
                   :fields="createFields"
@@ -151,6 +155,11 @@
                 />
               </v-col>
             </v-row>
+            <datasource-guide-panel
+              :datasources="sqliteDatasources"
+              :fields="createFields"
+              @insert="onCreateInsert"
+            />
             <v-row dense align="center">
               <v-col cols="auto">
                 <v-btn v-request="validateCreateRegoNow" variant="tonal" size="small">
@@ -239,6 +248,7 @@
             <v-row dense>
               <v-col cols="12">
                 <rego-editor
+                  ref="editRegoEditorRef"
                   v-model="editRego"
                   :errors="editRegoErrors"
                   :fields="editFields"
@@ -253,6 +263,12 @@
                 />
               </v-col>
             </v-row>
+            <datasource-guide-panel
+              v-if="editable"
+              :datasources="sqliteDatasources"
+              :fields="editFields"
+              @insert="onEditInsert"
+            />
             <v-row dense align="center">
               <v-col cols="auto">
                 <v-btn
@@ -390,7 +406,6 @@ import {
   tagRuleListGet,
   tagRuleListOptions,
   tagRuleModelMetadata,
-  tagRuleModelOptions,
   tagRuleModelSamples,
   tagRuleSetEnabled,
   tagRuleSqliteMeta,
@@ -404,9 +419,9 @@ import type { BatchActions, ItemActions } from "@/components/@types/table";
 import type { BatchResultOut } from "@/apis/@types/admin";
 import { useAppStore } from "@/stores/app";
 import { createTagRuleSchema, updateTagRuleSchema } from "@/schemas/tagRule";
+import { EnumClass, enumLabelOf, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
-import { modelTypeKeyLabel } from "@/utils/modelField";
 import {
   buildRegoSkeleton,
   extractInputFields,
@@ -424,7 +439,6 @@ import type {
   TagRuleFunctionOut,
   TagRuleListOut,
   TagRuleModelMetadataOut,
-  TagRuleModelOptionsOut,
   TagRuleModelSamplesOut,
   TagRuleSqliteMetaOut,
   TagRuleValidateOut,
@@ -445,18 +459,13 @@ const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const rollbackConfirmRef = useTemplateRef("rollbackConfirmRef");
 
-// 模型下拉选项：title 统一保留为模型类型键，渲染时经 modelOptionTitle 按值 i18n 翻译
-// （model.<modelKey>.name），后端 /model/options 仅提供 {value,label} 的 value 键。
-const modelOptions = ref([
-  {
-    title: HTTP_TRANSPORT_MODEL_KEY,
-    value: HTTP_TRANSPORT_MODEL_KEY,
-  },
-]);
+// 模型下拉选项：统一经 tagRuleModel 枚举类从枚举 store 解析（value 为完整类型键），
+// 展示名由 modelOptionTitle 按值经 enumLabelOf 翻译（enum.tagRuleModel.<ModelKey>）。
+const modelOptions = computed(() => enumOptionsOf(EnumClass.tagRuleModel));
 
-// modelOptionTitle 模型下拉展示名：按模型类型键经 i18n 翻译（语言切换即时生效）。
+// modelOptionTitle 模型下拉展示名：按 tagRuleModel 枚举类 value 解析 label（语言切换即时生效）。
 const modelOptionTitle = (option: { title: string; value: string }): string =>
-  modelTypeKeyLabel(option.value);
+  enumLabelOf(EnumClass.tagRuleModel, option.value);
 
 // ---- 自定义 OPA 内置函数 / sqlite vtable 元信息（Rego 编辑器补全、悬停与 SQL 提示）----
 const customFunctions = ref<RegoFunctionMeta[]>([]);
@@ -493,14 +502,8 @@ const loadRegoMeta = async (): Promise<void> => {
 
 onMounted(() => {
   void loadRegoMeta();
-  void getResponse<TagRuleModelOptionsOut>(tagRuleModelOptions(), async (rsp) => {
-    const items = rsp.data.items ?? [];
-    if (items.length > 0) {
-      // 仅采用后端返回的 value 键；展示名由 modelOptionTitle 按 value 经 i18n 翻译，
-      // 不再依赖后端本地化/易读 label
-      modelOptions.value = items.map((o) => ({ title: o.value, value: o.value }));
-    }
-  });
+  // 目标模型下拉与列表列 label 需 tagRuleModel 枚举类已缓存；enumLabelOf 响应式，缓存到达自动刷新
+  void ensureEnum(EnumClass.tagRuleModel);
 });
 
 const createForm = useForm({ validationSchema: createTagRuleSchema });
@@ -557,6 +560,7 @@ const loadModelSamples = async (model: string, target: Ref<SampleOption[]>): Pro
 };
 
 // ---- Rego editor state (create dialog) ----
+const createRegoEditorRef = useTemplateRef("createRegoEditorRef");
 const createRego = ref("");
 const createPreflightErrors = ref<RegoValidationError[]>([]);
 const createBackendErrors = ref<RegoValidationError[]>([]);
@@ -656,7 +660,13 @@ const generateCreateSkeleton = (): void => {
     : skeleton;
 };
 
+/** 数据源速查/场景样例插入到创建对话框的编辑器光标处。 */
+const onCreateInsert = (text: string): void => {
+  createRegoEditorRef.value?.insertAtCursor(text);
+};
+
 // ---- Rego editor state (edit dialog) ----
+const editRegoEditorRef = useTemplateRef("editRegoEditorRef");
 const editRego = ref("");
 const editPreflightErrors = ref<RegoValidationError[]>([]);
 const editBackendErrors = ref<RegoValidationError[]>([]);
@@ -731,6 +741,11 @@ const validateEditRegoNow = async (): Promise<void> => {
       color: "error",
     });
   }
+};
+
+/** 数据源速查/场景样例插入到编辑对话框的编辑器光标处。 */
+const onEditInsert = (text: string): void => {
+  editRegoEditorRef.value?.insertAtCursor(text);
 };
 
 watch(editRego, (val) => {

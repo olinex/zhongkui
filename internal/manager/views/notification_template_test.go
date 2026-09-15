@@ -1,6 +1,6 @@
 // Package routes 提供 HTTP 路由注册和管理功能。
 // 本文件包含通知模板（NotificationTemplate）管理路由的集成测试：
-// 覆盖事件枚举、列表过滤、创建成功/重复/非法校验、更新（强制 override）、
+// 覆盖列表过滤、创建成功/重复/非法校验、更新（强制 override）、
 // 恢复正常默认（restore-default）与渲染预览（render-test）的成功及失败路径。
 package views
 
@@ -35,7 +35,6 @@ func createNotificationTemplateTestDB(t *testing.T) *database.DB {
 func registerNotificationTemplateTestRoutes(admin *gin.RouterGroup) {
 	group := admin.Group("/notification/template")
 	{
-		group.POST("/events", NotificationTemplateEventsGet)
 		group.POST("/list", NotificationTemplateListGet)
 		group.POST("/create", NotificationTemplateCreate)
 		group.POST("/update", NotificationTemplateUpdate)
@@ -97,42 +96,6 @@ func notificationTemplateListItems(r *gin.Engine, body map[string]any) (total ui
 	So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
 	So(resp.Code, ShouldEqual, http.StatusOK)
 	return resp.Data.Total, resp.Data.Items
-}
-
-// TestNotificationTemplateEventsGet 事件模板枚举返回注册表内容。
-func TestNotificationTemplateEventsGet(t *testing.T) {
-	Convey("测试通知模板事件枚举", t, func() {
-		db := createNotificationTemplateTestDB(t)
-		// goconvey 会为每个叶子重新执行外层 Convey 体，导致每次 new 一个未提交事务；
-		// 若不在此处及时回滚，多个叶子事务会在连接池上重叠持有行锁，引发 PostgreSQL 锁等待（单测挂死）。
-		Reset(func() {
-			So(db.Rollback().Error, ShouldBeNil)
-		})
-		r := setupNotificationTemplateTestRouter(db, middlewares.DefaultNamespace)
-
-		w := doNotificationTemplateRequest(r, http.MethodPost, "/notification/template/events", nil)
-		So(w.Code, ShouldEqual, http.StatusOK)
-		var resp struct {
-			Code int                            `json:"code"`
-			Data *NotificationTemplateEventsOut `json:"data"`
-		}
-		So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
-		So(resp.Code, ShouldEqual, http.StatusOK)
-		So(resp.Data.Events, ShouldNotBeEmpty)
-		// 注册表中应含标签事件告警，且携带其支持渠道/语言与默认标题
-		found := false
-		for _, e := range resp.Data.Events {
-			if e.Event == core.EventTypeTagEventRecord {
-				found = true
-				So(e.Template, ShouldNotBeEmpty)
-				So(e.Channels, ShouldContain, "*")
-				So(e.Languages, ShouldNotBeEmpty)
-				So(e.DefaultTitle, ShouldNotBeEmpty)
-				So(e.DefaultContent, ShouldNotBeEmpty)
-			}
-		}
-		So(found, ShouldBeTrue)
-	})
 }
 
 // TestNotificationTemplateList 列表查询与事件/来源过滤。

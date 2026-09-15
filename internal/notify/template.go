@@ -56,12 +56,13 @@ var eventTemplateSpecs = map[string]EventTemplateSpec{
 		Channels:  []string{"*"},
 		Languages: []base.Language{base.LangSimplifiedChinese, base.LangEnglish},
 		SampleParams: map[string]any{
-			"Namespace":  "示例命名空间",
-			"RuleName":   "示例规则名",
-			"DetectedAt": "2026-01-01T00:00:00Z",
+			"Namespace":     "示例命名空间",
+			"RuleName":      "示例规则名",
+			"DetectedAt":    "2026-01-01T00:00:00Z",
+			"DetectedAtFmt": "2026-01-01 00:00:00 UTC",
 			"Hits": []any{
-				map[string]any{"ConditionName": "条件A", "Dimension": "src_ip", "Item": "10.0.0.1", "Count": 5, "Threshold": 3},
-				map[string]any{"ConditionName": "条件B", "Dimension": "dst_port", "Item": "443", "Count": 128, "Threshold": 50},
+				map[string]any{"ConditionName": "条件A", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 5, "Threshold": 3, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
+				map[string]any{"ConditionName": "条件B", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 128, "Threshold": 50, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s", "RecordCount": 128},
 			},
 		},
 	},

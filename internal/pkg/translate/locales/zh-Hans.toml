@@ -107,9 +107,6 @@ alphanumspecial = "字段只能包含字母、数字与指定的特殊字符"
 gtCurrentTime = "字段必须晚于当前时间"
 ltCurrentTime = "字段必须早于当前时间"
 
-["model.network.httpTransport"]
-other = "HTTP 传输"
-
 # =============================================================================
 # Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
 # 中文为默认文案；English lives in en.toml
@@ -196,28 +193,28 @@ other = "两次输入不一致，请重新输入！"
 # =============================================================================
 
 [cli.confirm.enter]
-other = "请输入 `{{.Input}}` 以确认"
+other = "请输入 `[[.Input]]` 以确认"
 
 [cli.confirm.reenter]
-other = "请再次输入 `{{.Input}}` 以确认"
+other = "请再次输入 `[[.Input]]` 以确认"
 
 [cli.etcd.select-keys]
-other = "输入要删除的键编号（如 1,3,5-{{.Total}}）或输入 'all' 删除全部 {{.Total}} 个键"
+other = "输入要删除的键编号（如 1,3,5-[[.Total]]）或输入 'all' 删除全部 [[.Total]] 个键"
 
 [cli.etcd.no-keys]
 other = "未选择任何键，无需删除"
 
 [cli.etcd.invalid-range]
-other = "无效的范围：{{.Range}}"
+other = "无效的范围：[[.Range]]"
 
 [cli.etcd.invalid-number]
-other = "无效的键编号：{{.Number}}"
+other = "无效的键编号：[[.Number]]"
 
 [cli.etcd.delete-count]
-other = "即将删除 {{.Count}} 个键："
+other = "即将删除 [[.Count]] 个键："
 
 [cli.etcd.delete-item]
-other = "  - {{.Key}}"
+other = "  - [[.Key]]"
 
 [cli.base.pterm-debug]
 other = "pterm 调试已启用"
@@ -229,19 +226,19 @@ other = "zhongkui 服务进程已退出"
 other = "正在回滚所有迁移..."
 
 [cli.clear.connect-failed]
-other = "连接 {{.DB}} 数据库失败：{{.Err}}"
+other = "连接 [[.DB]] 数据库失败：[[.Err]]"
 
 [cli.clear.rolling-back-db]
-other = "正在回滚 {{.DB}}..."
+other = "正在回滚 [[.DB]]..."
 
 [cli.clear.rollback-failed]
-other = "{{.DB}} 回滚失败：{{.Err}}"
+other = "[[.DB]] 回滚失败：[[.Err]]"
 
 [cli.clear.database-complete]
 other = "数据库清空完成"
 
 [cli.etcd.get-keys-failed]
-other = "获取 {{.Category}} 键失败：{{.Err}}"
+other = "获取 [[.Category]] 键失败：[[.Err]]"
 
 [cli.etcd.no-keys-found]
 other = "未找到任何 etcd 缓存键"
@@ -250,16 +247,16 @@ other = "未找到任何 etcd 缓存键"
 other = "=== etcd 缓存键 ==="
 
 [cli.etcd.delete-failed]
-other = "删除 {{.Key}} 失败：{{.Err}}"
+other = "删除 [[.Key]] 失败：[[.Err]]"
 
 [cli.etcd.deleted]
-other = "已删除 {{.Key}}"
+other = "已删除 [[.Key]]"
 
 [cli.etcd.clear-complete]
 other = "etcd 缓存清除完成"
 
 [cli.capture.stats]
-other = "[抓包统计] {{.Stats}}"
+other = "[抓包统计] [[.Stats]]"
 
 [cli.config.col-path]
 other = "路径"
@@ -274,82 +271,82 @@ other = "默认值"
 other = "说明"
 
 [cli.migrate.create-failed]
-other = "{{.DB}}：{{.Err}}"
+other = "[[.DB]]：[[.Err]]"
 
 [cli.migrate.created]
-other = "已创建 {{.Path}}"
+other = "已创建 [[.Path]]"
 
 [cli.migrate.section]
-other = "{{.Action}}（{{.DB}}）"
+other = "[[.Action]]（[[.DB]]）"
 
 [cli.migrate.action-failed]
-other = "{{.DB}} {{.Action}} 失败：{{.Err}}"
+other = "[[.DB]] [[.Action]] 失败：[[.Err]]"
 
 [cli.migrate.completed]
 other = "迁移全部执行成功"
 
 [cli.migrate.dry-run-section]
-other = "试运行（dry-run）{{.DB}}"
+other = "试运行（dry-run）[[.DB]]"
 
 [cli.migrate.dry-run-db-failed]
-other = "dry-run {{.DB}}：{{.Err}}"
+other = "dry-run [[.DB]]：[[.Err]]"
 
 [cli.migrate.dry-run-succeeded]
 other = "dry-run 执行成功"
 
 [cli.migrate.dry-run-failed]
-other = "dry-run 失败：{{.Err}}"
+other = "dry-run 失败：[[.Err]]"
 
 [cli.migrate.diff-section]
-other = "结构对比（diff）{{.DB}}"
+other = "结构对比（diff）[[.DB]]"
 
 [cli.migrate.diff-failed]
-other = "diff {{.DB}}：{{.Err}}"
+other = "diff [[.DB]]：[[.Err]]"
 
 [cli.migrate.check-section]
-other = "结构检查（check）{{.DB}}"
+other = "结构检查（check）[[.DB]]"
 
 [cli.migrate.check-failed]
-other = "check {{.DB}}：{{.Err}}"
+other = "check [[.DB]]：[[.Err]]"
 
 [cli.migrate.up]
-other = "在 {{.DB}} 上运行 goose up 迁移"
+other = "在 [[.DB]] 上运行 goose up 迁移"
 
 [cli.migrate.up-to]
-other = "在 {{.DB}} 上执行 goose up-to 迁移至版本 {{.Version}}"
+other = "在 [[.DB]] 上执行 goose up-to 迁移至版本 [[.Version]]"
 
 [cli.migrate.down]
-other = "在 {{.DB}} 上回滚 goose down 迁移"
+other = "在 [[.DB]] 上回滚 goose down 迁移"
 
 [cli.migrate.down-to]
-other = "在 {{.DB}} 上执行 goose down-to 回滚至版本 {{.Version}}"
+other = "在 [[.DB]] 上执行 goose down-to 回滚至版本 [[.Version]]"
 
 [cli.migrate.down-no-current-version]
-other = "{{.DB}} 没有已应用的迁移，无需回滚"
+other = "[[.DB]] 没有已应用的迁移，无需回滚"
 
 [cli.migrate.down-to-no-current-version]
-other = "{{.DB}} 没有已应用的迁移，无需回滚"
+other = "[[.DB]] 没有已应用的迁移，无需回滚"
 
 [cli.migrate.goose-migrated]
-other = "数据库已成功迁移至版本 {{.Version}}"
+other = "数据库已成功迁移至版本 [[.Version]]"
 
 [cli.migrate.goose-no-migrations]
-other = "没有需要执行的迁移，当前版本 {{.Version}}"
+other = "没有需要执行的迁移，当前版本 [[.Version]]"
 
 [cli.migrate.goose-up-to]
-other = "已迁移至版本 {{.Version}}"
+other = "已迁移至版本 [[.Version]]"
 
 [cli.migrate.goose-down-to]
-other = "已回滚至版本 {{.Version}}"
+other = "已回滚至版本 [[.Version]]"
 
 [cli.migrate.goose-file-not-found]
-other = "未找到当前版本（{{.Version}}）的迁移文件：{{.Err}}"
+other = "未找到当前版本（[[.Version]]）的迁移文件：[[.Err]]"
 
 [cli.migrate.goose-ok]
-other = "OK   {{.Source}}（{{.Duration}}）"
+other = "OK   [[.Source]]（[[.Duration]]）"
 
 [cli.migrate.goose-empty]
-other = "EMPTY {{.Source}}（{{.Duration}}）"
+other = "EMPTY [[.Source]]（[[.Duration]]）"
 
 [cli.migrate.col-version]
 other = "版本"
@@ -376,40 +373,40 @@ other = "未找到迁移文件"
 other = "正在为 dry-run 创建临时数据库..."
 
 [cli.migrate.dry-run-running]
-other = "正在临时数据库 {{.DB}} 上执行迁移..."
+other = "正在临时数据库 [[.DB]] 上执行迁移..."
 
 [cli.migrate.dry-run-migration-failed]
-other = "dry-run 迁移失败：{{.Err}}"
+other = "dry-run 迁移失败：[[.Err]]"
 
 [cli.migrate.dry-run-completed]
-other = "dry-run 迁移已在 {{.DB}} 上成功完成"
+other = "dry-run 迁移已在 [[.DB]] 上成功完成"
 
 [cli.migrate.dry-run-cleanup]
-other = "正在清理临时数据库 {{.DB}}..."
+other = "正在清理临时数据库 [[.DB]]..."
 
 [cli.migrate.dry-run-drop-failed]
-other = "警告：删除临时数据库 {{.DB}} 失败：{{.Err}}"
+other = "警告：删除临时数据库 [[.DB]] 失败：[[.Err]]"
 
 [cli.migrate.dry-run-preserved]
-other = "临时数据库 {{.DB}} 已保留（--keep-temp）"
+other = "临时数据库 [[.DB]] 已保留（--keep-temp）"
 
 [cli.migrate.check-creating]
 other = "正在为结构检查创建临时数据库..."
 
 [cli.migrate.check-running]
-other = "正在临时数据库 {{.DB}} 上执行迁移..."
+other = "正在临时数据库 [[.DB]] 上执行迁移..."
 
 [cli.migrate.check-comparing]
 other = "正在对比模型定义与数据库结构..."
 
 [cli.migrate.check-cleanup]
-other = "正在清理临时数据库 {{.DB}}..."
+other = "正在清理临时数据库 [[.DB]]..."
 
 [cli.migrate.check-drop-failed]
-other = "警告：删除临时数据库 {{.DB}} 失败：{{.Err}}"
+other = "警告：删除临时数据库 [[.DB]] 失败：[[.Err]]"
 
 [cli.migrate.check-preserved]
-other = "临时数据库 {{.DB}} 已保留（--keep-temp）"
+other = "临时数据库 [[.DB]] 已保留（--keep-temp）"
 
 [cli.migrate.check-ok]
 other = "所有模型均与数据库结构一致，未发现问题"
@@ -445,7 +442,7 @@ other = "预期类型"
 other = "实际类型"
 
 [cli.migrate.issues-table-error]
-other = "渲染问题表格失败：{{.Err}}"
+other = "渲染问题表格失败：[[.Err]]"
 
 [cli.migrate.diff-identical]
 other = "数据库结构已是最新，无待变更"
@@ -472,91 +469,91 @@ other = "删除列"
 other = "已修改"
 
 [cli.user.create-success]
-other = "创建用户 {{.Username}} 成功"
+other = "创建用户 [[.Username]] 成功"
 
 [cli.user.reset-password-success]
-other = "重置用户 {{.Username}} 的密码成功"
+other = "重置用户 [[.Username]] 的密码成功"
 
 [cli.user.extract-config-failed]
-other = "无法提取配置：{{.Err}}"
+other = "无法提取配置：[[.Err]]"
 
 [cli.user.not-found]
-other = "找不到用户 {{.Username}}：{{.Err}}"
+other = "找不到用户 [[.Username]]：[[.Err]]"
 
 [cli.user.access-key-create-failed]
-other = "无法创建访问密钥：{{.Err}}"
+other = "无法创建访问密钥：[[.Err]]"
 
 [cli.user.access-key-max]
-other = "用户 {{.Username}} 已有 {{.Max}} 个访问密钥（上限：{{.Max}}）"
+other = "用户 [[.Username]] 已有 [[.Max]] 个访问密钥（上限：[[.Max]]）"
 
 [cli.user.access-key-created]
-other = "已为用户 {{.Username}} 创建访问密钥"
+other = "已为用户 [[.Username]] 创建访问密钥"
 
 [cli.user.access-key-id]
-other = "  AccessKeyID:     {{.Value}}"
+other = "  AccessKeyID:     [[.Value]]"
 
 [cli.user.access-key-secret]
-other = "  AccessKeySecret: {{.Value}}"
+other = "  AccessKeySecret: [[.Value]]"
 
 [cli.user.access-key-description]
-other = "  Description:     {{.Value}}"
+other = "  Description:     [[.Value]]"
 
 [cli.user.access-key-enabled]
-other = "  Enabled:         {{.Value}}"
+other = "  Enabled:         [[.Value]]"
 
 [cli.user.access-key-expired-at]
-other = "  ExpiredAt:       {{.Value}}"
+other = "  ExpiredAt:       [[.Value]]"
 
 [cli.user.access-key-never-expires]
 other = "  ExpiredAt:       never"
 
 [cli.tls.key-created]
-other = "TLS 密钥文件 {{.Path}} 已创建"
+other = "TLS 密钥文件 [[.Path]] 已创建"
 
 [cli.tls.cert-created]
-other = "TLS 证书文件 {{.Path}} 已创建"
+other = "TLS 证书文件 [[.Path]] 已创建"
 
 [cli.testcase.generated]
-other = "测试用例已生成到 {{.Dir}}"
+other = "测试用例已生成到 [[.Dir]]"
 
 [cli.testcase.no-http]
 other = "pcap 文件中未发现 HTTP 流量"
 
 [cli.testcase.found-streams]
-other = "发现 {{.Count}} 条 HTTP 流"
+other = "发现 [[.Count]] 条 HTTP 流"
 
 [cli.testcase.processing-stream]
-other = "正在处理 TCP 流 {{.Stream}}..."
+other = "正在处理 TCP 流 [[.Stream]]..."
 
 [cli.testcase.process-failed]
-other = "处理流 {{.Stream}} 失败：{{.Err}}，跳过"
+other = "处理流 [[.Stream]] 失败：[[.Err]]，跳过"
 
 [cli.testcase.generated-file]
-other = "  已生成 {{.Path}}"
+other = "  已生成 [[.Path]]"
 
 [cli.testcase.total]
-other = "共 {{.Tx}} 个 HTTP 事务，跨 {{.Streams}} 条流"
+other = "共 [[.Tx]] 个 HTTP 事务，跨 [[.Streams]] 条流"
 
 [cli.testcase.parse-request-failed]
-other = "  流 {{.Stream}}：解析第 {{.Tx}} 个 HTTP 请求失败：{{.Err}}"
+other = "  流 [[.Stream]]：解析第 [[.Tx]] 个 HTTP 请求失败：[[.Err]]"
 
 [cli.testcase.response-missing]
-other = "  流 {{.Stream}} 事务 {{.Tx}}：HTTP 响应缺失或不完整：{{.Err}}"
+other = "  流 [[.Stream]] 事务 [[.Tx]]：HTTP 响应缺失或不完整：[[.Err]]"
 
 [cli.testcase.parse-response-failed]
-other = "  流 {{.Stream}} 事务 {{.Tx}}：解析 HTTP 响应失败：{{.Err}}"
+other = "  流 [[.Stream]] 事务 [[.Tx]]：解析 HTTP 响应失败：[[.Err]]"
 
 [cli.s3.lifecycle.applied]
-other = "已应用 {{.Count}} 条生命周期规则到存储桶 {{.Bucket}}"
+other = "已应用 [[.Count]] 条生命周期规则到存储桶 [[.Bucket]]"
 
 [cli.s3.lifecycle.removed]
-other = "已移除存储桶 {{.Bucket}} 的全部生命周期规则"
+other = "已移除存储桶 [[.Bucket]] 的全部生命周期规则"
 
 [cli.s3.lifecycle.no-rules]
-other = "存储桶 {{.Bucket}} 当前未配置生命周期规则"
+other = "存储桶 [[.Bucket]] 当前未配置生命周期规则"
 
 [cli.s3.lifecycle.rule-preview]
-other = "即将应用到存储桶 {{.Bucket}} 的 {{.Count}} 条生命周期规则："
+other = "即将应用到存储桶 [[.Bucket]] 的 [[.Count]] 条生命周期规则："
 
 [cli.s3.lifecycle.prompt-prefix]
 other = "请选择要配置过期策略的对象路径前缀"
@@ -571,10 +568,10 @@ other = "退出"
 other = "请输入对象创建后的过期天数（正整数，到期自动删除）"
 
 [cli.s3.lifecycle.prompt-confirm-apply]
-other = "确认将以上 {{.Count}} 条规则应用到存储桶 {{.Bucket}}？此操作将全量替换既有规则"
+other = "确认将以上 [[.Count]] 条规则应用到存储桶 [[.Bucket]]？此操作将全量替换既有规则"
 
 [cli.s3.lifecycle.duplicate-prefix]
-other = "前缀 {{.Prefix}} 已添加过规则，请选择其他前缀"
+other = "前缀 [[.Prefix]] 已添加过规则，请选择其他前缀"
 
 [cli.s3.lifecycle.invalid-days]
 other = "过期天数必须为正整数，请重新输入"
@@ -598,16 +595,16 @@ other = "PREFIX"
 other = "EXPIRE DAYS"
 
 [cli.run.capture-stats-enabled]
-other = "已启用抓包统计，每 {{.Interval}} 输出到标准输出"
+other = "已启用抓包统计，每 [[.Interval]] 输出到标准输出"
 
 [cli.run.processor-create-failed]
-other = "创建处理器 {{.Name}} 失败：{{.Err}}"
+other = "创建处理器 [[.Name]] 失败：[[.Err]]"
 
 [cli.scheduler.none-found]
 other = "etcd 中未找到任何定时任务配置"
 
 [cli.scheduler.not-found]
-other = "未找到定时任务配置：{{.Name}}"
+other = "未找到定时任务配置：[[.Name]]"
 
 [cli.scheduler.col-name]
 other = "name"
@@ -631,10 +628,10 @@ other = "maxRetry"
 other = "enabled"
 
 [cli.crypto.book-generated-file]
-other = "密码本文件已生成：{{.Path}}（{{.Bytes}} 字节）"
+other = "密码本文件已生成：[[.Path]]（[[.Bytes]] 字节）"
 
 [cli.crypto.book-generated-stdout]
-other = "密码本已生成（{{.Bytes}} 字节）。使用 --output 保存到文件。"
+other = "密码本已生成（[[.Bytes]] 字节）。使用 --output 保存到文件。"
 
 [cli.crypto.parent-secret-key-warning]
 other = "警告：正在使用配置文件中的父密钥，这不适用于生产环境，请尽快切换到 KMS。"
@@ -643,19 +640,19 @@ other = "警告：正在使用配置文件中的父密钥，这不适用于生�
 other = "警告：正在使用内置默认密码本，这不适用于生产环境，请运行 'zki create password-book' 生成自己的密码本文件。"
 
 [cli.capturer.create-failed]
-other = "无法创建抓包器：{{.Err}}"
+other = "无法创建抓包器：[[.Err]]"
 
 [cli.capturer.created]
-other = "抓包器 {{.Namespace}}/{{.Name}}（{{.Version}}）创建成功"
+other = "抓包器 [[.Namespace]]/[[.Name]]（[[.Version]]）创建成功"
 
 [cli.pcap.nil-model]
-other = "[nil 模型] level={{.Level}} stack_len={{.Len}}"
+other = "[nil 模型] level=[[.Level]] stack_len=[[.Len]]"
 
 [cli.pcap.nil-model-stack]
-other = "[nil 模型]   stack[{{.Index}}] level={{.Level}} proto={{.Proto}} headers={{.Headers}}"
+other = "[nil 模型]   stack[[[.Index]]] level=[[.Level]] proto=[[.Proto]] headers=[[.Headers]]"
 
 [cli.pcap.import-stats]
-other = "[pcap 导入统计] {{.Stats}}"
+other = "[pcap 导入统计] [[.Stats]]"
 
 [cli.tracer.report-title]
 other = "阶段耗时统计报告"
@@ -685,10 +682,10 @@ other = "最大"
 other = "占比"
 
 [cli.tracer.render-error]
-other = "渲染报告表格失败：{{.Err}}"
+other = "渲染报告表格失败：[[.Err]]"
 
 [cli.tracer.total-records]
-other = "记录总数：{{.Count}}"
+other = "记录总数：[[.Count]]"
 
 [cli.bench.col-name]
 other = "基准测试"
@@ -715,10 +712,10 @@ other = "BPS"
 other = "时长"
 
 [cli.bench.report-save-failed]
-other = "警告：保存基准测试报告失败：{{.Err}}"
+other = "警告：保存基准测试报告失败：[[.Err]]"
 
 [cli.bench.report-saved]
-other = "基准测试报告已保存：{{.Path}}"
+other = "基准测试报告已保存：[[.Path]]"
 
 # =============================================================================
 # Tag rule Rego error/lint messages - Key layout: tagrule.*
@@ -1502,13 +1499,175 @@ other = "禁用补全描述"
 [flag.completion.powershell.no-descriptions]
 other = "禁用补全描述"
 
-[notify.password.reset]
-title = "重置账户密码"
-content = "@emails/password-reset-content.zh-Hans.html"
+# notify.* 默认标题/正文：正文经 text/template 渲染（含 go-i18n 不负责的 {{...}} 动作），
+# translate 已全局注入 [[ / ]] 数据定界符（dataDelimParser），这些源串不含 [[ 会触发
+# go-i18n fast-path 原样返回，再交给 text/template 渲染。
+# title = "@xx" 经 resolveExternalLocales 展开为 other 的外链文件正文。
+[notify.password.reset.title]
+other = "重置账户密码"
 
-[notify.tag_event.alert]
-title = "标签事件告警: {{.RuleName}}"
-content = "@notify/tag-event-alert-content.zh-Hans.txt"
+[notify.password.reset.content]
+other = "@emails/password-reset-content.zh-Hans.html"
+
+[notify.tag_event.alert.title]
+other = "标签事件告警: {{.RuleName}}"
+
+[notify.tag_event.alert.content]
+other = "@notify/tag-event-alert-content.zh-Hans.txt"
+
+# =============================================================================
+# 枚举 label 键（后端单源，前端消费）
+# 统一为 enum.<类名>.<key>：label 按 key 翻译，value（数据库存储值）不作为键组成部分；
+# 旧键 model.<实体>.option.<字段>.<值> 中「同值多实体重复」的条目已合并到同一 enum 类。
+# 类名与 key 由 internal/manager/views/enum_classes.go（静态类）与 enum_registry.go
+# （注册表类）定义；通知默认模板经模板函数 t 按此渲染可读 label，前端枚举 label
+# 经统一枚举接口 /admin/enum/get|list 按请求语言从本节下发（entry.key + label）。
+# =============================================================================
+
+# 通知渠道类型（枚举类 channelType，来源 message.Types() 注册表）
+[enum.channelType.email]
+other = "邮件"
+
+[enum.channelType.webhook]
+other = "Webhook"
+
+# 通知事件（枚举类 notificationEvent，来源 notify.TemplateSpecs() 注册表）
+[enum.notificationEvent.tag_event_record]
+other = "标签事件告警"
+
+# 数据源类型（枚举类 datasourceType，来源 sqlitevtab vtab 常量）
+[enum.datasourceType.mysql]
+other = "MySQL"
+
+[enum.datasourceType.postgres]
+other = "PostgreSQL"
+
+[enum.datasourceType.clickhouse]
+other = "ClickHouse"
+
+[enum.datasourceType.sqlite_file]
+other = "SQLite 文件"
+
+[enum.datasourceType.etcd]
+other = "etcd"
+
+[enum.datasourceType.mongo]
+other = "MongoDB"
+
+[enum.datasourceType.redis]
+other = "Redis"
+
+# 数据源结构（枚举类 datasourceStruct）
+[enum.datasourceStruct.hash]
+other = "哈希"
+
+[enum.datasourceStruct.list]
+other = "列表"
+
+[enum.datasourceStruct.set]
+other = "集合"
+
+[enum.datasourceStruct.string]
+other = "字符串"
+
+[enum.datasourceStruct.zset]
+other = "有序集合"
+
+# 策略效果（枚举类 policyEffect）
+[enum.policyEffect.allow]
+other = "允许"
+
+[enum.policyEffect.deny]
+other = "禁止"
+
+# 标签规则目标模型（枚举类 tagRuleModel，Key 为 tagengine.ModelKey 短展示键）
+[enum.tagRuleModel.httpTransport]
+other = "HTTP 传输"
+
+# 标签事件维度（枚举类 tagEventDimension，来源 tagengine 各模型登记的合法维度取值）
+[enum.tagEventDimension.fpTcpClientSig]
+other = "客户端指纹签名"
+
+[enum.tagEventDimension.fpTcpServerSig]
+other = "服务端指纹签名"
+
+# 通知模板来源（枚举类 notificationSource）
+[enum.notificationSource.default]
+other = "默认"
+
+[enum.notificationSource.override]
+other = "覆盖"
+
+# 通知记录状态（枚举类 notificationRecordStatus）
+[enum.notificationRecordStatus.failed]
+other = "失败"
+
+[enum.notificationRecordStatus.pending]
+other = "待发送"
+
+[enum.notificationRecordStatus.success]
+other = "成功"
+
+# 标签事件告警状态（枚举类 tagAlertStatus）
+[enum.tagAlertStatus.alerting]
+other = "告警中"
+
+[enum.tagAlertStatus.closed]
+other = "已关闭"
+
+[enum.tagAlertStatus.pending]
+other = "待处理"
+
+[enum.tagAlertStatus.suppressed]
+other = "已抑制"
+
+# 语言（枚举类 language）
+[enum.language.en]
+other = "英文"
+
+[enum.language.zh-Hans]
+other = "简体中文"
+
+# HTTP 方法（枚举类 httpMethod，label 与 key 相同）
+[enum.httpMethod.CONNECT]
+other = "CONNECT"
+
+[enum.httpMethod.DELETE]
+other = "DELETE"
+
+[enum.httpMethod.GET]
+other = "GET"
+
+[enum.httpMethod.HEAD]
+other = "HEAD"
+
+[enum.httpMethod.OPTIONS]
+other = "OPTIONS"
+
+[enum.httpMethod.PATCH]
+other = "PATCH"
+
+[enum.httpMethod.POST]
+other = "POST"
+
+[enum.httpMethod.PUT]
+other = "PUT"
+
+[enum.httpMethod.TRACE]
+other = "TRACE"
+
+# HTTP 版本（枚举类 httpVersion，label 与 key 相同；键含 /，须用引号形式）
+[enum.httpVersion."HTTP/1.0"]
+other = "HTTP/1.0"
+
+[enum.httpVersion."HTTP/1.1"]
+other = "HTTP/1.1"
+
+[enum.httpVersion."HTTP/2"]
+other = "HTTP/2"
+
+[enum.httpVersion."HTTP/3"]
+other = "HTTP/3"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

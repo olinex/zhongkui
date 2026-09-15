@@ -12,6 +12,7 @@ import { routes } from "vue-router/auto-routes";
 
 import { useAppStore } from "@/stores/app";
 import { useConfigSyncStore } from "@/stores/configSync";
+import { useEnumsStore } from "@/stores/enums";
 import { useUserStore } from "@/stores/user";
 import i18n from "@/utils/i18n";
 
@@ -93,6 +94,9 @@ router.beforeEach(async (to, from, next) => {
     consola.info(`change language from ${i18n.global.locale.value} to ${lang}`);
     appStore.asLanguage(lang);
   }
+  // 触发当前语言全量枚举预取与缓存（按语言在途去重，已加载同语言时内部跳过）；
+  // 枚举值空间仅后端进程重启才可能更新，故永久缓存；首次导航即覆盖应用启动时的初始语言。
+  await useEnumsStore().prefetch(lang);
   if (to.meta.title) {
     document.title = i18n.global.t(to.meta.title as string);
   }

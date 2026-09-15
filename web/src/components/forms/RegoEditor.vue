@@ -987,7 +987,22 @@ watch(
   { immediate: true },
 );
 
-defineExpose({ focus: () => view.value?.focus() });
+defineExpose({
+  focus: () => view.value?.focus(),
+  /** insertAtCursor 在光标处插入文本并置于插入内容末尾（供速查面板/样例一键写入）。 */
+  insertAtCursor: (text: string) => {
+    const editor = view.value;
+    if (!editor) {
+      return;
+    }
+    const head = editor.state.selection.main.head;
+    editor.dispatch({
+      changes: { from: head, insert: text },
+      selection: { anchor: head + text.length },
+    });
+    editor.focus();
+  },
+});
 </script>
 
 <style scoped>

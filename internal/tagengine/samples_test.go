@@ -40,7 +40,7 @@ var registerCustomModelOnce sync.Once
 // registerCustomModel 注册自定义目标模型到全局注册表。
 func registerCustomModel() {
 	registerCustomModelOnce.Do(func() {
-		tagengine.Register(tagengine.Target{Type: &testSampleModel{}, DisplayName: "test"})
+		tagengine.Register(tagengine.Target{Type: &testSampleModel{}})
 	})
 }
 

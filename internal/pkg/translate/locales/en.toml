@@ -451,28 +451,28 @@ other = "disable completion descriptions"
 # =============================================================================
 
 [cli.confirm.enter]
-other = "Please enter `{{.Input}}` to confirm"
+other = "Please enter `[[.Input]]` to confirm"
 
 [cli.confirm.reenter]
-other = "Please re-enter `{{.Input}}` to confirm"
+other = "Please re-enter `[[.Input]]` to confirm"
 
 [cli.etcd.select-keys]
-other = "Enter the key numbers to delete (e.g. 1,3,5-{{.Total}}) or 'all' to delete all {{.Total}} keys"
+other = "Enter the key numbers to delete (e.g. 1,3,5-[[.Total]]) or 'all' to delete all [[.Total]] keys"
 
 [cli.etcd.no-keys]
 other = "No keys selected, nothing to do"
 
 [cli.etcd.invalid-range]
-other = "Invalid range: {{.Range}}"
+other = "Invalid range: [[.Range]]"
 
 [cli.etcd.invalid-number]
-other = "Invalid key number: {{.Number}}"
+other = "Invalid key number: [[.Number]]"
 
 [cli.etcd.delete-count]
-other = "Will delete {{.Count}} keys:"
+other = "Will delete [[.Count]] keys:"
 
 [cli.etcd.delete-item]
-other = "  - {{.Key}}"
+other = "  - [[.Key]]"
 
 # -----------------------------------------------------------------------------
 # Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
@@ -568,19 +568,19 @@ other = "zhongkui server process exit"
 other = "Rolling back all migrations..."
 
 [cli.clear.connect-failed]
-other = "Failed to connect {{.DB}} database: {{.Err}}"
+other = "Failed to connect [[.DB]] database: [[.Err]]"
 
 [cli.clear.rolling-back-db]
-other = "Rolling back {{.DB}}..."
+other = "Rolling back [[.DB]]..."
 
 [cli.clear.rollback-failed]
-other = "{{.DB}} rollback failed: {{.Err}}"
+other = "[[.DB]] rollback failed: [[.Err]]"
 
 [cli.clear.database-complete]
 other = "Clear database complete"
 
 [cli.etcd.get-keys-failed]
-other = "Failed to get {{.Category}} keys: {{.Err}}"
+other = "Failed to get [[.Category]] keys: [[.Err]]"
 
 [cli.etcd.no-keys-found]
 other = "No etcd cache keys found"
@@ -589,91 +589,91 @@ other = "No etcd cache keys found"
 other = "=== etcd cache keys ==="
 
 [cli.etcd.delete-failed]
-other = "Failed to delete {{.Key}}: {{.Err}}"
+other = "Failed to delete [[.Key]]: [[.Err]]"
 
 [cli.etcd.deleted]
-other = "Deleted {{.Key}}"
+other = "Deleted [[.Key]]"
 
 [cli.etcd.clear-complete]
 other = "Clear etcd cache complete"
 
 [cli.migrate.create-failed]
-other = "{{.DB}}: {{.Err}}"
+other = "[[.DB]]: [[.Err]]"
 
 [cli.migrate.created]
-other = "Created {{.Path}}"
+other = "Created [[.Path]]"
 
 [cli.migrate.section]
-other = "{{.Action}} ({{.DB}})"
+other = "[[.Action]] ([[.DB]])"
 
 [cli.migrate.action-failed]
-other = "{{.DB}} {{.Action}} failed: {{.Err}}"
+other = "[[.DB]] [[.Action]] failed: [[.Err]]"
 
 [cli.migrate.completed]
 other = "Migrations completed successfully"
 
 [cli.migrate.dry-run-section]
-other = "dry-run {{.DB}}"
+other = "dry-run [[.DB]]"
 
 [cli.migrate.dry-run-db-failed]
-other = "dry-run {{.DB}}: {{.Err}}"
+other = "dry-run [[.DB]]: [[.Err]]"
 
 [cli.migrate.dry-run-succeeded]
 other = "dry-run succeeded"
 
 [cli.migrate.dry-run-failed]
-other = "dry-run failed: {{.Err}}"
+other = "dry-run failed: [[.Err]]"
 
 [cli.migrate.diff-section]
-other = "diff {{.DB}}"
+other = "diff [[.DB]]"
 
 [cli.migrate.diff-failed]
-other = "diff {{.DB}}: {{.Err}}"
+other = "diff [[.DB]]: [[.Err]]"
 
 [cli.migrate.check-section]
-other = "check {{.DB}}"
+other = "check [[.DB]]"
 
 [cli.migrate.check-failed]
-other = "check {{.DB}}: {{.Err}}"
+other = "check [[.DB]]: [[.Err]]"
 
 [cli.migrate.up]
-other = "Running goose up on {{.DB}}"
+other = "Running goose up on [[.DB]]"
 
 [cli.migrate.up-to]
-other = "Running goose up-to to version {{.Version}} on {{.DB}}"
+other = "Running goose up-to to version [[.Version]] on [[.DB]]"
 
 [cli.migrate.down]
-other = "Running goose down on {{.DB}}"
+other = "Running goose down on [[.DB]]"
 
 [cli.migrate.down-to]
-other = "Running goose down-to to version {{.Version}} on {{.DB}}"
+other = "Running goose down-to to version [[.Version]] on [[.DB]]"
 
 [cli.migrate.down-no-current-version]
-other = "{{.DB}} has no applied migrations, nothing to roll back"
+other = "[[.DB]] has no applied migrations, nothing to roll back"
 
 [cli.migrate.down-to-no-current-version]
-other = "{{.DB}} has no applied migrations, nothing to roll back"
+other = "[[.DB]] has no applied migrations, nothing to roll back"
 
 [cli.migrate.goose-migrated]
-other = "Database successfully migrated to version {{.Version}}"
+other = "Database successfully migrated to version [[.Version]]"
 
 [cli.migrate.goose-no-migrations]
-other = "No migrations to run, current version {{.Version}}"
+other = "No migrations to run, current version [[.Version]]"
 
 [cli.migrate.goose-up-to]
-other = "Migrations up to version {{.Version}}"
+other = "Migrations up to version [[.Version]]"
 
 [cli.migrate.goose-down-to]
-other = "Rolled back to version {{.Version}}"
+other = "Rolled back to version [[.Version]]"
 
 [cli.migrate.goose-file-not-found]
-other = "Migration file for current version ({{.Version}}) not found: {{.Err}}"
+other = "Migration file for current version ([[.Version]]) not found: [[.Err]]"
 
 [cli.migrate.goose-ok]
-other = "OK   {{.Source}} ({{.Duration}})"
+other = "OK   [[.Source]] ([[.Duration]])"
 
 [cli.migrate.goose-empty]
-other = "EMPTY {{.Source}} ({{.Duration}})"
+other = "EMPTY [[.Source]] ([[.Duration]])"
 
 [cli.migrate.col-version]
 other = "Version"
@@ -700,40 +700,40 @@ other = "No migration file found"
 other = "Creating temporary database for dry-run..."
 
 [cli.migrate.dry-run-running]
-other = "Running migrations on temporary database {{.DB}}..."
+other = "Running migrations on temporary database [[.DB]]..."
 
 [cli.migrate.dry-run-migration-failed]
-other = "Dry-run migration failed: {{.Err}}"
+other = "Dry-run migration failed: [[.Err]]"
 
 [cli.migrate.dry-run-completed]
-other = "Dry-run migration completed successfully on {{.DB}}"
+other = "Dry-run migration completed successfully on [[.DB]]"
 
 [cli.migrate.dry-run-cleanup]
-other = "Cleaning up temporary database {{.DB}}..."
+other = "Cleaning up temporary database [[.DB]]..."
 
 [cli.migrate.dry-run-drop-failed]
-other = "Warning: failed to drop temp database {{.DB}}: {{.Err}}"
+other = "Warning: failed to drop temp database [[.DB]]: [[.Err]]"
 
 [cli.migrate.dry-run-preserved]
-other = "Temporary database {{.DB}} preserved (--keep-temp)"
+other = "Temporary database [[.DB]] preserved (--keep-temp)"
 
 [cli.migrate.check-creating]
 other = "Creating temporary database for schema check..."
 
 [cli.migrate.check-running]
-other = "Running migrations on temporary database {{.DB}}..."
+other = "Running migrations on temporary database [[.DB]]..."
 
 [cli.migrate.check-comparing]
 other = "Comparing model definitions with database schema..."
 
 [cli.migrate.check-cleanup]
-other = "Cleaning up temporary database {{.DB}}..."
+other = "Cleaning up temporary database [[.DB]]..."
 
 [cli.migrate.check-drop-failed]
-other = "Warning: failed to drop temp database {{.DB}}: {{.Err}}"
+other = "Warning: failed to drop temp database [[.DB]]: [[.Err]]"
 
 [cli.migrate.check-preserved]
-other = "Temporary database {{.DB}} preserved (--keep-temp)"
+other = "Temporary database [[.DB]] preserved (--keep-temp)"
 
 [cli.migrate.check-ok]
 other = "All models match the database schema, no issues found"
@@ -769,7 +769,7 @@ other = "Expected Type"
 other = "Actual Type"
 
 [cli.migrate.issues-table-error]
-other = "Error rendering issues table: {{.Err}}"
+other = "Error rendering issues table: [[.Err]]"
 
 [cli.migrate.diff-identical]
 other = "Database schema is up to date, no changes pending"
@@ -796,91 +796,91 @@ other = "Dropped Column"
 other = "Modified"
 
 [cli.user.create-success]
-other = "User {{.Username}} created successfully"
+other = "User [[.Username]] created successfully"
 
 [cli.user.reset-password-success]
-other = "Password of user {{.Username}} reset successfully"
+other = "Password of user [[.Username]] reset successfully"
 
 [cli.user.extract-config-failed]
-other = "Cannot extract config: {{.Err}}"
+other = "Cannot extract config: [[.Err]]"
 
 [cli.user.not-found]
-other = "Cannot find user {{.Username}}: {{.Err}}"
+other = "Cannot find user [[.Username]]: [[.Err]]"
 
 [cli.user.access-key-create-failed]
-other = "Cannot create access key: {{.Err}}"
+other = "Cannot create access key: [[.Err]]"
 
 [cli.user.access-key-max]
-other = "User {{.Username}} already has {{.Max}} access keys (max: {{.Max}})"
+other = "User [[.Username]] already has [[.Max]] access keys (max: [[.Max]])"
 
 [cli.user.access-key-created]
-other = "Access key created for user {{.Username}}"
+other = "Access key created for user [[.Username]]"
 
 [cli.user.access-key-id]
-other = "  AccessKeyID:     {{.Value}}"
+other = "  AccessKeyID:     [[.Value]]"
 
 [cli.user.access-key-secret]
-other = "  AccessKeySecret: {{.Value}}"
+other = "  AccessKeySecret: [[.Value]]"
 
 [cli.user.access-key-description]
-other = "  Description:     {{.Value}}"
+other = "  Description:     [[.Value]]"
 
 [cli.user.access-key-enabled]
-other = "  Enabled:         {{.Value}}"
+other = "  Enabled:         [[.Value]]"
 
 [cli.user.access-key-expired-at]
-other = "  ExpiredAt:       {{.Value}}"
+other = "  ExpiredAt:       [[.Value]]"
 
 [cli.user.access-key-never-expires]
 other = "  ExpiredAt:       never"
 
 [cli.tls.key-created]
-other = "TLS key file {{.Path}} was created"
+other = "TLS key file [[.Path]] was created"
 
 [cli.tls.cert-created]
-other = "TLS cert file {{.Path}} was created"
+other = "TLS cert file [[.Path]] was created"
 
 [cli.testcase.generated]
-other = "Test cases generated at {{.Dir}}"
+other = "Test cases generated at [[.Dir]]"
 
 [cli.testcase.no-http]
 other = "No HTTP traffic found in pcap file"
 
 [cli.testcase.found-streams]
-other = "Found {{.Count}} HTTP stream(s)"
+other = "Found [[.Count]] HTTP stream(s)"
 
 [cli.testcase.processing-stream]
-other = "Processing TCP stream {{.Stream}}..."
+other = "Processing TCP stream [[.Stream]]..."
 
 [cli.testcase.process-failed]
-other = "Failed to process stream {{.Stream}}: {{.Err}}, skipping"
+other = "Failed to process stream [[.Stream]]: [[.Err]], skipping"
 
 [cli.testcase.generated-file]
-other = "  Generated {{.Path}}"
+other = "  Generated [[.Path]]"
 
 [cli.testcase.total]
-other = "Total: {{.Tx}} HTTP transaction(s) across {{.Streams}} stream(s)"
+other = "Total: [[.Tx]] HTTP transaction(s) across [[.Streams]] stream(s)"
 
 [cli.testcase.parse-request-failed]
-other = "  stream {{.Stream}}: failed to parse HTTP request at tx {{.Tx}}: {{.Err}}"
+other = "  stream [[.Stream]]: failed to parse HTTP request at tx [[.Tx]]: [[.Err]]"
 
 [cli.testcase.response-missing]
-other = "  stream {{.Stream}} tx {{.Tx}}: HTTP response missing or incomplete: {{.Err}}"
+other = "  stream [[.Stream]] tx [[.Tx]]: HTTP response missing or incomplete: [[.Err]]"
 
 [cli.testcase.parse-response-failed]
-other = "  stream {{.Stream}} tx {{.Tx}}: failed to parse HTTP response: {{.Err}}"
+other = "  stream [[.Stream]] tx [[.Tx]]: failed to parse HTTP response: [[.Err]]"
 
 [cli.s3.lifecycle.applied]
-other = "Applied {{.Count}} lifecycle rule(s) to bucket {{.Bucket}}"
+other = "Applied [[.Count]] lifecycle rule(s) to bucket [[.Bucket]]"
 
 [cli.s3.lifecycle.removed]
-other = "Removed all lifecycle rules from bucket {{.Bucket}}"
+other = "Removed all lifecycle rules from bucket [[.Bucket]]"
 
 [cli.s3.lifecycle.no-rules]
-other = "Bucket {{.Bucket}} has no lifecycle rules configured"
+other = "Bucket [[.Bucket]] has no lifecycle rules configured"
 
 [cli.s3.lifecycle.rule-preview]
-other = "The following {{.Count}} lifecycle rule(s) will be applied to bucket {{.Bucket}}:"
+other = "The following [[.Count]] lifecycle rule(s) will be applied to bucket [[.Bucket]]:"
 
 [cli.s3.lifecycle.prompt-prefix]
 other = "Select the object path prefix to configure expiration"
@@ -895,10 +895,10 @@ other = "Exit"
 other = "Enter the number of days after object creation before expiry (positive integer)"
 
 [cli.s3.lifecycle.prompt-confirm-apply]
-other = "Apply the {{.Count}} rule(s) above to bucket {{.Bucket}}? This fully replaces the existing rules"
+other = "Apply the [[.Count]] rule(s) above to bucket [[.Bucket]]? This fully replaces the existing rules"
 
 [cli.s3.lifecycle.duplicate-prefix]
-other = "Prefix {{.Prefix}} already has a rule, please select another"
+other = "Prefix [[.Prefix]] already has a rule, please select another"
 
 [cli.s3.lifecycle.invalid-days]
 other = "Expiration days must be a positive integer, please try again"
@@ -922,22 +922,22 @@ other = "PREFIX"
 other = "EXPIRE DAYS"
 
 [cli.run.capture-stats-enabled]
-other = "Capture stats enabled, printing every {{.Interval}} to stdout"
+other = "Capture stats enabled, printing every [[.Interval]] to stdout"
 
 [cli.run.processor-create-failed]
-other = "Failed to create processor {{.Name}}: {{.Err}}"
+other = "Failed to create processor [[.Name]]: [[.Err]]"
 
 [cli.scheduler.none-found]
 other = "No scheduled task configs found in etcd"
 
 [cli.scheduler.not-found]
-other = "Scheduled task config not found: {{.Name}}"
+other = "Scheduled task config not found: [[.Name]]"
 
 [cli.crypto.book-generated-file]
-other = "Password book generated successfully: {{.Path}} ({{.Bytes}} bytes)"
+other = "Password book generated successfully: [[.Path]] ([[.Bytes]] bytes)"
 
 [cli.crypto.book-generated-stdout]
-other = "Password book generated ({{.Bytes}} bytes). Use --output to save to a file."
+other = "Password book generated ([[.Bytes]] bytes). Use --output to save to a file."
 
 [cli.crypto.parent-secret-key-warning]
 other = "WARNING: Using parent secret key from config file. This is NOT safe for production. Please switch to KMS as soon as possible."
@@ -946,10 +946,10 @@ other = "WARNING: Using parent secret key from config file. This is NOT safe for
 other = "WARNING: Using embedded default password book. This is NOT safe for production. Please run 'zki create password-book' to generate your own password book file."
 
 [cli.capturer.create-failed]
-other = "Cannot create capturer: {{.Err}}"
+other = "Cannot create capturer: [[.Err]]"
 
 [cli.capturer.created]
-other = "Capturer {{.Namespace}}/{{.Name}} ({{.Version}}) created successfully"
+other = "Capturer [[.Namespace]]/[[.Name]] ([[.Version]]) created successfully"
 
 [cli.tracer.report-title]
 other = "Stage Timing Statistics Report"
@@ -979,10 +979,10 @@ other = "Max"
 other = "Ratio"
 
 [cli.tracer.render-error]
-other = "Error rendering report table: {{.Err}}"
+other = "Error rendering report table: [[.Err]]"
 
 [cli.tracer.total-records]
-other = "Total records: {{.Count}}"
+other = "Total records: [[.Count]]"
 
 [cli.scheduler.col-name]
 other = "name"
@@ -1018,16 +1018,16 @@ other = "default"
 other = "comment"
 
 [cli.capture.stats]
-other = "[capture stats] {{.Stats}}"
+other = "[capture stats] [[.Stats]]"
 
 [cli.pcap.nil-model]
-other = "[nil model] level={{.Level}} stack_len={{.Len}}"
+other = "[nil model] level=[[.Level]] stack_len=[[.Len]]"
 
 [cli.pcap.nil-model-stack]
-other = "[nil model]   stack[{{.Index}}] level={{.Level}} proto={{.Proto}} headers={{.Headers}}"
+other = "[nil model]   stack[[[.Index]]] level=[[.Level]] proto=[[.Proto]] headers=[[.Headers]]"
 
 [cli.pcap.import-stats]
-other = "[pcap import stats] {{.Stats}}"
+other = "[pcap import stats] [[.Stats]]"
 
 [cli.bench.col-name]
 other = "Benchmark"
@@ -1054,10 +1054,10 @@ other = "BPS"
 other = "Duration"
 
 [cli.bench.report-save-failed]
-other = "Warning: failed to save benchmark report: {{.Err}}"
+other = "Warning: failed to save benchmark report: [[.Err]]"
 
 [cli.bench.report-saved]
-other = "Benchmark report saved: {{.Path}}"
+other = "Benchmark report saved: [[.Path]]"
 
 # =============================================================================
 # Config comment translations (rendered by "describe config")
@@ -1566,9 +1566,6 @@ other = "Default language/locale (ref: https://pkg.go.dev/github.com/nicksnyder/
 ["config.i18n.supportLocales"]
 other = "List of supported languages/locales (ref: https://pkg.go.dev/github.com/nicksnyder/go-i18n/v2/i18n#Bundle-Locale)"
 
-["model.network.httpTransport"]
-other = "HTTP Transport"
-
 # =============================================================================
 # Tag rule Rego error/lint messages - Key layout: tagrule.*
 # 标签规则 Rego 校验错误与字段 lint 告警文案，供接口层按请求语言翻译
@@ -2019,13 +2016,182 @@ other = "Server end timestamp"
 ["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
 other = "Risk tag combination"
 
-[notify.password.reset]
-title = "Reset Your Account Password"
-content = "@emails/password-reset-content.en.html"
+# notify.* default title/content: since the body is rendered via text/template ({{...}}
+# actions such as {{...}} that go-i18n does not own), translate globally injects the
+# [[ / ]] data delimiter (dataDelimParser), so these sources (no [[ in body) hit the
+# go-i18n fast-path and are returned verbatim, later handed to text/template rendering.
+# title = "@xx" is expanded by resolveExternalLocales into the other field's external
+# file body.
+[notify.password.reset.title]
+other = "Reset Your Account Password"
 
-[notify.tag_event.alert]
-title = "Tag Event Alert: {{.RuleName}}"
-content = "@notify/tag-event-alert-content.en.txt"
+[notify.password.reset.content]
+other = "@emails/password-reset-content.en.html"
+
+[notify.tag_event.alert.title]
+other = "Tag Event Alert: {{.RuleName}}"
+
+[notify.tag_event.alert.content]
+other = "@notify/tag-event-alert-content.en.txt"
+
+# =============================================================================
+# Enum label keys (backend single source, consumed by the frontend)
+# Unified as enum.<className>.<key>: labels are translated by key, and the value
+# (database storage value) is not part of the key. Entries duplicated across
+# entities under the old model.<entity>.option.<field>.<value> keys are merged
+# into a single enum class. Class names and keys are defined by
+# internal/manager/views/enum_classes.go (static classes) and enum_registry.go
+# (registry classes); notification default templates render readable labels via
+# the template function t, and the frontend enum-label dataset is served from this
+# section per request language through the unified enum endpoints /admin/enum/get|list
+# (entry.key + label).
+# =============================================================================
+
+# Notification channel type (enum class channelType, from the message.Types() registry)
+[enum.channelType.email]
+other = "Email"
+
+[enum.channelType.webhook]
+other = "Webhook"
+
+# Notification event (enum class notificationEvent, from the notify.TemplateSpecs() registry)
+[enum.notificationEvent.tag_event_record]
+other = "Tag Event Alert"
+
+# Datasource type (enum class datasourceType, from sqlitevtab vtab constants)
+[enum.datasourceType.mysql]
+other = "MySQL"
+
+[enum.datasourceType.postgres]
+other = "PostgreSQL"
+
+[enum.datasourceType.clickhouse]
+other = "ClickHouse"
+
+[enum.datasourceType.sqlite_file]
+other = "SQLite file"
+
+[enum.datasourceType.etcd]
+other = "etcd"
+
+[enum.datasourceType.mongo]
+other = "MongoDB"
+
+[enum.datasourceType.redis]
+other = "Redis"
+
+# Datasource struct (enum class datasourceStruct)
+[enum.datasourceStruct.hash]
+other = "Hash"
+
+[enum.datasourceStruct.list]
+other = "List"
+
+[enum.datasourceStruct.set]
+other = "Set"
+
+[enum.datasourceStruct.string]
+other = "String"
+
+[enum.datasourceStruct.zset]
+other = "Sorted Set"
+
+# Policy effect (enum class policyEffect)
+[enum.policyEffect.allow]
+other = "Allow"
+
+[enum.policyEffect.deny]
+other = "Deny"
+
+# Tag rule target model (enum class tagRuleModel, key is the tagengine.ModelKey short key)
+[enum.tagRuleModel.httpTransport]
+other = "HTTP Transport"
+
+# Tag event dimension (enum class tagEventDimension, from the legal dimension values
+# registered on each tagengine target model)
+[enum.tagEventDimension.fpTcpClientSig]
+other = "Client Fingerprint Signature"
+
+[enum.tagEventDimension.fpTcpServerSig]
+other = "Server Fingerprint Signature"
+
+# Notification template source (enum class notificationSource)
+[enum.notificationSource.default]
+other = "Default"
+
+[enum.notificationSource.override]
+other = "Override"
+
+# Notification record status (enum class notificationRecordStatus)
+[enum.notificationRecordStatus.failed]
+other = "Failed"
+
+[enum.notificationRecordStatus.pending]
+other = "Pending"
+
+[enum.notificationRecordStatus.success]
+other = "Success"
+
+# Tag event alert status (enum class tagAlertStatus)
+[enum.tagAlertStatus.alerting]
+other = "Alerting"
+
+[enum.tagAlertStatus.closed]
+other = "Closed"
+
+[enum.tagAlertStatus.pending]
+other = "Pending"
+
+[enum.tagAlertStatus.suppressed]
+other = "Suppressed"
+
+# Language (enum class language)
+[enum.language.en]
+other = "English"
+
+[enum.language.zh-Hans]
+other = "Simplified Chinese"
+
+# HTTP method (enum class httpMethod, label equals key)
+[enum.httpMethod.CONNECT]
+other = "CONNECT"
+
+[enum.httpMethod.DELETE]
+other = "DELETE"
+
+[enum.httpMethod.GET]
+other = "GET"
+
+[enum.httpMethod.HEAD]
+other = "HEAD"
+
+[enum.httpMethod.OPTIONS]
+other = "OPTIONS"
+
+[enum.httpMethod.PATCH]
+other = "PATCH"
+
+[enum.httpMethod.POST]
+other = "POST"
+
+[enum.httpMethod.PUT]
+other = "PUT"
+
+[enum.httpMethod.TRACE]
+other = "TRACE"
+
+# HTTP version (enum class httpVersion, label equals key; quoted keys for the "/")
+[enum.httpVersion."HTTP/1.0"]
+other = "HTTP/1.0"
+
+[enum.httpVersion."HTTP/1.1"]
+other = "HTTP/1.1"
+
+[enum.httpVersion."HTTP/2"]
+other = "HTTP/2"
+
+[enum.httpVersion."HTTP/3"]
+other = "HTTP/3"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

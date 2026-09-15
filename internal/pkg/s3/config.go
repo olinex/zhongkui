@@ -1,6 +1,8 @@
 package s3
 
 import (
+	"time"
+
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"zhongkui.com/zhongkui/internal/pkg/config"
@@ -62,6 +64,18 @@ type Config struct {
 	//   - false: 加密到临时文件后以已知大小简单 PUT 上传，
 	//     适用于 multipart upload 支持不完整的 S3 实现（如 RustFS Alpha）
 	StreamingUpload bool `mapstructure:"streamingUpload" default:"false" comment:"加密上传是否使用流式管道 + multipart；对 multipart 支持不完整的 S3 服务端（如 RustFS alpha）应设置为 false"`
+
+	// ObjectCacheDir 是数据源上传文件在读取时的内存缓存目录（ObjectCache 通用机制）。
+	// Linux 默认 /dev/shm/zhongkui-objcache（tmpfs 即内存，不占本地磁盘），其余平台回退
+	// 系统临时目录；为空时按平台默认。不可写时自动回退磁盘缓存目录。
+	ObjectCacheDir string `mapstructure:"objectCacheDir" default:"" comment:"数据源上传文件内存缓存目录（Linux 默认 /dev/shm/zhongkui-objcache，tmpfs 即内存；为空按平台默认，不可写时回退磁盘缓存目录）"`
+
+	// ObjectCacheMemoryThresholdMB 是数据源上传文件「内存优先」阈值：文件解密后小于等于
+	// 该大小落入内存缓存目录，否则临时落盘（TTL 回收）。
+	ObjectCacheMemoryThresholdMB int `mapstructure:"objectCacheMemoryThresholdMB" default:"8" comment:"数据源上传文件内存优先阈值（MB）：小于等于该值落入内存缓存目录，否则临时落盘"`
+
+	// ObjectCacheTTL 是数据源上传文件本地缓存的存活时间，到期后失效重拉 S3。
+	ObjectCacheTTL time.Duration `mapstructure:"objectCacheTTL" default:"1h" comment:"数据源上传文件本地缓存存活时间，到期后失效并重新拉取 S3"`
 }
 
 // ExtractCryptoKey 使用密钥派生函数从配置中提取加密密钥。

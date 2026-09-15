@@ -320,6 +320,78 @@ export function buildRegoSkeleton(name: string): string {
   ].join("\n");
 }
 
+/** 一个开箱场景样例：标题/说明的 i18n 键 + 可插入编辑器的完整 rego 片段。 */
+export interface DatasourceSample {
+  /** 样例标题的 i18n 键 */
+  titleKey: string;
+  /** 样例一句话说明的 i18n 键 */
+  descKey: string;
+  /** 插入编辑器的完整 rego 片段（package zki + tags contains 契约） */
+  snippet: string;
+}
+
+/**
+ * buildDatasourceSamples 基于当前命中的数据源 meta 组装开箱场景样例，演示
+ * sqlite.query 的存在性判断 / 取单值 / 聚合统计三种用法（含 `?` 参数绑定与
+ * 行对象字段访问）。生成的片段以 `package zki` + `tags contains` 契约包裹，
+ * 可直接试运行。table 为数据源裸名（sqlite.query 中 FROM 引用的表名）。
+ */
+export function buildDatasourceSamples(
+  ds: SqliteDatasourceMeta,
+  tag = "tag",
+  field = "",
+): DatasourceSample[] {
+  const table = ds.name;
+  const c1 = ds.columns[0]?.name ?? "col";
+  const c2 = ds.columns[1]?.name ?? c1;
+  const target = field ? `input.${field}` : "input.<字段>";
+  const task = tag.trim() || "tag";
+
+  const exists = [
+    "package zki",
+    "",
+    `tags contains "${task}" if {`,
+    `\t# 存在性判断：命中任一匹配行即成立（COUNT(*) > 0）`,
+    `\trows := sqlite.query("SELECT COUNT(*) AS n FROM ${table} WHERE ${c1} = ?", [${target}])`,
+    "\trows[0].n > 0",
+    "}",
+    "",
+  ].join("\n");
+
+  const value = [
+    "package zki",
+    "",
+    `tags contains "${task}" if {`,
+    `\t# 取单值：SQL 结果每行是一个对象，以 rows[0].<列> 取字段（参数 \`?\` 与数组一一对应）`,
+    `\trows := sqlite.query("SELECT ${c2} FROM ${table} WHERE ${c1} = ? LIMIT 1", [${target}])`,
+    "\tcount(rows) > 0",
+    `\trows[0].${c2} == "期望值"`,
+    "}",
+    "",
+  ].join("\n");
+
+  const aggregate = [
+    "package zki",
+    "",
+    `tags contains "${task}" if {`,
+    `\t# 聚合统计：COUNT(DISTINCT ...) / SUM / AVG，结果行列名为别名 n`,
+    `\trows := sqlite.query("SELECT COUNT(DISTINCT ${c1}) AS n FROM ${table}", [])`,
+    "\trows[0].n >= 1",
+    "}",
+    "",
+  ].join("\n");
+
+  return [
+    { titleKey: "guide.sample.exists", descKey: "guide.sample.existsDesc", snippet: exists },
+    { titleKey: "guide.sample.value", descKey: "guide.sample.valueDesc", snippet: value },
+    {
+      titleKey: "guide.sample.aggregate",
+      descKey: "guide.sample.aggregateDesc",
+      snippet: aggregate,
+    },
+  ];
+}
+
 /**
  * Lightweight local Rego preflight checks for instant feedback while typing.
  * Checks bracket/quote pairing and the required `package zki` / `tags`

@@ -130,17 +130,15 @@ func registerNotificationRoutes(ctx *RegisterContext) {
 	}
 
 	// ========== 通知模板：/api/v1/notification/template ==========
-	// 通知模板管理（事件枚举、列表、创建/更新、恢复默认与渲染预览）。
+	// 通知模板管理（列表、创建/更新、恢复默认与渲染预览）。
 	{
 		templateGroup := notificationGroup.Group("/template", ctx.messagePoolMiddleware)
-		// 通知模板事件枚举 - 返回各事件支持渠道/语言与默认标题/正文
-		templateGroup.POST("/events", views.NotificationTemplateEventsGet)
-		// 通知模板事件枚举元信息
-		templateGroup.OPTIONS("/events", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[views.NotificationTemplateEventsOut]())))
 		// 通知模板列表查询 - 支持事件/来源/语言/渠道类型过滤与分页
 		templateGroup.POST("/list", views.NotificationTemplateListGet)
 		// 通知模板列表元信息
 		templateGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.NotificationTemplateListGetSearchIn, *views.NotificationTemplateListOut]())
+		// 通知事件精简元数据 - 事件支持语言与模板变量清单（供编辑器语言下拉提示与智能补全）
+		templateGroup.POST("/events/meta", views.NotificationTemplateEventsMetaGet)
 		// 创建通知模板（用户覆盖模板，source=override）
 		templateGroup.POST("/create", views.NotificationTemplateCreate)
 		// 创建通知模板元信息

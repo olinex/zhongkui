@@ -12,7 +12,7 @@
         <!-- 状态列：按事件状态着色（告警=error / 抑制=warning / 待处理与关闭=默认） -->
         <template #cell-status="{ item }">
           <v-chip size="small" :color="statusColor(item.status)">
-            {{ enumValueTitle("tagEventRecord", item.status) }}
+            {{ enumLabelOf(EnumClass.tagAlertStatus, item.status) }}
           </v-chip>
         </template>
       </search-table>
@@ -33,7 +33,7 @@ meta:
 
 <script setup lang="ts" name="tag-event-record">
 import { tagEventRecordListGet, tagEventRecordListOptions } from "@/apis/tagEvent";
-import { enumValueTitle } from "@/utils/options";
+import { EnumClass, enumLabelOf } from "@/utils/enums";
 
 import type { ItemActions } from "@/components/@types/table";
 

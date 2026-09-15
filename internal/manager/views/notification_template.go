@@ -1,6 +1,6 @@
 // Package routes 提供 HTTP 路由注册和管理功能。
 // 本文件包含通知模板（NotificationTemplate）管理相关的 API 路由处理器，
-// 提供事件模板枚举（events）、模板列表、创建/更新、恢复默认（restore-default）
+// 提供模板列表、创建/更新、恢复默认（restore-default）
 // 与渲染预览（render-test）能力。通知模板为命名空间级资源，
 // 同一命名空间下（event + channel_type + language）组合唯一。
 // 事件默认标题/正文不再落库（已迁至翻译包 i18n 键 notify.<template>.title/.content），
@@ -27,35 +27,8 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	message "zhongkui.com/zhongkui/internal/pkg/message"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
-
-// NotificationTemplateEventsOut 定义通知模板事件枚举的输出结构。
-// 枚举注册表中各事件的默认模板能力，供前端动态渲染模板管理页。
-type NotificationTemplateEventsOut struct {
-	// Events 已注册事件模板的事件列表
-	Events []NotificationTemplateEventItemOut `json:"events"`
-}
-
-// NotificationTemplateEventItemOut 定义单条事件模板枚举项。
-type NotificationTemplateEventItemOut struct {
-	// Event 事件类型键
-	Event string `json:"event"`
-	// Template 消息模板键
-	Template string `json:"template"`
-	// Channels 该事件支持的渠道类型键列表（可能含 "*" 通配）
-	Channels []string `json:"channels"`
-	// Languages 该事件支持的语言（base.Language，JSON 序列化为语言标签字符串）。
-	// 不支持 "*" 通配，"对所有语言生效"由前端在枚举时另行追加。
-	Languages []base.Language `json:"languages"`
-	// DefaultTitle 平台默认语言下默认标题（以事件样例参数渲染出的代表性文案）
-	DefaultTitle string `json:"defaultTitle"`
-	// DefaultContent 平台默认语言下默认正文（以事件样例参数渲染出的代表性文案）
-	DefaultContent string `json:"defaultContent"`
-	// Fields 该事件的可选模板变量名清单（供前端智能补全）
-	Fields []string `json:"fields"`
-}
 
 // NotificationTemplateItemOut 定义通知模板列表的输出项结构。
 // 字段与核心模型解耦（独立定义），JSON 键与映射来源模型字段保持一致。
@@ -202,6 +175,34 @@ type NotificationTemplateDryRunOut struct {
 	Content string `json:"content"`
 }
 
+// NotificationTemplateEventMetaItemOut 定义单条通知事件的精简元数据输出项。
+// 供模板编辑器生成语言下拉提示与模板变量智能补全，不承载渠道/模板键等已由
+// 统一枚举接口（/admin/enum）覆盖的枚举信息。
+// NotificationTemplateEventMetaItemOut defines the concise metadata item of a single
+// notification event, feeding the template editor's language dropdown hint and
+// template-variable smart completion. It omits channel/template-key enum info that is
+// already covered by the unified enum API (/admin/enum).
+type NotificationTemplateEventMetaItemOut struct {
+	// Event 事件类型键
+	// Event the event type key
+	Event string `json:"event"`
+	// Languages 该事件支持的语言（BCP-47 标签）
+	// Languages the languages supported by this event (BCP-47 tags)
+	Languages []string `json:"languages"`
+	// Fields 该事件可用的模板变量名清单（升序）
+	// Fields the available template variable names of this event (ascending)
+	Fields []string `json:"fields"`
+}
+
+// NotificationTemplateEventMetaOut 定义通知事件精简元数据接口的输出结构。
+// NotificationTemplateEventMetaOut defines the output of the concise notification
+// event metadata API.
+type NotificationTemplateEventMetaOut struct {
+	// Events 事件元数据项列表
+	// Events the list of event metadata items
+	Events []NotificationTemplateEventMetaItemOut `json:"events"`
+}
+
 // notificationTemplateRenderLogger 供 render-test 构造 notify.Service 使用的记录器。
 // RenderPreview 不依赖 logger，这里以调试级记录器作占位，避免每次请求重复创建。
 var notificationTemplateRenderLogger = func() *logging.Logger {
@@ -211,31 +212,6 @@ var notificationTemplateRenderLogger = func() *logging.Logger {
 	}
 	return logger
 }()
-
-// NotificationTemplateEventsGet 处理获取通知模板事件枚举的请求。
-// 依据 notify.TemplateSpecs() 注册表返回各事件的支持渠道/语言与默认标题/正文；
-// 默认标题/正文取自翻译包 i18n 键 notify.<template>.title/.content，并以事件样例参数
-// 渲染出一份代表性文案（含 {{range}} 等动作），供前端展示各事件的默认模板能力。
-func NotificationTemplateEventsGet(c *gin.Context) {
-	specs := notify.TemplateSpecs()
-	events := make([]NotificationTemplateEventItemOut, 0, len(specs))
-	for event, spec := range specs {
-		defaultParams, _ := notify.EventSampleParams(event)
-		if defaultParams == nil {
-			defaultParams = map[string]any{}
-		}
-		events = append(events, NotificationTemplateEventItemOut{
-			Event:          event,
-			Template:       spec.Template,
-			Channels:       slices.Clone(spec.Channels),
-			Languages:      slices.Clone(spec.Languages),
-			DefaultTitle:   translate.Localize(base.DefaultLanguage, spec.TitleKey(), defaultParams),
-			DefaultContent: translate.Localize(base.DefaultLanguage, spec.ContentKey(), defaultParams),
-			Fields:         notify.EventFields(event),
-		})
-	}
-	response.SimpleOK.AbortWithGinW(c, NotificationTemplateEventsOut{Events: events})
-}
 
 // NotificationTemplateListGet 处理获取通知模板列表的请求。
 // 基于统一搜索基座 BuildSearchQuery 支持分页、排序与多字段过滤（事件/来源/语言/渠道类型/
@@ -538,28 +514,48 @@ func NotificationTemplateDryRun(c *gin.Context) {
 	})
 }
 
+// NotificationTemplateEventsMetaGet 处理获取通知事件精简元数据的请求（/events/meta）。
+// 遍历 notify.TemplateSpecs() 事件注册表，为每个事件组装支持语言（spec.Languages）与
+// 可用模板变量清单（notify.EventFields），供模板编辑器语言下拉提示与智能补全使用；
+// 事件键升序返回保证输出稳定。
+// NotificationTemplateEventsMetaGet handles the concise notification event metadata
+// request (/events/meta). It walks the notify.TemplateSpecs() registry and assembles
+// the supported languages (spec.Languages) and available template variable list
+// (notify.EventFields) per event for the template editor's language dropdown hint and
+// smart completion; event keys are returned ascending for stable output.
+func NotificationTemplateEventsMetaGet(c *gin.Context) {
+	specs := notify.TemplateSpecs()
+	events := make([]string, 0, len(specs))
+	for event := range specs {
+		events = append(events, event)
+	}
+	sort.Strings(events)
+	items := make([]NotificationTemplateEventMetaItemOut, 0, len(events))
+	for _, event := range events {
+		spec := specs[event]
+		languages := make([]string, 0, len(spec.Languages))
+		for _, lang := range spec.Languages {
+			languages = append(languages, lang.String())
+		}
+		items = append(items, NotificationTemplateEventMetaItemOut{
+			Event:     event,
+			Languages: languages,
+			Fields:    notify.EventFields(event),
+		})
+	}
+	response.SimpleOK.AbortWithGinW(c, NotificationTemplateEventMetaOut{Events: items})
+}
+
 // notificationTemplateBadInput 以 400 + CodeBadBody 响应通知模板业务校验失败。
 // details 为具体原因，供前端直接向用户展示。
 func notificationTemplateBadInput(c *gin.Context, err error) {
 	response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
 }
 
-// init 注册通知模板事件字段的运行时枚举 provider：
-// NotificationTemplateCreateIn.event 的可选值来自 notify.TemplateSpecs() 注册表（运行时动态，
-// 无法静态声明进 enumFieldOptions）。Key/Value 均取原始事件键（不烤入命名空间前缀），
-// 前端在渲染时按自身选择的 i18n 命名空间拼键翻译（如 model.notificationTemplate.option.event.<key>）。
+// init 注册通知模板相关枚举字段的枚举类绑定：
+//   - NotificationTemplateCreateIn.event 对应 notificationEvent 类（notify.TemplateSpecs()）
+//   - NotificationTemplateListOut.channelType 对应 channelType 类（message.Types()）
 func init() {
-	runtimeEnumProviders["NotificationTemplateCreateIn.event"] = func() []utils.EnumOption {
-		specs := notify.TemplateSpecs()
-		events := make([]string, 0, len(specs))
-		for event := range specs {
-			events = append(events, event)
-		}
-		sort.Strings(events)
-		options := make([]utils.EnumOption, 0, len(events))
-		for _, event := range events {
-			options = append(options, utils.EnumOption{Key: event, Value: event})
-		}
-		return options
-	}
+	AddEnumBinding("NotificationTemplateCreateIn", "event", "notificationEvent")
+	AddEnumBinding("NotificationTemplateListOut", "channelType", "channelType")
 }
