@@ -21,6 +21,7 @@ func registerDatasourceRoutes(ctx *RegisterContext) {
 		ctx.namespaceMiddleware,         // 命名空间隔离
 		ctx.authorizeMiddleware,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
 		ctx.coreDatabaseMiddleware,      // 核心库（GORM）连接
+		ctx.etcdMiddleware,              // etcd 客户端（写路径 broadcastDatasourceChange 热同步）
 		ctx.sqliteVTabPoolsMiddleware,   // SQLite vtable 池（数据源 CRUD 注册/注销裸名 vtable）
 	)
 
@@ -41,6 +42,14 @@ func registerDatasourceRoutes(ctx *RegisterContext) {
 		dsGroup.POST("/create", views.DatasourceCreate)
 		// 创建第三方数据源元信息
 		dsGroup.OPTIONS("/create", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[views.DatasourceCreateIn]())))
+		// 测试第三方数据源连接 - 预检连通性，不落库不注册 vtable，失败原因放 body 返回
+		dsGroup.POST("/test", views.DatasourceTest)
+		// 测试第三方数据源连接元信息
+		dsGroup.OPTIONS("/test", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[views.DatasourceTestIn](), views.WithBodyOutput[views.DatasourceTestOut]())))
+		// 自省第三方数据源表结构 - 预检列定义，不落库不注册 vtable；sqlite_file 上传 .db 文件
+		dsGroup.POST("/introspect", views.DatasourceIntrospect)
+		// 自省第三方数据源表结构元信息
+		dsGroup.OPTIONS("/introspect", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[views.DatasourceIntrospectIn](), views.WithBodyOutput[views.DatasourceIntrospectOut]())))
 		// 第三方数据源详情查询 - 根据ID获取数据源完整信息
 		dsGroup.POST("/:id/get", views.DatasourceDetailGet)
 		// 第三方数据源详情元信息

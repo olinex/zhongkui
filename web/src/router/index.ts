@@ -13,6 +13,7 @@ import { routes } from "vue-router/auto-routes";
 import { useAppStore } from "@/stores/app";
 import { useConfigSyncStore } from "@/stores/configSync";
 import { useEnumsStore } from "@/stores/enums";
+import { useFeaturesStore } from "@/stores/features";
 import { useUserStore } from "@/stores/user";
 import i18n from "@/utils/i18n";
 
@@ -89,6 +90,8 @@ router.beforeEach(async (to, from, next) => {
   // 登录态有效时初始化前端配置同步：拉取服务端配置并开始监听本地变更
   if (to.meta.requiresAuth && userStore.exists) {
     await useConfigSyncStore().init();
+    // 预取功能开关：导航侧边栏与首页快速开始按开关过滤入口，须在页面渲染前加载完成
+    await useFeaturesStore().load();
   }
   if (lang !== i18n.global.locale.value) {
     consola.info(`change language from ${i18n.global.locale.value} to ${lang}`);

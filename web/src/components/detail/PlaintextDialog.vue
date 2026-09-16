@@ -13,7 +13,7 @@
         <div class="plaintext-preview">
           <pre class="font-mono">{{ isText ? text : hex }}</pre>
         </div>
-        <div v-if="truncated" class="text-caption text-medium-emphasis mt-1">
+        <div v-if="truncated" class="text-caption text-on-surface-variant mt-1">
           {{ $t("notice.plaintextTruncated") }}
         </div>
       </v-card-text>

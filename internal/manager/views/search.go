@@ -3752,6 +3752,184 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 	}
 }
 
+type createdAtKnowledgeDocumentListGetOrderByItem int
+
+func (i *createdAtKnowledgeDocumentListGetOrderByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtKnowledgeDocumentListGetOrderByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtKnowledgeDocumentListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type updatedAtKnowledgeDocumentListGetOrderByItem int
+
+func (i *updatedAtKnowledgeDocumentListGetOrderByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtKnowledgeDocumentListGetOrderByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtKnowledgeDocumentListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type KnowledgeDocumentListGetOrderBy struct {
+	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type titleKnowledgeDocumentListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *titleKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "title"
+}
+
+func (i *titleKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "title"
+}
+
+func (i *titleKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *titleKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type KnowledgeDocumentListGetFilterBy struct {
+	Title *titleKnowledgeDocumentListGetFilterByItem `mapstructure:"title"`
+}
+
+type KnowledgeDocumentListGetSearchIn struct {
+	Pagination
+	Greedy   bool                              `mapstructure:"greedy" default:"false"`
+	OrderBy  []KnowledgeDocumentListGetOrderBy `mapstructure:"orderBy"`
+	FilterBy *KnowledgeDocumentListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                          `mapstructure:"fields"`
+}
+
+func (s *KnowledgeDocumentListGetSearchIn) GetGreedy() bool {
+	return s.Greedy
+}
+
+func (s *KnowledgeDocumentListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+	items := make([]utils.OrderByItem, 0)
+	if s.OrderBy == nil {
+		return items
+	}
+	for _, ord := range s.OrderBy {
+		switch ord.Name {
+		case "createdAt":
+			item := createdAtKnowledgeDocumentListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "updatedAt":
+			item := updatedAtKnowledgeDocumentListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		}
+	}
+	return items
+}
+
+func (s *KnowledgeDocumentListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+	items := make(map[string]utils.FilterByItem)
+	if s.FilterBy == nil {
+		return items
+	}
+	if s.FilterBy.Title != nil {
+		items["title"] = s.FilterBy.Title
+	}
+	return items
+}
+
+func (s *KnowledgeDocumentListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *KnowledgeDocumentListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "title":
+			add("title")
+		case "chunkCount":
+			add("chunk_count")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		}
+	}
+	return columns
+}
+
+func (s *KnowledgeDocumentListGetSearchIn) GetOptions() *utils.SearchOptions {
+	return &utils.SearchOptions{
+		OrderBy: []string{
+			"createdAt",
+			"updatedAt",
+		},
+		FilterBy: []*utils.FilterByOption{
+			{
+				Name: "title",
+				Type: "string",
+				Actions: []string{
+					"eq",
+					"neq",
+					"pfx",
+					"npfx",
+					"ipfx",
+					"inpfx",
+					"sfx",
+					"nsfx",
+					"isfx",
+					"insfx",
+					"ctn",
+					"nctn",
+					"ictn",
+					"inctn",
+				},
+			},
+		},
+		Fields: []string{
+			"id",
+			"title",
+			"chunkCount",
+			"createdAt",
+			"updatedAt",
+		},
+	}
+}
+
 type createdAtNamespaceListGetOrderByItem int
 
 func (i *createdAtNamespaceListGetOrderByItem) GetName() string {

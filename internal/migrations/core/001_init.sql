@@ -604,7 +604,119 @@ COMMENT ON COLUMN datasources.enabled IS 'is the datasource enabled';
 COMMENT ON COLUMN datasources.config IS 'the connection config (JSON text, may contain credentials), encrypted at rest as BYTEA';
 COMMENT ON COLUMN datasources.description IS 'the optional description of the datasource';
 
+CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE IF NOT EXISTS knowledge_documents (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    title VARCHAR(256) NOT NULL,
+    content TEXT NOT NULL,
+    chunk_count INT NOT NULL DEFAULT 0,
+    hash CHAR(64) NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_documents_namespace
+    ON knowledge_documents (namespace_name);
+
+COMMENT ON COLUMN knowledge_documents.id IS 'the primary key of the knowledge document';
+COMMENT ON COLUMN knowledge_documents.created_at IS 'the creation time of the knowledge document';
+COMMENT ON COLUMN knowledge_documents.updated_at IS 'the last update time of the knowledge document';
+COMMENT ON COLUMN knowledge_documents.deleted_at IS 'the soft delete time of the knowledge document, null means not deleted';
+COMMENT ON COLUMN knowledge_documents.namespace_name IS 'the namespace the knowledge document belongs to';
+COMMENT ON COLUMN knowledge_documents.title IS 'the title of the knowledge document';
+COMMENT ON COLUMN knowledge_documents.content IS 'the full content of the knowledge document';
+COMMENT ON COLUMN knowledge_documents.chunk_count IS 'the number of chunks the document is split into';
+COMMENT ON COLUMN knowledge_documents.hash IS 'the sha256 hex digest of the document content, used to detect stale chunk indexes';
+
+CREATE TABLE IF NOT EXISTS knowledge_chunks (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    document_id INT NOT NULL REFERENCES knowledge_documents(id) ON DELETE CASCADE,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    chunk_index INT NOT NULL,
+    heading_path TEXT NOT NULL DEFAULT '',
+    content TEXT NOT NULL,
+    embedding vector(1536) NOT NULL,
+    search tsvector NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_namespace_document
+    ON knowledge_chunks (namespace_name, document_id);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_embedding
+    ON knowledge_chunks USING hnsw (embedding vector_cosine_ops);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_chunks_search
+    ON knowledge_chunks USING gin (search);
+
+COMMENT ON COLUMN knowledge_chunks.id IS 'the primary key of the knowledge chunk';
+COMMENT ON COLUMN knowledge_chunks.created_at IS 'the creation time of the knowledge chunk';
+COMMENT ON COLUMN knowledge_chunks.updated_at IS 'the last update time of the knowledge chunk';
+COMMENT ON COLUMN knowledge_chunks.document_id IS 'the owning knowledge document id, cascade delete with the document';
+COMMENT ON COLUMN knowledge_chunks.namespace_name IS 'the namespace the knowledge chunk belongs to';
+COMMENT ON COLUMN knowledge_chunks.chunk_index IS 'the index of the chunk within the document, starting from 0';
+COMMENT ON COLUMN knowledge_chunks.heading_path IS 'the heading path of the chunk within the document, used for citation traceability';
+COMMENT ON COLUMN knowledge_chunks.content IS 'the content of the chunk';
+COMMENT ON COLUMN knowledge_chunks.embedding IS 'the vectorized representation of the chunk content for similarity retrieval';
+COMMENT ON COLUMN knowledge_chunks.search IS 'the full-text search representation of the chunk content';
+
+CREATE TABLE IF NOT EXISTS agent_sessions (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    title VARCHAR(256) NOT NULL DEFAULT '',
+    target_model VARCHAR(255) NOT NULL DEFAULT '',
+    status VARCHAR(16) NOT NULL DEFAULT 'active'
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_namespace
+    ON agent_sessions (namespace_name);
+
+COMMENT ON COLUMN agent_sessions.id IS 'the primary key of the agent session';
+COMMENT ON COLUMN agent_sessions.created_at IS 'the creation time of the agent session';
+COMMENT ON COLUMN agent_sessions.updated_at IS 'the last update time of the agent session';
+COMMENT ON COLUMN agent_sessions.deleted_at IS 'the soft delete time of the agent session, null means not deleted';
+COMMENT ON COLUMN agent_sessions.namespace_name IS 'the namespace the agent session belongs to';
+COMMENT ON COLUMN agent_sessions.title IS 'the title of the agent session, defaulting to a summary of the first user message';
+COMMENT ON COLUMN agent_sessions.target_model IS 'the target model bound to the session, empty means the default model';
+COMMENT ON COLUMN agent_sessions.status IS 'the status of the agent session, default active';
+
+CREATE TABLE IF NOT EXISTS agent_messages (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    role VARCHAR(16) NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    draft_json JSONB,
+    citations_json JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_messages_session_id
+    ON agent_messages (session_id);
+
+COMMENT ON COLUMN agent_messages.id IS 'the primary key of the agent message';
+COMMENT ON COLUMN agent_messages.created_at IS 'the creation time of the agent message';
+COMMENT ON COLUMN agent_messages.updated_at IS 'the last update time of the agent message';
+COMMENT ON COLUMN agent_messages.session_id IS 'the owning agent session id, cascade delete with the session';
+COMMENT ON COLUMN agent_messages.namespace_name IS 'the namespace the agent message belongs to';
+COMMENT ON COLUMN agent_messages.role IS 'the role of the message, e.g. user, assistant or system';
+COMMENT ON COLUMN agent_messages.content IS 'the content of the message';
+COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, null when not applicable';
+COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, null when not applicable';
+
 -- +goose Down
+DROP TABLE IF EXISTS agent_messages;
+DROP TABLE IF EXISTS agent_sessions;
+DROP TABLE IF EXISTS knowledge_chunks;
+DROP TABLE IF EXISTS knowledge_documents;
 DROP TABLE IF EXISTS tag_event_record_hits;
 DROP TABLE IF EXISTS tag_event_records;
 DROP TABLE IF EXISTS tag_rule_versions;

@@ -56,10 +56,10 @@
                 <tr v-for="row in rows" :key="row.key">
                   <td>
                     <div class="text-body-2">{{ row.label }}</div>
-                    <div class="font-mono text-caption text-medium-emphasis">{{ row.key }}</div>
+                    <div class="font-mono text-caption text-on-surface-variant">{{ row.key }}</div>
                   </td>
                   <td class="font-mono text-body-2">{{ row.value }}</td>
-                  <td class="text-body-2 text-medium-emphasis">{{ row.desc }}</td>
+                  <td class="text-body-2 text-on-surface-variant">{{ row.desc }}</td>
                 </tr>
               </tbody>
             </v-table>

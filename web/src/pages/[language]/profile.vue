@@ -68,7 +68,7 @@
         <div class="d-flex align-center mb-5">
           <div>
             <h1 class="text-h5 font-weight-bold mb-0">{{ $t("title.userProfile") }}</h1>
-            <p class="text-body-2 text-medium-emphasis mb-0">{{ $t("profile.pageSubtitle") }}</p>
+            <p class="text-body-2 text-on-surface-variant mb-0">{{ $t("profile.pageSubtitle") }}</p>
           </div>
           <v-spacer />
           <v-btn
@@ -96,7 +96,7 @@
                   <v-img src="@/assets/logo.png" cover />
                 </v-avatar>
                 <div class="text-h6 font-weight-bold text-truncate">{{ userStore.nickleName }}</div>
-                <div class="text-body-2 text-medium-emphasis text-truncate mb-3">
+                <div class="text-body-2 text-on-surface-variant text-truncate mb-3">
                   {{ userStore.email || "—" }}
                 </div>
                 <hex-string-chip
@@ -123,7 +123,7 @@
                       <div class="text-subtitle-1 font-weight-bold">
                         {{ $t("title.profileInfo") }}
                       </div>
-                      <div class="text-body-2 text-medium-emphasis">
+                      <div class="text-body-2 text-on-surface-variant">
                         {{ $t("profile.infoSubtitle") }}
                       </div>
                     </div>
@@ -172,7 +172,7 @@
                       <div class="text-subtitle-1 font-weight-bold">
                         {{ $t("title.accessKey") }}
                       </div>
-                      <div class="text-body-2 text-medium-emphasis">
+                      <div class="text-body-2 text-on-surface-variant">
                         {{ $t("profile.accessKeySubtitle") }}
                       </div>
                     </div>
@@ -192,8 +192,8 @@
 
                   <!-- Empty state -->
                   <div v-if="accessKeys.length === 0" class="text-center pa-8">
-                    <v-icon size="48" class="mb-3 text-medium-emphasis">mdi-key-off-outline</v-icon>
-                    <div class="text-body-2 text-medium-emphasis">
+                    <v-icon size="48" class="mb-3 text-on-surface-variant">mdi-key-off-outline</v-icon>
+                    <div class="text-body-2 text-on-surface-variant">
                       {{ $t("profile.emptyAccessKeys") }}
                     </div>
                   </div>
@@ -236,7 +236,7 @@
                             {{ $t("action.delete") }}
                           </v-btn>
                         </div>
-                        <div v-if="key.description" class="text-body-2 text-medium-emphasis mt-2">
+                        <div v-if="key.description" class="text-body-2 text-on-surface-variant mt-2">
                           {{ key.description }}
                         </div>
                         <div class="d-flex flex-wrap ga-2 mt-2">
@@ -293,7 +293,7 @@
                       <div class="text-subtitle-1 font-weight-bold">
                         {{ $t("title.frontendConfigSync") }}
                       </div>
-                      <div class="text-body-2 text-medium-emphasis">
+                      <div class="text-body-2 text-on-surface-variant">
                         {{ $t("profile.configSyncSubtitle") }}
                       </div>
                     </div>
@@ -322,7 +322,7 @@
                       <div class="text-subtitle-1 font-weight-bold">
                         {{ $t("title.passwordReset") }}
                       </div>
-                      <div class="text-body-2 text-medium-emphasis">
+                      <div class="text-body-2 text-on-surface-variant">
                         {{ $t("profile.passwordSubtitle") }}
                       </div>
                     </div>

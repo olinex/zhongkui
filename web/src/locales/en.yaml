@@ -11,6 +11,10 @@ navbar:
     queue: Queue
     task: Task
     scheduler: Scheduler
+  ai:
+    self: AI
+    knowledge: Knowledge Base
+    assistant: AI Assistant
   notification:
     self: Notifications
     channel: Notification Channels
@@ -240,6 +244,28 @@ model:
       lastAccessAt: Last Access At
       enabled: Enabled
       description: Description
+  aiDocument:
+    name: Knowledge Document
+    field:
+      id: ID
+      title: Title
+      content: Content
+      chunkCount: Chunks
+      hash: Hash
+      createdAt: Created At
+      updatedAt: Updated At
+  aiSession:
+    name: AI Session
+    field:
+      title: Title
+      targetModel: Target Model
+      status: Status
+      createdAt: Created At
+      updatedAt: Updated At
+      query: Request
+      docIDs: Documents
+      businessData: Business Data
+      regoRule: Rego Validation Rule
   server:
     name: Server
     field:
@@ -358,7 +384,9 @@ model:
       notificationGroup: Notification Group
       notificationTarget: Notification Target
   datasource:
-    name: Third-party Datasource
+    name: Third-Party Datasource
+    schemaRequiredHint: Provide a complete column definition via the “Introspect Schema”
+      button or fill it in manually before saving
     field:
       id: ID
       createdAt: Created At
@@ -389,8 +417,11 @@ model:
       collection: Collection Name
       endpoints: Endpoints
       schema: Manual Schema
-      schemaHint: When there is no privilege to introspect the table structure, specify the
-        column names and types manually; leave empty to introspect automatically
+      schemaHint: This column definition is required. Generate it via the “Introspect Schema”
+        button, or specify the column names and types manually; leaving it empty no longer
+        auto-introspects
+      schemaMongoHint: MongoDB has no fixed schema and cannot be introspected; you must
+        specify the column names and types manually
       addColumn: Add Column
       columnName: Column Name
       columnType: Type
@@ -401,6 +432,10 @@ model:
       string: String
       blob: Blob
       bool: Boolean
+    action:
+      testConnection: Test Connection
+      introspectSchema: Introspect Schema
+      introspectColumns: Columns
   tagEventRecord:
     name: Tag Event Record
     field:
@@ -1035,11 +1070,14 @@ action:
   viewDetail: View Details
   viewStack: View Network Stack
   viewInput: View input
+  fullscreen: Fullscreen edit
+  exitFullscreen: Exit fullscreen
   favoriteSample: Save as Sample
   resetFrontendConfig: Reset Frontend Config
   download: Download
   back: Back
   refresh: Refresh
+  reindex: Reindex
   query: Query
   columns: Columns
   selectAll: Select All
@@ -1054,6 +1092,7 @@ action:
 guide:
   title: Third-party Data Query
   datasource: Datasource Cheatsheet
+  columns: columns
   datasourceEmpty: No datasource registered in this namespace yet. Create a datasource first to query it in rego
   insertSelect: Insert SELECT
   clickInsertColumn: Click to insert table.column
@@ -1078,6 +1117,8 @@ title:
   profileInfo: Profile Info
   frontendConfigSync: Frontend Config Sync
   accessKey: Access Key
+  aiKnowledge: Knowledge Base
+  aiAssistant: AI Assistant
   passwordReset: Password Reset
   userAdmin: Admin - User
   groupAdmin: Admin - Group
@@ -1123,6 +1164,29 @@ home:
     emptyGroup: Drag or add a navigation link
     dropHere: Drop here
     defaultGroup: Default
+page:
+  aiAssistant:
+    generate: Generate
+    generating: Generating…
+    stop: Stop
+    newSession: New Session
+    renameSession: Rename Session
+    deleteSession: Delete Session
+    citations: Citations
+    draft: Draft
+    validationPassed: Valid
+    validationFailed: Invalid
+    businessDataHint: Paste JSON you obtained from existing pages (traffic / plaintext / datasource query) under your own login session; the backend injects it as context only and never fetches data itself
+    invalidJson: Business data is not valid JSON
+    copyDraft: Copy Draft
+    copied: Copied
+    openTagRulePage: Go to Tag Rules
+    emptyQuery: Please enter a request
+    error: Generation failed
+    me: Me
+    assistant: Assistant
+    hintSelectSession: Create or select a session to start
+    confirmDeleteSession: Delete this session and all its messages?
 profile:
   pageSubtitle: Manage your account details, access keys and password security
   infoSubtitle: Update your nickname and email, then click "Update" to save
@@ -1164,6 +1228,7 @@ notice:
   cancelConfirm: "Confirm canceling {category} {key}?"
   runConfirm: "Confirm running {category} {key}?"
   rollbackConfirm: "Confirm rolling back {category} {key} to version {version}?"
+  reindexConfirm: "Confirm reindexing {category} {key}?"
   noVersion: This rule has no historical versions yet
   dryRunConfirm: "Confirm dry running {category} {key}?"
   enableConfirm: "Confirm enabling {category} {key}?"
@@ -1187,6 +1252,12 @@ notice:
     noTargets: This group has no bound targets yet
     restoreDefaultConfirm: "Confirm to restore templates of event {event} ({language}) to built-in defaults?"
     restoreDefaultSuccess: Restored to built-in default templates
+  datasource:
+    testSuccess: Connection successful
+    testFailed: Connection failed
+    introspectSuccess: Schema introspected successfully
+    introspectFailed: Schema introspection failed
+    introspectNoFile: Please select a SQLite database file
 inputType:
   string: String
   number: Number

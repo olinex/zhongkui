@@ -1,11 +1,13 @@
 <template>
   <div class="schema-editor-wrap">
-    <v-label class="mb-1">{{ $t("model.datasource.configField.schemaHint") }}</v-label>
-    <div
-      v-for="(col, index) in columns"
-      :key="index"
-      class="schema-row"
-    >
+    <p class="text-caption text-on-surface-variant mb-2">
+      {{
+        mandatorySchema
+          ? $t("model.datasource.configField.schemaMongoHint")
+          : $t("model.datasource.configField.schemaHint")
+      }}
+    </p>
+    <div v-for="(col, index) in columns" :key="index" class="schema-row">
       <v-text-field
         :model-value="col.name"
         :label="$t('model.datasource.configField.columnName')"
@@ -60,8 +62,10 @@ const props = withDefaults(
   defineProps<{
     modelValue: DatasourceColumn[];
     disabled?: boolean;
+    // mandatorySchema 无固定表结构、无法自动自省的数据源（如 Mongo），必须手动填写表结构
+    mandatorySchema?: boolean;
   }>(),
-  { disabled: false },
+  { disabled: false, mandatorySchema: false },
 );
 
 const emit = defineEmits<{
@@ -90,7 +94,11 @@ watch(
   { immediate: true },
 );
 
-const commit = (): void => emit("update:modelValue", columns.value.map((c) => ({ ...c })));
+const commit = (): void =>
+  emit(
+    "update:modelValue",
+    columns.value.map((c) => ({ ...c })),
+  );
 
 const addColumn = (): void => {
   columns.value.push({ name: "", type: "string" });

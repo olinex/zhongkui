@@ -5,7 +5,9 @@ import { getJwtHeader, request } from "./base";
 import type { FilterByOption, HeaderOption, SearchOptionsOut } from "@/components/@types/table";
 import type {
   DatasourceCreateIn,
+  DatasourceIntrospectIn,
   DatasourceSearchIn,
+  DatasourceTestIn,
   DatasourceUpdateIn,
 } from "./@types/datasource";
 import { BackendDataType, SearchAction } from "@/types";
@@ -151,4 +153,28 @@ export function datasourceBatchSetEnabled(enabled: boolean, ids: number[]): Axio
       headers: getJwtHeader(),
     },
   );
+}
+
+// ---- 预检（测试连接 / 自省表结构）----
+// datasourceTest 测试数据源联通性：config 为配置明文 JSON 文本，出参 data.success 表明连接结果
+export function datasourceTest(data: DatasourceTestIn): AxiosPromise {
+  return request.post("/datasource/test", data, { headers: getJwtHeader() });
+}
+
+// datasourceIntrospect 自省数据源表结构：sqlite_file 类型以 multipart/form-data 提交（附 .db 文件），
+// 其余类型为 JSON 体。出参 data.columns 为解析出的列定义。
+export function datasourceIntrospect(
+  data: DatasourceIntrospectIn,
+  file: File | null = null,
+): AxiosPromise {
+  const payload: FormData | DatasourceIntrospectIn = file
+    ? (() => {
+        const form = new FormData();
+        form.append("type", data.type);
+        form.append("config", data.config);
+        form.append("file", file);
+        return form;
+      })()
+    : data;
+  return request.post("/datasource/introspect", payload, { headers: getJwtHeader() });
 }

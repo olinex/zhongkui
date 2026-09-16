@@ -2,7 +2,7 @@
 //
 // 本包负责：
 //  1. 初始化全局与分组中间件链
-//  2. 按 path 拆分注册各组 API 路由（admin / traffic / tag-event / datasource / plaintext / user / notification / etl），
+//  2. 按 path 拆分注册各组 API 路由（admin / traffic / tag-event / datasource / plaintext / user / notification / etl / ai），
 //     路由处理函数与元信息定义于 internal/manager/views 包
 //
 // 路由分组结构：
@@ -16,7 +16,8 @@
 //     │   ├── 公共接口          注册、登录等无需认证的接口
 //     │   └── /self             个人接口（需要用户认证）
 //     ├── /notification         通知管理接口
-//     └── /etl                  ETL管道监控接口
+//     ├── /etl                  ETL管道监控接口
+//     └── /ai                   AI 助手（RAG + Agent）接口
 package router
 
 import (
@@ -58,6 +59,7 @@ type RegisterContext struct {
 	featureRegistryMiddleware   gin.HandlerFunc
 	messagePoolMiddleware       gin.HandlerFunc
 	sqliteVTabPoolsMiddleware   gin.HandlerFunc
+	aiMiddleware                gin.HandlerFunc
 }
 
 // RouteRegister 注册全部 HTTP 路由：初始化全局中间件链后，
@@ -91,6 +93,8 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	tagEngine := provider.MustInvokeTagEngine(i)
 	featureRegistry := provider.MustInvokeFeatureRegistry(i)
 	messagePool := provider.MustInvokeMessagePool(i)
+	// aiMiddleware - AI 助手组件中间件，将 AI 组件（Agent/Knowledge/Sessions/Config）注入
+	aiComps := provider.MustInvokeAi(ctx, i)
 	cfg, err := manager.ExtractConfig(viper, validator.Validate)
 	if err != nil {
 		return errors.WithStack(err)
@@ -154,6 +158,8 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	// sqliteVTabPoolsMiddleware - SQLite vtable 池持有者中间件，将按命名空间隔离的
 	// vtable 池注入请求上下文，供标签事件第三方数据源 CRUD 处理器在请求内注册/注销 vtable
 	sqliteVTabPoolsMiddleware := middlewares.SQLiteVTabPoolsMiddleware(sqliteVTabPools)
+	// 请求上下文，供 AI 相关处理器读取；AI 未启用时组件仅携带 Config，处理器经 Enabled 判断
+	aiMiddleware := middlewares.AiMiddleware(aiComps)
 
 	// ==================== 默认错误处理 ====================
 	// 重写Gin框架的默认错误响应，提供统一的错误格式和国际化支持
@@ -196,6 +202,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		featureRegistryMiddleware:   featureRegistryMiddleware,
 		messagePoolMiddleware:       messagePoolMiddleware,
 		sqliteVTabPoolsMiddleware:   sqliteVTabPoolsMiddleware,
+		aiMiddleware:                aiMiddleware,
 	}
 
 	// ==================== 全局功能开关端点 ====================
@@ -219,5 +226,6 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	registerUserRoutes(rc)
 	registerNotificationRoutes(rc)
 	registerEtlRoutes(rc)
+	registerAiRoutes(rc)
 	return nil
 }

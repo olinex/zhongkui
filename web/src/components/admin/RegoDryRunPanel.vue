@@ -73,6 +73,7 @@
        加密/S3 字段提供明文查看 -->
   <model-detail-dialog
     v-model="inputDialog"
+    class="rego-sample-input-viewer"
     :title="$t('model.tagRuleSample.field.input')"
     :fields="detailFields"
     :plaintext-loading="plaintextLoading"
@@ -294,5 +295,11 @@ defineExpose({ run, loading, openInput });
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
 .dry-run-body :deep(.v-expansion-panel-text__wrapper) {
   padding: 4px 12px 12px;
+}
+
+/* input 查看对话框：全屏 rego 编辑器的自定义 z-index 会盖住 Vuetify 默认 overlay 层级，
+   该对话框（teleport 到 body）需单独拉高到全屏编辑器之上才能正常展示 */
+:global(.rego-sample-input-viewer) {
+  z-index: 2800 !important;
 }
 </style>

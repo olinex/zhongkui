@@ -8,6 +8,8 @@ import { getResponse } from "@/apis/base";
 // 功能键常量：与后端 features.Key 保持一致。
 // FEATURE_PASSWORD_RESET 密码重置功能（依赖系统 SMTP），关闭时前端隐藏"忘记密码"入口。
 export const FEATURE_PASSWORD_RESET = "passwordReset";
+// FEATURE_AI AI 助手功能（RAG + Agent），关闭时前端隐藏 AI 相关导航入口。
+export const FEATURE_AI = "ai";
 
 export const useFeaturesStore = defineStore("features", {
   state: () => ({

@@ -11,6 +11,10 @@ navbar:
     queue: 管道
     task: 任务
     scheduler: 定时任务
+  ai:
+    self: AI
+    knowledge: 知识库管理
+    assistant: AI 助手
   notification:
     self: 通知管理
     channel: 通知渠道
@@ -240,6 +244,28 @@ model:
       lastAccessAt: 最后使用时日
       enabled: 启用
       description: 描述
+  aiDocument:
+    name: 知识文档
+    field:
+      id: ID
+      title: 标题
+      content: 内容
+      chunkCount: 分块数
+      hash: 内容摘要
+      createdAt: 创建时间
+      updatedAt: 更新时间
+  aiSession:
+    name: AI 会话
+    field:
+      title: 标题
+      targetModel: 目标模型
+      status: 状态
+      createdAt: 创建时间
+      updatedAt: 更新时间
+      query: 诉求
+      docIDs: 知识库文档
+      businessData: 业务数据
+      regoRule: Rego 校验规则
   server:
     name: 服务端
     field:
@@ -359,6 +385,7 @@ model:
       notificationTarget: 通知目标
   datasource:
     name: 第三方数据源
+    schemaRequiredHint: 请先点击「自省表结构」生成列定义，或手动填写完整列定义后再保存
     field:
       id: ID
       createdAt: 创建时日
@@ -389,7 +416,8 @@ model:
       collection: 集合名
       endpoints: 端点地址
       schema: 手动表结构
-      schemaHint: 无表结构自省权限时，可在此手动填写列名与类型；留空则自动自省
+      schemaHint: 此列为必填：可点击「自省表结构」自动生成，或在此手动填写列名与类型；后端不再自动自省
+      schemaMongoHint: MongoDB 无固定表结构，无法自动自省，必须手动填写列名与类型
       addColumn: 添加列
       columnName: 列名
       columnType: 类型
@@ -400,6 +428,10 @@ model:
       string: 字符串
       blob: 二进制
       bool: 布尔
+    action:
+      testConnection: 测试连接
+      introspectSchema: 自省表结构
+      introspectColumns: 列
   tagEventRecord:
     name: 标签事件记录
     field:
@@ -1028,11 +1060,14 @@ action:
   viewDetail: 查看详情
   viewStack: 查看网络堆栈
   viewInput: 查看 input
+  fullscreen: 全屏编辑
+  exitFullscreen: 退出全屏
   favoriteSample: 收藏样例
   resetFrontendConfig: 重置前端配置
   download: 下载
   back: 返回
   refresh: 刷新
+  reindex: 重新索引
   query: 查询
   columns: 列设置
   selectAll: 全选
@@ -1053,6 +1088,7 @@ action:
 guide:
   title: 第三方数据查询
   datasource: 数据源速查
+  columns: 列
   datasourceEmpty: 该命名空间暂无已注册的数据源，请先创建第三方数据源后再在 rego 中查询
   insertSelect: 插入 SELECT
   clickInsertColumn: 点击插入 表.列
@@ -1077,6 +1113,8 @@ title:
   profileInfo: 个人信息
   frontendConfigSync: 页面配置同步
   accessKey: 访问密钥
+  aiKnowledge: 知识库管理
+  aiAssistant: AI 助手
   passwordReset: 重置密码
   userAdmin: 管理 - 用户
   groupAdmin: 管理 - 用户组
@@ -1122,6 +1160,29 @@ home:
     emptyGroup: 拖入或添加导航入口
     dropHere: 松开放入此处
     defaultGroup: 默认
+page:
+  aiAssistant:
+    generate: 生成
+    generating: 生成中…
+    stop: 停止
+    newSession: 新建会话
+    renameSession: 重命名会话
+    deleteSession: 删除会话
+    citations: 引用来源
+    draft: 结构化草稿
+    validationPassed: 校验通过
+    validationFailed: 校验未通过
+    businessDataHint: 可粘贴从既有页面（流量 / 明文 / 数据源查询）在您的登录会话与权限内取得的数据 JSON，后端仅作上下文注入，不自行取数
+    invalidJson: 业务数据不是合法 JSON
+    copyDraft: 复制草稿
+    copied: 已复制
+    openTagRulePage: 前往标签规则页
+    emptyQuery: 请输入诉求
+    error: 生成失败
+    me: 我
+    assistant: 助手
+    hintSelectSession: 请先新建或选择一个会话开始对话
+    confirmDeleteSession: 确定删除该会话及其全部消息吗？
 profile:
   pageSubtitle: 管理你的账号信息、访问密钥与密码安全
   infoSubtitle: 修改昵称与邮箱后点击「更新」保存
@@ -1163,6 +1224,7 @@ notice:
   cancelConfirm: "确认取消 {category} {key} 吗？"
   runConfirm: "确认运行 {category} {key} 吗？"
   rollbackConfirm: "确认回滚 {category} {key} 到版本 {version} 吗？"
+  reindexConfirm: "确认重新索引 {category} {key} 吗？"
   noVersion: 该规则暂无历史版本
   dryRunConfirm: "确认对 {category} {key} 执行试运行吗？"
   enableConfirm: "确认启用 {category} {key} 吗？"
@@ -1186,6 +1248,12 @@ notice:
     noTargets: 该通知组暂未绑定任何目标
     restoreDefaultConfirm: "确认将事件 {event}（{language}）的通知模板恢复为内置默认吗？"
     restoreDefaultSuccess: 已恢复为内置默认模板
+  datasource:
+    testSuccess: 连接成功
+    testFailed: 连接失败
+    introspectSuccess: 表结构解析成功
+    introspectFailed: 表结构解析失败
+    introspectNoFile: 请先选择 SQLite 数据库文件
 inputType:
   string: 字符串
   number: 数字

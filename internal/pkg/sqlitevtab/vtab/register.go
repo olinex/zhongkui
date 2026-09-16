@@ -27,13 +27,12 @@ import (
 	// stdlib
 	"context"
 	"encoding/json"
-	"fmt"
 	"regexp"
 	"strings"
 
 	// third-party
+
 	"github.com/creasty/defaults"
-	"github.com/redis/go-redis/v9"
 
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -87,7 +86,7 @@ type RedisConfig struct {
 	Port int `json:"port" default:"6379"`
 	// Password 密码（可选）
 	// Password the password (optional)
-	Password string `json:"password"`
+	Password string `json:"password" form:"kind=password"`
 	// DB 逻辑库号，默认 0
 	// DB the logical database number, default 0
 	DB int `json:"db" default:"0"`
@@ -113,19 +112,19 @@ type MySQLTableConfig struct {
 	User string `json:"user" binding:"required"`
 	// Password 密码（可选）
 	// Password the password (optional)
-	Password string `json:"password"`
+	Password string `json:"password" form:"kind=password"`
 	// DBName 默认数据库名，查询限定于该库
 	// DBName the default database, queries scoped to it
 	DBName string `json:"dbName" binding:"required"`
 	// Table 要暴露的业务表名
 	// Table the business table name to expose
 	Table string `json:"table" binding:"required"`
-	// Schema 手动指定的列定义（可选）。提供时跳过 SHOW COLUMNS 自省，按此 schema 注册；
-	// 缺省时回退自省。适用于账号无表结构查看权限、需客户自行提供数据结构的场景。
-	// Schema the manually-specified column definitions (optional). When provided, SHOW
-	// COLUMNS introspection is skipped and the vtable registers with this schema; when
-	// absent, introspection is used. Intended for accounts lacking table-structure
-	// privileges, where the customer supplies the schema themselves.
+	// Schema 列定义（**必填**）。注册时要求完整列定义，由前端经 /datasource/introspect
+	// 自省（SHOW COLUMNS）或手动提供；后端注册不再自动自省。适用于需主动控制列名的场景。
+	// Schema the column definitions (**required**). Registration requires a complete column
+	// definition, introspected by the frontend via /datasource/introspect (SHOW COLUMNS) or
+	// provided manually; the backend no longer auto-introspects at registration. Useful when
+	// the column set must be controlled explicitly.
 	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
 }
 
@@ -148,16 +147,18 @@ type PostgresTableConfig struct {
 	User string `json:"user" binding:"required"`
 	// Password 密码（可选）
 	// Password the password (optional)
-	Password string `json:"password"`
+	Password string `json:"password" form:"kind=password"`
 	// DBName 默认数据库名，查询限定于该库
 	// DBName the default database, queries scoped to it
 	DBName string `json:"dbName" binding:"required"`
 	// Table 要暴露的业务表名
 	// Table the business table name to expose
 	Table string `json:"table" binding:"required"`
-	// Schema 同 MySQLTableConfig.Schema 语义：提供时跳过 information_schema 自省。
-	// Schema has the same semantics as MySQLTableConfig.Schema: introspection is skipped
-	// when provided.
+	// Schema 列定义（**必填**），同 MySQLTableConfig.Schema 语义：注册时要求完整列定义，
+	// 由前端自省或手动提供，后端不再自动自省。
+	// Schema the column definitions (**required**), same semantics as MySQLTableConfig.Schema:
+	// registration requires a complete column definition provided by the frontend (introspection
+	// or manual); the backend no longer auto-introspects.
 	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
 }
 
@@ -178,16 +179,18 @@ type ClickHouseTableConfig struct {
 	User string `json:"user" binding:"required"`
 	// Password 密码（可选）
 	// Password the password (optional)
-	Password string `json:"password"`
+	Password string `json:"password" form:"kind=password"`
 	// DBName 默认数据库名，查询限定于该库
 	// DBName the default database, queries scoped to it
 	DBName string `json:"dbName" binding:"required"`
 	// Table 要暴露的业务表名
 	// Table the business table name to expose
 	Table string `json:"table" binding:"required"`
-	// Schema 同 MySQLTableConfig.Schema 语义：提供时跳过 DESCRIBE TABLE 自省。
-	// Schema has the same semantics as MySQLTableConfig.Schema: introspection is skipped
-	// when provided.
+	// Schema 列定义（**必填**），同 MySQLTableConfig.Schema 语义：注册时要求完整列定义，
+	// 由前端自省或手动提供，后端不再自动自省。
+	// Schema the column definitions (**required**), same semantics as MySQLTableConfig.Schema:
+	// registration requires a complete column definition provided by the frontend (introspection
+	// or manual); the backend no longer auto-introspects.
 	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
 }
 
@@ -202,9 +205,11 @@ type SQLiteFileTableConfig struct {
 	// Table 要暴露的业务表名
 	// Table the business table name to expose
 	Table string `json:"table" binding:"required"`
-	// Schema 同 MySQLTableConfig.Schema 语义：提供时跳过 PRAGMA table_info 自省。
-	// Schema has the same semantics as MySQLTableConfig.Schema: introspection is skipped
-	// when provided.
+	// Schema 列定义（**必填**），同 MySQLTableConfig.Schema 语义：注册时要求完整列定义，
+	// 由前端自省或手动提供，后端不再自动自省。
+	// Schema the column definitions (**required**), same semantics as MySQLTableConfig.Schema:
+	// registration requires a complete column definition provided by the frontend (introspection
+	// or manual); the backend no longer auto-introspects.
 	Schema []DatasourceColumn `json:"schema" form:"kind=columns"`
 }
 
@@ -245,7 +250,7 @@ type EtcdTableConfig struct {
 	Username string `json:"username"`
 	// Password 密码（可选）
 	// Password the password (optional)
-	Password string `json:"password"`
+	Password string `json:"password" form:"kind=password"`
 }
 
 // DatasourceColumn 手动指定的一列：Name 为暴露到 vtable 的列名（合法 SQL 标识符），
@@ -350,178 +355,36 @@ func redisDatasourceFactory(pool *RedisPool, structType string) (sqlitevtab.Data
 // 按 typ 解析 cfgData，按命名空间隔离地建立连接池、构造数据源，并以裸 name 注册到
 // pool（该 pool 已由调用方 Pools.Register 解析为当前命名空间的池）。注册成功后 vtable
 // 即可经 sqlite.query 以裸名查询。校验由 ValidateLocalName（本地名）+ RegisterDatasource
-// （裸名/schema）+ 各构造器承担；MySQL 会在注册期自省一次表结构（连库校验）。
+// （裸名/schema）+ 各构造器承担；表型数据源（mysql/postgres/clickhouse/sqlite_file）要求
+// config 必须带完整 schema（由前端经 /datasource/introspect 自省或手动提供），注册时不再
+// 自动自省。
 // registerInto parses the config and registers one sqlite vtable under its bare name
 // on the given namespace pool. It parses cfgData by typ, builds a namespace-isolated
 // connection pool, constructs the datasource and registers it under the bare name on
 // pool (already resolved by the caller Pools.Register for the current namespace). Once
 // registered the vtable is queryable by its bare name via sqlite.query. Validation is
 // done by ValidateLocalName (local name) + RegisterDatasource (bare name/schema) + the
-// constructors; MySQL introspects the table once during registration (a connection-level
-// check).
+// constructors; table-style datasources (mysql/postgres/clickhouse/sqlite_file) require a
+// complete schema in the config (introspected via /datasource/introspect or provided
+// manually by the frontend) and no longer auto-introspect during registration.
 func registerInto(ctx context.Context, pool *sqlitevtab.SQLitePool, store *s3.ObjectCache, namespace, name, typ string, cfgData []byte) error {
 	if err := ValidateLocalName(name); err != nil {
 		return err
 	}
 
-	var ds sqlitevtab.Datasource
-	switch typ {
-	case DatasourceTypeRedis:
-		var cfg RedisConfig
-		// 先应用 default tag 填充默认值，再由实际传入的 JSON 覆盖；缺省字段保持默认值。
-		if err := defaults.Set(&cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: apply defaults: %v", err))
-		}
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid redis config: %v", err))
-		}
-		opts := &redis.Options{Addr: fmt.Sprintf("%s:%d", cfg.Addr, cfg.Port), Password: cfg.Password, DB: cfg.DB}
-		poolHandle := NewRedisPool(opts, namespace)
-		var err error
-		if ds, err = redisDatasourceFactory(poolHandle, cfg.Struct); err != nil {
-			return err
-		}
-	case DatasourceTypeMySQL:
-		var cfg MySQLTableConfig
-		// 先应用 default tag 填充默认值（含默认端口 3306），再由实际传入的 JSON 覆盖。
-		if err := defaults.Set(&cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: apply defaults: %v", err))
-		}
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid mysql config: %v", err))
-		}
-		poolHandle := NewMySQLPool(&MySQLConfig{
-			Addr:      cfg.Addr,
-			Port:      cfg.Port,
-			User:      cfg.User,
-			Password:  cfg.Password,
-			DBName:    cfg.DBName,
-			Namespace: namespace,
-		})
-		var err error
-		if len(cfg.Schema) > 0 {
-			var cols []sqlitevtab.Column
-			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
-				return err
-			}
-			if ds, err = NewMySQLDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
-				return err
-			}
-		} else if ds, err = NewMySQLDatasource(ctx, poolHandle, cfg.Table); err != nil {
-			return err
-		}
-	case DatasourceTypePostgres:
-		var cfg PostgresTableConfig
-		// 先应用 default tag 填充默认值（含默认端口 5432），再由实际传入的 JSON 覆盖。
-		if err := defaults.Set(&cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: apply defaults: %v", err))
-		}
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid postgres config: %v", err))
-		}
-		poolHandle := NewPostgresPool(&PostgresConfig{
-			Addr:      cfg.Addr,
-			Port:      cfg.Port,
-			User:      cfg.User,
-			Password:  cfg.Password,
-			DBName:    cfg.DBName,
-			Namespace: namespace,
-		})
-		var err error
-		if len(cfg.Schema) > 0 {
-			var cols []sqlitevtab.Column
-			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
-				return err
-			}
-			if ds, err = NewPostgresDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
-				return err
-			}
-		} else if ds, err = NewPostgresDatasource(ctx, poolHandle, cfg.Table); err != nil {
-			return err
-		}
-	case DatasourceTypeClickHouse:
-		var cfg ClickHouseTableConfig
-		if err := defaults.Set(&cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: apply defaults: %v", err))
-		}
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid clickhouse config: %v", err))
-		}
-		poolHandle := NewClickHousePool(&ClickHouseConfig{
-			Addr: cfg.Addr, Port: cfg.Port, User: cfg.User, Password: cfg.Password,
-			DBName: cfg.DBName, Namespace: namespace,
-		})
-		var err error
-		if len(cfg.Schema) > 0 {
-			var cols []sqlitevtab.Column
-			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
-				return err
-			}
-			if ds, err = NewClickHouseDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
-				return err
-			}
-		} else if ds, err = NewClickHouseDatasource(ctx, poolHandle, cfg.Table); err != nil {
-			return err
-		}
-	case DatasourceTypeSQLiteFile:
-		var cfg SQLiteFileTableConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid sqlite_file config: %v", err))
-		}
-		if store == nil {
-			return errors.New("tag datasource: sqlite_file requires S3 object storage (ObjectCache) to be enabled")
-		}
-		// 先从 S3 拉取并解密为本地明文文件（内存优先、超阈落盘，见 internal/pkg/s3/objectcache.go），
-		// 再把该明文路径交给连接池打开；对象键由命名空间+数据源名派生，随生命周期稳定。
-		objectKey := SQLiteObjectKey(namespace, name)
-		var path string
-		if p, err := store.Materialize(ctx, objectKey); err != nil {
-			return err
-		} else {
-			path = p
-		}
-		poolHandle := NewSQLiteFilePool(&SQLiteFileConfig{Path: path, Namespace: namespace})
-		var err error
-		if len(cfg.Schema) > 0 {
-			var cols []sqlitevtab.Column
-			if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
-				return err
-			}
-			if ds, err = NewSQLiteFileDatasourceWithSchema(poolHandle, cfg.Table, cols); err != nil {
-				return err
-			}
-		} else if ds, err = NewSQLiteFileDatasource(ctx, poolHandle, cfg.Table); err != nil {
-			return err
-		}
-	case DatasourceTypeEtcd:
-		var cfg EtcdTableConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid etcd config: %v", err))
-		}
-		ds = NewEtcdDatasource(NewEtcdPool(&EtcdConfig{
-			Endpoints: splitEndpoints(cfg.Endpoints), Username: cfg.Username,
-			Password: cfg.Password, Namespace: namespace,
-		}))
-	case DatasourceTypeMongo:
-		var cfg MongoCollectionConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid mongo config: %v", err))
-		}
-		if len(cfg.Schema) == 0 {
-			return errors.New("mongo: schema must be provided during registration")
-		}
-		var err error
-		var cols []sqlitevtab.Column
-		if cols, err = parseDatasourceColumns(cfg.Schema); err != nil {
-			return err
-		}
-		if ds, err = NewMongoDatasourceWithSchema(NewMongoPool(&MongoConfig{
-			URI: cfg.URI, DB: cfg.DB, Collection: cfg.Collection, Namespace: namespace,
-		}), cols); err != nil {
-			return err
-		}
-	default:
+	config, err := decodeDatasourceConfig(typ, cfgData)
+	if err != nil {
+		return err
+	}
+
+	p, ok := lookupDatasourcePlugin(typ)
+	if !ok {
 		return errors.Newf("tag datasource: unsupported type %q", typ)
+	}
+
+	ds, err := p.Register(ctx, pool, store, namespace, name, config)
+	if err != nil {
+		return err
 	}
 
 	schema, err := schemaOf(ds)
@@ -555,49 +418,42 @@ func schemaOf(ds sqlitevtab.Datasource) (sqlitevtab.Schema, error) {
 // config to avoid persisting an invalid one, but must not trigger connection-level
 // introspection, so this stays a decode-level check separate from Register.
 func ValidateConfigJSON(typ string, cfgData []byte) error {
-	switch typ {
-	case DatasourceTypeRedis:
-		var cfg RedisConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid redis config: %v", err))
-		}
-		if _, err := redisDatasourceFactory(nil, cfg.Struct); err != nil {
-			return err
-		}
-	case DatasourceTypeMySQL:
-		var cfg MySQLTableConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid mysql config: %v", err))
-		}
-	case DatasourceTypePostgres:
-		var cfg PostgresTableConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid postgres config: %v", err))
-		}
-	case DatasourceTypeClickHouse:
-		var cfg ClickHouseTableConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid clickhouse config: %v", err))
-		}
-	case DatasourceTypeSQLiteFile:
-		var cfg SQLiteFileTableConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid sqlite_file config: %v", err))
-		}
-	case DatasourceTypeEtcd:
-		var cfg EtcdTableConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid etcd config: %v", err))
-		}
-	case DatasourceTypeMongo:
-		var cfg MongoCollectionConfig
-		if err := json.Unmarshal(cfgData, &cfg); err != nil {
-			return errors.WithStack(errors.Newf("tag datasource: invalid mongo config: %v", err))
-		}
-	default:
+	cfg, err := decodeDatasourceConfig(typ, cfgData)
+	if err != nil {
+		return err
+	}
+	// 委托各类型插件校验配置与类型的一致性（Redis 额外校验客户端要暴露的结构类型，其余
+	// 类型仅做解码级结构校验）。
+	// Delegate structural validation of the config against the type to each plugin (Redis
+	// additionally validates the structure type the client exposes; the rest only undergo a
+	// decode-level structural check).
+	p, ok := lookupDatasourcePlugin(typ)
+	if !ok {
 		return errors.Newf("tag datasource: unsupported type %q", typ)
 	}
-	return nil
+	return p.ValidateConfig(cfg)
+}
+
+// decodeDatasourceConfig 按数据源类型解码配置 JSON（先应用 default tag 再反序列化，
+// 未知类型返回错误），返回该类型的配置指针。供 Register / TestConn / IntrospectSchema /
+// ValidateConfigJSON 复用同一解析逻辑（单一事实来源）。
+// decodeDatasourceConfig decodes the config JSON by datasource type (applying the default
+// tags before unmarshalling; unknown types error), returning a typed config pointer. It is
+// the single source of truth reused by Register / TestConn / IntrospectSchema /
+// ValidateConfigJSON for parsing.
+func decodeDatasourceConfig(typ string, cfgData []byte) (any, error) {
+	p, ok := lookupDatasourcePlugin(typ)
+	if !ok {
+		return nil, errors.Newf("tag datasource: unsupported type %q", typ)
+	}
+	cfg := p.NewConfig()
+	if err := defaults.Set(cfg); err != nil {
+		return nil, errors.WithStack(errors.Newf("tag datasource: apply defaults: %v", err))
+	}
+	if err := json.Unmarshal(cfgData, cfg); err != nil {
+		return nil, errors.WithStack(errors.Newf("tag datasource: invalid %s config: %v", typ, err))
+	}
+	return cfg, nil
 }
 
 // splitEndpoints 把逗号分隔的端点串拆成列表并去掉空项/空白。

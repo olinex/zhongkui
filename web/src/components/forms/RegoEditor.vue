@@ -1,33 +1,64 @@
 <template>
-  <div class="rego-editor-wrap">
-    <div v-if="samples.length > 0" class="sample-selector">
-      <div class="panel-header">
-        <span class="panel-title">{{ $t("action.selectSample") }}</span>
+  <!-- 全屏时 Teleport 到 body，脱离对话框 .v-overlay__content 的 transform 祖先，
+       否则 position:fixed 的相对包含块仍是对话框容器，无法真正铺满视口 -->
+  <teleport to="body" :disabled="!fullscreen">
+    <div class="rego-editor-wrap" :class="{ 'is-fullscreen': fullscreen }">
+      <div class="rego-toolbar">
+        <div class="sample-selector">
+          <v-select
+            v-if="samples.length > 0"
+            v-model="selectedSampleName"
+            :items="samples.map((s) => ({ title: s.name, value: s.name }))"
+            :label="$t('action.selectSample')"
+            density="compact"
+            variant="outlined"
+            hide-details
+            clearable
+          >
+            <template #append-inner>
+              <v-btn
+                variant="text"
+                size="small"
+                icon="mdi-eye-outline"
+                :disabled="!selectedSampleName"
+                :title="$t('action.viewInput')"
+                @click.stop="emit('viewInput')"
+              />
+            </template>
+          </v-select>
+        </div>
+        <v-btn
+          class="toolbar-btn"
+          :icon="fullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
+          :variant="fullscreen ? 'tonal' : 'text'"
+          :disabled="disabled"
+          :title="$t(fullscreen ? 'action.exitFullscreen' : 'action.fullscreen')"
+          @click="toggleFullscreen"
+        />
+        <v-btn
+          class="toolbar-btn"
+          icon="mdi-database-search-outline"
+          :variant="guideOpen ? 'tonal' : 'text'"
+          color="primary"
+          :disabled="disabled"
+          :title="$t('guide.title')"
+          @click="openGuide"
+        />
       </div>
-      <div class="sample-selector-body">
-        <v-select
-          v-model="selectedSampleName"
-          :items="samples.map((s) => ({ title: s.name, value: s.name }))"
-          density="compact"
-          variant="outlined"
-          hide-details
-          clearable
-        >
-          <template #append-inner>
-            <v-btn
-              variant="text"
-              size="small"
-              icon="mdi-eye-outline"
-              :disabled="!selectedSampleName"
-              :title="$t('action.viewInput')"
-              @click.stop="emit('viewInput')"
+      <div class="rego-body">
+        <div ref="hostRef" class="rego-editor" :style="{ minHeight }" />
+        <transition name="guide">
+          <div v-if="fullscreen && guideOpen" class="fullscreen-guide">
+            <datasource-guide-panel
+              :datasources="sqliteDatasources"
+              :fields="fields"
+              @insert="handleGuideInsert"
             />
-          </template>
-        </v-select>
+          </div>
+        </transition>
       </div>
     </div>
-    <div ref="hostRef" class="rego-editor" :style="{ minHeight }" />
-  </div>
+  </teleport>
 </template>
 
 <script setup lang="ts" name="rego-editor">
@@ -118,6 +149,55 @@ const appStore = useAppStore();
 
 const hostRef = useTemplateRef<HTMLDivElement>("hostRef");
 const view = shallowRef<EditorView>();
+
+// ---- 全屏编辑模式 与 参考侧边栏（数据源速查 + 场景样例）----
+// 第三方数据源参考栏仅在全屏模式下以右侧并排分栏呈现（充足宽度，与编辑器同框）；
+// 点击「第三方数据源查询」若未全屏则强制进入全屏并打开参考栏。只读（disabled）时禁用。
+const fullscreen = ref(false);
+const guideOpen = ref(false);
+
+/** 切换全屏；退出全屏时一并收起参考栏（参考栏只存在于全屏模式）。 */
+function toggleFullscreen(): void {
+  fullscreen.value = !fullscreen.value;
+  if (!fullscreen.value) {
+    guideOpen.value = false;
+  }
+}
+
+/** 打开第三方数据源参考：未全屏则先进入全屏；已全屏则在参考栏显隐间切换。 */
+function openGuide(): void {
+  if (!fullscreen.value) {
+    fullscreen.value = true;
+    guideOpen.value = true;
+    return;
+  }
+  guideOpen.value = !guideOpen.value;
+}
+
+// 全屏布局切换后重新测量，保证 CodeMirror 行宽度/滚动区正确适配（lineWrapping 需要）
+watch(fullscreen, async (open) => {
+  if (open) {
+    await nextTick();
+    view.value?.requestMeasure();
+  }
+});
+
+/** 在光标处插入文本并置于插入内容末尾（速查/样例一键写入），随后把焦点还给编辑器。 */
+function insertAtCursor(text: string): void {
+  const editor = view.value;
+  if (!editor) {
+    return;
+  }
+  const head = editor.state.selection.main.head;
+  editor.dispatch({
+    changes: { from: head, insert: text },
+    selection: { anchor: head + text.length },
+  });
+  editor.focus();
+}
+
+/** 抽屉内 DatasourceGuidePanel 的一键插入，插入后保持抽屉展开以便连续取用。 */
+const handleGuideInsert = (text: string): void => insertAtCursor(text);
 
 // ---- sample selector state ----
 // 试运行样例与编辑器联动：用户预先选择一个样例后，编辑器对 `input.<field>`
@@ -913,10 +993,15 @@ const extensions: Extension[] = [
   }),
 ];
 
+// 编辑器容器尺寸变化（全屏切换、窗口缩放）时触发 CodeMirror 重测，
+// 否则 lineWrapping 分行/横向布局不会随宽度正确重排
+const resizeObserver = new ResizeObserver(() => view.value?.requestMeasure());
+
 onMounted(() => {
   if (!hostRef.value) {
     return;
   }
+  resizeObserver.observe(hostRef.value);
   view.value = new EditorView({
     state: EditorState.create({ doc: props.modelValue, extensions }),
     parent: hostRef.value,
@@ -924,6 +1009,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  resizeObserver.disconnect();
   view.value?.destroy();
   view.value = undefined;
 });
@@ -989,40 +1075,103 @@ watch(
 
 defineExpose({
   focus: () => view.value?.focus(),
-  /** insertAtCursor 在光标处插入文本并置于插入内容末尾（供速查面板/样例一键写入）。 */
-  insertAtCursor: (text: string) => {
-    const editor = view.value;
-    if (!editor) {
-      return;
-    }
-    const head = editor.state.selection.main.head;
-    editor.dispatch({
-      changes: { from: head, insert: text },
-      selection: { anchor: head + text.length },
-    });
-    editor.focus();
-  },
 });
 </script>
 
 <style scoped>
 .rego-editor-wrap {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-/* Sample selector sits above the editor as a bordered section matching the
-   editor box, so the user can pre-select a sample while writing the rule;
-   the selected sample drives input value hints. */
+/* 顶栏：样例选择器 + 全屏/参考按钮，与编辑器同框一体 */
+.rego-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-btn {
+  flex-shrink: 0;
+}
+
 .sample-selector {
+  flex: 1;
+  min-width: 0;
+}
+
+.rego-body {
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.rego-editor {
+  flex: 1 1 0%;
+  min-width: 0;
+
+  /* visible：允许 lint tooltip 向上溢出显示（如第一行出错时 tooltip 展开在编辑器
+     上方），内容滚动仍由 .cm-scroller 管理，不会产生页面溢出 */
+  overflow: visible;
   border: 1px solid rgb(0 0 0 / 24%);
   border-radius: 4px;
   background-color: rgb(var(--v-theme-surface));
 }
 
-.sample-selector-body {
-  padding: 0 12px 12px;
+/* 全屏模式：编辑器整屏覆盖（fixed 铺满视口），主体占据剩余高度，
+   参考栏在其右侧以并排分栏出现，宽度充足不与编辑器互相挤压 */
+.rego-editor-wrap.is-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  padding: 16px;
+  background-color: rgb(var(--v-theme-surface));
+}
+
+.is-fullscreen .rego-editor {
+  height: 100%;
+}
+
+.is-fullscreen .rego-editor :deep(.cm-editor),
+.is-fullscreen .rego-editor :deep(.cm-scroller) {
+  height: 100%;
+}
+
+/* 全屏主体改用 grid 两列，列高严格受视口约束，参考栏超高时能内部滚动 */
+.is-fullscreen .rego-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 8px;
+  align-items: stretch;
+  min-height: 0;
+}
+
+/* 全屏模式下的右侧参考栏：并排分栏，固定宽度 + 独立滚动 */
+.fullscreen-guide {
+  flex-shrink: 0;
+  width: 340px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid rgb(var(--v-theme-border));
+  border-radius: 8px;
+  background-color: rgb(var(--v-theme-surface));
+}
+
+.guide-enter-active,
+.guide-leave-active {
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.guide-enter-from,
+.guide-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
 }
 
 /* Hover tooltip content for `input.<field>` sample values. */
@@ -1042,32 +1191,6 @@ defineExpose({
 :deep(.cm-sample-hover-value) {
   font-weight: 600;
   color: rgb(var(--v-theme-primary));
-}
-
-/* 样例选择器头部与编辑器主题一致 */
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 32px;
-  padding: 0 4px 0 12px;
-}
-
-.panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-.rego-editor {
-  width: 100%;
-
-  /* visible：允许 lint tooltip 向上溢出显示（如第一行出错时 tooltip 展开在编辑器
-     上方），内容滚动仍由 .cm-scroller 管理，不会产生页面溢出 */
-  overflow: visible;
-  border: 1px solid rgb(0 0 0 / 24%);
-  border-radius: 4px;
-  background-color: rgb(var(--v-theme-surface));
 }
 
 /* 空文档时显示 "/" 用法提示，颜色与弱化文字一致，避免干扰编辑 */

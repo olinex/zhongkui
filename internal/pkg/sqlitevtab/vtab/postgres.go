@@ -39,6 +39,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
+	"reflect"
 	"strings"
 
 	// third-party
@@ -48,7 +50,9 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 
 	// internal
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
@@ -183,4 +187,88 @@ func CloseAllPostgresClients(ctx context.Context) {
 // double quotes, to embed datasource and column names into SQL safely against injection.
 func quotePgIdent(s string) string {
 	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
+// postgresPlugin 实现 DatasourcePlugin，把 postgres 数据源类型接入插件注册表。
+// postgresPlugin implements DatasourcePlugin, wiring the postgres datasource type into the
+// plugin registry.
+type postgresPlugin struct{}
+
+// Key 返回数据源类型键。
+// Key returns the datasource type key.
+func (postgresPlugin) Key() string { return DatasourceTypePostgres }
+
+// ConfigType 返回配置值反射类型。
+// ConfigType returns the config value's reflect type.
+func (postgresPlugin) ConfigType() reflect.Type { return reflect.TypeFor[PostgresTableConfig]() }
+
+// NewConfig 返回全新一份 *PostgresTableConfig。
+// NewConfig returns a fresh *PostgresTableConfig.
+func (postgresPlugin) NewConfig() any { return &PostgresTableConfig{} }
+
+// ValidateConfig 结构已经解码校验，这里无需额外操作。
+// ValidateConfig does nothing extra since the structure was already validated at decode.
+func (postgresPlugin) ValidateConfig(_ any) error { return nil }
+
+// TestConn 建池借出 connection、PingContext 探活后归还。
+// TestConn borrows a connection from the pool, probes it via PingContext and returns it.
+func (postgresPlugin) TestConn(ctx context.Context, cfg any) error {
+	c := cfg.(*PostgresTableConfig)
+	pool := NewPostgresPool(&PostgresConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
+	db, err := pool.Acquire(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	pingErr := db.PingContext(ctx)
+	pool.Release(ctx, db)
+	if pingErr != nil {
+		return errors.WithStack(pingErr)
+	}
+	return nil
+}
+
+// IntrospectSchema 建池、NewPostgresDatasource 自省表结构后返回列定义。
+// IntrospectSchema builds the pool, introspects the table via NewPostgresDatasource and
+// returns the column definitions.
+func (postgresPlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) ([]DatasourceColumn, error) {
+	c := cfg.(*PostgresTableConfig)
+	pool := NewPostgresPool(&PostgresConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
+	ds, err := NewPostgresDatasource(ctx, pool, c.Table)
+	if err != nil {
+		return nil, err
+	}
+	schema, err := schemaOf(ds)
+	if err != nil {
+		return nil, err
+	}
+	return schemaColumnsOut(schema), nil
+}
+
+// Register 校验 schema 非空 → 建池 → parseDatasourceColumns → NewPostgresDatasourceWithSchema。
+// Register validates schema not-empty → build pool → parseDatasourceColumns →
+// NewPostgresDatasourceWithSchema.
+func (postgresPlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
+	c := cfg.(*PostgresTableConfig)
+	if len(c.Schema) == 0 {
+		return nil, errors.Newf("%s: schema must be provided; run introspection from the frontend", DatasourceTypePostgres)
+	}
+	poolHandle := NewPostgresPool(&PostgresConfig{
+		Addr:      c.Addr,
+		Port:      c.Port,
+		User:      c.User,
+		Password:  c.Password,
+		DBName:    c.DBName,
+		Namespace: namespace,
+	})
+	cols, err := parseDatasourceColumns(c.Schema)
+	if err != nil {
+		return nil, err
+	}
+	return NewPostgresDatasourceWithSchema(poolHandle, c.Table, cols)
+}
+
+// init 自注册 postgres 数据源类型。
+// init self-registers the postgres datasource type.
+func init() {
+	RegisterDatasourceType(postgresPlugin{})
 }

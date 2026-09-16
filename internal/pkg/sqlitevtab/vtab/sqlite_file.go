@@ -24,12 +24,17 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
+	"reflect"
 
 	// third-party
 	_ "github.com/glebarez/go-sqlite"
 
 	// internal
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // SQLiteFileConfig 描述一个 SQLite 文件实例的接入配置。
@@ -94,4 +99,75 @@ type SQLiteFilePool struct {
 // for graceful shutdown.
 func CloseAllSQLiteClients(ctx context.Context) {
 	sqliteFileClients.closeAll(ctx)
+}
+
+// sqliteFilePlugin 实现 DatasourcePlugin，把 sqlite_file 数据源类型接入插件注册表。
+// sqliteFilePlugin implements DatasourcePlugin, wiring the sqlite_file datasource type into
+// the plugin registry.
+type sqliteFilePlugin struct{}
+
+// Key 返回数据源类型键。
+// Key returns the datasource type key.
+func (sqliteFilePlugin) Key() string { return DatasourceTypeSQLiteFile }
+
+// ConfigType 返回配置值反射类型。
+// ConfigType returns the config value's reflect type.
+func (sqliteFilePlugin) ConfigType() reflect.Type { return reflect.TypeFor[SQLiteFileTableConfig]() }
+
+// NewConfig 返回全新一份 *SQLiteFileTableConfig。
+// NewConfig returns a fresh *SQLiteFileTableConfig.
+func (sqliteFilePlugin) NewConfig() any { return &SQLiteFileTableConfig{} }
+
+// ValidateConfig 结构已经解码校验，这里无需额外操作。
+// ValidateConfig does nothing extra since the structure was already validated at decode.
+func (sqliteFilePlugin) ValidateConfig(_ any) error { return nil }
+
+// TestConn sqlite 文件无网络端点，返回「不支持连接测试」错误。
+// TestConn returns a "connection test unsupported" error since sqlite files have no
+// network endpoint.
+func (sqliteFilePlugin) TestConn(_ context.Context, _ any) error {
+	return errors.New("sqlite_file: connection test is not supported (no network endpoint)")
+}
+
+// IntrospectSchema 对前端上传的 .db 明文文件流做 PRAGMA table_info 自省；未传文件报错。
+// IntrospectSchema introspects the frontend-uploaded .db plaintext stream via PRAGMA
+// table_info; a missing file errors.
+func (sqliteFilePlugin) IntrospectSchema(ctx context.Context, cfg any, file io.Reader) ([]DatasourceColumn, error) {
+	c := cfg.(*SQLiteFileTableConfig)
+	if file == nil {
+		return nil, errors.New("sqlite_file: schema introspection requires an uploaded .db file")
+	}
+	return introspectSQLiteFile(ctx, c.Table, file)
+}
+
+// Register 要求 schema 非空与 S3 对象存储已启用，再 Materialize 明文文件建池构造数据源。
+// Register requires a non-empty schema and enabled S3 object storage, then materializes the
+// plaintext file, builds the pool and constructs the datasource.
+func (sqliteFilePlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, store *s3.ObjectCache, namespace, name string, cfg any) (sqlitevtab.Datasource, error) {
+	c := cfg.(*SQLiteFileTableConfig)
+	if len(c.Schema) == 0 {
+		return nil, errors.Newf("%s: schema must be provided; run introspection from the frontend", DatasourceTypeSQLiteFile)
+	}
+	if store == nil {
+		return nil, errors.New("tag datasource: sqlite_file requires S3 object storage (ObjectCache) to be enabled")
+	}
+	// 先从 S3 拉取并解密为本地明文文件，再把该明文路径交给连接池打开；对象键由命名空间+
+	// 数据源名派生，随生命周期稳定。
+	objectKey := SQLiteObjectKey(namespace, name)
+	path, err := store.Materialize(ctx, objectKey)
+	if err != nil {
+		return nil, err
+	}
+	poolHandle := NewSQLiteFilePool(&SQLiteFileConfig{Path: path, Namespace: namespace})
+	cols, err := parseDatasourceColumns(c.Schema)
+	if err != nil {
+		return nil, err
+	}
+	return NewSQLiteFileDatasourceWithSchema(poolHandle, c.Table, cols)
+}
+
+// init 自注册 sqlite_file 数据源类型。
+// init self-registers the sqlite_file datasource type.
+func init() {
+	RegisterDatasourceType(sqliteFilePlugin{})
 }

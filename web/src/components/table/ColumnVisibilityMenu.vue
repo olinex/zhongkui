@@ -43,7 +43,7 @@
             </template>
             <v-list-item-title class="text-body-2">{{ hdr.title }}</v-list-item-title>
             <template #append>
-              <v-icon icon="mdi-drag" size="small" class="text-medium-emphasis drag-handle" />
+              <v-icon icon="mdi-drag" size="small" class="text-on-surface-variant drag-handle" />
             </template>
           </v-list-item>
         </v-list>

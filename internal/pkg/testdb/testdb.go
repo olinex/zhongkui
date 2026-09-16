@@ -110,7 +110,7 @@ func Raw(t testing.TB) *database.DB {
 func open(prefix, driver string) (*database.DB, error) {
 	dsn := loadDSN(prefix)
 	if dsn == "" {
-		return nil, errors.Newf("未配置测试数据库 %s 的 DSN（config.toml 的 [database.%s] 或环境变量 %s/%s）", prefix, prefix, coreDSNEnv, rawDSNEnv)
+		return nil, errors.Newf("no DSN configured for test database %s (config.toml [database.%s] or env %s/%s)", prefix, prefix, coreDSNEnv, rawDSNEnv)
 	}
 
 	// 确保数据库存在（幂等）
@@ -151,11 +151,11 @@ func truncate(db *database.DB, driver string) error {
 	}
 	switch driver {
 	case "postgres":
-		return errors.New("testdb: postgres 测试库改为事务回滚隔离，不应再 TRUNCATE")
+		return errors.New("testdb: postgres test db uses transaction-rollback isolation; TRUNCATE is not allowed")
 	case "clickhouse":
 		return truncateClickHouse(sqlDB)
 	default:
-		return errors.Newf("testdb: 不支持的驱动：%s", driver)
+		return errors.Newf("testdb: unsupported driver: %s", driver)
 	}
 }
 

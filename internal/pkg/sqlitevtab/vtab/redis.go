@@ -33,6 +33,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -43,6 +44,7 @@ import (
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
@@ -342,4 +344,94 @@ func likeGlob(pattern string) string {
 		}
 	}
 	return b.String()
+}
+
+// redisPlugin 实现 DatasourcePlugin，把 redis 数据源类型接入插件注册表。
+// registerInto / TestConn / IntrospectSchema / ValidateConfigJSON 统一经接口驱动，宿主
+// 无需感知具体类型。
+// redisPlugin implements DatasourcePlugin, wiring the redis datasource type into the
+// plugin registry. registerInto / TestConn / IntrospectSchema / ValidateConfigJSON drive
+// it uniformly through the interface, so the host need not know the concrete type.
+type redisPlugin struct{}
+
+// Key 返回数据源类型键。
+// Key returns the datasource type key.
+func (redisPlugin) Key() string { return DatasourceTypeRedis }
+
+// ConfigType 返回配置值反射类型。
+// ConfigType returns the config value's reflect type.
+func (redisPlugin) ConfigType() reflect.Type { return reflect.TypeFor[RedisConfig]() }
+
+// NewConfig 返回全新一份 *RedisConfig。
+// NewConfig returns a fresh *RedisConfig.
+func (redisPlugin) NewConfig() any { return &RedisConfig{} }
+
+// ValidateConfig 校验 redis 客户端要暴露的结构类型（经 redisDatasourceFactory 分派）。
+// ValidateConfig validates the structure type the redis client exposes (dispatched via
+// redisDatasourceFactory).
+func (redisPlugin) ValidateConfig(cfg any) error {
+	c := cfg.(*RedisConfig)
+	if _, err := redisDatasourceFactory(nil, c.Struct); err != nil {
+		return err
+	}
+	return nil
+}
+
+// TestConn 建池借出 client、Ping 探活后归还。
+// TestConn borrows a client from the pool, probes it via Ping and returns it.
+func (redisPlugin) TestConn(ctx context.Context, cfg any) error {
+	c := cfg.(*RedisConfig)
+	pool := NewRedisPool(&redis.Options{Addr: fmt.Sprintf("%s:%d", c.Addr, c.Port), Password: c.Password, DB: c.DB}, "")
+	client, err := pool.Acquire(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	pingErr := client.Ping(ctx).Err()
+	pool.Release(ctx, client)
+	if pingErr != nil {
+		return errors.WithStack(pingErr)
+	}
+	return nil
+}
+
+// IntrospectSchema 建池 Ping 探活后按 Struct 返回该结构的固定列定义。
+// IntrospectSchema probes via Ping then returns the fixed column definitions of the
+// configured Struct.
+func (redisPlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) ([]DatasourceColumn, error) {
+	c := cfg.(*RedisConfig)
+	pool := NewRedisPool(&redis.Options{Addr: fmt.Sprintf("%s:%d", c.Addr, c.Port), Password: c.Password, DB: c.DB}, "")
+	client, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if pingErr := client.Ping(ctx).Err(); pingErr != nil {
+		pool.Release(ctx, client)
+		return nil, errors.WithStack(pingErr)
+	}
+	pool.Release(ctx, client)
+	ds, err := redisDatasourceFactory(pool, c.Struct)
+	if err != nil {
+		return nil, err
+	}
+	schema, err := schemaOf(ds)
+	if err != nil {
+		return nil, err
+	}
+	return schemaColumnsOut(schema), nil
+}
+
+// Register 建池 NewRedisPool(opts, namespace) 并按 Struct 构造数据源。
+// Register builds the pool via NewRedisPool(opts, namespace) and constructs the datasource
+// by Struct.
+func (redisPlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
+	c := cfg.(*RedisConfig)
+	opts := &redis.Options{Addr: fmt.Sprintf("%s:%d", c.Addr, c.Port), Password: c.Password, DB: c.DB}
+	poolHandle := NewRedisPool(opts, namespace)
+	return redisDatasourceFactory(poolHandle, c.Struct)
+}
+
+// init 自注册 redis 数据源类型。
+// init self-registers the redis datasource type.
+func init() {
+	RegisterDatasourceType(redisPlugin{})
 }

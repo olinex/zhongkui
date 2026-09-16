@@ -82,6 +82,7 @@ var RootCmd = &cobra.Command{
 		provider.InjectCaptureClient(i)
 		provider.InjectMailSender(i)
 		provider.InjectFeatureRegistry(i)
+		provider.InjectAi(ctx, i)
 		provider.InjectMessagePool(i)
 
 		// 初始化密钥派生器
@@ -209,6 +210,7 @@ func init() {
 	migrateCmd.AddCommand(migrateDiffCmd)
 	migrateCmd.AddCommand(migrateCheckCmd)
 	migrateCmd.AddCommand(migrateCreateCmd)
+	migrateCmd.AddCommand(migrateAiEmbeddingCmd)
 	RootCmd.AddCommand(migrateCmd)
 	// create
 	createCmd.AddCommand(createUserCmd)

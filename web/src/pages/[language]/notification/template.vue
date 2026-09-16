@@ -389,7 +389,7 @@
                 {{ $t("model.notificationTemplate.field.content") }}
               </div>
               <pre class="render-preview">{{ renderResult.content }}</pre>
-              <div class="text-caption text-medium-emphasis mt-2">
+              <div class="text-caption text-on-surface-variant mt-2">
                 channelType: {{ channelTypeNameKey(renderResult.channelType) }} · language:
                 {{ $t(languageNameKey(renderResult.language)) }}
               </div>

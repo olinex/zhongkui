@@ -37,6 +37,12 @@ const (
 	// PasswordResetKey the password-reset feature; depends on the system SMTP email
 	// capability and is disabled when SMTP is not enabled or not configured
 	PasswordResetKey = "passwordReset"
+	// AiKey AI 助手功能（RAG + Agent）：依赖 ai.enabled 开关与 chat/embedding 两套
+	// 端点配置（baseURL/apiKey/model）的完整度，配置缺失或未启用时关闭
+	// AiKey the AI assistant feature (RAG + Agent); depends on the ai.enabled switch and
+	// the completeness of the chat/embedding endpoint configs (baseURL/apiKey/model),
+	// disabled when the config is missing or not enabled
+	AiKey = "ai"
 )
 
 // Feature 全局功能开关接口：由具体功能实现，供注册表聚合枚举与查询。
@@ -120,4 +126,29 @@ func (f *passwordResetFeature) Enabled() bool { return f.sender.Enabled() }
 // PasswordReset builds the password-reset feature toggle.
 func PasswordReset(sender IsEnabled) Feature {
 	return &passwordResetFeature{sender: sender}
+}
+
+// aiFeature AI 助手功能开关：委托 AI 配置（LLMConfig.Enabled）判断，仅当 [llm] 启用且
+// chat/embedding 端点配置完整时开启，避免开放无意义的功能入口；LLM 接入细节对 features 不可见。
+// aiFeature is the AI assistant feature toggle: it delegates to the AI config
+// (LLMConfig.Enabled) and is enabled only when [llm] is enabled and the chat/embedding
+// endpoint configs are complete, avoiding exposing a meaningless feature entry; LLM access
+// details stay invisible to features.
+type aiFeature struct {
+	aiCfg IsEnabled
+}
+
+// Key 返回 AI 助手功能键。
+// Key returns the AI assistant feature key.
+func (f *aiFeature) Key() string { return AiKey }
+
+// Enabled 判断 AI 助手功能是否可用：由 AI 配置报告其能力（LLMConfig.Enabled）。
+// Enabled reports the AI assistant availability, derived from the AI config capability
+// (LLMConfig.Enabled).
+func (f *aiFeature) Enabled() bool { return f.aiCfg.Enabled() }
+
+// Ai 构造 AI 助手功能开关。
+// Ai builds the AI assistant feature toggle.
+func Ai(enabled IsEnabled) Feature {
+	return &aiFeature{aiCfg: enabled}
 }

@@ -25,6 +25,8 @@ import (
 	// stdlib
 	"context"
 	"fmt"
+	"io"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -35,6 +37,8 @@ import (
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // defaultEtcdDialTimeout etcd 客户端建连超时。
@@ -171,4 +175,72 @@ func (p *EtcdPool) Close(ctx context.Context) {
 // graceful shutdown.
 func CloseAllEtcdClients(ctx context.Context) {
 	etcdClients.manager.CloseAll(ctx)
+}
+
+// etcdPlugin 实现 DatasourcePlugin，把 etcd 数据源类型接入插件注册表。
+// etcdPlugin implements DatasourcePlugin, wiring the etcd datasource type into the plugin
+// registry.
+type etcdPlugin struct{}
+
+// Key 返回数据源类型键。
+// Key returns the datasource type key.
+func (etcdPlugin) Key() string { return DatasourceTypeEtcd }
+
+// ConfigType 返回配置值反射类型。
+// ConfigType returns the config value's reflect type.
+func (etcdPlugin) ConfigType() reflect.Type { return reflect.TypeFor[EtcdTableConfig]() }
+
+// NewConfig 返回全新一份 *EtcdTableConfig。
+// NewConfig returns a fresh *EtcdTableConfig.
+func (etcdPlugin) NewConfig() any { return &EtcdTableConfig{} }
+
+// ValidateConfig 结构已经解码校验，这里无需额外操作。
+// ValidateConfig does nothing extra since the structure was already validated at decode.
+func (etcdPlugin) ValidateConfig(_ any) error { return nil }
+
+// TestConn 借用 client、MemberList 探活（覆盖连通+认证）后归还。
+// TestConn borrows a client, probes connectivity + auth via MemberList and returns it.
+func (etcdPlugin) TestConn(ctx context.Context, cfg any) error {
+	c := cfg.(*EtcdTableConfig)
+	pool := NewEtcdPool(&EtcdConfig{Endpoints: splitEndpoints(c.Endpoints), Username: c.Username, Password: c.Password})
+	cli, err := pool.Acquire(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	_, memberErr := cli.MemberList(ctx)
+	pool.Release(ctx, cli)
+	if memberErr != nil {
+		return errors.WithStack(memberErr)
+	}
+	return nil
+}
+
+// IntrospectSchema 探活后返回固定的 key/value 两列定义。
+// IntrospectSchema probes then returns the fixed key/value column definitions.
+func (p etcdPlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) ([]DatasourceColumn, error) {
+	if err := p.TestConn(ctx, cfg); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return []DatasourceColumn{
+		{Name: "key", Type: "string"},
+		{Name: "value", Type: "string"},
+	}, nil
+}
+
+// Register 建池 NewEtcdPool 后构造数据源。
+// Register builds the pool via NewEtcdPool and constructs the datasource.
+func (etcdPlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
+	c := cfg.(*EtcdTableConfig)
+	return NewEtcdDatasource(NewEtcdPool(&EtcdConfig{
+		Endpoints: splitEndpoints(c.Endpoints), 
+		Username: c.Username,
+		Password: c.Password, 
+		Namespace: namespace,
+	})), nil
+}
+
+// init 自注册 etcd 数据源类型。
+// init self-registers the etcd datasource type.
+func init() {
+	RegisterDatasourceType(etcdPlugin{})
 }

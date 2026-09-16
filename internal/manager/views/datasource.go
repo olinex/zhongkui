@@ -11,8 +11,6 @@ import (
 
 	"io"
 	"net/http"
-	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -93,6 +91,41 @@ type DatasourceBatchIn struct {
 	Ids FlexList[uint64] `json:"ids"`
 }
 
+// DatasourceTestIn 测试连接请求输入：传入数据源类型与连接配置 JSON。
+type DatasourceTestIn struct {
+	// Type 数据源类型键（redis / mysql / postgres / clickhouse / sqlite_file / etcd / mongo）
+	Type string `json:"type" binding:"required,max=16"`
+	// Config 连接配置（JSON 文本），结构与数据源类型对应
+	Config string `json:"config" binding:"required"`
+}
+
+// DatasourceTestOut 测试连接结果输出：Success 表示连通性，Message 为失败原因（成功可为空）。
+type DatasourceTestOut struct {
+	// Success 是否连通
+	Success bool `json:"success"`
+	// Message 失败原因（Success=true 时通常为空）
+	Message string `json:"message"`
+}
+
+// DatasourceIntrospectIn 自省表结构请求输入。
+type DatasourceIntrospectIn struct {
+	// Type 数据源类型键
+	Type string `json:"type" binding:"required,max=16"`
+	// Config 连接配置（JSON 文本）
+	Config string `json:"config" binding:"required"`
+}
+
+// DatasourceIntrospectOut 自省表结构结果输出：Success 表示自省成功，Message 为失败原因，
+// Columns 为解析出的列定义（供前端继续调整）。
+type DatasourceIntrospectOut struct {
+	// Success 是否自省成功
+	Success bool `json:"success"`
+	// Message 失败原因（Success=true 时通常为空）
+	Message string `json:"message"`
+	// Columns 解析出的列定义（列名 + 类型键）
+	Columns []vtab.DatasourceColumn `json:"columns"`
+}
+
 // DatasourceTypeOut 描述单个第三方数据源类型的枚举项。
 type DatasourceTypeOut struct {
 	// Type 数据源类型键（redis / mysql）
@@ -110,46 +143,18 @@ type DatasourceTypesOut struct {
 }
 
 // DatasourceTypeConfigGet 处理获取第三方数据源类型枚举的请求。
-// 返回 redis / mysql / postgres / clickhouse / sqlite_file / etcd / mongo 类型及其
-// 配置字段 schema，供前端动态渲染创建/编辑表单。schema 依据对应 vtab 前端配置结构体的
-// binding/default 标签经 views.getStructFields 反射生成（与 OPTIONS 元信息同一事实来源）。
+// 返回全部已注册数据源类型及其配置字段 schema，供前端动态渲染创建/编辑表单。schema
+// 依据对应 vtab 前端配置结构体的 binding/default 标签经 views.getStructFields 反射生成
+// （与 OPTIONS 元信息同一事实来源）。
 func DatasourceTypeConfigGet(c *gin.Context) {
-	results := []DatasourceTypeOut{
-		{
-			Type:   vtab.DatasourceTypeRedis,
-			Name:   vtab.DatasourceTypeRedis,
-			Config: getStructFields(reflect.TypeFor[vtab.RedisConfig]()),
-		},
-		{
-			Type:   vtab.DatasourceTypeMySQL,
-			Name:   vtab.DatasourceTypeMySQL,
-			Config: getStructFields(reflect.TypeFor[vtab.MySQLTableConfig]()),
-		},
-		{
-			Type:   vtab.DatasourceTypePostgres,
-			Name:   vtab.DatasourceTypePostgres,
-			Config: getStructFields(reflect.TypeFor[vtab.PostgresTableConfig]()),
-		},
-		{
-			Type:   vtab.DatasourceTypeClickHouse,
-			Name:   vtab.DatasourceTypeClickHouse,
-			Config: getStructFields(reflect.TypeFor[vtab.ClickHouseTableConfig]()),
-		},
-		{
-			Type:   vtab.DatasourceTypeSQLiteFile,
-			Name:   vtab.DatasourceTypeSQLiteFile,
-			Config: getStructFields(reflect.TypeFor[vtab.SQLiteFileTableConfig]()),
-		},
-		{
-			Type:   vtab.DatasourceTypeEtcd,
-			Name:   vtab.DatasourceTypeEtcd,
-			Config: getStructFields(reflect.TypeFor[vtab.EtcdTableConfig]()),
-		},
-		{
-			Type:   vtab.DatasourceTypeMongo,
-			Name:   vtab.DatasourceTypeMongo,
-			Config: getStructFields(reflect.TypeFor[vtab.MongoCollectionConfig]()),
-		},
+	plugins := vtab.DatasourceTypes()
+	results := make([]DatasourceTypeOut, 0, len(plugins))
+	for _, p := range plugins {
+		results = append(results, DatasourceTypeOut{
+			Type:   p.Key(),
+			Name:   p.Key(),
+			Config: getStructFields(p.ConfigType()),
+		})
 	}
 	response.SimpleOK.AbortWithGinW(c, DatasourceTypesOut{Types: results})
 }
@@ -263,13 +268,13 @@ func DatasourceCreate(c *gin.Context) {
 	objectKey := ""
 	if in.Type == vtab.DatasourceTypeSQLiteFile {
 		if file == nil {
-			response.CreateBadBodyError(errors.New("创建 sqlite 数据源必须上传 .db 文件")).AbortWithGinH(c)
+			response.CreateBadBodyError(errors.New("creating a sqlite datasource requires an uploaded .db file")).AbortWithGinH(c)
 			return
 		}
 		objectKey = vtab.SQLiteObjectKey(namespace, in.Name)
 		if err := pools.StoreSQLiteObject(c, namespace, in.Name, file); err != nil {
 			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
-				response.CreateBadBodyError(errors.New("创建 sqlite 数据源需要启用 S3 对象存储")).AbortWithGinH(c)
+				response.CreateBadBodyError(errors.New("creating a sqlite datasource requires S3 object storage to be enabled")).AbortWithGinH(c)
 			} else {
 				response.CreateAccidentError(err).AbortWithGinH(c)
 			}
@@ -390,7 +395,7 @@ func DatasourceUpdate(c *gin.Context) {
 	if instance.Type == vtab.DatasourceTypeSQLiteFile && file != nil {
 		if err := pools.StoreSQLiteObject(c, namespace, instance.Name, file); err != nil {
 			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
-				response.CreateBadBodyError(errors.New("更新 sqlite 数据源需要启用 S3 对象存储")).AbortWithGinH(c)
+				response.CreateBadBodyError(errors.New("updating a sqlite datasource requires S3 object storage to be enabled")).AbortWithGinH(c)
 			} else {
 				response.CreateAccidentError(err).AbortWithGinH(c)
 			}
@@ -565,13 +570,9 @@ func broadcastDatasourceChange(c *gin.Context, namespace, name string) {
 }
 
 // isSupportedDatasourceType 判断数据源类型是否为 vtab 支持的类型。
-// 支持：redis / mysql / postgres / clickhouse / sqlite_file / etcd / mongo。
+// 判断类型键是否已有插件注册。
 func isSupportedDatasourceType(typ string) bool {
-	return slices.Contains([]string{
-		vtab.DatasourceTypeRedis, vtab.DatasourceTypeMySQL, vtab.DatasourceTypePostgres,
-		vtab.DatasourceTypeClickHouse, vtab.DatasourceTypeSQLiteFile,
-		vtab.DatasourceTypeEtcd, vtab.DatasourceTypeMongo,
-	}, typ)
+	return vtab.IsDatasourceTypeRegistered(typ)
 }
 
 // readDatasourceMultipart 流式解析 multipart/form-data 请求：把 file 字段之前出现的普通
@@ -625,6 +626,76 @@ func newDatasourceDetailOut(ds *core.Datasource) DatasourceDetailOut {
 		Config:      ds.Config,
 		Description: ds.Description,
 	}
+}
+
+// DatasourceTest 处理测试第三方数据源连接的请求。
+// 不落库、不注册 vtable，仅按类型建立连接并校验连通性；失败原因放在 body 的 Message
+// 字段返回（仍走 HTTP 200，不抛 5xx）。sqlite_file 无网络连接，恒返回失败。
+// DatasourceTest handles the datasource connection-test request: it connects and verifies
+// reachability by type without persisting or registering a vtable. On failure the reason is
+// returned in the body Message field (still over HTTP 200, no 5xx). sqlite_file has no
+// network connection and always fails.
+func DatasourceTest(c *gin.Context) {
+	var in DatasourceTestIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	out := DatasourceTestOut{Success: true}
+	if err := vtab.TestConn(c.Request.Context(), in.Type, []byte(in.Config)); err != nil {
+		out = DatasourceTestOut{Success: false, Message: err.Error()}
+	}
+	response.SimpleOK.AbortWithGinW(c, out)
+}
+
+// DatasourceIntrospect 处理自省第三方数据源表结构的请求。
+// 不落库、不注册 vtable，仅建立连接后解析目标表结构并映射为列定义（列名 + 类型键），
+// 供前端在创建数据源时展示。sqlite_file 类型走 multipart/form-data 分支，复用
+// readDatasourceMultipart 流式拿到上传的 .db 文件后一并传给 IntrospectSchema（其内部按
+// 类型分发，sqlite_file 分支做 PRAGMA 自省）；其余类型仍为 JSON 体，file 传 nil。
+// 失败原因放在 body 的 Message 字段返回（仍走 HTTP 200，不抛 5xx）。
+// DatasourceIntrospect handles the datasource schema-introspection request: it connects,
+// parses the target table structure and maps it to column definitions (name + type key)
+// without persisting or registering a vtable, for the frontend to show when creating a
+// datasource. The sqlite_file type goes through the multipart/form-data branch, reusing
+// readDatasourceMultipart to stream the uploaded .db file and passing it to IntrospectSchema
+// (which dispatches by type and does PRAGMA introspection in its sqlite_file branch); other
+// types use a JSON body and pass nil as the file. On failure the reason is returned in the
+// body Message field (still over HTTP 200, no 5xx).
+func DatasourceIntrospect(c *gin.Context) {
+	var in DatasourceIntrospectIn
+	// sqlite_file 前端以 multipart/form-data 提交（含 .db 文件流），其余类型仍为 JSON 体。
+	// 仅 sqlite 需要 file 字段；readDatasourceMultipart 流式返回 file 部分，避免整文件缓冲。
+	var file io.Reader
+	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
+		var err error
+		if file, err = readDatasourceMultipart(c, func(name string, body []byte) {
+			switch name {
+			case "type":
+				in.Type = string(body)
+			case "config":
+				in.Config = string(body)
+			}
+		}); err != nil {
+			response.CreateBadBodyError(err).AbortWithGinH(c)
+			return
+		}
+		if closer, ok := file.(io.ReadCloser); ok {
+			defer closer.Close()
+		}
+	} else if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+
+	var out DatasourceIntrospectOut
+	cols, err := vtab.IntrospectSchema(c.Request.Context(), in.Type, []byte(in.Config), file)
+	if err == nil {
+		out = DatasourceIntrospectOut{Success: true, Columns: cols}
+	} else {
+		out = DatasourceIntrospectOut{Success: false, Message: err.Error()}
+	}
+	response.SimpleOK.AbortWithGinW(c, out)
 }
 
 // init 注册第三方数据源列表出参（DatasourceListOut.type）的数据源类型枚举类绑定，

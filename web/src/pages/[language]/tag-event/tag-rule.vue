@@ -141,7 +141,6 @@
             <v-row dense>
               <v-col cols="12">
                 <rego-editor
-                  ref="createRegoEditorRef"
                   v-model="createRego"
                   :errors="createRegoErrors"
                   :fields="createFields"
@@ -155,11 +154,6 @@
                 />
               </v-col>
             </v-row>
-            <datasource-guide-panel
-              :datasources="sqliteDatasources"
-              :fields="createFields"
-              @insert="onCreateInsert"
-            />
             <v-row dense align="center">
               <v-col cols="auto">
                 <v-btn v-request="validateCreateRegoNow" variant="tonal" size="small">
@@ -248,7 +242,6 @@
             <v-row dense>
               <v-col cols="12">
                 <rego-editor
-                  ref="editRegoEditorRef"
                   v-model="editRego"
                   :errors="editRegoErrors"
                   :fields="editFields"
@@ -263,12 +256,6 @@
                 />
               </v-col>
             </v-row>
-            <datasource-guide-panel
-              v-if="editable"
-              :datasources="sqliteDatasources"
-              :fields="editFields"
-              @insert="onEditInsert"
-            />
             <v-row dense align="center">
               <v-col cols="auto">
                 <v-btn
@@ -560,7 +547,6 @@ const loadModelSamples = async (model: string, target: Ref<SampleOption[]>): Pro
 };
 
 // ---- Rego editor state (create dialog) ----
-const createRegoEditorRef = useTemplateRef("createRegoEditorRef");
 const createRego = ref("");
 const createPreflightErrors = ref<RegoValidationError[]>([]);
 const createBackendErrors = ref<RegoValidationError[]>([]);
@@ -660,13 +646,7 @@ const generateCreateSkeleton = (): void => {
     : skeleton;
 };
 
-/** 数据源速查/场景样例插入到创建对话框的编辑器光标处。 */
-const onCreateInsert = (text: string): void => {
-  createRegoEditorRef.value?.insertAtCursor(text);
-};
-
 // ---- Rego editor state (edit dialog) ----
-const editRegoEditorRef = useTemplateRef("editRegoEditorRef");
 const editRego = ref("");
 const editPreflightErrors = ref<RegoValidationError[]>([]);
 const editBackendErrors = ref<RegoValidationError[]>([]);
@@ -741,11 +721,6 @@ const validateEditRegoNow = async (): Promise<void> => {
       color: "error",
     });
   }
-};
-
-/** 数据源速查/场景样例插入到编辑对话框的编辑器光标处。 */
-const onEditInsert = (text: string): void => {
-  editRegoEditorRef.value?.insertAtCursor(text);
 };
 
 watch(editRego, (val) => {

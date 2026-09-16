@@ -15,7 +15,7 @@
         </v-toolbar-title>
         <span
           v-if="transport?.traceId"
-          class="font-mono text-caption text-medium-emphasis text-truncate"
+          class="font-mono text-caption text-on-surface-variant text-truncate"
         >
           {{ transport.traceId }}
         </span>
@@ -40,7 +40,7 @@
             <v-chip variant="tonal" size="small">
               {{ $t("model.networkStack.summary.packets") }} {{ packets.length }}
             </v-chip>
-            <span v-if="hasMore" class="text-caption text-medium-emphasis">
+            <span v-if="hasMore" class="text-caption text-on-surface-variant">
               {{ $t("model.networkStack.summary.loaded") }} {{ items.length }}/{{ total }}
             </span>
           </div>
@@ -49,12 +49,12 @@
         <v-alert v-if="error" type="error" class="mb-3">
           {{ error }}
         </v-alert>
-        <div v-if="!transport" class="text-center my-8 text-medium-emphasis">
+        <div v-if="!transport" class="text-center my-8 text-on-surface-variant">
           {{ $t("model.networkStack.summary.noTraceId") }}
         </div>
         <div
           v-else-if="!loading && packets.length === 0"
-          class="text-center my-8 text-medium-emphasis"
+          class="text-center my-8 text-on-surface-variant"
         >
           {{ $t("model.networkStack.summary.empty") }}
         </div>
@@ -85,10 +85,10 @@
                     <v-chip :color="packetColor(cell.packet.kind)" size="small" variant="tonal">
                       {{ packetKindText(cell.packet.kind) }}
                     </v-chip>
-                    <span class="font-mono text-caption text-medium-emphasis">
+                    <span class="font-mono text-caption text-on-surface-variant">
                       [{{ cell.packet.start }} , {{ cell.packet.end }})
                     </span>
-                    <span class="text-caption text-medium-emphasis">
+                    <span class="text-caption text-on-surface-variant">
                       {{ localeDatetimeFormat(DateTime.fromISO(cell.packet.timestamp)) }}
                     </span>
                   </div>

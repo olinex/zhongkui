@@ -72,3 +72,36 @@ export interface DatasourceSearchIn extends SearchIn {
   createdAt?: string;
   updatedAt?: string;
 }
+
+// ---- 预检（测试连接 / 自省表结构）----
+// DatasourceColumn 自省返回的一列（与后端 DatasourceColumn JSON 结构一致）
+export interface DatasourceColumn {
+  name: string;
+  type: string;
+}
+
+// DatasourceTestIn 测试数据源连接入参（config 为配置明文 JSON 文本）
+export interface DatasourceTestIn {
+  type: string;
+  config: string;
+}
+
+// DatasourceTestOut 测试数据源连接出参
+export interface DatasourceTestOut {
+  success: boolean;
+  message: string;
+}
+
+// DatasourceIntrospectIn 自省数据源表结构入参（config 为配置明文 JSON 文本；
+// sqlite_file 类型以 multipart 提交，另附 .db 文件）
+export interface DatasourceIntrospectIn {
+  type: string;
+  config: string;
+}
+
+// DatasourceIntrospectOut 自省数据源表结构出参
+export interface DatasourceIntrospectOut {
+  success: boolean;
+  message: string;
+  columns: DatasourceColumn[];
+}

@@ -27,7 +27,7 @@
           open-strategy="single" 保证手风琴互斥（同一时间仅一个分组展开）；
           opened 记录展开分组，路由变化时由 watch 自动展开当前页面所属分组
         -->
-        <template v-for="(parent, index) in navigationGroups" :key="parent.value">
+        <template v-for="(parent, index) in visibleNavigationGroups" :key="parent.value">
           <v-list-group :value="parent.value" color="primary">
             <template #activator="{ props: groupProps }">
               <v-list-item
@@ -97,9 +97,18 @@
 import { navigationGroups } from "@/navigation";
 import type { NavChild } from "@/navigation";
 import { useConfigSyncStore } from "@/stores/configSync";
+import { useFeaturesStore } from "@/stores/features";
 import { localManager } from "@/stores/local";
 
 const route = useRoute();
+
+// 按功能开关过滤导航组：设置 feature 且开关关闭的分组（如 AI 助手）不展示。
+const visibleNavigationGroups = computed(() => {
+  const featuresStore = useFeaturesStore();
+  return navigationGroups.filter(
+    (group) => !group.feature || featuresStore.isEnable(group.feature),
+  );
+});
 
 const props = defineProps({
   currentNav: {

@@ -3275,3 +3275,59 @@ column = "config"
 [[DatasourceListGet.selectFields]]
 fieldName = "description"
 column = "description"
+
+# KnowledgeDocumentListGet
+
+# AI 知识库文档列表（AI 助手 RAG 知识管理）
+[KnowledgeDocumentListGet]
+timeModule = true
+
+[[KnowledgeDocumentListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[KnowledgeDocumentListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "title"
+fieldType = "string"
+column = "title"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "title"
+column = "title"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "chunkCount"
+column = "chunk_count"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"

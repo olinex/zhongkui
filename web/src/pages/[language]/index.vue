@@ -6,7 +6,7 @@
         <!-- Welcome area -->
         <div class="mb-8">
           <h1 class="text-h4 font-weight-bold">{{ $t("title.zk") }}</h1>
-          <p class="text-h6 text-medium-emphasis mt-2">{{ $t("home.subtitle") }}</p>
+          <p class="text-h6 text-on-surface-variant mt-2">{{ $t("home.subtitle") }}</p>
         </div>
 
         <!-- Quick start section -->
@@ -211,6 +211,7 @@ meta:
 import router from "@/router";
 import { navigationGroups } from "@/navigation";
 import type { NavChild } from "@/navigation";
+import { useFeaturesStore } from "@/stores/features";
 import { isBuiltinGroup, linkKey, useQuickStartStore } from "@/stores/quickStart";
 import type { QuickStartGroup, QuickStartLink } from "@/stores/quickStart";
 import i18n from "@/utils/i18n";
@@ -276,12 +277,21 @@ const openAddLinkDialog = (groupId: string) => {
   addLinkDialog.value = true;
 };
 
+// 按功能开关过滤导航组：设置 feature 且开关关闭的分组（如 AI 助手）不展示。
+const visibleNavigationGroups = computed(() => {
+  const featuresStore = useFeaturesStore();
+  return navigationGroups.filter(
+    (group) => !group.feature || featuresStore.isEnable(group.feature),
+  );
+});
+
 const filteredNavigation = computed(() => {
   const keyword = linkSearch.value.trim().toLowerCase();
+  const groups = visibleNavigationGroups.value;
   if (!keyword) {
-    return navigationGroups;
+    return groups;
   }
-  return navigationGroups
+  return groups
     .map((group) => {
       return {
         ...group,

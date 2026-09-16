@@ -61,6 +61,8 @@ func registerDatasourceTestRoutes(r *gin.Engine, pools *vtab.Pools) {
 	group.POST("/delete", DatasourceBatchDelete)
 	group.POST("/enable", DatasourceBatchSetEnabled(true))
 	group.POST("/disable", DatasourceBatchSetEnabled(false))
+	group.POST("/test", DatasourceTest)
+	group.POST("/introspect", DatasourceIntrospect)
 }
 
 // setupDatasourceTestRouterWithNamespace 创建测试路由引擎，注入 i18n、日志、数据库、
@@ -327,6 +329,46 @@ func TestDatasourceDeleteAndList(t *testing.T) {
 			So(db.Model(&core.Datasource{}).Where("name = ?", "dropped").Count(&count).Error, ShouldBeNil)
 			So(count, ShouldEqual, 0)
 			waitDatasourceRegistered(pools, datasourceTestNamespace, "dropped", false)
+		})
+	})
+}
+
+// TestDatasourceTestAndIntrospect 第三方数据源预检：连接测试与表结构自省。
+func TestDatasourceTestAndIntrospect(t *testing.T) {
+	Convey("第三方数据源预检", t, func() {
+		db := createDatasourceTestDB(t)
+		Reset(func() {
+			So(db.Rollback().Error, ShouldBeNil)
+		})
+		pools := newDatasourceTestPools(t)
+		r := setupDatasourceTestRouterWithNamespace(db, pools, datasourceTestNamespace)
+
+		Convey("sqlite_file 连接测试恒失败（无网络连接），message 非空", func() {
+			w := doDatasourceRequest(r, http.MethodPost, "/datasource/test", map[string]any{
+				"type":   vtab.DatasourceTypeSQLiteFile,
+				"config": "{}",
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data DatasourceTestOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Success, ShouldBeFalse)
+			So(resp.Data.Message, ShouldNotBeEmpty)
+		})
+
+		Convey("redis 连接测试（redis pool 懒建连，Ping 探活）应返回成功（环境存在可连 redis）", func() {
+			w := doDatasourceRequest(r, http.MethodPost, "/datasource/test", map[string]any{
+				"type":   vtab.DatasourceTypeRedis,
+				"config": `{"addr":"127.0.0.1","struct":"string"}`,
+			})
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Data DatasourceTestOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Success, ShouldBeTrue)
+			So(resp.Data.Message, ShouldEqual, "")
 		})
 	})
 }

@@ -226,6 +226,12 @@ other = "Check whether model definitions match the database schema"
 [cmd.migrate.create.short]
 other = "Create a SQL migration file in the migration directory"
 
+[cmd.migrate.ai-embedding.short]
+other = "Reconcile the embedding column dimension to the config and rebuild the HNSW index"
+
+[cmd.migrate.ai-embedding.long]
+other = "Rebuild the knowledge_chunks.embedding column on the core database to the AI-configured dimension (drop stale index and vectors, ALTER TYPE, rebuild the HNSW index). Run this after switching the embedding model dimension, then reindex the knowledge base documents."
+
 [cmd.create.short]
 other = "Create resources (user, TLS cert, access key)"
 
@@ -611,6 +617,18 @@ other = "[[.DB]] [[.Action]] failed: [[.Err]]"
 
 [cli.migrate.completed]
 other = "Migrations completed successfully"
+
+[cli.migrate.ai-embedding-section]
+other = "Reconciling the embedding column dimension on [[.DB]]"
+
+[cli.migrate.ai-embedding-failed]
+other = "Failed to reconcile the embedding column dimension on [[.DB]]: [[.Err]]"
+
+[cli.migrate.ai-embedding-reconciled]
+other = "Embedding column dimension reconciled to [[.Dimensions]], please reindex the knowledge base documents"
+
+[cli.migrate.ai-embedding-in-sync]
+other = "Embedding column dimension already matches the config, no change needed"
 
 [cli.migrate.dry-run-section]
 other = "dry-run [[.DB]]"

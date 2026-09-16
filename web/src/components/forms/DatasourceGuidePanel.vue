@@ -1,21 +1,42 @@
 <template>
-  <v-expansion-panels v-model="expanded" class="guide-panel" variant="accordion">
+  <v-expansion-panels v-model="expanded" class="guide-panel" variant="accordion" density="compact">
     <v-expansion-panel>
-      <v-expansion-panel-title>
-        <span class="panel-title">{{ $t("guide.title") }}</span>
+      <v-expansion-panel-title class="panel-titlebar">
+        <div class="panel-head">
+          <v-icon size="18" class="panel-head-icon">mdi-database-search</v-icon>
+          <span class="panel-title">{{ $t("guide.title") }}</span>
+        </div>
       </v-expansion-panel-title>
       <v-expansion-panel-text>
         <!-- 数据源速查 -->
         <div class="guide-section">
-          <div class="guide-section-title">{{ $t("guide.datasource") }}</div>
+          <div class="section-head">
+            <span class="section-badge">01</span>
+            <span class="section-title">{{ $t("guide.datasource") }}</span>
+          </div>
           <div v-if="datasources.length === 0" class="guide-empty">
-            {{ $t("guide.datasourceEmpty") }}
+            <v-icon size="16" start>mdi-database-off</v-icon>
+            <span>{{ $t("guide.datasourceEmpty") }}</span>
           </div>
           <template v-else>
-            <div v-for="ds in datasources" :key="ds.name" class="ds-block">
+            <div v-for="ds in datasources" :key="ds.name" class="ds-card">
               <div class="ds-head">
-                <code class="ds-name">{{ ds.name }}</code>
-                <v-btn size="small" variant="tonal" @click="insertSelect(ds)">
+                <div class="ds-ident">
+                  <v-avatar size="28" color="primary" variant="tonal" class="ds-avatar">
+                    <v-icon size="16">mdi-database</v-icon>
+                  </v-avatar>
+                  <div class="ds-ident-text">
+                    <code class="ds-name">{{ ds.name }}</code>
+                    <span class="ds-count">{{ ds.columns.length }} {{ $t("guide.columns") }}</span>
+                  </div>
+                </div>
+                <v-btn
+                  class="ds-insert-btn"
+                  size="small"
+                  variant="tonal"
+                  prepend-icon="mdi-shape-plus-outline"
+                  @click="insertSelect(ds)"
+                >
                   {{ $t("guide.insertSelect") }}
                 </v-btn>
               </div>
@@ -39,20 +60,30 @@
 
         <!-- 场景样例：一键插入可运行片段 -->
         <div class="guide-section">
-          <div class="guide-section-title">{{ $t("guide.samples") }}</div>
+          <div class="section-head">
+            <span class="section-badge">02</span>
+            <span class="section-title">{{ $t("guide.samples") }}</span>
+          </div>
           <div v-if="samples.length === 0" class="guide-empty">
-            {{ $t("guide.sampleEmpty") }}
+            <v-icon size="16" start>mdi-flask-outline</v-icon>
+            <span>{{ $t("guide.sampleEmpty") }}</span>
           </div>
           <v-card
             v-for="s in samples"
             :key="s.titleKey"
             variant="outlined"
             class="sample-card"
-            :title="$t('guide.clickInsertSample')"
+            :aria-label="$t('guide.clickInsertSample')"
             @click="insert(s.snippet)"
           >
-            <div class="sample-title">{{ $t(s.titleKey) }}</div>
-            <div class="sample-desc">{{ $t(s.descKey) }}</div>
+            <v-avatar size="34" color="primary" variant="tonal" class="sample-avatar">
+              <v-icon size="18">{{ sampleIcon(s.titleKey) }}</v-icon>
+            </v-avatar>
+            <div class="sample-main">
+              <div class="sample-title">{{ $t(s.titleKey) }}</div>
+              <div class="sample-desc">{{ $t(s.descKey) }}</div>
+            </div>
+            <v-icon size="18" class="sample-arrow">mdi-chevron-right</v-icon>
           </v-card>
         </div>
       </v-expansion-panel-text>
@@ -61,8 +92,6 @@
 </template>
 
 <script setup lang="ts" name="datasource-guide-panel">
-// Third-party / Plugins
-
 // Internal
 import {
   buildDatasourceSamples,
@@ -118,17 +147,52 @@ const insertColumn = (ds: SqliteDatasourceMeta, col: SqliteColumnMeta): void => 
 
 /** 列类型徽标文案键，复用数据源 schema 编辑器的类型翻译。 */
 const columnTypeLabel = (type: string): string => `model.datasource.columnType.${type}`;
+
+/** 场景样例标题键 → 装饰性图标，按三个固定样例标题键映射，其余回退通用图标。 */
+const sampleIcon = (titleKey: string): string => {
+  switch (titleKey) {
+    case "guide.sample.exists":
+      return "mdi-check-circle-outline";
+    case "guide.sample.value":
+      return "mdi-arrow-right-box";
+    default:
+      return "mdi-chart-bar";
+  }
+};
 </script>
 
 <style scoped>
 .guide-panel {
-  border: 1px solid rgb(0 0 0 / 24%);
-  border-radius: 4px;
+  border: 1px solid rgb(var(--v-theme-border));
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* 参考栏已固定为全屏右侧 340px，无需再压缩内边距；
+   保留适度左右留白，避免内容与参考栏边框紧贴 */
+/* stylelint-disable-next-line selector-class-pattern */
+.guide-panel :deep(.v-expansion-panel-text__wrapper) {
+  padding: 4px 12px 12px;
+}
+
+.panel-titlebar {
+  min-height: 40px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-head-icon {
+  color: rgb(var(--v-theme-primary));
 }
 
 .panel-title {
   font-size: 13px;
   font-weight: 600;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .guide-section {
@@ -138,26 +202,60 @@ const columnTypeLabel = (type: string): string => `model.datasource.columnType.$
 }
 
 .guide-section + .guide-section {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px dashed rgb(0 0 0 / 12%);
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed rgb(var(--v-theme-border));
 }
 
-.guide-section-title {
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgb(var(--v-theme-on-primary));
+  background: rgb(var(--v-theme-primary));
+}
+
+.section-title {
   font-size: 12px;
   font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .guide-empty {
+  display: flex;
+  align-items: center;
   font-size: 12px;
+  line-height: 1.5;
   color: rgb(var(--v-theme-on-surface-variant));
 }
 
-.ds-block {
+.ds-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgb(var(--v-theme-border));
+  border-radius: 8px;
+  background: rgb(var(--v-theme-surface));
+  transition: border-color 0.16s ease;
+}
+
+.ds-card:hover {
+  border-color: rgb(var(--v-theme-primary));
 }
 
 .ds-head {
@@ -167,10 +265,41 @@ const columnTypeLabel = (type: string): string => `model.datasource.columnType.$
   gap: 8px;
 }
 
+.ds-ident {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ds-insert-btn {
+  flex-shrink: 0;
+}
+
+.ds-avatar {
+  flex-shrink: 0;
+}
+
+.ds-ident-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .ds-name {
   font-size: 13px;
   font-weight: 600;
   color: rgb(var(--v-theme-primary));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-count {
+  font-size: 11px;
+  color: rgb(var(--v-theme-on-surface-variant));
+  white-space: nowrap;
 }
 
 .ds-cols {
@@ -185,6 +314,7 @@ const columnTypeLabel = (type: string): string => `model.datasource.columnType.$
 
 .ds-col-name {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 500;
 }
 
 .ds-col-type {
@@ -193,21 +323,54 @@ const columnTypeLabel = (type: string): string => `model.datasource.columnType.$
 }
 
 .sample-card {
-  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
   cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
 }
 
 .sample-card:hover {
   border-color: rgb(var(--v-theme-primary));
+  background: rgb(var(--v-theme-surface-variant), 0.4);
+}
+
+.sample-avatar {
+  flex-shrink: 0;
+}
+
+.sample-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
 }
 
 .sample-title {
   font-size: 13px;
   font-weight: 600;
+  color: rgb(var(--v-theme-on-surface));
 }
 
 .sample-desc {
   font-size: 12px;
+  line-height: 1.4;
   color: rgb(var(--v-theme-on-surface-variant));
+  overflow-wrap: break-word;
+}
+
+.sample-arrow {
+  flex-shrink: 0;
+  color: rgb(var(--v-theme-on-surface-variant));
+  opacity: 0.7;
+}
+
+.sample-card:hover .sample-arrow {
+  opacity: 1;
+  color: rgb(var(--v-theme-primary));
 }
 </style>

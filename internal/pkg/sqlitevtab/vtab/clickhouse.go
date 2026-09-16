@@ -24,6 +24,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
+	"reflect"
 	"time"
 
 	// third-party
@@ -31,7 +33,10 @@ import (
 	"github.com/creasty/defaults"
 
 	// internal
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // ClickHouseConfig 描述一个 ClickHouse 实例的接入配置。
@@ -106,4 +111,88 @@ type ClickHousePool struct {
 // meant for graceful shutdown.
 func CloseAllClickHouseClients(ctx context.Context) {
 	clickhouseClients.closeAll(ctx)
+}
+
+// clickhousePlugin 实现 DatasourcePlugin，把 clickhouse 数据源类型接入插件注册表。
+// clickhousePlugin implements DatasourcePlugin, wiring the clickhouse datasource type into
+// the plugin registry.
+type clickhousePlugin struct{}
+
+// Key 返回数据源类型键。
+// Key returns the datasource type key.
+func (clickhousePlugin) Key() string { return DatasourceTypeClickHouse }
+
+// ConfigType 返回配置值反射类型。
+// ConfigType returns the config value's reflect type.
+func (clickhousePlugin) ConfigType() reflect.Type { return reflect.TypeFor[ClickHouseTableConfig]() }
+
+// NewConfig 返回全新一份 *ClickHouseTableConfig。
+// NewConfig returns a fresh *ClickHouseTableConfig.
+func (clickhousePlugin) NewConfig() any { return &ClickHouseTableConfig{} }
+
+// ValidateConfig 结构已经解码校验，这里无需额外操作。
+// ValidateConfig does nothing extra since the structure was already validated at decode.
+func (clickhousePlugin) ValidateConfig(_ any) error { return nil }
+
+// TestConn 建池借出 connection、PingContext 探活后归还。
+// TestConn borrows a connection from the pool, probes it via PingContext and returns it.
+func (clickhousePlugin) TestConn(ctx context.Context, cfg any) error {
+	c := cfg.(*ClickHouseTableConfig)
+	pool := NewClickHousePool(&ClickHouseConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
+	db, err := pool.Acquire(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	pingErr := db.PingContext(ctx)
+	pool.Release(ctx, db)
+	if pingErr != nil {
+		return errors.WithStack(pingErr)
+	}
+	return nil
+}
+
+// IntrospectSchema 建池、NewClickHouseDatasource 自省表结构后返回列定义。
+// IntrospectSchema builds the pool, introspects the table via NewClickHouseDatasource and
+// returns the column definitions.
+func (clickhousePlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) ([]DatasourceColumn, error) {
+	c := cfg.(*ClickHouseTableConfig)
+	pool := NewClickHousePool(&ClickHouseConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
+	ds, err := NewClickHouseDatasource(ctx, pool, c.Table)
+	if err != nil {
+		return nil, err
+	}
+	schema, err := schemaOf(ds)
+	if err != nil {
+		return nil, err
+	}
+	return schemaColumnsOut(schema), nil
+}
+
+// Register 校验 schema 非空 → 建池 → parseDatasourceColumns → NewClickHouseDatasourceWithSchema。
+// Register validates schema not-empty → build pool → parseDatasourceColumns →
+// NewClickHouseDatasourceWithSchema.
+func (clickhousePlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
+	c := cfg.(*ClickHouseTableConfig)
+	if len(c.Schema) == 0 {
+		return nil, errors.Newf("%s: schema must be provided; run introspection from the frontend", DatasourceTypeClickHouse)
+	}
+	poolHandle := NewClickHousePool(&ClickHouseConfig{
+		Addr:      c.Addr,
+		Port:      c.Port,
+		User:      c.User,
+		Password:  c.Password,
+		DBName:    c.DBName,
+		Namespace: namespace,
+	})
+	cols, err := parseDatasourceColumns(c.Schema)
+	if err != nil {
+		return nil, err
+	}
+	return NewClickHouseDatasourceWithSchema(poolHandle, c.Table, cols)
+}
+
+// init 自注册 clickhouse 数据源类型。
+// init self-registers the clickhouse datasource type.
+func init() {
+	RegisterDatasourceType(clickhousePlugin{})
 }

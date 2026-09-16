@@ -82,6 +82,7 @@
         :confirm-disabled="
           !createForm.meta.value.valid ||
           !createConfigValid ||
+          createSchemaEmpty ||
           (isCreateSQLite && !createSqliteFile)
         "
         force-editable
@@ -158,8 +159,12 @@
                     </v-label>
                     <datasource-schema-editor
                       :model-value="createConfigValues[f.name] as DatasourceColumn[]"
+                      :mandatory-schema="createType === 'mongo'"
                       @update:model-value="createConfigValues[f.name] = $event"
                     />
+                    <div v-if="createSchemaEmpty" class="text-caption text-on-surface-variant mt-2">
+                      {{ $t("model.datasource.schemaRequiredHint") }}
+                    </div>
                     <div v-if="createConfigErrors[f.name]" class="text-error text-body-2 mt-1">
                       {{ createConfigErrors[f.name] }}
                     </div>
@@ -203,6 +208,36 @@
             </template>
             <v-row dense>
               <v-col cols="12">
+                <template v-if="canIntrospect(createType)">
+                  <v-btn
+                    prepend-icon="mdi-table-search"
+                    :loading="createIntrospecting"
+                    :disabled="createIntrospecting"
+                    variant="tonal"
+                    class="mr-2"
+                    @click="handleIntrospectSchema('create')"
+                  >
+                    {{ $t("model.datasource.action.introspectSchema") }}
+                  </v-btn>
+                </template>
+                <template v-if="canTestConnection(createType)">
+                  <v-btn
+                    prepend-icon="mdi-connection"
+                    :loading="createTesting"
+                    :disabled="createTesting"
+                    variant="tonal"
+                    @click="handleTestConnection('create')"
+                  >
+                    {{ $t("model.datasource.action.testConnection") }}
+                  </v-btn>
+                </template>
+                <div v-if="createIntrospectInfo" class="text-caption text-on-surface-variant mt-1">
+                  {{ $t("model.datasource.action.introspectColumns") }}: {{ createIntrospectInfo }}
+                </div>
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
@@ -218,7 +253,7 @@
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t('model.datasource.name')"
-        :confirm-disabled="!updateForm.meta.value.valid || !editConfigValid"
+        :confirm-disabled="!updateForm.meta.value.valid || !editConfigValid || editSchemaEmpty"
         prepend-icon="mdi-database-import-outline"
         @confirm="itemUpdateAction"
       >
@@ -292,9 +327,16 @@
                   </v-label>
                   <datasource-schema-editor
                     :model-value="editConfigValues[f.name] as DatasourceColumn[]"
+                    :mandatory-schema="editType === 'mongo'"
                     :disabled="!editable"
                     @update:model-value="editConfigValues[f.name] = $event"
                   />
+                  <div
+                    v-if="editSchemaEmpty && editable"
+                    class="text-caption text-on-surface-variant mt-2"
+                  >
+                    {{ $t("model.datasource.schemaRequiredHint") }}
+                  </div>
                   <div
                     v-if="editConfigErrors[f.name] && editable"
                     class="text-error text-body-2 mt-1"
@@ -343,6 +385,36 @@
             </v-row>
             <v-row dense>
               <v-col cols="12">
+                <template v-if="canIntrospect(editType)">
+                  <v-btn
+                    prepend-icon="mdi-table-search"
+                    :loading="editIntrospecting"
+                    :disabled="editIntrospecting || !editable"
+                    variant="tonal"
+                    class="mr-2"
+                    @click="handleIntrospectSchema('edit')"
+                  >
+                    {{ $t("model.datasource.action.introspectSchema") }}
+                  </v-btn>
+                </template>
+                <template v-if="canTestConnection(editType)">
+                  <v-btn
+                    prepend-icon="mdi-connection"
+                    :loading="editTesting"
+                    :disabled="editTesting || !editable"
+                    variant="tonal"
+                    @click="handleTestConnection('edit')"
+                  >
+                    {{ $t("model.datasource.action.testConnection") }}
+                  </v-btn>
+                </template>
+                <div v-if="editIntrospectInfo" class="text-caption text-on-surface-variant mt-1">
+                  {{ $t("model.datasource.action.introspectColumns") }}: {{ editIntrospectInfo }}
+                </div>
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
                 <v-textarea
                   v-model="editDescription"
                   v-bind="editDescriptionProps"
@@ -375,14 +447,19 @@ import {
   datasourceBatchSetEnabled,
   datasourceCreate,
   datasourceDetailGet,
+  datasourceIntrospect,
   datasourceListGet,
   datasourceListOptions,
+  datasourceTest,
   datasourceTypesGet,
   datasourceUpdate,
 } from "@/apis/datasource";
 import type { BatchResultOut } from "@/apis/@types/admin";
 import type {
+  DatasourceColumn,
+  DatasourceIntrospectOut,
   DatasourceItem,
+  DatasourceTestOut,
   DatasourceTypeField,
   DatasourceTypeItem,
 } from "@/apis/@types/datasource";
@@ -427,6 +504,21 @@ const editSqliteFile = ref<File | null>(null);
 const isCreateSQLite = computed(() => createType.value === "sqlite_file");
 const isEditSQLite = computed(() => editType.value === "sqlite_file");
 
+// ---- 预检（测试连接 / 自省表结构）能力判断 ----
+// canTestConnection：sqlite_file 类型不支持测试连接（需上传本地 .db 文件）
+const canTestConnection = (type: string): boolean => type !== "sqlite_file";
+// canIntrospect：mongo 类型无固定表结构，不支持自省，必须手动填写 schema
+const canIntrospect = (type: string): boolean => type !== "mongo";
+
+// ---- 预检进行中 loading（禁用按钮防止重复点击）----
+const createTesting = ref(false);
+const createIntrospecting = ref(false);
+const editTesting = ref(false);
+const editIntrospecting = ref(false);
+// ---- 只读类型（redis/etcd）自省结果的展示行（列名逗号拼接）----
+const createIntrospectInfo = ref("");
+const editIntrospectInfo = ref("");
+
 // ---- 数据源类型注册表（含各类型配置 schema），经 /types 动态拉取 ----
 const typeItems = ref<DatasourceTypeItem[]>([]);
 const typeMap = computed<Record<string, DatasourceTypeItem>>(() => {
@@ -457,12 +549,6 @@ onMounted(() => {
 // configFieldLabel 依据数据源类型与字段名拼接配置字段的 i18n label key
 const configFieldLabel = (_type: string, field: string): string =>
   `model.datasource.configField.${field}`;
-
-// DatasourceColumn 手动 schema 的一列（与后端 DatasourceColumn JSON 结构一致）
-interface DatasourceColumn {
-  name: string;
-  type: string;
-}
 
 // configFieldType 将配置字段 schema 的 kind 映射为输入框的 type 属性
 const configFieldType = (kind: string): string => {
@@ -563,7 +649,8 @@ const makeConfigState = (getType: () => string): DatasourceConfigState => {
     for (const f of fields.value) {
       const v = values.value[f.name];
       if (f.kind === "columns") {
-        // 空 schema 省略字段，后端 len(Schema) > 0 判定自动回退自省
+        // 仅当列定义非空才输出数组；空 schema 已被前端完整性校验（schemaRequiredHint）拦截，
+        // 后端注册亦不再自动自省
         if (Array.isArray(v) && v.length > 0) {
           config[f.name] = v.map((c) => ({ name: c.name.trim(), type: c.type }));
         }
@@ -612,6 +699,125 @@ const {
   validate: validateEditConfig,
 } = makeConfigState(() => editType.value);
 
+// ---- schema 完整性：存在 columns 字段（表型数据源 / mongo）时必须非空才允许保存 ----
+// 后端注册不再自动自省，列定义必须由前端自省按钮生成或手动填写，空 schema 直接禁用保存
+const makeSchemaEmpty = (
+  fields: () => DatasourceTypeField[],
+  values: () => Record<string, string | number | DatasourceColumn[]>,
+): Ref<boolean> =>
+  computed(() => {
+    const f = fields().find((cf) => cf.kind === "columns");
+    if (!f) {
+      return false;
+    }
+    return ((values()[f.name] as DatasourceColumn[] | undefined) ?? []).length === 0;
+  });
+const createSchemaEmpty = makeSchemaEmpty(
+  () => createConfigFields.value,
+  () => createConfigValues.value,
+);
+const editSchemaEmpty = makeSchemaEmpty(
+  () => editConfigFields.value,
+  () => editConfigValues.value,
+);
+
+// ---- 预检处理（创建/编辑对话框共用工厂，经 group 区分绑定各自的表单状态）----
+// 测试连接：构造 { type, config } 调 datasourceTest，成功绿提示、失败红提示并附后端 message
+const handleTestConnection = async (group: "create" | "edit"): Promise<void> => {
+  const type = group === "create" ? createType.value : editType.value;
+  if (!canTestConnection(type)) {
+    return;
+  }
+  const loading = group === "create" ? createTesting : editTesting;
+  loading.value = true;
+  try {
+    await getResponse<DatasourceTestOut>(
+      datasourceTest({
+        type,
+        config: group === "create" ? dumpCreateConfigJson() : dumpEditConfigJson(),
+      }),
+      async (rsp) => {
+        appStore.notify({
+          text: rsp.data.success
+            ? i18n.global.t("notice.datasource.testSuccess")
+            : `${i18n.global.t("notice.datasource.testFailed")}: ${rsp.data.message}`,
+          timeout: 5000,
+          color: rsp.data.success ? "success" : "error",
+        });
+      },
+      async (rsp) => {
+        appStore.notify({
+          text: rsp.summary,
+          timeout: 5000,
+          color: "error",
+        });
+      },
+    );
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 自省表结构：sqlite_file 需已选 .db 文件并以 multipart 提交；有 columns 字段的结果回填表单，
+// 只读类型（redis/etcd）的结果以一行 caption 文案展示
+const handleIntrospectSchema = async (group: "create" | "edit"): Promise<void> => {
+  const type = group === "create" ? createType.value : editType.value;
+  if (!canIntrospect(type)) {
+    return;
+  }
+  const loading = group === "create" ? createIntrospecting : editIntrospecting;
+  const info = group === "create" ? createIntrospectInfo : editIntrospectInfo;
+  const values = group === "create" ? createConfigValues : editConfigValues;
+  const fields = group === "create" ? createConfigFields : editConfigFields;
+  const file = group === "create" ? createSqliteFile.value : editSqliteFile.value;
+  const config = group === "create" ? dumpCreateConfigJson() : dumpEditConfigJson();
+  if (type === "sqlite_file" && !file) {
+    appStore.notify({
+      text: i18n.global.t("notice.datasource.introspectNoFile"),
+      timeout: 5000,
+      color: "error",
+    });
+    return;
+  }
+  loading.value = true;
+  try {
+    await getResponse<DatasourceIntrospectOut>(
+      datasourceIntrospect({ type, config }, file),
+      async (rsp) => {
+        if (rsp.data.success) {
+          const colField = fields.value.find((f) => f.kind === "columns");
+          if (colField) {
+            values.value[colField.name] = rsp.data.columns;
+          } else {
+            // redis/etcd 等只读类型：无 columns 字段，仅作只读展示，不写回配置
+            info.value = rsp.data.columns.map((c) => c.name).join(", ");
+          }
+          appStore.notify({
+            text: i18n.global.t("notice.datasource.introspectSuccess"),
+            timeout: 5000,
+            color: "success",
+          });
+        } else {
+          appStore.notify({
+            text: `${i18n.global.t("notice.datasource.introspectFailed")}: ${rsp.data.message}`,
+            timeout: 5000,
+            color: "error",
+          });
+        }
+      },
+      async (rsp) => {
+        appStore.notify({
+          text: rsp.summary,
+          timeout: 5000,
+          color: "error",
+        });
+      },
+    );
+  } finally {
+    loading.value = false;
+  }
+};
+
 // ---- 密码字段明文展示开关 ----
 // 按字段名与打开方式（create/edit）分别记录是否明文展示，避免两套配置表单串扰
 const createRevealed = ref<Record<string, boolean>>({});
@@ -632,6 +838,7 @@ const openCreateDialogAction = (): void => {
   createForm.resetField("enabled", { value: true });
   createForm.resetField("description", { value: "" });
   createSqliteFile.value = null;
+  createIntrospectInfo.value = "";
   resetCreateConfig();
   createDialogRef.value?.open({});
 };
@@ -639,6 +846,7 @@ const openCreateDialogAction = (): void => {
 // 数据源类型切换时重置配置表单与 sqlite 文件选择（按新类型 schema 生成默认值）
 const onCreateTypeChange = (): void => {
   createSqliteFile.value = null;
+  createIntrospectInfo.value = "";
   resetCreateConfig();
 };
 
@@ -687,6 +895,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
       editDatasourceId = rsp.data.id;
       editType.value = rsp.data.type;
       editSqliteFile.value = null;
+      editIntrospectInfo.value = "";
       updateForm.resetField("enabled", { value: rsp.data.enabled });
       updateForm.resetField("description", { value: rsp.data.description });
       // config 为 base64 密文，需经明文接口解密后再回填编辑表单

@@ -93,13 +93,5 @@ func init() {
 	enum.Register(enum.Type{Name: "notificationEvent", Entries: eventEntries()})
 	enum.Register(enum.Type{Name: "tagRuleModel", Entries: tagRuleModelEntries()})
 	enum.Register(enum.Type{Name: "tagEventDimension", Entries: tagEventDimensionEntries()})
-	enum.Register(enum.Type{Name: "datasourceType", Entries: typeKeysToEntries([]string{
-		vtab.DatasourceTypeRedis,
-		vtab.DatasourceTypeMySQL,
-		vtab.DatasourceTypePostgres,
-		vtab.DatasourceTypeClickHouse,
-		vtab.DatasourceTypeSQLiteFile,
-		vtab.DatasourceTypeEtcd,
-		vtab.DatasourceTypeMongo,
-	})})
+	enum.Register(enum.Type{Name: "datasourceType", Entries: typeKeysToEntries(vtab.DatasourceTypeKeys())})
 }

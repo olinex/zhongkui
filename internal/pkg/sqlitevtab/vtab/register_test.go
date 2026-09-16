@@ -13,7 +13,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/redis/go-redis/v9"
 	. "github.com/smartystreets/goconvey/convey"
 
@@ -124,29 +123,15 @@ func TestRegisterRedis(t *testing.T) {
 }
 
 func TestRegisterMySQL(t *testing.T) {
-	Convey("mysql 表以裸名注册成功", t, func() {
+	Convey("mysql 无 schema 注册报错（后端不再自动自省）", t, func() {
 		ctx := context.Background()
 		pools := NewPools(nil)
 		t.Cleanup(func() { pools.Close(ctx) })
-		db, mock, err := sqlmock.New()
-		So(err, ShouldBeNil)
-		t.Cleanup(func() { db.Close() })
-
-		show := sqlmock.NewRows([]string{"Field", "Type", "Null", "Key", "Default", "Extra"}).
-			AddRow("id", "int(11)", "NO", "PRI", nil, "").
-			AddRow("name", "varchar(255)", "YES", "", nil, "")
-		mock.ExpectQuery("SHOW COLUMNS FROM `app`.`users`").WillReturnRows(show)
-
-		// 先注入 mock db 覆盖到 Register 内部 NewMySQLPool 将派生的连接池 Key
-		hp := NewMySQLPool(&MySQLConfig{Addr: "127.0.0.1", Port: 3306, User: "u", DBName: "app", Namespace: "prod"})
-		mysqlClients.overrideDB(hp.key, db)
-		t.Cleanup(func() { mysqlClients.overrideDB(hp.key, nil) })
 
 		cfg := []byte(`{"addr":"127.0.0.1","port":3306,"user":"u","dbName":"app","table":"users"}`)
-		So(pools.Register(ctx, "prod", "users_tbl", DatasourceTypeMySQL, cfg), ShouldBeNil)
+		So(pools.Register(ctx, "prod", "users_tbl", DatasourceTypeMySQL, cfg), ShouldNotBeNil)
 		pool := pools.Pool("prod")
-		So(pool.Datasources(), ShouldContain, "users_tbl")
-		So(mock.ExpectationsWereMet(), ShouldBeNil)
+		So(pool.Datasources(), ShouldNotContain, "users_tbl")
 	})
 
 	Convey("非法数据源类型报错", t, func() {
@@ -155,6 +140,25 @@ func TestRegisterMySQL(t *testing.T) {
 		t.Cleanup(func() { pools.Close(ctx) })
 		So(pools.Register(ctx, "prod", "x", "oracle", []byte(`{}`)), ShouldNotBeNil)
 	})
+}
+
+func TestRegisterTableDatasourceRequiresSchema(t *testing.T) {
+	for _, tc := range []struct {
+		typ string
+		cfg string
+	}{
+		{DatasourceTypeMySQL, `{"addr":"127.0.0.1","user":"u","dbName":"app","table":"t"}`},
+		{DatasourceTypePostgres, `{"addr":"127.0.0.1","user":"u","dbName":"app","table":"t"}`},
+		{DatasourceTypeClickHouse, `{"addr":"127.0.0.1","user":"u","dbName":"app","table":"t"}`},
+		{DatasourceTypeSQLiteFile, `{"table":"t"}`},
+	} {
+		Convey("类型 "+tc.typ+" 无 schema 注册报错（后端不再自动自省）", t, func() {
+			ctx := context.Background()
+			pools := NewPools(nil)
+			t.Cleanup(func() { pools.Close(ctx) })
+			So(pools.Register(ctx, "prod", "x", tc.typ, []byte(tc.cfg)), ShouldNotBeNil)
+		})
+	}
 }
 
 func TestRegisterNamespaceIsolation(t *testing.T) {

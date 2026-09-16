@@ -3,6 +3,8 @@
 // sidebar and the home-page quick start picker).
 // Link titles are i18n keys (navbar.*); navigation targets are route name + params.
 
+import { FEATURE_AI } from "@/stores/features";
+
 export interface NavChild {
   title: string;
   icon: string;
@@ -11,6 +13,8 @@ export interface NavChild {
   // 是否受命名空间影响：为 true 时在侧边栏子项上叠加 Namespace 标识，
   // 指明该页面随命名空间切换而变化；false 或缺省表示与命名空间无关
   namespaceScoped?: boolean;
+  // 所属功能开关键：设置后该子项随对应功能开关（关闭时）一并隐藏
+  feature?: string;
 }
 
 export interface NavGroup {
@@ -18,6 +22,8 @@ export interface NavGroup {
   icon: string;
   value: string;
   childrens: NavChild[];
+  // 所属功能开关键：设置后该分组随对应功能开关（关闭时）一并隐藏
+  feature?: string;
 }
 
 export const navigationGroups: NavGroup[] = [
@@ -135,6 +141,26 @@ export const navigationGroups: NavGroup[] = [
         title: "navbar.etl.scheduler",
         icon: "mdi-calendar-clock",
         routeName: "ETL Scheduler List",
+      },
+    ],
+  },
+  {
+    title: "navbar.ai.self",
+    icon: "mdi-robot-outline",
+    value: "ai",
+    feature: FEATURE_AI,
+    childrens: [
+      {
+        title: "navbar.ai.knowledge",
+        icon: "mdi-book-open-variant",
+        routeName: "AI Knowledge List",
+        namespaceScoped: true,
+      },
+      {
+        title: "navbar.ai.assistant",
+        icon: "mdi-robot",
+        routeName: "AI Assistant",
+        namespaceScoped: true,
       },
     ],
   },

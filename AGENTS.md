@@ -285,6 +285,33 @@ export const useAppStore = defineStore("app", {
 - ESLint v9 flat config；允许 `&&` 短路与三元表达式
 - 组件经 `unplugin-vue-components` 自动注册，禁止手动 import `src/components/` 下的组件
 
+### 文本排版与对比度规范（Typography & Contrast）
+
+文本颜色只允许取自 Vuetify 主题 tokens（`src/plugins/vuetify.ts` / `styles/DESIGN.md` 的 `--v-theme-*` 或对应 `text-*` 工具类），**禁止** `text-medium-emphasis` 等固定透明度弱化——其背景色叠算对比不足。按文字角色选用「字号 + 颜色」组合，确保 light/dark 双主题下对比达标。
+
+| 角色 Role | 字号 Size | 颜色 Color | 字重 | 典型场景 |
+|-----------|-----------|-----------|------|----------|
+| 页面/区块标题 | `text-h6`（16px） | `text-on-surface` | 600 | 卡片/区块标题、对话框标题 |
+| 正文 / 单元格 / 字段值 | 默认 body（0.875rem/14px） | `text-on-surface` | 400 | 表格单元格、长文本 |
+| 表单字段标签（field label） | 默认 body（0.875rem/14px） | `text-on-surface` | 500 | `v-text-field` / `v-select` 的 label |
+| 表头 / 列名 | `text-caption`（0.75rem） | `text-on-surface-variant` | 600 + uppercase | `.v-data-table th` |
+| 次要说明 / 表单提示（hint/描述） | `text-caption`（0.75rem） | `text-on-surface-variant` | 400 | 表单 helper 提示、区块说明（如 SchemaEditor 提示） |
+| 弱化辅助文本（时间戳、副标题） | `text-caption`（0.75rem） | `text-on-surface-variant` | 400 | 时间戳、元信息、面包屑 |
+| 禁用态 | 继承 | Vuetify disabled 态 | — | disabled 控件文字 |
+
+对比度锚点（相对各主题 `surface` 背景）：
+
+| 颜色 | Light（`#FFFFFF`/`surface`） | Dark（`#151A21`/`surface`） | 达标 |
+|------|------------------------------|------------------------------|------|
+| `on-surface`（主文本） | ≈ 14:1 | ≈ 14:1 | WCAG AAA（≥4.5:1） |
+| `on-surface-variant`（次要/说明） | ≈ 7.5:1 | ≈ 7.0:1 | WCAG AAA（≥4.5:1） |
+
+硬性规则：
+
+- 主文本一律 `text-on-surface`，次要/说明/提示一律 `text-on-surface-variant`；不要自定义灰度或任意 hex。
+- 说明/提示类文本**必须**缩到 `text-caption`（12px）以与字段名（14px）形成字号区分，而不是和字段名同样字号。
+- 不要用 `text-medium-emphasis` / `text-low-emphasis` 表达「次要」——统一改用 `text-on-surface-variant`。
+
 ### SFC Structure
 
 ```vue

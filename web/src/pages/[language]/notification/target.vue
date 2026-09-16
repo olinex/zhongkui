@@ -323,7 +323,7 @@
       <v-dialog v-model="testSendDialog" max-width="640">
         <v-card prepend-icon="mdi-send-check-outline" :title="$t('action.testSend')">
           <v-card-text>
-            <div v-if="testSendLoading" class="d-flex align-center ga-2 text-medium-emphasis">
+            <div v-if="testSendLoading" class="d-flex align-center ga-2 text-on-surface-variant">
               <v-progress-circular indeterminate size="20" />
               <span>{{ $t("summary.dataLoading") }}</span>
             </div>
@@ -332,10 +332,10 @@
               <div class="text-h6">{{ testSendResult.title }}</div>
               <pre class="test-send-content">{{ testSendResult.content }}</pre>
               <v-divider class="my-2" />
-              <div class="text-caption text-medium-emphasis">
+              <div class="text-caption text-on-surface-variant">
                 messageId: {{ testSendResult.messageId }}
               </div>
-              <div class="text-caption text-medium-emphasis">
+              <div class="text-caption text-on-surface-variant">
                 {{ $t("model.notificationTarget.field.language") }}:
                 {{ $t(languageNameKey(testSendResult.language)) }}
               </div>

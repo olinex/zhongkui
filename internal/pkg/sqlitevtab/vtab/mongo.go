@@ -26,15 +26,20 @@ import (
 	// stdlib
 	"context"
 	"fmt"
+	"io"
+	"reflect"
 	"sync"
 
 	// third-party
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // MongoConfig 描述一个 MongoDB 集合的接入配置。
@@ -164,4 +169,72 @@ func (p *MongoPool) Close(ctx context.Context) {
 // for graceful shutdown.
 func CloseAllMongoClients(ctx context.Context) {
 	mongoClients.manager.CloseAll(ctx)
+}
+
+// mongoPlugin 实现 DatasourcePlugin，把 mongo 数据源类型接入插件注册表。
+// mongoPlugin implements DatasourcePlugin, wiring the mongo datasource type into the plugin
+// registry.
+type mongoPlugin struct{}
+
+// Key 返回数据源类型键。
+// Key returns the datasource type key.
+func (mongoPlugin) Key() string { return DatasourceTypeMongo }
+
+// ConfigType 返回配置值反射类型。
+// ConfigType returns the config value's reflect type.
+func (mongoPlugin) ConfigType() reflect.Type { return reflect.TypeFor[MongoCollectionConfig]() }
+
+// NewConfig 返回全新一份 *MongoCollectionConfig。
+// NewConfig returns a fresh *MongoCollectionConfig.
+func (mongoPlugin) NewConfig() any { return &MongoCollectionConfig{} }
+
+// ValidateConfig 结构已经解码校验，这里无需额外操作。
+// ValidateConfig does nothing extra since the structure was already validated at decode.
+func (mongoPlugin) ValidateConfig(_ any) error { return nil }
+
+// TestConn 借用 client、经 Ping(readpref.Primary()) 探活后归还。
+// TestConn borrows a client, probes it via Ping(readpref.Primary()) and returns it.
+func (mongoPlugin) TestConn(ctx context.Context, cfg any) error {
+	c := cfg.(*MongoCollectionConfig)
+	pool := NewMongoPool(&MongoConfig{URI: c.URI, DB: c.DB, Collection: c.Collection})
+	client, err := pool.Acquire(ctx)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	pingErr := client.Ping(ctx, readpref.Primary())
+	pool.Release(ctx, client)
+	if pingErr != nil {
+		return errors.WithStack(pingErr)
+	}
+	return nil
+}
+
+// IntrospectSchema MongoDB 无固定 schema，返回「需手动填写 schema」错误。
+// IntrospectSchema returns a "schema must be filled manually" error since MongoDB has no
+// fixed schema.
+func (mongoPlugin) IntrospectSchema(_ context.Context, _ any, _ io.Reader) ([]DatasourceColumn, error) {
+	return nil, errors.New("mongo: MongoDB has no fixed schema; define the columns manually")
+}
+
+// Register 校验 schema 非空 → 建池 → parseDatasourceColumns → NewMongoDatasourceWithSchema。
+// Register validates schema not-empty → build pool → parseDatasourceColumns →
+// NewMongoDatasourceWithSchema.
+func (mongoPlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
+	c := cfg.(*MongoCollectionConfig)
+	if len(c.Schema) == 0 {
+		return nil, errors.New("mongo: schema must be provided during registration")
+	}
+	cols, err := parseDatasourceColumns(c.Schema)
+	if err != nil {
+		return nil, err
+	}
+	return NewMongoDatasourceWithSchema(NewMongoPool(&MongoConfig{
+		URI: c.URI, DB: c.DB, Collection: c.Collection, Namespace: namespace,
+	}), cols)
+}
+
+// init 自注册 mongo 数据源类型。
+// init self-registers the mongo datasource type.
+func init() {
+	RegisterDatasourceType(mongoPlugin{})
 }

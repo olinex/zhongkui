@@ -285,6 +285,18 @@ other = "[[.DB]] [[.Action]] 失败：[[.Err]]"
 [cli.migrate.completed]
 other = "迁移全部执行成功"
 
+[cli.migrate.ai-embedding-section]
+other = "正在校准 [[.DB]] 库的 embedding 列维度"
+
+[cli.migrate.ai-embedding-failed]
+other = "校准 [[.DB]] 库 embedding 列维度失败：[[.Err]]"
+
+[cli.migrate.ai-embedding-reconciled]
+other = "已将 embedding 列维度校准为 [[.Dimensions]]，请重新索引知识库文档"
+
+[cli.migrate.ai-embedding-in-sync]
+other = "embedding 列维度与配置一致，无需调整"
+
 [cli.migrate.dry-run-section]
 other = "试运行（dry-run）[[.DB]]"
 
@@ -1282,6 +1294,12 @@ other = "检查模型定义与数据库结构是否一致"
 
 [cmd.migrate.create.short]
 other = "在迁移目录中创建 SQL 迁移文件"
+
+[cmd.migrate.ai-embedding.short]
+other = "校准 embedding 列维度为配置值并重建 HNSW 索引"
+
+[cmd.migrate.ai-embedding.long]
+other = "将 core 库的 knowledge_chunks.embedding 列重建为 AI 配置指定的维度（删除旧索引与向量、ALTER TYPE、重建 HNSW 索引）。更换 embedding 模型维度后执行本命令，完成后需重新索引知识库文档。"
 
 [cmd.create.short]
 other = "创建资源（用户、TLS 证书、访问密钥）"

@@ -225,7 +225,7 @@
                 <copy-btn :value="resetResultPassword" />
               </template>
             </v-text-field>
-            <p class="text-body-2 text-medium-emphasis mt-2">
+            <p class="text-body-2 text-on-surface-variant mt-2">
               {{ $t("model.user.field.passwordResetNotice") }}
             </p>
           </v-card-text>
