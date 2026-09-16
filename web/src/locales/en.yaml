@@ -5,6 +5,7 @@ navbar:
     group: Group
     namespace: Namespace
     capturer: Capturer
+    systemStatus: System Status
   etl:
     self: ETL
     server: Server
@@ -79,6 +80,19 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
+  service:
+    name: Service
+    field:
+      serviceName: Service Name
+      instanceId: Instance ID
+      host: Host
+      version: Version
+      pid: PID
+      startedAt: Started At
+      running: Running
+      live: Liveness
+      ready: Readiness
+      started: Started
   notificationTarget:
     name: Notification Target
     field:
@@ -235,6 +249,15 @@ model:
       timeout: Timeout
       promisc: Promiscuous Mode
       enabled: Enabled
+      sessionId: Session ID
+      status: Status
+      configVersion: Config Version
+      globalVersion: Global Version
+      lastSeen: Last Seen
+    option:
+      status:
+        running: Running
+        stopped: Stopped
   accessKey:
     name: Access Key
     field:
@@ -1124,6 +1147,7 @@ title:
   groupAdmin: Admin - Group
   namespaceAdmin: Admin - Namespace
   capturerAdmin: Admin - Capturer
+  systemStatus: Admin - System Status
   notification:
     channel: Notification Channels
     target: Notification Targets

@@ -5,6 +5,7 @@ navbar:
     group: 用户组
     namespace: 命名空间
     capturer: 采集器
+    systemStatus: 系统状态
   etl:
     self: 数据处理
     server: 服务端
@@ -79,6 +80,19 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
+  service:
+    name: 服务
+    field:
+      serviceName: 服务名
+      instanceId: 实例ID
+      host: 主机
+      version: 版本
+      pid: 进程ID
+      startedAt: 启动时间
+      running: 运行时长
+      live: 存活
+      ready: 就绪
+      started: 已启动
   notificationTarget:
     name: 通知目标
     field:
@@ -235,6 +249,15 @@ model:
       timeout: 超时时长
       promisc: 混杂模式
       enabled: 启用
+      sessionId: 会话ID
+      status: 状态
+      configVersion: 配置版本
+      globalVersion: 全局版本
+      lastSeen: 最后上报
+    option:
+      status:
+        running: 运行中
+        stopped: 已停止
   accessKey:
     name: 访问密钥
     field:
@@ -1120,6 +1143,7 @@ title:
   groupAdmin: 管理 - 用户组
   namespaceAdmin: 管理 - 命名空间
   capturerAdmin: 管理 - 采集器
+  systemStatus: 管理 - 系统状态
   notification:
     channel: 通知渠道
     target: 通知目标

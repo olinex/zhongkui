@@ -115,7 +115,7 @@ func TestTimeoutState(t *testing.T) {
 	if results[0].Err == "" {
 		t.Errorf("expected a deadline error message")
 	}
-	if results[0].Latency <= 0 || results[0].Latency.Std() > 200*time.Millisecond {
+	if results[0].Latency <= 0 || results[0].Latency > 200*time.Millisecond {
 		t.Errorf("latency out of expected range: %v", results[0].Latency)
 	}
 }

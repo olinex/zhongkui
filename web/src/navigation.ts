@@ -190,6 +190,11 @@ export const navigationGroups: NavGroup[] = [
         routeName: "Admin Capturer List",
       },
       {
+        title: "navbar.admin.systemStatus",
+        icon: "mdi-server",
+        routeName: "Admin System Status",
+      },
+      {
         title: "navbar.datasource.self",
         icon: "mdi-database-import-outline",
         routeName: "Datasource List",

@@ -19,6 +19,13 @@ func registerAdminRoutes(ctx *RegisterContext) {
 		ctx.coreDatabaseMiddleware,      // 数据库连接
 	)
 	{
+		// ========== 服务状态接口 ==========
+		// 读取 etcd 服务目录，向用户呈现各类服务的整体运行状态
+		adminGroup.POST("/service/list", views.ServiceListGet(ctx.injector))
+		adminGroup.OPTIONS("/service/list", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[views.ServiceListOut]()),
+		))
+
 		// ========== 用户管理接口 ==========
 		// 提供用户信息的增删改查和状态管理功能
 
@@ -163,6 +170,12 @@ func registerAdminRoutes(ctx *RegisterContext) {
 		// 删除抓包器元信息
 		adminGroup.OPTIONS("/capturer/delete", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.CapturerBatchDeleteIn](), views.WithBodyOutput[views.BatchResultOut]()),
+		))
+		// 采集器运行状态列表 - 读取 etcd 中 reporter 代为写入的在线会话状态
+		adminGroup.POST("/capturer/status/list", views.CapturerStatusListGet(ctx.injector))
+		// 采集器运行状态列表元信息（仅输出，无请求体）
+		adminGroup.OPTIONS("/capturer/status/list", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[views.CapturerStatusListOut]()),
 		))
 
 		// ========== 统一枚举获取接口 ==========

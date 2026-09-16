@@ -790,7 +790,7 @@ func TagEventRuleDryRun(c *gin.Context) {
 		response.SimpleOK.AbortWithGinW(c, out)
 		return
 	}
-	events, err := tagengine.Detect(c.Request.Context(), middlewares.GetRawDatabase(c), conds, now)
+	events, err := tagengine.Detect(c, middlewares.GetRawDatabase(c), conds, now)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return

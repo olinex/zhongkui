@@ -16,7 +16,7 @@ func OtelMiddleware() gin.HandlerFunc {
 
 func startSpan(c *gin.Context, scope, name string) (context.Context, trace.Span) {
 	tracer := o.Tracer(scope)
-	ctx, span := tracer.Start(c.Request.Context(), name)
+	ctx, span := tracer.Start(c, name)
 	c.Request = c.Request.WithContext(ctx) // 让后续 handler 使用带子 span 的 ctx
 	return ctx, span
 }

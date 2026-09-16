@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"context"
 	"time"
 
 	"github.com/pterm/pterm"
+	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/datasource"
 	"zhongkui.com/zhongkui/internal/manager"
@@ -16,6 +18,21 @@ import (
 	"zhongkui.com/zhongkui/internal/worker"
 )
 
+// startHealth 在独立 goroutine 中启动健康探针服务，与主服务主体并发运行。
+// 服务名用于 etcd 服务目录标识；构建失败时仅记录日志，不影响主服务启动。
+func startHealth(ctx context.Context, i do.Injector, serviceName string) {
+	hs, err := provider.NewHealthService(ctx, i, serviceName)
+	if err != nil {
+		pterm.Error.Println(err.Error())
+		return
+	}
+	go func() {
+		if err := hs.Start(ctx); err != nil {
+			pterm.Error.Println(err.Error())
+		}
+	}()
+}
+
 var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "cmd.run.web.short",
@@ -25,6 +42,7 @@ var webCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return
 		}
+		startHealth(ctx, i, provider.HealthServiceNameWeb)
 		if err := manager.RunHttpService(ctx, i); err != nil {
 			pterm.Error.Println(err.Error())
 			return
@@ -38,6 +56,7 @@ var grpcCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		_ = provider.MustInvokeKeyDerivation(i)
+		startHealth(ctx, i, provider.HealthServiceNameGrpc)
 		srv := reporter.NewReportService(i)
 		if err := srv.Run(ctx); err != nil {
 			pterm.Error.Println(err.Error())
@@ -94,7 +113,13 @@ var workerCmd = &cobra.Command{
 		// Watcher（同步 web 进程数据源增删改/启停到本地 vtable 池）均通过
 		// runtime.Group 编排启动与关闭，Redis 队列故障不再连带影响流式处理器。
 		// 单个处理器创建失败仅记录并跳过。
+		healthService, err := provider.NewHealthService(ctx, i, provider.HealthServiceNameWorker)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
 		services := []runtime.Service{
+			healthService,
 			tagEngine,
 			datasourceWatcher,
 			runtime.NewPipelineService(server),

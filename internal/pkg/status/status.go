@@ -19,8 +19,7 @@ package status
 
 import (
 	"context"
-
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"time"
 )
 
 // Status 单个外部依赖的健康状态。
@@ -28,12 +27,12 @@ import (
 // Status represents the health state of a single external dependency.
 // Field names and types are fixed; Err and Latency are omitempty.
 type Status struct {
-	Name       string                `json:"name"`              // 依赖名称 / dependency name
-	Category   string                `json:"category"`          // 依赖类别 / dependency category
-	Configured bool                  `json:"configured"`        // 是否已配置 / whether configured
-	Reachable  bool                  `json:"reachable"`         // 是否可达 / whether reachable
-	Err        string                `json:"message,omitempty"` // 不可达原因 / unreachable reason
-	Latency    serializer.DurationMS `json:"latency,omitempty"` // 探测耗时（毫秒） / probe latency in milliseconds
+	Name       string        `json:"name"`              // 依赖名称 / dependency name
+	Category   string        `json:"category"`          // 依赖类别 / dependency category
+	Configured bool          `json:"configured"`        // 是否已配置 / whether configured
+	Reachable  bool          `json:"reachable"`         // 是否可达 / whether reachable
+	Err        string        `json:"message,omitempty"` // 不可达原因 / unreachable reason
+	Latency    time.Duration `json:"latency,omitempty"` // 探测耗时 / probe latency
 }
 
 // State 返回稳定枚举值，用于展示与 json 输出。

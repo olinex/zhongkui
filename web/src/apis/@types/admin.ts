@@ -58,6 +58,26 @@ export interface CapturerCreateIn {
   config: CapturerConfigIn;
 }
 
+// CapturerStatusItemOut 单个采集器资源运行状态项。
+// CapturerStatusItemOut is a running state item for a single capturer resource.
+export interface CapturerStatusItemOut {
+  namespace: string;
+  name: string;
+  version: string;
+  sessionId: string;
+  // 运行状态短键（running / stopped），经 model.capturer.option.status.* 渲染标签。
+  status: string;
+  configVersion: number;
+  globalVersion: number;
+  lastSeen: string;
+}
+
+// CapturerStatusListOut 采集器运行状态列表出参。
+// CapturerStatusListOut is the capturer running state list output.
+export interface CapturerStatusListOut {
+  items: CapturerStatusItemOut[];
+}
+
 // tag rule
 export interface TagRuleCreateIn {
   name: string;

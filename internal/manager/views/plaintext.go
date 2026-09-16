@@ -118,7 +118,7 @@ func S3PlaintextGet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	rc, err := s3.NewZkcn(middlewares.GetS3Client(c), in.ObjectKey, cryptoKey, 0).Load(c.Request.Context())
+	rc, err := s3.NewZkcn(middlewares.GetS3Client(c), in.ObjectKey, cryptoKey, 0).Load(c)
 	if err != nil {
 		if s3.IsNotExists(err) {
 			response.CreateCodeError(http.StatusNotFound, http.StatusNotFound, nil).AbortWithGinH(c)

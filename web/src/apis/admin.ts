@@ -219,3 +219,10 @@ export function capturerDelete(ids: FlexIDs): AxiosPromise {
     },
   );
 }
+
+export function capturerStatusListGet(): AxiosPromise {
+  return request.post("/admin/capturer/status/list", {}, { headers: getJwtHeader() });
+}
+
+// 复导出类型，方便消费方按需 import。
+export type { CapturerStatusItemOut, CapturerStatusListOut } from "./@types/admin";

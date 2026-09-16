@@ -10,7 +10,6 @@ import (
 
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // Registry 依赖自省注册表。
@@ -65,7 +64,7 @@ func (r *Registry) SetPerProbeTimeout(d time.Duration) {
 //   - 整体不因单个依赖宕机而失败。
 //
 // 内部使用 errgroupx 并行调度，各协程回调恒返回 nil（不抛错误）。
-// Latency 在此处计时并填充为毫秒时长。
+// Latency 在此处计时并填充为 time.Duration。
 //
 // Run executes all probes concurrently and returns a []Status aligned with the
 // registration order. Each probe runs under its own timeout context; a panicking
@@ -91,9 +90,9 @@ func (r *Registry) Run(ctx context.Context) []Status {
 }
 
 // probe 对单个探测项执行超时受限的探测并计时。
-// 负责创建独立超时 ctx、recover panic、填充 Latency（毫秒）。
+// 负责创建独立超时 ctx、recover panic、填充 Latency（time.Duration）。
 // probe runs a single probe under a per-probe timeout context, recovers panics,
-// and measures latency filled into Latency (milliseconds).
+// and measures latency filled into Latency (a time.Duration).
 func (r *Registry) probe(parent context.Context, spec Spec) (st Status) {
 	st.Name = spec.Name
 	st.Category = spec.Category
@@ -109,7 +108,7 @@ func (r *Registry) probe(parent context.Context, spec Spec) (st Status) {
 			st.Reachable = false
 			st.Err = fmt.Sprintf("panic: %v", rec)
 		}
-		st.Latency = serializer.DurationMS(time.Since(start).Milliseconds())
+		st.Latency = time.Since(start)
 	}()
 	pst := spec.Probe(ctx)
 	st.Configured = pst.Configured

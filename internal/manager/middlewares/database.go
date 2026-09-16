@@ -50,7 +50,7 @@ func CoreDatabaseMiddleware(db *database.DB) gin.HandlerFunc {
 //   - *database.DB: 绑定了当前请求上下文的数据库连接实例
 func GetCoreDatabase(c *gin.Context) *database.DB {
 	if db, ok := c.Get(CoreDatabaseCtxName); ok {
-		return db.(*database.DB).WithContext(c.Request.Context())
+		return db.(*database.DB).WithContext(c)
 	}
 	panic("database does not exists")
 }
@@ -85,7 +85,7 @@ func RawDatabaseMiddleware(db *database.DB) gin.HandlerFunc {
 //   - *database.DB: 绑定了当前请求上下文的 raw 库连接实例
 func GetRawDatabase(c *gin.Context) *database.DB {
 	if db, ok := c.Get(RawDatabaseCtxName); ok {
-		return db.(*database.DB).WithContext(c.Request.Context())
+		return db.(*database.DB).WithContext(c)
 	}
 	panic("raw database does not exists")
 }

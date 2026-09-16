@@ -44,6 +44,7 @@ require (
 	go.opentelemetry.io/contrib/bridges/otelzap v0.19.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.69.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.69.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.20.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.20.0
@@ -71,6 +72,7 @@ require (
 	github.com/cloudwego/eino-ext/libs/acl/openai v0.1.17 // indirect
 	github.com/eino-contrib/jsonschema v1.0.3 // indirect
 	github.com/evanphx/json-patch v0.5.2 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/meguminnnnnnnnn/go-openai v0.1.2 // indirect

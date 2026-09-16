@@ -276,7 +276,7 @@ func EtlPipelineInspectorServerListGet(c *gin.Context) {
 // 响应: ETLPipelineInspectorSchedulerListOut
 func EtlPipelineInspectorSchedulerListGet(c *gin.Context) {
 	client := middlewares.GetEtcdClient(c)
-	configs, err := pipeline.LoadSchedulerTaskConfigs(c.Request.Context(), client)
+	configs, err := pipeline.LoadSchedulerTaskConfigs(c, client)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return

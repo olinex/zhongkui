@@ -16,8 +16,8 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/sse"
 )
 
@@ -350,7 +350,7 @@ func AgentStream(c *gin.Context) {
 		return
 	}
 	sseWriter := sse.NewSSEWriter(c.Writer)
-	reader, err := comps.Agent.StreamRun(c.Request.Context(), ai.AgentInput{
+	reader, err := comps.Agent.StreamRun(c, ai.AgentInput{
 		Query:         in.Query,
 		NamespaceName: namespace,
 		DocIDs:        in.DocIDs,

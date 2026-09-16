@@ -48,7 +48,7 @@ var RootCmd = &cobra.Command{
 		cmd.SetContext(ctx)
 
 		provider.InjectOtelShutdowner(ctx, i)
-
+		provider.InjectHealthServer(ctx, i)
 		provider.InjectCommand(i, cmd)
 		provider.InjectViper(i)
 		provider.InjectKeyDerivation(i)

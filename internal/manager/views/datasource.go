@@ -642,7 +642,7 @@ func DatasourceTest(c *gin.Context) {
 		return
 	}
 	out := DatasourceTestOut{Success: true}
-	if err := vtab.TestConn(c.Request.Context(), in.Type, []byte(in.Config)); err != nil {
+	if err := vtab.TestConn(c, in.Type, []byte(in.Config)); err != nil {
 		out = DatasourceTestOut{Success: false, Message: err.Error()}
 	}
 	response.SimpleOK.AbortWithGinW(c, out)
@@ -689,7 +689,7 @@ func DatasourceIntrospect(c *gin.Context) {
 	}
 
 	var out DatasourceIntrospectOut
-	cols, err := vtab.IntrospectSchema(c.Request.Context(), in.Type, []byte(in.Config), file)
+	cols, err := vtab.IntrospectSchema(c, in.Type, []byte(in.Config), file)
 	if err == nil {
 		out = DatasourceIntrospectOut{Success: true, Columns: cols}
 	} else {

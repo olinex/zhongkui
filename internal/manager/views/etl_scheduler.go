@@ -97,7 +97,7 @@ func EtlSchedulerTaskCreate(c *gin.Context) {
 		return
 	}
 	client := middlewares.GetEtcdClient(c)
-	configs, err := pipeline.LoadSchedulerTaskConfigs(c.Request.Context(), client)
+	configs, err := pipeline.LoadSchedulerTaskConfigs(c, client)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -106,7 +106,7 @@ func EtlSchedulerTaskCreate(c *gin.Context) {
 		response.CreateSchedulerTaskError("schedulerTaskCreateExist", in.TypeName).AbortWithGinH(c)
 		return
 	}
-	if err := pipeline.SaveSchedulerTaskConfig(c.Request.Context(), client, in.TypeName, etlSchedulerTaskInToConfig(in)); err != nil {
+	if err := pipeline.SaveSchedulerTaskConfig(c, client, in.TypeName, etlSchedulerTaskInToConfig(in)); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -128,7 +128,7 @@ func EtlSchedulerTaskUpdate(c *gin.Context) {
 		return
 	}
 	client := middlewares.GetEtcdClient(c)
-	configs, err := pipeline.LoadSchedulerTaskConfigs(c.Request.Context(), client)
+	configs, err := pipeline.LoadSchedulerTaskConfigs(c, client)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -137,7 +137,7 @@ func EtlSchedulerTaskUpdate(c *gin.Context) {
 		response.CreateSchedulerTaskError("schedulerTaskUpdateNotExist", in.TypeName).AbortWithGinH(c)
 		return
 	}
-	if err := pipeline.SaveSchedulerTaskConfig(c.Request.Context(), client, in.TypeName, etlSchedulerTaskInToConfig(in)); err != nil {
+	if err := pipeline.SaveSchedulerTaskConfig(c, client, in.TypeName, etlSchedulerTaskInToConfig(in)); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -156,7 +156,7 @@ func EtlSchedulerTaskToggle(c *gin.Context) {
 		return
 	}
 	client := middlewares.GetEtcdClient(c)
-	configs, err := pipeline.LoadSchedulerTaskConfigs(c.Request.Context(), client)
+	configs, err := pipeline.LoadSchedulerTaskConfigs(c, client)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -167,7 +167,7 @@ func EtlSchedulerTaskToggle(c *gin.Context) {
 		return
 	}
 	cfg.Enabled = in.Enabled
-	if err := pipeline.SaveSchedulerTaskConfig(c.Request.Context(), client, in.TypeName, cfg); err != nil {
+	if err := pipeline.SaveSchedulerTaskConfig(c, client, in.TypeName, cfg); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -186,7 +186,7 @@ func EtlSchedulerTaskDelete(c *gin.Context) {
 		return
 	}
 	client := middlewares.GetEtcdClient(c)
-	configs, err := pipeline.LoadSchedulerTaskConfigs(c.Request.Context(), client)
+	configs, err := pipeline.LoadSchedulerTaskConfigs(c, client)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -195,7 +195,7 @@ func EtlSchedulerTaskDelete(c *gin.Context) {
 		response.CreateSchedulerTaskError("schedulerTaskUpdateNotExist", in.TypeName).AbortWithGinH(c)
 		return
 	}
-	if err := pipeline.DeleteSchedulerTaskConfig(c.Request.Context(), client, in.TypeName); err != nil {
+	if err := pipeline.DeleteSchedulerTaskConfig(c, client, in.TypeName); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -214,7 +214,7 @@ func EtlSchedulerTaskRun(c *gin.Context) {
 		return
 	}
 	client := middlewares.GetEtcdClient(c)
-	configs, err := pipeline.LoadSchedulerTaskConfigs(c.Request.Context(), client)
+	configs, err := pipeline.LoadSchedulerTaskConfigs(c, client)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -225,7 +225,7 @@ func EtlSchedulerTaskRun(c *gin.Context) {
 		return
 	}
 	enq := middlewares.GetPipelineClient(c)
-	if err := pipeline.EnqueueSchedulerTaskNow(c.Request.Context(), enq, in.TypeName, cfg); err != nil {
+	if err := pipeline.EnqueueSchedulerTaskNow(c, enq, in.TypeName, cfg); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}

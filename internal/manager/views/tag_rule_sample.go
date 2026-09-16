@@ -169,7 +169,7 @@ func TagRuleSampleCreate(c *gin.Context) {
 	} else if len(keys) > 0 {
 		uid := serializer.NewHexUUIDv4().String()
 		var copyErr error
-		rollback, copyErr = CopySampleS3Objects(c.Request.Context(), middlewares.GetS3Client(c), in.Model, in.Input, uid)
+		rollback, copyErr = CopySampleS3Objects(c, middlewares.GetS3Client(c), in.Model, in.Input, uid)
 		if copyErr != nil {
 			if rollback != nil {
 				rollback()
@@ -318,7 +318,7 @@ func TagRuleSampleBatchDelete(c *gin.Context) {
 				if err := json.Unmarshal(instance.Input, &input); err != nil {
 					return errors.WithStack(err)
 				}
-				if err := DeleteSampleS3Objects(c.Request.Context(), middlewares.GetS3Client(c), instance.Model, input); err != nil {
+				if err := DeleteSampleS3Objects(c, middlewares.GetS3Client(c), instance.Model, input); err != nil {
 					return errors.WithStack(err)
 				}
 			}

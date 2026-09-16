@@ -60,7 +60,7 @@ func newDependencyItemOut(st status.Status) DependencyItemOut {
 		Configured: st.Configured,
 		Reachable:  st.Reachable,
 		Status:     st.State(),
-		Latency:    st.Latency,
+		Latency:    serializer.DurationMS(st.Latency.Milliseconds()),
 		Message:    st.Err,
 	}
 }
