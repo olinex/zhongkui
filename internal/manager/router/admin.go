@@ -178,5 +178,13 @@ func registerAdminRoutes(ctx *RegisterContext) {
 		adminGroup.OPTIONS("/enum/list", views.StructMetaGinHandler(
 			views.WithMethod(http.MethodPost, views.WithBodyInput[views.EnumListIn](), views.WithBodyOutput[views.EnumListOut]()),
 		))
+
+		// ========== 依赖状态自省接口 ==========
+		// 返回全部外部依赖（database / redis / etcd / s3 / mail / grpc / llm）的配置与连通状态
+		adminGroup.POST("/deps/list", views.DependencyListGet(ctx.injector))
+		// 依赖状态列表元信息（仅输出，无请求体）
+		adminGroup.OPTIONS("/deps/list", views.StructMetaGinHandler(
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[views.DependencyListOut]()),
+		))
 	}
 }

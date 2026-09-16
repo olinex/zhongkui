@@ -41,8 +41,9 @@ import (
 // RegisterContext 路由注册上下文：聚合全局引擎、API 版本组与公共中间件实例，
 // 供各 path 分组注册函数复用。
 type RegisterContext struct {
-	engine  *gin.Engine
-	v1Group *gin.RouterGroup
+	engine   *gin.Engine
+	v1Group  *gin.RouterGroup
+	injector do.Injector
 
 	authenticatorMiddleware     gin.HandlerFunc
 	forceAuthenticateMiddleware gin.HandlerFunc
@@ -187,6 +188,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	rc := &RegisterContext{
 		engine:                      engine,
 		v1Group:                     engine.Group("/api/v1"),
+		injector:                    i,
 		authenticatorMiddleware:     authenticatorMiddleware,
 		forceAuthenticateMiddleware: forceAuthenticateMiddleware,
 		policyMiddleware:            policyMiddleware,

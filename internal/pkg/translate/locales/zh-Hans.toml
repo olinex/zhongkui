@@ -639,6 +639,33 @@ other = "maxRetry"
 [cli.scheduler.col-enabled]
 other = "enabled"
 
+[cli.deps.col-name]
+other = "名称"
+
+[cli.deps.col-category]
+other = "类别"
+
+[cli.deps.col-configured]
+other = "已配置"
+
+[cli.deps.col-state]
+other = "状态"
+
+[cli.deps.col-latency]
+other = "耗时"
+
+[cli.deps.col-message]
+other = "说明"
+
+[cli.deps.value.ok]
+other = "正常"
+
+[cli.deps.value.unreachable]
+other = "不可达"
+
+[cli.deps.value.disabled]
+other = "未配置"
+
 [cli.crypto.book-generated-file]
 other = "密码本文件已生成：[[.Path]]（[[.Bytes]] 字节）"
 
@@ -1240,6 +1267,9 @@ other = "从 etcd 打印定时任务配置"
 
 [cmd.describe.scheduler.long]
 other = "从 etcd 打印定时任务的配置。\n使用 --name 指定一个或多个任务类型。未提供 --name 时，列出所有任务。\n\n示例：\n  zhongkui describe scheduler\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble"
+
+[cmd.describe.deps.short]
+other = "查看外部依赖状态"
 
 [cmd.run.short]
 other = "运行 zhongkui 服务进程"

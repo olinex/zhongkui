@@ -172,6 +172,9 @@ other = "Print scheduler task configs from etcd"
 [cmd.describe.scheduler.long]
 other = "Print scheduler task configs from etcd.\nUse --name to specify one or more task types. Without --name, list all tasks.\n\nExamples:\n  zhongkui describe scheduler\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble\n  zhongkui describe scheduler --name network:periodic:ipv4reassemble --name network:periodic:ipv6reassemble"
 
+[cmd.describe.deps.short]
+other = "Show external dependency status"
+
 [cmd.run.short]
 other = "Run the zhongkui server process"
 
@@ -1022,6 +1025,33 @@ other = "maxRetry"
 
 [cli.scheduler.col-enabled]
 other = "enabled"
+
+[cli.deps.col-name]
+other = "Name"
+
+[cli.deps.col-category]
+other = "Category"
+
+[cli.deps.col-configured]
+other = "Configured"
+
+[cli.deps.col-state]
+other = "State"
+
+[cli.deps.col-latency]
+other = "Latency"
+
+[cli.deps.col-message]
+other = "Message"
+
+[cli.deps.value.ok]
+other = "OK"
+
+[cli.deps.value.unreachable]
+other = "Unreachable"
+
+[cli.deps.value.disabled]
+other = "Disabled"
 
 [cli.config.col-path]
 other = "path"

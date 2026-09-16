@@ -189,6 +189,7 @@ func init() {
 	// describe
 	describeCmd.AddCommand(describeConfigCmd)
 	describeCmd.AddCommand(describeSchedulerCmd)
+	describeCmd.AddCommand(describeDepsCmd)
 	RootCmd.AddCommand(describeCmd)
 	// run
 	runCmd.AddCommand(webCmd)
