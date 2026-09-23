@@ -88,7 +88,7 @@ func getJSONTagAndType(t reflect.Type) (opts []*HeaderOption) {
 // 返回值：
 //   - string: 参数值
 //   - bool: 是否成功获取（true 表示参数有效，false 表示参数为空且请求已被中断）
-func getRawParam(c *gin.Context, name string) (string, bool) {
+func GetRawParam(c *gin.Context, name string) (string, bool) {
 	rawStr := c.Param(name)
 	if len(rawStr) == 0 {
 		response.CreateBadUrlParamError("emptyUrlParam", name).AbortWithGinH(c)
@@ -107,7 +107,7 @@ func getRawParam(c *gin.Context, name string) (string, bool) {
 // 返回值：
 //   - uint64: 解析后的参数值
 //   - bool: 是否成功解析（true 表示参数有效，false 表示解析失败且请求已被中断）
-func getUint64Param(c *gin.Context, name string) (uint64, bool) {
+func GetUint64Param(c *gin.Context, name string) (uint64, bool) {
 	idStr := c.Param(name)
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
@@ -128,7 +128,7 @@ func getUint64Param(c *gin.Context, name string) (uint64, bool) {
 // 返回值：
 //   - serializer.HexUUID: 解析后的二进制 UUID
 //   - bool: 是否成功解析（true 表示 UUID 有效，false 表示无效且请求已被中断）
-func getUUIDParam(c *gin.Context, name string) (serializer.HexUUID, bool) {
+func GetUUIDParam(c *gin.Context, name string) (serializer.HexUUID, bool) {
 	uuidStr := c.Param(name)
 	binUUID, err := serializer.HexUUIDv4FromString(uuidStr)
 	if err != nil || binUUID.IsNil() || binUUID.IsEmpty() {

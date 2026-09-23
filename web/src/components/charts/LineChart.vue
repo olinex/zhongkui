@@ -1,4 +1,6 @@
 <template>
+  <!-- height / width 为公开 prop（默认 400px / 100%），由调用方按图表场景传入，
+       属运行时计算值，故保留 :style 绑定 -->
   <v-chart :style="{ height, width }" :option="mergedOption" />
 </template>
 

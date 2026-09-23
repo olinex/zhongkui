@@ -2,8 +2,6 @@
   <v-combobox
     :model-value="modelValue"
     :label="$t('model.__base.field.search')"
-    density="compact"
-    variant="outlined"
     return-object
     multiple
     readonly

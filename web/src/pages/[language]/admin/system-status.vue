@@ -1,55 +1,58 @@
 <template>
   <main-layout current-nav="admin">
     <template #body>
-      <v-card class="mb-4">
-        <v-card-title class="text-h6 text-on-surface">
-          {{ $t("model.service.name") }}
-        </v-card-title>
-        <v-data-table :items="serviceItems" :headers="serviceHeaders" item-value="instanceId">
-          <template #[`item.startedAt`]="{ item }">
-            <span v-if="isValidDateTime(item.startedAt)">{{
-              formatStartedAt(item.startedAt)
-            }}</span>
-            <span v-else>{{ item.startedAt }}</span>
-          </template>
-          <template #[`item.running`]="{ item }">
-            {{ formatRunning(item.startedAt) }}
-          </template>
-          <template #[`item.live`]="{ item }">
-            <BooleanChip
-              :value="item.live"
-              :label="$t(item.live ? 'model.__base.value.yes' : 'model.__base.value.no')"
-            />
-          </template>
-          <template #[`item.ready`]="{ item }">
-            <BooleanChip
-              :value="item.ready"
-              :label="$t(item.ready ? 'model.__base.value.yes' : 'model.__base.value.no')"
-            />
-          </template>
-          <template #[`item.started`]="{ item }">
-            <BooleanChip
-              :value="item.started"
-              :label="$t(item.started ? 'model.__base.value.yes' : 'model.__base.value.no')"
-            />
-          </template>
-        </v-data-table>
-      </v-card>
+      <!-- 服务/采集器两块内容经 tab 拆分：消除多卡片垂直排列时的背景间隙，RefreshControl 置于 tab 栏下方右侧共享 -->
+      <tab-view
+        v-model="tab"
+        :items="[
+          { key: 'service', label: $t('model.service.name') },
+          { key: 'capturer', label: $t('model.capturer.name') },
+        ]"
+      >
+        <template #actions>
+          <RefreshControl
+            v-model:interval="refreshInterval"
+            :loading="refreshing"
+            @refresh="refreshAll(true)"
+            @auto-refresh="refreshAll()"
+          />
+        </template>
 
-      <v-card>
-        <v-card-title class="text-h6 text-on-surface">
-          {{ $t("model.capturer.name") }}
-        </v-card-title>
-        <v-data-table :items="capturerItems" :headers="capturerHeaders" item-value="namespace">
-          <template #[`item.status`]="{ item }">
-            {{ $t(`model.capturer.option.status.${item.status}`) }}
-          </template>
-          <template #[`item.lastSeen`]="{ item }">
-            <span v-if="isValidDateTime(item.lastSeen)">{{ formatLastSeen(item.lastSeen) }}</span>
-            <span v-else>{{ item.lastSeen }}</span>
-          </template>
-        </v-data-table>
-      </v-card>
+        <template #service>
+          <v-data-table :items="serviceItems" :headers="serviceHeaders" item-value="instanceId">
+            <template #[`item.startedAt`]="{ item }">
+              <span v-if="isValidDateTime(item.startedAt)">{{
+                formatStartedAt(item.startedAt)
+              }}</span>
+              <span v-else>{{ item.startedAt }}</span>
+            </template>
+            <template #[`item.running`]="{ item }">
+              {{ formatRunning(item.startedAt) }}
+            </template>
+            <template #[`item.live`]="{ item }">
+              <BooleanChip :value="item.live" />
+            </template>
+            <template #[`item.ready`]="{ item }">
+              <BooleanChip :value="item.ready" />
+            </template>
+            <template #[`item.started`]="{ item }">
+              <BooleanChip :value="item.started" />
+            </template>
+          </v-data-table>
+        </template>
+
+        <template #capturer>
+          <v-data-table :items="capturerItems" :headers="capturerHeaders" item-value="namespace">
+            <template #[`item.status`]="{ item }">
+              {{ $t(`model.capturer.option.status.${item.status}`) }}
+            </template>
+            <template #[`item.lastSeen`]="{ item }">
+              <span v-if="isValidDateTime(item.lastSeen)">{{ formatLastSeen(item.lastSeen) }}</span>
+              <span v-else>{{ item.lastSeen }}</span>
+            </template>
+          </v-data-table>
+        </template>
+      </tab-view>
     </template>
   </main-layout>
 </template>
@@ -73,12 +76,16 @@ import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 import { DateTime } from "luxon";
 
 const appStore = useAppStore();
+// 当前激活的 tab：service（服务状态）或 capturer（采集器状态）
+const tab = ref("service");
 const serviceItems = ref<ServiceItemOut[]>([]);
 const capturerItems = ref<CapturerStatusItemOut[]>([]);
 
-// nowTick 每 30 秒更新一次，驱动运行时长列刷新。
+// nowTick 每次刷新时更新，驱动运行时长列重新计算。
 const nowTick = ref(0);
-let timer: number | undefined;
+const refreshInterval = ref(30000);
+// refreshing 仅用于手动刷新按钮的 loading 态，定时刷新不触发。
+const refreshing = ref(false);
 
 // 服务状态列标题跟随语言变化，故用 computed 声明。
 const serviceHeaders = computed(() => [
@@ -182,19 +189,23 @@ const getCapturerStatusListAction = async (): Promise<void> => {
   );
 };
 
-// 每 30 秒刷新：nowTick 驱动运行时长列，同时重新拉取列表反映服务/采集器上线下线。
-onMounted(async () => {
-  await Promise.all([getServiceListAction(), getCapturerStatusListAction()]);
-  timer = window.setInterval(() => {
-    nowTick.value = Date.now();
-    void getServiceListAction();
-    void getCapturerStatusListAction();
-  }, 30000);
-});
-
-onBeforeUnmount(() => {
-  if (timer !== undefined) {
-    window.clearInterval(timer);
+// refreshAll 立即刷新：重新拉取服务/采集器列表并更新运行时长基准。
+// showLoading 为 true 时点亮刷新按钮 loading（手动触发），定时触发不显示。
+const refreshAll = async (showLoading = false): Promise<void> => {
+  if (showLoading) {
+    refreshing.value = true;
   }
+  nowTick.value = Date.now();
+  try {
+    await Promise.all([getServiceListAction(), getCapturerStatusListAction()]);
+  } finally {
+    refreshing.value = false;
+  }
+};
+
+// 定时刷新由 RefreshControl 组件自持（环形倒计时），此处仅在挂载时做一次初始加载；
+// 后续自动刷新经 auto-refresh 事件回调 refreshAll()。
+onMounted(async () => {
+  await refreshAll();
 });
 </script>

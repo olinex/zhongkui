@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/config"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 )
 
@@ -31,7 +31,7 @@ import (
 //
 // 返回:
 //   - gin.HandlerFunc: Gin 框架中间件处理函数
-func SecureHeadersMiddleware(cfg *manager.SecureConfig) gin.HandlerFunc {
+func SecureHeadersMiddleware(cfg *config.SecureConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header(base.HdrContentSecurityPolicy, cfg.ContentSecurityPolicy)
 		c.Header(base.HdrPermissionsPolicy, cfg.PermissionsPolicy)
@@ -71,7 +71,7 @@ func SecureHeadersMiddleware(cfg *manager.SecureConfig) gin.HandlerFunc {
 //
 // 返回:
 //   - gin.HandlerFunc: Gin 框架中间件处理函数
-func CORSHeadersMiddleware(cfg *manager.CORSConfig) gin.HandlerFunc {
+func CORSHeadersMiddleware(cfg *config.CORSConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Header(base.HdrAccessControlAllowCredentials, strconv.FormatBool(cfg.AllowCredentials))
 		c.Header(base.HdrAccessControlAllowHeaders, strings.Join(cfg.AllowHeaders, ", "))

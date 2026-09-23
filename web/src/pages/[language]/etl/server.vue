@@ -1,12 +1,15 @@
 <template>
   <main-layout current-nav="etl">
     <template #body>
+      <!-- 操作按钮行：与其余列表页一致的独立右对齐行（本页为卡片列表，无筛选行与表格） -->
+      <div class="d-flex justify-end align-center ga-2 pb-2">
+        <action-button-group :refresh="getServerListAction" />
+      </div>
       <v-empty-state
         v-show="servers.length === 0"
         v-request="getServerListAction"
         icon="mdi-magnify"
         :headline="$t('summary.noServerYet', { name: $t('model.server.name') })"
-        :text="$t('summary.noServerYetHelp', { btn: $t('action.reset') })"
         :action-text="$t('action.reset')"
       />
       <v-card v-for="server in servers" :key="server.id">

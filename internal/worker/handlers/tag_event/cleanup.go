@@ -7,6 +7,8 @@ import (
 	"time"
 
 	// third-party
+
+	"github.com/creasty/defaults"
 	"github.com/samber/do/v2"
 
 	// internal
@@ -27,13 +29,11 @@ const (
 	TagEventCleanupTask = "tag:event:cleanup"
 )
 
-// defaultCleanupRetention 默认清理保留期：suppressed 事件（从未发送通知的无效数据）保留 7 天后清理。
-const defaultCleanupRetention = 7 * 24 * time.Hour
-
 // cleanupTaskPayload 清理任务载荷，保留期随任务调度参数一并维护于 etcd 的 scheduler/cfg 配置。
 type cleanupTaskPayload struct {
-	// Retention 清理保留期；suppressed 事件 detected_at 早于"当前时间-保留期"即被删除。0 时使用默认值 168h。
-	Retention serializer.DurationNS `json:"retention"`
+	// Retention 清理保留期；suppressed 事件 detected_at 早于"当前时间-保留期"即被删除。
+	// 缺省（未声明或非正值）为 default 标签声明的 7 天。
+	Retention serializer.DurationNS `json:"retention" default:"168h"`
 }
 
 // EventCleanupHandler 标签事件无效记录清理处理器，消费 tag:event:cleanup 任务。
@@ -54,13 +54,13 @@ func NewEventCleanupHandler(i do.Injector) *EventCleanupHandler {
 	return &EventCleanupHandler{coreDB: coreDB, logger: logger}
 }
 
-// Do 执行一次清理：解析任务载荷中的保留期（缺失时用默认 7 天），
+// Do 执行一次清理：解析任务载荷中的保留期（缺失或非正值时用默认 7 天），
 // 单条 DELETE 删除 status=suppressed 且 detected_at 早于截止时间的记录，命中明细经数据库外键级联删除。
 func (h *EventCleanupHandler) Do(ctx context.Context, task etl.Task) error {
 	retention, err := parseCleanupRetention(task.Payload())
 	if err != nil {
+		// 解析失败时 parseCleanupRetention 已回退默认保留期，仅记录告警并继续清理
 		h.logger.Ctx(ctx).Warnf("tag event cleanup: parse retention failed, use default: %v", err)
-		retention = defaultCleanupRetention
 	}
 	cutoff := time.Now().Add(-retention)
 	res := h.coreDB.WithContext(ctx).
@@ -75,28 +75,36 @@ func (h *EventCleanupHandler) Do(ctx context.Context, task etl.Task) error {
 	return nil
 }
 
-// parseCleanupRetention 从任务载荷提取清理保留期；载荷缺失/解析失败时返回默认值（7 天）。
+// parseCleanupRetention 从任务载荷提取清理保留期；载荷缺失/解析失败/保留期非正值时回退默认值（7 天）。
+// 默认值由 cleanupTaskPayload.Retention 的 default 标签声明，此处经 defaults.Set 取回，不重复字面量。
 // 普通 asynq 定时任务的载荷即 sCfg.Payload（retention 位于顶层）；
 // 兼容游标任务载荷（retention 嵌于 payload 子对象）以免被误配为游标模式。
 func parseCleanupRetention(raw []byte) (time.Duration, error) {
+	var fallback cleanupTaskPayload
+	if err := defaults.Set(&fallback); err != nil {
+		return 0, errors.WithStack(err)
+	}
+	defaultRetention := fallback.Retention.Std()
 	if len(raw) == 0 {
-		return defaultCleanupRetention, nil
+		return defaultRetention, nil
 	}
 	var m map[string]any
 	if err := json.Unmarshal(raw, &m); err != nil {
-		return defaultCleanupRetention, errors.WithStack(err)
+		return defaultRetention, errors.WithStack(err)
 	}
 	if inner, ok := m["payload"].(map[string]any); ok && len(inner) > 0 {
 		m = inner
 	}
+	data, err := json.Marshal(m)
+	if err != nil {
+		return defaultRetention, errors.WithStack(err)
+	}
 	var p cleanupTaskPayload
-	if data, err := json.Marshal(m); err != nil {
-		return defaultCleanupRetention, errors.WithStack(err)
-	} else if err := json.Unmarshal(data, &p); err != nil {
-		return defaultCleanupRetention, errors.WithStack(err)
+	if err := json.Unmarshal(data, &p); err != nil {
+		return defaultRetention, errors.WithStack(err)
 	}
 	if p.Retention <= 0 {
-		return defaultCleanupRetention, nil
+		return defaultRetention, nil
 	}
 	return p.Retention.Std(), nil
 }

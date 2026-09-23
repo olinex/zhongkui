@@ -3,7 +3,7 @@ package cmd
 import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/config"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/provider"
 )
@@ -13,7 +13,7 @@ var describeConfigCmd = &cobra.Command{
 	Short: "cmd.describe.config.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		descs := provider.DescribeLoggerConfig()
-		descs.Join(manager.DescribeConfig())
+		descs.Join(config.DescribeConfig())
 		descs.Join(provider.DescribeCryptoConfig())
 		descs.Join(provider.DescribeDatabaseConfig())
 		descs.Join(provider.DescribeEtcdConfig())
@@ -23,7 +23,6 @@ var describeConfigCmd = &cobra.Command{
 		descs.Join(provider.DescribeGrpcServerConfig())
 		descs.Join(provider.DescribePipelineConfig())
 		descs.Join(provider.DescribeMailConfig())
-		descs.Join(provider.DescribeAiConfig())
 		descs.Join(provider.DescribeHealthConfig())
 		// 表头经 translate.T 按 key 本地化（cli.config.col-*）；配置项说明以结构体
 		// comment 标签为唯一事实来源，英文翻译可追加到 en.toml 的 config.<path>

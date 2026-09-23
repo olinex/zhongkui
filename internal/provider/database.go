@@ -46,6 +46,9 @@ func CoreModels() []any {
 		&tagmodel.TagRule{},
 		&tagmodel.TagRuleVersion{},
 		&tagmodel.TagRuleSample{},
+		&coremodel.LlmModel{},
+		&coremodel.LlmBinding{},
+		&coremodel.AgentParam{},
 	}
 }
 

@@ -1,34 +1,26 @@
 <template>
   <!-- 明文查看对话框：加密字段解密 / S3 body 按对象键读取的明文展示，
        支持文本/十六进制预览与下载；open() 由调用方在行详情与列表单元格触发 -->
-  <v-dialog v-model="dialog" max-width="900">
-    <v-card>
-      <v-card-title class="text-no-wrap">
-        {{ title }}
-      </v-card-title>
-      <v-card-text>
-        <v-alert v-if="!isText" type="info" variant="tonal" density="compact" class="mb-2">
-          {{ $t("notice.plaintextBinary") }}
-        </v-alert>
-        <div class="plaintext-preview">
-          <pre class="font-mono">{{ isText ? text : hex }}</pre>
-        </div>
-        <div v-if="truncated" class="text-caption text-on-surface-variant mt-1">
-          {{ $t("notice.plaintextTruncated") }}
-        </div>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          :text="$t('action.download')"
-          prepend-icon="mdi-download"
-          variant="tonal"
-          @click="downloadAction"
-        />
-        <v-btn :text="$t('action.close')" variant="text" @click="dialog = false" />
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <app-dialog v-model="dialog" :title="title" size="lg">
+    <v-alert v-if="!isText" type="info" class="mb-2">
+      {{ $t("notice.plaintextBinary") }}
+    </v-alert>
+    <div class="plaintext-preview">
+      <pre class="font-mono">{{ isText ? text : hex }}</pre>
+    </div>
+    <div v-if="truncated" class="zk-hint mt-1">
+      {{ $t("notice.plaintextTruncated") }}
+    </div>
+    <template #footer>
+      <v-btn
+        :text="$t('action.download')"
+        prepend-icon="mdi-download"
+        variant="tonal"
+        @click="downloadAction"
+      />
+      <v-btn :text="$t('action.close')" variant="text" @click="dialog = false" />
+    </template>
+  </app-dialog>
 </template>
 
 <script setup lang="ts" name="plaintext-dialog">
@@ -145,7 +137,7 @@ defineExpose({ open });
 <style scoped>
 /* Plaintext preview area with vertical scrolling for long contents. */
 .plaintext-preview {
-  max-height: 480px;
+  max-height: var(--zk-preview-max-height);
   overflow-y: auto;
 }
 

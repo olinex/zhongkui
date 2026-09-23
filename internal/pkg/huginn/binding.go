@@ -10,15 +10,17 @@
 //   - HTTP 解析成功即返回结果（浏览器 / 服务端未匹配时字段为空串、quality 为 0.0）。
 package huginn
 
-// defaultMTU MTU 缺省值：未从客户端 SYN 提取到 MTU 时的兜底值（对应 FFI DEFAULT_MTU）。
-const defaultMTU uint16 = 1500
+import "github.com/creasty/defaults"
+
+// third-party
 
 // TCPFingerprint TCP 指纹识别结果（p0f 风格）。
 type TCPFingerprint struct {
 	OS        string  `json:"os"`
 	OSQuality float64 `json:"os_quality"`
 	Sig       string  `json:"sig"`
-	MTU       uint16  `json:"mtu"`
+	// MTU 未从客户端 SYN 提取到 MTU 时的兜底值（对应 FFI DEFAULT_MTU）
+	MTU uint16 `json:"mtu" default:"1500"`
 }
 
 // HTTPFingerprint Http 指纹识别结果。
@@ -92,11 +94,15 @@ func analyzeTCP(raw []byte, v6 bool) *TCPFingerprint {
 	}
 
 	os, quality := matchTCP(collection, obs)
-	mtu := defaultMTU
-	if pkg.mtu != nil {
-		mtu = *pkg.mtu
+	fp := &TCPFingerprint{OS: os, OSQuality: quality, Sig: obs.String()}
+	// MTU 缺省值由 default 标签声明，未提取到时由 defaults.Set 填充
+	if err := defaults.Set(fp); err != nil {
+		return nil
 	}
-	return &TCPFingerprint{OS: os, OSQuality: quality, Sig: obs.String(), MTU: mtu}
+	if pkg.mtu != nil {
+		fp.MTU = *pkg.mtu
+	}
+	return fp
 }
 
 // AnalyzeTCPIPv4 分析原始 IPv4+TCP 头字节，返回 TCP 指纹。

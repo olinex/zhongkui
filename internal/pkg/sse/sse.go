@@ -25,14 +25,20 @@ import (
 type SSEEventValue string
 
 // SSE 事件类型常量：SSE 流上事件的 event 行取值。前端按事件类型分发解析：
-// delta 累积正文、done 呈现结构化产物与引用、error 中断提示、ping 保活。
+// delta 累积正文、stage 呈现执行阶段的状态与用量、done 呈现结构化产物与引用、
+// error 中断提示、ping 保活。
 // SSE event type constants: the event-line values of the SSE stream. The frontend
-// dispatches by event type: delta accumulates the content, done presents the
-// structured artifact and citations, error aborts with a hint, ping keeps alive.
+// dispatches by event type: delta accumulates the content, stage presents the status and
+// usage of an execution stage, done presents the structured artifact and citations, error
+// aborts with a hint, ping keeps alive.
 const (
-	// SSEEventDelta 增量文本事件（data 为 {"delta": "..."}）
-	// SSEEventDelta the delta-text event (data is {"delta": "..."})
+	// SSEEventDelta 增量文本事件（data 为 {"delta": "..."}，可带 {"stage": "..."}）
+	// SSEEventDelta the delta-text event (data is {"delta": "..."}, optionally with {"stage": "..."})
 	SSEEventDelta SSEEventValue = "delta"
+	// SSEEventStage 阶段事件（data 为调用方的阶段状态负载，如阶段开始/完成/失败的耗时与用量）
+	// SSEEventStage the stage event (data is the caller's stage-status payload, e.g. the
+	// elapsed time and usage of a stage start / completion / failure)
+	SSEEventStage SSEEventValue = "stage"
 	// SSEEventDone 完成事件（data 为调用方产物负载，如完整对话产物）
 	// SSEEventDone the done event (data is the caller's artifact payload, e.g. the
 	// full dialogue artifact)
@@ -132,6 +138,22 @@ func (s *SSEWriter) Send(ev SSEEvent) error {
 // SendDelta sends a delta text (delta event).
 func (s *SSEWriter) SendDelta(delta string) error {
 	return WriteSSE(s.w, SSEEvent{Event: SSEEventDelta, Data: map[string]string{"delta": delta}})
+}
+
+// SendStageDelta 发送带阶段标识的增量文本（delta 事件，data 为
+// {"stage": "...", "delta": "..."}），供多阶段流式过程（如检索试运行）把增量
+// 归属到具体阶段。
+// SendStageDelta sends a delta text tagged with its stage (delta event, data is
+// {"stage": "...", "delta": "..."}), letting a multi-stage streaming process (e.g. the
+// retrieval dry-run) attribute deltas to a specific stage.
+func (s *SSEWriter) SendStageDelta(stage string, delta string) error {
+	return WriteSSE(s.w, SSEEvent{Event: SSEEventDelta, Data: map[string]string{"stage": stage, "delta": delta}})
+}
+
+// SendStage 发送阶段事件（stage 事件，payload 为调用方的阶段状态负载）。
+// SendStage sends a stage event (stage event, payload is the caller's stage-status payload).
+func (s *SSEWriter) SendStage(payload any) error {
+	return WriteSSE(s.w, SSEEvent{Event: SSEEventStage, Data: payload})
 }
 
 // SendDone 发送完成事件（payload 为调用方结构化产物，任意可 JSON 序列化负载）。

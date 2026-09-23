@@ -134,7 +134,8 @@
                       icon="mdi-minus"
                       variant="tonal"
                       color="error"
-                      density="compact"
+                      :title="$t('action.leave')"
+                      :aria-label="$t('action.leave')"
                       @click="leaveGroupAction(proxy.unionID, item, removeItem)"
                     />
                   </template>
@@ -146,10 +147,9 @@
                       v-model="item.namespace"
                       :items="namespaceOpts"
                       :disabled="!listEditable"
-                      variant="outlined"
                       hide-details
                       single-line
-                      style="width: 140px"
+                      class="join-namespace-select"
                     />
                     <v-btn
                       v-request="
@@ -167,7 +167,6 @@
                       color="primary"
                       variant="tonal"
                       size="small"
-                      density="compact"
                     />
                   </template>
                 </inner-edit-table>
@@ -213,29 +212,28 @@
           </v-form>
         </template>
       </temp-editable-dialog>
-      <v-dialog v-model="resetResultDialog" max-width="500">
-        <v-card prepend-icon="mdi-lock-reset" :title="$t('action.resetPassword')">
-          <v-card-text>
-            <v-text-field
-              :model-value="resetResultPassword"
-              :label="$t('model.user.field.newPassword')"
-              readonly
-            >
-              <template #append-inner>
-                <copy-btn :value="resetResultPassword" />
-              </template>
-            </v-text-field>
-            <p class="text-body-2 text-on-surface-variant mt-2">
-              {{ $t("model.user.field.passwordResetNotice") }}
-            </p>
-          </v-card-text>
-          <v-divider />
-          <v-card-actions>
-            <v-spacer />
-            <v-btn :text="$t('action.close')" variant="plain" @click="resetResultDialog = false" />
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <app-dialog
+        v-model="resetResultDialog"
+        :title="$t('action.resetPassword')"
+        icon="mdi-lock-reset"
+        size="sm"
+      >
+        <v-text-field
+          :model-value="resetResultPassword"
+          :label="$t('model.user.field.newPassword')"
+          readonly
+        >
+          <template #append-inner>
+            <copy-btn :value="resetResultPassword" />
+          </template>
+        </v-text-field>
+        <p class="text-body-2 text-on-surface-variant mt-2">
+          {{ $t("model.user.field.passwordResetNotice") }}
+        </p>
+        <template #footer>
+          <v-btn :text="$t('action.close')" variant="text" @click="resetResultDialog = false" />
+        </template>
+      </app-dialog>
     </template>
   </main-layout>
 </template>
@@ -702,3 +700,10 @@ const leaveGroupAction = async (
   );
 };
 </script>
+
+<style scoped>
+/* Namespace select keeps a fixed width so the append actions stay aligned in the row. */
+.join-namespace-select {
+  width: 140px;
+}
+</style>

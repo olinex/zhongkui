@@ -1,7 +1,7 @@
 <template>
   <div class="tag-expr-editor-wrap">
-    <div class="expr-header">
-      <span class="expr-title">{{ $t("model.tagEventCondition.field.expression") }}</span>
+    <div class="zk-editor-header">
+      <span class="zk-editor-title">{{ $t("model.tagEventCondition.field.expression") }}</span>
       <v-spacer />
       <v-icon v-if="valid" size="x-small" color="success" :title="$t('action.validatePassed')">
         mdi-check-circle
@@ -10,13 +10,15 @@
         mdi-alert-circle
       </v-icon>
     </div>
+    <!-- minHeight 为公开 prop（tag-event-rule.vue 等调用方按场景传入自定义最小高度），
+         属运行时计算值，故保留 :style 绑定 -->
     <div
       ref="hostRef"
-      class="expr-editor"
+      class="zk-editor"
       :class="{ 'is-error': !!errorMessage }"
       :style="{ minHeight }"
     />
-    <div v-if="errorMessage" class="expr-error">{{ errorMessage }}</div>
+    <div v-if="errorMessage" class="zk-error-text">{{ errorMessage }}</div>
   </div>
 </template>
 
@@ -222,9 +224,9 @@ const extensions: Extension[] = [
   editableCompartment.of(EditorState.readOnly.of(props.disabled)),
   EditorView.lineWrapping,
   EditorView.theme({
-    "&": { fontSize: "13px", height: "100%" },
+    "&": { fontSize: "var(--zk-editor-font-size)", height: "100%" },
     ".cm-scroller": {
-      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      fontFamily: "var(--zk-font-mono)",
       lineHeight: "1.6",
     },
     "&.cm-focused": { outline: "none" },
@@ -292,52 +294,6 @@ defineExpose({ focus: () => view.value?.focus() });
 .tag-expr-editor-wrap {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-/* 头部与 rego 编辑器各分区一致：13px 半粗标题 + 校验状态图标 */
-.expr-header {
-  display: flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 2px;
-}
-
-.expr-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-.expr-editor {
-  width: 100%;
-  border: 1px solid rgb(0 0 0 / 24%);
-  border-radius: 4px;
-  background-color: rgb(var(--v-theme-surface));
-  overflow: hidden;
-}
-
-.expr-editor.is-error {
-  border-color: rgb(var(--v-theme-error));
-}
-
-.expr-error {
-  font-size: 12px;
-  color: rgb(var(--v-theme-error));
-  padding: 0 2px;
-}
-
-/* CodeMirror tooltip（补全菜单 / lint 悬停消息）跟随 Vuetify 主题，
-   与 rego 编辑器保持一致，避免 dark 下亮字亮底对比度不足 */
-:deep(.cm-tooltip) {
-  z-index: 5000;
-  background-color: rgb(var(--v-theme-surface)) !important;
-  border: 1px solid rgb(var(--v-theme-on-surface), 0.12) !important;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
-:deep(.cm-tooltip .cm-diagnosticText) {
-  color: rgb(var(--v-theme-on-surface)) !important;
+  gap: var(--zk-space-1);
 }
 </style>

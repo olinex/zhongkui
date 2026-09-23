@@ -24,11 +24,7 @@
         </template>
         <!-- 来源列：default / override 以彩色 chip 高亮展示（i18n 翻译展示名，与筛选下拉一致） -->
         <template #cell-source="{ value }">
-          <v-chip
-            :color="value === 'override' ? 'primary' : 'default'"
-            size="small"
-            variant="tonal"
-          >
+          <v-chip :color="value === 'override' ? 'primary' : 'default'">
             {{ sourceNameKey(String(value ?? "")) }}
           </v-chip>
         </template>
@@ -113,7 +109,7 @@
                   :label="$t('model.notificationTemplate.field.title')"
                   :valid="editorTitleValid"
                   :error-message="editorTitleError"
-                  min-height="72px"
+                  :min-height="'var(--zk-editor-min-height)'"
                 />
               </v-col>
             </v-row>
@@ -125,7 +121,7 @@
                   :label="$t('model.notificationTemplate.field.content')"
                   :valid="editorContentValid"
                   :error-message="editorContentError"
-                  min-height="140px"
+                  :min-height="'var(--zk-editor-min-height)'"
                 />
               </v-col>
             </v-row>
@@ -153,7 +149,6 @@
                 <v-alert
                   v-if="tmplDryRunOpen && tmplDryRunError"
                   type="error"
-                  variant="tonal"
                   class="mt-2"
                   :text="tmplDryRunError"
                 />
@@ -162,11 +157,11 @@
                   <div class="text-subtitle-2">
                     {{ $t("model.notificationTemplate.field.title") }}
                   </div>
-                  <pre class="render-preview">{{ tmplDryRun.title }}</pre>
+                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.title }}</pre>
                   <div class="text-subtitle-2 mt-2">
                     {{ $t("model.notificationTemplate.field.content") }}
                   </div>
-                  <pre class="render-preview">{{ tmplDryRun.content }}</pre>
+                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.content }}</pre>
                 </template>
               </v-col>
             </v-row>
@@ -229,7 +224,7 @@
                   :valid="editorTitleValid"
                   :error-message="editorTitleError"
                   :disabled="!editable"
-                  min-height="72px"
+                  :min-height="'var(--zk-editor-min-height)'"
                 />
               </v-col>
             </v-row>
@@ -242,7 +237,7 @@
                   :valid="editorContentValid"
                   :error-message="editorContentError"
                   :disabled="!editable"
-                  min-height="140px"
+                  :min-height="'var(--zk-editor-min-height)'"
                 />
               </v-col>
             </v-row>
@@ -271,7 +266,6 @@
                 <v-alert
                   v-if="tmplDryRunOpen && tmplDryRunError"
                   type="error"
-                  variant="tonal"
                   class="mt-2"
                   :text="tmplDryRunError"
                 />
@@ -280,11 +274,11 @@
                   <div class="text-subtitle-2">
                     {{ $t("model.notificationTemplate.field.title") }}
                   </div>
-                  <pre class="render-preview">{{ tmplDryRun.title }}</pre>
+                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.title }}</pre>
                   <div class="text-subtitle-2 mt-2">
                     {{ $t("model.notificationTemplate.field.content") }}
                   </div>
-                  <pre class="render-preview">{{ tmplDryRun.content }}</pre>
+                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.content }}</pre>
                 </template>
               </v-col>
             </v-row>
@@ -293,110 +287,105 @@
       </temp-editable-dialog>
 
       <!-- 渲染测试对话框：选择事件/渠道/语言并编辑模板参数，实时预览渲染后的标题与正文 -->
-      <v-dialog v-model="renderDialog" max-width="720">
-        <v-card prepend-icon="mdi-play-box-outline" :title="$t('action.renderTest')">
-          <v-card-text>
-            <v-form>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-select
-                    v-model="renderEvent"
-                    :items="eventOptions"
-                    item-title="title"
-                    item-value="value"
-                    :label="$t('model.notificationTemplate.field.event')"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-select
-                    v-model="renderChannelType"
-                    :items="renderChannelOptions"
-                    :label="$t('model.notificationTemplate.field.channelType')"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-select
-                    v-model="renderLanguage"
-                    :items="renderLanguageOptions"
-                    item-title="title"
-                    item-value="value"
-                    :label="$t('model.notificationTemplate.field.language')"
-                  />
-                </v-col>
-              </v-row>
-              <v-divider class="my-2" />
-              <v-row dense align="center">
-                <v-col>
-                  <v-label>{{ $t("model.notificationTemplate.field.params") }}</v-label>
-                </v-col>
-                <v-col cols="auto">
-                  <v-btn
-                    :text="$t('action.add')"
-                    size="small"
-                    variant="tonal"
-                    color="primary"
-                    @click="addRenderParam"
-                  />
-                </v-col>
-              </v-row>
-              <v-row v-for="(row, index) in renderParams" :key="index" dense align="center">
-                <v-col cols="5">
-                  <v-text-field v-model="row.key" :label="$t('model.__base.field.field')" />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field v-model="row.value" :label="$t('model.__base.field.value')" />
-                </v-col>
-                <v-col cols="1">
-                  <v-btn
-                    icon="mdi-minus"
-                    variant="tonal"
-                    color="error"
-                    density="compact"
-                    @click="removeRenderParam(index)"
-                  />
-                </v-col>
-              </v-row>
-            </v-form>
-            <v-divider class="my-3" />
-            <div class="d-flex ga-2">
+      <app-dialog
+        v-model="renderDialog"
+        :title="$t('action.renderTest')"
+        icon="mdi-play-box-outline"
+        size="md"
+      >
+        <v-form>
+          <v-row dense>
+            <v-col cols="12">
+              <v-select
+                v-model="renderEvent"
+                :items="eventOptions"
+                item-title="title"
+                item-value="value"
+                :label="$t('model.notificationTemplate.field.event')"
+              />
+            </v-col>
+          </v-row>
+          <v-row dense>
+            <v-col cols="6">
+              <v-select
+                v-model="renderChannelType"
+                :items="renderChannelOptions"
+                :label="$t('model.notificationTemplate.field.channelType')"
+              />
+            </v-col>
+            <v-col cols="6">
+              <v-select
+                v-model="renderLanguage"
+                :items="renderLanguageOptions"
+                item-title="title"
+                item-value="value"
+                :label="$t('model.notificationTemplate.field.language')"
+              />
+            </v-col>
+          </v-row>
+          <v-divider class="my-2" />
+          <v-row dense align="center">
+            <v-col>
+              <v-label>{{ $t("model.notificationTemplate.field.params") }}</v-label>
+            </v-col>
+            <v-col cols="auto">
               <v-btn
-                v-request="renderTestAction"
-                color="primary"
+                :text="$t('action.add')"
+                size="small"
                 variant="tonal"
-                :disabled="!renderEvent"
-              >
-                {{ $t("action.renderTest") }}
-              </v-btn>
-              <v-spacer />
-              <v-btn variant="text" @click="renderDialog = false">
-                {{ $t("action.close") }}
-              </v-btn>
-            </div>
-            <v-alert
-              v-if="renderError"
-              type="error"
-              variant="tonal"
-              class="mt-3"
-              :text="renderError"
-            />
-            <template v-if="renderResult">
-              <v-divider class="my-3" />
-              <div class="text-subtitle-2">{{ $t("model.notificationTemplate.field.title") }}</div>
-              <pre class="render-preview">{{ renderResult.title }}</pre>
-              <div class="text-subtitle-2 mt-2">
-                {{ $t("model.notificationTemplate.field.content") }}
-              </div>
-              <pre class="render-preview">{{ renderResult.content }}</pre>
-              <div class="text-caption text-on-surface-variant mt-2">
-                channelType: {{ channelTypeNameKey(renderResult.channelType) }} · language:
-                {{ $t(languageNameKey(renderResult.language)) }}
-              </div>
-            </template>
-          </v-card-text>
-        </v-card>
-      </v-dialog>
+                color="primary"
+                @click="addRenderParam"
+              />
+            </v-col>
+          </v-row>
+          <v-row v-for="(row, index) in renderParams" :key="index" dense align="center">
+            <v-col cols="5">
+              <v-text-field v-model="row.key" :label="$t('model.__base.field.field')" />
+            </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="row.value" :label="$t('model.__base.field.value')" />
+            </v-col>
+            <v-col cols="1">
+              <v-btn
+                icon="mdi-minus"
+                variant="tonal"
+                color="error"
+                :title="$t('action.remove')"
+                :aria-label="$t('action.remove')"
+                @click="removeRenderParam(index)"
+              />
+            </v-col>
+          </v-row>
+        </v-form>
+        <v-divider class="my-3" />
+        <v-btn
+          v-request="renderTestAction"
+          color="primary"
+          variant="tonal"
+          :disabled="!renderEvent"
+        >
+          {{ $t("action.renderTest") }}
+        </v-btn>
+        <v-alert v-if="renderError" type="error" class="mt-3" :text="renderError" />
+        <template v-if="renderResult">
+          <v-divider class="my-3" />
+          <div class="text-subtitle-2">{{ $t("model.notificationTemplate.field.title") }}</div>
+          <pre class="zk-code-preview text-body-2">{{ renderResult.title }}</pre>
+          <div class="text-subtitle-2 mt-2">
+            {{ $t("model.notificationTemplate.field.content") }}
+          </div>
+          <pre class="zk-code-preview text-body-2">{{ renderResult.content }}</pre>
+          <div class="text-caption text-on-surface-variant mt-2">
+            channelType: {{ channelTypeNameKey(renderResult.channelType) }} · language:
+            {{ $t(languageNameKey(renderResult.language)) }}
+          </div>
+        </template>
+        <template #footer>
+          <v-btn variant="text" @click="renderDialog = false">
+            {{ $t("action.close") }}
+          </v-btn>
+        </template>
+      </app-dialog>
     </template>
   </main-layout>
 </template>
@@ -929,16 +918,3 @@ const getActions = (): ItemActions => {
   };
 };
 </script>
-
-<style scoped>
-/* 渲染测试预览框：保留换行与空白，限制最大高度超出可滚动 */
-.render-preview {
-  white-space: pre-wrap;
-  background: rgb(0 0 0 / 5%);
-  border-radius: 4px;
-  padding: 8px;
-  font-size: 13px;
-  max-height: 320px;
-  overflow: auto;
-}
-</style>

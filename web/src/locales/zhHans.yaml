@@ -6,6 +6,7 @@ navbar:
     namespace: 命名空间
     capturer: 采集器
     systemStatus: 系统状态
+    llmConfig: LLM 配置
   etl:
     self: 数据处理
     server: 服务端
@@ -36,6 +37,8 @@ navbar:
   datasource:
     self: 数据源
   namespaceScoped: 受命名空间影响
+  # 功能不可用标识的通用提示：后端未下发具体原因时兜底展示在侧边栏 tooltip 上
+  featureUnavailable: 该功能当前不可用
   pin: 固定侧边栏
   unpin: 取消固定
 model:
@@ -281,7 +284,7 @@ model:
     name: AI 会话
     field:
       title: 标题
-      targetModel: 目标模型
+      slot: 档位
       status: 状态
       createdAt: 创建时间
       updatedAt: 更新时间
@@ -289,6 +292,57 @@ model:
       docIDs: 知识库文档
       businessData: 业务数据
       regoRule: Rego 校验规则
+  llmModel:
+    name: LLM 模型
+    field:
+      id: ID
+      name: 名称
+      kind: 模型类型
+      baseURL: 接入地址
+      apiKey: 凭据
+      model: 模型名
+      timeoutSeconds: 超时（秒）
+      temperature: 温度
+      maxTokens: 最大输出 Token
+      dimensions: 向量维度
+      enabled: 启用
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  llmBinding:
+    name: 档位绑定
+    field:
+      slot: 档位
+      modelId: 模型 ID
+      modelName: 已绑定模型
+      kind: 模型类型
+      providerModel: 供应商模型
+      enabled: 模型状态
+      dimensions: 向量维度
+      bound: 已绑定
+      available: 可用
+  agentParam:
+    name: Agent 参数
+    field:
+      key: 参数键
+      group: 分组
+      kind: 参数类型
+      default: 默认值
+      value: 当前值
+      overridden: 已覆盖
+      label: 参数名
+      comment: 说明
+    type:
+      agent: Agent 行为
+      retrieval: 检索
+      session: 会话上下文
+      chunking: 分块
+      eval: 质量评估
+      sanitize: 数据清洗
   server:
     name: 服务端
     field:
@@ -439,7 +493,7 @@ model:
       collection: 集合名
       endpoints: 端点地址
       schema: 手动表结构
-      schemaHint: 此列为必填：可点击「自省表结构」自动生成，或在此手动填写列名与类型；后端不再自动自省
+      schemaHint: 此列为必填；后端不再自动自省
       schemaMongoHint: MongoDB 无固定表结构，无法自动自省，必须手动填写列名与类型
       addColumn: 添加列
       columnName: 列名
@@ -1028,6 +1082,8 @@ action:
   signIn: 登录
   signOut: 退出
   language: 语言
+  toggleTheme: 切换主题
+  accountMenu: 账号菜单
   pwdForget: 忘记密码
   forgotSend: 发送重置邮件
   forgotBackToSignIn: 返回登录
@@ -1059,6 +1115,8 @@ action:
   previousDate: 上一天
   currentDate: 当天
   nextDate: 下一天
+  previousRecord: 上一条
+  nextRecord: 下一条
   currentTime: 当前时间
   copySecret: 复制密钥
   validate: 校验
@@ -1089,7 +1147,11 @@ action:
   resetFrontendConfig: 重置前端配置
   download: 下载
   back: 返回
+  backHome: 返回首页
   refresh: 刷新
+  refreshInterval: 自动刷新间隔
+  enableAutoRefresh: 开启自动刷新
+  disableAutoRefresh: 停止自动刷新
   reindex: 重新索引
   query: 查询
   columns: 列设置
@@ -1108,15 +1170,19 @@ action:
   renderTest: 渲染测试
   templateValidate: 语法校验
   templateDryRun: 试运行
+  bind: 绑定
+  unbind: 解绑
+  save: 保存
+  test: 连通性测试
 guide:
   title: 第三方数据查询
   datasource: 数据源速查
   columns: 列
-  datasourceEmpty: 该命名空间暂无已注册的数据源，请先创建第三方数据源后再在 rego 中查询
+  datasourceEmpty: 该命名空间暂无已注册的数据源
   insertSelect: 插入 SELECT
   clickInsertColumn: 点击插入 表.列
   samples: 场景样例
-  sampleEmpty: 请先创建并接入数据源，即可一键生成可运行样例
+  sampleEmpty: 暂无可运行样例
   clickInsertSample: 点击把可运行样例插入编辑器
   sample:
     exists: 存在性判断
@@ -1132,6 +1198,7 @@ title:
   pwdForget: 忘记密码
   err404: 错误 - 404
   err401: 错误 - 401
+  featureUnavailable: 功能不可用
   userProfile: 用户个人资料
   profileInfo: 个人信息
   frontendConfigSync: 页面配置同步
@@ -1144,6 +1211,7 @@ title:
   namespaceAdmin: 管理 - 命名空间
   capturerAdmin: 管理 - 采集器
   systemStatus: 管理 - 系统状态
+  llmConfigAdmin: 管理 - LLM 配置
   notification:
     channel: 通知渠道
     target: 通知目标
@@ -1185,6 +1253,11 @@ home:
     dropHere: 松开放入此处
     defaultGroup: 默认
 page:
+  featureUnavailable:
+    title: "{feature}暂未开通"
+    hint: 该功能当前不可用，请先前往开通页面完成配置
+    activate: 前往{page}开通
+    contactAdmin: 该功能需要管理员开通，请联系管理员
   aiAssistant:
     generate: 生成
     generating: 生成中…
@@ -1207,12 +1280,70 @@ page:
     assistant: 助手
     hintSelectSession: 请先新建或选择一个会话开始对话
     confirmDeleteSession: 确定删除该会话及其全部消息吗？
+    slotHint: 新建会话时该档位会成为会话缺省档位
+    disabled: AI 能力未启用
+  aiKnowledge:
+    dryRun: 检索试运行
+    query: 查询问题
+    advancedParams: 高级参数
+    advancedParamsHint: "未配置时使用后端默认值（{topKLabel}: {topK} · {candidatesLabel}: {candidates} · {fusionLabel}: {fusion}）"
+    topK: 重排保留条数
+    candidates: 候选条数
+    fusion: 融合策略
+    weightVector: 向量权重
+    weightKeyword: 关键词权重
+    run: 运行
+    running: 运行中…
+    stop: 停止
+    process: 运行过程
+    streamOutput: 模型原始输出
+    stageFailed: 阶段失败
+    stage:
+      retrieve: 混合检索
+      answer: 生成回答
+      chunkRelevance: 分块相关性判断
+      claims: 声明忠实度判断
+      reverseQuestions: 反推问题生成
+    retrievedChunks: 检索分块
+    answer: 生成回答
+    metrics: 量化指标
+    contextPrecision: 召回质量
+    faithfulness: 答案忠实度
+    answerRelevance: 答案相关性
+    contextUtilization: 上下文利用率
+    relevantOfTotal: "相关分块 {relevant}/{total}"
+    judgments: 分块相关性判断
+    claims: 声明忠实度明细
+    reverseQuestions: 反推问题
+    warnings: 评估警告
+    evalError: 评估不可用
+    metaModel: 模型
+    metaElapsed: 耗时
+    metaPromptTokens: 输入 Token
+    metaCompletionTokens: 输出 Token
+    metaTotalTokens: 合计 Token
+    metaTotal: 总计耗时
+    close: 关闭
+  llmModelAdmin:
+    baseURLHint: 供应商的 OpenAI 兼容接口基地址（例如 https://dashscope.aliyuncs.com/compatible-mode/v1）
+    apiKeyKeepHint: 凭据不以明文回显；留空表示沿用原凭据
+    scopeHint: 模型注册表为全局配置，不随命名空间隔离
+    dimensionsHint: 向量维度由后端在绑定 embedding 档位时探测确定；如需调整索引维度，请联系运维在服务器上执行
+  llmBindingAdmin:
+    hint: 四个档位各绑定一个模型：对话档位需对话模型，向量化槽位需向量化模型；档位可用性以运行时快照为准
+    selectModel: 选择模型
+    unbound: 未绑定
+  agentParamAdmin:
+    hint: 参数出厂值由数据库迁移写入并在启动时校验，修改后即时生效；留空提交即写回出厂值
+    dirtyCount: "{count} 项待保存"
+    groupCount: "{count} 项"
+    defaultValue: "默认值：{value}"
 profile:
   pageSubtitle: 管理你的账号信息、访问密钥与密码安全
   infoSubtitle: 修改昵称与邮箱后点击「更新」保存
   accessKeySubtitle: 访问密钥用于以程序化方式调用 API，创建后请妥善保存
   passwordSubtitle: 修改登录密码，建议使用强密码并定期更换
-  emptyAccessKeys: 暂无访问密钥，点击右上角「创建」添加
+  emptyAccessKeys: 暂无访问密钥
   configSyncSubtitle: 将浏览器中的页面配置（主题、语言、侧边栏等）同步到服务端，跨主机登录时保持一致
   configSyncHint: 开启后，页面配置调整会立即上传；同步失败时恢复为最近一次同步的配置
 summary:
@@ -1224,7 +1355,6 @@ summary:
   noEventDetected: 未检测到事件
   noTagMatched: 未命中任何标签
   noServerYet: "目前尚未有正在运行中的{name}哦！"
-  noServerYetHelp: "您可以尝试点击下面的{btn}按钮，再次获取数据。"
   unknownError: 出现未知错误...
 notice:
   wellcome: 欢迎！
@@ -1278,6 +1408,17 @@ notice:
     introspectSuccess: 表结构解析成功
     introspectFailed: 表结构解析失败
     introspectNoFile: 请先选择 SQLite 数据库文件
+  llmModel:
+    testSuccess: 连通性测试通过
+    testFailed: 连通性测试失败
+  llmBinding:
+    bindSuccess: 档位绑定成功
+    unbindSuccess: 档位解绑成功
+    unbindConfirm: "确认解绑档位 {key} 吗？解绑后该档位不可用"
+  agentParam:
+    saveSuccess: 参数保存成功
+    resetSuccess: 参数已恢复默认值
+    resetGroupConfirm: "确认将「{key}」分组的参数全部恢复默认吗？"
 inputType:
   string: 字符串
   number: 数字

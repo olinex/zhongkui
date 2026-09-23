@@ -24,7 +24,7 @@
             {{ $t(`action.${key}`) }}
           </v-btn>
         </v-btn-group>
-        <v-btn density="compact" variant="text" @click="clearSelection">
+        <v-btn variant="text" @click="clearSelection">
           {{ $t("action.clearSelection") }}
         </v-btn>
       </template>
@@ -33,6 +33,7 @@
           :query="triggerQuery"
           :refresh="tableDataRefresh"
           :create="create"
+          :actions="toolbarActions"
           :loading="loading"
           collapsible
         >
@@ -113,6 +114,7 @@ import i18n from "@/utils/i18n";
 import { enumFieldTypeOfMeta, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { useColumnVisibility } from "@/utils/column";
 import type { FilterItem } from "@/components/forms/ExpressionField.vue";
+import type { ActionButton } from "@/components/base/ActionButtonGroup.vue";
 import type { SortItem } from "vuetify/lib/components/VDataTable/composables/sort.mjs";
 import type { BaseHeaders, ErrorResponse, Status, SuccessResponse } from "@/apis/@types/base";
 import type {
@@ -252,6 +254,11 @@ const props = defineProps({
     type: Function as PropType<() => void>,
     default: undefined,
   },
+  toolbarActions: {
+    // 工具栏次级操作按钮（收起时隐藏），透传给 action-button-group
+    type: Array as PropType<ActionButton[]>,
+    default: () => [],
+  },
   modelName: {
     // 经 OPTIONS 派生表头/筛选字段时用于 model.<modelName>.field.* 翻译；自定义源页面无需提供
     type: String,
@@ -380,17 +387,36 @@ const filterByOptions = computed(() => {
 
 // 拉取 OPTIONS：仅当未提供自定义表头/筛选字段源时执行，结果用于派生表格表头与高级筛选字段
 onBeforeMount(async () => {
-  if (!props.optionsRequest) {
+  // 自定义表头/筛选字段源页面无需 OPTIONS；仅 OPTIONS 派生表头时需等待其就绪后再发起首次查询
+  const optionsRequest = props.optionsRequest;
+  if (!optionsRequest) {
     return;
   }
   // optionsRequest 允许返回 Promise（异步预取枚举类后返回选项）；Promise.resolve 统一归一：
-  // 真 AxiosPromise（axios）原样透传，页面返回的包装 Promise 解包为响应对象后走同一解析路径
-  await getSearchOptionsResponse(Promise.resolve(props.optionsRequest()), async (rsp) => {
-    optionsSearchHeaders.value = await extractSearchHeaders(rsp.data);
-    optionsTableHeaders.value = extractTableHeaders(rsp.data);
+  // 真 AxiosPromise（axios）原样透传，页面返回的包装 Promise 解包为响应对象后走同一解析路径。
+  // getResponse 调用 success 回调时不 await（extractSearchHeaders 内部仍 await ensureEnum），
+  // getSearchOptionsResponse 返回时表头可能尚未填充；故以显式 Promise 门闩等待表头真正就绪，
+  // 再发起首次查询，避免可见列尚未填充使字段投影遗漏 createdAt/updatedAt 等默认可见列，
+  // 导致列表返回字段不全（首屏单元格显示为未定义）
+  const headersReady = new Promise<void>((resolve) => {
+    void getSearchOptionsResponse(
+      Promise.resolve(optionsRequest()),
+      async (rsp) => {
+        try {
+          optionsSearchHeaders.value = await extractSearchHeaders(rsp.data);
+          optionsTableHeaders.value = extractTableHeaders(rsp.data);
+        } finally {
+          resolve();
+        }
+      },
+      async () => resolve(),
+      async () => resolve(),
+      async () => resolve(),
+    );
   });
-  // 表头（含默认可见列）就绪后再发起首次查询：onMounted 早于 OPTIONS 返回，
-  // 可见列尚未填充会使字段投影遗漏 createdAt/updatedAt 等默认可见列，导致列表返回字段不全
+  await headersReady;
+  // 表头就绪后 useColumnVisibility 的可见列派生（pre flush watch）才在本组件调度，
+  // nextTick 确保可见列填充完成后再发起首次查询
   await nextTick();
   tableDataRefresh();
 });

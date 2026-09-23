@@ -295,7 +295,7 @@ other = "校准 [[.DB]] 库 embedding 列维度失败：[[.Err]]"
 other = "已将 embedding 列维度校准为 [[.Dimensions]]，请重新索引知识库文档"
 
 [cli.migrate.ai-embedding-in-sync]
-other = "embedding 列维度与配置一致，无需调整"
+other = "embedding 列维度与指定维度一致，无需重建"
 
 [cli.migrate.dry-run-section]
 other = "试运行（dry-run）[[.DB]]"
@@ -1326,10 +1326,10 @@ other = "检查模型定义与数据库结构是否一致"
 other = "在迁移目录中创建 SQL 迁移文件"
 
 [cmd.migrate.ai-embedding.short]
-other = "校准 embedding 列维度为配置值并重建 HNSW 索引"
+other = "按显式指定的维度重建 embedding 列与 HNSW 索引"
 
 [cmd.migrate.ai-embedding.long]
-other = "将 core 库的 knowledge_chunks.embedding 列重建为 AI 配置指定的维度（删除旧索引与向量、ALTER TYPE、重建 HNSW 索引）。更换 embedding 模型维度后执行本命令，完成后需重新索引知识库文档。"
+other = "按运维显式指定的目标维度重建 core 库的 knowledge_chunks.embedding 列与 HNSW 索引：须经 --dimensions 指定目标维度，执行前须先解绑 embedding 档位；命令会删除旧索引与全部向量、执行 ALTER TYPE、重建 HNSW 索引，完成后需重新索引知识库文档。"
 
 [cmd.create.short]
 other = "创建资源（用户、TLS 证书、访问密钥）"
@@ -1432,6 +1432,9 @@ other = "跳过确认"
 
 [flag.migrate.keep-temp]
 other = "保留临时数据库"
+
+[flag.migrate.ai-embedding.dimensions]
+other = "目标向量维度（运维显式指定，须为正整数；调整会清空全部知识库向量并要求重新索引）"
 
 [flag.run.capture.stats-print]
 other = "启用周期性抓包统计输出到标准输出"
@@ -1716,6 +1719,223 @@ other = "HTTP/2"
 
 [enum.httpVersion."HTTP/3"]
 other = "HTTP/3"
+
+# LLM 模型类型（枚举类 llmModelKind）
+[enum.llmModelKind.chat]
+other = "对话模型"
+
+[enum.llmModelKind.embedding]
+other = "向量模型"
+
+# LLM 档位槽位（枚举类 llmSlot）
+[enum.llmSlot.embedding]
+other = "向量槽位"
+
+[enum.llmSlot.flash]
+other = "轻量档"
+
+[enum.llmSlot.standard]
+other = "标准档"
+
+[enum.llmSlot.advanced]
+other = "高级档"
+
+# =============================================================================
+# AI capability disabled reasons (ai.disabled.*)
+# 「AI 能力为何不可用」的运维说明文案：由 internal/ai 的运行时快照判定，
+# 接口层按请求语言翻译后随状态接口与档位绑定接口返回。
+# 键与数据占位符（统一使用 [[.X]] 定界符）：
+#   not-assembled  : 运行时尚未完成首次装配（无数据占位符）
+#   slot-unbound   : 必需档位没有绑定记录（[[.Slot]]）
+#   model-disabled : 绑定模型被禁用（[[.Slot]] / [[.Model]]）
+#   kind-mismatch  : 绑定模型类型与档位不符（[[.Slot]] / [[.Model]] / [[.Want]]）
+#   separator      : 多条原因之间的连接符
+# =============================================================================
+
+[ai.disabled.not-assembled]
+other = "运行时快照尚未完成首次装配"
+
+[ai.disabled.slot-unbound]
+other = "[[.Slot]] 档位没有绑定模型"
+
+[ai.disabled.model-disabled]
+other = "绑定到 [[.Slot]] 档位的模型 [[.Model]] 已被禁用"
+
+[ai.disabled.kind-mismatch]
+other = "绑定到 [[.Slot]] 档位的模型 [[.Model]] 不是 [[.Want]] 模型"
+
+[ai.disabled.separator]
+other = "；"
+
+# =============================================================================
+# Agent tunable parameter metadata (param.<Key>.label|comment)
+# 参数键与 internal/pkg/llm 注册表（Specs）一一对应且全局唯一，故直接复用为文案键：
+# label 为参数展示名，comment 为参数说明；接口层按请求语言翻译后随 param/list 一并返回。
+# 本文件是这些文案的唯一来源（注册表不持有副本），未命中时 label 回退参数短名
+# （键最后一段）、comment 回退键本身，并由 param_i18n_test.go 的键完整性测试兜底。
+# =============================================================================
+
+# ---- agent：Agent 对话的提示词、消息分节标题与上下文截断 ----
+[param.agent.systemPrompt.label]
+other = "系统提示词"
+
+[param.agent.systemPrompt.comment]
+other = "Agent 对话的系统提示词，要求模型输出 {\"content\":..., \"draft\":{...}} 形状的 JSON"
+
+[param.agent.retrievalSectionTitle.label]
+other = "检索知识分节标题"
+
+[param.agent.retrievalSectionTitle.comment]
+other = "用户消息中检索知识分节的标题"
+
+[param.agent.businessSectionTitle.label]
+other = "业务现场分节标题"
+
+[param.agent.businessSectionTitle.comment]
+other = "用户消息中当前业务现场分节的标题"
+
+[param.agent.questionSectionTitle.label]
+other = "提问分节标题"
+
+[param.agent.questionSectionTitle.comment]
+other = "用户消息中提问分节的标题"
+
+[param.agent.retrievedDocSnippetLimit.label]
+other = "检索片段截断长度"
+
+[param.agent.retrievedDocSnippetLimit.comment]
+other = "注入用户消息的单个检索片段截断长度（字符），控制 prompt 体积"
+
+[param.agent.defaultSlot.label]
+other = "默认档位"
+
+[param.agent.defaultSlot.comment]
+other = "未显式指定档位且调用点未声明建议档位时使用的默认档位（flash/standard/advanced）"
+
+# ---- retrieval：混合检索融合与 LLM 重排 ----
+[param.retrieval.topK.label]
+other = "最终引用条数"
+
+[param.retrieval.topK.comment]
+other = "LLM 重排后保留的最终引用条数"
+
+[param.retrieval.candidates.label]
+other = "重排候选条数"
+
+[param.retrieval.candidates.comment]
+other = "融合后送入 LLM 重排的候选条数（每条检索路各取该条数）"
+
+[param.retrieval.fusion.label]
+other = "融合策略"
+
+[param.retrieval.fusion.comment]
+other = "两路检索融合策略：rrf 或 weighted"
+
+[param.retrieval.weightVector.label]
+other = "向量路权重"
+
+[param.retrieval.weightVector.comment]
+other = "weighted 融合时向量检索路的权重"
+
+[param.retrieval.weightKeyword.label]
+other = "关键词路权重"
+
+[param.retrieval.weightKeyword.comment]
+other = "weighted 融合时关键词检索路的权重"
+
+[param.retrieval.rerankSystemPrompt.label]
+other = "重排系统提示词"
+
+[param.retrieval.rerankSystemPrompt.comment]
+other = "LLM 重排的系统提示词，要求仅返回候选序号的 JSON 数组"
+
+[param.retrieval.rerankSnippetLimit.label]
+other = "重排片段截断长度"
+
+[param.retrieval.rerankSnippetLimit.comment]
+other = "重排请求中单个候选片段截断长度（字符），控制 prompt 体积"
+
+[param.retrieval.rerankTemperature.label]
+other = "重排温度"
+
+[param.retrieval.rerankTemperature.comment]
+other = "LLM 重排调用使用的生成温度，越低排序越确定"
+
+# ---- session：会话上下文注入上限 ----
+[param.session.maxContextMessages.label]
+other = "上下文消息条数上限"
+
+[param.session.maxContextMessages.comment]
+other = "注入 LLM 上下文的历史消息条数上限"
+
+[param.session.maxContextBytes.label]
+other = "业务数据注入上限"
+
+[param.session.maxContextBytes.comment]
+other = "前端透传 businessData 单次注入的总大小上限（字节）"
+
+# ---- chunking：Markdown 结构感知切片 ----
+[param.chunking.size.label]
+other = "切片目标长度"
+
+[param.chunking.size.comment]
+other = "切片亲和目标长度（字符），结构原子单元内尽量靠近"
+
+[param.chunking.overlap.label]
+other = "切片重叠长度"
+
+[param.chunking.overlap.comment]
+other = "相邻切块的重叠衔接长度（字符）"
+
+# ---- eval：RAG 评估 judge 提示词与参数 ----
+[param.eval.answerSystemPrompt.label]
+other = "回答生成提示词"
+
+[param.eval.answerSystemPrompt.comment]
+other = "评估中「基于检索上下文生成回答」judge 的系统提示词"
+
+[param.eval.chunkRelevanceSystemPrompt.label]
+other = "分块相关性提示词"
+
+[param.eval.chunkRelevanceSystemPrompt.comment]
+other = "评估中「分块相关性判定」judge 的系统提示词"
+
+[param.eval.claimsSystemPrompt.label]
+other = "声明抽取提示词"
+
+[param.eval.claimsSystemPrompt.comment]
+other = "评估中「答案声明抽取与支撑判定」judge 的系统提示词"
+
+[param.eval.reverseQuestionsSystemPrompt.label]
+other = "反推问题提示词"
+
+[param.eval.reverseQuestionsSystemPrompt.comment]
+other = "评估中「反推问题生成」judge 的系统提示词"
+
+[param.eval.reverseQuestionCount.label]
+other = "反推问题条数"
+
+[param.eval.reverseQuestionCount.comment]
+other = "反推问题最多保留条数，非正数表示不限制"
+
+[param.eval.snippetLimit.label]
+other = "评估片段截断长度"
+
+[param.eval.snippetLimit.comment]
+other = "评估请求中单个检索片段截断长度（字符），控制 prompt 体积"
+
+# ---- sanitize：业务数据注入前的清洗限界 ----
+[param.sanitize.maxItems.label]
+other = "业务数据条目数上限"
+
+[param.sanitize.maxItems.comment]
+other = "业务数据顶层条目数上限，非正数表示不限制（仅按字节上限截断）"
+
+[param.sanitize.maxBytes.label]
+other = "业务数据字节上限"
+
+[param.sanitize.maxBytes.comment]
+other = "业务数据紧凑 JSON 序列化字节上限，非正数表示不限制（仅执行清洗）"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

@@ -4,7 +4,7 @@
       <app-header />
     </template>
     <template #body>
-      <v-card prepend-avatar="@/assets/logo.png" style="width: min(420px, 100%)">
+      <v-card prepend-avatar="@/assets/logo.png">
         <template #title>
           <span class="font-weight-black">{{ $t("title.zk") }}</span>
         </template>
@@ -30,7 +30,6 @@
                 type="button"
                 variant="text"
                 color="primary"
-                class="ma-2 pa-2"
                 @click="$router.push(`/${appStore.language}/auth/forgot-password`)"
                 >{{ $t("action.pwdForget") }}</v-btn
               >
@@ -43,7 +42,6 @@
                 type="submit"
                 color="primary"
                 variant="flat"
-                class="ma-2 pa-2"
                 >{{ $t("action.signIn") }}</v-btn
               >
             </v-card-actions>

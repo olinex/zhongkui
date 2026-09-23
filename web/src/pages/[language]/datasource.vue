@@ -162,7 +162,7 @@
                       :mandatory-schema="createType === 'mongo'"
                       @update:model-value="createConfigValues[f.name] = $event"
                     />
-                    <div v-if="createSchemaEmpty" class="text-caption text-on-surface-variant mt-2">
+                    <div v-if="createSchemaEmpty" class="zk-hint mt-2">
                       {{ $t("model.datasource.schemaRequiredHint") }}
                     </div>
                     <div v-if="createConfigErrors[f.name]" class="text-error text-body-2 mt-1">
@@ -191,8 +191,8 @@
                     :append-inner-icon="
                       f.kind === 'password'
                         ? isRevealed('create', f.name)
-                          ? 'mdi-eye-off'
-                          : 'mdi-eye'
+                          ? 'mdi-eye'
+                          : 'mdi-eye-off'
                         : undefined
                     "
                     :error-messages="createConfigErrors[f.name] || ''"
@@ -331,10 +331,7 @@
                     :disabled="!editable"
                     @update:model-value="editConfigValues[f.name] = $event"
                   />
-                  <div
-                    v-if="editSchemaEmpty && editable"
-                    class="text-caption text-on-surface-variant mt-2"
-                  >
+                  <div v-if="editSchemaEmpty && editable" class="zk-hint mt-2">
                     {{ $t("model.datasource.schemaRequiredHint") }}
                   </div>
                   <div

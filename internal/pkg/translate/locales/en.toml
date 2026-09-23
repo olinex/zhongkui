@@ -230,10 +230,10 @@ other = "Check whether model definitions match the database schema"
 other = "Create a SQL migration file in the migration directory"
 
 [cmd.migrate.ai-embedding.short]
-other = "Reconcile the embedding column dimension to the config and rebuild the HNSW index"
+other = "Rebuild the embedding column and the HNSW index at the explicitly specified dimension"
 
 [cmd.migrate.ai-embedding.long]
-other = "Rebuild the knowledge_chunks.embedding column on the core database to the AI-configured dimension (drop stale index and vectors, ALTER TYPE, rebuild the HNSW index). Run this after switching the embedding model dimension, then reindex the knowledge base documents."
+other = "Rebuild the knowledge_chunks.embedding column on the core database and its HNSW index at the target dimension explicitly specified by the operator: the target must be given through --dimensions and the embedding slot must be unbound before running it; the command drops the old index and all vectors, runs ALTER TYPE and rebuilds the HNSW index, and the knowledge base documents must be reindexed afterwards."
 
 [cmd.create.short]
 other = "Create resources (user, TLS cert, access key)"
@@ -340,6 +340,9 @@ other = "skip confirmation"
 
 [flag.migrate.keep-temp]
 other = "keep the temporary database"
+
+[flag.migrate.ai-embedding.dimensions]
+other = "target vector dimensions (explicitly set by operators, must be a positive integer; resizing clears all knowledge base vectors and requires reindexing)"
 
 [flag.run.capture.stats-print]
 other = "periodically print capture stats to stdout"
@@ -631,7 +634,7 @@ other = "Failed to reconcile the embedding column dimension on [[.DB]]: [[.Err]]
 other = "Embedding column dimension reconciled to [[.Dimensions]], please reindex the knowledge base documents"
 
 [cli.migrate.ai-embedding-in-sync]
-other = "Embedding column dimension already matches the config, no change needed"
+other = "Embedding column dimension already matches the specified dimension, no rebuild needed"
 
 [cli.migrate.dry-run-section]
 other = "dry-run [[.DB]]"
@@ -2240,6 +2243,227 @@ other = "HTTP/2"
 
 [enum.httpVersion."HTTP/3"]
 other = "HTTP/3"
+
+# LLM model kind (enum class llmModelKind)
+[enum.llmModelKind.chat]
+other = "Chat Model"
+
+[enum.llmModelKind.embedding]
+other = "Embedding Model"
+
+# LLM slot (enum class llmSlot)
+[enum.llmSlot.embedding]
+other = "Embedding Slot"
+
+[enum.llmSlot.flash]
+other = "Flash"
+
+[enum.llmSlot.standard]
+other = "Standard"
+
+[enum.llmSlot.advanced]
+other = "Advanced"
+
+# =============================================================================
+# AI capability disabled reasons (ai.disabled.*)
+# The operator-facing copy explaining why the AI capability is unavailable: judged by the
+# runtime snapshot of internal/ai and translated per request language by the view layer,
+# returned with the status API and the slot-binding API.
+# Keys and their data placeholders (uniformly written with the [[.X]] delimiter):
+#   not-assembled  : the runtime has not completed its first assembly (no placeholder)
+#   slot-unbound   : a required slot has no binding record ([[.Slot]])
+#   model-disabled : the bound model is disabled ([[.Slot]] / [[.Model]])
+#   kind-mismatch  : the bound model kind does not match the slot ([[.Slot]] / [[.Model]] / [[.Want]])
+#   separator      : the joiner between multiple reasons
+# =============================================================================
+
+[ai.disabled.not-assembled]
+other = "the runtime snapshot is not assembled yet"
+
+[ai.disabled.slot-unbound]
+other = "the [[.Slot]] slot has no bound model"
+
+[ai.disabled.model-disabled]
+other = "the model [[.Model]] bound to the [[.Slot]] slot is disabled"
+
+[ai.disabled.kind-mismatch]
+other = "the model [[.Model]] bound to the [[.Slot]] slot is not a [[.Want]] model"
+
+[ai.disabled.separator]
+other = "; "
+
+# =============================================================================
+# Agent tunable parameter metadata (param.<Key>.label|comment)
+# Keys map one-to-one onto the registry (Specs) of internal/pkg/llm and are globally unique,
+# so each one is reused directly as part of its copy key: label is the display name and
+# comment the description; the view layer translates them per request language and returns
+# them with param/list. This file is the single source of that copy (the registry holds no
+# duplicate): on a miss the label falls back to the short parameter name (the last key
+# segment) and the comment to the key itself, with the key-completeness test in
+# param_i18n_test.go as the backstop.
+# =============================================================================
+
+# ---- agent: Agent chat prompts, message section titles and context truncation ----
+[param.agent.systemPrompt.label]
+other = "System Prompt"
+
+[param.agent.systemPrompt.comment]
+other = "System prompt of the Agent conversation; the model must output JSON shaped as {\"content\":..., \"draft\":{...}}"
+
+[param.agent.retrievalSectionTitle.label]
+other = "Retrieved Knowledge Section Title"
+
+[param.agent.retrievalSectionTitle.comment]
+other = "Section title of the retrieved knowledge part inside the user message"
+
+[param.agent.businessSectionTitle.label]
+other = "Business Scene Section Title"
+
+[param.agent.businessSectionTitle.comment]
+other = "Section title of the current business scene part inside the user message"
+
+[param.agent.questionSectionTitle.label]
+other = "Question Section Title"
+
+[param.agent.questionSectionTitle.comment]
+other = "Section title of the question part inside the user message"
+
+[param.agent.retrievedDocSnippetLimit.label]
+other = "Retrieved Snippet Limit"
+
+[param.agent.retrievedDocSnippetLimit.comment]
+other = "Truncation length (characters) of each retrieved snippet injected into the user message, controlling the prompt size"
+
+[param.agent.defaultSlot.label]
+other = "Default Slot"
+
+[param.agent.defaultSlot.comment]
+other = "Slot used when none is explicitly requested and the call site declares no preferred slot (flash/standard/advanced)"
+
+# ---- retrieval: hybrid retrieval fusion and LLM reranking ----
+[param.retrieval.topK.label]
+other = "Final Reference Count"
+
+[param.retrieval.topK.comment]
+other = "Number of final references kept after LLM reranking"
+
+[param.retrieval.candidates.label]
+other = "Rerank Candidate Count"
+
+[param.retrieval.candidates.comment]
+other = "Number of candidates sent to LLM reranking after fusion (taken from each retrieval path)"
+
+[param.retrieval.fusion.label]
+other = "Fusion Strategy"
+
+[param.retrieval.fusion.comment]
+other = "Fusion strategy of the two retrieval paths: rrf or weighted"
+
+[param.retrieval.weightVector.label]
+other = "Vector Path Weight"
+
+[param.retrieval.weightVector.comment]
+other = "Weight of the vector retrieval path when the weighted fusion is used"
+
+[param.retrieval.weightKeyword.label]
+other = "Keyword Path Weight"
+
+[param.retrieval.weightKeyword.comment]
+other = "Weight of the keyword retrieval path when the weighted fusion is used"
+
+[param.retrieval.rerankSystemPrompt.label]
+other = "Rerank System Prompt"
+
+[param.retrieval.rerankSystemPrompt.comment]
+other = "System prompt of LLM reranking; the model must return only a JSON array of candidate indices"
+
+[param.retrieval.rerankSnippetLimit.label]
+other = "Rerank Snippet Limit"
+
+[param.retrieval.rerankSnippetLimit.comment]
+other = "Truncation length (characters) of each candidate snippet in the rerank request, controlling the prompt size"
+
+[param.retrieval.rerankTemperature.label]
+other = "Rerank Temperature"
+
+[param.retrieval.rerankTemperature.comment]
+other = "Generation temperature of the LLM rerank call; lower values make the ordering more deterministic"
+
+# ---- session: conversation context injection bounds ----
+[param.session.maxContextMessages.label]
+other = "Context Message Limit"
+
+[param.session.maxContextMessages.comment]
+other = "Maximum number of history messages injected into the LLM context"
+
+[param.session.maxContextBytes.label]
+other = "Business Data Injection Limit"
+
+[param.session.maxContextBytes.comment]
+other = "Total size limit (bytes) of a single businessData payload injected from the frontend"
+
+# ---- chunking: Markdown structure-aware chunking ----
+[param.chunking.size.label]
+other = "Chunk Target Size"
+
+[param.chunking.size.comment]
+other = "Affinity target length (characters) of a chunk, staying inside structural atoms whenever possible"
+
+[param.chunking.overlap.label]
+other = "Chunk Overlap"
+
+[param.chunking.overlap.comment]
+other = "Overlap length (characters) shared by adjacent chunks"
+
+# ---- eval: RAG evaluation judge prompts and parameters ----
+[param.eval.answerSystemPrompt.label]
+other = "Answer Generation Prompt"
+
+[param.eval.answerSystemPrompt.comment]
+other = "System prompt of the judge generating an answer from the retrieved context during evaluation"
+
+[param.eval.chunkRelevanceSystemPrompt.label]
+other = "Chunk Relevance Prompt"
+
+[param.eval.chunkRelevanceSystemPrompt.comment]
+other = "System prompt of the judge deciding chunk relevance during evaluation"
+
+[param.eval.claimsSystemPrompt.label]
+other = "Claim Extraction Prompt"
+
+[param.eval.claimsSystemPrompt.comment]
+other = "System prompt of the judge extracting answer claims and deciding their support during evaluation"
+
+[param.eval.reverseQuestionsSystemPrompt.label]
+other = "Reverse Question Prompt"
+
+[param.eval.reverseQuestionsSystemPrompt.comment]
+other = "System prompt of the judge generating reverse questions during evaluation"
+
+[param.eval.reverseQuestionCount.label]
+other = "Reverse Question Count"
+
+[param.eval.reverseQuestionCount.comment]
+other = "Maximum number of reverse questions kept; a non-positive value means unlimited"
+
+[param.eval.snippetLimit.label]
+other = "Evaluation Snippet Limit"
+
+[param.eval.snippetLimit.comment]
+other = "Truncation length (characters) of each retrieved snippet in the evaluation request, controlling the prompt size"
+
+# ---- sanitize: bounds applied before business data injection ----
+[param.sanitize.maxItems.label]
+other = "Business Data Item Limit"
+
+[param.sanitize.maxItems.comment]
+other = "Maximum number of top-level business data items; a non-positive value means unlimited (truncation by the byte limit still applies)"
+
+[param.sanitize.maxBytes.label]
+other = "Business Data Byte Limit"
+
+[param.sanitize.maxBytes.comment]
+other = "Byte limit of the compact JSON serialization of business data; a non-positive value means unlimited (sanitization still applies)"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

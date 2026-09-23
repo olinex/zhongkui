@@ -4,6 +4,8 @@
     :color="color"
     :variant="variant"
     :density="density"
+    :title="$t('action.copy')"
+    :aria-label="$t('action.copy')"
     @click="copyToClipboard(value)"
   ></v-btn>
 </template>
@@ -13,6 +15,9 @@ import { copyToClipboard } from "@/utils/clipboard";
 import type { PropType } from "vue";
 import type { Density, Variant } from "../@types/base";
 
+// color / density stay undefined so the theme layer owns the VBtn baseline
+// (density="compact"); an icon-only button is flat by definition, so `variant`
+// defaults to "text" instead of Vuetify's "elevated".
 defineProps({
   value: {
     type: String,
@@ -20,7 +25,7 @@ defineProps({
   },
   color: {
     type: String,
-    default: "default",
+    default: undefined,
   },
   variant: {
     type: String as PropType<Variant>,
@@ -28,7 +33,7 @@ defineProps({
   },
   density: {
     type: String as PropType<Density>,
-    default: "compact",
+    default: undefined,
   },
 });
 </script>

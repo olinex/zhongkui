@@ -5,22 +5,25 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
-// migrateAiEmbeddingCmd 将 core 库的 knowledge_chunks.embedding 列维度校准为 AI 配置
-// 指定的维度。独立于 migrate up，由用户在更换 embedding 模型维度后手动触发。
-// migrateAiEmbeddingCmd reconciles the knowledge_chunks.embedding column dimension on the core
-// database to the AI-configured dimension. It is independent of migrate up and is triggered
-// manually by the user after switching the embedding model dimension.
+// migrateAiEmbeddingCmd 按运维经 --dimensions 显式指定的目标维度重建 core 库的
+// knowledge_chunks.embedding 列（删 HNSW 索引、清空旧向量、ALTER TYPE、重建索引）。
+// 独立于 migrate up：索引维度是运维独占的 schema 属性，换用不同维度的 embedding 模型后
+// 由运维显式执行本命令调整。
+// migrateAiEmbeddingCmd rebuilds the knowledge_chunks.embedding column on the core database at
+// the target dimension explicitly specified by the operator through --dimensions (drop the HNSW
+// index, clear stale vectors, ALTER TYPE, rebuild the index). It is independent of migrate up:
+// the index dimension is a schema attribute owned exclusively by operators, so switching to an
+// embedding model with a different dimension is adjusted by running this command explicitly.
 var migrateAiEmbeddingCmd = &cobra.Command{
 	Use:   "ai-embedding",
 	Short: "cmd.migrate.ai-embedding.short",
@@ -28,47 +31,65 @@ var migrateAiEmbeddingCmd = &cobra.Command{
 	Run:   runReconcileEmbeddingCmd,
 }
 
-// runReconcileEmbeddingCmd 执行 embedding 列维度校准：将 core 库的
-// knowledge_chunks.embedding 列重建为 AI 配置指定的维度（删 HNSW 索引、清旧向量、
-// ALTER TYPE、重建索引）。该命令独立于 migrate up，由用户在更换 embedding 模型维度后
-// 手动触发（migrate ai-embedding）。
-// runReconcileEmbeddingCmd rebuilds the knowledge_chunks.embedding column to the AI-configured
-// dimension on the core database (drop HNSW index, clear stale vectors, ALTER TYPE, rebuild the
-// index). It is independent of migrate up and is triggered manually by the user after switching
-// the embedding model dimension.
+// runReconcileEmbeddingCmd 执行 embedding 列维度重建：经 viper 读取 --dimensions 的目标维度
+// （命令行参数已在启动期绑定进 viper，无需再访问 cmd.Flags），交由 reconcileCoreAISchema
+// 完成冲突检查与 DDL 重建。
+// runReconcileEmbeddingCmd performs the embedding-column rebuild: it reads the target dimension of
+// --dimensions from viper (CLI flags are already bound into viper during startup, so cmd.Flags is
+// not accessed again) and hands it to reconcileCoreAISchema for the conflict check and the DDL
+// rebuild.
 func runReconcileEmbeddingCmd(cmd *cobra.Command, args []string) {
 	ctx, i := cmdToolBox(cmd)
-	v := provider.MustInvokeViper(i)
 	gormDB := provider.MustInvokeDatabase(i, base.CoreDbName)
+	v := provider.MustInvokeViper(i)
 
 	pterm.DefaultSection.Println(translate.T("cli.migrate.ai-embedding-section", map[string]any{"DB": base.CoreDbName}))
-	if err := reconcileCoreAISchema(ctx, v, gormDB); err != nil {
+	if err := reconcileCoreAISchema(ctx, gormDB, v.GetInt("dimensions")); err != nil {
 		pterm.Error.Println(translate.T("cli.migrate.ai-embedding-failed", map[string]any{"DB": base.CoreDbName, "Err": err}))
 		return
 	}
 }
 
-// reconcileCoreAISchema 将 knowledge_chunks.embedding 列维度校准为 AI 配置指定的维度。
-// AI 维度以配置为唯一事实来源，维度的实际变更（ALTER TYPE、删除旧向量、重建 HNSW 索引）
-// 由用户在 ai reconcile-embedding 命令中显式触发，而非服务启动或 migrate 时自动改动。
-// reconcileCoreAISchema reconciles the knowledge_chunks.embedding column dimension to the
-// AI-configured dimension. The dimension is driven by the config as the single source of truth,
-// and the actual schema change (ALTER TYPE, clearing stale vectors, rebuilding the HNSW index) is
-// triggered explicitly by the user via the ai reconcile-embedding command, rather than being
-// altered automatically at server startup or during migrate.
-func reconcileCoreAISchema(ctx context.Context, v *viper.Viper, gormDB *database.DB) error {
-	aiCfg, err := llm.ExtractConfigOrEmpty(v, validator.Validate)
-	if err != nil {
-		return errors.Newf("failed to extract ai config: %v", err)
+// reconcileCoreAISchema 按运维显式指定的目标维度重建 knowledge_chunks.embedding 列：目标维度
+// 只来自 --dimensions（不再是模型注册表/配置声明的维度），必须先校验为正整数；若 embedding
+// 槽位已绑定模型且其维度与目标维度不同（维度未知也视为不同），则拒绝并在错误中提示先解绑
+// （拒绝规则保证了真正重建时 embedding 槽位必然未绑定，故无需广播运行时失效）；通过校验后
+// 执行维度的实际变更（ALTER TYPE、清空旧向量、重建 HNSW 索引），完成后需重新索引知识库文档。
+// reconcileCoreAISchema rebuilds the knowledge_chunks.embedding column at the target dimension
+// explicitly specified by the operator: the target comes only from --dimensions (no longer from
+// a dimension declared by the model registry or the config) and must be validated as a positive
+// integer first. When the embedding slot is bound to a model whose dimension differs from the
+// target (an unknown dimension counts as different), the request is rejected with an error
+// telling the operator to unbind first (the rejection rule guarantees the embedding slot is
+// unbound whenever a real rebuild happens, so no runtime invalidation broadcast is needed). Once
+// validated, the actual schema change is applied (ALTER TYPE, clearing stale vectors, rebuilding
+// the HNSW index); the knowledge base documents must be reindexed afterwards.
+func reconcileCoreAISchema(ctx context.Context, gormDB *database.DB, target int) error {
+	if target <= 0 {
+		return errors.New("the --dimensions flag is required and must be a positive integer")
 	}
-	reconciled, err := llm.ReconcileEmbeddingColumn(ctx, gormDB, aiCfg.Embedding.Dimensions)
+	store, err := ai.NewStore(gormDB)
+	if err != nil {
+		return errors.Newf("failed to read ai model registry: %v", err)
+	}
+	name, dimensions, bound, err := store.EmbeddingDimensions(ctx)
+	if err != nil {
+		return errors.Newf("failed to read ai embedding dimension: %v", err)
+	}
+	if bound && dimensions != target {
+		return errors.Newf(
+			"the embedding slot is bound to model %q with %d dimensions; unbind it before resizing the index to %d",
+			name, dimensions, target,
+		)
+	}
+	reconciled, err := llm.ReconcileEmbeddingColumn(ctx, gormDB, target)
 	if err != nil {
 		return errors.Newf("failed to reconcile ai embedding column: %v", err)
 	}
 	if reconciled {
-		pterm.Success.Println(translate.T("cli.ai.embedding-reconciled", map[string]any{"Dimensions": aiCfg.Embedding.Dimensions}))
+		pterm.Success.Println(translate.T("cli.migrate.ai-embedding-reconciled", map[string]any{"Dimensions": target}))
 	} else {
-		pterm.Success.Println(translate.T("cli.ai.embedding-in-sync", nil))
+		pterm.Success.Println(translate.T("cli.migrate.ai-embedding-in-sync", nil))
 	}
 	return nil
 }

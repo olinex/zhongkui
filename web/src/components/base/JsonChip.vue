@@ -3,23 +3,16 @@
     <v-chip :color="color" :variant="variant" :density="density" @click="dialog = true">
       <span class="font-mono">{{ short }}</span>
     </v-chip>
-    <v-dialog v-model="dialog" max-width="600">
-      <template #default>
-        <v-card>
-          <v-card-text>
-            <VueJsonPretty :data="value && JSON.parse(value)" />
-          </v-card-text>
-          <v-card-actions>
-            <v-btn @click="close">
-              {{ $t("action.close") }}
-            </v-btn>
-            <v-btn color="info" @click="copy">
-              {{ $t("action.copy") }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
+    <!-- Width comes from the AppDialog size tier (sm = 560px); the body scrolls
+         via AppDialog's `scrollable`, so no local max-height is needed. -->
+    <app-dialog v-model="dialog" :title="$t('action.detail')" size="sm">
+      <VueJsonPretty :data="value && JSON.parse(value)" />
+      <template #footer>
+        <v-btn color="info" @click="copy">
+          {{ $t("action.copy") }}
+        </v-btn>
       </template>
-    </v-dialog>
+    </app-dialog>
   </div>
 </template>
 
@@ -57,6 +50,8 @@ const copy = async () => {
   close();
 };
 
+// Defaults stay undefined so the theme layer owns the VChip baseline
+// (small + tonal); callers only override for a real semantic difference.
 const props = defineProps({
   value: {
     type: String,
@@ -64,15 +59,15 @@ const props = defineProps({
   },
   color: {
     type: String,
-    default: "default",
+    default: undefined,
   },
   variant: {
     type: String as PropType<Variant>,
-    default: "tonal",
+    default: undefined,
   },
   density: {
     type: String as PropType<Density>,
-    default: "default",
+    default: undefined,
   },
 });
 </script>

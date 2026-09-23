@@ -67,6 +67,10 @@ func NewViper(
 	v := viper.New()
 	v.SetEnvPrefix(envPrefix)
 	v.AutomaticEnv()
+	// 环境变量键名替换：将配置键中的 '.' 映射为 '_'（如 health.port → ZKI_HEALTH_PORT）。
+	// viper 的 AutomaticEnv 在无 EnvKeyReplacer 时按原始点路径查找（ZKI_HEALTH.PORT），
+	// 与真实环境变量命名（不允许含点）永不匹配，导致所有带前缀的 env 覆盖静默失效。
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// 如果命令行通过 --config / -c 指定了配置文件路径，则直接加载该文件
 	if flags != nil {

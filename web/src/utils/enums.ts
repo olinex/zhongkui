@@ -20,6 +20,8 @@ export const EnumClass = {
   language: "language",
   httpMethod: "httpMethod",
   httpVersion: "httpVersion",
+  llmModelKind: "llmModelKind",
+  llmSlot: "llmSlot",
 } as const;
 
 // currentLang 当前语言（i18n locale value，如 zh-Hans / en）

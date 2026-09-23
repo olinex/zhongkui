@@ -5,7 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
@@ -95,6 +98,11 @@ func (l ZapGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (st
 
 	// 根据执行结果和耗时选择适当的日志级别
 	switch {
+	case errors.Is(err, gorm.ErrRecordNotFound):
+		// 记录不存在是查询未命中的正常结果（如按档位读取可选绑定、按 ID 探测存在性），
+		// 调用方普遍将其视为业务状态而非故障，与 GORM 默认日志的
+		// IgnoreRecordNotFoundError 语义一致，故不按错误级别输出，仅保留调试可见性
+		l.loggger.Ctx(ctx).Debugf("sql record not found, elapsed: %v, sql: %s, rows: %d", elapsed, sql, rows)
 	case err != nil:
 		// SQL 执行错误：记录错误级别日志
 		l.loggger.Ctx(ctx).Errorf("sql execution error: %v, elapsed: %v, sql: %s, rows: %d", err, elapsed, sql, rows)

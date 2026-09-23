@@ -1,29 +1,29 @@
 <template>
   <v-menu v-model="menu" transition="scale-transition" :close-on-content-click="false">
     <template #activator="{ props: activatorProps }">
+      <!-- Density is owned by the theme layer (VBtn density="compact"). -->
       <v-btn
         v-bind="activatorProps"
         icon="mdi-view-column-outline"
         variant="text"
-        density="compact"
         :title="$t('action.columns')"
         :aria-label="$t('action.columns')"
       />
     </template>
-    <v-card min-width="260">
-      <v-card-title class="text-subtitle-2 px-4 pt-3 pb-1">
+    <v-card class="zk-panel">
+      <v-card-title class="zk-section-title px-4 pt-3 pb-1">
         {{ $t("action.columns") }}
       </v-card-title>
-      <v-card-text class="px-0 py-0 overflow-y-auto" style="max-height: 320px">
-        <v-list density="compact">
+      <!-- 不再就地限高：VMenu 内容由 Vuetify 按可视区裁剪，.v-card 自身 overflow:auto 滚动 -->
+      <v-card-text class="px-0 py-0">
+        <v-list>
           <v-list-item
             v-for="hdr in displayHeaders"
             :key="hdr.key"
             draggable="true"
-            density="compact"
             :class="{
               'drag-source': dragKey === hdr.key,
-              'drag-over': dragOverKey === hdr.key,
+              'zk-drag-over': dragOverKey === hdr.key,
             }"
             @dragstart="onDragStart(hdr.key)"
             @dragend="onDragEnd"
@@ -207,6 +207,8 @@ const cancel = (): void => {
 </script>
 
 <style scoped>
+/* 仅保留布局 / 状态定位声明；容器外观（描边、圆角、底色）走 .zk-panel */
+
 /* 拖拽把手：提示该行可拖拽排序 */
 .drag-handle {
   cursor: grab;
@@ -215,10 +217,5 @@ const cancel = (): void => {
 /* 正在拖拽的列半透明显示 */
 .drag-source {
   opacity: 0.4;
-}
-
-/* 拖拽悬停目标高亮指示落点 */
-.drag-over {
-  background-color: rgb(var(--v-theme-primary), 0.12);
 }
 </style>

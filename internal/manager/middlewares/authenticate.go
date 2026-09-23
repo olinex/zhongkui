@@ -9,7 +9,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/config"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
@@ -63,7 +63,7 @@ type UserClaims struct {
 // 负责 JWT 令牌的创建、验证、刷新和管理
 type JwtAuthenticator struct {
 	// cfg 认证配置，包含密钥、超时时间等参数
-	cfg *manager.AuthConfig
+	cfg *config.AuthConfig
 	// db 数据库连接，用于验证用户信息
 	db *database.DB
 	// kd 密钥派生器，用于从密码派生密钥
@@ -77,7 +77,7 @@ type JwtAuthenticator struct {
 //
 // 返回:
 //   - *JwtAuthenticator: 新创建的认证器实例
-func NewJwtAuthenticator(cfg *manager.AuthConfig, db *database.DB, kd *key.KeyDerivation) *JwtAuthenticator {
+func NewJwtAuthenticator(cfg *config.AuthConfig, db *database.DB, kd *key.KeyDerivation) *JwtAuthenticator {
 	return &JwtAuthenticator{
 		cfg: cfg,
 		db:  db,

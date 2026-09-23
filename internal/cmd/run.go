@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/datasource"
 	"zhongkui.com/zhongkui/internal/manager"
-	"zhongkui.com/zhongkui/internal/manager/router"
 	"zhongkui.com/zhongkui/internal/pkg/runtime"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
@@ -33,16 +32,35 @@ func startHealth(ctx context.Context, i do.Injector, serviceName string) {
 	}()
 }
 
+// startAiWatch 在独立 goroutine 中启动 AI 运行时配置变更监听（etcd 广播触发热重载），
+// 与主服务主体并发运行。运行时解析失败或无 etcd 客户端时仅记录日志，不影响主服务启动。
+// startAiWatch starts the AI runtime config change watcher (an etcd broadcast triggers a
+// hot reload) in a separate goroutine, running concurrently with the main service. A failed
+// runtime resolution or a missing etcd client only logs and never blocks the main service.
+func startAiWatch(ctx context.Context, i do.Injector) {
+	rt, err := provider.InvokeAi(ctx, i)
+	if err != nil {
+		pterm.Error.Println(err.Error())
+		return
+	}
+	go func() {
+		if err := rt.Start(ctx); err != nil {
+			pterm.Error.Println(err.Error())
+		}
+	}()
+}
+
 var webCmd = &cobra.Command{
 	Use:   "web",
 	Short: "cmd.run.web.short",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
-		if err := router.RouteRegister(ctx, i); err != nil {
+		if err := manager.RouteRegister(ctx, i); err != nil {
 			pterm.Error.Println(err.Error())
 			return
 		}
 		startHealth(ctx, i, provider.HealthServiceNameWeb)
+		startAiWatch(ctx, i)
 		if err := manager.RunHttpService(ctx, i); err != nil {
 			pterm.Error.Println(err.Error())
 			return

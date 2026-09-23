@@ -2,15 +2,19 @@
   <v-text-field
     :model-value="datetimeStr"
     :label="label"
+    :density="density"
+    :clearable="clearable"
+    :disabled="disabled"
+    :readonly="readonly"
+    :rules="rules"
+    :error-messages="errorMessages"
     min-width="245"
-    prepend-inner-icon="mdi-clock"
-    clearable
-    readonly
+    prepend-inner-icon="mdi-calendar-clock"
     @click:clear="emits('update:modelValue', null)"
   >
     <v-menu v-if="menu" :close-on-content-click="false" activator="parent" min-width="0">
-      <v-card>
-        <v-card-text>
+      <v-card class="zk-panel">
+        <div class="picker-panel-body">
           <v-tabs v-model="tab">
             <v-tab value="date">{{ $t("model.__base.field.date") }}</v-tab>
             <v-tab value="time">{{ $t("model.__base.field.time") }}</v-tab>
@@ -33,20 +37,20 @@
               />
             </v-tabs-window-item>
           </v-tabs-window>
-        </v-card-text>
-        <v-card-actions>
+        </div>
+        <div class="picker-panel-footer">
           <v-btn v-show="tab === 'date'" @click="previousDate">{{
             $t("action.previousDate")
           }}</v-btn>
           <v-btn v-show="tab === 'date'" @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
           <v-btn v-show="tab === 'date'" @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
           <v-btn v-show="tab === 'time'" @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
-        </v-card-actions>
+        </div>
       </v-card>
     </v-menu>
     <v-dialog v-else activator="parent" width="auto">
-      <v-card>
-        <v-card-text>
+      <v-card class="zk-panel">
+        <div class="picker-panel-body">
           <v-tabs v-model="tab">
             <v-tab value="date">{{ $t("model.__base.field.date") }}</v-tab>
             <v-tab value="time">{{ $t("model.__base.field.time") }}</v-tab>
@@ -69,23 +73,29 @@
               />
             </v-tabs-window-item>
           </v-tabs-window>
-        </v-card-text>
-        <v-card-actions>
+        </div>
+        <div class="picker-panel-footer">
           <v-btn v-show="tab === 'date'" @click="previousDate">{{
             $t("action.previousDate")
           }}</v-btn>
           <v-btn v-show="tab === 'date'" @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
           <v-btn v-show="tab === 'date'" @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
           <v-btn v-show="tab === 'time'" @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
-        </v-card-actions>
+        </div>
       </v-card>
     </v-dialog>
   </v-text-field>
 </template>
 
 <script setup lang="ts" name="datetime-field">
-import { localeDatetimeFormat, localeTimeFormat } from "@/utils/i18n";
 import { DateTime } from "luxon";
+
+import type { Density } from "../@types/base";
+import { localeDatetimeFormat, localeTimeFormat } from "@/utils/i18n";
+
+// Validation rule shape of the underlying field: `true` when valid,
+// otherwise the error message to display.
+type Rule = (value: unknown) => boolean | string;
 
 const tab = ref("date");
 
@@ -229,6 +239,32 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  // Pickers are panel-only inputs, so they stay readonly unless opted out.
+  clearable: {
+    type: Boolean,
+    default: true,
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  readonly: {
+    type: Boolean,
+    default: true,
+  },
+  density: {
+    type: String as PropType<Density>,
+    default: "compact",
+  },
+  errorMessages: {
+    type: String,
+    default: "",
+  },
+  rules: {
+    type: Array as PropType<Rule[]>,
+    default: () => [],
+  },
+  // Render the panel as an inline menu (true) or a modal dialog (default).
   menu: {
     type: Boolean,
   },
@@ -236,3 +272,18 @@ const props = defineProps({
 
 const emits = defineEmits(["update:modelValue"]);
 </script>
+
+<style scoped>
+/* Panel spacing only: border, radius and background come from `.zk-panel`. */
+.picker-panel-body {
+  padding: var(--zk-space-4) var(--zk-space-4) var(--zk-space-2);
+}
+
+/* Footer actions share one right-aligned layout across the picker family. */
+.picker-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--zk-space-2);
+  padding: var(--zk-space-2) var(--zk-space-4) var(--zk-space-4);
+}
+</style>

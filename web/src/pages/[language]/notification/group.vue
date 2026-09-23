@@ -13,7 +13,7 @@
       >
         <!-- 默认分组列：默认分组以彩色 chip 高亮展示 -->
         <template #cell-isDefault="{ value }">
-          <v-chip v-if="value" color="primary" size="small" variant="tonal">
+          <v-chip v-if="value" color="primary">
             {{ $t("model.notificationGroup.field.isDefault") }}
           </v-chip>
           <template v-else>
@@ -120,7 +120,8 @@
                       icon="mdi-minus"
                       variant="tonal"
                       color="error"
-                      density="compact"
+                      :title="$t('action.remove')"
+                      :aria-label="$t('action.remove')"
                       @click="removeItem"
                     />
                   </template>
@@ -132,7 +133,6 @@
                       :disabled="!listEditable || bound"
                       :text="$t('action.add')"
                       color="primary"
-                      density="compact"
                       variant="tonal"
                       @click="appendItem(item)"
                     />
@@ -204,7 +204,8 @@
                       icon="mdi-minus"
                       variant="tonal"
                       color="error"
-                      density="compact"
+                      :title="$t('action.remove')"
+                      :aria-label="$t('action.remove')"
                       @click="removeItem"
                     />
                   </template>
@@ -216,7 +217,6 @@
                       :disabled="!listEditable || bound"
                       :text="$t('action.add')"
                       color="primary"
-                      density="compact"
                       variant="tonal"
                       @click="appendItem(item)"
                     />

@@ -354,13 +354,13 @@ func TestGetJSONTagAndType(t *testing.T) {
 }
 
 func TestGetRawParam(t *testing.T) {
-	Convey("测试 getRawParam 函数", t, func() {
+	Convey("测试 GetRawParam 函数", t, func() {
 		Convey("参数非空时应正确返回参数值", func() {
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/group/:name", func(c *gin.Context) {
-				val, ok := getRawParam(c, "name")
+				val, ok := GetRawParam(c, "name")
 				So(ok, ShouldBeTrue)
 				So(val, ShouldEqual, "admin")
 				c.Status(http.StatusOK)
@@ -381,7 +381,7 @@ func TestGetRawParam(t *testing.T) {
 			c.Request = httptest.NewRequest(http.MethodGet, "/api/group/", nil)
 			c.Params = gin.Params{{Key: "name", Value: ""}}
 
-			val, ok := getRawParam(c, "name")
+			val, ok := GetRawParam(c, "name")
 			So(ok, ShouldBeFalse)
 			So(val, ShouldEqual, "")
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -390,13 +390,13 @@ func TestGetRawParam(t *testing.T) {
 }
 
 func TestGetUint64Param(t *testing.T) {
-	Convey("测试 getUint64Param 函数", t, func() {
+	Convey("测试 GetUint64Param 函数", t, func() {
 		Convey("有效的 uint64 参数应正确解析", func() {
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/user/:id", func(c *gin.Context) {
-				id, ok := getUint64Param(c, "id")
+				id, ok := GetUint64Param(c, "id")
 				So(ok, ShouldBeTrue)
 				So(id, ShouldEqual, uint64(12345))
 				c.Status(http.StatusOK)
@@ -413,7 +413,7 @@ func TestGetUint64Param(t *testing.T) {
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/user/:id", func(c *gin.Context) {
-				id, ok := getUint64Param(c, "id")
+				id, ok := GetUint64Param(c, "id")
 				So(ok, ShouldBeFalse)
 				So(id, ShouldEqual, uint64(0))
 				c.Status(http.StatusOK)
@@ -430,7 +430,7 @@ func TestGetUint64Param(t *testing.T) {
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/user/:id", func(c *gin.Context) {
-				id, ok := getUint64Param(c, "id")
+				id, ok := GetUint64Param(c, "id")
 				So(ok, ShouldBeFalse)
 				So(id, ShouldEqual, uint64(0))
 				c.Status(http.StatusOK)
@@ -447,7 +447,7 @@ func TestGetUint64Param(t *testing.T) {
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/user/:id", func(c *gin.Context) {
-				id, ok := getUint64Param(c, "id")
+				id, ok := GetUint64Param(c, "id")
 				So(ok, ShouldBeTrue)
 				So(id, ShouldEqual, uint64(0))
 				c.Status(http.StatusOK)
@@ -462,13 +462,13 @@ func TestGetUint64Param(t *testing.T) {
 }
 
 func TestGetUUIDParam(t *testing.T) {
-	Convey("测试 getUUIDParam 函数", t, func() {
+	Convey("测试 GetUUIDParam 函数", t, func() {
 		Convey("有效的 UUID 参数应正确解析", func() {
 			gin.SetMode(gin.TestMode)
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/task/:id", func(c *gin.Context) {
-				uuid, ok := getUUIDParam(c, "id")
+				uuid, ok := GetUUIDParam(c, "id")
 				So(ok, ShouldBeTrue)
 				So(uuid.String(), ShouldEqual, "123e4567-e89b-12d3-a456-426614174000")
 				c.Status(http.StatusOK)
@@ -485,7 +485,7 @@ func TestGetUUIDParam(t *testing.T) {
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/task/:id", func(c *gin.Context) {
-				_, ok := getUUIDParam(c, "id")
+				_, ok := GetUUIDParam(c, "id")
 				So(ok, ShouldBeFalse)
 				c.Status(http.StatusOK)
 			})
@@ -501,7 +501,7 @@ func TestGetUUIDParam(t *testing.T) {
 			r := gin.New()
 			r.Use(setupI18nMiddleware())
 			r.GET("/api/task/:id", func(c *gin.Context) {
-				_, ok := getUUIDParam(c, "id")
+				_, ok := GetUUIDParam(c, "id")
 				So(ok, ShouldBeFalse)
 				c.Status(http.StatusOK)
 			})

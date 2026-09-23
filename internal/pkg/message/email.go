@@ -13,6 +13,9 @@ import (
 	"strings"
 	"time"
 
+	// third-party
+	"github.com/creasty/defaults"
+
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
@@ -264,14 +267,13 @@ func init() {
 		TypeEmail,
 		func(config json.RawMessage) (Channel, error) {
 			var cfg EmailChannelConfig
-			if err := json.Unmarshal(config, &cfg); err != nil {
+			// Port 缺省值由 default 标签声明，在反序列化前经 defaults.Set 填充
+			if err := defaults.Set(&cfg); err != nil {
 				return nil, errors.WithStack(err)
-			}
-			if err := validator.Validate.Struct(&cfg); err != nil {
+			} else if err := json.Unmarshal(config, &cfg); err != nil {
 				return nil, errors.WithStack(err)
-			}
-			if cfg.Port == 0 {
-				cfg.Port = 25
+			} else if err := validator.Validate.Struct(&cfg); err != nil {
+				return nil, errors.WithStack(err)
 			}
 			return &emailChannel{
 				host:     cfg.Host,

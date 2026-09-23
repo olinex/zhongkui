@@ -71,13 +71,16 @@ func NewSessionStore(db *database.DB) (*SessionStore, error) {
 	return &SessionStore{db: db}, nil
 }
 
-// CreateSession 创建一个新会话，初始状态为 active。
-// CreateSession creates a new session with the initial status active.
-func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title, targetModel string) (*modelsai.AgentSession, error) {
+// CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位
+// (flash/standard/advanced)，空表示生成时按 agent.defaultSlot 参数解析。
+// CreateSession creates a new session with the initial status active; slot is the default
+// slot of the session (flash/standard/advanced) and an empty value means resolving through the
+// agent.defaultSlot parameter at generation time.
+func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title, slot string) (*modelsai.AgentSession, error) {
 	session := &modelsai.AgentSession{
 		NamespaceName: namespaceName,
 		Title:         title,
-		TargetModel:   targetModel,
+		TargetModel:   slot,
 		Status:        SessionStatusActive,
 	}
 	if err := s.db.WithContext(ctx).Create(session).Error; err != nil {

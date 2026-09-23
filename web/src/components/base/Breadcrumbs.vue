@@ -3,7 +3,7 @@
     :items="crumbs"
     :divider="'/'"
     density="compact"
-    class="px-0 mb-1 text-caption breadcrumbs"
+    class="px-0 mb-1 text-caption zk-breadcrumbs"
   />
 </template>
 
@@ -74,24 +74,3 @@ const crumbs = computed<BreadcrumbItem[]>(() => {
   return items;
 });
 </script>
-
-<style scoped>
-/* 标题栏紧凑化：进一步收窄面包屑上下内边距，分隔符左右间距同步收紧；
-   默认（不可点击的中间层级）弱化显示，与可点击项形成对比 */
-.breadcrumbs {
-  color: rgb(var(--v-theme-on-surface-variant));
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-
-/* 可点击项（如首页/上级页面）以主色高亮，用户一眼即可识别可跳转 */
-/* stylelint-disable-next-line selector-class-pattern */
-.breadcrumbs :deep(.v-breadcrumbs-item--link) {
-  color: rgb(var(--v-theme-primary));
-}
-
-.breadcrumbs :deep(.v-breadcrumbs-divider) {
-  padding-left: 6px;
-  padding-right: 6px;
-}
-</style>

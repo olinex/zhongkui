@@ -1,28 +1,26 @@
 <template>
-  <div v-if="result !== null || loading" class="tag-event-dry-run-panel">
+  <div v-if="result !== null || loading" class="tag-event-dry-run-panel zk-editor zk-flat-panels">
     <div v-if="loading" class="dry-run-body">
       <v-progress-linear indeterminate color="primary" class="mt-1" />
     </div>
     <div v-else-if="result" class="dry-run-body">
       <!-- 规则概要：名称 / 匹配策略 / 检测时间 -->
       <div class="result-block">
-        <div class="result-label">{{ $t("title.dryRunSummary") }}</div>
-        <div class="summary-grid">
+        <div class="result-label zk-label-caps">{{ $t("title.dryRunSummary") }}</div>
+        <div class="summary-grid zk-panel--subtle">
           <div class="summary-item">
-            <span class="summary-key">{{ $t("model.tagEventRule.field.name") }}</span>
-            <span class="summary-value">{{
-              result.ruleName || $t("model.__base.value.blank")
-            }}</span>
+            <span class="zk-hint">{{ $t("model.tagEventRule.field.name") }}</span>
+            <span>{{ result.ruleName || $t("model.__base.value.blank") }}</span>
           </div>
           <div class="summary-item">
-            <span class="summary-key">{{ $t("model.tagEventRule.field.matchAll") }}</span>
-            <span class="summary-value">
+            <span class="zk-hint">{{ $t("model.tagEventRule.field.matchAll") }}</span>
+            <span>
               {{ result.matchAll ? $t("model.__base.value.yes") : $t("model.__base.value.no") }}
             </span>
           </div>
           <div class="summary-item">
-            <span class="summary-key">{{ $t("model.tagEventCondition.field.detectedAt") }}</span>
-            <span class="summary-value font-mono">
+            <span class="zk-hint">{{ $t("model.tagEventCondition.field.detectedAt") }}</span>
+            <span class="font-mono">
               {{ localeDatetimeFormat(DateTime.fromISO(result.detectedAt)) }}
             </span>
           </div>
@@ -30,37 +28,37 @@
       </div>
       <!-- 检测事件：命中则逐事件展开，未命中提示到头了 -->
       <div class="result-block">
-        <div class="result-label">{{ $t("title.dryRunEvents") }}</div>
-        <v-expansion-panels v-if="result.events?.length" variant="accordion" density="compact">
+        <div class="result-label zk-label-caps">{{ $t("title.dryRunEvents") }}</div>
+        <v-expansion-panels v-if="result.events?.length">
           <v-expansion-panel v-for="ev in result.events" :key="`${ev.ruleID}-${ev.detectedAt}`">
             <v-expansion-panel-title>
               <v-icon icon="mdi-check-circle-outline" color="success" size="small" class="me-1" />
-              <span class="event-name">{{ ev.ruleName }}</span>
+              <span class="zk-editor-title">{{ ev.ruleName }}</span>
               <v-spacer />
-              <span class="event-time">
+              <span class="event-time zk-hint">
                 <v-icon size="x-small" class="me-1">mdi-clock-outline</v-icon>
                 {{ localeDatetimeFormat(DateTime.fromISO(ev.detectedAt)) }}
               </span>
             </v-expansion-panel-title>
             <v-expansion-panel-text>
-              <v-list density="compact" class="bg-transparent">
+              <v-list class="bg-transparent">
                 <v-list-item v-for="hit in ev.hits" :key="hit.conditionID">
                   <template #prepend>
                     <v-icon size="small" color="primary" class="me-1">mdi-tag-outline</v-icon>
                   </template>
                   <template #title>
-                    <span class="hit-name">{{ hit.conditionName }}</span>
+                    <span class="zk-editor-title">{{ hit.conditionName }}</span>
                   </template>
                   <template #subtitle>
-                    <span class="hit-meta">
+                    <span class="zk-hint">
                       {{ hit.model }}
                       {{ hit.dimension ? ` / ${hit.dimension}` : "" }}
                       {{ hit.item ? ` / ${hit.item}` : "" }}
                     </span>
                   </template>
                   <template #append>
-                    <span class="hit-count">{{ hit.count }}/{{ hit.threshold }}</span>
-                    <v-chip size="x-small" variant="tonal" class="ms-1">
+                    <span class="zk-metric">{{ hit.count }}/{{ hit.threshold }}</span>
+                    <v-chip size="x-small" class="ms-1">
                       {{ localDurationFormat(hit.window) }}
                     </v-chip>
                   </template>
@@ -72,8 +70,6 @@
         <v-alert
           v-else
           type="info"
-          density="compact"
-          variant="tonal"
           :text="$t('summary.noEventDetected')"
         />
       </div>
@@ -147,48 +143,31 @@ defineExpose({ run, loading, reset });
 </script>
 
 <style scoped>
-/* 与标签规则试运行面板一致：带边框的分区盒，保持对话框内视觉语言统一 */
+/* 结果面板外壳（描边 / 圆角 / surface 背景）与三个编辑器一致，走全局 .zk-editor，
+   展开面板的扁平外观走全局 .zk-flat-panels，此处只保留布局定位 */
 .tag-event-dry-run-panel {
-  margin-top: 8px;
-  border: 1px solid rgb(var(--v-theme-on-surface), 0.12);
-  border-radius: 4px;
-  background-color: rgb(var(--v-theme-surface));
-}
-
-.dry-run-header {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 4px 0 12px;
-}
-
-.dry-run-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface));
+  margin-top: var(--zk-space-2);
 }
 
 .dry-run-body {
-  padding: 0 12px 12px;
+  padding: 0 var(--zk-space-3) var(--zk-space-3);
 }
 
 /* 结果分区：用标题分隔并明确各元素含义（与标签规则试运行面板一致） */
 .result-block {
-  margin-top: 8px;
+  margin-top: var(--zk-space-2);
 }
 
 .result-label {
-  margin-bottom: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface-variant));
+  margin-bottom: var(--zk-space-1);
 }
 
-/* 规则概要：key / value 网格，自动换行布局 */
+/* 规则概要：key / value 网格，自动换行布局（底色走 .zk-panel--subtle） */
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 4px 16px;
+  gap: var(--zk-space-1) var(--zk-space-4);
+  padding: var(--zk-space-2) var(--zk-space-3);
 }
 
 .summary-item {
@@ -196,81 +175,20 @@ defineExpose({ run, loading, reset });
   flex-direction: column;
 }
 
-.summary-key {
-  font-size: 12px;
-  color: rgb(var(--v-theme-on-surface-variant));
-}
-
-.summary-value {
-  font-size: 13px;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-/* 事件行：名称 / 检测时间，与标签规则规则明细行同款视觉 */
-.event-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
+/* 事件行时间：图标与时间水平对齐 */
 .event-time {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
-  color: rgb(var(--v-theme-on-surface-variant));
 }
 
-/* 命中行：条件名 / 命中分组元信息 / 计数与窗口 */
-.hit-name {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.hit-meta {
-  font-size: 12px;
-  color: rgb(var(--v-theme-on-surface-variant));
-}
-
-.hit-count {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-primary));
-}
-
-/* ---- 检测事件展开面板：与分区盒视觉统一 ----
-   去除 Vuetify 默认的悬浮阴影与深色 hover 遮罩，改为透明背景 + 淡色 hover */
-.dry-run-body :deep(.v-expansion-panels) {
-  background: transparent;
-}
-
-.dry-run-body :deep(.v-expansion-panel) {
-  background: transparent;
-  border-radius: 4px;
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel__shadow) {
-  display: none;
-}
-
+/* 检测事件展开面板：标题行与内容区的布局（外观走 .zk-flat-panels） */
 .dry-run-body :deep(.v-expansion-panel-title) {
-  min-height: 36px;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel-title__overlay) {
-  background-color: rgb(var(--v-theme-on-surface), 0.06);
-  opacity: 0;
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel-title:hover > .v-expansion-panel-title__overlay) {
-  opacity: 1;
+  min-height: var(--zk-control-height-compact);
+  padding: var(--zk-space-1) var(--zk-space-3);
 }
 
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
 .dry-run-body :deep(.v-expansion-panel-text__wrapper) {
-  padding: 4px 12px 12px;
+  padding: var(--zk-space-1) var(--zk-space-3) var(--zk-space-3);
 }
 </style>

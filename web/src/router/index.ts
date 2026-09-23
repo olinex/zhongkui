@@ -17,6 +17,7 @@ import { useFeaturesStore } from "@/stores/features";
 import { useUserStore } from "@/stores/user";
 import i18n from "@/utils/i18n";
 
+import { featureOfRoute } from "@/navigation";
 import { SupportLanguage } from "@/types";
 import { isEnumValue } from "@/utils/options";
 
@@ -90,8 +91,28 @@ router.beforeEach(async (to, from, next) => {
   // 登录态有效时初始化前端配置同步：拉取服务端配置并开始监听本地变更
   if (to.meta.requiresAuth && userStore.exists) {
     await useConfigSyncStore().init();
-    // 预取功能开关：导航侧边栏与首页快速开始按开关过滤入口，须在页面渲染前加载完成
+    // 预取功能开关：导航侧边栏按开关标注入口可用性，须在页面渲染前加载完成
     await useFeaturesStore().load();
+    // 功能不可用拦截：所属功能已关闭的路由不渲染其页面，统一重定向到「功能不可用」说明页，
+    // 由该页展示后端下发的不可用原因并引导前往开通入口（避免各功能页各自处理不可用态）。
+    // 命中时先强制刷新一次功能开关，使刚在开通入口完成开通的用户下一次导航即可通过。
+    const featureKey = featureOfRoute(String(to.name));
+    if (featureKey && !useFeaturesStore().isEnable(featureKey)) {
+      await useFeaturesStore().load(true);
+      if (!useFeaturesStore().isEnable(featureKey)) {
+        consola.warn(`feature ${featureKey} is disabled, redirect to feature-unavailable`);
+        await router.replace({
+          name: "Feature Unavailable",
+          params: {
+            language: appStore.language,
+          },
+          query: {
+            ...to.query,
+            feature: featureKey,
+          },
+        });
+      }
+    }
   }
   if (lang !== i18n.global.locale.value) {
     consola.info(`change language from ${i18n.global.locale.value} to ${lang}`);

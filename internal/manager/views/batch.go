@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+
 	"zhongkui.com/zhongkui/internal/manager/response"
 
 	"github.com/gin-gonic/gin"
@@ -61,7 +62,7 @@ type BatchResultOut struct {
 
 // batchExecute 批量执行骨架：逐条调用 act，错误捕获进 Failed（不中断后续条目），
 // 最终统一返回 BatchResultOut 汇总（HTTP 200 表达批量结果，失败在明细中体现）。
-func batchExecute[T any](c *gin.Context, items []T, idOf func(T) string, act func(T) error) {
+func BatchExecute[T any](c *gin.Context, items []T, idOf func(T) string, act func(T) error) {
 	out := BatchResultOut{Failed: []BatchFailureOut{}}
 	for _, item := range items {
 		if err := act(item); err != nil {
@@ -75,7 +76,7 @@ func batchExecute[T any](c *gin.Context, items []T, idOf func(T) string, act fun
 
 // validFlexLen 校验批量标识符列表长度（1..maxBatchItems）。
 // 长度非法时以 400 中断请求并返回 false。
-func validFlexLen[T any](c *gin.Context, items []T) bool {
+func ValidFlexLen[T any](c *gin.Context, items []T) bool {
 	if len(items) >= 1 && len(items) <= maxBatchItems {
 		return true
 	}

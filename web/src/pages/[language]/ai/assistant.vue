@@ -14,6 +14,7 @@
                 variant="tonal"
                 color="primary"
                 size="small"
+                :disabled="!aiEnabled"
                 :title="$t('page.aiAssistant.newSession')"
                 :aria-label="$t('page.aiAssistant.newSession')"
                 @click="openCreateSessionDialog"
@@ -21,7 +22,7 @@
             </v-card-title>
             <v-divider />
             <div class="session-list flex-grow-1 overflow-y-auto">
-              <v-list nav density="compact">
+              <v-list nav>
                 <v-list-item
                   v-for="s in sessions"
                   :key="s.id"
@@ -91,11 +92,11 @@
                   :class="m.role === 'user' ? 'justify-end' : 'justify-start'"
                 >
                   <div
-                    class="message-bubble"
+                    class="message-bubble zk-chat-bubble"
                     :class="
                       m.role === 'user'
-                        ? 'bg-primary text-on-primary user-bubble'
-                        : 'bg-surface-variant text-on-surface assistant-bubble'
+                        ? 'bg-primary text-on-primary zk-chat-bubble--user'
+                        : 'bg-surface-variant text-on-surface zk-chat-bubble--assistant'
                     "
                   >
                     <div class="d-flex align-center mb-1">
@@ -112,24 +113,14 @@
                       <span v-if="m.streaming" class="text-caption text-on-surface-variant">
                         {{ $t("page.aiAssistant.generating") }}
                       </span>
-                      <v-chip
-                        v-else-if="m.valid === true"
-                        size="x-small"
-                        color="success"
-                        variant="tonal"
-                      >
+                      <v-chip v-else-if="m.valid === true" size="x-small" color="success">
                         {{ $t("page.aiAssistant.validationPassed") }}
                       </v-chip>
-                      <v-chip
-                        v-else-if="m.valid === false"
-                        size="x-small"
-                        color="error"
-                        variant="tonal"
-                      >
+                      <v-chip v-else-if="m.valid === false" size="x-small" color="error">
                         {{ $t("page.aiAssistant.validationFailed") }}
                       </v-chip>
                     </div>
-                    <div v-if="m.content" class="message-content">{{ m.content }}</div>
+                    <div v-if="m.content" class="message-content text-body-2">{{ m.content }}</div>
                     <div
                       v-if="m.validationDetail"
                       class="text-caption text-on-surface-variant mt-1"
@@ -141,7 +132,7 @@
                       <div class="text-caption text-on-surface-variant mb-1">
                         {{ $t("page.aiAssistant.citations") }}
                       </div>
-                      <v-list density="compact" class="citation-list">
+                      <v-list class="citation-list bg-transparent">
                         <v-list-item v-for="(c, idx) in citationsOf(m)" :key="idx">
                           <v-list-item-title class="text-body-2 text-on-surface">
                             {{ c.title }}
@@ -174,7 +165,18 @@
             <v-divider />
             <!-- 输入区 -->
             <div class="chat-composer pa-4">
+              <v-alert v-if="aiStatus && !aiStatus.enabled" type="warning" class="mb-2">
+                {{ aiStatus.reason || $t("page.aiAssistant.disabled") }}
+              </v-alert>
               <v-form>
+                <v-select
+                  v-model="slot"
+                  :items="slotOptions"
+                  :label="$t('model.aiSession.field.slot')"
+                  :hint="$t('page.aiAssistant.slotHint')"
+                  persistent-hint
+                  class="mb-2"
+                />
                 <v-textarea
                   v-model="query"
                   :label="$t('model.aiSession.field.query')"
@@ -208,7 +210,7 @@
                   :label="$t('model.aiSession.field.regoRule')"
                   rows="1"
                   auto-grow
-                  class="mt-2 monospace"
+                  class="mt-2 font-mono"
                 />
                 <div class="d-flex align-center justify-space-between mt-2">
                   <v-btn variant="text" size="small" color="primary" @click="openTagRulePage">
@@ -218,7 +220,12 @@
                     <v-btn v-if="streaming" color="error" variant="tonal" @click="stopGenerating">
                       {{ $t("page.aiAssistant.stop") }}
                     </v-btn>
-                    <v-btn v-else color="primary" :disabled="!activeSessionId" @click="sendQuery">
+                    <v-btn
+                      v-else
+                      color="primary"
+                      :disabled="!activeSessionId || !aiEnabled"
+                      @click="sendQuery"
+                    >
                       {{ $t("page.aiAssistant.generate") }}
                     </v-btn>
                   </div>
@@ -316,12 +323,14 @@ import {
   agentSessionDelete,
   agentSessionListGet,
   agentSessionRename,
+  agentStatusGet,
   agentStreamGenerate,
   knowledgeDocumentListGet,
 } from "@/apis/ai";
 import type {
   AgentMessageItem,
   AgentSessionItem,
+  AgentStatusOut,
   KnowledgeDocumentItem,
   RetrievalResult,
 } from "@/apis/@types/ai";
@@ -329,6 +338,7 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { SearchOut } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import { copyToClipboard } from "@/utils/clipboard";
+import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 
@@ -386,6 +396,50 @@ let messageKey = 0;
 const nextKey = (): number => ++messageKey;
 
 const messages = ref<ChatMessage[]>([]);
+
+// ---- AI 状态与档位 ----
+const aiStatus = ref<AgentStatusOut | null>(null);
+// slot 当前档位：初值留空，由状态接口下发的后端默认档位（参数 agent.defaultSlot）填充，
+// 前端不声明档位字面量，避免与后端配置漂移
+const slot = ref("");
+
+// aiEnabled AI 能力是否可用；状态未加载完成时不禁用操作，由后端错误兜底
+const aiEnabled = computed((): boolean => (aiStatus.value ? aiStatus.value.enabled : true));
+
+// slotOptions 档位下拉选项：仅展示对话档位，不可用档位禁选
+const slotOptions = computed(() => {
+  const chatSlots = (aiStatus.value?.slots ?? []).filter((s) => s.kind === "chat");
+  return chatSlots.map((s) => ({
+    title: s.modelName
+      ? `${enumLabelOf(EnumClass.llmSlot, s.slot)} · ${s.modelName}`
+      : enumLabelOf(EnumClass.llmSlot, s.slot),
+    value: s.slot,
+    props: { disabled: !s.available },
+  }));
+});
+
+// loadStatus 拉取 AI 状态：驱动档位下拉选项与未启用原因展示
+const loadStatus = async (): Promise<void> => {
+  await getResponse<AgentStatusOut>(
+    agentStatusGet(),
+    async (rsp) => {
+      aiStatus.value = rsp.data;
+      // 未选择档位时取后端下发的默认档位（参数 agent.defaultSlot）
+      if (!slot.value) {
+        slot.value = rsp.data.defaultSlot;
+      }
+      // 当前选中档位不可用时回落到首个可用对话档位
+      const available = (rsp.data.slots ?? []).filter((s) => s.kind === "chat" && s.available);
+      const current = (rsp.data.slots ?? []).find((s) => s.slot === slot.value);
+      if (available.length > 0 && current?.available !== true) {
+        slot.value = available[0].slot;
+      }
+    },
+    async () => {
+      aiStatus.value = null;
+    },
+  );
+};
 
 // asRecord 将未知载荷归一化为 JSON 对象（null/数组/非对象返回 undefined）
 const asRecord = (v: unknown): Record<string, unknown> | undefined =>
@@ -462,6 +516,11 @@ const selectSession = async (id: number): Promise<void> => {
   stopGenerating();
   activeSessionId.value = id;
   messages.value = [];
+  // 会话记录了缺省档位时同步到档位下拉；未记录时保持当前选择
+  const target = sessions.value.find((s) => s.id === id);
+  if (target && target.slot) {
+    slot.value = target.slot;
+  }
   await loadMessages(id);
 };
 
@@ -485,6 +544,8 @@ const createSessionAction = createSessionForm.handleSubmit(async (values) => {
     agentSessionCreate({
       // 会话标题为单行文本，提交前去除首尾空白
       title: (values.title as string).trim(),
+      // 会话缺省档位随当前档位下拉传入，作为后续生成的回退档位
+      slot: slot.value || undefined,
     }),
     async (rsp) => {
       sessions.value = [rsp.data, ...sessions.value];
@@ -641,6 +702,8 @@ const sendQuery = async (): Promise<void> => {
       docIDs: docIDs.value.length > 0 ? docIDs.value : undefined,
       businessData: parsedBusiness,
       regoRule: regoRule.value.trim() || undefined,
+      // 本次生成的显式档位（为空时由后端回退到会话档位与默认档位参数）
+      slot: slot.value || undefined,
     },
     {
       onDelta: (delta: string) => {
@@ -709,6 +772,8 @@ const openTagRulePage = (): void => {
 };
 
 onMounted(() => {
+  void ensureEnum(EnumClass.llmSlot);
+  void loadStatus();
   void loadSessions();
   void loadDocOptions();
 });
@@ -723,37 +788,24 @@ onUnmounted(() => {
 /* 双栏等高布局：减去顶栏（64px）、页面内边距与面包屑占位，最小高度保证窄屏可用 */
 .assistant-row {
   height: calc(100vh - 180px);
-  min-height: 480px;
+  min-height: calc(var(--zk-editor-min-height) * 3);
 }
 
 .chat-messages {
   scroll-behavior: smooth;
 }
 
+/* 气泡：宽度上限保留原 85% 比例（无对应令牌）；圆角由 .zk-chat-bubble* 外壳类承载 */
 .message-bubble {
-  max-width: 85%;
-  border-radius: 12px;
-  padding: 10px 14px;
-}
-
-.user-bubble {
-  border-bottom-right-radius: 4px;
-}
-
-.assistant-bubble {
-  border-bottom-left-radius: 4px;
+  max-width: calc(100% * 0.85);
+  padding: var(--zk-space-2) var(--zk-space-3);
 }
 
 /* 正文保留换行与空格（模型输出 Markdown 原文，v1 阶段按纯文本展示） */
 .message-content {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 0.875rem;
   line-height: 1.6;
-}
-
-.citation-list {
-  background: transparent;
 }
 
 /* 引用正文两行截断，避免单条引用撑爆气泡 */
@@ -767,13 +819,8 @@ onUnmounted(() => {
 
 /* 草稿 JSON 视区：表面色衬底与气泡（surface-variant）区分，保证可读性 */
 .draft-sheet {
-  max-height: 260px;
+  max-height: calc(var(--zk-editor-min-height) * 1.5);
   overflow: auto;
-  padding: 8px 10px;
-}
-
-.monospace :deep(textarea) {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
+  padding: var(--zk-space-2) var(--zk-space-3);
 }
 </style>

@@ -17,8 +17,8 @@ import (
 
 	// internal
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // agentNode 常量：Eino Graph 五节点管线的节点名（上下文组装 → 混合检索 →
@@ -40,24 +40,6 @@ const (
 // produce: the rule file declares package agent with the rule name validate
 // (data.agent.validate) whose value must be a boolean.
 const agentRegoQuery = "data.agent.validate"
-
-// agentSystemPrompt 是 Agent 的系统提示词（英文，要求模型输出结构化 JSON）。
-// 模型端配置已强制 response_format=json_object，此处仍显式说明 JSON 形状，
-// 使自定义模型与测试替身遵循同一契约。
-// agentSystemPrompt is the Agent system prompt (English, asking for structured
-// JSON output). The model endpoint already forces response_format=json_object;
-// the JSON shape is still spelled out here so custom models and test doubles
-// follow the same contract.
-const agentSystemPrompt = `You are "ZhongKui AI", an embedded assistant of a network-traffic capture and analysis platform. You help users inspect captured packets, build tag rules, query data sources, and operate the platform.
-
-You must reply with ONLY a JSON object in exactly this shape:
-{"content": "<your markdown answer>", "draft": {<optional structured payload>}}
-
-Rules:
-- "content": the visible answer in Markdown. Match the language of the user's question.
-- "draft": a JSON object capturing structured facts, extracted entities or actionable plans for downstream automation; use {} when nothing structured applies.
-- Answer questions using the retrieved knowledge when relevant and cite sources by their titles.
-- Never fabricate facts beyond the provided context.`
 
 // AgentInput 是一次 Agent 提问的图输入。
 // AgentInput is the graph input of a single agent request.
@@ -86,7 +68,25 @@ type AgentInput struct {
 	// RegoRule the optional Rego rule source validating the structured draft;
 	// empty skips the rule validation
 	RegoRule string `json:"regoRule,omitempty"`
+	// Slot 显式指定的 LLM 档位；为空时依次回退到 DeclaredSlot 与
+	// agent.defaultSlot 参数（见 resolveInputSlot）
+	// Slot the explicitly requested LLM slot; when empty it falls back to
+	// DeclaredSlot and then to the agent.defaultSlot parameter (see resolveInputSlot)
+	Slot llm.Slot `json:"slot,omitempty"`
+	// DeclaredSlot 调用点声明的默认档位（不对外暴露），优先级低于显式 Slot
+	// DeclaredSlot the default slot declared by the call site (not exposed), with a
+	// lower priority than the explicit Slot
+	DeclaredSlot llm.Slot `json:"-"`
 }
+
+// ChatResolver 按档位解析对话模型（使用者侧行为契约）：由上层装配方（Runtime）
+// 实现，Agent 内部按本次运行解析出的档位调用它取回对话客户端，从而在
+// 同一张图内支持按请求切换模型而不重建图。
+// ChatResolver resolves a chat model by slot (a consumer-side behavior contract):
+// implemented by the assembler (the Runtime). The Agent calls it with the
+// slot resolved for the current run to obtain the chat client, so a single graph
+// serves per-request model switching without being rebuilt.
+type ChatResolver = func(slot llm.Slot) (model.BaseChatModel, error)
 
 // AgentState 是图运行期间的共享状态，经 compose.ProcessState 在节点间传递
 // 原始输入与检索引用（局部状态按次运行隔离，并发安全由框架保证）。
@@ -96,6 +96,7 @@ type AgentInput struct {
 type AgentState struct {
 	input     AgentInput        // 节点 1 写入的原始输入
 	citations []RetrievalResult // 节点 3 写入的检索引用
+	slot      llm.Slot          // 节点 1 写入的本次运行档位
 }
 
 // AgentOutput 是图输出（流式项）：流中先出现若干 delta 增量项，最后出现一个
@@ -147,28 +148,32 @@ func init() {
 
 // Agent 是 AI 助手的对话执行器：持有编译后的五节点 Eino Graph（Runnable），
 // 提供非流式（Generate）与流式（Stream）两种执行入口，并依赖 SessionStore
-// 做会话持久化（见 StreamRun）。
+// 做会话持久化（见 StreamRun）。行为参数（提示词、分节标题、上下文与截断上限）
+// 一律经参数解析器 params 读取。
 // Agent is the dialogue executor of the AI assistant: it holds the compiled
 // five-node Eino Graph (Runnable) and offers both non-streaming (Generate) and
 // streaming (Stream) execution, depending on SessionStore for session
-// persistence (see StreamRun).
+// persistence (see StreamRun). Every behavior parameter (prompts, section
+// titles, context and truncation bounds) is read through the params resolver.
 type Agent struct {
-	chat      model.BaseChatModel // 图内 LLM 节点（*ChatClient 天然满足）
+	resolver  ChatResolver        // 图内 LLM 节点（按档位解析对话模型）
 	retriever retriever.Retriever // 图内检索节点（*Retriever 天然满足）
 	store     *SessionStore       // 会话持久化
-	cfg       *llm.LLMConfig     // 行为配置快照
+	params    *llm.Params         // 行为参数解析器（提示词、标题、上限、截断长度）
 	runnable  compose.Runnable[AgentInput, AgentOutput]
 }
 
-// NewAgent 构造 Agent：校验依赖后组装五节点图并编译。chat/retriever/store/cfg
-// 任一为空时返回英文错误；chat 与 retriever 均为接口参数，测试可注入替身。
+// NewAgent 构造 Agent：校验依赖后组装五节点图并编译。resolver/retriever/store/params
+// 任一为空时返回英文错误；resolver 与 retriever 均为函数/接口参数，测试可注入替身。
+// 行为参数由上层（Runtime）从 agent_params 解析后传入。
 // NewAgent constructs an Agent: it validates the dependencies, assembles the
-// five-node graph and compiles it. A nil chat/retriever/store/cfg yields an
-// English error; chat and retriever are interface parameters so tests can
-// inject doubles.
-func NewAgent(chat model.BaseChatModel, retriever retriever.Retriever, store *SessionStore, cfg *llm.LLMConfig) (*Agent, error) {
-	if chat == nil {
-		return nil, errors.New("agent: nil chat model")
+// five-node graph and compiles it. A nil resolver/retriever/store/params yields an
+// English error; resolver and retriever are function/interface parameters so tests
+// can inject doubles. The behavior parameters are resolved from agent_params by the
+// caller (the Runtime) and passed in.
+func NewAgent(resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *llm.Params) (*Agent, error) {
+	if resolver == nil {
+		return nil, errors.New("agent: nil chat resolver")
 	}
 	if retriever == nil {
 		return nil, errors.New("agent: nil retriever")
@@ -176,10 +181,10 @@ func NewAgent(chat model.BaseChatModel, retriever retriever.Retriever, store *Se
 	if store == nil {
 		return nil, errors.New("agent: nil session store")
 	}
-	if cfg == nil {
-		return nil, errors.New("agent: nil ai config")
+	if params == nil {
+		return nil, errors.New("agent: nil params")
 	}
-	a := &Agent{chat: chat, retriever: retriever, store: store, cfg: cfg}
+	a := &Agent{resolver: resolver, retriever: retriever, store: store, params: params}
 	g := compose.NewGraph[AgentInput, AgentOutput](
 		compose.WithGenLocalState(func(ctx context.Context) *AgentState {
 			return &AgentState{}
@@ -197,8 +202,9 @@ func NewAgent(chat model.BaseChatModel, retriever retriever.Retriever, store *Se
 	if err := g.AddLambdaNode(agentNodeSanitize, compose.InvokableLambda(a.sanitizeBusinessData)); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	// 节点 4：LLM 生成（流式），输出 *schema.Message 流。
-	if err := g.AddChatModelNode(agentNodeLLMGeneration, chat); err != nil {
+	// 节点 4：LLM 生成（流式 lambda；按本次运行档位解析对话模型后 Stream），
+	// 输出 *schema.Message 流，节点 key 与出边保持不变。
+	if err := g.AddLambdaNode(agentNodeLLMGeneration, compose.StreamableLambda(a.generate)); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	// 节点 5：结构化校验（透传增量 + 流末尾聚合校验），输出 AgentOutput 流。
@@ -226,10 +232,57 @@ func NewAgent(chat model.BaseChatModel, retriever retriever.Retriever, store *Se
 	return a, nil
 }
 
+// generate 是节点 4（流式 lambda）：从图状态读取本次运行解析出的档位，经 resolver
+// 取回对话客户端并执行流式生成，输出 *schema.Message 流。档位未绑定或解析失败时
+// 返回英文错误，由图的流错误通道向外传播。
+// generate is node 4 (a streaming lambda): it reads the slot resolved for this run
+// from the graph state, resolves the chat client via the resolver and performs the
+// streaming generation, emitting a *schema.Message stream. An unbound or unresolvable
+// slot yields an English error propagated through the graph's stream error channel.
+func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*schema.StreamReader[*schema.Message], error) {
+	var slot llm.Slot
+	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
+		slot = st.slot
+		return nil
+	}); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	chat, err := a.resolver(slot)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if chat == nil {
+		return nil, errors.Newf("agent: no chat model resolved for slot %q", slot)
+	}
+	reader, err := chat.Stream(ctx, messages)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return reader, nil
+}
+
+// resolveInputSlot 解析本次运行的档位并写回输入：优先级为显式 Slot → 调用点声明的
+// DeclaredSlot → 参数 agent.defaultSlot。解析失败返回英文错误。
+// resolveInputSlot resolves the slot for this run and writes it back into the input:
+// the priority is the explicit Slot, then the call-site DeclaredSlot, then the
+// agent.defaultSlot parameter. A resolution failure yields an English error.
+func (a *Agent) resolveInputSlot(input *AgentInput) error {
+	fallback := llm.Slot(a.params.String("agent.defaultSlot"))
+	slot, err := llm.ResolveSlot(input.Slot, input.DeclaredSlot, fallback)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	input.Slot = slot
+	return nil
+}
+
 // Generate 非流式执行一次对话，返回最终结构化产物（done 项）。
 // Generate runs one conversation turn in a non-streaming way and returns the
 // final structured artifact (the done item).
 func (a *Agent) Generate(ctx context.Context, input AgentInput, opts ...compose.Option) (AgentOutput, error) {
+	if err := a.resolveInputSlot(&input); err != nil {
+		return AgentOutput{}, err
+	}
 	opts = append(opts, a.retrieverOptions(input))
 	out, err := a.runnable.Invoke(ctx, input, opts...)
 	if err != nil {
@@ -244,6 +297,9 @@ func (a *Agent) Generate(ctx context.Context, input AgentInput, opts ...compose.
 // AgentOutput stream (delta items followed by a done item). The caller is
 // responsible for closing the returned reader.
 func (a *Agent) Stream(ctx context.Context, input AgentInput, opts ...compose.Option) (*schema.StreamReader[AgentOutput], error) {
+	if err := a.resolveInputSlot(&input); err != nil {
+		return nil, err
+	}
 	opts = append(opts, a.retrieverOptions(input))
 	reader, err := a.runnable.Stream(ctx, input, opts...)
 	if err != nil {
@@ -253,7 +309,7 @@ func (a *Agent) Stream(ctx context.Context, input AgentInput, opts ...compose.Op
 }
 
 // StreamRun 是带会话持久化的流式执行入口（SSE 管线后端）：
-//  1. 会话存在时先校验会话、加载历史消息并注入图输入（受 Session.MaxContextMessages 约束）；
+//  1. 会话存在时先校验会话、加载历史消息并注入图输入（受参数 session.maxContextMessages 约束）；
 //  2. 持久化本轮用户消息；
 //  3. 执行流式图；
 //  4. 流末尾收到 done 项时先持久化助手回复（正文 + 草稿 + 引用）再向外发送 done。
@@ -263,8 +319,8 @@ func (a *Agent) Stream(ctx context.Context, input AgentInput, opts ...compose.Op
 // StreamRun is the session-persisting streaming entry (the backend of the SSE
 // pipeline):
 //  1. when the session exists, it validates the session, loads the history
-//     messages and injects them into the graph input (bounded by
-//     Session.MaxContextMessages);
+//     messages and injects them into the graph input (bounded by the parameter
+//     session.maxContextMessages);
 //  2. persists the user message of this turn;
 //  3. runs the streaming graph;
 //  4. on the done item at the stream end, persists the assistant reply (content +
@@ -284,7 +340,7 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 			}
 			return nil, errors.WithStack(err)
 		}
-		history, err := a.store.HistoryMessages(ctx, input.SessionID, a.cfg.Session.MaxContextMessages)
+		history, err := a.store.HistoryMessages(ctx, input.SessionID, a.params.Int("session.maxContextMessages"))
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -383,6 +439,7 @@ func (a *Agent) assembleContext(ctx context.Context, in AgentInput) (string, err
 	}
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 		st.input = in
+		st.slot = in.Slot
 		return nil
 	}); err != nil {
 		return "", errors.WithStack(err)
@@ -404,11 +461,11 @@ func (a *Agent) sanitizeBusinessData(ctx context.Context, docs []*schema.Documen
 	}); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	sanitized, err := llm.SanitizeBusinessData(in.BusinessData, a.cfg.Session.MaxContextBytes)
+	sanitized, err := llm.SanitizeBusinessData(in.BusinessData, a.params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return buildAgentMessages(in.HistoryMessages, docs, sanitized, in.Query), nil
+	return buildAgentMessages(a.params, in.HistoryMessages, docs, sanitized, in.Query), nil
 }
 
 // validateOutput 是节点 5：透传 LLM 流式增量（delta 项），流结束后聚合全文并
@@ -582,31 +639,35 @@ func validateDraftWithRego(ctx context.Context, source string, draft json.RawMes
 
 // buildAgentMessages 组装发送给 LLM 的完整消息列表：系统提示 + 历史消息 +
 // 检索知识 + 业务现场 + 当前提问（检索/业务段拼接在用户消息内，控制消息条数）。
+// 系统提示词、三个分节标题与片段截断长度均经参数解析器 params 读取。
 // buildAgentMessages assembles the full message list sent to the LLM: system
 // prompt + history messages + retrieved knowledge + business scene + the current
 // question (the retrieval/business sections are joined into the user message to
-// keep the message count bounded).
-func buildAgentMessages(history []*schema.Message, docs []*schema.Document, businessData llm.BusinessData, query string) []*schema.Message {
+// keep the message count bounded). The system prompt, the three section titles
+// and the snippet truncation length are all read through the params resolver.
+func buildAgentMessages(params *llm.Params, history []*schema.Message, docs []*schema.Document, businessData llm.BusinessData, query string) []*schema.Message {
 	messages := make([]*schema.Message, 0, 2+len(history))
-	messages = append(messages, schema.SystemMessage(agentSystemPrompt))
+	messages = append(messages, schema.SystemMessage(params.Text("agent.systemPrompt")))
 	messages = append(messages, history...)
 	var parts []string
 	if len(docs) > 0 {
-		parts = append(parts, "## Retrieved Knowledge\n"+formatRetrievedDocs(docs))
+		parts = append(parts, params.String("agent.retrievalSectionTitle")+"\n"+formatRetrievedDocs(params, docs))
 	}
 	if len(businessData) > 0 {
-		parts = append(parts, "## Current Business Scene\n"+formatBusinessData(businessData))
+		parts = append(parts, params.String("agent.businessSectionTitle")+"\n"+formatBusinessData(businessData))
 	}
-	parts = append(parts, "## User Question\n"+strings.TrimSpace(query))
+	parts = append(parts, params.String("agent.questionSectionTitle")+"\n"+strings.TrimSpace(query))
 	messages = append(messages, schema.UserMessage(strings.Join(parts, "\n\n")))
 	return messages
 }
 
 // formatRetrievedDocs 将检索文档格式化为带标题的引用列表（正文经 truncateText
-// 限长，控制 prompt 体积）。
+// 限长到参数 agent.retrievedDocSnippetLimit，控制 prompt 体积）。
 // formatRetrievedDocs formats the retrieved documents into a titled citation
-// list (the bodies are length-capped by truncateText to bound the prompt size).
-func formatRetrievedDocs(docs []*schema.Document) string {
+// list (the bodies are length-capped by truncateText to the parameter
+// agent.retrievedDocSnippetLimit to bound the prompt size).
+func formatRetrievedDocs(params *llm.Params, docs []*schema.Document) string {
+	snippetLimit := params.Int("agent.retrievedDocSnippetLimit")
 	var sb strings.Builder
 	for i, d := range docs {
 		if i > 0 {
@@ -619,7 +680,7 @@ func formatRetrievedDocs(docs []*schema.Document) string {
 				sb.WriteString(": ")
 			}
 		}
-		sb.WriteString(truncateText(d.Content, 500))
+		sb.WriteString(truncateText(d.Content, snippetLimit))
 	}
 	return sb.String()
 }

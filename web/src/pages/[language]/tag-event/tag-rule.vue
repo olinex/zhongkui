@@ -1,38 +1,37 @@
 <template>
   <main-layout current-nav="tag-event">
     <template #body>
-      <v-card flat>
-        <v-tabs v-model="activeTab" color="primary">
-          <v-tab value="rules">{{ $t("model.tagRule.name") }}</v-tab>
-          <v-tab value="samples">{{ $t("model.tagRuleSample.name") }}</v-tab>
-        </v-tabs>
-        <v-divider />
-        <v-tabs-window v-model="activeTab">
-          <v-tabs-window-item value="rules">
-            <search-table
-              ref="searchTableRef"
-              :list-request="tagRuleListGet"
-              :options-request="tagRuleListOptions"
-              :actions="getActions"
-              :batch-actions="getBatchActions"
-              :create="openCreateDialogAction"
-              :project-fields="projectFields"
-              model-name="tagRule"
-            >
-              <!-- 目标模型列显示可读名称（与表单下拉一致），而非原始类型键 -->
-              <template #cell-model="{ value }">
-                {{
-                  enumLabelOf(EnumClass.tagRuleModel, String(value ?? "")) ||
-                  $t("model.__base.value.blank")
-                }}
-              </template>
-            </search-table>
-          </v-tabs-window-item>
-          <v-tabs-window-item value="samples">
-            <tag-rule-sample-panel />
-          </v-tabs-window-item>
-        </v-tabs-window>
-      </v-card>
+      <tab-view
+        v-model="activeTab"
+        :items="[
+          { key: 'rules', label: $t('model.tagRule.name') },
+          { key: 'samples', label: $t('model.tagRuleSample.name') },
+        ]"
+      >
+        <template #rules>
+          <search-table
+            ref="searchTableRef"
+            :list-request="tagRuleListGet"
+            :options-request="tagRuleListOptions"
+            :actions="getActions"
+            :batch-actions="getBatchActions"
+            :create="openCreateDialogAction"
+            :project-fields="projectFields"
+            model-name="tagRule"
+          >
+            <!-- 目标模型列显示可读名称（与表单下拉一致），而非原始类型键 -->
+            <template #cell-model="{ value }">
+              {{
+                enumLabelOf(EnumClass.tagRuleModel, String(value ?? "")) ||
+                $t("model.__base.value.blank")
+              }}
+            </template>
+          </search-table>
+        </template>
+        <template #samples>
+          <tag-rule-sample-panel />
+        </template>
+      </tab-view>
 
       <confirm-dialog
         ref="deleteConfirmRef"
@@ -148,7 +147,7 @@
                   :functions="customFunctions"
                   :sqlite-datasources="sqliteDatasources"
                   :samples="createSamples"
-                  min-height="260px"
+                  :min-height="'var(--zk-editor-min-height)'"
                   @update:sample-input="createSampleInput = $event"
                   @view-input="createDryRunRef?.openInput()"
                 />
@@ -250,7 +249,7 @@
                   :sqlite-datasources="sqliteDatasources"
                   :samples="editSamples"
                   :disabled="!editable"
-                  min-height="260px"
+                  :min-height="'var(--zk-editor-min-height)'"
                   @update:sample-input="editSampleInput = $event"
                   @view-input="editDryRunRef?.openInput()"
                 />
@@ -303,53 +302,43 @@
         </template>
       </temp-editable-dialog>
 
-      <v-dialog v-model="versionDialog" max-width="800">
-        <v-card>
-          <v-card-title>{{ $t("action.version") }}</v-card-title>
-          <v-card-text>
-            <v-alert
-              v-if="versionItems.length === 0"
-              type="info"
-              variant="tonal"
-              density="compact"
-              :text="$t('notice.noVersion')"
-            />
-            <v-list v-else>
-              <v-list-item v-for="v in versionItems" :key="v.id">
-                <template #title>
-                  <v-chip size="small" class="me-2"> v{{ v.version }} </v-chip>
-                  {{ v.name }}
-                </template>
-                <template #subtitle>
-                  {{ localeDatetimeFormat(DateTime.fromISO(v.createdAt)) }}
-                </template>
-                <template #append>
-                  <v-btn
-                    variant="tonal"
-                    size="small"
-                    class="me-2"
-                    @click="expandedVersion = expandedVersion === v.version ? null : v.version"
-                  >
-                    {{ $t("action.expand") }}
-                  </v-btn>
-                  <v-btn variant="tonal" size="small" color="error" @click="openRollbackConfirm(v)">
-                    {{ $t("action.rollback") }}
-                  </v-btn>
-                </template>
-                <v-expand-transition>
-                  <pre v-if="expandedVersion === v.version" class="rego-view">{{ v.rego }}</pre>
-                </v-expand-transition>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="plain" @click="versionDialog = false">
-              {{ $t("action.close") }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <app-dialog v-model="versionDialog" :title="$t('action.version')" size="md">
+        <v-alert v-if="versionItems.length === 0" type="info" :text="$t('notice.noVersion')" />
+        <v-list v-else>
+          <v-list-item v-for="v in versionItems" :key="v.id">
+            <template #title>
+              <v-chip class="me-2"> v{{ v.version }} </v-chip>
+              {{ v.name }}
+            </template>
+            <template #subtitle>
+              {{ localeDatetimeFormat(DateTime.fromISO(v.createdAt)) }}
+            </template>
+            <template #append>
+              <v-btn
+                variant="tonal"
+                size="small"
+                class="me-2"
+                @click="expandedVersion = expandedVersion === v.version ? null : v.version"
+              >
+                {{ $t("action.expand") }}
+              </v-btn>
+              <v-btn variant="tonal" size="small" color="error" @click="openRollbackConfirm(v)">
+                {{ $t("action.rollback") }}
+              </v-btn>
+            </template>
+            <v-expand-transition>
+              <pre v-if="expandedVersion === v.version" class="zk-code-preview text-body-2">{{
+                v.rego
+              }}</pre>
+            </v-expand-transition>
+          </v-list-item>
+        </v-list>
+        <template #footer>
+          <v-btn variant="text" @click="versionDialog = false">
+            {{ $t("action.close") }}
+          </v-btn>
+        </template>
+      </app-dialog>
 
       <confirm-dialog
         ref="rollbackConfirmRef"
@@ -1107,33 +1096,9 @@ const itemRollbackAction = async (proxy: Record<string, any>): Promise<void> => 
 </script>
 
 <style scoped>
-/* tabs 窗口内的通用列表卡片（search-table 自带 v-card）平铺融入外层卡片：
-   覆盖全局 .v-card 的边框/圆角/背景，避免「tabs 悬空 + 独立圆角卡片」的割裂观感 */
-.v-tabs-window :deep(.v-card) {
-  border: none;
-  border-radius: 0;
-  background: transparent;
-}
-
-.monospace :deep(textarea) {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
-}
-
 /* 启用开关独占一行但收缩到内容宽度，避免整行铺满留白 */
 .switch-narrow {
   flex: 0 1 auto;
   width: fit-content;
-}
-
-.rego-view {
-  white-space: pre-wrap;
-  word-break: break-all;
-  background-color: rgb(var(--v-theme-surface-variant));
-  border-radius: 4px;
-  padding: 12px;
-  font-size: 13px;
-  max-height: 320px;
-  overflow: auto;
 }
 </style>

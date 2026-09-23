@@ -14,10 +14,8 @@ package views
 
 import (
 	// stdlib
-
 	"net/http"
 	"reflect"
-	"strconv"
 	"strings"
 
 	// third-party
@@ -280,7 +278,7 @@ func getStructMeta(t reflect.Type) *StructMeta {
 	}
 	return &StructMeta{
 		Name:   tt.Name(),
-		Fields: getStructFields(t),
+		Fields: GetStructFields(t),
 	}
 }
 
@@ -298,7 +296,7 @@ func getStructMeta(t reflect.Type) *StructMeta {
 //   - Enum/EnumType：按结构体类型名查 enumBindings 绑定表（typeName → field → 枚举类名），命中则标记为枚举字段并附带枚举类名。
 //
 // 未指定结构体类型或类型非结构体时返回 nil。
-func getStructFields(t reflect.Type) []*FieldMeta {
+func GetStructFields(t reflect.Type) []*FieldMeta {
 	if t == nil {
 		return nil
 	}
@@ -439,15 +437,15 @@ func parseFormTag(tag string) map[string]string {
 func parseDefault(kind Kind, v string) any {
 	switch kind {
 	case KindNumber:
-		if n, err := strconv.Atoi(v); err == nil {
+		if n, err := utils.ParseScalar(utils.ScalarKindInt, v); err == nil {
 			return n
 		}
-		if f, err := strconv.ParseFloat(v, 64); err == nil {
+		if f, err := utils.ParseScalar(utils.ScalarKindFloat, v); err == nil {
 			return f
 		}
 		return v
 	case KindBoolean:
-		if b, err := strconv.ParseBool(v); err == nil {
+		if b, err := utils.ParseScalar(utils.ScalarKindBool, v); err == nil {
 			return b
 		}
 		return v

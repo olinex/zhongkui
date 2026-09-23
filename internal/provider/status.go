@@ -10,12 +10,13 @@ import (
 	"time"
 
 	// third-party
-	"github.com/cloudwego/eino/schema"
 	"github.com/minio/minio-go/v7"
 	"github.com/samber/do/v2"
 	"github.com/spf13/viper"
 
 	// internal
+
+	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -95,8 +96,8 @@ func NewDependencyRegistry(ctx context.Context, i do.Injector) (*status.Registry
 	reg.Register(status.Spec{Name: "etcd", Category: dependencyCategoryEtcd, Probe: probeEtcd(viper, etcdLogger)})
 	reg.Register(status.Spec{Name: "s3", Category: dependencyCategoryS3, Probe: probeS3(viper, kd)})
 	reg.Register(status.Spec{Name: "smtp", Category: dependencyCategoryMail, Probe: probeSMTP(viper)})
-	reg.Register(status.Spec{Name: "llm-chat", Category: dependencyCategoryLLM, Probe: probeLLMChat(viper)})
-	reg.Register(status.Spec{Name: "llm-embedding", Category: dependencyCategoryLLM, Probe: probeLLMEmbedding(viper)})
+	reg.Register(status.Spec{Name: "llm-chat", Category: dependencyCategoryLLM, Probe: probeModel(viper, dbLogger, llm.SlotStandard)})
+	reg.Register(status.Spec{Name: "llm-embedding", Category: dependencyCategoryLLM, Probe: probeModel(viper, dbLogger, llm.SlotEmbedding)})
 	return reg, nil
 }
 
@@ -229,47 +230,38 @@ func probeSMTP(v *viper.Viper) status.Probe {
 	}
 }
 
-// probeLLMChat 对 chat 端点做一次极小真实请求判定可达。仅当 chat 配置（baseURL/apiKey/
-// model）完全填写才视为已配置，且不依赖 [llm].enabled 开关（与 llm.NewChatClient 口径一致）。
-// probeLLMChat performs a tiny real request to the chat endpoint to determine reachability.
-// It is "configured" only when the chat config (baseURL/apiKey/model) is fully filled and,
-// following llm.NewChatClient, does not depend on the [llm].enabled switch.
-func probeLLMChat(v *viper.Viper) status.Probe {
+// probeModel 依配置自建 core 库连接，从模型注册表（llm_models + llm_bindings）读取指定
+// 档位的模型端点配置并对该端点做一次轻量探活（见 ai.TestModel：chat 走 GET
+// /models，embedding 走一次最小向量化请求）。档位无可用绑定（含未启用/类型不符）→
+// Configured=false；配置读取或探活失败 → Configured=true、Reachable=false（英文原因）。
+// 探测结束后关闭自建连接，避免连接泄漏。
+// probeModel builds its own core-DB connection from config, reads the model endpoint config
+// of the given slot from the model registry (llm_models + llm_bindings) and lightly probes
+// that endpoint (see ai.TestModel: chat uses GET /models, embedding makes one minimal
+// embedding request). A slot without a usable binding (disabled or kind mismatch included)
+// yields Configured=false; a config-read or probe failure yields Configured=true with
+// Reachable=false (an English reason). The self-built connection is closed afterwards to
+// avoid leaks.
+func probeModel(v *viper.Viper, logger *logging.Logger, slot llm.Slot) status.Probe {
 	return func(ctx context.Context) status.Status {
-		if cfg, err := llm.ExtractConfigOrEmpty(v, validator.Validate); err != nil {
+		if cfg, err := database.ExtractConfig(v, validator.Validate, base.CoreDbName); err != nil {
 			return status.Status{Configured: false}
-		} else if cfg.Chat.BaseURL == "" || cfg.Chat.APIKey == "" || cfg.Chat.Model == "" {
-			return status.Status{Configured: false}
-		} else if chat, err := llm.NewChatClient(ctx, cfg.Chat); err != nil {
-			return status.Status{Configured: true, Reachable: false, Err: "construct chat client: " + err.Error()}
-		} else if _, err := chat.Generate(ctx, []*schema.Message{{
-			// 客户端构造时固定注入 response_format=json_object，DashScope 要求
-			// 消息中出现 "json" 字样，否则返回 400；探活消息需包含该词。
-			Role: schema.User, Content: "ping: reply with a valid JSON object.",
-		}}); err != nil {
-			return status.Status{Configured: true, Reachable: false, Err: "chat request: " + err.Error()}
+		} else if db, err := database.NewDatabase(cfg, logger); err != nil {
+			return status.Status{Configured: true, Reachable: false, Err: "construct database: " + err.Error()}
+		} else if sqlDB, err := db.DB(); err != nil {
+			return status.Status{Configured: true, Reachable: false, Err: "resolve database connection: " + err.Error()}
+		} else {
+			defer sqlDB.Close()
+			if store, err := ai.NewStore(db); err != nil {
+				return status.Status{Configured: true, Reachable: false, Err: "construct config store: " + err.Error()}
+			} else if model, err := store.ModelConfig(ctx, slot); errors.Is(err, ai.ErrSlotNotBound) {
+				return status.Status{Configured: false}
+			} else if err != nil {
+				return status.Status{Configured: true, Reachable: false, Err: "load model config: " + err.Error()}
+			} else if err := ai.TestModel(ctx, model); err != nil {
+				return status.Status{Configured: true, Reachable: false, Err: err.Error()}
+			}
+			return status.Status{Configured: true, Reachable: true}
 		}
-		return status.Status{Configured: true, Reachable: true}
-	}
-}
-
-// probeLLMEmbedding 对 embedding 端点做一次极小真实请求判定可达。仅当 embedding 配置
-// （baseURL/apiKey/model）完全填写才视为已配置，且不依赖 [llm].enabled 开关（与
-// llm.NewEmbedClient 口径一致）。
-// probeLLMEmbedding performs a tiny real request to the embedding endpoint to determine
-// reachability. It is "configured" only when the embedding config (baseURL/apiKey/model) is
-// fully filled and, following llm.NewEmbedClient, does not depend on the [llm].enabled switch.
-func probeLLMEmbedding(v *viper.Viper) status.Probe {
-	return func(ctx context.Context) status.Status {
-		if cfg, err := llm.ExtractConfigOrEmpty(v, validator.Validate); err != nil {
-			return status.Status{Configured: false}
-		} else if cfg.Embedding.BaseURL == "" || cfg.Embedding.APIKey == "" || cfg.Embedding.Model == "" {
-			return status.Status{Configured: false}
-		} else if emb, err := llm.NewEmbedClient(ctx, cfg.Embedding); err != nil {
-			return status.Status{Configured: true, Reachable: false, Err: "construct embedding client: " + err.Error()}
-		} else if _, err := emb.EmbedStrings(ctx, []string{"ping"}); err != nil {
-			return status.Status{Configured: true, Reachable: false, Err: "embedding request: " + err.Error()}
-		}
-		return status.Status{Configured: true, Reachable: true}
 	}
 }

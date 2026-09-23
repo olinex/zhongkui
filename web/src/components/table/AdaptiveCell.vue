@@ -55,7 +55,14 @@
     open-on-hover
   >
     <template #activator="{ props }">
-      <v-btn icon="mdi-dots-vertical" variant="plain" density="compact" v-bind="props" />
+      <!-- Density is owned by the theme layer (VBtn density="compact"). -->
+      <v-btn
+        icon="mdi-dots-vertical"
+        variant="plain"
+        :title="$t('model.__base.field.__actions')"
+        :aria-label="$t('model.__base.field.__actions')"
+        v-bind="props"
+      />
     </template>
     <v-list>
       <v-list-item

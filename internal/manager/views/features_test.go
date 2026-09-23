@@ -10,12 +10,44 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"zhongkui.com/zhongkui/internal/manager/features"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
+	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/mail"
 	"zhongkui.com/zhongkui/internal/pkg/message"
+	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
+
+// createUserSelfTestDB 创建用于测试的核心数据库
+// （原定义于 user 子包测试，本测试作为基座包测试需自包含）
+func createUserSelfTestDB(t *testing.T) *database.DB {
+	return testdb.Core(t)
+}
+
+// createTestLoggingLogger 创建测试专用的日志器
+func createTestLoggingLogger() *logging.Logger {
+	config := zap.NewProductionConfig()
+	config.OutputPaths = []string{}
+	config.Level = zap.NewAtomicLevelAt(zapcore.DebugLevel)
+	zapLogger, _ := config.Build()
+	return &logging.Logger{SugaredLogger: zapLogger.Sugar()}
+}
+
+// setupUserSelfTestRouterWithDB 创建注入核心数据库的测试路由
+func setupUserSelfTestRouterWithDB(db *database.DB) *gin.Engine {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(setupI18nMiddleware())
+	r.Use(func(c *gin.Context) {
+		c.Set(middlewares.CoreDatabaseCtxName, db)
+		c.Next()
+	})
+	return r
+}
 
 func TestFeaturesListGet(t *testing.T) {
 	Convey("测试 FeaturesListGet 函数", t, func() {

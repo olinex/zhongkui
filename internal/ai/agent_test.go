@@ -15,8 +15,8 @@ import (
 
 	// internal
 	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // stubChat 是测试用对话模型替身：实现 model.BaseChatModel，记录收到的消息，
@@ -68,6 +68,12 @@ func (s *stubRetriever) Retrieve(ctx context.Context, query string, opts ...retr
 	return s.docs, nil
 }
 
+// stubResolver 返回始终解析到同一个替身的档位解析器（测试用）。
+// stubResolver returns a slot resolver that always resolves to the same double (test use).
+func stubResolver(chat model.BaseChatModel) ChatResolver {
+	return func(slot llm.Slot) (model.BaseChatModel, error) { return chat, nil }
+}
+
 // newTestAgent 构造基于 sqlite 内存库 + 给定替身的 Agent，配置会话上限
 // （历史 10 条、业务数据 4096 字节）。
 // newTestAgent builds an Agent over an in-memory sqlite DB with the given
@@ -79,8 +85,11 @@ func newTestAgent(t *testing.T, chat model.BaseChatModel, retriever retriever.Re
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	cfg := &llm.LLMConfig{Session: llm.SessionConfig{MaxContextMessages: 10, MaxContextBytes: 4096}}
-	agent, err := NewAgent(chat, retriever, store, cfg)
+	params := testParams(t, map[string]string{
+		"session.maxContextMessages": "10",
+		"session.maxContextBytes":    "4096",
+	})
+	agent, err := NewAgent(stubResolver(chat), retriever, store, params)
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
 	}
@@ -94,23 +103,23 @@ func TestNewAgent_ValidationErrors(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	cfg := &llm.LLMConfig{}
+	params := testParams(t, nil)
 	chat := &stubChat{}
 	rtv := &stubRetriever{}
 	cases := []struct {
-		name  string
-		chat  model.BaseChatModel
-		rtv   retriever.Retriever
-		store *SessionStore
-		cfg   *llm.LLMConfig
+		name     string
+		resolver ChatResolver
+		rtv      retriever.Retriever
+		store    *SessionStore
+		params   *llm.Params
 	}{
-		{"nil chat", nil, rtv, store, cfg},
-		{"nil retriever", chat, nil, store, cfg},
-		{"nil store", chat, rtv, nil, cfg},
-		{"nil config", chat, rtv, store, nil},
+		{"nil resolver", nil, rtv, store, params},
+		{"nil retriever", stubResolver(chat), nil, store, params},
+		{"nil store", stubResolver(chat), rtv, nil, params},
+		{"nil params", stubResolver(chat), rtv, store, nil},
 	}
 	for _, c := range cases {
-		if _, err := NewAgent(c.chat, c.rtv, c.store, c.cfg); err == nil {
+		if _, err := NewAgent(c.resolver, c.rtv, c.store, c.params); err == nil {
 			t.Errorf("%s: NewAgent() = nil error, want an error", c.name)
 		}
 	}
@@ -296,7 +305,7 @@ func TestBuildAgentMessages(t *testing.T) {
 	history := []*schema.Message{schema.UserMessage("prev q"), schema.AssistantMessage("prev a", nil)}
 	docs := []*schema.Document{{ID: "1", Content: "kb body", MetaData: map[string]any{"title": "KB"}}}
 	data := llm.BusinessData{"src": "192.168.1.1"}
-	messages := buildAgentMessages(history, docs, data, "  current q  ")
+	messages := buildAgentMessages(testParams(t, nil), history, docs, data, "  current q  ")
 	if len(messages) != 4 {
 		t.Fatalf("buildAgentMessages() len = %d, want 4", len(messages))
 	}

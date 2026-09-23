@@ -1,28 +1,22 @@
 <template>
-  <v-dialog v-model="dialog" max-width="600">
-    <template #default>
-      <v-card :prepend-icon="prependIcon" :title="title">
-        <v-card-text>
-          <slot name="body" :proxy="proxy" />
-          <v-text-field v-show="doubleCheck" v-model="value" variant="underlined">
-            <template #append-inner>
-              <v-chip variant="text">
-                {{ $t("model.__base.content.doubleCheck", { random }) }}
-              </v-chip>
-            </template>
-          </v-text-field>
-        </v-card-text>
-        <v-card-actions>
-          <v-btn @click="close">
-            {{ $t("action.close") }}
-          </v-btn>
-          <v-btn v-request="confirm" color="info" :disabled="doubleCheck && random !== value">
-            {{ $t("action.confirm") }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
+  <app-dialog v-model="dialog" :title="title" :icon="prependIcon" size="sm">
+    <slot name="body" :proxy="proxy" />
+    <v-text-field v-show="doubleCheck" v-model="value" variant="underlined">
+      <template #append-inner>
+        <v-chip variant="text">
+          {{ $t("model.__base.content.doubleCheck", { random }) }}
+        </v-chip>
+      </template>
+    </v-text-field>
+    <template #footer>
+      <v-btn @click="close">
+        {{ $t("action.close") }}
+      </v-btn>
+      <v-btn v-request="confirm" color="info" :disabled="doubleCheck && random !== value">
+        {{ $t("action.confirm") }}
+      </v-btn>
     </template>
-  </v-dialog>
+  </app-dialog>
 </template>
 
 <script setup lang="ts" name="confirm-dialog">

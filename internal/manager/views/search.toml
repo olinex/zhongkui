@@ -80,6 +80,16 @@ datasourceStruct = [
     { key = "set", value = "set" },
     { key = "zset", value = "zset" },
 ]
+llmModelKind = [
+    { key = "chat", value = "chat" },
+    { key = "embedding", value = "embedding" },
+]
+llmSlot = [
+    { key = "flash", value = "flash" },
+    { key = "standard", value = "standard" },
+    { key = "advanced", value = "advanced" },
+    { key = "embedding", value = "embedding" },
+]
 
 # ---- 结构体字段枚举绑定（enumSets 集合的引用声明，meta 自省按此下发 enumType）----
 # typeName 必须与列表 OPTIONS 的 bodyOutput 结构体 reflect.Type.Name() 精确一致；
@@ -129,6 +139,30 @@ typeName = "TagEventRecordListOut"
 [[enums.fields]]
 field = "status"
 set = "tagAlertStatus"
+
+[[enums]]
+typeName = "LlmModelListOut"
+[[enums.fields]]
+field = "kind"
+set = "llmModelKind"
+
+[[enums]]
+typeName = "LlmModelDetailOut"
+[[enums.fields]]
+field = "kind"
+set = "llmModelKind"
+
+[[enums]]
+typeName = "LlmModelCreateIn"
+[[enums.fields]]
+field = "kind"
+set = "llmModelKind"
+
+[[enums]]
+typeName = "LlmModelTestIn"
+[[enums.fields]]
+field = "kind"
+set = "llmModelKind"
 
 # 用户
 [UserListGet]
@@ -298,60 +332,60 @@ fieldName = "frontendConfigSyncEnabled"
 column = "frontend_config_sync_enabled"
 
 # 权限模板
-[RbacPolicyTmplateListGet]
+[RbacPolicyTemplateListGet]
 timeModule = true
 
-[[RbacPolicyTmplateListGet.orderByFields]]
+[[RbacPolicyTemplateListGet.orderByFields]]
 fieldName = "createdAt"
 column = "created_at"
 
-[[RbacPolicyTmplateListGet.orderByFields]]
+[[RbacPolicyTemplateListGet.orderByFields]]
 fieldName = "updatedAt"
 column = "updated_at"
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "createdAt"
 fieldType = "time.Time"
 column = "created_at"
 binding = "required"
 actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "createdAtTime"
 fieldType = "serializer.TimeOnly"
 column = "Time(created_at)"
 binding = "required"
 actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "createdAtDate"
 fieldType = "serializer.DateOnly"
 column = "Date(created_at)"
 binding = "required"
 actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "updatedAt"
 fieldType = "time.Time"
 column = "updated_at"
 binding = "required"
 actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "updatedAtTime"
 fieldType = "serializer.TimeOnly"
 column = "Time(updated_at)"
 binding = "required"
 actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "updatedAtDate"
 fieldType = "serializer.DateOnly"
 column = "Date(updated_at)"
 binding = "required"
 actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "target"
 fieldType = "string"
 column = "target"
@@ -373,7 +407,7 @@ actions = [
     "inctn",
 ]
 
-[[RbacPolicyTmplateListGet.filterByFields]]
+[[RbacPolicyTemplateListGet.filterByFields]]
 fieldName = "action"
 fieldType = "string"
 column = "action"
@@ -396,19 +430,19 @@ actions = [
 ]
 
 
-[[RbacPolicyTmplateListGet.selectFields]]
+[[RbacPolicyTemplateListGet.selectFields]]
 fieldName = "id"
 column = "id"
-[[RbacPolicyTmplateListGet.selectFields]]
+[[RbacPolicyTemplateListGet.selectFields]]
 fieldName = "createdAt"
 column = "created_at"
-[[RbacPolicyTmplateListGet.selectFields]]
+[[RbacPolicyTemplateListGet.selectFields]]
 fieldName = "updatedAt"
 column = "updated_at"
-[[RbacPolicyTmplateListGet.selectFields]]
+[[RbacPolicyTemplateListGet.selectFields]]
 fieldName = "target"
 column = "target"
-[[RbacPolicyTmplateListGet.selectFields]]
+[[RbacPolicyTemplateListGet.selectFields]]
 fieldName = "action"
 column = "action"
 # GroupListGet
@@ -3331,3 +3365,146 @@ column = "created_at"
 [[KnowledgeDocumentListGet.selectFields]]
 fieldName = "updatedAt"
 column = "updated_at"
+
+# LLM 模型注册表列表（admin 配置 API：/api/v1/admin/llm/model/list）
+# 模型注册表为全局配置（不按命名空间隔离），过滤/排序覆盖时间、名称、类型与启用状态
+[LlmModelListGet]
+timeModule = true
+
+[[LlmModelListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[LlmModelListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "kind"
+fieldType = "string"
+column = "kind"
+binding = ""
+actions = ["eq"]
+
+[[LlmModelListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[LlmModelListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "name"
+column = "name"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "kind"
+column = "kind"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "baseURL"
+column = "base_url"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "model"
+column = "model"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "timeoutSeconds"
+column = "timeout_seconds"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "temperature"
+column = "temperature"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "maxTokens"
+column = "max_tokens"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "dimensions"
+column = "dimensions"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "description"
+column = "description"

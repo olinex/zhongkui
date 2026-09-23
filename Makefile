@@ -103,7 +103,7 @@ pull-dev-deps:
 		"redis redis:8.2.1" \
 		"etcd quay.io/coreos/etcd:v3.6.5" \
 		"clickhouse clickhouse:25.3.3" \
-		"postgres postgres:16-alpine3.22" \
+		"postgres pgvector/pgvector:pg17" \
 		"rustfs rustfs/rustfs:latest"; \
 	do \
 		set -- $$item; \
@@ -130,7 +130,7 @@ run-dev-deps:
 				-e POSTGRES_PASSWORD=root_password \
 				-e POSTGRES_USER=postgres \
 				-e POSTGRES_DB=default \
-				postgres:16-alpine3.22; \
+				pgvector/pgvector:pg17; \
 			docker run -itd --restart unless-stopped --name rustfs --network host \
 				-e RUSTFS_ADDRESS=localhost:9002 \
 				-e RUSTFS_CONSOLE_ENABLE=true \
@@ -151,7 +151,7 @@ run-dev-deps:
 				-e POSTGRES_PASSWORD=root_password \
 				-e POSTGRES_USER=postgres \
 				-e POSTGRES_DB=default \
-				postgres:16-alpine3.22; \
+				pgvector/pgvector:pg17; \
 			nerdctl run -td --restart=always --name rustfs --net=host \
 				-e RUSTFS_ADDRESS=localhost:9002 \
 				-e RUSTFS_CONSOLE_ENABLE=true \

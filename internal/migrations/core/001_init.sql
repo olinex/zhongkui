@@ -684,7 +684,7 @@ COMMENT ON COLUMN agent_sessions.updated_at IS 'the last update time of the agen
 COMMENT ON COLUMN agent_sessions.deleted_at IS 'the soft delete time of the agent session, null means not deleted';
 COMMENT ON COLUMN agent_sessions.namespace_name IS 'the namespace the agent session belongs to';
 COMMENT ON COLUMN agent_sessions.title IS 'the title of the agent session, defaulting to a summary of the first user message';
-COMMENT ON COLUMN agent_sessions.target_model IS 'the target model bound to the session, empty means the default model';
+COMMENT ON COLUMN agent_sessions.target_model IS 'the default slot of the session (flash/standard/advanced), empty means resolving through the agent.defaultSlot parameter';
 COMMENT ON COLUMN agent_sessions.status IS 'the status of the agent session, default active';
 
 CREATE TABLE IF NOT EXISTS agent_messages (
@@ -712,7 +712,82 @@ COMMENT ON COLUMN agent_messages.content IS 'the content of the message';
 COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, null when not applicable';
 COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, null when not applicable';
 
+CREATE TABLE IF NOT EXISTS llm_models (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    name VARCHAR(64) NOT NULL,
+    kind VARCHAR(16) NOT NULL,
+    base_url VARCHAR(512) NOT NULL DEFAULT '',
+    api_key BYTEA,
+    model VARCHAR(128) NOT NULL DEFAULT '',
+    timeout_seconds INT NOT NULL DEFAULT 0,
+    temperature DOUBLE PRECISION NOT NULL DEFAULT 0,
+    max_tokens INT NOT NULL DEFAULT 0,
+    dimensions INT NOT NULL DEFAULT 0,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    description VARCHAR(512) NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_llm_models_name ON llm_models (name);
+CREATE INDEX IF NOT EXISTS idx_llm_models_kind ON llm_models (kind);
+
+COMMENT ON COLUMN llm_models.id IS 'the primary key of the llm model';
+COMMENT ON COLUMN llm_models.created_at IS 'the creation time of the llm model';
+COMMENT ON COLUMN llm_models.updated_at IS 'the last update time of the llm model';
+COMMENT ON COLUMN llm_models.deleted_at IS 'the soft delete time of the llm model, null means not deleted';
+COMMENT ON COLUMN llm_models.name IS 'the globally unique local name of the llm model';
+COMMENT ON COLUMN llm_models.kind IS 'the kind of the llm model, chat or embedding';
+COMMENT ON COLUMN llm_models.base_url IS 'the base address of the model endpoint (OpenAI compatible API)';
+COMMENT ON COLUMN llm_models.api_key IS 'the credential of the model endpoint, encrypted at rest as BYTEA';
+COMMENT ON COLUMN llm_models.model IS 'the vendor-side model name, e.g. gpt-4o-mini';
+COMMENT ON COLUMN llm_models.timeout_seconds IS 'the timeout in seconds of a single request, 0 means the caller default';
+COMMENT ON COLUMN llm_models.temperature IS 'the sampling temperature within [0, 2], only meaningful for chat models';
+COMMENT ON COLUMN llm_models.max_tokens IS 'the maximum number of tokens per generation, only meaningful for chat models';
+COMMENT ON COLUMN llm_models.dimensions IS 'the vector dimensions, only meaningful for embedding models';
+COMMENT ON COLUMN llm_models.enabled IS 'is the llm model enabled, disabled models cannot be bound to a slot';
+COMMENT ON COLUMN llm_models.description IS 'the optional description of the llm model';
+
+CREATE TABLE IF NOT EXISTS llm_bindings (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    slot VARCHAR(16) NOT NULL,
+    model_id BIGINT NOT NULL REFERENCES llm_models(id) ON DELETE RESTRICT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_llm_bindings_slot ON llm_bindings (slot);
+CREATE INDEX IF NOT EXISTS idx_llm_bindings_model_id ON llm_bindings (model_id);
+
+COMMENT ON COLUMN llm_bindings.id IS 'the primary key of the llm slot binding';
+COMMENT ON COLUMN llm_bindings.created_at IS 'the creation time of the llm slot binding';
+COMMENT ON COLUMN llm_bindings.updated_at IS 'the last update time of the llm slot binding';
+COMMENT ON COLUMN llm_bindings.slot IS 'the bound slot, one of flash, standard, advanced or embedding, unique';
+COMMENT ON COLUMN llm_bindings.model_id IS 'the bound llm model id, deletion of a bound model is restricted';
+
+CREATE TABLE IF NOT EXISTS agent_params (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    key VARCHAR(128) NOT NULL,
+    value TEXT NOT NULL DEFAULT '',
+    default_value TEXT NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_params_key ON agent_params (key);
+
+COMMENT ON COLUMN agent_params.id IS 'the primary key of the agent parameter';
+COMMENT ON COLUMN agent_params.created_at IS 'the creation time of the agent parameter';
+COMMENT ON COLUMN agent_params.updated_at IS 'the last update time of the agent parameter';
+COMMENT ON COLUMN agent_params.key IS 'the parameter key, dot-separated, e.g. agent.systemPrompt, declared by the in-code parameter registry';
+COMMENT ON COLUMN agent_params.value IS 'the effective value of the parameter, interpreted by the kind declared in the in-code registry';
+COMMENT ON COLUMN agent_params.default_value IS 'the factory value of the parameter, seeded by the migrate fixtures and never written through any API path';
+
 -- +goose Down
+DROP TABLE IF EXISTS agent_params;
+DROP TABLE IF EXISTS llm_bindings;
+DROP TABLE IF EXISTS llm_models;
 DROP TABLE IF EXISTS agent_messages;
 DROP TABLE IF EXISTS agent_sessions;
 DROP TABLE IF EXISTS knowledge_chunks;

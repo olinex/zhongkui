@@ -26,13 +26,23 @@ func TestParseCleanupRetention(t *testing.T) {
 		Convey("空载荷回退默认 7 天", func() {
 			got, err := parseCleanupRetention(nil)
 			So(err, ShouldBeNil)
-			So(got, ShouldResemble, defaultCleanupRetention)
+			So(got, ShouldResemble, 7*24*time.Hour)
 		})
 
 		Convey("普通定时任务载荷缺失保留期时回退默认", func() {
 			got, err := parseCleanupRetention([]byte(`{}`))
 			So(err, ShouldBeNil)
-			So(got, ShouldResemble, defaultCleanupRetention)
+			So(got, ShouldResemble, 7*24*time.Hour)
+		})
+
+		Convey("普通定时任务载荷指定零/负保留期时回退默认", func() {
+			got, err := parseCleanupRetention([]byte(`{"retention":"0s"}`))
+			So(err, ShouldBeNil)
+			So(got, ShouldResemble, 7*24*time.Hour)
+
+			got, err = parseCleanupRetention([]byte(`{"retention":"-1h"}`))
+			So(err, ShouldBeNil)
+			So(got, ShouldResemble, 7*24*time.Hour)
 		})
 
 		Convey("普通定时任务载荷顶层指定保留期时生效", func() {

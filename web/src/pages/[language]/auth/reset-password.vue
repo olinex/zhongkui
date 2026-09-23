@@ -4,7 +4,7 @@
       <app-header />
     </template>
     <template #body>
-      <v-card prepend-avatar="@/assets/logo.png" style="width: min(420px, 100%)">
+      <v-card prepend-avatar="@/assets/logo.png">
         <template #title>
           <span class="font-weight-black">{{ $t("title.passwordReset") }}</span>
         </template>
@@ -12,15 +12,12 @@
           <v-spacer />
           <!-- 缺少令牌：提示用户重新发起申请 -->
           <template v-if="missingToken">
-            <v-alert type="warning" variant="tonal" class="mb-4">{{
-              $t("notice.resetTokenMissing")
-            }}</v-alert>
+            <v-alert type="warning" class="mb-4">{{ $t("notice.resetTokenMissing") }}</v-alert>
             <v-card-actions class="d-flex justify-center">
               <v-btn
                 type="button"
                 variant="text"
                 color="primary"
-                class="ma-2 pa-2"
                 @click="$router.push(`/${appStore.language}/auth/forgot-password`)"
                 >{{ $t("action.pwdForget") }}</v-btn
               >
@@ -45,7 +42,6 @@
                 type="button"
                 variant="text"
                 color="primary"
-                class="ma-2 pa-2"
                 @click="$router.push(`/${appStore.language}/auth/sign-in`)"
                 >{{ $t("action.forgotBackToSignIn") }}</v-btn
               >
@@ -55,7 +51,6 @@
                 type="submit"
                 color="primary"
                 variant="flat"
-                class="ma-2 pa-2"
                 >{{ $t("action.resetSubmit") }}</v-btn
               >
             </v-card-actions>

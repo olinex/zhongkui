@@ -1,64 +1,70 @@
 <template>
   <main-layout current-nav="etl">
     <template #body>
-      <v-container fluid>
-        <v-form class="filter-form">
-          <v-row dense align-center>
-            <v-col cols="auto">
-              <v-select
-                v-model="queue"
-                :label="$t('model.queue.field.queue')"
-                :items="queueOptions"
-                density="compact"
-              />
+      <!-- 列表骨架与 SearchTable 一致：扁平卡片承载「筛选行 → 操作按钮行 → 图表/表格」，
+           操作按钮行独占一行右对齐，不再与筛选控件挤在同一行 -->
+      <v-card flat>
+        <v-card-text class="px-4 pt-3 pb-2">
+          <v-form class="filter-form zk-filter-form">
+            <v-row dense align-center>
+              <v-col cols="auto">
+                <v-select
+                  v-model="queue"
+                  :label="$t('model.queue.field.queue')"
+                  :items="queueOptions"
+                />
+              </v-col>
+              <v-col cols="auto">
+                <usual-days-field
+                  v-model="days"
+                  :label="$t('model.queue.field.days')"
+                  density="compact"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+        <div class="px-4 pb-2 d-flex justify-end align-center ga-2">
+          <action-button-group :refresh="refreshAction" collapsible>
+            <column-visibility-menu
+              v-model="queueVisibleKeys"
+              v-model:order="queueColumnOrder"
+              :headers="queueAllToggleable"
+            />
+          </action-button-group>
+        </div>
+        <v-container fluid class="px-4 pt-0 pb-4">
+          <v-row dense>
+            <v-col cols="6">
+              <bars-chart :option="barsOption" />
             </v-col>
-            <v-col cols="auto">
-              <usual-days-field
-                v-model="days"
-                :label="$t('model.queue.field.days')"
-                density="compact"
-              />
+            <v-col cols="6">
+              <line-chart :option="lineOption" />
             </v-col>
-            <action-button-group class="ml-auto" :refresh="refreshAction" collapsible>
-              <column-visibility-menu
-                v-model="queueVisibleKeys"
-                v-model:order="queueColumnOrder"
-                :headers="queueAllToggleable"
-              />
-            </action-button-group>
           </v-row>
-        </v-form>
-        <v-divider class="my-2" />
-        <v-row dense>
-          <v-col cols="6">
-            <bars-chart :option="barsOption" />
-          </v-col>
-          <v-col cols="6">
-            <line-chart :option="lineOption" />
-          </v-col>
-        </v-row>
-        <v-row dense>
-          <v-col cols="12">
-            <v-data-table :headers="queueVisibleHeaders" :items="queueItems">
-              <template #item="{ item }">
-                <tr class="text-no-wrap">
-                  <td
-                    v-for="hdr in queueVisibleHeaders"
-                    :key="hdr.key"
-                    :class="
-                      hdr.fixed === 'end'
-                        ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
-                        : undefined
-                    "
-                  >
-                    <adaptive-cell :header="hdr" :item="item" :actions="getQueueActions" />
-                  </td>
-                </tr>
-              </template>
-            </v-data-table>
-          </v-col>
-        </v-row>
-      </v-container>
+          <v-row dense>
+            <v-col cols="12">
+              <v-data-table :headers="queueVisibleHeaders" :items="queueItems">
+                <template #item="{ item }">
+                  <tr class="text-no-wrap">
+                    <td
+                      v-for="hdr in queueVisibleHeaders"
+                      :key="hdr.key"
+                      :class="
+                        hdr.fixed === 'end'
+                          ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
+                          : undefined
+                      "
+                    >
+                      <adaptive-cell :header="hdr" :item="item" :actions="getQueueActions" />
+                    </td>
+                  </tr>
+                </template>
+              </v-data-table>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-card>
     </template>
   </main-layout>
 </template>
@@ -359,17 +365,3 @@ const getQueueActions = (item: Record<string, any>): ItemActions => {
 
 onMounted(refreshAction);
 </script>
-
-<style scoped>
-/* 折叠筛选输入的空消息区，使按钮组与输入控件保持同一水平线，
-   与流量页 filter-form 的垂直间距保持一致 */
-/* stylelint-disable-next-line selector-class-pattern */
-.filter-form :deep(.v-input__details:has(.v-messages:empty)) {
-  min-height: 0;
-  padding-top: 0;
-}
-
-.filter-form :deep(.v-messages:empty) {
-  min-height: 0;
-}
-</style>

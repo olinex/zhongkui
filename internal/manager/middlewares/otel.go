@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	o "go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/config"
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 )
 
 func OtelMiddleware() gin.HandlerFunc {
-	return otel.GinMiddleware(manager.Prefix)
+	return otel.GinMiddleware(config.Prefix)
 }
 
 func startSpan(c *gin.Context, scope, name string) (context.Context, trace.Span) {

@@ -87,7 +87,7 @@
               :label="$t('model.tagRuleSample.field.input')"
               readonly
               rows="12"
-              class="monospace"
+              class="font-mono"
             />
           </v-col>
         </v-row>
@@ -383,10 +383,3 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 </script>
-
-<style scoped>
-.monospace :deep(textarea) {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
-}
-</style>

@@ -2,66 +2,66 @@
   <v-text-field
     :model-value="displayStr"
     :label="label"
+    :density="density"
+    :clearable="clearable"
+    :disabled="disabled"
+    :readonly="readonly"
+    :rules="rules"
+    :error-messages="errorMessages"
     min-width="245"
-    prepend-inner-icon="mdi-calendar-range"
-    clearable
-    readonly
+    prepend-inner-icon="mdi-clock-outline"
     @click:clear="emits('update:modelValue', null)"
   >
     <v-menu v-if="menu" :close-on-content-click="false" activator="parent" min-width="0">
-      <v-card>
-        <v-card-text>
+      <v-card class="zk-panel">
+        <div class="picker-panel-body">
           <v-date-picker
             :model-value="pickedDates"
             multiple="range"
             show-adjacent-months
             @update:model-value="updateDates"
           />
-          <div class="d-flex ga-2 mt-2">
+          <div class="picker-panel-times">
             <v-text-field
               v-model="startTimeStr"
               :label="$t('model.__base.field.startTime')"
               type="time"
-              density="compact"
               hide-details
             />
             <v-text-field
               v-model="endTimeStr"
               :label="$t('model.__base.field.endTime')"
               type="time"
-              density="compact"
               hide-details
             />
           </div>
-        </v-card-text>
+        </div>
       </v-card>
     </v-menu>
     <v-dialog v-else activator="parent" width="auto">
-      <v-card>
-        <v-card-text>
+      <v-card class="zk-panel">
+        <div class="picker-panel-body">
           <v-date-picker
             :model-value="pickedDates"
             multiple="range"
             show-adjacent-months
             @update:model-value="updateDates"
           />
-          <div class="d-flex ga-2 mt-2">
+          <div class="picker-panel-times">
             <v-text-field
               v-model="startTimeStr"
               :label="$t('model.__base.field.startTime')"
               type="time"
-              density="compact"
               hide-details
             />
             <v-text-field
               v-model="endTimeStr"
               :label="$t('model.__base.field.endTime')"
               type="time"
-              density="compact"
               hide-details
             />
           </div>
-        </v-card-text>
+        </div>
       </v-card>
     </v-dialog>
   </v-text-field>
@@ -69,6 +69,12 @@
 
 <script setup lang="ts" name="date-time-range-field">
 import { DateTime } from "luxon";
+
+import type { Density } from "../@types/base";
+
+// Validation rule shape of the underlying field: `true` when valid,
+// otherwise the error message to display.
+type Rule = (value: unknown) => boolean | string;
 
 // props/emits 须在 immediate watch 之前定义（回调同步访问 props）
 const props = defineProps({
@@ -80,6 +86,32 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  // Pickers are panel-only inputs, so they stay readonly unless opted out.
+  clearable: {
+    type: Boolean,
+    default: true,
+  },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  readonly: {
+    type: Boolean,
+    default: true,
+  },
+  density: {
+    type: String as PropType<Density>,
+    default: "compact",
+  },
+  errorMessages: {
+    type: String,
+    default: "",
+  },
+  rules: {
+    type: Array as PropType<Rule[]>,
+    default: () => [],
+  },
+  // Render the panel as an inline menu (true) or a modal dialog (default).
   menu: {
     type: Boolean,
   },
@@ -183,3 +215,19 @@ const displayStr = computed((): string | null => {
   return `${format(props.modelValue[0])} ~ ${format(props.modelValue[1])}`;
 });
 </script>
+
+<style scoped>
+/* Panel spacing only: border, radius and background come from `.zk-panel`. */
+.picker-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--zk-space-2);
+  padding: var(--zk-space-4);
+}
+
+/* Start/end time inputs sit side by side under the range calendar. */
+.picker-panel-times {
+  display: flex;
+  gap: var(--zk-space-2);
+}
+</style>

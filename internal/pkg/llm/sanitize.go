@@ -12,21 +12,24 @@ import (
 
 // BusinessData 是前端透传的业务数据载体（JSON 对象），作为 Agent 会话中「当前业务现场」
 // 注入 LLM 上下文；注入前必须经 SanitizeBusinessData 清洗与限界，避免空值与超长内容
-// 挤占 LLMConfig.Session.MaxContextBytes 预算。键与值均为 JSON 可序列化类型。
+// 挤占会话上下文预算。键与值均为 JSON 可序列化类型。
 // BusinessData is the carrier of the frontend-passed business data (a JSON object),
 // injected as the "current business scene" of an Agent session into the LLM context; it
-// must be sanitized and size-bounded by SanitizeBusinessData before injection so empty
-// values and oversized content do not consume the LLMConfig.Session.MaxContextBytes
-// budget. Keys and values are JSON-serializable.
+// must be sanitized and bounded by SanitizeBusinessData before injection so empty values
+// and oversized content do not consume the session context budget. Keys and values are
+// JSON-serializable.
 type BusinessData map[string]any
 
 // SanitizeBusinessData 对业务数据执行清洗与限界，返回与原数据相互独立的结果
 // （入参不会被修改）：
 //   - 清洗：递归剔除空值条目（nil、空字符串、空切片、空 map）——map 递归清洗每个
 //     条目、slice/array 递归清洗每个元素，嵌套结构清洗后变空的条目/元素一并剔除；
-//   - 限界：若紧凑 JSON 序列化字节数超过 maxBytes，按条目序列化字节数从大到小依次丢弃
-//     （字节数相同时按 key 字典序升序），直至整体不超限——优先保留信息密度更高的短条目；
-//   - maxBytes <= 0 视为不设字节上限（仅执行清洗）。
+//   - 条目数限界：清洗后顶层条目数超过参数 sanitize.maxItems（>0 时生效）时，按条目
+//     序列化字节数从大到小依次丢弃，直至满足上限；
+//   - 字节限界：若紧凑 JSON 序列化字节数超过参数 sanitize.maxBytes，按条目序列化字节数
+//     从大到小依次丢弃（字节数相同时按 key 字典序升序），直至整体不超限——优先保留信息
+//     密度更高的短条目；
+//   - 两个限界参数（经 params 读取）非正数时视为不设该上限。
 //
 // 返回结果始终是合法 JSON 对象（json.Marshal 不会失败），供上层直接序列化注入。
 // SanitizeBusinessData sanitizes and bounds the business data, returning a result
@@ -34,14 +37,18 @@ type BusinessData map[string]any
 //   - sanitize: recursively drop empty values (nil, empty string, empty slice, empty
 //     map) — maps are recursed per entry, slices/arrays per element, and nested
 //     structures that turn empty after cleaning are dropped as well;
-//   - bound: when the compact JSON byte size exceeds maxBytes, drop entries one by one
-//     in descending serialized-byte size (ties broken by ascending key) until the total
-//     fits, keeping the information-dense short entries first;
-//   - a non-positive maxBytes means no byte bound (sanitization only).
+//   - item bound: when the cleaned top-level entry count exceeds the parameter
+//     sanitize.maxItems (effective when positive), entries are dropped in descending
+//     serialized-byte size until the bound holds;
+//   - byte bound: when the compact JSON byte size exceeds the parameter
+//     sanitize.maxBytes, entries are dropped one by one in descending serialized-byte
+//     size (ties broken by ascending key) until the total fits, keeping the
+//     information-dense short entries first;
+//   - a non-positive bound parameter (read through params) means that bound is off.
 //
 // The result is always a valid JSON object (json.Marshal never fails) ready for direct
 // serialization and injection by upper layers.
-func SanitizeBusinessData(data BusinessData, maxBytes int) (BusinessData, error) {
+func SanitizeBusinessData(data BusinessData, params *Params) (BusinessData, error) {
 	out := make(BusinessData, len(data))
 	for k, v := range data {
 		cleaned := sanitizeBusinessValue(v)
@@ -50,6 +57,16 @@ func SanitizeBusinessData(data BusinessData, maxBytes int) (BusinessData, error)
 		}
 		out[k] = cleaned
 	}
+	maxItems := params.Int("sanitize.maxItems")
+	if maxItems > 0 && len(out) > maxItems {
+		for _, k := range businessKeysBySizeDesc(out) {
+			delete(out, k)
+			if len(out) <= maxItems {
+				break
+			}
+		}
+	}
+	maxBytes := params.Int("sanitize.maxBytes")
 	if maxBytes <= 0 {
 		return out, nil
 	}

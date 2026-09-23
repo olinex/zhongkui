@@ -3,8 +3,6 @@
     :model-value="modelValue"
     :label="$t(`model.__base.field.search`)"
     prepend-inner-icon="mdi-magnify"
-    variant="outlined"
-    density="compact"
     hide-details
     single-line
     rounded
@@ -23,7 +21,7 @@
         <v-card>
           <v-card-text>
             <!-- 自有滚动容器：仅在真正滚动到底时按下拉加载下一页，避免无限触发请求 -->
-            <div ref="scrollEl" class="pt-0" :style="{ maxHeight: '300px', overflowY: 'auto' }">
+            <div ref="scrollEl" class="pt-0 scroll-list">
               <slot name="items" :items="items" :close="() => (open = false)" />
               <div ref="sentinelEl" class="d-flex align-center justify-center pa-2">
                 <span v-if="loading" class="text-body-2 text-on-surface-variant">{{
@@ -180,3 +178,11 @@ const props = defineProps({
 
 const emits = defineEmits(["update:modelValue"]);
 </script>
+
+<style scoped>
+/* 下拉候选列表滚动容器：限制最大高度，超出内部滚动（IntersectionObserver 以此容器为 root） */
+.scroll-list {
+  max-height: var(--zk-dropdown-max-height);
+  overflow-y: auto;
+}
+</style>

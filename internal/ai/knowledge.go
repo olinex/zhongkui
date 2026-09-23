@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	// third-party
 	"github.com/cloudwego/eino/components/embedding"
@@ -19,10 +20,10 @@ import (
 	"gorm.io/gorm/clause"
 
 	// internal
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // rrfK 是 RRF（Reciprocal Rank Fusion）融合的固定常数 k。
@@ -64,44 +65,65 @@ type embedder interface {
 	EmbedStrings(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error)
 }
 
-// chatGenerator 是 LLM 重排所需的最小对话接口；*ChatClient 与 eino 实现均满足。
-// chatGenerator is the minimal chat interface needed by the LLM rerank; both *ChatClient
-// and eino implementations satisfy it.
+// chatModelNamer 是能报告自身模型名的对话客户端的最小接口（*llm.ChatClient 天然满足）。
+// chatModelNamer is the minimal interface of a chat client able to report its model
+// name (*llm.ChatClient satisfies it out of the box).
+type chatModelNamer interface {
+	ModelName() string
+}
+
+// chatGenerator 是知识库所需的最小对话接口；*ChatClient 与 eino 实现均满足。
+// 重排使用非流式 Generate；dry-run 的评估链路使用流式 Stream 以实时透传模型输出。
+// chatGenerator is the minimal chat interface needed by the knowledge base; both
+// *ChatClient and eino implementations satisfy it. The rerank uses the non-streaming
+// Generate; the dry-run evaluation chain uses the streaming Stream to relay the model
+// output in real time.
 type chatGenerator interface {
 	Generate(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error)
+	Stream(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error)
+}
+
+// chatModelName 尽力取回 chat 客户端的模型名（客户端不支持时返回空串），用于
+// dry-run 结果的调用明细。
+// chatModelName best-effort resolves the model name of the chat client (an empty string
+// when the client does not support it), used for the call details of the dry-run result.
+func chatModelName(chat chatGenerator) string {
+	if namer, ok := chat.(chatModelNamer); ok {
+		return namer.ModelName()
+	}
+	return ""
 }
 
 // Knowledge 是知识库索引的入口：负责文档切块、向量化落库（knowledge_chunks）与
-// 文档/分块删除。持有一个 gorm DB、向量化客户端与切片器；chat 客户端用于重排（可为空）。
+// 文档/分块删除。持有一个 gorm DB、向量化客户端与切片器。
 // Knowledge is the entry of knowledge-base indexing: it chunks documents, embeds and
 // persists them into knowledge_chunks, and deletes documents/chunks. It holds a gorm DB,
-// the embedding client and the chunker; the chat client is used for rerank (may be nil).
+// the embedding client and the chunker.
 type Knowledge struct {
 	db      *database.DB
 	embed   embedder
-	chat    chatGenerator // 可空：为空时重排被跳过
-	cfg     *pkgllm.LLMConfig
-	chunker *pkgllm.MarkdownChunker
+	params  *llm.Params // 行为参数解析器（切片长度与重叠）
+	chunker *llm.MarkdownChunker
 }
 
-// NewKnowledge 构造 Knowledge；db/embed/cfg 任一为空时返回英文错误。
-// NewKnowledge constructs a Knowledge; a nil db, embedder or config returns an English error.
-func NewKnowledge(db *database.DB, embed embedder, chat chatGenerator, cfg *pkgllm.LLMConfig) (*Knowledge, error) {
+// NewKnowledge 构造 Knowledge；db/embed/params 任一为空时返回英文错误。
+// NewKnowledge constructs a Knowledge; a nil db, embedder or params returns an English
+// error.
+func NewKnowledge(db *database.DB, embed embedder, params *llm.Params) (*Knowledge, error) {
 	if db == nil {
 		return nil, errors.New("knowledge: nil database")
 	}
 	if embed == nil {
 		return nil, errors.New("knowledge: nil embedder")
 	}
-	if cfg == nil {
-		return nil, errors.New("knowledge: nil ai config")
+	if params == nil {
+		return nil, errors.New("knowledge: nil params")
 	}
 	return &Knowledge{
 		db:      db,
 		embed:   embed,
-		chat:    chat,
-		cfg:     cfg,
-		chunker: pkgllm.NewMarkdownChunker(cfg.Chunking.Size, cfg.Chunking.Overlap),
+		params:  params,
+		chunker: llm.NewMarkdownChunker(params.Int("chunking.size"), params.Int("chunking.overlap")),
 	}, nil
 }
 
@@ -112,7 +134,7 @@ func NewKnowledge(db *database.DB, embed embedder, chat chatGenerator, cfg *pkgl
 // and inserts the new ones within a single transaction, finally updating doc.ChunkCount
 // and doc.Hash. The full-text search representation of each chunk body is written to the
 // search column via the to_tsvector('simple', ...) SQL expression.
-func (k *Knowledge) IndexDocument(ctx context.Context, doc *modelsai.KnowledgeDocument) error {
+func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument) error {
 	if doc == nil {
 		return errors.New("knowledge: nil document")
 	}
@@ -143,12 +165,12 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *modelsai.KnowledgeDo
 	hash := sha256Hex(doc.Content)
 	return k.db.Transaction(func(tx *gorm.DB) error {
 		// 单事务内先清旧块再插入新块，保证索引原子替换
-		if err := tx.Where("document_id = ?", doc.ID).Delete(&modelsai.KnowledgeChunk{}).Error; err != nil {
+		if err := tx.Where("document_id = ?", doc.ID).Delete(&ai.KnowledgeChunk{}).Error; err != nil {
 			return errors.WithStack(err)
 		}
 		for i, c := range chunks {
 			path, _ := c.MetaData["headingPath"].(string)
-			chunk := &modelsai.KnowledgeChunk{
+			chunk := &ai.KnowledgeChunk{
 				DocumentID:    doc.ID,
 				NamespaceName: doc.NamespaceName,
 				ChunkIndex:    i,
@@ -160,13 +182,13 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *modelsai.KnowledgeDo
 				return errors.WithStack(err)
 			}
 			// search 列为 tsvector，须经 SQL 表达式写入
-			if err := tx.Model(&modelsai.KnowledgeChunk{}).
+			if err := tx.Model(&ai.KnowledgeChunk{}).
 				Where("id = ?", chunk.ID).
 				Updates(map[string]any{"search": gorm.Expr("to_tsvector('simple', ?)", texts[i])}).Error; err != nil {
 				return errors.WithStack(err)
 			}
 		}
-		return tx.Model(&modelsai.KnowledgeDocument{}).
+		return tx.Model(&ai.KnowledgeDocument{}).
 			Where("id = ?", doc.ID).
 			Updates(map[string]any{"chunk_count": len(chunks), "hash": hash}).Error
 	})
@@ -176,7 +198,7 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *modelsai.KnowledgeDo
 // 因此 Reindex 直接复用 IndexDocument。
 // Reindex re-chunks and rebuilds the chunk index of the document. IndexDocument already
 // clears the old chunks inside its transaction, so Reindex simply reuses IndexDocument.
-func (k *Knowledge) Reindex(ctx context.Context, doc *modelsai.KnowledgeDocument) error {
+func (k *Knowledge) Reindex(ctx context.Context, doc *ai.KnowledgeDocument) error {
 	return k.IndexDocument(ctx, doc)
 }
 
@@ -187,14 +209,25 @@ func (k *Knowledge) Reindex(ctx context.Context, doc *modelsai.KnowledgeDocument
 // soft-deleted, both inside a single transaction.
 func (k *Knowledge) DeleteDocument(ctx context.Context, docID uint) error {
 	return k.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("document_id = ?", docID).Delete(&modelsai.KnowledgeChunk{}).Error; err != nil {
+		if err := tx.Where("document_id = ?", docID).Delete(&ai.KnowledgeChunk{}).Error; err != nil {
 			return errors.WithStack(err)
 		}
-		if err := tx.Where("id = ?", docID).Delete(&modelsai.KnowledgeDocument{}).Error; err != nil {
+		if err := tx.Where("id = ?", docID).Delete(&ai.KnowledgeDocument{}).Error; err != nil {
 			return errors.WithStack(err)
 		}
 		return nil
 	})
+}
+
+// FusionWeights 是 weighted 融合的两路权重。
+// FusionWeights carries the two path weights of the weighted fusion.
+type FusionWeights struct {
+	// Vector 向量路权重
+	// Vector the vector-path weight
+	Vector float64
+	// Keyword 关键词路权重
+	// Keyword the keyword-path weight
+	Keyword float64
 }
 
 // RetrieveOptions 是 Retriever.Retrieve 的实现专属调用参数，经 retriever.Option 注入。
@@ -218,7 +251,7 @@ type RetrieveOptions struct {
 	Fusion string
 	// Weights weighted 融合权重
 	// Weights the weights of the weighted fusion
-	Weights pkgllm.WeightConfig
+	Weights FusionWeights
 }
 
 // WithNamespace 设置检索命名空间。
@@ -263,7 +296,7 @@ func WithFusion(fusion string) retriever.Option {
 
 // WithWeights 设置 weighted 融合权重。
 // WithWeights sets the weights of the weighted fusion.
-func WithWeights(weights pkgllm.WeightConfig) retriever.Option {
+func WithWeights(weights FusionWeights) retriever.Option {
 	return retriever.WrapImplSpecificOptFn(func(o *RetrieveOptions) {
 		o.Weights = weights
 	})
@@ -271,50 +304,82 @@ func WithWeights(weights pkgllm.WeightConfig) retriever.Option {
 
 // Retriever 是知识库的混合检索器，实现 eino retriever.Retriever 接口：
 // 向量路（pgvector 余弦距离）与关键词路（tsvector 全文检索）各取 candidates 条，
-// 经 RRF / weighted 融合后送入 LLM 重排取 TopK。chat 客户端不可用时跳过重排，
-// 直接返回融合排序前 TopK（见 Retrieve 注释）。
+// 经 RRF / weighted 融合后送入 LLM 重排取 TopK。重排按调用点声明的 flash 档位经
+// resolver 解析对话客户端；resolver 缺失（未注入）时跳过重排，直接返回融合排序前
+// TopK，flash 档位未绑定时返回明确英文错误而不切换到其他档位（见 Retrieve 注释）。
 // Retriever is the hybrid retriever of the knowledge base, implementing the eino
 // retriever.Retriever interface: the vector path (pgvector cosine distance) and the
 // keyword path (tsvector full-text search) each fetch candidates hits, which are fused
-// via RRF / weighted and then reranked by the LLM down to TopK. When the chat client is
-// unavailable the rerank is skipped and the fusion-ranked TopK is returned directly (see
-// the Retrieve comment).
+// via RRF / weighted and then reranked by the LLM down to TopK. The rerank resolves its
+// chat client through the resolver with the call-site-declared flash slot; when the
+// resolver is absent (not injected) the rerank is skipped and the fusion-ranked TopK is
+// returned directly, while an unbound flash slot yields an explicit English error instead
+// of switching to another slot (see the Retrieve comment).
 type Retriever struct {
-	db    *database.DB
-	embed embedder
-	chat  chatGenerator // 可空：为空时跳过 LLM 重排
-	cfg   *pkgllm.LLMConfig
+	db       *database.DB
+	embed    embedder
+	resolver ChatResolver // 可空：为空时跳过 LLM 重排与评估
+	params   *llm.Params  // 行为参数解析器（检索条数、融合、重排提示词与温度）
 }
 
-// NewRetriever 构造 Retriever；db/embed/cfg 任一为空时返回英文错误。
-// NewRetriever constructs a Retriever; a nil db, embedder or config returns an English
-// error.
-func NewRetriever(db *database.DB, embed embedder, chat chatGenerator, cfg *pkgllm.LLMConfig) (*Retriever, error) {
+// NewRetriever 构造 Retriever；db/embed/params 任一为空时返回英文错误。resolver 可为
+// nil，此时检索跳过 LLM 重排（见 Retrieve 的说明）。
+// NewRetriever constructs a Retriever; a nil db, embedder or params returns an English
+// error. resolver may be nil, in which case retrieval skips the LLM rerank (see the note on
+// Retrieve).
+func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params *llm.Params) (*Retriever, error) {
 	if db == nil {
 		return nil, errors.New("retriever: nil database")
 	}
 	if embed == nil {
 		return nil, errors.New("retriever: nil embedder")
 	}
-	if cfg == nil {
-		return nil, errors.New("retriever: nil ai config")
+	if params == nil {
+		return nil, errors.New("retriever: nil params")
 	}
-	return &Retriever{db: db, embed: embed, chat: chat, cfg: cfg}, nil
+	return &Retriever{db: db, embed: embed, resolver: resolver, params: params}, nil
+}
+
+// resolveRerankChat 按调用点声明的低档位（rerankSlot，即 flash）解析重排与评估使用的
+// 对话客户端：resolver 未注入时返回 (nil, nil)，调用方跳过重排与评估；档位未绑定或绑定
+// 不可用时返回运行时（Runtime）给出的英文错误，绝不静默切换到其他档位。
+// resolveRerankChat resolves the chat client used by the rerank and the evaluation through
+// the call-site-declared low slot (rerankSlot, i.e. flash): an absent resolver yields
+// (nil, nil) so the caller skips the rerank and the evaluation; an unbound or unusable slot
+// returns the English error from the runtime and never silently switches to another slot.
+func (r *Retriever) resolveRerankChat() (chatGenerator, error) {
+	if r.resolver == nil {
+		return nil, nil
+	}
+	chat, err := r.resolver(llm.SlotFlash)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if chat == nil {
+		return nil, errors.Newf("retriever: no chat model resolved for slot %q", llm.SlotFlash)
+	}
+	return chat, nil
 }
 
 // Retrieve 执行混合检索：向量路 + 关键词路 → 融合 → LLM 重排。
-// 降级策略：chat 客户端为 nil 或重排调用/解析失败时，回退为融合排序前 TopK
-// （英文注释说明降级行为），检索仍可用。
+// 档位语义：重排声明使用 flash 档位（rerankSlot），该档位未绑定时直接返回英文错误，
+// 不切换到其他档位。降级策略：未注入 resolver（重排未启用）或重排调用/解析失败时，
+// 回退为融合排序前 TopK（英文注释说明降级行为），检索仍可用。
 // Retrieve runs the hybrid retrieval: vector path plus keyword path, fusion, then LLM
-// rerank. Degradation strategy: when the chat client is nil or the rerank call/parse
-// fails, it falls back to the fusion-ranked TopK (the degradation is documented here in
-// English), keeping the retrieval usable.
+// rerank. Slot semantics: the rerank declares the flash slot (rerankSlot); an unbound slot
+// returns an English error directly without switching to another slot. Degradation strategy:
+// when no resolver was injected (the rerank is disabled) or the rerank call/parse fails, it
+// falls back to the fusion-ranked TopK (the degradation is documented here in English),
+// keeping the retrieval usable.
 func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retriever.Option) ([]*schema.Document, error) {
 	o := retriever.GetImplSpecificOptions(&RetrieveOptions{
-		TopK:       r.cfg.Rerank.TopK,
-		Candidates: r.cfg.Rerank.Candidates,
-		Fusion:     r.cfg.Rerank.Fusion,
-		Weights:    r.cfg.Rerank.Weights,
+		TopK:       r.params.Int("retrieval.topK"),
+		Candidates: r.params.Int("retrieval.candidates"),
+		Fusion:     r.params.String("retrieval.fusion"),
+		Weights: FusionWeights{
+			Vector:  r.params.Float("retrieval.weightVector"),
+			Keyword: r.params.Float("retrieval.weightKeyword"),
+		},
 	}, opts...)
 	if strings.TrimSpace(query) == "" {
 		return nil, errors.New("retriever: empty query")
@@ -341,18 +406,111 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 	cands := fuseRetrievalResults(vectorHits, keywordHits, o.Fusion, o.Weights)
 	cands = selectTopK(cands, o.Candidates)
 
-	// 无 chat 客户端：跳过 LLM 重排，直接返回融合排序前 TopK。
-	// No chat client: the LLM rerank is skipped and the fusion-ranked TopK is returned.
-	if r.chat == nil {
+	// 解析重排使用的对话客户端（调用点声明 flash 档位）：未注入 resolver 时跳过重排，
+	// 直接返回融合排序前 TopK；档位未绑定时返回英文错误，不切换到其他档位。
+	// Resolve the chat client of the rerank (the call site declares the flash slot): an
+	// absent resolver skips the rerank and returns the fusion-ranked TopK directly, while an
+	// unbound slot returns an English error without switching to another slot.
+	chat, err := r.resolveRerankChat()
+	if err != nil {
+		return nil, err
+	}
+	if chat == nil {
 		return toSchemaDocuments(selectTopK(cands, o.TopK)), nil
 	}
 	// 重排失败（调用错误或 JSON 解析失败）：降级为融合排序前 TopK。
 	// Rerank failure (call error or JSON parse failure): degrade to the fusion-ranked TopK.
-	ranked, rerankErr := r.rerank(ctx, query, cands, o.TopK)
+	ranked, rerankErr := r.rerank(ctx, chat, query, cands, o.TopK)
 	if rerankErr != nil {
 		return toSchemaDocuments(selectTopK(cands, o.TopK)), nil
 	}
 	return toSchemaDocuments(ranked), nil
+}
+
+// DryRun 执行知识库 RAG dry-run：混合检索（参数可覆盖）→ 基于上下文生成回答 →
+// RAGAS 风格量化评估。全流程经 report 实时上报阶段状态与模型增量输出（为 nil 时
+// 不上报）；report 返回错误（SSE 写失败/客户端断开）时立即中止并向上返回该错误。
+// 检索失败或 flash 档位未绑定（重排与评估的声明档位）时返回错误；评估客户端缺失或
+// 检索结果为空时返回带检索结果与 evalError 的结果（evaluation 为空）。结果中的 Meta
+// 汇总检索耗时、各次调用明细、总计耗时与 token。
+// DryRun runs a knowledge-base RAG dry-run: hybrid retrieval (with overridable
+// parameters), context-based answer generation, then RAGAS-style quantitative
+// evaluation. The whole flow reports stage statuses and model deltas through report in
+// real time (a nil reporter reports nothing); when report returns an error (an SSE write
+// failure or a disconnected client) the run aborts immediately and that error is
+// propagated. A retrieval failure or an unbound flash slot (the declared slot of the rerank
+// and the evaluation) returns an error; when the evaluation client is absent or no results
+// are retrieved, it returns a result carrying the retrieval hits and an evalError
+// (evaluation stays nil). Meta in the result summarizes the retrieval elapsed time, the
+// per-call details, the total elapsed time and the token usage.
+func (r *Retriever) DryRun(ctx context.Context, query string, report EvalReporter, opts ...retriever.Option) (*DryRunResult, error) {
+	totalStart := time.Now()
+	// reportErr 记录上报写失败（客户端断开），与「评估前置条件不满足」的降级错误区分开
+	// reportErr records a report write failure (a disconnected client), kept apart from the
+	// degradation error of unmet evaluation preconditions
+	var reportErr error
+	emit := func(ev StageEvent) error {
+		if report == nil || reportErr != nil {
+			return reportErr
+		}
+		reportErr = report(ev)
+		return reportErr
+	}
+
+	if err := emit(StageEvent{Stage: EvalStageRetrieve, Status: EvalStatusStart}); err != nil {
+		return nil, err
+	}
+	retrieveStart := time.Now()
+	docs, err := r.Retrieve(ctx, query, opts...)
+	retrieveElapsed := time.Since(retrieveStart).Milliseconds()
+	if err != nil {
+		_ = emit(StageEvent{Stage: EvalStageRetrieve, Status: EvalStatusFailed, ElapsedMs: retrieveElapsed, Err: err.Error()})
+		return nil, errors.WithStack(err)
+	}
+	results := ToRetrievalResults(docs)
+	if err := emit(StageEvent{Stage: EvalStageRetrieve, Status: EvalStatusDone, ElapsedMs: retrieveElapsed}); err != nil {
+		return nil, err
+	}
+
+	out := &DryRunResult{
+		Query:   query,
+		Results: results,
+		Meta: DryRunMeta{
+			RetrieveElapsedMs: retrieveElapsed,
+			// 空 slice 而非 nil，保证 JSON 序列化为 [] 而不是 null
+			// Use an empty slice instead of nil so JSON serializes as [] rather than null
+			Calls: []CallMeta{},
+		},
+	}
+	// 评估 judge 同样声明使用 flash 档位；档位未绑定时返回英文错误（不切换到其他档位），
+	// 由调用方以 SSE error 事件明确告知用户。
+	// The evaluation judges declare the flash slot as well; an unbound slot returns an English
+	// error (without switching to another slot) that the caller reports as an SSE error event.
+	chat, err := r.resolveRerankChat()
+	if err != nil {
+		return nil, err
+	}
+	ev, calls, evalErr := evaluate(ctx, r.params, chat, r.embed, query, results, emit)
+	if reportErr != nil {
+		return nil, reportErr
+	}
+	if evalErr != nil {
+		out.EvalError = evalErr.Error()
+	} else {
+		out.Evaluation = ev
+	}
+	if calls != nil {
+		out.Meta.Calls = calls
+	}
+	modelName := chatModelName(chat)
+	for i := range out.Meta.Calls {
+		out.Meta.Calls[i].Model = modelName
+		out.Meta.Usage.PromptTokens += out.Meta.Calls[i].Usage.PromptTokens
+		out.Meta.Usage.CompletionTokens += out.Meta.Calls[i].Usage.CompletionTokens
+		out.Meta.Usage.TotalTokens += out.Meta.Calls[i].Usage.TotalTokens
+	}
+	out.Meta.TotalElapsedMs = time.Since(totalStart).Milliseconds()
+	return out, nil
 }
 
 // vectorRetrieve 执行向量路检索：按余弦距离（embedding <=> ?）升序取 candidates 条。
@@ -373,7 +531,7 @@ func (r *Retriever) vectorRetrieve(ctx context.Context, o *RetrieveOptions, vec 
 	q = q.Order(clause.OrderBy{Expression: gorm.Expr("c.embedding <=> ?::vector", lit)}).
 		Limit(o.Candidates)
 	var rows []struct {
-		modelsai.KnowledgeChunk
+		ai.KnowledgeChunk
 		Title string
 		Score float64
 	}
@@ -402,7 +560,7 @@ func (r *Retriever) keywordRetrieve(ctx context.Context, o *RetrieveOptions, que
 	q = q.Order(clause.OrderBy{Expression: gorm.Expr("ts_rank(c.search, plainto_tsquery('simple', ?)) DESC", query)}).
 		Limit(o.Candidates)
 	var rows []struct {
-		modelsai.KnowledgeChunk
+		ai.KnowledgeChunk
 		Title string
 		Score float64
 	}
@@ -413,22 +571,21 @@ func (r *Retriever) keywordRetrieve(ctx context.Context, o *RetrieveOptions, que
 }
 
 // rerank 将候选块发给 chat 模型按相关度排序：模型须返回 JSON 数组（按相关度降序的
-// 候选序号），解析失败或返回无效序号时返回错误（上层降级为融合排序）。chat 为 nil
-// 时同样返回错误（上层跳过重排）。prompt 与系统指令均为英文，要求模型仅输出 JSON。
+// 候选序号），解析失败或返回无效序号时返回错误（上层降级为融合排序）。chat 由调用方
+// 经 resolveRerankChat 按声明的 flash 档位解析后传入。prompt 与系统指令均为英文，
+// 要求模型仅输出 JSON。
 // rerank sends the candidates to the chat model for relevance ordering: the model must
 // return a JSON array (candidate indices in descending relevance); a parse failure or
-// invalid indices yield an error (the caller degrades to the fusion order). A nil chat
-// also yields an error (the caller skips the rerank). The prompt and the system
-// instruction are in English, asking the model to output JSON only.
-func (r *Retriever) rerank(ctx context.Context, query string, cands []*RetrievalResult, topK int) ([]*RetrievalResult, error) {
-	if r.chat == nil {
-		return nil, errors.New("retriever: chat client unavailable, rerank skipped")
-	}
+// invalid indices yield an error (the caller degrades to the fusion order). The chat client
+// is resolved by the caller through resolveRerankChat with the declared flash slot. The
+// prompt and the system instruction are in English, asking the model to output JSON only.
+func (r *Retriever) rerank(ctx context.Context, chat chatGenerator, query string, cands []*RetrievalResult, topK int) ([]*RetrievalResult, error) {
 	messages := []*schema.Message{
-		schema.SystemMessage("You are a relevance reranker for retrieval-augmented generation. Rank the given chunks by relevance to the query and return ONLY a JSON array of chunk indices ordered from most to least relevant, e.g. [3,1,0]. Do not output any other text."),
-		schema.UserMessage(buildRerankPrompt(query, cands)),
+		schema.SystemMessage(r.params.Text("retrieval.rerankSystemPrompt")),
+		schema.UserMessage(buildRerankPrompt(query, cands, r.params.Int("retrieval.rerankSnippetLimit"))),
 	}
-	resp, err := r.chat.Generate(ctx, messages)
+	// 重排使用低温度（参数 retrieval.rerankTemperature），使排序结果更确定
+	resp, err := chat.Generate(ctx, messages, model.WithTemperature(float32(r.params.Float("retrieval.rerankTemperature"))))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -451,14 +608,15 @@ func (r *Retriever) rerank(ctx context.Context, query string, cands []*Retrieval
 	return selectTopK(ranked, topK), nil
 }
 
-// buildRerankPrompt 构造重排请求的用户消息：列出 query 与带序号的候选块。
+// buildRerankPrompt 构造重排请求的用户消息：列出 query 与带序号的候选块（正文截断到
+// snippetLimit 个字符）。
 // buildRerankPrompt builds the user message of the rerank request, listing the query and
-// the numbered candidate chunks.
-func buildRerankPrompt(query string, cands []*RetrievalResult) string {
+// the numbered candidate chunks (bodies truncated to snippetLimit characters).
+func buildRerankPrompt(query string, cands []*RetrievalResult, snippetLimit int) string {
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Query: %s\n\nChunks:\n", query)
 	for i, c := range cands {
-		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, c.Title, truncateText(c.Content, 500))
+		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, c.Title, truncateText(c.Content, snippetLimit))
 	}
 	return sb.String()
 }
@@ -500,9 +658,9 @@ func parseRerankIndices(content string) ([]int, error) {
 // fuseRetrievalResults 按策略融合两路检索结果；未知策略默认 RRF。
 // fuseRetrievalResults fuses the two retrieval paths by the given strategy; unknown
 // strategies default to RRF.
-func fuseRetrievalResults(vector, keyword []*RetrievalResult, fusion string, weights pkgllm.WeightConfig) []*RetrievalResult {
+func fuseRetrievalResults(vector, keyword []*RetrievalResult, fusion string, weights FusionWeights) []*RetrievalResult {
 	switch strings.ToLower(strings.TrimSpace(fusion)) {
-	case "weighted":
+	case llm.FusionWeighted:
 		return fuseWeighted(vector, keyword, weights)
 	default:
 		return fuseRRF(vector, keyword)
@@ -537,7 +695,7 @@ func fuseRRF(vector, keyword []*RetrievalResult) []*RetrievalResult {
 // fuseWeighted fuses the two paths with normalized weights: each path score is min-max
 // normalized first (0.5 when the max equals the min), then linearly weighted by the
 // vector/keyword weights, finally returned sorted by the fused score descending.
-func fuseWeighted(vector, keyword []*RetrievalResult, weights pkgllm.WeightConfig) []*RetrievalResult {
+func fuseWeighted(vector, keyword []*RetrievalResult, weights FusionWeights) []*RetrievalResult {
 	scores := make(map[chunkKey]*RetrievalResult)
 	normalized := func(path []*RetrievalResult) map[chunkKey]float64 {
 		out := make(map[chunkKey]float64, len(path))
@@ -682,7 +840,7 @@ func ToRetrievalResults(docs []*schema.Document) []RetrievalResult {
 // rowsToResults converts retrieval SQL scan rows into retrieval results whose Content is
 // the heading path plus the chunk body.
 func rowsToResults(rows []struct {
-	modelsai.KnowledgeChunk
+	ai.KnowledgeChunk
 	Title string
 	Score float64
 }) []*RetrievalResult {

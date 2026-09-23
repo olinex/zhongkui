@@ -40,7 +40,6 @@
                         color="primary"
                         variant="tonal"
                         size="small"
-                        density="compact"
                         @click="appendItem(item)"
                       />
                     </slot>
@@ -57,7 +56,6 @@
       :items-per-page-options="pageSizeOptions"
       :headers="exactHeaders"
       :search="search"
-      density="compact"
       virtual-scrolling
       fixed-header
       max-height="360px"

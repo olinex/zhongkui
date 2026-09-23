@@ -2,7 +2,6 @@
   <v-text-field
     v-if="inputType === SearchInputType.STRING"
     :model-value="modelValue"
-    :density="density"
     @update:model-value="update"
   />
   <v-number-input
@@ -11,7 +10,6 @@
     :min="numberProps.min"
     :max="numberProps.max"
     :precision="numberProps.precision"
-    :density="density"
     control-variant="split"
     @update:model-value="update"
   />
@@ -21,7 +19,6 @@
     :items="booleanOptions"
     :item-title="optionTitle"
     item-value="value"
-    :density="density"
     @update:model-value="update"
   />
   <date-field
@@ -46,7 +43,6 @@
     :item-title="optionTitle"
     item-value="value"
     return-object
-    :density="density"
     @update:model-value="update"
   />
 </template>
@@ -55,7 +51,6 @@
 import type { PropType } from "vue";
 import i18n from "@/utils/i18n";
 import { SearchInputType, type Option } from "../@types/forms";
-import { type Density } from "../@types/base";
 import type { NumberRange } from "@/types";
 
 // 布尔筛选值采用与枚举一致的 v-select 下拉（是/否），保持各数据类型值输入控件外观统一。
@@ -105,10 +100,6 @@ const props = defineProps({
   options: {
     type: Array as PropType<Option[]>,
     default: () => [],
-  },
-  density: {
-    type: Object as PropType<Density>,
-    default: null,
   },
 });
 

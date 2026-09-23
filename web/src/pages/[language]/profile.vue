@@ -2,7 +2,7 @@
   <v-layout>
     <app-header />
     <v-main class="d-flex mb-6">
-      <v-container class="mx-auto pa-4 pa-md-6" style="max-width: 1200px">
+      <v-container class="pa-4 pa-md-6 zk-page-container">
         <temp-editable-dialog
           ref="createAccessDialogRef"
           :title="$t(`title.accessKey`)"
@@ -76,6 +76,7 @@
             variant="text"
             size="large"
             :title="$t('action.back')"
+            :aria-label="$t('action.back')"
             @click="goBack"
           />
           <v-btn
@@ -83,6 +84,7 @@
             variant="text"
             size="large"
             :title="$t('title.home')"
+            :aria-label="$t('title.home')"
             @click="gotoHome"
           />
         </div>
@@ -111,7 +113,7 @@
 
           <!-- Settings sections -->
           <v-col cols="12" md="8" xl="9">
-            <v-expansion-panels variant="accordion" class="mb-6">
+            <v-expansion-panels class="mb-6">
               <!-- 个人信息 -->
               <v-expansion-panel eager>
                 <v-expansion-panel-title>
@@ -192,7 +194,9 @@
 
                   <!-- Empty state -->
                   <div v-if="accessKeys.length === 0" class="text-center pa-8">
-                    <v-icon size="48" class="mb-3 text-on-surface-variant">mdi-key-off-outline</v-icon>
+                    <v-icon size="48" class="mb-3 text-on-surface-variant"
+                      >mdi-key-off-outline</v-icon
+                    >
                     <div class="text-body-2 text-on-surface-variant">
                       {{ $t("profile.emptyAccessKeys") }}
                     </div>
@@ -204,7 +208,7 @@
                       <v-divider v-if="index > 0" />
                       <div class="py-4">
                         <div class="d-flex align-center ga-3 flex-wrap">
-                          <boolean-chip :value="key.enabled" density="compact" />
+                          <boolean-chip :value="key.enabled" />
                           <span class="font-mono text-body-2 font-weight-medium">{{
                             key.accessKeyID
                           }}</span>
@@ -236,21 +240,19 @@
                             {{ $t("action.delete") }}
                           </v-btn>
                         </div>
-                        <div v-if="key.description" class="text-body-2 text-on-surface-variant mt-2">
+                        <div
+                          v-if="key.description"
+                          class="text-body-2 text-on-surface-variant mt-2"
+                        >
                           {{ key.description }}
                         </div>
                         <div class="d-flex flex-wrap ga-2 mt-2">
-                          <v-chip
-                            size="small"
-                            density="compact"
-                            prepend-icon="mdi-calendar-outline"
-                          >
+                          <v-chip density="compact" prepend-icon="mdi-calendar-outline">
                             {{ $t("model.accessKey.field.createdAt") }}:
                             {{ localeDatetimeFormat(DateTime.fromISO(key.createdAt)) }}
                           </v-chip>
                           <v-chip
                             v-if="key.updatedAt"
-                            size="small"
                             density="compact"
                             prepend-icon="mdi-calendar-refresh-outline"
                           >
@@ -259,7 +261,6 @@
                           </v-chip>
                           <v-chip
                             v-if="key.expiredAt !== null"
-                            size="small"
                             density="compact"
                             prepend-icon="mdi-calendar-clock-outline"
                           >
@@ -268,7 +269,6 @@
                           </v-chip>
                           <v-chip
                             v-if="key.lastAccessAt !== null"
-                            size="small"
                             density="compact"
                             prepend-icon="mdi-history"
                           >

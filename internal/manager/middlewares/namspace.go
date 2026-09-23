@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/config"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
 )
@@ -59,7 +59,7 @@ func decodeNamespace(raw string) string {
 //
 // 返回值：
 //   - gin.HandlerFunc: 可直接注册到 Gin 路由中的中间件处理函数
-func NamespaceMiddleware(cfg *manager.NamespaceConfig) gin.HandlerFunc {
+func NamespaceMiddleware(cfg *config.NamespaceConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		_, span := StartMiddlewareSpan(c, "namespace")
 		defer span.End()

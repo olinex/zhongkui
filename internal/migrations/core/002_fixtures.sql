@@ -4,7 +4,8 @@
 -- 全局种子数据与权限点（fixtures）
 -- 本文件合并迁移 002~008 的 fixtures 内容，无向后兼容负担：
 -- 权限点模板已合并补齐全部需认证接口且移除已废弃的 jwt/refresh；
--- 标签规则样例表 DDL 与种子数据随本文件一起迁移（无外键依赖）。
+-- 标签规则样例表 DDL 与种子数据随本文件一起迁移（无外键依赖）；
+-- Agent 行为参数（含提示词）的出厂值在此种子化，作为参数类值的唯一来源。
 -- =====================================================================
 
 -- -------------------------------------------------------------
@@ -74,7 +75,90 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/datasource/enable', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/datasource/enable', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/datasource/disable', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/datasource/disable', 'OPTIONS', 'allow')
+    ('p', 'admin', 'api:/api/v1/datasource/disable', 'OPTIONS', 'allow'),
+    -- 第三方数据源：连接测试与结构自省
+    ('p', 'admin', 'api:/api/v1/datasource/test', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/test', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/introspect', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/datasource/introspect', 'OPTIONS', 'allow'),
+    -- 管理接口：服务/依赖状态、采集器运行状态与统一枚举
+    ('p', 'admin', 'api:/api/v1/admin/service/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/service/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/deps/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/deps/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/capturer/status/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/capturer/status/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/enum/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/enum/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/enum/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/enum/list', 'OPTIONS', 'allow'),
+    -- 标签事件接口：OPA 内置函数与 sqlite schema 元信息
+    ('p', 'admin', 'api:/api/v1/tag-event/tag-rule/functions', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/tag-event/tag-rule/functions', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/tag-event/tag-rule/sqlite/meta', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/tag-event/tag-rule/sqlite/meta', 'OPTIONS', 'allow'),
+    -- 原始流量审计接口：行详情
+    ('p', 'admin', 'api:/api/v1/traffic/ipv4-tcp/detail', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/traffic/ipv4-tcp/detail', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/traffic/ipv6-tcp/detail', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/traffic/ipv6-tcp/detail', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/traffic/http-transport/detail', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/traffic/http-transport/detail', 'OPTIONS', 'allow'),
+    -- 通知模板：事件元信息
+    ('p', 'admin', 'api:/api/v1/notification/template/events/meta', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/notification/template/events/meta', 'OPTIONS', 'allow'),
+    -- AI 助手接口（知识库文档 / Agent 会话 / 流式生成 / 状态）
+    ('p', 'admin', 'api:/api/v1/ai/doc/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/create', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/create', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/:id/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/:id/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/:id/update', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/:id/update', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/delete', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/:id/reindex', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/doc/:id/reindex', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/create', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/create', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/:id/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/:id/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/:id/rename', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/:id/rename', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/:id/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/:id/messages', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/session/:id/messages', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/status', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/status', 'OPTIONS', 'allow'),
+    -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖）
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/create', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/create', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/:id/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/:id/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/:id/update', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/:id/update', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/delete', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/test', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/model/test', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/binding/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/binding/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/binding/:slot/set', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/binding/:slot/set', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/binding/:slot/unbind', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/binding/:slot/unbind', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/param/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/param/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/param/set', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/param/set', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/param/reset', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/param/reset', 'OPTIONS', 'allow')
 ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 
 -- -------------------------------------------------------------
@@ -124,6 +208,15 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     -- 管理接口：RBAC 策略模板
     ('api:/api/v1/admin/rbac-policy-template/list', 'POST'),
     ('api:/api/v1/admin/rbac-policy-template/list', 'OPTIONS'),
+    -- 管理接口：服务/依赖状态与统一枚举
+    ('api:/api/v1/admin/service/list', 'POST'),
+    ('api:/api/v1/admin/service/list', 'OPTIONS'),
+    ('api:/api/v1/admin/deps/list', 'POST'),
+    ('api:/api/v1/admin/deps/list', 'OPTIONS'),
+    ('api:/api/v1/admin/enum/get', 'POST'),
+    ('api:/api/v1/admin/enum/get', 'OPTIONS'),
+    ('api:/api/v1/admin/enum/list', 'POST'),
+    ('api:/api/v1/admin/enum/list', 'OPTIONS'),
     -- 管理接口：命名空间
     ('api:/api/v1/admin/namespace/list', 'POST'),
     ('api:/api/v1/admin/namespace/list', 'OPTIONS'),
@@ -146,6 +239,9 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/admin/capturer/:id/update', 'OPTIONS'),
     ('api:/api/v1/admin/capturer/delete', 'POST'),
     ('api:/api/v1/admin/capturer/delete', 'OPTIONS'),
+    -- 管理接口：采集器运行状态
+    ('api:/api/v1/admin/capturer/status/list', 'POST'),
+    ('api:/api/v1/admin/capturer/status/list', 'OPTIONS'),
     -- 标签事件接口：标签规则
     ('api:/api/v1/tag-event/tag-rule/list', 'POST'),
     ('api:/api/v1/tag-event/tag-rule/list', 'OPTIONS'),
@@ -175,6 +271,10 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/tag-event/tag-rule/model/metadata', 'OPTIONS'),
     ('api:/api/v1/tag-event/tag-rule/model/samples', 'POST'),
     ('api:/api/v1/tag-event/tag-rule/model/samples', 'OPTIONS'),
+    ('api:/api/v1/tag-event/tag-rule/functions', 'POST'),
+    ('api:/api/v1/tag-event/tag-rule/functions', 'OPTIONS'),
+    ('api:/api/v1/tag-event/tag-rule/sqlite/meta', 'POST'),
+    ('api:/api/v1/tag-event/tag-rule/sqlite/meta', 'OPTIONS'),
     -- 标签事件接口：标签规则样例
     ('api:/api/v1/tag-event/tag-rule-sample/list', 'POST'),
     ('api:/api/v1/tag-event/tag-rule-sample/list', 'OPTIONS'),
@@ -225,6 +325,10 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/datasource/list', 'OPTIONS'),
     ('api:/api/v1/datasource/create', 'POST'),
     ('api:/api/v1/datasource/create', 'OPTIONS'),
+    ('api:/api/v1/datasource/test', 'POST'),
+    ('api:/api/v1/datasource/test', 'OPTIONS'),
+    ('api:/api/v1/datasource/introspect', 'POST'),
+    ('api:/api/v1/datasource/introspect', 'OPTIONS'),
     ('api:/api/v1/datasource/:id/get', 'POST'),
     ('api:/api/v1/datasource/:id/get', 'OPTIONS'),
     ('api:/api/v1/datasource/:id/update', 'POST'),
@@ -235,13 +339,19 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/datasource/enable', 'OPTIONS'),
     ('api:/api/v1/datasource/disable', 'POST'),
     ('api:/api/v1/datasource/disable', 'OPTIONS'),
-    -- 原始流量审计接口（无唯一性 ID，不提供 detail 接口，list 返回全字段）
+    -- 原始流量审计接口
     ('api:/api/v1/traffic/ipv4-tcp/list', 'POST'),
     ('api:/api/v1/traffic/ipv4-tcp/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/ipv4-tcp/detail', 'POST'),
+    ('api:/api/v1/traffic/ipv4-tcp/detail', 'OPTIONS'),
     ('api:/api/v1/traffic/ipv6-tcp/list', 'POST'),
     ('api:/api/v1/traffic/ipv6-tcp/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/ipv6-tcp/detail', 'POST'),
+    ('api:/api/v1/traffic/ipv6-tcp/detail', 'OPTIONS'),
     ('api:/api/v1/traffic/http-transport/list', 'POST'),
     ('api:/api/v1/traffic/http-transport/list', 'OPTIONS'),
+    ('api:/api/v1/traffic/http-transport/detail', 'POST'),
+    ('api:/api/v1/traffic/http-transport/detail', 'OPTIONS'),
     ('api:/api/v1/traffic/http-transport/stack/list', 'POST'),
     ('api:/api/v1/traffic/http-transport/stack/list', 'OPTIONS'),
     -- 通用明文查看接口
@@ -249,6 +359,58 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/plaintext/crypto', 'OPTIONS'),
     ('api:/api/v1/plaintext/s3', 'POST'),
     ('api:/api/v1/plaintext/s3', 'OPTIONS'),
+    -- AI 助手接口（知识库文档 / Agent 会话 / 流式生成 / 状态）
+    ('api:/api/v1/ai/doc/list', 'POST'),
+    ('api:/api/v1/ai/doc/list', 'OPTIONS'),
+    ('api:/api/v1/ai/doc/create', 'POST'),
+    ('api:/api/v1/ai/doc/create', 'OPTIONS'),
+    ('api:/api/v1/ai/doc/:id/get', 'POST'),
+    ('api:/api/v1/ai/doc/:id/get', 'OPTIONS'),
+    ('api:/api/v1/ai/doc/:id/update', 'POST'),
+    ('api:/api/v1/ai/doc/:id/update', 'OPTIONS'),
+    ('api:/api/v1/ai/doc/delete', 'POST'),
+    ('api:/api/v1/ai/doc/delete', 'OPTIONS'),
+    ('api:/api/v1/ai/doc/:id/reindex', 'POST'),
+    ('api:/api/v1/ai/doc/:id/reindex', 'OPTIONS'),
+    ('api:/api/v1/ai/session/list', 'POST'),
+    ('api:/api/v1/ai/session/create', 'POST'),
+    ('api:/api/v1/ai/session/create', 'OPTIONS'),
+    ('api:/api/v1/ai/session/:id/get', 'POST'),
+    ('api:/api/v1/ai/session/:id/get', 'OPTIONS'),
+    ('api:/api/v1/ai/session/:id/rename', 'POST'),
+    ('api:/api/v1/ai/session/:id/rename', 'OPTIONS'),
+    ('api:/api/v1/ai/session/:id/delete', 'POST'),
+    ('api:/api/v1/ai/session/:id/messages', 'POST'),
+    ('api:/api/v1/ai/session/:id/messages', 'OPTIONS'),
+    ('api:/api/v1/ai/agent/:sessionID/stream', 'POST'),
+    ('api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS'),
+    ('api:/api/v1/ai/status', 'POST'),
+    ('api:/api/v1/ai/status', 'OPTIONS'),
+    -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖）
+    ('api:/api/v1/admin/llm/model/list', 'POST'),
+    ('api:/api/v1/admin/llm/model/list', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/model/create', 'POST'),
+    ('api:/api/v1/admin/llm/model/create', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/model/:id/get', 'POST'),
+    ('api:/api/v1/admin/llm/model/:id/get', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/model/:id/update', 'POST'),
+    ('api:/api/v1/admin/llm/model/:id/update', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/model/delete', 'POST'),
+    ('api:/api/v1/admin/llm/model/delete', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/model/test', 'POST'),
+    ('api:/api/v1/admin/llm/model/test', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/binding/list', 'POST'),
+    ('api:/api/v1/admin/llm/binding/list', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/binding/:slot/set', 'POST'),
+    ('api:/api/v1/admin/llm/binding/:slot/set', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/binding/:slot/unbind', 'POST'),
+    ('api:/api/v1/admin/llm/binding/:slot/unbind', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/param/list', 'POST'),
+    ('api:/api/v1/admin/llm/param/list', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/param/set', 'POST'),
+    ('api:/api/v1/admin/llm/param/set', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/param/reset', 'POST'),
+    ('api:/api/v1/admin/llm/param/reset', 'OPTIONS'),
     -- 个人接口（default 组自管资源）
     ('api:/api/v1/user/self/password/reset', 'POST'),
     ('api:/api/v1/user/self/password/reset', 'OPTIONS'),
@@ -324,6 +486,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     -- 通知管理：模板
     ('api:/api/v1/notification/template/list', 'POST'),
     ('api:/api/v1/notification/template/list', 'OPTIONS'),
+    ('api:/api/v1/notification/template/events/meta', 'POST'),
+    ('api:/api/v1/notification/template/events/meta', 'OPTIONS'),
     ('api:/api/v1/notification/template/create', 'POST'),
     ('api:/api/v1/notification/template/create', 'OPTIONS'),
     ('api:/api/v1/notification/template/update', 'POST'),
@@ -479,7 +643,77 @@ FROM namespaces ns
 CROSS JOIN (VALUES ('webhook')) AS v(type)
 ON CONFLICT (namespace_name, name) DO NOTHING;
 
+-- -------------------------------------------------------------
+-- 8) Agent 参数出厂值
+-- -------------------------------------------------------------
+-- 参数键由代码内注册表（internal/pkg/llm 的 Specs）声明，参数类值不写在代码里：出厂值
+-- 只在此段种子化，value 与 default_value 初始相同。value 是运行期生效值（可由管理
+-- 接口或直接改库调整），default_value 是只读出厂值（供「恢复出厂值」写回）。启动期强校验
+-- 要求注册表每个键都有库内记录，故代码内新增参数必须同步补此段。
+-- 提示词正文含单引号与 JSON 双引号，统一用美元引用（$$...$$）包裹，避免转义。
+INSERT INTO agent_params (key, value, default_value)
+SELECT v.key, v.value, v.value
+FROM (VALUES
+    (
+        'agent.systemPrompt',
+        $$You are "ZhongKui AI", an embedded assistant of a network-traffic capture and analysis platform. You help users inspect captured packets, build tag rules, query data sources, and operate the platform.
+
+You must reply with ONLY a JSON object in exactly this shape:
+{"content": "<your markdown answer>", "draft": {<optional structured payload>}}
+
+Rules:
+- "content": the visible answer in Markdown. Match the language of the user's question.
+- "draft": a JSON object capturing structured facts, extracted entities or actionable plans for downstream automation; use {} when nothing structured applies.
+- Answer questions using the retrieved knowledge when relevant and cite sources by their titles.
+- Never fabricate facts beyond the provided context.$$
+    ),
+    ('agent.retrievalSectionTitle', '## Retrieved Knowledge'),
+    ('agent.businessSectionTitle', '## Current Business Scene'),
+    ('agent.questionSectionTitle', '## User Question'),
+    ('agent.retrievedDocSnippetLimit', '500'),
+    ('agent.defaultSlot', 'standard'),
+    ('retrieval.topK', '5'),
+    ('retrieval.candidates', '30'),
+    ('retrieval.fusion', 'rrf'),
+    ('retrieval.weightVector', '0.6'),
+    ('retrieval.weightKeyword', '0.4'),
+    (
+        'retrieval.rerankSystemPrompt',
+        $$You are a relevance reranker for retrieval-augmented generation. Rank the given chunks by relevance to the query and return ONLY a JSON array of chunk indices ordered from most to least relevant, e.g. [3,1,0]. Do not output any other text.$$
+    ),
+    ('retrieval.rerankSnippetLimit', '500'),
+    ('retrieval.rerankTemperature', '0.2'),
+    ('session.maxContextMessages', '20'),
+    ('session.maxContextBytes', '32768'),
+    ('chunking.size', '800'),
+    ('chunking.overlap', '100'),
+    (
+        'eval.answerSystemPrompt',
+        $$You are a helpful assistant for retrieval-augmented generation. Answer the user's question using ONLY the provided context chunks. If the context does not contain the answer, say that you do not know. Return ONLY a JSON object like {"answer": "..."} and nothing else.$$
+    ),
+    (
+        'eval.chunkRelevanceSystemPrompt',
+        $$You are a retrieval quality judge. Given the query and the retrieved context chunks, judge each chunk's relevance to the query. Return ONLY a JSON object like {"judgments": [{"index": 0, "relevant": true, "score": 0.9, "reason": "..."}]} where index is the chunk's number, score is a relevance score between 0 and 1, and reason is a short English explanation. Do not output any other text.$$
+    ),
+    (
+        'eval.claimsSystemPrompt',
+        $$You are a faithfulness judge. Extract every factual claim from the given answer and determine whether each claim can be inferred from the provided context chunks. Return ONLY a JSON object like {"claims": [{"statement": "...", "supported": true, "chunkIndexes": [0, 2]}]} where chunkIndexes lists the chunk numbers supporting the claim and is an empty array when the claim is not supported. Do not output any other text.$$
+    ),
+    (
+        'eval.reverseQuestionsSystemPrompt',
+        $$You are an answer relevance judge. Reverse-engineer up to 3 questions that the given answer could plausibly answer. Return ONLY a JSON object like {"questions": ["...", "..."]}. Do not output any other text.$$
+    ),
+    ('eval.reverseQuestionCount', '3'),
+    ('eval.snippetLimit', '500'),
+    ('sanitize.maxItems', '0'),
+    ('sanitize.maxBytes', '32768')
+) AS v(key, value)
+ON CONFLICT (key) DO NOTHING;
+
 -- +goose Down
+
+-- Agent 参数出厂值
+DELETE FROM agent_params;
 
 -- 占位符通知渠道
 DELETE FROM notification_channels

@@ -2,6 +2,8 @@
   <!-- 网络堆栈对话框：以 HttpTransport 的 traceId 查询组成该 TCP 流的全部网络堆栈记录，
        按 seq 分组为“包”，并根据 AppTailer 的 payload offset 与记录的
        payloadStartOffset/payloadEndOffset 相交，高亮请求包与响应包 -->
+  <!-- 未走 AppDialog：本对话框为 fullscreen + dialog-bottom-transition 形态（骨架仅覆盖
+       居中卡片式对话框），全屏无宽度档位，故保留原生 VDialog 用法 -->
   <v-dialog
     :model-value="modelValue"
     fullscreen
@@ -9,7 +11,7 @@
     @update:model-value="onUpdate"
   >
     <v-card>
-      <v-toolbar density="compact">
+      <v-toolbar>
         <v-toolbar-title class="text-no-wrap">
           {{ $t("model.networkStack.name") }}
         </v-toolbar-title>
@@ -20,24 +22,30 @@
           {{ transport.traceId }}
         </span>
         <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="onUpdate(false)" />
+        <v-btn
+          icon="mdi-close"
+          variant="text"
+          :title="$t('action.close')"
+          :aria-label="$t('action.close')"
+          @click="onUpdate(false)"
+        />
       </v-toolbar>
 
-      <div class="px-6 py-4 overflow-y-auto" style="height: calc(100vh - 48px)">
+      <div class="stack-dialog-body px-6 py-4">
         <!-- 传输摘要：请求行 + 高亮图例与计数 -->
         <v-sheet v-if="transport" class="pa-3 mb-3 rounded">
           <div class="d-flex align-center ga-2 flex-wrap">
-            <v-chip color="primary" variant="tonal" size="small">{{ method }}</v-chip>
+            <v-chip color="primary">{{ method }}</v-chip>
             <span class="font-mono text-body-2">{{ host }}{{ path }}</span>
           </div>
           <div class="d-flex align-center ga-3 mt-2 flex-wrap">
-            <v-chip color="primary" variant="tonal" size="small" prepend-icon="mdi-arrow-up-bold">
+            <v-chip color="primary" prepend-icon="mdi-arrow-up-bold">
               {{ $t("model.networkStack.summary.requests") }} {{ requestCount }}
             </v-chip>
-            <v-chip color="success" variant="tonal" size="small" prepend-icon="mdi-arrow-down-bold">
+            <v-chip color="success" prepend-icon="mdi-arrow-down-bold">
               {{ $t("model.networkStack.summary.responses") }} {{ responseCount }}
             </v-chip>
-            <v-chip variant="tonal" size="small">
+            <v-chip>
               {{ $t("model.networkStack.summary.packets") }} {{ packets.length }}
             </v-chip>
             <span v-if="hasMore" class="text-caption text-on-surface-variant">
@@ -64,16 +72,20 @@
         <!-- 双栏对比视图：左=客户端→服务端，右=服务端→客户端，按 seq 上下对齐，
              同序号两侧的链路/网络/传输层（含 TCP 头）在同一行左右并排，便于对比 -->
         <div v-if="packets.length > 0" class="stack-compare">
-          <div class="stack-compare-header">
+          <div class="zk-stack-compare-header">
             <v-icon size="x-small" class="mr-1">mdi-arrow-up-bold</v-icon>
             {{ $t("model.networkStack.direction.clientToServer") }}
           </div>
-          <div class="stack-compare-header">
+          <div class="zk-stack-compare-header">
             <v-icon size="x-small" class="mr-1">mdi-arrow-down-bold</v-icon>
             {{ $t("model.networkStack.direction.serverToClient") }}
           </div>
           <template v-for="cell in stackCells" :key="cell.key">
-            <v-card v-if="cell.packet" :class="packetClass(cell.packet.kind)" class="stack-packet">
+            <v-card
+              v-if="cell.packet"
+              :class="packetClass(cell.packet.kind)"
+              class="zk-stack-packet"
+            >
               <v-card-item>
                 <template #prepend>
                   <v-avatar :color="packetColor(cell.packet.kind)" variant="tonal" size="small">
@@ -82,7 +94,7 @@
                 </template>
                 <template #title>
                   <div class="d-flex align-center ga-2 flex-wrap">
-                    <v-chip :color="packetColor(cell.packet.kind)" size="small" variant="tonal">
+                    <v-chip :color="packetColor(cell.packet.kind)">
                       {{ packetKindText(cell.packet.kind) }}
                     </v-chip>
                     <span class="font-mono text-caption text-on-surface-variant">
@@ -102,12 +114,12 @@
                       v-for="layer in cell.packet.layers"
                       :key="`${cell.packet.cli2Srv}-${cell.packet.seq}-${layer.level}-${layer.proto}`"
                     >
-                      <td class="text-no-wrap" style="width: 96px">
+                      <td class="layer-level-col text-no-wrap">
                         <v-chip size="x-small" variant="flat" color="grey">
                           {{ levelName(layer.level) }}
                         </v-chip>
                       </td>
-                      <td class="text-no-wrap font-mono text-body-2" style="width: 120px">
+                      <td class="layer-proto-col text-no-wrap font-mono text-body-2">
                         {{ protoName(layer.proto) }}
                       </td>
                       <td>
@@ -123,7 +135,7 @@
                 </v-table>
               </v-card-text>
             </v-card>
-            <div v-else class="stack-compare-empty" />
+            <div v-else class="zk-stack-compare-empty" />
           </template>
         </div>
 
@@ -452,55 +464,38 @@ const protoName = (value: unknown): string => {
   return PROTO_NAMES[v] ?? `#${v}`;
 };
 
-// packetClass 高亮样式：命中的请求/响应包叠加 .stack-request/.stack-response，
+// packetClass 高亮样式：命中的请求/响应包叠加 .zk-stack-request/.zk-stack-response，
 // 以左侧色条 + 顶部色带 + 高透明度底色与普通包形成强烈区分
 const packetClass = (kind: PacketKind): Record<string, boolean> => {
   return {
-    "stack-request": kind === "request",
-    "stack-response": kind === "response",
+    "zk-stack-request": kind === "request",
+    "zk-stack-response": kind === "response",
   };
 };
 </script>
 
 <style scoped>
+/* 全屏对话框主体：视口高度减去紧凑工具栏高度（令牌值），并自行纵向滚动 */
+.stack-dialog-body {
+  height: calc(100vh - var(--zk-toolbar-height-compact));
+  overflow-y: auto;
+}
+
 /* 双栏对比网格：两列布局，[左0,右0,左1,右1,...] 依序排入，每对元素占一行，
    实现同序号两侧（客户端/服务端）上下对齐、左右并排 */
 .stack-compare {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 12px;
+  gap: var(--zk-space-3);
   align-items: start;
 }
 
-.stack-compare-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 0;
-  font-size: 0.75rem;
-  color: rgb(var(--v-theme-on-surface-variant));
+/* 层表列宽提示：层级列 / 协议列限定宽度，协议头部列自适应占满剩余空间 */
+.layer-level-col {
+  width: 96px;
 }
 
-/* 某一侧缺少对应 seq 的包时以占位保持行高对齐 */
-.stack-compare-empty {
-  min-height: 48px;
-}
-
-.stack-packet {
-  border-left: 5px solid rgb(var(--v-theme-grey));
-}
-
-/* 命中的请求/响应包：加粗左侧色条 + 顶部色带 + 高透明度底色，与普通包形成强烈区分；
-   Vuetify 主题色以 RGB 三元组变量（--v-theme-{name}）暴露，配合 / alpha 使用透明度 */
-.stack-packet.stack-request {
-  border-top: 3px solid rgb(var(--v-theme-primary));
-  border-left-color: rgb(var(--v-theme-primary));
-  background-color: rgb(var(--v-theme-primary) / 18%);
-}
-
-.stack-packet.stack-response {
-  border-top: 3px solid rgb(var(--v-theme-success));
-  border-left-color: rgb(var(--v-theme-success));
-  background-color: rgb(var(--v-theme-success) / 18%);
+.layer-proto-col {
+  width: 120px;
 }
 </style>

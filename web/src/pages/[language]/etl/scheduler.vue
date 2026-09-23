@@ -1,8 +1,9 @@
 <template>
   <main-layout current-nav="etl">
     <template #body>
-      <v-container fluid>
-        <div class="d-flex justify-end my-2">
+      <!-- 列表骨架与 SearchTable 一致：本页无筛选条件，扁平卡片承载「操作按钮行 → 表格」 -->
+      <v-card flat>
+        <div class="px-4 pt-3 pb-2 d-flex justify-end align-center ga-2">
           <action-button-group
             :refresh="getSchedulerListAction"
             :create="openCreateDialogAction"
@@ -15,331 +16,333 @@
             />
           </action-button-group>
         </div>
-        <v-row dense>
-          <v-col cols="12">
-            <v-data-table :headers="schedulerVisibleHeaders" :items="schedulerItems">
-              <template #item="{ item }">
-                <tr class="text-no-wrap">
-                  <td
-                    v-for="hdr in schedulerVisibleHeaders"
-                    :key="hdr.key"
-                    :class="
-                      hdr.fixed === 'end'
-                        ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
-                        : undefined
-                    "
-                  >
-                    <adaptive-cell :header="hdr" :item="item" :actions="getSchedulerActions" />
-                  </td>
-                </tr>
-              </template>
-            </v-data-table>
-          </v-col>
-        </v-row>
-        <temp-editable-dialog
-          ref="createDialogRef"
-          :title="$t('model.scheduler.name')"
-          :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
-          force-editable
-          prepend-icon="mdi-calendar-plus"
-          @confirm="createAction"
-        >
-          <template #body>
-            <v-form>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-text-field
-                    v-model="createTypeName"
-                    v-bind="createTypeNameProps"
-                    :label="$t('model.scheduler.field.typeName')"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createCronSpec"
-                    v-bind="createCronSpecProps"
-                    :label="$t('model.scheduler.field.cronSpec')"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createInterval"
-                    v-bind="createIntervalProps"
-                    :label="$t('model.scheduler.field.interval')"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-text-field
-                    v-model="createQueue"
-                    v-bind="createQueueProps"
-                    :label="$t('model.scheduler.field.queue')"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createTimeout"
-                    v-bind="createTimeoutProps"
-                    :label="$t('model.scheduler.field.timeout')"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createMaxRetry"
-                    v-bind="createMaxRetryProps"
-                    type="number"
-                    :label="$t('model.scheduler.field.maxRetry')"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createRetention"
-                    v-bind="createRetentionProps"
-                    :label="$t('model.scheduler.field.retention')"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createLookback"
-                    v-bind="createLookbackProps"
-                    :label="$t('model.scheduler.field.lookback')"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-switch
-                    v-model="createEnabled"
-                    v-bind="createEnabledProps"
-                    :label="$t('model.scheduler.field.enabled')"
-                    color="primary"
-                    hide-details
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-textarea
-                    v-model="createPayload"
-                    :label="$t('model.scheduler.field.payload')"
-                    rows="3"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-switch
-                    v-model="createBacklogEnabled"
-                    v-bind="createBacklogEnabledProps"
-                    :label="$t('model.scheduler.field.backlogEnabled')"
-                    color="primary"
-                    hide-details
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createBacklogWindow"
-                    v-bind="createBacklogWindowProps"
-                    :label="$t('model.scheduler.field.backlogWindow')"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="createBacklogLimit"
-                    v-bind="createBacklogLimitProps"
-                    type="number"
-                    :label="$t('model.scheduler.field.backlogLimit')"
-                  />
-                </v-col>
-              </v-row>
-            </v-form>
-          </template>
-        </temp-editable-dialog>
-        <temp-editable-dialog
-          ref="editDialogRef"
-          :title="$t('model.scheduler.name')"
-          :confirm-disabled="!editForm.meta.value.valid"
-          prepend-icon="mdi-calendar-edit"
-          @confirm="itemUpdateAction"
-        >
-          <template #body="{ editable }">
-            <v-form>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-text-field
-                    :model-value="editTypeName"
-                    :label="$t('model.scheduler.field.typeName')"
-                    disabled
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editCronSpec"
-                    v-bind="editCronSpecProps"
-                    :label="$t('model.scheduler.field.cronSpec')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editInterval"
-                    v-bind="editIntervalProps"
-                    :label="$t('model.scheduler.field.interval')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-text-field
-                    v-model="editQueue"
-                    v-bind="editQueueProps"
-                    :label="$t('model.scheduler.field.queue')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editTimeout"
-                    v-bind="editTimeoutProps"
-                    :label="$t('model.scheduler.field.timeout')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editMaxRetry"
-                    v-bind="editMaxRetryProps"
-                    type="number"
-                    :label="$t('model.scheduler.field.maxRetry')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editRetention"
-                    v-bind="editRetentionProps"
-                    :label="$t('model.scheduler.field.retention')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editLookback"
-                    v-bind="editLookbackProps"
-                    :label="$t('model.scheduler.field.lookback')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-switch
-                    v-model="editEnabled"
-                    v-bind="editEnabledProps"
-                    :label="$t('model.scheduler.field.enabled')"
-                    color="primary"
-                    hide-details
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-textarea
-                    v-model="editPayload"
-                    :label="$t('model.scheduler.field.payload')"
-                    rows="3"
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="12">
-                  <v-switch
-                    v-model="editBacklogEnabled"
-                    v-bind="editBacklogEnabledProps"
-                    :label="$t('model.scheduler.field.backlogEnabled')"
-                    color="primary"
-                    hide-details
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-              <v-row dense>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editBacklogWindow"
-                    v-bind="editBacklogWindowProps"
-                    :label="$t('model.scheduler.field.backlogWindow')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-                <v-col cols="6">
-                  <v-text-field
-                    v-model="editBacklogLimit"
-                    v-bind="editBacklogLimitProps"
-                    type="number"
-                    :label="$t('model.scheduler.field.backlogLimit')"
-                    :disabled="!editable"
-                  />
-                </v-col>
-              </v-row>
-            </v-form>
-          </template>
-        </temp-editable-dialog>
-        <confirm-dialog
-          ref="deleteConfirmRef"
-          :title="$t('model.scheduler.name')"
-          prepend-icon="mdi-calendar-remove"
-          @confirm="deleteAction"
-        >
-          <template #body="{ proxy }">
-            <confirm-alert
-              :action="$t('action.delete')"
-              :text="
-                $t('notice.deleteConfirm', {
-                  category: $t('model.scheduler.name'),
-                  key: proxy.typeName,
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-        <confirm-dialog
-          ref="runConfirmRef"
-          :title="$t('model.scheduler.name')"
-          prepend-icon="mdi-calendar-play"
-          @confirm="runAction"
-        >
-          <template #body="{ proxy }">
-            <confirm-alert
-              :action="$t('action.run')"
-              :text="
-                $t('notice.runConfirm', {
-                  category: $t('model.scheduler.name'),
-                  key: proxy.typeName,
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-      </v-container>
+        <v-container fluid class="px-4 pt-0 pb-4">
+          <v-row dense>
+            <v-col cols="12">
+              <v-data-table :headers="schedulerVisibleHeaders" :items="schedulerItems">
+                <template #item="{ item }">
+                  <tr class="text-no-wrap">
+                    <td
+                      v-for="hdr in schedulerVisibleHeaders"
+                      :key="hdr.key"
+                      :class="
+                        hdr.fixed === 'end'
+                          ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
+                          : undefined
+                      "
+                    >
+                      <adaptive-cell :header="hdr" :item="item" :actions="getSchedulerActions" />
+                    </td>
+                  </tr>
+                </template>
+              </v-data-table>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-card>
+      <temp-editable-dialog
+        ref="createDialogRef"
+        :title="$t('model.scheduler.name')"
+        :confirm-disabled="!createForm.meta.value.dirty || !createForm.meta.value.valid"
+        force-editable
+        prepend-icon="mdi-calendar-plus"
+        @confirm="createAction"
+      >
+        <template #body>
+          <v-form>
+            <v-row dense>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="createTypeName"
+                  v-bind="createTypeNameProps"
+                  :label="$t('model.scheduler.field.typeName')"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createCronSpec"
+                  v-bind="createCronSpecProps"
+                  :label="$t('model.scheduler.field.cronSpec')"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createInterval"
+                  v-bind="createIntervalProps"
+                  :label="$t('model.scheduler.field.interval')"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="createQueue"
+                  v-bind="createQueueProps"
+                  :label="$t('model.scheduler.field.queue')"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createTimeout"
+                  v-bind="createTimeoutProps"
+                  :label="$t('model.scheduler.field.timeout')"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createMaxRetry"
+                  v-bind="createMaxRetryProps"
+                  type="number"
+                  :label="$t('model.scheduler.field.maxRetry')"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createRetention"
+                  v-bind="createRetentionProps"
+                  :label="$t('model.scheduler.field.retention')"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createLookback"
+                  v-bind="createLookbackProps"
+                  :label="$t('model.scheduler.field.lookback')"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-switch
+                  v-model="createEnabled"
+                  v-bind="createEnabledProps"
+                  :label="$t('model.scheduler.field.enabled')"
+                  color="primary"
+                  hide-details
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-textarea
+                  v-model="createPayload"
+                  :label="$t('model.scheduler.field.payload')"
+                  rows="3"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-switch
+                  v-model="createBacklogEnabled"
+                  v-bind="createBacklogEnabledProps"
+                  :label="$t('model.scheduler.field.backlogEnabled')"
+                  color="primary"
+                  hide-details
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createBacklogWindow"
+                  v-bind="createBacklogWindowProps"
+                  :label="$t('model.scheduler.field.backlogWindow')"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="createBacklogLimit"
+                  v-bind="createBacklogLimitProps"
+                  type="number"
+                  :label="$t('model.scheduler.field.backlogLimit')"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </template>
+      </temp-editable-dialog>
+      <temp-editable-dialog
+        ref="editDialogRef"
+        :title="$t('model.scheduler.name')"
+        :confirm-disabled="!editForm.meta.value.valid"
+        prepend-icon="mdi-calendar-edit"
+        @confirm="itemUpdateAction"
+      >
+        <template #body="{ editable }">
+          <v-form>
+            <v-row dense>
+              <v-col cols="12">
+                <v-text-field
+                  :model-value="editTypeName"
+                  :label="$t('model.scheduler.field.typeName')"
+                  disabled
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editCronSpec"
+                  v-bind="editCronSpecProps"
+                  :label="$t('model.scheduler.field.cronSpec')"
+                  :disabled="!editable"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editInterval"
+                  v-bind="editIntervalProps"
+                  :label="$t('model.scheduler.field.interval')"
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="editQueue"
+                  v-bind="editQueueProps"
+                  :label="$t('model.scheduler.field.queue')"
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editTimeout"
+                  v-bind="editTimeoutProps"
+                  :label="$t('model.scheduler.field.timeout')"
+                  :disabled="!editable"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editMaxRetry"
+                  v-bind="editMaxRetryProps"
+                  type="number"
+                  :label="$t('model.scheduler.field.maxRetry')"
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editRetention"
+                  v-bind="editRetentionProps"
+                  :label="$t('model.scheduler.field.retention')"
+                  :disabled="!editable"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editLookback"
+                  v-bind="editLookbackProps"
+                  :label="$t('model.scheduler.field.lookback')"
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-switch
+                  v-model="editEnabled"
+                  v-bind="editEnabledProps"
+                  :label="$t('model.scheduler.field.enabled')"
+                  color="primary"
+                  hide-details
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-textarea
+                  v-model="editPayload"
+                  :label="$t('model.scheduler.field.payload')"
+                  rows="3"
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-switch
+                  v-model="editBacklogEnabled"
+                  v-bind="editBacklogEnabledProps"
+                  :label="$t('model.scheduler.field.backlogEnabled')"
+                  color="primary"
+                  hide-details
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editBacklogWindow"
+                  v-bind="editBacklogWindowProps"
+                  :label="$t('model.scheduler.field.backlogWindow')"
+                  :disabled="!editable"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-text-field
+                  v-model="editBacklogLimit"
+                  v-bind="editBacklogLimitProps"
+                  type="number"
+                  :label="$t('model.scheduler.field.backlogLimit')"
+                  :disabled="!editable"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </template>
+      </temp-editable-dialog>
+      <confirm-dialog
+        ref="deleteConfirmRef"
+        :title="$t('model.scheduler.name')"
+        prepend-icon="mdi-calendar-remove"
+        @confirm="deleteAction"
+      >
+        <template #body="{ proxy }">
+          <confirm-alert
+            :action="$t('action.delete')"
+            :text="
+              $t('notice.deleteConfirm', {
+                category: $t('model.scheduler.name'),
+                key: proxy.typeName,
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
+      <confirm-dialog
+        ref="runConfirmRef"
+        :title="$t('model.scheduler.name')"
+        prepend-icon="mdi-calendar-play"
+        @confirm="runAction"
+      >
+        <template #body="{ proxy }">
+          <confirm-alert
+            :action="$t('action.run')"
+            :text="
+              $t('notice.runConfirm', {
+                category: $t('model.scheduler.name'),
+                key: proxy.typeName,
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
     </template>
   </main-layout>
 </template>

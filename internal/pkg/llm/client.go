@@ -1,9 +1,23 @@
+// Package llm 提供 AI 助手（RAG + Agent）的 LLM 接入与行为参数体系：OpenAI 兼容的对话
+// （Chat）与向量化（Embedding）客户端封装、模型档位（flash / standard / advanced / embedding）
+// 取值与解析、可调行为参数注册表（提示词、检索融合与重排、会话上下文、切片、评估与
+// 清洗限界），以及知识库向量列的维度校准。本包与 GORM / 具体持久化模型解耦，仅依赖
+// stdlib 与 internal/pkg 内共享包；LLM 端点配置的唯一事实来源是数据库模型注册表
+// （见 ModelConfig），不再来自配置文件。
+//
+// Package llm provides the LLM integration and behavior-parameter system of the AI assistant
+// (RAG + Agent): the OpenAI-compatible chat and embedding client wrappers, the model slots
+// (flash / standard / advanced / embedding) and their parsing, the tunable behavior-parameter
+// registry (prompts, retrieval fusion and rerank, session context, chunking, evaluation and
+// sanitization bounds), and the dimension reconciliation of the knowledge-base vector column.
+// This package is decoupled from GORM and concrete persistence models, depending only on the
+// stdlib and the shared internal/pkg packages; the single source of truth of the LLM endpoint
+// config is the database model registry (see ModelConfig), no longer the config file.
 package llm
 
 import (
 	// stdlib
 	"context"
-	"strings"
 
 	// third-party
 	embeddingopenai "github.com/cloudwego/eino-ext/components/embedding/openai"
@@ -31,7 +45,7 @@ import (
 // call, while the timeout is injected via ChatModelConfig.Timeout at construction time.
 type ChatClient struct {
 	model model.ChatModel // 底层 eino 对话模型
-	cfg   ChatConfig      // 对话模型配置快照
+	cfg   ModelConfig     // 模型端点配置快照
 }
 
 // Generate 以非流式方式生成回复，调用时注入温度与 maxTokens。
@@ -66,11 +80,19 @@ func (c *ChatClient) Stream(ctx context.Context, messages []*schema.Message, opt
 	}
 }
 
-// NewChatClient 依据 ChatConfig 构造 ChatClient。
+// ModelName 返回底层供应商模型名（如 gpt-4o-mini），供 dry-run 元信息等展示场景使用。
+// ModelName returns the vendor-side model name (e.g. gpt-4o-mini) for display scenarios
+// such as the dry-run metadata.
+func (c *ChatClient) ModelName() string {
+	return c.cfg.Model
+}
+
+// NewChatClient 依据模型端点配置快照构造 ChatClient。
 // 要求 baseURL/apiKey/model 均非空，否则返回英文错误（不允许静默降级）。
-// NewChatClient constructs a ChatClient from a ChatConfig. It requires non-empty
-// baseURL/apiKey/model and returns an English error otherwise (no silent degradation).
-func NewChatClient(ctx context.Context, cfg ChatConfig) (*ChatClient, error) {
+// NewChatClient constructs a ChatClient from a model endpoint config snapshot. It requires
+// non-empty baseURL/apiKey/model and returns an English error otherwise (no silent
+// degradation).
+func NewChatClient(ctx context.Context, cfg ModelConfig) (*ChatClient, error) {
 	if cfg.BaseURL == "" || cfg.APIKey == "" || cfg.Model == "" {
 		return nil, errors.New("incomplete chat config: baseURL/apiKey/model must all be non-empty")
 	}
@@ -96,11 +118,11 @@ func NewChatClient(ctx context.Context, cfg ChatConfig) (*ChatClient, error) {
 // EmbedClient 包装 eino OpenAI 兼容向量化模型（eino-ext components/embedding/openai），
 // 实现 eino embedding.Embedder 接口，可直接注入 eino 检索链路。
 // EmbedClient wraps the eino OpenAI-compatible embedding model (eino-ext
-// components/embedding/openai), implementing the eino embedding.Embedder interface so it
-// can be injected directly into the eino retrieval pipeline.
+// components/embedding/openai), implementing the eino embedding.Embedder interface so it can
+// be injected directly into the eino retrieval pipeline.
 type EmbedClient struct {
 	embedder embedding.Embedder // 底层 eino 向量化模型
-	cfg      EmbeddingConfig    // 向量化模型配置快照
+	cfg      ModelConfig        // 模型端点配置快照
 }
 
 // EmbedStrings 批量向量化文本，返回与输入顺序一致的向量列表。
@@ -113,11 +135,19 @@ func (e *EmbedClient) EmbedStrings(ctx context.Context, texts []string, opts ...
 	return vectors, nil
 }
 
-// NewEmbedClient 依据 EmbeddingConfig 构造 EmbedClient。
+// ModelName 返回底层供应商模型名（如 text-embedding-3-small），供状态展示使用。
+// ModelName returns the vendor-side model name (e.g. text-embedding-3-small) for status
+// display.
+func (e *EmbedClient) ModelName() string {
+	return e.cfg.Model
+}
+
+// NewEmbedClient 依据模型端点配置快照构造 EmbedClient。
 // 要求 baseURL/apiKey/model 均非空，否则返回英文错误（不允许静默降级）。
-// NewEmbedClient constructs an EmbedClient from an EmbeddingConfig. It requires non-empty
-// baseURL/apiKey/model and returns an English error otherwise (no silent degradation).
-func NewEmbedClient(ctx context.Context, cfg EmbeddingConfig) (*EmbedClient, error) {
+// NewEmbedClient constructs an EmbedClient from a model endpoint config snapshot. It requires
+// non-empty baseURL/apiKey/model and returns an English error otherwise (no silent
+// degradation).
+func NewEmbedClient(ctx context.Context, cfg ModelConfig) (*EmbedClient, error) {
 	if cfg.BaseURL == "" || cfg.APIKey == "" || cfg.Model == "" {
 		return nil, errors.New("incomplete embedding config: baseURL/apiKey/model must all be non-empty")
 	}
@@ -135,53 +165,4 @@ func NewEmbedClient(ctx context.Context, cfg EmbeddingConfig) (*EmbedClient, err
 		return nil, errors.WithStack(err)
 	}
 	return &EmbedClient{embedder: embedder, cfg: cfg}, nil
-}
-
-// Clients 聚合对话与向量化两类客户端，供上层一次性构造与持有。
-// Clients aggregates the chat and embedding clients for one-shot construction and holding
-// by upper layers.
-type Clients struct {
-	// Chat 对话客户端（重排等场景使用）
-	// Chat the chat client (used by rerank etc.)
-	Chat *ChatClient
-	// Embed 向量化客户端（索引与向量检索使用）
-	// Embed the embedding client (used by indexing and vector retrieval)
-	Embed *EmbedClient
-}
-
-// NewClients 依据 LLMConfig 一次性构造对话与向量化客户端，构造底层模型时透传 ctx。
-// 仅校验端点配置（baseURL/apiKey/model）完整性，不校验 [llm].enabled 开关——开关的
-// 调用时机由功能开关层控制；chat 或 embedding 任一配置缺失即返回指明缺失部分的英文
-// 错误，不允许静默降级（避免检索链路以残缺能力运行）。需要仅构造单类客户端的场景
-// 请使用 NewChatClient / NewEmbedClient。
-// NewClients constructs both the chat and embedding clients from an LLMConfig in one call,
-// threading ctx into the underlying model construction. It only validates the endpoint
-// configs (baseURL/apiKey/model) and does not check the [llm].enabled switch, whose
-// invocation timing is controlled by the feature-toggle layer; a missing chat or embedding
-// config returns an English error naming the missing part and never degrades silently (so
-// the retrieval pipeline never runs with crippled capabilities). Use NewChatClient /
-// NewEmbedClient when only one client kind is needed.
-func NewClients(ctx context.Context, cfg *LLMConfig) (*Clients, error) {
-	if cfg == nil {
-		return nil, errors.New("ai config is nil")
-	}
-	var missing []string
-	if cfg.Chat.BaseURL == "" || cfg.Chat.APIKey == "" || cfg.Chat.Model == "" {
-		missing = append(missing, "chat")
-	}
-	if cfg.Embedding.BaseURL == "" || cfg.Embedding.APIKey == "" || cfg.Embedding.Model == "" {
-		missing = append(missing, "embedding")
-	}
-	if len(missing) > 0 {
-		return nil, errors.Newf("ai clients cannot be constructed: incomplete endpoint config for: %s", strings.Join(missing, ", "))
-	}
-	chat, err := NewChatClient(ctx, cfg.Chat)
-	if err != nil {
-		return nil, err
-	}
-	embed, err := NewEmbedClient(ctx, cfg.Embedding)
-	if err != nil {
-		return nil, err
-	}
-	return &Clients{Chat: chat, Embed: embed}, nil
 }

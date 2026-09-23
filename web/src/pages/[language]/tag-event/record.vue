@@ -11,7 +11,7 @@
       >
         <!-- 状态列：按事件状态着色（告警=error / 抑制=warning / 待处理与关闭=默认） -->
         <template #cell-status="{ item }">
-          <v-chip size="small" :color="statusColor(item.status)">
+          <v-chip :color="statusColor(item.status)">
             {{ enumLabelOf(EnumClass.tagAlertStatus, item.status) }}
           </v-chip>
         </template>

@@ -159,10 +159,11 @@
                 <v-spacer />
                 <v-btn
                   icon="mdi-minus"
-                  density="compact"
                   variant="tonal"
                   color="error"
                   :disabled="createConditions.length === 1"
+                  :title="$t('action.removeCondition')"
+                  :aria-label="$t('action.removeCondition')"
                   @click="removeCreateCondition(idx)"
                 />
               </v-card-title>
@@ -244,7 +245,7 @@
                       :error-message="
                         cond.touched ? cond.localError || cond.fieldErrors.expression : ''
                       "
-                      min-height="260px"
+                      :min-height="'var(--zk-editor-min-height)'"
                       @update:model-value="markTouched(cond)"
                     />
                   </v-col>
@@ -396,10 +397,11 @@
                 <v-spacer />
                 <v-btn
                   icon="mdi-minus"
-                  density="compact"
                   variant="tonal"
                   color="error"
                   :disabled="!editable || editConditions.length === 1"
+                  :title="$t('action.removeCondition')"
+                  :aria-label="$t('action.removeCondition')"
                   @click="removeEditCondition(idx)"
                 />
               </v-card-title>
@@ -489,7 +491,7 @@
                         cond.touched ? cond.localError || cond.fieldErrors.expression : ''
                       "
                       :disabled="!editable"
-                      min-height="260px"
+                      :min-height="'var(--zk-editor-min-height)'"
                       @update:model-value="markTouched(cond)"
                     />
                   </v-col>
@@ -544,60 +546,48 @@
         </template>
       </temp-editable-dialog>
 
-      <v-dialog v-model="versionDialog" max-width="800">
-        <v-card>
-          <v-card-title>{{ $t("action.version") }}</v-card-title>
-          <v-card-text>
-            <v-alert
-              v-if="versionItems.length === 0"
-              type="info"
-              variant="tonal"
-              density="compact"
-              :text="$t('notice.noVersion')"
-            />
-            <v-list v-else>
-              <v-list-item v-for="v in versionItems" :key="v.id">
-                <template #title>
-                  <v-chip size="small" class="me-2">v{{ v.version }}</v-chip>
-                  {{ v.name }}
-                </template>
-                <template #subtitle>
-                  {{ localeDatetimeFormat(DateTime.fromISO(v.createdAt)) }}
-                </template>
-                <template #append>
-                  <v-btn
-                    variant="tonal"
-                    size="small"
-                    class="me-2"
-                    @click="expandedVersion = expandedVersion === v.version ? null : v.version"
-                  >
-                    {{ $t("action.expand") }}
-                  </v-btn>
-                  <v-btn variant="tonal" size="small" color="error" @click="openRollbackConfirm(v)">
-                    {{ $t("action.rollback") }}
-                  </v-btn>
-                </template>
-                <v-expand-transition>
-                  <v-list v-if="expandedVersion === v.version" density="compact" class="rego-view">
-                    <v-list-item
-                      v-for="c in v.conditions"
-                      :key="c.id"
-                      :title="`${c.name} (${c.expression})`"
-                      :subtitle="`${$t('model.tagEventCondition.field.window')}: ${localDurationFormat(c.window)}`"
-                    />
-                  </v-list>
-                </v-expand-transition>
-              </v-list-item>
-            </v-list>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="plain" @click="versionDialog = false">
-              {{ $t("action.close") }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <app-dialog v-model="versionDialog" :title="$t('action.version')" size="md">
+        <v-alert v-if="versionItems.length === 0" type="info" :text="$t('notice.noVersion')" />
+        <v-list v-else>
+          <v-list-item v-for="v in versionItems" :key="v.id">
+            <template #title>
+              <v-chip class="me-2">v{{ v.version }}</v-chip>
+              {{ v.name }}
+            </template>
+            <template #subtitle>
+              {{ localeDatetimeFormat(DateTime.fromISO(v.createdAt)) }}
+            </template>
+            <template #append>
+              <v-btn
+                variant="tonal"
+                size="small"
+                class="me-2"
+                @click="expandedVersion = expandedVersion === v.version ? null : v.version"
+              >
+                {{ $t("action.expand") }}
+              </v-btn>
+              <v-btn variant="tonal" size="small" color="error" @click="openRollbackConfirm(v)">
+                {{ $t("action.rollback") }}
+              </v-btn>
+            </template>
+            <v-expand-transition>
+              <v-list v-if="expandedVersion === v.version" class="zk-code-preview text-body-2">
+                <v-list-item
+                  v-for="c in v.conditions"
+                  :key="c.id"
+                  :title="`${c.name} (${c.expression})`"
+                  :subtitle="`${$t('model.tagEventCondition.field.window')}: ${localDurationFormat(c.window)}`"
+                />
+              </v-list>
+            </v-expand-transition>
+          </v-list-item>
+        </v-list>
+        <template #footer>
+          <v-btn variant="text" @click="versionDialog = false">
+            {{ $t("action.close") }}
+          </v-btn>
+        </template>
+      </app-dialog>
 
       <confirm-dialog
         ref="rollbackConfirmRef"
@@ -1451,16 +1441,3 @@ const itemRollbackAction = async (proxy: Record<string, any>): Promise<void> => 
   );
 };
 </script>
-
-<style scoped>
-.rego-view {
-  white-space: pre-wrap;
-  word-break: break-all;
-  background-color: rgb(var(--v-theme-surface-variant));
-  border-radius: 4px;
-  padding: 8px;
-  font-size: 13px;
-  max-height: 320px;
-  overflow: auto;
-}
-</style>

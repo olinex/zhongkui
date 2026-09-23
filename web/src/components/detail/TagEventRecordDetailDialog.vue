@@ -1,143 +1,134 @@
 <template>
   <!-- 标签事件记录详情对话框：与流量审计等列表详情一致，通过 dialog 展示而非独立路由页；
        内容分三块呈卡片（事件基础信息 / 命中明细 / 关联发送记录）。 -->
-  <v-dialog :model-value="modelValue" max-width="900" @update:model-value="onUpdate">
-    <v-card>
-      <v-toolbar density="compact">
-        <v-toolbar-title class="text-no-wrap">
-          {{ $t("title.tagEvent.recordDetail") }}
-        </v-toolbar-title>
-        <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="onUpdate(false)" />
-      </v-toolbar>
-      <div class="pa-4 overflow-y-auto" style="max-height: 72vh">
-        <v-skeleton-loader v-if="loading" type="article" min-height="220" />
-        <v-alert v-else-if="errorText" type="error" variant="tonal" density="compact">
-          {{ errorText }}
-        </v-alert>
+  <app-dialog
+    :model-value="modelValue"
+    :title="$t('title.tagEvent.recordDetail')"
+    size="lg"
+    @update:model-value="onUpdate"
+  >
+    <v-skeleton-loader v-if="loading" type="article" min-height="220" />
+    <v-alert v-else-if="errorText" type="error">
+      {{ errorText }}
+    </v-alert>
 
-        <template v-else-if="detail">
-          <!-- 一、事件基础信息 -->
-          <v-card variant="tonal" class="mb-4">
-            <v-card-title class="text-subtitle-1 font-weight-medium">
-              {{ $t("model.tagEventRecord.content.info") }}
-            </v-card-title>
-            <v-card-text>
-              <v-table density="compact">
-                <tbody>
-                  <tr v-for="field in baseFields" :key="field.key">
-                    <td class="text-no-wrap font-weight-medium" style="width: 180px">
-                      {{ field.label }}
-                    </td>
-                    <td>{{ field.display }}</td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </v-card-text>
-          </v-card>
+    <template v-else-if="detail">
+      <!-- 一、事件基础信息 -->
+      <v-card variant="tonal" class="mb-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium">
+          {{ $t("model.tagEventRecord.content.info") }}
+        </v-card-title>
+        <v-card-text>
+          <v-table density="compact">
+            <tbody>
+              <tr v-for="field in baseFields" :key="field.key">
+                <td class="field-label-col text-no-wrap font-weight-medium">
+                  {{ field.label }}
+                </td>
+                <td>{{ field.display }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card-text>
+      </v-card>
 
-          <!-- 二、命中明细 -->
-          <v-card variant="tonal" class="mb-4">
-            <v-card-title class="text-subtitle-1 font-weight-medium">
-              {{ $t("model.tagEventRecord.content.hits") }}
-            </v-card-title>
-            <v-card-text>
-              <v-alert
-                v-if="detail.hits.length === 0"
-                type="info"
-                variant="tonal"
-                density="compact"
-                :text="$t('model.__base.value.blank')"
-              />
-              <v-table v-else density="compact">
-                <thead>
-                  <tr>
-                    <th>{{ $t("model.tagEventRecordHit.field.conditionName") }}</th>
-                    <th>{{ $t("model.tagEventRecordHit.field.model") }}</th>
-                    <th>{{ $t("model.tagEventRecordHit.field.dimension") }}</th>
-                    <th>{{ $t("model.tagEventRecordHit.field.item") }}</th>
-                    <th>{{ $t("model.tagEventRecordHit.field.count") }}</th>
-                    <th>{{ $t("model.tagEventRecordHit.field.threshold") }}</th>
-                    <th>{{ $t("model.tagEventRecordHit.field.window") }}</th>
-                    <th class="text-no-wrap">{{ $t("model.__base.field.__actions") }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="hit in detail.hits" :key="hit.id">
-                    <td>{{ hit.conditionName }}</td>
-                    <td>{{ enumLabelOf(EnumClass.tagRuleModel, hit.model) }}</td>
-                    <td>{{ enumLabelOf(EnumClass.tagEventDimension, hit.dimension) }}</td>
-                    <td>{{ hit.item }}</td>
-                    <td>{{ hit.count }}</td>
-                    <td>{{ hit.threshold }}</td>
-                    <td>{{ localDurationFormat(hit.window) }}</td>
-                    <td>
-                      <v-btn
-                        :disabled="hit.ids.length === 0"
-                        :title="$t('action.viewRecords')"
-                        icon="mdi-eye"
-                        size="small"
-                        variant="tonal"
-                        @click="openHitRecords(hit)"
-                      />
-                    </td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </v-card-text>
-          </v-card>
+      <!-- 二、命中明细 -->
+      <v-card variant="tonal" class="mb-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium">
+          {{ $t("model.tagEventRecord.content.hits") }}
+        </v-card-title>
+        <v-card-text>
+          <v-alert
+            v-if="detail.hits.length === 0"
+            type="info"
+            :text="$t('model.__base.value.blank')"
+          />
+          <v-table v-else density="compact">
+            <thead>
+              <tr>
+                <th>{{ $t("model.tagEventRecordHit.field.conditionName") }}</th>
+                <th>{{ $t("model.tagEventRecordHit.field.model") }}</th>
+                <th>{{ $t("model.tagEventRecordHit.field.dimension") }}</th>
+                <th>{{ $t("model.tagEventRecordHit.field.item") }}</th>
+                <th>{{ $t("model.tagEventRecordHit.field.count") }}</th>
+                <th>{{ $t("model.tagEventRecordHit.field.threshold") }}</th>
+                <th>{{ $t("model.tagEventRecordHit.field.window") }}</th>
+                <th class="text-no-wrap">{{ $t("model.__base.field.__actions") }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="hit in detail.hits" :key="hit.id">
+                <td>{{ hit.conditionName }}</td>
+                <td>{{ enumLabelOf(EnumClass.tagRuleModel, hit.model) }}</td>
+                <td>{{ enumLabelOf(EnumClass.tagEventDimension, hit.dimension) }}</td>
+                <td>{{ hit.item }}</td>
+                <td>{{ hit.count }}</td>
+                <td>{{ hit.threshold }}</td>
+                <td>{{ localDurationFormat(hit.window) }}</td>
+                <td>
+                  <v-btn
+                    :disabled="hit.ids.length === 0"
+                    :title="$t('action.viewRecords')"
+                    :aria-label="$t('action.viewRecords')"
+                    icon="mdi-eye"
+                    size="small"
+                    variant="tonal"
+                    @click="openHitRecords(hit)"
+                  />
+                </td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card-text>
+      </v-card>
 
-          <!-- 三、关联发送记录 -->
-          <v-card variant="tonal">
-            <v-card-title class="text-subtitle-1 font-weight-medium">
-              {{ $t("model.tagEventRecord.content.sends") }}
-            </v-card-title>
-            <v-card-text>
-              <v-alert
-                v-if="detail.sends.length === 0"
-                type="info"
-                variant="tonal"
-                density="compact"
-                :text="$t('model.__base.value.blank')"
-              />
-              <v-table v-else density="compact">
-                <thead>
-                  <tr>
-                    <th>{{ $t("model.tagEventRecordSend.field.targetName") }}</th>
-                    <th>{{ $t("model.tagEventRecordSend.field.channelName") }}</th>
-                    <th>{{ $t("model.tagEventRecordSend.field.channelType") }}</th>
-                    <th>{{ $t("model.tagEventRecordSend.field.status") }}</th>
-                    <th>{{ $t("model.tagEventRecordSend.field.messageId") }}</th>
-                    <th>{{ $t("model.tagEventRecordSend.field.notifiedAt") }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="send in detail.sends" :key="send.id">
-                    <td>{{ send.targetName }}</td>
-                    <td>{{ send.channelName }}</td>
-                    <td>
-                      <v-chip size="small" variant="tonal">
-                        {{ enumLabelOf(EnumClass.channelType, send.channelType) }}
-                      </v-chip>
-                    </td>
-                    <td>
-                      <v-chip size="small" :color="sendStatusColor(send.status)">
-                        {{ enumLabelOf(EnumClass.notificationRecordStatus, send.status) }}
-                      </v-chip>
-                    </td>
-                    <td>
-                      {{ send.messageId || $t("model.__base.value.null") }}
-                    </td>
-                    <td>{{ formatDatetime(send.notifiedAt) }}</td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </v-card-text>
-          </v-card>
-        </template>
-      </div>
-    </v-card>
-  </v-dialog>
+      <!-- 三、关联发送记录 -->
+      <v-card variant="tonal">
+        <v-card-title class="text-subtitle-1 font-weight-medium">
+          {{ $t("model.tagEventRecord.content.sends") }}
+        </v-card-title>
+        <v-card-text>
+          <v-alert
+            v-if="detail.sends.length === 0"
+            type="info"
+            :text="$t('model.__base.value.blank')"
+          />
+          <v-table v-else density="compact">
+            <thead>
+              <tr>
+                <th>{{ $t("model.tagEventRecordSend.field.targetName") }}</th>
+                <th>{{ $t("model.tagEventRecordSend.field.channelName") }}</th>
+                <th>{{ $t("model.tagEventRecordSend.field.channelType") }}</th>
+                <th>{{ $t("model.tagEventRecordSend.field.status") }}</th>
+                <th>{{ $t("model.tagEventRecordSend.field.messageId") }}</th>
+                <th>{{ $t("model.tagEventRecordSend.field.notifiedAt") }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="send in detail.sends" :key="send.id">
+                <td>{{ send.targetName }}</td>
+                <td>{{ send.channelName }}</td>
+                <td>
+                  <v-chip>
+                    {{ enumLabelOf(EnumClass.channelType, send.channelType) }}
+                  </v-chip>
+                </td>
+                <td>
+                  <v-chip :color="sendStatusColor(send.status)">
+                    {{ enumLabelOf(EnumClass.notificationRecordStatus, send.status) }}
+                  </v-chip>
+                </td>
+                <td>
+                  {{ send.messageId || $t("model.__base.value.null") }}
+                </td>
+                <td>{{ formatDatetime(send.notifiedAt) }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card-text>
+      </v-card>
+    </template>
+  </app-dialog>
 
   <!-- 命中条件原始数据反查：展示该条件命中的 http_transports 明细；
        detectedAt 随详情传入，供反查弹窗推导入库时间预筛范围 -->
@@ -279,3 +270,10 @@ const openHitRecords = (hit: TagEventRecordHitOut): void => {
   hitRecordsOpen.value = true;
 };
 </script>
+
+<style scoped>
+/* 字段名列宽提示：固定标签列宽度，值列自适应占满剩余空间 */
+.field-label-col {
+  width: 180px;
+}
+</style>

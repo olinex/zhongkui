@@ -13,7 +13,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/text/language"
-	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/config"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/models/core"
 )
@@ -62,7 +62,7 @@ func newTestTranslator() ut.Translator {
 // setupNamespaceTestRouter 创建用于命名空间中间件测试的 Gin 路由
 // 注册 NamespaceMiddleware 和一个测试处理函数，用于验证命名空间是否正确注入上下文。
 // 同时注入 Localizer 和 Translator 中间件，以支持 AbortWithGinH 的国际化功能。
-func setupNamespaceTestRouter(cfg *manager.NamespaceConfig) *gin.Engine {
+func setupNamespaceTestRouter(cfg *config.NamespaceConfig) *gin.Engine {
 	router := gin.New()
 	router.Use(func(c *gin.Context) {
 		c.Set(response.LocalizerCtxName, newTestLocalizer())
@@ -152,7 +152,7 @@ func TestNamespaceMiddleware(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	Convey("测试 NamespaceMiddleware 中间件", t, func() {
-		cfg := &manager.NamespaceConfig{
+		cfg := &config.NamespaceConfig{
 			HeaderName: "X-Namespace",
 			QueryName:  "namespace",
 			CookieName: "namespace",
@@ -315,7 +315,7 @@ func TestNamespaceMiddleware(t *testing.T) {
 		})
 
 		Convey("应使用自定义配置的键名提取命名空间", func() {
-			customCfg := &manager.NamespaceConfig{
+			customCfg := &config.NamespaceConfig{
 				HeaderName: "X-Custom-Ns",
 				QueryName:  "ns",
 				CookieName: "ns-cookie",
@@ -383,7 +383,7 @@ func TestNamespaceMiddlewareAndGetNamespace_Integration(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	Convey("测试 NamespaceMiddleware 和 GetNamespace 集成", t, func() {
-		cfg := &manager.NamespaceConfig{
+		cfg := &config.NamespaceConfig{
 			HeaderName: "X-Namespace",
 			QueryName:  "namespace",
 			CookieName: "namespace",

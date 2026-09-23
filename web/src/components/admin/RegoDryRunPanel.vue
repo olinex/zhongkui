@@ -1,5 +1,5 @@
 <template>
-  <div v-if="result !== null || loading" class="rego-dry-run-panel">
+  <div v-if="result !== null || loading" class="rego-dry-run-panel zk-editor zk-flat-panels">
     <div v-if="loading" class="dry-run-body">
       <v-progress-linear indeterminate color="primary" class="mt-1" />
     </div>
@@ -8,31 +8,27 @@
       <v-alert
         v-if="result?.error"
         type="error"
-        density="compact"
-        variant="tonal"
         :text="result.error"
         class="mb-2"
       />
       <!-- 标签结果：全部规则命中的标签汇总；未命中任何标签时提示 -->
       <div class="result-block">
-        <div class="result-label">{{ $t("title.dryRunTags") }}</div>
+        <div class="result-label zk-label-caps">{{ $t("title.dryRunTags") }}</div>
         <div v-if="tagList.length" class="d-flex flex-wrap">
-          <v-chip v-for="tag in tagList" :key="tag" color="primary" size="small" class="me-1 my-1">
+          <v-chip v-for="tag in tagList" :key="tag" color="primary" class="me-1 my-1">
             {{ tag }}
           </v-chip>
         </div>
         <v-alert
           v-else
           type="info"
-          density="compact"
-          variant="tonal"
           :text="$t('summary.noTagMatched')"
         />
       </div>
       <!-- 规则明细：每条规则的状态、耗时与命中的标签 -->
       <div v-if="ruleEntries.length" class="result-block">
-        <div class="result-label">{{ $t("title.dryRunRules") }}</div>
-        <v-expansion-panels variant="accordion" density="compact">
+        <div class="result-label zk-label-caps">{{ $t("title.dryRunRules") }}</div>
+        <v-expansion-panels>
           <v-expansion-panel v-for="[name, rule] in ruleEntries" :key="name">
             <v-expansion-panel-title>
               <v-icon
@@ -41,9 +37,9 @@
                 size="small"
                 class="me-1"
               />
-              <span class="rule-name">{{ name }}</span>
+              <span class="font-mono">{{ name }}</span>
               <v-spacer />
-              <span class="rule-duration">
+              <span class="rule-duration zk-hint">
                 <v-icon size="x-small" class="me-1">mdi-timer-outline</v-icon>
                 {{ localDurationFormat(rule.duration) }}
               </span>
@@ -52,13 +48,11 @@
               <v-alert
                 v-if="rule.error"
                 type="error"
-                density="compact"
-                variant="tonal"
                 :text="rule.error"
                 class="mb-2"
               />
               <div v-if="rule.tags?.length" class="d-flex flex-wrap">
-                <v-chip v-for="tag in rule.tags" :key="tag" size="small" class="me-1 my-1">
+                <v-chip v-for="tag in rule.tags" :key="tag" class="me-1 my-1">
                   {{ tag }}
                 </v-chip>
               </div>
@@ -221,80 +215,39 @@ defineExpose({ run, loading, openInput });
 </script>
 
 <style scoped>
-/* 与 rego 编辑器各区块（样例选择/输入字段/编辑器）统一为带边框的分区盒，
-   去除原 v-card tonal 的悬浮卡片感，保持对话框内视觉语言一致 */
+/* 结果面板外壳（描边 / 圆角 / surface 背景）与三个编辑器一致，走全局 .zk-editor，
+   展开面板的扁平外观走全局 .zk-flat-panels，此处只保留布局定位 */
 .rego-dry-run-panel {
-  margin-top: 8px;
-  border: 1px solid rgb(0 0 0 / 24%);
-  border-radius: 4px;
-  background-color: rgb(var(--v-theme-surface));
+  margin-top: var(--zk-space-2);
 }
 
 .dry-run-body {
-  padding: 12px;
+  padding: var(--zk-space-3);
 }
 
 /* 结果分区：标签汇总 / 规则明细，用标题分隔并明确各元素含义 */
 .result-block {
-  margin-top: 8px;
+  margin-top: var(--zk-space-2);
 }
 
 .result-label {
-  margin-bottom: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface-variant));
-}
-
-.rule-name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 13px;
+  margin-bottom: var(--zk-space-1);
 }
 
 .rule-duration {
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
-  color: rgb(var(--v-theme-on-surface-variant));
 }
 
-/* ---- 试运行结果规则展开面板：与分区盒视觉统一 ----
-   去除 Vuetify 默认的悬浮阴影、currentColor 深色 hover 遮罩与大号标题，
-   改为透明背景 + 淡色 hover（与字段列表行 hover 同款）、紧凑标题行 */
-.dry-run-body :deep(.v-expansion-panels) {
-  background: transparent;
-}
-
-.dry-run-body :deep(.v-expansion-panel) {
-  background: transparent;
-  border-radius: 4px;
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel__shadow) {
-  display: none;
-}
-
+/* 规则明细展开面板：标题行与内容区的布局（外观走 .zk-flat-panels） */
 .dry-run-body :deep(.v-expansion-panel-title) {
-  min-height: 36px;
-  padding: 6px 12px;
-  font-size: 13px;
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel-title__overlay) {
-  background-color: rgb(var(--v-theme-on-surface), 0.06);
-  opacity: 0;
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel-title:hover > .v-expansion-panel-title__overlay) {
-  opacity: 1;
+  min-height: var(--zk-control-height-compact);
+  padding: var(--zk-space-1) var(--zk-space-3);
 }
 
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
 .dry-run-body :deep(.v-expansion-panel-text__wrapper) {
-  padding: 4px 12px 12px;
+  padding: var(--zk-space-1) var(--zk-space-3) var(--zk-space-3);
 }
 
 /* input 查看对话框：全屏 rego 编辑器的自定义 z-index 会盖住 Vuetify 默认 overlay 层级，

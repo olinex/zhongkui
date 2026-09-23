@@ -14,8 +14,12 @@ import type {
   AgentSessionCreateIn,
   AgentSessionRenameIn,
   AgentStreamIn,
+  DryRunStage,
+  DryRunStageEvent,
   KnowledgeDocumentCreateIn,
   KnowledgeDocumentUpdateIn,
+  RetrievalDryRunIn,
+  RetrievalDryRunOut,
 } from "./@types/ai";
 
 // ---- 知识库文档 ----
@@ -66,6 +70,17 @@ export function knowledgeDocumentDelete(ids: FlexIDs): AxiosPromise {
 export function knowledgeDocumentReindex(id: number): AxiosPromise {
   return request.post(
     `/ai/doc/${id}/reindex`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// 检索试运行参数默认值（来自后端 [llm].rerank 配置，供前端对话框预填展示）
+export function knowledgeRetrievalOptions(): AxiosPromise {
+  return request.post(
+    "/ai/retrieval/options",
     {},
     {
       headers: getJwtHeader(),
@@ -137,62 +152,61 @@ export function agentStatusGet(): AxiosPromise {
   );
 }
 
-// ---- 流式生成（SSE，原生 fetch 实现）----
+// ---- 流式响应（SSE，原生 fetch 实现）----
 export interface AgentStreamHandlers {
   onDelta?: (delta: string) => void;
   onDone?: (out: AgentOutput) => void;
   onError?: (msg: string) => void;
 }
 
-// handleStreamEvent 解析单个 SSE 事件块（`event:` / `data:` 行），按类型分发到处理器。
-// ping 事件无 data，仅作保活，直接忽略。
-function handleStreamEvent(block: string, handlers: AgentStreamHandlers): void {
-  let eventType = "";
+// 检索试运行流式处理器：stage 为阶段状态事件（start/done/failed），
+// delta 为该阶段的模型增量原始输出，done 为最终完整结果（含调用元信息）。
+export interface RetrievalDryRunStreamHandlers {
+  onStage?: (stage: DryRunStageEvent) => void;
+  onDelta?: (stage: DryRunStage, delta: string) => void;
+  onDone?: (out: RetrievalDryRunOut) => void;
+  onError?: (msg: string) => void;
+}
+
+// 解析后的原始 SSE 事件（事件类型 + 已反序列化的 JSON 负载）。
+interface SSERawEvent {
+  type: string;
+  data: unknown;
+}
+
+// parseEventBlock 解析单个 SSE 事件块（`event:` / `data:` 行）；缺少任一字段时返回 null。
+// ping 事件无 data，仅作保活，因此自然被丢弃。
+function parseEventBlock(block: string): SSERawEvent | null {
+  let type = "";
   let data = "";
   for (const line of block.split("\n")) {
     if (line.startsWith("event:")) {
-      eventType = line.slice("event:".length).trim();
+      type = line.slice("event:".length).trim();
     } else if (line.startsWith("data:")) {
       data = line.slice("data:".length).trim();
     }
   }
-  if (!eventType || !data) {
-    return;
+  if (!type || !data) {
+    return null;
   }
-  switch (eventType) {
-    case "delta": {
-      const payload = JSON.parse(data) as { delta: string };
-      handlers.onDelta?.(payload.delta);
-      break;
-    }
-    case "done": {
-      handlers.onDone?.(JSON.parse(data) as AgentOutput);
-      break;
-    }
-    case "error": {
-      const payload = JSON.parse(data) as { error: string };
-      handlers.onError?.(payload.error);
-      break;
-    }
-    default:
-      break;
-  }
+  return { type, data: JSON.parse(data) as unknown };
 }
 
-// agentStreamGenerate 启动 POST /ai/agent/${sessionID}/stream 的 SSE 流式生成，
-// 返回中止函数；调用方（组件卸载等）可随时调用中止。
-// axios 不支持流式响应，故此处使用原生 fetch + ReadableStream。
-export function agentStreamGenerate(
-  sessionID: number,
-  data: AgentStreamIn,
-  handlers: AgentStreamHandlers,
+// streamSSEPost 启动一个 POST 的 SSE 流式请求并按事件分发，返回中止函数。
+// axios 不支持流式响应，故使用原生 fetch + ReadableStream；事件以空行（\n\n）分隔，
+// 逐块取出解析。请求头与 axios 拦截器保持一致（语言、命名空间、JWT）。
+function streamSSEPost(
+  path: string,
+  body: unknown,
+  onEvent: (event: SSERawEvent) => void,
+  onError: (msg: string) => void,
 ): () => void {
   const controller = new AbortController();
 
   const run = async (): Promise<void> => {
     const store = useAppStore();
     try {
-      const rsp = await fetch(`${current_base_url()}/ai/agent/${sessionID}/stream`, {
+      const rsp = await fetch(`${current_base_url()}${path}`, {
         method: "POST",
         signal: controller.signal,
         headers: {
@@ -205,14 +219,14 @@ export function agentStreamGenerate(
           [HttpHeader.NAMESPACE]: encodeURIComponent(store.namespace),
           [X_JWT_HEADER_NAME]: localManager.getJwt() || "",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(body),
       });
       if (!rsp.ok) {
-        handlers.onError?.(`Generation failed with status ${rsp.status}`);
+        onError(`Request failed with status ${rsp.status}`);
         return;
       }
       if (!rsp.body) {
-        handlers.onError?.("Generation failed: empty response body");
+        onError("Request failed: empty response body");
         return;
       }
       const reader = rsp.body.getReader();
@@ -224,28 +238,102 @@ export function agentStreamGenerate(
           break;
         }
         buffer += decoder.decode(value, { stream: true });
-        // 事件以空行（\n\n）分隔，逐块取出解析。
         let sep = buffer.indexOf("\n\n");
         while (sep !== -1) {
           const block = buffer.slice(0, sep);
           buffer = buffer.slice(sep + 2);
-          handleStreamEvent(block, handlers);
+          dispatchEventBlock(block, onEvent);
           sep = buffer.indexOf("\n\n");
         }
       }
       // 流结束后的残余缓冲（无尾随空行）也需处理。
       if (buffer.trim()) {
-        handleStreamEvent(buffer, handlers);
+        dispatchEventBlock(buffer, onEvent);
       }
     } catch (err) {
       if (controller.signal.aborted) {
         // 调用方主动中止，静默结束。
         return;
       }
-      handlers.onError?.(err instanceof Error ? err.message : String(err));
+      onError(err instanceof Error ? err.message : String(err));
     }
   };
 
   void run();
   return () => controller.abort();
+}
+
+// dispatchEventBlock 解析并分发单个事件块，解析失败（非 JSON 负载）时静默跳过。
+function dispatchEventBlock(block: string, onEvent: (event: SSERawEvent) => void): void {
+  let event: SSERawEvent | null = null;
+  try {
+    event = parseEventBlock(block);
+  } catch {
+    return;
+  }
+  if (event) {
+    onEvent(event);
+  }
+}
+
+// agentStreamGenerate 启动 POST /ai/agent/${sessionID}/stream 的 SSE 流式生成，
+// 返回中止函数；调用方（组件卸载等）可随时调用中止。
+export function agentStreamGenerate(
+  sessionID: number,
+  data: AgentStreamIn,
+  handlers: AgentStreamHandlers,
+): () => void {
+  return streamSSEPost(
+    `/ai/agent/${sessionID}/stream`,
+    data,
+    (event) => {
+      switch (event.type) {
+        case "delta":
+          handlers.onDelta?.((event.data as { delta: string }).delta);
+          break;
+        case "done":
+          handlers.onDone?.(event.data as AgentOutput);
+          break;
+        case "error":
+          handlers.onError?.((event.data as { error: string }).error);
+          break;
+        default:
+          break;
+      }
+    },
+    (msg) => handlers.onError?.(msg),
+  );
+}
+
+// knowledgeRetrievalDryRunStream 启动 POST /ai/retrieval/dry-run 的 SSE 流式检索试运行，
+// 返回中止函数；运行期间按阶段实时回调模型原始输出与阶段状态。
+export function knowledgeRetrievalDryRunStream(
+  data: RetrievalDryRunIn,
+  handlers: RetrievalDryRunStreamHandlers,
+): () => void {
+  return streamSSEPost(
+    "/ai/retrieval/dry-run",
+    data,
+    (event) => {
+      switch (event.type) {
+        case "delta": {
+          const payload = event.data as { stage: DryRunStage; delta: string };
+          handlers.onDelta?.(payload.stage, payload.delta);
+          break;
+        }
+        case "stage":
+          handlers.onStage?.(event.data as DryRunStageEvent);
+          break;
+        case "done":
+          handlers.onDone?.(event.data as RetrievalDryRunOut);
+          break;
+        case "error":
+          handlers.onError?.((event.data as { error: string }).error);
+          break;
+        default:
+          break;
+      }
+    },
+    (msg) => handlers.onError?.(msg),
+  );
 }

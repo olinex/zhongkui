@@ -3,6 +3,10 @@
  *
  * Global styles. All colors come from Vuetify theme CSS variables
  * (e.g. `rgb(var(--v-theme-background))`), so light/dark themes stay in sync.
+ *
+ * 本文件是「外壳层」：集中定义跨组件复用的 .zk-* 复用类与 Vuetify / CodeMirror
+ * 内部类覆盖。同类组件需要相同外观时必须引用这里的类，禁止在各自 <style scoped>
+ * 中就地重写颜色 / 字号 / 圆角 / 边框 / 阴影（见 AGENTS.md「样式体系分层」）。
  */
 
 @use "./tokens" as *;
@@ -14,11 +18,11 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-// Dark base for overscroll, matches default dark theme
+// overscroll 露出的底色：跟随当前主题的 background（亮 / 暗主题下与页面底色一致）
 // overflow-y: auto 覆盖 Vuetify reset 的 scroll（强制常驻滚动条会在无滚动内容时
 // 于右侧留下 11px 槽位，露出 html 背景色与 app-bar 形成色差竖带）
 html {
-  background-color: #0e1116;
+  background-color: rgb(var(--v-theme-background));
   overflow-y: auto;
 }
 
@@ -57,13 +61,14 @@ html {
 }
 
 // Flat cards: thin border instead of heavy shadow.
-// Note: Vuetify has no `--v-theme-border` variable, so use a translucent
-// `on-surface` tint matching Vuetify's own border-opacity (0.12) semantics.
+// Note: the theme does define a `border` color (`--v-theme-border`), but we
+// deliberately use a translucent `on-surface` tint so the line auto-scales
+// with the text color and matches Vuetify's own border-opacity semantics.
 // `.v-application` prefix wins over vite-plugin-vuetify's deferred component
 // styles in dev mode (same specificity, later injection order).
 .v-application .v-card {
-  border: 1px solid rgb(var(--v-theme-on-surface), 0.12);
-  border-radius: 12px;
+  border: var(--zk-hairline-width) solid rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+  border-radius: var(--zk-radius-lg);
 }
 
 // Light theme: strengthen the hairline card border so white surfaces stand out
@@ -72,8 +77,178 @@ html {
 // exempted from the kebab-case class pattern rule.
 /* stylelint-disable-next-line selector-class-pattern */
 .v-application.v-theme--light .v-card {
-  border-color: rgb(var(--v-theme-on-surface), 0.16);
+  border-color: rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
 }
+
+// ---------------------------------------------------------------------------
+// Reusable shells (.zk-*)
+// 同类组件共享外观的唯一来源；组件 <style scoped> 只保留布局定位。
+// ---------------------------------------------------------------------------
+
+// hairline 描边：替代各处手写的 `border: 1px solid rgb(var(--v-theme-on-surface), 0.12)`
+.zk-hairline {
+  border: var(--zk-hairline-width) solid rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+}
+
+// 面板：surface 背景 + hairline 描边，用于信息 / 结果面板容器。
+// 替代各 Panel 内重复的 border + border-radius + background-color 组合。
+.zk-panel {
+  border: var(--zk-hairline-width) solid rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+  border-radius: var(--zk-radius-md);
+  background-color: rgb(var(--v-theme-surface));
+}
+
+// 弱化面板：on-surface 低透明度背景，用于代码块、键值行、预览区。
+// 替代各组件重复的 `background-color: rgb(var(--v-theme-on-surface), 0.06)`。
+// `--subtle` 是 BEM 修饰符（双短横线），豁免 kebab-case 类名规则。
+/* stylelint-disable-next-line selector-class-pattern */
+.zk-panel--subtle {
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-subtle-opacity));
+}
+
+// 区块标题：替代 text-h6 / text-subtitle-* / font-weight-600 等散落写法
+.zk-section-title {
+  font-size: var(--zk-font-size-subtitle);
+  font-weight: var(--zk-font-weight-semibold);
+  color: rgb(var(--v-theme-on-surface));
+}
+
+// 编辑器区块标题（比 .zk-section-title 低一级，与字段标签同字号）
+.zk-editor-title {
+  font-size: var(--zk-font-size-body);
+  font-weight: var(--zk-font-weight-semibold);
+  color: rgb(var(--v-theme-on-surface));
+}
+
+// 次要说明 / 表单提示：统一 text-caption + on-surface-variant。
+// 仅承载不可推断的约束（格式、范围、副作用），禁止解释界面如何操作。
+.zk-hint {
+  font-size: var(--zk-font-size-caption);
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+// 字段级错误文本（替代各编辑器内重复的 12px + error 色声明）
+.zk-error-text {
+  font-size: var(--zk-font-size-caption);
+  color: rgb(var(--v-theme-error));
+}
+
+// ---------------------------------------------------------------------------
+// Editor shell (CodeMirror family)
+// 三个编辑器（Rego / Go 模板 / 标签表达式）与两个 DryRun 面板共同引用，
+// 替代原先各自复制的 `border: 1px solid rgb(0 0 0 / 24%)`（深色主题下失效）。
+// ---------------------------------------------------------------------------
+
+// 编辑器外壳：描边 + 圆角 + surface 背景，替代各编辑器复制的
+// `border: 1px solid rgb(0 0 0 / 24%)`（深色主题下黑边贴黑底失效）。
+// overflow 用 visible（而非 hidden）：CodeMirror 把 tooltip 挂在 .cm-editor 内部，
+// `above: true` 的 lint / 补全提示会向上溢出编辑器边界，hidden 会把它们裁掉；
+// 内容滚动由 .cm-scroller 自行管理，不会造成页面溢出。
+.zk-editor {
+  width: 100%;
+  overflow: visible;
+  border: var(--zk-hairline-width) solid rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-surface));
+
+  // 校验失败态：描边转为语义错误色
+  &.is-error {
+    border-color: rgb(var(--v-theme-error));
+  }
+}
+
+// 编辑器区块标题行：标题 + 校验状态图标水平对齐
+.zk-editor-header {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-1);
+  min-height: var(--zk-editor-header-min-height);
+  padding: 0 var(--zk-space-1);
+}
+
+// CodeMirror 提示（补全菜单 / lint 悬停消息）跟随 Vuetify 主题。
+// 否则深色下 CM 默认浅底 #f5f5f5 + 继承暗色编辑器的亮色文字，对比度不足。
+// 层级提升到最上层，避免被全屏编辑器 / 对话框内其他元素遮挡。
+.cm-tooltip {
+  z-index: var(--zk-z-tooltip);
+  background-color: rgb(var(--v-theme-surface)) !important;
+  border: var(--zk-hairline-width) solid rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity)) !important;
+  color: rgb(var(--v-theme-on-surface));
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
+.cm-tooltip .cm-diagnosticText {
+  color: rgb(var(--v-theme-on-surface)) !important;
+}
+
+// 空文档时的占位提示，与弱化文字一致，避免干扰编辑
+/* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
+.cm-editor .cm-placeholder {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+// 补全弹窗内的示例代码块（info 区域）
+/* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
+.cm-tooltip .cm-function-info {
+  margin: 0;
+  padding: var(--zk-space-1) var(--zk-space-2);
+  font-family: $zk-font-mono;
+  font-size: var(--zk-font-size-caption);
+  white-space: pre-wrap;
+}
+
+// 样例悬停提示（`input.<field>` 在所选样例中的实际取值）：字段名 + 取值
+.cm-sample-hover {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-2);
+  padding: var(--zk-space-1) 0;
+  font-family: $zk-font-mono;
+  font-size: var(--zk-font-size-caption);
+}
+
+.cm-sample-hover-label {
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+.cm-sample-hover-value {
+  font-weight: var(--zk-font-weight-semibold);
+  color: rgb(var(--v-theme-primary));
+}
+
+// 自定义 OPA 内置函数悬停提示：签名 / 说明 / 示例
+.cm-function-hover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--zk-space-1);
+  padding: var(--zk-space-1) 0;
+  font-family: $zk-font-mono;
+  font-size: var(--zk-font-size-caption);
+}
+
+.cm-function-hover-signature {
+  font-weight: var(--zk-font-weight-semibold);
+  color: rgb(var(--v-theme-primary));
+}
+
+.cm-function-hover-description {
+  color: rgb(var(--v-theme-on-surface-variant));
+  white-space: pre-wrap;
+}
+
+.cm-function-hover-example {
+  margin: 0;
+  padding: var(--zk-space-1) var(--zk-space-2);
+  white-space: pre-wrap;
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-surface-variant));
+  color: rgb(var(--v-theme-on-surface));
+}
+
+// ---------------------------------------------------------------------------
+// Vuetify internal overrides
+// ---------------------------------------------------------------------------
 
 // v-request 指令加载态：隐藏原内容并展示居中的旋转 spinner
 // 复用 Vuetify 的 mdi-loading / mdi-spin 动画，保证与现有小按钮加载反馈一致。
@@ -107,8 +282,8 @@ html {
 
   // Data table: refined header
   th {
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: var(--zk-font-size-caption);
+    font-weight: var(--zk-font-weight-semibold);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: rgb(var(--v-theme-on-surface-variant));
@@ -129,7 +304,12 @@ html {
   // header checkbox with each row's checkbox.
   /* stylelint-disable-next-line selector-class-pattern */
   .v-data-table__th .v-checkbox-btn {
-    margin-top: calc((var(--v-table-header-height, 56px) - var(--v-table-row-height, 52px)) / 2);
+    // 表头（40px）比数据行（36px）高，居中后的全选复选框会偏离行网格，
+    // 下移两者高度差的一半，使表头复选框与各行复选框对齐
+    $header-h: var(--v-table-header-height, #{$zk-table-header-height-compact});
+    $row-h: var(--v-table-row-height, #{$zk-table-row-height-compact});
+
+    margin-top: calc(($header-h - $row-h) / 2);
   }
 
   // Data table: the select-all header cell uses 8px side padding while body
@@ -139,4 +319,425 @@ html {
   .v-data-table__th.v-data-table-column--no-padding {
     padding-inline: 16px;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Panel family shells
+// 面板族（结果面板 / 数据源参考栏 / 键值预览区）补充的复用类。
+// 这些视觉在组件 <style scoped> 中无法表达（禁写颜色 / 圆角 / 边框），故登记在此。
+// ---------------------------------------------------------------------------
+
+// 顶部单线分隔：替代组件内就地书写的 on-surface 半透明 border-top，
+// 以及依赖未暴露主题语义的 dashed border-top（深色主题下失效）。
+.zk-hairline-top {
+  border-top: var(--zk-hairline-width) solid
+    rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+}
+
+// 区块标签（分组小标题）：caption + 半粗 + 全大写 + 次要色，与数据表表头同角色。
+// 替代各面板内 `text-caption text-on-surface-variant font-weight-600 text-uppercase` 的散落组合。
+.zk-label-caps {
+  font-size: var(--zk-font-size-caption);
+  font-weight: var(--zk-font-weight-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+// 技术标识符强调文本（数据源表名等）：等宽 + 半粗 + 主色。
+.zk-mono-emphasis {
+  font-family: $zk-font-mono;
+  font-weight: var(--zk-font-weight-semibold);
+  color: rgb(var(--v-theme-primary));
+}
+
+// 强调数值（命中计数等）：caption + 半粗 + 主色。
+.zk-metric {
+  font-size: var(--zk-font-size-caption);
+  font-weight: var(--zk-font-weight-semibold);
+  color: rgb(var(--v-theme-primary));
+}
+
+// 序号徽标：主色填充胶囊 + on-primary 文字（数据源参考栏的分区序号）。
+// 替代就地声明的胶囊圆角 / 11px 字号 / 主色背景组合。
+.zk-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  padding: 0 var(--zk-space-1);
+  border-radius: var(--zk-radius-pill);
+  font-size: var(--zk-font-size-caption);
+  font-weight: var(--zk-font-weight-semibold);
+  color: rgb(var(--v-theme-on-primary));
+  background-color: rgb(var(--v-theme-primary));
+}
+
+// 可点击卡片：hover 时描边转主色 + 底色微抬。
+// 替代 DatasourceGuidePanel 内 .ds-card:hover / .sample-card:hover 的就地声明。
+.zk-interactive-card {
+  transition:
+    border-color var(--zk-transition-fast) ease,
+    background-color var(--zk-transition-fast) ease;
+
+  &:hover {
+    border-color: rgb(var(--v-theme-primary));
+    background-color: rgb(var(--v-theme-surface-variant), var(--zk-surface-subtle-opacity));
+  }
+}
+
+// 扁平展开面板族：透明背景 + 隐藏悬浮阴影 + 淡色 hover。
+// 用法：在包含 v-expansion-panels 的祖先容器上添加 .zk-flat-panels。
+// 替代 AgentParamPanel(.param-groups) 与两个 DryRun 面板(.dry-run-body) 内各自复制的
+// `background: transparent`、`.v-expansion-panel__shadow { display: none }` 与
+// `.v-expansion-panel-title__overlay { background-color: rgb(var(--v-theme-on-surface), 0.06) }`。
+// `.v-application` 前缀压过 vite-plugin-vuetify 延迟注入的组件样式（同上方 .v-card 处理）。
+.v-application .zk-flat-panels {
+  .v-expansion-panels {
+    background: transparent;
+  }
+
+  .v-expansion-panel {
+    background: transparent;
+  }
+
+  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
+  .v-expansion-panel__shadow {
+    display: none;
+  }
+
+  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
+  .v-expansion-panel-title__overlay {
+    background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-subtle-opacity));
+    opacity: 0;
+  }
+
+  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
+  .v-expansion-panel-title:hover > .v-expansion-panel-title__overlay {
+    opacity: 1;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Drag-and-drop indicator
+// ---------------------------------------------------------------------------
+// 拖拽落点高亮：列表内拖拽排序时标记当前悬停的目标行（列设置菜单）。
+// 登记在外壳层是因为组件 <style scoped> 禁止声明 background-color，
+// 且该视觉（primary 低透明度底）没有对应的 Vuetify 工具类。
+.zk-drag-over {
+  background-color: rgb(var(--v-theme-primary), 0.12);
+}
+
+// ---------------------------------------------------------------------------
+// Page container
+// ---------------------------------------------------------------------------
+
+// 页面内容容器：统一最大宽度与水平居中，由 MainLayout 与各页自建布局共用。
+// 替代内联 `style="max-width: 1440px|1200px"` 与散落的 mx-auto。
+// `.v-application` 前缀压过 vite-plugin-vuetify 延迟注入的 `.v-container`
+// 媒体查询 max-width（1280 / 1920 / 2560px）—— 二者同权重，仅靠注入顺序不可靠，
+// 否则本令牌在视口 ≥ 1920px 时失效（容器被撑到断点宽度）。
+.v-application .zk-page-container {
+  width: 100%;
+  max-width: var(--zk-container-max-width);
+  margin-inline: auto;
+}
+
+// ---------------------------------------------------------------------------
+// Centered surface (auth / error pages)
+// ---------------------------------------------------------------------------
+// 全屏居中骨架：CentralLayout 独占，认证页（登录 / 忘记密码 / 重置密码 /
+// 重置成功）与错误页（401 / 404）共用同一套尺寸与滚动行为 —— 页面只提供内容，
+// 不再各自书写宽度或高度。替代骨架曾内联的 `height="100%"` 与认证页卡片曾
+// 内联的 `style="width: min(420px, 100%)"`。
+
+// 居中骨架：横向 align-items 居中，纵向走 flex 主轴居中。
+// 纵向之所以不用 align-items: center，是因为交叉轴居中不会收缩超高内容 ——
+// 内容会同时向上下两端溢出，顶部被裁出可视区且无法滚动到；走主轴则可在
+// 内容超高时收缩，把溢出交给表面自己的滚动条。
+// 高度必须与内容无关，否则会与父级形成循环：v-main 是 `flex: 1 0 auto`，
+// 且祖先 `.v-application__wrap` 只有 `min-height`（可被内容撑高），所以
+// 内容变高 → v-main 变高 → 子元素 `height: 100%` 跟着变高 → 永不收缩、
+// 页面整体滚动（实测注入 2000px 内容时 100% 得到 2254px，页面出现滚动条）。
+// 因此改由视口推导：100dvh 减去 Vuetify 布局偏移（--v-layout-top/bottom 由
+// v-main 内联注入，同时也是 v-main 自身的上下 padding），结果恰等于
+// 「v-main 的内容盒高度」，且不含内容项，循环被打断。
+.zk-centered-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: calc(100dvh - var(--v-layout-top, 0px) - var(--v-layout-bottom, 0px));
+  padding: var(--zk-space-4);
+}
+
+// 居中表面：固定宽度上限，不随视口放大；窄屏退化为「100% - 骨架内边距」。
+// flex 项默认 min-height: auto（= 内容高度）不会收缩，置 0 后才允许沿主轴收缩到
+// 可视区内，进而由自身滚动承载超出部分，页面整体不滚动。
+// 高度上限即父容器内容盒，无需百分比 max-height（避免依赖父级高度可解析）。
+.zk-centered-surface {
+  width: 100%;
+  max-width: var(--zk-centered-surface-width);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// ---------------------------------------------------------------------------
+// Content blocks
+// ---------------------------------------------------------------------------
+
+// 代码 / 文本预览块：弱化底色 + 小圆角 + 统一内边距与换行，供通知渲染预览、
+// 载荷详情、测试发送结果、rego 源码预览、模型流式输出等复用。
+// 替代各页复制的 `.render-preview` / `.payload-view` / `.test-send-content` /
+// `.rego-view` / `.stream-output` 中重复的 `padding` + `white-space` + 换行断词声明。
+// 限高与滚动交由消费方（对话框内由 scrollable 承载，独立区块自行限制）。
+.zk-code-preview {
+  padding: var(--zk-space-2);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-subtle-opacity));
+}
+
+// 列表 / 阶段行的选中态高亮。
+// 与 .zk-drag-over 视觉一致但语义不同：选中是持久态，拖拽高亮是瞬时态，
+// 分开命名以便后续独立调整而不互相牵连。
+.zk-row-selected {
+  background-color: rgb(var(--v-theme-primary), 0.12);
+}
+
+// 筛选表单：折叠输入控件为空的消息占位区，使筛选行与操作按钮组保持同一水平线；
+// 校验错误出现时消息区自动展开，不受影响。
+// 替代 traffic/[type].vue、etl/queue.vue、etl/task.vue 三处复制的
+// `:deep(.v-input__details:has(.v-messages:empty)) { min-height: 0; padding-top: 0 }`。
+// `.v-input__details` / `.v-messages` 是 Vuetify 内部 BEM 类名（双下划线），
+// 豁免 kebab-case 类名规则。
+.zk-filter-form {
+  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
+  .v-input__details:has(.v-messages:empty) {
+    min-height: 0;
+    padding-top: 0;
+  }
+
+  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
+  .v-messages:empty {
+    min-height: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chat bubbles
+// 聊天气泡（AI 助手对话）：共享大圆角，并按气泡归属（用户 / 助手）收窄底部一角，
+// 形成指向发送者的视觉锚点。
+// 替代 assistant.vue 内 scoped 的 .message-bubble / .user-bubble / .assistant-bubble
+// 就地声明的 border-radius / border-bottom-*-radius（气泡的背景与文字色仍由
+// Vuetify 工具类 bg-primary / bg-surface-variant 提供，不在此重复）。
+// `--user` / `--assistant` 是 BEM 修饰符（双短横线），豁免 kebab-case 类名规则。
+// ---------------------------------------------------------------------------
+
+.zk-chat-bubble {
+  border-radius: var(--zk-radius-lg);
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.zk-chat-bubble--user {
+  border-bottom-right-radius: var(--zk-radius-sm);
+}
+
+/* stylelint-disable-next-line selector-class-pattern */
+.zk-chat-bubble--assistant {
+  border-bottom-left-radius: var(--zk-radius-sm);
+}
+
+// ---------------------------------------------------------------------------
+// Directional hairline separators
+// 与 .zk-hairline（四周描边）同源的定向分隔线：
+//   --right  侧边导航抽屉与内容区之间
+//   --bottom 顶栏与内容区之间
+// 替代 AppHeader / MainLayout 内就地书写的
+// `border-right|border-bottom: 1px solid rgb(var(--v-theme-on-surface), 0.12)`。
+// `.v-application` 前缀压过 vite-plugin-vuetify 延迟注入的 .v-app-bar /
+// .v-navigation-drawer 边框声明（同优先级、注入顺序更晚）。
+// ---------------------------------------------------------------------------
+
+.v-application .zk-hairline-right {
+  border-right: var(--zk-hairline-width) solid
+    rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+}
+
+.v-application .zk-hairline-bottom {
+  border-bottom: var(--zk-hairline-width) solid
+    rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
+}
+
+// ---------------------------------------------------------------------------
+// Embedded tab window
+// 卡片内嵌 tabs 窗口：内层 v-card（如 search-table 自带的列表卡片）去外框后
+// 平铺融入外层卡片，避免「tabs 悬空 + 独立圆角卡片」的割裂观感。
+// 用法：在包含 v-tabs-window 的外层 v-card 上添加 .zk-tabs-embedded。
+// 替代 TabView.vue 内 scoped 的 `:deep(.v-tabs-window .v-card)` 就地声明；
+// 优先级高于 `.v-application .v-card` 与浅色主题的强化描边规则。
+// ---------------------------------------------------------------------------
+
+.v-application .zk-tabs-embedded .v-tabs-window .v-card {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+// ---------------------------------------------------------------------------
+// Dialog toolbar (AppDialog skeleton)
+// 对话框工具栏：内容左右内边距取 --zk-space-5，与 VDialog 主体文本的水平内边距对齐
+// （Vuetify 的 `.v-dialog > .v-overlay__content > .v-card > .v-card-text` 为
+// `padding: 16px 24px 24px`），让前置图标 / 标题与主体文本落在同一左轴线；Vuetify
+// 默认不给 `.v-toolbar__content` 任何内边距，前置 v-icon 会紧贴卡片描边。
+// 标题与前置图标间距收为 --zk-space-3（Vuetify 的 20px 是为「标题即首元素」设计）；
+// 末位关闭按钮去掉默认 4px 外边距，使其 40px 命中区与内容盒右边界齐平。
+// 用法：在对话框骨架的 v-toolbar 上添加 .zk-dialog-toolbar（AppDialog.vue 无 <style> 块）。
+// 注意：对话框经 v-overlay-container 挂载在 body 下，不在 .v-application 内，故本组
+// 规则刻意不带 .v-application 前缀（带上会完全不匹配），改以严格高于 Vuetify 的
+// 选择器权重取胜（见 AGENTS.md「样式体系分层 · 覆盖 Vuetify 组件类」）。
+// ---------------------------------------------------------------------------
+
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
+.zk-dialog-toolbar .v-toolbar__content {
+  padding-inline: var(--zk-space-5);
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
+.zk-dialog-toolbar .v-toolbar__content > .v-toolbar-title {
+  margin-inline-start: var(--zk-space-3);
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
+.zk-dialog-toolbar .v-toolbar__content > .v-toolbar-title:first-child {
+  margin-inline-start: 0;
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
+.zk-dialog-toolbar .v-toolbar__content > .v-btn:last-child {
+  margin-inline-end: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Breadcrumbs
+// 面包屑：次要色文字 + 上下紧凑内边距 + 分隔符左右间距 + 可点击项主色高亮。
+// 替代 Breadcrumbs.vue 内 scoped 的 .breadcrumbs / :deep(.v-breadcrumbs-*)。
+// ---------------------------------------------------------------------------
+
+.v-application .zk-breadcrumbs {
+  padding-block: var(--zk-space-1);
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
+.v-application .zk-breadcrumbs .v-breadcrumbs-item--link {
+  color: rgb(var(--v-theme-primary));
+}
+
+.v-application .zk-breadcrumbs .v-breadcrumbs-divider {
+  padding-inline: 6px;
+}
+
+// ---------------------------------------------------------------------------
+// Refresh control (split button group)
+// 刷新控件分体按钮组：组取小圆角（首/末段由 Vuetify 的 inherit 继承），
+// 组内各段直角衔接；等宽数字保证倒计时文本不跳动。
+// 替代 RefreshControl.vue 内 scoped 的 .refresh-control / .rt-btn / .rt-btn-flat-*。
+// ---------------------------------------------------------------------------
+
+.v-application .zk-refresh-group {
+  border-radius: var(--zk-radius-sm);
+  font-variant-numeric: tabular-nums;
+
+  .v-btn {
+    letter-spacing: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Network stack compare view (dialog)
+// 网络堆栈双栏对比视图：表头、包卡片强调色条与底色、空占位行。
+// 替代 NetworkStackDialog.vue 内 scoped 的 .stack-compare-header / .stack-packet*
+// 就地声明（含 border / background-color / font-size 等 scoped 无法承载的视觉）。
+// ---------------------------------------------------------------------------
+
+.zk-stack-compare-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--zk-space-1) 0;
+  font-size: var(--zk-font-size-caption);
+  color: rgb(var(--v-theme-on-surface-variant));
+}
+
+// 某一侧缺少对应 seq 的包时以占位保持行高对齐
+.zk-stack-compare-empty {
+  min-height: var(--zk-placeholder-min-height);
+}
+
+// 普通包卡片：左侧灰色标识条（包卡片是 v-card，需压过 `.v-application .v-card` 的描边）
+.v-application .zk-stack-packet {
+  border-left: 5px solid rgb(var(--v-theme-grey));
+}
+
+// 命中的请求 / 响应包：加粗左侧色条 + 顶部色带 + 高透明度底色，与普通包强烈区分；
+// Vuetify 主题色以 RGB 三元组变量（--v-theme-{name}）暴露，配合 / alpha 使用透明度。
+.v-application .zk-stack-packet.zk-stack-request {
+  border-top: 3px solid rgb(var(--v-theme-primary));
+  border-left-color: rgb(var(--v-theme-primary));
+  background-color: rgb(var(--v-theme-primary) / 18%);
+}
+
+.v-application .zk-stack-packet.zk-stack-response {
+  border-top: 3px solid rgb(var(--v-theme-success));
+  border-left-color: rgb(var(--v-theme-success));
+  background-color: rgb(var(--v-theme-success) / 18%);
+}
+
+// ---------------------------------------------------------------------------
+// Network stack header summary chip
+// 协议头部可读摘要（可点击 chip）：内联块 + 最大宽度不溢出 + 小圆角 + hover 底色。
+// 替代 NetworkStackHeader.vue 内 scoped 的 .stack-header* 就地声明。
+// ---------------------------------------------------------------------------
+
+.zk-stack-header {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 8px;
+  border-radius: var(--zk-radius-sm);
+  cursor: pointer;
+  line-height: 1.35;
+
+  &:hover {
+    background-color: rgb(var(--v-theme-surface-variant));
+  }
+}
+
+.zk-stack-header-primary {
+  color: rgb(var(--v-theme-on-surface));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// 摘要第二行：信息片段（协议 · TTL · 标志 · 长度）较多，窄列下允许换行，
+// 长 token（MAC / IPv6 / 端口列表）用 overflow-wrap 断行，保证信息完整可见
+.zk-stack-header-secondary {
+  color: rgb(var(--v-theme-on-surface-variant));
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+// ---------------------------------------------------------------------------
+// Filter clause card (ClauseField)
+// 筛选条件卡片（字段 / 动作 / 值三段式）：最小宽度保证三段输入等宽，
+// 最大宽度不超过容器。替代 ClauseField.vue 内 scoped 的 .clause-filter-card
+// 就地声明的 min-width / max-width。
+// ---------------------------------------------------------------------------
+
+.zk-clause-card {
+  min-width: 340px;
+  max-width: 100%;
 }

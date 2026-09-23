@@ -1,7 +1,7 @@
 <template>
   <v-confirm-edit :model-value="props.modelValue" @update:model-value="addSelection">
     <template #default="{ model: proxyModel, actions }">
-      <v-card class="clause-filter-card mx-auto">
+      <v-card class="zk-clause-card mx-auto">
         <template #text>
           <v-select
             :model-value="choiceField"
@@ -27,7 +27,6 @@
             :input-type="inputType"
             :number-props="numberProps"
             :options="choiceOptions"
-            density="compact"
             @update:model-value="(value) => updateValue(proxyModel, value)"
           />
         </template>
@@ -271,17 +270,12 @@ const emits = defineEmits(["update:modelValue"]);
 <style scoped>
 /* 字段/动作/值三段输入控件统一宽度：
    v-menu 内容按内容收缩时，值输入可能因 min-width（如日期 180px、日期时间 245px）
-   或内容撑宽而与其他两段不一致；给卡片设定最小宽度并让所有输入控件撑满，
-   保证三段（字段/动作/值）始终等宽 */
-.clause-filter-card {
-  min-width: 340px;
-  max-width: 100%;
-}
-
-.clause-filter-card :deep(.v-input) {
+   或内容撑宽而与其他两段不一致；卡片最小/最大宽度走全局 .zk-clause-card，
+   此处仅让所有输入控件撑满，保证三段（字段/动作/值）始终等宽 */
+.zk-clause-card :deep(.v-input) {
   width: 100%;
 
-  /* 统一输入控件高度（compact=40px），保证字段/动作/值三段等高的兜底约束 */
-  --v-input-control-height: 40px;
+  /* 统一输入控件高度（compact），保证字段/动作/值三段等高的兜底约束 */
+  --v-input-control-height: var(--zk-control-height-compact);
 }
 </style>

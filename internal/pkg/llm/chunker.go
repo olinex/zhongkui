@@ -11,8 +11,8 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
-// 默认切片参数：ChunkingConfig 的 default 标签值（size=800, overlap=100），
-// 当构造参数非正数时回退使用。
+// 默认切片参数（size=800, overlap=100）：行为参数注册表中 chunking.size /
+// chunking.overlap 的默认值，构造参数非正数时回退使用。
 const (
 	defaultChunkSize    = 800
 	defaultChunkOverlap = 100

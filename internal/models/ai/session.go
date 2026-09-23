@@ -11,10 +11,10 @@ import (
 )
 
 // AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答消息
-// （AgentMessage），并记录会话绑定的目标模型与状态。对应表为 agent_sessions。
+// （AgentMessage），并记录会话缺省档位与状态。对应表为 agent_sessions。
 // AgentSession represents an AI assistant session, aggregating the multi-turn
 // question-answer messages (AgentMessage) of the same topic, and recording the
-// bound target model and the status of the session.
+// default slot and the status of the session.
 type AgentSession struct {
 	gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
 
@@ -29,9 +29,12 @@ type AgentSession struct {
 	// Title the title of the session, defaulting to a summary of the first user
 	// message, renameable by the user
 	Title string `gorm:"type:VARCHAR(256)"`
-	// TargetModel 会话绑定的目标模型标识（如模型供应商与模型名），空表示使用默认模型
-	// TargetModel the target model identifier bound to the session (e.g. the
-	// provider and the model name), empty means the default model
+	// TargetModel 会话缺省档位（列名沿用历史命名）：取值 flash/standard/advanced，空表示按
+	// 参数 agent.defaultSlot 解析；生成请求未显式指定档位时使用该档位
+	// TargetModel the default slot of the session (the column name keeps its historical
+	// naming): one of flash/standard/advanced, empty means resolving through the
+	// agent.defaultSlot parameter; it is used when a generation request specifies no slot
+	// explicitly
 	TargetModel string `gorm:"type:VARCHAR(255)"`
 	// Status 会话状态（如 active/archived），默认 active
 	// Status the status of the session (e.g. active/archived), default active

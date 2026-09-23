@@ -1,6 +1,6 @@
 <template>
   <div class="schema-editor-wrap">
-    <p class="text-caption text-on-surface-variant mb-2">
+    <p class="zk-hint mb-2">
       {{
         mandatorySchema
           ? $t("model.datasource.configField.schemaMongoHint")
@@ -11,8 +11,6 @@
       <v-text-field
         :model-value="col.name"
         :label="$t('model.datasource.configField.columnName')"
-        density="compact"
-        variant="outlined"
         hide-details
         :disabled="disabled"
         @update:model-value="updateName(index, $event)"
@@ -21,8 +19,6 @@
         :model-value="col.type"
         :items="columnTypeItems"
         :label="$t('model.datasource.configField.columnType')"
-        density="compact"
-        variant="outlined"
         hide-details
         :disabled="disabled"
         @update:model-value="updateType(index, $event)"
@@ -33,6 +29,7 @@
         size="small"
         :disabled="disabled"
         :title="$t('action.delete')"
+        :aria-label="$t('action.delete')"
         @click="removeColumn(index)"
       />
     </div>
@@ -125,12 +122,12 @@ const updateType = (index: number, value: unknown): void => {
 .schema-editor-wrap {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--zk-space-2);
 }
 
 .schema-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--zk-space-2);
 }
 </style>

@@ -7,8 +7,8 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/manager"
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkui.com/zhongkui/internal/manager/config"
+	"zhongkui.com/zhongkui/internal/manager/views/user"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/cliinput"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
@@ -21,7 +21,7 @@ import (
 // createUserInput 定义命令行创建用户的输入结构体
 // 继承 HTTP 注册输入，并额外包含是否为超级管理员的交互式确认
 type createUserInput struct {
-	views.UserRegisterIn
+	user.UserRegisterIn
 	Superuser bool `viper:"superuser" prompt:"是否为超级管理员？"`
 }
 
@@ -34,7 +34,7 @@ func extractUserInput(v *viper.Viper) (createUserInput, error) {
 }
 
 func extractUsernamePassword(v *viper.Viper) (username, password string, err error) {
-	var in views.UserPasswordLoginIn
+	var in user.UserPasswordLoginIn
 	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
 		return "", "", err
 	}
@@ -142,7 +142,7 @@ var createAccessKeyCmd = &cobra.Command{
 		}
 
 		// 从配置文件读取最大数量，通过 ExtractConfig 获取带默认值的配置
-		cfg, err := manager.ExtractConfig(v, validator.Validate)
+		cfg, err := config.ExtractConfig(v, validator.Validate)
 		if err != nil {
 			pterm.Error.Println(translate.T("cli.user.extract-config-failed", map[string]any{"Err": err}))
 			return

@@ -6,6 +6,7 @@ navbar:
     namespace: Namespace
     capturer: Capturer
     systemStatus: System Status
+    llmConfig: LLM Config
   etl:
     self: ETL
     server: Server
@@ -36,6 +37,9 @@ navbar:
   datasource:
     self: Datasource
   namespaceScoped: Namespace-scoped
+  # Generic hint for the unavailable badge: shown in the sidebar tooltip when the backend
+  # supplies no specific reason
+  featureUnavailable: This feature is currently unavailable
   pin: Pin sidebar
   unpin: Unpin sidebar
 model:
@@ -281,7 +285,7 @@ model:
     name: AI Session
     field:
       title: Title
-      targetModel: Target Model
+      slot: Slot
       status: Status
       createdAt: Created At
       updatedAt: Updated At
@@ -289,6 +293,57 @@ model:
       docIDs: Documents
       businessData: Business Data
       regoRule: Rego Validation Rule
+  llmModel:
+    name: LLM Model
+    field:
+      id: ID
+      name: Name
+      kind: Model Kind
+      baseURL: Base URL
+      apiKey: API Key
+      model: Model
+      timeoutSeconds: Timeout (s)
+      temperature: Temperature
+      maxTokens: Max Tokens
+      dimensions: Dimensions
+      enabled: Enabled
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  llmBinding:
+    name: Slot Binding
+    field:
+      slot: Slot
+      modelId: Model ID
+      modelName: Bound Model
+      kind: Model Kind
+      providerModel: Provider Model
+      enabled: Model Status
+      dimensions: Dimensions
+      bound: Bound
+      available: Available
+  agentParam:
+    name: Agent Params
+    field:
+      key: Param Key
+      group: Group
+      kind: Param Kind
+      default: Default
+      value: Current
+      overridden: Overridden
+      label: Param
+      comment: Description
+    type:
+      agent: Agent Behavior
+      retrieval: Retrieval
+      session: Session Context
+      chunking: Chunking
+      eval: Quality Evaluation
+      sanitize: Data Sanitization
   server:
     name: Server
     field:
@@ -440,9 +495,7 @@ model:
       collection: Collection Name
       endpoints: Endpoints
       schema: Manual Schema
-      schemaHint: This column definition is required. Generate it via the “Introspect Schema”
-        button, or specify the column names and types manually; leaving it empty no longer
-        auto-introspects
+      schemaHint: This column definition is required; leaving it empty no longer auto-introspects
       schemaMongoHint: MongoDB has no fixed schema and cannot be introspected; you must
         specify the column names and types manually
       addColumn: Add Column
@@ -1032,6 +1085,8 @@ action:
   signIn: Sign In
   signOut: Sign Out
   language: Language
+  toggleTheme: Toggle theme
+  accountMenu: Account menu
   pwdForget: Forgot Password
   forgotSend: Send Reset Email
   forgotBackToSignIn: Back to Sign In
@@ -1069,6 +1124,8 @@ action:
   previousDate: Previous Date
   currentDate: Current Date
   nextDate: Next Date
+  previousRecord: Previous record
+  nextRecord: Next record
   currentTime: Current Time
   copySecret: Copy Secret
   validate: Validate
@@ -1099,7 +1156,11 @@ action:
   resetFrontendConfig: Reset Frontend Config
   download: Download
   back: Back
+  backHome: Back to Home
   refresh: Refresh
+  refreshInterval: Auto refresh interval
+  enableAutoRefresh: Start auto refresh
+  disableAutoRefresh: Stop auto refresh
   reindex: Reindex
   query: Query
   columns: Columns
@@ -1112,15 +1173,19 @@ action:
   renderTest: Render Test
   templateValidate: Validate Syntax
   templateDryRun: Dry Run
+  bind: Bind
+  unbind: Unbind
+  save: Save
+  test: Test Connection
 guide:
   title: Third-party Data Query
   datasource: Datasource Cheatsheet
   columns: columns
-  datasourceEmpty: No datasource registered in this namespace yet. Create a datasource first to query it in rego
+  datasourceEmpty: No datasource registered in this namespace yet
   insertSelect: Insert SELECT
   clickInsertColumn: Click to insert table.column
   samples: Scenarios
-  sampleEmpty: Register and connect a datasource to generate runnable samples
+  sampleEmpty: No runnable samples yet
   clickInsertSample: Click to insert a runnable sample into the editor
   sample:
     exists: Existence check
@@ -1136,6 +1201,7 @@ title:
   pwdForget: Forgot Password
   err404: Error - 404
   err401: Error - 401
+  featureUnavailable: Feature Unavailable
   userProfile: User Profile
   profileInfo: Profile Info
   frontendConfigSync: Frontend Config Sync
@@ -1148,6 +1214,7 @@ title:
   namespaceAdmin: Admin - Namespace
   capturerAdmin: Admin - Capturer
   systemStatus: Admin - System Status
+  llmConfigAdmin: Admin - LLM Config
   notification:
     channel: Notification Channels
     target: Notification Targets
@@ -1189,6 +1256,11 @@ home:
     dropHere: Drop here
     defaultGroup: Default
 page:
+  featureUnavailable:
+    title: "{feature} is not activated yet"
+    hint: This feature is currently unavailable. Complete the setup on its activation page first.
+    activate: Go to {page} to activate
+    contactAdmin: This feature must be activated by an administrator. Please contact your administrator.
   aiAssistant:
     generate: Generate
     generating: Generating…
@@ -1211,12 +1283,70 @@ page:
     assistant: Assistant
     hintSelectSession: Create or select a session to start
     confirmDeleteSession: Delete this session and all its messages?
+    slotHint: It also becomes the session default slot when creating a session
+    disabled: AI feature is disabled
+  aiKnowledge:
+    dryRun: Dry Run
+    query: Query
+    advancedParams: Advanced Parameters
+    advancedParamsHint: "Backend defaults are used when unset ({topKLabel}: {topK} · {candidatesLabel}: {candidates} · {fusionLabel}: {fusion})"
+    topK: Rerank Top-K
+    candidates: Candidates
+    fusion: Fusion
+    weightVector: Vector Weight
+    weightKeyword: Keyword Weight
+    run: Run
+    running: Running…
+    stop: Stop
+    process: Progress
+    streamOutput: Model Raw Output
+    stageFailed: Stage Failed
+    stage:
+      retrieve: Hybrid Retrieval
+      answer: Answer Generation
+      chunkRelevance: Chunk Relevance
+      claims: Claim Faithfulness
+      reverseQuestions: Reverse Questions
+    retrievedChunks: Retrieved Chunks
+    answer: Generated Answer
+    metrics: Metrics
+    contextPrecision: Context Precision
+    faithfulness: Faithfulness
+    answerRelevance: Answer Relevance
+    contextUtilization: Context Utilization
+    relevantOfTotal: "Relevant {relevant}/{total}"
+    judgments: Chunk Judgments
+    claims: Claim Faithfulness
+    reverseQuestions: Reverse Questions
+    warnings: Warnings
+    evalError: Evaluation Unavailable
+    metaModel: Model
+    metaElapsed: Elapsed
+    metaPromptTokens: Prompt Tokens
+    metaCompletionTokens: Completion Tokens
+    metaTotalTokens: Total Tokens
+    metaTotal: Total Elapsed
+    close: Close
+  llmModelAdmin:
+    baseURLHint: OpenAI-compatible base URL of the provider (e.g. https://dashscope.aliyuncs.com/compatible-mode/v1)
+    apiKeyKeepHint: The key is never echoed in plaintext; leave blank to keep the existing key
+    scopeHint: The model registry is global configuration and is not isolated per namespace
+    dimensionsHint: The vector dimensions are probed by the backend when an embedding slot is bound; to change the index dimensions, contact the operations team to run the server-side command
+  llmBindingAdmin:
+    hint: "Each of the four slots binds one model: chat slots require a chat model and the embedding slot requires an embedding model; slot availability comes from the runtime snapshot"
+    selectModel: Select Model
+    unbound: Unbound
+  agentParamAdmin:
+    hint: Factory values are seeded by the database migration and validated at startup; changes take effect immediately, and submitting blank writes a parameter back to its factory value
+    dirtyCount: "{count} pending"
+    groupCount: "{count}"
+    defaultValue: "Default: {value}"
 profile:
   pageSubtitle: Manage your account details, access keys and password security
   infoSubtitle: Update your nickname and email, then click "Update" to save
   accessKeySubtitle: Access keys enable programmatic API access; keep them safe after creation
   passwordSubtitle: Change your sign-in password. Prefer a strong password and rotate it regularly
-  emptyAccessKeys: No access keys yet. Click "Create" at the top right to add one
+  emptyAccessKeys: No access keys yet
   configSyncSubtitle: Keep browser page configuration (theme, language, sidebar, etc.) in sync across hosts
   configSyncHint: When enabled, page configuration changes are uploaded immediately; on sync failure the last synced configuration is restored
 summary:
@@ -1228,7 +1358,6 @@ summary:
   noEventDetected: No events detected
   noTagMatched: No tags matched
   noServerYet: There is no running {name} yet!
-  noServerYetHelp: You can try clicking the {btn} button below to fetch data again.
   unknownError: Something went wrong...
 notice:
   wellcome: Welcome!
@@ -1282,6 +1411,17 @@ notice:
     introspectSuccess: Schema introspected successfully
     introspectFailed: Schema introspection failed
     introspectNoFile: Please select a SQLite database file
+  llmModel:
+    testSuccess: Connectivity test passed
+    testFailed: Connectivity test failed
+  llmBinding:
+    bindSuccess: Slot bound successfully
+    unbindSuccess: Slot unbound successfully
+    unbindConfirm: "Unbind slot {key}? The slot becomes unavailable after unbinding"
+  agentParam:
+    saveSuccess: Params saved successfully
+    resetSuccess: Params restored to defaults
+    resetGroupConfirm: 'Restore all params in the "{key}" group to defaults?'
 inputType:
   string: String
   number: Number

@@ -3,121 +3,116 @@
        单条记录 + 上一条/下一条切换；字段按 kind 分支渲染三列自适应列表
        （字段名 / 字段值 / 操作），crypto 与 s3 字段经操作列查看明文。
        detectedAt 来自事件详情，用于推导原始记录入库时间预筛范围（后端 ClickHouse 分区裁剪）。 -->
-  <v-dialog :model-value="modelValue" max-width="900" @update:model-value="onUpdate">
-    <v-card>
-      <v-toolbar density="compact">
-        <v-toolbar-title class="text-no-wrap">
-          {{ $t("title.tagEvent.hitRecords") }}
-        </v-toolbar-title>
-        <v-spacer />
-        <div v-if="items.length > 0" class="d-flex align-center ga-2">
-          <v-btn
-            icon="mdi-chevron-left"
-            size="small"
-            variant="text"
-            :disabled="currentIndex <= 0"
-            @click="currentIndex -= 1"
-          />
-          <span class="text-caption text-no-wrap">{{ currentIndex + 1 }} / {{ items.length }}</span>
-          <v-btn
-            icon="mdi-chevron-right"
-            size="small"
-            variant="text"
-            :disabled="currentIndex >= items.length - 1"
-            @click="currentIndex += 1"
-          />
-        </div>
-        <v-btn icon="mdi-close" variant="text" @click="onUpdate(false)" />
-      </v-toolbar>
-      <div class="pa-4 overflow-y-auto" style="max-height: 72vh">
-        <v-skeleton-loader v-if="loading" type="article" min-height="220" />
-        <v-alert v-else-if="errorText" type="error" variant="tonal" density="compact">
-          {{ errorText }}
-        </v-alert>
-        <template v-else>
-          <!-- 命中摘要 -->
-          <v-card variant="tonal" class="mb-4">
-            <v-card-title class="text-subtitle-1 font-weight-medium">
-              {{ $t("model.tagEventRecordHit.name") }}
-            </v-card-title>
-            <v-card-text>
-              <v-table density="compact">
-                <tbody>
-                  <tr v-for="field in summaryFields" :key="field.key">
-                    <td class="text-no-wrap font-weight-medium" style="width: 180px">
-                      {{ field.label }}
-                    </td>
-                    <td>{{ field.display }}</td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </v-card-text>
-          </v-card>
-
-          <!-- 原始数据明细 -->
-          <template v-if="items.length > 0">
-            <v-table density="compact">
-              <thead>
-                <tr>
-                  <th class="text-no-wrap">{{ $t("model.__base.field.field") }}</th>
-                  <th>{{ $t("model.__base.field.value") }}</th>
-                  <th class="text-no-wrap">{{ $t("model.__base.field.action") }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="field in detailFields" :key="field.key">
-                  <td class="text-no-wrap font-weight-medium">{{ field.label }}</td>
-                  <td class="detail-value">
-                    <template v-if="field.kind === 'crypto'">
-                      <v-chip color="warning" variant="tonal" size="small">
-                        {{ $t("model.__base.field.encrypted") }}
-                      </v-chip>
-                    </template>
-                    <template v-else-if="field.kind === 's3'">
-                      <span class="font-mono">{{ field.display }}</span>
-                      <storage-size-chip
-                        class="ml-2"
-                        :value="field.length"
-                        binary
-                        density="comfortable"
-                      />
-                    </template>
-                    <template v-else>
-                      <adaptive-cell :header="plainHeader(field)" :item="plainItem(field)" />
-                    </template>
-                  </td>
-                  <td class="text-no-wrap">
-                    <template
-                      v-if="field.kind === 'crypto' || (field.kind === 's3' && field.length > 0)"
-                    >
-                      <v-btn
-                        :text="$t('action.viewPlaintext')"
-                        size="small"
-                        variant="tonal"
-                        color="primary"
-                        :loading="plaintextLoading === field.key"
-                        @click="viewPlaintextAction(field)"
-                      />
-                    </template>
-                    <template v-else-if="field.kind === 's3'">
-                      <v-chip size="small">{{ $t("notice.plaintextEmpty") }}</v-chip>
-                    </template>
-                  </td>
-                </tr>
-              </tbody>
-            </v-table>
-          </template>
-          <v-alert
-            v-else
-            type="info"
-            variant="tonal"
-            density="compact"
-            :text="$t('model.__base.value.blank')"
-          />
-        </template>
+  <app-dialog
+    :model-value="modelValue"
+    :title="$t('title.tagEvent.hitRecords')"
+    size="lg"
+    @update:model-value="onUpdate"
+  >
+    <template #header-append>
+      <v-spacer />
+      <div v-if="items.length > 0" class="d-flex align-center ga-2">
+        <v-btn
+          icon="mdi-chevron-left"
+          size="small"
+          variant="text"
+          :disabled="currentIndex <= 0"
+          :title="$t('action.previousRecord')"
+          :aria-label="$t('action.previousRecord')"
+          @click="currentIndex -= 1"
+        />
+        <span class="text-caption text-no-wrap">{{ currentIndex + 1 }} / {{ items.length }}</span>
+        <v-btn
+          icon="mdi-chevron-right"
+          size="small"
+          variant="text"
+          :disabled="currentIndex >= items.length - 1"
+          :title="$t('action.nextRecord')"
+          :aria-label="$t('action.nextRecord')"
+          @click="currentIndex += 1"
+        />
       </div>
-    </v-card>
-  </v-dialog>
+    </template>
+    <v-skeleton-loader v-if="loading" type="article" min-height="220" />
+    <v-alert v-else-if="errorText" type="error">
+      {{ errorText }}
+    </v-alert>
+    <template v-else>
+      <!-- 命中摘要 -->
+      <v-card variant="tonal" class="mb-4">
+        <v-card-title class="text-subtitle-1 font-weight-medium">
+          {{ $t("model.tagEventRecordHit.name") }}
+        </v-card-title>
+        <v-card-text>
+          <v-table density="compact">
+            <tbody>
+              <tr v-for="field in summaryFields" :key="field.key">
+                <td class="field-label-col text-no-wrap font-weight-medium">
+                  {{ field.label }}
+                </td>
+                <td>{{ field.display }}</td>
+              </tr>
+            </tbody>
+          </v-table>
+        </v-card-text>
+      </v-card>
+
+      <!-- 原始数据明细 -->
+      <template v-if="items.length > 0">
+        <v-table density="compact">
+          <thead>
+            <tr>
+              <th class="text-no-wrap">{{ $t("model.__base.field.field") }}</th>
+              <th>{{ $t("model.__base.field.value") }}</th>
+              <th class="text-no-wrap">{{ $t("model.__base.field.action") }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="field in detailFields" :key="field.key">
+              <td class="text-no-wrap font-weight-medium">{{ field.label }}</td>
+              <td class="detail-value">
+                <template v-if="field.kind === 'crypto'">
+                  <v-chip color="warning">
+                    {{ $t("model.__base.field.encrypted") }}
+                  </v-chip>
+                </template>
+                <template v-else-if="field.kind === 's3'">
+                  <span class="font-mono">{{ field.display }}</span>
+                  <storage-size-chip
+                    class="ml-2"
+                    :value="field.length"
+                    binary
+                    density="comfortable"
+                  />
+                </template>
+                <template v-else>
+                  <adaptive-cell :header="plainHeader(field)" :item="plainItem(field)" />
+                </template>
+              </td>
+              <td class="text-no-wrap">
+                <template
+                  v-if="field.kind === 'crypto' || (field.kind === 's3' && field.length > 0)"
+                >
+                  <v-btn
+                    :text="$t('action.viewPlaintext')"
+                    size="small"
+                    variant="tonal"
+                    color="primary"
+                    :loading="plaintextLoading === field.key"
+                    @click="viewPlaintextAction(field)"
+                  />
+                </template>
+                <template v-else-if="field.kind === 's3'">
+                  <v-chip>{{ $t("notice.plaintextEmpty") }}</v-chip>
+                </template>
+              </td>
+            </tr>
+          </tbody>
+        </v-table>
+      </template>
+      <v-alert v-else type="info" :text="$t('model.__base.value.blank')" />
+    </template>
+  </app-dialog>
 
   <!-- 明文查看对话框（共享组件：加密/S3 字段解密展示与下载） -->
   <plaintext-dialog ref="plaintextDialogRef" />
@@ -321,6 +316,11 @@ const viewPlaintextAction = async (field: DetailField): Promise<void> => {
 </script>
 
 <style scoped>
+/* 字段名列宽提示：固定标签列宽度，值列自适应占满剩余空间 */
+.field-label-col {
+  width: 180px;
+}
+
 /* 详情值单元格：长文本（如 base64 报文、请求头）自动换行，避免撑破紧凑对话框 */
 .detail-value {
   word-break: break-all;

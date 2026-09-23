@@ -2,7 +2,7 @@
   <v-layout>
     <app-header />
     <v-main>
-      <v-container class="mx-auto pa-8" style="max-width: 1200px">
+      <v-container class="pa-4 pa-md-6 zk-page-container">
         <!-- Welcome area -->
         <div class="mb-8">
           <h1 class="text-h4 font-weight-bold">{{ $t("title.zk") }}</h1>
@@ -30,7 +30,6 @@
             <template v-if="editingGroupId === group.id">
               <v-text-field
                 v-model="groupTitleDraft"
-                density="compact"
                 variant="underlined"
                 hide-details
                 autofocus
@@ -56,6 +55,7 @@
               size="small"
               variant="text"
               :title="$t('home.quickStart.addLink')"
+              :aria-label="$t('home.quickStart.addLink')"
               @click="openAddLinkDialog(group.id)"
             />
             <v-btn
@@ -64,6 +64,7 @@
               size="small"
               variant="text"
               :title="$t('home.quickStart.deleteGroup')"
+              :aria-label="$t('home.quickStart.deleteGroup')"
               @click="askDeleteGroup(group)"
             />
           </div>
@@ -79,10 +80,10 @@
               lg="3"
             >
               <v-card
-                class="quick-link-card"
+                class="quick-link-card zk-interactive-card"
                 :class="{
                   'quick-link-dragging': isDragging(group.id, index),
-                  'quick-drop-before': isDropTarget(group.id, index),
+                  'zk-drag-over': isDropTarget(group.id, index),
                 }"
                 draggable="true"
                 @click="goto(link)"
@@ -107,6 +108,7 @@
                       size="x-small"
                       variant="text"
                       :title="$t('home.quickStart.removeLink')"
+                      :aria-label="$t('home.quickStart.removeLink')"
                       @click.stop="store.removeLink(group.id, index)"
                     />
                   </template>
@@ -118,8 +120,8 @@
           <!-- Empty group drop zone -->
           <div
             v-if="group.links.length === 0"
-            class="quick-drop-zone"
-            :class="{ 'quick-drop-active': isDropTarget(group.id, 0) }"
+            class="quick-drop-zone zk-panel--subtle zk-hairline zk-hint"
+            :class="{ 'zk-drag-over': isDropTarget(group.id, 0) }"
             @dragover.prevent="onDragOver(group.id, 0)"
             @dragleave="onDragLeave($event, group.id, 0)"
             @drop.prevent="onDrop(group.id, 0)"
@@ -130,8 +132,8 @@
           <!-- Trailing drop zone while a drag is active -->
           <div
             v-else-if="dragSource"
-            class="quick-drop-zone"
-            :class="{ 'quick-drop-active': isDropTarget(group.id, group.links.length) }"
+            class="quick-drop-zone zk-panel--subtle zk-hairline zk-hint"
+            :class="{ 'zk-drag-over': isDropTarget(group.id, group.links.length) }"
             @dragover.prevent="onDragOver(group.id, group.links.length)"
             @dragleave="onDragLeave($event, group.id, group.links.length)"
             @drop.prevent="onDrop(group.id, group.links.length)"
@@ -141,43 +143,41 @@
         </div>
 
         <!-- Add navigation link dialog -->
-        <v-dialog v-model="addLinkDialog" max-width="560">
-          <v-card :title="$t('home.quickStart.addLink')" prepend-icon="mdi-link-variant">
-            <v-card-text>
-              <v-text-field
-                v-model="linkSearch"
-                density="compact"
-                variant="outlined"
-                :label="$t('home.quickStart.searchNav')"
-                prepend-inner-icon="mdi-magnify"
-                clearable
-              />
-              <v-list density="comfortable" class="quick-picker-list">
-                <template v-for="navGroup in filteredNavigation" :key="navGroup.value">
-                  <v-list-subheader>{{ $t(navGroup.title) }}</v-list-subheader>
-                  <v-list-item
-                    v-for="child in navGroup.childrens"
-                    :key="linkKey(child)"
-                    :disabled="linkExists(child)"
-                    @click="addLinkToCurrent(child)"
-                  >
-                    <template #prepend>
-                      <v-icon size="small">{{ child.icon }}</v-icon>
-                    </template>
-                    <v-list-item-title class="text-body-2">{{ $t(child.title) }}</v-list-item-title>
-                    <template #append>
-                      <v-icon v-if="linkExists(child)" size="small">mdi-check</v-icon>
-                    </template>
-                  </v-list-item>
+        <app-dialog
+          v-model="addLinkDialog"
+          :title="$t('home.quickStart.addLink')"
+          icon="mdi-link-variant"
+          size="sm"
+        >
+          <v-text-field
+            v-model="linkSearch"
+            :label="$t('home.quickStart.searchNav')"
+            prepend-inner-icon="mdi-magnify"
+            clearable
+          />
+          <v-list density="comfortable">
+            <template v-for="navGroup in filteredNavigation" :key="navGroup.value">
+              <v-list-subheader>{{ $t(navGroup.title) }}</v-list-subheader>
+              <v-list-item
+                v-for="child in navGroup.childrens"
+                :key="linkKey(child)"
+                :disabled="linkExists(child)"
+                @click="addLinkToCurrent(child)"
+              >
+                <template #prepend>
+                  <v-icon size="small">{{ child.icon }}</v-icon>
                 </template>
-              </v-list>
-            </v-card-text>
-            <v-card-actions>
-              <v-spacer />
-              <v-btn :text="$t('action.close')" variant="text" @click="addLinkDialog = false" />
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
+                <v-list-item-title class="text-body-2">{{ $t(child.title) }}</v-list-item-title>
+                <template #append>
+                  <v-icon v-if="linkExists(child)" size="small">mdi-check</v-icon>
+                </template>
+              </v-list-item>
+            </template>
+          </v-list>
+          <template #footer>
+            <v-btn :text="$t('action.close')" variant="text" @click="addLinkDialog = false" />
+          </template>
+        </app-dialog>
 
         <!-- Delete group confirmation -->
         <confirm-dialog
@@ -209,11 +209,12 @@ meta:
 
 <script setup lang="ts" name="home">
 import router from "@/router";
-import { navigationGroups } from "@/navigation";
+import { filterNavigationByPerm, navigationGroups } from "@/navigation";
 import type { NavChild } from "@/navigation";
 import { useFeaturesStore } from "@/stores/features";
 import { isBuiltinGroup, linkKey, useQuickStartStore } from "@/stores/quickStart";
 import type { QuickStartGroup, QuickStartLink } from "@/stores/quickStart";
+import { useUserStore } from "@/stores/user";
 import i18n from "@/utils/i18n";
 
 const store = useQuickStartStore();
@@ -277,12 +278,15 @@ const openAddLinkDialog = (groupId: string) => {
   addLinkDialog.value = true;
 };
 
-// 按功能开关过滤导航组：设置 feature 且开关关闭的分组（如 AI 助手）不展示。
+// 按功能开关与权限点过滤导航组：设置 feature 且开关关闭的分组（如 AI 助手）不展示，
+// 子项需满足其声明的权限点，分组内子项全部隐藏时该分组一并隐藏。
 const visibleNavigationGroups = computed(() => {
   const featuresStore = useFeaturesStore();
-  return navigationGroups.filter(
+  const userStore = useUserStore();
+  const groups = navigationGroups.filter(
     (group) => !group.feature || featuresStore.isEnable(group.feature),
   );
+  return filterNavigationByPerm(groups, (perm) => userStore.can(perm.obj, perm.act));
 });
 
 const filteredNavigation = computed(() => {
@@ -384,29 +388,16 @@ const onDragEnd = () => {
 <style scoped>
 .quick-group-title {
   cursor: pointer;
-  transition: color 0.2s ease;
-}
-
-.quick-group-title:hover {
-  color: rgb(var(--v-theme-primary));
 }
 
 .quick-group-name-input {
-  max-width: 320px;
+  max-width: var(--zk-container-max-width-narrow);
 }
 
-/* Link cards, matching the pre-group quick start style. */
+/* Link cards: hover feedback comes from the global .zk-interactive-card shell. */
 .quick-link-card {
   position: relative;
   cursor: grab;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease;
-}
-
-.quick-link-card:hover {
-  border-color: rgb(var(--v-theme-primary));
-  background-color: rgb(var(--v-theme-primary), 0.06);
 }
 
 .quick-link-card:active {
@@ -420,39 +411,20 @@ const onDragEnd = () => {
 /* Remove button: only visible while hovering the whole card. */
 .quick-link-remove {
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: opacity var(--zk-transition-fast) ease;
 }
 
 .quick-link-card:hover .quick-link-remove {
   opacity: 1;
 }
 
-/* Insertion indicator above a card. */
-.quick-drop-before {
-  box-shadow: inset 0 2px 0 rgb(var(--v-theme-primary));
-}
-
-/* Drop zone (empty group / trailing) highlight. */
+/* Drop zone (empty group / trailing): layout only, surface comes from
+   .zk-panel--subtle + .zk-hairline, highlight from .zk-drag-over. */
 .quick-drop-zone {
-  min-height: 44px;
-  margin-top: 8px;
-  border: 1px dashed rgb(var(--v-theme-on-surface), 0.25);
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgb(var(--v-theme-on-surface), 0.6);
-  font-size: 0.875rem;
-}
-
-.quick-drop-active {
-  border-style: solid;
-  border-color: rgb(var(--v-theme-primary));
-  background-color: rgb(var(--v-theme-primary), 0.08);
-}
-
-.quick-picker-list {
-  max-height: 480px;
-  overflow-y: auto;
+  min-height: var(--zk-control-height-compact);
+  margin-top: var(--zk-space-2);
 }
 </style>

@@ -162,7 +162,7 @@
                 <v-label>{{ $t("model.notificationTarget.field.config") }}</v-label>
               </v-col>
               <v-col v-if="createChannelType" cols="auto">
-                <v-chip size="small" variant="tonal">
+                <v-chip>
                   {{ enumLabelOf(EnumClass.channelType, createChannelType) }}
                 </v-chip>
               </v-col>
@@ -177,7 +177,6 @@
                     :label="$t(targetFieldLabel(createChannelType, field.name))"
                     :required="field.required"
                     :error-messages="fieldErrors(createConfigState.errors, field.name)"
-                    density="compact"
                   />
                   <v-text-field
                     v-else-if="field.kind === 'number'"
@@ -186,7 +185,6 @@
                     :label="$t(targetFieldLabel(createChannelType, field.name))"
                     :required="field.required"
                     :error-messages="fieldErrors(createConfigState.errors, field.name)"
-                    density="compact"
                   />
                   <v-textarea
                     v-else
@@ -195,7 +193,6 @@
                     :required="field.required"
                     :error-messages="fieldErrors(createConfigState.errors, field.name)"
                     rows="2"
-                    density="compact"
                   />
                 </v-col>
               </v-row>
@@ -274,7 +271,7 @@
                 <v-label>{{ $t("model.notificationTarget.field.config") }}</v-label>
               </v-col>
               <v-col v-if="editChannelType" cols="auto">
-                <v-chip size="small" variant="tonal">
+                <v-chip>
                   {{ enumLabelOf(EnumClass.channelType, editChannelType) }}
                 </v-chip>
               </v-col>
@@ -290,7 +287,6 @@
                     :required="field.required"
                     :error-messages="fieldErrors(editConfigState.errors, field.name)"
                     :disabled="!editable"
-                    density="compact"
                   />
                   <v-text-field
                     v-else-if="field.kind === 'number'"
@@ -300,7 +296,6 @@
                     :required="field.required"
                     :error-messages="fieldErrors(editConfigState.errors, field.name)"
                     :disabled="!editable"
-                    density="compact"
                   />
                   <v-textarea
                     v-else
@@ -310,7 +305,6 @@
                     :error-messages="fieldErrors(editConfigState.errors, field.name)"
                     :disabled="!editable"
                     rows="2"
-                    density="compact"
                   />
                 </v-col>
               </v-row>
@@ -320,45 +314,45 @@
       </temp-editable-dialog>
 
       <!-- 测试发送结果对话框：触发后立即打开，展示发送进度与最终结果 -->
-      <v-dialog v-model="testSendDialog" max-width="640">
-        <v-card prepend-icon="mdi-send-check-outline" :title="$t('action.testSend')">
-          <v-card-text>
-            <div v-if="testSendLoading" class="d-flex align-center ga-2 text-on-surface-variant">
-              <v-progress-circular indeterminate size="20" />
-              <span>{{ $t("summary.dataLoading") }}</span>
-            </div>
-            <v-alert v-else-if="testSendError" type="error" variant="tonal" :text="testSendError" />
-            <template v-else-if="testSendResult">
-              <div class="text-h6">{{ testSendResult.title }}</div>
-              <pre class="test-send-content">{{ testSendResult.content }}</pre>
-              <v-divider class="my-2" />
-              <div class="text-caption text-on-surface-variant">
-                messageId: {{ testSendResult.messageId }}
-              </div>
-              <div class="text-caption text-on-surface-variant">
-                {{ $t("model.notificationTarget.field.language") }}:
-                {{ $t(languageNameKey(testSendResult.language)) }}
-              </div>
-              <v-divider class="my-2" />
-              <div class="text-subtitle-2">{{ $t("model.notificationChannel.name") }}</div>
-              <pre class="test-send-content">{{
-                JSON.stringify(testSendResult.channel, null, 2)
-              }}</pre>
-              <v-divider class="my-2" />
-              <div class="text-subtitle-2">{{ $t("model.notificationTarget.name") }}</div>
-              <pre class="test-send-content">{{
-                JSON.stringify(testSendResult.target, null, 2)
-              }}</pre>
-            </template>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="plain" @click="testSendDialog = false">
-              {{ $t("action.close") }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+      <app-dialog
+        v-model="testSendDialog"
+        :title="$t('action.testSend')"
+        icon="mdi-send-check-outline"
+        size="md"
+      >
+        <div v-if="testSendLoading" class="d-flex align-center ga-2 text-on-surface-variant">
+          <v-progress-circular indeterminate size="20" />
+          <span>{{ $t("summary.dataLoading") }}</span>
+        </div>
+        <v-alert v-else-if="testSendError" type="error" :text="testSendError" />
+        <template v-else-if="testSendResult">
+          <div class="text-h6">{{ testSendResult.title }}</div>
+          <pre class="zk-code-preview text-body-2">{{ testSendResult.content }}</pre>
+          <v-divider class="my-2" />
+          <div class="text-caption text-on-surface-variant">
+            messageId: {{ testSendResult.messageId }}
+          </div>
+          <div class="text-caption text-on-surface-variant">
+            {{ $t("model.notificationTarget.field.language") }}:
+            {{ $t(languageNameKey(testSendResult.language)) }}
+          </div>
+          <v-divider class="my-2" />
+          <div class="text-subtitle-2">{{ $t("model.notificationChannel.name") }}</div>
+          <pre class="zk-code-preview text-body-2">{{
+            JSON.stringify(testSendResult.channel, null, 2)
+          }}</pre>
+          <v-divider class="my-2" />
+          <div class="text-subtitle-2">{{ $t("model.notificationTarget.name") }}</div>
+          <pre class="zk-code-preview text-body-2">{{
+            JSON.stringify(testSendResult.target, null, 2)
+          }}</pre>
+        </template>
+        <template #footer>
+          <v-btn variant="text" @click="testSendDialog = false">
+            {{ $t("action.close") }}
+          </v-btn>
+        </template>
+      </app-dialog>
     </template>
   </main-layout>
 </template>
@@ -949,13 +943,3 @@ const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 </script>
-
-<style scoped>
-/* 测试发送结果正文：保留换行并限制最大高度，超出可滚动 */
-.test-send-content {
-  white-space: pre-wrap;
-  font-size: 13px;
-  max-height: 320px;
-  overflow: auto;
-}
-</style>

@@ -40,6 +40,8 @@ import (
 	"time"
 
 	// third-party
+
+	"github.com/creasty/defaults"
 	sqlite3 "github.com/ncruces/go-sqlite3"
 
 	// internal
@@ -51,12 +53,23 @@ import (
 // connPoolKey is the fixed key of the sqlite connection pool.
 const connPoolKey resourcepool.Key = "sqlitevtab:conn"
 
-// sqlitePoolOptions 是 NewSQLitePool 的函数式选项承载结构。
-// sqlitePoolOptions carries the functional options of NewSQLitePool.
+// sqlitePoolOptions 是 NewSQLitePool 的函数式选项承载结构：各字段默认值由 default 标签
+// 声明，先经 defaults.Set 填充，再由调用方传入的选项覆盖。
+// sqlitePoolOptions carries the functional options of NewSQLitePool: each field's default is
+// declared by its default tag, filled by defaults.Set first and then overridden by the options
+// the caller passes in.
 type sqlitePoolOptions struct {
-	connections  int
-	maxRows      int
-	queryTimeout time.Duration
+	// Connections sqlite 连接池默认上限。作为 sqlitevtab 自有选项默认值，不与 resourcepool
+	// 的默认配置（NewDefaultConfig.MaxTotal）隐式绑定。
+	// Connections the default sqlite connection pool cap. As a sqlitevtab-owned option default,
+	// it is not implicitly tied to the resourcepool default config (NewDefaultConfig.MaxTotal).
+	Connections int `default:"8"`
+	// MaxRows 单次查询最大返回行数。
+	// MaxRows the maximum number of rows a single query returns.
+	MaxRows int `default:"1000"`
+	// QueryTimeout 查询默认超时（仅在调用方 ctx 无截止时间时生效）。
+	// QueryTimeout the default query timeout (only applied when the caller's ctx has no deadline).
+	QueryTimeout time.Duration `default:"5s"`
 }
 
 // Option 配置 SQLitePool 的函数式选项。
@@ -66,21 +79,21 @@ type Option func(*sqlitePoolOptions)
 // WithConnections 设置 sqlite 连接池上限（默认 8）。
 // WithConnections sets the sqlite connection pool cap (default 8).
 func WithConnections(n int) Option {
-	return func(o *sqlitePoolOptions) { o.connections = n }
+	return func(o *sqlitePoolOptions) { o.Connections = n }
 }
 
 // WithMaxRows 设置单次查询最大返回行数（默认 1000）。
 // WithMaxRows sets the maximum number of rows a single query returns
 // (default 1000).
 func WithMaxRows(n int) Option {
-	return func(o *sqlitePoolOptions) { o.maxRows = n }
+	return func(o *sqlitePoolOptions) { o.MaxRows = n }
 }
 
 // WithQueryTimeout 设置查询默认超时（默认 5s；仅在调用方 ctx 无截止时间时生效）。
 // WithQueryTimeout sets the default query timeout (default 5s; only applied
 // when the caller's ctx has no deadline).
 func WithQueryTimeout(d time.Duration) Option {
-	return func(o *sqlitePoolOptions) { o.queryTimeout = d }
+	return func(o *sqlitePoolOptions) { o.QueryTimeout = d }
 }
 
 // registryEntry 是注册表条目：注册后不可变，覆盖时整体替换指针。
@@ -112,31 +125,22 @@ type SQLitePool struct {
 	queryTimeout time.Duration
 }
 
-// defaultConnections sqlite 连接池默认上限。作为 sqlitevtab 自有选项默认值，
-// 不与 resourcepool 的默认配置（NewDefaultConfig.MaxTotal）隐式绑定。
-// defaultConnections is the default sqlite connection pool cap. As a
-// sqlitevtab-owned option default, it is not implicitly tied to the
-// resourcepool default config (NewDefaultConfig.MaxTotal).
-const defaultConnections = 8
-
 // NewSQLitePool 创建 SQLitePool。连接在首次借出时经 Lifespan.Open 惰性建立，
 // 数据源实例在首次被 vtable 引用时惰性构建。
 // NewSQLitePool creates a SQLitePool. Connections are lazily established via
 // Lifespan.Open on first borrow, and datasource instances are lazily built on
 // first reference by a vtable.
 func NewSQLitePool(opts ...Option) *SQLitePool {
-	options := sqlitePoolOptions{
-		connections:  defaultConnections,
-		maxRows:      1000,
-		queryTimeout: 5 * time.Second,
-	}
+	var options sqlitePoolOptions
+	// 默认值由 default 标签声明（标签为编译期字面量，失败即为致命不变量）
+	defaults.MustSet(&options)
 	for _, opt := range opts {
 		opt(&options)
 	}
 	p := &SQLitePool{
 		registry:     make(map[string]*registryEntry),
-		maxRows:      options.maxRows,
-		queryTimeout: options.queryTimeout,
+		maxRows:      options.MaxRows,
+		queryTimeout: options.QueryTimeout,
 	}
 	// 连接池与数据源池均从默认资源池配置起步：连接池仅将 MaxTotal 覆盖为
 	// 连接数上限，数据源池保持默认配置（按数据源名各自独立实例池）。
@@ -144,7 +148,7 @@ func NewSQLitePool(opts ...Option) *SQLitePool {
 	// overrides only MaxTotal with the connection cap, while the datasource pool
 	// keeps the default config (one independent instance pool per datasource name).
 	connCfg := *resourcepool.NewDefaultConfig()
-	connCfg.MaxTotal = options.connections
+	connCfg.MaxTotal = options.Connections
 	p.connPool = resourcepool.NewManager(func(resourcepool.Key) (*sqliteConn, error) {
 		return &sqliteConn{pool: p, modules: make(map[string]uint64)}, nil
 	}, &connCfg)

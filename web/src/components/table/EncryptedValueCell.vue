@@ -11,17 +11,12 @@
     :loading="loading"
     @click.stop="emit('view-plaintext', item, fieldKey)"
   />
-  <template v-else>
+  <!-- S3 分支：对象键 + 存储大小 + 明文入口按同一行内基线对齐（间距走 4px 栅格 gap） -->
+  <div v-else class="d-inline-flex align-center ga-2">
     <span class="font-mono">{{ value }}</span>
-    <storage-size-chip
-      class="ml-2"
-      :value="Number(item[`${fieldKey}Length`] ?? 0)"
-      binary
-      density="comfortable"
-    />
+    <storage-size-chip :value="Number(item[`${fieldKey}Length`] ?? 0)" binary />
     <v-btn
       :text="$t('action.viewPlaintext')"
-      class="ml-2"
       size="small"
       variant="tonal"
       color="primary"
@@ -29,7 +24,7 @@
       :loading="loading"
       @click.stop="emit('view-plaintext', item, fieldKey)"
     />
-  </template>
+  </div>
 </template>
 
 <script setup lang="ts" name="encrypted-value-cell">

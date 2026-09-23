@@ -7,13 +7,13 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/manager"
+	"zhongkui.com/zhongkui/internal/manager/config"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 )
 
 // createTestSecureConfig 创建用于测试的安全响应头配置
-func createTestSecureConfig() *manager.SecureConfig {
-	return &manager.SecureConfig{
+func createTestSecureConfig() *config.SecureConfig {
+	return &config.SecureConfig{
 		XFrameOptions:           "DENY",
 		ContentSecurityPolicy:   "default-src 'self'",
 		XXSSProtection:          "1; mode=block",
@@ -25,8 +25,8 @@ func createTestSecureConfig() *manager.SecureConfig {
 }
 
 // createTestCORSConfig 创建用于测试的 CORS 配置
-func createTestCORSConfig() *manager.CORSConfig {
-	return &manager.CORSConfig{
+func createTestCORSConfig() *config.CORSConfig {
+	return &config.CORSConfig{
 		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowCredentials: true,
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
@@ -129,7 +129,7 @@ func TestSecureHeadersMiddleware(t *testing.T) {
 		})
 
 		Convey("当配置为空字符串时应设置空值响应头", func() {
-			emptyCfg := &manager.SecureConfig{}
+			emptyCfg := &config.SecureConfig{}
 			emptyMiddleware := SecureHeadersMiddleware(emptyCfg)
 			r := setupRouter(emptyMiddleware)
 			w := httptest.NewRecorder()
@@ -231,7 +231,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 		})
 
 		Convey("当 AllowCredentials 为 false 时应设置响应头为 false", func() {
-			cfgNoCreds := &manager.CORSConfig{
+			cfgNoCreds := &config.CORSConfig{
 				AllowOrigins:     []string{"*"},
 				AllowCredentials: false,
 				AllowHeaders:     []string{"Content-Type"},
@@ -316,7 +316,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 		})
 
 		Convey("AllowHeaders 为空时应设置空的 Access-Control-Allow-Headers", func() {
-			cfgNoHeaders := &manager.CORSConfig{
+			cfgNoHeaders := &config.CORSConfig{
 				AllowOrigins: []string{"*"},
 				AllowHeaders: []string{},
 				AllowMethods: []string{"GET"},
@@ -331,7 +331,7 @@ func TestCORSHeadersMiddleware(t *testing.T) {
 		})
 
 		Convey("AllowMethods 为空时预检请求应返回 403", func() {
-			cfgNoMethods := &manager.CORSConfig{
+			cfgNoMethods := &config.CORSConfig{
 				AllowOrigins: []string{"*"},
 				AllowHeaders: []string{"Content-Type"},
 				AllowMethods: []string{},

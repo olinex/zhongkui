@@ -107,7 +107,8 @@
                       icon="mdi-minus"
                       variant="tonal"
                       color="error"
-                      density="compact"
+                      :title="$t('action.remove')"
+                      :aria-label="$t('action.remove')"
                       @click="removePolicyAction(proxy.name, item, removeItem)"
                     />
                   </template>
@@ -121,11 +122,9 @@
                       :items="policyEffectOptions"
                       :item-title="policyEffectTitle"
                       :disabled="!listEditable"
-                      variant="outlined"
-                      density="compact"
                       hide-details
                       single-line
-                      style="width: 108px"
+                      class="policy-effect-select"
                     />
                     <v-btn
                       v-request="
@@ -144,7 +143,6 @@
                       color="primary"
                       variant="tonal"
                       size="small"
-                      density="compact"
                     />
                   </template>
                 </inner-edit-table>
@@ -498,3 +496,10 @@ const removePolicyAction = async (
   );
 };
 </script>
+
+<style scoped>
+/* Effect select keeps a fixed width so the append actions stay aligned in the row. */
+.policy-effect-select {
+  width: 108px;
+}
+</style>

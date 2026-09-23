@@ -1,4 +1,4 @@
-package views
+package views_test
 
 import (
 	"bytes"
@@ -12,6 +12,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/smartystreets/goconvey/convey"
 
+	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkui.com/zhongkui/internal/manager/views/admin"
+	"zhongkui.com/zhongkui/internal/manager/views/datasource"
+	"zhongkui.com/zhongkui/internal/manager/views/notification"
+	"zhongkui.com/zhongkui/internal/manager/views/tag"
+	"zhongkui.com/zhongkui/internal/manager/views/traffic"
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
@@ -28,25 +34,25 @@ type projectionCase struct {
 // searchProjectionCases 全部 19 个已实现字段投影的列表接口映射。
 func searchProjectionCases() []projectionCase {
 	return []projectionCase{
-		{"UserListGet", &UserListGetSearchIn{}, &UserListOut{}},
-		{"RbacPolicyTemplateListGet", &RbacPolicyTmplateListGetSearchIn{}, &RbacPolicyTemplateListOut{}},
-		{"GroupListGet", &GroupListGetSearchIn{}, &GroupListOut{}},
-		{"NamespaceListGet", &NamespaceListGetSearchIn{}, &NamespaceListOut{}},
-		{"CapturerListGet", &CapturerListGetSearchIn{}, &CapturerListOut{}},
-		{"TagRuleListGet", &TagRuleListGetSearchIn{}, &TagRuleListOut{}},
-		{"TagRuleSampleListGet", &TagRuleSampleListGetSearchIn{}, &TagRuleSampleListOut{}},
-		{"TagEventRuleListGet", &TagEventRuleListGetSearchIn{}, &TagEventRuleListOut{}},
-		{"Ipv4TcpListGet", &Ipv4TcpListGetSearchIn{}, &Ipv4TcpListGetListItemOut{}},
-		{"Ipv6TcpListGet", &Ipv6TcpListGetSearchIn{}, &Ipv6TcpListGetListItemOut{}},
-		{"HttpTransportListGet", &HttpTransportListGetSearchIn{}, &HttpTransportListGetListItemOut{}},
-		{"NetworkStackListGet", &NetworkStackListGetSearchIn{}, &NetworkStackListGetListItemOut{}},
-		{"NotificationChannelListGet", &NotificationChannelListGetSearchIn{}, &NotificationChannelListOut{}},
-		{"NotificationTargetListGet", &NotificationTargetListGetSearchIn{}, &NotificationTargetListOut{}},
-		{"NotificationGroupListGet", &NotificationGroupListGetSearchIn{}, &NotificationGroupListOut{}},
-		{"NotificationTemplateListGet", &NotificationTemplateListGetSearchIn{}, &NotificationTemplateListOut{}},
-		{"NotificationRecordListGet", &NotificationRecordListGetSearchIn{}, &NotificationRecordListOut{}},
-		{"TagEventRecordListGet", &TagEventRecordListGetSearchIn{}, &TagEventRecordListOut{}},
-		{"DatasourceListGet", &DatasourceListGetSearchIn{}, &DatasourceListOut{}},
+		{"UserListGet", &views.UserListGetSearchIn{}, &admin.UserListOut{}},
+		{"RbacPolicyTemplateListGet", &views.RbacPolicyTemplateListGetSearchIn{}, &admin.RbacPolicyTemplateListOut{}},
+		{"GroupListGet", &views.GroupListGetSearchIn{}, &admin.GroupListOut{}},
+		{"NamespaceListGet", &views.NamespaceListGetSearchIn{}, &admin.NamespaceListOut{}},
+		{"CapturerListGet", &views.CapturerListGetSearchIn{}, &admin.CapturerListOut{}},
+		{"TagRuleListGet", &views.TagRuleListGetSearchIn{}, &tag.TagRuleListOut{}},
+		{"TagRuleSampleListGet", &views.TagRuleSampleListGetSearchIn{}, &tag.TagRuleSampleListOut{}},
+		{"TagEventRuleListGet", &views.TagEventRuleListGetSearchIn{}, &tag.TagEventRuleListOut{}},
+		{"Ipv4TcpListGet", &views.Ipv4TcpListGetSearchIn{}, &traffic.Ipv4TcpListGetListItemOut{}},
+		{"Ipv6TcpListGet", &views.Ipv6TcpListGetSearchIn{}, &traffic.Ipv6TcpListGetListItemOut{}},
+		{"HttpTransportListGet", &views.HttpTransportListGetSearchIn{}, &traffic.HttpTransportListGetListItemOut{}},
+		{"NetworkStackListGet", &views.NetworkStackListGetSearchIn{}, &traffic.NetworkStackListGetListItemOut{}},
+		{"NotificationChannelListGet", &views.NotificationChannelListGetSearchIn{}, &notification.NotificationChannelListOut{}},
+		{"NotificationTargetListGet", &views.NotificationTargetListGetSearchIn{}, &notification.NotificationTargetListOut{}},
+		{"NotificationGroupListGet", &views.NotificationGroupListGetSearchIn{}, &notification.NotificationGroupListOut{}},
+		{"NotificationTemplateListGet", &views.NotificationTemplateListGetSearchIn{}, &notification.NotificationTemplateListOut{}},
+		{"NotificationRecordListGet", &views.NotificationRecordListGetSearchIn{}, &notification.NotificationRecordListOut{}},
+		{"TagEventRecordListGet", &views.TagEventRecordListGetSearchIn{}, &tag.TagEventRecordListOut{}},
+		{"DatasourceListGet", &views.DatasourceListGetSearchIn{}, &datasource.DatasourceListOut{}},
 	}
 }
 
@@ -94,17 +100,17 @@ func TestSelectFieldsCompleteness(t *testing.T) {
 // 空 fields 返回 nil、未知字段静默忽略、重复字段去重、不强制包含 id 列。
 func TestResolveSelectColumns(t *testing.T) {
 	convey.Convey("Fields 为空时返回 nil", t, func() {
-		in := &HttpTransportListGetSearchIn{}
+		in := &views.HttpTransportListGetSearchIn{}
 		convey.So(in.ResolveSelectColumns(), convey.ShouldBeNil)
 	})
 
 	convey.Convey("未知字段被静默忽略", t, func() {
-		in := &HttpTransportListGetSearchIn{Fields: []string{"unknown"}}
+		in := &views.HttpTransportListGetSearchIn{Fields: []string{"unknown"}}
 		convey.So(in.ResolveSelectColumns(), convey.ShouldBeEmpty)
 	})
 
 	convey.Convey("重复字段去重", t, func() {
-		in := &HttpTransportListGetSearchIn{Fields: []string{"timestamp", "timestamp"}}
+		in := &views.HttpTransportListGetSearchIn{Fields: []string{"timestamp", "timestamp"}}
 		columns := in.ResolveSelectColumns()
 		count := 0
 		for _, column := range columns {
@@ -116,14 +122,14 @@ func TestResolveSelectColumns(t *testing.T) {
 	})
 
 	convey.Convey("不强制包含 id 列：Fields 不含 id 时结果不含 id", t, func() {
-		in := &HttpTransportListGetSearchIn{Fields: []string{"url"}}
+		in := &views.HttpTransportListGetSearchIn{Fields: []string{"url"}}
 		columns := in.ResolveSelectColumns()
 		convey.So(len(columns), convey.ShouldEqual, 1)
 		convey.So(columns[0], convey.ShouldEqual, "url")
 	})
 
 	convey.Convey("NetworkStack 白名单不含 id（无唯一 ID），解析结果不含 id 列", t, func() {
-		in := &NetworkStackListGetSearchIn{}
+		in := &views.NetworkStackListGetSearchIn{}
 		convey.So(in.ResolveSelectColumns(), convey.ShouldBeNil)
 		in.Fields = []string{"timestamp", "seq"}
 		columns := in.ResolveSelectColumns()
@@ -146,7 +152,7 @@ func TestTrafficDetailInBinding(t *testing.T) {
 		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 		c.Request.Header.Set("Content-Type", "application/json")
 
-		var in HttpTransportDetailGetIn
+		var in traffic.HttpTransportDetailGetIn
 		convey.So(c.ShouldBindBodyWithJSON(&in), convey.ShouldBeNil)
 		convey.So(in.Namespace, convey.ShouldEqual, "default")
 		convey.So(in.ID.String(), convey.ShouldEqual, "0c0a2b3c-4d5e-6f70-8192-a3b4c5d6e7f8")
@@ -159,7 +165,7 @@ func TestTrafficDetailInBinding(t *testing.T) {
 		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 		c.Request.Header.Set("Content-Type", "application/json")
 
-		var in Ipv4TcpDetailGetIn
+		var in traffic.Ipv4TcpDetailGetIn
 		convey.So(c.ShouldBindBodyWithJSON(&in), convey.ShouldNotBeNil)
 	})
 
@@ -170,7 +176,7 @@ func TestTrafficDetailInBinding(t *testing.T) {
 		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
 		c.Request.Header.Set("Content-Type", "application/json")
 
-		var in Ipv6TcpDetailGetIn
+		var in traffic.Ipv6TcpDetailGetIn
 		convey.So(c.ShouldBindBodyWithJSON(&in), convey.ShouldNotBeNil)
 	})
 }
@@ -184,7 +190,7 @@ func TestProjectionOutputKeys(t *testing.T) {
 				ID: serializer.MustHexUUIDv4FromString("0c0a2b3c4d5e6f708192a3b4c5d6e7f8"),
 			},
 		}
-		out := newHttpTransportListGetListItemOut(&row)
+		out := traffic.NewHttpTransportListGetListItemOut(&row)
 
 		m := utils.ProjectItemFields(out, []string{"timestamp", "url", "unknownField"})
 		keys := stringSet(nil)
@@ -208,15 +214,15 @@ func TestProjectionCryptoFieldString(t *testing.T) {
 				ID: serializer.MustHexUUIDv4FromString("0c0a2b3c4d5e6f708192a3b4c5d6e7f8"),
 			},
 		}
-		out := newHttpTransportListGetListItemOut(&row)
+		out := traffic.NewHttpTransportListGetListItemOut(&row)
 		var cookie serializer.Crypto
 		convey.So(json.Unmarshal([]byte(`"aGVsbG8="`), &cookie), convey.ShouldBeNil)
 		out.ReqHdrCookie = &cookie
 
 		projected := utils.ProjectSearchItems(
-			[]*HttpTransportListGetListItemOut{out},
-			&HttpTransportListGetSearchIn{Fields: []string{"reqHdrCookie"}},
-			func(o **HttpTransportListGetListItemOut) any { return *o },
+			[]*traffic.HttpTransportListGetListItemOut{out},
+			&views.HttpTransportListGetSearchIn{Fields: []string{"reqHdrCookie"}},
+			func(o **traffic.HttpTransportListGetListItemOut) any { return *o },
 		)
 		convey.So(projected, convey.ShouldHaveLength, 1)
 

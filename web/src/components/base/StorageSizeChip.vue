@@ -16,6 +16,8 @@ const humanReadableValue = computed((): string => {
   }
 });
 
+// Defaults stay undefined so the theme layer owns the VChip baseline
+// (small + tonal); callers only override for a real semantic difference.
 const props = defineProps({
   value: {
     type: Number,
@@ -23,15 +25,15 @@ const props = defineProps({
   },
   color: {
     type: String,
-    default: "default",
+    default: undefined,
   },
   variant: {
     type: String as PropType<Variant>,
-    default: "tonal",
+    default: undefined,
   },
   density: {
     type: String as PropType<Density>,
-    default: "default",
+    default: undefined,
   },
   binary: {
     type: Boolean,

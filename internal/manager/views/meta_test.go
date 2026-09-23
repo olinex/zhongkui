@@ -185,7 +185,7 @@ func TestGetStructMeta(t *testing.T) {
 
 		Convey("未指定类型时应返回 nil", func() {
 			So(getStructMeta(nil), ShouldBeNil)
-			So(getStructFields(nil), ShouldBeNil)
+			So(GetStructFields(nil), ShouldBeNil)
 		})
 
 		Convey("命中枚举类绑定表的字段应附带 enumType 并标记为枚举", func() {

@@ -1,5 +1,5 @@
 <template>
-  <v-app-bar elevation="0" class="app-header">
+  <v-app-bar class="zk-hairline-bottom">
     <template #prepend>
       <v-btn variant="text" @click="gotoHome">
         <v-img src="@/assets/logo.png" size="xs" cover absolute round />
@@ -17,7 +17,7 @@
           </v-btn>
         </template>
         <v-card class="mx-auto">
-          <v-list density="compact">
+          <v-list>
             <v-list-item
               v-for="(namespace, index) in avaliableNamespaces"
               :key="index"
@@ -38,7 +38,7 @@
           </v-btn>
         </template>
         <v-card class="mx-auto">
-          <v-list density="compact">
+          <v-list>
             <v-list-item
               v-for="item in SUPPORT_LANGUAGES"
               v-show="item.value !== appStore.language"
@@ -55,6 +55,8 @@
         class="mr-2"
         variant="text"
         :icon="appStore.theme === DARK_THEME ? 'mdi-weather-night' : 'mdi-weather-sunny'"
+        :title="$t('action.toggleTheme')"
+        :aria-label="$t('action.toggleTheme')"
         @click="appStore.toggleTheme"
       />
       <v-btn
@@ -71,10 +73,12 @@
             v-show="userStore.valid"
             icon="mdi-dots-vertical"
             variant="text"
+            :title="$t('action.accountMenu')"
+            :aria-label="$t('action.accountMenu')"
             v-bind="props"
           ></v-btn>
         </template>
-        <v-list :lines="false" density="compact" nav>
+        <v-list :lines="false" nav>
           <v-list-item v-show="!profileCurrent" @click="gotoProfile">
             <template #prepend>
               <v-icon icon="mdi-account" />
@@ -166,10 +170,3 @@ const signOut = () => {
   });
 };
 </script>
-
-<style scoped>
-/* Hairline bottom border separating the app bar from page content. */
-.app-header {
-  border-bottom: 1px solid rgb(var(--v-theme-on-surface), 0.12);
-}
-</style>

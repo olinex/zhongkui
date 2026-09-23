@@ -1,33 +1,42 @@
 <template>
-  <v-expansion-panels v-model="expanded" class="guide-panel" variant="accordion" density="compact">
+  <v-expansion-panels
+    v-model="expanded"
+    class="guide-panel zk-panel"
+  >
     <v-expansion-panel>
       <v-expansion-panel-title class="panel-titlebar">
         <div class="panel-head">
-          <v-icon size="18" class="panel-head-icon">mdi-database-search</v-icon>
-          <span class="panel-title">{{ $t("guide.title") }}</span>
+          <v-icon size="18" color="primary">mdi-database-search</v-icon>
+          <span class="zk-editor-title">{{ $t("guide.title") }}</span>
         </div>
       </v-expansion-panel-title>
       <v-expansion-panel-text>
         <!-- 数据源速查 -->
         <div class="guide-section">
           <div class="section-head">
-            <span class="section-badge">01</span>
-            <span class="section-title">{{ $t("guide.datasource") }}</span>
+            <span class="zk-step-badge">01</span>
+            <span class="zk-label-caps">{{ $t("guide.datasource") }}</span>
           </div>
-          <div v-if="datasources.length === 0" class="guide-empty">
+          <div v-if="datasources.length === 0" class="guide-empty zk-hint">
             <v-icon size="16" start>mdi-database-off</v-icon>
             <span>{{ $t("guide.datasourceEmpty") }}</span>
           </div>
           <template v-else>
-            <div v-for="ds in datasources" :key="ds.name" class="ds-card">
+            <div
+              v-for="ds in datasources"
+              :key="ds.name"
+              class="ds-card zk-panel zk-interactive-card"
+            >
               <div class="ds-head">
                 <div class="ds-ident">
                   <v-avatar size="28" color="primary" variant="tonal" class="ds-avatar">
                     <v-icon size="16">mdi-database</v-icon>
                   </v-avatar>
                   <div class="ds-ident-text">
-                    <code class="ds-name">{{ ds.name }}</code>
-                    <span class="ds-count">{{ ds.columns.length }} {{ $t("guide.columns") }}</span>
+                    <code class="ds-name zk-mono-emphasis">{{ ds.name }}</code>
+                    <span class="ds-count zk-hint"
+                      >{{ ds.columns.length }} {{ $t("guide.columns") }}</span
+                    >
                   </div>
                 </div>
                 <v-btn
@@ -44,14 +53,13 @@
                 <v-chip
                   v-for="col in ds.columns"
                   :key="col.name"
-                  size="small"
                   variant="outlined"
                   class="ds-col"
                   :title="$t('guide.clickInsertColumn')"
                   @click="insertColumn(ds, col)"
                 >
-                  <span class="ds-col-name">{{ col.name }}</span>
-                  <span class="ds-col-type">{{ $t(columnTypeLabel(col.type)) }}</span>
+                  <span class="font-mono">{{ col.name }}</span>
+                  <span class="zk-hint">{{ $t(columnTypeLabel(col.type)) }}</span>
                 </v-chip>
               </div>
             </div>
@@ -59,12 +67,12 @@
         </div>
 
         <!-- 场景样例：一键插入可运行片段 -->
-        <div class="guide-section">
+        <div class="guide-section zk-hairline-top">
           <div class="section-head">
-            <span class="section-badge">02</span>
-            <span class="section-title">{{ $t("guide.samples") }}</span>
+            <span class="zk-step-badge">02</span>
+            <span class="zk-label-caps">{{ $t("guide.samples") }}</span>
           </div>
-          <div v-if="samples.length === 0" class="guide-empty">
+          <div v-if="samples.length === 0" class="guide-empty zk-hint">
             <v-icon size="16" start>mdi-flask-outline</v-icon>
             <span>{{ $t("guide.sampleEmpty") }}</span>
           </div>
@@ -72,7 +80,7 @@
             v-for="s in samples"
             :key="s.titleKey"
             variant="outlined"
-            class="sample-card"
+            class="sample-card zk-interactive-card"
             :aria-label="$t('guide.clickInsertSample')"
             @click="insert(s.snippet)"
           >
@@ -80,10 +88,12 @@
               <v-icon size="18">{{ sampleIcon(s.titleKey) }}</v-icon>
             </v-avatar>
             <div class="sample-main">
-              <div class="sample-title">{{ $t(s.titleKey) }}</div>
-              <div class="sample-desc">{{ $t(s.descKey) }}</div>
+              <div class="zk-editor-title">{{ $t(s.titleKey) }}</div>
+              <div class="sample-desc zk-hint">{{ $t(s.descKey) }}</div>
             </div>
-            <v-icon size="18" class="sample-arrow">mdi-chevron-right</v-icon>
+            <v-icon size="18" class="sample-arrow text-on-surface-variant"
+              >mdi-chevron-right</v-icon
+            >
           </v-card>
         </div>
       </v-expansion-panel-text>
@@ -162,9 +172,9 @@ const sampleIcon = (titleKey: string): string => {
 </script>
 
 <style scoped>
+/* 参考栏外壳（hairline 描边 / 圆角 / surface 背景）走全局 .zk-panel，
+   卡片 hover 反馈走全局 .zk-interactive-card，此处只保留布局定位 */
 .guide-panel {
-  border: 1px solid rgb(var(--v-theme-border));
-  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -172,103 +182,60 @@ const sampleIcon = (titleKey: string): string => {
    保留适度左右留白，避免内容与参考栏边框紧贴 */
 /* stylelint-disable-next-line selector-class-pattern */
 .guide-panel :deep(.v-expansion-panel-text__wrapper) {
-  padding: 4px 12px 12px;
+  padding: var(--zk-space-1) var(--zk-space-3) var(--zk-space-3);
 }
 
 .panel-titlebar {
-  min-height: 40px;
+  min-height: var(--zk-control-height-compact);
 }
 
 .panel-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.panel-head-icon {
-  color: rgb(var(--v-theme-primary));
-}
-
-.panel-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface));
+  gap: var(--zk-space-2);
 }
 
 .guide-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--zk-space-2);
 }
 
+/* 分区之间的分隔线走 .zk-hairline-top */
 .guide-section + .guide-section {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed rgb(var(--v-theme-border));
+  margin-top: var(--zk-space-3);
+  padding-top: var(--zk-space-3);
 }
 
 .section-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.section-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  color: rgb(var(--v-theme-on-primary));
-  background: rgb(var(--v-theme-primary));
-}
-
-.section-title {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: rgb(var(--v-theme-on-surface-variant));
+  gap: var(--zk-space-2);
 }
 
 .guide-empty {
   display: flex;
   align-items: center;
-  font-size: 12px;
-  line-height: 1.5;
-  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 .ds-card {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1px solid rgb(var(--v-theme-border));
-  border-radius: 8px;
-  background: rgb(var(--v-theme-surface));
-  transition: border-color 0.16s ease;
-}
-
-.ds-card:hover {
-  border-color: rgb(var(--v-theme-primary));
+  gap: var(--zk-space-2);
+  padding: var(--zk-space-3);
 }
 
 .ds-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--zk-space-2);
 }
 
 .ds-ident {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--zk-space-2);
   flex: 1;
   min-width: 0;
 }
@@ -288,54 +255,31 @@ const sampleIcon = (titleKey: string): string => {
 }
 
 .ds-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-primary));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .ds-count {
-  font-size: 11px;
-  color: rgb(var(--v-theme-on-surface-variant));
   white-space: nowrap;
 }
 
 .ds-cols {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--zk-space-1);
 }
 
 .ds-col {
   cursor: pointer;
 }
 
-.ds-col-name {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-weight: 500;
-}
-
-.ds-col-type {
-  font-size: 11px;
-  color: rgb(var(--v-theme-on-surface-variant));
-}
-
 .sample-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: var(--zk-space-3);
+  padding: var(--zk-space-3);
   cursor: pointer;
-  transition:
-    border-color 0.16s ease,
-    background-color 0.16s ease;
-}
-
-.sample-card:hover {
-  border-color: rgb(var(--v-theme-primary));
-  background: rgb(var(--v-theme-surface-variant), 0.4);
 }
 
 .sample-avatar {
@@ -345,32 +289,16 @@ const sampleIcon = (titleKey: string): string => {
 .sample-main {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--zk-space-1);
   min-width: 0;
   flex: 1;
 }
 
-.sample-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgb(var(--v-theme-on-surface));
-}
-
 .sample-desc {
-  font-size: 12px;
-  line-height: 1.4;
-  color: rgb(var(--v-theme-on-surface-variant));
   overflow-wrap: break-word;
 }
 
 .sample-arrow {
   flex-shrink: 0;
-  color: rgb(var(--v-theme-on-surface-variant));
-  opacity: 0.7;
-}
-
-.sample-card:hover .sample-arrow {
-  opacity: 1;
-  color: rgb(var(--v-theme-primary));
 }
 </style>

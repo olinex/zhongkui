@@ -19,7 +19,7 @@
         <!-- 额外筛选区：抓包时间（timestamp）与入库时间（createdAt）两个必填时间范围，
                不参与高级条件编辑器（由 buildFilter 强制注入） -->
         <template #extra-filters>
-          <div class="extra-filters d-flex flex-wrap align-center ga-2 mt-2">
+          <div class="extra-filters zk-filter-form d-flex flex-wrap align-center ga-2 mt-2">
             <date-time-range-field
               v-model="timestampRange"
               v-bind="timestampRangeProps"
@@ -924,19 +924,3 @@ onMounted(async () => {
   await loadSearchOptions();
 });
 </script>
-
-<style scoped>
-/* Collapse the empty message slot of time range filter inputs so the extra filter row
-   keeps compact; validation errors still expand it.
-   `.v-input__details` is a Vuetify BEM element class (double underscore),
-   exempted from the kebab-case class pattern rule. */
-/* stylelint-disable-next-line selector-class-pattern */
-.extra-filters :deep(.v-input__details:has(.v-messages:empty)) {
-  min-height: 0;
-  padding-top: 0;
-}
-
-.extra-filters :deep(.v-messages:empty) {
-  min-height: 0;
-}
-</style>

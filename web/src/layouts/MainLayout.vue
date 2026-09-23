@@ -6,7 +6,7 @@
       :expand-on-hover="!pinned"
       permanent
       width="220"
-      class="nav-drawer"
+      class="zk-hairline-right"
     >
       <!-- 固定展开切换：点击后侧边栏保持展开，不再随鼠标悬停收起；偏好持久化到本地 -->
       <template #append>
@@ -40,6 +40,17 @@
                 <template #prepend>
                   <v-icon>{{ parent.icon }}</v-icon>
                 </template>
+                <!--
+                  父级标识跟随全部子项的标识语义：全部子项功能不可用 → 锁定标识，全部子项受
+                  命名空间影响 → 命名空间标识（两者同时命中时锁定优先，见 navBadgeOf）。
+                  声明 #append 会接管 Vuetify 默认注入的展开箭头，故此处以不指定 icon 的 v-icon
+                  继承父级 VListGroup 经 defaults 注入的 appendIcon（即展开/收起箭头），
+                  避免重复声明箭头图标及其展开态映射
+                -->
+                <template #append>
+                  <nav-badge :kind="groupBadge(parent)" :text="groupBadgeReason(parent)" />
+                  <v-icon />
+                </template>
               </v-list-item>
             </template>
             <v-list-item
@@ -53,19 +64,14 @@
               nav
               :to="childTo(child)"
             >
-              <!-- 仅对受命名空间影响的子项叠加 Namespace 标识：区分该页面是否随命名空间切换而变化 -->
-              <template v-if="child.namespaceScoped" #append>
-                <v-tooltip location="top">
-                  <template #activator="{ props: tooltipProps }">
-                    <v-icon
-                      v-bind="tooltipProps"
-                      icon="mdi-alpha-n-box-outline"
-                      size="small"
-                      color="primary"
-                    />
-                  </template>
-                  <span>{{ $t("navbar.namespaceScoped") }}</span>
-                </v-tooltip>
+              <!-- 功能未开启的子项不隐藏，而以次级文本色置为不可用态；点击进入该页面后由
+                   路由守卫统一引导到「功能不可用」说明页 -->
+              <template v-if="isChildUnavailable(parent, child)" #title>
+                <span class="text-on-surface-variant">{{ $t(child.title) }}</span>
+              </template>
+              <!-- 子项标识：功能不可用（锁定）优先于受命名空间影响，两者同时命中时只展示锁定 -->
+              <template v-if="childBadge(parent, child)" #append>
+                <nav-badge :kind="childBadge(parent, child)" :text="featureReason(parent, child)" />
               </template>
             </v-list-item>
           </v-list-group>
@@ -73,7 +79,7 @@
       </v-list>
     </v-navigation-drawer>
     <v-main class="d-flex mb-6">
-      <v-container class="pa-4 pa-md-6" style="max-width: 1440px">
+      <v-container class="pa-4 pa-md-6 zk-page-container">
         <slot name="prepend" />
         <!--
           页面标题以面包屑形式展示：首页可点击返回，导航树匹配到的祖先层级
@@ -94,21 +100,57 @@
 </template>
 
 <script setup lang="ts" name="main-layout">
-import { navigationGroups } from "@/navigation";
-import type { NavChild } from "@/navigation";
+import { filterNavigationByPerm, navBadgeOf, navigationGroups } from "@/navigation";
+import type { NavBadgeKind, NavChild, NavGroup } from "@/navigation";
 import { useConfigSyncStore } from "@/stores/configSync";
 import { useFeaturesStore } from "@/stores/features";
 import { localManager } from "@/stores/local";
+import { useUserStore } from "@/stores/user";
 
 const route = useRoute();
+const featuresStore = useFeaturesStore();
 
-// 按功能开关过滤导航组：设置 feature 且开关关闭的分组（如 AI 助手）不展示。
+// 按权限点过滤导航组：子项需满足其声明的权限点，分组内子项全部隐藏时该分组一并隐藏。
+// 功能开关不参与过滤：功能关闭的入口仍展示在侧边栏，仅置为不可用态（见 isChildUnavailable）。
 const visibleNavigationGroups = computed(() => {
-  const featuresStore = useFeaturesStore();
-  return navigationGroups.filter(
-    (group) => !group.feature || featuresStore.isEnable(group.feature),
-  );
+  const userStore = useUserStore();
+  return filterNavigationByPerm(navigationGroups, (perm) => userStore.can(perm.obj, perm.act));
 });
+
+// childFeature 子项自身声明的 feature 优先，否则继承所属分组（如 AI 分组下的子项）
+const childFeature = (parent: NavGroup, child: NavChild): string | undefined =>
+  child.feature ?? parent.feature;
+
+// isChildUnavailable 功能关闭的入口不隐藏，而是置为不可用态；点击后由路由守卫
+// 统一引导到「功能不可用」说明页
+const isChildUnavailable = (parent: NavGroup, child: NavChild): boolean => {
+  const key = childFeature(parent, child);
+  return !!key && !featuresStore.isEnable(key);
+};
+
+// featureReason 不可用原因（后端按语言下发，可能为空，模板回退通用提示）
+const featureReason = (parent: NavGroup, child: NavChild): string => {
+  const key = childFeature(parent, child);
+  return key ? featuresStore.reasonOf(key) : "";
+};
+
+// childBadge 子项标识：功能不可用优先于受命名空间影响（规则见 navBadgeOf）
+const childBadge = (parent: NavGroup, child: NavChild): NavBadgeKind | undefined =>
+  navBadgeOf(isChildUnavailable(parent, child), !!child.namespaceScoped);
+
+// groupBadge 父级标识：仅在**全部**子项命中同一语义时才跟随展示——部分子项不可用、或部分子项
+// 与命名空间无关时，父级标识会以偏概全，故此时不展示。判定基于该分组当前可见（已按权限过滤）
+// 的子项，即用户实际看到的子项；两类语义同时命中时锁定优先（与子项共用 navBadgeOf）
+const groupBadge = (parent: NavGroup): NavBadgeKind | undefined =>
+  navBadgeOf(
+    parent.childrens.every((child) => isChildUnavailable(parent, child)),
+    parent.childrens.every((child) => !!child.namespaceScoped),
+  );
+
+// groupBadgeReason 父级锁定标识的说明：取分组自身声明的功能原因（子项继承该功能），
+// 分组未声明功能时为空串（由 nav-badge 回退通用提示）
+const groupBadgeReason = (parent: NavGroup): string =>
+  parent.feature ? featuresStore.reasonOf(parent.feature) : "";
 
 const props = defineProps({
   currentNav: {
@@ -196,19 +238,14 @@ watch(
 </script>
 
 <style scoped>
-/* Hairline right border separating the drawer from page content. */
-.nav-drawer {
-  border-right: 1px solid rgb(var(--v-theme-on-surface), 0.12);
-}
-
 /* Indent child items under their parent group heading. */
 .nav-child {
-  margin-left: 16px;
+  margin-left: var(--zk-space-4);
 }
 
 /* 加速 v-list-group 展开/收起高度动画（Vuetify 默认 0.3s → 0.15s） */
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
 :deep(.v-list-group__items) {
-  transition-duration: 0.15s !important;
+  transition-duration: var(--zk-transition-fast) !important;
 }
 </style>

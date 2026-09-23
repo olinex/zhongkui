@@ -51,6 +51,22 @@ func init() {
 		},
 	})
 	enum.Register(enum.Type{
+		Name: "llmModelKind",
+		Entries: []enum.Entry{
+			{Key: "chat", Value: "chat"},
+			{Key: "embedding", Value: "embedding"},
+		},
+	})
+	enum.Register(enum.Type{
+		Name: "llmSlot",
+		Entries: []enum.Entry{
+			{Key: "flash", Value: "flash"},
+			{Key: "standard", Value: "standard"},
+			{Key: "advanced", Value: "advanced"},
+			{Key: "embedding", Value: "embedding"},
+		},
+	})
+	enum.Register(enum.Type{
 		Name: "notificationRecordStatus",
 		Entries: []enum.Entry{
 			{Key: "pending", Value: "pending"},
@@ -109,5 +125,17 @@ var enumBindings = map[string]map[string]string{
 	},
 	"TagEventRecordListOut": {
 		"status": "tagAlertStatus",
+	},
+	"LlmModelListOut": {
+		"kind": "llmModelKind",
+	},
+	"LlmModelDetailOut": {
+		"kind": "llmModelKind",
+	},
+	"LlmModelCreateIn": {
+		"kind": "llmModelKind",
+	},
+	"LlmModelTestIn": {
+		"kind": "llmModelKind",
 	},
 }

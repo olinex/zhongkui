@@ -2,71 +2,53 @@
   <!-- 行详情对话框：只读明细以紧凑卡片对话框展示（与发送记录详情一致，便于聚焦字段）；
        字段按 kind 分支渲染；存在加密/S3 等操作字段时保留操作列，否则退化为两列；
        plain 字段按列表页方式（AdaptiveCell）依 type 渲染，而非纯文本 -->
-  <v-dialog :model-value="modelValue" max-width="760" @update:model-value="onUpdate">
-    <v-card>
-      <v-toolbar density="compact">
-        <v-toolbar-title class="text-no-wrap">
-          {{ title }}
-        </v-toolbar-title>
-        <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="onUpdate(false)" />
-      </v-toolbar>
-      <div class="px-6 py-4 overflow-y-auto" style="max-height: 70vh">
-        <v-table density="compact">
-          <thead v-if="showActions">
-            <tr>
-              <th class="text-no-wrap">{{ $t("model.__base.field.field") }}</th>
-              <th>{{ $t("model.__base.field.value") }}</th>
-              <th class="text-no-wrap">{{ $t("model.__base.field.action") }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="field in fields" :key="field.key">
-              <td class="text-no-wrap font-weight-medium">
-                {{ field.label }}
-              </td>
-              <td class="detail-value">
-                <template v-if="field.kind === 'crypto'">
-                  <v-chip color="warning" variant="tonal" size="small">
-                    {{ $t("model.__base.field.encrypted") }}
-                  </v-chip>
-                </template>
-                <template v-else-if="field.kind === 's3'">
-                  <span class="font-mono">{{ field.display }}</span>
-                  <storage-size-chip
-                    class="ml-2"
-                    :value="field.length"
-                    binary
-                    density="comfortable"
-                  />
-                </template>
-                <template v-else>
-                  <adaptive-cell :header="plainHeader(field)" :item="plainItem(field)" />
-                </template>
-              </td>
-              <td v-if="showActions" class="text-no-wrap">
-                <template
-                  v-if="field.kind === 'crypto' || (field.kind === 's3' && field.length > 0)"
-                >
-                  <v-btn
-                    :text="$t('action.viewPlaintext')"
-                    size="small"
-                    variant="tonal"
-                    color="primary"
-                    :loading="plaintextLoading === field.key"
-                    @click="$emit('view-plaintext', field)"
-                  />
-                </template>
-                <template v-else-if="field.kind === 's3'">
-                  <v-chip size="small">{{ $t("notice.plaintextEmpty") }}</v-chip>
-                </template>
-              </td>
-            </tr>
-          </tbody>
-        </v-table>
-      </div>
-    </v-card>
-  </v-dialog>
+  <app-dialog :model-value="modelValue" :title="title" size="md" @update:model-value="onUpdate">
+    <v-table density="compact">
+      <thead v-if="showActions">
+        <tr>
+          <th class="text-no-wrap">{{ $t("model.__base.field.field") }}</th>
+          <th>{{ $t("model.__base.field.value") }}</th>
+          <th class="text-no-wrap">{{ $t("model.__base.field.action") }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr v-for="field in fields" :key="field.key">
+          <td class="text-no-wrap font-weight-medium">
+            {{ field.label }}
+          </td>
+          <td class="detail-value">
+            <template v-if="field.kind === 'crypto'">
+              <v-chip color="warning">
+                {{ $t("model.__base.field.encrypted") }}
+              </v-chip>
+            </template>
+            <template v-else-if="field.kind === 's3'">
+              <span class="font-mono">{{ field.display }}</span>
+              <storage-size-chip class="ml-2" :value="field.length" binary density="comfortable" />
+            </template>
+            <template v-else>
+              <adaptive-cell :header="plainHeader(field)" :item="plainItem(field)" />
+            </template>
+          </td>
+          <td v-if="showActions" class="text-no-wrap">
+            <template v-if="field.kind === 'crypto' || (field.kind === 's3' && field.length > 0)">
+              <v-btn
+                :text="$t('action.viewPlaintext')"
+                size="small"
+                variant="tonal"
+                color="primary"
+                :loading="plaintextLoading === field.key"
+                @click="$emit('view-plaintext', field)"
+              />
+            </template>
+            <template v-else-if="field.kind === 's3'">
+              <v-chip>{{ $t("notice.plaintextEmpty") }}</v-chip>
+            </template>
+          </td>
+        </tr>
+      </tbody>
+    </v-table>
+  </app-dialog>
 </template>
 
 <script setup lang="ts" name="model-detail-dialog">

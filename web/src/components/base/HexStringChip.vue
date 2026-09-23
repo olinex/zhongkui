@@ -14,6 +14,10 @@
 import { copyToClipboard } from "@/utils/clipboard";
 import type { Variant } from "../@types/base";
 
+// size / variant / color are intentionally unset by default: the theme layer
+// already provides the VChip baseline (small + tonal), so leaving them
+// undefined keeps every chip in the family identical unless a caller really
+// needs a semantic override (e.g. color="info" for hashes).
 defineProps({
   value: {
     type: String,
@@ -21,15 +25,15 @@ defineProps({
   },
   size: {
     type: String,
-    default: "default",
+    default: undefined,
   },
   color: {
     type: String,
-    default: "default",
+    default: undefined,
   },
   variant: {
     type: String as PropType<Variant>,
-    default: "tonal",
+    default: undefined,
   },
   prefix: {
     type: String,

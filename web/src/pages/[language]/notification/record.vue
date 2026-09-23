@@ -11,60 +11,49 @@
       >
         <!-- 状态列：按发送状态着色（成功=success / 失败=error / 待处理=默认） -->
         <template #cell-status="{ item }">
-          <v-chip size="small" :color="statusColor(item.status)">
+          <v-chip :color="statusColor(item.status)">
             {{ enumLabelOf(EnumClass.notificationRecordStatus, item.status) }}
           </v-chip>
         </template>
         <!-- 渠道类型列：展示可读的渠道类型名 -->
         <template #cell-channelType="{ item }">
-          <v-chip size="small" variant="tonal">
+          <v-chip>
             {{ enumLabelOf(EnumClass.channelType, item.channelType) }}
           </v-chip>
         </template>
         <!-- 事件类型列：展示经过 i18n 翻译的枚举 label（键为事件注册表返回的 event 键） -->
         <template #cell-eventType="{ item }">
-          <v-chip size="small" variant="tonal">
+          <v-chip>
             {{ enumLabelOf(EnumClass.notificationEvent, item.eventType) }}
           </v-chip>
         </template>
       </search-table>
 
       <!-- 记录详情对话框：只读展示基础字段、payload（美化 JSON）与失败原因（如有） -->
-      <v-dialog v-model="detailDialog" max-width="760">
-        <v-card>
-          <v-toolbar density="compact">
-            <v-toolbar-title class="text-no-wrap">
-              {{ $t("model.notificationRecord.name") }}
-            </v-toolbar-title>
-            <v-spacer />
-            <v-btn icon="mdi-close" variant="text" @click="detailDialog = false" />
-          </v-toolbar>
-          <div class="px-6 py-4">
-            <v-table density="compact">
-              <tbody>
-                <tr v-for="field in detailFields" :key="field.key">
-                  <td class="text-no-wrap font-weight-medium">{{ field.label }}</td>
-                  <td>{{ field.display }}</td>
-                </tr>
-              </tbody>
-            </v-table>
+      <app-dialog v-model="detailDialog" :title="$t('model.notificationRecord.name')" size="md">
+        <v-table density="compact">
+          <tbody>
+            <tr v-for="field in detailFields" :key="field.key">
+              <td class="text-no-wrap font-weight-medium">{{ field.label }}</td>
+              <td>{{ field.display }}</td>
+            </tr>
+          </tbody>
+        </v-table>
 
-            <v-divider class="my-3" />
+        <v-divider class="my-3" />
 
-            <div class="text-subtitle-2 font-weight-medium mb-2">
-              {{ $t("model.notificationRecord.field.payload") }}
-            </div>
-            <pre class="payload-view">{{ detailPayload }}</pre>
+        <div class="text-subtitle-2 font-weight-medium mb-2">
+          {{ $t("model.notificationRecord.field.payload") }}
+        </div>
+        <pre class="zk-code-preview text-body-2">{{ detailPayload }}</pre>
 
-            <v-alert v-if="detailError" type="error" variant="tonal" density="compact" class="mt-3">
-              <div class="text-subtitle-2 font-weight-medium mb-1">
-                {{ $t("model.notificationRecord.field.error") }}
-              </div>
-              <div class="text-body-2 error-view">{{ detailError }}</div>
-            </v-alert>
+        <v-alert v-if="detailError" type="error" class="mt-3">
+          <div class="text-subtitle-2 font-weight-medium mb-1">
+            {{ $t("model.notificationRecord.field.error") }}
           </div>
-        </v-card>
-      </v-dialog>
+          <div class="text-body-2 error-view">{{ detailError }}</div>
+        </v-alert>
+      </app-dialog>
     </template>
   </main-layout>
 </template>
@@ -202,17 +191,8 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
 </script>
 
 <style scoped>
-/* payload 美化 JSON 视图：可滚动、自动换行，便于浏览长报文 */
-.payload-view {
-  white-space: pre-wrap;
-  word-break: break-all;
-  background-color: rgb(var(--v-theme-surface-variant));
-  border-radius: 4px;
-  padding: 12px;
-  font-size: 13px;
-  max-height: 320px;
-  overflow: auto;
-}
+/* payload 美化 JSON 视图的外观（弱化底色 + 换行 + 断词 + 内边距）统一走
+   .zk-code-preview，超高内容由 AppDialog 的滚动承载，不再本地限高 */
 
 /* 失败原因长文本自动换行 */
 .error-view {

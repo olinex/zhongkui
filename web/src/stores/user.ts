@@ -195,6 +195,17 @@ export const useUserStore = defineStore("user", {
         return await this.enforcer?.enforce(rvals);
       }
     },
+    // can synchronously evaluates one permission point against the loaded RBAC
+    // snapshot. Argument order (sub, obj, act, nsp) mirrors the backend authorize
+    // middleware; the namespace is read from local storage, the same source the
+    // X-Namespace request header uses. Returns false while the authorization
+    // info has not been loaded yet.
+    can(obj: string, act: string): boolean {
+      if (this.enforcer === null) {
+        return false;
+      }
+      return this.enforcer.enforceSync(this.unionID, obj, act, localManager.getNamespace());
+    },
     async getAvailableNamespaces(): Promise<string[]> {
       if (this.enforcer === null) {
         return [];

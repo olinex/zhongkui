@@ -7,7 +7,6 @@
       icon="mdi-magnify"
       color="primary"
       variant="text"
-      density="compact"
       :title="$t('action.query')"
       :aria-label="$t('action.query')"
       @click="query"
@@ -17,7 +16,6 @@
       :disabled="loading"
       icon="mdi-refresh"
       variant="text"
-      density="compact"
       :title="$t('action.refresh')"
       :aria-label="$t('action.refresh')"
       @click="refresh"
@@ -27,21 +25,31 @@
       icon="mdi-plus"
       color="primary"
       variant="text"
-      density="compact"
       :title="$t('action.create')"
       :aria-label="$t('action.create')"
       @click="create"
     />
+    <!-- 常驻次级按钮（alwaysShow）：与查询/刷新/创建同级，收起时也保持展示 -->
+    <v-btn
+      v-for="(action, index) in alwaysShowActions"
+      :key="index"
+      :icon="action.icon"
+      :color="action.color"
+      :loading="action.loading"
+      variant="text"
+      :title="action.title"
+      :aria-label="action.title"
+      @click="action.onClick"
+    />
     <!-- 次级按钮：仅可收起时随收起状态隐藏，否则始终展示 -->
     <template v-if="!collapsible || !collapse">
       <v-btn
-        v-for="(action, index) in actions"
+        v-for="(action, index) in collapsibleActions"
         :key="index"
         :icon="action.icon"
         :color="action.color"
         :loading="action.loading"
         variant="text"
-        density="compact"
         :title="action.title"
         :aria-label="action.title"
         @click="action.onClick"
@@ -53,7 +61,6 @@
       v-if="collapsible"
       :icon="collapse ? 'mdi-chevron-right' : 'mdi-chevron-left'"
       variant="text"
-      density="compact"
       :title="$t(collapse ? 'action.expand' : 'action.collapse')"
       :aria-label="$t(collapse ? 'action.expand' : 'action.collapse')"
       @click="collapse = !collapse"
@@ -67,7 +74,7 @@
 // - 按钮轮廓与背景容器（v-sheet / v-card）一致：variant="text"
 // - collapsible 时收起仅保留常驻按钮（刷新 / 创建），次级按钮隐藏
 
-// 次级操作按钮定义（收起时隐藏）
+// 次级操作按钮定义（收起时隐藏，alwaysShow 的除外）
 export interface ActionButton {
   /** 图标名（mdi-*） */
   icon: string;
@@ -77,11 +84,13 @@ export interface ActionButton {
   color?: string;
   /** 加载状态，按钮展示进度指示 */
   loading?: boolean;
+  /** 常驻标志：true 时收起状态也保持展示（可选） */
+  alwaysShow?: boolean;
   /** 点击回调 */
   onClick: () => void;
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     /** 查询操作，显式查询模式下发起查询；收起时始终展示（不传则不渲染） */
     query?: () => void;
@@ -89,7 +98,7 @@ withDefaults(
     refresh?: () => void;
     /** 创建操作，收起时始终展示（不传则不渲染） */
     create?: () => void;
-    /** 次级操作，收起时隐藏 */
+    /** 次级操作，收起时隐藏（alwaysShow 的除外） */
     actions?: ActionButton[];
     /** 是否可收起（展示收起/展开切换按钮） */
     collapsible?: boolean;
@@ -105,6 +114,11 @@ withDefaults(
     loading: false,
   },
 );
+
+// 常驻次级按钮（alwaysShow）：收起时也保持展示
+const alwaysShowActions = computed(() => props.actions.filter((a) => a.alwaysShow));
+// 普通次级按钮：收起时隐藏
+const collapsibleActions = computed(() => props.actions.filter((a) => !a.alwaysShow));
 
 // 收起状态：默认收起，仅展示刷新/创建等常驻按钮
 const collapse = ref(true);

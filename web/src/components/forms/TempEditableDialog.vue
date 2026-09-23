@@ -1,29 +1,23 @@
 <template>
-  <v-dialog v-model="dialog" max-width="600">
-    <v-card :prepend-icon="prependIcon" :title="title">
-      <v-card-text>
-        <slot name="body" :proxy="proxy" :editable="forceEditable || editable" />
-      </v-card-text>
-      <v-divider />
-      <v-card-actions>
-        <v-spacer />
-        <v-btn :text="$t(`action.close`)" variant="plain" @click="close" />
-        <v-btn
-          v-show="!forceEditable && !editable"
-          :text="$t(`action.edit`)"
-          variant="tonal"
-          @click="editable = true"
-        />
-        <v-btn
-          v-show="forceEditable || editable"
-          v-request="confirm"
-          color="primary"
-          :text="$t(`action.confirm`)"
-          :disabled="confirmDisabled"
-        />
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <app-dialog v-model="dialog" :title="title" :icon="prependIcon" size="sm">
+    <slot name="body" :proxy="proxy" :editable="forceEditable || editable" />
+    <template #footer>
+      <v-btn :text="$t(`action.close`)" variant="text" @click="close" />
+      <v-btn
+        v-show="!forceEditable && !editable"
+        :text="$t(`action.edit`)"
+        variant="tonal"
+        @click="editable = true"
+      />
+      <v-btn
+        v-show="forceEditable || editable"
+        v-request="confirm"
+        color="primary"
+        :text="$t(`action.confirm`)"
+        :disabled="confirmDisabled"
+      />
+    </template>
+  </app-dialog>
 </template>
 
 <script setup lang="ts" name="temp-editable-dialog">

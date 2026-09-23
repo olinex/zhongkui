@@ -1,4 +1,5 @@
 <template>
+  <!-- positionStyle 为运行时拖拽坐标（持久化到 localStorage），非静态样式，故保留 :style 绑定 -->
   <div v-if="visible" class="scroll-fab" :style="positionStyle" @pointerdown="onPointerDown">
     <v-fab
       :title="$t('action.scrollToBottom')"

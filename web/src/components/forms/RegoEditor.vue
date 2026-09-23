@@ -2,7 +2,10 @@
   <!-- 全屏时 Teleport 到 body，脱离对话框 .v-overlay__content 的 transform 祖先，
        否则 position:fixed 的相对包含块仍是对话框容器，无法真正铺满视口 -->
   <teleport to="body" :disabled="!fullscreen">
-    <div class="rego-editor-wrap" :class="{ 'is-fullscreen': fullscreen }">
+    <div
+      class="rego-editor-wrap"
+      :class="{ 'is-fullscreen': fullscreen, 'bg-surface': fullscreen }"
+    >
       <div class="rego-toolbar">
         <div class="sample-selector">
           <v-select
@@ -10,8 +13,6 @@
             v-model="selectedSampleName"
             :items="samples.map((s) => ({ title: s.name, value: s.name }))"
             :label="$t('action.selectSample')"
-            density="compact"
-            variant="outlined"
             hide-details
             clearable
           >
@@ -22,6 +23,7 @@
                 icon="mdi-eye-outline"
                 :disabled="!selectedSampleName"
                 :title="$t('action.viewInput')"
+                :aria-label="$t('action.viewInput')"
                 @click.stop="emit('viewInput')"
               />
             </template>
@@ -33,6 +35,7 @@
           :variant="fullscreen ? 'tonal' : 'text'"
           :disabled="disabled"
           :title="$t(fullscreen ? 'action.exitFullscreen' : 'action.fullscreen')"
+          :aria-label="$t(fullscreen ? 'action.exitFullscreen' : 'action.fullscreen')"
           @click="toggleFullscreen"
         />
         <v-btn
@@ -42,13 +45,16 @@
           color="primary"
           :disabled="disabled"
           :title="$t('guide.title')"
+          :aria-label="$t('guide.title')"
           @click="openGuide"
         />
       </div>
       <div class="rego-body">
-        <div ref="hostRef" class="rego-editor" :style="{ minHeight }" />
+        <!-- minHeight 为公开 prop（tag-rule.vue / tag-event-rule.vue / notification/template.vue
+             等调用方按场景传入自定义最小高度），属运行时计算值，故保留 :style 绑定 -->
+        <div ref="hostRef" class="rego-editor zk-editor" :style="{ minHeight }" />
         <transition name="guide">
-          <div v-if="fullscreen && guideOpen" class="fullscreen-guide">
+          <div v-if="fullscreen && guideOpen" class="fullscreen-guide zk-panel">
             <datasource-guide-panel
               :datasources="sqliteDatasources"
               :fields="fields"
@@ -93,7 +99,7 @@ import {
 import { rego } from "codemirror-lang-rego";
 
 import { useAppStore } from "@/stores/app";
-import { highlightFor } from "@/utils/editorHighlight";
+import { highlightFor, sqlHighlightFor } from "@/utils/editorHighlight";
 import i18n from "@/utils/i18n";
 import {
   classifyRegoCompletionContext,
@@ -957,7 +963,7 @@ const extensions: Extension[] = [
   rego({ autocomplete: true, hover: true }),
   lineNumbers(),
   highlightActiveLine(),
-  highlightCompartment.of(highlightFor(appStore.theme)),
+  highlightCompartment.of([highlightFor(appStore.theme), sqlHighlightFor(appStore.theme)]),
   bracketMatching(),
   // 空文档时显示 "/" 用法提示（点击输入后自动隐藏）
   placeholder(i18n.global.t("action.regoFieldHint")),
@@ -977,9 +983,9 @@ const extensions: Extension[] = [
   editableCompartment.of(EditorState.readOnly.of(props.disabled)),
   EditorView.lineWrapping,
   EditorView.theme({
-    "&": { fontSize: "13px", height: "100%" },
+    "&": { fontSize: "var(--zk-editor-font-size)", height: "100%" },
     ".cm-scroller": {
-      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+      fontFamily: "var(--zk-font-mono)",
       lineHeight: "1.6",
     },
     "&.cm-focused": { outline: "none" },
@@ -1055,12 +1061,13 @@ watch(
   },
 );
 
-// Switch syntax highlighting when the app theme changes.
+// Switch syntax highlighting (including the sqlite.query SQL semantic colors)
+// when the app theme changes.
 watch(
   () => appStore.theme,
   (theme) => {
     view.value?.dispatch({
-      effects: highlightCompartment.reconfigure(highlightFor(theme)),
+      effects: highlightCompartment.reconfigure([highlightFor(theme), sqlHighlightFor(theme)]),
     });
   },
 );
@@ -1083,14 +1090,14 @@ defineExpose({
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--zk-space-2);
 }
 
 /* 顶栏：样例选择器 + 全屏/参考按钮，与编辑器同框一体 */
 .rego-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--zk-space-2);
 }
 
 .toolbar-btn {
@@ -1104,7 +1111,7 @@ defineExpose({
 
 .rego-body {
   display: flex;
-  gap: 8px;
+  gap: var(--zk-space-2);
   min-width: 0;
   flex: 1;
 }
@@ -1112,13 +1119,6 @@ defineExpose({
 .rego-editor {
   flex: 1 1 0%;
   min-width: 0;
-
-  /* visible：允许 lint tooltip 向上溢出显示（如第一行出错时 tooltip 展开在编辑器
-     上方），内容滚动仍由 .cm-scroller 管理，不会产生页面溢出 */
-  overflow: visible;
-  border: 1px solid rgb(0 0 0 / 24%);
-  border-radius: 4px;
-  background-color: rgb(var(--v-theme-surface));
 }
 
 /* 全屏模式：编辑器整屏覆盖（fixed 铺满视口），主体占据剩余高度，
@@ -1126,160 +1126,47 @@ defineExpose({
 .rego-editor-wrap.is-fullscreen {
   position: fixed;
   inset: 0;
-  z-index: 2600;
-  padding: 16px;
-  background-color: rgb(var(--v-theme-surface));
+  z-index: var(--zk-z-fullscreen);
+  padding: var(--zk-space-4);
 }
 
 .is-fullscreen .rego-editor {
-  height: 100%;
+  block-size: 100%;
 }
 
 .is-fullscreen .rego-editor :deep(.cm-editor),
 .is-fullscreen .rego-editor :deep(.cm-scroller) {
-  height: 100%;
+  block-size: 100%;
 }
 
 /* 全屏主体改用 grid 两列，列高严格受视口约束，参考栏超高时能内部滚动 */
 .is-fullscreen .rego-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 8px;
+  gap: var(--zk-space-2);
   align-items: stretch;
-  min-height: 0;
+  min-block-size: 0;
 }
 
-/* 全屏模式下的右侧参考栏：并排分栏，固定宽度 + 独立滚动 */
+/* 全屏模式下的右侧参考栏：并排分栏，固定宽度 + 独立滚动（外观走 .zk-panel） */
 .fullscreen-guide {
   flex-shrink: 0;
   width: 340px;
-  min-height: 0;
+  min-block-size: 0;
   overflow-y: auto;
-  padding: 10px;
-  border: 1px solid rgb(var(--v-theme-border));
-  border-radius: 8px;
-  background-color: rgb(var(--v-theme-surface));
+  padding: var(--zk-space-3);
 }
 
 .guide-enter-active,
 .guide-leave-active {
   transition:
-    transform 0.2s ease,
-    opacity 0.2s ease;
+    transform var(--zk-transition-base) ease,
+    opacity var(--zk-transition-base) ease;
 }
 
 .guide-enter-from,
 .guide-leave-to {
   transform: translateX(100%);
   opacity: 0;
-}
-
-/* Hover tooltip content for `input.<field>` sample values. */
-:deep(.cm-sample-hover) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 2px 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-:deep(.cm-sample-hover-label) {
-  color: rgb(var(--v-theme-on-surface-variant));
-}
-
-:deep(.cm-sample-hover-value) {
-  font-weight: 600;
-  color: rgb(var(--v-theme-primary));
-}
-
-/* 空文档时显示 "/" 用法提示，颜色与弱化文字一致，避免干扰编辑 */
-:deep(.cm-placeholder) {
-  color: rgb(var(--v-theme-on-surface-variant));
-}
-
-/* CodeMirror tooltip（lint 错误消息 / 补全菜单）跟随 Vuetify 主题。
-   否则 dark 下 CM 默认浅底 #f5f5f5 + 继承暗色编辑器的亮色文字，
-   亮字亮底对比度不足（如 lint 错误消息几乎不可见）。
-   z-index 提升到最上层，避免被对话框内其他元素遮挡 */
-:deep(.cm-tooltip) {
-  z-index: 5000;
-  background-color: rgb(var(--v-theme-surface)) !important;
-  border: 1px solid rgb(var(--v-theme-on-surface), 0.12) !important;
-  color: rgb(var(--v-theme-on-surface));
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- CodeMirror 内部类名 */
-:deep(.cm-tooltip .cm-diagnosticText) {
-  color: rgb(var(--v-theme-on-surface)) !important;
-}
-
-/* sqlite.query("...") 字符串内的 SQL 语义高亮：关键词/表名/单引号字面量，
-   配色与 utils/editorHighlight 的语义色一致，深浅主题各一套 */
-:deep(.cm-sql-keyword) {
-  color: #cf222e;
-  font-weight: 600;
-}
-
-:deep(.cm-sql-table) {
-  color: #0550ae;
-}
-
-:deep(.cm-sql-string) {
-  color: #0a7d22;
-}
-
-/* Vuetify 深色主题类名（v-theme--dark）不在 kebab-case 规范内，需逐条豁免 */
-/* stylelint-disable-next-line selector-class-pattern */
-:global(.v-theme--dark .cm-sql-keyword) {
-  color: #c678dd;
-}
-
-/* stylelint-disable-next-line selector-class-pattern */
-:global(.v-theme--dark .cm-sql-table) {
-  color: #61afef;
-}
-
-/* stylelint-disable-next-line selector-class-pattern */
-:global(.v-theme--dark .cm-sql-string) {
-  color: #98c379;
-}
-
-/* 自定义 OPA 内置函数悬停提示：签名 / 说明 / 示例，配色与样例提示一致 */
-:deep(.cm-function-hover) {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 2px 0;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-:deep(.cm-function-hover-signature) {
-  font-weight: 600;
-  color: rgb(var(--v-theme-primary));
-}
-
-:deep(.cm-function-hover-description) {
-  color: rgb(var(--v-theme-on-surface-variant));
-  white-space: pre-wrap;
-}
-
-:deep(.cm-function-hover-example) {
-  margin: 0;
-  padding: 4px 6px;
-  white-space: pre-wrap;
-  border-radius: 4px;
-  background-color: rgb(var(--v-theme-surface-variant));
-  color: rgb(var(--v-theme-on-surface));
-}
-
-/* 补全弹窗内的示例代码块（info 区域） */
-:deep(.cm-function-info) {
-  margin: 0;
-  padding: 6px 8px;
-  white-space: pre-wrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
 }
 </style>

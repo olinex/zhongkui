@@ -1,196 +1,196 @@
 <template>
   <main-layout current-nav="etl">
     <template #body>
-      <v-container fluid>
-        <v-form class="filter-form">
-          <v-row dense align-center>
-            <v-col cols="auto">
-              <v-select
-                v-model="queue"
-                :label="$t('model.queue.field.queue')"
-                :items="queueOptions"
-                density="compact"
-              />
+      <!-- 列表骨架与 SearchTable 一致：扁平卡片承载「筛选行 → 操作按钮行 → 表格」，
+           操作按钮行独占一行右对齐，不再与筛选控件挤在同一行 -->
+      <v-card flat>
+        <v-card-text class="px-4 pt-3 pb-2">
+          <v-form class="filter-form zk-filter-form">
+            <v-row dense align-center>
+              <v-col cols="auto">
+                <v-select
+                  v-model="queue"
+                  :label="$t('model.queue.field.queue')"
+                  :items="queueOptions"
+                />
+              </v-col>
+              <v-col cols="auto">
+                <v-select
+                  v-model="taskState"
+                  :label="$t('model.task.field.state')"
+                  :items="taskTypeOptions"
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card-text>
+        <div class="px-4 pb-2 d-flex justify-end align-center ga-2">
+          <action-button-group :refresh="refreshAction" :actions="taskToolbarActions" collapsible>
+            <column-visibility-menu
+              v-model="taskVisibleKeys"
+              v-model:order="taskColumnOrder"
+              :headers="taskAllToggleable"
+            />
+          </action-button-group>
+        </div>
+        <v-container fluid class="px-4 pt-0 pb-4">
+          <v-row dense>
+            <v-col cols="12">
+              <v-data-table-server
+                v-model:page="page"
+                v-model:items-per-page="pageSize"
+                :headers="taskVisibleHeaders"
+                :items="taskItems"
+                :items-length="taskTotal"
+                :items-per-page-options="pageSizeOptions"
+                select-strategy="page"
+              >
+                <template #item="{ item }">
+                  <tr class="text-no-wrap">
+                    <td
+                      v-for="hdr in taskVisibleHeaders"
+                      :key="hdr.key"
+                      :class="
+                        hdr.fixed === 'end'
+                          ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
+                          : undefined
+                      "
+                    >
+                      <adaptive-cell :header="hdr" :item="item" :actions="getTaskActions" />
+                    </td>
+                  </tr>
+                </template>
+              </v-data-table-server>
             </v-col>
-            <v-col cols="auto">
-              <v-select
-                v-model="taskState"
-                :label="$t('model.task.field.state')"
-                :items="taskTypeOptions"
-                density="compact"
-              />
-            </v-col>
-            <action-button-group
-              class="ml-auto"
-              :refresh="refreshAction"
-              :actions="taskToolbarActions"
-              collapsible
-            >
-              <column-visibility-menu
-                v-model="taskVisibleKeys"
-                v-model:order="taskColumnOrder"
-                :headers="taskAllToggleable"
-              />
-            </action-button-group>
           </v-row>
-        </v-form>
-        <v-divider class="my-2" />
-        <v-row dense>
-          <v-col cols="12">
-            <v-data-table-server
-              v-model:page="page"
-              v-model:items-per-page="pageSize"
-              :headers="taskVisibleHeaders"
-              :items="taskItems"
-              :items-length="taskTotal"
-              :items-per-page-options="pageSizeOptions"
-              select-strategy="page"
-            >
-              <template #item="{ item }">
-                <tr class="text-no-wrap">
-                  <td
-                    v-for="hdr in taskVisibleHeaders"
-                    :key="hdr.key"
-                    :class="
-                      hdr.fixed === 'end'
-                        ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
-                        : undefined
-                    "
-                  >
-                    <adaptive-cell :header="hdr" :item="item" :actions="getTaskActions" />
-                  </td>
-                </tr>
-              </template>
-            </v-data-table-server>
-          </v-col>
-        </v-row>
-        <confirm-dialog
-          ref="confirmStateDeleteTaskDialogRef"
-          :title="$t(`model.task.name`)"
-          prepend-icon="mdi-format-list-bulleted"
-          @confirm="deleteStateTaskAction"
-        >
-          <template #body>
-            <confirm-alert
-              :action="$t('action.delete')"
-              :text="
-                $t(`notice.deleteConfirm`, {
-                  category: $t(`model.queue.field.${taskState}`),
-                  key: $t(`model.task.name`),
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-        <confirm-dialog
-          ref="confirmStateArchiveTaskDialogRef"
-          :title="$t(`model.task.name`)"
-          prepend-icon="mdi-format-list-bulleted"
-          @confirm="archiveStateTaskAction"
-        >
-          <template #body>
-            <confirm-alert
-              :action="$t(`action.archive`)"
-              :text="
-                $t(`notice.archiveConfirm`, {
-                  category: $t(`model.queue.field.${taskState}`),
-                  key: $t(`model.task.name`),
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-        <confirm-dialog
-          ref="confirmStateRunTaskDialogRef"
-          :title="$t(`model.task.name`)"
-          prepend-icon="mdi-format-list-bulleted"
-          @confirm="runStateTaskAction"
-        >
-          <template #body>
-            <confirm-alert
-              :action="$t(`action.run`)"
-              :text="
-                $t(`notice.runConfirm`, {
-                  category: $t(`model.queue.field.${taskState}`),
-                  key: $t(`model.task.name`),
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-        <confirm-dialog
-          ref="confirmSingleDeleteTaskDialogRef"
-          :title="$t(`model.task.name`)"
-          prepend-icon="mdi-format-list-bulleted"
-          @confirm="deleteTaskAction"
-        >
-          <template #body="{ proxy }">
-            <confirm-alert
-              :action="$t(`action.delete`)"
-              :text="
-                $t(`notice.deleteConfirm`, {
-                  category: $t(`model.task.name`),
-                  key: proxy.id,
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-        <confirm-dialog
-          ref="confirmSingleArchiveTaskDialogRef"
-          :title="$t(`model.task.name`)"
-          prepend-icon="mdi-format-list-bulleted"
-          @confirm="archiveTaskAction"
-        >
-          <template #body="{ proxy }">
-            <confirm-alert
-              :action="$t(`action.archive`)"
-              :text="
-                $t(`notice.archiveConfirm`, {
-                  category: $t(`model.task.name`),
-                  key: proxy.id,
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-        <confirm-dialog
-          ref="confirmSingleRunTaskDialogRef"
-          :title="$t(`model.task.name`)"
-          prepend-icon="mdi-format-list-bulleted"
-          @confirm="runTaskAction"
-        >
-          <template #body="{ proxy }">
-            <confirm-alert
-              :action="$t(`action.run`)"
-              :text="
-                $t(`notice.runConfirm`, {
-                  category: $t(`model.task.name`),
-                  key: proxy.id,
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-        <confirm-dialog
-          ref="confirmSingleCancelTaskDialogRef"
-          :title="$t(`model.task.name`)"
-          prepend-icon="mdi-format-list-bulleted"
-          @confirm="cancelPorcessingTaskAction"
-        >
-          <template #body="{ proxy }">
-            <confirm-alert
-              :action="$t(`action.cancel`)"
-              :text="
-                $t(`notice.cancelConfirm`, {
-                  category: $t(`model.task.name`),
-                  key: proxy.id,
-                })
-              "
-            />
-          </template>
-        </confirm-dialog>
-      </v-container>
+        </v-container>
+      </v-card>
+      <confirm-dialog
+        ref="confirmStateDeleteTaskDialogRef"
+        :title="$t(`model.task.name`)"
+        prepend-icon="mdi-format-list-bulleted"
+        @confirm="deleteStateTaskAction"
+      >
+        <template #body>
+          <confirm-alert
+            :action="$t('action.delete')"
+            :text="
+              $t(`notice.deleteConfirm`, {
+                category: $t(`model.queue.field.${taskState}`),
+                key: $t(`model.task.name`),
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
+      <confirm-dialog
+        ref="confirmStateArchiveTaskDialogRef"
+        :title="$t(`model.task.name`)"
+        prepend-icon="mdi-format-list-bulleted"
+        @confirm="archiveStateTaskAction"
+      >
+        <template #body>
+          <confirm-alert
+            :action="$t(`action.archive`)"
+            :text="
+              $t(`notice.archiveConfirm`, {
+                category: $t(`model.queue.field.${taskState}`),
+                key: $t(`model.task.name`),
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
+      <confirm-dialog
+        ref="confirmStateRunTaskDialogRef"
+        :title="$t(`model.task.name`)"
+        prepend-icon="mdi-format-list-bulleted"
+        @confirm="runStateTaskAction"
+      >
+        <template #body>
+          <confirm-alert
+            :action="$t(`action.run`)"
+            :text="
+              $t(`notice.runConfirm`, {
+                category: $t(`model.queue.field.${taskState}`),
+                key: $t(`model.task.name`),
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
+      <confirm-dialog
+        ref="confirmSingleDeleteTaskDialogRef"
+        :title="$t(`model.task.name`)"
+        prepend-icon="mdi-format-list-bulleted"
+        @confirm="deleteTaskAction"
+      >
+        <template #body="{ proxy }">
+          <confirm-alert
+            :action="$t(`action.delete`)"
+            :text="
+              $t(`notice.deleteConfirm`, {
+                category: $t(`model.task.name`),
+                key: proxy.id,
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
+      <confirm-dialog
+        ref="confirmSingleArchiveTaskDialogRef"
+        :title="$t(`model.task.name`)"
+        prepend-icon="mdi-format-list-bulleted"
+        @confirm="archiveTaskAction"
+      >
+        <template #body="{ proxy }">
+          <confirm-alert
+            :action="$t(`action.archive`)"
+            :text="
+              $t(`notice.archiveConfirm`, {
+                category: $t(`model.task.name`),
+                key: proxy.id,
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
+      <confirm-dialog
+        ref="confirmSingleRunTaskDialogRef"
+        :title="$t(`model.task.name`)"
+        prepend-icon="mdi-format-list-bulleted"
+        @confirm="runTaskAction"
+      >
+        <template #body="{ proxy }">
+          <confirm-alert
+            :action="$t(`action.run`)"
+            :text="
+              $t(`notice.runConfirm`, {
+                category: $t(`model.task.name`),
+                key: proxy.id,
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
+      <confirm-dialog
+        ref="confirmSingleCancelTaskDialogRef"
+        :title="$t(`model.task.name`)"
+        prepend-icon="mdi-format-list-bulleted"
+        @confirm="cancelPorcessingTaskAction"
+      >
+        <template #body="{ proxy }">
+          <confirm-alert
+            :action="$t(`action.cancel`)"
+            :text="
+              $t(`notice.cancelConfirm`, {
+                category: $t(`model.task.name`),
+                key: proxy.id,
+              })
+            "
+          />
+        </template>
+      </confirm-dialog>
     </template>
   </main-layout>
 </template>
@@ -774,17 +774,3 @@ const cancelPorcessingTaskAction = async (item: Record<string, any>): Promise<vo
 
 onMounted(refreshAction);
 </script>
-
-<style scoped>
-/* 折叠筛选输入的空消息区，使按钮组与输入控件保持同一水平线，
-   与流量页 filter-form 的垂直间距保持一致 */
-/* stylelint-disable-next-line selector-class-pattern */
-.filter-form :deep(.v-input__details:has(.v-messages:empty)) {
-  min-height: 0;
-  padding-top: 0;
-}
-
-.filter-form :deep(.v-messages:empty) {
-  min-height: 0;
-}
-</style>

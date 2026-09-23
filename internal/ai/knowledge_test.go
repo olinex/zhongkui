@@ -76,7 +76,7 @@ func TestFuseRRF_SinglePath(t *testing.T) {
 // TestFuseWeighted verifies the weighted fusion: each path is min-max normalized then
 // linearly combined by the weights.
 func TestFuseWeighted(t *testing.T) {
-	weights := llm.WeightConfig{Vector: 0.6, Keyword: 0.4}
+	weights := FusionWeights{Vector: 0.6, Keyword: 0.4}
 	vector := []*RetrievalResult{
 		{DocumentID: "a", ChunkIndex: 0, Score: 0.9}, // norm 1.0
 		{DocumentID: "b", ChunkIndex: 0, Score: 0.3}, // norm 0.0
@@ -110,7 +110,7 @@ func TestFuseWeighted(t *testing.T) {
 // TestFuseWeighted_FlatPath verifies a path whose scores are all equal (min==max)
 // normalizes to 0.5.
 func TestFuseWeighted_FlatPath(t *testing.T) {
-	weights := llm.WeightConfig{Vector: 0.6, Keyword: 0.4}
+	weights := FusionWeights{Vector: 0.6, Keyword: 0.4}
 	vector := []*RetrievalResult{{DocumentID: "a", ChunkIndex: 0, Score: 0.5}}
 	keyword := []*RetrievalResult{{DocumentID: "a", ChunkIndex: 0, Score: 0.7}}
 	got := fuseWeighted(vector, keyword, weights)
@@ -284,7 +284,7 @@ func TestSortedResults_Deterministic(t *testing.T) {
 func TestRetrieveOptions(t *testing.T) {
 	o := retriever.GetImplSpecificOptions(&RetrieveOptions{TopK: 5}, WithNamespace("ns"),
 		WithDocIDs([]uint{1, 2}), WithRetrieveTopK(3), WithCandidates(9),
-		WithFusion("weighted"), WithWeights(llm.WeightConfig{Vector: 1, Keyword: 0}))
+		WithFusion("weighted"), WithWeights(FusionWeights{Vector: 1, Keyword: 0}))
 	if o.NamespaceName != "ns" {
 		t.Errorf("NamespaceName = %q, want %q", o.NamespaceName, "ns")
 	}
@@ -305,22 +305,22 @@ func TestRetrieveOptions(t *testing.T) {
 	}
 }
 
-// TestNewKnowledge_Validation 测试构造参数校验：nil db/embed/cfg 返回英文错误。
-// TestNewKnowledge_Validation verifies constructor validation: nil db/embed/cfg yield an
+// TestNewKnowledge_Validation 测试构造参数校验：nil db/embed/params 返回英文错误。
+// TestNewKnowledge_Validation verifies constructor validation: nil db/embed/params yield an
 // English error.
 func TestNewKnowledge_Validation(t *testing.T) {
-	cfg := &llm.LLMConfig{}
-	if _, err := NewKnowledge(nil, nil, nil, cfg); err == nil || !strings.Contains(err.Error(), "nil database") {
+	params := testParams(t, nil)
+	if _, err := NewKnowledge(nil, nil, params); err == nil || !strings.Contains(err.Error(), "nil database") {
 		t.Errorf("NewKnowledge(nil db) error = %v, want nil-database error", err)
 	}
 	embed := &llm.EmbedClient{}
-	if _, err := NewKnowledge(nil, embed, nil, cfg); err == nil || !strings.Contains(err.Error(), "nil database") {
+	if _, err := NewKnowledge(nil, embed, params); err == nil || !strings.Contains(err.Error(), "nil database") {
 		t.Errorf("NewKnowledge(nil db) error = %v, want nil-database error", err)
 	}
-	if _, err := NewKnowledge(nil, nil, nil, cfg); err == nil {
+	if _, err := NewKnowledge(nil, nil, params); err == nil {
 		t.Errorf("NewKnowledge() error = nil, want error")
 	}
-	if _, err := NewRetriever(nil, embed, nil, cfg); err == nil || !strings.Contains(err.Error(), "nil database") {
+	if _, err := NewRetriever(nil, embed, nil, params); err == nil || !strings.Contains(err.Error(), "nil database") {
 		t.Errorf("NewRetriever(nil db) error = %v, want nil-database error", err)
 	}
 }
@@ -328,7 +328,7 @@ func TestNewKnowledge_Validation(t *testing.T) {
 // TestRetriever_EmptyQuery 测试空查询直接报错（不调用 embed）。
 // TestRetriever_EmptyQuery verifies an empty query errors out without calling the embed.
 func TestRetriever_EmptyQuery(t *testing.T) {
-	r := &Retriever{cfg: &llm.LLMConfig{}}
+	r := &Retriever{params: testParams(t, nil)}
 	if _, err := r.Retrieve(context.Background(), "   "); err == nil {
 		t.Errorf("Retrieve(blank query) error = nil, want error")
 	}
