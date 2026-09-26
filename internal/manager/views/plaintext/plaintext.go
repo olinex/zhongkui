@@ -164,4 +164,8 @@ func init() {
 	registerPlaintextModel("notification-target", &core.NotificationTarget{})
 	// 第三方数据源连接配置含凭据（如密码），经 crypto 序列化器加密存储；明文查看经全局明文接口解密
 	registerPlaintextModel("datasource", &core.Datasource{})
+	// LLM 模型端点的访问凭据（apiKey）与 MCP 服务器的请求头（headers）承载第三方凭据，
+	// 经 crypto 序列化器加密存储；明文查看经全局明文接口解密
+	registerPlaintextModel("llm-model", &core.LlmModel{})
+	registerPlaintextModel("mcp-server", &core.McpServer{})
 }

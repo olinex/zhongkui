@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/base32"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"net/url"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -18,6 +20,7 @@ import (
 	"github.com/dlclark/regexp2"
 	"github.com/go-playground/validator/v10"
 	"zhongkui.com/zhongkui/internal/pkg/codes"
+	"zhongkui.com/zhongkui/internal/pkg/enum"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -29,6 +32,10 @@ const (
 	TagStrictFileName  = "strictFileName"
 	TagDirpath         = "dirpath"
 	TagAlphanumSpecial = "alphanumspecial"
+	TagEnum            = "enum"
+	TagHTTPURL         = "httpUrl"
+	TagJSONObject      = "jsonObject"
+	TagTrimmed         = "trimmed"
 )
 
 // alphanumSpecialRegexps 按特殊字符参数缓存编译后的校验正则。
@@ -520,4 +527,89 @@ func ValidateDirPath(fl validator.FieldLevel) bool {
 	} else {
 		return IsValidDirPath(v)
 	}
+}
+
+// IsValidEnum 判断 value 是否为指定枚举类（enum 注册表的类名）的合法取值。值空间唯一来源是
+// internal/pkg/enum 注册表，调用方一律以 `binding:"enum=<类名>"` 引用，禁止就地书写枚举字面量
+// 或 switch 分支。按条目的 Value 严格匹配，与「数据库字段存储 value、不可存 key」的约定一致：
+// In 结构体的入参语义即即将落库的取值，接受 key 会让展示键被写进数据库。
+// className 未注册属编程缺陷（标签参数写错），此时 panic 而非返回 false——静默地把所有入参判为
+// 非法会让缺陷伪装成用户的输入问题。
+func IsValidEnum(className, value string) bool {
+	class, ok := enum.Get(className)
+	if !ok {
+		panic(fmt.Sprintf("validator: enum type %q is not registered, check the enum tag parameter", className))
+	}
+	if _, ok := class.EntryByValue(value); !ok {
+		return false
+	}
+	return true
+}
+
+// IsValidHTTPURL 判断字符串是否为绝对的 http / https URL（scheme 与 host 均非空）。空字符串、
+// 相对路径、其他 scheme（file / ftp / ws 等）一律不合法；字段可选时以 `omitempty` 放行空值。
+func IsValidHTTPURL(value string) bool {
+	parsed, err := url.Parse(value)
+	if err != nil {
+		return false
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return false
+	}
+	return parsed.Host != ""
+}
+
+// IsValidJSONObject 判断字符串是否为「所有值均为字符串的 JSON 对象」文本，用于承载嵌套在字符串
+// 字段里的结构化配置（如请求头）。空字符串不合法；字段可选时以 `omitempty` 放行空值。
+// 字面量 null 反序列化到 map 不报错但得到 nil map，故须显式排除，否则「null」会被当成合法对象。
+func IsValidJSONObject(value string) bool {
+	var obj map[string]string
+	if err := json.Unmarshal([]byte(value), &obj); err != nil {
+		return false
+	}
+	return obj != nil
+}
+
+// IsTrimmed 判断字符串首尾是否均无空白字符。空白由前端输入框负责去除（见 AGENTS.md 前端约定），
+// 后端只做判定、不做静默裁剪——静默裁剪会让「前端已提交的原值」与「实际落库值」不一致，
+// 排查时看不到用户真正输入了什么。空字符串视为已去空白（是否允许为空由 required 决定）。
+func IsTrimmed(value string) bool {
+	return strings.TrimSpace(value) == value
+}
+
+// ValidateEnum 是 enum 标签的验证函数，标签参数为 enum 注册表的类名，例如
+// `binding:"enum=mcpTransport"`。
+func ValidateEnum(fl validator.FieldLevel) bool {
+	v, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+	return IsValidEnum(fl.Param(), v)
+}
+
+// ValidateHTTPURL 是 httpUrl 标签的验证函数。
+func ValidateHTTPURL(fl validator.FieldLevel) bool {
+	v, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+	return IsValidHTTPURL(v)
+}
+
+// ValidateJSONObject 是 jsonObject 标签的验证函数。
+func ValidateJSONObject(fl validator.FieldLevel) bool {
+	v, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+	return IsValidJSONObject(v)
+}
+
+// ValidateTrimmed 是 trimmed 标签的验证函数。
+func ValidateTrimmed(fl validator.FieldLevel) bool {
+	v, ok := fl.Field().Interface().(string)
+	if !ok {
+		return false
+	}
+	return IsTrimmed(v)
 }

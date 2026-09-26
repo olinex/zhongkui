@@ -134,7 +134,7 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'OPTIONS', 'allow'),
-    -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖）
+    -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖 / MCP 服务器注册表 / 工具注册表）
     ('p', 'admin', 'api:/api/v1/admin/llm/model/list', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/llm/model/list', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/llm/model/create', 'POST', 'allow'),
@@ -158,7 +158,27 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/admin/llm/param/set', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/llm/param/set', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/llm/param/reset', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/admin/llm/param/reset', 'OPTIONS', 'allow')
+    ('p', 'admin', 'api:/api/v1/admin/llm/param/reset', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/create', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/create', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/:id/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/:id/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/:id/update', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/:id/update', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/delete', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/test', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/test', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/:id/sync', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/mcp/:id/sync', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/tool/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/tool/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/tool/set-enabled', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/tool/set-enabled', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/tool/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/admin/llm/tool/delete', 'OPTIONS', 'allow')
 ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 
 -- -------------------------------------------------------------
@@ -386,7 +406,7 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS'),
     ('api:/api/v1/ai/status', 'POST'),
     ('api:/api/v1/ai/status', 'OPTIONS'),
-    -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖）
+    -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖 / MCP 服务器注册表 / 工具注册表）
     ('api:/api/v1/admin/llm/model/list', 'POST'),
     ('api:/api/v1/admin/llm/model/list', 'OPTIONS'),
     ('api:/api/v1/admin/llm/model/create', 'POST'),
@@ -411,6 +431,26 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/admin/llm/param/set', 'OPTIONS'),
     ('api:/api/v1/admin/llm/param/reset', 'POST'),
     ('api:/api/v1/admin/llm/param/reset', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/mcp/list', 'POST'),
+    ('api:/api/v1/admin/llm/mcp/list', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/mcp/create', 'POST'),
+    ('api:/api/v1/admin/llm/mcp/create', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/mcp/:id/get', 'POST'),
+    ('api:/api/v1/admin/llm/mcp/:id/get', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/mcp/:id/update', 'POST'),
+    ('api:/api/v1/admin/llm/mcp/:id/update', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/mcp/delete', 'POST'),
+    ('api:/api/v1/admin/llm/mcp/delete', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/mcp/test', 'POST'),
+    ('api:/api/v1/admin/llm/mcp/test', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/mcp/:id/sync', 'POST'),
+    ('api:/api/v1/admin/llm/mcp/:id/sync', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/tool/list', 'POST'),
+    ('api:/api/v1/admin/llm/tool/list', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/tool/set-enabled', 'POST'),
+    ('api:/api/v1/admin/llm/tool/set-enabled', 'OPTIONS'),
+    ('api:/api/v1/admin/llm/tool/delete', 'POST'),
+    ('api:/api/v1/admin/llm/tool/delete', 'OPTIONS'),
     -- 个人接口（default 组自管资源）
     ('api:/api/v1/user/self/password/reset', 'POST'),
     ('api:/api/v1/user/self/password/reset', 'OPTIONS'),
@@ -559,6 +599,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('plaintext:crypto:notification-channel:config', 'READ'),
     ('plaintext:crypto:notification-target:config', 'READ'),
     ('plaintext:crypto:datasource:config', 'READ'),
+    ('plaintext:crypto:llm-model:apiKey', 'READ'),
+    ('plaintext:crypto:mcp-server:headers', 'READ'),
     ('plaintext:s3:http-transport:reqBody', 'READ'),
     ('plaintext:s3:http-transport:rspBody', 'READ')
 ON CONFLICT (target, action) DO NOTHING;
@@ -672,6 +714,8 @@ Rules:
     ('agent.questionSectionTitle', '## User Question'),
     ('agent.retrievedDocSnippetLimit', '500'),
     ('agent.defaultSlot', 'standard'),
+    ('agent.maxToolRounds', '3'),
+    ('agent.maxToolResultBytes', '8192'),
     ('retrieval.topK', '5'),
     ('retrieval.candidates', '30'),
     ('retrieval.fusion', 'rrf'),
@@ -703,6 +747,23 @@ Rules:
         'eval.reverseQuestionsSystemPrompt',
         $$You are an answer relevance judge. Reverse-engineer up to 3 questions that the given answer could plausibly answer. Return ONLY a JSON object like {"questions": ["...", "..."]}. Do not output any other text.$$
     ),
+    (
+        'eval.suggestionsSystemPrompt',
+        $$You are a retrieval-augmented generation (RAG) diagnosis expert. Given the user query, the answer produced from the retrieved context, the retrieval metrics and the retrieved chunks with their judgments, propose concrete improvement suggestions for the operator.
+
+Classify every suggestion into exactly one of these categories:
+- "coverage": the knowledge base lacks the documents needed to answer the query (missing or incomplete documents, stale content, unsplit or unindexed material).
+- "ranking": retrieval or reranking is misordered or misconfigured (fusion strategy, weights, topK or candidates are not appropriate, relevant chunks ranked too low).
+- "generation": the answer itself is flawed (it ignores the context, drifts from the question, or is incomplete).
+- "context": the retrieved context is relevant but underused by the answer (part of the context should have been cited or summarized).
+- "other": anything that does not fit the categories above.
+
+Rules:
+- Each suggestion has a short "detail" that states the problem and the concrete action to take; keep it specific and actionable.
+- Order the suggestions from most to least important and return at most 5 of them.
+- Return an empty array when the run looks healthy: {"suggestions": []}.
+- Return ONLY a JSON object like {"suggestions": [{"category": "coverage", "detail": "..."}]}. Do not output any other text.$$
+    ),
     ('eval.reverseQuestionCount', '3'),
     ('eval.snippetLimit', '500'),
     ('sanitize.maxItems', '0'),
@@ -710,7 +771,22 @@ Rules:
 ) AS v(key, value)
 ON CONFLICT (key) DO NOTHING;
 
+-- -------------------------------------------------------------
+-- 9) 内置工具出厂行（扩展位）
+-- -------------------------------------------------------------
+-- 内置工具由代码内注册表（internal/pkg/llm 的 ToolSpecs）声明，其出厂行只能在此段种子化。
+-- 新增一个内置工具时，必须在此追加一条 llm_tools 的 INSERT 出厂行
+-- （INSERT INTO llm_tools (name, source, mcp_server_id, remote_name, description, enabled)
+-- ... ON CONFLICT (name) DO NOTHING;），其中 source 取内置来源字面量、mcp_server_id 为
+-- NULL、remote_name 与 description 为空串、enabled 取安全默认 false（由管理员在工具面板
+-- 显式启用）。守卫测试 internal/ai/tools_fixture_test.go 断言注册表键集合与本段内置行
+-- 集合双向一致，忘记追加即会暴露漂移。
+-- 本段有意仅在「内置工具清单非空」时出现：当前注册表为空，故此处暂不写入任何 INSERT
+-- 语句（空清单无需种子化）。
+
 -- +goose Down
+
+-- 内置工具出厂行（扩展位）：首版为空，无需清理；llm_tools 表本身由 001 的 Down 段删除。
 
 -- Agent 参数出厂值
 DELETE FROM agent_params;

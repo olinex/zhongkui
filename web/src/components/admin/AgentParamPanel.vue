@@ -1,6 +1,5 @@
 <template>
-  <!-- .zk-flat-panels 提供分组面板的扁平外观（透明背景 / 去阴影 / 淡色 hover） -->
-  <div class="pa-4 zk-flat-panels">
+  <div class="pa-4">
     <!-- 说明以 banner 常驻提示；待保存计数与操作控件收在其尾部，仍保持单行布局 -->
     <v-alert type="info" class="mb-3">
       {{ $t("page.agentParamAdmin.hint") }}
@@ -34,15 +33,18 @@
     </v-alert>
 
     <!-- 扩展面板为手风琴式：同一时刻只展开一个分组（multiple 会突破该语义，禁止声明） -->
-    <v-expansion-panels v-model="expandedGroup" class="param-groups">
+    <v-expansion-panels v-model="expandedGroup">
       <v-expansion-panel v-for="group in groups" :key="group" :value="group">
-        <v-expansion-panel-title>
-          {{ groupLabel(group) }}
-          <span class="zk-hint ms-2">
+        <expansion-panel-title
+          :icon="groupIcon(group)"
+          :title="groupLabel(group)"
+          :subtitle="groupSubtitle(group)"
+        >
+          <span class="zk-hint">
             {{ $t("page.agentParamAdmin.groupCount", { count: groupItems(group).length }) }}
           </span>
-          <!-- actions 槽会顶替默认展开图标，故自行渲染 chevron；按钮需 stop 以免连带切换分组 -->
-          <template #actions="{ expanded }">
+          <template #actions>
+            <!-- 按钮需 stop 以免连带切换分组（chevron 由标题组件统一渲染） -->
             <v-btn
               variant="text"
               size="small"
@@ -52,15 +54,11 @@
             >
               {{ $t("action.restoreDefault") }}
             </v-btn>
-            <v-icon
-              size="small"
-              :icon="expanded ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-              class="ms-1"
-            />
           </template>
-        </v-expansion-panel-title>
+        </expansion-panel-title>
 
         <v-expansion-panel-text>
+          <!-- 每项带顶部分隔线：与标题行共同构成「把手 / 内容」边界 -->
           <div v-for="item in groupItems(group)" :key="item.key" class="param-item zk-hairline-top">
             <div class="d-flex align-center mb-1">
               <span class="text-body-2 text-on-surface font-weight-500">{{ item.label }}</span>
@@ -249,6 +247,25 @@ const groupLabel = (group: string): string => {
   return label === key ? group : label;
 };
 
+// GROUP_ICONS 分组图标（标题区头像用）：只表达分组语义；未登记的分组回退通用图标
+const GROUP_ICONS: Record<string, string> = {
+  agent: "mdi-robot-outline",
+  retrieval: "mdi-database-search-outline",
+  session: "mdi-forum-outline",
+  chunking: "mdi-content-cut",
+  eval: "mdi-clipboard-check-outline",
+  sanitize: "mdi-shield-check-outline",
+};
+
+const groupIcon = (group: string): string => GROUP_ICONS[group] ?? "mdi-tune-variant";
+
+// groupSubtitle 分组说明：翻译缺失时返回空串（说明属补充信息，缺省不占位）
+const groupSubtitle = (group: string): string => {
+  const key = `page.agentParamAdmin.groupSubtitle.${group}`;
+  const text = i18n.global.t(key);
+  return text === key ? "" : text;
+};
+
 const hasOverride = (group: string): boolean => groupItems(group).some((i) => i.overridden);
 
 // optionsOf 构造封闭取值清单的下拉项：参数声明了枚举类时以该类条目的本地化 label 展示
@@ -431,31 +448,8 @@ const resetGroupAction = async (): Promise<void> => {
 </script>
 
 <style scoped>
-/* 分组展开面板：扁平外观（透明背景 / 去阴影 / hover 高亮）由全局 .zk-flat-panels 提供，
+/* 展开面板外观（底色 / 面板间分隔线 / 展开抬升 / 标题与内容内边距）一律走 Vuetify 默认，
    此处只保留布局定位 */
-
-/* 展开时不再浮起：取消默认的 16px 间距，并保持分隔线始终可见 */
-.param-groups :deep(.v-expansion-panel:not(:first-child)),
-.param-groups :deep(.v-expansion-panel + .v-expansion-panel) {
-  margin-top: 0;
-}
-
-.param-groups :deep(.v-expansion-panel:not(:first-child)::after) {
-  opacity: 1;
-}
-
-/* 标题去掉左右内缩并固定高度，使分组名与参数项左边缘对齐、展开时不跳动
-   （权重需高于 Vuetify 展开态标题的 64px 规则，故带上 button 元素选择器；
-   高度取紧凑工具栏令牌，足够容纳「恢复默认」按钮，折叠/展开两种状态一致） */
-.param-groups :deep(.v-expansion-panel > button.v-expansion-panel-title) {
-  min-height: var(--zk-toolbar-height-compact);
-  padding: var(--zk-space-1) 0;
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.param-groups :deep(.v-expansion-panel-text__wrapper) {
-  padding: 0 0 var(--zk-space-2);
-}
 
 .param-item + .param-item {
   margin-top: var(--zk-space-2);

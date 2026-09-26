@@ -87,6 +87,7 @@
 1112 = "定时任务配置非法"
 1113 = "重置密码功能不可用，请联系管理员或稍后再试"
 1114 = "重置密码链接无效或已过期，请重新申请"
+1115 = "档位绑定与系统当前配置不兼容，请按错误详情调整后重试"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -104,6 +105,10 @@ fileName = "字段须为合法的文件名"
 strictFileName = "字段须为严格合法的文件名（不能以连字符开头，不能包含空格或控制字符）"
 dirpath = "字段须为合法的目录路径"
 alphanumspecial = "字段只能包含字母、数字与指定的特殊字符"
+enum = "字段取值不在允许范围内"
+httpUrl = "字段须为绝对的 http 或 https 地址"
+jsonObject = "字段须为 JSON 对象文本，且所有取值均为字符串"
+trimmed = "字段首尾不能包含空白字符"
 gtCurrentTime = "字段必须晚于当前时间"
 ltCurrentTime = "字段必须早于当前时间"
 
@@ -1570,8 +1575,10 @@ other = "@notify/tag-event-alert-content.zh-Hans.txt"
 # 枚举 label 键（后端单源，前端消费）
 # 统一为 enum.<类名>.<key>：label 按 key 翻译，value（数据库存储值）不作为键组成部分；
 # 旧键 model.<实体>.option.<字段>.<值> 中「同值多实体重复」的条目已合并到同一 enum 类。
-# 类名与 key 由 internal/manager/views/enum_classes.go（静态类）与 enum_registry.go
-# （注册表类）定义；通知默认模板经模板函数 t 按此渲染可读 label，前端枚举 label
+# 类名与 key 由类所属的包定义：取值空间固定的类由其取值空间的归属包就地声明并注册，
+# 业务注册表来源的类由所属业务包（message / notify / vtab / tagengine，经
+# enum.RegisterSource 注册）声明；
+# 通知默认模板经模板函数 t 按此渲染可读 label，前端枚举 label
 # 经统一枚举接口 /admin/enum/get|list 按请求语言从本节下发（entry.key + label）。
 # =============================================================================
 
@@ -1740,6 +1747,88 @@ other = "标准档"
 [enum.llmSlot.advanced]
 other = "高级档"
 
+# 工具来源（枚举类 llmToolSource）
+[enum.llmToolSource.builtin]
+other = "内置工具"
+
+[enum.llmToolSource.mcp]
+other = "MCP 工具"
+
+# MCP 远端传输方式（枚举类 mcpTransport）
+[enum.mcpTransport.sse]
+other = "SSE"
+
+[enum.mcpTransport.streamable_http]
+other = "可流式 HTTP"
+
+# =============================================================================
+# Dry-run 评估阶段、阶段状态与改进建议归类（枚举类 evalStage / evalStageStatus /
+# diagnosisCategory，归属包 internal/ai）。助手页的工具调用阶段与知识库页阶段同属 evalStage。
+# =============================================================================
+
+[enum.evalStage.retrieve]
+other = "混合检索"
+
+[enum.evalStage.answer]
+other = "生成回答"
+
+[enum.evalStage.chunkRelevance]
+other = "分块相关性判断"
+
+[enum.evalStage.claims]
+other = "声明忠实度判断"
+
+[enum.evalStage.reverseQuestions]
+other = "反推问题生成"
+
+[enum.evalStage.suggestions]
+other = "改进建议生成"
+
+[enum.evalStage.toolCall]
+other = "调用工具"
+
+[enum.evalStage.toolResult]
+other = "工具结果"
+
+[enum.evalStageStatus.start]
+other = "进行中"
+
+[enum.evalStageStatus.done]
+other = "已完成"
+
+[enum.evalStageStatus.failed]
+other = "失败"
+
+[enum.diagnosisCategory.coverage]
+other = "知识覆盖不足"
+
+[enum.diagnosisCategory.ranking]
+other = "检索排序需调参"
+
+[enum.diagnosisCategory.generation]
+other = "生成质量待改进"
+
+[enum.diagnosisCategory.context]
+other = "上下文利用不足"
+
+[enum.diagnosisCategory.other]
+other = "其他"
+
+[enum.chunkUnitKind.paragraph]
+other = "正文段落"
+
+[enum.chunkUnitKind.code]
+other = "代码块"
+
+[enum.chunkUnitKind.table]
+other = "表格"
+
+[enum.chunkUnitKind.list]
+other = "列表"
+
+[enum.chunkUnitKind.quote]
+other = "引用"
+
 # =============================================================================
 # AI capability disabled reasons (ai.disabled.*)
 # 「AI 能力为何不可用」的运维说明文案：由 internal/ai 的运行时快照判定，
@@ -1811,6 +1900,18 @@ other = "默认档位"
 
 [param.agent.defaultSlot.comment]
 other = "未显式指定档位且调用点未声明建议档位时使用的默认档位（flash/standard/advanced）"
+
+[param.agent.maxToolRounds.label]
+other = "工具调用轮数上限"
+
+[param.agent.maxToolRounds.comment]
+other = "单轮对话中工具调用循环的最大轮数，达到上限仍存在工具调用时以该轮文本作为答案"
+
+[param.agent.maxToolResultBytes.label]
+other = "工具结果字节上限"
+
+[param.agent.maxToolResultBytes.comment]
+other = "单个工具返回结果注入模型上下文前的字节上限，超出部分被截断"
 
 # ---- retrieval：混合检索融合与 LLM 重排 ----
 [param.retrieval.topK.label]
@@ -1911,6 +2012,12 @@ other = "反推问题提示词"
 
 [param.eval.reverseQuestionsSystemPrompt.comment]
 other = "评估中「反推问题生成」judge 的系统提示词"
+
+[param.eval.suggestionsSystemPrompt.label]
+other = "改进建议生成提示词"
+
+[param.eval.suggestionsSystemPrompt.comment]
+other = "检索试运行中「改进建议生成」judge 的系统提示词，按知识覆盖/检索排序/生成质量等类别提出建议"
 
 [param.eval.reverseQuestionCount.label]
 other = "反推问题条数"

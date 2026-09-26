@@ -98,3 +98,60 @@ export const updateLlmModelSchema = () =>
     enabled,
     description,
   });
+
+// MCP 服务器端点的表单校验 schema。
+// 创建与更新同一套规则：headers 均为可选（创建留空表示无请求头，更新留空表示沿用原凭据），
+// 且 headers 承载凭据、可合法包含首尾空白，故禁止 trim；name / url 为单行文本，统一 trim 规范化。
+const mcpServerName = yup
+  .string()
+  .trim()
+  .nonNullable()
+  .required()
+  .min(1)
+  .max(64)
+  .label("model.mcpServer.field.name");
+
+const mcpServerTransport = yup
+  .string()
+  .nonNullable()
+  .required()
+  .label("model.mcpServer.field.transport");
+
+const mcpServerURL = yup
+  .string()
+  .trim()
+  .nonNullable()
+  .required()
+  .min(1)
+  .max(512)
+  .label("model.mcpServer.field.url");
+
+const mcpServerHeaders = yup.string().nonNullable().label("model.mcpServer.field.headers");
+
+const mcpServerTimeoutSeconds = yup
+  .number()
+  .nonNullable()
+  .required()
+  .integer()
+  .min(1)
+  .label("model.mcpServer.field.timeoutSeconds");
+
+const mcpServerEnabled = yup.bool().nonNullable().required().label("model.mcpServer.field.enabled");
+
+const mcpServerDescription = yup
+  .string()
+  .nonNullable()
+  .max(512)
+  .label("model.mcpServer.field.description");
+
+// MCP 服务器表单 schema（创建与更新共用）
+export const mcpServerSchema = () =>
+  yup.object({
+    name: mcpServerName,
+    transport: mcpServerTransport,
+    url: mcpServerURL,
+    headers: mcpServerHeaders,
+    timeoutSeconds: mcpServerTimeoutSeconds,
+    enabled: mcpServerEnabled,
+    description: mcpServerDescription,
+  });

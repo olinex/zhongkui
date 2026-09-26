@@ -1,5 +1,5 @@
 <template>
-  <div v-if="result !== null || loading" class="tag-event-dry-run-panel zk-editor zk-flat-panels">
+  <div v-if="result !== null || loading" class="tag-event-dry-run-panel zk-editor">
     <div v-if="loading" class="dry-run-body">
       <v-progress-linear indeterminate color="primary" class="mt-1" />
     </div>
@@ -31,15 +31,19 @@
         <div class="result-label zk-label-caps">{{ $t("title.dryRunEvents") }}</div>
         <v-expansion-panels v-if="result.events?.length">
           <v-expansion-panel v-for="ev in result.events" :key="`${ev.ruleID}-${ev.detectedAt}`">
-            <v-expansion-panel-title>
-              <v-icon icon="mdi-check-circle-outline" color="success" size="small" class="me-1" />
-              <span class="zk-editor-title">{{ ev.ruleName }}</span>
-              <v-spacer />
-              <span class="event-time zk-hint">
-                <v-icon size="x-small" class="me-1">mdi-clock-outline</v-icon>
-                {{ localeDatetimeFormat(DateTime.fromISO(ev.detectedAt)) }}
-              </span>
-            </v-expansion-panel-title>
+            <expansion-panel-title
+              icon="mdi-check-circle-outline"
+              color="success"
+              :title="ev.ruleName"
+              :subtitle="$t('title.dryRunEventHits', { count: ev.hits.length })"
+            >
+              <template #actions>
+                <span class="event-time zk-hint">
+                  <v-icon size="x-small" class="me-1">mdi-clock-outline</v-icon>
+                  {{ localeDatetimeFormat(DateTime.fromISO(ev.detectedAt)) }}
+                </span>
+              </template>
+            </expansion-panel-title>
             <v-expansion-panel-text>
               <v-list class="bg-transparent">
                 <v-list-item v-for="hit in ev.hits" :key="hit.conditionID">
@@ -67,11 +71,7 @@
             </v-expansion-panel-text>
           </v-expansion-panel>
         </v-expansion-panels>
-        <v-alert
-          v-else
-          type="info"
-          :text="$t('summary.noEventDetected')"
-        />
+        <v-alert v-else type="info" :text="$t('summary.noEventDetected')" />
       </div>
     </div>
   </div>
@@ -143,8 +143,8 @@ defineExpose({ run, loading, reset });
 </script>
 
 <style scoped>
-/* 结果面板外壳（描边 / 圆角 / surface 背景）与三个编辑器一致，走全局 .zk-editor，
-   展开面板的扁平外观走全局 .zk-flat-panels，此处只保留布局定位 */
+/* 结果面板外壳（描边 / 圆角 / surface 背景）与三个编辑器一致，走全局 .zk-editor；
+   展开面板的标题与内容内边距一律走 Vuetify 默认，此处只保留布局定位 */
 .tag-event-dry-run-panel {
   margin-top: var(--zk-space-2);
 }
@@ -179,16 +179,5 @@ defineExpose({ run, loading, reset });
 .event-time {
   display: inline-flex;
   align-items: center;
-}
-
-/* 检测事件展开面板：标题行与内容区的布局（外观走 .zk-flat-panels） */
-.dry-run-body :deep(.v-expansion-panel-title) {
-  min-height: var(--zk-control-height-compact);
-  padding: var(--zk-space-1) var(--zk-space-3);
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel-text__wrapper) {
-  padding: var(--zk-space-1) var(--zk-space-3) var(--zk-space-3);
 }
 </style>

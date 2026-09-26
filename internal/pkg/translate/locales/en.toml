@@ -87,6 +87,7 @@
 1112 = "Invalid Scheduler Task Config"
 1113 = "Password reset is unavailable. Please contact the administrator or try again later"
 1114 = "The password reset link is invalid or expired, please request a new one"
+1115 = "The slot binding is incompatible with the current system configuration, adjust it as described in the error details and retry"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -104,6 +105,10 @@ fileName = "The field must be a valid file name"
 strictFileName = "The field must be a strictly valid file name (must not start with a hyphen, and must not contain spaces or control characters)"
 dirpath = "The field must be a valid directory path"
 alphanumspecial = "The field must contain only letters, numbers and the specified special characters"
+enum = "The field value is not among the allowed options"
+httpUrl = "The field must be an absolute http or https URL"
+jsonObject = "The field must be JSON object text whose values are all strings"
+trimmed = "The field must not contain leading or trailing whitespace"
 gtCurrentTime = "The field must be a time later than the current time"
 ltCurrentTime = "The field must be a time earlier than the current time"
 
@@ -2090,12 +2095,13 @@ other = "@notify/tag-event-alert-content.en.txt"
 # Unified as enum.<className>.<key>: labels are translated by key, and the value
 # (database storage value) is not part of the key. Entries duplicated across
 # entities under the old model.<entity>.option.<field>.<value> keys are merged
-# into a single enum class. Class names and keys are defined by
-# internal/manager/views/enum_classes.go (static classes) and enum_registry.go
-# (registry classes); notification default templates render readable labels via
-# the template function t, and the frontend enum-label dataset is served from this
-# section per request language through the unified enum endpoints /admin/enum/get|list
-# (entry.key + label).
+# into a single enum class. Class names and keys are defined by the package each class
+# belongs to: a fixed value space is declared and registered in place by the package that
+# owns it, and a registry-sourced class is declared by its owning business package
+# (message / notify / vtab / tagengine, registered via enum.RegisterSource);
+# notification default templates render readable labels via the template function t, and the
+# frontend enum-label dataset is served from this section per request language through the
+# unified enum endpoints /admin/enum/get|list (entry.key + label).
 # =============================================================================
 
 # Notification channel type (enum class channelType, from the message.Types() registry)
@@ -2264,6 +2270,89 @@ other = "Standard"
 [enum.llmSlot.advanced]
 other = "Advanced"
 
+# Tool source (enum class llmToolSource)
+[enum.llmToolSource.builtin]
+other = "Builtin Tool"
+
+[enum.llmToolSource.mcp]
+other = "MCP Tool"
+
+# MCP remote transport (enum class mcpTransport)
+[enum.mcpTransport.sse]
+other = "SSE"
+
+[enum.mcpTransport.streamable_http]
+other = "Streamable HTTP"
+
+# =============================================================================
+# Dry-run evaluation stages, stage statuses and improvement suggestion categories
+# (enum classes evalStage / evalStageStatus / diagnosisCategory, owned by internal/ai).
+# The tool-call stages of the assistant page share evalStage with the knowledge page stages.
+# =============================================================================
+
+[enum.evalStage.retrieve]
+other = "Hybrid Retrieval"
+
+[enum.evalStage.answer]
+other = "Answer Generation"
+
+[enum.evalStage.chunkRelevance]
+other = "Chunk Relevance"
+
+[enum.evalStage.claims]
+other = "Claim Faithfulness"
+
+[enum.evalStage.reverseQuestions]
+other = "Reverse Questions"
+
+[enum.evalStage.suggestions]
+other = "Improvement Suggestions"
+
+[enum.evalStage.toolCall]
+other = "Tool Call"
+
+[enum.evalStage.toolResult]
+other = "Tool Result"
+
+[enum.evalStageStatus.start]
+other = "Running"
+
+[enum.evalStageStatus.done]
+other = "Done"
+
+[enum.evalStageStatus.failed]
+other = "Failed"
+
+[enum.diagnosisCategory.coverage]
+other = "Missing Knowledge Coverage"
+
+[enum.diagnosisCategory.ranking]
+other = "Ranking Needs Tuning"
+
+[enum.diagnosisCategory.generation]
+other = "Answer Quality"
+
+[enum.diagnosisCategory.context]
+other = "Context Underused"
+
+[enum.diagnosisCategory.other]
+other = "Other"
+
+[enum.chunkUnitKind.paragraph]
+other = "Plain Text"
+
+[enum.chunkUnitKind.code]
+other = "Code Block"
+
+[enum.chunkUnitKind.table]
+other = "Table"
+
+[enum.chunkUnitKind.list]
+other = "List"
+
+[enum.chunkUnitKind.quote]
+other = "Quote"
+
 # =============================================================================
 # AI capability disabled reasons (ai.disabled.*)
 # The operator-facing copy explaining why the AI capability is unavailable: judged by the
@@ -2339,6 +2428,18 @@ other = "Default Slot"
 
 [param.agent.defaultSlot.comment]
 other = "Slot used when none is explicitly requested and the call site declares no preferred slot (flash/standard/advanced)"
+
+[param.agent.maxToolRounds.label]
+other = "Max Tool Rounds"
+
+[param.agent.maxToolRounds.comment]
+other = "Maximum number of tool-call rounds in a single turn; when the bound is reached with tool calls still pending, the text of that round becomes the answer"
+
+[param.agent.maxToolResultBytes.label]
+other = "Tool Result Byte Limit"
+
+[param.agent.maxToolResultBytes.comment]
+other = "Byte limit of a single tool result before it is injected into the model context; the excess is truncated"
 
 # ---- retrieval: hybrid retrieval fusion and LLM reranking ----
 [param.retrieval.topK.label]
@@ -2439,6 +2540,12 @@ other = "Reverse Question Prompt"
 
 [param.eval.reverseQuestionsSystemPrompt.comment]
 other = "System prompt of the judge generating reverse questions during evaluation"
+
+[param.eval.suggestionsSystemPrompt.label]
+other = "Suggestion Generation Prompt"
+
+[param.eval.suggestionsSystemPrompt.comment]
+other = "System prompt of the judge generating improvement suggestions during the retrieval dry-run, categorized as knowledge coverage, retrieval ranking, generation quality and so on"
 
 [param.eval.reverseQuestionCount.label]
 other = "Reverse Question Count"

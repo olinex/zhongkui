@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"slices"
 	"strings"
 	"text/template"
 
@@ -116,27 +115,17 @@ type searchGenerateConfig struct {
 	PackageName string
 	TimeModule  bool                          `toml:"timeModule"`
 	Searchs     map[string]searchGenerateItem `toml:"searchs"`
-	// EnumSets 命名的可选枚举值集合（search.toml 顶层 [enumSets.<name>] 映射表）。
-	// 集合名即映射 key，value 为该集合的可选项；同一集合可被多个 [[enums]] 字段声明通过 set 引用。
-	// dive 使校验递归进入映射 value（slice）及其元素（go-playground/validator 对 map 需显式 dive）。
-	EnumSets map[string][]enumGenerateConfigOption `toml:"enumSets" validate:"dive,min=1,dive"`
-	// EnumFields 可选枚举值声明（search.toml 顶层 [[enums]] 数组）。
-	// 按结构体类型名组织，其字段通过 set 引用 EnumSets 中的命名集合。
-	// 与 Searchs 同属视图层声明式配置：经 enum.tmpl 渲染为 enum_classes.go，
-	// 注册静态枚举类并输出字段绑定表（enumBindings），供统一枚举接口与 meta 自省（enumType）使用。
+	// EnumFields 结构体字段与枚举类的绑定声明（search.toml 顶层 [[enums]] 数组）。
+	// 按结构体类型名组织，其字段通过 set 引用枚举注册表已注册的类名（可选项由该来源定义）。
+	// 与 Searchs 同属视图层声明式配置：经 enum_bindings.tmpl 渲染为 enum_bindings.go，
+	// 输出字段绑定表（enumBindings），供 meta 自省（enumType）使用。
 	EnumFields []enumGenerateConfigType `toml:"enums" validate:"dive"`
 }
 
-// enumGenerateConfigOption 声明单个可选枚举值项：Key 为类内唯一标识（i18n 经 enum.<类名>.<key> 翻译 label），
-// Value 为提交/存储值（多数与 Key 相同，个别富枚举允许不同）。
-type enumGenerateConfigOption struct {
-	Key   string `toml:"key" validate:"required"`
-	Value string `toml:"value" validate:"required"`
-}
-
 // enumGenerateConfigField 声明结构体中某个枚举字段与枚举类的绑定关系。
-// Set 引用枚举类名（可来自 [enumSets.<name>] 静态声明，也可为业务注册表来源的运行时类），
-// 可选项由 enum 注册表统一定义，本处仅作"字段 → 枚举类名"绑定。
+// Set 引用枚举注册表已注册的类名（取值空间固定的枚举由归属包就地声明并注册；业务注册表
+// 来源的枚举由所属业务包经 RegisterSource 声明），可选项由 enum 注册表统一定义，本处仅作
+// "字段 → 枚举类名"绑定。
 type enumGenerateConfigField struct {
 	Field string `toml:"field" validate:"required"`
 	Set   string `toml:"set" validate:"required"`
@@ -150,18 +139,11 @@ type enumGenerateConfigType struct {
 	Fields   []enumGenerateConfigField `toml:"fields" validate:"required,min=1,dive"`
 }
 
-// enumGenerateTemplateData 是 enum.tmpl 的渲染数据：命名集合展开为枚举类注册，
-// [[enums]] 声明展开为字段绑定，模板只负责输出而无需感知引用关系。
+// enumGenerateTemplateData 是 enum_bindings.tmpl 的渲染数据：[[enums]] 声明展开为
+// 字段绑定表，模板只负责输出而无需感知引用关系。
 type enumGenerateTemplateData struct {
 	PackageName string
-	Classes     []enumGenerateTemplateClass
 	Types       []enumGenerateTemplateType
-}
-
-// enumGenerateTemplateClass 模板渲染用的枚举类注册声明。
-type enumGenerateTemplateClass struct {
-	Name    string
-	Entries []enumGenerateConfigOption
 }
 
 // enumGenerateTemplateType 模板渲染用的结构体类型声明。
@@ -239,16 +221,16 @@ var searchGenerateCmd = &cobra.Command{
 		if outputPath == "" {
 			panic("output path is required")
 		}
-		enumTmplPath, err := flags.GetString("enumTemplatePath")
+		enumBindingsTmplPath, err := flags.GetString("enumBindingsTemplatePath")
 		if err != nil {
-			panic(fmt.Sprintf("Invalid enum template path: %v", err))
+			panic(fmt.Sprintf("Invalid enum bindings template path: %v", err))
 		}
-		enumOutputPath, err := flags.GetString("enumOutputPath")
+		enumBindingsOutputPath, err := flags.GetString("enumBindingsOutputPath")
 		if err != nil {
-			panic(fmt.Sprintf("Invalid enum output path: %v", err))
+			panic(fmt.Sprintf("Invalid enum bindings output path: %v", err))
 		}
-		// 枚举模板与输出路径须同时提供：仅当两者齐全时才生成 enum_classes.go
-		genEnum := enumTmplPath != "" && enumOutputPath != ""
+		// 枚举绑定模板与输出路径须同时提供：仅当两者齐全时才生成 enum_bindings.go
+		genEnum := enumBindingsTmplPath != "" && enumBindingsOutputPath != ""
 
 		tempBytes, err := os.ReadFile(tmplPath)
 		if err != nil {
@@ -260,7 +242,7 @@ var searchGenerateCmd = &cobra.Command{
 		}
 		var enumTmpl *template.Template
 		if genEnum {
-			enumBytes, err := os.ReadFile(enumTmplPath)
+			enumBytes, err := os.ReadFile(enumBindingsTmplPath)
 			if err != nil {
 				panic(fmt.Sprintf("Invalid enum template file: %v", err))
 			}
@@ -277,25 +259,22 @@ var searchGenerateCmd = &cobra.Command{
 			PackageName: packageName,
 			TimeModule:  true,
 		}
-		// Searchs 与 EnumFields/EnumSets 分两次解析：go-toml 无法在同一文档中混排
-		// 顶层命名表（[XxxListGet] / [enumSets.<name>]）与 [[enums]] 数组表，故：
-		//   - EnumFields/EnumSets 经 wrapper 结构体直接解析（其余顶层表被宽松忽略）
-		//   - Searchs 先按通用 map 解码、剔除 enums/enumSets 键后回写再解析
+		// Searchs 与 EnumFields 分两次解析：go-toml 无法在同一文档中混排顶层命名表
+		// （[XxxListGet]）与 [[enums]] 数组表，故：
+		//   - EnumFields 经 wrapper 结构体直接解析（其余顶层表被宽松忽略）
+		//   - Searchs 先按通用 map 解码、剔除 enums 键后回写再解析
 		var enumsDoc struct {
-			EnumSets map[string][]enumGenerateConfigOption `toml:"enumSets"`
-			Enums    []enumGenerateConfigType              `toml:"enums"`
+			Enums []enumGenerateConfigType `toml:"enums"`
 		}
 		if err = toml.Unmarshal(cfgBytes, &enumsDoc); err != nil {
 			panic(fmt.Sprintf("Invalid toml config: %v", err))
 		}
-		cfg.EnumSets = enumsDoc.EnumSets
 		cfg.EnumFields = enumsDoc.Enums
 		var doc map[string]any
 		if err = toml.Unmarshal(cfgBytes, &doc); err != nil {
 			panic(fmt.Sprintf("Invalid toml config: %v", err))
 		}
 		delete(doc, "enums")
-		delete(doc, "enumSets")
 		if searchBytes, err := toml.Marshal(doc); err != nil {
 			panic(fmt.Sprintf("Invalid toml config: %v", err))
 		} else if err = toml.Unmarshal(searchBytes, &cfg.Searchs); err != nil {
@@ -325,8 +304,8 @@ var searchGenerateCmd = &cobra.Command{
 			}
 		}
 		// 同一结构体类型内字段名去重，避免生成的枚举绑定表产生歧义；
-		// [[enums]] 的 set 仅作为"字段 → 枚举类名"绑定引用，类可来自 [enumSets]
-		// 静态声明或业务注册表运行时注册，故此处不校验 set 是否声明。
+		// [[enums]] 的 set 仅作为"字段 → 枚举类名"绑定引用，类可来自归属包的就地声明
+		// 或业务包经 RegisterSource 声明的运行时类，故此处不校验 set 是否声明。
 		templateTypes := make([]enumGenerateTemplateType, 0, len(cfg.EnumFields))
 		for _, t := range cfg.EnumFields {
 			seen := make(map[string]struct{}, len(t.Fields))
@@ -346,20 +325,6 @@ var searchGenerateCmd = &cobra.Command{
 				Fields:   templateFields,
 			})
 		}
-		// 命名集合展开为枚举类注册（类名即集合名）：映射 key 天然唯一，
-		// 按键升序遍历保证生成的注册代码顺序稳定（避免 map 随机迭代导致产物抖动）
-		classNames := make([]string, 0, len(cfg.EnumSets))
-		for name := range cfg.EnumSets {
-			classNames = append(classNames, name)
-		}
-		slices.Sort(classNames)
-		templateClasses := make([]enumGenerateTemplateClass, 0, len(classNames))
-		for _, name := range classNames {
-			templateClasses = append(templateClasses, enumGenerateTemplateClass{
-				Name:    name,
-				Entries: cfg.EnumSets[name],
-			})
-		}
 		outputFile, err := os.OpenFile(outputPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
 		if err != nil {
 			panic(fmt.Sprintf("Invalid output file: %v", err))
@@ -370,22 +335,21 @@ var searchGenerateCmd = &cobra.Command{
 			panic(fmt.Sprintf("Failed to execute template: %v", err))
 		}
 		outputFile.Close()
-		// 可选：渲染枚举注册表 enum_classes.go（由 search.toml 的 [enumSets.<name>] + [[enums]] 声明驱动）
+		// 可选：渲染枚举字段绑定表 enum_bindings.go（由 search.toml 的 [[enums]] 声明驱动）
 		if !genEnum {
 			return
 		}
-		enumOutputFile, err := os.OpenFile(enumOutputPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
+		enumOutputFile, err := os.OpenFile(enumBindingsOutputPath, os.O_CREATE|os.O_TRUNC|os.O_RDWR, 0644)
 		if err != nil {
 			panic(fmt.Sprintf("Invalid enum output file: %v", err))
 		}
 		defer enumOutputFile.Close()
 		err = enumTmpl.Execute(enumOutputFile, enumGenerateTemplateData{
 			PackageName: packageName,
-			Classes:     templateClasses,
 			Types:       templateTypes,
 		})
 		if err != nil {
-			panic(fmt.Sprintf("Failed to execute enum template: %v", err))
+			panic(fmt.Sprintf("Failed to execute enum bindings template: %v", err))
 		}
 	},
 }
@@ -433,9 +397,9 @@ func init() {
 	flags.String("templatePath", "", "Path to the template file")
 	flags.String("configPath", "", "Path to the toml configs file")
 	flags.String("outputPath", "", "Path to the directory where the models will be generated")
-	// 枚举注册表生成（可选）：同时提供时才渲染 enum_classes.go，数据源为同一 configPath 的 [enumSets.<name>] + [[enums]] 声明
-	flags.String("enumTemplatePath", "", "Path to the enum template file")
-	flags.String("enumOutputPath", "", "Path where enum classes will be generated")
+	// 枚举字段绑定表生成（可选）：同时提供时才渲染 enum_bindings.go，数据源为同一 configPath 的 [[enums]] 声明
+	flags.String("enumBindingsTemplatePath", "", "Path to the enum bindings template file")
+	flags.String("enumBindingsOutputPath", "", "Path where enum bindings will be generated")
 
 	genFallbackFlags := genFallbackPcapCmd.Flags()
 	genFallbackFlags.String("output", "", "Output path for the pcap file")

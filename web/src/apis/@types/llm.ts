@@ -1,8 +1,10 @@
 // Third-party
+import type { FlexIDs } from "./admin";
 import type { SearchIn } from "@/components/@types/table";
 
 // ---- LLM 模型注册表（/admin/llm/model）----
-// LlmModelItem LLM 模型端点列表项；列表字段投影白名单不含 apiKey，故不含凭据字段
+// LlmModelItem LLM 模型端点列表项；apiKey 为 base64 密文（列表出参即密文，
+// 仅用于展示加密标识与直传明文接口解密，明文不回显）
 export interface LlmModelItem {
   id: number;
   createdAt: string;
@@ -10,6 +12,7 @@ export interface LlmModelItem {
   name: string;
   kind: string;
   baseURL: string;
+  apiKey: string;
   model: string;
   timeoutSeconds: number;
   temperature: number;
@@ -19,10 +22,9 @@ export interface LlmModelItem {
   description: string;
 }
 
-// LlmModelDetailOut LLM 模型详情出参；apiKey 为密文（明文不回显，编辑留空表示沿用原凭据）
-export interface LlmModelDetailOut extends LlmModelItem {
-  apiKey: string;
-}
+// LlmModelDetailOut LLM 模型详情出参；字段与列表项一致（apiKey 同为密文，
+// 编辑时留空表示沿用原凭据）
+export type LlmModelDetailOut = LlmModelItem;
 
 // LlmModelListOut LLM 模型列表出参
 export interface LlmModelListOut {
@@ -105,11 +107,14 @@ export interface LlmSlotBindingOut {
   available: boolean;
 }
 
-// LlmBindingListOut 档位绑定列表出参；disabledReason 为 AI 不可用时的原因（按请求语言返回）
+// LlmBindingListOut 档位绑定列表出参；disabledReason 为 AI 不可用时的原因（按请求语言返回）；
+// indexDimensions 为知识库向量索引（knowledge_chunks.embedding 列）当前维度，索引列未就绪时为 0，
+// 供运维在提交 embedding 档位绑定前预知目标维度
 export interface LlmBindingListOut {
   slots: LlmSlotBindingOut[];
   enabled: boolean;
   disabledReason: string;
+  indexDimensions: number;
 }
 
 // LlmBindingSetIn 绑定档位入参
@@ -157,4 +162,127 @@ export interface LlmParamSetIn {
 export interface LlmParamResetIn {
   keys?: string[];
   group?: string;
+}
+
+// ---- MCP 服务器注册表（/admin/llm/mcp）----
+// McpServerItem MCP 服务器列表项；transport 取值由后端枚举类 mcpTransport 下发（streamable_http / sse）
+export interface McpServerItem {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  transport: string;
+  url: string;
+  timeoutSeconds: number;
+  enabled: boolean;
+  description: string;
+}
+
+// McpServerDetailOut MCP 服务器详情出参；headers 为密文（编辑留空表示沿用原凭据）；
+// 列表字段投影白名单含 headers，故列表项亦为该类型
+export interface McpServerDetailOut extends McpServerItem {
+  headers: string;
+}
+
+// McpServerListOut MCP 服务器列表出参
+export interface McpServerListOut {
+  items: McpServerDetailOut[];
+  total: number;
+}
+
+// McpServerCreateIn 注册 MCP 服务器入参；headers 为 JSON 文本形式的请求头（可选）
+export interface McpServerCreateIn {
+  name: string;
+  transport: string;
+  url: string;
+  headers?: string;
+  timeoutSeconds: number;
+  enabled: boolean;
+  description?: string;
+}
+
+// McpServerUpdateIn 更新 MCP 服务器入参；headers 留空表示沿用原凭据
+export interface McpServerUpdateIn {
+  name: string;
+  transport: string;
+  url: string;
+  headers: string;
+  timeoutSeconds: number;
+  enabled: boolean;
+  description?: string;
+}
+
+// McpServerSearchIn MCP 服务器搜索入参
+// 继承通用 SearchIn（page/pageSize/orderBy/filterBy 等），附加特有过滤字段；
+// 过滤字段命名与后端 search.toml 的 McpServerListGet 一致
+export interface McpServerSearchIn extends SearchIn {
+  search?: string;
+  name?: string;
+  transport?: string;
+  enabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// McpServerTestIn 连通性测试入参；id 大于 0 时按已注册服务器探活，其余字段被忽略；
+// 否则按提交的完整服务器配置探活（不落库）
+export interface McpServerTestIn {
+  id?: number;
+  transport?: string;
+  url?: string;
+  headers?: string;
+  timeoutSeconds?: number;
+}
+
+// McpServerTestOut 连通性测试出参；toolNames 为探活时探测到的远端工具名清单
+export interface McpServerTestOut {
+  ok: boolean;
+  toolCount: number;
+  toolNames: string[];
+}
+
+// McpServerSyncOut 同步远端工具清单出参
+export interface McpServerSyncOut {
+  created: number;
+  updated: number;
+  removed: number;
+}
+
+// ---- 工具注册表（/admin/llm/tool）----
+// LlmToolItem 工具列表项；source 取值由后端枚举类 llmToolSource 下发（builtin / mcp），
+// mcp 来源工具附所属服务器名与远端工具名
+export interface LlmToolItem {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  name: string;
+  source: string;
+  mcpServerName: string;
+  remoteName: string;
+  enabled: boolean;
+  description: string;
+}
+
+// LlmToolListOut 工具列表出参
+export interface LlmToolListOut {
+  items: LlmToolItem[];
+  total: number;
+}
+
+// LlmToolSearchIn 工具搜索入参
+// 继承通用 SearchIn（page/pageSize/orderBy/filterBy 等），附加特有过滤字段；
+// 过滤字段命名与后端 search.toml 的 LlmToolListGet 一致
+export interface LlmToolSearchIn extends SearchIn {
+  search?: string;
+  name?: string;
+  source?: string;
+  enabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// LlmToolSetEnabledIn 批量设置工具启用态入参
+export interface LlmToolSetEnabledIn {
+  ids: FlexIDs;
+  enabled: boolean;
 }

@@ -24,9 +24,9 @@ var ChangeKey = etcd.WithPrefix("ai/") + "change"
 // ChangeKind is the kind identifier of an LLM config change.
 type ChangeKind string
 
-// 变更种类常量：模型注册表、档位绑定与参数覆盖三类写路径。
-// Change kind constants: the three write paths of the model registry, the slot bindings and
-// the parameter overrides.
+// 变更种类常量：模型注册表、档位绑定、参数覆盖、MCP 服务器注册表与工具注册表五类写路径。
+// Change kind constants: the five write paths of the model registry, the slot bindings, the
+// parameter overrides, the MCP server registry and the tool registry.
 const (
 	// ChangeKindModel 模型注册表（llm_models）发生增删改
 	// ChangeKindModel a create/update/delete on the model registry (llm_models)
@@ -37,6 +37,12 @@ const (
 	// ChangeKindParam Agent 行为参数覆盖（agent_params）发生增删改
 	// ChangeKindParam a create/update/delete on the agent parameter overrides (agent_params)
 	ChangeKindParam ChangeKind = "param"
+	// ChangeKindMcp MCP 服务器注册表（mcp_servers）发生增删改
+	// ChangeKindMcp a create/update/delete on the MCP server registry (mcp_servers)
+	ChangeKindMcp ChangeKind = "mcp"
+	// ChangeKindTool 工具注册表（llm_tools）发生增删改
+	// ChangeKindTool a create/update/delete on the tool registry (llm_tools)
+	ChangeKindTool ChangeKind = "tool"
 )
 
 // ChangeEvent 是 LLM 配置变更事件的负载。
@@ -47,8 +53,8 @@ const (
 // occurrence time for the watcher to log context; the watching logic is a wholesale rebuild
 // and does not depend on the payload.
 type ChangeEvent struct {
-	// Kind 变更种类（model / binding / param）
-	// Kind the change kind (model / binding / param)
+	// Kind 变更种类（model / binding / param / mcp / tool）
+	// Kind the change kind (model / binding / param / mcp / tool)
 	Kind ChangeKind `json:"kind"`
 	// Name 受影响对象的本地标识，如模型名、档位标识或参数键
 	// Name the local identity of the affected object, e.g. a model name, a slot or a

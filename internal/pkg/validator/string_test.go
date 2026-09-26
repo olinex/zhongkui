@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"zhongkui.com/zhongkui/internal/pkg/enum"
 )
 
 // TestIsValidStrongPassword tests the password validation function
@@ -944,6 +945,97 @@ func TestSlugValidation(t *testing.T) {
 			for _, slug := range invalidSlugs {
 				Convey(fmt.Sprintf("Slug '%s' should be invalid", slug), func() {
 					So(IsSlug(slug), ShouldBeFalse)
+				})
+			}
+		})
+	})
+}
+
+// TestGenericFieldValidations 覆盖 enum / httpUrl / jsonObject / trimmed 四个通用字段级校验：
+// 它们供各视图层 In 结构体以绑定标签直接引用，取代各自就地书写的解析与校验方法。
+// TestGenericFieldValidations covers the four generic field validations enum / httpUrl / jsonObject
+// / trimmed, which view-layer In structs reference through binding tags instead of writing their own
+// parsing and validation helpers.
+func TestGenericFieldValidations(t *testing.T) {
+	// 注册仅供测试使用的枚举类，避免与业务枚举类的注册冲突
+	enum.Register(enum.Type{Name: "validatorTestKind", Entries: []enum.Entry{
+		{Key: "alpha", Value: "alpha"},
+		{Key: "beta", Value: "beta"},
+	}})
+
+	Convey("Test generic field validations", t, func() {
+		Convey("enum accepts exactly the values of the registered class", func() {
+			So(IsValidEnum("validatorTestKind", "alpha"), ShouldBeTrue)
+			So(IsValidEnum("validatorTestKind", "beta"), ShouldBeTrue)
+			// 按 value 严格匹配：类外取值、大小写变体与带空白的取值一律拒绝
+			So(IsValidEnum("validatorTestKind", "gamma"), ShouldBeFalse)
+			So(IsValidEnum("validatorTestKind", "Alpha"), ShouldBeFalse)
+			So(IsValidEnum("validatorTestKind", " alpha"), ShouldBeFalse)
+			So(IsValidEnum("validatorTestKind", ""), ShouldBeFalse)
+		})
+
+		Convey("enum panics on an unregistered class (a tag parameter typo)", func() {
+			So(func() { IsValidEnum("validatorTestKindMissing", "alpha") }, ShouldPanic)
+		})
+
+		Convey("httpUrl accepts absolute http / https URLs only", func() {
+			for _, valid := range []string{
+				"http://example.com/mcp",
+				"https://example.com",
+				"https://example.com:8443/mcp?x=1",
+			} {
+				Convey(fmt.Sprintf("URL '%s' should be valid", valid), func() {
+					So(IsValidHTTPURL(valid), ShouldBeTrue)
+				})
+			}
+			for _, invalid := range []string{
+				"",
+				"example.com",
+				"/mcp",
+				"ftp://example.com",
+				"ws://example.com",
+				"http://",
+			} {
+				Convey(fmt.Sprintf("URL '%s' should be invalid", invalid), func() {
+					So(IsValidHTTPURL(invalid), ShouldBeFalse)
+				})
+			}
+		})
+
+		Convey("jsonObject accepts object text whose values are all strings", func() {
+			for _, valid := range []string{
+				"{}",
+				`{"Authorization":"Bearer x"}`,
+				`{"A":"1","B":"2"}`,
+			} {
+				Convey(fmt.Sprintf("JSON '%s' should be valid", valid), func() {
+					So(IsValidJSONObject(valid), ShouldBeTrue)
+				})
+			}
+			for _, invalid := range []string{
+				"",
+				"null",
+				"[]",
+				`"text"`,
+				`{"A":1}`,
+				`{"A":{"B":"1"}}`,
+				"{",
+			} {
+				Convey(fmt.Sprintf("JSON '%s' should be invalid", invalid), func() {
+					So(IsValidJSONObject(invalid), ShouldBeFalse)
+				})
+			}
+		})
+
+		Convey("trimmed rejects leading or trailing whitespace", func() {
+			for _, valid := range []string{"", "abc", "a b", "中文"} {
+				Convey(fmt.Sprintf("value '%s' should be trimmed", valid), func() {
+					So(IsTrimmed(valid), ShouldBeTrue)
+				})
+			}
+			for _, invalid := range []string{" abc", "abc ", "\tabc", "abc\n", " "} {
+				Convey(fmt.Sprintf("value '%q' should not be trimmed", invalid), func() {
+					So(IsTrimmed(invalid), ShouldBeFalse)
 				})
 			}
 		})

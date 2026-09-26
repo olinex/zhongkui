@@ -160,17 +160,29 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 ### 枚举统一注册表（enum 注册表 / search-generate 规范）
 
-- **单一数据来源**：所有枚举值统一注册进 `internal/pkg/enum` 注册表（`enum.Register(enum.Type{Name, Entries})`，条目 `enum.Entry{Key, Value}`），每个枚举类（类名如 `channelType`、`httpMethod`）有且仅有一个注册点，类内 key 互斥唯一、value 互斥唯一。数据库内存储该字段枚举值时一律存 **value**（不可存 key）。
-- **注册来源两类**：
-  - 静态枚举类：在 `search.toml` 的 `[enumSets]` 映射表中声明（集合名即映射 key，value 为该集合的内联 `options` 数组），由 `search-generate` 生成 `enum_classes.go`（`init()` 中 `enum.Register` 注册 + `enumBindings` 结构体字段绑定表）；类名即映射 key。
-  - 业务注册表来源（channelType / notificationEvent / datasourceType / tagRuleModel）：值空间随业务注册表在代码内固定，在视图层 `enum_registry.go` 的 `init()` 中从对应业务注册表组装注册（与 `/channel/types`、`/template/events`、`/datasource/types`、tagengine 注册表共用单一来源）。
-- **字段与枚举类绑定**：`search.toml` `[[enums]]` 仅作「结构体类型 + 字段 JSON 名 → 枚举类名」绑定引用（`type` / `field` / `set`），`search-generate` 生成进 `enumBindings`，meta.go 反射输出 `FieldMeta.EnumType`；运行时字段（如 `NotificationTemplateCreateIn.event`）经 `views.AddEnumBinding(typeName, field, className)` 在模块 `init()` 补充。`set` 类名仅为引用，不携带可选项——可选项唯一来源是 enum 注册表。
-- **i18n label 键**：统一前缀 `enum.<类名>.<key>`（如 `enum.notificationEvent.tag_event_record`、`enum.httpMethod.GET`），只允许经 **key** 翻译 label，禁止经 value 翻译；中英文 `zh-Hans.toml` / `en.toml` 结构一一对应，新增枚举条目（含注册表来源的新渠道/事件）必须同步补两语言键，未命中回退显示 key 本身。**禁止**任何 `model.*.option.*` 平铺或分组键。
+- **单一数据来源**：所有枚举值统一注册进 `internal/pkg/enum` 注册表（`enum.Register(enum.Type{Name, Entries})` 或 `enum.RegisterSource(name, entriesSource)`，条目 `enum.Entry{Key, Value}`），每个枚举类（类名如 `channelType`、`httpMethod`）有且仅有一个注册点，类内 key 互斥唯一、value 互斥唯一。数据库内存储该字段枚举值时一律存 **value**（不可存 key）。
+- **声明与注册一律在取值空间的归属包**：每个枚举类的唯一注册点落在**取值空间的归属包**——即该取值空间的定义处，声明形态两类：
+  - 取值空间固定的枚举：取值空间就地声明在该包内（类型化取值常量 + 取值序列），并在包内 `init()` 经 `enum.EntriesOf` + `enum.Register` 在注册时快照条目；若包内已有该取值空间的常量/清单（如 `base.SupportLanguages`、`base.EffectAllow`、`core.TemplateSource*`、`tag.EventStatus*`、`vtab.redisKind*`、`llm.AllSlots`），则**直接复用**为条目来源，不重复声明常量。当前归属：`language` / `policyEffect` → `internal/pkg/base`；`httpMethod` / `httpVersion` → `internal/models/network`；`notificationSource` / `notificationRecordStatus` → `internal/models/core`；`tagAlertStatus` → `internal/models/tag`；`datasourceStruct` → `internal/pkg/sqlitevtab/vtab`；`llmModelKind` / `llmSlot` / `llmToolSource` → `internal/pkg/llm`；`mcpTransport` → `internal/ai/tools/mcp`；`evalStage` / `evalStageStatus` / `diagnosisCategory` → `internal/ai`。**禁止**任何集中的纯声明包（如曾经的 `internal/enums`）：类必须与它的取值空间同包，跨层共用类由消费方 import 归属包引用其常量。
+  - 业务注册表来源（channelType / notificationEvent / datasourceType / tagRuleModel / tagEventDimension）：值空间随业务注册表在代码内固定，由**所属业务包**（message / notify / vtab / tagengine）经 `enum.RegisterSource(类名, func() []enum.Entry)` 声明条目来源——条目不在注册时快照，而在每次读取（`Get` / `List`）时从业务注册表实时派生，避免包内多 `init()` 的文件顺序影响条目完整性；与 `/channel/types`、`/template/events`、`/datasource/types`、tagengine 注册表共用单一来源。视图层不再组装任何枚举类。
+- **字段与枚举类绑定**：`search.toml` `[[enums]]` 仅作「结构体类型 + 字段 JSON 名 → 枚举类名」绑定引用（`type` / `field` / `set`），`search-generate` 生成进视图层 `enum_bindings.go` 的 `enumBindings`（绑定视图层结构体字段名，属视图层关注点），meta.go 反射输出 `FieldMeta.EnumType`；运行时字段（如 `NotificationTemplateCreateIn.event`）经 `views.AddEnumBinding(typeName, field, className)`（`enum_registry.go`）在模块 `init()` 补充。`set` 类名仅为引用，不携带可选项——可选项唯一来源是 enum 注册表。
+- **i18n label 键**：统一前缀 `enum.<类名>.<key>`（如 `enum.notificationEvent.tag_event_record`、`enum.httpMethod.GET`），只允许经 **key** 翻译 label，禁止经 value 翻译；中英文 `zh-Hans.toml` / `en.toml` 结构一一对应，新增枚举条目（含注册表来源的新渠道/事件）必须同步补两语言键，未命中回退显示 key 本身。**禁止**任何 `model.*.option.*` 平铺或分组键。键完整性由 `internal/manager/views/enum_i18n_test.go` 的 `TestEnumClassesHaveBilingualLabels` 兜底：遍历 `enum.List()` 断言每个类每个条目的 label 键在每种支持语言下均可解析（解析结果不等于 key），新增枚举类/条目必须同步补两语言翻译文件。
 - **统一枚举接口**：`POST /admin/enum/get`（按 `{type, lang}` 返回单类条目）与 `POST /admin/enum/list`（按 `lang` 返回全量类条目），出参条目均为 `{key, value, label}`，label 跟随请求语言。前端按（枚举类, 语言）组合缓存（`stores/enums.ts`），仅后端进程重启才可能更新，页面间不重复请求。
 - **前端消费契约**：类名常量集中在 `utils/enums.ts` 的 `EnumClass`；`enumFieldTypeOfMeta` 从 meta `bodyOutput` 取字段 `enumType`，`ensureEnum` / `enumEntriesOf` / `enumLabelOf`（value/key 双解析优先 value）/ `enumOptionsOf` 统一经枚举 store；表头/筛选（SearchTable.vue、AdaptiveCell.vue）与页面下拉一律按 `enumType` 定位枚举类，禁止手工维护选项字面量。通知模板 `t` 函数类感知：`t "<类名>" <key|value>` 优先按 value 匹配再按 key 匹配，经 `enum.<类名>.<key>` 渲染 label。
 - **目标模型枚举（tagRuleModel）**：Key 为 `tagengine.ModelKey` 推导的短展示键（camelCase，如 `httpTransport`），Value 为完整类型键（数据库存储语义，驱动 `WHERE model = ?` 匹配 tag_summings）；`TagEventRecordHit.Model` 落库存枚举短键（`toEventHit` 收敛），通知模板 `t "tagRuleModel" .Model` 与展示经同一枚举类收敛；S3 明文查看接口的模型 `switch` 经 `tagengine.ModelKey` 幂等匹配（兼容完整类型键/枚举键两种入参）。禁止 snake_case 与完整类型键作为展示键双写。
 - **前端禁止声明枚举字面量**：枚举的取值集合、默认值与展示文案**一律由后端接口返回**，前端不得在任何文件中书写枚举取值数组或取值常量——包括 `const SLOT_ORDER = ["flash", "standard", "advanced", "embedding"]`（取值集合）与 `const DEFAULT_SLOT = "standard"`（默认值）这类形式。理由：字面量一旦落在前端就会与后端注册表/参数配置漂移（曾出现助手页把默认档位写死 `standard`，运维把参数 `agent.defaultSlot` 改为 `advanced` 后该页仍按 `standard` 生成）。取值集合与默认值经接口下发（搜索类走 `enumType` / 参数类走 `options` + `enumType` / 状态类走 `defaultSlot` 等），选项文案经 `enum.<类名>.<key>` 渲染，需要固定展示顺序时以接口返回顺序为准，前端不再自行排序。
 - **参数注册表的枚举取值**：参数注册表（`internal/pkg/llm` 的 `ParamSpec`）中取值空间属于某个枚举类的参数，必须同时声明 `Options`（封闭取值清单：可选项与写入校验的唯一来源，由枚举/业务注册表**派生**得出，禁止重复书写字面量）与 `EnumType`（枚举类名，仅供消费方按 `enum.<类名>.<key>` 渲染 label）；`param/list` 出参带 `enumType`，前端据此经枚举 store 渲染下拉项文案，未声明 `EnumType` 时字面量本身即文案（如 `retrieval.fusion`）。枚举类名与取值清单的一致性由 `internal/manager/views/llm/param_enum_test.go` 的守卫测试兜底。
+
+### 字段校验标签（validator 自定义 tag）
+
+- **单一登记点**：全部自定义校验规则的 tag → 校验函数登记表唯一维护在 `internal/pkg/validator` 的 `Funcs()`，`internal/provider/validator.go` 与各测试 setup（`views/base_test.go`、`views/*/testmain_test.go`、`views/*/setup_i18n_test.go`）一律经 `validator.Funcs()` 取用，禁止任何调用方重复抄写 tag 清单（漏抄会让该 tag 在对应场景下被判为未注册规则，表现为绑定失败而非编译错误）。
+- **能力扩展范式**：新增规则一律「`TagXxx` 常量 + `IsValidXxx(string) bool` 谓词 + `ValidateXxx(fl validator.FieldLevel) bool` 适配器」，在 `Funcs()` 登记，并在中英文 locale（`internal/pkg/translate/locales/zh-Hans.toml` / `en.toml`）的 `[validator]` 段补 `validator.<tag>` 文案（缺失即 `MustLocalizeMessage` panic）。
+- **通用字段级 tag（禁止就地实现同等能力）**：
+  - `enum=<枚举类名>`：取值必须命中 `internal/pkg/enum` 注册表中该类的某个 **value**（按 value 严格匹配，不接受 key）；类名未注册属编程缺陷，直接 panic。
+  - `httpUrl`：绝对 `http` / `https` 地址（scheme 与 host 均非空）；可选时配 `omitempty`。
+  - `jsonObject`：所有取值均为字符串的 JSON 对象文本（字面量 `null`、数组、非字符串取值一律不合法）；可选时配 `omitempty`。
+  - `trimmed`：字符串首尾无空白。后端**只判定、不静默裁剪**——裁剪会让前端提交原值与实际落库值不一致；由此前端对同名单行输入必须 trim，文本域（`v-textarea`）豁免（见「String Input Trimming 字符串输入去空白」）。
+- **就地校验禁令**：视图层 In 结构体的字段合法性**一律由绑定标签表达**，禁止书写 `normalizeXxx` / `parseXxx` 这类仅做 trim、枚举白名单、URL 或 JSON 形态判断的私有方法；处理器只做「绑定 → 业务约束（唯一性、存在性等）→ 落库」。数据层解码（如密文列解出的 JSON 文本转 `map[string]string`）不属于校验，保留在处理器内。
+- **条件必填**：同一 In 结构体存在多种用法时（如「带 id 时其余字段被忽略」），用 `required_if=<字段> <值>` + `omitempty` 表达条件必填，而非无条件的 `required`。
 
 ---
 
@@ -231,6 +243,7 @@ import type { App } from "vue";
 
 - YAML 文件在 `src/locales/`：`en.yaml` / `zhHans.yaml`；点号层级 key（`model.user.field.username`）
 - 模板：`{{ $t("key.path") }}`；脚本：`i18n.global.t("key.path")`
+- 文案内嵌**字面花括号**（如 JSON 示例 `{"Authorization":"Bearer xxx"}`）必须用 vue-i18n 字面量语法包裹：写成 `{'{"Authorization":"Bearer xxx"}'}`。裸 `{` 会被消息编译器当作插值占位符，构建期报 `Invalid token in placeholder`（code 2）；双写 `{{...}}` 同样非法（code 9 `Not allowed nest placeholder`）。YAML 标量须加引号（单引号风格下把内层 `'` 双写为 `''`，以 prettier 输出为准）
 - 语言切换通过 `[language]` 动态路由段
 
 ### i18n 模型翻译组织规范（model.*）
@@ -292,6 +305,7 @@ export const useAppStore = defineStore("app", {
 | `web/src/styles/main.scss` | 全局样式与 `.zk-*` 复用外壳类 |
 | `web/src/styles/settings.scss` | Vuetify SASS 覆写（`$border-radius-root` / `$body-font-family` 等） |
 | `web/src/components/base/AppDialog.vue` | 对话框骨架 |
+| `web/src/components/base/ExpansionPanelTitle.vue` | 展开面板标题区骨架 |
 | `web/src/utils/editorHighlight.ts` | 编辑器语法高亮配色 |
 | `web/src/utils/chartTheme.ts` | 图表主题合成 |
 | `web/src/layouts/{MainLayout,CentralLayout}.vue`、`web/src/components/base/AppHeader.vue` | 布局骨架 |
@@ -318,11 +332,11 @@ export const useAppStore = defineStore("app", {
 |----|-----|------|
 | 边框 | `.zk-hairline` / `-top` / `-right` / `-bottom` | 四边或单边 1px hairline 分隔 |
 | 面板 | `.zk-panel`（+ `--subtle`）、`.zk-code-preview`、`.zk-interactive-card`、`.zk-tabs-embedded` | 表面容器（hairline + `radius-md`）；弱化面板用 `on-surface` 6% 底 + `radius-sm`（代码块、键值行、预览）；可点卡片 hover 转 `primary` 描边；嵌入标签页压平内层 `v-card` |
-| 排版 | `.zk-section-title` / `.zk-editor-title` / `.zk-hint` / `.zk-error-text` / `.zk-label-caps` / `.zk-mono-emphasis` / `.zk-metric` / `.zk-step-badge` | 区块标题、编辑器标题、提示、字段错误、分组标签、技术标识强调、指标值、步骤徽标 |
+| 排版 | `.zk-section-title` / `.zk-section-subtitle` / `.zk-editor-title` / `.zk-hint` / `.zk-error-text` / `.zk-label-caps` / `.zk-mono-emphasis` / `.zk-metric` / `.zk-step-badge` | 区块标题、次级标题（主标题旁的同级弱化标题，如对话框标题后的实体名）、编辑器标题、提示、字段错误、分组标签、技术标识强调、指标值、步骤徽标 |
 | 编辑器 | `.zk-editor`（+ `.is-error`）/ `.zk-editor-header` | CodeMirror 外壳（主题感知 hairline + `radius-sm`）与标题行 |
 | 请求态 | `.zk-request-loading` / `.zk-request-spinner` | `v-request` 加载态：隐藏按钮原内容并注入 spinner 覆盖层 |
 | 布局 | `.zk-page-container` / `.zk-centered-layout` / `.zk-centered-surface` / `.zk-filter-form` / `.zk-breadcrumbs` / `.zk-refresh-group` | 页面容器、居中骨架、筛选表单（压掉空提示区以保持单行）、面包屑、刷新分体按钮组 |
-| 交互态 | `.zk-flat-panels` / `.zk-drag-over` / `.zk-row-selected` | 扁平展开面板（透明底、无阴影、hover 弱化）、拖拽悬停行、常驻选中行 |
+| 交互态 | `.zk-drag-over` / `.zk-row-hover` / `.zk-row-selected` | 拖拽悬停行、可点击行悬停（primary 6%）、常驻选中行（展开面板为「描边盒 + 盒内平铺条目」，盒由外层容器提供，见「展开面板族」） |
 | 网络栈对比 | `.zk-stack-packet`（+ `-request` / `-response`）、`.zk-stack-header`（+ `-primary` / `-secondary`）、`.zk-stack-compare-header` / `-empty`、`.zk-clause-card` | 包卡片（灰色左侧标记条）、协议头摘要 chip、两列对齐占位、筛选子句卡片 |
 
 同文件还注册非 `.zk-` 辅助：`.font-mono`、CodeMirror tooltip 覆写（`.cm-tooltip` / `.cm-function-info`）与示例 / 函数悬停块（`.cm-sample-hover*` / `.cm-function-hover*`）。
@@ -330,7 +344,7 @@ export const useAppStore = defineStore("app", {
 覆盖 Vuetify 组件类必须带 `.v-application` 前缀：
 
 - `vite-plugin-vuetify` **延迟注入**组件样式，注入位置在 `styles/main.scss` 之后；因此外层用**单个** `.zk-*` 类去覆盖 Vuetify 组件类（与 `.v-container` / `.v-card` 等同为单类权重）**不可靠**——同权重下后者胜出，声明会被静默吞掉。
-- 一律写成 `.v-application .zk-xxx`（现有先例：`.v-application .v-card`、`.v-application .zk-flat-panels`、`.v-application .zk-page-container`）。
+- 一律写成 `.v-application .zk-xxx`（现有先例：`.v-application .v-card`、`.v-application .zk-page-container`）。
 - 反例：`.zk-page-container { max-width: 1440px }` 会被 `.v-container` 的媒体查询 `max-width`（1280 / 1920 / 2560px）覆盖，令牌在视口 ≥ 1920px 时静默失效。
 - **例外——对话框 / 浮层内部禁止带 `.v-application` 前缀**：`VDialog` 内容经 `v-overlay-container` 挂载到 `body` 下，**不在 `.v-application` 祖先链内**，带前缀的选择器会完全不匹配（曾出现 `.v-application .zk-dialog-toolbar …` 静默失效，且同一原因导致对话框 `.v-card` 拿不到全局 hairline 描边）。这类规则改以**严格高于目标 Vuetify 规则的选择器权重**取胜，与注入顺序无关：如 `.zk-dialog-toolbar .v-toolbar__content`（0-2-0）覆盖 `.v-toolbar__content`（0-1-0）、`.zk-dialog-toolbar .v-toolbar__content > .v-toolbar-title`（0-3-0）覆盖 Vuetify 同构规则（0-2-0）。
 
@@ -539,6 +553,8 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 - **一个功能族一个变体基线**：同一功能族的组件（全部对话框、全部 CodeMirror 编辑器、全部信息面板、全部 chip、全部日期时间字段）共享同一骨架与同一视觉基线；需要变体时必须**成对定义**（如 `size: "sm" | "md" | "lg" | "xl"`）并在样式层集中实现，禁止各组件内自写一套。
 - **输入族变体基线**：所有输入类组件（`VTextField` / `VSelect` / `VAutocomplete` / `VCombobox` / `VTextarea` / `VNumberInput` / `VFileInput` / `VField`）必须**全部**在 `plugins/vuetify.ts` 的 `defaults` 中登记 `variant: "outlined"` + `density: "compact"`。理由：Vuetify 这些组件**自带的默认 variant 是 `filled`**，漏登记不会报错，只会静默退化为灰色填充，与同族 outlined 控件并排时明显分裂（`VNumberInput` / `VFileInput` 曾长期如此）。新增或升级 Vuetify 输入组件时必须同步补登记，并在本节末「组件默认值清单」中更新对应行——该清单与 `defaults` 对象必须逐项一致。
 - **扩展面板单展开**：`VExpansionPanels` 已由 `plugins/vuetify.ts` 的 `defaults` 固定为 `variant: "accordion"`，语义是**同一时刻只展开一项**，用法处**禁止**声明 `multiple`。理由：`multiple` 与 `variant` 在 Vuetify 内是**正交**的两组属性（`variant` 只落 `--variant-accordion` 样式类，是否允许多开只由 `multiple` 决定），一旦声明就只保留手风琴外观、却突破其单开语义，出现多个面板同时展开；同一手风琴内的 `v-model` 也必须是**单值**（无展开项时为空串），不得声明为数组。先例：`components/admin/AgentParamPanel.vue`、`pages/[language]/ai/knowledge.vue`。
+- **展开面板标题区**：全部 `v-expansion-panels` 的标题一律走 `web/src/components/base/ExpansionPanelTitle.vue`（图标头像 + `.zk-section-title` 标题 + `.zk-hint` 说明；右侧 `actions` 槽插在组件统一渲染的 chevron 之前），**禁止**在用法处自写 `v-expansion-panel-title` 结构或手写 chevron。状态类图标需要旋转动效（运行中 / 加载态）时走组件的 `spin` prop（复用 `@mdi/font` 的 `.mdi-spin` 动画），用法处不得另挂图标。先例：`pages/[language]/profile.vue`、`components/admin/AgentParamPanel.vue`、`components/admin/RegoDryRunPanel.vue`、`components/admin/TagEventRuleDryRunPanel.vue`、`pages/[language]/ai/knowledge.vue`、`components/forms/DatasourceGuidePanel.vue`。
+- **展开面板族 = 描边盒 + 盒内平铺条目**：全站 `v-expansion-panels` 一律呈现「一个 hairline 描边盒，盒内以面板间 1px 分隔线分条」，条目自身无边框、无悬浮阴影。描边盒**只能由外层容器提供，且恰好一层**（`.zk-panel` 包裹 div、`TabView` 卡片、`.zk-editor` 外壳三种皆可，按所在页面结构择一）；`v-expansion-panels` 自身**禁止**再带 `.zk-panel` / `.zk-editor` / `.zk-hairline` 等描边类（曾出现面板组自身带 `.zk-panel`、外层参考栏也带 `.zk-panel` 的双层框，以及「有阴影 / 无边框平铺 / 有边框」三种观感并存）。`.v-expansion-panel__shadow` 抬升阴影已由 `styles/main.scss` 全局 `display: none`，用法处不得覆写或重新引入。其余外观（标题 `16px 24px` / 48px、展开态 64px；内容 `8px 24px 16px` 内边距；手风琴 variant 下展开项 `margin-top: 0`）保持 Vuetify 默认，禁止在用法处覆写内边距 / 底色 / hover 遮罩。先例：`pages/[language]/profile.vue`（包裹 div 提供盒）、`components/admin/AgentParamPanel.vue`（TabView 卡片提供盒）、`components/admin/{Rego,TagEventRule}DryRunPanel.vue`（`.zk-editor` 外壳提供盒）、`components/forms/DatasourceGuidePanel.vue`（外层参考栏提供盒，根节点已去掉自身描边）。
 - **对话框**：一律走 `web/src/components/base/AppDialog.vue` 骨架（紧凑工具栏「图标 + 标题 + 关闭图标按钮」+ `VDivider` + 可滚动主体 + 可选右对齐页脚）；宽度只取 `size` 四档（映射 `--zk-dialog-width-sm|md|lg|xl`），禁止自由 px。例外：全屏 + 底部过渡形态的 `NetworkStackDialog.vue` 保留原生 `VDialog`。
 - **代码编辑器**：全部 CodeMirror 编辑器共享 `.zk-editor` 外壳（主题感知 hairline 描边、`--zk-radius-sm`、统一内边距 / 最小高度 / 字号），校验失败态加 `.is-error` 修饰类；语法配色继续复用 `utils/editorHighlight.ts`。
 - **图标按钮**：统一 `variant="text"`（`density="compact"` 由 `VBtn` 默认值提供）+ `:title`（tooltip）+ `:aria-label`。
@@ -607,6 +623,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 |------|------|------|------|
 | `modelValue` | `boolean` | —（必填） | 打开状态（`v-model`） |
 | `title` | `string` | —（必填） | 工具栏标题 |
+| `subtitle` | `string` | `undefined` | 可选次级标题，紧随主标题（`.zk-section-subtitle`：同字号、降字重、`on-surface-variant`）。承载「视图名 + 实体名」这类双标题场景，实体名过长时随标题行整体截断，主标题始终完整可读 |
 | `icon` | `string` | `undefined` | 可选前置 `mdi-*` 图标 |
 | `size` | `"sm" \| "md" \| "lg" \| "xl"` | `"md"` | 宽度档 |
 | `persistent` | `boolean` | `false` | 点击遮罩 / ESC 不关闭 |
@@ -725,19 +742,21 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
   - 子项的功能键为「子项自身 `feature` 优先，否则继承所属分组」，见 `MainLayout.vue` 的 `childFeature`。
 - **导航标识徽章**（`components/base/NavBadge.vue`）：侧边栏的「锁定」与「命名空间」两类标识是**同一组件族的两个变体**，父级与子级共用同一组件、同一套解析规则，禁止就地各写一套图标 + tooltip：
   - 标识种类由 `navigation.ts` 的 `navBadgeOf(unavailable, namespaceScoped)` 统一解析：**锁定优先于命名空间**——页面既然已经不可用，再说明它是否随命名空间变化已无意义，故两者同时命中时只返回 `lock`；父级与子级共用该函数，保证同类标识语义处处一致。
-  - `lock`：`mdi-lock-outline` + `color="warning"`（不可用是**状态**，用语义色）；tooltip 取后端下发的原因（`featuresStore.reasonOf(key)`），为空时回退 `navbar.featureUnavailable`。
+  - `lock`：`mdi-lock-outline` + `color="warning"`（不可用是**状态**，用语义色）；tooltip 取 `navbar.featureUnavailable`。
   - `namespace`：`mdi-alpha-n-box-outline` + `color="primary"`（命名空间是**归属**而非状态，禁止用语义色表达）；tooltip 取 `navbar.namespaceScoped`。
+  - **tooltip 文案只表达「标识是什么」且必须单行**：受左侧可用宽度预算（约 6~7 个汉字）限制，文案须短（`navbar.featureUnavailable` / `navbar.namespaceScoped` 两个键，中英同步精简），字数超出时**优先精简文案**而非放宽宽度。**禁止**把后端下发的具体不可用原因塞进 tooltip：技术细节长且随实现变化，必然折行或被翻到右侧（该原因只由说明页承载）。
   - **子级标识**：命中条件由子项自身决定（见上条的功能键继承规则）。
   - **父级标识**：**仅在全部子项命中同一语义时**才跟随展示——部分子项不可用、或部分子项与命名空间无关时，父级标识会以偏概全，故不展示；判定基于该分组当前可见（已按权限过滤）的子项，即用户实际看到的子项。
   - 无标识时**不提供** `#append` 插槽（用 `v-if` 控制），避免空容器参与布局。
-  - **tooltip 一律朝左展开，且必须用 `max-width` 属性限制宽度**：这不是装饰而是行为约束——Vuetify 的位置策略（`connectedLocationStrategy`）在首选方向放不下时会**自动翻到对侧**，而标识紧贴抽屉右侧、左侧可用空间只有约 132px，宽度超过该值的 tooltip（典型：后端下发的不可用原因）会被翻到右侧，造成同类标识方向不一致。该宽度只能用 Vuetify 的 `max-width` 属性（`makeDimensionProps` 会把它作为**行内样式**写到 `.v-overlay__content`），**不能**用 CSS 类覆盖；新增/改动这类 tooltip 文案时禁止移除该限制。
+  - **tooltip 一律朝左展开，且必须用 `max-width` 属性限制宽度**：这不是装饰而是行为约束——Vuetify 的位置策略（`connectedLocationStrategy`）在首选方向放不下时会**自动翻到对侧**，而标识紧贴抽屉右侧、左侧可用空间只有约 133px，宽度超过该值的 tooltip 会被翻到右侧，造成同类标识方向不一致。该宽度只能用 Vuetify 的 `max-width` 属性（`makeDimensionProps` 会把它作为**行内样式**写到 `.v-overlay__content`），**不能**用 CSS 类覆盖；新增/改动这类 tooltip 文案时禁止移除该限制。
   - 父级标识复用分组标题行的 `#append` 插槽，而该插槽会接管 Vuetify 默认注入的展开箭头，故必须在同一插槽内保留一个**不指定 `icon`** 的 `v-icon` 以继承父级 `VListGroup` 经 defaults 注入的 `appendIcon`：否则展开箭头消失，或被迫重复声明箭头图标及其展开态映射（先例见 `MainLayout.vue` 的父级 `#append`）。
 - **唯一例外**：没有对应页面、无法跳转的非导航入口（如登录页「忘记密码」链接）仍按功能开关隐藏——展示置灰却无处可去没有意义。
 - **页面级引导统一走路由守卫 + 独立说明页**，禁止各功能页各自处理不可用态：
   - 路由 → 功能的映射由 `navigation.ts` 的 `featureOfRoute` 推导（子项 `feature` 优先，否则继承分组；未登记在导航中的路由返回 `undefined`），只维护一份声明；
   - `router/index.ts` 的守卫对 `requiresAuth` 路由校验：命中关闭功能时先 `load(true)` **强制刷新一次**功能开关再重定向到 `Feature Unavailable`。理由：前端没有「配置变更推送」通道，用户刚在开通页完成开通后若直接返回，缓存中的旧可用性会把自己再次拦回说明页；
   - 说明页 `pages/[language]/feature-unavailable.vue` 走 `CentralLayout` + `v-empty-state`（`mdi-lock-outline` + `color="warning"`），功能键经 query 传入。其文案与引导全部取自单一来源：功能展示名取导航分组标题，开通入口取分组 `activationRoute` 声明的路由名（标题与所需权限经 `navChildByRoute` 复用导航中既有子项），**禁止**在本页二次声明功能名或权限字面量；
-  - 用户具备开通入口所需权限时展示「前往 {page} 开通」主按钮；不具备时改提示联系管理员，**禁止**引导其前往无权访问的页面。
+  - 用户具备开通入口所需权限时展示「前往 {page} 开通」主按钮；不具备时改提示联系管理员，**禁止**引导其前往无权访问的页面；
+  - 说明页是死胡同页面，必须同时提供「返回上一级」退出入口（`action.backPrevious`）：优先 `router.back()` 回到进入本页前的页面，直接用 URL 打开本页无历史可回退时退化为首页，避免按钮无响应或把用户带出应用。**为此守卫的该次重定向必须用 `router.push` 而非 `router.replace`**：守卫先于 `finalizeNavigation` 执行，被拦截的导航尚未写入历史，`replace` 顶掉的是用户当前所在页面的条目，说明页会变成「无上一级」的死胡同（用户点按钮或浏览器后退都只能越过该页）。
 - **该约束只覆盖侧边栏导航入口**：首页快速开始选择器（`pages/[language]/index.vue`）仍按功能开关过滤链接卡片；其卡片本身不带可用性标识，点击后同样由路由守卫引导到说明页。
 - **新增一项功能开关时必须同时**：后端在 `internal/manager/features` 注册，并在不可用原因可解释时下发 `reason`（依赖方实现 `Reasoned` 可选接口，见 `internal/ai/runtime.go`）；前端在 `navigation.ts` 的对应分组 / 子项上声明 `feature`，有页面级开通入口时声明 `activationRoute`。
 

@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	// third-party
 	"github.com/cloudwego/eino/components/embedding"
@@ -361,17 +362,16 @@ func (r *Retriever) resolveRerankChat() (chatGenerator, error) {
 	return chat, nil
 }
 
-// Retrieve 执行混合检索：向量路 + 关键词路 → 融合 → LLM 重排。
-// 档位语义：重排声明使用 flash 档位（rerankSlot），该档位未绑定时直接返回英文错误，
-// 不切换到其他档位。降级策略：未注入 resolver（重排未启用）或重排调用/解析失败时，
-// 回退为融合排序前 TopK（英文注释说明降级行为），检索仍可用。
-// Retrieve runs the hybrid retrieval: vector path plus keyword path, fusion, then LLM
-// rerank. Slot semantics: the rerank declares the flash slot (rerankSlot); an unbound slot
-// returns an English error directly without switching to another slot. Degradation strategy:
-// when no resolver was injected (the rerank is disabled) or the rerank call/parse fails, it
-// falls back to the fusion-ranked TopK (the degradation is documented here in English),
-// keeping the retrieval usable.
-func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retriever.Option) ([]*schema.Document, error) {
+// retrieveOptions 解析本次检索实际生效的参数：先以行为参数（retrieval.*）为默认值，再叠加
+// 调用方经 opts 注入的覆盖，最后做两处归一化（Candidates 非正数时取 TopK；TopK 非正数或
+// 超过 Candidates 时取 Candidates）。Retrieve 与 DryRun 共用本方法，保证 dry-run 的改进建议
+// 引用的参数与实际检索完全一致。
+// retrieveOptions resolves the retrieval parameters effective for this run: the behavior
+// parameters (retrieval.*) supply the defaults, the caller-injected opts override them, and two
+// normalizations are applied last (a non-positive Candidates becomes TopK; a non-positive TopK or
+// one exceeding Candidates becomes Candidates). Retrieve and DryRun share this method so the
+// parameters quoted by the dry-run suggestions match the actual retrieval exactly.
+func (r *Retriever) retrieveOptions(opts ...retriever.Option) *RetrieveOptions {
 	o := retriever.GetImplSpecificOptions(&RetrieveOptions{
 		TopK:       r.params.Int("retrieval.topK"),
 		Candidates: r.params.Int("retrieval.candidates"),
@@ -381,14 +381,29 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 			Keyword: r.params.Float("retrieval.weightKeyword"),
 		},
 	}, opts...)
-	if strings.TrimSpace(query) == "" {
-		return nil, errors.New("retriever: empty query")
-	}
 	if o.Candidates <= 0 {
 		o.Candidates = o.TopK
 	}
 	if o.TopK <= 0 || o.TopK > o.Candidates {
 		o.TopK = o.Candidates
+	}
+	return o
+}
+
+// Retrieve 执行混合检索：向量路 + 关键词路 → 融合 → 内容去重 → LLM 重排。
+// 档位语义：重排声明使用 flash 档位（rerankSlot），该档位未绑定时直接返回英文错误，
+// 不切换到其他档位。降级策略：未注入 resolver（重排未启用）或重排调用/解析失败时，
+// 回退为融合排序前 TopK（英文注释说明降级行为），检索仍可用。
+// Retrieve runs the hybrid retrieval: vector path plus keyword path, fusion, content
+// dedupe, then LLM rerank. Slot semantics: the rerank declares the flash slot (rerankSlot);
+// an unbound slot returns an English error directly without switching to another slot.
+// Degradation strategy: when no resolver was injected (the rerank is disabled) or the
+// rerank call/parse fails, it falls back to the fusion-ranked TopK (the degradation is
+// documented here in English), keeping the retrieval usable.
+func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retriever.Option) ([]*schema.Document, error) {
+	o := r.retrieveOptions(opts...)
+	if strings.TrimSpace(query) == "" {
+		return nil, errors.New("retriever: empty query")
 	}
 
 	queryVec, err := r.embed.EmbedStrings(ctx, []string{query})
@@ -404,6 +419,12 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 		return nil, errors.WithStack(err)
 	}
 	cands := fuseRetrievalResults(vectorHits, keywordHits, o.Fusion, o.Weights)
+	// 内容去重先于候选截断与重排：重复命中会占掉 candidates/topK 名额、把真正独立的候选
+	// 挤出短名单，还会让重排在同一段文本的多个副本上重复判定（见 dedupeSimilarResults）
+	// Dedupe by content before truncating to candidates and before the rerank: duplicates
+	// would eat the candidates/topK slots, push genuinely distinct hits out of the shortlist
+	// and make the rerank judge several copies of the same text
+	cands = dedupeSimilarResults(cands)
 	cands = selectTopK(cands, o.Candidates)
 
 	// 解析重排使用的对话客户端（调用点声明 flash 档位）：未注入 resolver 时跳过重排，
@@ -428,22 +449,25 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 }
 
 // DryRun 执行知识库 RAG dry-run：混合检索（参数可覆盖）→ 基于上下文生成回答 →
-// RAGAS 风格量化评估。全流程经 report 实时上报阶段状态与模型增量输出（为 nil 时
+// RAGAS 风格量化评估 → 改进建议。全流程经 report 实时上报阶段状态与模型增量输出（为 nil 时
 // 不上报）；report 返回错误（SSE 写失败/客户端断开）时立即中止并向上返回该错误。
-// 检索失败或 flash 档位未绑定（重排与评估的声明档位）时返回错误；评估客户端缺失或
-// 检索结果为空时返回带检索结果与 evalError 的结果（evaluation 为空）。结果中的 Meta
+// languageTag 为请求语言标签（BCP-47），用于要求模型以该语言输出改进建议正文，为空时不
+// 下发语言指令。检索失败或 flash 档位未绑定（重排与评估的声明档位）时返回错误；评估客户端
+// 缺失或检索结果为空时返回带检索结果与 evalError 的结果（evaluation 为空）。结果中的 Meta
 // 汇总检索耗时、各次调用明细、总计耗时与 token。
 // DryRun runs a knowledge-base RAG dry-run: hybrid retrieval (with overridable
-// parameters), context-based answer generation, then RAGAS-style quantitative
-// evaluation. The whole flow reports stage statuses and model deltas through report in
-// real time (a nil reporter reports nothing); when report returns an error (an SSE write
-// failure or a disconnected client) the run aborts immediately and that error is
-// propagated. A retrieval failure or an unbound flash slot (the declared slot of the rerank
-// and the evaluation) returns an error; when the evaluation client is absent or no results
-// are retrieved, it returns a result carrying the retrieval hits and an evalError
-// (evaluation stays nil). Meta in the result summarizes the retrieval elapsed time, the
-// per-call details, the total elapsed time and the token usage.
-func (r *Retriever) DryRun(ctx context.Context, query string, report EvalReporter, opts ...retriever.Option) (*DryRunResult, error) {
+// parameters), context-based answer generation, RAGAS-style quantitative evaluation and
+// improvement suggestions. The whole flow reports stage statuses and model deltas through
+// report in real time (a nil reporter reports nothing); when report returns an error (an SSE
+// write failure or a disconnected client) the run aborts immediately and that error is
+// propagated. languageTag is the request language tag (BCP-47), used to ask the model to write
+// the suggestion bodies in that language; an empty value drops the language instruction. A
+// retrieval failure or an unbound flash slot (the declared slot of the rerank and the
+// evaluation) returns an error; when the evaluation client is absent or no results are
+// retrieved, it returns a result carrying the retrieval hits and an evalError (evaluation stays
+// nil). Meta in the result summarizes the retrieval elapsed time, the per-call details, the
+// total elapsed time and the token usage.
+func (r *Retriever) DryRun(ctx context.Context, query string, report EvalReporter, languageTag string, opts ...retriever.Option) (*DryRunResult, error) {
 	totalStart := time.Now()
 	// reportErr 记录上报写失败（客户端断开），与「评估前置条件不满足」的降级错误区分开
 	// reportErr records a report write failure (a disconnected client), kept apart from the
@@ -490,7 +514,12 @@ func (r *Retriever) DryRun(ctx context.Context, query string, report EvalReporte
 	if err != nil {
 		return nil, err
 	}
-	ev, calls, evalErr := evaluate(ctx, r.params, chat, r.embed, query, results, emit)
+	// 改进建议需引用本次实际生效的检索参数（与 Retrieve 走上完全相同的默认值与归一化），
+	// 并需要请求语言标签
+	// The suggestions quote the retrieval parameters effective in this run (the very defaults and
+	// normalization Retrieve applies) and need the request language tag
+	diag := diagnosisContext{Options: *r.retrieveOptions(opts...), Language: languageTag}
+	ev, calls, evalErr := evaluate(ctx, r.params, chat, r.embed, query, results, diag, emit)
 	if reportErr != nil {
 		return nil, reportErr
 	}
@@ -775,6 +804,100 @@ func lessResult(a, b *RetrievalResult) bool {
 	return a.ChunkIndex < b.ChunkIndex
 }
 
+// 内容去重的字符 n-gram 长度与 Jaccard 相似度阈值。阈值取高值，只拦「内容实质相同」的命中：
+// 分片接缝处的重叠复读（默认 overlap=100 对 size=800）只占约一成，远低于阈值，故相邻块
+// 不会被误删；而同一篇自重复文本被切成相邻块、同一份内容被重复索引等真重复会被拦下。
+// The character n-gram size and the Jaccard similarity threshold of the content dedupe. The
+// high threshold only rejects hits whose content is substantially the same: the seam overlap
+// (default overlap=100 against size=800) accounts for about a tenth of a chunk and stays far
+// below it, so adjacent chunks are never removed by mistake.
+const (
+	dedupeShingleSize      = 4
+	dedupeSimilarityCutoff = 0.8
+)
+
+// dedupeSimilarResults 去掉融合排序结果中内容实质重复的命中：按排序自前向后逐条保留，
+// 某条与任一已保留条目的字符 n-gram Jaccard 相似度不低于 dedupeSimilarityCutoff 时丢弃。
+// 保留排序更靠前的一条——重排与融合都认定它更相关，分数更高且信息不劣于后者。输入不足
+// 两条时原样返回。
+// dedupeSimilarResults drops the hits whose content is substantially the same as an
+// already-kept hit: walking the fusion order from front to back, a hit whose character
+// n-gram Jaccard similarity to any kept hit reaches dedupeSimilarityCutoff is discarded.
+// The earlier hit wins — both the fusion and the rerank ranked it higher, and its content is
+// no less informative than the later one. Fewer than two hits are returned as-is.
+func dedupeSimilarResults(hits []*RetrievalResult) []*RetrievalResult {
+	if len(hits) < 2 {
+		return hits
+	}
+	kept := make([]*RetrievalResult, 0, len(hits))
+	keptShingles := make([]map[string]struct{}, 0, len(hits))
+	for _, hit := range hits {
+		shingles := contentShingles(hit.Content)
+		duplicated := false
+		for _, prev := range keptShingles {
+			if jaccardSimilarity(shingles, prev) >= dedupeSimilarityCutoff {
+				duplicated = true
+				break
+			}
+		}
+		if duplicated {
+			continue
+		}
+		kept = append(kept, hit)
+		keptShingles = append(keptShingles, shingles)
+	}
+	return kept
+}
+
+// contentShingles 把分块正文归一化后切成字符 n-gram 集合用作相似度指纹：归一化先折叠
+// 全部空白，使标题路径拼接、段落分隔等排版差异不影响判定；正文短于 n-gram 长度时整体
+// 作为一个指纹，保证「同样短小」也能互相判为重复。
+// contentShingles turns the chunk body into a character n-gram set used as a similarity
+// fingerprint: normalization collapses every whitespace run first so that layout differences
+// (heading path concatenation, paragraph separators) do not affect the check; a body shorter
+// than the n-gram size becomes a single fingerprint so equally short bodies still compare.
+func contentShingles(content string) map[string]struct{} {
+	runes := []rune(strings.Join(strings.Fields(content), ""))
+	if len(runes) == 0 {
+		return nil
+	}
+	if len(runes) < dedupeShingleSize {
+		return map[string]struct{}{string(runes): {}}
+	}
+	out := make(map[string]struct{}, len(runes)-dedupeShingleSize+1)
+	for i := 0; i+dedupeShingleSize <= len(runes); i++ {
+		out[string(runes[i:i+dedupeShingleSize])] = struct{}{}
+	}
+	return out
+}
+
+// jaccardSimilarity 计算两个 n-gram 集合的 Jaccard 相似度；任一集合为空时返回 0。
+// 先做上限剪枝：Jaccard 至多为 min(|A|,|B|)/max(|A|,|B|)，达不到阈值的组合直接返回 0，
+// 免去全量交集计算（正文长度悬殊的条目占绝大多数）。
+// jaccardSimilarity computes the Jaccard similarity of two n-gram sets (0 when either set is
+// empty). An upper-bound prune runs first: the Jaccard index cannot exceed
+// min(|A|,|B|)/max(|A|,|B|), so a pair below the threshold returns 0 without computing the
+// full intersection (bodies of very different lengths are the vast majority of pairs).
+func jaccardSimilarity(a, b map[string]struct{}) float64 {
+	if len(a) == 0 || len(b) == 0 {
+		return 0
+	}
+	small, large := len(a), len(b)
+	if small > large {
+		small, large = large, small
+	}
+	if float64(small)/float64(large) < dedupeSimilarityCutoff {
+		return 0
+	}
+	var overlap int
+	for shingle := range a {
+		if _, ok := b[shingle]; ok {
+			overlap++
+		}
+	}
+	return float64(overlap) / float64(len(a)+len(b)-overlap)
+}
+
 // selectTopK 取融合排序后的前 topK 条（重排不可用/失败时的降级结果）；topK 非正数时
 // 返回全部。
 // selectTopK takes the first topK hits of the fusion order (the degraded result when the
@@ -882,6 +1005,158 @@ func toFloat32(vec []float64) []float32 {
 func sha256Hex(content string) string {
 	sum := sha256.Sum256([]byte(content))
 	return hex.EncodeToString(sum[:])
+}
+
+// chunkOverviewRow 是分块明细的读取行：仅含明细所需列，避免载入 embedding 大字段。
+// chunkOverviewRow is the read row of a chunk detail: only the columns the detail needs, so the
+// large embedding column is never loaded.
+type chunkOverviewRow struct {
+	// ChunkIndex 分块在文档内的序号
+	ChunkIndex int
+	// HeadingPath 所属标题路径
+	HeadingPath string
+	// Content 分块正文
+	Content string
+}
+
+// ChunkOverviewSummary 是文档分块构建摘要：读时从知识文档与其分块聚合派生，不持久化。
+// ChunkOverviewSummary is the chunk-construction summary of a document: derived at read time by
+// aggregating the knowledge document and its chunks, nothing is persisted.
+type ChunkOverviewSummary struct {
+	// ChunkCount 分块数（实际读取到的分块行数）
+	ChunkCount int
+	// ContentChars 文档正文字符数
+	ContentChars int
+	// ChunkCharsTotal 各分块正文字符数之和（含 overlap 造成的重复）
+	ChunkCharsTotal int
+	// ChunkCharsAvg 分块正文字符数均值（整数除法；无分块时为 0）
+	ChunkCharsAvg int
+	// ChunkCharsMin 分块正文字符数最小值（无分块时为 0）
+	ChunkCharsMin int
+	// ChunkCharsMax 分块正文字符数最大值（无分块时为 0）
+	ChunkCharsMax int
+	// HeadingPathCount 去重后的标题路径数（空路径不计入）
+	HeadingPathCount int
+	// AtomicChunkCount 含代码块或表格的分块数（超长也不切分的原子块）
+	AtomicChunkCount int
+	// ChunkSize 生效参数 chunking.size（params 为 nil 时为 0）
+	ChunkSize int
+	// ChunkOverlap 生效参数 chunking.overlap（params 为 nil 时为 0）
+	ChunkOverlap int
+	// Indexed 是否已建立索引（存在分块且内容摘要非空）
+	Indexed bool
+	// Stale 索引摘要与当前正文不一致（索引落后于正文）
+	Stale bool
+	// IndexedAt 最近一次索引写入时间（文档更新时间）
+	IndexedAt time.Time
+	// Hash 文档内容 sha256 摘要
+	Hash string
+}
+
+// ChunkOverviewItem 是单个分块的构建明细。
+// ChunkOverviewItem is the construction detail of a single chunk.
+type ChunkOverviewItem struct {
+	// Index 分块在文档内的序号
+	Index int
+	// HeadingPath 所属标题路径（空表示该块不在任何标题之下）
+	HeadingPath string
+	// Content 分块正文
+	Content string
+	// Chars 正文字符数
+	Chars int
+	// Lines 正文行数
+	Lines int
+	// Kinds 识别出的结构单元类型（取值为 chunkUnitKind 枚举类的值，按声明顺序）
+	Kinds []llm.ChunkUnitKind
+}
+
+// ChunkOverview 是文档分块构建明细的聚合结果。
+// ChunkOverview is the aggregated result of a document's chunk-construction detail.
+type ChunkOverview struct {
+	// Summary 文档级索引摘要
+	Summary ChunkOverviewSummary
+	// Chunks 逐块明细（按 chunk_index 升序；无分块时为空切片而非 nil）
+	Chunks []ChunkOverviewItem
+}
+
+// BuildChunkOverview 读取文档分块并聚合构建摘要：按 chunk_index 升序读取分块（仅选取
+// chunk_index/heading_path/content，不载入 embedding），逐块统计字符数/行数/结构单元类型，
+// 并派生标题路径数、原子块数、索引状态与陈旧标记。本函数为包级函数（不挂 Knowledge 方法），
+// 使 AI 能力未启用时也能读取明细（此时文档通常未索引，返回空分块 + Indexed=false）。
+// params 为 nil 时切片长度与重叠长度记 0；db 或 doc 为 nil 时返回英文错误。
+// BuildChunkOverview reads a document's chunks and aggregates the summary: chunks are read in
+// chunk_index ascending order (selecting only chunk_index/heading_path/content, never loading the
+// embedding), and each chunk contributes its character count, line count and structural unit kinds,
+// from which the heading-path count, atomic-chunk count, index state and stale flag are derived. It
+// is a package-level function rather than a Knowledge method so the detail stays readable while the
+// AI capability is disabled (such documents are normally unindexed and yield no chunks with
+// Indexed=false). A nil params records zero chunk size and overlap; a nil db or doc returns an
+// English error.
+func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params, doc *ai.KnowledgeDocument) (*ChunkOverview, error) {
+	if db == nil {
+		return nil, errors.New("knowledge: nil database")
+	}
+	if doc == nil {
+		return nil, errors.New("knowledge: nil document")
+	}
+	var rows []chunkOverviewRow
+	if err := db.WithContext(ctx).
+		Table("knowledge_chunks").
+		Select("chunk_index, heading_path, content").
+		Where("document_id = ? AND namespace_name = ?", doc.ID, doc.NamespaceName).
+		Order("chunk_index ASC").
+		Scan(&rows).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	summary := ChunkOverviewSummary{
+		ChunkCount:   len(rows),
+		ContentChars: utf8.RuneCountInString(doc.Content),
+		IndexedAt:    doc.UpdatedAt,
+		Hash:         doc.Hash,
+	}
+	if params != nil {
+		summary.ChunkSize = params.Int("chunking.size")
+		summary.ChunkOverlap = params.Int("chunking.overlap")
+	}
+	chunks := make([]ChunkOverviewItem, 0, len(rows))
+	paths := make(map[string]struct{}, len(rows))
+	for _, row := range rows {
+		chars := utf8.RuneCountInString(row.Content)
+		kinds := llm.DescribeChunk(row.Content)
+		for _, kind := range kinds {
+			// 代码块与表格为原子单元（超长也不切分），单独计数供运维判断是否出现超长块
+			if kind == llm.ChunkUnitCode || kind == llm.ChunkUnitTable {
+				summary.AtomicChunkCount++
+				break
+			}
+		}
+		if row.HeadingPath != "" {
+			paths[row.HeadingPath] = struct{}{}
+		}
+		summary.ChunkCharsTotal += chars
+		if len(chunks) == 0 || chars < summary.ChunkCharsMin {
+			summary.ChunkCharsMin = chars
+		}
+		if chars > summary.ChunkCharsMax {
+			summary.ChunkCharsMax = chars
+		}
+		chunks = append(chunks, ChunkOverviewItem{
+			Index:       row.ChunkIndex,
+			HeadingPath: row.HeadingPath,
+			Content:     row.Content,
+			Chars:       chars,
+			Lines:       strings.Count(row.Content, "\n") + 1,
+			Kinds:       kinds,
+		})
+	}
+	if len(chunks) > 0 {
+		summary.ChunkCharsAvg = summary.ChunkCharsTotal / len(chunks)
+	}
+	summary.HeadingPathCount = len(paths)
+	summary.Indexed = summary.ChunkCount > 0 && doc.Hash != ""
+	// 索引失败时 IndexDocument 的整事务回滚，hash 会落后于当前正文：此即索引陈旧信号
+	summary.Stale = summary.Indexed && sha256Hex(doc.Content) != doc.Hash
+	return &ChunkOverview{Summary: summary, Chunks: chunks}, nil
 }
 
 // truncateText 将文本截断到前 max 个字符（超过时追加省略号），避免重排 prompt 超长。

@@ -7,7 +7,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    __lint_probe: typeof import('./components/__lint_probe.vue')['default']
     ActionButtonGroup: typeof import('./components/base/ActionButtonGroup.vue')['default']
     AdaptiveCell: typeof import('./components/table/AdaptiveCell.vue')['default']
     AdaptiveField: typeof import('./components/forms/AdaptiveField.vue')['default']
@@ -31,17 +30,19 @@ declare module 'vue' {
     DatetimeField: typeof import('./components/forms/DatetimeField.vue')['default']
     DateTimeRangeField: typeof import('./components/forms/DateTimeRangeField.vue')['default']
     EncryptedValueCell: typeof import('./components/table/EncryptedValueCell.vue')['default']
+    ExpansionPanelTitle: typeof import('./components/base/ExpansionPanelTitle.vue')['default']
     ExpressionField: typeof import('./components/forms/ExpressionField.vue')['default']
     GoTemplateEditor: typeof import('./components/forms/GoTemplateEditor.vue')['default']
     HexStringChip: typeof import('./components/base/HexStringChip.vue')['default']
     InnerEditTable: typeof import('./components/table/InnerEditTable.vue')['default']
-    InsetPanel: typeof import('./components/base/InsetPanel.vue')['default']
     JsonChip: typeof import('./components/base/JsonChip.vue')['default']
+    KnowledgeChunksDialog: typeof import('./components/detail/KnowledgeChunksDialog.vue')['default']
     LineChart: typeof import('./components/charts/LineChart.vue')['default']
     LlmBindingPanel: typeof import('./components/admin/LlmBindingPanel.vue')['default']
     LlmModelPanel: typeof import('./components/admin/LlmModelPanel.vue')['default']
+    LlmToolPanel: typeof import('./components/admin/LlmToolPanel.vue')['default']
     MainLayout: typeof import('./layouts/MainLayout.vue')['default']
-    MissingValue: typeof import('./components/base/MissingValue.vue')['default']
+    McpServerPanel: typeof import('./components/admin/McpServerPanel.vue')['default']
     ModelDetailDialog: typeof import('./components/detail/ModelDetailDialog.vue')['default']
     NavBadge: typeof import('./components/base/NavBadge.vue')['default']
     NetworkStackDialog: typeof import('./components/detail/NetworkStackDialog.vue')['default']
@@ -57,7 +58,6 @@ declare module 'vue' {
     ScrollSearchField: typeof import('./components/forms/ScrollSearchField.vue')['default']
     ScrollToBottomFab: typeof import('./components/base/ScrollToBottomFab.vue')['default']
     SearchTable: typeof import('./components/table/SearchTable.vue')['default']
-    StateChip: typeof import('./components/base/StateChip.vue')['default']
     StorageSizeChip: typeof import('./components/base/StorageSizeChip.vue')['default']
     TabView: typeof import('./components/base/TabView.vue')['default']
     TagEventHitRecordsDialog: typeof import('./components/detail/TagEventHitRecordsDialog.vue')['default']
@@ -68,6 +68,5 @@ declare module 'vue' {
     TempEditableDialog: typeof import('./components/forms/TempEditableDialog.vue')['default']
     TimeField: typeof import('./components/forms/TimeField.vue')['default']
     UsualDaysField: typeof import('./components/forms/UsualDaysField.vue')['default']
-    ZoneHeader: typeof import('./components/base/ZoneHeader.vue')['default']
   }
 }

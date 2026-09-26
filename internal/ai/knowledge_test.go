@@ -139,6 +139,112 @@ func TestSelectTopK(t *testing.T) {
 	}
 }
 
+// TestDedupeSimilarResults 测试内容去重：内容实质相同的后位命中被丢弃并保留排序更靠前的
+// 一条，部分重合（相似度低于阈值）与空正文的命中全部保留，不足两条的输入原样返回。
+// TestDedupeSimilarResults verifies the content dedupe: a later hit whose content is
+// substantially the same is dropped in favour of the earlier one, while partially
+// overlapping hits (below the threshold) and empty bodies are all kept, and fewer than two
+// hits are returned as-is.
+func TestDedupeSimilarResults(t *testing.T) {
+	// 逐字重复的长正文：真实场景即自重复文档被切成相邻块后两块内容几乎一致
+	repeated := strings.Repeat("这是一个无聊的故事，通过无限递归的方式讲一个故事重复下去。", 30)
+	// 部分重合：共享一段前言、各自接不同的独有正文，相似度约四成
+	shared := "本段说明检索命中后的处理流程：先融合排序，再按候选截断，最后交给重排模型判定。"
+	cases := []struct {
+		name    string
+		hits    []*RetrievalResult
+		wantIDs []string
+	}{
+		{
+			name: "相同正文只留排序更靠前的一条",
+			hits: []*RetrievalResult{
+				{DocumentID: "1", ChunkIndex: 0, Content: repeated},
+				{DocumentID: "1", ChunkIndex: 1, Content: repeated},
+				{DocumentID: "2", ChunkIndex: 0, Content: "另一篇文档的正文，与上面无关。"},
+			},
+			wantIDs: []string{"1", "2"},
+		},
+		{
+			name: "部分重合低于阈值时全部保留",
+			hits: []*RetrievalResult{
+				{DocumentID: "3", ChunkIndex: 0, Content: shared + "独有正文甲：向量路的召回与分数归一化。"},
+				{DocumentID: "4", ChunkIndex: 0, Content: shared + "独有正文乙：关键词路的分词与命中统计。"},
+			},
+			wantIDs: []string{"3", "4"},
+		},
+		{
+			name: "空正文不互相判重",
+			hits: []*RetrievalResult{
+				{DocumentID: "5", ChunkIndex: 0, Content: ""},
+				{DocumentID: "6", ChunkIndex: 0, Content: ""},
+			},
+			wantIDs: []string{"5", "6"},
+		},
+		{
+			name:    "不足两条原样返回",
+			hits:    []*RetrievalResult{{DocumentID: "7", ChunkIndex: 0, Content: repeated}},
+			wantIDs: []string{"7"},
+		},
+	}
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := dedupeSimilarResults(tt.hits)
+			gotIDs := make([]string, 0, len(got))
+			for _, hit := range got {
+				gotIDs = append(gotIDs, hit.DocumentID)
+			}
+			if strings.Join(gotIDs, ",") != strings.Join(tt.wantIDs, ",") {
+				t.Errorf("kept IDs = %v, want %v", gotIDs, tt.wantIDs)
+			}
+		})
+	}
+}
+
+// TestDedupeSimilarResults_RepeatedDocument 测试自重复文档的相邻分块被判为重复：同一段
+// 无限递归的笑话被顺序切成两块后，两块内容几乎相同（并非逐字节相同），后者应被丢弃。
+// TestDedupeSimilarResults_RepeatedDocument verifies that adjacent chunks of a
+// self-repeating document count as duplicates: two consecutive slices of the same
+// infinitely recursive joke are almost identical (not byte-identical) and the later one is
+// dropped.
+func TestDedupeSimilarResults_RepeatedDocument(t *testing.T) {
+	sentence := "这是一个无聊的故事，通过无限递归的方式讲一个故事重复下去，用来逗弄小孩子的。"
+	runes := []rune(strings.Repeat(sentence, 60))
+	got := dedupeSimilarResults([]*RetrievalResult{
+		{DocumentID: "1", ChunkIndex: 0, Content: string(runes[:800])},
+		{DocumentID: "1", ChunkIndex: 1, Content: string(runes[800:1600])},
+	})
+	if len(got) != 1 {
+		t.Fatalf("kept %d hits, want 1", len(got))
+	}
+	if got[0].ChunkIndex != 0 {
+		t.Errorf("kept chunkIndex = %d, want 0 (the earlier hit wins)", got[0].ChunkIndex)
+	}
+}
+
+// TestDedupeSimilarResults_KeepsSeamOverlap 测试分片接缝处的重叠复读不被判为重复：chunker
+// 弥合 size 截断接缝时会把这前一块尾部 overlap 个字符复读到下一块开头（默认 100 对
+// size=800，约占一成），相似度远低于阈值，两块都必须保留，否则会丢掉后一块的独有正文。
+// TestDedupeSimilarResults_KeepsSeamOverlap verifies that the seam overlap is never taken
+// for a duplicate: when bridging a size-truncated seam the chunker copies the previous
+// chunk tail (chunking.overlap characters, default 100 against size=800, about a tenth of a
+// chunk) into the next chunk head, far below the threshold, so both chunks must stay —
+// dropping the later one would lose its own body.
+func TestDedupeSimilarResults_KeepsSeamOverlap(t *testing.T) {
+	prevRunes := []rune(strings.Repeat("甲乙丙丁戊己庚辛壬癸", 80))
+	prev := string(prevRunes)
+	next := string(prevRunes[len(prevRunes)-100:]) + "\n" + strings.Repeat("子丑寅卯辰巳午未申酉", 80)
+	if sim := jaccardSimilarity(contentShingles(prev), contentShingles(next)); sim >= dedupeSimilarityCutoff {
+		t.Fatalf("seam similarity = %v, want below %v", sim, dedupeSimilarityCutoff)
+	}
+	got := dedupeSimilarResults([]*RetrievalResult{
+		{DocumentID: "1", ChunkIndex: 0, Content: prev},
+		{DocumentID: "1", ChunkIndex: 1, Content: next},
+	})
+	if len(got) != 2 {
+		t.Fatalf("seam-overlapped chunks kept %d hits, want 2", len(got))
+	}
+}
+
 // TestParseRerankIndices 测试解析模型返回的序号数组（含浮点数组与 ```json 围栏包裹）。
 // TestParseRerankIndices verifies parsing the index array returned by the model
 // (including float arrays and ```json fence wrapping).

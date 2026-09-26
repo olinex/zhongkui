@@ -2,96 +2,29 @@
 #
 # 本文件同时驱动两类生成产物：
 #   1. [[XxxListGet]] 表 → search.go（列表搜索选项 / 筛选字段 / 字段投影）
-#   2. [enumSets] 映射表 + [[enums]] → enum_classes.go（静态枚举类注册 + 结构体字段
-#      与枚举类绑定表 enumBindings；meta.go 反射 In/Out 结构体字段元信息时输出
-#      FieldMeta.EnumType 供前端定位枚举类）
+#   2. [[enums]] → enum_bindings.go（结构体字段与枚举类绑定表 enumBindings；meta.go
+#      反射 In/Out 结构体字段元信息时输出 FieldMeta.EnumType 供前端定位枚举类）
 #
-# 可选枚举值两层声明：可选项只写在命名集合（enumSets 映射表，集合名即 key、value 即 options 数组）
-# 中一次；[[enums]] 按结构体字段引用命名集合，作为"字段 → 枚举类名"绑定的单一事实来源。
-# 可选项本身不随 meta 下发，前端经统一枚举接口（/admin/enum/get|list）按枚举类获取（出参 {key, value, label}）：
-#   # 1) 命名的枚举值集合（一次声明、多处复用；集合名即映射 key，value 为该集合 options 数组）
-#   [enumSets]
-#   notificationChannelType = [
-#     { key = "email", value = "email" },   # key：集合内唯一标识（i18n 经 enum.<类名>.<key> 翻译展示）
-#     { key = "webhook", value = "webhook" },  # value：提交/存储值（多数与 key 相同）
-#   ]
+# 枚举取值空间不在本文件声明，统一由底层单一来源提供（前端经统一枚举接口
+# POST /admin/enum/get|list 按枚举类获取，出参 {key, value, label}）：
+#   - 取值空间固定的枚举（httpMethod / httpVersion / language / notificationSource /
+#     notificationRecordStatus / tagAlertStatus / policyEffect / datasourceStruct /
+#     llmModelKind / llmSlot / llmToolSource / mcpTransport）：由取值空间的归属包就地声明
+#     （按类声明类型化取值常量或复用包内既有常量/清单，在包内 init 注册）；
+#   - 取值空间取自业务注册表的枚举（channelType / notificationEvent / datasourceType /
+#     tagRuleModel / tagEventDimension）：由所属业务包（message / notify / vtab /
+#     tagengine）经 enum.RegisterSource 声明条目来源，读取时从业务注册表派生。
+# 本文件仅保留「字段 → 枚举类名」的绑定引用（[[enums]]），不重复声明可选项。
 #
-#   # 2) 结构体字段引用命名集合
+#   # 结构体字段引用枚举类
 #   [[enums]]
 #   typeName = "NotificationChannelCreateIn"   # 必须与视图层结构体 reflect.Type.Name() 精确一致
 #
 #   [[enums.fields]]
 #   field = "type"     # 结构体字段的 JSON 字段名
-#   set = "notificationChannelType"            # 引用 [enumSets] 中已声明的集合名（即映射 key）
+#   set = "channelType"                        # 引用枚举注册表已注册的类名（可选项由该来源定义）
 
-# ---- 命名枚举值集合（静态枚举类唯一来源）：search-generate 据此生成 enum 注册表注册代码 ----
-# 说明：
-#   - 每个命名集合注册为一个枚举类（类名即映射 key），供统一枚举接口
-#     POST /admin/enum/get|list 与 meta 自省（enumType）使用；
-#   - 业务注册表来源的枚举类（channelType / notificationEvent / datasourceType /
-#     tagRuleModel）不在此声明，由视图层 init() 从对应业务注册表组装注册（单一来源）；
-#   - [[enums]] 的 set 仅作为"字段 → 枚举类名"绑定引用，不要求本处声明。
-
-[enumSets]
-httpMethod = [
-    { key = "GET", value = "GET" },
-    { key = "POST", value = "POST" },
-    { key = "PUT", value = "PUT" },
-    { key = "DELETE", value = "DELETE" },
-    { key = "PATCH", value = "PATCH" },
-    { key = "HEAD", value = "HEAD" },
-    { key = "OPTIONS", value = "OPTIONS" },
-    { key = "TRACE", value = "TRACE" },
-    { key = "CONNECT", value = "CONNECT" },
-]
-httpVersion = [
-    { key = "HTTP/1.0", value = "HTTP/1.0" },
-    { key = "HTTP/1.1", value = "HTTP/1.1" },
-    { key = "HTTP/2", value = "HTTP/2" },
-    { key = "HTTP/3", value = "HTTP/3" },
-]
-language = [
-    { key = "en", value = "en" },
-    { key = "zh-Hans", value = "zh-Hans" },
-]
-notificationSource = [
-    { key = "default", value = "default" },
-    { key = "override", value = "override" },
-]
-notificationRecordStatus = [
-    { key = "pending", value = "pending" },
-    { key = "success", value = "success" },
-    { key = "failed", value = "failed" },
-]
-tagAlertStatus = [
-    { key = "pending", value = "pending" },
-    { key = "alerting", value = "alerting" },
-    { key = "suppressed", value = "suppressed" },
-    { key = "closed", value = "closed" },
-]
-policyEffect = [
-    { key = "allow", value = "allow" },
-    { key = "deny", value = "deny" },
-]
-datasourceStruct = [
-    { key = "string", value = "string" },
-    { key = "hash", value = "hash" },
-    { key = "list", value = "list" },
-    { key = "set", value = "set" },
-    { key = "zset", value = "zset" },
-]
-llmModelKind = [
-    { key = "chat", value = "chat" },
-    { key = "embedding", value = "embedding" },
-]
-llmSlot = [
-    { key = "flash", value = "flash" },
-    { key = "standard", value = "standard" },
-    { key = "advanced", value = "advanced" },
-    { key = "embedding", value = "embedding" },
-]
-
-# ---- 结构体字段枚举绑定（enumSets 集合的引用声明，meta 自省按此下发 enumType）----
+# ---- 结构体字段枚举绑定（引用枚举注册表已注册的类名，meta 自省按此下发 enumType）----
 # typeName 必须与列表 OPTIONS 的 bodyOutput 结构体 reflect.Type.Name() 精确一致；
 # field 为 ListOut 结构体字段的 JSON 字段名，与 filterByFields.fieldName 保持一致。
 
@@ -163,6 +96,42 @@ typeName = "LlmModelTestIn"
 [[enums.fields]]
 field = "kind"
 set = "llmModelKind"
+
+[[enums]]
+typeName = "McpServerListOut"
+[[enums.fields]]
+field = "transport"
+set = "mcpTransport"
+
+[[enums]]
+typeName = "McpServerDetailOut"
+[[enums.fields]]
+field = "transport"
+set = "mcpTransport"
+
+[[enums]]
+typeName = "McpServerCreateIn"
+[[enums.fields]]
+field = "transport"
+set = "mcpTransport"
+
+[[enums]]
+typeName = "McpServerUpdateIn"
+[[enums.fields]]
+field = "transport"
+set = "mcpTransport"
+
+[[enums]]
+typeName = "McpServerTestIn"
+[[enums.fields]]
+field = "transport"
+set = "mcpTransport"
+
+[[enums]]
+typeName = "LlmToolListOut"
+[[enums.fields]]
+field = "source"
+set = "llmToolSource"
 
 # 用户
 [UserListGet]
@@ -3482,6 +3451,10 @@ fieldName = "baseURL"
 column = "base_url"
 
 [[LlmModelListGet.selectFields]]
+fieldName = "apiKey"
+column = "api_key"
+
+[[LlmModelListGet.selectFields]]
 fieldName = "model"
 column = "model"
 
@@ -3506,5 +3479,263 @@ fieldName = "enabled"
 column = "enabled"
 
 [[LlmModelListGet.selectFields]]
+fieldName = "description"
+column = "description"
+
+# MCP 服务器注册表列表（admin 配置 API：/api/v1/admin/llm/mcp/list）
+# 注册表为全局配置（不按命名空间隔离），过滤/排序覆盖时间、名称、传输方式与启用状态
+[McpServerListGet]
+timeModule = true
+
+[[McpServerListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[McpServerListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[McpServerListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "transport"
+fieldType = "string"
+column = "transport"
+binding = ""
+actions = ["eq"]
+
+[[McpServerListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[McpServerListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[McpServerListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[McpServerListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[McpServerListGet.selectFields]]
+fieldName = "name"
+column = "name"
+
+[[McpServerListGet.selectFields]]
+fieldName = "transport"
+column = "transport"
+
+[[McpServerListGet.selectFields]]
+fieldName = "url"
+column = "url"
+
+[[McpServerListGet.selectFields]]
+fieldName = "headers"
+column = "headers"
+
+[[McpServerListGet.selectFields]]
+fieldName = "timeoutSeconds"
+column = "timeout_seconds"
+
+[[McpServerListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+
+[[McpServerListGet.selectFields]]
+fieldName = "description"
+column = "description"
+
+# 工具注册表列表（admin 配置 API：/api/v1/admin/llm/tool/list）
+# 注册表为全局配置（不按命名空间隔离），过滤/排序覆盖时间、名称、来源与启用状态
+[LlmToolListGet]
+timeModule = true
+
+[[LlmToolListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[LlmToolListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "name"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = [
+    "eq",
+    "neq",
+    "pfx",
+    "npfx",
+    "ipfx",
+    "inpfx",
+    "sfx",
+    "nsfx",
+    "isfx",
+    "insfx",
+    "ctn",
+    "nctn",
+    "ictn",
+    "inctn",
+]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "source"
+fieldType = "string"
+column = "source"
+binding = ""
+actions = ["eq"]
+
+[[LlmToolListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[LlmToolListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[LlmToolListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[LlmToolListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[LlmToolListGet.selectFields]]
+fieldName = "name"
+column = "name"
+
+[[LlmToolListGet.selectFields]]
+fieldName = "source"
+column = "source"
+
+[[LlmToolListGet.selectFields]]
+fieldName = "mcpServerName"
+column = "mcp_server_id"
+
+[[LlmToolListGet.selectFields]]
+fieldName = "remoteName"
+column = "remote_name"
+
+[[LlmToolListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+
+[[LlmToolListGet.selectFields]]
 fieldName = "description"
 column = "description"

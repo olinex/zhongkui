@@ -34,3 +34,30 @@ func newValidate() *validator.Validate {
 func init() {
 	Validate = newValidate()
 }
+
+// Funcs 返回全部自定义校验规则的登记表（tag → 校验函数），是自定义规则的唯一登记处：
+// provider 用它把规则注册到全局校验器并为每个 tag 挂本地化文案，测试用它注册到自己的校验器。
+// 集中登记可避免各调用方重复抄写 tag 清单——漏抄某项会让该 tag 在对应场景被判为未注册规则，
+// 表现为绑定失败而非编译错误。
+// Funcs returns the registry of every custom validation rule (tag -> validation func) and is the
+// single registration point: provider registers them on the global validator and attaches the
+// localized message for each tag, while tests register them on their own validators. A central
+// registry keeps callers from copying the tag list around: a missed entry makes that tag count as
+// an unregistered rule in that scope, surfacing as a binding failure rather than a compile error.
+func Funcs() map[string]validator.Func {
+	return map[string]validator.Func{
+		TagStrongPassword:         ValidateStrongPassword,
+		TagWindowsFileName:        ValidateWindowsFileName,
+		TagUnixFileName:           ValidateUnixFileName,
+		TagFileName:               ValidateFileName,
+		TagStrictFileName:         ValidateStrictFileName,
+		TagDirpath:                ValidateDirPath,
+		TagAlphanumSpecial:        ValidateAlphanumSpecial,
+		TagEnum:                   ValidateEnum,
+		TagHTTPURL:                ValidateHTTPURL,
+		TagJSONObject:             ValidateJSONObject,
+		TagTrimmed:                ValidateTrimmed,
+		TagGreaterThanCurrentTime: ValidateGtCurrentTime,
+		TagLesserThanCurrentTime:  ValidateLtCurrentTime,
+	}
+}

@@ -36,9 +36,10 @@ navbar:
     record: 标签事件记录
   datasource:
     self: 数据源
-  namespaceScoped: 受命名空间影响
-  # 功能不可用标识的通用提示：后端未下发具体原因时兜底展示在侧边栏 tooltip 上
-  featureUnavailable: 该功能当前不可用
+  # 侧边栏标识 tooltip：受抽屉左侧可用宽度限制（约 6~7 个汉字），只表达「是什么」，
+  # 不承载后端下发的具体不可用原因（长文案会折行或被翻转到右侧）
+  namespaceScoped: 命名空间隔离
+  featureUnavailable: 功能不可用
   pin: 固定侧边栏
   unpin: 取消固定
 model:
@@ -343,6 +344,39 @@ model:
       chunking: 分块
       eval: 质量评估
       sanitize: 数据清洗
+  mcpServer:
+    name: MCP 服务器
+    field:
+      id: ID
+      name: 名称
+      transport: 传输方式
+      url: 接入地址
+      headers: 请求头
+      timeoutSeconds: 超时（秒）
+      enabled: 启用
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
+  llmTool:
+    name: 工具
+    field:
+      id: ID
+      name: 名称
+      source: 来源
+      mcpServerName: 所属服务器
+      remoteName: 远端工具名
+      enabled: 启用
+      description: 描述
+      createdAt: 创建时间
+      createdAtTime: 创建时间
+      createdAtDate: 创建日期
+      updatedAt: 更新时间
+      updatedAtTime: 更新时间
+      updatedAtDate: 更新日期
   server:
     name: 服务端
     field:
@@ -1147,12 +1181,14 @@ action:
   resetFrontendConfig: 重置前端配置
   download: 下载
   back: 返回
+  backPrevious: 返回上一级
   backHome: 返回首页
   refresh: 刷新
   refreshInterval: 自动刷新间隔
   enableAutoRefresh: 开启自动刷新
   disableAutoRefresh: 停止自动刷新
   reindex: 重新索引
+  chunks: 分块明细
   query: 查询
   columns: 列设置
   selectAll: 全选
@@ -1174,8 +1210,10 @@ action:
   unbind: 解绑
   save: 保存
   test: 连通性测试
+  sync: 同步工具
 guide:
   title: 第三方数据查询
+  subtitle: 当前命名空间已注册的第三方数据源及其可运行查询样例
   datasource: 数据源速查
   columns: 列
   datasourceEmpty: 该命名空间暂无已注册的数据源
@@ -1234,8 +1272,11 @@ title:
   trafficDetail: 流量审计 - 详情
   dryRunTags: 标签结果
   dryRunRules: 规则明细
+  dryRunRuleTags: 命中 {count} 个标签
+  dryRunRuleFailed: 规则执行出错
   dryRunSummary: 规则概要
   dryRunEvents: 检测事件
+  dryRunEventHits: 命中 {count} 个条件
 home:
   subtitle: 网络安全审计平台
   quickStart:
@@ -1282,6 +1323,7 @@ page:
     confirmDeleteSession: 确定删除该会话及其全部消息吗？
     slotHint: 新建会话时该档位会成为会话缺省档位
     disabled: AI 能力未启用
+    stageFailed: 阶段失败
   aiKnowledge:
     dryRun: 检索试运行
     query: 查询问题
@@ -1296,15 +1338,10 @@ page:
     running: 运行中…
     stop: 停止
     process: 运行过程
-    streamOutput: 模型原始输出
+    stageNoOutput: 该阶段暂无输出
     stageFailed: 阶段失败
-    stage:
-      retrieve: 混合检索
-      answer: 生成回答
-      chunkRelevance: 分块相关性判断
-      claims: 声明忠实度判断
-      reverseQuestions: 反推问题生成
     retrievedChunks: 检索分块
+    retrievedChunksSubtitle: 检索命中的文档分块及其相似度
     answer: 生成回答
     metrics: 量化指标
     contextPrecision: 召回质量
@@ -1313,17 +1350,46 @@ page:
     contextUtilization: 上下文利用率
     relevantOfTotal: "相关分块 {relevant}/{total}"
     judgments: 分块相关性判断
+    judgmentsSubtitle: 逐条判定检索分块与问题的相关性
     claims: 声明忠实度明细
+    claimsSubtitle: 逐条判定回答中的声明能否由检索内容支撑
     reverseQuestions: 反推问题
+    reverseQuestionsSubtitle: 由检索分块反推、本应能被回答的问题
+    suggestions: 改进建议
+    suggestionsEmpty: 本次检索与生成未见明显问题，暂无改进建议
+    suggestionsSubtitle: 依据检索结果与量化指标给出的可执行改进方向
     warnings: 评估警告
     evalError: 评估不可用
     metaModel: 模型
-    metaElapsed: 耗时
     metaPromptTokens: 输入 Token
     metaCompletionTokens: 输出 Token
     metaTotalTokens: 合计 Token
+    metaRetrieveElapsed: 检索耗时
     metaTotal: 总计耗时
     close: 关闭
+    chunks: 分块明细
+    chunkSummary: 索引摘要
+    chunkIndexed: 已索引
+    chunkNotIndexed: 未索引
+    chunkStale: 索引落后正文
+    chunkList: 分块列表
+    chunkNotIndexedHint: 该文档尚未建立索引，暂无分块；请先执行重新索引
+    chunkCharsValue: "{count} 字符"
+    chunkLinesValue: "{count} 行"
+    chunkStatCount: 分块数量
+    chunkStatContentChars: 正文字符数
+    chunkStatCharsTotal: 分块字符合计
+    chunkStatCharsAvg: 分块字符均值
+    chunkStatCharsMin: 分块字符最少
+    chunkStatCharsMax: 分块字符最多
+    chunkStatHeadingPaths: 标题路径数
+    chunkStatAtomic: 原子分块数
+    chunkSize: 切片粒度
+    chunkOverlap: 切片重叠
+    chunkEmbeddingModel: 向量模型
+    chunkEmbeddingDimensions: 向量维度
+    chunkHash: 内容指纹
+    chunkIndexedAt: 索引时间
   llmModelAdmin:
     baseURLHint: 供应商的 OpenAI 兼容接口基地址（例如 https://dashscope.aliyuncs.com/compatible-mode/v1）
     apiKeyKeepHint: 凭据不以明文回显；留空表示沿用原凭据
@@ -1331,13 +1397,32 @@ page:
     dimensionsHint: 向量维度由后端在绑定 embedding 档位时探测确定；如需调整索引维度，请联系运维在服务器上执行
   llmBindingAdmin:
     hint: 四个档位各绑定一个模型：对话档位需对话模型，向量化槽位需向量化模型；档位可用性以运行时快照为准
+    indexDimensions: 知识库索引维度 {dimensions}
+    indexDimensionsUnavailable: 知识库索引维度未知（索引列未就绪，请先执行数据库迁移）
     selectModel: 选择模型
     unbound: 未绑定
   agentParamAdmin:
     hint: 参数出厂值由数据库迁移写入并在启动时校验，修改后即时生效；留空提交即写回出厂值
     dirtyCount: "{count} 项待保存"
     groupCount: "{count} 项"
+    groupSubtitle:
+      agent: 系统提示词、消息分节标题与检索片段截断
+      retrieval: 混合检索的召回条数、融合权重与 LLM 重排
+      session: 注入模型的会话历史条数与字节上限
+      chunking: Markdown 结构感知的切片粒度与重叠
+      eval: RAG 评估各阶段的判定提示词与参数
+      sanitize: 业务数据注入模型前的条目数与字节限界
     defaultValue: "默认值：{value}"
+  mcpServerAdmin:
+    scopeHint: MCP 服务器注册表为全局配置，不随命名空间隔离
+    urlHint: MCP 端点地址（http / https）
+    # JSON 示例的花括号须用 vue-i18n 字面量语法 {'...'} 包裹；裸花括号会被当作
+    # 插值占位符解析，构建期报错（code 2）
+    headersHint: '请求头以 JSON 对象文本填写（如 {''{"Authorization":"Bearer xxx"}''}），值须为字符串；落库为密文'
+    headersKeepHint: 请求头不以明文回显；留空表示沿用原凭据
+  llmToolAdmin:
+    scopeHint: 工具注册表为全局配置，不随命名空间隔离；内置来源工具由系统维护、不可删除
+    builtinReadonly: 内置来源工具由系统维护，不可删除
 profile:
   pageSubtitle: 管理你的账号信息、访问密钥与密码安全
   infoSubtitle: 修改昵称与邮箱后点击「更新」保存
@@ -1364,6 +1449,7 @@ notice:
   profileUpdated: 个人资料更新成功！
   passwordReset: 密码重置成功！
   frontendConfigSyncFailed: 前端配置同步失败，已恢复最近一次同步的配置
+  missingParam: 缺少必要参数，无法加载详情
   tagExpr:
     empty: 表达式不能为空
     unexpectedChar: '非法字符 "{char}"'
@@ -1419,6 +1505,10 @@ notice:
     saveSuccess: 参数保存成功
     resetSuccess: 参数已恢复默认值
     resetGroupConfirm: "确认将「{key}」分组的参数全部恢复默认吗？"
+  mcpServer:
+    testSuccess: "连通性测试通过，远端发现 {count} 个工具"
+    testFailed: 连通性测试失败
+    syncSuccess: "同步完成：新增 {created} 项、刷新 {updated} 项、清理 {removed} 项"
 inputType:
   string: 字符串
   number: 数字

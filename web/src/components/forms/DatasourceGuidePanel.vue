@@ -1,15 +1,11 @@
 <template>
-  <v-expansion-panels
-    v-model="expanded"
-    class="guide-panel zk-panel"
-  >
+  <v-expansion-panels v-model="expanded" class="guide-panel">
     <v-expansion-panel>
-      <v-expansion-panel-title class="panel-titlebar">
-        <div class="panel-head">
-          <v-icon size="18" color="primary">mdi-database-search</v-icon>
-          <span class="zk-editor-title">{{ $t("guide.title") }}</span>
-        </div>
-      </v-expansion-panel-title>
+      <expansion-panel-title
+        icon="mdi-database-search"
+        :title="$t('guide.title')"
+        :subtitle="$t('guide.subtitle')"
+      />
       <v-expansion-panel-text>
         <!-- 数据源速查 -->
         <div class="guide-section">
@@ -172,27 +168,11 @@ const sampleIcon = (titleKey: string): string => {
 </script>
 
 <style scoped>
-/* 参考栏外壳（hairline 描边 / 圆角 / surface 背景）走全局 .zk-panel，
-   卡片 hover 反馈走全局 .zk-interactive-card，此处只保留布局定位 */
+/* 面板组自身裸放（描边盒由外层参考栏容器 .fullscreen-guide.zk-panel 提供），
+   卡片 hover 反馈走全局 .zk-interactive-card，
+   展开面板的标题与内容内边距一律走 Vuetify 默认，此处只保留布局定位 */
 .guide-panel {
   overflow: hidden;
-}
-
-/* 参考栏已固定为全屏右侧 340px，无需再压缩内边距；
-   保留适度左右留白，避免内容与参考栏边框紧贴 */
-/* stylelint-disable-next-line selector-class-pattern */
-.guide-panel :deep(.v-expansion-panel-text__wrapper) {
-  padding: var(--zk-space-1) var(--zk-space-3) var(--zk-space-3);
-}
-
-.panel-titlebar {
-  min-height: var(--zk-control-height-compact);
-}
-
-.panel-head {
-  display: flex;
-  align-items: center;
-  gap: var(--zk-space-2);
 }
 
 .guide-section {

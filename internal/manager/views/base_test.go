@@ -47,17 +47,7 @@ func registerBindingValidations() {
 	if !ok {
 		panic("binding validator is not valid")
 	}
-	for tag, fn := range map[string]uv.Func{
-		validator.TagStrongPassword:         validator.ValidateStrongPassword,
-		validator.TagWindowsFileName:        validator.ValidateWindowsFileName,
-		validator.TagUnixFileName:           validator.ValidateUnixFileName,
-		validator.TagFileName:               validator.ValidateFileName,
-		validator.TagStrictFileName:         validator.ValidateStrictFileName,
-		validator.TagDirpath:                validator.ValidateDirPath,
-		validator.TagAlphanumSpecial:        validator.ValidateAlphanumSpecial,
-		validator.TagGreaterThanCurrentTime: validator.ValidateGtCurrentTime,
-		validator.TagLesserThanCurrentTime:  validator.ValidateLtCurrentTime,
-	} {
+	for tag, fn := range validator.Funcs() {
 		if err := v.RegisterValidation(tag, fn); err != nil {
 			panic(err)
 		}

@@ -14,19 +14,24 @@
 // HTTP view layer and the dependency status probes. This package reads no LLM config file.
 package ai
 
-import "zhongkui.com/zhongkui/internal/pkg/llm"
+import (
+	"github.com/cloudwego/eino/components/tool"
+
+	"zhongkui.com/zhongkui/internal/pkg/llm"
+)
 
 // Components 聚合 AI 助手（RAG + Agent）运行所需的全部组件：对话执行器（Agent）、
-// 知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化（SessionStore）与
-// 行为参数解析器（Params）。由本包的运行时（Runtime）依据数据库模型注册表装配，并经请求
-// 中间件注入视图层；AI 未启用时各执行组件为 nil，视图层以 Enabled 统一判断。
+// 知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化（SessionStore）、
+// 行为参数解析器（Params）与已启用的工具清单（Tools）。由本包的运行时（Runtime）依据数据库
+// 模型注册表装配，并经请求中间件注入视图层；AI 未启用时各执行组件为 nil，视图层以 Enabled
+// 统一判断。
 // Components aggregates all the components the AI assistant (RAG + Agent) needs at
 // runtime: the dialogue executor (Agent), the knowledge-base index (Knowledge), the
-// knowledge-base retriever (Retriever), the session persistence (SessionStore) and the
-// behavior-parameter resolver (Params). It is assembled by the runtime (Runtime) of this
-// package from the database model registry and injected into the view layer via a request
-// middleware; when AI is disabled the execution components are nil and the view layer checks
-// Enabled uniformly.
+// knowledge-base retriever (Retriever), the session persistence (SessionStore), the
+// behavior-parameter resolver (Params) and the enabled tool list (Tools). It is assembled by the
+// runtime (Runtime) of this package from the database model registry and injected into the view
+// layer via a request middleware; when AI is disabled the execution components are nil and the
+// view layer checks Enabled uniformly.
 type Components struct {
 	// Agent 对话执行器（AI 未启用时为 nil）
 	// Agent the dialogue executor (nil when AI is disabled)
@@ -43,11 +48,17 @@ type Components struct {
 	// Params 行为参数解析器（始终非 nil）
 	// Params the behavior-parameter resolver (always non-nil)
 	Params *llm.Params
+	// Tools 已启用的工具（AI 未启用时为空），视图层 / Agent 由它取得工具清单与 schema；
+	// AI 启用但无启用工具时为空切片（非 nil）
+	// Tools the enabled tools (empty when AI is disabled); the view layer and the Agent take the
+	// tool list and schema from it. It is an empty (non-nil) slice when AI is enabled but no tool
+	// is enabled
+	Tools []tool.BaseTool
 }
 
 // Enabled 报告 AI 能力是否已完整装配（未启用或装配不完整时返回 false）。
 // Enabled reports whether the AI capability is fully assembled (false when disabled
 // or partially assembled).
 func (c *Components) Enabled() bool {
-	return c != nil && c.Agent != nil && c.Knowledge != nil && c.Sessions != nil && c.Params != nil
+	return c != nil && c.Agent != nil && c.Knowledge != nil && c.Sessions != nil && c.Params != nil && c.Tools != nil
 }

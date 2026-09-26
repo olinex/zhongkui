@@ -25,7 +25,7 @@ var (
 // 目标模型在全局注册表中登记后，其类型键（pkgpath.TypeName 完整路径）
 // 方可作为 TagRule.Model / TagSumming.Model / TagEventCondition.Model 等
 // 模型字段的合法取值；展示 label 不再由注册表人工维护，统一经 tagRuleModel
-// 枚举类（Key 取 ModelKey，见 enum_registry.go）按 enum.tagRuleModel.<ModelKey> 推导。
+// 枚举类（Key 取 ModelKey，见 enum.go）按 enum.tagRuleModel.<ModelKey> 推导。
 // 每个目标模型必须具有唯一 ID 字段且类型为 serializer.HexUUID（共享类型锚点），
 // 与 ClickHouse tag_summings.ids（Array(UUID)）列类型保持一致，保证打标结果
 // 跨模型统一以 UUID 锚定数据行。
@@ -147,8 +147,8 @@ func Dimensions(typeKey string) []string {
 }
 
 // AllDimensions 返回全部已注册目标模型的合法标签维度取值（snake_case 列名）的
-// 跨模型去重并集，按取值升序排序。供视图层组装 tagEventDimension 枚举类条目
-// （Key/Value 均取维度取值，数据库存储语义）与参数校验使用；维度展示 label 不在
+// 跨模型去重并集，按取值升序排序。供本包注册 tagEventDimension 枚举类条目
+// （见 enum.go，Key/Value 均取维度取值，数据库存储语义）与参数校验使用；维度展示 label 不在
 // 此输出，统一经 tagEventDimension 枚举类按 enum.tagEventDimension.<取值> 本地化。
 func AllDimensions() []string {
 	seen := make(map[string]struct{})
@@ -166,7 +166,7 @@ func AllDimensions() []string {
 }
 
 // TypeKeys 返回全部已注册目标模型的类型键列表，按类型键升序排序。
-// 供接口层组装 tagRuleModel 枚举类条目（Key 取 ModelKey(typeKey)、Value 取完整
+// 供本包注册 tagRuleModel 枚举类条目（见 enum.go，Key 取 ModelKey(typeKey)、Value 取完整
 // 类型键）与参数校验使用；模型展示 label 不在此输出，统一经 tagRuleModel 枚举类
 // 按 enum.tagRuleModel.<ModelKey> 经统一枚举接口本地化。
 func TypeKeys() []string {

@@ -101,7 +101,11 @@ router.beforeEach(async (to, from, next) => {
       await useFeaturesStore().load(true);
       if (!useFeaturesStore().isEnable(featureKey)) {
         consola.warn(`feature ${featureKey} is disabled, redirect to feature-unavailable`);
-        await router.replace({
+        // 此处必须用 push 而非 replace：被拦截的导航还没写入历史（守卫先于 finalizeNavigation），
+        // 若以 replace 重定向，被顶掉的是用户当前所在页面的历史条目，说明页随即成为"无上一级"的
+        // 死胡同——用户点「返回上一级」或浏览器后退只能越过该页落到更早的页面。
+        // push 会保留用户所在页面作为上一条历史，两种后退方式都能正确回到它。
+        await router.push({
           name: "Feature Unavailable",
           params: {
             language: appStore.language,

@@ -81,8 +81,8 @@ func TestLocalizer(t *testing.T) {
 	})
 }
 
-// ensureTestEnumClasses 幂等注册本测试用枚举类（translate 测试二进制不链接 views 包，
-// 其 init() 才注册全量 enum 类；此处按同一契约注册 tagRuleModel / channelType，已存在则跳过）。
+// ensureTestEnumClasses 幂等注册本测试用枚举类（translate 测试二进制不链接各枚举类的归属包，
+// 其 init() 才注册该类；此处按同一契约注册 tagRuleModel / channelType，已存在则跳过）。
 func ensureTestEnumClasses() {
 	for _, t := range []enum.Type{
 		{

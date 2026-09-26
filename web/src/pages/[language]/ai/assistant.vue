@@ -120,6 +120,30 @@
                         {{ $t("page.aiAssistant.validationFailed") }}
                       </v-chip>
                     </div>
+                    <!-- 工具调用阶段：与检索试运行的阶段列表同源展示（图标 + 阶段名 + 工具名 + 耗时/失败原因） -->
+                    <div v-if="m.stages && m.stages.length > 0" class="stage-list">
+                      <div v-for="s in m.stages" :key="s.key" class="stage-row">
+                        <v-icon
+                          :icon="stageIconOf(s, m.streaming === true)"
+                          :color="stageColorOf(s, m.streaming === true)"
+                          size="small"
+                          :class="{ 'mdi-spin': m.streaming === true && s.status === 'start' }"
+                        />
+                        <span class="stage-name text-body-2 text-on-surface">
+                          {{ stageLabelOf(s.stage) }}
+                        </span>
+                        <span v-if="s.tool" class="text-caption text-on-surface-variant font-mono">
+                          {{ s.tool }}
+                        </span>
+                        <v-spacer />
+                        <span
+                          v-if="s.elapsedMs > 0 || s.error"
+                          class="text-caption text-on-surface-variant"
+                        >
+                          {{ stageMetaTextOf(s) }}
+                        </span>
+                      </div>
+                    </div>
                     <div v-if="m.content" class="message-content text-body-2">{{ m.content }}</div>
                     <div
                       v-if="m.validationDetail"
@@ -330,7 +354,10 @@ import {
 import type {
   AgentMessageItem,
   AgentSessionItem,
+  AgentStageEvent,
   AgentStatusOut,
+  EvalStage,
+  EvalStageStatus,
   KnowledgeDocumentItem,
   RetrievalResult,
 } from "@/apis/@types/ai";
@@ -379,8 +406,20 @@ const messagesRef = useTemplateRef("messagesRef");
 const sessions = ref<AgentSessionItem[]>([]);
 const activeSessionId = ref<number | null>(null);
 
+// AgentStageState 工具调用阶段视图模型：一次生成中每个「阶段 + 工具名」组合一行，
+// 后续同键状态事件仅更新该行（与检索试运行的阶段列表同构）
+interface AgentStageState {
+  key: string;
+  stage: EvalStage;
+  tool: string;
+  status?: EvalStageStatus;
+  elapsedMs: number;
+  error?: string;
+}
+
 // ChatMessage 会话消息视图模型：会话历史消息与流式占位消息统一形态。
-// draft/citations 由 done 事件回填；valid/validationDetail 仅在有校验规则时才有意义。
+// draft/citations 由 done 事件回填；valid/validationDetail 仅在有校验规则时才有意义；
+// stages 为本次生成实时累积的工具调用阶段（历史消息不携带，后端不持久化阶段）
 interface ChatMessage {
   key: number;
   role: "user" | "assistant" | "system";
@@ -390,6 +429,7 @@ interface ChatMessage {
   valid?: boolean;
   validationDetail?: string;
   streaming?: boolean;
+  stages?: AgentStageState[];
 }
 
 let messageKey = 0;
@@ -462,6 +502,75 @@ const hasDraft = (m: ChatMessage): boolean =>
 // copyDraft 复制结构化草稿 JSON 文本到剪贴板
 const copyDraft = async (m: ChatMessage): Promise<void> => {
   await copyToClipboard(JSON.stringify(m.draft, null, 2));
+};
+
+// ---- 工具调用阶段 ----
+// stageLabelOf 阶段展示名（经枚举注册表 evalStage 按当前语言渲染 label，与检索试运行同源）
+const stageLabelOf = (stage: EvalStage): string => enumLabelOf(EnumClass.evalStage, stage);
+
+// stageIconOf 阶段状态图标：运行中旋转、完成打勾、失败告警；流已结束仍在进行的阶段展示为已中止
+const stageIconOf = (stage: AgentStageState, running: boolean): string => {
+  if (stage.status === "done") {
+    return "mdi-check-circle-outline";
+  }
+  if (stage.status === "failed") {
+    return "mdi-alert-circle-outline";
+  }
+  return running ? "mdi-loading" : "mdi-stop-circle-outline";
+};
+
+// stageColorOf 阶段状态语义色
+const stageColorOf = (stage: AgentStageState, running: boolean): string => {
+  if (stage.status === "done") {
+    return "success";
+  }
+  if (stage.status === "failed") {
+    return "warning";
+  }
+  return running ? "primary" : "warning";
+};
+
+// stageMetaTextOf 阶段元信息：耗时与失败原因
+const stageMetaTextOf = (stage: AgentStageState): string => {
+  const parts: string[] = [];
+  if (stage.elapsedMs > 0) {
+    parts.push(`${stage.elapsedMs} ms`);
+  }
+  if (stage.error) {
+    parts.push(`${i18n.global.t("page.aiAssistant.stageFailed")}: ${stage.error}`);
+  }
+  return parts.join(" · ");
+};
+
+// applyAgentStage 应用一次工具调用阶段事件：按「阶段 + 工具名」归并到同一行
+// （同一工具的多轮调用各自成行），后续同键事件仅更新状态/耗时/失败原因
+const applyAgentStage = (key: number, ev: AgentStageEvent): void => {
+  const msg = messages.value.find((m) => m.key === key);
+  if (!msg) {
+    return;
+  }
+  const stages = (msg.stages ??= []);
+  const stageKey = `${ev.stage}:${ev.tool ?? ""}`;
+  const target = stages.find((s) => s.key === stageKey);
+  if (target) {
+    target.status = ev.status ?? target.status;
+    if (ev.elapsedMs > 0) {
+      target.elapsedMs = ev.elapsedMs;
+    }
+    if (ev.error) {
+      target.error = ev.error;
+    }
+  } else {
+    stages.push({
+      key: stageKey,
+      stage: ev.stage,
+      tool: ev.tool ?? "",
+      status: ev.status,
+      elapsedMs: ev.elapsedMs,
+      error: ev.error,
+    });
+  }
+  scrollToBottom();
 };
 
 // ---- 会话加载 ----
@@ -713,6 +822,10 @@ const sendQuery = async (): Promise<void> => {
           scrollToBottom();
         }
       },
+      // 工具调用阶段事件：工具调用轮不产生答案增量，仅实时累积阶段行（含工具名）
+      onStage: (ev: AgentStageEvent) => {
+        applyAgentStage(assistantKey, ev);
+      },
       onDone: (out) => {
         const msg = messages.value.find((m) => m.key === assistantKey);
         if (msg) {
@@ -773,6 +886,8 @@ const openTagRulePage = (): void => {
 
 onMounted(() => {
   void ensureEnum(EnumClass.llmSlot);
+  // 工具调用阶段名经统一枚举注册表渲染 label（与检索试运行共用 evalStage）
+  void ensureEnum(EnumClass.evalStage);
   void loadStatus();
   void loadSessions();
   void loadDocOptions();
@@ -806,6 +921,22 @@ onUnmounted(() => {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.6;
+}
+
+/* 工具调用阶段列表：与检索试运行的阶段行同构（气泡内不可点击，故不设选中态与光标） */
+.stage-list {
+  margin-top: var(--zk-space-1);
+}
+
+.stage-row {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-2);
+  padding: var(--zk-space-1) 0;
+}
+
+.stage-name {
+  flex: 0 0 auto;
 }
 
 /* 引用正文两行截断，避免单条引用撑爆气泡 */

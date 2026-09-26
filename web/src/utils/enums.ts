@@ -22,6 +22,12 @@ export const EnumClass = {
   httpVersion: "httpVersion",
   llmModelKind: "llmModelKind",
   llmSlot: "llmSlot",
+  mcpTransport: "mcpTransport",
+  llmToolSource: "llmToolSource",
+  evalStage: "evalStage",
+  evalStageStatus: "evalStageStatus",
+  diagnosisCategory: "diagnosisCategory",
+  chunkUnitKind: "chunkUnitKind",
 } as const;
 
 // currentLang 当前语言（i18n locale value，如 zh-Hans / en）

@@ -13,6 +13,7 @@ require (
 	github.com/cloudwego/eino v0.9.19
 	github.com/cloudwego/eino-ext/components/embedding/openai v0.0.0-20260909094858-6fe16d48b736
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
+	github.com/cloudwego/eino-ext/components/tool/mcp v0.0.9
 	github.com/creasty/defaults v1.8.0
 	github.com/fatih/color v1.18.0
 	github.com/glebarez/go-sqlite v1.20.3
@@ -23,6 +24,7 @@ require (
 	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.19.0
+	github.com/mark3labs/mcp-go v0.43.0
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/ncruces/go-sqlite3 v0.35.4
 	github.com/nicksnyder/go-i18n/v2 v2.6.0
@@ -74,6 +76,7 @@ require (
 	github.com/evanphx/json-patch v0.5.2 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/goph/emperror v0.17.2 // indirect
+	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/meguminnnnnnnnn/go-openai v0.1.2 // indirect
 	github.com/ncruces/go-sqlite3-wasm/v5 v5.0.35304 // indirect
@@ -85,6 +88,7 @@ require (
 	github.com/xdg-go/scram v1.2.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/yargevad/filepathx v1.0.0 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	github.com/yuin/gopher-lua v1.1.1 // indirect
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect

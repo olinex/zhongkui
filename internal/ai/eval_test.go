@@ -206,7 +206,7 @@ func TestEvaluate(t *testing.T) {
 	okJudgments := `{"judgments": [{"index": 0, "relevant": true, "score": 0.9, "reason": "directly answers"}, {"index": 1, "relevant": false, "score": 0.2, "reason": "off topic"}]}`
 
 	t.Run("nil chat", func(t *testing.T) {
-		_, _, err := evaluate(context.Background(), testParams(t, nil), nil, nil, "q", results, nil)
+		_, _, err := evaluate(context.Background(), testParams(t, nil), nil, nil, "q", results, diagnosisContext{}, nil)
 		if err == nil || !strings.Contains(err.Error(), "chat client unavailable") {
 			t.Errorf("evaluate(nil chat) error = %v, want chat-client error", err)
 		}
@@ -214,7 +214,7 @@ func TestEvaluate(t *testing.T) {
 
 	t.Run("empty results", func(t *testing.T) {
 		chat := &fakeChat{}
-		_, _, err := evaluate(context.Background(), testParams(t, nil), chat, nil, "q", nil, nil)
+		_, _, err := evaluate(context.Background(), testParams(t, nil), chat, nil, "q", nil, diagnosisContext{}, nil)
 		if err == nil || !strings.Contains(err.Error(), "no retrieval results") {
 			t.Errorf("evaluate(empty results) error = %v, want empty-results error", err)
 		}
@@ -226,6 +226,7 @@ func TestEvaluate(t *testing.T) {
 			okJudgments,
 			`{"claims": [{"statement": "The sky is blue.", "supported": true, "chunkIndexes": [0]}]}`,
 			`{"questions": ["What color is the sky?"]}`,
+			`{"suggestions": [{"category": "coverage", "detail": "Add a document about sky colors."}, {"category": "unknown-kind", "detail": "Fallback category."}]}`,
 		}
 		i := 0
 		chat := &fakeChat{gen: func(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error) {
@@ -240,7 +241,7 @@ func TestEvaluate(t *testing.T) {
 			}
 			return out, nil
 		}}
-		ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, embed, "What color is the sky?", results, nil)
+		ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, embed, "What color is the sky?", results, diagnosisContext{}, nil)
 		if err != nil {
 			t.Fatalf("evaluate() error = %v", err)
 		}
@@ -268,6 +269,18 @@ func TestEvaluate(t *testing.T) {
 		if len(ev.ReverseQuestions) != 1 || ev.ReverseQuestions[0] != "What color is the sky?" {
 			t.Errorf("ReverseQuestions = %v, want the single reverse question", ev.ReverseQuestions)
 		}
+		want := []DiagnosisSuggestion{
+			{Category: DiagnosisCategoryCoverage, Detail: "Add a document about sky colors."},
+			{Category: DiagnosisCategoryOther, Detail: "Fallback category."},
+		}
+		if len(ev.Suggestions) != len(want) {
+			t.Fatalf("Suggestions = %+v, want %+v", ev.Suggestions, want)
+		}
+		for idx := range want {
+			if ev.Suggestions[idx] != want[idx] {
+				t.Errorf("Suggestions[%d] = %+v, want %+v", idx, ev.Suggestions[idx], want[idx])
+			}
+		}
 	})
 
 	t.Run("claims failure", func(t *testing.T) {
@@ -276,6 +289,7 @@ func TestEvaluate(t *testing.T) {
 			okJudgments,
 			"not json",
 			`{"questions": ["What color is the sky?"]}`,
+			`{"suggestions": []}`,
 		}
 		i := 0
 		chat := &fakeChat{gen: func(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error) {
@@ -290,7 +304,7 @@ func TestEvaluate(t *testing.T) {
 			}
 			return out, nil
 		}}
-		ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, embed, "q", results, nil)
+		ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, embed, "q", results, diagnosisContext{}, nil)
 		if err != nil {
 			t.Fatalf("evaluate() error = %v", err)
 		}
@@ -303,12 +317,16 @@ func TestEvaluate(t *testing.T) {
 		if !almostEqual(ev.Metrics.ContextPrecision, 1) {
 			t.Errorf("ContextPrecision = %v, want 1", ev.Metrics.ContextPrecision)
 		}
+		if len(ev.Suggestions) != 0 {
+			t.Errorf("Suggestions = %+v, want none", ev.Suggestions)
+		}
 	})
 
 	t.Run("answer failure", func(t *testing.T) {
 		responses := []string{
 			"not json",
 			okJudgments,
+			`{"suggestions": [{"category": "generation", "detail": "The answer generator returned malformed JSON."}]}`,
 		}
 		i := 0
 		chat := &fakeChat{gen: func(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error) {
@@ -319,7 +337,7 @@ func TestEvaluate(t *testing.T) {
 		embed := &fakeEmbed{embed: func(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error) {
 			return [][]float64{{1, 0, 0}}, nil
 		}}
-		ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, embed, "q", results, nil)
+		ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, embed, "q", results, diagnosisContext{}, nil)
 		if err != nil {
 			t.Fatalf("evaluate() error = %v", err)
 		}
@@ -332,6 +350,12 @@ func TestEvaluate(t *testing.T) {
 		if ev.Metrics.Faithfulness != 0 || ev.Metrics.AnswerRelevance != 0 || ev.Metrics.ContextUtilization != 0 {
 			t.Errorf("Faithfulness/AnswerRelevance/ContextUtilization = %v/%v/%v, want 0/0/0",
 				ev.Metrics.Faithfulness, ev.Metrics.AnswerRelevance, ev.Metrics.ContextUtilization)
+		}
+		// 回答生成失败也要产出建议：失败本身是重要诊断线索
+		// Suggestions must be produced even when the answer generation failed: the failure is a
+		// valuable diagnostic clue of its own
+		if len(ev.Suggestions) != 1 || ev.Suggestions[0].Category != DiagnosisCategoryGeneration {
+			t.Errorf("Suggestions = %+v, want one generation suggestion", ev.Suggestions)
 		}
 	})
 }
@@ -382,6 +406,7 @@ func TestEvaluateStreaming(t *testing.T) {
 		`{"judgments": [{"index": 0, "relevant": true, "score": 0.9, "reason": "ok"}]}`,
 		`{"claims": [{"statement": "s", "supported": true, "chunkIndexes": [0]}]}`,
 		`{"questions": ["What color is the sky?"]}`,
+		`{"suggestions": [{"category": "coverage", "detail": "Add more sky documents."}]}`,
 	}
 	i := 0
 	chat := &fakeChat{stream: streamOf(responses, &i)}
@@ -390,7 +415,7 @@ func TestEvaluateStreaming(t *testing.T) {
 		events = append(events, ev)
 		return nil
 	}
-	ev, calls, err := evaluate(context.Background(), testParams(t, nil), chat, uniformEmbed(), "q", results, report)
+	ev, calls, err := evaluate(context.Background(), testParams(t, nil), chat, uniformEmbed(), "q", results, diagnosisContext{}, report)
 	if err != nil {
 		t.Fatalf("evaluate() error = %v", err)
 	}
@@ -400,7 +425,7 @@ func TestEvaluateStreaming(t *testing.T) {
 	if len(ev.Warnings) != 0 {
 		t.Errorf("Warnings = %v, want none", ev.Warnings)
 	}
-	stages := []EvalStage{EvalStageAnswer, EvalStageChunkRelevance, EvalStageClaims, EvalStageReverseQuestions}
+	stages := []EvalStage{EvalStageAnswer, EvalStageChunkRelevance, EvalStageClaims, EvalStageReverseQuestions, EvalStageSuggestions}
 	deltas := make(map[EvalStage]string, len(stages))
 	statuses := make(map[EvalStage][]EvalStageStatus, len(stages))
 	for _, e := range events {
@@ -440,6 +465,7 @@ func TestEvaluateStreamFailed(t *testing.T) {
 		`{"judgments": [{"index": 0, "relevant": true, "score": 0.9, "reason": "ok"}]}`,
 		"not json",
 		`{"questions": ["What color is the sky?"]}`,
+		`{"suggestions": []}`,
 	}
 	i := 0
 	chat := &fakeChat{stream: streamOf(responses, &i)}
@@ -448,7 +474,7 @@ func TestEvaluateStreamFailed(t *testing.T) {
 		events = append(events, ev)
 		return nil
 	}
-	ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, uniformEmbed(), "q", results, report)
+	ev, _, err := evaluate(context.Background(), testParams(t, nil), chat, uniformEmbed(), "q", results, diagnosisContext{}, report)
 	if err != nil {
 		t.Fatalf("evaluate() error = %v", err)
 	}

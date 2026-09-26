@@ -1,18 +1,26 @@
 // Package core 提供平台核心领域的持久化模型。本文件定义 LLM 模型注册表（LlmModel）、
-// 档位绑定（LlmBinding）与 Agent 参数（AgentParam）三个模型：模型端点由前端动态
-// 注册（APIKey 以密文落库），档位绑定把 flash / standard / advanced / embedding 四个固定槽位
-// 指向注册表中的一条模型记录，参数表同时持有出厂值（default_value，由 migrate fixture
-// 注入）与当前生效值（value），参数类值的唯一来源是数据库而非代码。三者均为全局配置，
-// 不按命名空间隔离。
+// 档位绑定（LlmBinding）、Agent 参数（AgentParam）、MCP 服务器注册表（McpServer）与
+// 工具注册表（LlmTool）五个模型：模型端点由前端动态注册（APIKey 以密文落库），档位绑定
+// 把 flash / standard / advanced / embedding 四个固定槽位指向注册表中的一条模型记录，
+// 参数表同时持有出厂值（default_value，由 migrate fixture 注入）与当前生效值（value），
+// 参数类值的唯一来源是数据库而非代码；MCP 服务器注册表登记远程 MCP 端点（headers 以密文
+// 落库，首版仅支持 streamable_http / sse 两种远程传输），工具注册表登记 Agent 可调用的
+// 工具（内置工具由代码内注册表声明、MCP 工具由所属服务器同步而来），二者共同决定运行期
+// 可装配的工具集合。五者均为全局配置，不按命名空间隔离。
 //
 // Package core provides the persistence models of the platform core domain. This file
-// defines the LLM model registry (LlmModel), the slot binding (LlmBinding) and the Agent
-// parameter (AgentParam): model endpoints are registered dynamically by the frontend (API
-// keys persisted encrypted at rest), slot bindings point the four fixed slots
-// flash / standard / advanced / embedding to one record of the registry, and the parameter
-// table carries both the factory value (default_value, injected by the migrate fixtures) and
-// the effective value (value), making the database rather than the code the single source of
-// parameter values. All three are global configuration, not namespace scoped.
+// defines the LLM model registry (LlmModel), the slot binding (LlmBinding), the Agent
+// parameter (AgentParam), the MCP server registry (McpServer) and the tool registry
+// (LlmTool): model endpoints are registered dynamically by the frontend (API keys persisted
+// encrypted at rest), slot bindings point the four fixed slots flash / standard / advanced /
+// embedding to one record of the registry, and the parameter table carries both the factory
+// value (default_value, injected by the migrate fixtures) and the effective value (value),
+// making the database rather than the code the single source of parameter values; the MCP
+// server registry records remote MCP endpoints (headers persisted encrypted at rest, only the
+// streamable_http / sse remote transports are supported in the first version) and the tool
+// registry records the tools callable by the Agent (builtin tools declared by the in-code
+// registry, MCP tools synchronized from their server), together determining the tool set
+// assembled at runtime. All five are global configuration, not namespace scoped.
 package core
 
 import (
@@ -51,7 +59,7 @@ type LlmModel struct {
 	// 明文经 APIKeyData() 获取
 	// APIKey the credential used to access the model endpoint, persisted encrypted at
 	// rest via the crypto serializer (BYTEA column), plaintext obtained via APIKeyData()
-	APIKey *serializer.Crypto `gorm:"column:api_key;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7001,length=32"`
+	APIKey *serializer.Crypto `json:"apiKey" gorm:"column:api_key;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7001,length=32"`
 	// ModelName 供应商侧的模型名，如 gpt-4o-mini、text-embedding-3-small；
 	// 列名保持 model，Go 字段名取 ModelName 是因为内嵌的 gorm.Model 已占用 Model 标识符
 	// ModelName the vendor-side model name, e.g. gpt-4o-mini, text-embedding-3-small;
@@ -147,4 +155,111 @@ type AgentParam struct {
 	// maintained by the migrate fixtures only and never written through any API path.
 	// "Restore the factory value" means writing Value back to this column
 	DefaultValue string `gorm:"column:default_value;type:TEXT"`
+}
+
+// McpServer 表示一个注册到平台的远程 MCP（Model Context Protocol）端点，是 Agent 可调用
+// 的 MCP 工具的来源。Name 为全局唯一的本地标识（uq_mcp_servers_name）。Transport 决定远端
+// 连接方式，首版仅支持远程传输 streamable_http / sse；Headers 承载 Authorization 等请求
+// 头，是一个 JSON 对象字符串，以加密形式落库（crypto serializer，BYTEA 列），明文经
+// HeadersData() 获取。本表有意不出现 command / args / env 列——首版不支持 stdio 本地
+// 进程，这是从 schema 层杜绝「管理员配置任意本地命令执行」。对应表为 mcp_servers，属全局
+// 配置，不按命名空间隔离。
+// McpServer represents a remote MCP (Model Context Protocol) endpoint registered on the
+// platform, the source of the MCP tools callable by the Agent. Name is the globally unique
+// local identity (uq_mcp_servers_name). Transport decides how the remote is reached, and the
+// first version supports only the remote transports streamable_http / sse; Headers carries
+// request headers such as Authorization as a JSON object string, persisted encrypted at rest
+// via the crypto serializer (BYTEA column), plaintext obtained via HeadersData(). This table
+// deliberately has no command / args / env column — stdio local processes are not supported in
+// the first version, which rules out "an operator configuring arbitrary local command
+// execution" at the schema level. The table is mcp_servers and is global configuration, not
+// namespace scoped.
+type McpServer struct {
+	gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+	// Name MCP 服务器的本地标识，全局唯一（uq_mcp_servers_name）
+	// Name the local identity of the MCP server, globally unique (uq_mcp_servers_name)
+	Name string `gorm:"type:VARCHAR(64);uniqueIndex:uq_mcp_servers_name"`
+	// Transport 远端传输方式：streamable_http | sse，取值见 mcp.Transport（枚举类 mcpTransport，
+	// 声明于 internal/ai/tools/mcp）
+	// Transport the remote transport: streamable_http | sse, valued from mcp.Transport (the
+	// mcpTransport enum class, declared in internal/ai/tools/mcp)
+	Transport string `gorm:"type:VARCHAR(32);index:idx_mcp_servers_transport"`
+	// URL MCP 端点的地址（http/https）
+	// URL the address of the MCP endpoint (http/https)
+	URL string `gorm:"column:url;type:VARCHAR(512)"`
+	// Headers 请求头（JSON 对象字符串，承载 Authorization 等凭据），以加密形式持久化
+	// （crypto serializer 密文入库，BYTEA 列）；明文经 HeadersData() 获取
+	// Headers the request headers (a JSON object string carrying credentials such as
+	// Authorization), persisted encrypted at rest via the crypto serializer (BYTEA column),
+	// plaintext obtained via HeadersData()
+	Headers *serializer.Crypto `json:"headers" gorm:"column:headers;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7002,length=32"`
+	// TimeoutSeconds 单次请求的超时秒数，0 表示使用调用方默认值
+	// TimeoutSeconds the timeout in seconds of a single request, 0 means the caller default
+	TimeoutSeconds int `gorm:"type:INTEGER"`
+	// Enabled 是否启用，禁用的服务器及其全部工具不参与装配
+	// Enabled whether the server is enabled; a disabled server and all its tools are not assembled
+	Enabled bool `gorm:"type:BOOLEAN;default:true"`
+	// Description 服务器描述，说明用途
+	// Description the description of the server
+	Description string `gorm:"type:VARCHAR(512)"`
+}
+
+// HeadersData 返回请求头的明文字节，nil 安全（Headers 为空或 nil 时返回 nil）。
+// HeadersData returns the plaintext bytes of the request headers, nil-safe (nil when Headers
+// is nil or empty).
+func (m *McpServer) HeadersData() []byte {
+	if m == nil || m.Headers == nil {
+		return nil
+	}
+	return m.Headers.Value()
+}
+
+// LlmTool 表示一条注册到平台的工具记录，是 Agent 可调用的工具的唯一事实来源。Name 为
+// Agent 面向的工具名，全局唯一（uq_llm_tools_name）。Source 取 builtin / mcp：内置工具的
+// 描述文案来自 i18n（Description 行为空），其入参 schema 由代码内注册表声明；MCP 工具的
+// 入参 schema 实时取自所属服务器的 tools/list，Description 仅作列表展示缓存。一致性约束：
+// source='mcp' 当且仅当 McpServerID IS NOT NULL，由视图层与服务层校验；工具真正的入参
+// schema 不落库，运行时按来源实时获取。对应表为 llm_tools，属全局配置，不按命名空间隔离。
+// LlmTool represents one tool record registered on the platform, the single source of truth of
+// the tools callable by the Agent. Name is the Agent-facing tool name, globally unique
+// (uq_llm_tools_name). Source is builtin / mcp: builtin tools take their description text from
+// i18n (their Description row is empty) and their input schema from the in-code registry, while
+// MCP tools take their input schema live from the owning server's tools/list and use
+// Description merely as a listing cache. Consistency constraint: source='mcp' if and only if
+// McpServerID IS NOT NULL, validated by the view and service layers; the real input schema of a
+// tool is never persisted and is fetched live per source at runtime. The table is llm_tools and
+// is global configuration, not namespace scoped.
+type LlmTool struct {
+	gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+	// Name Agent 面向的工具名，全局唯一（uq_llm_tools_name）
+	// Name the Agent-facing tool name, globally unique (uq_llm_tools_name)
+	Name string `gorm:"type:VARCHAR(128);uniqueIndex:uq_llm_tools_name"`
+	// Source 工具来源：builtin | mcp，取值见 llm.ToolSource（枚举类 llmToolSource，声明于
+	// internal/pkg/llm）
+	// Source the tool source: builtin | mcp, valued from llm.ToolSource (the llmToolSource enum
+	// class, declared in internal/pkg/llm)
+	Source string `gorm:"type:VARCHAR(16);index:idx_llm_tools_source"`
+	// McpServerID 所属 MCP 服务器的 ID（llm_tools.mcp_server_id），可空：source='mcp' 时
+	// 非空、source='builtin' 时为空
+	// McpServerID the id of the owning MCP server (mcp_servers.id), nullable: non-null when
+	// source='mcp' and null when source='builtin'
+	McpServerID *uint `gorm:"type:BIGINT;index:idx_llm_tools_mcp_server_id"`
+	// McpServer 所属 MCP 服务器实体，用于 GORM 关联（foreignKey:McpServerID;references:ID；
+	// 级联删除）
+	// McpServer the owning MCP server entity, for GORM association
+	// (foreignKey:McpServerID;references:ID;OnDelete:CASCADE)
+	McpServer *McpServer `gorm:"foreignKey:McpServerID;references:ID;constraint:OnDelete:CASCADE"`
+	// RemoteName MCP 服务器侧的工具名；source='builtin' 时为空
+	// RemoteName the tool name on the MCP server side; empty when source='builtin'
+	RemoteName string `gorm:"type:VARCHAR(128)"`
+	// Description 展示用描述缓存；source='builtin' 时为空，其文案取自 i18n
+	// Description the description cache for listing; empty when source='builtin', whose text
+	// comes from i18n
+	Description string `gorm:"type:VARCHAR(512)"`
+	// Enabled 是否启用，默认 false（安全默认，由管理员在工具面板显式启用）；禁用的工具不参与装配
+	// Enabled whether the tool is enabled, default false (a safe default, explicitly enabled by
+	// an operator in the tool panel); a disabled tool is not assembled
+	Enabled bool `gorm:"type:BOOLEAN;default:false"`
 }

@@ -1,7 +1,9 @@
 // Package enum 提供全项目统一的枚举值注册表。
-// 所有枚举值集合在此唯一登记：每个枚举类（Type）有且仅有一个注册点，来源可以是
-// 配置文件代码生成（search.toml → search-generate）或 Go 业务注册表代码字面量
-// （message / notify / vtab / tagengine）。
+// 所有枚举值集合在此唯一登记：每个枚举类（Type）有且仅有一个注册点，且该注册点一律落在取值空间的
+// 归属包（即取值空间的定义处），声明形态有两类——取值空间固定的类经 Register 在注册时快照条目
+// （取值常量/清单就地声明在同一包内）；取值空间取自业务注册表的类（渠道类型、通知事件、数据源类型、
+// 目标模型等）由所属业务包经 RegisterSource 声明条目来源，条目在读取时从业务注册表派生，避免包内
+// init 顺序影响条目完整性。
 //
 // 统一契约：
 //   - 类名（Type.Name）全局唯一；
@@ -33,6 +35,19 @@ type Entry struct {
 type Type struct {
 	Name    string
 	Entries []Entry
+}
+
+// EntriesOf 把「key 与 value 相同」的取值序列转为枚举条目列表（多数枚举类即此形态），
+// 使按类声明取值空间的枚举类在注册时直接复用同一份取值序列，无需在注册处重抄一遍字面量。
+// EntriesOf converts a value sequence whose key equals its value (the shape of most enum classes)
+// into enum entries, so an enum class declaring its value space in code reuses that very sequence
+// at registration time instead of repeating the literals.
+func EntriesOf[T ~string](values []T) []Entry {
+	entries := make([]Entry, 0, len(values))
+	for _, value := range values {
+		entries = append(entries, Entry{Key: string(value), Value: string(value)})
+	}
+	return entries
 }
 
 // LabelKey 返回类内 key 对应的 i18n label 键（enum.<类名>.<key>）。
@@ -71,7 +86,11 @@ func (t *Type) Resolve(kv string) (Entry, bool) {
 	return t.EntryByKey(kv)
 }
 
-// Register 注册枚举类。
+// sources 惰性条目来源表：类名 → 条目派生函数（见 RegisterSource）。
+// 仅在包 init 阶段写入，运行期只读，故无需加锁。
+var sources = map[string]func() []Entry{}
+
+// Register 注册枚举类，条目在注册时快照。
 // 校验规则（违规直接 panic，错误信息指明冲突项）：
 //   - 类名全局唯一；
 //   - 类名非空；
@@ -84,31 +103,79 @@ func Register(t Type) {
 	if _, ok := registry[t.Name]; ok {
 		panic(fmt.Sprintf("enum: duplicate type name %q", t.Name))
 	}
-	keys := make(map[string]struct{}, len(t.Entries))
-	values := make(map[string]struct{}, len(t.Entries))
-	for _, e := range t.Entries {
-		if e.Key == "" {
-			panic(fmt.Sprintf("enum: type %q has an entry with empty key", t.Name))
-		}
-		if _, ok := keys[e.Key]; ok {
-			panic(fmt.Sprintf("enum: type %q has duplicate key %q", t.Name, e.Key))
-		}
-		keys[e.Key] = struct{}{}
-		if e.Value == "" {
-			panic(fmt.Sprintf("enum: type %q has an entry with empty value", t.Name))
-		}
-		if _, ok := values[e.Value]; ok {
-			panic(fmt.Sprintf("enum: type %q has duplicate value %q", t.Name, e.Value))
-		}
-		values[e.Value] = struct{}{}
-	}
+	validateEntries(t.Name, t.Entries)
 	registry[t.Name] = &Type{Name: t.Name, Entries: t.Entries}
 }
 
-// Get 按类名返回枚举类，未注册返回 false。
+// RegisterSource 注册一个取值空间取自业务注册表的枚举类：条目不在注册时快照，而在每次读取
+// （Get / List）时经 entries 从业务注册表实时派生。适用于来源注册表由同一包内多个 init() 依次
+// 填充的场景（如渠道工厂、数据源插件），使条目完整性不取决于包内 init 的文件顺序；取值空间在
+// 运行生命周期内仍固定（无动态枚举）。类名唯一性、非空与 entries 非 nil 的约束同 Register，
+// 违规直接 panic。
+// RegisterSource registers an enum class whose value space is derived from a business registry:
+// the entries are not snapshotted at registration time but derived on every read (Get / List) via
+// entries. It fits registries filled by several init() functions of one package (channel
+// factories, datasource plugins), so entry completeness never depends on the in-package init file
+// order; the value space stays fixed for the process lifetime (no dynamic enums). Name
+// uniqueness/non-emptiness and a non-nil entries are enforced like Register, panicking on violation.
+func RegisterSource(name string, entries func() []Entry) {
+	if name == "" {
+		panic("enum: register source with empty type name")
+	}
+	if entries == nil {
+		panic(fmt.Sprintf("enum: type %q registered with a nil entries source", name))
+	}
+	if _, ok := registry[name]; ok {
+		panic(fmt.Sprintf("enum: duplicate type name %q", name))
+	}
+	registry[name] = &Type{Name: name}
+	sources[name] = entries
+}
+
+// validateEntries 校验类内条目 key/value 非空且各自唯一，违规直接 panic。
+// validateEntries validates that the keys and values of a class are non-empty and mutually
+// unique, panicking on violation.
+func validateEntries(name string, entries []Entry) {
+	keys := make(map[string]struct{}, len(entries))
+	values := make(map[string]struct{}, len(entries))
+	for _, e := range entries {
+		if e.Key == "" {
+			panic(fmt.Sprintf("enum: type %q has an entry with empty key", name))
+		}
+		if _, ok := keys[e.Key]; ok {
+			panic(fmt.Sprintf("enum: type %q has duplicate key %q", name, e.Key))
+		}
+		keys[e.Key] = struct{}{}
+		if e.Value == "" {
+			panic(fmt.Sprintf("enum: type %q has an entry with empty value", name))
+		}
+		if _, ok := values[e.Value]; ok {
+			panic(fmt.Sprintf("enum: type %q has duplicate value %q", name, e.Value))
+		}
+		values[e.Value] = struct{}{}
+	}
+}
+
+// resolve 返回类的有效条目：注册了条目来源的类经来源实时派生并校验，其余用注册时快照。
+// resolve returns the effective entries of a class: classes with an entries source derive and
+// validate them on the fly, the others use the registration-time snapshot.
+func resolve(t *Type) *Type {
+	src, ok := sources[t.Name]
+	if !ok {
+		return t
+	}
+	entries := src()
+	validateEntries(t.Name, entries)
+	return &Type{Name: t.Name, Entries: entries}
+}
+
+// Get 按类名返回枚举类（条目已就绪），未注册返回 false。
 func Get(name string) (*Type, bool) {
 	t, ok := registry[name]
-	return t, ok
+	if !ok {
+		return nil, false
+	}
+	return resolve(t), true
 }
 
 // Exists 判断枚举类是否已注册。
@@ -117,11 +184,11 @@ func Exists(name string) bool {
 	return ok
 }
 
-// List 返回全部已注册枚举类，按类名排序（输出顺序稳定）。
+// List 返回全部已注册枚举类（条目已就绪），按类名排序（输出顺序稳定）。
 func List() []*Type {
 	types := make([]*Type, 0, len(registry))
 	for _, t := range registry {
-		types = append(types, t)
+		types = append(types, resolve(t))
 	}
 	sort.Slice(types, func(i, j int) bool { return types[i].Name < types[j].Name })
 	return types

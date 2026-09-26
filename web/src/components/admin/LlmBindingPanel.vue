@@ -2,7 +2,16 @@
   <div class="pa-4">
     <!-- 说明以 banner 常驻提示；刷新控件收在其尾部，仍保持单行布局 -->
     <v-alert type="info" class="mb-3">
-      {{ $t("page.llmBindingAdmin.hint") }}
+      <div>{{ $t("page.llmBindingAdmin.hint") }}</div>
+      <!-- 知识库索引维度是 embedding 档位绑定的前置条件：常驻展示，使运维在提交前即可判断候选模型是否可用 -->
+      <div class="mt-1">
+        <v-chip v-if="indexDimensions > 0" size="small" variant="tonal" prepend-icon="mdi-database">
+          {{ $t("page.llmBindingAdmin.indexDimensions", { dimensions: indexDimensions }) }}
+        </v-chip>
+        <span v-else class="zk-hint">
+          {{ $t("page.llmBindingAdmin.indexDimensionsUnavailable") }}
+        </span>
+      </div>
       <template #append>
         <v-btn
           icon="mdi-refresh"
@@ -160,6 +169,9 @@ onMounted(() => {
 // rows 档位行：直接采用后端返回的槽位清单（其顺序即档位清单顺序），前端不另行声明档位字面量
 const rows = computed((): LlmSlotBindingOut[] => bindingState.value?.slots ?? []);
 
+// indexDimensions 知识库向量索引当前维度（0 表示索引列未就绪，由后端读取 knowledge_chunks.embedding）
+const indexDimensions = computed((): number => bindingState.value?.indexDimensions ?? 0);
+
 // CandidateOption 候选模型下拉项；未启用模型保留展示但不可选
 interface CandidateOption {
   title: string;
@@ -253,8 +265,9 @@ const bindAction = async (slot: string): Promise<void> => {
         });
       },
       async (rsp) => {
-        // 绑定失败原因（类型不匹配 / 模型未启用 / 模型不存在）由后端以英文错误返回
-        notifyError(rsp.summary);
+        // 绑定失败原因（类型不符 / 模型未启用 / 维度与知识库索引不兼容）由后端以英文 details
+        // 返回，缺失时回退本地化的 summary
+        notifyError(typeof rsp.details === "string" ? rsp.details : rsp.summary);
         await loadBindings();
       },
     );

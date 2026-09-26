@@ -8,7 +8,7 @@ import (
 
 // RegisterRoutes 注册 /api/v1/ai AI 助手（RAG + Agent）接口。
 // 分组挂认证/授权/命名空间/核心库/功能开关/AI 组件中间件；子组：
-//   - /doc    知识库文档 CRUD/list/reindex
+//   - /doc    知识库文档 CRUD/list/reindex/chunks
 //   - /session  Agent 会话 create/list/get/rename/delete/messages
 //   - /agent/:sessionID/stream  SSE 流式生成
 //   - /status  AI 状态（可用性 + 维度差异）
@@ -52,6 +52,10 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	docGroup.POST("/:id/reindex", KnowledgeDocumentReindex)
 	// 重新索引知识库文档元信息
 	docGroup.OPTIONS("/:id/reindex", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentReindexOut]())))
+	// 知识库文档分块明细 - 聚合索引摘要（分块统计/切片参数/向量维度/索引新鲜度）与逐块明细
+	docGroup.POST("/:id/chunks", KnowledgeDocumentChunksGet)
+	// 知识库文档分块明细元信息
+	docGroup.OPTIONS("/:id/chunks", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]())))
 
 	// ========== 知识库检索试运行：/api/v1/ai/retrieval ==========
 	// 知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估

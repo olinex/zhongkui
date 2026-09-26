@@ -155,6 +155,65 @@ func TestMarkdownChunker_Overlap(t *testing.T) {
 	}
 }
 
+// TestMarkdownChunker_NoOverlapAcrossHeading 测试标题硬边界处不施加重叠：上一节正文
+// 短于 overlap 时，不得整块复读到下一节开头。回归用例——曾把「说明」整段贴进「内容」块。
+// TestMarkdownChunker_NoOverlapAcrossHeading verifies no overlap is applied across a
+// heading hard boundary: a previous section shorter than overlap must never be copied
+// wholesale into the next section. Regression: the 说明 paragraph was once prepended to
+// the 内容 chunk.
+func TestMarkdownChunker_NoOverlapAcrossHeading(t *testing.T) {
+	content := strings.Join([]string{
+		"# 标题",
+		"## 说明",
+		"这是一个无聊的故事，通过无限递归地方式，讲一个故事重复下去，用来逗弄小孩子的。",
+		"## 内容",
+		"从前有座山，山里有座庙。",
+	}, "\n\n")
+	doc := &schema.Document{Content: content}
+	// overlap(100) 远大于「说明」正文长度(39)，旧实现会把整段复读到「内容」块开头
+	c := NewMarkdownChunker(800, 100)
+	got, err := c.Transform(context.Background(), []*schema.Document{doc})
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("chunk count = %d, want 2", len(got))
+	}
+	if got[1].Content != "从前有座山，山里有座庙。" {
+		t.Errorf("chunk[1] content = %q, want the 内容 body without any overlap prefix", got[1].Content)
+	}
+}
+
+// TestMarkdownChunker_OverlapCappedAtHalfPrevious 测试重叠长度按上一块的一半封顶：
+// overlap 被配置得不小于上一块长度时，只复读上一块尾部的一半而非整块。
+// TestMarkdownChunker_OverlapCappedAtHalfPrevious verifies the overlap is capped at half of
+// the previous chunk: when overlap is configured no smaller than the previous chunk, only
+// half of its tail is reused instead of the whole chunk.
+func TestMarkdownChunker_OverlapCappedAtHalfPrevious(t *testing.T) {
+	content := strings.Join([]string{"aaaa", "bbbb", "cccc", "dddd"}, "\n\n")
+	doc := &schema.Document{Content: content}
+	// size(8) 触发段落中途截断，overlap(100) 远大于上一块长度(9)
+	c := NewMarkdownChunker(8, 100)
+	got, err := c.Transform(context.Background(), []*schema.Document{doc})
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("chunk count = %d, want 2", len(got))
+	}
+	if got[0].Content != "aaaa\n\nbbbb" {
+		t.Fatalf("chunk[0] content = %q, want the first two paragraphs", got[0].Content)
+	}
+	// 上一块长 10 字符，封顶后重叠至多 5 字符；重叠是字符级尾部截取，切点可落在
+	// 空白处，故此处取到 "\nbbbb"。关键是不能整块复读
+	if got[1].Content != "\nbbbb\ncccc\n\ndddd" {
+		t.Errorf("chunk[1] content = %q, want %q", got[1].Content, "\nbbbb\ncccc\n\ndddd")
+	}
+	if strings.HasPrefix(got[1].Content, got[0].Content) {
+		t.Errorf("chunk[1] content = %q, must not repeat the whole previous chunk", got[1].Content)
+	}
+}
+
 // TestMarkdownChunker_MetaDataPreserved 测试输入 MetaData 被保留并补充 chunkIndex。
 // TestMarkdownChunker_MetaDataPreserved verifies the input MetaData is preserved and
 // chunkIndex is added.
@@ -209,5 +268,62 @@ func TestNewMarkdownChunker_Defaults(t *testing.T) {
 	}
 	if c.overlap != 0 {
 		t.Errorf("overlap = %d, want 0 (clamped)", c.overlap)
+	}
+}
+
+// TestDescribeChunk 测试分块正文的结构单元识别：去重、按声明顺序返回，标题不参与，
+// 空正文返回空切片。
+// TestDescribeChunk verifies the structural unit recognition of a chunk body: kinds are
+// deduplicated, returned in declaration order, headings never participate, and an empty
+// body yields an empty slice.
+func TestDescribeChunk(t *testing.T) {
+	cases := []struct {
+		name    string
+		content string
+		want    []ChunkUnitKind
+	}{
+		{
+			name:    "空正文",
+			content: "",
+			want:    []ChunkUnitKind{},
+		},
+		{
+			name:    "纯段落",
+			content: "para one\n\npara two",
+			want:    []ChunkUnitKind{ChunkUnitParagraph},
+		},
+		{
+			name:    "标题不参与识别",
+			content: "## Heading\n\npara",
+			want:    []ChunkUnitKind{ChunkUnitParagraph},
+		},
+		{
+			name:    "段落与代码块并按声明顺序排列",
+			content: "```go\ncode\n```\n\npara",
+			want:    []ChunkUnitKind{ChunkUnitParagraph, ChunkUnitCode},
+		},
+		{
+			name:    "重复单元去重且表格为原子单元",
+			content: "| a | b |\n|---|---|\n\npara one\n\npara two",
+			want:    []ChunkUnitKind{ChunkUnitParagraph, ChunkUnitTable},
+		},
+		{
+			name:    "列表与引用",
+			content: "- item one\n- item two\n\n> quoted",
+			want:    []ChunkUnitKind{ChunkUnitList, ChunkUnitQuote},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := DescribeChunk(tc.content)
+			if len(got) != len(tc.want) {
+				t.Fatalf("DescribeChunk() = %v, want %v", got, tc.want)
+			}
+			for i, kind := range got {
+				if kind != tc.want[i] {
+					t.Fatalf("DescribeChunk()[%d] = %q, want %q", i, kind, tc.want[i])
+				}
+			}
+		})
 	}
 }

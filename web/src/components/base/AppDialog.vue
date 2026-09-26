@@ -11,6 +11,7 @@
         <v-icon v-if="icon" :icon="icon" color="primary" />
         <v-toolbar-title class="zk-section-title text-truncate">
           {{ title }}
+          <span v-if="subtitle" class="zk-section-subtitle">{{ subtitle }}</span>
         </v-toolbar-title>
         <slot name="header-append" />
         <v-progress-circular v-if="loading" indeterminate size="20" />
@@ -44,6 +45,8 @@ const props = withDefaults(
     modelValue: boolean;
     /** Dialog title rendered in the toolbar. */
     title: string;
+    /** Optional secondary title rendered right after the main title (weaker weight and color). */
+    subtitle?: string;
     /** Optional leading mdi-* icon rendered before the title. */
     icon?: string;
     /** Dialog width tier, mapped to the --zk-dialog-width-* token of the same name. */
@@ -57,6 +60,7 @@ const props = withDefaults(
   }>(),
   {
     icon: undefined,
+    subtitle: undefined,
     size: "md",
     persistent: false,
     scrollable: true,

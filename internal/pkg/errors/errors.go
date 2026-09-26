@@ -76,6 +76,19 @@ func Is(err error, target error) bool {
 	return errors.Is(err, target)
 }
 
+// As 在错误链中查找与 target 匹配的错误并赋值。
+// 与 Is 同理，支持错误链的递归检查，用于按错误类型（而非哨兵值）分流业务错误码。
+//
+// 示例:
+//
+//	var mismatch *llm.EmbeddingDimensionMismatchError
+//	if errors.As(err, &mismatch) {
+//	    // 处理维度不兼容错误
+//	}
+func As(err error, target any) bool {
+	return e.As(err, target)
+}
+
 func Join(errs ...error) error {
 	return e.Join(errs...)
 }

@@ -128,6 +128,13 @@
         </template>
       </temp-editable-dialog>
 
+      <!-- 分块明细对话框：展示文档级索引摘要与逐块构建明细（读时派生，不改表） -->
+      <knowledge-chunks-dialog
+        v-model="chunksDialog"
+        :document-id="chunksDocumentId"
+        :document-title="chunksDocumentTitle"
+      />
+
       <!-- 检索试运行对话框：输入查询与可选参数，运行完整检索链路（混合检索 → 生成回答 → 四项量化指标）并展示结果 -->
       <!-- AppDialog 未定义 after-leave 事件，此监听经根节点属性透传落到内部 VDialog，
            保留"关闭动画结束后再重置检索试运行状态"的原有行为 -->
@@ -252,53 +259,50 @@
           </v-btn>
         </v-form>
 
-        <!-- 运行过程：阶段进度与模型原始输出实时滚动，完成后保留并可折叠回看 -->
+        <!-- 运行过程：阶段进度面板组（手风琴单开，同一时刻只展开当前查看的阶段并实时滚动其输出）；
+             描边盒由外层 .zk-panel 提供，面板组自身裸放（见 AGENTS.md「展开面板族」） -->
         <div v-if="dryRunStages.length > 0" class="dry-run-process zk-panel">
-          <div class="process-header">
-            <span class="result-label zk-label-caps">{{ $t("page.aiKnowledge.process") }}</span>
-            <v-spacer />
-            <v-btn
-              v-if="dryRunStreamText"
-              variant="text"
-              size="x-small"
-              @click="showStreamOutput = !showStreamOutput"
-            >
-              <v-icon
-                size="small"
-                :icon="showStreamOutput ? 'mdi-chevron-up' : 'mdi-chevron-down'"
-                class="me-1"
-              />
-              {{ $t("page.aiKnowledge.streamOutput") }}
-            </v-btn>
-          </div>
-          <div class="stage-list">
-            <div
+          <div class="result-label zk-label-caps">{{ $t("page.aiKnowledge.process") }}</div>
+          <v-expansion-panels v-model="expandedStage">
+            <v-expansion-panel
               v-for="stage in dryRunStages"
               :key="stage.stage"
-              class="stage-row"
-              :class="{ 'zk-row-selected': dryRunSelectedStage === stage.stage }"
-              @click="dryRunSelectedStage = stage.stage"
+              :value="stage.stage"
             >
-              <v-icon
+              <expansion-panel-title
                 :icon="stageIconOf(stage)"
                 :color="stageColorOf(stage)"
-                size="small"
-                :class="{ 'mdi-spin': dryRunRunning && stage.status === 'start' }"
-              />
-              <span class="stage-name text-body-2 text-on-surface">
-                {{ stageLabelOf(stage.stage) }}
-              </span>
-              <v-spacer />
-              <span class="text-caption text-on-surface-variant">
-                {{ stageMetaTextOf(stage) }}
-              </span>
-            </div>
+                :title="stageLabelOf(stage.stage)"
+                :spin="dryRunRunning && stage.status === 'start'"
+              >
+                <template #actions>
+                  <span
+                    class="stage-meta text-caption text-on-surface-variant"
+                    :title="stageMetaTextOf(stage)"
+                  >
+                    {{ stageMetaTextOf(stage) }}
+                  </span>
+                </template>
+              </expansion-panel-title>
+              <v-expansion-panel-text>
+                <pre
+                  v-if="stage.output"
+                  :ref="(el) => bindStageOutputEl(stage.stage, el)"
+                  class="zk-code-preview stage-output font-mono text-caption text-on-surface"
+                  >{{ stage.output }}</pre>
+                <p v-else class="zk-hint">{{ $t("page.aiKnowledge.stageNoOutput") }}</p>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+          <!-- 汇总脚注：检索与总计耗时、全部调用合计 token（运行结束后由汇总结果回填） -->
+          <div v-if="dryRunResult" class="metric-footnote zk-hint">
+            {{ $t("page.aiKnowledge.metaRetrieveElapsed") }}
+            {{ dryRunResult.meta.retrieveElapsedMs }} ms ·
+            {{ $t("page.aiKnowledge.metaTotal") }}
+            {{ dryRunResult.meta.totalElapsedMs }} ms ·
+            {{ $t("page.aiKnowledge.metaTotalTokens") }}
+            {{ dryRunResult.meta.usage.totalTokens }}
           </div>
-          <pre
-            v-if="showStreamOutput && dryRunStreamText"
-            ref="streamOutputRef"
-            class="zk-code-preview stream-output font-mono text-caption text-on-surface"
-            >{{ dryRunStreamText }}</pre>
         </div>
 
         <template v-if="dryRunResult">
@@ -316,7 +320,7 @@
           </p>
 
           <!-- 评估成功：回答引用块 + 量化指标卡片网格 + 明细折叠面板 -->
-          <div v-if="dryRunResult.evaluation" class="dry-run-result zk-panel zk-flat-panels">
+          <div v-if="dryRunResult.evaluation" class="dry-run-result zk-panel">
             <div class="result-block">
               <div class="zk-code-preview answer-block">
                 <div class="result-label zk-label-caps">{{ $t("page.aiKnowledge.answer") }}</div>
@@ -350,21 +354,38 @@
               </div>
             </div>
 
+            <!-- 改进建议：按封闭归类给出可执行动作（知识覆盖 / 排序调参 / 生成质量 / 上下文利用） -->
+            <div class="result-block">
+              <div class="result-label zk-label-caps">{{ $t("page.aiKnowledge.suggestions") }}</div>
+              <div class="metric-footnote zk-hint">
+                {{ $t("page.aiKnowledge.suggestionsSubtitle") }}
+              </div>
+              <p v-if="dryRunSuggestions.length === 0" class="zk-hint">
+                {{ $t("page.aiKnowledge.suggestionsEmpty") }}
+              </p>
+              <v-list v-else class="bg-transparent">
+                <v-list-item v-for="(suggestion, idx) in dryRunSuggestions" :key="idx">
+                  <template #prepend>
+                    <v-icon :icon="suggestionIconOf(suggestion.category)" size="small" />
+                  </template>
+                  <v-list-item-title class="text-body-2 text-on-surface">
+                    {{ suggestionCategoryLabelOf(suggestion.category) }}
+                  </v-list-item-title>
+                  <p class="text-body-2 text-on-surface mt-1">{{ suggestion.detail }}</p>
+                </v-list-item>
+              </v-list>
+            </div>
+
             <div class="result-block">
               <v-expansion-panels v-model="resultPanel">
                 <v-expansion-panel value="chunks">
-                  <v-expansion-panel-title>
-                    <v-icon
-                      icon="mdi-file-document-multiple-outline"
-                      size="small"
-                      color="primary"
-                      class="me-2"
-                    />
-                    {{ $t("page.aiKnowledge.retrievedChunks") }}
-                    <v-chip size="x-small" class="ms-2">
-                      {{ dryRunResult.results.length }}
-                    </v-chip>
-                  </v-expansion-panel-title>
+                  <expansion-panel-title
+                    icon="mdi-file-document-multiple-outline"
+                    :title="$t('page.aiKnowledge.retrievedChunks')"
+                    :subtitle="$t('page.aiKnowledge.retrievedChunksSubtitle')"
+                  >
+                    <v-chip size="x-small">{{ dryRunResult.results.length }}</v-chip>
+                  </expansion-panel-title>
                   <v-expansion-panel-text>
                     <v-list class="bg-transparent">
                       <v-list-item v-for="(result, idx) in dryRunResult.results" :key="idx">
@@ -382,18 +403,15 @@
                 </v-expansion-panel>
 
                 <v-expansion-panel value="judgments">
-                  <v-expansion-panel-title>
-                    <v-icon
-                      icon="mdi-check-decagram-outline"
-                      size="small"
-                      color="primary"
-                      class="me-2"
-                    />
-                    {{ $t("page.aiKnowledge.judgments") }}
-                    <v-chip size="x-small" class="ms-2">
+                  <expansion-panel-title
+                    icon="mdi-check-decagram-outline"
+                    :title="$t('page.aiKnowledge.judgments')"
+                    :subtitle="$t('page.aiKnowledge.judgmentsSubtitle')"
+                  >
+                    <v-chip size="x-small">
                       {{ dryRunResult.evaluation.chunkJudgments.length }}
                     </v-chip>
-                  </v-expansion-panel-title>
+                  </expansion-panel-title>
                   <v-expansion-panel-text>
                     <v-list class="bg-transparent">
                       <v-list-item
@@ -421,18 +439,15 @@
                 </v-expansion-panel>
 
                 <v-expansion-panel value="claims">
-                  <v-expansion-panel-title>
-                    <v-icon
-                      icon="mdi-format-quote-open"
-                      size="small"
-                      color="primary"
-                      class="me-2"
-                    />
-                    {{ $t("page.aiKnowledge.claims") }}
-                    <v-chip size="x-small" class="ms-2">
+                  <expansion-panel-title
+                    icon="mdi-format-quote-open"
+                    :title="$t('page.aiKnowledge.claims')"
+                    :subtitle="$t('page.aiKnowledge.claimsSubtitle')"
+                  >
+                    <v-chip size="x-small">
                       {{ dryRunResult.evaluation.claims.length }}
                     </v-chip>
-                  </v-expansion-panel-title>
+                  </expansion-panel-title>
                   <v-expansion-panel-text>
                     <v-list class="bg-transparent">
                       <v-list-item
@@ -460,18 +475,15 @@
                 </v-expansion-panel>
 
                 <v-expansion-panel value="reverseQuestions">
-                  <v-expansion-panel-title>
-                    <v-icon
-                      icon="mdi-help-circle-outline"
-                      size="small"
-                      color="primary"
-                      class="me-2"
-                    />
-                    {{ $t("page.aiKnowledge.reverseQuestions") }}
-                    <v-chip size="x-small" class="ms-2">
+                  <expansion-panel-title
+                    icon="mdi-help-circle-outline"
+                    :title="$t('page.aiKnowledge.reverseQuestions')"
+                    :subtitle="$t('page.aiKnowledge.reverseQuestionsSubtitle')"
+                  >
+                    <v-chip size="x-small">
                       {{ dryRunResult.evaluation.reverseQuestions.length }}
                     </v-chip>
-                  </v-expansion-panel-title>
+                  </expansion-panel-title>
                   <v-expansion-panel-text>
                     <v-list class="bg-transparent">
                       <v-list-item
@@ -506,44 +518,6 @@
                 <p class="text-body-2 text-on-surface mt-1">{{ result.content }}</p>
               </v-list-item>
             </v-list>
-          </div>
-
-          <!-- 调用元信息：各阶段模型调用的模型名/耗时/token 明细，以及检索与总计汇总 -->
-          <div class="dry-run-result zk-panel">
-            <div class="result-block">
-              <div class="result-label zk-label-caps">{{ $t("page.aiKnowledge.meta") }}</div>
-              <div class="meta-list">
-                <div v-for="call in dryRunResult.meta.calls" :key="call.stage" class="meta-row">
-                  <span class="meta-stage text-body-2 text-on-surface">
-                    {{ stageLabelOf(call.stage) }}
-                  </span>
-                  <span class="meta-cell text-caption text-on-surface-variant">
-                    {{ $t("page.aiKnowledge.metaModel") }} {{ call.model }}
-                  </span>
-                  <span class="meta-cell text-caption text-on-surface-variant">
-                    {{ $t("page.aiKnowledge.metaElapsed") }} {{ call.elapsedMs }} ms
-                  </span>
-                  <span class="meta-cell text-caption text-on-surface-variant">
-                    {{ $t("page.aiKnowledge.metaPromptTokens") }} {{ call.usage.promptTokens }}
-                  </span>
-                  <span class="meta-cell text-caption text-on-surface-variant">
-                    {{ $t("page.aiKnowledge.metaCompletionTokens") }}
-                    {{ call.usage.completionTokens }}
-                  </span>
-                  <span class="meta-cell text-caption text-on-surface-variant">
-                    {{ $t("page.aiKnowledge.metaTotalTokens") }} {{ call.usage.totalTokens }}
-                  </span>
-                </div>
-              </div>
-              <div class="metric-footnote zk-hint">
-                {{ $t("page.aiKnowledge.metaRetrieveElapsed") }}
-                {{ dryRunResult.meta.retrieveElapsedMs }} ms ·
-                {{ $t("page.aiKnowledge.metaTotal") }}
-                {{ dryRunResult.meta.totalElapsedMs }} ms ·
-                {{ $t("page.aiKnowledge.metaTotalTokens") }}
-                {{ dryRunResult.meta.usage.totalTokens }}
-              </div>
-            </div>
           </div>
         </template>
         <template #footer>
@@ -580,10 +554,12 @@ import {
   knowledgeRetrievalOptions,
 } from "@/apis/ai";
 import type {
+  DiagnosisCategory,
+  DiagnosisSuggestion,
   DryRunCallUsage,
-  DryRunStage,
   DryRunStageEvent,
-  DryRunStageStatus,
+  EvalStage,
+  EvalStageStatus,
   KnowledgeDocumentDetail,
   KnowledgeDocumentReindexOut,
   RetrievalDryRunIn,
@@ -595,6 +571,7 @@ import type { BatchResultOut } from "@/apis/@types/admin";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
 import type { ActionButton } from "@/components/base/ActionButtonGroup.vue";
 import { useAppStore } from "@/stores/app";
+import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
 
@@ -730,6 +707,11 @@ const projectFields = (visible: string[]): string[] => ["id", "title", ...visibl
 const getActions = (item: Record<string, any>): ItemActions => {
   return {
     edit: () => detailGetAction(item),
+    chunks: () => {
+      chunksDocumentId.value = item.id as number;
+      chunksDocumentTitle.value = item.title as string;
+      chunksDialog.value = true;
+    },
     reindex: () => {
       batchState.value = null;
       reindexConfirmRef.value?.open(item);
@@ -740,6 +722,12 @@ const getActions = (item: Record<string, any>): ItemActions => {
     },
   };
 };
+
+// ---- 分块明细 ----
+// 明细由后端读时派生（不改表），打开对话框时按当前文档 id 现取现算
+const chunksDialog = ref(false);
+const chunksDocumentId = ref(0);
+const chunksDocumentTitle = ref("");
 
 // ---- 重新索引 ----
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -846,8 +834,8 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
 // ---- 检索试运行 ----
 // 单个阶段的前端运行态：status 为后端上报的阶段状态，output 为该阶段模型原始输出增量累计
 interface DryRunStageState {
-  stage: DryRunStage;
-  status: DryRunStageStatus;
+  stage: EvalStage;
+  status: EvalStageStatus;
   elapsedMs: number;
   usage?: DryRunCallUsage;
   error?: string;
@@ -863,20 +851,31 @@ const dryRunWeightVector = ref<number | null>(null);
 const dryRunWeightKeyword = ref<number | null>(null);
 const dryRunRunning = ref(false);
 const dryRunResult = ref<RetrievalDryRunOut | null>(null);
-// 运行过程区：阶段进度列表与当前查看的阶段（点击阶段行可回看该阶段原始输出）
+// 运行过程区：阶段进度列表与当前展开的阶段（v-expansion-panels 的 v-model）。
+// 面板为手风琴式，同一时刻只展开一项，故为单值而非列表；运行中自动跟随最新上报的阶段，
+// 空串表示全部收起
 const dryRunStages = ref<DryRunStageState[]>([]);
-const dryRunSelectedStage = ref<DryRunStage | null>(null);
-// 过程区原始输出是否展开（运行中默认展开以实时滚动，完成后可折叠回看）
-const showStreamOutput = ref(true);
+const expandedStage = ref<string>("");
+// 各阶段输出容器的 DOM 引用：面板内容仅在展开时渲染、收起后即卸载（Vuetify useLazy 行为），
+// 同名模板 ref 在 v-for 中还会退化成数组，无法稳定定位，故按阶段登记到 Map，
+// 由模板中的函数 ref 在元素挂载 / 卸载时写入与清除
+const stageOutputEls = new Map<EvalStage, HTMLPreElement>();
+const bindStageOutputEl = (stage: EvalStage, el: unknown): void => {
+  if (el) {
+    stageOutputEls.set(stage, el as HTMLPreElement);
+  } else {
+    stageOutputEls.delete(stage);
+  }
+};
 // 高级参数是否展开（默认折叠隐藏，仅展示查询问题）
 const showAdvancedParams = ref(false);
 // 后端 [llm].rerank 配置的默认参数，用于折叠提示与展开表单预填
 const dryRunDefaults = ref<RetrievalOptionsOut | null>(null);
-// 结果明细折叠面板的展开状态（手风琴式，同一时刻仅一项），默认展开「检索分块」
-const resultPanel = ref<string>("chunks");
+// 结果明细折叠面板的展开状态（手风琴式，同一时刻仅一项；空串表示全部收起）。
+// 与运行过程面板一致默认全部收起，由用户按需展开，避免长明细一上来就撑满对话框
+const resultPanel = ref<string>("");
 // 当前流式请求的中止函数（为空表示当前没有进行中的流）
 const dryRunAbort = ref<(() => void) | null>(null);
-const streamOutputRef = useTemplateRef("streamOutputRef");
 
 // 融合策略选项（rrf / weighted）
 const fusionOptions = [
@@ -924,9 +923,30 @@ const percentOf = (value: number): string => `${(value * 100).toFixed(1)}%`;
 // dryRunWarnings 评估警告列表（评估缺失时为空数组，避免模板中的可选链）
 const dryRunWarnings = computed<string[]>(() => dryRunResult.value?.evaluation?.warnings ?? []);
 
-// stageLabelOf 将阶段标识映射为展示名（page.aiKnowledge.stage.<阶段>）
-const stageLabelOf = (stage: DryRunStage): string =>
-  i18n.global.t(`page.aiKnowledge.stage.${stage}`);
+// dryRunSuggestions 改进建议列表（评估缺失时为空数组，避免模板中的可选链）
+const dryRunSuggestions = computed<DiagnosisSuggestion[]>(
+  () => dryRunResult.value?.evaluation?.suggestions ?? [],
+);
+
+// 改进建议归类 → 图标：以图标区分「补文档」与「调参数」两类动作（归类取值由后端下发，未命中降级兜底）
+const suggestionIcons: Record<string, string> = {
+  coverage: "mdi-book-plus-outline",
+  ranking: "mdi-sort-variant",
+  generation: "mdi-text-box-edit-outline",
+  context: "mdi-link-variant",
+  other: "mdi-lightbulb-outline",
+};
+
+// suggestionIconOf 建议归类图标，未知归类降级为兜底图标
+const suggestionIconOf = (category: DiagnosisCategory): string =>
+  suggestionIcons[category] ?? suggestionIcons.other;
+
+// suggestionCategoryLabelOf 建议归类展示名（经枚举注册表 diagnosisCategory 按当前语言渲染 label）
+const suggestionCategoryLabelOf = (category: DiagnosisCategory): string =>
+  enumLabelOf(EnumClass.diagnosisCategory, category);
+
+// stageLabelOf 阶段展示名（经枚举注册表 evalStage 按当前语言渲染 label）
+const stageLabelOf = (stage: EvalStage): string => enumLabelOf(EnumClass.evalStage, stage);
 
 // stageIconOf 阶段状态图标：运行中旋转、完成打勾、失败告警；流已停止仍在进行的阶段展示为已中止
 const stageIconOf = (stage: DryRunStageState): string => {
@@ -950,19 +970,15 @@ const stageColorOf = (stage: DryRunStageState): string => {
   return dryRunRunning.value ? "primary" : "warning";
 };
 
-// 当前查看的阶段原始输出：优先用户选中的阶段，否则跟随最新阶段
-const dryRunStreamText = computed<string>(() => {
-  const stages = dryRunStages.value;
-  const selected = dryRunSelectedStage.value
-    ? stages.find((item) => item.stage === dryRunSelectedStage.value)
-    : undefined;
-  return (selected ?? stages[stages.length - 1])?.output ?? "";
-});
+// 当前展开阶段的模型原始输出（阶段未登记或全部收起时为空串）
+const expandedStageOutput = computed<string>(
+  () => dryRunStages.value.find((item) => item.stage === expandedStage.value)?.output ?? "",
+);
 
-// 原始输出更新后自动滚动到底部，始终展示最新增量
-watch(dryRunStreamText, async () => {
+// 输出更新后把展开中的输出容器滚动到底部，始终展示最新增量
+watch(expandedStageOutput, async () => {
   await nextTick();
-  const target = streamOutputRef.value;
+  const target = expandedStage.value ? stageOutputEls.get(expandedStage.value) : undefined;
   if (target) {
     target.scrollTop = target.scrollHeight;
   }
@@ -986,21 +1002,32 @@ const applyStageEvent = (ev: DryRunStageEvent): void => {
       output: "",
     });
   }
-  // 自动跟随最新阶段，运行中无需手动切换即可看到当前阶段输出
-  dryRunSelectedStage.value = ev.stage;
+  // 自动跟随最新阶段：展开到刚上报的阶段，运行中无需手动切换即可看到当前阶段输出
+  expandedStage.value = ev.stage;
 };
 
 // appendStageDelta 累计某阶段的模型原始输出增量
-const appendStageDelta = (stage: DryRunStage, delta: string): void => {
+const appendStageDelta = (stage: EvalStage, delta: string): void => {
   const target = dryRunStages.value.find((item) => item.stage === stage);
   if (target) {
     target.output += delta;
   }
 };
 
-// stageMetaTextOf 阶段行右侧摘要：耗时、token 用量与失败原因（无内容时为空串）
+// modelOfStage 该阶段实际调用的模型名：仅后端汇总的调用元信息携带（流式阶段事件不含），
+// 故运行结束后才有值，运行中为空串
+const modelOfStage = (stage: EvalStage): string =>
+  dryRunResult.value?.meta.calls.find((call) => call.stage === stage)?.model ?? "";
+
+// stageMetaTextOf 阶段行右侧摘要：模型、耗时、token 用量与失败原因（无内容时为空串）。
+// 这里是调用信息的唯一落点——原「调用元信息」列表除模型名与合计 Token 外的字段均与此重复，
+// 已整块合并进来，不再单独成块（见 AGENTS.md「展开面板族」）
 const stageMetaTextOf = (stage: DryRunStageState): string => {
   const parts: string[] = [];
+  const model = modelOfStage(stage.stage);
+  if (model) {
+    parts.push(`${i18n.global.t("page.aiKnowledge.metaModel")} ${model}`);
+  }
   if (stage.elapsedMs > 0) {
     parts.push(`${stage.elapsedMs} ms`);
   }
@@ -1008,6 +1035,7 @@ const stageMetaTextOf = (stage: DryRunStageState): string => {
     parts.push(
       `${i18n.global.t("page.aiKnowledge.metaPromptTokens")} ${stage.usage.promptTokens}`,
       `${i18n.global.t("page.aiKnowledge.metaCompletionTokens")} ${stage.usage.completionTokens}`,
+      `${i18n.global.t("page.aiKnowledge.metaTotalTokens")} ${stage.usage.totalTokens}`,
     );
   }
   if (stage.error) {
@@ -1064,8 +1092,8 @@ const resetDryRunDialog = (): void => {
   dryRunQuery.value = "";
   dryRunResult.value = null;
   dryRunStages.value = [];
-  dryRunSelectedStage.value = null;
-  showStreamOutput.value = true;
+  expandedStage.value = "";
+  stageOutputEls.clear();
   dryRunDefaults.value = null;
   showAdvancedParams.value = false;
   dryRunTopK.value = null;
@@ -1073,13 +1101,16 @@ const resetDryRunDialog = (): void => {
   dryRunFusion.value = null;
   dryRunWeightVector.value = null;
   dryRunWeightKeyword.value = null;
-  resultPanel.value = "chunks";
+  resultPanel.value = "";
 };
 
 const openDryRunDialog = async (): Promise<void> => {
   // 打开时重置状态并拉取后端默认值预填，供折叠提示与展开表单展示
   resetDryRunDialog();
   dryRunDialog.value = true;
+  // 阶段名与建议归类经统一枚举注册表渲染 label，按当前语言预取（缓存到达后模板自动刷新）
+  void ensureEnum(EnumClass.evalStage);
+  void ensureEnum(EnumClass.diagnosisCategory);
   await loadDryRunDefaults();
 };
 
@@ -1108,9 +1139,9 @@ const runDryRunAction = (): void => {
   // 新一轮运行清空上一轮的过程与结果
   dryRunResult.value = null;
   dryRunStages.value = [];
-  dryRunSelectedStage.value = null;
-  showStreamOutput.value = true;
-  resultPanel.value = "chunks";
+  expandedStage.value = "";
+  stageOutputEls.clear();
+  resultPanel.value = "";
   dryRunRunning.value = true;
   dryRunAbort.value = knowledgeRetrievalDryRunStream(payload, {
     onStage: applyStageEvent,
@@ -1119,6 +1150,9 @@ const runDryRunAction = (): void => {
       dryRunResult.value = out;
       dryRunRunning.value = false;
       dryRunAbort.value = null;
+      // 运行中自动展开最新阶段便于跟读输出，结束后收起：过程与结果都已定格，
+      // 折叠成清单让用户按需回看（报错时不收起——此时结果区不存在，过程是唯一内容）
+      expandedStage.value = "";
     },
     onError: (msg) => {
       dryRunRunning.value = false;
@@ -1165,58 +1199,22 @@ const toolbarActions = computed<ActionButton[]>(() => [
   padding: var(--zk-space-3);
 }
 
-.process-header {
-  display: flex;
-  align-items: center;
-  min-height: var(--zk-editor-header-min-height);
+/* 阶段行右侧元信息：面板标题行高固定，超长内容（如失败原因）以省略号收束，完整文本经 title 提示；
+   min-width: 0 让该项可被压缩，否则 nowrap 文本会撑破标题行 */
+.stage-meta {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.stage-list {
-  margin-top: var(--zk-space-1);
-}
-
-/* 阶段行：可点击选中行，选中态高亮走 .zk-row-selected */
-.stage-row {
-  display: flex;
-  align-items: center;
-  gap: var(--zk-space-2);
-  padding: var(--zk-space-1) var(--zk-space-2);
-  cursor: pointer;
-}
-
-.stage-name {
-  flex: 0 0 auto;
-}
-
-/* 模型原始输出：等宽走 .font-mono，底色 / 换行 / 内边距走 .zk-code-preview，
-   此处仅保留本地滚动所需的限高与行距 */
-.stream-output {
-  margin: var(--zk-space-2) 0 0;
+/* 阶段模型原始输出：等宽走 .font-mono，底色 / 换行 / 内边距走 .zk-code-preview，
+   此处仅保留 margin 归零（pre 自带 1em）与本地滚动所需的限高与行距 */
+.stage-output {
+  margin: 0;
   max-height: calc(var(--zk-editor-min-height) * 1.25);
   overflow: auto;
   line-height: 1.5;
-}
-
-/* 调用元信息：每行折叠为可换行的“阶段 + 各项指标”紧凑列表 */
-.meta-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 2px 12px;
-}
-
-.meta-stage {
-  flex: 0 0 96px;
-}
-
-.meta-cell {
-  flex: 0 0 auto;
 }
 
 .result-block {
@@ -1258,16 +1256,5 @@ const toolbarActions = computed<ActionButton[]>(() => [
 
 .metric-footnote {
   margin-top: var(--zk-space-1);
-}
-
-/* 明细折叠面板：背景 / 阴影 / hover 遮罩走 .zk-flat-panels，此处只保留标题行布局 */
-.dry-run-result :deep(.v-expansion-panel-title) {
-  min-height: var(--zk-table-row-height-compact);
-  padding: var(--zk-space-1) var(--zk-space-3);
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-result :deep(.v-expansion-panel-text__wrapper) {
-  padding: var(--zk-space-1) var(--zk-space-3) var(--zk-space-3);
 }
 </style>

@@ -84,12 +84,12 @@ func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, l
 		return nil, errors.New("ai runtime: nil logger")
 	}
 	rt := &Runtime{db: db, store: store, client: client, logger: logger}
-	rt.current.Store(emptyState())
+	rt.swapState(emptyState())
 	st, err := rt.build(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	rt.current.Store(st)
+	rt.swapState(st)
 	rt.watcher = newWatcher(rt, client, logger)
 	return rt, nil
 }
@@ -170,19 +170,39 @@ func (r *Runtime) Embed() (embedding.Embedder, error) {
 
 // Invalidate 重新读取数据库配置并整体替换当前装配态，供配置变更（etcd 广播）时调用。
 // 重建失败时保留上一可用快照并记录英文错误（不 panic、不残缺降级），同时向上返回错误
-// 供监听方记录告警。
+// 供监听方记录告警。替换成功后关闭被替换掉的旧快照持有的 MCP 会话（避免重建次数增长导致
+// 连接泄漏）；关闭失败只记英文告警，不影响返回值。
 // Invalidate re-reads the database config and wholly swaps the current assembly state, for
 // use on a config change (an etcd broadcast). A failed rebuild keeps the previous usable
 // snapshot and logs an English error (no panic, no crippled degradation) while still
-// returning the error so the watcher can record a warning.
+// returning the error so the watcher can record a warning. After a successful swap it closes
+// the MCP sessions held by the replaced snapshot (so repeated rebuilds never leak connections);
+// a close failure only logs an English warning and never affects the result.
 func (r *Runtime) Invalidate(ctx context.Context) error {
 	st, err := r.build(ctx)
 	if err != nil {
 		r.logger.Ctx(ctx).Errorf("ai: rebuild failed, keeping the previous snapshot: %v", err)
 		return errors.WithStack(err)
 	}
-	r.current.Store(st)
+	if old := r.swapState(st); old != nil {
+		if err := old.snapshot.CloseTools(); err != nil {
+			r.logger.Ctx(ctx).Warnf("ai: closing the replaced snapshot's MCP sessions failed: %v", err)
+		}
+	}
 	return nil
+}
+
+// swapState 原子替换当前装配态并返回被替换掉的旧装配态（首次替换时为 nil）。抽出它使
+// Invalidate / NewRuntime / Shutdown 复用同一替换点，并让同包单测无需数据库即可验证「替换后旧
+// 快照的连接被关闭」的生命周期语义。next 为 nil 时按 atomic.Pointer 的既有语义存入 nil，各读取
+// 方法对 nil 装配态已做零值安全处理。
+// swapState atomically swaps the current assembly state and returns the replaced one (nil on the
+// first swap). Extracting it lets Invalidate / NewRuntime / Shutdown share one swap point and lets
+// the package tests verify the lifecycle semantics "the replaced snapshot's connections are closed"
+// without a database. A nil next is stored as nil per the existing atomic.Pointer semantics, and
+// the read methods already handle a nil state safely.
+func (r *Runtime) swapState(next *runtimeState) *runtimeState {
+	return r.current.Swap(next)
 }
 
 // TestModel 对给定模型端点配置做一次轻量探活（chat 走 GET {baseURL}/models，embedding
@@ -209,24 +229,38 @@ func (r *Runtime) Start(ctx context.Context) error {
 
 // Shutdown 停止配置变更监听（实现 runtime.Service 生命周期，实际停止依赖 Start 的 ctx
 // 取消）；同时满足 samber/do 的 ShutdownerWithContext 约定，由注入器在关闭阶段调用。
+// 除既有监听关闭外，再关闭当前快照持有的 MCP 会话（失败只记英文告警）；CloseTools 幂等，
+// 故重复调用安全。
 // Shutdown stops the config change watcher (the runtime.Service lifecycle; the actual stop
 // relies on the Start ctx cancellation). It also satisfies the samber/do
-// ShutdownerWithContext contract so the injector drives it during shutdown.
+// ShutdownerWithContext contract so the injector drives it during shutdown. Besides the
+// existing watcher shutdown it also closes the MCP sessions held by the current snapshot (a
+// failure only logs an English warning); CloseTools is idempotent, so a repeated call is safe.
 func (r *Runtime) Shutdown(ctx context.Context) error {
+	if st := r.current.Load(); st != nil {
+		if err := st.snapshot.CloseTools(); err != nil {
+			r.logger.Ctx(ctx).Warnf("ai: closing the MCP sessions on shutdown failed: %v", err)
+		}
+	}
 	if r.watcher == nil {
 		return nil
 	}
 	return r.watcher.Shutdown(ctx)
 }
 
-// build 依据数据库当前状态装配一份完整运行态：快照 → 各对话档位客户端 → 向量化客户端
-// → 会话存储 / 知识库 / 检索器 / Agent。未启用（standard 或 embedding 档位不可用）时仅返回
-// 携带参数读取器的空组件，不构建任何客户端。
-// build assembles one complete runtime state from the current database state: snapshot →
-// per-slot chat clients → embedding client → session store / knowledge / retriever / Agent.
-// When disabled (the standard or the embedding slot is unusable) it returns only the empty
-// components carrying the parameter reader and builds no client.
-func (r *Runtime) build(ctx context.Context) (*runtimeState, error) {
+// build 依据数据库当前状态装配一份完整运行态：快照 → 已启用工具 → 各对话档位客户端 →
+// 向量化客户端 → 会话存储 / 知识库 / 检索器 / Agent。未启用（standard 或 embedding 档位不可用）
+// 时仅返回携带参数读取器的空组件，不构建任何客户端，也不拨号任何 MCP 服务器（未启用时工具无
+// 意义，且不应产生网络副作用）。工具装配按服务器粒度降级：MCP 端点故障只转为告警而不使装配
+// 失败，仅读库失败才返回错误。
+// build assembles one complete runtime state from the current database state: snapshot → enabled
+// tools → per-slot chat clients → embedding client → session store / knowledge / retriever /
+// Agent. When disabled (the standard or the embedding slot is unusable) it returns only the empty
+// components carrying the parameter reader, builds no client and dials no MCP server (tools are
+// meaningless while disabled and must not cause network side effects). The tool assembly degrades
+// per server: an MCP endpoint failure only becomes a warning rather than failing the assembly, and
+// only a failed database read returns an error.
+func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 	snap, err := r.store.Load(ctx)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -239,6 +273,26 @@ func (r *Runtime) build(ctx context.Context) (*runtimeState, error) {
 	if !snap.Enabled() {
 		return st, nil
 	}
+	// 工具装配产出的 MCP 会话句柄由快照持有。若后续构建中途失败，本函数返回错误且新快照不会
+	// 被发布（st 不会进入 r.current），此时必须关闭刚建立的连接，避免装配失败时的连接泄漏。
+	// The MCP session handles produced by the tool assembly are held by the snapshot. If a later
+	// step fails, this function returns an error and the new snapshot is never published (st never
+	// enters r.current), so the freshly established connections must be closed to avoid a leak on a
+	// failed assembly.
+	set, err := r.store.LoadTools(ctx, r.logger)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	defer func() {
+		if err != nil {
+			_ = set.Close()
+		}
+	}()
+	for _, warning := range set.Warnings {
+		r.logger.Ctx(ctx).Warnf("%s", warning)
+	}
+	snap.mountTools(set)
+
 	for slot, info := range snap.Slots() {
 		if !info.Bound || info.Kind == llm.ModelKindEmbedding {
 			continue
@@ -282,7 +336,7 @@ func (r *Runtime) build(ctx context.Context) (*runtimeState, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	agent, err := NewAgent(r.chatResolver(st.chats), retriever, sessions, snap.Params())
+	agent, err := NewAgent(ctx, r.chatResolver(st.chats), retriever, sessions, snap.Params(), snap.Tools(), snap.ToolInfos())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -292,6 +346,7 @@ func (r *Runtime) build(ctx context.Context) (*runtimeState, error) {
 		Retriever: retriever,
 		Sessions:  sessions,
 		Params:    snap.Params(),
+		Tools:     snap.Tools(),
 	}
 	return st, nil
 }

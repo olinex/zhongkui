@@ -7,6 +7,8 @@ import (
 	"time"
 
 	// third-party
+	"github.com/cloudwego/eino/components/tool"
+	"github.com/cloudwego/eino/schema"
 	"gorm.io/gorm"
 
 	// internal
@@ -66,6 +68,9 @@ type Snapshot struct {
 	deviated    int                          // 当前值与出厂值不同的参数条数
 	enabled     bool                         // AI 能力是否可用（standard 与 embedding 档位均可用）
 	defaultSlot llm.Slot                     // 参数 agent.defaultSlot 的生效值（未装配时为空）
+	tools       []tool.BaseTool              // 已启用工具（发布前一次性挂载，发布后只读）
+	toolInfos   []*schema.ToolInfo           // 与 tools 一一对应的 schema 清单（顺序一致）
+	closeTools  func() error                 // MCP 会话关闭句柄（本次装配未拨号时为 nil）
 }
 
 // emptySnapshot 返回一份未启用且无任何绑定的空快照，用于运行时尚未完成首次装配时的
@@ -229,6 +234,64 @@ func (s *Snapshot) Bindings() map[llm.Slot]string {
 	return out
 }
 
+// Tools 返回已启用工具的副本（调用方修改返回值不会影响快照内部状态）；未装配或 AI 未启用
+// 时返回空切片（非 nil）。视图层与 Agent 由它取得可消费的 eino 工具清单。
+// Tools returns a copy of the enabled tools (a caller's mutation never reaches the internal
+// state); it returns an empty (non-nil) slice before assembly or while AI is disabled. The view
+// layer and the Agent take the consumable eino tool list from it.
+func (s *Snapshot) Tools() []tool.BaseTool {
+	if s == nil {
+		return []tool.BaseTool{}
+	}
+	out := make([]tool.BaseTool, len(s.tools))
+	copy(out, s.tools)
+	return out
+}
+
+// ToolInfos 返回已启用工具的 schema 清单副本，顺序与 Tools 一一对应；未装配或 AI 未启用时
+// 返回空切片（非 nil）。节点 4 以它作为 model.WithTools 的入参。
+// ToolInfos returns a copy of the schema list of the enabled tools, aligned one to one with Tools;
+// it returns an empty (non-nil) slice before assembly or while AI is disabled. Node 4 feeds it to
+// model.WithTools.
+func (s *Snapshot) ToolInfos() []*schema.ToolInfo {
+	if s == nil {
+		return []*schema.ToolInfo{}
+	}
+	out := make([]*schema.ToolInfo, len(s.toolInfos))
+	copy(out, s.toolInfos)
+	return out
+}
+
+// CloseTools 关闭本快照持有的 MCP 会话（幂等）；nil 接收者或本次装配未拨号时返回 nil。快照在
+// 发布后只读，会话句柄由快照持有：仅供 Runtime 在替换快照后（或关闭时）关闭旧快照的连接时
+// 调用，调用方不得自行关闭，否则会与他人的读取竞争。
+// CloseTools closes the MCP sessions held by this snapshot (idempotent); a nil receiver or an
+// assembly that dialed nothing returns nil. A published snapshot is read-only and owns the session
+// handles: it is meant for the Runtime to call when closing the connections of a replaced snapshot
+// (or on shutdown), and callers must not close them themselves, which would race with other
+// readers.
+func (s *Snapshot) CloseTools() error {
+	if s == nil || s.closeTools == nil {
+		return nil
+	}
+	return s.closeTools()
+}
+
+// mountTools 把一次工具装配的产出挂到快照上：已构建工具、与之一一对应的 schema 清单以及 MCP
+// 会话关闭句柄。仅供 Runtime.build 在快照发布前调用一次（快照发布后即只读，不得再写入）。
+// mountTools mounts the output of one tool assembly onto the snapshot: the built tools, the schema
+// list aligned with them and the MCP session close handle. It is meant to be called once by
+// Runtime.build before the snapshot is published (a published snapshot is read-only and must not
+// be written again).
+func (s *Snapshot) mountTools(set *ToolSet) {
+	if s == nil || set == nil {
+		return
+	}
+	s.tools = set.Tools
+	s.toolInfos = set.Infos
+	s.closeTools = set.Close
+}
+
 // Store 从 core 库读取 LLM 配置：模型注册表（llm_models）、档位绑定（llm_bindings，含
 // 关联的模型实体）与行为参数（agent_params，出厂值与当前值）。模型绑定携带明文凭据，
 // 故 Store 只应在进程内使用，不得序列化输出。
@@ -237,16 +300,18 @@ func (s *Snapshot) Bindings() map[llm.Slot]string {
 // (agent_params, factory and effective values). The model bindings carry plaintext
 // credentials, so a Store must stay inside the process and never be serialized outward.
 type Store struct {
-	db *database.DB
+	db     *database.DB
+	dialer mcpDialer // MCP 连接器（生产实现委托 internal/ai/tools/mcp，测试可替换为假实现）
 }
 
-// NewStore 构造 Store；db 为空时返回英文错误。
-// NewStore constructs a Store; a nil db yields an English error.
+// NewStore 构造 Store；db 为空时返回英文错误。MCP 连接器默认取生产实现（本包不引用 MCP SDK）。
+// NewStore constructs a Store; a nil db yields an English error. The MCP connector defaults to the
+// production implementation (this package never references the MCP SDK).
 func NewStore(db *database.DB) (*Store, error) {
 	if db == nil {
 		return nil, errors.New("ai store: nil database")
 	}
-	return &Store{db: db}, nil
+	return &Store{db: db, dialer: realMCPDialer{}}, nil
 }
 
 // Load 组装一份配置快照：读取全部档位绑定与行为参数，计算可用性，并在 embedding 档位

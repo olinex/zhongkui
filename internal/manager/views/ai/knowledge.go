@@ -13,11 +13,13 @@ import (
 	"gorm.io/gorm"
 
 	// internal
+	ai "zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -323,4 +325,138 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 		ChunkCount: doc.ChunkCount,
 		Hash:       doc.Hash,
 	})
+}
+
+// KnowledgeDocumentIndexSummaryOut 定义知识库文档索引摘要的输出结构：
+// 全部字段在读取时从文档与其分块聚合派生（含 overlap 造成的重复计数），不落库。
+type KnowledgeDocumentIndexSummaryOut struct {
+	// ChunkCount 分块数
+	ChunkCount int `json:"chunkCount"`
+	// ContentChars 文档正文字符数
+	ContentChars int `json:"contentChars"`
+	// ChunkCharsTotal 各分块正文字符数之和
+	ChunkCharsTotal int `json:"chunkCharsTotal"`
+	// ChunkCharsAvg 分块正文字符数均值
+	ChunkCharsAvg int `json:"chunkCharsAvg"`
+	// ChunkCharsMin 分块正文字符数最小值
+	ChunkCharsMin int `json:"chunkCharsMin"`
+	// ChunkCharsMax 分块正文字符数最大值
+	ChunkCharsMax int `json:"chunkCharsMax"`
+	// HeadingPathCount 去重后的标题路径数
+	HeadingPathCount int `json:"headingPathCount"`
+	// AtomicChunkCount 含代码块或表格的分块数（超长也不切分的原子块）
+	AtomicChunkCount int `json:"atomicChunkCount"`
+	// ChunkSize 生效参数 chunking.size
+	ChunkSize int `json:"chunkSize"`
+	// ChunkOverlap 生效参数 chunking.overlap
+	ChunkOverlap int `json:"chunkOverlap"`
+	// Indexed 是否已建立索引
+	Indexed bool `json:"indexed"`
+	// Stale 索引摘要与当前正文是否不一致（索引落后于正文）
+	Stale bool `json:"stale"`
+	// IndexedAt 最近一次索引写入时间（文档更新时间）
+	IndexedAt time.Time `json:"indexedAt"`
+	// Hash 文档内容 sha256 摘要
+	Hash string `json:"hash"`
+	// EmbeddingModel embedding 档位绑定的供应商模型名（未绑定时为空）
+	EmbeddingModel string `json:"embeddingModel"`
+	// EmbeddingDimensions embedding 列的实际向量维度（不可读时为 0）
+	EmbeddingDimensions int `json:"embeddingDimensions"`
+}
+
+// KnowledgeDocumentChunkOut 定义单个知识分块的输出结构。
+type KnowledgeDocumentChunkOut struct {
+	// Index 分块在文档内的序号
+	Index int `json:"index"`
+	// HeadingPath 所属标题路径（空表示该块不在任何标题之下）
+	HeadingPath string `json:"headingPath"`
+	// Content 分块正文
+	Content string `json:"content"`
+	// Chars 正文字符数
+	Chars int `json:"chars"`
+	// Lines 正文行数
+	Lines int `json:"lines"`
+	// Kinds 结构单元类型（取值为 chunkUnitKind 枚举类的值）
+	Kinds []string `json:"kinds"`
+}
+
+// KnowledgeDocumentChunksOut 定义知识库文档分块明细的输出结构（文档级摘要 + 逐块明细）。
+type KnowledgeDocumentChunksOut struct {
+	// Summary 文档级索引摘要
+	Summary KnowledgeDocumentIndexSummaryOut `json:"summary"`
+	// Chunks 逐块明细（按分块序号升序；无分块时为空数组）
+	Chunks []KnowledgeDocumentChunkOut `json:"chunks"`
+}
+
+// KnowledgeDocumentChunksGet 处理获取知识库文档分块明细的请求。
+// 按 (id, namespace) 定位文档（不存在返回 404），随后读取该文档分块并聚合构建摘要：
+// 分块统计、切片参数、向量模型与维度、索引新鲜度均在此给出。读路径不依赖 AI 能力是否启用
+// （未启用时文档通常未索引，返回空分块与 indexed=false）。
+func KnowledgeDocumentChunksGet(c *gin.Context) {
+	namespace, ok := middlewares.RequireNamespace(c)
+	if !ok {
+		return
+	}
+	id, ok := views.GetUint64Param(c, "id")
+	if !ok {
+		return
+	}
+	db := middlewares.GetCoreDatabase(c)
+	doc := modelsai.KnowledgeDocument{}
+	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&doc).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.ErrDefaultPageNotFound.AbortWithGinH(c)
+			return
+		}
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	overview, err := ai.BuildChunkOverview(c, db, middlewares.GetAi(c).Params, &doc)
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	out := KnowledgeDocumentChunksOut{
+		Summary: KnowledgeDocumentIndexSummaryOut{
+			ChunkCount:       overview.Summary.ChunkCount,
+			ContentChars:     overview.Summary.ContentChars,
+			ChunkCharsTotal:  overview.Summary.ChunkCharsTotal,
+			ChunkCharsAvg:    overview.Summary.ChunkCharsAvg,
+			ChunkCharsMin:    overview.Summary.ChunkCharsMin,
+			ChunkCharsMax:    overview.Summary.ChunkCharsMax,
+			HeadingPathCount: overview.Summary.HeadingPathCount,
+			AtomicChunkCount: overview.Summary.AtomicChunkCount,
+			ChunkSize:        overview.Summary.ChunkSize,
+			ChunkOverlap:     overview.Summary.ChunkOverlap,
+			Indexed:          overview.Summary.Indexed,
+			Stale:            overview.Summary.Stale,
+			IndexedAt:        overview.Summary.IndexedAt,
+			Hash:             overview.Summary.Hash,
+		},
+		// 空数组而非 null，保证前端拿到稳定结构
+		Chunks: make([]KnowledgeDocumentChunkOut, 0, len(overview.Chunks)),
+	}
+	// 向量模型取自运行时快照的 embedding 档位绑定（未绑定时留空）
+	if info, ok := middlewares.GetAiRuntime(c).Snapshot().Slots()[llm.SlotEmbedding]; ok {
+		out.Summary.EmbeddingModel = info.Model
+	}
+	// 向量维度取 embedding 列的实际维度（表或列不可读时记 0），与状态接口共用同一读取来源
+	if n, found, err := llm.ChunkEmbeddingDimension(c, db); err == nil && found {
+		out.Summary.EmbeddingDimensions = n
+	}
+	for _, chunk := range overview.Chunks {
+		kinds := make([]string, 0, len(chunk.Kinds))
+		for _, kind := range chunk.Kinds {
+			kinds = append(kinds, string(kind))
+		}
+		out.Chunks = append(out.Chunks, KnowledgeDocumentChunkOut{
+			Index:       chunk.Index,
+			HeadingPath: chunk.HeadingPath,
+			Content:     chunk.Content,
+			Chars:       chunk.Chars,
+			Lines:       chunk.Lines,
+			Kinds:       kinds,
+		})
+	}
+	response.SimpleOK.AbortWithGinW(c, out)
 }

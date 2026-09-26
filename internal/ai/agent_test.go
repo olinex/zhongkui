@@ -89,7 +89,7 @@ func newTestAgent(t *testing.T, chat model.BaseChatModel, retriever retriever.Re
 		"session.maxContextMessages": "10",
 		"session.maxContextBytes":    "4096",
 	})
-	agent, err := NewAgent(stubResolver(chat), retriever, store, params)
+	agent, err := NewAgent(context.Background(), stubResolver(chat), retriever, store, params, nil, nil)
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
 	}
@@ -119,7 +119,7 @@ func TestNewAgent_ValidationErrors(t *testing.T) {
 		{"nil params", stubResolver(chat), rtv, store, nil},
 	}
 	for _, c := range cases {
-		if _, err := NewAgent(c.resolver, c.rtv, c.store, c.params); err == nil {
+		if _, err := NewAgent(context.Background(), c.resolver, c.rtv, c.store, c.params, nil, nil); err == nil {
 			t.Errorf("%s: NewAgent() = nil error, want an error", c.name)
 		}
 	}

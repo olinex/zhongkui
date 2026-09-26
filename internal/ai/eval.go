@@ -43,6 +43,17 @@ const (
 	// EvalStageReverseQuestions 反推问题生成阶段
 	// EvalStageReverseQuestions the reverse question generation stage
 	EvalStageReverseQuestions EvalStage = "reverseQuestions"
+	// EvalStageSuggestions 改进建议生成阶段（依据检索结果、指标与实际生效的检索参数给出）
+	// EvalStageSuggestions the improvement suggestion stage (driven by the retrieval hits, the
+	// metrics and the effective retrieval parameters)
+	EvalStageSuggestions EvalStage = "suggestions"
+	// EvalStageToolCall 工具调用阶段（Agent 节点 4 准备/发起一次工具调用）
+	// EvalStageToolCall the tool-call stage (Agent node 4 prepares/starts one tool call)
+	EvalStageToolCall EvalStage = "toolCall"
+	// EvalStageToolResult 工具结果阶段（Agent 节点 4 收到一次工具执行的结果）
+	// EvalStageToolResult the tool-result stage (Agent node 4 receives the result of one
+	// tool execution)
+	EvalStageToolResult EvalStage = "toolResult"
 )
 
 // EvalStageStatus 是阶段状态标识；带 Delta 的增量事件不携带状态。
@@ -120,6 +131,10 @@ type StageEvent struct {
 	// Err 阶段失败原因（仅 failed 有值）
 	// Err the stage failure reason (failed only)
 	Err string `json:"error,omitempty"`
+	// Tool 本轮事件的工具名（仅 toolCall / toolResult 阶段有值，其他阶段为空）
+	// Tool the tool name of this event (only the toolCall / toolResult stages carry it;
+	// empty for every other stage)
+	Tool string `json:"tool,omitempty"`
 }
 
 // EvalReporter 是评估阶段事件的实时上报回调：返回错误（如 SSE 写失败/客户端断开）
@@ -181,6 +196,90 @@ type FaithfulnessClaim struct {
 	ChunkIndexes []int `json:"chunkIndexes"`
 }
 
+// DiagnosisCategory 是改进建议的封闭归类：模型只能从上列取值中选一个，未知取值由
+// normalizeDiagnosisCategory 兜底为 DiagnosisCategoryOther，保证前端可以按类别稳定映射图标
+// 与文案，而无需正则匹配自由文本。
+// DiagnosisCategory is the closed classification of an improvement suggestion: the model picks
+// exactly one of the listed values and an unknown value falls back to DiagnosisCategoryOther via
+// normalizeDiagnosisCategory, so the frontend maps icons and copy by category instead of
+// pattern-matching free text.
+type DiagnosisCategory string
+
+// 改进建议归类常量。
+// Improvement suggestion category constants.
+const (
+	// DiagnosisCategoryCoverage 知识覆盖不足：知识库缺少回答该问题所需的文档
+	// DiagnosisCategoryCoverage missing knowledge coverage: the knowledge base lacks the
+	// documents needed to answer the query
+	DiagnosisCategoryCoverage DiagnosisCategory = "coverage"
+	// DiagnosisCategoryRanking 检索排序问题：融合策略、权重、条数等检索参数需要调整
+	// DiagnosisCategoryRanking retrieval ranking issue: the fusion strategy, weights, hit
+	// counts and other retrieval parameters need tuning
+	DiagnosisCategoryRanking DiagnosisCategory = "ranking"
+	// DiagnosisCategoryGeneration 生成质量问题：回答本身偏离问题或忽略上下文
+	// DiagnosisCategoryGeneration answer quality issue: the answer itself drifts from the
+	// question or ignores the context
+	DiagnosisCategoryGeneration DiagnosisCategory = "generation"
+	// DiagnosisCategoryContext 上下文利用问题：检索到的上下文相关但未被回答充分使用
+	// DiagnosisCategoryContext context utilization issue: the retrieved context is relevant
+	// but underused by the answer
+	DiagnosisCategoryContext DiagnosisCategory = "context"
+	// DiagnosisCategoryOther 其他：不属于上述归类的建议
+	// DiagnosisCategoryOther anything that does not fit the categories above
+	DiagnosisCategoryOther DiagnosisCategory = "other"
+)
+
+// DiagnosisSuggestion 是一条改进建议：Category 为封闭归类，Detail 为按请求语言输出的
+// 自由文本（说明问题与应采取的具体动作）。
+// DiagnosisSuggestion is a single improvement suggestion: Category is the closed classification
+// and Detail is free text in the request language (stating the problem and the concrete action
+// to take).
+type DiagnosisSuggestion struct {
+	// Category 建议归类
+	// Category the suggestion classification
+	Category DiagnosisCategory `json:"category"`
+	// Detail 建议正文（请求语言）
+	// Detail the suggestion body (in the request language)
+	Detail string `json:"detail"`
+}
+
+// diagnosisContext 是改进建议阶段所需的上下文：实际生效的检索参数（用于给出可执行的调参
+// 建议）与请求语言标签（用于要求模型以该语言输出建议正文）。检索参数取自
+// Retriever.retrieveOptions，即与本次检索完全一致的默认值与归一化结果。
+// diagnosisContext carries what the suggestion stage needs: the effective retrieval parameters
+// (so the advice can name concrete tunings) and the request language tag (so the model writes the
+// suggestion bodies in that language). The parameters come from Retriever.retrieveOptions, i.e.
+// the very defaults and normalization applied by this run.
+type diagnosisContext struct {
+	// Options 本次检索实际生效的参数
+	// Options the retrieval parameters effectively used by this run
+	Options RetrieveOptions
+	// Language 请求语言标签（BCP-47，如 zh-Hans / en）；为空时不下发语言指令
+	// Language the request language tag (BCP-47, e.g. zh-Hans / en); an empty value drops the
+	// language instruction
+	Language string
+}
+
+// normalizeDiagnosisCategory 把模型给出的归类字面量归一化到封闭取值：大小写与空白不敏感，
+// 未知取值兜底为 DiagnosisCategoryOther。
+// normalizeDiagnosisCategory normalizes the category literal given by the model onto the closed
+// value space: case and whitespace insensitive, with unknown values falling back to
+// DiagnosisCategoryOther.
+func normalizeDiagnosisCategory(raw string) DiagnosisCategory {
+	switch DiagnosisCategory(strings.ToLower(strings.TrimSpace(raw))) {
+	case DiagnosisCategoryCoverage:
+		return DiagnosisCategoryCoverage
+	case DiagnosisCategoryRanking:
+		return DiagnosisCategoryRanking
+	case DiagnosisCategoryGeneration:
+		return DiagnosisCategoryGeneration
+	case DiagnosisCategoryContext:
+		return DiagnosisCategoryContext
+	default:
+		return DiagnosisCategoryOther
+	}
+}
+
 // DryRunEvaluation 是一次 dry-run 的评估结果。
 // DryRunEvaluation is the evaluation result of a single dry-run.
 type DryRunEvaluation struct {
@@ -201,6 +300,10 @@ type DryRunEvaluation struct {
 	// ReverseQuestions the reverse-engineered questions (empty when there is no answer or
 	// the generation failed)
 	ReverseQuestions []string `json:"reverseQuestions"`
+	// Suggestions 依据检索结果与指标给出的改进建议（生成失败时为空）
+	// Suggestions the improvement suggestions derived from the retrieval hits and metrics
+	// (empty when the generation failed)
+	Suggestions []DiagnosisSuggestion `json:"suggestions"`
 	// RelevantCount 被判定为相关的分块数
 	// RelevantCount the number of chunks judged relevant
 	RelevantCount int `json:"relevantCount"`
@@ -454,6 +557,95 @@ func judgeReverseQuestions(ctx context.Context, params *llm.Params, chat chatGen
 	return out, meta, nil
 }
 
+// judgeSuggestions 依据检索结果、量化指标与本次实际生效的检索参数生成改进建议：
+// 丢弃 detail 为空的条目并把归类归一化到封闭取值。
+// judgeSuggestions generates improvement suggestions from the retrieval hits, the
+// quantitative metrics and the retrieval parameters effective in this run: entries with an
+// empty detail are dropped and the category is normalized onto the closed value space.
+func judgeSuggestions(ctx context.Context, params *llm.Params, chat chatGenerator, query string, ev *DryRunEvaluation, results []RetrievalResult, diag diagnosisContext, report EvalReporter) ([]DiagnosisSuggestion, CallMeta, error) {
+	messages := []*schema.Message{
+		schema.SystemMessage(suggestionsSystemPrompt(params, diag.Language)),
+		schema.UserMessage(buildSuggestionsPrompt(query, ev, results, diag.Options, params.Int("eval.snippetLimit"))),
+	}
+	content, meta, err := streamChat(ctx, chat, EvalStageSuggestions, messages, report)
+	if err != nil {
+		return nil, meta, err
+	}
+	var parsed struct {
+		Suggestions []struct {
+			Category string `json:"category"`
+			Detail   string `json:"detail"`
+		} `json:"suggestions"`
+	}
+	body := stripJSONFence(content)
+	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
+		return nil, meta, errors.Newf("dry-run: cannot parse suggestion response as JSON: %q", truncateText(body, 200))
+	}
+	out := make([]DiagnosisSuggestion, 0, len(parsed.Suggestions))
+	for _, s := range parsed.Suggestions {
+		if strings.TrimSpace(s.Detail) == "" {
+			continue
+		}
+		out = append(out, DiagnosisSuggestion{Category: normalizeDiagnosisCategory(s.Category), Detail: s.Detail})
+	}
+	return out, meta, nil
+}
+
+// suggestionsSystemPrompt 拼装改进建议阶段的系统提示词：以管理员可编辑的
+// eval.suggestionsSystemPrompt 出厂值为主体，追加以请求语言输出建议正文的指令。语言指令
+// 由代码拼接而不是写进提示词，避免管理员编辑提示词时丢失语言约束。
+// suggestionsSystemPrompt assembles the system prompt of the suggestion stage: the editable
+// eval.suggestionsSystemPrompt factory body, followed by the instruction to write the
+// suggestion bodies in the request language. The language instruction is appended in code
+// rather than baked into the prompt, so an operator editing the prompt cannot lose it.
+func suggestionsSystemPrompt(params *llm.Params, languageTag string) string {
+	base := params.Text("eval.suggestionsSystemPrompt")
+	if strings.TrimSpace(languageTag) == "" {
+		return base
+	}
+	return base + "\n\nWrite every \"detail\" in the language tagged BCP-47 \"" + languageTag +
+		"\". Keep the JSON keys and the category identifiers in English."
+}
+
+// buildSuggestionsPrompt 构造改进建议请求的用户消息：列出查询、实际生效的检索参数、生成的
+// 回答、量化指标、带相关性判定的检索分块与降级警告，使模型能区分「知识不全」与「排序/参数
+// 不当」两类问题。answer 为空（生成失败）时省略回答段。
+// buildSuggestionsPrompt builds the user message of the suggestion request: the query, the
+// effective retrieval parameters, the generated answer, the quantitative metrics, the retrieved
+// chunks with their relevance judgments and the degradation warnings, letting the model tell a
+// knowledge gap apart from a ranking or parameter issue. The answer section is omitted when the
+// answer is empty (generation failed).
+func buildSuggestionsPrompt(query string, ev *DryRunEvaluation, results []RetrievalResult, opts RetrieveOptions, snippetLimit int) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Query: %s\n\n", query)
+	fmt.Fprintf(&sb, "Retrieval parameters in effect: topK=%d, candidates=%d, fusion=%s, weightVector=%g, weightKeyword=%g\n\n",
+		opts.TopK, opts.Candidates, opts.Fusion, opts.Weights.Vector, opts.Weights.Keyword)
+	if ev.Answer != "" {
+		fmt.Fprintf(&sb, "Answer:\n%s\n\n", ev.Answer)
+	} else {
+		sb.WriteString("Answer: (generation failed, no answer was produced)\n\n")
+	}
+	fmt.Fprintf(&sb, "Metrics: contextPrecision=%g, faithfulness=%g, answerRelevance=%g, contextUtilization=%g, relevantChunks=%d/%d\n\n",
+		ev.Metrics.ContextPrecision, ev.Metrics.Faithfulness, ev.Metrics.AnswerRelevance,
+		ev.Metrics.ContextUtilization, ev.RelevantCount, ev.TotalChunks)
+	sb.WriteString("Context chunks:\n")
+	judged := make(map[int]ChunkJudgment, len(ev.ChunkJudgments))
+	for _, j := range ev.ChunkJudgments {
+		judged[j.Index] = j
+	}
+	for i, r := range results {
+		if j, ok := judged[i]; ok {
+			fmt.Fprintf(&sb, "[%d] %s (relevant=%t, score=%g)\n%s\n\n", i, r.Title, j.Relevant, j.Score, truncateText(r.Content, snippetLimit))
+			continue
+		}
+		fmt.Fprintf(&sb, "[%d] %s (not judged)\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
+	}
+	if len(ev.Warnings) > 0 {
+		fmt.Fprintf(&sb, "Warnings:\n- %s\n", strings.Join(ev.Warnings, "\n- "))
+	}
+	return sb.String()
+}
+
 // buildEvalChunkPrompt 构造评估请求的用户消息：列出 query 与带序号的检索分块
 // （正文经 truncateText 截断到 snippetLimit 字符）。
 // buildEvalChunkPrompt builds the user message of an evaluation request, listing the
@@ -600,20 +792,20 @@ func cosineSimilarity(a, b []float64) float64 {
 	return dot / (math.Sqrt(na) * math.Sqrt(nb))
 }
 
-// evaluate 对给定检索结果执行完整评估：生成回答 → 分块相关性 → 声明抽取 → 反推问题。
-// 每步经 report 上报 start / done / failed 事件并实时透传模型增量输出；单步失败不中断
-// 整体流程，而是记录 warning 并将对应指标置 0；chat 为 nil 或 results 为空时返回英文
+// evaluate 对给定检索结果执行完整评估：生成回答 → 分块相关性 → 声明抽取 → 反推问题 →
+// 改进建议。每步经 report 上报 start / done / failed 事件并实时透传模型增量输出；单步失败
+// 不中断整体流程，而是记录 warning 并将对应指标置 0；chat 为 nil 或 results 为空时返回英文
 // 错误（上层转为 evalError，不产出 evaluation）。report 返回错误（客户端断开）时立即
 // 中止后续阶段并向上返回该错误。返回的 []CallMeta 为各次调用的耗时与 token 明细。
 // evaluate runs the full evaluation over the given retrieval results: answer generation,
-// chunk relevance, claim extraction and reverse question generation. Each step reports
-// start / done / failed events through report and streams the model deltas in real time; a
-// step failure does not abort the flow, it records a warning and zeroes the related
+// chunk relevance, claim extraction, reverse question generation and improvement suggestions.
+// Each step reports start / done / failed events through report and streams the model deltas in
+// real time; a step failure does not abort the flow, it records a warning and zeroes the related
 // metrics. A nil chat or empty results yield an English error (the caller turns it into
 // evalError without an evaluation). When report returns an error (a disconnected client)
 // the remaining stages abort immediately and the error is propagated. The returned
 // []CallMeta carries the elapsed time and token usage of every call.
-func evaluate(ctx context.Context, params *llm.Params, chat chatGenerator, embed embedder, query string, results []RetrievalResult, report EvalReporter) (*DryRunEvaluation, []CallMeta, error) {
+func evaluate(ctx context.Context, params *llm.Params, chat chatGenerator, embed embedder, query string, results []RetrievalResult, diag diagnosisContext, report EvalReporter) (*DryRunEvaluation, []CallMeta, error) {
 	if chat == nil {
 		return nil, nil, errors.New("dry-run: chat client unavailable, evaluation skipped")
 	}
@@ -628,10 +820,11 @@ func evaluate(ctx context.Context, params *llm.Params, chat chatGenerator, embed
 		ChunkJudgments:   []ChunkJudgment{},
 		Claims:           []FaithfulnessClaim{},
 		ReverseQuestions: []string{},
+		Suggestions:      []DiagnosisSuggestion{},
 		Warnings:         []string{},
 		TotalChunks:      len(results),
 	}
-	calls := make([]CallMeta, 0, 4)
+	calls := make([]CallMeta, 0, 5)
 
 	// emit 上报阶段事件；首次写失败（客户端断开）被记录后，后续 emit 直接返回该错误，
 	// 使剩余阶段立即中止，避免继续产生无谓的大模型调用开销
@@ -737,6 +930,28 @@ func evaluate(ctx context.Context, params *llm.Params, chat chatGenerator, embed
 			}
 			_ = emit(StageEvent{Stage: EvalStageReverseQuestions, Status: EvalStatusDone, ElapsedMs: call.ElapsedMs, Usage: &call.Usage})
 		}
+	}
+	if emitErr != nil {
+		return ev, calls, emitErr
+	}
+
+	// 改进建议不依赖回答是否生成成功：回答失败本身即是重要诊断线索，故该阶段置于
+	// ev.Answer 分支之外
+	// The suggestions do not depend on a successfully generated answer — a failed generation is
+	// itself a valuable diagnostic clue — so this stage sits outside the ev.Answer branch
+	var suggestions []DiagnosisSuggestion
+	suggestions, call, err = runStage(EvalStageSuggestions, emit, func() ([]DiagnosisSuggestion, CallMeta, error) {
+		return judgeSuggestions(ctx, params, chat, query, ev, results, diag, emit)
+	})
+	calls = append(calls, call)
+	if emitErr != nil {
+		return ev, calls, emitErr
+	}
+	if err != nil {
+		fail(EvalStageSuggestions, "suggestion generation failed", call, err)
+	} else {
+		ev.Suggestions = suggestions
+		_ = emit(StageEvent{Stage: EvalStageSuggestions, Status: EvalStatusDone, ElapsedMs: call.ElapsedMs, Usage: &call.Usage})
 	}
 	if emitErr != nil {
 		return ev, calls, emitErr

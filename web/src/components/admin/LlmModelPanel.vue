@@ -21,7 +21,20 @@
       <span v-if="item.dimensions" class="text-on-surface">{{ item.dimensions }}</span>
       <span v-else class="zk-hint">—</span>
     </template>
+
+    <!-- 凭据为加密列：列表出参为密文，仅以「已加密」标识占位，点击解密查看明文 -->
+    <template #cell-apiKey="{ item }">
+      <encrypted-value-cell
+        kind="crypto"
+        :item="item"
+        field-key="apiKey"
+        @view-plaintext="viewApiKeyPlaintext"
+      />
+    </template>
   </search-table>
+
+  <!-- 共享明文对话框：查看模型端点凭据明文 -->
+  <plaintext-dialog ref="plaintextDialogRef" />
 
   <confirm-dialog
     ref="deleteConfirmRef"
@@ -335,6 +348,8 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
 import { createLlmModelSchema, updateLlmModelSchema } from "@/schemas/llm";
 import { useAppStore } from "@/stores/app";
+import { BackendDataType } from "@/types";
+import { isEmptyCiphertext } from "@/utils/encrypted";
 import { vuetifyCfg } from "@/utils/form";
 import { EnumClass, enumLabelOf, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import i18n from "@/utils/i18n";
@@ -388,6 +403,7 @@ const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
+const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 
 // ---- 凭据明文展示开关（创建/编辑各自独立，避免互相串扰）----
 const createApiKeyRevealed = ref(false);
@@ -550,6 +566,30 @@ const itemTestAction = async (item: Record<string, any>): Promise<void> => {
         color: "error",
       });
     },
+  );
+};
+
+// ---- 凭据明文查看 ----
+// viewApiKeyPlaintext 以列表下发的密文为凭据，经全局明文接口解密查看端点凭据；
+// 明文不随列表下发，解密须经 plaintext:crypto:llm-model:apiKey 权限点授权
+const viewApiKeyPlaintext = async (item: Record<string, unknown>): Promise<void> => {
+  const ciphertext = item.apiKey;
+  if (isEmptyCiphertext(ciphertext)) {
+    return;
+  }
+  const label = i18n.global.t("model.llmModel.field.apiKey");
+  await plaintextDialogRef.value?.open(
+    {
+      key: "apiKey",
+      label,
+      display: "",
+      kind: "crypto",
+      length: 0,
+      value: ciphertext,
+      type: BackendDataType.STRING,
+    },
+    "llm-model",
+    label,
   );
 };
 

@@ -52,6 +52,10 @@ type LlmBindingListOut struct {
 	Enabled bool `json:"enabled"`
 	// DisabledReason AI 能力不可用的原因（按请求语言本地化；可用时为空）
 	DisabledReason string `json:"disabledReason"`
+	// IndexDimensions 知识库向量索引（knowledge_chunks.embedding 列）当前维度。
+	// 索引列尚未建好或读不出时为 0；供运维在提交 embedding 档位绑定前预知目标维度，
+	// 避免只能靠绑定失败的报错才发现维度不符（该列维度由运维经 migrate ai-embedding 重建）
+	IndexDimensions int `json:"indexDimensions"`
 }
 
 // LlmBindingSetIn 定义绑定档位的请求输入结构。
@@ -63,7 +67,7 @@ type LlmBindingSetIn struct {
 // LlmBindingListGet 处理获取档位绑定情况的请求。
 // 槽位可用性以 AI 运行时快照为权威（含「模型被禁用」「类型不符」的判定），
 // 绑定记录 ID 取自 llm_bindings；整体可用性与不可用原因取快照的判定结果
-// （不可用原因按请求语言本地化）。
+// （不可用原因按请求语言本地化）；另附带知识库索引列当前维度，供运维绑定前预知目标维度。
 func LlmBindingListGet(c *gin.Context) {
 	snap := middlewares.GetAiRuntime(c).Snapshot()
 	infos := snap.Slots()
@@ -92,10 +96,21 @@ func LlmBindingListGet(c *gin.Context) {
 		}
 		slots = append(slots, out)
 	}
+	// 索引维度是 embedding 档位绑定成败的关键前置信息，读不出（列未建）时以 0 出参，
+	// 由前端提示运维先执行迁移
+	indexDim, found, err := pkgllm.ChunkEmbeddingDimension(c, db)
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	if !found {
+		indexDim = 0
+	}
 	response.SimpleOK.AbortWithGinW(c, LlmBindingListOut{
-		Slots:          slots,
-		Enabled:        snap.Enabled(),
-		DisabledReason: snap.DisabledReason(middlewares.GetLanguage(c)),
+		Slots:           slots,
+		Enabled:         snap.Enabled(),
+		DisabledReason:  snap.DisabledReason(middlewares.GetLanguage(c)),
+		IndexDimensions: indexDim,
 	})
 }
 
@@ -156,6 +171,14 @@ func LlmBindingSet(c *gin.Context) {
 	if slot == pkgllm.SlotEmbedding {
 		verified, err := verifyEmbeddingCompat(c, modelConfigOf(&instance))
 		if err != nil {
+			// 维度不兼容属于「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，
+			// 用专门的业务码（并附含修复步骤的详情）；端点不可达 / 凭据无效等错误
+			// 仍是请求侧问题，按请求体错误透出
+			var mismatch *pkgllm.EmbeddingDimensionMismatchError
+			if errors.As(err, &mismatch) {
+				response.CreateLlmBindingIncompatibleError(mismatch).AbortWithGinH(c)
+				return
+			}
 			response.CreateBadBodyError(err).AbortWithGinH(c)
 			return
 		}

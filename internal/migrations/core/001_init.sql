@@ -784,7 +784,66 @@ COMMENT ON COLUMN agent_params.key IS 'the parameter key, dot-separated, e.g. ag
 COMMENT ON COLUMN agent_params.value IS 'the effective value of the parameter, interpreted by the kind declared in the in-code registry';
 COMMENT ON COLUMN agent_params.default_value IS 'the factory value of the parameter, seeded by the migrate fixtures and never written through any API path';
 
+CREATE TABLE IF NOT EXISTS mcp_servers (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    name VARCHAR(64) NOT NULL,
+    transport VARCHAR(32) NOT NULL DEFAULT '',
+    url VARCHAR(512) NOT NULL DEFAULT '',
+    headers BYTEA,
+    timeout_seconds INT NOT NULL DEFAULT 0,
+    enabled BOOLEAN NOT NULL DEFAULT true,
+    description VARCHAR(512) NOT NULL DEFAULT ''
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_mcp_servers_name ON mcp_servers (name);
+CREATE INDEX IF NOT EXISTS idx_mcp_servers_transport ON mcp_servers (transport);
+
+COMMENT ON COLUMN mcp_servers.id IS 'the primary key of the mcp server';
+COMMENT ON COLUMN mcp_servers.created_at IS 'the creation time of the mcp server';
+COMMENT ON COLUMN mcp_servers.updated_at IS 'the last update time of the mcp server';
+COMMENT ON COLUMN mcp_servers.deleted_at IS 'the soft delete time of the mcp server, null means not deleted';
+COMMENT ON COLUMN mcp_servers.name IS 'the globally unique local name of the mcp server';
+COMMENT ON COLUMN mcp_servers.transport IS 'the remote transport of the mcp server, streamable_http or sse';
+COMMENT ON COLUMN mcp_servers.url IS 'the address of the mcp endpoint (http/https)';
+COMMENT ON COLUMN mcp_servers.headers IS 'the request headers as a JSON object string, encrypted at rest as BYTEA';
+COMMENT ON COLUMN mcp_servers.timeout_seconds IS 'the timeout in seconds of a single request, 0 means the caller default';
+COMMENT ON COLUMN mcp_servers.enabled IS 'is the mcp server enabled, a disabled server and all its tools are not assembled';
+COMMENT ON COLUMN mcp_servers.description IS 'the optional description of the mcp server';
+
+CREATE TABLE IF NOT EXISTS llm_tools (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    name VARCHAR(128) NOT NULL,
+    source VARCHAR(16) NOT NULL,
+    mcp_server_id BIGINT REFERENCES mcp_servers(id) ON DELETE CASCADE,
+    remote_name VARCHAR(128) NOT NULL DEFAULT '',
+    description VARCHAR(512) NOT NULL DEFAULT '',
+    enabled BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_llm_tools_name ON llm_tools (name);
+CREATE INDEX IF NOT EXISTS idx_llm_tools_source ON llm_tools (source);
+CREATE INDEX IF NOT EXISTS idx_llm_tools_mcp_server_id ON llm_tools (mcp_server_id);
+
+COMMENT ON COLUMN llm_tools.id IS 'the primary key of the llm tool';
+COMMENT ON COLUMN llm_tools.created_at IS 'the creation time of the llm tool';
+COMMENT ON COLUMN llm_tools.updated_at IS 'the last update time of the llm tool';
+COMMENT ON COLUMN llm_tools.deleted_at IS 'the soft delete time of the llm tool, null means not deleted';
+COMMENT ON COLUMN llm_tools.name IS 'the globally unique agent-facing name of the llm tool';
+COMMENT ON COLUMN llm_tools.source IS 'the source of the llm tool, builtin or mcp';
+COMMENT ON COLUMN llm_tools.mcp_server_id IS 'the owning mcp server id, non-null when source is mcp and null when builtin';
+COMMENT ON COLUMN llm_tools.remote_name IS 'the tool name on the mcp server side, empty for builtin tools';
+COMMENT ON COLUMN llm_tools.description IS 'the description cache for listing, empty for builtin tools whose text comes from i18n';
+COMMENT ON COLUMN llm_tools.enabled IS 'is the llm tool enabled, default false and a disabled tool is not assembled';
+
 -- +goose Down
+DROP TABLE IF EXISTS llm_tools;
+DROP TABLE IF EXISTS mcp_servers;
 DROP TABLE IF EXISTS agent_params;
 DROP TABLE IF EXISTS llm_bindings;
 DROP TABLE IF EXISTS llm_models;

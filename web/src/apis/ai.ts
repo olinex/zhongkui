@@ -13,9 +13,10 @@ import type {
   AgentOutput,
   AgentSessionCreateIn,
   AgentSessionRenameIn,
+  AgentStageEvent,
   AgentStreamIn,
-  DryRunStage,
   DryRunStageEvent,
+  EvalStage,
   KnowledgeDocumentCreateIn,
   KnowledgeDocumentUpdateIn,
   RetrievalDryRunIn,
@@ -70,6 +71,17 @@ export function knowledgeDocumentDelete(ids: FlexIDs): AxiosPromise {
 export function knowledgeDocumentReindex(id: number): AxiosPromise {
   return request.post(
     `/ai/doc/${id}/reindex`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// 知识库文档分块明细：读取该文档分块并返回索引摘要与逐块明细（读路径不要求 AI 能力已启用）
+export function knowledgeDocumentChunksGet(id: number): AxiosPromise {
+  return request.post(
+    `/ai/doc/${id}/chunks`,
     {},
     {
       headers: getJwtHeader(),
@@ -153,8 +165,11 @@ export function agentStatusGet(): AxiosPromise {
 }
 
 // ---- 流式响应（SSE，原生 fetch 实现）----
+// Agent 生成流式处理器：delta 为答案增量文本，stage 为工具调用阶段状态事件
+// （toolCall / toolResult 的 start/done/failed，含工具名），done 为最终完整结果。
 export interface AgentStreamHandlers {
   onDelta?: (delta: string) => void;
+  onStage?: (stage: AgentStageEvent) => void;
   onDone?: (out: AgentOutput) => void;
   onError?: (msg: string) => void;
 }
@@ -163,7 +178,7 @@ export interface AgentStreamHandlers {
 // delta 为该阶段的模型增量原始输出，done 为最终完整结果（含调用元信息）。
 export interface RetrievalDryRunStreamHandlers {
   onStage?: (stage: DryRunStageEvent) => void;
-  onDelta?: (stage: DryRunStage, delta: string) => void;
+  onDelta?: (stage: EvalStage, delta: string) => void;
   onDone?: (out: RetrievalDryRunOut) => void;
   onError?: (msg: string) => void;
 }
@@ -291,6 +306,11 @@ export function agentStreamGenerate(
         case "delta":
           handlers.onDelta?.((event.data as { delta: string }).delta);
           break;
+        // 工具调用阶段事件：后端在工具调用轮仅上报阶段状态（不带增量输出），
+        // 形状与检索试运行的 stage 事件一致，故沿用同一分发路径
+        case "stage":
+          handlers.onStage?.(event.data as AgentStageEvent);
+          break;
         case "done":
           handlers.onDone?.(event.data as AgentOutput);
           break;
@@ -317,7 +337,7 @@ export function knowledgeRetrievalDryRunStream(
     (event) => {
       switch (event.type) {
         case "delta": {
-          const payload = event.data as { stage: DryRunStage; delta: string };
+          const payload = event.data as { stage: EvalStage; delta: string };
           handlers.onDelta?.(payload.stage, payload.delta);
           break;
         }

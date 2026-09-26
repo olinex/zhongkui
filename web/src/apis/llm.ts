@@ -10,6 +10,12 @@ import type {
   LlmModelUpdateIn,
   LlmParamResetIn,
   LlmParamSetIn,
+  LlmToolSearchIn,
+  LlmToolSetEnabledIn,
+  McpServerCreateIn,
+  McpServerSearchIn,
+  McpServerTestIn,
+  McpServerUpdateIn,
 } from "./@types/llm";
 
 // ---- LLM 模型注册表（/api/v1/admin/llm/model）----
@@ -115,4 +121,102 @@ export function llmParamReset(data: LlmParamResetIn): AxiosPromise {
   return request.post("/admin/llm/param/reset", data, {
     headers: getJwtHeader(),
   });
+}
+
+// ---- MCP 服务器注册表（/api/v1/admin/llm/mcp）----
+export function mcpServerListGet(data: McpServerSearchIn): AxiosPromise {
+  return request.post("/admin/llm/mcp/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// mcpServerListOptions MCP 服务器列表自省元信息：表头、筛选字段与枚举类名由后端 search 定义派生
+export function mcpServerListOptions(): AxiosPromise {
+  return request.options("/admin/llm/mcp/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+export function mcpServerCreate(data: McpServerCreateIn): AxiosPromise {
+  return request.post("/admin/llm/mcp/create", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function mcpServerDetailGet(id: number): AxiosPromise {
+  return request.post(
+    `/admin/llm/mcp/${id}/get`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function mcpServerUpdate(id: number, data: McpServerUpdateIn): AxiosPromise {
+  return request.post(`/admin/llm/mcp/${id}/update`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function mcpServerBatchDelete(ids: FlexIDs): AxiosPromise {
+  return request.post(
+    "/admin/llm/mcp/delete",
+    { ids },
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// mcpServerTest 测试 MCP 服务器连通性：探活最长可达注册的超时秒数（默认 60s），
+// 故显式覆盖 axios 实例的全局短超时，避免客户端提前判失败
+export function mcpServerTest(data: McpServerTestIn): AxiosPromise {
+  return request.post("/admin/llm/mcp/test", data, {
+    headers: getJwtHeader(),
+    timeout: 120000,
+  });
+}
+
+// mcpServerSync 同步远端工具清单：需连远端拉取工具列表，同样显式覆盖全局短超时
+export function mcpServerSync(id: number): AxiosPromise {
+  return request.post(
+    `/admin/llm/mcp/${id}/sync`,
+    {},
+    {
+      headers: getJwtHeader(),
+      timeout: 120000,
+    },
+  );
+}
+
+// ---- 工具注册表（/api/v1/admin/llm/tool）----
+export function llmToolListGet(data: LlmToolSearchIn): AxiosPromise {
+  return request.post("/admin/llm/tool/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// llmToolListOptions 工具列表自省元信息：表头、筛选字段与枚举类名由后端 search 定义派生
+export function llmToolListOptions(): AxiosPromise {
+  return request.options("/admin/llm/tool/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+export function llmToolSetEnabled(data: LlmToolSetEnabledIn): AxiosPromise {
+  return request.post("/admin/llm/tool/set-enabled", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// llmToolBatchDelete 批量删除工具：含 builtin 来源工具时后端整批拒绝
+export function llmToolBatchDelete(ids: FlexIDs): AxiosPromise {
+  return request.post(
+    "/admin/llm/tool/delete",
+    { ids },
+    {
+      headers: getJwtHeader(),
+    },
+  );
 }

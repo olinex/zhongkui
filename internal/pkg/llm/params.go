@@ -145,6 +145,26 @@ var Specs = []ParamSpec{
 		Options:  chatSlotValues(),
 		EnumType: "llmSlot",
 	},
+	// agent.maxToolRounds 工具调用循环的最大轮数：单轮对话内「生成 -> 执行工具 -> 再生成」
+	// 的循环上限，达到上限仍存在未完成的工具调用时以该轮文本作为答案。
+	// agent.maxToolRounds the maximum number of tool-call rounds: the bound of the
+	// generate -> run tools -> generate cycle inside a single turn; when the bound is reached
+	// with tool calls still pending, the text of that round becomes the answer.
+	{
+		Key:   "agent.maxToolRounds",
+		Group: "agent",
+		Kind:  ParamKindInt,
+	},
+	// agent.maxToolResultBytes 单次工具结果注入模型上下文前的字节上限：超出部分被截断，
+	// 用于限制工具结果对上下文的占用。
+	// agent.maxToolResultBytes the byte bound of a single tool result before it is injected
+	// into the model context: the excess is truncated, bounding how much of the context a
+	// tool result may occupy.
+	{
+		Key:   "agent.maxToolResultBytes",
+		Group: "agent",
+		Kind:  ParamKindInt,
+	},
 
 	// ---- retrieval：混合检索融合与 LLM 重排 ----
 	{
@@ -231,6 +251,14 @@ var Specs = []ParamSpec{
 	},
 	{
 		Key:   "eval.reverseQuestionsSystemPrompt",
+		Group: "eval",
+		Kind:  ParamKindText,
+	},
+	// eval.suggestionsSystemPrompt 生成检索试运行的改进建议（覆盖不足 / 排序调参 / 生成质量等）。
+	// eval.suggestionsSystemPrompt generates improvement suggestions for the retrieval dry-run
+	// (missing coverage, ranking tuning, generation quality, and so on).
+	{
+		Key:   "eval.suggestionsSystemPrompt",
 		Group: "eval",
 		Kind:  ParamKindText,
 	},

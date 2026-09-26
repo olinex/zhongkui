@@ -49,6 +49,8 @@ func CoreModels() []any {
 		&coremodel.LlmModel{},
 		&coremodel.LlmBinding{},
 		&coremodel.AgentParam{},
+		&coremodel.McpServer{},
+		&coremodel.LlmTool{},
 	}
 }
 

@@ -6,18 +6,8 @@ import (
 	uv "github.com/go-playground/validator/v10"
 )
 
-// testValidations 测试用的自定义验证规则注册表，与 provider 中的注册保持一致
-var testValidations = map[string]uv.Func{
-	TagStrongPassword:         ValidateStrongPassword,
-	TagWindowsFileName:        ValidateWindowsFileName,
-	TagUnixFileName:           ValidateUnixFileName,
-	TagFileName:               ValidateFileName,
-	TagStrictFileName:         ValidateStrictFileName,
-	TagDirpath:                ValidateDirPath,
-	TagAlphanumSpecial:        ValidateAlphanumSpecial,
-	TagGreaterThanCurrentTime: ValidateGtCurrentTime,
-	TagLesserThanCurrentTime:  ValidateLtCurrentTime,
-}
+// testValidations 测试用的自定义验证规则注册表，直接取用规则清单的唯一登记点
+var testValidations = Funcs()
 
 // newTestValidate 创建注册了全部自定义验证规则与 binding 标签名的验证器实例
 // 每次调用返回全新实例，避免在共享验证器上重复注册自定义规则触发 panic

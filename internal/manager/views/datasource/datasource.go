@@ -694,7 +694,7 @@ func DatasourceIntrospect(c *gin.Context) {
 }
 
 // init 注册第三方数据源列表出参（DatasourceListOut.type）的数据源类型枚举类绑定，
-// 枚举类由 enum_registry.go 从 vtab 包类型常量注册（类名 datasourceType）。
+// 枚举类由 vtab 包经 enum.RegisterSource 注册（类名 datasourceType，见 internal/pkg/sqlitevtab/vtab/enum.go）。
 func init() {
 	views.AddEnumBinding("DatasourceListOut", "type", "datasourceType")
 }

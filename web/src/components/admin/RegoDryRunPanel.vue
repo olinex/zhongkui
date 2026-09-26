@@ -1,16 +1,11 @@
 <template>
-  <div v-if="result !== null || loading" class="rego-dry-run-panel zk-editor zk-flat-panels">
+  <div v-if="result !== null || loading" class="rego-dry-run-panel zk-editor">
     <div v-if="loading" class="dry-run-body">
       <v-progress-linear indeterminate color="primary" class="mt-1" />
     </div>
     <div v-else class="dry-run-body">
       <!-- 整体错误 -->
-      <v-alert
-        v-if="result?.error"
-        type="error"
-        :text="result.error"
-        class="mb-2"
-      />
+      <v-alert v-if="result?.error" type="error" :text="result.error" class="mb-2" />
       <!-- 标签结果：全部规则命中的标签汇总；未命中任何标签时提示 -->
       <div class="result-block">
         <div class="result-label zk-label-caps">{{ $t("title.dryRunTags") }}</div>
@@ -19,38 +14,32 @@
             {{ tag }}
           </v-chip>
         </div>
-        <v-alert
-          v-else
-          type="info"
-          :text="$t('summary.noTagMatched')"
-        />
+        <v-alert v-else type="info" :text="$t('summary.noTagMatched')" />
       </div>
       <!-- 规则明细：每条规则的状态、耗时与命中的标签 -->
       <div v-if="ruleEntries.length" class="result-block">
         <div class="result-label zk-label-caps">{{ $t("title.dryRunRules") }}</div>
         <v-expansion-panels>
           <v-expansion-panel v-for="[name, rule] in ruleEntries" :key="name">
-            <v-expansion-panel-title>
-              <v-icon
-                :icon="rule.error ? 'mdi-close-circle-outline' : 'mdi-check-circle-outline'"
-                :color="rule.error ? 'error' : 'success'"
-                size="small"
-                class="me-1"
-              />
-              <span class="font-mono">{{ name }}</span>
-              <v-spacer />
-              <span class="rule-duration zk-hint">
-                <v-icon size="x-small" class="me-1">mdi-timer-outline</v-icon>
-                {{ localDurationFormat(rule.duration) }}
-              </span>
-            </v-expansion-panel-title>
+            <expansion-panel-title
+              :icon="rule.error ? 'mdi-close-circle-outline' : 'mdi-check-circle-outline'"
+              :color="rule.error ? 'error' : 'success'"
+              :title="name"
+              :subtitle="
+                rule.error
+                  ? $t('title.dryRunRuleFailed')
+                  : $t('title.dryRunRuleTags', { count: rule.tags?.length ?? 0 })
+              "
+            >
+              <template #actions>
+                <span class="rule-duration zk-hint">
+                  <v-icon size="x-small" class="me-1">mdi-timer-outline</v-icon>
+                  {{ localDurationFormat(rule.duration) }}
+                </span>
+              </template>
+            </expansion-panel-title>
             <v-expansion-panel-text>
-              <v-alert
-                v-if="rule.error"
-                type="error"
-                :text="rule.error"
-                class="mb-2"
-              />
+              <v-alert v-if="rule.error" type="error" :text="rule.error" class="mb-2" />
               <div v-if="rule.tags?.length" class="d-flex flex-wrap">
                 <v-chip v-for="tag in rule.tags" :key="tag" class="me-1 my-1">
                   {{ tag }}
@@ -215,8 +204,8 @@ defineExpose({ run, loading, openInput });
 </script>
 
 <style scoped>
-/* 结果面板外壳（描边 / 圆角 / surface 背景）与三个编辑器一致，走全局 .zk-editor，
-   展开面板的扁平外观走全局 .zk-flat-panels，此处只保留布局定位 */
+/* 结果面板外壳（描边 / 圆角 / surface 背景）与三个编辑器一致，走全局 .zk-editor；
+   展开面板的标题与内容内边距一律走 Vuetify 默认，此处只保留布局定位 */
 .rego-dry-run-panel {
   margin-top: var(--zk-space-2);
 }
@@ -237,17 +226,6 @@ defineExpose({ run, loading, openInput });
 .rule-duration {
   display: inline-flex;
   align-items: center;
-}
-
-/* 规则明细展开面板：标题行与内容区的布局（外观走 .zk-flat-panels） */
-.dry-run-body :deep(.v-expansion-panel-title) {
-  min-height: var(--zk-control-height-compact);
-  padding: var(--zk-space-1) var(--zk-space-3);
-}
-
-/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-.dry-run-body :deep(.v-expansion-panel-text__wrapper) {
-  padding: var(--zk-space-1) var(--zk-space-3) var(--zk-space-3);
 }
 
 /* input 查看对话框：全屏 rego 编辑器的自定义 z-index 会盖住 Vuetify 默认 overlay 层级，

@@ -80,6 +80,20 @@ html {
   border-color: rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
 }
 
+// Flat expansion panels: the panel set is a plain list inside a hairline box.
+// Vuetify 在每个 .v-expansion-panel 内渲染 .v-expansion-panel__shadow（elevation-2），
+// 会在描边盒内部再叠一圈悬浮阴影，与全站「hairline 描边、无阴影」的容器语言冲突，
+// 故全站统一隐藏。描边盒一律由面板组的外层容器提供（.zk-panel / TabView 卡片 /
+// .zk-editor 外壳），面板组自身保持裸放（见 AGENTS.md「展开面板族」）。
+// 选择器不能带 `.v-application` 前缀：VDialog 内容经 overlay 挂到 body 下、不在该祖先链内，
+// 带前缀会让对话框 / 浮层内的面板漏出阴影，与管理页观感分裂（见 AGENTS.md 的对话框例外）。
+// 改用「两个类」（0-2-0）压过 Vuetify 自身的 `.v-expansion-panel__shadow`（0-1-0），
+// 与 vite-plugin-vuetify 的延迟注入顺序无关，应用内与浮层内都能命中。
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 元素名 */
+.v-expansion-panels .v-expansion-panel__shadow {
+  display: none;
+}
+
 // ---------------------------------------------------------------------------
 // Reusable shells (.zk-*)
 // 同类组件共享外观的唯一来源；组件 <style scoped> 只保留布局定位。
@@ -112,6 +126,14 @@ html {
   font-size: var(--zk-font-size-subtitle);
   font-weight: var(--zk-font-weight-semibold);
   color: rgb(var(--v-theme-on-surface));
+}
+
+// 次级标题：主标题旁的同级弱化标题（如对话框标题「分块明细」后的文档名）。
+// 与 .zk-section-title 同字号，靠降字重 + 次要色形成层级，不与主标题争抢
+.zk-section-subtitle {
+  font-size: var(--zk-font-size-subtitle);
+  font-weight: var(--zk-font-weight-regular);
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 // 编辑器区块标题（比 .zk-section-title 低一级，与字段标签同字号）
@@ -387,38 +409,6 @@ html {
   }
 }
 
-// 扁平展开面板族：透明背景 + 隐藏悬浮阴影 + 淡色 hover。
-// 用法：在包含 v-expansion-panels 的祖先容器上添加 .zk-flat-panels。
-// 替代 AgentParamPanel(.param-groups) 与两个 DryRun 面板(.dry-run-body) 内各自复制的
-// `background: transparent`、`.v-expansion-panel__shadow { display: none }` 与
-// `.v-expansion-panel-title__overlay { background-color: rgb(var(--v-theme-on-surface), 0.06) }`。
-// `.v-application` 前缀压过 vite-plugin-vuetify 延迟注入的组件样式（同上方 .v-card 处理）。
-.v-application .zk-flat-panels {
-  .v-expansion-panels {
-    background: transparent;
-  }
-
-  .v-expansion-panel {
-    background: transparent;
-  }
-
-  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-  .v-expansion-panel__shadow {
-    display: none;
-  }
-
-  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-  .v-expansion-panel-title__overlay {
-    background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-subtle-opacity));
-    opacity: 0;
-  }
-
-  /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部类名 */
-  .v-expansion-panel-title:hover > .v-expansion-panel-title__overlay {
-    opacity: 1;
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Drag-and-drop indicator
 // ---------------------------------------------------------------------------
@@ -500,7 +490,14 @@ html {
   background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-subtle-opacity));
 }
 
-// 列表 / 阶段行的选中态高亮。
+// 可点击行（分块行）的悬停反馈。类名自带 :hover，用法处静态挂载即可，
+// 强度与数据表行 hover 一致（primary 6%）。排除选中行，保证持久态高亮（.zk-row-selected）
+// 悬停时不被更浅的瞬时色冲淡。
+.zk-row-hover:not(.zk-row-selected):hover {
+  background-color: rgb(var(--v-theme-primary), 0.06);
+}
+
+// 列表 / 分块行的选中态高亮。
 // 与 .zk-drag-over 视觉一致但语义不同：选中是持久态，拖拽高亮是瞬时态，
 // 分开命名以便后续独立调整而不互相牵连。
 .zk-row-selected {
@@ -613,6 +610,11 @@ html {
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
 .zk-dialog-toolbar .v-toolbar__content > .v-toolbar-title:first-child {
   margin-inline-start: 0;
+}
+
+// 对话框标题内的次级标题：紧贴主标题，间隔由标题行自己给
+.zk-dialog-toolbar .zk-section-subtitle {
+  margin-inline-start: var(--zk-space-3);
 }
 
 /* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */

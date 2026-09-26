@@ -36,10 +36,11 @@ navbar:
     record: Tag Event Record
   datasource:
     self: Datasource
-  namespaceScoped: Namespace-scoped
-  # Generic hint for the unavailable badge: shown in the sidebar tooltip when the backend
-  # supplies no specific reason
-  featureUnavailable: This feature is currently unavailable
+  # Sidebar badge tooltips: the space left of the drawer (~6-7 CJK chars) caps their length,
+  # so they only state *what* the badge means and never carry the backend reason
+  # (long copy wraps or gets flipped to the other side)
+  namespaceScoped: Namespace
+  featureUnavailable: Unavailable
   pin: Pin sidebar
   unpin: Unpin sidebar
 model:
@@ -344,6 +345,39 @@ model:
       chunking: Chunking
       eval: Quality Evaluation
       sanitize: Data Sanitization
+  mcpServer:
+    name: MCP Server
+    field:
+      id: ID
+      name: Name
+      transport: Transport
+      url: URL
+      headers: Headers
+      timeoutSeconds: Timeout (s)
+      enabled: Enabled
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
+  llmTool:
+    name: Tool
+    field:
+      id: ID
+      name: Name
+      source: Source
+      mcpServerName: Owning Server
+      remoteName: Remote Tool Name
+      enabled: Enabled
+      description: Description
+      createdAt: Created At
+      createdAtTime: Created At Time
+      createdAtDate: Created At Date
+      updatedAt: Updated At
+      updatedAtTime: Updated At Time
+      updatedAtDate: Updated At Date
   server:
     name: Server
     field:
@@ -1156,12 +1190,14 @@ action:
   resetFrontendConfig: Reset Frontend Config
   download: Download
   back: Back
+  backPrevious: Back to Previous Level
   backHome: Back to Home
   refresh: Refresh
   refreshInterval: Auto refresh interval
   enableAutoRefresh: Start auto refresh
   disableAutoRefresh: Stop auto refresh
   reindex: Reindex
+  chunks: Chunk Details
   query: Query
   columns: Columns
   selectAll: Select All
@@ -1177,8 +1213,10 @@ action:
   unbind: Unbind
   save: Save
   test: Test Connection
+  sync: Sync Tools
 guide:
   title: Third-party Data Query
+  subtitle: Third-party datasources registered in this namespace, plus runnable query samples
   datasource: Datasource Cheatsheet
   columns: columns
   datasourceEmpty: No datasource registered in this namespace yet
@@ -1237,8 +1275,11 @@ title:
   trafficDetail: Traffic Audit - Detail
   dryRunTags: Tag Results
   dryRunRules: Rule Details
+  dryRunRuleTags: Matched {count} tags
+  dryRunRuleFailed: Rule execution failed
   dryRunSummary: Rule Summary
   dryRunEvents: Detected Events
+  dryRunEventHits: Matched {count} conditions
 home:
   subtitle: Network Security Audit Platform
   quickStart:
@@ -1285,6 +1326,7 @@ page:
     confirmDeleteSession: Delete this session and all its messages?
     slotHint: It also becomes the session default slot when creating a session
     disabled: AI feature is disabled
+    stageFailed: Stage Failed
   aiKnowledge:
     dryRun: Dry Run
     query: Query
@@ -1299,15 +1341,10 @@ page:
     running: Running…
     stop: Stop
     process: Progress
-    streamOutput: Model Raw Output
+    stageNoOutput: No output for this stage yet
     stageFailed: Stage Failed
-    stage:
-      retrieve: Hybrid Retrieval
-      answer: Answer Generation
-      chunkRelevance: Chunk Relevance
-      claims: Claim Faithfulness
-      reverseQuestions: Reverse Questions
     retrievedChunks: Retrieved Chunks
+    retrievedChunksSubtitle: Document chunks matched by retrieval, with their similarity
     answer: Generated Answer
     metrics: Metrics
     contextPrecision: Context Precision
@@ -1316,17 +1353,46 @@ page:
     contextUtilization: Context Utilization
     relevantOfTotal: "Relevant {relevant}/{total}"
     judgments: Chunk Judgments
+    judgmentsSubtitle: Per-chunk relevance verdict against the question
     claims: Claim Faithfulness
+    claimsSubtitle: Whether each answer claim is supported by retrieved content
     reverseQuestions: Reverse Questions
+    reverseQuestionsSubtitle: Questions the retrieved chunks should be able to answer
+    suggestions: Improvement Suggestions
+    suggestionsEmpty: No obvious issue found in this run; no suggestions for now
+    suggestionsSubtitle: Actionable improvements derived from the retrieval hits and metrics
     warnings: Warnings
     evalError: Evaluation Unavailable
     metaModel: Model
-    metaElapsed: Elapsed
     metaPromptTokens: Prompt Tokens
     metaCompletionTokens: Completion Tokens
     metaTotalTokens: Total Tokens
+    metaRetrieveElapsed: Retrieve Elapsed
     metaTotal: Total Elapsed
     close: Close
+    chunks: Chunk Details
+    chunkSummary: Index Summary
+    chunkIndexed: Indexed
+    chunkNotIndexed: Not indexed
+    chunkStale: Index behind content
+    chunkList: Chunks
+    chunkNotIndexedHint: This document is not indexed yet, so there are no chunks; run reindex first
+    chunkCharsValue: "{count} chars"
+    chunkLinesValue: "{count} lines"
+    chunkStatCount: Chunk count
+    chunkStatContentChars: Content chars
+    chunkStatCharsTotal: Total chunk chars
+    chunkStatCharsAvg: Average chunk chars
+    chunkStatCharsMin: Smallest chunk chars
+    chunkStatCharsMax: Largest chunk chars
+    chunkStatHeadingPaths: Heading paths
+    chunkStatAtomic: Atomic chunks
+    chunkSize: Chunk size
+    chunkOverlap: Chunk overlap
+    chunkEmbeddingModel: Embedding model
+    chunkEmbeddingDimensions: Embedding dimensions
+    chunkHash: Content hash
+    chunkIndexedAt: Indexed at
   llmModelAdmin:
     baseURLHint: OpenAI-compatible base URL of the provider (e.g. https://dashscope.aliyuncs.com/compatible-mode/v1)
     apiKeyKeepHint: The key is never echoed in plaintext; leave blank to keep the existing key
@@ -1334,13 +1400,32 @@ page:
     dimensionsHint: The vector dimensions are probed by the backend when an embedding slot is bound; to change the index dimensions, contact the operations team to run the server-side command
   llmBindingAdmin:
     hint: "Each of the four slots binds one model: chat slots require a chat model and the embedding slot requires an embedding model; slot availability comes from the runtime snapshot"
+    indexDimensions: "Knowledge index dimensions: {dimensions}"
+    indexDimensionsUnavailable: "Knowledge index dimensions unknown (the index column is not ready; run the database migration first)"
     selectModel: Select Model
     unbound: Unbound
   agentParamAdmin:
     hint: Factory values are seeded by the database migration and validated at startup; changes take effect immediately, and submitting blank writes a parameter back to its factory value
     dirtyCount: "{count} pending"
     groupCount: "{count}"
+    groupSubtitle:
+      agent: System prompt, message section titles and retrieved snippet truncation
+      retrieval: Recall count, fusion weights and LLM reranking
+      session: Message-count and byte caps on injected conversation history
+      chunking: Markdown-aware slice size and overlap
+      eval: Judge prompts and parameters for each RAG evaluation stage
+      sanitize: Entry-count and byte caps applied before business data reaches the model
     defaultValue: "Default: {value}"
+  mcpServerAdmin:
+    scopeHint: The MCP server registry is global configuration and is not scoped by namespace
+    urlHint: MCP endpoint address (http / https)
+    # The braces of the JSON example must be wrapped in vue-i18n's literal syntax {'...'};
+    # bare braces are read as an interpolation placeholder and fail the build (code 2)
+    headersHint: 'Headers are entered as JSON object text (e.g. {''{"Authorization":"Bearer xxx"}''}); every value must be a string. Stored encrypted'
+    headersKeepHint: Headers are never echoed in plaintext; leave blank to keep the current credentials
+  llmToolAdmin:
+    scopeHint: The tool registry is global configuration and is not scoped by namespace; builtin tools are maintained by the system and cannot be deleted
+    builtinReadonly: Builtin tools are maintained by the system and cannot be deleted
 profile:
   pageSubtitle: Manage your account details, access keys and password security
   infoSubtitle: Update your nickname and email, then click "Update" to save
@@ -1367,6 +1452,7 @@ notice:
   profileUpdated: Profile updated successfully!
   passwordReset: Password reset successfully!
   frontendConfigSyncFailed: Frontend config sync failed, the last synced configuration has been restored
+  missingParam: Missing a required parameter, cannot load the detail
   tagExpr:
     empty: Expression is empty
     unexpectedChar: 'Unexpected character "{char}"'
@@ -1422,6 +1508,10 @@ notice:
     saveSuccess: Params saved successfully
     resetSuccess: Params restored to defaults
     resetGroupConfirm: 'Restore all params in the "{key}" group to defaults?'
+  mcpServer:
+    testSuccess: "Connection test passed; the remote exposes {count} tool(s)"
+    testFailed: Connection test failed
+    syncSuccess: "Sync complete: {created} added, {updated} refreshed, {removed} removed"
 inputType:
   string: String
   number: Number

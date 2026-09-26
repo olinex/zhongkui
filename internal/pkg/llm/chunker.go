@@ -5,6 +5,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	// third-party
 	"github.com/cloudwego/eino/components/document"
@@ -61,7 +62,9 @@ type mdUnit struct {
 //     只存在于 headingPath）；
 //   - 普通段落/列表/引用按 chunking.size 亲和目标长度合并；代码块/表格为原子单元，
 //     即使整体超长也整体成一块，不硬切；
-//   - 相邻块之间按 chunking.overlap 字符重叠衔接（复用上一块尾部文本）。
+//   - 仅当一块因达到 chunking.size 在段落中途被截断时，其下一块才按 chunking.overlap
+//     字符复用该块尾部文本衔接（重叠至多取该块长度的一半）；命中标题、原子单元成块等
+//     自然边界处不存在被切开的接缝，下一块不复用上一块文本。
 //
 // MarkdownChunker is a Markdown structure-aware chunker implementing the eino
 // document.Transformer interface: it consumes Document.Content as raw markdown and
@@ -76,8 +79,10 @@ type mdUnit struct {
 //     lives in headingPath);
 //   - plain paragraphs/lists/quotes merge toward the chunking.size affinity target;
 //     code blocks and tables are atomic units that stay whole even when oversized;
-//   - adjacent chunks overlap by chunking.overlap characters (reusing the previous
-//     chunk tail text).
+//   - a chunk reuses the previous chunk tail text (chunking.overlap characters) only
+//     when that previous chunk was cut mid-paragraph by chunking.size (the overlap is
+//     capped at half of that chunk's length); at natural boundaries such as headings
+//     and atomic units there is no severed seam, so the next chunk reuses nothing.
 type MarkdownChunker struct {
 	size    int // 亲和目标长度（字符）
 	overlap int // 相邻块重叠长度（字符）
@@ -119,43 +124,58 @@ func (c *MarkdownChunker) chunk(doc *schema.Document) []*schema.Document {
 		out      []*schema.Document
 		buf      []mdUnit // 待合并的段落/列表/引用缓冲
 		bufLen   int
-		prevTail string // 上一块的尾部文本（overlap 复用）
+		prevTail string // 上一块可复用的尾部文本（overlap，已按上限封顶）
+		prevCut  bool   // 上一块是否因达到 size 在段落中途被截断（只有此时才存在待弥合的接缝）
 		index    int
 	)
-	emit := func(text, path string) {
-		if c.overlap > 0 && prevTail != "" {
+	// emit 结算一块。carry 表示本块紧接在上一块被截断的位置之后，需要复用其尾部文本：
+	// overlap 的用途是弥合被 size 切开的接缝——接缝两侧本是同一段连续文本，重叠让恰好落在
+	// 接缝上的查询能命中任意一侧；而命中标题、原子单元成块、文档末尾都是自然边界，
+	// 跨过去只会把上一节的文本贴进本节正文，故只有被 size 截断时才衔接。
+	emit := func(text, path string, carry bool) {
+		if carry && prevTail != "" {
 			text = prevTail + "\n" + text
 		}
 		out = append(out, newChunkDoc(doc, index, path, text))
-		prevTail = lastRunes(text, c.overlap)
+		// 尾部文本至多取本块长度的一半：overlap 是弥合接缝的手段，只应复读一小部分；而
+		// size 与 overlap 由行为参数各自配置，若 overlap 被调得过大（不小于本块长度），
+		// 整块复读会让下一块失去全部独有正文信息
+		prevTail = lastRunes(text, min(c.overlap, utf8.RuneCountInString(text)/2))
 		index++
 	}
-	flush := func() {
+	// flush 结算缓冲并成块；cut 表示本次结算是否因达到 size 把内容截断在段落中途，
+	// 该标记传给下一块，决定它能否复用本块尾部
+	flush := func(cut bool) {
 		if len(buf) == 0 {
 			return
 		}
-		emit(joinUnits(buf), buf[0].path)
+		emit(joinUnits(buf), buf[0].path, prevCut)
+		prevCut = cut
 		buf = nil
 		bufLen = 0
 	}
 	for _, u := range units {
 		switch u.kind {
 		case unitCodeBlock, unitTable:
-			// 原子单元：先结算缓冲，再整体成块
-			flush()
-			emit(u.text, u.path)
+			// 原子单元：先结算缓冲，再整体成块；单元自身完整，前后都不重叠
+			flush(false)
+			emit(u.text, u.path, false)
+			prevCut = false
 		case unitHeading:
-			// 标题为硬边界：结算当前块，标题文本不进入块正文（只存在于 headingPath）
-			flush()
+			// 标题为硬边界：结算当前块，标题文本不进入块正文（只存在于 headingPath）；
+			// 边界之后不再复用上一块尾部，硬边界不承载跨节重叠
+			flush(false)
+			prevCut = false
 		default:
 			buf = append(buf, u)
 			bufLen += len(u.text)
 			if bufLen >= c.size {
-				flush()
+				// 段落中途截断：本块尾部可与下一块衔接
+				flush(true)
 			}
 		}
 	}
-	flush()
+	flush(false)
 	return out
 }
 
@@ -475,4 +495,82 @@ func pushHeading(stack []string, levels []int, level int, text string) ([]string
 		stack = stack[:len(stack)-1]
 	}
 	return append(stack, text), append(levels, level)
+}
+
+// ChunkUnitKind 是分块正文中识别出的结构单元类型（chunkUnitKind 枚举类的取值类型）。
+// ChunkUnitKind is the structural unit kind recognized inside a chunk body (the value type of
+// the chunkUnitKind enum class).
+type ChunkUnitKind string
+
+// 分块结构单元类型常量。
+// Chunk structural unit kind constants.
+const (
+	// ChunkUnitParagraph 普通段落
+	// ChunkUnitParagraph a plain paragraph
+	ChunkUnitParagraph ChunkUnitKind = "paragraph"
+	// ChunkUnitCode 围栏代码块（原子单元，超长也不切分）
+	// ChunkUnitCode a fenced code block (an atomic unit, never split even when oversized)
+	ChunkUnitCode ChunkUnitKind = "code"
+	// ChunkUnitTable 表格块（原子单元，超长也不切分）
+	// ChunkUnitTable a table block (an atomic unit, never split even when oversized)
+	ChunkUnitTable ChunkUnitKind = "table"
+	// ChunkUnitList 列表块
+	// ChunkUnitList a list block
+	ChunkUnitList ChunkUnitKind = "list"
+	// ChunkUnitQuote 引用块
+	// ChunkUnitQuote a quote block
+	ChunkUnitQuote ChunkUnitKind = "quote"
+)
+
+// chunkUnitKindValues 是 chunkUnitKind 枚举类的取值空间，声明顺序即枚举类条目顺序与展示顺序。
+// chunkUnitKindValues is the value space of the chunkUnitKind enum class; the declaration order is
+// the entry order of the enum class and the display order.
+var chunkUnitKindValues = []ChunkUnitKind{
+	ChunkUnitParagraph, ChunkUnitCode, ChunkUnitTable, ChunkUnitList, ChunkUnitQuote,
+}
+
+// mdUnitKindToChunkUnitKind 把行级解析得到的内部单元类型映射为对外的结构单元类型；标题单元
+// 返回 ok=false（标题为硬边界，只存在于 headingPath，绝不进入分块正文）。
+// mdUnitKindToChunkUnitKind maps an internal line-level unit kind to the exposed structural unit
+// kind; a heading unit yields ok=false (a heading is a hard boundary living only in headingPath
+// and never entering a chunk body).
+func mdUnitKindToChunkUnitKind(kind mdUnitKind) (ChunkUnitKind, bool) {
+	switch kind {
+	case unitParagraph:
+		return ChunkUnitParagraph, true
+	case unitCodeBlock:
+		return ChunkUnitCode, true
+	case unitTable:
+		return ChunkUnitTable, true
+	case unitList:
+		return ChunkUnitList, true
+	case unitQuote:
+		return ChunkUnitQuote, true
+	default:
+		return "", false
+	}
+}
+
+// DescribeChunk 复用本包的行级 markdown 解析识别分块正文包含的结构单元类型：去重后按
+// chunkUnitKindValues 的声明顺序稳定返回；无单元时返回空切片（而非 nil）。识别只针对正文，
+// 标题单元不参与（见 mdUnitKindToChunkUnitKind）。
+// DescribeChunk reuses this package's line-level markdown parsing to recognize the structural unit
+// kinds a chunk body contains: duplicates are removed and the result follows the declaration order
+// of chunkUnitKindValues; a body without units yields an empty slice (never nil). Only the body is
+// recognized — heading units never participate (see mdUnitKindToChunkUnitKind).
+func DescribeChunk(content string) []ChunkUnitKind {
+	units := parseMarkdownUnits(strings.Split(content, "\n"))
+	found := make(map[ChunkUnitKind]struct{}, len(chunkUnitKindValues))
+	for _, u := range units {
+		if kind, ok := mdUnitKindToChunkUnitKind(u.kind); ok {
+			found[kind] = struct{}{}
+		}
+	}
+	out := make([]ChunkUnitKind, 0, len(found))
+	for _, kind := range chunkUnitKindValues {
+		if _, ok := found[kind]; ok {
+			out = append(out, kind)
+		}
+	}
+	return out
 }

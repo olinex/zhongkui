@@ -18,6 +18,9 @@
           <v-btn v-if="activation" color="primary" variant="flat" :to="activationTo">
             {{ $t("page.featureUnavailable.activate", { page: $t(activation.title) }) }}
           </v-btn>
+          <v-btn variant="text" @click="goBackPrevious">
+            {{ $t("action.backPrevious") }}
+          </v-btn>
           <v-btn variant="text" :to="{ name: 'Home', params: { language: appStore.language } }">
             {{ $t("action.backHome") }}
           </v-btn>
@@ -41,6 +44,7 @@ meta:
 
 <script setup lang="ts" name="feature-unavailable">
 import { featureGroupOf, navChildByRoute } from "@/navigation";
+import router from "@/router";
 import { useAppStore } from "@/stores/app";
 import { useFeaturesStore } from "@/stores/features";
 import { useUserStore } from "@/stores/user";
@@ -93,4 +97,17 @@ const activationTo = computed(() => ({
   name: activation.value?.routeName,
   params: { language: appStore.language, ...activation.value?.params },
 }));
+
+// goBackPrevious 返回上一级：回到进入本页前所处的页面（守卫以 push 重定向至此，
+// 故该历史记录即用户点击功能入口时所在的页面）。
+// 直接用 URL 打开本页时无历史可回退，此时退化为回到首页，
+// 避免按钮点击后无响应或把用户带出应用。
+const goBackPrevious = () => {
+  const state = window.history.state as { back?: string | null } | null;
+  if (state?.back) {
+    router.back();
+    return;
+  }
+  router.push({ name: "Home", params: { language: appStore.language } });
+};
 </script>

@@ -25,6 +25,50 @@ export interface KnowledgeDocumentReindexOut {
   hash: string;
 }
 
+// 知识库文档索引摘要（KnowledgeDocumentChunksOut.summary）
+// 全部字段由后端在读取时从文档与其分块聚合派生（含 overlap 造成的重复计数），不落库。
+export interface KnowledgeDocumentIndexSummary {
+  chunkCount: number;
+  contentChars: number;
+  chunkCharsTotal: number;
+  chunkCharsAvg: number;
+  chunkCharsMin: number;
+  chunkCharsMax: number;
+  headingPathCount: number;
+  // 含代码块或表格的分块数（超长也不切分的原子块）
+  atomicChunkCount: number;
+  // 生效参数 chunking.size / chunking.overlap
+  chunkSize: number;
+  chunkOverlap: number;
+  indexed: boolean;
+  // 索引摘要与当前正文不一致（索引落后于正文）
+  stale: boolean;
+  indexedAt: string;
+  hash: string;
+  // embedding 档位绑定的供应商模型名（未绑定时为空）
+  embeddingModel: string;
+  // embedding 列的实际向量维度（不可读时为 0）
+  embeddingDimensions: number;
+}
+
+// 单个知识分块明细（kinds 取值集合与展示文案由后端枚举类 chunkUnitKind 下发，
+// 见 utils/enums.ts 的 EnumClass，前端不声明取值字面量）
+export interface KnowledgeDocumentChunk {
+  index: number;
+  // 所属标题路径，空表示该块不在任何标题之下
+  headingPath: string;
+  content: string;
+  chars: number;
+  lines: number;
+  kinds: string[];
+}
+
+// 知识库文档分块明细（文档级索引摘要 + 逐块明细）
+export interface KnowledgeDocumentChunksOut {
+  summary: KnowledgeDocumentIndexSummary;
+  chunks: KnowledgeDocumentChunk[];
+}
+
 // AI 会话（AgentSession）
 export interface AgentSessionItem {
   id: number;
@@ -81,6 +125,23 @@ export interface AgentOutput {
   draft?: unknown;
   valid: boolean;
   validationDetail?: string;
+}
+
+// 评估阶段标识与阶段状态：取值集合与展示文案一律由后端枚举类 evalStage / evalStageStatus
+// 下发（见 utils/enums.ts 的 EnumClass），前端不声明取值字面量，此处仅为类型别名。工具调用
+// 阶段（toolCall / toolResult）与知识库检索试运行的阶段同属后端的 EvalStage 一个枚举类。
+export type EvalStage = string;
+export type EvalStageStatus = string;
+
+// SSE stage 事件负载（Agent 生成流）：status 非空为阶段状态事件（start/done/failed）；
+// tool 为本轮事件的工具名（仅 toolCall / toolResult 阶段有值），error 仅 failed 有值
+export interface AgentStageEvent {
+  stage: EvalStage;
+  status?: EvalStageStatus;
+  delta?: string;
+  elapsedMs: number;
+  tool?: string;
+  error?: string;
 }
 
 // 单个档位的绑定模型与可用性（AgentSlotStatusOut）
@@ -154,12 +215,20 @@ export interface FaithfulnessClaim {
   supported: boolean;
   chunkIndexes: number[];
 }
+// 改进建议归类的取值集合与展示文案由后端枚举类 diagnosisCategory 下发（EnumClass.diagnosisCategory）
+export type DiagnosisCategory = string;
+// 单条改进建议：detail 为后端按请求语言输出的自由文本
+export interface DiagnosisSuggestion {
+  category: DiagnosisCategory;
+  detail: string;
+}
 export interface DryRunEvaluation {
   answer: string;
   metrics: RetrievalDryRunMetrics;
   chunkJudgments: ChunkJudgment[];
   claims: FaithfulnessClaim[];
   reverseQuestions: string[];
+  suggestions: DiagnosisSuggestion[];
   relevantCount: number;
   totalChunks: number;
   warnings: string[];
@@ -172,11 +241,6 @@ export interface RetrievalDryRunOut {
   meta: DryRunMeta;
 }
 
-// 检索试运行阶段标识（与后端 EvalStage 严格对齐）
-export type DryRunStage = "retrieve" | "answer" | "chunkRelevance" | "claims" | "reverseQuestions";
-// 阶段状态：start 阶段开始，done 阶段完成，failed 阶段失败（已降级为 warning）
-export type DryRunStageStatus = "start" | "done" | "failed";
-
 // 单次调用 token 用量
 export interface DryRunCallUsage {
   promptTokens: number;
@@ -186,7 +250,7 @@ export interface DryRunCallUsage {
 
 // 单次调用元信息（模型名由后端汇总时填充）
 export interface DryRunCallMeta {
-  stage: DryRunStage;
+  stage: EvalStage;
   model: string;
   elapsedMs: number;
   usage: DryRunCallUsage;
@@ -194,8 +258,8 @@ export interface DryRunCallMeta {
 
 // SSE stage 事件负载：status 非空为阶段状态事件，delta 非空为该阶段的增量输出事件
 export interface DryRunStageEvent {
-  stage: DryRunStage;
-  status?: DryRunStageStatus;
+  stage: EvalStage;
+  status?: EvalStageStatus;
   delta?: string;
   elapsedMs: number;
   usage?: DryRunCallUsage;

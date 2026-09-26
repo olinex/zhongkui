@@ -140,6 +140,28 @@ export const navigationGroups: NavGroup[] = [
     ],
   },
   {
+    title: "navbar.ai.self",
+    icon: "mdi-robot-outline",
+    value: "ai",
+    feature: FEATURE_AI,
+    // AI 能力的开通入口：LLM 模型注册与档位绑定都在 LLM 配置页完成
+    activationRoute: "Admin LLM Config",
+    childrens: [
+      {
+        title: "navbar.ai.knowledge",
+        icon: "mdi-book-open-variant",
+        routeName: "AI Knowledge List",
+        namespaceScoped: true,
+      },
+      {
+        title: "navbar.ai.assistant",
+        icon: "mdi-robot",
+        routeName: "AI Assistant",
+        namespaceScoped: true,
+      },
+    ],
+  },
+  {
     title: "navbar.etl.self",
     icon: "mdi-timetable",
     value: "etl",
@@ -163,28 +185,6 @@ export const navigationGroups: NavGroup[] = [
         title: "navbar.etl.scheduler",
         icon: "mdi-calendar-clock",
         routeName: "ETL Scheduler List",
-      },
-    ],
-  },
-  {
-    title: "navbar.ai.self",
-    icon: "mdi-robot-outline",
-    value: "ai",
-    feature: FEATURE_AI,
-    // AI 能力的开通入口：LLM 模型注册与档位绑定都在 LLM 配置页完成
-    activationRoute: "Admin LLM Config",
-    childrens: [
-      {
-        title: "navbar.ai.knowledge",
-        icon: "mdi-book-open-variant",
-        routeName: "AI Knowledge List",
-        namespaceScoped: true,
-      },
-      {
-        title: "navbar.ai.assistant",
-        icon: "mdi-robot",
-        routeName: "AI Assistant",
-        namespaceScoped: true,
       },
     ],
   },

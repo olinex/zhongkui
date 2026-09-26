@@ -3,6 +3,7 @@ package llm
 import (
 	// stdlib
 	"context"
+	"fmt"
 
 	// third-party
 	"github.com/creasty/defaults"
@@ -59,9 +60,9 @@ func ProbeEmbeddingDimensions(ctx context.Context, cfg ModelConfig) (int, error)
 // VerifyEmbeddingCompat probes the actual vector dimension produced by the embedding endpoint
 // described by cfg and verifies its compatibility with columnDim (the dimension of the
 // knowledge_chunks.embedding column on the core database): a compatible endpoint returns the
-// verified dimension (always equal to columnDim), otherwise an English error directing the
-// operator to resize the index is returned. The core invariant is "the verified dimension of the
-// model bound to the embedding slot == the embedding column dimension".
+// verified dimension (always equal to columnDim), otherwise an *EmbeddingDimensionMismatchError
+// directing the operator to unbind and resize the index is returned. The core invariant is "the
+// verified dimension of the model bound to the embedding slot == the embedding column dimension".
 // The decision performs two probes, and their order matters:
 //  1. Native probe (no dimensions declared): reads the native dimension of the model; errors
 //     such as an unreachable endpoint or an invalid credential are propagated verbatim, because
@@ -85,8 +86,37 @@ func VerifyEmbeddingCompat(ctx context.Context, cfg ModelConfig, columnDim int) 
 	if targeted, err := ProbeEmbeddingDimensions(ctx, cfg); err == nil && targeted == columnDim {
 		return columnDim, nil
 	}
-	return 0, errors.Newf(
-		"embedding model %q is incompatible with the knowledge index dimension %d (the model returned %d dimensions); resize the index with the migrate ai-embedding command before binding",
-		cfg.Name, columnDim, native,
+	return 0, &EmbeddingDimensionMismatchError{
+		Model:           cfg.Name,
+		IndexDimension:  columnDim,
+		NativeDimension: native,
+	}
+}
+
+// EmbeddingDimensionMismatchError 表示 embedding 模型的实际输出维度与知识库索引维度不兼容。
+// 这是一类「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，故以专用错误类型（而非笼统的
+// 请求体错误）暴露给调用方，让接口层能选用语义准确的业务错误码，并据此在文案中补齐修复前置条件。
+// 端点不可达 / 凭据无效等错误不会被包装为该类型，须如实透出（见 VerifyEmbeddingCompat 注释）。
+// EmbeddingDimensionMismatchError reports that the actual output dimension of an embedding model is
+// incompatible with the knowledge index dimension. It is a configuration-level rejection: the
+// request body is valid and the conflict lies in the system's current index dimension, so it is
+// exposed as a dedicated error type (rather than a generic bad-body error) to let the API layer pick
+// an accurate business code and complete the remediation preconditions in the message. Endpoint
+// errors such as an unreachable host or an invalid credential are never wrapped into this type.
+type EmbeddingDimensionMismatchError struct {
+	// Model 模型本地标识
+	Model string
+	// IndexDimension 知识库索引（knowledge_chunks.embedding 列）当前维度
+	IndexDimension int
+	// NativeDimension 模型未声明 dimensions 时实际返回的维度
+	NativeDimension int
+}
+
+// Error 返回英文错误详情，含完整修复步骤：先解绑 embedding 档位（若已绑定，否则重建索引会被
+// reconcile 前置校验拒绝），再按模型原生维度重建索引列。
+func (e *EmbeddingDimensionMismatchError) Error() string {
+	return fmt.Sprintf(
+		"embedding model %q is incompatible with the knowledge index dimension %d (the model returned %d dimensions); unbind the embedding slot if it is bound, then run `migrate ai-embedding --dimensions %d` before binding",
+		e.Model, e.IndexDimension, e.NativeDimension, e.NativeDimension,
 	)
 }

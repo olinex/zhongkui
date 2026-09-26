@@ -396,6 +396,19 @@ func AgentStream(c *gin.Context) {
 		return
 	}
 	sseWriter := sse.NewSSEWriter(c.Writer)
+	// 工具调用阶段事件映射：带增量输出的事件走 delta 事件（携带阶段标识），状态事件走
+	// stage 事件（沿用 dryrun.go 的 report 写法）；写失败（如客户端断开）由 Agent 节点 4
+	// 捕获并中止工具循环，避免无谓的模型与工具调用。
+	// Tool-call stage event mapping: events carrying a delta become delta events (tagged with
+	// the stage), status events become stage events (following the report style of dryrun.go);
+	// a write failure (e.g. a disconnected client) is caught by Agent node 4 and aborts the tool
+	// loop, avoiding needless model and tool calls.
+	report := func(ev ai.StageEvent) error {
+		if ev.Delta != "" {
+			return sseWriter.SendStageDelta(string(ev.Stage), ev.Delta)
+		}
+		return sseWriter.SendStage(ev)
+	}
 	reader, err := comps.Agent.StreamRun(c, ai.AgentInput{
 		Query:         in.Query,
 		NamespaceName: namespace,
@@ -405,6 +418,7 @@ func AgentStream(c *gin.Context) {
 		RegoRule:      in.RegoRule,
 		Slot:          pkgllm.Slot(strings.TrimSpace(in.Slot)),
 		DeclaredSlot:  pkgllm.Slot(session.TargetModel),
+		ToolReporter:  report,
 	})
 	if err != nil {
 		_ = sseWriter.SendError(err)

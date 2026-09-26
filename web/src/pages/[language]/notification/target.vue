@@ -101,7 +101,7 @@
         @confirm="createAction"
       >
         <template #body>
-          <v-form>
+          <v-form ref="createFormRef">
             <v-row dense>
               <v-col cols="12">
                 <v-text-field
@@ -398,6 +398,7 @@ import { languageNameKey, languageSelectOptions } from "@/utils/options";
 const appStore = useAppStore();
 const channelStore = useNotificationChannelStore();
 const searchTableRef = useTemplateRef("searchTableRef");
+const createFormRef = useTemplateRef("createFormRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
@@ -590,7 +591,7 @@ const createFormValid = computed<boolean>(
     !!createName.value.trim() && createChannelId.value !== null && createConfigState.value.valid,
 );
 
-const openCreateDialogAction = (): void => {
+const openCreateDialogAction = async (): Promise<void> => {
   createName.value = "";
   createChannelId.value = null;
   createEnabled.value = true;
@@ -598,6 +599,11 @@ const openCreateDialogAction = (): void => {
   createDescription.value = "";
   createConfigValues.value = {};
   createDialogRef.value?.open({});
+  // Vuetify 输入框默认「值变更即校验」：把字段重置为空会被判成「已输入后清空」并弹出必填错误，
+  // 使重开对话框时尚未输入就报错。等本次重置触发的校验跑完（nextTick）后再清除校验态，
+  // 让表单回到「尚未输入」的初始状态。
+  await nextTick();
+  createFormRef.value?.resetValidation();
 };
 
 const createAction = async (): Promise<void> => {

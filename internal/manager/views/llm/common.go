@@ -68,11 +68,10 @@ func modelConfigOf(m *core.LlmModel) pkgllm.ModelConfig {
 // warning and never blocks the committed business change (the DB has committed; on a failed
 // rebuild the runtime keeps the previous usable snapshot per the AI runtime contract).
 func afterConfigWrite(c *gin.Context, kind ai.ChangeKind, name string) {
-	ctx := c.Request.Context()
-	if err := middlewares.GetAiRuntime(c).Invalidate(ctx); err != nil {
+	if err := middlewares.GetAiRuntime(c).Invalidate(c); err != nil {
 		middlewares.GetLogger(c).Warnf(c, nil, "ai runtime rebuild failed after %s write, name=%s, err=%v", kind, name, err)
 	}
-	if err := ai.BroadcastChange(ctx, middlewares.GetEtcdClient(c), &ai.ChangeEvent{Kind: kind, Name: name}); err != nil {
+	if err := ai.BroadcastChange(c, middlewares.GetEtcdClient(c), &ai.ChangeEvent{Kind: kind, Name: name}); err != nil {
 		middlewares.GetLogger(c).Warnf(c, nil, "broadcast ai change failed, kind=%s, name=%s, err=%v", kind, name, err)
 	}
 }

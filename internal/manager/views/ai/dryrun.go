@@ -159,7 +159,7 @@ func RetrievalDryRunStream(c *gin.Context) {
 		}
 		return sseWriter.SendStage(ev)
 	}
-	out, err := comps.Retriever.DryRun(c, in.Query, report, opts...)
+	out, err := comps.Retriever.DryRun(c, in.Query, report, middlewares.GetLanguage(c).String(), opts...)
 	if err != nil {
 		_ = sseWriter.SendError(err)
 		return

@@ -163,3 +163,60 @@ func TestTypeResolve(t *testing.T) {
 		})
 	})
 }
+
+func TestRegisterSource(t *testing.T) {
+	Convey("惰性条目来源注册", t, func() {
+		Reset(func() {
+			registry = map[string]*Type{}
+			sources = map[string]func() []Entry{}
+		})
+
+		Convey("条目在每次读取时从来源派生（注册时无快照）", func() {
+			values := []string{"email"}
+			RegisterSource("channelType", func() []Entry { return EntriesOf(values) })
+
+			typ, ok := Get("channelType")
+			So(ok, ShouldBeTrue)
+			So(len(typ.Entries), ShouldEqual, 1)
+
+			// 来源注册表随后扩展（同包内后续 init 填充），读取即随动——不依赖 init 顺序
+			values = append(values, "webhook")
+			typ, ok = Get("channelType")
+			So(ok, ShouldBeTrue)
+			So(len(typ.Entries), ShouldEqual, 2)
+
+			types := List()
+			So(len(types), ShouldEqual, 1)
+			So(len(types[0].Entries), ShouldEqual, 2)
+		})
+
+		Convey("类名重复 panic", func() {
+			RegisterSource("dup", func() []Entry { return nil })
+			assertPanicWith(func() {
+				RegisterSource("dup", func() []Entry { return nil })
+			}, "duplicate type name")
+			assertPanicWith(func() {
+				Register(Type{Name: "dup2"})
+				RegisterSource("dup2", func() []Entry { return nil })
+			}, "duplicate type name")
+		})
+
+		Convey("空类名或 nil 来源 panic", func() {
+			assertPanicWith(func() {
+				RegisterSource("", func() []Entry { return nil })
+			}, "empty type name")
+			assertPanicWith(func() {
+				RegisterSource("nilSrc", nil)
+			}, "nil entries source")
+		})
+
+		Convey("来源条目违规时读取即 panic", func() {
+			RegisterSource("bad", func() []Entry {
+				return []Entry{{Key: "a", Value: "a"}, {Key: "a", Value: "b"}}
+			})
+			assertPanicWith(func() {
+				Get("bad")
+			}, "duplicate key")
+		})
+	})
+}

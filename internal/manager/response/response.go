@@ -59,6 +59,7 @@ const (
 	CodeSchedulerTaskInvalid                      // 1112: 定时任务配置非法（cronSpec 与 interval 未满足互斥要求、任务已存在或不存在等）
 	CodePasswordResetUnavailable                  // 1113: 重置密码功能不可用（系统未启用或未配置 SMTP）
 	CodePasswordResetTokenInvalid                 // 1114: 重置密码令牌无效或已过期
+	CodeLlmBindingIncompatible                    // 1115: 档位绑定与系统当前配置不兼容（如向量维度与知识库索引维度不符）
 )
 
 // 预定义的常用错误实例
@@ -241,6 +242,21 @@ func CreateSchedulerTaskError(msgID string, args ...any) *CodeError {
 		MsgID: msgID,
 		args:  args,
 	})
+}
+
+// CreateLlmBindingIncompatibleError 创建一个档位绑定与系统配置不兼容的 CodeError
+// 用于「请求体本身合法、冲突在于系统当前配置」的拒绝场景，典型如 embedding 模型的实际输出
+// 维度与知识库索引（knowledge_chunks.embedding 列）维度不兼容：此类冲突不是请求体格式问题，
+// 故不使用 CodeBadBody（1002），而使用专门的业务码，便于前端与管理台区分处置方式。
+// 错误详情为原始 error 对象（英文，含修复步骤）。
+//
+// 参数：
+//   - err: 不兼容原因（原始 error 对象）
+//
+// 返回值：
+//   - *CodeError: HTTP 状态码为 400，业务码为 CodeLlmBindingIncompatible 的错误实例
+func CreateLlmBindingIncompatibleError(err error) *CodeError {
+	return CreateCodeError(http.StatusBadRequest, CodeLlmBindingIncompatible, err)
 }
 
 // CreateBadUrlParamError 创建一个 URL 路径参数错误的 CodeError

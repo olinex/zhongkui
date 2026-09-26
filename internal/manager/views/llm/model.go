@@ -151,7 +151,8 @@ type LlmModelTestOut struct {
 // LlmModelListGet 处理获取 LLM 模型注册表列表的请求。
 // 支持分页、排序与过滤（时间/名称/类型/启用状态）；模型注册表为全局配置，不按命名空间
 // 隔离。查询按 gorm 模型扫描（api_key 经 crypto 序列化器读取），再映射为接口层 Out 结构；
-// 列表字段投影白名单不含 apiKey，故列表出参不携带任何凭据。
+// apiKey 在投影白名单内，凭据以密文（base64）出参，仅供列表单元格展示加密标识与直传
+// /plaintext/crypto 解密，明文须经明文权限接口查看。
 func LlmModelListGet(c *gin.Context) {
 	var in views.LlmModelListGetSearchIn
 	if err := defaults.Set(&in); err != nil {

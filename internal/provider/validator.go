@@ -12,18 +12,8 @@ import (
 )
 
 func genValidatorFuncs(_ do.Injector) (map[string]uv.Func, error) {
-	var validatorFuncs = map[string]uv.Func{
-		validator.TagStrongPassword:         validator.ValidateStrongPassword,
-		validator.TagWindowsFileName:        validator.ValidateWindowsFileName,
-		validator.TagUnixFileName:           validator.ValidateUnixFileName,
-		validator.TagFileName:               validator.ValidateFileName,
-		validator.TagStrictFileName:         validator.ValidateStrictFileName,
-		validator.TagDirpath:                validator.ValidateDirPath,
-		validator.TagAlphanumSpecial:        validator.ValidateAlphanumSpecial,
-		validator.TagGreaterThanCurrentTime: validator.ValidateGtCurrentTime,
-		validator.TagLesserThanCurrentTime:  validator.ValidateLtCurrentTime,
-	}
-	return validatorFuncs, nil
+	// 规则清单的唯一登记点在 validator.Funcs，此处只负责取用
+	return validator.Funcs(), nil
 }
 
 func newUniversalTranslator(_ context.Context) do.Provider[*ut.UniversalTranslator] {

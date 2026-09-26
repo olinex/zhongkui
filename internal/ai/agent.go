@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"io"
 	"strings"
+	"time"
+	"unicode/utf8"
 
 	// third-party
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/retriever"
+	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 	"github.com/open-policy-agent/opa/rego"
@@ -77,6 +80,12 @@ type AgentInput struct {
 	// DeclaredSlot the default slot declared by the call site (not exposed), with a
 	// lower priority than the explicit Slot
 	DeclaredSlot llm.Slot `json:"-"`
+	// ToolReporter 工具调用阶段事件的上报回调（不对外暴露），由视图层注入 SSE 写入器；
+	// 为 nil 时不上报。与 HistoryMessages / DeclaredSlot 同为 json:"-"。
+	// ToolReporter the report callback of tool-call stage events (not exposed), injected by
+	// the view layer with the SSE writer; nil reports nothing. Like HistoryMessages /
+	// DeclaredSlot it is json:"-".
+	ToolReporter EvalReporter `json:"-"`
 }
 
 // ChatResolver 按档位解析对话模型（使用者侧行为契约）：由上层装配方（Runtime）
@@ -94,9 +103,10 @@ type ChatResolver = func(slot llm.Slot) (model.BaseChatModel, error)
 // and the retrieval citations between nodes via compose.ProcessState (local
 // per-run state, concurrency-safe by the framework).
 type AgentState struct {
-	input     AgentInput        // 节点 1 写入的原始输入
-	citations []RetrievalResult // 节点 3 写入的检索引用
-	slot      llm.Slot          // 节点 1 写入的本次运行档位
+	input        AgentInput        // 节点 1 写入的原始输入
+	citations    []RetrievalResult // 节点 3 写入的检索引用
+	slot         llm.Slot          // 节点 1 写入的本次运行档位
+	toolReporter EvalReporter      // 节点 1 写入的本次运行工具阶段上报回调
 }
 
 // AgentOutput 是图输出（流式项）：流中先出现若干 delta 增量项，最后出现一个
@@ -156,22 +166,38 @@ func init() {
 // persistence (see StreamRun). Every behavior parameter (prompts, section
 // titles, context and truncation bounds) is read through the params resolver.
 type Agent struct {
-	resolver  ChatResolver        // 图内 LLM 节点（按档位解析对话模型）
-	retriever retriever.Retriever // 图内检索节点（*Retriever 天然满足）
-	store     *SessionStore       // 会话持久化
-	params    *llm.Params         // 行为参数解析器（提示词、标题、上限、截断长度）
+	resolver  ChatResolver             // 图内 LLM 节点（按档位解析对话模型）
+	retriever retriever.Retriever      // 图内检索节点（*Retriever 天然满足）
+	store     *SessionStore            // 会话持久化
+	params    *llm.Params              // 行为参数解析器（提示词、标题、上限、截断长度）
+	tools     []tool.BaseTool          // 本次装配可用的工具（无工具时为空）
+	toolInfos []*schema.ToolInfo       // 与 tools 对应的 schema 清单（无工具时为空）
+	toolIndex map[string]tool.BaseTool // 按 Info(ctx).Name 建立的工具索引（节点 4 派发用）
 	runnable  compose.Runnable[AgentInput, AgentOutput]
 }
 
 // NewAgent 构造 Agent：校验依赖后组装五节点图并编译。resolver/retriever/store/params
 // 任一为空时返回英文错误；resolver 与 retriever 均为函数/接口参数，测试可注入替身。
-// 行为参数由上层（Runtime）从 agent_params 解析后传入。
+// 行为参数由上层（Runtime）从 agent_params 解析后传入。tools/toolInfos 为本次装配可用的
+// 工具及其 schema 清单，二者均不做非空校验：toolInfos 为空即「无工具模式」，节点 4 不传
+// 工具选项，行为与引入工具前一致。工具索引在此按 Info(ctx).Name 构建，ctx 由调用方传入
+// （即 Runtime 的装配 ctx），使取消、超时与链路追踪同样覆盖构造期，而非藏在 background
+// context 之后；Info 取失败的工具被跳过（该工具因此不可派发，但其 schema 若在 toolInfos
+// 中仍会被模型看到——正常装配下两者同源，不会出现该情形）。
 // NewAgent constructs an Agent: it validates the dependencies, assembles the
 // five-node graph and compiles it. A nil resolver/retriever/store/params yields an
 // English error; resolver and retriever are function/interface parameters so tests
 // can inject doubles. The behavior parameters are resolved from agent_params by the
-// caller (the Runtime) and passed in.
-func NewAgent(resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *llm.Params) (*Agent, error) {
+// caller (the Runtime) and passed in. tools/toolInfos are the tools available to this
+// assembly and their schema list; neither is validated for emptiness: an empty
+// toolInfos means "no-tool mode" and node 4 passes no tool option, behaving exactly as
+// before tools existed. The tool index is built here from Info(ctx).Name — ctx comes from
+// the caller (the Runtime assembly ctx) so that cancellation, deadlines and tracing cover
+// the construction too, instead of being hidden behind a background context; a tool whose
+// Info fails is skipped (and thus not dispatchable, though its schema in toolInfos would
+// still be visible to the model — under normal assembly both come from the same source so
+// this never happens).
+func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *llm.Params, tools []tool.BaseTool, toolInfos []*schema.ToolInfo) (*Agent, error) {
 	if resolver == nil {
 		return nil, errors.New("agent: nil chat resolver")
 	}
@@ -184,7 +210,15 @@ func NewAgent(resolver ChatResolver, retriever retriever.Retriever, store *Sessi
 	if params == nil {
 		return nil, errors.New("agent: nil params")
 	}
-	a := &Agent{resolver: resolver, retriever: retriever, store: store, params: params}
+	a := &Agent{
+		resolver:  resolver,
+		retriever: retriever,
+		store:     store,
+		params:    params,
+		tools:     tools,
+		toolInfos: toolInfos,
+		toolIndex: buildToolIndex(ctx, tools),
+	}
 	g := compose.NewGraph[AgentInput, AgentOutput](
 		compose.WithGenLocalState(func(ctx context.Context) *AgentState {
 			return &AgentState{}
@@ -232,17 +266,31 @@ func NewAgent(resolver ChatResolver, retriever retriever.Retriever, store *Sessi
 	return a, nil
 }
 
-// generate 是节点 4（流式 lambda）：从图状态读取本次运行解析出的档位，经 resolver
-// 取回对话客户端并执行流式生成，输出 *schema.Message 流。档位未绑定或解析失败时
-// 返回英文错误，由图的流错误通道向外传播。
-// generate is node 4 (a streaming lambda): it reads the slot resolved for this run
-// from the graph state, resolves the chat client via the resolver and performs the
-// streaming generation, emitting a *schema.Message stream. An unbound or unresolvable
-// slot yields an English error propagated through the graph's stream error channel.
+// generate 是节点 4（流式 lambda）：从图状态读取本次运行解析出的档位与工具阶段上报回调，
+// 经 resolver 取回对话客户端。无启用工具（toolInfos 为空）时退化为单次流式生成，行为与
+// 引入工具前完全一致；存在启用工具时执行受 agent.maxToolRounds 约束的工具调用循环——
+// 每轮模型流式生成，含 ToolCalls 的轮次执行工具、回填结果后进入下一轮（其文本增量不外发），
+// 不含 ToolCalls 的轮次文本增量作为最终答案外发。单个工具执行失败时把错误文本作为结果回填，
+// 不中断整轮；达到轮数上限仍有 ToolCalls 时以该轮文本为答案并上报 toolCall 阶段 failed，
+// 不返回错误。档位未绑定或解析失败时返回英文错误，由图的流错误通道向外传播。
+// generate is node 4 (a streaming lambda): it reads the slot resolved for this run and the
+// tool-stage report callback from the graph state, and resolves the chat client via the
+// resolver. With no enabled tools (an empty toolInfos) it degrades to a single streaming
+// generation, behaving exactly as before tools existed; with enabled tools it runs a tool-call
+// loop bounded by agent.maxToolRounds — each round generates a model stream, a round carrying
+// ToolCalls runs the tools and feeds the results back into the next round (its text deltas are
+// never emitted), and a round without ToolCalls emits its text deltas as the final answer. A
+// single tool failure feeds the error text back as the tool result without aborting the turn;
+// reaching the round bound with ToolCalls still pending emits that round's text as the answer
+// and reports the toolCall stage as failed without returning an error. An unbound or
+// unresolvable slot yields an English error propagated through the graph's stream error
+// channel.
 func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*schema.StreamReader[*schema.Message], error) {
 	var slot llm.Slot
+	var reporter EvalReporter
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 		slot = st.slot
+		reporter = st.toolReporter
 		return nil
 	}); err != nil {
 		return nil, errors.WithStack(err)
@@ -254,11 +302,196 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 	if chat == nil {
 		return nil, errors.Newf("agent: no chat model resolved for slot %q", slot)
 	}
-	reader, err := chat.Stream(ctx, messages)
-	if err != nil {
-		return nil, errors.WithStack(err)
+	// 无工具模式：不传工具选项，原样走单次流式生成（真流式，行为与引入工具前一致）。
+	// No-tool mode: pass no tool option and take the single streaming generation path unchanged
+	// (truly streaming, behaving exactly as before tools existed).
+	if len(a.toolInfos) == 0 {
+		reader, err := chat.Stream(ctx, messages)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return reader, nil
 	}
-	return reader, nil
+
+	outSR, outSW := schema.Pipe[*schema.Message](64)
+	go func() {
+		defer outSW.Close()
+		// 轮数上限非正数时钳到 1；结果字节上限非正数时不截断。
+		// A non-positive round bound is clamped to 1; a non-positive byte bound means no
+		// truncation.
+		maxRounds := a.params.Int("agent.maxToolRounds")
+		if maxRounds <= 0 {
+			maxRounds = 1
+		}
+		maxBytes := a.params.Int("agent.maxToolResultBytes")
+		current := messages
+		for round := 0; round < maxRounds; round++ {
+			reader, err := chat.Stream(ctx, current, model.WithTools(a.toolInfos))
+			if err != nil {
+				outSW.Send(nil, errors.WithStack(err))
+				return
+			}
+			chunks, err := drainMessageStream(reader)
+			if err != nil {
+				outSW.Send(nil, errors.WithStack(err))
+				return
+			}
+			msg, err := schema.ConcatMessages(chunks)
+			if err != nil {
+				outSW.Send(nil, errors.WithStack(err))
+				return
+			}
+			// 答案轮：无 ToolCalls，逐条原文外发本轮流（节点 5 的 delta 透传与聚合契约不变，
+			// 这是唯一外发增量文本的路径）。
+			// Answer round: no ToolCalls, so this round's stream is emitted chunk by chunk
+			// verbatim (node 5's delta pass-through and aggregation contract is unchanged; this
+			// is the only path that emits incremental text).
+			if len(msg.ToolCalls) == 0 {
+				for _, c := range chunks {
+					outSW.Send(c, nil)
+				}
+				return
+			}
+			// 达到轮数上限仍有未完成的工具调用：以该轮文本为答案、上报 toolCall 阶段失败、不返回错误。
+			// The round bound is reached with tool calls still pending: this round's text becomes
+			// the answer, the toolCall stage is reported failed, and no error is returned.
+			if round == maxRounds-1 {
+				for _, c := range chunks {
+					outSW.Send(c, nil)
+				}
+				err := errors.Newf("agent: reached the tool-call round bound (%d) with pending tool calls, using this round's text as the answer", maxRounds)
+				if reporter != nil {
+					if rerr := reporter(StageEvent{Stage: EvalStageToolCall, Status: EvalStatusFailed, Err: err.Error()}); rerr != nil {
+						outSW.Send(nil, errors.WithStack(rerr))
+					}
+				}
+				return
+			}
+			// 中间轮：不外发任何增量文本，仅把含 ToolCalls 的 assistant 消息追加进下一轮上下文，
+			// 并逐个执行工具、把结果作为 tool 消息回填。
+			// Intermediate round: emit no incremental text; append the assistant message carrying
+			// the ToolCalls to the next round's context, run each tool and feed the result back as
+			// a tool message.
+			current = append(current, msg)
+			for _, tc := range msg.ToolCalls {
+				name := tc.Function.Name
+				if reporter != nil {
+					if rerr := reporter(StageEvent{Stage: EvalStageToolCall, Status: EvalStatusStart, Tool: name}); rerr != nil {
+						outSW.Send(nil, errors.WithStack(rerr))
+						return
+					}
+				}
+				start := time.Now()
+				result, execErr := a.runTool(ctx, tc)
+				elapsed := time.Since(start).Milliseconds()
+				if execErr != nil {
+					// 工具执行失败：把错误文本作为工具结果回填让模型自行纠错，绝不当作流错误上抛。
+					// Tool failure: feed the error text back as the tool result so the model can
+					// correct itself; never raise it as a stream error.
+					result = "tool execution failed: " + execErr.Error()
+					if reporter != nil {
+						if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, ElapsedMs: elapsed, Err: execErr.Error()}); rerr != nil {
+							outSW.Send(nil, errors.WithStack(rerr))
+							return
+						}
+					}
+				} else {
+					result = truncateBytes(result, maxBytes)
+					if reporter != nil {
+						if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: name, ElapsedMs: elapsed}); rerr != nil {
+							outSW.Send(nil, errors.WithStack(rerr))
+							return
+						}
+					}
+				}
+				current = append(current, schema.ToolMessage(result, tc.ID))
+			}
+		}
+	}()
+	return outSR, nil
+}
+
+// drainMessageStream 抽干一个消息流并返回其全部分块：遇到非 io.EOF 的接收错误时先关闭流
+// 再返回该错误，正常到流末尾时关闭流并返回 nil 错误。
+// drainMessageStream drains a message stream and returns all its chunks: on a non-io.EOF receive
+// error it closes the stream and returns the error, and on reaching the stream end it closes the
+// stream and returns a nil error.
+func drainMessageStream(reader *schema.StreamReader[*schema.Message]) ([]*schema.Message, error) {
+	defer reader.Close()
+	var chunks []*schema.Message
+	for {
+		chunk, err := reader.Recv()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return chunks, nil
+			}
+			return nil, err
+		}
+		chunks = append(chunks, chunk)
+	}
+}
+
+// buildToolIndex 按 Info(ctx).Name 为可派发工具建立索引：Info 取失败的工具被跳过（本包
+// Agent 无 logger 依赖，故不记录日志，仅依赖运行期的 reporter 上报工具失败）。
+// buildToolIndex builds an index of dispatchable tools by Info(ctx).Name: a tool whose Info fails
+// is skipped (this package's Agent has no logger dependency, so nothing is logged; tool failures
+// are surfaced at run time through the reporter instead).
+func buildToolIndex(ctx context.Context, tools []tool.BaseTool) map[string]tool.BaseTool {
+	index := make(map[string]tool.BaseTool, len(tools))
+	for _, built := range tools {
+		if built == nil {
+			continue
+		}
+		info, err := built.Info(ctx)
+		if err != nil || info == nil || info.Name == "" {
+			continue
+		}
+		index[info.Name] = built
+	}
+	return index
+}
+
+// runTool 派发一次工具调用：按工具名在索引中查找并断言为 tool.InvokableTool，取不到或类型
+// 不符即视为执行失败（返回英文错误），否则以 JSON 参数串调用 InvokableRun 并返回其结果。
+// runTool dispatches one tool call: it looks the tool name up in the index and asserts it to
+// tool.InvokableTool, treating a miss or a type mismatch as an execution failure (returning an
+// English error), otherwise it calls InvokableRun with the JSON argument string and returns its
+// result.
+func (a *Agent) runTool(ctx context.Context, tc schema.ToolCall) (string, error) {
+	name := tc.Function.Name
+	built, ok := a.toolIndex[name]
+	if !ok || built == nil {
+		return "", errors.Newf("agent: no tool named %q is available", name)
+	}
+	invokable, ok := built.(tool.InvokableTool)
+	if !ok {
+		return "", errors.Newf("agent: tool %q is not an invokable tool", name)
+	}
+	res, err := invokable.InvokableRun(ctx, tc.Function.Arguments)
+	if err != nil {
+		return "", err
+	}
+	return res, nil
+}
+
+// truncateBytes 把字符串按 UTF-8 rune 边界截断到不超过 max 字节（max 非正数时不截断），
+// 发生截断时追加 "..."，保证不产生残缺的多字节字符。与 truncateText（rune 语义）不同，
+// 本函数以字节为限，用于限制工具结果对模型上下文的占用。
+// truncateBytes truncates a string to at most max bytes along UTF-8 rune boundaries (a
+// non-positive max means no truncation), appending "..." when it truncates, so no malformed
+// multi-byte character is ever produced. Unlike truncateText (rune semantics), this function is
+// byte-bounded, keeping a tool result's footprint on the model context limited.
+func truncateBytes(s string, max int) string {
+	if max <= 0 || len(s) <= max {
+		return s
+	}
+	// 从 max 处向前回退到 rune 边界，避免切断多字节字符。
+	// Step back from max to a rune boundary so no multi-byte character is cut off.
+	cut := max
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + "..."
 }
 
 // resolveInputSlot 解析本次运行的档位并写回输入：优先级为显式 Slot → 调用点声明的
@@ -440,6 +673,7 @@ func (a *Agent) assembleContext(ctx context.Context, in AgentInput) (string, err
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 		st.input = in
 		st.slot = in.Slot
+		st.toolReporter = in.ToolReporter
 		return nil
 	}); err != nil {
 		return "", errors.WithStack(err)

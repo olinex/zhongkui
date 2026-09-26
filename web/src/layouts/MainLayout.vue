@@ -48,7 +48,7 @@
                   避免重复声明箭头图标及其展开态映射
                 -->
                 <template #append>
-                  <nav-badge :kind="groupBadge(parent)" :text="groupBadgeReason(parent)" />
+                  <nav-badge :kind="groupBadge(parent)" />
                   <v-icon />
                 </template>
               </v-list-item>
@@ -71,7 +71,7 @@
               </template>
               <!-- 子项标识：功能不可用（锁定）优先于受命名空间影响，两者同时命中时只展示锁定 -->
               <template v-if="childBadge(parent, child)" #append>
-                <nav-badge :kind="childBadge(parent, child)" :text="featureReason(parent, child)" />
+                <nav-badge :kind="childBadge(parent, child)" />
               </template>
             </v-list-item>
           </v-list-group>
@@ -128,12 +128,6 @@ const isChildUnavailable = (parent: NavGroup, child: NavChild): boolean => {
   return !!key && !featuresStore.isEnable(key);
 };
 
-// featureReason 不可用原因（后端按语言下发，可能为空，模板回退通用提示）
-const featureReason = (parent: NavGroup, child: NavChild): string => {
-  const key = childFeature(parent, child);
-  return key ? featuresStore.reasonOf(key) : "";
-};
-
 // childBadge 子项标识：功能不可用优先于受命名空间影响（规则见 navBadgeOf）
 const childBadge = (parent: NavGroup, child: NavChild): NavBadgeKind | undefined =>
   navBadgeOf(isChildUnavailable(parent, child), !!child.namespaceScoped);
@@ -146,11 +140,6 @@ const groupBadge = (parent: NavGroup): NavBadgeKind | undefined =>
     parent.childrens.every((child) => isChildUnavailable(parent, child)),
     parent.childrens.every((child) => !!child.namespaceScoped),
   );
-
-// groupBadgeReason 父级锁定标识的说明：取分组自身声明的功能原因（子项继承该功能），
-// 分组未声明功能时为空串（由 nav-badge 回退通用提示）
-const groupBadgeReason = (parent: NavGroup): string =>
-  parent.feature ? featuresStore.reasonOf(parent.feature) : "";
 
 const props = defineProps({
   currentNav: {
