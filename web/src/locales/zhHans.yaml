@@ -278,7 +278,12 @@ model:
       title: 标题
       content: 内容
       chunkCount: 分块数
+      format: 格式
+      status: 状态
+      sizeBytes: 原件大小
       hash: 内容摘要
+      originalName: 原文件名
+      parseError: 解析错误
       createdAt: 创建时间
       updatedAt: 更新时间
   aiSession:
@@ -1188,6 +1193,7 @@ action:
   enableAutoRefresh: 开启自动刷新
   disableAutoRefresh: 停止自动刷新
   reindex: 重新索引
+  reparse: 重新解析
   chunks: 分块明细
   query: 查询
   columns: 列设置
@@ -1390,6 +1396,12 @@ page:
     chunkEmbeddingDimensions: 向量维度
     chunkHash: 内容指纹
     chunkIndexedAt: 索引时间
+    importDocument: 导入文档
+    importTitlePlaceholder: 留空则使用文件名（去扩展名）
+    importFile: 原件文件
+    importFileHint: 支持 Markdown / TXT / PDF / DOCX，单文件不超过 64 MB
+    importedContentReadOnly: 正文来自导入原件的解析结果，只读；仅可修改标题
+    parseError: 解析错误
   llmModelAdmin:
     baseURLHint: 供应商的 OpenAI 兼容接口基地址（例如 https://dashscope.aliyuncs.com/compatible-mode/v1）
     apiKeyKeepHint: 凭据不以明文回显；留空表示沿用原凭据
@@ -1465,6 +1477,7 @@ notice:
   runConfirm: "确认运行 {category} {key} 吗？"
   rollbackConfirm: "确认回滚 {category} {key} 到版本 {version} 吗？"
   reindexConfirm: "确认重新索引 {category} {key} 吗？"
+  reparseConfirm: "确认重新解析 {category} {key} 吗？"
   noVersion: 该规则暂无历史版本
   dryRunConfirm: "确认对 {category} {key} 执行试运行吗？"
   enableConfirm: "确认启用 {category} {key} 吗？"
@@ -1509,6 +1522,10 @@ notice:
     testSuccess: "连通性测试通过，远端发现 {count} 个工具"
     testFailed: 连通性测试失败
     syncSuccess: "同步完成：新增 {created} 项、刷新 {updated} 项、清理 {removed} 项"
+  aiDocument:
+    downloadSuccess: "已开始下载 {name}"
+    downloadFailed: 原件下载失败
+    notDownloadable: 该文档没有可下载的原件
 inputType:
   string: 字符串
   number: 数字

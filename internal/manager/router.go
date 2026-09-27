@@ -42,6 +42,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	coreDB := provider.MustInvokeCoreDatabase(i)
 	rawDB := provider.MustInvokeRawDatabase(i)
 	s3Client := provider.MustInvokeS3(i)
+	objCache := provider.MustInvokeObjectCache(i)
 
 	// 初始化命名空间缓存：设置数据库引用并预加载全量命名空间
 	core.Cache.SetDB(coreDB)
@@ -109,6 +110,8 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	rawDatabaseMiddleware := middlewares.RawDatabaseMiddleware(rawDB)
 	// S3 - S3 客户端中间件，供原始流量 body 明文读取
 	s3Middleware := middlewares.S3ClientMiddleware(s3Client)
+	// ObjectCache - S3 通用加密对象缓存中间件，供知识库原件上传/下载/清理使用
+	objectCacheMiddleware := middlewares.ObjectCacheMiddleware(objCache)
 	// Etcd - etcd客户端中间件，将etcd客户端注入请求上下文
 	etcdMiddleware := middlewares.EtcdClientMiddleware(etcd)
 	// Namespace - 命名空间中间件，处理多租户命名空间隔离
@@ -162,6 +165,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		CoreDatabase:      coreDatabaseMiddleware,
 		RawDatabase:       rawDatabaseMiddleware,
 		S3:                s3Middleware,
+		ObjectCache:       objectCacheMiddleware,
 		Etcd:              etcdMiddleware,
 		Namespace:         namespaceMiddleware,
 		PipelineInspector: pipelineInspectorMiddleware,

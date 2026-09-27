@@ -526,6 +526,8 @@ defineExpose({
   clearSelection,
   startLoading,
   selectItems,
+  // 当前列表行：供页面按行状态派生的行为（如知识库页对 pending/parsing 行的有界轮询）读取
+  items,
   filterBy,
 });
 </script>

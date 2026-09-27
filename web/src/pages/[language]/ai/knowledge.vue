@@ -11,7 +11,26 @@
         :toolbar-actions="toolbarActions"
         :project-fields="projectFields"
         model-name="aiDocument"
-      />
+      >
+        <!-- 状态列：按处理状态着色，进行中（parsing）附加载指示 -->
+        <template #cell-status="{ item }">
+          <v-chip :color="statusColor(item.status)">
+            <v-progress-circular
+              v-if="statusSpinning(item.status)"
+              indeterminate
+              size="12"
+              width="2"
+              class="me-1"
+            />
+            {{ enumLabelOf(EnumClass.knowledgeDocStatus, item.status) }}
+          </v-chip>
+        </template>
+
+        <!-- 原件大小列：字节数经本地 formatBytes 转为人类可读文本（手工录入无原件，展示为空） -->
+        <template #cell-sizeBytes="{ item }">
+          {{ formatBytes(item.sizeBytes) }}
+        </template>
+      </search-table>
 
       <!-- 删除确认对话框：单条删除与批量删除共用 -->
       <confirm-dialog
@@ -39,18 +58,18 @@
         </template>
       </confirm-dialog>
 
-      <!-- 重新索引确认对话框 -->
+      <!-- 重新索引 / 重新解析确认对话框：同一接口，按文档来源切换文案（手工文档=重新索引，导入文档=重新解析） -->
       <confirm-dialog
         ref="reindexConfirmRef"
-        :title="$t('action.reindex')"
+        :title="$t(`action.${reindexActionKey}`)"
         prepend-icon="mdi-database-sync-outline"
         @confirm="itemReindexAction"
       >
         <template #body="{ proxy }">
           <confirm-alert
-            :action="$t('action.reindex')"
+            :action="$t(`action.${reindexActionKey}`)"
             :text="
-              $t('notice.reindexConfirm', {
+              $t(`notice.${reindexActionKey}Confirm`, {
                 category: $t('model.aiDocument.name'),
                 key: proxy.title,
               })
@@ -58,6 +77,44 @@
           />
         </template>
       </confirm-dialog>
+
+      <!-- 导入知识文档对话框：标题可选（留空则后端取文件名去扩展名）+ 选择原件；
+           提交时 file 必须最后 append（后端契约）。提交中经 v-request 展示加载态 -->
+      <temp-editable-dialog
+        ref="uploadDialogRef"
+        :title="$t('page.aiKnowledge.importDocument')"
+        :confirm-disabled="!uploadFile"
+        force-editable
+        prepend-icon="mdi-file-import-outline"
+        @confirm="uploadAction"
+      >
+        <template #body>
+          <v-form>
+            <v-row dense>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="uploadTitle"
+                  :label="$t('model.aiDocument.field.title')"
+                  :placeholder="$t('page.aiKnowledge.importTitlePlaceholder')"
+                  hide-details="auto"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
+                <v-file-input
+                  v-model="uploadFile"
+                  accept=".md,.markdown,.txt,.pdf,.docx"
+                  :label="`${$t('page.aiKnowledge.importFile')} *`"
+                  :hint="$t('page.aiKnowledge.importFileHint')"
+                  persistent-hint
+                  show-size
+                />
+              </v-col>
+            </v-row>
+          </v-form>
+        </template>
+      </temp-editable-dialog>
 
       <!-- 创建知识文档对话框 -->
       <temp-editable-dialog
@@ -93,16 +150,20 @@
         </template>
       </temp-editable-dialog>
 
-      <!-- 编辑知识文档对话框：标题与正文均可修改（更新接口触发重新索引） -->
+      <!-- 编辑知识文档对话框：手工文档标题与正文均可修改；导入文档正文只读（来自原件），仅标题可改 -->
       <temp-editable-dialog
         ref="editDialogRef"
         :title="$t('model.aiDocument.name')"
-        :confirm-disabled="!updateForm.meta.value.valid"
+        :confirm-disabled="updateConfirmDisabled"
         prepend-icon="mdi-book-edit"
         @confirm="itemUpdateAction"
       >
         <template #body="{ editable }">
           <v-form>
+            <!-- 解析失败原因：仅失败文档展示，便于用户判断是否重新解析 -->
+            <v-alert v-if="editParseError" type="error" density="compact" class="mb-2">
+              {{ $t("page.aiKnowledge.parseError") }}: {{ editParseError }}
+            </v-alert>
             <v-row dense>
               <v-col cols="12">
                 <v-text-field
@@ -119,9 +180,16 @@
                   v-model="editContent"
                   v-bind="editContentProps"
                   :label="$t('model.aiDocument.field.content')"
+                  :readonly="editDocumentImported"
                   :disabled="!editable"
                   rows="10"
                 />
+              </v-col>
+            </v-row>
+            <!-- 正文只读提示：仅导入文档展示（正文由解析流水线从原件生成，只能改标题） -->
+            <v-row v-if="editDocumentImported" dense>
+              <v-col cols="12" class="zk-hint">
+                {{ $t("page.aiKnowledge.importedContentReadOnly") }}
               </v-col>
             </v-row>
           </v-form>
@@ -546,10 +614,12 @@ import {
   knowledgeDocumentCreate,
   knowledgeDocumentDelete,
   knowledgeDocumentDetailGet,
+  knowledgeDocumentDownload,
   knowledgeDocumentListGet,
   knowledgeDocumentListOptions,
   knowledgeDocumentReindex,
   knowledgeDocumentUpdate,
+  knowledgeDocumentUpload,
   knowledgeRetrievalDryRunStream,
   knowledgeRetrievalOptions,
 } from "@/apis/ai";
@@ -562,12 +632,15 @@ import type {
   EvalStageStatus,
   KnowledgeDocumentDetail,
   KnowledgeDocumentReindexOut,
+  KnowledgeDocumentUpdateIn,
+  KnowledgeDocumentUploadOut,
   RetrievalDryRunIn,
   RetrievalDryRunOut,
   RetrievalOptionsOut,
 } from "@/apis/@types/ai";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { BatchResultOut } from "@/apis/@types/admin";
+import axios from "axios";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
 import type { ActionButton } from "@/components/base/ActionButtonGroup.vue";
 import { useAppStore } from "@/stores/app";
@@ -597,13 +670,15 @@ const updateDocSchema = yup.object({
     .min(1)
     .max(255)
     .label("model.aiDocument.field.title"),
-  content: yup.string().nonNullable().required().min(1).label("model.aiDocument.field.content"),
+  // 正文可选：导入文档正文只读（提交时不携带 content），手工文档的「正文必填」在 updateConfirmDisabled 中校验
+  content: yup.string().label("model.aiDocument.field.content"),
 });
 
 const appStore = useAppStore();
 const searchTableRef = useTemplateRef("searchTableRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
+const uploadDialogRef = useTemplateRef("uploadDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const reindexConfirmRef = useTemplateRef("reindexConfirmRef");
 
@@ -649,8 +724,56 @@ const createAction = createForm.handleSubmit(async (values) => {
   );
 });
 
+// ---- 导入文档（multipart 上传原件）----
+const uploadFile = ref<File | null>(null);
+const uploadTitle = ref("");
+
+const openUploadDialogAction = (): void => {
+  uploadFile.value = null;
+  uploadTitle.value = "";
+  uploadDialogRef.value?.open({});
+};
+
+// uploadAction 提交导入：title 可选（留空由后端取文件名去扩展名），file 必须最后 append。
+// 返回 Promise 供 temp-editable-dialog 的 v-request 指令展示加载态。
+const uploadAction = async (): Promise<void> => {
+  const file = uploadFile.value;
+  if (!file) {
+    return;
+  }
+  const form = new FormData();
+  const title = uploadTitle.value.trim();
+  if (title) {
+    form.append("title", title);
+  }
+  // 后端契约：file 必须为最后一个表单部分，故最后 append
+  form.append("file", file);
+  await getResponse<KnowledgeDocumentUploadOut>(
+    knowledgeDocumentUpload(form),
+    async (rsp) => {
+      await searchTableRef.value?.refresh();
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "success",
+      });
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
 // ---- 编辑对话框 ----
 let editDocumentId = 0;
+// 当前编辑文档是否为导入文档（详情 originalName 非空）；导入文档正文只读，仅标题可改
+const editDocumentImported = ref(false);
+// 当前编辑文档的解析失败原因（非 failed 为空），在编辑对话框内提示
+const editParseError = ref("");
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
@@ -658,6 +781,9 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
     knowledgeDocumentDetailGet(item.id),
     async (rsp) => {
       editDocumentId = rsp.data.id;
+      // 以详情 originalName 判定导入文档：列表出参不含该字段，详情才是权威来源
+      editDocumentImported.value = !!rsp.data.originalName;
+      editParseError.value = rsp.data.parseError;
       updateForm.resetField("title", { value: rsp.data.title });
       updateForm.resetField("content", { value: rsp.data.content });
       editDialogRef.value?.open(rsp.data);
@@ -672,14 +798,24 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
+// updateConfirmDisabled 确认按钮禁用条件：标题校验未通过，或手工文档正文为空
+// （导入文档正文只读，不参与必填校验）
+const updateConfirmDisabled = computed(
+  () => !updateForm.meta.value.valid || (!editDocumentImported.value && !editContent.value),
+);
+
 const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
+    const payload: KnowledgeDocumentUpdateIn = {
+      id: editDocumentId,
+      title: (values.title as string).trim(),
+    };
+    // 导入文档正文只读：提交时不携带 content（后端对携带非空 content 的导入文档返回 400）
+    if (!editDocumentImported.value) {
+      payload.content = values.content;
+    }
     await getSimpleResponse(
-      knowledgeDocumentUpdate(editDocumentId, {
-        id: editDocumentId,
-        title: (values.title as string).trim(),
-        content: values.content,
-      }),
+      knowledgeDocumentUpdate(editDocumentId, payload),
       async (rsp) => {
         await searchTableRef.value?.refresh();
         appStore.notify({
@@ -700,27 +836,94 @@ const itemUpdateAction = () => {
 };
 
 // ---- 列表操作 ----
-// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
-const projectFields = (visible: string[]): string[] => ["id", "title", ...visible];
+// projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效。
+// format/status/sizeBytes 为状态徽标渲染与「导入文档判定（下载/重新解析入口）」所依赖，恒定投影
+const projectFields = (visible: string[]): string[] => [
+  "id",
+  "title",
+  "format",
+  "status",
+  "sizeBytes",
+  ...visible,
+];
+
+// ---- 处理状态展示映射（展示层）----
+// color 为 chip 语义色；spinning 表示进行中（展示加载指示）；active 表示状态尚未收敛（触发有界轮询）。
+// 取值字面量集中于此展示层映射，模板渲染、行操作可用性与轮询判定均由此派生
+interface StatusDisplay {
+  color?: string;
+  spinning?: boolean;
+  active?: boolean;
+}
+const STATUS_DISPLAY: Record<string, StatusDisplay> = {
+  pending: { color: undefined, active: true },
+  parsing: { color: "info", spinning: true, active: true },
+  ready: { color: "success" },
+  failed: { color: "error" },
+};
+
+// statusColor 状态徽标语义色（未登记状态回退默认色）
+const statusColor = (status: string | undefined): string | undefined =>
+  STATUS_DISPLAY[status ?? ""]?.color;
+
+// statusSpinning 是否进行中（展示加载指示）
+const statusSpinning = (status: string | undefined): boolean =>
+  !!STATUS_DISPLAY[status ?? ""]?.spinning;
+
+// statusActive 状态是否尚未收敛（pending/parsing），用于轮询启停与重新解析入口可用性
+const statusActive = (status: string | undefined): boolean =>
+  !!STATUS_DISPLAY[status ?? ""]?.active;
+
+// isImportedDocument 列表行是否为导入文档（含 S3 原件）。列表出参不含 objectKey/originalName，
+// 仅能据 sizeBytes 推断：手工录入文档固定 size_bytes=0，导入文档原件非空故 sizeBytes>0。
+// 局限：导入的空文件（sizeBytes=0）会被误判为手工文档，此时不展示下载/重新解析入口。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isImportedDocument = (item: Record<string, any>): boolean => Number(item.sizeBytes ?? 0) > 0;
+
+// formatBytes 将字节数格式化为人类可读文本（1024 进制，保留一位小数）；无原件（0 字节）展示为空
+const formatBytes = (value: unknown): string => {
+  const bytes = Number(value ?? 0);
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return "";
+  }
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = bytes;
+  let unit = 0;
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024;
+    unit += 1;
+  }
+  const text = unit === 0 ? String(size) : size.toFixed(1);
+  return `${text} ${units[unit]}`;
+};
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
-  return {
+  const actions: ItemActions = {
     edit: () => detailGetAction(item),
     chunks: () => {
       chunksDocumentId.value = item.id as number;
       chunksDocumentTitle.value = item.title as string;
       chunksDialog.value = true;
     },
-    reindex: () => {
-      batchState.value = null;
-      reindexConfirmRef.value?.open(item);
-    },
-    delete: () => {
-      batchState.value = null;
-      deleteConfirmRef.value?.open(item);
-    },
   };
+  // 导入文档「重新解析」（后端重新下载原件 → 重新解析 → 重建索引）：与手工文档的「重新索引」
+  // 共用同一接口，仅按来源切换文案，避免两个入口造成歧义。
+  // 进行中（pending/parsing）时后端会拒绝重复投递（400）；共享行操作菜单无禁用态，
+  // 故此处以「省略即禁用」处理（与 datasource 启/禁用操作的条件包含范式一致）。
+  if (isImportedDocument(item)) {
+    if (!statusActive(item.status as string)) {
+      actions.reparse = () => openReindexConfirm(item, "reparse");
+    }
+    actions.download = () => itemDownloadAction(item);
+  } else {
+    actions.reindex = () => openReindexConfirm(item, "reindex");
+  }
+  actions.delete = () => {
+    batchState.value = null;
+    deleteConfirmRef.value?.open(item);
+  };
+  return actions;
 };
 
 // ---- 分块明细 ----
@@ -729,12 +932,24 @@ const chunksDialog = ref(false);
 const chunksDocumentId = ref(0);
 const chunksDocumentTitle = ref("");
 
-// ---- 重新索引 ----
+// ---- 重新索引 / 重新解析 ----
+// 当前确认对话框对应的操作键：手工文档为 reindex（重新索引），导入文档为 reparse（重新解析）
+const reindexActionKey = ref<"reindex" | "reparse">("reindex");
+
+// openReindexConfirm 打开确认对话框：按操作键切换标题与确认文案（同一接口，仅文案不同）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const openReindexConfirm = (item: Record<string, any>, key: "reindex" | "reparse"): void => {
+  batchState.value = null;
+  reindexActionKey.value = key;
+  reindexConfirmRef.value?.open(item);
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemReindexAction = async (proxy: Record<string, any>): Promise<void> => {
   await getResponse<KnowledgeDocumentReindexOut>(
     knowledgeDocumentReindex(proxy.id),
     async (rsp) => {
+      // 刷新后由列表行状态驱动有界轮询（导入文档重新解析返回 pending，手工文档同步返回 ready）
       await searchTableRef.value?.refresh();
       appStore.notify({
         text: rsp.summary,
@@ -751,6 +966,140 @@ const itemReindexAction = async (proxy: Record<string, any>): Promise<void> => {
     },
   );
 };
+
+// ---- 下载原件 ----
+// fetchDocumentDetail 取文档详情：列表出参不含 originalName/objectKey，详情是导入文档判定的
+// 权威来源（originalName 非空即导入文档）。返回 null 表示请求失败（已提示错误）。
+const fetchDocumentDetail = async (id: number): Promise<KnowledgeDocumentDetail | null> => {
+  let result: KnowledgeDocumentDetail | null = null;
+  await getResponse<KnowledgeDocumentDetail>(
+    knowledgeDocumentDetailGet(id),
+    async (rsp) => {
+      result = rsp.data;
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+  return result;
+};
+
+// downloadErrorMessage 解析二进制下载失败的错误消息：blob 响应体为统一 JSON 信封
+// （{code,summary}），逐层解析失败时回退到通用文案
+const downloadErrorMessage = async (err: unknown): Promise<string> => {
+  if (axios.isAxiosError(err) && err.response) {
+    const data = err.response.data as unknown;
+    if (data instanceof Blob) {
+      try {
+        const text = await data.text();
+        const json = JSON.parse(text) as { summary?: string };
+        if (json.summary) {
+          return json.summary;
+        }
+      } catch {
+        // 非 JSON 响应体：忽略并回退到通用文案
+      }
+    }
+  }
+  return i18n.global.t("notice.aiDocument.downloadFailed");
+};
+
+// saveBlobAsFile 触发浏览器保存：以对象 URL 生成临时链接触发下载（照 PlaintextDialog 先例）
+const saveBlobAsFile = (blob: Blob, filename: string): void => {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
+// itemDownloadAction 下载导入文档原件：先取详情拿到 originalName（列表无该字段），据其判定
+// 是否为导入文档并作为保存文件名（避免解析 Content-Disposition 的 RFC 5987 编码）
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const itemDownloadAction = async (item: Record<string, any>): Promise<void> => {
+  const detail = await fetchDocumentDetail(item.id as number);
+  if (!detail) {
+    return;
+  }
+  if (!detail.originalName) {
+    appStore.notify({
+      text: i18n.global.t("notice.aiDocument.notDownloadable"),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  try {
+    const rsp = await knowledgeDocumentDownload(item.id as number);
+    saveBlobAsFile(rsp.data as Blob, detail.originalName);
+    appStore.notify({
+      text: i18n.global.t("notice.aiDocument.downloadSuccess", { name: detail.originalName }),
+      timeout: 3000,
+      color: "success",
+    });
+  } catch (err) {
+    appStore.notify({
+      text: await downloadErrorMessage(err),
+      timeout: 3000,
+      color: "error",
+    });
+  }
+};
+
+// ---- 有界轮询 ----
+// 列表存在 pending/parsing 行时按固定间隔刷新，使异步解析状态自动收敛，无需人工刷新。
+// 停止条件：全部收敛（无进行中行）→ 立即停止并清零计数；达到次数上限 → 停止（后台任务长期
+// 不收敛时避免无限刷新，上限 100 次 × 3s ≈ 5 分钟）；组件卸载 → 清理定时器（onUnmounted）。
+const POLL_INTERVAL_MS = 3000;
+const POLL_MAX_ATTEMPTS = 100;
+
+let pollTimer: ReturnType<typeof setInterval> | null = null;
+let pollAttempts = 0;
+
+const stopPolling = (): void => {
+  if (pollTimer !== null) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+  pollAttempts = 0;
+};
+
+// listHasActiveDocuments 列表当前是否存在进行中（pending/parsing）行
+const listHasActiveDocuments = (): boolean =>
+  (searchTableRef.value?.items ?? []).some((item) => statusActive(item.status as string));
+
+// syncPolling 按列表状态启停轮询：存在进行中行时启动（已在轮询则保持不变），
+// 全部收敛时停止
+const syncPolling = (): void => {
+  if (!listHasActiveDocuments()) {
+    stopPolling();
+    return;
+  }
+  if (pollTimer !== null) {
+    return;
+  }
+  pollAttempts = 0;
+  pollTimer = setInterval(async () => {
+    if (pollAttempts >= POLL_MAX_ATTEMPTS) {
+      stopPolling();
+      return;
+    }
+    pollAttempts += 1;
+    await searchTableRef.value?.refresh();
+  }, POLL_INTERVAL_MS);
+};
+
+// 列表行引用每次刷新后变化，据此启停轮询；卸载时清理定时器
+watch(
+  () => searchTableRef.value?.items,
+  () => syncPolling(),
+);
+onUnmounted(stopPolling);
 
 // ---- 批量删除 ----
 // applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
@@ -1166,9 +1515,16 @@ const runDryRunAction = (): void => {
   });
 };
 
-// 工具栏操作按钮：检索试运行入口（alwaysShow 常驻，收起工具栏时也保持展示）
+// 工具栏操作按钮：导入文档与检索试运行入口（alwaysShow 常驻，收起工具栏时也保持展示）
 
 const toolbarActions = computed<ActionButton[]>(() => [
+  {
+    icon: "mdi-file-import-outline",
+    title: i18n.global.t("page.aiKnowledge.importDocument"),
+    // 与「新建」并列常驻，避免另起一行
+    alwaysShow: true,
+    onClick: openUploadDialogAction,
+  },
   {
     icon: "mdi-flask-outline",
     title: i18n.global.t("page.aiKnowledge.dryRun"),

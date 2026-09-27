@@ -28,6 +28,9 @@ export const EnumClass = {
   evalStageStatus: "evalStageStatus",
   diagnosisCategory: "diagnosisCategory",
   chunkUnitKind: "chunkUnitKind",
+  // 知识库文档来源格式（归属 internal/pkg/docconv）与处理状态（归属 internal/models/ai）
+  documentFormat: "documentFormat",
+  knowledgeDocStatus: "knowledgeDocStatus",
 } as const;
 
 // currentLang 当前语言（i18n locale value，如 zh-Hans / en）

@@ -8,10 +8,12 @@ import (
 	// 覆盖全量枚举类；若某个归属包被移出本清单，其类会静默缺失，由下方空注册表断言拦截
 	_ "zhongkui.com/zhongkui/internal/ai"
 	_ "zhongkui.com/zhongkui/internal/ai/tools/mcp"
+	_ "zhongkui.com/zhongkui/internal/models/ai"
 	_ "zhongkui.com/zhongkui/internal/models/core"
 	_ "zhongkui.com/zhongkui/internal/models/network"
 	_ "zhongkui.com/zhongkui/internal/models/tag"
 	_ "zhongkui.com/zhongkui/internal/notify"
+	_ "zhongkui.com/zhongkui/internal/pkg/docconv"
 	_ "zhongkui.com/zhongkui/internal/pkg/message"
 	_ "zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
 	_ "zhongkui.com/zhongkui/internal/tagengine"

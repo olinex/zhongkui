@@ -3,7 +3,8 @@
 // （复用 Zkcn 流式管道），写入/删除随数据源配置生命周期管理，读取时按需拉取解密为本地
 // 可供打开的文件。该机制不绑定任何具体数据源类型，便于后续第三方数据源接入复用。
 //
-// 读取时为满足「尽量不加载到本地磁盘」，Materialize 按 size 双路落地：
+// 读取时为满足「尽量不加载到本地磁盘」，Materialize 按 size 流式双路落地，分流过程内存占用不超过
+// 阈值（不会把整个对象缓冲进内存）：
 //   - size <= 内存阈值：落入内存缓存目录（Linux 默认 /dev/shm，tmpfs 即 RAM，不占本地盘）；
 //   - size > 内存阈值：落入磁盘缓存目录（os.TempDir 子目录），TTL 到期回收。
 //
@@ -18,7 +19,8 @@
 // file when reading. The mechanism is not bound to any datasource type, so it can be reused
 // by third-party datasources later.
 //
-// To avoid loading onto the local disk when reading, Materialize routes by size:
+// To avoid loading onto the local disk when reading, Materialize routes by size in a streaming
+// way whose memory use never exceeds the threshold (the whole object is never buffered):
 //   - size <= memory threshold: written into the in-memory cache dir (default /dev/shm on
 //     Linux, a tmpfs that is RAM, not persistent disk);
 //   - size > threshold: spilled to a disk cache dir (os.TempDir subdir) recycled by TTL.
@@ -30,6 +32,8 @@ package s3
 
 import (
 	// stdlib
+
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -70,16 +74,80 @@ func defaultObjectCacheMemDir() string {
 	return filepath.Join(os.TempDir(), objectCachePrefix)
 }
 
+// objectBackend 抽象底层「加密对象存储」的读/写/删，使 ObjectCache 不直接依赖具体 *S3Client：
+// 生产实现为 s3Backend（经 Zkcn 管道加解密读写 S3）；S3 未配置时以 disabledBackend 空对象替代
+// 原先散落在各方法里的 nil client 判断；测试可注入内存实现。
+// objectBackend abstracts the underlying encrypted object store (read/write/remove) so that
+// ObjectCache does not depend on a concrete *S3Client: production uses s3Backend (encrypting and
+// decrypting through the Zkcn pipeline against S3), an unconfigured S3 uses the disabledBackend
+// null object in place of the nil-client checks formerly scattered across methods, and tests may
+// inject an in-memory implementation.
+type objectBackend interface {
+	Store(ctx context.Context, objectKey string, r io.Reader) error
+	Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error)
+	Remove(ctx context.Context, objectKey string) error
+}
+
+// s3Backend 是 objectBackend 的生产实现：对象经 Zkcn（zstd+AES-GCM）加密管道写入 S3，
+// 读取时加密下载并解密为明文流。
+// s3Backend is the production objectBackend: objects are written to S3 through the Zkcn
+// (zstd+AES-GCM) pipeline and downloaded decrypted as a plaintext stream.
+type s3Backend struct {
+	client *S3Client
+}
+
+func (b s3Backend) Store(ctx context.Context, objectKey string, r io.Reader) error {
+	if _, err := NewZkcn(b.client, objectKey, nil, 0).Store(ctx, r); err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// Fetch 下载并解密对象，返回明文读取流；对象不存在时返回明确错误。
+// Fetch downloads and decrypts the object, returning a plaintext reader; a missing object is an
+// explicit error.
+func (b s3Backend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+	rc, err := NewZkcn(b.client, objectKey, nil, 0).Load(ctx)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if rc == nil {
+		return nil, errors.Newf("s3 objectcache: object %q not found", objectKey)
+	}
+	return rc, nil
+}
+
+func (b s3Backend) Remove(ctx context.Context, objectKey string) error {
+	return errors.WithStack(NewZkcn(b.client, objectKey, nil, 0).Clear(ctx))
+}
+
+// disabledBackend 是 S3 未配置时的空对象后端：三个方法各自返回带操作语义的「S3 未配置」错误，
+// 使 Store/Materialize/Open/Remove 无需再各自判空。
+// disabledBackend is the null-object backend used when S3 is not configured: each method returns
+// an operation-specific "S3 not configured" error, so Store/Materialize/Open/Remove no longer
+// each need their own nil check.
+type disabledBackend struct{}
+
+func (disabledBackend) Store(context.Context, string, io.Reader) error {
+	return errors.New("s3 objectcache: S3 not configured to store object")
+}
+
+func (disabledBackend) Fetch(context.Context, string) (io.ReadCloser, error) {
+	return nil, errors.New("s3 objectcache: S3 not configured to load object")
+}
+
+func (disabledBackend) Remove(context.Context, string) error {
+	return errors.New("s3 objectcache: S3 not configured to remove object")
+}
+
 // ObjectCache 负责把数据源上传的文件加密存于 S3，读取时按需拉取解密为本地文件。
 // ObjectCache stores datasource-uploaded files encrypted in S3 and materializes them to
 // local files on demand when reading.
 type ObjectCache struct {
-	// client 底层的 S3 客户端（nil 表示 S3 未配置）。
-	// client the underlying S3 client (nil means S3 is not configured).
-	client *S3Client
-	// fetch 拉取+解密对象明文读取流的实现（默认 fetchFromS3，测试可注入替换）。
-	// fetch the object fetch+decrypt implementation (defaults to fetchFromS3; injectable).
-	fetch func(ctx context.Context, objectKey string) (io.ReadCloser, error)
+	// backend 底层加密对象存储的读写删端口（生产为 s3Backend，S3 未配置为 disabledBackend）。
+	// backend the underlying encrypted-object read/write/remove port (s3Backend in production,
+	// disabledBackend when S3 is not configured).
+	backend objectBackend
 	// memDir 内存缓存目录（tmpfs，如 Linux /dev/shm），承载 <= 阈值的小文件。
 	// memDir the in-memory cache dir (tmpfs, e.g. /dev/shm) for files <= threshold.
 	memDir string
@@ -109,22 +177,33 @@ type cacheEntry struct {
 }
 
 // NewObjectCache 以 S3 客户端与 Config 的通用对象缓存项构建对象缓存。缓存默认值（内存目录、
-// 内存优先阈值 64MB、本地缓存 TTL 1h）统一由 Config 的 default tag 经 defaults 库注入，
-// 不再手写分支；内存目录为空时按平台默认，不可写时回退磁盘缓存目录。client 可为 nil
-// （S3 未启用，此时 Store/Materialize/Remove 会返回「S3 未配置」错误）。
+// 内存优先阈值、本地缓存 TTL）统一由 Config 的 default tag 经 defaults 库注入，不再手写分支；
+// 内存目录为空时按平台默认，不可写时回退磁盘缓存目录。client 为 nil 表示 S3 未启用，此时注入
+// disabledBackend 空对象，Store/Materialize/Open/Remove 统一返回「S3 未配置」错误。
 // NewObjectCache builds an ObjectCache from an S3 client and the generic object cache options
-// in Config. Cache defaults (mem dir, 64MB memory-first threshold, 1h local-cache TTL) are
-// injected from Config's default tags via the defaults library instead of hand-written
-// branches; an empty mem dir falls back to the platform default and an unwritable one to the
-// disk cache dir. client may be nil (S3 disabled, in which case Store/Materialize/Remove
-// return a "S3 not configured" error).
+// in Config. Cache defaults (mem dir, memory-first threshold, local-cache TTL) are injected from
+// Config's default tags via the defaults library instead of hand-written branches; an empty mem
+// dir falls back to the platform default and an unwritable one to the disk cache dir. A nil
+// client means S3 is disabled, in which case a disabledBackend null object is installed so that
+// Store/Materialize/Open/Remove uniformly return a "S3 not configured" error.
 func NewObjectCache(client *S3Client, cfg Config) *ObjectCache {
+	if client == nil {
+		return newObjectCache(disabledBackend{}, cfg)
+	}
+	return newObjectCache(s3Backend{client: client}, cfg)
+}
+
+// newObjectCache 以给定后端端口构建对象缓存；NewObjectCache 与包内测试均经此构造，使测试可注入
+// 内存实现替代真实 S3。
+// newObjectCache builds the cache from a backend port; both NewObjectCache and in-package tests
+// construct through it, letting tests inject an in-memory implementation instead of real S3.
+func newObjectCache(backend objectBackend, cfg Config) *ObjectCache {
 	// 与项目约定一致：默认值统一经 defaults 库的 default tag 注入，而非手写 if-else。
 	if err := defaults.Set(&cfg); err != nil {
 		panic("s3 objectcache: apply defaults: " + err.Error())
 	}
 	c := &ObjectCache{
-		client:  client,
+		backend: backend,
 		memDir:  cfg.ObjectCacheDir,
 		diskDir: filepath.Join(os.TempDir(), objectCachePrefix),
 		thresh:  int64(cfg.ObjectCacheMemoryThresholdMB) << 20,
@@ -150,34 +229,19 @@ func NewObjectCache(client *S3Client, cfg Config) *ObjectCache {
 // streaming upload, zero disk staging). The object is stored permanently (no TTL), with a
 // lifecycle tied to the datasource config.
 func (c *ObjectCache) Store(ctx context.Context, objectKey string, r io.Reader) error {
-	if c == nil || c.client == nil {
-		return errors.New("s3 objectcache: S3 not configured to store object")
+	if c == nil {
+		return errors.New("s3 objectcache: unavailable")
 	}
-	if _, err := NewZkcn(c.client, objectKey, nil, 0).Store(ctx, r); err != nil {
-		return errors.WithStack(err)
-	}
-	return nil
-}
-
-// fetchFromS3 从 S3 下载并解密对象，返回明文读取流。
-// fetchFromS3 downloads and decrypts the S3 object, returning a plaintext reader.
-func (c *ObjectCache) fetchFromS3(ctx context.Context, objectKey string) (io.ReadCloser, error) {
-	rc, err := NewZkcn(c.client, objectKey, nil, 0).Load(ctx)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	if rc == nil {
-		return nil, errors.Newf("s3 objectcache: object %q not found", objectKey)
-	}
-	return rc, nil
+	return c.backend.Store(ctx, objectKey, r)
 }
 
 // Materialize 确保 objectKey 对应的明文已落地为本地可用文件，返回其路径。
-// 先命中 TTL 缓存复用；未缓存则拉取解密，按 size 决定落内存目录还是磁盘目录。
+// 先命中 TTL 缓存复用；未缓存则拉取解密，按 size 流式分路落地（内存占用不超过阈值）。
 // 进程内并发安全。
-// Materialize ensures the plaintext of objectKey is materialized as a local file and returns
-// its path. A live TTL cache hit is reused; otherwise it fetches, decrypts and writes to the
-// mem or disk cache dir by size. Safe for concurrent use.
+// Materialize ensures the plaintext of objectKey is materialized as a local file and returns its
+// path. A live TTL cache hit is reused; otherwise it fetches, decrypts and streams the plaintext
+// into the mem or disk cache dir by size, with memory use bounded by the threshold. Safe for
+// concurrent use.
 func (c *ObjectCache) Materialize(ctx context.Context, objectKey string) (string, error) {
 	if c == nil {
 		return "", errors.New("s3 objectcache: unavailable")
@@ -185,43 +249,90 @@ func (c *ObjectCache) Materialize(ctx context.Context, objectKey string) (string
 	if path, hit := c.cached(objectKey); hit {
 		return path, nil
 	}
-	fetch := c.fetch
-	if fetch == nil {
-		if c.client == nil {
-			return "", errors.New("s3 objectcache: S3 not configured to load object")
-		}
-		fetch = c.fetchFromS3
-	}
-	rc, err := fetch(ctx, objectKey)
+	rc, err := c.backend.Fetch(ctx, objectKey)
 	if err != nil {
 		return "", err
 	}
 	defer rc.Close()
-	data, err := io.ReadAll(rc)
+	full, err := c.materialize(rc, objectKey)
 	if err != nil {
-		return "", errors.WithStack(err)
-	}
-	dir := c.diskDir
-	if int64(len(data)) <= c.thresh {
-		dir = c.memDir
-	}
-	full := filepath.Join(dir, hashObjectKey(objectKey))
-	if err := os.WriteFile(full, data, 0o600); err != nil {
-		return "", errors.WithStack(err)
+		return "", err
 	}
 	c.setCache(objectKey, full)
 	return full, nil
+}
+
+// materialize 把明文流 rc 按 size 分路写入本地缓存文件并返回最终路径：先读至多「阈值+1」字节到
+// 内存，未超阈即小文件，直接写内存目录（不触碰本地磁盘）；一旦超阈则把已缓冲前缀与剩余流写入
+// 磁盘目录的暂存文件，再原子改名到最终路径。全程内存占用不超过阈值，不会把整个对象缓冲进内存。
+// materialize routes the plaintext stream rc into a local cache file by size and returns its
+// path: it reads up to "threshold+1" bytes into memory and, if not exceeded, writes the small
+// object straight to the mem dir (never touching local disk); once exceeded, it writes the
+// buffered prefix plus the remaining stream into a staging file in the disk dir and atomically
+// renames it into place. Memory use never exceeds the threshold.
+func (c *ObjectCache) materialize(rc io.Reader, objectKey string) (string, error) {
+	name := hashObjectKey(objectKey)
+
+	var head bytes.Buffer
+	if _, err := io.CopyN(&head, rc, c.thresh+1); err != nil && err != io.EOF {
+		return "", errors.WithStack(err)
+	}
+	if int64(head.Len()) <= c.thresh {
+		full := filepath.Join(c.memDir, name)
+		if err := os.WriteFile(full, head.Bytes(), 0o600); err != nil {
+			return "", errors.WithStack(err)
+		}
+		return full, nil
+	}
+
+	tmp, err := os.CreateTemp(c.diskDir, name+".tmp-*")
+	if err != nil {
+		return "", errors.WithStack(err)
+	}
+	tmpPath := tmp.Name()
+	// 成功后 rename 已把该文件移走；失败路径由 defer 清理，避免残留半成品被后续误用。
+	defer os.Remove(tmpPath)
+	if _, err := tmp.Write(head.Bytes()); err != nil {
+		tmp.Close()
+		return "", errors.WithStack(err)
+	}
+	if _, err := io.Copy(tmp, rc); err != nil {
+		tmp.Close()
+		return "", errors.WithStack(err)
+	}
+	if err := tmp.Close(); err != nil {
+		return "", errors.WithStack(err)
+	}
+	full := filepath.Join(c.diskDir, name)
+	if err := os.Rename(tmpPath, full); err != nil {
+		return "", errors.WithStack(err)
+	}
+	return full, nil
+}
+
+// Open 拉取并解密 objectKey 对应的对象，返回明文读取流，供流式下载使用，避免整对象落地。
+// 直接走底层后端端口，不写入本地缓存文件，调用方负责关闭返回的 ReadCloser。c 为 nil 或 S3
+// 未配置时返回明确错误。
+// Open fetches and decrypts the object for objectKey and returns a plaintext reader for streaming
+// download, avoiding materializing the whole object locally. It goes straight to the backend port
+// and writes no local cache file; the caller owns closing the returned ReadCloser. Returns a clear
+// error when c is nil or S3 is not configured.
+func (c *ObjectCache) Open(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+	if c == nil {
+		return nil, errors.New("s3 objectcache: unavailable")
+	}
+	return c.backend.Fetch(ctx, objectKey)
 }
 
 // Remove 删除 S3 中 objectKey 对应的对象并失效本地缓存。用于数据源删除时清理无归属文件。
 // Remove deletes the S3 object for objectKey and invalidates the local cache. Used to clean
 // up ownerless files when a datasource is deleted.
 func (c *ObjectCache) Remove(ctx context.Context, objectKey string) error {
-	if c == nil || c.client == nil {
-		return errors.New("s3 objectcache: S3 not configured to remove object")
+	if c == nil {
+		return errors.New("s3 objectcache: unavailable")
 	}
 	c.Invalidate(objectKey)
-	return errors.WithStack(NewZkcn(c.client, objectKey, nil, 0).Clear(ctx))
+	return c.backend.Remove(ctx, objectKey)
 }
 
 // Invalidate 仅失效本地缓存文件（不触碰 S3 对象）。供注销/更新后释放内存目录占用。

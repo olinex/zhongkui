@@ -1830,6 +1830,36 @@ other = "列表"
 other = "引用"
 
 # =============================================================================
+# 知识库文档格式与导入处理状态（枚举类 documentFormat / knowledgeDocStatus，
+# 归属包 internal/pkg/docconv 与 internal/models/ai）。documentFormat 对应常见文档
+# 格式导入知识库时的来源格式，knowledgeDocStatus 对应导入文档的解析流转状态。
+# =============================================================================
+
+[enum.documentFormat.markdown]
+other = "Markdown"
+
+[enum.documentFormat.txt]
+other = "纯文本"
+
+[enum.documentFormat.pdf]
+other = "PDF"
+
+[enum.documentFormat.docx]
+other = "Word 文档"
+
+[enum.knowledgeDocStatus.pending]
+other = "待解析"
+
+[enum.knowledgeDocStatus.parsing]
+other = "解析中"
+
+[enum.knowledgeDocStatus.ready]
+other = "就绪"
+
+[enum.knowledgeDocStatus.failed]
+other = "解析失败"
+
+# =============================================================================
 # AI capability disabled reasons (ai.disabled.*)
 # 「AI 能力为何不可用」的运维说明文案：由 internal/ai 的运行时快照判定，
 # 接口层按请求语言翻译后随状态接口与档位绑定接口返回。

@@ -3813,8 +3813,52 @@ func (i *titleKnowledgeDocumentListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
+type formatKnowledgeDocumentListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *formatKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "format"
+}
+
+func (i *formatKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "format"
+}
+
+func (i *formatKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *formatKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type statusKnowledgeDocumentListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *statusKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "status"
+}
+
+func (i *statusKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "status"
+}
+
+func (i *statusKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *statusKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
 type KnowledgeDocumentListGetFilterBy struct {
-	Title *titleKnowledgeDocumentListGetFilterByItem `mapstructure:"title"`
+	Title  *titleKnowledgeDocumentListGetFilterByItem  `mapstructure:"title"`
+	Format *formatKnowledgeDocumentListGetFilterByItem `mapstructure:"format"`
+	Status *statusKnowledgeDocumentListGetFilterByItem `mapstructure:"status"`
 }
 
 type KnowledgeDocumentListGetSearchIn struct {
@@ -3855,6 +3899,12 @@ func (s *KnowledgeDocumentListGetSearchIn) GetFilterBy() map[string]utils.Filter
 	if s.FilterBy.Title != nil {
 		items["title"] = s.FilterBy.Title
 	}
+	if s.FilterBy.Format != nil {
+		items["format"] = s.FilterBy.Format
+	}
+	if s.FilterBy.Status != nil {
+		items["status"] = s.FilterBy.Status
+	}
 	return items
 }
 
@@ -3883,6 +3933,12 @@ func (s *KnowledgeDocumentListGetSearchIn) ResolveSelectColumns() []string {
 			add("title")
 		case "chunkCount":
 			add("chunk_count")
+		case "format":
+			add("format")
+		case "status":
+			add("status")
+		case "sizeBytes":
+			add("size_bytes")
 		case "createdAt":
 			add("created_at")
 		case "updatedAt":
@@ -3919,11 +3975,28 @@ func (s *KnowledgeDocumentListGetSearchIn) GetOptions() *utils.SearchOptions {
 					"inctn",
 				},
 			},
+			{
+				Name: "format",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "status",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
 		},
 		Fields: []string{
 			"id",
 			"title",
 			"chunkCount",
+			"format",
+			"status",
+			"sizeBytes",
 			"createdAt",
 			"updatedAt",
 		},

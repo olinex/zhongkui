@@ -30,6 +30,14 @@ export const request = axios.create({
 });
 
 request.interceptors.request.use((config) => {
+  // 携带文件的 FormData 请求必须走 multipart/form-data：axios 默认序列化在 Content-Type 含
+  // application/json 时会把 FormData 转成 JSON（见 axios defaults.transformRequest 的
+  // isFormData 分支：hasJSONContentType ? JSON.stringify(formDataToJSON(data)) : data），
+  // 导致后端收到 JSON 体而非 multipart，报「请求体格式错误」。故此处清除实例默认的 JSON
+  // Content-Type，让 axios 原样透传 FormData，由浏览器补全 multipart 边界。
+  if (config.data instanceof FormData) {
+    config.headers.delete(HttpHeader.CONTENT_TYPE);
+  }
   const store = useAppStore();
   if (!config.headers[HttpHeader.ACCEPT_LANGUAGE]) {
     config.headers[HttpHeader.ACCEPT_LANGUAGE] = store.language;

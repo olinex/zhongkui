@@ -7,22 +7,39 @@ import (
 )
 
 // RegisterRoutes 注册 /api/v1/ai AI 助手（RAG + Agent）接口。
-// 分组挂认证/授权/命名空间/核心库/功能开关/AI 组件中间件；子组：
-//   - /doc    知识库文档 CRUD/list/reindex/chunks
+// 分组挂认证/授权/命名空间/核心库/功能开关/AI 组件/S3/对象缓存/管道投递客户端中间件；子组：
+//   - /doc    知识库文档 CRUD/list/reindex/chunks + 导入上传/原件下载
 //   - /session  Agent 会话 create/list/get/rename/delete/messages
 //   - /agent/:sessionID/stream  SSE 流式生成
 //   - /status  AI 状态（可用性 + 维度差异）
+//
+// 知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存
+// （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务入队）中间件供子路由共享。
+// RegisterRoutes registers the /api/v1/ai AI assistant (RAG + Agent) endpoints.
+// The group mounts authentication/authorization/namespace/core-database/feature-registry/AI-component/
+// S3/object-cache/pipeline-client middlewares; subgroups:
+//   - /doc     knowledge-document CRUD/list/reindex/chunks plus import upload/source download
+//   - /session  agent sessions create/list/get/rename/delete/messages
+//   - /agent/:sessionID/stream  SSE streaming generation
+//   - /status  AI status (availability + slot differences)
+//
+// Knowledge-document import needs S3 source storage and asynchronous parse-task enqueueing, so the
+// parent group mounts S3 (source read/write), object cache (source encrypt-upload/download/cleanup)
+// and the pipeline client (asynq parse-task enqueue) middlewares shared by the subroutes.
 func RegisterRoutes(ctx *views.RegisterContext) {
 	aiGroup := ctx.V1Group.Group(
 		"/ai",
-		ctx.Authenticator,
-		ctx.ForceAuthenticate,
-		ctx.Policy,
-		ctx.Namespace,
-		ctx.Authorize,
-		ctx.CoreDatabase,
-		ctx.FeatureRegistry,
-		ctx.Ai,
+		ctx.Authenticator,     // 认证器注入
+		ctx.ForceAuthenticate, // 强制JWT认证
+		ctx.Policy,            // RBAC策略引擎
+		ctx.Namespace,         // 命名空间隔离
+		ctx.Authorize,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.CoreDatabase,      // 核心库连接（知识库文档/会话持久化）
+		ctx.FeatureRegistry,   // 功能开关注册表
+		ctx.Ai,                // AI 助手组件（RAG 知识库 + Agent）
+		ctx.S3,                // S3 客户端（知识库原件读写）
+		ctx.ObjectCache,       // 对象缓存（原件加密上传/下载/清理）
+		ctx.PipelineClient,    // 管道投递客户端（解析任务入队）
 	)
 
 	// ========== 知识库文档：/api/v1/ai/doc ==========
@@ -36,6 +53,12 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	docGroup.POST("/create", KnowledgeDocumentCreate)
 	// 创建知识库文档元信息
 	docGroup.OPTIONS("/create", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[KnowledgeDocumentCreateIn]())))
+	// 导入知识库文档 - multipart 上传原件（流式加密存 S3）后投递异步解析任务
+	// Import a knowledge document - multipart upload of the source (stream-encrypted into S3), then enqueue an async parse task
+	docGroup.POST("/upload", KnowledgeDocumentUpload)
+	// 导入知识库文档元信息（multipart 输入无法用结构体描述，仅登记请求方法与出参）
+	// Import knowledge-document metadata (multipart input cannot be described by a struct; registers only the method and output)
+	docGroup.OPTIONS("/upload", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentUploadOut]())))
 	// 知识库文档详情查询 - 根据ID获取文档完整信息（标题/正文/分块数/摘要）
 	docGroup.POST("/:id/get", KnowledgeDocumentDetailGet)
 	// 知识库文档详情元信息
@@ -56,6 +79,12 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	docGroup.POST("/:id/chunks", KnowledgeDocumentChunksGet)
 	// 知识库文档分块明细元信息
 	docGroup.OPTIONS("/:id/chunks", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]())))
+	// 下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）
+	// Download a knowledge-document source file - decrypt the S3 source and stream it back as an attachment (binary stream, bypassing the unified JSON response wrapper)
+	docGroup.POST("/:id/download", KnowledgeDocumentDownload)
+	// 下载知识库文档原件元信息（二进制流响应不适配结构体元信息，仅登记请求方法）
+	// Download knowledge-document source metadata (the binary-stream response does not fit struct metadata; registers only the method)
+	docGroup.OPTIONS("/:id/download", views.StructMetaGinHandler(views.WithMethod(http.MethodPost)))
 
 	// ========== 知识库检索试运行：/api/v1/ai/retrieval ==========
 	// 知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估

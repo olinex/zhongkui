@@ -51,6 +51,29 @@ type KnowledgeDocument struct {
 	// Hash the sha256 hex digest of the document content, used to detect whether
 	// existing chunk indexes are stale
 	Hash string `gorm:"type:CHAR(64)"`
+	// Format 文档来源格式，取值来自枚举类 documentFormat；手工录入的文档为 markdown
+	// Format the source format of the document, its values come from the enum class
+	// documentFormat; manually entered documents are markdown
+	Format string `gorm:"type:VARCHAR(16)"`
+	// OriginalName 导入文档的原始文件名，手工录入的文档为空
+	// OriginalName the original file name of an imported document, empty for
+	// manually entered documents
+	OriginalName string `gorm:"type:VARCHAR(256)"`
+	// ObjectKey 原件在 S3 中的对象键，手工录入的文档为空
+	// ObjectKey the S3 object key of the source file, empty for manually entered
+	// documents
+	ObjectKey string `gorm:"type:VARCHAR(512)"`
+	// SizeBytes 原件字节数，手工录入的文档为 0
+	// SizeBytes the byte size of the source file, 0 for manually entered documents
+	SizeBytes int64 `gorm:"type:BIGINT"`
+	// Status 文档处理状态，取值来自枚举类 knowledgeDocStatus
+	// Status the processing status of the document, its values come from the enum
+	// class knowledgeDocStatus
+	Status string `gorm:"type:VARCHAR(16)"`
+	// ParseError 解析失败原因，解析成功或手工录入的文档为空
+	// ParseError the reason of a parse failure, empty on success or for manually
+	// entered documents
+	ParseError string `gorm:"type:TEXT"`
 }
 
 // KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元：

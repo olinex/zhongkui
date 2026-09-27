@@ -24,6 +24,7 @@ require (
 	github.com/jolestar/go-commons-pool/v2 v2.1.2
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.19.0
+	github.com/ledongthuc/pdf v0.0.0-20260907135840-6c8c28e0e8a0
 	github.com/mark3labs/mcp-go v0.43.0
 	github.com/minio/minio-go/v7 v7.0.95
 	github.com/ncruces/go-sqlite3 v0.35.4

@@ -42,6 +42,16 @@ export function knowledgeDocumentCreate(data: KnowledgeDocumentCreateIn): AxiosP
   });
 }
 
+// knowledgeDocumentUpload 导入文档原件：以 multipart/form-data 提交，字段 title 可选（缺省取
+// 文件名去扩展名）、file 必填。后端契约要求 file 必须为最后一个表单部分，故 FormData 构造时
+// 须最后 append file（与 apis/datasource.ts 的 buildCreateForm 范式一致）；出参 data 为
+// KnowledgeDocumentUploadOut（新建文档 id 与 pending 状态）。
+export function knowledgeDocumentUpload(formData: FormData): AxiosPromise {
+  return request.post("/ai/doc/upload", formData, {
+    headers: getJwtHeader(),
+  });
+}
+
 export function knowledgeDocumentDetailGet(id: number): AxiosPromise {
   return request.post(
     `/ai/doc/${id}/get`,
@@ -85,6 +95,23 @@ export function knowledgeDocumentChunksGet(id: number): AxiosPromise {
     {},
     {
       headers: getJwtHeader(),
+    },
+  );
+}
+
+// knowledgeDocumentDownload 下载导入文档原件：响应为二进制流（不走 getResponse 的 JSON 成功
+// 回调，由调用方直接处理 Blob；原件文件名在 Content-Disposition 响应头中）。仅导入文档可下载，
+// 手动录入文档返回 404。
+export function knowledgeDocumentDownload(id: number): AxiosPromise {
+  return request.post(
+    `/ai/doc/${id}/download`,
+    {},
+    {
+      headers: {
+        ...getJwtHeader(),
+        Accept: "application/octet-stream",
+      },
+      responseType: "blob",
     },
   );
 }
