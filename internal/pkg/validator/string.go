@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -577,10 +578,24 @@ func IsTrimmed(value string) bool {
 	return strings.TrimSpace(value) == value
 }
 
+// stringFieldValue 取出字符串类字段的值，支持具名 string 类型（如 pkg/llm 的枚举取值类型），
+// 使自定义标签（enum / httpUrl / jsonObject / trimmed）可直接施加于枚举字段；非 string 类的
+// 字段返回 false。
+// stringFieldValue extracts the value of a string-kind field; it supports named string types (such
+// as the enum value types of pkg/llm), letting the custom tags (enum / httpUrl / jsonObject /
+// trimmed) be applied to enum fields directly. A field of any other kind yields false.
+func stringFieldValue(fl validator.FieldLevel) (string, bool) {
+	f := fl.Field()
+	if f.Kind() != reflect.String {
+		return "", false
+	}
+	return f.String(), true
+}
+
 // ValidateEnum 是 enum 标签的验证函数，标签参数为 enum 注册表的类名，例如
 // `binding:"enum=mcpTransport"`。
 func ValidateEnum(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}
@@ -589,7 +604,7 @@ func ValidateEnum(fl validator.FieldLevel) bool {
 
 // ValidateHTTPURL 是 httpUrl 标签的验证函数。
 func ValidateHTTPURL(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}
@@ -598,7 +613,7 @@ func ValidateHTTPURL(fl validator.FieldLevel) bool {
 
 // ValidateJSONObject 是 jsonObject 标签的验证函数。
 func ValidateJSONObject(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}
@@ -607,7 +622,7 @@ func ValidateJSONObject(fl validator.FieldLevel) bool {
 
 // ValidateTrimmed 是 trimmed 标签的验证函数。
 func ValidateTrimmed(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}

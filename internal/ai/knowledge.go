@@ -25,6 +25,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // rrfK 是 RRF（Reciprocal Rank Fusion）融合的固定常数 k。
@@ -308,6 +309,8 @@ func WithWeights(weights FusionWeights) retriever.Option {
 // 经 RRF / weighted 融合后送入 LLM 重排取 TopK。重排按调用点声明的 flash 档位经
 // resolver 解析对话客户端；resolver 缺失（未注入）时跳过重排，直接返回融合排序前
 // TopK，flash 档位未绑定时返回明确英文错误而不切换到其他档位（见 Retrieve 注释）。
+// 每次检索命中后异步回写命中文档的使用统计（use_count / last_used_at），供知识库
+// 运营判断哪些文档真正被用到。
 // Retriever is the hybrid retriever of the knowledge base, implementing the eino
 // retriever.Retriever interface: the vector path (pgvector cosine distance) and the
 // keyword path (tsvector full-text search) each fetch candidates hits, which are fused
@@ -315,20 +318,23 @@ func WithWeights(weights FusionWeights) retriever.Option {
 // chat client through the resolver with the call-site-declared flash slot; when the
 // resolver is absent (not injected) the rerank is skipped and the fusion-ranked TopK is
 // returned directly, while an unbound flash slot yields an explicit English error instead
-// of switching to another slot (see the Retrieve comment).
+// of switching to another slot (see the Retrieve comment). After every retrieval the usage
+// statistics (use_count / last_used_at) of the hit documents are written back
+// asynchronously, so knowledge-base operators can tell which documents are really used.
 type Retriever struct {
 	db       *database.DB
 	embed    embedder
-	resolver ChatResolver // 可空：为空时跳过 LLM 重排与评估
-	params   *llm.Params  // 行为参数解析器（检索条数、融合、重排提示词与温度）
+	resolver ChatResolver    // 可空：为空时跳过 LLM 重排与评估
+	params   *llm.Params     // 行为参数解析器（检索条数、融合、重排提示词与温度）
+	logger   *logging.Logger // 可空：为 nil 时跳过告警日志
 }
 
 // NewRetriever 构造 Retriever；db/embed/params 任一为空时返回英文错误。resolver 可为
-// nil，此时检索跳过 LLM 重排（见 Retrieve 的说明）。
+// nil，此时检索跳过 LLM 重排（见 Retrieve 的说明）；logger 可为 nil（内部判空后再用）。
 // NewRetriever constructs a Retriever; a nil db, embedder or params returns an English
 // error. resolver may be nil, in which case retrieval skips the LLM rerank (see the note on
-// Retrieve).
-func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params *llm.Params) (*Retriever, error) {
+// Retrieve); logger may be nil (it is checked for nil before use).
+func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params *llm.Params, logger *logging.Logger) (*Retriever, error) {
 	if db == nil {
 		return nil, errors.New("retriever: nil database")
 	}
@@ -338,7 +344,7 @@ func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params
 	if params == nil {
 		return nil, errors.New("retriever: nil params")
 	}
-	return &Retriever{db: db, embed: embed, resolver: resolver, params: params}, nil
+	return &Retriever{db: db, embed: embed, resolver: resolver, params: params, logger: logger}, nil
 }
 
 // resolveRerankChat 按调用点声明的低档位（rerankSlot，即 flash）解析重排与评估使用的
@@ -436,16 +442,21 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 	if err != nil {
 		return nil, err
 	}
+	var docs []*schema.Document
 	if chat == nil {
-		return toSchemaDocuments(selectTopK(cands, o.TopK)), nil
+		docs = toSchemaDocuments(selectTopK(cands, o.TopK))
+	} else if ranked, rerankErr := r.rerank(ctx, chat, query, cands, o.TopK); rerankErr != nil {
+		// 重排失败（调用错误或 JSON 解析失败）：降级为融合排序前 TopK。
+		// Rerank failure (call error or JSON parse failure): degrade to the fusion-ranked TopK.
+		docs = toSchemaDocuments(selectTopK(cands, o.TopK))
+	} else {
+		docs = toSchemaDocuments(ranked)
 	}
-	// 重排失败（调用错误或 JSON 解析失败）：降级为融合排序前 TopK。
-	// Rerank failure (call error or JSON parse failure): degrade to the fusion-ranked TopK.
-	ranked, rerankErr := r.rerank(ctx, chat, query, cands, o.TopK)
-	if rerankErr != nil {
-		return toSchemaDocuments(selectTopK(cands, o.TopK)), nil
-	}
-	return toSchemaDocuments(ranked), nil
+	// 命中回写使用统计：仅统计最终返回的文档，异步执行且失败仅告警，不影响检索结果
+	// Write back the usage statistics of the hits: only the finally returned documents are
+	// counted, the write is asynchronous and its failure only warns without affecting the result
+	r.touchUsageAsync(ctx, docs)
+	return docs, nil
 }
 
 // DryRun 执行知识库 RAG dry-run：混合检索（参数可覆盖）→ 基于上下文生成回答 →
@@ -826,6 +837,18 @@ const (
 // The earlier hit wins — both the fusion and the rerank ranked it higher, and its content is
 // no less informative than the later one. Fewer than two hits are returned as-is.
 func dedupeSimilarResults(hits []*RetrievalResult) []*RetrievalResult {
+	return dedupeSimilarResultsWithCutoff(hits, dedupeSimilarityCutoff)
+}
+
+// dedupeSimilarResultsWithCutoff 是 dedupeSimilarResults 的阈值可变体：相似度阈值由调用方
+// 指定（长期记忆检索去重用参数 memory.dedupeThreshold），其余行为与 dedupeSimilarResults
+// 完全一致。既有 dedupeSimilarResults 以 dedupeSimilarityCutoff 委托本函数，行为不变。
+// dedupeSimilarResultsWithCutoff is the threshold-parameterized variant of
+// dedupeSimilarResults: the similarity cutoff is supplied by the caller (long-term memory
+// retrieval dedupe passes memory.dedupeThreshold) and every other behavior matches
+// dedupeSimilarResults. The existing dedupeSimilarResults delegates here with
+// dedupeSimilarityCutoff, keeping its behavior unchanged.
+func dedupeSimilarResultsWithCutoff(hits []*RetrievalResult, cutoff float64) []*RetrievalResult {
 	if len(hits) < 2 {
 		return hits
 	}
@@ -835,7 +858,7 @@ func dedupeSimilarResults(hits []*RetrievalResult) []*RetrievalResult {
 		shingles := contentShingles(hit.Content)
 		duplicated := false
 		for _, prev := range keptShingles {
-			if jaccardSimilarity(shingles, prev) >= dedupeSimilarityCutoff {
+			if jaccardSimilarityWithCutoff(shingles, prev, cutoff) >= cutoff {
 				duplicated = true
 				break
 			}
@@ -879,6 +902,18 @@ func contentShingles(content string) map[string]struct{} {
 // min(|A|,|B|)/max(|A|,|B|), so a pair below the threshold returns 0 without computing the
 // full intersection (bodies of very different lengths are the vast majority of pairs).
 func jaccardSimilarity(a, b map[string]struct{}) float64 {
+	return jaccardSimilarityWithCutoff(a, b, dedupeSimilarityCutoff)
+}
+
+// jaccardSimilarityWithCutoff 是 jaccardSimilarity 的阈值可变体：上限剪枝所用的阈值由调用方
+// 指定（长期记忆检索去重用参数 memory.dedupeThreshold），其余计算与 jaccardSimilarity 完全
+// 一致。既有 jaccardSimilarity 以 dedupeSimilarityCutoff 委托本函数，行为不变。
+// jaccardSimilarityWithCutoff is the threshold-parameterized variant of jaccardSimilarity: the
+// cutoff used by the upper-bound prune is supplied by the caller (long-term memory retrieval
+// dedupe passes memory.dedupeThreshold) and the rest of the computation matches
+// jaccardSimilarity. The existing jaccardSimilarity delegates here with dedupeSimilarityCutoff,
+// keeping its behavior unchanged.
+func jaccardSimilarityWithCutoff(a, b map[string]struct{}, cutoff float64) float64 {
 	if len(a) == 0 || len(b) == 0 {
 		return 0
 	}
@@ -886,7 +921,7 @@ func jaccardSimilarity(a, b map[string]struct{}) float64 {
 	if small > large {
 		small, large = large, small
 	}
-	if float64(small)/float64(large) < dedupeSimilarityCutoff {
+	if float64(small)/float64(large) < cutoff {
 		return 0
 	}
 	var overlap int
@@ -929,6 +964,84 @@ func toSchemaDocuments(results []*RetrievalResult) []*schema.Document {
 		})
 	}
 	return out
+}
+
+// TouchUsage 递增给定知识文档的 use_count 与 last_used_at；ids 为空直接返回 nil。
+// 语义与长期记忆的 MemoryStore.TouchUsage 一致，供检索命中后回写使用统计。
+// TouchUsage increments use_count and last_used_at of the given knowledge documents; an
+// empty ids slice returns nil directly. Its semantics match MemoryStore.TouchUsage of the
+// long-term memory, and it is used to write back the usage statistics after a retrieval hit.
+func (r *Retriever) TouchUsage(ctx context.Context, ids []uint) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	if err := r.db.WithContext(ctx).Model(&ai.KnowledgeDocument{}).
+		Where("id IN ?", ids).
+		Updates(map[string]any{
+			"use_count":    gorm.Expr("use_count + 1"),
+			"last_used_at": gorm.Expr("NOW()"),
+		}).Error; err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
+// touchUsageAsync 以命中文档 ID 异步回写使用统计（每篇命中文档一次自增）：无 ID 时直接返回，
+// 写入失败仅告警、绝不中断或影响检索结果。长期记忆与知识库采用同一策略：使用统计是增强信息，
+// 不能因它失败而让生成/检索失败。
+// touchUsageAsync writes back the usage statistics of the hit documents asynchronously (one
+// increment per hit document): it returns directly when there is no id, and a write failure only
+// warns without ever interrupting or affecting the retrieval result. The long-term memory and the
+// knowledge base share this policy: the usage statistics are enhancement information and must
+// never fail a generation or a retrieval.
+func (r *Retriever) touchUsageAsync(ctx context.Context, docs []*schema.Document) {
+	ids := documentIDsOf(docs)
+	if len(ids) == 0 {
+		return
+	}
+	go func() {
+		if err := r.TouchUsage(ctx, ids); err != nil {
+			r.warnf(ctx, "retriever: touch document usage failed: %v", err)
+		}
+	}()
+}
+
+// documentIDsOf 从检索结果中提取去重后的文档 ID：MetaData 的 documentID 为字符串形式，
+// 解析失败或缺失的条目直接跳过，保证非数字 ID 不会污染统计。
+// documentIDsOf extracts the deduplicated document ids of the retrieval results: the documentID
+// in MetaData is a string, and an entry that fails to parse or is missing is skipped so a
+// non-numeric id never pollutes the statistics.
+func documentIDsOf(docs []*schema.Document) []uint {
+	ids := make([]uint, 0, len(docs))
+	seen := make(map[uint]struct{}, len(docs))
+	for _, doc := range docs {
+		if doc == nil || doc.MetaData == nil {
+			continue
+		}
+		raw, ok := doc.MetaData["documentID"].(string)
+		if !ok {
+			continue
+		}
+		id, err := strconv.ParseUint(raw, 10, 64)
+		if err != nil || id == 0 {
+			continue
+		}
+		if _, dup := seen[uint(id)]; dup {
+			continue
+		}
+		seen[uint(id)] = struct{}{}
+		ids = append(ids, uint(id))
+	}
+	return ids
+}
+
+// warnf 在 logger 非空时输出告警。
+// warnf emits a warning when the logger is non-nil.
+func (r *Retriever) warnf(ctx context.Context, format string, args ...any) {
+	if r.logger == nil {
+		return
+	}
+	r.logger.Ctx(ctx).Warnf(format, args...)
 }
 
 // ToRetrievalResults 从 eino schema.Document 列表（MetaData 携带 documentID/title/

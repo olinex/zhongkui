@@ -22,7 +22,6 @@ import (
 	"github.com/gopacket/gopacket/pcap"
 	. "github.com/smartystreets/goconvey/convey"
 	"zhongkui.com/zhongkui/internal/models/network"
-	n "zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
@@ -51,7 +50,7 @@ func extractPackets[P TCPPacket](ctx context.Context, path string, srcChan chan<
 		// if tl == nil || tl.LayerType() != layers.LayerTypeTCP {
 		// 	continue
 		// }
-		builder := n.NewPacketModelBuilder(packet, SessionID, source)
+		builder := network.NewPacketModelBuilder(packet, SessionID, source)
 		model := builder.BuildAsPacketModel()
 		if tcpPacket, ok := model.(P); ok {
 			select {

@@ -104,7 +104,7 @@ func (l *LayerStack) Scan(value any) error {
 // FrameInfo 表示数据包的帧信息
 // 包含时间戳和对应的网络层堆栈信息
 type FrameInfo struct {
-	Timestamp  time.Time  `json:"timestamp"`   // 数据包捕获时间戳
+	Timestamp  time.Time  `json:"timestamp"`  // 数据包捕获时间戳
 	LayerStack LayerStack `json:"layerStack"` // 网络层堆栈信息
 }
 
@@ -129,7 +129,7 @@ type RowMeta struct {
 // TimestampMeta 表示时间元数据
 // 包含采集时间与入库时间，使用高精度时间格式存储
 type TimestampMeta struct {
-	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"`  // 采集时间：数据包被捕获的时刻
+	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"` // 采集时间：数据包被捕获的时刻
 	CreatedAt time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"createdAt"` // 入库时间：数据写入数据库的时刻
 }
 

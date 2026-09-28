@@ -125,11 +125,11 @@ func TestDistanceMSS(t *testing.T) {
 func TestDistanceWindowSize(t *testing.T) {
 	mss := ptr16(1460)
 	cases := []struct {
-		name          string
-		obs, sig      windowSize
-		obsMSS        *uint16
-		want          uint32
-		wantNil       bool
+		name     string
+		obs, sig windowSize
+		obsMSS   *uint16
+		want     uint32
+		wantNil  bool
 	}{
 		{"mss equal", windowSize{kind: winMss, value: 10}, windowSize{kind: winMss, value: 10}, nil, 0, false},
 		{"mss differ", windowSize{kind: winMss, value: 10}, windowSize{kind: winMss, value: 5}, nil, 2, false},

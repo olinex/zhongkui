@@ -4,7 +4,6 @@ import (
 	// stdlib
 
 	"io"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -254,7 +253,7 @@ func DatasourceCreate(c *gin.Context) {
 		return
 	}
 	if !isSupportedDatasourceType(in.Type) {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
+		response.CreateBadBodyError(nil).AbortWithGinH(c)
 		return
 	}
 	pools := middlewares.GetSQLiteVTabPools(c)

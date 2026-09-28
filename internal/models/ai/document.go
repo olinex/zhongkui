@@ -13,7 +13,11 @@
 package ai
 
 import (
+	// stdlib
+
 	// third-party
+	"time"
+
 	"gorm.io/gorm"
 
 	// internal
@@ -51,6 +55,14 @@ type KnowledgeDocument struct {
 	// Hash the sha256 hex digest of the document content, used to detect whether
 	// existing chunk indexes are stale
 	Hash string `gorm:"type:CHAR(64)"`
+	// UseCount 该文档的分块被检索命中的次数，默认 0
+	// UseCount the number of times the document has been recalled by retrieval
+	// (one increment per retrieval that hits any of its chunks), default 0
+	UseCount int `gorm:"type:INT"`
+	// LastUsedAt 最近一次被检索命中的时间，可空（从未命中为 NULL）
+	// LastUsedAt the last time the document was recalled by retrieval, nullable
+	// (NULL when never used)
+	LastUsedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
 }
 
 // KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元：

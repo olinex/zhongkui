@@ -13,13 +13,13 @@ import (
 // 新增模型的加密/S3 字段：RegisterPlaintextModel 注册模型 + 补模板种子即可，无需新增接口。
 func RegisterRoutes(ctx *views.RegisterContext) {
 	plaintextGroup := ctx.V1Group.Group(
-		"/plaintext",                    // 明文查看接口路径前缀
-		ctx.Authenticator,               // 认证器注入
-		ctx.ForceAuthenticate,           // 强制JWT认证
-		ctx.Policy,                      // RBAC策略引擎
-		ctx.Namespace,                   // 命名空间隔离
-		ctx.Authorize,                   // 权限验证（api:{FullPath} + HTTP 方法动态授权）
-		ctx.S3,                          // S3 客户端（S3 body 明文读取）
+		"/plaintext",          // 明文查看接口路径前缀
+		ctx.Authenticator,     // 认证器注入
+		ctx.ForceAuthenticate, // 强制JWT认证
+		ctx.Policy,            // RBAC策略引擎
+		ctx.Namespace,         // 命名空间隔离
+		ctx.Authorize,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.S3,                // S3 客户端（S3 body 明文读取）
 	)
 	// 加密字段明文解密 - 请求携带模型注册名 + 字段 + base64 密文，按字段权限点静态授权后返回明文
 	plaintextGroup.POST("/crypto", CryptoPlaintextGet)

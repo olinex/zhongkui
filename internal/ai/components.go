@@ -45,6 +45,10 @@ type Components struct {
 	// Sessions 会话持久化（AI 未启用时为 nil）
 	// Sessions the session persistence (nil when AI is disabled)
 	Sessions *SessionStore
+	// Memory 会话记忆服务（滚动摘要 / 会话压缩 / 长期记忆检索；AI 未启用时为 nil）
+	// Memory the session memory service (rolling summary / session compaction / long-term memory
+	// retrieval; nil when AI is disabled)
+	Memory *Memory
 	// Params 行为参数解析器（始终非 nil）
 	// Params the behavior-parameter resolver (always non-nil)
 	Params *llm.Params
@@ -60,5 +64,5 @@ type Components struct {
 // Enabled reports whether the AI capability is fully assembled (false when disabled
 // or partially assembled).
 func (c *Components) Enabled() bool {
-	return c != nil && c.Agent != nil && c.Knowledge != nil && c.Sessions != nil && c.Params != nil && c.Tools != nil
+	return c != nil && c.Agent != nil && c.Knowledge != nil && c.Sessions != nil && c.Memory != nil && c.Params != nil && c.Tools != nil
 }

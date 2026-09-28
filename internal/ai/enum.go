@@ -1,17 +1,22 @@
 // 本文件把 dry-run 评估的阶段、阶段状态与改进建议归类注册为枚举类 evalStage / evalStageStatus /
-// diagnosisCategory。三个取值空间的唯一来源是本包 eval.go 内的类型化常量，故此处不重复声明字面量：
-// 取值序列按常量声明顺序就地复用为条目来源，条目在包内 init 注册时快照。类名须与前端
-// utils/enums.ts 的 EnumClass 成员、i18n 键 enum.<类名>.<key> 以及消费方引用一致。助手页的工具调用
-// 阶段（toolCall / toolResult）与知识库页的阶段同属 EvalStage 类型，共用 evalStage 一个枚举类。
+// diagnosisCategory。取值空间的唯一来源是本包 eval.go 内的类型化常量，故不重复声明字面量：取值
+// 序列按常量声明顺序就地复用为条目来源，条目在包内 init 注册时快照。类名须与前端 utils/enums.ts 的
+// EnumClass 成员、i18n 键 enum.<类名>.<key> 以及消费方引用一致。助手页的工具调用阶段
+// （toolCall / toolResult）与知识库页的阶段同属 EvalStage 类型，共用 evalStage 一个枚举类。
+// 长期记忆类别/状态（memoryKind / memoryStatus）的枚举类注册已随其类型迁至 internal/pkg/llm
+// （见该包的 enum.go 与 memory.go），本包统一引用该包的类型与常量。
 //
 // This file registers the dry-run evaluation stages, stage statuses and improvement suggestion
 // categories as the enum classes evalStage / evalStageStatus / diagnosisCategory. The single source of
-// all three value spaces is the typed constants in eval.go of this package, so no literal is repeated
-// here: each value sequence is reused in constant declaration order as the entry source and the entries
-// are snapshotted by an in-package init. The class names must match the frontend EnumClass members in
-// utils/enums.ts, the enum.<class>.<key> i18n keys and the references of consumers. The tool-call stages
-// of the assistant page (toolCall / toolResult) belong to the same EvalStage type as the knowledge page
-// stages and share the single evalStage class.
+// these value spaces is the typed constants in eval.go of this package, so no literal is repeated
+// here: each value sequence is reused in constant declaration order as the entry source and the
+// entries are snapshotted by an in-package init. The class names must match the frontend EnumClass
+// members in utils/enums.ts, the enum.<class>.<key> i18n keys and the references of consumers. The
+// tool-call stages of the assistant page (toolCall / toolResult) belong to the same EvalStage type as
+// the knowledge page stages and share the single evalStage class. The enum class registration of the
+// long-term memory kind/status (memoryKind / memoryStatus) moved to internal/pkg/llm together with
+// their types (see enum.go and memory.go of that package); this package references those types and
+// constants.
 package ai
 
 import (
@@ -53,9 +58,11 @@ var diagnosisCategoryValues = []DiagnosisCategory{
 	DiagnosisCategoryOther,
 }
 
-// init 注册枚举类 evalStage / evalStageStatus / diagnosisCategory（取值空间固定，条目在注册时快照）。
-// init registers the enum classes evalStage / evalStageStatus / diagnosisCategory (fixed value spaces,
-// their entries snapshotted at registration time).
+// init 注册枚举类 evalStage / evalStageStatus / diagnosisCategory（取值空间固定，条目在注册时
+// 快照）。评估阶段、阶段状态与改进建议归类的取值常量同处 eval.go，保持单一来源。
+// init registers the enum classes evalStage / evalStageStatus / diagnosisCategory (fixed value
+// spaces, their entries snapshotted at registration time). The typed constants of the evaluation
+// stages, stage statuses and suggestion categories live in eval.go, keeping a single source.
 func init() {
 	enum.Register(enum.Type{Name: "evalStage", Entries: enum.EntriesOf(evalStageValues)})
 	enum.Register(enum.Type{Name: "evalStageStatus", Entries: enum.EntriesOf(evalStageStatusValues)})

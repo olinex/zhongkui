@@ -14,6 +14,7 @@ import (
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // newTestSessionDB 构造会话测试用的 sqlite 内存库并迁移会话/消息两张表。
@@ -47,11 +48,11 @@ func TestSessionStore_CreateGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	session, err := store.CreateSession(context.Background(), "default", "首轮对话", "gpt-4o")
+	session, err := store.CreateSession(context.Background(), "default", "首轮对话", "gpt-4o", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	if session.ID == 0 || session.Status != SessionStatusActive {
+	if session.ID == 0 || session.Status != llm.SessionStatusActive {
 		t.Fatalf("CreateSession() = %+v, want non-zero ID and active status", session)
 	}
 	got, err := store.GetSession(context.Background(), session.ID)
@@ -76,11 +77,11 @@ func TestSessionStore_ListSessions(t *testing.T) {
 	}
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		if _, err := store.CreateSession(ctx, "default", "s", "m"); err != nil {
+		if _, err := store.CreateSession(ctx, "default", "s", "m", "knowledge"); err != nil {
 			t.Fatalf("CreateSession error = %v", err)
 		}
 	}
-	if _, err := store.CreateSession(ctx, "other", "s", "m"); err != nil {
+	if _, err := store.CreateSession(ctx, "other", "s", "m", "knowledge"); err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	all, err := store.ListSessions(ctx, "default", 0, 0)
@@ -113,7 +114,7 @@ func TestSessionStore_RenameAndStatus(t *testing.T) {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
 	ctx := context.Background()
-	session, err := store.CreateSession(ctx, "default", "old", "m")
+	session, err := store.CreateSession(ctx, "default", "old", "m", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
@@ -124,18 +125,18 @@ func TestSessionStore_RenameAndStatus(t *testing.T) {
 	if renamed.Title != "new title" {
 		t.Errorf("RenameSession() title = %q, want %q", renamed.Title, "new title")
 	}
-	archived, err := store.SetSessionStatus(ctx, session.ID, SessionStatusArchived)
+	archived, err := store.SetSessionStatus(ctx, session.ID, llm.SessionStatusArchived)
 	if err != nil {
 		t.Fatalf("SetSessionStatus error = %v", err)
 	}
-	if archived.Status != SessionStatusArchived {
-		t.Errorf("SetSessionStatus() status = %q, want %q", archived.Status, SessionStatusArchived)
+	if archived.Status != llm.SessionStatusArchived {
+		t.Errorf("SetSessionStatus() status = %q, want %q", archived.Status, llm.SessionStatusArchived)
 	}
 	got, err := store.GetSession(ctx, session.ID)
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if got.Title != "new title" || got.Status != SessionStatusArchived {
+	if got.Title != "new title" || got.Status != llm.SessionStatusArchived {
 		t.Errorf("GetSession() = %+v, want the renamed and archived session", got)
 	}
 }
@@ -151,13 +152,13 @@ func TestSessionStore_DeleteCascadesMessages(t *testing.T) {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
 	ctx := context.Background()
-	session, err := store.CreateSession(ctx, "default", "t", "m")
+	session, err := store.CreateSession(ctx, "default", "t", "m", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
-			SessionID: session.ID, NamespaceName: "default", Role: MessageRoleUser, Content: "q",
+			SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleUser, Content: "q",
 		}); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
@@ -190,11 +191,11 @@ func TestSessionStore_Messages(t *testing.T) {
 		t.Fatal("AppendMessage(nil) = nil error, want an error")
 	}
 	ctx := context.Background()
-	session, err := store.CreateSession(ctx, "default", "t", "m")
+	session, err := store.CreateSession(ctx, "default", "t", "m", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	appendMsg := func(role, content string) {
+	appendMsg := func(role llm.MessageRole, content string) {
 		t.Helper()
 		if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
 			SessionID: session.ID, NamespaceName: "default", Role: role, Content: content,
@@ -202,9 +203,9 @@ func TestSessionStore_Messages(t *testing.T) {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
 	}
-	appendMsg(MessageRoleUser, "u1")
-	appendMsg(MessageRoleAssistant, "a1")
-	appendMsg(MessageRoleUser, "u2")
+	appendMsg(llm.MessageRoleUser, "u1")
+	appendMsg(llm.MessageRoleAssistant, "a1")
+	appendMsg(llm.MessageRoleUser, "u2")
 
 	all, err := store.ListMessages(ctx, session.ID, 0, 0)
 	if err != nil {

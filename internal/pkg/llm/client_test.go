@@ -14,7 +14,7 @@ import (
 // and case are tolerated), while embedding and unknown values are invalid.
 func TestParseChatSlot(t *testing.T) {
 	cases := []struct {
-		value string
+		value Slot
 		want  Slot
 		ok    bool
 	}{

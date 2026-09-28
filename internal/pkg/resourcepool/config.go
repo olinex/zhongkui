@@ -51,14 +51,14 @@ type Config struct {
 // stale connections are rebuilt on borrow.
 func NewDefaultConfig() *Config {
 	return &Config{
-		MaxTotal:               8,
-		MaxIdle:                4,
-		MinIdle:                0,
-		TestOnCreate:           true,
-		TestOnBorrow:           true,
-		TestOnReturn:           false,
-		BlockWhenExhausted:     true,
-		MinEvictableIdleTime:   30 * time.Second,
+		MaxTotal:                8,
+		MaxIdle:                 4,
+		MinIdle:                 0,
+		TestOnCreate:            true,
+		TestOnBorrow:            true,
+		TestOnReturn:            false,
+		BlockWhenExhausted:      true,
+		MinEvictableIdleTime:    30 * time.Second,
 		TimeBetweenEvictionRuns: 10 * time.Second,
 	}
 }

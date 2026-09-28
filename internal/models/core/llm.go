@@ -29,6 +29,7 @@ import (
 
 	// internal
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
@@ -50,7 +51,7 @@ type LlmModel struct {
 	Name string `gorm:"type:VARCHAR(64);uniqueIndex:uq_llm_models_name"`
 	// Kind 模型类型：chat（对话）| embedding（向量化），取值见视图层 llmModelKind 枚举类
 	// Kind the kind of the model: chat | embedding, valued from the llmModelKind enum class
-	Kind string `gorm:"type:VARCHAR(16);index:idx_llm_models_kind"`
+	Kind llm.ModelKind `gorm:"type:VARCHAR(16);index:idx_llm_models_kind"`
 	// BaseURL 模型端点的基地址（OpenAI 兼容 API），如 https://api.openai.com/v1
 	// BaseURL the base address of the model endpoint (OpenAI compatible API),
 	// e.g. https://api.openai.com/v1
@@ -117,7 +118,7 @@ type LlmBinding struct {
 
 	// Slot 档位槽位：flash | standard | advanced | embedding，全局唯一（uq_llm_bindings_slot）
 	// Slot the slot: flash | standard | advanced | embedding, globally unique (uq_llm_bindings_slot)
-	Slot string `gorm:"type:VARCHAR(16);uniqueIndex:uq_llm_bindings_slot"`
+	Slot llm.Slot `gorm:"type:VARCHAR(16);uniqueIndex:uq_llm_bindings_slot"`
 	// ModelID 绑定的模型记录 ID（llm_models.id）
 	// ModelID the id of the bound model record (llm_models.id)
 	ModelID uint `gorm:"type:BIGINT;index:idx_llm_bindings_model_id"`
@@ -240,7 +241,7 @@ type LlmTool struct {
 	// internal/pkg/llm）
 	// Source the tool source: builtin | mcp, valued from llm.ToolSource (the llmToolSource enum
 	// class, declared in internal/pkg/llm)
-	Source string `gorm:"type:VARCHAR(16);index:idx_llm_tools_source"`
+	Source llm.ToolSource `gorm:"type:VARCHAR(16);index:idx_llm_tools_source"`
 	// McpServerID 所属 MCP 服务器的 ID（llm_tools.mcp_server_id），可空：source='mcp' 时
 	// 非空、source='builtin' 时为空
 	// McpServerID the id of the owning MCP server (mcp_servers.id), nullable: non-null when

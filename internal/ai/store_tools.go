@@ -140,7 +140,7 @@ func (s *Store) LoadTools(ctx context.Context, logger *logging.Logger) (*ToolSet
 	}
 	for i := range rows {
 		row := &rows[i]
-		switch llm.ToolSource(row.Source) {
+		switch row.Source {
 		case llm.ToolSourceBuiltin:
 			s.appendBuiltinTool(ctx, set, logger, row)
 		case llm.ToolSourceMCP:
@@ -190,7 +190,7 @@ func (s *Store) groupMCPRows(set *ToolSet, rows []coremodel.LlmTool) ([]*mcpGrou
 	byServer := make(map[uint]*mcpGroup)
 	for i := range rows {
 		row := &rows[i]
-		if llm.ToolSource(row.Source) != llm.ToolSourceMCP {
+		if row.Source != llm.ToolSourceMCP {
 			continue
 		}
 		if row.McpServerID == nil || row.McpServer == nil {

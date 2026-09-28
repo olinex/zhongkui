@@ -1,8 +1,6 @@
 //go:build !profile
 // +build !profile
 
-
-
 package test
 
 var Tracer = NewStageTracer()

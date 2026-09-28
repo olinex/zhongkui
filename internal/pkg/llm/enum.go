@@ -1,16 +1,21 @@
-// 本文件把 LLM 模型类型、档位槽位、工具来源与分块结构单元注册为枚举类 llmModelKind / llmSlot /
-// llmToolSource / chunkUnitKind。四类取值空间均以本包已有的单一来源为准，故此处不重复声明：
-// 模型类型取自 ModelKind 常量、档位取自 AllSlots 清单、分块结构单元取自 chunker.go 的
-// chunkUnitKindValues；工具来源（llm_tools.source）的取值常量在本文件声明（此前散落为字面量），
-// 与工具注册表（ToolSpecs）同包。类名须与 search.toml 字段绑定的引用一致。
+// 本文件把 LLM 模型类型、档位槽位、工具来源、分块结构单元、Agent 类型与记忆类别/状态注册为枚举类
+// llmModelKind / llmSlot / llmToolSource / chunkUnitKind / agentKind / memoryKind / memoryStatus。七类
+// 取值空间均以本包已有的单一来源为准，故此处不重复声明：模型类型取自 ModelKind 常量、档位取自
+// AllSlots 清单、分块结构单元取自 chunker.go 的 chunkUnitKindValues、Agent 类型取自 agent.go 的
+// agentKindValues、记忆类别/状态取自 memory.go 的 memoryKindValues / memoryStatusValues；工具来源
+// （llm_tools.source）的取值常量在本文件声明（此前散落为字面量），与工具注册表（ToolSpecs）同包。
+// 类名须与 search.toml 字段绑定的引用一致。
 //
-// This file registers the LLM model kinds, slots, tool sources and chunk structural unit kinds as the
-// enum classes llmModelKind / llmSlot / llmToolSource / chunkUnitKind. All four value spaces follow the
-// single source this package already holds, so nothing is repeated here: the model kinds come from the
-// ModelKind constants, the slots from the AllSlots catalog and the chunk structural unit kinds from
-// chunkUnitKindValues in chunker.go; the tool source (llm_tools.source) constants are declared in this
-// file (they used to be scattered literals), in the same package as the tool registry (ToolSpecs). The
-// class names must match the references in the search.toml field bindings.
+// This file registers the LLM model kinds, slots, tool sources, chunk structural unit kinds, agent
+// kinds and memory kind/status as the enum classes llmModelKind / llmSlot / llmToolSource /
+// chunkUnitKind / agentKind / memoryKind / memoryStatus. All seven value spaces follow the single
+// source this package already holds, so nothing is repeated here: the model kinds come from the
+// ModelKind constants, the slots from the AllSlots catalog, the chunk structural unit kinds from
+// chunkUnitKindValues in chunker.go, the agent kinds from agentKindValues in agent.go and the memory
+// kind/status from memoryKindValues / memoryStatusValues in memory.go; the tool source
+// (llm_tools.source) constants are declared in this file (they used to be scattered literals), in the
+// same package as the tool registry (ToolSpecs). The class names must match the references in the
+// search.toml field bindings.
 package llm
 
 import (
@@ -46,16 +51,24 @@ var modelKindValues = []ModelKind{ModelKindChat, ModelKindEmbedding}
 // entry order of the enum class and the display order of the frontend select.
 var toolSourceValues = []ToolSource{ToolSourceBuiltin, ToolSourceMCP}
 
-// init 注册枚举类 llmModelKind / llmSlot / llmToolSource / chunkUnitKind（取值空间固定，条目在
-// 注册时快照）。llmSlot 的取值空间直接复用 AllSlots 清单，档位成员仍只在该清单一处声明；
-// chunkUnitKind 复用 chunkUnitKindValues，分块结构单元成员仍只在 chunker.go 一处声明。
-// init registers the enum classes llmModelKind / llmSlot / llmToolSource / chunkUnitKind (fixed value
-// spaces, their entries snapshotted at registration time). The llmSlot value space reuses the AllSlots
-// catalog, so the slot members stay declared only there; chunkUnitKind reuses chunkUnitKindValues, so
-// the chunk structural unit members stay declared only in chunker.go.
+// init 注册枚举类 llmModelKind / llmSlot / llmToolSource / chunkUnitKind / agentKind / memoryKind /
+// memoryStatus（取值空间固定，条目在注册时快照）。llmSlot 的取值空间直接复用 AllSlots 清单，档位
+// 成员仍只在该清单一处声明；chunkUnitKind 复用 chunkUnitKindValues，分块结构单元成员仍只在
+// chunker.go 一处声明；agentKind 复用 agentKindValues，Agent 类型成员仍只在 agent.go 一处声明；
+// memoryKind / memoryStatus 复用 memory.go 的两份取值序列，记忆类别/状态成员仍只在该文件一处声明。
+// init registers the enum classes llmModelKind / llmSlot / llmToolSource / chunkUnitKind / agentKind /
+// memoryKind / memoryStatus (fixed value spaces, their entries snapshotted at registration time). The
+// llmSlot value space reuses the AllSlots catalog, so the slot members stay declared only there;
+// chunkUnitKind reuses chunkUnitKindValues, so the chunk structural unit members stay declared only in
+// chunker.go; agentKind reuses agentKindValues, so the agent kind members stay declared only in
+// agent.go; memoryKind / memoryStatus reuse the two value sequences in memory.go, so the memory
+// kind/status members stay declared only in that file.
 func init() {
 	enum.Register(enum.Type{Name: "llmModelKind", Entries: enum.EntriesOf(modelKindValues)})
 	enum.Register(enum.Type{Name: "llmSlot", Entries: enum.EntriesOf(AllSlots)})
 	enum.Register(enum.Type{Name: "llmToolSource", Entries: enum.EntriesOf(toolSourceValues)})
 	enum.Register(enum.Type{Name: "chunkUnitKind", Entries: enum.EntriesOf(chunkUnitKindValues)})
+	enum.Register(enum.Type{Name: "agentKind", Entries: enum.EntriesOf(agentKindValues)})
+	enum.Register(enum.Type{Name: "memoryKind", Entries: enum.EntriesOf(memoryKindValues)})
+	enum.Register(enum.Type{Name: "memoryStatus", Entries: enum.EntriesOf(memoryStatusValues)})
 }

@@ -46,7 +46,7 @@ func seedSyncServer(t *testing.T, db *gorm.DB, name string) *core.McpServer {
 // seedSyncTool inserts one llm_tools row and returns its record.
 func seedSyncTool(t *testing.T, db *gorm.DB, name string, source pkgllm.ToolSource, serverID *uint, remoteName, description string, enabled bool) *core.LlmTool {
 	t.Helper()
-	row := &core.LlmTool{Name: name, Source: string(source), McpServerID: serverID, RemoteName: remoteName, Description: description, Enabled: enabled}
+	row := &core.LlmTool{Name: name, Source: source, McpServerID: serverID, RemoteName: remoteName, Description: description, Enabled: enabled}
 	if err := db.Create(row).Error; err != nil {
 		t.Fatalf("seed tool %q error = %v", name, err)
 	}
@@ -95,7 +95,7 @@ func TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans(t *testing.T) {
 	if b.Enabled {
 		t.Error("tool-b enabled = true, want false (a newly discovered tool is disabled)")
 	}
-	if b.Source != string(pkgllm.ToolSourceMCP) || b.McpServerID == nil || *b.McpServerID != server.ID || b.RemoteName != "tool-b" {
+	if b.Source != pkgllm.ToolSourceMCP || b.McpServerID == nil || *b.McpServerID != server.ID || b.RemoteName != "tool-b" {
 		t.Errorf("tool-b row = %+v, want source=mcp with the owning server and remote_name", b)
 	}
 
@@ -139,7 +139,7 @@ func TestReconcileMCPTools_RejectsConsistencyViolation(t *testing.T) {
 	db := newSyncTestDB(t)
 	server := seedSyncServer(t, db, "srv-a")
 	// 绕过创建期约束直接落一行违反不变量的脏数据（source=mcp 但无 mcp_server_id）。
-	if err := db.Create(&core.LlmTool{Name: "dirty", Source: string(pkgllm.ToolSourceMCP), RemoteName: "dirty"}).Error; err != nil {
+	if err := db.Create(&core.LlmTool{Name: "dirty", Source: pkgllm.ToolSourceMCP, RemoteName: "dirty"}).Error; err != nil {
 		t.Fatalf("seed dirty row error = %v", err)
 	}
 	if _, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{{Name: "clean"}}); err == nil {

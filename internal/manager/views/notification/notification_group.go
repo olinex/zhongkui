@@ -2,7 +2,6 @@ package notification
 
 import (
 	// stdlib
-	"net/http"
 	"strconv"
 
 	// third-party
@@ -300,8 +299,8 @@ func NotificationGroupCreate(c *gin.Context) {
 		return nil
 	}); err != nil {
 		if errors.Is(err, errNotificationGroupTargetInvalid) {
-			// 目标缺失或跨命名空间：CreateBadBodyError 仅接受 validator.ValidationErrors，此处直接用 CodeBadBody 构造 400 响应
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
+			// 目标缺失或跨命名空间：返回 400 且不透出内部哨兵错误详情
+			response.CreateBadBodyError(nil).AbortWithGinH(c)
 			return
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -352,8 +351,8 @@ func NotificationGroupUpdate(c *gin.Context) {
 		return nil
 	}); err != nil {
 		if errors.Is(err, errNotificationGroupTargetInvalid) {
-			// 目标缺失或跨命名空间：CreateBadBodyError 仅接受 validator.ValidationErrors，此处直接用 CodeBadBody 构造 400 响应
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
+			// 目标缺失或跨命名空间：返回 400 且不透出内部哨兵错误详情
+			response.CreateBadBodyError(nil).AbortWithGinH(c)
 			return
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)

@@ -3,7 +3,6 @@ package ai
 import (
 	// stdlib
 	"fmt"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -31,6 +30,10 @@ type KnowledgeDocumentItemOut struct {
 	Title string `json:"title"`
 	// ChunkCount 文档被切分的知识分块数量
 	ChunkCount int `json:"chunkCount"`
+	// UseCount 该文档被检索命中的次数
+	UseCount int `json:"useCount"`
+	// LastUsedAt 最近一次被检索命中的时间，从未命中时为空
+	LastUsedAt *time.Time `json:"lastUsedAt"`
 	// CreatedAt 创建时间
 	CreatedAt time.Time `json:"createdAt"`
 	// UpdatedAt 更新时间
@@ -71,6 +74,10 @@ type KnowledgeDocumentDetailOut struct {
 	Content string `json:"content"`
 	// ChunkCount 文档被切分的知识分块数量
 	ChunkCount int `json:"chunkCount"`
+	// UseCount 该文档被检索命中的次数
+	UseCount int `json:"useCount"`
+	// LastUsedAt 最近一次被检索命中的时间，从未命中时为空
+	LastUsedAt *time.Time `json:"lastUsedAt"`
 	// Hash 文档内容的 sha256 十六进制摘要
 	Hash string `json:"hash"`
 	// CreatedAt 创建时间
@@ -158,7 +165,7 @@ func KnowledgeDocumentCreate(c *gin.Context) {
 	}
 	comps := middlewares.GetAi(c)
 	if comps.Knowledge == nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.New("ai feature is disabled")).AbortWithGinH(c)
 		return
 	}
 	if err := comps.Knowledge.IndexDocument(c, doc); err != nil {
@@ -196,6 +203,8 @@ func KnowledgeDocumentDetailGet(c *gin.Context) {
 		Title:      instance.Title,
 		Content:    instance.Content,
 		ChunkCount: instance.ChunkCount,
+		UseCount:   instance.UseCount,
+		LastUsedAt: instance.LastUsedAt,
 		Hash:       instance.Hash,
 		CreatedAt:  instance.CreatedAt,
 		UpdatedAt:  instance.UpdatedAt,
@@ -302,7 +311,7 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 	}
 	comps := middlewares.GetAi(c)
 	if comps.Knowledge == nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.New("ai feature is disabled")).AbortWithGinH(c)
 		return
 	}
 	doc := modelsai.KnowledgeDocument{}

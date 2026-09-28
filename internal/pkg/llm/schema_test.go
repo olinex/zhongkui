@@ -77,3 +77,97 @@ func TestReconcileEmbeddingColumn_ScanErrorPropagates(t *testing.T) {
 		t.Fatalf("expected non-missing scan error to propagate, got nil")
 	}
 }
+
+// columnState 描述测试中注入的某列维度读取行为。
+// columnState describes the injected dimension-read behavior of one column in tests.
+type columnState struct {
+	dim   int
+	found bool
+	err   error
+}
+
+// columnKey 以「表.列」为键，便于测试按列注入维度读取行为。
+// columnKey builds a "table.column" key so tests can inject per-column behavior.
+func columnKey(table, column string) string { return table + "." + column }
+
+// runMultiReconcile 以逐列注入的维度驱动 reconcileVectorColumns 多列内核并捕获实际执行的 DDL。
+// runMultiReconcile drives the reconcileVectorColumns multi-column core with per-column injected
+// dimensions, capturing the DDL statements actually issued.
+func runMultiReconcile(states map[string]columnState, target int) (reconciled bool, executed []string, err error) {
+	currentDim := func(_ context.Context, table, column string) (int, bool, error) {
+		st := states[columnKey(table, column)]
+		return st.dim, st.found, st.err
+	}
+	exec := func(_ context.Context, sql string) error {
+		executed = append(executed, sql)
+		return nil
+	}
+	reconciled, err = reconcileVectorColumns(context.Background(), target, currentDim, exec)
+	return reconciled, executed, err
+}
+
+func TestReconcileVectorColumns_OnlyMismatchedColumnChanged(t *testing.T) {
+	// 仅知识库列 1536→1024 不一致，记忆列已对齐：DDL 只应针对知识库表。
+	states := map[string]columnState{
+		columnKey(chunkEmbeddingTable, chunkEmbeddingColumn):   {dim: 1536, found: true},
+		columnKey(memoryEmbeddingTable, memoryEmbeddingColumn): {dim: 1024, found: true},
+	}
+	reconciled, executed, err := runMultiReconcile(states, 1024)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !reconciled {
+		t.Fatalf("expected reconcile for the mismatched knowledge column")
+	}
+	if len(executed) != 4 {
+		t.Fatalf("expected 4 DDL statements for one column, got %d: %v", len(executed), executed)
+	}
+	for _, sql := range executed {
+		if strings.Contains(sql, memoryEmbeddingTable) {
+			t.Errorf("aligned memory column must not be touched, got DDL %q", sql)
+		}
+	}
+}
+
+func TestReconcileVectorColumns_MissingColumnSkipped(t *testing.T) {
+	// 知识库表缺失（found=false）应静默跳过，记忆列照常校准。
+	states := map[string]columnState{
+		columnKey(chunkEmbeddingTable, chunkEmbeddingColumn):   {found: false},
+		columnKey(memoryEmbeddingTable, memoryEmbeddingColumn): {dim: 512, found: true},
+	}
+	reconciled, executed, err := runMultiReconcile(states, 1024)
+	if err != nil {
+		t.Fatalf("expected missing table to be skipped, got: %v", err)
+	}
+	if !reconciled {
+		t.Fatalf("expected the present memory column to be reconciled")
+	}
+	if len(executed) != 4 {
+		t.Fatalf("expected 4 DDL statements for the memory column, got %d: %v", len(executed), executed)
+	}
+	for _, sql := range executed {
+		if strings.Contains(sql, chunkEmbeddingTable) {
+			t.Errorf("missing knowledge column must be skipped, got DDL %q", sql)
+		}
+	}
+	if !strings.Contains(executed[2], "TYPE vector(1024)") {
+		t.Errorf("expected ALTER TYPE vector(1024), got %q", executed[2])
+	}
+}
+
+func TestReconcileVectorColumns_NoopWhenAllAligned(t *testing.T) {
+	states := map[string]columnState{
+		columnKey(chunkEmbeddingTable, chunkEmbeddingColumn):   {dim: 1024, found: true},
+		columnKey(memoryEmbeddingTable, memoryEmbeddingColumn): {dim: 1024, found: true},
+	}
+	reconciled, executed, err := runMultiReconcile(states, 1024)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if reconciled {
+		t.Fatalf("expected no reconcile when all columns are aligned")
+	}
+	if len(executed) != 0 {
+		t.Fatalf("expected no DDL when all columns are aligned, got %v", executed)
+	}
+}

@@ -8,8 +8,9 @@ import (
 
 	// third-party
 	gpool "github.com/jolestar/go-commons-pool/v2"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+
 	// internal
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 // Manager 泛型资源池管理器：按不透明 Key 惰性维护一组独立的 go-commons-pool

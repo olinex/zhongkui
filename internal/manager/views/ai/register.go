@@ -10,6 +10,7 @@ import (
 // 分组挂认证/授权/命名空间/核心库/功能开关/AI 组件中间件；子组：
 //   - /doc    知识库文档 CRUD/list/reindex/chunks
 //   - /session  Agent 会话 create/list/get/rename/delete/messages
+//   - /memory  长期记忆 create/list/get/update/delete/status
 //   - /agent/:sessionID/stream  SSE 流式生成
 //   - /status  AI 状态（可用性 + 维度差异）
 func RegisterRoutes(ctx *views.RegisterContext) {
@@ -88,6 +89,38 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	sessionGroup.POST("/:id/messages", AgentMessageListGet)
 	// 会话消息列表元信息
 	sessionGroup.OPTIONS("/:id/messages", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMessageListOut]())))
+	// 压缩会话上下文并抽取长期记忆 - 折叠未摘要消息进滚动摘要并按开关抽取长期记忆
+	sessionGroup.POST("/:id/compact", AgentSessionCompact)
+	// 压缩会话上下文元信息
+	sessionGroup.OPTIONS("/:id/compact", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentSessionCompactOut]())))
+
+	// ========== 长期记忆：/api/v1/ai/memory ==========
+	// 命名空间 + Agent 类型级长期记忆的管理接口（列表/新增/详情/更新/批量删除/启停）。
+	memoryGroup := aiGroup.Group("/memory")
+	// 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影
+	memoryGroup.POST("/list", AgentMemoryListGet)
+	// 记忆列表元信息
+	memoryGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.AgentMemoryListGetSearchIn, *AgentMemoryListOut]())
+	// 新增记忆 - 向量化后经精确去重/语义合并落库
+	memoryGroup.POST("/create", AgentMemoryCreate)
+	// 新增记忆元信息
+	memoryGroup.OPTIONS("/create", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryCreateIn]())))
+	// 记忆详情查询
+	memoryGroup.POST("/:id/get", AgentMemoryDetailGet)
+	// 记忆详情元信息
+	memoryGroup.OPTIONS("/:id/get", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMemoryDetailOut]())))
+	// 更新记忆 - 仅更新非空字段，正文变更时重新向量化
+	memoryGroup.POST("/:id/update", AgentMemoryUpdate)
+	// 更新记忆元信息
+	memoryGroup.OPTIONS("/:id/update", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryUpdateIn]())))
+	// 批量删除记忆 - 软删除
+	memoryGroup.POST("/delete", AgentMemoryBatchDelete)
+	// 批量删除记忆元信息
+	memoryGroup.OPTIONS("/delete", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryBatchIn](), views.WithBodyOutput[views.BatchResultOut]())))
+	// 启停记忆 - active/archived
+	memoryGroup.POST("/:id/status", AgentMemorySetStatus)
+	// 启停记忆元信息
+	memoryGroup.OPTIONS("/:id/status", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryStatusIn]())))
 
 	// ========== Agent 流式生成与状态：/api/v1/ai ==========
 	// SSE 流式问答（带会话持久化）与 AI 状态查询。

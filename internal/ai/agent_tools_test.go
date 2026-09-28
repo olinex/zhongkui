@@ -140,7 +140,7 @@ func newAgentWithTools(t *testing.T, chat model.BaseChatModel, rtv retriever.Ret
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	agent, err := NewAgent(context.Background(), stubResolver(chat), rtv, store, testParams(t, overrides), built, infos)
+	agent, err := NewAgent(context.Background(), stubResolver(chat), rtv, store, testParams(t, overrides), nil, nil, built, infos)
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
 	}

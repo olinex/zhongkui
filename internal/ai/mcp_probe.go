@@ -10,20 +10,15 @@ import (
 )
 
 // MCPRemoteTool 是远端 MCP 服务器 tools/list 返回的一个工具的展示信息：服务器侧的工具名与
-// 可读描述。它是视图层与远端探测之间的解耦类型——视图层（连通性测试、工具清单同步）只依赖
-// internal/ai，不直接引用 MCP SDK。
+// 可读描述。它是 internal/ai/tools/mcp.RemoteTool 的类型别名（二者为同一类型），避免同一结构
+// 在同模块内重复声明；视图层（连通性测试、工具清单同步）经本包使用该类型，只依赖 internal/ai，
+// 不直接引用 MCP SDK。
 // MCPRemoteTool is the display information of one tool returned by a remote MCP server's
-// tools/list: the server-side tool name and its human-readable description. It decouples the view
-// layer from the remote probe — the view layer (connectivity test, tool-list synchronization)
-// depends only on internal/ai and never references the MCP SDK.
-type MCPRemoteTool struct {
-	// Name 远端服务器侧的工具名
-	// Name the tool name on the remote server side
-	Name string
-	// Description 远端提供的工具描述（可能为空）
-	// Description the description provided by the remote (may be empty)
-	Description string
-}
+// tools/list: the server-side tool name and its human-readable description. It is a type alias of
+// internal/ai/tools/mcp.RemoteTool (the two are the same type), avoiding a duplicate declaration of
+// the same struct within the module; the view layer (connectivity test, tool-list synchronization)
+// uses it through this package and depends only on internal/ai, never referencing the MCP SDK.
+type MCPRemoteTool = mcp.RemoteTool
 
 // ProbeMCPServer 连接远端 MCP 服务器（initialize 握手 + tools/list）取回全部工具的名称与描述，
 // 随即关闭会话；失败返回英文错误。transport 取 streamable_http / sse，url 非空，headers 为已由
@@ -53,9 +48,5 @@ func ProbeMCPServer(ctx context.Context, transport, url string, headers map[stri
 	if err != nil {
 		return nil, err
 	}
-	out := make([]MCPRemoteTool, 0, len(tools))
-	for _, tool := range tools {
-		out = append(out, MCPRemoteTool{Name: tool.Name, Description: tool.Description})
-	}
-	return out, nil
+	return tools, nil
 }

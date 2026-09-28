@@ -26,21 +26,24 @@ type ToolSpec struct {
 // ToolSpecs 是全部内置工具的元信息注册表，声明顺序即前端展示顺序。新增内置工具必须同时补齐
 // 三处，缺一处都会被守卫拦下：在此登记（缺则实现注册表无对应键，启动期按名解析即暴露缺陷）、
 // 在 internal/ai/tools 注册实现（缺则 Build 返回「编程缺陷」错误）、在 migrate fixture 中
-// 种子化出厂行（缺则由守卫测试 internal/ai/tools_fixture_test.go 暴露）。首版允许为空数组：
-// 三条链路（元信息注册表 / 实现注册表 / fixture 种子化 + 守卫测试）必须齐备，使后续新增内置
-// 工具无需再改配置面代码。
+// 种子化出厂行（缺则由守卫测试 internal/ai/tools_fixture_test.go 暴露）。三条链路（元信息
+// 注册表 / 实现注册表 / fixture 种子化 + 守卫测试）必须齐备，使后续新增内置工具无需再改配置面
+// 代码。
 // ToolSpecs is the registry of every builtin tool; the declaration order is the frontend display
 // order. A new builtin tool must be completed in three places at once, each guarded on its own:
 // registered here (a miss leaves the implementation registry without the key and surfaces as soon
 // as the runtime resolves the name at startup), given an implementation in internal/ai/tools (a
 // miss makes Build return a "programming defect" error), and seeded as a factory row in the
-// migrate fixtures (a miss is surfaced by the guard test internal/ai/tools_fixture_test.go). The
-// first version may be an empty slice: the three links (metadata registry / implementation
-// registry / fixture seeding plus the guard test) must all be in place so that adding a builtin
-// tool later needs no further edit of the config surface.
+// migrate fixtures (a miss is surfaced by the guard test internal/ai/tools_fixture_test.go). All
+// three links (metadata registry / implementation registry / fixture seeding plus the guard test)
+// must be in place so that adding a builtin tool later needs no further edit of the config surface.
 var ToolSpecs = []ToolSpec{
-	// ---- builtin：平台自有内置工具（首版为空） ----
-	// ---- builtin: the platform's own builtin tools (empty in the first version) ----
+	// ---- builtin：平台自有内置工具 ----
+	// ---- builtin: the platform's own builtin tools ----
+	{
+		Name:  "memory_write",
+		Group: "builtin",
+	},
 }
 
 // LookupTool 按名查询内置工具元信息，未声明时返回 ok=false（同名函数 Lookup 已被参数注册表

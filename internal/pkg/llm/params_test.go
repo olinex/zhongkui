@@ -50,7 +50,7 @@ func TestSpecs_Order(t *testing.T) {
 			groups = append(groups, spec.Group)
 		}
 	}
-	want := []string{"agent", "retrieval", "session", "chunking", "eval", "sanitize"}
+	want := []string{"agent", "retrieval", "session", "memory", "chunking", "eval", "sanitize"}
 	if strings.Join(groups, ",") != strings.Join(want, ",") {
 		t.Errorf("group order = %v, want %v", groups, want)
 	}

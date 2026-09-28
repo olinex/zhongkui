@@ -879,8 +879,7 @@ func validateTagEventRuleConditions(c *gin.Context, conds []*TagEventRuleConditi
 // 校验通过返回 true。不设置任何绑定是合法的（表示使用命名空间默认组）。
 func validateTagEventRuleNotification(c *gin.Context, namespace string, groupID, targetID *uint) bool {
 	if groupID != nil && targetID != nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-			errors.New("notification group and target are mutually exclusive")).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.New("notification group and target are mutually exclusive")).AbortWithGinH(c)
 		return false
 	}
 	db := middlewares.GetCoreDatabase(c)
@@ -892,8 +891,7 @@ func validateTagEventRuleNotification(c *gin.Context, namespace string, groupID,
 			return false
 		}
 		if count == 0 {
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-				errors.Newf("notification group %d does not exist in namespace %s", *groupID, namespace)).AbortWithGinH(c)
+			response.CreateBadBodyError(errors.Newf("notification group %d does not exist in namespace %s", *groupID, namespace)).AbortWithGinH(c)
 			return false
 		}
 	}
@@ -905,8 +903,7 @@ func validateTagEventRuleNotification(c *gin.Context, namespace string, groupID,
 			return false
 		}
 		if count == 0 {
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-				errors.Newf("notification target %d does not exist in namespace %s", *targetID, namespace)).AbortWithGinH(c)
+			response.CreateBadBodyError(errors.Newf("notification target %d does not exist in namespace %s", *targetID, namespace)).AbortWithGinH(c)
 			return false
 		}
 	}

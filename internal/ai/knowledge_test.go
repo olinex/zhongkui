@@ -426,7 +426,7 @@ func TestNewKnowledge_Validation(t *testing.T) {
 	if _, err := NewKnowledge(nil, nil, params); err == nil {
 		t.Errorf("NewKnowledge() error = nil, want error")
 	}
-	if _, err := NewRetriever(nil, embed, nil, params); err == nil || !strings.Contains(err.Error(), "nil database") {
+	if _, err := NewRetriever(nil, embed, nil, params, nil); err == nil || !strings.Contains(err.Error(), "nil database") {
 		t.Errorf("NewRetriever(nil db) error = %v, want nil-database error", err)
 	}
 }

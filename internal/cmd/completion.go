@@ -13,18 +13,18 @@ var completionNoDesc bool
 // 通过自定义中文命令屏蔽 cobra 默认的英文 completion 命令（cobra 检测到
 // 已有同名命令时会跳过默认创建），各 shell 子命令复用 cobra 的 Gen*Completion 方法。
 var completionCmd = &cobra.Command{
-	Use:   "completion",
-	Short: "cmd.completion.short",
-	Long:  "cmd.completion.long",
+	Use:               "completion",
+	Short:             "cmd.completion.short",
+	Long:              "cmd.completion.long",
 	Args:              cobra.NoArgs,
 	ValidArgsFunction: cobra.NoFileCompletions,
 }
 
 // completionBashCmd 生成 bash shell 的自动补全脚本
 var completionBashCmd = &cobra.Command{
-	Use:   "bash",
-	Short: "cmd.completion.bash.short",
-	Long:  "cmd.completion.bash.long",
+	Use:                   "bash",
+	Short:                 "cmd.completion.bash.short",
+	Long:                  "cmd.completion.bash.long",
 	Args:                  cobra.NoArgs,
 	DisableFlagsInUseLine: true,
 	ValidArgsFunction:     cobra.NoFileCompletions,
@@ -35,9 +35,9 @@ var completionBashCmd = &cobra.Command{
 
 // completionZshCmd 生成 zsh shell 的自动补全脚本
 var completionZshCmd = &cobra.Command{
-	Use:   "zsh",
-	Short: "cmd.completion.zsh.short",
-	Long:  "cmd.completion.zsh.long",
+	Use:               "zsh",
+	Short:             "cmd.completion.zsh.short",
+	Long:              "cmd.completion.zsh.long",
 	Args:              cobra.NoArgs,
 	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -50,9 +50,9 @@ var completionZshCmd = &cobra.Command{
 
 // completionFishCmd 生成 fish shell 的自动补全脚本
 var completionFishCmd = &cobra.Command{
-	Use:   "fish",
-	Short: "cmd.completion.fish.short",
-	Long:  "cmd.completion.fish.long",
+	Use:               "fish",
+	Short:             "cmd.completion.fish.short",
+	Long:              "cmd.completion.fish.long",
 	Args:              cobra.NoArgs,
 	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -62,9 +62,9 @@ var completionFishCmd = &cobra.Command{
 
 // completionPowerShellCmd 生成 PowerShell 的自动补全脚本
 var completionPowerShellCmd = &cobra.Command{
-	Use:   "powershell",
-	Short: "cmd.completion.powershell.short",
-	Long:  "cmd.completion.powershell.long",
+	Use:               "powershell",
+	Short:             "cmd.completion.powershell.short",
+	Long:              "cmd.completion.powershell.long",
 	Args:              cobra.NoArgs,
 	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {

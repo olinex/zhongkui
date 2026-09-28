@@ -139,7 +139,7 @@ func seedTool(t *testing.T, db *database.DB, name string, source llm.ToolSource,
 	t.Helper()
 	row := &coremodel.LlmTool{
 		Name:        name,
-		Source:      string(source),
+		Source:      source,
 		McpServerID: serverID,
 		RemoteName:  remoteName,
 		Enabled:     enabled,

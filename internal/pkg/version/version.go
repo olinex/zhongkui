@@ -1,7 +1,6 @@
 package version
 
 import (
-	"encoding/json"
 	"os/exec"
 	"strings"
 )
@@ -78,12 +77,6 @@ func (v versionInfo) Verbose() string {
 		panic(err)
 	}
 	return b.String()
-}
-
-// JSON 返回 JSON 格式的版本信息
-func (v versionInfo) JSON() string {
-	data, _ := json.MarshalIndent(v, "", "  ")
-	return string(data)
 }
 
 // gitCommit 尝试通过执行 git rev-parse 获取当前 commit hash

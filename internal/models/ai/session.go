@@ -8,6 +8,7 @@ import (
 	// internal
 	coremodel "zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答消息
@@ -35,10 +36,22 @@ type AgentSession struct {
 	// naming): one of flash/standard/advanced, empty means resolving through the
 	// agent.defaultSlot parameter; it is used when a generation request specifies no slot
 	// explicitly
-	TargetModel string `gorm:"type:VARCHAR(255)"`
+	TargetModel llm.Slot `gorm:"type:VARCHAR(255)"`
 	// Status 会话状态（如 active/archived），默认 active
 	// Status the status of the session (e.g. active/archived), default active
-	Status string `gorm:"type:VARCHAR(16)"`
+	Status llm.SessionStatus `gorm:"type:VARCHAR(16)"`
+	// AgentKind 会话所属 Agent 类型（如 knowledge/rego），记忆归属与检索据此隔离
+	// AgentKind the agent kind the session belongs to (e.g. knowledge/rego), isolating the
+	// ownership and retrieval of memories
+	AgentKind llm.AgentKind `gorm:"type:VARCHAR(32);default:knowledge"`
+	// Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空串
+	// Summary the rolling summary of the session, compressing the messages already folded
+	// into it, empty when none
+	Summary string `gorm:"type:TEXT"`
+	// SummaryUptoMessageID 滚动摘要已覆盖的最后一条消息 ID，0 表示尚未摘要任何消息
+	// SummaryUptoMessageID the id of the last message covered by the rolling summary,
+	// 0 means nothing is summarized yet
+	SummaryUptoMessageID uint `gorm:"type:BIGINT"`
 }
 
 // AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文
@@ -62,7 +75,7 @@ type AgentMessage struct {
 	NamespaceName string `gorm:"type:VARCHAR(32)"`
 	// Role 消息角色：user/assistant/system 等
 	// Role the role of the message: user/assistant/system etc.
-	Role string `gorm:"type:VARCHAR(16)"`
+	Role llm.MessageRole `gorm:"type:VARCHAR(16)"`
 	// Content 消息正文内容
 	// Content the content of the message
 	Content string `gorm:"type:TEXT"`

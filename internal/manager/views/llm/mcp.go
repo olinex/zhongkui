@@ -545,7 +545,7 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 		var all []struct {
 			ID          uint
 			Name        string
-			Source      string
+			Source      llm.ToolSource
 			McpServerID *uint
 		}
 		if err := tx.Model(&core.LlmTool{}).
@@ -555,7 +555,7 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 		nameOwner := make(map[string]uint, len(all))
 		for i := range all {
 			row := all[i]
-			if (row.Source == string(llm.ToolSourceMCP)) != (row.McpServerID != nil) {
+			if (row.Source == llm.ToolSourceMCP) != (row.McpServerID != nil) {
 				return errors.Newf(
 					"tool %q (#%d) violates the consistency invariant: source %q if and only if mcp_server_id is not null",
 					row.Name, row.ID, string(llm.ToolSourceMCP))
@@ -589,7 +589,7 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 			serverID := server.ID
 			created := core.LlmTool{
 				Name:        remoteName,
-				Source:      string(llm.ToolSourceMCP),
+				Source:      llm.ToolSourceMCP,
 				McpServerID: &serverID,
 				RemoteName:  remoteName,
 				Description: remoteTool.Description,

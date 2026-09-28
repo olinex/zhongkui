@@ -951,6 +951,16 @@ func TestSlugValidation(t *testing.T) {
 	})
 }
 
+// namedKind / namedKindPayload 用于验证自定义标签（enum / trimmed）可直接作用于具名 string 类型，
+// 即 pkg/llm 的枚举取值类型这类字段。
+// namedKind / namedKindPayload verify that the custom tags (enum / trimmed) apply directly to a
+// named string type, i.e. a field such as the enum value types of pkg/llm.
+type namedKind string
+
+type namedKindPayload struct {
+	Kind namedKind `json:"kind" binding:"omitempty,trimmed,enum=validatorTestKind"`
+}
+
 // TestGenericFieldValidations 覆盖 enum / httpUrl / jsonObject / trimmed 四个通用字段级校验：
 // 它们供各视图层 In 结构体以绑定标签直接引用，取代各自就地书写的解析与校验方法。
 // TestGenericFieldValidations covers the four generic field validations enum / httpUrl / jsonObject
@@ -1038,6 +1048,17 @@ func TestGenericFieldValidations(t *testing.T) {
 					So(IsTrimmed(invalid), ShouldBeFalse)
 				})
 			}
+		})
+
+		Convey("custom tags apply to a named string type (enum value types)", func() {
+			v := newTestValidate()
+			// 合法取值通过；空值由 omitempty 放行
+			So(v.Struct(namedKindPayload{Kind: "beta"}), ShouldBeNil)
+			So(v.Struct(namedKindPayload{Kind: ""}), ShouldBeNil)
+			// 带首尾空白被 trimmed 拒绝（只判定、不静默裁剪）
+			So(v.Struct(namedKindPayload{Kind: " beta"}), ShouldNotBeNil)
+			// 类外取值被 enum 拒绝
+			So(v.Struct(namedKindPayload{Kind: "gamma"}), ShouldNotBeNil)
 		})
 	})
 }

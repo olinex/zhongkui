@@ -221,6 +221,88 @@ var Specs = []ParamSpec{
 		Kind:  ParamKindInt,
 	},
 
+	// ---- memory：长期记忆与会话摘要 ----
+	// memory.enabled 长期记忆总开关：关闭时跳过记忆检索与注入，且不报错。
+	// memory.enabled the master switch of long-term memory: when off, memory retrieval and
+	// injection are skipped without any error.
+	{
+		Key:   "memory.enabled",
+		Group: "memory",
+		Kind:  ParamKindBool,
+	},
+	// memory.sectionTitle 记忆注入时使用的分节标题。
+	// memory.sectionTitle the section title used when memories are injected.
+	{
+		Key:   "memory.sectionTitle",
+		Group: "memory",
+		Kind:  ParamKindString,
+	},
+	// memory.topK 注入提示词的记忆条数。
+	// memory.topK the number of memories injected into the prompt.
+	{
+		Key:   "memory.topK",
+		Group: "memory",
+		Kind:  ParamKindInt,
+	},
+	// memory.candidates 向量路与关键词路各自的候选条数。
+	// memory.candidates the number of candidates taken by the vector path and the keyword
+	// path respectively.
+	{
+		Key:   "memory.candidates",
+		Group: "memory",
+		Kind:  ParamKindInt,
+	},
+	// memory.maxItems 注入条数的硬上限。
+	// memory.maxItems the hard bound of the number of injected items.
+	{
+		Key:   "memory.maxItems",
+		Group: "memory",
+		Kind:  ParamKindInt,
+	},
+	// memory.maxItemBytes 单条记忆注入的字节上限，超出部分被截断。
+	// memory.maxItemBytes the byte bound of a single injected memory, the excess is truncated.
+	{
+		Key:   "memory.maxItemBytes",
+		Group: "memory",
+		Kind:  ParamKindInt,
+	},
+	// memory.dedupeThreshold 语义去重/合并阈值（余弦相似度）。
+	// memory.dedupeThreshold the semantic deduplication/merge threshold (cosine similarity).
+	{
+		Key:   "memory.dedupeThreshold",
+		Group: "memory",
+		Kind:  ParamKindFloat,
+	},
+	// memory.summarySystemPrompt 会话滚动摘要的系统提示词。
+	// memory.summarySystemPrompt the system prompt of the rolling session summary.
+	{
+		Key:   "memory.summarySystemPrompt",
+		Group: "memory",
+		Kind:  ParamKindText,
+	},
+	// memory.summaryMinEvictedMessages 触发滚动摘要的最少未摘要消息条数。
+	// memory.summaryMinEvictedMessages the minimum number of unsummarized messages that
+	// triggers the rolling summary.
+	{
+		Key:   "memory.summaryMinEvictedMessages",
+		Group: "memory",
+		Kind:  ParamKindInt,
+	},
+	// memory.extractSystemPrompt 压缩时抽取长期记忆的系统提示词。
+	// memory.extractSystemPrompt the system prompt extracting long-term memories on compaction.
+	{
+		Key:   "memory.extractSystemPrompt",
+		Group: "memory",
+		Kind:  ParamKindText,
+	},
+	// memory.extractMaxItems 单次压缩最多抽取的记忆条数。
+	// memory.extractMaxItems the maximum number of memories extracted by a single compaction.
+	{
+		Key:   "memory.extractMaxItems",
+		Group: "memory",
+		Kind:  ParamKindInt,
+	},
+
 	// ---- chunking：Markdown 结构感知切片 ----
 	{
 		Key:   "chunking.size",

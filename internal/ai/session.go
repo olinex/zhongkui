@@ -11,31 +11,7 @@ import (
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-)
-
-// 会话状态常量：AgentSession.Status 的取值空间。
-// Session status constants: the value space of AgentSession.Status.
-const (
-	// SessionStatusActive 会话状态：活跃（默认）
-	// SessionStatusActive the active session status (default)
-	SessionStatusActive = "active"
-	// SessionStatusArchived 会话状态：归档（不再展示/参与上下文）
-	// SessionStatusArchived the archived session status (hidden from lists/context)
-	SessionStatusArchived = "archived"
-)
-
-// 消息角色常量：AgentMessage.Role 的取值空间。
-// Message role constants: the value space of AgentMessage.Role.
-const (
-	// MessageRoleUser 用户消息
-	// MessageRoleUser the user message
-	MessageRoleUser = "user"
-	// MessageRoleAssistant 助手消息
-	// MessageRoleAssistant the assistant message
-	MessageRoleAssistant = "assistant"
-	// MessageRoleSystem 系统消息
-	// MessageRoleSystem the system message
-	MessageRoleSystem = "system"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // 包级错误哨兵：会话/消息查询不命中的统一错误，供上层 errors.Is 判断。
@@ -72,16 +48,24 @@ func NewSessionStore(db *database.DB) (*SessionStore, error) {
 }
 
 // CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位
-// (flash/standard/advanced)，空表示生成时按 agent.defaultSlot 参数解析。
+// (flash/standard/advanced)，空表示生成时按 agent.defaultSlot 参数解析；agentKind 为会话所属
+// Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。
 // CreateSession creates a new session with the initial status active; slot is the default
 // slot of the session (flash/standard/advanced) and an empty value means resolving through the
-// agent.defaultSlot parameter at generation time.
-func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title, slot string) (*modelsai.AgentSession, error) {
+// agent.defaultSlot parameter at generation time; agentKind is the agent kind the session belongs
+// to, an empty value defaults to knowledge and an invalid value yields an English error without
+// persisting anything.
+func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title string, slot llm.Slot, agentKind llm.AgentKind) (*modelsai.AgentSession, error) {
+	kind, err := llm.ParseAgentKind(agentKind)
+	if err != nil {
+		return nil, err
+	}
 	session := &modelsai.AgentSession{
 		NamespaceName: namespaceName,
 		Title:         title,
 		TargetModel:   slot,
-		Status:        SessionStatusActive,
+		Status:        llm.SessionStatusActive,
+		AgentKind:     kind,
 	}
 	if err := s.db.WithContext(ctx).Create(session).Error; err != nil {
 		return nil, errors.WithStack(err)
@@ -139,7 +123,7 @@ func (s *SessionStore) RenameSession(ctx context.Context, id uint, title string)
 // SetSessionStatus 更新会话状态（如归档），返回更新后的会话。
 // SetSessionStatus updates the session status (e.g. archived) and returns the
 // updated session.
-func (s *SessionStore) SetSessionStatus(ctx context.Context, id uint, status string) (*modelsai.AgentSession, error) {
+func (s *SessionStore) SetSessionStatus(ctx context.Context, id uint, status llm.SessionStatus) (*modelsai.AgentSession, error) {
 	session, err := s.GetSession(ctx, id)
 	if err != nil {
 		return nil, err
@@ -220,6 +204,54 @@ func (s *SessionStore) HistoryMessages(ctx context.Context, sessionID uint, maxC
 	return messages, nil
 }
 
+// ListMessagesAfter 返回会话中 id 大于 afterID 的消息（按 id 升序），供会话压缩取出
+// 「游标之后尚未摘要的全部消息」。
+// ListMessagesAfter returns the messages of a session whose id is greater than afterID
+// (ordered by id ascending), used by session compaction to take "every message after the
+// cursor that has not been summarized yet".
+func (s *SessionStore) ListMessagesAfter(ctx context.Context, sessionID uint, afterID uint) ([]*modelsai.AgentMessage, error) {
+	var messages []*modelsai.AgentMessage
+	if err := s.db.WithContext(ctx).
+		Where("session_id = ? AND id > ?", sessionID, afterID).
+		Order("id ASC").Find(&messages).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return messages, nil
+}
+
+// ListMessagesBefore 返回会话中 afterID 与 beforeID 之间的消息（afterID < id < beforeID，
+// 按 id 升序），供滚动摘要取出「窗口外且尚未摘要」的消息（窗口最旧消息 ID 作上界）。
+// ListMessagesBefore returns the messages of a session between afterID and beforeID
+// (afterID < id < beforeID, ordered by id ascending), used by the rolling summary to take
+// the "window-external and not yet summarized" messages (with the oldest window message id
+// as the upper bound).
+func (s *SessionStore) ListMessagesBefore(ctx context.Context, sessionID uint, beforeID uint, afterID uint) ([]*modelsai.AgentMessage, error) {
+	var messages []*modelsai.AgentMessage
+	if err := s.db.WithContext(ctx).
+		Where("session_id = ? AND id > ? AND id < ?", sessionID, afterID, beforeID).
+		Order("id ASC").Find(&messages).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return messages, nil
+}
+
+// UpdateSummary 更新会话的滚动摘要与其覆盖到的最后一条消息 ID，只写这两列、不触碰其它字段
+// （避免并发改写会话标题/档位等）。
+// UpdateSummary updates the rolling summary of a session and the id of the last message it
+// covers, writing only these two columns and leaving every other field untouched (so a
+// concurrent update of the title/slot is never clobbered).
+func (s *SessionStore) UpdateSummary(ctx context.Context, sessionID uint, summary string, uptoMessageID uint) error {
+	if err := s.db.WithContext(ctx).Model(&modelsai.AgentSession{}).
+		Where("id = ?", sessionID).
+		Updates(map[string]any{
+			"summary":                 summary,
+			"summary_upto_message_id": uptoMessageID,
+		}).Error; err != nil {
+		return errors.WithStack(err)
+	}
+	return nil
+}
+
 // LatestAssistantMessage 返回会话最近一条助手消息（含草稿/引用载荷）；
 // 不存在时返回 ErrMessageNotFound。
 // LatestAssistantMessage returns the latest assistant message of a session
@@ -228,7 +260,7 @@ func (s *SessionStore) HistoryMessages(ctx context.Context, sessionID uint, maxC
 func (s *SessionStore) LatestAssistantMessage(ctx context.Context, sessionID uint) (*modelsai.AgentMessage, error) {
 	var msg modelsai.AgentMessage
 	err := s.db.WithContext(ctx).
-		Where("session_id = ? AND role = ?", sessionID, MessageRoleAssistant).
+		Where("session_id = ? AND role = ?", sessionID, llm.MessageRoleAssistant).
 		Order("created_at DESC, id DESC").
 		First(&msg).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {

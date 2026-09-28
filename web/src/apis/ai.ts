@@ -11,6 +11,9 @@ import type { SearchIn } from "@/components/@types/table";
 import type { FlexIDs } from "./@types/admin";
 import type {
   AgentOutput,
+  AgentMemoryCreateIn,
+  AgentMemoryStatusIn,
+  AgentMemoryUpdateIn,
   AgentSessionCreateIn,
   AgentSessionRenameIn,
   AgentStageEvent,
@@ -151,6 +154,68 @@ export function agentMessageListGet(id: number): AxiosPromise {
       headers: getJwtHeader(),
     },
   );
+}
+
+// 压缩会话上下文并抽取长期记忆：返回刷新后的摘要、成功落库的记忆条数与非致命告警
+export function agentSessionCompact(id: number): AxiosPromise {
+  return request.post(
+    `/ai/session/${id}/compact`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// ---- 长期记忆 ----
+export function agentMemoryListGet(data: SearchIn): AxiosPromise {
+  return request.post("/ai/memory/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentMemoryListOptions(): AxiosPromise {
+  return request.options("/ai/memory/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentMemoryCreate(data: AgentMemoryCreateIn): AxiosPromise {
+  return request.post("/ai/memory/create", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentMemoryDetailGet(id: number): AxiosPromise {
+  return request.post(
+    `/ai/memory/${id}/get`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function agentMemoryUpdate(id: number, data: AgentMemoryUpdateIn): AxiosPromise {
+  return request.post(`/ai/memory/${id}/update`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentMemoryDelete(ids: FlexIDs): AxiosPromise {
+  return request.post(
+    "/ai/memory/delete",
+    { ids },
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function agentMemoryStatusSet(id: number, data: AgentMemoryStatusIn): AxiosPromise {
+  return request.post(`/ai/memory/${id}/status`, data, {
+    headers: getJwtHeader(),
+  });
 }
 
 // ---- AI 状态 ----

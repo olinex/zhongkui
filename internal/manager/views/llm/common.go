@@ -46,7 +46,7 @@ func verifyEmbeddingCompat(c *gin.Context, cfg pkgllm.ModelConfig) (int, error) 
 func modelConfigOf(m *core.LlmModel) pkgllm.ModelConfig {
 	return pkgllm.ModelConfig{
 		Name:        m.Name,
-		Kind:        pkgllm.ModelKind(m.Kind),
+		Kind:        m.Kind,
 		BaseURL:     m.BaseURL,
 		APIKey:      string(m.APIKeyData()),
 		Model:       m.ModelName,

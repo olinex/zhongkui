@@ -7,7 +7,6 @@ package views
 
 import (
 	// stdlib
-	"net/http"
 
 	// third-party
 	"github.com/gin-gonic/gin"
@@ -50,8 +49,7 @@ func EnumGet(c *gin.Context) {
 	}
 	t, ok := enum.Get(in.Type)
 	if !ok {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-			errors.Newf("enum: unknown type %q", in.Type)).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.Newf("enum: unknown type %q", in.Type)).AbortWithGinH(c)
 		return
 	}
 	lang := enumRequestLang(c, in.Lang)

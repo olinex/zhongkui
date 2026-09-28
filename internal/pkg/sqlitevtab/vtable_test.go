@@ -8,8 +8,9 @@ import (
 
 	// third-party
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+
 	// internal
+	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // recordingDatasource 记录每次 Open 收到的下推约束与查询上下文，内部委托

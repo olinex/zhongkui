@@ -128,12 +128,6 @@ func NewSSEWriter(w http.ResponseWriter) *SSEWriter {
 	return &SSEWriter{w: w}
 }
 
-// Send 写入一条任意事件。
-// Send writes an arbitrary event.
-func (s *SSEWriter) Send(ev SSEEvent) error {
-	return WriteSSE(s.w, ev)
-}
-
 // SendDelta 发送一段增量文本（delta 事件）。
 // SendDelta sends a delta text (delta event).
 func (s *SSEWriter) SendDelta(delta string) error {

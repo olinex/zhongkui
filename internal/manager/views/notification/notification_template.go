@@ -2,7 +2,6 @@ package notification
 
 import (
 	// stdlib
-	"net/http"
 	"slices"
 	"sort"
 
@@ -543,7 +542,7 @@ func NotificationTemplateEventsMetaGet(c *gin.Context) {
 // notificationTemplateBadInput 以 400 + CodeBadBody 响应通知模板业务校验失败。
 // details 为具体原因，供前端直接向用户展示。
 func notificationTemplateBadInput(c *gin.Context, err error) {
-	response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
+	response.CreateBadBodyError(err).AbortWithGinH(c)
 }
 
 // init 注册通知模板相关枚举字段的枚举类绑定：

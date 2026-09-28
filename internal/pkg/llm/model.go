@@ -33,8 +33,8 @@ const (
 // comparison is case-insensitive): only chat / embedding are valid and any other value yields an
 // English error. The kind catalog and the value normalization are declared only in this package,
 // so callers no longer validate on their own.
-func ParseModelKind(value string) (ModelKind, error) {
-	switch kind := ModelKind(strings.ToLower(strings.TrimSpace(value))); kind {
+func ParseModelKind(value ModelKind) (ModelKind, error) {
+	switch kind := ModelKind(strings.ToLower(strings.TrimSpace(string(value)))); kind {
 	case ModelKindChat, ModelKindEmbedding:
 		return kind, nil
 	default:
@@ -80,8 +80,8 @@ var AllSlots = []Slot{SlotFlash, SlotStandard, SlotAdvanced, SlotEmbedding}
 // is case-insensitive): the four fixed slots are valid and any other value yields an English
 // error. The slot catalog and the value normalization are declared only in this package, so
 // callers no longer validate on their own nor assemble the error text themselves.
-func ParseSlot(value string) (Slot, error) {
-	slot := Slot(strings.ToLower(strings.TrimSpace(value)))
+func ParseSlot(value Slot) (Slot, error) {
+	slot := Slot(strings.ToLower(strings.TrimSpace(string(value))))
 	for _, known := range AllSlots {
 		if known == slot {
 			return slot, nil
@@ -123,7 +123,7 @@ func slotNames(slots []Slot) string {
 // InvalidChatSlotError returns the English error of an invalid chat slot value, with the
 // enumeration text sharing its source with the slot catalogs. The view layer uses it directly
 // when ParseChatSlot returns false, so no site repeats the slot enumeration.
-func InvalidChatSlotError(value string) error {
+func InvalidChatSlotError(value Slot) error {
 	return chatSlotError("invalid chat slot", value)
 }
 
@@ -132,7 +132,7 @@ func InvalidChatSlotError(value string) error {
 // chatSlotError assembles the English error of an invalid chat slot value: subject is the error
 // subject, telling apart the value source (explicit / call-site declared / registry default),
 // and the enumeration text comes from chatSlots.
-func chatSlotError(subject, value string) error {
+func chatSlotError(subject string, value Slot) error {
 	return errors.Newf("%s %q: expected one of %s", subject, value, slotNames(chatSlots))
 }
 
@@ -141,8 +141,8 @@ func chatSlotError(subject, value string) error {
 // ParseChatSlot parses and validates a chat slot value (surrounding whitespace is trimmed,
 // the comparison is case-insensitive): only flash / standard / advanced are valid, while
 // embedding or an unknown value yields ok=false.
-func ParseChatSlot(value string) (Slot, bool) {
-	slot := Slot(strings.ToLower(strings.TrimSpace(value)))
+func ParseChatSlot(value Slot) (Slot, bool) {
+	slot := Slot(strings.ToLower(strings.TrimSpace(string(value))))
 	for _, known := range chatSlots {
 		if known == slot {
 			return slot, true
@@ -174,22 +174,22 @@ func SlotKind(slot Slot) ModelKind {
 // error.
 func ResolveSlot(requested, declared, fallback Slot) (Slot, error) {
 	if requested != "" {
-		slot, ok := ParseChatSlot(string(requested))
+		slot, ok := ParseChatSlot(requested)
 		if !ok {
-			return "", InvalidChatSlotError(string(requested))
+			return "", InvalidChatSlotError(requested)
 		}
 		return slot, nil
 	}
 	if declared != "" {
-		slot, ok := ParseChatSlot(string(declared))
+		slot, ok := ParseChatSlot(declared)
 		if !ok {
-			return "", chatSlotError("invalid declared chat slot", string(declared))
+			return "", chatSlotError("invalid declared chat slot", declared)
 		}
 		return slot, nil
 	}
-	slot, ok := ParseChatSlot(string(fallback))
+	slot, ok := ParseChatSlot(fallback)
 	if !ok {
-		return "", chatSlotError("invalid default chat slot", string(fallback))
+		return "", chatSlotError("invalid default chat slot", fallback)
 	}
 	return slot, nil
 }

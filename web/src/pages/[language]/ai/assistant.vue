@@ -52,6 +52,16 @@
                 {{ currentSessionTitle }}
               </span>
               <v-btn
+                icon="mdi-archive-arrow-down-outline"
+                variant="tonal"
+                size="small"
+                class="me-2"
+                :disabled="!activeSessionId || streaming"
+                :title="$t('page.aiAssistant.compact')"
+                :aria-label="$t('page.aiAssistant.compact')"
+                @click="compactSessionAction"
+              />
+              <v-btn
                 icon="mdi-pencil-outline"
                 variant="tonal"
                 size="small"
@@ -273,6 +283,18 @@
           <v-form>
             <v-row dense>
               <v-col cols="12">
+                <v-select
+                  v-model="createSessionAgentKind"
+                  v-bind="createSessionAgentKindProps"
+                  :items="agentKindOptions"
+                  :label="$t('model.aiSession.field.agentKind')"
+                  item-title="title"
+                  item-value="value"
+                />
+              </v-col>
+            </v-row>
+            <v-row dense>
+              <v-col cols="12">
                 <v-text-field
                   v-model="createSessionTitle"
                   v-bind="createSessionTitleProps"
@@ -322,6 +344,37 @@
           />
         </template>
       </confirm-dialog>
+
+      <!-- 压缩上下文结果对话框：展示刷新后的摘要、抽取的记忆条数与非致命告警 -->
+      <app-dialog
+        v-model="compactDialog"
+        :title="$t('page.aiAssistant.compact')"
+        icon="mdi-archive-arrow-down-outline"
+        size="md"
+        :loading="compactLoading"
+      >
+        <template v-if="compactResult">
+          <div class="zk-label-caps mb-1">{{ $t("page.aiAssistant.compactSummary") }}</div>
+          <div class="zk-code-preview compact-summary text-body-2">
+            {{ compactResult.summary || $t("model.__base.value.blank") }}
+          </div>
+          <div class="d-flex align-center mt-4">
+            <span class="text-body-2">{{ $t("page.aiAssistant.compactExtracted") }}</span>
+            <v-chip size="small" color="primary" class="ms-2">{{ compactResult.extracted }}</v-chip>
+          </div>
+          <v-alert v-if="compactResult.warnings.length > 0" type="warning" class="mt-4">
+            <div class="text-caption">{{ $t("page.aiAssistant.compactWarnings") }}</div>
+            <div v-for="(warning, idx) in compactResult.warnings" :key="idx">
+              {{ warning }}
+            </div>
+          </v-alert>
+        </template>
+        <template #footer>
+          <v-btn variant="text" @click="compactDialog = false">
+            {{ $t("action.close") }}
+          </v-btn>
+        </template>
+      </app-dialog>
     </template>
   </main-layout>
 </template>
@@ -343,6 +396,7 @@ import "vue-json-pretty/lib/styles.css";
 
 import {
   agentMessageListGet,
+  agentSessionCompact,
   agentSessionCreate,
   agentSessionDelete,
   agentSessionListGet,
@@ -353,6 +407,7 @@ import {
 } from "@/apis/ai";
 import type {
   AgentMessageItem,
+  AgentSessionCompactOut,
   AgentSessionItem,
   AgentStageEvent,
   AgentStatusOut,
@@ -365,7 +420,7 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { SearchOut } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import { copyToClipboard } from "@/utils/clipboard";
-import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
+import { EnumClass, enumLabelOf, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 
@@ -383,6 +438,8 @@ const sessionSchema = yup.object({
     .min(1)
     .max(255)
     .label("model.aiSession.field.title"),
+  // Agent 类型可选，取值集合与文案经后端枚举类 agentKind 下发
+  agentKind: yup.string().nonNullable().label("model.aiSession.field.agentKind"),
 });
 
 const createSessionForm = useForm({ validationSchema: sessionSchema });
@@ -390,6 +447,10 @@ const renameSessionForm = useForm({ validationSchema: sessionSchema });
 
 const [createSessionTitle, createSessionTitleProps] = createSessionForm.defineField(
   "title",
+  vuetifyCfg,
+);
+const [createSessionAgentKind, createSessionAgentKindProps] = createSessionForm.defineField(
+  "agentKind",
   vuetifyCfg,
 );
 const [renameSessionTitle, renameSessionTitleProps] = renameSessionForm.defineField(
@@ -457,6 +518,9 @@ const slotOptions = computed(() => {
     props: { disabled: !s.available },
   }));
 });
+
+// agentKindOptions 会话 Agent 类型下拉选项：取值集合与文案一律来自后端枚举类 agentKind
+const agentKindOptions = computed(() => enumOptionsOf(EnumClass.agentKind));
 
 // loadStatus 拉取 AI 状态：驱动档位下拉选项与未启用原因展示
 const loadStatus = async (): Promise<void> => {
@@ -643,8 +707,13 @@ const scrollToBottom = (): void => {
 };
 
 // ---- 会话增删改 ----
-const openCreateSessionDialog = (): void => {
+const openCreateSessionDialog = async (): Promise<void> => {
+  // 预取 Agent 类型枚举后默认选中后端返回的首项（返回顺序即展示顺序），避免前端声明默认值字面量
+  await ensureEnum(EnumClass.agentKind);
   createSessionForm.resetField("title", { value: "" });
+  createSessionForm.resetField("agentKind", {
+    value: enumOptionsOf(EnumClass.agentKind)[0]?.value ?? "",
+  });
   createSessionDialogRef.value?.open({});
 };
 
@@ -655,6 +724,8 @@ const createSessionAction = createSessionForm.handleSubmit(async (values) => {
       title: (values.title as string).trim(),
       // 会话缺省档位随当前档位下拉传入，作为后续生成的回退档位
       slot: slot.value || undefined,
+      // 会话所属 Agent 类型（缺省由后端取 knowledge）
+      agentKind: values.agentKind || undefined,
     }),
     async (rsp) => {
       sessions.value = [rsp.data, ...sessions.value];
@@ -738,6 +809,39 @@ const deleteSessionAction = async (): Promise<void> => {
       });
     },
   );
+};
+
+// ---- 压缩上下文并记忆 ----
+// 压缩当前会话：把未摘要消息折叠进滚动摘要并按开关抽取长期记忆，
+// 结果（刷新后的摘要 / 抽取条数 / 非致命告警）在结果对话框中展示
+const compactDialog = ref(false);
+const compactLoading = ref(false);
+const compactResult = ref<AgentSessionCompactOut | null>(null);
+
+const compactSessionAction = async (): Promise<void> => {
+  if (activeSessionId.value === null) {
+    return;
+  }
+  compactResult.value = null;
+  compactDialog.value = true;
+  compactLoading.value = true;
+  await getResponse<AgentSessionCompactOut>(
+    agentSessionCompact(activeSessionId.value),
+    async (rsp) => {
+      compactResult.value = rsp.data;
+      // 摘要刷新后会话列表的摘要字段同步更新
+      await loadSessions();
+    },
+    async (rsp) => {
+      compactDialog.value = false;
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+  compactLoading.value = false;
 };
 
 // ---- 知识库文档选项（检索限定下拉）----
@@ -888,6 +992,8 @@ onMounted(() => {
   void ensureEnum(EnumClass.llmSlot);
   // 工具调用阶段名经统一枚举注册表渲染 label（与检索试运行共用 evalStage）
   void ensureEnum(EnumClass.evalStage);
+  // 创建会话的 Agent 类型下拉经统一枚举注册表渲染 label
+  void ensureEnum(EnumClass.agentKind);
   void loadStatus();
   void loadSessions();
   void loadDocOptions();
@@ -953,5 +1059,12 @@ onUnmounted(() => {
   max-height: calc(var(--zk-editor-min-height) * 1.5);
   overflow: auto;
   padding: var(--zk-space-2) var(--zk-space-3);
+}
+
+/* 压缩摘要正文：保留换行与空格（摘要为模型输出纯文本） */
+.compact-summary {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 </style>

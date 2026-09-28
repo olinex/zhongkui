@@ -28,6 +28,9 @@ export const EnumClass = {
   evalStageStatus: "evalStageStatus",
   diagnosisCategory: "diagnosisCategory",
   chunkUnitKind: "chunkUnitKind",
+  agentKind: "agentKind",
+  memoryKind: "memoryKind",
+  memoryStatus: "memoryStatus",
 } as const;
 
 // currentLang 当前语言（i18n locale value，如 zh-Hans / en）

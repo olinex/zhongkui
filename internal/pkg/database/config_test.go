@@ -83,25 +83,25 @@ func TestToGormConfig_CustomValues(t *testing.T) {
 func TestToGormConfig_PartialCustomValues(t *testing.T) {
 	Convey("当使用部分自定义 MetaConfig 值时", t, func() {
 		meta := &MetaConfig{
-			SkipDefaultTransaction:   true,
-			PrepareStmt:              true,
-			CreateBatchSize:          50,
-			TranslateError:           true,
-			PropagateUnscoped:        false,
+			SkipDefaultTransaction: true,
+			PrepareStmt:            true,
+			CreateBatchSize:        50,
+			TranslateError:         true,
+			PropagateUnscoped:      false,
 		}
 		result := meta.ToGormConfig(nil)
 
 		So(result, ShouldNotBeNil)
 		So(result.SkipDefaultTransaction, ShouldBeTrue)
 		So(result.FullSaveAssociations, ShouldBeFalse) // 默认值
-		So(result.DryRun, ShouldBeFalse) // 默认值
+		So(result.DryRun, ShouldBeFalse)               // 默认值
 		So(result.PrepareStmt, ShouldBeTrue)
-		So(result.DisableAutomaticPing, ShouldBeFalse) // 默认值
+		So(result.DisableAutomaticPing, ShouldBeFalse)                     // 默认值
 		So(result.DisableForeignKeyConstraintWhenMigrating, ShouldBeFalse) // 默认值
-		So(result.IgnoreRelationshipsWhenMigrating, ShouldBeFalse) // 默认值
-		So(result.DisableNestedTransaction, ShouldBeFalse) // 默认值
-		So(result.AllowGlobalUpdate, ShouldBeFalse) // 默认值
-		So(result.QueryFields, ShouldBeFalse) // 默认值
+		So(result.IgnoreRelationshipsWhenMigrating, ShouldBeFalse)         // 默认值
+		So(result.DisableNestedTransaction, ShouldBeFalse)                 // 默认值
+		So(result.AllowGlobalUpdate, ShouldBeFalse)                        // 默认值
+		So(result.QueryFields, ShouldBeFalse)                              // 默认值
 		So(result.CreateBatchSize, ShouldEqual, 50)
 		So(result.TranslateError, ShouldBeTrue)
 		So(result.PropagateUnscoped, ShouldBeFalse)

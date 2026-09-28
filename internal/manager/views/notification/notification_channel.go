@@ -3,7 +3,6 @@ package notification
 import (
 	// stdlib
 
-	"net/http"
 	"slices"
 	"strconv"
 
@@ -205,12 +204,12 @@ func NotificationChannelCreate(c *gin.Context) {
 		return
 	}
 	if !isSupportedNotificationChannelType(in.Type) {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
+		response.CreateBadBodyError(nil).AbortWithGinH(c)
 		return
 	}
 	if message.IsPlaceholderType(in.Type) {
 		// 占位符渠道（如 webhook）为系统固定数据，随命名空间自动种子化，禁止前端重复创建
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
+		response.CreateBadBodyError(nil).AbortWithGinH(c)
 		return
 	}
 	// 渠道级配置须能被渠道工厂反序列化并校验通过（如 email 的 port 必须是数字、

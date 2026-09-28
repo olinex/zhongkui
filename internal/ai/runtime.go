@@ -332,11 +332,25 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 	// constant of the ai package) at their call sites, so the slot-to-chat-client resolver is
 	// injected instead of a fixed client; an unbound flash yields an explicit English error
 	// from the resolver and never silently switches to another slot.
-	retriever, err := NewRetriever(r.db, embedder, r.chatResolver(st.chats), snap.Params())
+	retriever, err := NewRetriever(r.db, embedder, r.chatResolver(st.chats), snap.Params(), r.logger)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	agent, err := NewAgent(ctx, r.chatResolver(st.chats), retriever, sessions, snap.Params(), snap.Tools(), snap.ToolInfos())
+	// 会话记忆服务：长期记忆存储（MemoryStore，向量/关键词检索与落库）与服务层 Memory
+	// （滚动摘要 / 会话压缩 / 记忆检索），后者注入 Agent 并暴露给视图层的压缩接口。
+	// The session memory service: the long-term memory store (MemoryStore, hybrid retrieval and
+	// persistence) and the service layer Memory (rolling summary / session compaction / memory
+	// retrieval), the latter injected into the Agent and exposed to the view-layer compaction
+	// endpoint.
+	memoryStore, err := NewMemoryStore(r.db, embedder, snap.Params(), r.logger)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	memoryService, err := NewMemory(memoryStore, r.chatResolver(st.chats), snap.Params(), r.logger)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	agent, err := NewAgent(ctx, r.chatResolver(st.chats), retriever, sessions, snap.Params(), memoryService, r.logger, snap.Tools(), snap.ToolInfos())
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -345,6 +359,7 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 		Knowledge: knowledge,
 		Retriever: retriever,
 		Sessions:  sessions,
+		Memory:    memoryService,
 		Params:    snap.Params(),
 		Tools:     snap.Tools(),
 	}

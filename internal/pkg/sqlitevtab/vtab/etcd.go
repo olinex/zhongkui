@@ -232,9 +232,9 @@ func (p etcdPlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) 
 func (etcdPlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
 	c := cfg.(*EtcdTableConfig)
 	return NewEtcdDatasource(NewEtcdPool(&EtcdConfig{
-		Endpoints: splitEndpoints(c.Endpoints), 
-		Username: c.Username,
-		Password: c.Password, 
+		Endpoints: splitEndpoints(c.Endpoints),
+		Username:  c.Username,
+		Password:  c.Password,
 		Namespace: namespace,
 	})), nil
 }

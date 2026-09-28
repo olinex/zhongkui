@@ -159,6 +159,13 @@ export const navigationGroups: NavGroup[] = [
         routeName: "AI Assistant",
         namespaceScoped: true,
       },
+      {
+        title: "navbar.ai.memory",
+        icon: "mdi-brain",
+        routeName: "AI Memory List",
+        namespaceScoped: true,
+        perm: { obj: "api:/api/v1/ai/memory/list", act: "POST" },
+      },
     ],
   },
   {

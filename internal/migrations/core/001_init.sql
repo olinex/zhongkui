@@ -615,7 +615,9 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     title VARCHAR(256) NOT NULL,
     content TEXT NOT NULL,
     chunk_count INT NOT NULL DEFAULT 0,
-    hash CHAR(64) NOT NULL DEFAULT ''
+    hash CHAR(64) NOT NULL DEFAULT '',
+    use_count INT NOT NULL DEFAULT 0,
+    last_used_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_documents_namespace
@@ -630,6 +632,8 @@ COMMENT ON COLUMN knowledge_documents.title IS 'the title of the knowledge docum
 COMMENT ON COLUMN knowledge_documents.content IS 'the full content of the knowledge document';
 COMMENT ON COLUMN knowledge_documents.chunk_count IS 'the number of chunks the document is split into';
 COMMENT ON COLUMN knowledge_documents.hash IS 'the sha256 hex digest of the document content, used to detect stale chunk indexes';
+COMMENT ON COLUMN knowledge_documents.use_count IS 'the number of times the document has been recalled by retrieval, one increment per retrieval hitting any of its chunks, default 0';
+COMMENT ON COLUMN knowledge_documents.last_used_at IS 'the last time the document was recalled by retrieval, null when never used';
 
 CREATE TABLE IF NOT EXISTS knowledge_chunks (
     id SERIAL PRIMARY KEY,
@@ -672,7 +676,10 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     title VARCHAR(256) NOT NULL DEFAULT '',
     target_model VARCHAR(255) NOT NULL DEFAULT '',
-    status VARCHAR(16) NOT NULL DEFAULT 'active'
+    status VARCHAR(16) NOT NULL DEFAULT 'active',
+    agent_kind VARCHAR(32) NOT NULL DEFAULT 'knowledge',
+    summary TEXT NOT NULL DEFAULT '',
+    summary_upto_message_id BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_namespace
@@ -686,6 +693,9 @@ COMMENT ON COLUMN agent_sessions.namespace_name IS 'the namespace the agent sess
 COMMENT ON COLUMN agent_sessions.title IS 'the title of the agent session, defaulting to a summary of the first user message';
 COMMENT ON COLUMN agent_sessions.target_model IS 'the default slot of the session (flash/standard/advanced), empty means resolving through the agent.defaultSlot parameter';
 COMMENT ON COLUMN agent_sessions.status IS 'the status of the agent session, default active';
+COMMENT ON COLUMN agent_sessions.agent_kind IS 'the agent kind the session belongs to, e.g. knowledge or rego';
+COMMENT ON COLUMN agent_sessions.summary IS 'the rolling summary of the session, compressing the messages already folded into it, empty when none';
+COMMENT ON COLUMN agent_sessions.summary_upto_message_id IS 'the id of the last message covered by the rolling summary, 0 means nothing is summarized yet';
 
 CREATE TABLE IF NOT EXISTS agent_messages (
     id BIGSERIAL PRIMARY KEY,
@@ -711,6 +721,54 @@ COMMENT ON COLUMN agent_messages.role IS 'the role of the message, e.g. user, as
 COMMENT ON COLUMN agent_messages.content IS 'the content of the message';
 COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, null when not applicable';
 COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, null when not applicable';
+
+CREATE TABLE IF NOT EXISTS agent_memories (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    agent_kind VARCHAR(32) NOT NULL,
+    session_id BIGINT NOT NULL DEFAULT 0,
+    kind VARCHAR(16) NOT NULL DEFAULT 'fact',
+    title VARCHAR(256) NOT NULL DEFAULT '',
+    content TEXT NOT NULL,
+    embedding vector(1536) NOT NULL,
+    search tsvector NOT NULL DEFAULT '',
+    hash CHAR(64) NOT NULL DEFAULT '',
+    status VARCHAR(16) NOT NULL DEFAULT 'active',
+    use_count INT NOT NULL DEFAULT 0,
+    last_used_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_memories_namespace_kind
+    ON agent_memories (namespace_name, agent_kind);
+
+CREATE INDEX IF NOT EXISTS idx_agent_memories_embedding
+    ON agent_memories USING hnsw (embedding vector_cosine_ops);
+
+CREATE INDEX IF NOT EXISTS idx_agent_memories_search
+    ON agent_memories USING gin (search);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_memories_scope_hash
+    ON agent_memories (namespace_name, agent_kind, hash);
+
+COMMENT ON COLUMN agent_memories.id IS 'the primary key of the agent memory';
+COMMENT ON COLUMN agent_memories.created_at IS 'the creation time of the agent memory';
+COMMENT ON COLUMN agent_memories.updated_at IS 'the last update time of the agent memory';
+COMMENT ON COLUMN agent_memories.deleted_at IS 'the soft delete time of the agent memory, null means not deleted';
+COMMENT ON COLUMN agent_memories.namespace_name IS 'the namespace the agent memory belongs to';
+COMMENT ON COLUMN agent_memories.agent_kind IS 'the agent kind the memory belongs to, e.g. knowledge or rego';
+COMMENT ON COLUMN agent_memories.session_id IS 'the originating session id, 0 for memories added manually (no cascade so memories survive session deletion)';
+COMMENT ON COLUMN agent_memories.kind IS 'the category of the memory, e.g. fact, preference, decision or artifact';
+COMMENT ON COLUMN agent_memories.title IS 'the one-line title of the memory';
+COMMENT ON COLUMN agent_memories.content IS 'the body of the memory';
+COMMENT ON COLUMN agent_memories.embedding IS 'the vectorized representation of the memory content for similarity retrieval';
+COMMENT ON COLUMN agent_memories.search IS 'the full-text search representation of the memory content';
+COMMENT ON COLUMN agent_memories.hash IS 'the sha256 hex digest of the normalized memory content, used for exact deduplication';
+COMMENT ON COLUMN agent_memories.status IS 'the status of the memory, e.g. active or archived';
+COMMENT ON COLUMN agent_memories.use_count IS 'the number of times the memory has been recalled by retrieval, default 0';
+COMMENT ON COLUMN agent_memories.last_used_at IS 'the last time the memory was recalled by retrieval, null when never used';
 
 CREATE TABLE IF NOT EXISTS llm_models (
     id SERIAL PRIMARY KEY,
@@ -847,6 +905,7 @@ DROP TABLE IF EXISTS mcp_servers;
 DROP TABLE IF EXISTS agent_params;
 DROP TABLE IF EXISTS llm_bindings;
 DROP TABLE IF EXISTS llm_models;
+DROP TABLE IF EXISTS agent_memories;
 DROP TABLE IF EXISTS agent_messages;
 DROP TABLE IF EXISTS agent_sessions;
 DROP TABLE IF EXISTS knowledge_chunks;

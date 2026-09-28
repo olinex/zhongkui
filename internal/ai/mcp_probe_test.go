@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/ai/tools/mcp"
 	// internal
+	"zhongkui.com/zhongkui/internal/ai/tools/mcp"
 )
 
 // jsonrpcRequest 是 MCP 客户端发来的 JSON-RPC 请求的最小视图；id 以原始 JSON 承载以便原样回显。

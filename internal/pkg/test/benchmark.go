@@ -16,7 +16,6 @@ import (
 )
 
 type benchConfig struct {
-	minDuration time.Duration
 	warmupCount int
 	outputDir   string
 	autoReport  bool
@@ -26,7 +25,6 @@ type benchConfig struct {
 
 func defaultConfig() benchConfig {
 	return benchConfig{
-		minDuration: 1 * time.Second,
 		warmupCount: 0,
 		outputDir:   ".",
 		autoReport:  true,
@@ -35,12 +33,6 @@ func defaultConfig() benchConfig {
 }
 
 type BenchOption func(*benchConfig)
-
-func WithMinDuration(d time.Duration) BenchOption {
-	return func(c *benchConfig) {
-		c.minDuration = d
-	}
-}
 
 func WithWarmup(n int) BenchOption {
 	return func(c *benchConfig) {

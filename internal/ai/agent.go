@@ -19,9 +19,12 @@ import (
 	"gorm.io/datatypes"
 
 	// internal
+
+	"zhongkui.com/zhongkui/internal/ai/tools"
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
 // agentNode 常量：Eino Graph 五节点管线的节点名（上下文组装 → 混合检索 →
@@ -44,6 +47,13 @@ const (
 // (data.agent.validate) whose value must be a boolean.
 const agentRegoQuery = "data.agent.validate"
 
+// agentSummarySectionTitle 是注入给 LLM 时「会话滚动摘要」段的英文标题常量（长期记忆分节的
+// 标题取参数 memory.sectionTitle，分节位于摘要之后、窗口历史之前）。
+// agentSummarySectionTitle is the English title constant of the "rolling session summary"
+// section injected into the LLM (the long-term memory section takes its title from the
+// memory.sectionTitle parameter and sits after the summary and before the window history).
+const agentSummarySectionTitle = "## Conversation Summary"
+
 // AgentInput 是一次 Agent 提问的图输入。
 // AgentInput is the graph input of a single agent request.
 type AgentInput struct {
@@ -59,10 +69,22 @@ type AgentInput struct {
 	// SessionID 会话 ID；为 0 时不读写会话（无持久化）
 	// SessionID the session ID; 0 means no session persistence
 	SessionID uint `json:"sessionID,omitempty"`
+	// AgentKind 本次运行所属的 Agent 类型，是长期记忆按「命名空间 + Agent 类型」隔离的维度；
+	// 为空时按 knowledge 处理。会话路径由 StreamRun 从会话读取后注入。
+	// AgentKind the agent kind of this run, the dimension long-term memories are isolated by
+	// together with the namespace; an empty value means knowledge. The session path injects it
+	// from the session in StreamRun.
+	AgentKind llm.AgentKind `json:"agentKind,omitempty"`
 	// HistoryMessages 历史消息（一般由 StreamRun 从会话加载，也可由调用方直接注入）
 	// HistoryMessages the history messages (normally loaded from the session by
 	// StreamRun, or injected directly by the caller)
 	HistoryMessages []*schema.Message `json:"-"`
+	// Summary 本次生成使用的会话滚动摘要（由 StreamRun 从会话读取/刷新后注入），
+	// 非空时作为独立摘要段插在系统提示之后、窗口历史之前
+	// Summary the rolling session summary used by this run (read/refreshed from the
+	// session by StreamRun); when non-empty it is injected as a standalone section
+	// right after the system prompt and before the window history
+	Summary string `json:"-"`
 	// BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
 	// BusinessData the frontend-passed current business scene (sanitized and
 	// bounded by SanitizeBusinessData before injection)
@@ -170,6 +192,8 @@ type Agent struct {
 	retriever retriever.Retriever      // 图内检索节点（*Retriever 天然满足）
 	store     *SessionStore            // 会话持久化
 	params    *llm.Params              // 行为参数解析器（提示词、标题、上限、截断长度）
+	memory    *Memory                  // 会话记忆服务（滚动摘要）；为 nil 时跳过摘要
+	logger    *logging.Logger          // 日志记录器（可空：为 nil 时跳过告警）
 	tools     []tool.BaseTool          // 本次装配可用的工具（无工具时为空）
 	toolInfos []*schema.ToolInfo       // 与 tools 对应的 schema 清单（无工具时为空）
 	toolIndex map[string]tool.BaseTool // 按 Info(ctx).Name 建立的工具索引（节点 4 派发用）
@@ -177,7 +201,8 @@ type Agent struct {
 }
 
 // NewAgent 构造 Agent：校验依赖后组装五节点图并编译。resolver/retriever/store/params
-// 任一为空时返回英文错误；resolver 与 retriever 均为函数/接口参数，测试可注入替身。
+// 任一为空时返回英文错误；memory 与 logger 允许为 nil（memory 为 nil 时跳过滚动摘要，
+// logger 为 nil 时跳过告警）；resolver 与 retriever 均为函数/接口参数，测试可注入替身。
 // 行为参数由上层（Runtime）从 agent_params 解析后传入。tools/toolInfos 为本次装配可用的
 // 工具及其 schema 清单，二者均不做非空校验：toolInfos 为空即「无工具模式」，节点 4 不传
 // 工具选项，行为与引入工具前一致。工具索引在此按 Info(ctx).Name 构建，ctx 由调用方传入
@@ -197,7 +222,7 @@ type Agent struct {
 // Info fails is skipped (and thus not dispatchable, though its schema in toolInfos would
 // still be visible to the model — under normal assembly both come from the same source so
 // this never happens).
-func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *llm.Params, tools []tool.BaseTool, toolInfos []*schema.ToolInfo) (*Agent, error) {
+func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *llm.Params, memory *Memory, logger *logging.Logger, tools []tool.BaseTool, toolInfos []*schema.ToolInfo) (*Agent, error) {
 	if resolver == nil {
 		return nil, errors.New("agent: nil chat resolver")
 	}
@@ -215,6 +240,8 @@ func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Re
 		retriever: retriever,
 		store:     store,
 		params:    params,
+		memory:    memory,
+		logger:    logger,
 		tools:     tools,
 		toolInfos: toolInfos,
 		toolIndex: buildToolIndex(ctx, tools),
@@ -288,9 +315,11 @@ func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Re
 func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*schema.StreamReader[*schema.Message], error) {
 	var slot llm.Slot
 	var reporter EvalReporter
+	var in AgentInput
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 		slot = st.slot
 		reporter = st.toolReporter
+		in = st.input
 		return nil
 	}); err != nil {
 		return nil, errors.WithStack(err)
@@ -324,6 +353,10 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 			maxRounds = 1
 		}
 		maxBytes := a.params.Int("agent.maxToolResultBytes")
+		// 派发工具前注入记忆运行期信息：memory_write 据此取回写入器与本次运行的归属。
+		// Inject the memory runtime before dispatching tools: memory_write reads the writer and
+		// the scope of this run back from it.
+		toolCtx := a.memoryToolContext(ctx, in)
 		current := messages
 		for round := 0; round < maxRounds; round++ {
 			reader, err := chat.Stream(ctx, current, model.WithTools(a.toolInfos))
@@ -382,7 +415,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 					}
 				}
 				start := time.Now()
-				result, execErr := a.runTool(ctx, tc)
+				result, execErr := a.runTool(toolCtx, tc)
 				elapsed := time.Since(start).Milliseconds()
 				if execErr != nil {
 					// 工具执行失败：把错误文本作为工具结果回填让模型自行纠错，绝不当作流错误上抛。
@@ -474,6 +507,25 @@ func (a *Agent) runTool(ctx context.Context, tc schema.ToolCall) (string, error)
 	return res, nil
 }
 
+// memoryToolContext 在派发工具前把记忆运行期信息（写入器与归属：命名空间 / Agent 类型 / 来源
+// 会话）注入 ctx，供 memory_write 在工具循环中取回；记忆服务缺失时原样返回 ctx（工具因取不到
+// 运行期信息而返回英文错误，不会静默写入）。
+// memoryToolContext injects the memory runtime (the writer plus the scope: namespace / agent kind /
+// originating session) into ctx before tools are dispatched, for memory_write to read back during the
+// tool loop; a missing memory service returns ctx unchanged (the tool then returns an English error
+// for the absent runtime instead of silently writing).
+func (a *Agent) memoryToolContext(ctx context.Context, in AgentInput) context.Context {
+	if a.memory == nil {
+		return ctx
+	}
+	return tools.WithMemoryRuntime(ctx, tools.MemoryRuntime{
+		Writer:        memoryStoreWriter{store: a.memory.store},
+		NamespaceName: in.NamespaceName,
+		AgentKind:     in.AgentKind,
+		SessionID:     in.SessionID,
+	})
+}
+
 // truncateBytes 把字符串按 UTF-8 rune 边界截断到不超过 max 字节（max 非正数时不截断），
 // 发生截断时追加 "..."，保证不产生残缺的多字节字符。与 truncateText（rune 语义）不同，
 // 本函数以字节为限，用于限制工具结果对模型上下文的占用。
@@ -542,7 +594,9 @@ func (a *Agent) Stream(ctx context.Context, input AgentInput, opts ...compose.Op
 }
 
 // StreamRun 是带会话持久化的流式执行入口（SSE 管线后端）：
-//  1. 会话存在时先校验会话、加载历史消息并注入图输入（受参数 session.maxContextMessages 约束）；
+//  1. 会话存在时先校验会话、加载历史消息（先按 session.maxContextMessages 取最近 N 条、
+//     再按 session.maxContextBytes 从最旧裁剪整条）并注入图输入；随后按 memory.summaryMinEvictedMessages
+//     阈值推进滚动摘要（失败仅告警），摘要一并注入图输入；
 //  2. 持久化本轮用户消息；
 //  3. 执行流式图；
 //  4. 流末尾收到 done 项时先持久化助手回复（正文 + 草稿 + 引用）再向外发送 done。
@@ -551,9 +605,11 @@ func (a *Agent) Stream(ctx context.Context, input AgentInput, opts ...compose.Op
 // ErrSessionNotFound 且不落任何消息；提问为空时返回英文错误（不落空消息）。
 // StreamRun is the session-persisting streaming entry (the backend of the SSE
 // pipeline):
-//  1. when the session exists, it validates the session, loads the history
-//     messages and injects them into the graph input (bounded by the parameter
-//     session.maxContextMessages);
+//  1. when the session exists, it validates the session, loads the history messages
+//     (taking the latest N by session.maxContextMessages then trimming whole messages
+//     from the oldest by session.maxContextBytes) and injects them into the graph
+//     input; it then advances the rolling summary at the memory.summaryMinEvictedMessages
+//     threshold (a failure only warns) and injects the summary as well;
 //  2. persists the user message of this turn;
 //  3. runs the streaming graph;
 //  4. on the done item at the stream end, persists the assistant reply (content +
@@ -567,7 +623,8 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 		return nil, errors.New("agent: empty query")
 	}
 	if input.SessionID != 0 {
-		if _, err := a.store.GetSession(ctx, input.SessionID); err != nil {
+		session, err := a.store.GetSession(ctx, input.SessionID)
+		if err != nil {
 			if errors.Is(err, ErrSessionNotFound) {
 				return nil, err
 			}
@@ -577,11 +634,23 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
+		// 字节预算裁剪：条数窗口之后，再按 session.maxContextBytes 从最旧开始丢弃整条消息
+		// （至少保留最新一条）；裁剪后的最旧消息 ID 即窗口下界，供滚动摘要圈定被挤出消息。
+		// Byte-budget trimming: after the count window, whole messages are dropped from the
+		// oldest until the total fits session.maxContextBytes (keeping at least the newest one);
+		// the oldest surviving message id is the window lower bound used by the rolling summary
+		// to delimit the evicted messages.
+		history = trimMessagesByBytes(history, a.params.Int("session.maxContextBytes"))
 		input.HistoryMessages = toSchemaMessages(history)
+		// 会话所属 Agent 类型是长期记忆的隔离维度，由会话决定（调用方的显式取值不覆盖它）。
+		// The session's agent kind is the isolation dimension of long-term memory and is decided by
+		// the session (an explicit caller value never overrides it).
+		input.AgentKind = session.AgentKind
+		input.Summary = a.refreshSummary(ctx, session, history)
 		if _, err := a.store.AppendMessage(ctx, &modelsai.AgentMessage{
 			SessionID:     input.SessionID,
 			NamespaceName: input.NamespaceName,
-			Role:          MessageRoleUser,
+			Role:          llm.MessageRoleUser,
 			Content:       strings.TrimSpace(input.Query),
 		}); err != nil {
 			return nil, errors.WithStack(err)
@@ -592,6 +661,89 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 		return nil, errors.WithStack(err)
 	}
 	return a.wrapPersist(ctx, reader, input), nil
+}
+
+// trimMessagesByBytes 按字节预算从最旧开始丢弃整条消息，直到剩余消息的 Content 字节总数不
+// 超过 maxBytes；至少保留最新一条（只丢整条消息，故不会切断多字节字符），maxBytes 非正数或
+// 未超预算时原样返回。
+// trimMessagesByBytes drops whole messages from the oldest until the total Content bytes of the
+// remaining messages fit within maxBytes, always keeping at least the newest one (only whole
+// messages are dropped, so no multi-byte character is ever cut); a non-positive maxBytes or an
+// in-budget input returns the input unchanged.
+func trimMessagesByBytes(messages []*modelsai.AgentMessage, maxBytes int) []*modelsai.AgentMessage {
+	if maxBytes <= 0 || len(messages) == 0 {
+		return messages
+	}
+	total := 0
+	for _, msg := range messages {
+		if msg != nil {
+			total += len(msg.Content)
+		}
+	}
+	if total <= maxBytes {
+		return messages
+	}
+	cut := 0
+	for cut < len(messages)-1 && total > maxBytes {
+		if messages[cut] != nil {
+			total -= len(messages[cut].Content)
+		}
+		cut++
+	}
+	return messages[cut:]
+}
+
+// refreshSummary 在加载窗口历史后推进滚动摘要：取「窗口外且 id > summary_upto_message_id 的
+// 未摘要消息」（窗口最旧消息 ID 作上界），条数达到 memory.summaryMinEvictedMessages 且 memory
+// 非 nil 时用 flash 重写摘要并落库，同时把新摘要写回会话副本使本次生成即用新摘要。摘要失败仅
+// 告警、不中断生成、不推进游标；不受 memory.enabled 开关约束（该开关只管长期记忆）。
+// refreshSummary advances the rolling summary after the window history is loaded: it takes the
+// "window-external messages with id > summary_upto_message_id that are not summarized yet" (with
+// the oldest window message id as the upper bound) and, when their count reaches
+// memory.summaryMinEvictedMessages and memory is non-nil, rewrites the summary with flash and
+// persists it while writing the new summary back into the session copy so this run already uses
+// it. A failure only warns, never aborts the run and never advances the cursor; it is not gated by
+// memory.enabled (that switch only governs long-term memory).
+func (a *Agent) refreshSummary(ctx context.Context, session *modelsai.AgentSession, history []*modelsai.AgentMessage) string {
+	if session == nil || a.memory == nil {
+		if session == nil {
+			return ""
+		}
+		return session.Summary
+	}
+	var windowOldestID uint
+	if len(history) > 0 && history[0] != nil {
+		windowOldestID = history[0].ID
+	}
+	evicted, err := a.store.ListMessagesBefore(ctx, session.ID, windowOldestID, session.SummaryUptoMessageID)
+	if err != nil {
+		a.warnf(ctx, "agent: loading evicted messages for the rolling summary failed: %v", err)
+		return session.Summary
+	}
+	if len(evicted) == 0 || len(evicted) < a.params.Int("memory.summaryMinEvictedMessages") {
+		return session.Summary
+	}
+	summary, upto, err := a.memory.Summarize(ctx, session, evicted)
+	if err != nil {
+		a.warnf(ctx, "agent: rolling summary failed, keeping the previous summary: %v", err)
+		return session.Summary
+	}
+	if err := a.store.UpdateSummary(ctx, session.ID, summary, upto); err != nil {
+		a.warnf(ctx, "agent: persisting the rolling summary failed, keeping the previous summary: %v", err)
+		return session.Summary
+	}
+	session.Summary = summary
+	session.SummaryUptoMessageID = upto
+	return summary
+}
+
+// warnf 在 logger 非空时输出告警。
+// warnf emits a warning when the logger is non-nil.
+func (a *Agent) warnf(ctx context.Context, format string, args ...any) {
+	if a.logger == nil {
+		return
+	}
+	a.logger.Ctx(ctx).Warnf(format, args...)
 }
 
 // wrapPersist 包装图输出流：收到 done 项且会话存在时，先持久化助手回复再向外
@@ -635,7 +787,7 @@ func (a *Agent) persistAssistantMessage(ctx context.Context, input AgentInput, d
 	msg := &modelsai.AgentMessage{
 		SessionID:     input.SessionID,
 		NamespaceName: input.NamespaceName,
-		Role:          MessageRoleAssistant,
+		Role:          llm.MessageRoleAssistant,
 		Content:       done.Content,
 	}
 	if len(done.Draft) > 0 && string(done.Draft) != "null" {
@@ -699,7 +851,32 @@ func (a *Agent) sanitizeBusinessData(ctx context.Context, docs []*schema.Documen
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return buildAgentMessages(a.params, in.HistoryMessages, docs, sanitized, in.Query), nil
+	return buildAgentMessages(a.params, in.Summary, a.recallMemories(ctx, in), in.HistoryMessages, docs, sanitized, in.Query), nil
+}
+
+// recallMemories 取回本次运行可注入的长期记忆：记忆服务缺失、memory.enabled=false、命名空间为
+// 空或 Agent 类型非法时返回 nil（不注入记忆分节）；检索失败降级为 nil 且只记录告警，绝不中断
+// 生成——长期记忆是增强能力，缺失时行为与引入记忆前一致。
+// recallMemories fetches the long-term memories injectable into this run: it returns nil (no memory
+// section) when the memory service is missing, memory.enabled=false, the namespace is empty or the
+// agent kind is invalid; a retrieval failure degrades to nil with a warning only and never aborts the
+// generation — long-term memory is an enhancement, and its absence behaves exactly as before memory
+// existed.
+func (a *Agent) recallMemories(ctx context.Context, in AgentInput) []MemoryHit {
+	if a.memory == nil || !a.params.Bool("memory.enabled") {
+		return nil
+	}
+	agentKind, err := llm.ParseAgentKind(in.AgentKind)
+	if err != nil {
+		a.warnf(ctx, "agent: long-term memory retrieval skipped, invalid agent kind: %v", err)
+		return nil
+	}
+	hits, err := a.memory.Recall(ctx, in.NamespaceName, agentKind, in.Query)
+	if err != nil {
+		a.warnf(ctx, "agent: long-term memory retrieval failed, skipping the memory section: %v", err)
+		return nil
+	}
+	return hits
 }
 
 // validateOutput 是节点 5：透传 LLM 流式增量（delta 项），流结束后聚合全文并
@@ -871,17 +1048,26 @@ func validateDraftWithRego(ctx context.Context, source string, draft json.RawMes
 	return true, "", nil
 }
 
-// buildAgentMessages 组装发送给 LLM 的完整消息列表：系统提示 + 历史消息 +
-// 检索知识 + 业务现场 + 当前提问（检索/业务段拼接在用户消息内，控制消息条数）。
-// 系统提示词、三个分节标题与片段截断长度均经参数解析器 params 读取。
-// buildAgentMessages assembles the full message list sent to the LLM: system
-// prompt + history messages + retrieved knowledge + business scene + the current
-// question (the retrieval/business sections are joined into the user message to
-// keep the message count bounded). The system prompt, the three section titles
-// and the snippet truncation length are all read through the params resolver.
-func buildAgentMessages(params *llm.Params, history []*schema.Message, docs []*schema.Document, businessData llm.BusinessData, query string) []*schema.Message {
-	messages := make([]*schema.Message, 0, 2+len(history))
+// buildAgentMessages 组装发送给 LLM 的完整消息列表：系统提示 + 会话摘要（若有）+
+// 长期记忆分节（若有）+ 历史消息 + 检索知识 + 业务现场 + 当前提问（检索/业务段拼接在用户
+// 消息内，控制消息条数）。长期记忆分节位于摘要之后、窗口历史之前。系统提示词、摘要段标题、
+// 记忆段标题、三个分节标题与片段截断长度均经参数解析器 params 读取。
+// buildAgentMessages assembles the full message list sent to the LLM: system prompt + session
+// summary (when present) + long-term memory section (when present) + history messages + retrieved
+// knowledge + business scene + the current question (the retrieval/business sections are joined into
+// the user message to keep the message count bounded). The long-term memory section sits after the
+// summary and before the window history. The system prompt, the summary section title, the memory
+// section title, the three section titles and the snippet truncation length are all read through the
+// params resolver.
+func buildAgentMessages(params *llm.Params, summary string, memories []MemoryHit, history []*schema.Message, docs []*schema.Document, businessData llm.BusinessData, query string) []*schema.Message {
+	messages := make([]*schema.Message, 0, 3+len(history))
 	messages = append(messages, schema.SystemMessage(params.Text("agent.systemPrompt")))
+	if trimmed := strings.TrimSpace(summary); trimmed != "" {
+		messages = append(messages, schema.SystemMessage(agentSummarySectionTitle+"\n"+trimmed))
+	}
+	if section := formatMemories(params, memories); section != "" {
+		messages = append(messages, schema.SystemMessage(section))
+	}
 	messages = append(messages, history...)
 	var parts []string
 	if len(docs) > 0 {
@@ -893,6 +1079,37 @@ func buildAgentMessages(params *llm.Params, history []*schema.Message, docs []*s
 	parts = append(parts, params.String("agent.questionSectionTitle")+"\n"+strings.TrimSpace(query))
 	messages = append(messages, schema.UserMessage(strings.Join(parts, "\n\n")))
 	return messages
+}
+
+// formatMemories 把长期记忆命中格式化为一个注入段：段标题取参数 memory.sectionTitle，
+// 每条形如 "- [kind] title: content"（无标题时省略 "title: "）；正文为空或全部为空时返回空串，
+// 调用方据此跳过该分节。条数与单条长度已由 MemoryStore.Retrieve 按 memory.maxItems /
+// memory.maxItemBytes 限界，本函数不再重复截断。
+// formatMemories formats the long-term memory hits into one injected section: the section title comes
+// from the memory.sectionTitle parameter and each entry looks like "- [kind] title: content" (the
+// "title: " part is omitted when there is no title); it returns an empty string when no entry has a
+// body, and the caller skips the section in that case. The entry count and each body's length are
+// already bounded by MemoryStore.Retrieve through memory.maxItems / memory.maxItemBytes, so this
+// function does not truncate again.
+func formatMemories(params *llm.Params, memories []MemoryHit) string {
+	if len(memories) == 0 {
+		return ""
+	}
+	lines := make([]string, 0, len(memories))
+	for _, hit := range memories {
+		content := strings.TrimSpace(hit.Content)
+		if content == "" {
+			continue
+		}
+		if title := strings.TrimSpace(hit.Title); title != "" {
+			content = title + ": " + content
+		}
+		lines = append(lines, "- ["+string(hit.Kind)+"] "+content)
+	}
+	if len(lines) == 0 {
+		return ""
+	}
+	return params.String("memory.sectionTitle") + "\n" + strings.Join(lines, "\n")
 }
 
 // formatRetrievedDocs 将检索文档格式化为带标题的引用列表（正文经 truncateText
@@ -944,11 +1161,11 @@ func toSchemaMessages(messages []*modelsai.AgentMessage) []*schema.Message {
 			continue
 		}
 		switch m.Role {
-		case MessageRoleUser:
+		case llm.MessageRoleUser:
 			out = append(out, schema.UserMessage(m.Content))
-		case MessageRoleAssistant:
+		case llm.MessageRoleAssistant:
 			out = append(out, schema.AssistantMessage(m.Content, nil))
-		case MessageRoleSystem:
+		case llm.MessageRoleSystem:
 			out = append(out, schema.SystemMessage(m.Content))
 		}
 	}

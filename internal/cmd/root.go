@@ -10,7 +10,6 @@ import (
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"zhongkui.com/zhongkui/internal/pkg/base"
-	_ "zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 	_ "zhongkui.com/zhongkui/internal/pkg/validator"
 	"zhongkui.com/zhongkui/internal/provider"

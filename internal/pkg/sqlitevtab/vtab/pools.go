@@ -123,9 +123,9 @@ func (p *Pools) Pool(ns string) *sqlitevtab.SQLitePool {
 // in that namespace can query it by the bare name via sqlite.query.
 func (p *Pools) Register(ctx context.Context, ns, name, typ string, cfgData []byte) error {
 	return registerInto(
-		ctx, 
-		p.Pool(ns), 
-		p.store(), 
+		ctx,
+		p.Pool(ns),
+		p.store(),
 		ns, name, typ, cfgData)
 }
 
