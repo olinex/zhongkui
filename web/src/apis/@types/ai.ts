@@ -113,7 +113,8 @@ export interface AgentSessionItem {
   updatedAt: string;
 }
 export interface AgentSessionCreateIn {
-  title: string;
+  // 首个用户问题，必填；后端据此经 LLM 生成会话主题（失败时按其截断兜底）
+  query: string;
   slot?: string;
   // 会话所属 Agent 类型（knowledge/rego），可选；缺省由后端取 knowledge
   agentKind?: string;
@@ -152,24 +153,8 @@ export interface AgentMemoryItemOut {
 export interface AgentMemoryDetailOut extends AgentMemoryItemOut {
   // 所属命名空间
   namespaceName: string;
-  // 来源会话 ID（手动新增为 0）
+  // 来源会话 ID（记忆按会话隔离，仅在来源会话内可见）
   sessionId: number;
-}
-export interface AgentMemoryCreateIn {
-  // 记忆所属 Agent 类型（knowledge/rego），可选；缺省由后端取 knowledge
-  agentKind?: string;
-  // 记忆类别（fact/preference/decision/artifact），可选；缺省由后端取 fact
-  kind?: string;
-  title?: string;
-  content: string;
-}
-export interface AgentMemoryUpdateIn {
-  // 记忆类别（fact/preference/decision/artifact），可选；空值表示不修改
-  kind?: string;
-  // 记忆标题，可选；空值表示不修改
-  title?: string;
-  // 记忆正文，可选；空值表示不修改，非空时后端重新向量化
-  content?: string;
 }
 export interface AgentMemoryStatusIn {
   // 目标状态（active/archived）

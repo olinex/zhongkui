@@ -13,49 +13,38 @@
 package views
 
 import (
-	// stdlib
+	// 标准库
 	"net/http"
 	"reflect"
 	"strings"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
 // Kind 描述字段的语义类型，供前端选择相应的表单控件。
-// Kind describes the semantic type of a field for frontend form control selection.
 type Kind string
 
 const (
 	// KindString 单行文本
-	// KindString single-line text
 	KindString Kind = "string"
 	// KindNumber 数值
-	// KindNumber numeric
 	KindNumber Kind = "number"
 	// KindPassword 密码输入
-	// KindPassword password input
 	KindPassword Kind = "password"
 	// KindTextarea 多行文本
-	// KindTextarea multi-line text
 	KindTextarea Kind = "textarea"
 	// KindObject 对象/结构化数据（通常以 JSON 文本编辑）
-	// KindObject object/structured (usually edited as JSON text)
 	KindObject Kind = "object"
 	// KindColumns 列定义列表：形如 [{name, type}] 的手动 schema 编辑器（数据源接入用）
-	// KindColumns a list of column definitions, e.g. [{name, type}], rendered as a manual
-	// schema editor (used for datasource access)
 	KindColumns Kind = "columns"
 	// KindBoolean 布尔开关
-	// KindBoolean boolean switch
 	KindBoolean Kind = "boolean"
 	// KindCrypto 加密字段：值保存为 base64 密文（经 meta options 下发前端，明文需走明文权限接口）
-	// KindCrypto encrypted field: value is base64 ciphertext (disclosed via meta options to the
-	// frontend; plaintext requires the plaintext permission endpoint)
 	KindCrypto Kind = "crypto"
 )
 
@@ -401,7 +390,6 @@ func structFieldName(field reflect.StructField) string {
 }
 
 // kindForType 依据 Go 类型推断字段的默认 kind。
-// kindForType infers the default kind from the Go field type.
 func kindForType(t reflect.Type) Kind {
 	switch t.Kind() {
 	case reflect.Bool:
@@ -418,7 +406,6 @@ func kindForType(t reflect.Type) Kind {
 }
 
 // parseFormTag 解析 form 标签：";" 分隔的 k=v 列表。
-// parseFormTag parses the form tag as a ";"-separated k=v list.
 func parseFormTag(tag string) map[string]string {
 	kv := make(map[string]string)
 	for _, part := range strings.Split(tag, ";") {
@@ -433,7 +420,6 @@ func parseFormTag(tag string) map[string]string {
 }
 
 // parseDefault 依据 kind 将 form 标签的 default 字符串解析为数值/布尔/字符串。
-// parseDefault parses the form default string into a number/boolean/string by kind.
 func parseDefault(kind Kind, v string) any {
 	switch kind {
 	case KindNumber:

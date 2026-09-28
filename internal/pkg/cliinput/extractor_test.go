@@ -17,6 +17,7 @@ var testValidate = validator.Validate
 // 基础错误场景
 // ---------------------------------------------------------------------------
 
+// 测试非指针目标返回错误。
 func TestExtract_NonPointerTarget(t *testing.T) {
 	v := viper.New()
 	type S struct {
@@ -29,6 +30,7 @@ func TestExtract_NonPointerTarget(t *testing.T) {
 	}
 }
 
+// 测试指向非结构体的指针返回错误。
 func TestExtract_PointerToNonStruct(t *testing.T) {
 	v := viper.New()
 	n := 42
@@ -38,6 +40,7 @@ func TestExtract_PointerToNonStruct(t *testing.T) {
 	}
 }
 
+// 测试 nil 指针返回错误。
 func TestExtract_NilPointer(t *testing.T) {
 	v := viper.New()
 	type S struct {
@@ -54,6 +57,7 @@ func TestExtract_NilPointer(t *testing.T) {
 // String 字段
 // ---------------------------------------------------------------------------
 
+// 测试从 viper 提取字符串字段。
 func TestExtract_StringFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("username", "alice")
@@ -70,6 +74,7 @@ func TestExtract_StringFromViper(t *testing.T) {
 	}
 }
 
+// 测试字符串未设置且无 prompt 时保持零值。
 func TestExtract_StringEmptyFromViper_NoPrompt(t *testing.T) {
 	v := viper.New()
 	// viper 中未设置该 key，且没有 prompt tag，应保持零值
@@ -85,6 +90,7 @@ func TestExtract_StringEmptyFromViper_NoPrompt(t *testing.T) {
 	}
 }
 
+// 测试无 viper tag 的字段被跳过。
 func TestExtract_StringFieldNoViperTag(t *testing.T) {
 	v := viper.New()
 	v.Set("name", "alice")
@@ -106,6 +112,7 @@ func TestExtract_StringFieldNoViperTag(t *testing.T) {
 // Bool 字段
 // ---------------------------------------------------------------------------
 
+// 测试提取布尔真值。
 func TestExtract_BoolFromViper_True(t *testing.T) {
 	v := viper.New()
 	v.Set("verbose", true)
@@ -122,6 +129,7 @@ func TestExtract_BoolFromViper_True(t *testing.T) {
 	}
 }
 
+// 测试提取布尔假值。
 func TestExtract_BoolFromViper_False(t *testing.T) {
 	v := viper.New()
 	v.Set("verbose", false)
@@ -138,6 +146,7 @@ func TestExtract_BoolFromViper_False(t *testing.T) {
 	}
 }
 
+// 测试布尔未设置且无 prompt 时保持零值。
 func TestExtract_BoolNotSet_NoPrompt(t *testing.T) {
 	v := viper.New()
 	// 未设置且无 prompt，应保持零值 false
@@ -157,6 +166,7 @@ func TestExtract_BoolNotSet_NoPrompt(t *testing.T) {
 // 有符号整数字段
 // ---------------------------------------------------------------------------
 
+// 测试提取 int 字段。
 func TestExtract_IntFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("count", 42)
@@ -173,6 +183,7 @@ func TestExtract_IntFromViper(t *testing.T) {
 	}
 }
 
+// 测试提取负 int 值。
 func TestExtract_IntNegative(t *testing.T) {
 	v := viper.New()
 	v.Set("offset", -10)
@@ -189,6 +200,7 @@ func TestExtract_IntNegative(t *testing.T) {
 	}
 }
 
+// 测试提取 int8 字段。
 func TestExtract_Int8FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", int64(127))
@@ -205,6 +217,7 @@ func TestExtract_Int8FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 int16 字段。
 func TestExtract_Int16FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", int64(-32000))
@@ -221,6 +234,7 @@ func TestExtract_Int16FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 int32 字段。
 func TestExtract_Int32FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", int64(100000))
@@ -237,6 +251,7 @@ func TestExtract_Int32FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 int64 字段。
 func TestExtract_Int64FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", int64(9999999999))
@@ -253,6 +268,7 @@ func TestExtract_Int64FromViper(t *testing.T) {
 	}
 }
 
+// 测试 int 未设置且无 prompt 时保持零值。
 func TestExtract_IntNotSet_NoPrompt(t *testing.T) {
 	v := viper.New()
 	type Input struct {
@@ -267,6 +283,7 @@ func TestExtract_IntNotSet_NoPrompt(t *testing.T) {
 	}
 }
 
+// 测试提取 int 零值。
 func TestExtract_IntZeroFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("count", 0)
@@ -287,6 +304,7 @@ func TestExtract_IntZeroFromViper(t *testing.T) {
 // 无符号整数字段
 // ---------------------------------------------------------------------------
 
+// 测试提取 uint 字段。
 func TestExtract_UintFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("port", uint64(8080))
@@ -303,6 +321,7 @@ func TestExtract_UintFromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 uint8 字段。
 func TestExtract_Uint8FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", uint64(255))
@@ -319,6 +338,7 @@ func TestExtract_Uint8FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 uint16 字段。
 func TestExtract_Uint16FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", uint64(65535))
@@ -335,6 +355,7 @@ func TestExtract_Uint16FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 uint32 字段。
 func TestExtract_Uint32FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", uint64(4294967295))
@@ -351,6 +372,7 @@ func TestExtract_Uint32FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 uint64 字段。
 func TestExtract_Uint64FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("val", uint64(18446744073709551615))
@@ -367,6 +389,7 @@ func TestExtract_Uint64FromViper(t *testing.T) {
 	}
 }
 
+// 测试 uint 未设置且无 prompt 时保持零值。
 func TestExtract_UintNotSet_NoPrompt(t *testing.T) {
 	v := viper.New()
 	type Input struct {
@@ -385,6 +408,7 @@ func TestExtract_UintNotSet_NoPrompt(t *testing.T) {
 // 浮点数字段
 // ---------------------------------------------------------------------------
 
+// 测试提取 float32 字段。
 func TestExtract_Float32FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("ratio", 3.14)
@@ -402,6 +426,7 @@ func TestExtract_Float32FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 float64 字段。
 func TestExtract_Float64FromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("ratio", 3.141592653589793)
@@ -418,6 +443,7 @@ func TestExtract_Float64FromViper(t *testing.T) {
 	}
 }
 
+// 测试提取 float64 零值。
 func TestExtract_Float64Zero(t *testing.T) {
 	v := viper.New()
 	v.Set("ratio", 0.0)
@@ -434,6 +460,7 @@ func TestExtract_Float64Zero(t *testing.T) {
 	}
 }
 
+// 测试提取负 float64 值。
 func TestExtract_Float64Negative(t *testing.T) {
 	v := viper.New()
 	v.Set("temp", -273.15)
@@ -450,6 +477,7 @@ func TestExtract_Float64Negative(t *testing.T) {
 	}
 }
 
+// 测试浮点未设置且无 prompt 时保持零值。
 func TestExtract_FloatNotSet_NoPrompt(t *testing.T) {
 	v := viper.New()
 	type Input struct {
@@ -468,6 +496,7 @@ func TestExtract_FloatNotSet_NoPrompt(t *testing.T) {
 // time.Duration 字段
 // ---------------------------------------------------------------------------
 
+// 测试提取 time.Duration 字段。
 func TestExtract_DurationFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("timeout", "30s")
@@ -484,6 +513,7 @@ func TestExtract_DurationFromViper(t *testing.T) {
 	}
 }
 
+// 测试以分钟为单位的 Duration。
 func TestExtract_DurationMinutes(t *testing.T) {
 	v := viper.New()
 	v.Set("interval", "5m")
@@ -500,6 +530,7 @@ func TestExtract_DurationMinutes(t *testing.T) {
 	}
 }
 
+// 测试复合时长的 Duration。
 func TestExtract_DurationComplex(t *testing.T) {
 	v := viper.New()
 	v.Set("ttl", "1h30m")
@@ -517,6 +548,7 @@ func TestExtract_DurationComplex(t *testing.T) {
 	}
 }
 
+// 测试 Duration 未设置且无 prompt 时保持零值。
 func TestExtract_DurationNotSet_NoPrompt(t *testing.T) {
 	v := viper.New()
 	type Input struct {
@@ -535,6 +567,7 @@ func TestExtract_DurationNotSet_NoPrompt(t *testing.T) {
 // []string 字段
 // ---------------------------------------------------------------------------
 
+// 测试提取 []string 字段。
 func TestExtract_StringSliceFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("tags", []string{"a", "b", "c"})
@@ -551,6 +584,7 @@ func TestExtract_StringSliceFromViper(t *testing.T) {
 	}
 }
 
+// 测试空 []string 未设置时保持 nil。
 func TestExtract_StringSliceEmpty(t *testing.T) {
 	v := viper.New()
 	// 未设置，无 prompt，应保持 nil
@@ -566,6 +600,7 @@ func TestExtract_StringSliceEmpty(t *testing.T) {
 	}
 }
 
+// 测试提取单元素 []string。
 func TestExtract_StringSliceSingleElement(t *testing.T) {
 	v := viper.New()
 	v.Set("hosts", []string{"localhost"})
@@ -586,6 +621,7 @@ func TestExtract_StringSliceSingleElement(t *testing.T) {
 // 嵌套结构体
 // ---------------------------------------------------------------------------
 
+// 测试提取嵌套结构体字段。
 func TestExtract_NestedStruct(t *testing.T) {
 	v := viper.New()
 	v.Set("Server.Host", "localhost")
@@ -610,6 +646,7 @@ func TestExtract_NestedStruct(t *testing.T) {
 	}
 }
 
+// 测试提取匿名嵌入结构体字段。
 func TestExtract_EmbeddedStruct(t *testing.T) {
 	v := viper.New()
 	v.Set("Base.Name", "test")
@@ -629,6 +666,7 @@ func TestExtract_EmbeddedStruct(t *testing.T) {
 	}
 }
 
+// 测试提取多层嵌套结构体字段。
 func TestExtract_DeeplyNestedStruct(t *testing.T) {
 	v := viper.New()
 	v.Set("A.B.Value", "deep")
@@ -655,6 +693,7 @@ func TestExtract_DeeplyNestedStruct(t *testing.T) {
 // 混合类型
 // ---------------------------------------------------------------------------
 
+// 测试提取混合类型字段。
 func TestExtract_MixedTypes(t *testing.T) {
 	v := viper.New()
 	v.Set("name", "alice")
@@ -700,6 +739,7 @@ func TestExtract_MixedTypes(t *testing.T) {
 // 空结构体
 // ---------------------------------------------------------------------------
 
+// 测试空结构体不报错。
 func TestExtract_EmptyStruct(t *testing.T) {
 	v := viper.New()
 	type Input struct{}
@@ -713,6 +753,7 @@ func TestExtract_EmptyStruct(t *testing.T) {
 // 不支持的字段类型（应被跳过）
 // ---------------------------------------------------------------------------
 
+// 测试不支持的字段类型被跳过。
 func TestExtract_UnsupportedFieldType(t *testing.T) {
 	v := viper.New()
 	v.Set("data", "something")
@@ -731,6 +772,7 @@ func TestExtract_UnsupportedFieldType(t *testing.T) {
 	}
 }
 
+// 测试不支持的切片类型被跳过。
 func TestExtract_UnsupportedSliceType(t *testing.T) {
 	v := viper.New()
 	v.Set("nums", []int{1, 2, 3}) // []int 不支持，仅支持 []string
@@ -756,6 +798,7 @@ func TestExtract_UnsupportedSliceType(t *testing.T) {
 // 带 prefix 的验证路径
 // ---------------------------------------------------------------------------
 
+// 测试带 prefix 的验证路径。
 func TestExtract_WithPrefix(t *testing.T) {
 	v := viper.New()
 	v.Set("name", "alice")
@@ -777,6 +820,7 @@ func TestExtract_WithPrefix(t *testing.T) {
 // 验证器集成
 // ---------------------------------------------------------------------------
 
+// 测试绑定校验通过。
 func TestExtract_ValidationPass(t *testing.T) {
 	v := viper.New()
 	v.Set("username", "alice123")
@@ -793,6 +837,7 @@ func TestExtract_ValidationPass(t *testing.T) {
 	}
 }
 
+// 测试绑定校验失败。
 func TestExtract_ValidationFail(t *testing.T) {
 	v := viper.New()
 	v.Set("username", "abc") // 太短，min=6
@@ -807,6 +852,7 @@ func TestExtract_ValidationFail(t *testing.T) {
 	}
 }
 
+// 测试嵌套字段绑定校验失败。
 func TestExtract_ValidationNestedField(t *testing.T) {
 	v := viper.New()
 	v.Set("Server.Port", uint64(0)) // 0 不满足 min=1
@@ -828,6 +874,7 @@ func TestExtract_ValidationNestedField(t *testing.T) {
 // 多个字段部分有值
 // ---------------------------------------------------------------------------
 
+// 测试部分字段有值时的提取。
 func TestExtract_PartialFieldsSet(t *testing.T) {
 	v := viper.New()
 	v.Set("name", "alice")
@@ -853,6 +900,7 @@ func TestExtract_PartialFieldsSet(t *testing.T) {
 // 边界条件：特殊字符和空字符串
 // ---------------------------------------------------------------------------
 
+// 测试含特殊字符的字符串。
 func TestExtract_StringWithSpecialChars(t *testing.T) {
 	v := viper.New()
 	v.Set("path", "/usr/local/bin:/usr/bin")
@@ -869,6 +917,7 @@ func TestExtract_StringWithSpecialChars(t *testing.T) {
 	}
 }
 
+// 测试 viper 中的空字符串等同于未设置。
 func TestExtract_EmptyStringFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("name", "")
@@ -886,6 +935,7 @@ func TestExtract_EmptyStringFromViper(t *testing.T) {
 	}
 }
 
+// 测试空切片保持 nil。
 func TestExtract_EmptyStringSliceFromViper(t *testing.T) {
 	v := viper.New()
 	v.Set("tags", []string{})
@@ -907,6 +957,7 @@ func TestExtract_EmptyStringSliceFromViper(t *testing.T) {
 // 多个嵌套结构体同级
 // ---------------------------------------------------------------------------
 
+// 测试多个同级嵌套结构体。
 func TestExtract_MultipleNestedSiblings(t *testing.T) {
 	v := viper.New()
 	v.Set("Database.Host", "db.local")
@@ -938,6 +989,7 @@ func TestExtract_MultipleNestedSiblings(t *testing.T) {
 // 所有字段都没有 viper tag
 // ---------------------------------------------------------------------------
 
+// 测试全部字段均无 viper tag 时保持零值。
 func TestExtract_AllFieldsWithoutViperTag(t *testing.T) {
 	v := viper.New()
 	type Input struct {

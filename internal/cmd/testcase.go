@@ -1,3 +1,5 @@
+// Package cmd 实现命令行入口与各子命令：构建根命令、注册 create / run / migrate 等子命令，
+// 并负责参数解析、调用内部服务与终端输出。
 package cmd
 
 import (
@@ -83,24 +85,24 @@ func init() {
 	generateTestcaseCmd.MarkFlagRequired("pcap")
 }
 
-// generateTestcase uses tshark to extract HTTP data from a pcap file.
+// generateTestcase 使用 tshark 从 pcap 文件中提取 HTTP 数据。
 func generateTestcase(pcapPath, outputDir string) error {
-	// Verify tshark is available
+	// 确认 tshark 可用
 	if _, err := exec.LookPath("tshark"); err != nil {
 		return fmt.Errorf("tshark not found in PATH: %w", err)
 	}
 
-	// Verify pcap file exists
+	// 确认 pcap 文件存在
 	if _, err := os.Stat(pcapPath); os.IsNotExist(err) {
 		return fmt.Errorf("pcap file not found: %s", pcapPath)
 	}
 
-	// Create output directory
+	// 创建输出目录
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	// List all TCP streams containing HTTP traffic
+	// 列出所有含 HTTP 流量的 TCP 流
 	streams, err := listHTTPStreams(pcapPath)
 	if err != nil {
 		return fmt.Errorf("failed to list HTTP streams: %w", err)
@@ -135,7 +137,7 @@ func generateTestcase(pcapPath, outputDir string) error {
 	return nil
 }
 
-// listHTTPStreams returns all TCP stream IDs that contain HTTP traffic.
+// listHTTPStreams 返回所有含 HTTP 流量的 TCP 流 ID。
 func listHTTPStreams(pcapPath string) ([]int, error) {
 	cmd := exec.Command("tshark",
 		"-r", pcapPath,
@@ -168,25 +170,25 @@ func listHTTPStreams(pcapPath string) ([]int, error) {
 	return streams, nil
 }
 
-// extractStreamTransactions extracts all HTTP transactions from a TCP stream.
+// extractStreamTransactions 从一条 TCP 流中提取所有 HTTP 事务。
 func extractStreamTransactions(pcapPath string, streamID int) ([]TransactionFixture, error) {
-	// Extract stream metadata (client/server IPs and ports)
+	// 提取流元数据（客户端/服务端 IP 与端口）
 	meta, err := extractStreamMeta(pcapPath, streamID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract stream metadata: %w", err)
 	}
 
-	// Extract all TCP packets for the stream
+	// 提取该流的全部 TCP 包
 	packets, err := extractPacketRecords(pcapPath, streamID, meta)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract TCP packets: %w", err)
 	}
 
-	// Concatenate same-direction payloads and split into HTTP transactions
+	// 拼接同方向载荷并切分为 HTTP 事务
 	return splitHTTPTransactions(streamID, meta, packets)
 }
 
-// extractStreamMeta extracts client/server address info from the first HTTP request packet.
+// extractStreamMeta 从首个 HTTP 请求包中提取客户端/服务端地址信息。
 func extractStreamMeta(pcapPath string, streamID int) (*streamMeta, error) {
 	streamStr := fmt.Sprintf("tcp.stream==%d and http.request", streamID)
 	cmd := exec.Command("tshark",
@@ -222,7 +224,7 @@ func extractStreamMeta(pcapPath string, streamID int) (*streamMeta, error) {
 	return meta, nil
 }
 
-// extractPacketRecords extracts all TCP packet info for a given stream.
+// extractPacketRecords 提取指定流的全部 TCP 包信息。
 func extractPacketRecords(pcapPath string, streamID int, meta *streamMeta) ([]PacketRecord, error) {
 	streamStr := fmt.Sprintf("tcp.stream==%d", streamID)
 	cmd := exec.Command("tshark",
@@ -258,8 +260,7 @@ func extractPacketRecords(pcapPath string, streamID int, meta *streamMeta) ([]Pa
 		if len(fields) > 0 {
 			packet.Frame, _ = strconv.Atoi(fields[0])
 		}
-		// Use source port to determine direction — works correctly for localhost traffic
-		// where client and server share the same IP
+		// 用源端口判定方向——对客户端与服务端共用同一 IP 的 localhost 流量同样正确
 		if len(fields) > 1 {
 			if fields[1] == clientPortStr {
 				packet.Direction = "c2s"
@@ -276,7 +277,7 @@ func extractPacketRecords(pcapPath string, streamID int, meta *streamMeta) ([]Pa
 			packet.AckRaw = uint32(v)
 		}
 
-		// Parse flags
+		// 解析标志位
 		packet.Flags = make([]string, 0)
 		if len(fields) > 4 && fields[4] == "1" {
 			packet.Flags = append(packet.Flags, "SYN")
@@ -301,10 +302,10 @@ func extractPacketRecords(pcapPath string, streamID int, meta *streamMeta) ([]Pa
 	return packets, nil
 }
 
-// splitHTTPTransactions concatenates same-direction TCP payloads and splits them
-// into individual HTTP request-response pairs using Go's net/http parser.
+// splitHTTPTransactions 拼接同方向的 TCP 载荷，并用 Go 的 net/http 解析器
+// 将其切分为一个个 HTTP 请求-响应对。
 func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecord) ([]TransactionFixture, error) {
-	// Concatenate all c2s and s2c payloads separately
+	// 分别拼接全部 c2s 与 s2c 载荷
 	var reqPayloads, rspPayloads []string
 	for _, pkt := range packets {
 		if pkt.PayloadHex == "" {
@@ -337,21 +338,21 @@ func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecor
 	txID := 0
 
 	for {
-		// Try to read an HTTP request from the client data stream
+		// 尝试从客户端数据流读取一个 HTTP 请求
 		req, reqRaw, err := readHTTPRequest(clientReader)
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			// If we can't parse a request but there's still data, log and stop
+			// 仍有数据却无法解析出请求时，记录告警并停止
 			pterm.Warning.Println(translate.T("cli.testcase.parse-request-failed", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 			break
 		}
 
-		// Try to read the corresponding HTTP response
+		// 尝试读取对应的 HTTP 响应
 		_, respRaw, err := readHTTPResponse(serverReader, req)
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
-			// Response incomplete or missing — still record the request alone
+			// 响应不完整或缺失——仍单独记录该请求
 			pterm.Warning.Println(translate.T("cli.testcase.response-missing", map[string]any{"Stream": streamID, "Tx": txID, "Err": err}))
 		}
 		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
@@ -375,21 +376,21 @@ func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecor
 	return transactions, nil
 }
 
-// readHTTPRequest reads one HTTP request from reader and returns the parsed request
-// along with its raw wire-format bytes.
+// readHTTPRequest 从 reader 读取一个 HTTP 请求，返回解析后的请求
+// 及其原始线格式字节。
 func readHTTPRequest(r *bufio.Reader) (*http.Request, []byte, error) {
-	// Peek ahead to check if there's data
+	// 预先窥探是否有数据
 	if _, err := r.Peek(1); err != nil {
 		return nil, nil, err
 	}
 
-	// Read the request using net/http
+	// 使用 net/http 读取请求
 	req, err := http.ReadRequest(r)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	// Reconstruct raw wire-format bytes via Request.Write
+	// 经 Request.Write 重建原始线格式字节
 	var buf bytes.Buffer
 	if err := req.Write(&buf); err != nil {
 		return req, nil, errors.WithStack(err)
@@ -398,7 +399,7 @@ func readHTTPRequest(r *bufio.Reader) (*http.Request, []byte, error) {
 	return req, buf.Bytes(), nil
 }
 
-// readHTTPResponse reads one HTTP response from reader using the given request as context.
+// readHTTPResponse 以给定请求为上下文，从 reader 读取一个 HTTP 响应。
 func readHTTPResponse(r *bufio.Reader, req *http.Request) (*http.Response, []byte, error) {
 	if _, err := r.Peek(1); err != nil {
 		return nil, nil, err
@@ -417,23 +418,23 @@ func readHTTPResponse(r *bufio.Reader, req *http.Request) (*http.Response, []byt
 	return resp, buf.Bytes(), nil
 }
 
-// joinHexPayloads joins multiple hex-encoded payloads into a single hex string.
+// joinHexPayloads 把多个十六进制编码的载荷拼接为单个十六进制字符串。
 func joinHexPayloads(payloads []string) string {
 	var builder strings.Builder
 	for _, p := range payloads {
-		// tshark may output hex with colon separators (e.g. "aa:bb:cc")
+		// tshark 输出的十六进制可能带冒号分隔符（如 "aa:bb:cc"）
 		p = strings.ReplaceAll(p, ":", "")
 		builder.WriteString(p)
 	}
 	return builder.String()
 }
 
-// hexDecode decodes a hex string into raw bytes.
+// hexDecode 把十六进制字符串解码为原始字节。
 func hexDecode(s string) ([]byte, error) {
 	return hex.DecodeString(s)
 }
 
-// hexEncode encodes raw bytes into a hex string.
+// hexEncode 把原始字节编码为十六进制字符串。
 func hexEncode(b []byte) string {
 	if len(b) == 0 {
 		return ""
@@ -441,7 +442,7 @@ func hexEncode(b []byte) string {
 	return hex.EncodeToString(b)
 }
 
-// writeTransactionFixture serializes a TransactionFixture to a JSON file.
+// writeTransactionFixture 把 TransactionFixture 序列化为 JSON 文件。
 func writeTransactionFixture(fixture *TransactionFixture, path string) error {
 	data, err := json.MarshalIndent(fixture, "", "  ")
 	if err != nil {
@@ -453,7 +454,7 @@ func writeTransactionFixture(fixture *TransactionFixture, path string) error {
 	return nil
 }
 
-// HexDecode decodes a hex string into raw bytes (convenience for test code).
+// HexDecode 把十六进制字符串解码为原始字节（供测试代码使用的便捷函数）。
 func HexDecode(s string) ([]byte, error) {
 	return hex.DecodeString(s)
 }

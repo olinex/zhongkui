@@ -1,5 +1,4 @@
 // 全局功能开关接口类型定义。
-// Feature-flag interface type definitions.
 
 // FeatureOut 功能开关输出项：键 + 启停状态 + 不可用原因。
 export interface FeatureOut {

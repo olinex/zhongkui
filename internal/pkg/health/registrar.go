@@ -12,17 +12,25 @@ import (
 )
 
 // ServiceInfo 写入 etcd 服务目录的单实例状态负载。
-// ServiceInfo is the per-instance state payload stored in the etcd service directory.
 type ServiceInfo struct {
-	ServiceName string    `json:"serviceName"`
-	InstanceID  string    `json:"instanceId"`
-	Host        string    `json:"host"`
-	Version     string    `json:"version"`
-	PID         int       `json:"pid"`
-	StartedAt   time.Time `json:"startedAt"`
-	Live        bool      `json:"live"`
-	Ready       bool      `json:"ready"`
-	Started     bool      `json:"started"`
+	// ServiceName 服务名称
+	ServiceName string `json:"serviceName"`
+	// InstanceID 实例唯一标识
+	InstanceID string `json:"instanceId"`
+	// Host 实例所在主机地址
+	Host string `json:"host"`
+	// Version 实例运行版本
+	Version string `json:"version"`
+	// PID 进程 ID
+	PID int `json:"pid"`
+	// StartedAt 实例启动时间
+	StartedAt time.Time `json:"startedAt"`
+	// Live 存活探针状态
+	Live bool `json:"live"`
+	// Ready 就绪探针状态
+	Ready bool `json:"ready"`
+	// Started 启动探针状态
+	Started bool `json:"started"`
 }
 
 // registrar 经 etcd 租赁持续注册/续约服务运行状态；

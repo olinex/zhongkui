@@ -1,3 +1,5 @@
+// Package network 提供网络协议数据包的持久化模型与构建器，覆盖以太网 / ARP / IPv4 /
+// IPv6 / TCP / UDP 及 HTTP 传输等各层协议头与元数据，供抓包导入、组包与流量审计域复用。
 package network
 
 import (
@@ -412,6 +414,7 @@ func newCrypto(s string) *serializer.Crypto {
 	return serializer.NewCrypto([]byte(s))
 }
 
+// NewHttpRequestHeaders 从 HTTP 请求构建请求头宽表模型，涉敏头（凭据、Cookie、WebSocket 握手密钥）以 Crypto 加密存储。
 func NewHttpRequestHeaders(req *http.Request) *HttpRequestHeaders {
 	return &HttpRequestHeaders{
 		// 认证（加密存储）
@@ -747,6 +750,7 @@ type HttpResponseHeaders struct {
 	RspHdrPriority string `gorm:"column:rsp_hdr_priority;type:String CODEC(ZSTD(3))" json:"rspHdrPriority"`
 }
 
+// NewHttpResponseHeaders 从 HTTP 响应构建响应头宽表模型，涉敏头（认证质询、Set-Cookie、WebSocket 握手接受）以 Crypto 加密存储。
 func NewHttpResponseHeaders(resp *http.Response) *HttpResponseHeaders {
 	return &HttpResponseHeaders{
 		// 认证（加密存储）
@@ -967,23 +971,36 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 // TcpFingerprint 表示 HttpTransport 上的 TCP 指纹（客户端/服务端），
 // 来源于 pcap 导入阶段写入 tcp 包表的指纹，经组包器 StreamMeta 透传填充。
 type TcpFingerprint struct {
-	ClientOS        string  `gorm:"column:fp_tcp_client_os;type:String CODEC(ZSTD(3))" json:"fpTcpClientOs"`
+	// ClientOS 客户端操作系统
+	ClientOS string `gorm:"column:fp_tcp_client_os;type:String CODEC(ZSTD(3))" json:"fpTcpClientOs"`
+	// ClientOSQuality 客户端操作系统识别置信度
 	ClientOSQuality float64 `gorm:"column:fp_tcp_client_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fpTcpClientOsQuality"`
-	ClientSig       string  `gorm:"column:fp_tcp_client_sig;type:String CODEC(ZSTD(3))" json:"fpTcpClientSig"`
-	ServerOS        string  `gorm:"column:fp_tcp_server_os;type:String CODEC(ZSTD(3))" json:"fpTcpServerOs"`
+	// ClientSig 客户端 TCP 签名
+	ClientSig string `gorm:"column:fp_tcp_client_sig;type:String CODEC(ZSTD(3))" json:"fpTcpClientSig"`
+	// ServerOS 服务端操作系统
+	ServerOS string `gorm:"column:fp_tcp_server_os;type:String CODEC(ZSTD(3))" json:"fpTcpServerOs"`
+	// ServerOSQuality 服务端操作系统识别置信度
 	ServerOSQuality float64 `gorm:"column:fp_tcp_server_os_quality;type:Float64 CODEC(ZSTD(3))" json:"fpTcpServerOsQuality"`
-	ServerSig       string  `gorm:"column:fp_tcp_server_sig;type:String CODEC(ZSTD(3))" json:"fpTcpServerSig"`
-	MTU             uint16  `gorm:"column:fp_tcp_mtu;type:UInt16 CODEC(ZSTD(3))" json:"fpTcpMtu"`
+	// ServerSig 服务端 TCP 签名
+	ServerSig string `gorm:"column:fp_tcp_server_sig;type:String CODEC(ZSTD(3))" json:"fpTcpServerSig"`
+	// MTU MTU 值
+	MTU uint16 `gorm:"column:fp_tcp_mtu;type:UInt16 CODEC(ZSTD(3))" json:"fpTcpMtu"`
 }
 
 // HttpFingerprint 表示 HttpTransport 上的 Http 指纹与设备类别猜测。
 type HttpFingerprint struct {
-	Browser        string  `gorm:"column:fp_http_browser;type:String CODEC(ZSTD(3))" json:"fpHttpBrowser"`
+	// Browser 浏览器
+	Browser string `gorm:"column:fp_http_browser;type:String CODEC(ZSTD(3))" json:"fpHttpBrowser"`
+	// BrowserQuality 浏览器识别置信度
 	BrowserQuality float64 `gorm:"column:fp_http_browser_quality;type:Float64 CODEC(ZSTD(3))" json:"fpHttpBrowserQuality"`
-	Server         string  `gorm:"column:fp_http_server;type:String CODEC(ZSTD(3))" json:"fpHttpServer"`
-	ServerQuality  float64 `gorm:"column:fp_http_server_quality;type:Float64 CODEC(ZSTD(3))" json:"fpHttpServerQuality"`
-	Language       string  `gorm:"column:fp_http_language;type:String CODEC(ZSTD(3))" json:"fpHttpLanguage"`
-	DeviceGuess    string  `gorm:"column:fp_device_guess;type:String CODEC(ZSTD(3))" json:"fpDeviceGuess"`
+	// Server 服务端软件
+	Server string `gorm:"column:fp_http_server;type:String CODEC(ZSTD(3))" json:"fpHttpServer"`
+	// ServerQuality 服务端软件识别置信度
+	ServerQuality float64 `gorm:"column:fp_http_server_quality;type:Float64 CODEC(ZSTD(3))" json:"fpHttpServerQuality"`
+	// Language HTTP 语言
+	Language string `gorm:"column:fp_http_language;type:String CODEC(ZSTD(3))" json:"fpHttpLanguage"`
+	// DeviceGuess 设备类别猜测
+	DeviceGuess string `gorm:"column:fp_device_guess;type:String CODEC(ZSTD(3))" json:"fpDeviceGuess"`
 }
 
 // HttpTransport 表示HTTP传输层信息

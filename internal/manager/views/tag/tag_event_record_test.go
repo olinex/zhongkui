@@ -1,17 +1,17 @@
 package tag
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 	"gorm.io/datatypes"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/pkg/database"

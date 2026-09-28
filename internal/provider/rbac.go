@@ -24,7 +24,7 @@ func newRbacProvider() do.Provider[*casbin.Enforcer] {
 				return nil, errors.WithStack(err)
 			}
 			enforcer, err := casbin.NewEnforcer(mdl, adapter)
-			// TODO: enable zap logger
+			// TODO: 启用 zap 日志
 			if err != nil {
 				return nil, errors.WithStack(err)
 			}
@@ -33,18 +33,22 @@ func newRbacProvider() do.Provider[*casbin.Enforcer] {
 	}
 }
 
+// NewRbac 返回基于 casbin 的 RBAC 执行器的依赖注入 provider。
 func NewRbac() do.Provider[*casbin.Enforcer] {
 	return newRbacProvider()
 }
 
+// InjectRbac 将 RBAC 执行器 provider 注册到依赖注入容器。
 func InjectRbac(i do.Injector) {
 	do.Provide(i, NewRbac())
 }
 
+// InvokeRbac 从依赖注入容器获取 RBAC 执行器实例。
 func InvokeRbac(i do.Injector) (*casbin.Enforcer, error) {
 	return do.Invoke[*casbin.Enforcer](i)
 }
 
+// MustInvokeRbac 从依赖注入容器获取 RBAC 执行器实例，失败时 panic。
 func MustInvokeRbac(i do.Injector) *casbin.Enforcer {
 	return do.MustInvoke[*casbin.Enforcer](i)
 }

@@ -4,71 +4,52 @@
 // 与类型清单统一驱动，无需改动任何按类型分发的既有代码。测试注册一个合成插件
 // extensibility_probe，覆盖：默认值填充、连通测试委托、表结构自省委托、端到端注册后
 // sqlite 查询、类型列举，以及恶意类型键解码报错。
-//
-// This file demonstrates the extensibility of the third-party datasource plugin model:
-// adding a new datasource type only requires implementing the DatasourcePlugin interface
-// and self-registering once via RegisterDatasourceType, after which
-// decodeDatasourceConfig / TestConn / IntrospectSchema / registerInto (via Pools.Register)
-// and the type listings drive it uniformly — no existing per-type dispatch code changes.
-// A synthetic plugin extensibility_probe is registered to cover: default-value filling,
-// connection-test delegation, schema-introspection delegation, end-to-end registration
-// followed by a sqlite query, type listing, and decode errors for an unknown type key.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"io"
 	"reflect"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	pkgerrors "zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // extensibilityProbeKey 是本测试合成数据源类型的唯一键。
-// extensibilityProbeKey is the unique key of the synthetic datasource type used in this test.
 const extensibilityProbeKey = "extensibility_probe"
 
 // probeConfig 是合成数据源的前端配置。Label 带 default tag，用于验证 NewConfig 后统一
 // 经 defaults.Set 填充默认值；Required 用于 ValidateConfig 校验。
-// probeConfig is the front-end config of the synthetic datasource. Label carries a default
-// tag to verify default filling after NewConfig via defaults.Set; Required drives ValidateConfig.
 type probeConfig struct {
 	Label    string `json:"label" default:"xyz"`
 	Required string `json:"required"`
 }
 
 // probePlugin 实现 DatasourcePlugin 接口的合成插件。
-// probePlugin is the synthetic plugin implementing the DatasourcePlugin interface.
 type probePlugin struct{}
 
 // Key 返回数据源类型键。
-// Key returns the datasource type key.
 func (p *probePlugin) Key() string { return extensibilityProbeKey }
 
 // NewConfig 返回该类全新配置指针。
-// NewConfig returns a fresh config pointer of this type.
 func (p *probePlugin) NewConfig() any { return &probeConfig{} }
 
 // ConfigType 返回配置值的反射类型。
-// ConfigType returns the reflect type of the config value.
 func (p *probePlugin) ConfigType() reflect.Type { return reflect.TypeFor[probeConfig]() }
 
 // TestConn 委托式连通测试：返回 nil 表示探活成功。
-// TestConn performs the delegated connection test, returning nil to signal success.
 func (p *probePlugin) TestConn(_ context.Context, cfg any) error {
 	return nil
 }
 
 // IntrospectSchema 委托式自省：固定返回 k/v 两列，忽略 file 参数。
-// IntrospectSchema performs the delegated introspection, returning the fixed k/v columns
-// regardless of the file argument.
 func (p *probePlugin) IntrospectSchema(_ context.Context, _ any, _ io.Reader) ([]DatasourceColumn, error) {
 	return []DatasourceColumn{
 		{Name: "k", Type: "string"},
@@ -78,9 +59,6 @@ func (p *probePlugin) IntrospectSchema(_ context.Context, _ any, _ io.Reader) ([
 
 // Register 从配置构造行集数据源并返回。静态数据源不实现 dsSchemaProvider，故包装为
 // probeDatasource 以对外暴露 datasourceSchema()，供 registerInto 的 schemaOf 复用其内部 schema。
-// Register builds a row-set datasource from the config and returns it. StaticDatasource does
-// not implement dsSchemaProvider, so it is wrapped as probeDatasource to expose
-// datasourceSchema(), letting registerInto's schemaOf reuse its internal schema.
 func (p *probePlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, _, _ string, cfg any) (sqlitevtab.Datasource, error) {
 	if _, ok := cfg.(*probeConfig); !ok {
 		return nil, pkgerrors.Newf("extensibility_probe: unexpected config type %T", cfg)
@@ -97,7 +75,6 @@ func (p *probePlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s
 }
 
 // ValidateConfig 校验配置结构：Required 为空时报错。
-// ValidateConfig validates the config structure, erroring when Required is empty.
 func (p *probePlugin) ValidateConfig(cfg any) error {
 	pc, ok := cfg.(*probeConfig)
 	if !ok {
@@ -118,7 +95,6 @@ type probeDatasource struct {
 }
 
 // datasourceSchema 返回注册用 schema。
-// datasourceSchema returns the schema used for registration.
 func (d *probeDatasource) datasourceSchema() sqlitevtab.Schema { return d.schema }
 
 // TestExtensibility 验证新增一类插件化数据源类型即可被统一分发驱动，无需改动既有代码。

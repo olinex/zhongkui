@@ -1,15 +1,15 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"fmt"
 	"strings"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
@@ -276,14 +276,6 @@ func paramComment(lang *base.Language, spec pkgllm.ParamSpec) string {
 // 参数传入空串时即为该情形；数值与布尔类参数的空串按零值处理（表单清空的既有契约）；
 // 类型不符或声明了封闭取值清单却传入清单外的值（如 retrieval.fusion）时返回英文错误，
 // 避免非法值落库。
-// normalizeParamValue normalizes the JSON native value of a request into the in-database text
-// literal according to the registry-declared kind. An empty return means "restore the factory
-// value", in which case the caller writes the current value back to default_value: that is the
-// case for a null input or an empty string on a string-kind parameter; an empty string on a
-// numeric or boolean parameter is treated as the zero value (the established contract of a
-// cleared form field). A kind mismatch, or a value outside the declared closed value space
-// (such as retrieval.fusion), yields an English error so an illegal value never reaches the
-// database.
 func normalizeParamValue(spec pkgllm.ParamSpec, value any) (string, error) {
 	if value == nil {
 		return "", nil

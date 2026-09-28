@@ -85,6 +85,7 @@ export type HeaderValueKind =
   | "json"
   | "raw";
 
+// HeaderFieldMeta 描述单个头部字段的元数据：技术键名与值类型。
 export interface HeaderFieldMeta {
   // headers JSON 中的技术键名，同时决定 i18n 键：
   // 字段名 = model.networkStack.header.field.<key>，说明 = model.networkStack.header.desc.<key>
@@ -95,7 +96,7 @@ export interface HeaderFieldMeta {
 // 按 LayerType（proto）声明各层头部字段的展示顺序与值类型；
 // Loopback（54）无真实链路层信息（eth 字段全空），不逐字段展示
 export const HEADER_FIELDS: Record<number, HeaderFieldMeta[]> = {
-  // Ethernet
+  // 以太网
   17: [
     { key: "ethDstMac", kind: "mac" },
     { key: "ethSrcMac", kind: "mac" },
@@ -183,7 +184,9 @@ export const formatHeaderValue = (kind: HeaderValueKind, value: unknown): string
     case "port":
       return formatPort(Number(value ?? 0));
     case "bool":
-      return value ? t("model.networkStack.header.value.yes") : t("model.networkStack.header.value.no");
+      return value
+        ? t("model.networkStack.header.value.yes")
+        : t("model.networkStack.header.value.no");
     case "tcpOptions":
       return formatTcpOptions(value);
     case "ipv4Options":
@@ -347,7 +350,5 @@ const formatBytes = (value: unknown): string => {
   if (typeof value !== "string" || value === "") {
     return none();
   }
-  return [...value]
-    .map((ch) => ch.charCodeAt(0).toString(16).padStart(2, "0"))
-    .join(" ");
+  return [...value].map((ch) => ch.charCodeAt(0).toString(16).padStart(2, "0")).join(" ");
 };

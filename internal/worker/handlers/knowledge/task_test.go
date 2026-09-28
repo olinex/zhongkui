@@ -1,16 +1,15 @@
 package knowledge
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/smartystreets/goconvey/convey"
 )
 
 // TestNewParseTask 测试知识文档解析任务的编码。
-// TestNewParseTask tests the encoding of the knowledge document parse task.
 func TestNewParseTask(t *testing.T) {
 	convey.Convey("NewParseTask 编码知识文档解析任务", t, func() {
 		convey.Convey("合法文档 ID：类型为 ai:doc:parse 且载荷往返一致", func() {

@@ -14,8 +14,6 @@ import (
 
 // newPostgresMockPool 以注入 key 的 mock db 构建 PostgresPool，供无需真实 PostgreSQL
 // 的测试使用（参照 newMySQLMockPool）。
-// newPostgresMockPool builds a PostgresPool whose key resolves to an injected mock db,
-// for tests that need no real PostgreSQL (mirrors newMySQLMockPool).
 func newPostgresMockPool(t *testing.T, cfg *PostgresConfig, db *sql.DB) *PostgresPool {
 	t.Helper()
 	pool := NewPostgresPool(cfg)
@@ -25,8 +23,6 @@ func newPostgresMockPool(t *testing.T, cfg *PostgresConfig, db *sql.DB) *Postgre
 }
 
 // pgQuery 经 SQLitePool 注册数据源并执行一条只读 SQL，返回列名与行值（表名统一 pg_vtab）。
-// pgQuery registers the datasource on a SQLitePool and executes one read-only SQL
-// statement, returning columns and row values (registered as pg_vtab).
 func pgQuery(t *testing.T, ds *PostgresDatasource, sql string, args ...any) ([]string, [][]any) {
 	t.Helper()
 	pool := sqlitevtab.NewSQLitePool()

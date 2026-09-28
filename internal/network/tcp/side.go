@@ -430,6 +430,8 @@ func (s *Side[P]) findIndex(offset uint64) int {
 	return n - 1
 }
 
+// UpdateComsumed 记账自上次调用以来已被消费（读取器取走）的字节数，
+// 返回本次消费量、段的起止载荷偏移与起止时间戳；无可可靠计算的消费量时返回 0。
 func (s *Side[P]) UpdateComsumed() (consumed uint64, startPayloadOffset, endPayloadOffset uint64, startTimestamp, endTimestamp time.Time) {
 	s.tailerMu.Lock()
 	defer s.tailerMu.Unlock()

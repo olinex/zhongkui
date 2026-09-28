@@ -3,35 +3,27 @@
 // 当同时存在 key 精确值与 field 精确等值（OpEQ）→HGET 单行，否则 HGETALL 逐 field
 // 一行并按 field 升序保证确定性。类型非 hash 的键不产生行。连接经共享 RedisPool
 // 在 Open 借出、取数后即时归还。
-//
-// This file provides the Redis hash datasource. Each hash field maps to a row: the
-// key column supports exact equality/pattern scan; when both an exact key and a
-// field OpEQ exist →HGET single row, otherwise HGETALL yields one row per field sorted
-// ascending by field for determinism. Keys not of type hash yield no row. A connection
-// is borrowed from the shared RedisPool on Open and released right after fetching.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"sort"
 
-	// third-party
+	// 第三方
 	"github.com/redis/go-redis/v9"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // RedisHashDatasource 是基于 Redis hash 结构的 vtable 数据源。
-// RedisHashDatasource is the vtable datasource over the Redis hash structure.
 type RedisHashDatasource struct {
 	redisBase
 	fieldIndex int
 }
 
 // NewRedisHashDatasource 创建 redis_hash 数据源。
-// NewRedisHashDatasource creates a redis_hash datasource.
 func NewRedisHashDatasource(pool *RedisPool) *RedisHashDatasource {
 	return &RedisHashDatasource{
 		redisBase: redisBase{
@@ -53,8 +45,6 @@ func NewRedisHashDatasource(pool *RedisPool) *RedisHashDatasource {
 
 // Open 实现 Datasource.Open：借出连接，按 key 解析计划与可选的 field 精确等值读取
 // hash 行并返回行游标。
-// Open implements Datasource.Open: it borrows a connection, reads hash rows per the
-// key plan and an optional field OpEQ, and returns a row cursor.
 func (d *RedisHashDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	client, err := d.pool.Acquire(ctx)
 	if err != nil {
@@ -79,7 +69,6 @@ func (d *RedisHashDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Co
 }
 
 // fetch 根据计划收集 hash 行（key, field, value）。
-// fetch collects hash rows (key, field, value) per the plan.
 func (d *RedisHashDatasource) fetch(ctx context.Context, client *redis.Client, plan redisKeyPlan, field string, hasField bool) ([][]any, error) {
 	var rows [][]any
 	appendKey := func(key string) {

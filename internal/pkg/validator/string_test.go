@@ -1,3 +1,5 @@
+// Package validator 提供通用的字段与取值校验：字符串（密码、文件名、哈希、编码等）、
+// 时间与月份等格式校验，以及供结构体绑定标签引用的通用字段级校验器。
 package validator
 
 import (
@@ -9,11 +11,11 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/enum"
 )
 
-// TestIsValidStrongPassword tests the password validation function
+// TestIsValidStrongPassword 测试密码校验函数
 func TestIsValidStrongPassword(t *testing.T) {
 	Convey("Test strong password validation", t, func() {
 		Convey("Valid strong passwords", func() {
-			// Test passwords that meet all requirements
+			// 满足全部要求的密码
 			validPasswords := []string{
 				"Password123!",
 				"MySecure@Pass1",
@@ -34,7 +36,7 @@ func TestIsValidStrongPassword(t *testing.T) {
 		})
 
 		Convey("Invalid weak passwords", func() {
-			// Test passwords that fail different requirements
+			// 未满足各项要求的密码
 			invalidPasswords := []struct {
 				password string
 				reason   string
@@ -59,7 +61,7 @@ func TestIsValidStrongPassword(t *testing.T) {
 		})
 
 		Convey("Edge cases", func() {
-			// Password with various special characters
+			// 含各种特殊字符的密码
 			specialChars := []string{"@", "$", "!", "%", "*", "?", "&"}
 			for _, char := range specialChars {
 				Convey(fmt.Sprintf("Password with '%s' should be valid", char), func() {
@@ -71,7 +73,7 @@ func TestIsValidStrongPassword(t *testing.T) {
 	})
 }
 
-// TestGenerateStrongPassword tests the strong password generation function
+// TestGenerateStrongPassword 测试强密码生成函数
 func TestGenerateStrongPassword(t *testing.T) {
 	Convey("Test strong password generation", t, func() {
 		Convey("Valid lengths", func() {
@@ -107,7 +109,7 @@ func TestGenerateStrongPassword(t *testing.T) {
 	})
 }
 
-// TestIsValidWindowsFileName tests Windows filename validation
+// TestIsValidWindowsFileName 测试 Windows 文件名校验
 func TestIsValidWindowsFileName(t *testing.T) {
 	Convey("Test Windows filename validation", t, func() {
 		Convey("Valid Windows filenames", func() {
@@ -158,7 +160,7 @@ func TestIsValidWindowsFileName(t *testing.T) {
 				"file|name.txt",
 				"file?name.txt",
 				"file*name.txt",
-				"file\x00name.txt", // Null character
+				"file\x00name.txt", // 空字符
 			}
 
 			for _, name := range illegalChars {
@@ -185,7 +187,7 @@ func TestIsValidWindowsFileName(t *testing.T) {
 		})
 
 		Convey("Invalid Windows filenames - too long", func() {
-			// Create a filename longer than 255 characters
+			// 构造一个超过 255 字符的文件名
 			longName := string(make([]byte, 256))
 			for i := range longName {
 				longName = longName[:i] + "a" + longName[i+1:]
@@ -197,7 +199,7 @@ func TestIsValidWindowsFileName(t *testing.T) {
 	})
 }
 
-// TestIsValidUnixFileName tests Unix filename validation
+// TestIsValidUnixFileName 测试 Unix 文件名校验
 func TestIsValidUnixFileName(t *testing.T) {
 	Convey("Test Unix filename validation", t, func() {
 		Convey("Valid Unix filenames", func() {
@@ -230,9 +232,9 @@ func TestIsValidUnixFileName(t *testing.T) {
 		Convey("Invalid Unix filenames", func() {
 			invalidNames := []string{
 				"",
-				".",                // Forward slash
-				"..",               // Null character
-				"file\x00name.txt", // Tab should be handled by control character check in IsStrictValidFileName
+				".",                // 正斜杠
+				"..",               // 空字符
+				"file\x00name.txt", // 制表符应由 IsStrictValidFileName 中的控制字符检查处理
 			}
 
 			for _, name := range invalidNames {
@@ -243,7 +245,7 @@ func TestIsValidUnixFileName(t *testing.T) {
 		})
 
 		Convey("Invalid Unix filenames - too long", func() {
-			// Create a filename longer than 255 characters
+			// 构造一个超过 255 字符的文件名
 			longName := string(make([]byte, 256))
 			for i := range longName {
 				longName = longName[:i] + "a" + longName[i+1:]
@@ -255,14 +257,14 @@ func TestIsValidUnixFileName(t *testing.T) {
 	})
 }
 
-// TestIsValidFileName tests cross-platform filename validation
+// TestIsValidFileName 测试跨平台文件名校验
 func TestIsValidFileName(t *testing.T) {
 	Convey("Test cross-platform filename validation", t, func() {
 		Convey("Basic invalid filenames", func() {
 			invalidNames := []string{
 				"", ".", "..",
-				"file\x00name.txt",               // Invalid UTF-8
-				string([]byte{0xff, 0xfe, 0xfd}), // Invalid UTF-8
+				"file\x00name.txt",               // 非法 UTF-8
+				string([]byte{0xff, 0xfe, 0xfd}), // 非法 UTF-8
 			}
 
 			for _, name := range invalidNames {
@@ -290,11 +292,11 @@ func TestIsValidFileName(t *testing.T) {
 		})
 
 		Convey("Platform-specific behavior", func() {
-			// These filenames are valid on Unix but invalid on Windows
+			// 这些文件名在 Unix 上合法、在 Windows 上非法
 			unixOnlyValid := []string{
 				"file:name.txt",
-				"CON.txt", // Not reserved when lowercase
-				"aux.log", // Not reserved when lowercase
+				"CON.txt", // 小写时不视为保留名
+				"aux.log", // 小写时不视为保留名
 			}
 
 			for _, name := range unixOnlyValid {
@@ -311,7 +313,7 @@ func TestIsValidFileName(t *testing.T) {
 	})
 }
 
-// TestIsNull tests null value detection
+// TestIsNull 测试空值识别
 func TestIsNull(t *testing.T) {
 	Convey("Test null value detection", t, func() {
 		Convey("Valid null representations", func() {
@@ -355,7 +357,7 @@ func TestIsNull(t *testing.T) {
 	})
 }
 
-// TestIsBool tests boolean value detection
+// TestIsBool 测试布尔值识别
 func TestIsBool(t *testing.T) {
 	Convey("Test boolean value detection", t, func() {
 		Convey("Valid boolean values", func() {
@@ -403,7 +405,7 @@ func TestIsBool(t *testing.T) {
 	})
 }
 
-// TestIsInt tests integer value detection
+// TestIsInt 测试整数值识别
 func TestIsInt(t *testing.T) {
 	Convey("Test integer value detection", t, func() {
 		Convey("Valid integers", func() {
@@ -413,11 +415,11 @@ func TestIsInt(t *testing.T) {
 				"-1",
 				"123",
 				"-456",
-				"2147483647",           // Max int32
-				"-2147483648",          // Min int32
-				"9223372036854775807",  // Max int64
-				"-9223372036854775808", // Min int64
-				"+123",                 // With plus sign
+				"2147483647",           // int32 最大值
+				"-2147483648",          // int32 最小值
+				"9223372036854775807",  // int64 最大值
+				"-9223372036854775808", // int64 最小值
+				"+123",                 // 带正号
 			}
 
 			for _, value := range validInts {
@@ -438,10 +440,10 @@ func TestIsInt(t *testing.T) {
 				"123 ",
 				" 123",
 				"12-3",
-				"+",                    // Just plus sign
-				"-",                    // Just minus sign
-				"9223372036854775808",  // Overflow int64
-				"-9223372036854775809", // Underflow int64
+				"+",                    // 仅正号
+				"-",                    // 仅负号
+				"9223372036854775808",  // int64 溢出
+				"-9223372036854775809", // int64 下溢
 			}
 
 			for _, value := range invalidInts {
@@ -453,7 +455,7 @@ func TestIsInt(t *testing.T) {
 	})
 }
 
-// TestIsFloat tests float value detection
+// TestIsFloat 测试浮点值识别
 func TestIsFloat(t *testing.T) {
 	Convey("Test float value detection", t, func() {
 		Convey("Valid floats", func() {
@@ -469,9 +471,9 @@ func TestIsFloat(t *testing.T) {
 				".5",
 				"0.5",
 				"-0.5",
-				"123.", // Trailing decimal point
-				".0",   // Leading decimal point
-				"+1.5", // With plus sign
+				"123.", // 带尾随小数点的数字
+				".0",   // 前导小数点
+				"+1.5", // 带正号
 			}
 
 			for _, value := range validFloats {
@@ -504,16 +506,16 @@ func TestIsFloat(t *testing.T) {
 	})
 }
 
-// TestHashValidation tests hash validation functions
+// TestHashValidation 测试哈希校验函数
 func TestHashValidation(t *testing.T) {
 	Convey("MD5 validation", t, func() {
 		Convey("Valid MD5 hashes", func() {
 			validMD5s := []string{
-				"d41d8cd98f00b204e9800998ecf8427e", // Empty string MD5
-				"5d41402abc4b2a76b9719d911017c592", // "hello" MD5
-				"098f6bcd4621d373cade4e832627b4f6", // "test" MD5
-				"0123456789ABCDEF0123456789ABCDEF", // Uppercase
-				"aBcDeF1234567890aBcDeF1234567890", // Mixed case
+				"d41d8cd98f00b204e9800998ecf8427e", // 空字符串的 MD5
+				"5d41402abc4b2a76b9719d911017c592", // 对应 "hello" 的 MD5
+				"098f6bcd4621d373cade4e832627b4f6", // 对应 "test" 的 MD5
+				"0123456789ABCDEF0123456789ABCDEF", // 大写
+				"aBcDeF1234567890aBcDeF1234567890", // 大小写混合
 			}
 
 			for _, value := range validMD5s {
@@ -525,10 +527,10 @@ func TestHashValidation(t *testing.T) {
 
 		Convey("Invalid MD5 hashes", func() {
 			invalidMD5s := []string{
-				"",                                  // Empty
-				"d41d8cd98f00b204e9800998ecf8427",   // 31 chars
-				"d41d8cd98f00b204e9800998ecf8427ee", // 33 chars
-				"g41d8cd98f00b204e9800998ecf8427e",  // Invalid hex char
+				"",                                  // 空字符串
+				"d41d8cd98f00b204e9800998ecf8427",   // 31 个字符
+				"d41d8cd98f00b204e9800998ecf8427ee", // 33 个字符
+				"g41d8cd98f00b204e9800998ecf8427e",  // 非法十六进制字符
 				"not_a_hash",
 			}
 
@@ -543,9 +545,9 @@ func TestHashValidation(t *testing.T) {
 	Convey("SHA1 validation", t, func() {
 		Convey("Valid SHA1 hashes", func() {
 			validSHA1s := []string{
-				"da39a3ee5e6b4b0d3255bfef95601890afd80709", // Empty string SHA1
-				"aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d", // "hello" SHA1
-				"a94a8fe5ccb19ba61c4c0873d391e987982fbbd3", // "test" SHA1
+				"da39a3ee5e6b4b0d3255bfef95601890afd80709", // 空字符串的 SHA1
+				"aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d", // 对应 "hello" 的 SHA1
+				"a94a8fe5ccb19ba61c4c0873d391e987982fbbd3", // 对应 "test" 的 SHA1
 			}
 
 			for _, value := range validSHA1s {
@@ -568,8 +570,8 @@ func TestHashValidation(t *testing.T) {
 	Convey("SHA256 validation", t, func() {
 		Convey("Valid SHA256 hashes", func() {
 			validSHA256s := []string{
-				"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // Empty string SHA256
-				"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824", // "hello" SHA256
+				"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // 空字符串的 SHA256
+				"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824", // 对应 "hello" 的 SHA256
 			}
 
 			for _, value := range validSHA256s {
@@ -625,7 +627,7 @@ func TestHashValidation(t *testing.T) {
 	})
 }
 
-// TestUUIDValidation tests UUID validation
+// TestUUIDValidation 测试 UUID 校验
 func TestUUIDValidation(t *testing.T) {
 	Convey("Test UUID validation", t, func() {
 		Convey("Valid UUIDs", func() {
@@ -647,12 +649,12 @@ func TestUUIDValidation(t *testing.T) {
 		Convey("Invalid UUIDs", func() {
 			invalidUUIDs := []string{
 				"",
-				"550e8400e29b41d4a716446655440000",      // Without dashes
-				"550e8400-e29b-41d4-a716-44665544",      // Too short
-				"550e8400-e29b-41d4-a716-4466554400000", // Too long
-				"550e8400-e29b-41d4-a716-44665544g000",  // Invalid hex char
-				"550e8400-e29b-41d4-a716-44665544-0000", // Extra dash
-				"g50e8400-e29b-41d4-a716-446655440000",  // Invalid hex
+				"550e8400e29b41d4a716446655440000",      // 无连字符
+				"550e8400-e29b-41d4-a716-44665544",      // 过短
+				"550e8400-e29b-41d4-a716-4466554400000", // 过长
+				"550e8400-e29b-41d4-a716-44665544g000",  // 非法十六进制字符
+				"550e8400-e29b-41d4-a716-44665544-0000", // 多余的连字符
+				"g50e8400-e29b-41d4-a716-446655440000",  // 非法十六进制
 			}
 
 			for _, value := range invalidUUIDs {
@@ -664,19 +666,19 @@ func TestUUIDValidation(t *testing.T) {
 	})
 }
 
-// TestBase64Validation tests Base64 validation
+// TestBase64Validation 测试 Base64 校验
 func TestBase64Validation(t *testing.T) {
 	Convey("Test Base64 validation", t, func() {
 		Convey("Valid Base64 strings", func() {
 			validBase64s := []string{
-				"aGVsbG8=",                 // "hello"
-				"dGVzdA==",                 // "test"
-				"SGVsbG8gV29ybGQh",         // "Hello World!"
-				"eyJ0ZXN0IjoidmFsdWUifQ==", // {"test":"value"}
-				"AA==",                     // Single byte
-				"QQ==",                     // 'A'
-				"YWJjZGVmZ2g=",             // "abcdefgh"
-				"",                         // Empty string is valid base64
+				"aGVsbG8=",                 // 对应 "hello"
+				"dGVzdA==",                 // 对应 "test"
+				"SGVsbG8gV29ybGQh",         // 对应 "Hello World!"
+				"eyJ0ZXN0IjoidmFsdWUifQ==", // 对应 {"test":"value"}
+				"AA==",                     // 单字节
+				"QQ==",                     // 对应 'A'
+				"YWJjZGVmZ2g=",             // 对应 "abcdefgh"
+				"",                         // 空字符串是合法的 base64
 			}
 
 			for _, value := range validBase64s {
@@ -688,10 +690,10 @@ func TestBase64Validation(t *testing.T) {
 
 		Convey("Invalid Base64 strings", func() {
 			invalidBase64s := []string{
-				"!!!",                  // Invalid characters
-				"YWJjZGVmZ2g",          // Missing padding
-				"YWJjZGRmZ2g===",       // Too much padding
-				"YWJjZGRmZ2g=aGVsbG8=", // Invalid characters in the middle
+				"!!!",                  // 非法字符
+				"YWJjZGVmZ2g",          // 缺少填充
+				"YWJjZGRmZ2g===",       // 填充过多
+				"YWJjZGRmZ2g=aGVsbG8=", // 中间含非法字符
 			}
 
 			for _, value := range invalidBase64s {
@@ -703,14 +705,14 @@ func TestBase64Validation(t *testing.T) {
 	})
 }
 
-// TestBase32Validation tests Base32 validation
+// TestBase32Validation 测试 Base32 校验
 func TestBase32Validation(t *testing.T) {
 	Convey("Test Base32 validation", t, func() {
 		Convey("Valid Base32 strings", func() {
 			validBase32s := []string{
-				"NBSWY3DP", // "hello"
-				"ORSXG5A=", // "test"
-				"",         // Empty string is valid base32
+				"NBSWY3DP", // 对应 "hello"
+				"ORSXG5A=", // 对应 "test"
+				"",         // 空字符串是合法的 base32
 			}
 
 			for _, value := range validBase32s {
@@ -722,9 +724,9 @@ func TestBase32Validation(t *testing.T) {
 
 		Convey("Invalid Base32 strings", func() {
 			invalidBase32s := []string{
-				"123",    // Numbers only
-				"!!!",    // Invalid characters
-				"abcdef", // Lowercase letters
+				"123",    // 仅数字
+				"!!!",    // 非法字符
+				"abcdef", // 小写字母
 			}
 
 			for _, value := range invalidBase32s {
@@ -736,19 +738,19 @@ func TestBase32Validation(t *testing.T) {
 	})
 }
 
-// TestDateValidation tests date validation functions
+// TestDateValidation 测试日期校验函数
 func TestDateValidation(t *testing.T) {
 	Convey("Test date validation functions", t, func() {
 		Convey("Valid dates", func() {
 			validDates := []string{
-				"2023-01-01", // Simple date format
-				"2023-12-31", // Simple date format
-				"2020-02-29", // Leap year
-				"2023-01",    // Year-month only
-				"01-31-2023", // US format
-				"12-25-2023", // US format
-				"31.12.2023", // European format
-				"01.01.2023", // European format
+				"2023-01-01", // 简单日期格式
+				"2023-12-31", // 简单日期格式
+				"2020-02-29", // 闰年
+				"2023-01",    // 仅年月
+				"01-31-2023", // 美式格式
+				"12-25-2023", // 美式格式
+				"31.12.2023", // 欧式格式
+				"01.01.2023", // 欧式格式
 			}
 
 			for _, date := range validDates {
@@ -761,16 +763,16 @@ func TestDateValidation(t *testing.T) {
 		Convey("Invalid dates", func() {
 			invalidDates := []string{
 				"",
-				"2023-13-01", // Invalid month
-				"2023-01-32", // Invalid day
-				"2023-04-31", // April has 30 days
-				"2023-02-29", // Non-leap year Feb 29
-				"13-01-2023", // US format invalid month
-				"01-32-2023", // US format invalid day
-				"31.13.2023", // European format invalid month
-				"32.01.2023", // European format invalid day
-				"2023-1-1",   // Single digit month/day
-				"23-01-01",   // 2-digit year
+				"2023-13-01", // 非法月份
+				"2023-01-32", // 非法日期
+				"2023-04-31", // 4 月只有 30 天
+				"2023-02-29", // 非闰年的 2 月 29 日
+				"13-01-2023", // 美式格式的非法月份
+				"01-32-2023", // 美式格式的非法日期
+				"31.13.2023", // 欧式格式的非法月份
+				"32.01.2023", // 欧式格式的非法日期
+				"2023-1-1",   // 单位数的月/日
+				"23-01-01",   // 2 位年份
 			}
 
 			for _, date := range invalidDates {
@@ -782,7 +784,7 @@ func TestDateValidation(t *testing.T) {
 	})
 }
 
-// TestYearQuarterValidation tests year-quarter validation
+// TestYearQuarterValidation 测试年-季度校验
 func TestYearQuarterValidation(t *testing.T) {
 	Convey("Test year-quarter validation", t, func() {
 		Convey("Valid year-quarters", func() {
@@ -794,7 +796,7 @@ func TestYearQuarterValidation(t *testing.T) {
 				"1999-Q1",
 				"2000-Q4",
 				"2100-Q2",
-				"2023-q1", // Lowercase
+				"2023-q1", // 小写
 			}
 
 			for _, quarter := range validQuarters {
@@ -809,10 +811,10 @@ func TestYearQuarterValidation(t *testing.T) {
 				"",
 				"2023-Q0",
 				"2023-Q5",
-				"23-Q1",   // 2-digit year
-				"2023-Q",  // Missing quarter
-				"2023-1",  // Missing Q
-				"Q1-2023", // Wrong format
+				"23-Q1",   // 2 位年份
+				"2023-Q",  // 缺少季度
+				"2023-1",  // 缺少 Q
+				"Q1-2023", // 格式错误
 			}
 
 			for _, quarter := range invalidQuarters {
@@ -824,7 +826,7 @@ func TestYearQuarterValidation(t *testing.T) {
 	})
 }
 
-// TestYearWeekValidation tests year-week validation
+// TestYearWeekValidation 测试年-周校验
 func TestYearWeekValidation(t *testing.T) {
 	Convey("Test year-week validation", t, func() {
 		Convey("Valid year-weeks", func() {
@@ -832,10 +834,10 @@ func TestYearWeekValidation(t *testing.T) {
 				"2023-W01",
 				"2023-W52",
 				"2023-W53",
-				"2020-W53", // Year with 53 weeks
+				"2020-W53", // 具有 53 周的年份
 				"1999-W01",
 				"2000-W52",
-				"2023-w01", // Lowercase
+				"2023-w01", // 小写
 			}
 
 			for _, week := range validWeeks {
@@ -848,12 +850,12 @@ func TestYearWeekValidation(t *testing.T) {
 		Convey("Invalid year-weeks", func() {
 			invalidWeeks := []string{
 				"",
-				"2023-W00", // Week 0 doesn't exist
-				"2023-W54", // Week 54 doesn't exist
-				"23-W01",   // 2-digit year
-				"2023-W",   // Missing week number
-				"2023-01",  // Missing W
-				"W01-2023", // Wrong format
+				"2023-W00", // 第 0 周不存在
+				"2023-W54", // 第 54 周不存在
+				"23-W01",   // 2 位年份
+				"2023-W",   // 缺少周数
+				"2023-01",  // 缺少 W
+				"W01-2023", // 格式错误
 			}
 
 			for _, week := range invalidWeeks {
@@ -865,7 +867,7 @@ func TestYearWeekValidation(t *testing.T) {
 	})
 }
 
-// TestDatetimeValidation tests datetime validation
+// TestDatetimeValidation 测试日期时间校验
 func TestDatetimeValidation(t *testing.T) {
 	Convey("Test datetime validation", t, func() {
 		Convey("Valid datetimes", func() {
@@ -887,14 +889,14 @@ func TestDatetimeValidation(t *testing.T) {
 		Convey("Invalid datetimes", func() {
 			invalidDatetimes := []string{
 				"",
-				"2023-13-01-12-30-45", // Invalid month
-				"2023-01-32-12-30-45", // Invalid day
-				"2023-01-01-24-30-45", // Invalid hour
-				"2023-01-01-12-60-45", // Invalid minute
-				"2023-01-01-12-30-60", // Invalid second
-				"2023-01-01-12-30",    // Missing seconds
-				"2023-01-01-12",       // Missing minutes and seconds
-				"23-01-01-12-30-45",   // 2-digit year
+				"2023-13-01-12-30-45", // 非法月份
+				"2023-01-32-12-30-45", // 非法日期
+				"2023-01-01-24-30-45", // 非法小时
+				"2023-01-01-12-60-45", // 非法分钟
+				"2023-01-01-12-30-60", // 非法秒
+				"2023-01-01-12-30",    // 缺少秒
+				"2023-01-01-12",       // 缺少分和秒
+				"23-01-01-12-30-45",   // 2 位年份
 			}
 
 			for _, datetime := range invalidDatetimes {
@@ -906,7 +908,7 @@ func TestDatetimeValidation(t *testing.T) {
 	})
 }
 
-// TestSlugValidation tests slug validation
+// TestSlugValidation 测试 slug 校验
 func TestSlugValidation(t *testing.T) {
 	Convey("Test slug validation", t, func() {
 		Convey("Valid slugs", func() {
@@ -933,13 +935,13 @@ func TestSlugValidation(t *testing.T) {
 		Convey("Invalid slugs", func() {
 			invalidSlugs := []string{
 				"",
-				"-hello",       // Starts with hyphen
-				"hello-",       // Ends with hyphen
-				"hello--world", // Double hyphen
-				"hello world",  // Contains space
-				"Hello-World",  // Contains uppercase
-				"hello.world",  // Contains period
-				"hello@world",  // Contains special char
+				"-hello",       // 以连字符开头
+				"hello-",       // 以连字符结尾
+				"hello--world", // 连续双连字符
+				"hello world",  // 含空格
+				"Hello-World",  // 含大写字母
+				"hello.world",  // 含句点
+				"hello@world",  // 含特殊字符
 			}
 
 			for _, slug := range invalidSlugs {
@@ -953,8 +955,6 @@ func TestSlugValidation(t *testing.T) {
 
 // namedKind / namedKindPayload 用于验证自定义标签（enum / trimmed）可直接作用于具名 string 类型，
 // 即 pkg/llm 的枚举取值类型这类字段。
-// namedKind / namedKindPayload verify that the custom tags (enum / trimmed) apply directly to a
-// named string type, i.e. a field such as the enum value types of pkg/llm.
 type namedKind string
 
 type namedKindPayload struct {
@@ -963,9 +963,6 @@ type namedKindPayload struct {
 
 // TestGenericFieldValidations 覆盖 enum / httpUrl / jsonObject / trimmed 四个通用字段级校验：
 // 它们供各视图层 In 结构体以绑定标签直接引用，取代各自就地书写的解析与校验方法。
-// TestGenericFieldValidations covers the four generic field validations enum / httpUrl / jsonObject
-// / trimmed, which view-layer In structs reference through binding tags instead of writing their own
-// parsing and validation helpers.
 func TestGenericFieldValidations(t *testing.T) {
 	// 注册仅供测试使用的枚举类，避免与业务枚举类的注册冲突
 	enum.Register(enum.Type{Name: "validatorTestKind", Entries: []enum.Entry{

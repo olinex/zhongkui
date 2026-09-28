@@ -9,9 +9,6 @@ import (
 
 // TestRedisPool RedisPool（基于 resourcepool.Manager[*redis.Client]）的借/还/清理语义：
 // 借出复用闲置 client、关闭（Clear）后新借会重建不同 client。
-// TestRedisPool covers the resourcepool-backed RedisPool borrow/recycle/clear semantics:
-// a newly borrowed client reuses the idle one, and a borrow after Close (Clear) rebuilds
-// a different client.
 func TestRedisPool(t *testing.T) {
 	ctx := context.Background()
 

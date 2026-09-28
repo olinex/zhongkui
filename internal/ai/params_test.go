@@ -1,21 +1,16 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"testing"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // testParams 构造测试用参数读取器：出厂值由 migrate fixture 注入数据库，测试不复制生产
 // 提示词正文，故提示词类键给可辨识的短占位串（agent.systemPrompt 保留 "ZhongKui" 以便
 // 断言系统提示已注入），其余键给与出厂值等价的字面量；overrides 覆盖其上。
-// testParams builds a parameter reader for tests: the factory values are seeded into the
-// database by the migrate fixtures, so tests never copy prompt bodies. Prompt-typed keys get
-// short identifiable placeholders (agent.systemPrompt keeps "ZhongKui" so tests can assert the
-// system prompt is injected) while the remaining keys carry literals equivalent to the seeded
-// factory values; overrides are layered on top.
 func testParams(t *testing.T, overrides map[string]string) *llm.Params {
 	t.Helper()
 	values := map[string]string{
@@ -37,6 +32,7 @@ func testParams(t *testing.T, overrides map[string]string) *llm.Params {
 		"retrieval.rerankTemperature":       "0.2",
 		"session.maxContextMessages":        "20",
 		"session.maxContextBytes":           "32768",
+		"session.topicSystemPrompt":         "test session topic system prompt",
 		"memory.enabled":                    "false",
 		"memory.sectionTitle":               "## Long-term Memory",
 		"memory.topK":                       "5",

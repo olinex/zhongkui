@@ -15,7 +15,7 @@ func TestIPv6HeaderTLVOption_Basic(t *testing.T) {
 	Convey("Test IPv6HeaderTLVOption basic functionality", t, func() {
 		Convey("Should create IPv6HeaderTLVOption with valid fields", func() {
 			option := IPv6HeaderTLVOption{
-				OptionType:       5, // Router Alert option
+				OptionType:       5, // 路由告警（Router Alert）选项
 				OptionLength:     4,
 				ActualLength:     8,
 				OptionData:       []byte{0x00, 0x00, 0x00, 0x01},
@@ -33,7 +33,7 @@ func TestIPv6HeaderTLVOption_Basic(t *testing.T) {
 
 		Convey("Should support JSON serialization and deserialization", func() {
 			original := IPv6HeaderTLVOption{
-				OptionType:       194, // Jumbo Payload option
+				OptionType:       194, // 超大载荷（Jumbo Payload）选项
 				OptionLength:     4,
 				ActualLength:     8,
 				OptionData:       []byte{0x00, 0x01, 0x02, 0x03},
@@ -65,13 +65,13 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 		Convey("Should serialize IPv6HeaderTLVOptions to JSON for database storage", func() {
 			options := IPv6HeaderTLVOptions{
 				{
-					OptionType:   5, // Router Alert
+					OptionType:   5, // 路由告警（Router Alert）
 					OptionLength: 4,
 					ActualLength: 8,
 					OptionData:   []byte{0x00, 0x00, 0x00, 0x01},
 				},
 				{
-					OptionType:   1, // PadN
+					OptionType:   1, // PadN 填充
 					OptionLength: 3,
 					ActualLength: 4,
 					OptionData:   []byte{0x00, 0x00, 0x00},
@@ -85,7 +85,7 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 			var decoded IPv6HeaderTLVOptions
 			err = decoded.Scan(value)
 			So(err, ShouldBeNil)
-			So(len(decoded), ShouldEqual, 2)
+			So(len(options), ShouldEqual, 2)
 			So(decoded[0].OptionType, ShouldEqual, 5)
 			So(decoded[1].OptionType, ShouldEqual, 1)
 		})
@@ -116,7 +116,7 @@ func TestIPv6HeaderTLVOptions_Database(t *testing.T) {
 			err := options.Scan(jsonData)
 			So(err, ShouldBeNil)
 			So(len(options), ShouldEqual, 1)
-			So(options[0].OptionType, ShouldEqual, 194) // Jumbo Payload
+			So(options[0].OptionType, ShouldEqual, 194) // 超大载荷（Jumbo Payload）
 		})
 
 		Convey("Should return error for unsupported type in Scan method", func() {
@@ -148,7 +148,7 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 		Convey("Should create IPv6HopByHop with valid fields", func() {
 			options := IPv6HeaderTLVOptions{
 				{
-					OptionType:   5, // Router Alert
+					OptionType:   5, // 路由告警（Router Alert）
 					OptionLength: 4,
 					ActualLength: 8,
 					OptionData:   []byte{0x00, 0x00, 0x00, 0x01},
@@ -247,10 +247,10 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 		})
 
 		Convey("Should handle nil pointer with Value method", func() {
-			var hbh *IPv6HopByHop // nil pointer
+			var hbh *IPv6HopByHop // nil 指针
 			value, err := hbh.Value()
 			So(err, ShouldBeNil)
-			// nil pointer should return nil driver.Value for SQL NULL
+			// nil 指针应为 SQL NULL 返回 nil driver.Value
 			So(value, ShouldBeNil)
 		})
 
@@ -258,7 +258,7 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 			var hbh IPv6HopByHop
 			err := hbh.Scan("")
 			So(err, ShouldBeNil)
-			// struct should be zero-valued after empty scan
+			// 空值扫描后结构体应为零值
 			So(hbh.NextHeader, ShouldEqual, layers.IPProtocol(0))
 			So(hbh.HeaderLength, ShouldEqual, 0)
 			So(hbh.ActualLength, ShouldEqual, 0)
@@ -269,7 +269,7 @@ func TestIPv6HopByHop_Basic(t *testing.T) {
 			var hbh IPv6HopByHop
 			err := hbh.Scan([]byte{})
 			So(err, ShouldBeNil)
-			// struct should be zero-valued after empty scan
+			// 空值扫描后结构体应为零值
 			So(hbh.NextHeader, ShouldEqual, layers.IPProtocol(0))
 			So(hbh.HeaderLength, ShouldEqual, 0)
 			So(hbh.ActualLength, ShouldEqual, 0)

@@ -1,3 +1,5 @@
+// Package migrate（本文件）实现模型定义与数据库实际结构的比对校验，
+// 在临时库上执行迁移后逐表逐列检查差异。
 package migrate
 
 import (
@@ -65,16 +67,24 @@ var (
 	}
 )
 
+// IssueKind 表示结构比对问题的种类。
 type IssueKind int
 
+// 结构比对问题种类：类型不匹配、缺失表、多余表、缺失列、多余列。
 const (
+	// IssueKindMismatch 列类型与模型声明不匹配。
 	IssueKindMismatch IssueKind = iota
+	// IssueKindMissingTable 模型声明了但数据库缺失的表。
 	IssueKindMissingTable
+	// IssueKindExtraTable 数据库存在但模型未声明的表。
 	IssueKindExtraTable
+	// IssueKindMissingColumn 模型声明了但数据库缺失的列。
 	IssueKindMissingColumn
+	// IssueKindExtraColumn 数据库存在但模型未声明的列。
 	IssueKindExtraColumn
 )
 
+// Label 返回问题种类对应的本地化名称。
 func (k IssueKind) Label() string {
 	switch k {
 	case IssueKindMissingTable:
@@ -90,14 +100,21 @@ func (k IssueKind) Label() string {
 	}
 }
 
+// CheckIssue 描述一条结构和模型比对发现的问题。
 type CheckIssue struct {
-	Table        string
-	Column       string
-	Kind         IssueKind
+	// Table 问题所属表名。
+	Table string
+	// Column 问题所属列名，整表级问题为空。
+	Column string
+	// Kind 问题种类。
+	Kind IssueKind
+	// ExpectedType 模型声明的期望类型。
 	ExpectedType string
-	ActualType   string
+	// ActualType 数据库实际类型。
+	ActualType string
 }
 
+// Check 在临时数据库上执行全部迁移，然后比对模型声明与实际结构。
 func Check(ctx context.Context, cfg *Config, models []any) error {
 	pterm.Info.Println(translate.T("cli.migrate.check-creating", nil))
 	tempDB, err := CreateTempDB(ctx, cfg)
@@ -144,6 +161,7 @@ func Check(ctx context.Context, cfg *Config, models []any) error {
 	return err
 }
 
+// CheckModels 比对给定数据库结构与模型声明，输出差异表格。
 func CheckModels(ctx context.Context, db *sql.DB, driver string, models []any) error {
 	actualTables, err := getTables(ctx, db, driver)
 	if err != nil {

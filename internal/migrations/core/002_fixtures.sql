@@ -134,15 +134,11 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'OPTIONS', 'allow'),
-    -- AI 助手接口：长期记忆管理（列表/新增/详情/更新/批量删除/启停）
+    -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
     ('p', 'admin', 'api:/api/v1/ai/memory/list', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/list', 'OPTIONS', 'allow'),
-    ('p', 'admin', 'api:/api/v1/ai/memory/create', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/ai/memory/create', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/:id/get', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/:id/get', 'OPTIONS', 'allow'),
-    ('p', 'admin', 'api:/api/v1/ai/memory/:id/update', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/ai/memory/:id/update', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/delete', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/delete', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/:id/status', 'POST', 'allow'),
@@ -419,15 +415,11 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS'),
     ('api:/api/v1/ai/status', 'POST'),
     ('api:/api/v1/ai/status', 'OPTIONS'),
-    -- AI 助手接口：长期记忆管理（列表/新增/详情/更新/批量删除/启停）
+    -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
     ('api:/api/v1/ai/memory/list', 'POST'),
     ('api:/api/v1/ai/memory/list', 'OPTIONS'),
-    ('api:/api/v1/ai/memory/create', 'POST'),
-    ('api:/api/v1/ai/memory/create', 'OPTIONS'),
     ('api:/api/v1/ai/memory/:id/get', 'POST'),
     ('api:/api/v1/ai/memory/:id/get', 'OPTIONS'),
-    ('api:/api/v1/ai/memory/:id/update', 'POST'),
-    ('api:/api/v1/ai/memory/:id/update', 'OPTIONS'),
     ('api:/api/v1/ai/memory/delete', 'POST'),
     ('api:/api/v1/ai/memory/delete', 'OPTIONS'),
     ('api:/api/v1/ai/memory/:id/status', 'POST'),
@@ -755,6 +747,10 @@ Rules:
     ('retrieval.rerankTemperature', '0.2'),
     ('session.maxContextMessages', '20'),
     ('session.maxContextBytes', '32768'),
+    (
+        'session.topicSystemPrompt',
+        $$You name a chat session from its first user message. Produce ONE short topic that captures what the session is about, in the same language as the message. Keep it under 20 characters, factual and specific: no quotes, no trailing punctuation, no prefixes like "Topic:", and no line breaks. Return ONLY the topic text.$$
+    ),
     ('memory.enabled', 'true'),
     ('memory.sectionTitle', '## Long-term Memory'),
     ('memory.topK', '5'),

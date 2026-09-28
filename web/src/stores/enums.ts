@@ -9,11 +9,11 @@
 //   enumsStore.labelOf("httpMethod", "GET", "zh-Hans"); // 按 value/key 解析 label
 import { defineStore } from "pinia";
 
-// Utilities
+// 工具
 import { getResponse } from "@/apis/base";
 import { enumGet, enumList } from "@/apis/enums";
 
-// Types
+// 类型
 import type { EnumEntryOut, EnumTypeOut } from "@/apis/enums";
 
 export const useEnumsStore = defineStore("enums", {

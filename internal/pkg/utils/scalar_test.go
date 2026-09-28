@@ -1,14 +1,12 @@
 package utils
 
 import (
-	// stdlib
+	// 标准库
 	"math"
 	"testing"
 )
 
 // TestParseScalar 测试字面量按标量类型解析：字符串不修剪，数值与布尔修剪首尾空白。
-// TestParseScalar verifies literal parsing by scalar kind: strings are not trimmed while
-// numeric and boolean kinds trim surrounding whitespace.
 func TestParseScalar(t *testing.T) {
 	cases := []struct {
 		kind    ScalarKind
@@ -39,7 +37,6 @@ func TestParseScalar(t *testing.T) {
 }
 
 // TestParseScalarErrors 测试解析失败与未知类型均返回错误。
-// TestParseScalarErrors verifies a failed parse and an unknown kind both yield errors.
 func TestParseScalarErrors(t *testing.T) {
 	cases := []struct {
 		kind    ScalarKind
@@ -63,9 +60,6 @@ func TestParseScalarErrors(t *testing.T) {
 
 // TestCoerceScalar 测试 JSON 原生值按标量类型收敛：数字与布尔字段的空串按零值处理，
 // 整数字段拒绝非整数浮点。
-// TestCoerceScalar verifies JSON native values coerced by scalar kind: an empty string on a
-// numeric or boolean field yields the zero value, and an int field rejects a non-integral
-// float.
 func TestCoerceScalar(t *testing.T) {
 	cases := []struct {
 		kind  ScalarKind
@@ -100,7 +94,6 @@ func TestCoerceScalar(t *testing.T) {
 }
 
 // TestCoerceScalarErrors 测试类型与标量类型不符时返回错误。
-// TestCoerceScalarErrors verifies a type contradicting the scalar kind yields an error.
 func TestCoerceScalarErrors(t *testing.T) {
 	cases := []struct {
 		kind  ScalarKind
@@ -126,8 +119,6 @@ func TestCoerceScalarErrors(t *testing.T) {
 }
 
 // TestCoerceScalar_IntZeroFloat 测试整数 0 的浮点表示被接受为整数字段（0 应可写回）。
-// TestCoerceScalar_IntZeroFloat verifies the float representation of integer zero is accepted
-// for an int field (zero must be writable).
 func TestCoerceScalar_IntZeroFloat(t *testing.T) {
 	got, err := CoerceScalar(ScalarKindInt, float64(0))
 	if err != nil {
@@ -139,8 +130,6 @@ func TestCoerceScalar_IntZeroFloat(t *testing.T) {
 }
 
 // TestFormatScalar 测试按标量类型格式化：与 ParseScalar 往返一致，浮点取最短表示。
-// TestFormatScalar verifies formatting by scalar kind: it round-trips with ParseScalar and
-// floats take their shortest form.
 func TestFormatScalar(t *testing.T) {
 	cases := []struct {
 		kind  ScalarKind
@@ -172,7 +161,6 @@ func TestFormatScalar(t *testing.T) {
 }
 
 // TestFormatScalarErrors 测试类型与标量类型不符时返回错误。
-// TestFormatScalarErrors verifies a type contradicting the scalar kind yields an error.
 func TestFormatScalarErrors(t *testing.T) {
 	cases := []struct {
 		kind  ScalarKind
@@ -192,8 +180,6 @@ func TestFormatScalarErrors(t *testing.T) {
 }
 
 // TestScalarRoundTrip 测试「字面量 → 值 → 字面量」在数值与布尔类型上稳定不变。
-// TestScalarRoundTrip verifies the literal → value → literal round trip is stable for
-// numeric and boolean kinds.
 func TestScalarRoundTrip(t *testing.T) {
 	cases := []struct {
 		kind    ScalarKind
@@ -222,8 +208,6 @@ func TestScalarRoundTrip(t *testing.T) {
 }
 
 // TestFloatNaNNotAnInt 测试 NaN 不会被误判为整数（math.Trunc(NaN) == NaN，须显式排除）。
-// TestFloatNaNNotAnInt verifies NaN is never taken for an integer (math.Trunc(NaN) == NaN,
-// so it must be excluded explicitly).
 func TestFloatNaNNotAnInt(t *testing.T) {
 	if _, err := CoerceScalar(ScalarKindInt, math.NaN()); err == nil {
 		t.Errorf("CoerceScalar(int, NaN) error = nil, want an error")

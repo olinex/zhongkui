@@ -435,7 +435,7 @@ import {
   type LanguageSelectOption,
 } from "@/utils/options";
 
-// Types
+// 类型
 import type { ChannelTypeOption } from "@/stores/notificationChannel";
 
 // ---- 校验 schema ----

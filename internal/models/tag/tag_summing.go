@@ -46,9 +46,5 @@ type TagSumming struct {
 	// IDs 该聚合分组对应的原始记录 ID 列表（如 http_transports.id）。
 	// 由物化视图 groupArray(id) 收集，SummingMergeTree 合并相同排序键行时拼接数组，
 	// 恒满足 length(ids) == cnt；借此在聚合层保留与原始记录的追溯关系。
-	// IDs the record ID list of the aggregation group (e.g., http_transports.id),
-	// collected by the materialized view via groupArray(id); arrays are concatenated
-	// on SummingMergeTree merges so length(ids) == cnt always holds, keeping the
-	// aggregation traceable back to the raw records.
 	IDs serializer.HexUUIDs `gorm:"type:Array(UUID)" json:"ids"`
 }

@@ -57,13 +57,13 @@ func init() {
 	flags.String("namespace", "", "flag.create.capturer.namespace")
 	flags.String("name", "", "flag.create.capturer.name")
 	flags.String("version", "", "flag.create.capturer.version")
-	// CapturerConfig fields
+	// CapturerConfig 抓包配置字段
 	flags.String("device", "", "flag.create.capturer.device")
 	flags.Uint32("snap-len", 0, "flag.create.capturer.snap-len")
 	flags.Bool("promisc", false, "flag.create.capturer.promisc")
 	flags.Int32("read-timeout", 0, "flag.create.capturer.read-timeout")
 	flags.String("bpf-expr", "", "flag.create.capturer.bpf-expr")
 	flags.Bool("enabled", false, "flag.create.capturer.enabled")
-	// Meta flags
+	// 元信息标志
 	flags.Duration("timeout", time.Minute, "flag.create.capturer.timeout")
 }

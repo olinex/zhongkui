@@ -1,20 +1,20 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"strconv"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	// internal
+	// 项目内部
 	mcptool "zhongkui.com/zhongkui/internal/ai/tools/mcp"
 	coremodel "zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -23,21 +23,16 @@ import (
 )
 
 // fakeTool 是测试用 eino 工具：Info 直接返回给定工具名（模拟内置/MCP 工具的 schema 来源）。
-// fakeTool is a test eino tool: Info returns the given tool name directly (simulating the schema
-// source of a builtin / MCP tool).
 type fakeTool struct {
 	name string
 }
 
 // Info 返回仅携带工具名的 schema。
-// Info returns a schema carrying only the tool name.
 func (t *fakeTool) Info(context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{Name: t.name}, nil
 }
 
 // fakeMCPConn 是可观测的假 MCP 会话：记录 Close 调用次数与最近一次取工具的名单。
-// fakeMCPConn is an observable fake MCP session: it counts Close calls and keeps the latest
-// tool-name list it was asked for.
 type fakeMCPConn struct {
 	tools      map[string]tool.BaseTool // remote name → tool
 	loadErr    error                    // 非 nil 时取工具失败（模拟 tools/list 失败）
@@ -47,7 +42,6 @@ type fakeMCPConn struct {
 }
 
 // LoadTools 按 remoteNames 从预置工具表取回存在的工具。
-// LoadTools fetches the tools that exist for remoteNames from the preset table.
 func (c *fakeMCPConn) LoadTools(_ context.Context, remoteNames []string, _ map[string]string) ([]tool.BaseTool, error) {
 	c.lastNames = remoteNames
 	if c.loadErr != nil {
@@ -63,15 +57,12 @@ func (c *fakeMCPConn) LoadTools(_ context.Context, remoteNames []string, _ map[s
 }
 
 // Close 记录一次关闭并返回预置的错误（默认 nil）。
-// Close records one close and returns the preset error (nil by default).
 func (c *fakeMCPConn) Close() error {
 	c.closeCount++
 	return c.closeErr
 }
 
 // fakeDialer 是假 MCP 连接器：按 URL 返回预置会话或预置错误，并记录被拨号的 URL。
-// fakeDialer is a fake MCP connector: it returns the preset session or preset error per URL and
-// records the dialed URLs.
 type fakeDialer struct {
 	conns    map[string]*fakeMCPConn
 	failures map[string]error
@@ -79,7 +70,6 @@ type fakeDialer struct {
 }
 
 // Dial 按 URL 返回预置结果（失败优先于成功）。
-// Dial returns the preset result per URL (a failure takes precedence over success).
 func (d *fakeDialer) Dial(_ context.Context, cfg mcptool.ConnConfig) (mcpConn, error) {
 	d.dialed = append(d.dialed, cfg.URL)
 	if err, ok := d.failures[cfg.URL]; ok {
@@ -93,8 +83,6 @@ func (d *fakeDialer) Dial(_ context.Context, cfg mcptool.ConnConfig) (mcpConn, e
 }
 
 // newTestToolDB 构造工具装配测试用的 sqlite 内存库并迁移 mcp_servers / llm_tools 两表。
-// newTestToolDB builds an in-memory sqlite DB for the tool assembly tests and migrates the
-// mcp_servers / llm_tools tables.
 func newTestToolDB(t *testing.T) *database.DB {
 	t.Helper()
 	gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
@@ -108,8 +96,6 @@ func newTestToolDB(t *testing.T) *database.DB {
 }
 
 // seedMCPServer 插入一台 MCP 服务器并返回其记录（HTTP headers 留空以避开加解密链路）。
-// seedMCPServer inserts one MCP server and returns its record (HTTP headers are left empty to
-// sidestep the encrypt/decrypt path).
 func seedMCPServer(t *testing.T, db *database.DB, name, url string, enabled bool) *coremodel.McpServer {
 	t.Helper()
 	server := &coremodel.McpServer{
@@ -124,9 +110,6 @@ func seedMCPServer(t *testing.T, db *database.DB, name, url string, enabled bool
 	}
 	// Enabled 列声明了 default:true，Create 会因零值（false）回落到列默认值，故显式回写一次，
 	// 使「禁用服务器」的测试夹具真的落库为 false。
-	// The Enabled column declares default:true, so Create falls back to the column default for a
-	// zero value (false); write it back explicitly so a "disabled server" test fixture is truly
-	// persisted as false.
 	if err := db.Model(server).Update("enabled", enabled).Error; err != nil {
 		t.Fatalf("seed mcp server %q enabled error = %v", name, err)
 	}
@@ -134,7 +117,6 @@ func seedMCPServer(t *testing.T, db *database.DB, name, url string, enabled bool
 }
 
 // seedTool 插入一行 llm_tools 并返回其记录。
-// seedTool inserts one llm_tools row and returns its record.
 func seedTool(t *testing.T, db *database.DB, name string, source llm.ToolSource, serverID *uint, remoteName string, enabled bool) *coremodel.LlmTool {
 	t.Helper()
 	row := &coremodel.LlmTool{
@@ -151,7 +133,6 @@ func seedTool(t *testing.T, db *database.DB, name string, source llm.ToolSource,
 }
 
 // toolNames 取出装配结果中全部工具的 Info 名称（顺序）。
-// toolNames extracts the Info names of every assembled tool (in order).
 func toolNames(t *testing.T, set *ToolSet) []string {
 	t.Helper()
 	names := make([]string, 0, len(set.Tools))
@@ -166,7 +147,6 @@ func toolNames(t *testing.T, set *ToolSet) []string {
 }
 
 // warningsContain 报告是否有告警包含子串。
-// warningsContain reports whether any warning carries the substring.
 func warningsContain(warnings []string, substr string) bool {
 	for _, warning := range warnings {
 		if strings.Contains(warning, substr) {
@@ -177,7 +157,6 @@ func warningsContain(warnings []string, substr string) bool {
 }
 
 // containsName 报告名称清单是否精确包含给定名称。
-// containsName reports whether the name list contains the given name exactly.
 func containsName(names []string, want string) bool {
 	for _, name := range names {
 		if name == want {
@@ -191,13 +170,6 @@ func containsName(names []string, want string) bool {
 // 不出现、禁用的服务器其工具整体跳过且不告警），以及 MCP 端点故障按服务器粒度降级——不可达的
 // 服务器只产生英文告警、其余可达服务器的工具照常装配、整体返回 nil 错误。同时覆盖内置工具
 // 解析失败降级为告警、远端已不提供某工具时告警跳过，以及空清单非 nil 的顺序与关闭语义。
-// TestLoadToolsEnabledAndDegrade verifies the two key contracts of the tool assembly: only the
-// enabled rows are assembled (a disabled tool is absent and a disabled server's tools are skipped
-// without a warning), and an MCP endpoint failure degrades per server — an unreachable server only
-// produces an English warning while the tools of the other reachable servers are assembled as usual
-// with a nil overall error. It also covers the builtin resolution failing into a warning, a tool
-// the remote no longer provides being warned and skipped, and the non-nil order/close semantics of
-// an empty list.
 func TestLoadToolsEnabledAndDegrade(t *testing.T) {
 	db := newTestToolDB(t)
 	store, err := NewStore(db)
@@ -207,8 +179,6 @@ func TestLoadToolsEnabledAndDegrade(t *testing.T) {
 	a1, a2, a3 := "tool-a1", "tool-a2", "tool-a3"
 	remoteA1, remoteA2, remoteA3 := "remote-a1", "remote-a2", "remote-a3"
 	// 真实 MCP 工具经 eino 暴露后其 Info.Name 即远端工具名，故假工具的 Info.Name 取 remote_name。
-	// A real MCP tool exposed through eino has its remote tool name as Info.Name, so the fake
-	// tools carry the remote_name as Info.Name.
 	upstreamA := &fakeMCPConn{tools: map[string]tool.BaseTool{
 		remoteA1: &fakeTool{name: remoteA1},
 		remoteA2: &fakeTool{name: remoteA2},
@@ -318,11 +288,6 @@ func TestLoadToolsEnabledAndDegrade(t *testing.T) {
 // internal/ai/tools/mcp 走真实网络）驱动装配层的降级契约：注册一台不可达的启用服务器及其启用工具
 // 后，LoadTools 返回 nil 错误、工具清单为空，但 Warnings 含该服务器的英文告警——证明「服务器粒度
 // 降级」在真实传输栈上成立，而非仅对假 dialer 成立。
-// TestLoadToolsRealDialerUnreachableDegrades drives the assembly-layer degradation contract with the
-// real MCP adapter (realMCPDialer, which goes over the real network through internal/ai/tools/mcp):
-// after registering one unreachable enabled server with an enabled tool, LoadTools returns a nil
-// error and an empty tool list while Warnings carries the English warning for that server — proving
-// the "per-server degradation" holds on the real transport stack, not merely against a fake dialer.
 func TestLoadToolsRealDialerUnreachableDegrades(t *testing.T) {
 	db := newTestToolDB(t)
 	store, err := NewStore(db)
@@ -363,8 +328,6 @@ func TestLoadToolsRealDialerUnreachableDegrades(t *testing.T) {
 
 // TestLoadToolsNoEnabledRows 验证空清单是正常结果：没有任何启用工具时返回非 nil 且各切片为
 // 非 nil 空切片、无告警、Close 安全返回 nil。
-// TestLoadToolsNoEnabledRows verifies an empty catalog is a normal result: with no enabled tool it
-// returns a non-nil set with non-nil empty slices, no warning, and a nil-safe Close.
 func TestLoadToolsNoEnabledRows(t *testing.T) {
 	db := newTestToolDB(t)
 	store, err := NewStore(db)
@@ -393,13 +356,6 @@ func TestLoadToolsNoEnabledRows(t *testing.T) {
 // 建立的句柄按服务器一条累积，CloseTools 逐条关闭全部句柄（不因某条失败而中断后续），仅把失败
 // 错误合并返回；其中「拨号成功但取工具失败」的服务器其句柄已登记、同样被关闭（无泄漏），而拨号
 // 失败的服务器没有句柄可关。同时固化该函数的幂等契约：首次关闭的错误不会在重复调用时重现。
-// TestCloseToolsMultiServerClosesAllSessions freezes the snapshot's session-closing behavior with
-// several MCP servers: the handles established at assembly accumulate one per server, and CloseTools
-// closes every handle one by one without letting a failure interrupt the rest, returning only the
-// joined failures; a server that dialed successfully but failed to fetch tools has already
-// registered its handle and is closed too (no leak), while a server that failed to dial has no
-// handle. It also freezes the idempotency contract: the first close's errors do not reappear on a
-// repeated call.
 func TestCloseToolsMultiServerClosesAllSessions(t *testing.T) {
 	db := newTestToolDB(t)
 	store, err := NewStore(db)
@@ -497,9 +453,6 @@ func TestCloseToolsMultiServerClosesAllSessions(t *testing.T) {
 
 // TestCloseToolsNilSafeAndIdempotent 验证 Snapshot.CloseTools 的零值安全：nil 接收者、未挂载
 // 工具的空快照、以及无连接的工具集都安全返回 nil。
-// TestCloseToolsNilSafeAndIdempotent verifies the zero-value safety of Snapshot.CloseTools: a nil
-// receiver, an empty snapshot with no tools mounted and a tool set with no connection all return
-// nil safely.
 func TestCloseToolsNilSafeAndIdempotent(t *testing.T) {
 	var nilSnapshot *Snapshot
 	if err := nilSnapshot.CloseTools(); err != nil {
@@ -521,9 +474,6 @@ func TestCloseToolsNilSafeAndIdempotent(t *testing.T) {
 
 // TestSwapStateClosesReplacedConnections 验证连接生命周期：swapState 返回被替换掉的旧装配态，
 // 关闭旧快照即关闭其持有的 MCP 会话且幂等，同时确认 mountTools 暴露的工具与 schema 只读副本。
-// TestSwapStateClosesReplacedConnections verifies the connection lifecycle: swapState returns the
-// replaced old assembly state, and closing that old snapshot closes the MCP sessions it holds and is
-// idempotent; it also confirms mountTools exposes read-only copies of the tools and schema.
 func TestSwapStateClosesReplacedConnections(t *testing.T) {
 	conn := &fakeMCPConn{tools: map[string]tool.BaseTool{}}
 	oldSet := &ToolSet{

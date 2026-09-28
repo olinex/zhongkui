@@ -16,8 +16,10 @@ import (
 )
 
 const (
+	// InjectorCtxName 是 samber/do 注入器在 context 中存储的键名。
 	InjectorCtxName = "inj"
-	SignalCtxName   = "sig"
+	// SignalCtxName 是信号监听停止函数在 context 中存储的键名。
+	SignalCtxName = "sig"
 )
 
 func cmdToolBox(cmd *cobra.Command) (context.Context, do.Injector) {
@@ -33,6 +35,7 @@ func getSignalCancel(ctx context.Context) context.CancelFunc {
 	return nil
 }
 
+// RootCmd 是 zhongkui 的根命令，负责全局依赖注入启动与优雅关闭流程。
 var RootCmd = &cobra.Command{
 	Use:   "zhongkui",
 	Short: "cmd.short",
@@ -125,6 +128,7 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+// Execute 本地化命令树后执行根命令，执行失败时打印错误。
 func Execute() {
 	// 在命令执行前将命令描述与标志说明本地化为 CLI 语言
 	// 因为 --help 等路径不会触发 PersistentPreRunE，这里必须提前完成翻译

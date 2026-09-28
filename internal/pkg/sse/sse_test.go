@@ -1,7 +1,7 @@
 package sse
 
 import (
-	// stdlib
+	// 标准库
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -9,8 +9,6 @@ import (
 
 // TestSSEEvent_Encode 测试事件的 SSE 线格式编码：event 行 + data 行 + 空行；
 // 负载为紧凑单行 JSON；ping 事件无 data 行。
-// TestSSEEvent_Encode verifies the SSE wire-format encoding: an event line plus
-// a single compact data line plus a blank line; the ping event has no data line.
 func TestSSEEvent_Encode(t *testing.T) {
 	delta := SSEEvent{Event: SSEEventDelta, Data: map[string]string{"delta": "hi"}}
 	buf, err := delta.Encode()
@@ -42,8 +40,6 @@ func TestSSEEvent_Encode(t *testing.T) {
 
 // TestSSEWriter_HeadersAndEvents 测试 SSEWriter 设置流式响应头，语义化发送方法
 // 产出正确的 event/data 序列。
-// TestSSEWriter_HeadersAndEvents verifies SSEWriter sets the streaming headers
-// and the semantic send methods emit the expected event/data sequences.
 func TestSSEWriter_HeadersAndEvents(t *testing.T) {
 	rec := httptest.NewRecorder()
 	w := NewSSEWriter(rec)
@@ -81,8 +77,6 @@ func TestSSEWriter_HeadersAndEvents(t *testing.T) {
 }
 
 // errText 构造一个错误（仅测试辅助，避免生产错误包依赖）。
-// errText builds an error (a test helper only, avoiding production error
-// package dependencies).
 type errText string
 
 func (e errText) Error() string { return string(e) }

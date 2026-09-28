@@ -1,5 +1,7 @@
 //go:build linux
 
+// Package wire 提供抓包链路的底层实现：定义统一的 Wire 接口与 RawPacket 结果类型，
+// 并按平台与内核能力提供 libpcap、AF_PACKET、AF_XDP（eBPF）等多种数据包捕获实现。
 package wire
 
 import (
@@ -70,10 +72,10 @@ const (
 )
 
 const (
-	// eBPF register mapping
-	ebpfA = asm.R0 // cBPF accumulator
-	ebpfX = asm.R8 // cBPF index register
-	ebpfL = asm.R9 // precomputed packet length for BPF_LEN
+	// eBPF 寄存器映射
+	ebpfA = asm.R0 // cBPF 累加器
+	ebpfX = asm.R8 // cBPF 索引寄存器
+	ebpfL = asm.R9 // 预计算的包长度，供 BPF_LEN 使用
 )
 
 func cbpfClass(code uint16) uint16 { return code & 0x07 }
@@ -98,7 +100,7 @@ func cbpfSizeToAsm(sz uint16) asm.Size {
 type cbpfToEbpf struct {
 	cbpf []pcap.BPFInstruction
 
-	// Maps cBPF instruction index to eBPF instruction offset
+	// 将 cBPF 指令下标映射为 eBPF 指令偏移
 	offsetMap       []int
 	labels          []string
 	filterDoneLabel string
@@ -120,14 +122,14 @@ func convertCbpfToEbpf(cbpf []pcap.BPFInstruction) (asm.Instructions, error) {
 		c.labels[i] = fmt.Sprintf("cbpf_%d", i)
 	}
 
-	// First pass: calculate offsets
+	// 第一遍：计算偏移
 	offset := 0
 	for i := range c.cbpf {
 		c.offsetMap[i] = offset
 		offset += c.instructionSize(i)
 	}
 
-	// Second pass: emit instructions
+	// 第二遍：生成指令
 	var insns asm.Instructions
 	for i := range c.cbpf {
 		label := c.labels[i]
@@ -182,13 +184,13 @@ func (c *cbpfToEbpf) instructionSize(i int) int {
 	case cBPFClassSTX:
 		return 1 // StoreMem
 	case cBPFClassALU:
-		return 1 // ALU op
+		return 1 // ALU 运算
 	case cBPFClassJMP:
-		return 2 // conditional jump + unconditional jump
+		return 2 // 条件跳转 + 无条件跳转
 	case cBPFClassRET:
-		return 1 // JA to filter_done
+		return 1 // 跳转到 filter_done
 	case cBPFClassMISC:
-		return 1 // TAX or TXA
+		return 1 // TAX 或 TXA
 	}
 	return 1
 }
@@ -354,7 +356,7 @@ func (c *cbpfToEbpf) emitJMP(i int, ins pcap.BPFInstruction) (asm.Instructions, 
 	if op == cBPFJMPJA {
 		target := i + int(ins.K) + 1
 		if target < 0 || target > len(c.cbpf) {
-			target = len(c.cbpf) // jump to filter_done
+			target = len(c.cbpf) // 跳转到 filter_done
 		}
 		targetLabel := c.labelFor(target)
 		return asm.Instructions{
@@ -474,37 +476,37 @@ func BuildXdpCollectionSpec(cbpfInsns []pcap.BPFInstruction) (*ebpf.CollectionSp
 	}
 
 	prog := asm.Instructions{
-		// Load data and data_end from xdp_md context
+		// 从 xdp_md 上下文读取 data 与 data_end
 		asm.LoadMem(asm.R2, asm.R1, 0, asm.Word), // r2 = ctx->data
 		asm.LoadMem(asm.R3, asm.R1, 4, asm.Word), // r3 = ctx->data_end
 
-		// Save pointers
+		// 保存指针
 		asm.Mov.Reg(asm.R6, asm.R2), // r6 = data
 		asm.Mov.Reg(asm.R7, asm.R3), // r7 = data_end
 
-		// Precompute packet length for cBPF BPF_LEN support
+		// 预先计算包长度，以支持 cBPF 的 BPF_LEN
 		asm.Mov.Reg(ebpfL, asm.R7), // r9 = data_end
 		asm.Sub.Reg(ebpfL, asm.R6), // r9 = data_end - data = pktlen
 
-		// Check minimum Ethernet header size (14 bytes)
+		// 检查以太网头部最小长度（14 字节）
 		asm.JLT.Imm(ebpfL, 14, "pass"),
 	}
 
-	// Inline translated cBPF filter
+	// 内联翻译后的 cBPF 过滤程序
 	prog = append(prog, ebpfFilter...)
 
-	// Post-filter: R0=0 means no match (PASS), R0!=0 means match (redirect)
+	// 过滤后置：R0=0 表示未命中（PASS），R0!=0 表示命中（重定向）
 	prog = append(prog,
 		asm.JEq.Imm(asm.R0, 0, "pass").WithSymbol("filter_done"),
 
-		// Redirect to AF_XDP via xsk_map
+		// 经 xsk_map 重定向到 AF_XDP
 		asm.LoadMapPtr(asm.R1, 0).WithReference("xsk_map"),
 		asm.Mov.Imm(asm.R2, 0),
 		asm.Mov.Imm(asm.R3, 0),
 		asm.FnRedirectMap.Call(),
 		asm.Return(),
 
-		// pass label: return XDP_PASS
+		// pass 标签：返回 XDP_PASS
 		asm.Mov.Imm(asm.R0, 2).WithSymbol("pass"),
 		asm.Return(),
 	)

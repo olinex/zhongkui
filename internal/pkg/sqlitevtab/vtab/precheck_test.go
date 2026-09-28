@@ -3,13 +3,6 @@
 // IntrospectSchema 表结构自省（含 sqlite_file 分支）。MySQL/Postgres/ClickHouse 经
 // go-sqlmock 注入、Redis 经 miniredis 起进程内实例验证成功路径；etcd 与 mongo 因
 // clientv3.Client / mongo.Client 为具体类型、无本地 mock 而仅覆盖解码级路径。
-//
-// This file tests the datasource pre-check facility (precheck.go): config-decode reuse
-// (decodeDatasourceConfig), the reverse type-key mapping (valueTypeKey), the TestConn
-// connectivity check and IntrospectSchema introspection (including its sqlite_file
-// branch). MySQL/Postgres/ClickHouse are exercised via go-sqlmock injection and Redis via
-// an in-process miniredis for the success path; etcd and mongo have concrete client types
-// with no local mock, so only the decode-level path is covered for them.
 package vtab
 
 import (
@@ -248,7 +241,6 @@ func TestIntrospectSchema(t *testing.T) {
 }
 
 // mockRedisAddr 起一个 miniredis 并返回 host 与 port 两个字符串片段。
-// mockRedisAddr starts a miniredis and returns the host and port fragments.
 func mockRedisAddr(t *testing.T) (host, port string) {
 	t.Helper()
 	s, err := miniredis.Run()

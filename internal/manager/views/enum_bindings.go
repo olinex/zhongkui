@@ -69,13 +69,6 @@ var enumBindings = map[string]map[string]string{
 		"kind":      "memoryKind",
 		"status":    "memoryStatus",
 	},
-	"AgentMemoryCreateIn": {
-		"agentKind": "agentKind",
-		"kind":      "memoryKind",
-	},
-	"AgentMemoryUpdateIn": {
-		"kind": "memoryKind",
-	},
 	"AgentMemoryStatusIn": {
 		"status": "memoryStatus",
 	},

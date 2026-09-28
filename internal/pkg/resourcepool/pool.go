@@ -1,38 +1,31 @@
 package resourcepool
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"io"
 	"sync"
 
-	// third-party
+	// 第三方
 	gpool "github.com/jolestar/go-commons-pool/v2"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 // Manager 泛型资源池管理器：按不透明 Key 惰性维护一组独立的 go-commons-pool
 // 对象池，统一驱动 Lifespan 生命周期钩子，并对外提供 Acquire/Release/
 // Invalidate/CloseAll。Manager 是进程级共享的，多个使用方可并发访问（线程安全）。
-// Manager is a generic pool manager: it lazily maintains a set of independent
-// go-commons-pool pools keyed by an opaque Key, uniformly drives the Lifespan
-// hooks, and exposes Acquire/Release/Invalidate/CloseAll. Manager is intended to
-// be process-wide and is safe for concurrent use.
 type Manager[T any] struct {
 	// make 依据 Key 惰性构建资源对象
-	// make lazily builds a resource object from a Key
 	make Make[T]
 	// cfg 资源池配置（所有 Key 池共用）
-	// cfg the pool config shared by all Key pools
 	cfg *Config
 	// pools Key -> *gpool.ObjectPool
 	pools sync.Map
 }
 
 // NewManager 创建资源池管理器。cfg 为 nil 时使用 NewDefaultConfig。
-// NewManager creates a pool manager; a nil cfg falls back to NewDefaultConfig.
 func NewManager[T any](make Make[T], cfg *Config) *Manager[T] {
 	if cfg == nil {
 		cfg = NewDefaultConfig()
@@ -42,8 +35,6 @@ func NewManager[T any](make Make[T], cfg *Config) *Manager[T] {
 
 // factoryFor 构造绑定到指定 Key 的池对象工厂，将 Lifespan 钩子映射到
 // go-commons-pool 的创建/校验/销毁回调。
-// factoryFor builds a pooled-object factory bound to a Key, mapping Lifespan hooks
-// onto go-commons-pool's create/validate/destroy callbacks.
 func (m *Manager[T]) factoryFor(key Key) gpool.PooledObjectFactory {
 	create := func(ctx context.Context) (any, error) {
 		res, err := m.make(key)
@@ -78,7 +69,6 @@ func (m *Manager[T]) factoryFor(key Key) gpool.PooledObjectFactory {
 }
 
 // poolFor 惰性获取（必要时创建）属于 Key 的对象池。
-// poolFor lazily fetches (creating if needed) the pool belonging to a Key.
 func (m *Manager[T]) poolFor(key Key) *gpool.ObjectPool {
 	if p, ok := m.pools.Load(key); ok {
 		return p.(*gpool.ObjectPool)
@@ -91,10 +81,6 @@ func (m *Manager[T]) poolFor(key Key) *gpool.ObjectPool {
 // Acquire 从与 key 关联的池中借出并返回一个经校验可用的资源对象。
 // 同一对象在同一时刻最多被一个调用方独占；池空且允许阻塞时等待直到有对象可用
 // 或 ctx 被取消。返回非 nil 错误表示借出失败（含新建时 Open 失败）。
-// Acquire borrows and returns a validated resource object from the pool for a key.
-// An object is exclusively held by one caller at a time; when the pool is exhausted
-// and blocking is allowed it waits until an object is available or ctx is done.
-// A non-nil error means the borrow failed (including a failed Open on creation).
 func (m *Manager[T]) Acquire(ctx context.Context, key Key) (T, error) {
 	var zero T
 	obj, err := m.poolFor(key).BorrowObject(ctx)
@@ -111,7 +97,6 @@ func (m *Manager[T]) Acquire(ctx context.Context, key Key) (T, error) {
 }
 
 // Release 将资源对象归还到与 key 关联的池以便复用。
-// Release returns the resource object to its pool for the key to be reused.
 func (m *Manager[T]) Release(ctx context.Context, key Key, v T) {
 	if p, ok := m.pools.Load(key); ok {
 		_ = p.(*gpool.ObjectPool).ReturnObject(ctx, v)
@@ -119,7 +104,6 @@ func (m *Manager[T]) Release(ctx context.Context, key Key, v T) {
 }
 
 // Invalidate 将资源对象从池中失效并销毁（不回收复用）。
-// Invalidate removes and destroys the resource object from the pool (not reused).
 func (m *Manager[T]) Invalidate(ctx context.Context, key Key, v T) {
 	if p, ok := m.pools.Load(key); ok {
 		_ = p.(*gpool.ObjectPool).InvalidateObject(ctx, v)
@@ -130,11 +114,6 @@ func (m *Manager[T]) Invalidate(ctx context.Context, key Key, v T) {
 // 用于资源"已过期"的场景（如数据源被覆盖/注销）：闲置实例立即销毁，
 // 借出的实例由调用方结合版本校验在归还时选择 Invalidate 而非 Release，
 // 使下次借出必然经 Make 重建新实例。
-// Clear destroys all idle objects in the pool for a key (borrowed objects are
-// unaffected). It targets "instance is stale" scenarios (e.g. datasource
-// overwrite/unregister): idle instances are destroyed immediately, and borrowed
-// instances are invalidated instead of released by callers doing a version check
-// on return, so the next borrow always rebuilds via Make.
 func (m *Manager[T]) Clear(ctx context.Context, key Key) {
 	if p, ok := m.pools.Load(key); ok {
 		p.(*gpool.ObjectPool).Clear(ctx)
@@ -142,8 +121,6 @@ func (m *Manager[T]) Clear(ctx context.Context, key Key) {
 }
 
 // CloseAll 关闭全部对象池并销毁存活（闲置）对象，释放底层外部资源。
-// CloseAll closes every pool and destroys live (idle) objects, releasing the
-// underlying external resources.
 func (m *Manager[T]) CloseAll(ctx context.Context) {
 	m.pools.Range(func(_, value any) bool {
 		p := value.(*gpool.ObjectPool)

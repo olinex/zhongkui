@@ -1,3 +1,6 @@
+// Package manager 提供 API 管理层的核心能力：HTTP 服务的启动与生命周期编排、配置管理、JWT 认证
+// 与 RBAC 授权中间件，以及把路由分发给各业务子包的 RegisterRoutes。
+//
 // Router 相关逻辑：HTTP 路由注册的薄层。
 //
 // 本文件承载全局中间件装配、公共端点（/ping、/features/list）注册，

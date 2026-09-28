@@ -1,3 +1,4 @@
+// Package totel 提供抓包链路（capture）的 OpenTelemetry 埋点：scope/span 名称常量、span 辅助函数与指标记录函数。
 package totel
 
 import (
@@ -14,23 +15,35 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// 抓包链路的 OpenTelemetry scope 与 span 名称常量。
 const (
-	ScopeName         = base.GlobalPrefix + "-capture"
-	SpanRun           = "capture.run"
-	SpanWatch         = "capture.watch"
-	SpanFeedback      = "capture.feedback"
-	SpanUpload        = "capture.upload"
+	// ScopeName 抓包链路的 tracer/meter scope 名称
+	ScopeName = base.GlobalPrefix + "-capture"
+	// SpanRun Run 生命周期的 span 名称
+	SpanRun = "capture.run"
+	// SpanWatch watch 监控循环的 span 名称
+	SpanWatch = "capture.watch"
+	// SpanFeedback feedback 流的 span 名称
+	SpanFeedback = "capture.feedback"
+	// SpanUpload upload 生命周期的 span 名称
+	SpanUpload = "capture.upload"
+	// SpanPacketHandler 数据包处理器的 span 名称
 	SpanPacketHandler = "capture.packet_handler"
-	SpanCapture       = "capture.capture"
-	SpanDump          = "capture.dump"
-	SpanDumpOne       = "capture.dump_one"
-	SpanUploadFile    = "capture.upload_file"
-	SpanUploadOne     = "capture.upload_one"
+	// SpanCapture 抓包阶段的 span 名称
+	SpanCapture = "capture.capture"
+	// SpanDump dump 循环的 span 名称
+	SpanDump = "capture.dump"
+	// SpanDumpOne 单个数据段 dump 的 span 名称
+	SpanDumpOne = "capture.dump_one"
+	// SpanUploadFile 上传循环的 span 名称
+	SpanUploadFile = "capture.upload_file"
+	// SpanUploadOne 单个对象上传的 span 名称
+	SpanUploadOne = "capture.upload_one"
 )
 
 var (
 	once sync.Once
-	// ---------- Metrics ----------
+	// ---------- 指标 ----------
 	// segmentsDumpedCounter 统计 dump 出的数据段文件数量
 	segmentsDumpedCounter metric.Int64Counter
 	// segmentsUploadedCounter 统计成功上传到 S3 的数据段数量
@@ -45,6 +58,7 @@ var (
 	uploadErrorCounter metric.Int64Counter
 )
 
+// InitMetrics 初始化抓包链路的 OpenTelemetry 指标，仅执行一次。
 func InitMetrics() {
 	once.Do(initMetrics)
 }

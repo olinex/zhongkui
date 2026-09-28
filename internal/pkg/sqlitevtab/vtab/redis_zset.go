@@ -2,33 +2,25 @@
 // redis_zset 表把 Redis zset 每个成员作为一行：key 列支持精确等值/模式扫描；成员以
 // ZRANGE 0 -1 WITHSCORES 读取，score 解析为 float64（ValueTypeFloat64）。类型非 zset
 // 的键不产生行。连接经共享 RedisPool 在 Open 借出、取数后即时归还。
-//
-// This file provides the Redis zset datasource. Each zset member maps to a row: the
-// key column supports exact equality/pattern scan; members are read via ZRANGE
-// 0 -1 WITHSCORES with score parsed to float64 (ValueTypeFloat64). Keys not of type
-// zset yield no row. A connection is borrowed from the shared RedisPool on Open and
-// released right after fetching.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 
-	// third-party
+	// 第三方
 	"github.com/redis/go-redis/v9"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // RedisZSetDatasource 是基于 Redis zset 结构的 vtable 数据源。
-// RedisZSetDatasource is the vtable datasource over the Redis zset structure.
 type RedisZSetDatasource struct {
 	redisBase
 }
 
 // NewRedisZSetDatasource 创建 redis_zset 数据源。
-// NewRedisZSetDatasource creates a redis_zset datasource.
 func NewRedisZSetDatasource(pool *RedisPool) *RedisZSetDatasource {
 	return &RedisZSetDatasource{
 		redisBase: redisBase{
@@ -48,8 +40,6 @@ func NewRedisZSetDatasource(pool *RedisPool) *RedisZSetDatasource {
 }
 
 // Open 实现 Datasource.Open：借出连接，按 key 解析计划读取 zset 成员行并返回行游标。
-// Open implements Datasource.Open: it borrows a connection, reads zset member rows per
-// the key plan and returns a row cursor.
 func (d *RedisZSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	client, err := d.pool.Acquire(ctx)
 	if err != nil {
@@ -66,7 +56,6 @@ func (d *RedisZSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Co
 }
 
 // fetch 根据计划收集 zset 行（key, member, score）。
-// fetch collects zset rows (key, member, score) per the plan.
 func (d *RedisZSetDatasource) fetch(ctx context.Context, client *redis.Client, plan redisKeyPlan) ([][]any, error) {
 	var rows [][]any
 	appendKey := func(key string) {

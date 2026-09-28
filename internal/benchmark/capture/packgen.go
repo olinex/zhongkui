@@ -10,6 +10,7 @@ import (
 	"github.com/gopacket/gopacket/pcapgo"
 )
 
+// GenerateFallbackPcap 生成包含指定数量 TCP 数据包的兜底 pcap 文件。
 func GenerateFallbackPcap(outputPath string, numPackets int) error {
 	f, err := os.Create(outputPath)
 	if err != nil {

@@ -29,14 +29,17 @@ func newTagEngineProvider() do.Provider[*tagengine.Engine] {
 	}
 }
 
+// InjectTagEngine 向依赖注入器注册标签识别引擎 provider。
 func InjectTagEngine(i do.Injector) {
 	do.Provide(i, newTagEngineProvider())
 }
 
+// InvokeTagEngine 从依赖注入器解析标签识别引擎，错误交由调用方处理。
 func InvokeTagEngine(i do.Injector) (*tagengine.Engine, error) {
 	return do.Invoke[*tagengine.Engine](i)
 }
 
+// MustInvokeTagEngine 从依赖注入器解析标签识别引擎，失败时 panic。
 func MustInvokeTagEngine(i do.Injector) *tagengine.Engine {
 	return do.MustInvoke[*tagengine.Engine](i)
 }

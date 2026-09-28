@@ -7,29 +7,15 @@
 //
 // 命名空间统一用 ""（空串）：预检不持久化任何连接，故连接池按空命名空间派生临时 Key，
 // 不与真实注册的命名空间池串扰。
-//
-// This file provides the datasource "pre-check" capability: two pure validation functions
-// meant for the view layer to call before persisting a datastore, TestConn and
-// IntrospectSchema (sqlite-file introspection is folded into IntrospectSchema via its file
-// argument carrying the .db file stream). They reuse
-// register.go's decodeDatasourceConfig and the per-datasource connection-pool /
-// introspection logic, but neither persist nor register a vtable: TestConn only connects
-// and verifies reachability; IntrospectSchema connects, introspects the target table
-// structure and maps it to column definitions (name + type key) for the frontend to show
-// when creating a datasource.
-//
-// The namespace is uniformly "" (empty): pre-checks persist no connection, so the pool is
-// derived under an empty namespace and does not entangle with real registered namespace
-// pools.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"io"
 	"os"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
@@ -38,11 +24,6 @@ import (
 // redis 经 Ping 探活、mysql/postgres/clickhouse 经 PingContext、
 // etcd 经 MemberList（覆盖连通+认证）、mongo 经 Ping(Primary) 校验；
 // sqlite_file 无网络连接，返回「不支持连接测试」错误。
-// TestConn establishes a connection by datasource type and verifies reachability,
-// returning a contextual reason on failure. redis probes via Ping, mysql/postgres/
-// clickhouse via PingContext, etcd via MemberList (covering connectivity + auth), mongo
-// via Ping(Primary); sqlite_file has no network connection and returns a
-// "connection test unsupported" error.
 func TestConn(ctx context.Context, typ string, cfgData []byte) error {
 	cfg, err := decodeDatasourceConfig(typ, cfgData)
 	if err != nil {
@@ -61,14 +42,6 @@ func TestConn(ctx context.Context, typ string, cfgData []byte) error {
 // mongo 无固定结构，返回「需手动填写 schema」错误；sqlite_file 复用同一入口，要求传入
 // 前端上传的 .db 文件（io.Reader），内部经 introspectSQLiteFile 做 PRAGMA table_info 自省，
 // 未传文件返回错误。非 sqlite_file 类型传入的 file 被忽略。故障返回带上下文原因。
-// IntrospectSchema parses the table structure by datasource type and returns column
-// definitions (name + type key). mysql/postgres/clickhouse introspect via SHOW COLUMNS /
-// information_schema / DESCRIBE respectively; redis probes via Ping then returns the fixed
-// columns of the configured Struct; etcd probes then returns the fixed key/value columns;
-// mongo has no fixed structure and returns a "schema must be filled manually" error;
-// sqlite_file shares the same entry: it requires the frontend-uploaded .db file (io.Reader),
-// introspected via PRAGMA table_info by introspectSQLiteFile, and errors if no file is given.
-// The file argument is ignored for non-sqlite_file types. Failures return a contextual reason.
 func IntrospectSchema(ctx context.Context, typ string, cfgData []byte, file io.Reader) ([]DatasourceColumn, error) {
 	cfg, err := decodeDatasourceConfig(typ, cfgData)
 	if err != nil {
@@ -84,10 +57,6 @@ func IntrospectSchema(ctx context.Context, typ string, cfgData []byte, file io.R
 // introspectSQLiteFile 对前端上传的 .db 文件（以 io.Reader 传入明文内容）做 PRAGMA
 // table_info 自省，返回列定义。文件写入临时文件打开，结束后清理。仅由 IntrospectSchema
 // 的 sqlite_file 分支调用。
-// introspectSQLiteFile introspects a frontend-uploaded .db file (passed as plaintext
-// via an io.Reader) via PRAGMA table_info and returns column definitions. The content is
-// written to a temporary file that is opened and cleaned up afterwards. It is only called
-// by IntrospectSchema's sqlite_file branch.
 func introspectSQLiteFile(ctx context.Context, table string, r io.Reader) ([]DatasourceColumn, error) {
 	tmp, err := os.CreateTemp("", "sqlite-introspect-*.db")
 	if err != nil {
@@ -111,9 +80,6 @@ func introspectSQLiteFile(ctx context.Context, table string, r io.Reader) ([]Dat
 // valueTypeKey 将 sqlitevtab.ValueType 反向映射为手动 schema 的类型键
 // （any/integer/float/string/blob/bool），与 columnValueType 互为逆映射；未知类型
 // （理论上不会发生）映射为 "any"。
-// valueTypeKey reverse-maps a sqlitevtab.ValueType to a manual-schema type key
-// (any/integer/float/string/blob/bool), the inverse of columnValueType; an unknown type
-// (not expected in practice) maps to "any".
 func valueTypeKey(vt sqlitevtab.ValueType) string {
 	switch vt {
 	case sqlitevtab.ValueTypeAny:
@@ -134,8 +100,6 @@ func valueTypeKey(vt sqlitevtab.ValueType) string {
 }
 
 // schemaColumnsOut 把 sqlitevtab.Schema 的列映射为视图层可用的 []DatasourceColumn。
-// schemaColumnsOut maps a sqlitevtab.Schema's columns into a view-consumable slice of
-// DatasourceColumn.
 func schemaColumnsOut(schema sqlitevtab.Schema) []DatasourceColumn {
 	out := make([]DatasourceColumn, 0, len(schema.Columns))
 	for _, col := range schema.Columns {

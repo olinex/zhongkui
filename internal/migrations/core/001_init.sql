@@ -754,7 +754,7 @@ CREATE TABLE IF NOT EXISTS agent_memories (
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_memories_namespace_kind
-    ON agent_memories (namespace_name, agent_kind);
+    ON agent_memories (namespace_name, agent_kind, session_id);
 
 CREATE INDEX IF NOT EXISTS idx_agent_memories_embedding
     ON agent_memories USING hnsw (embedding vector_cosine_ops);
@@ -763,7 +763,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_memories_search
     ON agent_memories USING gin (search);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_memories_scope_hash
-    ON agent_memories (namespace_name, agent_kind, hash);
+    ON agent_memories (namespace_name, agent_kind, session_id, hash);
 
 COMMENT ON COLUMN agent_memories.id IS 'the primary key of the agent memory';
 COMMENT ON COLUMN agent_memories.created_at IS 'the creation time of the agent memory';
@@ -771,7 +771,7 @@ COMMENT ON COLUMN agent_memories.updated_at IS 'the last update time of the agen
 COMMENT ON COLUMN agent_memories.deleted_at IS 'the soft delete time of the agent memory, null means not deleted';
 COMMENT ON COLUMN agent_memories.namespace_name IS 'the namespace the agent memory belongs to';
 COMMENT ON COLUMN agent_memories.agent_kind IS 'the agent kind the memory belongs to, e.g. knowledge or rego';
-COMMENT ON COLUMN agent_memories.session_id IS 'the originating session id, 0 for memories added manually (no cascade so memories survive session deletion)';
+COMMENT ON COLUMN agent_memories.session_id IS 'the originating session id, the isolation dimension for retrieval and uniqueness (visible only within its originating session)';
 COMMENT ON COLUMN agent_memories.kind IS 'the category of the memory, e.g. fact, preference, decision or artifact';
 COMMENT ON COLUMN agent_memories.title IS 'the one-line title of the memory';
 COMMENT ON COLUMN agent_memories.content IS 'the body of the memory';

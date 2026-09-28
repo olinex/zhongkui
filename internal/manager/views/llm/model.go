@@ -1,17 +1,17 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"fmt"
 	"strings"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"

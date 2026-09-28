@@ -121,7 +121,7 @@ func TestTCPOptions_Basic(t *testing.T) {
 			err := options.Scan(jsonStr)
 			So(err, ShouldBeNil)
 			So(len(options), ShouldEqual, 1)
-			So(options[0].Type, ShouldEqual, layers.TCPOptionKind(2)) // MSS
+			So(options[0].Type, ShouldEqual, layers.TCPOptionKind(2)) // MSS 选项
 			So(options[0].Length, ShouldEqual, 4)
 			So(options[0].Data, ShouldResemble, []byte{0x05, 0xB4})
 		})
@@ -157,10 +157,10 @@ func TestTCPOptions_Basic(t *testing.T) {
 		})
 
 		Convey("Should handle nil slice with Value method", func() {
-			var options TCPOptions // nil slice
+			var options TCPOptions // nil 切片
 			value, err := options.Value()
 			So(err, ShouldBeNil)
-			// nil slice should return nil driver.Value for SQL NULL
+			// nil 切片对应 SQL NULL，应返回 nil driver.Value
 			So(value, ShouldBeNil)
 		})
 
@@ -417,7 +417,7 @@ func TestPacketIPv4TCP_StreamID(t *testing.T) {
 			streamID2 := packet2.StreamID()
 
 			So(streamID1, ShouldEqual, streamID2)
-			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+			So(len(streamID1), ShouldEqual, 16) // 64 位哈希的十六进制表示
 
 			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
 			packet1.TCPStreamID = packet1.StreamID()
@@ -546,7 +546,7 @@ func TestPacketIPv6TCP_StreamID(t *testing.T) {
 			streamID2 := packet2.StreamID()
 
 			So(streamID1, ShouldEqual, streamID2)
-			So(len(streamID1), ShouldEqual, 16) // 64-bit hash hex
+			So(len(streamID1), ShouldEqual, 16) // 64 位哈希的十六进制表示
 
 			// 验证TCPStreamID数据库字段可以直接设置为StreamID计算结果
 			packet1.TCPStreamID = packet1.StreamID()

@@ -1,23 +1,20 @@
 package sqlitevtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"sync"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // recordingDatasource 记录每次 Open 收到的下推约束与查询上下文，内部委托
 // StaticDatasource 产出数据，用于断言 WHERE 约束下推语义。
-// recordingDatasource records the pushdown constraints and query context of each
-// Open and delegates data production to StaticDatasource, for asserting the WHERE
-// pushdown semantics.
 type recordingDatasource struct {
 	schema Schema
 	data   [][]any
@@ -29,7 +26,6 @@ type recordingDatasource struct {
 }
 
 // Open 记录约束与上下文并委托静态数据源。
-// Open records the constraints and context, then delegates to the static source.
 func (d *recordingDatasource) Open(ctx context.Context, pushdown []Constraint) (Rows, error) {
 	d.mu.Lock()
 	d.opens++
@@ -40,7 +36,6 @@ func (d *recordingDatasource) Open(ctx context.Context, pushdown []Constraint) (
 }
 
 // lastPushdown 返回最近一次 Open 的下推约束副本。
-// lastPushdown returns a copy of the most recent Open's pushdown constraints.
 func (d *recordingDatasource) lastPushdown() []Constraint {
 	d.mu.Lock()
 	defer d.mu.Unlock()
@@ -48,8 +43,6 @@ func (d *recordingDatasource) lastPushdown() []Constraint {
 }
 
 // registerRecording 注册一个带 recordingDatasource 的数据源并返回该实例。
-// registerRecording registers a datasource backed by a recordingDatasource and
-// returns the instance.
 func registerRecording(t *testing.T, pool *SQLitePool, name string, schema Schema, data [][]any) *recordingDatasource {
 	t.Helper()
 	rec := &recordingDatasource{schema: schema, data: data}
@@ -61,7 +54,6 @@ func registerRecording(t *testing.T, pool *SQLitePool, name string, schema Schem
 }
 
 // ipGeoSchema 测试用 schema：ip 与 score 可过滤，name 不可过滤。
-// ipGeoSchema is a test schema: ip and score are filterable, name is not.
 var ipGeoSchema = Schema{
 	Columns: []Column{
 		{Name: "ip", ValueType: ValueTypeString},
@@ -72,7 +64,6 @@ var ipGeoSchema = Schema{
 }
 
 // ipGeoData 测试用行集。
-// ipGeoData is the test row set.
 var ipGeoData = [][]any{
 	{"8.8.8.8", int64(90), "google"},
 	{"1.2.3.4", int64(120), "cn"},

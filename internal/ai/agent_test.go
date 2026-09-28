@@ -1,7 +1,7 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"io"
@@ -9,13 +9,13 @@ import (
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/retriever"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/ai/tools"
 	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -24,9 +24,6 @@ import (
 
 // stubChat 是测试用对话模型替身：实现 model.BaseChatModel，记录收到的消息，
 // 按配置返回完整回复（Generate）或分块流（Stream）。
-// stubChat is a test double of the chat model: it implements model.BaseChatModel,
-// records the received messages and returns the configured reply (Generate) or
-// a chunked stream (Stream).
 type stubChat struct {
 	reply     string              // Generate 的完整回复
 	chunks    []string            // Stream 的分块；为空时退回单块 reply
@@ -56,9 +53,6 @@ func (s *stubChat) Stream(ctx context.Context, input []*schema.Message, opts ...
 
 // stubRetriever 是测试用检索器替身：实现 retriever.Retriever，返回配置的文档
 // 并记录查询与选项。
-// stubRetriever is a test double of the retriever: it implements
-// retriever.Retriever, returns the configured documents and records the query
-// and options.
 type stubRetriever struct {
 	docs  []*schema.Document
 	query string
@@ -72,16 +66,12 @@ func (s *stubRetriever) Retrieve(ctx context.Context, query string, opts ...retr
 }
 
 // stubResolver 返回始终解析到同一个替身的档位解析器（测试用）。
-// stubResolver returns a slot resolver that always resolves to the same double (test use).
 func stubResolver(chat model.BaseChatModel) ChatResolver {
 	return func(slot llm.Slot) (model.BaseChatModel, error) { return chat, nil }
 }
 
 // newTestAgent 构造基于 sqlite 内存库 + 给定替身的 Agent，配置会话上限
 // （历史 10 条、业务数据 4096 字节）。
-// newTestAgent builds an Agent over an in-memory sqlite DB with the given
-// doubles, configuring the session bounds (10 history messages, 4096 business
-// bytes).
 func newTestAgent(t *testing.T, chat model.BaseChatModel, retriever retriever.Retriever) *Agent {
 	t.Helper()
 	store, err := NewSessionStore(newTestSessionDB(t))
@@ -100,7 +90,6 @@ func newTestAgent(t *testing.T, chat model.BaseChatModel, retriever retriever.Re
 }
 
 // TestNewAgent_ValidationErrors 测试依赖为空时返回英文错误。
-// TestNewAgent_ValidationErrors verifies nil dependencies yield English errors.
 func TestNewAgent_ValidationErrors(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
@@ -130,9 +119,6 @@ func TestNewAgent_ValidationErrors(t *testing.T) {
 
 // TestAgent_Generate_Structured 测试非流式执行：结构化 JSON 回复被解析为正文 +
 // 草稿，检索引用随 done 项输出，Rego 规则（无）下 Valid 恒真。
-// TestAgent_Generate_Structured verifies the non-streaming execution: the
-// structured JSON reply is parsed into content + draft, retrieval citations ride
-// the done item, and Valid is true without a Rego rule.
 func TestAgent_Generate_Structured(t *testing.T) {
 	chat := &stubChat{reply: `{"content": "**hello**", "draft": {"rule": {"name": "http-rule"}}}`}
 	rtv := &stubRetriever{docs: []*schema.Document{{
@@ -169,8 +155,6 @@ func TestAgent_Generate_Structured(t *testing.T) {
 
 // TestAgent_Generate_PlainText 测试非结构化回复降级：正文原样返回、无草稿，
 // Valid 仍为真（无校验规则）。
-// TestAgent_Generate_PlainText verifies the non-structured reply degradation:
-// the raw text is the content, no draft, Valid stays true (no validation rule).
 func TestAgent_Generate_PlainText(t *testing.T) {
 	chat := &stubChat{reply: "just a plain answer"}
 	agent := newTestAgent(t, chat, &stubRetriever{})
@@ -188,7 +172,6 @@ func TestAgent_Generate_PlainText(t *testing.T) {
 }
 
 // TestAgent_Generate_EmptyReply 测试模型空回复返回错误。
-// TestAgent_Generate_EmptyReply verifies an empty model reply yields an error.
 func TestAgent_Generate_EmptyReply(t *testing.T) {
 	chat := &stubChat{reply: "   "}
 	agent := newTestAgent(t, chat, &stubRetriever{})
@@ -200,8 +183,6 @@ func TestAgent_Generate_EmptyReply(t *testing.T) {
 
 // TestAgent_Stream_DeltasAndDone 测试流式执行：delta 增量项之后是 done 完成项，
 // done 项携带聚合全文与引用。
-// TestAgent_Stream_DeltasAndDone verifies the streaming execution: delta items
-// come first, then the done item carrying the aggregated text and citations.
 func TestAgent_Stream_DeltasAndDone(t *testing.T) {
 	chat := &stubChat{chunks: []string{"Hello", " world", "!"}}
 	rtv := &stubRetriever{docs: []*schema.Document{{
@@ -246,8 +227,6 @@ func TestAgent_Stream_DeltasAndDone(t *testing.T) {
 
 // TestParseStructuredReply 测试结构化 JSON 解析：常规、代码围栏包裹、空 content
 // 报错、draft 为 null 时返回 nil。
-// TestParseStructuredReply verifies the structured JSON parsing: plain, code
-// fence wrapped, empty content error, and null draft yielding nil.
 func TestParseStructuredReply(t *testing.T) {
 	content, draft, err := parseStructuredReply(`{"content": "c1", "draft": {"a": 1}}`)
 	if err != nil || content != "c1" || string(draft) != `{"a": 1}` {
@@ -271,8 +250,6 @@ func TestParseStructuredReply(t *testing.T) {
 
 // TestValidateDraftWithRego 测试 Rego 校验规则：真值通过、假值/非布尔/非法规则
 // 以 detail 形式返回失败（不返回 error）。
-// TestValidateDraftWithRego verifies the Rego validation rule: true passes,
-// false / non-boolean / broken rules fail via the detail (no error).
 func TestValidateDraftWithRego(t *testing.T) {
 	ctx := context.Background()
 	valid, detail, err := validateDraftWithRego(ctx, "package agent\nvalidate := input.count > 0", json.RawMessage(`{"count": 1}`))
@@ -302,8 +279,6 @@ func TestValidateDraftWithRego(t *testing.T) {
 
 // TestBuildAgentMessages 测试消息组装顺序：系统提示 + 历史 + 用户消息（检索知识 +
 // 业务现场 + 提问）。
-// TestBuildAgentMessages verifies the message assembly order: system prompt +
-// history + user message (retrieved knowledge + business scene + question).
 func TestBuildAgentMessages(t *testing.T) {
 	history := []*schema.Message{schema.UserMessage("prev q"), schema.AssistantMessage("prev a", nil)}
 	docs := []*schema.Document{{ID: "1", Content: "kb body", MetaData: map[string]any{"title": "KB"}}}
@@ -327,8 +302,6 @@ func TestBuildAgentMessages(t *testing.T) {
 }
 
 // TestToSchemaMessages 测试持久化消息转 eino 消息：角色映射、跳过空内容与未知角色。
-// TestToSchemaMessages verifies persisted-message conversion: role mapping,
-// empty contents and unknown roles are skipped.
 func TestToSchemaMessages(t *testing.T) {
 	messages := []*ai.AgentMessage{
 		{Role: llm.MessageRoleUser, Content: "u"},
@@ -350,9 +323,6 @@ func TestToSchemaMessages(t *testing.T) {
 
 // TestStreamRun_PersistsMessages 测试 StreamRun 持久化用户与助手消息：助手消息
 // 携带正文、草稿与引用；LatestAssistantMessage 可回读。
-// TestStreamRun_PersistsMessages verifies StreamRun persists the user and the
-// assistant messages: the assistant message carries the content, draft and
-// citations; LatestAssistantMessage reads it back.
 func TestStreamRun_PersistsMessages(t *testing.T) {
 	chat := &stubChat{reply: `{"content": "answer", "draft": {"rule": "r1"}}`}
 	rtv := &stubRetriever{docs: []*schema.Document{{
@@ -415,9 +385,6 @@ func TestStreamRun_PersistsMessages(t *testing.T) {
 
 // TestStreamRun_InjectsHistory 测试 StreamRun 注入历史：先持久化一轮问答，
 // 第二轮调用时替身收到的消息列表包含上一轮的历史。
-// TestStreamRun_InjectsHistory verifies StreamRun injects the history: after one
-// persisted turn, the second call's received message list includes the previous
-// turn.
 func TestStreamRun_InjectsHistory(t *testing.T) {
 	chat := &stubChat{reply: `{"content": "a2", "draft": {}}`}
 	agent := newTestAgent(t, chat, &stubRetriever{})
@@ -466,8 +433,6 @@ func TestStreamRun_InjectsHistory(t *testing.T) {
 }
 
 // TestStreamRun_MissingSession 测试会话不存在时返回 ErrSessionNotFound 且不落消息。
-// TestStreamRun_MissingSession verifies a missing session yields
-// ErrSessionNotFound and persists nothing.
 func TestStreamRun_MissingSession(t *testing.T) {
 	agent := newTestAgent(t, &stubChat{reply: "x"}, &stubRetriever{})
 	if _, err := agent.StreamRun(context.Background(), AgentInput{Query: "q", SessionID: 99999}); !errors.Is(err, ErrSessionNotFound) {
@@ -476,7 +441,6 @@ func TestStreamRun_MissingSession(t *testing.T) {
 }
 
 // TestStreamRun_EmptyQuery 测试空提问返回英文错误。
-// TestStreamRun_EmptyQuery verifies an empty query yields an English error.
 func TestStreamRun_EmptyQuery(t *testing.T) {
 	agent := newTestAgent(t, &stubChat{reply: "x"}, &stubRetriever{})
 	if _, err := agent.StreamRun(context.Background(), AgentInput{Query: "   "}); err == nil {
@@ -486,9 +450,6 @@ func TestStreamRun_EmptyQuery(t *testing.T) {
 
 // TestAgent_Generate_RegoValidation 测试 Rego 校验规则接入：规则校验通过时
 // Valid 为真，未通过时 Valid 为假并带说明。
-// TestAgent_Generate_RegoValidation verifies the Rego validation wiring: a
-// passing rule yields Valid=true and a failing rule yields Valid=false with a
-// detail.
 func TestAgent_Generate_RegoValidation(t *testing.T) {
 	rule := "package agent\nvalidate := input.hits > 0"
 	chat := &stubChat{reply: `{"content": "ok", "draft": {"hits": 1}}`}
@@ -513,9 +474,6 @@ func TestAgent_Generate_RegoValidation(t *testing.T) {
 }
 
 // slotChatResolver 返回按档位分发的对话解析器：命中 bySlot 时返回对应替身，其余档位返回英文错误。
-// slotChatResolver returns a slot-dispatching chat resolver: it returns the matching double when
-// the slot is present in bySlot, and an English error for any other slot. Tests use it to route the
-// memory summary (flash) and the agent generation (standard) to separate doubles.
 func slotChatResolver(bySlot map[llm.Slot]model.BaseChatModel) ChatResolver {
 	return func(slot llm.Slot) (model.BaseChatModel, error) {
 		if chat, ok := bySlot[slot]; ok {
@@ -527,13 +485,8 @@ func slotChatResolver(bySlot map[llm.Slot]model.BaseChatModel) ChatResolver {
 
 // TestTrimMessagesByBytes 测试字节预算裁剪：总字节不超预算时原样返回，超预算时从最旧丢整条、
 // 至少保留最新一条（故不切断多字节字符），预算非正数时不裁剪。
-// TestTrimMessagesByBytes verifies the byte-budget trimming: an in-budget input is returned
-// unchanged, an over-budget input drops whole messages from the oldest keeping at least the newest
-// (so no multi-byte character is ever cut) and a non-positive budget disables trimming.
 func TestTrimMessagesByBytes(t *testing.T) {
 	// 裁剪只依据 Content 字节，故构造时不设主键（ID 内嵌于 BaseModel，无法用字面量键赋值）。
-	// Trimming only depends on Content bytes, so the constructor sets no primary key (ID is
-	// embedded in BaseModel and cannot be set through a literal key).
 	newMessages := func(contents ...string) []*ai.AgentMessage {
 		out := make([]*ai.AgentMessage, 0, len(contents))
 		for _, c := range contents {
@@ -572,9 +525,6 @@ func TestTrimMessagesByBytes(t *testing.T) {
 
 // TestBuildAgentMessages_SummaryInjected 测试摘要段的注入位置：系统提示 + 摘要段 + 历史消息 +
 // 用户消息，摘要段为独立 system 消息且以英文标题常量开头。
-// TestBuildAgentMessages_SummaryInjected verifies the injected position of the summary section:
-// system prompt + summary section + history messages + user message, the summary being a
-// standalone system message starting with the English title constant.
 func TestBuildAgentMessages_SummaryInjected(t *testing.T) {
 	history := []*schema.Message{schema.UserMessage("prev q"), schema.AssistantMessage("prev a", nil)}
 	messages := buildAgentMessages(testParams(t, nil), "  folded  ", nil, history, nil, nil, "q")
@@ -598,11 +548,6 @@ func TestBuildAgentMessages_SummaryInjected(t *testing.T) {
 // rollingSummaryFixture 是滚动摘要相关用例的共享装配：sqlite 内存库（会话与记忆同源）、按档位
 // 分流的对话替身（flash 供记忆摘要、standard 供 Agent 生成），以及一个已预置 4 条历史的会话；
 // 窗口取最近 1 条，故前 3 条被挤出，其最后一条 ID 即摘要游标上界。
-// rollingSummaryFixture is the shared assembly of the rolling-summary cases: an in-memory sqlite
-// DB (sessions and memory share it), slot-dispatching chat doubles (flash for the memory summary,
-// standard for the agent generation) and a session preloaded with 4 history messages; the window
-// keeps the latest 1, so the 3 earlier ones are evicted and the last of them is the summary cursor
-// bound.
 type rollingSummaryFixture struct {
 	agent         *Agent           // 被测 Agent（已注入 Memory）
 	store         *SessionStore    // 会话存储（回读摘要用）
@@ -613,8 +558,6 @@ type rollingSummaryFixture struct {
 }
 
 // newRollingSummaryFixture 构造上述装配；minEvicted 为触发滚动摘要的最少被挤出消息条数。
-// newRollingSummaryFixture builds the assembly above; minEvicted is the minimum evicted-message
-// count that triggers the rolling summary.
 func newRollingSummaryFixture(t *testing.T, minEvicted int) *rollingSummaryFixture {
 	t.Helper()
 	ctx := context.Background()
@@ -672,8 +615,6 @@ func newRollingSummaryFixture(t *testing.T, minEvicted int) *rollingSummaryFixtu
 }
 
 // drainStreamRun 执行一次 StreamRun 并把输出流读到结束（done 项或流错误）。
-// drainStreamRun runs one StreamRun and consumes the output stream to its end (the done item or a
-// stream error).
 func drainStreamRun(t *testing.T, agent *Agent, ctx context.Context, input AgentInput) {
 	t.Helper()
 	reader, err := agent.StreamRun(ctx, input)
@@ -694,9 +635,6 @@ func drainStreamRun(t *testing.T, agent *Agent, ctx context.Context, input Agent
 
 // TestStreamRun_RollingSummaryInjected 测试达到阈值时的滚动摘要：被挤出消息条数达标即调用
 // flash 重写摘要、落库并把摘要段注入本次生成（位于系统提示之后、窗口历史之前）。
-// TestStreamRun_RollingSummaryInjected verifies the rolling summary at the threshold: once the
-// evicted-message count qualifies, flash rewrites the summary, it is persisted, and the summary
-// section is injected into this run (after the system prompt and before the window history).
 func TestStreamRun_RollingSummaryInjected(t *testing.T) {
 	f := newRollingSummaryFixture(t, 2)
 	ctx := context.Background()
@@ -734,10 +672,6 @@ func TestStreamRun_RollingSummaryInjected(t *testing.T) {
 // TestBuildAgentMessages_MemoryInjected 测试长期记忆分节的注入位置与格式：系统提示 + 摘要段 +
 // 记忆段 + 窗口历史 + 用户消息；记忆段为独立 system 消息，条目形如 "- [kind] title: content"，
 // 正文为空（去空白后）的命中被跳过。
-// TestBuildAgentMessages_MemoryInjected verifies the injected position and format of the long-term
-// memory section: system prompt + summary section + memory section + window history + user message;
-// the memory section is a standalone system message whose entries look like "- [kind] title:
-// content", and a hit whose body is blank (after trimming) is skipped.
 func TestBuildAgentMessages_MemoryInjected(t *testing.T) {
 	params := testParams(t, map[string]string{"memory.sectionTitle": "## Long-term Memory"})
 	history := []*schema.Message{schema.UserMessage("prev q")}
@@ -768,9 +702,6 @@ func TestBuildAgentMessages_MemoryInjected(t *testing.T) {
 
 // TestBuildAgentMessages_MemorySectionSkipped 测试无记忆可用时不注入记忆分节：命中为空或全部
 // 正文为空时消息列表与引入长期记忆前完全一致。
-// TestBuildAgentMessages_MemorySectionSkipped verifies no memory section is injected when there is
-// nothing to inject: with no hits, or hits whose bodies are all blank, the message list is exactly as
-// before long-term memory existed.
 func TestBuildAgentMessages_MemorySectionSkipped(t *testing.T) {
 	for _, memories := range [][]MemoryHit{nil, {{ID: 1, Kind: llm.MemoryKindFact, Content: "  "}}} {
 		messages := buildAgentMessages(testParams(t, nil), "", memories, nil, nil, nil, "q")
@@ -782,17 +713,12 @@ func TestBuildAgentMessages_MemorySectionSkipped(t *testing.T) {
 
 // memoryAgentFixture 是记忆相关用例的共享装配：sqlite 内存库（会话与记忆同源）、注入了记忆服务
 // 与 memory_write 工具的 Agent，以及该工具实例。
-// memoryAgentFixture is the shared assembly of the memory cases: an in-memory sqlite DB (sessions
-// and memory share it) plus an Agent with the memory service and the memory_write tool injected,
-// along with the tool instance itself.
 type memoryAgentFixture struct {
 	agent *Agent
 	tool  tool.BaseTool
 }
 
 // newMemoryAgentFixture 构造上述装配；chat 同时用于 Agent 生成与记忆摘要，overrides 覆盖参数。
-// newMemoryAgentFixture builds the assembly above; chat serves both the agent generation and the
-// memory summary, and overrides replaces parameters.
 func newMemoryAgentFixture(t *testing.T, chat model.BaseChatModel, overrides map[string]string) *memoryAgentFixture {
 	t.Helper()
 	ctx := context.Background()
@@ -829,10 +755,6 @@ func newMemoryAgentFixture(t *testing.T, chat model.BaseChatModel, overrides map
 // TestRecallMemories_DegradesToNoSection 测试长期记忆检索的四条降级路径：记忆服务缺失、
 // memory.enabled=false、检索失败（sqlite 无 pgvector/tsvector）与 Agent 类型非法时一律返回空
 // 命中（不注入记忆分节），且检索失败绝不作为错误上抛。
-// TestRecallMemories_DegradesToNoSection verifies the four degradation paths of the long-term memory
-// retrieval: a missing memory service, memory.enabled=false, a failed retrieval (sqlite has neither
-// pgvector nor tsvector) and an invalid agent kind all yield no hits (no memory section injected),
-// and a retrieval failure is never raised as an error.
 func TestRecallMemories_DegradesToNoSection(t *testing.T) {
 	ctx := context.Background()
 	query := AgentInput{Query: "q", NamespaceName: "default"}
@@ -865,9 +787,6 @@ func TestRecallMemories_DegradesToNoSection(t *testing.T) {
 
 // TestStream_MemoryFailureKeepsGeneration 测试长期记忆检索失败不影响生成：开关打开且底层库
 // 不支持检索时，生成仍正常完成，且消息列表中不含记忆分节。
-// TestStream_MemoryFailureKeepsGeneration verifies a failed long-term memory retrieval never affects
-// the generation: with the switch on and a store that cannot serve the retrieval, the run still
-// completes normally and the message list carries no memory section.
 func TestStream_MemoryFailureKeepsGeneration(t *testing.T) {
 	chat := &stubChat{chunks: []string{"ok"}}
 	f := newMemoryAgentFixture(t, chat, map[string]string{
@@ -900,10 +819,6 @@ func TestStream_MemoryFailureKeepsGeneration(t *testing.T) {
 // TestMemoryToolContext_InjectsRuntime 测试节点 4 派发工具前的记忆运行期注入：注入记忆服务后
 // memory_write 能取回写入器与归属（内容抵达存储层后由存储层按空命名空间拒绝），未注入记忆服务
 // 时工具因取不到运行期信息而返回英文错误。
-// TestMemoryToolContext_InjectsRuntime verifies the memory runtime injection of node 4 before tools
-// are dispatched: with the memory service injected the memory_write tool reads the writer and the
-// scope back (the content reaches the store, which rejects it for the empty namespace), while without
-// the memory service the tool returns an English error for the absent runtime.
 func TestMemoryToolContext_InjectsRuntime(t *testing.T) {
 	ctx := context.Background()
 	tc := schema.ToolCall{ID: "c1", Type: "function", Function: schema.FunctionCall{Name: "memory_write", Arguments: `{"content":"remember this"}`}}
@@ -923,9 +838,6 @@ func TestMemoryToolContext_InjectsRuntime(t *testing.T) {
 
 // TestMemoryStoreWriter_Validation 测试写入适配器的入参校验：store 缺失、命名空间为空与正文为
 // 空均在触碰数据库前返回英文错误（故无需真实向量库即可覆盖）。
-// TestMemoryStoreWriter_Validation verifies the input validation of the write adapter: a missing
-// store, an empty namespace and an empty body all yield English errors before touching the database
-// (so no real vector store is needed to cover them).
 func TestMemoryStoreWriter_Validation(t *testing.T) {
 	ctx := context.Background()
 	if _, err := (memoryStoreWriter{}).WriteMemory(ctx, tools.MemoryWriteInput{NamespaceName: "ns", Content: "c"}); err == nil {
@@ -940,18 +852,19 @@ func TestMemoryStoreWriter_Validation(t *testing.T) {
 	if _, err := writer.WriteMemory(ctx, tools.MemoryWriteInput{Content: "c"}); err == nil {
 		t.Error("WriteMemory(empty namespace) = nil error, want an error")
 	}
-	if _, err := writer.WriteMemory(ctx, tools.MemoryWriteInput{NamespaceName: "ns", Content: "  "}); err == nil {
+	if _, err := writer.WriteMemory(ctx, tools.MemoryWriteInput{NamespaceName: "ns", SessionID: 1, Content: "  "}); err == nil {
 		t.Error("WriteMemory(empty content) = nil error, want an error")
 	}
-	// import cycle guard: the adapter satisfies the writer interface of internal/ai/tools.
+	// 无会话（SessionID 为 0）时拒绝写入：记忆按会话隔离，无会话运行不生成记忆
+	if _, err := writer.WriteMemory(ctx, tools.MemoryWriteInput{NamespaceName: "ns", Content: "c"}); err == nil {
+		t.Error("WriteMemory(empty session) = nil error, want an error")
+	}
+	// 导入环守卫：该适配器满足 internal/ai/tools 的写入接口。
 	var _ tools.MemoryWriter = writer
 }
 
 // TestStreamRun_RollingSummaryBelowThreshold 测试未达阈值时不触发滚动摘要：被挤出消息条数不足
 // 时不调用 flash、不注入摘要段、不推进游标。
-// TestStreamRun_RollingSummaryBelowThreshold verifies the rolling summary stays dormant below the
-// threshold: when the evicted-message count is insufficient, flash is never called, no summary
-// section is injected and the cursor is not advanced.
 func TestStreamRun_RollingSummaryBelowThreshold(t *testing.T) {
 	f := newRollingSummaryFixture(t, 5)
 	ctx := context.Background()

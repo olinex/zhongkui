@@ -29,6 +29,7 @@ type testDetector struct {
 	*detectors.HttpDetector
 }
 
+// Build 实现 detectors 的构建阶段，将请求/响应组装为测试用 HTTP 传输模型。
 func (d *testDetector) Build(
 	ctx context.Context,
 	baseMeta *n.BaseMeta,

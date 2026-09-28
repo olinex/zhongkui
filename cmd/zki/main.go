@@ -1,3 +1,4 @@
+// Package main 提供 zhongkui 的主程序入口：委托 internal/cmd 构建并执行根命令。
 package main
 
 import (

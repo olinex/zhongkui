@@ -1,3 +1,5 @@
+// Package translate 提供基于 go-i18n 的国际化能力：加载内置与自定义的 TOML 本地化文件、
+// 展开其外部模板引用，并向调用方提供文案翻译入口。
 package translate
 
 import (

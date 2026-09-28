@@ -555,7 +555,7 @@ const requiredRule = (path: string) => [
     i18n.global.t("validation.mixed.required", { path }),
 ];
 
-// ---- create dialog ----
+// ---- 创建对话框 ----
 const createName = ref("");
 const createChannelId = ref<number | null>(null);
 const createEnabled = ref(true);
@@ -638,7 +638,7 @@ const createAction = async (): Promise<void> => {
   );
 };
 
-// ---- edit dialog ----
+// ---- 编辑对话框 ----
 let editTargetId = 0;
 const editChannelType = ref("");
 const editEnabled = ref(true);
@@ -736,7 +736,7 @@ const itemUpdateAction = async (): Promise<void> => {
   );
 };
 
-// ---- test-send ----
+// ---- 测试发送 ----
 const testSendResult = ref<NotificationTargetTestSendOut | null>(null);
 const testSendDialog = ref(false);
 const testSendLoading = ref(false);
@@ -769,7 +769,7 @@ const testSendAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
-// ---- list actions ----
+// ---- 列表操作 ----
 // projectFields 字段投影：编辑对话框直接回填列表项字段，恒定投影避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => [
   "id",

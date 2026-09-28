@@ -12,6 +12,7 @@ func newTestNode(id string) *ReassemblerNode[*mockTCPPacket] {
 	}
 }
 
+// TestGroupEntry_BasicOperations 验证 groupEntry 的基本操作：初始为空以及 pushFront 与 len 的正确性。
 func TestGroupEntry_BasicOperations(t *testing.T) {
 	Convey("Test groupEntry basic operations", t, func() {
 
@@ -44,6 +45,7 @@ func TestGroupEntry_BasicOperations(t *testing.T) {
 	})
 }
 
+// TestGroupEntry_PopTail 验证 groupEntry 的 pick 尾节点行为：空组无操作、单元素清空及多元素返回尾节点。
 func TestGroupEntry_PopTail(t *testing.T) {
 	Convey("Test groupEntry popTail", t, func() {
 
@@ -75,7 +77,7 @@ func TestGroupEntry_PopTail(t *testing.T) {
 			g.pushFront(n1)
 			g.pushFront(n2)
 			g.pushFront(n3)
-			// order: head=n3, n2, tail=n1
+			// 顺序：head=n3、n2，tail=n1
 
 			popped := g.tail
 			g.pick(g.tail)
@@ -90,6 +92,7 @@ func TestGroupEntry_PopTail(t *testing.T) {
 	})
 }
 
+// TestGroupEntry_MoveToFront 验证 groupEntry 的 moveToFront：头节点无操作、尾节点与中间节点移动到头部。
 func TestGroupEntry_MoveToFront(t *testing.T) {
 	Convey("Test groupEntry moveToFront", t, func() {
 
@@ -101,7 +104,7 @@ func TestGroupEntry_MoveToFront(t *testing.T) {
 			n2 := newTestNode("flow-2")
 			g.pushFront(n1)
 			g.pushFront(n2)
-			// head=n2, tail=n1
+			// 头节点为 n2，尾节点为 n1
 
 			g.moveToFront(n2)
 			So(g.head, ShouldEqual, n2)
@@ -119,7 +122,7 @@ func TestGroupEntry_MoveToFront(t *testing.T) {
 			g.pushFront(n1)
 			g.pushFront(n2)
 			g.pushFront(n3)
-			// head=n3, n2, tail=n1
+			// 头节点为 n3、n2，尾节点为 n1
 
 			g.moveToFront(n1)
 			So(g.head, ShouldEqual, n1)
@@ -138,7 +141,7 @@ func TestGroupEntry_MoveToFront(t *testing.T) {
 			g.pushFront(n1)
 			g.pushFront(n2)
 			g.pushFront(n3)
-			// head=n3, n2, tail=n1
+			// 头节点为 n3、n2，尾节点为 n1
 
 			g.moveToFront(n2)
 			So(g.head, ShouldEqual, n2)
@@ -151,6 +154,7 @@ func TestGroupEntry_MoveToFront(t *testing.T) {
 	})
 }
 
+// TestGroupEntry_Remove 验证 groupEntry 的 pick 删除行为：删头、删尾、删中间节点以及逐个删空。
 func TestGroupEntry_Remove(t *testing.T) {
 	Convey("Test groupEntry remove", t, func() {
 
@@ -162,7 +166,7 @@ func TestGroupEntry_Remove(t *testing.T) {
 			n2 := newTestNode("flow-2")
 			g.pushFront(n1)
 			g.pushFront(n2)
-			// head=n2, tail=n1
+			// 头节点为 n2，尾节点为 n1
 
 			g.pick(n2)
 			So(g.head, ShouldEqual, n1)
@@ -180,7 +184,7 @@ func TestGroupEntry_Remove(t *testing.T) {
 			n2 := newTestNode("flow-2")
 			g.pushFront(n1)
 			g.pushFront(n2)
-			// head=n2, tail=n1
+			// 头节点为 n2，尾节点为 n1
 
 			g.pick(n1)
 			So(g.head, ShouldEqual, n2)
@@ -200,7 +204,7 @@ func TestGroupEntry_Remove(t *testing.T) {
 			g.pushFront(n1)
 			g.pushFront(n2)
 			g.pushFront(n3)
-			// head=n3, n2, tail=n1
+			// 头节点为 n3、n2，尾节点为 n1
 
 			g.pick(n2)
 			So(g.head, ShouldEqual, n3)
@@ -232,6 +236,8 @@ func TestGroupEntry_Remove(t *testing.T) {
 	})
 }
 
+// TestGroupEntry_LRUOrdering 验证 groupEntry 的 LRU 顺序：pushFront 入头部、pick 尾部淘汰最旧，
+// 以及 moveToFront 提升节点后改变淘汰顺序。
 func TestGroupEntry_LRUOrdering(t *testing.T) {
 	Convey("Test groupEntry LRU ordering", t, func() {
 
@@ -262,12 +268,12 @@ func TestGroupEntry_LRUOrdering(t *testing.T) {
 			n1 := newTestNode("1")
 			n2 := newTestNode("2")
 			n3 := newTestNode("3")
-			g.pushFront(n1) // head=1
-			g.pushFront(n2) // head=2, tail=1
-			g.pushFront(n3) // head=3, 2, tail=1
+			g.pushFront(n1) // 头节点为 1
+			g.pushFront(n2) // 头节点为 2，尾节点为 1
+			g.pushFront(n3) // 头节点为 3、2，尾节点为 1
 
 			// 访问最旧的 n1，提升到头部
-			g.moveToFront(n1) // head=1, 3, tail=2
+			g.moveToFront(n1) // 头节点为 1、3，尾节点为 2
 
 			// 现在 pick tail 应返回 n2（新的最旧）
 			So(g.tail.ID, ShouldEqual, "2")

@@ -1,3 +1,4 @@
+// Package totel 提供远程 Reporter 服务的 OpenTelemetry 埋点：scope/span 名称常量、span 辅助函数与指标记录函数。
 package totel
 
 import (
@@ -14,16 +15,21 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// Reporter 服务的 OpenTelemetry scope 与 span 名称常量。
 const (
-	ScopeName    = base.GlobalPrefix + "-reporter"
-	SpanRun      = "reporter.run"
-	SpanWatch    = "reporter.watch"
+	// ScopeName Reporter 服务的 tracer/meter scope 名称
+	ScopeName = base.GlobalPrefix + "-reporter"
+	// SpanRun Run 生命周期的 span 名称
+	SpanRun = "reporter.run"
+	// SpanWatch Watch 流式接口的 span 名称
+	SpanWatch = "reporter.watch"
+	// SpanFeedback Feedback 流式接口的 span 名称
 	SpanFeedback = "reporter.feedback"
 )
 
 var (
 	once sync.Once
-	// ---------- Metrics ----------
+	// ---------- 指标 ----------
 	// watchConnectionsCounter 统计 Watch 连接数
 	watchConnectionsCounter metric.Int64Counter
 	// watchEventsCounter 统计 Watch 推送的事件数，按事件类型标记
@@ -34,6 +40,7 @@ var (
 	feedbackTasksEnqueuedCounter metric.Int64Counter
 )
 
+// InitMetrics 初始化 Reporter 服务的 OpenTelemetry 指标，仅执行一次。
 func InitMetrics() {
 	once.Do(initMetrics)
 }

@@ -195,10 +195,12 @@ const policyEffectOptions = computed(() => enumOptionsOf(EnumClass.policyEffect)
 const policyEffectTitle = (option: { title: string; value: string }): string =>
   enumLabelOf(EnumClass.policyEffect, option.value);
 
+// 编辑表单：校验规则为 updateGroupSchema，用于修改用户组描述。
 const updateForm = useForm({
   validationSchema: updateGroupSchema,
 });
 
+// 新建表单：校验规则为 createGroupSchema，用于创建用户组。
 const createForm = useForm({
   validationSchema: createGroupSchema,
 });
@@ -220,6 +222,7 @@ const searchTableRef = useTemplateRef("searchTableRef");
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
+// 用户组内嵌策略表格的列定义。
 const groupPolicyHeaders: Array<TableHeader> = [
   {
     key: "target",
@@ -258,6 +261,7 @@ const groupPolicyHeaders: Array<TableHeader> = [
   },
 ];
 
+// 用户组内嵌策略表格的搜索列定义。
 const groupPolicySearchHeaders: Record<string, SearchAction> = {
   target: SearchAction.CONTAIN,
   action: SearchAction.CONTAIN,
@@ -266,6 +270,7 @@ const groupPolicySearchHeaders: Record<string, SearchAction> = {
 // projectFields 字段投影：行操作依赖字段恒定投影（name 定位），避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "name", ...visible];
 
+// 行操作定义：编辑走详情弹窗，删除走确认弹窗。
 const getActions = (): ItemActions => {
   return {
     edit: detailGetAction,
@@ -277,6 +282,7 @@ const getActions = (): ItemActions => {
   };
 };
 
+// 拉取用户组详情并打开编辑弹窗。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<GroupDetailOut>(
@@ -295,6 +301,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
+// 提交用户组描述修改。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemUpdateAction = (proxy: Record<string, any>) => {
   updateForm.handleSubmit(async (values) => {
@@ -346,6 +353,7 @@ const applyBatchResult = (summary: string, result: BatchResultOut): void => {
 type BatchState = { items: Record<string, any>[] };
 const batchState = ref<BatchState | null>(null);
 
+// 批量操作定义：删除需二次确认。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getBatchActions = (items: Record<string, any>[]): BatchActions => {
   return {
@@ -356,6 +364,7 @@ const getBatchActions = (items: Record<string, any>[]): BatchActions => {
   };
 };
 
+// 批量删除用户组并刷新列表。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> => {
   const names = items.map((i) => i.name as string);
@@ -376,6 +385,7 @@ const batchDeleteAction = async (items: Record<string, any>[]): Promise<void> =>
   );
 };
 
+// 删除单条或批量选中的用户组，并刷新列表。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
   const state = batchState.value;
@@ -400,12 +410,14 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 
+// 打开新建弹窗并重置表单。
 const openCreateDialogAction = () => {
   createDialogRef.value?.open({ name: "", description: "" });
   createForm.resetField("name", { value: "" });
   createForm.resetField("description", { value: "" });
 };
 
+// 提交新建用户组。
 const createAction = createForm.handleSubmit(async (values) => {
   await getSimpleResponse(
     groupCreate({
@@ -431,6 +443,7 @@ const createAction = createForm.handleSubmit(async (values) => {
   );
 });
 
+// 向用户组追加一条 RBAC 策略。
 const addPolicyAction = async (
   groupName: string,
   target: string,
@@ -466,6 +479,7 @@ const addPolicyAction = async (
   );
 };
 
+// 从用户组移除一条 RBAC 策略。
 const removePolicyAction = async (
   groupName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -498,7 +512,7 @@ const removePolicyAction = async (
 </script>
 
 <style scoped>
-/* Effect select keeps a fixed width so the append actions stay aligned in the row. */
+/* effect 下拉保持固定宽度，使行内追加操作对齐。 */
 .policy-effect-select {
   width: 108px;
 }

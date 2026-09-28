@@ -1,22 +1,19 @@
 package message
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // TestMakeKey_Canonicalization 语义等价的渠道级配置（字段顺序不同）应映射到同一资源池 Key，
 // 从而复用同一连接池；配置不同则映射到不同 Key。
-// TestMakeKey_Canonicalization verifies semantically equivalent channel-level configs
-// (differing field order) map to the same pool Key (thus sharing a pool), while
-// different configs map to different keys.
 func TestMakeKey_Canonicalization(t *testing.T) {
 	Convey("规范化渠道级配置映射资源池 Key", t, func() {
 		Convey("字段顺序不同的等价配置共享同一 Key", func() {
@@ -45,8 +42,6 @@ func TestMakeKey_Canonicalization(t *testing.T) {
 
 // TestDecodeKey_Roundtrip makeKey 与 decodeKey 应为一对互逆运算：decodeKey 还原渠道类型，
 // 并还原 makeKey 规范化（map 键升序）后的配置原文。
-// TestDecodeKey_Roundtrip verifies makeKey/decodeKey are inverses: decodeKey recovers the
-// channel type and the canonicalized (key-sorted) config stored by makeKey.
 func TestDecodeKey_Roundtrip(t *testing.T) {
 	Convey("makeKey 与 decodeKey 互逆", t, func() {
 		typ := TypeWebhook

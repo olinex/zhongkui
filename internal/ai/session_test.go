@@ -1,16 +1,16 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	// internal
+	// 项目内部
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -18,8 +18,6 @@ import (
 )
 
 // newTestSessionDB 构造会话测试用的 sqlite 内存库并迁移会话/消息两张表。
-// newTestSessionDB builds an in-memory sqlite DB for session tests and migrates
-// the session/message tables.
 func newTestSessionDB(t *testing.T) *database.DB {
 	t.Helper()
 	gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
@@ -33,7 +31,6 @@ func newTestSessionDB(t *testing.T) *database.DB {
 }
 
 // TestNewSessionStore_NilDB 测试 db 为空时返回英文错误。
-// TestNewSessionStore_NilDB verifies a nil db yields an English error.
 func TestNewSessionStore_NilDB(t *testing.T) {
 	if _, err := NewSessionStore(nil); err == nil {
 		t.Fatal("NewSessionStore(nil) = nil error, want an error")
@@ -41,8 +38,6 @@ func TestNewSessionStore_NilDB(t *testing.T) {
 }
 
 // TestSessionStore_CreateGet 测试会话创建后字段落库、状态为 active，GetSession 往返一致。
-// TestSessionStore_CreateGet verifies the created session fields persist with the
-// active status and GetSession round-trips consistently.
 func TestSessionStore_CreateGet(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
@@ -68,8 +63,6 @@ func TestSessionStore_CreateGet(t *testing.T) {
 }
 
 // TestSessionStore_ListSessions 测试列表按更新时间倒序、分页生效、命名空间隔离。
-// TestSessionStore_ListSessions verifies the list orders by update time
-// descending, applies paging, and isolates namespaces.
 func TestSessionStore_ListSessions(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
@@ -106,8 +99,6 @@ func TestSessionStore_ListSessions(t *testing.T) {
 }
 
 // TestSessionStore_RenameAndStatus 测试重命名与状态更新后返回更新后的会话。
-// TestSessionStore_RenameAndStatus verifies rename and status updates return the
-// updated session.
 func TestSessionStore_RenameAndStatus(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
@@ -143,9 +134,6 @@ func TestSessionStore_RenameAndStatus(t *testing.T) {
 
 // TestSessionStore_DeleteCascadesMessages 测试删除会话时消息在同一事务内级联删除，
 // 会话本身为软删除（GetSession 返回 ErrSessionNotFound）。
-// TestSessionStore_DeleteCascadesMessages verifies deleting a session cascades
-// its messages within one transaction and the session itself is soft-deleted
-// (GetSession yields ErrSessionNotFound).
 func TestSessionStore_DeleteCascadesMessages(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
@@ -180,8 +168,6 @@ func TestSessionStore_DeleteCascadesMessages(t *testing.T) {
 
 // TestSessionStore_Messages 测试消息追加/列表/历史（最近 N 条按时间升序返回）与
 // 最近助手消息查询。
-// TestSessionStore_Messages verifies message append/list, history (latest N in
-// ascending order) and the latest-assistant-message lookup.
 func TestSessionStore_Messages(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {

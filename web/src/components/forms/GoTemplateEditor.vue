@@ -303,7 +303,7 @@ async function goTemplateCompletion(context: CompletionContext): Promise<Complet
   return { from, options };
 }
 
-// Toggle read-only editing dynamically.
+// 动态切换只读编辑状态。
 const editableCompartment = new Compartment();
 
 const extensions: Extension[] = [
@@ -349,7 +349,7 @@ onBeforeUnmount(() => {
   view.value = undefined;
 });
 
-// Sync external content changes.
+// 同步外部内容变更。
 watch(
   () => props.modelValue,
   (val) => {
@@ -363,7 +363,7 @@ watch(
   },
 );
 
-// Toggle read-only state when the `disabled` prop changes.
+// 当 disabled 属性变化时切换只读状态。
 watch(
   () => props.disabled,
   (val) => {
@@ -373,7 +373,7 @@ watch(
   },
 );
 
-// Switch syntax highlighting when the app theme changes.
+// 应用主题变化时切换语法高亮。
 watch(
   () => appStore.theme,
   (theme) => {

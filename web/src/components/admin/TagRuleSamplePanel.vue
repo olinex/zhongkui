@@ -155,7 +155,7 @@ const updateForm = useForm({ validationSchema: updateTagRuleSampleSchema });
 const [editName, editNameProps] = updateForm.defineField("name", vuetifyCfg);
 const [editDescription, editDescriptionProps] = updateForm.defineField("description", vuetifyCfg);
 
-// ---- detail ----
+// ---- 详情 ----
 // detailFields 样例详情字段：遍历 input 文档按模型类型翻译字段名；
 // 加密/S3 字段经模型类型键逆映射识别后提供明文查看，其余字段按流量模型类型
 // （TrafficFieldTypes）由 AdaptiveCell 以列表页方式渲染
@@ -236,7 +236,7 @@ const openDetailAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
-// ---- list actions ----
+// ---- 列表操作 ----
 // projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "name", ...visible];
 
@@ -253,7 +253,7 @@ const getSampleActions = (item: Record<string, any>): ItemActions => {
   };
 };
 
-// ---- edit ----
+// ---- 编辑 ----
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const editAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<TagRuleSampleDetailOut>(

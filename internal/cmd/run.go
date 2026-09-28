@@ -34,9 +34,6 @@ func startHealth(ctx context.Context, i do.Injector, serviceName string) {
 
 // startAiWatch 在独立 goroutine 中启动 AI 运行时配置变更监听（etcd 广播触发热重载），
 // 与主服务主体并发运行。运行时解析失败或无 etcd 客户端时仅记录日志，不影响主服务启动。
-// startAiWatch starts the AI runtime config change watcher (an etcd broadcast triggers a
-// hot reload) in a separate goroutine, running concurrently with the main service. A failed
-// runtime resolution or a missing etcd client only logs and never blocks the main service.
 func startAiWatch(ctx context.Context, i do.Injector) {
 	rt, err := provider.InvokeAi(ctx, i)
 	if err != nil {
@@ -93,8 +90,6 @@ var workerCmd = &cobra.Command{
 		// SQLite vtable，保证 worker 进程内 sqlite.query 可按裸名查询。缺失该步骤时
 		// 规则中的第三方数据源查询全部失败（no such table），标签识别报错后透传、
 		// 真实运行无法命中标签（试运行走 web 进程故正常）。
-		// Mirror the web process: reload third-party datasources at startup so tag rules
-		// can resolve bare-named vtables via sqlite.query inside the worker process.
 		sqliteVTabPools := provider.MustInvokeSQLiteVTabPools(i)
 		coreDB := provider.MustInvokeCoreDatabase(i)
 		if err := datasource.Reload(ctx, coreDB, sqliteVTabPools); err != nil {

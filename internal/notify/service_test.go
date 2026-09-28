@@ -1,7 +1,7 @@
 package notify
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,10 +11,10 @@ import (
 	"sync"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -40,7 +40,6 @@ func initServiceTestKeyDerivation() {
 }
 
 // newServiceTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
-// newServiceTestDB creates a shared, pre-migrated PostgreSQL test DB (testdb.Core).
 func newServiceTestDB(t *testing.T) *database.DB {
 	t.Helper()
 	initServiceTestKeyDerivation()
@@ -48,7 +47,6 @@ func newServiceTestDB(t *testing.T) *database.DB {
 }
 
 // newTestService 创建测试用的通知服务实例。
-// newTestService creates a notification service for tests.
 func newTestService(db *database.DB) *Service {
 	logger, _ := logging.NewDefaultLogger()
 	return NewService(db, logger, message.NewPool())
@@ -56,9 +54,6 @@ func newTestService(db *database.DB) *Service {
 
 // testMessage 构造一个基于真实模板键 tag_event.alert 的结构化通知消息，
 // 使全链路发送经由 locales 模板渲染出具体文案（而非代码写死的标题与正文）。
-// testMessage builds a structured message pinned to the real tag_event.alert
-// template key so the full delivery flow renders concrete text via the locale
-// templates instead of hardcoded titles and content.
 func testMessage() message.Message {
 	return message.Message{
 		Template: TemplateTagEventAlert,
@@ -68,9 +63,6 @@ func testMessage() message.Message {
 
 // seedWebhook 在指定命名空间下构造一个启用状态的 webhook 渠道、目标与默认通知组，
 // 并将目标加入该组；返回组与目标实体（含 ID）。
-// seedWebhook creates an enabled webhook channel, target and default group in the
-// given namespace, binding the target into the group; it returns the group and
-// target entities (with IDs).
 func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.NotificationGroup, *core.NotificationTarget) {
 	t.Helper()
 	channel := &core.NotificationChannel{
@@ -114,9 +106,6 @@ func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.No
 
 // seedWebhookTarget 在给定命名空间下新建一个启用 webhook 渠道与目标，并将目标加入指定
 // 通知组；渠道/目标名称以组 ID 与序号保证同命名空间内唯一。返回目标实体（含 ID）。
-// seedWebhookTarget creates an enabled webhook channel and target in the namespace and
-// binds the target into the given group; channel/target names are unique within the
-// namespace via the group ID and a sequence. It returns the target entity (with ID).
 func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, groupID uint, seq int) *core.NotificationTarget {
 	t.Helper()
 	channel := &core.NotificationChannel{
@@ -152,8 +141,6 @@ func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, gro
 
 // TestService_ResolveGroupTargets 测试 ResolveGroupTargets：将通知组解析为逐目标直投
 // 入参列表，供上层编排器扇出为逐目标直投任务。
-// TestService_ResolveGroupTargets tests ResolveGroupTargets: expanding a group into a
-// list of per-target direct-send inputs for the orchestration layer to fan out.
 func TestService_ResolveGroupTargets(t *testing.T) {
 	convey.Convey("ResolveGroupTargets 通知组扇出解析", t, func() {
 		convey.Convey("显式指定组时返回组内启用目标的直投入参列表", func() {
@@ -256,9 +243,6 @@ func TestService_ResolveGroupTargets(t *testing.T) {
 
 // TestService_SendToTarget 测试单目标直投：不经通知组加载目标发送并写入 GroupID=0 的
 // 记录，同目标幂等去重，以及目标禁用时静默跳过。
-// TestService_SendToTarget tests direct single-target send: loading a target without a
-// group, delivering and writing a record with GroupID=0, idempotent dedup per target,
-// and silent skip when the target is disabled.
 func TestService_SendToTarget(t *testing.T) {
 	convey.Convey("单目标直投", t, func() {
 		convey.Convey("向未分组目标直投写入 GroupID=0 的记录并命中 webhook", func() {
@@ -390,8 +374,6 @@ func TestService_SendToTarget(t *testing.T) {
 }
 
 // TestService_ResolveGroup 测试通知组解析：显式组、命名空间默认组与不存在组。
-// TestService_ResolveGroup tests group resolution: explicit group, namespace default
-// group and a non-existent group.
 func TestService_ResolveGroup(t *testing.T) {
 	convey.Convey("通知组解析", t, func() {
 		convey.Convey("显式指定组时返回该组", func() {
@@ -451,8 +433,6 @@ func TestService_ResolveGroup(t *testing.T) {
 }
 
 // seedTemplate 在测试库中直接插入一条命名空间级通知模板行（source=default）。
-// seedTemplate inserts a namespace-scoped notification template row (source=default)
-// directly into the test DB.
 func seedTemplate(t *testing.T, db *database.DB, tmpl *core.NotificationTemplate) *core.NotificationTemplate {
 	t.Helper()
 	if err := db.Create(tmpl).Error; err != nil {
@@ -463,18 +443,12 @@ func seedTemplate(t *testing.T, db *database.DB, tmpl *core.NotificationTemplate
 
 // renderTestTarget 构造一个最小化的通知目标（仅含命名空间与语言），供 renderMessage
 // 直接测试：renderMessage 只依赖 NamespaceName 与 Language 及外部传入的渠道类型。
-// renderTestTarget builds a minimal notification target (namespace + language only) for
-// directly testing renderMessage, which depends solely on NamespaceName and Language plus
-// the externally passed channel type.
 func renderTestTarget(namespace, language string) *core.NotificationTarget {
 	return &core.NotificationTarget{NamespaceName: namespace, Language: language}
 }
 
 // TestService_ResolveTemplate 测试持久化模板按三要素（事件/渠道类型/语言）的最低特异性
 // 解析：精确优先于通配、总分相同时精确渠道优先于精确语言。
-// TestService_ResolveTemplate tests persisting template resolution by the three factors
-// (event/channel/language) with the lowest specificity: exact beats wildcard, and on a tie
-// an exact channel beats an exact language.
 func TestService_ResolveTemplate(t *testing.T) {
 	convey.Convey("持久化模板解析", t, func() {
 		convey.Convey("精确渠道+精确语言优先于通配组合", func() {
@@ -546,9 +520,6 @@ func TestService_ResolveTemplate(t *testing.T) {
 // TestService_RenderMessage_TemplateFallback 测试 renderMessage 的模板解析回退链：
 // 精确持久化模板渲染、渠道通配、语言通配、无行回退 locales 代码模板，以及 {{range}}
 // 渲染。
-// TestService_RenderMessage_TemplateFallback tests renderMessage's template resolution
-// fallback chain: exact persisted template rendering, channel wildcard, language wildcard,
-// locale fallback with no row, and {{range}} rendering.
 func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 	convey.Convey("renderMessage 模板回退链", t, func() {
 		convey.Convey("命中精确持久化模板（事件+渠道+语言）时渲染持久化文本", func() {
@@ -661,8 +632,6 @@ func TestService_RenderMessage_TemplateFallback(t *testing.T) {
 }
 
 // TestService_RenderPreview 测试模板渲染预览：成功时返回标题/正文，未知事件返回错误。
-// TestService_RenderPreview tests the template render preview: success returns title/content,
-// and an unknown event returns an error.
 func TestService_RenderPreview(t *testing.T) {
 	convey.Convey("模板渲染预览", t, func() {
 		convey.Convey("命中持久化模板时渲染标题与正文", func() {

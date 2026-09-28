@@ -75,6 +75,8 @@ type xdpWire struct {
 	bpfSpec *ebpf.CollectionSpec
 }
 
+// NewXdpWire 依据配置创建基于 AF_XDP + XDP 的抓包实现：依次尝试 Native XDP 与
+// Generic XDP 两种模式，均失败则返回错误，由调用方降级到其他抓包后端。
 func NewXdpWire(config *reporter_v1.Config) (Wire, error) {
 	if config.Device == "any" {
 		return nil, errors.New("xdp does not support 'any' device")
@@ -103,7 +105,7 @@ func NewXdpWire(config *reporter_v1.Config) (Wire, error) {
 
 	xw.bpfSpec = buildDefaultCollectionSpec()
 
-	// Mode 1: AF_XDP + Native XDP (driver mode, zero-copy on supported NICs)
+	// 模式 1：AF_XDP + Native XDP（驱动模式，受支持的网卡上为零拷贝）
 	log.Printf("XDP: attempting mode 1 — AF_XDP + Native XDP (driver) on %s", config.Device)
 	if err := xw.loadAndAttachXdp(link.XDPDriverMode); err == nil {
 		log.Printf("XDP: mode 1 succeeded — AF_XDP + Native XDP on %s", config.Device)
@@ -112,7 +114,7 @@ func NewXdpWire(config *reporter_v1.Config) (Wire, error) {
 		log.Printf("XDP: mode 1 failed on %s: %v", config.Device, err)
 	}
 
-	// Mode 2: AF_XDP + Generic XDP (SKB mode, copy-based)
+	// 模式 2：AF_XDP + Generic XDP（SKB 模式，基于拷贝）
 	log.Printf("XDP: attempting mode 2 — AF_XDP + Generic XDP (SKB) on %s", config.Device)
 	if err := xw.loadAndAttachXdp(link.XDPGenericMode); err == nil {
 		log.Printf("XDP: mode 2 succeeded — AF_XDP + Generic XDP on %s", config.Device)
@@ -121,7 +123,7 @@ func NewXdpWire(config *reporter_v1.Config) (Wire, error) {
 		log.Printf("XDP: mode 2 failed on %s: %v", config.Device, err)
 	}
 
-	// All XDP modes failed — caller should fall back to afpacket / libpcap
+	// 全部 XDP 模式均失败——调用方应降级到 afpacket / libpcap
 	xw.Close()
 	log.Printf("XDP: all modes exhausted on %s, falling back to afpacket", config.Device)
 	return nil, errors.New("XDP: failed to attach eBPF program in both Native and Generic modes")
@@ -329,15 +331,13 @@ func setupAfxdpRing(size int, descOff uint64, xskFd int) (*afxdpRing, error) {
 	return ring, nil
 }
 
-// loadAndAttachXdp loads the eBPF program, inserts the AF_XDP socket fd into
-// the XSK map, and attaches the XDP program to the interface with the given flags.
-// The caller must have already set up UMEM and AF_XDP socket.
+// loadAndAttachXdp 加载 eBPF 程序，将 AF_XDP socket 的 fd 写入 XSK map，
+// 并以给定 flags 将 XDP 程序挂载到网卡。调用方须已创建好 UMEM 与 AF_XDP socket。
 //
-// This method cleans up any previously loaded eBPF objects and links before
-// attempting a fresh load, making it safe to call multiple times (e.g., for
-// retry with different attach flags, or for SetBPFFilter reprogramming).
+// 本方法在重新加载前会清理上一次已加载的 eBPF 对象与链接，故可安全地重复调用
+// （例如以不同的挂载 flags 重试，或供 SetBPFFilter 重新编程）。
 func (x *xdpWire) loadAndAttachXdp(flags link.XDPAttachFlags) error {
-	// Clean up any previously loaded objects from a failed attempt
+	// 清理上一次失败尝试中已加载的对象
 	if x.xdpLink != nil {
 		x.xdpLink.Close()
 		x.xdpLink = nil
@@ -381,14 +381,18 @@ func (x *xdpWire) loadAndAttachXdp(flags link.XDPAttachFlags) error {
 	return nil
 }
 
+// Name 返回抓包后端名称。
 func (x *xdpWire) Name() string {
 	return xdpWireName
 }
 
+// LinkType 返回链路层类型（以太网）。
 func (x *xdpWire) LinkType() layers.LinkType {
 	return layers.LinkTypeEthernet
 }
 
+// SetBPFFilter 将过滤表达式编译为 eBPF 程序并重新挂载到网卡，优先使用 Native XDP，
+// 失败则回退到 Generic XDP。
 func (x *xdpWire) SetBPFFilter(expr string) error {
 	spec, err := CompileBPFProgramJIT(expr)
 	if err != nil {
@@ -397,13 +401,14 @@ func (x *xdpWire) SetBPFFilter(expr string) error {
 
 	x.bpfSpec = spec
 
-	// Try Native XDP first, then Generic
+	// 先尝试 Native XDP，再尝试 Generic
 	if err := x.loadAndAttachXdp(link.XDPDriverMode); err == nil {
 		return nil
 	}
 	return x.loadAndAttachXdp(link.XDPGenericMode)
 }
 
+// ZeroCopyReadPacketData 从 RX ring 零拷贝读取一个数据包，返回指向 UMEM 的原始数据。
 func (x *xdpWire) ZeroCopyReadPacketData() *RawPacket {
 	if x.rxRing == nil {
 		return &RawPacket{Err: syscall.EBADF}

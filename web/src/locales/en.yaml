@@ -1350,6 +1350,7 @@ page:
     me: Me
     assistant: Assistant
     hintSelectSession: Create or select a session to start
+    hintFirstQuery: Send your first question to start; the session topic is generated automatically
     confirmDeleteSession: Delete this session and all its messages?
     slotHint: It also becomes the session default slot when creating a session
     disabled: AI feature is disabled
@@ -1358,8 +1359,6 @@ page:
     compactSummary: Context Summary
     compactExtracted: Extracted Memories
     compactWarnings: Extraction Warnings
-  aiMemory:
-    contentHint: The body is recalled by later sessions during retrieval; keep it self-contained and independently understandable
   aiKnowledge:
     dryRun: Dry Run
     query: Query

@@ -32,6 +32,6 @@ const props = defineProps({
 });
 
 const chartTheme = useChartTheme();
-// Merge theme defaults so the chart follows light/dark switching immediately.
+// 合并主题默认项，使图表随明/暗主题切换即时更新。
 const mergedOption = computed(() => withChartTheme(props.option, chartTheme.value));
 </script>

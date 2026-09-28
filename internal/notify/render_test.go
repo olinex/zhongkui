@@ -14,12 +14,6 @@ import (
 // 测试二进制不链接 internal/manager/views（其 init() 注册 channelType / tagRuleModel 等类），
 // 故此处按同一契约注册等价条目：channelType 的 key/value 一致，tagRuleModel 的 value 为
 // 完整类型键（数据库存储语义）。已存在的类跳过注册，避免重复注册 panic。
-// ensureTestEnumClasses ensures the enum classes required by the class-aware template
-// functions (TenumKey/TenumValue) are registered. The test binary does not link
-// internal/manager/views (whose init() registers channelType / tagRuleModel etc.), so
-// equivalent entries under the same contract are registered here: channelType uses
-// identical key/value, tagRuleModel uses the full type key as value (database storage
-// semantics). Classes already present are skipped to avoid a duplicate-registration panic.
 func ensureTestEnumClasses() {
 	register := func(name string, entries []enum.Entry) {
 		if _, exists := enum.Get(name); !exists {

@@ -119,17 +119,17 @@ const props = withDefaults(
   defineProps<{
     modelValue: string;
     errors?: RegoValidationError[];
-    /** extra `input.<field>` completions, e.g. fields referenced by existing rules */
+    /** 额外的 `input.<field>` 补全项，如既有规则引用到的字段 */
     extraCompletions?: string[];
-    /** input document field metadata from backend, drives `input.` & "/" completions */
+    /** 来自后端的输入文档字段元信息，驱动 `input.` 与 "/" 补全 */
     fields?: InputFieldMeta[];
-    /** custom OPA builtin metadata from backend, drives function completion & hover */
+    /** 来自后端的自定义 OPA 内置函数元信息，驱动函数补全与悬停提示 */
     functions?: RegoFunctionMeta[];
-    /** sqlite vtable datasource schemas, drives SQL completion inside `sqlite.query` strings */
+    /** sqlite 虚拟表数据源 schema，驱动 `sqlite.query` 字符串内的 SQL 补全 */
     sqliteDatasources?: SqliteDatasourceMeta[];
-    /** available samples for the current model, drives the sample selector */
+    /** 当前模型可用的样例，驱动样例选择器 */
     samples?: { name: string; input: Record<string, unknown> }[];
-    /** disables editing (read-only), the component stays interactive */
+    /** 禁用编辑（只读），组件仍保持可交互 */
     disabled?: boolean;
     minHeight?: string;
   }>(),
@@ -205,13 +205,13 @@ function insertAtCursor(text: string): void {
 /** 抽屉内 DatasourceGuidePanel 的一键插入，插入后保持抽屉展开以便连续取用。 */
 const handleGuideInsert = (text: string): void => insertAtCursor(text);
 
-// ---- sample selector state ----
+// ---- 样例选择器状态 ----
 // 试运行样例与编辑器联动：用户预先选择一个样例后，编辑器对 `input.<field>`
 // 的补全与悬停提示会展示该字段在样例中的实际值，便于快速判断规则合法性。
 const selectedSampleName = ref("");
 const selectedSampleInput = shallowRef<Record<string, unknown> | null>(null);
 
-/** Formats a sample value for display in completion/hover hints. */
+/** 格式化样例值，供补全/悬停提示展示。 */
 function formatSampleValue(value: unknown): string {
   if (value === null) {
     return "null";
@@ -228,12 +228,12 @@ function formatSampleValue(value: unknown): string {
   return String(value);
 }
 
-/** Looks up the sample value of an `input.<field>` reference, if any. */
+/** 查找 `input.<field>` 引用对应的样例值（若存在）。 */
 function sampleValueFor(field: string): unknown {
   return selectedSampleInput.value?.[field];
 }
 
-/** Finds the `input.<field>` token covering the given document position. */
+/** 查找覆盖给定文档位置的 `input.<field>` 词元。 */
 function inputFieldAt(
   editorView: EditorView,
   pos: number,
@@ -255,7 +255,7 @@ function inputFieldAt(
 // 语法高亮随主题切换，配色统一走 utils/editorHighlight 的共享方案。
 const highlightCompartment = new Compartment();
 
-/** Inserts the full snippet and places the cursor inside its quotes. */
+/** 插入完整片段并把光标置于其引号内部。 */
 function applySnippet(
   editorView: EditorView,
   _completion: Completion,
@@ -270,18 +270,16 @@ function applySnippet(
   });
 }
 
-/** Localizes a semantic input type key, falling back to the raw type text. */
+/** 本地化语义输入类型键，无对应翻译时回退为原始类型文本。 */
 function inputTypeLabel(type: string): string {
   const key = `inputType.${type}`;
   return i18n.global.te(key) ? i18n.global.t(key) : type;
 }
 
 /**
- * Builds `input.<field>` completions from the `fields` metadata merged with
- * `extraCompletions` (deduplicated by field name, metadata wins). Sensitive
- * fields get a marker in the label and a hint in the detail text. When a
- * sample is selected, the field's actual value is appended to the detail so
- * the user can judge rule correctness while typing.
+ * 由 `fields` 元信息合并 `extraCompletions` 构建 `input.<field>` 补全
+ * （按字段名去重，元信息优先）。敏感字段在标签中加标记、在详情文本中加提示。
+ * 选中样例后，会把字段的实际值附加到详情，便于用户边输入边判断规则正确性。
  * `prefix` 用于 "/" 触发的「输入即筛选」：斜杠补全走 filter:false 由本函数
  * 按前缀过滤（与 CM 内置前缀匹配一致，大小写不敏感）；语言补全等场景传 ""。
  */
@@ -351,7 +349,7 @@ function inRegoLiteral(state: EditorState, pos: number): boolean {
   return false;
 }
 
-// ---- custom OPA builtins & nested sqlite.query support ----
+// ---- 自定义 OPA 内置函数与嵌套 sqlite.query 支持 ----
 
 /**
  * 最小语法节点结构：只声明本组件用到的字段，避免依赖 @lezer/common 类型
@@ -603,6 +601,10 @@ const sqliteHighlightField = StateField.define<DecorationSet>({
   provide: (field) => EditorView.decorations.from(field),
 });
 
+/**
+ * 为 sqlite.query("...") 参数字符串内部的 SQL 关键字、单引号字符串字面量与
+ * FROM/JOIN 后的已注册表名叠加高亮装饰，随文档编辑增量重建。
+ */
 function computeSqliteHighlights(state: EditorState): DecorationSet {
   const decos: Range<Decoration>[] = [];
   const cursor = syntaxTree(state).cursor();
@@ -786,12 +788,10 @@ function sqliteSqlDiagnostics(state: EditorState): Diagnostic[] {
 }
 
 /**
- * Custom completion source: completes `input.<field>` from field metadata and
- * `extraCompletions`, then falls back to the Rego language sources (keywords,
- * OPA built-ins) registered by `codemirror-lang-rego`. The fallback is
- * position-aware: no completion is offered where the next word would be a
- * syntax error (e.g. right after `input.field == "..."`), and term positions
- * (e.g. after `==`) drop statement-starting keywords like `if`/`else`.
+ * 自定义补全源：先由字段元信息与 `extraCompletions` 补全 `input.<field>`，
+ * 再回退到 `codemirror-lang-rego` 注册的 Rego 语言补全源（关键字、OPA 内置函数）。
+ * 回退是位置感知的：当后续单词会构成语法错误时不提供补全（如 `input.field == "..."`
+ * 之后），项（term）位置（如 `==` 之后）会过滤掉 `if`/`else` 等语句开头关键字。
  */
 async function regoCompletion(context: CompletionContext): Promise<CompletionResult | null> {
   const line = context.state.doc.lineAt(context.pos);
@@ -864,13 +864,11 @@ async function regoCompletion(context: CompletionContext): Promise<CompletionRes
   return null;
 }
 
-// Toggles read-only editing dynamically (e.g. edit dialog locks fields until
-// the user switches to edit mode).
+// 动态切换只读编辑（如编辑对话框在用户切换到编辑模式前锁定字段）。
 const editableCompartment = new Compartment();
 
-// Hover tooltip: when a sample is selected, hovering an `input.<field>`
-// reference shows the field's actual value from the sample, so the user can
-// judge rule correctness without running a dry-run.
+// 悬停提示：选中样例后，悬停在 `input.<field>` 引用上会显示该字段在样例中的
+// 实际值，便于用户无需试运行即可判断规则正确性。
 const sampleHover = hoverTooltip((editorView, pos) => {
   const hit = inputFieldAt(editorView, pos);
   if (!hit) {
@@ -899,9 +897,8 @@ const sampleHover = hoverTooltip((editorView, pos) => {
   };
 });
 
-// Hover tooltip: hovering a custom OPA builtin call (e.g. sqlite.query) shows
-// its localized description, signature and usage example from the backend
-// metadata, so the user can inspect the call contract without leaving the editor.
+// 悬停提示：悬停在自定义 OPA 内置函数调用（如 sqlite.query）上时，显示来自后端
+// 元信息的本地化描述、签名与使用示例，便于用户无需离开编辑器即可查看调用契约。
 const functionHover = hoverTooltip((editorView, pos) => {
   const hit = customFunctionAt(editorView.state, pos);
   if (!hit) {
@@ -971,7 +968,7 @@ const extensions: Extension[] = [
   sampleHover,
   functionHover,
   sqliteHighlightField,
-  // Stub linter so external diagnostics pushed via `setDiagnostics` render.
+  // 占位 linter，使经 `setDiagnostics` 推入的外部诊断得以渲染。
   // 不启用 lintGutter：避免行号区右侧渲染空的 lint 占位列，与其它编辑器一致；
   // 错误下划线、悬停提示与校验逻辑均不受影响。
   linter(() => []),
@@ -1020,7 +1017,7 @@ onBeforeUnmount(() => {
   view.value = undefined;
 });
 
-// Reset the sample selection when the sample list changes (e.g. model switch).
+// 样例列表变化（如切换模型）时重置样例选择。
 watch(
   () => props.samples,
   (list) => {
@@ -1029,15 +1026,14 @@ watch(
   { immediate: true },
 );
 
-// Emit the selected sample's input so the parent can share it with the
-// dry-run panel, keeping the editor and the dry-run feature in sync.
+// 向上抛出所选样例的输入，供父组件与试运行面板共享，使编辑器与试运行功能保持同步。
 watch(selectedSampleName, (name) => {
   const found = props.samples.find((s) => s.name === name);
   selectedSampleInput.value = found ? found.input : null;
   emit("update:sampleInput", selectedSampleInput.value);
 });
 
-// Sync external content changes (e.g. skeleton generation, snippet chips).
+// 同步外部内容变化（如生成骨架、片段芯片）。
 watch(
   () => props.modelValue,
   (val) => {
@@ -1051,7 +1047,7 @@ watch(
   },
 );
 
-// Toggle read-only state when the `disabled` prop changes.
+// `disabled` 属性变化时切换只读状态。
 watch(
   () => props.disabled,
   (val) => {
@@ -1061,8 +1057,7 @@ watch(
   },
 );
 
-// Switch syntax highlighting (including the sqlite.query SQL semantic colors)
-// when the app theme changes.
+// 应用主题变化时切换语法高亮（含 sqlite.query 的 SQL 语义配色）。
 watch(
   () => appStore.theme,
   (theme) => {
@@ -1072,8 +1067,8 @@ watch(
   },
 );
 
-// Push validation diagnostics (backend + sqlite SQL hints) into the CodeMirror
-// lint state whenever the parent revalidates the rule.
+// 父组件每次重新校验规则时，把校验诊断（后端 + sqlite SQL 提示）推入 CodeMirror
+// 的 lint 状态。
 watch(
   () => props.errors,
   () => updateDiagnostics(),

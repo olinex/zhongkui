@@ -1,20 +1,17 @@
 // navigation.ts
-// Shared sidebar navigation configuration (single source of truth for the
-// sidebar and the home-page quick start picker).
-// Link titles are i18n keys (navbar.*); navigation targets are route name + params.
+// 共享的侧边栏导航配置（侧边栏与首页快速开始选择器的单一事实来源）。
+// 链接标题为 i18n 键（navbar.*）；导航目标为路由名 + 参数。
 
 import { FEATURE_AI } from "@/stores/features";
 
 // NavPerm 单个导航项所需的权限点（object 形如 api:/api/v1/admin/llm/model/list，
 // act 为 HTTP 方法字符串，如 "POST"），与后端 RBAC 策略登记取值一致。
-// NavPerm is the permission point a navigation item requires (obj looks like
-// api:/api/v1/admin/llm/model/list and act is an HTTP method string such as "POST"),
-// matching the values registered in the backend RBAC policies.
 export interface NavPerm {
   obj: string;
   act: string;
 }
 
+// NavChild 单个导航子项（侧边栏的具体页面入口）。
 export interface NavChild {
   title: string;
   icon: string;
@@ -26,10 +23,10 @@ export interface NavChild {
   // 所属功能开关键：设置后该子项随对应功能开关（关闭时）置为不可用态，但仍展示
   feature?: string;
   // 所需权限点：设置后该子项仅在当前用户具备该权限时可见
-  // Required permission point: when set, the item is visible only if the current user has it
   perm?: NavPerm;
 }
 
+// NavGroup 导航分组（侧边栏的一级分组，含其下的导航子项）。
 export interface NavGroup {
   title: string;
   icon: string;
@@ -44,10 +41,9 @@ export interface NavGroup {
 }
 
 // NavBadgeKind 导航项标识的种类：lock 表示功能不可用，namespace 表示该页面受命名空间影响。
-// NavBadgeKind is the kind of a navigation badge: lock means the feature is unavailable and
-// namespace means the page is namespace-scoped.
 export type NavBadgeKind = "lock" | "namespace";
 
+// navigationGroups 侧边栏导航的完整分组声明。
 export const navigationGroups: NavGroup[] = [
   {
     title: "navbar.tagEvent.self",
@@ -243,9 +239,6 @@ export const navigationGroups: NavGroup[] = [
 
 // filterNavigationByPerm 按权限点过滤导航：未声明 perm 的子项保留，判定不通过的
 // 子项剔除，过滤后子项为空的分组整体丢弃。feature 过滤由调用方负责，本函数不做。
-// filterNavigationByPerm filters navigation groups by permission point: children without
-// a declared perm are kept, children that fail the predicate are dropped, and a group whose
-// children all disappear is dropped entirely. Feature filtering stays with the caller.
 export function filterNavigationByPerm(
   groups: NavGroup[],
   can: (perm: NavPerm) => boolean,
@@ -262,18 +255,12 @@ export function filterNavigationByPerm(
 
 // featureGroupOf 按功能键取声明该功能的导航分组：功能展示名取该分组的标题，开通入口取
 // 分组上的 activationRoute，供「功能不可用」说明页与侧边栏共用同一份声明。
-// featureGroupOf resolves the navigation group declaring the given feature: the feature's
-// display name is the group title and its activation entry is the group's activationRoute,
-// so the "feature unavailable" page and the sidebar share one declaration.
 export function featureGroupOf(key: string): NavGroup | undefined {
   return navigationGroups.find((group) => group.feature === key);
 }
 
 // featureOfRoute 取路由所属的功能键：子项自身声明的 feature 优先，否则继承所属分组；
 // 未登记在导航中的路由（如错误页、说明页本身）返回 undefined。
-// featureOfRoute resolves the feature key owning the given route: a feature declared on the
-// child wins, otherwise the group's feature is inherited; a route that is not registered in
-// the navigation (such as the error and explanation pages) yields undefined.
 export function featureOfRoute(routeName: string): string | undefined {
   for (const group of navigationGroups) {
     const child = group.childrens.find((item) => item.routeName === routeName);
@@ -286,9 +273,6 @@ export function featureOfRoute(routeName: string): string | undefined {
 
 // navChildByRoute 按路由名取导航子项：用于把功能开通入口的路由名解析为标题与所需权限
 // （开通入口本身已在导航中登记，避免标题与权限点的字面量二次声明）。
-// navChildByRoute resolves a navigation child by route name: it turns the feature activation
-// entry's route name into its title and required permission point (the activation entry is
-// already registered in the navigation, so no title or permission literal is duplicated).
 export function navChildByRoute(routeName: string): NavChild | undefined {
   for (const group of navigationGroups) {
     const child = group.childrens.find((item) => item.routeName === routeName);
@@ -302,9 +286,6 @@ export function navChildByRoute(routeName: string): NavChild | undefined {
 // navBadgeOf 解析导航项标识：功能不可用优先于受命名空间影响——页面既然已经不可用，再说明它是否
 // 随命名空间变化已无意义，故两者同时命中时只返回 lock；均未命中时无标识。父级与子级共用此规则，
 // 使其标识语义始终一致。
-// navBadgeOf resolves a navigation badge: unavailable wins over namespace-scoped, because telling
-// the user whether an already unusable page follows the namespace is pointless, so both hitting
-// yields lock. Parent and child share this rule so their badges always mean the same thing.
 export function navBadgeOf(
   unavailable: boolean,
   namespaceScoped: boolean,

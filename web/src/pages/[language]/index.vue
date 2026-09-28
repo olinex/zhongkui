@@ -3,13 +3,13 @@
     <app-header />
     <v-main>
       <v-container class="pa-4 pa-md-6 zk-page-container">
-        <!-- Welcome area -->
+        <!-- 欢迎区域 -->
         <div class="mb-8">
           <h1 class="text-h4 font-weight-bold">{{ $t("title.zk") }}</h1>
           <p class="text-h6 text-on-surface-variant mt-2">{{ $t("home.subtitle") }}</p>
         </div>
 
-        <!-- Quick start section -->
+        <!-- 快速开始区域 -->
         <div class="d-flex align-center mb-4">
           <h2 class="text-h6">{{ $t("home.quickStart.self") }}</h2>
           <v-spacer />
@@ -22,9 +22,9 @@
           />
         </div>
 
-        <!-- Custom groups of navigation links -->
+        <!-- 自定义导航链接分组 -->
         <div v-for="group in store.groups" :key="group.id" class="mb-8">
-          <!-- Group heading: title (click to rename) + actions -->
+          <!-- 分组标题：标题（点击可重命名）+ 操作按钮 -->
           <div class="d-flex align-center mb-3 ga-2">
             <v-icon color="primary">mdi-folder-multiple-outline</v-icon>
             <template v-if="editingGroupId === group.id">
@@ -69,7 +69,7 @@
             />
           </div>
 
-          <!-- Links as cards, same style as the pre-group quick start -->
+          <!-- 链接以卡片展示，样式与分组化之前的快速开始一致 -->
           <v-row dense>
             <v-col
               v-for="(link, index) in group.links"
@@ -100,7 +100,7 @@
                     </v-avatar>
                   </template>
                   <v-card-title class="text-body-2 ps-1">{{ $t(link.title) }}</v-card-title>
-                  <!-- Remove button: only visible when hovering the card -->
+                  <!-- 移除按钮：仅在悬停卡片时可见 -->
                   <template #append>
                     <v-btn
                       class="quick-link-remove"
@@ -117,7 +117,7 @@
             </v-col>
           </v-row>
 
-          <!-- Empty group drop zone -->
+          <!-- 空分组的放置区 -->
           <div
             v-if="group.links.length === 0"
             class="quick-drop-zone zk-panel--subtle zk-hairline zk-hint"
@@ -129,7 +129,7 @@
             {{ $t("home.quickStart.emptyGroup") }}
           </div>
 
-          <!-- Trailing drop zone while a drag is active -->
+          <!-- 拖拽进行中的尾部放置区 -->
           <div
             v-else-if="dragSource"
             class="quick-drop-zone zk-panel--subtle zk-hairline zk-hint"
@@ -142,7 +142,7 @@
           </div>
         </div>
 
-        <!-- Add navigation link dialog -->
+        <!-- 添加导航链接对话框 -->
         <app-dialog
           v-model="addLinkDialog"
           :title="$t('home.quickStart.addLink')"
@@ -179,7 +179,7 @@
           </template>
         </app-dialog>
 
-        <!-- Delete group confirmation -->
+        <!-- 删除分组确认 -->
         <confirm-dialog
           ref="confirmDialogRef"
           prepend-icon="mdi-delete-outline"
@@ -220,12 +220,13 @@ import i18n from "@/utils/i18n";
 const store = useQuickStartStore();
 const route = useRoute();
 
-// --- Group operations ---
+// --- 分组操作 ---
 // displayTitle 组标题支持 i18n key 与纯文本：key 存在时翻译，否则原样返回
 const displayTitle = (title: string): string => {
   return i18n.global.te(title) ? i18n.global.t(title) : title;
 };
 
+// addGroupAction 新增一个快速开始分组并立即进入重命名状态。
 const addGroupAction = () => {
   const id = store.addGroup("home.quickStart.newGroup");
   const group = store.groups.find((g) => g.id === id);
@@ -237,15 +238,18 @@ const addGroupAction = () => {
 const editingGroupId = ref("");
 const groupTitleDraft = ref("");
 
+// startRename 进入指定分组标题的编辑态，草稿预填当前显示名。
 const startRename = (group: QuickStartGroup) => {
   editingGroupId.value = group.id;
   groupTitleDraft.value = displayTitle(group.title);
 };
 
+// cancelRename 退出分组标题编辑态。
 const cancelRename = () => {
   editingGroupId.value = "";
 };
 
+// commitRename 提交分组重命名：标题为空则放弃修改。
 const commitRename = (id: string) => {
   if (!editingGroupId.value) {
     return;
@@ -259,19 +263,22 @@ const commitRename = (id: string) => {
 
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
 
+// askDeleteGroup 打开删除该分组的确认对话框。
 const askDeleteGroup = (group: QuickStartGroup) => {
   confirmDialogRef.value?.open({ group });
 };
 
+// deleteGroupAction 确认后删除分组。
 const deleteGroupAction = (payload: { group: QuickStartGroup }) => {
   store.removeGroup(payload.group.id);
 };
 
-// --- Add link dialog ---
+// --- 添加链接对话框 ---
 const addLinkDialog = ref(false);
 const addLinkTargetGroupId = ref("");
 const linkSearch = ref("");
 
+// openAddLinkDialog 打开添加链接对话框并重置搜索词。
 const openAddLinkDialog = (groupId: string) => {
   addLinkTargetGroupId.value = groupId;
   linkSearch.value = "";
@@ -289,6 +296,7 @@ const visibleNavigationGroups = computed(() => {
   return filterNavigationByPerm(groups, (perm) => userStore.can(perm.obj, perm.act));
 });
 
+// 按搜索关键词过滤可见导航组：仅保留命中子项的分组。
 const filteredNavigation = computed(() => {
   const keyword = linkSearch.value.trim().toLowerCase();
   const groups = visibleNavigationGroups.value;
@@ -312,6 +320,7 @@ const filteredNavigation = computed(() => {
     .filter((group) => group.childrens.length > 0);
 });
 
+// linkExists 判断某导航项是否已存在于目标分组中（用于禁用重复添加）。
 const linkExists = (child: NavChild): boolean => {
   const group = store.groups.find((g) => g.id === addLinkTargetGroupId.value);
   if (!group) {
@@ -320,29 +329,33 @@ const linkExists = (child: NavChild): boolean => {
   return group.links.some((existing) => linkKey(existing) === linkKey(child));
 };
 
+// addLinkToCurrent 把选中的导航项添加到目标分组。
 const addLinkToCurrent = (child: NavChild) => {
   store.addLink(addLinkTargetGroupId.value, child);
 };
 
-// --- Navigation ---
+// --- 导航跳转 ---
 const goto = (link: QuickStartLink) => {
-  // route.params type does not satisfy RouteLocationRaw.params
+  // route.params 类型不满足 RouteLocationRaw.params 的要求
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   router.push({ name: link.routeName as any, params: { ...route.params, ...link.params } as any });
 };
 
-// --- Drag & drop reorder (native HTML5 DnD) ---
+// --- 拖拽排序（原生 HTML5 DnD） ---
 const dragSource = ref<{ groupId: string; index: number } | null>(null);
 const dropTarget = ref<{ groupId: string; index: number } | null>(null);
 
+// isDragging 判断指定链接是否为当前拖拽源。
 const isDragging = (groupId: string, index: number): boolean => {
   return dragSource.value?.groupId === groupId && dragSource.value?.index === index;
 };
 
+// isDropTarget 判断指定链接是否为当前放置目标。
 const isDropTarget = (groupId: string, index: number): boolean => {
   return dropTarget.value?.groupId === groupId && dropTarget.value?.index === index;
 };
 
+// onDragStart 记录拖拽源并设置 dataTransfer 数据。
 const onDragStart = (event: DragEvent, groupId: string, index: number) => {
   dragSource.value = { groupId, index };
   if (event.dataTransfer) {
@@ -351,6 +364,7 @@ const onDragStart = (event: DragEvent, groupId: string, index: number) => {
   }
 };
 
+// onDragOver 更新当前放置目标（变更时）。
 const onDragOver = (groupId: string, index: number) => {
   const current = dropTarget.value;
   if (current?.groupId !== groupId || current?.index !== index) {
@@ -370,6 +384,7 @@ const onDragLeave = (event: DragEvent, groupId: string, index: number) => {
   }
 };
 
+// onDrop 将拖拽源移动到放置目标位置。
 const onDrop = (groupId: string, index: number) => {
   const source = dragSource.value;
   if (source) {
@@ -379,6 +394,7 @@ const onDrop = (groupId: string, index: number) => {
   dropTarget.value = null;
 };
 
+// onDragEnd 拖拽结束时清理拖拽源与放置目标状态。
 const onDragEnd = () => {
   dragSource.value = null;
   dropTarget.value = null;
@@ -394,7 +410,7 @@ const onDragEnd = () => {
   max-width: var(--zk-container-max-width-narrow);
 }
 
-/* Link cards: hover feedback comes from the global .zk-interactive-card shell. */
+/* 链接卡片：悬停反馈来自全局的 .zk-interactive-card 外壳。 */
 .quick-link-card {
   position: relative;
   cursor: grab;
@@ -408,7 +424,7 @@ const onDragEnd = () => {
   opacity: 0.4;
 }
 
-/* Remove button: only visible while hovering the whole card. */
+/* 移除按钮：仅在悬停整个卡片时可见。 */
 .quick-link-remove {
   opacity: 0;
   transition: opacity var(--zk-transition-fast) ease;
@@ -418,8 +434,8 @@ const onDragEnd = () => {
   opacity: 1;
 }
 
-/* Drop zone (empty group / trailing): layout only, surface comes from
-   .zk-panel--subtle + .zk-hairline, highlight from .zk-drag-over. */
+/* 放置区（空分组 / 尾部）：仅负责布局，外观来自
+   .zk-panel--subtle + .zk-hairline，高亮来自 .zk-drag-over。 */
 .quick-drop-zone {
   display: flex;
   align-items: center;

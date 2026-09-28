@@ -1,13 +1,10 @@
+// Package crypto 提供密码学相关工具：随机字符串生成、密码哈希，以及加密字段（secure tag）的
+// 标签解析与加密模式构造。
+//
 // 本文件提供加密字段（secure tag）的通用能力：标签解析与加密模式构造。
 // 视图层明文查看（internal/manager/views/plaintext.go）与 GORM crypto 序列化器
 // （internal/pkg/serializer）都只是本层能力的借用者，避免各自重复实现
 // 「tag → 密钥派生 → 模式构造」链路。
-//
-// This file provides the shared capabilities for encrypted fields (secure tag): tag
-// parsing and crypto-mode construction. Both the view-layer plaintext lookup
-// (internal/manager/views/plaintext.go) and the GORM crypto serializer
-// (internal/pkg/serializer) borrow from this layer, avoiding duplicated
-// "tag → key derivation → mode construction" pipelines.
 package crypto
 
 import (
@@ -19,11 +16,9 @@ import (
 )
 
 // SecurityTagKey 加密字段的 secure 结构体标签键。
-// SecurityTagKey is the secure struct tag key of encrypted fields.
 const SecurityTagKey = "secure"
 
 // CryptoTag 加密字段标签内容（secure 标签解析结果）。
-// CryptoTag is the parsed content of the secure tag of an encrypted field.
 type CryptoTag struct {
 	Mode   string `tag:"mode"`
 	Offset int    `tag:"offset"`
@@ -31,7 +26,6 @@ type CryptoTag struct {
 }
 
 // ParseCryptoTag 解析 secure 标签字符串为 CryptoTag。
-// ParseCryptoTag parses a secure tag string into a CryptoTag.
 func ParseCryptoTag(tag string) (CryptoTag, error) {
 	var cTag CryptoTag
 	if err := t.Unmarshal(tag, &cTag); err != nil {
@@ -50,18 +44,6 @@ func ParseCryptoTag(tag string) (CryptoTag, error) {
 //
 // 背景：结构体嵌入会导致内外层同 json 名字段并存（如 PacketIPv6TCP 内嵌 PacketIPv6 且
 // 两者均声明 Payload）。单段路径解析到最外层，多段路径可定位内层，从而消除歧义。
-//
-// FieldTag resolves the secure tag of a model field by its field path into a CryptoTag
-// (no key derivation). nameTag selects the struct tag used to match path segments (e.g.
-// "json", "gorm"); the plaintext API's field param is the JSON field name, so callers
-// pass "json" (consistent with the permission-point object and the frontend contract).
-// Field resolution is delegated to internal/pkg/utils.ExtractFieldTag:
-//   - single-segment (e.g. "payload"): shallow-first recursive lookup, always returns the
-//     secure tag of the outermost (directly declared) field, consistent with the stored
-//     column (an embedded struct's same-name field is shadowed and not part of column
-//     mapping);
-//   - multi-segment (e.g. "PacketIPv6.Payload"): descends level by level along the
-//     explicit path to locate the inner embedded field.
 func FieldTag(model any, path, nameTag string) (CryptoTag, error) {
 	secure, err := utils.ExtractFieldTag(model, path, nameTag, SecurityTagKey)
 	if err != nil {
@@ -82,10 +64,6 @@ func FieldTag(model any, path, nameTag string) (CryptoTag, error) {
 // 返回值：
 //   - mode.Mode: 对应加密模式（当前支持 AES-GCM）
 //   - error: 密钥派生器未初始化、密钥派生失败或未知加密模式时返回错误
-//
-// ModeForTag derives the child key from a CryptoTag and builds the matching crypto mode,
-// the shared front half of the encrypted-field decrypt pipeline (tag → key → mode →
-// decrypt).
 func ModeForTag(cTag CryptoTag) (mode.Mode, error) {
 	kd, err := key.GetKeyDerivation()
 	if err != nil {
@@ -109,8 +87,6 @@ func ModeForTag(cTag CryptoTag) (mode.Mode, error) {
 
 // ModeFromTag 解析 secure 标签字符串并构造加密模式，供 GORM crypto 序列化器
 // （读库扫描 Scan）使用。
-// ModeFromTag parses a secure tag string and builds the crypto mode, used by the GORM
-// crypto serializer (Scan).
 func ModeFromTag(tag string) (mode.Mode, error) {
 	cTag, err := ParseCryptoTag(tag)
 	if err != nil {
@@ -122,10 +98,6 @@ func ModeFromTag(tag string) (mode.Mode, error) {
 // ModeForField 按字段路径解析模型字段的 secure 标签并构造加密模式，供视图层
 // 明文查看接口（CryptoPlaintextGet）使用。nameTag 与 FieldTag 同义：明文接口的
 // field 参数为字段 json 名，故传入 "json"。
-// ModeForField resolves the secure tag of a model field by its field path and builds the
-// crypto mode, used by the view-layer plaintext lookup (CryptoPlaintextGet). nameTag has
-// the same meaning as in FieldTag: the plaintext API's field param is the JSON field
-// name, so callers pass "json".
 func ModeForField(model any, path, nameTag string) (mode.Mode, error) {
 	cTag, err := FieldTag(model, path, nameTag)
 	if err != nil {

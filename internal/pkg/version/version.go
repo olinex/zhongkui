@@ -1,3 +1,5 @@
+// Package version 提供构建版本信息的读取与格式化：语义化版本号、commit、构建时间与
+// 构建者，支持经 -ldflags 注入，并在缺失时回退到 git 命令获取 commit。
 package version
 
 import (

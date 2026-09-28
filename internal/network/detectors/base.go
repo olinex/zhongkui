@@ -1,3 +1,4 @@
+// Package detectors 定义应用层协议推测器接口与注册表，并内置 HTTP 协议的检测、提取与组装实现。
 package detectors
 
 import (
@@ -32,6 +33,7 @@ func RegisterAppProtocolDetector(protocol AppProtocol, detector AppProtocolDetec
 	Detectors[protocol] = detector
 }
 
+// StreamMeta 描述一条已重组 TCP 流的元数据：地址、端口、ISN、被动指纹与时间戳。
 type StreamMeta struct {
 	// TraceID 流跟踪ID，用于关联不同数据包的元数据
 	TraceID serializer.HexUUID
@@ -55,30 +57,40 @@ type StreamMeta struct {
 	Timestamp time.Time
 }
 
+// AppTailer 记录一条流在提取阶段消费的客户端/服务端数据量、偏移与时间戳。
 type AppTailer struct {
-	ClientConsumed, ServerConsumed                   uint64
+	// ClientConsumed、ServerConsumed 分别为客户端、服务端方向已消费的字节数。
+	ClientConsumed, ServerConsumed uint64
+	// ClientStartPayloadOffset、ClientEndPayloadOffset 为客户端方向的起始/结束负载偏移。
 	ClientStartPayloadOffset, ClientEndPayloadOffset uint64
-	ClientStartTimestamp, ClientEndTimestamp         time.Time
+	// ClientStartTimestamp、ClientEndTimestamp 为客户端方向的起始/结束时间戳。
+	ClientStartTimestamp, ClientEndTimestamp time.Time
+	// ServerStartPayloadOffset、ServerEndPayloadOffset 为服务端方向的起始/结束负载偏移。
 	ServerStartPayloadOffset, ServerEndPayloadOffset uint64
-	ServerStartTimestamp, ServerEndTimestamp         time.Time
+	// ServerStartTimestamp、ServerEndTimestamp 为服务端方向的起始/结束时间戳。
+	ServerStartTimestamp, ServerEndTimestamp time.Time
 }
 
+// BuildTailer 是构建 AppTailer 的回调，供组装阶段取用流的消费偏移信息。
 type BuildTailer func(ctx context.Context) (tailer *AppTailer, err error)
 
 // AppProtocolDetector 应用层协议推测器接口。
 // 用于推测数据包中的应用层协议类型，并判断数据是否完整。
 type AppProtocolDetector interface {
+	// Detect 判断当前方向的数据是否匹配本协议。
 	Detect(
 		ctx context.Context,
 		peek []byte,
 		c2s bool,
 	) (ok bool, err error)
 
+	// Extract 从双向缓冲区中提取完整的请求与响应对象。
 	Extract(
 		ctx context.Context,
 		clientReader, serverReader *bufio.Reader,
 	) (clientPayload, serverPayload any, err error)
 
+	// Build 将提取到的请求/响应组装为应用层对象。
 	Build(
 		ctx context.Context,
 		baseMeta *n.BaseMeta,

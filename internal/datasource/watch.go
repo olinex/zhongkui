@@ -1,10 +1,10 @@
 package datasource
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 	"zhongkui.com/zhongkui/internal/pkg/logging"

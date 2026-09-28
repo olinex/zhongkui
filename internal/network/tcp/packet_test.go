@@ -213,6 +213,7 @@ func withPayload(payload []byte) func(*mockTCPPacket) {
 	}
 }
 
+// TestTCPPacketInterface 验证 mockTCPPacket 的默认值、构造选项与各访问器行为。
 func TestTCPPacketInterface(t *testing.T) {
 	Convey("Test TCPPacket interface", t, func() {
 		Convey("Should create mock TCP packet with default values", func() {
@@ -334,6 +335,7 @@ func TestTCPPacketInterface(t *testing.T) {
 	})
 }
 
+// TestTCPPacketInterfaceCompliance 验证 mockTCPPacket 满足 TCPPacket 接口及各方法返回类型。
 func TestTCPPacketInterfaceCompliance(t *testing.T) {
 	Convey("Test TCPPacket interface compliance", t, func() {
 		Convey("Should satisfy TCPPacket interface", func() {
@@ -397,6 +399,7 @@ func TestTCPPacketInterfaceCompliance(t *testing.T) {
 	})
 }
 
+// TestTCPPacketSeqFunction 验证 tcpPacketSeq 对各类地址、端口与序列号的格式化结果。
 func TestTCPPacketSeqFunction(t *testing.T) {
 	Convey("Test tcpPacketSeq function", t, func() {
 		Convey("Should format TCP packet sequence information correctly", func() {
@@ -470,8 +473,8 @@ func TestTCPPacketSeqFunction(t *testing.T) {
 
 		Convey("Should handle well-known ports", func() {
 			packet := newMockTCPPacketWithOptions(
-				withSrcPort(80),  // HTTP
-				withDstPort(443), // HTTPS
+				withSrcPort(80),  // HTTP 端口
+				withDstPort(443), // HTTPS 端口
 			)
 
 			result := tcpPacketSeq(packet)

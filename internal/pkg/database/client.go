@@ -1,3 +1,5 @@
+// Package database 提供数据库连接创建与管理：依据配置选择驱动（postgres / clickhouse）
+// 并构建 GORM 连接，同时提供配置解析与日志记录等能力。
 package database
 
 import (

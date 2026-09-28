@@ -1,25 +1,23 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"io"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/components/retriever"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 // scriptedTurn 是 stub 对话模型的一次流式/非流式响应：正文与（可选的）工具调用。
-// scriptedTurn is one streamed/non-streamed response of the stub chat model: the text plus the
-// (optional) tool calls.
 type scriptedTurn struct {
 	content   string
 	toolCalls []schema.ToolCall
@@ -27,9 +25,6 @@ type scriptedTurn struct {
 
 // scriptedChat 是测试用对话模型替身：按调用次序返回预置的每一轮响应（超出后重复最后一轮），
 // 并记录每次收到的消息列表与工具清单。
-// scriptedChat is a test double of the chat model: it returns the preset response of each round by
-// call order (repeating the last one after it is exhausted) and records the received message list
-// and tool list of every call.
 type scriptedChat struct {
 	turns     []scriptedTurn
 	calls     int
@@ -62,8 +57,6 @@ func (c *scriptedChat) Stream(ctx context.Context, input []*schema.Message, opts
 }
 
 // pick 取本次调用对应的轮次并推进计数（超出预置轮数后重复最后一轮）。
-// pick returns the round of this call and advances the counter (repeating the last round once the
-// presets are exhausted).
 func (c *scriptedChat) pick() scriptedTurn {
 	idx := c.calls
 	if idx >= len(c.turns) {
@@ -74,8 +67,6 @@ func (c *scriptedChat) pick() scriptedTurn {
 }
 
 // recordingTool 是测试用工具替身：实现 tool.InvokableTool，返回配置的结果并记录收到的参数。
-// recordingTool is a test tool double: it implements tool.InvokableTool, returning the configured
-// result and recording the received arguments.
 type recordingTool struct {
 	name     string
 	infoErr  error
@@ -102,8 +93,6 @@ func (f *recordingTool) InvokableRun(ctx context.Context, argumentsInJSON string
 
 // eventRecorder 记录上报的阶段事件；failAt 指定第几个事件（1-based）的上报返回错误，用于
 // 模拟 SSE 客户端断开。
-// eventRecorder records the reported stage events; failAt makes the report of the n-th (1-based)
-// event return an error, simulating a disconnected SSE client.
 type eventRecorder struct {
 	events []StageEvent
 	failAt int
@@ -120,7 +109,6 @@ func (r *eventRecorder) report(ev StageEvent) error {
 }
 
 // findEvent 返回首个匹配阶段/状态/工具名的事件（未找到返回 nil）。
-// findEvent returns the first event matching the stage/status/tool name (nil when none matches).
 func (r *eventRecorder) findEvent(stage EvalStage, status EvalStageStatus, toolName string) *StageEvent {
 	for i := range r.events {
 		ev := &r.events[i]
@@ -132,8 +120,6 @@ func (r *eventRecorder) findEvent(stage EvalStage, status EvalStageStatus, toolN
 }
 
 // newAgentWithTools 构造带工具清单的测试 Agent（复用 testParams 与内存会话库）。
-// newAgentWithTools builds a test Agent carrying a tool list (reusing testParams and the in-memory
-// session DB).
 func newAgentWithTools(t *testing.T, chat model.BaseChatModel, rtv retriever.Retriever, built []tool.BaseTool, infos []*schema.ToolInfo, overrides map[string]string) *Agent {
 	t.Helper()
 	store, err := NewSessionStore(newTestSessionDB(t))
@@ -148,8 +134,6 @@ func newAgentWithTools(t *testing.T, chat model.BaseChatModel, rtv retriever.Ret
 }
 
 // collectStream 抽干 AgentOutput 流，返回拼接后的增量文本、done 项与首个流错误（若有）。
-// collectStream drains the AgentOutput stream, returning the joined delta text, the done item and
-// the first stream error (if any).
 func collectStream(t *testing.T, reader *schema.StreamReader[AgentOutput]) (string, AgentOutput, error) {
 	t.Helper()
 	defer reader.Close()
@@ -171,9 +155,6 @@ func collectStream(t *testing.T, reader *schema.StreamReader[AgentOutput]) (stri
 
 // TestAgent_Tools_NoToolsUnchanged 测试无启用工具时节点 4 退化为单次流式生成：delta 与
 // done 与引入工具前一致，不产生任何工具阶段事件，也不传工具清单。
-// TestAgent_Tools_NoToolsUnchanged verifies that with no enabled tools node 4 degrades to a single
-// streaming generation: the deltas and done are unchanged, no tool stage event is produced, and no
-// tool list is passed.
 func TestAgent_Tools_NoToolsUnchanged(t *testing.T) {
 	chat := &scriptedChat{turns: []scriptedTurn{{content: "plain answer"}}}
 	rec := &eventRecorder{}
@@ -203,9 +184,6 @@ func TestAgent_Tools_NoToolsUnchanged(t *testing.T) {
 
 // TestAgent_Tools_ExecutesToolThenAnswers 测试含工具时首轮返回 ToolCalls：工具被执行、发生
 // 二次生成，最终外发文本只含答案轮文本，上报 toolCall(start) 与 toolResult(done)。
-// TestAgent_Tools_ExecutesToolThenAnswers verifies that with tools a first round returning
-// ToolCalls runs the tool and triggers a second generation: the emitted text only carries the
-// answer round, and toolCall(start) plus toolResult(done) are reported.
 func TestAgent_Tools_ExecutesToolThenAnswers(t *testing.T) {
 	built := &recordingTool{name: "weather", run: func(ctx context.Context, args string) (string, error) {
 		return "sunny", nil
@@ -269,9 +247,6 @@ func TestAgent_Tools_ExecutesToolThenAnswers(t *testing.T) {
 
 // TestAgent_Tools_FailureFeedsErrorBack 测试工具执行失败：错误文本作为工具结果回填，本轮仍
 // 正常 done、无流错误，上报 toolResult(failed)。
-// TestAgent_Tools_FailureFeedsErrorBack verifies a tool failure: the error text is fed back as the
-// tool result, the turn still ends with a normal done and no stream error, and toolResult(failed)
-// is reported.
 func TestAgent_Tools_FailureFeedsErrorBack(t *testing.T) {
 	built := &recordingTool{name: "boom", run: func(ctx context.Context, args string) (string, error) {
 		return "", errors.New("upstream down")
@@ -311,9 +286,6 @@ func TestAgent_Tools_FailureFeedsErrorBack(t *testing.T) {
 
 // TestAgent_Tools_RoundBoundReached 测试达到轮数上限：agent.maxToolRounds=1 且模型始终返回
 // ToolCalls 时只跑 1 轮、外发该轮文本、上报 toolCall(failed)、不执行工具、不返回错误。
-// TestAgent_Tools_RoundBoundReached verifies the round bound: with agent.maxToolRounds=1 and a
-// model that always returns ToolCalls it runs exactly one round, emits that round's text, reports
-// toolCall(failed), executes no tool and returns no error.
 func TestAgent_Tools_RoundBoundReached(t *testing.T) {
 	built := &recordingTool{name: "loop"}
 	infos := []*schema.ToolInfo{{Name: "loop", Desc: "looping tool"}}
@@ -350,9 +322,6 @@ func TestAgent_Tools_RoundBoundReached(t *testing.T) {
 
 // TestAgent_Tools_ReporterErrorAbortsLoop 测试上报失败（如 SSE 客户端断开）中止工具循环：
 // 流收到错误、工具不被执行、不再发起后续模型调用。
-// TestAgent_Tools_ReporterErrorAbortsLoop verifies that a report failure (e.g. a disconnected SSE
-// client) aborts the tool loop: the stream gets an error, no tool is executed and no further model
-// call is made.
 func TestAgent_Tools_ReporterErrorAbortsLoop(t *testing.T) {
 	built := &recordingTool{name: "weather"}
 	infos := []*schema.ToolInfo{{Name: "weather", Desc: "weather tool"}}

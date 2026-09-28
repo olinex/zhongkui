@@ -7,6 +7,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestClusterFeature 验证 BIRCH 聚类特征对象的累加、重置、合并与相似度计算。
 func TestClusterFeature(t *testing.T) {
 	Convey("Call NewClusterFeature", t, func() {
 		Convey("1. Should return empty ClusterFeature", func(c C) {

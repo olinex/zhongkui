@@ -1,3 +1,6 @@
+// Package distributed 提供分布式数据处理编排能力：以 etcd 作为服务目录与成员注册中心，
+// 将集群成员管理、虚拟节点分片、处理水位（watermark）持久化与主循环调度集中到编排器
+// （Orchestrator），业务侧只需实现 ClusterHandler 接口定制数据拉取、处理与水位提取逻辑。
 package distributed
 
 import (

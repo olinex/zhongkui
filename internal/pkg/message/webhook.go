@@ -1,7 +1,7 @@
 package message
 
 import (
-	// stdlib
+	// 标准库
 	"bytes"
 	"context"
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 	"reflect"
 	"time"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
@@ -20,14 +20,6 @@ import (
 // 使 HTTP 连接由标准库自动复用并在闲置超时后回收——即 webhook 渠道底层外部资源的
 // 生命周期管理，由统一资源池之外的 net/http 运输层负责。webhook 通道自身无长期
 // 服务端连接，因此不实现 resourcepool.Lifespan，按纯对象复用处理。
-// webhookHTTPClient is the HTTP client used by the webhook channel with an overall
-// timeout to avoid blocking task execution. Its Transport configures a connection
-// pool (MaxIdleConns/MaxIdleConnsPerHost/IdleConnTimeout) so HTTP connections are
-// reused by the stdlib and reclaimed after idling out—that is, the lifecycle of the
-// webhook channel's underlying external resource is handled by net/http's transport
-// layer outside the unified pool. The webhook channel holds no long-lived server
-// connection, so it does not implement resourcepool.Lifespan and is reused as a
-// plain object.
 var webhookHTTPClient = &http.Client{
 	Transport: &http.Transport{
 		MaxIdleConns:          32,
@@ -44,39 +36,25 @@ var webhookHTTPClient = &http.Client{
 // 目标级配置（notification_targets.config）结构：
 //
 //	{"url": "https://example.com/hook", "headers": {"X-Token": "secret"}}
-//
-// webhookChannel delivers the message JSON to the target URL via HTTP POST. The
-// channel-level config is currently empty {} (the URL lives in the target config);
-// the target-level config schema is:
-//
-//	{"url": "https://example.com/hook", "headers": {"X-Token": "secret"}}
 type webhookChannel struct{}
 
 // WebhookChannelConfig Webhook 渠道级配置：当前为空对象（Webhook 地址在目标级配置中）。
 // 反射产出空字段列表，供前端渲染空渠道级配置表单。
-// WebhookChannelConfig is the channel-level config of the webhook channel; it is
-// currently empty (the URL lives in the target config). It yields an empty field list.
 type WebhookChannelConfig struct{}
 
 // WebhookTarget Webhook 目标级配置。
-// WebhookTarget is the target-level config of the webhook channel.
 type WebhookTarget struct {
 	// URL 接收 Webhook 的地址，必填
-	// URL the address to receive the webhook, required
 	URL string `json:"url" binding:"required" form:"kind=string"`
 	// Headers 附加请求头，可选
-	// Headers the extra request headers, optional
 	Headers map[string]string `json:"headers" form:"kind=object"`
 }
 
 // Type 返回渠道类型键。
-// Type returns the channel type key.
 func (c *webhookChannel) Type() string { return TypeWebhook }
 
 // Send 将消息以 JSON 形式 POST 到目标 Webhook URL。
 // 2xx 视为成功；目标配置缺失 URL、非法 JSON 或非 2xx 响应均返回错误。
-// Send POSTs the message JSON to the target webhook URL. A 2xx response is success;
-// a missing URL, invalid JSON or a non-2xx response returns an error.
 func (c *webhookChannel) Send(ctx context.Context, target *Target, msg *RenderedMessage) (string, error) {
 	var cfg WebhookTarget
 	if err := json.Unmarshal(target.Config, &cfg); err != nil {
@@ -112,8 +90,6 @@ func (c *webhookChannel) Send(ctx context.Context, target *Target, msg *Rendered
 
 // init 注册 Webhook 渠道工厂并注册其配置结构体类型供表单元信息抽取；
 // 渠道级配置暂不解析（空对象）。
-// init registers the webhook factory and its config struct types; the channel-level
-// config is currently unused (empty object).
 func init() {
 	RegisterChannel(
 		TypeWebhook,

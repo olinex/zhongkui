@@ -1,14 +1,14 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"fmt"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
@@ -17,13 +17,6 @@ import (
 // 降维向量），否则请求模型原生维度。超时取 cfg.Timeout，未声明（0）时经 defaults.Set 回填
 // ModelConfig.Timeout 的 default 标签声明的 15s；端点不可达、凭据非法或返回空向量时返回英文错误，
 // 绝不静默失败。
-// ProbeEmbeddingDimensions issues one minimal embedding request against the endpoint and
-// returns the actual vector dimension of the output. When cfg.Dimensions > 0 the dimension is
-// declared with the request (the dimensions parameter of OpenAI-compatible endpoints, letting
-// the model return a reduced-dimension vector), otherwise the native dimension of the model is
-// requested. The timeout is cfg.Timeout, filled with the 15s declared by the default tag of
-// ModelConfig.Timeout via defaults.Set when undeclared (0); an unreachable endpoint, an invalid
-// credential or an empty vector yields an English error and never fails silently.
 func ProbeEmbeddingDimensions(ctx context.Context, cfg ModelConfig) (int, error) {
 	// 超时缺省值由 default 标签声明，未声明（0）时回填
 	if err := defaults.Set(&cfg); err != nil {
@@ -56,23 +49,6 @@ func ProbeEmbeddingDimensions(ctx context.Context, cfg ModelConfig) (int, error)
 //     是「原生 1536 维，但支持 dimensions 参数返回降维向量」，索引若按 1024 建依然兼容，
 //     故原生维度不等于 columnDim 时须再声明 columnDim 探一次；此步失败（供应商不支持
 //     dimensions 参数）不单独报错，而是落到下一步返回统一的不兼容错误。
-//
-// VerifyEmbeddingCompat probes the actual vector dimension produced by the embedding endpoint
-// described by cfg and verifies its compatibility with columnDim (the dimension of the
-// knowledge_chunks.embedding column on the core database): a compatible endpoint returns the
-// verified dimension (always equal to columnDim), otherwise an *EmbeddingDimensionMismatchError
-// directing the operator to unbind and resize the index is returned. The core invariant is "the
-// verified dimension of the model bound to the embedding slot == the embedding column dimension".
-// The decision performs two probes, and their order matters:
-//  1. Native probe (no dimensions declared): reads the native dimension of the model; errors
-//     such as an unreachable endpoint or an invalid credential are propagated verbatim, because
-//     they mean the model itself is unusable and must not be masked as "incompatible".
-//  2. Targeted probe (dimensions declared = columnDim): models such as
-//     text-embedding-3-small/large are natively 1536-dimensional but accept a dimensions
-//     parameter to return reduced vectors, so an index built at 1024 stays compatible; hence a
-//     second probe declaring columnDim is needed when the native one differs. A failure of this
-//     step (the vendor does not support the dimensions parameter) is not reported on its own but
-//     falls through to the unified incompatible error below.
 func VerifyEmbeddingCompat(ctx context.Context, cfg ModelConfig, columnDim int) (int, error) {
 	cfg.Dimensions = 0
 	native, err := ProbeEmbeddingDimensions(ctx, cfg)
@@ -97,12 +73,6 @@ func VerifyEmbeddingCompat(ctx context.Context, cfg ModelConfig, columnDim int) 
 // 这是一类「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，故以专用错误类型（而非笼统的
 // 请求体错误）暴露给调用方，让接口层能选用语义准确的业务错误码，并据此在文案中补齐修复前置条件。
 // 端点不可达 / 凭据无效等错误不会被包装为该类型，须如实透出（见 VerifyEmbeddingCompat 注释）。
-// EmbeddingDimensionMismatchError reports that the actual output dimension of an embedding model is
-// incompatible with the knowledge index dimension. It is a configuration-level rejection: the
-// request body is valid and the conflict lies in the system's current index dimension, so it is
-// exposed as a dedicated error type (rather than a generic bad-body error) to let the API layer pick
-// an accurate business code and complete the remediation preconditions in the message. Endpoint
-// errors such as an unreachable host or an invalid credential are never wrapped into this type.
 type EmbeddingDimensionMismatchError struct {
 	// Model 模型本地标识
 	Model string

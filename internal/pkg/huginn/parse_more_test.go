@@ -7,6 +7,7 @@ import (
 	"testing"
 )
 
+// TestParseIPVersion 验证 IP 版本令牌的解析与非法值拒绝。
 func TestParseIPVersion(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -31,6 +32,7 @@ func TestParseIPVersion(t *testing.T) {
 	}
 }
 
+// TestParseUintErrors 验证定长无符号整数解析对越界与非数字输入的拒绝。
 func TestParseUintErrors(t *testing.T) {
 	if _, err := parseUint8("256"); err == nil {
 		t.Error("parseUint8(256): want error")
@@ -49,6 +51,7 @@ func TestParseUintErrors(t *testing.T) {
 	}
 }
 
+// TestParseTTLErrors 验证 TTL 令牌解析对非法格式的拒绝。
 func TestParseTTLErrors(t *testing.T) {
 	for _, in := range []string{"", "64+", "64++", "abc", "x-"} {
 		if _, err := parseTTL(in); err == nil {
@@ -57,6 +60,7 @@ func TestParseTTLErrors(t *testing.T) {
 	}
 }
 
+// TestParseWindowSizeErrors 验证窗口大小令牌解析对非法格式的拒绝。
 func TestParseWindowSizeErrors(t *testing.T) {
 	for _, in := range []string{"mss*", "mtu*x", "%", "65536", "abc"} {
 		if _, err := parseWindowSize(in); err == nil {
@@ -65,6 +69,7 @@ func TestParseWindowSizeErrors(t *testing.T) {
 	}
 }
 
+// TestParseTCPOptionAll 验证各 TCP 选项令牌的解析。
 func TestParseTCPOptionAll(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -87,6 +92,7 @@ func TestParseTCPOptionAll(t *testing.T) {
 	}
 }
 
+// TestParseTCPOptionErrors 验证 TCP 选项令牌解析对非法格式的拒绝。
 func TestParseTCPOptionErrors(t *testing.T) {
 	for _, in := range []string{"", "eol+x", "eol+", "?x", "?", "badopt", "mss2"} {
 		if _, err := parseTCPOption(in); err == nil {
@@ -95,6 +101,7 @@ func TestParseTCPOptionErrors(t *testing.T) {
 	}
 }
 
+// TestParseQuirkAll 验证各怪癖标记令牌的解析与未知识别。
 func TestParseQuirkAll(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -129,6 +136,7 @@ func TestParseQuirkAll(t *testing.T) {
 	}
 }
 
+// TestParsePayloadSizeAll 验证载荷分类令牌的解析与非法值拒绝。
 func TestParsePayloadSizeAll(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -149,6 +157,7 @@ func TestParsePayloadSizeAll(t *testing.T) {
 	}
 }
 
+// TestParseTCPSignatureErrors 验证 TCP 签名解析对段数不足与各段非法的拒绝。
 func TestParseTCPSignatureErrors(t *testing.T) {
 	// 段数不对
 	if _, err := parseTCPSignature("1:2:3"); err == nil {
@@ -173,6 +182,7 @@ func TestParseTCPSignatureErrors(t *testing.T) {
 	}
 }
 
+// TestParseHTTPVersionErrors 验证 HTTP 版本令牌对非法值与不支持版本的拒绝。
 func TestParseHTTPVersionErrors(t *testing.T) {
 	if _, err := parseHTTPVersion("x"); err == nil {
 		t.Error("parseHTTPVersion(x): want error")
@@ -182,6 +192,7 @@ func TestParseHTTPVersionErrors(t *testing.T) {
 	}
 }
 
+// TestParseSectionsErrorsExtra 验证分段解析对 sig 先于 label 与非法 HTTP 签名的拒绝。
 func TestParseSectionsErrorsExtra(t *testing.T) {
 	// sig 先于 label / 非法 HTTP 签名
 	for _, in := range []string{

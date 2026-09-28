@@ -702,7 +702,7 @@ const leaveGroupAction = async (
 </script>
 
 <style scoped>
-/* Namespace select keeps a fixed width so the append actions stay aligned in the row. */
+/* 命名空间下拉固定宽度，使行内的追加操作按钮保持对齐。 */
 .join-namespace-select {
   width: 140px;
 }

@@ -5,6 +5,7 @@ package huginn
 
 import "testing"
 
+// TestTcpOlayoutKey 验证 TCP 选项布局键的生成。
 func TestTcpOlayoutKey(t *testing.T) {
 	olayout := []tcpOption{{kind: optMss}, {kind: optSok}, {kind: optEol, num: 1}}
 	if got := tcpOlayoutKey(olayout); got != "mss,sok,eol+1" {
@@ -15,6 +16,7 @@ func TestTcpOlayoutKey(t *testing.T) {
 	}
 }
 
+// TestTCPIndexKeysForSignature 验证 TCP 签名的索引键生成与通配展开。
 func TestTCPIndexKeysForSignature(t *testing.T) {
 	sig := &tcpSignature{version: ipV4, olayout: []tcpOption{{kind: optMss}}, pclass: payloadZero}
 	keys := tcpIndexKeysForSignature(sig)
@@ -38,6 +40,7 @@ func TestTCPIndexKeysForSignature(t *testing.T) {
 	}
 }
 
+// TestHTTPIndexKeysForSignature 验证 HTTP 签名的索引键生成与通配展开。
 func TestHTTPIndexKeysForSignature(t *testing.T) {
 	sig := &httpSignature{version: httpV11}
 	keys := httpIndexKeysForSignature(sig)
@@ -50,6 +53,7 @@ func TestHTTPIndexKeysForSignature(t *testing.T) {
 	}
 }
 
+// TestTCPCollectionFindBestMatch 验证 TCP 集合的最佳匹配查找与各类不命中场景。
 func TestTCPCollectionFindBestMatch(t *testing.T) {
 	// 用 linuxSYNPacket 构造观测，索引与匹配全链路验证
 	pkg, err := analyzeTCPIPv4(linuxSYNPacket())
@@ -96,6 +100,7 @@ func TestTCPCollectionFindBestMatch(t *testing.T) {
 	}
 }
 
+// TestHTTPCollectionFindBestMatch 验证 HTTP 集合的最佳匹配查找与版本不命中场景。
 func TestHTTPCollectionFindBestMatch(t *testing.T) {
 	obs := &httpObservation{
 		version: httpV11,
@@ -142,6 +147,7 @@ func TestHTTPCollectionFindBestMatch(t *testing.T) {
 	}
 }
 
+// TestLoadDatabaseError 验证签名库加载对非法签名段报错、对空内容返回空库。
 func TestLoadDatabaseError(t *testing.T) {
 	// 非法签名段 → 解析失败
 	_, err := loadDatabase("[tcp:request]\nlabel = s:unix:Bad:1.0\nsig = *:64:0\n")

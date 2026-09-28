@@ -1,3 +1,4 @@
+// Package test（本文件）提供 CPU / 内存 / goroutine 等性能剖析数据的采集与解析。
 package test
 
 import (
@@ -15,15 +16,23 @@ import (
 	"github.com/google/pprof/profile"
 )
 
+// ProfilingConfig 定义性能剖析的采集开关与展示条目数。
 type ProfilingConfig struct {
-	CPU       bool
-	Heap      bool
+	// CPU 是否采集 CPU 剖析。
+	CPU bool
+	// Heap 是否采集堆内存剖析。
+	Heap bool
+	// Goroutine 是否采集 goroutine 剖析。
 	Goroutine bool
-	Mutex     bool
-	Block     bool
-	TopN      int
+	// Mutex 是否采集互斥锁剖析。
+	Mutex bool
+	// Block 是否采集阻塞剖析。
+	Block bool
+	// TopN 各类剖析结果展示的条目数。
+	TopN int
 }
 
+// DefaultProfilingConfig 返回默认的性能剖析配置（全部开启，TopN 为 10）。
 func DefaultProfilingConfig() ProfilingConfig {
 	return ProfilingConfig{
 		CPU:       true,
@@ -35,28 +44,46 @@ func DefaultProfilingConfig() ProfilingConfig {
 	}
 }
 
+// ProfileEntry 表示一条剖析统计条目。
 type ProfileEntry struct {
+	// Function 函数名。
 	Function string
+	// FileLine 源码位置（文件:行）。
 	FileLine string
-	Value    int64
-	Percent  float64
+	// Value 统计值（如耗时或分配量）。
+	Value int64
+	// Percent 占比（百分比）。
+	Percent float64
 }
 
+// ProfileResult 汇总一次性能剖析的产物路径与统计结果。
 type ProfileResult struct {
-	CPUProfilePath  string
+	// CPUProfilePath CPU 剖析文件路径。
+	CPUProfilePath string
+	// HeapProfilePath 堆内存剖析文件路径。
 	HeapProfilePath string
-	GoroutinePath   string
-	MutexPath       string
-	BlockPath       string
+	// GoroutinePath goroutine 剖析文件路径。
+	GoroutinePath string
+	// MutexPath 互斥锁剖析文件路径。
+	MutexPath string
+	// BlockPath 阻塞剖析文件路径。
+	BlockPath string
 
-	TopCPU          []ProfileEntry
-	TopAllocBytes   []ProfileEntry
+	// TopCPU CPU 占用最高的函数列表。
+	TopCPU []ProfileEntry
+	// TopAllocBytes 按分配字节数排序的分配点列表。
+	TopAllocBytes []ProfileEntry
+	// TopAllocObjects 按分配对象数排序的分配点列表。
 	TopAllocObjects []ProfileEntry
 
-	GoroutineCount   int
-	MemStats         runtime.MemStats
+	// GoroutineCount goroutine 数量。
+	GoroutineCount int
+	// MemStats 运行时内存统计。
+	MemStats runtime.MemStats
+	// MutexContentions 互斥锁竞争次数。
 	MutexContentions int64
-	MutexDelayTotal  time.Duration
+	// MutexDelayTotal 互斥锁等待总时长。
+	MutexDelayTotal time.Duration
 }
 
 func newProfileOutputDir(baseDir string) string {

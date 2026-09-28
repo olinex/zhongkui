@@ -155,21 +155,6 @@ field = "status"
 set = "memoryStatus"
 
 [[enums]]
-typeName = "AgentMemoryCreateIn"
-[[enums.fields]]
-field = "agentKind"
-set = "agentKind"
-[[enums.fields]]
-field = "kind"
-set = "memoryKind"
-
-[[enums]]
-typeName = "AgentMemoryUpdateIn"
-[[enums.fields]]
-field = "kind"
-set = "memoryKind"
-
-[[enums]]
 typeName = "AgentMemoryStatusIn"
 [[enums.fields]]
 field = "status"

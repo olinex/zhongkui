@@ -1,3 +1,6 @@
+// Package base 提供应用的基础定义：环境配置（Env）、全局常量（RBAC 策略、
+// 数据库/日志/Redis 名称、HTTP 头）、语言类型及其解析与序列化、主机名工具，
+// 以及语言与策略动作的枚举注册。
 package base
 
 import (
@@ -25,8 +28,7 @@ var (
 	// 若在此处直接引用 Env.Lang，会取到默认值尚未填充的空字符串。
 	DefaultLanguage *Language
 	// LanguageWildcard 通配所有语言的标记（String() 返回 "*"），用于模板等以
-	// "*" 表示"对所有语言生效"的场景。LanguageWildcard the wildcard-all marker
-	// whose String() returns "*", used where "*" means "applies to all languages".
+	// "*" 表示"对所有语言生效"的场景。
 	LanguageWildcard = Language{wildcard: true}
 )
 

@@ -136,7 +136,7 @@ const appendItem = (item: Record<string, any>) => {
 
 const props = defineProps({
   modelValue: {
-    // Row payload is dynamic.
+    // 行载荷为动态结构。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Object as PropType<Array<Record<string, any>>>,
     required: true,
@@ -180,7 +180,7 @@ const props = defineProps({
 const emits = defineEmits(["update:modelValue"]);
 
 // 候选条目是否已被选（按 itemKeyField 比对），供默认「添加」按钮与 item-append 插槽使用
-// Row payload is dynamic.
+// 行载荷为动态结构。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const isBound = (item: Record<string, any>): boolean => {
   return props.modelValue.some((x) => x[props.itemKeyField] === item[props.itemKeyField]);

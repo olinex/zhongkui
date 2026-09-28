@@ -59,7 +59,6 @@ export interface CapturerCreateIn {
 }
 
 // CapturerStatusItemOut 单个采集器资源运行状态项。
-// CapturerStatusItemOut is a running state item for a single capturer resource.
 export interface CapturerStatusItemOut {
   namespace: string;
   name: string;
@@ -73,12 +72,11 @@ export interface CapturerStatusItemOut {
 }
 
 // CapturerStatusListOut 采集器运行状态列表出参。
-// CapturerStatusListOut is the capturer running state list output.
 export interface CapturerStatusListOut {
   items: CapturerStatusItemOut[];
 }
 
-// tag rule
+// 标签规则
 export interface TagRuleCreateIn {
   name: string;
   description: string;
@@ -110,7 +108,7 @@ export interface TagRuleDryRunIn {
   input: Record<string, unknown>;
 }
 
-// tag rule sample
+// 标签规则样本
 export interface TagRuleSampleCreateIn {
   model: string;
   name: string;
@@ -123,13 +121,13 @@ export interface TagRuleSampleUpdateIn {
   description: string;
 }
 
-// tag event rule
+// 标签事件规则
 export interface TagEventRuleConditionIn {
   model: string;
   dimension: string;
   item: string;
   name: string;
-  /** window as duration string (e.g. "5m") */
+  /** 窗口，形如时长字符串（如 "5m"） */
   window: string;
   threshold: number;
   expression: string;
@@ -141,7 +139,7 @@ export interface TagEventRuleCreateIn {
   name: string;
   description: string;
   matchAll: boolean;
-  /** suppressWindow in nanoseconds (frontend converts from minutes) */
+  /** suppressWindow 以纳秒为单位（前端按分钟换算） */
   suppressWindow: number;
   enabled: boolean;
   /** notificationGroupId 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
@@ -154,7 +152,7 @@ export interface TagEventRuleCreateIn {
 export interface TagEventRuleUpdateIn {
   description: string;
   matchAll: boolean;
-  /** suppressWindow in nanoseconds (frontend converts from minutes) */
+  /** suppressWindow 以纳秒为单位（前端按分钟换算） */
   suppressWindow: number;
   enabled: boolean;
   /** notificationGroupId 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
@@ -175,7 +173,7 @@ export interface TagEventRuleDryRunIn {
   conditions: TagEventRuleConditionIn[];
 }
 
-// batch action
+// 批量操作
 export type FlexIDs = number | number[];
 export type FlexUnionIds = string | string[];
 export type FlexNames = string | string[];

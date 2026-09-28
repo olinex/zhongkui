@@ -1,16 +1,13 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"strings"
 	"testing"
 )
 
 // TestSpecs_Consistency 校验注册表自身一致性：键非空且唯一、分组非空、类型合法，
 // 且注册表不携带任何出厂值（出厂值只由 migrate fixture 注入 agent_params）。
-// TestSpecs_Consistency verifies the registry consistency: keys are non-empty and unique,
-// groups are non-empty, kinds are known, and the registry carries no factory value at all
-// (factory values are injected only by the migrate fixtures into agent_params).
 func TestSpecs_Consistency(t *testing.T) {
 	if len(Specs) == 0 {
 		t.Fatal("Specs is empty")
@@ -37,9 +34,6 @@ func TestSpecs_Consistency(t *testing.T) {
 
 // TestSpecs_Order 校验注册表声明顺序稳定：首个键为 agent.systemPrompt，且分组首次出现
 // 的顺序与约定一致（该顺序即前端展示顺序）。
-// TestSpecs_Order verifies the declaration order is stable: the first key is
-// agent.systemPrompt and the groups first appear in the agreed order (that order is the
-// frontend display order).
 func TestSpecs_Order(t *testing.T) {
 	if Specs[0].Key != "agent.systemPrompt" {
 		t.Errorf("Specs[0].Key = %q, want agent.systemPrompt", Specs[0].Key)
@@ -57,8 +51,6 @@ func TestSpecs_Order(t *testing.T) {
 }
 
 // TestLookup 校验按键查询参数元信息：命中时返回完整元信息，未声明时返回 ok=false。
-// TestLookup verifies the metadata lookup: a hit returns the full metadata and an
-// undeclared key returns ok=false.
 func TestLookup(t *testing.T) {
 	spec, ok := Lookup("retrieval.topK")
 	if !ok {
@@ -74,9 +66,6 @@ func TestLookup(t *testing.T) {
 
 // TestValidateValue 校验按类型校验字面量：可解析返回 nil，不可解析返回含键与字面量的
 // 英文错误；string / text 类接受任意字面量。
-// TestValidateValue verifies the per-kind literal validation: a parsable literal yields nil,
-// an unparsable one yields an English error carrying the key and the literal; the string and
-// text kinds accept any literal.
 func TestValidateValue(t *testing.T) {
 	if err := ValidateValue(ParamSpec{Key: "agent.systemPrompt", Kind: ParamKindText}, "anything"); err != nil {
 		t.Errorf("ValidateValue(text) error = %v, want nil", err)
@@ -120,8 +109,6 @@ func TestValidateValue(t *testing.T) {
 
 // TestParams_Values 校验生效值按类型读取（string/text/int/float/bool），值全部来自
 // 构造时传入的映射（即数据库 agent_params.value）。
-// TestParams_Values verifies the typed reads of the effective values (string/text/int/float/
-// bool): every value comes from the map given at construction (agent_params.value).
 func TestParams_Values(t *testing.T) {
 	p := NewParams(map[string]string{
 		"retrieval.fusion":            "weighted",
@@ -149,9 +136,6 @@ func TestParams_Values(t *testing.T) {
 
 // TestParams_EmptyValueIsMissing 校验空串值在构造时被丢弃，读取时按「库内无值」panic
 // （本包已无出厂值可回落，缺值即数据未按迁移种子化）。
-// TestParams_EmptyValueIsMissing verifies an empty value is dropped at construction and
-// panics as "no value in the database" when read (the package holds no factory value to fall
-// back on, so a missing value means the data was not seeded by the migration).
 func TestParams_EmptyValueIsMissing(t *testing.T) {
 	p := NewParams(map[string]string{"retrieval.fusion": "", "retrieval.topK": ""})
 	assertPanicContains(t, "empty string value", func() { p.String("retrieval.fusion") },
@@ -164,8 +148,6 @@ func TestParams_EmptyValueIsMissing(t *testing.T) {
 
 // TestParams_InvalidValuePanics 校验不可解析的生效值 panic（英文消息，含键与字面量），
 // 不再回落任何默认值。
-// TestParams_InvalidValuePanics verifies an unparsable effective value panics (an English
-// message carrying the key and the literal) instead of falling back to a default.
 func TestParams_InvalidValuePanics(t *testing.T) {
 	p := NewParams(map[string]string{
 		"retrieval.topK":         "not-a-number",
@@ -178,8 +160,6 @@ func TestParams_InvalidValuePanics(t *testing.T) {
 }
 
 // TestParams_Panics 校验编程缺陷快速失败：读取未声明键或类型不符时 panic（英文消息）。
-// TestParams_Panics verifies the fail-fast of programming defects: reading an undeclared
-// key or a kind mismatch panics (with an English message).
 func TestParams_Panics(t *testing.T) {
 	p := NewParams(map[string]string{"retrieval.topK": "5"})
 	cases := []struct {
@@ -199,7 +179,6 @@ func TestParams_Panics(t *testing.T) {
 }
 
 // assertPanicContains 断言 call 触发 panic 且 panic 值（字符串）包含 want。
-// assertPanicContains asserts call panics with a string value containing want.
 func assertPanicContains(t *testing.T, name string, call func(), want string) {
 	t.Helper()
 	defer func() {

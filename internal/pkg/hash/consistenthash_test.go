@@ -1,3 +1,7 @@
+// Package hash 提供一致性哈希环与流式哈希能力。
+// 一致性哈希环（ConsistentHash）基于虚拟节点实现成员到 key 的均匀映射，
+// 用于数据分片与负载均衡；流式哈希（StreamHasher）基于 maphash 池化实现，
+// 用于对字节流快速计算 64 位哈希。
 package hash
 
 import (
@@ -237,15 +241,15 @@ func TestConsistentHash_VNodeIndicesOf(t *testing.T) {
 			// 有序成员列表
 			ch.Update([]string{"a", "b", "c"})
 
-			// position 0: indices = {0, 3, 6, 9}
+			// 位置 0：indices = {0, 3, 6, 9}
 			indicesA := ch.VNodeIndicesOf("a")
 			So(indicesA, ShouldResemble, []int{0, 3, 6, 9})
 
-			// position 1: indices = {1, 4, 7, 10}
+			// 位置 1：indices = {1, 4, 7, 10}
 			indicesB := ch.VNodeIndicesOf("b")
 			So(indicesB, ShouldResemble, []int{1, 4, 7, 10})
 
-			// position 2: indices = {2, 5, 8, 11}
+			// 位置 2：indices = {2, 5, 8, 11}
 			indicesC := ch.VNodeIndicesOf("c")
 			So(indicesC, ShouldResemble, []int{2, 5, 8, 11})
 		})

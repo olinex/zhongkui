@@ -78,6 +78,7 @@ func NewClient(cfg *Config) *Client {
 	}
 }
 
+// Shutdown 关闭底层 Redis 客户端连接，重复调用安全（已关闭时直接返回 nil）。
 func (c *Client) Shutdown() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()

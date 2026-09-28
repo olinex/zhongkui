@@ -1,15 +1,15 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/embedding"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai/tools"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -18,8 +18,6 @@ import (
 
 // TestNewMemoryStore_NilArgs 测试构造 MemoryStore 时的空值校验：db/embed/params 为空返回
 // 英文错误，logger 为空允许通过。
-// TestNewMemoryStore_NilArgs verifies the nil checks of constructing a MemoryStore: a nil
-// db/embedder/params returns an English error, while a nil logger is allowed.
 func TestNewMemoryStore_NilArgs(t *testing.T) {
 	if _, err := NewMemoryStore(nil, nil, nil, nil); err == nil {
 		t.Error("NewMemoryStore(nil, nil, nil, nil) = nil error, want an error")
@@ -40,19 +38,15 @@ func TestNewMemoryStore_NilArgs(t *testing.T) {
 }
 
 // stubEmbedder 是满足 embedder 接口的最小桩实现。
-// stubEmbedder is the minimal stub satisfying the embedder interface.
 type stubEmbedder struct{}
 
 // EmbedStrings 返回与入参等长的空向量表。
-// EmbedStrings returns an empty-vector list as long as the input.
 func (stubEmbedder) EmbedStrings(_ context.Context, texts []string, _ ...embedding.Option) ([][]float64, error) {
 	out := make([][]float64, len(texts))
 	return out, nil
 }
 
 // TestParseMemoryKind 测试记忆类别解析：空串取缺省 fact，合法取值原样返回，非法取值报英文错误。
-// TestParseMemoryKind verifies the memory kind parsing: an empty string yields the default fact, a
-// valid value is returned unchanged, and an invalid value yields an English error.
 func TestParseMemoryKind(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -87,7 +81,6 @@ func TestParseMemoryKind(t *testing.T) {
 }
 
 // TestValidMemoryStatus 测试记忆状态取值空间校验。
-// TestValidMemoryStatus verifies the memory status value-space check.
 func TestValidMemoryStatus(t *testing.T) {
 	if _, err := llm.ParseMemoryStatus(llm.MemoryStatusActive); err != nil {
 		t.Errorf("llm.ParseMemoryStatus(active) error = %v, want nil", err)
@@ -101,8 +94,6 @@ func TestValidMemoryStatus(t *testing.T) {
 }
 
 // TestNormalizeMemoryContent 测试正文规范化：折叠全部空白并去首尾，且哈希基于规范化正文保持稳定。
-// TestNormalizeMemoryContent verifies body normalization: every whitespace run is collapsed and the
-// ends trimmed, and the hash based on the normalized body stays stable.
 func TestNormalizeMemoryContent(t *testing.T) {
 	cases := []struct {
 		name string
@@ -129,20 +120,18 @@ func TestNormalizeMemoryContent(t *testing.T) {
 }
 
 // TestMemoryWrite_ValidationErrors 测试写入的入参校验（db/embed 未就绪即应被拦下，说明校验先于
-// 落库与向量化）：空命名空间、空正文、非法 Agent 类型、非法记忆类别均返回英文错误。
-// TestMemoryWrite_ValidationErrors verifies the write input validation (db/embed being unusable is
-// never reached, proving validation precedes persistence and embedding): an empty namespace, an
-// empty body, an invalid agent kind and an invalid memory kind all return an English error.
+// 落库与向量化）：空命名空间、空会话、空正文、非法 Agent 类型、非法记忆类别均返回英文错误。
 func TestMemoryWrite_ValidationErrors(t *testing.T) {
 	store := &MemoryStore{}
 	cases := []struct {
 		name string
 		in   tools.MemoryWriteInput
 	}{
-		{name: "空命名空间", in: tools.MemoryWriteInput{NamespaceName: "  ", Content: "内容"}},
-		{name: "空正文", in: tools.MemoryWriteInput{NamespaceName: "default", Content: "   \n"}},
-		{name: "非法 Agent 类型", in: tools.MemoryWriteInput{NamespaceName: "default", AgentKind: llm.AgentKind("unknown"), Content: "内容"}},
-		{name: "非法记忆类别", in: tools.MemoryWriteInput{NamespaceName: "default", Kind: llm.MemoryKind("bogus"), Content: "内容"}},
+		{name: "空命名空间", in: tools.MemoryWriteInput{NamespaceName: "  ", SessionID: 1, Content: "内容"}},
+		{name: "空会话", in: tools.MemoryWriteInput{NamespaceName: "default", Content: "内容"}},
+		{name: "空正文", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, Content: "   \n"}},
+		{name: "非法 Agent 类型", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, AgentKind: llm.AgentKind("unknown"), Content: "内容"}},
+		{name: "非法记忆类别", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, Kind: llm.MemoryKind("bogus"), Content: "内容"}},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -159,10 +148,6 @@ func TestMemoryWrite_ValidationErrors(t *testing.T) {
 
 // TestTruncateBytes_Multibyte 测试按字节截断的 UTF-8 边界安全：不切断中文/emoji，maxBytes<=0
 // 或未超限时原样返回。本用例复用包内既有 truncateBytes（同时被知识库工具结果与记忆注入使用）。
-// TestTruncateBytes_Multibyte verifies the UTF-8-boundary safety of the byte truncation: no Chinese
-// character or emoji is split, and a non-positive maxBytes or an in-range text returns the input
-// unchanged. This case reuses the in-package truncateBytes (shared by the knowledge tool results
-// and the memory injection).
 func TestTruncateBytes_Multibyte(t *testing.T) {
 	if got := truncateBytes("short", 100); got != "short" {
 		t.Errorf("truncateBytes(\"short\", 100) = %q, want %q", got, "short")
@@ -189,9 +174,6 @@ func TestTruncateBytes_Multibyte(t *testing.T) {
 
 // TestJaccardSimilarityWithCutoff 测试带阈值的 Jaccard 相似度：阈值之上返回真实相似度，阈值
 // 之下被上限剪枝归零，阈值为 0 时不做剪枝。
-// TestJaccardSimilarityWithCutoff verifies the threshold-parameterized Jaccard similarity: above the
-// cutoff it returns the true similarity, below it the upper-bound prune yields 0, and a cutoff of 0
-// disables the prune.
 func TestJaccardSimilarityWithCutoff(t *testing.T) {
 	a := contentShingles("一二三四五六七八九十")     // 7 个 4-gram
 	b := contentShingles("一二三四五六七八九十甲乙丙丁") // 11 个 4-gram，含 a 的全部指纹
@@ -214,9 +196,6 @@ func TestJaccardSimilarityWithCutoff(t *testing.T) {
 
 // TestDedupeSimilarResultsWithCutoff 测试带阈值的内容去重：阈值低于相似度时判重、高于相似度
 // 时保留；且以 dedupeSimilarityCutoff 调用时与既有 dedupeSimilarResults 行为完全一致。
-// TestDedupeSimilarResultsWithCutoff verifies the threshold-parameterized content dedupe: a cutoff
-// below the similarity dedupes while one above keeps both; called with dedupeSimilarityCutoff it
-// matches the existing dedupeSimilarResults exactly.
 func TestDedupeSimilarResultsWithCutoff(t *testing.T) {
 	hits := func() []*RetrievalResult {
 		return []*RetrievalResult{
@@ -241,7 +220,6 @@ func TestDedupeSimilarResultsWithCutoff(t *testing.T) {
 }
 
 // docIDs 提取检索结果的文档 ID 序列。
-// docIDs extracts the document IDs of the retrieval results.
 func docIDs(hits []*RetrievalResult) []string {
 	out := make([]string, 0, len(hits))
 	for _, hit := range hits {

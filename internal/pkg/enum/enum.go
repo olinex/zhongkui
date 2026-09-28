@@ -15,7 +15,7 @@
 package enum
 
 import (
-	// stdlib
+	// 标准库
 	"fmt"
 	"sort"
 )
@@ -27,21 +27,22 @@ var registry = map[string]*Type{}
 // key 与 value 可以相同（多数枚举），也可以在"富枚举"场景下分离
 // （如目标模型类：key=httpTransport、value=完整类型键）。
 type Entry struct {
-	Key   string `json:"key"`
+	// Key 类内唯一标识，作为 i18n label 的定位依据
+	Key string `json:"key"`
+	// Value 数据库存储值
 	Value string `json:"value"`
 }
 
 // Type 枚举类：name 全局唯一，Entries 内 key/value 各自唯一。
 type Type struct {
-	Name    string
+	// Name 枚举类名，全局唯一
+	Name string
+	// Entries 类内枚举条目列表，key/value 各自唯一
 	Entries []Entry
 }
 
 // EntriesOf 把「key 与 value 相同」的取值序列转为枚举条目列表（多数枚举类即此形态），
 // 使按类声明取值空间的枚举类在注册时直接复用同一份取值序列，无需在注册处重抄一遍字面量。
-// EntriesOf converts a value sequence whose key equals its value (the shape of most enum classes)
-// into enum entries, so an enum class declaring its value space in code reuses that very sequence
-// at registration time instead of repeating the literals.
 func EntriesOf[T ~string](values []T) []Entry {
 	entries := make([]Entry, 0, len(values))
 	for _, value := range values {
@@ -112,12 +113,6 @@ func Register(t Type) {
 // 填充的场景（如渠道工厂、数据源插件），使条目完整性不取决于包内 init 的文件顺序；取值空间在
 // 运行生命周期内仍固定（无动态枚举）。类名唯一性、非空与 entries 非 nil 的约束同 Register，
 // 违规直接 panic。
-// RegisterSource registers an enum class whose value space is derived from a business registry:
-// the entries are not snapshotted at registration time but derived on every read (Get / List) via
-// entries. It fits registries filled by several init() functions of one package (channel
-// factories, datasource plugins), so entry completeness never depends on the in-package init file
-// order; the value space stays fixed for the process lifetime (no dynamic enums). Name
-// uniqueness/non-emptiness and a non-nil entries are enforced like Register, panicking on violation.
 func RegisterSource(name string, entries func() []Entry) {
 	if name == "" {
 		panic("enum: register source with empty type name")
@@ -133,8 +128,6 @@ func RegisterSource(name string, entries func() []Entry) {
 }
 
 // validateEntries 校验类内条目 key/value 非空且各自唯一，违规直接 panic。
-// validateEntries validates that the keys and values of a class are non-empty and mutually
-// unique, panicking on violation.
 func validateEntries(name string, entries []Entry) {
 	keys := make(map[string]struct{}, len(entries))
 	values := make(map[string]struct{}, len(entries))
@@ -157,8 +150,6 @@ func validateEntries(name string, entries []Entry) {
 }
 
 // resolve 返回类的有效条目：注册了条目来源的类经来源实时派生并校验，其余用注册时快照。
-// resolve returns the effective entries of a class: classes with an entries source derive and
-// validate them on the fly, the others use the registration-time snapshot.
 func resolve(t *Type) *Type {
 	src, ok := sources[t.Name]
 	if !ok {

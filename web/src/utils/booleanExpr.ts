@@ -1,39 +1,35 @@
 /**
- * Boolean expression parser for tag event rule conditions.
+ * 标签事件规则条件的布尔表达式解析器。
  *
- * Mirrors the backend grammar in `internal/models/tag/tag_event_rule.go`
- * (built with `github.com/alecthomas/participle/v2`):
+ * 镜像后端 `internal/models/tag/tag_event_rule.go` 的语法
+ * （基于 `github.com/alecthomas/participle/v2` 构建）：
  *
  *   BoolExpr  := AndTerm ( 'OR'  AndTerm )*
  *   AndTerm   := NotFactor ( 'AND' NotFactor )*
  *   NotFactor := 'NOT'? Atom
  *   Atom      := Ident | '(' BoolExpr ')'
  *
- * Ident is `[\p{L}]([\p{L}\p{N}_-]*[\p{L}\p{N}])?` (Unicode letters, so Chinese
- * tag names like "登录失败" are accepted), whitespace is elided, and the tokens
- * AND / OR / NOT are reserved as operators (matched by value).
+ * Ident 为 `[\p{L}]([\p{L}\p{N}_-]*[\p{L}\p{N}])?`（Unicode 字母，故「登录失败」这类
+ * 中文标签名可被接受），空白被忽略，AND / OR / NOT 作为运算符保留（按值匹配）。
  *
- * `parseBooleanExpr` performs a full grammar parse and returns the same
- * "refined" normalization as the backend `BoolExpr.String()` so the frontend
- * can provide instant validation feedback without a server round-trip.
+ * `parseBooleanExpr` 执行完整语法解析，返回与后端 `BoolExpr.String()` 相同的
+ * 「规范化」结果，使前端无需服务端往返即可即时校验。
  */
 
 import i18n from "@/utils/i18n";
 
 export interface BooleanExprParseResult {
   ok: boolean;
-  /** normalized expression, present when ok */
+  /** 规范化后的表达式，ok 为 true 时存在 */
   refined?: string;
-  /** human-readable error message (已本地化), present when not ok */
+  /** 可读的错误信息（已本地化），ok 为 false 时存在 */
   error?: string;
-  /** character offset where parsing failed, when locatable */
+  /** 解析失败处的字符偏移量，可定位时存在 */
   offset?: number;
 }
 
 // exprMessage 将解析错误文案本地化：以 notice.tagExpr.<key> 命名的翻译键渲染，
 // 避免把英文原文（如 "expression is empty"）直接暴露给用户。
-// exprMessage localizes parse-error messages via the notice.tagExpr.<key> keys,
-// so raw English strings (e.g. "expression is empty") are not shown to users.
 const exprMessage = (key: string, params?: Record<string, unknown>): string =>
   i18n.global.t(`notice.tagExpr.${key}`, params ?? {});
 
@@ -106,7 +102,7 @@ class BoolExprParser {
 
   constructor(private tokens: BoolExprToken[]) {}
 
-  /** Parses the whole token stream; returns the refined expression. */
+  /** 解析整个 token 流；返回规范化后的表达式。 */
   parse(): string {
     const refined = this.parseOr();
     if (this.pos < this.tokens.length) {
@@ -178,8 +174,8 @@ class BoolExprParser {
 }
 
 /**
- * Parses a tag event condition expression and normalizes it.
- * Mirrors the backend `ParseBoolExpr` + `BoolExpr.String()` behavior.
+ * 解析标签事件条件表达式并规范化。
+ * 与后端 `ParseBoolExpr` + `BoolExpr.String()` 行为一致。
  */
 export function parseBooleanExpr(src: string): BooleanExprParseResult {
   if (!src.trim()) {
@@ -201,8 +197,7 @@ export function parseBooleanExpr(src: string): BooleanExprParseResult {
 }
 
 /**
- * Returns the normalized form of a valid expression, or an empty string
- * when the expression is invalid.
+ * 返回合法表达式的规范化形式，表达式非法时返回空字符串。
  */
 export function refineBooleanExpr(src: string): string {
   return parseBooleanExpr(src).refined ?? "";

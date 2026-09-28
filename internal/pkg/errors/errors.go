@@ -1,7 +1,6 @@
+// Package errors 提供带堆栈跟踪的增强错误处理；是否记录堆栈由环境配置决定。
 package errors
 
-// Package errors 提供了增强的错误处理功能，支持堆栈跟踪。
-// 该包根据环境变量配置来决定是否启用堆栈跟踪功能。
 import (
 	e "errors"
 	"fmt"
@@ -89,6 +88,7 @@ func As(err error, target any) bool {
 	return e.As(err, target)
 }
 
+// Join 把多个错误合并为一个错误，nil 错误会被忽略（全部为 nil 时返回 nil）。
 func Join(errs ...error) error {
 	return e.Join(errs...)
 }

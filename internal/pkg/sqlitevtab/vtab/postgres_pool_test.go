@@ -10,10 +10,6 @@ import (
 // TestPostgresPool PostgresPool（基于 resourcepool.Manager[*sql.DB]）的借/还/清理语义：
 // 借出复用闲置 *sql.DB、关闭（Clear）后新借会重建不同句柄；sql.OpenDB 懒建连，故无需
 // 真实 PostgreSQL 即可验证池语义。
-// TestPostgresPool covers the resourcepool-backed PostgresPool borrow/recycle/clear
-// semantics: a newly borrowed *sql.DB reuses the idle one, and a borrow after Close
-// (Clear) rebuilds a different handle. As sql.OpenDB connects lazily, no real PostgreSQL
-// is needed to verify the pool semantics.
 func TestPostgresPool(t *testing.T) {
 	ctx := context.Background()
 

@@ -1,12 +1,9 @@
 // Package views（本文件）提供 ReadMultipartFile 的单测：验证 file 部分以未缓冲的读取流返回、
 // 普通表单字段经回调填充且有大小上限、超限字段直接报错。
-// Package views (this file) unit-tests ReadMultipartFile: the file part is returned as an
-// unbuffered stream, ordinary fields are delivered via the callback under a size bound, and an
-// over-limit field is an error.
 package views
 
 import (
-	// stdlib
+	// 标准库
 	"bytes"
 	"io"
 	"mime/multipart"
@@ -15,14 +12,12 @@ import (
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 // newMultipartContext 构造携带 multipart/form-data 请求体的 gin 测试上下文，body 由 build 写入。
-// newMultipartContext builds a gin test context carrying a multipart/form-data body written by
-// build.
 func newMultipartContext(t *testing.T, build func(w *multipart.Writer)) *gin.Context {
 	t.Helper()
 	var buf bytes.Buffer

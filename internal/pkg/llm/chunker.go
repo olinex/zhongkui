@@ -1,13 +1,13 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/document"
 	"github.com/cloudwego/eino/schema"
 )
@@ -20,32 +20,24 @@ const (
 )
 
 // mdUnitKind 标识 markdown 解析出的原子单元类型。
-// mdUnitKind identifies the kind of an atomic unit parsed from markdown.
 type mdUnitKind int
 
 const (
 	// unitHeading 标题行（硬边界标记，自身不产出块正文）
-	// unitHeading a heading line (a hard-boundary marker, never part of a chunk body)
 	unitHeading mdUnitKind = iota
 	// unitParagraph 普通段落
-	// unitParagraph a plain paragraph
 	unitParagraph
 	// unitCodeBlock 围栏代码块
-	// unitCodeBlock a fenced code block
 	unitCodeBlock
 	// unitTable 表格块
-	// unitTable a table block
 	unitTable
 	// unitList 列表块
-	// unitList a list block
 	unitList
 	// unitQuote 引用块
-	// unitQuote a quote block
 	unitQuote
 )
 
 // mdUnit 是行级解析 markdown 得到的不可拆散原子单元。
-// mdUnit is an unsplittable atomic unit produced by line-level markdown parsing.
 type mdUnit struct {
 	kind mdUnitKind // 单元类型
 	text string     // 单元正文（不含标题行）
@@ -65,32 +57,12 @@ type mdUnit struct {
 //   - 仅当一块因达到 chunking.size 在段落中途被截断时，其下一块才按 chunking.overlap
 //     字符复用该块尾部文本衔接（重叠至多取该块长度的一半）；命中标题、原子单元成块等
 //     自然边界处不存在被切开的接缝，下一块不复用上一块文本。
-//
-// MarkdownChunker is a Markdown structure-aware chunker implementing the eino
-// document.Transformer interface: it consumes Document.Content as raw markdown and
-// emits chunk documents whose MetaData carries chunkIndex and headingPath while
-// preserving the input MetaData. Chunking rules:
-//   - line-level parsing of ATX headings (#..###### with level and heading path),
-//     fenced code blocks (paired ```/~~~, an unclosed fence extends to the end of the
-//     document and is never split), table blocks (consecutive | lines), list blocks,
-//     quote blocks and plain paragraphs;
-//   - a heading is a hard boundary: hitting one settles the current chunk and updates
-//     the heading path; the chunk body never repeats heading lines (heading text only
-//     lives in headingPath);
-//   - plain paragraphs/lists/quotes merge toward the chunking.size affinity target;
-//     code blocks and tables are atomic units that stay whole even when oversized;
-//   - a chunk reuses the previous chunk tail text (chunking.overlap characters) only
-//     when that previous chunk was cut mid-paragraph by chunking.size (the overlap is
-//     capped at half of that chunk's length); at natural boundaries such as headings
-//     and atomic units there is no severed seam, so the next chunk reuses nothing.
 type MarkdownChunker struct {
 	size    int // 亲和目标长度（字符）
 	overlap int // 相邻块重叠长度（字符）
 }
 
 // NewMarkdownChunker 构造 MarkdownChunker。size <= 0 时回退默认 800，overlap < 0 时按 0 处理。
-// NewMarkdownChunker constructs a MarkdownChunker. A non-positive size falls back to the
-// default 800; a negative overlap is treated as 0.
 func NewMarkdownChunker(size, overlap int) *MarkdownChunker {
 	if size <= 0 {
 		size = defaultChunkSize
@@ -102,8 +74,6 @@ func NewMarkdownChunker(size, overlap int) *MarkdownChunker {
 }
 
 // Transform 对每个输入文档执行 markdown 结构感知切片，返回切片后的 chunk 文档列表。
-// Transform applies Markdown structure-aware chunking to every input document and returns
-// the resulting chunk documents.
 func (c *MarkdownChunker) Transform(_ context.Context, src []*schema.Document, _ ...document.TransformerOption) ([]*schema.Document, error) {
 	var out []*schema.Document
 	for _, doc := range src {
@@ -113,8 +83,6 @@ func (c *MarkdownChunker) Transform(_ context.Context, src []*schema.Document, _
 }
 
 // chunk 将单个文档切为多个 chunk；空文档/纯空白返回空切片。
-// chunk splits a single document into chunks; an empty or whitespace-only document
-// yields an empty slice.
 func (c *MarkdownChunker) chunk(doc *schema.Document) []*schema.Document {
 	units := parseMarkdownUnits(strings.Split(doc.Content, "\n"))
 	if len(units) == 0 {
@@ -180,8 +148,6 @@ func (c *MarkdownChunker) chunk(doc *schema.Document) []*schema.Document {
 }
 
 // newChunkDoc 组装一个 chunk 文档：保留输入 MetaData，补充 chunkIndex/headingPath。
-// newChunkDoc assembles a chunk document: it keeps the input MetaData and adds
-// chunkIndex/headingPath.
 func newChunkDoc(src *schema.Document, index int, headingPath, content string) *schema.Document {
 	meta := make(map[string]any, len(src.MetaData)+2)
 	for k, v := range src.MetaData {
@@ -197,7 +163,6 @@ func newChunkDoc(src *schema.Document, index int, headingPath, content string) *
 }
 
 // joinUnits 将多个可合并单元以空行分隔拼接为块正文。
-// joinUnits joins mergeable units into chunk text separated by blank lines.
 func joinUnits(units []mdUnit) string {
 	parts := make([]string, 0, len(units))
 	for _, u := range units {
@@ -207,8 +172,6 @@ func joinUnits(units []mdUnit) string {
 }
 
 // lastRunes 返回字符串末尾的 n 个字符；n 非正数或字符串为空时返回空串。
-// lastRunes returns the last n characters of s; an empty string is returned when n is
-// non-positive or s is empty.
 func lastRunes(s string, n int) string {
 	if n <= 0 || s == "" {
 		return ""
@@ -221,8 +184,6 @@ func lastRunes(s string, n int) string {
 }
 
 // parseMarkdownUnits 行级解析 markdown 为原子单元序列，标题行只更新标题路径不产出单元。
-// parseMarkdownUnits parses markdown line by line into atomic units; heading lines only
-// update the heading path and never produce a unit.
 func parseMarkdownUnits(lines []string) []mdUnit {
 	var (
 		units []mdUnit
@@ -277,8 +238,6 @@ func parseMarkdownUnits(lines []string) []mdUnit {
 }
 
 // parseATXHeading 解析 ATX 标题行（#..###### 后跟空格）；不满足时返回 ok=false。
-// parseATXHeading parses an ATX heading line (#..###### followed by a space); ok=false
-// when the line is not a heading.
 func parseATXHeading(line string) (level int, text string, ok bool) {
 	t := strings.TrimLeft(line, " \t")
 	if t == "" || t[0] != '#' {
@@ -296,8 +255,6 @@ func parseATXHeading(line string) (level int, text string, ok bool) {
 }
 
 // fenceOpener 判断行是否为围栏代码块开启行，返回围栏字符（` 或 ~）。
-// fenceOpener reports whether the line opens a fenced code block, returning the fence
-// character (` or ~).
 func fenceOpener(line string) (byte, bool) {
 	t := strings.TrimSpace(line)
 	if len(t) < 3 {
@@ -318,7 +275,6 @@ func fenceOpener(line string) (byte, bool) {
 }
 
 // fenceCloser 判断行是否为匹配围栏字符的闭合行。
-// fenceCloser reports whether the line closes a fence of the given character.
 func fenceCloser(line string, ch byte) bool {
 	t := strings.TrimSpace(line)
 	if len(t) < 3 {
@@ -332,8 +288,6 @@ func fenceCloser(line string, ch byte) bool {
 }
 
 // scanFencedBlock 从开启行开始收集围栏代码块直至闭合行；未闭合时延伸到文档末尾。
-// scanFencedBlock collects a fenced code block from its opening line to the closing
-// line; an unclosed fence extends to the end of the document.
 func scanFencedBlock(lines []string, start int, ch byte) (text string, next int) {
 	text = lines[start]
 	j := start + 1
@@ -349,7 +303,6 @@ func scanFencedBlock(lines []string, start int, ch byte) (text string, next int)
 }
 
 // scanTable 收集连续以 | 开头的表格行（含分隔行）。
-// scanTable collects consecutive table rows starting with | (including the separator row).
 func scanTable(lines []string, start int) (text string, next int) {
 	text = lines[start]
 	j := start + 1
@@ -361,8 +314,6 @@ func scanTable(lines []string, start int) (text string, next int) {
 }
 
 // isListMarker 判断行是否为列表项（- * + 或 数字. / 数字) 后跟空白）。
-// isListMarker reports whether the line is a list item (- * + or number./number)
-// followed by whitespace).
 func isListMarker(line string) bool {
 	t := strings.TrimLeft(line, " \t")
 	if len(t) < 2 {
@@ -387,15 +338,11 @@ func isListMarker(line string) bool {
 }
 
 // isIndentedContinuation 判断行是否为列表的缩进续行（以空白开头且非空）。
-// isIndentedContinuation reports whether the line is an indented continuation of a list
-// (starts with whitespace and is not blank).
 func isIndentedContinuation(line string) bool {
 	return line != "" && (line[0] == ' ' || line[0] == '\t') && strings.TrimSpace(line) != ""
 }
 
 // scanList 收集列表块：列表项行 + 缩进续行；空行仅在后续仍为列表项时计入。
-// scanList collects a list block: list-item lines plus indented continuations; a blank
-// line is only included when the following content is still a list item.
 func scanList(lines []string, start int) (text string, next int) {
 	text = lines[start]
 	j := start + 1
@@ -423,8 +370,6 @@ func scanList(lines []string, start int) (text string, next int) {
 }
 
 // scanQuote 收集引用块：连续 > 行；空行仅在后续仍为引用行时计入。
-// scanQuote collects a quote block: consecutive > lines; a blank line is only included
-// when the following content is still quoted.
 func scanQuote(lines []string, start int) (text string, next int) {
 	text = lines[start]
 	j := start + 1
@@ -451,8 +396,6 @@ func scanQuote(lines []string, start int) (text string, next int) {
 }
 
 // scanParagraph 收集普通段落：连续非空且非结构起始行。
-// scanParagraph collects a plain paragraph: consecutive non-blank lines that do not
-// start a structural block.
 func scanParagraph(lines []string, start int) (text string, next int) {
 	text = lines[start]
 	j := start + 1
@@ -464,8 +407,6 @@ func scanParagraph(lines []string, start int) (text string, next int) {
 }
 
 // isStructureStart 判断行是否为结构起始行（空行/标题/围栏/表格/列表/引用）。
-// isStructureStart reports whether the line starts a structural block (blank line,
-// heading, fence, table, list or quote).
 func isStructureStart(line string) bool {
 	t := strings.TrimSpace(line)
 	if t == "" {
@@ -487,8 +428,6 @@ func isStructureStart(line string) bool {
 }
 
 // pushHeading 更新标题路径栈：弹出层级不低于当前标题的栈顶，再压入当前标题。
-// pushHeading updates the heading path stack: entries whose level is not lower than the
-// current heading are popped, then the current heading is pushed.
 func pushHeading(stack []string, levels []int, level int, text string) ([]string, []int) {
 	for len(levels) > 0 && levels[len(levels)-1] >= level {
 		levels = levels[:len(levels)-1]
@@ -498,42 +437,29 @@ func pushHeading(stack []string, levels []int, level int, text string) ([]string
 }
 
 // ChunkUnitKind 是分块正文中识别出的结构单元类型（chunkUnitKind 枚举类的取值类型）。
-// ChunkUnitKind is the structural unit kind recognized inside a chunk body (the value type of
-// the chunkUnitKind enum class).
 type ChunkUnitKind string
 
 // 分块结构单元类型常量。
-// Chunk structural unit kind constants.
 const (
 	// ChunkUnitParagraph 普通段落
-	// ChunkUnitParagraph a plain paragraph
 	ChunkUnitParagraph ChunkUnitKind = "paragraph"
 	// ChunkUnitCode 围栏代码块（原子单元，超长也不切分）
-	// ChunkUnitCode a fenced code block (an atomic unit, never split even when oversized)
 	ChunkUnitCode ChunkUnitKind = "code"
 	// ChunkUnitTable 表格块（原子单元，超长也不切分）
-	// ChunkUnitTable a table block (an atomic unit, never split even when oversized)
 	ChunkUnitTable ChunkUnitKind = "table"
 	// ChunkUnitList 列表块
-	// ChunkUnitList a list block
 	ChunkUnitList ChunkUnitKind = "list"
 	// ChunkUnitQuote 引用块
-	// ChunkUnitQuote a quote block
 	ChunkUnitQuote ChunkUnitKind = "quote"
 )
 
 // chunkUnitKindValues 是 chunkUnitKind 枚举类的取值空间，声明顺序即枚举类条目顺序与展示顺序。
-// chunkUnitKindValues is the value space of the chunkUnitKind enum class; the declaration order is
-// the entry order of the enum class and the display order.
 var chunkUnitKindValues = []ChunkUnitKind{
 	ChunkUnitParagraph, ChunkUnitCode, ChunkUnitTable, ChunkUnitList, ChunkUnitQuote,
 }
 
 // mdUnitKindToChunkUnitKind 把行级解析得到的内部单元类型映射为对外的结构单元类型；标题单元
 // 返回 ok=false（标题为硬边界，只存在于 headingPath，绝不进入分块正文）。
-// mdUnitKindToChunkUnitKind maps an internal line-level unit kind to the exposed structural unit
-// kind; a heading unit yields ok=false (a heading is a hard boundary living only in headingPath
-// and never entering a chunk body).
 func mdUnitKindToChunkUnitKind(kind mdUnitKind) (ChunkUnitKind, bool) {
 	switch kind {
 	case unitParagraph:
@@ -554,10 +480,6 @@ func mdUnitKindToChunkUnitKind(kind mdUnitKind) (ChunkUnitKind, bool) {
 // DescribeChunk 复用本包的行级 markdown 解析识别分块正文包含的结构单元类型：去重后按
 // chunkUnitKindValues 的声明顺序稳定返回；无单元时返回空切片（而非 nil）。识别只针对正文，
 // 标题单元不参与（见 mdUnitKindToChunkUnitKind）。
-// DescribeChunk reuses this package's line-level markdown parsing to recognize the structural unit
-// kinds a chunk body contains: duplicates are removed and the result follows the declaration order
-// of chunkUnitKindValues; a body without units yields an empty slice (never nil). Only the body is
-// recognized — heading units never participate (see mdUnitKindToChunkUnitKind).
 func DescribeChunk(content string) []ChunkUnitKind {
 	units := parseMarkdownUnits(strings.Split(content, "\n"))
 	found := make(map[ChunkUnitKind]struct{}, len(chunkUnitKindValues))

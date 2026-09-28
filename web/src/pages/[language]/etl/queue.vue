@@ -100,8 +100,11 @@ import type { InspectorDailyStatIn } from "@/apis/@types/etl";
 import { DateTime } from "luxon";
 
 const appStore = useAppStore();
+// days 每日统计的统计天数（默认近 7 天）
 const days = ref(7);
+// queue 当前选中的队列名（默认 default 队列）
 const queue = ref("default");
+// queueHeaders 队列表格列定义
 const queueHeaders = ref([
   {
     key: "name",
@@ -174,13 +177,17 @@ const {
   visibleKeys: queueVisibleKeys,
   visibleHeaders: queueVisibleHeaders,
 } = useColumnVisibility("model:queue", queueHeaders);
+// statItems 按队列名索引的每日统计项
 const statItems = ref({} as Record<string, InspectorDailyStatItem[]>);
+// queueItems 队列列表项
 const queueItems = ref([] as InspectorQueueListItem[]);
+// queueOptions 队列下拉选项：由每日统计数据的队列名生成
 const queueOptions = computed(() => {
   return Object.keys(statItems.value).map((key) => {
     return { title: key, value: key };
   });
 });
+// barsOption 各队列任务状态分布柱状图配置
 const barsOption = computed((): BarsChartOption => {
   const active = i18n.global.t("chart.field.active");
   const pending = i18n.global.t("chart.field.pending");
@@ -225,6 +232,7 @@ const barsOption = computed((): BarsChartOption => {
     }),
   };
 });
+// lineOption 所选队列的任务处理趋势折线图配置
 const lineOption = computed((): LineChartOption => {
   const processed = i18n.global.t("chart.field.processed");
   const failed = i18n.global.t("chart.field.failed");
@@ -279,14 +287,17 @@ const lineOption = computed((): LineChartOption => {
   };
 });
 
+// 切换统计天数时自动刷新每日统计
 watch(days, (value) => {
   getDailyStatAction({ days: value });
 });
 
+// refreshAction 刷新队列列表与每日统计
 const refreshAction = async (): Promise<void> => {
   await Promise.all([getQueueListAction(), getDailyStatAction({ days: days.value })]);
 };
 
+// getQueueListAction 拉取队列列表，并据暂停状态推导运行状态
 const getQueueListAction = async (): Promise<void> => {
   await getResponse<InspectorQueueListOut>(
     inspectorQueueListGet(),
@@ -309,6 +320,7 @@ const getQueueListAction = async (): Promise<void> => {
   );
 };
 
+// getDailyStatAction 按天数拉取每日队列统计
 const getDailyStatAction = async (data: InspectorDailyStatIn): Promise<void> => {
   await getResponse<InspectorDailyStatListOut>(
     inspectorDailyStatListGet(data),
@@ -325,6 +337,7 @@ const getDailyStatAction = async (data: InspectorDailyStatIn): Promise<void> => 
   );
 };
 
+// pauseToggleQueueAction 切换队列暂停/恢复，并就地更新对应行状态
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const pauseToggleQueueAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
@@ -352,6 +365,7 @@ const pauseToggleQueueAction = async (item: Record<string, any>): Promise<void> 
   );
 };
 
+// getQueueActions 依据队列运行状态生成行操作（暂停或恢复）
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getQueueActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {};
@@ -363,5 +377,6 @@ const getQueueActions = (item: Record<string, any>): ItemActions => {
   return actions;
 };
 
+// 页面挂载后首次加载数据
 onMounted(refreshAction);
 </script>

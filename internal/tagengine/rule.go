@@ -18,6 +18,7 @@ const (
 	regoQuery = "data.zki.tags"
 )
 
+// RuleDetailResult 单条规则的识别结果，含标签集合、评估耗时与评估错误。
 type RuleDetailResult struct {
 	// Tags 规则匹配的标签集合
 	Tags []string `json:"tags"`
@@ -33,6 +34,7 @@ type compiledRule struct {
 	query *rego.PreparedEvalQuery
 }
 
+// CompileRule 将单条规则编译为可复用查询，返回模块名与已编译规则。
 func CompileRule(ctx context.Context, rule *tag.TagRule) (string, *compiledRule, error) {
 	moduleName := fmt.Sprintf("%s.rego", rule.Name)
 	// 逐规则编译，供 RecognizeWithDetail 规则归属与 dry-run 逐规则详情
@@ -47,6 +49,7 @@ func CompileRule(ctx context.Context, rule *tag.TagRule) (string, *compiledRule,
 	return moduleName, &compiledRule{rule: rule, query: &query}, nil
 }
 
+// Recognize 执行规则查询并返回去重排序后的标签集合。
 func (r *compiledRule) Recognize(ctx context.Context, options ...rego.EvalOption) ([]string, error) {
 	results, err := r.query.Eval(ctx, options...)
 	if err != nil {
@@ -55,6 +58,7 @@ func (r *compiledRule) Recognize(ctx context.Context, options ...rego.EvalOption
 	return extractTags(results), nil
 }
 
+// RecognizeWithDetail 执行规则查询并返回含标签、耗时与错误的识别详情。
 func (r *compiledRule) RecognizeWithDetail(ctx context.Context, options ...rego.EvalOption) *RuleDetailResult {
 	start := time.Now()
 	tags, err := r.Recognize(ctx, options...)

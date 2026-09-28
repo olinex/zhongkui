@@ -1,18 +1,18 @@
 package notification
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"net/http"
 	"strconv"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
@@ -103,38 +103,25 @@ type NotificationTargetBatchIn struct {
 // NotificationTargetSendIn 定义"向单个通知目标发送通知"的请求输入结构。
 // 调用方指定目标（经 URL :id）+ 事件引用 + 消息模板，投递 notify:send:target 异步任务，
 // 复用通知全链路（模板渲染、渠道基座投递与发送记录写入）。
-// NotificationTargetSendIn is the request input of "send a notification to a single
-// target". The caller supplies the target (via URL :id) plus an event reference and a
-// message template; the handler enqueues a notify:send:target async task that reuses
-// the full notification pipeline (template rendering, channel delivery and record write).
 type NotificationTargetSendIn struct {
 	// EventType 事件类型键（如 tag_event），与 EventID 组合定位通知记录（必填）
-	// EventType the event type key (e.g. tag_event), locating the notification record with EventID (required)
 	EventType string `json:"eventType" binding:"required"`
 	// EventID 触发通知的事件 ID，须为非零值以保证幂等去重（必填）
-	// EventID the ID of the event that triggered the notification, must be non-zero for idempotent dedup (required)
 	EventID uint `json:"eventID" binding:"required"`
 	// Template 消息模板键，经目标偏好语言渲染为标题/正文（必填）
-	// Template the message template key, rendered into title/content in the target-preferred language (required)
 	Template string `json:"template" binding:"required"`
 	// Params 模板参数，供 locales 模板渲染
-	// Params the template params used to render the locale template
 	Params map[string]any `json:"params"`
 }
 
 // NotificationTargetSendOut 定义"向单个通知目标发送通知"的输出结构。
 // 回显本次异步投递请求所定位的目标与事件引用。
-// NotificationTargetSendOut is the output of "send a notification to a single target",
-// echoing the target and event reference of this async send request.
 type NotificationTargetSendOut struct {
 	// TargetID 本次投递的目标 ID
-	// TargetID the target ID this send addressed
 	TargetID uint `json:"targetId"`
 	// EventType 本次投递的事件类型键
-	// EventType the event type key of this send
 	EventType string `json:"eventType"`
 	// EventID 本次投递的事件 ID
-	// EventID the event ID of this send
 	EventID uint `json:"eventId"`
 }
 
@@ -541,12 +528,6 @@ func notificationTestSendFailed(c *gin.Context, err error) {
 // 按 (id, namespace) 预加载渠道校验目标存在且属于当前命名空间（缺失 404），
 // 目标或所属渠道被禁用时返回 400 + CodeNotificationSendFailed（复用 notificationTestSendFailed），
 // 通过后组装 notify.SendTargetInput 并投递 notify:send:target 异步任务（投递失败 500）。
-// NotificationTargetSend handles the "send a notification to a single target" request.
-// It validates the target exists and belongs to the current namespace via (id, namespace)
-// with its channel preloaded (404 when missing), returns 400 + CodeNotificationSendFailed
-// (reusing notificationTestSendFailed) when the target or its channel is disabled,
-// then builds a notify.SendTargetInput and enqueues a notify:send:target async task
-// (500 on enqueue failure).
 func NotificationTargetSend(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -633,9 +614,6 @@ func notificationTargetDetailOut(target *core.NotificationTarget, channel *core.
 
 // parseTargetLanguage 将数据库/模型中以字符串存储的目标偏好语言解析为 base.Language；
 // 空字符串回退为零值（平台默认），非法标签回退为空，避免破坏输出结构。
-// parseTargetLanguage parses the target's stored string language into a base.Language;
-// an empty string yields the zero value (platform default) and an invalid tag also
-// falls back to empty, keeping the output struct well-formed.
 func parseTargetLanguage(lang string) base.Language {
 	if l, err := base.ParseLanguage(lang); err == nil {
 		return *l

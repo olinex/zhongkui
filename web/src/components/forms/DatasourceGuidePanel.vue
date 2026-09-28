@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts" name="datasource-guide-panel">
-// Internal
+// 项目内部
 import {
   buildDatasourceSamples,
   type DatasourceSample,
@@ -121,6 +121,7 @@ const props = withDefaults(
   { fields: () => [], tag: "tag", defaultOpen: true },
 );
 
+// emit 向编辑器插入代码片段事件。
 const emit = defineEmits<{ (e: "insert", text: string): void }>();
 
 // 面板展开态：数组元素为展开的面板索引（仅一页，0=展开）

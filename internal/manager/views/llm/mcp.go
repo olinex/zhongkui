@@ -1,18 +1,18 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
@@ -28,10 +28,6 @@ import (
 // McpServerCreateIn 定义注册 MCP 服务器端点的请求输入结构。
 // 名称与传输方式、URL 必填；timeoutSeconds 默认 60 秒（经 default 标签声明并在反序列化前由
 // defaults.Set 填充）；headers 为明文 JSON 对象文本（承载 Authorization 等凭据），落库为密文。
-// McpServerCreateIn is the request input of registering an MCP server endpoint. Name, transport
-// and URL are required; timeoutSeconds defaults to 60 (declared via the default tag and filled by
-// defaults.Set before unmarshaling); headers is the plaintext JSON object text (carrying
-// credentials such as Authorization) and is persisted encrypted at rest.
 //
 // 校验一律由绑定标签表达（无就地解析/校验方法）：trimmed 只施加于前端会 trim 的单行字段
 // （name / transport / url），description 与 headers 不加——前者为空多行文案、后者为 JSON 文本，
@@ -56,10 +52,6 @@ type McpServerCreateIn struct {
 // McpServerUpdateIn 定义更新 MCP 服务器端点的请求输入结构。
 // 传输方式允许修改；headers 留空表示沿用原凭据（避免编辑时强制回填密文）；其余字段按整表单提交。
 // 校验标签与 McpServerCreateIn 同口径（见其注释）。
-// McpServerUpdateIn is the request input of updating an MCP server endpoint. The transport is
-// mutable; an empty headers means keeping the original credentials (no forced ciphertext
-// round-trip on edit); the remaining fields are submitted as a whole form. Its binding tags share
-// the semantics of McpServerCreateIn (see its comment).
 type McpServerUpdateIn struct {
 	// Name 服务器的本地标识，全局唯一，最长 64
 	Name string `json:"name" binding:"required,trimmed,max=64"`
@@ -80,11 +72,8 @@ type McpServerUpdateIn struct {
 // McpServerDetailOut 定义 MCP 服务器端点的详情输出结构。
 // 嵌入 BaseItemOut 携带审计字段；字段名与列表字段投影白名单（search.toml selectFields）一一对应；
 // headers 以密文形式返回（crypto 序列化器，经 form 标签告知前端该字段已加密），不回显明文。
-// McpServerDetailOut is the detail output of an MCP server endpoint. It embeds BaseItemOut for the
-// audit fields and its field names line up with the list projection whitelist (search.toml
-// selectFields); headers is returned as ciphertext (the crypto serializer, with the form tag
-// telling the frontend the field is encrypted) and the plaintext is never echoed.
 type McpServerDetailOut struct {
+	// utils.BaseItemOut 内嵌明细通用字段（ID 与创建/更新时间）。
 	utils.BaseItemOut
 	// Name 服务器的本地标识，全局唯一
 	Name string `json:"name"`
@@ -104,17 +93,15 @@ type McpServerDetailOut struct {
 
 // McpServerListOut 定义 MCP 服务器列表的输出项结构。
 // 嵌入 BaseTotalOut 以支持分页总数统计。
-// McpServerListOut is the item output of the MCP server list; it embeds BaseTotalOut for the
-// pagination total.
 type McpServerListOut struct {
+	// McpServerDetailOut 内嵌 MCP 服务器详情字段。
 	McpServerDetailOut
+	// utils.BaseTotalOut 内嵌分页总数统计字段。
 	utils.BaseTotalOut
 }
 
 // McpServerBatchIn 批量操作 MCP 服务器的请求输入结构。
 // Ids 接受标量（单个 ID）或数组（多个 ID）。
-// McpServerBatchIn is the request input of a batch operation on MCP servers; Ids accepts a scalar
-// (one id) or an array (several ids).
 type McpServerBatchIn struct {
 	// Ids 待批量操作的服务器 ID 列表
 	Ids views.FlexList[uint64] `json:"ids"`
@@ -123,10 +110,6 @@ type McpServerBatchIn struct {
 // McpServerTestIn 连通性测试请求输入，支持两种用法：
 //   - 仅传 id：读取该服务器记录（含解密凭据）后探测，其余字段被忽略；
 //   - 不传 id：按本次提交的完整端点配置探测，不落库。
-//
-// McpServerTestIn is the connectivity-test input with two usages: with an id it probes the stored
-// server record (with decrypted credentials) and ignores the other fields; without an id it probes
-// the endpoint config submitted this time and persists nothing.
 //
 // 因「带 id 时其余字段被忽略」，此处不能写无条件的 required：改用 required_if=ID 0 表达
 // 「仅在按配置探测时必填」，配合 omitempty 让空值在带 id 的用法下跳过其余校验。
@@ -145,9 +128,6 @@ type McpServerTestIn struct {
 
 // McpServerTestOut 连通性测试结果输出：Ok 表示端点可达，ToolCount / ToolNames 为远端
 // tools/list 发现的工具数量与名称清单。失败时接口返回明确英文错误（不返回本结构）。
-// McpServerTestOut is the connectivity-test result: Ok means the endpoint is reachable, while
-// ToolCount / ToolNames are the count and names discovered by the remote tools/list. On failure the
-// API returns a clear English error instead of this structure.
 type McpServerTestOut struct {
 	// Ok 端点是否可达（成功响应恒为 true）
 	Ok bool `json:"ok"`
@@ -159,8 +139,6 @@ type McpServerTestOut struct {
 
 // McpServerSyncOut 工具清单同步结果输出：Created / Updated / Removed 分别为新增、刷新与
 // 清理（远端已不提供）的工具行数。
-// McpServerSyncOut is the tool-list synchronization result: Created / Updated / Removed are the
-// counts of tools inserted, refreshed and removed (no longer provided by the remote).
 type McpServerSyncOut struct {
 	// Created 新增的工具行数（enabled=false）
 	Created int `json:"created"`
@@ -174,11 +152,6 @@ type McpServerSyncOut struct {
 // 支持分页、排序与过滤（时间/名称/传输方式/启用状态）；注册表为全局配置，不按命名空间隔离。
 // 查询按 gorm 模型扫描（headers 经 crypto 序列化器读取），再映射为接口层 Out 结构并做字段投影；
 // headers 出参为密文，不出现在任何投影项的明文位置。
-// McpServerListGet handles the MCP server registry list request. It supports pagination, ordering
-// and filtering (time / name / transport / enabled); the registry is global configuration, not
-// namespace scoped. The query scans the gorm model (headers read through the crypto serializer),
-// maps it into the view-layer Out and projects the fields; the headers output is ciphertext and no
-// projection item carries plaintext.
 func McpServerListGet(c *gin.Context) {
 	var in views.McpServerListGetSearchIn
 	if err := defaults.Set(&in); err != nil {
@@ -225,12 +198,6 @@ func McpServerListGet(c *gin.Context) {
 // 请求头为合法 JSON 对象）一律由 McpServerCreateIn 的绑定标签保证；处理器只做名称唯一性预检
 // （含软删除记录，避免触发唯一索引冲突）与落库（headers 以密文写入），成功后在提交后置动作中
 // 重建运行时并广播变更。
-// McpServerCreate handles the MCP server registration request. Field validity (a non-empty name, a
-// transport from the mcpTransport enum, an absolute http/https URL, a positive timeout and headers
-// that are a valid JSON object) is guaranteed by the binding tags of McpServerCreateIn; the handler
-// only pre-checks name uniqueness (including soft-deleted rows, so a unique-index conflict never
-// surfaces as a 500) and persists the row (headers written encrypted); on success the post-commit
-// action rebuilds the runtime and broadcasts the change.
 func McpServerCreate(c *gin.Context) {
 	var in McpServerCreateIn
 	if err := defaults.Set(&in); err != nil {
@@ -277,8 +244,6 @@ func McpServerCreate(c *gin.Context) {
 
 // McpServerDetailGet 处理获取 MCP 服务器详情的请求。
 // 服务器不存在时返回 404；headers 以密文形式返回。
-// McpServerDetailGet handles the MCP server detail request. A missing server yields 404 and the
-// headers are returned as ciphertext.
 func McpServerDetailGet(c *gin.Context) {
 	id, ok := views.GetUint64Param(c, "id")
 	if !ok {
@@ -299,10 +264,6 @@ func McpServerDetailGet(c *gin.Context) {
 // McpServerUpdate 处理更新 MCP 服务器端点的请求。
 // 传输方式允许修改；headers 留空表示沿用原凭据（Select 不含 headers 列）；其余字段按整表单全量
 // 校验后落库，成功后重建运行时并广播变更。
-// McpServerUpdate handles the MCP server update request. The transport is mutable; an empty headers
-// keeps the original credentials (headers is not in the Select column list); the remaining fields
-// are fully validated as a whole form and persisted, and on success the runtime is rebuilt and the
-// change broadcast.
 func McpServerUpdate(c *gin.Context) {
 	id, ok := views.GetUint64Param(c, "id")
 	if !ok {
@@ -360,12 +321,6 @@ func McpServerUpdate(c *gin.Context) {
 // 不会触发数据库层的 ON DELETE CASCADE（该外键只在物理 DELETE 时生效），故在此显式级联，
 // 保证删除服务器后其同步出的工具行不再出现在工具列表中。服务器不存在视为成功跳过（幂等）。
 // 全部条目处理完毕后统一重建运行时并广播变更。
-// McpServerBatchDelete batch-deletes MCP servers. Each server is soft-deleted in a transaction and
-// its tool rows are explicitly soft-deleted too: GORM's soft delete issues an UPDATE, which never
-// triggers the database-level ON DELETE CASCADE (that foreign key only fires on a physical DELETE),
-// so the cascade is done explicitly here, ensuring the tools synchronized from a deleted server no
-// longer show up in the tool list. A missing server counts as a successful skip (idempotent). Once
-// every item is processed the runtime is rebuilt and the change broadcast.
 func McpServerBatchDelete(c *gin.Context) {
 	var in McpServerBatchIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
@@ -410,12 +365,6 @@ func McpServerBatchDelete(c *gin.Context) {
 // 探测经 ai.ProbeMCPServer 执行 MCP initialize 握手 + tools/list，返回远端发现的工具数量与名称
 // 清单；失败（不可达、握手失败等）返回明确的英文错误。本接口耗时较长，服务端不设额外上限，
 // 超时由 timeoutSeconds / 请求上下文约束。
-// McpServerTest handles the MCP server connectivity test. It persists nothing and has no side
-// effect, supporting both a registered server id (reading the decrypted credentials) and a full
-// endpoint config. The probe runs the MCP initialize handshake + tools/list through
-// ai.ProbeMCPServer, returning the tool count and names discovered on the remote; a failure
-// (unreachable, failed handshake, ...) yields a clear English error. The call is slow, so the server
-// imposes no extra cap: the timeout is bounded by timeoutSeconds and the request context.
 func McpServerTest(c *gin.Context) {
 	var in McpServerTestIn
 	if err := defaults.Set(&in); err != nil {
@@ -478,12 +427,6 @@ func McpServerTest(c *gin.Context) {
 // mcp_server_id=:id）对账：新工具以 enabled=false 新增，已存在工具保留 enabled 并刷新
 // description / remote_name，远端已不存在的工具被删除。全程在一个事务里完成，一致后重建运行时
 // 并广播变更。
-// McpServerSync synchronizes the remote tool list into the tool registry. It fetches the remote
-// tools/list through ai.ProbeMCPServer and reconciles it with the rows of that server in llm_tools
-// (source='mcp', mcp_server_id=:id): new tools are inserted with enabled=false, existing tools keep
-// their enabled flag and have description / remote_name refreshed, and tools the remote no longer
-// provides are deleted. The whole reconciliation runs in one transaction; once consistent the
-// runtime is rebuilt and the change broadcast.
 func McpServerSync(c *gin.Context) {
 	id, ok := views.GetUint64Param(c, "id")
 	if !ok {
@@ -522,11 +465,6 @@ func McpServerSync(c *gin.Context) {
 // reconcileMCPTools 把远端工具清单与 llm_tools 中该服务器的行对账，返回新增/刷新/清理的数量。
 // 全程在一个事务里完成；发现任何违反一致性约束（source='mcp' ⟺ mcp_server_id IS NOT NULL）的
 // 行、远端工具名为空、或新增工具名与既有工具重名时返回英文错误并回滚。
-// reconcileMCPTools reconciles the remote tool list with the rows of that server in llm_tools and
-// returns the inserted / refreshed / removed counts. It runs in one transaction and returns an
-// English error (rolling back) on any row that violates the consistency invariant (source='mcp' iff
-// mcp_server_id IS NOT NULL), on an empty remote tool name, or on a new tool name colliding with an
-// existing tool.
 func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemoteTool) (McpServerSyncOut, error) {
 	out := McpServerSyncOut{}
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -620,8 +558,6 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 }
 
 // newMcpServerDetailOut 将 MCP 服务器注册表记录映射为详情输出结构（headers 保持密文指针不动）。
-// newMcpServerDetailOut maps an MCP server registry record into the detail output (the headers
-// ciphertext pointer is passed through untouched).
 func newMcpServerDetailOut(m *core.McpServer) McpServerDetailOut {
 	return McpServerDetailOut{
 		BaseItemOut: utils.BaseItemOut{
@@ -641,9 +577,6 @@ func newMcpServerDetailOut(m *core.McpServer) McpServerDetailOut {
 
 // decodeMcpHeaders 把密文列解出的明文请求头解析为 map[string]string；为空返回 nil（表示无请求头），
 // JSON 非法返回固定的英文错误——错误文本不携带原始明文，避免凭据经错误信息泄漏。
-// decodeMcpHeaders parses the plaintext request headers (decrypted from the encrypted column) into a
-// map[string]string; empty yields nil (meaning no headers) and invalid JSON yields a fixed English
-// error whose text never carries the raw plaintext, so credentials can never leak through the error.
 func decodeMcpHeaders(raw []byte) (map[string]string, error) {
 	if len(raw) == 0 {
 		return nil, nil

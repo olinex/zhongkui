@@ -37,7 +37,7 @@ import type { PropType } from "vue";
 
 const appStore = useAppStore();
 const loading = ref(false);
-// Server response items are dynamic.
+// 服务端返回的条目为动态结构。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Array<Record<string, any>>);
 
@@ -50,7 +50,7 @@ const initAction = async () => {
 const searchAction = debounce(async () => {
   loading.value = true;
   items.value = [];
-  // Server response items are dynamic.
+  // 服务端返回的条目为动态结构。
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getResponse<SearchOut<Record<string, any>>>(
     props.searchRequest({

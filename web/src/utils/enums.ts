@@ -1,7 +1,7 @@
 import { useEnumsStore } from "@/stores/enums";
 import i18n from "@/utils/i18n";
 
-// Types
+// 类型
 import type { EnumEntryOut } from "@/apis/enums";
 import type { ApiMeta } from "@/components/@types/meta";
 

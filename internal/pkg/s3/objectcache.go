@@ -11,27 +11,10 @@
 // 本地文件以 objectKey 哈希为确定性名，进程内按 TTL 缓存复用，避免重复拉取 S3。
 // 进程崩溃残留由 CleanupOrphans 在启动时清理：内存与磁盘缓存目录均为本模块专属子目录，
 // 直接移除目录内全部文件即可。
-//
-// This file provides ObjectCache, a generic S3-encrypted object cache. It stores arbitrary
-// third-party files uploaded by datasources (e.g. a sqlite .db) encrypted in S3 with
-// zstd+AES-GCM (reusing the Zkcn streaming pipeline), writing/removing them together with
-// the datasource config lifecycle, and materializing them on demand to a locally-openable
-// file when reading. The mechanism is not bound to any datasource type, so it can be reused
-// by third-party datasources later.
-//
-// To avoid loading onto the local disk when reading, Materialize routes by size in a streaming
-// way whose memory use never exceeds the threshold (the whole object is never buffered):
-//   - size <= memory threshold: written into the in-memory cache dir (default /dev/shm on
-//     Linux, a tmpfs that is RAM, not persistent disk);
-//   - size > threshold: spilled to a disk cache dir (os.TempDir subdir) recycled by TTL.
-//
-// Local files use a deterministic objectKey hash as name, cached per objectKey with a TTL to
-// avoid re-fetching S3. Crash leftovers are cleaned by CleanupOrphans at startup: both cache
-// dirs are dedicated to this module, so every entry inside them is removed.
 package s3
 
 import (
-	// stdlib
+	// 标准库
 
 	"bytes"
 	"context"
@@ -44,9 +27,9 @@ import (
 	"sync"
 	"time"
 
-	// third-party
+	// 第三方
 
-	// internal
+	// 项目内部
 	"github.com/creasty/defaults"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -55,18 +38,10 @@ import (
 // 而来——Linux 内存目录为 /dev/shm/{prefix}，其余平台及磁盘缓存目录为 os.TempDir()/{prefix}。
 // 因两个缓存目录均默认落于该 prefix 构成且专属本模块的子目录，启动清理可安全移除目录内
 // 全部文件，无需逐文件甄别。
-// objectCachePrefix is the shared name component of this module's cache dirs: both the memory
-// and disk cache dirs are derived from it (Linux memory dir /dev/shm/{prefix}, disk and other
-// memory dirs os.TempDir()/{prefix}). Since both dirs live under this prefix's dedicated
-// subdir by default, startup cleanup can safely remove every entry inside, with no per-file
-// filtering.
 const objectCachePrefix = "zhongkui-objcache"
 
 // defaultObjectCacheMemDir 返回平台相关的内存缓存目录：Linux 优先 /dev/shm/{prefix}（tmpfs
 // 即内存），其余平台回退系统临时目录下的 prefix 专属子目录。
-// defaultObjectCacheMemDir returns the platform-dependent in-memory cache dir: Linux prefers
-// /dev/shm/{prefix} (a tmpfs that is RAM); others fall back to the prefix-dedicated subdir
-// under the OS temp dir.
 func defaultObjectCacheMemDir() string {
 	if runtime.GOOS == "linux" {
 		return filepath.Join("/dev/shm", objectCachePrefix)
@@ -77,11 +52,6 @@ func defaultObjectCacheMemDir() string {
 // objectBackend 抽象底层「加密对象存储」的读/写/删，使 ObjectCache 不直接依赖具体 *S3Client：
 // 生产实现为 s3Backend（经 Zkcn 管道加解密读写 S3）；S3 未配置时以 disabledBackend 空对象替代
 // 原先散落在各方法里的 nil client 判断；测试可注入内存实现。
-// objectBackend abstracts the underlying encrypted object store (read/write/remove) so that
-// ObjectCache does not depend on a concrete *S3Client: production uses s3Backend (encrypting and
-// decrypting through the Zkcn pipeline against S3), an unconfigured S3 uses the disabledBackend
-// null object in place of the nil-client checks formerly scattered across methods, and tests may
-// inject an in-memory implementation.
 type objectBackend interface {
 	Store(ctx context.Context, objectKey string, r io.Reader) error
 	Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error)
@@ -90,8 +60,6 @@ type objectBackend interface {
 
 // s3Backend 是 objectBackend 的生产实现：对象经 Zkcn（zstd+AES-GCM）加密管道写入 S3，
 // 读取时加密下载并解密为明文流。
-// s3Backend is the production objectBackend: objects are written to S3 through the Zkcn
-// (zstd+AES-GCM) pipeline and downloaded decrypted as a plaintext stream.
 type s3Backend struct {
 	client *S3Client
 }
@@ -104,8 +72,6 @@ func (b s3Backend) Store(ctx context.Context, objectKey string, r io.Reader) err
 }
 
 // Fetch 下载并解密对象，返回明文读取流；对象不存在时返回明确错误。
-// Fetch downloads and decrypts the object, returning a plaintext reader; a missing object is an
-// explicit error.
 func (b s3Backend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error) {
 	rc, err := NewZkcn(b.client, objectKey, nil, 0).Load(ctx)
 	if err != nil {
@@ -123,9 +89,6 @@ func (b s3Backend) Remove(ctx context.Context, objectKey string) error {
 
 // disabledBackend 是 S3 未配置时的空对象后端：三个方法各自返回带操作语义的「S3 未配置」错误，
 // 使 Store/Materialize/Open/Remove 无需再各自判空。
-// disabledBackend is the null-object backend used when S3 is not configured: each method returns
-// an operation-specific "S3 not configured" error, so Store/Materialize/Open/Remove no longer
-// each need their own nil check.
 type disabledBackend struct{}
 
 func (disabledBackend) Store(context.Context, string, io.Reader) error {
@@ -141,36 +104,25 @@ func (disabledBackend) Remove(context.Context, string) error {
 }
 
 // ObjectCache 负责把数据源上传的文件加密存于 S3，读取时按需拉取解密为本地文件。
-// ObjectCache stores datasource-uploaded files encrypted in S3 and materializes them to
-// local files on demand when reading.
 type ObjectCache struct {
 	// backend 底层加密对象存储的读写删端口（生产为 s3Backend，S3 未配置为 disabledBackend）。
-	// backend the underlying encrypted-object read/write/remove port (s3Backend in production,
-	// disabledBackend when S3 is not configured).
 	backend objectBackend
 	// memDir 内存缓存目录（tmpfs，如 Linux /dev/shm），承载 <= 阈值的小文件。
-	// memDir the in-memory cache dir (tmpfs, e.g. /dev/shm) for files <= threshold.
 	memDir string
 	// diskDir 磁盘缓存目录，承载 > 阈值的大文件（TTL 回收）。
-	// diskDir the disk cache dir for files > threshold (TTL-recycled).
 	diskDir string
 	// thresh 内存优先阈值（字节）。
-	// thresh the memory-first threshold in bytes.
 	thresh int64
 	// ttl 本地缓存存活时长。
-	// ttl the local cache TTL.
 	ttl time.Duration
 
 	// mu 保护 files。
-	// mu guards files.
 	mu sync.Mutex
 	// files objectKey → 本地缓存条目。
-	// files objectKey → local cache entry.
 	files map[string]cacheEntry
 }
 
 // cacheEntry 描述一个已落地的本地缓存文件。
-// cacheEntry describes a materialized local cache file.
 type cacheEntry struct {
 	path     string
 	lastUsed time.Time
@@ -180,12 +132,6 @@ type cacheEntry struct {
 // 内存优先阈值、本地缓存 TTL）统一由 Config 的 default tag 经 defaults 库注入，不再手写分支；
 // 内存目录为空时按平台默认，不可写时回退磁盘缓存目录。client 为 nil 表示 S3 未启用，此时注入
 // disabledBackend 空对象，Store/Materialize/Open/Remove 统一返回「S3 未配置」错误。
-// NewObjectCache builds an ObjectCache from an S3 client and the generic object cache options
-// in Config. Cache defaults (mem dir, memory-first threshold, local-cache TTL) are injected from
-// Config's default tags via the defaults library instead of hand-written branches; an empty mem
-// dir falls back to the platform default and an unwritable one to the disk cache dir. A nil
-// client means S3 is disabled, in which case a disabledBackend null object is installed so that
-// Store/Materialize/Open/Remove uniformly return a "S3 not configured" error.
 func NewObjectCache(client *S3Client, cfg Config) *ObjectCache {
 	if client == nil {
 		return newObjectCache(disabledBackend{}, cfg)
@@ -195,8 +141,6 @@ func NewObjectCache(client *S3Client, cfg Config) *ObjectCache {
 
 // newObjectCache 以给定后端端口构建对象缓存；NewObjectCache 与包内测试均经此构造，使测试可注入
 // 内存实现替代真实 S3。
-// newObjectCache builds the cache from a backend port; both NewObjectCache and in-package tests
-// construct through it, letting tests inject an in-memory implementation instead of real S3.
 func newObjectCache(backend objectBackend, cfg Config) *ObjectCache {
 	// 与项目约定一致：默认值统一经 defaults 库的 default tag 注入，而非手写 if-else。
 	if err := defaults.Set(&cfg); err != nil {
@@ -225,9 +169,6 @@ func newObjectCache(backend objectBackend, cfg Config) *ObjectCache {
 
 // Store 把 reader 中的明文内容流式加密上传到 S3（复用 Zkcn 流式上传，零磁盘暂存）。
 // 对象永久存储（无 TTL），生命周期随数据源配置管理。
-// Store streams and encrypts the reader's plaintext content into S3 (reusing Zkcn's
-// streaming upload, zero disk staging). The object is stored permanently (no TTL), with a
-// lifecycle tied to the datasource config.
 func (c *ObjectCache) Store(ctx context.Context, objectKey string, r io.Reader) error {
 	if c == nil {
 		return errors.New("s3 objectcache: unavailable")
@@ -238,10 +179,6 @@ func (c *ObjectCache) Store(ctx context.Context, objectKey string, r io.Reader) 
 // Materialize 确保 objectKey 对应的明文已落地为本地可用文件，返回其路径。
 // 先命中 TTL 缓存复用；未缓存则拉取解密，按 size 流式分路落地（内存占用不超过阈值）。
 // 进程内并发安全。
-// Materialize ensures the plaintext of objectKey is materialized as a local file and returns its
-// path. A live TTL cache hit is reused; otherwise it fetches, decrypts and streams the plaintext
-// into the mem or disk cache dir by size, with memory use bounded by the threshold. Safe for
-// concurrent use.
 func (c *ObjectCache) Materialize(ctx context.Context, objectKey string) (string, error) {
 	if c == nil {
 		return "", errors.New("s3 objectcache: unavailable")
@@ -265,11 +202,6 @@ func (c *ObjectCache) Materialize(ctx context.Context, objectKey string) (string
 // materialize 把明文流 rc 按 size 分路写入本地缓存文件并返回最终路径：先读至多「阈值+1」字节到
 // 内存，未超阈即小文件，直接写内存目录（不触碰本地磁盘）；一旦超阈则把已缓冲前缀与剩余流写入
 // 磁盘目录的暂存文件，再原子改名到最终路径。全程内存占用不超过阈值，不会把整个对象缓冲进内存。
-// materialize routes the plaintext stream rc into a local cache file by size and returns its
-// path: it reads up to "threshold+1" bytes into memory and, if not exceeded, writes the small
-// object straight to the mem dir (never touching local disk); once exceeded, it writes the
-// buffered prefix plus the remaining stream into a staging file in the disk dir and atomically
-// renames it into place. Memory use never exceeds the threshold.
 func (c *ObjectCache) materialize(rc io.Reader, objectKey string) (string, error) {
 	name := hashObjectKey(objectKey)
 
@@ -313,10 +245,6 @@ func (c *ObjectCache) materialize(rc io.Reader, objectKey string) (string, error
 // Open 拉取并解密 objectKey 对应的对象，返回明文读取流，供流式下载使用，避免整对象落地。
 // 直接走底层后端端口，不写入本地缓存文件，调用方负责关闭返回的 ReadCloser。c 为 nil 或 S3
 // 未配置时返回明确错误。
-// Open fetches and decrypts the object for objectKey and returns a plaintext reader for streaming
-// download, avoiding materializing the whole object locally. It goes straight to the backend port
-// and writes no local cache file; the caller owns closing the returned ReadCloser. Returns a clear
-// error when c is nil or S3 is not configured.
 func (c *ObjectCache) Open(ctx context.Context, objectKey string) (io.ReadCloser, error) {
 	if c == nil {
 		return nil, errors.New("s3 objectcache: unavailable")
@@ -325,8 +253,6 @@ func (c *ObjectCache) Open(ctx context.Context, objectKey string) (io.ReadCloser
 }
 
 // Remove 删除 S3 中 objectKey 对应的对象并失效本地缓存。用于数据源删除时清理无归属文件。
-// Remove deletes the S3 object for objectKey and invalidates the local cache. Used to clean
-// up ownerless files when a datasource is deleted.
 func (c *ObjectCache) Remove(ctx context.Context, objectKey string) error {
 	if c == nil {
 		return errors.New("s3 objectcache: unavailable")
@@ -336,8 +262,6 @@ func (c *ObjectCache) Remove(ctx context.Context, objectKey string) error {
 }
 
 // Invalidate 仅失效本地缓存文件（不触碰 S3 对象）。供注销/更新后释放内存目录占用。
-// Invalidate drops only the local cached file (leaving the S3 object untouched), to free
-// memory-dir space after unregister/update.
 func (c *ObjectCache) Invalidate(objectKey string) {
 	if c == nil {
 		return
@@ -351,8 +275,6 @@ func (c *ObjectCache) Invalidate(objectKey string) {
 }
 
 // cached 返回未过期的本地缓存路径；缓存过期或文件缺失时清理并返回未命中。
-// cached returns a live local cache path; on TTL expiry or missing file it cleans up and
-// reports a miss.
 func (c *ObjectCache) cached(objectKey string) (string, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -375,7 +297,6 @@ func (c *ObjectCache) cached(objectKey string) (string, bool) {
 }
 
 // setCache 记录 objectKey 的本地缓存路径。
-// setCache records the local cache path of objectKey.
 func (c *ObjectCache) setCache(objectKey, path string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -384,9 +305,6 @@ func (c *ObjectCache) setCache(objectKey, path string) {
 
 // CleanupOrphans 清理崩溃/异常退出残留的本地缓存文件。内存与磁盘缓存目录均为本模块专属
 // 子目录，故移除目录内全部文件即安全；建议在进程启动时调用。
-// CleanupOrphans removes leftover local cache files from crashes/abnormal exits. Since both
-// cache dirs are dedicated to this module, removing every entry inside them is safe; call it
-// at process startup.
 func (c *ObjectCache) CleanupOrphans() {
 	if c == nil {
 		return
@@ -410,8 +328,6 @@ func (c *ObjectCache) CleanupOrphans() {
 
 // hashObjectKey 取 objectKey 的 SHA-256 前 16 个十六进制字符作为本地文件名，保证目录内
 // 命名确定性且不泄漏原文。
-// hashObjectKey takes the first 16 hex chars of objectKey's SHA-256 as the local filename,
-// keeping names deterministic and not leaking the raw key.
 func hashObjectKey(objectKey string) string {
 	sum := sha256.Sum256([]byte(objectKey))
 	return hex.EncodeToString(sum[:])[:16]

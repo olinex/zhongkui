@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/status"
 )
 
+// TestKeyOf 验证服务注册键按前缀、服务名与实例 ID 拼接正确。
 func TestKeyOf(t *testing.T) {
 	server := NewServer(&Config{ReadyTimeout: time.Second}, status.New(), nil)
 	cfg := RegistryConfig{KeyPrefix: "services/"}
@@ -21,6 +22,7 @@ func TestKeyOf(t *testing.T) {
 	}
 }
 
+// TestServiceInfoJSON 验证 ServiceInfo 的 JSON 编解码字段名与取值正确。
 func TestServiceInfoJSON(t *testing.T) {
 	info := ServiceInfo{
 		ServiceName: "web",

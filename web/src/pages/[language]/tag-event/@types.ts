@@ -43,7 +43,7 @@ export interface TagRuleValidateOut {
 
 export interface TagRuleDryRunRuleOut {
   tags: string[];
-  /** duration as duration string (e.g. "5s") */
+  /** duration 为时长字符串（如 "5s"） */
   duration: string;
   error: string;
 }
@@ -124,7 +124,7 @@ export interface TagEventRuleConditionOut extends NormalModelOut {
   dimension: string;
   item: string;
   name: string;
-  /** window as duration string (e.g. "5m") */
+  /** window 为时长字符串（如 "5m"） */
   window: string;
   threshold: number;
   expression: string;
@@ -136,7 +136,7 @@ export interface TagEventRuleBaseDetailOut extends NormalModelOut {
   name: string;
   description: string;
   matchAll: boolean;
-  /** suppressWindow as duration string (e.g. "1h0m0s"), 0 means no suppression */
+  /** suppressWindow 为时长字符串（如 "1h0m0s"），0 表示不抑制 */
   suppressWindow: string;
   enabled: boolean;
 }
@@ -160,7 +160,7 @@ export interface TagEventRuleVersionOut extends NormalModelOut {
   version: number;
   name: string;
   matchAll: boolean;
-  /** suppressWindow as duration string (e.g. "1h0m0s"), 0 means no suppression */
+  /** suppressWindow 为时长字符串（如 "1h0m0s"），0 表示不抑制 */
   suppressWindow: string;
   description: string;
   conditions: TagEventRuleConditionOut[];
@@ -180,7 +180,7 @@ export interface TagEventHitOut {
   item: string;
   count: number;
   threshold: number;
-  /** window as duration string (e.g. "5m") */
+  /** window 为时长字符串（如 "5m"） */
   window: string;
 }
 

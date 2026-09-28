@@ -1,3 +1,4 @@
+// Package hash 提供一致性哈希环与流式哈希能力。
 package hash
 
 import (
@@ -32,6 +33,7 @@ func NewConsistentHash(vnodes int) *ConsistentHash {
 	}
 }
 
+// NewConsistentHashWithDefaultVnodes 使用默认虚拟节点数（DefaultVnodes）创建一致性哈希环。
 func NewConsistentHashWithDefaultVnodes() *ConsistentHash {
 	return NewConsistentHash(DefaultVnodes)
 }

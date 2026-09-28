@@ -1,3 +1,4 @@
+// Package reporter 实现上报服务：通过 gRPC 流式接口提供资源状态监听（Watch）与客户端反馈处理（Feedback）。
 package reporter
 
 import (
@@ -42,6 +43,7 @@ type ReporterService struct {
 	logger  *logging.Logger
 }
 
+// NewReportService 从依赖注入器装配并注册上报服务。
 func NewReportService(i do.Injector) *ReporterService {
 	totel.InitMetrics()
 	etcd := provider.MustInvokeEtcdClient(i)
@@ -421,6 +423,7 @@ func (srv *ReporterService) Feedback(stream g.ClientStreamingServer[reporter_v1.
 	}
 }
 
+// Run 启动 gRPC 服务，等待上下文取消后优雅关闭或启动失败退出。
 func (srv *ReporterService) Run(ctx context.Context) (err error) {
 	ctx, span := totel.StartRunSpan(ctx)
 	defer totel.EndSpan(span, &err)

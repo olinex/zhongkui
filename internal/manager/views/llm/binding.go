@@ -1,11 +1,11 @@
 package llm
 
 import (
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
@@ -29,7 +29,6 @@ type LlmSlotBindingOut struct {
 	// Kind 绑定模型的类型：chat | embedding（未绑定时为空）
 	Kind pkgllm.ModelKind `json:"kind"`
 	// RequiredKind 该档位要求的模型类型：chat | embedding
-	// RequiredKind is the model kind the slot requires: chat | embedding
 	RequiredKind pkgllm.ModelKind `json:"requiredKind"`
 	// ProviderModel 绑定模型的供应商侧模型名（未绑定时为空）
 	ProviderModel string `json:"providerModel"`
@@ -120,15 +119,6 @@ func LlmBindingListGet(c *gin.Context) {
 // embedding 槽位额外做一次真实维度兼容性校验（探测端点实际输出维度与
 // knowledge_chunks.embedding 列维度是否兼容，不兼容即 400 拒绝、不写绑定），通过后把
 // 已验证维度写回模型记录（后端管理的只读缓存）；成功后在提交后置动作中重建运行时并广播变更。
-// LlmBindingSet handles a slot-binding request. After the slot value is validated as legal, the
-// model is confirmed to exist, to be enabled and to have a kind matching the slot (the embedding
-// slot requires an embedding model and every other slot requires a chat model), the binding
-// record is written (rebinding the same slot overwrites it with the latest model). The embedding
-// slot additionally performs a real dimension-compatibility check (it probes the actual output
-// dimension of the endpoint against the knowledge_chunks.embedding column dimension; an
-// incompatible pair is rejected with 400 and no binding is written); on success the verified
-// dimension is written back to the model record (a read-only cache managed by the backend).
-// Once done, the post-commit action rebuilds the runtime and broadcasts the change.
 func LlmBindingSet(c *gin.Context) {
 	raw, ok := views.GetRawParam(c, "slot")
 	if !ok {

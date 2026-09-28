@@ -7,6 +7,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestBibyteSize_BasicMethods 测试 BibyteSize 的基本方法与单位换算。
 func TestBibyteSize_BasicMethods(t *testing.T) {
 	Convey("测试 BibyteSize 基本方法", t, func() {
 		Convey("String 方法", func() {
@@ -63,6 +64,7 @@ func TestBibyteSize_BasicMethods(t *testing.T) {
 	})
 }
 
+// TestBibyteSize_UnmarshalJSON 测试 BibyteSize 的 JSON 反序列化。
 func TestBibyteSize_UnmarshalJSON(t *testing.T) {
 	Convey("测试 BibyteSize JSON 反序列化", t, func() {
 		Convey("解析有效的容量字符串", func() {
@@ -112,6 +114,7 @@ func TestBibyteSize_UnmarshalJSON(t *testing.T) {
 	})
 }
 
+// TestBibyteSize_UnmarshalText 测试 BibyteSize 的文本反序列化。
 func TestBibyteSize_UnmarshalText(t *testing.T) {
 	Convey("测试 BibyteSize Text 反序列化", t, func() {
 		Convey("解析有效的容量字符串", func() {
@@ -136,6 +139,7 @@ func TestBibyteSize_UnmarshalText(t *testing.T) {
 	})
 }
 
+// TestBibyteSize_UnmarshalBinary 测试 BibyteSize 的二进制反序列化。
 func TestBibyteSize_UnmarshalBinary(t *testing.T) {
 	Convey("测试 BibyteSize Binary 反序列化", t, func() {
 		Convey("解析有效的容量字符串", func() {
@@ -160,6 +164,7 @@ func TestBibyteSize_UnmarshalBinary(t *testing.T) {
 	})
 }
 
+// TestBibyteSize_StructSerialization 测试 BibyteSize 在结构体中的序列化与反序列化。
 func TestBibyteSize_StructSerialization(t *testing.T) {
 	Convey("测试 BibyteSize 在结构体中的序列化", t, func() {
 		type Config struct {

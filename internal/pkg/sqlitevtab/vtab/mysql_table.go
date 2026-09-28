@@ -4,38 +4,27 @@
 // schema；Open 时借出 *sql.DB，把下推约束构建为参数化 SELECT，同步扫描全部行后
 // 立即归还连接。仅非 ValueTypeAny 的列参与下推，GLOB/MATCH 与类型不确定的谓词
 // 交由 sqlite 以 Omit=false 复查兜底，保证下推结果为真实匹配行的超集。
-//
-// This file provides the MySQL/MariaDB datasource. MySQLDatasource exposes a business
-// table of one instance as a vtable: at construction it introspects SHOW COLUMNS to
-// derive column names and ValueTypes (see deriveValueType) and builds the schema; on
-// Open it borrows a *sql.DB, translates pushdown constraints into a parameterized
-// SELECT, synchronously scans all rows and immediately returns the connection. Only
-// non-ValueTypeAny columns participate in pushdown; OpGLOB/OpMATCH and type-uncertain
-// predicates are left to sqlite's Omit=false re-check, keeping the pushed result a
-// superset of the truly matching rows.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"database/sql"
 	"slices"
 	"strings"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // mysqlColumn 描述自省得到的一列：列名与 ValueType。
-// mysqlColumn describes one introspected column: its name and ValueType.
 type mysqlColumn struct {
 	name string
 	vt   sqlitevtab.ValueType
 }
 
 // MySQLDatasource 是基于 MySQL/MariaDB 一张表的 vtable 数据源。
-// MySQLDatasource is the vtable datasource over one MySQL/MariaDB table.
 type MySQLDatasource struct {
 	mysqlBase
 	tableRef string
@@ -45,11 +34,6 @@ type MySQLDatasource struct {
 // 一次连接执行 SHOW COLUMNS（随后立即归还）。table 必须是合法 SQL 标识符；返回的
 // 数据源经 SQLitePool.RegisterDatasource 注册（schema 用 ds.datasourceSchema()）
 // 后即可查询。
-// NewMySQLDatasource introspects the table structure of table in the instance behind
-// pool and creates a datasource. Construction borrows a connection once, runs
-// SHOW COLUMNS and immediately returns it. table must be a valid SQL identifier; the
-// returned datasource is queryable once registered via SQLitePool.RegisterDatasource
-// (schema via ds.datasourceSchema()).
 func NewMySQLDatasource(ctx context.Context, pool *MySQLPool, table string) (*MySQLDatasource, error) {
 	if !mysqlIdentPattern.MatchString(table) {
 		return nil, errors.Newf("mysql: invalid table identifier %q", table)
@@ -92,11 +76,6 @@ func NewMySQLDatasource(ctx context.Context, pool *MySQLPool, table string) (*My
 // NewMySQLDatasourceWithSchema 以手动指定的列构建数据源，跳过 SHOW COLUMNS 自省。
 // 适用于接入账号无表结构查看权限、由客户自行提供数据结构的场景；table 仍须为合法 SQL
 // 标识符，columns 至少一列（名称/类型键已在 registerInto 经 parseDatasourceColumns 校验）。
-// NewMySQLDatasourceWithSchema builds a datasource with manually-specified columns,
-// skipping SHOW COLUMNS introspection. Intended for accounts without table-structure
-// privileges where the customer supplies the schema; table must still be a valid SQL
-// identifier and columns must be non-empty (names/type keys are validated by
-// parseDatasourceColumns in registerInto).
 func NewMySQLDatasourceWithSchema(pool *MySQLPool, table string, columns []sqlitevtab.Column) (*MySQLDatasource, error) {
 	if !mysqlIdentPattern.MatchString(table) {
 		return nil, errors.Newf("mysql: invalid table identifier %q", table)
@@ -112,8 +91,6 @@ func NewMySQLDatasourceWithSchema(pool *MySQLPool, table string, columns []sqlit
 }
 
 // newMySQLDatasource 以给定列构建数据源（也供测试直接注入列，无需真实 MySQL）。
-// newMySQLDatasource builds a datasource with the given columns (also used by tests to
-// inject columns directly without a real MySQL).
 func newMySQLDatasource(pool *MySQLPool, db, table string, cols []mysqlColumn) *MySQLDatasource {
 	schema := sqlitevtab.Schema{Columns: make([]sqlitevtab.Column, 0, len(cols))}
 	valueTypes := make([]sqlitevtab.ValueType, 0, len(cols))
@@ -126,8 +103,6 @@ func newMySQLDatasource(pool *MySQLPool, db, table string, cols []mysqlColumn) *
 		}
 	}
 	// Filterable 也要写回 schema，sqlitevtab 的 BestIndex 才会据此生成并下推约束。
-	// Filterable is written back into the schema so sqlitevtab's BestIndex emits and
-	// pushes down the constraints.
 	schema.Filterable = filterable
 	return &MySQLDatasource{
 		mysqlBase: mysqlBase{pool: pool, schema: schema, valueTypes: valueTypes, filterable: filterable},
@@ -138,9 +113,6 @@ func newMySQLDatasource(pool *MySQLPool, db, table string, cols []mysqlColumn) *
 // deriveValueType 将 MySQL/MariaDB 列类型映射为 sqlitevtab.ValueType。base 取自类型名
 // 首 token（去掉括号参数与 unsigned 等修饰）；未知类型映射为 ValueTypeAny（declare
 // 省略类型、按值推断，且不参与下推）。
-// deriveValueType maps a MySQL/MariaDB column type to sqlitevtab.ValueType. base is the
-// leading type token (params and modifiers stripped); unrecognized types map to
-// ValueTypeAny (no declared type, inferred from values, and not pushdown-filterable).
 func deriveValueType(colType string) sqlitevtab.ValueType {
 	base := strings.ToLower(strings.TrimSpace(colType))
 	if i := strings.IndexAny(base, "( "); i >= 0 {
@@ -166,9 +138,6 @@ func deriveValueType(colType string) sqlitevtab.ValueType {
 
 // Open 实现 Datasource.Open：借出连接，依据下推约束构建参数化查询、同步取回全部行
 // 并返回内存游标；连接作用域到 fetch 结束即归还。
-// Open implements Datasource.Open: it borrows a connection, builds a parameterized
-// query from the pushdown constraints, synchronously fetches all rows and returns an
-// in-memory cursor; the connection is released once fetch is done.
 func (d *MySQLDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	db, err := d.pool.Acquire(ctx)
 	if err != nil {
@@ -186,10 +155,6 @@ func (d *MySQLDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constr
 
 // buildQuery 依据下推约束构建参数化 SELECT 与绑定参数。仅对可下推（非 Any）列合成
 // 谓词；OpGLOB/OpMATCH 无 MySQL 直接语义而跳过；无约束时返回全表 SELECT（宽松超集）。
-// buildQuery builds a parameterized SELECT and its bound args from the pushdown
-// constraints. Predicates are synthesized only for filterable (non-Any) columns;
-// OpGLOB/OpMATCH have no direct MySQL semantics and are skipped; with no constraints a
-// full-table SELECT is returned (a loose superset).
 func (d *MySQLDatasource) buildQuery(pushdown []sqlitevtab.Constraint) (string, []any) {
 	var sel strings.Builder
 	sel.WriteString("SELECT ")
@@ -247,15 +212,12 @@ func (d *MySQLDatasource) buildQuery(pushdown []sqlitevtab.Constraint) (string, 
 }
 
 // containsInt 判断切片是否包含给定整数。
-// containsInt reports whether the slice contains the integer.
 func containsInt(a []int, v int) bool {
 	return slices.Contains(a, v)
 }
 
 // fetch 执行查询并把全部行扫描进内存（按 valueTypes 归一化，NULL→nil）。返回的行
 // 顺序即驱动返回顺序。
-// fetch executes the query and scans all rows into memory (normalized per valueTypes,
-// NULL→nil). The row order is the driver's returned order.
 func (d *MySQLDatasource) fetch(ctx context.Context, db *sql.DB, query string, args []any) ([][]any, error) {
 	qrows, err := db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -277,8 +239,6 @@ func (d *MySQLDatasource) fetch(ctx context.Context, db *sql.DB, query string, a
 }
 
 // scanRow 将一行按 schema 列扫描并逐列经 convertCell 归一化。
-// scanRow scans one row against the schema columns and normalizes each cell via
-// convertCell.
 func (d *MySQLDatasource) scanRow(qrows *sql.Rows) ([]any, error) {
 	dest := make([]any, len(d.schema.Columns))
 	ptrs := make([]any, len(dest))

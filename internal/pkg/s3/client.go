@@ -438,6 +438,7 @@ func (s *S3Client) StatObject(ctx context.Context, objectKey string, opts minio.
 	return s.cli.StatObject(ctx, s.bucket, objectKey, opts)
 }
 
+// IsNotExists 判断错误是否表示 S3 对象或存储桶不存在（NoSuchKey / NoSuchBucket）。
 func IsNotExists(err error) bool {
 	if err == nil {
 		return false

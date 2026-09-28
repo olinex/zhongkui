@@ -1,17 +1,18 @@
+// Package notification 提供通知域（渠道 / 目标 / 组 / 模板 / 记录）的 API 处理器与视图 In/Out 结构体。
 package notification
 
 import (
-	// stdlib
+	// 标准库
 
 	"slices"
 	"strconv"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
@@ -101,9 +102,6 @@ type NotificationChannelTypeOut struct {
 	Name string `json:"name"`
 	// Placeholder 是否为「占位符」渠道：渠道级配置无字段（如 webhook），仅标明目标类型，
 	// 作为固定数据随命名空间自动种子化，前端应隐藏其创建入口且不可删除
-	// Placeholder whether the type is a placeholder channel whose channel-level config has
-	// no fields (e.g. webhook), only marking the target type; seeded per namespace as fixed
-	// data, so the frontend hides its create entry and disallows deletion
 	Placeholder bool `json:"placeholder"`
 	// Config 该类型的渠道级 / 目标级配置 schema
 	Config NotificationChannelTypeConfigSchema `json:"config"`

@@ -19,10 +19,10 @@ import i18n from "@/utils/i18n";
 
 import type { Density } from "../@types/base";
 
-// Validation rule shape of the underlying field: `true` when valid,
-// otherwise the error message to display.
+// 底层字段的校验规则形状：合法时返回 `true`，否则返回要展示的错误信息。
 type Rule = (value: unknown) => boolean | string;
 
+// options 常用天数下拉项（7/15/30/90/180），单位经 i18n 翻译。
 const options = computed(() => {
   const unit = i18n.global.t("unit.day");
   return [
@@ -34,18 +34,14 @@ const options = computed(() => {
   ];
 });
 
-// Deliberate variant differences from the date/time picker family
-// (`DateField` / `TimeField` / `DatetimeField` / `DateRangeField` /
-// `DateTimeRangeField`): this field is a `v-select` over a fixed set of day
-// counts (7/15/30/90/180), which are panel-only pickers defaulting to
-// `clearable: true` and `readonly: true`. Do not "fix" the following as
-// omissions:
-//   - no `clearable` prop: clearing would emit a non-numeric value and break
-//     the downstream `days` query parameter, so the value stays required
-//     (`modelValue` is `Number` and `required`).
-//   - `readonly` defaults to `false`: a select is meant to be opened and
-//     changed directly, unlike a picker whose value is only chosen inside a
-//     panel.
+// 与日期/时间选择器族（`DateField` / `TimeField` / `DatetimeField` / `DateRangeField` /
+// `DateTimeRangeField`）有意保持的差异：本字段是对固定天数集合（7/15/30/90/180）的
+// `v-select`，而选择器族为仅面板选择、默认 `clearable: true` 与 `readonly: true`。
+// 请勿将以下差异当作遗漏「修复」：
+//   - 无 `clearable` 属性：清空会发出非数值并破坏下游 `days` 查询参数，故取值恒为必填
+//     （`modelValue` 为 `Number` 且 `required`）。
+//   - `readonly` 默认为 `false`：下拉框本就应可直接展开修改，不同于只能在面板内选值的
+//     选择器。
 defineProps({
   modelValue: {
     type: Number,
@@ -81,5 +77,6 @@ defineProps({
   },
 });
 
+// emits 值变更事件，供父组件以 v-model 绑定。
 const emits = defineEmits(["update:modelValue"]);
 </script>

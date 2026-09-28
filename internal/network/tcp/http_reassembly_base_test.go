@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
 )
 
+// TestBase 验证 extractPackets 与 runRouter 在多种抓包文件下的行为。
 func TestBase(t *testing.T) {
 	Convey("Test extractPackets with IPv4 TCP", t, func() {
 		Convey("Should read pcap file without error", func(c C) {

@@ -7,6 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// 测试基于配置创建生产日志记录器。
 func TestNewProductionLogger(t *testing.T) {
 	convey.Convey("Test NewProductionLogger", t, func() {
 		convey.Convey("should create logger with valid config", func() {
@@ -58,6 +59,7 @@ func TestNewProductionLogger(t *testing.T) {
 	})
 }
 
+// 测试创建默认日志记录器。
 func TestNewDefaultLogger(t *testing.T) {
 	convey.Convey("Test NewDefaultLogger", t, func() {
 		convey.Convey("should create logger with default config", func() {
@@ -82,6 +84,7 @@ func TestNewDefaultLogger(t *testing.T) {
 	})
 }
 
+// 测试日志类型别名与嵌入关系。
 func TestLoggerAliases(t *testing.T) {
 	convey.Convey("Test type aliases", t, func() {
 		convey.Convey("LoggerCfg should be alias of zap.Config", func() {
@@ -108,6 +111,7 @@ func TestLoggerAliases(t *testing.T) {
 	})
 }
 
+// 测试日志记录器的各级别与结构化输出。
 func TestLoggerFunctionality(t *testing.T) {
 	convey.Convey("Test logger functionality", t, func() {
 		logger, err := NewDefaultLogger()

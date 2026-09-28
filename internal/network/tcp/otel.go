@@ -15,21 +15,31 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// TCP 流重组的 OpenTelemetry scope 与 span 名称常量。
 const (
-	ScopeName     = base.GlobalPrefix + "-tcp"
-	SpanRouter    = "tcp.router"
+	// ScopeName TCP 流重组的 tracer/meter scope 名称
+	ScopeName = base.GlobalPrefix + "-tcp"
+	// SpanRouter 路由器阶段的 span 名称
+	SpanRouter = "tcp.router"
+	// SpanRectifier 整流器阶段的 span 名称
 	SpanRectifier = "tcp.rectifier"
-	SpanSide      = "tcp.side"
-	SpanDetect    = "tcp.detector"
-	SpanExtract   = "tcp.extractor"
-	SpanBuild     = "tcp.builder"
-	SpanParse     = "tcp.parse"
-	SpanCleanup   = "tcp.cleanup"
+	// SpanSide 单端处理阶段的 span 名称
+	SpanSide = "tcp.side"
+	// SpanDetect 协议检测阶段的 span 名称
+	SpanDetect = "tcp.detector"
+	// SpanExtract 协议提取阶段的 span 名称
+	SpanExtract = "tcp.extractor"
+	// SpanBuild 应用层构建阶段的 span 名称
+	SpanBuild = "tcp.builder"
+	// SpanParse 解析循环的 span 名称
+	SpanParse = "tcp.parse"
+	// SpanCleanup 清理阶段的 span 名称
+	SpanCleanup = "tcp.cleanup"
 )
 
 var (
 	once sync.Once
-	// ---------- Metrics ----------
+	// ---------- 指标 ----------
 	// packetCounter 统计处理的数据包总数，按类型标记（syn/syn_ack/ack/fin/rst/data）
 	packetCounter metric.Int64Counter
 	// packetOutOfOrderCounter 统计乱序数据包数量
@@ -54,6 +64,7 @@ var (
 	cleanupFlowsLivingGaguge metric.Int64Gauge
 )
 
+// InitMetrics 初始化 TCP 流重组的 OpenTelemetry 指标，仅执行一次。
 func InitMetrics() {
 	once.Do(initMetrics)
 }
@@ -262,7 +273,7 @@ func startCleanupSpan(ctx context.Context, force bool) (context.Context, trace.S
 }
 
 // ---------------------------------------------------------------------------
-// Metrics 记录辅助函数
+// 指标记录辅助函数
 // ---------------------------------------------------------------------------
 
 func recordPacket(ctx context.Context, packet TCPPacket) {

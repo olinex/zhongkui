@@ -81,6 +81,7 @@ tags contains "oops" if {
 	count(input.reqHdrContentLength) > 10
 }`
 
+// TestValidateGroupRuntime 验证运行期样例校验对合法规则、求值报错与不可反序列化样例的处理。
 func TestValidateGroupRuntime(t *testing.T) {
 	Convey("Test ValidateGroupRuntime", t, func() {
 		db := setupSampleDB(t)

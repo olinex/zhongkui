@@ -1,3 +1,6 @@
+// Package traffic 提供流量审计域（IPv4-TCP / IPv6-TCP / HTTP 传输 / 网络栈）的 API 处理器与
+// 视图 In/Out 结构体。
+//
 // RegisterRoutes 注册 /api/v1/traffic 原始流量审计接口路由。
 // 只读查询 raw 库（ClickHouse）中的原始流量数据。
 // 三种数据类型（ipv4-tcp / ipv6-tcp / http-transport）的数据结构与业务逻辑差异较大，

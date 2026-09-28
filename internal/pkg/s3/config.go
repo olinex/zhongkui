@@ -12,8 +12,10 @@ import (
 // PREFIX 是S3配置在配置文件中的前缀
 // 用于在Viper配置管理器中标识S3相关的配置项
 const (
-	Prefix          = "s3"
+	Prefix = "s3"
+	// CryptoKeyOffset 是从密码本派生 S3 加密子密钥的固定偏移量。
 	CryptoKeyOffset = 43036
+	// CryptoKeyLength 是 S3 加密子密钥的固定长度（字节）。
 	CryptoKeyLength = 32
 )
 

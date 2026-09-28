@@ -1,17 +1,19 @@
+// Package ai 提供 AI 知识域（Agent / 知识库 / 会话）的 HTTP 处理器与视图 In/Out 结构体，
+// 向内封装 internal/ai 的组件能力。
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 
-	// internal
+	// 项目内部
 	ai "zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
@@ -23,8 +25,6 @@ import (
 )
 
 // requireAiEnabled 获取已启用的 AI 组件；功能未启用时以 400 + 英文错误中断请求并返回 nil。
-// requireAiEnabled fetches the enabled AI components; when the feature is disabled it
-// aborts the request with 400 + an English error and returns nil.
 func requireAiEnabled(c *gin.Context) *ai.Components {
 	comps := middlewares.GetAi(c)
 	if !comps.Enabled() {
@@ -36,9 +36,6 @@ func requireAiEnabled(c *gin.Context) *ai.Components {
 
 // getOwnedAgentSession 按 ID 查询 AI 助手会话并校验其属于给定命名空间：
 // 会话不存在（ErrSessionNotFound）或归属不符时以 404 中断请求并返回 nil。
-// getOwnedAgentSession fetches an agent session by ID and validates that it belongs
-// to the given namespace: a missing session (ErrSessionNotFound) or an ownership
-// mismatch aborts the request with 404 and returns nil.
 func getOwnedAgentSession(c *gin.Context, comps *ai.Components, sessionID uint, namespace string) *modelsai.AgentSession {
 	session, err := comps.Sessions.GetSession(c, sessionID)
 	if err != nil {
@@ -81,8 +78,8 @@ type AgentSessionListOut []AgentSessionItemOut
 
 // AgentSessionCreateIn 定义创建 AI 助手会话的请求输入。
 type AgentSessionCreateIn struct {
-	// Title 会话标题，必填
-	Title string `json:"title" binding:"required"`
+	// Query 首个用户问题，必填；会话主题据此经 LLM 生成（失败时按其截断兜底）
+	Query string `json:"query" binding:"required"`
 	// Slot 会话缺省档位（flash/standard/advanced），可选；空表示按 agent.defaultSlot 参数解析
 	Slot pkgllm.Slot `json:"slot"`
 	// AgentKind 会话所属 Agent 类型（knowledge/rego），可选；缺省 knowledge，非法取值以 400 +
@@ -118,13 +115,9 @@ type AgentMessageItemOut struct {
 type AgentMessageListOut []AgentMessageItemOut
 
 // AgentSessionCompactIn 定义会话压缩的请求输入：压缩仅需会话 ID（路径参数），无请求体字段。
-// AgentSessionCompactIn defines the request input of session compaction: it only needs the
-// session id (a path parameter) and carries no body field.
 type AgentSessionCompactIn struct{}
 
 // AgentSessionCompactOut 定义会话压缩的输出：刷新后的摘要、成功落库的长期记忆条数与非致命告警。
-// AgentSessionCompactOut defines the output of session compaction: the refreshed summary, the
-// number of long-term memories persisted and the non-fatal warnings.
 type AgentSessionCompactOut struct {
 	// Summary 刷新后的会话摘要
 	Summary string `json:"summary"`
@@ -150,7 +143,6 @@ type AgentStreamIn struct {
 }
 
 // AgentSlotStatusOut 定义单个档位的绑定模型与可用性输出项。
-// AgentSlotStatusOut defines the output item of one slot: its bound model and availability.
 type AgentSlotStatusOut struct {
 	// Slot 档位标识（flash/standard/advanced/embedding）
 	Slot pkgllm.Slot `json:"slot"`
@@ -194,7 +186,6 @@ type AgentStatusOut struct {
 }
 
 // newAgentSessionItemOut 将会话模型映射为视图层输出项。
-// newAgentSessionItemOut maps the session model into a view-layer output item.
 func newAgentSessionItemOut(s *modelsai.AgentSession) AgentSessionItemOut {
 	return AgentSessionItemOut{
 		ID:        s.ID,
@@ -210,9 +201,6 @@ func newAgentSessionItemOut(s *modelsai.AgentSession) AgentSessionItemOut {
 
 // newAgentMessageItemOut 将消息模型映射为视图层输出项：
 // 草稿与引用载荷经 JSON 反序列化暴露，空或非法时留空（omitempty 省略）。
-// newAgentMessageItemOut maps the message model into a view-layer output item: the
-// draft and citation payloads are exposed via JSON unmarshal, left empty when blank
-// or invalid (omitted by omitempty).
 func newAgentMessageItemOut(m *modelsai.AgentMessage) AgentMessageItemOut {
 	out := AgentMessageItemOut{
 		ID:        m.ID,
@@ -233,9 +221,10 @@ func newAgentMessageItemOut(m *modelsai.AgentMessage) AgentMessageItemOut {
 }
 
 // AgentSessionCreate 处理创建 AI 助手会话的请求。
-// 新会话归属当前请求命名空间，初始状态为 active；可选档位字段经校验后作为该会话的
-// 缺省档位落库，可选 Agent 类型字段经校验后作为该会话的归属落库（缺省 knowledge）；
-// 两类字段的非法取值均以 400 + 英文错误拒绝（不静默回落）。
+// 新会话归属当前请求命名空间，初始状态为 active；会话主题由首个用户问题经 LLM 生成，失败时
+// 按其截断兜底，绝不阻断创建。可选档位字段经校验后作为该会话的缺省档位落库，可选 Agent 类型
+// 字段经校验后作为该会话的归属落库（缺省 knowledge）；两类字段的非法取值均以 400 + 英文错误
+// 拒绝（不静默回落）。
 func AgentSessionCreate(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -264,7 +253,12 @@ func AgentSessionCreate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	session, err := comps.Sessions.CreateSession(c, namespace, in.Title, slot, agentKind)
+	query := strings.TrimSpace(in.Query)
+	topic := ai.SessionTopicFallback(query)
+	if comps.Memory != nil {
+		topic = comps.Memory.GenerateTopic(c, query)
+	}
+	session, err := comps.Sessions.CreateSession(c, namespace, topic, slot, agentKind)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -371,11 +365,6 @@ func AgentSessionDelete(c *gin.Context) {
 // AgentSessionCompact 处理压缩 AI 助手会话上下文并抽取长期记忆的请求。
 // 先校验会话归属（404 语义同详情接口），再经 Memory.Compact 把未摘要消息折叠进滚动摘要并
 // 抽取长期记忆；摘要失败以 500 + 英文错误返回，长期记忆抽取/落库失败仅作为 warnings 返回。
-// AgentSessionCompact handles the request to compact an AI assistant session context and extract
-// long-term memories. It first validates the session ownership (404 semantics as the detail
-// endpoint), then folds the unsummarized messages into the rolling summary and extracts long-term
-// memories via Memory.Compact; a summary failure returns 500 + an English error, while a long-term
-// memory extraction/persistence failure is only returned as warnings.
 func AgentSessionCompact(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -470,10 +459,6 @@ func AgentStream(c *gin.Context) {
 	// 工具调用阶段事件映射：带增量输出的事件走 delta 事件（携带阶段标识），状态事件走
 	// stage 事件（沿用 dryrun.go 的 report 写法）；写失败（如客户端断开）由 Agent 节点 4
 	// 捕获并中止工具循环，避免无谓的模型与工具调用。
-	// Tool-call stage event mapping: events carrying a delta become delta events (tagged with
-	// the stage), status events become stage events (following the report style of dryrun.go);
-	// a write failure (e.g. a disconnected client) is caught by Agent node 4 and aborts the tool
-	// loop, avoiding needless model and tool calls.
 	report := func(ev ai.StageEvent) error {
 		if ev.Delta != "" {
 			return sseWriter.SendStageDelta(string(ev.Stage), ev.Delta)
@@ -519,13 +504,6 @@ func AgentStream(c *gin.Context) {
 // 从运行时快照读取 AI 能力是否启用、各档位绑定的模型与可用性、生效的参数覆盖数量；
 // 未启用时给出明确原因（按请求语言本地化）。启用时额外查询数据库 knowledge_chunks.embedding 与
 // agent_memories.embedding 两列的实际维度并与绑定模型维度对比，不一致时提示风险。
-// AgentStatusGet handles the AI assistant status request (no forced enable, always 200).
-// It reads from the runtime snapshot whether the AI capability is enabled, the model bound
-// to each slot with its availability and the number of effective parameter overrides, and
-// gives an explicit reason (localized to the request language) when disabled. When enabled it
-// additionally queries the actual dimensions of the knowledge_chunks.embedding and
-// agent_memories.embedding columns and compares them with the bound model dimension, warning about
-// a mismatch.
 func AgentStatusGet(c *gin.Context) {
 	rt := middlewares.GetAiRuntime(c)
 	snap := rt.Snapshot()
@@ -564,9 +542,6 @@ func AgentStatusGet(c *gin.Context) {
 		db := middlewares.GetCoreDatabase(c)
 		// 维度自检覆盖两列受治理的向量列：knowledge_chunks.embedding 与 agent_memories.embedding；
 		// 任一列可读且与绑定模型维度不一致即报出 dimensionMismatch（读不出时交由迁移建列）。
-		// The dimension self-check covers both governed vector columns:
-		// knowledge_chunks.embedding and agent_memories.embedding; a mismatch on either readable
-		// column sets dimensionMismatch (an unreadable column is left to the migration).
 		if n, found, err := pkgllm.ChunkEmbeddingDimension(c, db); err == nil && found && n != out.EmbeddingDimensions {
 			out.DimensionMismatch = true
 			out.DimensionDetail = fmt.Sprintf("embedding dimension mismatch: knowledge_chunks.embedding column is %d, bound model is %d", n, out.EmbeddingDimensions)

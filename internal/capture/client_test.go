@@ -58,6 +58,7 @@ func syncMapLen(m *sync.Map) int {
 	return count
 }
 
+// TestCaptureClient_Shutdown 验证 CaptureClient 关闭时对已追踪临时文件的清理行为。
 func TestCaptureClient_Shutdown(t *testing.T) {
 	Convey("CaptureClient Shutdown 临时文件清理测试", t, func() {
 

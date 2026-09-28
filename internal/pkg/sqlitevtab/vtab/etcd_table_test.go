@@ -1,11 +1,6 @@
 // Package vtab（本文件）提供 etcd 数据源单元测试。
 // etcd 键值对数据源无法像 Redis/MySQL 那样本地起 mock（clientv3.Client 为具体类型），
 // 故聚焦纯逻辑：LIKE 模式前缀提取（likePrefix）与 key 下推计划解析（resolveKeyPlan）。
-//
-// This file provides etcd datasource unit tests. Since the etcd key-value datasource
-// cannot easily be backed by a local mock like Redis/MySQL (clientv3.Client is a concrete
-// type), it focuses on pure logic: LIKE pattern prefix extraction (likePrefix) and key
-// pushdown plan resolution (resolveKeyPlan).
 package vtab
 
 import (

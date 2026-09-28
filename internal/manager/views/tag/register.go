@@ -1,10 +1,12 @@
+// Package tag 提供标签域（规则 / 规则样本 / 事件规则 / 事件记录 / S3 样本）的 API 处理器与视图
+// In/Out 结构体。
 package tag
 
 import (
-	// stdlib
+	// 标准库
 	"net/http"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/views"
 )
 

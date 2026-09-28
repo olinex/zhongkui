@@ -11,16 +11,26 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
+// CaptureMetrics 单次抓包基准测试的性能指标集合。
 type CaptureMetrics struct {
-	Name          string
-	SentCount     int
+	// Name 基准用例名称。
+	Name string
+	// SentCount 发送的数据包数量。
+	SentCount int
+	// CapturedCount 实际捕获到的数据包数量。
 	CapturedCount int
-	TotalBytes    int64
-	Duration      time.Duration
-	PPS           float64
-	BPS           float64
-	LostCount     int
-	LossRate      float64
+	// TotalBytes 捕获到的总字节数。
+	TotalBytes int64
+	// Duration 本次抓包持续时间。
+	Duration time.Duration
+	// PPS 每秒包数（packets per second）。
+	PPS float64
+	// BPS 每秒字节数（bytes per second）。
+	BPS float64
+	// LostCount 丢失的数据包数量。
+	LostCount int
+	// LossRate 丢包率（百分比）。
+	LossRate float64
 }
 
 var (
@@ -28,6 +38,7 @@ var (
 	results   []*CaptureMetrics
 )
 
+// Compute 根据持续时间与计数计算 PPS、BPS、丢包数与丢包率。
 func (m *CaptureMetrics) Compute() {
 	if m.Duration > 0 {
 		m.PPS = float64(m.CapturedCount) / m.Duration.Seconds()
@@ -39,6 +50,7 @@ func (m *CaptureMetrics) Compute() {
 	}
 }
 
+// ReportToBenchmark 将指标上报给基准测试框架并追加到全局结果集。
 func (m *CaptureMetrics) ReportToBenchmark(b *testing.B) {
 	b.ReportMetric(m.PPS, "pps")
 	b.ReportMetric(m.BPS, "bps")
@@ -49,6 +61,7 @@ func (m *CaptureMetrics) ReportToBenchmark(b *testing.B) {
 	resultsMu.Unlock()
 }
 
+// PrintResultsTable 以表格形式打印所有收集到的基准指标。
 func PrintResultsTable() {
 	resultsMu.Lock()
 	defer resultsMu.Unlock()

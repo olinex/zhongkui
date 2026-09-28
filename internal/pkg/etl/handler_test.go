@@ -14,6 +14,7 @@ type testHandlerConfig struct {
 	MaxRetry int           `mapstructure:"maxRetry" default:"3"`
 }
 
+// TestGetHandlerParam_Success 验证从上下文成功解析处理器配置。
 func TestGetHandlerParam_Success(t *testing.T) {
 	Convey("TestGetHandlerParam 成功解析配置", t, func() {
 		ctx := context.WithValue(context.Background(), ContextHandlerParamName, map[string]any{
@@ -35,6 +36,7 @@ func TestGetHandlerParam_Success(t *testing.T) {
 	})
 }
 
+// TestGetHandlerParam_NotFound 验证上下文缺少配置参数时返回错误。
 func TestGetHandlerParam_NotFound(t *testing.T) {
 	Convey("TestGetHandlerParam Context中无配置参数", t, func() {
 		ctx := context.Background()
@@ -47,6 +49,7 @@ func TestGetHandlerParam_NotFound(t *testing.T) {
 	})
 }
 
+// TestGetHandlerParam_DefaultValues 验证配置缺失字段回落到默认值。
 func TestGetHandlerParam_DefaultValues(t *testing.T) {
 	Convey("TestGetHandlerParam 验证默认值", t, func() {
 		ctx := context.WithValue(context.Background(), ContextHandlerParamName, map[string]any{

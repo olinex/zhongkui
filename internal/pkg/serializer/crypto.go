@@ -21,19 +21,18 @@ type Crypto struct {
 	cipher []byte
 }
 
+// NewCrypto 以明文构造 Crypto 实例，供写库侧使用。
 func NewCrypto(value []byte) *Crypto {
 	return &Crypto{value: value}
 }
 
+// Value 返回明文字节。
 func (c *Crypto) Value() []byte {
 	return c.value
 }
 
 // Cipher 返回原始密文字节（Scan 读库时保留），供详情输出编码为 base64 密文文本；
 // 写库侧构造或未读库的 Crypto（cipher 为空）返回 nil，避免泄露明文。
-// Cipher returns the raw ciphertext bytes retained on Scan, used by detail output to
-// encode a base64 ciphertext; returns nil for a write-side or un-scanned Crypto (empty
-// cipher), preventing plaintext leakage.
 func (c *Crypto) Cipher() []byte {
 	if c == nil {
 		return nil
@@ -92,6 +91,7 @@ func (c *Crypto) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// CryptoSerializer 实现 GORM 加密字段的加解密序列化器。
 type CryptoSerializer struct{}
 
 func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
@@ -99,6 +99,7 @@ func (cs CryptoSerializer) getTagMode(field *schema.Field) (mode.Mode, error) {
 	return crypto.ModeFromTag(field.StructField.Tag.Get(crypto.SecurityTagKey))
 }
 
+// Scan 从数据库读取字段值，解密得到明文并保留原始密文。
 func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error {
 	// 断言数据库值为 []byte 或 string（ClickHouse String 列返回 string 类型）
 	var raw []byte
@@ -149,6 +150,7 @@ func (cs CryptoSerializer) Scan(ctx context.Context, field *schema.Field, dst re
 	return nil
 }
 
+// Value 将字段明文加密后写回数据库，空值写入 NULL。
 func (cs CryptoSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error) {
 	// 如果字段值为 nil，返回 nil（对应数据库 NULL）
 	if fieldValue == nil {

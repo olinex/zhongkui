@@ -1,5 +1,4 @@
 // 全局功能开关（feature flags）状态存储。
-// Pinia store for global feature flags.
 import { defineStore } from "pinia";
 
 import { featuresListGet } from "@/apis/features";

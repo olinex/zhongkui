@@ -1,31 +1,24 @@
 // 本文件覆盖内置工具 memory_write 的纯逻辑：缺写入器、空 content、kind 校验/缺省、正常写入时
 // 传入写入器的字段时间与返回 JSON。全部用例不依赖 PostgreSQL（用假 MemoryWriter 断言收到的入参），
 // 也不依赖 internal/ai（本包不能反向导入）。
-//
-// This file covers the pure logic of the builtin tool memory_write: a missing writer, an empty
-// content, kind validation/defaulting, and the field values handed to the writer plus the returned
-// JSON on success. No case needs PostgreSQL (a fake MemoryWriter records the received input) nor
-// internal/ai (this package cannot import it back).
 package tools
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // fakeMemoryWriter 是 MemoryWriter 的测试替身：记录收到的入参与调用次数，按预设返回 ID 或错误。
-// fakeMemoryWriter is a test double of MemoryWriter: it records the received input and the call count,
-// returning a preset id or error.
 type fakeMemoryWriter struct {
 	id    uint
 	err   error
@@ -34,7 +27,6 @@ type fakeMemoryWriter struct {
 }
 
 // WriteMemory 记录入参并返回预设结果。
-// WriteMemory records the input and returns the preset result.
 func (w *fakeMemoryWriter) WriteMemory(_ context.Context, in MemoryWriteInput) (uint, error) {
 	w.calls++
 	w.got = append(w.got, in)
@@ -42,7 +34,6 @@ func (w *fakeMemoryWriter) WriteMemory(_ context.Context, in MemoryWriteInput) (
 }
 
 // memoryRuntimeCtx 构造一个已注入假写入器与归属信息的 ctx，便于各用例复用。
-// memoryRuntimeCtx builds a ctx with the fake writer and scope already injected, shared by the cases.
 func memoryRuntimeCtx(w MemoryWriter) context.Context {
 	return WithMemoryRuntime(context.Background(), MemoryRuntime{
 		Writer:        w,
@@ -53,8 +44,6 @@ func memoryRuntimeCtx(w MemoryWriter) context.Context {
 }
 
 // TestMemoryWrite_MissingWriter 覆盖未注入运行期或写入器为 nil 时返回英文错误且不误报写入。
-// TestMemoryWrite_MissingWriter covers that a missing runtime or a nil writer returns an English error
-// without a spurious write.
 func TestMemoryWrite_MissingWriter(t *testing.T) {
 	run := &memoryWriteTool{}
 	args := `{"content":"a stable fact"}`
@@ -72,8 +61,6 @@ func TestMemoryWrite_MissingWriter(t *testing.T) {
 }
 
 // TestMemoryWrite_EmptyContent 覆盖 content 为空或全空白时被拒且不调用写入器。
-// TestMemoryWrite_EmptyContent covers that an empty or all-whitespace content is rejected and the
-// writer is never called.
 func TestMemoryWrite_EmptyContent(t *testing.T) {
 	cases := map[string]string{
 		"empty":      `{"content":""}`,
@@ -94,8 +81,6 @@ func TestMemoryWrite_EmptyContent(t *testing.T) {
 }
 
 // TestMemoryWrite_Kind 覆盖：非法 kind 被拒；空 kind 落为 fact；合法 kind 原样传递。
-// TestMemoryWrite_Kind covers: an invalid kind is rejected; an empty kind falls back to fact; a legal
-// kind is passed through unchanged.
 func TestMemoryWrite_Kind(t *testing.T) {
 	invalid := &fakeMemoryWriter{}
 	if _, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(invalid), `{"content":"x","kind":"bogus"}`); err == nil {
@@ -126,8 +111,6 @@ func TestMemoryWrite_Kind(t *testing.T) {
 
 // TestMemoryWrite_Success 覆盖正常调用：写入器收到的入参各字段与 ctx 注入值及工具入参一致，且返回
 // 的 JSON 可解出 ID 与 saved。
-// TestMemoryWrite_Success covers a normal call: every field the writer receives matches the ctx-injected
-// scope and the tool input, and the returned JSON decodes into the id and saved.
 func TestMemoryWrite_Success(t *testing.T) {
 	w := &fakeMemoryWriter{id: 123}
 	out, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(w),
@@ -161,8 +144,6 @@ func TestMemoryWrite_Success(t *testing.T) {
 }
 
 // TestMemoryWrite_Info 覆盖 Info 的工具名与参数 schema：content 必填、kind 带枚举取值、title 存在。
-// TestMemoryWrite_Info covers the tool name and the parameter schema of Info: content is required,
-// kind carries its enum values and title exists.
 func TestMemoryWrite_Info(t *testing.T) {
 	info, err := (&memoryWriteTool{}).Info(context.Background())
 	if err != nil {
@@ -199,8 +180,6 @@ func TestMemoryWrite_Info(t *testing.T) {
 
 // TestMemoryWrite_BuildResolves 覆盖 init 期登记生效：Build 可按名解析 memory_write 并返回可用的
 // eino 工具（内容与直接构造的实现等价）。
-// TestMemoryWrite_BuildResolves covers that the init-time registration takes effect: Build resolves
-// memory_write by name and returns a usable eino tool (equivalent to the directly constructed one).
 func TestMemoryWrite_BuildResolves(t *testing.T) {
 	built, err := Build(context.Background(), "memory_write", Deps{})
 	if err != nil {
@@ -216,9 +195,7 @@ func TestMemoryWrite_BuildResolves(t *testing.T) {
 }
 
 // 仅用于确认假替身满足接口（编译期断言）。
-// Compile-time assertion that the fake satisfies the interface.
 var _ MemoryWriter = (*fakeMemoryWriter)(nil)
 
 // 仅用于确认工具满足 eino 的可调用工具接口（编译期断言）。
-// Compile-time assertion that the tool satisfies the eino invokable tool interface.
 var _ tool.InvokableTool = (*memoryWriteTool)(nil)

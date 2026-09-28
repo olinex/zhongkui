@@ -1,4 +1,4 @@
-// Utilities
+// 工具
 import { defineStore } from "pinia";
 import i18n from "@/utils/i18n";
 import { useConfigSyncStore } from "./configSync";

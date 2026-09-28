@@ -6,7 +6,7 @@
 package tag
 
 import (
-	// stdlib
+	// 标准库
 
 	"context"
 	"encoding/json"
@@ -14,14 +14,14 @@ import (
 	"net/http"
 	"strconv"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/open-policy-agent/opa/v1/rego"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"

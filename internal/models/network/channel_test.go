@@ -55,7 +55,7 @@ func TestGRERouting(t *testing.T) {
 	Convey("Test GRERouting functions", t, func() {
 		Convey("NewGRERouting should create valid GRERouting", func() {
 			rawRouting := &layers.GRERouting{
-				AddressFamily:      2, // IPv4
+				AddressFamily:      2, // IPv4 地址族
 				SRELength:          4,
 				RoutingInformation: []byte{192, 168, 1, 1, 192, 168, 1, 2},
 				Next: &layers.GRERouting{
@@ -151,7 +151,7 @@ func TestGRERouting(t *testing.T) {
 			var routing GRERouting
 			err := routing.Scan("")
 			So(err, ShouldBeNil)
-			// struct should be zero-valued after empty scan
+			// 空值扫描后结构体应为零值
 			So(routing.AddressFamily, ShouldEqual, 0)
 		})
 
@@ -159,7 +159,7 @@ func TestGRERouting(t *testing.T) {
 			var routing GRERouting
 			err := routing.Scan([]byte{})
 			So(err, ShouldBeNil)
-			// struct should be zero-valued after empty scan
+			// 空值扫描后结构体应为零值
 			So(routing.AddressFamily, ShouldEqual, 0)
 		})
 	})

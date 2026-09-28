@@ -1,10 +1,6 @@
 // Package vtab（本文件）提供 MongoDB 数据源单元测试。
 // Mongo 客户端不易本地 mock，聚焦纯逻辑：单元格归一化（cell/mongoInt64/mongoFloat/
 // mongoText）与 Filterable 恒空契约。
-//
-// This file provides MongoDB datasource unit tests. As the Mongo client is hard to mock
-// locally, it focuses on pure logic: cell normalization (cell/mongoInt64/mongoFloat/
-// mongoText) and the always-empty-Filterable contract.
 package vtab
 
 import (

@@ -4,14 +4,14 @@
 package tagengine
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 
-	// third-party
+	// 第三方
 	"gorm.io/datatypes"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -62,8 +62,6 @@ var httpTransportExample = map[string]any{
 
 // ListModelSamples 列出目标模型在指定命名空间下的全部系统样例（按 name 排序）。
 // 未注册模型返回 ErrModelNotRegistered。
-// ListModelSamples lists all system samples of the target model under the given
-// namespace ordered by name; unregistered models return ErrModelNotRegistered.
 func ListModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error) {
 	if !IsRegistered(typeKey) {
 		return nil, errors.WithStack(ErrModelNotRegistered)
@@ -79,10 +77,6 @@ func ListModelSamples(ctx context.Context, db *database.DB, namespace, typeKey s
 // 并发幂等：插入遇唯一约束冲突（uq_tag_rule_samples_namespace_name_model_name）时
 // 忽略错误后重查，保证不重复。
 // 未注册模型返回 ErrModelNotRegistered。
-// EnsureModelSamples ensures the target model has system samples under the given
-// namespace, lazily provisioning and persisting them when missing, then returns
-// the latest sample list. Samples are provisioned per namespace and isolated
-// between tenants.
 func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey string) ([]*tag.TagRuleSample, error) {
 	target, ok := TargetInfo(typeKey)
 	if !ok {

@@ -1,11 +1,11 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"strings"
 	"testing"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
@@ -15,13 +15,6 @@ import (
 // 类型与档位不符」四个分支，并顺带覆盖多条原因的分隔符。该文案直接随状态接口与档位绑定
 // 接口返回前端，缺键会以裸键的形式暴露给运维，故以此测试兜底（与 param_i18n_test.go
 // 的键完整性守卫同一约定）。
-// TestDisabledReasonLocalized verifies that the AI-capability disabled reason resolves to real
-// copy in every supported language instead of falling back to the i18n key itself: it covers the
-// four branches (snapshot not assembled, slot unbound, bound model disabled, bound model kind
-// mismatch) and, with the unbound branch, the joiner between multiple reasons. The copy is
-// returned to the frontend by the status API and the slot-binding API, so a missing key would
-// leak a bare key to operators; this test is the backstop (the same convention as the
-// key-completeness guard in param_i18n_test.go).
 func TestDisabledReasonLocalized(t *testing.T) {
 	disabled := emptySnapshot()
 	disabled.infos[llm.SlotStandard] = SlotInfo{Slot: llm.SlotStandard, Name: "gpt-4o-mini", Enabled: false}

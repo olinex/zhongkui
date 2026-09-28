@@ -16,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/validator"
 )
 
+// 各数据库在依赖注入器中的命名标签。
 const (
 	CoreDbLabel     = "database." + base.CoreDbName
 	RawDbLabel      = "database." + base.RawDbName
@@ -100,10 +101,12 @@ func newDatabaseProvider(name string) do.Provider[*database.DB] {
 	}
 }
 
+// NewCoreDatabase 返回构建 core 数据库的 provider 工厂。
 func NewCoreDatabase() do.Provider[*database.DB] {
 	return newDatabaseProvider(base.CoreDbName)
 }
 
+// NewRawDatabase 返回构建 raw 数据库的 provider 工厂。
 func NewRawDatabase() do.Provider[*database.DB] {
 	return newDatabaseProvider(base.RawDbName)
 }
@@ -120,30 +123,37 @@ func Models(dbName string) []any {
 	}
 }
 
+// InjectCoreDatabase 向依赖注入器注册 core 数据库 provider。
 func InjectCoreDatabase(i do.Injector) {
 	do.ProvideNamed(i, CoreDbLabel, NewCoreDatabase())
 }
 
+// InjectRawDatabase 向依赖注入器注册 raw 数据库 provider。
 func InjectRawDatabase(i do.Injector) {
 	do.ProvideNamed(i, RawDbLabel, NewRawDatabase())
 }
 
+// InvokeCoreDatabase 从依赖注入器解析 core 数据库，错误交由调用方处理。
 func InvokeCoreDatabase(i do.Injector) (*database.DB, error) {
 	return do.InvokeNamed[*database.DB](i, CoreDbLabel)
 }
 
+// MustInvokeCoreDatabase 从依赖注入器解析 core 数据库，失败时 panic。
 func MustInvokeCoreDatabase(i do.Injector) *database.DB {
 	return do.MustInvokeNamed[*database.DB](i, CoreDbLabel)
 }
 
+// InvokeRawDatabase 从依赖注入器解析 raw 数据库，错误交由调用方处理。
 func InvokeRawDatabase(i do.Injector) (*database.DB, error) {
 	return do.InvokeNamed[*database.DB](i, RawDbLabel)
 }
 
+// MustInvokeRawDatabase 从依赖注入器解析 raw 数据库，失败时 panic。
 func MustInvokeRawDatabase(i do.Injector) *database.DB {
 	return do.MustInvokeNamed[*database.DB](i, RawDbLabel)
 }
 
+// InvokeDatabase 按数据库名从依赖注入器解析对应数据库，错误交由调用方处理。
 func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error) {
 	switch dbName {
 	case base.CoreDbName:
@@ -155,6 +165,7 @@ func InvokeDatabase(i do.Injector, dbName string) (*database.DB, error) {
 	}
 }
 
+// MustInvokeDatabase 按数据库名从依赖注入器解析对应数据库，失败时 panic。
 func MustInvokeDatabase(i do.Injector, dbName string) *database.DB {
 	switch dbName {
 	case base.CoreDbName:
@@ -166,6 +177,7 @@ func MustInvokeDatabase(i do.Injector, dbName string) *database.DB {
 	}
 }
 
+// DescribeDatabaseConfig 返回各数据库的配置项描述。
 func DescribeDatabaseConfig() config.ConfigDescriptions {
 	return database.DescribeConfig(
 		base.CoreDbName,

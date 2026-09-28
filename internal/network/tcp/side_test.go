@@ -330,9 +330,9 @@ func TestSideUpdateComsumed(t *testing.T) {
 		Convey("Multiple packets, consumed crosses interval boundaries", func() {
 			// 写入 3 个包：5 + 6 + 2 = 13 字节
 			client, _, cancel, totalWritten := makeSideWithPayload(0x35,
-				[]byte("hello"),  // 5 bytes, Written → 5
-				[]byte(" world"), // 6 bytes, Written → 11
-				[]byte("!!"),     // 2 bytes, Written → 13
+				[]byte("hello"),  // 5 字节，Written → 5
+				[]byte(" world"), // 6 字节，Written → 11
+				[]byte("!!"),     // 2 字节，Written → 13
 			)
 			defer cancel()
 
@@ -364,8 +364,8 @@ func TestSideUpdateComsumed(t *testing.T) {
 
 		Convey("Segment ends exactly at a packet boundary", func() {
 			client, _, cancel, _ := makeSideWithPayload(0x36,
-				[]byte("aaaaa"), // 5 bytes
-				[]byte("bbbbb"), // 5 bytes
+				[]byte("aaaaa"), // 5 字节
+				[]byte("bbbbb"), // 5 字节
 			)
 			defer cancel()
 
@@ -394,8 +394,8 @@ func TestSideUpdateComsumed(t *testing.T) {
 
 		Convey("Timestamp progression: spanning packets takes boundary packet timestamps", func() {
 			client, _, cancel, _ := makeSideWithPayload(0x38,
-				[]byte("first"),  // 5 bytes → [0, 5)
-				[]byte("second"), // 6 bytes → [5, 11)
+				[]byte("first"),  // 5 字节 → [0, 5)
+				[]byte("second"), // 6 字节 → [5, 11)
 			)
 			defer cancel()
 
@@ -412,8 +412,8 @@ func TestSideUpdateComsumed(t *testing.T) {
 
 		Convey("Timestamp at packet boundary: boundary offset belongs to the next packet", func() {
 			client, _, cancel, _ := makeSideWithPayload(0x3B,
-				[]byte("aaaaa"), // 5 bytes → [0, 5)
-				[]byte("bbbbb"), // 5 bytes → [5, 10)
+				[]byte("aaaaa"), // 5 字节 → [0, 5)
+				[]byte("bbbbb"), // 5 字节 → [5, 10)
 			)
 			defer cancel()
 
@@ -456,14 +456,14 @@ func TestSideFramesWriteToDstChan(t *testing.T) {
 
 			// 握手3条（client SYN、server SYNACK、client ACK）+ 2个数据包 = 5 条帧记录
 			frames := collectStacks(t, dstChan, 5)
-			So(frames[0].Seq, ShouldEqual, uint32(0)) // client SYN
-			So(frames[1].Seq, ShouldEqual, uint32(0)) // server SYNACK
-			So(frames[2].Seq, ShouldEqual, uint32(1)) // client ACK
+			So(frames[0].Seq, ShouldEqual, uint32(0)) // 客户端 SYN
+			So(frames[1].Seq, ShouldEqual, uint32(0)) // 服务端 SYNACK
+			So(frames[2].Seq, ShouldEqual, uint32(1)) // 客户端 ACK
 			So(frames[3].Seq, ShouldEqual, uint32(2)) // hello
 			So(frames[4].Seq, ShouldEqual, uint32(3)) // world
 			// 方向与TraceID填充正确
-			So(frames[0].Cli2Srv, ShouldBeTrue)  // client SYN
-			So(frames[1].Cli2Srv, ShouldBeFalse) // server SYNACK
+			So(frames[0].Cli2Srv, ShouldBeTrue)  // 客户端 SYN
+			So(frames[1].Cli2Srv, ShouldBeFalse) // 服务端 SYNACK
 			So(frames[3].Cli2Srv, ShouldBeTrue)  // hello（client侧）
 			So(frames[0].TraceID, ShouldResemble, client.traceID)
 			So(frames[4].TraceID, ShouldResemble, client.traceID)

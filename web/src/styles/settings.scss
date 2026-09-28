@@ -1,9 +1,8 @@
 /**
  * src/styles/settings.scss
  *
- * Overrides Vuetify SASS variables. This file is injected into every SCSS
- * compilation by vite-plugin-vuetify, so it must ONLY contain @use rules and
- * variable overrides — no plain CSS rules here.
+ * 覆盖 Vuetify 的 SASS 变量。本文件由 vite-plugin-vuetify 注入到每次 SCSS
+ * 编译中，因此只能包含 @use 规则与变量覆盖——不得出现普通 CSS 规则。
  */
 
 // https://vuetifyjs.com/features/sass-variables/

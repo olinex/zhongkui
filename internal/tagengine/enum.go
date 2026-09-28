@@ -3,24 +3,14 @@
 // Value 取完整类型键（数据库存储语义）；tagEventDimension 的 Key/Value 均取维度取值
 // （snake_case 列名）。注册表由包级变量字面量构建，此处经 enum.RegisterSource 声明
 // 来源，与 TypeKeys()/AllDimensions() 共用同一注册表作为单一来源。
-//
-// This file registers the target models and the tag event dimensions as enum classes.
-// Both value spaces come from this package's target model registry (registeredTargets):
-// tagRuleModel takes ModelKey(typeKey) as key (short display key) and the full type key as
-// value (database storage semantics); tagEventDimension takes the dimension value
-// (snake_case column name) as both key and value. The registry is built from a
-// package-level variable literal, and enum.RegisterSource is used here so the enums share
-// that very registry as the single source of truth.
 package tagengine
 
 import (
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/enum"
 )
 
 // init 注册 tagRuleModel 与 tagEventDimension 枚举类（来源为目标模型注册表，读取时派生）。
-// init registers the tagRuleModel and tagEventDimension enum classes (sourced from the
-// target model registry, derived on read).
 func init() {
 	enum.RegisterSource("tagRuleModel", func() []enum.Entry {
 		typeKeys := TypeKeys()

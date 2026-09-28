@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试文件扩展名查询器的单例与数据加载。
 func TestGetFilenameExtensionCodes(t *testing.T) {
 	Convey("验证单例行为", t, func() {
 		instance1 := GetFilenameExtensionCodes()
@@ -26,6 +27,7 @@ func TestGetFilenameExtensionCodes(t *testing.T) {
 	})
 }
 
+// 测试按扩展名查询其分类标签。
 func TestFilenameExtensionCodes_ConvertFromName(t *testing.T) {
 	Convey("查询不存在的扩展名", t, func() {
 		checker := GetFilenameExtensionCodes()

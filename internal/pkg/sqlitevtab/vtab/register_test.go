@@ -2,11 +2,6 @@
 // 本地名校验、redis 各结构/mysql 注册成功、非法类型/结构/本地名报错、命名空间隔离
 // （同名列在不同命名空间各自独立注册为裸名 vtable、连接池 Key 含命名空间维度）、
 // 以及注册/注销生命周期。
-//
-// This file tests the unified registration wrapper (register.go / pools.go): local-name
-// validation, successful redis/mysql registration, error cases for invalid types/structs/
-// names, namespace isolation (the same name across namespaces yields independent bare-name
-// vtables and namespace-scoped pool keys), and the register/unregister lifecycle.
 package vtab
 
 import (
@@ -19,6 +14,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
+// TestParseDatasourceColumns 验证数据源列映射的解析与非法列拒绝。
 func TestParseDatasourceColumns(t *testing.T) {
 	Convey("parseDatasourceColumns 合法列映射", t, func() {
 		cols, err := parseDatasourceColumns([]DatasourceColumn{
@@ -56,6 +52,7 @@ func TestParseDatasourceColumns(t *testing.T) {
 	})
 }
 
+// TestRegisterMySQLWithManualSchema 验证 MySQL 手动 schema 注册跳过建连自省、非法列报错。
 func TestRegisterMySQLWithManualSchema(t *testing.T) {
 	Convey("mysql 手动 schema 注册跳过 SHOW COLUMNS", t, func() {
 		ctx := context.Background()
@@ -77,6 +74,7 @@ func TestRegisterMySQLWithManualSchema(t *testing.T) {
 	})
 }
 
+// TestValidateLocalName 验证本地名的合法标识符校验。
 func TestValidateLocalName(t *testing.T) {
 	Convey("ValidateLocalName 通过合法标识符", t, func() {
 		So(ValidateLocalName("user_list"), ShouldBeNil)
@@ -90,6 +88,7 @@ func TestValidateLocalName(t *testing.T) {
 	}
 }
 
+// TestRegisterRedis 验证 Redis 各结构以裸名注册、非法 struct 与非法 JSON 报错。
 func TestRegisterRedis(t *testing.T) {
 	for _, structType := range []string{"string", "hash", "list", "set", "zset"} {
 		Convey("redis 结构 "+structType+" 以裸名注册成功", t, func() {
@@ -122,6 +121,7 @@ func TestRegisterRedis(t *testing.T) {
 	})
 }
 
+// TestRegisterMySQL 验证 MySQL 无 schema 注册报错与非法数据源类型报错。
 func TestRegisterMySQL(t *testing.T) {
 	Convey("mysql 无 schema 注册报错（后端不再自动自省）", t, func() {
 		ctx := context.Background()
@@ -142,6 +142,7 @@ func TestRegisterMySQL(t *testing.T) {
 	})
 }
 
+// TestRegisterTableDatasourceRequiresSchema 验证表类数据源缺 schema 时注册报错。
 func TestRegisterTableDatasourceRequiresSchema(t *testing.T) {
 	for _, tc := range []struct {
 		typ string
@@ -161,6 +162,7 @@ func TestRegisterTableDatasourceRequiresSchema(t *testing.T) {
 	}
 }
 
+// TestRegisterNamespaceIsolation 验证同名列跨命名空间独立注册，连接池 Key 含命名空间维度。
 func TestRegisterNamespaceIsolation(t *testing.T) {
 	Convey("同名列跨命名空间各自注册成独立裸名 vtable", t, func() {
 		ctx := context.Background()
@@ -189,6 +191,7 @@ func TestRegisterNamespaceIsolation(t *testing.T) {
 	})
 }
 
+// TestUnregister 验证注销已注册数据源及重复注销的幂等行为。
 func TestUnregister(t *testing.T) {
 	Convey("Unregister 注销已注册数据源（裸名）", t, func() {
 		ctx := context.Background()

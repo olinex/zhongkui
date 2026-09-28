@@ -1,3 +1,5 @@
+// Package otel（本文件）负责构建 OpenTelemetry 资源信息，汇聚 SDK、进程、
+// 系统、容器、主机及部署环境等属性。
 package otel
 
 import (
@@ -10,6 +12,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/version"
 )
 
+// NewResource 构建 OpenTelemetry 资源，自动采集环境、SDK、进程与主机等属性。
 func NewResource(ctx context.Context) (*sdkresource.Resource, error) {
 	res, err := sdkresource.New(
 		ctx,

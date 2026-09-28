@@ -90,7 +90,7 @@
         </div>
 
         <v-row>
-          <!-- Profile summary -->
+          <!-- 个人资料摘要 -->
           <v-col cols="12" md="4" xl="3">
             <v-card class="profile-summary">
               <div class="text-center pa-6">
@@ -111,7 +111,7 @@
             </v-card>
           </v-col>
 
-          <!-- Settings sections：面板组裸放在描边盒内，盒内平铺条目（见 AGENTS.md「展开面板族」） -->
+          <!-- 设置分区：面板组裸放在描边盒内，盒内平铺条目（见 AGENTS.md「展开面板族」） -->
           <v-col cols="12" md="8" xl="9">
             <div class="zk-panel pa-4 mb-6">
               <v-expansion-panels>
@@ -173,7 +173,7 @@
                       </v-btn>
                     </div>
 
-                    <!-- Empty state -->
+                    <!-- 空状态 -->
                     <div v-if="accessKeys.length === 0" class="text-center pa-8">
                       <v-icon size="48" class="mb-3 text-on-surface-variant"
                         >mdi-key-off-outline</v-icon
@@ -183,7 +183,7 @@
                       </div>
                     </div>
 
-                    <!-- Access key list -->
+                    <!-- 访问密钥列表 -->
                     <template v-else>
                       <template v-for="(key, index) in accessKeys" :key="key.id">
                         <v-divider v-if="index > 0" />
@@ -410,7 +410,7 @@ const goBack = () => {
 };
 
 const gotoHome = () => {
-  // route.params type does not satisfy RouteLocationRaw.params
+  // route.params 的类型不满足 RouteLocationRaw.params
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   router.push({ name: "Home", params: route.params as any });
 };

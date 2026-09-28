@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试 RFC 1766 查询器的单例行为。
 func TestGetRFC1766Codes(t *testing.T) {
 	Convey("获取 RFC 1766 代码查询器实例", t, func() {
 		checker := GetRFC1766Codes()
@@ -18,6 +19,7 @@ func TestGetRFC1766Codes(t *testing.T) {
 	})
 }
 
+// 测试按区域设置名称（语言_国家）查询。
 func TestRFC1766Codes(t *testing.T) {
 	Convey("根据区域设置名称查询", t, func() {
 		checker := GetRFC1766Codes()
@@ -175,6 +177,7 @@ func TestRFC1766Codes(t *testing.T) {
 	})
 }
 
+// 测试 RFC 4646 查询器的单例行为。
 func TestGetRFC4646Codes(t *testing.T) {
 	Convey("获取 RFC 4646 代码查询器实例", t, func() {
 		checker := GetRFC4646Codes()
@@ -187,6 +190,7 @@ func TestGetRFC4646Codes(t *testing.T) {
 	})
 }
 
+// 测试按语言标签名称（语言_脚本）查询。
 func TestRFC4646Codes(t *testing.T) {
 	Convey("根据语言标签名称查询", t, func() {
 		checker := GetRFC4646Codes()

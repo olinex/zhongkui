@@ -1,3 +1,4 @@
+// Package logging 提供日志系统的配置定义、解析与基于 zap 的记录器构建能力。
 package logging
 
 import (

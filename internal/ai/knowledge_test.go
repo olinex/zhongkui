@@ -1,28 +1,25 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"math"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/retriever"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // almostEqual 报告两个浮点数是否在容差内近似相等。
-// almostEqual reports whether two floats are approximately equal within a tolerance.
 func almostEqual(a, b float64) bool {
 	return math.Abs(a-b) < 1e-9
 }
 
 // TestFuseRRF 测试 RRF 融合：两路命中按 sum(1/(k+rank)) 打分，序与分符合预期。
-// TestFuseRRF verifies RRF fusion: hits from both paths are scored by
-// sum(1/(k+rank)) with the expected order and scores.
 func TestFuseRRF(t *testing.T) {
 	vector := []*RetrievalResult{
 		{DocumentID: "1", ChunkIndex: 0, Title: "A", Score: 0.9},
@@ -56,8 +53,6 @@ func TestFuseRRF(t *testing.T) {
 }
 
 // TestFuseRRF_SinglePath 测试只有一路命中时 RRF 仍按该路排序输出。
-// TestFuseRRF_SinglePath verifies RRF output follows the single path when only one path
-// has hits.
 func TestFuseRRF_SinglePath(t *testing.T) {
 	keyword := []*RetrievalResult{
 		{DocumentID: "1", ChunkIndex: 0, Score: 0.1},
@@ -73,8 +68,6 @@ func TestFuseRRF_SinglePath(t *testing.T) {
 }
 
 // TestFuseWeighted 测试加权融合：每路 min-max 归一化后按权重线性叠加。
-// TestFuseWeighted verifies the weighted fusion: each path is min-max normalized then
-// linearly combined by the weights.
 func TestFuseWeighted(t *testing.T) {
 	weights := FusionWeights{Vector: 0.6, Keyword: 0.4}
 	vector := []*RetrievalResult{
@@ -107,8 +100,6 @@ func TestFuseWeighted(t *testing.T) {
 }
 
 // TestFuseWeighted_FlatPath 测试一路内所有分值相同（min==max）时归一化为 0.5。
-// TestFuseWeighted_FlatPath verifies a path whose scores are all equal (min==max)
-// normalizes to 0.5.
 func TestFuseWeighted_FlatPath(t *testing.T) {
 	weights := FusionWeights{Vector: 0.6, Keyword: 0.4}
 	vector := []*RetrievalResult{{DocumentID: "a", ChunkIndex: 0, Score: 0.5}}
@@ -123,8 +114,6 @@ func TestFuseWeighted_FlatPath(t *testing.T) {
 }
 
 // TestSelectTopK 测试取前 topK 条：topK 非正数或超过长度时返回全部。
-// TestSelectTopK verifies taking the first topK hits: a non-positive topK or topK beyond
-// the length returns all hits.
 func TestSelectTopK(t *testing.T) {
 	cands := []*RetrievalResult{{DocumentID: "1"}, {DocumentID: "2"}, {DocumentID: "3"}}
 	if got := selectTopK(cands, 0); len(got) != 3 {
@@ -141,10 +130,6 @@ func TestSelectTopK(t *testing.T) {
 
 // TestDedupeSimilarResults 测试内容去重：内容实质相同的后位命中被丢弃并保留排序更靠前的
 // 一条，部分重合（相似度低于阈值）与空正文的命中全部保留，不足两条的输入原样返回。
-// TestDedupeSimilarResults verifies the content dedupe: a later hit whose content is
-// substantially the same is dropped in favour of the earlier one, while partially
-// overlapping hits (below the threshold) and empty bodies are all kept, and fewer than two
-// hits are returned as-is.
 func TestDedupeSimilarResults(t *testing.T) {
 	// 逐字重复的长正文：真实场景即自重复文档被切成相邻块后两块内容几乎一致
 	repeated := strings.Repeat("这是一个无聊的故事，通过无限递归的方式讲一个故事重复下去。", 30)
@@ -202,10 +187,6 @@ func TestDedupeSimilarResults(t *testing.T) {
 
 // TestDedupeSimilarResults_RepeatedDocument 测试自重复文档的相邻分块被判为重复：同一段
 // 无限递归的笑话被顺序切成两块后，两块内容几乎相同（并非逐字节相同），后者应被丢弃。
-// TestDedupeSimilarResults_RepeatedDocument verifies that adjacent chunks of a
-// self-repeating document count as duplicates: two consecutive slices of the same
-// infinitely recursive joke are almost identical (not byte-identical) and the later one is
-// dropped.
 func TestDedupeSimilarResults_RepeatedDocument(t *testing.T) {
 	sentence := "这是一个无聊的故事，通过无限递归的方式讲一个故事重复下去，用来逗弄小孩子的。"
 	runes := []rune(strings.Repeat(sentence, 60))
@@ -224,11 +205,6 @@ func TestDedupeSimilarResults_RepeatedDocument(t *testing.T) {
 // TestDedupeSimilarResults_KeepsSeamOverlap 测试分片接缝处的重叠复读不被判为重复：chunker
 // 弥合 size 截断接缝时会把这前一块尾部 overlap 个字符复读到下一块开头（默认 100 对
 // size=800，约占一成），相似度远低于阈值，两块都必须保留，否则会丢掉后一块的独有正文。
-// TestDedupeSimilarResults_KeepsSeamOverlap verifies that the seam overlap is never taken
-// for a duplicate: when bridging a size-truncated seam the chunker copies the previous
-// chunk tail (chunking.overlap characters, default 100 against size=800, about a tenth of a
-// chunk) into the next chunk head, far below the threshold, so both chunks must stay —
-// dropping the later one would lose its own body.
 func TestDedupeSimilarResults_KeepsSeamOverlap(t *testing.T) {
 	prevRunes := []rune(strings.Repeat("甲乙丙丁戊己庚辛壬癸", 80))
 	prev := string(prevRunes)
@@ -246,8 +222,6 @@ func TestDedupeSimilarResults_KeepsSeamOverlap(t *testing.T) {
 }
 
 // TestParseRerankIndices 测试解析模型返回的序号数组（含浮点数组与 ```json 围栏包裹）。
-// TestParseRerankIndices verifies parsing the index array returned by the model
-// (including float arrays and ```json fence wrapping).
 func TestParseRerankIndices(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -279,8 +253,6 @@ func TestParseRerankIndices(t *testing.T) {
 }
 
 // TestParseRerankIndices_Invalid 测试非法响应返回错误（上层降级为融合排序）。
-// TestParseRerankIndices_Invalid verifies an invalid response yields an error (the caller
-// degrades to the fusion order).
 func TestParseRerankIndices_Invalid(t *testing.T) {
 	for _, in := range []string{"", "not json", "{\"a\":1}"} {
 		if _, err := parseRerankIndices(in); err == nil {
@@ -290,7 +262,6 @@ func TestParseRerankIndices_Invalid(t *testing.T) {
 }
 
 // TestVectorLiteral 测试向量序列化为 pgvector 字面量。
-// TestVectorLiteral verifies serializing a vector into a pgvector literal.
 func TestVectorLiteral(t *testing.T) {
 	if got := vectorLiteral([]float64{0.1, 0.25, 1}); got != "[0.1,0.25,1]" {
 		t.Errorf("vectorLiteral() = %q, want %q", got, "[0.1,0.25,1]")
@@ -301,7 +272,6 @@ func TestVectorLiteral(t *testing.T) {
 }
 
 // TestToFloat32 测试 float64 向量转 float32 存储类型。
-// TestToFloat32 verifies converting a float64 vector into the float32 storage type.
 func TestToFloat32(t *testing.T) {
 	got := toFloat32([]float64{0.1, 0.5, -2})
 	want := []float32{0.1, 0.5, -2}
@@ -316,7 +286,6 @@ func TestToFloat32(t *testing.T) {
 }
 
 // TestSha256Hex 测试内容摘要为 sha256 十六进制（已知向量）。
-// TestSha256Hex verifies the content digest is the sha256 hex (known vector).
 func TestSha256Hex(t *testing.T) {
 	const want = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
 	if got := sha256Hex("abc"); got != want {
@@ -325,8 +294,6 @@ func TestSha256Hex(t *testing.T) {
 }
 
 // TestTruncateText 测试文本截断：短文本原样返回，长文本保留前 max 字符并追加省略号。
-// TestTruncateText verifies text truncation: short text is unchanged, long text keeps the
-// first max characters and appends an ellipsis.
 func TestTruncateText(t *testing.T) {
 	if got := truncateText("short", 100); got != "short" {
 		t.Errorf("truncateText(\"short\", 100) = %q, want %q", got, "short")
@@ -342,8 +309,6 @@ func TestTruncateText(t *testing.T) {
 
 // TestToSchemaDocuments_RoundTrip 测试 RetrievalResult → schema.Document →
 // ToRetrievalResults 往返不丢字段。
-// TestToSchemaDocuments_RoundTrip verifies the RetrievalResult → schema.Document →
-// ToRetrievalResults round trip keeps every field.
 func TestToSchemaDocuments_RoundTrip(t *testing.T) {
 	results := []*RetrievalResult{
 		{DocumentID: "7", Title: "T1", ChunkIndex: 2, Content: "text", Score: 0.5},
@@ -364,8 +329,6 @@ func TestToSchemaDocuments_RoundTrip(t *testing.T) {
 }
 
 // TestSortedResults_Deterministic 测试同分条目按 docID/chunkIndex 稳定排序。
-// TestSortedResults_Deterministic verifies ties are broken deterministically by
-// docID/chunkIndex.
 func TestSortedResults_Deterministic(t *testing.T) {
 	scores := map[chunkKey]*RetrievalResult{
 		{docID: "a", index: 1}: {DocumentID: "a", ChunkIndex: 1, Score: 1},
@@ -385,8 +348,6 @@ func TestSortedResults_Deterministic(t *testing.T) {
 }
 
 // TestRetrieveOptions 测试实现专属选项经 retriever.Option 注入并合并到默认值。
-// TestRetrieveOptions verifies implementation-specific options are injected via
-// retriever.Option and merged onto the defaults.
 func TestRetrieveOptions(t *testing.T) {
 	o := retriever.GetImplSpecificOptions(&RetrieveOptions{TopK: 5}, WithNamespace("ns"),
 		WithDocIDs([]uint{1, 2}), WithRetrieveTopK(3), WithCandidates(9),
@@ -412,8 +373,6 @@ func TestRetrieveOptions(t *testing.T) {
 }
 
 // TestNewKnowledge_Validation 测试构造参数校验：nil db/embed/params 返回英文错误。
-// TestNewKnowledge_Validation verifies constructor validation: nil db/embed/params yield an
-// English error.
 func TestNewKnowledge_Validation(t *testing.T) {
 	params := testParams(t, nil)
 	if _, err := NewKnowledge(nil, nil, params); err == nil || !strings.Contains(err.Error(), "nil database") {
@@ -432,7 +391,6 @@ func TestNewKnowledge_Validation(t *testing.T) {
 }
 
 // TestRetriever_EmptyQuery 测试空查询直接报错（不调用 embed）。
-// TestRetriever_EmptyQuery verifies an empty query errors out without calling the embed.
 func TestRetriever_EmptyQuery(t *testing.T) {
 	r := &Retriever{params: testParams(t, nil)}
 	if _, err := r.Retrieve(context.Background(), "   "); err == nil {

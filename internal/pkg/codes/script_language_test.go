@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试 ISO 15924 查询器的单例行为。
 func TestGetISO15924Codes(t *testing.T) {
 	Convey("验证单例行为", t, func() {
 		instance1 := GetISO15924Codes()
@@ -19,6 +20,7 @@ func TestGetISO15924Codes(t *testing.T) {
 	})
 }
 
+// 测试按 Alpha-4 代码查询书写系统。
 func TestISO15924Codes_ConvertFromAlpha4(t *testing.T) {
 	Convey("根据 Alpha-4 代码查询", t, func() {
 		checker := GetISO15924Codes()
@@ -107,6 +109,7 @@ func TestISO15924Codes_ConvertFromAlpha4(t *testing.T) {
 	})
 }
 
+// 测试按书写系统名称查询。
 func TestISO15924Codes_ConvertFromName(t *testing.T) {
 	Convey("根据书写系统名称查询", t, func() {
 		checker := GetISO15924Codes()
@@ -161,6 +164,7 @@ func TestISO15924Codes_ConvertFromName(t *testing.T) {
 	})
 }
 
+// 测试按数字代码查询书写系统。
 func TestISO15924Codes_ConvertFromNumeric(t *testing.T) {
 	Convey("根据数字代码查询", t, func() {
 		checker := GetISO15924Codes()
@@ -207,6 +211,7 @@ func TestISO15924Codes_ConvertFromNumeric(t *testing.T) {
 	})
 }
 
+// 测试数据完整性与大小写敏感性。
 func TestISO15924Codes_DataIntegrity(t *testing.T) {
 	Convey("验证数据完整性", t, func() {
 		checker := GetISO15924Codes()

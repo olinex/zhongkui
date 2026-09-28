@@ -1,20 +1,17 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/schema"
 )
 
 // TestMarkdownChunker_HeadingsAreBoundaries 测试标题为硬边界：正文不含标题行，
 // 每个标题下的内容独立成块，headingPath 与标题层级一致。
-// TestMarkdownChunker_HeadingsAreBoundaries verifies headings are hard boundaries: the
-// chunk body never repeats heading lines, content under each heading becomes its own
-// chunk, and headingPath matches the heading hierarchy.
 func TestMarkdownChunker_HeadingsAreBoundaries(t *testing.T) {
 	doc := &schema.Document{
 		Content: "# Root\npara a\n## Sub\npara b\n### Leaf\npara c",
@@ -43,8 +40,6 @@ func TestMarkdownChunker_HeadingsAreBoundaries(t *testing.T) {
 }
 
 // TestMarkdownChunker_CodeBlockAtomic 测试围栏代码块为原子单元，整体超长也不硬切。
-// TestMarkdownChunker_CodeBlockAtomic verifies a fenced code block is atomic and stays
-// whole even when oversized.
 func TestMarkdownChunker_CodeBlockAtomic(t *testing.T) {
 	// size=10 远小于代码块长度，但代码块必须整体成一块
 	content := "## Code\n```go\nline one\nline two\nline three\n```\nAfter"
@@ -70,8 +65,6 @@ func TestMarkdownChunker_CodeBlockAtomic(t *testing.T) {
 
 // TestMarkdownChunker_UnclosedFenceExtends 测试未闭合的围栏延伸到文档末尾，
 // 其内部的标题行不会成为边界。
-// TestMarkdownChunker_UnclosedFenceExtends verifies an unclosed fence extends to the end
-// of the document and heading-looking lines inside it never become boundaries.
 func TestMarkdownChunker_UnclosedFenceExtends(t *testing.T) {
 	content := "# Doc\n```\nline1\n# NotAHeading\nline2\n"
 	doc := &schema.Document{Content: content}
@@ -92,7 +85,6 @@ func TestMarkdownChunker_UnclosedFenceExtends(t *testing.T) {
 }
 
 // TestMarkdownChunker_TableAtomic 测试表格块为原子单元。
-// TestMarkdownChunker_TableAtomic verifies a table block is an atomic unit.
 func TestMarkdownChunker_TableAtomic(t *testing.T) {
 	content := "## Table\n| a | b |\n|---|---|\n| 1 | 2 |\nTail"
 	doc := &schema.Document{Content: content}
@@ -113,8 +105,6 @@ func TestMarkdownChunker_TableAtomic(t *testing.T) {
 }
 
 // TestMarkdownChunker_MergesToTargetSize 测试普通段落按 size 亲和目标合并成块。
-// TestMarkdownChunker_MergesToTargetSize verifies plain paragraphs merge toward the size
-// affinity target.
 func TestMarkdownChunker_MergesToTargetSize(t *testing.T) {
 	content := strings.Join([]string{"aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff"}, "\n\n")
 	doc := &schema.Document{Content: content}
@@ -136,8 +126,6 @@ func TestMarkdownChunker_MergesToTargetSize(t *testing.T) {
 }
 
 // TestMarkdownChunker_Overlap 测试相邻块按 overlap 字符重叠衔接（复用上一块尾部）。
-// TestMarkdownChunker_Overlap verifies adjacent chunks overlap by overlap characters
-// (reusing the previous chunk tail).
 func TestMarkdownChunker_Overlap(t *testing.T) {
 	content := strings.Join([]string{"aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff"}, "\n\n")
 	doc := &schema.Document{Content: content}
@@ -157,10 +145,6 @@ func TestMarkdownChunker_Overlap(t *testing.T) {
 
 // TestMarkdownChunker_NoOverlapAcrossHeading 测试标题硬边界处不施加重叠：上一节正文
 // 短于 overlap 时，不得整块复读到下一节开头。回归用例——曾把「说明」整段贴进「内容」块。
-// TestMarkdownChunker_NoOverlapAcrossHeading verifies no overlap is applied across a
-// heading hard boundary: a previous section shorter than overlap must never be copied
-// wholesale into the next section. Regression: the 说明 paragraph was once prepended to
-// the 内容 chunk.
 func TestMarkdownChunker_NoOverlapAcrossHeading(t *testing.T) {
 	content := strings.Join([]string{
 		"# 标题",
@@ -186,9 +170,6 @@ func TestMarkdownChunker_NoOverlapAcrossHeading(t *testing.T) {
 
 // TestMarkdownChunker_OverlapCappedAtHalfPrevious 测试重叠长度按上一块的一半封顶：
 // overlap 被配置得不小于上一块长度时，只复读上一块尾部的一半而非整块。
-// TestMarkdownChunker_OverlapCappedAtHalfPrevious verifies the overlap is capped at half of
-// the previous chunk: when overlap is configured no smaller than the previous chunk, only
-// half of its tail is reused instead of the whole chunk.
 func TestMarkdownChunker_OverlapCappedAtHalfPrevious(t *testing.T) {
 	content := strings.Join([]string{"aaaa", "bbbb", "cccc", "dddd"}, "\n\n")
 	doc := &schema.Document{Content: content}
@@ -215,8 +196,6 @@ func TestMarkdownChunker_OverlapCappedAtHalfPrevious(t *testing.T) {
 }
 
 // TestMarkdownChunker_MetaDataPreserved 测试输入 MetaData 被保留并补充 chunkIndex。
-// TestMarkdownChunker_MetaDataPreserved verifies the input MetaData is preserved and
-// chunkIndex is added.
 func TestMarkdownChunker_MetaDataPreserved(t *testing.T) {
 	doc := &schema.Document{
 		ID:       "doc-1",
@@ -243,8 +222,6 @@ func TestMarkdownChunker_MetaDataPreserved(t *testing.T) {
 }
 
 // TestMarkdownChunker_EmptyDocument 测试空文档/纯空白文档不产出任何块。
-// TestMarkdownChunker_EmptyDocument verifies an empty or whitespace-only document yields
-// no chunks.
 func TestMarkdownChunker_EmptyDocument(t *testing.T) {
 	c := NewMarkdownChunker(800, 100)
 	for _, content := range []string{"", "   \n  \n"} {
@@ -259,8 +236,6 @@ func TestMarkdownChunker_EmptyDocument(t *testing.T) {
 }
 
 // TestNewMarkdownChunker_Defaults 测试非法参数回退默认值（size<=0 → 800，overlap<0 → 0）。
-// TestNewMarkdownChunker_Defaults verifies invalid parameters fall back to defaults
-// (size<=0 → 800, overlap<0 → 0).
 func TestNewMarkdownChunker_Defaults(t *testing.T) {
 	c := NewMarkdownChunker(0, -3)
 	if c.size != 800 {
@@ -273,9 +248,6 @@ func TestNewMarkdownChunker_Defaults(t *testing.T) {
 
 // TestDescribeChunk 测试分块正文的结构单元识别：去重、按声明顺序返回，标题不参与，
 // 空正文返回空切片。
-// TestDescribeChunk verifies the structural unit recognition of a chunk body: kinds are
-// deduplicated, returned in declaration order, headings never participate, and an empty
-// body yields an empty slice.
 func TestDescribeChunk(t *testing.T) {
 	cases := []struct {
 		name    string

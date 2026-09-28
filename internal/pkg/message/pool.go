@@ -1,13 +1,13 @@
 package message
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"sort"
 	"strings"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 )
 
@@ -20,19 +20,12 @@ import (
 // Pool 消息渠道连接池的统一入口：持有按渠道 Key 惰性建池的渠道生命周期管理器。
 // 作为 DI 注入对象注册为进程级单例；Shutdown 使池自身即关闭器，provider 层无需再包
 // 一层 shutdowner 结构体，提升内聚性。
-// Pool is the unified entry point of the message channel pool: it holds the channel
-// lifecycle manager that lazily builds pools per channel Key. Registered as a
-// process-wide singleton via DI; Shutdown makes the pool itself the closer, so the
-// provider layer no longer needs a shutdowner wrapper, improving cohesion.
 type Pool struct {
 	manager *resourcepool.Manager[Channel]
 }
 
 // NewPool 创建消息渠道连接池。资源类型为 message.Channel，依据 Key（类型 + 规范化
 // 配置）惰性建池并由 go-commons-pool 托管连接复用与回收。
-// NewPool creates the message channel pool over message.Channel: it lazily builds
-// pools keyed by (type + canonicalized config) and lets go-commons-pool handle
-// connection reuse and reclamation.
 func NewPool() *Pool {
 	return &Pool{
 		manager: resourcepool.NewManager(func(key resourcepool.Key) (Channel, error) {
@@ -44,20 +37,14 @@ func NewPool() *Pool {
 }
 
 // keySep 分隔渠道类型与配置的边界字节。JSON 不包含 NUL 字节，故用作安全分隔符。
-// keySep delimits the channel type from its config. JSON never contains a NUL byte,
-// so it is a safe separator.
 const keySep = "\x00"
 
 // makeKey 构造资源池 Key：规范化渠道级配置后与类型拼接，使语义相同的配置复用同一池。
-// makeKey builds the pool Key: it canonicalizes the channel-level config and joins it
-// with the type so semantically identical configs share the same pool.
 func makeKey(typ string, config json.RawMessage) resourcepool.Key {
 	return resourcepool.Key(typ + keySep + canonicalJSON(config))
 }
 
 // decodeKey 从资源池 Key 还原渠道类型与渠道级配置（makeKey 的逆运算）。
-// decodeKey recovers the channel type and channel-level config from the Key
-// (the inverse of makeKey).
 func decodeKey(key resourcepool.Key) (string, json.RawMessage) {
 	raw := string(key)
 	if before, after, ok := strings.Cut(raw, keySep); ok {
@@ -68,8 +55,6 @@ func decodeKey(key resourcepool.Key) (string, json.RawMessage) {
 
 // canonicalJSON 将渠道级配置规范化为稳定字节序的 JSON（map 键升序），
 // 保证字段顺序不同的等价配置复用同一连接池。
-// canonicalJSON normalizes the channel-level config into a stable-byte-order JSON
-// (map keys sorted) so equivalent configs with different field orders share a pool.
 func canonicalJSON(config json.RawMessage) string {
 	if len(config) == 0 {
 		return "{}"
@@ -103,12 +88,6 @@ func canonicalJSON(config json.RawMessage) string {
 // Send 经统一资源池向目标投递渲染后的消息：借出与配置匹配的渠道实例并复用底层连接，
 // 发送完成后归还；渠道实例借出（含建连/校验）失败或发送失败均原样返回错误。
 // 发送失败仍归还对象，由下一次借出的 testOnBorrow 校验并在底层连接失效后自动重建。
-// Send delivers the rendered message to the target through the unified pool: it
-// borrows a channel instance matched to the config (reusing the underlying
-// connection), sends, then returns the instance. A borrow failure (including
-// connect/validation) or a send failure is returned as-is. A send failure still
-// returns the object; the next borrow validates it via testOnBorrow and rebuilds
-// the underlying connection once it is stale.
 func (p *Pool) Send(ctx context.Context, typ string, config json.RawMessage, target *Target, msg *RenderedMessage) (string, error) {
 	key := makeKey(typ, config)
 	ch, err := p.manager.Acquire(ctx, key)
@@ -121,8 +100,6 @@ func (p *Pool) Send(ctx context.Context, typ string, config json.RawMessage, tar
 
 // Shutdown 关闭全部渠道资源池并销毁存活连接，实现 do.ShutdownerWithContextAndError，
 // 进程优雅关闭时由 samber/do 驱动调用。
-// Shutdown closes all channel pools and destroys live connections, implementing
-// do.ShutdownerWithContextAndError, driven by samber/do on graceful shutdown.
 func (p *Pool) Shutdown(ctx context.Context) error {
 	p.manager.CloseAll(ctx)
 	return nil

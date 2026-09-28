@@ -5,7 +5,7 @@
 package tagengine
 
 import (
-	// third-party
+	// 第三方
 	"github.com/open-policy-agent/opa/ast"
 )
 

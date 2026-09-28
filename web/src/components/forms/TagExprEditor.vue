@@ -49,15 +49,17 @@ import i18n from "@/utils/i18n";
 
 const props = withDefaults(
   defineProps<{
+    /** 绑定的表达式文本（v-model）。 */
     modelValue: string;
-    /** available tags for autocomplete (tag pool) */
+    /** 自动补全可用的标签（标签池）。 */
     tags?: string[];
-    /** validation passed, renders a success marker */
+    /** 校验通过，渲染成功标记。 */
     valid?: boolean;
-    /** validation error message, rendered below the editor */
+    /** 校验错误消息，渲染在编辑器下方。 */
     errorMessage?: string;
-    /** disables editing (read-only) */
+    /** 禁用编辑（只读）。 */
     disabled?: boolean;
+    /** 编辑器最小高度。 */
     minHeight?: string;
   }>(),
   {
@@ -69,6 +71,7 @@ const props = withDefaults(
   },
 );
 
+// 表达式文本变更事件。
 const emit = defineEmits<{ (e: "update:modelValue", value: string): void }>();
 
 const appStore = useAppStore();
@@ -102,7 +105,7 @@ const exprStreamParser: StreamParser<unknown> = {
 };
 const exprLanguage = StreamLanguage.define(exprStreamParser);
 
-// ---- live lint: 复用前后端一致的 parseBooleanExpr，出错位置标红下划线 + 悬停提示
+// ---- 实时检查：复用前后端一致的 parseBooleanExpr，出错位置标红下划线 + 悬停提示
 const exprLinter = linter((editorView) => {
   const p = parseBooleanExpr(editorView.state.doc.toString());
   if (p.ok) {
@@ -204,7 +207,7 @@ async function exprCompletion(context: CompletionContext): Promise<CompletionRes
   return { from, options };
 }
 
-// Toggles read-only editing dynamically.
+// 动态切换只读编辑状态。
 const editableCompartment = new Compartment();
 
 const extensions: Extension[] = [
@@ -253,7 +256,7 @@ onBeforeUnmount(() => {
   view.value = undefined;
 });
 
-// Sync external content changes (e.g. tag chip append / expression generation).
+// 同步外部内容变更（如追加标签芯片 / 生成表达式）。
 watch(
   () => props.modelValue,
   (val) => {
@@ -267,7 +270,7 @@ watch(
   },
 );
 
-// Toggle read-only state when the `disabled` prop changes.
+// 当 disabled prop 变化时切换只读状态。
 watch(
   () => props.disabled,
   (val) => {
@@ -277,7 +280,7 @@ watch(
   },
 );
 
-// Switch syntax highlighting when the app theme changes.
+// 应用主题变化时切换语法高亮。
 watch(
   () => appStore.theme,
   (theme) => {

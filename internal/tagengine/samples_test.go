@@ -1,17 +1,17 @@
 package tagengine_test
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
@@ -44,6 +44,7 @@ func registerCustomModel() {
 	})
 }
 
+// TestListModelSamples 验证模型样例列表查询与命名空间隔离。
 func TestListModelSamples(t *testing.T) {
 	Convey("Test ListModelSamples", t, func() {
 		db := setupSampleDB(t)
@@ -83,6 +84,7 @@ func TestListModelSamples(t *testing.T) {
 	})
 }
 
+// TestEnsureModelSamples 验证模型样例的懒供给、幂等性与自定义模型缺省样例。
 func TestEnsureModelSamples(t *testing.T) {
 	Convey("Test EnsureModelSamples", t, func() {
 		db := setupSampleDB(t)

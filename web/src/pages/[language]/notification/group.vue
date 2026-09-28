@@ -296,7 +296,7 @@ const updateNotificationGroupSchema = yup.object({
     .label("model.notificationGroup.field.description"),
 });
 
-// ---- forms ----
+// ---- 表单 ----
 const createForm = useForm({ validationSchema: createNotificationGroupSchema });
 const updateForm = useForm({ validationSchema: updateNotificationGroupSchema });
 

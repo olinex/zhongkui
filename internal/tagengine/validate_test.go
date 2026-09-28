@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// TestValidateRego 验证 ValidateRego 对各类 rego 源码的合法性判定。
 func TestValidateRego(t *testing.T) {
 	Convey("Test ValidateRego", t, func() {
 		Convey("合法的 contains 规则应返回 nil", func() {
@@ -49,6 +50,7 @@ func TestValidateRego(t *testing.T) {
 	})
 }
 
+// TestInspectRego 验证 InspectRego 返回的错误列表与行列定位。
 func TestInspectRego(t *testing.T) {
 	Convey("Test InspectRego", t, func() {
 		Convey("合法规则应返回空错误列表与 true", func() {
@@ -81,6 +83,7 @@ func TestInspectRego(t *testing.T) {
 	})
 }
 
+// TestValidateGroup 验证规则组内跨规则的冲突检测。
 func TestValidateGroup(t *testing.T) {
 	Convey("Test ValidateGroup", t, func() {
 		Convey("多条 contains 规则共存应通过", func() {

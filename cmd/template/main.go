@@ -1,3 +1,5 @@
+// Package main 提供 zhongkui 的代码生成与辅助命令行：依据 search.toml 与模板生成搜索模型、
+// 枚举字段绑定代码，并支持生成兜底 pcap 文件。
 package main
 
 import (
@@ -30,6 +32,7 @@ var (
 			return false
 		},
 	})
+	// StringActions 定义字符串类型字段支持的过滤动作。
 	StringActions map[string]any = map[string]any{
 		"nil":   struct{}{},
 		"nnil":  struct{}{},
@@ -48,6 +51,7 @@ var (
 		"ictn":  struct{}{},
 		"inctn": struct{}{},
 	}
+	// NumberActions 定义数值类型字段支持的过滤动作。
 	NumberActions map[string]any = map[string]any{
 		"nil":  struct{}{},
 		"nnil": struct{}{},
@@ -58,6 +62,7 @@ var (
 		"gt":   struct{}{},
 		"gte":  struct{}{},
 	}
+	// BooleanActions 定义布尔类型字段支持的过滤动作。
 	BooleanActions = map[string]any{
 		"nil":  struct{}{},
 		"nnil": struct{}{},
@@ -75,9 +80,12 @@ var (
 		"eq":  struct{}{},
 		"neq": struct{}{},
 	}
+	// DatetimeActions 定义 time.Time 类型字段支持的过滤动作（复用数值动作）。
 	DatetimeActions = NumberActions
-	DateActions     = NumberActions
-	TimeActions     = NumberActions
+	// DateActions 定义 serializer.DateOnly 类型字段支持的过滤动作（复用数值动作）。
+	DateActions = NumberActions
+	// TimeActions 定义 serializer.TimeOnly 类型字段支持的过滤动作（复用数值动作）。
+	TimeActions = NumberActions
 )
 
 type searchGenerateConfigFilterBy struct {
@@ -354,6 +362,7 @@ var searchGenerateCmd = &cobra.Command{
 	},
 }
 
+// RootCmd 是 api 命令行工具的根命令。
 var RootCmd = &cobra.Command{
 	Use:   "api",
 	Short: "The seismograph api group command lines",
@@ -362,6 +371,7 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+// Execute 执行根命令，出错时打印错误并退出进程。
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)

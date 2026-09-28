@@ -16,8 +16,6 @@ func newTestLogger() *logging.Logger {
 }
 
 // TestSender_Send_Disabled 测试未启用时 Send 返回"disabled"错误。
-// TestSender_Send_Disabled verifies Send returns an error containing "disabled"
-// when the config is disabled.
 func TestSender_Send_Disabled(t *testing.T) {
 	s := NewSender(&Config{Enabled: false}, newTestLogger(), message.NewPool())
 	err := s.Send(context.Background(), "ops@example.com", message.Message{Template: "test"}, "")
@@ -30,8 +28,6 @@ func TestSender_Send_Disabled(t *testing.T) {
 }
 
 // TestSender_Send_NotConfigured 测试启用但缺少 host/from 时 Send 返回"not configured"错误。
-// TestSender_Send_NotConfigured verifies Send returns an error containing
-// "not configured" when enabled but host/from are blank.
 func TestSender_Send_NotConfigured(t *testing.T) {
 	tests := []struct {
 		name string

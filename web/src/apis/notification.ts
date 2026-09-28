@@ -27,7 +27,7 @@ import type {
   SearchOptionsOut,
 } from "@/components/@types/table";
 
-// Utilities
+// 工具
 import { EnumClass, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { BackendDataType, SearchAction } from "@/types";
 

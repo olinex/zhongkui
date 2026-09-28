@@ -1,27 +1,24 @@
 package resourcepool
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 // plainResource 未实现 Lifespan 但实现 io.Closer 的资源类型，
 // 用于验证「纯对象复用 + CloseAll 时经 io.Closer 关闭」的分支。
-// plainResource is a resource type that does not implement Lifespan but implements
-// io.Closer, used to verify the "plain object reuse + close via io.Closer on CloseAll" branch.
 type plainResource struct {
 	closes int32
 }
 
 // Close 实现 io.Closer，供池在销毁时调用（计数器自增）。
-// Close implements io.Closer so the pool can destroy it (incrementing a counter).
 func (r *plainResource) Close() error {
 	atomic.AddInt32(&r.closes, 1)
 	return nil
@@ -29,8 +26,6 @@ func (r *plainResource) Close() error {
 
 // lifecycleResource 实现 Lifespan 的资源类型，带创建/打开/校验/关闭计数，
 // 并支持在测试中按需注入校验结果以模拟连接失效。
-// lifecycleResource implements Lifespan with create/open/validate/close counters and
-// injectable validation results to simulate a stale connection.
 type lifecycleResource struct {
 	openCount    int32
 	closeCount   int32
@@ -39,14 +34,12 @@ type lifecycleResource struct {
 }
 
 // Open 自增打开计数并返回 nil（模拟建连成功）。
-// Open increments the open counter and returns nil (simulating a successful connect).
 func (r *lifecycleResource) Open(context.Context) error {
 	atomic.AddInt32(&r.openCount, 1)
 	return nil
 }
 
 // Validate 自增校验计数；存在注入的校验函数时按其结果返回，否则默认可用。
-// Validate increments the validate counter, returning the injected result when set, else true.
 func (r *lifecycleResource) Validate(context.Context) bool {
 	atomic.AddInt32(&r.validCount, 1)
 	if r.validateFunc != nil {
@@ -56,14 +49,12 @@ func (r *lifecycleResource) Validate(context.Context) bool {
 }
 
 // Close 自增关闭计数并返回 nil。
-// Close increments the close counter and returns nil.
 func (r *lifecycleResource) Close() error {
 	atomic.AddInt32(&r.closeCount, 1)
 	return nil
 }
 
 // newTestManager 构造一个以 makeCount 记录 Make 调用次数、Make 返回 lifecycleResource 的管理器。
-// newTestManager builds a manager whose Make records invocation count and returns lifecycleResource.
 func newTestManager(t *testing.T, cfg *Config) (*Manager[*lifecycleResource], *int32) {
 	t.Helper()
 	var makeCount int32
@@ -75,8 +66,6 @@ func newTestManager(t *testing.T, cfg *Config) (*Manager[*lifecycleResource], *i
 }
 
 // TestManager_ReuseSameKey 同一 Key 多次借出应复用池中实例而不重建（Make 仅首次调用）。
-// TestManager_ReuseSameKey verifies reusing the same key borrows the pooled instance
-// rather than rebuilding (Make is only called once).
 func TestManager_ReuseSameKey(t *testing.T) {
 	Convey("同一 Key 借出-归还后重复借出复用实例不重建", t, func() {
 		cfg := NewDefaultConfig()
@@ -102,8 +91,6 @@ func TestManager_ReuseSameKey(t *testing.T) {
 }
 
 // TestManager_ValidateFailureRebuild 借出校验失败时应销毁旧实例并通过 Make 重建新实例。
-// TestManager_ValidateFailureRebuild verifies a borrow-validation failure destroys the
-// stale instance and rebuilds a new one via Make.
 func TestManager_ValidateFailureRebuild(t *testing.T) {
 	Convey("借出校验（testOnBorrow）失败销毁并重建", t, func() {
 		cfg := NewDefaultConfig()
@@ -134,8 +121,6 @@ func TestManager_ValidateFailureRebuild(t *testing.T) {
 }
 
 // TestManager_MaxTotalBlocks 并发借出超过 MaxTotal 且在 blockWhenExhausted 下应阻塞直至 ctx 超时失败。
-// TestManager_MaxTotalBlocks verifies borrows beyond MaxTotal block until ctx deadline
-// when blockWhenExhausted is enabled.
 func TestManager_MaxTotalBlocks(t *testing.T) {
 	Convey("池耗尽时借出阻塞直至上下文超时", t, func() {
 		cfg := NewDefaultConfig()
@@ -162,7 +147,6 @@ func TestManager_MaxTotalBlocks(t *testing.T) {
 }
 
 // TestManager_CloseAllDestroys 关闭管理器应通过 Close 销毁全部存活（闲置）对象。
-// TestManager_CloseAllDestroys verifies CloseAll destroys all live (idle) objects via Close.
 func TestManager_CloseAllDestroys(t *testing.T) {
 	Convey("CloseAll 销毁全部闲置对象", t, func() {
 		cfg := NewDefaultConfig()
@@ -192,8 +176,6 @@ func TestManager_CloseAllDestroys(t *testing.T) {
 
 // TestManager_PlainReuseAndCloser 未实现 Lifespan 的类型按纯对象复用；
 // CloseAll 应经 io.Closer 关闭。确认不持有持久连接的资源类型无需实现 Open/Validate。
-// TestManager_PlainReuseAndCloser verifies types without Lifespan reuse as plain objects
-// and are closed via io.Closer on CloseAll (no Open/Validate required).
 func TestManager_PlainReuseAndCloser(t *testing.T) {
 	Convey("未实现 Lifespan 的资源纯对象复用且经 io.Closer 关闭", t, func() {
 		cfg := NewDefaultConfig()
@@ -233,8 +215,6 @@ func TestManager_PlainReuseAndCloser(t *testing.T) {
 
 // TestManager_IdleEviction 闲置实例在超过 MinEvictableIdleTime 后被驱逐线程 Close 销毁。
 // 采用带轮询等待的宽松断言，避免时序抖动导致偶发失败。
-// TestManager_IdleEviction verifies idle instances are evicted by the evictor after
-// MinEvictableIdleTime (Close called). A polling wait keeps it robust to timing jitter.
 func TestManager_IdleEviction(t *testing.T) {
 	Convey("闲置连接超阈值后被驱逐销毁", t, func() {
 		cfg := NewDefaultConfig()

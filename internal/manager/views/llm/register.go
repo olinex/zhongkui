@@ -16,10 +16,10 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"net/http"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/views"
 )
 

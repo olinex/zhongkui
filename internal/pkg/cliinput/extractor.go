@@ -1,16 +1,15 @@
-// Package cliinput provides a generic struct-based data extraction pattern
-// that combines viper (CLI flags), pterm (interactive prompts), and
-// validator (parameter validation).
+// Package cliinput 提供基于结构体的通用数据提取模式，
+// 结合 viper（CLI 参数）、pterm（交互式提示）与 validator（参数校验）。
 //
-// Define struct fields with the following tags:
+// 结构体字段支持以下 tag：
 //
-//	viper:"key"    - viper config key to read first (also marks the field for extraction)
-//	prompt:"text"  - interactive prompt text, used if viper has no value
-//	mask:"true"    - mask input with '*', for sensitive fields like passwords
-//	confirm:"true" - prompt twice and verify both inputs match (for password confirmation)
-//	binding:"..."  - standard validator binding tags for validation
+//	viper:"key"    - 优先读取的 viper 配置键（同时标记该字段需要提取）
+//	prompt:"text"  - 交互式提示文本，viper 无值时使用
+//	mask:"true"    - 以 '*' 遮蔽输入，适用于密码等敏感字段
+//	confirm:"true" - 提示两次并校验两次输入一致（用于密码确认）
+//	binding:"..."  - 标准的 validator binding 校验 tag
 //
-// Example:
+// 示例：
 //
 //	type RegisterInput struct {
 //	    Username string `viper:"username" prompt:"please enter username" binding:"required,min=6"`
@@ -22,7 +21,7 @@
 //	    if err := cliinput.Extract(v, validate, &in); err != nil {
 //	        return err
 //	    }
-//	    // in.Username and in.Password are now populated and validated
+//	    // in.Username 与 in.Password 此时已填充并通过校验
 //	}
 package cliinput
 
@@ -41,7 +40,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
-// Tag names used in struct field tags.
+// 结构体字段 tag 使用的 tag 名称。
 const (
 	TagViper      = "viper"
 	TagPrompt     = "prompt"

@@ -239,13 +239,13 @@ const props = defineProps({
     required: true,
   },
   actions: {
-    // Row payload is dynamic.
+    // 行载荷为动态结构。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Function as PropType<(item: Record<string, any>) => ItemActions>,
     default: undefined,
   },
   batchActions: {
-    // Selected rows payload is dynamic.
+    // 选中行的载荷为动态结构。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Function as PropType<(items: Record<string, any>[]) => BatchActions>,
     default: undefined,
@@ -310,7 +310,7 @@ const props = defineProps({
   },
   // 行点击回调：提供后表格行可点击（hover 高亮 + pointer 光标），用于行详情下钻
   rowClick: {
-    // Table row values are heterogeneous.
+    // 表格行的值类型不固定。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Function as PropType<(item: Record<string, any>) => void>,
     default: undefined,
@@ -324,7 +324,7 @@ const pageSize = ref(10);
 // 默认排序克隆自 props.defaultOrderBy，避免列表排序时原地改写传入数组
 const orderBy = ref([...(props.defaultOrderBy ?? [])]);
 const filterBy = ref([] as FilterItem[]);
-// Server response items are dynamic.
+// 服务端响应条目为动态结构。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Record<string, any>[]);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -446,7 +446,7 @@ async function tableDataRefresh() {
   const fields = props.projectFields(visibleKeys.value);
   try {
     loading.value = true;
-    // Server response items are dynamic.
+    // 服务端响应条目为动态结构。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await getSearchResponse<Record<string, any>>(
       props.listRequest({
@@ -500,7 +500,7 @@ const triggerQuery = async (): Promise<void> => {
 // onRowClick 行点击统一处理：仅在提供 rowClick 回调时下钻行详情等操作
 const onRowClick = (
   _event: Event,
-  // Table row values are heterogeneous.
+  // 表格行的值类型不固定。
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: { item: Record<string, any> },
 ): void => {

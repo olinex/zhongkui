@@ -1,11 +1,6 @@
 // Package vtab（本文件）提供 SQLite 文件数据源单元测试。
 // 用真实临时 .db 文件（github.com/glebarez/go-sqlite 驱动）做端到端验证：自省 PRAGMA
 // table_info、值归一化，以及源与 sqlitevtab 同语义下的 LIKE 下推。
-//
-// This file provides SQLite-file datasource unit tests. A real temp .db file
-// (github.com/glebarez/go-sqlite driver) is used for end-to-end verification: PRAGMA
-// table_info introspection, value normalization, and LIKE pushdown under identical
-// SQLite semantics.
 package vtab
 
 import (
@@ -23,9 +18,6 @@ import (
 
 // newSQLiteFileMockPool 以注入 key 的 mock db 构建 SQLiteFilePool。实际上 sqlite 文件走
 // 真实驱动，helper 仅为保持与其它池一致的注入点。
-// newSQLiteFileMockPool builds a SQLiteFilePool with an injected mock db for its key.
-// Since sqlite files use a real driver, the helper only keeps the injection point
-// consistent with the other pools.
 func newSQLiteFileMockPool(t *testing.T, cfg *SQLiteFileConfig, db *sql.DB) *SQLiteFilePool {
 	t.Helper()
 	pool := NewSQLiteFilePool(cfg)
@@ -35,8 +27,6 @@ func newSQLiteFileMockPool(t *testing.T, cfg *SQLiteFileConfig, db *sql.DB) *SQL
 }
 
 // sqQuery 经 SQLitePool 注册数据源并执行一条只读 SQL，返回列名与行值（表名统一 sq_vtab）。
-// sqQuery registers the datasource on a SQLitePool and executes one read-only SQL
-// statement, returning columns and row values (registered as sq_vtab).
 func sqQuery(t *testing.T, ds *SQLiteFileDatasource, sql string, args ...any) ([]string, [][]any) {
 	t.Helper()
 	pool := sqlitevtab.NewSQLitePool()

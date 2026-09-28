@@ -12,10 +12,6 @@ import (
 // healthMetrics 持有健康探针状态指标的同步 gauge 仪器。
 // 指标经全局 MeterProvider 发布，复用既有 OTLP 管道导出，不新增 exporter/reader；
 // OTEL 未启用时全局 meter 为 noop，记录被丢弃，无需分支短路。
-// healthMetrics holds the sync-gauge instruments publishing health-probe states.
-// Metrics are emitted through the global MeterProvider and exported via the existing
-// OTLP pipeline (no new exporter/reader). When OTEL is disabled the global meter is a
-// no-op and records are dropped, so no branch is needed here.
 type healthMetrics struct {
 	live     metric.Int64Gauge
 	ready    metric.Int64Gauge

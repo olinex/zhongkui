@@ -135,7 +135,7 @@ defineExpose({ open });
 </script>
 
 <style scoped>
-/* Plaintext preview area with vertical scrolling for long contents. */
+/* 明文预览区：内容过长时纵向滚动。 */
 .plaintext-preview {
   max-height: var(--zk-preview-max-height);
   overflow-y: auto;

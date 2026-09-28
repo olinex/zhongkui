@@ -1,23 +1,21 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 
 	"net/http"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/docconv"
 )
 
 // seedImportedDocument 在测试命名空间内插入一份「导入文档」行（带 S3 原件键），返回其 ID。
-// seedImportedDocument inserts an "imported document" row (with an S3 source key) in the test
-// namespace and returns its ID.
 func seedImportedDocument(t *testing.T, db *database.DB, status string) uint {
 	t.Helper()
 	doc := &modelsai.KnowledgeDocument{
@@ -37,7 +35,6 @@ func seedImportedDocument(t *testing.T, db *database.DB, status string) uint {
 }
 
 // countNamespaceDocuments 统计测试命名空间内的文档行数。
-// countNamespaceDocuments counts the document rows in the test namespace.
 func countNamespaceDocuments(db *database.DB) int64 {
 	var count int64
 	if err := db.Model(&modelsai.KnowledgeDocument{}).
@@ -48,7 +45,6 @@ func countNamespaceDocuments(db *database.DB) int64 {
 }
 
 // reloadDocument 按 ID 重新读取文档行。
-// reloadDocument re-reads a document row by ID.
 func reloadDocument(t *testing.T, db *database.DB, id uint) *modelsai.KnowledgeDocument {
 	t.Helper()
 	doc := &modelsai.KnowledgeDocument{}
@@ -60,9 +56,6 @@ func reloadDocument(t *testing.T, db *database.DB, id uint) *modelsai.KnowledgeD
 
 // TestKnowledgeDocumentUpload 导入上传的边界分支：不支持格式 / 超限 / AI 未启用均返回 400
 // 且不落库（成功上传路径需要真实 S3 对象缓存，见文件末尾的取舍说明）。
-// TestKnowledgeDocumentUpload covers the upload edge branches: an unsupported format, an
-// oversize body and a disabled AI runtime each yield 400 without persisting a row (the success
-// path needs a real S3 object cache; see the tradeoff note at the end of the file).
 func TestKnowledgeDocumentUpload(t *testing.T) {
 	Convey("知识库文档导入上传的边界分支", t, func() {
 		db := createKnowledgeTestDB(t)
@@ -95,9 +88,6 @@ func TestKnowledgeDocumentUpload(t *testing.T) {
 
 // TestKnowledgeDocumentUpdateImported 导入文档的更新语义：正文只读（携带非空内容显式 400），
 // 仅改标题成功且不改变状态与正文（不触发重新解析）。
-// TestKnowledgeDocumentUpdateImported covers the update semantics of an imported document: the
-// content is read-only (a non-empty content yields an explicit 400) and a title-only update
-// succeeds without changing the status or the content (no reparse).
 func TestKnowledgeDocumentUpdateImported(t *testing.T) {
 	Convey("导入文档更新语义", t, func() {
 		db := createKnowledgeTestDB(t)
@@ -135,9 +125,6 @@ func TestKnowledgeDocumentUpdateImported(t *testing.T) {
 
 // TestKnowledgeDocumentReindexGuard 重新索引的来源语义：AI 未启用返回 400；导入文档在
 // pending/parsing 进行中态被拒绝重复投递（在触达管道客户端之前返回，故无需真实 asynq）。
-// TestKnowledgeDocumentReindexGuard covers the reindex semantics by source: a disabled AI
-// runtime yields 400, and an imported document already in pending/parsing rejects a duplicate
-// enqueue (it returns before reaching the pipeline client, so no real asynq is required).
 func TestKnowledgeDocumentReindexGuard(t *testing.T) {
 	Convey("重新索引的来源守卫", t, func() {
 		db := createKnowledgeTestDB(t)
@@ -174,9 +161,6 @@ func TestKnowledgeDocumentReindexGuard(t *testing.T) {
 
 // TestKnowledgeDocumentContentType 按格式映射下载响应 Content-Type（未知格式回退
 // application/octet-stream）。下载成功路径需真实 S3 对象缓存，故此处仅覆盖纯映射逻辑。
-// TestKnowledgeDocumentContentType maps the download Content-Type by format (an unknown
-// format falls back to application/octet-stream). The download success path needs a real S3
-// object cache, so only the pure mapping is covered here.
 func TestKnowledgeDocumentContentType(t *testing.T) {
 	Convey("下载响应 Content-Type 映射", t, func() {
 		Convey("已知格式返回对应类型", func() {

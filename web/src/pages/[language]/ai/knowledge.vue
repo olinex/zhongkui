@@ -682,7 +682,7 @@ const uploadDialogRef = useTemplateRef("uploadDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const reindexConfirmRef = useTemplateRef("reindexConfirmRef");
 
-// ---- forms ----
+// ---- 表单 ----
 const createForm = useForm({ validationSchema: createDocSchema });
 const updateForm = useForm({ validationSchema: updateDocSchema });
 

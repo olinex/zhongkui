@@ -1347,6 +1347,7 @@ page:
     me: 我
     assistant: 助手
     hintSelectSession: 请先新建或选择一个会话开始对话
+    hintFirstQuery: 输入首个问题即可开始对话，会话主题将由系统自动生成
     confirmDeleteSession: 确定删除该会话及其全部消息吗？
     slotHint: 新建会话时该档位会成为会话缺省档位
     disabled: AI 能力未启用
@@ -1355,8 +1356,6 @@ page:
     compactSummary: 上下文摘要
     compactExtracted: 已提取记忆条数
     compactWarnings: 提取警告
-  aiMemory:
-    contentHint: 记忆正文用于后续会话检索召回，建议自包含、可独立理解
   aiKnowledge:
     dryRun: 检索试运行
     query: 查询问题

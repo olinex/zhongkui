@@ -8,6 +8,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试 ISO 标准与集合类常量的取值。
 func TestBaseConstants(t *testing.T) {
 	Convey("验证 ISO 标准常量值", t, func() {
 		Convey("1. 验证 LANGUAGE 常量", func(c C) {
@@ -31,6 +32,7 @@ func TestBaseConstants(t *testing.T) {
 	})
 }
 
+// 测试常量路径的前缀、后缀与 ISO 编号。
 func TestBaseConstantsPathFormat(t *testing.T) {
 	Convey("验证常量路径前缀格式", t, func() {
 		Convey("1. 标准类常量路径应以 standards/ 开头", func(c C) {
@@ -79,6 +81,7 @@ func TestBaseConstantsPathFormat(t *testing.T) {
 	})
 }
 
+// 测试嵌入的标准文件可访问且为合法 JSON。
 func TestEmbeddedStandards(t *testing.T) {
 	Convey("验证嵌入的标准文件可访问", t, func() {
 		Convey("1. LANGUAGE 文件可打开", func(c C) {
@@ -181,6 +184,7 @@ func TestEmbeddedStandards(t *testing.T) {
 	})
 }
 
+// 测试嵌入的集合文件可访问且为合法 JSON。
 func TestEmbeddedCollections(t *testing.T) {
 	Convey("验证嵌入的集合文件可访问", t, func() {
 		Convey("1. FilenameExtension 文件可打开", func(c C) {
@@ -221,6 +225,7 @@ func TestEmbeddedCollections(t *testing.T) {
 	})
 }
 
+// 测试两个嵌入文件系统相互隔离。
 func TestEmbeddedFSIsolation(t *testing.T) {
 	Convey("验证两个嵌入文件系统相互隔离", t, func() {
 		Convey("1. embeddedStandards 不能访问 collections 目录中的文件", func(c C) {
@@ -240,6 +245,7 @@ func TestEmbeddedFSIsolation(t *testing.T) {
 	})
 }
 
+// 测试嵌入文件系统的目录结构。
 func TestEmbeddedFSReadDir(t *testing.T) {
 	Convey("验证嵌入文件系统的目录结构", t, func() {
 		Convey("1. embeddedStandards 的 standards 目录应包含 4 个文件", func(c C) {
@@ -277,6 +283,7 @@ func TestEmbeddedFSReadDir(t *testing.T) {
 	})
 }
 
+// 测试通过 Stat 获取嵌入文件信息。
 func TestEmbeddedFSStat(t *testing.T) {
 	Convey("验证通过 Stat 获取文件信息", t, func() {
 		Convey("1. 获取 LANGUAGE 文件信息", func(c C) {

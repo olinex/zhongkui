@@ -3,14 +3,14 @@
 package docconv
 
 import (
-	// stdlib
+	// 标准库
 	"bytes"
 	"context"
 	"fmt"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -36,9 +36,6 @@ func TestConvertPDF(t *testing.T) {
 
 // buildMinimalPDF 手工构造含 n 页的最小 PDF 字节：目录 + 页树 + 共享 Helvetica 字体 + 每页的
 // 页对象与内容流，并按经典 xref 表给出精确字节偏移（页文本须为 ASCII 以保证偏移量正确）。
-// buildMinimalPDF hand-crafts the bytes of a minimal PDF with n pages: catalog + page tree + a
-// shared Helvetica font + each page's page object and content stream, with a classic xref table
-// carrying exact byte offsets (page text must be ASCII so the offsets stay correct).
 func buildMinimalPDF(pageTexts []string) []byte {
 	n := len(pageTexts)
 	total := 3 + 2*n // 对象 1..total：1 catalog、2 pages、3 font，其后每页 page+content

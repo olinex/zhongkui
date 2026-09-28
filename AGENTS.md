@@ -20,16 +20,16 @@ Three-block grouping, blank-line separated, alphabetical within each block: 标�
 
 ```go
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"fmt"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -68,7 +68,7 @@ if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
 
 ### Comments
 
-中英双语注释为标准；所有导出类型/函数/常量/结构体字段必须有注释，文件必须有 `// Package xxx` 文档注释。
+注释一律使用中文，禁止中英双语或纯英文（`// Package`、`// Deprecated:` 等由 Go 工具链识别的固定前缀按语言约定保留英文）；所有导出类型/函数/常量/结构体字段必须有注释，文件必须有 `// Package xxx` 文档注释。
 
 ```go
 // UserClaims 自定义 JWT 声明结构
@@ -102,16 +102,16 @@ Composite indexes / unique constraints use `uq`/`idx` prefix:
 `samber/do/v2` 固定三层模式：私有 provider 工厂 → `InjectXxx` → `InvokeXxx`；`MustInvokeXxx`（panic 版）仅用于启动关键依赖。
 
 ```go
-// Layer 1: private provider factory
+// 第一层：私有 provider 工厂
 func newViperProvider() do.Provider[*viper.Viper] { ... }
 
-// Layer 2: injection function
+// 第二层：注入函数
 func InjectViper(i do.Injector) { do.Provide(i, newViperProvider()) }
 
-// Layer 3: invocation with error
+// 第三层：带错误的调用
 func InvokeViper(i do.Injector) (*viper.Viper, error) { ... }
 
-// Layer 3b: panic invocation (仅用于启动关键依赖)
+// 第三层b：panic 版调用（仅用于启动关键依赖）
 func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 ```
 
@@ -157,6 +157,13 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - 模型层专属类型（`network.LayerLevel` / `network.TCPOptions` / `network.LayerStack` 等）同样不得出现在 In/Out 结构体字段中，一律用视图层等价类型替换（如 `uint8`、`[]TcpOptionOut`、`[]LayerInfoOut`）。
 - 数据流：处理器以模型查询数据库，再经显式映射函数（`newXxxOut`，入参为模型指针）逐字段转换为独立 Out；JSON 字段名（json tag）须与映射来源字段保持一致，避免破坏前端契约。
 - 例外：**局部匿名扫描容器**（`var rows []struct { network.Xxx; utils.BaseTotalOut }`）仅作 GORM 扫描用途，不属于 In/Out 结构体，允许内嵌模型，沿用 notification 模块既有模式。
+
+### 长期记忆（Long-Term Memory）
+
+- **隔离维度固定为「命名空间 + Agent 类型 + 来源会话」**：`agent_memories` 的记忆只在来源会话内可见，跨越会话互不检索。唯一索引 `uq_agent_memories_scope_hash` 与检索索引 `idx_agent_memories_namespace_kind` 均须包含 `session_id`；存储层的精确去重、语义合并与向量/关键词两路检索的 Where 一律带 `session_id`，禁止只按 namespace + agent_kind 过滤。
+- **无会话运行不生成记忆**：`session_id = 0`（无会话运行）时 `MemoryStore.Write` 拒绝写入、`Retrieve` 直接返回空、Agent 不注入记忆运行时（`memoryToolContext` 原样返回 ctx）也不检索；避免落进任何会话都检索不到的孤儿桶。
+- **管理端不提供新增/编辑**：记忆由 Agent 运行期经 `memory_write` 工具生成，管理接口仅保留列表 / 详情 / 删除 / 启停，`AgentMemoryCreateIn` / `AgentMemoryUpdateIn` 及其路由、RBAC 权限点与前端入口一律不得存在。
+- **检索去重复用知识库文本 n-gram（4-gram Jaccard、阈值 `memory.dedupeThreshold`）**；写入去重是 sha256 精确去重 + pgvector 余弦语义合并，两者语义不同，禁止混用。
 
 ### 枚举统一注册表（enum 注册表 / search-generate 规范）
 
@@ -219,16 +226,16 @@ const searchTableRef = useTemplateRef("searchTableRef");
 按带注释标签的块组织，类型导入一律用 `import type`：
 
 ```ts
-// Third-party
+// 第三方
 import consola from "consola";
 
-// Plugins / Utilities
+// 插件 / 工具
 import { registerPlugins } from "@/plugins";
 
-// Components
+// 组件
 import App from "./App.vue";
 
-// Types
+// 类型
 import type { App } from "vue";
 ```
 
@@ -771,7 +778,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 ```ts
 const chartTheme = useChartTheme();
 const option = computed(() =>
-  withChartTheme({ /* page-specific series, xAxis, yAxis, ... */ }, chartTheme.value),
+  withChartTheme({ /* 页面专属 series、xAxis、yAxis 等 */ }, chartTheme.value),
 );
 ```
 
@@ -816,7 +823,7 @@ const option = computed(() =>
 
 ```vue
 <template>
-  <!-- HTML -->
+  <!-- HTML 结构 -->
 </template>
 
 <route lang="yaml">
@@ -827,7 +834,7 @@ meta:
 </route>
 
 <script setup lang="ts">
-// Logic
+// 逻辑
 </script>
 
 <style scoped>
@@ -878,7 +885,7 @@ meta:
 
 1. 无死代码：及时清理未使用的 import、变量、函数
 2. 一致性优先：遵循所改文件/模块既有模式
-3. 注释语言：Go 代码用中文，前端用英文
+3. 注释语言：全项目统一使用中文（Go 与前端一致），禁止中英双语或纯英文
 4. 类型安全：TypeScript strict mode；Go 适当使用泛型
 5. 错误处理：禁止忽略错误，始终包裹上下文
 6. DI：新依赖一律走 `provider/` → `Inject` → `Invoke`

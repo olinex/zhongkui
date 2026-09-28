@@ -2032,6 +2032,12 @@ other = "业务数据注入上限"
 [param.session.maxContextBytes.comment]
 other = "前端透传 businessData 单次注入的总大小上限（字节）"
 
+[param.session.topicSystemPrompt.label]
+other = "会话主题提示词"
+
+[param.session.topicSystemPrompt.comment]
+other = "据会话首条用户消息生成会话短主题的系统提示词"
+
 # ---- memory：长期记忆与会话摘要 ----
 [param.memory.enabled.label]
 other = "长期记忆开关"

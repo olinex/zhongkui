@@ -1,7 +1,7 @@
 package response
 
 import (
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	ut "github.com/go-playground/universal-translator"
 	"github.com/nicksnyder/go-i18n/v2/i18n"

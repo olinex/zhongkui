@@ -1,8 +1,12 @@
+// Package base 提供应用的基础定义：环境配置（Env）、全局常量、语言类型及其解析与序列化、
+// 主机名工具，以及语言与策略动作的枚举注册。
 package base
 
+// 通用常量：资源前缀、RBAC 模型与标签、内置分组/命名空间、权限点前缀与语义动作、HTTP 头部名。
 const (
+	// GlobalPrefix 全局资源名称统一前缀。
 	GlobalPrefix = "zki"
-	// rbac model
+	// rbac 模型定义（casbin 模型文本）。
 	RbacModel = `
 [request_definition]
 r = sub, obj, act, nsp
@@ -21,19 +25,19 @@ m = (p.obj == "*" || r.obj == p.obj) && \
     (p.act == "*" || r.act == p.act) && \
 	(g(r.sub, p.sub, "*") || g(r.sub, p.sub, r.nsp))
 `
-	// rbac label
+	// rbac 标签
 	WideMatchLabel = "*"
 	PolicyLabel    = "p"
 	GroupLabel     = "g"
 	EffectAllow    = "allow"
 	EffectDeny     = "deny"
 
-	// buildin group
+	// 内置分组
 	SuperuserGroup = "superuser"
 	AdminGroup     = "admin"
 	DefaultGroup   = "default"
 
-	// buildin namespace
+	// 内置命名空间
 	DefaultNamespace = "default"
 
 	// 全局权限点（permission point）格式规范：
@@ -58,7 +62,7 @@ m = (p.obj == "*" || r.obj == p.obj) && \
 	ActionRead  = "READ"
 	ActionWrite = "WRITE"
 
-	// http headers
+	// HTTP 请求头名
 	HdrHost                          = "Host"
 	HdrOrigin                        = "Origin"
 	HdrAccept                        = "Accept"

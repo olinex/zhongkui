@@ -33,6 +33,7 @@ func perform(s *Server, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
+// TestStartupNotStarted 验证未上报启动时 /startupz 返回 503。
 func TestStartupNotStarted(t *testing.T) {
 	s := newTestServer(status.New())
 	if rec := perform(s, "/startupz"); rec.Code != http.StatusServiceUnavailable {
@@ -40,6 +41,7 @@ func TestStartupNotStarted(t *testing.T) {
 	}
 }
 
+// TestReadyNotStarted 验证仅开始监听但未上报启动时 /readyz 返回 503。
 func TestReadyNotStarted(t *testing.T) {
 	s := newTestServer(status.New())
 	s.listening.Store(true)
@@ -48,6 +50,7 @@ func TestReadyNotStarted(t *testing.T) {
 	}
 }
 
+// TestAllOK 验证依赖全部就绪时各探针端点返回 200。
 func TestAllOK(t *testing.T) {
 	reg := status.New()
 	reg.Register(status.Spec{Name: "redis", Category: "cache", Probe: depProbeOK})
@@ -72,6 +75,7 @@ func TestAllOK(t *testing.T) {
 	})
 }
 
+// TestReadyUnreachable 验证依赖不可达时 /readyz 返回 503 并携带依赖状态。
 func TestReadyUnreachable(t *testing.T) {
 	reg := status.New()
 	reg.Register(status.Spec{Name: "redis", Category: "cache", Probe: depProbeUnreachable})
@@ -96,6 +100,7 @@ func TestReadyUnreachable(t *testing.T) {
 	}
 }
 
+// TestReadyDisabledDoesNotBlock 验证未配置的依赖不阻塞就绪判定。
 func TestReadyDisabledDoesNotBlock(t *testing.T) {
 	reg := status.New()
 	reg.Register(status.Spec{Name: "redis", Category: "cache", Probe: depProbeOK})
@@ -111,6 +116,7 @@ func TestReadyDisabledDoesNotBlock(t *testing.T) {
 	}
 }
 
+// TestShuttingDown 验证关闭过程中 /healthz 与 /readyz 均返回 503。
 func TestShuttingDown(t *testing.T) {
 	reg := status.New()
 	reg.Register(status.Spec{Name: "redis", Category: "cache", Probe: depProbeOK})
@@ -131,6 +137,7 @@ func TestShuttingDown(t *testing.T) {
 	})
 }
 
+// TestAllStateReady 验证 allStateReady 对不可达依赖判否、对就绪/未配置依赖判真。
 func TestAllStateReady(t *testing.T) {
 	ok := status.Status{Name: "redis", Category: "cache", Configured: true, Reachable: true}
 	unreachable := status.Status{Name: "redis", Category: "cache", Configured: true, Reachable: false}
@@ -148,6 +155,7 @@ func TestAllStateReady(t *testing.T) {
 	})
 }
 
+// TestSnapshot 验证状态快照包含启动标记、服务名、主机与进程 ID。
 func TestSnapshot(t *testing.T) {
 	s := NewServer(&Config{ReadyTimeout: time.Second}, status.New(), nil)
 	s.serviceName = "test-service"

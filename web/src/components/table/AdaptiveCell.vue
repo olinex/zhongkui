@@ -55,7 +55,7 @@
     open-on-hover
   >
     <template #activator="{ props }">
-      <!-- Density is owned by the theme layer (VBtn density="compact"). -->
+      <!-- 密度由主题层决定（VBtn density="compact"）。 -->
       <v-btn
         icon="mdi-dots-vertical"
         variant="plain"
@@ -99,7 +99,7 @@ defineProps({
     required: true,
   },
   item: {
-    // Table row values are heterogeneous; column types come from `header.type`.
+    // 表格行值类型异构；列类型由 header.type 决定。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: Object as PropType<Record<string, any>>,
     required: true,

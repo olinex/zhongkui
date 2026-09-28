@@ -84,24 +84,28 @@ const update = (value: unknown) => {
 
 const props = defineProps({
   modelValue: {
-    // Passed through to the native field as-is.
+    // 原样透传给底层字段控件（不在此处加工）。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     type: [Object, String, null] as PropType<any>,
     required: true,
   },
+  // inputType 输入控件类型，决定渲染哪一种字段控件
   inputType: {
     type: String as PropType<SearchInputType>,
     required: true,
   },
+  // numberProps 数字输入的范围与精度配置
   numberProps: {
     type: Object as PropType<NumberRange>,
     required: true,
   },
+  // options 枚举/选择型控件的候选项
   options: {
     type: Array as PropType<Option[]>,
     default: () => [],
   },
 });
 
+// emits 更新字段取值
 const emits = defineEmits(["update:modelValue"]);
 </script>

@@ -1,7 +1,7 @@
 <template>
   <v-menu v-model="menu" transition="scale-transition" :close-on-content-click="false">
     <template #activator="{ props: activatorProps }">
-      <!-- Density is owned by the theme layer (VBtn density="compact"). -->
+      <!-- 密度由主题层统一控制（VBtn density="compact"）。 -->
       <v-btn
         v-bind="activatorProps"
         icon="mdi-view-column-outline"
@@ -81,20 +81,24 @@ import type { PropType } from "vue";
 import type { TableHeader } from "../@types/table";
 
 const props = defineProps({
+  // 全部可选列定义
   headers: {
     type: Object as PropType<Array<TableHeader>>,
     required: true,
   },
+  // 当前可见列
   modelValue: {
     type: Object as PropType<Array<string>>,
     required: true,
   },
+  // 当前列顺序
   order: {
     type: Object as PropType<Array<string>>,
     required: true,
   },
 });
 
+// emits 草稿确认时一次性提交列可见性与列顺序。
 const emits = defineEmits<{
   (e: "update:modelValue", value: Array<string>): void;
   (e: "update:order", value: Array<string>): void;

@@ -37,14 +37,17 @@ func newUniversalTranslator(_ context.Context) do.Provider[*ut.UniversalTranslat
 	}
 }
 
+// InjectUniversalTranslator 向依赖注入器注册通用翻译器 provider，并登记校验规则及其多语言翻译。
 func InjectUniversalTranslator(ctx context.Context, i do.Injector) {
 	do.Provide(i, newUniversalTranslator(ctx))
 }
 
+// InvokeUniversalTranslator 从依赖注入器解析通用翻译器，错误交由调用方处理。
 func InvokeUniversalTranslator(i do.Injector) (*ut.UniversalTranslator, error) {
 	return do.Invoke[*ut.UniversalTranslator](i)
 }
 
+// MustInvokeUniversalTranslator 从依赖注入器解析通用翻译器，失败时 panic。
 func MustInvokeUniversalTranslator(i do.Injector) *ut.UniversalTranslator {
 	return do.MustInvoke[*ut.UniversalTranslator](i)
 }

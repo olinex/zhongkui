@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// 测试按结构体 tag 解析。
 func TestUnmarshal_StructTags(t *testing.T) {
 	type Config struct {
 		Mode   string `tag:"mode"`
@@ -32,6 +33,7 @@ func TestUnmarshal_StructTags(t *testing.T) {
 	}
 }
 
+// 测试按字段名解析。
 func TestUnmarshal_FieldNames(t *testing.T) {
 	type Config struct {
 		Mode   string
@@ -53,6 +55,7 @@ func TestUnmarshal_FieldNames(t *testing.T) {
 	}
 }
 
+// 测试整数字面量解析。
 func TestUnmarshal_IntValuesAsLiteral(t *testing.T) {
 	type Config struct {
 		Count int
@@ -69,6 +72,7 @@ func TestUnmarshal_IntValuesAsLiteral(t *testing.T) {
 	}
 }
 
+// 测试仅部分字段赋值。
 func TestUnmarshal_PartialFields(t *testing.T) {
 	type Config struct {
 		Mode   string `tag:"mode"`
@@ -90,6 +94,7 @@ func TestUnmarshal_PartialFields(t *testing.T) {
 	}
 }
 
+// 测试布尔字段解析。
 func TestUnmarshal_BoolField(t *testing.T) {
 	type Config struct {
 		Enabled bool `tag:"enabled"`
@@ -126,6 +131,7 @@ func TestUnmarshal_BoolField(t *testing.T) {
 	})
 }
 
+// 测试浮点字段解析。
 func TestUnmarshal_FloatField(t *testing.T) {
 	type Config struct {
 		Ratio float64 `tag:"ratio"`
@@ -152,6 +158,7 @@ func TestUnmarshal_FloatField(t *testing.T) {
 	})
 }
 
+// 测试无符号整数字段解析。
 func TestUnmarshal_UintField(t *testing.T) {
 	type Config struct {
 		Port uint16 `tag:"port"`
@@ -166,6 +173,7 @@ func TestUnmarshal_UintField(t *testing.T) {
 	}
 }
 
+// 测试非法输入返回错误。
 func TestUnmarshal_Errors(t *testing.T) {
 	t.Run("nil target", func(t *testing.T) {
 		if err := Unmarshal(`key="val"`, nil); err == nil {
@@ -201,6 +209,7 @@ func TestUnmarshal_Errors(t *testing.T) {
 	})
 }
 
+// 测试忽略未导出字段。
 func TestUnmarshal_IgnoresUnexportedFields(t *testing.T) {
 	type Config struct {
 		Exported   string `tag:"exported"`

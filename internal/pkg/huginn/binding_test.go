@@ -11,6 +11,7 @@ import (
 	"testing"
 )
 
+// 测试 IPv4 SYN 报文指纹解析的完整往返结果。
 func TestAnalyzeTCPIPv4RoundTrip(t *testing.T) {
 	fp, err := AnalyzeTCPIPv4(linuxSYNPacket())
 	if err != nil {
@@ -33,6 +34,7 @@ func TestAnalyzeTCPIPv4RoundTrip(t *testing.T) {
 	}
 }
 
+// 测试空输入、过短数据、非 TCP 协议与非法标志组合均返回 nil。
 func TestAnalyzeTCPEmptyAndErrors(t *testing.T) {
 	if fp, err := AnalyzeTCPIPv4(nil); fp != nil || err != nil {
 		t.Errorf("empty v4: fp=%v err=%v, want nil/nil", fp, err)
@@ -56,6 +58,7 @@ func TestAnalyzeTCPEmptyAndErrors(t *testing.T) {
 	}
 }
 
+// 测试 IPv6 SYN 与 SYN-ACK（服务端方向）解析。
 func TestAnalyzeTCPIPv6AndResponse(t *testing.T) {
 	// IPv6 SYN：无匹配签名 → OS 为空但 sig/mtu 仍填充
 	opts := tcpOptBytes(tcpOptMSS, 0x05, 0xa0)
@@ -91,6 +94,7 @@ func TestAnalyzeTCPIPv6AndResponse(t *testing.T) {
 	}
 }
 
+// 测试 HTTP 请求精确命中已知签名。
 func TestAnalyzeHTTPRequestMatch(t *testing.T) {
 	// 精确匹配 p0f.fp 中 Firefox 2.x 签名（含全部头值与顺序）→ 总距离 0
 	raw := []byte("GET / HTTP/1.1\r\n" +
@@ -120,6 +124,7 @@ func TestAnalyzeHTTPRequestMatch(t *testing.T) {
 	}
 }
 
+// 测试 HTTP 请求解析成功但未命中任何签名。
 func TestAnalyzeHTTPRequestNoMatch(t *testing.T) {
 	// 大量未知头 → 所有签名头距离均超上限 → 解析成功但未命中
 	var sb strings.Builder
@@ -140,6 +145,7 @@ func TestAnalyzeHTTPRequestNoMatch(t *testing.T) {
 	}
 }
 
+// 测试 HTTP 响应命中已知服务端签名。
 func TestAnalyzeHTTPResponseMatch(t *testing.T) {
 	raw := []byte("HTTP/1.1 200 OK\r\n" +
 		"Server: nginx/1.18.0\r\n" +
@@ -163,6 +169,7 @@ func TestAnalyzeHTTPResponseMatch(t *testing.T) {
 	}
 }
 
+// 测试 HTTP 空输入与解析失败均返回 nil。
 func TestAnalyzeHTTPEmptyAndErrors(t *testing.T) {
 	if fp, err := AnalyzeHTTPRequest(nil); fp != nil || err != nil {
 		t.Errorf("empty request: fp=%v err=%v, want nil/nil", fp, err)
@@ -179,6 +186,7 @@ func TestAnalyzeHTTPEmptyAndErrors(t *testing.T) {
 	}
 }
 
+// 测试 TCP 指纹的 JSON 字段名与取值。
 func TestTCPFingerprintJSON(t *testing.T) {
 	fp, err := AnalyzeTCPIPv4(linuxSYNPacket())
 	if err != nil || fp == nil {
@@ -205,6 +213,7 @@ func TestTCPFingerprintJSON(t *testing.T) {
 	}
 }
 
+// 测试 HTTP 指纹的 JSON 字段名与取值。
 func TestHTTPFingerprintJSON(t *testing.T) {
 	raw := []byte("HTTP/1.1 200 OK\r\n" +
 		"Server: nginx/1.18.0\r\n" +

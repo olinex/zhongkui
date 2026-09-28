@@ -1,16 +1,16 @@
 package notification
 
 import (
-	// stdlib
+	// 标准库
 	"slices"
 	"sort"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
@@ -171,28 +171,18 @@ type NotificationTemplateDryRunOut struct {
 // NotificationTemplateEventMetaItemOut 定义单条通知事件的精简元数据输出项。
 // 供模板编辑器生成语言下拉提示与模板变量智能补全，不承载渠道/模板键等已由
 // 统一枚举接口（/admin/enum）覆盖的枚举信息。
-// NotificationTemplateEventMetaItemOut defines the concise metadata item of a single
-// notification event, feeding the template editor's language dropdown hint and
-// template-variable smart completion. It omits channel/template-key enum info that is
-// already covered by the unified enum API (/admin/enum).
 type NotificationTemplateEventMetaItemOut struct {
 	// Event 事件类型键
-	// Event the event type key
 	Event string `json:"event"`
 	// Languages 该事件支持的语言（BCP-47 标签）
-	// Languages the languages supported by this event (BCP-47 tags)
 	Languages []string `json:"languages"`
 	// Fields 该事件可用的模板变量名清单（升序）
-	// Fields the available template variable names of this event (ascending)
 	Fields []string `json:"fields"`
 }
 
 // NotificationTemplateEventMetaOut 定义通知事件精简元数据接口的输出结构。
-// NotificationTemplateEventMetaOut defines the output of the concise notification
-// event metadata API.
 type NotificationTemplateEventMetaOut struct {
 	// Events 事件元数据项列表
-	// Events the list of event metadata items
 	Events []NotificationTemplateEventMetaItemOut `json:"events"`
 }
 
@@ -511,11 +501,6 @@ func NotificationTemplateDryRun(c *gin.Context) {
 // 遍历 notify.TemplateSpecs() 事件注册表，为每个事件组装支持语言（spec.Languages）与
 // 可用模板变量清单（notify.EventFields），供模板编辑器语言下拉提示与智能补全使用；
 // 事件键升序返回保证输出稳定。
-// NotificationTemplateEventsMetaGet handles the concise notification event metadata
-// request (/events/meta). It walks the notify.TemplateSpecs() registry and assembles
-// the supported languages (spec.Languages) and available template variable list
-// (notify.EventFields) per event for the template editor's language dropdown hint and
-// smart completion; event keys are returned ascending for stable output.
 func NotificationTemplateEventsMetaGet(c *gin.Context) {
 	specs := notify.TemplateSpecs()
 	events := make([]string, 0, len(specs))

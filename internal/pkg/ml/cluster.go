@@ -1,3 +1,4 @@
+// Package ml 提供机器学习算法的纯 Go 实现，当前包含 BIRCH 聚类算法的聚类特征（CF）计算。
 package ml
 
 import (

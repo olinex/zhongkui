@@ -6,6 +6,8 @@ package utils
 //   - Key：字段内唯一标识，前端借此查找 i18n 键（model.<model>.<entity>.option.<key>）翻译展示
 //   - Value：提交/存储的枚举值（多数与 Key 相同，个别富枚举允许不同）
 type EnumOption struct {
-	Key   string `json:"key"`
+	// Key 字段内唯一标识，前端借此查找 i18n 键翻译展示
+	Key string `json:"key"`
+	// Value 提交/存储的枚举值，多数与 Key 相同
 	Value string `json:"value"`
 }

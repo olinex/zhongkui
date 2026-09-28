@@ -33,18 +33,22 @@ func newCaptureClientProvider(i do.Injector) (*capture.CaptureClient, error) {
 	}
 }
 
+// NewCaptureClient 返回构建抓包客户端的 provider 工厂。
 func NewCaptureClient() do.Provider[*capture.CaptureClient] {
 	return newCaptureClientProvider
 }
 
+// InjectCaptureClient 向依赖注入器注册抓包客户端 provider。
 func InjectCaptureClient(i do.Injector) {
 	do.Provide(i, NewCaptureClient())
 }
 
+// InvokeCaptureClient 从依赖注入器解析抓包客户端，错误交由调用方处理。
 func InvokeCaptureClient(i do.Injector) (*capture.CaptureClient, error) {
 	return do.Invoke[*capture.CaptureClient](i)
 }
 
+// MustInvokeCaptureClient 从依赖注入器解析抓包客户端，失败时 panic。
 func MustInvokeCaptureClient(i do.Injector) *capture.CaptureClient {
 	return do.MustInvoke[*capture.CaptureClient](i)
 }

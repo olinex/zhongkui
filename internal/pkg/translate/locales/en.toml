@@ -2562,6 +2562,12 @@ other = "Business Data Injection Limit"
 [param.session.maxContextBytes.comment]
 other = "Total size limit (bytes) of a single businessData payload injected from the frontend"
 
+[param.session.topicSystemPrompt.label]
+other = "Session Topic Prompt"
+
+[param.session.topicSystemPrompt.comment]
+other = "System prompt that generates the short session topic from the session's first user message"
+
 # ---- memory: long-term memory and session summary ----
 [param.memory.enabled.label]
 other = "Long-term Memory Switch"

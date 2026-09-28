@@ -19,7 +19,7 @@ import type {
 } from "./@types/admin";
 import type { profileChangeIn } from "./@types/user";
 
-// user
+// 用户
 export function userListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/user/list", data, { headers: getJwtHeader() });
 }
@@ -80,7 +80,7 @@ export function userFrontendConfigReset(unionID: string): AxiosPromise {
   );
 }
 
-// group
+// 分组
 export function groupListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/group/list", data, { headers: getJwtHeader() });
 }
@@ -127,7 +127,7 @@ export function groupRbacPolicyRemove(groupName: string, data: GroupRbacPolicyIn
   });
 }
 
-// namespace
+// 命名空间
 export function namespaceListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/namespace/list", data, {
     headers: getJwtHeader(),
@@ -166,7 +166,7 @@ export function namespaceUpdate(name: string, data: NamespaceUpdateIn): AxiosPro
   });
 }
 
-// rbac policy template
+// RBAC 策略模板
 export function rbacPolicyTemplateListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/rbac-policy-template/list", data, {
     headers: getJwtHeader(),
@@ -179,7 +179,7 @@ export function rbacPolicyTemplateListOptions(): AxiosPromise {
   });
 }
 
-// capturer
+// 采集器
 export function capturerListGet(data: SearchIn): AxiosPromise {
   return request.post("/admin/capturer/list", data, {
     headers: getJwtHeader(),

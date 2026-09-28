@@ -465,7 +465,7 @@ const createChannelConfigState = (getType: () => string): ChannelConfigState => 
   return { values, errors, fields, valid, reset, fromJson, toJson, validate };
 };
 
-// ---- forms ----
+// ---- 表单 ----
 const createForm = useForm({ validationSchema: createChannelSchema });
 const updateForm = useForm({ validationSchema: updateChannelSchema });
 

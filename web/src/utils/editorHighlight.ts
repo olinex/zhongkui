@@ -1,13 +1,13 @@
-// Third-party
+// 第三方
 import { defaultHighlightStyle, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 
-// Types
+// 类型
 import type { Extension } from "@codemirror/state";
 
-// Plugins / Utilities
+// 插件 / 工具
 import { DARK_THEME } from "@/stores/local";
 
 // 项目统一的编辑器语法高亮语义配色方案：同一语义在任意编辑器（go 模板 / 标签表达式 / rego
