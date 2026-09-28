@@ -81,6 +81,10 @@ export const localManager = {
   setScrollFabPos(pos: { left: number; top: number }): void {
     localStorage.setItem(SCROLL_FAB_POS_KEY, JSON.stringify(pos));
   },
+  // 清除直达底部悬浮按钮的位置记录（视口尺寸变化时复位回右下角贴靠）
+  clearScrollFabPos(): void {
+    localStorage.removeItem(SCROLL_FAB_POS_KEY);
+  },
 
   getJwt(): string | void {
     // 优先读取 localStorage 中的令牌，其次回退到 Cookie。

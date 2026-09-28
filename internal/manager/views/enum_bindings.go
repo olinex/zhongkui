@@ -60,6 +60,10 @@ var enumBindings = map[string]map[string]string{
 	"LlmToolListOut": {
 		"source": "llmToolSource",
 	},
+	"KnowledgeDocumentListOut": {
+		"format": "documentFormat",
+		"status": "knowledgeDocStatus",
+	},
 	"AgentMemoryListOut": {
 		"agentKind": "agentKind",
 		"kind":      "memoryKind",

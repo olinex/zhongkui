@@ -6,6 +6,7 @@ package s3
 import (
 	// stdlib
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -17,22 +18,51 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-// newObjectCacheForTest 以供注入的 fetch 构建通用对象缓存（免真实 S3），供单元测试使用。
+// fakeBackend 是测试用的 objectBackend：以函数注入读/写/删，避免依赖真实 S3。
+// fakeBackend is a test objectBackend: read/write/remove are injected as functions so tests need
+// no real S3.
+type fakeBackend struct {
+	fetch  func(ctx context.Context, objectKey string) (io.ReadCloser, error)
+	store  func(ctx context.Context, objectKey string, r io.Reader) error
+	remove func(ctx context.Context, objectKey string) error
+}
+
+func (b fakeBackend) Store(ctx context.Context, objectKey string, r io.Reader) error {
+	if b.store == nil {
+		return nil
+	}
+	return b.store(ctx, objectKey, r)
+}
+
+func (b fakeBackend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+	if b.fetch == nil {
+		return nil, errors.New("fetch not stubbed")
+	}
+	return b.fetch(ctx, objectKey)
+}
+
+func (b fakeBackend) Remove(ctx context.Context, objectKey string) error {
+	if b.remove == nil {
+		return nil
+	}
+	return b.remove(ctx, objectKey)
+}
+
+// newObjectCacheForTest 以注入的 fetch 构建通用对象缓存（免真实 S3），供单元测试使用。
 // newObjectCacheForTest builds an ObjectCache with an injected fetch (no real S3) for tests.
 func newObjectCacheForTest(fetch func(ctx context.Context, objectKey string) (io.ReadCloser, error), cfg Config) *ObjectCache {
-	c := NewObjectCache(nil, cfg)
-	c.fetch = fetch
-	return c
+	return newObjectCache(fakeBackend{fetch: fetch}, cfg)
 }
 
 func TestObjectCacheMaterialize(t *testing.T) {
 	Convey("Materialize 按 size 分路落地", t, func() {
 		base, err := os.MkdirTemp("", "zk-objcache-")
 		So(err, ShouldBeNil)
-		// 阈值 1MB：小文件（4B）落内存目录，大文件（1MB+1）超阈落磁盘目录。
+		// 阈值 1MB：小文件（4B）落内存目录，大文件（超阈且 > 阈值+1，覆盖「前缀缓冲+剩余流」路径）
+		// 超阈落磁盘目录。
 		cache := newObjectCacheForTest(func(_ context.Context, objectKey string) (io.ReadCloser, error) {
 			if strings.HasSuffix(objectKey, "/big") {
-				return io.NopCloser(strings.NewReader(string(make([]byte, 1<<20+1)))), nil
+				return io.NopCloser(strings.NewReader(string(make([]byte, (1<<20)+4096)))), nil
 			}
 			return io.NopCloser(strings.NewReader("ABCD")), nil
 		}, Config{
@@ -40,7 +70,7 @@ func TestObjectCacheMaterialize(t *testing.T) {
 			ObjectCacheMemoryThresholdMB: 1,
 		})
 
-		Convey("小文件（<= 阈值）落入内存目录，大文件超阈落盘", func() {
+		Convey("小文件（<= 阈值）落入内存目录，大文件超阈落盘且内容完整", func() {
 			small, err := cache.Materialize(context.Background(), "datasource/ns/small")
 			So(err, ShouldBeNil)
 			So(filepath.Dir(small), ShouldEqual, cache.memDir)
@@ -48,6 +78,10 @@ func TestObjectCacheMaterialize(t *testing.T) {
 			big, err := cache.Materialize(context.Background(), "datasource/ns/big")
 			So(err, ShouldBeNil)
 			So(filepath.Dir(big), ShouldEqual, cache.diskDir)
+			// 流式分路：已缓冲前缀与剩余流拼接后不得丢失或错位。
+			got, err := os.ReadFile(big)
+			So(err, ShouldBeNil)
+			So(len(got), ShouldEqual, (1<<20)+4096)
 		})
 
 		Convey("进程内缓存复用：未过期不重复拉取", func() {
@@ -102,7 +136,7 @@ func TestObjectCacheMaterialize(t *testing.T) {
 
 	Convey("未配置 S3（client nil）时 Store/Materialize/Remove 明确报错", t, func() {
 		base, _ := os.MkdirTemp("", "zk-objcache-")
-		cache := newObjectCacheForTest(nil, Config{
+		cache := NewObjectCache(nil, Config{
 			ObjectCacheDir: filepath.Join(base, "mem"),
 		})
 		ctx := context.Background()
@@ -111,6 +145,49 @@ func TestObjectCacheMaterialize(t *testing.T) {
 		So(err.Error(), ShouldContainSubstring, "S3 not configured")
 		So(cache.Store(ctx, "datasource/ns/x", strings.NewReader("p")), ShouldNotBeNil)
 		So(cache.Remove(ctx, "datasource/ns/x"), ShouldNotBeNil)
+	})
+}
+
+func TestObjectCacheOpen(t *testing.T) {
+	Convey("Open 返回对象明文读取流且不落地本地文件", t, func() {
+		base, _ := os.MkdirTemp("", "zk-objcache-")
+
+		Convey("注入 fetch 时读到明文，且不写本地缓存", func() {
+			cache := newObjectCacheForTest(func(_ context.Context, objectKey string) (io.ReadCloser, error) {
+				So(objectKey, ShouldEqual, "datasource/ns/file")
+				return io.NopCloser(strings.NewReader("plaintext")), nil
+			}, Config{ObjectCacheDir: filepath.Join(base, "mem")})
+			rc, err := cache.Open(context.Background(), "datasource/ns/file")
+			So(err, ShouldBeNil)
+			defer rc.Close()
+			data, err := io.ReadAll(rc)
+			So(err, ShouldBeNil)
+			So(string(data), ShouldEqual, "plaintext")
+			So(len(cache.files), ShouldEqual, 0) // Open 不写本地缓存表
+		})
+
+		Convey("fetch 报错时透传错误并返回 nil 流", func() {
+			cache := newObjectCacheForTest(func(_ context.Context, _ string) (io.ReadCloser, error) {
+				return nil, errors.New("boom")
+			}, Config{ObjectCacheDir: filepath.Join(base, "mem2")})
+			rc, err := cache.Open(context.Background(), "datasource/ns/file")
+			So(err, ShouldNotBeNil)
+			So(err.Error(), ShouldContainSubstring, "boom")
+			So(rc, ShouldBeNil)
+		})
+	})
+
+	Convey("nil 缓存或未配置 S3（client nil）时 Open 明确报错", t, func() {
+		base, _ := os.MkdirTemp("", "zk-objcache-")
+		cache := NewObjectCache(nil, Config{ObjectCacheDir: filepath.Join(base, "mem")})
+		rc, err := cache.Open(context.Background(), "datasource/ns/x")
+		So(err, ShouldNotBeNil)
+		So(rc, ShouldBeNil)
+		So(err.Error(), ShouldContainSubstring, "S3 not configured")
+
+		var nilCache *ObjectCache
+		_, err = nilCache.Open(context.Background(), "datasource/ns/x")
+		So(err, ShouldNotBeNil)
 	})
 }
 

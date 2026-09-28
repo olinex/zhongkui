@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/do/v2"
 	"zhongkui.com/zhongkui/internal/pkg/etl"
+	"zhongkui.com/zhongkui/internal/worker/handlers/knowledge"
 	"zhongkui.com/zhongkui/internal/worker/handlers/mail"
 	"zhongkui.com/zhongkui/internal/worker/handlers/notify"
 	"zhongkui.com/zhongkui/internal/worker/handlers/pcap"
@@ -19,6 +20,7 @@ import (
 //   - pcap 导入任务的 batch handler（pcap.NewPcapBatchHandler）
 //   - 标签事件检测（tag:event:detect）与抑制评估（tag:event:suppress）handler
 //   - 通用通知发送（notify:send）handler，由标签事件等事件源投递
+//   - 知识文档导入解析（ai:doc:parse）handler，由知识库导入接口投递
 //   - 分布式 TCP 流处理器工厂（IPv4 和 IPv6）
 func Registry(ctx context.Context, injector do.Injector) {
 	// 注册 pcap 导入任务的 worker
@@ -36,6 +38,9 @@ func Registry(ctx context.Context, injector do.Injector) {
 	// 注册通用通知组发送与单目标直投 worker
 	etl.HandlerRegister(notify.SendGroupTask, notify.NewSendGroupHandler(injector))
 	etl.HandlerRegister(notify.SendTargetTask, notify.NewSendTargetHandler(injector))
+
+	// 注册知识文档导入解析 worker（ai:doc:parse）：拉取解密 S3 原件、抽取文本、切块向量化并收敛状态
+	etl.HandlerRegister(knowledge.ParseTask, knowledge.NewParseHandler(injector))
 
 	// 注册分布式 TCP 流处理器
 	etl.RegisterProcessorFactory(flow.ProcIpv4Tcp, flow.NewIPv4PacketProcessorFactory(injector))

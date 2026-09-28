@@ -34,6 +34,8 @@ type RegisterContext struct {
 	RawDatabase gin.HandlerFunc
 	// S3 S3 客户端中间件，供原始流量 body 明文读取。
 	S3 gin.HandlerFunc
+	// ObjectCache S3 通用加密对象缓存中间件，供知识库原件上传/下载/清理使用。
+	ObjectCache gin.HandlerFunc
 	// Etcd etcd 客户端中间件，将 etcd 客户端注入请求上下文。
 	Etcd gin.HandlerFunc
 	// Namespace 命名空间中间件，处理多租户命名空间隔离。

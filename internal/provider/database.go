@@ -2,6 +2,7 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	apimodel "zhongkui.com/zhongkui/internal/models/api"
 	coremodel "zhongkui.com/zhongkui/internal/models/core"
 	netmodel "zhongkui.com/zhongkui/internal/models/network"
@@ -26,9 +27,11 @@ const (
 func CoreModels() []any {
 	return []any{
 		&coremodel.User{},
+		&coremodel.UserPasswordReset{},
 		&coremodel.Group{},
 		&coremodel.Namespace{},
 		&coremodel.Capturer{},
+		&coremodel.Datasource{},
 		&coremodel.AccessKey{},
 		&coremodel.RbacPolicy{},
 		&coremodel.RbacPolicyTemplate{},
@@ -51,6 +54,11 @@ func CoreModels() []any {
 		&coremodel.AgentParam{},
 		&coremodel.McpServer{},
 		&coremodel.LlmTool{},
+		&aimodel.KnowledgeDocument{},
+		&aimodel.KnowledgeChunk{},
+		&aimodel.AgentSession{},
+		&aimodel.AgentMessage{},
+		&aimodel.AgentMemory{},
 	}
 }
 

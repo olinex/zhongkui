@@ -1,7 +1,19 @@
+// 文档格式与处理状态：取值集合与展示文案一律由后端枚举类 documentFormat（归属
+// internal/pkg/docconv）与 knowledgeDocStatus（归属 internal/models/ai）下发（见
+// utils/enums.ts 的 EnumClass），前端不声明取值字面量，此处仅为类型别名。
+export type DocumentFormat = string;
+export type KnowledgeDocStatus = string;
+
 // 知识库文档（KnowledgeDocument）
 export interface KnowledgeDocumentItem {
   id: number;
   title: string;
+  // 文档来源格式（markdown/txt/pdf/docx），手动录入文档固定为 markdown
+  format: DocumentFormat;
+  // 文档处理状态（pending/parsing/ready/failed），手动录入文档固定为 ready
+  status: KnowledgeDocStatus;
+  // 原件字节数，无原件（手动录入）时为 0
+  sizeBytes: number;
   chunkCount: number;
   // 被检索命中的次数（每次检索命中该文档的任一分块自增一次）
   useCount: number;
@@ -13,6 +25,10 @@ export interface KnowledgeDocumentItem {
 export interface KnowledgeDocumentDetail extends KnowledgeDocumentItem {
   content: string;
   hash: string;
+  // 导入时的原件文件名，手动录入文档为空
+  originalName: string;
+  // 解析失败原因（按请求语言返回），非 failed 状态为空
+  parseError: string;
 }
 export interface KnowledgeDocumentCreateIn {
   title: string;
@@ -21,12 +37,21 @@ export interface KnowledgeDocumentCreateIn {
 export interface KnowledgeDocumentUpdateIn {
   id: number;
   title: string;
-  content: string;
+  // 正文可选：导入文档仅允许改标题（携带非空 content 会被后端拒绝），手动录入文档语义不变
+  content?: string;
 }
 export interface KnowledgeDocumentReindexOut {
   id: number;
   chunkCount: number;
   hash: string;
+  // 重新索引后的处理状态：导入文档异步重解析时为 pending，手动录入文档同步重建时为 ready
+  status: KnowledgeDocStatus;
+}
+
+// 知识库文档导入出参（KnowledgeDocumentUploadOut）：客户端据 id 轮询列表、据 status 判断进度
+export interface KnowledgeDocumentUploadOut {
+  id: number;
+  status: KnowledgeDocStatus;
 }
 
 // 知识库文档索引摘要（KnowledgeDocumentChunksOut.summary）

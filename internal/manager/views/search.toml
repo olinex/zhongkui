@@ -134,6 +134,15 @@ field = "source"
 set = "llmToolSource"
 
 [[enums]]
+typeName = "KnowledgeDocumentListOut"
+[[enums.fields]]
+field = "format"
+set = "documentFormat"
+[[enums.fields]]
+field = "status"
+set = "knowledgeDocStatus"
+
+[[enums]]
 typeName = "AgentMemoryListOut"
 [[enums.fields]]
 field = "agentKind"
@@ -3348,6 +3357,20 @@ actions = [
     "inctn",
 ]
 
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "format"
+fieldType = "string"
+column = "format"
+binding = ""
+actions = ["eq"]
+
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "status"
+fieldType = "string"
+column = "status"
+binding = ""
+actions = ["eq"]
+
 [[KnowledgeDocumentListGet.selectFields]]
 fieldName = "id"
 column = "id"
@@ -3359,6 +3382,18 @@ column = "title"
 [[KnowledgeDocumentListGet.selectFields]]
 fieldName = "chunkCount"
 column = "chunk_count"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "format"
+column = "format"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "status"
+column = "status"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "sizeBytes"
+column = "size_bytes"
 
 [[KnowledgeDocumentListGet.selectFields]]
 fieldName = "useCount"

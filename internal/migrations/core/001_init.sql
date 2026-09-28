@@ -616,6 +616,12 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     content TEXT NOT NULL,
     chunk_count INT NOT NULL DEFAULT 0,
     hash CHAR(64) NOT NULL DEFAULT '',
+    format VARCHAR(16) NOT NULL DEFAULT 'markdown',
+    original_name VARCHAR(256) NOT NULL DEFAULT '',
+    object_key VARCHAR(512) NOT NULL DEFAULT '',
+    size_bytes BIGINT NOT NULL DEFAULT 0,
+    status VARCHAR(16) NOT NULL DEFAULT 'ready',
+    parse_error TEXT NOT NULL DEFAULT '',
     use_count INT NOT NULL DEFAULT 0,
     last_used_at TIMESTAMPTZ
 );
@@ -632,6 +638,12 @@ COMMENT ON COLUMN knowledge_documents.title IS 'the title of the knowledge docum
 COMMENT ON COLUMN knowledge_documents.content IS 'the full content of the knowledge document';
 COMMENT ON COLUMN knowledge_documents.chunk_count IS 'the number of chunks the document is split into';
 COMMENT ON COLUMN knowledge_documents.hash IS 'the sha256 hex digest of the document content, used to detect stale chunk indexes';
+COMMENT ON COLUMN knowledge_documents.format IS 'the source format of the document, its values come from the enum class documentFormat';
+COMMENT ON COLUMN knowledge_documents.original_name IS 'the original file name of an imported document, empty for manually entered documents';
+COMMENT ON COLUMN knowledge_documents.object_key IS 'the S3 object key of the source file, empty for manually entered documents';
+COMMENT ON COLUMN knowledge_documents.size_bytes IS 'the byte size of the source file, 0 for manually entered documents';
+COMMENT ON COLUMN knowledge_documents.status IS 'the processing status of the document, its values come from the enum class knowledgeDocStatus';
+COMMENT ON COLUMN knowledge_documents.parse_error IS 'the reason of a parse failure, empty on success or for manually entered documents';
 COMMENT ON COLUMN knowledge_documents.use_count IS 'the number of times the document has been recalled by retrieval, one increment per retrieval hitting any of its chunks, default 0';
 COMMENT ON COLUMN knowledge_documents.last_used_at IS 'the last time the document was recalled by retrieval, null when never used';
 

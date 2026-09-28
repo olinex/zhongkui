@@ -6,7 +6,28 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	// third-party
+	"github.com/cloudwego/eino/components/embedding"
 )
+
+// fakeEmbedder 记录每次收到的批次文本，并返回与入参等长的占位向量（第 i 个向量的唯一元素为
+// 文本长度），用于验证 EmbedClient 的切批与顺序对齐行为。
+// fakeEmbedder records the texts of every received batch and returns placeholder vectors equal
+// in length to the input (the sole element of the i-th vector is the text length), used to verify
+// EmbedClient's batching and order alignment.
+type fakeEmbedder struct {
+	batches [][]string
+}
+
+func (f *fakeEmbedder) EmbedStrings(_ context.Context, texts []string, _ ...embedding.Option) ([][]float64, error) {
+	f.batches = append(f.batches, append([]string(nil), texts...))
+	out := make([][]float64, len(texts))
+	for i, s := range texts {
+		out[i] = []float64{float64(len(s))}
+	}
+	return out, nil
+}
 
 // TestParseChatSlot 测试对话档位解析：flash/standard/advanced 合法（容忍空白与大小写），
 // embedding 与未知取值非法。
@@ -136,4 +157,58 @@ func TestClient_ModelName(t *testing.T) {
 	if embed.ModelName() != "embed-test" {
 		t.Errorf("EmbedClient.ModelName() = %q, want %q", embed.ModelName(), "embed-test")
 	}
+}
+
+// TestEmbedClient_EmbedStringsBatching 验证 EmbedClient 在入参超过单请求上限时按 embedBatchSize
+// 切批提交，结果按入参顺序拼接；未超过上限时只提交一批。
+// TestEmbedClient_EmbedStringsBatching verifies EmbedClient splits the input into embedBatchSize
+// batches when it exceeds the per-request cap and concatenates the results in input order, and
+// that an input within the cap is submitted as a single batch.
+func TestEmbedClient_EmbedStringsBatching(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("within cap sends a single batch", func(t *testing.T) {
+		fake := &fakeEmbedder{}
+		client := &EmbedClient{embedder: fake}
+		texts := []string{"a", "bb", "ccc"}
+		vectors, err := client.EmbedStrings(ctx, texts)
+		if err != nil {
+			t.Fatalf("EmbedStrings() error = %v", err)
+		}
+		if len(fake.batches) != 1 || len(fake.batches[0]) != len(texts) {
+			t.Fatalf("batches = %v, want a single batch of %d", fake.batches, len(texts))
+		}
+		if len(vectors) != len(texts) {
+			t.Fatalf("len(vectors) = %d, want %d", len(vectors), len(texts))
+		}
+	})
+
+	t.Run("over cap is split and concatenated in order", func(t *testing.T) {
+		fake := &fakeEmbedder{}
+		client := &EmbedClient{embedder: fake}
+		texts := make([]string, embedBatchSize*2+3)
+		for i := range texts {
+			texts[i] = strings.Repeat("x", i+1)
+		}
+		vectors, err := client.EmbedStrings(ctx, texts)
+		if err != nil {
+			t.Fatalf("EmbedStrings() error = %v", err)
+		}
+		if len(fake.batches) != 3 {
+			t.Fatalf("len(batches) = %d, want 3", len(fake.batches))
+		}
+		for i, want := range []int{embedBatchSize, embedBatchSize, 3} {
+			if len(fake.batches[i]) != want {
+				t.Errorf("batch %d size = %d, want %d", i, len(fake.batches[i]), want)
+			}
+		}
+		if len(vectors) != len(texts) {
+			t.Fatalf("len(vectors) = %d, want %d", len(vectors), len(texts))
+		}
+		for i, v := range vectors {
+			if len(v) != 1 || v[0] != float64(i+1) {
+				t.Fatalf("vectors[%d] = %v, want [%d]", i, v, i+1)
+			}
+		}
+	})
 }

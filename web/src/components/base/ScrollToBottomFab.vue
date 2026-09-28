@@ -59,6 +59,16 @@ const update = () => {
   }
 };
 
+// 视口尺寸变化：按约定把按钮复位回右下角贴靠——丢弃已拖动的坐标并清除持久化，
+// 使按钮重新显示时直接落在右下角；随后刷新可滚动/到底状态。
+// 仅响应 window resize（视口尺寸），不含内容高度变化（ResizeObserver 仍走 update），
+// 避免数据加载导致内容变高时误清用户拖动的位置
+const onResize = () => {
+  position.value = { left: -1, top: -1 };
+  localManager.clearScrollFabPos();
+  update();
+};
+
 // 直达页面底部（平滑滚动）
 const scrollToBottom = () => {
   window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
@@ -134,7 +144,7 @@ let resizeObserver: ResizeObserver | undefined;
 onMounted(() => {
   update();
   window.addEventListener("scroll", update, { passive: true });
-  window.addEventListener("resize", update);
+  window.addEventListener("resize", onResize);
   // 表格/内容高度变化（如调整每页数目后行数骤增）时刷新可见性：
   // scroll 事件只在滚动时触发，内容变高但用户未滚动时需由尺寸观察兜底
   resizeObserver = new ResizeObserver(update);
@@ -142,7 +152,7 @@ onMounted(() => {
 });
 onUnmounted(() => {
   window.removeEventListener("scroll", update);
-  window.removeEventListener("resize", update);
+  window.removeEventListener("resize", onResize);
   resizeObserver?.disconnect();
 });
 </script>

@@ -125,12 +125,39 @@ type EmbedClient struct {
 	cfg      ModelConfig        // 模型端点配置快照
 }
 
-// EmbedStrings 批量向量化文本，返回与输入顺序一致的向量列表。
-// EmbedStrings embeds a batch of texts, returning vectors aligned with the input order.
+// embedBatchSize 单次向量化请求允许提交的最大文本条数。上游 eino 的 OpenAI 兼容向量化客户端
+// 会把整批文本一次提交、不做切分，而部分供应商对单请求 contents 条数设有硬上限（本实例的
+// 百炼模型即返回「batch size is invalid, it should not be larger than 20」）。此处取一个对常见
+// 供应商都安全的保守值，由 EmbedClient 在内部切批提交，对外仍保持「一次批量向量化、结果顺序
+// 与入参一致」的语义。
+// embedBatchSize is the maximum number of texts submitted in a single embedding request. The
+// upstream eino OpenAI-compatible embedding client submits the whole batch in one request
+// without splitting, while some vendors hard-cap the per-request contents count (the Bailian
+// model in this instance returns "batch size is invalid, it should not be larger than 20"). A
+// conservative value safe for common vendors is used, and EmbedClient splits the batch
+// internally while preserving the "one batched call, order-aligned results" semantics.
+const embedBatchSize = 10
+
+// EmbedStrings 批量向量化文本，返回与输入顺序一致的向量列表。超过 embedBatchSize 时按批切分
+// 逐批提交再顺序拼接，规避供应商的单请求条数上限。
+// EmbedStrings embeds a batch of texts, returning vectors aligned with the input order. When the
+// input exceeds embedBatchSize it is split into batches submitted one by one and concatenated in
+// order, sidestepping the vendor's per-request contents cap.
 func (e *EmbedClient) EmbedStrings(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error) {
-	vectors, err := e.embedder.EmbedStrings(ctx, texts, opts...)
-	if err != nil {
-		return nil, errors.WithStack(err)
+	if len(texts) <= embedBatchSize {
+		vectors, err := e.embedder.EmbedStrings(ctx, texts, opts...)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return vectors, nil
+	}
+	vectors := make([][]float64, 0, len(texts))
+	for start := 0; start < len(texts); start += embedBatchSize {
+		batch, err := e.embedder.EmbedStrings(ctx, texts[start:min(start+embedBatchSize, len(texts))], opts...)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		vectors = append(vectors, batch...)
 	}
 	return vectors, nil
 }

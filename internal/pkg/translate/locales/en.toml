@@ -2381,6 +2381,38 @@ other = "List"
 other = "Quote"
 
 # =============================================================================
+# Knowledge document formats and import processing statuses
+# (enum classes documentFormat / knowledgeDocStatus, owned by
+# internal/pkg/docconv and internal/models/ai). documentFormat is the source format
+# when importing common document formats into the knowledge base, and
+# knowledgeDocStatus is the parse transition status of an imported document.
+# =============================================================================
+
+[enum.documentFormat.markdown]
+other = "Markdown"
+
+[enum.documentFormat.txt]
+other = "Plain text"
+
+[enum.documentFormat.pdf]
+other = "PDF"
+
+[enum.documentFormat.docx]
+other = "Word document"
+
+[enum.knowledgeDocStatus.pending]
+other = "Pending"
+
+[enum.knowledgeDocStatus.parsing]
+other = "Parsing"
+
+[enum.knowledgeDocStatus.ready]
+other = "Ready"
+
+[enum.knowledgeDocStatus.failed]
+other = "Failed"
+
+# =============================================================================
 # AI capability disabled reasons (ai.disabled.*)
 # The operator-facing copy explaining why the AI capability is unavailable: judged by the
 # runtime snapshot of internal/ai and translated per request language by the view layer,

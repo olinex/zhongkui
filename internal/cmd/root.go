@@ -65,6 +65,7 @@ var RootCmd = &cobra.Command{
 		provider.InjectCoreDatabase(i)
 		provider.InjectRawDatabase(i)
 		provider.InjectTagEngine(i)
+		provider.InjectObjectCache(i)
 		provider.InjectSQLiteVTabPools(i)
 		provider.InjectDatasourceWatcher(i)
 		provider.InjectCacheRedis(i)

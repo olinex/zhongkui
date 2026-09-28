@@ -220,11 +220,11 @@ func DatasourceCreate(c *gin.Context) {
 		return
 	}
 	// sqlite_file 前端以 multipart/form-data 提交（含 .db 文件流），其余类型仍为 JSON 体。
-	// 仅 sqlite 需要 file 字段；readDatasourceMultipart 流式返回 file 部分，避免整文件缓冲。
+	// 仅 sqlite 需要 file 字段；views.ReadMultipartFile 流式返回 file 部分，避免整文件缓冲。
 	var file io.Reader
 	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
 		var err error
-		if file, err = readDatasourceMultipart(c, func(name string, body []byte) {
+		if file, err = views.ReadMultipartFile(c, func(name string, body []byte) {
 			switch name {
 			case "name":
 				in.Name = string(body)
@@ -363,7 +363,7 @@ func DatasourceUpdate(c *gin.Context) {
 	var file io.Reader
 	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
 		var err error
-		if file, err = readDatasourceMultipart(c, func(name string, body []byte) {
+		if file, err = views.ReadMultipartFile(c, func(name string, body []byte) {
 			switch name {
 			case "enabled":
 				in.Enabled, _ = strconv.ParseBool(string(body))
@@ -569,43 +569,6 @@ func isSupportedDatasourceType(typ string) bool {
 	return vtab.IsDatasourceTypeRegistered(typ)
 }
 
-// readDatasourceMultipart 流式解析 multipart/form-data 请求：把 file 字段之前出现的普通
-// 表单字段经 cb(name, body) 回调交给调用方填充，并把 file 部分的读取流原样返回给调用方
-// 直通 S3 加密上传（避免整文件缓冲/落盘）。约定 file 字段须位于最后一个 part（前端保证
-// 顺序），因此返回的流在回调完成后即可安全读取。未携带 file 时返回 nil。
-// readDatasourceMultipart streams a multipart/form-data request: it feeds ordinary form
-// fields before "file" to cb(name, body), and returns the "file" part as a raw reader for
-// the caller to stream straight into S3 encrypting upload (no whole-file buffering/spilling).
-// It assumes "file" is the last part (guaranteed by the frontend) so the returned stream is
-// safe to read after the callback loop. Returns nil when no file part is present.
-func readDatasourceMultipart(c *gin.Context, cb func(name string, body []byte)) (io.Reader, error) {
-	mr, err := c.Request.MultipartReader()
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	for {
-		part, err := mr.NextPart()
-		if err == io.EOF {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		if name := part.FormName(); name == "file" {
-			// 将整个 file 部分作为读取流返回（不预读），由存储层流式消费。
-			return part, nil
-		}
-		body, err := io.ReadAll(part)
-		if cErr := part.Close(); cErr != nil {
-			return nil, errors.WithStack(cErr)
-		}
-		if err != nil {
-			return nil, errors.WithStack(err)
-		}
-		cb(part.FormName(), body)
-	}
-}
-
 // newDatasourceDetailOut 将 Datasource 转换为基础上的详情输出结构。
 func newDatasourceDetailOut(ds *core.Datasource) DatasourceDetailOut {
 	return DatasourceDetailOut{
@@ -645,25 +608,25 @@ func DatasourceTest(c *gin.Context) {
 // DatasourceIntrospect 处理自省第三方数据源表结构的请求。
 // 不落库、不注册 vtable，仅建立连接后解析目标表结构并映射为列定义（列名 + 类型键），
 // 供前端在创建数据源时展示。sqlite_file 类型走 multipart/form-data 分支，复用
-// readDatasourceMultipart 流式拿到上传的 .db 文件后一并传给 IntrospectSchema（其内部按
+// views.ReadMultipartFile 流式拿到上传的 .db 文件后一并传给 IntrospectSchema（其内部按
 // 类型分发，sqlite_file 分支做 PRAGMA 自省）；其余类型仍为 JSON 体，file 传 nil。
 // 失败原因放在 body 的 Message 字段返回（仍走 HTTP 200，不抛 5xx）。
 // DatasourceIntrospect handles the datasource schema-introspection request: it connects,
 // parses the target table structure and maps it to column definitions (name + type key)
 // without persisting or registering a vtable, for the frontend to show when creating a
 // datasource. The sqlite_file type goes through the multipart/form-data branch, reusing
-// readDatasourceMultipart to stream the uploaded .db file and passing it to IntrospectSchema
+// views.ReadMultipartFile to stream the uploaded .db file and passing it to IntrospectSchema
 // (which dispatches by type and does PRAGMA introspection in its sqlite_file branch); other
 // types use a JSON body and pass nil as the file. On failure the reason is returned in the
 // body Message field (still over HTTP 200, no 5xx).
 func DatasourceIntrospect(c *gin.Context) {
 	var in DatasourceIntrospectIn
 	// sqlite_file 前端以 multipart/form-data 提交（含 .db 文件流），其余类型仍为 JSON 体。
-	// 仅 sqlite 需要 file 字段；readDatasourceMultipart 流式返回 file 部分，避免整文件缓冲。
+	// 仅 sqlite 需要 file 字段；views.ReadMultipartFile 流式返回 file 部分，避免整文件缓冲。
 	var file io.Reader
 	if strings.HasPrefix(c.ContentType(), "multipart/form-data") {
 		var err error
-		if file, err = readDatasourceMultipart(c, func(name string, body []byte) {
+		if file, err = views.ReadMultipartFile(c, func(name string, body []byte) {
 			switch name {
 			case "type":
 				in.Type = string(body)

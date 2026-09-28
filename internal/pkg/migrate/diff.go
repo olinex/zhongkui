@@ -150,7 +150,12 @@ FROM information_schema.tables
 WHERE table_schema = 'public'
 AND table_type = 'BASE TABLE'
 ORDER BY table_name`,
-			listColumnsQuery: `SELECT column_name, data_type, is_nullable,
+			// information_schema 把扩展类型（如 pgvector 的 vector）统一报告为
+			// USER-DEFINED，其真实类型名在 udt_name 中；回退到 udt_name 才能与模型
+			// 声明的 vector(n) 正确比对，否则必然误报类型不匹配。
+			listColumnsQuery: `SELECT column_name,
+       CASE WHEN data_type = 'USER-DEFINED' THEN udt_name ELSE data_type END,
+       is_nullable,
        COALESCE(column_default, '')
 FROM information_schema.columns
 WHERE table_schema = 'public' AND table_name = $1

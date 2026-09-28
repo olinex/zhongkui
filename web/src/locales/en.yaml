@@ -280,9 +280,14 @@ model:
       title: Title
       content: Content
       chunkCount: Chunks
+      format: Format
+      status: Status
+      sizeBytes: Source Size
       useCount: Hit Count
       lastUsedAt: Last Hit At
       hash: Hash
+      originalName: Original Filename
+      parseError: Parse Error
       createdAt: Created At
       updatedAt: Updated At
   aiSession:
@@ -1217,6 +1222,7 @@ action:
   enableAutoRefresh: Start auto refresh
   disableAutoRefresh: Stop auto refresh
   reindex: Reindex
+  reparse: Reparse
   chunks: Chunk Details
   query: Query
   columns: Columns
@@ -1420,6 +1426,12 @@ page:
     chunkEmbeddingDimensions: Embedding dimensions
     chunkHash: Content hash
     chunkIndexedAt: Indexed at
+    importDocument: Import Document
+    importTitlePlaceholder: Leave blank to use the filename (without extension)
+    importFile: Source file
+    importFileHint: Supports Markdown / TXT / PDF / DOCX, up to 64 MB per file
+    importedContentReadOnly: The content is parsed from the imported source and is read-only; only the title can be changed
+    parseError: Parse Error
   llmModelAdmin:
     baseURLHint: OpenAI-compatible base URL of the provider (e.g. https://dashscope.aliyuncs.com/compatible-mode/v1)
     apiKeyKeepHint: The key is never echoed in plaintext; leave blank to keep the existing key
@@ -1495,6 +1507,7 @@ notice:
   runConfirm: "Confirm running {category} {key}?"
   rollbackConfirm: "Confirm rolling back {category} {key} to version {version}?"
   reindexConfirm: "Confirm reindexing {category} {key}?"
+  reparseConfirm: "Confirm reparsing {category} {key}?"
   noVersion: This rule has no historical versions yet
   dryRunConfirm: "Confirm dry running {category} {key}?"
   enableConfirm: "Confirm enabling {category} {key}?"
@@ -1539,6 +1552,10 @@ notice:
     testSuccess: "Connection test passed; the remote exposes {count} tool(s)"
     testFailed: Connection test failed
     syncSuccess: "Sync complete: {created} added, {updated} refreshed, {removed} removed"
+  aiDocument:
+    downloadSuccess: "Downloading {name}"
+    downloadFailed: Failed to download the source file
+    notDownloadable: This document has no downloadable source file
 inputType:
   string: String
   number: Number
