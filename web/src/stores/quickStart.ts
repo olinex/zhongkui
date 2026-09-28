@@ -1,6 +1,6 @@
 // stores/quickStart.ts
-// Quick start checklist store: user-defined groups of sidebar navigation
-// links, persisted to localStorage (per browser, following localManager).
+// 快速开始清单 store：用户自定义的侧边栏导航链接分组，持久化到 localStorage
+// （按浏览器维度，遵循 localManager）。
 
 import { defineStore } from "pinia";
 
@@ -9,6 +9,7 @@ import type { NavChild } from "@/navigation";
 import { useConfigSyncStore } from "./configSync";
 import { localManager } from "./local";
 
+// QuickStartLink 快速开始中的单个导航链接。
 export interface QuickStartLink {
   title: string;
   icon: string;
@@ -16,6 +17,7 @@ export interface QuickStartLink {
   params?: Record<string, string>;
 }
 
+// QuickStartGroup 快速开始中的一组导航链接。
 export interface QuickStartGroup {
   id: string;
   title: string;
@@ -29,8 +31,7 @@ export const isBuiltinGroup = (group: Pick<QuickStartGroup, "id" | "builtin">): 
   return group.builtin === true || group.id === "default";
 };
 
-// linkKey builds a stable identity for a navigation link (route name + params),
-// used for de-duplication and as a Vue list key.
+// linkKey 为导航链接构造稳定标识（路由名 + 参数），用于去重与作为 Vue 列表 key。
 export const linkKey = (link: Pick<QuickStartLink, "routeName" | "params">): string => {
   return `${link.routeName}:${JSON.stringify(link.params ?? {})}`;
 };
@@ -92,6 +93,7 @@ const parseStoredGroups = (raw: string | null): QuickStartGroup[] | null => {
   }
 };
 
+// useQuickStartStore 快速开始清单 store：管理分组及其下导航链接的增删改与持久化。
 export const useQuickStartStore = defineStore("quickStart", {
   state: () => ({
     groups: parseStoredGroups(localManager.getQuickStartGroups()) ?? seedDefaultGroups(),

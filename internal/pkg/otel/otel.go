@@ -1,3 +1,5 @@
+// Package otel（本文件）提供 OpenTelemetry 的初始化入口：装配上下文传播器、
+// 资源及各 Provider，并返回统一的关闭函数。
 package otel
 
 import (
@@ -16,6 +18,8 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
+// Setup 初始化 OpenTelemetry，注册文本映射传播器并设置各类 Provider，
+// 返回用于释放资源的关闭函数。未启用时仅返回空关闭函数。
 func Setup(ctx context.Context) (func(context.Context) error, error) {
 	var shutdownFuncs []func(context.Context) error
 	var err error

@@ -7,35 +7,22 @@
 // 正确性取舍：Mongo 数值类型间等值比较存在类型强转歧义，为保证超集契约不成立时的漏
 // 行风险，本数据源不做任何谓词下推（Filterable 恒空），由 sqlite 对全量集合行做本地
 // 过滤。详见 mongo_table.go。
-//
-// This file provides the MongoDB vtable datasource connection layer. MongoDB has no
-// fixed schema at the database level, so here one collection is exposed as a vtable:
-// the columns (names + ValueTypes) must come from the schema explicitly declared by the
-// frontend at registration; no first-document introspection is performed (see
-// mongo_table.go). The connection model reuses the resource pool: a Key is derived from
-// URI+DB+Collection, lazily building a mongo.Client (mongo-driver/v2), borrowed on Open
-// and returned after fetching.
-//
-// Correctness trade-off: because Mongo numeric equality has type-coercion ambiguity, to
-// avoid dropping rows and breaking the superset contract we push no predicate here
-// (Filterable is always empty) and let sqlite filter the full collection locally. See
-// mongo_table.go.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"fmt"
 	"io"
 	"reflect"
 	"sync"
 
-	// third-party
+	// 第三方
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
@@ -43,34 +30,26 @@ import (
 )
 
 // MongoConfig 描述一个 MongoDB 集合的接入配置。
-// MongoConfig describes how to reach one MongoDB collection.
 type MongoConfig struct {
 	// URI 连接串（含认证），如 mongodb://user:pass@127.0.0.1:27017。
-	// URI the connection string (with auth), e.g. mongodb://user:pass@127.0.0.1:27017.
 	URI string
 	// DB 数据库名。
-	// DB the database name.
 	DB string
 	// Collection 集合名。
-	// Collection the collection name.
 	Collection string
 	// Namespace 数据源所属命名空间，仅参与连接池 Key 派生（不参与寻址）。
-	// Namespace the datasource namespace; only participates in pool-key derivation.
 	Namespace string
 }
 
 // mongoClients 是 Mongo 客户端池注册表。
-// mongoClients is the Mongo client pool registry.
 var mongoClients = newMongoClientRegistry()
 
 // mongoClientConfig 描述一个 Key 的客户端构造。
-// mongoClientConfig describes the client construction for one Key.
 type mongoClientConfig struct {
 	uri string
 }
 
 // mongoClientRegistry 按 Key 维护 Mongo 客户端池。
-// mongoClientRegistry keeps Mongo client pools by Key.
 type mongoClientRegistry struct {
 	mu       sync.RWMutex
 	manager  *resourcepool.Manager[*mongo.Client]
@@ -79,7 +58,6 @@ type mongoClientRegistry struct {
 }
 
 // newMongoClientRegistry 创建注册表并装配进程级 Manager。
-// newMongoClientRegistry builds the registry and its process-wide Manager.
 func newMongoClientRegistry() *mongoClientRegistry {
 	r := &mongoClientRegistry{
 		cfgs:     make(map[resourcepool.Key]*mongoClientConfig),
@@ -91,8 +69,6 @@ func newMongoClientRegistry() *mongoClientRegistry {
 
 // makeDBFor 依据 Key 惰性创建 mongo.Client（mongo-driver 不阻塞，懒建连）；测试经
 // override 注入 mock client 时直接返回之。
-// makeDBFor lazily builds a *mongo.Client for a Key (mongo-driver is non-blocking and
-// connects lazily); tests bypass it via the override map.
 func (r *mongoClientRegistry) makeDBFor(key resourcepool.Key) (*mongo.Client, error) {
 	r.mu.RLock()
 	if cli, ok := r.override[key]; ok {
@@ -108,7 +84,6 @@ func (r *mongoClientRegistry) makeDBFor(key resourcepool.Key) (*mongo.Client, er
 }
 
 // register 注入一个 Key 的客户端配置（重复注入覆盖）。
-// register injects the client config for a Key (overwrites on re-injection).
 func (r *mongoClientRegistry) register(key resourcepool.Key, uri string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -116,7 +91,6 @@ func (r *mongoClientRegistry) register(key resourcepool.Key, uri string) {
 }
 
 // overrideClient 设置/清除指定 Key 的 mock client 注入（仅供测试）。
-// overrideClient sets/clears a mocked client override for a Key (test only).
 func (r *mongoClientRegistry) overrideClient(key resourcepool.Key, cli *mongo.Client) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -129,8 +103,6 @@ func (r *mongoClientRegistry) overrideClient(key resourcepool.Key, cli *mongo.Cl
 
 // NewMongoPool 注入一份 Mongo 集合配置并返回其池句柄。客户端惰性创建，构造本身不触发
 // 网络连接。
-// NewMongoPool injects one Mongo collection config and returns its pool handle. Clients
-// are created lazily, so construction initiates no network connection.
 func NewMongoPool(cfg *MongoConfig) *MongoPool {
 	key := resourcepool.Key(fmt.Sprintf("%s@%s/%s.%s", cfg.Namespace, cfg.URI, cfg.DB, cfg.Collection))
 	mongoClients.register(key, cfg.URI)
@@ -138,8 +110,6 @@ func NewMongoPool(cfg *MongoConfig) *MongoPool {
 }
 
 // MongoPool 是基于资源池的 Mongo 客户端池句柄，绑定一个集合配置派生的 Key。
-// MongoPool is a resourcepool-backed Mongo client pool handle bound to a Key derived
-// from a collection config.
 type MongoPool struct {
 	key        resourcepool.Key
 	db         string
@@ -147,53 +117,41 @@ type MongoPool struct {
 }
 
 // Acquire 借出并返回一个可用的 *mongo.Client（懒建连）。*mongo.Client 并发安全。
-// Acquire borrows a usable *mongo.Client (lazily connecting). It is concurrency-safe.
 func (p *MongoPool) Acquire(ctx context.Context) (*mongo.Client, error) {
 	return mongoClients.manager.Acquire(ctx, p.key)
 }
 
 // Release 归还 *mongo.Client 以便复用。
-// Release returns the *mongo.Client for reuse.
 func (p *MongoPool) Release(ctx context.Context, cli *mongo.Client) {
 	mongoClients.manager.Release(ctx, p.key, cli)
 }
 
 // Close 销毁该实例池内的闲置客户端（借出中的不受影响）。
-// Close destroys idle clients in this instance's pool (borrowed ones unaffected).
 func (p *MongoPool) Close(ctx context.Context) {
 	mongoClients.manager.Clear(ctx, p.key)
 }
 
 // CloseAllMongoClients 关闭全部 Mongo 客户端池并销毁存活对象。供进程优雅关闭调用。
-// CloseAllMongoClients closes every Mongo client pool and destroys live objects, meant
-// for graceful shutdown.
 func CloseAllMongoClients(ctx context.Context) {
 	mongoClients.manager.CloseAll(ctx)
 }
 
 // mongoPlugin 实现 DatasourcePlugin，把 mongo 数据源类型接入插件注册表。
-// mongoPlugin implements DatasourcePlugin, wiring the mongo datasource type into the plugin
-// registry.
 type mongoPlugin struct{}
 
 // Key 返回数据源类型键。
-// Key returns the datasource type key.
 func (mongoPlugin) Key() string { return DatasourceTypeMongo }
 
 // ConfigType 返回配置值反射类型。
-// ConfigType returns the config value's reflect type.
 func (mongoPlugin) ConfigType() reflect.Type { return reflect.TypeFor[MongoCollectionConfig]() }
 
 // NewConfig 返回全新一份 *MongoCollectionConfig。
-// NewConfig returns a fresh *MongoCollectionConfig.
 func (mongoPlugin) NewConfig() any { return &MongoCollectionConfig{} }
 
 // ValidateConfig 结构已经解码校验，这里无需额外操作。
-// ValidateConfig does nothing extra since the structure was already validated at decode.
 func (mongoPlugin) ValidateConfig(_ any) error { return nil }
 
 // TestConn 借用 client、经 Ping(readpref.Primary()) 探活后归还。
-// TestConn borrows a client, probes it via Ping(readpref.Primary()) and returns it.
 func (mongoPlugin) TestConn(ctx context.Context, cfg any) error {
 	c := cfg.(*MongoCollectionConfig)
 	pool := NewMongoPool(&MongoConfig{URI: c.URI, DB: c.DB, Collection: c.Collection})
@@ -210,15 +168,11 @@ func (mongoPlugin) TestConn(ctx context.Context, cfg any) error {
 }
 
 // IntrospectSchema MongoDB 无固定 schema，返回「需手动填写 schema」错误。
-// IntrospectSchema returns a "schema must be filled manually" error since MongoDB has no
-// fixed schema.
 func (mongoPlugin) IntrospectSchema(_ context.Context, _ any, _ io.Reader) ([]DatasourceColumn, error) {
 	return nil, errors.New("mongo: MongoDB has no fixed schema; define the columns manually")
 }
 
 // Register 校验 schema 非空 → 建池 → parseDatasourceColumns → NewMongoDatasourceWithSchema。
-// Register validates schema not-empty → build pool → parseDatasourceColumns →
-// NewMongoDatasourceWithSchema.
 func (mongoPlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
 	c := cfg.(*MongoCollectionConfig)
 	if len(c.Schema) == 0 {
@@ -234,7 +188,6 @@ func (mongoPlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.O
 }
 
 // init 自注册 mongo 数据源类型。
-// init self-registers the mongo datasource type.
 func init() {
 	RegisterDatasourceType(mongoPlugin{})
 }

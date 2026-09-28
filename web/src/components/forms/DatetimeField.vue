@@ -93,12 +93,13 @@ import { DateTime } from "luxon";
 import type { Density } from "../@types/base";
 import { localeDatetimeFormat, localeTimeFormat } from "@/utils/i18n";
 
-// Validation rule shape of the underlying field: `true` when valid,
-// otherwise the error message to display.
+// Rule 底层字段的校验规则形态：合法时返回 `true`，否则返回需展示的错误信息。
 type Rule = (value: unknown) => boolean | string;
 
+// tab 面板当前激活的标签页（date 日期 / time 时间）
 const tab = ref("date");
 
+// datetimeStr 绑定值的本地化展示字符串
 const datetimeStr = computed((): string | null => {
   if (props.modelValue === null) {
     return null;
@@ -115,6 +116,7 @@ const datetimeStr = computed((): string | null => {
   }
 });
 
+// dateRaw 绑定值对应的日期对象（供日期选择器使用）
 const dateRaw = computed((): Date | null => {
   if (props.modelValue === null) {
     return null;
@@ -129,6 +131,7 @@ const dateRaw = computed((): Date | null => {
   }
 });
 
+// timeStr 绑定值对应的本地化时间字符串
 const timeStr = computed((): string | null => {
   if (props.modelValue === null) {
     return null;
@@ -143,22 +146,27 @@ const timeStr = computed((): string | null => {
   }
 });
 
+// previousDate 将日期回退一天
 const previousDate = () => {
   updateDate(DateTime.now().minus({ days: 1 }).toJSDate());
 };
 
+// currentDate 将日期设为今天
 const currentDate = () => {
   updateDate(DateTime.now().toJSDate());
 };
 
+// nextDate 将日期前进一天
 const nextDate = () => {
   updateDate(DateTime.now().plus({ days: 1 }).toJSDate());
 };
 
+// currentTime 将时间设为当前时刻
 const currentTime = () => {
   updateTime(localeTimeFormat(DateTime.now()));
 };
 
+// updateDate 更新日期部分，保留绑定值原有的时分秒与毫秒
 const updateDate = (value: Date | null) => {
   if (value === null) {
     emits("update:modelValue", null);
@@ -196,6 +204,7 @@ const updateDate = (value: Date | null) => {
   }
 };
 
+// updateTime 更新时间部分，保留绑定值原有的年月日
 const updateTime = (value: string) => {
   if (value === null) {
     emits("update:modelValue", null);
@@ -230,6 +239,7 @@ const updateTime = (value: string) => {
   }
 };
 
+// props 组件入参：绑定值、展示配置与底层字段校验规则
 const props = defineProps({
   modelValue: {
     type: [DateTime, Date, String, null] as PropType<DateTime | Date | string | null>,
@@ -239,7 +249,7 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  // Pickers are panel-only inputs, so they stay readonly unless opted out.
+  // 选择器面板为纯展示输入，除显式关闭外保持只读。
   clearable: {
     type: Boolean,
     default: true,
@@ -264,22 +274,23 @@ const props = defineProps({
     type: Array as PropType<Rule[]>,
     default: () => [],
   },
-  // Render the panel as an inline menu (true) or a modal dialog (default).
+  // 面板渲染方式：true 为内联菜单，默认（未设）为模态对话框。
   menu: {
     type: Boolean,
   },
 });
 
+// emits 组件事件：模型值变更
 const emits = defineEmits(["update:modelValue"]);
 </script>
 
 <style scoped>
-/* Panel spacing only: border, radius and background come from `.zk-panel`. */
+/* 仅处理面板间距：边框、圆角与背景取自 `.zk-panel`。 */
 .picker-panel-body {
   padding: var(--zk-space-4) var(--zk-space-4) var(--zk-space-2);
 }
 
-/* Footer actions share one right-aligned layout across the picker family. */
+/* 底部操作按钮在整个选择器家族中共用同一套右对齐布局。 */
 .picker-panel-footer {
   display: flex;
   justify-content: flex-end;

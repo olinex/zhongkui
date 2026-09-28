@@ -1,3 +1,5 @@
+// Package migrate（本文件）封装基于 goose 的迁移执行器，提供版本升降级、
+// 当前版本查询与状态展示等能力。
 package migrate
 
 import (
@@ -65,11 +67,13 @@ func translateGooseLog(format string, v ...any) string {
 	}
 }
 
+// Migrator 封装 goose 迁移操作与数据库连接。
 type Migrator struct {
 	cfg *Config
 	db  *sql.DB
 }
 
+// NewMigrator 依据配置建立数据库连接并创建迁移执行器。
 func NewMigrator(cfg *Config) (*Migrator, error) {
 	db, err := sql.Open(sqlDriverName(cfg.Driver), cfg.DSN)
 	if err != nil {
@@ -86,6 +90,7 @@ func NewMigrator(cfg *Config) (*Migrator, error) {
 	return m, nil
 }
 
+// NewMigratorFromDB 复用已有的数据库连接创建迁移执行器。
 func NewMigratorFromDB(cfg *Config, db *sql.DB) (*Migrator, error) {
 	if err := db.Ping(); err != nil {
 		return nil, errors.WithStack(err)
@@ -148,10 +153,12 @@ func (m *Migrator) ensureVersionTable() error {
 	return nil
 }
 
+// Close 关闭底层数据库连接。
 func (m *Migrator) Close() error {
 	return m.db.Close()
 }
 
+// Up 执行全部未应用的迁移。
 func (m *Migrator) Up(ctx context.Context) error {
 	pterm.Info.Println(translate.T("cli.migrate.up", map[string]any{"DB": m.cfg.Name}))
 	if err := goose.UpContext(ctx, m.db, m.cfg.MigrationsDir); err != nil {
@@ -160,6 +167,7 @@ func (m *Migrator) Up(ctx context.Context) error {
 	return nil
 }
 
+// UpTo 迁移至指定版本（仅向上）。
 func (m *Migrator) UpTo(ctx context.Context, version int64) error {
 	pterm.Info.Println(translate.T("cli.migrate.up-to", map[string]any{"DB": m.cfg.Name, "Version": version}))
 	if err := goose.UpToContext(ctx, m.db, m.cfg.MigrationsDir, version); err != nil {
@@ -168,6 +176,7 @@ func (m *Migrator) UpTo(ctx context.Context, version int64) error {
 	return nil
 }
 
+// Down 回滚最近一次已应用的迁移。
 func (m *Migrator) Down(ctx context.Context) error {
 	pterm.Warning.Println(translate.T("cli.migrate.down", map[string]any{"DB": m.cfg.Name}))
 	if err := goose.DownContext(ctx, m.db, m.cfg.MigrationsDir); err != nil {
@@ -181,6 +190,7 @@ func (m *Migrator) Down(ctx context.Context) error {
 	return nil
 }
 
+// DownTo 回滚至指定版本（仅向下）。
 func (m *Migrator) DownTo(ctx context.Context, version int64) error {
 	pterm.Warning.Println(translate.T("cli.migrate.down-to", map[string]any{"DB": m.cfg.Name, "Version": version}))
 	if err := goose.DownToContext(ctx, m.db, m.cfg.MigrationsDir, version); err != nil {
@@ -194,9 +204,12 @@ func (m *Migrator) DownTo(ctx context.Context, version int64) error {
 	return nil
 }
 
+// GetCurrentVersion 返回数据库当前已应用的最新迁移版本。
 func (m *Migrator) GetCurrentVersion(ctx context.Context) (int64, error) {
 	return goose.GetDBVersionContext(ctx, m.db)
 }
+
+// Status 打印全部迁移文件的应用状态表格。
 func (m *Migrator) Status(ctx context.Context) error {
 	migrations, err := goose.CollectMigrations(m.cfg.MigrationsDir, 0, goose.MaxVersion)
 	if err != nil {

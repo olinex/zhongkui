@@ -1,14 +1,14 @@
 package mcp
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"sort"
 	"strings"
 	"testing"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/cloudwego/eino/components/tool"
 	mcpgo "github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -17,10 +17,6 @@ import (
 // newStreamableStub 起一个真实的 streamable_http MCP 服务器（实现 initialize 握手与 tools/list，
 // 且提供可被 tools/call 调用的工具），返回其地址与关闭函数。本测试包是 MCP SDK 在本仓库内的
 // 唯一落点，故可在这里直接使用 SDK 的 server 包构造协议正确的对端。
-// newStreamableStub starts a real streamable_http MCP server (implementing the initialize handshake
-// and tools/list, plus tools invocable via tools/call) and returns its address along with a teardown
-// function. This test package is the only place in the repository where the MCP SDK appears, so the
-// SDK server package is used here to build a protocol-correct peer.
 func newStreamableStub(t *testing.T) (string, func()) {
 	t.Helper()
 	srv := server.NewMCPServer("zki-stub", "1.0.0")
@@ -43,10 +39,6 @@ func newStreamableStub(t *testing.T) (string, func()) {
 // TestDialConn_ListAndLoadTools_RealProtocol 端到端打通真实 MCP 协议：经适配层 DialConn 完成
 // initialize 握手后，ListAllTools 取回远端全部工具的名单与描述，LoadTools 按远端工具名取回 eino
 // tool.BaseTool（Info.Name 与远端一致）并能真正 invoke 远端工具；最后 Close 释放会话。
-// TestDialConn_ListAndLoadTools_RealProtocol drives the real MCP protocol end to end: after DialConn
-// completes the initialize handshake, ListAllTools returns the remote tool names and descriptions,
-// LoadTools fetches eino tool.BaseTool values by remote name (Info.Name matches the remote) that can
-// actually invoke the remote tool, and Close releases the session.
 func TestDialConn_ListAndLoadTools_RealProtocol(t *testing.T) {
 	url, stop := newStreamableStub(t)
 	defer stop()
@@ -116,8 +108,6 @@ func TestDialConn_ListAndLoadTools_RealProtocol(t *testing.T) {
 
 // TestDial_RejectsUnsupportedTransportAndUnreachable 校验适配层的失败契约：非法传输方式与不可达
 // 端点均返回英文错误。
-// TestDial_RejectsUnsupportedTransportAndUnreachable verifies the adapter failure contract: an
-// unsupported transport and an unreachable endpoint both yield an English error.
 func TestDial_RejectsUnsupportedTransportAndUnreachable(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()

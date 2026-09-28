@@ -1,10 +1,10 @@
 package middlewares
 
 import (
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/pkg/base"

@@ -1,7 +1,7 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"strings"
 	"testing"
@@ -9,9 +9,6 @@ import (
 
 // sanitizeBudgetParams 构造覆盖 sanitize.maxBytes 的参数解析器，便于测试按字节预算清洗
 // （sanitize.maxItems 置为 0，即不限制条目数）。
-// sanitizeBudgetParams builds a parameter resolver overriding sanitize.maxBytes so the
-// tests can exercise byte-budget sanitization (sanitize.maxItems is set to 0, i.e. no
-// item-count limit).
 func sanitizeBudgetParams(maxBytes string) *Params {
 	return NewParams(map[string]string{
 		"sanitize.maxItems": "0",
@@ -21,10 +18,6 @@ func sanitizeBudgetParams(maxBytes string) *Params {
 
 // TestSanitizeBusinessData_Recursive 测试嵌套结构递归清洗：内层空条目/空元素被剔除，
 // 清洗后变空的嵌套结构被连带剔除，非空嵌套结构保留且不影响顶层结果。
-// TestSanitizeBusinessData_Recursive verifies recursive cleaning of nested structures:
-// inner empty entries/elements are dropped, nested structures that turn empty are
-// removed along the way, and non-empty nested structures survive with no impact on the
-// top-level result.
 func TestSanitizeBusinessData_Recursive(t *testing.T) {
 	data := BusinessData{
 		"nestedMap": map[string]any{
@@ -97,9 +90,6 @@ func TestSanitizeBusinessData_Recursive(t *testing.T) {
 
 // TestSanitizeBusinessData_CleansEmptyValues 测试空值条目（nil/空字符串/空切片/空 map）
 // 被剔除，数值 0 与布尔 false 保留；sanitize.maxBytes 非正数时仅执行清洗；入参不被修改。
-// TestSanitizeBusinessData_CleansEmptyValues verifies empty entries (nil/empty string/
-// empty slice/empty map) are dropped while numeric zero and boolean false are kept; a
-// non-positive sanitize.maxBytes only sanitizes; the input is never mutated.
 func TestSanitizeBusinessData_CleansEmptyValues(t *testing.T) {
 	data := BusinessData{
 		"nil":   nil,
@@ -130,8 +120,6 @@ func TestSanitizeBusinessData_CleansEmptyValues(t *testing.T) {
 }
 
 // TestSanitizeBusinessData_WithinBudgetUnchanged 测试未超预算时数据原样保留（仅清洗）。
-// TestSanitizeBusinessData_WithinBudgetUnchanged verifies data within the budget is kept
-// as-is (sanitization only).
 func TestSanitizeBusinessData_WithinBudgetUnchanged(t *testing.T) {
 	data := BusinessData{"a": "short", "b": 42, "drop": ""}
 	out, err := SanitizeBusinessData(data, sanitizeBudgetParams("4096"))
@@ -148,8 +136,6 @@ func TestSanitizeBusinessData_WithinBudgetUnchanged(t *testing.T) {
 
 // TestSanitizeBusinessData_DropsLargestUntilFits 测试超预算时按字节数从大到小丢弃条目，
 // 短条目优先保留，结果序列化后不超过预算。
-// TestSanitizeBusinessData_DropsLargestUntilFits verifies over-budget data drops the
-// largest entries first, keeps the short ones, and the serialized result fits the budget.
 func TestSanitizeBusinessData_DropsLargestUntilFits(t *testing.T) {
 	big := strings.Repeat("x", 1000)
 	data := BusinessData{"big1": big, "big2": big, "small": "s"}
@@ -183,8 +169,6 @@ func TestSanitizeBusinessData_DropsLargestUntilFits(t *testing.T) {
 }
 
 // TestSanitizeBusinessData_Deterministic 测试相同输入两次清洗结果一致。
-// TestSanitizeBusinessData_Deterministic verifies the same input sanitized twice yields
-// identical results.
 func TestSanitizeBusinessData_Deterministic(t *testing.T) {
 	data := BusinessData{
 		"a": strings.Repeat("y", 300),
@@ -210,8 +194,6 @@ func TestSanitizeBusinessData_Deterministic(t *testing.T) {
 }
 
 // TestSanitizeBusinessData_TinyBudget 测试预算小于等于空对象大小时返回空对象且仍为合法 JSON。
-// TestSanitizeBusinessData_TinyBudget verifies a budget no larger than the empty object
-// yields an empty object that is still valid JSON.
 func TestSanitizeBusinessData_TinyBudget(t *testing.T) {
 	data := BusinessData{"a": strings.Repeat("x", 100)}
 	out, err := SanitizeBusinessData(data, sanitizeBudgetParams("2"))

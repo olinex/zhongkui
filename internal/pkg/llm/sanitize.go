@@ -1,23 +1,18 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"reflect"
 	"sort"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 // BusinessData 是前端透传的业务数据载体（JSON 对象），作为 Agent 会话中「当前业务现场」
 // 注入 LLM 上下文；注入前必须经 SanitizeBusinessData 清洗与限界，避免空值与超长内容
 // 挤占会话上下文预算。键与值均为 JSON 可序列化类型。
-// BusinessData is the carrier of the frontend-passed business data (a JSON object),
-// injected as the "current business scene" of an Agent session into the LLM context; it
-// must be sanitized and bounded by SanitizeBusinessData before injection so empty values
-// and oversized content do not consume the session context budget. Keys and values are
-// JSON-serializable.
 type BusinessData map[string]any
 
 // SanitizeBusinessData 对业务数据执行清洗与限界，返回与原数据相互独立的结果
@@ -32,22 +27,6 @@ type BusinessData map[string]any
 //   - 两个限界参数（经 params 读取）非正数时视为不设该上限。
 //
 // 返回结果始终是合法 JSON 对象（json.Marshal 不会失败），供上层直接序列化注入。
-// SanitizeBusinessData sanitizes and bounds the business data, returning a result
-// independent of the input (the input is never mutated):
-//   - sanitize: recursively drop empty values (nil, empty string, empty slice, empty
-//     map) — maps are recursed per entry, slices/arrays per element, and nested
-//     structures that turn empty after cleaning are dropped as well;
-//   - item bound: when the cleaned top-level entry count exceeds the parameter
-//     sanitize.maxItems (effective when positive), entries are dropped in descending
-//     serialized-byte size until the bound holds;
-//   - byte bound: when the compact JSON byte size exceeds the parameter
-//     sanitize.maxBytes, entries are dropped one by one in descending serialized-byte
-//     size (ties broken by ascending key) until the total fits, keeping the
-//     information-dense short entries first;
-//   - a non-positive bound parameter (read through params) means that bound is off.
-//
-// The result is always a valid JSON object (json.Marshal never fails) ready for direct
-// serialization and injection by upper layers.
 func SanitizeBusinessData(data BusinessData, params *Params) (BusinessData, error) {
 	out := make(BusinessData, len(data))
 	for k, v := range data {
@@ -90,12 +69,6 @@ func SanitizeBusinessData(data BusinessData, params *Params) (BusinessData, erro
 // sanitizeBusinessValue 递归清洗单个业务值并返回独立副本：map 逐条目清洗并剔除
 // 清洗后为空的条目，slice/array 逐元素清洗并剔除清洗后为空的元素；其余类型（字符串、
 // 数值、布尔、nil 及不可反射类型）原样返回。返回 nil 表示该值清洗后为空，应由调用方剔除。
-// sanitizeBusinessValue recursively cleans a single business value and returns an
-// independent copy: maps are cleaned per entry (dropping entries that become empty),
-// slices/arrays are cleaned per element (dropping elements that become empty); the
-// remaining kinds (string, number, bool, nil and non-reflectable types) are returned
-// as-is. A nil return means the value is empty after cleaning and should be dropped
-// by the caller.
 func sanitizeBusinessValue(v any) any {
 	if v == nil {
 		return nil
@@ -156,7 +129,6 @@ func isEmptyBusinessValue(v any) bool {
 }
 
 // jsonFits 报告 data 经紧凑 JSON 序列化后的字节数是否不超过 maxBytes。
-// jsonFits reports whether the compact JSON serialization of data fits within maxBytes.
 func jsonFits(data BusinessData, maxBytes int) (bool, error) {
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -167,8 +139,6 @@ func jsonFits(data BusinessData, maxBytes int) (bool, error) {
 
 // businessKeysBySizeDesc 按条目序列化字节数降序返回 key（字节数相同时按字典序升序），
 // 保证截断行为确定可复现。
-// businessKeysBySizeDesc returns the keys ordered by descending serialized-byte size
-// (ties broken by ascending lexicographic order), keeping the truncation deterministic.
 func businessKeysBySizeDesc(data BusinessData) []string {
 	keys := make([]string, 0, len(data))
 	for k := range data {

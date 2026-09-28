@@ -1,16 +1,16 @@
 /**
  * plugins/vuetify.ts
  *
- * Framework documentation: https://vuetifyjs.com`
+ * 框架文档：https://vuetifyjs.com`
  */
 
-// Styles
+// 样式
 import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 
 import { configure } from "vee-validate";
 import { useI18n } from "vue-i18n";
-// Composables
+// 组合式 API
 import { createVuetify, type LocaleOptions } from "vuetify";
 import { createVueI18nAdapter } from "vuetify/locale/adapters/vue-i18n";
 
@@ -22,7 +22,7 @@ configure({
   validateOnBlur: true,
 });
 
-// https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
+// 参见 https://vuetifyjs.com/en/introduction/why-vuetify/#feature-guides
 export default createVuetify({
   theme: {
     defaultTheme: localManager.getTheme(),

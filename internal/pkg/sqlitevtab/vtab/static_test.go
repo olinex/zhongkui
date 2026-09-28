@@ -1,15 +1,15 @@
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"io"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )

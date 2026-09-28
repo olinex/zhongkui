@@ -2,7 +2,7 @@ import { BackendDataType, SearchAction } from "@/types";
 
 export interface Option {
   title: string;
-  // Search option values are heterogeneous (string / number / boolean / enum).
+  // 搜索选项值类型异构（字符串 / 数字 / 布尔 / 枚举）。
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: any;
 }
@@ -10,7 +10,7 @@ export interface Option {
 export interface SearchItem {
   field: { value: string; title: string };
   action: { value: string; title: string };
-  // Form field values are heterogeneous (string / number / boolean / Date).
+  // 表单字段值类型异构（字符串 / 数字 / 布尔 / 日期）。
   value: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: any;

@@ -10,18 +10,6 @@
 // tagengine）经 enum.RegisterSource 声明条目来源。视图层只保留「字段 → 枚举类名」的绑定：
 // search.toml [[enums]] 生成 enumBindings（见 enum_bindings.go），运行时注册的字段经
 // AddEnumBinding 在对应模块 init() 时补充。
-//
-// This file provides the runtime class-binding entry point (AddEnumBinding) for the enum fields of
-// view-layer structs. The declaration and registration of enum value spaces all live outside the view
-// layer, each declared in place by the package the value space belongs to — that is, where the value
-// space is defined: a fixed value space is declared in the package holding its constants/catalog
-// (language / policyEffect in base, httpMethod / httpVersion in models/network, notificationSource /
-// notificationRecordStatus in models/core, tagAlertStatus in models/tag, datasourceStruct in vtab,
-// llmModelKind / llmSlot / llmToolSource in pkg/llm, mcpTransport in ai/tools/mcp — all registered by
-// an in-package init via enum.Register); a value space taken from a business registry is declared by
-// its owning business package (message / notify / vtab / tagengine) via enum.RegisterSource. The view
-// layer keeps only the field-to-class bindings: enumBindings generated from search.toml [[enums]]
-// (see enum_bindings.go), plus runtime fields added via AddEnumBinding in each module's init().
 package views
 
 // AddEnumBinding 注册某视图结构体单个枚举字段与枚举类的绑定。

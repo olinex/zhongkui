@@ -1,7 +1,7 @@
 package notification
 
 import (
-	// stdlib
+	// 标准库
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -11,11 +11,11 @@ import (
 	"strconv"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/views"
 	"zhongkui.com/zhongkui/internal/models/core"

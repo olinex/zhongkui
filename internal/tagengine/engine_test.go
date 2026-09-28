@@ -52,6 +52,7 @@ func insertRule(t *testing.T, db *database.DB, name, rego string) {
 	}
 }
 
+// TestEngine_Recognize 验证引擎按目标模型识别并去重排序标签。
 func TestEngine_Recognize(t *testing.T) {
 	Convey("Test Engine Recognize", t, func() {
 		engine, db := setupEngine(t)
@@ -80,6 +81,7 @@ tags contains "web_request" if {
 	})
 }
 
+// TestEngine_NoRules 验证空规则库时返回空标签集合与 nil 错误。
 func TestEngine_NoRules(t *testing.T) {
 	Convey("Test Engine NoRules", t, func() {
 		engine, _ := setupEngine(t)
@@ -92,6 +94,7 @@ func TestEngine_NoRules(t *testing.T) {
 	})
 }
 
+// TestEngine_CacheAndInvalidate 验证规则缓存加载与失效后识别结果的变化。
 func TestEngine_CacheAndInvalidate(t *testing.T) {
 	Convey("Test Engine CacheAndInvalidate", t, func() {
 		engine, db := setupEngine(t)
@@ -131,6 +134,7 @@ tags contains "new" if {
 	})
 }
 
+// TestEngine_RecognizeWithDetail 验证引擎返回命中的标签与逐规则识别详情。
 func TestEngine_RecognizeWithDetail(t *testing.T) {
 	Convey("Test Engine RecognizeWithDetail", t, func() {
 		engine, db := setupEngine(t)
@@ -158,6 +162,7 @@ tags contains "miss_tag" if {
 	})
 }
 
+// TestEngine_UnsupportedTarget 验证非结构体目标返回 ErrUnsupportedTarget。
 func TestEngine_UnsupportedTarget(t *testing.T) {
 	Convey("Test Engine UnsupportedTarget", t, func() {
 		engine, _ := setupEngine(t)
@@ -176,6 +181,7 @@ type recogModelB struct {
 	Method    string `json:"method"`
 }
 
+// TestEngine_SeparateGroups 验证引擎按目标类型键分组隔离规则。
 func TestEngine_SeparateGroups(t *testing.T) {
 	Convey("Test Engine SeparateGroups", t, func() {
 		engine, db := setupEngine(t)

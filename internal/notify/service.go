@@ -1,18 +1,18 @@
 package notify
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"strings"
 	"text/template"
 	"time"
 
-	// third-party
+	// 第三方
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -25,28 +25,16 @@ import (
 
 // ErrDeliveryPending 通知记录仍处于 pending 占位（其他发送者正在投递，或崩溃遗留的占位
 // 租约尚未过期），本次调用未获得发送槽位，作为瞬时错误交还任务重试，待槽位释放或被回收。
-// ErrDeliveryPending is returned when the notification record is still held by a
-// pending claim (another sender is delivering, or the lease of a crashed sender has
-// not expired yet); this call did not win the slot and is handed back for retry.
 var ErrDeliveryPending = errors.New("notify: delivery slot is pending, retry later")
 
 // claimLease 通知记录占位租约时长：发送者在占位后崩溃或超时，遗留的 pending 记录超过该
 // 时长即视为失效，后续重试可条件更新回收该槽位并接管发送，避免槽位被永久占死。
 // 取值需明显大于一次渠道发送的耗时（秒级），以平衡"并发重复发送"与"崩溃遗留回收"。
-// claimLease is the lease duration of a pending claim: a pending record left by a
-// sender that crashed or timed out after claiming is treated as stale beyond this
-// duration, so a later retry can reclaim the slot and take over the delivery instead
-// of leaving it blocked forever. It must be comfortably larger than one channel send
-// (seconds), balancing duplicate delivery against stale-claim recovery.
 const claimLease = 5 * time.Minute
 
 // Service 通用通知服务：将一次通知请求（事件引用 + 通知组 + 消息）解析为具体目标，
 // 经渠道基座发送，并维护 notification_records 发送记录。
 // 通知组未绑定目标、目标无可用渠道等场景静默跳过（记录日志），不视为错误。
-// Service is the generic notification service: it resolves a notification request
-// (event reference + notification group + message) into concrete targets, delivers
-// via the channel base and maintains notification_records. Scenarios without a group,
-// targets or usable channels are skipped silently (logged), not treated as errors.
 type Service struct {
 	coreDB *database.DB
 	logger *logging.Logger
@@ -54,7 +42,6 @@ type Service struct {
 }
 
 // NewService 创建通用通知服务。
-// NewService creates the generic notification service.
 func NewService(coreDB *database.DB, logger *logging.Logger, pool *message.Pool) *Service {
 	return &Service{coreDB: coreDB, logger: logger, pool: pool}
 }
@@ -63,12 +50,6 @@ func NewService(coreDB *database.DB, logger *logging.Logger, pool *message.Pool)
 // （SendTargetInput）复用：sendOne / claim / finalize 仅依赖该公共子集，故统一入参为
 // *sendEvent。SendGroupInput / SendTargetInput 各自保留独立的 JSON 字段（不内嵌此私有类型），
 // 以便保持既有复合字面量写法并允许外部包构造入参。
-// sendEvent is the shared carrier of the event reference and message, reused by both
-// group send (SendGroupInput) and single-target direct send (SendTargetInput): sendOne /
-// claim / finalize only depend on this common subset, so they uniformly take a
-// *sendEvent. SendGroupInput / SendTargetInput each keep independent JSON fields (they
-// do not embed this private type) so existing composite literals keep working and
-// external packages can still construct the inputs.
 type sendEvent struct {
 	Namespace string
 	EventType string
@@ -77,54 +58,31 @@ type sendEvent struct {
 }
 
 // SendGroupInput 一次向通知组发送的请求，为 notify:send:group 任务载荷的持久化形态。
-// SendGroupInput is a notification send request that fans out to the targets of a
-// group, the payload of the notify:send:group task.
 type SendGroupInput struct {
 	// Namespace 命名空间，通知组与目标均限定在该命名空间内（必填）
-	// Namespace the namespace; the group and targets are scoped to it (required)
 	Namespace string `json:"namespace" binding:"required"`
 	// GroupID 通知组 ID；nil 表示使用命名空间默认通知组（无默认组则跳过）
-	// GroupID the notification group ID; nil means the namespace default group is used
-	// (skipped when there is no default group)
 	GroupID *uint `json:"groupID"`
 	// EventType 事件类型键（如 tag_event），与 EventID、TargetID 组合唯一定位通知记录（必填）
-	// EventType the event type key (e.g. tag_event), forming the unique notification
-	// record key with EventID and TargetID (required)
 	EventType string `json:"eventType" binding:"required"`
 	// EventID 触发通知的事件 ID（必填，须为非零值；0 会使同类型事件折叠到同一条记录，破坏幂等去重）
-	// EventID the ID of the event that triggered the notification (required, must be
-	// non-zero; a zero value would collapse all events of the same type into one record
-	// and break idempotent deduplication)
 	EventID uint `json:"eventID" binding:"required"`
 	// Message 通用消息内容（必填，模板键另须非空）
-	// Message the generic message content (required; the template key must be non-empty)
 	Message message.Message `json:"message" binding:"required"`
 }
 
 // SendTargetInput 一次不经通知组、直接投递单个目标的通知发送请求，为 notify:send:target
 // 任务载荷的持久化形态。TargetID 唯一指定目标（限定在命名空间内）。
-// SendTargetInput is a notification send request that skips notification groups and
-// delivers directly to a single target, the payload of the notify:send:target task.
-// TargetID uniquely addresses the target (scoped within the namespace).
 type SendTargetInput struct {
 	// Namespace 命名空间，目标限定在该命名空间内（必填）
-	// Namespace the namespace; the target is scoped to it (required)
 	Namespace string `json:"namespace" binding:"required"`
 	// EventType 事件类型键（如 tag_event），与 EventID、TargetID 组合唯一定位通知记录（必填）
-	// EventType the event type key (e.g. tag_event), forming the unique notification
-	// record key with EventID and TargetID (required)
 	EventType string `json:"eventType" binding:"required"`
 	// EventID 触发通知的事件 ID（必填，须为非零值；0 会使同类型事件折叠到同一条记录，破坏幂等去重）
-	// EventID the ID of the event that triggered the notification (required, must be
-	// non-zero; a zero value would collapse all events of the same type into one record
-	// and break idempotent deduplication)
 	EventID uint `json:"eventID" binding:"required"`
 	// Message 通用消息内容（必填，模板键另须非空）
-	// Message the generic message content (required; the template key must be non-empty)
 	Message message.Message `json:"message" binding:"required"`
 	// TargetID 直接投递的目标 ID（必填，须为已存在且启用、所属渠道启用的目标）
-	// TargetID the target ID to deliver to directly (required; must resolve to an
-	// existing target whose channel is present and enabled, and that is itself enabled)
 	TargetID uint `json:"targetID" binding:"required"`
 }
 
@@ -133,13 +91,6 @@ type SendTargetInput struct {
 // 流程：解析通知组 -> 加载组内启用且所属渠道启用的目标；无组或无目标时记录日志并返回
 // 空列表（不视为错误）。每个目标映射为一个 SendTargetInput（透传命名空间、事件引用与
 // 消息，仅补充 TargetID）。
-// ResolveGroupTargets resolves the group (explicit or the namespace default) and expands
-// its targets into a list of per-target direct-send inputs for the orchestration layer
-// to enqueue one notify:send:target task per target. It first resolves the group then
-// loads the enabled targets (whose channel is enabled) in the group; when there is no
-// group or no targets it logs and returns an empty list (not an error). Each target is
-// mapped into a SendTargetInput that reuses the namespace, event reference and message,
-// adding only the TargetID.
 func (s *Service) ResolveGroupTargets(ctx context.Context, in SendGroupInput) ([]SendTargetInput, error) {
 	group, err := s.resolveGroup(ctx, in.Namespace, in.GroupID)
 	if err != nil {
@@ -172,9 +123,6 @@ func (s *Service) ResolveGroupTargets(ctx context.Context, in SendGroupInput) ([
 
 // resolveGroup 解析通知组：GroupID 非 nil 时加载指定组（校验命名空间），
 // 否则加载命名空间默认组；组不存在时返回 (nil, nil)。
-// resolveGroup resolves the group: with a non-nil GroupID it loads that group (scoped
-// to the namespace), otherwise it loads the namespace default group; it returns
-// (nil, nil) when no such group exists.
 func (s *Service) resolveGroup(ctx context.Context, namespace string, groupID *uint) (*core.NotificationGroup, error) {
 	query := s.coreDB.WithContext(ctx).Where("namespace_name = ?", namespace)
 	if groupID != nil {
@@ -193,8 +141,6 @@ func (s *Service) resolveGroup(ctx context.Context, namespace string, groupID *u
 }
 
 // loadTargets 加载通知组内启用且所属渠道启用的目标（预载所属渠道）。
-// loadTargets loads the targets that are enabled and whose channel is enabled within
-// the group (preloading the owning channel).
 func (s *Service) loadTargets(ctx context.Context, namespace string, groupID uint) ([]core.NotificationTarget, error) {
 	var targets []core.NotificationTarget
 	if err := s.coreDB.WithContext(ctx).
@@ -220,12 +166,6 @@ func (s *Service) loadTargets(ctx context.Context, namespace string, groupID uin
 // 抢占发送槽位（claim），只有占位成功者负责本次投递，其余并发方跳过，杜绝并发重复发送；
 // 已成功投递的目标跳过（幂等），失败目标在后续重试中可重新占位。占位成功后再按目标语言
 // 渲染消息、经渠道发送，最终将占位记录更新为成功/失败终态（finalize）。
-// sendOne delivers to a single target: it atomically claims the delivery slot via the
-// unique index (event_type, event_id, target_id) acting as a mutex, so only the
-// winning caller sends while concurrent callers skip, preventing duplicate delivery.
-// Already-delivered targets are skipped (idempotent), and failed targets can be
-// reclaimed on later retries. After winning the claim it renders the message in the
-// target language, sends via the channel, and finalizes the record as success/failed.
 func (s *Service) sendOne(ctx context.Context, ev *sendEvent, group *core.NotificationGroup, target *core.NotificationTarget) error {
 	// 1) 原子占位发送槽位：唯一索引冲突即说明已有记录，占位失败者跳过
 	won, err := s.claim(ctx, ev, group, target)
@@ -262,14 +202,6 @@ func (s *Service) sendOne(ctx context.Context, ev *sendEvent, group *core.Notifi
 //   - 回收：条件 UPDATE 仅将 status 从 pending/failed 置回 pending，且 pending 需满足
 //     updated_at 早于租约截止（避免两个回收方同时成功），仅一个并发方
 //     RowsAffected==1 获得槽位，其余返回 ErrDeliveryPending 交还重试。
-//
-// claim atomically claims the (event_type, event_id, target_id) delivery slot using the
-// unique index as a mutex, returning whether the claim was won. On the first claim an
-// INSERT ... ON CONFLICT DO NOTHING inserts a pending record; a RowsAffected of 1 wins
-// the slot. On conflict the existing status decides: success skips; a pending within
-// lease returns ErrDeliveryPending (handed back for retry) while a stale pending or a
-// failed record falls through to reclamation via a conditional UPDATE in which only one
-// concurrent caller matches (RowsAffected==1); the rest return ErrDeliveryPending.
 func (s *Service) claim(ctx context.Context, ev *sendEvent, group *core.NotificationGroup, target *core.NotificationTarget) (won bool, err error) {
 	now := time.Now()
 	record := &core.NotificationRecord{
@@ -332,9 +264,6 @@ func (s *Service) claim(ctx context.Context, ev *sendEvent, group *core.Notifica
 
 // groupID 从通知组指针提取 ID；组为 nil（单目标直投不经通知组）时返回 0，
 // 使直投记录写入 GroupID=0。
-// groupID extracts the group ID from a group pointer; it returns 0 when the group is
-// nil (direct single-target send does not go through a group), so the record of a
-// direct send writes GroupID=0.
 func groupID(group *core.NotificationGroup) uint {
 	if group == nil {
 		return 0
@@ -348,14 +277,6 @@ func groupID(group *core.NotificationGroup) uint {
 // 渠道类型/语言精确匹配得分 0、"*" 通配得分 1，组合总分越低越优先；总分相同时优先
 // 精确渠道而非精确语言，仍平局时按 ID 升序确定（确定性）。无匹配行时返回 (nil, nil)。
 // 软删除的行由 GORM 默认过滤。resolveTemplate 返回模板行；查询失败返回错误。
-// resolveTemplate resolves the persisted notification template by the three factors
-// (event, channel type, language) within the namespace: it queries rows matching
-// (namespace_name, event) with channel_type ∈ {channelType, "*"} and language ∈
-// {lang, "*"}, then picks the best row by the lowest specificity: an exact channel/language
-// scores 0 and "*" wildcard scores 1, and the lower the composite total the better; on a tie
-// an exact channel is preferred over an exact language, and a further tie is broken by
-// ascending ID (deterministic). It returns (nil, nil) when no row matches. Soft-deleted rows
-// are filtered by GORM by default. It returns the template row, or an error when the query fails.
 func (s *Service) resolveTemplate(ctx context.Context, namespace string, event, channelType, lang string) (*core.NotificationTemplate, error) {
 	var rows []core.NotificationTemplate
 	if err := s.coreDB.WithContext(ctx).
@@ -408,19 +329,6 @@ func (s *Service) resolveTemplate(ctx context.Context, namespace string, event, 
 //     时回退原 value。
 //
 // 三者类名均兼容 "enum." 前缀写法。lang 为 nil 时由 translate 层回退默认语言。
-// renderFuncs builds the custom function map that renders notification templates in a
-// target language, injecting three semantically exclusive template functions to avoid the
-// ambiguity of the former overloaded single t:
-//   - T "<i18nKey>": directly localizes a full i18n key (translate.Localize), falling back
-//     to the key itself on a miss;
-//   - TenumKey "<className>" "<key>": localizes the enum label via enum.<className>.<key>,
-//     falling back to the key itself when the class or key is unresolved;
-//   - TenumValue "<className>" "<value>": resolves the entry by value first (the enum
-//     registry Resolve contract, value before key) then localizes via enum.<className>.<key>,
-//     falling back to the original value on a miss.
-//
-// All three accept an optional "enum." prefix on the class name. A nil lang falls back to
-// the default language inside the translate layer.
 func renderFuncs(lang *base.Language) template.FuncMap {
 	return template.FuncMap{
 		"T": func(key string) string {
@@ -451,17 +359,6 @@ func renderFuncs(lang *base.Language) template.FuncMap {
 // 渲染枚举 label。键缺失时
 // Localize 回退返回键本身，据此判定默认模板是否可用。渲染得到的结构体仍为
 // *message.RenderedMessage{Title, Content, ContentType}。
-// renderI18nDefault looks up and renders the default title/content from the i18n keys
-// notify.<template>.title / notify.<template>.content as the fallback when no persisted
-// template row is resolved. Since notify.* defaults are rendered via text/template (they
-// contain {{...}} function calls), translate's global data delimiter is [[ / ]] (dataDelimParser), and
-// these sources contain no [[, so go-i18n fast-paths and returns the unrendered original
-// verbatim; thus Localize(lang, key, nil) here yields the raw template string (with {{...}}
-// placeholders), rendered via message.RenderTemplateWithFuncs with the
-// custom template functions (T/TenumKey/TenumValue from renderFuncs) to resolve enum labels.
-// A missing key makes Localize
-// return the key itself, which signals whether the default template is usable. The result is
-// still a *message.RenderedMessage{Title, Content, ContentType}.
 func renderI18nDefault(lang *base.Language, spec *EventTemplateSpec, params map[string]any, contentType string) (*message.RenderedMessage, error) {
 	titleKey := spec.TitleKey()
 	contentKey := spec.ContentKey()
@@ -485,11 +382,6 @@ func renderI18nDefault(lang *base.Language, spec *EventTemplateSpec, params map[
 // RenderDefaultMessage 依据模板键与语言渲染 notify 内置默认模板（标题+正文），供管理端
 // 事件枚举等场景用事件样例参数展示事件的默认模板能力。模板内容同样经模板函数 t 渲染枚举
 // label（与发送路径一致）。模板键未注册到事件注册表时返回错误。
-// RenderDefaultMessage renders the built-in default template (title+content) for a template
-// key in a language, backing management pages (e.g. the event enum) that demonstrate an
-// event's default template capability with the sample params. The content is rendered through
-// the template function t for enum labels as well (matching the send path). It returns an
-// error when the template key is not registered in the event registry.
 func RenderDefaultMessage(lang *base.Language, templateKey string, params map[string]any, contentType string) (*message.RenderedMessage, error) {
 	_, spec, ok := TemplateSpecOf(templateKey)
 	if !ok {
@@ -505,16 +397,6 @@ func RenderDefaultMessage(lang *base.Language, templateKey string, params map[st
 // （renderI18nDefault，键 notify.<template>.title/.content）。两者皆不可用时返回错误，由
 // sendOne 记录失败。模板必须先注册到事件注册表：未注册的模板键无持久化行也无可预知的内容，
 // 后端文件/语言包无法预知前端会配置什么模板键，故直接返回错误，不经 locales notify.* 兜底。
-// renderMessage renders a structured Message into concrete text (message.RenderedMessage) in the
-// target-preferred language and channel type, treating the NotificationTemplate table as the
-// single source of truth. It looks up the event spec by the message template key (TemplateSpecOf);
-// on a hit it calls resolveTemplate to resolve the persisted template by (event, channel, language)
-// and renders it; when no persisted row exists it falls back to the i18n built-in default template
-// via renderI18nDefault (keys notify.<template>.title/.content). It errors when both sources are
-// unusable, and sendOne records the failure. A template key must first be registered in
-// the event registry: an unregistered key has no persisted row and no predictable content (the
-// backend files/locales cannot foresee what template keys the frontend will configure), so it
-// errors directly rather than falling back to locales notify.*.
 func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTarget, channelType string, msg *message.Message) (*message.RenderedMessage, error) {
 	if msg.Template == "" {
 		return nil, errors.New("notify: message template is required")
@@ -563,13 +445,6 @@ func (s *Service) renderMessage(ctx context.Context, target *core.NotificationTa
 // 持久化模板行时经 renderTemplateText 渲染并回传错误详情（管理端据此返回 400）；无
 // 持久化行时回退到规格默认（renderSpecDefault，注册表内置默认）。lang 空或非法时
 // 归一化到平台默认语言。
-// RenderPreview renders a template preview in the given namespace driven directly by the
-// event type key (for the management render-test), bypassing targets/messages. It returns a
-// descriptive error when the event has no spec; when a persisted template row exists it
-// renders via renderTemplateText and returns the error detail (the manager surfaces it as a
-// 400); without a persisted row it falls back to the i18n default via renderI18nDefault
-// (the built-in default in the translate package). An empty or invalid lang is normalized
-// to the platform default.
 func (s *Service) RenderPreview(ctx context.Context, namespace, event string, channelType, lang string, params map[string]any) (*message.RenderedMessage, error) {
 	spec, ok := EventSpecOf(event)
 	if !ok {
@@ -604,15 +479,6 @@ func (s *Service) RenderPreview(ctx context.Context, namespace, event string, ch
 // 消息快照（可为 nil），sendErr 非 nil 时记录为失败并携带错误信息，notified_at 仅在
 // 成功时写入。占位成功后行必然存在且由 (event_type, event_id, target_id) 唯一定位，
 // 故以条件 UPDATE 落终态（updated_at 同时刷新，作为下一次占位租约的基准）。
-// finalize updates the claimed (status=pending) notification record to its terminal
-// state: rendered is the snapshot of the actually delivered message (may be nil), a
-// non-nil sendErr marks the record failed with the error, and notified_at is only set
-// on success. The row is guaranteed to exist after a won claim and is uniquely located
-// by (event_type, event_id, target_id), so a conditional UPDATE writes the terminal
-// state (updated_at is refreshed as the lease baseline for the next claim). A failed
-// delivery propagates sendErr after persisting the failure so the notify:send:target
-// task is retried; on retry successful targets are skipped while failed ones are
-// re-claimed.
 func (s *Service) finalize(ctx context.Context, ev *sendEvent, group *core.NotificationGroup, target *core.NotificationTarget, rendered *message.RenderedMessage, msgID string, sendErr error) error {
 	payload := []byte("{}")
 	if rendered != nil {
@@ -664,10 +530,6 @@ func (s *Service) finalize(ctx context.Context, ev *sendEvent, group *core.Notif
 // SendToTarget 执行一次不经通知组的单目标直投：加载目标（含过滤：缺失/禁用渠道、禁用目标
 // 均视为不可用跳过），不可用时记录日志并返回 nil；否则复用 sendOne 的唯一索引幂等占位与
 // 投递逻辑，写入 GroupID=0 的发送记录。
-// SendToTarget performs a direct single-target send that skips notification groups: it
-// loads the target (filtering out unavailable ones such as missing/disabled channel or
-// a disabled target), logs and returns nil when unavailable, otherwise reuses sendOne's
-// unique-index idempotent claim and delivery, writing a record with GroupID=0.
 func (s *Service) SendToTarget(ctx context.Context, in SendTargetInput) error {
 	target, err := s.loadDirectTarget(ctx, in.Namespace, in.TargetID)
 	if err != nil {
@@ -684,10 +546,6 @@ func (s *Service) SendToTarget(ctx context.Context, in SendTargetInput) error {
 // loadDirectTarget 按 (namespace_name, id) 加载指定目标并预载其渠道；记录不存在返回
 // (nil, nil)。随后过滤：所属渠道缺失（Channel.ID==0）或禁用、或目标自身禁用时返回
 // (nil, nil)，否则返回目标。
-// loadDirectTarget loads the target by (namespace_name, id) with its channel preloaded;
-// it returns (nil, nil) when the record does not exist. It then filters: when the
-// channel is missing (Channel.ID==0) or disabled, or the target itself is disabled, it
-// returns (nil, nil); otherwise it returns the target.
 func (s *Service) loadDirectTarget(ctx context.Context, namespace string, targetID uint) (*core.NotificationTarget, error) {
 	var target core.NotificationTarget
 	if err := s.coreDB.WithContext(ctx).

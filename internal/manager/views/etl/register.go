@@ -13,12 +13,12 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// ETL 为全局资源（无命名空间隔离需求），认证链挂载后命名空间中间件
 	// 在无请求头/查询参数/Cookie 时回落默认命名空间 "default"，授权按该命名空间执行。
 	etlGroup := ctx.V1Group.Group(
-		"/etl",                          // ETL 接口路径前缀
-		ctx.Authenticator,               // 认证器注入
-		ctx.ForceAuthenticate,           // 强制JWT认证
-		ctx.Policy,                      // RBAC策略引擎
-		ctx.Namespace,                   // 命名空间隔离（回落 default）
-		ctx.Authorize,                   // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		"/etl",                // ETL 接口路径前缀
+		ctx.Authenticator,     // 认证器注入
+		ctx.ForceAuthenticate, // 强制JWT认证
+		ctx.Policy,            // RBAC策略引擎
+		ctx.Namespace,         // 命名空间隔离（回落 default）
+		ctx.Authorize,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
 	)
 	{
 		// ========== 检查器子组：/api/v1/etl/inspector ==========

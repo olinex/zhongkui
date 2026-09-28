@@ -1,3 +1,5 @@
+// Package migrate（本文件）提供迁移演练：在临时数据库上执行迁移以验证脚本
+// 是否正确，不影响目标数据库。
 package migrate
 
 import (
@@ -8,13 +10,19 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
+// DryRunResult 描述一次迁移演练的结果。
 type DryRunResult struct {
-	Success           bool
+	// Success 迁移是否全部成功执行。
+	Success bool
+	// MigrationsApplied 已成功应用的迁移数量。
 	MigrationsApplied int
-	Error             error
-	TempDBName        string
+	// Error 迁移失败时记录的错误。
+	Error error
+	// TempDBName 演练所用临时数据库的名称。
+	TempDBName string
 }
 
+// DryRun 在临时数据库上执行迁移演练并返回结果。
 func DryRun(ctx context.Context, cfg *Config) (*DryRunResult, error) {
 	pterm.Info.Println(translate.T("cli.migrate.dry-run-creating", nil))
 	tempDB, err := CreateTempDB(ctx, cfg)

@@ -1,8 +1,8 @@
 /**
  * src/styles/main.scss
  *
- * Global styles. All colors come from Vuetify theme CSS variables
- * (e.g. `rgb(var(--v-theme-background))`), so light/dark themes stay in sync.
+ * 全局样式。所有颜色均取自 Vuetify 主题的 CSS 变量（如 `rgb(var(--v-theme-background))`），
+ * 亮 / 暗主题自动保持一致。
  *
  * 本文件是「外壳层」：集中定义跨组件复用的 .zk-* 复用类与 Vuetify / CodeMirror
  * 内部类覆盖。同类组件需要相同外观时必须引用这里的类，禁止在各自 <style scoped>
@@ -11,7 +11,7 @@
 
 @use "./tokens" as *;
 
-// Base body
+// 页面基础 body
 body {
   font-family: $zk-font-family;
   color: rgb(var(--v-theme-on-background));
@@ -26,7 +26,7 @@ html {
   overflow-y: auto;
 }
 
-// Scrollbars (WebKit)
+// 滚动条（WebKit）
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -37,50 +37,48 @@ html {
   border-radius: 4px;
 }
 
-// Scrollbars (Firefox)
+// 滚动条（Firefox）
 * {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--v-theme-on-surface), 0.3) transparent;
 }
 
-// Keyboard focus indicator
+// 键盘焦点指示器
 :focus-visible {
   outline: 2px solid rgb(var(--v-theme-primary));
   outline-offset: 2px;
 }
 
-// Text selection
+// 文本选中态
 ::selection {
   background: rgb(var(--v-theme-primary), 0.25);
 }
 
-// Monospace utility for technical values (IDs, hashes, hex, bytes)
+// 技术取值（ID / 哈希 / 十六进制 / 字节）的等宽工具类
 .font-mono {
   font-family: $zk-font-mono;
   font-variant-numeric: tabular-nums;
 }
 
-// Flat cards: thin border instead of heavy shadow.
-// Note: the theme does define a `border` color (`--v-theme-border`), but we
-// deliberately use a translucent `on-surface` tint so the line auto-scales
-// with the text color and matches Vuetify's own border-opacity semantics.
-// `.v-application` prefix wins over vite-plugin-vuetify's deferred component
-// styles in dev mode (same specificity, later injection order).
+// 扁平卡片：用细描边替代厚重阴影。
+// 说明：主题确实定义了 `border` 颜色（`--v-theme-border`），但此处刻意改用
+// on-surface 半透明色，使线条随文字颜色自动缩放，并与 Vuetify 自身的
+// border-opacity 语义一致。
+// `.v-application` 前缀在同权重下靠更晚的注入顺序，压过 vite-plugin-vuetify
+// 在开发模式下延迟注入的组件样式。
 .v-application .v-card {
   border: var(--zk-hairline-width) solid rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity));
   border-radius: var(--zk-radius-lg);
 }
 
-// Light theme: strengthen the hairline card border so white surfaces stand out
-// clearly against the slightly darker page background.
-// `.v-theme--light` is a Vuetify BEM modifier class (double hyphen), so it is
-// exempted from the kebab-case class pattern rule.
+// 浅色主题：加强卡片的 hairline 描边，让白色表面在略深的页面底色上清晰可辨。
+// `.v-theme--light` 是 Vuetify 的 BEM 修饰符类（双短横线），故豁免 kebab-case 类名规则。
 /* stylelint-disable-next-line selector-class-pattern */
 .v-application.v-theme--light .v-card {
   border-color: rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
 }
 
-// Flat expansion panels: the panel set is a plain list inside a hairline box.
+// 扁平展开面板：面板组是描边盒内的一列普通列表。
 // Vuetify 在每个 .v-expansion-panel 内渲染 .v-expansion-panel__shadow（elevation-2），
 // 会在描边盒内部再叠一圈悬浮阴影，与全站「hairline 描边、无阴影」的容器语言冲突，
 // 故全站统一隐藏。描边盒一律由面板组的外层容器提供（.zk-panel / TabView 卡片 /
@@ -95,7 +93,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Reusable shells (.zk-*)
+// 复用外壳（.zk-*）
 // 同类组件共享外观的唯一来源；组件 <style scoped> 只保留布局定位。
 // ---------------------------------------------------------------------------
 
@@ -157,7 +155,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Editor shell (CodeMirror family)
+// 编辑器外壳（CodeMirror 族）
 // 三个编辑器（Rego / Go 模板 / 标签表达式）与两个 DryRun 面板共同引用，
 // 替代原先各自复制的 `border: 1px solid rgb(0 0 0 / 24%)`（深色主题下失效）。
 // ---------------------------------------------------------------------------
@@ -269,7 +267,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Vuetify internal overrides
+// Vuetify 内部覆盖
 // ---------------------------------------------------------------------------
 
 // v-request 指令加载态：隐藏原内容并展示居中的旋转 spinner
@@ -296,13 +294,13 @@ html {
   }
 }
 
-// Data table: row hover highlight
+// 数据表：行 hover 高亮
 .v-application .v-data-table {
   tbody tr:hover {
     background: rgb(var(--v-theme-primary), 0.06);
   }
 
-  // Data table: refined header
+  // 数据表：精细化表头
   th {
     font-size: var(--zk-font-size-caption);
     font-weight: var(--zk-font-weight-semibold);
@@ -311,19 +309,14 @@ html {
     color: rgb(var(--v-theme-on-surface-variant));
   }
 
-  // Data table: header select-all checkbox icon inherits the reduced th
-  // font-size (0.75rem → 18px icon), while row checkboxes render at 21px
-  // (1.5em × 14px td font). Pin the header icon to 21px so header and row
-  // checkboxes stay visually identical.
+  // 数据表：表头全选复选框图标会继承缩小后的 th 字号（0.75rem → 18px 图标），
+  // 而数据行复选框按 21px 渲染（1.5em × 14px td 字号）。将表头图标固定为 21px，
+  // 使表头与数据行的复选框外观保持一致。
   /* stylelint-disable-next-line selector-class-pattern */
   .v-data-table__th .v-checkbox-btn .v-icon {
     font-size: 1.3125rem;
   }
 
-  // Data table: the header cell is taller than body rows (compact density:
-  // header 40px vs row 36px), so the centered select-all checkbox sits off
-  // the row grid. Shift it down by half the height difference to align the
-  // header checkbox with each row's checkbox.
   /* stylelint-disable-next-line selector-class-pattern */
   .v-data-table__th .v-checkbox-btn {
     // 表头（40px）比数据行（36px）高，居中后的全选复选框会偏离行网格，
@@ -334,9 +327,9 @@ html {
     margin-top: calc(($header-h - $row-h) / 2);
   }
 
-  // Data table: the select-all header cell uses 8px side padding while body
-  // cells use 16px, pushing the header checkbox left of the row checkboxes.
-  // Match the body padding so all checkboxes line up in a straight column.
+  // 数据表：全选表头单元格使用 8px 左右内边距，而数据行单元格使用 16px，
+  // 使表头复选框相对数据行复选框左移。改用与数据行一致的内边距，
+  // 让所有复选框对齐在同一直列上。
   /* stylelint-disable-next-line selector-class-pattern */
   .v-data-table__th.v-data-table-column--no-padding {
     padding-inline: 16px;
@@ -344,7 +337,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Panel family shells
+// 面板族外壳
 // 面板族（结果面板 / 数据源参考栏 / 键值预览区）补充的复用类。
 // 这些视觉在组件 <style scoped> 中无法表达（禁写颜色 / 圆角 / 边框），故登记在此。
 // ---------------------------------------------------------------------------
@@ -410,7 +403,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Drag-and-drop indicator
+// 拖拽指示
 // ---------------------------------------------------------------------------
 // 拖拽落点高亮：列表内拖拽排序时标记当前悬停的目标行（列设置菜单）。
 // 登记在外壳层是因为组件 <style scoped> 禁止声明 background-color，
@@ -420,7 +413,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Page container
+// 页面容器
 // ---------------------------------------------------------------------------
 
 // 页面内容容器：统一最大宽度与水平居中，由 MainLayout 与各页自建布局共用。
@@ -435,7 +428,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Centered surface (auth / error pages)
+// 居中表面（认证 / 错误页）
 // ---------------------------------------------------------------------------
 // 全屏居中骨架：CentralLayout 独占，认证页（登录 / 忘记密码 / 重置密码 /
 // 重置成功）与错误页（401 / 404）共用同一套尺寸与滚动行为 —— 页面只提供内容，
@@ -474,7 +467,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Content blocks
+// 内容区块
 // ---------------------------------------------------------------------------
 
 // 代码 / 文本预览块：弱化底色 + 小圆角 + 统一内边距与换行，供通知渲染预览、
@@ -524,7 +517,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Chat bubbles
+// 聊天气泡
 // 聊天气泡（AI 助手对话）：共享大圆角，并按气泡归属（用户 / 助手）收窄底部一角，
 // 形成指向发送者的视觉锚点。
 // 替代 assistant.vue 内 scoped 的 .message-bubble / .user-bubble / .assistant-bubble
@@ -548,7 +541,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Directional hairline separators
+// 定向 hairline 分隔线
 // 与 .zk-hairline（四周描边）同源的定向分隔线：
 //   --right  侧边导航抽屉与内容区之间
 //   --bottom 顶栏与内容区之间
@@ -569,7 +562,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Embedded tab window
+// 内嵌 tab 窗口
 // 卡片内嵌 tabs 窗口：内层 v-card（如 search-table 自带的列表卡片）去外框后
 // 平铺融入外层卡片，避免「tabs 悬空 + 独立圆角卡片」的割裂观感。
 // 用法：在包含 v-tabs-window 的外层 v-card 上添加 .zk-tabs-embedded。
@@ -584,7 +577,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Dialog toolbar (AppDialog skeleton)
+// 对话框工具栏（AppDialog 骨架）
 // 对话框工具栏：内容左右内边距取 --zk-space-5，与 VDialog 主体文本的水平内边距对齐
 // （Vuetify 的 `.v-dialog > .v-overlay__content > .v-card > .v-card-text` 为
 // `padding: 16px 24px 24px`），让前置图标 / 标题与主体文本落在同一左轴线；Vuetify
@@ -623,7 +616,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Breadcrumbs
+// 面包屑
 // 面包屑：次要色文字 + 上下紧凑内边距 + 分隔符左右间距 + 可点击项主色高亮。
 // 替代 Breadcrumbs.vue 内 scoped 的 .breadcrumbs / :deep(.v-breadcrumbs-*)。
 // ---------------------------------------------------------------------------
@@ -643,7 +636,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Refresh control (split button group)
+// 刷新控件（分体按钮组）
 // 刷新控件分体按钮组：组取小圆角（首/末段由 Vuetify 的 inherit 继承），
 // 组内各段直角衔接；等宽数字保证倒计时文本不跳动。
 // 替代 RefreshControl.vue 内 scoped 的 .refresh-control / .rt-btn / .rt-btn-flat-*。
@@ -659,7 +652,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Network stack compare view (dialog)
+// 网络堆栈对比视图（对话框）
 // 网络堆栈双栏对比视图：表头、包卡片强调色条与底色、空占位行。
 // 替代 NetworkStackDialog.vue 内 scoped 的 .stack-compare-header / .stack-packet*
 // 就地声明（含 border / background-color / font-size 等 scoped 无法承载的视觉）。
@@ -699,7 +692,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Network stack header summary chip
+// 网络堆栈头部摘要 chip
 // 协议头部可读摘要（可点击 chip）：内联块 + 最大宽度不溢出 + 小圆角 + hover 底色。
 // 替代 NetworkStackHeader.vue 内 scoped 的 .stack-header* 就地声明。
 // ---------------------------------------------------------------------------
@@ -733,7 +726,7 @@ html {
 }
 
 // ---------------------------------------------------------------------------
-// Filter clause card (ClauseField)
+// 筛选条件卡片（ClauseField）
 // 筛选条件卡片（字段 / 动作 / 值三段式）：最小宽度保证三段输入等宽，
 // 最大宽度不超过容器。替代 ClauseField.vue 内 scoped 的 .clause-filter-card
 // 就地声明的 min-width / max-width。

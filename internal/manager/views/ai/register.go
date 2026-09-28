@@ -10,22 +10,12 @@ import (
 // 分组挂认证/授权/命名空间/核心库/功能开关/AI 组件/S3/对象缓存/管道投递客户端中间件；子组：
 //   - /doc    知识库文档 CRUD/list/reindex/chunks + 导入上传/原件下载
 //   - /session  Agent 会话 create/list/get/rename/delete/messages
+//   - /memory  长期记忆 create/list/get/update/delete/status
 //   - /agent/:sessionID/stream  SSE 流式生成
 //   - /status  AI 状态（可用性 + 维度差异）
 //
 // 知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存
 // （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务入队）中间件供子路由共享。
-// RegisterRoutes registers the /api/v1/ai AI assistant (RAG + Agent) endpoints.
-// The group mounts authentication/authorization/namespace/core-database/feature-registry/AI-component/
-// S3/object-cache/pipeline-client middlewares; subgroups:
-//   - /doc     knowledge-document CRUD/list/reindex/chunks plus import upload/source download
-//   - /session  agent sessions create/list/get/rename/delete/messages
-//   - /agent/:sessionID/stream  SSE streaming generation
-//   - /status  AI status (availability + slot differences)
-//
-// Knowledge-document import needs S3 source storage and asynchronous parse-task enqueueing, so the
-// parent group mounts S3 (source read/write), object cache (source encrypt-upload/download/cleanup)
-// and the pipeline client (asynq parse-task enqueue) middlewares shared by the subroutes.
 func RegisterRoutes(ctx *views.RegisterContext) {
 	aiGroup := ctx.V1Group.Group(
 		"/ai",
@@ -54,10 +44,8 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 创建知识库文档元信息
 	docGroup.OPTIONS("/create", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[KnowledgeDocumentCreateIn]())))
 	// 导入知识库文档 - multipart 上传原件（流式加密存 S3）后投递异步解析任务
-	// Import a knowledge document - multipart upload of the source (stream-encrypted into S3), then enqueue an async parse task
 	docGroup.POST("/upload", KnowledgeDocumentUpload)
 	// 导入知识库文档元信息（multipart 输入无法用结构体描述，仅登记请求方法与出参）
-	// Import knowledge-document metadata (multipart input cannot be described by a struct; registers only the method and output)
 	docGroup.OPTIONS("/upload", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentUploadOut]())))
 	// 知识库文档详情查询 - 根据ID获取文档完整信息（标题/正文/分块数/摘要）
 	docGroup.POST("/:id/get", KnowledgeDocumentDetailGet)
@@ -80,10 +68,8 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 知识库文档分块明细元信息
 	docGroup.OPTIONS("/:id/chunks", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]())))
 	// 下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）
-	// Download a knowledge-document source file - decrypt the S3 source and stream it back as an attachment (binary stream, bypassing the unified JSON response wrapper)
 	docGroup.POST("/:id/download", KnowledgeDocumentDownload)
 	// 下载知识库文档原件元信息（二进制流响应不适配结构体元信息，仅登记请求方法）
-	// Download knowledge-document source metadata (the binary-stream response does not fit struct metadata; registers only the method)
 	docGroup.OPTIONS("/:id/download", views.StructMetaGinHandler(views.WithMethod(http.MethodPost)))
 
 	// ========== 知识库检索试运行：/api/v1/ai/retrieval ==========
@@ -117,6 +103,31 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	sessionGroup.POST("/:id/messages", AgentMessageListGet)
 	// 会话消息列表元信息
 	sessionGroup.OPTIONS("/:id/messages", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMessageListOut]())))
+	// 压缩会话上下文并抽取长期记忆 - 折叠未摘要消息进滚动摘要并按开关抽取长期记忆
+	sessionGroup.POST("/:id/compact", AgentSessionCompact)
+	// 压缩会话上下文元信息
+	sessionGroup.OPTIONS("/:id/compact", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentSessionCompactOut]())))
+
+	// ========== 长期记忆：/api/v1/ai/memory ==========
+	// 会话级长期记忆的管理接口（列表/详情/批量删除/启停）；记忆由 Agent 运行期按会话生成，
+	// 不在管理端新增或修改。
+	memoryGroup := aiGroup.Group("/memory")
+	// 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影
+	memoryGroup.POST("/list", AgentMemoryListGet)
+	// 记忆列表元信息
+	memoryGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.AgentMemoryListGetSearchIn, *AgentMemoryListOut]())
+	// 记忆详情查询
+	memoryGroup.POST("/:id/get", AgentMemoryDetailGet)
+	// 记忆详情元信息
+	memoryGroup.OPTIONS("/:id/get", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMemoryDetailOut]())))
+	// 批量删除记忆 - 软删除
+	memoryGroup.POST("/delete", AgentMemoryBatchDelete)
+	// 批量删除记忆元信息
+	memoryGroup.OPTIONS("/delete", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryBatchIn](), views.WithBodyOutput[views.BatchResultOut]())))
+	// 启停记忆 - active/archived
+	memoryGroup.POST("/:id/status", AgentMemorySetStatus)
+	// 启停记忆元信息
+	memoryGroup.OPTIONS("/:id/status", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryStatusIn]())))
 
 	// ========== Agent 流式生成与状态：/api/v1/ai ==========
 	// SSE 流式问答（带会话持久化）与 AI 状态查询。

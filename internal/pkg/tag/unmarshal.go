@@ -1,3 +1,5 @@
+// Package tag 提供结构体标签（struct tag）的解析能力：把形如 `mode="aes-gcm", length=32`
+// 的标签字符串解析为键值对，并经反射填充到目标结构体。
 package tag
 
 import (

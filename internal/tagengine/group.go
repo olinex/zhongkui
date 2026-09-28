@@ -12,6 +12,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
+// GroupDetailResult 一个规则组的识别结果，含去重标签集合、耗时、错误与逐规则详情。
 type GroupDetailResult struct {
 	// Tags 组内所有规则识别到的去重排序后的标签集合。
 	Tags []string `json:"tags"`
@@ -59,6 +60,7 @@ func CompileGroup(ctx context.Context, rules []*tag.TagRule, extraOpts ...func(*
 	return &compiledGroup{rules: compiled, group: &prepared}, nil
 }
 
+// Recognize 执行组级合并查询并返回去重排序后的标签集合。
 func (g *compiledGroup) Recognize(ctx context.Context, options ...rego.EvalOption) ([]string, error) {
 	results, err := g.group.Eval(ctx, options...)
 	if err != nil {
@@ -67,6 +69,7 @@ func (g *compiledGroup) Recognize(ctx context.Context, options ...rego.EvalOptio
 	return extractTags(results), nil
 }
 
+// RecognizeWithDetail 执行组级合并查询，并汇总每条规则的识别详情。
 func (g *compiledGroup) RecognizeWithDetail(ctx context.Context, options ...rego.EvalOption) *GroupDetailResult {
 	start := time.Now()
 	tags, err := g.Recognize(ctx, options...)

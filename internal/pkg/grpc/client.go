@@ -74,6 +74,7 @@ func NewClient(cfg *ClientConfig, extraOpts ...g.DialOption) (*Client, error) {
 	return &Client{conn}, nil
 }
 
+// Shutdown 关闭底层 gRPC 连接。
 func (c *Client) Shutdown() error {
 	return c.ClientConn.Close()
 }

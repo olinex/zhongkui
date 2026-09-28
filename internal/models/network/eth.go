@@ -51,6 +51,7 @@ func NewEthernetHeaders(eth *layers.Ethernet) *EthernetHeaders {
 	}
 }
 
+// NewLoopbackHeaders 构造回环（loopback）数据包使用的空以太网头部实例。
 func NewLoopbackHeaders() *EthernetHeaders {
 	return &EthernetHeaders{
 		EthDstMAC: serializer.MacAddr(net.HardwareAddr{}),

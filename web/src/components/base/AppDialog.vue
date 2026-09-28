@@ -41,21 +41,21 @@
 <script setup lang="ts" name="app-dialog">
 const props = withDefaults(
   defineProps<{
-    /** Whether the dialog is currently open (v-model). */
+    /** 对话框当前是否打开（v-model）。 */
     modelValue: boolean;
-    /** Dialog title rendered in the toolbar. */
+    /** 工具栏中渲染的对话框标题。 */
     title: string;
-    /** Optional secondary title rendered right after the main title (weaker weight and color). */
+    /** 可选副标题，紧跟在主标题之后渲染（更弱的字重与颜色）。 */
     subtitle?: string;
-    /** Optional leading mdi-* icon rendered before the title. */
+    /** 可选的前置 mdi-* 图标，渲染在标题之前。 */
     icon?: string;
-    /** Dialog width tier, mapped to the --zk-dialog-width-* token of the same name. */
+    /** 对话框宽度档位，映射到同名的 --zk-dialog-width-* 令牌。 */
     size?: "sm" | "md" | "lg" | "xl";
-    /** When true, overlay click and ESC do not close the dialog. */
+    /** 为 true 时，点击遮罩或按 ESC 不会关闭对话框。 */
     persistent?: boolean;
-    /** When true, the body scrolls independently of the toolbar and footer. */
+    /** 为 true 时，正文区域独立于工具栏与底部滚动。 */
     scrollable?: boolean;
-    /** When true, a progress indicator is shown next to the title. */
+    /** 为 true 时，在标题旁显示进度指示。 */
     loading?: boolean;
   }>(),
   {
@@ -68,13 +68,15 @@ const props = withDefaults(
   },
 );
 
+// 对话框开关状态变更事件。
 const emits = defineEmits<{
   "update:modelValue": [value: boolean];
 }>();
 
-// Width comes from the token layer only (tokens.scss exports --zk-dialog-width-*).
+// 宽度仅来自令牌层（tokens.scss 导出 --zk-dialog-width-*）。
 const maxWidth = computed<string>(() => `var(--zk-dialog-width-${props.size})`);
 
+// 将开关状态透传给父组件。
 const onUpdate = (value: boolean): void => {
   emits("update:modelValue", value);
 };

@@ -1,3 +1,5 @@
+// Package validator 提供基于 go-playground/validator 的自定义校验规则（字符串、时间等），
+// 供各接口结构体的 binding 标签按名引用。
 package validator
 
 import (
@@ -9,6 +11,7 @@ import (
 	"math/big"
 	"net/url"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -24,23 +27,36 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// 自定义校验标签名常量：各标签在注册表中按此名绑定到对应的验证函数。
 const (
-	TagStrongPassword  = "strongPassword"
+	// TagStrongPassword 强密码标签
+	TagStrongPassword = "strongPassword"
+	// TagWindowsFileName Windows 文件名标签
 	TagWindowsFileName = "windowsFileName"
-	TagUnixFileName    = "unixFileName"
-	TagFileName        = "fileName"
-	TagStrictFileName  = "strictFileName"
-	TagDirpath         = "dirpath"
+	// TagUnixFileName Unix 文件名标签
+	TagUnixFileName = "unixFileName"
+	// TagFileName 文件名标签（按当前操作系统选择规则）
+	TagFileName = "fileName"
+	// TagStrictFileName 严格文件名标签
+	TagStrictFileName = "strictFileName"
+	// TagDirpath 目录路径标签
+	TagDirpath = "dirpath"
+	// TagAlphanumSpecial 字母数字加指定特殊字符标签
 	TagAlphanumSpecial = "alphanumspecial"
-	TagEnum            = "enum"
-	TagHTTPURL         = "httpUrl"
-	TagJSONObject      = "jsonObject"
-	TagTrimmed         = "trimmed"
+	// TagEnum 枚举取值标签（标签参数为枚举注册表的类名）
+	TagEnum = "enum"
+	// TagHTTPURL 绝对 HTTP/HTTPS URL 标签
+	TagHTTPURL = "httpUrl"
+	// TagJSONObject 字符串化 JSON 对象标签
+	TagJSONObject = "jsonObject"
+	// TagTrimmed 已去除首尾空白标签
+	TagTrimmed = "trimmed"
 )
 
 // alphanumSpecialRegexps 按特殊字符参数缓存编译后的校验正则。
 var alphanumSpecialRegexps sync.Map
 
+// windowsReservedNames Windows 保留设备名集合（不区分大小写），用作文件名时非法。
 var (
 	windowsReservedNames = map[string]any{
 		"CON":  nil,
@@ -68,6 +84,7 @@ var (
 	}
 )
 
+// 预编译的校验正则：分别用于强密码、Windows/Unix 非法字符、十六进制、UUID、年季/年周与 slug。
 var (
 	strongPasswordRegex      = regexp2.MustCompile(`^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{6,}$`, regexp2.DefaultUnmarshalOptions)
 	windowsIllegalCharsRegex = regexp2.MustCompile(`^(.*[<>:"/\\|?*\x00-\x1F].*|.*[.\s])$`, regexp2.DefaultUnmarshalOptions)
@@ -85,8 +102,10 @@ var (
 	slugRegex = regexp2.MustCompile(`^\b[a-z0-9]+(?:[-_][a-z0-9]+)*\b$`, regexp2.DefaultUnmarshalOptions)
 )
 
+// IsValidStrongPassword 判断字符串是否符合强密码要求（至少包含一位数字、一个大写字母、
+// 一个小写字母和一个特殊字符，长度不少于 6）。
 func IsValidStrongPassword(value string) bool {
-	// The strong password must contain at least one digit, one uppercase letter, one lowercase letter, and one special character.
+	// 强密码必须至少包含一位数字、一个大写字母、一个小写字母和一个特殊字符。
 	if ok, err := strongPasswordRegex.MatchString(value); err == nil && ok {
 		return true
 	}
@@ -159,6 +178,8 @@ func randomIndex(max int) (int, error) {
 	return int(n.Int64()), nil
 }
 
+// IsValidWindowsFileName 判断字符串是否为合法的 Windows 文件名（排除保留设备名、
+// 非法字符、以空格或点结尾以及超长的情况）。
 func IsValidWindowsFileName(value string) bool {
 	if value == "" {
 		return false
@@ -187,6 +208,7 @@ func IsValidWindowsFileName(value string) bool {
 	return true
 }
 
+// IsValidUnixFileName 判断字符串是否为合法的 Unix 文件名（排除非法字符并限制长度）。
 func IsValidUnixFileName(value string) bool {
 	if value == "" {
 		return false
@@ -203,6 +225,7 @@ func IsValidUnixFileName(value string) bool {
 	return true
 }
 
+// IsValidFileName 判断字符串是否为合法文件名：按当前操作系统选择 Windows 或 Unix 规则。
 func IsValidFileName(value string) bool {
 	// 基本检查
 	if value == "" || value == "." || value == ".." {
@@ -226,6 +249,8 @@ func IsValidFileName(value string) bool {
 	}
 }
 
+// IsStrictValidFileName 在 IsValidFileName 基础上施加更严格的规则：不含控制字符、
+// 不以连字符开头且不含空格。
 func IsStrictValidFileName(value string) bool {
 	if !IsValidFileName(value) {
 		return false
@@ -252,6 +277,7 @@ func IsStrictValidFileName(value string) bool {
 	return true
 }
 
+// IsValidDirPath 判断字符串是否为合法目录路径（非空且不含 NUL 字符）。
 func IsValidDirPath(value string) bool {
 	if value == "" {
 		return false
@@ -264,16 +290,19 @@ func IsValidDirPath(value string) bool {
 	return true
 }
 
+// IsNull 判断字符串是否为 null / nil（不区分大小写）。
 func IsNull(value string) bool {
 	lower := strings.ToLower(value)
 	return lower == "null" || lower == "nil"
 }
 
+// IsBool 判断字符串是否为布尔字面量 true / false（不区分大小写）。
 func IsBool(value string) bool {
 	lower := strings.ToLower(value)
 	return lower == "true" || lower == "false"
 }
 
+// IsInt 判断字符串是否可解析为整数。
 func IsInt(value string) bool {
 	if _, err := strconv.ParseInt(value, 10, 64); err != nil {
 		return false
@@ -281,6 +310,7 @@ func IsInt(value string) bool {
 	return true
 }
 
+// IsFloat 判断字符串是否可解析为浮点数。
 func IsFloat(value string) bool {
 	if _, err := strconv.ParseFloat(value, 64); err != nil {
 		return false
@@ -288,6 +318,7 @@ func IsFloat(value string) bool {
 	return true
 }
 
+// IsMD5 判断字符串是否为 32 位十六进制 MD5 摘要。
 func IsMD5(value string) bool {
 	if ok, err := hexRegex.MatchString(value); err == nil && ok && len(value) == 32 {
 		return true
@@ -295,6 +326,7 @@ func IsMD5(value string) bool {
 	return false
 }
 
+// IsSHA1 判断字符串是否为 40 位十六进制 SHA1 摘要。
 func IsSHA1(value string) bool {
 	if ok, err := hexRegex.MatchString(value); err == nil && ok && len(value) == 40 {
 		return true
@@ -302,6 +334,7 @@ func IsSHA1(value string) bool {
 	return false
 }
 
+// IsSHA256 判断字符串是否为 64 位十六进制 SHA256 摘要。
 func IsSHA256(value string) bool {
 	if ok, err := hexRegex.MatchString(value); err == nil && ok && len(value) == 64 {
 		return true
@@ -309,6 +342,7 @@ func IsSHA256(value string) bool {
 	return false
 }
 
+// IsHex 判断字符串是否为十六进制串。
 func IsHex(value string) bool {
 	if ok, err := hexRegex.MatchString(value); err == nil && ok {
 		return true
@@ -316,6 +350,7 @@ func IsHex(value string) bool {
 	return false
 }
 
+// IsUUID 判断字符串是否符合标准 UUID 格式。
 func IsUUID(value string) bool {
 	if ok, err := uuidRegex.MatchString(value); err == nil && ok {
 		return true
@@ -323,6 +358,7 @@ func IsUUID(value string) bool {
 	return false
 }
 
+// IsBase32 判断字符串是否为合法的 Base32 编码。
 func IsBase32(value string) bool {
 	if _, err := base32.StdEncoding.DecodeString(value); err != nil {
 		return false
@@ -330,6 +366,7 @@ func IsBase32(value string) bool {
 	return true
 }
 
+// IsBase64 判断字符串是否为合法的 Base64 编码。
 func IsBase64(value string) bool {
 	if _, err := base64.StdEncoding.DecodeString(value); err != nil {
 		return false
@@ -337,6 +374,7 @@ func IsBase64(value string) bool {
 	return true
 }
 
+// IsDate 判断字符串是否为支持的日期格式（YYYY-MM-DD、YYYY-MM、MM-DD-YYYY、DD.MM.YYYY）。
 func IsDate(value string) bool {
 	// YYYY-MM-DD
 	if _, err := time.Parse(time.DateOnly, value); err == nil {
@@ -357,6 +395,7 @@ func IsDate(value string) bool {
 	return false
 }
 
+// IsYearQuarter 判断字符串是否为年季格式（YYYY-Q[1-4]）。
 func IsYearQuarter(value string) bool {
 	if ok, err := yearQuarterRegex.MatchString(value); err == nil && ok {
 		return true
@@ -364,6 +403,7 @@ func IsYearQuarter(value string) bool {
 	return false
 }
 
+// IsYearWeek 判断字符串是否为年周格式（YYYY-W[01-53]）。
 func IsYearWeek(value string) bool {
 	if ok, err := yearWeekyRegex.MatchString(value); err == nil && ok {
 		return true
@@ -371,6 +411,7 @@ func IsYearWeek(value string) bool {
 	return false
 }
 
+// IsDatetime 判断字符串是否为支持的日期时间格式（以 - 或 _ 分隔的多种变体）。
 func IsDatetime(value string) bool {
 	if _, err := time.Parse("2006-01-02_15-04-05", value); err == nil {
 		return true
@@ -387,6 +428,7 @@ func IsDatetime(value string) bool {
 	return false
 }
 
+// IsCodesISO31661 判断字符串是否为合法的 ISO 3166-1 国家/地区代码（alpha-2/alpha-3/名称）。
 func IsCodesISO31661(value string) bool {
 	checker := codes.GetISO31661Codes()
 	if len(value) == 2 {
@@ -398,6 +440,7 @@ func IsCodesISO31661(value string) bool {
 	}
 }
 
+// IsCodesISO6392 判断字符串是否为合法的 ISO 639-2 语言代码（alpha-2/alpha-3/名称）。
 func IsCodesISO6392(value string) bool {
 	checker := codes.GetISO6392Codes()
 	if len(value) == 2 {
@@ -409,6 +452,7 @@ func IsCodesISO6392(value string) bool {
 	}
 }
 
+// IsCodesISO4217 判断字符串是否为合法的 ISO 4217 货币代码（alpha-3/名称）。
 func IsCodesISO4217(value string) bool {
 	checker := codes.GetISO4217Codes()
 	if len(value) == 3 {
@@ -418,6 +462,7 @@ func IsCodesISO4217(value string) bool {
 	}
 }
 
+// IsCodeISO15924 判断字符串是否为合法的 ISO 15924 文字代码（alpha-4/名称）。
 func IsCodeISO15924(value string) bool {
 	checker := codes.GetISO15924Codes()
 	if len(value) == 4 {
@@ -427,18 +472,22 @@ func IsCodeISO15924(value string) bool {
 	}
 }
 
+// IsCodesRFC1766 判断字符串是否为合法的 RFC 1766 语言标签。
 func IsCodesRFC1766(value string) bool {
 	return codes.GetRFC1766Codes().ConvertFromName(value) != nil
 }
 
+// IsCodesRFC4646 判断字符串是否为合法的 RFC 4646 语言标签。
 func IsCodesRFC4646(value string) bool {
 	return codes.GetRFC4646Codes().ConvertFromName(value) != nil
 }
 
+// IsCodesFilenameExtension 判断字符串是否为已知的文件扩展名。
 func IsCodesFilenameExtension(value string) bool {
 	return codes.GetFilenameExtensionCodes().ConvertFromName(value) != nil
 }
 
+// IsSlug 判断字符串是否为 slug 格式（小写字母数字，以 - 或 _ 连接）。
 func IsSlug(value string) bool {
 	if ok, err := slugRegex.MatchString(value); err == nil && ok {
 		return true
@@ -473,6 +522,7 @@ func matchAlphanumSpecial(re *regexp2.Regexp, value string) bool {
 	return false
 }
 
+// ValidateAlphanumSpecial 是 alphanumspecial 标签的验证函数，标签参数为允许的特殊字符集合。
 func ValidateAlphanumSpecial(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -481,6 +531,7 @@ func ValidateAlphanumSpecial(fl validator.FieldLevel) bool {
 	}
 }
 
+// ValidateStrongPassword 是 strongPassword 标签的验证函数。
 func ValidateStrongPassword(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -489,6 +540,7 @@ func ValidateStrongPassword(fl validator.FieldLevel) bool {
 	}
 }
 
+// ValidateWindowsFileName 是 windowsFileName 标签的验证函数。
 func ValidateWindowsFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -497,6 +549,7 @@ func ValidateWindowsFileName(fl validator.FieldLevel) bool {
 	}
 }
 
+// ValidateUnixFileName 是 unixFileName 标签的验证函数。
 func ValidateUnixFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -505,6 +558,7 @@ func ValidateUnixFileName(fl validator.FieldLevel) bool {
 	}
 }
 
+// ValidateFileName 是 fileName 标签的验证函数。
 func ValidateFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -513,6 +567,7 @@ func ValidateFileName(fl validator.FieldLevel) bool {
 	}
 }
 
+// ValidateStrictFileName 是 strictFileName 标签的验证函数。
 func ValidateStrictFileName(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -521,6 +576,7 @@ func ValidateStrictFileName(fl validator.FieldLevel) bool {
 	}
 }
 
+// ValidateDirPath 是 dirpath 标签的验证函数。
 func ValidateDirPath(fl validator.FieldLevel) bool {
 	if v, ok := fl.Field().Interface().(string); !ok {
 		return false
@@ -577,10 +633,21 @@ func IsTrimmed(value string) bool {
 	return strings.TrimSpace(value) == value
 }
 
+// stringFieldValue 取出字符串类字段的值，支持具名 string 类型（如 pkg/llm 的枚举取值类型），
+// 使自定义标签（enum / httpUrl / jsonObject / trimmed）可直接施加于枚举字段；非 string 类的
+// 字段返回 false。
+func stringFieldValue(fl validator.FieldLevel) (string, bool) {
+	f := fl.Field()
+	if f.Kind() != reflect.String {
+		return "", false
+	}
+	return f.String(), true
+}
+
 // ValidateEnum 是 enum 标签的验证函数，标签参数为 enum 注册表的类名，例如
 // `binding:"enum=mcpTransport"`。
 func ValidateEnum(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}
@@ -589,7 +656,7 @@ func ValidateEnum(fl validator.FieldLevel) bool {
 
 // ValidateHTTPURL 是 httpUrl 标签的验证函数。
 func ValidateHTTPURL(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}
@@ -598,7 +665,7 @@ func ValidateHTTPURL(fl validator.FieldLevel) bool {
 
 // ValidateJSONObject 是 jsonObject 标签的验证函数。
 func ValidateJSONObject(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}
@@ -607,7 +674,7 @@ func ValidateJSONObject(fl validator.FieldLevel) bool {
 
 // ValidateTrimmed 是 trimmed 标签的验证函数。
 func ValidateTrimmed(fl validator.FieldLevel) bool {
-	v, ok := fl.Field().Interface().(string)
+	v, ok := stringFieldValue(fl)
 	if !ok {
 		return false
 	}

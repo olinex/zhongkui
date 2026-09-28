@@ -1,4 +1,4 @@
-// Third-party
+// 第三方
 import type { SearchIn } from "@/components/@types/table";
 
 // ---- 通知渠道类型 ----

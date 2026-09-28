@@ -1,3 +1,4 @@
+// Package utils 提供通用工具函数，涵盖文件哈希计算与路径解析等。
 package utils
 
 import (

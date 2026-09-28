@@ -1,24 +1,23 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	// internal
+	// 项目内部
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // newTestSessionDB 构造会话测试用的 sqlite 内存库并迁移会话/消息两张表。
-// newTestSessionDB builds an in-memory sqlite DB for session tests and migrates
-// the session/message tables.
 func newTestSessionDB(t *testing.T) *database.DB {
 	t.Helper()
 	gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{Logger: logger.Discard})
@@ -32,7 +31,6 @@ func newTestSessionDB(t *testing.T) *database.DB {
 }
 
 // TestNewSessionStore_NilDB 测试 db 为空时返回英文错误。
-// TestNewSessionStore_NilDB verifies a nil db yields an English error.
 func TestNewSessionStore_NilDB(t *testing.T) {
 	if _, err := NewSessionStore(nil); err == nil {
 		t.Fatal("NewSessionStore(nil) = nil error, want an error")
@@ -40,18 +38,16 @@ func TestNewSessionStore_NilDB(t *testing.T) {
 }
 
 // TestSessionStore_CreateGet 测试会话创建后字段落库、状态为 active，GetSession 往返一致。
-// TestSessionStore_CreateGet verifies the created session fields persist with the
-// active status and GetSession round-trips consistently.
 func TestSessionStore_CreateGet(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	session, err := store.CreateSession(context.Background(), "default", "首轮对话", "gpt-4o")
+	session, err := store.CreateSession(context.Background(), "default", "首轮对话", "gpt-4o", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	if session.ID == 0 || session.Status != SessionStatusActive {
+	if session.ID == 0 || session.Status != llm.SessionStatusActive {
 		t.Fatalf("CreateSession() = %+v, want non-zero ID and active status", session)
 	}
 	got, err := store.GetSession(context.Background(), session.ID)
@@ -67,8 +63,6 @@ func TestSessionStore_CreateGet(t *testing.T) {
 }
 
 // TestSessionStore_ListSessions 测试列表按更新时间倒序、分页生效、命名空间隔离。
-// TestSessionStore_ListSessions verifies the list orders by update time
-// descending, applies paging, and isolates namespaces.
 func TestSessionStore_ListSessions(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
@@ -76,11 +70,11 @@ func TestSessionStore_ListSessions(t *testing.T) {
 	}
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		if _, err := store.CreateSession(ctx, "default", "s", "m"); err != nil {
+		if _, err := store.CreateSession(ctx, "default", "s", "m", "knowledge"); err != nil {
 			t.Fatalf("CreateSession error = %v", err)
 		}
 	}
-	if _, err := store.CreateSession(ctx, "other", "s", "m"); err != nil {
+	if _, err := store.CreateSession(ctx, "other", "s", "m", "knowledge"); err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	all, err := store.ListSessions(ctx, "default", 0, 0)
@@ -105,15 +99,13 @@ func TestSessionStore_ListSessions(t *testing.T) {
 }
 
 // TestSessionStore_RenameAndStatus 测试重命名与状态更新后返回更新后的会话。
-// TestSessionStore_RenameAndStatus verifies rename and status updates return the
-// updated session.
 func TestSessionStore_RenameAndStatus(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
 	ctx := context.Background()
-	session, err := store.CreateSession(ctx, "default", "old", "m")
+	session, err := store.CreateSession(ctx, "default", "old", "m", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
@@ -124,40 +116,37 @@ func TestSessionStore_RenameAndStatus(t *testing.T) {
 	if renamed.Title != "new title" {
 		t.Errorf("RenameSession() title = %q, want %q", renamed.Title, "new title")
 	}
-	archived, err := store.SetSessionStatus(ctx, session.ID, SessionStatusArchived)
+	archived, err := store.SetSessionStatus(ctx, session.ID, llm.SessionStatusArchived)
 	if err != nil {
 		t.Fatalf("SetSessionStatus error = %v", err)
 	}
-	if archived.Status != SessionStatusArchived {
-		t.Errorf("SetSessionStatus() status = %q, want %q", archived.Status, SessionStatusArchived)
+	if archived.Status != llm.SessionStatusArchived {
+		t.Errorf("SetSessionStatus() status = %q, want %q", archived.Status, llm.SessionStatusArchived)
 	}
 	got, err := store.GetSession(ctx, session.ID)
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if got.Title != "new title" || got.Status != SessionStatusArchived {
+	if got.Title != "new title" || got.Status != llm.SessionStatusArchived {
 		t.Errorf("GetSession() = %+v, want the renamed and archived session", got)
 	}
 }
 
 // TestSessionStore_DeleteCascadesMessages 测试删除会话时消息在同一事务内级联删除，
 // 会话本身为软删除（GetSession 返回 ErrSessionNotFound）。
-// TestSessionStore_DeleteCascadesMessages verifies deleting a session cascades
-// its messages within one transaction and the session itself is soft-deleted
-// (GetSession yields ErrSessionNotFound).
 func TestSessionStore_DeleteCascadesMessages(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
 	ctx := context.Background()
-	session, err := store.CreateSession(ctx, "default", "t", "m")
+	session, err := store.CreateSession(ctx, "default", "t", "m", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	for i := 0; i < 2; i++ {
 		if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
-			SessionID: session.ID, NamespaceName: "default", Role: MessageRoleUser, Content: "q",
+			SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleUser, Content: "q",
 		}); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
@@ -179,8 +168,6 @@ func TestSessionStore_DeleteCascadesMessages(t *testing.T) {
 
 // TestSessionStore_Messages 测试消息追加/列表/历史（最近 N 条按时间升序返回）与
 // 最近助手消息查询。
-// TestSessionStore_Messages verifies message append/list, history (latest N in
-// ascending order) and the latest-assistant-message lookup.
 func TestSessionStore_Messages(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
 	if err != nil {
@@ -190,11 +177,11 @@ func TestSessionStore_Messages(t *testing.T) {
 		t.Fatal("AppendMessage(nil) = nil error, want an error")
 	}
 	ctx := context.Background()
-	session, err := store.CreateSession(ctx, "default", "t", "m")
+	session, err := store.CreateSession(ctx, "default", "t", "m", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	appendMsg := func(role, content string) {
+	appendMsg := func(role llm.MessageRole, content string) {
 		t.Helper()
 		if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
 			SessionID: session.ID, NamespaceName: "default", Role: role, Content: content,
@@ -202,9 +189,9 @@ func TestSessionStore_Messages(t *testing.T) {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
 	}
-	appendMsg(MessageRoleUser, "u1")
-	appendMsg(MessageRoleAssistant, "a1")
-	appendMsg(MessageRoleUser, "u2")
+	appendMsg(llm.MessageRoleUser, "u1")
+	appendMsg(llm.MessageRoleAssistant, "a1")
+	appendMsg(llm.MessageRoleUser, "u2")
 
 	all, err := store.ListMessages(ctx, session.ID, 0, 0)
 	if err != nil {

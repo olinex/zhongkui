@@ -46,6 +46,7 @@ type HttpDetector struct {
 	kd     *key.KeyDerivation
 }
 
+// NewHttpDetector 创建 HTTP 协议检测器。
 func NewHttpDetector(client *s3.S3Client, kd *key.KeyDerivation) *HttpDetector {
 	return &HttpDetector{
 		client: client,
@@ -269,6 +270,7 @@ type rawHTTP struct {
 	response []byte
 }
 
+// Build 将提取到的 HTTP 请求与响应组装为 HttpTransport 对象。
 func (s *HttpDetector) Build(
 	ctx context.Context,
 	baseMeta *n.BaseMeta,

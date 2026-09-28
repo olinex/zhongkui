@@ -1,7 +1,7 @@
 import { BackendDataType, type NumberRange, SupportLanguage } from "@/types";
 import i18n from "@/utils/i18n";
 
-// Utilities
+// 工具
 import { EnumClass, enumLabelOf } from "./enums";
 
 // 语言名称 i18n 键前缀：option.language.<语言键>（含 "*" 通配与具体语言键，如 en / zh-Hans）

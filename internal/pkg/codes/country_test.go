@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试 ISO 3166-1 国家/地区的 Alpha2/Alpha3/名称/数字查询。
 func TestISO31661Codes(t *testing.T) {
 	Convey("根据 Alpha-2 代码查询", t, func() {
 		checker := GetISO31661Codes()
@@ -166,6 +167,7 @@ func TestISO31661Codes(t *testing.T) {
 	})
 }
 
+// 测试 GetISO31661Codes 的单例行为。
 func TestISO31661CodesSingleton(t *testing.T) {
 	Convey("验证 GetISO31661Codes 单例行为", t, func() {
 		Convey("多次调用应返回相同的实例", func(c C) {
@@ -176,6 +178,7 @@ func TestISO31661CodesSingleton(t *testing.T) {
 	})
 }
 
+// 测试不同索引查询同一国家/地区返回同一条目。
 func TestISO31661CodesCrossIndexConsistency(t *testing.T) {
 	Convey("验证不同索引之间的交叉一致性", t, func() {
 		checker := GetISO31661Codes()
@@ -202,6 +205,7 @@ func TestISO31661CodesCrossIndexConsistency(t *testing.T) {
 	})
 }
 
+// 测试 OfficialName 字段。
 func TestISO31661CodesOfficialName(t *testing.T) {
 	Convey("验证 OfficialName 字段", t, func() {
 		checker := GetISO31661Codes()
@@ -216,6 +220,7 @@ func TestISO31661CodesOfficialName(t *testing.T) {
 	})
 }
 
+// 测试查询区分大小写。
 func TestISO31661CodesCaseSensitive(t *testing.T) {
 	Convey("验证查询区分大小写", t, func() {
 		checker := GetISO31661Codes()
@@ -234,6 +239,7 @@ func TestISO31661CodesCaseSensitive(t *testing.T) {
 	})
 }
 
+// 测试更多国家/地区数据。
 func TestISO31661CodesMoreCountries(t *testing.T) {
 	Convey("验证更多国家/地区数据", t, func() {
 		checker := GetISO31661Codes()
@@ -288,6 +294,7 @@ func TestISO31661CodesMoreCountries(t *testing.T) {
 	})
 }
 
+// 测试数字代码的前导零处理。
 func TestISO31661CodesNumericPadding(t *testing.T) {
 	Convey("验证数字代码的前导零处理", t, func() {
 		checker := GetISO31661Codes()
@@ -306,6 +313,7 @@ func TestISO31661CodesNumericPadding(t *testing.T) {
 	})
 }
 
+// 测试 ISO31661Entry 字段完整性。
 func TestISO31661EntryFields(t *testing.T) {
 	Convey("验证 ISO31661Entry 字段完整性", t, func() {
 		checker := GetISO31661Codes()

@@ -27,6 +27,7 @@ func withAckNum(ack uint32) func(*mockTCPPacket) {
 	}
 }
 
+// BenchmarkRouterSingleFlow 对单条 TCP 流的包路由处理进行基准测试。
 func BenchmarkRouterSingleFlow(b *testing.B) {
 	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 
@@ -152,6 +153,7 @@ func BenchmarkRouterSingleFlow(b *testing.B) {
 	test.Tracer.Report()
 }
 
+// BenchmarkRouterConcurrentFlows 对并发多条 TCP 流的包路由处理进行基准测试。
 func BenchmarkRouterConcurrentFlows(b *testing.B) {
 	logger := &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 

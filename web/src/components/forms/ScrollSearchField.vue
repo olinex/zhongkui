@@ -56,7 +56,7 @@ const scrollEl = ref<HTMLElement | null>(null);
 const sentinelEl = ref<HTMLElement | null>(null);
 const loading = ref(false);
 const hasMore = ref(true);
-// Server response items are dynamic.
+// 服务端返回的条目为动态结构。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const items = ref([] as Array<Record<string, any>>);
 
@@ -82,7 +82,7 @@ const loadMore = () => {
     return;
   }
   loading.value = true;
-  // Server response items are dynamic.
+  // 服务端返回的条目为动态结构。
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getResponse<SearchOut<Record<string, any>>>(
     props.searchRequest({

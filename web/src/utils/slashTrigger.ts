@@ -1,8 +1,7 @@
 /**
- * Slash-trigger helpers shared by the Rego editor and the tag expression
- * editor: "/" opens an in-editor field/tag picker, a second "/" while the
- * picker is open acts as a close signal (the slash itself is swallowed),
- * and a "/" after "/" with the picker closed is typed as a literal.
+ * Rego 编辑器与标签表达式编辑器共用的斜杠触发辅助函数：
+ * "/" 打开编辑器内的字段/标签选择器，选择器打开时再次输入 "/" 作为关闭信号
+ * （该斜杠本身被吞掉），选择器关闭时输入 "/" 后面的 "/" 按字面量处理。
  */
 
 import type { Completion } from "@codemirror/autocomplete";
@@ -14,8 +13,8 @@ import type { EditorView, KeyBinding } from "@codemirror/view";
 const SLASH_PREV_BLOCK_RE = /[a-zA-Z0-9_)\]"'`]/;
 
 /**
- * Finds the position of the last eligible "/" trigger in the text before the
- * cursor, or null. 从行尾向前扫描：触发斜杠前一字符不能是 "/"（即非 "//"），
+ * 在光标之前的文本中查找最后一个可触发的 "/" 位置，找不到返回 null。
+ * 从行尾向前扫描：触发斜杠前一字符不能是 "/"（即非 "//"），
  * 也不能是词字符等封闭字符。可选的 `inLiteral` 用于排除字符串/注释等
  * 字面量内部的斜杠（由各编辑器的语法树判定）。
  */
@@ -40,18 +39,16 @@ export function findSlashPos(
   return line.from + slashIdx;
 }
 
-/** Whether the completion dropdown is currently open (.cm-tooltip-autocomplete in DOM). */
+/** 补全下拉框当前是否打开（DOM 中存在 .cm-tooltip-autocomplete）。 */
 export function isCompletionOpen(view: EditorView): boolean {
   return view.dom.querySelector(".cm-tooltip-autocomplete") !== null;
 }
 
 /**
- * "/" key binding implementing the slash input rules:
- * - prev char is "/" and the dropdown is open: the slash is only a close
- *   signal, swallowed without writing to the document;
- * - otherwise fall through to normal input (opening the picker is handled
- *   by the completion source; a "/" after "/" with the picker closed is
- *   typed literally).
+ * 实现斜杠输入规则的 "/" 键绑定：
+ * - 前一字符为 "/" 且下拉框已打开：该斜杠仅作为关闭信号，被吞掉且不写入文档；
+ * - 否则交由常规输入处理（打开选择器由补全源负责；选择器关闭时，
+ *   "/" 之后的 "/" 按字面量输入）。
  */
 export const slashKeyBinding: KeyBinding = {
   key: "/",
@@ -67,11 +64,10 @@ export const slashKeyBinding: KeyBinding = {
 };
 
 /**
- * Wraps completion options so that picking one replaces the range starting at
- * the "/" trigger (from 已包含斜杠，无需再前移):
- * - function applies get `from` passed through (已覆盖斜杠);
- * - label-only applies become functions inserting the label from `from`,
- *   with the cursor placed after the inserted text (mirrors CM's default).
+ * 包装补全选项，使选中项替换从 "/" 触发处开始的区间（已包含斜杠，无需再前移）：
+ * - 函数形式的 apply 直接透传 `from`（已覆盖斜杠）；
+ * - 仅含 label 的 apply 变为从 `from` 插入 label 的函数，
+ *   光标置于插入文本之后（与 CM 默认行为一致）。
  */
 export function withSlashApply(options: Completion[]): Completion[] {
   return options.map((c) => {

@@ -7,6 +7,8 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+// Validate 是全局共享的校验器实例，绑定 gin 的 binding.Validator 引擎，
+// 已注册自定义标签名称函数：优先取 json 标签名，其次 mapstructure 标签名，最后回退字段名。
 var (
 	Validate *validator.Validate
 )
@@ -39,11 +41,6 @@ func init() {
 // provider 用它把规则注册到全局校验器并为每个 tag 挂本地化文案，测试用它注册到自己的校验器。
 // 集中登记可避免各调用方重复抄写 tag 清单——漏抄某项会让该 tag 在对应场景被判为未注册规则，
 // 表现为绑定失败而非编译错误。
-// Funcs returns the registry of every custom validation rule (tag -> validation func) and is the
-// single registration point: provider registers them on the global validator and attaches the
-// localized message for each tag, while tests register them on their own validators. A central
-// registry keeps callers from copying the tag list around: a missed entry makes that tag count as
-// an unregistered rule in that scope, surfacing as a binding failure rather than a compile error.
 func Funcs() map[string]validator.Func {
 	return map[string]validator.Func{
 		TagStrongPassword:         ValidateStrongPassword,

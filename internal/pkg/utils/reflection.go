@@ -7,18 +7,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
-func GetField[T any](obj any, name string) T {
-	rv := reflect.ValueOf(obj)
-	if rv.Kind() == reflect.Pointer {
-		rv = rv.Elem()
-	}
-	field := rv.FieldByName(name)
-	if !field.CanInterface() {
-		field = reflect.NewAt(field.Type(), field.Addr().UnsafePointer()).Elem()
-	}
-	return field.Interface().(T)
-}
-
+// SetField 设置结构体字段的值（字段不可导出时经 unsafe 反射写入）。
 func SetField(obj any, name string, value any) {
 	rv := reflect.ValueOf(obj)
 	if rv.Kind() == reflect.Pointer {

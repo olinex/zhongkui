@@ -1,7 +1,7 @@
 package message
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"io"
@@ -10,12 +10,11 @@ import (
 	"sync"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/smartystreets/goconvey/convey"
 )
 
 // TestWebhookChannel_Send 测试 webhook 渠道的发送行为。
-// TestWebhookChannel_Send tests the send behavior of the webhook channel.
 func TestWebhookChannel_Send(t *testing.T) {
 	convey.Convey("webhook 渠道发送", t, func() {
 		convey.Convey("POST 到目标 URL，携带消息 JSON 与附加请求头", func() {

@@ -14,9 +14,6 @@ import (
 
 // 各服务的固定服务名，用于 etcd 服务目录键与日志标识。
 // 注：capturer 不在此列——它不直连 etcd，其状态经 gRPC Feedback 由 reporter 代为写入 etcd。
-// Fixed service names used for the etcd service-directory key and logging.
-// Note: capturer is intentionally absent — it never talks to etcd directly; its status is
-// written to etcd by the reporter on its behalf via the gRPC Feedback stream.
 const (
 	HealthServiceNameWeb    = "web"
 	HealthServiceNameGrpc   = "grpc"
@@ -43,6 +40,7 @@ func healthServerProvider(ctx context.Context) do.Provider[*health.Server] {
 	}
 }
 
+// NewHealthServer 返回构建全局健康探针服务的 provider 工厂。
 func NewHealthServer(ctx context.Context) do.Provider[*health.Server] {
 	return healthServerProvider(ctx)
 }
@@ -52,18 +50,18 @@ func InjectHealthServer(ctx context.Context, i do.Injector) {
 	do.Provide(i, NewHealthServer(ctx))
 }
 
+// InvokeHealthServer 从注入器解析全局健康探针服务。
 func InvokeHealthServer(ctx context.Context, i do.Injector) (*health.Server, error) {
 	return do.Invoke[*health.Server](i)
 }
 
+// MustInvokeHealthServer 从注入器解析全局健康探针服务，失败时 panic。
 func MustInvokeHealthServer(ctx context.Context, i do.Injector) *health.Server {
 	return do.MustInvoke[*health.Server](i)
 }
 
 // HealthService 将健康探针服务适配为 runtime.Service，
 // 供 runtime.Group 统一编排（worker）或命令侧 goroutine 启动（web/grpc）。
-// HealthService adapts the health probe server to runtime.Service for orchestration by
-// runtime.Group (worker) or standalone goroutine startup (web/grpc).
 type HealthService struct {
 	*health.Server
 	logger *logging.Logger

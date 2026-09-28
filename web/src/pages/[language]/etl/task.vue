@@ -500,6 +500,7 @@ watch(
   { immediate: true },
 );
 
+// refreshAction 并行刷新队列列表、每日统计与任务列表。
 const refreshAction = async (): Promise<void> => {
   await Promise.all([
     getQueueListAction(),
@@ -513,6 +514,7 @@ const refreshAction = async (): Promise<void> => {
   ]);
 };
 
+// getQueueListAction 拉取队列列表并推导各队列的运行状态。
 const getQueueListAction = async (): Promise<void> => {
   await getResponse<InspectorQueueListOut>(
     inspectorQueueListGet(),
@@ -535,6 +537,7 @@ const getQueueListAction = async (): Promise<void> => {
   );
 };
 
+// getDailyStatAction 按天数拉取每日统计，作为队列筛选项的数据来源。
 const getDailyStatAction = async (data: InspectorDailyStatIn): Promise<void> => {
   await getResponse<InspectorDailyStatListOut>(
     inspectorDailyStatListGet(data),
@@ -551,6 +554,7 @@ const getDailyStatAction = async (data: InspectorDailyStatIn): Promise<void> => 
   );
 };
 
+// getTaskListAction 按筛选条件分页拉取任务列表。
 const getTaskListAction = async (data: InspectorTaskListIn): Promise<void> => {
   await getResponse<InspectorTaskListOut>(
     inspectorTaskListGet(data),
@@ -567,6 +571,7 @@ const getTaskListAction = async (data: InspectorTaskListIn): Promise<void> => {
   );
 };
 
+// getTaskActions 按当前任务状态动态生成可用的行操作。
 const getTaskActions = (): ItemActions => {
   const actions: ItemActions = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -595,6 +600,7 @@ const getTaskActions = (): ItemActions => {
   return actions;
 };
 
+// deleteStateTaskAction 删除当前状态下的整批任务并刷新列表。
 const deleteStateTaskAction = async (): Promise<void> => {
   await getResponse<number>(
     inspectorStateTaskDelete({ queue: queue.value, state: taskState.value }),
@@ -622,6 +628,7 @@ const deleteStateTaskAction = async (): Promise<void> => {
   );
 };
 
+// deleteTaskAction 删除单条任务并刷新队列与任务列表。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const deleteTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
@@ -645,6 +652,7 @@ const deleteTaskAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
+// archiveStateTaskAction 归档当前状态下的整批任务并刷新列表。
 const archiveStateTaskAction = async (): Promise<void> => {
   await getResponse<number>(
     inspectorStateTaskArchive({ queue: queue.value, state: taskState.value }),
@@ -672,6 +680,7 @@ const archiveStateTaskAction = async (): Promise<void> => {
   );
 };
 
+// archiveTaskAction 归档单条任务并刷新队列与任务列表。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const archiveTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
@@ -695,6 +704,7 @@ const archiveTaskAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
+// runStateTaskAction 立即执行当前状态下的整批任务并刷新列表。
 const runStateTaskAction = async (): Promise<void> => {
   await getResponse<number>(
     inspectorStateTaskRun({ queue: queue.value, state: taskState.value }),
@@ -722,6 +732,7 @@ const runStateTaskAction = async (): Promise<void> => {
   );
 };
 
+// runTaskAction 立即执行单条任务并刷新队列与任务列表。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const runTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
@@ -745,6 +756,7 @@ const runTaskAction = async (item: Record<string, any>): Promise<void> => {
   );
 };
 
+// cancelPorcessingTaskAction 取消单条正在处理的任务并刷新列表。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const cancelPorcessingTaskAction = async (item: Record<string, any>): Promise<void> => {
   await getSimpleResponse(

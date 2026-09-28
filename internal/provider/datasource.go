@@ -1,10 +1,10 @@
 package provider
 
 import (
-	// third-party
+	// 第三方
 	"github.com/samber/do/v2"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/datasource"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -30,20 +30,16 @@ func newDatasourceWatcherProvider() do.Provider[*datasource.Watcher] {
 }
 
 // InjectDatasourceWatcher 注册数据源变更监听器 provider。
-// InjectDatasourceWatcher registers the datasource change watcher provider.
 func InjectDatasourceWatcher(i do.Injector) {
 	do.Provide(i, newDatasourceWatcherProvider())
 }
 
 // InvokeDatasourceWatcher 取得数据源变更监听器。
-// InvokeDatasourceWatcher resolves the datasource change watcher.
 func InvokeDatasourceWatcher(i do.Injector) (*datasource.Watcher, error) {
 	return do.Invoke[*datasource.Watcher](i)
 }
 
 // MustInvokeDatasourceWatcher panic 版本取得数据源变更监听器。
-// MustInvokeDatasourceWatcher is the panicking variant to resolve the datasource
-// change watcher.
 func MustInvokeDatasourceWatcher(i do.Injector) *datasource.Watcher {
 	return do.MustInvoke[*datasource.Watcher](i)
 }

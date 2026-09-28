@@ -8,6 +8,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
+// NetworkFrame 表示单个数据包展平后的网络协议栈记录列表。
 type NetworkFrame []*NetworkStack
 
 // NewNetworkFrame 将数据包的网络层堆栈展平为 NetworkStack 记录列表。

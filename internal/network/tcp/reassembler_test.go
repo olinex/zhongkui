@@ -162,6 +162,7 @@ func newTestReassemblerWithHandshakeWithoutBuffer(_ *testing.T, sessionID byte) 
 // fatalError 是用于测试非可重试错误的哨兵错误。
 var fatalError = stderrors.New("fatal extraction error")
 
+// TestReassemblerParse_RetryableError 验证 parse 循环对可重试与非可重试错误的处理策略。
 func TestReassemblerParse_RetryableError(t *testing.T) {
 	// 初始化 OTEL metrics：生产环境由 NewRouter 调用，测试需手动调用
 	InitMetrics()

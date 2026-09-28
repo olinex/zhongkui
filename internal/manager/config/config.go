@@ -21,8 +21,10 @@ import (
 // 所有 API 管理层的配置项均位于 "api" 前缀之下。
 // 例如：api.host、api.port、api.auth.secretKey 等。
 const (
-	Prefix          = "api"
+	Prefix = "api"
+	// CryptoKeyOffset 是派生子密钥（CryptoKey）时使用的偏移量。
 	CryptoKeyOffset = 9820
+	// CryptoKeyLength 是派生子密钥（CryptoKey）的字节长度（对应 AES-256）。
 	CryptoKeyLength = 32
 )
 
@@ -83,6 +85,8 @@ type AuthConfig struct {
 	AccessKeyCount uint `mapstructure:"accessKeyCount" default:"3" comment:"每个用户允许创建的访问密钥（AccessKey）最大数量"`
 }
 
+// ExtractCryptoKey 从密钥派生器派生出 API 管理层专属的子密钥，
+// 用于对敏感配置（如 JWT 密钥）进行加解密。
 func (a *AuthConfig) ExtractCryptoKey(kd *key.KeyDerivation) ([]byte, error) {
 	return kd.DeriveChildKey(CryptoKeyOffset, CryptoKeyLength)
 }
@@ -254,6 +258,7 @@ func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error
 	return config.ExtractConfig[Config](v, validate, Prefix)
 }
 
+// DescribeConfig 返回 API 管理层配置项的元描述列表。
 func DescribeConfig() config.ConfigDescriptions {
 	return config.DescribeConfig[Config](Prefix)
 }

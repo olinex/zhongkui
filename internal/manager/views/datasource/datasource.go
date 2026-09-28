@@ -1,19 +1,18 @@
 package datasource
 
 import (
-	// stdlib
+	// 标准库
 
 	"io"
-	"net/http"
 	"strconv"
 	"strings"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/datasource"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
@@ -254,7 +253,7 @@ func DatasourceCreate(c *gin.Context) {
 		return
 	}
 	if !isSupportedDatasourceType(in.Type) {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, nil).AbortWithGinH(c)
+		response.CreateBadBodyError(nil).AbortWithGinH(c)
 		return
 	}
 	pools := middlewares.GetSQLiteVTabPools(c)
@@ -589,10 +588,6 @@ func newDatasourceDetailOut(ds *core.Datasource) DatasourceDetailOut {
 // DatasourceTest 处理测试第三方数据源连接的请求。
 // 不落库、不注册 vtable，仅按类型建立连接并校验连通性；失败原因放在 body 的 Message
 // 字段返回（仍走 HTTP 200，不抛 5xx）。sqlite_file 无网络连接，恒返回失败。
-// DatasourceTest handles the datasource connection-test request: it connects and verifies
-// reachability by type without persisting or registering a vtable. On failure the reason is
-// returned in the body Message field (still over HTTP 200, no 5xx). sqlite_file has no
-// network connection and always fails.
 func DatasourceTest(c *gin.Context) {
 	var in DatasourceTestIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
@@ -612,14 +607,6 @@ func DatasourceTest(c *gin.Context) {
 // views.ReadMultipartFile 流式拿到上传的 .db 文件后一并传给 IntrospectSchema（其内部按
 // 类型分发，sqlite_file 分支做 PRAGMA 自省）；其余类型仍为 JSON 体，file 传 nil。
 // 失败原因放在 body 的 Message 字段返回（仍走 HTTP 200，不抛 5xx）。
-// DatasourceIntrospect handles the datasource schema-introspection request: it connects,
-// parses the target table structure and maps it to column definitions (name + type key)
-// without persisting or registering a vtable, for the frontend to show when creating a
-// datasource. The sqlite_file type goes through the multipart/form-data branch, reusing
-// views.ReadMultipartFile to stream the uploaded .db file and passing it to IntrospectSchema
-// (which dispatches by type and does PRAGMA introspection in its sqlite_file branch); other
-// types use a JSON body and pass nil as the file. On failure the reason is returned in the
-// body Message field (still over HTTP 200, no 5xx).
 func DatasourceIntrospect(c *gin.Context) {
 	var in DatasourceIntrospectIn
 	// sqlite_file 前端以 multipart/form-data 提交（含 .db 文件流），其余类型仍为 JSON 体。

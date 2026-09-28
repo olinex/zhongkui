@@ -1,3 +1,5 @@
+// Package tagengine 提供基于 Open Policy Agent（OPA）的标签识别引擎，以及基于标签聚合统计的
+// 标签事件识别能力。
 package tagengine
 
 import (

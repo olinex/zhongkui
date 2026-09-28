@@ -104,7 +104,7 @@ func (l *LayerStack) Scan(value any) error {
 // FrameInfo 表示数据包的帧信息
 // 包含时间戳和对应的网络层堆栈信息
 type FrameInfo struct {
-	Timestamp  time.Time  `json:"timestamp"`   // 数据包捕获时间戳
+	Timestamp  time.Time  `json:"timestamp"`  // 数据包捕获时间戳
 	LayerStack LayerStack `json:"layerStack"` // 网络层堆栈信息
 }
 
@@ -114,10 +114,10 @@ type BaseMeta struct {
 	// WARN：gorm 的 clickhouse driver 有着严重的 bug
 	// 在进行FindInBatches时， 若返回的数据数量超过 batchSize，会根据主键排序
 	// 若此时表没有主键， 会导致报错 primary key required，因此 clickhouse 表必须设置一个伪主键，且不能是联合主键
-	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"`
-	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`
-	Version   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"version"`
-	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"sessionId"`
+	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"` // 命名空间名称
+	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`              // 抓包实例标识
+	Version   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"version"`              // 数据版本
+	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"sessionId"`                              // 会话唯一标识
 }
 
 // RowMeta 行唯一标识元数据
@@ -129,10 +129,11 @@ type RowMeta struct {
 // TimestampMeta 表示时间元数据
 // 包含采集时间与入库时间，使用高精度时间格式存储
 type TimestampMeta struct {
-	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"`  // 采集时间：数据包被捕获的时刻
+	Timestamp time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"timestamp"` // 采集时间：数据包被捕获的时刻
 	CreatedAt time.Time `gorm:"type:DateTime64(6, 'UTC') CODEC(DoubleDelta, ZSTD(3))" json:"createdAt"` // 入库时间：数据写入数据库的时刻
 }
 
+// TraceMeta 表示链路追踪元数据，携带用于关联同一请求各环节的追踪 ID
 type TraceMeta struct {
 	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"traceId"`
 }
@@ -140,22 +141,23 @@ type TraceMeta struct {
 // DirectionMeta 表示数据包方向元数据
 // Cli2Srv 标记该数据包是否为客户端到服务端方向（true表示客户端到服务端，false表示服务端到客户端）
 type DirectionMeta struct {
-	Cli2Srv bool `gorm:"column:cli_2_srv;type:Bool" json:"cli2Srv"`
+	Cli2Srv bool `gorm:"column:cli_2_srv;type:Bool" json:"cli2Srv"` // 是否为客户端到服务端方向
 }
 
 // CaptureMeta 表示捕获元数据
 // 包含数据包捕获时的状态信息
 type CaptureMeta struct {
-	Truncated     bool   `gorm:"type:Bool" json:"truncated"`
-	CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"captureLength"`
+	Truncated     bool   `gorm:"type:Bool" json:"truncated"`                      // 数据包是否被截断
+	CaptureLength uint32 `gorm:"type:UInt32 CODEC(ZSTD(3))" json:"captureLength"` // 实际捕获长度（字节）
 }
 
 // PacketMeta 表示数据包元数据
 // 包含原始数据包的网络层堆栈信息
 type PacketMeta struct {
-	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layerStack"`
+	LayerStack LayerStack `gorm:"type:String CODEC(ZSTD(3))" json:"layerStack"` // 网络层堆栈信息
 }
 
+// TagsMeta 表示风险标签元数据，存储去重排序后的标签数组
 type TagsMeta struct {
 	// Tags 风险标签组合，存储去重排序后的标签数组
 	// ClickHouse 中使用 Array(String) 类型存储

@@ -1,3 +1,6 @@
+// Package serializer 提供可在数据库、JSON 与文本之间相互序列化的自定义类型
+// （时长、IP/MAC 地址、字节、加密文本、位置、日期/时间、存储容量等），
+// 供数据模型字段与前后端契约统一复用。
 package serializer
 
 import (

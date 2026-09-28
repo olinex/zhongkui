@@ -23,6 +23,7 @@ func (inputerModel) TagRecogInput() (map[string]any, error) {
 	return map[string]any{"custom": "doc"}, nil
 }
 
+// TestTypeKey 验证 TypeKey 对值/指针实例返回一致类型键，非法目标返回 ErrUnsupportedTarget。
 func TestTypeKey(t *testing.T) {
 	Convey("Test TypeKey", t, func() {
 		Convey("传值实例与指针实例应返回相同的类型键", func() {
@@ -50,6 +51,7 @@ func TestTypeKey(t *testing.T) {
 	})
 }
 
+// TestBuildInput 验证 BuildInput 生成规则输入文档且不暴露敏感字段明文。
 func TestBuildInput(t *testing.T) {
 	Convey("Test BuildInput", t, func() {
 		Convey("简单结构体应使用 json tag 作为 map 键", func() {

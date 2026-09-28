@@ -24,12 +24,12 @@ func TestIPv4Options_Basic(t *testing.T) {
 		Convey("Should serialize IPv4Options to JSON for database storage", func() {
 			options := IPv4Options{
 				{
-					OptionType:   1, // IPv4 NOP option
+					OptionType:   1, // IPv4 NOP 选项
 					OptionLength: 1,
 					OptionData:   []byte{},
 				},
 				{
-					OptionType:   0, // IPv4 EOL option
+					OptionType:   0, // IPv4 EOL 选项
 					OptionLength: 1,
 					OptionData:   []byte{},
 				},
@@ -44,8 +44,8 @@ func TestIPv4Options_Basic(t *testing.T) {
 			err = decoded.Scan(value)
 			So(err, ShouldBeNil)
 			So(len(decoded), ShouldEqual, 2)
-			So(decoded[0].OptionType, ShouldEqual, uint8(1)) // NOP
-			So(decoded[1].OptionType, ShouldEqual, uint8(0)) // EOL
+			So(decoded[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
+			So(decoded[1].OptionType, ShouldEqual, uint8(0)) // EOL 选项
 		})
 
 		Convey("Should handle nil value in Scan method", func() {
@@ -61,7 +61,7 @@ func TestIPv4Options_Basic(t *testing.T) {
 			err := options.Scan(jsonStr)
 			So(err, ShouldBeNil)
 			So(len(options), ShouldEqual, 1)
-			So(options[0].OptionType, ShouldEqual, uint8(1)) // NOP
+			So(options[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
 		})
 
 		Convey("Should return error for unsupported type in Scan method", func() {
@@ -74,7 +74,7 @@ func TestIPv4Options_Basic(t *testing.T) {
 		Convey("Should support JSON serialization and deserialization", func() {
 			original := IPv4Options{
 				{
-					OptionType:   68, // IPv4 Timestamp option
+					OptionType:   68, // IPv4 时间戳选项
 					OptionLength: 4,
 					OptionData:   []byte{0x01, 0x02, 0x03, 0x04},
 				},
@@ -89,16 +89,16 @@ func TestIPv4Options_Basic(t *testing.T) {
 			So(err, ShouldBeNil)
 
 			So(len(decoded), ShouldEqual, 1)
-			So(decoded[0].OptionType, ShouldEqual, uint8(68)) // Timestamp
+			So(decoded[0].OptionType, ShouldEqual, uint8(68)) // 时间戳选项
 			So(decoded[0].OptionLength, ShouldEqual, 4)
 			So(decoded[0].OptionData, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04})
 		})
 
 		Convey("Should handle nil slice with Value method", func() {
-			var options IPv4Options // nil slice
+			var options IPv4Options // nil 切片
 			value, err := options.Value()
 			So(err, ShouldBeNil)
-			// nil slice should return nil driver.Value for SQL NULL
+			// nil 切片对应 SQL NULL，应返回 nil driver.Value
 			So(value, ShouldBeNil)
 		})
 
@@ -233,7 +233,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4Dst:     serializer.IPv4Addr(dstIP),
 				IPv4Options: IPv4Options{
 					{
-						OptionType:   1, // IPv4 NOP option
+						OptionType:   1, // IPv4 NOP 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
@@ -247,7 +247,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 			err = json.Unmarshal(jsonData, &decoded)
 			So(err, ShouldBeNil)
 			So(len(decoded.IPv4Options), ShouldEqual, 1)
-			So(decoded.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP
+			So(decoded.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
 		})
 	})
 }
@@ -275,7 +275,7 @@ func TestNewIPv4Headers(t *testing.T) {
 				DstIP:      dstIP,
 				Options: []layers.IPv4Option{
 					{
-						OptionType:   1, // IPv4 NOP option
+						OptionType:   1, // IPv4 NOP 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
@@ -297,7 +297,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.SrcAddr().String(), ShouldEqual, "192.168.1.100")
 			So(headers.DstAddr().String(), ShouldEqual, "10.0.0.1")
 			So(len(headers.IPv4Options), ShouldEqual, 1)
-			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP
+			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1)) // NOP 选项
 			So(headers.IPv4Padding, ShouldEqual, "\x00\x00")
 		})
 
@@ -352,17 +352,17 @@ func TestNewIPv4Headers(t *testing.T) {
 				DstIP:    dstIP,
 				Options: []layers.IPv4Option{
 					{
-						OptionType:   1, // IPv4 NOP option
+						OptionType:   1, // IPv4 NOP 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
 					{
-						OptionType:   0, // IPv4 EOL option
+						OptionType:   0, // IPv4 EOL 选项
 						OptionLength: 1,
 						OptionData:   []byte{},
 					},
 					{
-						OptionType:   68, // IPv4 Timestamp option
+						OptionType:   68, // IPv4 时间戳选项
 						OptionLength: 4,
 						OptionData:   []byte{0x01, 0x02, 0x03, 0x04},
 					},
@@ -374,9 +374,9 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers, ShouldNotBeNil)
 			So(headers.IPv4IHL, ShouldEqual, 6)
 			So(len(headers.IPv4Options), ShouldEqual, 3)
-			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1))  // NOP
-			So(headers.IPv4Options[1].OptionType, ShouldEqual, uint8(0))  // EOL
-			So(headers.IPv4Options[2].OptionType, ShouldEqual, uint8(68)) // Timestamp
+			So(headers.IPv4Options[0].OptionType, ShouldEqual, uint8(1))  // NOP 选项
+			So(headers.IPv4Options[1].OptionType, ShouldEqual, uint8(0))  // EOL 选项
+			So(headers.IPv4Options[2].OptionType, ShouldEqual, uint8(68)) // 时间戳选项
 			So(headers.IPv4Options[2].OptionData, ShouldResemble, []byte{0x01, 0x02, 0x03, 0x04})
 		})
 	})

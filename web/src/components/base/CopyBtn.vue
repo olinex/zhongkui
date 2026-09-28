@@ -15,9 +15,8 @@ import { copyToClipboard } from "@/utils/clipboard";
 import type { PropType } from "vue";
 import type { Density, Variant } from "../@types/base";
 
-// color / density stay undefined so the theme layer owns the VBtn baseline
-// (density="compact"); an icon-only button is flat by definition, so `variant`
-// defaults to "text" instead of Vuetify's "elevated".
+// color / density 保持 undefined，由主题层统一 VBtn 基线（density="compact"）；
+// 纯图标按钮本身即扁平，故 variant 默认取 "text" 而非 Vuetify 的 "elevated"。
 defineProps({
   value: {
     type: String,

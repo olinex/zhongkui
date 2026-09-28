@@ -1,3 +1,5 @@
+// Package otel（本文件）负责按配置创建 Trace / Metric / Log 的 OTLP 或
+// 标准输出导出器。
 package otel
 
 import (
@@ -24,6 +26,7 @@ var (
 	errInvalidOTLPProtocol = errors.New("invalid OTLP protocol")
 )
 
+// NewTraceExporter 按配置创建链路导出器，支持标准输出与 OTLP（http/grpc）两种方式。
 func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 	switch Env.Provider {
 	case ProviderStdout:
@@ -44,6 +47,7 @@ func NewTraceExporter(ctx context.Context) (sdktrace.SpanExporter, error) {
 	}
 }
 
+// NewMeterExporter 按配置创建指标导出器，支持标准输出与 OTLP（http/grpc）两种方式。
 func NewMeterExporter(ctx context.Context) (sdkmetric.Exporter, error) {
 	switch Env.Provider {
 	case ProviderStdout:
@@ -64,6 +68,7 @@ func NewMeterExporter(ctx context.Context) (sdkmetric.Exporter, error) {
 	}
 }
 
+// NewLogExporter 按配置创建日志导出器，支持标准输出与 OTLP（http/grpc）两种方式。
 func NewLogExporter(ctx context.Context) (sdklog.Exporter, error) {
 	switch Env.Provider {
 	case ProviderStdout:

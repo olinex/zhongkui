@@ -1,10 +1,10 @@
 package enum
 
 import (
-	// stdlib
+	// 标准库
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -18,6 +18,7 @@ func assertPanicWith(fn func(), want string) {
 	fn()
 }
 
+// TestRegisterAndGet 测试枚举类的注册、按名查询、存在性判断与列表排序。
 func TestRegisterAndGet(t *testing.T) {
 	Convey("枚举类注册与查询", t, func() {
 		Reset(func() {
@@ -63,6 +64,7 @@ func TestRegisterAndGet(t *testing.T) {
 	})
 }
 
+// TestRegisterValidation 测试枚举类注册时的各类非法输入均触发 panic。
 func TestRegisterValidation(t *testing.T) {
 	Convey("枚举类注册校验", t, func() {
 		Reset(func() {
@@ -120,6 +122,7 @@ func TestRegisterValidation(t *testing.T) {
 	})
 }
 
+// TestTypeResolve 测试枚举条目的 label 键生成与按 value/key 解析。
 func TestTypeResolve(t *testing.T) {
 	Convey("枚举类解析", t, func() {
 		typ := &Type{
@@ -164,6 +167,7 @@ func TestTypeResolve(t *testing.T) {
 	})
 }
 
+// TestRegisterSource 测试惰性条目来源的注册、读取派生与注册冲突校验。
 func TestRegisterSource(t *testing.T) {
 	Convey("惰性条目来源注册", t, func() {
 		Reset(func() {

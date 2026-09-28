@@ -12,23 +12,30 @@ package huginn
 
 import "github.com/creasty/defaults"
 
-// third-party
+// 第三方
 
 // TCPFingerprint TCP 指纹识别结果（p0f 风格）。
 type TCPFingerprint struct {
-	OS        string  `json:"os"`
+	// OS 匹配到的操作系统名称，未命中时为空串
+	OS string `json:"os"`
+	// OSQuality 操作系统匹配质量分
 	OSQuality float64 `json:"os_quality"`
-	Sig       string  `json:"sig"`
+	// Sig 匹配所用观测值签名
+	Sig string `json:"sig"`
 	// MTU 未从客户端 SYN 提取到 MTU 时的兜底值（对应 FFI DEFAULT_MTU）
 	MTU uint16 `json:"mtu" default:"1500"`
 }
 
 // HTTPFingerprint Http 指纹识别结果。
 type HTTPFingerprint struct {
-	Browser  string  `json:"browser"`
-	Server   string  `json:"server"`
-	Language string  `json:"language"`
-	Quality  float64 `json:"quality"`
+	// Browser 匹配到的浏览器名称，未命中时为空串
+	Browser string `json:"browser"`
+	// Server 匹配到的服务端名称，未命中时为空串
+	Server string `json:"server"`
+	// Language 匹配到的语言标识
+	Language string `json:"language"`
+	// Quality 匹配质量分
+	Quality float64 `json:"quality"`
 }
 
 // matchTCP 在全局签名库中匹配 TCP 观测值，返回 OS 猜测串与质量分。

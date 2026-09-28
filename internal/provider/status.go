@@ -1,7 +1,7 @@
 package provider
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"crypto/tls"
 	"net"
@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/minio/minio-go/v7"
 	"github.com/samber/do/v2"
 	"github.com/spf13/viper"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
@@ -32,7 +32,6 @@ import (
 )
 
 // 各探测项依赖类别，作为 Spec.Category 的取值。
-// Dependency categories used as the Spec.Category value of each probe.
 const (
 	dependencyCategoryDatabase = "database"
 	dependencyCategoryRedis    = "redis"
@@ -57,19 +56,6 @@ const (
 //   - 配置缺失/未启用 → Configured=false。
 //
 // 探测自建客户端（db/redis/etcd/grpc）用完后显式 Close，避免连接/协程泄漏。
-//
-// NewDependencyRegistry builds the core-infrastructure probe registry. Every probe
-// constructs its own client from config and probes connectivity explicitly, depending on
-// no pre-existing global connection; the CLI (lightweight side injector) and the Web (full
-// injector) share this same function and probe set.
-//
-// It Invokes shared deps (viper / key-derivation / database / etcd logger) from the
-// injector, registers each status.Spec with a fixed Name/Category (probes only fill
-// Configured/Reachable/Err), and returns the *status.Registry for the caller to Run/Render.
-// Probe semantics (a probe never returns an error; it always reports via Status):
-// construction failure (config extraction / client build) → Configured=true, Reachable=false
-// with an English Err; successful reachability → Reachable=true, Err=""; missing or disabled
-// config → Configured=false. Self-built clients (db/redis/etcd/grpc) are explicitly closed.
 func NewDependencyRegistry(ctx context.Context, i do.Injector) (*status.Registry, error) {
 	viper, err := InvokeViper(i)
 	if err != nil {
@@ -103,8 +89,6 @@ func NewDependencyRegistry(ctx context.Context, i do.Injector) (*status.Registry
 
 // probeDatabase 依配置构造 GORM DB，并对底层 *sql.DB 执行 PingContext 探测，
 // 结束后关闭连接（避免泄漏）。
-// probeDatabase builds a GORM DB from config and pings the underlying *sql.DB via
-// PingContext, closing the connection afterwards to avoid leaks.
 func probeDatabase(v *viper.Viper, logger *logging.Logger, name string) status.Probe {
 	return func(ctx context.Context) status.Status {
 		if cfg, err := database.ExtractConfig(v, validator.Validate, name); err != nil {
@@ -124,8 +108,6 @@ func probeDatabase(v *viper.Viper, logger *logging.Logger, name string) status.P
 }
 
 // probeRedis 依配置构造 redis 客户端并 Ping，结束后关闭客户端（避免泄漏）。
-// probeRedis builds a redis client from config and pings it, closing the client
-// afterwards to avoid leaks.
 func probeRedis(v *viper.Viper, name string) status.Probe {
 	return func(ctx context.Context) status.Status {
 		if cfg, err := redis.ExtractConfig(v, validator.Validate, name); err != nil {
@@ -142,8 +124,6 @@ func probeRedis(v *viper.Viper, name string) status.Probe {
 }
 
 // probeEtcd 依配置构造 etcd 客户端，做一次短超时读（Get）判定连通，结束后关闭客户端。
-// probeEtcd builds an etcd client from config and performs a short-timeout Get to
-// determine reachability, closing the client afterwards.
 func probeEtcd(v *viper.Viper, logger *logging.Logger) status.Probe {
 	return func(ctx context.Context) status.Status {
 		if cfg, err := etcd.ExtractConfig(v, validator.Validate); err != nil {
@@ -153,7 +133,6 @@ func probeEtcd(v *viper.Viper, logger *logging.Logger) status.Probe {
 		} else {
 			defer client.Close()
 			// Get 命中不存在的键仍返回成功，仅用于验证连接与鉴权往返。
-			// A Get on a missing key still succeeds; it only exercises the round trip.
 			if _, err := client.Get(ctx, etcd.WithPrefix("status/")); err != nil {
 				return status.Status{Configured: true, Reachable: false, Err: "etcd get: " + err.Error()}
 			}
@@ -165,9 +144,6 @@ func probeEtcd(v *viper.Viper, logger *logging.Logger) status.Probe {
 // probeS3 依配置构造 S3 客户端（注入可关闭的自建 transport），做一次查桶（StatObject）
 // 判定连通。S3Client 本身无 Close 方法（minio 走 HTTP），故探测后关闭自建 transport 的
 // 空闲连接以释放资源。
-// probeS3 builds an S3 client (with its own closable transport) from config and performs a
-// bucket StatObject to determine reachability. S3Client has no Close method (minio is HTTP),
-// so the probe closes the self-built transport's idle connections afterwards.
 func probeS3(v *viper.Viper, kd *key.KeyDerivation) status.Probe {
 	return func(ctx context.Context) status.Status {
 		if cfg, err := s3.ExtractConfig(v, validator.Validate); err != nil {
@@ -181,8 +157,6 @@ func probeS3(v *viper.Viper, kd *key.KeyDerivation) status.Probe {
 				defer transport.CloseIdleConnections()
 				if _, err := client.StatObject(ctx, "zk-status-probe", minio.StatObjectOptions{}); err != nil {
 					// 对象不存在/桶不存在等 S3 语义错误同样证明服务已响应，视为可达。
-					// S3 semantic errors (NoSuchKey/NoSuchBucket) also prove the service
-					// responded, so they count as reachable.
 					if s3.IsNotExists(err) {
 						return status.Status{Configured: true, Reachable: true}
 					}
@@ -197,9 +171,6 @@ func probeS3(v *viper.Viper, kd *key.KeyDerivation) status.Probe {
 // probeSMTP 依 [smtp] 配置做 host:port 的 TCP/TLS(SMTPS) 连接握手。仅当 config.enabled
 // 为 true 才视为已配置；465 端口（隐式 TLS）用 tls.Dial，其余（587/25 STARTTLS）用
 // 普通 TCP 拨号。
-// probeSMTP performs a TCP/TLS(SMTPS) handshake to host:port per the [smtp] config. It is
-// "configured" only when config.enabled is true; port 465 (implicit TLS) uses tls.Dial,
-// while other ports (587/25 STARTTLS) use a plain TCP dial.
 func probeSMTP(v *viper.Viper) status.Probe {
 	return func(ctx context.Context) status.Status {
 		if cfg, err := mail.ExtractConfig(v, validator.Validate); err != nil {
@@ -235,13 +206,6 @@ func probeSMTP(v *viper.Viper) status.Probe {
 // /models，embedding 走一次最小向量化请求）。档位无可用绑定（含未启用/类型不符）→
 // Configured=false；配置读取或探活失败 → Configured=true、Reachable=false（英文原因）。
 // 探测结束后关闭自建连接，避免连接泄漏。
-// probeModel builds its own core-DB connection from config, reads the model endpoint config
-// of the given slot from the model registry (llm_models + llm_bindings) and lightly probes
-// that endpoint (see ai.TestModel: chat uses GET /models, embedding makes one minimal
-// embedding request). A slot without a usable binding (disabled or kind mismatch included)
-// yields Configured=false; a config-read or probe failure yields Configured=true with
-// Reachable=false (an English reason). The self-built connection is closed afterwards to
-// avoid leaks.
 func probeModel(v *viper.Viper, logger *logging.Logger, slot llm.Slot) status.Probe {
 	return func(ctx context.Context) status.Status {
 		if cfg, err := database.ExtractConfig(v, validator.Validate, base.CoreDbName); err != nil {

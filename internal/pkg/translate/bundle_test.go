@@ -115,10 +115,6 @@ func ensureTestEnumClasses() {
 // renderNotifyRaw 以目标语言渲染 notify 默认模板的“原始模板串”：注入与 notify 层
 // renderFuncs 一致的三个模板函数（T 直接翻译 i18n 键，TenumKey/TenumValue 按枚举
 // key/value 经 enum 注册表解析 label），供本包测试验证带函数调用的默认模板渲染路径。
-// renderNotifyRaw renders the raw string of a notify default template in a language by
-// injecting the three template functions that match notify.renderFuncs (T translates a
-// full i18n key directly; TenumKey/TenumValue resolve the enum label by key/value via the
-// enum registry), so package tests verify the function-call rendering path.
 func renderNotifyRaw(lang *base.Language, raw string, params map[string]any) string {
 	tmpl, err := template.New("render").Option("missingkey=zero").Funcs(template.FuncMap{
 		"T": func(key string) string {

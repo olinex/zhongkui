@@ -677,7 +677,7 @@ interface ConditionDraft {
   model: string;
   dimension: string;
   item: string;
-  /** window in minutes (converted to duration string on submit) */
+  /** 抑制窗口，单位为分钟（提交时转换为 duration 字符串） */
   window: number;
   threshold: number | null;
   expression: string;
@@ -911,7 +911,7 @@ const toConditionIn = (c: ConditionDraft): TagEventRuleConditionIn => ({
   description: c.description,
 });
 
-// ---- forms ----
+// ---- 表单 ----
 const createForm = useForm({ validationSchema: createTagEventRuleSchema });
 const updateForm = useForm({ validationSchema: updateTagEventRuleSchema });
 
@@ -935,7 +935,7 @@ const [editSuppressWindow, editSuppressWindowProps] = updateForm.defineField(
 );
 const [editEnabled, editEnabledProps] = updateForm.defineField("enabled", vuetifyCfg);
 
-// ---- tag pool (heuristic expansion source) ----
+// ---- 标签池（启发式扩展来源） ----
 const tagPool = ref<string[]>([]);
 const tagPoolLoading = ref(false);
 const tagPoolLoaded = ref(false);
@@ -1022,7 +1022,7 @@ const watchConditionExpression = (cond: ConditionDraft): void => {
   );
 };
 
-// ---- create dialog ----
+// ---- 创建对话框 ----
 const createConditions = ref<ConditionDraft[]>([]);
 
 const addCreateCondition = (): void => {
@@ -1097,7 +1097,7 @@ const createAction = createForm.handleSubmit(async (values) => {
   );
 });
 
-// ---- edit dialog ----
+// ---- 编辑对话框 ----
 let editRuleId = 0;
 const editConditions = ref<ConditionDraft[]>([]);
 
@@ -1218,7 +1218,7 @@ const itemUpdateAction = () => {
   })();
 };
 
-// ---- list actions ----
+// ---- 列表操作 ----
 // projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", ...visible];
 
@@ -1389,7 +1389,7 @@ const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 
-// ---- version list & rollback ----
+// ---- 版本列表与回滚 ----
 const versionDialog = ref(false);
 const versionItems = ref<TagEventRuleVersionOut[]>([]);
 const expandedVersion = ref<number | null>(null);

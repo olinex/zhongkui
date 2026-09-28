@@ -1,7 +1,7 @@
 /**
  * stylelint.config.js
  *
- * Stylelint configuration for CSS / SCSS / Vue SFC styles.
+ * Stylelint 配置：用于 CSS / SCSS / Vue SFC 样式。
  */
 export default {
   extends: ["stylelint-config-standard", "stylelint-config-recommended-vue"],

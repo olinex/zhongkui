@@ -351,9 +351,9 @@ func ExampleRegisterTranslation() {
 	fmt.Println("4. Handle any errors that occur")
 
 	// 输出:
-	// To use RegisterTranslation:
-	// 1. Create a translator for your language
-	// 2. Create an i18n bundle with validation messages
-	// 3. Call RegisterTranslation with the validator, translator, bundle, tag, and language code
-	// 4. Handle any errors that occur
+	// 使用 RegisterTranslation 的步骤：
+	// 1. 为你的语言创建翻译器
+	// 2. 创建包含校验消息的 i18n bundle
+	// 3. 用验证器、翻译器、bundle、标签与语言代码调用 RegisterTranslation
+	// 4. 处理可能出现的错误
 }

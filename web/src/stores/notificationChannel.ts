@@ -1,11 +1,11 @@
-// Utilities
+// 工具
 import { defineStore } from "pinia";
 
 import { getResponse } from "@/apis/base";
 import { notificationChannelTypesGet } from "@/apis/notification";
 import { EnumClass, enumOptionsOf } from "@/utils/enums";
 
-// Types
+// 类型
 import type {
   NotificationChannelTypeItem,
   NotificationChannelTypesOut,

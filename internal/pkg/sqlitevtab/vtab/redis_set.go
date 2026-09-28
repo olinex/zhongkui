@@ -2,34 +2,26 @@
 // redis_set 表把 Redis set 每个成员作为一行：key 列支持精确等值/模式扫描；成员以
 // SMEMBERS 读取并按 member 升序保证确定性。类型非 set 的键不产生行。连接经共享
 // RedisPool 在 Open 借出、取数后即时归还。
-//
-// This file provides the Redis set datasource. Each set member maps to a row: the
-// key column supports exact equality/pattern scan; members are read via SMEMBERS and
-// sorted ascending by member for determinism. Keys not of type set yield no row. A
-// connection is borrowed from the shared RedisPool on Open and released right after
-// fetching.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"sort"
 
-	// third-party
+	// 第三方
 	"github.com/redis/go-redis/v9"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // RedisSetDatasource 是基于 Redis set 结构的 vtable 数据源。
-// RedisSetDatasource is the vtable datasource over the Redis set structure.
 type RedisSetDatasource struct {
 	redisBase
 }
 
 // NewRedisSetDatasource 创建 redis_set 数据源。
-// NewRedisSetDatasource creates a redis_set datasource.
 func NewRedisSetDatasource(pool *RedisPool) *RedisSetDatasource {
 	return &RedisSetDatasource{
 		redisBase: redisBase{
@@ -48,8 +40,6 @@ func NewRedisSetDatasource(pool *RedisPool) *RedisSetDatasource {
 }
 
 // Open 实现 Datasource.Open：借出连接，按 key 解析计划读取 set 成员行并返回行游标。
-// Open implements Datasource.Open: it borrows a connection, reads set member rows per
-// the key plan and returns a row cursor.
 func (d *RedisSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	client, err := d.pool.Acquire(ctx)
 	if err != nil {
@@ -66,7 +56,6 @@ func (d *RedisSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Con
 }
 
 // fetch 根据计划收集 set 行（key, member），成员升序。
-// fetch collects set rows (key, member) per the plan, members ascending.
 func (d *RedisSetDatasource) fetch(ctx context.Context, client *redis.Client, plan redisKeyPlan) ([][]any, error) {
 	var rows [][]any
 	appendKey := func(key string) {

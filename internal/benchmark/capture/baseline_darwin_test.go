@@ -14,6 +14,7 @@ import (
 
 // === 常规基线 (darwin 上 platform = libpcap) ===
 
+// BenchmarkPlatformSmoke platform 常规基线冒烟（darwin 下 platform = libpcap）。
 func BenchmarkPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
 	runBaseline(b, "platform-smoke", LevelSmoke, func(cfg *reporter_v1.Config) (wire.Wire, error) {
@@ -21,6 +22,7 @@ func BenchmarkPlatformSmoke(b *testing.B) {
 	})
 }
 
+// BenchmarkPlatformSmallFlows platform 常规基线小流量。
 func BenchmarkPlatformSmallFlows(b *testing.B) {
 	logger := newBenchLogger()
 	runBaseline(b, "platform-smallflows", LevelSmallFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
@@ -28,6 +30,7 @@ func BenchmarkPlatformSmallFlows(b *testing.B) {
 	})
 }
 
+// BenchmarkPlatformBigFlows platform 常规基线大流量。
 func BenchmarkPlatformBigFlows(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping bigflows in short mode")
@@ -44,6 +47,7 @@ func newBenchLogger() *logging.Logger {
 
 // === 纯计数 (skip copy) 基线 ===
 
+// BenchmarkRawPlatformSmoke platform 纯计数（skip copy）基线冒烟。
 func BenchmarkRawPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-smoke", LevelSmoke, func(cfg *reporter_v1.Config) (wire.Wire, error) {
@@ -51,6 +55,7 @@ func BenchmarkRawPlatformSmoke(b *testing.B) {
 	})
 }
 
+// BenchmarkRawPlatformSmallFlows platform 纯计数（skip copy）基线小流量。
 func BenchmarkRawPlatformSmallFlows(b *testing.B) {
 	logger := newBenchLogger()
 	runRawBaseline(b, "raw-platform-smallflows", LevelSmallFlows, func(cfg *reporter_v1.Config) (wire.Wire, error) {
@@ -58,6 +63,7 @@ func BenchmarkRawPlatformSmallFlows(b *testing.B) {
 	})
 }
 
+// BenchmarkRawPlatformBigFlows platform 纯计数（skip copy）基线大流量。
 func BenchmarkRawPlatformBigFlows(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping bigflows in short mode")

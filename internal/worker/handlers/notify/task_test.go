@@ -1,7 +1,7 @@
 package notify
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"fmt"
@@ -10,11 +10,11 @@ import (
 	"sync"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/hibiken/asynq"
 	"github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/core"
 	notifybase "zhongkui.com/zhongkui/internal/notify"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
@@ -27,34 +27,27 @@ import (
 )
 
 // fakeETLTask 实现 etl.Task 接口的测试替身。
-// fakeETLTask is a test double implementing the etl.Task interface.
 type fakeETLTask struct {
 	typ     string
 	payload []byte
 }
 
 // 编译期断言：确保 fakeETLTask 实现了 etl.Task 接口。
-// Compile-time assertion that fakeETLTask implements etl.Task.
 var _ etl.Task = (*fakeETLTask)(nil)
 
 // Type 返回任务类型。
-// Type returns the task type.
 func (t *fakeETLTask) Type() string { return t.typ }
 
 // Payload 返回任务载荷。
-// Payload returns the task payload.
 func (t *fakeETLTask) Payload() []byte { return t.payload }
 
 // fakeTaskEnqueuer 记录被投递任务的测试替身，用于断言组任务扇出的逐目标直投任务。
-// fakeTaskEnqueuer is a test double recording enqueued tasks, used to assert the
-// per-target direct-send tasks fanned out by the group handler.
 type fakeTaskEnqueuer struct {
 	mu    sync.Mutex
 	tasks []*asynq.Task
 }
 
 // EnqueueContext 记录任务并返回 (nil, nil)。
-// EnqueueContext records the task and returns (nil, nil).
 func (f *fakeTaskEnqueuer) EnqueueContext(ctx context.Context, task *asynq.Task, opts ...asynq.Option) (*asynq.TaskInfo, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -63,7 +56,6 @@ func (f *fakeTaskEnqueuer) EnqueueContext(ctx context.Context, task *asynq.Task,
 }
 
 // tasks 返回按投递顺序排好的任务快照。
-// tasks returns a snapshot of the enqueued tasks in delivery order.
 func (f *fakeTaskEnqueuer) tasksSnapshot() []*asynq.Task {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -73,7 +65,6 @@ func (f *fakeTaskEnqueuer) tasksSnapshot() []*asynq.Task {
 }
 
 // TestNewSendGroupTask 测试通知组发送任务的编码。
-// TestNewSendGroupTask tests the encoding of the notification group-send task.
 func TestNewSendGroupTask(t *testing.T) {
 	convey.Convey("NewSendGroupTask 编码通知组发送任务", t, func() {
 		convey.Convey("合法输入编码成功且类型为 notify:send:group", func() {
@@ -126,7 +117,6 @@ func TestNewSendGroupTask(t *testing.T) {
 }
 
 // TestNewSendTargetTask 测试单目标直投任务的编码。
-// TestNewSendTargetTask tests the encoding of the direct single-target send task.
 func TestNewSendTargetTask(t *testing.T) {
 	convey.Convey("NewSendTargetTask 编码单目标直投任务", t, func() {
 		convey.Convey("合法输入编码成功、类型为 notify:send:target 且 TargetID 往返一致", func() {
@@ -176,7 +166,6 @@ func TestNewSendTargetTask(t *testing.T) {
 }
 
 // TestSendTargetHandler_Do 测试单目标直投处理器的载荷解析。
-// TestSendTargetHandler_Do tests the payload parsing of the direct-send handler.
 func TestSendTargetHandler_Do(t *testing.T) {
 	convey.Convey("SendTargetHandler 载荷解析", t, func() {
 		// 载荷非法路径不会触及 service/logger，可传 nil 直接验证错误分支
@@ -190,7 +179,6 @@ func TestSendTargetHandler_Do(t *testing.T) {
 }
 
 // TestSendGroupHandler_Do 测试通知组发送处理器的载荷解析。
-// TestSendGroupHandler_Do tests the payload parsing of the group-send handler.
 func TestSendGroupHandler_Do(t *testing.T) {
 	convey.Convey("SendGroupHandler 载荷解析", t, func() {
 		// 载荷非法路径不会触及 service/logger/client，可传 nil 直接验证错误分支
@@ -228,7 +216,6 @@ func initTaskTestKeyDerivation() {
 }
 
 // newServiceTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
-// newServiceTestDB creates a shared, pre-migrated PostgreSQL test DB (testdb.Core).
 func newServiceTestDB(t *testing.T) *database.DB {
 	t.Helper()
 	initTaskTestKeyDerivation()
@@ -236,7 +223,6 @@ func newServiceTestDB(t *testing.T) *database.DB {
 }
 
 // newTestService 创建测试用的通知服务实例。
-// newTestService creates a notification service for tests.
 func newTestService(db *database.DB) *notifybase.Service {
 	logger, _ := logging.NewDefaultLogger()
 	return notifybase.NewService(db, logger, message.NewPool())
@@ -244,17 +230,12 @@ func newTestService(db *database.DB) *notifybase.Service {
 
 // ensureTestNamespace 确保命名空间在测试库中存在（FirstOrCreate 幂等创建），
 // 以满足 notification_* 表上 namespace_name 的外键约束。
-// ensureTestNamespace makes sure the namespace row exists (idempotent FirstOrCreate)
-// to satisfy the namespace_name foreign keys on the notification_* tables.
 func ensureTestNamespace(db *database.DB, namespace string) {
 	db.FirstOrCreate(&core.Namespace{Name: namespace})
 }
 
 // seedWebhook 在指定命名空间下构造一个启用状态的 webhook 渠道、目标与默认通知组，
 // 并将目标加入该组；返回组与目标实体（含 ID）。
-// seedWebhook creates an enabled webhook channel, target and default group in the
-// given namespace, binding the target into the group; it returns the group and
-// target entities (with IDs).
 func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.NotificationGroup, *core.NotificationTarget) {
 	t.Helper()
 	ensureTestNamespace(db, namespace)
@@ -299,9 +280,6 @@ func seedWebhook(t *testing.T, db *database.DB, namespace, url string) (*core.No
 
 // seedWebhookTarget 在给定命名空间下新建一个启用 webhook 渠道与目标，并将目标加入指定
 // 通知组；渠道/目标名称以组 ID 与序号保证同命名空间内唯一。返回目标实体（含 ID）。
-// seedWebhookTarget creates an enabled webhook channel and target in the namespace and
-// binds the target into the given group; channel/target names are unique within the
-// namespace via the group ID and a sequence. It returns the target entity (with ID).
 func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, groupID uint, seq int) *core.NotificationTarget {
 	t.Helper()
 	ensureTestNamespace(db, namespace)
@@ -338,9 +316,6 @@ func seedWebhookTarget(t *testing.T, db *database.DB, namespace, url string, gro
 
 // testMessage 构造一个基于真实模板键 tag_event.alert 的结构化通知消息，
 // 使全链路发送经由 locales 模板渲染出具体文案（而非代码写死的标题与正文）。
-// testMessage builds a structured message pinned to the real tag_event.alert
-// template key so the full delivery flow renders concrete text via the locale
-// templates instead of hardcoded titles and content.
 func testMessage() message.Message {
 	return message.Message{
 		Template: notifybase.TemplateTagEventAlert,
@@ -350,8 +325,6 @@ func testMessage() message.Message {
 
 // TestSendGroupHandler_Full 测试 SendGroupHandler 经真实 service 将通知组扇出为逐目标
 // 直投任务的完整链路。
-// TestSendGroupHandler_Full tests the full fan-out chain of SendGroupHandler through a
-// real service, expanding a group into per-target direct-send tasks.
 func TestSendGroupHandler_Full(t *testing.T) {
 	convey.Convey("SendGroupHandler 完整扇出链路", t, func() {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -395,8 +368,6 @@ func TestSendGroupHandler_Full(t *testing.T) {
 
 // TestSendTargetHandler_Full 测试 SendTargetHandler 经真实 service 的完整直投投递链路：
 // 析取目标发送并写入发送记录。
-// TestSendTargetHandler_Full tests the full direct-delivery chain of SendTargetHandler
-// through a real service: resolving the target, delivering and writing a record.
 func TestSendTargetHandler_Full(t *testing.T) {
 	convey.Convey("SendTargetHandler 完整直投链路", t, func() {
 		reqs := 0

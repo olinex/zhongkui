@@ -19,7 +19,7 @@ func newBenchLogger() *logging.Logger {
 	return &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 }
 
-// === Platform 基线 (loopback) ===
+// === Platform 平台基线（环回）===
 
 func BenchmarkPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
@@ -59,7 +59,7 @@ func BenchmarkPlatformSlowSmallFlows(b *testing.B) {
 	}, 1*time.Millisecond)
 }
 
-// === XDP 基线 (veth pair) ===
+// === XDP 基线（veth 网卡对）===
 
 // runVethBaseline 使用 veth pair 进行基线测试。
 // XDP 需要网卡驱动支持 native 模式，loopback 不支持，因此使用 veth 虚拟网卡。
@@ -121,7 +121,7 @@ func runVethBaseline(b *testing.B, wireName string, level FlowLevel, newWire fun
 		}
 	}()
 
-	// warmup: 发送 5 个包，等待 XDP 捕获至少 3 个
+	// 预热：发送 5 个包，等待 XDP 捕获至少 3 个
 	for i := 0; i < 5; i++ {
 		if err := handle.WritePacketData(packets[0].Data); err != nil {
 			b.Skipf("warmup 发包失败: %v", err)
@@ -217,7 +217,7 @@ func BenchmarkXdpBigFlows(b *testing.B) {
 	runVethBaseline(b, "xdp-bigflows", LevelBigFlows, wire.NewXdpWire)
 }
 
-// === XDP 慢速基线 (veth pair) ===
+// === XDP 慢速基线（veth 网卡对）===
 
 func runVethSlowBaseline(b *testing.B, wireName string, level FlowLevel, newWire func(*reporter_v1.Config) (wire.Wire, error), interval time.Duration) {
 	if testing.Short() && level != LevelSmoke {
@@ -363,7 +363,7 @@ func BenchmarkXdpSlowSmallFlows(b *testing.B) {
 	runVethSlowBaseline(b, "xdp-slow-smallflows", LevelSmallFlows, wire.NewXdpWire, 1*time.Millisecond)
 }
 
-// === Afpacket 独立基线 (loopback) ===
+// === Afpacket 独立基线（环回）===
 
 func BenchmarkAfpacketSmoke(b *testing.B) {
 	runBaseline(b, "afpacket-smoke", LevelSmoke, wire.NewAfpacketWire)
@@ -388,7 +388,7 @@ func BenchmarkAfpacketSlowSmallFlows(b *testing.B) {
 	runSlowBaseline(b, "afpacket-slow-smallflows", LevelSmallFlows, wire.NewAfpacketWire, 1*time.Millisecond)
 }
 
-// === Linux 平台 raw capture（skip copy）基线 ===
+// === Linux 平台原始抓包（跳过拷贝）基线 ===
 
 func BenchmarkRawPlatformSmoke(b *testing.B) {
 	logger := newBenchLogger()
@@ -429,7 +429,7 @@ func BenchmarkRawAfpacketBigFlows(b *testing.B) {
 	runRawBaseline(b, "raw-afpacket-bigflows", LevelBigFlows, wire.NewAfpacketWire)
 }
 
-// === XDP raw capture（skip copy, veth pair）===
+// === XDP 原始抓包（跳过拷贝，veth 网卡对）===
 
 func runVethRawBaseline(b *testing.B, wireName string, level FlowLevel, newWire func(*reporter_v1.Config) (wire.Wire, error)) {
 	if testing.Short() && level != LevelSmoke {
@@ -484,7 +484,7 @@ func runVethRawBaseline(b *testing.B, wireName string, level FlowLevel, newWire 
 		}
 	}()
 
-	// warmup
+	// 预热
 	for i := 0; i < 5; i++ {
 		if err := handle.WritePacketData(packets[0].Data); err != nil {
 			b.Skipf("warmup 发包失败: %v", err)

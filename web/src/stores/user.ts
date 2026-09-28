@@ -12,15 +12,19 @@ import { localManager } from "./local";
 
 import type { Emitter } from "mitt";
 import type { UserTokenOut } from "@/apis/@types/user";
+// USER_REFRESH_EVENT 令牌刷新事件的名称，用于跨组件通知重新拉取令牌。
 const USER_REFRESH_EVENT: string = "base:jwt-token-refresh";
+// ZERO_DATETIME 零值时间，作为未加载令牌时的初始过期时间。
 const ZERO_DATETIME: DateTime = DateTime.fromSeconds(0);
 
+// JwtClaims JWT 载荷中本系统额外使用的声明字段。
 interface JwtClaims extends JwtPayload {
   unionID: string;
   nickleName: string;
   email: string;
 }
 
+// AuthorizationInfo 后端下发的授权信息：RBAC 模型、策略集合与可见命名空间。
 interface AuthorizationInfo {
   model: string;
   policies: string[][];
@@ -29,7 +33,7 @@ interface AuthorizationInfo {
 
 export const useUserStore = defineStore("user", {
   state: () => ({
-    // meta fields
+    // 元数据字段
     initial: false,
     issuer: "",
     subject: "",
@@ -37,7 +41,7 @@ export const useUserStore = defineStore("user", {
     expiresAt: ZERO_DATETIME,
     notBefore: ZERO_DATETIME,
     issuedAt: ZERO_DATETIME,
-    // custom fields
+    // 自定义字段
     exists: false,
     unionID: "",
     nickleName: "",
@@ -55,6 +59,7 @@ export const useUserStore = defineStore("user", {
     },
   },
   actions: {
+    // clear 重置会话状态为未登录的初始值。
     clear() {
       this.initial = false;
       this.issuer = "";
@@ -69,6 +74,7 @@ export const useUserStore = defineStore("user", {
       this.email = "";
       this.enforcer = null;
     },
+    // load 从本地令牌解析用户信息，并拉取授权信息构建 RBAC 执行器。
     async load() {
       const jwt = localManager.getJwt();
       if (!jwt) {
@@ -106,6 +112,7 @@ export const useUserStore = defineStore("user", {
         },
       );
     },
+    // refresh 刷新 JWT 令牌并重新加载用户信息；auto 为真时按过期时间自动续期。
     async refresh(auto: boolean) {
       const jwt = localManager.getJwt();
       if (!jwt) {
@@ -162,10 +169,12 @@ export const useUserStore = defineStore("user", {
         },
       );
     },
+    // signOut 清除本地令牌并重置会话状态。
     signOut() {
       localManager.removeJwt();
       this.clear();
     },
+    // init 初始化会话：已加载则直接返回，否则加载并按需安排自动续期。
     async init() {
       if (this.exists) {
         return;
@@ -177,17 +186,19 @@ export const useUserStore = defineStore("user", {
       const timeout = this.timeout;
       setTimeout(() => this.refresh(true), timeout);
     },
-    // mitt events are untyped in this project.
+    // 订阅令牌刷新事件并触发会话初始化；mitt 事件在本项目中未做类型定义。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshEventOn(mitter: Emitter<any>) {
       mitter.on(USER_REFRESH_EVENT, () => this.refresh(false));
       this.init();
     },
+    // 取消订阅令牌刷新事件并重置会话状态。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     refreshEventOff(mitter: Emitter<any>) {
       mitter.off(USER_REFRESH_EVENT);
       this.clear();
     },
+    // checkPermission 异步校验一组权限点是否全部通过。
     async checkPermission(...rvals: string[]): Promise<boolean> {
       if (this.enforcer === null) {
         return false;
@@ -195,17 +206,16 @@ export const useUserStore = defineStore("user", {
         return await this.enforcer?.enforce(rvals);
       }
     },
-    // can synchronously evaluates one permission point against the loaded RBAC
-    // snapshot. Argument order (sub, obj, act, nsp) mirrors the backend authorize
-    // middleware; the namespace is read from local storage, the same source the
-    // X-Namespace request header uses. Returns false while the authorization
-    // info has not been loaded yet.
+    // can 同步校验单个权限点：参数顺序 (sub, obj, act, nsp) 与后端鉴权中间件一致，
+    // 命名空间取自本地存储，与 X-Namespace 请求头同源；
+    // 授权信息尚未加载时返回 false。
     can(obj: string, act: string): boolean {
       if (this.enforcer === null) {
         return false;
       }
       return this.enforcer.enforceSync(this.unionID, obj, act, localManager.getNamespace());
     },
+    // getAvailableNamespaces 返回当前用户可见的命名空间列表。
     async getAvailableNamespaces(): Promise<string[]> {
       if (this.enforcer === null) {
         return [];

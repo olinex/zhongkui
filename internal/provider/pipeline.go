@@ -149,102 +149,127 @@ func newPipelineServerProvider(ctx context.Context) do.Provider[*pipeline.Server
 	}
 }
 
+// NewPipelineInspector 返回构建流水线巡检器的 provider 工厂。
 func NewPipelineInspector() do.Provider[*pipeline.Inspector] {
 	return newPipelineInspectorProvider()
 }
 
+// NewPipelineScheduler 返回构建流水线调度器的 provider 工厂。
 func NewPipelineScheduler(ctx context.Context) do.Provider[*etcd.Election] {
 	return newPipelineSchedulerProvider(ctx)
 }
 
+// NewPipelineTaskRegistry 返回构建流水线任务注册表的 provider 工厂。
 func NewPipelineTaskRegistry() do.Provider[etl.HandlerFuncs] {
 	return newPipelineTaskRegistryProvider()
 }
 
+// NewPipelineProcessorFactoriesRegistry 返回构建流水线处理器工厂注册表的 provider 工厂。
 func NewPipelineProcessorFactoriesRegistry() do.Provider[etl.ProcessorFactories] {
 	return newPipelineProcessorFactoriesRegistryProvider()
 }
 
+// NewPipelineClient 返回构建流水线客户端的 provider 工厂。
 func NewPipelineClient() do.Provider[*pipeline.Client] {
 	return newPipelineClientProvider()
 }
 
+// NewPipelineServer 返回构建流水线服务端的 provider 工厂。
 func NewPipelineServer(ctx context.Context) do.Provider[*pipeline.Server] {
 	return newPipelineServerProvider(ctx)
 }
 
+// InjectPipelineInspector 向依赖注入器注册流水线巡检器 provider。
 func InjectPipelineInspector(i do.Injector) {
 	do.Provide(i, NewPipelineInspector())
 }
 
+// InjectPipelineScheduler 向依赖注入器注册流水线调度器 provider。
 func InjectPipelineScheduler(ctx context.Context, i do.Injector) {
 	do.Provide(i, NewPipelineScheduler(ctx))
 }
 
+// InjectPipelineRegistry 向依赖注入器注册流水线任务注册表 provider。
 func InjectPipelineRegistry(i do.Injector) {
 	do.Provide(i, NewPipelineTaskRegistry())
 }
 
+// InjectPipelineProcessorFactoriesRegistry 向依赖注入器注册流水线处理器工厂注册表 provider。
 func InjectPipelineProcessorFactoriesRegistry(i do.Injector) {
 	do.Provide(i, NewPipelineProcessorFactoriesRegistry())
 }
 
+// InjectPipelineClient 向依赖注入器注册流水线客户端 provider（按需创建）。
 func InjectPipelineClient(i do.Injector) {
 	do.ProvideTransient(i, NewPipelineClient())
 }
 
+// InjectPipelineServer 向依赖注入器注册流水线服务端 provider。
 func InjectPipelineServer(ctx context.Context, i do.Injector) {
 	do.Provide(i, NewPipelineServer(ctx))
 }
 
+// InvokePipelineInspector 从依赖注入器解析流水线巡检器，错误交由调用方处理。
 func InvokePipelineInspector(i do.Injector) (*pipeline.Inspector, error) {
 	return do.Invoke[*pipeline.Inspector](i)
 }
 
+// InvokePipelineScheduler 从依赖注入器解析流水线调度器，错误交由调用方处理。
 func InvokePipelineScheduler(i do.Injector) (*etcd.Election, error) {
 	return do.Invoke[*etcd.Election](i)
 }
 
+// InvokePipelineTaskRegistry 从依赖注入器解析流水线任务注册表，错误交由调用方处理。
 func InvokePipelineTaskRegistry(i do.Injector) (etl.HandlerFuncs, error) {
 	return do.Invoke[etl.HandlerFuncs](i)
 }
 
+// InvokePipelineProcessorFactoriesRegistry 从依赖注入器解析流水线处理器工厂注册表，错误交由调用方处理。
 func InvokePipelineProcessorFactoriesRegistry(i do.Injector) (etl.ProcessorFactories, error) {
 	return do.Invoke[etl.ProcessorFactories](i)
 }
 
+// InvokePipelineClient 从依赖注入器解析流水线客户端，错误交由调用方处理。
 func InvokePipelineClient(i do.Injector) (*pipeline.Client, error) {
 	return do.Invoke[*pipeline.Client](i)
 }
 
+// MustInvokePipelineInspector 从依赖注入器解析流水线巡检器，失败时 panic。
 func MustInvokePipelineInspector(i do.Injector) *pipeline.Inspector {
 	return do.MustInvoke[*pipeline.Inspector](i)
 }
 
+// MustInvokePipelineScheduler 从依赖注入器解析流水线调度器，失败时 panic。
 func MustInvokePipelineScheduler(i do.Injector) *etcd.Election {
 	return do.MustInvoke[*etcd.Election](i)
 }
 
+// MustInvokePipelineTaskRegistry 从依赖注入器解析流水线任务注册表，失败时 panic。
 func MustInvokePipelineTaskRegistry(i do.Injector) etl.HandlerFuncs {
 	return do.MustInvoke[etl.HandlerFuncs](i)
 }
 
+// MustInvokePipelineProcessorFactoriesRegistry 从依赖注入器解析流水线处理器工厂注册表，失败时 panic。
 func MustInvokePipelineProcessorFactoriesRegistry(i do.Injector) etl.ProcessorFactories {
 	return do.MustInvoke[etl.ProcessorFactories](i)
 }
 
+// MustInvokePipelineClient 从依赖注入器解析流水线客户端，失败时 panic。
 func MustInvokePipelineClient(i do.Injector) *pipeline.Client {
 	return do.MustInvoke[*pipeline.Client](i)
 }
 
+// MustInvokePipelineServer 从依赖注入器解析流水线服务端，失败时 panic。
 func MustInvokePipelineServer(i do.Injector) *pipeline.Server {
 	return do.MustInvoke[*pipeline.Server](i)
 }
 
+// InvokePipelineServer 从依赖注入器解析流水线服务端，错误交由调用方处理。
 func InvokePipelineServer(i do.Injector) (*pipeline.Server, error) {
 	return do.Invoke[*pipeline.Server](i)
 }
 
+// DescribePipelineConfig 返回流水线的配置项描述。
 func DescribePipelineConfig() config.ConfigDescriptions {
 	return pipeline.DescribeConfig()
 }

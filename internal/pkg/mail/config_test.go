@@ -11,7 +11,6 @@ import (
 var testValidate = uv.New()
 
 // TestExtractConfig 测试从 Viper 提取 [smtp] 配置并映射到各字段。
-// TestExtractConfig verifies extracting the [smtp] config from Viper into fields.
 func TestExtractConfig(t *testing.T) {
 	v := viper.New()
 	v.Set("smtp.enabled", true)
@@ -48,9 +47,6 @@ func TestExtractConfig(t *testing.T) {
 // TestExtractConfig_DefaultsBackfill 测试未显式配置的字段由 default 标签回填默认值
 // （本包使用 config.ExtractConfig：仅当 [smtp] 段存在时才回填；完全缺省时因 nil sub 返回错误，
 // 与 internal/pkg/logging 的既有行为一致）。
-// TestExtractConfig_DefaultsBackfill verifies unspecified fields fall back to their
-// default-tag values. Note config.ExtractConfig backfills only when the [smtp] section
-// exists; a fully absent section returns an error on nil sub (same as internal/pkg/logging).
 func TestExtractConfig_DefaultsBackfill(t *testing.T) {
 	// 建立 [smtp] 段但不配置部分字段，验证默认值回填
 	v := viper.New()
@@ -75,7 +71,6 @@ func TestExtractConfig_DefaultsBackfill(t *testing.T) {
 }
 
 // TestDescribeConfig 测试 DescribeConfig 输出结构化描述且前缀为 smtp。
-// TestDescribeConfig verifies DescribeConfig returns descriptions under the "smtp" prefix.
 func TestDescribeConfig(t *testing.T) {
 	descs := DescribeConfig()
 	if len(descs) == 0 {

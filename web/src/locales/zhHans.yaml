@@ -17,6 +17,7 @@ navbar:
     self: AI
     knowledge: 知识库管理
     assistant: AI 助手
+    memory: 长期记忆
   notification:
     self: 通知管理
     channel: 通知渠道
@@ -281,6 +282,8 @@ model:
       format: 格式
       status: 状态
       sizeBytes: 原件大小
+      useCount: 命中次数
+      lastUsedAt: 最近命中
       hash: 内容摘要
       originalName: 原文件名
       parseError: 解析错误
@@ -292,12 +295,29 @@ model:
       title: 标题
       slot: 档位
       status: 状态
+      agentKind: Agent 类型
+      summary: 上下文摘要
       createdAt: 创建时间
       updatedAt: 更新时间
       query: 诉求
       docIDs: 知识库文档
       businessData: 业务数据
       regoRule: Rego 校验规则
+  agentMemory:
+    name: 长期记忆
+    field:
+      id: ID
+      agentKind: Agent 类型
+      kind: 记忆类别
+      title: 标题
+      content: 正文
+      status: 状态
+      useCount: 命中次数
+      lastUsedAt: 最近命中
+      createdAt: 创建时间
+      updatedAt: 更新时间
+      namespaceName: 命名空间
+      sessionId: 来源会话
   llmModel:
     name: LLM 模型
     field:
@@ -1249,6 +1269,7 @@ title:
   accessKey: 访问密钥
   aiKnowledge: 知识库管理
   aiAssistant: AI 助手
+  aiMemory: 长期记忆
   passwordReset: 重置密码
   userAdmin: 管理 - 用户
   groupAdmin: 管理 - 用户组
@@ -1326,10 +1347,15 @@ page:
     me: 我
     assistant: 助手
     hintSelectSession: 请先新建或选择一个会话开始对话
+    hintFirstQuery: 输入首个问题即可开始对话，会话主题将由系统自动生成
     confirmDeleteSession: 确定删除该会话及其全部消息吗？
     slotHint: 新建会话时该档位会成为会话缺省档位
     disabled: AI 能力未启用
     stageFailed: 阶段失败
+    compact: 压缩上下文并记忆
+    compactSummary: 上下文摘要
+    compactExtracted: 已提取记忆条数
+    compactWarnings: 提取警告
   aiKnowledge:
     dryRun: 检索试运行
     query: 查询问题

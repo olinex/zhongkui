@@ -14,6 +14,7 @@ func u32Eq(got *uint32, want uint32) bool {
 	return got != nil && *got == want
 }
 
+// TestSatAdd 验证饱和加法在溢出时钳制到最大值。
 func TestSatAdd(t *testing.T) {
 	if got := satAdd(10, 5); got != 15 {
 		t.Errorf("satAdd(10,5) = %d", got)
@@ -29,6 +30,7 @@ func TestSatAdd(t *testing.T) {
 	}
 }
 
+// TestPtrU32 验证 uint32 指针构造辅助函数。
 func TestPtrU32(t *testing.T) {
 	p := ptrU32(7)
 	if p == nil || *p != 7 {
@@ -36,6 +38,7 @@ func TestPtrU32(t *testing.T) {
 	}
 }
 
+// TestDistanceIPVersion 验证 IP 版本维度的距离与不兼容判定。
 func TestDistanceIPVersion(t *testing.T) {
 	if d := distanceIPVersion(ipV4, ipV4); !u32Eq(d, 0) {
 		t.Errorf("v4/v4 = %v", d)
@@ -51,6 +54,7 @@ func TestDistanceIPVersion(t *testing.T) {
 	}
 }
 
+// TestDistanceTTL 验证 TTL 维度各表示形式交叉比较的距离。
 func TestDistanceTTL(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -92,6 +96,7 @@ func TestDistanceTTL(t *testing.T) {
 	}
 }
 
+// TestDistanceOlen 验证 IP 选项长度维度的距离。
 func TestDistanceOlen(t *testing.T) {
 	sig := &tcpSignature{olen: 0}
 	if d := distanceOlen(0, sig); !u32Eq(d, 0) {
@@ -102,6 +107,7 @@ func TestDistanceOlen(t *testing.T) {
 	}
 }
 
+// TestDistanceMSS 验证 MSS 维度的通配、相等与不等距离。
 func TestDistanceMSS(t *testing.T) {
 	obs := &tcpObservation{mss: ptr16(1460)}
 	// 签名 MSS 通配
@@ -122,14 +128,15 @@ func TestDistanceMSS(t *testing.T) {
 	}
 }
 
+// TestDistanceWindowSize 验证窗口大小维度各表示形式的距离与不兼容判定。
 func TestDistanceWindowSize(t *testing.T) {
 	mss := ptr16(1460)
 	cases := []struct {
-		name          string
-		obs, sig      windowSize
-		obsMSS        *uint16
-		want          uint32
-		wantNil       bool
+		name     string
+		obs, sig windowSize
+		obsMSS   *uint16
+		want     uint32
+		wantNil  bool
 	}{
 		{"mss equal", windowSize{kind: winMss, value: 10}, windowSize{kind: winMss, value: 10}, nil, 0, false},
 		{"mss differ", windowSize{kind: winMss, value: 10}, windowSize{kind: winMss, value: 5}, nil, 2, false},
@@ -159,6 +166,7 @@ func TestDistanceWindowSize(t *testing.T) {
 	}
 }
 
+// TestDistanceWscale 验证窗口缩放因子维度的距离。
 func TestDistanceWscale(t *testing.T) {
 	obs := &tcpObservation{wscale: ptr8(6)}
 	if d := distanceWscale(obs, &tcpSignature{}); !u32Eq(d, 0) {
@@ -175,6 +183,7 @@ func TestDistanceWscale(t *testing.T) {
 	}
 }
 
+// TestDistanceOlayout 验证 TCP 选项布局维度的距离。
 func TestDistanceOlayout(t *testing.T) {
 	a := []tcpOption{{kind: optMss}, {kind: optSok}}
 	if d := distanceOlayout(a, a); !u32Eq(d, 0) {
@@ -191,6 +200,7 @@ func TestDistanceOlayout(t *testing.T) {
 	}
 }
 
+// TestDistanceQuirks 验证怪癖集合维度的距离。
 func TestDistanceQuirks(t *testing.T) {
 	a := []quirk{quirkDf, quirkNonZeroID}
 	if d := distanceQuirks(a, a); !u32Eq(d, 0) {
@@ -204,6 +214,7 @@ func TestDistanceQuirks(t *testing.T) {
 	}
 }
 
+// TestDistancePayloadSize 验证载荷分类维度的距离。
 func TestDistancePayloadSize(t *testing.T) {
 	if d := distancePayloadSize(payloadZero, payloadAny); !u32Eq(d, 0) {
 		t.Errorf("any = %v", d)
@@ -231,6 +242,7 @@ func linuxSignature() tcpSignature {
 	}
 }
 
+// TestCalculateTCPDistance 验证 TCP 观测与签名的综合距离及各不可匹配条件。
 func TestCalculateTCPDistance(t *testing.T) {
 	// 完全匹配 → 0
 	obs := &tcpObservation{
@@ -292,6 +304,7 @@ func TestCalculateTCPDistance(t *testing.T) {
 	}
 }
 
+// TestTcpDistanceToScore 验证 TCP 距离到相似分数的映射。
 func TestTcpDistanceToScore(t *testing.T) {
 	cases := []struct {
 		d    uint32
@@ -309,6 +322,7 @@ func TestTcpDistanceToScore(t *testing.T) {
 	}
 }
 
+// TestDistanceHTTPVersion 验证 HTTP 版本维度的距离与兼容判定。
 func TestDistanceHTTPVersion(t *testing.T) {
 	if d := distanceHTTPVersion(httpV11, httpV11); !u32Eq(d, 0) {
 		t.Errorf("equal = %v", d)
@@ -321,6 +335,7 @@ func TestDistanceHTTPVersion(t *testing.T) {
 	}
 }
 
+// TestHTTPHeaderValueEqual 验证 HTTP 头取值的相等判断（含 nil 场景）。
 func TestHTTPHeaderValueEqual(t *testing.T) {
 	if !httpHeaderValueEqual(nil, nil) {
 		t.Errorf("nil/nil should be equal")
@@ -336,6 +351,7 @@ func TestHTTPHeaderValueEqual(t *testing.T) {
 	}
 }
 
+// TestDistanceHeader 验证 HTTP 头顺序维度的错误计数与距离带。
 func TestDistanceHeader(t *testing.T) {
 	h := func(name string, opt bool, value *string) httpHeader {
 		return httpHeader{optional: opt, name: name, value: value}
@@ -409,6 +425,7 @@ func TestDistanceHeader(t *testing.T) {
 	}
 }
 
+// TestDistanceExpsw 验证期望子串维度的距离。
 func TestDistanceExpsw(t *testing.T) {
 	if d := distanceExpsw("nginx/1.18.0", "nginx/"); !u32Eq(d, 0) {
 		t.Errorf("contains = %v", d)
@@ -418,6 +435,7 @@ func TestDistanceExpsw(t *testing.T) {
 	}
 }
 
+// TestCalculateHTTPDistance 验证 HTTP 观测与签名的综合距离及各不可匹配条件。
 func TestCalculateHTTPDistance(t *testing.T) {
 	obs := &httpObservation{
 		version: httpV11,
@@ -459,6 +477,7 @@ func TestCalculateHTTPDistance(t *testing.T) {
 	}
 }
 
+// TestHTTPDistanceToScore 验证 HTTP 距离到相似分数的映射。
 func TestHTTPDistanceToScore(t *testing.T) {
 	cases := []struct {
 		d    uint32

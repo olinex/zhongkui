@@ -10,6 +10,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/otel"
 )
 
+// OtelMiddleware 返回为 API 管理层接入 OpenTelemetry 链路追踪的 Gin 中间件。
 func OtelMiddleware() gin.HandlerFunc {
 	return otel.GinMiddleware(config.Prefix)
 }
@@ -21,10 +22,12 @@ func startSpan(c *gin.Context, scope, name string) (context.Context, trace.Span)
 	return ctx, span
 }
 
+// StartMiddlewareSpan 在当前请求上下文中创建一个 gin-middleware 作用域的子 span。
 func StartMiddlewareSpan(c *gin.Context, name string) (context.Context, trace.Span) {
 	return startSpan(c, "gin-middleware", name)
 }
 
+// StartHandlerSpan 在当前请求上下文中创建一个 gin-handler 作用域的子 span。
 func StartHandlerSpan(c *gin.Context, name string) (context.Context, trace.Span) {
 	return startSpan(c, "gin-handler", name)
 }

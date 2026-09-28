@@ -52,6 +52,16 @@
                 {{ currentSessionTitle }}
               </span>
               <v-btn
+                icon="mdi-archive-arrow-down-outline"
+                variant="tonal"
+                size="small"
+                class="me-2"
+                :disabled="!activeSessionId || streaming"
+                :title="$t('page.aiAssistant.compact')"
+                :aria-label="$t('page.aiAssistant.compact')"
+                @click="compactSessionAction"
+              />
+              <v-btn
                 icon="mdi-pencil-outline"
                 variant="tonal"
                 size="small"
@@ -81,7 +91,13 @@
               >
                 <v-icon icon="mdi-robot-outline" size="56" class="text-on-surface-variant" />
                 <div class="text-caption text-on-surface-variant mt-3">
-                  {{ $t("page.aiAssistant.hintSelectSession") }}
+                  {{
+                    $t(
+                      draftMode
+                        ? "page.aiAssistant.hintFirstQuery"
+                        : "page.aiAssistant.hintSelectSession",
+                    )
+                  }}
                 </div>
               </div>
               <template v-else>
@@ -207,7 +223,9 @@
                   rows="2"
                   auto-grow
                   hide-details
-                  @keydown.enter.exact.prevent="!streaming && activeSessionId && sendQuery()"
+                  @keydown.enter.exact.prevent="
+                    !streaming && (activeSessionId || draftMode) && sendQuery()
+                  "
                 />
                 <v-select
                   v-model="docIDs"
@@ -247,7 +265,7 @@
                     <v-btn
                       v-else
                       color="primary"
-                      :disabled="!activeSessionId || !aiEnabled"
+                      :disabled="(!activeSessionId && !draftMode) || !aiEnabled"
                       @click="sendQuery"
                     >
                       {{ $t("page.aiAssistant.generate") }}
@@ -273,10 +291,15 @@
           <v-form>
             <v-row dense>
               <v-col cols="12">
-                <v-text-field
-                  v-model="createSessionTitle"
-                  v-bind="createSessionTitleProps"
-                  :label="$t('model.aiSession.field.title')"
+                <v-select
+                  v-model="createSessionAgentKind"
+                  v-bind="createSessionAgentKindProps"
+                  :items="agentKindOptions"
+                  :label="$t('model.aiSession.field.agentKind')"
+                  item-title="title"
+                  item-value="value"
+                  :hint="$t('page.aiAssistant.hintFirstQuery')"
+                  persistent-hint
                 />
               </v-col>
             </v-row>
@@ -322,6 +345,37 @@
           />
         </template>
       </confirm-dialog>
+
+      <!-- 压缩上下文结果对话框：展示刷新后的摘要、抽取的记忆条数与非致命告警 -->
+      <app-dialog
+        v-model="compactDialog"
+        :title="$t('page.aiAssistant.compact')"
+        icon="mdi-archive-arrow-down-outline"
+        size="md"
+        :loading="compactLoading"
+      >
+        <template v-if="compactResult">
+          <div class="zk-label-caps mb-1">{{ $t("page.aiAssistant.compactSummary") }}</div>
+          <div class="zk-code-preview compact-summary text-body-2">
+            {{ compactResult.summary || $t("model.__base.value.blank") }}
+          </div>
+          <div class="d-flex align-center mt-4">
+            <span class="text-body-2">{{ $t("page.aiAssistant.compactExtracted") }}</span>
+            <v-chip size="small" color="primary" class="ms-2">{{ compactResult.extracted }}</v-chip>
+          </div>
+          <v-alert v-if="compactResult.warnings.length > 0" type="warning" class="mt-4">
+            <div class="text-caption">{{ $t("page.aiAssistant.compactWarnings") }}</div>
+            <div v-for="(warning, idx) in compactResult.warnings" :key="idx">
+              {{ warning }}
+            </div>
+          </v-alert>
+        </template>
+        <template #footer>
+          <v-btn variant="text" @click="compactDialog = false">
+            {{ $t("action.close") }}
+          </v-btn>
+        </template>
+      </app-dialog>
     </template>
   </main-layout>
 </template>
@@ -343,6 +397,7 @@ import "vue-json-pretty/lib/styles.css";
 
 import {
   agentMessageListGet,
+  agentSessionCompact,
   agentSessionCreate,
   agentSessionDelete,
   agentSessionListGet,
@@ -353,6 +408,7 @@ import {
 } from "@/apis/ai";
 import type {
   AgentMessageItem,
+  AgentSessionCompactOut,
   AgentSessionItem,
   AgentStageEvent,
   AgentStatusOut,
@@ -365,7 +421,7 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { SearchOut } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import { copyToClipboard } from "@/utils/clipboard";
-import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
+import { EnumClass, enumLabelOf, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 
@@ -374,7 +430,13 @@ const router = useRouter();
 const route = useRoute();
 
 // ---- 会话表单校验 schema ----
-const sessionSchema = yup.object({
+// 新建会话仅选 Agent 类型：会话主题由后端据首条用户消息生成，故此处不再校验标题
+const createSessionSchema = yup.object({
+  // Agent 类型可选，取值集合与文案经后端枚举类 agentKind 下发
+  agentKind: yup.string().nonNullable().label("model.aiSession.field.agentKind"),
+});
+// 重命名会话仅校验标题
+const renameSessionSchema = yup.object({
   title: yup
     .string()
     .trim()
@@ -385,11 +447,11 @@ const sessionSchema = yup.object({
     .label("model.aiSession.field.title"),
 });
 
-const createSessionForm = useForm({ validationSchema: sessionSchema });
-const renameSessionForm = useForm({ validationSchema: sessionSchema });
+const createSessionForm = useForm({ validationSchema: createSessionSchema });
+const renameSessionForm = useForm({ validationSchema: renameSessionSchema });
 
-const [createSessionTitle, createSessionTitleProps] = createSessionForm.defineField(
-  "title",
+const [createSessionAgentKind, createSessionAgentKindProps] = createSessionForm.defineField(
+  "agentKind",
   vuetifyCfg,
 );
 const [renameSessionTitle, renameSessionTitleProps] = renameSessionForm.defineField(
@@ -405,6 +467,11 @@ const messagesRef = useTemplateRef("messagesRef");
 // ---- 会话与消息状态 ----
 const sessions = ref<AgentSessionItem[]>([]);
 const activeSessionId = ref<number | null>(null);
+// draftMode 待创建态：已选定 Agent 类型但尚未发出首条消息；会话在首条消息发出时才真正创建，
+// 主题由后端据该消息生成，故此时不存在任何会话 ID。
+const draftMode = ref(false);
+// draftAgentKind 待创建会话的 Agent 类型（待创建态下有效）
+const draftAgentKind = ref("");
 
 // AgentStageState 工具调用阶段视图模型：一次生成中每个「阶段 + 工具名」组合一行，
 // 后续同键状态事件仅更新该行（与检索试运行的阶段列表同构）
@@ -458,6 +525,9 @@ const slotOptions = computed(() => {
   }));
 });
 
+// agentKindOptions 会话 Agent 类型下拉选项：取值集合与文案一律来自后端枚举类 agentKind
+const agentKindOptions = computed(() => enumOptionsOf(EnumClass.agentKind));
+
 // loadStatus 拉取 AI 状态：驱动档位下拉选项与未启用原因展示
 const loadStatus = async (): Promise<void> => {
   await getResponse<AgentStatusOut>(
@@ -488,6 +558,10 @@ const asRecord = (v: unknown): Record<string, unknown> | undefined =>
     : undefined;
 
 const currentSessionTitle = computed((): string => {
+  // 待创建态尚无会话，标题位展示占位文案，首条消息发出后由后端生成的主题替换
+  if (draftMode.value) {
+    return i18n.global.t("page.aiAssistant.newSession");
+  }
   const s = sessions.value.find((x) => x.id === activeSessionId.value);
   return s?.title ?? "";
 });
@@ -623,6 +697,7 @@ const loadMessages = async (id: number): Promise<void> => {
 
 const selectSession = async (id: number): Promise<void> => {
   stopGenerating();
+  draftMode.value = false;
   activeSessionId.value = id;
   messages.value = [];
   // 会话记录了缺省档位时同步到档位下拉；未记录时保持当前选择
@@ -643,36 +718,23 @@ const scrollToBottom = (): void => {
 };
 
 // ---- 会话增删改 ----
-const openCreateSessionDialog = (): void => {
-  createSessionForm.resetField("title", { value: "" });
+const openCreateSessionDialog = async (): Promise<void> => {
+  // 预取 Agent 类型枚举后默认选中后端返回的首项（返回顺序即展示顺序），避免前端声明默认值字面量
+  await ensureEnum(EnumClass.agentKind);
+  createSessionForm.resetField("agentKind", {
+    value: enumOptionsOf(EnumClass.agentKind)[0]?.value ?? "",
+  });
   createSessionDialogRef.value?.open({});
 };
 
-const createSessionAction = createSessionForm.handleSubmit(async (values) => {
-  await getResponse<AgentSessionItem>(
-    agentSessionCreate({
-      // 会话标题为单行文本，提交前去除首尾空白
-      title: (values.title as string).trim(),
-      // 会话缺省档位随当前档位下拉传入，作为后续生成的回退档位
-      slot: slot.value || undefined,
-    }),
-    async (rsp) => {
-      sessions.value = [rsp.data, ...sessions.value];
-      await selectSession(rsp.data.id);
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
+// createSessionAction 确认新建：仅记录所选 Agent 类型并进入待创建态，会话在首条消息发出时才创建
+// （主题由后端据该消息生成），故此处不调用创建接口。
+const createSessionAction = createSessionForm.handleSubmit((values) => {
+  stopGenerating();
+  draftAgentKind.value = (values.agentKind as string) || "";
+  draftMode.value = true;
+  activeSessionId.value = null;
+  messages.value = [];
 });
 
 const openRenameSessionDialog = (): void => {
@@ -740,6 +802,39 @@ const deleteSessionAction = async (): Promise<void> => {
   );
 };
 
+// ---- 压缩上下文并记忆 ----
+// 压缩当前会话：把未摘要消息折叠进滚动摘要并按开关抽取长期记忆，
+// 结果（刷新后的摘要 / 抽取条数 / 非致命告警）在结果对话框中展示
+const compactDialog = ref(false);
+const compactLoading = ref(false);
+const compactResult = ref<AgentSessionCompactOut | null>(null);
+
+const compactSessionAction = async (): Promise<void> => {
+  if (activeSessionId.value === null) {
+    return;
+  }
+  compactResult.value = null;
+  compactDialog.value = true;
+  compactLoading.value = true;
+  await getResponse<AgentSessionCompactOut>(
+    agentSessionCompact(activeSessionId.value),
+    async (rsp) => {
+      compactResult.value = rsp.data;
+      // 摘要刷新后会话列表的摘要字段同步更新
+      await loadSessions();
+    },
+    async (rsp) => {
+      compactDialog.value = false;
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+  compactLoading.value = false;
+};
+
 // ---- 知识库文档选项（检索限定下拉）----
 
 const docOptions = ref<{ title: string; value: number }[]>([]);
@@ -767,35 +862,13 @@ const regoRule = ref("");
 const streaming = ref(false);
 let abortStream: (() => void) | null = null;
 
-// sendQuery 发起一次流式问答：先校验输入，再推送用户消息与流式占位消息，
-// SSE 增量经 onDelta 累积，done 事件回填内容/引用/草稿与校验结果。
-const sendQuery = async (): Promise<void> => {
-  if (streaming.value || activeSessionId.value === null) {
-    return;
-  }
-  const q = query.value.trim();
-  if (!q) {
-    appStore.notify({
-      text: i18n.global.t("page.aiAssistant.emptyQuery"),
-      timeout: 3000,
-      color: "error",
-    });
-    return;
-  }
-  let parsedBusiness: Record<string, unknown> | undefined;
-  if (businessData.value.trim()) {
-    try {
-      parsedBusiness = JSON.parse(businessData.value) as Record<string, unknown>;
-    } catch {
-      appStore.notify({
-        text: i18n.global.t("page.aiAssistant.invalidJson"),
-        timeout: 3000,
-        color: "error",
-      });
-      return;
-    }
-  }
-  const sessionID = activeSessionId.value;
+// startStream 推送用户消息与流式占位消息并发起流式生成：SSE 增量经 onDelta 累积，
+// done 事件回填内容/引用/草稿与校验结果（会话此时已存在）。
+const startStream = (
+  sessionID: number,
+  q: string,
+  parsedBusiness?: Record<string, unknown>,
+): void => {
   const assistantKey = nextKey();
   const hasRule = regoRule.value.trim().length > 0;
   messages.value.push({ key: nextKey(), role: "user", content: q });
@@ -864,6 +937,72 @@ const sendQuery = async (): Promise<void> => {
   );
 };
 
+// createSessionForQuery 待创建态下据首条用户问题创建会话：主题由后端经 LLM 生成并随响应回传，
+// 成功后将会话置顶选中并立即发起本次流式生成；失败则中止本次发送（不推送任何气泡）。
+const createSessionForQuery = async (
+  firstQuery: string,
+  parsedBusiness?: Record<string, unknown>,
+): Promise<void> => {
+  await getResponse<AgentSessionItem>(
+    agentSessionCreate({
+      // 首个用户问题：后端据此经 LLM 生成会话主题（失败时按其截断兜底）
+      query: firstQuery,
+      // 会话缺省档位随当前档位下拉传入，作为后续生成的回退档位
+      slot: slot.value || undefined,
+      // 会话所属 Agent 类型（缺省由后端取 knowledge）
+      agentKind: draftAgentKind.value || undefined,
+    }),
+    async (rsp) => {
+      sessions.value = [rsp.data, ...sessions.value];
+      activeSessionId.value = rsp.data.id;
+      draftMode.value = false;
+      startStream(rsp.data.id, firstQuery, parsedBusiness);
+    },
+    async (rsp) => {
+      appStore.notify({
+        text: rsp.summary,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  );
+};
+
+// sendQuery 发起一次流式问答：先校验输入，待创建态下先创建会话，再推送用户消息与流式占位消息。
+const sendQuery = async (): Promise<void> => {
+  if (streaming.value || (activeSessionId.value === null && !draftMode.value)) {
+    return;
+  }
+  const q = query.value.trim();
+  if (!q) {
+    appStore.notify({
+      text: i18n.global.t("page.aiAssistant.emptyQuery"),
+      timeout: 3000,
+      color: "error",
+    });
+    return;
+  }
+  let parsedBusiness: Record<string, unknown> | undefined;
+  if (businessData.value.trim()) {
+    try {
+      parsedBusiness = JSON.parse(businessData.value) as Record<string, unknown>;
+    } catch {
+      appStore.notify({
+        text: i18n.global.t("page.aiAssistant.invalidJson"),
+        timeout: 3000,
+        color: "error",
+      });
+      return;
+    }
+  }
+  // 待创建态：先据首个问题创建会话（主题由后端生成并回传），创建成功后才发起流式生成
+  if (activeSessionId.value === null) {
+    await createSessionForQuery(q, parsedBusiness);
+    return;
+  }
+  startStream(activeSessionId.value, q, parsedBusiness);
+};
+
 const stopGenerating = (): void => {
   if (abortStream) {
     abortStream();
@@ -888,6 +1027,8 @@ onMounted(() => {
   void ensureEnum(EnumClass.llmSlot);
   // 工具调用阶段名经统一枚举注册表渲染 label（与检索试运行共用 evalStage）
   void ensureEnum(EnumClass.evalStage);
+  // 创建会话的 Agent 类型下拉经统一枚举注册表渲染 label
+  void ensureEnum(EnumClass.agentKind);
   void loadStatus();
   void loadSessions();
   void loadDocOptions();
@@ -953,5 +1094,12 @@ onUnmounted(() => {
   max-height: calc(var(--zk-editor-min-height) * 1.5);
   overflow: auto;
   padding: var(--zk-space-2) var(--zk-space-3);
+}
+
+/* 压缩摘要正文：保留换行与空格（摘要为模型输出纯文本） */
+.compact-summary {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
 }
 </style>

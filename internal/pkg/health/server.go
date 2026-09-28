@@ -20,8 +20,6 @@ import (
 )
 
 // Snapshot 服务运行状态的瞬时快照，供 etcd 上报与测试断言使用。
-// Snapshot is a momentary snapshot of the service running state, used by the etcd
-// reporter and by tests.
 type Snapshot struct {
 	ServiceName string    // 服务名 / service name
 	InstanceID  string    // 实例 ID / instance identifier
@@ -38,11 +36,6 @@ type Snapshot struct {
 // 暴露 /healthz /readyz /startupz 三个 k8s 语义探针端点；就绪信号复用 *status.Registry；
 // 可选地经 etcd 发布自身运行状态到服务目录。其内存模型参照 manager.RunHttpService
 // （goroutine + errCh + ctx 取消优雅关闭）。
-//
-// Server is the project-wide unified health probe HTTP service exposing the k8s-semantics
-// endpoints /healthz /readyz /startupz. Readiness reuses *status.Registry; it optionally
-// publishes its running state into the etcd service directory. Its memory model mirrors
-// manager.RunHttpService (goroutine + errCh + graceful shutdown on ctx cancellation).
 type Server struct {
 	cfg *Config
 	reg *status.Registry
@@ -66,8 +59,6 @@ type Server struct {
 
 // NewServer 创建一个健康探针服务。
 // reg 为就绪探测注册表；etcdClient 可空（为空则跳过 etcd 服务状态上报）。
-// NewServer creates a health probe server. reg is the readiness probe registry;
-// etcdClient may be nil to skip etcd service-state reporting.
 func NewServer(cfg *Config, reg *status.Registry, etcdClient *etcd.EtcdClient) *Server {
 	reg.SetPerProbeTimeout(cfg.ReadyTimeout)
 	host, _ := os.Hostname()
@@ -98,10 +89,6 @@ func (s *Server) buildMux() http.Handler {
 // Start 启动健康探针服务并阻塞运行，直到 ctx 取消或服务出错返回。
 // serviceName 用于 etcd 服务目录键与日志标识。启用 etcd 上报时同时启动注册循环，
 // 并在退出时吊销租赁。
-//
-// Start launches the health probe service and blocks until ctx is cancelled or the
-// service errors. serviceName is used for the etcd directory key and logging. When
-// etcd reporting is enabled a registration loop is started and its lease revoked on exit.
 func (s *Server) Start(ctx context.Context, logger *logging.Logger, serviceName string) error {
 	if !s.cfg.Enabled {
 		<-ctx.Done()

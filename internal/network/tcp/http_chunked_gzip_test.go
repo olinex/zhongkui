@@ -8,9 +8,9 @@ import (
 )
 
 func TestHttpChunkedGzipReassembly(t *testing.T) {
-	// NOTE: This pcap uses Transfer-Encoding: chunked + Content-Encoding: gzip.
-	// The resp.Write() round-trip in fixture generation may produce different body bytes
-	// than the original wire format, so we only verify the pipeline runs without error.
+	// 注意：该 pcap 使用 Transfer-Encoding: chunked + Content-Encoding: gzip。
+	// fixture 生成时 resp.Write() 往返可能产生与原始线上格式不同的 body 字节，
+	// 因此这里仅验证流水线可无错运行。
 	Convey("Test http_chunked_gzip reassembly vs tshark", t, func() {
 		Convey("Should process pcap without error", func(c C) {
 			err := runRouter("testdata/http_chunked_gzip.pcap")

@@ -1,3 +1,5 @@
+// Package migrate（本文件）负责临时数据库的创建、连接与清理，用于迁移
+// 演练、结构校验等需要隔离环境的场景。
 package migrate
 
 import (
@@ -39,6 +41,7 @@ var (
 	}
 )
 
+// TempDB 表示一个已创建的临时数据库及其连接信息。
 type TempDB struct {
 	cfg     *Config
 	db      *sql.DB
@@ -102,6 +105,7 @@ func dialectFor(driver string) (dbDialect, error) {
 	}
 }
 
+// CreateTempDB 按配置创建临时数据库并返回其连接句柄。
 func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error) {
 	suffix, err := crypto.GenerateRandomString(8)
 	if err != nil {
@@ -157,6 +161,7 @@ func createTempDB(ctx context.Context, cfg *Config, suffix string, d dbDialect) 
 	}, nil
 }
 
+// Close 关闭临时数据库连接，并在未设置保留时删除该临时数据库。
 func (t *TempDB) Close(ctx context.Context) error {
 	if t.db != nil {
 		t.db.Close()

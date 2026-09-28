@@ -1,6 +1,8 @@
 //go:build profile
 // +build profile
 
+// Package test 提供测试与基准测试的通用辅助设施：阶段耗时追踪（StageTracer）
+// 与基准运行、性能剖析工具。
 package test
 
 import (
@@ -14,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
+// Tracer 全局阶段耗时追踪器实例，供各包在热点路径埋点。
 var Tracer = NewStageTracer()
 
 type stageRecord struct {
@@ -29,6 +32,7 @@ type stackEntry struct {
 	start time.Time
 }
 
+// StageTracer 阶段耗时追踪器：以 Begin/End 配对记录各阶段的调用次数与耗时分布。
 type StageTracer struct {
 	mu      sync.Mutex
 	records map[string]*stageRecord
@@ -36,6 +40,7 @@ type StageTracer struct {
 	written bool
 }
 
+// NewStageTracer 创建一个 StageTracer 实例。
 func NewStageTracer() *StageTracer {
 	return &StageTracer{
 		records: make(map[string]*stageRecord, 64),
@@ -43,12 +48,14 @@ func NewStageTracer() *StageTracer {
 	}
 }
 
+// Begin 开始一个命名阶段的计时，支持嵌套调用。
 func (t *StageTracer) Begin(name string) {
 	t.mu.Lock()
 	t.stack = append(t.stack, stackEntry{name: name, start: time.Now()})
 	t.mu.Unlock()
 }
 
+// End 结束最近一次 Begin 开启的阶段并累计其耗时。
 func (t *StageTracer) End() {
 	t.mu.Lock()
 	if len(t.stack) == 0 {
@@ -76,6 +83,7 @@ func (t *StageTracer) End() {
 	t.mu.Unlock()
 }
 
+// Report 汇总各阶段的调用次数与耗时并输出统计报告。
 func (t *StageTracer) Report() {
 	t.mu.Lock()
 	records := make([]*stageRecord, 0, len(t.records))

@@ -1,31 +1,22 @@
 // Package vtab 提供 sqlitevtab 标准之上可直接复用的数据源实现。
 // StaticDatasource 是内存行集的参考数据源实现，演示 Datasource 契约与下推
 // 约束匹配语义，同时可作为测试基准；接入方可参考其模式实现自有数据源。
-//
-// Package vtab provides ready-to-use datasource implementations on top of the
-// sqlitevtab standard. StaticDatasource is a reference datasource implementation
-// backed by an in-memory row set, demonstrating the Datasource contract and the
-// pushdown constraint matching semantics; it also serves as a test baseline.
-// Consumers may model their own datasources on it.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"bytes"
 	"context"
 	"io"
 	"regexp"
 	"strings"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // StaticDatasource 是内存行集的参考数据源实现，演示 Datasource 契约与下推
 // 约束匹配语义，同时可作为测试基准。
-// StaticDatasource is a reference datasource implementation backed by an
-// in-memory row set, demonstrating the Datasource contract and the pushdown
-// constraint matching semantics; it also serves as a test baseline.
 type StaticDatasource struct {
 	schema sqlitevtab.Schema
 	data   [][]any
@@ -33,15 +24,11 @@ type StaticDatasource struct {
 
 // NewStaticDatasource 创建静态数据源。data 每行长度应与 schema.Columns 对齐；
 // 越界行值按 nil 处理。
-// NewStaticDatasource creates a static datasource. Each row of data should be
-// aligned with schema.Columns; out-of-range row values are treated as nil.
 func NewStaticDatasource(schema sqlitevtab.Schema, data [][]any) *StaticDatasource {
 	return &StaticDatasource{schema: schema, data: data}
 }
 
 // Open 实现 Datasource.Open：返回逐行匹配全部下推约束的行游标。
-// Open implements Datasource.Open: returns a row cursor that matches every
-// pushdown constraint row by row.
 func (d *StaticDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	rules := make([]staticRule, 0, len(pushdown))
 	for _, cst := range pushdown {
@@ -66,7 +53,6 @@ func (d *StaticDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Const
 }
 
 // staticRows 是 StaticDatasource 的行游标。
-// staticRows is the row cursor of StaticDatasource.
 type staticRows struct {
 	data  [][]any
 	rules []staticRule
@@ -74,8 +60,6 @@ type staticRows struct {
 }
 
 // Next 返回下一行命中行（行值的副本），迭代结束返回 io.EOF。
-// Next returns the next matching row (a copy of the row values), or io.EOF
-// when iteration is done.
 func (r *staticRows) Next() ([]any, error) {
 	for r.idx < len(r.data) {
 		row := r.data[r.idx]
@@ -88,7 +72,6 @@ func (r *staticRows) Next() ([]any, error) {
 }
 
 // Close 释放游标引用（幂等）。
-// Close drops the cursor references (idempotent).
 func (r *staticRows) Close() error {
 	r.data = nil
 	r.rules = nil
@@ -96,7 +79,6 @@ func (r *staticRows) Close() error {
 }
 
 // matches 逐条应用全部下推约束。
-// matches applies every pushdown constraint in turn.
 func (r *staticRows) matches(row []any) bool {
 	for _, rule := range r.rules {
 		if !rule.matches(row) {
@@ -107,7 +89,6 @@ func (r *staticRows) matches(row []any) bool {
 }
 
 // staticRule 是一条约束及其（可选）预编译正则。
-// staticRule is one constraint with its optional precompiled regexp.
 type staticRule struct {
 	cst sqlitevtab.Constraint
 	re  *regexp.Regexp
@@ -116,9 +97,6 @@ type staticRule struct {
 // matches 判断一行是否满足该约束。对不匹配类型的数据（如 String 列收到
 // 数值绑定）按不匹配处理（返回 false），最终正确性由 sqlite 侧 Omit=false
 // 复查兜底。
-// matches reports whether a row satisfies the constraint. Type-mismatched
-// data (e.g. a numeric bind on a String column) is treated as not matching
-// (false); final correctness is backstopped by sqlite's Omit=false re-check.
 func (r *staticRule) matches(row []any) bool {
 	value := rowValue(row, r.cst.Column)
 	switch r.cst.Op {
@@ -162,7 +140,6 @@ func (r *staticRule) matches(row []any) bool {
 }
 
 // rowValue 返回一行中指定列的值；越界按 nil 处理。
-// rowValue returns the value of a column in a row; out-of-range means nil.
 func rowValue(row []any, col int) any {
 	if col < 0 || col >= len(row) {
 		return nil
@@ -171,7 +148,6 @@ func rowValue(row []any, col int) any {
 }
 
 // textPattern 将值规整为字符串；支持 string 与 []byte。
-// textPattern normalizes a value to a string; string and []byte are accepted.
 func textPattern(v any) (string, bool) {
 	switch s := v.(type) {
 	case string:
@@ -186,9 +162,6 @@ func textPattern(v any) (string, bool) {
 // eqValues 按值语义判断相等：字符串按字符串、整数按 int64、浮点按 float64、
 // 布尔按布尔、二进制按 bytes.Equal；值可为 nil 时仅 nil==nil 匹配，
 // 类型不匹配视为不相等。
-// eqValues compares values semantically: strings by string, integers by int64,
-// floats by float64, bools by bool, blobs by bytes.Equal; when either side is
-// nil only nil==nil matches, and type mismatches are treated as unequal.
 func eqValues(a, b any) bool {
 	if a == nil || b == nil {
 		return a == nil && b == nil
@@ -229,9 +202,6 @@ func eqValues(a, b any) bool {
 
 // compareValues 按数值或字符串语义比较两值，返回 (比较结果, 是否可比较)。
 // 任一值为 nil 或类型不匹配时不可比较。
-// compareValues compares two values numerically or lexically, returning the
-// comparison result and whether they are comparable. Either nil or a type
-// mismatch means not comparable.
 func compareValues(a, b any) (int, bool) {
 	if a == nil || b == nil {
 		return 0, false
@@ -288,7 +258,6 @@ func compareValues(a, b any) (int, bool) {
 }
 
 // cmpInt64 比较两个 int64。
-// cmpInt64 compares two int64 values.
 func cmpInt64(a, b int64) int {
 	switch {
 	case a < b:
@@ -301,7 +270,6 @@ func cmpInt64(a, b int64) int {
 }
 
 // matchContains 按大小写不敏感的子串包含实现 MATCH 匹配。
-// matchContains implements MATCH as a case-insensitive substring containment.
 func matchContains(a, b any) bool {
 	as, ok1 := textPattern(a)
 	bs, ok2 := textPattern(b)
@@ -313,9 +281,6 @@ func matchContains(a, b any) bool {
 
 // likeToRegex 将 sqlite LIKE 通配模式转为正则：%→.*、_→.，其余字符转义；
 // 大小写不敏感由调用方加 (?i) 前缀。
-// likeToRegex converts an sqlite LIKE wildcard pattern to a regexp:
-// %→.*, _→., with other characters escaped; case-insensitivity is applied by
-// the caller via the (?i) prefix.
 func likeToRegex(pattern string) string {
 	var b strings.Builder
 	b.WriteByte('^')
@@ -335,9 +300,6 @@ func likeToRegex(pattern string) string {
 
 // globToRegex 将 sqlite GLOB 通配模式转为正则：*→.*、?→.、[..] 字符类
 // 原样透传，其余字符转义；大小写敏感。
-// globToRegex converts an sqlite GLOB wildcard pattern to a regexp:
-// *→.*, ?→., [..] character classes pass through, with other characters
-// escaped; matching is case-sensitive.
 func globToRegex(pattern string) string {
 	var b strings.Builder
 	b.WriteByte('^')

@@ -72,10 +72,10 @@ import { DateTime } from "luxon";
 
 import type { Density } from "../@types/base";
 
-// Validation rule shape of the underlying field: `true` when valid,
-// otherwise the error message to display.
+// Rule 底层字段的校验规则形态：合法时返回 `true`，否则返回需展示的错误信息。
 type Rule = (value: unknown) => boolean | string;
 
+// props 组件入参：绑定值、展示配置与底层字段校验规则
 // props/emits 须在 immediate watch 之前定义（回调同步访问 props）
 const props = defineProps({
   modelValue: {
@@ -86,7 +86,7 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  // Pickers are panel-only inputs, so they stay readonly unless opted out.
+  // 选择器面板为纯展示输入，除显式关闭外保持只读。
   clearable: {
     type: Boolean,
     default: true,
@@ -111,12 +111,13 @@ const props = defineProps({
     type: Array as PropType<Rule[]>,
     default: () => [],
   },
-  // Render the panel as an inline menu (true) or a modal dialog (default).
+  // 面板渲染方式：true 为内联菜单，默认（未设）为模态对话框。
   menu: {
     type: Boolean,
   },
 });
 
+// emits 组件事件：模型值变更
 const emits = defineEmits(["update:modelValue"]);
 
 // 弹出层内部状态：日期选择器的已选日期与起始/截止时间字符串（"HH:mm"）
@@ -217,7 +218,7 @@ const displayStr = computed((): string | null => {
 </script>
 
 <style scoped>
-/* Panel spacing only: border, radius and background come from `.zk-panel`. */
+/* 仅处理面板间距：边框、圆角与背景取自 `.zk-panel`。 */
 .picker-panel-body {
   display: flex;
   flex-direction: column;
@@ -225,7 +226,7 @@ const displayStr = computed((): string | null => {
   padding: var(--zk-space-4);
 }
 
-/* Start/end time inputs sit side by side under the range calendar. */
+/* 起始/截止时间输入框并排展示在范围日历下方。 */
 .picker-panel-times {
   display: flex;
   gap: var(--zk-space-2);

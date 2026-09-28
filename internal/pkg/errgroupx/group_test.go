@@ -18,6 +18,7 @@ type customErr struct{ msg string }
 
 func (e *customErr) Error() string { return e.msg }
 
+// 测试单个协程返回错误时包装协程标识并保留错误链。
 func TestGroup_Go_SingleError(t *testing.T) {
 	g, _ := WithContext(context.Background())
 	g.Go(func() error {
@@ -40,6 +41,7 @@ func TestGroup_Go_SingleError(t *testing.T) {
 	}
 }
 
+// 测试两个协程返回不同错误时只返回其一并保留标识。
 func TestGroup_Go_TwoDifferentErrors(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -78,6 +80,7 @@ func TestGroup_Go_TwoDifferentErrors(t *testing.T) {
 	}
 }
 
+// 测试两个协程返回相同错误时仍能通过标识区分来源。
 func TestGroup_Go_TwoSameErrors(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -112,6 +115,7 @@ func TestGroup_Go_TwoSameErrors(t *testing.T) {
 	}
 }
 
+// 测试命名协程的错误标签。
 func TestGroup_GoNamed(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -139,6 +143,7 @@ func TestGroup_GoNamed(t *testing.T) {
 	}
 }
 
+// 测试多个命名协程返回相同错误时通过标签区分来源。
 func TestGroup_GoNamed_MultipleSameError(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -168,6 +173,7 @@ func TestGroup_GoNamed_MultipleSameError(t *testing.T) {
 	}
 }
 
+// 测试匿名与命名协程混用时的错误标识。
 func TestGroup_MixedGoAndGoNamed(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -191,6 +197,7 @@ func TestGroup_MixedGoAndGoNamed(t *testing.T) {
 	}
 }
 
+// 测试全部协程成功时 Wait 返回 nil。
 func TestGroup_NoError(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -203,6 +210,7 @@ func TestGroup_NoError(t *testing.T) {
 	}
 }
 
+// 测试协程出错时上下文取消且错误仍带标识。
 func TestGroup_ContextCancellation(t *testing.T) {
 	g, ctx := WithContext(context.Background())
 
@@ -234,6 +242,7 @@ func TestGroup_ContextCancellation(t *testing.T) {
 	}
 }
 
+// 测试 SetLimit 限制最大并发数。
 func TestGroup_SetLimit(t *testing.T) {
 	g, _ := WithContext(context.Background())
 	g.SetLimit(2)
@@ -270,6 +279,7 @@ func TestGroup_SetLimit(t *testing.T) {
 	}
 }
 
+// 测试 Wait 返回第一个错误并包装协程标识。
 func TestGroup_WaitReturnsFirstError(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -299,6 +309,7 @@ func TestGroup_WaitReturnsFirstError(t *testing.T) {
 	}
 }
 
+// 测试协程序号分配在并发下唯一且线程安全。
 func TestGroup_CounterConcurrencySafety(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -345,6 +356,7 @@ func TestGroup_CounterConcurrencySafety(t *testing.T) {
 	}
 }
 
+// 测试错误包装保留原始类型（errors.As）。
 func TestGroup_ErrorWrappingPreservesChain(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -369,6 +381,7 @@ func TestGroup_ErrorWrappingPreservesChain(t *testing.T) {
 	}
 }
 
+// 测试空组 Wait 返回 nil。
 func TestGroup_EmptyGroup(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -378,6 +391,7 @@ func TestGroup_EmptyGroup(t *testing.T) {
 	}
 }
 
+// 测试空名称的命名协程错误格式。
 func TestGroup_GoNamed_EmptyName(t *testing.T) {
 	g, _ := WithContext(context.Background())
 
@@ -396,6 +410,7 @@ func TestGroup_GoNamed_EmptyName(t *testing.T) {
 	}
 }
 
+// 测试协程返回 nil 时不影响错误标识。
 func TestGroup_NilErrorInGoroutine(t *testing.T) {
 	g, _ := WithContext(context.Background())
 

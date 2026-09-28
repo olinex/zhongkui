@@ -1,11 +1,11 @@
 package tagengine
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 )
@@ -20,8 +20,10 @@ var ruleChangeKey = etcd.WithPrefix("tagengine/") + "rule-change"
 // 记录本次写路径影响的分组（Namespace + Model），供引擎精准失效
 // 对应分组缓存，避免全量失效的高成本；解析失败时回退全量失效保证不遗漏。
 type RuleChangeEvent struct {
+	// Namespace 受影响分组所属的命名空间
 	Namespace string `json:"namespace"`
-	Model     string `json:"model"`
+	// Model 受影响分组的数据模型名
+	Model string `json:"model"`
 }
 
 // BroadcastChange 广播规则变更事件。

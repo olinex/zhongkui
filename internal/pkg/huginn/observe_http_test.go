@@ -26,6 +26,7 @@ func eqHeaders(a, b []httpHeader) bool {
 	return true
 }
 
+// TestSplitHTTPLines 验证 HTTP 报文按 CRLF / LF 分段及混用时的分隔优先级。
 func TestSplitHTTPLines(t *testing.T) {
 	if got := splitHTTPLines("a\r\nb"); len(got) != 2 || got[0] != "a" || got[1] != "b" {
 		t.Errorf("crlf: %v", got)
@@ -39,6 +40,7 @@ func TestSplitHTTPLines(t *testing.T) {
 	}
 }
 
+// TestParseHTTPHeaders 验证头部行解析：空行截断、跳过无冒号行与空名行、去除首尾空白。
 func TestParseHTTPHeaders(t *testing.T) {
 	lines := []string{
 		"Host: example.com",
@@ -60,6 +62,7 @@ func TestParseHTTPHeaders(t *testing.T) {
 	}
 }
 
+// TestParseHTTPRequest 验证 HTTP 请求解析：版本、头顺序与取值、期望子串、语言偏好及缺失头。
 func TestParseHTTPRequest(t *testing.T) {
 	data := []byte("GET /index.html HTTP/1.1\r\n" +
 		"Host: example.com\r\n" +
@@ -120,6 +123,7 @@ func containsHeaderName(headers []httpHeader, name string) bool {
 	return false
 }
 
+// TestParseHTTPRequestErrors 验证请求解析的各错误拒绝路径。
 func TestParseHTTPRequestErrors(t *testing.T) {
 	cases := []struct {
 		name string
@@ -141,6 +145,7 @@ func TestParseHTTPRequestErrors(t *testing.T) {
 	}
 }
 
+// TestParseHTTPResponse 验证 HTTP 响应解析：版本、期望子串与头取值忽略规则。
 func TestParseHTTPResponse(t *testing.T) {
 	data := []byte("HTTP/1.1 200 OK\r\n" +
 		"Server: nginx/1.18.0\r\n" +
@@ -174,6 +179,7 @@ func TestParseHTTPResponse(t *testing.T) {
 	}
 }
 
+// TestParseHTTPResponseErrors 验证响应解析的各错误拒绝路径。
 func TestParseHTTPResponseErrors(t *testing.T) {
 	cases := []struct {
 		name string
@@ -194,6 +200,7 @@ func TestParseHTTPResponseErrors(t *testing.T) {
 	}
 }
 
+// TestConvertHeadersToHTTPFormat 验证原始头到指纹头格式的转换：可选头标记与取值忽略规则。
 func TestConvertHeadersToHTTPFormat(t *testing.T) {
 	// 请求：Cookie → 可选；Host/User-Agent → 忽略值；其余保留值
 	req := []httpHeaderRaw{
@@ -236,6 +243,7 @@ func TestConvertHeadersToHTTPFormat(t *testing.T) {
 	}
 }
 
+// TestBuildAbsentHeaders 验证缺失头列表按请求/响应方向与已出现头推导。
 func TestBuildAbsentHeaders(t *testing.T) {
 	// 请求：Host/User-Agent/Accept 已出现
 	req := []httpHeaderRaw{
@@ -275,6 +283,7 @@ func TestBuildAbsentHeaders(t *testing.T) {
 	}
 }
 
+// TestExpswValue 验证期望子串为空时回落为占位符。
 func TestExpswValue(t *testing.T) {
 	if got := expswValue(""); got != "???" {
 		t.Errorf("empty = %s", got)
@@ -284,6 +293,7 @@ func TestExpswValue(t *testing.T) {
 	}
 }
 
+// TestGetHighestQualityLanguage 验证从 Accept-Language 中按质量权重挑选首选语言。
 func TestGetHighestQualityLanguage(t *testing.T) {
 	cases := []struct {
 		in, want string

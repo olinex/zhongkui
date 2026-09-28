@@ -1,7 +1,7 @@
 package notification
 
 import (
-	// stdlib
+	// 标准库
 	"bytes"
 	"context"
 	"encoding/json"
@@ -14,12 +14,12 @@ import (
 	"testing"
 	"unsafe"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
@@ -494,7 +494,6 @@ func TestNotificationTargetTestSend(t *testing.T) {
 }
 
 // fakePipelineEnqueuer 测试用假 asynq 投递客户端，捕获最后一次被投递的任务供断言。
-// fakePipelineEnqueuer is a stubbed asynq enqueuer capturing the last enqueued task.
 type fakePipelineEnqueuer struct {
 	mu       sync.Mutex
 	lastTask *asynq.Task
@@ -515,10 +514,6 @@ func (f *fakePipelineEnqueuer) Close() error { return nil }
 // pipeline.Client 的 enqueuer 字段为包内非导出字段，且 NewClient 需要真实 Redis 客户端，
 // 单元测试通过 reflect.NewAt + unsafe 绕过非导出字段限制注入假 enqueuer，
 // 使 EnqueueContext 在测试中直接命中假实现而不触达 Redis。
-// newFakePipelineClient builds a *pipeline.Client whose delivery is stubbed. The
-// enqueuer field is package-private and NewClient needs a real Redis client, so the
-// test injects the fake via reflect.NewAt + unsafe to bypass the unexported-field
-// restriction, making EnqueueContext hit the fake directly without touching Redis.
 func newFakePipelineClient(f *fakePipelineEnqueuer) *pipeline.Client {
 	client := &pipeline.Client{}
 	field := reflect.ValueOf(client).Elem().FieldByName("cli")
@@ -559,9 +554,6 @@ func notificationTargetSendBody() map[string]any {
 
 // insertNotificationTargetTestTarget 直接落库一条通知目标（跳过 HTTP 创建接口，
 // 规避 create 接口 + 按名查 ID 在共享引擎下的不确定性），返回该目标。
-// insertNotificationTargetTestTarget inserts a notification target directly into the
-// database (bypassing the HTTP create endpoint and the name-based ID lookup, which are
-// unreliable on a shared engine), returning the target.
 func insertNotificationTargetTestTarget(db *database.DB, namespace, name string, ch *core.NotificationChannel, enabled bool) *core.NotificationTarget {
 	t := &core.NotificationTarget{
 		NamespaceName: namespace,

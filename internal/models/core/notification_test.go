@@ -1,16 +1,16 @@
 package core
 
 import (
-	// stdlib
+	// 标准库
 	"reflect"
 	"strings"
 	"testing"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"

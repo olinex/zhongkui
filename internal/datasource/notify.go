@@ -1,11 +1,11 @@
 package datasource
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
 )

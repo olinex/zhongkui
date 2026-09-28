@@ -53,10 +53,14 @@ func (s *CaptureStats) Snapshot() CaptureStatsSnapshot {
 
 // CaptureStatsSnapshot 统计数据的不可变快照
 type CaptureStatsSnapshot struct {
-	Packets  int64
-	Bytes    int64
+	// Packets 累计捕获的数据包数量
+	Packets int64
+	// Bytes 累计捕获的字节数
+	Bytes int64
+	// Segments 累计完成的数据段数量
 	Segments int64
-	Elapsed  time.Duration
+	// Elapsed 自统计启动以来经过的时间
+	Elapsed time.Duration
 }
 
 // String 格式化统计快照为人类可读的单行输出
@@ -67,7 +71,7 @@ func (s CaptureStatsSnapshot) String() string {
 	mbps := float64(0)
 	if elapsedSec > 0 {
 		pps = float64(s.Packets) / elapsedSec
-		// 8 bits per byte, convert to megabits per second
+		// 每字节 8 位，换算为兆比特每秒
 		mbps = float64(s.Bytes) * 8 / elapsedSec / 1_000_000
 	}
 	mb := float64(s.Bytes) / 1_000_000

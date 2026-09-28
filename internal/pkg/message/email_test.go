@@ -1,18 +1,17 @@
 package message
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/smartystreets/goconvey/convey"
 )
 
 // TestEmailChannel_Factory 测试邮件渠道工厂的配置校验。
-// TestEmailChannel_Factory tests the config validation of the email channel factory.
 func TestEmailChannel_Factory(t *testing.T) {
 	convey.Convey("邮件渠道工厂配置校验", t, func() {
 		convey.Convey("host 与 from 齐全时构建成功", func() {
@@ -41,7 +40,6 @@ func TestEmailChannel_Factory(t *testing.T) {
 }
 
 // TestEmailChannel_Send 测试邮件渠道发送的目标配置校验。
-// TestEmailChannel_Send tests the target config validation of the email channel send.
 func TestEmailChannel_Send(t *testing.T) {
 	convey.Convey("邮件渠道发送配置校验", t, func() {
 		ch := &emailChannel{host: "smtp.example.com", port: 25, from: "alert@example.com"}
@@ -60,8 +58,6 @@ func TestEmailChannel_Send(t *testing.T) {
 }
 
 // TestEmailChannel_BuildMailBody 测试邮件报文组装：标准邮件头 + 正文。
-// TestEmailChannel_BuildMailBody tests the mail body assembly with standard headers
-// plus the body.
 func TestEmailChannel_BuildMailBody(t *testing.T) {
 	convey.Convey("组装标准邮件报文", t, func() {
 		body := string(buildMailBody("alert@example.com", "ops@example.com", &RenderedMessage{Title: "alert", Content: "hello"}))

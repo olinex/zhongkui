@@ -6,19 +6,18 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
-	"google.golang.org/grpc"
 	g "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/keepalive"
 	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 // ClientPrefix 是gRPC客户端设置的配置前缀。
@@ -61,7 +60,7 @@ func unaryClientInterceptor(ctx context.Context, method string, req, reply any, 
 // 返回：
 //   - grpc.ClientStream: 客户端流对象
 //   - error: 调用过程中发生的错误
-func StreamClientInterceptor(ctx context.Context, desc *g.StreamDesc, cc *g.ClientConn, method string, streamer g.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+func StreamClientInterceptor(ctx context.Context, desc *g.StreamDesc, cc *g.ClientConn, method string, streamer g.Streamer, opts ...g.CallOption) (g.ClientStream, error) {
 	// 将方法路径存入上下文，供后续处理使用
 	ctx = context.WithValue(ctx, "method", method)
 

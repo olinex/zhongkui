@@ -14,6 +14,7 @@ type testProcConfig struct {
 	MaxRetry int           `mapstructure:"maxRetry" default:"3"`
 }
 
+// TestGetProcParam_Success 验证从上下文成功解析处理器参数配置。
 func TestGetProcParam_Success(t *testing.T) {
 	Convey("TestGetProcParam 成功解析配置", t, func() {
 		ctx := context.WithValue(context.Background(), ContextProcParamName, map[string]any{
@@ -35,6 +36,7 @@ func TestGetProcParam_Success(t *testing.T) {
 	})
 }
 
+// TestGetProcParam_NotFound 验证上下文缺少处理器参数时返回错误。
 func TestGetProcParam_NotFound(t *testing.T) {
 	Convey("TestGetProcParam Context中无处理器参数", t, func() {
 		ctx := context.Background()

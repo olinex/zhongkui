@@ -3,8 +3,8 @@
     <v-chip :color="color" :variant="variant" :density="density" @click="dialog = true">
       <span class="font-mono">{{ short }}</span>
     </v-chip>
-    <!-- Width comes from the AppDialog size tier (sm = 560px); the body scrolls
-         via AppDialog's `scrollable`, so no local max-height is needed. -->
+    <!-- 宽度来自 AppDialog 的尺寸档位（sm = 560px）；内容区经 AppDialog 的 scrollable
+         滚动，故无需本地 max-height。 -->
     <app-dialog v-model="dialog" :title="$t('action.detail')" size="sm">
       <VueJsonPretty :data="value && JSON.parse(value)" />
       <template #footer>
@@ -50,8 +50,8 @@ const copy = async () => {
   close();
 };
 
-// Defaults stay undefined so the theme layer owns the VChip baseline
-// (small + tonal); callers only override for a real semantic difference.
+// 默认保持 undefined，由主题层统一 VChip 基线（small + tonal）；
+// 调用方仅在确有语义差异时覆盖。
 const props = defineProps({
   value: {
     type: String,

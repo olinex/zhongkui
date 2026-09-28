@@ -82,9 +82,11 @@ import { modelFieldTitle, modelTypeKeyToI18nKey } from "@/utils/modelField";
 import type { TagRuleDryRunOut, TagRuleDryRunRuleOut } from "@/pages/[language]/tag-event/@types";
 
 const props = defineProps<{
+  /** 打标的流量模型注册名 */
   model: string;
+  /** 规则体 rego 源码 */
   rego: string;
-  /** input document of the sample selected in the rego editor, kept in sync */
+  /** rego 编辑器中选中样例的 input 文档，与编辑器保持同步 */
   sampleInput?: Record<string, unknown> | null;
 }>();
 
@@ -166,6 +168,7 @@ const viewPlaintextAction = async (field: DetailField): Promise<void> => {
   }
 };
 
+// run 触发试运行：提交当前 rego 与 input，回填标签与规则明细结果。
 const run = async (): Promise<void> => {
   result.value = null;
   loading.value = true;

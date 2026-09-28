@@ -1,18 +1,19 @@
+// Package ai 提供 AI 知识域（Agent / 知识库 / 会话）的 HTTP 处理器与视图 In/Out 结构体，
+// 向内封装 internal/ai 的组件能力。
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"strings"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 
-	// internal
+	// 项目内部
 	ai "zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
@@ -24,12 +25,10 @@ import (
 )
 
 // requireAiEnabled 获取已启用的 AI 组件；功能未启用时以 400 + 英文错误中断请求并返回 nil。
-// requireAiEnabled fetches the enabled AI components; when the feature is disabled it
-// aborts the request with 400 + an English error and returns nil.
 func requireAiEnabled(c *gin.Context) *ai.Components {
 	comps := middlewares.GetAi(c)
 	if !comps.Enabled() {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.New("ai feature is disabled")).AbortWithGinH(c)
 		return nil
 	}
 	return comps
@@ -37,9 +36,6 @@ func requireAiEnabled(c *gin.Context) *ai.Components {
 
 // getOwnedAgentSession 按 ID 查询 AI 助手会话并校验其属于给定命名空间：
 // 会话不存在（ErrSessionNotFound）或归属不符时以 404 中断请求并返回 nil。
-// getOwnedAgentSession fetches an agent session by ID and validates that it belongs
-// to the given namespace: a missing session (ErrSessionNotFound) or an ownership
-// mismatch aborts the request with 404 and returns nil.
 func getOwnedAgentSession(c *gin.Context, comps *ai.Components, sessionID uint, namespace string) *modelsai.AgentSession {
 	session, err := comps.Sessions.GetSession(c, sessionID)
 	if err != nil {
@@ -64,9 +60,13 @@ type AgentSessionItemOut struct {
 	// Title 会话标题
 	Title string `json:"title"`
 	// Slot 会话缺省档位（flash/standard/advanced），空表示按 agent.defaultSlot 参数解析
-	Slot string `json:"slot"`
+	Slot pkgllm.Slot `json:"slot"`
 	// Status 会话状态（active/archived）
-	Status string `json:"status"`
+	Status pkgllm.SessionStatus `json:"status"`
+	// AgentKind 会话所属 Agent 类型（knowledge/rego）
+	AgentKind pkgllm.AgentKind `json:"agentKind"`
+	// Summary 会话滚动摘要，无摘要时为空串
+	Summary string `json:"summary"`
 	// CreatedAt 创建时间
 	CreatedAt time.Time `json:"createdAt"`
 	// UpdatedAt 更新时间
@@ -78,10 +78,13 @@ type AgentSessionListOut []AgentSessionItemOut
 
 // AgentSessionCreateIn 定义创建 AI 助手会话的请求输入。
 type AgentSessionCreateIn struct {
-	// Title 会话标题，必填
-	Title string `json:"title" binding:"required"`
+	// Query 首个用户问题，必填；会话主题据此经 LLM 生成（失败时按其截断兜底）
+	Query string `json:"query" binding:"required"`
 	// Slot 会话缺省档位（flash/standard/advanced），可选；空表示按 agent.defaultSlot 参数解析
-	Slot string `json:"slot"`
+	Slot pkgllm.Slot `json:"slot"`
+	// AgentKind 会话所属 Agent 类型（knowledge/rego），可选；缺省 knowledge，非法取值以 400 +
+	// 英文错误拒绝
+	AgentKind pkgllm.AgentKind `json:"agentKind"`
 }
 
 // AgentSessionRenameIn 定义重命名 AI 助手会话的请求输入。
@@ -97,7 +100,7 @@ type AgentMessageItemOut struct {
 	// ID 消息 ID
 	ID uint `json:"id"`
 	// Role 消息角色（user/assistant/system）
-	Role string `json:"role"`
+	Role pkgllm.MessageRole `json:"role"`
 	// Content 消息正文内容
 	Content string `json:"content"`
 	// Draft 助手回复的结构化草稿载荷（JSON 对象），无草稿时省略
@@ -111,6 +114,19 @@ type AgentMessageItemOut struct {
 // AgentMessageListOut 定义 AI 助手会话消息列表输出。
 type AgentMessageListOut []AgentMessageItemOut
 
+// AgentSessionCompactIn 定义会话压缩的请求输入：压缩仅需会话 ID（路径参数），无请求体字段。
+type AgentSessionCompactIn struct{}
+
+// AgentSessionCompactOut 定义会话压缩的输出：刷新后的摘要、成功落库的长期记忆条数与非致命告警。
+type AgentSessionCompactOut struct {
+	// Summary 刷新后的会话摘要
+	Summary string `json:"summary"`
+	// Extracted 成功落库的长期记忆条数
+	Extracted int `json:"extracted"`
+	// Warnings 非致命告警（长期记忆抽取/落库失败等），无告警时为空数组
+	Warnings []string `json:"warnings"`
+}
+
 // AgentStreamIn 定义 AI 助手流式生成的请求输入。
 type AgentStreamIn struct {
 	// Query 用户本次提问文本，必填
@@ -123,20 +139,19 @@ type AgentStreamIn struct {
 	RegoRule string `json:"regoRule"`
 	// Slot 本次生成的显式档位（flash/standard/advanced），可选；为空时依次回退到会话档位与
 	// agent.defaultSlot 参数
-	Slot string `json:"slot"`
+	Slot pkgllm.Slot `json:"slot"`
 }
 
 // AgentSlotStatusOut 定义单个档位的绑定模型与可用性输出项。
-// AgentSlotStatusOut defines the output item of one slot: its bound model and availability.
 type AgentSlotStatusOut struct {
 	// Slot 档位标识（flash/standard/advanced/embedding）
-	Slot string `json:"slot"`
+	Slot pkgllm.Slot `json:"slot"`
 	// ModelName 绑定模型在注册表中的本地标识（无绑定时为空）
 	ModelName string `json:"modelName"`
 	// ProviderModel 供应商侧的模型名（无绑定时为空）
 	ProviderModel string `json:"providerModel"`
 	// Kind 绑定模型类型（chat/embedding；无绑定时为空）
-	Kind string `json:"kind"`
+	Kind pkgllm.ModelKind `json:"kind"`
 	// Enabled 绑定模型是否启用
 	Enabled bool `json:"enabled"`
 	// Bound 绑定是否可用（模型已启用且类型与档位匹配）
@@ -163,7 +178,7 @@ type AgentStatusOut struct {
 	Slots []AgentSlotStatusOut `json:"slots"`
 	// DefaultSlot 未显式指定档位且会话未记录档位时使用的默认档位（参数 agent.defaultSlot 的
 	// 生效值），供前端档位下拉取初值，避免前端自持档位字面量
-	DefaultSlot string `json:"defaultSlot"`
+	DefaultSlot pkgllm.Slot `json:"defaultSlot"`
 	// ParamOverrideCount 当前值与出厂值不同的行为参数条数（0 表示全部参数仍为出厂值）
 	ParamOverrideCount int `json:"paramOverrideCount"`
 	// Reason AI 能力不可用的原因说明（按请求语言本地化；可用时为空）
@@ -171,13 +186,14 @@ type AgentStatusOut struct {
 }
 
 // newAgentSessionItemOut 将会话模型映射为视图层输出项。
-// newAgentSessionItemOut maps the session model into a view-layer output item.
 func newAgentSessionItemOut(s *modelsai.AgentSession) AgentSessionItemOut {
 	return AgentSessionItemOut{
 		ID:        s.ID,
 		Title:     s.Title,
 		Slot:      s.TargetModel,
 		Status:    s.Status,
+		AgentKind: s.AgentKind,
+		Summary:   s.Summary,
 		CreatedAt: s.CreatedAt,
 		UpdatedAt: s.UpdatedAt,
 	}
@@ -185,9 +201,6 @@ func newAgentSessionItemOut(s *modelsai.AgentSession) AgentSessionItemOut {
 
 // newAgentMessageItemOut 将消息模型映射为视图层输出项：
 // 草稿与引用载荷经 JSON 反序列化暴露，空或非法时留空（omitempty 省略）。
-// newAgentMessageItemOut maps the message model into a view-layer output item: the
-// draft and citation payloads are exposed via JSON unmarshal, left empty when blank
-// or invalid (omitted by omitempty).
 func newAgentMessageItemOut(m *modelsai.AgentMessage) AgentMessageItemOut {
 	out := AgentMessageItemOut{
 		ID:        m.ID,
@@ -208,8 +221,10 @@ func newAgentMessageItemOut(m *modelsai.AgentMessage) AgentMessageItemOut {
 }
 
 // AgentSessionCreate 处理创建 AI 助手会话的请求。
-// 新会话归属当前请求命名空间，初始状态为 active；可选档位字段经校验后作为该会话的
-// 缺省档位落库，非法取值以 400 + 英文错误拒绝（不静默回落）。
+// 新会话归属当前请求命名空间，初始状态为 active；会话主题由首个用户问题经 LLM 生成，失败时
+// 按其截断兜底，绝不阻断创建。可选档位字段经校验后作为该会话的缺省档位落库，可选 Agent 类型
+// 字段经校验后作为该会话的归属落库（缺省 knowledge）；两类字段的非法取值均以 400 + 英文错误
+// 拒绝（不静默回落）。
 func AgentSessionCreate(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -224,17 +239,26 @@ func AgentSessionCreate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	slot := ""
-	if value := strings.TrimSpace(in.Slot); value != "" {
+	slot := pkgllm.Slot("")
+	if value := pkgllm.Slot(strings.TrimSpace(string(in.Slot))); value != "" {
 		parsed, ok := pkgllm.ParseChatSlot(value)
 		if !ok {
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-				pkgllm.InvalidChatSlotError(value)).AbortWithGinH(c)
+			response.CreateBadBodyError(pkgllm.InvalidChatSlotError(value)).AbortWithGinH(c)
 			return
 		}
-		slot = string(parsed)
+		slot = parsed
 	}
-	session, err := comps.Sessions.CreateSession(c, namespace, in.Title, slot)
+	agentKind, err := pkgllm.ParseAgentKind(in.AgentKind)
+	if err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	query := strings.TrimSpace(in.Query)
+	topic := ai.SessionTopicFallback(query)
+	if comps.Memory != nil {
+		topic = comps.Memory.GenerateTopic(c, query)
+	}
+	session, err := comps.Sessions.CreateSession(c, namespace, topic, slot, agentKind)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -338,6 +362,42 @@ func AgentSessionDelete(c *gin.Context) {
 	response.SimpleOK.AbortWithGinH(c)
 }
 
+// AgentSessionCompact 处理压缩 AI 助手会话上下文并抽取长期记忆的请求。
+// 先校验会话归属（404 语义同详情接口），再经 Memory.Compact 把未摘要消息折叠进滚动摘要并
+// 抽取长期记忆；摘要失败以 500 + 英文错误返回，长期记忆抽取/落库失败仅作为 warnings 返回。
+func AgentSessionCompact(c *gin.Context) {
+	namespace, ok := middlewares.RequireNamespace(c)
+	if !ok {
+		return
+	}
+	comps := requireAiEnabled(c)
+	if comps == nil {
+		return
+	}
+	id, ok := views.GetUint64Param(c, "id")
+	if !ok {
+		return
+	}
+	session := getOwnedAgentSession(c, comps, uint(id), namespace)
+	if session == nil {
+		return
+	}
+	result, err := comps.Memory.Compact(c, session)
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	warnings := result.Warnings
+	if warnings == nil {
+		warnings = []string{}
+	}
+	response.SimpleOK.AbortWithGinW(c, AgentSessionCompactOut{
+		Summary:   result.Summary,
+		Extracted: result.Extracted,
+		Warnings:  warnings,
+	})
+}
+
 // AgentMessageListGet 处理获取 AI 助手会话消息列表的请求。
 // 会话不存在或不属于当前命名空间时返回 404；消息按创建时间升序返回（与对话顺序一致）。
 func AgentMessageListGet(c *gin.Context) {
@@ -399,10 +459,6 @@ func AgentStream(c *gin.Context) {
 	// 工具调用阶段事件映射：带增量输出的事件走 delta 事件（携带阶段标识），状态事件走
 	// stage 事件（沿用 dryrun.go 的 report 写法）；写失败（如客户端断开）由 Agent 节点 4
 	// 捕获并中止工具循环，避免无谓的模型与工具调用。
-	// Tool-call stage event mapping: events carrying a delta become delta events (tagged with
-	// the stage), status events become stage events (following the report style of dryrun.go);
-	// a write failure (e.g. a disconnected client) is caught by Agent node 4 and aborts the tool
-	// loop, avoiding needless model and tool calls.
 	report := func(ev ai.StageEvent) error {
 		if ev.Delta != "" {
 			return sseWriter.SendStageDelta(string(ev.Stage), ev.Delta)
@@ -416,8 +472,8 @@ func AgentStream(c *gin.Context) {
 		SessionID:     uint(sessionID),
 		BusinessData:  in.BusinessData,
 		RegoRule:      in.RegoRule,
-		Slot:          pkgllm.Slot(strings.TrimSpace(in.Slot)),
-		DeclaredSlot:  pkgllm.Slot(session.TargetModel),
+		Slot:          pkgllm.Slot(strings.TrimSpace(string(in.Slot))),
+		DeclaredSlot:  session.TargetModel,
 		ToolReporter:  report,
 	})
 	if err != nil {
@@ -446,27 +502,21 @@ func AgentStream(c *gin.Context) {
 
 // AgentStatusGet 处理获取 AI 助手状态的请求（不强制启用，始终 200）。
 // 从运行时快照读取 AI 能力是否启用、各档位绑定的模型与可用性、生效的参数覆盖数量；
-// 未启用时给出明确原因（按请求语言本地化）。启用时额外查询数据库 knowledge_chunks.embedding
-// 列的实际维度并与绑定模型维度对比，不一致时提示风险。
-// AgentStatusGet handles the AI assistant status request (no forced enable, always 200).
-// It reads from the runtime snapshot whether the AI capability is enabled, the model bound
-// to each slot with its availability and the number of effective parameter overrides, and
-// gives an explicit reason (localized to the request language) when disabled. When enabled it
-// additionally queries the actual dimension of the knowledge_chunks.embedding column and compares
-// it with the bound model dimension, warning about a mismatch.
+// 未启用时给出明确原因（按请求语言本地化）。启用时额外查询数据库 knowledge_chunks.embedding 与
+// agent_memories.embedding 两列的实际维度并与绑定模型维度对比，不一致时提示风险。
 func AgentStatusGet(c *gin.Context) {
 	rt := middlewares.GetAiRuntime(c)
 	snap := rt.Snapshot()
 	out := AgentStatusOut{Enabled: rt.Enabled(), Reason: snap.DisabledReason(middlewares.GetLanguage(c))}
-	out.DefaultSlot = string(snap.DefaultSlot())
+	out.DefaultSlot = snap.DefaultSlot()
 	slots := snap.Slots()
 	out.Slots = make([]AgentSlotStatusOut, 0, len(pkgllm.AllSlots))
 	for _, slot := range pkgllm.AllSlots {
-		item := AgentSlotStatusOut{Slot: string(slot)}
+		item := AgentSlotStatusOut{Slot: slot}
 		if info, ok := slots[slot]; ok {
 			item.ModelName = info.Name
 			item.ProviderModel = info.Model
-			item.Kind = string(info.Kind)
+			item.Kind = info.Kind
 			item.Enabled = info.Enabled
 			item.Bound = info.Bound
 		}
@@ -489,9 +539,15 @@ func AgentStatusGet(c *gin.Context) {
 	out.EmbeddingDimensions = snap.EmbeddingDimensions()
 	out.ParamOverrideCount = snap.ParamOverrideCount()
 	if out.Enabled {
-		if n, found, err := pkgllm.ChunkEmbeddingDimension(c, middlewares.GetCoreDatabase(c)); err == nil && found && n != out.EmbeddingDimensions {
+		db := middlewares.GetCoreDatabase(c)
+		// 维度自检覆盖两列受治理的向量列：knowledge_chunks.embedding 与 agent_memories.embedding；
+		// 任一列可读且与绑定模型维度不一致即报出 dimensionMismatch（读不出时交由迁移建列）。
+		if n, found, err := pkgllm.ChunkEmbeddingDimension(c, db); err == nil && found && n != out.EmbeddingDimensions {
 			out.DimensionMismatch = true
-			out.DimensionDetail = fmt.Sprintf("embedding dimension mismatch: column is %d, bound model is %d", n, out.EmbeddingDimensions)
+			out.DimensionDetail = fmt.Sprintf("embedding dimension mismatch: knowledge_chunks.embedding column is %d, bound model is %d", n, out.EmbeddingDimensions)
+		} else if n, found, err := pkgllm.MemoryEmbeddingDimension(c, db); err == nil && found && n != out.EmbeddingDimensions {
+			out.DimensionMismatch = true
+			out.DimensionDetail = fmt.Sprintf("embedding dimension mismatch: agent_memories.embedding column is %d, bound model is %d", n, out.EmbeddingDimensions)
 		}
 	}
 	response.SimpleOK.AbortWithGinW(c, out)

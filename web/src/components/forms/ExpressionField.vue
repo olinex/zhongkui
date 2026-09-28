@@ -67,10 +67,11 @@
 <script setup lang="ts" name="expression-field">
 import type { FilterByOption } from "../@types/table";
 
+// FilterItem 单个筛选条件项：字段、动作与取值，title 均为 i18n 键。
 export interface FilterItem {
   field: { value: string; title: string };
   action: { value: string; title: string };
-  // Value is dynamic and only passed through.
+  // value 为动态值，仅做透传，不在此处加工。
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: { value: any; title: string };
 }
@@ -114,15 +115,18 @@ const addSelection = (item: FilterItem) => {
 };
 
 const props = defineProps({
+  // modelValue 已选筛选条件列表
   modelValue: {
     type: Array as PropType<FilterItem[]>,
     default: () => [],
   },
+  // headers 可筛选字段及其可选动作的面板配置
   headers: {
     type: Object as PropType<Record<string, FilterByOption>>,
     required: true,
   },
 });
 
+// emits 更新已选筛选条件列表
 const emits = defineEmits(["update:modelValue"]);
 </script>

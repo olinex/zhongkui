@@ -24,19 +24,6 @@ import (
 // SQLitePool，vtable 以裸名注册。求值前引擎按目标实例的命名空间解析对应池并绑定到
 // 求值 ctx（WithDatasourcePool），sqlite.query builtin 从中读取，故 rego 规则可直接
 // 引用裸名、无需命名空间前缀。未绑定 pools 时引擎不提供第三方数据源查询。
-// Engine is the OPA-based tag recognition engine. Rules are grouped by
-// (Namespace, Model) and compiled/cached; evaluating a struct produces tags. The
-// engine may optionally bind an etcd client: when unbound it only offers local
-// recognition and cache invalidation; when bound it implements runtime.Service,
-// strstarting a goroutine to watch rule changes and broadcast change events.
-// Engine is concurrency-safe and rego.PreparedEvalQuery can be evaluated in parallel.
-//
-// Third-party datasources use per-namespace pools (vtab.Pools): each namespace owns
-// its own SQLitePool and vtables are registered under their bare name. Before
-// evaluation the engine resolves the target instance's namespace pool and binds it
-// to the evaluation ctx (WithDatasourcePool), which the sqlite.query builtin reads,
-// so rego rules reference bare names without a namespace prefix. With no pools
-// bound the engine offers no third-party datasource querying.
 type Engine struct {
 	db     *database.DB
 	logger *logging.Logger
@@ -54,14 +41,10 @@ func groupKey(namespace, model string) string {
 }
 
 // EngineOption 是 Engine 的函数式配置选项。
-// EngineOption is a functional option for configuring an Engine.
 type EngineOption func(*Engine)
 
 // NewEngine 创建标签识别引擎，绑定 core 数据库读取规则。
 // 可选通过 variadic 选项注入第三方数据源按命名空间池（WithDatasourcePools）等。
-// NewEngine creates the tag recognition engine bound to the core database for rule
-// reads. Optional variadic options inject per-namespace third-party datasource pools
-// (WithDatasourcePools) and more.
 func NewEngine(db *database.DB, logger *logging.Logger, client *etcd.EtcdClient, opts ...EngineOption) *Engine {
 	engine := &Engine{
 		db:     db,
@@ -79,9 +62,6 @@ func NewEngine(db *database.DB, logger *logging.Logger, client *etcd.EtcdClient,
 
 // WithDatasourcePools 注入按命名空间隔离的第三方数据源池，供求值路径将各命名空间池
 // 绑定到求值 ctx 以供 sqlite.query 查询裸名 vtable。
-// WithDatasourcePools injects the per-namespace third-party datasource pools so the
-// evaluation path binds the namespace pool to the evaluation ctx for sqlite.query to
-// query bare-named vtables.
 func WithDatasourcePools(pools *vtab.Pools) EngineOption {
 	return func(e *Engine) {
 		e.pools = pools
@@ -166,9 +146,6 @@ func (e *Engine) RecognizeWithDetail(ctx context.Context, target any) (*GroupDet
 // withNamespacePool 若引擎已注入按命名空间池，则把该命名空间的 SQLitePool 绑定到
 // ctx，供求值 sqlite.query 查询该命名空间的裸名 vtable；未注入或解析失败时原样返回
 // ctx（sqlite.query 将报未绑池）。
-// withNamespacePool binds the namespace's SQLitePool onto ctx for sqlite.query to
-// query bare-named vtables when the engine has been injected with per-namespace pools;
-// it returns ctx unchanged when no pools are injected or resolution fails.
 func (e *Engine) withNamespacePool(ctx context.Context, namespace string) context.Context {
 	if e.pools == nil {
 		return ctx

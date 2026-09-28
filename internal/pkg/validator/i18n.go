@@ -16,6 +16,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
+// UniversalTranslator 全局通用翻译器实例。
 var (
 	UniversalTranslator *ut.UniversalTranslator
 )
@@ -140,6 +141,7 @@ func getTranslator(uni *ut.UniversalTranslator, lang *base.Language) (ut.Transla
 	return trans, nil
 }
 
+// GetTranslator 从通用翻译器中获取指定语言的翻译器。
 func GetTranslator(lang *base.Language) ut.Translator {
 	return mustGetTranslator(UniversalTranslator, lang)
 }

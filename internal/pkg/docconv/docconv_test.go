@@ -3,7 +3,7 @@
 package docconv
 
 import (
-	// stdlib
+	// 标准库
 	"archive/zip"
 	"bytes"
 	"context"
@@ -11,7 +11,7 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -105,7 +105,6 @@ func TestConvertDocx(t *testing.T) {
 }
 
 // mustBuildDocx 在测试内手工构造最小 DOCX：仅含 word/document.xml 一个部件。
-// mustBuildDocx builds a minimal DOCX with only the word/document.xml part inside the test.
 func mustBuildDocx(documentXML string) []byte {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)

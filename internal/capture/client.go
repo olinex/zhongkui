@@ -1,3 +1,5 @@
+// Package capture 提供抓包客户端：管理与远程 Reporter 服务的通信、监听配置变更、
+// 执行数据包捕获并上传到 S3，同时向服务端反馈抓包状态。
 package capture
 
 import (
@@ -666,6 +668,8 @@ func parseEndpoint(endpoint string) (host, port string) {
 	return endpoint, ""
 }
 
+// Run 启动抓包客户端的全部子任务：配置监听（watch）、状态反馈（feedback）、数据包上传
+// （upload）与可选的统计打印，任一子任务返回错误或上下文取消时整体退出。
 func (cc *CaptureClient) Run(ctx context.Context, sessionID serializer.HexUUID) (err error) {
 	resource := cc.cfg.Resource.String()
 	ctx, span := totel.StartRunSpan(ctx, resource)

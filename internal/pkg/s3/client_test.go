@@ -20,6 +20,7 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// TestWithTransport 测试 WithTransport 选项能否正确设置 minio 客户端的传输层。
 func TestWithTransport(t *testing.T) {
 	convey.Convey("Test WithTransport option", t, func() {
 		convey.Convey("should set custom transport on minio.Options", func() {
@@ -55,6 +56,7 @@ func TestWithTransport(t *testing.T) {
 	})
 }
 
+// TestGetEndpoint 测试 GetEndpoint 返回创建时配置的端点。
 func TestGetEndpoint(t *testing.T) {
 	convey.Convey("Test GetEndpoint", t, func() {
 		convey.Convey("should return the endpoint set during creation", func() {
@@ -76,6 +78,7 @@ func TestGetEndpoint(t *testing.T) {
 	})
 }
 
+// TestIsNotExists 测试 IsNotExists 对各类错误的判定。
 func TestIsNotExists(t *testing.T) {
 	convey.Convey("Test IsNotExists", t, func() {
 		convey.Convey("nil error should return false", func() {
@@ -111,7 +114,7 @@ func TestIsNotExists(t *testing.T) {
 
 		convey.Convey("XMinioObjectNotFoundAs403 error - depends on minio.ToErrorResponse mapping", func() {
 			err := minio.ErrorResponse{Code: "XMinioObjectNotFoundAs403"}
-			// minio.ToErrorResponse may or may not map this to NoSuchKey
+			// minio.ToErrorResponse 可能将其映射为 NoSuchKey，也可能不映射
 			// 只需验证不会 panic
 			_ = IsNotExists(err)
 			convey.So(true, convey.ShouldBeTrue) // 至少不崩溃
@@ -156,6 +159,7 @@ func TestIsNotExists(t *testing.T) {
 	})
 }
 
+// TestCPutObjectAndCGetObject 测试加密写入与加密读取的往返一致性（需真实 S3 环境）。
 func TestCPutObjectAndCGetObject(t *testing.T) {
 	endpoint := os.Getenv("S3_TEST_ENDPOINT")
 	accessKey := os.Getenv("S3_TEST_ACCESS_KEY")
@@ -224,6 +228,7 @@ func TestCPutObjectAndCGetObject(t *testing.T) {
 	})
 }
 
+// TestNewS3Client_InvalidConfig 测试非法配置下创建 S3 客户端应失败。
 func TestNewS3Client_InvalidConfig(t *testing.T) {
 	convey.Convey("Test NewS3Client with invalid config", t, func() {
 		provider := key.NewConfigFileSecretKeyProvider("0123456789abcdef0123456789abcdef")
@@ -246,6 +251,7 @@ func TestNewS3Client_InvalidConfig(t *testing.T) {
 	})
 }
 
+// TestCPutObject_StreamEncryption 测试 CPutObject 的流式加密管道在发送前完成加密。
 func TestCPutObject_StreamEncryption(t *testing.T) {
 	convey.Convey("Test CPutObject stream encryption pipeline", t, func() {
 		convey.Convey("verify pipeline encrypts data before sending", func() {
@@ -409,6 +415,7 @@ func TestVerifyDownloadIntegrity(t *testing.T) {
 	})
 }
 
+// TestCopyObject 测试服务端复制的往返一致性（需真实 S3 环境）。
 func TestCopyObject(t *testing.T) {
 	endpoint := os.Getenv("S3_TEST_ENDPOINT")
 	accessKey := os.Getenv("S3_TEST_ACCESS_KEY")

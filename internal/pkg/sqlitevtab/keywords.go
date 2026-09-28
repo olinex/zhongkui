@@ -3,10 +3,6 @@ package sqlitevtab
 // sqliteKeywords 是 SQLite 保留关键字集合（小写）。数据源名作为 vtable
 // 表名直接嵌入 SQL，保留关键字需加引号才能使用，因此在注册期直接拒绝，
 // 避免 rego 作者踩坑。
-// sqliteKeywords is the set of SQLite reserved keywords (lowercase). Since a
-// datasource name is used directly as the vtable table name in SQL, reserved
-// keywords would require quoting; they are rejected at registration to avoid
-// pitfalls for rego authors.
 var sqliteKeywords = map[string]struct{}{
 	"abort": {}, "action": {}, "add": {}, "after": {}, "all": {}, "alter": {},
 	"always": {}, "analyze": {}, "and": {}, "as": {}, "asc": {}, "attach": {},

@@ -23,6 +23,8 @@ import (
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
+// RunHttpService 启动 HTTP 服务并在 context 取消时优雅关闭。
+// 服务在 goroutine 中监听并在启动失败或收到关闭信号时返回错误。
 func RunHttpService(ctx context.Context, i do.Injector) error {
 	viper := provider.MustInvokeViper(i)
 	engine := provider.MustInvokeGin(i)

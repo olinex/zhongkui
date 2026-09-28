@@ -1,3 +1,6 @@
+// Package admin 提供管理域（用户 / 分组 / RBAC / 命名空间 / 采集器 / 服务 / 依赖）的 API 处理器
+// 与视图 In/Out 结构体。
+//
 // 本文件（admin_capturer.go）定义了抓包器管理相关的 API 路由处理器，
 // 提供抓包器的列表查询、详情获取、创建、配置更新和删除功能。
 // 抓包器配置存储在 etcd 中，元数据存储在数据库中，
@@ -29,8 +32,6 @@ import (
 
 // capturerStatusRunning / capturerStatusStopped 是运行状态短键，驱动前端
 // model.capturer.option.status.* 的 i18n 标签渲染。
-// They are the short status keys driving the frontend
-// model.capturer.option.status.* i18n label rendering.
 const (
 	capturerStatusRunning = "running"
 	capturerStatusStopped = "stopped"
@@ -356,8 +357,6 @@ func CapturerBatchDelete(c *gin.Context) {
 }
 
 // capturerStatusItem 内部聚合载体：一个采集器资源的最新在线会话。
-// capturerStatusItem is the internal aggregation carrier: the latest online session
-// of one capturer resource.
 type capturerStatusItem struct {
 	namespace     string
 	name          string
@@ -371,47 +370,32 @@ type capturerStatusItem struct {
 
 // CapturerStatusItemOut 单个采集器资源运行状态输出项。
 // 字段为基本类型，逐字段映射自 etcd 中解析出的会话状态，不引用模型层结构体。
-// CapturerStatusItemOut is an output item for a single capturer resource running
-// state. All fields are primitive types mapped from the session status parsed out
-// of etcd; it does not reference any model-layer struct.
 type CapturerStatusItemOut struct {
 	// Namespace 命名空间
-	// Namespace the namespace
 	Namespace string `json:"namespace"`
 	// Name 采集器名称
-	// Name the capturer name
 	Name string `json:"name"`
 	// Version 版本号
-	// Version the version
 	Version string `json:"version"`
 	// SessionID 最新在线会话 ID
-	// SessionID the latest online session ID
 	SessionID string `json:"sessionId"`
 	// Status 运行状态短键（running / stopped）
-	// Status the running state short key (running / stopped)
 	Status string `json:"status"`
 	// ConfigVersion 配置版本
-	// ConfigVersion the config version
 	ConfigVersion int64 `json:"configVersion"`
 	// GlobalVersion 全局版本
-	// GlobalVersion the global version
 	GlobalVersion int64 `json:"globalVersion"`
 	// LastSeen 最后上报时刻
-	// LastSeen the last feedback time
 	LastSeen time.Time `json:"lastSeen"`
 }
 
 // CapturerStatusListOut 采集器运行状态列表输出。
-// CapturerStatusListOut is the capturer running state list output.
 type CapturerStatusListOut struct {
 	// Items 在线采集器资源运行状态项
-	// Items the online capturer resource running state items
 	Items []CapturerStatusItemOut `json:"items"`
 }
 
 // newCapturerStatusItemOut 将内部聚合项逐字段转换为视图层独立输出项。
-// newCapturerStatusItemOut maps an internal aggregation item field-by-field to a
-// standalone view-layer output item.
 func newCapturerStatusItemOut(item capturerStatusItem) CapturerStatusItemOut {
 	return CapturerStatusItemOut{
 		Namespace:     item.namespace,
@@ -426,7 +410,6 @@ func newCapturerStatusItemOut(item capturerStatusItem) CapturerStatusItemOut {
 }
 
 // statusKeyOf 将 proto 状态枚举映射为前端展示短键。
-// statusKeyOf maps the proto status enum to a frontend display short key.
 func statusKeyOf(st reporter_v1.StatusType) string {
 	switch st {
 	case reporter_v1.StatusType_STOPPED:
@@ -443,16 +426,6 @@ func statusKeyOf(st reporter_v1.StatusType) string {
 // 键格式：{GlobalPrefix}/reporter/{namespace}/{name}/{version}/sts/{sessionID}，
 // 值为 proto 序列化的 reporter_v1.FeedbackRequest（带租约，离线即过期消失）。
 // 仅保留每个资源（namespace/name/version）中 timestamp 最大的一条会话。
-//
-// CapturerStatusListGet handles the capturer running state list request, reading the
-// online session keys under the reporter prefix in etcd, aggregating the latest
-// session per resource and returning the list. Because it needs the etcd client from
-// the injector, it returns a gin.HandlerFunc closure.
-//
-// Key layout: {GlobalPrefix}/reporter/{namespace}/{name}/{version}/sts/{sessionID},
-// whose value is a proto-marshaled reporter_v1.FeedbackRequest (lease-based, so an
-// offline session expires and disappears). Only the session with the largest timestamp
-// is kept per resource (namespace/name/version).
 func CapturerStatusListGet(i do.Injector) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		client := provider.MustInvokeEtcdClient(i)
@@ -466,8 +439,6 @@ func CapturerStatusListGet(i do.Injector) gin.HandlerFunc {
 		}
 
 		// latest 以资源标识为键，保存该资源最新（timestamp 最大）的在线会话。
-		// latest keys the aggregation by resource identity and keeps the newest
-		// (largest timestamp) online session of each resource.
 		latest := make(map[string]capturerStatusItem)
 		for _, kv := range resp.Kvs {
 			item, ok := parseReporterStatusKey(string(kv.Key), kv.Value)
@@ -493,11 +464,6 @@ func CapturerStatusListGet(i do.Injector) gin.HandlerFunc {
 // 键去掉 core.ReporterEtcdPrefix 后须为 {namespace}/{name}/{version}/sts/{sessionID}
 // 五段结构（跳过 cfg 配置键），值按 reporter_v1.FeedbackRequest 解析以取得
 // timestamp / session_id / status。
-//
-// parseReporterStatusKey parses a single status key and unmarshals its value. After
-// stripping core.ReporterEtcdPrefix the key must be the five-segment layout
-// {namespace}/{name}/{version}/sts/{sessionID} (cfg keys are skipped), and the value
-// is unmarshaled as reporter_v1.FeedbackRequest to obtain timestamp / session_id / status.
 func parseReporterStatusKey(key string, value []byte) (capturerStatusItem, bool) {
 	rest, ok := strings.CutPrefix(key, core.ReporterEtcdPrefix)
 	if !ok {
@@ -524,7 +490,6 @@ func parseReporterStatusKey(key string, value []byte) (capturerStatusItem, bool)
 }
 
 // sortCapturerStatusItems 按 namespace → name → version 稳定排序列表。
-// sortCapturerStatusItems stably sorts the list by namespace → name → version.
 func sortCapturerStatusItems(items []CapturerStatusItemOut) {
 	for i := 1; i < len(items); i++ {
 		for j := i; j > 0 && capturerStatusLess(items[j], items[j-1]); j-- {
@@ -534,7 +499,6 @@ func sortCapturerStatusItems(items []CapturerStatusItemOut) {
 }
 
 // capturerStatusLess 比较两个输出项的字典序（namespace → name → version）。
-// capturerStatusLess compares two output items lexicographically (namespace → name → version).
 func capturerStatusLess(a, b CapturerStatusItemOut) bool {
 	if a.Namespace != b.Namespace {
 		return a.Namespace < b.Namespace

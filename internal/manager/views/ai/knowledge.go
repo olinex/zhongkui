@@ -1,7 +1,7 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -12,13 +12,13 @@ import (
 	"strings"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 	ai "zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
@@ -33,8 +33,6 @@ import (
 )
 
 // maxUploadBytes 文档导入请求体的上限（含 multipart 表单开销），64 MiB。
-// maxUploadBytes is the upper bound of a document-import request body (including the
-// multipart form overhead), 64 MiB.
 const maxUploadBytes = 64 << 20
 
 // KnowledgeDocumentItemOut 定义知识库文档列表的输出项结构（独立于模型层）。
@@ -51,6 +49,10 @@ type KnowledgeDocumentItemOut struct {
 	Status string `json:"status"`
 	// SizeBytes 原件字节数（手工录入的文档为 0）
 	SizeBytes int64 `json:"sizeBytes"`
+	// UseCount 该文档被检索命中的次数
+	UseCount int `json:"useCount"`
+	// LastUsedAt 最近一次被检索命中的时间，从未命中时为空
+	LastUsedAt *time.Time `json:"lastUsedAt"`
 	// CreatedAt 创建时间
 	CreatedAt time.Time `json:"createdAt"`
 	// UpdatedAt 更新时间
@@ -92,6 +94,10 @@ type KnowledgeDocumentDetailOut struct {
 	Content string `json:"content"`
 	// ChunkCount 文档被切分的知识分块数量
 	ChunkCount int `json:"chunkCount"`
+	// UseCount 该文档被检索命中的次数
+	UseCount int `json:"useCount"`
+	// LastUsedAt 最近一次被检索命中的时间，从未命中时为空
+	LastUsedAt *time.Time `json:"lastUsedAt"`
 	// Hash 文档内容的 sha256 十六进制摘要
 	Hash string `json:"hash"`
 	// Format 文档来源格式（取值为 documentFormat 枚举类的值：markdown/txt/pdf/docx）
@@ -203,7 +209,7 @@ func KnowledgeDocumentCreate(c *gin.Context) {
 	}
 	comps := middlewares.GetAi(c)
 	if comps.Knowledge == nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.New("ai feature is disabled")).AbortWithGinH(c)
 		return
 	}
 	if err := comps.Knowledge.IndexDocument(c, doc); err != nil {
@@ -241,6 +247,8 @@ func KnowledgeDocumentDetailGet(c *gin.Context) {
 		Title:        instance.Title,
 		Content:      instance.Content,
 		ChunkCount:   instance.ChunkCount,
+		UseCount:     instance.UseCount,
+		LastUsedAt:   instance.LastUsedAt,
 		Hash:         instance.Hash,
 		Format:       instance.Format,
 		Status:       instance.Status,
@@ -386,7 +394,7 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 	}
 	comps := middlewares.GetAi(c)
 	if comps.Knowledge == nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.New("ai feature is disabled")).AbortWithGinH(c)
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
@@ -581,9 +589,6 @@ func KnowledgeDocumentChunksGet(c *gin.Context) {
 
 // knowledgeUploadCounter 包装上传文件读取流并统计已读字节数：ObjectCache.Store 流式加密上传
 // 不返回字节数，故以计数 reader 在流式消费过程中统计，避免把整文件读进内存。
-// knowledgeUploadCounter wraps the uploaded file reader and counts the bytes read: since
-// ObjectCache.Store streams the encrypting upload without returning a byte count, a counting
-// reader tallies it during streaming, avoiding buffering the whole file in memory.
 type knowledgeUploadCounter struct {
 	// r 底层文件读取流
 	r io.Reader
@@ -592,7 +597,6 @@ type knowledgeUploadCounter struct {
 }
 
 // Read 读取底层流并累加字节数，实现 io.Reader。
-// Read reads the underlying stream and accumulates the byte count, implementing io.Reader.
 func (c *knowledgeUploadCounter) Read(p []byte) (int, error) {
 	n, err := c.r.Read(p)
 	c.n += int64(n)
@@ -604,13 +608,6 @@ func (c *knowledgeUploadCounter) Read(p []byte) (int, error) {
 // 处理顺序：请求体限流 → 流式解析表单 → docconv.Detect 做唯一权威格式校验 → AI 启用校验 →
 // 插入 pending 文档行 → 流式加密上传原件并统计字节数 → 回填 size_bytes/object_key →
 // 投递解析任务。任一步失败按「DB 行 ↔ S3 原件共存亡」回滚已产生的副作用，并返回英文错误。
-// KnowledgeDocumentUpload handles the knowledge-document import (multipart/form-data) request.
-// Fields: title (optional; defaults to the filename without extension) and file (required and
-// must be the last form part). Order: body limit -> streaming form parse -> the sole
-// authoritative format check via docconv.Detect -> AI-enabled check -> insert a pending
-// document row -> stream-encrypt-upload the source file while counting bytes -> backfill
-// size_bytes/object_key -> enqueue the parse task. A failure at any step rolls back the side
-// effects already produced ("DB row <-> S3 source file" coexist) and returns an English error.
 func KnowledgeDocumentUpload(c *gin.Context) {
 	// 请求体上限（含 multipart 表单开销）：先按 Content-Length 早拒，再用 MaxBytesReader
 	// 兜底分块传输/长度未知的场景，二者共同保证超限请求以明确英文错误返回 400。
@@ -725,15 +722,6 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 // 该接口返回二进制流，不经 views.StructMetaGinHandler 的统一 JSON 响应封装：统一响应会把
 // 结果包成 {code,data} JSON，破坏二进制内容与下载文件名，故照 plaintext.S3PlaintextGet 的
 // 既有先例直接写响应体（不改变框架响应语义，因为此接口无 JSON 出参）。
-// KnowledgeDocumentDownload handles the download of a knowledge-document source file. It
-// locates the document by (id, namespace): a missing document or a non-imported one (empty
-// ObjectKey) yields 404. It obtains the plaintext reader via ObjectCache.Open and streams it
-// into the response without whole-file buffering or landing. The response sets
-// Content-Disposition (RFC 5987 encoded original filename) and a Content-Type by format.
-// This endpoint returns a binary stream and does not go through the unified JSON response
-// wrapper of views.StructMetaGinHandler (which would wrap the result into a {code,data} JSON
-// envelope and corrupt the binary body and download filename); it follows the existing
-// plaintext.S3PlaintextGet precedent of writing the response body directly.
 func KnowledgeDocumentDownload(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -785,8 +773,6 @@ func KnowledgeDocumentDownload(c *gin.Context) {
 
 // knowledgeDocumentContentType 按文档格式返回下载响应的 Content-Type，未知格式回退
 // application/octet-stream。
-// knowledgeDocumentContentType returns the download Content-Type by document format, falling
-// back to application/octet-stream for an unknown format.
 func knowledgeDocumentContentType(format string) string {
 	switch docconv.Format(format) {
 	case docconv.FormatMarkdown, docconv.FormatTxt:

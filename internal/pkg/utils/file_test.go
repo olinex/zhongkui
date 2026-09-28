@@ -48,7 +48,7 @@ func TestCalculateFileMD5(t *testing.T) {
 			// 创建测试文件
 			testContent := "Hello, World! This is a test file for MD5 calculation."
 			testFilePath := filepath.Join(tempDir, "test.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -69,7 +69,7 @@ func TestCalculateFileMD5(t *testing.T) {
 			for i := range binaryData {
 				binaryData[i] = byte(i % 256)
 			}
-			
+
 			testFilePath := filepath.Join(tempDir, "test.bin")
 			err := os.WriteFile(testFilePath, binaryData, 0644)
 			So(err, ShouldBeNil)
@@ -115,7 +115,7 @@ func TestCalculateFileMD5(t *testing.T) {
 			for i := range data {
 				data[i] = byte(i % 256)
 			}
-			
+
 			_, err = file.Write(data)
 			So(err, ShouldBeNil)
 			file.Close()
@@ -156,7 +156,7 @@ func TestCalculateFileMD5(t *testing.T) {
 			// 创建测试文件
 			testContent := "Consistency test content"
 			testFilePath := filepath.Join(tempDir, "consistent.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -185,7 +185,7 @@ func TestCalculateFileSHA256(t *testing.T) {
 			// 创建测试文件
 			testContent := "Hello, World! This is a test file for SHA-256 calculation."
 			testFilePath := filepath.Join(tempDir, "test.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -206,7 +206,7 @@ func TestCalculateFileSHA256(t *testing.T) {
 			for i := range binaryData {
 				binaryData[i] = byte(i % 256)
 			}
-			
+
 			testFilePath := filepath.Join(tempDir, "test.bin")
 			err := os.WriteFile(testFilePath, binaryData, 0644)
 			So(err, ShouldBeNil)
@@ -252,7 +252,7 @@ func TestCalculateFileSHA256(t *testing.T) {
 			for i := range data {
 				data[i] = byte(i % 256)
 			}
-			
+
 			_, err = file.Write(data)
 			So(err, ShouldBeNil)
 			file.Close()
@@ -293,7 +293,7 @@ func TestCalculateFileSHA256(t *testing.T) {
 			// 创建测试文件
 			testContent := "Consistency test content for SHA-256"
 			testFilePath := filepath.Join(tempDir, "consistent.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -314,7 +314,7 @@ func TestCalculateFileSHA256(t *testing.T) {
 			// 创建测试文件
 			testContent := "Same content, different hash algorithms"
 			testFilePath := filepath.Join(tempDir, "comparison.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -326,11 +326,11 @@ func TestCalculateFileSHA256(t *testing.T) {
 			So(err2, ShouldBeNil)
 			So(md5Hash, ShouldNotBeNil)
 			So(sha256Hash, ShouldNotBeNil)
-			
+
 			// MD5 是 16 字节，SHA-256 是 32 字节
 			So(len(md5Hash), ShouldEqual, md5.Size)
 			So(len(sha256Hash), ShouldEqual, sha256.Size)
-			
+
 			// 哈希值应该不同
 			So(md5Hash, ShouldNotResemble, sha256Hash[:md5.Size])
 		})
@@ -346,7 +346,7 @@ func TestFileHashFunctionsIntegration(t *testing.T) {
 			// 测试文件名包含特殊字符
 			testContent := "File with special name"
 			testFilePath := filepath.Join(tempDir, "test file with spaces.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -363,7 +363,7 @@ func TestFileHashFunctionsIntegration(t *testing.T) {
 			// 测试文件内容包含 Unicode 字符
 			testContent := "Hello 世界! 这是一个测试文件。"
 			testFilePath := filepath.Join(tempDir, "unicode_test.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -380,7 +380,7 @@ func TestFileHashFunctionsIntegration(t *testing.T) {
 			// 测试已知的哈希值（空字符串）
 			testContent := ""
 			testFilePath := filepath.Join(tempDir, "empty_string.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0644)
 			So(err, ShouldBeNil)
 
@@ -403,7 +403,7 @@ func TestFileHashFunctionsIntegration(t *testing.T) {
 			// 测试文件权限
 			testContent := "Permission test"
 			testFilePath := filepath.Join(tempDir, "permission_test.txt")
-			
+
 			err := os.WriteFile(testFilePath, []byte(testContent), 0400) // 只读权限
 			So(err, ShouldBeNil)
 
@@ -424,13 +424,13 @@ func BenchmarkCalculateFileMD5(b *testing.B) {
 	// 创建测试文件
 	tempDir := b.TempDir()
 	testFilePath := filepath.Join(tempDir, "benchmark.txt")
-	
+
 	// 创建 1MB 测试数据
 	data := make([]byte, 1024*1024)
 	for i := range data {
 		data[i] = byte(i % 256)
 	}
-	
+
 	err := os.WriteFile(testFilePath, data, 0644)
 	if err != nil {
 		b.Fatal(err)
@@ -450,13 +450,13 @@ func BenchmarkCalculateFileSHA256(b *testing.B) {
 	// 创建测试文件
 	tempDir := b.TempDir()
 	testFilePath := filepath.Join(tempDir, "benchmark.txt")
-	
+
 	// 创建 1MB 测试数据
 	data := make([]byte, 1024*1024)
 	for i := range data {
 		data[i] = byte(i % 256)
 	}
-	
+
 	err := os.WriteFile(testFilePath, data, 0644)
 	if err != nil {
 		b.Fatal(err)
@@ -484,7 +484,7 @@ func ExampleCalculateFileMD5() {
 
 	testFilePath := filepath.Join(tempDir, "example.txt")
 	content := "This is an example file for MD5 calculation."
-	
+
 	if err := os.WriteFile(testFilePath, []byte(content), 0644); err != nil {
 		fmt.Printf("Error writing file: %v\n", err)
 		return
@@ -513,7 +513,7 @@ func ExampleCalculateFileSHA256() {
 
 	testFilePath := filepath.Join(tempDir, "example.txt")
 	content := "This is an example file for SHA-256 calculation."
-	
+
 	if err := os.WriteFile(testFilePath, []byte(content), 0644); err != nil {
 		fmt.Printf("Error writing file: %v\n", err)
 		return

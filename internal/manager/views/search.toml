@@ -142,6 +142,24 @@ set = "documentFormat"
 field = "status"
 set = "knowledgeDocStatus"
 
+[[enums]]
+typeName = "AgentMemoryListOut"
+[[enums.fields]]
+field = "agentKind"
+set = "agentKind"
+[[enums.fields]]
+field = "kind"
+set = "memoryKind"
+[[enums.fields]]
+field = "status"
+set = "memoryStatus"
+
+[[enums]]
+typeName = "AgentMemoryStatusIn"
+[[enums.fields]]
+field = "status"
+set = "memoryStatus"
+
 # 用户
 [UserListGet]
 timeModule = true
@@ -3363,6 +3381,14 @@ fieldName = "sizeBytes"
 column = "size_bytes"
 
 [[KnowledgeDocumentListGet.selectFields]]
+fieldName = "useCount"
+column = "use_count"
+
+[[KnowledgeDocumentListGet.selectFields]]
+fieldName = "lastUsedAt"
+column = "last_used_at"
+
+[[KnowledgeDocumentListGet.selectFields]]
 fieldName = "createdAt"
 column = "created_at"
 
@@ -3774,3 +3800,86 @@ column = "enabled"
 [[LlmToolListGet.selectFields]]
 fieldName = "description"
 column = "description"
+
+# AgentMemoryListGet
+
+# 长期记忆列表（AI 助手记忆管理页：/api/v1/ai/memory/list）
+# 过滤：keyword（标题/正文模糊）、agentKind / kind / status（枚举等值）；字段投影白名单见 selectFields。
+[AgentMemoryListGet]
+timeModule = true
+
+[[AgentMemoryListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[AgentMemoryListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "keyword"
+fieldType = "string"
+column = "content"
+binding = ""
+actions = ["ctn", "ictn"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "agentKind"
+fieldType = "string"
+column = "agent_kind"
+binding = "oneof=knowledge rego"
+actions = ["eq"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "kind"
+fieldType = "string"
+column = "kind"
+binding = "oneof=fact preference decision artifact"
+actions = ["eq"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "status"
+fieldType = "string"
+column = "status"
+binding = "oneof=active archived"
+actions = ["eq"]
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "agentKind"
+column = "agent_kind"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "kind"
+column = "kind"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "title"
+column = "title"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "content"
+column = "content"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "status"
+column = "status"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "useCount"
+column = "use_count"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "lastUsedAt"
+column = "last_used_at"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[AgentMemoryListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"

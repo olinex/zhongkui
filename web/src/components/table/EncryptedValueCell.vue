@@ -30,7 +30,7 @@
 <script setup lang="ts" name="encrypted-value-cell">
 import type { PropType } from "vue";
 
-// Utils
+// 工具
 import { isEmptyCiphertext } from "@/utils/encrypted";
 
 // 列表页加密/S3 字段统一单元格：按 kind 分支渲染“已加密”占位或对象键 + 存储大小 +

@@ -1,25 +1,24 @@
 /**
- * Rego helpers shared by the tag rule admin pages and the RegoEditor
- * component: tag/field literal extraction for heuristic expansion, metadata
- * driven input field snippets for autocomplete, Rego skeleton generation and
- * a lightweight local preflight checker.
+ * Rego 辅助函数，供标签规则管理页面与 RegoEditor 组件共用：用于启发式展开的
+ * tag/字段字面量提取、由元信息驱动的自动补全输入字段片段、Rego 骨架生成，
+ * 以及轻量的本地预校验。
  */
 
 export interface RegoValidationError {
   line: number;
   column: number;
   message: string;
-  /** lint severity key, e.g. "warning" / "error" */
+  /** lint 严重级键，如 "warning" / "error" */
   type?: string;
-  /** optional hint rendered alongside the message */
+  /** 可选提示，与消息一同渲染 */
   hint?: string;
 }
 
-/** Registered model type key for the HTTP transport input document. */
+/** HTTP 传输输入文档所注册的模型类型键。 */
 export const HTTP_TRANSPORT_MODEL_KEY =
   "zhongkui.com/zhongkui/internal/models/network.HttpTransport";
 
-/** Common Rego keywords offered by the editor autocomplete. */
+/** 编辑器自动补全提供的常用 Rego 关键字。 */
 export const REGO_KEYWORDS = [
   "package",
   "import",
@@ -40,14 +39,13 @@ export const REGO_KEYWORDS = [
 ];
 
 /**
- * Completion position classification for the Rego editor autocomplete.
- * The editor suppresses or filters options that would be invalid at the
- * cursor location, so that e.g. `and`/`abs`/`any` are not suggested right
- * after a completed expression like `input.file_ext == ""`.
+ * Rego 编辑器自动补全的补全位置分类。
+ * 编辑器会抑制或过滤在光标处非法的候选项，例如在已完成的表达式
+ * `input.file_ext == ""` 之后不再提示 `and`/`abs`/`any`。
  */
 export type RegoCompletionKind = "block" | "term" | "allowAll";
 
-/** Keywords that can only start a statement/expression, never a term. */
+/** 只能作为语句/表达式开头、不能作为项（term）的关键字。 */
 const EXPRESSION_START_KEYWORDS = new Set([
   "package",
   "import",
@@ -63,34 +61,31 @@ const EXPRESSION_START_KEYWORDS = new Set([
   "as",
 ]);
 
-/** Matches a fully closed string literal at the line end: `""`, `"..."` or `` `...` ``. */
+/** 匹配行尾完整闭合的字符串字面量：`""`、`"..."` 或 `` `...` ``。 */
 const CLOSED_LITERAL_TAIL_RE =
   /(?:""|"(?:[^"\\]|\\.)*"|`(?:[^`]|\\.)*`|\d+(?:\.\d+)?|true|false|null)$/;
 
-/** Comparison / assignment operators, looked up anywhere on the line. */
+/** 比较/赋值运算符，在整行任意位置查找。 */
 const COMPARISON_OP_RE = /(?:==|!=|<=|>=|<|>|:=|=)/;
 
-/** Line endings that expect a term value: operators, commas or open brackets. */
+/** 期望项（term）值的行尾：运算符、逗号或左括号。 */
 const TERM_POSITION_RE = /(?:==|!=|<=|>=|<|>|:=|=|,|\[|\{|\()\s*$/;
 
-/** Keywords that expect a following term on the same line. */
+/** 期望同一行紧随一个项（term）的关键字。 */
 const TERM_KEYWORD_RE = /(?:\bif\b|\bin\b|\bnot\b|\bsome\b|\bevery\b|\bcontains\b)\s*$/;
 
 /**
- * Classifies the completion context at the cursor given the line text before
- * the cursor (including any partial word being typed):
- * - "block": a completed expression/literal precedes the cursor, so any word
- *   typed here is a syntax error and no completion should be offered.
- * - "term": only a term (value) is expected here; statement-starting keywords
- *   must be filtered out of the completion list.
- * - "allowAll": no positional constraint, keep the default completions.
+ * 根据光标之前的行文本（含正在输入的部分单词）对光标处的补全上下文分类：
+ * - "block"：光标前是已完成表达式/字面量，此处输入任何单词都是语法错误，
+ *   不应提供补全。
+ * - "term"：此处只期望一个项（值），需从补全列表中过滤掉语句开头的关键字。
+ * - "allowAll"：无位置约束，保留默认补全。
  */
 export function classifyRegoCompletionContext(lineTextBefore: string): RegoCompletionKind {
-  // Drop the partial word being typed so we classify the position itself.
+  // 去掉正在输入的部分单词，以便对位置本身进行分类。
   const before = lineTextBefore.replace(/[a-zA-Z_][a-zA-Z0-9_]*$/, "");
 
-  // A closed literal right after a comparison/assignment completes the
-  // expression: any further word on this line is a syntax error.
+  // 比较/赋值后紧跟闭合字面量即构成完整表达式：此行再出现任何单词都是语法错误。
   if (CLOSED_LITERAL_TAIL_RE.test(before.trimEnd()) && COMPARISON_OP_RE.test(before)) {
     return "block";
   }
@@ -100,88 +95,85 @@ export function classifyRegoCompletionContext(lineTextBefore: string): RegoCompl
   return "allowAll";
 }
 
-/** Returns true when the completion label is a statement-starting keyword. */
+/** 当补全标签为语句开头关键字时返回 true。 */
 export function isRegoExpressionKeyword(label: string): boolean {
   return EXPRESSION_START_KEYWORDS.has(label);
 }
 
-/** Item metadata for array-typed fields, e.g. the element type of `items`. */
+/** 数组类型字段的元素元信息，如 `items` 的元素类型。 */
 export interface InputItemMeta {
   type: string;
   goType: string;
 }
 
 /**
- * Field metadata of an input model document as returned by the
- * `/tag-event/tag-rule/model/metadata` endpoint.
+ * 由 `/tag-event/tag-rule/model/metadata` 接口返回的输入模型文档字段元信息。
  */
 export interface InputFieldMeta {
-  /** input field name, e.g. "method" */
+  /** 输入字段名，如 "method" */
   field: string;
-  /** semantic type key, e.g. "string" | "number" | "boolean" | "object" | "array" */
+  /** 语义类型键，如 "string" | "number" | "boolean" | "object" | "array" */
   type: string;
-  /** Go type name of the backend model field */
+  /** 后端模型字段的 Go 类型名 */
   goType: string;
-  /** brief description shown in the autocomplete popup */
+  /** 在自动补全弹层中显示的简要描述 */
   description?: string;
-  /** whether the field carries sensitive data */
+  /** 该字段是否携带敏感数据 */
   sensitive?: boolean;
-  /** element metadata for array-typed fields */
+  /** 数组类型字段的元素元信息 */
   items?: InputItemMeta;
 }
 
-/** A sample input document offered for dry-run previews. */
+/** 供试运行预览使用的样例输入文档。 */
 export interface InputSample {
   name: string;
   description?: string;
   input: Record<string, unknown>;
 }
 
-/** A selectable model option, e.g. rendered as a `<v-select>` item. */
+/** 可选择的模型选项，如渲染为 `<v-select>` 的选项项。 */
 export interface ModelOption {
   value: string;
   label: string;
 }
 
-// ---- custom OPA builtins & sqlite vtable metadata ----
+// ---- 自定义 OPA 内置函数与 sqlite 虚拟表元信息 ----
 
 /**
- * Metadata of a custom OPA builtin callable inside rego rules, as returned by
- * the `/tag-event/tag-rule/functions` endpoint. Drives the Rego editor's
- * function keyword highlight, hover signature hints and autocomplete.
+ * 由 `/tag-event/tag-rule/functions` 接口返回、rego 规则内可调用的自定义 OPA
+ * 内置函数元信息。驱动 Rego 编辑器的函数关键字高亮、悬停签名提示与自动补全。
  */
 export interface RegoFunctionMeta {
-  /** full function name, e.g. "sqlite.query" */
+  /** 完整函数名，如 "sqlite.query" */
   name: string;
-  /** localized description shown in the autocomplete popup / hover tooltip */
+  /** 在自动补全弹层/悬停提示中显示的本地化描述 */
   description: string;
-  /** human-readable call signature, e.g. "sqlite.query(sql, params)" */
+  /** 人类可读的调用签名，如 "sqlite.query(sql, params)" */
   signature: string;
-  /** optional usage example text */
+  /** 可选的使用示例文本 */
   example?: string;
 }
 
-/** Metadata of a single column of a sqlite vtable datasource. */
+/** sqlite 虚拟表数据源的单个列元信息。 */
 export interface SqliteColumnMeta {
   name: string;
-  /** value type name, e.g. "text" | "integer" | "real" | "blob" | "any" */
+  /** 值类型名，如 "text" | "integer" | "real" | "blob" | "any" */
   type: string;
 }
 
 /**
- * Metadata of a third-party datasource registered as an sqlite vtable, as
- * returned by the `/tag-event/tag-rule/sqlite/meta` endpoint. Drives SQL
- * table/column completion inside `sqlite.query(...)` strings.
+ * 由 `/tag-event/tag-rule/sqlite/meta` 接口返回、注册为 sqlite 虚拟表的第三方
+ * 数据源元信息。驱动 `sqlite.query(...)` 字符串内的 SQL 表名/列名补全。
  */
 export interface SqliteDatasourceMeta {
-  /** bare table name referenced by sqlite.query, e.g. "ip_geo" */
+  /** sqlite.query 引用的裸表名，如 "ip_geo" */
   name: string;
   columns: SqliteColumnMeta[];
 }
 
 /**
- * SQL keywords offered by the editor for keyword highlight and autocomplete
- * inside `sqlite.query("...")` strings. SQLite read-only SELECT subset.
+ * 编辑器在 `sqlite.query("...")` 字符串内提供的关键字高亮与自动补全所用的 SQL
+ * 关键字，为 SQLite 只读 SELECT 子集。
  */
 export const SQL_KEYWORDS = [
   "select",
@@ -227,11 +219,9 @@ export const SQL_KEYWORDS = [
 ];
 
 /**
- * Builds an insertable Rego snippet for an input field based on its semantic
- * type. Fields comparable with a literal become `input.<field> == <literal>`
- * (string/number/boolean); object, array and sensitive fields cannot be
- * compared for equality, so only the bare `input.<field>` reference is
- * produced. Unknown types fall back to the bare reference as well.
+ * 依据语义类型为输入字段构建可插入的 Rego 片段。可与字面量比较的字段生成
+ * `input.<field> == <literal>`（字符串/数字/布尔）；对象、数组与敏感字段无法
+ * 做相等比较，只生成裸引用 `input.<field>`。未知类型同样回退为裸引用。
  */
 export function fieldSnippet(field: InputFieldMeta): string {
   const ref = `input.${field.field}`;
@@ -259,8 +249,8 @@ function unquoteLiteral(raw: string): string {
 }
 
 /**
- * Extracts tag string literals declared by a Rego rule:
- * `tags contains "x"` and `tags := { "a", "b" }` forms.
+ * 提取 Rego 规则中声明的 tag 字符串字面量：
+ * `tags contains "x"` 与 `tags := { "a", "b" }` 两种形式。
  */
 export function extractTagLiterals(rego: string): string[] {
   const tags = new Set<string>();
@@ -287,8 +277,7 @@ export function extractTagLiterals(rego: string): string[] {
 }
 
 /**
- * Extracts the first-segment field names referenced as `input.<field>` in a
- * Rego rule, deduplicated in first-seen order.
+ * 提取 Rego 规则中以 `input.<field>` 引用的首段字段名，按首次出现顺序去重。
  */
 export function extractInputFields(rego: string): string[] {
   const fields: string[] = [];
@@ -305,8 +294,8 @@ export function extractInputFields(rego: string): string[] {
 }
 
 /**
- * Builds a Rego skeleton following the `package zki` + `tags contains`
- * contract, using the given rule name as the produced tag.
+ * 按 `package zki` + `tags contains` 契约构建 Rego 骨架，使用给定规则名作为
+ * 产出的 tag。
  */
 export function buildRegoSkeleton(name: string): string {
   const tag = name.trim() || "tag";
@@ -393,9 +382,8 @@ export function buildDatasourceSamples(
 }
 
 /**
- * Lightweight local Rego preflight checks for instant feedback while typing.
- * Checks bracket/quote pairing and the required `package zki` / `tags`
- * declarations. Not a substitute for the authoritative backend validation.
+ * 轻量的本地 Rego 预检，用于输入时即时反馈。检查括号/引号配对以及必需的
+ * `package zki` / `tags` 声明。不能替代后端权威校验。
  */
 export function preflightRego(src: string): RegoValidationError[] {
   const errors: RegoValidationError[] = [];

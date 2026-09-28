@@ -23,7 +23,7 @@
 <script setup lang="ts" name="temp-editable-dialog">
 const dialog = ref(false);
 const editable = ref(false);
-// Dialog payload is dynamic.
+// 对话框负载为动态结构。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const proxy = ref({} as Record<string, any>);
 

@@ -1,7 +1,7 @@
 package ai
 
 import (
-	// stdlib
+	// 标准库
 	"bytes"
 	"context"
 	"encoding/json"
@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	en2 "github.com/go-playground/locales/en"
@@ -24,7 +24,7 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
 
-	// internal
+	// 项目内部
 	ai "zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
@@ -45,9 +45,6 @@ const knowledgeTestNamespace = "aitest"
 
 // TestMain 初始化全局 KeyDerivation（crypto serializer 落库/读取所需）与 Gin binding
 // 自定义验证规则。本测试包自包含（基座 views 包的 TestMain 未被子包继承）。
-// TestMain initializes the global KeyDerivation (needed by the crypto serializer on
-// read/write) and the Gin binding custom validation rules. This test package is
-// self-contained (the base views package TestMain is not inherited by subpackages).
 func TestMain(m *testing.M) {
 	pb, err := key.LoadPasswordBook("")
 	if err != nil {
@@ -66,7 +63,6 @@ func TestMain(m *testing.M) {
 }
 
 // newKnowledgeTestLogger 创建测试用日志记录器（丢弃输出）。
-// newKnowledgeTestLogger creates a test logger (output discarded).
 func newKnowledgeTestLogger() *logging.Logger {
 	config := zap.NewProductionConfig()
 	config.OutputPaths = []string{}
@@ -75,8 +71,6 @@ func newKnowledgeTestLogger() *logging.Logger {
 }
 
 // newKnowledgeTestLocalizer 返回测试专用 go-i18n Localizer，内置错误响应渲染所需的最小消息键。
-// newKnowledgeTestLocalizer returns a test go-i18n Localizer carrying the minimal message
-// keys required by error responses.
 func newKnowledgeTestLocalizer() *i18n.Localizer {
 	bundle := i18n.NewBundle(language.English)
 	bundle.RegisterUnmarshalFunc("toml", toml.Unmarshal)
@@ -95,7 +89,6 @@ error.badUrlParam = "bad url param: %s"
 }
 
 // newKnowledgeTestTranslator 返回测试专用 universal-translator。
-// newKnowledgeTestTranslator returns a test universal-translator.
 func newKnowledgeTestTranslator() ut.Translator {
 	uni := ut.New(en2.New())
 	trans, _ := uni.GetTranslator("en")
@@ -103,7 +96,6 @@ func newKnowledgeTestTranslator() ut.Translator {
 }
 
 // setupI18nMiddleware 返回注入 Localizer 与 Translator 的 Gin 中间件。
-// setupI18nMiddleware returns a Gin middleware injecting the Localizer and Translator.
 func setupI18nMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Set(response.LocalizerCtxName, newKnowledgeTestLocalizer())
@@ -114,9 +106,6 @@ func setupI18nMiddleware() gin.HandlerFunc {
 
 // createKnowledgeTestDB 返回共享 PostgreSQL 测试库（testdb.Core 事务隔离）并确保测试专用
 // 命名空间存在（满足 knowledge_documents.namespace_name 外键约束）。
-// createKnowledgeTestDB returns the shared PostgreSQL test database (testdb.Core transaction
-// isolation) and ensures the test namespace exists (satisfying the
-// knowledge_documents.namespace_name foreign key).
 func createKnowledgeTestDB(t *testing.T) *database.DB {
 	t.Helper()
 	db := testdb.Core(t)
@@ -128,8 +117,6 @@ func createKnowledgeTestDB(t *testing.T) *database.DB {
 }
 
 // newDisabledAiRuntime 构造未启用的 AI 运行时（模型注册表为空），用于覆盖「AI 未启用」分支。
-// newDisabledAiRuntime builds a disabled AI runtime (empty model registry) to cover the
-// "AI disabled" branch.
 func newDisabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 	t.Helper()
 	rt, err := ai.NewRuntime(context.Background(), db, nil, newKnowledgeTestLogger())
@@ -142,14 +129,10 @@ func newDisabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 // newEnabledAiRuntime 通过种子化两个模型（chat + embedding）与两条档位绑定把运行时装配为
 // 启用态，使 Knowledge 组件可用（用于覆盖「导入文档重新索引的进行中守卫」）。端点地址指向
 // 不可达地址：装配阶段只构建客户端、不联网，解析任务也不在本测试中执行。
-// newEnabledAiRuntime assembles an enabled runtime by seeding two models (chat + embedding)
-// and two slot bindings so the Knowledge component is available (to cover the "reindex guard
-// while parsing" case). The endpoint points to an unreachable address: assembly only builds
-// clients without networking, and no parse task runs in this test.
 func newEnabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 	t.Helper()
 	chat := &core.LlmModel{
-		Name: "chat-test", Kind: string(llm.ModelKindChat),
+		Name: "chat-test", Kind: llm.ModelKindChat,
 		BaseURL: "http://127.0.0.1:1/v1", APIKey: serializer.NewCrypto([]byte("sk-test")),
 		ModelName: "gpt-test", Enabled: true,
 	}
@@ -157,18 +140,17 @@ func newEnabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 		t.Fatalf("seed chat model: %v", err)
 	}
 	embed := &core.LlmModel{
-		Name: "embed-test", Kind: string(llm.ModelKindEmbedding),
+		Name: "embed-test", Kind: llm.ModelKindEmbedding,
 		BaseURL: "http://127.0.0.1:1/v1", APIKey: serializer.NewCrypto([]byte("sk-test")),
 		ModelName: "emb-test", Enabled: true,
 	}
 	if err := db.Create(embed).Error; err != nil {
 		t.Fatalf("seed embedding model: %v", err)
 	}
-	// Omit the associated model entity: ModelID already points at the seeded rows, and a
-	// zero-value association would otherwise be upserted by GORM.
+	// 省略关联的模型实体：ModelID 已指向已播种的行，否则零值关联会被 GORM 执行 upsert。
 	for _, binding := range []core.LlmBinding{
-		{Slot: string(llm.SlotStandard), ModelID: chat.ID},
-		{Slot: string(llm.SlotEmbedding), ModelID: embed.ID},
+		{Slot: llm.SlotStandard, ModelID: chat.ID},
+		{Slot: llm.SlotEmbedding, ModelID: embed.ID},
 	} {
 		if err := db.Omit("Model").Create(&binding).Error; err != nil {
 			t.Fatalf("seed slot binding %q: %v", binding.Slot, err)
@@ -184,10 +166,6 @@ func newEnabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 // newKnowledgeTestRouter 创建知识库文档测试路由引擎，注入 i18n、日志、核心库、命名空间、
 // AI 运行时、对象缓存与管道投递客户端。对象缓存与管道客户端以类型化 nil 注入：被测分支均在
 // 触达它们之前返回，故无需真实 S3/asynq。
-// newKnowledgeTestRouter builds the knowledge-document test router, injecting i18n, logger,
-// core database, namespace, AI runtime, object cache and pipeline client. The object cache
-// and pipeline client are injected as typed nils: every covered branch returns before reaching
-// them, so no real S3/asynq is required.
 func newKnowledgeTestRouter(db *database.DB, namespace string, rt *ai.Runtime) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
@@ -210,8 +188,6 @@ func newKnowledgeTestRouter(db *database.DB, namespace string, rt *ai.Runtime) *
 
 // doKnowledgeUploadRequest 构造一次 multipart/form-data 上传请求（title 可选、file 最后），
 // 并可按需覆盖 ContentLength 以触发体积早拒分支。
-// doKnowledgeUploadRequest builds a multipart/form-data upload request (optional title, file
-// last) and may override ContentLength to trigger the early size-rejection branch.
 func doKnowledgeUploadRequest(r *gin.Engine, path, filename, title string, content []byte, contentLength int64) *httptest.ResponseRecorder {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
@@ -238,7 +214,6 @@ func doKnowledgeUploadRequest(r *gin.Engine, path, filename, title string, conte
 }
 
 // doKnowledgeJSONRequest 执行一次 JSON 请求并返回响应记录器。
-// doKnowledgeJSONRequest performs one JSON request and returns the response recorder.
 func doKnowledgeJSONRequest(r *gin.Engine, method, path string, body any) *httptest.ResponseRecorder {
 	var reader io.Reader
 	if body != nil {
@@ -258,7 +233,6 @@ func doKnowledgeJSONRequest(r *gin.Engine, method, path string, body any) *httpt
 }
 
 // knowledgeDocPath 拼接知识库文档子操作路径。
-// knowledgeDocPath builds a knowledge-document sub-action path.
 func knowledgeDocPath(id uint, action string) string {
 	return "/ai/doc/" + strconv.FormatUint(uint64(id), 10) + action
 }

@@ -1,7 +1,7 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"net/http"
@@ -14,10 +14,6 @@ import (
 // newEmbeddingMockServer 启动一个模拟 OpenAI 兼容 embedding 端点的 httptest 服务器：
 // 校验请求为 POST {baseURL}/v1/embeddings 并解析 JSON 请求体，交由 respond 决定状态码与
 // 响应体；返回的第二个函数用于读取最近一次请求体（供断言 dimensions 参数）。
-// newEmbeddingMockServer starts an httptest server mimicking an OpenAI-compatible embedding
-// endpoint: it verifies the request is POST {baseURL}/v1/embeddings and decodes the JSON body,
-// then lets respond decide the status code and the response body; the second returned function
-// reads the latest request body (for asserting the dimensions parameter).
 func newEmbeddingMockServer(t *testing.T, respond func(req map[string]any) (int, map[string]any)) (*httptest.Server, func() map[string]any) {
 	t.Helper()
 	var lastRequest map[string]any
@@ -44,9 +40,6 @@ func newEmbeddingMockServer(t *testing.T, respond func(req map[string]any) (int,
 
 // mockEmbeddingResponse 构造符合 OpenAI 兼容响应结构的单条向量响应
 // （data[].embedding 为浮点向量），dimensions 为 0 时返回空向量。
-// mockEmbeddingResponse builds a single-vector response matching the OpenAI-compatible
-// response structure (data[].embedding holds the float vector); a dimensions of 0 yields an
-// empty vector.
 func mockEmbeddingResponse(dimensions int) map[string]any {
 	vector := make([]float32, dimensions)
 	for i := range vector {
@@ -63,8 +56,6 @@ func mockEmbeddingResponse(dimensions int) map[string]any {
 }
 
 // mockEmbedConfig 构造指向 mock 端点（{baseURL}/v1）的 embedding 模型配置。
-// mockEmbedConfig builds an embedding model config pointing at the mock endpoint
-// ({baseURL}/v1).
 func mockEmbedConfig(baseURL string, dimensions int) ModelConfig {
 	return ModelConfig{
 		Name:       "embed-test",
@@ -79,9 +70,6 @@ func mockEmbedConfig(baseURL string, dimensions int) ModelConfig {
 
 // TestProbeEmbeddingDimensions_Native 测试未声明维度时按模型原生维度探测：请求体不得携带
 // dimensions 字段，探测结果等于端点返回的向量长度。
-// TestProbeEmbeddingDimensions_Native verifies the probe without a declared dimension follows
-// the native dimension of the model: the request body must carry no dimensions field and the
-// result equals the vector length returned by the endpoint.
 func TestProbeEmbeddingDimensions_Native(t *testing.T) {
 	const native = 8
 	server, lastRequest := newEmbeddingMockServer(t, func(req map[string]any) (int, map[string]any) {
@@ -101,9 +89,6 @@ func TestProbeEmbeddingDimensions_Native(t *testing.T) {
 
 // TestProbeEmbeddingDimensions_Declared 测试声明维度时随请求下发 dimensions 参数：端点按
 // 该维度返回向量，探测结果等于声明的维度。
-// TestProbeEmbeddingDimensions_Declared verifies a declared dimension is sent with the request
-// as the dimensions parameter: the endpoint answers with that dimension and the result equals
-// the declared one.
 func TestProbeEmbeddingDimensions_Declared(t *testing.T) {
 	const declared = 4
 	server, lastRequest := newEmbeddingMockServer(t, func(req map[string]any) (int, map[string]any) {
@@ -127,8 +112,6 @@ func TestProbeEmbeddingDimensions_Declared(t *testing.T) {
 }
 
 // TestProbeEmbeddingDimensions_EmptyVector 测试端点在数据为空或向量为空时返回英文错误。
-// TestProbeEmbeddingDimensions_EmptyVector verifies an English error is returned when the
-// endpoint answers with no data or with an empty vector.
 func TestProbeEmbeddingDimensions_EmptyVector(t *testing.T) {
 	t.Run("empty data", func(t *testing.T) {
 		server, _ := newEmbeddingMockServer(t, func(req map[string]any) (int, map[string]any) {
@@ -153,8 +136,6 @@ func TestProbeEmbeddingDimensions_EmptyVector(t *testing.T) {
 }
 
 // TestProbeEmbeddingDimensions_ServerError 测试端点返回 5xx 时底层向量化错误被正确传出。
-// TestProbeEmbeddingDimensions_ServerError verifies the underlying embedding error propagates
-// when the endpoint answers with 5xx.
 func TestProbeEmbeddingDimensions_ServerError(t *testing.T) {
 	server, _ := newEmbeddingMockServer(t, func(req map[string]any) (int, map[string]any) {
 		return http.StatusInternalServerError, map[string]any{

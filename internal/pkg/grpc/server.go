@@ -22,7 +22,7 @@ type Server struct {
 	hthName string
 	// hthSrv 是gRPC健康检查服务器实例
 	hthSrv *health.Server
-	// TODO: logger
+	// TODO: 日志记录器
 	// 未来可以添加日志记录器，用于记录服务器操作和错误
 }
 

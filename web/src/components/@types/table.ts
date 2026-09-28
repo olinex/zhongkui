@@ -3,11 +3,11 @@ import type { Option } from "./forms";
 
 export type Align = "start" | "end" | "center" | undefined;
 export type Fixed = boolean | "end" | "start" | undefined;
-// Table row values are heterogeneous (string / number / boolean / Date / ...).
+// 表格行值类型异构（字符串 / 数字 / 布尔 / 日期 等）。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ItemAction = (item: Record<string, any>) => void;
 export type ItemActions = Record<string, ItemAction>;
-// Batch row values are heterogeneous, same as ItemAction.
+// 批量行值与 ItemAction 同理，类型异构。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type BatchAction = (items: Record<string, any>[]) => void;
 export type BatchActions = Record<string, BatchAction>;

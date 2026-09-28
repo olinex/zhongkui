@@ -54,7 +54,7 @@ import { DateTime } from "luxon";
 
 const choiceField = ref({ value: "", title: "" });
 const choiceAction = ref({ value: "", title: "" });
-// The selected value type depends on the field's backend data type.
+// 选中值的类型取决于字段的后端数据类型。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const choiceValue = ref(null as any);
 
@@ -170,7 +170,7 @@ const updateAction = (proxy: globalThis.Ref<SearchItem, SearchItem>, value: Opti
   }
 };
 
-// The updated value is heterogeneous: Date for datetime fields, string/number otherwise.
+// 更新后的值类型异构：日期时间字段为 Date，其余为字符串/数字。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const updateValue = (proxy: globalThis.Ref<SearchItem, SearchItem>, value: any) => {
   if (!props.modify) {

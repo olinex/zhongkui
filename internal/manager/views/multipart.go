@@ -1,30 +1,21 @@
 // 本文件提供视图层共享的 multipart/form-data 流式解析助手 ReadMultipartFile。
 // 供需要直通上传文件流（如第三方数据源 sqlite .db、知识库文档原件）的接口复用，
 // 避免每个接口各自重复实现「先读普通表单字段、再流式返回 file 部分」的解析逻辑。
-//
-// This file provides ReadMultipartFile, the shared streaming parser of
-// multipart/form-data requests in the view layer. Handlers that pass an uploaded
-// file straight through to a storage layer (e.g. a datasource sqlite .db or a
-// knowledge-document source file) reuse it, avoiding a per-handler reimplementation
-// of "read the ordinary form fields, then stream the file part out".
 package views
 
 import (
-	// stdlib
+	// 标准库
 	"io"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
 // maxFormFieldBytes 是单个普通表单字段（非 file 部分）读入内存的上限：这类字段只承载标题、
 // 名称、类型、配置等小数据，超过即视为异常/滥用请求并报错，避免超长字段把内存打满。
-// maxFormFieldBytes is the upper bound of a single ordinary form field (non-file part) read into
-// memory: such fields only carry small metadata (title, name, type, config), so exceeding it is
-// treated as an abnormal/abusive request and rejected, keeping field buffering bounded.
 const maxFormFieldBytes = 1 << 20
 
 // ReadMultipartFile 流式解析 multipart/form-data 请求：把 file 字段之前出现的普通表单字段经
@@ -33,15 +24,6 @@ const maxFormFieldBytes = 1 << 20
 // 保证顺序），因此返回的流在回调完成后即可安全读取。未携带 file 时返回 nil。
 // 普通表单字段按 maxFormFieldBytes 有界读取，超出即返回错误；返回的读取流须由调用方关闭。
 // 调用方需要原始文件名时可把返回的 io.Reader 断言为 *multipart.Part 后调用其 FileName()。
-// ReadMultipartFile streams a multipart/form-data request: it feeds ordinary form fields
-// before "file" to cb(name, body), and returns the "file" part as a stream for the caller to
-// pass straight into the storage layer — the file is never pre-read or buffered, so memory use
-// is independent of the file size. It assumes "file" is the last part (guaranteed by the
-// frontend) so the returned stream is safe to read after the callback loop. Returns nil when no
-// file part is present. Ordinary fields are read with a bound of maxFormFieldBytes and an
-// over-limit field is an error; the caller owns closing the returned reader.
-// A caller needing the original filename may type-assert the returned io.Reader to
-// *multipart.Part and call its FileName().
 func ReadMultipartFile(c *gin.Context, cb func(name string, body []byte)) (io.Reader, error) {
 	mr, err := c.Request.MultipartReader()
 	if err != nil {

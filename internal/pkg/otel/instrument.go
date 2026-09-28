@@ -59,11 +59,13 @@ func AsynqServerMiddleware() asynq.MiddlewareFunc {
 	}
 }
 
+// TracedAsynqClient 包装 asynq.Client，在任务入队时自动创建追踪 span。
 type TracedAsynqClient struct {
 	*asynq.Client
 	tracer trace.Tracer
 }
 
+// WrapAsynqClient 把 asynq.Client 包装为带追踪能力的 TracedAsynqClient；OTEL 未启用时返回 nil。
 func WrapAsynqClient(cli *asynq.Client) *TracedAsynqClient {
 	if !Env.Enabled {
 		return nil
@@ -102,6 +104,7 @@ func (c *TracedAsynqClient) EnqueueContext(ctx context.Context, task *asynq.Task
 	return info, err
 }
 
+// InjectRedisClient 为 Redis 客户端注入 OpenTelemetry 的链路追踪与指标采集；OTEL 未启用时不作处理。
 func InjectRedisClient(client *redis.Client) error {
 	if !Env.Enabled {
 		return nil
@@ -186,6 +189,7 @@ func GormPlugin() gorm.Plugin {
 	return tracing.NewPlugin()
 }
 
+// GinMiddleware 返回基于 otelgin 的 Gin 中间件，为 HTTP 请求创建追踪 span；OTEL 未启用时返回 nil。
 func GinMiddleware(name string) gin.HandlerFunc {
 	if !Env.Enabled {
 		return nil
@@ -230,6 +234,7 @@ func EtcdDialOptions() []g.DialOption {
 	}
 }
 
+// S3ClientOptions 返回 S3 客户端的 OTEL 追踪选项（经自定义 RoundTripper 埋点）；OTEL 未启用时返回 nil。
 func S3ClientOptions() []s3.ClientOption {
 	if !Env.Enabled {
 		return nil

@@ -15,11 +15,16 @@ import (
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
+// TLSInputs tls 子命令的输入参数。
 type TLSInputs struct {
-	Name     string        `viper:"name" prompt:"请输入 TLS 名称" binding:"required,min=2,max=255,strictFileName"`
-	DirPath  string        `viper:"dir-path" prompt:"请输入目录路径" binding:"required,min=2,max=1024,dirpath"`
-	TTL      time.Duration `viper:"ttl" prompt:"请输入有效期 TTL（例如 8760h 表示 1 年）" binding:"required"`
-	DNSNames []string      `viper:"dns-names" prompt:"请输入 DNS 域名列表" binding:"required,min=1"`
+	// Name TLS 名称，用于生成密钥与证书文件名。
+	Name string `viper:"name" prompt:"请输入 TLS 名称" binding:"required,min=2,max=255,strictFileName"`
+	// DirPath 密钥与证书的输出目录。
+	DirPath string `viper:"dir-path" prompt:"请输入目录路径" binding:"required,min=2,max=1024,dirpath"`
+	// TTL 证书有效期。
+	TTL time.Duration `viper:"ttl" prompt:"请输入有效期 TTL（例如 8760h 表示 1 年）" binding:"required"`
+	// DNSNames 证书包含的 DNS 域名列表。
+	DNSNames []string `viper:"dns-names" prompt:"请输入 DNS 域名列表" binding:"required,min=1"`
 }
 
 var generateTLSCmd = &cobra.Command{

@@ -4,7 +4,7 @@
 package s3
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"errors"
 	"io"
@@ -14,13 +14,11 @@ import (
 	"testing"
 	"time"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 // fakeBackend 是测试用的 objectBackend：以函数注入读/写/删，避免依赖真实 S3。
-// fakeBackend is a test objectBackend: read/write/remove are injected as functions so tests need
-// no real S3.
 type fakeBackend struct {
 	fetch  func(ctx context.Context, objectKey string) (io.ReadCloser, error)
 	store  func(ctx context.Context, objectKey string, r io.Reader) error
@@ -49,7 +47,6 @@ func (b fakeBackend) Remove(ctx context.Context, objectKey string) error {
 }
 
 // newObjectCacheForTest 以注入的 fetch 构建通用对象缓存（免真实 S3），供单元测试使用。
-// newObjectCacheForTest builds an ObjectCache with an injected fetch (no real S3) for tests.
 func newObjectCacheForTest(fetch func(ctx context.Context, objectKey string) (io.ReadCloser, error), cfg Config) *ObjectCache {
 	return newObjectCache(fakeBackend{fetch: fetch}, cfg)
 }

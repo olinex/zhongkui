@@ -68,7 +68,7 @@ func CryptoPlaintextGet(c *gin.Context) {
 	}
 	model, ok := plaintextModels[in.Model]
 	if !ok {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
 		return
 	}
 	m, err := crypto.ModeForField(model, in.Field, "json")
@@ -78,12 +78,12 @@ func CryptoPlaintextGet(c *gin.Context) {
 	}
 	raw, err := base64.StdEncoding.DecodeString(in.Ciphertext)
 	if err != nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
+		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
 	plain, err := m.Decrypt(raw)
 	if err != nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
+		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
 	c.Data(http.StatusOK, "application/octet-stream", plain)
@@ -105,7 +105,7 @@ func S3PlaintextGet(c *gin.Context) {
 		return
 	}
 	if _, ok := plaintextModels[in.Model]; !ok {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
 		return
 	}
 	kd, err := key.GetKeyDerivation()
@@ -121,7 +121,7 @@ func S3PlaintextGet(c *gin.Context) {
 	rc, err := s3.NewZkcn(middlewares.GetS3Client(c), in.ObjectKey, cryptoKey, 0).Load(c)
 	if err != nil {
 		if s3.IsNotExists(err) {
-			response.CreateCodeError(http.StatusNotFound, http.StatusNotFound, nil).AbortWithGinH(c)
+			response.ErrDefaultPageNotFound.AbortWithGinH(c)
 			return
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)

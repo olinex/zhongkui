@@ -2,13 +2,13 @@
 package tagengine_test
 
 import (
-	// stdlib
+	// 标准库
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/tagengine"
 )
 

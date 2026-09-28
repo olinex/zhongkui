@@ -293,13 +293,6 @@ WHERE p.rn = 1`,
 // （notify:send:group）。事件规则既未绑定目标也未绑定通知组时 GroupID 传 nil，
 // 由 notify 服务解析命名空间默认组。
 // 返回空列表（如事件已全部被删除）时调用方应跳过投递。
-// buildSendTasks loads the alerting events (with the rule-bound group/target and hit
-// details) and builds one notification send task per event: a direct single-target
-// task (notify:send:target, to NotificationTargetID) when the rule is directly bound to
-// a target, otherwise a group-send task (notify:send:group). When the rule is bound to
-// neither a target nor a group, GroupID is nil and the notify service resolves the
-// namespace default group. An empty result (e.g. all events deleted) makes the caller
-// skip delivery.
 func buildSendTasks(db *database.DB, eventIDs []uint) ([]*asynq.Task, error) {
 	var events []*tag.TagEventRecord
 	if err := db.
@@ -343,13 +336,6 @@ func buildSendTasks(db *database.DB, eventIDs []uint) ([]*asynq.Task, error) {
 // 渲染，事件源不关心最终文本，仅固化模板键与参数（Params 键与模板占位符一一对应）。
 // 除基础字段外，额外携带人读格式的检测时间（DetectedAtFmt）与命中明细的模型/时间窗口/
 // 涉及原始记录数（Model/Window/RecordCount），供默认与持久化模板丰富展示。
-// buildEventMessage maps a tag event to a structured notification message: a template
-// key plus params. The concrete text is rendered by the notify service in the target
-// language via the locale templates (notify.tag_event.alert.title/content); the event
-// source only pins the template key and params (keys matching the placeholders).
-// Beyond the basic fields it also carries a human-readable detected time (DetectedAtFmt)
-// and per-hit model/time-window/record count (Model/Window/RecordCount) to enrich both
-// the default and persisted template rendering.
 func buildEventMessage(ev *tag.TagEventRecord) message.Message {
 	hits := make([]map[string]any, 0, len(ev.Hits))
 	for _, hit := range ev.Hits {

@@ -167,7 +167,7 @@ const isChildActive = (child: NavChild): boolean => {
 
 // 固定展开状态：固定时禁用 hover 展开并保持展开，初始值从本地偏好恢复。
 const pinned = ref(localManager.getNavPinned());
-// Whether the navigation drawer is collapsed into a rail (expands on hover).
+// 是否将导航抽屉收起为窄栏（悬停时展开）。
 const rail = ref(!pinned.value);
 
 // 切换固定展开：固定时展开抽屉，取消固定时恢复 rail 收起模式，并持久化偏好
@@ -204,8 +204,6 @@ watch(
   { immediate: true },
 );
 
-// Keep the active group heading in sync with the current route so the parent
-// highlight stays consistent after navigating through a child item.
 // 路由变化时同时展开对应一级菜单，保证"当前子页面对应的一级导航栏打开"
 watch(
   () => route.name,
@@ -227,7 +225,7 @@ watch(
 </script>
 
 <style scoped>
-/* Indent child items under their parent group heading. */
+/* 将子项缩进到其父分组标题之下。 */
 .nav-child {
   margin-left: var(--zk-space-4);
 }

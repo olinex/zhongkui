@@ -1,4 +1,4 @@
-// Third-party
+// 第三方
 import type { FlexIDs } from "./admin";
 import type { SearchIn } from "@/components/@types/table";
 

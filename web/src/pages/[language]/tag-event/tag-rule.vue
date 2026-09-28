@@ -496,7 +496,7 @@ const [createEnabled, createEnabledProps] = createForm.defineField("enabled", vu
 const [editDescription, editDescriptionProps] = updateForm.defineField("description", vuetifyCfg);
 const [editEnabled, editEnabledProps] = updateForm.defineField("enabled", vuetifyCfg);
 
-// ---- input model metadata ----
+// ---- 输入模型元信息 ----
 const createFields = ref<InputFieldMeta[]>([]);
 
 const loadModelFields = async (model: string, target: Ref<InputFieldMeta[]>): Promise<void> => {
@@ -515,7 +515,7 @@ watch(createModel, (val) => {
   void loadModelFields(val, createFields);
 });
 
-// ---- input model samples ----
+// ---- 输入模型样例 ----
 // 样例与 rego 编辑器联动：按 model 加载样例（含完整 input），编辑器内预选样例后
 // 对 `input.<field>` 的补全/悬停提示展示实际值，试运行面板同步该 input。
 type SampleOption = { name: string; input: Record<string, unknown> };
@@ -535,7 +535,7 @@ const loadModelSamples = async (model: string, target: Ref<SampleOption[]>): Pro
   );
 };
 
-// ---- Rego editor state (create dialog) ----
+// ---- Rego 编辑器状态（创建对话框） ----
 const createRego = ref("");
 const createPreflightErrors = ref<RegoValidationError[]>([]);
 const createBackendErrors = ref<RegoValidationError[]>([]);
@@ -635,7 +635,7 @@ const generateCreateSkeleton = (): void => {
     : skeleton;
 };
 
-// ---- Rego editor state (edit dialog) ----
+// ---- Rego 编辑器状态（编辑对话框） ----
 const editRego = ref("");
 const editPreflightErrors = ref<RegoValidationError[]>([]);
 const editBackendErrors = ref<RegoValidationError[]>([]);
@@ -724,7 +724,7 @@ watch(editModel, (val) => {
   void loadModelSamples(val, editSamples);
 });
 
-// ---- list actions ----
+// ---- 列表操作 ----
 // projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", ...visible];
 
@@ -1014,7 +1014,7 @@ const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 
-// ---- reuse fields from other rules of the same model ----
+// ---- 复用同一模型下其他规则的字段 ----
 const reuseFieldsAction = async (): Promise<void> => {
   await getResponse<{ items: TagRuleListOut[] }>(
     tagRuleListGet({ greedy: false, page: 1, pageSize: 100 }),
@@ -1042,7 +1042,7 @@ const reuseFieldsAction = async (): Promise<void> => {
   );
 };
 
-// ---- version list & rollback ----
+// ---- 版本列表与回滚 ----
 const versionDialog = ref(false);
 const versionItems = ref<TagRuleVersionOut[]>([]);
 const expandedVersion = ref<number | null>(null);

@@ -1,11 +1,11 @@
 package etcd
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"testing"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 )
 

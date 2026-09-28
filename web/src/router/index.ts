@@ -1,12 +1,12 @@
 /**
  * router/index.ts
  *
- * Automatic routes for `./src/pages/*.vue`
+ * 为 `./src/pages/*.vue` 自动生成的路由。
  */
 
 import consola from "consola";
 import { setupLayouts } from "virtual:generated-layouts";
-// Composables
+// 组合式函数
 import { createRouter, createWebHistory } from "vue-router";
 import { routes } from "vue-router/auto-routes";
 
@@ -26,7 +26,7 @@ const router = createRouter({
   routes: setupLayouts(routes),
 });
 
-// Workaround for https://github.com/vitejs/vite/issues/11804
+// 针对 https://github.com/vitejs/vite/issues/11804 的变通处理
 router.onError((err, to) => {
   if (err?.message?.includes?.("Failed to fetch dynamically imported module")) {
     if (!localStorage.getItem("vuetify:dynamic-reload")) {
@@ -135,7 +135,7 @@ router.isReady().then(() => {
   localStorage.removeItem("vuetify:dynamic-reload");
 });
 
-// The route object is spread into `router.push`, so its shape is intentionally loose.
+// 路由对象会被展开传入 `router.push`，因此其类型刻意保持宽松。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const asLanguagePath = (route: any, language: SupportLanguage) => {
   router.push({

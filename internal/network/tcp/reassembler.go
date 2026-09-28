@@ -74,16 +74,16 @@ func newReassembler[P TCPPacket](
 
 func (r *Reassembler[P]) Meta() *detectors.StreamMeta {
 	return &detectors.StreamMeta{
-		TraceID:            r.TraceID,
-		ClientAddr:         r.ClientAddr,
-		ClientPort:         r.ClientPort,
-		ClientISN:          r.client.isn,
-		ServerAddr:         r.ServerAddr,
-		ServerPort:         r.ServerPort,
-		ServerISN:          r.server.isn,
-		ClientFingerprint:  r.client.fingerprint,
-		ServerFingerprint:  r.server.fingerprint,
-		Timestamp:          r.startTime,
+		TraceID:           r.TraceID,
+		ClientAddr:        r.ClientAddr,
+		ClientPort:        r.ClientPort,
+		ClientISN:         r.client.isn,
+		ServerAddr:        r.ServerAddr,
+		ServerPort:        r.ServerPort,
+		ServerISN:         r.server.isn,
+		ClientFingerprint: r.client.fingerprint,
+		ServerFingerprint: r.server.fingerprint,
+		Timestamp:         r.startTime,
 	}
 }
 

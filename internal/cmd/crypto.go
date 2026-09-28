@@ -18,7 +18,7 @@ var createPasswordBookCmd = &cobra.Command{
 	Short: "cmd.create.password-book.short",
 	Long:  "cmd.create.password-book.long",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Generate PasswordBookSize (65536) random bytes using crypto/rand
+		// 使用 crypto/rand 生成 PasswordBookSize（65536）字节的随机数据
 		data := make([]byte, key.PasswordBookSize)
 		if _, err := rand.Read(data); err != nil {
 			pterm.Error.Println(err.Error())
@@ -26,14 +26,14 @@ var createPasswordBookCmd = &cobra.Command{
 		}
 
 		if passwordBookOutput != "" {
-			// Write to file
+			// 写入文件
 			if err := os.WriteFile(passwordBookOutput, data, 0600); err != nil {
 				pterm.Error.Println(err.Error())
 				return
 			}
 			fmt.Println(translate.T("cli.crypto.book-generated-file", map[string]any{"Path": passwordBookOutput, "Bytes": len(data)}))
 		} else {
-			// Write to stdout
+			// 写入标准输出
 			if _, err := os.Stdout.Write(data); err != nil {
 				pterm.Error.Println(err.Error())
 				return

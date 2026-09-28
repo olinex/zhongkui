@@ -1,5 +1,4 @@
 // 全局功能开关（feature flags）接口。
-// Global feature-flag API.
 import type { AxiosPromise } from "axios";
 
 import { request } from "./base";

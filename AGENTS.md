@@ -20,16 +20,16 @@ Three-block grouping, blank-line separated, alphabetical within each block: 标�
 
 ```go
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"fmt"
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
@@ -68,7 +68,7 @@ if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
 
 ### Comments
 
-中英双语注释为标准；所有导出类型/函数/常量/结构体字段必须有注释，文件必须有 `// Package xxx` 文档注释。
+注释一律使用中文，禁止中英双语或纯英文（`// Package`、`// Deprecated:` 等由 Go 工具链识别的固定前缀按语言约定保留英文）；所有导出类型/函数/常量/结构体字段必须有注释，文件必须有 `// Package xxx` 文档注释。
 
 ```go
 // UserClaims 自定义 JWT 声明结构
@@ -102,16 +102,16 @@ Composite indexes / unique constraints use `uq`/`idx` prefix:
 `samber/do/v2` 固定三层模式：私有 provider 工厂 → `InjectXxx` → `InvokeXxx`；`MustInvokeXxx`（panic 版）仅用于启动关键依赖。
 
 ```go
-// Layer 1: private provider factory
+// 第一层：私有 provider 工厂
 func newViperProvider() do.Provider[*viper.Viper] { ... }
 
-// Layer 2: injection function
+// 第二层：注入函数
 func InjectViper(i do.Injector) { do.Provide(i, newViperProvider()) }
 
-// Layer 3: invocation with error
+// 第三层：带错误的调用
 func InvokeViper(i do.Injector) (*viper.Viper, error) { ... }
 
-// Layer 3b: panic invocation (仅用于启动关键依赖)
+// 第三层b：panic 版调用（仅用于启动关键依赖）
 func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 ```
 
@@ -158,11 +158,18 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - 数据流：处理器以模型查询数据库，再经显式映射函数（`newXxxOut`，入参为模型指针）逐字段转换为独立 Out；JSON 字段名（json tag）须与映射来源字段保持一致，避免破坏前端契约。
 - 例外：**局部匿名扫描容器**（`var rows []struct { network.Xxx; utils.BaseTotalOut }`）仅作 GORM 扫描用途，不属于 In/Out 结构体，允许内嵌模型，沿用 notification 模块既有模式。
 
+### 长期记忆（Long-Term Memory）
+
+- **隔离维度固定为「命名空间 + Agent 类型 + 来源会话」**：`agent_memories` 的记忆只在来源会话内可见，跨越会话互不检索。唯一索引 `uq_agent_memories_scope_hash` 与检索索引 `idx_agent_memories_namespace_kind` 均须包含 `session_id`；存储层的精确去重、语义合并与向量/关键词两路检索的 Where 一律带 `session_id`，禁止只按 namespace + agent_kind 过滤。
+- **无会话运行不生成记忆**：`session_id = 0`（无会话运行）时 `MemoryStore.Write` 拒绝写入、`Retrieve` 直接返回空、Agent 不注入记忆运行时（`memoryToolContext` 原样返回 ctx）也不检索；避免落进任何会话都检索不到的孤儿桶。
+- **管理端不提供新增/编辑**：记忆由 Agent 运行期经 `memory_write` 工具生成，管理接口仅保留列表 / 详情 / 删除 / 启停，`AgentMemoryCreateIn` / `AgentMemoryUpdateIn` 及其路由、RBAC 权限点与前端入口一律不得存在。
+- **检索去重复用知识库文本 n-gram（4-gram Jaccard、阈值 `memory.dedupeThreshold`）**；写入去重是 sha256 精确去重 + pgvector 余弦语义合并，两者语义不同，禁止混用。
+
 ### 枚举统一注册表（enum 注册表 / search-generate 规范）
 
 - **单一数据来源**：所有枚举值统一注册进 `internal/pkg/enum` 注册表（`enum.Register(enum.Type{Name, Entries})` 或 `enum.RegisterSource(name, entriesSource)`，条目 `enum.Entry{Key, Value}`），每个枚举类（类名如 `channelType`、`httpMethod`）有且仅有一个注册点，类内 key 互斥唯一、value 互斥唯一。数据库内存储该字段枚举值时一律存 **value**（不可存 key）。
 - **声明与注册一律在取值空间的归属包**：每个枚举类的唯一注册点落在**取值空间的归属包**——即该取值空间的定义处，声明形态两类：
-  - 取值空间固定的枚举：取值空间就地声明在该包内（类型化取值常量 + 取值序列），并在包内 `init()` 经 `enum.EntriesOf` + `enum.Register` 在注册时快照条目；若包内已有该取值空间的常量/清单（如 `base.SupportLanguages`、`base.EffectAllow`、`core.TemplateSource*`、`tag.EventStatus*`、`vtab.redisKind*`、`llm.AllSlots`），则**直接复用**为条目来源，不重复声明常量。当前归属：`language` / `policyEffect` → `internal/pkg/base`；`httpMethod` / `httpVersion` → `internal/models/network`；`notificationSource` / `notificationRecordStatus` → `internal/models/core`；`tagAlertStatus` → `internal/models/tag`；`datasourceStruct` → `internal/pkg/sqlitevtab/vtab`；`llmModelKind` / `llmSlot` / `llmToolSource` → `internal/pkg/llm`；`mcpTransport` → `internal/ai/tools/mcp`；`evalStage` / `evalStageStatus` / `diagnosisCategory` → `internal/ai`。**禁止**任何集中的纯声明包（如曾经的 `internal/enums`）：类必须与它的取值空间同包，跨层共用类由消费方 import 归属包引用其常量。
+  - 取值空间固定的枚举：取值空间就地声明在该包内（类型化取值常量 + 取值序列），并在包内 `init()` 经 `enum.EntriesOf` + `enum.Register` 在注册时快照条目；若包内已有该取值空间的常量/清单（如 `base.SupportLanguages`、`base.EffectAllow`、`core.TemplateSource*`、`tag.EventStatus*`、`vtab.redisKind*`、`llm.AllSlots`），则**直接复用**为条目来源，不重复声明常量。当前归属：`language` / `policyEffect` → `internal/pkg/base`；`httpMethod` / `httpVersion` → `internal/models/network`；`notificationSource` / `notificationRecordStatus` → `internal/models/core`；`tagAlertStatus` → `internal/models/tag`；`datasourceStruct` → `internal/pkg/sqlitevtab/vtab`；`llmModelKind` / `llmSlot` / `llmToolSource` / `memoryKind` / `memoryStatus` → `internal/pkg/llm`；`mcpTransport` → `internal/ai/tools/mcp`；`evalStage` / `evalStageStatus` / `diagnosisCategory` → `internal/ai`。**禁止**任何集中的纯声明包（如曾经的 `internal/enums`）：类必须与它的取值空间同包，跨层共用类由消费方 import 归属包引用其常量。
   - 业务注册表来源（channelType / notificationEvent / datasourceType / tagRuleModel / tagEventDimension）：值空间随业务注册表在代码内固定，由**所属业务包**（message / notify / vtab / tagengine）经 `enum.RegisterSource(类名, func() []enum.Entry)` 声明条目来源——条目不在注册时快照，而在每次读取（`Get` / `List`）时从业务注册表实时派生，避免包内多 `init()` 的文件顺序影响条目完整性；与 `/channel/types`、`/template/events`、`/datasource/types`、tagengine 注册表共用单一来源。视图层不再组装任何枚举类。
 - **归属判据是取值空间的拥有者，而非存储位置**：*被模型列存储 ≠ 归 model*。取值空间仅作为某个模型列的值域存在时，归该模型包（如 `knowledgeDocStatus` → `internal/models/ai`、`notificationRecordStatus` → `internal/models/core`、`tagAlertStatus` → `internal/models/tag`）；若该词汇由某个非 model 子系统定义或使用（如 `documentFormat` 由 `internal/pkg/docconv` 的 `Format` 定义、`mcpTransport` 由 `internal/ai/tools/mcp` 的传输实现使用），则归该子系统所属包，**不得**因「存在同名模型列」而迁入 model——后者会迫使 `internal/pkg` 反向依赖 `models`，或就地重复声明常量造成定义漂移。编排层（`internal/worker`、`internal/manager`）不设枚举注册点：记录的生命周期状态是持久化行的值域，归其模型包，驱动状态迁移的 handler/view 只是消费方。
 - **字段与枚举类绑定**：`search.toml` `[[enums]]` 仅作「结构体类型 + 字段 JSON 名 → 枚举类名」绑定引用（`type` / `field` / `set`），`search-generate` 生成进视图层 `enum_bindings.go` 的 `enumBindings`（绑定视图层结构体字段名，属视图层关注点），meta.go 反射输出 `FieldMeta.EnumType`；运行时字段（如 `NotificationTemplateCreateIn.event`）经 `views.AddEnumBinding(typeName, field, className)`（`enum_registry.go`）在模块 `init()` 补充。`set` 类名仅为引用，不携带可选项——可选项唯一来源是 enum 注册表。
@@ -219,16 +226,16 @@ const searchTableRef = useTemplateRef("searchTableRef");
 按带注释标签的块组织，类型导入一律用 `import type`：
 
 ```ts
-// Third-party
+// 第三方
 import consola from "consola";
 
-// Plugins / Utilities
+// 插件 / 工具
 import { registerPlugins } from "@/plugins";
 
-// Components
+// 组件
 import App from "./App.vue";
 
-// Types
+// 类型
 import type { App } from "vue";
 ```
 
@@ -771,7 +778,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 ```ts
 const chartTheme = useChartTheme();
 const option = computed(() =>
-  withChartTheme({ /* page-specific series, xAxis, yAxis, ... */ }, chartTheme.value),
+  withChartTheme({ /* 页面专属 series、xAxis、yAxis 等 */ }, chartTheme.value),
 );
 ```
 
@@ -816,7 +823,7 @@ const option = computed(() =>
 
 ```vue
 <template>
-  <!-- HTML -->
+  <!-- HTML 结构 -->
 </template>
 
 <route lang="yaml">
@@ -827,7 +834,7 @@ meta:
 </route>
 
 <script setup lang="ts">
-// Logic
+// 逻辑
 </script>
 
 <style scoped>
@@ -878,7 +885,7 @@ meta:
 
 1. 无死代码：及时清理未使用的 import、变量、函数
 2. 一致性优先：遵循所改文件/模块既有模式
-3. 注释语言：Go 代码用中文，前端用英文
+3. 注释语言：全项目统一使用中文（Go 与前端一致），禁止中英双语或纯英文
 4. 类型安全：TypeScript strict mode；Go 适当使用泛型
 5. 错误处理：禁止忽略错误，始终包裹上下文
 6. DI：新依赖一律走 `provider/` → `Inject` → `Invoke`

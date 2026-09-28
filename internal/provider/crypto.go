@@ -26,18 +26,22 @@ func newKeyDerivationProvider() do.Provider[*key.KeyDerivation] {
 	}
 }
 
+// InjectKeyDerivation 向依赖注入器注册密钥派生器 provider，并初始化全局密钥派生器。
 func InjectKeyDerivation(i do.Injector) {
 	do.Provide(i, newKeyDerivationProvider())
 }
 
+// InvokeKeyDerivation 从依赖注入器解析密钥派生器，错误交由调用方处理。
 func InvokeKeyDerivation(i do.Injector) (*key.KeyDerivation, error) {
 	return do.Invoke[*key.KeyDerivation](i)
 }
 
+// MustInvokeKeyDerivation 从依赖注入器解析密钥派生器，失败时 panic。
 func MustInvokeKeyDerivation(i do.Injector) *key.KeyDerivation {
 	return do.MustInvoke[*key.KeyDerivation](i)
 }
 
+// DescribeCryptoConfig 返回加密密钥相关配置项描述。
 func DescribeCryptoConfig() config.ConfigDescriptions {
 	return key.DescribeConfig()
 }

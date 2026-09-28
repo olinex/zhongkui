@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	// third-party
+	// 第三方
 	"gorm.io/gorm/clause"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/auth"
 	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"

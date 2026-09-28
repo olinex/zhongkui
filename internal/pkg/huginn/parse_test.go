@@ -29,8 +29,8 @@ func TestLoadGlobalDatabase(t *testing.T) {
 
 		Convey("known signatures present", func() {
 			// Linux 3.1-3.10: *:64:0:*:mss*10,4:mss,sok,ts,nop,ws:df,id+:0
-			// Mac OS X 10.x loopback: *:64:0:*:65535,6:mss,nop,ws,nop,nop,ts,sok,eol+1:df:0
-			// Firefox 115 or newer (http request)
+			// Mac OS X 10.x 回环：*:64:0:*:65535,6:mss,nop,ws,nop,nop,ts,sok,eol+1:df:0
+			// Firefox 115 或更新版本（http 请求）
 			req, err := parseTCPSignature("*:64:0:*:mss*10,4:mss,sok,ts,nop,ws:df,id+:0")
 			So(err, ShouldBeNil)
 			olayoutKey := tcpOlayoutKey(req.olayout)

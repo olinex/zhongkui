@@ -1,7 +1,7 @@
 /**
  * .eslint.js
  *
- * ESLint configuration file.
+ * ESLint 配置文件。
  */
 
 import eslintConfigPrettier from "eslint-config-prettier";
@@ -25,7 +25,7 @@ export default [
   {
     name: "app/rules",
     rules: {
-      // Explicit `any` is disallowed; use targeted eslint-disable comments where it is genuinely needed.
+      // 禁止显式 `any`；确有必要时使用精确的 eslint-disable 注释。
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-expressions": [
         "error",
@@ -38,6 +38,6 @@ export default [
     },
   },
 
-  // Must be last: turn off formatting rules that conflict with Prettier.
+  // 必须置于最后：关闭与 Prettier 冲突的格式化规则。
   eslintConfigPrettier,
 ];

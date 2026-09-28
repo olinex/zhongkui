@@ -14,10 +14,9 @@
 import { copyToClipboard } from "@/utils/clipboard";
 import type { Variant } from "../@types/base";
 
-// size / variant / color are intentionally unset by default: the theme layer
-// already provides the VChip baseline (small + tonal), so leaving them
-// undefined keeps every chip in the family identical unless a caller really
-// needs a semantic override (e.g. color="info" for hashes).
+// size / variant / color 默认刻意留空：主题层已提供 VChip 基线（small + tonal），
+// 保持 undefined 可让同族 chip 外观一致，除非调用方确有语义覆盖需求
+// （如哈希使用 color="info"）。
 defineProps({
   value: {
     type: String,

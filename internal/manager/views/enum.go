@@ -6,13 +6,12 @@
 package views
 
 import (
-	// stdlib
-	"net/http"
+	// 标准库
 
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/pkg/base"
@@ -23,20 +22,27 @@ import (
 
 // EnumEntryOut 枚举条目出参：key（i18n 定位）、value（数据库存储）、label（按请求语言翻译）。
 type EnumEntryOut struct {
-	Key   string `json:"key"`
+	// 枚举键（i18n 定位键）
+	Key string `json:"key"`
+	// 数据库存储值
 	Value string `json:"value"`
+	// 按请求语言翻译后的展示文案
 	Label string `json:"label"`
 }
 
 // EnumTypeOut 单个枚举类出参：类名 + 条目列表。
 type EnumTypeOut struct {
-	Type    string         `json:"type"`
+	// 枚举类名
+	Type string `json:"type"`
+	// 该类下的条目列表
 	Entries []EnumEntryOut `json:"entries"`
 }
 
 // EnumGetIn 枚举类查询入参：type 为枚举类名（必填），lang 为请求语言（缺省回退请求头语言）。
 type EnumGetIn struct {
-	Type string        `json:"type" binding:"required"`
+	// 枚举类名（必填）
+	Type string `json:"type" binding:"required"`
+	// 请求语言（缺省回退请求头语言）
 	Lang base.Language `json:"lang"`
 }
 
@@ -50,8 +56,7 @@ func EnumGet(c *gin.Context) {
 	}
 	t, ok := enum.Get(in.Type)
 	if !ok {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-			errors.Newf("enum: unknown type %q", in.Type)).AbortWithGinH(c)
+		response.CreateBadBodyError(errors.Newf("enum: unknown type %q", in.Type)).AbortWithGinH(c)
 		return
 	}
 	lang := enumRequestLang(c, in.Lang)
@@ -68,11 +73,13 @@ func EnumGet(c *gin.Context) {
 
 // EnumListIn 枚举全量类查询入参：lang 为请求语言（缺省回退请求头语言）。
 type EnumListIn struct {
+	// 请求语言（缺省回退请求头语言）
 	Lang base.Language `json:"lang"`
 }
 
 // EnumListOut 枚举全量类出参。
 type EnumListOut struct {
+	// 全部枚举类
 	Types []EnumTypeOut `json:"types"`
 }
 

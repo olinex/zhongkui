@@ -2277,6 +2277,33 @@ other = "Builtin Tool"
 [enum.llmToolSource.mcp]
 other = "MCP Tool"
 
+# Agent kind (enum class agentKind)
+[enum.agentKind.knowledge]
+other = "Knowledge Retrieval"
+
+[enum.agentKind.rego]
+other = "Rego Rule Generation"
+
+# Long-term memory kind (enum class memoryKind)
+[enum.memoryKind.fact]
+other = "Fact"
+
+[enum.memoryKind.preference]
+other = "Preference"
+
+[enum.memoryKind.decision]
+other = "Decision"
+
+[enum.memoryKind.artifact]
+other = "Artifact"
+
+# Long-term memory status (enum class memoryStatus)
+[enum.memoryStatus.active]
+other = "Active"
+
+[enum.memoryStatus.archived]
+other = "Archived"
+
 # MCP remote transport (enum class mcpTransport)
 [enum.mcpTransport.sse]
 other = "SSE"
@@ -2535,6 +2562,79 @@ other = "Business Data Injection Limit"
 [param.session.maxContextBytes.comment]
 other = "Total size limit (bytes) of a single businessData payload injected from the frontend"
 
+[param.session.topicSystemPrompt.label]
+other = "Session Topic Prompt"
+
+[param.session.topicSystemPrompt.comment]
+other = "System prompt that generates the short session topic from the session's first user message"
+
+# ---- memory: long-term memory and session summary ----
+[param.memory.enabled.label]
+other = "Long-term Memory Switch"
+
+[param.memory.enabled.comment]
+other = "Master switch of long-term memory; when off, generation requests skip memory retrieval and injection without any error"
+
+[param.memory.sectionTitle.label]
+other = "Memory Section Title"
+
+[param.memory.sectionTitle.comment]
+other = "Section title used when long-term memories are injected into the prompt"
+
+[param.memory.topK.label]
+other = "Memory Injection Count"
+
+[param.memory.topK.comment]
+other = "Number of long-term memories injected into the prompt after retrieval"
+
+[param.memory.candidates.label]
+other = "Memory Candidate Count"
+
+[param.memory.candidates.comment]
+other = "Number of candidate memories recalled by the vector path and the keyword path respectively"
+
+[param.memory.maxItems.label]
+other = "Memory Injection Hard Bound"
+
+[param.memory.maxItems.comment]
+other = "Hard bound of the number of long-term memories injected in a single turn; a non-positive value means unlimited"
+
+[param.memory.maxItemBytes.label]
+other = "Memory Item Byte Limit"
+
+[param.memory.maxItemBytes.comment]
+other = "Byte limit of a single long-term memory before being injected into the prompt; the excess is truncated"
+
+[param.memory.dedupeThreshold.label]
+other = "Memory Dedupe Threshold"
+
+[param.memory.dedupeThreshold.comment]
+other = "Semantic deduplication/merge threshold (cosine similarity) applied when writing memories"
+
+[param.memory.summarySystemPrompt.label]
+other = "Session Summary Prompt"
+
+[param.memory.summarySystemPrompt.comment]
+other = "System prompt used when rolling up the session history into a summary"
+
+[param.memory.summaryMinEvictedMessages.label]
+other = "Summary Trigger Count"
+
+[param.memory.summaryMinEvictedMessages.comment]
+other = "Number of unsummarized messages outside the window that triggers the rolling summary"
+
+[param.memory.extractSystemPrompt.label]
+other = "Memory Extraction Prompt"
+
+[param.memory.extractSystemPrompt.comment]
+other = "System prompt extracting long-term memories during session compaction"
+
+[param.memory.extractMaxItems.label]
+other = "Memory Extraction Count"
+
+[param.memory.extractMaxItems.comment]
+other = "Maximum number of long-term memories extracted by a single session compaction"
+
 # ---- chunking: Markdown structure-aware chunking ----
 [param.chunking.size.label]
 other = "Chunk Target Size"
@@ -2603,6 +2703,13 @@ other = "Business Data Byte Limit"
 
 [param.sanitize.maxBytes.comment]
 other = "Byte limit of the compact JSON serialization of business data; a non-positive value means unlimited (sanitization still applies)"
+
+# ---- tools: builtin tool display copy ----
+[tool.memory_write.label]
+other = "Long-term Memory Write"
+
+[tool.memory_write.comment]
+other = "Called by the agent on its own to write reusable conclusions, preferences or facts into the namespace-level long-term memory"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

@@ -1,3 +1,5 @@
+// Package migrate（本文件）实现数据库结构差异比对：读取两套结构的表与列
+// 定义，输出新增、删除与修改项。
 package migrate
 
 import (
@@ -12,36 +14,59 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
+// ColumnInfo 描述数据库中的列信息。
 type ColumnInfo struct {
-	Name     string
+	// Name 列名。
+	Name string
+	// DataType 列的数据类型。
 	DataType string
+	// Nullable 列是否可空。
 	Nullable string
-	Default  string
+	// Default 列的默认值表达式。
+	Default string
 }
 
+// TableInfo 描述数据库中的表及其列集合。
 type TableInfo struct {
-	Name    string
+	// Name 表名。
+	Name string
+	// Columns 表的列集合。
 	Columns []ColumnInfo
 }
 
+// DiffResult 汇总两套数据库结构的比对结果。
 type DiffResult struct {
-	NewTables      []TableInfo
-	DroppedTables  []TableInfo
+	// NewTables 目标多出的表。
+	NewTables []TableInfo
+	// DroppedTables 目标缺少的表。
+	DroppedTables []TableInfo
+	// ModifiedTables 列发生变化（增删或改类型）的表。
 	ModifiedTables []TableDiff
-	Identical      bool
+	// Identical 两套结构是否完全一致。
+	Identical bool
 }
 
+// ColumnDiff 描述单列的变更。
 type ColumnDiff struct {
+	// ColumnName 列名。
 	ColumnName string
-	OldType    string
-	NewType    string
-	Status     string
+	// OldType 变更前的类型。
+	OldType string
+	// NewType 变更后的类型。
+	NewType string
+	// Status 变更状态标识。
+	Status string
 }
 
+// TableDiff 描述单表的列级变更。
 type TableDiff struct {
-	TableName       string
-	NewColumns      []ColumnInfo
-	DroppedColumns  []ColumnInfo
+	// TableName 表名。
+	TableName string
+	// NewColumns 新增的列。
+	NewColumns []ColumnInfo
+	// DroppedColumns 删除的列。
+	DroppedColumns []ColumnInfo
+	// ModifiedColumns 类型变化的列。
 	ModifiedColumns []ColumnDiff
 }
 
@@ -52,6 +77,7 @@ type tableReader struct {
 	filterTable      func(string) bool
 }
 
+// Diff 比对当前数据库与迁移后目标数据库的结构，输出差异表格。
 func Diff(ctx context.Context, currentCfg, tempCfg *Config) error {
 	var (
 		tempDB *TempDB
@@ -150,7 +176,12 @@ FROM information_schema.tables
 WHERE table_schema = 'public'
 AND table_type = 'BASE TABLE'
 ORDER BY table_name`,
-			listColumnsQuery: `SELECT column_name, data_type, is_nullable,
+			// information_schema 把扩展类型（如 pgvector 的 vector）统一报告为
+			// USER-DEFINED，其真实类型名在 udt_name 中；回退到 udt_name 才能与模型
+			// 声明的 vector(n) 正确比对，否则必然误报类型不匹配。
+			listColumnsQuery: `SELECT column_name,
+       CASE WHEN data_type = 'USER-DEFINED' THEN udt_name ELSE data_type END,
+       is_nullable,
        COALESCE(column_default, '')
 FROM information_schema.columns
 WHERE table_schema = 'public' AND table_name = $1

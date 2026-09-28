@@ -281,16 +281,19 @@ func getXdpNicPair(b *testing.B) (nicCap, nicSend string) {
 
 // === 物理网卡 XDP 基线 (需 2 张物理网卡互联) ===
 
+// BenchmarkXdpNativeSmoke 物理网卡 XDP 原生模式冒烟基线。
 func BenchmarkXdpNativeSmoke(b *testing.B) {
 	nicCap, nicSend := getXdpNicPair(b)
 	runXdpPhysNicBaseline(b, "xdp-native-smoke", LevelSmoke, nicCap, nicSend)
 }
 
+// BenchmarkXdpNativeSmallFlows 物理网卡 XDP 原生模式小流量基线。
 func BenchmarkXdpNativeSmallFlows(b *testing.B) {
 	nicCap, nicSend := getXdpNicPair(b)
 	runXdpPhysNicBaseline(b, "xdp-native-smallflows", LevelSmallFlows, nicCap, nicSend)
 }
 
+// BenchmarkXdpNativeBigFlows 物理网卡 XDP 原生模式大流量基线。
 func BenchmarkXdpNativeBigFlows(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping bigflows in short mode")
@@ -301,16 +304,19 @@ func BenchmarkXdpNativeBigFlows(b *testing.B) {
 
 // === 物理网卡 XDP raw capture（skip copy）基线 ===
 
+// BenchmarkRawXdpNativeSmoke 物理网卡 XDP 原生模式纯计数（skip copy）冒烟基线。
 func BenchmarkRawXdpNativeSmoke(b *testing.B) {
 	nicCap, nicSend := getXdpNicPair(b)
 	runXdpPhysNicRawBaseline(b, "raw-xdp-native-smoke", LevelSmoke, nicCap, nicSend)
 }
 
+// BenchmarkRawXdpNativeSmallFlows 物理网卡 XDP 原生模式纯计数（skip copy）小流量基线。
 func BenchmarkRawXdpNativeSmallFlows(b *testing.B) {
 	nicCap, nicSend := getXdpNicPair(b)
 	runXdpPhysNicRawBaseline(b, "raw-xdp-native-smallflows", LevelSmallFlows, nicCap, nicSend)
 }
 
+// BenchmarkRawXdpNativeBigFlows 物理网卡 XDP 原生模式纯计数（skip copy）大流量基线。
 func BenchmarkRawXdpNativeBigFlows(b *testing.B) {
 	if testing.Short() {
 		b.Skip("skipping bigflows in short mode")

@@ -1,7 +1,7 @@
 package sqlitevtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"io"
 	"sync"
@@ -9,20 +9,18 @@ import (
 	"testing"
 	"time"
 
-	// third-party
+	// 第三方
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // simpleSchema 单列字符串 schema。
-// simpleSchema is a single string column schema.
 var simpleSchema = Schema{Columns: []Column{{Name: "name", ValueType: ValueTypeString}}}
 
 // registerStatic 注册一个由静态行集支撑的数据源。
-// registerStatic registers a datasource backed by a static row set.
 func registerStatic(t *testing.T, pool *SQLitePool, name string, schema Schema, data [][]any) {
 	t.Helper()
 	err := pool.RegisterDatasource(context.Background(), name, schema, func(resourcepool.Key) (Datasource, error) {
@@ -157,26 +155,17 @@ func TestPoolDynamicLifecycle(t *testing.T) {
 // resourcepool.Lifespan 的 Open(ctx) error（建立底层资源）方法名冲突，
 // 因此数据源类型无法同时实现 Lifespan；资源池仍负责其惰性创建（Make）、
 // 复用与销毁（io.Closer）。
-// closableDatasource implements Datasource and io.Closer, recording Close calls
-// to verify instance destruction is driven by the pool (via io.Closer on
-// CloseAll). Note: the Datasource contract requires Open(ctx, pushdown) (returns
-// a row cursor), which conflicts by name with Lifespan.Open(ctx) error
-// (establishing the underlying resource), so a datasource type cannot also
-// implement Lifespan; the pool still manages lazy creation (Make), reuse and
-// destruction (io.Closer).
 type closableDatasource struct {
 	static *testStaticDatasource
 	closes int32
 }
 
 // Open 实现 Datasource.Open。
-// Open implements Datasource.Open.
 func (d *closableDatasource) Open(ctx context.Context, pushdown []Constraint) (Rows, error) {
 	return d.static.Open(ctx, pushdown)
 }
 
 // Close 实现 io.Closer（资源池 CloseAll 时销毁，计数）。
-// Close implements io.Closer (destroyed by the pool on CloseAll, counted).
 func (d *closableDatasource) Close() error {
 	atomic.AddInt32(&d.closes, 1)
 	return nil
@@ -214,11 +203,9 @@ func TestPoolDatasourceLifecycle(t *testing.T) {
 }
 
 // ctxPropKey 上下文透传测试键。
-// ctxPropKey is the context propagation test key.
 type ctxPropKey string
 
 // ctxPropDatasource 记录 Open 收到的上下文。
-// ctxPropDatasource records the context received by Open.
 type ctxPropDatasource struct {
 	recordingDatasource
 }
@@ -303,24 +290,20 @@ func TestPoolQueryTimeout(t *testing.T) {
 }
 
 // blockingDatasource 返回一个随 ctx 取消而结束的阻塞行集。
-// blockingDatasource returns a row set that blocks until the ctx is done.
 type blockingDatasource struct{}
 
 // Open 返回等待 ctx 取消的阻塞行集。
-// Open returns a blocking row set that waits for ctx cancellation.
 func (d *blockingDatasource) Open(ctx context.Context, pushdown []Constraint) (Rows, error) {
 	return &blockingRows{ctx: ctx}, nil
 }
 
 // blockingRows 阻塞到 ctx 取消后以错误结束。
-// blockingRows blocks until ctx cancellation, then fails with an error.
 type blockingRows struct {
 	ctx  context.Context
 	done bool
 }
 
 // Next 阻塞等待 ctx 取消后返回错误。
-// Next blocks until ctx cancellation and then returns an error.
 func (r *blockingRows) Next() ([]any, error) {
 	if r.done {
 		return nil, io.EOF
@@ -331,5 +314,4 @@ func (r *blockingRows) Next() ([]any, error) {
 }
 
 // Close 无资源可释放。
-// Close releases nothing.
 func (r *blockingRows) Close() error { return nil }

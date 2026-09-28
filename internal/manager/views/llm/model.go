@@ -1,17 +1,17 @@
 package llm
 
 import (
-	// stdlib
+	// 标准库
 	"fmt"
 	"strings"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/creasty/defaults"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
@@ -31,7 +31,7 @@ type LlmModelCreateIn struct {
 	// Name 模型本地标识，全局唯一，最长 64
 	Name string `json:"name" binding:"max=64"`
 	// Kind 模型类型：chat（对话）| embedding（向量化），创建后不可更改
-	Kind string `json:"kind" binding:"max=16"`
+	Kind pkgllm.ModelKind `json:"kind" binding:"max=16"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址，最长 512
 	BaseURL string `json:"baseURL" binding:"max=512"`
 	// APIKey 访问端点的凭据（明文提交，落库为密文）
@@ -82,7 +82,7 @@ type LlmModelDetailOut struct {
 	// Name 模型本地标识，全局唯一
 	Name string `json:"name"`
 	// Kind 模型类型：chat | embedding
-	Kind string `json:"kind"`
+	Kind pkgllm.ModelKind `json:"kind"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址
 	BaseURL string `json:"baseURL"`
 	// APIKey 访问凭据的密文；明文不回显，需经明文权限接口查看
@@ -125,7 +125,7 @@ type LlmModelTestIn struct {
 	// ID 已注册模型的 ID；大于 0 时忽略其余字段
 	ID uint64 `json:"id"`
 	// Kind 模型类型：chat | embedding
-	Kind string `json:"kind" binding:"max=16"`
+	Kind pkgllm.ModelKind `json:"kind" binding:"max=16"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址
 	BaseURL string `json:"baseURL" binding:"max=512"`
 	// APIKey 访问端点的明文凭据
@@ -245,7 +245,7 @@ func LlmModelCreate(c *gin.Context) {
 	}
 	instance := &core.LlmModel{
 		Name:           name,
-		Kind:           string(kind),
+		Kind:           kind,
 		BaseURL:        baseURL,
 		APIKey:         serializer.NewCrypto([]byte(in.APIKey)),
 		ModelName:      modelName,

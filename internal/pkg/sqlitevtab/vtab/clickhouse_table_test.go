@@ -1,10 +1,6 @@
 // Package vtab（本文件）提供 ClickHouse 数据源单元测试。
 // 与 Postgres 类似，以 go-sqlmock 起 mock db 注入 ClickHousePool（无需真实 ClickHouse），
 // 验证类型映射、下推构建与经 SQLitePool RegisterDatasource + Query 的端到端查询。
-//
-// This file provides ClickHouse datasource unit tests. Like Postgres, a go-sqlmock db is
-// injected into a ClickHousePool (no real ClickHouse needed) to verify type mapping,
-// pushdown query building and end-to-end queries via SQLitePool.RegisterDatasource + Query.
 package vtab
 
 import (
@@ -21,8 +17,6 @@ import (
 
 // newClickHouseMockPool 以注入 key 的 mock db 构建 ClickHousePool，供无需真实 ClickHouse
 // 的测试使用。
-// newClickHouseMockPool builds a ClickHousePool whose key resolves to an injected mock db,
-// for tests that need no real ClickHouse.
 func newClickHouseMockPool(t *testing.T, cfg *ClickHouseConfig, db *sql.DB) *ClickHousePool {
 	t.Helper()
 	pool := NewClickHousePool(cfg)
@@ -32,8 +26,6 @@ func newClickHouseMockPool(t *testing.T, cfg *ClickHouseConfig, db *sql.DB) *Cli
 }
 
 // chQuery 经 SQLitePool 注册数据源并执行一条只读 SQL，返回列名与行值（表名统一 ch_vtab）。
-// chQuery registers the datasource on a SQLitePool and executes one read-only SQL
-// statement, returning columns and row values (registered as ch_vtab).
 func chQuery(t *testing.T, ds *ClickHouseDatasource, sql string, args ...any) ([]string, [][]any) {
 	t.Helper()
 	pool := sqlitevtab.NewSQLitePool()

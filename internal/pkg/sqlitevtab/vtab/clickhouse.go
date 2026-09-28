@@ -6,21 +6,10 @@
 //
 // 超集契约与下推取舍见 clickhouse_table.go：ClickHouse 的 LIKE 大小写敏感（与 sqlite
 // 不敏感不一致）而跳过下推，仅非 Any 列的比较/等值谓词安全下推。
-//
-// This file provides the ClickHouse vtable datasource connection layer. Each business
-// table is introspected via DESCRIBE at construction into an independent vtable (see
-// clickhouse_table.go). The connection model reuses the shared sqlDBPool (see
-// sqldb.go): a Key derived from the instance config lazily builds a *sql.DB
-// (clickhouse-go/v2 native protocol), borrowed on Open and returned right after
-// fetching. Identifiers are double-quoted (reusing quotePgIdent) and query placeholders
-// are ?. The superset contract and pushdown trade-off are discussed in
-// clickhouse_table.go: ClickHouse LIKE is case-sensitive (inconsistent with sqlite) and
-// so is not pushed; only comparison/equality predicates on non-Any columns are safely
-// pushed.
 package vtab
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"database/sql"
 	"fmt"
@@ -28,11 +17,11 @@ import (
 	"reflect"
 	"time"
 
-	// third-party
+	// 第三方
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/creasty/defaults"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
@@ -40,45 +29,33 @@ import (
 )
 
 // ClickHouseConfig 描述一个 ClickHouse 实例的接入配置。
-// ClickHouseConfig describes how to reach one ClickHouse instance.
 type ClickHouseConfig struct {
 	// Addr 主机地址（不含端口），如 127.0.0.1。
-	// Addr the host address without port, e.g. 127.0.0.1.
 	Addr string
 	// Port 端口，默认 9000（原生协议）。
-	// Port the port, default 9000 (native protocol).
 	Port int `default:"9000"`
 	// User 用户名。
-	// User the user name.
 	User string
 	// Password 密码。
-	// Password the password.
 	Password string
 	// DBName 默认数据库名；本实例下的 vtable 查询均限定于该库。
-	// DBName the default database; vtable queries under this instance are scoped to it.
 	DBName string
 	// Namespace 数据源所属命名空间，仅参与连接池 Key 派生（不参与 DSN）。
-	// Namespace the datasource namespace; only participates in pool-key derivation.
 	Namespace string
 	// DialTimeout 建连超时，默认 5s。
-	// DialTimeout the connection dial timeout, default 5s.
 	DialTimeout time.Duration `default:"5s"`
 }
 
 // clickhouseClients 是 ClickHouse 的 db 池注册表（独立 Key 空间）。
-// clickhouseClients is the ClickHouse db pool registry (its own Key space).
 var clickhouseClients = newSQLDBRegistry()
 
 // clickhouseKey 由配置规范化出实例 Key（Namespace + Addr + User + DBName）。
-// clickhouseKey derives the instance Key from config (Namespace + Addr + User + DBName).
 func clickhouseKey(c *ClickHouseConfig) resourcepool.Key {
 	return resourcepool.Key(fmt.Sprintf("%s@%s:%s/%s", c.Namespace, c.Addr, c.User, c.DBName))
 }
 
 // NewClickHousePool 注入一份 ClickHouse 实例配置并返回其池句柄。db 惰性创建，
 // 构造本身不触发网络连接。（address 为空时跳过 addr 字段，交由驱动默认。）
-// NewClickHousePool injects one ClickHouse instance config and returns its pool handle.
-// Databases are created lazily, so construction initiates no network connection.
 func NewClickHousePool(cfg *ClickHouseConfig) *ClickHousePool {
 	// 先应用 default tag 填充默认值（端口 9000、建连超时 5s），再由调用方显式设置覆盖；
 	// defaults.Set 仅在缺省（零值）字段上生效，失败即为 default tag 格式错误（致命不变量）。
@@ -99,43 +76,32 @@ func NewClickHousePool(cfg *ClickHouseConfig) *ClickHousePool {
 }
 
 // ClickHousePool 是 ClickHouse 的 sqlDBPool 句柄，绑定一个实例配置派生的 Key。
-// ClickHousePool is the ClickHouse sqlDBPool handle bound to a Key derived from an
-// instance config.
 type ClickHousePool struct {
 	sqlDBPool
 	db string
 }
 
 // CloseAllClickHouseClients 关闭全部 ClickHouse db 池并释放底层连接。供进程优雅关闭调用。
-// CloseAllClickHouseClients closes every ClickHouse db pool and releases connections,
-// meant for graceful shutdown.
 func CloseAllClickHouseClients(ctx context.Context) {
 	clickhouseClients.closeAll(ctx)
 }
 
 // clickhousePlugin 实现 DatasourcePlugin，把 clickhouse 数据源类型接入插件注册表。
-// clickhousePlugin implements DatasourcePlugin, wiring the clickhouse datasource type into
-// the plugin registry.
 type clickhousePlugin struct{}
 
 // Key 返回数据源类型键。
-// Key returns the datasource type key.
 func (clickhousePlugin) Key() string { return DatasourceTypeClickHouse }
 
 // ConfigType 返回配置值反射类型。
-// ConfigType returns the config value's reflect type.
 func (clickhousePlugin) ConfigType() reflect.Type { return reflect.TypeFor[ClickHouseTableConfig]() }
 
 // NewConfig 返回全新一份 *ClickHouseTableConfig。
-// NewConfig returns a fresh *ClickHouseTableConfig.
 func (clickhousePlugin) NewConfig() any { return &ClickHouseTableConfig{} }
 
 // ValidateConfig 结构已经解码校验，这里无需额外操作。
-// ValidateConfig does nothing extra since the structure was already validated at decode.
 func (clickhousePlugin) ValidateConfig(_ any) error { return nil }
 
 // TestConn 建池借出 connection、PingContext 探活后归还。
-// TestConn borrows a connection from the pool, probes it via PingContext and returns it.
 func (clickhousePlugin) TestConn(ctx context.Context, cfg any) error {
 	c := cfg.(*ClickHouseTableConfig)
 	pool := NewClickHousePool(&ClickHouseConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
@@ -152,8 +118,6 @@ func (clickhousePlugin) TestConn(ctx context.Context, cfg any) error {
 }
 
 // IntrospectSchema 建池、NewClickHouseDatasource 自省表结构后返回列定义。
-// IntrospectSchema builds the pool, introspects the table via NewClickHouseDatasource and
-// returns the column definitions.
 func (clickhousePlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) ([]DatasourceColumn, error) {
 	c := cfg.(*ClickHouseTableConfig)
 	pool := NewClickHousePool(&ClickHouseConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
@@ -169,8 +133,6 @@ func (clickhousePlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Read
 }
 
 // Register 校验 schema 非空 → 建池 → parseDatasourceColumns → NewClickHouseDatasourceWithSchema。
-// Register validates schema not-empty → build pool → parseDatasourceColumns →
-// NewClickHouseDatasourceWithSchema.
 func (clickhousePlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, _ *s3.ObjectCache, namespace, _ string, cfg any) (sqlitevtab.Datasource, error) {
 	c := cfg.(*ClickHouseTableConfig)
 	if len(c.Schema) == 0 {
@@ -192,7 +154,6 @@ func (clickhousePlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, 
 }
 
 // init 自注册 clickhouse 数据源类型。
-// init self-registers the clickhouse datasource type.
 func init() {
 	RegisterDatasourceType(clickhousePlugin{})
 }

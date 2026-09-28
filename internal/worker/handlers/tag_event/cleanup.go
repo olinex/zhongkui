@@ -1,17 +1,17 @@
 package tag_event
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"encoding/json"
 	"time"
 
-	// third-party
+	// 第三方
 
 	"github.com/creasty/defaults"
 	"github.com/samber/do/v2"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"

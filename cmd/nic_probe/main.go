@@ -1,5 +1,6 @@
 //go:build linux
 
+// Package main 提供物理网卡与 AF_XDP 支持的探测命令行工具。
 package main
 
 import (

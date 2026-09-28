@@ -1,13 +1,11 @@
 // stores/configSync.ts
-// Frontend page config sync store: keeps the browser-side page configuration
-// (theme, namespace, nav pinned, quick start groups, language, table columns) in
-// sync with the backend so a user gets the same page layout on any host.
+// 前端页面配置同步 store：将浏览器侧的页面配置（主题、命名空间、导航栏固定、
+// 快速开始分组、语言、表格列）与后端保持同步，使用户在任意主机上都能获得一致的
+// 页面布局。
 //
-// Concurrency: every push carries the previously synced hash and version as an
-// optimistic lock; if either mismatches (another browser already pushed) the
-// backend rejects the write. On any failure the local change is rolled back to
-// the last synced snapshot and an error is reported, so a broken sync never
-// silently diverges the page configuration.
+// 并发控制：每次推送都携带上一次同步的哈希与版本号作为乐观锁；二者任一不匹配
+// （其他浏览器已推送）后端即拒绝本次写入。任何失败都会把本地改动回滚到最近一次
+// 同步的快照并报错，故同步异常绝不会静默地使页面配置产生分歧。
 
 import consola from "consola";
 import { defineStore } from "pinia";
@@ -23,13 +21,13 @@ import { useAppStore } from "./app";
 import { localManager } from "./local";
 import { useQuickStartStore } from "./quickStart";
 
-// Debounce window before pushing local changes to the backend.
+// 本地改动推送至后端前的防抖窗口。
 const SYNC_DEBOUNCE_MS = 500;
 
 // 表格列配置在 localStorage 中的存储键前缀（与 utils/column.ts 保持一致）
 const COLUMN_STORAGE_PREFIX = "table-columns:";
 
-// PageConfig is the user-editable page configuration captured from localStorage.
+// PageConfig 是从 localStorage 采集的用户可编辑页面配置。
 interface PageConfig {
   theme: string;
   namespace: string;

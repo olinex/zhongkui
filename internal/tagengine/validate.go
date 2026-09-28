@@ -1,14 +1,14 @@
 package tagengine
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"strings"
 
-	// third-party
+	// 第三方
 	"github.com/open-policy-agent/opa/ast"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"

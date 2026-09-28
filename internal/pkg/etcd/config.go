@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"os"
 	"time"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/spf13/viper"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
@@ -151,10 +151,12 @@ func (c *Config) ToEtcdConfig(ctx context.Context, logger *logging.Logger) (cfg 
 	return
 }
 
+// DescribeConfig 返回 etcd 配置项的描述信息，用于生成配置文档。
 func DescribeConfig() config.ConfigDescriptions {
 	return config.DescribeConfig[Config](Prefix)
 }
 
+// ExtractConfig 从 viper 实例中提取并校验 etcd 配置。
 func ExtractConfig(viper *viper.Viper, validate *validator.Validate) (*Config, error) {
 	return config.ExtractConfig[Config](viper, validate, Prefix)
 }

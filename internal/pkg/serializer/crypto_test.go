@@ -88,7 +88,7 @@ func TestCrypto_getTagMode(t *testing.T) {
 
 		Convey("key length too short from tag", func() {
 			type BadModel struct {
-				// length=16 = MinKeyLength, should fail
+				// length=16 = MinKeyLength，应失败
 				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=16"`
 			}
 			s, err := schema.Parse(&BadModel{}, &sync.Map{}, schema.NamingStrategy{})
@@ -338,7 +338,7 @@ func TestCrypto_Value(t *testing.T) {
 
 			cipherBytes, ok := result.([]byte)
 			So(ok, ShouldBeTrue)
-			// ciphertext should be larger than plaintext (nonce + tag overhead)
+			// 密文应比明文长（nonce + tag 开销）
 			So(len(cipherBytes), ShouldBeGreaterThan, len(largeData))
 		})
 	})
@@ -424,7 +424,7 @@ func TestCrypto_CryptoTag_Defaults(t *testing.T) {
 		})
 
 		Convey("custom length in tag (AES-192)", func() {
-			// AES-192 = 24 bytes key, AES-256 = 32 bytes
+			// AES-192 = 24 字节密钥，AES-256 = 32 字节
 			type CustomModel struct {
 				Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=24"`
 			}

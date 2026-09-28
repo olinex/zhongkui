@@ -1,3 +1,4 @@
+// Package totel 提供分布式任务处理引擎（worker）的 OpenTelemetry 埋点：scope/span 名称常量、span 辅助函数与指标记录函数。
 package totel
 
 import (
@@ -14,15 +15,19 @@ import (
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 )
 
+// 任务处理引擎的 OpenTelemetry scope 与 span 名称常量。
 const (
-	ScopeName       = base.GlobalPrefix + "-tasks"
-	SpanTaskDo      = "tasks.batch.do"
+	// ScopeName 任务处理引擎的 tracer/meter scope 名称
+	ScopeName = base.GlobalPrefix + "-tasks"
+	// SpanTaskDo 批量任务执行的 span 名称
+	SpanTaskDo = "tasks.batch.do"
+	// SpanTaskExtract 数据提取阶段的 span 名称
 	SpanTaskExtract = "tasks.batch.extract"
 )
 
 var (
 	once sync.Once
-	// ---------- Metrics ----------
+	// ---------- 指标 ----------
 	// taskCounter 统计处理的任务总数，按类型标记
 	taskCounter metric.Int64Counter
 	// taskErrorCounter 统计任务处理失败次数，按类型标记
@@ -33,6 +38,7 @@ var (
 	packetsExtractedCounter metric.Int64Counter
 )
 
+// InitMetrics 初始化任务处理引擎的 OpenTelemetry 指标，仅执行一次。
 func InitMetrics() {
 	once.Do(initMetrics)
 }

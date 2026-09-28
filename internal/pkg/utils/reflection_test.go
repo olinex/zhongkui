@@ -15,6 +15,7 @@ type testOuter struct {
 	Payload []byte `json:"payload" secure:"mode=\"aes-gcm\",offset=200,length=32"`
 }
 
+// TestFindField 测试 FindField 的单段/多段路径解析与标签匹配。
 func TestFindField(t *testing.T) {
 	// 单段路径（按 json 名匹配）：浅层优先，解析到最外层直接声明的字段（外层遮蔽内层同名嵌入字段）
 	f, err := FindField(&testOuter{}, "payload", "json")
@@ -49,6 +50,7 @@ func TestFindField(t *testing.T) {
 	}
 }
 
+// TestExtractFieldTag 测试 ExtractFieldTag 提取结构体标签的行为。
 func TestExtractFieldTag(t *testing.T) {
 	// 按 Go 字段名解析 + 提取 gorm 标签
 	got, err := ExtractFieldTag(&testOuter{}, "testInner.Name", "", "gorm")
@@ -78,6 +80,7 @@ func TestExtractFieldTag(t *testing.T) {
 	}
 }
 
+// TestFindFieldErrors 测试 FindField 在字段不存在或输入非法时的错误处理。
 func TestFindFieldErrors(t *testing.T) {
 	if _, err := FindField(&testOuter{}, "NotExist", "json"); err == nil {
 		t.Fatal("FindField(NotExist) should fail")

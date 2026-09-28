@@ -88,7 +88,7 @@ func TestDeriveChildKey_WrapAround(t *testing.T) {
 	book := newTestPasswordBook(32)
 	kd := newTestKeyDerivation([]byte("wrap-test-key"), book)
 
-	// offset 24 + saltLen(17) = 41 > 32, will wrap around
+	// 偏移 24 + saltLen(17) = 41 > 32，会发生回绕
 	key1, err := kd.DeriveChildKey(24, 17)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -103,7 +103,7 @@ func TestDeriveChildKey_WrapAround(t *testing.T) {
 		t.Fatal("wrap-around derivation should be deterministic")
 	}
 
-	// Verify wrap-around produces a different key than a non-wrap call
+	// 验证回绕产生的密钥与非回绕调用不同
 	key3, err := kd.DeriveChildKey(0, 17)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

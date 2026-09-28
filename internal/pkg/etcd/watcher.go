@@ -9,14 +9,14 @@
 package etcd
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"time"
 
-	// third-party
+	// 第三方
 	clientv3 "go.etcd.io/etcd/client/v3"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )

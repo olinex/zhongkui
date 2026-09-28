@@ -1754,6 +1754,33 @@ other = "内置工具"
 [enum.llmToolSource.mcp]
 other = "MCP 工具"
 
+# Agent 类型（枚举类 agentKind）
+[enum.agentKind.knowledge]
+other = "知识检索"
+
+[enum.agentKind.rego]
+other = "Rego 规则生成"
+
+# 长期记忆类别（枚举类 memoryKind）
+[enum.memoryKind.fact]
+other = "事实"
+
+[enum.memoryKind.preference]
+other = "偏好"
+
+[enum.memoryKind.decision]
+other = "决策"
+
+[enum.memoryKind.artifact]
+other = "产物"
+
+# 长期记忆状态（枚举类 memoryStatus）
+[enum.memoryStatus.active]
+other = "生效"
+
+[enum.memoryStatus.archived]
+other = "归档"
+
 # MCP 远端传输方式（枚举类 mcpTransport）
 [enum.mcpTransport.sse]
 other = "SSE"
@@ -2005,6 +2032,79 @@ other = "业务数据注入上限"
 [param.session.maxContextBytes.comment]
 other = "前端透传 businessData 单次注入的总大小上限（字节）"
 
+[param.session.topicSystemPrompt.label]
+other = "会话主题提示词"
+
+[param.session.topicSystemPrompt.comment]
+other = "据会话首条用户消息生成会话短主题的系统提示词"
+
+# ---- memory：长期记忆与会话摘要 ----
+[param.memory.enabled.label]
+other = "长期记忆开关"
+
+[param.memory.enabled.comment]
+other = "长期记忆总开关，关闭时生成请求跳过记忆检索与注入且不报错"
+
+[param.memory.sectionTitle.label]
+other = "记忆分节标题"
+
+[param.memory.sectionTitle.comment]
+other = "长期记忆注入提示词时使用的分节标题"
+
+[param.memory.topK.label]
+other = "记忆注入条数"
+
+[param.memory.topK.comment]
+other = "检索后注入提示词的长期记忆条数"
+
+[param.memory.candidates.label]
+other = "记忆候选条数"
+
+[param.memory.candidates.comment]
+other = "向量路与关键词路各自召回的候选记忆条数"
+
+[param.memory.maxItems.label]
+other = "记忆注入硬上限"
+
+[param.memory.maxItems.comment]
+other = "单次注入长期记忆条数的硬上限，非正数表示不限制"
+
+[param.memory.maxItemBytes.label]
+other = "单条记忆字节上限"
+
+[param.memory.maxItemBytes.comment]
+other = "单条长期记忆注入提示词前的字节上限，超出部分被截断"
+
+[param.memory.dedupeThreshold.label]
+other = "记忆去重阈值"
+
+[param.memory.dedupeThreshold.comment]
+other = "写入记忆时的语义去重/合并阈值（余弦相似度）"
+
+[param.memory.summarySystemPrompt.label]
+other = "会话摘要提示词"
+
+[param.memory.summarySystemPrompt.comment]
+other = "滚动摘要会话历史时使用的系统提示词"
+
+[param.memory.summaryMinEvictedMessages.label]
+other = "摘要触发条数"
+
+[param.memory.summaryMinEvictedMessages.comment]
+other = "窗口外未摘要消息达到该条数时触发滚动摘要"
+
+[param.memory.extractSystemPrompt.label]
+other = "记忆抽取提示词"
+
+[param.memory.extractSystemPrompt.comment]
+other = "会话压缩时抽取长期记忆的系统提示词"
+
+[param.memory.extractMaxItems.label]
+other = "单次抽取条数"
+
+[param.memory.extractMaxItems.comment]
+other = "单次会话压缩最多抽取的长期记忆条数"
+
 # ---- chunking：Markdown 结构感知切片 ----
 [param.chunking.size.label]
 other = "切片目标长度"
@@ -2073,6 +2173,13 @@ other = "业务数据字节上限"
 
 [param.sanitize.maxBytes.comment]
 other = "业务数据紧凑 JSON 序列化字节上限，非正数表示不限制（仅执行清洗）"
+
+# ---- tools：内置工具展示文案 ----
+[tool.memory_write.label]
+other = "长期记忆写入"
+
+[tool.memory_write.comment]
+other = "Agent 自主调用，将可复用的结论、偏好或事实写入命名空间级长期记忆"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

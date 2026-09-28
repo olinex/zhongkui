@@ -1,11 +1,11 @@
 package llm
 
 import (
-	// third-party
+	// 第三方
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	// internal
+	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
@@ -21,16 +21,15 @@ import (
 // 「已绑定但模型类型与档位不符」三种情况。
 type LlmSlotBindingOut struct {
 	// Slot 档位标识：flash | standard | advanced | embedding
-	Slot string `json:"slot"`
+	Slot pkgllm.Slot `json:"slot"`
 	// ModelID 绑定模型的 ID（未绑定时为 0）
 	ModelID uint `json:"modelId"`
 	// ModelName 绑定模型的本地标识（未绑定时为空）
 	ModelName string `json:"modelName"`
 	// Kind 绑定模型的类型：chat | embedding（未绑定时为空）
-	Kind string `json:"kind"`
+	Kind pkgllm.ModelKind `json:"kind"`
 	// RequiredKind 该档位要求的模型类型：chat | embedding
-	// RequiredKind is the model kind the slot requires: chat | embedding
-	RequiredKind string `json:"requiredKind"`
+	RequiredKind pkgllm.ModelKind `json:"requiredKind"`
 	// ProviderModel 绑定模型的供应商侧模型名（未绑定时为空）
 	ProviderModel string `json:"providerModel"`
 	// Enabled 绑定模型是否启用
@@ -77,18 +76,18 @@ func LlmBindingListGet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	modelIDs := make(map[string]uint, len(bindings))
+	modelIDs := make(map[pkgllm.Slot]uint, len(bindings))
 	for i := range bindings {
 		modelIDs[bindings[i].Slot] = bindings[i].ModelID
 	}
 	slots := make([]LlmSlotBindingOut, 0, len(pkgllm.AllSlots))
 	for _, slot := range pkgllm.AllSlots {
-		out := LlmSlotBindingOut{Slot: string(slot), ModelID: modelIDs[string(slot)]}
-		out.RequiredKind = string(pkgllm.SlotKind(slot))
+		out := LlmSlotBindingOut{Slot: slot, ModelID: modelIDs[slot]}
+		out.RequiredKind = pkgllm.SlotKind(slot)
 		if info, ok := infos[slot]; ok {
 			out.ModelName = info.Name
 			out.ProviderModel = info.Model
-			out.Kind = string(info.Kind)
+			out.Kind = info.Kind
 			out.Enabled = info.Enabled
 			out.Dimensions = info.Dimensions
 			out.Bound = true
@@ -120,21 +119,12 @@ func LlmBindingListGet(c *gin.Context) {
 // embedding 槽位额外做一次真实维度兼容性校验（探测端点实际输出维度与
 // knowledge_chunks.embedding 列维度是否兼容，不兼容即 400 拒绝、不写绑定），通过后把
 // 已验证维度写回模型记录（后端管理的只读缓存）；成功后在提交后置动作中重建运行时并广播变更。
-// LlmBindingSet handles a slot-binding request. After the slot value is validated as legal, the
-// model is confirmed to exist, to be enabled and to have a kind matching the slot (the embedding
-// slot requires an embedding model and every other slot requires a chat model), the binding
-// record is written (rebinding the same slot overwrites it with the latest model). The embedding
-// slot additionally performs a real dimension-compatibility check (it probes the actual output
-// dimension of the endpoint against the knowledge_chunks.embedding column dimension; an
-// incompatible pair is rejected with 400 and no binding is written); on success the verified
-// dimension is written back to the model record (a read-only cache managed by the backend).
-// Once done, the post-commit action rebuilds the runtime and broadcasts the change.
 func LlmBindingSet(c *gin.Context) {
 	raw, ok := views.GetRawParam(c, "slot")
 	if !ok {
 		return
 	}
-	slot, err := pkgllm.ParseSlot(raw)
+	slot, err := pkgllm.ParseSlot(pkgllm.Slot(raw))
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
@@ -162,7 +152,7 @@ func LlmBindingSet(c *gin.Context) {
 		response.CreateBadBodyError(errors.Newf("model %q is disabled and cannot be bound to a slot", instance.Name)).AbortWithGinH(c)
 		return
 	}
-	if want := pkgllm.SlotKind(slot); pkgllm.ModelKind(instance.Kind) != want {
+	if want := pkgllm.SlotKind(slot); instance.Kind != want {
 		response.CreateBadBodyError(errors.Newf(
 			"model %q is a %s model and cannot be bound to the %q slot (which requires a %s model)",
 			instance.Name, instance.Kind, slot, want)).AbortWithGinH(c)
@@ -195,7 +185,7 @@ func LlmBindingSet(c *gin.Context) {
 			return
 		}
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		if err := db.Create(&core.LlmBinding{Slot: string(slot), ModelID: instance.ID}).Error; err != nil {
+		if err := db.Create(&core.LlmBinding{Slot: slot, ModelID: instance.ID}).Error; err != nil {
 			response.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}
@@ -215,7 +205,7 @@ func LlmBindingUnbind(c *gin.Context) {
 	if !ok {
 		return
 	}
-	slot, err := pkgllm.ParseSlot(raw)
+	slot, err := pkgllm.ParseSlot(pkgllm.Slot(raw))
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return

@@ -1,3 +1,5 @@
+// Package pcap 提供 PCAP 抓包文件的导入处理：从 S3 拉取抓包原件、解析数据包、
+// 转换为网络模型并批量落库，配套的任务载荷定义见 PcapS3Object。
 package pcap
 
 import (

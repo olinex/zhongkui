@@ -10,25 +10,17 @@ import (
 )
 
 // FeatureOut 功能开关输出项：键 + 启停状态 + 不可用原因。
-// FeatureOut is a feature-toggle output item: key + enabled state + unavailability reason.
 type FeatureOut struct {
 	// Key 功能键（如 passwordReset）
-	// Key the feature key (e.g. passwordReset)
 	Key string `json:"key"`
 	// Enabled 该功能当前是否开启
-	// Enabled whether the feature is currently enabled
 	Enabled bool `json:"enabled"`
 	// Reason 该功能不可用的原因（按请求语言本地化；可用或实现方未提供原因为空串），
 	// 供前端在侧边栏提示与「功能不可用」说明页中说明原因
-	// Reason the localized reason why the feature is unavailable (empty when enabled or the
-	// implementer gives no reason), letting the frontend explain the reason in the sidebar
-	// hint and on the "feature unavailable" page
 	Reason string `json:"reason"`
 }
 
 // FeaturesListGetOut 功能开关列表输出：依装配顺序返回全部功能开关。
-// FeaturesListGetOut is the feature-toggle list output, returning all toggles in
-// assembly order.
 type FeaturesListGetOut []FeatureOut
 
 // FeaturesListGet 处理功能开关列表请求（公共接口，无需认证）。

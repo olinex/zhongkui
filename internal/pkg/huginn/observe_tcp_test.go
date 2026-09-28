@@ -83,6 +83,7 @@ func linuxSYNPacket() []byte {
 	return buildIPv4(5, 0, 0x1234, 0x40, 0, 64, ipProtoTCP, tcp)
 }
 
+// TestGuessDistance 验证由 TTL 值反推的初始跳数估算。
 func TestGuessDistance(t *testing.T) {
 	cases := []struct {
 		in, want uint8
@@ -96,6 +97,7 @@ func TestGuessDistance(t *testing.T) {
 	}
 }
 
+// TestCalculateTTL 验证由 IP TTL 字段推导 TTL 表示形式（距离 / 取值 / 非法）。
 func TestCalculateTTL(t *testing.T) {
 	cases := []struct {
 		in   uint8
@@ -118,6 +120,7 @@ func TestCalculateTTL(t *testing.T) {
 	}
 }
 
+// TestDetectWinMultiplicator 验证窗口大小倍数的识别：MSS 倍数、MTU 倍数、模数与原始值。
 func TestDetectWinMultiplicator(t *testing.T) {
 	cases := []struct {
 		name         string
@@ -150,6 +153,7 @@ func TestDetectWinMultiplicator(t *testing.T) {
 	}
 }
 
+// TestParseTCPPacketErrors 验证 TCP 段解析对过短数据与非法偏移的拒绝。
 func TestParseTCPPacketErrors(t *testing.T) {
 	if _, err := parseTCPPacket(nil); !errors.Is(err, ErrPacketTooShort) {
 		t.Errorf("empty: got %v, want ErrPacketTooShort", err)
@@ -161,6 +165,7 @@ func TestParseTCPPacketErrors(t *testing.T) {
 	}
 }
 
+// TestParseTCPPacketOptions 验证 TCP 选项区与载荷的解析及数据偏移计算。
 func TestParseTCPPacketOptions(t *testing.T) {
 	// 选项区长度必须是 4 的倍数（data_offset 以 32 位字为单位）
 	opts := tcpOptBytes(tcpOptMSS, 0x05, 0xb4)
@@ -184,6 +189,7 @@ func TestParseTCPPacketOptions(t *testing.T) {
 	}
 }
 
+// TestAnalyzeTCPIPv4Errors 验证 IPv4 包分析对版本、协议与分片的拒绝。
 func TestAnalyzeTCPIPv4Errors(t *testing.T) {
 	if _, err := analyzeTCPIPv4(nil); !errors.Is(err, ErrPacketTooShort) {
 		t.Errorf("empty: got %v", err)
@@ -209,6 +215,7 @@ func TestAnalyzeTCPIPv4Errors(t *testing.T) {
 	}
 }
 
+// TestAnalyzeTCPIPv4LinuxSYN 验证典型 Linux SYN 包可提取全部观测维度并渲染出 p0f 签名串。
 func TestAnalyzeTCPIPv4LinuxSYN(t *testing.T) {
 	pkg, err := analyzeTCPIPv4(linuxSYNPacket())
 	if err != nil {
@@ -266,6 +273,7 @@ func TestAnalyzeTCPIPv4LinuxSYN(t *testing.T) {
 	}
 }
 
+// TestAnalyzeTCPIPv4SynAck 验证 SYN-ACK 包被识别为响应方向且不输出 MTU。
 func TestAnalyzeTCPIPv4SynAck(t *testing.T) {
 	tcp := buildTCP(80, 12345, 0x02020202, 0x01020304, tcpFlagSYN|tcpFlagACK, 14600, nil, nil)
 	raw := buildIPv4(5, 0, 0x1234, 0x40, 0, 64, ipProtoTCP, tcp)
@@ -285,6 +293,7 @@ func TestAnalyzeTCPIPv4SynAck(t *testing.T) {
 	}
 }
 
+// TestAnalyzeTCPIPv4InvalidFlags 验证非法标志位组合被拒绝。
 func TestAnalyzeTCPIPv4InvalidFlags(t *testing.T) {
 	// SYN + FIN 组合非法
 	tcp := buildTCP(1, 2, 0, 0, tcpFlagSYN|tcpFlagFIN, 100, nil, nil)
@@ -300,6 +309,7 @@ func TestAnalyzeTCPIPv4InvalidFlags(t *testing.T) {
 	}
 }
 
+// TestTCPQuirksExtraction 验证各类 TCP 怪癖标记的提取。
 func TestTCPQuirksExtraction(t *testing.T) {
 	// ECN：IP TOS 低 2 位 + TCP ECE/CWR；seq-、ack-、uptr+、pushf+
 	tcp := buildTCP(1, 2, 0, 0, tcpFlagSYN|tcpFlagECE|tcpFlagPSH, 100, nil, nil)
@@ -361,6 +371,7 @@ func containsQuirk(quirks []quirk, target quirk) bool {
 	return false
 }
 
+// TestTCPOptionEdgeCases 验证 TCP 选项的边界处理：EOL 填充、未知选项、SACK 与时间戳等。
 func TestTCPOptionEdgeCases(t *testing.T) {
 	// EOL 后零填充 → eol+1，无 opt+ 怪癖
 	// 选项区 4 字节对齐：NOP,NOP,EOL,pad
@@ -426,6 +437,7 @@ func containsOption(opts []tcpOption, target tcpOption) bool {
 	return false
 }
 
+// TestAnalyzeTCPIPv6 验证 IPv6 SYN 包分析：版本、窗口倍数、flow/ecn 怪癖与 MTU。
 func TestAnalyzeTCPIPv6(t *testing.T) {
 	// 非法版本
 	bad := make([]byte, 40)
@@ -477,6 +489,7 @@ func TestAnalyzeTCPIPv6(t *testing.T) {
 	}
 }
 
+// TestCalculateIPv6Olen 验证 IPv6 扩展头长度的计算。
 func TestCalculateIPv6Olen(t *testing.T) {
 	// next header 直接为 TCP → 0
 	if got := calculateIPv6Olen(buildIPv6(0, 0, ipProtoTCP, 64, nil)); got != 0 {
@@ -492,6 +505,7 @@ func TestCalculateIPv6Olen(t *testing.T) {
 	}
 }
 
+// TestMTUExtraction 验证 MTU 提取：方向过滤与 IP/TCP 选项长度累加。
 func TestMTUExtraction(t *testing.T) {
 	// 服务端方向不输出 MTU（extract 仅在 SYN 置位时计算，但输出被 from_client 过滤）
 	tcp := buildTCP(80, 12345, 0, 0, tcpFlagSYN|tcpFlagACK, 100, tcpOptBytes(tcpOptMSS, 0x05, 0xb4), nil)

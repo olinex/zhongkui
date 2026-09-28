@@ -73,7 +73,7 @@ import i18n from "@/utils/i18n";
 import { useAppStore } from "@/stores/app";
 import { useFeaturesStore, FEATURE_PASSWORD_RESET } from "@/stores/features";
 
-// Types
+// 类型
 import type { UserTokenOut } from "@/apis/@types/user";
 
 const route = useRoute();

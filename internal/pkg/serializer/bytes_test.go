@@ -7,6 +7,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestByteSegments_Basic 测试字节段的基本追加、读取、长度与拼接操作。
 func TestByteSegments_Basic(t *testing.T) {
 	Convey("Basic Append/Get/Length/Concat", t, func() {
 		b, err := NewByteSegments(100)
@@ -26,13 +27,14 @@ func TestByteSegments_Basic(t *testing.T) {
 	})
 }
 
+// TestByteSegments_AppendErrorsAndGet 测试追加超长与越界读取的错误处理。
 func TestByteSegments_AppendErrorsAndGet(t *testing.T) {
 	Convey("Append too long and GetSegment out of range", t, func() {
 		b, _ := NewByteSegments(2)
 		err := b.Append([]byte{1, 2, 3})
 		So(err, ShouldNotBeNil)
 
-		// out of range
+		// 越界
 		b2, _ := NewByteSegments(10)
 		b2.Append([]byte("x"))
 		So(b2.GetSegment(-1), ShouldBeNil)
@@ -40,6 +42,7 @@ func TestByteSegments_AppendErrorsAndGet(t *testing.T) {
 	})
 }
 
+// TestByteSegments_MarshalUnmarshalRoundtrip 测试序列化与反序列化的往返一致性。
 func TestByteSegments_MarshalUnmarshalRoundtrip(t *testing.T) {
 	Convey("Marshal and Unmarshal roundtrip", t, func() {
 		b, _ := NewByteSegments(1024)
@@ -62,6 +65,7 @@ func TestByteSegments_MarshalUnmarshalRoundtrip(t *testing.T) {
 	})
 }
 
+// TestByteSegments_UnmarshalErrors 测试反序列化时的魔数、长度与数据过短异常。
 func TestByteSegments_UnmarshalErrors(t *testing.T) {
 	Convey("Unmarshal with bad magic should return error", t, func() {
 		b, _ := NewByteSegments(10)
@@ -83,7 +87,7 @@ func TestByteSegments_UnmarshalErrors(t *testing.T) {
 		buf, _ := b.Marshal()
 		data := make([]byte, len(buf.Bytes()))
 		copy(data, buf.Bytes())
-		// set maxLength to 1
+		// 将 maxLength 设为 1
 		binary.BigEndian.PutUint32(data[8:12], 1)
 
 		c, _ := NewByteSegments(10)

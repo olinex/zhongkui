@@ -4,6 +4,7 @@ import (
 	"testing"
 )
 
+// TestStreamHasherConsistency 验证相同输入序列产生一致的哈希值。
 func TestStreamHasherConsistency(t *testing.T) {
 	parts := []string{"8080", "443", "192.168.1.100", "10.0.0.1"}
 
@@ -31,6 +32,7 @@ func TestStreamHasherConsistency(t *testing.T) {
 	}
 }
 
+// TestStreamHasherDifferentInput 验证不同输入产生不同的哈希值。
 func TestStreamHasherDifferentInput(t *testing.T) {
 	h1 := Acquire()
 	h1.WriteString("192.168.1.100:8080:10.0.0.1:443")
@@ -47,6 +49,7 @@ func TestStreamHasherDifferentInput(t *testing.T) {
 	}
 }
 
+// TestStreamHasherUint16 验证按小端序写入 uint16 的哈希结果一致。
 func TestStreamHasherUint16(t *testing.T) {
 	h1 := Acquire()
 	h1.WriteUint16(8080)
@@ -67,6 +70,7 @@ func TestStreamHasherUint16(t *testing.T) {
 	}
 }
 
+// BenchmarkStreamHasher 基准测试流式哈希器的拼接与求和性能。
 func BenchmarkStreamHasher(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {

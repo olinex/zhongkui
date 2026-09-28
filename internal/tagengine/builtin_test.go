@@ -1,15 +1,15 @@
 package tagengine_test
 
 import (
-	// stdlib
+	// 标准库
 	"context"
 	"testing"
 
-	// third-party
+	// 第三方
 	"github.com/open-policy-agent/opa/v1/rego"
 	. "github.com/smartystreets/goconvey/convey"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/tag"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
@@ -19,15 +19,12 @@ import (
 )
 
 // ipModel 内置函数端到端测试用的目标结构体，其类型键经 TypeKey 计算作为规则 Model。
-// ipModel is the target struct used by the builtin end-to-end tests; its type
-// key computed by TypeKey serves as the rule Model.
 type ipModel struct {
 	Namespace string `json:"namespace"`
 	IP        string `json:"ip"`
 }
 
 // registerIPGeo 注册 IP→国家 静态数据源（ip 列可下推过滤）。
-// registerIPGeo registers a static IP→country datasource (ip is filterable).
 func registerIPGeo(t *testing.T, pool *sqlitevtab.SQLitePool) {
 	t.Helper()
 	schema := sqlitevtab.Schema{

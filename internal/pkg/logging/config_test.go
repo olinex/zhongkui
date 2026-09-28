@@ -16,6 +16,7 @@ import (
 // testValidate 测试用的验证器实例
 var testValidate = uv.New()
 
+// 测试 Config 结构体的字段。
 func TestConfigStruct(t *testing.T) {
 	convey.Convey("Test Config struct", t, func() {
 		convey.Convey("should create Config with all fields", func() {
@@ -44,12 +45,13 @@ func TestConfigStruct(t *testing.T) {
 			}
 
 			convey.So(cfg.Level, convey.ShouldEqual, "info")
-			convey.So(cfg.Development, convey.ShouldBeFalse) // default value
-			convey.So(cfg.Encoding, convey.ShouldEqual, "")  // not set
+			convey.So(cfg.Development, convey.ShouldBeFalse) // 默认值
+			convey.So(cfg.Encoding, convey.ShouldEqual, "")  // 未设置
 		})
 	})
 }
 
+// 测试日志级别字符串解析。
 func TestParseLevel(t *testing.T) {
 	convey.Convey("Test ParseLevel function", t, func() {
 		convey.Convey("should parse debug level", func() {
@@ -105,6 +107,7 @@ func TestParseLevel(t *testing.T) {
 	})
 }
 
+// 测试转换为 zap.Config。
 func TestToZapConfig(t *testing.T) {
 	convey.Convey("Test ToZapConfig method", t, func() {
 		convey.Convey("should convert production config correctly", func() {
@@ -195,6 +198,7 @@ func TestToZapConfig(t *testing.T) {
 	})
 }
 
+// 测试配置描述输出。
 func TestDescribeConfig(t *testing.T) {
 	convey.Convey("Test DescribeConfig function", t, func() {
 		convey.Convey("should describe all configurations when no names provided", func() {
@@ -223,6 +227,7 @@ func TestDescribeConfig(t *testing.T) {
 	})
 }
 
+// 测试从 viper 提取日志配置。
 func TestExtractConfig(t *testing.T) {
 	convey.Convey("Test ExtractConfig function", t, func() {
 		convey.Convey("should extract config from viper", func() {
@@ -251,10 +256,10 @@ func TestExtractConfig(t *testing.T) {
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(cfg, convey.ShouldNotBeNil)
 			convey.So(cfg.Level, convey.ShouldEqual, "warn")
-			convey.So(cfg.Development, convey.ShouldBeFalse)                           // default from struct tag
-			convey.So(cfg.Encoding, convey.ShouldEqual, "json")                        // default from struct tag
-			convey.So(cfg.OutputPaths, convey.ShouldResemble, []string{"stdout"})      // default from struct tag
-			convey.So(cfg.ErrorOutputPaths, convey.ShouldResemble, []string{"stderr"}) // default from struct tag
+			convey.So(cfg.Development, convey.ShouldBeFalse)                           // 来自结构体 tag 的默认值
+			convey.So(cfg.Encoding, convey.ShouldEqual, "json")                        // 来自结构体 tag 的默认值
+			convey.So(cfg.OutputPaths, convey.ShouldResemble, []string{"stdout"})      // 来自结构体 tag 的默认值
+			convey.So(cfg.ErrorOutputPaths, convey.ShouldResemble, []string{"stderr"}) // 来自结构体 tag 的默认值
 		})
 
 		convey.Convey("should return error for non-existent config", func() {
@@ -300,6 +305,7 @@ func TestExtractConfig(t *testing.T) {
 	})
 }
 
+// 测试配置函数之间的集成。
 func TestIntegration(t *testing.T) {
 	convey.Convey("Test integration between config functions", t, func() {
 		convey.Convey("should parse level and create zap config", func() {
@@ -369,6 +375,7 @@ zap:
 	})
 }
 
+// 测试 Prefix 常量及其在配置路径中的使用。
 func TestConstants(t *testing.T) {
 	convey.Convey("Test constants", t, func() {
 		convey.Convey("should have correct PREFIX constant", func() {

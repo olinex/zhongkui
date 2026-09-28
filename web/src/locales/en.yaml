@@ -17,6 +17,7 @@ navbar:
     self: AI
     knowledge: Knowledge Base
     assistant: AI Assistant
+    memory: Memory
   notification:
     self: Notifications
     channel: Notification Channels
@@ -282,6 +283,8 @@ model:
       format: Format
       status: Status
       sizeBytes: Source Size
+      useCount: Hit Count
+      lastUsedAt: Last Hit At
       hash: Hash
       originalName: Original Filename
       parseError: Parse Error
@@ -293,12 +296,29 @@ model:
       title: Title
       slot: Slot
       status: Status
+      agentKind: Agent Kind
+      summary: Context Summary
       createdAt: Created At
       updatedAt: Updated At
       query: Request
       docIDs: Documents
       businessData: Business Data
       regoRule: Rego Validation Rule
+  agentMemory:
+    name: Memory
+    field:
+      id: ID
+      agentKind: Agent Kind
+      kind: Memory Kind
+      title: Title
+      content: Body
+      status: Status
+      useCount: Hit Count
+      lastUsedAt: Last Hit
+      createdAt: Created At
+      updatedAt: Updated At
+      namespaceName: Namespace
+      sessionId: Source Session
   llmModel:
     name: LLM Model
     field:
@@ -1252,6 +1272,7 @@ title:
   accessKey: Access Key
   aiKnowledge: Knowledge Base
   aiAssistant: AI Assistant
+  aiMemory: Memory
   passwordReset: Password Reset
   userAdmin: Admin - User
   groupAdmin: Admin - Group
@@ -1329,10 +1350,15 @@ page:
     me: Me
     assistant: Assistant
     hintSelectSession: Create or select a session to start
+    hintFirstQuery: Send your first question to start; the session topic is generated automatically
     confirmDeleteSession: Delete this session and all its messages?
     slotHint: It also becomes the session default slot when creating a session
     disabled: AI feature is disabled
     stageFailed: Stage Failed
+    compact: Compact Context into Memory
+    compactSummary: Context Summary
+    compactExtracted: Extracted Memories
+    compactWarnings: Extraction Warnings
   aiKnowledge:
     dryRun: Dry Run
     query: Query

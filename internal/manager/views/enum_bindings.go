@@ -64,4 +64,12 @@ var enumBindings = map[string]map[string]string{
 		"format": "documentFormat",
 		"status": "knowledgeDocStatus",
 	},
+	"AgentMemoryListOut": {
+		"agentKind": "agentKind",
+		"kind":      "memoryKind",
+		"status":    "memoryStatus",
+	},
+	"AgentMemoryStatusIn": {
+		"status": "memoryStatus",
+	},
 }

@@ -5,6 +5,7 @@ package huginn
 
 import "testing"
 
+// TestTTLString 验证 TTL 各表示形式的字符串渲染。
 func TestTTLString(t *testing.T) {
 	cases := []struct {
 		in   ttl
@@ -22,6 +23,7 @@ func TestTTLString(t *testing.T) {
 	}
 }
 
+// TestWindowSizeString 验证窗口大小各表示形式的字符串渲染。
 func TestWindowSizeString(t *testing.T) {
 	cases := []struct {
 		in   windowSize
@@ -40,6 +42,7 @@ func TestWindowSizeString(t *testing.T) {
 	}
 }
 
+// TestTcpOptionString 验证 TCP 选项各类型的字符串渲染。
 func TestTcpOptionString(t *testing.T) {
 	cases := []struct {
 		in   tcpOption
@@ -61,6 +64,7 @@ func TestTcpOptionString(t *testing.T) {
 	}
 }
 
+// TestQuirkString 验证各 TCP 怪癖标记的字符串渲染。
 func TestQuirkString(t *testing.T) {
 	all := []quirk{quirkDf, quirkNonZeroID, quirkZeroID, quirkEcn, quirkMustBeZero,
 		quirkFlowID, quirkSeqNumZero, quirkAckNumNonZero, quirkAckNumZero,
@@ -76,6 +80,7 @@ func TestQuirkString(t *testing.T) {
 	}
 }
 
+// TestPayloadSizeString 验证载荷分类的字符串渲染。
 func TestPayloadSizeString(t *testing.T) {
 	cases := []struct {
 		in   payloadSize
@@ -92,6 +97,7 @@ func TestPayloadSizeString(t *testing.T) {
 	}
 }
 
+// TestHTTPVersionString 验证 HTTP 版本枚举的字符串渲染。
 func TestHTTPVersionString(t *testing.T) {
 	cases := []struct {
 		in   httpVersion
@@ -110,6 +116,7 @@ func TestHTTPVersionString(t *testing.T) {
 	}
 }
 
+// TestParseHTTPVersionToken 验证 HTTP 版本令牌的解析与非法输入拒绝。
 func TestParseHTTPVersionToken(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -135,6 +142,7 @@ func TestParseHTTPVersionToken(t *testing.T) {
 	}
 }
 
+// TestHTTPHeaderString 验证 HTTP 头部（含可选与取值）的字符串渲染。
 func TestHTTPHeaderString(t *testing.T) {
 	cases := []struct {
 		in   httpHeader
@@ -151,6 +159,7 @@ func TestHTTPHeaderString(t *testing.T) {
 	}
 }
 
+// TestHTTPSignatureString 验证 HTTP 签名的字符串渲染。
 func TestHTTPSignatureString(t *testing.T) {
 	s := httpSignature{
 		version: httpV11,
@@ -163,6 +172,7 @@ func TestHTTPSignatureString(t *testing.T) {
 	}
 }
 
+// TestLabelString 验证指定标签与通用标签的字符串渲染。
 func TestLabelString(t *testing.T) {
 	l := label{ty: labelSpecified, class: strptr("unix"), name: "Linux", flavor: strptr("3.1-3.10")}
 	if got := l.String(); got != "s:unix:Linux:3.1-3.10" {
@@ -174,6 +184,7 @@ func TestLabelString(t *testing.T) {
 	}
 }
 
+// TestFormatGuess 验证指纹识别结果展示文案的拼接与回退规则。
 func TestFormatGuess(t *testing.T) {
 	if got := formatGuess("Firefox", strptr("!"), strptr("115 or newer")); got != "Firefox 115 or newer" {
 		t.Errorf("formatGuess = %q", got)

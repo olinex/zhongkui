@@ -209,7 +209,7 @@ func (j *JwtAuthenticator) Sign(user *core.User) (string, *response.CodeError) {
 	if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
 		return "", response.CreateAccidentError(err)
 	} else if tokenStr, err := token.SignedString(cryptoKey); err != nil {
-		// TODO: log
+		// TODO: 记录日志
 		return "", ErrJwtBadToken
 	} else {
 		return j.appendPrefix(tokenStr), nil

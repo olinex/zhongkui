@@ -1,3 +1,6 @@
+// Package traffic 提供流量审计域（IPv4-TCP / IPv6-TCP / HTTP 传输 / 网络栈）的 API 处理器与
+// 视图 In/Out 结构体。
+//
 // RegisterRoutes 注册 /api/v1/traffic 原始流量审计接口路由。
 // 只读查询 raw 库（ClickHouse）中的原始流量数据。
 // 三种数据类型（ipv4-tcp / ipv6-tcp / http-transport）的数据结构与业务逻辑差异较大，
@@ -21,13 +24,13 @@ import (
 // RegisterRoutes 注册 /api/v1/traffic 原始流量审计接口路由到共享注册上下文。
 func RegisterRoutes(ctx *views.RegisterContext) {
 	trafficGroup := ctx.V1Group.Group(
-		"/traffic",                 // 流量审计接口路径前缀
-		ctx.Authenticator,          // 认证器注入
-		ctx.ForceAuthenticate,      // 强制JWT认证
-		ctx.Policy,                 // RBAC策略引擎
-		ctx.Namespace,              // 命名空间隔离
-		ctx.Authorize,              // 权限验证（api:{FullPath} + HTTP 方法动态授权）
-		ctx.RawDatabase,            // raw 库（ClickHouse）连接
+		"/traffic",            // 流量审计接口路径前缀
+		ctx.Authenticator,     // 认证器注入
+		ctx.ForceAuthenticate, // 强制JWT认证
+		ctx.Policy,            // RBAC策略引擎
+		ctx.Namespace,         // 命名空间隔离
+		ctx.Authorize,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.RawDatabase,       // raw 库（ClickHouse）连接
 	)
 
 	// ========== IPv4 TCP 包：/api/v1/traffic/ipv4-tcp ==========

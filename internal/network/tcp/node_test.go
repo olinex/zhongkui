@@ -54,6 +54,7 @@ func testLogger() *logging.Logger {
 	return &logging.Logger{SugaredLogger: zap.NewNop().Sugar()}
 }
 
+// TestReassemblerNode_Run 验证 ReassemblerNode 的启动与停止生命周期。
 func TestReassemblerNode_Run(t *testing.T) {
 	Convey("Test ReassemblerNode start lifecycle", t, func() {
 		InitMetrics()

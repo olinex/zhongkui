@@ -27,6 +27,7 @@ declare module 'vue-router/auto-routes' {
     'Admin User List': RouteRecordInfo<'Admin User List', '/:language/admin/user', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'AI Assistant': RouteRecordInfo<'AI Assistant', '/:language/ai/assistant', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'AI Knowledge List': RouteRecordInfo<'AI Knowledge List', '/:language/ai/knowledge', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'AI Memory List': RouteRecordInfo<'AI Memory List', '/:language/ai/memory', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Forgot Password': RouteRecordInfo<'Forgot Password', '/:language/auth/forgot-password', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Reset Password': RouteRecordInfo<'Reset Password', '/:language/auth/reset-password', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Password Reset Success': RouteRecordInfo<'Password Reset Success', '/:language/auth/reset-success', { language: ParamValue<true> }, { language: ParamValue<false> }>,

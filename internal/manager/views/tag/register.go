@@ -1,10 +1,12 @@
+// Package tag 提供标签域（规则 / 规则样本 / 事件规则 / 事件记录 / S3 样本）的 API 处理器与视图
+// In/Out 结构体。
 package tag
 
 import (
-	// stdlib
+	// 标准库
 	"net/http"
 
-	// internal
+	// 项目内部
 	"zhongkui.com/zhongkui/internal/manager/views"
 )
 
@@ -14,15 +16,15 @@ import (
 // 认证 / RBAC / raw 库（标签事件规则 dry-run 查询 tag_summings）/ S3 / 命名空间等公共中间件挂在父组上继承。
 func RegisterRoutes(ctx *views.RegisterContext) {
 	tagEventGroup := ctx.V1Group.Group(
-		"/tag-event",                    // 标签事件接口路径前缀
-		ctx.Authenticator,               // 认证器注入
-		ctx.ForceAuthenticate,           // 强制JWT认证
-		ctx.Policy,                      // RBAC策略引擎
-		ctx.Namespace,                   // 命名空间隔离
-		ctx.Authorize,                   // 权限验证（api:{FullPath} + HTTP 方法动态授权）
-		ctx.RawDatabase,                 // raw 库（ClickHouse）连接（标签事件规则 dry-run）
-		ctx.S3,                          // S3 客户端（tag-rule-sample body 副本）
-		ctx.SQLiteVTabPools,             // SQLite vtable 池（数据源 CRUD 及规则 dry-run 查询裸名 vtable）
+		"/tag-event",          // 标签事件接口路径前缀
+		ctx.Authenticator,     // 认证器注入
+		ctx.ForceAuthenticate, // 强制JWT认证
+		ctx.Policy,            // RBAC策略引擎
+		ctx.Namespace,         // 命名空间隔离
+		ctx.Authorize,         // 权限验证（api:{FullPath} + HTTP 方法动态授权）
+		ctx.RawDatabase,       // raw 库（ClickHouse）连接（标签事件规则 dry-run）
+		ctx.S3,                // S3 客户端（tag-rule-sample body 副本）
+		ctx.SQLiteVTabPools,   // SQLite vtable 池（数据源 CRUD 及规则 dry-run 查询裸名 vtable）
 	)
 
 	// ========== 标签识别规则：/api/v1/tag-event/tag-rule ==========

@@ -15,6 +15,10 @@ export interface KnowledgeDocumentItem {
   // 原件字节数，无原件（手动录入）时为 0
   sizeBytes: number;
   chunkCount: number;
+  // 被检索命中的次数（每次检索命中该文档的任一分块自增一次）
+  useCount: number;
+  // 最近一次被检索命中的时间，从未命中时为 null
+  lastUsedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -101,16 +105,60 @@ export interface AgentSessionItem {
   // 会话缺省档位（flash/standard/advanced），空表示按 agent.defaultSlot 参数解析
   slot: string;
   status: string;
+  // 会话所属 Agent 类型（knowledge/rego），取值集合与展示文案由后端枚举类 agentKind 下发
+  agentKind: string;
+  // 会话滚动摘要，无摘要时为空串
+  summary: string;
   createdAt: string;
   updatedAt: string;
 }
 export interface AgentSessionCreateIn {
-  title: string;
+  // 首个用户问题，必填；后端据此经 LLM 生成会话主题（失败时按其截断兜底）
+  query: string;
   slot?: string;
+  // 会话所属 Agent 类型（knowledge/rego），可选；缺省由后端取 knowledge
+  agentKind?: string;
 }
 export interface AgentSessionRenameIn {
   id: number;
   title: string;
+}
+// 会话压缩输出（AgentSessionCompactOut）：刷新后的摘要、成功落库的长期记忆条数与非致命告警
+export interface AgentSessionCompactOut {
+  summary: string;
+  extracted: number;
+  warnings: string[];
+}
+
+// 长期记忆（AgentMemory）
+// 记忆所属 Agent 类型 / 类别 / 状态的取值集合与展示文案一律由后端枚举类
+// agentKind / memoryKind / memoryStatus 下发（见 utils/enums.ts 的 EnumClass），前端不声明取值字面量。
+export interface AgentMemoryItemOut {
+  id: number;
+  // 记忆所属 Agent 类型（knowledge/rego）
+  agentKind: string;
+  // 记忆类别（fact/preference/decision/artifact）
+  kind: string;
+  title: string;
+  content: string;
+  // 记忆状态（active/archived）
+  status: string;
+  // 被检索命中的次数
+  useCount: number;
+  // 最近一次被检索召回的时间，可空
+  lastUsedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface AgentMemoryDetailOut extends AgentMemoryItemOut {
+  // 所属命名空间
+  namespaceName: string;
+  // 来源会话 ID（记忆按会话隔离，仅在来源会话内可见）
+  sessionId: number;
+}
+export interface AgentMemoryStatusIn {
+  // 目标状态（active/archived）
+  status: string;
 }
 
 // 检索引用（RetrievalResult，来自 done 事件的 citations）

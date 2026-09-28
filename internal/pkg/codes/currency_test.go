@@ -6,6 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// 测试 ISO 4217 货币代码的 Alpha3/名称/数字代码查询。
 func TestISO4217Codes(t *testing.T) {
 	Convey("根据 Alpha-3 代码查询", t, func() {
 		checker := GetISO4217Codes()
@@ -147,6 +148,7 @@ func TestISO4217Codes(t *testing.T) {
 	})
 }
 
+// 测试 GetISO4217Codes 的单例行为。
 func TestISO4217CodesSingleton(t *testing.T) {
 	Convey("验证 GetISO4217Codes 单例行为", t, func() {
 		Convey("多次调用应返回相同的实例", func(c C) {
@@ -157,6 +159,7 @@ func TestISO4217CodesSingleton(t *testing.T) {
 	})
 }
 
+// 测试不同索引查询同一货币返回同一条目。
 func TestISO4217CodesCrossIndexConsistency(t *testing.T) {
 	Convey("验证不同索引之间的交叉一致性", t, func() {
 		checker := GetISO4217Codes()
@@ -183,6 +186,7 @@ func TestISO4217CodesCrossIndexConsistency(t *testing.T) {
 	})
 }
 
+// 测试查询区分大小写。
 func TestISO4217CodesCaseSensitive(t *testing.T) {
 	Convey("验证查询区分大小写", t, func() {
 		checker := GetISO4217Codes()
@@ -197,6 +201,7 @@ func TestISO4217CodesCaseSensitive(t *testing.T) {
 	})
 }
 
+// 测试更多货币数据。
 func TestISO4217CodesMoreCurrencies(t *testing.T) {
 	Convey("验证更多货币数据", t, func() {
 		checker := GetISO4217Codes()
@@ -239,6 +244,7 @@ func TestISO4217CodesMoreCurrencies(t *testing.T) {
 	})
 }
 
+// 测试数字代码的前导零处理。
 func TestISO4217CodesNumericPadding(t *testing.T) {
 	Convey("验证数字代码的前导零处理", t, func() {
 		checker := GetISO4217Codes()
@@ -257,6 +263,7 @@ func TestISO4217CodesNumericPadding(t *testing.T) {
 	})
 }
 
+// 测试 ISO4217Entry 字段完整性。
 func TestISO4217EntryFields(t *testing.T) {
 	Convey("验证 ISO4217Entry 字段完整性", t, func() {
 		checker := GetISO4217Codes()

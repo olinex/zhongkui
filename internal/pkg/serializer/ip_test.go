@@ -8,6 +8,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
+// TestIPAddr_BasicMethods 测试 IPAddr 的基本方法与构造。
 func TestIPAddr_BasicMethods(t *testing.T) {
 	Convey("Test IPAddr basic methods", t, func() {
 		Convey("String method", func() {
@@ -33,6 +34,7 @@ func TestIPAddr_BasicMethods(t *testing.T) {
 	})
 }
 
+// TestIPAddr_JSON 测试 IPAddr 的 JSON 序列化与反序列化。
 func TestIPAddr_JSON(t *testing.T) {
 	Convey("Test IPAddr JSON serialization", t, func() {
 		Convey("JSON Marshal", func() {
@@ -66,6 +68,7 @@ func TestIPAddr_JSON(t *testing.T) {
 	})
 }
 
+// TestIPAddr_Database 测试 IPAddr 的数据库读写方法。
 func TestIPAddr_Database(t *testing.T) {
 	Convey("Test IPAddr database methods", t, func() {
 		Convey("Value method", func() {
@@ -147,6 +150,7 @@ func TestIPAddr_Database(t *testing.T) {
 	})
 }
 
+// TestIPv4Addr_BasicMethods 测试 IPv4Addr 的基本方法与构造。
 func TestIPv4Addr_BasicMethods(t *testing.T) {
 	Convey("Test IPv4Addr basic methods", t, func() {
 		Convey("String method", func() {
@@ -175,6 +179,7 @@ func TestIPv4Addr_BasicMethods(t *testing.T) {
 	})
 }
 
+// TestIPv4Addr_JSON 测试 IPv4Addr 的 JSON 序列化与反序列化。
 func TestIPv4Addr_JSON(t *testing.T) {
 	Convey("Test IPv4Addr JSON serialization", t, func() {
 		Convey("JSON Marshal", func() {
@@ -196,6 +201,7 @@ func TestIPv4Addr_JSON(t *testing.T) {
 	})
 }
 
+// TestIPv4Addr_Database 测试 IPv4Addr 的数据库读写方法。
 func TestIPv4Addr_Database(t *testing.T) {
 	Convey("Test IPv4Addr database methods", t, func() {
 		Convey("Value method", func() {
@@ -217,6 +223,7 @@ func TestIPv4Addr_Database(t *testing.T) {
 	})
 }
 
+// TestIPv6Addr_BasicMethods 测试 IPv6Addr 的基本方法与构造。
 func TestIPv6Addr_BasicMethods(t *testing.T) {
 	Convey("Test IPv6Addr basic methods", t, func() {
 		Convey("String method", func() {
@@ -240,6 +247,7 @@ func TestIPv6Addr_BasicMethods(t *testing.T) {
 	})
 }
 
+// TestIPv6Addr_JSON 测试 IPv6Addr 的 JSON 序列化与反序列化。
 func TestIPv6Addr_JSON(t *testing.T) {
 	Convey("Test IPv6Addr JSON serialization", t, func() {
 		Convey("JSON Marshal", func() {
@@ -261,6 +269,7 @@ func TestIPv6Addr_JSON(t *testing.T) {
 	})
 }
 
+// TestIPv6Addr_Database 测试 IPv6Addr 的数据库读写方法。
 func TestIPv6Addr_Database(t *testing.T) {
 	Convey("Test IPv6Addr database methods", t, func() {
 		Convey("Value method", func() {

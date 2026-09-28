@@ -16,11 +16,11 @@ var (
 // VXLAN（Virtual Extensible LAN）是一种网络虚拟化技术，用于在现有IP网络上创建虚拟二层网络
 // 该结构体存储VXLAN头部的主要字段，便于后续分析和存储
 type VXLANChannel struct {
-	ValidIDFlag      bool   `json:"validIdFlag"`       // VNI有效标志位，表示VNI字段是否包含有效数据
-	VNI              uint32 `json:"vni"`                 // 虚拟网络标识符（VXLAN Network Identifier），24位，用于标识虚拟网络
-	GBPExtension     bool   `json:"gbpExtension"`       // 组策略扩展标志，表示是否包含组策略扩展头
-	GBPDontLearn     bool   `json:"gbpDontLearn"`      // 组策略不学习标志，控制MAC地址学习行为
-	GBPApplied       bool   `json:"gbpApplied"`         // 组策略应用标志，表示组策略是否已应用
+	ValidIDFlag      bool   `json:"validIdFlag"`      // VNI有效标志位，表示VNI字段是否包含有效数据
+	VNI              uint32 `json:"vni"`              // 虚拟网络标识符（VXLAN Network Identifier），24位，用于标识虚拟网络
+	GBPExtension     bool   `json:"gbpExtension"`     // 组策略扩展标志，表示是否包含组策略扩展头
+	GBPDontLearn     bool   `json:"gbpDontLearn"`     // 组策略不学习标志，控制MAC地址学习行为
+	GBPApplied       bool   `json:"gbpApplied"`       // 组策略应用标志，表示组策略是否已应用
 	GBPGroupPolicyID uint16 `json:"gbpGroupPolicyId"` // 组策略ID，用于分组策略控制
 }
 
@@ -55,7 +55,7 @@ type GRERouting struct {
 	AddressFamily      uint16      `json:"addressFamily"`      // 地址族类型，标识路由信息的地址格式（如IPv4、IPv6）
 	SRELength          uint8       `json:"sreLength"`          // 源路由扩展长度，以4字节为单位
 	RoutingInformation []byte      `json:"routingInformation"` // 路由信息数据，具体格式由AddressFamily决定
-	Next               *GRERouting `json:"next"`                // 下一个路由条目，支持多级源路由
+	Next               *GRERouting `json:"next"`               // 下一个路由条目，支持多级源路由
 }
 
 // NewGRERouting 从gopacket GRE路由创建GRERouting
@@ -149,22 +149,22 @@ func (g *GRERouting) Scan(value any) error {
 // GRE（Generic Routing Encapsulation）是一种通用的隧道封装协议，用于在IP网络中封装各种网络层协议
 // 该结构体存储GRE头部的主要字段，包括标志位、协议类型和可选字段
 type GREChannel struct {
-	ChecksumPresent   bool                `json:"checksumPresent"`    // 校验和存在标志，表示头部包含校验和字段
-	RoutingPresent    bool                `json:"routingPresent"`     // 路由存在标志，表示头部包含源路由扩展
-	KeyPresent        bool                `json:"keyPresent"`         // 密钥存在标志，表示头部包含密钥字段
-	SeqPresent        bool                `json:"seqPresent"`         // 序列号存在标志，表示头部包含序列号字段
+	ChecksumPresent   bool                `json:"checksumPresent"`   // 校验和存在标志，表示头部包含校验和字段
+	RoutingPresent    bool                `json:"routingPresent"`    // 路由存在标志，表示头部包含源路由扩展
+	KeyPresent        bool                `json:"keyPresent"`        // 密钥存在标志，表示头部包含密钥字段
+	SeqPresent        bool                `json:"seqPresent"`        // 序列号存在标志，表示头部包含序列号字段
 	StrictSourceRoute bool                `json:"strictSourceRoute"` // 严格源路由标志，控制源路由的处理方式
-	AckPresent        bool                `json:"ackPresent"`         // 确认号存在标志，表示头部包含确认号字段
-	CRecursionControl uint8               `json:"recursionControl"`   // 递归控制字段，限制隧道的嵌套深度
-	Flags             uint8               `json:"flags"`               // 保留标志位，用于未来扩展
-	Version           uint8               `json:"version"`             // GRE协议版本，目前通常为0
-	Protocol          layers.EthernetType `json:"protocol"`            // 封装协议类型，标识内层协议（如IPv4、IPv6等）
-	Checksum          uint16              `json:"checksum"`            // 可选校验和，用于验证头部完整性
-	Offset            uint16              `json:"offset"`              // 可选偏移量，与校验和相关
-	Key               uint32              `json:"key"`                 // 可选密钥，用于隧道标识和安全
-	Seq               uint32              `json:"seq"`                 // 可选序列号，用于数据包排序
-	Ack               uint32              `json:"ack"`                 // 可选确认号，用于可靠传输
-	Routing           *GRERouting         `json:"routing"`             // 可选源路由信息，支持多级路由
+	AckPresent        bool                `json:"ackPresent"`        // 确认号存在标志，表示头部包含确认号字段
+	CRecursionControl uint8               `json:"recursionControl"`  // 递归控制字段，限制隧道的嵌套深度
+	Flags             uint8               `json:"flags"`             // 保留标志位，用于未来扩展
+	Version           uint8               `json:"version"`           // GRE协议版本，目前通常为0
+	Protocol          layers.EthernetType `json:"protocol"`          // 封装协议类型，标识内层协议（如IPv4、IPv6等）
+	Checksum          uint16              `json:"checksum"`          // 可选校验和，用于验证头部完整性
+	Offset            uint16              `json:"offset"`            // 可选偏移量，与校验和相关
+	Key               uint32              `json:"key"`               // 可选密钥，用于隧道标识和安全
+	Seq               uint32              `json:"seq"`               // 可选序列号，用于数据包排序
+	Ack               uint32              `json:"ack"`               // 可选确认号，用于可靠传输
+	Routing           *GRERouting         `json:"routing"`           // 可选源路由信息，支持多级路由
 }
 
 // NewGREChannel 从gopacket GRE层创建GREChannel
@@ -240,13 +240,13 @@ func NewGeneveOption(geneve *layers.GeneveOption) *GeneveOption {
 // Geneve是一种通用的网络虚拟化封装协议，支持灵活的选项扩展
 // 该结构体存储Geneve头部的主要字段，包括版本、协议类型、VNI和选项列表
 type GeneveChannel struct {
-	Version        uint8               `json:"version"`         // Geneve协议版本，目前通常为0
+	Version        uint8               `json:"version"`        // Geneve协议版本，目前通常为0
 	OptionsLength  uint8               `json:"optionsLength"`  // 选项部分总长度，以4字节为单位
 	OAMPacket      bool                `json:"oamPacket"`      // OAM数据包标志，表示这是操作维护管理数据包
 	CriticalOption bool                `json:"criticalOption"` // 关键选项标志，表示包含必须处理的选项
-	Protocol       layers.EthernetType `json:"protocol"`        // 封装协议类型，标识内层协议（如IPv4、IPv6等）
-	VNI            uint32              `json:"vni"`             // 虚拟网络标识符，24位，用于标识虚拟网络
-	Options        []*GeneveOption     `json:"options"`         // Geneve选项列表，支持多个可扩展选项
+	Protocol       layers.EthernetType `json:"protocol"`       // 封装协议类型，标识内层协议（如IPv4、IPv6等）
+	VNI            uint32              `json:"vni"`            // 虚拟网络标识符，24位，用于标识虚拟网络
+	Options        []*GeneveOption     `json:"options"`        // Geneve选项列表，支持多个可扩展选项
 }
 
 // NewGeneveChannel 从gopacket Geneve层创建GeneveChannel
@@ -283,10 +283,10 @@ func NewGeneveChannel(geneve *layers.Geneve) *GeneveChannel {
 // MPLS（Multiprotocol Label Switching）是一种数据包转发技术，使用标签进行快速交换
 // 该结构体存储MPLS标签栈中的单个标签信息，包括标签值、流量类别、栈底标志和TTL
 type MPLSChannel struct {
-	Label        uint32 `json:"label"`         // MPLS标签值，20位，用于数据包转发
+	Label        uint32 `json:"label"`        // MPLS标签值，20位，用于数据包转发
 	TrafficClass uint8  `json:"trafficClass"` // 流量类别，3位，用于服务质量（QoS）区分
 	StackBottom  bool   `json:"stackBottom"`  // 栈底标志，1位，表示这是标签栈的最后一个标签
-	TTL          uint8  `json:"ttl"`           // 生存时间，8位，防止数据包在网络中无限循环
+	TTL          uint8  `json:"ttl"`          // 生存时间，8位，防止数据包在网络中无限循环
 }
 
 // NewMPLSChannel 从gopacket MPLS层创建MPLSChannel

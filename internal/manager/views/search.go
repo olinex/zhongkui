@@ -20,6 +20,283 @@ func (p *Pagination) GetPageSize() uint {
 	return p.PageSize
 }
 
+type createdAtAgentMemoryListGetOrderByItem int
+
+func (i *createdAtAgentMemoryListGetOrderByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtAgentMemoryListGetOrderByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtAgentMemoryListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type updatedAtAgentMemoryListGetOrderByItem int
+
+func (i *updatedAtAgentMemoryListGetOrderByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtAgentMemoryListGetOrderByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtAgentMemoryListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type AgentMemoryListGetOrderBy struct {
+	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type keywordAgentMemoryListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=ctn ictn"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *keywordAgentMemoryListGetFilterByItem) GetName() string {
+	return "keyword"
+}
+
+func (i *keywordAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "content"
+}
+
+func (i *keywordAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *keywordAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type agentKindAgentMemoryListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:"oneof=knowledge rego"`
+}
+
+func (i *agentKindAgentMemoryListGetFilterByItem) GetName() string {
+	return "agentKind"
+}
+
+func (i *agentKindAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "agent_kind"
+}
+
+func (i *agentKindAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *agentKindAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type kindAgentMemoryListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:"oneof=fact preference decision artifact"`
+}
+
+func (i *kindAgentMemoryListGetFilterByItem) GetName() string {
+	return "kind"
+}
+
+func (i *kindAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "kind"
+}
+
+func (i *kindAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *kindAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type statusAgentMemoryListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:"oneof=active archived"`
+}
+
+func (i *statusAgentMemoryListGetFilterByItem) GetName() string {
+	return "status"
+}
+
+func (i *statusAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "status"
+}
+
+func (i *statusAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *statusAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type AgentMemoryListGetFilterBy struct {
+	Keyword   *keywordAgentMemoryListGetFilterByItem   `mapstructure:"keyword"`
+	AgentKind *agentKindAgentMemoryListGetFilterByItem `mapstructure:"agentKind"`
+	Kind      *kindAgentMemoryListGetFilterByItem      `mapstructure:"kind"`
+	Status    *statusAgentMemoryListGetFilterByItem    `mapstructure:"status"`
+}
+
+type AgentMemoryListGetSearchIn struct {
+	Pagination
+	Greedy   bool                        `mapstructure:"greedy" default:"false"`
+	OrderBy  []AgentMemoryListGetOrderBy `mapstructure:"orderBy"`
+	FilterBy *AgentMemoryListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                    `mapstructure:"fields"`
+}
+
+func (s *AgentMemoryListGetSearchIn) GetGreedy() bool {
+	return s.Greedy
+}
+
+func (s *AgentMemoryListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+	items := make([]utils.OrderByItem, 0)
+	if s.OrderBy == nil {
+		return items
+	}
+	for _, ord := range s.OrderBy {
+		switch ord.Name {
+		case "createdAt":
+			item := createdAtAgentMemoryListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "updatedAt":
+			item := updatedAtAgentMemoryListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		}
+	}
+	return items
+}
+
+func (s *AgentMemoryListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+	items := make(map[string]utils.FilterByItem)
+	if s.FilterBy == nil {
+		return items
+	}
+	if s.FilterBy.Keyword != nil {
+		items["keyword"] = s.FilterBy.Keyword
+	}
+	if s.FilterBy.AgentKind != nil {
+		items["agentKind"] = s.FilterBy.AgentKind
+	}
+	if s.FilterBy.Kind != nil {
+		items["kind"] = s.FilterBy.Kind
+	}
+	if s.FilterBy.Status != nil {
+		items["status"] = s.FilterBy.Status
+	}
+	return items
+}
+
+func (s *AgentMemoryListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *AgentMemoryListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "agentKind":
+			add("agent_kind")
+		case "kind":
+			add("kind")
+		case "title":
+			add("title")
+		case "content":
+			add("content")
+		case "status":
+			add("status")
+		case "useCount":
+			add("use_count")
+		case "lastUsedAt":
+			add("last_used_at")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		}
+	}
+	return columns
+}
+
+func (s *AgentMemoryListGetSearchIn) GetOptions() *utils.SearchOptions {
+	return &utils.SearchOptions{
+		OrderBy: []string{
+			"createdAt",
+			"updatedAt",
+		},
+		FilterBy: []*utils.FilterByOption{
+			{
+				Name: "keyword",
+				Type: "string",
+				Actions: []string{
+					"ctn",
+					"ictn",
+				},
+			},
+			{
+				Name: "agentKind",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "kind",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "status",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+		},
+		Fields: []string{
+			"id",
+			"agentKind",
+			"kind",
+			"title",
+			"content",
+			"status",
+			"useCount",
+			"lastUsedAt",
+			"createdAt",
+			"updatedAt",
+		},
+	}
+}
+
 type createdAtCapturerListGetOrderByItem int
 
 func (i *createdAtCapturerListGetOrderByItem) GetName() string {
@@ -3939,6 +4216,10 @@ func (s *KnowledgeDocumentListGetSearchIn) ResolveSelectColumns() []string {
 			add("status")
 		case "sizeBytes":
 			add("size_bytes")
+		case "useCount":
+			add("use_count")
+		case "lastUsedAt":
+			add("last_used_at")
 		case "createdAt":
 			add("created_at")
 		case "updatedAt":
@@ -3997,6 +4278,8 @@ func (s *KnowledgeDocumentListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"format",
 			"status",
 			"sizeBytes",
+			"useCount",
+			"lastUsedAt",
 			"createdAt",
 			"updatedAt",
 		},
