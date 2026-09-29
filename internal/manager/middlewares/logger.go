@@ -17,6 +17,7 @@ const LoggerCtxName = "logger"
 // 在记录日志时自动附加 HTTP 请求上下文信息（请求方法、路径、客户端 IP），
 // 专为 Gin 框架的 HTTP 请求处理场景设计，使业务代码无需手动传递这些通用字段
 type ApiLogger struct {
+	// logger 底层结构化日志器，日志经其输出。
 	logger *logging.Logger
 }
 

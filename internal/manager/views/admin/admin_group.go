@@ -277,6 +277,7 @@ func GroupCreate(c *gin.Context) {
 // GroupBatchDeleteIn 批量删除用户组的请求输入结构。
 // Names 接受标量（单个组名）或数组（多个组名）。
 type GroupBatchDeleteIn struct {
+	// Names 待删除的用户组名称列表。
 	Names views.FlexList[string] `json:"names"`
 }
 

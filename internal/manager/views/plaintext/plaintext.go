@@ -39,16 +39,22 @@ func registerPlaintextModel(name string, model any) {
 // CryptoPlaintextIn 加密字段明文查看请求输入
 // Model 为模型注册名，Field 为字段 json 名（二者构成权限点 object），Ciphertext 为字段密文的 base64 编码
 type CryptoPlaintextIn struct {
-	Model      string `json:"model" binding:"required"`
-	Field      string `json:"field" binding:"required"`
+	// Model 目标模型注册名
+	Model string `json:"model" binding:"required"`
+	// Field 目标字段的 json 名
+	Field string `json:"field" binding:"required"`
+	// Ciphertext 字段密文的 base64 编码
 	Ciphertext string `json:"ciphertext" binding:"required"`
 }
 
 // S3PlaintextIn S3 body 明文查看请求输入
 // Model/Field 构成权限点 object，ObjectKey 为 body 内容在 S3 中的对象键
 type S3PlaintextIn struct {
-	Model     string `json:"model" binding:"required"`
-	Field     string `json:"field" binding:"required"`
+	// Model 目标模型注册名
+	Model string `json:"model" binding:"required"`
+	// Field 目标字段的 json 名
+	Field string `json:"field" binding:"required"`
+	// ObjectKey body 内容在 S3 中的对象键
 	ObjectKey string `json:"object_key" binding:"required"`
 }
 

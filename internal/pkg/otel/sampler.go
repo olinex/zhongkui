@@ -56,20 +56,24 @@ type filterSpanProcessor struct {
 	filter func(sdktrace.ReadOnlySpan) bool
 }
 
+// OnStart 决定是否采样新建的 Span，并透传给下游处理器。
 func (p *filterSpanProcessor) OnStart(ctx context.Context, s sdktrace.ReadWriteSpan) {
 	p.next.OnStart(ctx, s)
 }
 
+// OnEnd 对结束的 Span 执行尾部过滤，通过者转发给下游处理器。
 func (p *filterSpanProcessor) OnEnd(s sdktrace.ReadOnlySpan) {
 	if p.filter(s) {
 		p.next.OnEnd(s)
 	}
 }
 
+// Shutdown 关闭处理器并释放其持有的资源。
 func (p *filterSpanProcessor) Shutdown(ctx context.Context) error {
 	return p.next.Shutdown(ctx)
 }
 
+// ForceFlush 强制导出已缓冲的 Span。
 func (p *filterSpanProcessor) ForceFlush(ctx context.Context) error {
 	return p.next.ForceFlush(ctx)
 }

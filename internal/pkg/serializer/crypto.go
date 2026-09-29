@@ -17,7 +17,9 @@ import (
 //   - value: 明文，读写库时由 crypto serializer 加解密，GetPayload 等业务读取明文
 //   - cipher: 密文，Scan 读库时保留，供 MarshalJSON 输出 base64 密文（详情展示），避免明文泄露
 type Crypto struct {
-	value  []byte
+	// value 明文字节，业务读取与写库加密的来源。
+	value []byte
+	// cipher 密文字节，Scan 读库时保留，供详情输出 base64 密文。
 	cipher []byte
 }
 

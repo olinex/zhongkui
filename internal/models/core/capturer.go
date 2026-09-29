@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	// ReporterEtcdPrefix reporter 配置与状态在 etcd 中的存储键前缀
 	ReporterEtcdPrefix = etcd.WithPrefix("reporter/")
 )
 
@@ -98,10 +99,14 @@ func ReporterConfigMarshalAsBytes(config *reporter_v1.Config) ([]byte, error) {
 // 采集器通过命名空间、名称和版本唯一标识
 type Capturer struct {
 	database.BaseModel
-	Namespace     Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
-	NamespaceName string    `gorm:"type:VARCHAR(32)"`
-	Name          string    `gorm:"type:VARCHAR(32)"`
-	Version       string    `gorm:"type:VARCHAR(32)"`
+	// Namespace 所属命名空间关联模型，通过 NamespaceName 关联
+	Namespace Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
+	// NamespaceName 所属命名空间名称
+	NamespaceName string `gorm:"type:VARCHAR(32)"`
+	// Name 采集器名称
+	Name string `gorm:"type:VARCHAR(32)"`
+	// Version 采集器版本
+	Version string `gorm:"type:VARCHAR(32)"`
 }
 
 // CreateWithConfig 创建采集器记录并存储其配置到 etcd

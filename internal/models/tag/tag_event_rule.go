@@ -122,15 +122,23 @@ type TagEventCondition struct {
 	// Dimension 标签维度类型过滤条件，对应 TagSumming 的 dimension 维度，为空表示不限制（如 "fpTcpClientSig"、"fpTcpServerSig"）
 	Dimension string `gorm:"column:dimension;type:VARCHAR(128)"`
 	// Item 标签维度具体值过滤条件，对应 TagSumming 的 item 维度，为空表示不限制（如具体的指纹签名串）
-	Item           string                `gorm:"column:item;type:VARCHAR(255)"`
-	TagEventRuleID uint                  `gorm:"column:tag_event_rule_id;type:INT"`
-	TagEventRule   TagEventRule          `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Name           string                `gorm:"column:name;type:VARCHAR(255)"`
-	Window         serializer.DurationNS `gorm:"type:BIGINT"`
-	Threshold      int                   `gorm:"type:INT"`
-	Expression     string                `gorm:"type:VARCHAR(1024)"`
-	Enabled        bool                  `gorm:"type:BOOLEAN"`
-	Description    string                `gorm:"type:VARCHAR(256)"`
+	Item string `gorm:"column:item;type:VARCHAR(255)"`
+	// TagEventRuleID 所属标签事件规则 ID
+	TagEventRuleID uint `gorm:"column:tag_event_rule_id;type:INT"`
+	// TagEventRule 所属标签事件规则关联模型，随规则级联更新/删除
+	TagEventRule TagEventRule `gorm:"foreignKey:TagEventRuleID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	// Name 条件名称
+	Name string `gorm:"column:name;type:VARCHAR(255)"`
+	// Window 统计时间窗口（纳秒），在该窗口内统计标签命中次数
+	Window serializer.DurationNS `gorm:"type:BIGINT"`
+	// Threshold 触发阈值，窗口内命中次数超过该值即触发
+	Threshold int `gorm:"type:INT"`
+	// Expression 标签组合布尔表达式（AND / OR / NOT / 括号）
+	Expression string `gorm:"type:VARCHAR(1024)"`
+	// Enabled 是否启用该条件
+	Enabled bool `gorm:"type:BOOLEAN"`
+	// Description 条件描述
+	Description string `gorm:"type:VARCHAR(256)"`
 }
 
 // ExprValidate 验证标签事件条件中的标签组合表达式语法是否正确
@@ -157,8 +165,10 @@ type TagEventRule struct {
 	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
 	// NamespaceName 所属命名空间名称
 	NamespaceName string `gorm:"column:namespace_name;type:VARCHAR(32)"`
-	Name          string `gorm:"column:name;type:VARCHAR(255)"`
-	Enabled       bool   `gorm:"type:BOOLEAN"`
+	// Name 规则名称
+	Name string `gorm:"column:name;type:VARCHAR(255)"`
+	// Enabled 是否启用该规则
+	Enabled bool `gorm:"type:BOOLEAN"`
 	// MatchAll 是否要求规则下所有条件均命中才触发事件；为 false（默认）时任一条件命中即触发
 	MatchAll bool `gorm:"column:match_all;type:BOOLEAN;default:false"`
 	// NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定，此时使用命名空间默认通知组；
@@ -170,7 +180,8 @@ type TagEventRule struct {
 	// SuppressWindow 规则级抑制窗口（纳秒），同一事件键在此窗口内不重复告警；0 表示不抑制（每个事件都告警）
 	// 显式零值必须原样落库，故模型不设 default tag（业务默认 1 小时由 API 输入层 defaults 填充）
 	SuppressWindow serializer.DurationNS `gorm:"column:suppress_window;type:BIGINT"`
-	Description    string                `gorm:"column:description;type:VARCHAR(256)"`
+	// Description 规则描述
+	Description string `gorm:"column:description;type:VARCHAR(256)"`
 }
 
 // init 函数在包初始化时执行，用于初始化布尔表达式解析器

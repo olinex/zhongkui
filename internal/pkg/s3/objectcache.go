@@ -64,6 +64,7 @@ type s3Backend struct {
 	client *S3Client
 }
 
+// Store 经 Zkcn 加密管道把明文流写入 S3。
 func (b s3Backend) Store(ctx context.Context, objectKey string, r io.Reader) error {
 	if _, err := NewZkcn(b.client, objectKey, nil, 0).Store(ctx, r); err != nil {
 		return errors.WithStack(err)
@@ -83,6 +84,7 @@ func (b s3Backend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, 
 	return rc, nil
 }
 
+// Remove 删除 S3 中的加密对象。
 func (b s3Backend) Remove(ctx context.Context, objectKey string) error {
 	return errors.WithStack(NewZkcn(b.client, objectKey, nil, 0).Clear(ctx))
 }
@@ -91,14 +93,17 @@ func (b s3Backend) Remove(ctx context.Context, objectKey string) error {
 // 使 Store/Materialize/Open/Remove 无需再各自判空。
 type disabledBackend struct{}
 
+// Store 返回「S3 未配置」错误。
 func (disabledBackend) Store(context.Context, string, io.Reader) error {
 	return errors.New("s3 objectcache: S3 not configured to store object")
 }
 
+// Fetch 返回「S3 未配置」错误。
 func (disabledBackend) Fetch(context.Context, string) (io.ReadCloser, error) {
 	return nil, errors.New("s3 objectcache: S3 not configured to load object")
 }
 
+// Remove 返回「S3 未配置」错误。
 func (disabledBackend) Remove(context.Context, string) error {
 	return errors.New("s3 objectcache: S3 not configured to remove object")
 }

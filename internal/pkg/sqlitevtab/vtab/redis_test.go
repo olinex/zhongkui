@@ -1,6 +1,7 @@
 // Package vtab（本文件）提供 Redis vtable 数据源的共享测试工具：
 // 以 miniredis 起一个进程内 Redis，返回 *redis.Client；并提供经 SQLitePool
 // RegisterDatasource + Query 的端到端查询辅助。
+
 package vtab
 
 import (

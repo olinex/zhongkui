@@ -10,6 +10,7 @@
 // 本文件遵循 internal/pkg/sqlitevtab 的 Datasource 超集契约：数据源头尽力过滤是优化，
 // sqlite 侧以 Omit=false 复查每个返回行，故任何解析/扫描都必须返回真实匹配行的超集，
 // 禁止漏行。
+
 package vtab
 
 import (
@@ -60,6 +61,7 @@ type redisTypeKind string
 // 复用、失效自动重建与闲置回收。go-redis client 并发安全，池内可驻留多个 client
 // 以服务并发查询。
 type RedisPool struct {
+	// key 实例配置派生的连接池 Key。
 	key resourcepool.Key
 }
 

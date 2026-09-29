@@ -80,9 +80,12 @@ func chatModelName(chat chatGenerator) string {
 // Knowledge 是知识库索引的入口：负责文档切块、向量化落库（knowledge_chunks）与
 // 文档/分块删除。持有一个 gorm DB、向量化客户端与切片器。
 type Knowledge struct {
-	db      *database.DB
-	embed   embedder
-	params  *llm.Params // 行为参数解析器（切片长度与重叠）
+	// db core 库连接（knowledge_chunks / knowledge_documents 读写）。
+	db *database.DB
+	// embed 向量化客户端（把分块检索文本转为向量）。
+	embed  embedder
+	params *llm.Params // 行为参数解析器（切片长度与重叠）
+	// chunker Markdown 切片器（按参数长度与重叠切块）。
 	chunker *llm.MarkdownChunker
 }
 
@@ -262,7 +265,9 @@ func WithWeights(weights FusionWeights) retriever.Option {
 // 每次检索命中后异步回写命中文档的使用统计（use_count / last_used_at），供知识库
 // 运营判断哪些文档真正被用到。
 type Retriever struct {
-	db       *database.DB
+	// db core 库连接（knowledge_chunks / knowledge_documents 读取）。
+	db *database.DB
+	// embed 向量化客户端（把查询文本转为向量）。
 	embed    embedder
 	resolver ChatResolver    // 可空：为空时跳过 LLM 重排与评估
 	params   *llm.Params     // 行为参数解析器（检索条数、融合、重排提示词与温度）

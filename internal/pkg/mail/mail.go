@@ -18,9 +18,12 @@ import (
 // 邮件渠道直接发送。与 notify.Service 不同，Sender 不落库、不解析 notification_targets，
 // 仅按系统配置直接投递。
 type Sender struct {
-	cfg    *Config
+	// cfg 系统邮件（[smtp]）配置，提供 host/port/账号等发送参数。
+	cfg *Config
+	// logger 结构化日志器，用于记录语言回退等告警。
 	logger *logging.Logger
-	pool   *message.Pool
+	// pool 消息渠道连接池，负责实际投递邮件。
+	pool *message.Pool
 }
 
 // NewSender 构造一个系统层邮件直发器。

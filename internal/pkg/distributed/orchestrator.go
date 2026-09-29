@@ -34,12 +34,19 @@ func HashKeyToShard(key string, shardCount int) (int, error) {
 //   - Handler: 实现 ClusterHandler[Item] 接口的业务处理器
 //   - Item: 业务数据项的类型
 type Orchestrator[Handler ClusterHandler[Item], Item any] struct {
-	client   *etcd.EtcdClient
-	logger   *logging.Logger
-	cluster  *etcd.Cluster
-	config   *ClusterConfig
-	handler  Handler
-	name     string
+	// client etcd 客户端，用于成员注册与水位持久化。
+	client *etcd.EtcdClient
+	// logger 结构化日志实例。
+	logger *logging.Logger
+	// cluster etcd 集群成员管理句柄。
+	cluster *etcd.Cluster
+	// config 集群运行时配置。
+	config *ClusterConfig
+	// handler 业务处理器实现。
+	handler Handler
+	// name 集群名称。
+	name string
+	// memberID 本实例在集群中的唯一成员标识。
 	memberID string
 }
 

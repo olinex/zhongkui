@@ -16,7 +16,9 @@ import (
 )
 
 const (
+	// ProcIpv4Tcp IPv4 TCP 处理器标识
 	ProcIpv4Tcp = "ipv4-tcp"
+	// ProcIpv6Tcp IPv6 TCP 处理器标识
 	ProcIpv6Tcp = "ipv6-tcp"
 )
 
@@ -25,8 +27,10 @@ const (
 // 处理链由 etl.Pipeline 在 flowClusterHandler.Start 内部编排，
 // 本结构仅负责与 runtime 生命周期（Start/Shutdown）适配。
 type PacketProcessor[P tcp.TCPPacket] struct {
+	// logger 流水线日志记录器。
 	logger *logging.Logger
-	orch   *distributed.Orchestrator[*flowClusterHandler[P], P]
+	// orch 分布式编排器，协调轮询、流重组与批量写入的完整流水线。
+	orch *distributed.Orchestrator[*flowClusterHandler[P], P]
 }
 
 // Start 启动处理管道，阻塞直到 ctx 取消。

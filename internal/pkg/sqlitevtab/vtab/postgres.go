@@ -13,6 +13,7 @@
 //
 // PostgreSQL 标识符用双引号包裹（quotePgIdent），与 MySQL 的反引号不同；驱动经
 // pgx/v5 stdlib 注册（sql.OpenDB + stdlib.OpenDB）。
+
 package vtab
 
 import (
@@ -78,6 +79,7 @@ func (b *pgBase) datasourceSchema() sqlitevtab.Schema {
 // 限定到库。
 type PostgresPool struct {
 	sqlDBPool
+	// db 实例默认数据库名，自省时用于限定库。
 	db string
 }
 

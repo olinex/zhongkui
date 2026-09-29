@@ -37,23 +37,36 @@ type Snapshot struct {
 // 可选地经 etcd 发布自身运行状态到服务目录。其内存模型参照 manager.RunHttpService
 // （goroutine + errCh + ctx 取消优雅关闭）。
 type Server struct {
+	// cfg 健康探针服务配置。
 	cfg *Config
+	// reg 就绪探测注册表。
 	reg *status.Registry
 
+	// metrics 健康状态指标记录器。
 	metrics *healthMetrics
 
+	// serviceName 服务名，用于 etcd 目录键与日志标识。
 	serviceName string
-	instanceID  string
-	host        string
-	pid         int
+	// instanceID 实例标识（host-pid）。
+	instanceID string
+	// host 主机名。
+	host string
+	// pid 进程 ID。
+	pid int
 
-	startTime    time.Time
-	listening    atomic.Bool
-	started      atomic.Bool
+	// startTime 启动时刻。
+	startTime time.Time
+	// listening 是否正在监听。
+	listening atomic.Bool
+	// started 是否已完成启动。
+	started atomic.Bool
+	// shuttingDown 是否进入关机。
 	shuttingDown atomic.Bool
 
+	// regClient etcd 客户端，用于服务状态上报（可为空）。
 	regClient *etcd.EtcdClient
 
+	// srv 底层 HTTP 服务。
 	srv *http.Server
 }
 

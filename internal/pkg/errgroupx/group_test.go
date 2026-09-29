@@ -16,6 +16,7 @@ var sentinelErr = errors.New("sentinel error")
 // customErr 自定义错误类型，用于测试 errors.As 兼容性
 type customErr struct{ msg string }
 
+// Error 返回自定义错误的描述文本。
 func (e *customErr) Error() string { return e.msg }
 
 // 测试单个协程返回错误时包装协程标识并保留错误链。

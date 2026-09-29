@@ -19,9 +19,13 @@ import (
 // 未绑定 etcd 客户端时直接返回（无监听能力）。
 // 启动前的存量数据源由 datasource.Reload 在进程启动路径加载。
 type Watcher struct {
-	db          *database.DB
-	pools       *vtab.Pools
-	logger      *logging.Logger
+	// db core 库连接，收到变更后据此重读数据源配置。
+	db *database.DB
+	// pools 按命名空间隔离的第三方数据源池，用于精准同步本地 vtable。
+	pools *vtab.Pools
+	// logger 日志记录器，记录变更同步结果与告警。
+	logger *logging.Logger
+	// etcdWatcher 通用 etcd 变更监听器（nil 时无监听能力）。
 	etcdWatcher *etcd.Watcher
 }
 

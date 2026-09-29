@@ -45,6 +45,7 @@ type LifecycleRuleConfig struct {
 
 // LifecycleConfig 是 S3 桶生命周期规则清单
 type LifecycleConfig struct {
+	// Rules 生命周期规则清单。
 	Rules []LifecycleRuleConfig `yaml:"rules" json:"rules"`
 }
 

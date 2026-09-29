@@ -60,6 +60,7 @@ func init() {
 //	fmt.Println(lang.String()) // 输出: "zh-Hans"
 //	fmt.Println(lang.UnderscoreLocale()) // 输出: "zh_Hans"
 type Language struct {
+	// tag 内部语言标签，零值（und）表示未指定/平台默认。
 	tag      language.Tag
 	wildcard bool // true 表示通配所有语言（"*"）
 }

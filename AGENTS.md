@@ -79,6 +79,12 @@ type UserClaims struct {
 }
 ```
 
+- **强制手段**：注释完备性由自建 analyzer 检查，入口为 `make lint`（`cmd/commentlint` 驱动 `internal/lint/commentlint` 的 `analysis.Analyzer`，标准 `go/analysis` 驱动，诊断输出 `文件:行:列: 说明`，发现缺口时退出码 3），提交前与 CI 必跑，禁止只靠人工检查。
+- **检查范围**：导出类型 / 函数 / 方法 / 常量 / 变量、导出结构体的字段（**含非导出字段**，字段带 `comment:"` tag 或行尾注释均视为已有注释）、导出接口的方法，以及包注释。
+- **包注释按目录聚合**：同目录任一文件带包注释即视为该包已有包注释；被构建约束排除的同目录源文件同样计入（包注释允许落在 `//go:build linux` 这类实现文件中），外部测试包 `xxx_test` 的包注释由主包承载、不单独检查。
+- **豁免规则**：包子句前的注释带生成标记（标准 `// Code generated <id> DO NOT EDIT.` 及 `DO NOT EDIT!!!` 等非标准生成头）的文件整体跳过，正文里提到标记不算生成文件；`_test.go` 中 `Test` / `Benchmark` / `Example` / `Fuzz` 前缀函数跳过（测试替身的导出方法与导出类型仍须注释）；内嵌字段、内嵌接口与多名字声明中「部分导出」的字段（如 `A, b string`）不检查。
+- **口径与实现的单一来源**：检查口径的权威实现是 `internal/lint/commentlint/analyzer.go`，其行为契约由 `analyzer_test.go` 的 `analysistest` 用例（`testdata/src/`）锁定；新增/调整豁免规则必须同时改实现、测试用例与本条目。
+
 ### Struct Organization
 
 - 用结构体嵌入实现组合：`BaseMeta` → `TimestampMeta` → `CaptureMeta` → `AsPacket`
@@ -191,6 +197,17 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
   - `trimmed`：字符串首尾无空白。后端**只判定、不静默裁剪**——裁剪会让前端提交原值与实际落库值不一致；由此前端对同名单行输入必须 trim，文本域（`v-textarea`）豁免（见「String Input Trimming 字符串输入去空白」）。
 - **就地校验禁令**：视图层 In 结构体的字段合法性**一律由绑定标签表达**，禁止书写 `normalizeXxx` / `parseXxx` 这类仅做 trim、枚举白名单、URL 或 JSON 形态判断的私有方法；处理器只做「绑定 → 业务约束（唯一性、存在性等）→ 落库」。数据层解码（如密文列解出的 JSON 文本转 `map[string]string`）不属于校验，保留在处理器内。
 - **条件必填**：同一 In 结构体存在多种用法时（如「带 id 时其余字段被忽略」），用 `required_if=<字段> <值>` + `omitempty` 表达条件必填，而非无条件的 `required`。
+
+### 文档分类与导出（Diátaxis + gomarkdoc）
+
+- **四分类与唯一清单**：文档按 Diátaxis 组织为教程（`docs/tutorials/`）、操作指南（`docs/how-to/`）、参考（`docs/reference/`）、解释（`docs/explanation/`）四类；分类取值与全部条目（分类/标题/摘要/角色/适用场景/来源包/产物路径/渲染档）唯一登记在 `internal/docs/registry.go` 的 `Registry()`，分类取值定义在 `internal/docs/category.go`（`tutorial` / `how-to` / `reference` / `explanation`），新增或调整文档一律改此处。
+- **建议阅读角色与适用场景**：每条条目须标注一个或多个建议阅读角色（`Entry.Roles`）与一句话适用场景（`Entry.Scene`）。角色取值定义在 `internal/docs/role.go`，`Roles()` 是角色集合唯一注册点，取值为 `admin`（管理员，平台治理：用户 / 角色权限 / 命名空间 / 功能开关）、`secops`（安全运营，日常使用告警与标签：查看风险 / 编写调整 rego 规则 / 解读标签窗口统计 / 接收通知）、`ops`（运维，部署与运行：安装配置 / 数据库迁移 / 数据源接入 / 通知渠道配置 / 异步任务与队列 / 采集运行）、`dev`（研发，扩展系统能力：数据源插件 / 通知渠道类型 / 枚举类 / AI Agent 工具 / 管理端页面 / 依赖注入与生命周期 / 流水线调度），新增或调整角色一律改此处。角色与场景在三处呈现：叙述页页头 `> 分类：… · 来源：… · 角色：… · 适用场景：…`（手写 Overview 页同带角色行）、`docs/README.md` 各条目行的 `（角色：…；来源 …）` 片段、以及 `docs/README.md` 末尾的「按角色找文档」分区。守卫测试强制每条条目 Roles 与 Scene 非空、每个角色合法且至少被一条条目使用。
+- **单一事实来源**：教程 / 操作指南 / 解释的正文以既有功能包的 package 注释承载、经 gomarkdoc 导出，禁止在 Markdown 里重复维护同一知识；`docs/` 下除 `registry.go` 登记的手写条目（`Overview: true`）与既有 `docs/kernel/` 文档外，其余均为生成产物，首行带 `DO NOT EDIT` 生成标记（`internal/docs/export.go` 的 `generatedHeaderFormat`），不得手改。
+- **每个包至多一条叙述条目**：同一包的 package 注释只对应一篇叙述页，避免同包多页内容重复、被 RAG 重复索引。
+- **导出命令**：`zki create docs`（`internal/cmd/docs.go`），自带 `PersistentPreRunE` / `PersistentPostRunE` 旁路根命令全局 eager 启动，故无 DB/Redis/Etcd 亦可运行；一次导出产出全部叙述页 + `./internal/...`、`./cmd/...` 的参考页 + `docs/README.md` 索引。
+- **叙述档渲染约束（重要）**：叙述档在 `internal/docs/render.go` 中额外覆盖 `text` 模板（`narrativeTextTemplate`）关闭纯文本转义，因此叙述来源的 package 注释必须写成「原样 Markdown 且安全」——命令 / 路径 / 配置键 / 标识符一律用反引号包裹（否则 `_`、`*` 等会被 Markdown 解析成斜体 / 加粗）；禁止 `# ` 单井号标题（Go 文档注释只识别单井号为 heading，会渲染成固定层级并与注册表注入的 H1 标题重复、层级倒挂），顶层小节用 `## `、嵌套用 `### `；避免会被当作 HTML 标签吞掉的裸尖括号占位符。
+- **参考档保持内置转义**：参考档不覆盖 `text` 模板，沿用 gomarkdoc 内置转义——这对符号文档里的字面量 `#`、尖括号是正确行为，不得关闭。
+- **守卫测试**：`internal/docs/registry_test.go` 校验分类合法、输出路径唯一、来源包存在、叙述条目元信息完整；改注册表后必须过此测试。
 
 ---
 
@@ -863,12 +880,14 @@ meta:
 ├── cmd/
 │   ├── zki/          # 主程序入口 (main.go)
 │   ├── template/     # 代码生成器 (生成 manager/views/search.go 等)
+│   ├── commentlint/  # 注释检查器入口 (make lint 驱动 internal/lint/commentlint)
 │   └── nic_probe/    # 网卡 XDP 支持探测工具
 ├── internal/
 │   ├── benchmark/    # Benchmarking utilities
 │   ├── capture/      # Packet capture engine
 │   ├── cmd/          # CLI commands (Cobra)
 │   ├── manager/      # HTTP API layer (Gin)，子包：middlewares（中间件）、router（路由注册）、views（视图 In/Out 与处理器）、response（统一响应与错误体系）
+│   ├── lint/         # 代码检查 analyzer (commentlint，注释完备性)
 │   ├── migrations/   # Database migrations
 │   ├── models/       # Data models (core, api, network, tag)
 │   ├── network/      # Network protocol processing
@@ -893,3 +912,4 @@ meta:
 8. 测试文件与被测源码放在一起（`_test.go` / `_test.ts`）
 9. 代码与注释中禁止 emoji，除非显式要求
 10. 提交前运行 `pnpm lint`（web 前端 ESLint）、`pnpm lint:style`（Stylelint）与 `pnpm type-check`（vue-tsc），三者全部通过
+11. 提交前运行 `make lint`（Go 注释完备性检查，见「Comments」），并保证 `gofmt`、`go build ./...`、`go vet ./...` 通过

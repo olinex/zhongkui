@@ -23,9 +23,16 @@ type mockAccessKey struct {
 	expiredAt *time.Time
 }
 
-func (m *mockAccessKey) UserID() string        { return m.userID }
-func (m *mockAccessKey) IsEnabled() bool       { return m.enabled }
-func (m *mockAccessKey) Secret() string        { return m.secret }
+// UserID 返回访问密钥归属的用户 ID。
+func (m *mockAccessKey) UserID() string { return m.userID }
+
+// IsEnabled 返回访问密钥是否启用。
+func (m *mockAccessKey) IsEnabled() bool { return m.enabled }
+
+// Secret 返回访问密钥的签名密钥。
+func (m *mockAccessKey) Secret() string { return m.secret }
+
+// ExpiredAt 返回访问密钥的过期时间。
 func (m *mockAccessKey) ExpiredAt() *time.Time { return m.expiredAt }
 
 // mockAccessKeyPool 是 auth.AccessKeyPool 接口的模拟实现，用于单元测试
@@ -37,6 +44,7 @@ type mockAccessKeyPool struct {
 	updateLastErr   error
 }
 
+// GetKey 返回预设的访问密钥或预设的查询错误。
 func (m *mockAccessKeyPool) GetKey(_ context.Context, _ string) (auth.AccessKey, error) {
 	if m.getKeyErr != nil {
 		return nil, m.getKeyErr
@@ -47,10 +55,12 @@ func (m *mockAccessKeyPool) GetKey(_ context.Context, _ string) (auth.AccessKey,
 	return m.key, nil
 }
 
+// IsDuplicated 返回预设的随机串重复判定与错误。
 func (m *mockAccessKeyPool) IsDuplicated(_ context.Context, _ string, _ time.Time, _ string) (bool, error) {
 	return m.isDuplicated, m.isDuplicatedErr
 }
 
+// UpdateLastAccess 返回预设的最后访问时间更新错误。
 func (m *mockAccessKeyPool) UpdateLastAccess(_ context.Context, _ string) error {
 	return m.updateLastErr
 }

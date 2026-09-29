@@ -15,9 +15,12 @@ import (
 // 当 f 返回非 nil 错误时，错误信息会自动包装为 "goroutine#N: <original>" 格式，
 // 其中 N 为 Go 方法的调用序号（从 0 开始）。
 type Group struct {
-	eg      *errgroup.Group
+	// eg 底层 errgroup 实例。
+	eg *errgroup.Group
+	// counter 协程索引计数器。
 	counter int
-	mu      sync.Mutex
+	// mu 保护 counter 的互斥锁。
+	mu sync.Mutex
 }
 
 // WithContext 返回一个新的 Group 和关联的 context。

@@ -19,14 +19,12 @@ var (
 //
 // ISO 15924 是国际标准化组织（ISO）定义的书写系统代码标准，
 // 每个条目包含该书写系统的四位字母代码、数字代码及名称。
-//
-// 字段说明：
-//   - Alpha4: 四位字母代码（如 "Hans"、"Latn"、"Cyrl"），是使用最广泛的书写系统编码形式
-//   - Name: 书写系统的英文名称（如 "Han (Simplified variant)"、"Latin"、"Cyrillic"）
-//   - Numeric: 三位数字代码（如 "501"、"215"、"220"），与联合国数字代码一致
 type ISO15924Entry struct {
-	Alpha4  string `json:"alpha_4"`
-	Name    string `json:"name"`
+	// Alpha4 四位字母代码（Alpha-4），如 "Hans"、"Latn"，是使用最广泛的书写系统编码形式。
+	Alpha4 string `json:"alpha_4"`
+	// Name 书写系统的英文名称，如 "Latin"、"Cyrillic"。
+	Name string `json:"name"`
+	// Numeric 三位数字代码，如 "501"（简体汉字）、"215"（拉丁文），与联合国数字代码一致。
 	Numeric string `json:"numeric"`
 }
 

@@ -16,18 +16,30 @@ type pcapStatsContextKey struct{}
 // - 累计加载的各类网络模型数量（Ethernet、IPv4、IPv6、TCP、UDP）
 // - 任务启动时间，用于计算处理耗时和速率
 type PcapStats struct {
-	packets             atomic.Int64
-	bytes               atomic.Int64
-	ethCount            atomic.Int64
-	ipv4Count           atomic.Int64
-	ipv6Count           atomic.Int64
-	ipv4TCPCount        atomic.Int64
-	ipv6TCPCount        atomic.Int64
-	ipv4UDPCount        atomic.Int64
-	ipv6UDPCount        atomic.Int64
-	fingerprintCount    atomic.Int64
+	// packets 累计提取的数据包总数。
+	packets atomic.Int64
+	// bytes 累计提取的数据包总字节数。
+	bytes atomic.Int64
+	// ethCount 累计加载的 Ethernet 模型数量。
+	ethCount atomic.Int64
+	// ipv4Count 累计加载的 IPv4 模型数量。
+	ipv4Count atomic.Int64
+	// ipv6Count 累计加载的 IPv6 模型数量。
+	ipv6Count atomic.Int64
+	// ipv4TCPCount 累计加载的 IPv4 TCP 模型数量。
+	ipv4TCPCount atomic.Int64
+	// ipv6TCPCount 累计加载的 IPv6 TCP 模型数量。
+	ipv6TCPCount atomic.Int64
+	// ipv4UDPCount 累计加载的 IPv4 UDP 模型数量。
+	ipv4UDPCount atomic.Int64
+	// ipv6UDPCount 累计加载的 IPv6 UDP 模型数量。
+	ipv6UDPCount atomic.Int64
+	// fingerprintCount 累计成功的 TCP 被动指纹识别次数。
+	fingerprintCount atomic.Int64
+	// fingerprintErrCount 累计失败的 TCP 被动指纹识别次数。
 	fingerprintErrCount atomic.Int64
-	startTime           time.Time
+	// startTime 统计收集器创建时刻，用于计算处理耗时与速率。
+	startTime time.Time
 }
 
 // NewPcapStats 创建新的 PCAP 统计收集器实例，记录当前时间为启动时间
@@ -122,18 +134,30 @@ func (s *PcapStats) Snapshot() PcapStatsSnapshot {
 
 // PcapStatsSnapshot 统计数据的不可变快照
 type PcapStatsSnapshot struct {
-	Packets        int64
-	Bytes          int64
-	Eth            int64
-	IPv4           int64
-	IPv6           int64
-	IPv4TCP        int64
-	IPv6TCP        int64
-	IPv4UDP        int64
-	IPv6UDP        int64
+	// Packets 累计提取的数据包总数
+	Packets int64
+	// Bytes 累计提取的数据包总字节数
+	Bytes int64
+	// Eth 累计加载的 Ethernet 模型数量
+	Eth int64
+	// IPv4 累计加载的 IPv4 模型数量
+	IPv4 int64
+	// IPv6 累计加载的 IPv6 模型数量
+	IPv6 int64
+	// IPv4TCP 累计加载的 IPv4 TCP 模型数量
+	IPv4TCP int64
+	// IPv6TCP 累计加载的 IPv6 TCP 模型数量
+	IPv6TCP int64
+	// IPv4UDP 累计加载的 IPv4 UDP 模型数量
+	IPv4UDP int64
+	// IPv6UDP 累计加载的 IPv6 UDP 模型数量
+	IPv6UDP int64
+	// TCPFingerprint 累计成功的 TCP 被动指纹识别次数
 	TCPFingerprint int64
+	// FingerprintErr 累计失败的 TCP 被动指纹识别次数
 	FingerprintErr int64
-	Elapsed        time.Duration
+	// Elapsed 自统计收集器创建以来经过的耗时
+	Elapsed time.Duration
 }
 
 // String 格式化统计快照为人类可读的多行输出

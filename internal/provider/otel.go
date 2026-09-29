@@ -9,6 +9,7 @@ import (
 
 // OtelShutdowner 封装 OpenTelemetry 的关闭函数，供依赖注入器统一管理其生命周期。
 type OtelShutdowner struct {
+	// shutdown OpenTelemetry 关闭函数，由 Shutdown 调用以释放资源。
 	shutdown func(context.Context) error
 }
 

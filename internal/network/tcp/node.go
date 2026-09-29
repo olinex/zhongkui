@@ -17,15 +17,22 @@ import (
 // 类型参数:
 //   - P: 实现了TCPPacket接口的数据包类型
 type ReassemblerNode[P TCPPacket] struct {
-	ID          string // TCP流的唯一标识符
-	ctx         context.Context
-	cancel      context.CancelFunc
+	ID string // TCP流的唯一标识符
+	// ctx 节点生命周期上下文，随所属流关闭而取消。
+	ctx context.Context
+	// cancel 取消该节点上下文的函数。
+	cancel context.CancelFunc
+	// signalChan 唤醒等待中的重组/回收协程的信号通道。
 	signalChan  chan any
 	reassembler *Reassembler[P] // TCP重组器实例
-	prev        *ReassemblerNode[P]
-	next        *ReassemblerNode[P]
-	noticeTime  time.Time
-	status      atomic.Int32
+	// prev LRU 链表中前一个节点。
+	prev *ReassemblerNode[P]
+	// next LRU 链表中后一个节点。
+	next *ReassemblerNode[P]
+	// noticeTime 最近一次被访问的时间，用于 LRU 淘汰判定。
+	noticeTime time.Time
+	// status 节点状态，原子读写。
+	status atomic.Int32
 }
 
 func newReassemblerNode[P TCPPacket](

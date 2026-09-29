@@ -20,11 +20,8 @@ import (
 //
 // 该结构体用于接收更新命名空间的请求参数，包含以下字段：
 //   - Description: 命名空间描述，必填，长度限制为3-256个字符
-//
-// 字段说明：
-//   - json:"description": JSON序列化时使用"description"作为字段名
-//   - binding:"required,min=3,max=256": Gin绑定验证规则，要求必填且长度在3-256字符之间
 type NamespaceUpdateIn struct {
+	// Description 命名空间描述，必填且长度 3-256 字符。
 	Description string `json:"description" binding:"required,min=3,max=256"`
 }
 
@@ -43,6 +40,7 @@ type NamespaceUpdateIn struct {
 // 保证名称可作为 URL 路径参数安全传递（如 /admin/namespace/:name/delete）。
 type NamespaceCreateIn struct {
 	NamespaceUpdateIn
+	// Name 命名空间名称，创建后不可修改。
 	Name string `json:"name" binding:"required,min=3,max=32,alphanumspecial=_-"`
 }
 
@@ -60,7 +58,9 @@ type NamespaceCreateIn struct {
 // 该结构体在查询单个命名空间详情时使用。
 type NamespaceDetailOut struct {
 	utils.BaseItemOut
-	Name        string `json:"name"`
+	// Name 命名空间名称。
+	Name string `json:"name"`
+	// Description 命名空间描述。
 	Description string `json:"description"`
 }
 
@@ -175,6 +175,7 @@ func NamespaceDetailGet(c *gin.Context) {
 // NamespaceBatchDeleteIn 批量删除命名空间的请求输入结构。
 // Names 接受标量（单个命名空间名）或数组（多个命名空间名）。
 type NamespaceBatchDeleteIn struct {
+	// Names 待删除的命名空间名称列表。
 	Names views.FlexList[string] `json:"names"`
 }
 

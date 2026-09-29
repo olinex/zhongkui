@@ -4,6 +4,7 @@
 // 即可被 registerInto / TestConn / IntrospectSchema / ValidateConfigJSON 统一驱动，
 // 无需再改动任何按类型分发的 switch 或数据源清单。注册表并发安全，并支持在测试中
 // UnregisterDatasourceType 清理。
+
 package vtab
 
 import (

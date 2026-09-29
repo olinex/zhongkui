@@ -37,10 +37,14 @@ import (
 //   - logger: 结构化的日志记录器
 type ReporterService struct {
 	reporter_v1.UnimplementedReporterServiceServer
-	grpc    *grpc.Server
-	client  *etcd.EtcdClient
+	// grpc gRPC 服务器实例。
+	grpc *grpc.Server
+	// client etcd 客户端，用于存储与监听资源配置。
+	client *etcd.EtcdClient
+	// pClient 管道客户端，用于提交异步处理任务。
 	pClient *pipeline.Client
-	logger  *logging.Logger
+	// logger 结构化日志记录器。
+	logger *logging.Logger
 }
 
 // NewReportService 从依赖注入器装配并注册上报服务。

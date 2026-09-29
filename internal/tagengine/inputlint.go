@@ -2,6 +2,7 @@
 // 用户 Rego 中引用 input.<field> 的字段不在目标模型输入文档中时，
 // 产出 warning 级诊断（带行列号），帮助发现字段拼写错误；
 // 与 validate.go 的语法/契约校验互补，lint 不阻塞规则保存，仅提示。
+
 package tagengine
 
 import (

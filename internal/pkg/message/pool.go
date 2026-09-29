@@ -21,6 +21,7 @@ import (
 // 作为 DI 注入对象注册为进程级单例；Shutdown 使池自身即关闭器，provider 层无需再包
 // 一层 shutdowner 结构体，提升内聚性。
 type Pool struct {
+	// manager 渠道生命周期管理器，按 Key 惰性建池并托管连接复用与回收。
 	manager *resourcepool.Manager[Channel]
 }
 

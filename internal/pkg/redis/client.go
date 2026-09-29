@@ -23,7 +23,9 @@ import (
 //	}
 type Client struct {
 	*redis.Client
-	lock   sync.Mutex
+	// lock 保护 closed 标志的互斥锁，保证关闭幂等。
+	lock sync.Mutex
+	// closed 是否已关闭，避免重复关闭底层连接。
 	closed bool
 }
 

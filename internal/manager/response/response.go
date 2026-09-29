@@ -82,6 +82,7 @@ var (
 // 实现该接口的错误详情能够根据请求的语言环境返回本地化的错误描述。
 // 目前 DetailContext 是该接口的唯一实现，用于支持带参数的国际化消息模板。
 type LocalizedError interface {
+	// Localize 将错误本地化为指定语言环境下的描述字符串。
 	Localize(localizer *i18n.Localizer) string
 }
 

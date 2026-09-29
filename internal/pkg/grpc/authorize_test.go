@@ -34,25 +34,31 @@ type testServerStream struct {
 	ctx context.Context
 }
 
+// SetHeader 模拟设置响应头，直接返回 nil。
 func (t *testServerStream) SetHeader(md metadata.MD) error {
 	return nil
 }
 
+// SendHeader 模拟发送响应头，直接返回 nil。
 func (t *testServerStream) SendHeader(md metadata.MD) error {
 	return nil
 }
 
+// SetTrailer 模拟设置响应尾，不做任何操作。
 func (t *testServerStream) SetTrailer(md metadata.MD) {
 }
 
+// Context 返回该流绑定的上下文。
 func (t *testServerStream) Context() context.Context {
 	return t.ctx
 }
 
+// SendMsg 模拟发送消息，直接返回 nil。
 func (t *testServerStream) SendMsg(msg any) error {
 	return nil
 }
 
+// RecvMsg 模拟接收消息，直接返回 nil。
 func (t *testServerStream) RecvMsg(msg any) error {
 	return nil
 }

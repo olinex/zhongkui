@@ -279,6 +279,12 @@ other = "Extract HTTP test cases from a pcap file"
 [cmd.create.testcase.long]
 other = "Use tshark to extract HTTP request/response data from a pcap file and generate JSON test case files for verifying TCP reassembly and HTTP protocol detection logic.\n\nEach HTTP transaction (request-response pair) generates one JSON file.\nSupports multiple transactions per TCP stream for HTTP/1.1 keep-alive connections."
 
+[cmd.create.docs.short]
+other = "Generate Diátaxis-classified documentation from code comments"
+
+[cmd.create.docs.long]
+other = "Scan the documentation registry, use gomarkdoc to export each package's comments as Markdown (tutorials/how-to/reference/explanation), and generate the docs/README.md index."
+
 [cmd.force-reset-password.short]
 other = "Force reset a user's password via the command line"
 
@@ -898,6 +904,9 @@ other = "  stream [[.Stream]] tx [[.Tx]]: HTTP response missing or incomplete: [
 
 [cli.testcase.parse-response-failed]
 other = "  stream [[.Stream]] tx [[.Tx]]: failed to parse HTTP response: [[.Err]]"
+
+[cli.docs.generated]
+other = "Documentation generated at [[.Dir]]"
 
 [cli.s3.lifecycle.applied]
 other = "Applied [[.Count]] lifecycle rule(s) to bucket [[.Bucket]]"

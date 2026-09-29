@@ -30,11 +30,13 @@ type stubChat struct {
 	gotInputs [][]*schema.Message // 记录每次调用收到的消息列表
 }
 
+// Generate 记录输入消息并返回配置的完整回复。
 func (s *stubChat) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
 	s.gotInputs = append(s.gotInputs, input)
 	return &schema.Message{Role: schema.Assistant, Content: s.reply}, nil
 }
 
+// Stream 记录输入消息并返回配置的分块流，未配置分块时退回单块回复。
 func (s *stubChat) Stream(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
 	s.gotInputs = append(s.gotInputs, input)
 	chunks := s.chunks
@@ -59,6 +61,7 @@ type stubRetriever struct {
 	opts  []retriever.Option
 }
 
+// Retrieve 记录查询与选项并返回配置的文档。
 func (s *stubRetriever) Retrieve(ctx context.Context, query string, opts ...retriever.Option) ([]*schema.Document, error) {
 	s.query = query
 	s.opts = opts

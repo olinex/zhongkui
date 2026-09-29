@@ -8,6 +8,7 @@
 // 下推取舍：etcd 唯一可下推的维度是 key。模板/匹配类谓词（LIKE/%/_）按上述前缀/全量
 // 范围粗略下推——范围扫描结果是真实匹配行的超集，残余模式匹配交由 sqlite 以 Omit=false
 // 复查兜底，保证不漏行。value 列不可下推。
+
 package vtab
 
 import (
@@ -120,6 +121,7 @@ func NewEtcdPool(cfg *EtcdConfig) *EtcdPool {
 
 // EtcdPool 是基于资源池的 etcd 客户端池句柄，绑定一个集群配置派生的 Key。
 type EtcdPool struct {
+	// key 集群配置派生的连接池 Key。
 	key resourcepool.Key
 }
 

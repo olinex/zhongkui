@@ -16,9 +16,11 @@ import (
 // 持有全部已注册探测项与统一的单探测超时，最后一次 Run 的结果被缓存，
 // 可供 Render 直接渲染，并负责并行执行与表格渲染。
 type Registry struct {
+	// probes 已注册的探测项集合，注册顺序即 Run 结果的顺序。
 	probes          []Spec
 	PerProbeTimeout time.Duration `default:"3s"` // 单探测独立超时（默认 3s）
-	results         []Status
+	// results 最近一次 Run 的探测结果缓存，供 Render 直接渲染。
+	results []Status
 }
 
 // New 创建一个新的依赖自省注册表。

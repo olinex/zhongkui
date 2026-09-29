@@ -1,6 +1,7 @@
 // Package pipeline 提供基于 asynq 的任务队列与分布式调度功能。
 // 此文件保留游标调度模型的数据结构与纯函数：任务载荷、触发任务构造、触发点计算等；
 // 调度循环与游标读写原语已合并进 UnifiedScheduler（见 scheduler.go）。
+
 package pipeline
 
 import (

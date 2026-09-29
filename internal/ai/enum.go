@@ -5,6 +5,7 @@
 // （toolCall / toolResult）与知识库页的阶段同属 EvalStage 类型，共用 evalStage 一个枚举类。
 // 长期记忆类别/状态（memoryKind / memoryStatus）的枚举类注册已随其类型迁至 internal/pkg/llm
 // （见该包的 enum.go 与 memory.go），本包统一引用该包的类型与常量。
+
 package ai
 
 import (

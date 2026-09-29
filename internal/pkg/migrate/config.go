@@ -1,4 +1,3 @@
-// Package migrate（本文件）定义数据库迁移的配置项及其链式配置方法。
 package migrate
 
 import (

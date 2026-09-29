@@ -4,6 +4,7 @@
 // enum.RegisterSource 声明来源：条目在每次读取时实时派生，完整性与包内 init 的文件顺序无关。
 // datasourceStruct 的取值空间取自本包的 Redis 数据结构类型常量（redisKind*），顺序固定，故经
 // enum.Register 在注册时快照条目。
+
 package vtab
 
 import (

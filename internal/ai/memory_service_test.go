@@ -31,6 +31,7 @@ func newScriptedChat(replies ...string) *scriptedChat {
 // 触达 DB），从而在无 pgvector 的 sqlite 下稳定检验「长期记忆抽取失败只进 Warnings」。
 type errEmbedder struct{}
 
+// EmbedStrings 固定返回错误，用于模拟向量化失败。
 func (errEmbedder) EmbedStrings(_ context.Context, _ []string, _ ...embedding.Option) ([][]float64, error) {
 	return nil, errors.New("embedder: forced failure")
 }

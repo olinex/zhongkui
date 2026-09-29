@@ -1,6 +1,7 @@
 // Package queue 提供基于 asynq 的任务队列和调度器配置管理功能。
 // 该包定义了任务队列的配置结构，包括并发控制、队列优先级、调度器设置等，
 // 并提供了配置提取、描述和转换为 asynq 原生配置的方法。
+
 package pipeline
 
 import (

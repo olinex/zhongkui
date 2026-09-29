@@ -20,9 +20,12 @@ const SecurityTagKey = "secure"
 
 // CryptoTag 加密字段标签内容（secure 标签解析结果）。
 type CryptoTag struct {
-	Mode   string `tag:"mode"`
-	Offset int    `tag:"offset"`
-	Length int    `tag:"length"`
+	// Mode 加密模式标识（如 aes-gcm）
+	Mode string `tag:"mode"`
+	// Offset 派生密钥的偏移量
+	Offset int `tag:"offset"`
+	// Length 派生密钥的长度
+	Length int `tag:"length"`
 }
 
 // ParseCryptoTag 解析 secure 标签字符串为 CryptoTag。

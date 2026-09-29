@@ -3,6 +3,7 @@
 // 规则中冗余的 {namespace}__ 前缀，同时保证不同命名空间的连接与凭据互不串扰。
 // Pools 自身不持有数据库引用：扫描启用数据源由外部的 datasource.Reload 驱动，
 // 避免与模型层产生依赖倒置。
+
 package vtab
 
 import (
@@ -25,8 +26,11 @@ var ErrSQLiteStoreNotInjected = errors.New("sqlite_file: S3 object cache not inj
 // 防止并发首建泄漏重复池。另持有 objectStore（可为 nil）：sqlite_file 数据源注册时的
 // S3 对象拉取/解密与删除时的对象清理经它完成。
 type Pools struct {
-	mu          sync.RWMutex
-	pools       map[string]*sqlitevtab.SQLitePool
+	// mu 保护 pools 的读写锁。
+	mu sync.RWMutex
+	// pools 按命名空间持有的 SQLitePool。
+	pools map[string]*sqlitevtab.SQLitePool
+	// objectStore 通用 S3 对象缓存（可为 nil，表示 S3 未启用）。
 	objectStore *s3.ObjectCache
 }
 

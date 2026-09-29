@@ -1,5 +1,3 @@
-// Package migrate（本文件）负责临时数据库的创建、连接与清理，用于迁移
-// 演练、结构校验等需要隔离环境的场景。
 package migrate
 
 import (
@@ -43,10 +41,15 @@ var (
 
 // TempDB 表示一个已创建的临时数据库及其连接信息。
 type TempDB struct {
-	cfg     *Config
-	db      *sql.DB
-	dsn     string
-	name    string
+	// cfg 迁移配置。
+	cfg *Config
+	// db 临时数据库连接。
+	db *sql.DB
+	// dsn 临时数据库的 DSN。
+	dsn string
+	// name 临时数据库名。
+	name string
+	// dialect 数据库方言。
 	dialect dbDialect
 }
 

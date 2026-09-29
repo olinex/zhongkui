@@ -19,14 +19,12 @@ var (
 //
 // ISO 4217 是国际标准化组织（ISO）定义的货币代码标准，
 // 每个条目包含该货币的字母代码、数字代码及名称。
-//
-// 字段说明：
-//   - Alpha3: 三位字母代码（如 "CNY"、"USD"、"EUR"），是使用最广泛的货币编码形式
-//   - Name: 货币的英文名称（如 "Yuan Renminbi"、"US Dollar"、"Euro"）
-//   - Numeric: 三位数字代码（如 "156"、"840"、"978"），与联合国数字代码一致
 type ISO4217Entry struct {
-	Alpha3  string `json:"alpha_3"`
-	Name    string `json:"name"`
+	// Alpha3 三位字母代码（Alpha-3），如 "CNY"、"USD"，是使用最广泛的货币编码形式。
+	Alpha3 string `json:"alpha_3"`
+	// Name 货币的英文名称，如 "Yuan Renminbi"、"US Dollar"。
+	Name string `json:"name"`
+	// Numeric 三位数字代码，如 "156"（人民币）、"840"（美元），与联合国数字代码一致。
 	Numeric string `json:"numeric"`
 }
 

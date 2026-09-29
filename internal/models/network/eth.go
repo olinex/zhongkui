@@ -11,21 +11,19 @@ import (
 // 该结构体封装了以太网帧的关键头部字段，包括源MAC地址、目的MAC地址、
 // 以太网类型和帧长度。这些字段用于网络数据包的识别、路由和分析。
 //
-// 字段说明:
-//   - EthDstMAC: 目的MAC地址，标识数据包的目标网络接口
-//   - EthSrcMAC: 源MAC地址，标识数据包的发送网络接口
-//   - EthType:   以太网类型，标识上层协议类型（如IPv4、IPv6、ARP等）
-//   - EthLength: 帧长度，表示以太网帧的数据部分长度
-//
 // 数据库映射:
 //   - 使用GORM标签定义数据库约束和列类型
 //   - 使用JSON标签支持序列化和反序列化
 //   - 在ClickHouse中使用ZSTD(3)压缩算法优化存储
 type EthernetHeaders struct {
-	EthDstMAC serializer.MacAddr  `gorm:"type:FixedString(6)" json:"ethDstMac"`
-	EthSrcMAC serializer.MacAddr  `gorm:"type:FixedString(6)" json:"ethSrcMac"`
-	EthType   layers.EthernetType `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethType"`
-	EthLength uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethLength"`
+	// EthDstMAC 目的 MAC 地址
+	EthDstMAC serializer.MacAddr `gorm:"type:FixedString(6)" json:"ethDstMac"`
+	// EthSrcMAC 源 MAC 地址
+	EthSrcMAC serializer.MacAddr `gorm:"type:FixedString(6)" json:"ethSrcMac"`
+	// EthType 以太网类型，标识上层协议类型（如 IPv4、IPv6、ARP 等）
+	EthType layers.EthernetType `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethType"`
+	// EthLength 以太网帧数据部分长度（字节）
+	EthLength uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethLength"`
 }
 
 // NewEthernetHeaders 从gopacket以太网层创建EthernetHeaders实例

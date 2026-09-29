@@ -27,6 +27,7 @@ func TestMain(m *testing.M) {
 // CryptoTestModel 用于 GORM schema 解析，获取带 secure 标签的 Field
 // 注意：Scan 要求字段为指针类型
 type CryptoTestModel struct {
+	// Secret 带 secure 标签的加密字段，用于验证 GORM 序列化器解析出的字段标签。
 	Secret *Crypto `gorm:"serializer:crypto" secure:"mode=\"aes-gcm\",offset=0,length=32"`
 }
 

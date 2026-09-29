@@ -3,6 +3,7 @@
 // 由类型反射与 json tag 推导；字段描述（Description）不解析源码注释，
 // 而是由 tagengine 以 i18n 消息键（input.<typeKey>.<field>）标注，
 // 翻译文案维护在 internal/pkg/translate/locales 下，由接口层按请求语言翻译。
+
 package tagengine
 
 import (

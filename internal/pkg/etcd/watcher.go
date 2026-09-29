@@ -64,20 +64,17 @@ func WithWatchRetryInterval(interval time.Duration) WatchOption {
 // Watcher 通用的 etcd 变更监听器，实现 runtime.Service 生命周期。
 // 监听指定键的变更事件，逐事件回调 handler 执行同步/失效逻辑；
 // watch 中断自动重连；未绑定 etcd 客户端时直接返回（无监听能力）。
-//
-// 字段说明:
-//   - client: etcd 客户端实例，nil 时监听被跳过
-//   - key: 监听的 etcd 键
-//   - handler: 变更事件处理器
-//   - logger: 日志记录器，用于记录监听状态与事件处理告警
-//   - opts: 选项集合，包含重连间隔等可调参数
-//   - watch: 可注入的 watch 函数，默认调用 client.Watch，供白盒测试模拟断线重连
 type Watcher struct {
-	client  *EtcdClient
-	key     string
+	// client etcd 客户端实例，nil 时监听被跳过。
+	client *EtcdClient
+	// key 监听的 etcd 键。
+	key string
+	// handler 变更事件处理器。
 	handler ChangeHandler
-	logger  *logging.Logger
-	opts    watchOptions
+	// logger 日志记录器，记录监听状态与事件处理告警。
+	logger *logging.Logger
+	// opts 监听选项集合（重连间隔等可调参数）。
+	opts watchOptions
 	// watch 可注入的 watch 函数，默认调用 client.Watch，供白盒测试模拟断线重连。
 	watch func(ctx context.Context, key string) clientv3.WatchChan
 }

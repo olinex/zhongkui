@@ -52,9 +52,12 @@ var _ etl.Handler = (*SendTargetHandler)(nil)
 // 目标投递一条 notify:send:target 任务（由 SendTargetHandler 消费完成实际发送与记录写入）；
 // 载荷非法返回错误触发重试。
 type SendGroupHandler struct {
+	// service 通知服务，负责将通知组解析为逐目标直投入参。
 	service *notifybase.Service
-	client  taskEnqueuer
-	logger  *logging.Logger
+	// client 任务投递客户端，用于扇出投递逐目标直投任务。
+	client taskEnqueuer
+	// logger 结构化日志记录器。
+	logger *logging.Logger
 }
 
 // NewSendGroupHandler 从 do.Injector 解析依赖并创建通用通知组发送处理器。
@@ -122,8 +125,10 @@ func validateSendGroupInput(in notifybase.SendGroupInput) error {
 // 解析载荷后调用 Service.SendToTarget 不经通知组直接投递单个目标；
 // 载荷非法返回错误触发重试。
 type SendTargetHandler struct {
+	// service 通知服务，负责单目标直投发送。
 	service *notifybase.Service
-	logger  *logging.Logger
+	// logger 结构化日志记录器。
+	logger *logging.Logger
 }
 
 // NewSendTargetHandler 从 do.Injector 解析依赖并创建单目标直投处理器。

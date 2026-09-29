@@ -2,6 +2,7 @@
 // redis_string 表把 Redis string 键值键作为行集暴露：key 列支持精确等值（→GET）或
 // 模式扫描（→SCAN+TYPE+GET），value 列为键值。类型非 string（WRONGTYPE）或键不存在
 // 视为无该行。连接经共享 RedisPool 在 Open 借出、取数后即时归还。
+
 package vtab
 
 import (

@@ -1,6 +1,7 @@
 // Package vtab（本文件）提供 SQLite 文件数据源单元测试。
 // 用真实临时 .db 文件（github.com/glebarez/go-sqlite 驱动）做端到端验证：自省 PRAGMA
 // table_info、值归一化，以及源与 sqlitevtab 同语义下的 LIKE 下推。
+
 package vtab
 
 import (

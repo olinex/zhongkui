@@ -20,6 +20,7 @@ import (
 // 某依赖能力当前是否可用。定义在使用方（features）以解耦与具体实现包的依赖：底层能力
 // 判断（如 SMTP 配置完整性）被封装进实现方的 Enabled，features 不直接读取其配置结构。
 type IsEnabled interface {
+	// Enabled 报告依赖能力当前是否可用。
 	Enabled() bool
 }
 
@@ -29,6 +30,7 @@ type IsEnabled interface {
 // 未实现的功能（如密码重置）原因留空，前端回退到通用提示。
 type Reasoned interface {
 	IsEnabled
+	// DisabledReason 返回依赖不可用的原因（按请求语言本地化；可用时为空串）。
 	DisabledReason(lang *base.Language) string
 }
 
@@ -62,6 +64,7 @@ type Out struct {
 
 // Registry 全局功能开关注册表：按装配顺序维护功能集合，供枚举与按键查询。
 type Registry struct {
+	// features 已注册功能集合，按装配顺序保存。
 	features []Feature
 }
 

@@ -17,6 +17,7 @@ type mockTranslator struct {
 	translations map[string]string
 }
 
+// Add 向模拟翻译器登记一条键值翻译。
 func (m *mockTranslator) Add(key, text string, override bool) error {
 	if m.translations == nil {
 		m.translations = make(map[string]string)
@@ -25,6 +26,7 @@ func (m *mockTranslator) Add(key, text string, override bool) error {
 	return nil
 }
 
+// T 按键返回已登记的翻译，未命中时原样返回键。
 func (m *mockTranslator) T(key string, params ...string) (string, error) {
 	if text, ok := m.translations[key]; ok {
 		return text, nil
@@ -32,22 +34,27 @@ func (m *mockTranslator) T(key string, params ...string) (string, error) {
 	return key, nil
 }
 
+// C 按基数复数形式返回翻译，复用 T 的查表逻辑。
 func (m *mockTranslator) C(key string, num float64, digits uint64, param string) (string, error) {
 	return m.T(key, param)
 }
 
+// CardinalPluralRule 返回基数复数规则，固定为 "other"。
 func (m *mockTranslator) CardinalPluralRule(num float64, v uint64) string {
 	return "other"
 }
 
+// OrdinalPluralRule 返回序数复数规则，固定为 "other"。
 func (m *mockTranslator) OrdinalPluralRule(num float64, v uint64) string {
 	return "other"
 }
 
+// RangePluralRule 返回区间复数规则，固定为 "other"。
 func (m *mockTranslator) RangePluralRule(num1, num2 float64, v1, v2 uint64) string {
 	return "other"
 }
 
+// Locale 返回模拟语言标识。
 func (m *mockTranslator) Locale() string {
 	return "mock"
 }
@@ -58,51 +65,63 @@ type mockFieldError struct {
 	field string
 }
 
+// Tag 返回校验标签名。
 func (m *mockFieldError) Tag() string {
 	return m.tag
 }
 
+// ActualTag 返回实际校验标签名，与 Tag 一致。
 func (m *mockFieldError) ActualTag() string {
 	return m.tag
 }
 
+// Namespace 返回字段的命名空间。
 func (m *mockFieldError) Namespace() string {
 	return m.field
 }
 
+// StructNamespace 返回结构体命名空间。
 func (m *mockFieldError) StructNamespace() string {
 	return m.field
 }
 
+// Field 返回字段名。
 func (m *mockFieldError) Field() string {
 	return m.field
 }
 
+// StructField 返回结构体字段名。
 func (m *mockFieldError) StructField() string {
 	return m.field
 }
 
+// Value 返回触发校验失败的字段值，模拟实现固定返回 nil。
 func (m *mockFieldError) Value() any {
 	return nil
 }
 
+// Param 返回校验参数，模拟实现固定返回空串。
 func (m *mockFieldError) Param() string {
 	return ""
 }
 
+// Kind 返回字段的反射 Kind，固定为字符串。
 func (m *mockFieldError) Kind() reflect.Kind {
 	return reflect.String
 }
 
+// Type 返回字段的反射类型，固定为 string。
 func (m *mockFieldError) Type() reflect.Type {
 	return reflect.TypeOf("")
 }
 
+// Translate 借助翻译器将字段错误翻译为本地化文本。
 func (m *mockFieldError) Translate(trans ut.Translator) string {
 	t, _ := trans.T(m.tag, m.field)
 	return t
 }
 
+// Error 返回字段错误的描述文本。
 func (m *mockFieldError) Error() string {
 	return m.field + " failed validation"
 }
@@ -112,6 +131,7 @@ type mockLocalizer struct {
 	messages map[string]string
 }
 
+// Localize 按消息 ID 返回预设的本地化文本，未命中时回退到 Other 字段。
 func (m *mockLocalizer) Localize(message *i18n.Message) (string, error) {
 	if text, ok := m.messages[message.ID]; ok {
 		return text, nil
@@ -119,23 +139,28 @@ func (m *mockLocalizer) Localize(message *i18n.Message) (string, error) {
 	return message.Other, nil
 }
 
+// MustLocalize 返回本地化文本，忽略错误。
 func (m *mockLocalizer) MustLocalize(message *i18n.Message) string {
 	text, _ := m.Localize(message)
 	return text
 }
 
+// LocalizeMessage 本地化消息，转调 Localize。
 func (m *mockLocalizer) LocalizeMessage(message *i18n.Message) (string, error) {
 	return m.Localize(message)
 }
 
+// MustLocalizeMessage 本地化消息并返回文本，忽略错误。
 func (m *mockLocalizer) MustLocalizeMessage(message *i18n.Message) string {
 	return m.MustLocalize(message)
 }
 
+// LocalizeWithData 本地化带数据的消息，模拟实现忽略数据直接转调 Localize。
 func (m *mockLocalizer) LocalizeWithData(message *i18n.Message, data map[string]any) (string, error) {
 	return m.Localize(message)
 }
 
+// MustLocalizeWithData 本地化带数据的消息并返回文本，忽略错误。
 func (m *mockLocalizer) MustLocalizeWithData(message *i18n.Message, data map[string]any) string {
 	text, _ := m.LocalizeWithData(message, data)
 	return text

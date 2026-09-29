@@ -36,9 +36,12 @@ const claimLease = 5 * time.Minute
 // 经渠道基座发送，并维护 notification_records 发送记录。
 // 通知组未绑定目标、目标无可用渠道等场景静默跳过（记录日志），不视为错误。
 type Service struct {
+	// coreDB core 库连接，用于读写通知组、目标与发送记录。
 	coreDB *database.DB
+	// logger 日志记录器，记录跳过与失败场景。
 	logger *logging.Logger
-	pool   *message.Pool
+	// pool 渠道消息资源池，用于借出/归还渠道实例发送消息。
+	pool *message.Pool
 }
 
 // NewService 创建通用通知服务。

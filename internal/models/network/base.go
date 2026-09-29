@@ -135,6 +135,7 @@ type TimestampMeta struct {
 
 // TraceMeta 表示链路追踪元数据，携带用于关联同一请求各环节的追踪 ID
 type TraceMeta struct {
+	// TraceID 链路追踪 ID，用于关联同一请求各环节的追踪记录
 	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"traceId"`
 }
 

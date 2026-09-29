@@ -51,6 +51,7 @@ type UserCreateIn struct {
 //   - Password: 新密码，可选。若提供则必须满足强密码要求（8-64个ASCII字符）；
 //     若为空或省略，则由系统自动生成符合强密码要求的随机密码
 type AdminUserPasswordResetIn struct {
+	// Password 新密码；为空时由系统自动生成随机强密码。
 	Password string `json:"password" binding:"omitempty,min=8,max=64,ascii,strongPassword"`
 }
 
@@ -59,6 +60,7 @@ type AdminUserPasswordResetIn struct {
 // 该结构体用于返回重置后的明文密码（仅一次性展示），
 // 管理员须将新密码安全地告知目标用户。
 type AdminUserPasswordResetOut struct {
+	// Password 重置后的明文密码（仅一次性展示）。
 	Password string `json:"password"`
 }
 
@@ -306,6 +308,7 @@ func UserUpdate(c *gin.Context) {
 // UserBatchActiveIn 批量设置用户激活状态的请求输入结构。
 // UnionIds 接受标量（单个 unionID 字符串）或数组（多个 unionID 字符串）。
 type UserBatchActiveIn struct {
+	// UnionIds 待设置激活状态的用户 unionID 列表。
 	UnionIds views.FlexList[serializer.HexUUID] `json:"unionIds"`
 }
 

@@ -34,36 +34,56 @@ type DetectionCondition struct {
 
 // DetectionHit 标签事件检测查询结果行，按 (namespace, model, dimension, item) 分组聚合。
 type DetectionHit struct {
-	ConditionID uint   `gorm:"column:condition_id"`
-	Namespace   string `gorm:"column:namespace"`
-	Model       string `gorm:"column:model"`
-	Dimension   string `gorm:"column:dimension"`
-	Item        string `gorm:"column:item"`
-	Total       uint64 `gorm:"column:total"`
+	// ConditionID 命中分组所属条件的 ID
+	ConditionID uint `gorm:"column:condition_id"`
+	// Namespace 命中分组所属命名空间
+	Namespace string `gorm:"column:namespace"`
+	// Model 命中分组的目标模型类型键
+	Model string `gorm:"column:model"`
+	// Dimension 命中分组的标签维度
+	Dimension string `gorm:"column:dimension"`
+	// Item 命中分组的标签维度具体值
+	Item string `gorm:"column:item"`
+	// Total 命中分组在时间窗口内的命中总次数
+	Total uint64 `gorm:"column:total"`
 	// IDs 该命中分组去重聚合后的原始记录 ID 列表（如 http_transports.id）
 	IDs serializer.HexUUIDs `gorm:"column:ids"`
 }
 
 // TagEventRecord 标签事件记录识别结果，作为检测入库的持久化数据源或 dry-run 响应返回。
 type TagEventRecord struct {
-	Namespace  string              `json:"namespace"`
-	RuleID     uint                `json:"ruleID"`
-	RuleName   string              `json:"ruleName"`
-	MatchAll   bool                `json:"matchAll"`
-	DetectedAt time.Time           `json:"detectedAt"`
-	Hits       []TagEventRecordHit `json:"hits"`
+	// Namespace 事件所属命名空间
+	Namespace string `json:"namespace"`
+	// RuleID 触发事件的规则 ID
+	RuleID uint `json:"ruleID"`
+	// RuleName 触发事件的规则名称
+	RuleName string `json:"ruleName"`
+	// MatchAll 触发规则是否要求所有条件命中
+	MatchAll bool `json:"matchAll"`
+	// DetectedAt 事件检测时间
+	DetectedAt time.Time `json:"detectedAt"`
+	// Hits 事件包含的命中分组列表
+	Hits []TagEventRecordHit `json:"hits"`
 }
 
 // TagEventRecordHit 标签事件记录中的单条命中分组信息。
 type TagEventRecordHit struct {
-	ConditionID   uint                  `json:"conditionID"`
-	ConditionName string                `json:"conditionName"`
-	Model         string                `json:"model"`
-	Dimension     string                `json:"dimension"`
-	Item          string                `json:"item"`
-	Count         uint64                `json:"count"`
-	Threshold     int                   `json:"threshold"`
-	Window        serializer.DurationNS `json:"window"`
+	// ConditionID 命中分组所属条件的 ID
+	ConditionID uint `json:"conditionID"`
+	// ConditionName 命中分组所属条件的名称
+	ConditionName string `json:"conditionName"`
+	// Model 命中分组的目标模型类型键
+	Model string `json:"model"`
+	// Dimension 命中分组的标签维度
+	Dimension string `json:"dimension"`
+	// Item 命中分组的标签维度具体值
+	Item string `json:"item"`
+	// Count 命中分组在时间窗口内的命中次数
+	Count uint64 `json:"count"`
+	// Threshold 条件触发阈值
+	Threshold int `json:"threshold"`
+	// Window 统计时间窗口（纳秒）
+	Window serializer.DurationNS `json:"window"`
 	// IDs 命中分组去重聚合后的原始记录 ID 列表
 	IDs serializer.HexUUIDs `json:"ids"`
 }

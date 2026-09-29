@@ -21,6 +21,7 @@ var pool = sync.Pool{
 
 // StreamHasher 基于 maphash 的流式哈希器，用于对多个字段进行顺序拼接哈希。
 type StreamHasher struct {
+	// h 从对象池借出的 maphash 哈希器实例，承载累积哈希状态。
 	h *maphash.Hash
 }
 

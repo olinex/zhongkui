@@ -16,7 +16,9 @@ const (
 // 由队列实现（如 asynq.Task）满足该契约，使 etl 包不依赖具体队列实现。
 // 这是事件驱动任务（Handler）与分布式常驻任务（Processor）之上的统一任务契约。
 type Task interface {
+	// Type 返回任务类型，用于匹配对应的处理函数。
 	Type() string
+	// Payload 返回任务载荷的原始字节。
 	Payload() []byte
 }
 
@@ -26,6 +28,7 @@ type Task interface {
 //   - Handler：处理单个任务的短期逻辑，任务执行完毕后立即返回。适用于 ETL 流水线中的 Extract/Transform/Load 阶段。
 //   - Processor：管理长期运行的后台工作协程，调用 Start 启动后台循环，调用 Shutdown 优雅停止。
 type Handler interface {
+	// Do 处理单个任务，任务执行完毕后返回。
 	Do(ctx context.Context, task Task) error
 }
 

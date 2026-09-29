@@ -1,5 +1,7 @@
 # XDP Native + AF_XDP 抓包方案设计文档
 
+> 分类：解释 · 角色：研发 · 适用场景：需要理解内核侧 XDP/BPF 程序的设计与交互时阅读。
+
 ## 1. 概述
 
 本项目实现了基于 Linux XDP（eXpress Data Path）Native 模式的高性能网络数据包捕获方案。XDP 程序在网卡驱动层运行，配合 AF_XDP 零拷贝技术将匹配的数据包直接传递到用户态，性能远高于传统的 AF_PACKET 或 Libpcap 方案。

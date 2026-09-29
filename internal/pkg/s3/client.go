@@ -461,6 +461,7 @@ type etagVerifyingReader struct {
 	verified    bool
 }
 
+// Read 从底层 reader 读取数据并增量计算 MD5，读取结束时校验 ETag 一致性。
 func (r *etagVerifyingReader) Read(p []byte) (n int, err error) {
 	n, err = r.src.Read(p)
 	if n > 0 {

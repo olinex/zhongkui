@@ -16,6 +16,7 @@ type collectLoad[T any] struct {
 	items []T
 }
 
+// Load 线程安全地把整批数据追加到收集器。
 func (c *collectLoad[T]) Load(ctx context.Context, batch []T) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -23,6 +24,7 @@ func (c *collectLoad[T]) Load(ctx context.Context, batch []T) error {
 	return nil
 }
 
+// Batches 返回已收集数据的副本。
 func (c *collectLoad[T]) Batches() []T {
 	c.mu.Lock()
 	defer c.mu.Unlock()

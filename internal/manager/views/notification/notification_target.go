@@ -97,6 +97,7 @@ type NotificationTargetListOut struct {
 // NotificationTargetBatchIn 批量操作通知目标的请求输入结构。
 // Ids 接受标量（单个 ID）或数组（多个 ID）。
 type NotificationTargetBatchIn struct {
+	// Ids 待操作的通知目标主键列表
 	Ids views.FlexList[uint64] `json:"ids"`
 }
 

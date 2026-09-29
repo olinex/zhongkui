@@ -16,8 +16,10 @@ type cleanupStubTask struct {
 	payload []byte
 }
 
+// Type 返回清理任务类型标识。
 func (t cleanupStubTask) Type() string { return TagEventCleanupTask }
 
+// Payload 返回清理任务载荷。
 func (t cleanupStubTask) Payload() []byte { return t.payload }
 
 // TestParseCleanupRetention 验证保留期解析与默认值回退。

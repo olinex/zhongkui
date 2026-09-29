@@ -8,6 +8,7 @@
 // 大小写不一致的真实匹配行，违反超集契约，故 OpLIKE 一律不在此下推、交由 sqlite 以
 // Omit=false 复查；OpGLOB/OpMATCH 无直接语义同样跳过。EQ/NE/GT/GE/LT/LE/IS NULL 与
 // sqlite 语义一致，予以安全下推（同 MySQL/PostgreSQL 的取舍）。
+
 package vtab
 
 import (
@@ -30,6 +31,7 @@ type chColumn struct {
 // ClickHouseDatasource 是基于 ClickHouse 一张表的 vtable 数据源。
 type ClickHouseDatasource struct {
 	chBase
+	// tableRef 已引号包裹的表名。
 	tableRef string
 }
 

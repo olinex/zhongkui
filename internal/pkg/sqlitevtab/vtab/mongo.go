@@ -7,6 +7,7 @@
 // 正确性取舍：Mongo 数值类型间等值比较存在类型强转歧义，为保证超集契约不成立时的漏
 // 行风险，本数据源不做任何谓词下推（Filterable 恒空），由 sqlite 对全量集合行做本地
 // 过滤。详见 mongo_table.go。
+
 package vtab
 
 import (
@@ -111,8 +112,11 @@ func NewMongoPool(cfg *MongoConfig) *MongoPool {
 
 // MongoPool 是基于资源池的 Mongo 客户端池句柄，绑定一个集合配置派生的 Key。
 type MongoPool struct {
-	key        resourcepool.Key
-	db         string
+	// key 集合配置派生的连接池 Key。
+	key resourcepool.Key
+	// db 数据库名。
+	db string
+	// collection 集合名。
 	collection string
 }
 

@@ -3,6 +3,7 @@
 // IntrospectSchema 表结构自省（含 sqlite_file 分支）。MySQL/Postgres/ClickHouse 经
 // go-sqlmock 注入、Redis 经 miniredis 起进程内实例验证成功路径；etcd 与 mongo 因
 // clientv3.Client / mongo.Client 为具体类型、无本地 mock 而仅覆盖解码级路径。
+
 package vtab
 
 import (

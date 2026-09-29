@@ -19,20 +19,18 @@ var (
 //
 // ISO 3166-1 是国际标准化组织（ISO）定义的国家/地区代码标准，
 // 每个条目包含该国家/地区的多种编码形式、名称及旗帜标识。
-//
-// 字段说明：
-//   - Alpha2: 两位字母代码（如 "CN"、"US"），是使用最广泛的编码形式
-//   - Alpha3: 三位字母代码（如 "CHN"、"USA"），比 Alpha2 更具可读性
-//   - Flag: 该国家/地区对应的 emoji 旗帜符号（如 "🇨🇳"、"🇺🇸"）
-//   - Name: 国家/地区的英文名称（如 "China"、"United States"）
-//   - Numeric: 三位数字代码（如 "156"、"840"），与联合国统计司的数字代码一致
-//   - OfficialName: 国家/地区的官方全称（如 "People's Republic of China"），部分条目可能为空
 type ISO31661Entry struct {
-	Alpha2       string `json:"alpha_2"`
-	Alpha3       string `json:"alpha_3"`
-	Flag         string `json:"flag"`
-	Name         string `json:"name"`
-	Numeric      string `json:"numeric"`
+	// Alpha2 两位字母代码（Alpha-2），如 "CN"、"US"，是使用最广泛的编码形式。
+	Alpha2 string `json:"alpha_2"`
+	// Alpha3 三位字母代码（Alpha-3），如 "CHN"、"USA"，比 Alpha2 更具可读性。
+	Alpha3 string `json:"alpha_3"`
+	// Flag 该国家/地区对应的 emoji 旗帜符号，如 "🇨🇳"、"🇺🇸"。
+	Flag string `json:"flag"`
+	// Name 国家/地区的英文名称，如 "China"、"United States"。
+	Name string `json:"name"`
+	// Numeric 三位数字代码，如 "156"（中国）、"840"（美国），与联合国统计司的数字代码一致。
+	Numeric string `json:"numeric"`
+	// OfficialName 国家/地区的官方全称，如 "People's Republic of China"，部分条目可能为空。
 	OfficialName string `json:"official_name,omitempty"`
 }
 

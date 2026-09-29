@@ -10,6 +10,7 @@
 // 本文件遵循 internal/pkg/sqlitevtab 的 Datasource 超集契约：数据源头过滤是优化，
 // sqlite 侧以 Omit=false 复查每个返回行，故任何下推谓词都必须是真实匹配行的超集
 // （仅下推与 sqlite 语义一致且类型确定的列），禁止漏行。
+
 package vtab
 
 import (
@@ -78,6 +79,7 @@ func (b *mysqlBase) datasourceSchema() sqlitevtab.Schema {
 // 基座）。*sql.DB 并发安全，可被局部借出使用；数据源自省表结构时以 pool.db 限定到库。
 type MySQLPool struct {
 	sqlDBPool
+	// db 实例默认数据库名，自省时用于限定库。
 	db string
 }
 

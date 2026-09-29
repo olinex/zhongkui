@@ -1,5 +1,3 @@
-// Package migrate（本文件）实现数据库结构差异比对：读取两套结构的表与列
-// 定义，输出新增、删除与修改项。
 package migrate
 
 import (

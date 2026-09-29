@@ -32,74 +32,92 @@ type mockTCPPacket struct {
 	payload []byte
 }
 
+// Meta 返回模拟数据包的基础元数据。
 func (m *mockTCPPacket) Meta() *n.BaseMeta {
 	return m.meta
 }
 
+// StreamID 返回所属 TCP 流标识。
 func (m *mockTCPPacket) StreamID() string {
 	return m.streamID
 }
 
+// CaptureTimestamp 返回帧捕获时间戳。
 func (m *mockTCPPacket) CaptureTimestamp() time.Time {
 	return m.frameInfo.Timestamp
 }
 
+// IngestedAt 返回入库时间。
 func (m *mockTCPPacket) IngestedAt() time.Time {
 	return m.ingestedAt
 }
 
+// FrameInfo 返回帧信息。
 func (m *mockTCPPacket) FrameInfo() *n.FrameInfo {
 	return m.frameInfo
 }
 
+// NetworkFrame 根据帧信息与元数据构造网络帧。
 func (m *mockTCPPacket) NetworkFrame() n.NetworkFrame {
 	return n.NewNetworkFrame(m.frameInfo.LayerStack, *m.meta, m.frameInfo.Timestamp)
 }
 
+// SrcAddr 返回源 IP 地址。
 func (m *mockTCPPacket) SrcAddr() net.IP {
 	return m.srcAddr
 }
 
+// DstAddr 返回目的 IP 地址。
 func (m *mockTCPPacket) DstAddr() net.IP {
 	return m.dstAddr
 }
 
+// SrcPort 返回源端口。
 func (m *mockTCPPacket) SrcPort() layers.TCPPort {
 	return m.srcPort
 }
 
+// DstPort 返回目的端口。
 func (m *mockTCPPacket) DstPort() layers.TCPPort {
 	return m.dstPort
 }
 
+// SeqNum 返回 TCP 序列号。
 func (m *mockTCPPacket) SeqNum() uint32 {
 	return m.seqNum
 }
 
+// AckNum 返回 TCP 确认号。
 func (m *mockTCPPacket) AckNum() uint32 {
 	return m.ackNum
 }
 
+// IsSyn 返回是否带 SYN 标志。
 func (m *mockTCPPacket) IsSyn() bool {
 	return m.flags.syn
 }
 
+// IsSynAck 返回是否带 SYN-ACK 标志。
 func (m *mockTCPPacket) IsSynAck() bool {
 	return m.flags.synAck
 }
 
+// IsAck 返回是否带 ACK 标志。
 func (m *mockTCPPacket) IsAck() bool {
 	return m.flags.ack
 }
 
+// IsFin 返回是否带 FIN 标志。
 func (m *mockTCPPacket) IsFin() bool {
 	return m.flags.fin
 }
 
+// IsRst 返回是否带 RST 标志。
 func (m *mockTCPPacket) IsRst() bool {
 	return m.flags.rst
 }
 
+// GetPayload 返回 TCP 负载数据。
 func (m *mockTCPPacket) GetPayload() []byte {
 	return m.payload
 }

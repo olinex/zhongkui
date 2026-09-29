@@ -1,5 +1,3 @@
-// Package migrate（本文件）提供迁移演练：在临时数据库上执行迁移以验证脚本
-// 是否正确，不影响目标数据库。
 package migrate
 
 import (

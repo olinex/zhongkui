@@ -11,21 +11,19 @@ import (
 // UDP（User Datagram Protocol）是一种无连接的传输层协议，提供简单的不可靠数据报服务
 // 该结构体封装了UDP协议头部的所有字段，用于存储、查询和分析UDP数据包
 //
-// 字段说明:
-//   - UDPSrcPort:  源端口号，16位无符号整数，标识发送应用程序的端口
-//   - UDPDstPort:  目的端口号，16位无符号整数，标识接收应用程序的端口
-//   - UDPLength:   UDP数据包总长度，16位无符号整数，包括头部和数据（以字节为单位）
-//   - UDPChecksum: 校验和，16位无符号整数，用于错误检测（可选，IPv4中可为0）
-//
 // 使用场景:
 //   - 存储和查询UDP网络数据包
 //   - 分析DNS、DHCP、NTP等基于UDP的协议
 //   - 监控网络流量和性能分析
 type UDPHeaders struct {
-	UDPSrcPort  layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"srcPort"`
-	UDPDstPort  layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"dstPort"`
-	UDPLength   uint16         `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"length"`
-	UDPChecksum uint16         `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"checksum"`
+	// UDPSrcPort 源端口号，标识发送应用程序的端口
+	UDPSrcPort layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"srcPort"`
+	// UDPDstPort 目的端口号，标识接收应用程序的端口
+	UDPDstPort layers.UDPPort `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"dstPort"`
+	// UDPLength UDP 数据包总长度（字节），含头部与数据
+	UDPLength uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"length"`
+	// UDPChecksum 校验和，用于错误检测；IPv4 中可为 0
+	UDPChecksum uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"checksum"`
 }
 
 // NewUDPHeaders 从gopacket UDP层创建UDPHeaders
@@ -59,10 +57,12 @@ func NewUDPHeaders(udp *layers.UDP) *UDPHeaders {
 //   - 分析基于IPv4 UDP的应用程序协议
 //   - 网络流量监控和安全分析
 type PacketIPv4UDP struct {
-	PacketIPv4                     // 嵌入IPv4数据包基础结构
-	UDPHeaders                     // 嵌入UDP头部信息
-	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
-	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
+	PacketIPv4 // 嵌入IPv4数据包基础结构
+	UDPHeaders // 嵌入UDP头部信息
+	// UDPStreamID UDP 流唯一标识，由四元组哈希生成的 16 字符十六进制串
+	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
+	// Payload UDP 载荷，加密存储
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
 }
 
 // StreamID 返回TCP流ID
@@ -84,10 +84,12 @@ func (p *PacketIPv4UDP) StreamID() string {
 //   - 分析基于IPv6 UDP的应用程序协议（如DNS over IPv6）
 //   - IPv6网络流量监控和性能分析
 type PacketIPv6UDP struct {
-	PacketIPv6                     // 嵌入IPv6数据包基础结构
-	UDPHeaders                     // 嵌入UDP头部信息
-	UDPStreamID string             `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
-	Payload     *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
+	PacketIPv6 // 嵌入IPv6数据包基础结构
+	UDPHeaders // 嵌入UDP头部信息
+	// UDPStreamID UDP 流唯一标识，由四元组哈希生成的 16 字符十六进制串
+	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
+	// Payload UDP 载荷，加密存储
+	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
 }
 
 // StreamID 返回TCP流ID

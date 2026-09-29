@@ -28,6 +28,7 @@ type LoadFunc[T any] = func(ctx context.Context, batch []T) error
 //   - 消费方只通过 for range 读取 in，无需感知上游的关闭时机
 //   - 实现必须监听 ctx.Done，发送数据必须使用 select 而非裸 send，避免取消时 goroutine 泄漏
 type Stage[I, O any] interface {
+	// Process 消费 in 中的数据，处理后写入 out；返回前负责关闭 out。
 	Process(ctx context.Context, in <-chan I, out chan<- O) error
 }
 
@@ -36,6 +37,7 @@ type mapStage[I, O any] struct {
 	fn func(ctx context.Context, in I) (O, error)
 }
 
+// Process 对每个输入项应用转换函数，逐项写入 out。
 func (s *mapStage[I, O]) Process(ctx context.Context, in <-chan I, out chan<- O) error {
 	defer close(out)
 	for {
@@ -72,6 +74,7 @@ type bufferStage[T any] struct {
 	timeout time.Duration
 }
 
+// Process 按数量或超时聚合输入项，满批后写入 out。
 func (s *bufferStage[T]) Process(ctx context.Context, in <-chan T, out chan<- []T) error {
 	defer close(out)
 
@@ -161,10 +164,15 @@ func Buffer[T any](size int, timeout time.Duration) Stage[T, []T] {
 // Pipeline 流水线执行器，串联 extract → stages → buffer → loads。
 // 所有阶段由 errgroup 管理：任一阶段出错即取消整条流水线并返回第一个错误。
 type Pipeline[T any] struct {
-	extract  ExtractFunc[T]
-	stages   []Stage[T, T]
-	buffer   Stage[T, []T]
-	loads    []LoadFunc[T]
+	// extract 数据提取函数，作为流水线生产者向源通道输出数据。
+	extract ExtractFunc[T]
+	// stages 逐项转换阶段链，前一阶段的产出作为后一阶段的输入。
+	stages []Stage[T, T]
+	// buffer 批量聚合阶段，将 T 聚合为 []T。
+	buffer Stage[T, []T]
+	// loads 批量加载函数列表，对每个批次并发执行。
+	loads []LoadFunc[T]
+	// chanSize 阶段间通道的缓冲大小。
 	chanSize int
 }
 

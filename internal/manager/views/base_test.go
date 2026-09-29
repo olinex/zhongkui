@@ -163,11 +163,22 @@ type noJSONTagStruct struct {
 
 type testSearcherIn struct{}
 
-func (t *testSearcherIn) GetGreedy() bool                            { return false }
-func (t *testSearcherIn) GetPage() uint                              { return 1 }
-func (t *testSearcherIn) GetPageSize() uint                          { return 10 }
-func (t *testSearcherIn) GetOrderBy() []utils.OrderByItem            { return nil }
+// GetGreedy 返回固定的非贪婪标志。
+func (t *testSearcherIn) GetGreedy() bool { return false }
+
+// GetPage 返回固定页码。
+func (t *testSearcherIn) GetPage() uint { return 1 }
+
+// GetPageSize 返回固定每页条数。
+func (t *testSearcherIn) GetPageSize() uint { return 10 }
+
+// GetOrderBy 返回空的排序项列表。
+func (t *testSearcherIn) GetOrderBy() []utils.OrderByItem { return nil }
+
+// GetFilterBy 返回空的过滤项映射。
 func (t *testSearcherIn) GetFilterBy() map[string]utils.FilterByItem { return nil }
+
+// GetOptions 返回测试用的搜索选项。
 func (t *testSearcherIn) GetOptions() *utils.SearchOptions {
 	return &utils.SearchOptions{
 		OrderBy:  []string{"id", "name"},
