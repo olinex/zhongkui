@@ -146,9 +146,13 @@ func NewDefaultViperWithCmd(cmd *cobra.Command) *viper.Viper {
 //   - Default: 配置项的默认值，来自 default 标签
 //   - Comment: 配置项的说明文字，来自 comment 标签
 type ConfigDescription struct {
-	Path    string `json:"path"`
-	Kind    string `json:"kind"`
+	// Path 配置项的完整路径，如 "zap.default.level"。
+	Path string `json:"path"`
+	// Kind 配置项的 Go 类型名称，如 "string"、"bool"。
+	Kind string `json:"kind"`
+	// Default 配置项的默认值，来自 default 标签。
 	Default string `json:"default"`
+	// Comment 配置项的说明文字，来自 comment 标签。
 	Comment string `json:"comment"`
 }
 

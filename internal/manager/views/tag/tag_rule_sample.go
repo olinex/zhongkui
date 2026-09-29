@@ -276,6 +276,7 @@ func TagRuleSampleUpdate(c *gin.Context) {
 // TagRuleSampleBatchIn 批量操作标签规则样例的请求输入结构。
 // Ids 接受标量（单个 ID）或数组（多个 ID）。
 type TagRuleSampleBatchIn struct {
+	// Ids 待操作的标签规则样例主键列表
 	Ids views.FlexList[uint64] `json:"ids"`
 }
 

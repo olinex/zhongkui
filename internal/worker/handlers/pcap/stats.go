@@ -122,18 +122,30 @@ func (s *PcapStats) Snapshot() PcapStatsSnapshot {
 
 // PcapStatsSnapshot 统计数据的不可变快照
 type PcapStatsSnapshot struct {
-	Packets        int64
-	Bytes          int64
-	Eth            int64
-	IPv4           int64
-	IPv6           int64
-	IPv4TCP        int64
-	IPv6TCP        int64
-	IPv4UDP        int64
-	IPv6UDP        int64
+	// Packets 累计提取的数据包总数
+	Packets int64
+	// Bytes 累计提取的数据包总字节数
+	Bytes int64
+	// Eth 累计加载的 Ethernet 模型数量
+	Eth int64
+	// IPv4 累计加载的 IPv4 模型数量
+	IPv4 int64
+	// IPv6 累计加载的 IPv6 模型数量
+	IPv6 int64
+	// IPv4TCP 累计加载的 IPv4 TCP 模型数量
+	IPv4TCP int64
+	// IPv6TCP 累计加载的 IPv6 TCP 模型数量
+	IPv6TCP int64
+	// IPv4UDP 累计加载的 IPv4 UDP 模型数量
+	IPv4UDP int64
+	// IPv6UDP 累计加载的 IPv6 UDP 模型数量
+	IPv6UDP int64
+	// TCPFingerprint 累计成功的 TCP 被动指纹识别次数
 	TCPFingerprint int64
+	// FingerprintErr 累计失败的 TCP 被动指纹识别次数
 	FingerprintErr int64
-	Elapsed        time.Duration
+	// Elapsed 自统计收集器创建以来经过的耗时
+	Elapsed time.Duration
 }
 
 // String 格式化统计快照为人类可读的多行输出

@@ -7,6 +7,7 @@
 // 必须留在本包内以避免导入环）；归属信息（命名空间 / Agent 类型 / 来源会话）与写入器一同经 ctx
 // 注入，取不到时工具返回英文错误。工具元信息（llm.ToolSpecs）与出厂行（002_fixtures.sql）由
 // 另外两处提供，本文件只补实现并在 init 期登记。
+
 package tools
 
 import (

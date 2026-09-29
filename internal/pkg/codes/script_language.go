@@ -25,8 +25,11 @@ var (
 //   - Name: 书写系统的英文名称（如 "Han (Simplified variant)"、"Latin"、"Cyrillic"）
 //   - Numeric: 三位数字代码（如 "501"、"215"、"220"），与联合国数字代码一致
 type ISO15924Entry struct {
-	Alpha4  string `json:"alpha_4"`
-	Name    string `json:"name"`
+	// Alpha4 四位字母代码（Alpha-4），如 "Hans"、"Latn"。
+	Alpha4 string `json:"alpha_4"`
+	// Name 书写系统的英文名称，如 "Latin"、"Cyrillic"。
+	Name string `json:"name"`
+	// Numeric 三位数字代码，如 "501"（简体汉字）、"215"（拉丁文）。
 	Numeric string `json:"numeric"`
 }
 

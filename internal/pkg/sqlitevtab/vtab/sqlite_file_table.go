@@ -8,6 +8,7 @@
 // 下推（区别于 MySQL/PG/ClickHouse 的大小写敏感问题）；EQ/NE/GT/GE/LT/LE/IS NULL 自然
 // 一致下推。OpGLOB/OpMATCH 需绑定非参数化的模式匹配形式，为简洁起见仍跳过、交由
 // sqlite 复查（语义一致，复不复查结果相同）。
+
 package vtab
 
 import (

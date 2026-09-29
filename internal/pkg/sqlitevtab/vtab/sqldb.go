@@ -9,6 +9,7 @@
 //
 // 超集契约、借还的取数即还语义与 MySQL/PostgreSQL 相同；各数据源用独立的
 // sqlDBRegistry 实例维护自己的 Key 空间与 CloseAll。
+
 package vtab
 
 import (

@@ -1,5 +1,3 @@
-// Package migrate（本文件）负责临时数据库的创建、连接与清理，用于迁移
-// 演练、结构校验等需要隔离环境的场景。
 package migrate
 
 import (

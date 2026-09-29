@@ -3,6 +3,7 @@
 // 当同时存在 key 精确值与 field 精确等值（OpEQ）→HGET 单行，否则 HGETALL 逐 field
 // 一行并按 field 升序保证确定性。类型非 hash 的键不产生行。连接经共享 RedisPool
 // 在 Open 借出、取数后即时归还。
+
 package vtab
 
 import (

@@ -1,6 +1,7 @@
 // Package vtab（本文件）提供 ClickHouse 数据源单元测试。
 // 与 Postgres 类似，以 go-sqlmock 起 mock db 注入 ClickHousePool（无需真实 ClickHouse），
 // 验证类型映射、下推构建与经 SQLitePool RegisterDatasource + Query 的端到端查询。
+
 package vtab
 
 import (

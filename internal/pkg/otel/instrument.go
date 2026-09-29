@@ -126,14 +126,17 @@ type contextStrippingCore struct {
 	zapcore.Core
 }
 
+// With 返回携带过滤后字段的新 Core，剔除 context.Context 字段。
 func (c *contextStrippingCore) With(fields []zapcore.Field) zapcore.Core {
 	return &contextStrippingCore{c.Core.With(stripContextFields(fields))}
 }
 
+// Check 透传底层 Core，判断该日志条目是否需要记录。
 func (c *contextStrippingCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	return c.Core.Check(ent, ce)
 }
 
+// Write 剔除 context.Context 字段后写入底层 Core。
 func (c *contextStrippingCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return c.Core.Write(ent, stripContextFields(fields))
 }

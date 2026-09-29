@@ -1,6 +1,7 @@
 // Package queue 提供基于 asynq 的事件驱动任务队列功能。
 // 该包承载任务队列客户端、服务器、调度器、配置管理和中间件等模块，
 // 与数据处理流水线（etl 包）解耦，仅负责任务的投递与消费。
+
 package pipeline
 
 import (

@@ -10,6 +10,7 @@
 // 本文件遵循 internal/pkg/sqlitevtab 的 Datasource 超集契约：数据源头尽力过滤是优化，
 // sqlite 侧以 Omit=false 复查每个返回行，故任何解析/扫描都必须返回真实匹配行的超集，
 // 禁止漏行。
+
 package vtab
 
 import (

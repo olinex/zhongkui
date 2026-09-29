@@ -11,12 +11,16 @@ import (
 // ---------------------------------------------------------------------------
 
 const (
-	FileExt             = "zkcn"
-	FileDotExt          = "." + FileExt
+	// FileExt 管道输出文件的扩展名（不含点）。
+	FileExt = "zkcn"
+	// FileDotExt 带点的管道输出文件扩展名（.zkcn）。
+	FileDotExt = "." + FileExt
+	// CompressContentType 管道输出流的内容类型。
 	CompressContentType = "application/zkcn"
 	MagicBytes          = "\x5a\x4b\x43\x4e" // "ZKCN" — Zhongkui Crypto Notation
-	HeaderVersion       = 0x01
-	HeaderSize          = 7 // magic(4) + version(1) + compressID(1) + encryptID(1)
+	// HeaderVersion 管道自描述头部的版本号。
+	HeaderVersion = 0x01
+	HeaderSize    = 7 // magic(4) + version(1) + compressID(1) + encryptID(1)
 )
 
 // Pipeline 表示一个流式变换管道，固定按 先压缩(Compress) → 后加密(Encrypt) 的顺序处理数据。
@@ -147,10 +151,12 @@ type pipelineWriteCloser struct {
 	encWriter  io.WriteCloser
 }
 
+// Write 将 p 写入压缩写入器，数据经压缩后交由加密写入器写入底层 writer。
 func (pwc *pipelineWriteCloser) Write(p []byte) (int, error) {
 	return pwc.compWriter.Write(p)
 }
 
+// Close 依次关闭压缩写入器与加密写入器，确保剩余数据全部刷入底层 writer。
 func (pwc *pipelineWriteCloser) Close() error {
 	// 先关闭压缩写入器（刷新缓冲区，写入剩余压缩数据）
 	if err := pwc.compWriter.Close(); err != nil {
@@ -175,10 +181,12 @@ type pipelineReadCloser struct {
 	decompReader io.ReadCloser // 解压读取器（外层，直接面向调用者）
 }
 
+// Read 从解压读取器读取数据，数据已依次经解密与解压还原为明文。
 func (prc *pipelineReadCloser) Read(p []byte) (int, error) {
 	return prc.decompReader.Read(p)
 }
 
+// Close 依次关闭解压读取器、解密读取器与源 reader，释放各层资源。
 func (prc *pipelineReadCloser) Close() error {
 	// 先关闭解压读取器（释放解压器内部资源）
 	if err := prc.decompReader.Close(); err != nil {

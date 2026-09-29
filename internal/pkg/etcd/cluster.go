@@ -25,6 +25,7 @@ import (
 )
 
 var (
+	// ClusterEtcdPrefix 集群成员注册数据在 etcd 中的公共键前缀。
 	ClusterEtcdPrefix = WithPrefix("cluster/")
 )
 

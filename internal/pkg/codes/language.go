@@ -25,9 +25,12 @@ var (
 //   - Alpha3：对应 ISO 639-2/T 的三位字母代码（如 "zho"、"eng"），所有语言均具备。
 //   - Name：语言的英文标准名称（如 "Chinese"、"English"）。
 type ISO6392Entry struct {
+	// Alpha2 对应 ISO 639-1 的两位字母代码，如 "zh"、"en"；部分语言无此代码则为空。
 	Alpha2 string `json:"alpha_2,omitempty"`
+	// Alpha3 对应 ISO 639-2/T 的三位字母代码，如 "zho"、"eng"。
 	Alpha3 string `json:"alpha_3"`
-	Name   string `json:"name"`
+	// Name 语言的英文标准名称，如 "Chinese"、"English"。
+	Name string `json:"name"`
 }
 
 // ISO6392Data 表示 ISO 639-2 JSON 数据文件的顶层结构。
@@ -41,6 +44,7 @@ type ISO6392Entry struct {
 //	  ]
 //	}
 type ISO6392Data struct {
+	// Languages 包含所有 ISO 639-2 语言条目。
 	Languages []ISO6392Entry `json:"639-2"`
 }
 

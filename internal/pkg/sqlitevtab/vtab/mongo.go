@@ -7,6 +7,7 @@
 // 正确性取舍：Mongo 数值类型间等值比较存在类型强转歧义，为保证超集契约不成立时的漏
 // 行风险，本数据源不做任何谓词下推（Filterable 恒空），由 sqlite 对全量集合行做本地
 // 过滤。详见 mongo_table.go。
+
 package vtab
 
 import (

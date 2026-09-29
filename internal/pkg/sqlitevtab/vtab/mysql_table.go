@@ -4,6 +4,7 @@
 // schema；Open 时借出 *sql.DB，把下推约束构建为参数化 SELECT，同步扫描全部行后
 // 立即归还连接。仅非 ValueTypeAny 的列参与下推，GLOB/MATCH 与类型不确定的谓词
 // 交由 sqlite 以 Omit=false 复查兜底，保证下推结果为真实匹配行的超集。
+
 package vtab
 
 import (

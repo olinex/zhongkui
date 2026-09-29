@@ -496,6 +496,7 @@ func (x *xdpWire) refillFillRing() {
 	x.fillRing.enqueue(prod)
 }
 
+// Close 释放 XDP 链路、eBPF 对象、socket 文件描述符及环形缓冲区等资源。
 func (x *xdpWire) Close() {
 	if x.xdpLink != nil {
 		x.xdpLink.Close()

@@ -12,8 +12,10 @@ import "strings"
 //   - Language：ISO 639-2 语言条目，包含语言的 Alpha-2、Alpha-3 代码及名称
 //   - Country：ISO 3166-1 国家/地区条目，包含国家/地区的 Alpha-2、Alpha-3 代码及名称
 type RFC1766Entry struct {
+	// Language 语言条目（ISO 639-2）。
 	Language *ISO6392Entry
-	Country  *ISO31661Entry
+	// Country 国家/地区条目（ISO 3166-1）。
+	Country *ISO31661Entry
 }
 
 // RFC1766Codes 提供基于 RFC 1766 标准的区域设置代码查询与转换能力。
@@ -89,8 +91,10 @@ func (c *RFC1766Codes) ConvertFromName(name string) *RFC1766Entry {
 //   - Language：ISO 639-2 语言条目，包含语言的 Alpha-2、Alpha-3 代码及名称
 //   - Script：ISO 15924 文字脚本条目，包含脚本的 Alpha-4 代码、名称及数字代码
 type RFC4646Entry struct {
+	// Language 语言条目（ISO 639-2）。
 	Language *ISO6392Entry
-	Script   *ISO15924Entry
+	// Script 文字脚本条目（ISO 15924）。
+	Script *ISO15924Entry
 }
 
 // RFC4646Codes 提供基于 RFC 4646 标准的语言脚本代码查询与转换能力。

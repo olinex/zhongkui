@@ -1,6 +1,7 @@
 // Package vtab 提供 sqlitevtab 标准之上可直接复用的数据源实现。
 // StaticDatasource 是内存行集的参考数据源实现，演示 Datasource 契约与下推
 // 约束匹配语义，同时可作为测试基准；接入方可参考其模式实现自有数据源。
+
 package vtab
 
 import (

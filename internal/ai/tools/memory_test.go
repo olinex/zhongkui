@@ -1,6 +1,7 @@
 // 本文件覆盖内置工具 memory_write 的纯逻辑：缺写入器、空 content、kind 校验/缺省、正常写入时
 // 传入写入器的字段时间与返回 JSON。全部用例不依赖 PostgreSQL（用假 MemoryWriter 断言收到的入参），
 // 也不依赖 internal/ai（本包不能反向导入）。
+
 package tools
 
 import (

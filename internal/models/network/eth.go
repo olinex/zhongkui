@@ -22,10 +22,14 @@ import (
 //   - 使用JSON标签支持序列化和反序列化
 //   - 在ClickHouse中使用ZSTD(3)压缩算法优化存储
 type EthernetHeaders struct {
-	EthDstMAC serializer.MacAddr  `gorm:"type:FixedString(6)" json:"ethDstMac"`
-	EthSrcMAC serializer.MacAddr  `gorm:"type:FixedString(6)" json:"ethSrcMac"`
-	EthType   layers.EthernetType `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethType"`
-	EthLength uint16              `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethLength"`
+	// EthDstMAC 目的 MAC 地址
+	EthDstMAC serializer.MacAddr `gorm:"type:FixedString(6)" json:"ethDstMac"`
+	// EthSrcMAC 源 MAC 地址
+	EthSrcMAC serializer.MacAddr `gorm:"type:FixedString(6)" json:"ethSrcMac"`
+	// EthType 以太网类型，标识上层协议类型（如 IPv4、IPv6、ARP 等）
+	EthType layers.EthernetType `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethType"`
+	// EthLength 以太网帧数据部分长度（字节）
+	EthLength uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ethLength"`
 }
 
 // NewEthernetHeaders 从gopacket以太网层创建EthernetHeaders实例

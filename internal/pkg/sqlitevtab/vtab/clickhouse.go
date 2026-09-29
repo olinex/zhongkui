@@ -6,6 +6,7 @@
 //
 // 超集契约与下推取舍见 clickhouse_table.go：ClickHouse 的 LIKE 大小写敏感（与 sqlite
 // 不敏感不一致）而跳过下推，仅非 Any 列的比较/等值谓词安全下推。
+
 package vtab
 
 import (

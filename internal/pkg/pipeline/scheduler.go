@@ -1,6 +1,65 @@
-// Package queue 提供基于 asynq 的任务队列和分布式调度器功能。
-// 该包实现了基于 etcd 分布式选举的统一定时任务调度器，支持多实例部署下的高可用性。
-// 调度器通过 etcd 存储定时任务配置，确保配置的一致性和持久化。
+// Package pipeline 提供基于 asynq 的任务队列与分布式调度：投递（Client）、消费（Server）、
+// 定时触发（UnifiedScheduler）与只读监控（Inspector）。
+//
+// ## 职责边界
+//
+// 本包只负责任务的「投递、消费、调度」，不承载任何数据处理逻辑：数据流水线的 extract /
+// transform / load 语义属于 internal/pkg/etl，业务处理属于 internal/worker。两者以 etl.Task
+// 契约衔接——asynq.Task 满足该契约，故队列任务可直接投给 Handler，本包不依赖具体业务。
+//
+// ## 投递与消费
+//
+// Client 封装 asynq 客户端，经 EnqueueContext 投递任务（并提供 NewInspector 供监控）；Server
+// 封装 asynq 服务器，以 ServeMux 按任务类型路由到 etl.HandlerFuncs，并在最外层挂
+// RecoverWithStack 中间件兜底 panic、把带堆栈的错误回写 asynq 供任务详情查看。是否重试由投递
+// 侧的 asynq 选项（如 MaxRetry）决定，消费侧不改变该语义。DedupErrorMsg 对驱动重复拼接的错误
+// 文案做去重聚合，降低日志噪声。
+//
+// ## 统一定时调度器
+//
+// UnifiedScheduler 以单一调度循环统一承担两种触发模式，二者共享同一 etcd「触发点游标」，
+// 由 etcd 选举（ElectionService）保证多实例下仅领导者运行，选举胜出即启动、失败即停止：
+//
+//   - 游标模式（interval > 0）：把时间对齐到以 interval 为步长、以 Unix 纪元为基准的全局网格，
+//     取严格晚于上次游标且不晚于当前网格点的所有网格点作为触发点；
+//   - cron 模式（cronSpec != ""）：以 robfig/cron 计算自上次触发点以来的 cron 触发点。
+//
+// 每个触发点被投递为一条独立任务，载荷统一为 CursorTaskPayload{TriggerAt, Payload}：TriggerAt
+// 承载该触发时间点，Payload 透传任务配置中的固定参数。处理器始终以载荷中的 TriggerAt 确定数据
+// 范围，因此任务即使因积压或重试而延迟执行，其语义也不漂移；重复投递的载荷完全一致，处理器只要
+// 幂等即可保证结果一致。全部触发点入队成功后才经 CAS 事务把游标推进到最新触发点——若已被其他
+// 实例推进则放弃写入，避免游标倒退。积压行为由 BacklogPolicy 控制：关闭时不补投历史触发点、直接
+// 对齐到当前网格点；窗口（Window）只补投窗口内的触发点；Limit 限制单次补投数量。游标模式另以
+// Lookback 把触发基准时刻前移，确保统计的是「已结束的完整周期」而非仍在写入的当前周期。
+//
+// ## 配置与唯一事实来源
+//
+// SchedulerTaskConfig 描述单个任务（cronSpec / interval / queue / timeout / maxRetry / enabled /
+// retention / lookback / payload 等，字段默认值由 default 标签声明）。配置的唯一事实来源是
+// etcd：config.toml 中的默认任务在启动时经 importTaskConfigs 写入（存在即不覆盖），调度循环与
+// 前端管理接口都读写同一份 etcd 配置，不存在「文件与运行时」两份状态。ToAsynqConfig 把队列
+// 级配置转换为 asynq 原生配置，DescribeConfig / ExtractConfig 供配置描述与加载复用。
+// `sched_manager.go` 提供任务配置的 etcd 增删改查与「立即执行」原语，供前端定时任务管理接口与
+// 调度循环共用。
+//
+// ## 设计取舍
+//
+// 以单一调度循环统一 cron 与 interval 两种模式，而非为各任务各起一个调度器，目的是让「游标读写、
+// 选举、补投策略、投递入口」只有一份实现：两种模式的差异被压缩为「如何计算触发点」这一步，其余
+// 语义（去重、补投、CAS、幂等）完全共享，减少行为分叉。以 etcd 而非本地文件作为配置的唯一事实
+// 来源，使多实例、跨重启的配置天然一致，前端改动立即被调度循环感知，不存在「文件与运行时」两份
+// 状态。载荷携带各自的 TriggerAt 且重复投递完全一致，把「任务延迟执行」与「任务语义漂移」彻底
+// 解耦：处理器只需按 TriggerAt 划定数据范围并保持幂等，积压与重试便不会改变业务含义。游标经 CAS
+// 推进而非无条件写回，避免多实例竞争下把游标推回更早的时间点。多实例安全由 etcd 选举保证——仅
+// 领导者运行调度循环，选举胜出即启动、失败即停止，故无需额外的分布式锁。
+//
+// ## 可观测与运维
+//
+// 投递与消费的分离让监控成为旁路：NewInspector 以只读方式读取 asynq 运行态，供「数据处理-任务
+// 列表」展示队列与执行记录，不影响任务流转；SchedulerTaskConfig 的 retention 控制任务完成/失败
+// 后的保留时长，便于事后回看。DedupErrorMsg 对驱动重复拼接的错误文案做聚合，避免同一故障刷屏。
+//
+// 本文件（scheduler.go）承载调度循环、游标推进与 etcd 配置读写；投递与消费见 client.go / server.go。
 package pipeline
 
 import (

@@ -21,6 +21,7 @@ var (
 // （如 ["image"]、["video"]）的映射。部分扩展名可能对应多个分类标签，
 // 例如 "html" 同时属于 ["code", "web"] 两个分类。
 type FilenameExtensionCodes struct {
+	// Extensions 文件扩展名（小写）到分类标签列表的映射，如 "jpg" -> ["image"]、"html" -> ["code", "web"]。
 	Extensions map[string][]string `json:"extensions"`
 }
 

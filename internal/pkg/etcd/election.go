@@ -40,9 +40,13 @@ var (
 //     该方法应阻塞运行直到上下文取消或业务逻辑完成
 //   - Shutdown: 优雅关闭领导者的业务逻辑，在 Election.Shutdown 时被调用
 type ElectionHandler interface {
+	// Name 返回选举名称，同一名称的候选者竞争同一个领导者位置。
 	Name() string
+	// CandidateID 返回当前候选者的唯一标识，用于判断是否由自己成为领导者。
 	CandidateID() string
+	// Start 在成为领导者时被调用，执行领导者业务逻辑，应阻塞运行至上下文取消或业务完成。
 	Start(ctx context.Context) error
+	// Shutdown 优雅关闭领导者的业务逻辑。
 	Shutdown(ctx context.Context) error
 }
 

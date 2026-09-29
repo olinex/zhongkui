@@ -3,6 +3,7 @@
 // Value 取完整类型键（数据库存储语义）；tagEventDimension 的 Key/Value 均取维度取值
 // （snake_case 列名）。注册表由包级变量字面量构建，此处经 enum.RegisterSource 声明
 // 来源，与 TypeKeys()/AllDimensions() 共用同一注册表作为单一来源。
+
 package tagengine
 
 import (

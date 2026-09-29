@@ -224,6 +224,7 @@ func init() {
 	createCmd.AddCommand(createCapturerCmd)
 	createCmd.AddCommand(createPasswordBookCmd)
 	createCmd.AddCommand(generateTestcaseCmd)
+	createCmd.AddCommand(createDocsCmd)
 	RootCmd.AddCommand(createCmd)
 
 	// s3

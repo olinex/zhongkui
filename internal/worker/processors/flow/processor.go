@@ -16,7 +16,9 @@ import (
 )
 
 const (
+	// ProcIpv4Tcp IPv4 TCP 处理器标识
 	ProcIpv4Tcp = "ipv4-tcp"
+	// ProcIpv6Tcp IPv6 TCP 处理器标识
 	ProcIpv6Tcp = "ipv6-tcp"
 )
 

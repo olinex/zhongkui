@@ -222,6 +222,7 @@ type TagRuleModelMetadataOut struct {
 // 展示名不在此输出：前端持有目标模型对应的 i18n 命名空间，按 Value 自行拼键翻译，
 // 避免后端烤入具体命名空间前缀造成前后端耦合。
 type TagRuleModelDimensionOut struct {
+	// Value 维度取值（snake_case 列名）
 	Value string `json:"value"`
 }
 
@@ -513,6 +514,7 @@ func TagRuleUpdate(c *gin.Context) {
 // TagRuleBatchIn 批量操作标签规则的请求输入结构。
 // Ids 接受标量（单个 ID）或数组（多个 ID）。
 type TagRuleBatchIn struct {
+	// Ids 待操作的标签规则主键列表
 	Ids views.FlexList[uint64] `json:"ids"`
 }
 

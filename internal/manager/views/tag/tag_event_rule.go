@@ -462,6 +462,7 @@ func TagEventRuleUpdate(c *gin.Context) {
 // TagEventRuleBatchIn 批量操作标签事件规则的请求输入结构。
 // Ids 接受标量（单个 ID）或数组（多个 ID）。
 type TagEventRuleBatchIn struct {
+	// Ids 待操作的标签事件规则主键列表
 	Ids views.FlexList[uint64] `json:"ids"`
 }
 

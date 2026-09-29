@@ -83,6 +83,7 @@ type aesGCMWriteCloser struct {
 	closed    bool
 }
 
+// Write 将 p 写入内部缓冲区，缓冲满一块（chunkSize）时立即加密并写入底层 writer，返回已接收字节数。
 func (wc *aesGCMWriteCloser) Write(p []byte) (int, error) {
 	wc.mu.Lock()
 	defer wc.mu.Unlock()
@@ -116,6 +117,7 @@ func (wc *aesGCMWriteCloser) Write(p []byte) (int, error) {
 	return n, nil
 }
 
+// Close 加密并写入缓冲区中剩余的不完整块后关闭写入器；重复关闭安全幂等。
 func (wc *aesGCMWriteCloser) Close() error {
 	wc.mu.Lock()
 	defer wc.mu.Unlock()
@@ -176,6 +178,7 @@ type aesGCMReadCloser struct {
 	closed    bool
 }
 
+// Read 从已解密的缓冲区读取明文，缓冲区为空时解密下一个密文块，读到流末尾返回 io.EOF。
 func (rc *aesGCMReadCloser) Read(p []byte) (int, error) {
 	// 当缓冲区无数据时，尝试读取下一个块
 	for rc.buf.Len() == 0 && !rc.exhausted {
@@ -191,6 +194,7 @@ func (rc *aesGCMReadCloser) Read(p []byte) (int, error) {
 	return rc.buf.Read(p)
 }
 
+// Close 关闭读取器；重复关闭安全幂等。
 func (rc *aesGCMReadCloser) Close() error {
 	rc.mu.Lock()
 	defer rc.mu.Unlock()

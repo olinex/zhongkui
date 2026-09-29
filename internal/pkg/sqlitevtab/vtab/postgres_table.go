@@ -9,6 +9,7 @@
 // OpLIKE 一律不在此下推，交由 sqlite 以 Omit=false 复查兜底；OpGLOB/OpMATCH 同样无
 // 直接语义而跳过。EQ/NE/GT/GE/LT/LE 与 IS NULL/IS NOT NULL 在数值/布尔/文本（默认
 // collation 下）上与 sqlite 语义一致，予以安全下推。
+
 package vtab
 
 import (

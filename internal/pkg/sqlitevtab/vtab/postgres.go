@@ -13,6 +13,7 @@
 //
 // PostgreSQL 标识符用双引号包裹（quotePgIdent），与 MySQL 的反引号不同；驱动经
 // pgx/v5 stdlib 注册（sql.OpenDB + stdlib.OpenDB）。
+
 package vtab
 
 import (

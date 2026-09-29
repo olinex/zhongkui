@@ -560,6 +560,9 @@ other = "  流 [[.Stream]] 事务 [[.Tx]]：HTTP 响应缺失或不完整：[[.E
 [cli.testcase.parse-response-failed]
 other = "  流 [[.Stream]] 事务 [[.Tx]]：解析 HTTP 响应失败：[[.Err]]"
 
+[cli.docs.generated]
+other = "文档已生成至 [[.Dir]]"
+
 [cli.s3.lifecycle.applied]
 other = "已应用 [[.Count]] 条生命周期规则到存储桶 [[.Bucket]]"
 
@@ -1374,6 +1377,12 @@ other = "从 pcap 文件中提取 HTTP 测试用例"
 
 [cmd.create.testcase.long]
 other = "使用 tshark 从 pcap 文件中提取 HTTP 请求/响应数据，\n并生成 JSON 测试用例文件，用于验证 TCP 重组和 HTTP 协议识别逻辑。\n\n每个 HTTP 事务（请求-响应对）生成一个 JSON 文件。\n支持 HTTP/1.1 keep-alive 连接中每个 TCP 流包含多个事务的情况。"
+
+[cmd.create.docs.short]
+other = "从代码注释生成 Diátaxis 分类文档"
+
+[cmd.create.docs.long]
+other = "扫描文档注册表，调用 gomarkdoc 将各功能包的注释导出为 Markdown（教程/操作指南/参考/解释），并生成 docs/README.md 索引。"
 
 [cmd.force-reset-password.short]
 other = "通过命令行强制重置用户密码"

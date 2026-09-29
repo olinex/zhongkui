@@ -42,6 +42,9 @@ func newFlowClusterHandler[P tcp.TCPPacket](
 	}
 }
 
+// Poll 按水位区间从 ClickHouse 轮询数据包并投递到 items 通道。
+// 仅查询 created_at 落在 (prevWatermark, curWatermark] 且哈希命中 vnodeIndices 的分片，
+// 按批次边查询边发送，ctx 取消时提前返回。
 func (h *flowClusterHandler[P]) Poll(ctx context.Context, prevWatermark, curWatermark time.Time, vnodeIndices []int, items chan<- P) error {
 	pollStart := time.Now()
 	h.logger.Ctx(ctx).Debugf("flow handler poll started, prev=%s, end=%s, vnodeIndices=%v",

@@ -7,6 +7,7 @@
 //     超集契约，故一律由 sqlite 对全量行做本地过滤。
 //   - Open 借出 *mongo.Client，Find({}) 取回全部文档，逐文档按 schema 列归一化输出单元格；
 //     缺失字段→nil；嵌套文档/数组等复杂值输出为可读文本（ValueTypeAny，仅展示、不参与过滤）。
+
 package vtab
 
 import (

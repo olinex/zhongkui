@@ -1,6 +1,7 @@
 // Package pipeline 提供基于 asynq 的任务队列与分布式调度功能。
 // 此文件提供调度器任务配置的 etcd 增删改查与"立即执行"原语，
 // 供前端定时任务管理接口（internal/manager/views/etl.go）与调度循环共用。
+
 package pipeline
 
 import (

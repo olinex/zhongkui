@@ -1,5 +1,3 @@
-// Package migrate（本文件）实现模型定义与数据库实际结构的比对校验，
-// 在临时库上执行迁移后逐表逐列检查差异。
 package migrate
 
 import (

@@ -50,12 +50,18 @@ const (
 //   - BpfExpr: BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符
 //   - Enabled: 是否启用该抓包器配置
 type CapturerConfigIn struct {
-	Device  string                `json:"device" viper:"device" prompt:"请输入网络设备名称（如 eth0）" binding:"required,min=2,max=32"`
-	SnapLen uint32                `json:"snapLen" viper:"snap-len" prompt:"请输入抓包长度（字节）" binding:"required"`
-	Promisc bool                  `json:"promisc" viper:"promisc" prompt:"是否启用混杂模式？"`
+	// Device 网络设备名称（如 eth0）。
+	Device string `json:"device" viper:"device" prompt:"请输入网络设备名称（如 eth0）" binding:"required,min=2,max=32"`
+	// SnapLen 每个数据包的捕获长度（字节数）。
+	SnapLen uint32 `json:"snapLen" viper:"snap-len" prompt:"请输入抓包长度（字节）" binding:"required"`
+	// Promisc 是否启用混杂模式。
+	Promisc bool `json:"promisc" viper:"promisc" prompt:"是否启用混杂模式？"`
+	// Timeout 读超时时间（毫秒），支持可读时长字符串或整数毫秒。
 	Timeout serializer.DurationMS `json:"timeout" viper:"read-timeout" prompt:"请输入读超时时间（如 5s、1m30s）" binding:"required"`
-	BpfExpr string                `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024"`
-	Enabled bool                  `json:"enabled" viper:"enabled" prompt:"是否启用该抓包器？"`
+	// BpfExpr BPF 过滤表达式（如 "tcp port 80"）。
+	BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024"`
+	// Enabled 是否启用该抓包器配置。
+	Enabled bool `json:"enabled" viper:"enabled" prompt:"是否启用该抓包器？"`
 }
 
 // ToGRPC 将 CapturerConfigIn 转换为 gRPC 协议层定义的 Config 结构。
@@ -85,10 +91,14 @@ func (cc *CapturerConfigIn) ToGRPC() *reporter_v1.Config {
 //   - Version:   抓包器版本号，长度限制 3~32 字符
 //   - Config:    抓包器的运行配置
 type CapturerCreateIn struct {
-	Namespace string           `json:"namespace" viper:"namespace" prompt:"请输入命名空间" binding:"required,min=3,max=32"`
-	Name      string           `json:"name" viper:"name" prompt:"请输入抓包器名称" binding:"required,min=3,max=32"`
-	Version   string           `json:"version" viper:"version" prompt:"请输入版本号" binding:"required,min=3,max=32"`
-	Config    CapturerConfigIn `json:"config"`
+	// Namespace 所属命名空间名称。
+	Namespace string `json:"namespace" viper:"namespace" prompt:"请输入命名空间" binding:"required,min=3,max=32"`
+	// Name 抓包器名称。
+	Name string `json:"name" viper:"name" prompt:"请输入抓包器名称" binding:"required,min=3,max=32"`
+	// Version 抓包器版本号。
+	Version string `json:"version" viper:"version" prompt:"请输入版本号" binding:"required,min=3,max=32"`
+	// Config 抓包器的运行配置。
+	Config CapturerConfigIn `json:"config"`
 }
 
 // CapturerBaseDetailOut 定义抓包器的基础详情输出结构。
@@ -101,9 +111,12 @@ type CapturerCreateIn struct {
 //   - Version:           抓包器版本号
 type CapturerBaseDetailOut struct {
 	utils.BaseItemOut
+	// NamespaceName 所属命名空间名称。
 	NamespaceName string `json:"namespace"`
-	Name          string `json:"name"`
-	Version       string `json:"version"`
+	// Name 抓包器名称。
+	Name string `json:"name"`
+	// Version 抓包器版本号。
+	Version string `json:"version"`
 }
 
 // CapturerDetailOut 定义抓包器的完整详情输出结构。
@@ -111,6 +124,7 @@ type CapturerBaseDetailOut struct {
 // 用于 CapturerDetailGet 接口的响应体。
 type CapturerDetailOut struct {
 	CapturerBaseDetailOut
+	// Config 抓包器的运行配置。
 	Config CapturerConfigIn `json:"config"`
 }
 
@@ -314,6 +328,7 @@ func CapturerUpdate(c *gin.Context) {
 // CapturerBatchDeleteIn 批量删除抓包器的请求输入结构。
 // Ids 接受标量（单个 ID）或数组（多个 ID）。
 type CapturerBatchDeleteIn struct {
+	// Ids 待删除的抓包器主键 ID 列表。
 	Ids views.FlexList[uint64] `json:"ids"`
 }
 

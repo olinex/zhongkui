@@ -28,11 +28,17 @@ var (
 //   - Numeric: 三位数字代码（如 "156"、"840"），与联合国统计司的数字代码一致
 //   - OfficialName: 国家/地区的官方全称（如 "People's Republic of China"），部分条目可能为空
 type ISO31661Entry struct {
-	Alpha2       string `json:"alpha_2"`
-	Alpha3       string `json:"alpha_3"`
-	Flag         string `json:"flag"`
-	Name         string `json:"name"`
-	Numeric      string `json:"numeric"`
+	// Alpha2 两位字母代码（Alpha-2），如 "CN"、"US"。
+	Alpha2 string `json:"alpha_2"`
+	// Alpha3 三位字母代码（Alpha-3），如 "CHN"、"USA"。
+	Alpha3 string `json:"alpha_3"`
+	// Flag 该国家/地区的旗帜标识，如 "🇨🇳"、"🇺🇸"。
+	Flag string `json:"flag"`
+	// Name 国家/地区的英文名称，如 "China"、"United States"。
+	Name string `json:"name"`
+	// Numeric 三位数字代码，如 "156"（中国）、"840"（美国）。
+	Numeric string `json:"numeric"`
+	// OfficialName 国家/地区的官方全称，如 "People's Republic of China"，部分条目可能为空。
 	OfficialName string `json:"official_name,omitempty"`
 }
 

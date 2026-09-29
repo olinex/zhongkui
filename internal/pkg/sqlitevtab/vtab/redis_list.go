@@ -2,6 +2,7 @@
 // redis_list 表把 Redis list 每个元素作为一行：key 列支持精确等值/模式扫描；元素以
 // LRANGE 0 -1 读取，position 为 0 起始序号（int64 亲和）、value 为元素值。类型非 list
 // 的键不产生行。连接经共享 RedisPool 在 Open 借出、取数后即时归还。
+
 package vtab
 
 import (

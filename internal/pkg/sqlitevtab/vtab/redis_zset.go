@@ -2,6 +2,7 @@
 // redis_zset 表把 Redis zset 每个成员作为一行：key 列支持精确等值/模式扫描；成员以
 // ZRANGE 0 -1 WITHSCORES 读取，score 解析为 float64（ValueTypeFloat64）。类型非 zset
 // 的键不产生行。连接经共享 RedisPool 在 Open 借出、取数后即时归还。
+
 package vtab
 
 import (

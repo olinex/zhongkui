@@ -21,7 +21,9 @@ const (
 // 当业务需要持续运行而非一次性的任务处理时，应使用 Processor 而非 Handler。
 // Processor 是分布式/流式驱动的常驻处理契约，其生命周期由运行时统一编排，不隶属于任务队列。
 type Processor interface {
+	// Start 启动后台循环，阻塞直到 ctx 取消或发生错误；name 为处理器标识。
 	Start(ctx context.Context, name string) error
+	// Shutdown 优雅停止处理器并释放资源。
 	Shutdown()
 }
 
@@ -38,11 +40,13 @@ type ProcessorWrapper struct {
 	params map[string]any
 }
 
+// Start 将配置参数注入上下文后启动被包装的处理器。
 func (p *ProcessorWrapper) Start(ctx context.Context, name string) error {
 	ctx = context.WithValue(ctx, ContextProcParamName, p.params)
 	return p.Processor.Start(ctx, name)
 }
 
+// Shutdown 停止被包装的处理器。
 func (p *ProcessorWrapper) Shutdown() {
 	p.Processor.Shutdown()
 }

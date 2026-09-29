@@ -8,6 +8,7 @@
 //
 // 本文件（service.go）定义了基于 Uber FX 依赖注入框架的 HTTP 服务启动函数，
 // 负责在应用启动时异步启动 HTTP 服务器，在应用停止时优雅关闭服务器。
+
 package manager
 
 import (

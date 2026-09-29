@@ -111,6 +111,8 @@ type Rows interface {
 // 仅是优化：sqlite 侧以 Omit=false 复查每个返回行，因此过滤结果必须是
 // 真实匹配行的超集，禁止漏掉任何真实匹配的行（漏行无法被复查找回）。
 type Datasource interface {
+	// Open 依据下推约束返回行游标；实现方应尽力在数据源头过滤，
+	// 但可返回真实匹配行的超集（sqlite 侧会复查每个返回行）。
 	Open(ctx context.Context, pushdown []Constraint) (Rows, error)
 }
 

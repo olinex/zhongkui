@@ -1,6 +1,7 @@
 // Package vtab（本文件）提供 MongoDB 数据源单元测试。
 // Mongo 客户端不易本地 mock，聚焦纯逻辑：单元格归一化（cell/mongoInt64/mongoFloat/
 // mongoText）与 Filterable 恒空契约。
+
 package vtab
 
 import (

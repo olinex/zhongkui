@@ -1,6 +1,7 @@
 // Package vtab（本文件）提供 MySQL/MariaDB vtable 数据源的共享测试工具：
 // 以 go-sqlmock 起一个 mock 数据源注入 MySQLPool，避免依赖真实 MySQL；
 // 并提供经 SQLitePool RegisterDatasource + Query 的端到端查询辅助。
+
 package vtab
 
 import (

@@ -28,6 +28,7 @@ type LoadFunc[T any] = func(ctx context.Context, batch []T) error
 //   - 消费方只通过 for range 读取 in，无需感知上游的关闭时机
 //   - 实现必须监听 ctx.Done，发送数据必须使用 select 而非裸 send，避免取消时 goroutine 泄漏
 type Stage[I, O any] interface {
+	// Process 消费 in 中的数据，处理后写入 out；返回前负责关闭 out。
 	Process(ctx context.Context, in <-chan I, out chan<- O) error
 }
 
@@ -36,6 +37,7 @@ type mapStage[I, O any] struct {
 	fn func(ctx context.Context, in I) (O, error)
 }
 
+// Process 对每个输入项应用转换函数，逐项写入 out。
 func (s *mapStage[I, O]) Process(ctx context.Context, in <-chan I, out chan<- O) error {
 	defer close(out)
 	for {
@@ -72,6 +74,7 @@ type bufferStage[T any] struct {
 	timeout time.Duration
 }
 
+// Process 按数量或超时聚合输入项，满批后写入 out。
 func (s *bufferStage[T]) Process(ctx context.Context, in <-chan T, out chan<- []T) error {
 	defer close(out)
 

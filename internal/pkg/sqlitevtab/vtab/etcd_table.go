@@ -2,6 +2,7 @@
 // EtcdDatasource 把 etcd 的键值对暴露为一个 vtable，固定两列：key（可下推）与 value。
 // Open 借出 clientv3.Client，按 key 解析计划读取键值并返回行游标（key 形式见文件头
 // 注释：精确等值 / 前缀范围 / 全量范围，均为真实匹配行的超集）。
+
 package vtab
 
 import (

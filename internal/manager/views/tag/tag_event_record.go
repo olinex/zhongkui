@@ -368,6 +368,7 @@ type TagEventRecordHitRecordsIn struct {
 // TagEventRecordHitRecordsOut 定义标签事件记录命中条件原始数据反查输出。
 // Items 为该命中条件对应的原始数据明细（当前为 http_transports 全字段行）。
 type TagEventRecordHitRecordsOut struct {
+	// Items 该命中条件对应的原始数据明细列表
 	Items []*traffic.HttpTransportListGetListItemOut `json:"items"`
 }
 

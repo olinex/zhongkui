@@ -21,13 +21,16 @@ import (
 //   - etcd.Election：基于 etcd 分布式选举的调度器
 //   - etl.Processor：分布式流式常驻处理器
 type Service interface {
+	// Start 阻塞运行服务主体逻辑，直到 ctx 取消或服务内部错误返回。
 	Start(ctx context.Context) error
+	// Shutdown 在 Start 返回后由编排器调用，执行优雅关闭。
 	Shutdown(ctx context.Context) error
 }
 
 // Named 可选接口，为服务提供名称，用于日志与错误上下文标识。
 type Named interface {
 	Service
+	// Name 返回服务名称。
 	Name() string
 }
 
@@ -42,12 +45,15 @@ func NewPipelineService(server *pipeline.Server) Service {
 	return &pipelineService{server: server}
 }
 
+// Name 返回服务名称。
 func (s *pipelineService) Name() string { return "server" }
 
+// Start 启动任务队列服务器。
 func (s *pipelineService) Start(ctx context.Context) error {
 	return s.server.Start(ctx)
 }
 
+// Shutdown 关闭任务队列服务器。
 func (s *pipelineService) Shutdown(_ context.Context) error {
 	s.server.Shutdown()
 	return nil
@@ -64,12 +70,15 @@ func NewElectionService(election *etcd.Election) Service {
 	return &electionService{election: election}
 }
 
+// Name 返回服务名称。
 func (e *electionService) Name() string { return "scheduler" }
 
+// Start 启动基于 etcd 选举的调度器。
 func (e *electionService) Start(ctx context.Context) error {
 	return e.election.Start(ctx)
 }
 
+// Shutdown 关闭调度器。
 func (e *electionService) Shutdown(_ context.Context) error {
 	e.election.Shutdown()
 	return nil
@@ -87,12 +96,15 @@ func NewProcessorService(name string, processor etl.Processor) Service {
 	return &processorService{name: name, processor: processor}
 }
 
+// Name 返回处理器注册名。
 func (p *processorService) Name() string { return p.name }
 
+// Start 以处理器注册名启动分布式常驻处理器。
 func (p *processorService) Start(ctx context.Context) error {
 	return p.processor.Start(ctx, p.name)
 }
 
+// Shutdown 停止处理器。
 func (p *processorService) Shutdown(_ context.Context) error {
 	p.processor.Shutdown()
 	return nil

@@ -6,6 +6,7 @@
 // 纯 Go 驱动，免 cgo；驱动名 sqlite，与项目既有 gorm sqlite 方言一致），Open 借出、取数即还。
 // sqlite 源与 sqlitevtab 同为 SQLite 语义，LIKE/GLOB 可比 MySQL/PG 更安全地下推（见
 // sqlite_file_table.go）。
+
 package vtab
 
 import (

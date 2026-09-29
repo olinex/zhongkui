@@ -3,6 +3,7 @@
 // 规则中冗余的 {namespace}__ 前缀，同时保证不同命名空间的连接与凭据互不串扰。
 // Pools 自身不持有数据库引用：扫描启用数据源由外部的 datasource.Reload 驱动，
 // 避免与模型层产生依赖倒置。
+
 package vtab
 
 import (

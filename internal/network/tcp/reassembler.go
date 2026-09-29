@@ -72,6 +72,7 @@ func newReassembler[P TCPPacket](
 	}, nil
 }
 
+// Meta 返回当前流的元数据，包含 TraceID、四元组、双方 ISN 与被动指纹等信息。
 func (r *Reassembler[P]) Meta() *detectors.StreamMeta {
 	return &detectors.StreamMeta{
 		TraceID:           r.TraceID,
@@ -87,6 +88,7 @@ func (r *Reassembler[P]) Meta() *detectors.StreamMeta {
 	}
 }
 
+// Close 关闭流并释放客户端与服务端两侧的缓冲区资源。
 func (r *Reassembler[P]) Close() {
 	r.client.bufferClose()
 	r.server.bufferClose()
