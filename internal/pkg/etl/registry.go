@@ -10,6 +10,7 @@ import "context"
 //
 // 两类单元的差异由调用方通过 wrap 函数表达：如何将同名配置参数注入上下文并包装单元。
 type Registry[T any] struct {
+	// units 按名称索引的已注册单元映射。
 	units map[string]T
 }
 

@@ -42,8 +42,11 @@ var ErrMemoryNotFound = errors.New("memory: not found")
 // MemoryStore 是长期记忆的存储与检索入口：持有一个 gorm DB、向量化客户端、行为参数解析器与
 // 日志记录器，负责记忆的 CRUD、向量/全文混合检索与去重落库。
 type MemoryStore struct {
-	db     *database.DB
-	embed  embedder
+	// db core 库连接（agent_memories 读写）。
+	db *database.DB
+	// embed 向量化客户端（把记忆检索文本转为向量）。
+	embed embedder
+	// params 行为参数解析器（去重阈值、候选数、topK 与截断上限）。
 	params *llm.Params
 	logger *logging.Logger // 可空：为 nil 时跳过告警日志
 }
@@ -569,11 +572,13 @@ func normalizeMemoryContent(content string) string {
 // 写入口。它持有一个 MemoryStore（长期记忆落库与检索）、会话存储（摘要读写用）、按档位解析
 // 对话客户端的回调与行为参数解析器。视图层的会话压缩接口与 Agent 的滚动摘要均经它执行。
 type Memory struct {
+	// store 长期记忆存储（落库与检索）。
 	store    *MemoryStore
 	sessions *SessionStore // 会话存储，由 MemoryStore 的 db 同源派生
 	resolver ChatResolver  // 可空：Summarize/抽取时缺失即返回英文错误
-	params   *llm.Params
-	logger   *logging.Logger // 可空：为 nil 时跳过告警日志
+	// params 行为参数解析器（滚动摘要、记忆抽取与记忆开关等）。
+	params *llm.Params
+	logger *logging.Logger // 可空：为 nil 时跳过告警日志
 }
 
 // NewMemory 构造 Memory 服务：store/params 为空时返回英文错误，resolver 与 logger 允许为 nil

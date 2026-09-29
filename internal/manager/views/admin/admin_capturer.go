@@ -40,25 +40,16 @@ const (
 // CapturerConfigIn 定义抓包器配置的请求输入结构。
 // 该结构对应 reporter 进程的实际抓包参数，在创建和更新抓包器时使用。
 // 配置数据序列化后存储在 etcd 中，供 reporter 进程读取。
-//
-// 字段说明：
-//   - Device:  网络设备名称（如 eth0），长度限制 2~32 字符
-//   - SnapLen:  每个数据包的捕获长度（字节数），决定截断位置
-//   - Promisc: 是否启用混杂模式，启用后可捕获非本机的流量
-//   - Timeout: 读超时时间，以毫秒为单位；交互输入与 JSON 均支持可读时长字符串
-//     （如 "5s"、"1m30s"）或整数毫秒
-//   - BpfExpr: BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符
-//   - Enabled: 是否启用该抓包器配置
 type CapturerConfigIn struct {
-	// Device 网络设备名称（如 eth0）。
+	// Device 网络设备名称（如 eth0），长度限制 2~32 字符。
 	Device string `json:"device" viper:"device" prompt:"请输入网络设备名称（如 eth0）" binding:"required,min=2,max=32"`
-	// SnapLen 每个数据包的捕获长度（字节数）。
+	// SnapLen 每个数据包的捕获长度（字节数），决定截断位置。
 	SnapLen uint32 `json:"snapLen" viper:"snap-len" prompt:"请输入抓包长度（字节）" binding:"required"`
-	// Promisc 是否启用混杂模式。
+	// Promisc 是否启用混杂模式，启用后可捕获非本机的流量。
 	Promisc bool `json:"promisc" viper:"promisc" prompt:"是否启用混杂模式？"`
-	// Timeout 读超时时间（毫秒），支持可读时长字符串或整数毫秒。
+	// Timeout 读超时时间（毫秒），支持可读时长字符串（如 5s、1m30s）或整数毫秒。
 	Timeout serializer.DurationMS `json:"timeout" viper:"read-timeout" prompt:"请输入读超时时间（如 5s、1m30s）" binding:"required"`
-	// BpfExpr BPF 过滤表达式（如 "tcp port 80"）。
+	// BpfExpr BPF 过滤表达式（如 "tcp port 80"），长度限制 3~1024 字符。
 	BpfExpr string `json:"bpfExpr" viper:"bpf-expr" prompt:"请输入 BPF 过滤表达式（如 tcp port 80）" binding:"required,min=3,max=1024"`
 	// Enabled 是否启用该抓包器配置。
 	Enabled bool `json:"enabled" viper:"enabled" prompt:"是否启用该抓包器？"`
@@ -84,18 +75,12 @@ func (cc *CapturerConfigIn) ToGRPC() *reporter_v1.Config {
 // CapturerCreateIn 定义创建抓包器的请求输入结构。
 // 包含抓包器的标识信息（命名空间、名称、版本）和配置参数。
 // 三个标识字段联合组成唯一索引，确保同一命名空间下不存在重复的抓包器。
-//
-// 字段说明：
-//   - Namespace: 所属命名空间名称，长度限制 3~32 字符
-//   - Name:      抓包器名称，长度限制 3~32 字符
-//   - Version:   抓包器版本号，长度限制 3~32 字符
-//   - Config:    抓包器的运行配置
 type CapturerCreateIn struct {
-	// Namespace 所属命名空间名称。
+	// Namespace 所属命名空间名称，长度限制 3~32 字符。
 	Namespace string `json:"namespace" viper:"namespace" prompt:"请输入命名空间" binding:"required,min=3,max=32"`
-	// Name 抓包器名称。
+	// Name 抓包器名称，长度限制 3~32 字符。
 	Name string `json:"name" viper:"name" prompt:"请输入抓包器名称" binding:"required,min=3,max=32"`
-	// Version 抓包器版本号。
+	// Version 抓包器版本号，长度限制 3~32 字符。
 	Version string `json:"version" viper:"version" prompt:"请输入版本号" binding:"required,min=3,max=32"`
 	// Config 抓包器的运行配置。
 	Config CapturerConfigIn `json:"config"`

@@ -64,6 +64,7 @@ type Out struct {
 
 // Registry 全局功能开关注册表：按装配顺序维护功能集合，供枚举与按键查询。
 type Registry struct {
+	// features 已注册功能集合，按装配顺序保存。
 	features []Feature
 }
 

@@ -26,10 +26,14 @@ const (
 // Pipeline 表示一个流式变换管道，固定按 先压缩(Compress) → 后加密(Encrypt) 的顺序处理数据。
 // 输出流包含自描述头部，携带压缩算法和加密算法的标识信息。
 type Pipeline struct {
+	// compressor 压缩变换器，写入方向先对数据进行压缩。
 	compressor Transform
-	cryptor    Transform
+	// cryptor 加密变换器，对压缩后的数据进行加密。
+	cryptor Transform
+	// compressID 压缩算法的标识字节，写入自描述头部。
 	compressID byte
-	cryptID    byte
+	// cryptID 加密算法的标识字节，写入自描述头部。
+	cryptID byte
 }
 
 // NewCompressEncryptPipeline 创建先压缩后加密的管道。

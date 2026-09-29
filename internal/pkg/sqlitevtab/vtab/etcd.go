@@ -121,6 +121,7 @@ func NewEtcdPool(cfg *EtcdConfig) *EtcdPool {
 
 // EtcdPool 是基于资源池的 etcd 客户端池句柄，绑定一个集群配置派生的 Key。
 type EtcdPool struct {
+	// key 集群配置派生的连接池 Key。
 	key resourcepool.Key
 }
 

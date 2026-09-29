@@ -48,7 +48,9 @@ var _ etl.Handler = (*MailSendHandler)(nil)
 // 解析邮件载荷后调用 Sender.Send 按系统 smtp 配置直接投递；
 // 载荷非法返回错误触发重试。
 type MailSendHandler struct {
+	// sender 邮件直发器，按系统 smtp 配置直接投递邮件。
 	sender mailSender
+	// logger 结构化日志记录器。
 	logger *logging.Logger
 }
 

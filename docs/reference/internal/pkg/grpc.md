@@ -381,11 +381,7 @@ ToOption 将AuthClientConfig转换为gRPC客户端的身份验证连接选项。
 <a name="AuthRouter"></a>
 ## type AuthRouter
 
-AuthRouter 是gRPC身份验证路由器 负责管理和路由不同的身份验证器，支持多种认证协议 结构体字段:
-
-- lock: 读写锁，保护authes映射的并发访问
-- authes: 身份验证器映射，键为验证器名称，值为Authenticator接口实现
-- config: 身份验证服务器配置，包含认证相关的配置选项
+AuthRouter 是gRPC身份验证路由器 负责管理和路由不同的身份验证器，支持多种认证协议
 
 ```go
 type AuthRouter struct {

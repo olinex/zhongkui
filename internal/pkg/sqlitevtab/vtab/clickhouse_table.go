@@ -31,6 +31,7 @@ type chColumn struct {
 // ClickHouseDatasource 是基于 ClickHouse 一张表的 vtable 数据源。
 type ClickHouseDatasource struct {
 	chBase
+	// tableRef 已引号包裹的表名。
 	tableRef string
 }
 

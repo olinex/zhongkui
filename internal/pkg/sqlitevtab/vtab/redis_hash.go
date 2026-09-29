@@ -21,6 +21,7 @@ import (
 // RedisHashDatasource 是基于 Redis hash 结构的 vtable 数据源。
 type RedisHashDatasource struct {
 	redisBase
+	// fieldIndex 记录 field 列在表结构中的列索引。
 	fieldIndex int
 }
 

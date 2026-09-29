@@ -34,9 +34,13 @@ type stackEntry struct {
 
 // StageTracer 阶段耗时追踪器：以 Begin/End 配对记录各阶段的调用次数与耗时分布。
 type StageTracer struct {
-	mu      sync.Mutex
+	// mu 保护 records 与 stack 的互斥锁。
+	mu sync.Mutex
+	// records 各阶段名称到耗时记录的映射。
 	records map[string]*stageRecord
-	stack   []stackEntry
+	// stack 未结束阶段的嵌套计时栈。
+	stack []stackEntry
+	// written 标记报告是否已输出。
 	written bool
 }
 

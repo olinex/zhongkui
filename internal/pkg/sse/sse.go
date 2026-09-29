@@ -81,6 +81,7 @@ func WriteSSE(w http.ResponseWriter, ev SSEEvent) error {
 // SSEWriter 是 SSE 响应写手的便捷封装：构造时设置 text/event-stream 响应头，
 // 提供增量/完成/错误/心跳的语义化发送方法（内部统一复用 WriteSSE）。
 type SSEWriter struct {
+	// w 底层 HTTP 响应写手，事件经其写出并刷新。
 	w http.ResponseWriter
 }
 

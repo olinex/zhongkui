@@ -23,10 +23,12 @@ type fakeChat struct {
 	stream func(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error)
 }
 
+// Generate 转调配置的 gen 函数返回非流式响应。
 func (f *fakeChat) Generate(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error) {
 	return f.gen(ctx, messages, opts...)
 }
 
+// Stream 转调配置的 stream 函数；未配置时把 gen 的单次结果拆成流式分片返回。
 func (f *fakeChat) Stream(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
 	if f.stream != nil {
 		return f.stream(ctx, messages, opts...)
@@ -52,6 +54,7 @@ type fakeEmbed struct {
 	embed func(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error)
 }
 
+// EmbedStrings 转调配置的 embed 函数返回文本向量。
 func (f *fakeEmbed) EmbedStrings(ctx context.Context, texts []string, opts ...embedding.Option) ([][]float64, error) {
 	return f.embed(ctx, texts, opts...)
 }

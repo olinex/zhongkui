@@ -28,6 +28,7 @@ type RemoteTool struct {
 // Connection 是已完成握手的 MCP 会话在运行时装配层的句柄：它把「取工具」与「关闭会话」收敛为
 // 两个方法，使 internal/ai 的装配代码无需引用 MCP SDK（SDK 只出现在本包内）。
 type Connection struct {
+	// cli 已完成 initialize 握手的 MCP 客户端句柄（SDK 类型，仅本包内使用）。
 	cli client.MCPClient
 }
 

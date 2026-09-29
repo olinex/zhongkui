@@ -79,6 +79,7 @@ func NewClickHousePool(cfg *ClickHouseConfig) *ClickHousePool {
 // ClickHousePool 是 ClickHouse 的 sqlDBPool 句柄，绑定一个实例配置派生的 Key。
 type ClickHousePool struct {
 	sqlDBPool
+	// db 实例默认数据库名。
 	db string
 }
 

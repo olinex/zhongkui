@@ -138,15 +138,8 @@ func NewDefaultViperWithCmd(cmd *cobra.Command) *viper.Viper {
 //
 // 该结构体用于生成配置文档，每个实例对应配置结构体中的一个字段。
 // 通过反射从结构体标签（mapstructure、default、comment）中提取信息填充。
-//
-// 字段说明：
-//   - Path:    配置项的完整路径，例如 "zap.default.level"，
-//     由前缀和 mapstructure 标签（或小写字段名）拼接而成
-//   - Kind:    配置项的 Go 类型名称，例如 "string"、"bool"、"slice"
-//   - Default: 配置项的默认值，来自 default 标签
-//   - Comment: 配置项的说明文字，来自 comment 标签
 type ConfigDescription struct {
-	// Path 配置项的完整路径，如 "zap.default.level"。
+	// Path 配置项的完整路径，由前缀和 mapstructure 标签（或小写字段名）拼接而成，如 "zap.default.level"。
 	Path string `json:"path"`
 	// Kind 配置项的 Go 类型名称，如 "string"、"bool"。
 	Kind string `json:"kind"`

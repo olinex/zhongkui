@@ -787,12 +787,6 @@ ValidateSchedule 校验任务调度模式：cronSpec 与 interval 二选一（�
 
 Server 表示任务队列服务器，负责从 Redis 队列中获取任务并分发给对应的处理函数。 该结构体封装了 asynq 服务器的核心功能，提供启动、停止和任务处理能力。 它只负责事件驱动任务的消费，不管理分布式常驻处理器（Processor）。
 
-字段说明：
-
-- logger: \*logging.Logger \- 日志记录器，用于记录服务器运行状态和错误信息
-- srv: \*asynq.Server \- asynq 服务器实例，负责与 Redis 交互和任务调度
-- mux: \*asynq.ServeMux \- 任务分发器，根据任务类型路由到对应的处理函数
-
 生命周期：
 
 1. 通过 NewServer 函数创建服务器实例

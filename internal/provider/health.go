@@ -64,8 +64,10 @@ func MustInvokeHealthServer(ctx context.Context, i do.Injector) *health.Server {
 // 供 runtime.Group 统一编排（worker）或命令侧 goroutine 启动（web/grpc）。
 type HealthService struct {
 	*health.Server
+	// logger 结构化日志器，供健康服务运行期输出。
 	logger *logging.Logger
-	name   string
+	// name 服务名，用于 etcd 服务目录键与日志标识。
+	name string
 }
 
 // NewHealthService 构建以其服务名运行的健康探针服务。

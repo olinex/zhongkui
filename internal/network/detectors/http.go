@@ -42,8 +42,10 @@ var _ AppProtocolDetector = (*HttpDetector)(nil)
 // 实现tcp.AppProtocolDetector接口，用于检测和提取TCP流中的HTTP协议数据
 // 该检测器负责识别HTTP请求和响应，解析HTTP协议头部，并构建完整的HTTP传输对象
 type HttpDetector struct {
+	// client S3 客户端，用于正文内容的存储与去重。
 	client *s3.S3Client
-	kd     *key.KeyDerivation
+	// kd 密钥派生器，用于生成正文加密所需的子密钥。
+	kd *key.KeyDerivation
 }
 
 // NewHttpDetector 创建 HTTP 协议检测器。

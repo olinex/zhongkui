@@ -28,6 +28,7 @@ var (
 
 // ZstdCompressor 使用 Zstandard 算法进行流式压缩和解压。
 type ZstdCompressor struct {
+	// level Zstandard 压缩级别。
 	level zstd.EncoderLevel
 }
 
@@ -69,6 +70,7 @@ func (c *ZstdCompressor) WrapReader(r io.Reader) (io.ReadCloser, error) {
 
 // GzipCompressor 使用 Gzip 算法进行流式压缩和解压。
 type GzipCompressor struct {
+	// level Gzip 压缩级别。
 	level int
 }
 

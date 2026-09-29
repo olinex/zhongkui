@@ -28,6 +28,7 @@ type mysqlColumn struct {
 // MySQLDatasource 是基于 MySQL/MariaDB 一张表的 vtable 数据源。
 type MySQLDatasource struct {
 	mysqlBase
+	// tableRef 已引号包裹的库表引用。
 	tableRef string
 }
 

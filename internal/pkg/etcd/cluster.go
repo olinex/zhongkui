@@ -39,19 +39,17 @@ var (
 //   - 多进程协作处理数据流时，按 key 哈希将数据分发给不同进程
 //   - Session 租约自动过期机制保证进程崩溃后成员自动移除
 //   - 成员变化时通过读写锁保护，不影响正在处理的数据
-//
-// 字段说明：
-//   - client: etcd 客户端实例，用于与 etcd 集群通信
-//   - session: etcd 租约会话，自动心跳保活，过期后成员自动注销
-//   - memberID: 当前成员的唯一标识
-//   - prefix: etcd 键前缀，用于隔离不同业务的集群
-//   - mu: 读写锁，保护一致性哈希环的并发访问
 type Cluster struct {
-	mu       sync.RWMutex
-	client   *EtcdClient
-	name     string
+	// mu 读写锁，保护一致性哈希环的并发访问。
+	mu sync.RWMutex
+	// client etcd 客户端实例，用于成员注册与监听。
+	client *EtcdClient
+	// name 集群名称（etcd 键识别名，隔离不同业务的集群）。
+	name string
+	// memberID 当前成员的唯一标识。
 	memberID string
-	ring     *hash.ConsistentHash
+	// ring 一致性哈希环（虚拟节点），用于数据分片路由。
+	ring *hash.ConsistentHash
 }
 
 // ClusterMember 表示集群成员的元信息。

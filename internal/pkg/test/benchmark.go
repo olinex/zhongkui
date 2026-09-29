@@ -88,6 +88,7 @@ type BenchResult struct {
 	// MemBytes 内存分配字节数。
 	MemBytes int64
 
+	// timings 各次采样的耗时列表（纳秒）。
 	timings []float64
 	// Profile 性能剖析结果，未启用剖析时为 nil。
 	Profile *ProfileResult

@@ -37,6 +37,7 @@ var (
 		Name:      "test",
 		Version:   "v1",
 	}
+	// SessionID 测试用例共用的会话标识，用于构造带会话归属的资源原始数据。
 	SessionID serializer.HexUUID = serializer.NewHexUUIDv4()
 )
 

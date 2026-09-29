@@ -112,8 +112,11 @@ func NewMongoPool(cfg *MongoConfig) *MongoPool {
 
 // MongoPool 是基于资源池的 Mongo 客户端池句柄，绑定一个集合配置派生的 Key。
 type MongoPool struct {
-	key        resourcepool.Key
-	db         string
+	// key 集合配置派生的连接池 Key。
+	key resourcepool.Key
+	// db 数据库名。
+	db string
+	// collection 集合名。
 	collection string
 }
 

@@ -21,9 +21,14 @@ type testOrderByItem struct {
 	order  string
 }
 
-func (t *testOrderByItem) GetName() string   { return t.name }
+// GetName 返回排序项名称。
+func (t *testOrderByItem) GetName() string { return t.name }
+
+// GetColumn 返回排序字段名。
 func (t *testOrderByItem) GetColumn() string { return t.column }
-func (t *testOrderByItem) GetOrder() string  { return t.order }
+
+// GetOrder 返回排序方向。
+func (t *testOrderByItem) GetOrder() string { return t.order }
 
 // 测试用的 FilterByItem 实现
 type testFilterByItem struct {
@@ -33,10 +38,17 @@ type testFilterByItem struct {
 	value  any
 }
 
-func (t *testFilterByItem) GetName() string   { return t.name }
+// GetName 返回过滤项名称。
+func (t *testFilterByItem) GetName() string { return t.name }
+
+// GetColumn 返回过滤字段名。
 func (t *testFilterByItem) GetColumn() string { return t.column }
+
+// GetAction 返回过滤操作类型。
 func (t *testFilterByItem) GetAction() string { return t.action }
-func (t *testFilterByItem) GetValue() any     { return t.value }
+
+// GetValue 返回过滤比较值。
+func (t *testFilterByItem) GetValue() any { return t.value }
 
 // 测试用的 SearcherIn 实现
 type testSearcherIn struct {
@@ -48,18 +60,30 @@ type testSearcherIn struct {
 	options  *SearchOptions
 }
 
-func (t *testSearcherIn) GetGreedy() bool                      { return t.greedy }
-func (t *testSearcherIn) GetPage() uint                        { return t.page }
-func (t *testSearcherIn) GetPageSize() uint                    { return t.pageSize }
-func (t *testSearcherIn) GetOrderBy() []OrderByItem            { return t.orderBy }
+// GetGreedy 返回是否贪婪查询。
+func (t *testSearcherIn) GetGreedy() bool { return t.greedy }
+
+// GetPage 返回页码。
+func (t *testSearcherIn) GetPage() uint { return t.page }
+
+// GetPageSize 返回每页条数。
+func (t *testSearcherIn) GetPageSize() uint { return t.pageSize }
+
+// GetOrderBy 返回排序项列表。
+func (t *testSearcherIn) GetOrderBy() []OrderByItem { return t.orderBy }
+
+// GetFilterBy 返回过滤项映射。
 func (t *testSearcherIn) GetFilterBy() map[string]FilterByItem { return t.filterBy }
-func (t *testSearcherIn) GetOptions() *SearchOptions           { return t.options }
+
+// GetOptions 返回搜索选项。
+func (t *testSearcherIn) GetOptions() *SearchOptions { return t.options }
 
 // 测试用的 TotalOut 实现
 type testTotalOut struct {
 	Total uint `json:"-"`
 }
 
+// GetTotal 返回总数，nil 接收者返回 0。
 func (t *testTotalOut) GetTotal() uint {
 	if t == nil {
 		return 0
@@ -1028,6 +1052,7 @@ type testProjectMarshaler struct {
 	cipher string
 }
 
+// MarshalJSON 将测试类型序列化为带固定前缀的 JSON 字符串，用于验证投影保留指针接收器。
 func (m *testProjectMarshaler) MarshalJSON() ([]byte, error) {
 	return json.Marshal("cipher:" + m.cipher)
 }
@@ -1182,8 +1207,10 @@ type testProjectorSearcher struct {
 	fields []string
 }
 
+// GetFields 返回测试配置的投影字段白名单。
 func (t *testProjectorSearcher) GetFields() []string { return t.fields }
 
+// ResolveSelectColumns 返回测试固定的投影列。
 func (t *testProjectorSearcher) ResolveSelectColumns() []string {
 	return []string{"id", "name"}
 }

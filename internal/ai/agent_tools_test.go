@@ -32,6 +32,7 @@ type scriptedChat struct {
 	gotTools  [][]*schema.ToolInfo
 }
 
+// Generate 记录输入与工具清单，并按次序返回预置的下一轮非流式响应。
 func (c *scriptedChat) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
 	c.gotInputs = append(c.gotInputs, input)
 	c.gotTools = append(c.gotTools, model.GetCommonOptions(&model.Options{}, opts...).Tools)
@@ -39,6 +40,7 @@ func (c *scriptedChat) Generate(ctx context.Context, input []*schema.Message, op
 	return &schema.Message{Role: schema.Assistant, Content: turn.content, ToolCalls: turn.toolCalls}, nil
 }
 
+// Stream 记录输入与工具清单，并按次序把预置的下一轮响应拆成流式分片返回。
 func (c *scriptedChat) Stream(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
 	c.gotInputs = append(c.gotInputs, input)
 	c.gotTools = append(c.gotTools, model.GetCommonOptions(&model.Options{}, opts...).Tools)
@@ -75,6 +77,7 @@ type recordingTool struct {
 	runCalls int
 }
 
+// Info 返回预设错误，否则返回该工具的名称与描述信息。
 func (f *recordingTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	if f.infoErr != nil {
 		return nil, f.infoErr
@@ -82,6 +85,7 @@ func (f *recordingTool) Info(ctx context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{Name: f.name, Desc: "a test tool"}, nil
 }
 
+// InvokableRun 记录调用参数并转调预设的 run 函数返回结果。
 func (f *recordingTool) InvokableRun(ctx context.Context, argumentsInJSON string, _ ...tool.Option) (string, error) {
 	f.runCalls++
 	f.gotArgs = append(f.gotArgs, argumentsInJSON)

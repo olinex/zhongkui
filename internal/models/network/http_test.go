@@ -37,6 +37,7 @@ func newMockS3Server() *mockS3Server {
 	}
 }
 
+// ServeHTTP 实现内存版 S3 服务端，按方法处理 PUT/HEAD/GET/DELETE 请求。
 func (m *mockS3Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	key := strings.TrimPrefix(r.URL.Path, "/test-bucket/")
 	m.mu.Lock()

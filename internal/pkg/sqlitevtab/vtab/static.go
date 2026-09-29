@@ -19,8 +19,10 @@ import (
 // StaticDatasource 是内存行集的参考数据源实现，演示 Datasource 契约与下推
 // 约束匹配语义，同时可作为测试基准。
 type StaticDatasource struct {
+	// schema 数据源 schema。
 	schema sqlitevtab.Schema
-	data   [][]any
+	// data 内存行集。
+	data [][]any
 }
 
 // NewStaticDatasource 创建静态数据源。data 每行长度应与 schema.Columns 对齐；

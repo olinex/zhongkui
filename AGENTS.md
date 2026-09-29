@@ -79,6 +79,12 @@ type UserClaims struct {
 }
 ```
 
+- **强制手段**：注释完备性由自建 analyzer 检查，入口为 `make lint`（`cmd/commentlint` 驱动 `internal/lint/commentlint` 的 `analysis.Analyzer`，标准 `go/analysis` 驱动，诊断输出 `文件:行:列: 说明`，发现缺口时退出码 3），提交前与 CI 必跑，禁止只靠人工检查。
+- **检查范围**：导出类型 / 函数 / 方法 / 常量 / 变量、导出结构体的字段（**含非导出字段**，字段带 `comment:"` tag 或行尾注释均视为已有注释）、导出接口的方法，以及包注释。
+- **包注释按目录聚合**：同目录任一文件带包注释即视为该包已有包注释；被构建约束排除的同目录源文件同样计入（包注释允许落在 `//go:build linux` 这类实现文件中），外部测试包 `xxx_test` 的包注释由主包承载、不单独检查。
+- **豁免规则**：包子句前的注释带生成标记（标准 `// Code generated <id> DO NOT EDIT.` 及 `DO NOT EDIT!!!` 等非标准生成头）的文件整体跳过，正文里提到标记不算生成文件；`_test.go` 中 `Test` / `Benchmark` / `Example` / `Fuzz` 前缀函数跳过（测试替身的导出方法与导出类型仍须注释）；内嵌字段、内嵌接口与多名字声明中「部分导出」的字段（如 `A, b string`）不检查。
+- **口径与实现的单一来源**：检查口径的权威实现是 `internal/lint/commentlint/analyzer.go`，其行为契约由 `analyzer_test.go` 的 `analysistest` 用例（`testdata/src/`）锁定；新增/调整豁免规则必须同时改实现、测试用例与本条目。
+
 ### Struct Organization
 
 - 用结构体嵌入实现组合：`BaseMeta` → `TimestampMeta` → `CaptureMeta` → `AsPacket`
@@ -874,12 +880,14 @@ meta:
 ├── cmd/
 │   ├── zki/          # 主程序入口 (main.go)
 │   ├── template/     # 代码生成器 (生成 manager/views/search.go 等)
+│   ├── commentlint/  # 注释检查器入口 (make lint 驱动 internal/lint/commentlint)
 │   └── nic_probe/    # 网卡 XDP 支持探测工具
 ├── internal/
 │   ├── benchmark/    # Benchmarking utilities
 │   ├── capture/      # Packet capture engine
 │   ├── cmd/          # CLI commands (Cobra)
 │   ├── manager/      # HTTP API layer (Gin)，子包：middlewares（中间件）、router（路由注册）、views（视图 In/Out 与处理器）、response（统一响应与错误体系）
+│   ├── lint/         # 代码检查 analyzer (commentlint，注释完备性)
 │   ├── migrations/   # Database migrations
 │   ├── models/       # Data models (core, api, network, tag)
 │   ├── network/      # Network protocol processing
@@ -904,3 +912,4 @@ meta:
 8. 测试文件与被测源码放在一起（`_test.go` / `_test.ts`）
 9. 代码与注释中禁止 emoji，除非显式要求
 10. 提交前运行 `pnpm lint`（web 前端 ESLint）、`pnpm lint:style`（Stylelint）与 `pnpm type-check`（vue-tsc），三者全部通过
+11. 提交前运行 `make lint`（Go 注释完备性检查，见「Comments」），并保证 `gofmt`、`go build ./...`、`go vet ./...` 通过

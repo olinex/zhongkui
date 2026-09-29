@@ -140,8 +140,10 @@ func translateGooseLog(format string, v ...any) string {
 
 // Migrator 封装 goose 迁移操作与数据库连接。
 type Migrator struct {
+	// cfg 迁移配置。
 	cfg *Config
-	db  *sql.DB
+	// db 底层数据库连接。
+	db *sql.DB
 }
 
 // NewMigrator 依据配置建立数据库连接并创建迁移执行器。

@@ -76,14 +76,21 @@ type registryEntry struct {
 // 数据源实例池与数据源注册表，提供注册/注销/查询/关闭能力。进程级共享，
 // 可并发使用。
 type SQLitePool struct {
+	// connPool sqlite 连接池，按固定 Key 池化复用。
 	connPool *resourcepool.Manager[*sqliteConn]
-	dsPool   *resourcepool.Manager[Datasource]
+	// dsPool 数据源实例池，按数据源名池化复用。
+	dsPool *resourcepool.Manager[Datasource]
 
-	mu       sync.RWMutex
+	// mu 保护 registry 与 version 的读写锁。
+	mu sync.RWMutex
+	// registry 数据源注册表，按数据源名索引。
 	registry map[string]*registryEntry
-	version  uint64
+	// version 注册表版本号，每次变更递增。
+	version uint64
 
-	maxRows      int
+	// maxRows 单次查询最大返回行数。
+	maxRows int
+	// queryTimeout 查询默认超时。
 	queryTimeout time.Duration
 }
 

@@ -164,10 +164,15 @@ func Buffer[T any](size int, timeout time.Duration) Stage[T, []T] {
 // Pipeline 流水线执行器，串联 extract → stages → buffer → loads。
 // 所有阶段由 errgroup 管理：任一阶段出错即取消整条流水线并返回第一个错误。
 type Pipeline[T any] struct {
-	extract  ExtractFunc[T]
-	stages   []Stage[T, T]
-	buffer   Stage[T, []T]
-	loads    []LoadFunc[T]
+	// extract 数据提取函数，作为流水线生产者向源通道输出数据。
+	extract ExtractFunc[T]
+	// stages 逐项转换阶段链，前一阶段的产出作为后一阶段的输入。
+	stages []Stage[T, T]
+	// buffer 批量聚合阶段，将 T 聚合为 []T。
+	buffer Stage[T, []T]
+	// loads 批量加载函数列表，对每个批次并发执行。
+	loads []LoadFunc[T]
+	// chanSize 阶段间通道的缓冲大小。
 	chanSize int
 }
 

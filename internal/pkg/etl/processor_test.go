@@ -18,6 +18,7 @@ type mockProcessor struct {
 	startErr       error
 }
 
+// Start 记录启动参数并返回预设错误。
 func (m *mockProcessor) Start(ctx context.Context, name string) error {
 	m.startCalled = true
 	m.capturedCtx = ctx
@@ -25,6 +26,7 @@ func (m *mockProcessor) Start(ctx context.Context, name string) error {
 	return m.startErr
 }
 
+// Shutdown 记录一次关闭调用。
 func (m *mockProcessor) Shutdown() {
 	m.shutdownCalled = true
 }

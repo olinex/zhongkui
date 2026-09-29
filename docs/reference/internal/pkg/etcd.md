@@ -158,14 +158,6 @@ Cluster 基于 etcd 实现分布式集群成员发现与数据分片路由。
 - Session 租约自动过期机制保证进程崩溃后成员自动移除
 - 成员变化时通过读写锁保护，不影响正在处理的数据
 
-字段说明：
-
-- client: etcd 客户端实例，用于与 etcd 集群通信
-- session: etcd 租约会话，自动心跳保活，过期后成员自动注销
-- memberID: 当前成员的唯一标识
-- prefix: etcd 键前缀，用于隔离不同业务的集群
-- mu: 读写锁，保护一致性哈希环的并发访问
-
 ```go
 type Cluster struct {
     // contains filtered or unexported fields
@@ -372,13 +364,6 @@ Election 封装了基于 etcd 的分布式领导者选举逻辑。 它利用 etc
 2. 基于 Session 创建选举实例，参与竞选
 3. 并发执行两个 goroutine： a\) Campaign goroutine：阻塞式参与竞选，直到成为领导者 b\) Observe goroutine：监听选举结果，当确认自己成为领导者后启动业务逻辑
 4. 当实例挂掉时，Session 的 TTL 到期后自动释放，其他实例可重新竞选
-
-字段说明:
-
-- ctx: 上下文对象，用于控制选举的生命周期，取消该上下文将停止选举
-- client: etcd 客户端实例，用于与 etcd 集群通信
-- logger: 日志记录器，用于记录选举过程中的关键事件
-- handler: 选举事件处理器，定义了成为领导者后的业务逻辑
 
 ```go
 type Election struct {
@@ -588,15 +573,6 @@ WithWatchRetryInterval 覆盖 watch 中断后的重连间隔（默认 watchRetry
 ## type Watcher
 
 Watcher 通用的 etcd 变更监听器，实现 runtime.Service 生命周期。 监听指定键的变更事件，逐事件回调 handler 执行同步/失效逻辑； watch 中断自动重连；未绑定 etcd 客户端时直接返回（无监听能力）。
-
-字段说明:
-
-- client: etcd 客户端实例，nil 时监听被跳过
-- key: 监听的 etcd 键
-- handler: 变更事件处理器
-- logger: 日志记录器，用于记录监听状态与事件处理告警
-- opts: 选项集合，包含重连间隔等可调参数
-- watch: 可注入的 watch 函数，默认调用 client.Watch，供白盒测试模拟断线重连
 
 ```go
 type Watcher struct {

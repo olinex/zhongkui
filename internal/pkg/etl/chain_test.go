@@ -16,7 +16,10 @@ type fakeTask struct {
 	payload []byte
 }
 
-func (t *fakeTask) Type() string    { return t.typ }
+// Type 返回任务类型标识。
+func (t *fakeTask) Type() string { return t.typ }
+
+// Payload 返回任务载荷。
 func (t *fakeTask) Payload() []byte { return t.payload }
 
 // TestChainBasic 验证数据处理链完整流转：任务透传 → extract → Map → Buffer → load。
@@ -431,6 +434,7 @@ type fakeHandler struct {
 	do HandlerFunc
 }
 
+// Do 转调配置的处理器函数执行任务。
 func (f *fakeHandler) Do(ctx context.Context, task Task) error {
 	return f.do(ctx, task)
 }

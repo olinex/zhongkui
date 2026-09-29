@@ -61,6 +61,7 @@ type redisTypeKind string
 // 复用、失效自动重建与闲置回收。go-redis client 并发安全，池内可驻留多个 client
 // 以服务并发查询。
 type RedisPool struct {
+	// key 实例配置派生的连接池 Key。
 	key resourcepool.Key
 }
 

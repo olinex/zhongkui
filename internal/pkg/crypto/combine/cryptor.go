@@ -33,6 +33,7 @@ var (
 //
 // 密钥长度决定 AES 变体：16 字节 = AES-128，24 字节 = AES-192，32 字节 = AES-256。
 type AESGCMCryptor struct {
+	// key AES 密钥，长度决定 AES 变体（16/24/32 字节）。
 	key []byte
 }
 

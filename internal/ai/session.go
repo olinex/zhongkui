@@ -26,6 +26,7 @@ var (
 // 全部操作基于 GORM（database.DB，即 *gorm.DB）。会话删除时消息在同一事务内级联删除；
 // 消息查询默认按创建时间升序，与 LLM 对话顺序一致。
 type SessionStore struct {
+	// db core 库连接（agent_sessions / agent_messages 读写）。
 	db *database.DB
 }
 

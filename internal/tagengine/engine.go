@@ -25,11 +25,15 @@ import (
 // 求值 ctx（WithDatasourcePool），sqlite.query builtin 从中读取，故 rego 规则可直接
 // 引用裸名、无需命名空间前缀。未绑定 pools 时引擎不提供第三方数据源查询。
 type Engine struct {
-	db     *database.DB
+	// db core 库连接，用于读取标签规则。
+	db *database.DB
+	// logger 日志记录器。
 	logger *logging.Logger
+	// client etcd 客户端（nil 时仅本地识别，不监听规则变更）。
 	client *etcd.EtcdClient
-	pools  *vtab.Pools
-	cache  sync.Map // key: groupKey(string) → *compiledGroup
+	// pools 按命名空间隔离的第三方数据源池（nil 时不提供第三方数据源查询）。
+	pools *vtab.Pools
+	cache sync.Map // key: groupKey(string) → *compiledGroup
 	// watcher 规则变更监听器（etcd 通用层），nil 时 Start/Shutdown 直接跳过。
 	watcher *etcd.Watcher
 }

@@ -15,6 +15,7 @@ import (
 // ZapGormLogger 是 GORM 日志接口的 Zap 适配器
 // 将 GORM 的日志输出重定向到项目的 Zap 日志系统
 type ZapGormLogger struct {
+	// loggger 项目结构化日志器，GORM 日志经其输出（字段名沿用历史拼写）。
 	loggger *logging.Logger
 }
 

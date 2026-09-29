@@ -16,14 +16,17 @@ type mockElectionHandler struct {
 	shutdownFunc func(ctx context.Context) error
 }
 
+// Name 返回选举名称。
 func (m *mockElectionHandler) Name() string {
 	return m.name
 }
 
+// CandidateID 返回候选者标识。
 func (m *mockElectionHandler) CandidateID() string {
 	return m.candidateID
 }
 
+// Start 调用预设的启动函数，未设置时返回 nil。
 func (m *mockElectionHandler) Start(ctx context.Context) error {
 	if m.startFunc != nil {
 		return m.startFunc(ctx)
@@ -31,6 +34,7 @@ func (m *mockElectionHandler) Start(ctx context.Context) error {
 	return nil
 }
 
+// Shutdown 调用预设的关闭函数，未设置时返回 nil。
 func (m *mockElectionHandler) Shutdown(ctx context.Context) error {
 	if m.shutdownFunc != nil {
 		return m.shutdownFunc(ctx)

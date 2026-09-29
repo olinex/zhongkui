@@ -230,6 +230,7 @@ func (s *Snapshot) mountTools(set *ToolSet) {
 // 关联的模型实体）与行为参数（agent_params，出厂值与当前值）。模型绑定携带明文凭据，
 // 故 Store 只应在进程内使用，不得序列化输出。
 type Store struct {
+	// db core 库连接（模型注册表、档位绑定与行为参数读取）。
 	db     *database.DB
 	dialer mcpDialer // MCP 连接器（生产实现委托 internal/ai/tools/mcp，测试可替换为假实现）
 }

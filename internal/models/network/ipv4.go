@@ -98,22 +98,6 @@ func (i *IPv4Options) Scan(value any) error {
 // IPv4（Internet Protocol version 4）是互联网协议的第4版，是当前互联网最主要的网络层协议
 // 该结构体封装了IPv4协议头部的所有字段，用于存储、查询和分析网络数据包
 //
-// 字段说明:
-//   - IPv4Version:    协议版本号，固定为4（4位）
-//   - IPv4IHL:        头部长度（Internet Header Length），以32位字为单位（4位）
-//   - IPv4TOS:        服务类型（Type of Service），用于QoS优先级控制（8位）
-//   - IPv4Length:     总长度（Total Length），包括头部和数据，以字节为单位（16位）
-//   - IPv4Id:         标识符（Identification），用于分片重组（16位）
-//   - IPv4Flags:      标志位（Flags），包含DF（Don't Fragment）和MF（More Fragments）（3位）
-//   - IPv4FragOffset: 分片偏移（Fragment Offset），以8字节为单位（13位）
-//   - IPv4TTL:        生存时间（Time To Live），防止数据包无限循环（8位）
-//   - IPv4IPProtocol: 上层协议类型（Protocol），如TCP(6)、UDP(17)、ICMP(1)等（8位）
-//   - IPv4Checksum:   头部校验和（Header Checksum），用于错误检测（16位）
-//   - IPv4Src:        源IP地址（Source Address）（32位）
-//   - IPv4Dst:        目的IP地址（Destination Address）（32位）
-//   - IPv4Options:    IPv4选项列表，可选字段
-//   - IPv4Padding:    填充字节，确保头部长度为32位的整数倍
-//
 // 数据库映射:
 //   - 使用GORM标签定义数据库约束和列类型
 //   - 使用JSON标签支持序列化和反序列化
@@ -126,33 +110,33 @@ func (i *IPv4Options) Scan(value any) error {
 //   - 路径追踪：通过TTL递减分析网络路径
 //   - QoS分析：根据TOS字段分析服务质量
 type IPv4Headers struct {
-	// 协议版本号，固定为 4
+	// IPv4Version 协议版本号，固定为 4（4 位）
 	IPv4Version uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Version"`
-	// 头部长度（以 32 位字为单位）
+	// IPv4IHL 头部长度（IHL），以 32 位字为单位（4 位）
 	IPv4IHL uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Ihl"`
-	// 服务类型（QoS 优先级控制）
+	// IPv4TOS 服务类型（TOS），用于 QoS 优先级控制（8 位）
 	IPv4TOS uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Tos"`
-	// 总长度（含头部与数据，单位字节）
+	// IPv4Length 总长度，含头部与数据，单位字节（16 位）
 	IPv4Length uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Length"`
-	// 标识符（用于分片重组）
+	// IPv4Id 标识符，用于分片重组（16 位）
 	IPv4Id uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Id"`
-	// 标志位（包含 DF、MF）
+	// IPv4Flags 标志位，包含 DF、MF（3 位）
 	IPv4Flags layers.IPv4Flag `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Flags"`
-	// 分片偏移（以 8 字节为单位）
+	// IPv4FragOffset 分片偏移，以 8 字节为单位（13 位）
 	IPv4FragOffset uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4FragOffset"`
-	// 生存时间
+	// IPv4TTL 生存时间，防止数据包无限循环（8 位）
 	IPv4TTL uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Ttl"`
-	// 上层协议类型（如 TCP=6、UDP=17、ICMP=1）
+	// IPv4IPProtocol 上层协议类型，如 TCP=6、UDP=17、ICMP=1（8 位）
 	IPv4IPProtocol layers.IPProtocol `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4IpProtocol"`
-	// 头部校验和
+	// IPv4Checksum 头部校验和，用于错误检测（16 位）
 	IPv4Checksum uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Checksum"`
-	// 源 IP 地址
+	// IPv4Src 源 IP 地址（32 位）
 	IPv4Src serializer.IPv4Addr `gorm:"type:IPv4" json:"ipv4Src"`
-	// 目的 IP 地址
+	// IPv4Dst 目的 IP 地址（32 位）
 	IPv4Dst serializer.IPv4Addr `gorm:"type:IPv4" json:"ipv4Dst"`
-	// IPv4 选项列表
+	// IPv4Options IPv4 选项列表，可选字段
 	IPv4Options IPv4Options `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Options"`
-	// 填充字节（对齐 32 位边界）
+	// IPv4Padding 填充字节，确保头部长度为 32 位的整数倍
 	IPv4Padding string `gorm:"type:String CODEC(ZSTD(3))" json:"ipv4Padding"`
 }
 

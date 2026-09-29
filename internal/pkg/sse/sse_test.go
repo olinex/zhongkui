@@ -79,4 +79,5 @@ func TestSSEWriter_HeadersAndEvents(t *testing.T) {
 // errText 构造一个错误（仅测试辅助，避免生产错误包依赖）。
 type errText string
 
+// Error 返回测试错误的描述文本。
 func (e errText) Error() string { return string(e) }

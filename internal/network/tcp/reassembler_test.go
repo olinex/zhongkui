@@ -26,6 +26,7 @@ type mockDetector struct {
 	matchRsp   bool  // 响应侧检测是否匹配
 }
 
+// Detect 返回预设的检测错误或按请求/响应侧返回是否匹配。
 func (m *mockDetector) Detect(ctx context.Context, peek []byte, c2s bool) (bool, error) {
 	if m.detectErr != nil {
 		return false, m.detectErr
@@ -36,6 +37,7 @@ func (m *mockDetector) Detect(ctx context.Context, peek []byte, c2s bool) (bool,
 	return m.matchRsp, nil
 }
 
+// Extract 返回预设错误，否则读取双方缓冲区全部可用数据作为提取结果。
 func (m *mockDetector) Extract(ctx context.Context, clientReader, serverReader *bufio.Reader) (any, any, error) {
 	if m.extractErr != nil {
 		return nil, nil, m.extractErr
@@ -54,6 +56,7 @@ func (m *mockDetector) Extract(ctx context.Context, clientReader, serverReader *
 	return clientData[:n1], serverData[:n2], nil
 }
 
+// Build 将客户端与服务器端负载组装为应用层对象。
 func (m *mockDetector) Build(ctx context.Context, baseMeta *n.BaseMeta,
 	streamMeta *detectors.StreamMeta,
 	streamIndex uint32,

@@ -33,6 +33,7 @@ type pgColumn struct {
 // PostgresDatasource 是基于 PostgreSQL 一张表的 vtable 数据源。
 type PostgresDatasource struct {
 	pgBase
+	// tableRef 已引号包裹的库表引用。
 	tableRef string
 }
 

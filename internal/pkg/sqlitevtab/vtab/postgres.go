@@ -79,6 +79,7 @@ func (b *pgBase) datasourceSchema() sqlitevtab.Schema {
 // 限定到库。
 type PostgresPool struct {
 	sqlDBPool
+	// db 实例默认数据库名，自省时用于限定库。
 	db string
 }
 

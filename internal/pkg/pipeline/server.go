@@ -42,11 +42,6 @@ type RawConfig = asynq.Config
 // 该结构体封装了 asynq 服务器的核心功能，提供启动、停止和任务处理能力。
 // 它只负责事件驱动任务的消费，不管理分布式常驻处理器（Processor）。
 //
-// 字段说明：
-//   - logger: *logging.Logger - 日志记录器，用于记录服务器运行状态和错误信息
-//   - srv: *asynq.Server - asynq 服务器实例，负责与 Redis 交互和任务调度
-//   - mux: *asynq.ServeMux - 任务分发器，根据任务类型路由到对应的处理函数
-//
 // 生命周期：
 //  1. 通过 NewServer 函数创建服务器实例
 //  2. 调用 Start 方法启动服务器，开始处理任务

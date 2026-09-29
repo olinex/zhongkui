@@ -37,6 +37,7 @@ type ProcessorFactory func(ctx context.Context) (Processor, error)
 // 在 Start 方法中自动将 params 注入到上下文中，使被包装的 Processor 通过 GetProcParam 获取配置。
 type ProcessorWrapper struct {
 	Processor
+	// params 处理器配置参数映射，Start 时注入上下文供处理器读取。
 	params map[string]any
 }
 

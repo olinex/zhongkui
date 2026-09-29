@@ -10,6 +10,7 @@ type mockSecretKeyProvider struct {
 	key []byte
 }
 
+// GetSecretKey 返回预设的密钥，用于测试子密钥派生。
 func (m *mockSecretKeyProvider) GetSecretKey() ([]byte, error) {
 	return m.key, nil
 }

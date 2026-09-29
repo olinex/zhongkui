@@ -13,9 +13,13 @@ import (
 // - 累计完成的数据段（segment）数量
 // - 抓包启动时间，用于计算速率（pps、mbps）
 type CaptureStats struct {
-	packets   atomic.Int64
-	bytes     atomic.Int64
-	segments  atomic.Int64
+	// packets 累计捕获的数据包数量。
+	packets atomic.Int64
+	// bytes 累计捕获的字节数。
+	bytes atomic.Int64
+	// segments 累计完成的数据段（segment）数量。
+	segments atomic.Int64
+	// startTime 统计启动时间，用于计算速率（pps、mbps）。
 	startTime time.Time
 }
 

@@ -22,8 +22,10 @@ type fakeService struct {
 	shutdown    chan struct{}
 }
 
+// Name 返回服务名称。
 func (f *fakeService) Name() string { return f.name }
 
+// Start 记录启动并阻塞至上下文取消，返回预设的上下文错误。
 func (f *fakeService) Start(ctx context.Context) error {
 	f.startCount.Add(1)
 	if f.startErr != nil {
@@ -39,6 +41,7 @@ func (f *fakeService) Start(ctx context.Context) error {
 	return f.ctxErr
 }
 
+// Shutdown 记录一次关闭调用并返回 nil。
 func (f *fakeService) Shutdown(_ context.Context) error {
 	f.shutdownCtn.Add(1)
 	select {

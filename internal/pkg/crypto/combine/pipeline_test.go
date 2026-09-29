@@ -292,6 +292,7 @@ func TestPipelineConcurrent(t *testing.T) {
 // mockTransform 实现 Transform 但不实现 AlgoIDer，用于测试构造错误
 type mockTransform struct{}
 
+// WrapWriter 返回一个无操作包装的写入器，模拟未实现算法标识的转换。
 func (m *mockTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	return struct {
 		io.Writer
@@ -299,6 +300,7 @@ func (m *mockTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	}{w, io.NopCloser(nil)}, nil
 }
 
+// WrapReader 返回一个无操作包装的读取器，模拟未实现算法标识的转换。
 func (m *mockTransform) WrapReader(r io.Reader) (io.ReadCloser, error) {
 	return io.NopCloser(r), nil
 }
@@ -316,14 +318,17 @@ type trackingCloser struct {
 	records *[]string
 }
 
+// Read 透传读取被包裹的 reader。
 func (tc *trackingCloser) Read(p []byte) (int, error) {
 	return tc.reader.Read(p)
 }
 
+// Write 透传写入被包裹的 writer。
 func (tc *trackingCloser) Write(p []byte) (int, error) {
 	return tc.writer.Write(p)
 }
 
+// Close 记录一次关闭调用并返回 nil。
 func (tc *trackingCloser) Close() error {
 	*tc.records = append(*tc.records, tc.name)
 	return nil
@@ -336,13 +341,16 @@ type trackingTransform struct {
 	records    *[]string
 }
 
+// ModeID 返回该转换对应的算法标识字节。
 func (t *trackingTransform) ModeID() byte { return t.algoID }
 
+// WrapWriter 返回一个记录关闭调用的写入器包装。
 func (t *trackingTransform) WrapWriter(w io.Writer) (io.WriteCloser, error) {
 	tc := &trackingCloser{name: t.readerName, writer: w, records: t.records}
 	return tc, nil
 }
 
+// WrapReader 返回一个记录关闭调用的读取器包装。
 func (t *trackingTransform) WrapReader(r io.Reader) (io.ReadCloser, error) {
 	tc := &trackingCloser{name: t.readerName, reader: r, records: t.records}
 	return tc, nil

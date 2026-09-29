@@ -214,19 +214,13 @@ ISO15924Entry 表示 ISO 15924 标准中一种书写系统（script）的完整�
 
 ISO 15924 是国际标准化组织（ISO）定义的书写系统代码标准， 每个条目包含该书写系统的四位字母代码、数字代码及名称。
 
-字段说明：
-
-- Alpha4: 四位字母代码（如 "Hans"、"Latn"、"Cyrl"），是使用最广泛的书写系统编码形式
-- Name: 书写系统的英文名称（如 "Han \(Simplified variant\)"、"Latin"、"Cyrillic"）
-- Numeric: 三位数字代码（如 "501"、"215"、"220"），与联合国数字代码一致
-
 ```go
 type ISO15924Entry struct {
-    // Alpha4 四位字母代码（Alpha-4），如 "Hans"、"Latn"。
+    // Alpha4 四位字母代码（Alpha-4），如 "Hans"、"Latn"，是使用最广泛的书写系统编码形式。
     Alpha4 string `json:"alpha_4"`
     // Name 书写系统的英文名称，如 "Latin"、"Cyrillic"。
     Name string `json:"name"`
-    // Numeric 三位数字代码，如 "501"（简体汉字）、"215"（拉丁文）。
+    // Numeric 三位数字代码，如 "501"（简体汉字）、"215"（拉丁文），与联合国数字代码一致。
     Numeric string `json:"numeric"`
 }
 ```
@@ -342,26 +336,17 @@ ISO31661Entry 表示 ISO 3166\-1 标准中一个国家/地区的完整信息条�
 
 ISO 3166\-1 是国际标准化组织（ISO）定义的国家/地区代码标准， 每个条目包含该国家/地区的多种编码形式、名称及旗帜标识。
 
-字段说明：
-
-- Alpha2: 两位字母代码（如 "CN"、"US"），是使用最广泛的编码形式
-- Alpha3: 三位字母代码（如 "CHN"、"USA"），比 Alpha2 更具可读性
-- Flag: 该国家/地区对应的 emoji 旗帜符号（如 "🇨🇳"、"🇺🇸"）
-- Name: 国家/地区的英文名称（如 "China"、"United States"）
-- Numeric: 三位数字代码（如 "156"、"840"），与联合国统计司的数字代码一致
-- OfficialName: 国家/地区的官方全称（如 "People's Republic of China"），部分条目可能为空
-
 ```go
 type ISO31661Entry struct {
-    // Alpha2 两位字母代码（Alpha-2），如 "CN"、"US"。
+    // Alpha2 两位字母代码（Alpha-2），如 "CN"、"US"，是使用最广泛的编码形式。
     Alpha2 string `json:"alpha_2"`
-    // Alpha3 三位字母代码（Alpha-3），如 "CHN"、"USA"。
+    // Alpha3 三位字母代码（Alpha-3），如 "CHN"、"USA"，比 Alpha2 更具可读性。
     Alpha3 string `json:"alpha_3"`
-    // Flag 该国家/地区的旗帜标识，如 "🇨🇳"、"🇺🇸"。
+    // Flag 该国家/地区对应的 emoji 旗帜符号，如 "🇨🇳"、"🇺🇸"。
     Flag string `json:"flag"`
     // Name 国家/地区的英文名称，如 "China"、"United States"。
     Name string `json:"name"`
-    // Numeric 三位数字代码，如 "156"（中国）、"840"（美国）。
+    // Numeric 三位数字代码，如 "156"（中国）、"840"（美国），与联合国统计司的数字代码一致。
     Numeric string `json:"numeric"`
     // OfficialName 国家/地区的官方全称，如 "People's Republic of China"，部分条目可能为空。
     OfficialName string `json:"official_name,omitempty"`
@@ -462,19 +447,13 @@ ISO4217Entry 表示 ISO 4217 标准中一种货币的完整信息条目。
 
 ISO 4217 是国际标准化组织（ISO）定义的货币代码标准， 每个条目包含该货币的字母代码、数字代码及名称。
 
-字段说明：
-
-- Alpha3: 三位字母代码（如 "CNY"、"USD"、"EUR"），是使用最广泛的货币编码形式
-- Name: 货币的英文名称（如 "Yuan Renminbi"、"US Dollar"、"Euro"）
-- Numeric: 三位数字代码（如 "156"、"840"、"978"），与联合国数字代码一致
-
 ```go
 type ISO4217Entry struct {
-    // Alpha3 三位字母代码（Alpha-3），如 "CNY"、"USD"。
+    // Alpha3 三位字母代码（Alpha-3），如 "CNY"、"USD"，是使用最广泛的货币编码形式。
     Alpha3 string `json:"alpha_3"`
     // Name 货币的英文名称，如 "Yuan Renminbi"、"US Dollar"。
     Name string `json:"name"`
-    // Numeric 三位数字代码，如 "156"（人民币）、"840"（美元）。
+    // Numeric 三位数字代码，如 "156"（人民币）、"840"（美元），与联合国数字代码一致。
     Numeric string `json:"numeric"`
 }
 ```
@@ -568,12 +547,6 @@ ISO6392Entry 表示 ISO 639\-2 标准中的单条语言记录。
 
 ISO 639\-2 定义了语言的 Alpha\-3（三位字母）代码，部分语言同时拥有 对应 ISO 639\-1 的 Alpha\-2（两位字母）代码。
 
-字段说明：
-
-- Alpha2：对应 ISO 639\-1 的两位字母代码（如 "zh"、"en"），部分语言无此代码则留空。
-- Alpha3：对应 ISO 639\-2/T 的三位字母代码（如 "zho"、"eng"），所有语言均具备。
-- Name：语言的英文标准名称（如 "Chinese"、"English"）。
-
 ```go
 type ISO6392Entry struct {
     // Alpha2 对应 ISO 639-1 的两位字母代码，如 "zh"、"en"；部分语言无此代码则为空。
@@ -642,11 +615,6 @@ RFC1766Entry 表示符合 RFC 1766 标准的区域设置条目。
 
 RFC 1766 定义了语言标识标签的格式，由语言代码（ISO 639）和国家/地区代码（ISO 3166\-1）组成， 用于标识特定国家/地区的语言变体，例如 "zh\_CN" 表示中国大陆使用的中文，"en\_US" 表示美国英语。
 
-字段说明：
-
-- Language：ISO 639\-2 语言条目，包含语言的 Alpha\-2、Alpha\-3 代码及名称
-- Country：ISO 3166\-1 国家/地区条目，包含国家/地区的 Alpha\-2、Alpha\-3 代码及名称
-
 ```go
 type RFC1766Entry struct {
     // Language 语言条目（ISO 639-2）。
@@ -712,11 +680,6 @@ ConvertFromName 根据语言标签名称查询对应的 RFC 4646 条目。
 RFC4646Entry 表示符合 RFC 4646 标准的语言脚本条目。
 
 RFC 4646（后修订为 RFC 5646 / BCP 47）定义了语言标识标签的格式， 由语言代码（ISO 639）和文字脚本代码（ISO 15924）组成， 用于标识使用特定文字书写系统的语言，例如 "zh\_Hans" 表示简体中文， "ja\_Jpan" 表示使用日文书写系统（汉字\+平假名\+片假名）的日语。
-
-字段说明：
-
-- Language：ISO 639\-2 语言条目，包含语言的 Alpha\-2、Alpha\-3 代码及名称
-- Script：ISO 15924 文字脚本条目，包含脚本的 Alpha\-4 代码、名称及数字代码
 
 ```go
 type RFC4646Entry struct {

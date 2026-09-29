@@ -34,6 +34,7 @@ type enqueuer interface {
 //	    // 处理错误
 //	}
 type Client struct {
+	// cli asynq 客户端接口，已按 OTEL 是否启用包装追踪能力。
 	cli enqueuer
 }
 

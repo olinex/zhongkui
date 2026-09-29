@@ -31,6 +31,7 @@ SUDO ?= sudo
 	build-release
 	run
 	clean
+	lint
 	bench-prepare
 	bench-smoke
 	bench-slow
@@ -379,6 +380,17 @@ run:
 clean:
 	rm -f internal/pkg/protobuf/reporter/v1/reporter.pb.go
 	rm -f internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go
+
+# ============================================================
+# 代码检查
+# ============================================================
+
+# lint - 运行自建注释检查 analyzer (cmd/commentlint)，校验包注释与导出声明的注释完备性
+# 检查范围、豁免规则与口径见 AGENTS.md「Comments」，实现见 internal/lint/commentlint
+# 诊断输出到 stderr，发现缺口时退出码为 3 (make 因此失败)，可直接作为 CI/提交前检查
+# 用法: make lint
+lint:
+	go run cmd/commentlint/main.go ./...
 
 # ============================================================
 # Wire 抓包实现基线测试

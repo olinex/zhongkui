@@ -79,6 +79,7 @@ func (b *mysqlBase) datasourceSchema() sqlitevtab.Schema {
 // 基座）。*sql.DB 并发安全，可被局部借出使用；数据源自省表结构时以 pool.db 限定到库。
 type MySQLPool struct {
 	sqlDBPool
+	// db 实例默认数据库名，自省时用于限定库。
 	db string
 }
 

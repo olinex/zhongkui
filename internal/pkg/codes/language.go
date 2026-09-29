@@ -19,11 +19,6 @@ var (
 //
 // ISO 639-2 定义了语言的 Alpha-3（三位字母）代码，部分语言同时拥有
 // 对应 ISO 639-1 的 Alpha-2（两位字母）代码。
-//
-// 字段说明：
-//   - Alpha2：对应 ISO 639-1 的两位字母代码（如 "zh"、"en"），部分语言无此代码则留空。
-//   - Alpha3：对应 ISO 639-2/T 的三位字母代码（如 "zho"、"eng"），所有语言均具备。
-//   - Name：语言的英文标准名称（如 "Chinese"、"English"）。
 type ISO6392Entry struct {
 	// Alpha2 对应 ISO 639-1 的两位字母代码，如 "zh"、"en"；部分语言无此代码则为空。
 	Alpha2 string `json:"alpha_2,omitempty"`

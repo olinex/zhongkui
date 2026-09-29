@@ -136,7 +136,8 @@ type Agent struct {
 	tools     []tool.BaseTool          // 本次装配可用的工具（无工具时为空）
 	toolInfos []*schema.ToolInfo       // 与 tools 对应的 schema 清单（无工具时为空）
 	toolIndex map[string]tool.BaseTool // 按 Info(ctx).Name 建立的工具索引（节点 4 派发用）
-	runnable  compose.Runnable[AgentInput, AgentOutput]
+	// runnable 编译后的五节点图执行入口（Generate 与 Stream 共用）。
+	runnable compose.Runnable[AgentInput, AgentOutput]
 }
 
 // NewAgent 构造 Agent：校验依赖后组装五节点图并编译。resolver/retriever/store/params

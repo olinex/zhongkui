@@ -25,6 +25,7 @@ type fakeBackend struct {
 	remove func(ctx context.Context, objectKey string) error
 }
 
+// Store 转调注入的 store 函数，未注入时直接返回 nil。
 func (b fakeBackend) Store(ctx context.Context, objectKey string, r io.Reader) error {
 	if b.store == nil {
 		return nil
@@ -32,6 +33,7 @@ func (b fakeBackend) Store(ctx context.Context, objectKey string, r io.Reader) e
 	return b.store(ctx, objectKey, r)
 }
 
+// Fetch 转调注入的 fetch 函数，未注入时返回错误。
 func (b fakeBackend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser, error) {
 	if b.fetch == nil {
 		return nil, errors.New("fetch not stubbed")
@@ -39,6 +41,7 @@ func (b fakeBackend) Fetch(ctx context.Context, objectKey string) (io.ReadCloser
 	return b.fetch(ctx, objectKey)
 }
 
+// Remove 转调注入的 remove 函数，未注入时直接返回 nil。
 func (b fakeBackend) Remove(ctx context.Context, objectKey string) error {
 	if b.remove == nil {
 		return nil

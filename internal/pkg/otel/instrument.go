@@ -62,6 +62,7 @@ func AsynqServerMiddleware() asynq.MiddlewareFunc {
 // TracedAsynqClient 包装 asynq.Client，在任务入队时自动创建追踪 span。
 type TracedAsynqClient struct {
 	*asynq.Client
+	// tracer 用于为任务入队创建追踪 span 的 Tracer。
 	tracer trace.Tracer
 }
 

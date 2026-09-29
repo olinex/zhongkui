@@ -61,16 +61,14 @@ type ElectionHandler interface {
 //     a) Campaign goroutine：阻塞式参与竞选，直到成为领导者
 //     b) Observe goroutine：监听选举结果，当确认自己成为领导者后启动业务逻辑
 //  4. 当实例挂掉时，Session 的 TTL 到期后自动释放，其他实例可重新竞选
-//
-// 字段说明:
-//   - ctx: 上下文对象，用于控制选举的生命周期，取消该上下文将停止选举
-//   - client: etcd 客户端实例，用于与 etcd 集群通信
-//   - logger: 日志记录器，用于记录选举过程中的关键事件
-//   - handler: 选举事件处理器，定义了成为领导者后的业务逻辑
 type Election struct {
-	ctx     context.Context
-	client  *EtcdClient
-	logger  *logging.Logger
+	// ctx 选举生命周期上下文，取消即停止选举。
+	ctx context.Context
+	// client etcd 客户端实例，用于竞选与会话通信。
+	client *EtcdClient
+	// logger 日志记录器，记录选举关键事件。
+	logger *logging.Logger
+	// handler 选举事件处理器，定义成为领导者后的业务逻辑。
 	handler ElectionHandler
 }
 

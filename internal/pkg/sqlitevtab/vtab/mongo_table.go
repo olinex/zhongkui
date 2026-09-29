@@ -33,8 +33,11 @@ type mongoColumn struct {
 
 // MongoDatasource 是一个 Mongo 集合的 vtable 数据源。
 type MongoDatasource struct {
-	pool       *MongoPool
-	schema     sqlitevtab.Schema
+	// pool 数据源连接池。
+	pool *MongoPool
+	// schema 注册 schema。
+	schema sqlitevtab.Schema
+	// valueTypes 各列 ValueType，输出单元格时归一化。
 	valueTypes []sqlitevtab.ValueType
 }
 
