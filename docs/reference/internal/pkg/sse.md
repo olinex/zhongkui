@@ -16,6 +16,7 @@
   - [func \(s \*SSEWriter\) SendError\(err error\) error](<#SSEWriter.SendError>)
   - [func \(s \*SSEWriter\) SendStage\(payload any\) error](<#SSEWriter.SendStage>)
   - [func \(s \*SSEWriter\) SendStageDelta\(stage string, delta string\) error](<#SSEWriter.SendStageDelta>)
+  - [func \(s \*SSEWriter\) SendToolRequest\(payload any\) error](<#SSEWriter.SendToolRequest>)
 
 
 <a name="WriteSSE"></a>
@@ -59,7 +60,7 @@ SSEEventValue 是 SSE 事件类型值：SSEEvent.Event 的取值空间（独立�
 type SSEEventValue string
 ```
 
-<a name="SSEEventDelta"></a>SSE 事件类型常量：SSE 流上事件的 event 行取值。前端按事件类型分发解析： delta 累积正文、stage 呈现执行阶段的状态与用量、done 呈现结构化产物与引用、 error 中断提示、ping 保活。
+<a name="SSEEventDelta"></a>SSE 事件类型常量：SSE 流上事件的 event 行取值。前端按事件类型分发解析： delta 累积正文、stage 呈现执行阶段的状态与用量、done 呈现结构化产物与引用、 error 中断提示、ping 保活、tool\_request 挂起等待前端执行客户端工具。
 
 ```go
 const (
@@ -73,6 +74,9 @@ const (
     SSEEventError SSEEventValue = "error"
     // SSEEventPing 心跳事件（无 data 行，保持代理/网关连接）
     SSEEventPing SSEEventValue = "ping"
+    // SSEEventToolRequest 工具执行请求事件：表示当前流已挂起、等待前端执行并审批
+    // 客户端工具调用；调用方不应期待本次流再出现 done 事件。
+    SSEEventToolRequest SSEEventValue = "tool_request"
 )
 ```
 
@@ -149,3 +153,12 @@ func (s *SSEWriter) SendStageDelta(stage string, delta string) error
 ```
 
 SendStageDelta 发送带阶段标识的增量文本（delta 事件，data 为 \{"stage": "...", "delta": "..."\}），供多阶段流式过程（如检索试运行）把增量 归属到具体阶段。
+
+<a name="SSEWriter.SendToolRequest"></a>
+### func \(\*SSEWriter\) SendToolRequest
+
+```go
+func (s *SSEWriter) SendToolRequest(payload any) error
+```
+
+SendToolRequest 发送工具执行请求事件（tool\_request 事件，表示本次流挂起等待 前端执行并审批客户端工具调用；发送后调用方不应再发送 done）。payload 由调用方 提供，须包含 callId、接口 ID、参数、已合成的请求描述符与是否需审批。

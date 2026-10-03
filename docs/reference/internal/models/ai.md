@@ -4,13 +4,117 @@
 
 ## Index
 
+- [Variables](<#variables>)
+- [func ChatSlotValues\(\) \[\]string](<#ChatSlotValues>)
+- [func InvalidChatSlotError\(value Slot\) error](<#InvalidChatSlotError>)
+- [func SlotKind\(slot Slot\) llm.ModelKind](<#SlotKind>)
+- [type AgentKind](<#AgentKind>)
+  - [func AllAgentKinds\(\) \[\]AgentKind](<#AllAgentKinds>)
+  - [func ParseAgentKind\(raw AgentKind\) \(AgentKind, error\)](<#ParseAgentKind>)
 - [type AgentMemory](<#AgentMemory>)
 - [type AgentMessage](<#AgentMessage>)
+- [type AgentParam](<#AgentParam>)
+- [type AgentRun](<#AgentRun>)
+- [type AgentRunStatus](<#AgentRunStatus>)
+  - [func AllAgentRunStatuses\(\) \[\]AgentRunStatus](<#AllAgentRunStatuses>)
+  - [func ParseAgentRunStatus\(raw AgentRunStatus\) \(AgentRunStatus, error\)](<#ParseAgentRunStatus>)
 - [type AgentSession](<#AgentSession>)
 - [type KnowledgeChunk](<#KnowledgeChunk>)
 - [type KnowledgeDocStatus](<#KnowledgeDocStatus>)
 - [type KnowledgeDocument](<#KnowledgeDocument>)
+- [type LlmBinding](<#LlmBinding>)
+- [type LlmModel](<#LlmModel>)
+  - [func \(l \*LlmModel\) APIKeyData\(\) \[\]byte](<#LlmModel.APIKeyData>)
+- [type LlmTool](<#LlmTool>)
+- [type McpServer](<#McpServer>)
+  - [func \(m \*McpServer\) HeadersData\(\) \[\]byte](<#McpServer.HeadersData>)
+- [type MemoryKind](<#MemoryKind>)
+  - [func AllMemoryKinds\(\) \[\]MemoryKind](<#AllMemoryKinds>)
+  - [func ParseMemoryKind\(raw MemoryKind\) \(MemoryKind, error\)](<#ParseMemoryKind>)
+- [type MemoryStatus](<#MemoryStatus>)
+  - [func AllMemoryStatuses\(\) \[\]MemoryStatus](<#AllMemoryStatuses>)
+  - [func ParseMemoryStatus\(raw MemoryStatus\) \(MemoryStatus, error\)](<#ParseMemoryStatus>)
+- [type MessageRole](<#MessageRole>)
+- [type SessionStatus](<#SessionStatus>)
+- [type Slot](<#Slot>)
+  - [func ParseChatSlot\(value Slot\) \(Slot, bool\)](<#ParseChatSlot>)
+  - [func ParseSlot\(value Slot\) \(Slot, error\)](<#ParseSlot>)
+  - [func ResolveSlot\(requested, declared, fallback Slot\) \(Slot, error\)](<#ResolveSlot>)
+- [type ToolSource](<#ToolSource>)
 
+
+## Variables
+
+<a name="AllSlots"></a>AllSlots 是全部固定档位的清单，声明顺序即前端展示顺序：三档对话档位在前，向量化槽位在后。 档位枚举的成员集合只在此处声明，视图层与 ai 运行时一律引用本清单，不自行列举档位。
+
+```go
+var AllSlots = []Slot{SlotFlash, SlotStandard, SlotAdvanced, SlotEmbedding}
+```
+
+<a name="ChatSlotValues"></a>
+## func ChatSlotValues
+
+```go
+func ChatSlotValues() []string
+```
+
+ChatSlotValues 把对话档位清单展开为字面量清单（embedding 不在其列），返回新切片，调用方 修改不影响内部档位清单。档位成员仍只声明在 AllSlots 一处，清单由此派生，新增档位无需同步 修改消费方（如参数注册表 agent.defaultSlot 的封闭取值清单）。
+
+<a name="InvalidChatSlotError"></a>
+## func InvalidChatSlotError
+
+```go
+func InvalidChatSlotError(value Slot) error
+```
+
+InvalidChatSlotError 返回「对话档位取值不合法」的英文错误，枚举文案与档位清单同源；供 视图层在 ParseChatSlot 返回 false 时直接使用，各处不再重复拼写档位枚举。
+
+<a name="SlotKind"></a>
+## func SlotKind
+
+```go
+func SlotKind(slot Slot) llm.ModelKind
+```
+
+SlotKind 返回档位要求的模型类型：embedding 档位要求向量模型，其余对话档位要求对话模型。
+
+<a name="AgentKind"></a>
+## type AgentKind
+
+AgentKind 是 Agent 类型的标识：知识检索/知识库运营（knowledge）与 Rego 规则生成（rego）。 会话与长期记忆均按「命名空间 \+ AgentKind」归属与隔离，取值与 agent\_sessions.agent\_kind、 agent\_memories.agent\_kind 列的取值一致。
+
+```go
+type AgentKind string
+```
+
+<a name="AgentKindKnowledge"></a>Agent 类型常量。
+
+```go
+const (
+    // AgentKindKnowledge 知识检索/知识库运营 Agent
+    AgentKindKnowledge AgentKind = "knowledge"
+    // AgentKindRego Rego 规则生成 Agent
+    AgentKindRego AgentKind = "rego"
+)
+```
+
+<a name="AllAgentKinds"></a>
+### func AllAgentKinds
+
+```go
+func AllAgentKinds() []AgentKind
+```
+
+AllAgentKinds 返回全部 Agent 类型的副本，声明顺序即枚举类条目顺序与前端展示顺序；供展示与 校验遍历使用，调用方修改返回值不影响该取值空间。
+
+<a name="ParseAgentKind"></a>
+### func ParseAgentKind
+
+```go
+func ParseAgentKind(raw AgentKind) (AgentKind, error)
+```
+
+ParseAgentKind 解析并校验 Agent 类型取值：空串取缺省值 knowledge；非空但不在取值空间内的 取值返回英文错误；合法取值原样返回。取值清单只在 internal/models/ai 声明，调用方不再各自 校验并拼错误文案。
 
 <a name="AgentMemory"></a>
 ## type AgentMemory
@@ -26,23 +130,23 @@ type AgentMemory struct {
     // NamespaceName 所属命名空间名称，多租户隔离字段，与 AgentKind、SessionID 组成复合索引
     NamespaceName string `gorm:"type:VARCHAR(32);index:idx_agent_memories_namespace_kind,priority:1"`
     // AgentKind 所属 Agent 类型（如 knowledge/rego），与 NamespaceName、SessionID 组成复合索引
-    AgentKind llm.AgentKind `gorm:"type:VARCHAR(32);index:idx_agent_memories_namespace_kind,priority:2"`
+    AgentKind AgentKind `gorm:"type:VARCHAR(32);index:idx_agent_memories_namespace_kind,priority:2"`
     // SessionID 来源会话 ID，检索与唯一性均以它为隔离维度（记忆只在来源会话内可见，不手动新增）
     SessionID uint `gorm:"type:BIGINT;index:idx_agent_memories_namespace_kind,priority:3"`
     // Kind 记忆类别（fact/preference/decision/artifact），默认 fact
-    Kind llm.MemoryKind `gorm:"type:VARCHAR(16)"`
+    Kind MemoryKind `gorm:"type:VARCHAR(16)"`
     // Title 一句话标题，便于在记忆列表中识别
     Title string `gorm:"type:VARCHAR(256)"`
-    // Content 记忆正文内容
-    Content string `gorm:"type:TEXT"`
+    // Content 记忆正文内容，经 crypto 序列化器加密存储
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12805,length=32"`
     // Embedding 记忆正文的向量化表示（1536 维），用于向量相似度检索
     Embedding []float32 `gorm:"type:vector(1536);serializer:json"`
     // Search 记忆正文的全文检索表示（tsvector），用于关键词检索
     Search string `gorm:"type:tsvector"`
-    // Hash 规范化正文的 sha256 十六进制摘要，用于精确去重
-    Hash string `gorm:"type:CHAR(64)"`
+    // Hash 规范化正文的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于精确去重
+    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash" secure:"mode=\"hmac-sha256\",offset=12806,length=32"`
     // Status 记忆状态（active/archived），默认 active
-    Status llm.MemoryStatus `gorm:"type:VARCHAR(16)"`
+    Status MemoryStatus `gorm:"type:VARCHAR(16)"`
     // UseCount 被检索命中的次数，默认 0
     UseCount int `gorm:"type:INT"`
     // LastUsedAt 最近一次被检索召回的时间，可空（从未命中为 NULL）
@@ -60,21 +164,113 @@ type AgentMessage struct {
     database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
 
     // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
-    Namespace coremodel.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
     // SessionID 所属会话 ID，会话删除时消息级联删除
     SessionID uint `gorm:"type:BIGINT;index"`
     // NamespaceName 所属命名空间名称，多租户隔离字段
     NamespaceName string `gorm:"type:VARCHAR(32)"`
     // Role 消息角色：user/assistant/system 等
-    Role llm.MessageRole `gorm:"type:VARCHAR(16)"`
-    // Content 消息正文内容
-    Content string `gorm:"type:TEXT"`
-    // DraftJSON 助手回复的草稿载荷（JSON，如工具调用的中间状态），可空
-    DraftJSON datatypes.JSON `gorm:"type:JSONB"`
-    // CitationsJSON 引用来源列表（JSON），可空
-    CitationsJSON datatypes.JSON `gorm:"type:JSONB"`
+    Role MessageRole `gorm:"type:VARCHAR(16)"`
+    // Content 消息正文内容（含用户原文与模型输出，经 crypto 序列化器加密落库）
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12811,length=32"`
+    // DraftJSON 助手回复的草稿载荷（JSON，如工具调用的中间状态），可空，经 crypto 序列化器加密落库
+    DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12812,length=32"`
+    // CitationsJSON 引用来源列表（JSON），可空，经 crypto 序列化器加密落库（引用携带知识库正文）
+    CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12813,length=32"`
 }
 ```
+
+<a name="AgentParam"></a>
+## type AgentParam
+
+AgentParam 表示一条 Agent 行为参数记录：出厂值（DefaultValue）由 migrate fixture 注入、 只读，当前生效值（Value）可由管理接口或直接改库调整。表内每个注册表键恒有且仅有一条 记录，参数键、类型、分组与说明由代码内参数注册表声明（注册表不再持有任何出厂值）。 对应表为 agent\_params。
+
+```go
+type AgentParam struct {
+    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+    // Key 参数键（点号分层，如 agent.systemPrompt、retrieval.topK），全局唯一
+    // （uq_agent_params_key）
+    Key string `gorm:"type:VARCHAR(128);uniqueIndex:uq_agent_params_key"`
+    // Value 参数当前生效值，按注册表声明的类型解释（文本形式存储）
+    Value string `gorm:"type:TEXT"`
+    // DefaultValue 参数出厂值（与种子化时的 Value 相同），只由 migrate fixture 维护，
+    // 任何接口路径都不得写入；「恢复出厂值」即把 Value 写回本列
+    DefaultValue string `gorm:"column:default_value;type:TEXT"`
+}
+```
+
+<a name="AgentRun"></a>
+## type AgentRun
+
+AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后， 后端把完整消息链、待执行调用列表、检索引用、档位与过期时间落库，结束本次流等待前端回传 审批决定与执行结果，再据该现场从中断处续跑。对应表为 agent\_runs。
+
+```go
+type AgentRun struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32);index:idx_agent_runs_namespace"`
+    // SessionID 所属会话 ID，恢复请求据此校验运行现场归属
+    SessionID uint `json:"sessionId" gorm:"type:BIGINT;index:idx_agent_runs_session_id"`
+    // Status 运行现场状态，取值来自枚举类 agentRunStatus（pending/consumed/expired）
+    Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16);index:idx_agent_runs_status"`
+    // MessagesJSON 挂起时刻的完整消息链 JSON（含用户原文，经 crypto 序列化器加密落库）
+    MessagesJSON *serializer.Crypto `json:"messages" gorm:"column:messages;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12814,length=32"`
+    // PendingCallsJSON 待执行调用列表 JSON：callId、工具名与调用入参文本
+    // （工具入参可能携带凭据，经 crypto 序列化器加密落库）
+    PendingCallsJSON *serializer.Crypto `json:"pendingCalls" gorm:"column:pending_calls;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12815,length=32"`
+    // CitationsJSON 检索引用列表 JSON，用于恢复后的最终轮产出引用
+    // （引用携带知识库正文，经 crypto 序列化器加密落库）
+    CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12816,length=32"`
+    // Slot 本次运行使用的档位，取值来自枚举类 llmSlot
+    Slot Slot `json:"slot" gorm:"type:VARCHAR(255)"`
+    // ExpiresAt 运行现场过期时间，超过该时刻的现场不可恢复
+    ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_runs_expires_at"`
+}
+```
+
+<a name="AgentRunStatus"></a>
+## type AgentRunStatus
+
+AgentRunStatus 是 Agent 运行现场状态的标识：待恢复（pending）、已消费（consumed）与 已过期（expired），取值与 agent\_runs.status 列的取值一致。运行现场在命中客户端工具 时挂起并落库，仅处于 pending 且未过期的现场可被恢复。
+
+```go
+type AgentRunStatus string
+```
+
+<a name="AgentRunStatusPending"></a>运行现场状态常量。
+
+```go
+const (
+    // AgentRunStatusPending 待恢复：运行已挂起、等待前端回传审批决定与执行结果
+    AgentRunStatusPending AgentRunStatus = "pending"
+    // AgentRunStatusConsumed 已消费：运行现场已被成功恢复，不可再次恢复
+    AgentRunStatusConsumed AgentRunStatus = "consumed"
+    // AgentRunStatusExpired 已过期：运行现场超过存活期限，不可恢复
+    AgentRunStatusExpired AgentRunStatus = "expired"
+)
+```
+
+<a name="AllAgentRunStatuses"></a>
+### func AllAgentRunStatuses
+
+```go
+func AllAgentRunStatuses() []AgentRunStatus
+```
+
+AllAgentRunStatuses 返回全部运行现场状态的副本，声明顺序即枚举类条目顺序与前端展示顺序； 供运行现场服务与视图层复用，调用方修改返回值不影响该取值空间。
+
+<a name="ParseAgentRunStatus"></a>
+### func ParseAgentRunStatus
+
+```go
+func ParseAgentRunStatus(raw AgentRunStatus) (AgentRunStatus, error)
+```
+
+ParseAgentRunStatus 解析并校验运行现场状态：不在取值空间内的取值（含空串）返回英文错误； 合法取值原样返回。状态没有缺省值（写入路径显式使用 pending），故空串视为非法。
 
 <a name="AgentSession"></a>
 ## type AgentSession
@@ -86,20 +282,21 @@ type AgentSession struct {
     gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
 
     // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
-    Namespace coremodel.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
     // NamespaceName 所属命名空间名称，多租户隔离字段
     NamespaceName string `gorm:"type:VARCHAR(32);index:idx_agent_sessions_namespace"`
     // Title 会话标题，默认取首条用户消息的摘要，可由用户重命名
     Title string `gorm:"type:VARCHAR(256)"`
     // TargetModel 会话缺省档位（列名沿用历史命名）：取值 flash/standard/advanced，空表示按
     // 参数 agent.defaultSlot 解析；生成请求未显式指定档位时使用该档位
-    TargetModel llm.Slot `gorm:"type:VARCHAR(255)"`
+    TargetModel Slot `gorm:"type:VARCHAR(255)"`
     // Status 会话状态（如 active/archived），默认 active
-    Status llm.SessionStatus `gorm:"type:VARCHAR(16)"`
+    Status SessionStatus `gorm:"type:VARCHAR(16)"`
     // AgentKind 会话所属 Agent 类型（如 knowledge/rego），记忆归属与检索据此隔离
-    AgentKind llm.AgentKind `gorm:"type:VARCHAR(32);default:knowledge"`
-    // Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空串
-    Summary string `gorm:"type:TEXT"`
+    AgentKind AgentKind `gorm:"type:VARCHAR(32);default:knowledge"`
+    // Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空
+    // （正文含用户原文，经 crypto 序列化器加密落库）
+    Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12810,length=32"`
     // SummaryUptoMessageID 滚动摘要已覆盖的最后一条消息 ID，0 表示尚未摘要任何消息
     SummaryUptoMessageID uint `gorm:"type:BIGINT"`
 }
@@ -108,7 +305,7 @@ type AgentSession struct {
 <a name="KnowledgeChunk"></a>
 ## type KnowledgeChunk
 
-KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元： 每个分块携带向量化表示（Embedding）与全文检索表示（Search）， 支持向量相似度检索与关键词检索。对应表为 knowledge\_chunks。
+KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元： 每个分块携带向量化表示（Embedding）与全文检索表示（Search）， 支持向量相似度检索与关键词检索。标题路径与分块正文经 crypto 序列化器 加密存储（列类型 BYTEA）；Search 为 tsvector，保留明文词元以支撑全文检索。 对应表为 knowledge\_chunks。
 
 ```go
 type KnowledgeChunk struct {
@@ -122,10 +319,10 @@ type KnowledgeChunk struct {
     NamespaceName string `gorm:"type:VARCHAR(32);index:idx_knowledge_chunks_namespace_document,priority:1"`
     // ChunkIndex 分块在文档内的序号，从 0 开始
     ChunkIndex int `gorm:"type:INT"`
-    // HeadingPath 分块所属的标题路径（如 "## 简介 / 架构"），用于引用溯源
-    HeadingPath string `gorm:"type:TEXT"`
-    // Content 分块正文内容
-    Content string `gorm:"type:TEXT"`
+    // HeadingPath 分块所属的标题路径（如 "## 简介 / 架构"），用于引用溯源，经 crypto 序列化器加密存储
+    HeadingPath *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12802,length=32"`
+    // Content 分块正文内容，经 crypto 序列化器加密存储
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12803,length=32"`
     // Embedding 分块内容的向量化表示（1536 维），用于向量相似度检索
     Embedding []float32 `gorm:"type:vector(1536);serializer:json"`
     // Search 分块内容的全文检索表示（tsvector），用于关键词检索
@@ -160,7 +357,7 @@ const (
 <a name="KnowledgeDocument"></a>
 ## type KnowledgeDocument
 
-KnowledgeDocument 表示一份上传到知识库的文档，是 RAG 索引的输入单元： 文档按标题层级切分为多个知识分块（KnowledgeChunk），并保存内容摘要 （Hash）以判断已有分块索引是否随内容变更而过期。对应表为 knowledge\_documents。
+KnowledgeDocument 表示一份上传到知识库的文档，是 RAG 索引的输入单元： 文档按标题层级切分为多个知识分块（KnowledgeChunk），并保存内容摘要 （Hash）以判断已有分块索引是否随内容变更而过期。文档正文经 crypto 序列化器 加密存储（列类型 BYTEA），内容摘要为带密钥的 HMAC\-SHA256，均避免明文落库。 对应表为 knowledge\_documents。
 
 ```go
 type KnowledgeDocument struct {
@@ -172,12 +369,12 @@ type KnowledgeDocument struct {
     NamespaceName string `gorm:"type:VARCHAR(32);index:idx_knowledge_documents_namespace"`
     // Title 文档标题，便于在文档列表中识别
     Title string `gorm:"type:VARCHAR(256)"`
-    // Content 文档正文内容
-    Content string `gorm:"type:TEXT"`
+    // Content 文档正文内容，经 crypto 序列化器加密存储
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12801,length=32"`
     // ChunkCount 文档被切分的知识分块数量，0 表示尚未切分
     ChunkCount int `gorm:"type:INT"`
-    // Hash 文档内容的 sha256 十六进制摘要，用于判断已有分块索引是否过期
-    Hash string `gorm:"type:CHAR(64)"`
+    // Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于判断已有分块索引是否过期
+    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash" secure:"mode=\"hmac-sha256\",offset=12804,length=32"`
     // Format 文档来源格式，取值来自枚举类 documentFormat；手工录入的文档为 markdown
     Format string `gorm:"type:VARCHAR(16)"`
     // OriginalName 导入文档的原始文件名，手工录入的文档为空
@@ -195,4 +392,331 @@ type KnowledgeDocument struct {
     // LastUsedAt 最近一次被检索命中的时间，可空（从未命中为 NULL）
     LastUsedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
 }
+```
+
+<a name="LlmBinding"></a>
+## type LlmBinding
+
+LlmBinding 表示一个档位到模型注册表记录的绑定关系，每个槽位至多一条记录 （slot 唯一）。不同槽位允许复用同一条模型记录；被绑定的模型不允许删除 （外键 ON DELETE RESTRICT）。对应表为 llm\_bindings。
+
+```go
+type LlmBinding struct {
+    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+    // Slot 档位槽位：flash | standard | advanced | embedding，全局唯一（uq_llm_bindings_slot）
+    Slot Slot `gorm:"type:VARCHAR(16);uniqueIndex:uq_llm_bindings_slot"`
+    // ModelID 绑定的模型记录 ID（llm_models.id）
+    ModelID uint `gorm:"type:BIGINT;index:idx_llm_bindings_model_id"`
+    // Model 绑定的模型实体，用于 GORM 关联（foreignKey:ModelID;references:ID；删除受限）
+    Model LlmModel `gorm:"foreignKey:ModelID;references:ID;constraint:OnDelete:RESTRICT"`
+}
+```
+
+<a name="LlmModel"></a>
+## type LlmModel
+
+LlmModel 表示一个注册到平台的 LLM 模型端点（chat 或 embedding），是 LLM 配置的 唯一事实来源（不再来自配置文件）。Name 为全局唯一的本地标识，供档位绑定与运维 识别使用；Kind 区分为对话模型（chat）与向量模型（embedding）。APIKey 以加密形式 落库（crypto serializer，BYTEA 列），明文经 APIKeyData\(\) 获取。对应表为 llm\_models。
+
+```go
+type LlmModel struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Name 模型的本地标识，全局唯一（uq_llm_models_name）
+    Name string `gorm:"type:VARCHAR(64);uniqueIndex:uq_llm_models_name"`
+    // Kind 模型类型：chat（对话）| embedding（向量化），取值见视图层 llmModelKind 枚举类
+    Kind llm.ModelKind `gorm:"type:VARCHAR(16);index:idx_llm_models_kind"`
+    // BaseURL 模型端点的基地址（OpenAI 兼容 API），如 https://api.openai.com/v1
+    BaseURL string `gorm:"type:VARCHAR(512)"`
+    // APIKey 访问模型端点的凭据，以加密形式持久化（crypto serializer 密文入库，BYTEA 列）；
+    // 明文经 APIKeyData() 获取
+    APIKey *serializer.Crypto `json:"apiKey" gorm:"column:api_key;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7001,length=32"`
+    // ModelName 供应商侧的模型名，如 gpt-4o-mini、text-embedding-3-small；
+    // 列名保持 model，Go 字段名取 ModelName 是因为内嵌的 gorm.Model 已占用 Model 标识符
+    ModelName string `gorm:"column:model;type:VARCHAR(128)"`
+    // TimeoutSeconds 单次请求的超时秒数，0 表示使用调用方默认值
+    TimeoutSeconds int `gorm:"type:INTEGER"`
+    // Temperature 采样温度，取值范围 [0, 2]，仅 chat 类模型有意义
+    Temperature float64 `gorm:"type:DOUBLE PRECISION"`
+    // MaxTokens 单次生成的最大 token 数，仅 chat 类模型有意义
+    MaxTokens int `gorm:"type:INTEGER"`
+    // Dimensions 向量维度，仅 embedding 类模型有意义，是后端探测后写入的只读缓存：该值
+    // 不再由前端提交（前端的向量维度输入已移除），而是后端在绑定 embedding 槽位（或修改
+    // 已绑定模型的端点）时经真实探测写入，恒等于 knowledge_chunks.embedding 列的 pgvector
+    // 维度，供绑定兼容性校验与状态展示使用
+    Dimensions int `gorm:"type:INTEGER"`
+    // Enabled 是否启用，禁用的模型不可绑定到档位，也不参与可用性判定
+    Enabled bool `gorm:"type:BOOLEAN;default:true"`
+    // Description 模型描述，说明用途
+    Description string `gorm:"type:VARCHAR(512)"`
+}
+```
+
+<a name="LlmModel.APIKeyData"></a>
+### func \(\*LlmModel\) APIKeyData
+
+```go
+func (l *LlmModel) APIKeyData() []byte
+```
+
+APIKeyData 返回模型访问凭据的明文字节，nil 安全（APIKey 为空或 nil 时返回 nil）。
+
+<a name="LlmTool"></a>
+## type LlmTool
+
+LlmTool 表示一条注册到平台的工具记录，是 Agent 可调用的工具的唯一事实来源。Name 为 Agent 面向的工具名，全局唯一（uq\_llm\_tools\_name）。Source 取 builtin / mcp：内置工具的 描述文案来自 i18n（Description 行为空），其入参 schema 由代码内注册表声明；MCP 工具的 入参 schema 实时取自所属服务器的 tools/list，Description 仅作列表展示缓存。一致性约束： source='mcp' 当且仅当 McpServerID IS NOT NULL，由视图层与服务层校验；工具真正的入参 schema 不落库，运行时按来源实时获取。对应表为 llm\_tools，属全局配置，不按命名空间隔离。
+
+```go
+type LlmTool struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Name Agent 面向的工具名，全局唯一（uq_llm_tools_name）
+    Name string `gorm:"type:VARCHAR(128);uniqueIndex:uq_llm_tools_name"`
+    // Source 工具来源：builtin | mcp，取值见 ToolSource（枚举类 llmToolSource，声明于
+    // internal/models/ai）
+    Source ToolSource `gorm:"type:VARCHAR(16);index:idx_llm_tools_source"`
+    // McpServerID 所属 MCP 服务器的 ID（llm_tools.mcp_server_id），可空：source='mcp' 时
+    // 非空、source='builtin' 时为空
+    McpServerID *uint `gorm:"type:BIGINT;index:idx_llm_tools_mcp_server_id"`
+    // McpServer 所属 MCP 服务器实体，用于 GORM 关联（foreignKey:McpServerID;references:ID；
+    // 级联删除）
+    McpServer *McpServer `gorm:"foreignKey:McpServerID;references:ID;constraint:OnDelete:CASCADE"`
+    // RemoteName MCP 服务器侧的工具名；source='builtin' 时为空
+    RemoteName string `gorm:"type:VARCHAR(128)"`
+    // Description 展示用描述缓存；source='builtin' 时为空，其文案取自 i18n
+    Description string `gorm:"type:VARCHAR(512)"`
+    // Enabled 是否启用，默认 false（安全默认，由管理员在工具面板显式启用）；禁用的工具不参与装配
+    Enabled bool `gorm:"type:BOOLEAN;default:false"`
+}
+```
+
+<a name="McpServer"></a>
+## type McpServer
+
+McpServer 表示一个注册到平台的远程 MCP（Model Context Protocol）端点，是 Agent 可调用 的 MCP 工具的来源。Name 为全局唯一的本地标识（uq\_mcp\_servers\_name）。Transport 决定远端 连接方式，首版仅支持远程传输 streamable\_http / sse；Headers 承载 Authorization 等请求 头，是一个 JSON 对象字符串，以加密形式落库（crypto serializer，BYTEA 列），明文经 HeadersData\(\) 获取。本表有意不出现 command / args / env 列——首版不支持 stdio 本地 进程，这是从 schema 层杜绝「管理员配置任意本地命令执行」。对应表为 mcp\_servers，属全局 配置，不按命名空间隔离。
+
+```go
+type McpServer struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Name MCP 服务器的本地标识，全局唯一（uq_mcp_servers_name）
+    Name string `gorm:"type:VARCHAR(64);uniqueIndex:uq_mcp_servers_name"`
+    // Transport 远端传输方式：streamable_http | sse，取值见 mcp.Transport（枚举类 mcpTransport，
+    // 声明于 internal/ai/tools/mcp）
+    Transport string `gorm:"type:VARCHAR(32);index:idx_mcp_servers_transport"`
+    // URL MCP 端点的地址（http/https）
+    URL string `gorm:"column:url;type:VARCHAR(512)"`
+    // Headers 请求头（JSON 对象字符串，承载 Authorization 等凭据），以加密形式持久化
+    // （crypto serializer 密文入库，BYTEA 列）；明文经 HeadersData() 获取
+    Headers *serializer.Crypto `json:"headers" gorm:"column:headers;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=7002,length=32"`
+    // TimeoutSeconds 单次请求的超时秒数，0 表示使用调用方默认值
+    TimeoutSeconds int `gorm:"type:INTEGER"`
+    // Enabled 是否启用，禁用的服务器及其全部工具不参与装配
+    Enabled bool `gorm:"type:BOOLEAN;default:true"`
+    // Description 服务器描述，说明用途
+    Description string `gorm:"type:VARCHAR(512)"`
+}
+```
+
+<a name="McpServer.HeadersData"></a>
+### func \(\*McpServer\) HeadersData
+
+```go
+func (m *McpServer) HeadersData() []byte
+```
+
+HeadersData 返回请求头的明文字节，nil 安全（Headers 为空或 nil 时返回 nil）。
+
+<a name="MemoryKind"></a>
+## type MemoryKind
+
+MemoryKind 是长期记忆类别的标识：事实（fact）、偏好（preference）、决策（decision）与产物 （artifact），取值与 agent\_memories.kind 列的取值一致。 类型与取值空间声明在 internal/models/ai，是因为它与 AgentKind 同属「跨层共享的 AI 归属枚举」： 模型层、运行时层、工具层与视图层统一引用这里声明的取值，避免各自就地声明字符串常量。
+
+```go
+type MemoryKind string
+```
+
+<a name="MemoryKindFact"></a>记忆类别常量。
+
+```go
+const (
+    // MemoryKindFact 事实类记忆：客观陈述与结论
+    MemoryKindFact MemoryKind = "fact"
+    // MemoryKindPreference 偏好类记忆：用户的倾向与约定
+    MemoryKindPreference MemoryKind = "preference"
+    // MemoryKindDecision 决策类记忆：已确定的选择与取舍
+    MemoryKindDecision MemoryKind = "decision"
+    // MemoryKindArtifact 产物类记忆：可复用的片段与产出
+    MemoryKindArtifact MemoryKind = "artifact"
+)
+```
+
+<a name="AllMemoryKinds"></a>
+### func AllMemoryKinds
+
+```go
+func AllMemoryKinds() []MemoryKind
+```
+
+AllMemoryKinds 返回全部记忆类别的副本，声明顺序即枚举类条目顺序与前端展示顺序；供记忆服务、 工具层与视图层复用，调用方修改返回值不影响该取值空间。
+
+<a name="ParseMemoryKind"></a>
+### func ParseMemoryKind
+
+```go
+func ParseMemoryKind(raw MemoryKind) (MemoryKind, error)
+```
+
+ParseMemoryKind 解析并校验记忆类别：空串取缺省值 fact；非空但不在取值空间内的取值返回英文 错误；合法取值原样返回。取值清单只在 internal/models/ai 声明，调用方不再各自校验并拼错误文案。
+
+<a name="MemoryStatus"></a>
+## type MemoryStatus
+
+MemoryStatus 是长期记忆状态的标识：生效（active）与归档（archived），取值与 agent\_memories.status 列的取值一致（与会话状态 SessionStatus 是不同概念，勿混用）。
+
+```go
+type MemoryStatus string
+```
+
+<a name="MemoryStatusActive"></a>记忆状态常量。
+
+```go
+const (
+    // MemoryStatusActive 记忆状态：生效（参与检索与注入）
+    MemoryStatusActive MemoryStatus = "active"
+    // MemoryStatusArchived 记忆状态：归档（不参与检索与注入）
+    MemoryStatusArchived MemoryStatus = "archived"
+)
+```
+
+<a name="AllMemoryStatuses"></a>
+### func AllMemoryStatuses
+
+```go
+func AllMemoryStatuses() []MemoryStatus
+```
+
+AllMemoryStatuses 返回全部记忆状态的副本，声明顺序即枚举类条目顺序与前端展示顺序；供记忆服务 与视图层复用，调用方修改返回值不影响该取值空间。
+
+<a name="ParseMemoryStatus"></a>
+### func ParseMemoryStatus
+
+```go
+func ParseMemoryStatus(raw MemoryStatus) (MemoryStatus, error)
+```
+
+ParseMemoryStatus 解析并校验记忆状态：空串或不在取值空间内的取值返回英文错误；合法取值原样 返回。状态没有缺省值（写入路径显式使用 active），故空串视为非法。
+
+<a name="MessageRole"></a>
+## type MessageRole
+
+MessageRole 是 Agent 会话消息角色的标识：用户（user）、助手（assistant）与系统（system）， 取值与 agent\_messages.role 列的取值一致。此处只声明类型与取值常量，不注册枚举类：消息角色 原本就不是前端下拉的枚举类。
+
+```go
+type MessageRole string
+```
+
+<a name="MessageRoleUser"></a>消息角色常量。
+
+```go
+const (
+    // MessageRoleUser 用户消息
+    MessageRoleUser MessageRole = "user"
+    // MessageRoleAssistant 助手消息
+    MessageRoleAssistant MessageRole = "assistant"
+    // MessageRoleSystem 系统消息
+    MessageRoleSystem MessageRole = "system"
+)
+```
+
+<a name="SessionStatus"></a>
+## type SessionStatus
+
+SessionStatus 是 Agent 会话状态的标识：活跃（active）与归档（archived），取值与 agent\_sessions.status 列的取值一致（与长期记忆状态 MemoryStatus 是不同概念，勿混用）。 此处只声明类型与取值常量，不注册枚举类：会话状态原本就不是前端下拉的枚举类。
+
+```go
+type SessionStatus string
+```
+
+<a name="SessionStatusActive"></a>会话状态常量。
+
+```go
+const (
+    // SessionStatusActive 会话状态：活跃（默认）
+    SessionStatusActive SessionStatus = "active"
+    // SessionStatusArchived 会话状态：归档（不再展示/参与上下文）
+    SessionStatusArchived SessionStatus = "archived"
+)
+```
+
+<a name="Slot"></a>
+## type Slot
+
+Slot 是模型档位槽位标识：flash（轻量）、standard（标准）、advanced（增强）三档对话模型 与 embedding（向量化）一个固定槽位。与 llm\_bindings.slot 列的取值一致。
+
+```go
+type Slot string
+```
+
+<a name="SlotFlash"></a>档位常量。
+
+```go
+const (
+    // SlotFlash 轻量档：低时延、低成本的对话档位
+    SlotFlash Slot = "flash"
+    // SlotStandard 标准档：日常问答的默认对话档位
+    SlotStandard Slot = "standard"
+    // SlotAdvanced 增强档：复杂推理与长输出的对话档位
+    SlotAdvanced Slot = "advanced"
+    // SlotEmbedding 向量化档位：知识库索引与向量检索使用
+    SlotEmbedding Slot = "embedding"
+)
+```
+
+<a name="ParseChatSlot"></a>
+### func ParseChatSlot
+
+```go
+func ParseChatSlot(value Slot) (Slot, bool)
+```
+
+ParseChatSlot 解析并校验对话档位取值（忽略首尾空白；不区分大小写）： 仅 flash / standard / advanced 合法，embedding 或未知取值返回 ok=false。
+
+<a name="ParseSlot"></a>
+### func ParseSlot
+
+```go
+func ParseSlot(value Slot) (Slot, error)
+```
+
+ParseSlot 解析并校验档位取值（忽略首尾空白；不区分大小写）：四个固定档位均为合法取值， 其余取值返回英文错误。档位清单与取值规范化只在本包声明，调用方不再各自校验并拼错误文案。
+
+<a name="ResolveSlot"></a>
+### func ResolveSlot
+
+```go
+func ResolveSlot(requested, declared, fallback Slot) (Slot, error)
+```
+
+ResolveSlot 按「显式指定 → 调用点声明 → 注册表默认」的优先级解析本次调用使用的对话档位： requested 为调用方显式指定（如请求体字段），declared 为调用点声明的建议档位（如视图层 按业务场景推荐），fallback 为参数注册表 agent.defaultSlot 的默认档位。三者按序取第一个 非空值；任一非空取值不合法（embedding 或未知档位）或全部为空时返回英文错误。
+
+<a name="ToolSource"></a>
+## type ToolSource
+
+ToolSource 是工具来源的取值类型（llm\_tools.source 与视图层 source 字段）。
+
+```go
+type ToolSource string
+```
+
+<a name="ToolSourceBuiltin"></a>工具来源常量。
+
+```go
+const (
+    // ToolSourceBuiltin 内置工具：由代码内实现注册表声明，生命周期由代码掌握
+    ToolSourceBuiltin ToolSource = "builtin"
+    // ToolSourceMCP MCP 工具：由所属 MCP 服务器同步而来的远端工具
+    ToolSourceMCP ToolSource = "mcp"
+    // ToolSourceClient 客户端工具：由前端在用户凭据下执行，后端只下发请求描述符并等待审批结果
+    ToolSourceClient ToolSource = "client"
+)
 ```

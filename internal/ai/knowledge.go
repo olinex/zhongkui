@@ -3,8 +3,6 @@ package ai
 import (
 	// 标准库
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -22,10 +20,12 @@ import (
 
 	// 项目内部
 	"zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // rrfK 是 RRF（Reciprocal Rank Fusion）融合的固定常数 k。
@@ -84,13 +84,13 @@ type Knowledge struct {
 	db *database.DB
 	// embed 向量化客户端（把分块检索文本转为向量）。
 	embed  embedder
-	params *llm.Params // 行为参数解析器（切片长度与重叠）
+	params *Params // 行为参数解析器（切片长度与重叠）
 	// chunker Markdown 切片器（按参数长度与重叠切块）。
 	chunker *llm.MarkdownChunker
 }
 
 // NewKnowledge 构造 Knowledge；db/embed/params 任一为空时返回英文错误。
-func NewKnowledge(db *database.DB, embed embedder, params *llm.Params) (*Knowledge, error) {
+func NewKnowledge(db *database.DB, embed embedder, params *Params) (*Knowledge, error) {
 	if db == nil {
 		return nil, errors.New("knowledge: nil database")
 	}
@@ -115,9 +115,10 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 	if doc == nil {
 		return errors.New("knowledge: nil document")
 	}
+	plaintext := string(doc.Content.Value())
 	chunks, err := k.chunker.Transform(ctx, []*schema.Document{{
 		ID:      strconv.FormatUint(uint64(doc.ID), 10),
-		Content: doc.Content,
+		Content: plaintext,
 		MetaData: map[string]any{
 			"namespace":  doc.NamespaceName,
 			"documentID": strconv.FormatUint(uint64(doc.ID), 10),
@@ -139,7 +140,11 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 			return errors.WithStack(err)
 		}
 	}
-	hash := sha256Hex(doc.Content)
+	// 内容摘要为带密钥的 HMAC-SHA256：明文不落库，同时摘要确定可比，供过期判定使用
+	hash, err := crypto.DigestForField(&ai.KnowledgeDocument{}, "hash", "json", []byte(plaintext))
+	if err != nil {
+		return errors.WithStack(err)
+	}
 	return k.db.Transaction(func(tx *gorm.DB) error {
 		// 单事务内先清旧块再插入新块，保证索引原子替换
 		if err := tx.Where("document_id = ?", doc.ID).Delete(&ai.KnowledgeChunk{}).Error; err != nil {
@@ -147,12 +152,13 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 		}
 		for i, c := range chunks {
 			path, _ := c.MetaData["headingPath"].(string)
+			// 标题路径与正文经 crypto 序列化器加密落库（Create 走结构体路径，序列化器生效）
 			chunk := &ai.KnowledgeChunk{
 				DocumentID:    doc.ID,
 				NamespaceName: doc.NamespaceName,
 				ChunkIndex:    i,
-				HeadingPath:   path,
-				Content:       c.Content,
+				HeadingPath:   serializer.NewCrypto([]byte(path)),
+				Content:       serializer.NewCrypto([]byte(c.Content)),
 				Embedding:     toFloat32(vectors[i]),
 			}
 			if err := tx.Create(chunk).Error; err != nil {
@@ -165,9 +171,15 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 				return errors.WithStack(err)
 			}
 		}
+		// 采用结构体 + Select 更新而非 map：hash 经 hash 序列化器落库，
+		// map 更新走 clause.Assignment 直写会绕过序列化器
 		return tx.Model(&ai.KnowledgeDocument{}).
 			Where("id = ?", doc.ID).
-			Updates(map[string]any{"chunk_count": len(chunks), "hash": hash}).Error
+			Select("chunk_count", "hash").
+			Updates(&ai.KnowledgeDocument{
+				ChunkCount: len(chunks),
+				Hash:       serializer.NewHashDigest(hash),
+			}).Error
 	})
 }
 
@@ -175,6 +187,30 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 // 因此 Reindex 直接复用 IndexDocument。
 func (k *Knowledge) Reindex(ctx context.Context, doc *ai.KnowledgeDocument) error {
 	return k.IndexDocument(ctx, doc)
+}
+
+// ReindexNamespace 以当前 embedding 模型为准，重建命名空间下全部知识文档的分块与向量索引：
+// 逐篇读取文档正文（经 crypto 序列化器解密）后复用 IndexDocument 重新切片、向量化与落库，
+// 供更换 embedding 模型（维度或语义变化）后让 knowledge_chunks 与当前模型对齐。仅处理未软删除
+// 的文档，不改文档正文；返回实际重建的文档篇数，中途失败即返回该错误（已处理的文档不回滚，
+// 再次执行按同一全集继续收敛）。namespaceName 为空时返回英文错误。
+func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string) (int, error) {
+	if strings.TrimSpace(namespaceName) == "" {
+		return 0, errors.New("knowledge: empty namespace for reindex")
+	}
+	var docs []ai.KnowledgeDocument
+	if err := k.db.WithContext(ctx).
+		Select("id", "namespace_name", "title", "content").
+		Where("namespace_name = ?", namespaceName).
+		Find(&docs).Error; err != nil {
+		return 0, errors.WithStack(err)
+	}
+	for i := range docs {
+		if err := k.Reindex(ctx, &docs[i]); err != nil {
+			return i, err
+		}
+	}
+	return len(docs), nil
 }
 
 // DeleteDocument 删除文档及其分块：先显式删除分块（文档为软删除，DB 级联不生效），
@@ -270,13 +306,13 @@ type Retriever struct {
 	// embed 向量化客户端（把查询文本转为向量）。
 	embed    embedder
 	resolver ChatResolver    // 可空：为空时跳过 LLM 重排与评估
-	params   *llm.Params     // 行为参数解析器（检索条数、融合、重排提示词与温度）
+	params   *Params         // 行为参数解析器（检索条数、融合、重排提示词与温度）
 	logger   *logging.Logger // 可空：为 nil 时跳过告警日志
 }
 
 // NewRetriever 构造 Retriever；db/embed/params 任一为空时返回英文错误。resolver 可为
 // nil，此时检索跳过 LLM 重排（见 Retrieve 的说明）；logger 可为 nil（内部判空后再用）。
-func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params *llm.Params, logger *logging.Logger) (*Retriever, error) {
+func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params *Params, logger *logging.Logger) (*Retriever, error) {
 	if db == nil {
 		return nil, errors.New("retriever: nil database")
 	}
@@ -296,12 +332,12 @@ func (r *Retriever) resolveRerankChat() (chatGenerator, error) {
 	if r.resolver == nil {
 		return nil, nil
 	}
-	chat, err := r.resolver(llm.SlotFlash)
+	chat, err := r.resolver(ai.SlotFlash)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	if chat == nil {
-		return nil, errors.Newf("retriever: no chat model resolved for slot %q", llm.SlotFlash)
+		return nil, errors.Newf("retriever: no chat model resolved for slot %q", ai.SlotFlash)
 	}
 	return chat, nil
 }
@@ -507,7 +543,7 @@ func (r *Retriever) keywordRetrieve(ctx context.Context, o *RetrieveOptions, que
 
 // rerank 将候选块发给 chat 模型按相关度排序：模型须返回 JSON 数组（按相关度降序的
 // 候选序号），解析失败或返回无效序号时返回错误（上层降级为融合排序）。chat 由调用方
-// 经 resolveRerankChat 按声明的 flash 档位解析后传入。prompt 与系统指令均为英文，
+// 经 resolveRerankChat 按声明的 flash 档位解析后传入。prompt 与系统指令均为中文，
 // 要求模型仅输出 JSON。
 func (r *Retriever) rerank(ctx context.Context, chat chatGenerator, query string, cands []*RetrievalResult, topK int) ([]*RetrievalResult, error) {
 	messages := []*schema.Message{
@@ -542,7 +578,7 @@ func (r *Retriever) rerank(ctx context.Context, chat chatGenerator, query string
 // snippetLimit 个字符）。
 func buildRerankPrompt(query string, cands []*RetrievalResult, snippetLimit int) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Query: %s\n\nChunks:\n", query)
+	fmt.Fprintf(&sb, "查询：%s\n\n候选分块：\n", query)
 	for i, c := range cands {
 		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, c.Title, truncateText(c.Content, snippetLimit))
 	}
@@ -584,7 +620,7 @@ func parseRerankIndices(content string) ([]int, error) {
 // fuseRetrievalResults 按策略融合两路检索结果；未知策略默认 RRF。
 func fuseRetrievalResults(vector, keyword []*RetrievalResult, fusion string, weights FusionWeights) []*RetrievalResult {
 	switch strings.ToLower(strings.TrimSpace(fusion)) {
-	case llm.FusionWeighted:
+	case FusionWeighted:
 		return fuseWeighted(vector, keyword, weights)
 	default:
 		return fuseRRF(vector, keyword)
@@ -912,7 +948,7 @@ func rowsToResults(rows []struct {
 			DocumentID: strconv.FormatUint(uint64(row.DocumentID), 10),
 			Title:      row.Title,
 			ChunkIndex: row.ChunkIndex,
-			Content:    strings.TrimSpace(row.HeadingPath + "\n" + row.Content),
+			Content:    strings.TrimSpace(string(row.HeadingPath.Value()) + "\n" + string(row.Content.Value())),
 			Score:      row.Score,
 		})
 	}
@@ -937,20 +973,11 @@ func toFloat32(vec []float64) []float32 {
 	return out
 }
 
-// sha256Hex 计算内容的 sha256 十六进制摘要。
-func sha256Hex(content string) string {
-	sum := sha256.Sum256([]byte(content))
-	return hex.EncodeToString(sum[:])
-}
-
-// chunkOverviewRow 是分块明细的读取行：仅含明细所需列，避免载入 embedding 大字段。
+// chunkOverviewRow 是分块明细的读取行：内嵌 KnowledgeChunk 以复用其字段的 crypto
+// 序列化器标签（否则按原始密文字节扫入 string，得到的是密文而非明文），
+// 查询仅 Select 明细所需列，避免载入 embedding 大字段。
 type chunkOverviewRow struct {
-	// ChunkIndex 分块在文档内的序号
-	ChunkIndex int
-	// HeadingPath 所属标题路径
-	HeadingPath string
-	// Content 分块正文
-	Content string
+	ai.KnowledgeChunk
 }
 
 // ChunkOverviewSummary 是文档分块构建摘要：读时从知识文档与其分块聚合派生，不持久化。
@@ -981,7 +1008,7 @@ type ChunkOverviewSummary struct {
 	Stale bool
 	// IndexedAt 最近一次索引写入时间（文档更新时间）
 	IndexedAt time.Time
-	// Hash 文档内容 sha256 摘要
+	// Hash 文档内容的 HMAC-SHA256 十六进制摘要
 	Hash string
 }
 
@@ -1014,7 +1041,7 @@ type ChunkOverview struct {
 // 并派生标题路径数、原子块数、索引状态与陈旧标记。本函数为包级函数（不挂 Knowledge 方法），
 // 使 AI 能力未启用时也能读取明细（此时文档通常未索引，返回空分块 + Indexed=false）。
 // params 为 nil 时切片长度与重叠长度记 0；db 或 doc 为 nil 时返回英文错误。
-func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params, doc *ai.KnowledgeDocument) (*ChunkOverview, error) {
+func BuildChunkOverview(ctx context.Context, db *database.DB, params *Params, doc *ai.KnowledgeDocument) (*ChunkOverview, error) {
 	if db == nil {
 		return nil, errors.New("knowledge: nil database")
 	}
@@ -1030,11 +1057,12 @@ func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params
 		Scan(&rows).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}
+	plaintext := string(doc.Content.Value())
 	summary := ChunkOverviewSummary{
 		ChunkCount:   len(rows),
-		ContentChars: utf8.RuneCountInString(doc.Content),
+		ContentChars: utf8.RuneCountInString(plaintext),
 		IndexedAt:    doc.UpdatedAt,
-		Hash:         doc.Hash,
+		Hash:         doc.Hash.Digest(),
 	}
 	if params != nil {
 		summary.ChunkSize = params.Int("chunking.size")
@@ -1043,8 +1071,10 @@ func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params
 	chunks := make([]ChunkOverviewItem, 0, len(rows))
 	paths := make(map[string]struct{}, len(rows))
 	for _, row := range rows {
-		chars := utf8.RuneCountInString(row.Content)
-		kinds := llm.DescribeChunk(row.Content)
+		content := string(row.Content.Value())
+		headingPath := string(row.HeadingPath.Value())
+		chars := utf8.RuneCountInString(content)
+		kinds := llm.DescribeChunk(content)
 		for _, kind := range kinds {
 			// 代码块与表格为原子单元（超长也不切分），单独计数供运维判断是否出现超长块
 			if kind == llm.ChunkUnitCode || kind == llm.ChunkUnitTable {
@@ -1052,8 +1082,8 @@ func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params
 				break
 			}
 		}
-		if row.HeadingPath != "" {
-			paths[row.HeadingPath] = struct{}{}
+		if headingPath != "" {
+			paths[headingPath] = struct{}{}
 		}
 		summary.ChunkCharsTotal += chars
 		if len(chunks) == 0 || chars < summary.ChunkCharsMin {
@@ -1064,10 +1094,10 @@ func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params
 		}
 		chunks = append(chunks, ChunkOverviewItem{
 			Index:       row.ChunkIndex,
-			HeadingPath: row.HeadingPath,
-			Content:     row.Content,
+			HeadingPath: headingPath,
+			Content:     content,
 			Chars:       chars,
-			Lines:       strings.Count(row.Content, "\n") + 1,
+			Lines:       strings.Count(content, "\n") + 1,
 			Kinds:       kinds,
 		})
 	}
@@ -1075,9 +1105,15 @@ func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params
 		summary.ChunkCharsAvg = summary.ChunkCharsTotal / len(chunks)
 	}
 	summary.HeadingPathCount = len(paths)
-	summary.Indexed = summary.ChunkCount > 0 && doc.Hash != ""
-	// 索引失败时 IndexDocument 的整事务回滚，hash 会落后于当前正文：此即索引陈旧信号
-	summary.Stale = summary.Indexed && sha256Hex(doc.Content) != doc.Hash
+	summary.Indexed = summary.ChunkCount > 0 && doc.Hash.Digest() != ""
+	if summary.Indexed {
+		// 索引失败时 IndexDocument 的整事务回滚，hash 会落后于当前正文：此即索引陈旧信号
+		current, err := crypto.DigestForField(&ai.KnowledgeDocument{}, "hash", "json", []byte(plaintext))
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		summary.Stale = current != doc.Hash.Digest()
+	}
 	return &ChunkOverview{Summary: summary, Chunks: chunks}, nil
 }
 

@@ -38,6 +38,7 @@
 - [func IsValidFileName\(value string\) bool](<#IsValidFileName>)
 - [func IsValidHTTPURL\(value string\) bool](<#IsValidHTTPURL>)
 - [func IsValidJSONObject\(value string\) bool](<#IsValidJSONObject>)
+- [func IsValidJSONTypedValue\(typeName string, value any\) bool](<#IsValidJSONTypedValue>)
 - [func IsValidStrongPassword\(value string\) bool](<#IsValidStrongPassword>)
 - [func IsValidUnixFileName\(value string\) bool](<#IsValidUnixFileName>)
 - [func IsValidWindowsFileName\(value string\) bool](<#IsValidWindowsFileName>)
@@ -88,6 +89,23 @@ const (
     TagJSONObject = "jsonObject"
     // TagTrimmed 已去除首尾空白标签
     TagTrimmed = "trimmed"
+)
+```
+
+<a name="JSONTypeString"></a>JSONType\* 是 JSON 值类型名常量：供 validator 的 jsonObject 等校验能力与调用方复用， 集中在此声明以避免调用方就地书写类型名字面量。
+
+```go
+const (
+    // JSONTypeString JSON 字符串类型
+    JSONTypeString = "string"
+    // JSONTypeInt JSON 整数类型
+    JSONTypeInt = "int"
+    // JSONTypeBool JSON 布尔类型
+    JSONTypeBool = "bool"
+    // JSONTypeObject JSON 对象类型
+    JSONTypeObject = "object"
+    // JSONTypeArray JSON 数组类型
+    JSONTypeArray = "array"
 )
 ```
 
@@ -423,6 +441,15 @@ func IsValidJSONObject(value string) bool
 ```
 
 IsValidJSONObject 判断字符串是否为「所有值均为字符串的 JSON 对象」文本，用于承载嵌套在字符串 字段里的结构化配置（如请求头）。空字符串不合法；字段可选时以 \`omitempty\` 放行空值。 字面量 null 反序列化到 map 不报错但得到 nil map，故须显式排除，否则「null」会被当成合法对象。
+
+<a name="IsValidJSONTypedValue"></a>
+## func IsValidJSONTypedValue
+
+```go
+func IsValidJSONTypedValue(typeName string, value any) bool
+```
+
+IsValidJSONTypedValue 按声明的类型名校验一个已解码的 JSON 值：value 须来自 encoding/json 对 值的解码（数字为 float64、对象为 map\[string\]any、数组为 \[\]any、布尔为 bool、字符串为 string）。 「动态 schema → 值」的校验无法经结构体 binding 标签表达，故在此提供通用能力，避免调用方就地 堆砌 if\-else：string/int/bool/object/array 五类做基本类型判定，int 额外要求无小数部分；未知 类型名一律判为不合法（fail closed，目录侧已由 fail\-fast 保证只登记已知类型）。
 
 <a name="IsValidStrongPassword"></a>
 ## func IsValidStrongPassword

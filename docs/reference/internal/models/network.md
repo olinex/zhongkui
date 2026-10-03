@@ -662,8 +662,9 @@ type HttpRequestBody struct {
     Method string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"method"`
     // ReqBody 请求主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
     ReqBody string `gorm:"type:String CODEC(ZSTD(3))" json:"reqBody"`
-    // ReqBodyHash 请求主体内容的 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
-    ReqBodyHash string `gorm:"type:String CODEC(ZSTD(3))" json:"reqBodyHash"`
+    // ReqBodyHash 请求主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
+    // 经 hash 序列化器封装，空内容时为空内容的摘要
+    ReqBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"reqBodyHash" secure:"mode=\"hmac-sha256\",offset=12808,length=32"`
     // ReqBodyLength 请求主体内容的字节长度，空内容时为 0
     ReqBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"reqBodyLength"`
 }
@@ -676,7 +677,7 @@ type HttpRequestBody struct {
 func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, cryptoKey []byte) (*HttpRequestBody, error)
 ```
 
-NewHttpRequestBody 构建HTTP请求正文信息 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储
+NewHttpRequestBody 构建HTTP请求正文信息 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储。 摘要密钥由请求正文字段的 secure 标签就地派生，与落库序列化器同源。
 
 <a name="HttpRequestHeaders"></a>
 ## type HttpRequestHeaders
@@ -887,8 +888,9 @@ HttpResponseBody 表示HTTP响应正文信息 包含HTTP响应的主体内容和
 type HttpResponseBody struct {
     // RspBody 响应主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
     RspBody string `gorm:"type:String CODEC(ZSTD(3))" json:"rspBody"`
-    // RspBodyHash 响应主体内容的 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
-    RspBodyHash string `gorm:"type:String CODEC(ZSTD(3))" json:"rspBodyHash"`
+    // RspBodyHash 响应主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
+    // 经 hash 序列化器封装，空内容时为空内容的摘要
+    RspBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"rspBodyHash" secure:"mode=\"hmac-sha256\",offset=12809,length=32"`
     // RspBodyLength 响应主体内容的字节长度，空内容时为 0
     RspBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rspBodyLength"`
 }
@@ -901,7 +903,7 @@ type HttpResponseBody struct {
 func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, cryptoKey []byte) (*HttpResponseBody, error)
 ```
 
-NewHttpResponseBody 构建HTTP响应正文信息 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储
+NewHttpResponseBody 构建HTTP响应正文信息 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储。 摘要密钥由响应正文字段的 secure 标签就地派生，与落库序列化器同源。
 
 <a name="HttpResponseHeaders"></a>
 ## type HttpResponseHeaders
@@ -1072,7 +1074,7 @@ type HttpResponseHeaders struct {
 
     // RspHdrSecWebSocketAccept WebSocket 握手接受，指示服务器愿意升级到 WebSocket 连接
     // 使用 Crypto 加密存储，WebSocket 握手响应涉及连接安全
-    RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSecWebsocketAccept" secure:"mode=\"aes-gcm\",offset=70278,length=32"`
+    RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSecWebsocketAccept" secure:"mode=\"aes-gcm\",offset=12807,length=32"`
     // RspHdrSecWebSocketProtocol WebSocket 子协议，指示服务器从客户端的偏好中选择的子协议
     RspHdrSecWebSocketProtocol string `gorm:"column:rsp_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"rspHdrSecWebsocketProtocol"`
     // RspHdrSecWebSocketExtensions WebSocket 扩展，指示服务器从客户端的偏好中选择的扩展

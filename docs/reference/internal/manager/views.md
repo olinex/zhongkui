@@ -876,6 +876,7 @@ type FieldMeta struct {
     // 条目经统一枚举接口 /admin/enum/get 按类名获取（形状统一为 [{key, value}]），
     // label 由 key 经 enum.<类名>.<key> 翻译展示，value 为提交/存储值。
     EnumType string `json:"enumType,omitempty"`
+    // contains filtered or unexported fields
 }
 ```
 

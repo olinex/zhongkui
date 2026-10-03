@@ -16,9 +16,8 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -31,7 +30,7 @@ type LlmToolListOut struct {
 	// Name Agent 面向的工具名，全局唯一
 	Name string `json:"name"`
 	// Source 工具来源：builtin | mcp
-	Source pkgllm.ToolSource `json:"source"`
+	Source aimodel.ToolSource `json:"source"`
 	// McpServerName 所属 MCP 服务器的本地标识；内置工具为空
 	McpServerName string `json:"mcpServerName"`
 	// RemoteName MCP 服务器侧的工具名；内置工具为空
@@ -74,11 +73,11 @@ func LlmToolListGet(c *gin.Context) {
 	}
 	// 以局部扫描行承载 gorm 模型与注入的 total 列（用于分页总数），随后映射为 Out 结构
 	var rows []struct {
-		core.LlmTool
+		aimodel.LlmTool
 		utils.BaseTotalOut
 	}
 	base := middlewares.GetCoreDatabase(c)
-	db := base.Model(&core.LlmTool{})
+	db := base.Model(&aimodel.LlmTool{})
 	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -156,7 +155,7 @@ func LlmToolSetEnabled(c *gin.Context) {
 	views.BatchExecute(c, ids,
 		func(id uint64) string { return fmt.Sprintf("%d", id) },
 		func(id uint64) error {
-			instance := core.LlmTool{}
+			instance := aimodel.LlmTool{}
 			if err := db.First(&instance, id).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return nil // 不存在视为成功跳过
@@ -166,7 +165,7 @@ func LlmToolSetEnabled(c *gin.Context) {
 			if instance.Enabled == in.Enabled {
 				return nil // 幂等短路
 			}
-			if err := db.Model(&core.LlmTool{}).Where("id = ?", instance.ID).
+			if err := db.Model(&aimodel.LlmTool{}).Where("id = ?", instance.ID).
 				Update("enabled", in.Enabled).Error; err != nil {
 				return errors.WithStack(err)
 			}
@@ -196,8 +195,8 @@ func LlmToolBatchDelete(c *gin.Context) {
 	db := middlewares.GetCoreDatabase(c)
 	// 整批预检：批内存在内置工具即整批拒绝，避免出现「部分删除」的不可预期结果
 	var builtin int64
-	if err := db.Model(&core.LlmTool{}).
-		Where("id IN ? AND source = ?", ids, string(pkgllm.ToolSourceBuiltin)).Count(&builtin).Error; err != nil {
+	if err := db.Model(&aimodel.LlmTool{}).
+		Where("id IN ? AND source = ?", ids, string(aimodel.ToolSourceBuiltin)).Count(&builtin).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -210,14 +209,14 @@ func LlmToolBatchDelete(c *gin.Context) {
 	views.BatchExecute(c, ids,
 		func(id uint64) string { return fmt.Sprintf("%d", id) },
 		func(id uint64) error {
-			instance := core.LlmTool{}
+			instance := aimodel.LlmTool{}
 			if err := db.First(&instance, id).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return nil // 不存在视为成功跳过
 				}
 				return errors.WithStack(err)
 			}
-			if err := db.Delete(&core.LlmTool{}, instance.ID).Error; err != nil {
+			if err := db.Delete(&aimodel.LlmTool{}, instance.ID).Error; err != nil {
 				return errors.WithStack(err)
 			}
 			deleted++
@@ -240,7 +239,7 @@ func mcpServerNamesOf(db *gorm.DB, ids []uint) (map[uint]string, error) {
 		ID   uint
 		Name string
 	}
-	if err := db.Model(&core.McpServer{}).Select("id", "name").Where("id IN ?", ids).
+	if err := db.Model(&aimodel.McpServer{}).Select("id", "name").Where("id IN ?", ids).
 		Find(&servers).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}

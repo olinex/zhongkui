@@ -60,6 +60,10 @@ const (
 	CodePasswordResetUnavailable                  // 1113: 重置密码功能不可用（系统未启用或未配置 SMTP）
 	CodePasswordResetTokenInvalid                 // 1114: 重置密码令牌无效或已过期
 	CodeLlmBindingIncompatible                    // 1115: 档位绑定与系统当前配置不兼容（如向量维度与知识库索引维度不符）
+	CodeAgentRunNotFound                          // 1116: 待恢复的运行现场不存在
+	CodeAgentRunConsumed                          // 1117: 运行现场已被消费（重复恢复）
+	CodeAgentRunExpired                           // 1118: 运行现场已过期
+	CodeAgentRunForbidden                         // 1119: 运行现场归属不符
 )
 
 // 预定义的常用错误实例

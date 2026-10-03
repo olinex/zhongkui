@@ -24,7 +24,7 @@ As 在错误链中查找与 target 匹配的错误并赋值。 与 Is 同理，�
 示例:
 
 ```
-var mismatch *llm.EmbeddingDimensionMismatchError
+var mismatch *ai.EmbeddingDimensionMismatchError
 if errors.As(err, &mismatch) {
     // 处理维度不兼容错误
 }

@@ -16,25 +16,30 @@
 //
 // ## 配置来源与枚举
 //
-// 档位（llm.Slot）、模型类型（llm.ModelKind）、工具来源（llm.ToolSource）、记忆种类与状态
-// （llm.MemoryKind / llm.MemoryStatus）、会话状态（llm.SessionStatus）、消息角色
-// （llm.MessageRole）等枚举单点声明于 internal/pkg/llm，本包只引用、不重定义；「档位 → 模型」
-// 的绑定取自 `llm_bindings`，行为参数（agent.maxToolRounds、agent.maxToolResultBytes、`memory.*`、
-// `knowledge.chunking.*` 等）取自 `agent_params` 并经 llm.Params 解析，出厂值随 `002_fixtures.sql`
-// 注入。因此本包行为完全由数据库驱动，不存在「配置文件 + 数据库」两份事实。
+// 档位（Slot）声明于 internal/models/ai，模型类型（llm.ModelKind）声明于
+// internal/pkg/llm；工具来源（ToolSource）声明于 internal/models/ai；记忆种类与状态（MemoryKind / MemoryStatus）、会话状态
+// （SessionStatus）、消息角色（MessageRole）声明于 internal/models/ai，本包只引用、不重定义；
+// 「档位 → 模型」的绑定取自 `llm_bindings`，行为参数（agent.maxToolRounds、
+// agent.maxToolResultBytes、`memory.*`、`knowledge.chunking.*` 等）取自 `agent_params` 并经
+// Params 解析，出厂值随 `002_fixtures.sql` 注入。因此本包行为完全由数据库驱动，不存在
+// 「配置文件 + 数据库」两份事实。
 //
 // ## Agent 编排与记忆注入
 //
-// Agent 以 Eino 的 compose.Graph 编排五个节点：上下文装配、混合检索、业务数据脱敏、LLM 生成
+// Agent 以 Eino 的 compose.Graph 编排四个节点：上下文装配、业务数据脱敏、LLM 生成
 // 与输出校验。生成节点内驱动工具循环：每轮调用可用工具并把结果回灌对话，轮数受
 // agent.maxToolRounds 约束、单次工具结果受 agent.maxToolResultBytes 截断；最终输出可经 Rego
 // 校验（data.agent.validate）判定是否放行。
 //
 // 送入模型的消息按固定顺序装配：系统提示 → 会话摘要 → 长期记忆分节 → 窗口历史 → 用户消息；
-// 用户消息自身由「检索段 + 业务数据段 + 提问段」拼成。短期记忆以「条数 + 字节」双预算维护窗口，
+// 用户消息自身由「业务数据段 + 提问段」拼成。短期记忆以「条数 + 字节」双预算维护窗口，
 // 超窗内容滚动压缩为摘要写回会话；检索失败一律降级告警而绝不中断生成。
 //
 // ## RAG 检索
+//
+// 会话内的检索不再由图内固定节点执行，而是由内置工具 knowledge_search 按需发起（模型自行
+// 决定时机与查询、可多次调用；命名空间与文档限定由运行上下文注入，模型入参只有 query）；
+// Retriever.DryRun 与检索试运行链路保持不变。
 //
 // Retriever.Retrieve 走「向量路 + 关键词路」双通道：向量路按 embedding 的余弦距离（<=>）召回，
 // 关键词路按 tsvector 全文检索（@@ plainto_tsquery）；两路结果经 RRF（fuseRRF，rrfK = 60）或
@@ -64,8 +69,6 @@ package ai
 
 import (
 	"github.com/cloudwego/eino/components/tool"
-
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // Components 聚合 AI 助手（RAG + Agent）运行所需的全部组件：对话执行器（Agent）、
@@ -85,7 +88,7 @@ type Components struct {
 	// Memory 会话记忆服务（滚动摘要 / 会话压缩 / 长期记忆检索；AI 未启用时为 nil）
 	Memory *Memory
 	// Params 行为参数解析器（始终非 nil）
-	Params *llm.Params
+	Params *Params
 	// Tools 已启用的工具（AI 未启用时为空），视图层 / Agent 由它取得工具清单与 schema；
 	// AI 启用但无启用工具时为空切片（非 nil）
 	Tools []tool.BaseTool

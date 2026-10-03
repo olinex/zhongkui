@@ -191,7 +191,7 @@ type HttpTransportListGetListItemOut struct {
     Method string `json:"method"`
     // ReqBody 请求主体（S3 对象键，空字符串表示内容为空）
     ReqBody string `json:"reqBody"`
-    // ReqBodyHash 请求主体 SHA-256 摘要
+    // ReqBodyHash 请求主体 HMAC-SHA256 摘要（hex，带密钥防离线爆破）
     ReqBodyHash string `json:"reqBodyHash"`
     // ReqBodyLength 请求主体字节长度
     ReqBodyLength int64 `json:"reqBodyLength"`
@@ -329,7 +329,7 @@ type HttpTransportListGetListItemOut struct {
     // ---- HttpResponseBody ----
     // RspBody 响应主体（S3 对象键，空字符串表示内容为空）
     RspBody string `json:"rspBody"`
-    // RspBodyHash 响应主体 SHA-256 摘要
+    // RspBodyHash 响应主体 HMAC-SHA256 摘要（hex，带密钥防离线爆破）
     RspBodyHash string `json:"rspBodyHash"`
     // RspBodyLength 响应主体字节长度
     RspBodyLength int64 `json:"rspBodyLength"`

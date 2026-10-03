@@ -28,6 +28,7 @@ import (
 	ai "zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
+	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
@@ -131,7 +132,7 @@ func newDisabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 // 不可达地址：装配阶段只构建客户端、不联网，解析任务也不在本测试中执行。
 func newEnabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 	t.Helper()
-	chat := &core.LlmModel{
+	chat := &modelsai.LlmModel{
 		Name: "chat-test", Kind: llm.ModelKindChat,
 		BaseURL: "http://127.0.0.1:1/v1", APIKey: serializer.NewCrypto([]byte("sk-test")),
 		ModelName: "gpt-test", Enabled: true,
@@ -139,7 +140,7 @@ func newEnabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 	if err := db.Create(chat).Error; err != nil {
 		t.Fatalf("seed chat model: %v", err)
 	}
-	embed := &core.LlmModel{
+	embed := &modelsai.LlmModel{
 		Name: "embed-test", Kind: llm.ModelKindEmbedding,
 		BaseURL: "http://127.0.0.1:1/v1", APIKey: serializer.NewCrypto([]byte("sk-test")),
 		ModelName: "emb-test", Enabled: true,
@@ -148,9 +149,9 @@ func newEnabledAiRuntime(t *testing.T, db *database.DB) *ai.Runtime {
 		t.Fatalf("seed embedding model: %v", err)
 	}
 	// 省略关联的模型实体：ModelID 已指向已播种的行，否则零值关联会被 GORM 执行 upsert。
-	for _, binding := range []core.LlmBinding{
-		{Slot: llm.SlotStandard, ModelID: chat.ID},
-		{Slot: llm.SlotEmbedding, ModelID: embed.ID},
+	for _, binding := range []modelsai.LlmBinding{
+		{Slot: modelsai.SlotStandard, ModelID: chat.ID},
+		{Slot: modelsai.SlotEmbedding, ModelID: embed.ID},
 	} {
 		if err := db.Omit("Model").Create(&binding).Error; err != nil {
 			t.Fatalf("seed slot binding %q: %v", binding.Slot, err)

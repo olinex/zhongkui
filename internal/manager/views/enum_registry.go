@@ -4,8 +4,9 @@
 // 背景：枚举取值空间的声明与注册全部下沉到视图层之外，且一律由「取值空间的归属包」就地声明——
 // 归属包即该取值空间的定义处：取值空间固定者声明在其常量/清单所在的包（base 的 language /
 // policyEffect、models/network 的 httpMethod / httpVersion、models/core 的 notificationSource /
-// notificationRecordStatus、models/tag 的 tagAlertStatus、vtab 的 datasourceStruct、pkg/llm 的
-// llmModelKind / llmSlot / llmToolSource、ai/tools/mcp 的 mcpTransport，均在包内 init 经
+// notificationRecordStatus / llmSlot、models/tag 的 tagAlertStatus、vtab 的 datasourceStruct、pkg/llm
+// 的 llmModelKind / chunkUnitKind、models/core 的 llmToolSource、models/ai 的 agentKind /
+// agentRunStatus / memoryKind / memoryStatus、ai/tools/mcp 的 mcpTransport，均在包内 init 经
 // enum.Register 注册）；取值空间取自业务注册表者由所属业务包（message / notify / vtab /
 // tagengine）经 enum.RegisterSource 声明条目来源。视图层只保留「字段 → 枚举类名」的绑定：
 // search.toml [[enums]] 生成 enumBindings（见 enum_bindings.go），运行时注册的字段经

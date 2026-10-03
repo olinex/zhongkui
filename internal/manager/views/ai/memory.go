@@ -18,7 +18,6 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/views"
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
 
@@ -27,15 +26,15 @@ type AgentMemoryItemOut struct {
 	// ID 记忆 ID
 	ID uint `json:"id"`
 	// AgentKind 记忆所属 Agent 类型（knowledge/rego）
-	AgentKind pkgllm.AgentKind `json:"agentKind"`
+	AgentKind modelsai.AgentKind `json:"agentKind"`
 	// Kind 记忆类别（fact/preference/decision/artifact）
-	Kind pkgllm.MemoryKind `json:"kind"`
+	Kind modelsai.MemoryKind `json:"kind"`
 	// Title 记忆标题
 	Title string `json:"title"`
 	// Content 记忆正文
 	Content string `json:"content"`
 	// Status 记忆状态（active/archived）
-	Status pkgllm.MemoryStatus `json:"status"`
+	Status modelsai.MemoryStatus `json:"status"`
 	// UseCount 被检索命中的次数
 	UseCount int `json:"useCount"`
 	// LastUsedAt 最近一次被检索召回的时间，可空
@@ -59,17 +58,17 @@ type AgentMemoryDetailOut struct {
 	// NamespaceName 所属命名空间
 	NamespaceName string `json:"namespaceName"`
 	// AgentKind 记忆所属 Agent 类型（knowledge/rego）
-	AgentKind pkgllm.AgentKind `json:"agentKind"`
+	AgentKind modelsai.AgentKind `json:"agentKind"`
 	// SessionID 来源会话 ID（记忆按会话隔离，仅在来源会话内可见）
 	SessionID uint `json:"sessionId"`
 	// Kind 记忆类别（fact/preference/decision/artifact）
-	Kind pkgllm.MemoryKind `json:"kind"`
+	Kind modelsai.MemoryKind `json:"kind"`
 	// Title 记忆标题
 	Title string `json:"title"`
 	// Content 记忆正文
 	Content string `json:"content"`
 	// Status 记忆状态（active/archived）
-	Status pkgllm.MemoryStatus `json:"status"`
+	Status modelsai.MemoryStatus `json:"status"`
 	// UseCount 被检索命中的次数
 	UseCount int `json:"useCount"`
 	// LastUsedAt 最近一次被检索召回的时间，可空
@@ -89,7 +88,7 @@ type AgentMemoryBatchIn struct {
 // AgentMemoryStatusIn 定义启停长期记忆的请求输入。
 type AgentMemoryStatusIn struct {
 	// Status 目标状态（active/archived），必填且须为合法取值
-	Status pkgllm.MemoryStatus `json:"status" binding:"required,oneof=active archived"`
+	Status modelsai.MemoryStatus `json:"status" binding:"required,oneof=active archived"`
 }
 
 // newAgentMemoryItemOut 将记忆模型映射为列表项输出。
@@ -99,7 +98,7 @@ func newAgentMemoryItemOut(m *modelsai.AgentMemory) AgentMemoryItemOut {
 		AgentKind:  m.AgentKind,
 		Kind:       m.Kind,
 		Title:      m.Title,
-		Content:    m.Content,
+		Content:    string(m.Content.Value()),
 		Status:     m.Status,
 		UseCount:   m.UseCount,
 		LastUsedAt: m.LastUsedAt,
@@ -117,7 +116,7 @@ func newAgentMemoryDetailOut(m *modelsai.AgentMemory) AgentMemoryDetailOut {
 		SessionID:     m.SessionID,
 		Kind:          m.Kind,
 		Title:         m.Title,
-		Content:       m.Content,
+		Content:       string(m.Content.Value()),
 		Status:        m.Status,
 		UseCount:      m.UseCount,
 		LastUsedAt:    m.LastUsedAt,
@@ -157,13 +156,13 @@ func AgentMemoryListGet(c *gin.Context) {
 			query.Keyword = strings.TrimSpace(fb.Keyword.Value)
 		}
 		if fb.AgentKind != nil {
-			query.AgentKind = pkgllm.AgentKind(strings.TrimSpace(fb.AgentKind.Value))
+			query.AgentKind = modelsai.AgentKind(strings.TrimSpace(fb.AgentKind.Value))
 		}
 		if fb.Kind != nil {
-			query.Kind = pkgllm.MemoryKind(strings.TrimSpace(fb.Kind.Value))
+			query.Kind = modelsai.MemoryKind(strings.TrimSpace(fb.Kind.Value))
 		}
 		if fb.Status != nil {
-			query.Status = pkgllm.MemoryStatus(strings.TrimSpace(fb.Status.Value))
+			query.Status = modelsai.MemoryStatus(strings.TrimSpace(fb.Status.Value))
 		}
 	}
 	items, total, err := comps.Memory.List(c, query)

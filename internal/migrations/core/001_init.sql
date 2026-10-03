@@ -613,7 +613,7 @@ CREATE TABLE IF NOT EXISTS knowledge_documents (
     deleted_at TIMESTAMPTZ,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     title VARCHAR(256) NOT NULL,
-    content TEXT NOT NULL,
+    content BYTEA,
     chunk_count INT NOT NULL DEFAULT 0,
     hash CHAR(64) NOT NULL DEFAULT '',
     format VARCHAR(16) NOT NULL DEFAULT 'markdown',
@@ -635,9 +635,9 @@ COMMENT ON COLUMN knowledge_documents.updated_at IS 'the last update time of the
 COMMENT ON COLUMN knowledge_documents.deleted_at IS 'the soft delete time of the knowledge document, null means not deleted';
 COMMENT ON COLUMN knowledge_documents.namespace_name IS 'the namespace the knowledge document belongs to';
 COMMENT ON COLUMN knowledge_documents.title IS 'the title of the knowledge document';
-COMMENT ON COLUMN knowledge_documents.content IS 'the full content of the knowledge document';
+COMMENT ON COLUMN knowledge_documents.content IS 'the full content of the knowledge document, stored encrypted with the crypto serializer, null when empty';
 COMMENT ON COLUMN knowledge_documents.chunk_count IS 'the number of chunks the document is split into';
-COMMENT ON COLUMN knowledge_documents.hash IS 'the sha256 hex digest of the document content, used to detect stale chunk indexes';
+COMMENT ON COLUMN knowledge_documents.hash IS 'the keyed HMAC-SHA256 hex digest of the document content, used to detect stale chunk indexes';
 COMMENT ON COLUMN knowledge_documents.format IS 'the source format of the document, its values come from the enum class documentFormat';
 COMMENT ON COLUMN knowledge_documents.original_name IS 'the original file name of an imported document, empty for manually entered documents';
 COMMENT ON COLUMN knowledge_documents.object_key IS 'the S3 object key of the source file, empty for manually entered documents';
@@ -654,8 +654,8 @@ CREATE TABLE IF NOT EXISTS knowledge_chunks (
     document_id INT NOT NULL REFERENCES knowledge_documents(id) ON DELETE CASCADE,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     chunk_index INT NOT NULL,
-    heading_path TEXT NOT NULL DEFAULT '',
-    content TEXT NOT NULL,
+    heading_path BYTEA,
+    content BYTEA,
     embedding vector(1536) NOT NULL,
     search tsvector NOT NULL DEFAULT ''
 );
@@ -675,8 +675,8 @@ COMMENT ON COLUMN knowledge_chunks.updated_at IS 'the last update time of the kn
 COMMENT ON COLUMN knowledge_chunks.document_id IS 'the owning knowledge document id, cascade delete with the document';
 COMMENT ON COLUMN knowledge_chunks.namespace_name IS 'the namespace the knowledge chunk belongs to';
 COMMENT ON COLUMN knowledge_chunks.chunk_index IS 'the index of the chunk within the document, starting from 0';
-COMMENT ON COLUMN knowledge_chunks.heading_path IS 'the heading path of the chunk within the document, used for citation traceability';
-COMMENT ON COLUMN knowledge_chunks.content IS 'the content of the chunk';
+COMMENT ON COLUMN knowledge_chunks.heading_path IS 'the heading path of the chunk within the document, used for citation traceability, stored encrypted with the crypto serializer, null when empty';
+COMMENT ON COLUMN knowledge_chunks.content IS 'the content of the chunk, stored encrypted with the crypto serializer';
 COMMENT ON COLUMN knowledge_chunks.embedding IS 'the vectorized representation of the chunk content for similarity retrieval';
 COMMENT ON COLUMN knowledge_chunks.search IS 'the full-text search representation of the chunk content';
 
@@ -690,7 +690,7 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     target_model VARCHAR(255) NOT NULL DEFAULT '',
     status VARCHAR(16) NOT NULL DEFAULT 'active',
     agent_kind VARCHAR(32) NOT NULL DEFAULT 'knowledge',
-    summary TEXT NOT NULL DEFAULT '',
+    summary BYTEA,
     summary_upto_message_id BIGINT NOT NULL DEFAULT 0
 );
 
@@ -706,7 +706,7 @@ COMMENT ON COLUMN agent_sessions.title IS 'the title of the agent session, defau
 COMMENT ON COLUMN agent_sessions.target_model IS 'the default slot of the session (flash/standard/advanced), empty means resolving through the agent.defaultSlot parameter';
 COMMENT ON COLUMN agent_sessions.status IS 'the status of the agent session, default active';
 COMMENT ON COLUMN agent_sessions.agent_kind IS 'the agent kind the session belongs to, e.g. knowledge or rego';
-COMMENT ON COLUMN agent_sessions.summary IS 'the rolling summary of the session, compressing the messages already folded into it, empty when none';
+COMMENT ON COLUMN agent_sessions.summary IS 'the rolling summary of the session, compressing the messages already folded into it, stored encrypted with the crypto serializer, null when none';
 COMMENT ON COLUMN agent_sessions.summary_upto_message_id IS 'the id of the last message covered by the rolling summary, 0 means nothing is summarized yet';
 
 CREATE TABLE IF NOT EXISTS agent_messages (
@@ -716,9 +716,9 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     role VARCHAR(16) NOT NULL,
-    content TEXT NOT NULL DEFAULT '',
-    draft_json JSONB,
-    citations_json JSONB
+    content BYTEA,
+    draft_json BYTEA,
+    citations_json BYTEA
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_messages_session_id
@@ -730,9 +730,9 @@ COMMENT ON COLUMN agent_messages.updated_at IS 'the last update time of the agen
 COMMENT ON COLUMN agent_messages.session_id IS 'the owning agent session id, cascade delete with the session';
 COMMENT ON COLUMN agent_messages.namespace_name IS 'the namespace the agent message belongs to';
 COMMENT ON COLUMN agent_messages.role IS 'the role of the message, e.g. user, assistant or system';
-COMMENT ON COLUMN agent_messages.content IS 'the content of the message';
-COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, null when not applicable';
-COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, null when not applicable';
+COMMENT ON COLUMN agent_messages.content IS 'the content of the message, stored encrypted with the crypto serializer';
+COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, stored encrypted with the crypto serializer, null when not applicable';
 
 CREATE TABLE IF NOT EXISTS agent_memories (
     id SERIAL PRIMARY KEY,
@@ -744,7 +744,7 @@ CREATE TABLE IF NOT EXISTS agent_memories (
     session_id BIGINT NOT NULL DEFAULT 0,
     kind VARCHAR(16) NOT NULL DEFAULT 'fact',
     title VARCHAR(256) NOT NULL DEFAULT '',
-    content TEXT NOT NULL,
+    content BYTEA NOT NULL,
     embedding vector(1536) NOT NULL,
     search tsvector NOT NULL DEFAULT '',
     hash CHAR(64) NOT NULL DEFAULT '',
@@ -774,13 +774,53 @@ COMMENT ON COLUMN agent_memories.agent_kind IS 'the agent kind the memory belong
 COMMENT ON COLUMN agent_memories.session_id IS 'the originating session id, the isolation dimension for retrieval and uniqueness (visible only within its originating session)';
 COMMENT ON COLUMN agent_memories.kind IS 'the category of the memory, e.g. fact, preference, decision or artifact';
 COMMENT ON COLUMN agent_memories.title IS 'the one-line title of the memory';
-COMMENT ON COLUMN agent_memories.content IS 'the body of the memory';
+COMMENT ON COLUMN agent_memories.content IS 'the body of the memory, stored encrypted with the crypto serializer';
 COMMENT ON COLUMN agent_memories.embedding IS 'the vectorized representation of the memory content for similarity retrieval';
 COMMENT ON COLUMN agent_memories.search IS 'the full-text search representation of the memory content';
-COMMENT ON COLUMN agent_memories.hash IS 'the sha256 hex digest of the normalized memory content, used for exact deduplication';
+COMMENT ON COLUMN agent_memories.hash IS 'the keyed HMAC-SHA256 hex digest of the normalized memory content, used for exact deduplication';
 COMMENT ON COLUMN agent_memories.status IS 'the status of the memory, e.g. active or archived';
 COMMENT ON COLUMN agent_memories.use_count IS 'the number of times the memory has been recalled by retrieval, default 0';
 COMMENT ON COLUMN agent_memories.last_used_at IS 'the last time the memory was recalled by retrieval, null when never used';
+
+CREATE TABLE IF NOT EXISTS agent_runs (
+    id SERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL DEFAULT 0,
+    status VARCHAR(16) NOT NULL DEFAULT 'pending',
+    messages BYTEA,
+    pending_calls BYTEA,
+    citations BYTEA,
+    slot VARCHAR(255) NOT NULL DEFAULT '',
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_runs_namespace
+    ON agent_runs (namespace_name);
+
+CREATE INDEX IF NOT EXISTS idx_agent_runs_session_id
+    ON agent_runs (session_id);
+
+CREATE INDEX IF NOT EXISTS idx_agent_runs_status
+    ON agent_runs (status);
+
+CREATE INDEX IF NOT EXISTS idx_agent_runs_expires_at
+    ON agent_runs (expires_at);
+
+COMMENT ON COLUMN agent_runs.id IS 'the primary key of the agent run';
+COMMENT ON COLUMN agent_runs.created_at IS 'the creation time of the agent run';
+COMMENT ON COLUMN agent_runs.updated_at IS 'the last update time of the agent run';
+COMMENT ON COLUMN agent_runs.deleted_at IS 'the soft delete time of the agent run, null means not deleted';
+COMMENT ON COLUMN agent_runs.namespace_name IS 'the namespace the agent run belongs to';
+COMMENT ON COLUMN agent_runs.session_id IS 'the owning agent session id of the run';
+COMMENT ON COLUMN agent_runs.status IS 'the status of the run, its values come from the enum class agentRunStatus';
+COMMENT ON COLUMN agent_runs.messages IS 'the full message chain JSON snapshot at the moment of suspension, stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_runs.pending_calls IS 'the pending tool call list JSON (callId, api id, arguments and the synthesized request descriptor), stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_runs.citations IS 'the retrieval citation list JSON at the moment of suspension, stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_runs.slot IS 'the model slot of the run (flash/standard/advanced)';
+COMMENT ON COLUMN agent_runs.expires_at IS 'the expiry time of the run, after which it cannot be resumed';
 
 CREATE TABLE IF NOT EXISTS llm_models (
     id SERIAL PRIMARY KEY,
@@ -918,6 +958,7 @@ DROP TABLE IF EXISTS agent_params;
 DROP TABLE IF EXISTS llm_bindings;
 DROP TABLE IF EXISTS llm_models;
 DROP TABLE IF EXISTS agent_memories;
+DROP TABLE IF EXISTS agent_runs;
 DROP TABLE IF EXISTS agent_messages;
 DROP TABLE IF EXISTS agent_sessions;
 DROP TABLE IF EXISTS knowledge_chunks;

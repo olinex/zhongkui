@@ -80,7 +80,7 @@ func Is(err error, target error) bool {
 //
 // 示例:
 //
-//	var mismatch *llm.EmbeddingDimensionMismatchError
+//	var mismatch *ai.EmbeddingDimensionMismatchError
 //	if errors.As(err, &mismatch) {
 //	    // 处理维度不兼容错误
 //	}

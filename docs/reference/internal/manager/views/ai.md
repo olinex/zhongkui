@@ -17,6 +17,7 @@
 - [func AgentSessionRename\(c \*gin.Context\)](<#AgentSessionRename>)
 - [func AgentStatusGet\(c \*gin.Context\)](<#AgentStatusGet>)
 - [func AgentStream\(c \*gin.Context\)](<#AgentStream>)
+- [func AgentToolResult\(c \*gin.Context\)](<#AgentToolResult>)
 - [func KnowledgeDocumentBatchDelete\(c \*gin.Context\)](<#KnowledgeDocumentBatchDelete>)
 - [func KnowledgeDocumentChunksGet\(c \*gin.Context\)](<#KnowledgeDocumentChunksGet>)
 - [func KnowledgeDocumentCreate\(c \*gin.Context\)](<#KnowledgeDocumentCreate>)
@@ -45,6 +46,8 @@
 - [type AgentSlotStatusOut](<#AgentSlotStatusOut>)
 - [type AgentStatusOut](<#AgentStatusOut>)
 - [type AgentStreamIn](<#AgentStreamIn>)
+- [type AgentToolResultIn](<#AgentToolResultIn>)
+- [type AgentToolResultItemIn](<#AgentToolResultItemIn>)
 - [type DryRunIn](<#DryRunIn>)
 - [type DryRunOut](<#DryRunOut>)
 - [type KnowledgeDocumentBatchIn](<#KnowledgeDocumentBatchIn>)
@@ -180,6 +183,21 @@ func AgentStream(c *gin.Context)
 
 AgentStream 处理 AI 助手流式生成的请求（SSE，路由 /agent/:sessionID/stream）。 先校验会话归属（404 语义同详情接口），再经 Agent.StreamRun 执行带会话持久化的 流式图；流上依次透传 delta 增量事件，最终以 done 完成事件（含结构化产物与引用） 收尾；任一环节错误以 error 事件发送并结束流。本次生成的档位由 Agent 按「请求 slot → 会话档位 → agent.defaultSlot」解析，指定档位未绑定时返回英文错误，不静默回落。
 
+<a name="AgentToolResult"></a>
+## func AgentToolResult
+
+```go
+func AgentToolResult(c *gin.Context)
+```
+
+AgentToolResult 处理回传客户端工具调用结果并续跑挂起运行的请求（SSE，路由 /agent/:sessionID/tool\-result）。 挂起运行由 Agent 命中 client 来源工具时落库，本接口把前端在用户自身凭据下、经人工审批后得到的 执行结果回灌，从中断处续跑。流程：
+
+1. 校验命名空间、会话 ID、AI 功能与会话归属（404 语义同其它接口，避免泄露资源存在性）；
+2. 绑定请求体（须覆盖挂起时下发的全部 callId；同一轮多个调用一次性回传）；
+3. 调用 ResumeRun 认领运行现场（校验归属/状态/过期并原子消费）并重建续跑流；
+4. 仅当 ResumeRun 成功后才构造 SSE 写手：NewSSEWriter 一旦构造即写入响应头，此后无法再返回 JSON 错误，故失败时按 errors.Is 映射业务码以 JSON 中断（此时尚未构造 SSE 写手）；
+5. 成功后以与流式生成一致的事件语义透传续跑输出（delta/stage/done），再次命中 client 工具时 再次下发 tool\_request 并以 io.EOF 正常结束。
+
 <a name="KnowledgeDocumentBatchDelete"></a>
 ## func KnowledgeDocumentBatchDelete
 
@@ -280,6 +298,7 @@ RegisterRoutes 注册 /api/v1/ai AI 助手（RAG \+ Agent）接口。 分组挂�
 - /session Agent 会话 create/list/get/rename/delete/messages
 - /memory 长期记忆 create/list/get/update/delete/status
 - /agent/:sessionID/stream SSE 流式生成
+- /agent/:sessionID/tool\-result 回传客户端工具调用结果并续跑挂起运行（SSE）
 - /status AI 状态（可用性 \+ 维度差异）
 
 知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存 （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务入队）中间件供子路由共享。
@@ -326,17 +345,17 @@ type AgentMemoryDetailOut struct {
     // NamespaceName 所属命名空间
     NamespaceName string `json:"namespaceName"`
     // AgentKind 记忆所属 Agent 类型（knowledge/rego）
-    AgentKind pkgllm.AgentKind `json:"agentKind"`
+    AgentKind modelsai.AgentKind `json:"agentKind"`
     // SessionID 来源会话 ID（记忆按会话隔离，仅在来源会话内可见）
     SessionID uint `json:"sessionId"`
     // Kind 记忆类别（fact/preference/decision/artifact）
-    Kind pkgllm.MemoryKind `json:"kind"`
+    Kind modelsai.MemoryKind `json:"kind"`
     // Title 记忆标题
     Title string `json:"title"`
     // Content 记忆正文
     Content string `json:"content"`
     // Status 记忆状态（active/archived）
-    Status pkgllm.MemoryStatus `json:"status"`
+    Status modelsai.MemoryStatus `json:"status"`
     // UseCount 被检索命中的次数
     UseCount int `json:"useCount"`
     // LastUsedAt 最近一次被检索召回的时间，可空
@@ -358,15 +377,15 @@ type AgentMemoryItemOut struct {
     // ID 记忆 ID
     ID  uint `json:"id"`
     // AgentKind 记忆所属 Agent 类型（knowledge/rego）
-    AgentKind pkgllm.AgentKind `json:"agentKind"`
+    AgentKind modelsai.AgentKind `json:"agentKind"`
     // Kind 记忆类别（fact/preference/decision/artifact）
-    Kind pkgllm.MemoryKind `json:"kind"`
+    Kind modelsai.MemoryKind `json:"kind"`
     // Title 记忆标题
     Title string `json:"title"`
     // Content 记忆正文
     Content string `json:"content"`
     // Status 记忆状态（active/archived）
-    Status pkgllm.MemoryStatus `json:"status"`
+    Status modelsai.MemoryStatus `json:"status"`
     // UseCount 被检索命中的次数
     UseCount int `json:"useCount"`
     // LastUsedAt 最近一次被检索召回的时间，可空
@@ -398,7 +417,7 @@ AgentMemoryStatusIn 定义启停长期记忆的请求输入。
 ```go
 type AgentMemoryStatusIn struct {
     // Status 目标状态（active/archived），必填且须为合法取值
-    Status pkgllm.MemoryStatus `json:"status" binding:"required,oneof=active archived"`
+    Status modelsai.MemoryStatus `json:"status" binding:"required,oneof=active archived"`
 }
 ```
 
@@ -412,7 +431,7 @@ type AgentMessageItemOut struct {
     // ID 消息 ID
     ID  uint `json:"id"`
     // Role 消息角色（user/assistant/system）
-    Role pkgllm.MessageRole `json:"role"`
+    Role modelsai.MessageRole `json:"role"`
     // Content 消息正文内容
     Content string `json:"content"`
     // Draft 助手回复的结构化草稿载荷（JSON 对象），无草稿时省略
@@ -468,10 +487,10 @@ type AgentSessionCreateIn struct {
     // Query 首个用户问题，必填；会话主题据此经 LLM 生成（失败时按其截断兜底）
     Query string `json:"query" binding:"required"`
     // Slot 会话缺省档位（flash/standard/advanced），可选；空表示按 agent.defaultSlot 参数解析
-    Slot pkgllm.Slot `json:"slot"`
+    Slot modelsai.Slot `json:"slot"`
     // AgentKind 会话所属 Agent 类型（knowledge/rego），可选；缺省 knowledge，非法取值以 400 +
     // 英文错误拒绝
-    AgentKind pkgllm.AgentKind `json:"agentKind"`
+    AgentKind modelsai.AgentKind `json:"agentKind"`
 }
 ```
 
@@ -487,11 +506,11 @@ type AgentSessionItemOut struct {
     // Title 会话标题
     Title string `json:"title"`
     // Slot 会话缺省档位（flash/standard/advanced），空表示按 agent.defaultSlot 参数解析
-    Slot pkgllm.Slot `json:"slot"`
+    Slot modelsai.Slot `json:"slot"`
     // Status 会话状态（active/archived）
-    Status pkgllm.SessionStatus `json:"status"`
+    Status modelsai.SessionStatus `json:"status"`
     // AgentKind 会话所属 Agent 类型（knowledge/rego）
-    AgentKind pkgllm.AgentKind `json:"agentKind"`
+    AgentKind modelsai.AgentKind `json:"agentKind"`
     // Summary 会话滚动摘要，无摘要时为空串
     Summary string `json:"summary"`
     // CreatedAt 创建时间
@@ -532,13 +551,13 @@ AgentSlotStatusOut 定义单个档位的绑定模型与可用性输出项。
 ```go
 type AgentSlotStatusOut struct {
     // Slot 档位标识（flash/standard/advanced/embedding）
-    Slot pkgllm.Slot `json:"slot"`
+    Slot modelsai.Slot `json:"slot"`
     // ModelName 绑定模型在注册表中的本地标识（无绑定时为空）
     ModelName string `json:"modelName"`
     // ProviderModel 供应商侧的模型名（无绑定时为空）
     ProviderModel string `json:"providerModel"`
     // Kind 绑定模型类型（chat/embedding；无绑定时为空）
-    Kind pkgllm.ModelKind `json:"kind"`
+    Kind llm.ModelKind `json:"kind"`
     // Enabled 绑定模型是否启用
     Enabled bool `json:"enabled"`
     // Bound 绑定是否可用（模型已启用且类型与档位匹配）
@@ -567,11 +586,11 @@ type AgentStatusOut struct {
     DimensionMismatch bool `json:"dimensionMismatch"`
     // DimensionDetail 维度不一致的详细说明（一致时为空）
     DimensionDetail string `json:"dimensionDetail"`
-    // Slots 各档位绑定的模型与可用性（含不可用绑定），按 pkgllm.AllSlots 顺序
+    // Slots 各档位绑定的模型与可用性（含不可用绑定），按 modelsai.AllSlots 顺序
     Slots []AgentSlotStatusOut `json:"slots"`
     // DefaultSlot 未显式指定档位且会话未记录档位时使用的默认档位（参数 agent.defaultSlot 的
     // 生效值），供前端档位下拉取初值，避免前端自持档位字面量
-    DefaultSlot pkgllm.Slot `json:"defaultSlot"`
+    DefaultSlot modelsai.Slot `json:"defaultSlot"`
     // ParamOverrideCount 当前值与出厂值不同的行为参数条数（0 表示全部参数仍为出厂值）
     ParamOverrideCount int `json:"paramOverrideCount"`
     // Reason AI 能力不可用的原因说明（按请求语言本地化；可用时为空）
@@ -591,12 +610,42 @@ type AgentStreamIn struct {
     // DocIDs 检索限定的文档 ID 列表，为空表示不限定
     DocIDs []uint `json:"docIDs"`
     // BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
-    BusinessData pkgllm.BusinessData `json:"businessData"`
+    BusinessData ai.BusinessData `json:"businessData"`
     // RegoRule 可选的结构化草稿 Rego 校验规则源码，为空跳过规则校验
     RegoRule string `json:"regoRule"`
     // Slot 本次生成的显式档位（flash/standard/advanced），可选；为空时依次回退到会话档位与
     // agent.defaultSlot 参数
-    Slot pkgllm.Slot `json:"slot"`
+    Slot modelsai.Slot `json:"slot"`
+}
+```
+
+<a name="AgentToolResultIn"></a>
+## type AgentToolResultIn
+
+AgentToolResultIn 定义恢复挂起运行、回传客户端工具调用结果的请求输入。
+
+```go
+type AgentToolResultIn struct {
+    // Results 本次回传的执行结果列表；须覆盖挂起时下发的全部 callId（缺失者按「未提供结果」回灌）
+    Results []AgentToolResultItemIn `json:"results" binding:"required,dive"`
+}
+```
+
+<a name="AgentToolResultItemIn"></a>
+## type AgentToolResultItemIn
+
+AgentToolResultItemIn 定义单条客户端工具调用结果：与挂起时下发的 tool\_request 按 callId 对应。
+
+```go
+type AgentToolResultItemIn struct {
+    // CallID 挂起时下发的调用 ID，必填
+    CallID string `json:"callId" binding:"required"`
+    // Approved 用户是否批准执行该调用
+    Approved bool `json:"approved"`
+    // Result 前端以用户自身凭据执行成功后的结果文本
+    Result string `json:"result"`
+    // Error 前端执行失败时的错误文本
+    Error string `json:"error"`
 }
 ```
 
@@ -712,7 +761,7 @@ type KnowledgeDocumentDetailOut struct {
     UseCount int `json:"useCount"`
     // LastUsedAt 最近一次被检索命中的时间，从未命中时为空
     LastUsedAt *time.Time `json:"lastUsedAt"`
-    // Hash 文档内容的 sha256 十六进制摘要
+    // Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破）
     Hash string `json:"hash"`
     // Format 文档来源格式（取值为 documentFormat 枚举类的值：markdown/txt/pdf/docx）
     Format string `json:"format"`
@@ -764,7 +813,7 @@ type KnowledgeDocumentIndexSummaryOut struct {
     Stale bool `json:"stale"`
     // IndexedAt 最近一次索引写入时间（文档更新时间）
     IndexedAt time.Time `json:"indexedAt"`
-    // Hash 文档内容 sha256 摘要
+    // Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破）
     Hash string `json:"hash"`
     // EmbeddingModel embedding 档位绑定的供应商模型名（未绑定时为空）
     EmbeddingModel string `json:"embeddingModel"`

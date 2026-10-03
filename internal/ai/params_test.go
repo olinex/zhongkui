@@ -3,19 +3,15 @@ package ai
 import (
 	// 标准库
 	"testing"
-
-	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // testParams 构造测试用参数读取器：出厂值由 migrate fixture 注入数据库，测试不复制生产
 // 提示词正文，故提示词类键给可辨识的短占位串（agent.systemPrompt 保留 "ZhongKui" 以便
 // 断言系统提示已注入），其余键给与出厂值等价的字面量；overrides 覆盖其上。
-func testParams(t *testing.T, overrides map[string]string) *llm.Params {
+func testParams(t *testing.T, overrides map[string]string) *Params {
 	t.Helper()
 	values := map[string]string{
 		"agent.systemPrompt":                "test system prompt of ZhongKui AI",
-		"agent.retrievalSectionTitle":       "## Retrieved Knowledge",
 		"agent.businessSectionTitle":        "## Current Business Scene",
 		"agent.questionSectionTitle":        "## User Question",
 		"agent.retrievedDocSnippetLimit":    "500",
@@ -59,5 +55,5 @@ func testParams(t *testing.T, overrides map[string]string) *llm.Params {
 	for key, value := range overrides {
 		values[key] = value
 	}
-	return llm.NewParams(values)
+	return NewParams(values)
 }

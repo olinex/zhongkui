@@ -16,7 +16,6 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // newSessionTestRouter 创建 AI 会话测试路由引擎，注入 i18n、日志、核心库、命名空间与 AI 运行时。
@@ -61,7 +60,7 @@ func TestAgentSessionCreate(t *testing.T) {
 			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
 			So(resp.Data, ShouldNotBeNil)
 			So(resp.Data.Title, ShouldEqual, query)
-			So(resp.Data.AgentKind, ShouldEqual, llm.AgentKindKnowledge)
+			So(resp.Data.AgentKind, ShouldEqual, modelsai.AgentKindKnowledge)
 			So(resp.Data.ID, ShouldBeGreaterThan, 0)
 
 			var row modelsai.AgentSession

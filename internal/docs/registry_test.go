@@ -67,6 +67,19 @@ func TestRegistry(t *testing.T) {
 	}
 }
 
+// TestRegistry_GeneratedTitleUnique 守卫自动生成条目的标题唯一：数据库以标题（Title）作为生成
+// 文档分区的稳定键，重复标题会导致同步互相覆盖。
+func TestRegistry_GeneratedTitleUnique(t *testing.T) {
+	seen := make(map[string]string)
+	for _, entry := range Generated() {
+		if prev, ok := seen[entry.Title]; ok {
+			t.Errorf("生成条目标题重复: %q（Output=%q 与 %q）", entry.Title, entry.Output, prev)
+			continue
+		}
+		seen[entry.Title] = entry.Output
+	}
+}
+
 // repoRoot 从当前测试工作目录向上查找 go.mod，返回项目根目录。
 func repoRoot(t *testing.T) string {
 	t.Helper()

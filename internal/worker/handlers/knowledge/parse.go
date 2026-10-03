@@ -14,12 +14,13 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/docconv"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etl"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/provider"
 )
 
@@ -46,7 +47,7 @@ type objectMaterializer interface {
 // documentIndexer 知识库索引接口，定义在消费侧并与 ai 包解耦（*ai.Knowledge 满足该契约），
 // 便于单元测试注入替代实现，避免测试依赖真实 LLM 与向量库。
 type documentIndexer interface {
-	IndexDocument(ctx context.Context, doc *modelsai.KnowledgeDocument) error
+	IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument) error
 }
 
 // ParseHandler 知识文档导入解析处理器，消费 knowledge.ParseTask（ai:doc:parse）任务。
@@ -103,7 +104,7 @@ func (h *ParseHandler) Do(ctx context.Context, task etl.Task) error {
 		return err
 	}
 
-	var doc modelsai.KnowledgeDocument
+	var doc ai.KnowledgeDocument
 	if err := h.db.WithContext(ctx).First(&doc, payload.DocumentID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.Newf("knowledge parse: document %d not found", payload.DocumentID)
@@ -112,7 +113,7 @@ func (h *ParseHandler) Do(ctx context.Context, task etl.Task) error {
 	}
 
 	// 置 parsing 并清空上一次的 parse_error，使前端能看到「进行中」状态并按需轮询
-	if err := h.setStatus(ctx, &doc, modelsai.KnowledgeDocStatusParsing, ""); err != nil {
+	if err := h.setStatus(ctx, &doc, ai.KnowledgeDocStatusParsing, ""); err != nil {
 		h.logger.Ctx(ctx).Errorf("knowledge parse: mark document %d parsing failed: %v", doc.ID, err)
 		return errors.WithStack(err)
 	}
@@ -133,7 +134,7 @@ func (h *ParseHandler) Do(ctx context.Context, task etl.Task) error {
 // 「置 failed + 写 parse_error」只存在于错误返回路径上，文档将永久停留在 parsing；叠加投递侧
 // asynq.MaxRetry(0)（不重试）与重新索引对 parsing 返回 400，用户无法自助恢复，只能删除重传。
 // panic 的完整调用栈只写日志，不进入对用户可见的 parse_error（后者按 maxParseErrorBytes 截断）。
-func (h *ParseHandler) parseSafely(ctx context.Context, doc *modelsai.KnowledgeDocument) (err error) {
+func (h *ParseHandler) parseSafely(ctx context.Context, doc *ai.KnowledgeDocument) (err error) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			h.logger.Ctx(ctx).Errorf("knowledge parse: document %d panicked: %v\n%s", doc.ID, rec, debug.Stack())
@@ -145,7 +146,7 @@ func (h *ParseHandler) parseSafely(ctx context.Context, doc *modelsai.KnowledgeD
 
 // parse 执行解析主体并收敛状态：AI 可用性校验 -> 原件键校验 -> 拉取解密原件 -> 抽取文本 ->
 // 落库 content -> 切块向量化 -> 置 ready。任一步失败把错误交还调用方，由 Do 统一置 failed。
-func (h *ParseHandler) parse(ctx context.Context, doc *modelsai.KnowledgeDocument) error {
+func (h *ParseHandler) parse(ctx context.Context, doc *ai.KnowledgeDocument) error {
 	if h.enabled == nil || !h.enabled() {
 		return errors.New("knowledge parse: ai feature is disabled")
 	}
@@ -160,22 +161,23 @@ func (h *ParseHandler) parse(ctx context.Context, doc *modelsai.KnowledgeDocumen
 	if err != nil {
 		return err
 	}
-	doc.Content = text
-	if err := h.db.WithContext(ctx).Model(&modelsai.KnowledgeDocument{}).Where("id = ?", doc.ID).
-		Update("content", doc.Content).Error; err != nil {
+	doc.Content = serializer.NewCrypto([]byte(text))
+	// 采用结构体 Select 更新以触发 crypto 序列化器加密存储（map 更新不会走序列化器）
+	if err := h.db.WithContext(ctx).Model(&ai.KnowledgeDocument{}).Where("id = ?", doc.ID).
+		Select("content").Updates(&ai.KnowledgeDocument{Content: doc.Content}).Error; err != nil {
 		return errors.WithStack(err)
 	}
 	if err := h.index(ctx, doc); err != nil {
 		return err
 	}
-	if err := h.setStatus(ctx, doc, modelsai.KnowledgeDocStatusReady, ""); err != nil {
+	if err := h.setStatus(ctx, doc, ai.KnowledgeDocStatusReady, ""); err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
 }
 
 // extract 打开本地原件、读取其大小并按文档格式经 docconv.Convert 抽取 Markdown 文本。
-func (h *ParseHandler) extract(ctx context.Context, doc *modelsai.KnowledgeDocument, path string) (string, error) {
+func (h *ParseHandler) extract(ctx context.Context, doc *ai.KnowledgeDocument, path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", errors.WithStack(err)
@@ -194,7 +196,7 @@ func (h *ParseHandler) extract(ctx context.Context, doc *modelsai.KnowledgeDocum
 
 // index 取当前 AI 快照里的知识库索引器，对文档执行切块与向量化（索引器会读取 doc.Content
 // 并写入 chunk_count / hash）。
-func (h *ParseHandler) index(ctx context.Context, doc *modelsai.KnowledgeDocument) error {
+func (h *ParseHandler) index(ctx context.Context, doc *ai.KnowledgeDocument) error {
 	if h.indexer == nil {
 		return errors.New("knowledge parse: knowledge indexer is unavailable")
 	}
@@ -210,17 +212,17 @@ func (h *ParseHandler) index(ctx context.Context, doc *modelsai.KnowledgeDocumen
 
 // setStatus 持久化文档状态与 parse_error，并同步更新内存对象（status 与 parse_error 一并写入，
 // 避免遗留上一次的失败原因）。
-func (h *ParseHandler) setStatus(ctx context.Context, doc *modelsai.KnowledgeDocument, status modelsai.KnowledgeDocStatus, parseErr string) error {
+func (h *ParseHandler) setStatus(ctx context.Context, doc *ai.KnowledgeDocument, status ai.KnowledgeDocStatus, parseErr string) error {
 	doc.Status = string(status)
 	doc.ParseError = parseErr
-	return h.db.WithContext(ctx).Model(&modelsai.KnowledgeDocument{}).Where("id = ?", doc.ID).
+	return h.db.WithContext(ctx).Model(&ai.KnowledgeDocument{}).Where("id = ?", doc.ID).
 		Updates(map[string]any{"status": doc.Status, "parse_error": doc.ParseError}).Error
 }
 
 // fail 把文档收敛为 failed 并写入截断后的失败原因，随后返回原始错误（供 worker 记录日志）。
 // 置失败态的写入自身失败时，用 errors.Join 把两个错误一并返回，绝不静默吞掉。
-func (h *ParseHandler) fail(ctx context.Context, doc *modelsai.KnowledgeDocument, cause error) error {
-	if err := h.setStatus(ctx, doc, modelsai.KnowledgeDocStatusFailed, truncateParseError(cause.Error())); err != nil {
+func (h *ParseHandler) fail(ctx context.Context, doc *ai.KnowledgeDocument, cause error) error {
+	if err := h.setStatus(ctx, doc, ai.KnowledgeDocStatusFailed, truncateParseError(cause.Error())); err != nil {
 		h.logger.Ctx(ctx).Errorf("knowledge parse: mark document %d failed failed: %v", doc.ID, err)
 		return errors.Join(cause, errors.WithStack(err))
 	}

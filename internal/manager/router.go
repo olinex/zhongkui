@@ -277,5 +277,6 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	etl.RegisterRoutes(rc)
 	ai.RegisterRoutes(rc)
 	llm.RegisterRoutes(rc)
+
 	return nil
 }

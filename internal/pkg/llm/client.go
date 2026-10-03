@@ -1,9 +1,8 @@
-// Package llm 提供 AI 助手（RAG + Agent）的 LLM 接入与行为参数体系：OpenAI 兼容的对话
-// （Chat）与向量化（Embedding）客户端封装、模型档位（flash / standard / advanced / embedding）
-// 取值与解析、可调行为参数注册表（提示词、检索融合与重排、会话上下文、切片、评估与
-// 清洗限界），以及知识库向量列的维度校准。本包与 GORM / 具体持久化模型解耦，仅依赖
-// stdlib 与 internal/pkg 内共享包；LLM 端点配置的唯一事实来源是数据库模型注册表
-// （见 ModelConfig），不再来自配置文件。
+// Package llm 提供 AI 助手（RAG + Agent）的 LLM 接入底座：OpenAI 兼容的对话（Chat）与
+// 向量化（Embedding）客户端封装、模型与档位（flash / standard / advanced / embedding）的
+// 取值契约与解析、Markdown 结构感知切片，以及 embedding 端点的维度探测。本包与 GORM /
+// 具体持久化模型解耦，仅依赖 stdlib 与 internal/pkg 内共享包；LLM 端点配置的唯一事实来源
+// 是数据库模型注册表（见 ModelConfig），不再来自配置文件。
 package llm
 
 import (

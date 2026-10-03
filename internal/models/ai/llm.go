@@ -1,13 +1,15 @@
-// Package core 提供平台核心领域的持久化模型。本文件定义 LLM 模型注册表（LlmModel）、
-// 档位绑定（LlmBinding）、Agent 参数（AgentParam）、MCP 服务器注册表（McpServer）与
-// 工具注册表（LlmTool）五个模型：模型端点由前端动态注册（APIKey 以密文落库），档位绑定
-// 把 flash / standard / advanced / embedding 四个固定槽位指向注册表中的一条模型记录，
-// 参数表同时持有出厂值（default_value，由 migrate fixture 注入）与当前生效值（value），
-// 参数类值的唯一来源是数据库而非代码；MCP 服务器注册表登记远程 MCP 端点（headers 以密文
-// 落库，首版仅支持 streamable_http / sse 两种远程传输），工具注册表登记 Agent 可调用的
-// 工具（内置工具由代码内注册表声明、MCP 工具由所属服务器同步而来），二者共同决定运行期
-// 可装配的工具集合。五者均为全局配置，不按命名空间隔离。
-package core
+// 本文件定义 LLM 模型注册表（LlmModel）、档位绑定（LlmBinding）、Agent 参数（AgentParam）、
+// MCP 服务器注册表（McpServer）与工具注册表（LlmTool）五个模型：模型端点由前端动态注册
+// （APIKey 以密文落库），档位绑定把 flash / standard / advanced / embedding 四个固定槽位
+// 指向注册表中的一条模型记录，参数表同时持有出厂值（default_value，由 migrate fixture 注入）
+// 与当前生效值（value），参数类值的唯一来源是数据库而非代码；MCP 服务器注册表登记远程 MCP
+// 端点（headers 以密文落库，首版仅支持 streamable_http / sse 两种远程传输），工具注册表登记
+// Agent 可调用的工具（内置工具由代码内注册表声明、MCP 工具由所属服务器同步而来），二者共同
+// 决定运行期可装配的工具集合。五者均为全局配置，不按命名空间隔离。
+//
+// 模型档位枚举（llmSlot）的取值空间 Slot / AllSlots 与本包同源（见 enum.go），其类名与
+// search.toml 字段绑定的引用一致；LlmBinding.Slot 即以此为类型。包内文档注释见 document.go。
+package ai
 
 import (
 	// 第三方
@@ -70,7 +72,7 @@ type LlmBinding struct {
 	database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
 
 	// Slot 档位槽位：flash | standard | advanced | embedding，全局唯一（uq_llm_bindings_slot）
-	Slot llm.Slot `gorm:"type:VARCHAR(16);uniqueIndex:uq_llm_bindings_slot"`
+	Slot Slot `gorm:"type:VARCHAR(16);uniqueIndex:uq_llm_bindings_slot"`
 	// ModelID 绑定的模型记录 ID（llm_models.id）
 	ModelID uint `gorm:"type:BIGINT;index:idx_llm_bindings_model_id"`
 	// Model 绑定的模型实体，用于 GORM 关联（foreignKey:ModelID;references:ID；删除受限）
@@ -141,9 +143,9 @@ type LlmTool struct {
 
 	// Name Agent 面向的工具名，全局唯一（uq_llm_tools_name）
 	Name string `gorm:"type:VARCHAR(128);uniqueIndex:uq_llm_tools_name"`
-	// Source 工具来源：builtin | mcp，取值见 llm.ToolSource（枚举类 llmToolSource，声明于
-	// internal/pkg/llm）
-	Source llm.ToolSource `gorm:"type:VARCHAR(16);index:idx_llm_tools_source"`
+	// Source 工具来源：builtin | mcp，取值见 ToolSource（枚举类 llmToolSource，声明于
+	// internal/models/ai）
+	Source ToolSource `gorm:"type:VARCHAR(16);index:idx_llm_tools_source"`
 	// McpServerID 所属 MCP 服务器的 ID（llm_tools.mcp_server_id），可空：source='mcp' 时
 	// 非空、source='builtin' 时为空
 	McpServerID *uint `gorm:"type:BIGINT;index:idx_llm_tools_mcp_server_id"`

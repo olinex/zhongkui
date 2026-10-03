@@ -10,10 +10,9 @@ import (
 	"github.com/cloudwego/eino/components/embedding"
 
 	// 项目内部
-
 	"zhongkui.com/zhongkui/internal/ai/tools"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // TestNewMemoryStore_NilArgs 测试构造 MemoryStore 时的空值校验：db/embed/params 为空返回
@@ -22,17 +21,17 @@ func TestNewMemoryStore_NilArgs(t *testing.T) {
 	if _, err := NewMemoryStore(nil, nil, nil, nil); err == nil {
 		t.Error("NewMemoryStore(nil, nil, nil, nil) = nil error, want an error")
 	}
-	if _, err := NewMemoryStore(nil, stubEmbedder{}, llm.NewParams(nil), nil); err == nil {
+	if _, err := NewMemoryStore(nil, stubEmbedder{}, NewParams(nil), nil); err == nil {
 		t.Error("NewMemoryStore(nil, embed, params, nil) = nil error, want an error")
 	}
-	if _, err := NewMemoryStore(&database.DB{}, nil, llm.NewParams(nil), nil); err == nil {
+	if _, err := NewMemoryStore(&database.DB{}, nil, NewParams(nil), nil); err == nil {
 		t.Error("NewMemoryStore(db, nil, params, nil) = nil error, want an error")
 	}
 	if _, err := NewMemoryStore(&database.DB{}, stubEmbedder{}, nil, nil); err == nil {
 		t.Error("NewMemoryStore(db, embed, nil, nil) = nil error, want an error")
 	}
 	// logger 允许为空
-	if _, err := NewMemoryStore(&database.DB{}, stubEmbedder{}, llm.NewParams(nil), nil); err != nil {
+	if _, err := NewMemoryStore(&database.DB{}, stubEmbedder{}, NewParams(nil), nil); err != nil {
 		t.Errorf("NewMemoryStore(db, embed, params, nil) error = %v, want nil", err)
 	}
 }
@@ -50,31 +49,31 @@ func (stubEmbedder) EmbedStrings(_ context.Context, texts []string, _ ...embeddi
 func TestParseMemoryKind(t *testing.T) {
 	cases := []struct {
 		name    string
-		in      llm.MemoryKind
-		want    llm.MemoryKind
+		in      ai.MemoryKind
+		want    ai.MemoryKind
 		wantErr bool
 	}{
-		{name: "空取缺省", in: "", want: llm.MemoryKindFact},
-		{name: "合法事实", in: llm.MemoryKindFact, want: llm.MemoryKindFact},
-		{name: "合法偏好", in: llm.MemoryKindPreference, want: llm.MemoryKindPreference},
-		{name: "合法决策", in: llm.MemoryKindDecision, want: llm.MemoryKindDecision},
-		{name: "合法产物", in: llm.MemoryKindArtifact, want: llm.MemoryKindArtifact},
-		{name: "非法取值", in: llm.MemoryKind("bogus"), wantErr: true},
+		{name: "空取缺省", in: "", want: ai.MemoryKindFact},
+		{name: "合法事实", in: ai.MemoryKindFact, want: ai.MemoryKindFact},
+		{name: "合法偏好", in: ai.MemoryKindPreference, want: ai.MemoryKindPreference},
+		{name: "合法决策", in: ai.MemoryKindDecision, want: ai.MemoryKindDecision},
+		{name: "合法产物", in: ai.MemoryKindArtifact, want: ai.MemoryKindArtifact},
+		{name: "非法取值", in: ai.MemoryKind("bogus"), wantErr: true},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := llm.ParseMemoryKind(tt.in)
+			got, err := ai.ParseMemoryKind(tt.in)
 			if tt.wantErr {
 				if err == nil {
-					t.Fatalf("llm.ParseMemoryKind(%q) = nil error, want an error", tt.in)
+					t.Fatalf("aimodel.ParseMemoryKind(%q) = nil error, want an error", tt.in)
 				}
 				return
 			}
 			if err != nil {
-				t.Fatalf("llm.ParseMemoryKind(%q) error = %v", tt.in, err)
+				t.Fatalf("aimodel.ParseMemoryKind(%q) error = %v", tt.in, err)
 			}
 			if got != tt.want {
-				t.Errorf("llm.ParseMemoryKind(%q) = %q, want %q", tt.in, got, tt.want)
+				t.Errorf("aimodel.ParseMemoryKind(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
 	}
@@ -82,14 +81,14 @@ func TestParseMemoryKind(t *testing.T) {
 
 // TestValidMemoryStatus 测试记忆状态取值空间校验。
 func TestValidMemoryStatus(t *testing.T) {
-	if _, err := llm.ParseMemoryStatus(llm.MemoryStatusActive); err != nil {
-		t.Errorf("llm.ParseMemoryStatus(active) error = %v, want nil", err)
+	if _, err := ai.ParseMemoryStatus(ai.MemoryStatusActive); err != nil {
+		t.Errorf("aimodel.ParseMemoryStatus(active) error = %v, want nil", err)
 	}
-	if _, err := llm.ParseMemoryStatus(llm.MemoryStatusArchived); err != nil {
-		t.Errorf("llm.ParseMemoryStatus(archived) error = %v, want nil", err)
+	if _, err := ai.ParseMemoryStatus(ai.MemoryStatusArchived); err != nil {
+		t.Errorf("aimodel.ParseMemoryStatus(archived) error = %v, want nil", err)
 	}
-	if _, err := llm.ParseMemoryStatus(llm.MemoryStatus("bogus")); err == nil {
-		t.Error("llm.ParseMemoryStatus accepted an undeclared status")
+	if _, err := ai.ParseMemoryStatus(ai.MemoryStatus("bogus")); err == nil {
+		t.Error("aimodel.ParseMemoryStatus accepted an undeclared status")
 	}
 }
 
@@ -111,11 +110,11 @@ func TestNormalizeMemoryContent(t *testing.T) {
 			}
 		})
 	}
-	// 不同排版的同一正文规范化后哈希一致
-	a := sha256Hex(normalizeMemoryContent("甲乙  丙\n丁"))
-	b := sha256Hex(normalizeMemoryContent("甲乙 丙 丁"))
+	// 不同排版的同一正文规范化后应一致（HMAC 摘要基于规范化正文，故摘要亦一致）
+	a := normalizeMemoryContent("甲乙  丙\n丁")
+	b := normalizeMemoryContent("甲乙 丙 丁")
 	if a != b {
-		t.Errorf("hash of equivalent bodies differ: %s vs %s", a, b)
+		t.Errorf("normalized bodies of equivalent inputs differ: %q vs %q", a, b)
 	}
 }
 
@@ -130,8 +129,8 @@ func TestMemoryWrite_ValidationErrors(t *testing.T) {
 		{name: "空命名空间", in: tools.MemoryWriteInput{NamespaceName: "  ", SessionID: 1, Content: "内容"}},
 		{name: "空会话", in: tools.MemoryWriteInput{NamespaceName: "default", Content: "内容"}},
 		{name: "空正文", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, Content: "   \n"}},
-		{name: "非法 Agent 类型", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, AgentKind: llm.AgentKind("unknown"), Content: "内容"}},
-		{name: "非法记忆类别", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, Kind: llm.MemoryKind("bogus"), Content: "内容"}},
+		{name: "非法 Agent 类型", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, AgentKind: ai.AgentKind("unknown"), Content: "内容"}},
+		{name: "非法记忆类别", in: tools.MemoryWriteInput{NamespaceName: "default", SessionID: 1, Kind: ai.MemoryKind("bogus"), Content: "内容"}},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {

@@ -1,7 +1,7 @@
 // 本文件把通知模板来源与通知发送记录状态注册为枚举类 notificationSource /
-// notificationRecordStatus。两者的取值空间在本包已有唯一来源（TemplateSource* 与 RecordStatus*
-// 常量），故此处只按该来源派生条目并在包内 init 注册，不重复声明取值常量；类名须与 search.toml
-// 字段绑定的引用一致。
+// notificationRecordStatus。取值空间在本包已有唯一来源（TemplateSource* 与 RecordStatus*
+// 常量），故此处只按该来源派生条目并在包内 init 注册，不重复声明取值常量；类名须与
+// search.toml 字段绑定的引用一致。
 package core
 
 import (

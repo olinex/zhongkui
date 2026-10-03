@@ -18,9 +18,8 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -164,10 +163,10 @@ func McpServerListGet(c *gin.Context) {
 	}
 	// 以局部扫描行承载 gorm 模型与注入的 total 列（用于分页总数），随后映射为 Out 结构
 	var rows []struct {
-		core.McpServer
+		aimodel.McpServer
 		utils.BaseTotalOut
 	}
-	db := middlewares.GetCoreDatabase(c).Model(&core.McpServer{})
+	db := middlewares.GetCoreDatabase(c).Model(&aimodel.McpServer{})
 	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -212,7 +211,7 @@ func McpServerCreate(c *gin.Context) {
 	// 名称唯一性预检：含软删除记录（uq_mcp_servers_name 为非部分索引），
 	// 以便返回明确的英文校验错误而非唯一约束冲突的 500
 	var count int64
-	if err := db.Unscoped().Model(&core.McpServer{}).Where("name = ?", in.Name).Count(&count).Error; err != nil {
+	if err := db.Unscoped().Model(&aimodel.McpServer{}).Where("name = ?", in.Name).Count(&count).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -225,7 +224,7 @@ func McpServerCreate(c *gin.Context) {
 	if in.Headers != "" {
 		headers = []byte(in.Headers)
 	}
-	instance := &core.McpServer{
+	instance := &aimodel.McpServer{
 		Name:           in.Name,
 		Transport:      in.Transport,
 		URL:            in.URL,
@@ -249,7 +248,7 @@ func McpServerDetailGet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	instance := core.McpServer{}
+	instance := aimodel.McpServer{}
 	if err := middlewares.GetCoreDatabase(c).First(&instance, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -275,7 +274,7 @@ func McpServerUpdate(c *gin.Context) {
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
-	instance := core.McpServer{}
+	instance := aimodel.McpServer{}
 	if err := db.First(&instance, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -286,7 +285,7 @@ func McpServerUpdate(c *gin.Context) {
 	}
 	// 改名时做唯一性预检（排除自身，含软删除记录）
 	var count int64
-	if err := db.Unscoped().Model(&core.McpServer{}).Where("name = ? AND id <> ?", in.Name, instance.ID).Count(&count).Error; err != nil {
+	if err := db.Unscoped().Model(&aimodel.McpServer{}).Where("name = ? AND id <> ?", in.Name, instance.ID).Count(&count).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -295,7 +294,7 @@ func McpServerUpdate(c *gin.Context) {
 		return
 	}
 	columns := []string{"name", "transport", "url", "timeout_seconds", "enabled", "description"}
-	update := core.McpServer{
+	update := aimodel.McpServer{
 		Name:           in.Name,
 		Transport:      in.Transport,
 		URL:            in.URL,
@@ -308,7 +307,7 @@ func McpServerUpdate(c *gin.Context) {
 		columns = append(columns, "headers")
 		update.Headers = serializer.NewCrypto([]byte(in.Headers))
 	}
-	if err := db.Model(&core.McpServer{}).Where("id = ?", instance.ID).Select(columns).Updates(&update).Error; err != nil {
+	if err := db.Model(&aimodel.McpServer{}).Where("id = ?", instance.ID).Select(columns).Updates(&update).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -336,7 +335,7 @@ func McpServerBatchDelete(c *gin.Context) {
 	views.BatchExecute(c, ids,
 		func(id uint64) string { return fmt.Sprintf("%d", id) },
 		func(id uint64) error {
-			instance := core.McpServer{}
+			instance := aimodel.McpServer{}
 			if err := db.First(&instance, id).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return nil // 不存在视为成功跳过
@@ -344,10 +343,10 @@ func McpServerBatchDelete(c *gin.Context) {
 				return errors.WithStack(err)
 			}
 			if err := db.Transaction(func(tx *gorm.DB) error {
-				if err := tx.Where("mcp_server_id = ?", instance.ID).Delete(&core.LlmTool{}).Error; err != nil {
+				if err := tx.Where("mcp_server_id = ?", instance.ID).Delete(&aimodel.LlmTool{}).Error; err != nil {
 					return errors.WithStack(err)
 				}
-				return errors.WithStack(tx.Delete(&core.McpServer{}, instance.ID).Error)
+				return errors.WithStack(tx.Delete(&aimodel.McpServer{}, instance.ID).Error)
 			}); err != nil {
 				return err
 			}
@@ -383,7 +382,7 @@ func McpServerTest(c *gin.Context) {
 	)
 	if in.ID > 0 {
 		// 已注册服务器：以库内记录（含解密凭据）为准，请求体其余字段被忽略
-		instance := core.McpServer{}
+		instance := aimodel.McpServer{}
 		if err := middlewares.GetCoreDatabase(c).First(&instance, in.ID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -433,7 +432,7 @@ func McpServerSync(c *gin.Context) {
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
-	instance := core.McpServer{}
+	instance := aimodel.McpServer{}
 	if err := db.First(&instance, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -465,15 +464,15 @@ func McpServerSync(c *gin.Context) {
 // reconcileMCPTools 把远端工具清单与 llm_tools 中该服务器的行对账，返回新增/刷新/清理的数量。
 // 全程在一个事务里完成；发现任何违反一致性约束（source='mcp' ⟺ mcp_server_id IS NOT NULL）的
 // 行、远端工具名为空、或新增工具名与既有工具重名时返回英文错误并回滚。
-func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemoteTool) (McpServerSyncOut, error) {
+func reconcileMCPTools(db *gorm.DB, server *aimodel.McpServer, remote []ai.MCPRemoteTool) (McpServerSyncOut, error) {
 	out := McpServerSyncOut{}
 	err := db.Transaction(func(tx *gorm.DB) error {
 		// 该服务器的既有工具行：按 remote_name 索引
-		var owned []core.LlmTool
+		var owned []aimodel.LlmTool
 		if err := tx.Where("mcp_server_id = ?", server.ID).Find(&owned).Error; err != nil {
 			return errors.WithStack(err)
 		}
-		byRemote := make(map[string]core.LlmTool, len(owned))
+		byRemote := make(map[string]aimodel.LlmTool, len(owned))
 		for i := range owned {
 			row := owned[i]
 			byRemote[row.RemoteName] = row
@@ -483,20 +482,20 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 		var all []struct {
 			ID          uint
 			Name        string
-			Source      llm.ToolSource
+			Source      aimodel.ToolSource
 			McpServerID *uint
 		}
-		if err := tx.Model(&core.LlmTool{}).
+		if err := tx.Model(&aimodel.LlmTool{}).
 			Select("id", "name", "source", "mcp_server_id").Find(&all).Error; err != nil {
 			return errors.WithStack(err)
 		}
 		nameOwner := make(map[string]uint, len(all))
 		for i := range all {
 			row := all[i]
-			if (row.Source == llm.ToolSourceMCP) != (row.McpServerID != nil) {
+			if (row.Source == aimodel.ToolSourceMCP) != (row.McpServerID != nil) {
 				return errors.Newf(
 					"tool %q (#%d) violates the consistency invariant: source %q if and only if mcp_server_id is not null",
-					row.Name, row.ID, string(llm.ToolSourceMCP))
+					row.Name, row.ID, string(aimodel.ToolSourceMCP))
 			}
 			nameOwner[row.Name] = row.ID
 		}
@@ -512,8 +511,8 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 			seen[remoteName] = struct{}{}
 			if row, exists := byRemote[remoteName]; exists {
 				// 已存在：保留 enabled 不变，刷新 description 与 remote_name
-				refresh := core.LlmTool{RemoteName: remoteName, Description: remoteTool.Description}
-				if err := tx.Model(&core.LlmTool{}).Where("id = ?", row.ID).
+				refresh := aimodel.LlmTool{RemoteName: remoteName, Description: remoteTool.Description}
+				if err := tx.Model(&aimodel.LlmTool{}).Where("id = ?", row.ID).
 					Select("remote_name", "description").Updates(&refresh).Error; err != nil {
 					return errors.WithStack(err)
 				}
@@ -525,9 +524,9 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 					remoteName, owner, server.Name)
 			}
 			serverID := server.ID
-			created := core.LlmTool{
+			created := aimodel.LlmTool{
 				Name:        remoteName,
-				Source:      llm.ToolSourceMCP,
+				Source:      aimodel.ToolSourceMCP,
 				McpServerID: &serverID,
 				RemoteName:  remoteName,
 				Description: remoteTool.Description,
@@ -544,7 +543,7 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 			if _, stillRemote := seen[remoteName]; stillRemote {
 				continue
 			}
-			if err := tx.Delete(&core.LlmTool{}, row.ID).Error; err != nil {
+			if err := tx.Delete(&aimodel.LlmTool{}, row.ID).Error; err != nil {
 				return errors.WithStack(err)
 			}
 			out.Removed++
@@ -558,7 +557,7 @@ func reconcileMCPTools(db *gorm.DB, server *core.McpServer, remote []ai.MCPRemot
 }
 
 // newMcpServerDetailOut 将 MCP 服务器注册表记录映射为详情输出结构（headers 保持密文指针不动）。
-func newMcpServerDetailOut(m *core.McpServer) McpServerDetailOut {
+func newMcpServerDetailOut(m *aimodel.McpServer) McpServerDetailOut {
 	return McpServerDetailOut{
 		BaseItemOut: utils.BaseItemOut{
 			ID:        m.ID,

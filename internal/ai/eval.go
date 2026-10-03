@@ -16,7 +16,6 @@ import (
 
 	// 项目内部
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // EvalStage 是 dry-run 评估流程的阶段标识（检索 + 4 次评估调用）。
@@ -286,7 +285,7 @@ func streamChat(ctx context.Context, chat chatGenerator, stage EvalStage, messag
 
 // generateAnswer 基于检索上下文生成回答：system prompt 要求仅依据上下文回答、
 // 上下文不含答案时承认不知道，且仅输出 JSON。Answer 为空时返回英文错误。
-func generateAnswer(ctx context.Context, params *llm.Params, chat chatGenerator, query string, results []RetrievalResult, report EvalReporter) (string, CallMeta, error) {
+func generateAnswer(ctx context.Context, params *Params, chat chatGenerator, query string, results []RetrievalResult, report EvalReporter) (string, CallMeta, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage(params.Text("eval.answerSystemPrompt")),
 		schema.UserMessage(buildEvalChunkPrompt(query, results, params.Int("eval.snippetLimit"))),
@@ -310,7 +309,7 @@ func generateAnswer(ctx context.Context, params *llm.Params, chat chatGenerator,
 
 // judgeChunkRelevance 让模型逐块判断与查询的相关性并输出 JSON 判断数组：
 // 丢弃 index 越界的条目，score 钳制到 0..1，reason 原样保留。
-func judgeChunkRelevance(ctx context.Context, params *llm.Params, chat chatGenerator, query string, results []RetrievalResult, report EvalReporter) ([]ChunkJudgment, CallMeta, error) {
+func judgeChunkRelevance(ctx context.Context, params *Params, chat chatGenerator, query string, results []RetrievalResult, report EvalReporter) ([]ChunkJudgment, CallMeta, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage(params.Text("eval.chunkRelevanceSystemPrompt")),
 		schema.UserMessage(buildEvalChunkPrompt(query, results, params.Int("eval.snippetLimit"))),
@@ -349,7 +348,7 @@ func judgeChunkRelevance(ctx context.Context, params *llm.Params, chat chatGener
 
 // judgeClaims 抽取答案的全部事实声明并逐条判断是否可由检索上下文推断：
 // 丢弃 statement 为空的条目，chunkIndexes 中越界下标丢弃。
-func judgeClaims(ctx context.Context, params *llm.Params, chat chatGenerator, answer string, results []RetrievalResult, report EvalReporter) ([]FaithfulnessClaim, CallMeta, error) {
+func judgeClaims(ctx context.Context, params *Params, chat chatGenerator, answer string, results []RetrievalResult, report EvalReporter) ([]FaithfulnessClaim, CallMeta, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage(params.Text("eval.claimsSystemPrompt")),
 		schema.UserMessage(buildClaimsPrompt(answer, results, params.Int("eval.snippetLimit"))),
@@ -387,10 +386,10 @@ func judgeClaims(ctx context.Context, params *llm.Params, chat chatGenerator, an
 
 // judgeReverseQuestions 反推答案可能回答的问题：丢弃空串，最多保留参数
 // eval.reverseQuestionCount 指定的条数（非正数表示不限制）。
-func judgeReverseQuestions(ctx context.Context, params *llm.Params, chat chatGenerator, answer string, report EvalReporter) ([]string, CallMeta, error) {
+func judgeReverseQuestions(ctx context.Context, params *Params, chat chatGenerator, answer string, report EvalReporter) ([]string, CallMeta, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage(params.Text("eval.reverseQuestionsSystemPrompt")),
-		schema.UserMessage("Answer:\n" + answer),
+		schema.UserMessage("回答：\n" + answer),
 	}
 	content, meta, err := streamChat(ctx, chat, EvalStageReverseQuestions, messages, report)
 	if err != nil {
@@ -419,7 +418,7 @@ func judgeReverseQuestions(ctx context.Context, params *llm.Params, chat chatGen
 
 // judgeSuggestions 依据检索结果、量化指标与本次实际生效的检索参数生成改进建议：
 // 丢弃 detail 为空的条目并把归类归一化到封闭取值。
-func judgeSuggestions(ctx context.Context, params *llm.Params, chat chatGenerator, query string, ev *DryRunEvaluation, results []RetrievalResult, diag diagnosisContext, report EvalReporter) ([]DiagnosisSuggestion, CallMeta, error) {
+func judgeSuggestions(ctx context.Context, params *Params, chat chatGenerator, query string, ev *DryRunEvaluation, results []RetrievalResult, diag diagnosisContext, report EvalReporter) ([]DiagnosisSuggestion, CallMeta, error) {
 	messages := []*schema.Message{
 		schema.SystemMessage(suggestionsSystemPrompt(params, diag.Language)),
 		schema.UserMessage(buildSuggestionsPrompt(query, ev, results, diag.Options, params.Int("eval.snippetLimit"))),
@@ -451,13 +450,13 @@ func judgeSuggestions(ctx context.Context, params *llm.Params, chat chatGenerato
 // suggestionsSystemPrompt 拼装改进建议阶段的系统提示词：以管理员可编辑的
 // eval.suggestionsSystemPrompt 出厂值为主体，追加以请求语言输出建议正文的指令。语言指令
 // 由代码拼接而不是写进提示词，避免管理员编辑提示词时丢失语言约束。
-func suggestionsSystemPrompt(params *llm.Params, languageTag string) string {
+func suggestionsSystemPrompt(params *Params, languageTag string) string {
 	base := params.Text("eval.suggestionsSystemPrompt")
 	if strings.TrimSpace(languageTag) == "" {
 		return base
 	}
-	return base + "\n\nWrite every \"detail\" in the language tagged BCP-47 \"" + languageTag +
-		"\". Keep the JSON keys and the category identifiers in English."
+	return base + "\n\n请用 BCP-47 语言标签 \"" + languageTag + "\" 指定的语言书写每一条 \"detail\"" +
+		"；JSON 键与类别标识保持英文。"
 }
 
 // buildSuggestionsPrompt 构造改进建议请求的用户消息：列出查询、实际生效的检索参数、生成的
@@ -465,31 +464,31 @@ func suggestionsSystemPrompt(params *llm.Params, languageTag string) string {
 // 不当」两类问题。answer 为空（生成失败）时省略回答段。
 func buildSuggestionsPrompt(query string, ev *DryRunEvaluation, results []RetrievalResult, opts RetrieveOptions, snippetLimit int) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Query: %s\n\n", query)
-	fmt.Fprintf(&sb, "Retrieval parameters in effect: topK=%d, candidates=%d, fusion=%s, weightVector=%g, weightKeyword=%g\n\n",
+	fmt.Fprintf(&sb, "查询：%s\n\n", query)
+	fmt.Fprintf(&sb, "实际生效的检索参数：topK=%d, candidates=%d, fusion=%s, weightVector=%g, weightKeyword=%g\n\n",
 		opts.TopK, opts.Candidates, opts.Fusion, opts.Weights.Vector, opts.Weights.Keyword)
 	if ev.Answer != "" {
-		fmt.Fprintf(&sb, "Answer:\n%s\n\n", ev.Answer)
+		fmt.Fprintf(&sb, "回答：\n%s\n\n", ev.Answer)
 	} else {
-		sb.WriteString("Answer: (generation failed, no answer was produced)\n\n")
+		sb.WriteString("回答：（生成失败，未产出回答）\n\n")
 	}
-	fmt.Fprintf(&sb, "Metrics: contextPrecision=%g, faithfulness=%g, answerRelevance=%g, contextUtilization=%g, relevantChunks=%d/%d\n\n",
+	fmt.Fprintf(&sb, "指标：contextPrecision=%g, faithfulness=%g, answerRelevance=%g, contextUtilization=%g, relevantChunks=%d/%d\n\n",
 		ev.Metrics.ContextPrecision, ev.Metrics.Faithfulness, ev.Metrics.AnswerRelevance,
 		ev.Metrics.ContextUtilization, ev.RelevantCount, ev.TotalChunks)
-	sb.WriteString("Context chunks:\n")
+	sb.WriteString("上下文分块：\n")
 	judged := make(map[int]ChunkJudgment, len(ev.ChunkJudgments))
 	for _, j := range ev.ChunkJudgments {
 		judged[j.Index] = j
 	}
 	for i, r := range results {
 		if j, ok := judged[i]; ok {
-			fmt.Fprintf(&sb, "[%d] %s (relevant=%t, score=%g)\n%s\n\n", i, r.Title, j.Relevant, j.Score, truncateText(r.Content, snippetLimit))
+			fmt.Fprintf(&sb, "[%d] %s（relevant=%t, score=%g）\n%s\n\n", i, r.Title, j.Relevant, j.Score, truncateText(r.Content, snippetLimit))
 			continue
 		}
-		fmt.Fprintf(&sb, "[%d] %s (not judged)\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
+		fmt.Fprintf(&sb, "[%d] %s（未评判）\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
 	}
 	if len(ev.Warnings) > 0 {
-		fmt.Fprintf(&sb, "Warnings:\n- %s\n", strings.Join(ev.Warnings, "\n- "))
+		fmt.Fprintf(&sb, "告警：\n- %s\n", strings.Join(ev.Warnings, "\n- "))
 	}
 	return sb.String()
 }
@@ -498,7 +497,7 @@ func buildSuggestionsPrompt(query string, ev *DryRunEvaluation, results []Retrie
 // （正文经 truncateText 截断到 snippetLimit 字符）。
 func buildEvalChunkPrompt(query string, results []RetrievalResult, snippetLimit int) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Query: %s\n\nContext chunks:\n", query)
+	fmt.Fprintf(&sb, "查询：%s\n\n上下文分块：\n", query)
 	for i, r := range results {
 		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
 	}
@@ -509,7 +508,7 @@ func buildEvalChunkPrompt(query string, results []RetrievalResult, snippetLimit 
 // （正文经 truncateText 截断到 snippetLimit 字符）。
 func buildClaimsPrompt(answer string, results []RetrievalResult, snippetLimit int) string {
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Answer:\n%s\n\nContext chunks:\n", answer)
+	fmt.Fprintf(&sb, "回答：\n%s\n\n上下文分块：\n", answer)
 	for i, r := range results {
 		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
 	}
@@ -626,7 +625,7 @@ func cosineSimilarity(a, b []float64) float64 {
 // 不中断整体流程，而是记录 warning 并将对应指标置 0；chat 为 nil 或 results 为空时返回英文
 // 错误（上层转为 evalError，不产出 evaluation）。report 返回错误（客户端断开）时立即
 // 中止后续阶段并向上返回该错误。返回的 []CallMeta 为各次调用的耗时与 token 明细。
-func evaluate(ctx context.Context, params *llm.Params, chat chatGenerator, embed embedder, query string, results []RetrievalResult, diag diagnosisContext, report EvalReporter) (*DryRunEvaluation, []CallMeta, error) {
+func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed embedder, query string, results []RetrievalResult, diag diagnosisContext, report EvalReporter) (*DryRunEvaluation, []CallMeta, error) {
 	if chat == nil {
 		return nil, nil, errors.New("dry-run: chat client unavailable, evaluation skipped")
 	}

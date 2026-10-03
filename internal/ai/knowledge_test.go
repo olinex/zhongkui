@@ -285,14 +285,6 @@ func TestToFloat32(t *testing.T) {
 	}
 }
 
-// TestSha256Hex 测试内容摘要为 sha256 十六进制（已知向量）。
-func TestSha256Hex(t *testing.T) {
-	const want = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
-	if got := sha256Hex("abc"); got != want {
-		t.Errorf("sha256Hex(\"abc\") = %q, want %q", got, want)
-	}
-}
-
 // TestTruncateText 测试文本截断：短文本原样返回，长文本保留前 max 字符并追加省略号。
 func TestTruncateText(t *testing.T) {
 	if got := truncateText("short", 100); got != "short" {

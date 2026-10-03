@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	// 项目内部
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // TestDisabledReasonLocalized 验证 AI 能力不可用的原因在全部支持语言下都解析为真实文案，
@@ -17,9 +17,9 @@ import (
 // 的键完整性守卫同一约定）。
 func TestDisabledReasonLocalized(t *testing.T) {
 	disabled := emptySnapshot()
-	disabled.infos[llm.SlotStandard] = SlotInfo{Slot: llm.SlotStandard, Name: "gpt-4o-mini", Enabled: false}
+	disabled.infos[ai.SlotStandard] = SlotInfo{Slot: ai.SlotStandard, Name: "gpt-4o-mini", Enabled: false}
 	mismatch := emptySnapshot()
-	mismatch.infos[llm.SlotStandard] = SlotInfo{Slot: llm.SlotStandard, Name: "text-embedding-3-small", Enabled: true}
+	mismatch.infos[ai.SlotStandard] = SlotInfo{Slot: ai.SlotStandard, Name: "text-embedding-3-small", Enabled: true}
 
 	cases := []struct {
 		name     string

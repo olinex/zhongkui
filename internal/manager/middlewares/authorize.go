@@ -1,7 +1,6 @@
 package middlewares
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/casbin/casbin/v2"
@@ -76,7 +75,7 @@ func Authorize(c *gin.Context, span trace.Span) *response.CodeError {
 		span.SetStatus(codes.Error, "object is blank")
 		return ErrAuthorizeBlankFullPath
 	}
-	object := fmt.Sprintf(`%s:%s`, base.APIPrefix, path)
+	object := base.APIPrefix + ":" + path
 	attrs = append(attrs, attribute.String("object", object))
 	if ok, err := policy.Enforce(
 		user.UnionID.String(), // 用户标识

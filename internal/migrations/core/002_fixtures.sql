@@ -132,6 +132,8 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/ai/session/:id/messages', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/tool-result', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/tool-result', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'OPTIONS', 'allow'),
     -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
@@ -413,6 +415,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/ai/session/:id/messages', 'OPTIONS'),
     ('api:/api/v1/ai/agent/:sessionID/stream', 'POST'),
     ('api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS'),
+    ('api:/api/v1/ai/agent/:sessionID/tool-result', 'POST'),
+    ('api:/api/v1/ai/agent/:sessionID/tool-result', 'OPTIONS'),
     ('api:/api/v1/ai/status', 'POST'),
     ('api:/api/v1/ai/status', 'OPTIONS'),
     -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
@@ -706,30 +710,31 @@ ON CONFLICT (namespace_name, name) DO NOTHING;
 -- -------------------------------------------------------------
 -- 8) Agent 参数出厂值
 -- -------------------------------------------------------------
--- 参数键由代码内注册表（internal/pkg/llm 的 Specs）声明，参数类值不写在代码里：出厂值
+-- 参数键由代码内注册表（internal/ai 的 Specs）声明，参数类值不写在代码里：出厂值
 -- 只在此段种子化，value 与 default_value 初始相同。value 是运行期生效值（可由管理
 -- 接口或直接改库调整），default_value 是只读出厂值（供「恢复出厂值」写回）。启动期强校验
 -- 要求注册表每个键都有库内记录，故代码内新增参数必须同步补此段。
--- 提示词正文含单引号与 JSON 双引号，统一用美元引用（$$...$$）包裹，避免转义。
+-- 提示词正文含单引号与 JSON 双引号，统一用美元引用（$$...$$）包裹，避免转义。提示词正文与
+-- 段标题一律使用中文；其中的 JSON 键、枚举取值与类别标识属解析契约，保持英文原样（见
+-- AGENTS.md「LLM 提示词与工具文案」）。
 INSERT INTO agent_params (key, value, default_value)
 SELECT v.key, v.value, v.value
 FROM (VALUES
     (
         'agent.systemPrompt',
-        $$You are "ZhongKui AI", an embedded assistant of a network-traffic capture and analysis platform. You help users inspect captured packets, build tag rules, query data sources, and operate the platform.
+        $$你是「ZhongKui AI」，一个网络流量采集与分析平台的内置助手。你帮助用户查看已采集的数据包、编写标签规则、查询数据源并操作平台。
 
-You must reply with ONLY a JSON object in exactly this shape:
-{"content": "<your markdown answer>", "draft": {<optional structured payload>}}
+你必须仅回复一个 JSON 对象，且严格采用如下结构：
+{"content": "<你的 Markdown 回答>", "draft": {<可选的结构化载荷>}}
 
-Rules:
-- "content": the visible answer in Markdown. Match the language of the user's question.
-- "draft": a JSON object capturing structured facts, extracted entities or actionable plans for downstream automation; use {} when nothing structured applies.
-- Answer questions using the retrieved knowledge when relevant and cite sources by their titles.
-- Never fabricate facts beyond the provided context.$$
+规则：
+- "content"：面向用户可见的 Markdown 回答。回答语言与用户提问的语言保持一致。
+- "draft"：承载结构化事实、抽取的实体或可供下游自动化使用的可执行计划的 JSON 对象；没有适用内容时用 {}。
+- 当回答需要引用知识库中的既有资料时，调用内置工具 knowledge_search（可用不同查询多次调用）；当引用了它的结果时，按命中条目的标题标注来源。
+- 绝不编造所给上下文之外的事实。$$
     ),
-    ('agent.retrievalSectionTitle', '## Retrieved Knowledge'),
-    ('agent.businessSectionTitle', '## Current Business Scene'),
-    ('agent.questionSectionTitle', '## User Question'),
+    ('agent.businessSectionTitle', '## 当前业务现场'),
+    ('agent.questionSectionTitle', '## 用户提问'),
     ('agent.retrievedDocSnippetLimit', '500'),
     ('agent.defaultSlot', 'standard'),
     ('agent.maxToolRounds', '3'),
@@ -741,7 +746,7 @@ Rules:
     ('retrieval.weightKeyword', '0.4'),
     (
         'retrieval.rerankSystemPrompt',
-        $$You are a relevance reranker for retrieval-augmented generation. Rank the given chunks by relevance to the query and return ONLY a JSON array of chunk indices ordered from most to least relevant, e.g. [3,1,0]. Do not output any other text.$$
+        $$你是检索增强生成（RAG）的相关度重排器。把给出的分块按与查询的相关度排序，并且仅回复一个 JSON 数组，元素为分块序号，按相关度从高到低排列，例如 [3,1,0]。不要输出任何其他文本。$$
     ),
     ('retrieval.rerankSnippetLimit', '500'),
     ('retrieval.rerankTemperature', '0.2'),
@@ -749,10 +754,10 @@ Rules:
     ('session.maxContextBytes', '32768'),
     (
         'session.topicSystemPrompt',
-        $$You name a chat session from its first user message. Produce ONE short topic that captures what the session is about, in the same language as the message. Keep it under 20 characters, factual and specific: no quotes, no trailing punctuation, no prefixes like "Topic:", and no line breaks. Return ONLY the topic text.$$
+        $$你根据首个用户消息为一次会话命名。请产出一个能概括该会话主题的简短标题，语言与消息一致。控制在 20 个字符以内，须具体、忠于事实：不要引号、不要行尾标点、不要「Topic:」这类前缀，也不要换行。仅回复标题文本。$$
     ),
     ('memory.enabled', 'true'),
-    ('memory.sectionTitle', '## Long-term Memory'),
+    ('memory.sectionTitle', '## 长期记忆'),
     ('memory.topK', '5'),
     ('memory.candidates', '20'),
     ('memory.maxItems', '8'),
@@ -760,48 +765,48 @@ Rules:
     ('memory.dedupeThreshold', '0.92'),
     (
         'memory.summarySystemPrompt',
-        $$You maintain a rolling summary of a long multi-turn conversation between a user and an assistant. Merge the existing summary and the newly evicted messages into one updated summary. Keep it concise, factual and in the language of the conversation. Preserve decisions, constraints, identifiers, names and unresolved questions. Return ONLY the updated summary text, with no preamble.$$
+        $$你负责维护一段用户与助手之间多轮长对话的滚动摘要。把既有摘要与新近挤出的消息合并为一份更新后的摘要。保持简洁、忠于事实，语言与对话一致。保留其中的决定、约束、标识符、名称与尚未解决的问题。仅回复更新后的摘要文本，不要任何前言。$$
     ),
     ('memory.summaryMinEvictedMessages', '6'),
     (
         'memory.extractSystemPrompt',
-        $$You extract durable long-term memories from a conversation between a user and an assistant. Extract only the most reusable items: stable facts, user preferences, decisions and produced artifacts. Each memory must be self-contained and understandable without the conversation. Return ONLY a JSON object like {"memories": [{"kind": "fact", "title": "...", "content": "..."}]} where kind is one of fact, preference, decision, artifact. Return {"memories": []} when nothing is worth remembering.$$
+        $$你从一段用户与助手的对话中抽取可长期复用的记忆。只抽取最值得复用的条目：稳定的事实、用户偏好、决定与产出的成果。每条记忆须自包含，脱离原对话也能被理解。仅回复一个形如 {"memories": [{"kind": "fact", "title": "...", "content": "..."}]} 的 JSON 对象，其中 kind 取 fact、preference、decision、artifact 之一。没有值得记忆的内容时回复 {"memories": []}。$$
     ),
     ('memory.extractMaxItems', '5'),
     ('chunking.size', '800'),
     ('chunking.overlap', '100'),
     (
         'eval.answerSystemPrompt',
-        $$You are a helpful assistant for retrieval-augmented generation. Answer the user's question using ONLY the provided context chunks. If the context does not contain the answer, say that you do not know. Return ONLY a JSON object like {"answer": "..."} and nothing else.$$
+        $$你是一个用于检索增强生成（RAG）的助手。仅依据所给的上下文分块回答用户的问题。若上下文中没有答案，就说明你不知道。仅回复一个形如 {"answer": "..."} 的 JSON 对象，不要输出其他内容。$$
     ),
     (
         'eval.chunkRelevanceSystemPrompt',
-        $$You are a retrieval quality judge. Given the query and the retrieved context chunks, judge each chunk's relevance to the query. Return ONLY a JSON object like {"judgments": [{"index": 0, "relevant": true, "score": 0.9, "reason": "..."}]} where index is the chunk's number, score is a relevance score between 0 and 1, and reason is a short English explanation. Do not output any other text.$$
+        $$你是检索质量评判员。给定查询与检索到的上下文分块，评判每个分块与查询的相关度。仅回复一个形如 {"judgments": [{"index": 0, "relevant": true, "score": 0.9, "reason": "..."}]} 的 JSON 对象，其中 index 为分块序号，score 为 0 到 1 之间的相关度分数，reason 为简短的中文说明。不要输出任何其他内容。$$
     ),
     (
         'eval.claimsSystemPrompt',
-        $$You are a faithfulness judge. Extract every factual claim from the given answer and determine whether each claim can be inferred from the provided context chunks. Return ONLY a JSON object like {"claims": [{"statement": "...", "supported": true, "chunkIndexes": [0, 2]}]} where chunkIndexes lists the chunk numbers supporting the claim and is an empty array when the claim is not supported. Do not output any other text.$$
+        $$你是忠实度评判员。从给定的回答中抽取每一条事实性声明，并判断每条声明能否由所给的上下文分块推断出来。仅回复一个形如 {"claims": [{"statement": "...", "supported": true, "chunkIndexes": [0, 2]}]} 的 JSON 对象，其中 chunkIndexes 列出支持该声明的分块序号，声明不被支持时为空数组。不要输出任何其他内容。$$
     ),
     (
         'eval.reverseQuestionsSystemPrompt',
-        $$You are an answer relevance judge. Reverse-engineer up to 3 questions that the given answer could plausibly answer. Return ONLY a JSON object like {"questions": ["...", "..."]}. Do not output any other text.$$
+        $$你是答案相关度评判员。反推至多 3 个该回答可能回答的问题。仅回复一个形如 {"questions": ["...", "..."]} 的 JSON 对象。不要输出任何其他内容。$$
     ),
     (
         'eval.suggestionsSystemPrompt',
-        $$You are a retrieval-augmented generation (RAG) diagnosis expert. Given the user query, the answer produced from the retrieved context, the retrieval metrics and the retrieved chunks with their judgments, propose concrete improvement suggestions for the operator.
+        $$你是检索增强生成（RAG）的故障诊断专家。给定用户查询、依据检索到的上下文生成的回答、检索指标，以及带评判结果的检索分块，为运维人员提出具体的改进建议。
 
-Classify every suggestion into exactly one of these categories:
-- "coverage": the knowledge base lacks the documents needed to answer the query (missing or incomplete documents, stale content, unsplit or unindexed material).
-- "ranking": retrieval or reranking is misordered or misconfigured (fusion strategy, weights, topK or candidates are not appropriate, relevant chunks ranked too low).
-- "generation": the answer itself is flawed (it ignores the context, drifts from the question, or is incomplete).
-- "context": the retrieved context is relevant but underused by the answer (part of the context should have been cited or summarized).
-- "other": anything that does not fit the categories above.
+把每条建议归入下列类别中的恰好一类：
+- "coverage"：知识库缺少回答该查询所需的文档（文档缺失或不完整、内容过时、材料未切分或未建索引）。
+- "ranking"：检索或重排的排序或配置有误（融合策略、权重、topK 或 candidates 不合适，相关分块排序过低）。
+- "generation"：回答本身有缺陷（忽略上下文、偏离问题或不完整）。
+- "context"：检索到的上下文相关但未被回答充分利用（部分上下文本应被引用或概括）。
+- "other"：不符合上述任何类别的情况。
 
-Rules:
-- Each suggestion has a short "detail" that states the problem and the concrete action to take; keep it specific and actionable.
-- Order the suggestions from most to least important and return at most 5 of them.
-- Return an empty array when the run looks healthy: {"suggestions": []}.
-- Return ONLY a JSON object like {"suggestions": [{"category": "coverage", "detail": "..."}]}. Do not output any other text.$$
+规则：
+- 每条建议含一段简短的 "detail"，说明问题与应采取的具体动作；须具体、可执行。
+- 按重要性从高到低排列建议，最多回复 5 条。
+- 当本次运行看起来健康时回复空数组：{"suggestions": []}。
+- 仅回复一个形如 {"suggestions": [{"category": "coverage", "detail": "..."}]} 的 JSON 对象。不要输出任何其他内容。$$
     ),
     ('eval.reverseQuestionCount', '3'),
     ('eval.snippetLimit', '500'),
@@ -811,22 +816,26 @@ Rules:
 ON CONFLICT (key) DO NOTHING;
 
 -- -------------------------------------------------------------
--- 9) 内置工具出厂行
+-- 9) 工具出厂行（builtin / client）
 -- -------------------------------------------------------------
--- 内置工具由代码内注册表（internal/pkg/llm 的 ToolSpecs）声明，其出厂行只能在此段种子化。
--- 新增一个内置工具时，必须在此追加一条 llm_tools 的 INSERT 出厂行：source 取内置来源字面量、
--- mcp_server_id 为 NULL、remote_name 与 description 为空串、enabled 取安全默认 false（由管理
--- 员在工具面板显式启用）。守卫测试 internal/ai/tools_fixture_test.go 断言注册表键集合与本段
--- 内置行集合双向一致，忘记追加即会暴露漂移。当前注册表已声明 memory_write，故此处种下对应
--- 出厂行。
+-- 由代码内注册表（internal/ai 的 ToolSpecs）声明的工具，其出厂行只能在此段种子化，行
+-- source 与注册表声明分组的工具来源一致：builtin 取内置来源字面量，client 取客户端来源字面量。
+-- 新增一个工具时，必须在此追加一条 llm_tools 的 INSERT 出厂行：mcp_server_id 为 NULL、
+-- remote_name 与 description 为空串；enabled 的出厂默认值按工具语义定向决定——写库类工具
+-- （如 memory_write）取 false，需管理员在工具面板显式启用；只读基础能力（如 knowledge_search）
+-- 取 true，管理员仍可在工具面板停用。守卫测试 internal/ai/tools_fixture_test.go 断言注册表键
+-- 集合与本段各来源行集合双向一致，忘记追加即会暴露漂移。当前注册表已声明 memory_write 与
+-- knowledge_search（builtin）两个工具，client 分组暂无登记项，故此处只种下这两条出厂行。
 INSERT INTO llm_tools (name, source, mcp_server_id, remote_name, description, enabled)
-VALUES ('memory_write', 'builtin', NULL, '', '', false)
+VALUES
+    ('memory_write', 'builtin', NULL, '', '', false),
+    ('knowledge_search', 'builtin', NULL, '', '', true)
 ON CONFLICT (name) DO NOTHING;
 
 -- +goose Down
 
--- 内置工具出厂行：清理本段种下的内置来源行；llm_tools 表本身由 001 的 Down 段删除。
-DELETE FROM llm_tools WHERE source = 'builtin';
+-- 工具出厂行：清理本段种下的内置与客户端来源行；llm_tools 表本身由 001 的 Down 段删除。
+DELETE FROM llm_tools WHERE source IN ('builtin', 'client');
 
 -- Agent 参数出厂值
 DELETE FROM agent_params;

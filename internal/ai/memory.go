@@ -1,8 +1,9 @@
 // 本文件实现长期记忆（agent_memories）的存储与检索：按「命名空间 + Agent 类型 + 会话」归属与
-// 隔离（记忆只在其来源会话内可见），写入时做「规范化正文 sha256 精确去重 + pgvector 余弦相似度
-// 语义合并」并同步向量列与全文检索列，检索时做「向量路 + 关键词路」混合召回、RRF 融合、按参数
-// 阈值内容去重后取 topK，命中异步回写使用统计。检索结果的去重复用知识库同包的文本 n-gram
-// Jaccard 逻辑（与写入的余弦去重是两回事，勿混用）。
+// 隔离（记忆只在其来源会话内可见），写入时做「规范化正文带密钥 HMAC-SHA256 精确去重 + pgvector
+// 余弦相似度语义合并」并同步向量列与全文检索列，检索时做「向量路 + 关键词路」混合召回、RRF
+// 融合、按参数阈值内容去重后取 topK，命中异步回写使用统计。记忆正文经 crypto 序列化器加密存储
+// （列类型 BYTEA）。检索结果的去重复用知识库同包的文本 n-gram Jaccard 逻辑（与写入的余弦去重
+// 是两回事，勿混用）。
 
 package ai
 
@@ -12,7 +13,6 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
-	"time"
 
 	// 第三方
 	"github.com/cloudwego/eino/components/model"
@@ -23,10 +23,11 @@ import (
 	// 项目内部
 	"zhongkui.com/zhongkui/internal/ai/tools"
 	"zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // summaryEvictedMessageByteLimit 是滚动摘要/记忆抽取提示词中单条被折叠消息正文的字节上限：
@@ -47,13 +48,13 @@ type MemoryStore struct {
 	// embed 向量化客户端（把记忆检索文本转为向量）。
 	embed embedder
 	// params 行为参数解析器（去重阈值、候选数、topK 与截断上限）。
-	params *llm.Params
+	params *Params
 	logger *logging.Logger // 可空：为 nil 时跳过告警日志
 }
 
 // NewMemoryStore 构造 MemoryStore；db/embed/params 任一为空时返回英文错误，logger 允许为 nil
 // （内部判空后再用）。
-func NewMemoryStore(db *database.DB, embed embedder, params *llm.Params, logger *logging.Logger) (*MemoryStore, error) {
+func NewMemoryStore(db *database.DB, embed embedder, params *Params, logger *logging.Logger) (*MemoryStore, error) {
 	if db == nil {
 		return nil, errors.New("memory: nil database")
 	}
@@ -71,7 +72,7 @@ type MemoryHit struct {
 	// ID 记忆 ID
 	ID uint
 	// Kind 记忆类别
-	Kind llm.MemoryKind
+	Kind ai.MemoryKind
 	// Title 记忆标题
 	Title string
 	// Content 记忆正文（按 memory.maxItemBytes 截断）
@@ -85,11 +86,11 @@ type MemoryQuery struct {
 	// NamespaceName 限定命名空间（必填，非空）
 	NamespaceName string
 	// AgentKind 按 Agent 类型过滤（非空时生效）
-	AgentKind llm.AgentKind
+	AgentKind ai.AgentKind
 	// Kind 按记忆类别过滤（非空时生效）
-	Kind llm.MemoryKind
+	Kind ai.MemoryKind
 	// Status 按记忆状态过滤（非空时生效）
-	Status llm.MemoryStatus
+	Status ai.MemoryStatus
 	// Keyword 按标题/正文模糊匹配（非空时生效）
 	Keyword string
 	// Offset 分页偏移（小于 0 时取 0）
@@ -101,18 +102,24 @@ type MemoryQuery struct {
 // defaultMemoryListLimit 是记忆列表的默认每页条数。
 const defaultMemoryListLimit = 20
 
-// 记忆检索 SQL 行：仅含检索所需列，避免载入 embedding 大字段。
+// 记忆检索 SQL 行：内嵌 AgentMemory 以复用其字段的 crypto 序列化器标签（本地结构体的
+// 同名字段无标签，会把原始密文字节扫入 string，静默得到密文而非明文），查询仅 Select 检索
+// 所需列，避免载入 embedding 大字段。
 type memorySearchRow struct {
-	ID      uint
-	Kind    string
-	Title   string
-	Content string
-	Score   float64
+	ai.AgentMemory
+	// Score 融合前的相关度分数（向量余弦相似度或 ts_rank）
+	Score float64
 }
 
-// Write 写入一条长期记忆：先做规范化正文的 sha256 精确去重，未命中再按 pgvector 余弦相似度
-// 做语义合并，仍无则新增；三条路径均在同一事务内完成并同步 search/embedding 列。精确去重与语义
-// 合并都命中同一行时刷新该行（正文/标题/类别/向量/全文表示/状态/时间）而非新增。
+// memoryReindexRow 是记忆重嵌入的读取行：内嵌 AgentMemory 以复用其字段的 crypto 序列化器标签
+// （本地结构体的同名字段无标签，会把原始密文字节扫入 string，静默得到密文而非明文）。
+type memoryReindexRow struct {
+	ai.AgentMemory
+}
+
+// Write 写入一条长期记忆：先做规范化正文的带密钥 HMAC-SHA256 精确去重，未命中再按 pgvector
+// 余弦相似度做语义合并，仍无则新增；三条路径均在同一事务内完成并同步 search/embedding 列。
+// 精确去重与语义合并都命中同一行时刷新该行（正文/标题/类别/向量/全文表示/状态/时间）而非新增。
 // 记忆按「命名空间 + Agent 类型 + 会话」归属与隔离，故 SessionID 为 0（无会话运行）时拒绝写入，
 // 避免落进任何会话都检索不到的孤儿桶。
 func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai.AgentMemory, error) {
@@ -127,16 +134,20 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 	if content == "" {
 		return nil, errors.New("memory: empty content")
 	}
-	agentKind, err := llm.ParseAgentKind(in.AgentKind)
+	agentKind, err := ai.ParseAgentKind(in.AgentKind)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	kind, err := llm.ParseMemoryKind(in.Kind)
+	kind, err := ai.ParseMemoryKind(in.Kind)
 	if err != nil {
 		return nil, err
 	}
 	title := strings.TrimSpace(in.Title)
-	hash := sha256Hex(content)
+	// 内容摘要为带密钥的 HMAC-SHA256：明文不落库，同时摘要确定可比，供精确去重与唯一索引使用
+	hash, err := crypto.DigestForField(&ai.AgentMemory{}, "hash", "json", []byte(content))
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
 	// 检索文本 = 标题 + 正文（与知识库同约定：to_tsvector('simple', 该文本)）
 	searchText := memorySearchText(title, content)
 	vectors, err := s.embed.EmbedStrings(ctx, []string{searchText})
@@ -147,7 +158,19 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 		return nil, errors.New("memory: embedder returned no vector")
 	}
 	lit := vectorLiteral(vectors[0])
-	assign := memoryWriteAssignments(in, kind, title, content, hash, lit)
+	// 新增与刷新共用的字段载体：content 经 crypto 序列化器加密（结构体路径才走序列化器，
+	// map 更新会把明文直写列，故刷新一律走结构体 Select 更新）。
+	values := &ai.AgentMemory{
+		NamespaceName: namespaceName,
+		AgentKind:     agentKind,
+		SessionID:     in.SessionID,
+		Kind:          kind,
+		Title:         title,
+		Content:       serializer.NewCrypto([]byte(content)),
+		Embedding:     toFloat32(vectors[0]),
+		Hash:          serializer.NewHashDigest(hash),
+		Status:        ai.MemoryStatusActive,
+	}
 
 	var out *ai.AgentMemory
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -159,7 +182,7 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 				namespaceName, agentKind, in.SessionID, hash).
 			Order("id ASC").First(&existing).Error
 		if findErr == nil {
-			if err := s.refreshMemory(tx, existing.ID, true, assign, searchText); err != nil {
+			if err := s.refreshMemory(tx, existing.ID, true, values, searchText); err != nil {
 				return err
 			}
 			return s.reload(tx, namespaceName, existing.ID, &out)
@@ -176,30 +199,20 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 		if err := tx.Table("agent_memories").
 			Select("id, (embedding <=> ?::vector) AS distance", lit).
 			Where("namespace_name = ? AND agent_kind = ? AND session_id = ? AND status = ? AND deleted_at IS NULL",
-				namespaceName, agentKind, in.SessionID, llm.MemoryStatusActive).
+				namespaceName, agentKind, in.SessionID, ai.MemoryStatusActive).
 			Order(clause.OrderBy{Expression: gorm.Expr("embedding <=> ?::vector", lit)}).
 			Limit(1).Scan(&nearest).Error; err != nil {
 			return errors.WithStack(err)
 		}
 		if nearest.ID != 0 && 1-nearest.Distance >= s.params.Float("memory.dedupeThreshold") {
-			if err := s.refreshMemory(tx, nearest.ID, false, assign, searchText); err != nil {
+			if err := s.refreshMemory(tx, nearest.ID, false, values, searchText); err != nil {
 				return err
 			}
 			return s.reload(tx, namespaceName, nearest.ID, &out)
 		}
 
-		// 3) 新增：唯一索引并发冲突时改走更新，确保不返回 DB 冲突错误
-		mem := &ai.AgentMemory{
-			NamespaceName: namespaceName,
-			AgentKind:     agentKind,
-			SessionID:     in.SessionID,
-			Kind:          kind,
-			Title:         title,
-			Content:       content,
-			Embedding:     toFloat32(vectors[0]),
-			Hash:          hash,
-			Status:        llm.MemoryStatusActive,
-		}
+		// 3) 新增：唯一索引并发冲突时不报错（DoNothing），改为反查既有行并刷新（同一 hash 即同一
+		// 规范化正文），与上面两条刷新路径共用同一字段载体与序列化链路。
 		if err := tx.Clauses(clause.OnConflict{
 			Columns: []clause.Column{
 				{Name: "namespace_name"},
@@ -207,19 +220,22 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 				{Name: "session_id"},
 				{Name: "hash"},
 			},
-			DoUpdates: clause.Assignments(assign),
-		}).Create(mem).Error; err != nil {
+			DoNothing: true,
+		}).Create(values).Error; err != nil {
 			return errors.WithStack(err)
 		}
-		id := mem.ID
+		id := values.ID
 		if id == 0 {
-			// 冲突改走更新时部分方言不回填主键，按唯一索引四列反查
+			// 冲突改走刷新时部分方言不回填主键，按唯一索引四列反查
 			var got ai.AgentMemory
-			if err := tx.Where("namespace_name = ? AND agent_kind = ? AND session_id = ? AND hash = ?",
+			if err := tx.Unscoped().Where("namespace_name = ? AND agent_kind = ? AND session_id = ? AND hash = ?",
 				namespaceName, agentKind, in.SessionID, hash).First(&got).Error; err != nil {
 				return errors.WithStack(err)
 			}
-			id = got.ID
+			if err := s.refreshMemory(tx, got.ID, true, values, searchText); err != nil {
+				return err
+			}
+			return s.reload(tx, namespaceName, got.ID, &out)
 		}
 		if err := s.writeMemorySearch(tx, id, searchText); err != nil {
 			return err
@@ -232,12 +248,55 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 	return out, nil
 }
 
+// ReindexEmbeddings 以当前 embedding 模型为准，重算命名空间下全部 active 长期记忆的向量表示：
+// 读取标题与正文（经 crypto 序列化器解密），按 memorySearchText 约定拼出检索文本并一次性批量
+// 向量化，再逐行更新 embedding 列。记忆正文与标题未变，故不改 content 与 search（全文检索）列，
+// 仅让向量与当前模型对齐。供更换 embedding 模型（维度或语义变化）后使用；返回实际重算条数，
+// 中途失败即返回已完成条数与错误。namespaceName 为空时返回英文错误。
+func (s *MemoryStore) ReindexEmbeddings(ctx context.Context, namespaceName string) (int, error) {
+	namespaceName = strings.TrimSpace(namespaceName)
+	if namespaceName == "" {
+		return 0, errors.New("memory: empty namespace name")
+	}
+	var rows []memoryReindexRow
+	if err := s.db.WithContext(ctx).Table("agent_memories").
+		Select("id", "title", "content").
+		Where("namespace_name = ? AND status = ? AND deleted_at IS NULL", namespaceName, ai.MemoryStatusActive).
+		Order("id ASC").
+		Scan(&rows).Error; err != nil {
+		return 0, errors.WithStack(err)
+	}
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	texts := make([]string, len(rows))
+	for i, row := range rows {
+		texts[i] = memorySearchText(row.Title, string(row.Content.Value()))
+	}
+	vectors, err := s.embed.EmbedStrings(ctx, texts)
+	if err != nil {
+		return 0, errors.WithStack(err)
+	}
+	if len(vectors) != len(rows) {
+		return 0, errors.Newf("memory: embedder returned %d vectors for %d memories", len(vectors), len(rows))
+	}
+	for i, row := range rows {
+		// 采用结构体 + Select 更新，保证 embedding 字段经 serializer 落库
+		if err := s.db.WithContext(ctx).Model(&ai.AgentMemory{}).Where("id = ?", row.ID).
+			Select("embedding").
+			Updates(&ai.AgentMemory{Embedding: toFloat32(vectors[i])}).Error; err != nil {
+			return i, errors.WithStack(err)
+		}
+	}
+	return len(rows), nil
+}
+
 // Retrieve 执行长期记忆的混合检索：向量路 + 关键词路各取 memory.candidates 条 → RRF 融合 →
 // 按 memory.dedupeThreshold 内容去重 → 取 memory.topK，再受 memory.maxItems 约束；限定
 // namespace + agent_kind + session_id + status='active'，即记忆只在其来源会话内可见。
 // memory.enabled=false、命名空间为空、会话为 0 或查询空白时返回 (nil, nil) 且不报错。
 // 命中后异步回写使用统计（失败仅告警，不影响返回）。
-func (s *MemoryStore) Retrieve(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, query string) ([]MemoryHit, error) {
+func (s *MemoryStore) Retrieve(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, query string) ([]MemoryHit, error) {
 	if !s.params.Bool("memory.enabled") {
 		return nil, nil
 	}
@@ -245,7 +304,7 @@ func (s *MemoryStore) Retrieve(ctx context.Context, namespaceName string, agentK
 	if namespaceName == "" || sessionID == 0 || strings.TrimSpace(query) == "" {
 		return nil, nil
 	}
-	agentKind, err := llm.ParseAgentKind(agentKind)
+	agentKind, err := ai.ParseAgentKind(agentKind)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -359,7 +418,9 @@ func (s *MemoryStore) List(ctx context.Context, q MemoryQuery) ([]*ai.AgentMemor
 		}
 		if keyword := strings.TrimSpace(q.Keyword); keyword != "" {
 			like := "%" + keyword + "%"
-			tx = tx.Where("title ILIKE ? OR content ILIKE ?", like, like)
+			// 正文已加密存储，无法再做 ILIKE 明文匹配，改走 search 列（tsvector）的关键词命中；
+			// 标题仍为明文，保留子串匹配。
+			tx = tx.Where("title ILIKE ? OR search @@ plainto_tsquery('simple', ?)", like, keyword)
 		}
 		return tx
 	}
@@ -400,8 +461,8 @@ func (s *MemoryStore) Delete(ctx context.Context, namespaceName string, ids []ui
 }
 
 // SetStatus 设置指定命名空间下一条记忆的状态；status 不在取值空间内时返回英文错误。
-func (s *MemoryStore) SetStatus(ctx context.Context, namespaceName string, id uint, status llm.MemoryStatus) error {
-	if _, err := llm.ParseMemoryStatus(status); err != nil {
+func (s *MemoryStore) SetStatus(ctx context.Context, namespaceName string, id uint, status ai.MemoryStatus) error {
+	if _, err := ai.ParseMemoryStatus(status); err != nil {
 		return err
 	}
 	namespaceName = strings.TrimSpace(namespaceName)
@@ -444,7 +505,7 @@ func (w memoryStoreWriter) WriteMemory(ctx context.Context, in tools.MemoryWrite
 
 // vectorSearch 执行向量路检索：在「命名空间 + Agent 类型 + 会话」范围内按余弦距离升序取前
 // limit 条 active 记忆，返回检索结果与 DocumentID → 记忆类别的映射。
-func (s *MemoryStore) vectorSearch(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, vec []float64, limit int) ([]*RetrievalResult, map[string]llm.MemoryKind, error) {
+func (s *MemoryStore) vectorSearch(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, vec []float64, limit int) ([]*RetrievalResult, map[string]ai.MemoryKind, error) {
 	if limit <= 0 || len(vec) == 0 {
 		return nil, nil, nil
 	}
@@ -453,7 +514,7 @@ func (s *MemoryStore) vectorSearch(ctx context.Context, namespaceName string, ag
 	if err := s.db.WithContext(ctx).Table("agent_memories").
 		Select("id, kind, title, content, (1 - (embedding <=> ?::vector)) AS score", lit).
 		Where("namespace_name = ? AND agent_kind = ? AND session_id = ? AND status = ? AND deleted_at IS NULL",
-			namespaceName, agentKind, sessionID, llm.MemoryStatusActive).
+			namespaceName, agentKind, sessionID, ai.MemoryStatusActive).
 		Order(clause.OrderBy{Expression: gorm.Expr("embedding <=> ?::vector", lit)}).
 		Limit(limit).Scan(&rows).Error; err != nil {
 		return nil, nil, errors.WithStack(err)
@@ -464,7 +525,7 @@ func (s *MemoryStore) vectorSearch(ctx context.Context, namespaceName string, ag
 
 // keywordSearch 执行关键词路检索：在「命名空间 + Agent 类型 + 会话」范围内以
 // search @@ plainto_tsquery 过滤，按 ts_rank 降序取前 limit 条。
-func (s *MemoryStore) keywordSearch(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, query string, limit int) ([]*RetrievalResult, map[string]llm.MemoryKind, error) {
+func (s *MemoryStore) keywordSearch(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, query string, limit int) ([]*RetrievalResult, map[string]ai.MemoryKind, error) {
 	if limit <= 0 {
 		return nil, nil, nil
 	}
@@ -472,7 +533,7 @@ func (s *MemoryStore) keywordSearch(ctx context.Context, namespaceName string, a
 	if err := s.db.WithContext(ctx).Table("agent_memories").
 		Select("id, kind, title, content, ts_rank(search, plainto_tsquery('simple', ?)) AS score", query).
 		Where("namespace_name = ? AND agent_kind = ? AND session_id = ? AND status = ? AND deleted_at IS NULL",
-			namespaceName, agentKind, sessionID, llm.MemoryStatusActive).
+			namespaceName, agentKind, sessionID, ai.MemoryStatusActive).
 		Where("search @@ plainto_tsquery('simple', ?)", query).
 		Order(clause.OrderBy{Expression: gorm.Expr("ts_rank(search, plainto_tsquery('simple', ?)) DESC", query)}).
 		Limit(limit).Scan(&rows).Error; err != nil {
@@ -482,14 +543,18 @@ func (s *MemoryStore) keywordSearch(ctx context.Context, namespaceName string, a
 	return hits, kinds, nil
 }
 
-// refreshMemory 刷新既有记忆行：写入给定字段并重写 search 列。unscoped 为 true 时同时复活被
-// 软删除的行（软删除行的唯一 hash 仍占用唯一索引，复活可避免唯一约束冲突）。
-func (s *MemoryStore) refreshMemory(tx *gorm.DB, id uint, unscoped bool, assign map[string]any, searchText string) error {
-	q := tx.Model(&ai.AgentMemory{})
+// refreshMemory 刷新既有记忆行：以结构体 Select 更新给定字段并重写 search 列。采用结构体
+// 而非 map 是为了触发 crypto 序列化器加密 content（map 更新走 clause.Assignment 直写，会把
+// 明文落库）。unscoped 为 true 时同时复活被软删除的行（软删除行的唯一 hash 仍占用唯一索引，
+// 复活可避免唯一约束冲突）。
+func (s *MemoryStore) refreshMemory(tx *gorm.DB, id uint, unscoped bool, values *ai.AgentMemory, searchText string) error {
+	q := tx.Model(&ai.AgentMemory{}).Where("id = ?", id)
 	if unscoped {
-		q = tx.Unscoped().Model(&ai.AgentMemory{})
+		q = tx.Unscoped().Model(&ai.AgentMemory{}).Where("id = ?", id)
 	}
-	if err := q.Where("id = ?", id).Updates(assign).Error; err != nil {
+	if err := q.
+		Select("session_id", "kind", "title", "content", "embedding", "hash", "status", "deleted_at").
+		Updates(values).Error; err != nil {
 		return errors.WithStack(err)
 	}
 	return s.writeMemorySearch(tx, id, searchText)
@@ -525,36 +590,20 @@ func (s *MemoryStore) warnf(ctx context.Context, format string, args ...any) {
 
 // memoryRowsToResults 将检索 SQL 行转换为检索结果，并建立 DocumentID → 记忆类别的映射，
 // 供融合后还原记忆类别（RetrievalResult 本身不携带类别）。
-func memoryRowsToResults(rows []memorySearchRow) ([]*RetrievalResult, map[string]llm.MemoryKind) {
+func memoryRowsToResults(rows []memorySearchRow) ([]*RetrievalResult, map[string]ai.MemoryKind) {
 	hits := make([]*RetrievalResult, 0, len(rows))
-	kinds := make(map[string]llm.MemoryKind, len(rows))
+	kinds := make(map[string]ai.MemoryKind, len(rows))
 	for _, row := range rows {
 		id := strconv.FormatUint(uint64(row.ID), 10)
 		hits = append(hits, &RetrievalResult{
 			DocumentID: id,
 			Title:      row.Title,
-			Content:    row.Content,
+			Content:    string(row.Content.Value()),
 			Score:      row.Score,
 		})
-		kinds[id] = llm.MemoryKind(row.Kind)
+		kinds[id] = row.Kind
 	}
 	return hits, kinds
-}
-
-// memoryWriteAssignments 构造写入/刷新记忆行的字段表：embedding 经 pgvector 字面量表达式写入
-// （与模型 serializer 等价且更显式），deleted_at 置空以复活软删除行，status 复位为 active。
-func memoryWriteAssignments(in tools.MemoryWriteInput, kind llm.MemoryKind, title, content, hash, lit string) map[string]any {
-	return map[string]any{
-		"session_id": in.SessionID,
-		"kind":       string(kind),
-		"title":      title,
-		"content":    content,
-		"embedding":  gorm.Expr("?::vector", lit),
-		"hash":       hash,
-		"status":     string(llm.MemoryStatusActive),
-		"deleted_at": nil,
-		"updated_at": time.Now(),
-	}
 }
 
 // memorySearchText 计算记忆的全文检索文本：标题 + 正文（与知识库同一约定）。
@@ -563,7 +612,7 @@ func memorySearchText(title, content string) string {
 }
 
 // normalizeMemoryContent 规范化记忆正文：折叠全部空白串为单个空格并去除首尾空白，使排版差异
-// 不影响 sha256 精确去重。
+// 不影响带密钥 HMAC-SHA256 摘要的精确去重。
 func normalizeMemoryContent(content string) string {
 	return strings.TrimSpace(strings.Join(strings.Fields(content), " "))
 }
@@ -577,13 +626,13 @@ type Memory struct {
 	sessions *SessionStore // 会话存储，由 MemoryStore 的 db 同源派生
 	resolver ChatResolver  // 可空：Summarize/抽取时缺失即返回英文错误
 	// params 行为参数解析器（滚动摘要、记忆抽取与记忆开关等）。
-	params *llm.Params
+	params *Params
 	logger *logging.Logger // 可空：为 nil 时跳过告警日志
 }
 
 // NewMemory 构造 Memory 服务：store/params 为空时返回英文错误，resolver 与 logger 允许为 nil
 // （resolver 缺失在调用 Summarize/抽取时才报错）。会话存储由 store 的 db 同源派生。
-func NewMemory(store *MemoryStore, resolver ChatResolver, params *llm.Params, logger *logging.Logger) (*Memory, error) {
+func NewMemory(store *MemoryStore, resolver ChatResolver, params *Params, logger *logging.Logger) (*Memory, error) {
 	if store == nil {
 		return nil, errors.New("memory: nil store")
 	}
@@ -618,7 +667,7 @@ type CompactResult struct {
 
 // Recall 以查询文本在「命名空间 + Agent 类型 + 会话」范围内检索长期记忆，记忆只在其来源会话内
 // 可见；语义完全委托 MemoryStore.Retrieve（memory.enabled=false 时返回空且不报错）。
-func (m *Memory) Recall(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, query string) ([]MemoryHit, error) {
+func (m *Memory) Recall(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, query string) ([]MemoryHit, error) {
 	return m.store.Retrieve(ctx, namespaceName, agentKind, sessionID, query)
 }
 
@@ -648,8 +697,14 @@ func (m *Memory) Delete(ctx context.Context, namespaceName string, ids []uint) e
 
 // SetStatus 设置指定命名空间下一条长期记忆的状态（active/archived），语义完全委托
 // MemoryStore.SetStatus。
-func (m *Memory) SetStatus(ctx context.Context, namespaceName string, id uint, status llm.MemoryStatus) error {
+func (m *Memory) SetStatus(ctx context.Context, namespaceName string, id uint, status ai.MemoryStatus) error {
 	return m.store.SetStatus(ctx, namespaceName, id, status)
+}
+
+// ReindexEmbeddings 以当前 embedding 模型为准重算命名空间下全部 active 长期记忆的向量表示，
+// 委托长期记忆存储执行（见 MemoryStore.ReindexEmbeddings）。
+func (m *Memory) ReindexEmbeddings(ctx context.Context, namespaceName string) (int, error) {
+	return m.store.ReindexEmbeddings(ctx, namespaceName)
 }
 
 // Summarize 用 flash 档位把「既有摘要 + 被挤出消息」重写为新的滚动摘要：返回新摘要与被挤出
@@ -661,7 +716,7 @@ func (m *Memory) Summarize(ctx context.Context, session *ai.AgentSession, evicte
 		return "", 0, errors.New("memory: nil session")
 	}
 	if len(evicted) == 0 {
-		return session.Summary, session.SummaryUptoMessageID, nil
+		return string(session.Summary.Value()), session.SummaryUptoMessageID, nil
 	}
 	chat, err := m.resolveFlashChat()
 	if err != nil {
@@ -669,7 +724,7 @@ func (m *Memory) Summarize(ctx context.Context, session *ai.AgentSession, evicte
 	}
 	messages := []*schema.Message{
 		schema.SystemMessage(m.params.Text("memory.summarySystemPrompt")),
-		schema.UserMessage(buildSummaryPrompt(session.Summary, evicted)),
+		schema.UserMessage(buildSummaryPrompt(string(session.Summary.Value()), evicted)),
 	}
 	resp, err := chat.Generate(ctx, messages)
 	if err != nil {
@@ -726,7 +781,7 @@ func (m *Memory) Compact(ctx context.Context, session *ai.AgentSession) (*Compac
 	if session == nil {
 		return nil, errors.New("memory: nil session")
 	}
-	result := &CompactResult{Summary: session.Summary}
+	result := &CompactResult{Summary: string(session.Summary.Value())}
 	msgs, err := m.sessions.ListMessagesAfter(ctx, session.ID, session.SummaryUptoMessageID)
 	if err != nil {
 		return nil, err
@@ -741,7 +796,7 @@ func (m *Memory) Compact(ctx context.Context, session *ai.AgentSession) (*Compac
 	if err := m.sessions.UpdateSummary(ctx, session.ID, summary, upto); err != nil {
 		return nil, err
 	}
-	session.Summary = summary
+	session.Summary = serializer.NewCrypto([]byte(summary))
 	session.SummaryUptoMessageID = upto
 	result.Summary = summary
 	if !m.params.Bool("memory.enabled") {
@@ -777,7 +832,7 @@ func (m *Memory) extract(ctx context.Context, session *ai.AgentSession, msgs []*
 	if err != nil {
 		return 0, []string{"memory: cannot parse the extraction response: " + err.Error()}
 	}
-	agentKind, err := llm.ParseAgentKind(session.AgentKind)
+	agentKind, err := ai.ParseAgentKind(session.AgentKind)
 	if err != nil {
 		return 0, []string{"memory: extraction skipped: " + err.Error()}
 	}
@@ -788,8 +843,8 @@ func (m *Memory) extract(ctx context.Context, session *ai.AgentSession, msgs []*
 		if content == "" {
 			continue
 		}
-		// Kind 缺失按 fact 兜底（llm.ParseMemoryKind），非法取值跳过该条并记 warning。
-		kind, kerr := llm.ParseMemoryKind(llm.MemoryKind(item.Kind))
+		// Kind 缺失按 fact 兜底（ai.ParseMemoryKind），非法取值跳过该条并记 warning。
+		kind, kerr := ai.ParseMemoryKind(ai.MemoryKind(item.Kind))
 		if kerr != nil {
 			warnings = append(warnings, "memory: extraction skipped an item with an invalid kind: "+item.Kind)
 			continue
@@ -816,12 +871,12 @@ func (m *Memory) resolveFlashChat() (model.BaseChatModel, error) {
 	if m.resolver == nil {
 		return nil, errors.New("memory: nil chat resolver")
 	}
-	chat, err := m.resolver(llm.SlotFlash)
+	chat, err := m.resolver(ai.SlotFlash)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 	if chat == nil {
-		return nil, errors.Newf("memory: no chat model resolved for slot %q", llm.SlotFlash)
+		return nil, errors.Newf("memory: no chat model resolved for slot %q", ai.SlotFlash)
 	}
 	return chat, nil
 }
@@ -861,18 +916,18 @@ func parseExtractedMemories(content string, max int) ([]extractedMemory, error) 
 	return items, nil
 }
 
-// buildSummaryPrompt 构造滚动摘要请求的用户消息：先给出既有摘要（无则标注 (none)），再逐条
+// buildSummaryPrompt 构造滚动摘要请求的用户消息：先给出既有摘要（无则标注（无）），再逐条
 // 列出被挤出消息（role: content，单条按 perMessageByteLimit 截断，控制 prompt 体积）。
 func buildSummaryPrompt(existing string, evicted []*ai.AgentMessage) string {
 	var sb strings.Builder
-	sb.WriteString("Existing summary:\n")
+	sb.WriteString("既有摘要：\n")
 	if strings.TrimSpace(existing) == "" {
-		sb.WriteString("(none)\n")
+		sb.WriteString("（无）\n")
 	} else {
 		sb.WriteString(existing)
 		sb.WriteString("\n")
 	}
-	sb.WriteString("\nNew messages to fold into the summary:\n")
+	sb.WriteString("\n需并入摘要的新消息：\n")
 	sb.WriteString(buildMessageTranscript(evicted, summaryEvictedMessageByteLimit))
 	return sb.String()
 }
@@ -887,7 +942,7 @@ func buildMessageTranscript(messages []*ai.AgentMessage, perMessageByteLimit int
 		}
 		sb.WriteString(string(msg.Role))
 		sb.WriteString(": ")
-		sb.WriteString(truncateBytes(strings.TrimSpace(msg.Content), perMessageByteLimit))
+		sb.WriteString(truncateBytes(strings.TrimSpace(string(msg.Content.Value())), perMessageByteLimit))
 		sb.WriteString("\n")
 	}
 	return sb.String()

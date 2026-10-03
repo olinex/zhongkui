@@ -88,6 +88,10 @@
 1113 = "Password reset is unavailable. Please contact the administrator or try again later"
 1114 = "The password reset link is invalid or expired, please request a new one"
 1115 = "The slot binding is incompatible with the current system configuration, adjust it as described in the error details and retry"
+1116 = "The pending API invocation no longer exists, please start a new question"
+1117 = "This API invocation has already been processed, please do not submit it again"
+1118 = "This API invocation has timed out, please start a new question"
+1119 = "You are not allowed to resume this API invocation"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -234,12 +238,6 @@ other = "Check whether model definitions match the database schema"
 [cmd.migrate.create.short]
 other = "Create a SQL migration file in the migration directory"
 
-[cmd.migrate.ai-embedding.short]
-other = "Rebuild the embedding column and the HNSW index at the explicitly specified dimension"
-
-[cmd.migrate.ai-embedding.long]
-other = "Rebuild the knowledge_chunks.embedding column on the core database and its HNSW index at the target dimension explicitly specified by the operator: the target must be given through --dimensions and the embedding slot must be unbound before running it; the command drops the old index and all vectors, runs ALTER TYPE and rebuilds the HNSW index, and the knowledge base documents must be reindexed afterwards."
-
 [cmd.create.short]
 other = "Create resources (user, TLS cert, access key)"
 
@@ -284,6 +282,27 @@ other = "Generate Diátaxis-classified documentation from code comments"
 
 [cmd.create.docs.long]
 other = "Scan the documentation registry, use gomarkdoc to export each package's comments as Markdown (tutorials/how-to/reference/explanation), and generate the docs/README.md index."
+
+[cmd.sync.short]
+other = "Sync comment-generated docs and embedding vectors, and reconcile the embedding column dimension"
+
+[cmd.sync.docs.short]
+other = "Sync comment-generated documents into RAG"
+
+[cmd.sync.docs.long]
+other = "Extract source comments and generate narrative pages, then idempotently sync them into the target namespace's RAG (format=generated) via a content-hash diff plan. Additions/updates/deletions converge via the diff plan, unchanged content results in zero writes, the partition is read/written in isolation without touching manual documents, and nothing is written to disk."
+
+[cmd.sync.embeddings.short]
+other = "Recompute embedding vectors in a namespace with the current model"
+
+[cmd.sync.embeddings.long]
+other = "Recompute the embedding vectors in the target namespace with the current embedding model: knowledge documents are re-chunked and their chunk vectors rebuilt (knowledge_chunks), and long-term memories have their embedding column recomputed (agent_memories). Use this after switching the embedding model (dimension or semantic change) to align existing content with the current model; it does not modify document/memory bodies or full-text search columns, and does not touch other namespaces. For column-dimension changes, run sync embedding-dimensions first."
+
+[cmd.sync.embedding-dimensions.short]
+other = "Rebuild the embedding column and the HNSW index at the explicitly specified dimension"
+
+[cmd.sync.embedding-dimensions.long]
+other = "Rebuild the knowledge_chunks.embedding and agent_memories.embedding columns on the core database and their HNSW indexes at the target dimension explicitly specified by the operator: the target must be given through --dimensions and the embedding slot must be unbound before running it; the command drops the old index and all vectors, runs ALTER TYPE and rebuilds the HNSW index, and the knowledge base documents must be reindexed afterwards (run sync embeddings). It is the schema counterpart of sync embeddings and the two do not substitute for each other."
 
 [cmd.force-reset-password.short]
 other = "Force reset a user's password via the command line"
@@ -351,9 +370,6 @@ other = "skip confirmation"
 
 [flag.migrate.keep-temp]
 other = "keep the temporary database"
-
-[flag.migrate.ai-embedding.dimensions]
-other = "target vector dimensions (explicitly set by operators, must be a positive integer; resizing clears all knowledge base vectors and requires reindexing)"
 
 [flag.run.capture.stats-print]
 other = "periodically print capture stats to stdout"
@@ -450,6 +466,12 @@ other = "enable this capturer"
 
 [flag.create.capturer.timeout]
 other = "database operation timeout"
+
+[flag.sync.namespace]
+other = "target namespace (required)"
+
+[flag.sync.embedding-dimensions.dimensions]
+other = "target vector dimensions (explicitly set by operators, must be a positive integer; resizing clears all knowledge base vectors and requires reindexing)"
 
 [flag.create.testcase.pcap]
 other = "pcap file path (required)"
@@ -634,18 +656,6 @@ other = "[[.DB]] [[.Action]] failed: [[.Err]]"
 
 [cli.migrate.completed]
 other = "Migrations completed successfully"
-
-[cli.migrate.ai-embedding-section]
-other = "Reconciling the embedding column dimension on [[.DB]]"
-
-[cli.migrate.ai-embedding-failed]
-other = "Failed to reconcile the embedding column dimension on [[.DB]]: [[.Err]]"
-
-[cli.migrate.ai-embedding-reconciled]
-other = "Embedding column dimension reconciled to [[.Dimensions]], please reindex the knowledge base documents"
-
-[cli.migrate.ai-embedding-in-sync]
-other = "Embedding column dimension already matches the specified dimension, no rebuild needed"
 
 [cli.migrate.dry-run-section]
 other = "dry-run [[.DB]]"
@@ -907,6 +917,42 @@ other = "  stream [[.Stream]] tx [[.Tx]]: failed to parse HTTP response: [[.Err]
 
 [cli.docs.generated]
 other = "Documentation generated at [[.Dir]]"
+
+[cli.sync.docs.no-namespace]
+other = "Missing --namespace: specify the target namespace"
+
+[cli.sync.docs.disabled]
+other = "AI is not enabled; cannot sync comment-generated documents"
+
+[cli.sync.docs.done]
+other = "Synchronized [[.Narratives]] narrative page(s) for namespace [[.Namespace]]"
+
+[cli.sync.docs.failed]
+other = "Failed to sync comment-generated documents: [[.Err]]"
+
+[cli.sync.embeddings.no-namespace]
+other = "Missing --namespace: specify the target namespace"
+
+[cli.sync.embeddings.disabled]
+other = "AI is not enabled; cannot recompute embedding vectors"
+
+[cli.sync.embeddings.done]
+other = "Recomputed [[.Documents]] knowledge document(s) and [[.Memories]] long-term memory/memories for namespace [[.Namespace]]"
+
+[cli.sync.embeddings.failed]
+other = "Failed to recompute embedding vectors: [[.Err]]"
+
+[cli.sync.embedding-dimensions-section]
+other = "Reconciling the embedding column dimension on [[.DB]]"
+
+[cli.sync.embedding-dimensions-failed]
+other = "Failed to reconcile the embedding column dimension on [[.DB]]: [[.Err]]"
+
+[cli.sync.embedding-dimensions-reconciled]
+other = "Embedding column dimension reconciled to [[.Dimensions]], please reindex the knowledge base documents"
+
+[cli.sync.embedding-dimensions-in-sync]
+other = "Embedding column dimension already matches the specified dimension, no rebuild needed"
 
 [cli.s3.lifecycle.applied]
 other = "Applied [[.Count]] lifecycle rule(s) to bucket [[.Bucket]]"
@@ -2286,6 +2332,9 @@ other = "Builtin Tool"
 [enum.llmToolSource.mcp]
 other = "MCP Tool"
 
+[enum.llmToolSource.client]
+other = "Client Tool"
+
 # Agent kind (enum class agentKind)
 [enum.agentKind.knowledge]
 other = "Knowledge Retrieval"
@@ -2312,6 +2361,16 @@ other = "Active"
 
 [enum.memoryStatus.archived]
 other = "Archived"
+
+# Agent run status (enum class agentRunStatus)
+[enum.agentRunStatus.pending]
+other = "Pending"
+
+[enum.agentRunStatus.consumed]
+other = "Consumed"
+
+[enum.agentRunStatus.expired]
+other = "Expired"
 
 # MCP remote transport (enum class mcpTransport)
 [enum.mcpTransport.sse]
@@ -2409,6 +2468,9 @@ other = "PDF"
 [enum.documentFormat.docx]
 other = "Word document"
 
+[enum.documentFormat.generated]
+other = "Generated"
+
 [enum.knowledgeDocStatus.pending]
 other = "Pending"
 
@@ -2451,7 +2513,7 @@ other = "; "
 
 # =============================================================================
 # Agent tunable parameter metadata (param.<Key>.label|comment)
-# Keys map one-to-one onto the registry (Specs) of internal/pkg/llm and are globally unique,
+# Keys map one-to-one onto the registry (Specs) of internal/ai and are globally unique,
 # so each one is reused directly as part of its copy key: label is the display name and
 # comment the description; the view layer translates them per request language and returns
 # them with param/list. This file is the single source of that copy (the registry holds no
@@ -2467,12 +2529,6 @@ other = "System Prompt"
 [param.agent.systemPrompt.comment]
 other = "System prompt of the Agent conversation; the model must output JSON shaped as {\"content\":..., \"draft\":{...}}"
 
-[param.agent.retrievalSectionTitle.label]
-other = "Retrieved Knowledge Section Title"
-
-[param.agent.retrievalSectionTitle.comment]
-other = "Section title of the retrieved knowledge part inside the user message"
-
 [param.agent.businessSectionTitle.label]
 other = "Business Scene Section Title"
 
@@ -2486,10 +2542,10 @@ other = "Question Section Title"
 other = "Section title of the question part inside the user message"
 
 [param.agent.retrievedDocSnippetLimit.label]
-other = "Retrieved Snippet Limit"
+other = "Knowledge Search Snippet Limit"
 
 [param.agent.retrievedDocSnippetLimit.comment]
-other = "Truncation length (characters) of each retrieved snippet injected into the user message, controlling the prompt size"
+other = "Truncation length (characters) of each knowledge_search hit, controlling the tool result size in the model context"
 
 [param.agent.defaultSlot.label]
 other = "Default Slot"
@@ -2719,6 +2775,12 @@ other = "Long-term Memory Write"
 
 [tool.memory_write.comment]
 other = "Called by the agent on its own to write reusable conclusions, preferences or facts into the namespace-level long-term memory"
+
+[tool.knowledge_search.label]
+other = "Knowledge Base Search"
+
+[tool.knowledge_search.comment]
+other = "Called by the agent on demand to search the knowledge base of the current namespace; the agent decides when to search and which query to use, and may call it multiple times"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

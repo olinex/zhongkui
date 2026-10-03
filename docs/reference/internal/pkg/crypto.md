@@ -6,8 +6,11 @@
 
 - [Constants](<#constants>)
 - [func CheckPassword\(hashedPassword \[\]byte, rawPassword string\) bool](<#CheckPassword>)
+- [func DigestForField\(model any, path, nameTag string, data \[\]byte\) \(string, error\)](<#DigestForField>)
 - [func GenerateRandomBase64String\(length int\) \(string, error\)](<#GenerateRandomBase64String>)
 - [func GenerateRandomString\(length int\) \(string, error\)](<#GenerateRandomString>)
+- [func HashKeyForField\(model any, path, nameTag string\) \(\[\]byte, error\)](<#HashKeyForField>)
+- [func HashKeyForTag\(cTag CryptoTag\) \(\[\]byte, error\)](<#HashKeyForTag>)
 - [func HashPassword\(password string\) \(\[\]byte, error\)](<#HashPassword>)
 - [func ModeForField\(model any, path, nameTag string\) \(mode.Mode, error\)](<#ModeForField>)
 - [func ModeForTag\(cTag CryptoTag\) \(mode.Mode, error\)](<#ModeForTag>)
@@ -18,6 +21,12 @@
 
 
 ## Constants
+
+<a name="HmacSHA256"></a>HmacSHA256 带密钥摘要的算法标识，用于 secure 标签中需要确定性摘要的字段 （如内容去重的 hash）：同一密钥与内容恒得同一摘要，可等值匹配与建唯一索引， 且无密钥无法离线爆破，区别于 aes\-gcm 的可逆加密（密文随机、不可等值比较）。
+
+```go
+const HmacSHA256 = "hmac-sha256"
+```
 
 <a name="SecurityTagKey"></a>SecurityTagKey 加密字段的 secure 结构体标签键。
 
@@ -44,6 +53,29 @@ CheckPassword 校验原始密码与哈希密码是否匹配。
 返回值：
 
 - bool: 如果原始密码与哈希密码匹配则返回 true，否则返回 false
+
+<a name="DigestForField"></a>
+## func DigestForField
+
+```go
+func DigestForField(model any, path, nameTag string, data []byte) (string, error)
+```
+
+DigestForField 按字段路径解析模型字段的 secure 标签，派生 HMAC 密钥并对数据计算 十六进制 HMAC\-SHA256 摘要，供需要确定性等值的摘要字段（如内容去重的 hash）使用： 摘要不可逆推原文，且同一密钥与内容恒得同一摘要，可安全地做等值匹配与唯一索引。
+
+与 ModeForField 同构（tag → 密钥派生 → 结果），使摘要字段与加密字段共用同一条 标签解析与密钥派生链路，不必由调用方各自就地实现。
+
+参数：
+
+- model: 声明该字段的模型实例（或指针）
+- path: 字段路径（json 名，多段时逐层下降）
+- nameTag: 路径段匹配的字段命名标签（与 ModeForField 同义）
+- data: 待摘要的原始数据
+
+返回值：
+
+- string: 64 个字符的十六进制 HMAC\-SHA256 摘要
+- error: 字段无 secure 标签、算法标识不是 hmac\-sha256、密钥派生失败时返回错误
 
 <a name="GenerateRandomBase64String"></a>
 ## func GenerateRandomBase64String
@@ -90,6 +122,46 @@ GenerateRandomString 生成指定长度的随机字符串。
 - error: 如果随机数生成失败则返回错误，否则返回nil。
 
 注意：由于每个字符独立从62个字符中选取，较短字符串的字符多样性有限。 如需更高的信息密度或更短的等价随机值，请考虑使用 GenerateRandomBase64String。
+
+<a name="HashKeyForField"></a>
+## func HashKeyForField
+
+```go
+func HashKeyForField(model any, path, nameTag string) ([]byte, error)
+```
+
+HashKeyForField 按字段路径解析模型字段的 secure 标签并派生 HMAC 摘要密钥，供需要 流式计算摘要（正文体积大，无法一次性持有全部数据）的调用方复用同一条标签解析与 密钥派生链路，避免各自就地实现；一次性摘要直接用 DigestForField 即可。
+
+nameTag 与 FieldTag 同义：字段路径按 json 名匹配，故通常传入 "json"。
+
+参数：
+
+- model: 声明该字段的模型实例（或指针）
+- path: 字段路径（json 名，多段时逐层下降）
+- nameTag: 路径段匹配的字段命名标签（与 FieldTag 同义）
+
+返回值：
+
+- \[\]byte: 派生出的 HMAC 密钥
+- error: 字段无 secure 标签、算法标识不是 hmac\-sha256、密钥派生失败时返回错误
+
+<a name="HashKeyForTag"></a>
+## func HashKeyForTag
+
+```go
+func HashKeyForTag(cTag CryptoTag) ([]byte, error)
+```
+
+HashKeyForTag 校验摘要字段标签的算法标识为 hmac\-sha256 并派生摘要密钥，是整个 带密钥摘要链路（tag → 密钥）的通用前置步骤。
+
+参数：
+
+- cTag: 摘要字段标签（mode/offset/length），来自 secure tag 解析
+
+返回值：
+
+- \[\]byte: 派生出的 HMAC 密钥
+- error: 算法标识不是 hmac\-sha256、密钥派生器未初始化或密钥派生失败时返回错误
 
 <a name="HashPassword"></a>
 ## func HashPassword
@@ -154,7 +226,7 @@ CryptoTag 加密字段标签内容（secure 标签解析结果）。
 
 ```go
 type CryptoTag struct {
-    // Mode 加密模式标识（如 aes-gcm）
+    // Mode 算法标识（aes-gcm 为可逆加密，hmac-sha256 为带密钥摘要）
     Mode string `tag:"mode"`
     // Offset 派生密钥的偏移量
     Offset int `tag:"offset"`

@@ -1356,6 +1356,13 @@ page:
     compactSummary: 上下文摘要
     compactExtracted: 已提取记忆条数
     compactWarnings: 提取警告
+    approvalTitle: 工具调用审批
+    approvalWaiting: 等待审批
+    approvalParams: 调用参数
+    approve: 批准
+    reject: 拒绝
+    approved: 已批准
+    rejected: 已拒绝
   aiKnowledge:
     dryRun: 检索试运行
     query: 查询问题

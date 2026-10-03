@@ -14,10 +14,9 @@ import (
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/models/core"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -86,19 +85,19 @@ type LlmParamResetIn struct {
 // 返回注册表全部参数的元信息、库内出厂值与当前生效值，并标注当前值是否已偏离出厂值；
 // label / comment 跟随请求语言（i18n 键 param.<group>.<name>.label / .comment）。
 func LlmParamListGet(c *gin.Context) {
-	var rows []core.AgentParam
+	var rows []aimodel.AgentParam
 	if err := middlewares.GetCoreDatabase(c).Find(&rows).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	// 每个注册表键恰有一条记录（由启动期强校验保证）；缺失时按零值展示，不 panic
-	byKey := make(map[string]core.AgentParam, len(rows))
+	byKey := make(map[string]aimodel.AgentParam, len(rows))
 	for i := range rows {
 		byKey[rows[i].Key] = rows[i]
 	}
 	lang := middlewares.GetLanguage(c)
-	items := make([]LlmParamItemOut, 0, len(pkgllm.Specs))
-	for _, spec := range pkgllm.Specs {
+	items := make([]LlmParamItemOut, 0, len(ai.Specs))
+	for _, spec := range ai.Specs {
 		row := byKey[spec.Key]
 		items = append(items, LlmParamItemOut{
 			Key:        spec.Key,
@@ -136,7 +135,7 @@ func LlmParamSet(c *gin.Context) {
 	}
 	updates := make([]paramUpdate, 0, len(in.Items))
 	for _, item := range in.Items {
-		spec, ok := pkgllm.Lookup(item.Key)
+		spec, ok := ai.Lookup(item.Key)
 		if !ok {
 			response.CreateBadBodyError(errors.Newf("parameter %q is not declared in the registry", item.Key)).AbortWithGinH(c)
 			return
@@ -177,7 +176,7 @@ func LlmParamReset(c *gin.Context) {
 	}
 	keys := make([]string, 0, len(in.Keys))
 	if group := strings.TrimSpace(in.Group); group != "" {
-		for _, spec := range pkgllm.Specs {
+		for _, spec := range ai.Specs {
 			if spec.Group == group {
 				keys = append(keys, spec.Key)
 			}
@@ -188,7 +187,7 @@ func LlmParamReset(c *gin.Context) {
 		}
 	} else if len(in.Keys) > 0 {
 		for _, key := range in.Keys {
-			if _, ok := pkgllm.Lookup(key); !ok {
+			if _, ok := ai.Lookup(key); !ok {
 				response.CreateBadBodyError(errors.Newf("parameter %q is not declared in the registry", key)).AbortWithGinH(c)
 				return
 			}
@@ -209,26 +208,26 @@ func LlmParamReset(c *gin.Context) {
 // resetAgentParam 把给定键的当前生效值写回出厂值（value = default_value），不删除记录：
 // 参数记录必须恒存在，删行会让下次启动的强校验失败。
 func resetAgentParam(db *gorm.DB, keys []string) error {
-	return errors.WithStack(db.Model(&core.AgentParam{}).Where("key IN ?", keys).
+	return errors.WithStack(db.Model(&aimodel.AgentParam{}).Where("key IN ?", keys).
 		Update("value", gorm.Expr("default_value")).Error)
 }
 
 // upsertAgentParam 写入单条参数的当前生效值：记录必须已由 fixture 种子化（出厂值只由
 // fixture 维护），缺失时返回英文错误而不是新建一条没有出厂值的记录。
 func upsertAgentParam(db *gorm.DB, key, value string) error {
-	param := core.AgentParam{}
+	param := aimodel.AgentParam{}
 	if err := db.Where("key = ?", key).First(&param).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.Newf("parameter %q has no seeded row; run `migrate up` to seed the agent parameter defaults", key)
 		}
 		return errors.WithStack(err)
 	}
-	return errors.WithStack(db.Model(&core.AgentParam{}).Where("key = ?", key).Update("value", value).Error)
+	return errors.WithStack(db.Model(&aimodel.AgentParam{}).Where("key = ?", key).Update("value", value).Error)
 }
 
 // paramJSONValue 把库内文本字面量按其类型解析为对应的 JSON 原生类型，供前端直接展示与
 // 编辑（免去二次解析）；字面量不可解析时原样返回，保证接口始终可读。
-func paramJSONValue(spec pkgllm.ParamSpec, literal string) any {
+func paramJSONValue(spec ai.ParamSpec, literal string) any {
 	value, err := utils.ParseScalar(paramScalarKind(spec.Kind), literal)
 	if err != nil {
 		return literal
@@ -238,13 +237,13 @@ func paramJSONValue(spec pkgllm.ParamSpec, literal string) any {
 
 // paramScalarKind 把注册表声明的参数类型映射为标量类型内核；string 与 text 同属字符串，
 // text 仅表示多行文本语义。
-func paramScalarKind(kind pkgllm.ParamKind) utils.ScalarKind {
+func paramScalarKind(kind ai.ParamKind) utils.ScalarKind {
 	switch kind {
-	case pkgllm.ParamKindInt:
+	case ai.ParamKindInt:
 		return utils.ScalarKindInt
-	case pkgllm.ParamKindFloat:
+	case ai.ParamKindFloat:
 		return utils.ScalarKindFloat
-	case pkgllm.ParamKindBool:
+	case ai.ParamKindBool:
 		return utils.ScalarKindBool
 	default:
 		return utils.ScalarKindString
@@ -253,7 +252,7 @@ func paramScalarKind(kind pkgllm.ParamKind) utils.ScalarKind {
 
 // paramLabel 返回参数展示名称：i18n 键 param.<Key>.label（Key 全局唯一，故直接复用为文案
 // 键的一部分），未命中时回退参数短名（键的最后一段），保证前端始终有可展示的文案。
-func paramLabel(lang *base.Language, spec pkgllm.ParamSpec) string {
+func paramLabel(lang *base.Language, spec ai.ParamSpec) string {
 	key := fmt.Sprintf("param.%s.label", spec.Key)
 	if label := translate.L(lang, key, nil); label != key {
 		return label
@@ -267,7 +266,7 @@ func paramLabel(lang *base.Language, spec pkgllm.ParamSpec) string {
 // paramComment 返回参数说明：i18n 键 param.<Key>.comment（Key 全局唯一，故直接复用为文案
 // 键的一部分）。说明文案只在语言文件中维护，注册表不持有副本，故无可回退的兜底文案；
 // 未命中时按 translate 层约定返回键本身，由 param_i18n_test.go 的键完整性测试兜底。
-func paramComment(lang *base.Language, spec pkgllm.ParamSpec) string {
+func paramComment(lang *base.Language, spec ai.ParamSpec) string {
 	return translate.L(lang, fmt.Sprintf("param.%s.comment", spec.Key), nil)
 }
 
@@ -276,7 +275,7 @@ func paramComment(lang *base.Language, spec pkgllm.ParamSpec) string {
 // 参数传入空串时即为该情形；数值与布尔类参数的空串按零值处理（表单清空的既有契约）；
 // 类型不符或声明了封闭取值清单却传入清单外的值（如 retrieval.fusion）时返回英文错误，
 // 避免非法值落库。
-func normalizeParamValue(spec pkgllm.ParamSpec, value any) (string, error) {
+func normalizeParamValue(spec ai.ParamSpec, value any) (string, error) {
 	if value == nil {
 		return "", nil
 	}
@@ -284,7 +283,7 @@ func normalizeParamValue(spec pkgllm.ParamSpec, value any) (string, error) {
 	if err != nil {
 		return "", errors.Newf("parameter %q expects value of type %s: %v", spec.Key, spec.Kind, err)
 	}
-	if literal != "" && !pkgllm.OptionAllowed(spec, literal) {
+	if literal != "" && !ai.OptionAllowed(spec, literal) {
 		return "", errors.Newf("parameter %q expects one of %s, got %q",
 			spec.Key, strings.Join(spec.Options, ", "), literal)
 	}

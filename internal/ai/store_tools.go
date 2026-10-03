@@ -14,9 +14,8 @@ import (
 	// 项目内部
 	"zhongkui.com/zhongkui/internal/ai/tools"
 	"zhongkui.com/zhongkui/internal/ai/tools/mcp"
-	coremodel "zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 )
 
@@ -51,9 +50,10 @@ func (realMCPDialer) Dial(ctx context.Context, cfg mcp.ConnConfig) (mcpConn, err
 // nil（空清单是正常结果），Warnings 交由调用方记录。会话句柄由 ToolSet 持有，调用方在快照
 // 不再使用时经 Close 释放。
 type ToolSet struct {
-	// Tools 已构建的 eino 工具（顺序与 Infos 一致，恒非 nil）
+	// Tools 已构建的 eino 工具（顺序与 Infos 相同，恒非 nil）
 	Tools []tool.BaseTool
-	// Infos 与 Tools 一一对应的 schema 清单（顺序一致，恒非 nil）
+	// Infos 供模型选择的 schema 清单（顺序与 Tools 相同，恒非 nil）；client 来源工具只并入 schema、
+	// 不构建执行器，故其条目多于 Tools——调用方须按来源区分，不得假定二者等长
 	Infos []*schema.ToolInfo
 	// Warnings 按服务器/工具粒度降级时收集的英文告警，供调用方记录（可为 nil）
 	Warnings []string
@@ -106,10 +106,12 @@ func (s *Store) LoadTools(ctx context.Context, logger *logging.Logger) (*ToolSet
 	for i := range rows {
 		row := &rows[i]
 		switch row.Source {
-		case llm.ToolSourceBuiltin:
+		case ai.ToolSourceBuiltin:
 			s.appendBuiltinTool(ctx, set, logger, row)
-		case llm.ToolSourceMCP:
+		case ai.ToolSourceMCP:
 			s.appendMCPTool(ctx, set, row, byServer)
+		case ai.ToolSourceClient:
+			s.appendClientTool(ctx, set, row)
 		default:
 			set.warnf("ai: tool %q has an unknown source %q and is skipped", row.Name, row.Source)
 		}
@@ -119,8 +121,8 @@ func (s *Store) LoadTools(ctx context.Context, logger *logging.Logger) (*ToolSet
 
 // loadEnabledTools 读取 llm_tools 中 enabled=true 的行，预加载所属 MCP 服务器并按 id 升序。
 // 这是装配流程中唯一可能返回数据库错误的一步。
-func (s *Store) loadEnabledTools(ctx context.Context) ([]coremodel.LlmTool, error) {
-	var rows []coremodel.LlmTool
+func (s *Store) loadEnabledTools(ctx context.Context) ([]ai.LlmTool, error) {
+	var rows []ai.LlmTool
 	if err := s.db.WithContext(ctx).
 		Preload("McpServer").
 		Where("enabled = ?", true).
@@ -133,8 +135,8 @@ func (s *Store) loadEnabledTools(ctx context.Context) ([]coremodel.LlmTool, erro
 
 // mcpGroup 是一台已启用 MCP 服务器与其待装配的工具行。
 type mcpGroup struct {
-	server *coremodel.McpServer
-	rows   []*coremodel.LlmTool
+	server *ai.McpServer
+	rows   []*ai.LlmTool
 	tools  map[string]tool.BaseTool // remote_name → 已取回的工具（拨号/取工具失败时为空）
 	failed bool                     // 该服务器的连接或取工具整体失败（其工具整体跳过）
 }
@@ -142,12 +144,12 @@ type mcpGroup struct {
 // groupMCPRows 预扫一遍行：把 source=mcp 的行按所属服务器分组（同服务器只拨号一次，返回按首次
 // 出现顺序排列的分组），并在分组阶段就地剔除非法行——服务器指针/外键为空或 remote_name 为空
 // 视为数据非法，记英文告警并跳过该行；服务器未启用是管理员的显式选择，整体跳过且不告警。
-func (s *Store) groupMCPRows(set *ToolSet, rows []coremodel.LlmTool) ([]*mcpGroup, map[uint]*mcpGroup) {
+func (s *Store) groupMCPRows(set *ToolSet, rows []ai.LlmTool) ([]*mcpGroup, map[uint]*mcpGroup) {
 	ordered := make([]*mcpGroup, 0)
 	byServer := make(map[uint]*mcpGroup)
 	for i := range rows {
 		row := &rows[i]
-		if row.Source != llm.ToolSourceMCP {
+		if row.Source != ai.ToolSourceMCP {
 			continue
 		}
 		if row.McpServerID == nil || row.McpServer == nil {
@@ -222,7 +224,7 @@ func (s *Store) dialMCPGroup(ctx context.Context, set *ToolSet, group *mcpGroup)
 
 // appendBuiltinTool 经 internal/ai/tools 按名解析内置工具并追加其 schema；解析或取 schema 失败
 // 只记英文告警并跳过该工具，不上抛（内置实现的缺失属编程缺陷，但按降级处理以免阻断其余工具）。
-func (s *Store) appendBuiltinTool(ctx context.Context, set *ToolSet, logger *logging.Logger, row *coremodel.LlmTool) {
+func (s *Store) appendBuiltinTool(ctx context.Context, set *ToolSet, logger *logging.Logger, row *ai.LlmTool) {
 	built, err := tools.Build(ctx, row.Name, tools.Deps{DB: s.db, Logger: logger})
 	if err != nil {
 		set.warnf("ai: builtin tool %q could not be built and is skipped: %v", row.Name, err)
@@ -240,7 +242,7 @@ func (s *Store) appendBuiltinTool(ctx context.Context, set *ToolSet, logger *log
 // appendMCPTool 按行序取用所属服务器已取回的工具：外键为空（非法行）、服务器未启用或该服务器
 // 连接/取工具整体失败时直接跳过（前两者已在分组阶段处理或属显式选择）；远端已不提供该工具或取
 // schema 失败则记英文告警并跳过该行。
-func (s *Store) appendMCPTool(ctx context.Context, set *ToolSet, row *coremodel.LlmTool, byServer map[uint]*mcpGroup) {
+func (s *Store) appendMCPTool(ctx context.Context, set *ToolSet, row *ai.LlmTool, byServer map[uint]*mcpGroup) {
 	if row.McpServerID == nil {
 		return // 非法行已在分组阶段告警
 	}
@@ -259,6 +261,19 @@ func (s *Store) appendMCPTool(ctx context.Context, set *ToolSet, row *coremodel.
 		return
 	}
 	set.Tools = append(set.Tools, built)
+	set.Infos = append(set.Infos, info)
+}
+
+// appendClientTool 为 client 来源的工具并入合成 schema：client 工具由前端在用户自身凭据下执行，
+// 后端不构建执行器、不拨号任何远端，故只把 client schema 注册表（client_tools.go）里的
+// *schema.ToolInfo 追加进 Infos，不往 Tools 追加实现。取不到 schema 属编程缺陷（元信息注册表与
+// client schema 注册表漂移），记英文告警并跳过，与 appendBuiltinTool 同风格。
+func (s *Store) appendClientTool(_ context.Context, set *ToolSet, row *ai.LlmTool) {
+	info, ok := clientToolInfo(row.Name)
+	if !ok {
+		set.warnf("ai: client tool %q has no registered schema and is skipped", row.Name)
+		return
+	}
 	set.Infos = append(set.Infos, info)
 }
 

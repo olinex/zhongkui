@@ -11,9 +11,9 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // LlmSlotBindingOut 定义单个档位的绑定摘要与可用性输出。
@@ -21,15 +21,15 @@ import (
 // 「已绑定但模型类型与档位不符」三种情况。
 type LlmSlotBindingOut struct {
 	// Slot 档位标识：flash | standard | advanced | embedding
-	Slot pkgllm.Slot `json:"slot"`
+	Slot aimodel.Slot `json:"slot"`
 	// ModelID 绑定模型的 ID（未绑定时为 0）
 	ModelID uint `json:"modelId"`
 	// ModelName 绑定模型的本地标识（未绑定时为空）
 	ModelName string `json:"modelName"`
 	// Kind 绑定模型的类型：chat | embedding（未绑定时为空）
-	Kind pkgllm.ModelKind `json:"kind"`
+	Kind llm.ModelKind `json:"kind"`
 	// RequiredKind 该档位要求的模型类型：chat | embedding
-	RequiredKind pkgllm.ModelKind `json:"requiredKind"`
+	RequiredKind llm.ModelKind `json:"requiredKind"`
 	// ProviderModel 绑定模型的供应商侧模型名（未绑定时为空）
 	ProviderModel string `json:"providerModel"`
 	// Enabled 绑定模型是否启用
@@ -53,7 +53,7 @@ type LlmBindingListOut struct {
 	DisabledReason string `json:"disabledReason"`
 	// IndexDimensions 知识库向量索引（knowledge_chunks.embedding 列）当前维度。
 	// 索引列尚未建好或读不出时为 0；供运维在提交 embedding 档位绑定前预知目标维度，
-	// 避免只能靠绑定失败的报错才发现维度不符（该列维度由运维经 migrate ai-embedding 重建）
+	// 避免只能靠绑定失败的报错才发现维度不符（该列维度由运维经 sync embedding-dimensions 重建）
 	IndexDimensions int `json:"indexDimensions"`
 }
 
@@ -71,19 +71,19 @@ func LlmBindingListGet(c *gin.Context) {
 	snap := middlewares.GetAiRuntime(c).Snapshot()
 	infos := snap.Slots()
 	db := middlewares.GetCoreDatabase(c)
-	var bindings []core.LlmBinding
+	var bindings []aimodel.LlmBinding
 	if err := db.Find(&bindings).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	modelIDs := make(map[pkgllm.Slot]uint, len(bindings))
+	modelIDs := make(map[aimodel.Slot]uint, len(bindings))
 	for i := range bindings {
 		modelIDs[bindings[i].Slot] = bindings[i].ModelID
 	}
-	slots := make([]LlmSlotBindingOut, 0, len(pkgllm.AllSlots))
-	for _, slot := range pkgllm.AllSlots {
+	slots := make([]LlmSlotBindingOut, 0, len(aimodel.AllSlots))
+	for _, slot := range aimodel.AllSlots {
 		out := LlmSlotBindingOut{Slot: slot, ModelID: modelIDs[slot]}
-		out.RequiredKind = pkgllm.SlotKind(slot)
+		out.RequiredKind = aimodel.SlotKind(slot)
 		if info, ok := infos[slot]; ok {
 			out.ModelName = info.Name
 			out.ProviderModel = info.Model
@@ -97,7 +97,7 @@ func LlmBindingListGet(c *gin.Context) {
 	}
 	// 索引维度是 embedding 档位绑定成败的关键前置信息，读不出（列未建）时以 0 出参，
 	// 由前端提示运维先执行迁移
-	indexDim, found, err := pkgllm.ChunkEmbeddingDimension(c, db)
+	indexDim, found, err := ai.ChunkEmbeddingDimension(c, db)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -124,7 +124,7 @@ func LlmBindingSet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	slot, err := pkgllm.ParseSlot(pkgllm.Slot(raw))
+	slot, err := aimodel.ParseSlot(aimodel.Slot(raw))
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
@@ -139,7 +139,7 @@ func LlmBindingSet(c *gin.Context) {
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
-	instance := core.LlmModel{}
+	instance := aimodel.LlmModel{}
 	if err := db.First(&instance, in.ModelID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -152,19 +152,19 @@ func LlmBindingSet(c *gin.Context) {
 		response.CreateBadBodyError(errors.Newf("model %q is disabled and cannot be bound to a slot", instance.Name)).AbortWithGinH(c)
 		return
 	}
-	if want := pkgllm.SlotKind(slot); instance.Kind != want {
+	if want := aimodel.SlotKind(slot); instance.Kind != want {
 		response.CreateBadBodyError(errors.Newf(
 			"model %q is a %s model and cannot be bound to the %q slot (which requires a %s model)",
 			instance.Name, instance.Kind, slot, want)).AbortWithGinH(c)
 		return
 	}
-	if slot == pkgllm.SlotEmbedding {
+	if slot == aimodel.SlotEmbedding {
 		verified, err := verifyEmbeddingCompat(c, modelConfigOf(&instance))
 		if err != nil {
 			// 维度不兼容属于「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，
 			// 用专门的业务码（并附含修复步骤的详情）；端点不可达 / 凭据无效等错误
 			// 仍是请求侧问题，按请求体错误透出
-			var mismatch *pkgllm.EmbeddingDimensionMismatchError
+			var mismatch *ai.EmbeddingDimensionMismatchError
 			if errors.As(err, &mismatch) {
 				response.CreateLlmBindingIncompatibleError(mismatch).AbortWithGinH(c)
 				return
@@ -173,19 +173,19 @@ func LlmBindingSet(c *gin.Context) {
 			return
 		}
 		// 把已验证维度写回模型记录（后端管理的只读缓存）
-		if err := db.Model(&core.LlmModel{}).Where("id = ?", instance.ID).Update("dimensions", verified).Error; err != nil {
+		if err := db.Model(&aimodel.LlmModel{}).Where("id = ?", instance.ID).Update("dimensions", verified).Error; err != nil {
 			response.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}
 	}
-	binding := core.LlmBinding{}
+	binding := aimodel.LlmBinding{}
 	if err := db.Where("slot = ?", string(slot)).First(&binding).Error; err == nil {
-		if err := db.Model(&core.LlmBinding{}).Where("id = ?", binding.ID).Update("model_id", instance.ID).Error; err != nil {
+		if err := db.Model(&aimodel.LlmBinding{}).Where("id = ?", binding.ID).Update("model_id", instance.ID).Error; err != nil {
 			response.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}
 	} else if errors.Is(err, gorm.ErrRecordNotFound) {
-		if err := db.Create(&core.LlmBinding{Slot: slot, ModelID: instance.ID}).Error; err != nil {
+		if err := db.Create(&aimodel.LlmBinding{Slot: slot, ModelID: instance.ID}).Error; err != nil {
 			response.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}
@@ -205,12 +205,12 @@ func LlmBindingUnbind(c *gin.Context) {
 	if !ok {
 		return
 	}
-	slot, err := pkgllm.ParseSlot(pkgllm.Slot(raw))
+	slot, err := aimodel.ParseSlot(aimodel.Slot(raw))
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	if err := middlewares.GetCoreDatabase(c).Where("slot = ?", string(slot)).Delete(&core.LlmBinding{}).Error; err != nil {
+	if err := middlewares.GetCoreDatabase(c).Where("slot = ?", string(slot)).Delete(&aimodel.LlmBinding{}).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}

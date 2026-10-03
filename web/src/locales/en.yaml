@@ -1359,6 +1359,13 @@ page:
     compactSummary: Context Summary
     compactExtracted: Extracted Memories
     compactWarnings: Extraction Warnings
+    approvalTitle: Tool Call Approval
+    approvalWaiting: Awaiting approval
+    approvalParams: Arguments
+    approve: Approve
+    reject: Reject
+    approved: Approved
+    rejected: Rejected
   aiKnowledge:
     dryRun: Dry Run
     query: Query

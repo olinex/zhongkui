@@ -16,7 +16,10 @@
   - [func Generated\(\) \[\]Entry](<#Generated>)
   - [func Handwritten\(\) \[\]Entry](<#Handwritten>)
   - [func Registry\(\) \[\]Entry](<#Registry>)
+- [type NarrativeDocument](<#NarrativeDocument>)
+  - [func GeneratedNarrativeDocuments\(projectRoot string\) \(\[\]NarrativeDocument, error\)](<#GeneratedNarrativeDocuments>)
 - [type Options](<#Options>)
+- [type Projection](<#Projection>)
 - [type Role](<#Role>)
   - [func Roles\(\) \[\]Role](<#Roles>)
   - [func \(r Role\) Label\(\) string](<#Role.Label>)
@@ -166,6 +169,37 @@ func Registry() []Entry
 
 Registry 返回全部文档条目，是文档体系的唯一注册点。 每个包至多对应一个叙述档条目，避免相同知识内容被重复索引。
 
+<a name="NarrativeDocument"></a>
+## type NarrativeDocument
+
+NarrativeDocument 是供入 RAG 的叙述页文档：由包注释渲染而来，Content 与落盘叙述档正文同源。
+
+```go
+type NarrativeDocument struct {
+    // Key 稳定键，取条目输出路径（Entry.Output）。
+    Key string
+    // Title 文档标题，取条目标题（Entry.Title），作为入库与去重的稳定键。
+    Title string
+    // Category 条目的 Diátaxis 分类。
+    Category Category
+    // Roles 建议阅读角色。
+    Roles []Role
+    // Scene 适用场景说明。
+    Scene string
+    // Content 叙述档正文（narrativeBody 结果，不含 DO NOT EDIT 页头）。
+    Content string
+}
+```
+
+<a name="GeneratedNarrativeDocuments"></a>
+### func GeneratedNarrativeDocuments
+
+```go
+func GeneratedNarrativeDocuments(projectRoot string) ([]NarrativeDocument, error)
+```
+
+GeneratedNarrativeDocuments 遍历注册表中自动生成且非手写概述的叙述档条目，逐条渲染包注释并 组装为入 RAG 的叙述页文档。正文为空（包目录不含 Go 源码）的条目直接跳过；返回顺序保持 Registry 顺序，保证同步幂等。projectRoot 为项目根目录，用于解析导入路径对应的包目录。
+
 <a name="Options"></a>
 ## type Options
 
@@ -177,6 +211,32 @@ type Options struct {
     ProjectRoot string
     // Root 是文档输出目录（相对于 ProjectRoot），为空时使用默认值 Root。
     Root string
+    // Projections 是需额外写出的投影页（内容由调用方按单一事实来源渲染）；为空时导出行为与不传时一致。
+    Projections []Projection
+}
+```
+
+<a name="Projection"></a>
+## type Projection
+
+Projection 是由外部声明派生的文档投影页（如接口能力参考页）：正文由调用方按单一事实来源渲染， 导出器只负责落到 docs/ 下的稳定路径并套用统一页头与生成标记。
+
+```go
+type Projection struct {
+    // Title 投影页标题。
+    Title string
+    // Summary 投影页摘要，用于索引展示。
+    Summary string
+    // Roles 建议阅读角色。
+    Roles []Role
+    // Scene 适用场景说明。
+    Scene string
+    // Output 相对于 docs/ 的输出路径，例如 reference/example.md。
+    Output string
+    // SourceLabel 页头「来源」展示的声明来源标识，例如 external spec。
+    SourceLabel string
+    // Content 已渲染正文（Markdown，不含页级标题与页头）。
+    Content string
 }
 ```
 

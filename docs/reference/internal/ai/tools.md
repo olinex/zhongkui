@@ -7,9 +7,13 @@
 - [func Build\(ctx context.Context, name string, deps Deps\) \(tool.BaseTool, error\)](<#Build>)
 - [func Names\(\) \[\]string](<#Names>)
 - [func Register\(name string, builder Builder\)](<#Register>)
+- [func WithKnowledgeRuntime\(ctx context.Context, rt KnowledgeRuntime\) context.Context](<#WithKnowledgeRuntime>)
 - [func WithMemoryRuntime\(ctx context.Context, rt MemoryRuntime\) context.Context](<#WithMemoryRuntime>)
 - [type Builder](<#Builder>)
 - [type Deps](<#Deps>)
+- [type KnowledgeHit](<#KnowledgeHit>)
+- [type KnowledgeRuntime](<#KnowledgeRuntime>)
+- [type KnowledgeSearcher](<#KnowledgeSearcher>)
 - [type MemoryRuntime](<#MemoryRuntime>)
 - [type MemoryWriteInput](<#MemoryWriteInput>)
 - [type MemoryWriter](<#MemoryWriter>)
@@ -41,6 +45,15 @@ func Register(name string, builder Builder)
 ```
 
 Register 登记一个内置工具的实现，应由实现所在的 init 期调用。名称空、构造器为 nil 或 同名重复登记均视为编程缺陷，直接 panic（fail fast），避免非法注册表在生产中以残缺形态 运行。
+
+<a name="WithKnowledgeRuntime"></a>
+## func WithKnowledgeRuntime
+
+```go
+func WithKnowledgeRuntime(ctx context.Context, rt KnowledgeRuntime) context.Context
+```
+
+WithKnowledgeRuntime 把知识检索运行期检索器与截断长度写入 ctx，供 knowledge\_search 在工具 循环中取回。
 
 <a name="WithMemoryRuntime"></a>
 ## func WithMemoryRuntime
@@ -74,6 +87,52 @@ type Deps struct {
 }
 ```
 
+<a name="KnowledgeHit"></a>
+## type KnowledgeHit
+
+KnowledgeHit 是知识检索工具的一次命中条目。
+
+```go
+type KnowledgeHit struct {
+    // DocumentID 所属知识文档 ID（字符串形式）
+    DocumentID string
+    // Title 所属文档标题
+    Title string
+    // ChunkIndex 分块在文档内的序号
+    ChunkIndex int
+    // Content 该块的检索文本
+    Content string
+    // Score 检索相关度分数
+    Score float64
+}
+```
+
+<a name="KnowledgeRuntime"></a>
+## type KnowledgeRuntime
+
+KnowledgeRuntime 是 knowledge\_search 运行期所需的上下文快照。由 Agent 节点 4 在派发工具前经 WithKnowledgeRuntime 注入 ctx。
+
+```go
+type KnowledgeRuntime struct {
+    // Searcher 检索器（nil 时工具返回英文错误）
+    Searcher KnowledgeSearcher
+    // SnippetLimit 单条命中的内容截断长度（rune 数），非正数表示不截断
+    SnippetLimit int
+}
+```
+
+<a name="KnowledgeSearcher"></a>
+## type KnowledgeSearcher
+
+KnowledgeSearcher 是知识检索器接口：由上层（internal/ai）的适配器实现， 内部调用 Retriever.Retrieve（命名空间与文档限定由适配器持有，模型入参不参与）。
+
+```go
+type KnowledgeSearcher interface {
+    // Search 按查询语句检索当前运行命名空间的知识库并返回命中条目。
+    Search(ctx context.Context, query string) ([]KnowledgeHit, error)
+}
+```
+
 <a name="MemoryRuntime"></a>
 ## type MemoryRuntime
 
@@ -86,7 +145,7 @@ type MemoryRuntime struct {
     // NamespaceName 本次运行所属命名空间
     NamespaceName string
     // AgentKind 本次运行所属 Agent 类型
-    AgentKind llm.AgentKind
+    AgentKind aimodel.AgentKind
     // SessionID 本次运行的来源会话 ID
     SessionID uint
 }
@@ -102,11 +161,11 @@ type MemoryWriteInput struct {
     // NamespaceName 所属命名空间
     NamespaceName string
     // AgentKind 所属 Agent 类型
-    AgentKind llm.AgentKind
+    AgentKind aimodel.AgentKind
     // SessionID 来源会话 ID，必须非 0：记忆按会话隔离，只在来源会话内可见
     SessionID uint
     // Kind 记忆类别（已解析为具体取值，非空）
-    Kind llm.MemoryKind
+    Kind aimodel.MemoryKind
     // Title 记忆标题（可选，可能为空）
     Title string
     // Content 记忆正文（已去除首尾空白，非空）

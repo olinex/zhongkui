@@ -10,18 +10,19 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/docconv"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // seedImportedDocument 在测试命名空间内插入一份「导入文档」行（带 S3 原件键），返回其 ID。
 func seedImportedDocument(t *testing.T, db *database.DB, status string) uint {
 	t.Helper()
-	doc := &modelsai.KnowledgeDocument{
+	doc := &ai.KnowledgeDocument{
 		NamespaceName: knowledgeTestNamespace,
 		Title:         "imported",
-		Content:       "parsed body",
+		Content:       serializer.NewCrypto([]byte("parsed body")),
 		Format:        string(docconv.FormatMarkdown),
 		Status:        status,
 		OriginalName:  "notes.md",
@@ -37,7 +38,7 @@ func seedImportedDocument(t *testing.T, db *database.DB, status string) uint {
 // countNamespaceDocuments 统计测试命名空间内的文档行数。
 func countNamespaceDocuments(db *database.DB) int64 {
 	var count int64
-	if err := db.Model(&modelsai.KnowledgeDocument{}).
+	if err := db.Model(&ai.KnowledgeDocument{}).
 		Where("namespace_name = ?", knowledgeTestNamespace).Count(&count).Error; err != nil {
 		panic("failed to count knowledge documents: " + err.Error())
 	}
@@ -45,9 +46,9 @@ func countNamespaceDocuments(db *database.DB) int64 {
 }
 
 // reloadDocument 按 ID 重新读取文档行。
-func reloadDocument(t *testing.T, db *database.DB, id uint) *modelsai.KnowledgeDocument {
+func reloadDocument(t *testing.T, db *database.DB, id uint) *ai.KnowledgeDocument {
 	t.Helper()
-	doc := &modelsai.KnowledgeDocument{}
+	doc := &ai.KnowledgeDocument{}
 	if err := db.Where("id = ?", id).First(doc).Error; err != nil {
 		t.Fatalf("reload knowledge document %d: %v", id, err)
 	}
@@ -96,7 +97,7 @@ func TestKnowledgeDocumentUpdateImported(t *testing.T) {
 		})
 		rt := newDisabledAiRuntime(t, db)
 		r := newKnowledgeTestRouter(db, knowledgeTestNamespace, rt)
-		id := seedImportedDocument(t, db, string(modelsai.KnowledgeDocStatusReady))
+		id := seedImportedDocument(t, db, string(ai.KnowledgeDocStatusReady))
 
 		Convey("携带非空正文被拒绝且不落库", func() {
 			w := doKnowledgeJSONRequest(r, http.MethodPost, knowledgeDocPath(id, "/update"), map[string]any{
@@ -106,7 +107,7 @@ func TestKnowledgeDocumentUpdateImported(t *testing.T) {
 			So(w.Body.String(), ShouldContainSubstring, "read-only")
 			doc := reloadDocument(t, db, id)
 			So(doc.Title, ShouldEqual, "imported")
-			So(doc.Content, ShouldEqual, "parsed body")
+			So(string(doc.Content.Value()), ShouldEqual, "parsed body")
 		})
 
 		Convey("仅改标题成功且状态与正文不变", func() {
@@ -116,8 +117,8 @@ func TestKnowledgeDocumentUpdateImported(t *testing.T) {
 			So(w.Code, ShouldEqual, http.StatusOK)
 			doc := reloadDocument(t, db, id)
 			So(doc.Title, ShouldEqual, "renamed")
-			So(doc.Status, ShouldEqual, string(modelsai.KnowledgeDocStatusReady))
-			So(doc.Content, ShouldEqual, "parsed body")
+			So(doc.Status, ShouldEqual, string(ai.KnowledgeDocStatusReady))
+			So(string(doc.Content.Value()), ShouldEqual, "parsed body")
 			So(doc.ObjectKey, ShouldNotBeEmpty)
 		})
 	})
@@ -135,7 +136,7 @@ func TestKnowledgeDocumentReindexGuard(t *testing.T) {
 		Convey("AI 未启用时返回 400", func() {
 			rt := newDisabledAiRuntime(t, db)
 			r := newKnowledgeTestRouter(db, knowledgeTestNamespace, rt)
-			id := seedImportedDocument(t, db, string(modelsai.KnowledgeDocStatusReady))
+			id := seedImportedDocument(t, db, string(ai.KnowledgeDocStatusReady))
 
 			w := doKnowledgeJSONRequest(r, http.MethodPost, knowledgeDocPath(id, "/reindex"), nil)
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
@@ -145,8 +146,8 @@ func TestKnowledgeDocumentReindexGuard(t *testing.T) {
 		Convey("导入文档处于 pending/parsing 时拒绝重复投递", func() {
 			rt := newEnabledAiRuntime(t, db)
 			r := newKnowledgeTestRouter(db, knowledgeTestNamespace, rt)
-			pendingID := seedImportedDocument(t, db, string(modelsai.KnowledgeDocStatusPending))
-			parsingID := seedImportedDocument(t, db, string(modelsai.KnowledgeDocStatusParsing))
+			pendingID := seedImportedDocument(t, db, string(ai.KnowledgeDocStatusPending))
+			parsingID := seedImportedDocument(t, db, string(ai.KnowledgeDocStatusParsing))
 
 			w := doKnowledgeJSONRequest(r, http.MethodPost, knowledgeDocPath(pendingID, "/reindex"), nil)
 			So(w.Code, ShouldEqual, http.StatusBadRequest)

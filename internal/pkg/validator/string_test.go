@@ -1059,3 +1059,42 @@ func TestGenericFieldValidations(t *testing.T) {
 		})
 	})
 }
+
+// TestIsValidJSONTypedValue 测试「按类型名校验已解码 JSON 值」的通用能力，覆盖五类基本类型、
+// int 的整数要求与未知类型名的 fail-closed 行为。
+func TestIsValidJSONTypedValue(t *testing.T) {
+	Convey("Test dynamic JSON value type validation", t, func() {
+		Convey("string", func() {
+			So(IsValidJSONTypedValue(JSONTypeString, "abc"), ShouldBeTrue)
+			So(IsValidJSONTypedValue(JSONTypeString, ""), ShouldBeTrue)
+			So(IsValidJSONTypedValue(JSONTypeString, float64(1)), ShouldBeFalse)
+		})
+
+		Convey("int requires an integral value", func() {
+			So(IsValidJSONTypedValue(JSONTypeInt, float64(3)), ShouldBeTrue)
+			So(IsValidJSONTypedValue(JSONTypeInt, float64(3.5)), ShouldBeFalse)
+			So(IsValidJSONTypedValue(JSONTypeInt, "3"), ShouldBeFalse)
+		})
+
+		Convey("bool", func() {
+			So(IsValidJSONTypedValue(JSONTypeBool, true), ShouldBeTrue)
+			So(IsValidJSONTypedValue(JSONTypeBool, float64(1)), ShouldBeFalse)
+		})
+
+		Convey("object", func() {
+			So(IsValidJSONTypedValue(JSONTypeObject, map[string]any{"a": 1}), ShouldBeTrue)
+			So(IsValidJSONTypedValue(JSONTypeObject, []any{}), ShouldBeFalse)
+			So(IsValidJSONTypedValue(JSONTypeObject, map[string]any(nil)), ShouldBeFalse)
+		})
+
+		Convey("array", func() {
+			So(IsValidJSONTypedValue(JSONTypeArray, []any{"a"}), ShouldBeTrue)
+			So(IsValidJSONTypedValue(JSONTypeArray, map[string]any{}), ShouldBeFalse)
+		})
+
+		Convey("unknown type name fails closed", func() {
+			So(IsValidJSONTypedValue("integer", float64(1)), ShouldBeFalse)
+			So(IsValidJSONTypedValue("", "abc"), ShouldBeFalse)
+		})
+	})
+}

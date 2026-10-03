@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/hmac"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
 )
@@ -151,6 +153,8 @@ func TestStoreBodyDedup(t *testing.T) {
 		book, err := key.LoadPasswordBook("")
 		So(err, ShouldBeNil)
 		kd := key.NewKeyDerivation(provider, book)
+		// 全局密钥派生器供 crypto.HashKeyForField 使用（摘要密钥来源与生产一致）
+		key.InitGlobalKeyDerivation(provider, book)
 
 		mock := newMockS3Server()
 		server := httptest.NewServer(mock)
@@ -171,20 +175,26 @@ func TestStoreBodyDedup(t *testing.T) {
 
 		ctx := context.Background()
 		cryptoKey := []byte("0123456789abcdef0123456789abcdef")
+		// 摘要在生产由字段 secure 标签派生密钥，测试沿用同一条链路
+		reqHashKey, err := crypto.HashKeyForField(&HttpRequestBody{}, "reqBodyHash", "json")
+		So(err, ShouldBeNil)
+		rspHashKey, err := crypto.HashKeyForField(&HttpResponseBody{}, "rspBodyHash", "json")
+		So(err, ShouldBeNil)
 
 		Convey("相同大 Body 只上传一次，返回相同对象键", func() {
 			// 约 1.75MB 的大 Body，重复两次
 			body := bytes.Repeat([]byte("dedup-payload-"), 128*1024)
-			res1, err := storeBody(ctx, client, bytes.NewReader(body), true, cryptoKey)
+			res1, err := storeBody(ctx, client, bytes.NewReader(body), true, cryptoKey, reqHashKey)
 			So(err, ShouldBeNil)
-			res2, err := storeBody(ctx, client, bytes.NewReader(body), true, cryptoKey)
+			res2, err := storeBody(ctx, client, bytes.NewReader(body), true, cryptoKey, reqHashKey)
 			So(err, ShouldBeNil)
 
 			So(res1.Key, ShouldNotBeEmpty)
 			So(res2.Key, ShouldEqual, res1.Key)
-			// 摘要与长度如实记录
-			expectedHash := sha256.Sum256(body)
-			So(res1.Hash, ShouldEqual, hex.EncodeToString(expectedHash[:]))
+			// 摘要为带密钥 HMAC-SHA256，与长度一并如实记录
+			expectedMac := hmac.New(sha256.New, reqHashKey)
+			expectedMac.Write(body)
+			So(res1.Hash, ShouldEqual, hex.EncodeToString(expectedMac.Sum(nil)))
 			So(res1.Length, ShouldEqual, int64(len(body)))
 
 			mock.mu.Lock()
@@ -202,9 +212,9 @@ func TestStoreBodyDedup(t *testing.T) {
 		})
 
 		Convey("不同内容生成不同对象键", func() {
-			resA, err := storeBody(ctx, client, bytes.NewReader(bytes.Repeat([]byte("A"), 1<<20)), true, cryptoKey)
+			resA, err := storeBody(ctx, client, bytes.NewReader(bytes.Repeat([]byte("A"), 1<<20)), true, cryptoKey, reqHashKey)
 			So(err, ShouldBeNil)
-			resB, err := storeBody(ctx, client, bytes.NewReader(bytes.Repeat([]byte("B"), 1<<20)), true, cryptoKey)
+			resB, err := storeBody(ctx, client, bytes.NewReader(bytes.Repeat([]byte("B"), 1<<20)), true, cryptoKey, reqHashKey)
 			So(err, ShouldBeNil)
 			So(resA.Key, ShouldNotEqual, resB.Key)
 			So(resA.Key, ShouldNotBeEmpty)
@@ -218,15 +228,15 @@ func TestStoreBodyDedup(t *testing.T) {
 
 		Convey("请求与响应方向使用不同前缀，不互相去重", func() {
 			body := bytes.Repeat([]byte("X"), 1<<20)
-			resReq, err := storeBody(ctx, client, bytes.NewReader(body), true, cryptoKey)
+			resReq, err := storeBody(ctx, client, bytes.NewReader(body), true, cryptoKey, reqHashKey)
 			So(err, ShouldBeNil)
-			resRsp, err := storeBody(ctx, client, bytes.NewReader(body), false, cryptoKey)
+			resRsp, err := storeBody(ctx, client, bytes.NewReader(body), false, cryptoKey, rspHashKey)
 			So(err, ShouldBeNil)
 			So(resReq.Key, ShouldNotEqual, resRsp.Key)
 			So(strings.HasPrefix(resReq.Key, "body/request/"), ShouldBeTrue)
 			So(strings.HasPrefix(resRsp.Key, "body/response/"), ShouldBeTrue)
-			// 同一内容两个方向共享相同摘要与长度
-			So(resReq.Hash, ShouldEqual, resRsp.Hash)
+			// 两个方向的摘要密钥不同（offset 12808 / 12809），同一内容摘要亦不同
+			So(resReq.Hash, ShouldNotEqual, resRsp.Hash)
 			So(resReq.Length, ShouldEqual, resRsp.Length)
 
 			mock.mu.Lock()
@@ -235,13 +245,13 @@ func TestStoreBodyDedup(t *testing.T) {
 		})
 
 		Convey("空内容不执行上传", func() {
-			res, err := storeBody(ctx, client, strings.NewReader(""), true, cryptoKey)
+			res, err := storeBody(ctx, client, strings.NewReader(""), true, cryptoKey, reqHashKey)
 			So(err, ShouldBeNil)
 			So(res.Key, ShouldEqual, "")
-			// 空内容记录 0 长度与空内容的标准摘要
+			// 空内容记录 0 长度与空内容的摘要
 			So(res.Length, ShouldEqual, 0)
-			emptyHash := sha256.Sum256(nil)
-			So(res.Hash, ShouldEqual, hex.EncodeToString(emptyHash[:]))
+			emptyMac := hmac.New(sha256.New, reqHashKey)
+			So(res.Hash, ShouldEqual, hex.EncodeToString(emptyMac.Sum(nil)))
 
 			mock.mu.Lock()
 			So(len(mock.objects), ShouldEqual, 0)

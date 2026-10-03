@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/models/core"
 	"zhongkui.com/zhongkui/internal/models/network"
 	"zhongkui.com/zhongkui/internal/network/detectors"
@@ -172,6 +173,6 @@ func init() {
 	registerPlaintextModel("datasource", &core.Datasource{})
 	// LLM 模型端点的访问凭据（apiKey）与 MCP 服务器的请求头（headers）承载第三方凭据，
 	// 经 crypto 序列化器加密存储；明文查看经全局明文接口解密
-	registerPlaintextModel("llm-model", &core.LlmModel{})
-	registerPlaintextModel("mcp-server", &core.McpServer{})
+	registerPlaintextModel("llm-model", &ai.LlmModel{})
+	registerPlaintextModel("mcp-server", &ai.McpServer{})
 }

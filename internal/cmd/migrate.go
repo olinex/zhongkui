@@ -353,5 +353,4 @@ func init() {
 	migrateDryRunCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
 	migrateDiffCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
 	migrateCheckCmd.Flags().Bool("keep-temp", false, "flag.migrate.keep-temp")
-	migrateAiEmbeddingCmd.Flags().Int("dimensions", 0, "flag.migrate.ai-embedding.dimensions")
 }

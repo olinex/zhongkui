@@ -14,6 +14,7 @@ import (
 
 	// 项目内部
 
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -25,10 +26,10 @@ import (
 // runtimeState 是运行时的一份完整装配态：由配置快照与据此构建的客户端、组件组成。
 // 构造后整体只读，因此可经原子指针一次性替换，读取方无需加锁。
 type runtimeState struct {
-	snapshot *Snapshot                        // 配置快照
-	chats    map[llm.Slot]model.BaseChatModel // 对话档位 → 已构建的对话客户端
-	embedder embedding.Embedder               // 向量化客户端（未启用时为 nil）
-	comps    *Components                      // 已构建的 AI 组件
+	snapshot *Snapshot                       // 配置快照
+	chats    map[ai.Slot]model.BaseChatModel // 对话档位 → 已构建的对话客户端
+	embedder embedding.Embedder              // 向量化客户端（未启用时为 nil）
+	comps    *Components                     // 已构建的 AI 组件
 }
 
 // emptyState 返回初始装配态（未启用、无客户端、仅携带空的参数读取器），供首次装配完成前
@@ -37,7 +38,7 @@ func emptyState() *runtimeState {
 	snap := emptySnapshot()
 	return &runtimeState{
 		snapshot: snap,
-		chats:    map[llm.Slot]model.BaseChatModel{},
+		chats:    map[ai.Slot]model.BaseChatModel{},
 		comps:    &Components{Params: snap.Params()},
 	}
 }
@@ -108,13 +109,13 @@ func (r *Runtime) DisabledReason(lang *base.Language) string {
 }
 
 // Params 返回当前行为参数读取器（值全部取自库内 agent_params.value）。
-func (r *Runtime) Params() *llm.Params {
+func (r *Runtime) Params() *Params {
 	return r.Snapshot().Params()
 }
 
 // Chat 按档位返回已构建的对话客户端；档位未绑定或绑定不可用时返回英文错误，调用方
 // 据此报告「指定档位不可用」而非静默切换到其他档位。
-func (r *Runtime) Chat(slot llm.Slot) (model.BaseChatModel, error) {
+func (r *Runtime) Chat(slot ai.Slot) (model.BaseChatModel, error) {
 	st := r.current.Load()
 	if st == nil {
 		return nil, errors.New("ai runtime: not initialized")
@@ -204,7 +205,7 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 	}
 	st := &runtimeState{
 		snapshot: snap,
-		chats:    map[llm.Slot]model.BaseChatModel{},
+		chats:    map[ai.Slot]model.BaseChatModel{},
 		comps:    &Components{Params: snap.Params()},
 	}
 	if !snap.Enabled() {
@@ -240,7 +241,7 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 		}
 		st.chats[slot] = chat
 	}
-	embedCfg, err := snap.ModelConfig(llm.SlotEmbedding)
+	embedCfg, err := snap.ModelConfig(ai.SlotEmbedding)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -293,8 +294,8 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 
 // chatResolver 构造按档位解析对话客户端的回调：从本次装配的客户端表取用，档位未绑定
 // 时返回英文错误，绝不静默切换到其他档位。
-func (r *Runtime) chatResolver(chats map[llm.Slot]model.BaseChatModel) ChatResolver {
-	return func(slot llm.Slot) (model.BaseChatModel, error) {
+func (r *Runtime) chatResolver(chats map[ai.Slot]model.BaseChatModel) ChatResolver {
+	return func(slot ai.Slot) (model.BaseChatModel, error) {
 		if chat, ok := chats[slot]; ok && chat != nil {
 			return chat, nil
 		}

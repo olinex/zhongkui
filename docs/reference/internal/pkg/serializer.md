@@ -93,6 +93,15 @@
   - [func \(d \*DurationNS\) UnmarshalJSON\(data \[\]byte\) error](<#DurationNS.UnmarshalJSON>)
   - [func \(d \*DurationNS\) UnmarshalText\(text \[\]byte\) error](<#DurationNS.UnmarshalText>)
   - [func \(d DurationNS\) Value\(\) \(driver.Value, error\)](<#DurationNS.Value>)
+- [type Hash](<#Hash>)
+  - [func NewHashDigest\(digest string\) Hash](<#NewHashDigest>)
+  - [func \(h Hash\) Digest\(\) string](<#Hash.Digest>)
+  - [func \(h Hash\) MarshalJSON\(\) \(\[\]byte, error\)](<#Hash.MarshalJSON>)
+  - [func \(h Hash\) String\(\) string](<#Hash.String>)
+  - [func \(h \*Hash\) UnmarshalJSON\(data \[\]byte\) error](<#Hash.UnmarshalJSON>)
+- [type HashSerializer](<#HashSerializer>)
+  - [func \(hs HashSerializer\) Scan\(ctx context.Context, field \*schema.Field, dst reflect.Value, dbValue any\) error](<#HashSerializer.Scan>)
+  - [func \(hs HashSerializer\) Value\(ctx context.Context, field \*schema.Field, dst reflect.Value, fieldValue any\) \(any, error\)](<#HashSerializer.Value>)
 - [type HexUUID](<#HexUUID>)
   - [func HexUUIDv4FromString\(data string\) \(HexUUID, error\)](<#HexUUIDv4FromString>)
   - [func MustHexUUIDv4FromString\(data string\) HexUUID](<#MustHexUUIDv4FromString>)
@@ -530,7 +539,7 @@ UnmarshalJSON 从 JSON 恢复 Crypto 实例，支持两种取值形式：
 func (c *Crypto) Value() []byte
 ```
 
-Value 返回明文字节。
+Value 返回明文字节；未设置值（空数据或 nil 指针）时返回 nil。
 
 <a name="CryptoSerializer"></a>
 ## type CryptoSerializer
@@ -981,6 +990,92 @@ func (d DurationNS) Value() (driver.Value, error)
 ```
 
 Value 实现 driver.Valuer，数据库以整数纳秒（BIGINT）存储。
+
+<a name="Hash"></a>
+## type Hash
+
+Hash 是数据库摘要字段的类型化封装：字段持有由 crypto 层预计算的十六进制 HMAC\-SHA256 摘要，序列化器只负责 string/\[\]byte 互转、nil 安全与 JSON，不做 加解密。摘要单向且确定性（同一密钥与内容恒得同一摘要，可等值匹配与建唯一索引）， 与可逆且随机的 Crypto 语义相反，故不能复用 Crypto 承载。
+
+```go
+type Hash struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewHashDigest"></a>
+### func NewHashDigest
+
+```go
+func NewHashDigest(digest string) Hash
+```
+
+NewHashDigest 以十六进制摘要构造 Hash 实例，供写库侧使用。
+
+<a name="Hash.Digest"></a>
+### func \(Hash\) Digest
+
+```go
+func (h Hash) Digest() string
+```
+
+Digest 返回十六进制摘要；未设置值（零值 Hash）时返回空字符串。
+
+<a name="Hash.MarshalJSON"></a>
+### func \(Hash\) MarshalJSON
+
+```go
+func (h Hash) MarshalJSON() ([]byte, error)
+```
+
+MarshalJSON 将 Hash 序列化为 JSON 字符串（零值输出空字符串）。
+
+<a name="Hash.String"></a>
+### func \(Hash\) String
+
+```go
+func (h Hash) String() string
+```
+
+String 返回十六进制摘要，便于日志输出与字符串拼接。
+
+<a name="Hash.UnmarshalJSON"></a>
+### func \(\*Hash\) UnmarshalJSON
+
+```go
+func (h *Hash) UnmarshalJSON(data []byte) error
+```
+
+UnmarshalJSON 从 JSON 恢复 Hash 实例，支持两种取值形式：
+
+- 字符串：十六进制摘要，与 MarshalJSON 输出一致；
+- null 或空串：视为未设置，恢复零值 Hash。
+
+<a name="HashSerializer"></a>
+## type HashSerializer
+
+HashSerializer 实现 GORM 摘要字段的序列化器：仅做类型包装与标签模式校验， 摘要本身由 crypto 层在写库前预计算（见 crypto.DigestForField / crypto.HashKeyForField）。
+
+```go
+type HashSerializer struct{}
+```
+
+<a name="HashSerializer.Scan"></a>
+### func \(HashSerializer\) Scan
+
+```go
+func (hs HashSerializer) Scan(ctx context.Context, field *schema.Field, dst reflect.Value, dbValue any) error
+```
+
+Scan 从数据库读取字段值，包装为 Hash；空值与空字符串置零值。
+
+<a name="HashSerializer.Value"></a>
+### func \(HashSerializer\) Value
+
+```go
+func (hs HashSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error)
+```
+
+Value 校验字段标签后返回已预计算的十六进制摘要字符串，空摘要返回空字符串 （匹配 CHAR\(64\) NOT NULL DEFAULT ” 列定义）。
 
 <a name="HexUUID"></a>
 ## type HexUUID

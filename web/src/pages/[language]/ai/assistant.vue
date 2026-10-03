@@ -167,6 +167,67 @@
                     >
                       {{ m.validationDetail }}
                     </div>
+                    <!-- 人工审批面板：模型请求调用平台原生接口，逐条展示并需用户批准执行 / 拒绝 -->
+                    <div
+                      v-if="m.pendingCalls && m.pendingCalls.length > 0"
+                      class="approval-panel zk-hairline-top mt-2 pt-2"
+                    >
+                      <div class="d-flex align-center mb-1">
+                        <v-icon icon="mdi-shield-key-outline" size="small" class="me-1" />
+                        <span class="zk-label-caps">
+                          {{ $t("page.aiAssistant.approvalTitle") }}
+                        </span>
+                        <v-spacer />
+                        <span v-if="m.awaitingApproval" class="zk-hint">
+                          {{ $t("page.aiAssistant.approvalWaiting") }}
+                        </span>
+                      </div>
+                      <div
+                        v-for="c in m.pendingCalls"
+                        :key="c.callId"
+                        class="approval-item zk-panel--subtle pa-2 mb-2"
+                      >
+                        <div class="d-flex align-center">
+                          <span class="zk-mono-emphasis">{{ c.toolName }}</span>
+                          <v-spacer />
+                          <v-chip v-if="c.decision === 'approved'" size="x-small" color="success">
+                            {{ $t("page.aiAssistant.approved") }}
+                          </v-chip>
+                          <v-chip
+                            v-else-if="c.decision === 'rejected'"
+                            size="x-small"
+                            color="error"
+                          >
+                            {{ $t("page.aiAssistant.rejected") }}
+                          </v-chip>
+                        </div>
+                        <template v-if="c.arguments">
+                          <div class="zk-hint mt-1">
+                            {{ $t("page.aiAssistant.approvalParams") }}
+                          </div>
+                          <div class="zk-code-preview font-mono approval-params">
+                            {{ c.arguments }}
+                          </div>
+                        </template>
+                        <div v-if="c.error" class="zk-error-text mt-1">{{ c.error }}</div>
+                        <div v-else-if="c.result" class="zk-code-preview font-mono approval-result">
+                          {{ c.result }}
+                        </div>
+                        <div v-if="!c.decision" class="d-flex mt-2">
+                          <v-btn
+                            size="small"
+                            variant="tonal"
+                            color="primary"
+                            @click="approveCall(m, c)"
+                          >
+                            {{ $t("page.aiAssistant.approve") }}
+                          </v-btn>
+                          <v-btn size="small" variant="text" class="ms-2" @click="rejectCall(m, c)">
+                            {{ $t("page.aiAssistant.reject") }}
+                          </v-btn>
+                        </div>
+                      </div>
+                    </div>
                     <template v-if="citationsOf(m).length > 0">
                       <v-divider class="my-2" />
                       <div class="text-caption text-on-surface-variant mb-1">
@@ -224,7 +285,7 @@
                   auto-grow
                   hide-details
                   @keydown.enter.exact.prevent="
-                    !streaming && (activeSessionId || draftMode) && sendQuery()
+                    !streaming && !awaitingApproval && (activeSessionId || draftMode) && sendQuery()
                   "
                 />
                 <v-select
@@ -265,7 +326,7 @@
                     <v-btn
                       v-else
                       color="primary"
-                      :disabled="(!activeSessionId && !draftMode) || !aiEnabled"
+                      :disabled="(!activeSessionId && !draftMode) || !aiEnabled || awaitingApproval"
                       @click="sendQuery"
                     >
                       {{ $t("page.aiAssistant.generate") }}
@@ -404,7 +465,9 @@ import {
   agentSessionRename,
   agentStatusGet,
   agentStreamGenerate,
+  agentToolResultStream,
   knowledgeDocumentListGet,
+  type AgentStreamHandlers,
 } from "@/apis/ai";
 import type {
   AgentMessageItem,
@@ -416,6 +479,8 @@ import type {
   EvalStageStatus,
   KnowledgeDocumentItem,
   RetrievalResult,
+  ToolRequestPayload,
+  ToolResultItemIn,
 } from "@/apis/@types/ai";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import type { SearchOut } from "@/components/@types/table";
@@ -484,9 +549,25 @@ interface AgentStageState {
   error?: string;
 }
 
+// PendingCallState 单条待审批的工具调用视图模型：toolName / arguments 为后端原样下发的
+// 工具名与入参文本；decision / result / error 记录用户决策与执行结果；submitted 标记是否已随
+// 本轮结果回传后端（回传后仍保留展示，直到续跑流产生输出）。
+interface PendingCallState {
+  callId: string;
+  toolName: string;
+  // arguments 模型给出的调用入参（原始 JSON 文本）
+  arguments: string;
+  decision?: "approved" | "rejected";
+  // result 执行成功时的结果文本；error 执行失败时的错误文本
+  result?: string;
+  error?: string;
+  submitted?: boolean;
+}
+
 // ChatMessage 会话消息视图模型：会话历史消息与流式占位消息统一形态。
 // draft/citations 由 done 事件回填；valid/validationDetail 仅在有校验规则时才有意义；
-// stages 为本次生成实时累积的工具调用阶段（历史消息不携带，后端不持久化阶段）
+// stages 为本次生成实时累积的工具调用阶段（历史消息不携带，后端不持久化阶段）；
+// pendingCalls/awaitingApproval 承载「前端执行 + 人工审批」链路的状态。
 interface ChatMessage {
   key: number;
   role: "user" | "assistant" | "system";
@@ -497,6 +578,10 @@ interface ChatMessage {
   validationDetail?: string;
   streaming?: boolean;
   stages?: AgentStageState[];
+  // pendingCalls 本次挂起、待用户审批并执行的接口调用（为空表示无待审批项）
+  pendingCalls?: PendingCallState[];
+  // awaitingApproval 是否处于「等待审批」态（收到 tool_request 后置 true，提交回传后置 false）
+  awaitingApproval?: boolean;
 }
 
 let messageKey = 0;
@@ -862,78 +947,182 @@ const regoRule = ref("");
 const streaming = ref(false);
 let abortStream: (() => void) | null = null;
 
-// startStream 推送用户消息与流式占位消息并发起流式生成：SSE 增量经 onDelta 累积，
-// done 事件回填内容/引用/草稿与校验结果（会话此时已存在）。
+// awaitingApproval 是否存在等待人工审批的接口调用：为 true 时本轮生成已挂起，禁止再发起新生成
+const awaitingApproval = computed((): boolean =>
+  messages.value.some((m) => m.awaitingApproval === true),
+);
+
+// StreamStarter 发起一次 Agent SSE 流并返回中止函数：首轮用 agentStreamGenerate，
+// 审批续跑用 agentToolResultStream，二者共用 consumeAgentStream 的回调处理。
+type StreamStarter = (handlers: AgentStreamHandlers) => () => void;
+
+// pruneSubmittedCalls 续跑流一旦产生输出，即移除已回传后端的历史调用（保留当前轮待展示项）；
+// 待审批项清空后整体置空，避免气泡长期残留审批面板。
+const pruneSubmittedCalls = (msg: ChatMessage): void => {
+  if (!msg.pendingCalls || msg.pendingCalls.length === 0) {
+    return;
+  }
+  const remain = msg.pendingCalls.filter((c) => c.submitted !== true);
+  msg.pendingCalls = remain.length > 0 ? remain : undefined;
+};
+
+// consumeAgentStream 消费一次 Agent SSE 流（首轮生成与审批续跑共用同一套回调）：
+// 增量累积到消息、阶段事件归并到阶段行、done 回填结果；收到 tool_request 则挂起等待审批。
+const consumeAgentStream = (assistantKey: number, start: StreamStarter): void => {
+  streaming.value = true;
+  abortStream = start({
+    onDelta: (delta: string) => {
+      const msg = messages.value.find((m) => m.key === assistantKey);
+      if (msg) {
+        pruneSubmittedCalls(msg);
+        msg.content += delta;
+        scrollToBottom();
+      }
+    },
+    // 工具调用阶段事件：工具调用轮不产生答案增量，仅实时累积阶段行（含工具名）
+    onStage: (ev: AgentStageEvent) => {
+      const msg = messages.value.find((m) => m.key === assistantKey);
+      if (msg) {
+        pruneSubmittedCalls(msg);
+      }
+      applyAgentStage(assistantKey, ev);
+    },
+    // 挂起事件：累积本轮待审批调用（同一轮可能多条，按 callId 累加而非覆盖）。
+    // 流已正常 EOF（无 done / error），故不视为失败：保持 streaming=false、abortStream=null。
+    onToolRequest: (req: ToolRequestPayload) => {
+      const msg = messages.value.find((m) => m.key === assistantKey);
+      if (msg) {
+        pruneSubmittedCalls(msg);
+        const calls = (msg.pendingCalls ??= []);
+        calls.push({
+          callId: req.callId,
+          toolName: req.toolName,
+          arguments: req.arguments,
+        });
+        msg.awaitingApproval = true;
+        msg.streaming = false;
+        scrollToBottom();
+      }
+      streaming.value = false;
+      abortStream = null;
+      void loadSessions();
+    },
+    onDone: (out) => {
+      const msg = messages.value.find((m) => m.key === assistantKey);
+      if (msg) {
+        pruneSubmittedCalls(msg);
+        msg.content = out.content ?? msg.content;
+        msg.draft = asRecord(out.draft);
+        msg.citations = out.citations;
+        if (regoRule.value.trim()) {
+          msg.valid = out.valid;
+          msg.validationDetail = out.validationDetail;
+        }
+        msg.streaming = false;
+        scrollToBottom();
+      }
+      streaming.value = false;
+      abortStream = null;
+      // 会话活跃时间变化，刷新列表以维持最近活跃在前的排序
+      void loadSessions();
+    },
+    onError: (message: string) => {
+      const msg = messages.value.find((m) => m.key === assistantKey);
+      // 优先展示后端本地化摘要（如「本次接口调用已超时」「请勿重复提交」），缺失时回落到通用失败文案
+      const text = message || i18n.global.t("page.aiAssistant.error");
+      if (msg) {
+        msg.streaming = false;
+        // 恢复失败的调用已不可执行，清空待审批态避免界面卡在等待中
+        msg.awaitingApproval = false;
+        msg.pendingCalls = undefined;
+        if (!msg.content) {
+          msg.content = text;
+        }
+      }
+      streaming.value = false;
+      abortStream = null;
+      appStore.notify({
+        text,
+        timeout: 3000,
+        color: "error",
+      });
+    },
+  });
+};
+
+// ---- 人工审批（决策 + 结果回传）----
+
+// trySubmitApprovals 当本轮（尚未回传的）待审批调用全部已决策时，一次性回传全部结果并续跑；
+// 后端把运行现场一次性消费，故同一轮必须整体提交，不能逐条提交。
+const trySubmitApprovals = (msg: ChatMessage): void => {
+  if (activeSessionId.value === null || msg.awaitingApproval !== true) {
+    return;
+  }
+  const batch = (msg.pendingCalls ?? []).filter((c) => c.submitted !== true);
+  if (batch.length === 0 || batch.some((c) => !c.decision)) {
+    return;
+  }
+  const results: ToolResultItemIn[] = batch.map((c) => ({
+    callId: c.callId,
+    approved: c.decision === "approved",
+    result: c.result ?? "",
+    error: c.error ?? "",
+  }));
+  batch.forEach((c) => {
+    c.submitted = true;
+  });
+  msg.awaitingApproval = false;
+  const sessionID = activeSessionId.value;
+  consumeAgentStream(msg.key, (handlers) =>
+    agentToolResultStream(sessionID, { results }, handlers),
+  );
+};
+
+// approveCall 批准该调用：记录决策并尝试提交本轮结果（当前无已登记的客户端工具执行器，
+// 故不在此发起任何请求；后续新增客户端工具时在此按工具名分派执行）。
+const approveCall = (msg: ChatMessage, call: PendingCallState): void => {
+  if (call.decision) {
+    return;
+  }
+  call.decision = "approved";
+  trySubmitApprovals(msg);
+};
+
+// rejectCall 拒绝：仅记录决策，不执行任何调用
+const rejectCall = (msg: ChatMessage, call: PendingCallState): void => {
+  if (call.decision) {
+    return;
+  }
+  call.decision = "rejected";
+  trySubmitApprovals(msg);
+};
+
+// startStream 推送用户消息与流式占位消息并发起首轮流式生成：SSE 增量经 onDelta 累积，
+// done 事件回填内容/引用/草稿与校验结果（会话此时已存在）；挂起时转为等待审批。
 const startStream = (
   sessionID: number,
   q: string,
   parsedBusiness?: Record<string, unknown>,
 ): void => {
   const assistantKey = nextKey();
-  const hasRule = regoRule.value.trim().length > 0;
   messages.value.push({ key: nextKey(), role: "user", content: q });
   messages.value.push({ key: assistantKey, role: "assistant", content: "", streaming: true });
   query.value = "";
   scrollToBottom();
 
-  streaming.value = true;
-  abortStream = agentStreamGenerate(
-    sessionID,
-    {
-      query: q,
-      docIDs: docIDs.value.length > 0 ? docIDs.value : undefined,
-      businessData: parsedBusiness,
-      regoRule: regoRule.value.trim() || undefined,
-      // 本次生成的显式档位（为空时由后端回退到会话档位与默认档位参数）
-      slot: slot.value || undefined,
-    },
-    {
-      onDelta: (delta: string) => {
-        const msg = messages.value.find((m) => m.key === assistantKey);
-        if (msg) {
-          msg.content += delta;
-          scrollToBottom();
-        }
+  consumeAgentStream(assistantKey, (handlers) =>
+    agentStreamGenerate(
+      sessionID,
+      {
+        query: q,
+        docIDs: docIDs.value.length > 0 ? docIDs.value : undefined,
+        businessData: parsedBusiness,
+        regoRule: regoRule.value.trim() || undefined,
+        // 本次生成的显式档位（为空时由后端回退到会话档位与默认档位参数）
+        slot: slot.value || undefined,
       },
-      // 工具调用阶段事件：工具调用轮不产生答案增量，仅实时累积阶段行（含工具名）
-      onStage: (ev: AgentStageEvent) => {
-        applyAgentStage(assistantKey, ev);
-      },
-      onDone: (out) => {
-        const msg = messages.value.find((m) => m.key === assistantKey);
-        if (msg) {
-          msg.content = out.content ?? msg.content;
-          msg.draft = asRecord(out.draft);
-          msg.citations = out.citations;
-          if (hasRule) {
-            msg.valid = out.valid;
-            msg.validationDetail = out.validationDetail;
-          }
-          msg.streaming = false;
-          scrollToBottom();
-        }
-        streaming.value = false;
-        abortStream = null;
-        // 会话活跃时间变化，刷新列表以维持最近活跃在前的排序
-        void loadSessions();
-      },
-      onError: () => {
-        const msg = messages.value.find((m) => m.key === assistantKey);
-        if (msg) {
-          msg.streaming = false;
-          if (!msg.content) {
-            msg.content = i18n.global.t("page.aiAssistant.error");
-          }
-        }
-        streaming.value = false;
-        abortStream = null;
-        appStore.notify({
-          text: i18n.global.t("page.aiAssistant.error"),
-          timeout: 3000,
-          color: "error",
-        });
-      },
-    },
+      handlers,
+    ),
   );
 };
 
@@ -970,7 +1159,12 @@ const createSessionForQuery = async (
 
 // sendQuery 发起一次流式问答：先校验输入，待创建态下先创建会话，再推送用户消息与流式占位消息。
 const sendQuery = async (): Promise<void> => {
-  if (streaming.value || (activeSessionId.value === null && !draftMode.value)) {
+  // 等待审批期间本轮生成已挂起，不接受新的生成请求（须先完成或拒绝全部待审批调用）
+  if (
+    streaming.value ||
+    awaitingApproval.value ||
+    (activeSessionId.value === null && !draftMode.value)
+  ) {
     return;
   }
   const q = query.value.trim();
@@ -1101,5 +1295,18 @@ onUnmounted(() => {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.6;
+}
+
+/* 审批面板：内联在助手气泡内部，靠 hairline 与上方正文分隔 */
+.approval-panel {
+  width: 100%;
+}
+
+/* 参数 / 结果 JSON 视区：限高滚动，避免长响应撑高气泡 */
+.approval-params,
+.approval-result {
+  max-height: calc(var(--zk-editor-min-height) * 1.5);
+  overflow: auto;
+  margin-top: var(--zk-space-1);
 }
 </style>

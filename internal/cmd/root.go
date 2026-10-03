@@ -67,13 +67,13 @@ var RootCmd = &cobra.Command{
 		provider.InjectPipelineLogger(i)
 		provider.InjectCoreDatabase(i)
 		provider.InjectRawDatabase(i)
+		provider.InjectCacheRedis(i)
+		provider.InjectPipelineRedis(i)
+		provider.InjectEtcdClient(ctx, i)
 		provider.InjectTagEngine(i)
 		provider.InjectObjectCache(i)
 		provider.InjectSQLiteVTabPools(i)
 		provider.InjectDatasourceWatcher(i)
-		provider.InjectCacheRedis(i)
-		provider.InjectPipelineRedis(i)
-		provider.InjectEtcdClient(ctx, i)
 		provider.InjectReporterGrpcServer(i)
 		provider.InjectReporterGrpcClient(i)
 		provider.InjectPipelineInspector(i)
@@ -85,8 +85,8 @@ var RootCmd = &cobra.Command{
 		provider.InjectCaptureClient(i)
 		provider.InjectMailSender(i)
 		provider.InjectFeatureRegistry(i)
-		provider.InjectAi(ctx, i)
 		provider.InjectMessagePool(i)
+		provider.InjectAi(ctx, i)
 
 		// 初始化密钥派生器
 		_ = provider.MustInvokeKeyDerivation(i)
@@ -215,7 +215,6 @@ func init() {
 	migrateCmd.AddCommand(migrateDiffCmd)
 	migrateCmd.AddCommand(migrateCheckCmd)
 	migrateCmd.AddCommand(migrateCreateCmd)
-	migrateCmd.AddCommand(migrateAiEmbeddingCmd)
 	RootCmd.AddCommand(migrateCmd)
 	// create
 	createCmd.AddCommand(createUserCmd)
@@ -226,6 +225,11 @@ func init() {
 	createCmd.AddCommand(generateTestcaseCmd)
 	createCmd.AddCommand(createDocsCmd)
 	RootCmd.AddCommand(createCmd)
+	// sync
+	syncCmd.AddCommand(syncDocsCmd)
+	syncCmd.AddCommand(syncEmbeddingsCmd)
+	syncCmd.AddCommand(syncEmbeddingDimensionsCmd)
+	RootCmd.AddCommand(syncCmd)
 
 	// s3
 	s3LifecycleCmd.AddCommand(s3LifecycleApplyCmd)

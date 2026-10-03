@@ -6,9 +6,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // fixturePath 是 Agent 参数出厂值的种子文件路径（相对本包目录）。
@@ -42,7 +40,7 @@ func TestAgentParamsFixtureMatchesRegistry(t *testing.T) {
 	if len(literals) == 0 {
 		t.Fatal("no agent parameter row found in the fixture")
 	}
-	for _, spec := range llm.Specs {
+	for _, spec := range Specs {
 		value, ok := literals[spec.Key]
 		if !ok {
 			t.Errorf("fixture misses the parameter %q declared by the registry", spec.Key)
@@ -52,7 +50,7 @@ func TestAgentParamsFixtureMatchesRegistry(t *testing.T) {
 			t.Errorf("fixture seeds the parameter %q with an empty value", spec.Key)
 			continue
 		}
-		if err := llm.ValidateValue(spec, value); err != nil {
+		if err := ValidateValue(spec, value); err != nil {
 			t.Errorf("fixture value of %q does not match its kind: %v", spec.Key, err)
 		}
 		delete(literals, spec.Key)

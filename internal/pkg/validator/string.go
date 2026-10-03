@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 	"net/url"
 	"path/filepath"
@@ -51,6 +52,21 @@ const (
 	TagJSONObject = "jsonObject"
 	// TagTrimmed 已去除首尾空白标签
 	TagTrimmed = "trimmed"
+)
+
+// JSONType* 是 JSON 值类型名常量：供 validator 的 jsonObject 等校验能力与调用方复用，
+// 集中在此声明以避免调用方就地书写类型名字面量。
+const (
+	// JSONTypeString JSON 字符串类型
+	JSONTypeString = "string"
+	// JSONTypeInt JSON 整数类型
+	JSONTypeInt = "int"
+	// JSONTypeBool JSON 布尔类型
+	JSONTypeBool = "bool"
+	// JSONTypeObject JSON 对象类型
+	JSONTypeObject = "object"
+	// JSONTypeArray JSON 数组类型
+	JSONTypeArray = "array"
 )
 
 // alphanumSpecialRegexps 按特殊字符参数缓存编译后的校验正则。
@@ -624,6 +640,33 @@ func IsValidJSONObject(value string) bool {
 		return false
 	}
 	return obj != nil
+}
+
+// IsValidJSONTypedValue 按声明的类型名校验一个已解码的 JSON 值：value 须来自 encoding/json 对
+// 值的解码（数字为 float64、对象为 map[string]any、数组为 []any、布尔为 bool、字符串为 string）。
+// 「动态 schema → 值」的校验无法经结构体 binding 标签表达，故在此提供通用能力，避免调用方就地
+// 堆砌 if-else：string/int/bool/object/array 五类做基本类型判定，int 额外要求无小数部分；未知
+// 类型名一律判为不合法（fail closed，目录侧已由 fail-fast 保证只登记已知类型）。
+func IsValidJSONTypedValue(typeName string, value any) bool {
+	switch typeName {
+	case JSONTypeString:
+		_, ok := value.(string)
+		return ok
+	case JSONTypeInt:
+		n, ok := value.(float64)
+		return ok && n == math.Trunc(n)
+	case JSONTypeBool:
+		_, ok := value.(bool)
+		return ok
+	case JSONTypeObject:
+		obj, ok := value.(map[string]any)
+		return ok && obj != nil
+	case JSONTypeArray:
+		_, ok := value.([]any)
+		return ok
+	default:
+		return false
+	}
 }
 
 // IsTrimmed 判断字符串首尾是否均无空白字符。空白由前端输入框负责去除（见 AGENTS.md 前端约定），

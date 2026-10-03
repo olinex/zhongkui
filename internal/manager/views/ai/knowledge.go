@@ -26,8 +26,8 @@ import (
 	modelsai "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/docconv"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 	"zhongkui.com/zhongkui/internal/worker/handlers/knowledge"
 )
@@ -98,7 +98,7 @@ type KnowledgeDocumentDetailOut struct {
 	UseCount int `json:"useCount"`
 	// LastUsedAt 最近一次被检索命中的时间，从未命中时为空
 	LastUsedAt *time.Time `json:"lastUsedAt"`
-	// Hash 文档内容的 sha256 十六进制摘要
+	// Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破）
 	Hash string `json:"hash"`
 	// Format 文档来源格式（取值为 documentFormat 枚举类的值：markdown/txt/pdf/docx）
 	Format string `json:"format"`
@@ -198,7 +198,8 @@ func KnowledgeDocumentCreate(c *gin.Context) {
 	doc := &modelsai.KnowledgeDocument{
 		NamespaceName: namespace,
 		Title:         in.Title,
-		Content:       in.Content,
+		// 正文经 crypto 序列化器加密落库（Create 走结构体路径，序列化器生效）
+		Content: serializer.NewCrypto([]byte(in.Content)),
 		// 手工录入文档固定为 markdown + ready；原件字段保持零值（无 S3 原件）
 		Format: string(docconv.FormatMarkdown),
 		Status: string(modelsai.KnowledgeDocStatusReady),
@@ -245,11 +246,11 @@ func KnowledgeDocumentDetailGet(c *gin.Context) {
 	response.SimpleOK.AbortWithGinW(c, KnowledgeDocumentDetailOut{
 		ID:           instance.ID,
 		Title:        instance.Title,
-		Content:      instance.Content,
+		Content:      string(instance.Content.Value()),
 		ChunkCount:   instance.ChunkCount,
 		UseCount:     instance.UseCount,
 		LastUsedAt:   instance.LastUsedAt,
-		Hash:         instance.Hash,
+		Hash:         instance.Hash.Digest(),
 		Format:       instance.Format,
 		Status:       instance.Status,
 		SizeBytes:    instance.SizeBytes,
@@ -301,9 +302,11 @@ func KnowledgeDocumentUpdate(c *gin.Context) {
 		response.SimpleOK.AbortWithGinH(c)
 		return
 	}
+	// 采用结构体 Select 更新以触发 crypto 序列化器加密存储（map 更新不会走序列化器）
 	if err := db.WithContext(c).Model(&modelsai.KnowledgeDocument{}).
 		Where("id = ? AND namespace_name = ?", in.ID, namespace).
-		Updates(map[string]any{"title": in.Title, "content": in.Content}).Error; err != nil {
+		Select("title", "content").
+		Updates(&modelsai.KnowledgeDocument{Title: in.Title, Content: serializer.NewCrypto([]byte(in.Content))}).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -317,7 +320,7 @@ func KnowledgeDocumentUpdate(c *gin.Context) {
 		Model:         gorm.Model{ID: in.ID},
 		NamespaceName: namespace,
 		Title:         in.Title,
-		Content:       in.Content,
+		Content:       serializer.NewCrypto([]byte(in.Content)),
 	}
 	if err := comps.Knowledge.Reindex(c, doc); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -436,7 +439,7 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 		response.SimpleOK.AbortWithGinW(c, KnowledgeDocumentReindexOut{
 			ID:         doc.ID,
 			ChunkCount: doc.ChunkCount,
-			Hash:       doc.Hash,
+			Hash:       doc.Hash.Digest(),
 			Status:     string(modelsai.KnowledgeDocStatusPending),
 		})
 		return
@@ -448,7 +451,7 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 	response.SimpleOK.AbortWithGinW(c, KnowledgeDocumentReindexOut{
 		ID:         doc.ID,
 		ChunkCount: doc.ChunkCount,
-		Hash:       doc.Hash,
+		Hash:       doc.Hash.Digest(),
 		Status:     string(modelsai.KnowledgeDocStatusReady),
 	})
 }
@@ -482,7 +485,7 @@ type KnowledgeDocumentIndexSummaryOut struct {
 	Stale bool `json:"stale"`
 	// IndexedAt 最近一次索引写入时间（文档更新时间）
 	IndexedAt time.Time `json:"indexedAt"`
-	// Hash 文档内容 sha256 摘要
+	// Hash 文档内容的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破）
 	Hash string `json:"hash"`
 	// EmbeddingModel embedding 档位绑定的供应商模型名（未绑定时为空）
 	EmbeddingModel string `json:"embeddingModel"`
@@ -563,11 +566,11 @@ func KnowledgeDocumentChunksGet(c *gin.Context) {
 		Chunks: make([]KnowledgeDocumentChunkOut, 0, len(overview.Chunks)),
 	}
 	// 向量模型取自运行时快照的 embedding 档位绑定（未绑定时留空）
-	if info, ok := middlewares.GetAiRuntime(c).Snapshot().Slots()[llm.SlotEmbedding]; ok {
+	if info, ok := middlewares.GetAiRuntime(c).Snapshot().Slots()[modelsai.SlotEmbedding]; ok {
 		out.Summary.EmbeddingModel = info.Model
 	}
 	// 向量维度取 embedding 列的实际维度（表或列不可读时记 0），与状态接口共用同一读取来源
-	if n, found, err := llm.ChunkEmbeddingDimension(c, db); err == nil && found {
+	if n, found, err := ai.ChunkEmbeddingDimension(c, db); err == nil && found {
 		out.Summary.EmbeddingDimensions = n
 	}
 	for _, chunk := range overview.Chunks {

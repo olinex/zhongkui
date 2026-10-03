@@ -1,4 +1,4 @@
-package llm
+package ai
 
 import (
 	// 标准库
@@ -111,20 +111,16 @@ func TestValidateValue(t *testing.T) {
 // 构造时传入的映射（即数据库 agent_params.value）。
 func TestParams_Values(t *testing.T) {
 	p := NewParams(map[string]string{
-		"retrieval.fusion":            "weighted",
-		"agent.systemPrompt":          "custom agent prompt",
-		"retrieval.topK":              "9",
-		"retrieval.weightVector":      "0.25",
-		"agent.retrievalSectionTitle": "## KB",
+		"retrieval.fusion":       "weighted",
+		"agent.systemPrompt":     "custom agent prompt",
+		"retrieval.topK":         "9",
+		"retrieval.weightVector": "0.25",
 	})
 	if got := p.String("retrieval.fusion"); got != "weighted" {
 		t.Errorf("String(retrieval.fusion) = %q, want weighted", got)
 	}
 	if got := p.Text("agent.systemPrompt"); got != "custom agent prompt" {
 		t.Errorf("Text(agent.systemPrompt) = %q, want custom agent prompt", got)
-	}
-	if got := p.String("agent.retrievalSectionTitle"); got != "## KB" {
-		t.Errorf("String(agent.retrievalSectionTitle) = %q, want ## KB", got)
 	}
 	if got := p.Int("retrieval.topK"); got != 9 {
 		t.Errorf("Int(retrieval.topK) = %d, want 9", got)

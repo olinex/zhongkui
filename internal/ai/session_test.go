@@ -2,6 +2,8 @@ package ai
 
 import (
 	// 标准库
+
+	"bytes"
 	"context"
 	"testing"
 
@@ -11,11 +13,17 @@ import (
 	"gorm.io/gorm/logger"
 
 	// 项目内部
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
+
+// encTestValue 把明文字符串包装为加密字段值（*serializer.Crypto），供测试构造
+// AgentSession.Summary / AgentMessage.Content 等经 crypto 序列化器落库的字段。
+func encTestValue(s string) *serializer.Crypto {
+	return serializer.NewCrypto([]byte(s))
+}
 
 // newTestSessionDB 构造会话测试用的 sqlite 内存库并迁移会话/消息两张表。
 func newTestSessionDB(t *testing.T) *database.DB {
@@ -24,7 +32,7 @@ func newTestSessionDB(t *testing.T) *database.DB {
 	if err != nil {
 		t.Fatalf("gorm.Open(sqlite) error = %v", err)
 	}
-	if err := gdb.AutoMigrate(&modelsai.AgentSession{}, &modelsai.AgentMessage{}); err != nil {
+	if err := gdb.AutoMigrate(&ai.AgentSession{}, &ai.AgentMessage{}); err != nil {
 		t.Fatalf("AutoMigrate error = %v", err)
 	}
 	return gdb
@@ -47,7 +55,7 @@ func TestSessionStore_CreateGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	if session.ID == 0 || session.Status != llm.SessionStatusActive {
+	if session.ID == 0 || session.Status != ai.SessionStatusActive {
 		t.Fatalf("CreateSession() = %+v, want non-zero ID and active status", session)
 	}
 	got, err := store.GetSession(context.Background(), session.ID)
@@ -116,18 +124,18 @@ func TestSessionStore_RenameAndStatus(t *testing.T) {
 	if renamed.Title != "new title" {
 		t.Errorf("RenameSession() title = %q, want %q", renamed.Title, "new title")
 	}
-	archived, err := store.SetSessionStatus(ctx, session.ID, llm.SessionStatusArchived)
+	archived, err := store.SetSessionStatus(ctx, session.ID, ai.SessionStatusArchived)
 	if err != nil {
 		t.Fatalf("SetSessionStatus error = %v", err)
 	}
-	if archived.Status != llm.SessionStatusArchived {
-		t.Errorf("SetSessionStatus() status = %q, want %q", archived.Status, llm.SessionStatusArchived)
+	if archived.Status != ai.SessionStatusArchived {
+		t.Errorf("SetSessionStatus() status = %q, want %q", archived.Status, ai.SessionStatusArchived)
 	}
 	got, err := store.GetSession(ctx, session.ID)
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if got.Title != "new title" || got.Status != llm.SessionStatusArchived {
+	if got.Title != "new title" || got.Status != ai.SessionStatusArchived {
 		t.Errorf("GetSession() = %+v, want the renamed and archived session", got)
 	}
 }
@@ -145,8 +153,8 @@ func TestSessionStore_DeleteCascadesMessages(t *testing.T) {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	for i := 0; i < 2; i++ {
-		if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
-			SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleUser, Content: "q",
+		if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
+			SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("q"),
 		}); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
@@ -181,17 +189,17 @@ func TestSessionStore_Messages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	appendMsg := func(role llm.MessageRole, content string) {
+	appendMsg := func(role ai.MessageRole, content string) {
 		t.Helper()
-		if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
-			SessionID: session.ID, NamespaceName: "default", Role: role, Content: content,
+		if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
+			SessionID: session.ID, NamespaceName: "default", Role: role, Content: encTestValue(content),
 		}); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
 	}
-	appendMsg(llm.MessageRoleUser, "u1")
-	appendMsg(llm.MessageRoleAssistant, "a1")
-	appendMsg(llm.MessageRoleUser, "u2")
+	appendMsg(ai.MessageRoleUser, "u1")
+	appendMsg(ai.MessageRoleAssistant, "a1")
+	appendMsg(ai.MessageRoleUser, "u2")
 
 	all, err := store.ListMessages(ctx, session.ID, 0, 0)
 	if err != nil {
@@ -202,8 +210,8 @@ func TestSessionStore_Messages(t *testing.T) {
 	}
 	wantSeq := []string{"u1", "a1", "u2"}
 	for i, m := range all {
-		if m.Content != wantSeq[i] {
-			t.Errorf("ListMessages()[%d] content = %q, want %q (ascending order)", i, m.Content, wantSeq[i])
+		if got := string(m.Content.Value()); got != wantSeq[i] {
+			t.Errorf("ListMessages()[%d] content = %q, want %q (ascending order)", i, got, wantSeq[i])
 		}
 	}
 
@@ -214,18 +222,96 @@ func TestSessionStore_Messages(t *testing.T) {
 	if len(history) != 2 {
 		t.Fatalf("HistoryMessages(max=2) len = %d, want 2", len(history))
 	}
-	if history[0].Content != "a1" || history[1].Content != "u2" {
-		t.Errorf("HistoryMessages() = [%s, %s], want [a1, u2] (latest N ascending)", history[0].Content, history[1].Content)
+	if string(history[0].Content.Value()) != "a1" || string(history[1].Content.Value()) != "u2" {
+		t.Errorf("HistoryMessages() = [%s, %s], want [a1, u2] (latest N ascending)", history[0].Content.Value(), history[1].Content.Value())
 	}
 
 	latest, err := store.LatestAssistantMessage(ctx, session.ID)
 	if err != nil {
 		t.Fatalf("LatestAssistantMessage error = %v", err)
 	}
-	if latest.Content != "a1" {
-		t.Errorf("LatestAssistantMessage() content = %q, want %q", latest.Content, "a1")
+	if string(latest.Content.Value()) != "a1" {
+		t.Errorf("LatestAssistantMessage() content = %q, want %q", latest.Content.Value(), "a1")
 	}
 	if _, err := store.LatestAssistantMessage(ctx, 99999); !errors.Is(err, ErrMessageNotFound) {
 		t.Errorf("LatestAssistantMessage(missing) error = %v, want ErrMessageNotFound", err)
+	}
+}
+
+// TestSessionStore_EncryptedAtRest 测试会话与消息的涉敏字段确实以密文落库：直读原始列既不得
+// 出现明文，也应长于 AES-GCM 最小密文长度；同时经模型回读仍能解密还原（含 UpdateSummary 的
+// 「结构体 + Select」写路径，防止退回 map 更新而绕过序列化器）。
+func TestSessionStore_EncryptedAtRest(t *testing.T) {
+	db := newTestSessionDB(t)
+	store, err := NewSessionStore(db)
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	ctx := context.Background()
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge")
+	if err != nil {
+		t.Fatalf("CreateSession error = %v", err)
+	}
+	msg, err := store.AppendMessage(ctx, &ai.AgentMessage{
+		SessionID:     session.ID,
+		NamespaceName: "default",
+		Role:          ai.MessageRoleAssistant,
+		Content:       encTestValue("secret-content"),
+		DraftJSON:     encTestValue(`{"draft":"secret-draft"}`),
+		CitationsJSON: encTestValue(`[{"title":"secret-citation"}]`),
+	})
+	if err != nil {
+		t.Fatalf("AppendMessage error = %v", err)
+	}
+	if err := store.UpdateSummary(ctx, session.ID, "secret-summary", msg.ID); err != nil {
+		t.Fatalf("UpdateSummary error = %v", err)
+	}
+
+	var sessionRow struct {
+		Summary []byte
+	}
+	if err := db.Raw("SELECT summary FROM agent_sessions WHERE id = ?", session.ID).Scan(&sessionRow).Error; err != nil {
+		t.Fatalf("reading the raw summary column error = %v", err)
+	}
+	assertEncryptedColumn(t, "agent_sessions.summary", sessionRow.Summary, "secret-summary")
+
+	var messageRow struct {
+		Content       []byte
+		DraftJSON     []byte
+		CitationsJSON []byte
+	}
+	if err := db.Raw("SELECT content, draft_json, citations_json FROM agent_messages WHERE id = ?", msg.ID).
+		Scan(&messageRow).Error; err != nil {
+		t.Fatalf("reading the raw message columns error = %v", err)
+	}
+	assertEncryptedColumn(t, "agent_messages.content", messageRow.Content, "secret-content")
+	assertEncryptedColumn(t, "agent_messages.draft_json", messageRow.DraftJSON, "secret-draft")
+	assertEncryptedColumn(t, "agent_messages.citations_json", messageRow.CitationsJSON, "secret-citation")
+
+	// 回读经序列化器解密，明文可原样还原（含 UpdateSummary 写入的摘要）。
+	got, err := store.GetSession(ctx, session.ID)
+	if err != nil {
+		t.Fatalf("GetSession error = %v", err)
+	}
+	if string(got.Summary.Value()) != "secret-summary" {
+		t.Errorf("GetSession().Summary = %q, want %q", got.Summary.Value(), "secret-summary")
+	}
+	latest, err := store.LatestAssistantMessage(ctx, session.ID)
+	if err != nil {
+		t.Fatalf("LatestAssistantMessage error = %v", err)
+	}
+	if string(latest.Content.Value()) != "secret-content" {
+		t.Errorf("LatestAssistantMessage().Content = %q, want %q", latest.Content.Value(), "secret-content")
+	}
+}
+
+// assertEncryptedColumn 断言原始列既不包含明文，也长于 AES-GCM 最小密文长度（nonce 12 + tag 16）。
+func assertEncryptedColumn(t *testing.T, column string, raw []byte, plaintext string) {
+	t.Helper()
+	if len(raw) < 28 {
+		t.Errorf("%s raw length = %d, want an encrypted value (>= 28 bytes)", column, len(raw))
+	}
+	if bytes.Contains(raw, []byte(plaintext)) {
+		t.Errorf("%s raw value leaks the plaintext %q", column, plaintext)
 	}
 }

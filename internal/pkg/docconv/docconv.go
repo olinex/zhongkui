@@ -27,6 +27,10 @@ const (
 	FormatPDF Format = "pdf"
 	// FormatDocx Word DOCX 文档（落库值 docx）
 	FormatDocx Format = "docx"
+	// FormatGenerated 由代码注释自动生成的文档（叙述页等）专用分区（落库值 generated）。
+	// 该格式非用户导入格式，与人工导入文档相互隔离：同步生成文档时只操作该分区的文档，
+	// 绝不触碰其余格式的文档。
+	FormatGenerated Format = "generated"
 )
 
 // Detect 按文件名扩展名（大小写不敏感）识别文档格式：.md/.markdown → markdown、.txt → txt、

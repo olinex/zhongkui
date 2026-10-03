@@ -4,10 +4,18 @@
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func BroadcastChange\(ctx context.Context, client \*etcd.EtcdClient, event \*ChangeEvent\) error](<#BroadcastChange>)
+- [func CheckEmbeddingDimension\(ctx context.Context, db \*gorm.DB, dimensions int\) error](<#CheckEmbeddingDimension>)
+- [func ChunkEmbeddingDimension\(ctx context.Context, db \*gorm.DB\) \(int, bool, error\)](<#ChunkEmbeddingDimension>)
+- [func MemoryEmbeddingDimension\(ctx context.Context, db \*gorm.DB\) \(int, bool, error\)](<#MemoryEmbeddingDimension>)
+- [func OptionAllowed\(spec ParamSpec, literal string\) bool](<#OptionAllowed>)
+- [func ReconcileEmbeddingColumn\(ctx context.Context, db \*gorm.DB, dimensions int\) \(reconciled bool, err error\)](<#ReconcileEmbeddingColumn>)
 - [func SessionTopicFallback\(query string\) string](<#SessionTopicFallback>)
 - [func TestModel\(ctx context.Context, cfg llm.ModelConfig\) error](<#TestModel>)
+- [func ValidateValue\(spec ParamSpec, literal string\) error](<#ValidateValue>)
+- [func VerifyEmbeddingCompat\(ctx context.Context, cfg llm.ModelConfig, columnDim int\) \(int, error\)](<#VerifyEmbeddingCompat>)
 - [func WithCandidates\(candidates int\) retriever.Option](<#WithCandidates>)
 - [func WithDocIDs\(docIDs \[\]uint\) retriever.Option](<#WithDocIDs>)
 - [func WithFusion\(fusion string\) retriever.Option](<#WithFusion>)
@@ -15,13 +23,16 @@
 - [func WithRetrieveTopK\(topK int\) retriever.Option](<#WithRetrieveTopK>)
 - [func WithWeights\(weights FusionWeights\) retriever.Option](<#WithWeights>)
 - [type Agent](<#Agent>)
-  - [func NewAgent\(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store \*SessionStore, params \*llm.Params, memory \*Memory, logger \*logging.Logger, tools \[\]tool.BaseTool, toolInfos \[\]\*schema.ToolInfo\) \(\*Agent, error\)](<#NewAgent>)
+  - [func NewAgent\(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store \*SessionStore, params \*Params, memory \*Memory, logger \*logging.Logger, tools \[\]tool.BaseTool, toolInfos \[\]\*schema.ToolInfo\) \(\*Agent, error\)](<#NewAgent>)
   - [func \(a \*Agent\) Generate\(ctx context.Context, input AgentInput, opts ...compose.Option\) \(AgentOutput, error\)](<#Agent.Generate>)
+  - [func \(a \*Agent\) ResumeRun\(ctx context.Context, in ResumeInput, opts ...compose.Option\) \(\*schema.StreamReader\[AgentOutput\], error\)](<#Agent.ResumeRun>)
   - [func \(a \*Agent\) Stream\(ctx context.Context, input AgentInput, opts ...compose.Option\) \(\*schema.StreamReader\[AgentOutput\], error\)](<#Agent.Stream>)
   - [func \(a \*Agent\) StreamRun\(ctx context.Context, input AgentInput, opts ...compose.Option\) \(\*schema.StreamReader\[AgentOutput\], error\)](<#Agent.StreamRun>)
 - [type AgentInput](<#AgentInput>)
 - [type AgentOutput](<#AgentOutput>)
 - [type AgentState](<#AgentState>)
+- [type BusinessData](<#BusinessData>)
+  - [func SanitizeBusinessData\(data BusinessData, params \*Params\) \(BusinessData, error\)](<#SanitizeBusinessData>)
 - [type CallMeta](<#CallMeta>)
 - [type CallUsage](<#CallUsage>)
 - [type ChangeEvent](<#ChangeEvent>)
@@ -29,7 +40,7 @@
 - [type ChatResolver](<#ChatResolver>)
 - [type ChunkJudgment](<#ChunkJudgment>)
 - [type ChunkOverview](<#ChunkOverview>)
-  - [func BuildChunkOverview\(ctx context.Context, db \*database.DB, params \*llm.Params, doc \*ai.KnowledgeDocument\) \(\*ChunkOverview, error\)](<#BuildChunkOverview>)
+  - [func BuildChunkOverview\(ctx context.Context, db \*database.DB, params \*Params, doc \*ai.KnowledgeDocument\) \(\*ChunkOverview, error\)](<#BuildChunkOverview>)
 - [type ChunkOverviewItem](<#ChunkOverviewItem>)
 - [type ChunkOverviewSummary](<#ChunkOverviewSummary>)
 - [type CompactResult](<#CompactResult>)
@@ -41,88 +52,108 @@
 - [type DryRunMeta](<#DryRunMeta>)
 - [type DryRunMetrics](<#DryRunMetrics>)
 - [type DryRunResult](<#DryRunResult>)
+- [type EmbeddingDimensionMismatchError](<#EmbeddingDimensionMismatchError>)
+  - [func \(e \*EmbeddingDimensionMismatchError\) Error\(\) string](<#EmbeddingDimensionMismatchError.Error>)
 - [type EvalReporter](<#EvalReporter>)
 - [type EvalStage](<#EvalStage>)
 - [type EvalStageStatus](<#EvalStageStatus>)
 - [type FaithfulnessClaim](<#FaithfulnessClaim>)
 - [type FusionWeights](<#FusionWeights>)
+- [type GeneratedKnowledgeDoc](<#GeneratedKnowledgeDoc>)
 - [type Knowledge](<#Knowledge>)
-  - [func NewKnowledge\(db \*database.DB, embed embedder, params \*llm.Params\) \(\*Knowledge, error\)](<#NewKnowledge>)
+  - [func NewKnowledge\(db \*database.DB, embed embedder, params \*Params\) \(\*Knowledge, error\)](<#NewKnowledge>)
   - [func \(k \*Knowledge\) DeleteDocument\(ctx context.Context, docID uint\) error](<#Knowledge.DeleteDocument>)
   - [func \(k \*Knowledge\) IndexDocument\(ctx context.Context, doc \*ai.KnowledgeDocument\) error](<#Knowledge.IndexDocument>)
   - [func \(k \*Knowledge\) Reindex\(ctx context.Context, doc \*ai.KnowledgeDocument\) error](<#Knowledge.Reindex>)
+  - [func \(k \*Knowledge\) ReindexNamespace\(ctx context.Context, namespaceName string\) \(int, error\)](<#Knowledge.ReindexNamespace>)
+  - [func \(k \*Knowledge\) SyncGeneratedDocs\(ctx context.Context, namespaceName string, format docconv.Format, docs \[\]GeneratedKnowledgeDoc\) error](<#Knowledge.SyncGeneratedDocs>)
 - [type MCPRemoteTool](<#MCPRemoteTool>)
   - [func ProbeMCPServer\(ctx context.Context, transport, url string, headers map\[string\]string, timeout time.Duration\) \(\[\]MCPRemoteTool, error\)](<#ProbeMCPServer>)
 - [type Memory](<#Memory>)
-  - [func NewMemory\(store \*MemoryStore, resolver ChatResolver, params \*llm.Params, logger \*logging.Logger\) \(\*Memory, error\)](<#NewMemory>)
+  - [func NewMemory\(store \*MemoryStore, resolver ChatResolver, params \*Params, logger \*logging.Logger\) \(\*Memory, error\)](<#NewMemory>)
   - [func \(m \*Memory\) Compact\(ctx context.Context, session \*ai.AgentSession\) \(\*CompactResult, error\)](<#Memory.Compact>)
   - [func \(m \*Memory\) Delete\(ctx context.Context, namespaceName string, ids \[\]uint\) error](<#Memory.Delete>)
   - [func \(m \*Memory\) GenerateTopic\(ctx context.Context, query string\) string](<#Memory.GenerateTopic>)
   - [func \(m \*Memory\) Get\(ctx context.Context, namespaceName string, id uint\) \(\*ai.AgentMemory, error\)](<#Memory.Get>)
   - [func \(m \*Memory\) List\(ctx context.Context, q MemoryQuery\) \(\[\]\*ai.AgentMemory, int64, error\)](<#Memory.List>)
-  - [func \(m \*Memory\) Recall\(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, query string\) \(\[\]MemoryHit, error\)](<#Memory.Recall>)
-  - [func \(m \*Memory\) SetStatus\(ctx context.Context, namespaceName string, id uint, status llm.MemoryStatus\) error](<#Memory.SetStatus>)
+  - [func \(m \*Memory\) Recall\(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, query string\) \(\[\]MemoryHit, error\)](<#Memory.Recall>)
+  - [func \(m \*Memory\) ReindexEmbeddings\(ctx context.Context, namespaceName string\) \(int, error\)](<#Memory.ReindexEmbeddings>)
+  - [func \(m \*Memory\) SetStatus\(ctx context.Context, namespaceName string, id uint, status ai.MemoryStatus\) error](<#Memory.SetStatus>)
   - [func \(m \*Memory\) Summarize\(ctx context.Context, session \*ai.AgentSession, evicted \[\]\*ai.AgentMessage\) \(string, uint, error\)](<#Memory.Summarize>)
   - [func \(m \*Memory\) Write\(ctx context.Context, in tools.MemoryWriteInput\) \(\*ai.AgentMemory, error\)](<#Memory.Write>)
 - [type MemoryHit](<#MemoryHit>)
 - [type MemoryQuery](<#MemoryQuery>)
 - [type MemoryStore](<#MemoryStore>)
-  - [func NewMemoryStore\(db \*database.DB, embed embedder, params \*llm.Params, logger \*logging.Logger\) \(\*MemoryStore, error\)](<#NewMemoryStore>)
+  - [func NewMemoryStore\(db \*database.DB, embed embedder, params \*Params, logger \*logging.Logger\) \(\*MemoryStore, error\)](<#NewMemoryStore>)
   - [func \(s \*MemoryStore\) Delete\(ctx context.Context, namespaceName string, ids \[\]uint\) error](<#MemoryStore.Delete>)
   - [func \(s \*MemoryStore\) Get\(ctx context.Context, namespaceName string, id uint\) \(\*ai.AgentMemory, error\)](<#MemoryStore.Get>)
   - [func \(s \*MemoryStore\) List\(ctx context.Context, q MemoryQuery\) \(\[\]\*ai.AgentMemory, int64, error\)](<#MemoryStore.List>)
-  - [func \(s \*MemoryStore\) Retrieve\(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, query string\) \(\[\]MemoryHit, error\)](<#MemoryStore.Retrieve>)
-  - [func \(s \*MemoryStore\) SetStatus\(ctx context.Context, namespaceName string, id uint, status llm.MemoryStatus\) error](<#MemoryStore.SetStatus>)
+  - [func \(s \*MemoryStore\) ReindexEmbeddings\(ctx context.Context, namespaceName string\) \(int, error\)](<#MemoryStore.ReindexEmbeddings>)
+  - [func \(s \*MemoryStore\) Retrieve\(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, query string\) \(\[\]MemoryHit, error\)](<#MemoryStore.Retrieve>)
+  - [func \(s \*MemoryStore\) SetStatus\(ctx context.Context, namespaceName string, id uint, status ai.MemoryStatus\) error](<#MemoryStore.SetStatus>)
   - [func \(s \*MemoryStore\) TouchUsage\(ctx context.Context, ids \[\]uint\) error](<#MemoryStore.TouchUsage>)
   - [func \(s \*MemoryStore\) Write\(ctx context.Context, in tools.MemoryWriteInput\) \(\*ai.AgentMemory, error\)](<#MemoryStore.Write>)
+- [type ParamKind](<#ParamKind>)
+- [type ParamSpec](<#ParamSpec>)
+  - [func Lookup\(key string\) \(ParamSpec, bool\)](<#Lookup>)
+- [type Params](<#Params>)
+  - [func NewParams\(values map\[string\]string\) \*Params](<#NewParams>)
+  - [func \(p \*Params\) Bool\(key string\) bool](<#Params.Bool>)
+  - [func \(p \*Params\) Float\(key string\) float64](<#Params.Float>)
+  - [func \(p \*Params\) Int\(key string\) int](<#Params.Int>)
+  - [func \(p \*Params\) String\(key string\) string](<#Params.String>)
+  - [func \(p \*Params\) Text\(key string\) string](<#Params.Text>)
+- [type ResumeInput](<#ResumeInput>)
 - [type RetrievalResult](<#RetrievalResult>)
   - [func ToRetrievalResults\(docs \[\]\*schema.Document\) \[\]RetrievalResult](<#ToRetrievalResults>)
 - [type RetrieveOptions](<#RetrieveOptions>)
 - [type Retriever](<#Retriever>)
-  - [func NewRetriever\(db \*database.DB, embed embedder, resolver ChatResolver, params \*llm.Params, logger \*logging.Logger\) \(\*Retriever, error\)](<#NewRetriever>)
+  - [func NewRetriever\(db \*database.DB, embed embedder, resolver ChatResolver, params \*Params, logger \*logging.Logger\) \(\*Retriever, error\)](<#NewRetriever>)
   - [func \(r \*Retriever\) DryRun\(ctx context.Context, query string, report EvalReporter, languageTag string, opts ...retriever.Option\) \(\*DryRunResult, error\)](<#Retriever.DryRun>)
   - [func \(r \*Retriever\) Retrieve\(ctx context.Context, query string, opts ...retriever.Option\) \(\[\]\*schema.Document, error\)](<#Retriever.Retrieve>)
   - [func \(r \*Retriever\) TouchUsage\(ctx context.Context, ids \[\]uint\) error](<#Retriever.TouchUsage>)
 - [type Runtime](<#Runtime>)
   - [func NewRuntime\(ctx context.Context, db \*database.DB, client \*etcd.EtcdClient, logger \*logging.Logger\) \(\*Runtime, error\)](<#NewRuntime>)
-  - [func \(r \*Runtime\) Chat\(slot llm.Slot\) \(model.BaseChatModel, error\)](<#Runtime.Chat>)
+  - [func \(r \*Runtime\) Chat\(slot ai.Slot\) \(model.BaseChatModel, error\)](<#Runtime.Chat>)
   - [func \(r \*Runtime\) Current\(\) \*Components](<#Runtime.Current>)
   - [func \(r \*Runtime\) DisabledReason\(lang \*base.Language\) string](<#Runtime.DisabledReason>)
   - [func \(r \*Runtime\) Embed\(\) \(embedding.Embedder, error\)](<#Runtime.Embed>)
   - [func \(r \*Runtime\) Enabled\(\) bool](<#Runtime.Enabled>)
   - [func \(r \*Runtime\) Invalidate\(ctx context.Context\) error](<#Runtime.Invalidate>)
-  - [func \(r \*Runtime\) Params\(\) \*llm.Params](<#Runtime.Params>)
+  - [func \(r \*Runtime\) Params\(\) \*Params](<#Runtime.Params>)
   - [func \(r \*Runtime\) Shutdown\(ctx context.Context\) error](<#Runtime.Shutdown>)
   - [func \(r \*Runtime\) Snapshot\(\) \*Snapshot](<#Runtime.Snapshot>)
   - [func \(r \*Runtime\) Start\(ctx context.Context\) error](<#Runtime.Start>)
   - [func \(r \*Runtime\) TestModel\(ctx context.Context, cfg llm.ModelConfig\) error](<#Runtime.TestModel>)
 - [type SessionStore](<#SessionStore>)
   - [func NewSessionStore\(db \*database.DB\) \(\*SessionStore, error\)](<#NewSessionStore>)
-  - [func \(s \*SessionStore\) AppendMessage\(ctx context.Context, msg \*modelsai.AgentMessage\) \(\*modelsai.AgentMessage, error\)](<#SessionStore.AppendMessage>)
-  - [func \(s \*SessionStore\) CreateSession\(ctx context.Context, namespaceName, title string, slot llm.Slot, agentKind llm.AgentKind\) \(\*modelsai.AgentSession, error\)](<#SessionStore.CreateSession>)
+  - [func \(s \*SessionStore\) AppendMessage\(ctx context.Context, msg \*ai.AgentMessage\) \(\*ai.AgentMessage, error\)](<#SessionStore.AppendMessage>)
+  - [func \(s \*SessionStore\) ClaimAgentRun\(ctx context.Context, sessionID uint, namespaceName string\) \(\*ai.AgentRun, error\)](<#SessionStore.ClaimAgentRun>)
+  - [func \(s \*SessionStore\) CreateSession\(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind\) \(\*ai.AgentSession, error\)](<#SessionStore.CreateSession>)
   - [func \(s \*SessionStore\) DeleteSession\(ctx context.Context, id uint\) error](<#SessionStore.DeleteSession>)
-  - [func \(s \*SessionStore\) GetSession\(ctx context.Context, id uint\) \(\*modelsai.AgentSession, error\)](<#SessionStore.GetSession>)
-  - [func \(s \*SessionStore\) HistoryMessages\(ctx context.Context, sessionID uint, maxCount int\) \(\[\]\*modelsai.AgentMessage, error\)](<#SessionStore.HistoryMessages>)
-  - [func \(s \*SessionStore\) LatestAssistantMessage\(ctx context.Context, sessionID uint\) \(\*modelsai.AgentMessage, error\)](<#SessionStore.LatestAssistantMessage>)
-  - [func \(s \*SessionStore\) ListMessages\(ctx context.Context, sessionID uint, limit, offset int\) \(\[\]\*modelsai.AgentMessage, error\)](<#SessionStore.ListMessages>)
-  - [func \(s \*SessionStore\) ListMessagesAfter\(ctx context.Context, sessionID uint, afterID uint\) \(\[\]\*modelsai.AgentMessage, error\)](<#SessionStore.ListMessagesAfter>)
-  - [func \(s \*SessionStore\) ListMessagesBefore\(ctx context.Context, sessionID uint, beforeID uint, afterID uint\) \(\[\]\*modelsai.AgentMessage, error\)](<#SessionStore.ListMessagesBefore>)
-  - [func \(s \*SessionStore\) ListSessions\(ctx context.Context, namespaceName string, limit, offset int\) \(\[\]\*modelsai.AgentSession, error\)](<#SessionStore.ListSessions>)
-  - [func \(s \*SessionStore\) RenameSession\(ctx context.Context, id uint, title string\) \(\*modelsai.AgentSession, error\)](<#SessionStore.RenameSession>)
-  - [func \(s \*SessionStore\) SetSessionStatus\(ctx context.Context, id uint, status llm.SessionStatus\) \(\*modelsai.AgentSession, error\)](<#SessionStore.SetSessionStatus>)
+  - [func \(s \*SessionStore\) GetSession\(ctx context.Context, id uint\) \(\*ai.AgentSession, error\)](<#SessionStore.GetSession>)
+  - [func \(s \*SessionStore\) HistoryMessages\(ctx context.Context, sessionID uint, maxCount int\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.HistoryMessages>)
+  - [func \(s \*SessionStore\) LatestAssistantMessage\(ctx context.Context, sessionID uint\) \(\*ai.AgentMessage, error\)](<#SessionStore.LatestAssistantMessage>)
+  - [func \(s \*SessionStore\) ListMessages\(ctx context.Context, sessionID uint, limit, offset int\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessages>)
+  - [func \(s \*SessionStore\) ListMessagesAfter\(ctx context.Context, sessionID uint, afterID uint\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessagesAfter>)
+  - [func \(s \*SessionStore\) ListMessagesBefore\(ctx context.Context, sessionID uint, beforeID uint, afterID uint\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessagesBefore>)
+  - [func \(s \*SessionStore\) ListSessions\(ctx context.Context, namespaceName string, limit, offset int\) \(\[\]\*ai.AgentSession, error\)](<#SessionStore.ListSessions>)
+  - [func \(s \*SessionStore\) RenameSession\(ctx context.Context, id uint, title string\) \(\*ai.AgentSession, error\)](<#SessionStore.RenameSession>)
+  - [func \(s \*SessionStore\) SaveAgentRun\(ctx context.Context, run \*ai.AgentRun\) error](<#SessionStore.SaveAgentRun>)
+  - [func \(s \*SessionStore\) SetSessionStatus\(ctx context.Context, id uint, status ai.SessionStatus\) \(\*ai.AgentSession, error\)](<#SessionStore.SetSessionStatus>)
   - [func \(s \*SessionStore\) UpdateSummary\(ctx context.Context, sessionID uint, summary string, uptoMessageID uint\) error](<#SessionStore.UpdateSummary>)
 - [type SlotInfo](<#SlotInfo>)
 - [type Snapshot](<#Snapshot>)
-  - [func \(s \*Snapshot\) Bindings\(\) map\[llm.Slot\]string](<#Snapshot.Bindings>)
+  - [func \(s \*Snapshot\) Bindings\(\) map\[ai.Slot\]string](<#Snapshot.Bindings>)
   - [func \(s \*Snapshot\) CloseTools\(\) error](<#Snapshot.CloseTools>)
-  - [func \(s \*Snapshot\) DefaultSlot\(\) llm.Slot](<#Snapshot.DefaultSlot>)
+  - [func \(s \*Snapshot\) DefaultSlot\(\) ai.Slot](<#Snapshot.DefaultSlot>)
   - [func \(s \*Snapshot\) DisabledReason\(lang \*base.Language\) string](<#Snapshot.DisabledReason>)
   - [func \(s \*Snapshot\) EmbeddingDimensions\(\) int](<#Snapshot.EmbeddingDimensions>)
   - [func \(s \*Snapshot\) Enabled\(\) bool](<#Snapshot.Enabled>)
-  - [func \(s \*Snapshot\) ModelConfig\(slot llm.Slot\) \(llm.ModelConfig, error\)](<#Snapshot.ModelConfig>)
+  - [func \(s \*Snapshot\) ModelConfig\(slot ai.Slot\) \(llm.ModelConfig, error\)](<#Snapshot.ModelConfig>)
   - [func \(s \*Snapshot\) ParamOverrideCount\(\) int](<#Snapshot.ParamOverrideCount>)
-  - [func \(s \*Snapshot\) Params\(\) \*llm.Params](<#Snapshot.Params>)
-  - [func \(s \*Snapshot\) Slots\(\) map\[llm.Slot\]SlotInfo](<#Snapshot.Slots>)
+  - [func \(s \*Snapshot\) Params\(\) \*Params](<#Snapshot.Params>)
+  - [func \(s \*Snapshot\) Slots\(\) map\[ai.Slot\]SlotInfo](<#Snapshot.Slots>)
   - [func \(s \*Snapshot\) ToolInfos\(\) \[\]\*schema.ToolInfo](<#Snapshot.ToolInfos>)
   - [func \(s \*Snapshot\) Tools\(\) \[\]tool.BaseTool](<#Snapshot.Tools>)
 - [type StageEvent](<#StageEvent>)
@@ -131,12 +162,45 @@
   - [func \(s \*Store\) EmbeddingDimensions\(ctx context.Context\) \(string, int, bool, error\)](<#Store.EmbeddingDimensions>)
   - [func \(s \*Store\) Load\(ctx context.Context\) \(\*Snapshot, error\)](<#Store.Load>)
   - [func \(s \*Store\) LoadTools\(ctx context.Context, logger \*logging.Logger\) \(\*ToolSet, error\)](<#Store.LoadTools>)
-  - [func \(s \*Store\) ModelConfig\(ctx context.Context, slot llm.Slot\) \(llm.ModelConfig, error\)](<#Store.ModelConfig>)
+  - [func \(s \*Store\) ModelConfig\(ctx context.Context, slot ai.Slot\) \(llm.ModelConfig, error\)](<#Store.ModelConfig>)
+- [type ToolRequest](<#ToolRequest>)
+- [type ToolRequestReporter](<#ToolRequestReporter>)
+- [type ToolResult](<#ToolResult>)
 - [type ToolSet](<#ToolSet>)
   - [func \(ts \*ToolSet\) Close\(\) error](<#ToolSet.Close>)
+- [type ToolSpec](<#ToolSpec>)
+  - [func LookupTool\(name string\) \(ToolSpec, bool\)](<#LookupTool>)
 
+
+## Constants
+
+<a name="FusionRRF"></a>融合策略 retrieval.fusion 的封闭取值：注册表以此声明可选项，AI 运行时的策略判定复用 同一份字面量，避免两处各写一遍字符串。
+
+```go
+const (
+    // FusionRRF 倒数排名融合（Reciprocal Rank Fusion），也是未匹配到其他策略时的兜底策略
+    FusionRRF = "rrf"
+    // FusionWeighted 加权融合，权重取自 retrieval.weightVector / retrieval.weightKeyword
+    FusionWeighted = "weighted"
+)
+```
 
 ## Variables
+
+<a name="ErrAgentRunNotFound"></a>包级错误哨兵：运行现场恢复的失败类别，供上层 errors.Is 映射业务码。
+
+```go
+var (
+    // ErrAgentRunNotFound 运行现场不存在
+    ErrAgentRunNotFound = errors.New("agent run not found")
+    // ErrAgentRunConsumed 运行现场已被消费（重复恢复）
+    ErrAgentRunConsumed = errors.New("agent run already consumed")
+    // ErrAgentRunExpired 运行现场已过期
+    ErrAgentRunExpired = errors.New("agent run expired")
+    // ErrAgentRunForbidden 运行现场归属不符（命名空间不一致）
+    ErrAgentRunForbidden = errors.New("agent run forbidden")
+)
+```
 
 <a name="ErrSessionNotFound"></a>包级错误哨兵：会话/消息查询不命中的统一错误，供上层 errors.Is 判断。
 
@@ -167,6 +231,253 @@ var ErrMemoryNotFound = errors.New("memory: not found")
 var ErrSlotNotBound = errors.New("ai: no usable model bound to the requested slot")
 ```
 
+<a name="Specs"></a>Specs 是全部可调参数的注册表，声明顺序即前端展示顺序。新增参数必须同时补齐三处， 缺一处都会被守卫拦下：在此登记（缺则经 Params 读取时 panic，编程缺陷 fail fast）、 在 migrate fixture 中注入出厂值（缺则启动期强校验中止，守卫测试更早暴露）、 在两份语言文件中补齐 param.\<Key\>.label 与 param.\<Key\>.comment 文案（缺则由视图层的 i18n 键完整性测试暴露）。
+
+```go
+var Specs = []ParamSpec{
+
+    {
+        Key:   "agent.systemPrompt",
+        Group: "agent",
+        Kind:  ParamKindText,
+    },
+    {
+        Key:   "agent.businessSectionTitle",
+        Group: "agent",
+        Kind:  ParamKindString,
+    },
+    {
+        Key:   "agent.questionSectionTitle",
+        Group: "agent",
+        Kind:  ParamKindString,
+    },
+    {
+        Key:   "agent.retrievedDocSnippetLimit",
+        Group: "agent",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:      "agent.defaultSlot",
+        Group:    "agent",
+        Kind:     ParamKindString,
+        Options:  ai.ChatSlotValues(),
+        EnumType: "llmSlot",
+    },
+
+    {
+        Key:   "agent.maxToolRounds",
+        Group: "agent",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "agent.maxToolResultBytes",
+        Group: "agent",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "retrieval.topK",
+        Group: "retrieval",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:   "retrieval.candidates",
+        Group: "retrieval",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:     "retrieval.fusion",
+        Group:   "retrieval",
+        Kind:    ParamKindString,
+        Options: []string{FusionRRF, FusionWeighted},
+    },
+    {
+        Key:   "retrieval.weightVector",
+        Group: "retrieval",
+        Kind:  ParamKindFloat,
+    },
+    {
+        Key:   "retrieval.weightKeyword",
+        Group: "retrieval",
+        Kind:  ParamKindFloat,
+    },
+    {
+        Key:   "retrieval.rerankSystemPrompt",
+        Group: "retrieval",
+        Kind:  ParamKindText,
+    },
+    {
+        Key:   "retrieval.rerankSnippetLimit",
+        Group: "retrieval",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:   "retrieval.rerankTemperature",
+        Group: "retrieval",
+        Kind:  ParamKindFloat,
+    },
+
+    {
+        Key:   "session.maxContextMessages",
+        Group: "session",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:   "session.maxContextBytes",
+        Group: "session",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "session.topicSystemPrompt",
+        Group: "session",
+        Kind:  ParamKindText,
+    },
+
+    {
+        Key:   "memory.enabled",
+        Group: "memory",
+        Kind:  ParamKindBool,
+    },
+
+    {
+        Key:   "memory.sectionTitle",
+        Group: "memory",
+        Kind:  ParamKindString,
+    },
+
+    {
+        Key:   "memory.topK",
+        Group: "memory",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "memory.candidates",
+        Group: "memory",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "memory.maxItems",
+        Group: "memory",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "memory.maxItemBytes",
+        Group: "memory",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "memory.dedupeThreshold",
+        Group: "memory",
+        Kind:  ParamKindFloat,
+    },
+
+    {
+        Key:   "memory.summarySystemPrompt",
+        Group: "memory",
+        Kind:  ParamKindText,
+    },
+
+    {
+        Key:   "memory.summaryMinEvictedMessages",
+        Group: "memory",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "memory.extractSystemPrompt",
+        Group: "memory",
+        Kind:  ParamKindText,
+    },
+
+    {
+        Key:   "memory.extractMaxItems",
+        Group: "memory",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "chunking.size",
+        Group: "chunking",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:   "chunking.overlap",
+        Group: "chunking",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "eval.answerSystemPrompt",
+        Group: "eval",
+        Kind:  ParamKindText,
+    },
+    {
+        Key:   "eval.chunkRelevanceSystemPrompt",
+        Group: "eval",
+        Kind:  ParamKindText,
+    },
+    {
+        Key:   "eval.claimsSystemPrompt",
+        Group: "eval",
+        Kind:  ParamKindText,
+    },
+    {
+        Key:   "eval.reverseQuestionsSystemPrompt",
+        Group: "eval",
+        Kind:  ParamKindText,
+    },
+
+    {
+        Key:   "eval.suggestionsSystemPrompt",
+        Group: "eval",
+        Kind:  ParamKindText,
+    },
+    {
+        Key:   "eval.reverseQuestionCount",
+        Group: "eval",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:   "eval.snippetLimit",
+        Group: "eval",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "sanitize.maxItems",
+        Group: "sanitize",
+        Kind:  ParamKindInt,
+    },
+    {
+        Key:   "sanitize.maxBytes",
+        Group: "sanitize",
+        Kind:  ParamKindInt,
+    },
+}
+```
+
+<a name="ToolSpecs"></a>ToolSpecs 是全部内置工具的元信息注册表，声明顺序即前端展示顺序。新增内置工具必须同时补齐 三处，缺一处都会被守卫拦下：在此登记（缺则实现注册表无对应键，启动期按名解析即暴露缺陷）、 在 internal/ai/tools 注册实现（缺则 Build 返回「编程缺陷」错误）、在 migrate fixture 中 种子化出厂行（缺则由守卫测试 internal/ai/tools\_fixture\_test.go 暴露）。三条链路（元信息 注册表 / 实现注册表 / fixture 种子化 \+ 守卫测试）必须齐备，使后续新增内置工具无需再改配置面 代码。
+
+```go
+var ToolSpecs = []ToolSpec{
+
+    {
+        Name:  "memory_write",
+        Group: "builtin",
+    },
+    {
+        Name:  "knowledge_search",
+        Group: "builtin",
+    },
+}
+```
+
 <a name="BroadcastChange"></a>
 ## func BroadcastChange
 
@@ -175,6 +486,51 @@ func BroadcastChange(ctx context.Context, client *etcd.EtcdClient, event *Change
 ```
 
 BroadcastChange 广播 LLM 配置变更事件到 etcd 全局键。 管理端写路径在 DB 事务提交后调用，通知各进程的监听方重读数据库并重建运行时； 委托 etcd 通用广播层（JSON 序列化 \+ Put \+ 超时上限）；未绑定 etcd 客户端时返回 etcd.ErrChangeUnavailable，由写路径告警降级而不影响已提交的业务变更。
+
+<a name="CheckEmbeddingDimension"></a>
+## func CheckEmbeddingDimension
+
+```go
+func CheckEmbeddingDimension(ctx context.Context, db *gorm.DB, dimensions int) error
+```
+
+CheckEmbeddingDimension 按 vectorColumns 清单逐列校验（knowledge\_chunks.embedding 与 agent\_memories.embedding）维度与配置指定维度一致；某列可读且不一致时返回提示运行 migrate 子命令的英文错误，并点名是哪张表哪列。表或列不存在（数据库尚未建表）或维度读不出时返回 nil， 交由迁移负责建列。用于服务启动时的强校验：维度不一致即中止启动，用户需自行执行 migrate 重建列，而非在启动时自动改动数据库结构。
+
+<a name="ChunkEmbeddingDimension"></a>
+## func ChunkEmbeddingDimension
+
+```go
+func ChunkEmbeddingDimension(ctx context.Context, db *gorm.DB) (int, bool, error)
+```
+
+ChunkEmbeddingDimension 返回 knowledge\_chunks.embedding 列的 pgvector 维度与是否可读， 供状态自检等外部共用与校准一致的读取来源。
+
+<a name="MemoryEmbeddingDimension"></a>
+## func MemoryEmbeddingDimension
+
+```go
+func MemoryEmbeddingDimension(ctx context.Context, db *gorm.DB) (int, bool, error)
+```
+
+MemoryEmbeddingDimension 返回 agent\_memories.embedding 列的 pgvector 维度与是否可读， 供状态自检等外部比较记忆列维度与配置维度，读取来源与校准一致。
+
+<a name="OptionAllowed"></a>
+## func OptionAllowed
+
+```go
+func OptionAllowed(spec ParamSpec, literal string) bool
+```
+
+OptionAllowed 判断字面量是否属于参数的封闭取值清单；清单为空表示自由文本，一律通过。 参数的封闭语义只有这一处实现，启动期强校验、写入接口与 fixture 守卫测试共用。
+
+<a name="ReconcileEmbeddingColumn"></a>
+## func ReconcileEmbeddingColumn
+
+```go
+func ReconcileEmbeddingColumn(ctx context.Context, db *gorm.DB, dimensions int) (reconciled bool, err error)
+```
+
+ReconcileEmbeddingColumn 按 vectorColumns 清单遍历，将每列（knowledge\_chunks.embedding 与 agent\_memories.embedding）的维度校准为配置指定的维度，使「配置为唯一事实来源」：更换 embedding 模型（通常伴随维度变化）时，用户只需改 ai.embedding.dimensions，启动后数据库列 会自动跟随，无需手工改迁移或重建索引。返回的 reconciled 表示「任一列被改动过」。
 
 <a name="SessionTopicFallback"></a>
 ## func SessionTopicFallback
@@ -193,6 +549,27 @@ func TestModel(ctx context.Context, cfg llm.ModelConfig) error
 ```
 
 TestModel 对给定模型端点配置做一次轻量探活：chat 模型以 GET \{baseURL\}/models 判定 端点可达（OpenAI 兼容端点的标准能力，任何 HTTP 响应即视为已响应，仅传输层错误视为 不可达），避免以完整生成请求探活；embedding 模型执行一次最小向量化请求并校验返回 向量非空。配置不完整时返回英文错误。
+
+<a name="ValidateValue"></a>
+## func ValidateValue
+
+```go
+func ValidateValue(spec ParamSpec, literal string) error
+```
+
+ValidateValue 校验字面量能否按 spec.Kind 解析、且（当参数声明了封闭取值清单时）是否落在 清单内，不满足时返回英文错误（含键、类型或清单与字面量）。供启动期参数强校验与 fixture 守卫测试复用。
+
+<a name="VerifyEmbeddingCompat"></a>
+## func VerifyEmbeddingCompat
+
+```go
+func VerifyEmbeddingCompat(ctx context.Context, cfg llm.ModelConfig, columnDim int) (int, error)
+```
+
+VerifyEmbeddingCompat 探测 cfg 指向的 embedding 端点实际输出的向量维度，并校验其与 columnDim（core 库 knowledge\_chunks.embedding 列的维度）的兼容性：兼容时返回已验证维度 （恒等于 columnDim），否则返回指引运维调整索引的英文错误。核心不变量是「embedding 档位 绑定模型已验证的维度 == embedding 列维度」。 判定分两步探测，顺序不可颠倒：
+
+1. 原生探测（不声明 dimensions）：取模型原生维度；端点不可达、凭据非法等错误如实透出， 此类错误说明模型本身不可用，不应被当成「不兼容」而掩盖真实原因。
+2. 定向探测（声明 dimensions = columnDim）：text\-embedding\-3\-small/large 这类模型的语义 是「原生 1536 维，但支持 dimensions 参数返回降维向量」，索引若按 1024 建依然兼容， 故原生维度不等于 columnDim 时须再声明 columnDim 探一次；此步失败（供应商不支持 dimensions 参数）不单独报错，而是落到下一步返回统一的不兼容错误。
 
 <a name="WithCandidates"></a>
 ## func WithCandidates
@@ -251,7 +628,7 @@ WithWeights 设置 weighted 融合权重。
 <a name="Agent"></a>
 ## type Agent
 
-Agent 是 AI 助手的对话执行器：持有编译后的五节点 Eino Graph（Runnable）， 提供非流式（Generate）与流式（Stream）两种执行入口，并依赖 SessionStore 做会话持久化（见 StreamRun）。行为参数（提示词、分节标题、上下文与截断上限） 一律经参数解析器 params 读取。
+Agent 是 AI 助手的对话执行器：持有编译后的四节点 Eino Graph（Runnable）， 提供非流式（Generate）与流式（Stream）两种执行入口，并依赖 SessionStore 做会话持久化（见 StreamRun）。行为参数（提示词、分节标题、上下文与截断上限） 一律经参数解析器 params 读取。
 
 ```go
 type Agent struct {
@@ -263,10 +640,10 @@ type Agent struct {
 ### func NewAgent
 
 ```go
-func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *llm.Params, memory *Memory, logger *logging.Logger, tools []tool.BaseTool, toolInfos []*schema.ToolInfo) (*Agent, error)
+func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *Params, memory *Memory, logger *logging.Logger, tools []tool.BaseTool, toolInfos []*schema.ToolInfo) (*Agent, error)
 ```
 
-NewAgent 构造 Agent：校验依赖后组装五节点图并编译。resolver/retriever/store/params 任一为空时返回英文错误；memory 与 logger 允许为 nil（memory 为 nil 时跳过滚动摘要， logger 为 nil 时跳过告警）；resolver 与 retriever 均为函数/接口参数，测试可注入替身。 行为参数由上层（Runtime）从 agent\_params 解析后传入。tools/toolInfos 为本次装配可用的 工具及其 schema 清单，二者均不做非空校验：toolInfos 为空即「无工具模式」，节点 4 不传 工具选项，行为与引入工具前一致。工具索引在此按 Info\(ctx\).Name 构建，ctx 由调用方传入 （即 Runtime 的装配 ctx），使取消、超时与链路追踪同样覆盖构造期，而非藏在 background context 之后；Info 取失败的工具被跳过（该工具因此不可派发，但其 schema 若在 toolInfos 中仍会被模型看到——正常装配下两者同源，不会出现该情形）。
+NewAgent 构造 Agent：校验依赖后组装四节点图并编译。resolver/retriever/store/params 任一为空时返回英文错误；memory 与 logger 允许为 nil（memory 为 nil 时跳过滚动摘要， logger 为 nil 时跳过告警）；resolver 与 retriever 均为函数/接口参数，测试可注入替身。 行为参数由上层（Runtime）从 agent\_params 解析后传入。tools/toolInfos 为本次装配可用的 工具及其 schema 清单，二者均不做非空校验：toolInfos 为空即「无工具模式」，节点 4 不传 工具选项，行为与引入工具前一致。工具索引在此按 Info\(ctx\).Name 构建，ctx 由调用方传入 （即 Runtime 的装配 ctx），使取消、超时与链路追踪同样覆盖构造期，而非藏在 background context 之后；Info 取失败的工具被跳过（该工具因此不可派发，但其 schema 若在 toolInfos 中仍会被模型看到——正常装配下两者同源，不会出现该情形）。
 
 <a name="Agent.Generate"></a>
 ### func \(\*Agent\) Generate
@@ -276,6 +653,15 @@ func (a *Agent) Generate(ctx context.Context, input AgentInput, opts ...compose.
 ```
 
 Generate 非流式执行一次对话，返回最终结构化产物（done 项）。
+
+<a name="Agent.ResumeRun"></a>
+### func \(\*Agent\) ResumeRun
+
+```go
+func (a *Agent) ResumeRun(ctx context.Context, in ResumeInput, opts ...compose.Option) (*schema.StreamReader[AgentOutput], error)
+```
+
+ResumeRun 恢复一次因客户端工具调用挂起的运行：认领运行现场（校验归属/状态/过期并原子 消费），把前端回传结果按待执行调用的原始顺序回灌为 tool message，随后不经新的用户提问直接重入 生成节点续跑，并以同一套 SSE 事件继续输出；恢复后的最终 done 由 wrapPersist 落库为助手消息。 认领失败直接返回对应哨兵错误（不存在/归属不符/已消费/已过期），上层据此映射业务码，本函数不 额外包装以免破坏 errors.Is 语义。
 
 <a name="Agent.Stream"></a>
 ### func \(\*Agent\) Stream
@@ -319,24 +705,32 @@ type AgentInput struct {
     SessionID uint `json:"sessionID,omitempty"`
     // AgentKind 本次运行所属的 Agent 类型，是长期记忆按「命名空间 + Agent 类型」隔离的维度；
     // 为空时按 knowledge 处理。会话路径由 StreamRun 从会话读取后注入。
-    AgentKind llm.AgentKind `json:"agentKind,omitempty"`
+    AgentKind ai.AgentKind `json:"agentKind,omitempty"`
     // HistoryMessages 历史消息（一般由 StreamRun 从会话加载，也可由调用方直接注入）
     HistoryMessages []*schema.Message `json:"-"`
     // Summary 本次生成使用的会话滚动摘要（由 StreamRun 从会话读取/刷新后注入），
     // 非空时作为独立摘要段插在系统提示之后、窗口历史之前
     Summary string `json:"-"`
     // BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
-    BusinessData llm.BusinessData `json:"businessData,omitempty"`
+    BusinessData BusinessData `json:"businessData,omitempty"`
     // RegoRule 可选的结构化草稿 Rego 校验规则源码；为空跳过规则校验
     RegoRule string `json:"regoRule,omitempty"`
     // Slot 显式指定的 LLM 档位；为空时依次回退到 DeclaredSlot 与
     // agent.defaultSlot 参数（见 resolveInputSlot）
-    Slot llm.Slot `json:"slot,omitempty"`
+    Slot ai.Slot `json:"slot,omitempty"`
     // DeclaredSlot 调用点声明的默认档位（不对外暴露），优先级低于显式 Slot
-    DeclaredSlot llm.Slot `json:"-"`
+    DeclaredSlot ai.Slot `json:"-"`
     // ToolReporter 工具调用阶段事件的上报回调（不对外暴露），由视图层注入 SSE 写入器；
     // 为 nil 时不上报。与 HistoryMessages / DeclaredSlot 同为 json:"-"。
     ToolReporter EvalReporter `json:"-"`
+    // ToolRequestReporter 挂起时上报待执行的客户端工具调用请求的通道（不对外暴露），由视图层注入
+    // SSE 写入器；为 nil（或本次运行无会话）时客户端工具不挂起，按工具失败回灌。与 ToolReporter 同为 json:"-"。
+    ToolRequestReporter ToolRequestReporter `json:"-"`
+    // ResumeMessages 恢复运行要续跑的消息链（不对外暴露）；非 nil 表示本次为恢复运行，节点 1 跳过
+    // 提问非空校验、节点 2 短路直接透传该消息链（不重跑业务数据清洗与记忆召回）。
+    ResumeMessages []*schema.Message `json:"-"`
+    // ResumeCitations 恢复运行要产出的检索引用（不对外暴露），由挂起时刻持久化的引用预置进采集器。
+    ResumeCitations []RetrievalResult `json:"-"`
 }
 ```
 
@@ -367,13 +761,38 @@ type AgentOutput struct {
 <a name="AgentState"></a>
 ## type AgentState
 
-AgentState 是图运行期间的共享状态，经 compose.ProcessState 在节点间传递 原始输入与检索引用（局部状态按次运行隔离，并发安全由框架保证）。
+AgentState 是图运行期间的共享状态，经 compose.ProcessState 在节点间传递 原始输入与知识检索采集器（局部状态按次运行隔离，并发安全由框架保证）。
 
 ```go
 type AgentState struct {
     // contains filtered or unexported fields
 }
 ```
+
+<a name="BusinessData"></a>
+## type BusinessData
+
+BusinessData 是前端透传的业务数据载体（JSON 对象），作为 Agent 会话中「当前业务现场」 注入 LLM 上下文；注入前必须经 SanitizeBusinessData 清洗与限界，避免空值与超长内容 挤占会话上下文预算。键与值均为 JSON 可序列化类型。
+
+```go
+type BusinessData map[string]any
+```
+
+<a name="SanitizeBusinessData"></a>
+### func SanitizeBusinessData
+
+```go
+func SanitizeBusinessData(data BusinessData, params *Params) (BusinessData, error)
+```
+
+SanitizeBusinessData 对业务数据执行清洗与限界，返回与原数据相互独立的结果 （入参不会被修改）：
+
+- 清洗：递归剔除空值条目（nil、空字符串、空切片、空 map）——map 递归清洗每个 条目、slice/array 递归清洗每个元素，嵌套结构清洗后变空的条目/元素一并剔除；
+- 条目数限界：清洗后顶层条目数超过参数 sanitize.maxItems（\>0 时生效）时，按条目 序列化字节数从大到小依次丢弃，直至满足上限；
+- 字节限界：若紧凑 JSON 序列化字节数超过参数 sanitize.maxBytes，按条目序列化字节数 从大到小依次丢弃（字节数相同时按 key 字典序升序），直至整体不超限——优先保留信息 密度更高的短条目；
+- 两个限界参数（经 params 读取）非正数时视为不设该上限。
+
+返回结果始终是合法 JSON 对象（json.Marshal 不会失败），供上层直接序列化注入。
 
 <a name="CallMeta"></a>
 ## type CallMeta
@@ -457,7 +876,7 @@ const (
 ChatResolver 按档位解析对话模型（使用者侧行为契约）：由上层装配方（Runtime） 实现，Agent 内部按本次运行解析出的档位调用它取回对话客户端，从而在 同一张图内支持按请求切换模型而不重建图。
 
 ```go
-type ChatResolver = func(slot llm.Slot) (model.BaseChatModel, error)
+type ChatResolver = func(slot ai.Slot) (model.BaseChatModel, error)
 ```
 
 <a name="ChunkJudgment"></a>
@@ -496,7 +915,7 @@ type ChunkOverview struct {
 ### func BuildChunkOverview
 
 ```go
-func BuildChunkOverview(ctx context.Context, db *database.DB, params *llm.Params, doc *ai.KnowledgeDocument) (*ChunkOverview, error)
+func BuildChunkOverview(ctx context.Context, db *database.DB, params *Params, doc *ai.KnowledgeDocument) (*ChunkOverview, error)
 ```
 
 BuildChunkOverview 读取文档分块并聚合构建摘要：按 chunk\_index 升序读取分块（仅选取 chunk\_index/heading\_path/content，不载入 embedding），逐块统计字符数/行数/结构单元类型， 并派生标题路径数、原子块数、索引状态与陈旧标记。本函数为包级函数（不挂 Knowledge 方法）， 使 AI 能力未启用时也能读取明细（此时文档通常未索引，返回空分块 \+ Indexed=false）。 params 为 nil 时切片长度与重叠长度记 0；db 或 doc 为 nil 时返回英文错误。
@@ -556,7 +975,7 @@ type ChunkOverviewSummary struct {
     Stale bool
     // IndexedAt 最近一次索引写入时间（文档更新时间）
     IndexedAt time.Time
-    // Hash 文档内容 sha256 摘要
+    // Hash 文档内容的 HMAC-SHA256 十六进制摘要
     Hash string
 }
 ```
@@ -595,7 +1014,7 @@ type Components struct {
     // Memory 会话记忆服务（滚动摘要 / 会话压缩 / 长期记忆检索；AI 未启用时为 nil）
     Memory *Memory
     // Params 行为参数解析器（始终非 nil）
-    Params *llm.Params
+    Params *Params
     // Tools 已启用的工具（AI 未启用时为空），视图层 / Agent 由它取得工具清单与 schema；
     // AI 启用但无启用工具时为空切片（非 nil）
     Tools []tool.BaseTool
@@ -735,6 +1154,31 @@ type DryRunResult struct {
 }
 ```
 
+<a name="EmbeddingDimensionMismatchError"></a>
+## type EmbeddingDimensionMismatchError
+
+EmbeddingDimensionMismatchError 表示 embedding 模型的实际输出维度与知识库索引维度不兼容。 这是一类「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，故以专用错误类型（而非笼统的 请求体错误）暴露给调用方，让接口层能选用语义准确的业务错误码，并据此在文案中补齐修复前置条件。 端点不可达 / 凭据无效等错误不会被包装为该类型，须如实透出（见 VerifyEmbeddingCompat 注释）。
+
+```go
+type EmbeddingDimensionMismatchError struct {
+    // Model 模型本地标识
+    Model string
+    // IndexDimension 知识库索引（knowledge_chunks.embedding 列）当前维度
+    IndexDimension int
+    // NativeDimension 模型未声明 dimensions 时实际返回的维度
+    NativeDimension int
+}
+```
+
+<a name="EmbeddingDimensionMismatchError.Error"></a>
+### func \(\*EmbeddingDimensionMismatchError\) Error
+
+```go
+func (e *EmbeddingDimensionMismatchError) Error() string
+```
+
+Error 返回英文错误详情，含完整修复步骤：先解绑 embedding 档位（若已绑定，否则重建索引会被 reconcile 前置校验拒绝），再按模型原生维度重建索引列。
+
 <a name="EvalReporter"></a>
 ## type EvalReporter
 
@@ -828,6 +1272,22 @@ type FusionWeights struct {
 }
 ```
 
+<a name="GeneratedKnowledgeDoc"></a>
+## type GeneratedKnowledgeDoc
+
+GeneratedKnowledgeDoc 是由代码注释派生的生成知识文档的通用载体（叙述页等）：Key/Title 均为稳定键 （Title 作为入库与去重的稳定键），Content 为 Markdown 正文。文档集由调用方从注释抽取模型派生后 传入，本包不自行派生。
+
+```go
+type GeneratedKnowledgeDoc struct {
+    // Key 生成条目的稳定键（同一包内唯一）
+    Key string
+    // Title 文档标题，同时作为入库与同步判定的稳定键
+    Title string
+    // Content 文档正文（Markdown）
+    Content string
+}
+```
+
 <a name="Knowledge"></a>
 ## type Knowledge
 
@@ -843,7 +1303,7 @@ type Knowledge struct {
 ### func NewKnowledge
 
 ```go
-func NewKnowledge(db *database.DB, embed embedder, params *llm.Params) (*Knowledge, error)
+func NewKnowledge(db *database.DB, embed embedder, params *Params) (*Knowledge, error)
 ```
 
 NewKnowledge 构造 Knowledge；db/embed/params 任一为空时返回英文错误。
@@ -874,6 +1334,24 @@ func (k *Knowledge) Reindex(ctx context.Context, doc *ai.KnowledgeDocument) erro
 ```
 
 Reindex 重新切片并重建文档的分块索引。IndexDocument 本身即在事务内先清旧块， 因此 Reindex 直接复用 IndexDocument。
+
+<a name="Knowledge.ReindexNamespace"></a>
+### func \(\*Knowledge\) ReindexNamespace
+
+```go
+func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string) (int, error)
+```
+
+ReindexNamespace 以当前 embedding 模型为准，重建命名空间下全部知识文档的分块与向量索引： 逐篇读取文档正文（经 crypto 序列化器解密）后复用 IndexDocument 重新切片、向量化与落库， 供更换 embedding 模型（维度或语义变化）后让 knowledge\_chunks 与当前模型对齐。仅处理未软删除 的文档，不改文档正文；返回实际重建的文档篇数，中途失败即返回该错误（已处理的文档不回滚， 再次执行按同一全集继续收敛）。namespaceName 为空时返回英文错误。
+
+<a name="Knowledge.SyncGeneratedDocs"></a>
+### func \(\*Knowledge\) SyncGeneratedDocs
+
+```go
+func (k *Knowledge) SyncGeneratedDocs(ctx context.Context, namespaceName string, format docconv.Format, docs []GeneratedKnowledgeDoc) error
+```
+
+SyncGeneratedDocs 以传入的生成文档集为准，幂等同步指定命名空间下 format 分区的文档：新增文档集 中新出现的条目、更新正文变化的条目、删除库中已有但文档集已移除的条目；正文未变的条目原样保留 （不重复向量化、不产生重复条目）。文档集由调用方从注释抽取模型派生后传入，本方法不再自行派生。 全程逐条幂等，任一步失败即返回错误（已成功处理的条目不回滚，下次触发按同一差异计划继续收敛）。 namespaceName 为空时返回英文错误。
 
 <a name="MCPRemoteTool"></a>
 ## type MCPRemoteTool
@@ -908,7 +1386,7 @@ type Memory struct {
 ### func NewMemory
 
 ```go
-func NewMemory(store *MemoryStore, resolver ChatResolver, params *llm.Params, logger *logging.Logger) (*Memory, error)
+func NewMemory(store *MemoryStore, resolver ChatResolver, params *Params, logger *logging.Logger) (*Memory, error)
 ```
 
 NewMemory 构造 Memory 服务：store/params 为空时返回英文错误，resolver 与 logger 允许为 nil （resolver 缺失在调用 Summarize/抽取时才报错）。会话存储由 store 的 db 同源派生。
@@ -962,16 +1440,25 @@ List 分页列出命名空间下的长期记忆，语义完全委托 MemoryStore
 ### func \(\*Memory\) Recall
 
 ```go
-func (m *Memory) Recall(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, query string) ([]MemoryHit, error)
+func (m *Memory) Recall(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, query string) ([]MemoryHit, error)
 ```
 
 Recall 以查询文本在「命名空间 \+ Agent 类型 \+ 会话」范围内检索长期记忆，记忆只在其来源会话内 可见；语义完全委托 MemoryStore.Retrieve（memory.enabled=false 时返回空且不报错）。
+
+<a name="Memory.ReindexEmbeddings"></a>
+### func \(\*Memory\) ReindexEmbeddings
+
+```go
+func (m *Memory) ReindexEmbeddings(ctx context.Context, namespaceName string) (int, error)
+```
+
+ReindexEmbeddings 以当前 embedding 模型为准重算命名空间下全部 active 长期记忆的向量表示， 委托长期记忆存储执行（见 MemoryStore.ReindexEmbeddings）。
 
 <a name="Memory.SetStatus"></a>
 ### func \(\*Memory\) SetStatus
 
 ```go
-func (m *Memory) SetStatus(ctx context.Context, namespaceName string, id uint, status llm.MemoryStatus) error
+func (m *Memory) SetStatus(ctx context.Context, namespaceName string, id uint, status ai.MemoryStatus) error
 ```
 
 SetStatus 设置指定命名空间下一条长期记忆的状态（active/archived），语义完全委托 MemoryStore.SetStatus。
@@ -1004,7 +1491,7 @@ type MemoryHit struct {
     // ID 记忆 ID
     ID  uint
     // Kind 记忆类别
-    Kind llm.MemoryKind
+    Kind ai.MemoryKind
     // Title 记忆标题
     Title string
     // Content 记忆正文（按 memory.maxItemBytes 截断）
@@ -1024,11 +1511,11 @@ type MemoryQuery struct {
     // NamespaceName 限定命名空间（必填，非空）
     NamespaceName string
     // AgentKind 按 Agent 类型过滤（非空时生效）
-    AgentKind llm.AgentKind
+    AgentKind ai.AgentKind
     // Kind 按记忆类别过滤（非空时生效）
-    Kind llm.MemoryKind
+    Kind ai.MemoryKind
     // Status 按记忆状态过滤（非空时生效）
-    Status llm.MemoryStatus
+    Status ai.MemoryStatus
     // Keyword 按标题/正文模糊匹配（非空时生效）
     Keyword string
     // Offset 分页偏移（小于 0 时取 0）
@@ -1053,7 +1540,7 @@ type MemoryStore struct {
 ### func NewMemoryStore
 
 ```go
-func NewMemoryStore(db *database.DB, embed embedder, params *llm.Params, logger *logging.Logger) (*MemoryStore, error)
+func NewMemoryStore(db *database.DB, embed embedder, params *Params, logger *logging.Logger) (*MemoryStore, error)
 ```
 
 NewMemoryStore 构造 MemoryStore；db/embed/params 任一为空时返回英文错误，logger 允许为 nil （内部判空后再用）。
@@ -1085,11 +1572,20 @@ func (s *MemoryStore) List(ctx context.Context, q MemoryQuery) ([]*ai.AgentMemor
 
 List 分页列出命名空间下的记忆：AgentKind/Kind/Status 非空时过滤，Keyword 非空时按 标题/正文 ILIKE 模糊匹配；按 updated\_at 降序排序，并同时返回过滤后的总数。
 
+<a name="MemoryStore.ReindexEmbeddings"></a>
+### func \(\*MemoryStore\) ReindexEmbeddings
+
+```go
+func (s *MemoryStore) ReindexEmbeddings(ctx context.Context, namespaceName string) (int, error)
+```
+
+ReindexEmbeddings 以当前 embedding 模型为准，重算命名空间下全部 active 长期记忆的向量表示： 读取标题与正文（经 crypto 序列化器解密），按 memorySearchText 约定拼出检索文本并一次性批量 向量化，再逐行更新 embedding 列。记忆正文与标题未变，故不改 content 与 search（全文检索）列， 仅让向量与当前模型对齐。供更换 embedding 模型（维度或语义变化）后使用；返回实际重算条数， 中途失败即返回已完成条数与错误。namespaceName 为空时返回英文错误。
+
 <a name="MemoryStore.Retrieve"></a>
 ### func \(\*MemoryStore\) Retrieve
 
 ```go
-func (s *MemoryStore) Retrieve(ctx context.Context, namespaceName string, agentKind llm.AgentKind, sessionID uint, query string) ([]MemoryHit, error)
+func (s *MemoryStore) Retrieve(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID uint, query string) ([]MemoryHit, error)
 ```
 
 Retrieve 执行长期记忆的混合检索：向量路 \+ 关键词路各取 memory.candidates 条 → RRF 融合 → 按 memory.dedupeThreshold 内容去重 → 取 memory.topK，再受 memory.maxItems 约束；限定 namespace \+ agent\_kind \+ session\_id \+ status='active'，即记忆只在其来源会话内可见。 memory.enabled=false、命名空间为空、会话为 0 或查询空白时返回 \(nil, nil\) 且不报错。 命中后异步回写使用统计（失败仅告警，不影响返回）。
@@ -1098,7 +1594,7 @@ Retrieve 执行长期记忆的混合检索：向量路 \+ 关键词路各取 mem
 ### func \(\*MemoryStore\) SetStatus
 
 ```go
-func (s *MemoryStore) SetStatus(ctx context.Context, namespaceName string, id uint, status llm.MemoryStatus) error
+func (s *MemoryStore) SetStatus(ctx context.Context, namespaceName string, id uint, status ai.MemoryStatus) error
 ```
 
 SetStatus 设置指定命名空间下一条记忆的状态；status 不在取值空间内时返回英文错误。
@@ -1119,7 +1615,152 @@ TouchUsage 递增给定记忆的 use\_count 与 last\_used\_at；ids 为空直�
 func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai.AgentMemory, error)
 ```
 
-Write 写入一条长期记忆：先做规范化正文的 sha256 精确去重，未命中再按 pgvector 余弦相似度 做语义合并，仍无则新增；三条路径均在同一事务内完成并同步 search/embedding 列。精确去重与语义 合并都命中同一行时刷新该行（正文/标题/类别/向量/全文表示/状态/时间）而非新增。 记忆按「命名空间 \+ Agent 类型 \+ 会话」归属与隔离，故 SessionID 为 0（无会话运行）时拒绝写入， 避免落进任何会话都检索不到的孤儿桶。
+Write 写入一条长期记忆：先做规范化正文的带密钥 HMAC\-SHA256 精确去重，未命中再按 pgvector 余弦相似度做语义合并，仍无则新增；三条路径均在同一事务内完成并同步 search/embedding 列。 精确去重与语义合并都命中同一行时刷新该行（正文/标题/类别/向量/全文表示/状态/时间）而非新增。 记忆按「命名空间 \+ Agent 类型 \+ 会话」归属与隔离，故 SessionID 为 0（无会话运行）时拒绝写入， 避免落进任何会话都检索不到的孤儿桶。
+
+<a name="ParamKind"></a>
+## type ParamKind
+
+ParamKind 是参数值的类型标识，决定生效值的解析方式与前端表单控件类型。
+
+```go
+type ParamKind string
+```
+
+<a name="ParamKindString"></a>参数类型常量：string（单行文本）、text（多行文本，如 prompt 原文）、int（整数）、 float（浮点数）、bool（布尔开关）。
+
+```go
+const (
+    // ParamKindString 单行字符串（分节标题、融合策略名等）
+    ParamKindString ParamKind = "string"
+    // ParamKindText 多行文本（prompt 原文）
+    ParamKindText ParamKind = "text"
+    // ParamKindInt 整数（topK、截断长度、各类上限等）
+    ParamKindInt ParamKind = "int"
+    // ParamKindFloat 浮点数（融合权重、温度等）
+    ParamKindFloat ParamKind = "float"
+    // ParamKindBool 布尔开关
+    ParamKindBool ParamKind = "bool"
+)
+```
+
+<a name="ParamSpec"></a>
+## type ParamSpec
+
+ParamSpec 是单个可调参数的元信息，由本包注册表唯一声明：本包只持有键、类型、分组与 封闭取值清单，既不含任何出厂值（含提示词正文），也不含任何面向用户的文案。出厂值由 migrate fixture 注入 agent\_params.default\_value，当前生效值存于同表 value 列，数据库是 该类值的唯一来源；展示名与说明一律经后端 i18n 提供（param.\<Key\>.label / param.\<Key\>.comment，Key 全局唯一因而直接复用为文案键的一部分），故本包内不出现任何 可翻译文案。
+
+```go
+type ParamSpec struct {
+    // Key 点号分层参数键（如 agent.systemPrompt），注册表内唯一，并复用为 i18n 文案键的一部分
+    Key string
+    // Group 前端展示分组（如 agent、retrieval、session、chunking、eval、sanitize）
+    Group string
+    // Kind 参数值类型，决定生效值的解析方式
+    Kind ParamKind
+    // Options 封闭取值清单（仅 string 类型可有）：非空时该参数只能取清单中的一个值，
+    // 前端据此渲染下拉框而非自由文本框，启动期参数强校验与写入接口据此拒绝清单外的值；
+    // 为空表示自由文本。清单内的字面量即库内存储值，不做任何本地化。
+    Options []string
+    // EnumType 取值所属的枚举类名（可选，只与 Options 同时出现）：非空时 Options 内的字面量即
+    // 该类条目的 value，消费方据此经枚举注册表的 label 键（enum.<类名>.<key>）渲染展示文案，
+    // 与全站枚举展示同源；为空时字面量本身即展示文案（如 retrieval.fusion）。
+    // 类名仅为引用，取值空间仍唯一来自枚举注册表；两者是否一致由视图层守卫测试兜底。
+    EnumType string
+}
+```
+
+<a name="Lookup"></a>
+### func Lookup
+
+```go
+func Lookup(key string) (ParamSpec, bool)
+```
+
+Lookup 按键查询参数元信息，未声明时返回 ok=false。
+
+<a name="Params"></a>
+## type Params
+
+Params 是参数生效值的不可变读取器：值全部来自 agent\_params.value（出厂值由 fixture 注入同表 default\_value），本包不持有任何出厂值，因此取不到值即视为数据未按迁移 种子化，属异常状态。读取映射在构造时被复制，调用方后续修改入参不影响已构造的读取器。
+
+```go
+type Params struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewParams"></a>
+### func NewParams
+
+```go
+func NewParams(values map[string]string) *Params
+```
+
+NewParams 构造参数读取器：空串值视为「无值」被丢弃，其余键值原样保留。注册表未声明的 键不会被主动读取（读取时 panic），保留与否不影响运行。
+
+<a name="Params.Bool"></a>
+### func \(\*Params\) Bool
+
+```go
+func (p *Params) Bool(key string) bool
+```
+
+Bool 读取 bool 类型参数的生效值（接受 true/false/1/0 等 strconv 可解析形式）； 值缺失或不可解析时 panic（同 Int）。
+
+<a name="Params.Float"></a>
+### func \(\*Params\) Float
+
+```go
+func (p *Params) Float(key string) float64
+```
+
+Float 读取 float 类型参数的生效值；值缺失或不可解析时 panic（同 Int）。
+
+<a name="Params.Int"></a>
+### func \(\*Params\) Int
+
+```go
+func (p *Params) Int(key string) int
+```
+
+Int 读取 int 类型参数的生效值；值缺失或不可解析时 panic（启动期强校验保证正常路径 不可达，此处属数据被绕过接口破坏的异常状态）。
+
+<a name="Params.String"></a>
+### func \(\*Params\) String
+
+```go
+func (p *Params) String(key string) string
+```
+
+String 读取 string 类型参数的生效值。
+
+<a name="Params.Text"></a>
+### func \(\*Params\) Text
+
+```go
+func (p *Params) Text(key string) string
+```
+
+Text 读取 text 类型参数的生效值（多行文本，如 prompt 原文）。
+
+<a name="ResumeInput"></a>
+## type ResumeInput
+
+ResumeInput 是一次恢复运行的入参。
+
+```go
+type ResumeInput struct {
+    // SessionID 恢复请求对应的会话 ID
+    SessionID uint
+    // NamespaceName 恢复请求所属命名空间
+    NamespaceName string
+    // Results 前端回传的执行结果，按 callId 与挂起时下发的调用关联
+    Results []ToolResult
+    // ToolReporter 工具调用阶段事件的上报回调（可空）
+    ToolReporter EvalReporter
+    // ToolRequests 再次挂起时的客户端工具调用请求上报回调（可空）
+    ToolRequests ToolRequestReporter
+}
+```
 
 <a name="RetrievalResult"></a>
 ## type RetrievalResult
@@ -1187,7 +1828,7 @@ type Retriever struct {
 ### func NewRetriever
 
 ```go
-func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params *llm.Params, logger *logging.Logger) (*Retriever, error)
+func NewRetriever(db *database.DB, embed embedder, resolver ChatResolver, params *Params, logger *logging.Logger) (*Retriever, error)
 ```
 
 NewRetriever 构造 Retriever；db/embed/params 任一为空时返回英文错误。resolver 可为 nil，此时检索跳过 LLM 重排（见 Retrieve 的说明）；logger 可为 nil（内部判空后再用）。
@@ -1243,7 +1884,7 @@ NewRuntime 构造运行时并完成首次装配：读取数据库配置、构建
 ### func \(\*Runtime\) Chat
 
 ```go
-func (r *Runtime) Chat(slot llm.Slot) (model.BaseChatModel, error)
+func (r *Runtime) Chat(slot ai.Slot) (model.BaseChatModel, error)
 ```
 
 Chat 按档位返回已构建的对话客户端；档位未绑定或绑定不可用时返回英文错误，调用方 据此报告「指定档位不可用」而非静默切换到其他档位。
@@ -1297,7 +1938,7 @@ Invalidate 重新读取数据库配置并整体替换当前装配态，供配置
 ### func \(\*Runtime\) Params
 
 ```go
-func (r *Runtime) Params() *llm.Params
+func (r *Runtime) Params() *Params
 ```
 
 Params 返回当前行为参数读取器（值全部取自库内 agent\_params.value）。
@@ -1362,16 +2003,25 @@ NewSessionStore 构造 SessionStore；db 为空时返回英文错误。
 ### func \(\*SessionStore\) AppendMessage
 
 ```go
-func (s *SessionStore) AppendMessage(ctx context.Context, msg *modelsai.AgentMessage) (*modelsai.AgentMessage, error)
+func (s *SessionStore) AppendMessage(ctx context.Context, msg *ai.AgentMessage) (*ai.AgentMessage, error)
 ```
 
 AppendMessage 追加一条消息到会话；msg 为空时返回英文错误。
+
+<a name="SessionStore.ClaimAgentRun"></a>
+### func \(\*SessionStore\) ClaimAgentRun
+
+```go
+func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName string) (*ai.AgentRun, error)
+```
+
+ClaimAgentRun 认领一次恢复请求对应的运行现场：取该会话最近一行（不按状态过滤，以便区分「不存在」 与「已消费」），依次校验归属、状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并 返回该现场。失败类别见包级哨兵 ErrAgentRunNotFound / ErrAgentRunForbidden / ErrAgentRunConsumed / ErrAgentRunExpired，供上层映射业务码。
 
 <a name="SessionStore.CreateSession"></a>
 ### func \(\*SessionStore\) CreateSession
 
 ```go
-func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title string, slot llm.Slot, agentKind llm.AgentKind) (*modelsai.AgentSession, error)
+func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind) (*ai.AgentSession, error)
 ```
 
 CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位 \(flash/standard/advanced\)，空表示生成时按 agent.defaultSlot 参数解析；agentKind 为会话所属 Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。
@@ -1389,7 +2039,7 @@ DeleteSession 在同一事务内删除会话及其全部消息（会话软删除
 ### func \(\*SessionStore\) GetSession
 
 ```go
-func (s *SessionStore) GetSession(ctx context.Context, id uint) (*modelsai.AgentSession, error)
+func (s *SessionStore) GetSession(ctx context.Context, id uint) (*ai.AgentSession, error)
 ```
 
 GetSession 按 ID 查询会话；不存在时返回 ErrSessionNotFound。
@@ -1398,7 +2048,7 @@ GetSession 按 ID 查询会话；不存在时返回 ErrSessionNotFound。
 ### func \(\*SessionStore\) HistoryMessages
 
 ```go
-func (s *SessionStore) HistoryMessages(ctx context.Context, sessionID uint, maxCount int) ([]*modelsai.AgentMessage, error)
+func (s *SessionStore) HistoryMessages(ctx context.Context, sessionID uint, maxCount int) ([]*ai.AgentMessage, error)
 ```
 
 HistoryMessages 返回会话最近 maxCount 条消息（按时间升序返回，最新在后）， 供注入 LLM 上下文保持对话顺序；maxCount 非正数时返回全部消息。
@@ -1407,7 +2057,7 @@ HistoryMessages 返回会话最近 maxCount 条消息（按时间升序返回，
 ### func \(\*SessionStore\) LatestAssistantMessage
 
 ```go
-func (s *SessionStore) LatestAssistantMessage(ctx context.Context, sessionID uint) (*modelsai.AgentMessage, error)
+func (s *SessionStore) LatestAssistantMessage(ctx context.Context, sessionID uint) (*ai.AgentMessage, error)
 ```
 
 LatestAssistantMessage 返回会话最近一条助手消息（含草稿/引用载荷）； 不存在时返回 ErrMessageNotFound。
@@ -1416,7 +2066,7 @@ LatestAssistantMessage 返回会话最近一条助手消息（含草稿/引用�
 ### func \(\*SessionStore\) ListMessages
 
 ```go
-func (s *SessionStore) ListMessages(ctx context.Context, sessionID uint, limit, offset int) ([]*modelsai.AgentMessage, error)
+func (s *SessionStore) ListMessages(ctx context.Context, sessionID uint, limit, offset int) ([]*ai.AgentMessage, error)
 ```
 
 ListMessages 分页列出会话消息（按创建时间升序）；limit/offset 非正数时不限定。
@@ -1425,7 +2075,7 @@ ListMessages 分页列出会话消息（按创建时间升序）；limit/offset 
 ### func \(\*SessionStore\) ListMessagesAfter
 
 ```go
-func (s *SessionStore) ListMessagesAfter(ctx context.Context, sessionID uint, afterID uint) ([]*modelsai.AgentMessage, error)
+func (s *SessionStore) ListMessagesAfter(ctx context.Context, sessionID uint, afterID uint) ([]*ai.AgentMessage, error)
 ```
 
 ListMessagesAfter 返回会话中 id 大于 afterID 的消息（按 id 升序），供会话压缩取出 「游标之后尚未摘要的全部消息」。
@@ -1434,7 +2084,7 @@ ListMessagesAfter 返回会话中 id 大于 afterID 的消息（按 id 升序）
 ### func \(\*SessionStore\) ListMessagesBefore
 
 ```go
-func (s *SessionStore) ListMessagesBefore(ctx context.Context, sessionID uint, beforeID uint, afterID uint) ([]*modelsai.AgentMessage, error)
+func (s *SessionStore) ListMessagesBefore(ctx context.Context, sessionID uint, beforeID uint, afterID uint) ([]*ai.AgentMessage, error)
 ```
 
 ListMessagesBefore 返回会话中 afterID 与 beforeID 之间的消息（afterID \< id \< beforeID， 按 id 升序），供滚动摘要取出「窗口外且尚未摘要」的消息（窗口最旧消息 ID 作上界）。
@@ -1443,7 +2093,7 @@ ListMessagesBefore 返回会话中 afterID 与 beforeID 之间的消息（afterI
 ### func \(\*SessionStore\) ListSessions
 
 ```go
-func (s *SessionStore) ListSessions(ctx context.Context, namespaceName string, limit, offset int) ([]*modelsai.AgentSession, error)
+func (s *SessionStore) ListSessions(ctx context.Context, namespaceName string, limit, offset int) ([]*ai.AgentSession, error)
 ```
 
 ListSessions 列出命名空间下的会话，按更新时间倒序（最近活跃在前）； limit/offset 非正数时不限定。
@@ -1452,16 +2102,25 @@ ListSessions 列出命名空间下的会话，按更新时间倒序（最近活�
 ### func \(\*SessionStore\) RenameSession
 
 ```go
-func (s *SessionStore) RenameSession(ctx context.Context, id uint, title string) (*modelsai.AgentSession, error)
+func (s *SessionStore) RenameSession(ctx context.Context, id uint, title string) (*ai.AgentSession, error)
 ```
 
 RenameSession 重命名会话标题，返回更新后的会话。
+
+<a name="SessionStore.SaveAgentRun"></a>
+### func \(\*SessionStore\) SaveAgentRun
+
+```go
+func (s *SessionStore) SaveAgentRun(ctx context.Context, run *ai.AgentRun) error
+```
+
+SaveAgentRun 创建一行运行现场（状态为 pending），承载挂起时刻的运行现场。
 
 <a name="SessionStore.SetSessionStatus"></a>
 ### func \(\*SessionStore\) SetSessionStatus
 
 ```go
-func (s *SessionStore) SetSessionStatus(ctx context.Context, id uint, status llm.SessionStatus) (*modelsai.AgentSession, error)
+func (s *SessionStore) SetSessionStatus(ctx context.Context, id uint, status ai.SessionStatus) (*ai.AgentSession, error)
 ```
 
 SetSessionStatus 更新会话状态（如归档），返回更新后的会话。
@@ -1473,7 +2132,7 @@ SetSessionStatus 更新会话状态（如归档），返回更新后的会话。
 func (s *SessionStore) UpdateSummary(ctx context.Context, sessionID uint, summary string, uptoMessageID uint) error
 ```
 
-UpdateSummary 更新会话的滚动摘要与其覆盖到的最后一条消息 ID，只写这两列、不触碰其它字段 （避免并发改写会话标题/档位等）。
+UpdateSummary 更新会话的滚动摘要与其覆盖到的最后一条消息 ID，只写这两列、不触碰其它字段 （避免并发改写会话标题/档位等）。摘要经 crypto 序列化器加密落库，故必须以「结构体 \+ Select」 更新以触发序列化器（map 形式会绕过序列化器把明文直写库）。
 
 <a name="SlotInfo"></a>
 ## type SlotInfo
@@ -1483,7 +2142,7 @@ SlotInfo 是单个档位绑定的展示信息（不含凭据），用于管理�
 ```go
 type SlotInfo struct {
     // Slot 档位标识
-    Slot llm.Slot
+    Slot ai.Slot
     // Name 绑定模型的本地标识（llm_models.name）
     Name string
     // Model 供应商侧的模型名（llm_models.model）
@@ -1514,7 +2173,7 @@ type Snapshot struct {
 ### func \(\*Snapshot\) Bindings
 
 ```go
-func (s *Snapshot) Bindings() map[llm.Slot]string
+func (s *Snapshot) Bindings() map[ai.Slot]string
 ```
 
 Bindings 返回「档位 → 绑定模型本地标识」的映射，供管理端展示绑定关系。
@@ -1532,7 +2191,7 @@ CloseTools 关闭本快照持有的 MCP 会话（幂等）；nil 接收者或本
 ### func \(\*Snapshot\) DefaultSlot
 
 ```go
-func (s *Snapshot) DefaultSlot() llm.Slot
+func (s *Snapshot) DefaultSlot() ai.Slot
 ```
 
 DefaultSlot 返回参数 agent.defaultSlot 的生效值，供状态接口下发「未显式指定档位且会话未记录 档位时使用的默认档位」，使前端无需自持档位字面量；快照尚未完成首次装配时返回空串。
@@ -1568,7 +2227,7 @@ Enabled 报告 AI 能力是否可用：standard（默认对话档位）与 embed
 ### func \(\*Snapshot\) ModelConfig
 
 ```go
-func (s *Snapshot) ModelConfig(slot llm.Slot) (llm.ModelConfig, error)
+func (s *Snapshot) ModelConfig(slot ai.Slot) (llm.ModelConfig, error)
 ```
 
 ModelConfig 返回档位对应的模型端点配置；档位未绑定或绑定不可用时返回 ErrSlotNotBound，调用方据此报告「指定档位不可用」而非静默降级。
@@ -1586,7 +2245,7 @@ ParamOverrideCount 返回当前值与出厂值（default\_value）不同的参�
 ### func \(\*Snapshot\) Params
 
 ```go
-func (s *Snapshot) Params() *llm.Params
+func (s *Snapshot) Params() *Params
 ```
 
 Params 返回行为参数读取器（值全部取自库内 agent\_params.value；出厂值只由 migrate fixture 注入 default\_value，代码内不持有任何出厂值）。
@@ -1595,7 +2254,7 @@ Params 返回行为参数读取器（值全部取自库内 agent\_params.value�
 ### func \(\*Snapshot\) Slots
 
 ```go
-func (s *Snapshot) Slots() map[llm.Slot]SlotInfo
+func (s *Snapshot) Slots() map[ai.Slot]SlotInfo
 ```
 
 Slots 返回全部档位绑定的展示信息（含不可用绑定），按档位清单顺序。
@@ -1693,10 +2352,55 @@ LoadTools 把 llm\_tools 中已启用的行装配为运行时可消费的 eino �
 ### func \(\*Store\) ModelConfig
 
 ```go
-func (s *Store) ModelConfig(ctx context.Context, slot llm.Slot) (llm.ModelConfig, error)
+func (s *Store) ModelConfig(ctx context.Context, slot ai.Slot) (llm.ModelConfig, error)
 ```
 
 ModelConfig 读取单个档位的模型端点配置；未绑定或绑定不可用时返回 ErrSlotNotBound。 供不持有运行时快照的场景（如依赖状态探测）按档位单独取值。
+
+<a name="ToolRequest"></a>
+## type ToolRequest
+
+ToolRequest 是一条待前端执行的客户端工具调用请求（对应 SSE tool\_request 事件的载荷）。
+
+```go
+type ToolRequest struct {
+    // CallID 与模型 tool call id 一致，用于回传时关联
+    CallID string `json:"callId"`
+    // ToolName 待执行的客户端工具名（模型给出的调用名）
+    ToolName string `json:"toolName"`
+    // Arguments 模型给出的调用入参（原始 JSON 文本，后端不做解释）
+    Arguments string `json:"arguments"`
+    // ApprovalRequired 是否需用户审批（客户端工具恒为 true）
+    ApprovalRequired bool `json:"approvalRequired"`
+}
+```
+
+<a name="ToolRequestReporter"></a>
+## type ToolRequestReporter
+
+ToolRequestReporter 上报一条待执行的客户端工具调用请求；返回错误（写失败/客户端断开）时挂起中止。
+
+```go
+type ToolRequestReporter func(ToolRequest) error
+```
+
+<a name="ToolResult"></a>
+## type ToolResult
+
+ToolResult 是前端回传的一次客户端工具调用执行结果（对应恢复请求的载荷），按 CallID 与挂起时 下发的 tool\_request 关联。
+
+```go
+type ToolResult struct {
+    // CallID 与 tool_request 下发的 callId 一致
+    CallID string `json:"callId"`
+    // Approved 用户是否批准执行该调用
+    Approved bool `json:"approved"`
+    // Result 执行结果文本（批准且执行成功时有效）
+    Result string `json:"result,omitempty"`
+    // Error 执行错误文本（前端执行失败时有效）
+    Error string `json:"error,omitempty"`
+}
+```
 
 <a name="ToolSet"></a>
 ## type ToolSet
@@ -1705,9 +2409,10 @@ ToolSet 是一次工具装配的产出：已构建的工具、与之一一对应
 
 ```go
 type ToolSet struct {
-    // Tools 已构建的 eino 工具（顺序与 Infos 一致，恒非 nil）
+    // Tools 已构建的 eino 工具（顺序与 Infos 相同，恒非 nil）
     Tools []tool.BaseTool
-    // Infos 与 Tools 一一对应的 schema 清单（顺序一致，恒非 nil）
+    // Infos 供模型选择的 schema 清单（顺序与 Tools 相同，恒非 nil）；client 来源工具只并入 schema、
+    // 不构建执行器，故其条目多于 Tools——调用方须按来源区分，不得假定二者等长
     Infos []*schema.ToolInfo
     // Warnings 按服务器/工具粒度降级时收集的英文告警，供调用方记录（可为 nil）
     Warnings []string
@@ -1723,3 +2428,26 @@ func (ts *ToolSet) Close() error
 ```
 
 Close 关闭本次装配建立的全部 MCP 会话并把错误合并返回；幂等（重复调用或空清单均返回 nil）。
+
+<a name="ToolSpec"></a>
+## type ToolSpec
+
+ToolSpec 是单个内置工具的元信息，由本包注册表唯一声明：本包只持有工具名与分组，既不 含任何实现（实现在 internal/ai/tools，按名解析为 eino tool.BaseTool），也不含任何出厂值 （工具出厂行由 migrate fixture 注入 llm\_tools，source='builtin'），更不含任何面向用户的 文案（展示名与说明一律经后端 i18n 提供：tool.\<Name\>.label / tool.\<Name\>.comment，Name 全局唯一因而直接复用为文案键的一部分），故本包内不出现任何可翻译文案。
+
+```go
+type ToolSpec struct {
+    // Name 工具名（llm_tools.name，全局唯一），复用为 i18n 文案键的一部分
+    Name string
+    // Group 前端展示分组（如 builtin 等），与参数注册表的 Group 同义
+    Group string
+}
+```
+
+<a name="LookupTool"></a>
+### func LookupTool
+
+```go
+func LookupTool(name string) (ToolSpec, bool)
+```
+
+LookupTool 按名查询内置工具元信息，未声明时返回 ok=false（同名函数 Lookup 已被参数注册表 占用，故此处以 LookupTool 区分）。

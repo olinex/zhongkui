@@ -88,6 +88,10 @@
 1113 = "重置密码功能不可用，请联系管理员或稍后再试"
 1114 = "重置密码链接无效或已过期，请重新申请"
 1115 = "档位绑定与系统当前配置不兼容，请按错误详情调整后重试"
+1116 = "待审批的接口调用已不存在，请重新发起提问"
+1117 = "该接口调用已被处理，请勿重复提交"
+1118 = "本次接口调用已超时，请重新发起提问"
+1119 = "无权恢复该接口调用"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -289,18 +293,6 @@ other = "[[.DB]] [[.Action]] 失败：[[.Err]]"
 
 [cli.migrate.completed]
 other = "迁移全部执行成功"
-
-[cli.migrate.ai-embedding-section]
-other = "正在校准 [[.DB]] 库的 embedding 列维度"
-
-[cli.migrate.ai-embedding-failed]
-other = "校准 [[.DB]] 库 embedding 列维度失败：[[.Err]]"
-
-[cli.migrate.ai-embedding-reconciled]
-other = "已将 embedding 列维度校准为 [[.Dimensions]]，请重新索引知识库文档"
-
-[cli.migrate.ai-embedding-in-sync]
-other = "embedding 列维度与指定维度一致，无需重建"
 
 [cli.migrate.dry-run-section]
 other = "试运行（dry-run）[[.DB]]"
@@ -562,6 +554,42 @@ other = "  流 [[.Stream]] 事务 [[.Tx]]：解析 HTTP 响应失败：[[.Err]]"
 
 [cli.docs.generated]
 other = "文档已生成至 [[.Dir]]"
+
+[cli.sync.docs.no-namespace]
+other = "缺少 --namespace：请指定目标命名空间"
+
+[cli.sync.docs.disabled]
+other = "AI 能力未启用，无法同步注释生成文档"
+
+[cli.sync.docs.done]
+other = "已为命名空间 [[.Namespace]] 同步叙述页 [[.Narratives]] 条"
+
+[cli.sync.docs.failed]
+other = "同步注释生成文档失败：[[.Err]]"
+
+[cli.sync.embeddings.no-namespace]
+other = "缺少 --namespace：请指定目标命名空间"
+
+[cli.sync.embeddings.disabled]
+other = "AI 能力未启用，无法重算向量表示"
+
+[cli.sync.embeddings.done]
+other = "已为命名空间 [[.Namespace]] 重算知识文档 [[.Documents]] 篇、长期记忆 [[.Memories]] 条"
+
+[cli.sync.embeddings.failed]
+other = "重算向量表示失败：[[.Err]]"
+
+[cli.sync.embedding-dimensions-section]
+other = "正在校准 [[.DB]] 库的 embedding 列维度"
+
+[cli.sync.embedding-dimensions-failed]
+other = "校准 [[.DB]] 库 embedding 列维度失败：[[.Err]]"
+
+[cli.sync.embedding-dimensions-reconciled]
+other = "已将 embedding 列维度校准为 [[.Dimensions]]，请重新索引知识库文档"
+
+[cli.sync.embedding-dimensions-in-sync]
+other = "embedding 列维度与指定维度一致，无需重建"
 
 [cli.s3.lifecycle.applied]
 other = "已应用 [[.Count]] 条生命周期规则到存储桶 [[.Bucket]]"
@@ -1333,12 +1361,6 @@ other = "检查模型定义与数据库结构是否一致"
 [cmd.migrate.create.short]
 other = "在迁移目录中创建 SQL 迁移文件"
 
-[cmd.migrate.ai-embedding.short]
-other = "按显式指定的维度重建 embedding 列与 HNSW 索引"
-
-[cmd.migrate.ai-embedding.long]
-other = "按运维显式指定的目标维度重建 core 库的 knowledge_chunks.embedding 列与 HNSW 索引：须经 --dimensions 指定目标维度，执行前须先解绑 embedding 档位；命令会删除旧索引与全部向量、执行 ALTER TYPE、重建 HNSW 索引，完成后需重新索引知识库文档。"
-
 [cmd.create.short]
 other = "创建资源（用户、TLS 证书、访问密钥）"
 
@@ -1383,6 +1405,27 @@ other = "从代码注释生成 Diátaxis 分类文档"
 
 [cmd.create.docs.long]
 other = "扫描文档注册表，调用 gomarkdoc 将各功能包的注释导出为 Markdown（教程/操作指南/参考/解释），并生成 docs/README.md 索引。"
+
+[cmd.sync.short]
+other = "同步注释生成文档与 embedding 向量，并对齐 embedding 列维度"
+
+[cmd.sync.docs.short]
+other = "同步注释生成文档到 RAG"
+
+[cmd.sync.docs.long]
+other = "抽取源码注释并生成叙述页文档，按内容 hash 差异计划幂等同步到指定命名空间的 RAG（format=generated）；新增/更新/删除按差异收敛，内容未变则零写入，只读写该分区、不触碰人工文档，只入 RAG 不落盘。"
+
+[cmd.sync.embeddings.short]
+other = "以当前 embedding 模型重算命名空间下的向量表示"
+
+[cmd.sync.embeddings.long]
+other = "以当前 embedding 模型为准，重算指定命名空间下的向量表示：知识库文档重新切片并重建分块向量（knowledge_chunks），长期记忆重算 embedding 列（agent_memories）。用于更换 embedding 模型（维度或语义变化）后让既有内容与当前模型对齐；不改正文与全文检索列，不影响其它命名空间。列维度变更请先执行 sync embedding-dimensions。"
+
+[cmd.sync.embedding-dimensions.short]
+other = "按显式指定的维度重建 embedding 列与 HNSW 索引"
+
+[cmd.sync.embedding-dimensions.long]
+other = "按运维显式指定的目标维度重建 core 库的 knowledge_chunks.embedding 与 agent_memories.embedding 两列及其 HNSW 索引：须经 --dimensions 指定目标维度，执行前须先解绑 embedding 档位；命令会删除旧索引与全部向量、执行 ALTER TYPE、重建 HNSW 索引，完成后需重新索引知识库文档（执行 sync embeddings）。它与 sync embeddings 是同一命令组内的并列两条：本命令只改 schema（列维度），sync embeddings 只改内容（重嵌入向量），二者互不替代。"
 
 [cmd.force-reset-password.short]
 other = "通过命令行强制重置用户密码"
@@ -1446,9 +1489,6 @@ other = "跳过确认"
 
 [flag.migrate.keep-temp]
 other = "保留临时数据库"
-
-[flag.migrate.ai-embedding.dimensions]
-other = "目标向量维度（运维显式指定，须为正整数；调整会清空全部知识库向量并要求重新索引）"
 
 [flag.run.capture.stats-print]
 other = "启用周期性抓包统计输出到标准输出"
@@ -1545,6 +1585,12 @@ other = "启用该抓包器"
 
 [flag.create.capturer.timeout]
 other = "数据库操作超时时间"
+
+[flag.sync.namespace]
+other = "目标命名空间（必填）"
+
+[flag.sync.embedding-dimensions.dimensions]
+other = "目标向量维度（运维显式指定，须为正整数；调整会清空全部知识库向量并要求重新索引）"
 
 [flag.create.testcase.pcap]
 other = "pcap 文件路径（必填）"
@@ -1763,6 +1809,9 @@ other = "内置工具"
 [enum.llmToolSource.mcp]
 other = "MCP 工具"
 
+[enum.llmToolSource.client]
+other = "客户端工具"
+
 # Agent 类型（枚举类 agentKind）
 [enum.agentKind.knowledge]
 other = "知识检索"
@@ -1789,6 +1838,16 @@ other = "生效"
 
 [enum.memoryStatus.archived]
 other = "归档"
+
+# Agent 运行现场状态（枚举类 agentRunStatus）
+[enum.agentRunStatus.pending]
+other = "待恢复"
+
+[enum.agentRunStatus.consumed]
+other = "已消费"
+
+[enum.agentRunStatus.expired]
+other = "已过期"
 
 # MCP 远端传输方式（枚举类 mcpTransport）
 [enum.mcpTransport.sse]
@@ -1883,6 +1942,9 @@ other = "PDF"
 [enum.documentFormat.docx]
 other = "Word 文档"
 
+[enum.documentFormat.generated]
+other = "生成文档"
+
 [enum.knowledgeDocStatus.pending]
 other = "待解析"
 
@@ -1924,7 +1986,7 @@ other = "；"
 
 # =============================================================================
 # Agent tunable parameter metadata (param.<Key>.label|comment)
-# 参数键与 internal/pkg/llm 注册表（Specs）一一对应且全局唯一，故直接复用为文案键：
+# 参数键与 internal/ai 注册表（Specs）一一对应且全局唯一，故直接复用为文案键：
 # label 为参数展示名，comment 为参数说明；接口层按请求语言翻译后随 param/list 一并返回。
 # 本文件是这些文案的唯一来源（注册表不持有副本），未命中时 label 回退参数短名
 # （键最后一段）、comment 回退键本身，并由 param_i18n_test.go 的键完整性测试兜底。
@@ -1936,12 +1998,6 @@ other = "系统提示词"
 
 [param.agent.systemPrompt.comment]
 other = "Agent 对话的系统提示词，要求模型输出 {\"content\":..., \"draft\":{...}} 形状的 JSON"
-
-[param.agent.retrievalSectionTitle.label]
-other = "检索知识分节标题"
-
-[param.agent.retrievalSectionTitle.comment]
-other = "用户消息中检索知识分节的标题"
 
 [param.agent.businessSectionTitle.label]
 other = "业务现场分节标题"
@@ -1956,10 +2012,10 @@ other = "提问分节标题"
 other = "用户消息中提问分节的标题"
 
 [param.agent.retrievedDocSnippetLimit.label]
-other = "检索片段截断长度"
+other = "知识检索片段截断长度"
 
 [param.agent.retrievedDocSnippetLimit.comment]
-other = "注入用户消息的单个检索片段截断长度（字符），控制 prompt 体积"
+other = "knowledge_search 单条命中内容的截断长度（字符），控制工具结果对模型上下文的占用"
 
 [param.agent.defaultSlot.label]
 other = "默认档位"
@@ -2189,6 +2245,12 @@ other = "长期记忆写入"
 
 [tool.memory_write.comment]
 other = "Agent 自主调用，将可复用的结论、偏好或事实写入命名空间级长期记忆"
+
+[tool.knowledge_search.label]
+other = "知识库检索"
+
+[tool.knowledge_search.comment]
+other = "Agent 按需检索当前命名空间的知识库，可自行决定检索时机与查询语句并多次调用"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

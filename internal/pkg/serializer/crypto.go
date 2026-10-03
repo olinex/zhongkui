@@ -28,8 +28,11 @@ func NewCrypto(value []byte) *Crypto {
 	return &Crypto{value: value}
 }
 
-// Value 返回明文字节。
+// Value 返回明文字节；未设置值（空数据或 nil 指针）时返回 nil。
 func (c *Crypto) Value() []byte {
+	if c == nil {
+		return nil
+	}
 	return c.value
 }
 

@@ -103,6 +103,16 @@ Composite indexes / unique constraints use `uq`/`idx` prefix:
 - 列顺序必须与 SQL migration 定义一致；GORM 组合索引列按结构体字段声明顺序生成，字段顺序须对齐（如 `uq_tag_rules_namespace_name_model_name` 要求 `NamespaceName` 先于 `Model` 先于 `Name`）
 - 同时适用于 `internal/migrations` SQL 与 `internal/models` 中 GORM `uniqueIndex` / `index` tag
 
+### 字段级加密存储（Field Encryption）
+
+- **加密列用 `serializer.Crypto`**：敏感字段声明为 `*serializer.Crypto` 并带 `secure:"mode=\"aes-gcm\",offset=...,length=..."` tag，SQL 列类型 `BYTEA` 且可空（`001_init.sql` 的 `COMMENT` 标注 `stored encrypted with the crypto serializer`）；写路径赋值 `serializer.NewCrypto([]byte(...))`，读路径取 `string(field.Value())`（`Value()` 对 nil 安全）。密钥派生路径为 `FieldTag` → `GetKeyDerivation` → `DeriveChildKey(offset,length)`。
+- **`offset` 全局唯一且不越界**：须满足 `offset + max(key.MinKeyLength, length) <= key.PasswordBookSize`，否则密钥派生回绕甚至 panic；新增/调整 `secure` 字段由 `internal/pkg/crypto/secure_offset_test.go`（AST 扫描 `internal/models`）守卫唯一性与边界。
+- **AI 会话全链路一并加密**：同一隔离域内的会话内容不得留下明文旁路，`agent_messages.content/draft_json/citations_json`、`agent_sessions.summary`、`agent_runs.messages/pending_calls/citations` 一律按上述口径加密。`agent_runs` 三列原为 `JSONB`，加密后落库为可空 `BYTEA`（失去 DB 侧 JSONB 路径查询能力，现有读写仅整列存取，无此需求）；`agent_sessions.title` 保留明文（列表展示与检索语义）。
+- **摘要字段用 `serializer.Hash` + 带密钥 HMAC**：用于去重/陈旧判定的摘要字段声明为 `serializer.Hash` 并带 `secure:"mode=\"hmac-sha256\",offset=...,length=..."` tag（SQL 列 `CHAR(64)`，ClickHouse `String`），写路径赋值 `serializer.NewHashDigest(...)`，读路径与出参取 `field.Digest()`；禁止裸 `sha256`（防离线爆破）。序列化器只做 string/[]byte 互转、nil 安全与 JSON，并在 `Value` 时校验 tag mode 必须为 `hmac-sha256`。摘要须在写库前预计算（确定性，可等值匹配与建唯一索引），故不可复用可逆且随机的 `serializer.Crypto`。一次性摘要用 `crypto.DigestForField`；正文等体积大、无法一次性持有的流式摘要用 `crypto.HashKeyForField` 派生密钥后自行 `hmac.New(sha256.New, key)` 计算，且摘要与 S3 对象键同源时须同批改为 HMAC，避免明文摘要经列值泄漏内容指纹。
+- **`map` 更新绕过序列化器**：`Updates(map[string]any{...})` / `Update(col, v)` 不经 field serializer，明文直写；加密字段必须走「结构体 + `Select(列...)`」更新以触发序列化器（先例见 `internal/ai/memory.go`、`internal/manager/views/ai/knowledge.go`、`internal/worker/handlers/knowledge/parse.go`）。
+- **`Scan` 到本地结构体不解密**：检索/汇总行结构体须内嵌模型结构体（如 `struct{ ai.KnowledgeChunk; Score float64 }`）以继承 serializer tag，否则静默拿到密文。
+- **已接受的残留明文**：全文检索列 `tsvector`（`search`）、向量列 `embedding`、`title` 保持明文可检索语义，不得写入需加密的正文；业务 Out 直接返回明文字段，无需注册 `plaintextModels`（后者仅用于前端持有密文时的 RBAC 解密查看）。
+
 ### Dependency Injection
 
 `samber/do/v2` 固定三层模式：私有 provider 工厂 → `InjectXxx` → `InvokeXxx`；`MustInvokeXxx`（panic 版）仅用于启动关键依赖。
@@ -171,11 +181,54 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **管理端不提供新增/编辑**：记忆由 Agent 运行期经 `memory_write` 工具生成，管理接口仅保留列表 / 详情 / 删除 / 启停，`AgentMemoryCreateIn` / `AgentMemoryUpdateIn` 及其路由、RBAC 权限点与前端入口一律不得存在。
 - **检索去重复用知识库文本 n-gram（4-gram Jaccard、阈值 `memory.dedupeThreshold`）**；写入去重是 sha256 精确去重 + pgvector 余弦语义合并，两者语义不同，禁止混用。
 
+### RAG 检索（内置工具编排）
+
+- **会话内检索改为内置工具**：Agent 图内不再有固定检索节点（`hybrid_retrieval` 已移除，`context_assembly` 直连 `sanitize_business_data`），会话内的知识检索一律由内置工具 `knowledge_search` 按需发起——调用时机与查询语句由模型自行编排，可依上一轮结果改写查询多次调用。新增任何「模型按需取数」的能力都走同一范式（内置工具 + 工具循环），不得回退为图内固定节点。
+- **工具入参仅 `query`**：`knowledge_search` 的入参 schema 只暴露 `query`（必填）；命名空间（`AgentInput.NamespaceName`）与文档限定（`AgentInput.DocIDs`）由本次运行上下文经 `knowledgeToolContext` 注入到 `internal/ai` 侧适配器（`knowledgeSearcherAdapter`），模型入参**不得**携带或改变租户/文档范围——这是多租户安全边界，topK / 融合 / 权重等沿用 `retrieval.*` 参数，模型同样不可越权。
+- **引用经采集器回传**：工具命中由运行期知识采集器（`internal/ai/knowledge_tool.go` 的 `knowledgeCollector`，节点 1 创建、互斥锁保护）累积，节点 4 `finalizeOutput` 读采集器写入 `out.Citations`；禁止在工具 goroutine 内直接写 Eino 图状态。模型未调用工具时 `out.Citations` 为空。
+- **参数治理**：单条命中内容截断沿用 `agent.retrievedDocSnippetLimit`（语义为 `knowledge_search` 单条命中截断长度）；`agent.retrievalSectionTitle` 已删除，用户消息不再内嵌检索知识段（只由业务数据段 + 提问段拼成）。
+- **不得预设知识库内容范畴**：知识库由用户自行上传维护，内容随命名空间而异，任何一侧都不得假定它是「平台知识」或某一领域资料。工具描述（`knowledgeSearchTool.Info`）、参数说明与系统提示（`agent.systemPrompt`）一律用中性措辞——如「检索用户维护的知识库中的文档片段」「当回答需要引用知识库中的既有资料时调用」；描述检索能力时须写明「语义与关键词混合检索」，不得简化为「语义相似度检索」。系统提示 `agent.systemPrompt` 需引导模型按需调用 `knowledge_search` 并按命中条目标题引用来源。
+- **三层链路与出厂默认**：内置工具元信息（`internal/ai` 的 `ToolSpecs`）、出厂行（`002_fixtures.sql` 的 `llm_tools` 段）、实现注册表（`internal/ai/tools` 的 `Register`）三处必须同步，由 `internal/ai/tools_fixture_test.go` 双向守卫；`knowledge_search` 是只读基础能力，出厂 `enabled=true`，管理员仍可在「工具」页停用，停用后不再进入模型可用工具清单。
+- **dry-run 不走工具**：检索试运行（`Retriever.DryRun` 与视图层 dry-run 端点）保持「确定性检索 → 生成 → RAGAS 评估」链路不变，仍用于评估 RAG 本身，不经 LLM 工具编排。
+
+### 注释生成文档入 RAG（generated 分区）
+
+- **仅由命令行全量扫库更新、禁止人工维护**：叙述页由代码注释派生（`internal/docs` 的 `Registry()` 自动生成条目，经 `internal/docs.GeneratedNarrativeDocuments` 渲染），禁止人工维护第二份说明；运行期不再隐式写库，仅由 `zki sync docs --namespace <ns>` 走常规工具箱（DB + embedding）全量扫库同步，只入 RAG 不落盘（与「自省注入的知识库不可被随意修改」的既有约定一致）。
+- **分区隔离**：叙述页落在 `format='generated'`（`docconv.FormatGenerated`）的专用知识域，与人工业务文档分区隔离；同步（`SyncGeneratedDocs`，接收调用方传入的文档集与目标 format）只读写该分区，不得影响人工文档。
+- **幂等同步**：按新增 / 更新 / 删除差异计划幂等执行——正文未变的条目零写入（不重复向量化），条目下线即清理，连续两次执行且源码未变时第二次不产生任何写入。
+- **检索范围**：`knowledge_search` 不限定 format，可命中叙述页与人工文档。
+- **投影边界（参考页不入 RAG）**：进 RAG 的是**单篇**叙述页；`docs/reference/**`（逐包参考档）与 `docs/README.md` 是随 `zki create docs` 生成、落在 `docs/` 下且带 `DO NOT EDIT` 的人读产物，**不入 RAG**，避免同一份说明以整页粒度重复索引。
+
+### 向量与模型对齐（sync embeddings / sync embedding-dimensions）
+
+- **命令分组**：两条命令同属 `zki sync` 组、互为并列：`zki sync embedding-dimensions --dimensions <n>` 只改 schema（列维度），`zki sync embeddings --namespace <ns>` 只改内容（重嵌入向量）。`embedding-dimensions` 不是 goose 迁移、也不产迁移文件，故不归 `zki migrate`。
+- **分工**：列维度重建（`ALTER TYPE` + 清空 + 重建 HNSW）属 `zki sync embedding-dimensions`（须先解绑 embedding 档位）；内容重嵌入属 `zki sync embeddings --namespace <ns>`（以当前 embedding 模型重算知识库文档分块向量 `Knowledge.ReindexNamespace` 与全部 active 长期记忆向量 `MemoryStore.ReindexEmbeddings`）。两者互不替代。
+- **范围与边界**：`sync embeddings` 按命名空间隔离，只重算 `knowledge_chunks` 的向量与 `agent_memories.embedding`，不改文档/记忆正文，也不重写 `search`（tsvector）列；`--namespace` 必填。
+- **破坏性提醒**：`sync embedding-dimensions` 的 DDL 会 `DELETE` 整张 `knowledge_chunks` 与 `agent_memories`（不只是清向量），故维度变更后长期记忆已无内容可重嵌入（只能重新积累），知识库文档由 `knowledge_documents` 原文经 `sync embeddings` 重建；「同维度换模型」时迁移不触发清表，此时长期记忆与知识库文档都需要 `sync embeddings` 对齐。
+
+### 客户端工具与人工审批（client 工具挂起 / 恢复）
+
+- **禁止服务凭据直连**：需要以用户自身身份执行的调用（如平台原生接口）禁止由后端以服务凭据直连，一律走「后端下发工具调用请求 → 前端以用户自身凭据执行 → 结果回传续跑」。
+- **client 来源工具**：`internal/ai/client_tools.go` 的 `clientToolInfos` 注册表只登记 schema、不构建本地执行器，`isClientTool` 判定工具是否属该来源；当前生产注册表暂无登记项（能力待重新构思后登记），新增登记项须遵循下述挂起 / 恢复链路。命名空间由运行上下文注入，模型入参不得参与租户选择。
+- **命中不本地执行**：命中客户端工具时后端不得本地执行，必须持久化运行现场（`agent_runs` 表 + `internal/ai/agent_run.go` 的 `SaveAgentRun`）、下发 `tool_request` 事件（载荷为 `{callId, toolName, arguments, approvalRequired}`）、结束本次流且不发 `done` 也不发 `error`（以 EOF 正常结束）。
+- **恢复原子认领**：恢复必须原子认领运行现场（`ClaimAgentRun`，重复提交 / 过期 / 归属不符均有专用哨兵并映射业务码 1116~1119），结果按原始顺序回灌并按 `agent.maxToolResultBytes` 截断，恢复从生成节点续跑（不重跑检索与业务数据组装），可再次挂起。
+- **单点声明**：运行现场 TTL（`agentRunTTL`，10 分钟）、状态取值（`pending/consumed/expired`，`internal/models/ai` 的 `AgentRunStatus`）与失败类别（`internal/ai` 的 `ErrAgentRun*` 哨兵）必须单点声明，禁止就地字面量。
+- **新增 / 修改工具三处同步**：必须同步 `internal/ai` 的 `ToolSpecs` 元信息注册表、实现（builtin 为 `internal/ai/tools`，client 为 `internal/ai/client_tools.go` 的 schema 注册表）与 `002_fixtures.sql` 出厂行，由守卫测试 `internal/ai/tools_fixture_test.go` 双向守卫。
+- **前端审批契约**：前端收到 `tool_request` 必须进入「等待审批」态而非已完成 / 失败；审批面板须展示工具名与调用参数；批准后以用户自身凭据执行，拒绝时不得发起任何调用；同一轮多个调用必须一次性整体提交（运行现场一次性消费）；开流前返回的业务错误（超时 / 重复提交 / 无权恢复）须以后端 `summary` 提示用户。
+
+### LLM 提示词与工具文案（中文约束）
+
+- **一律中文**：凡送入模型或供模型决策的自然语言文本统一使用中文——出厂提示词（`002_fixtures.sql` 的 `agent.systemPrompt`、`retrieval.rerankSystemPrompt`、`session.topicSystemPrompt`、`memory.summarySystemPrompt`、`memory.extractSystemPrompt`、`eval.*SystemPrompt`）、界面段标题类参数（`agent.businessSectionTitle`、`agent.questionSectionTitle`、`memory.sectionTitle`）、用户消息中由代码拼接的段标题与标签（`agentSummarySectionTitle`、`buildRerankPrompt`、`buildEvalChunkPrompt`、`buildClaimsPrompt`、`buildSummaryPrompt`、`buildSuggestionsPrompt` 及其语言指令），以及内置工具的 `Info.Desc` 与参数说明（`internal/ai/tools`）。禁止新增英文提示词或英文工具描述。
+- **结构性标识保持英文**：JSON 键（`content` / `draft` / `results` / `memories` / `judgments` / `claims` / `suggestions` 等）、枚举取值（`memory.extractSystemPrompt` 的 `kind` 取值与 `memoryKindNames()` 返回的记忆类别）、工具名（`knowledge_search` / `memory_write`）、诊断类别标识（`coverage` / `ranking` / `generation` / `context` / `other`）与消息角色（`user` / `assistant` / `system`）是解析契约，必须保持英文原样，不得翻译。
+- **输出语言由提示词声明或代码追加**：回答语言以「跟随用户提问语言」为原则（在 `agent.systemPrompt` 内声明）；`eval.suggestionsSystemPrompt` 的建议正文语言由 `suggestionsSystemPrompt` 在代码侧追加 BCP-47 语言标签指令，禁止把语言约束写进可编辑的提示词正文（否则管理员编辑提示词时会丢失）。
+- **错误信息仍用英文**：工具与内部流程返回的 `error` 面向排障而非终端用户（同 `internal/ai/tools` 包注释），保持英文，不属于本约束所指的「提示词」范畴。
+- **出厂值只对新装库生效**：提示词经 `002_fixtures.sql` 以 `ON CONFLICT (key) DO NOTHING` 种子化，调整文案仅影响新装库；已部署库的存量 `value` / `default_value` 不回填，由管理员在参数页改写。
+
 ### 枚举统一注册表（enum 注册表 / search-generate 规范）
 
 - **单一数据来源**：所有枚举值统一注册进 `internal/pkg/enum` 注册表（`enum.Register(enum.Type{Name, Entries})` 或 `enum.RegisterSource(name, entriesSource)`，条目 `enum.Entry{Key, Value}`），每个枚举类（类名如 `channelType`、`httpMethod`）有且仅有一个注册点，类内 key 互斥唯一、value 互斥唯一。数据库内存储该字段枚举值时一律存 **value**（不可存 key）。
 - **声明与注册一律在取值空间的归属包**：每个枚举类的唯一注册点落在**取值空间的归属包**——即该取值空间的定义处，声明形态两类：
-  - 取值空间固定的枚举：取值空间就地声明在该包内（类型化取值常量 + 取值序列），并在包内 `init()` 经 `enum.EntriesOf` + `enum.Register` 在注册时快照条目；若包内已有该取值空间的常量/清单（如 `base.SupportLanguages`、`base.EffectAllow`、`core.TemplateSource*`、`tag.EventStatus*`、`vtab.redisKind*`、`llm.AllSlots`），则**直接复用**为条目来源，不重复声明常量。当前归属：`language` / `policyEffect` → `internal/pkg/base`；`httpMethod` / `httpVersion` → `internal/models/network`；`notificationSource` / `notificationRecordStatus` → `internal/models/core`；`tagAlertStatus` → `internal/models/tag`；`datasourceStruct` → `internal/pkg/sqlitevtab/vtab`；`llmModelKind` / `llmSlot` / `llmToolSource` / `memoryKind` / `memoryStatus` → `internal/pkg/llm`；`mcpTransport` → `internal/ai/tools/mcp`；`evalStage` / `evalStageStatus` / `diagnosisCategory` → `internal/ai`。**禁止**任何集中的纯声明包（如曾经的 `internal/enums`）：类必须与它的取值空间同包，跨层共用类由消费方 import 归属包引用其常量。
+  - 取值空间固定的枚举：取值空间就地声明在该包内（类型化取值常量 + 取值序列），并在包内 `init()` 经 `enum.EntriesOf` + `enum.Register` 在注册时快照条目；若包内已有该取值空间的常量/清单（如 `base.SupportLanguages`、`base.EffectAllow`、`core.TemplateSource*`、`tag.EventStatus*`、`vtab.redisKind*`、`ai.AllSlots`），则**直接复用**为条目来源，不重复声明常量。当前归属：`language` / `policyEffect` → `internal/pkg/base`；`httpMethod` / `httpVersion` → `internal/models/network`；`notificationSource` / `notificationRecordStatus` → `internal/models/core`；`tagAlertStatus` → `internal/models/tag`；`datasourceStruct` → `internal/pkg/sqlitevtab/vtab`；`llmModelKind` / `chunkUnitKind` → `internal/pkg/llm`；`llmSlot`（取值空间 `Slot` / `AllSlots`）→ `internal/models/ai`；`llmToolSource` → `internal/models/ai`；`agentKind` / `agentRunStatus` / `memoryKind` / `memoryStatus` → `internal/models/ai`；`mcpTransport` → `internal/ai/tools/mcp`；`evalStage` / `evalStageStatus` / `diagnosisCategory` → `internal/ai`。**禁止**任何集中的纯声明包（如曾经的 `internal/enums`）：类必须与它的取值空间同包，跨层共用类由消费方 import 归属包引用其常量。
   - 业务注册表来源（channelType / notificationEvent / datasourceType / tagRuleModel / tagEventDimension）：值空间随业务注册表在代码内固定，由**所属业务包**（message / notify / vtab / tagengine）经 `enum.RegisterSource(类名, func() []enum.Entry)` 声明条目来源——条目不在注册时快照，而在每次读取（`Get` / `List`）时从业务注册表实时派生，避免包内多 `init()` 的文件顺序影响条目完整性；与 `/channel/types`、`/template/events`、`/datasource/types`、tagengine 注册表共用单一来源。视图层不再组装任何枚举类。
 - **归属判据是取值空间的拥有者，而非存储位置**：*被模型列存储 ≠ 归 model*。取值空间仅作为某个模型列的值域存在时，归该模型包（如 `knowledgeDocStatus` → `internal/models/ai`、`notificationRecordStatus` → `internal/models/core`、`tagAlertStatus` → `internal/models/tag`）；若该词汇由某个非 model 子系统定义或使用（如 `documentFormat` 由 `internal/pkg/docconv` 的 `Format` 定义、`mcpTransport` 由 `internal/ai/tools/mcp` 的传输实现使用），则归该子系统所属包，**不得**因「存在同名模型列」而迁入 model——后者会迫使 `internal/pkg` 反向依赖 `models`，或就地重复声明常量造成定义漂移。编排层（`internal/worker`、`internal/manager`）不设枚举注册点：记录的生命周期状态是持久化行的值域，归其模型包，驱动状态迁移的 handler/view 只是消费方。
 - **字段与枚举类绑定**：`search.toml` `[[enums]]` 仅作「结构体类型 + 字段 JSON 名 → 枚举类名」绑定引用（`type` / `field` / `set`），`search-generate` 生成进视图层 `enum_bindings.go` 的 `enumBindings`（绑定视图层结构体字段名，属视图层关注点），meta.go 反射输出 `FieldMeta.EnumType`；运行时字段（如 `NotificationTemplateCreateIn.event`）经 `views.AddEnumBinding(typeName, field, className)`（`enum_registry.go`）在模块 `init()` 补充。`set` 类名仅为引用，不携带可选项——可选项唯一来源是 enum 注册表。
@@ -184,7 +237,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **前端消费契约**：类名常量集中在 `utils/enums.ts` 的 `EnumClass`；`enumFieldTypeOfMeta` 从 meta `bodyOutput` 取字段 `enumType`，`ensureEnum` / `enumEntriesOf` / `enumLabelOf`（value/key 双解析优先 value）/ `enumOptionsOf` 统一经枚举 store；表头/筛选（SearchTable.vue、AdaptiveCell.vue）与页面下拉一律按 `enumType` 定位枚举类，禁止手工维护选项字面量。通知模板 `t` 函数类感知：`t "<类名>" <key|value>` 优先按 value 匹配再按 key 匹配，经 `enum.<类名>.<key>` 渲染 label。
 - **目标模型枚举（tagRuleModel）**：Key 为 `tagengine.ModelKey` 推导的短展示键（camelCase，如 `httpTransport`），Value 为完整类型键（数据库存储语义，驱动 `WHERE model = ?` 匹配 tag_summings）；`TagEventRecordHit.Model` 落库存枚举短键（`toEventHit` 收敛），通知模板 `t "tagRuleModel" .Model` 与展示经同一枚举类收敛；S3 明文查看接口的模型 `switch` 经 `tagengine.ModelKey` 幂等匹配（兼容完整类型键/枚举键两种入参）。禁止 snake_case 与完整类型键作为展示键双写。
 - **前端禁止声明枚举字面量**：枚举的取值集合、默认值与展示文案**一律由后端接口返回**，前端不得在任何文件中书写枚举取值数组或取值常量——包括 `const SLOT_ORDER = ["flash", "standard", "advanced", "embedding"]`（取值集合）与 `const DEFAULT_SLOT = "standard"`（默认值）这类形式。理由：字面量一旦落在前端就会与后端注册表/参数配置漂移（曾出现助手页把默认档位写死 `standard`，运维把参数 `agent.defaultSlot` 改为 `advanced` 后该页仍按 `standard` 生成）。取值集合与默认值经接口下发（搜索类走 `enumType` / 参数类走 `options` + `enumType` / 状态类走 `defaultSlot` 等），选项文案经 `enum.<类名>.<key>` 渲染，需要固定展示顺序时以接口返回顺序为准，前端不再自行排序。
-- **参数注册表的枚举取值**：参数注册表（`internal/pkg/llm` 的 `ParamSpec`）中取值空间属于某个枚举类的参数，必须同时声明 `Options`（封闭取值清单：可选项与写入校验的唯一来源，由枚举/业务注册表**派生**得出，禁止重复书写字面量）与 `EnumType`（枚举类名，仅供消费方按 `enum.<类名>.<key>` 渲染 label）；`param/list` 出参带 `enumType`，前端据此经枚举 store 渲染下拉项文案，未声明 `EnumType` 时字面量本身即文案（如 `retrieval.fusion`）。枚举类名与取值清单的一致性由 `internal/manager/views/llm/param_enum_test.go` 的守卫测试兜底。
+- **参数注册表的枚举取值**：参数注册表（`internal/ai` 的 `ParamSpec`）中取值空间属于某个枚举类的参数，必须同时声明 `Options`（封闭取值清单：可选项与写入校验的唯一来源，由枚举/业务注册表**派生**得出，禁止重复书写字面量）与 `EnumType`（枚举类名，仅供消费方按 `enum.<类名>.<key>` 渲染 label）；`param/list` 出参带 `enumType`，前端据此经枚举 store 渲染下拉项文案，未声明 `EnumType` 时字面量本身即文案（如 `retrieval.fusion`）。枚举类名与取值清单的一致性由 `internal/manager/views/llm/param_enum_test.go` 的守卫测试兜底。
 
 ### 字段校验标签（validator 自定义 tag）
 
@@ -202,9 +255,10 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 - **四分类与唯一清单**：文档按 Diátaxis 组织为教程（`docs/tutorials/`）、操作指南（`docs/how-to/`）、参考（`docs/reference/`）、解释（`docs/explanation/`）四类；分类取值与全部条目（分类/标题/摘要/角色/适用场景/来源包/产物路径/渲染档）唯一登记在 `internal/docs/registry.go` 的 `Registry()`，分类取值定义在 `internal/docs/category.go`（`tutorial` / `how-to` / `reference` / `explanation`），新增或调整文档一律改此处。
 - **建议阅读角色与适用场景**：每条条目须标注一个或多个建议阅读角色（`Entry.Roles`）与一句话适用场景（`Entry.Scene`）。角色取值定义在 `internal/docs/role.go`，`Roles()` 是角色集合唯一注册点，取值为 `admin`（管理员，平台治理：用户 / 角色权限 / 命名空间 / 功能开关）、`secops`（安全运营，日常使用告警与标签：查看风险 / 编写调整 rego 规则 / 解读标签窗口统计 / 接收通知）、`ops`（运维，部署与运行：安装配置 / 数据库迁移 / 数据源接入 / 通知渠道配置 / 异步任务与队列 / 采集运行）、`dev`（研发，扩展系统能力：数据源插件 / 通知渠道类型 / 枚举类 / AI Agent 工具 / 管理端页面 / 依赖注入与生命周期 / 流水线调度），新增或调整角色一律改此处。角色与场景在三处呈现：叙述页页头 `> 分类：… · 来源：… · 角色：… · 适用场景：…`（手写 Overview 页同带角色行）、`docs/README.md` 各条目行的 `（角色：…；来源 …）` 片段、以及 `docs/README.md` 末尾的「按角色找文档」分区。守卫测试强制每条条目 Roles 与 Scene 非空、每个角色合法且至少被一条条目使用。
-- **单一事实来源**：教程 / 操作指南 / 解释的正文以既有功能包的 package 注释承载、经 gomarkdoc 导出，禁止在 Markdown 里重复维护同一知识；`docs/` 下除 `registry.go` 登记的手写条目（`Overview: true`）与既有 `docs/kernel/` 文档外，其余均为生成产物，首行带 `DO NOT EDIT` 生成标记（`internal/docs/export.go` 的 `generatedHeaderFormat`），不得手改。
+- **单一事实来源**：教程 / 操作指南 / 解释的正文以既有功能包的 package 注释承载、经 gomarkdoc 导出，禁止在 Markdown 里重复维护同一知识；`docs/` 下除 `registry.go` 登记的手写条目（`Overview: true`）、既有 `docs/kernel/` 文档与投影页外，其余均为生成产物，首行带 `DO NOT EDIT` 生成标记（`internal/docs/export.go` 的 `generatedHeaderFormat`），不得手改。
+- **投影页（Projection）**：除「叙述档（包注释）」与「参考档（包符号）」外，第三类产物是**投影页**——正文由调用方按单一事实来源在别处渲染好，导出器只负责落盘并套用统一页头（分类固定为参考）。**约束**：投影页正文必须以「声明 → 投影」方式派生（禁止人工维护第二份说明）；投影页只进 `docs/` 供人阅读，不参与 RAG 摄取（见「投影边界（参考页不入 RAG）」）；`Options.Projections` 为空时导出行为与不传时完全一致；投影页不参与「按角色找文档」分区，与其条目仅出现在 `docs/README.md` 的「参考」分区。当前生产侧无投影页（原接口能力参考页已随「agent 调用工具请求原生接口」功能整体剔除），机制保留供后续声明源派生页面复用。
 - **每个包至多一条叙述条目**：同一包的 package 注释只对应一篇叙述页，避免同包多页内容重复、被 RAG 重复索引。
-- **导出命令**：`zki create docs`（`internal/cmd/docs.go`），自带 `PersistentPreRunE` / `PersistentPostRunE` 旁路根命令全局 eager 启动，故无 DB/Redis/Etcd 亦可运行；一次导出产出全部叙述页 + `./internal/...`、`./cmd/...` 的参考页 + `docs/README.md` 索引。
+- **导出命令**：`zki create docs`（`internal/cmd/docs.go`），自带 `PersistentPreRunE` / `PersistentPostRunE` 旁路根命令全局 eager 启动，故无 DB/Redis/Etcd 亦可运行；一次导出产出全部叙述页 + `./internal/...`、`./cmd/...` 的参考页 + `docs/README.md` 索引。**抽取或生成失败不得静默**：导出出错必须以 `pterm.Error` 报错并返回错误使命令非零退出，避免参考页缺失被吞掉。
 - **叙述档渲染约束（重要）**：叙述档在 `internal/docs/render.go` 中额外覆盖 `text` 模板（`narrativeTextTemplate`）关闭纯文本转义，因此叙述来源的 package 注释必须写成「原样 Markdown 且安全」——命令 / 路径 / 配置键 / 标识符一律用反引号包裹（否则 `_`、`*` 等会被 Markdown 解析成斜体 / 加粗）；禁止 `# ` 单井号标题（Go 文档注释只识别单井号为 heading，会渲染成固定层级并与注册表注入的 H1 标题重复、层级倒挂），顶层小节用 `## `、嵌套用 `### `；避免会被当作 HTML 标签吞掉的裸尖括号占位符。
 - **参考档保持内置转义**：参考档不覆盖 `text` 模板，沿用 gomarkdoc 内置转义——这对符号文档里的字面量 `#`、尖括号是正确行为，不得关闭。
 - **守卫测试**：`internal/docs/registry_test.go` 校验分类合法、输出路径唯一、来源包存在、叙述条目元信息完整；改注册表后必须过此测试。
@@ -904,7 +958,7 @@ meta:
 
 1. 无死代码：及时清理未使用的 import、变量、函数
 2. 一致性优先：遵循所改文件/模块既有模式
-3. 注释语言：全项目统一使用中文（Go 与前端一致），禁止中英双语或纯英文
+3. 注释语言：全项目统一使用中文（Go 与前端一致），禁止中英双语或纯英文；送入模型的提示词与工具描述同此（见「LLM 提示词与工具文案（中文约束）」）
 4. 类型安全：TypeScript strict mode；Go 适当使用泛型
 5. 错误处理：禁止忽略错误，始终包裹上下文
 6. DI：新依赖一律走 `provider/` → `Inject` → `Invoke`
@@ -912,4 +966,5 @@ meta:
 8. 测试文件与被测源码放在一起（`_test.go` / `_test.ts`）
 9. 代码与注释中禁止 emoji，除非显式要求
 10. 提交前运行 `pnpm lint`（web 前端 ESLint）、`pnpm lint:style`（Stylelint）与 `pnpm type-check`（vue-tsc），三者全部通过
-11. 提交前运行 `make lint`（Go 注释完备性检查，见「Comments」），并保证 `gofmt`、`go build ./...`、`go vet ./...` 通过
+11. 分层边界：`internal/pkg/llm` 只承载 AI 能力薄封装——OpenAI 兼容客户端、端点配置快照（`ModelConfig`）、embedding 探针与 Markdown 分块器，以及客户端入参契约所需的 `ModelKind` 取值与解析（模型档位 `Slot` 及其取值空间/解析 helper 归 `internal/models/core`，因被持久化模型用作 GORM 字段类型）；LLM 行为参数注册表（`Specs` / `Params`）、内置工具元信息（`ToolSpecs`）、pgvector 列校准（`ReconcileEmbeddingColumn` 等）、业务数据清洗（`SanitizeBusinessData`）与 embedding 兼容性判定（`VerifyEmbeddingCompat`）一律归 `internal/ai`；业务枚举按取值空间归 `internal/models/core`（`ToolSource` / `llmSlot`）或 `internal/models/ai`（`AgentKind` / `AgentRunStatus` / `SessionStatus` / `MessageRole` / `MemoryKind` / `MemoryStatus`），禁止再上移进 `internal/pkg/llm`
+12. 提交前运行 `make lint`（Go 注释完备性检查，见「Comments」），并保证 `gofmt`、`go build ./...`、`go vet ./...` 通过

@@ -16,22 +16,20 @@ import (
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 	"github.com/open-policy-agent/opa/rego"
-	"gorm.io/datatypes"
 
 	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai/tools"
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
-// agentNode 常量：Eino Graph 五节点管线的节点名（上下文组装 → 混合检索 →
-// 业务数据清洗 → LLM 生成 → 结构化校验）。
+// agentNode 常量：Eino Graph 四节点管线（上下文组装 → 业务数据清洗 → LLM 生成
+// → 结构化校验）的节点名。
 const (
 	agentNodeContextAssembly = "context_assembly"
-	agentNodeHybridRetrieval = "hybrid_retrieval"
 	agentNodeSanitize        = "sanitize_business_data"
 	agentNodeLLMGeneration   = "llm_generation"
 	agentNodeValidation      = "validation"
@@ -41,9 +39,37 @@ const (
 // package agent 且规则名为 validate（data.agent.validate），返回值须为布尔。
 const agentRegoQuery = "data.agent.validate"
 
-// agentSummarySectionTitle 是注入给 LLM 时「会话滚动摘要」段的英文标题常量（长期记忆分节的
+// agentSummarySectionTitle 是注入给 LLM 时「会话滚动摘要」段的标题常量（长期记忆分节的
 // 标题取参数 memory.sectionTitle，分节位于摘要之后、窗口历史之前）。
-const agentSummarySectionTitle = "## Conversation Summary"
+const agentSummarySectionTitle = "## 会话摘要"
+
+// ToolRequest 是一条待前端执行的客户端工具调用请求（对应 SSE tool_request 事件的载荷）。
+type ToolRequest struct {
+	// CallID 与模型 tool call id 一致，用于回传时关联
+	CallID string `json:"callId"`
+	// ToolName 待执行的客户端工具名（模型给出的调用名）
+	ToolName string `json:"toolName"`
+	// Arguments 模型给出的调用入参（原始 JSON 文本，后端不做解释）
+	Arguments string `json:"arguments"`
+	// ApprovalRequired 是否需用户审批（客户端工具恒为 true）
+	ApprovalRequired bool `json:"approvalRequired"`
+}
+
+// ToolRequestReporter 上报一条待执行的客户端工具调用请求；返回错误（写失败/客户端断开）时挂起中止。
+type ToolRequestReporter func(ToolRequest) error
+
+// ToolResult 是前端回传的一次客户端工具调用执行结果（对应恢复请求的载荷），按 CallID 与挂起时
+// 下发的 tool_request 关联。
+type ToolResult struct {
+	// CallID 与 tool_request 下发的 callId 一致
+	CallID string `json:"callId"`
+	// Approved 用户是否批准执行该调用
+	Approved bool `json:"approved"`
+	// Result 执行结果文本（批准且执行成功时有效）
+	Result string `json:"result,omitempty"`
+	// Error 执行错误文本（前端执行失败时有效）
+	Error string `json:"error,omitempty"`
+}
 
 // AgentInput 是一次 Agent 提问的图输入。
 type AgentInput struct {
@@ -57,38 +83,49 @@ type AgentInput struct {
 	SessionID uint `json:"sessionID,omitempty"`
 	// AgentKind 本次运行所属的 Agent 类型，是长期记忆按「命名空间 + Agent 类型」隔离的维度；
 	// 为空时按 knowledge 处理。会话路径由 StreamRun 从会话读取后注入。
-	AgentKind llm.AgentKind `json:"agentKind,omitempty"`
+	AgentKind ai.AgentKind `json:"agentKind,omitempty"`
 	// HistoryMessages 历史消息（一般由 StreamRun 从会话加载，也可由调用方直接注入）
 	HistoryMessages []*schema.Message `json:"-"`
 	// Summary 本次生成使用的会话滚动摘要（由 StreamRun 从会话读取/刷新后注入），
 	// 非空时作为独立摘要段插在系统提示之后、窗口历史之前
 	Summary string `json:"-"`
 	// BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
-	BusinessData llm.BusinessData `json:"businessData,omitempty"`
+	BusinessData BusinessData `json:"businessData,omitempty"`
 	// RegoRule 可选的结构化草稿 Rego 校验规则源码；为空跳过规则校验
 	RegoRule string `json:"regoRule,omitempty"`
 	// Slot 显式指定的 LLM 档位；为空时依次回退到 DeclaredSlot 与
 	// agent.defaultSlot 参数（见 resolveInputSlot）
-	Slot llm.Slot `json:"slot,omitempty"`
+	Slot ai.Slot `json:"slot,omitempty"`
 	// DeclaredSlot 调用点声明的默认档位（不对外暴露），优先级低于显式 Slot
-	DeclaredSlot llm.Slot `json:"-"`
+	DeclaredSlot ai.Slot `json:"-"`
 	// ToolReporter 工具调用阶段事件的上报回调（不对外暴露），由视图层注入 SSE 写入器；
 	// 为 nil 时不上报。与 HistoryMessages / DeclaredSlot 同为 json:"-"。
 	ToolReporter EvalReporter `json:"-"`
+	// ToolRequestReporter 挂起时上报待执行的客户端工具调用请求的通道（不对外暴露），由视图层注入
+	// SSE 写入器；为 nil（或本次运行无会话）时客户端工具不挂起，按工具失败回灌。与 ToolReporter 同为 json:"-"。
+	ToolRequestReporter ToolRequestReporter `json:"-"`
+	// ResumeMessages 恢复运行要续跑的消息链（不对外暴露）；非 nil 表示本次为恢复运行，节点 1 跳过
+	// 提问非空校验、节点 2 短路直接透传该消息链（不重跑业务数据清洗与记忆召回）。
+	ResumeMessages []*schema.Message `json:"-"`
+	// ResumeCitations 恢复运行要产出的检索引用（不对外暴露），由挂起时刻持久化的引用预置进采集器。
+	ResumeCitations []RetrievalResult `json:"-"`
 }
 
 // ChatResolver 按档位解析对话模型（使用者侧行为契约）：由上层装配方（Runtime）
 // 实现，Agent 内部按本次运行解析出的档位调用它取回对话客户端，从而在
 // 同一张图内支持按请求切换模型而不重建图。
-type ChatResolver = func(slot llm.Slot) (model.BaseChatModel, error)
+type ChatResolver = func(slot ai.Slot) (model.BaseChatModel, error)
 
 // AgentState 是图运行期间的共享状态，经 compose.ProcessState 在节点间传递
-// 原始输入与检索引用（局部状态按次运行隔离，并发安全由框架保证）。
+// 原始输入与知识检索采集器（局部状态按次运行隔离，并发安全由框架保证）。
 type AgentState struct {
-	input        AgentInput        // 节点 1 写入的原始输入
-	citations    []RetrievalResult // 节点 3 写入的检索引用
-	slot         llm.Slot          // 节点 1 写入的本次运行档位
-	toolReporter EvalReporter      // 节点 1 写入的本次运行工具阶段上报回调
+	input        AgentInput          // 节点 1 写入的原始输入
+	knowledge    *knowledgeCollector // 节点 1 创建的知识检索采集器（供工具循环写入、节点 4 读取）
+	slot         ai.Slot             // 节点 1 写入的本次运行档位
+	toolReporter EvalReporter        // 节点 1 写入的本次运行工具阶段上报回调
+	toolRequests ToolRequestReporter // 节点 1 写入的本次运行客户端工具请求上报通道（节点 3 挂起时使用）
+	resume       []*schema.Message   // 节点 1 写入的恢复消息链，非 nil 表示本次为恢复运行（节点 2 据此短路）
+	suspended    bool                // 节点 3 在挂起时置为 true，节点 4 据此不发任何输出（不产出 done、不报错）
 }
 
 // AgentOutput 是图输出（流式项）：流中先出现若干 delta 增量项，最后出现一个
@@ -122,25 +159,25 @@ func init() {
 	})
 }
 
-// Agent 是 AI 助手的对话执行器：持有编译后的五节点 Eino Graph（Runnable），
+// Agent 是 AI 助手的对话执行器：持有编译后的四节点 Eino Graph（Runnable），
 // 提供非流式（Generate）与流式（Stream）两种执行入口，并依赖 SessionStore
 // 做会话持久化（见 StreamRun）。行为参数（提示词、分节标题、上下文与截断上限）
 // 一律经参数解析器 params 读取。
 type Agent struct {
 	resolver  ChatResolver             // 图内 LLM 节点（按档位解析对话模型）
-	retriever retriever.Retriever      // 图内检索节点（*Retriever 天然满足）
+	retriever retriever.Retriever      // 知识检索器，供 knowledge_search 工具适配器调用（*Retriever 天然满足）
 	store     *SessionStore            // 会话持久化
-	params    *llm.Params              // 行为参数解析器（提示词、标题、上限、截断长度）
+	params    *Params                  // 行为参数解析器（提示词、标题、上限、截断长度）
 	memory    *Memory                  // 会话记忆服务（滚动摘要）；为 nil 时跳过摘要
 	logger    *logging.Logger          // 日志记录器（可空：为 nil 时跳过告警）
 	tools     []tool.BaseTool          // 本次装配可用的工具（无工具时为空）
 	toolInfos []*schema.ToolInfo       // 与 tools 对应的 schema 清单（无工具时为空）
 	toolIndex map[string]tool.BaseTool // 按 Info(ctx).Name 建立的工具索引（节点 4 派发用）
-	// runnable 编译后的五节点图执行入口（Generate 与 Stream 共用）。
+	// runnable 编译后的四节点图执行入口（Generate 与 Stream 共用）。
 	runnable compose.Runnable[AgentInput, AgentOutput]
 }
 
-// NewAgent 构造 Agent：校验依赖后组装五节点图并编译。resolver/retriever/store/params
+// NewAgent 构造 Agent：校验依赖后组装四节点图并编译。resolver/retriever/store/params
 // 任一为空时返回英文错误；memory 与 logger 允许为 nil（memory 为 nil 时跳过滚动摘要，
 // logger 为 nil 时跳过告警）；resolver 与 retriever 均为函数/接口参数，测试可注入替身。
 // 行为参数由上层（Runtime）从 agent_params 解析后传入。tools/toolInfos 为本次装配可用的
@@ -149,7 +186,7 @@ type Agent struct {
 // （即 Runtime 的装配 ctx），使取消、超时与链路追踪同样覆盖构造期，而非藏在 background
 // context 之后；Info 取失败的工具被跳过（该工具因此不可派发，但其 schema 若在 toolInfos
 // 中仍会被模型看到——正常装配下两者同源，不会出现该情形）。
-func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *llm.Params, memory *Memory, logger *logging.Logger, tools []tool.BaseTool, toolInfos []*schema.ToolInfo) (*Agent, error) {
+func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store *SessionStore, params *Params, memory *Memory, logger *logging.Logger, tools []tool.BaseTool, toolInfos []*schema.ToolInfo) (*Agent, error) {
 	if resolver == nil {
 		return nil, errors.New("agent: nil chat resolver")
 	}
@@ -182,27 +219,22 @@ func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Re
 	if err := g.AddLambdaNode(agentNodeContextAssembly, compose.InvokableLambda(a.assembleContext)); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	// 节点 2：混合检索（向量 + 关键词，经 RRF/加权融合与 LLM 重排）。
-	if err := g.AddRetrieverNode(agentNodeHybridRetrieval, retriever); err != nil {
-		return nil, errors.WithStack(err)
-	}
-	// 节点 3：业务数据清洗 + 最终消息组装（系统提示 + 历史 + 检索知识 + 业务现场）。
+	// 节点 2：业务数据清洗 + 最终消息组装（系统提示 + 历史 + 业务现场）。
 	if err := g.AddLambdaNode(agentNodeSanitize, compose.InvokableLambda(a.sanitizeBusinessData)); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	// 节点 4：LLM 生成（流式 lambda；按本次运行档位解析对话模型后 Stream），
+	// 节点 3：LLM 生成（流式 lambda；按本次运行档位解析对话模型后 Stream），
 	// 输出 *schema.Message 流，节点 key 与出边保持不变。
 	if err := g.AddLambdaNode(agentNodeLLMGeneration, compose.StreamableLambda(a.generate)); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	// 节点 5：结构化校验（透传增量 + 流末尾聚合校验），输出 AgentOutput 流。
+	// 节点 4：结构化校验（透传增量 + 流末尾聚合校验），输出 AgentOutput 流。
 	if err := g.AddLambdaNode(agentNodeValidation, compose.TransformableLambda(a.validateOutput)); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	edges := [][2]string{
 		{compose.START, agentNodeContextAssembly},
-		{agentNodeContextAssembly, agentNodeHybridRetrieval},
-		{agentNodeHybridRetrieval, agentNodeSanitize},
+		{agentNodeContextAssembly, agentNodeSanitize},
 		{agentNodeSanitize, agentNodeLLMGeneration},
 		{agentNodeLLMGeneration, agentNodeValidation},
 		{agentNodeValidation, compose.END},
@@ -220,7 +252,7 @@ func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Re
 	return a, nil
 }
 
-// generate 是节点 4（流式 lambda）：从图状态读取本次运行解析出的档位与工具阶段上报回调，
+// generate 是节点 3（流式 lambda）：从图状态读取本次运行解析出的档位与工具阶段上报回调，
 // 经 resolver 取回对话客户端。无启用工具（toolInfos 为空）时退化为单次流式生成，行为与
 // 引入工具前完全一致；存在启用工具时执行受 agent.maxToolRounds 约束的工具调用循环——
 // 每轮模型流式生成，含 ToolCalls 的轮次执行工具、回填结果后进入下一轮（其文本增量不外发），
@@ -228,13 +260,17 @@ func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Re
 // 不中断整轮；达到轮数上限仍有 ToolCalls 时以该轮文本为答案并上报 toolCall 阶段 failed，
 // 不返回错误。档位未绑定或解析失败时返回英文错误，由图的流错误通道向外传播。
 func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*schema.StreamReader[*schema.Message], error) {
-	var slot llm.Slot
+	var slot ai.Slot
 	var reporter EvalReporter
+	var toolRequests ToolRequestReporter
 	var in AgentInput
+	var collector *knowledgeCollector
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 		slot = st.slot
 		reporter = st.toolReporter
+		toolRequests = st.toolRequests
 		in = st.input
+		collector = st.knowledge
 		return nil
 	}); err != nil {
 		return nil, errors.WithStack(err)
@@ -264,8 +300,10 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 			maxRounds = 1
 		}
 		maxBytes := a.params.Int("agent.maxToolResultBytes")
-		// 派发工具前注入记忆运行期信息：memory_write 据此取回写入器与本次运行的归属。
+		// 派发工具前注入记忆与知识检索运行期信息：memory_write 据此取回写入器与本次运行的
+		// 归属，knowledge_search 据此取回检索器（命名空间/文档限定）与采集器。
 		toolCtx := a.memoryToolContext(ctx, in)
+		toolCtx = a.knowledgeToolContext(toolCtx, in, collector)
 		current := messages
 		for round := 0; round < maxRounds; round++ {
 			reader, err := chat.Stream(ctx, current, model.WithTools(a.toolInfos))
@@ -307,6 +345,8 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 			// 中间轮：不外发任何增量文本，仅把含 ToolCalls 的 assistant 消息追加进下一轮上下文，
 			// 并逐个执行工具、把结果作为 tool 消息回填。
 			current = append(current, msg)
+			// pending 收集本轮通过校验、待前端执行的客户端工具调用；非空即本轮结束时挂起。
+			var pending []pendingToolCall
 			for _, tc := range msg.ToolCalls {
 				name := tc.Function.Name
 				if reporter != nil {
@@ -314,6 +354,23 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 						outSW.Send(nil, errors.WithStack(rerr))
 						return
 					}
+				}
+				// client 来源工具不在本地工具索引 a.toolIndex 中，须特判：仅当本次运行有持久化会话
+				// 且具备审批通道时登记为待执行调用（稍后挂起），否则按工具失败回灌。
+				if isClientTool(name) {
+					call, failText := prepareClientToolCall(tc, in, toolRequests)
+					if call != nil {
+						pending = append(pending, *call)
+						continue
+					}
+					if reporter != nil {
+						if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, Err: failText}); rerr != nil {
+							outSW.Send(nil, errors.WithStack(rerr))
+							return
+						}
+					}
+					current = append(current, schema.ToolMessage(failText, tc.ID))
+					continue
 				}
 				start := time.Now()
 				result, execErr := a.runTool(toolCtx, tc)
@@ -337,6 +394,35 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 					}
 				}
 				current = append(current, schema.ToolMessage(result, tc.ID))
+			}
+			// 本轮有通过校验的客户端调用：挂起本次运行——先持久化运行现场，再置挂起标志，最后按原序
+			// 逐条下发 tool_request；随后结束本次流（defer outSW.Close()）且不产出 done。无待执行调用
+			// 则维持既有行为进入下一轮。
+			if len(pending) > 0 {
+				if err := a.persistSuspendedRun(ctx, in, slot, current, collector, pending); err != nil {
+					outSW.Send(nil, errors.WithStack(err))
+					return
+				}
+				if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
+					st.suspended = true
+					return nil
+				}); err != nil {
+					outSW.Send(nil, errors.WithStack(err))
+					return
+				}
+				for i := range pending {
+					call := pending[i]
+					if err := toolRequests(ToolRequest{
+						CallID:           call.CallID,
+						ToolName:         call.ToolName,
+						Arguments:        call.Arguments,
+						ApprovalRequired: true,
+					}); err != nil {
+						outSW.Send(nil, errors.WithStack(err))
+						return
+					}
+				}
+				return
 			}
 		}
 	}()
@@ -430,8 +516,8 @@ func truncateBytes(s string, max int) string {
 // resolveInputSlot 解析本次运行的档位并写回输入：优先级为显式 Slot → 调用点声明的
 // DeclaredSlot → 参数 agent.defaultSlot。解析失败返回英文错误。
 func (a *Agent) resolveInputSlot(input *AgentInput) error {
-	fallback := llm.Slot(a.params.String("agent.defaultSlot"))
-	slot, err := llm.ResolveSlot(input.Slot, input.DeclaredSlot, fallback)
+	fallback := ai.Slot(a.params.String("agent.defaultSlot"))
+	slot, err := ai.ResolveSlot(input.Slot, input.DeclaredSlot, fallback)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -444,7 +530,6 @@ func (a *Agent) Generate(ctx context.Context, input AgentInput, opts ...compose.
 	if err := a.resolveInputSlot(&input); err != nil {
 		return AgentOutput{}, err
 	}
-	opts = append(opts, a.retrieverOptions(input))
 	out, err := a.runnable.Invoke(ctx, input, opts...)
 	if err != nil {
 		return AgentOutput{}, errors.WithStack(err)
@@ -458,7 +543,6 @@ func (a *Agent) Stream(ctx context.Context, input AgentInput, opts ...compose.Op
 	if err := a.resolveInputSlot(&input); err != nil {
 		return nil, err
 	}
-	opts = append(opts, a.retrieverOptions(input))
 	reader, err := a.runnable.Stream(ctx, input, opts...)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -499,11 +583,11 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 		// 会话所属 Agent 类型是长期记忆的隔离维度，由会话决定（调用方的显式取值不覆盖它）。
 		input.AgentKind = session.AgentKind
 		input.Summary = a.refreshSummary(ctx, session, history)
-		if _, err := a.store.AppendMessage(ctx, &modelsai.AgentMessage{
+		if _, err := a.store.AppendMessage(ctx, &ai.AgentMessage{
 			SessionID:     input.SessionID,
 			NamespaceName: input.NamespaceName,
-			Role:          llm.MessageRoleUser,
-			Content:       strings.TrimSpace(input.Query),
+			Role:          ai.MessageRoleUser,
+			Content:       serializer.NewCrypto([]byte(strings.TrimSpace(input.Query))),
 		}); err != nil {
 			return nil, errors.WithStack(err)
 		}
@@ -518,14 +602,14 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 // trimMessagesByBytes 按字节预算从最旧开始丢弃整条消息，直到剩余消息的 Content 字节总数不
 // 超过 maxBytes；至少保留最新一条（只丢整条消息，故不会切断多字节字符），maxBytes 非正数或
 // 未超预算时原样返回。
-func trimMessagesByBytes(messages []*modelsai.AgentMessage, maxBytes int) []*modelsai.AgentMessage {
+func trimMessagesByBytes(messages []*ai.AgentMessage, maxBytes int) []*ai.AgentMessage {
 	if maxBytes <= 0 || len(messages) == 0 {
 		return messages
 	}
 	total := 0
 	for _, msg := range messages {
 		if msg != nil {
-			total += len(msg.Content)
+			total += len(msg.Content.Value())
 		}
 	}
 	if total <= maxBytes {
@@ -534,7 +618,7 @@ func trimMessagesByBytes(messages []*modelsai.AgentMessage, maxBytes int) []*mod
 	cut := 0
 	for cut < len(messages)-1 && total > maxBytes {
 		if messages[cut] != nil {
-			total -= len(messages[cut].Content)
+			total -= len(messages[cut].Content.Value())
 		}
 		cut++
 	}
@@ -545,12 +629,13 @@ func trimMessagesByBytes(messages []*modelsai.AgentMessage, maxBytes int) []*mod
 // 未摘要消息」（窗口最旧消息 ID 作上界），条数达到 memory.summaryMinEvictedMessages 且 memory
 // 非 nil 时用 flash 重写摘要并落库，同时把新摘要写回会话副本使本次生成即用新摘要。摘要失败仅
 // 告警、不中断生成、不推进游标；不受 memory.enabled 开关约束（该开关只管长期记忆）。
-func (a *Agent) refreshSummary(ctx context.Context, session *modelsai.AgentSession, history []*modelsai.AgentMessage) string {
-	if session == nil || a.memory == nil {
-		if session == nil {
-			return ""
-		}
-		return session.Summary
+func (a *Agent) refreshSummary(ctx context.Context, session *ai.AgentSession, history []*ai.AgentMessage) string {
+	if session == nil {
+		return ""
+	}
+	existing := string(session.Summary.Value())
+	if a.memory == nil {
+		return existing
 	}
 	var windowOldestID uint
 	if len(history) > 0 && history[0] != nil {
@@ -559,21 +644,21 @@ func (a *Agent) refreshSummary(ctx context.Context, session *modelsai.AgentSessi
 	evicted, err := a.store.ListMessagesBefore(ctx, session.ID, windowOldestID, session.SummaryUptoMessageID)
 	if err != nil {
 		a.warnf(ctx, "agent: loading evicted messages for the rolling summary failed: %v", err)
-		return session.Summary
+		return existing
 	}
 	if len(evicted) == 0 || len(evicted) < a.params.Int("memory.summaryMinEvictedMessages") {
-		return session.Summary
+		return existing
 	}
 	summary, upto, err := a.memory.Summarize(ctx, session, evicted)
 	if err != nil {
 		a.warnf(ctx, "agent: rolling summary failed, keeping the previous summary: %v", err)
-		return session.Summary
+		return existing
 	}
 	if err := a.store.UpdateSummary(ctx, session.ID, summary, upto); err != nil {
 		a.warnf(ctx, "agent: persisting the rolling summary failed, keeping the previous summary: %v", err)
-		return session.Summary
+		return existing
 	}
-	session.Summary = summary
+	session.Summary = serializer.NewCrypto([]byte(summary))
 	session.SummaryUptoMessageID = upto
 	return summary
 }
@@ -617,18 +702,18 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 // persistAssistantMessage 把 done 项持久化为会话的助手消息：正文始终落库，
 // 结构化草稿与引用来源非空时随消息写入。
 func (a *Agent) persistAssistantMessage(ctx context.Context, input AgentInput, done AgentOutput) error {
-	msg := &modelsai.AgentMessage{
+	msg := &ai.AgentMessage{
 		SessionID:     input.SessionID,
 		NamespaceName: input.NamespaceName,
-		Role:          llm.MessageRoleAssistant,
-		Content:       done.Content,
+		Role:          ai.MessageRoleAssistant,
+		Content:       serializer.NewCrypto([]byte(done.Content)),
 	}
 	if len(done.Draft) > 0 && string(done.Draft) != "null" {
-		msg.DraftJSON = datatypes.JSON(done.Draft)
+		msg.DraftJSON = serializer.NewCrypto(done.Draft)
 	}
 	if len(done.Citations) > 0 {
 		if b, err := json.Marshal(done.Citations); err == nil {
-			msg.CitationsJSON = datatypes.JSON(b)
+			msg.CitationsJSON = serializer.NewCrypto(b)
 		}
 	}
 	if _, err := a.store.AppendMessage(ctx, msg); err != nil {
@@ -637,22 +722,25 @@ func (a *Agent) persistAssistantMessage(ctx context.Context, input AgentInput, d
 	return nil
 }
 
-// retrieverOptions 组装本次检索的实现专属选项（命名空间与文档限定），经
-// compose.WithRetrieverOption 路由到图内检索节点。
-func (a *Agent) retrieverOptions(input AgentInput) compose.Option {
-	return compose.WithRetrieverOption(WithNamespace(input.NamespaceName), WithDocIDs(input.DocIDs))
-}
-
 // assembleContext 是节点 1：校验提问非空，将完整输入写入图状态（供后续节点
 // 读取业务数据/历史/校验规则），并输出检索查询串。
 func (a *Agent) assembleContext(ctx context.Context, in AgentInput) (string, error) {
-	if strings.TrimSpace(in.Query) == "" {
+	// 恢复路径没有新的用户提问，跳过提问非空校验；首次运行仍要求提问非空。
+	if in.ResumeMessages == nil && strings.TrimSpace(in.Query) == "" {
 		return "", errors.New("agent: empty query")
 	}
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 		st.input = in
+		if in.ResumeMessages != nil {
+			// 恢复路径：把挂起时刻持久化的引用预置进采集器，供节点 4 在 done 中产出引用。
+			st.knowledge = &knowledgeCollector{results: in.ResumeCitations}
+		} else {
+			st.knowledge = &knowledgeCollector{}
+		}
 		st.slot = in.Slot
 		st.toolReporter = in.ToolReporter
+		st.toolRequests = in.ToolRequestReporter
+		st.resume = in.ResumeMessages
 		return nil
 	}); err != nil {
 		return "", errors.WithStack(err)
@@ -660,22 +748,27 @@ func (a *Agent) assembleContext(ctx context.Context, in AgentInput) (string, err
 	return in.Query, nil
 }
 
-// sanitizeBusinessData 是节点 3：从图状态读取原始输入，清洗业务数据并组装
-// 发送给 LLM 的最终消息列表，同时把检索引用写入状态供校验节点输出。
-func (a *Agent) sanitizeBusinessData(ctx context.Context, docs []*schema.Document) ([]*schema.Message, error) {
+// sanitizeBusinessData 是节点 2：从图状态读取原始输入，清洗业务数据并组装
+// 发送给 LLM 的最终消息列表。
+func (a *Agent) sanitizeBusinessData(ctx context.Context, query string) ([]*schema.Message, error) {
 	var in AgentInput
+	var resume []*schema.Message
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 		in = st.input
-		st.citations = ToRetrievalResults(docs)
+		resume = st.resume
 		return nil
 	}); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	sanitized, err := llm.SanitizeBusinessData(in.BusinessData, a.params)
+	// 恢复路径短路：直接透传挂起时刻持久化的消息链，不重跑业务数据清洗与记忆召回，避免上下文漂移。
+	if resume != nil {
+		return resume, nil
+	}
+	sanitized, err := SanitizeBusinessData(in.BusinessData, a.params)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return buildAgentMessages(a.params, in.Summary, a.recallMemories(ctx, in), in.HistoryMessages, docs, sanitized, in.Query), nil
+	return buildAgentMessages(a.params, in.Summary, a.recallMemories(ctx, in), in.HistoryMessages, sanitized, query), nil
 }
 
 // recallMemories 取回本次运行可注入的长期记忆：记忆服务缺失、memory.enabled=false、命名空间为
@@ -685,7 +778,7 @@ func (a *Agent) recallMemories(ctx context.Context, in AgentInput) []MemoryHit {
 	if a.memory == nil || !a.params.Bool("memory.enabled") || in.SessionID == 0 {
 		return nil
 	}
-	agentKind, err := llm.ParseAgentKind(in.AgentKind)
+	agentKind, err := ai.ParseAgentKind(in.AgentKind)
 	if err != nil {
 		a.warnf(ctx, "agent: long-term memory retrieval skipped, invalid agent kind: %v", err)
 		return nil
@@ -698,7 +791,7 @@ func (a *Agent) recallMemories(ctx context.Context, in AgentInput) []MemoryHit {
 	return hits
 }
 
-// validateOutput 是节点 5：透传 LLM 流式增量（delta 项），流结束后聚合全文并
+// validateOutput 是节点 4：透传 LLM 流式增量（delta 项），流结束后聚合全文并
 // 执行结构化产物解析与 Rego 校验，产出最终 done 项。
 func (a *Agent) validateOutput(ctx context.Context, in *schema.StreamReader[*schema.Message]) (*schema.StreamReader[AgentOutput], error) {
 	outSR, outSW := schema.Pipe[AgentOutput](64)
@@ -719,6 +812,18 @@ func (a *Agent) validateOutput(ctx context.Context, in *schema.StreamReader[*sch
 			if chunk.Content != "" {
 				outSW.Send(AgentOutput{Delta: chunk.Content}, nil)
 			}
+		}
+		// 挂起：节点 3 已把本次流置为以 tool_request 为终态，故不产出 done、不报错，直接结束。
+		var suspended bool
+		if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
+			suspended = st.suspended
+			return nil
+		}); err != nil {
+			outSW.Send(AgentOutput{}, errors.WithStack(err))
+			return
+		}
+		if suspended {
+			return
 		}
 		full, err := schema.ConcatMessages(chunks)
 		if err != nil {
@@ -754,7 +859,7 @@ func (a *Agent) finalizeOutput(ctx context.Context, full *schema.Message) (Agent
 	var citations []RetrievalResult
 	var regoRule string
 	if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
-		citations = append([]RetrievalResult(nil), st.citations...)
+		citations = st.knowledge.snapshot()
 		regoRule = st.input.RegoRule
 		return nil
 	}); err != nil {
@@ -847,10 +952,10 @@ func validateDraftWithRego(ctx context.Context, source string, draft json.RawMes
 }
 
 // buildAgentMessages 组装发送给 LLM 的完整消息列表：系统提示 + 会话摘要（若有）+
-// 长期记忆分节（若有）+ 历史消息 + 检索知识 + 业务现场 + 当前提问（检索/业务段拼接在用户
-// 消息内，控制消息条数）。长期记忆分节位于摘要之后、窗口历史之前。系统提示词、摘要段标题、
-// 记忆段标题、三个分节标题与片段截断长度均经参数解析器 params 读取。
-func buildAgentMessages(params *llm.Params, summary string, memories []MemoryHit, history []*schema.Message, docs []*schema.Document, businessData llm.BusinessData, query string) []*schema.Message {
+// 长期记忆分节（若有）+ 历史消息 + 业务现场 + 当前提问（业务段拼接在用户消息内，控制消息
+// 条数）。长期记忆分节位于摘要之后、窗口历史之前。系统提示词、摘要段标题、记忆段标题、
+// 两个分节标题与片段截断长度均经参数解析器 params 读取。
+func buildAgentMessages(params *Params, summary string, memories []MemoryHit, history []*schema.Message, businessData BusinessData, query string) []*schema.Message {
 	messages := make([]*schema.Message, 0, 3+len(history))
 	messages = append(messages, schema.SystemMessage(params.Text("agent.systemPrompt")))
 	if trimmed := strings.TrimSpace(summary); trimmed != "" {
@@ -861,9 +966,6 @@ func buildAgentMessages(params *llm.Params, summary string, memories []MemoryHit
 	}
 	messages = append(messages, history...)
 	var parts []string
-	if len(docs) > 0 {
-		parts = append(parts, params.String("agent.retrievalSectionTitle")+"\n"+formatRetrievedDocs(params, docs))
-	}
 	if len(businessData) > 0 {
 		parts = append(parts, params.String("agent.businessSectionTitle")+"\n"+formatBusinessData(businessData))
 	}
@@ -876,7 +978,7 @@ func buildAgentMessages(params *llm.Params, summary string, memories []MemoryHit
 // 每条形如 "- [kind] title: content"（无标题时省略 "title: "）；正文为空或全部为空时返回空串，
 // 调用方据此跳过该分节。条数与单条长度已由 MemoryStore.Retrieve 按 memory.maxItems /
 // memory.maxItemBytes 限界，本函数不再重复截断。
-func formatMemories(params *llm.Params, memories []MemoryHit) string {
+func formatMemories(params *Params, memories []MemoryHit) string {
 	if len(memories) == 0 {
 		return ""
 	}
@@ -897,30 +999,9 @@ func formatMemories(params *llm.Params, memories []MemoryHit) string {
 	return params.String("memory.sectionTitle") + "\n" + strings.Join(lines, "\n")
 }
 
-// formatRetrievedDocs 将检索文档格式化为带标题的引用列表（正文经 truncateText
-// 限长到参数 agent.retrievedDocSnippetLimit，控制 prompt 体积）。
-func formatRetrievedDocs(params *llm.Params, docs []*schema.Document) string {
-	snippetLimit := params.Int("agent.retrievedDocSnippetLimit")
-	var sb strings.Builder
-	for i, d := range docs {
-		if i > 0 {
-			sb.WriteString("\n")
-		}
-		sb.WriteString("- ")
-		if d.MetaData != nil {
-			if title, ok := d.MetaData["title"].(string); ok && title != "" {
-				sb.WriteString(title)
-				sb.WriteString(": ")
-			}
-		}
-		sb.WriteString(truncateText(d.Content, snippetLimit))
-	}
-	return sb.String()
-}
-
 // formatBusinessData 将业务现场序列化为 JSON 文本。入参已经 SanitizeBusinessData
 // 清洗（其结果保证可序列化），因此这里的序列化不会失败。
-func formatBusinessData(data llm.BusinessData) string {
+func formatBusinessData(data BusinessData) string {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return "{}"
@@ -930,19 +1011,23 @@ func formatBusinessData(data llm.BusinessData) string {
 
 // toSchemaMessages 将持久化消息转为 eino schema.Message 列表（跳过空内容与
 // 未知角色），供图输入注入历史上下文。
-func toSchemaMessages(messages []*modelsai.AgentMessage) []*schema.Message {
+func toSchemaMessages(messages []*ai.AgentMessage) []*schema.Message {
 	out := make([]*schema.Message, 0, len(messages))
 	for _, m := range messages {
-		if m == nil || strings.TrimSpace(m.Content) == "" {
+		if m == nil {
+			continue
+		}
+		content := string(m.Content.Value())
+		if strings.TrimSpace(content) == "" {
 			continue
 		}
 		switch m.Role {
-		case llm.MessageRoleUser:
-			out = append(out, schema.UserMessage(m.Content))
-		case llm.MessageRoleAssistant:
-			out = append(out, schema.AssistantMessage(m.Content, nil))
-		case llm.MessageRoleSystem:
-			out = append(out, schema.SystemMessage(m.Content))
+		case ai.MessageRoleUser:
+			out = append(out, schema.UserMessage(content))
+		case ai.MessageRoleAssistant:
+			out = append(out, schema.AssistantMessage(content, nil))
+		case ai.MessageRoleSystem:
+			out = append(out, schema.SystemMessage(content))
 		}
 	}
 	return out

@@ -15,11 +15,10 @@ import (
 	"gorm.io/gorm/logger"
 
 	// 项目内部
-	mcptool "zhongkui.com/zhongkui/internal/ai/tools/mcp"
-	coremodel "zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/ai/tools/mcp"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // fakeTool 是测试用 eino 工具：Info 直接返回给定工具名（模拟内置/MCP 工具的 schema 来源）。
@@ -70,7 +69,7 @@ type fakeDialer struct {
 }
 
 // Dial 按 URL 返回预置结果（失败优先于成功）。
-func (d *fakeDialer) Dial(_ context.Context, cfg mcptool.ConnConfig) (mcpConn, error) {
+func (d *fakeDialer) Dial(_ context.Context, cfg mcp.ConnConfig) (mcpConn, error) {
 	d.dialed = append(d.dialed, cfg.URL)
 	if err, ok := d.failures[cfg.URL]; ok {
 		return nil, err
@@ -89,18 +88,18 @@ func newTestToolDB(t *testing.T) *database.DB {
 	if err != nil {
 		t.Fatalf("gorm.Open(sqlite) error = %v", err)
 	}
-	if err := gdb.AutoMigrate(&coremodel.McpServer{}, &coremodel.LlmTool{}); err != nil {
+	if err := gdb.AutoMigrate(&ai.McpServer{}, &ai.LlmTool{}); err != nil {
 		t.Fatalf("AutoMigrate error = %v", err)
 	}
 	return gdb
 }
 
 // seedMCPServer 插入一台 MCP 服务器并返回其记录（HTTP headers 留空以避开加解密链路）。
-func seedMCPServer(t *testing.T, db *database.DB, name, url string, enabled bool) *coremodel.McpServer {
+func seedMCPServer(t *testing.T, db *database.DB, name, url string, enabled bool) *ai.McpServer {
 	t.Helper()
-	server := &coremodel.McpServer{
+	server := &ai.McpServer{
 		Name:           name,
-		Transport:      string(mcptool.TransportStreamableHTTP),
+		Transport:      string(mcp.TransportStreamableHTTP),
 		URL:            url,
 		TimeoutSeconds: 5,
 		Enabled:        enabled,
@@ -117,9 +116,9 @@ func seedMCPServer(t *testing.T, db *database.DB, name, url string, enabled bool
 }
 
 // seedTool 插入一行 llm_tools 并返回其记录。
-func seedTool(t *testing.T, db *database.DB, name string, source llm.ToolSource, serverID *uint, remoteName string, enabled bool) *coremodel.LlmTool {
+func seedTool(t *testing.T, db *database.DB, name string, source ai.ToolSource, serverID *uint, remoteName string, enabled bool) *ai.LlmTool {
 	t.Helper()
-	row := &coremodel.LlmTool{
+	row := &ai.LlmTool{
 		Name:        name,
 		Source:      source,
 		McpServerID: serverID,
@@ -199,17 +198,17 @@ func TestLoadToolsEnabledAndDegrade(t *testing.T) {
 	// 行序（id 升序）即装配顺序：builtin（未注册实现，应降级为告警）、a1（启用）、a2（禁用）、
 	// b1（所属服务器禁用，静默跳过）、c1（服务器不可达，告警跳过）、a3（远端已不提供，告警跳过）、
 	// d1（可达，正常装配）。
-	seedTool(t, db, "tool-unregistered-builtin", llm.ToolSourceBuiltin, nil, "", true)
+	seedTool(t, db, "tool-unregistered-builtin", ai.ToolSourceBuiltin, nil, "", true)
 	serverA := seedMCPServer(t, db, "srv-a", "http://a.test/mcp", true)
-	seedTool(t, db, a1, llm.ToolSourceMCP, &serverA.ID, remoteA1, true)
-	seedTool(t, db, a2, llm.ToolSourceMCP, &serverA.ID, remoteA2, false)
+	seedTool(t, db, a1, ai.ToolSourceMCP, &serverA.ID, remoteA1, true)
+	seedTool(t, db, a2, ai.ToolSourceMCP, &serverA.ID, remoteA2, false)
 	serverB := seedMCPServer(t, db, "srv-b", "http://b.test/mcp", false)
-	seedTool(t, db, "tool-b1", llm.ToolSourceMCP, &serverB.ID, "remote-b1", true)
+	seedTool(t, db, "tool-b1", ai.ToolSourceMCP, &serverB.ID, "remote-b1", true)
 	serverC := seedMCPServer(t, db, "srv-c", "http://c.test/mcp", true)
-	seedTool(t, db, "tool-c1", llm.ToolSourceMCP, &serverC.ID, "remote-c1", true)
-	seedTool(t, db, a3, llm.ToolSourceMCP, &serverA.ID, remoteA3, true)
+	seedTool(t, db, "tool-c1", ai.ToolSourceMCP, &serverC.ID, "remote-c1", true)
+	seedTool(t, db, a3, ai.ToolSourceMCP, &serverA.ID, remoteA3, true)
 	serverD := seedMCPServer(t, db, "srv-d", "http://d.test/mcp", true)
-	seedTool(t, db, "tool-d1", llm.ToolSourceMCP, &serverD.ID, "remote-d1", true)
+	seedTool(t, db, "tool-d1", ai.ToolSourceMCP, &serverD.ID, "remote-d1", true)
 
 	set, err := store.LoadTools(context.Background(), nil)
 	if err != nil {
@@ -298,7 +297,7 @@ func TestLoadToolsRealDialerUnreachableDegrades(t *testing.T) {
 
 	// 127.0.0.1:1 上无监听进程：握手必然失败（连接被拒），按服务器粒度降级。
 	server := seedMCPServer(t, db, "srv-dead", "http://127.0.0.1:1/mcp", true)
-	seedTool(t, db, "tool-dead", llm.ToolSourceMCP, &server.ID, "remote-dead", true)
+	seedTool(t, db, "tool-dead", ai.ToolSourceMCP, &server.ID, "remote-dead", true)
 
 	set, err := store.LoadTools(context.Background(), nil)
 	if err != nil {
@@ -335,7 +334,7 @@ func TestLoadToolsNoEnabledRows(t *testing.T) {
 		t.Fatalf("NewStore error = %v", err)
 	}
 	server := seedMCPServer(t, db, "srv-off", "http://off.test/mcp", true)
-	seedTool(t, db, "tool-off", llm.ToolSourceMCP, &server.ID, "remote-off", false)
+	seedTool(t, db, "tool-off", ai.ToolSourceMCP, &server.ID, "remote-off", false)
 
 	set, err := store.LoadTools(context.Background(), nil)
 	if err != nil {
@@ -395,7 +394,7 @@ func TestCloseToolsMultiServerClosesAllSessions(t *testing.T) {
 	}
 	for i, s := range servers {
 		server := seedMCPServer(t, db, s.name, s.url, true)
-		seedTool(t, db, "tool-"+s.name, llm.ToolSourceMCP, &server.ID, "remote-"+strconv.Itoa(i+1), true)
+		seedTool(t, db, "tool-"+s.name, ai.ToolSourceMCP, &server.ID, "remote-"+strconv.Itoa(i+1), true)
 	}
 
 	set, err := store.LoadTools(context.Background(), nil)

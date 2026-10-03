@@ -16,7 +16,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 )
 
 // fakeMemoryWriter 是 MemoryWriter 的测试替身：记录收到的入参与调用次数，按预设返回 ID 或错误。
@@ -39,7 +39,7 @@ func memoryRuntimeCtx(w MemoryWriter) context.Context {
 	return WithMemoryRuntime(context.Background(), MemoryRuntime{
 		Writer:        w,
 		NamespaceName: "ns-demo",
-		AgentKind:     llm.AgentKindRego,
+		AgentKind:     aimodel.AgentKindRego,
 		SessionID:     42,
 	})
 }
@@ -97,7 +97,7 @@ func TestMemoryWrite_Kind(t *testing.T) {
 	if _, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(defaulted), `{"content":"x"}`); err != nil {
 		t.Fatalf("empty-kind run error = %v", err)
 	}
-	if defaulted.calls != 1 || defaulted.got[0].Kind != llm.MemoryKindFact {
+	if defaulted.calls != 1 || defaulted.got[0].Kind != aimodel.MemoryKindFact {
 		t.Errorf("empty-kind input = %+v, want kind defaulted to fact", defaulted.got)
 	}
 
@@ -105,7 +105,7 @@ func TestMemoryWrite_Kind(t *testing.T) {
 	if _, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(explicit), `{"content":"x","kind":"decision"}`); err != nil {
 		t.Fatalf("explicit-kind run error = %v", err)
 	}
-	if explicit.calls != 1 || explicit.got[0].Kind != llm.MemoryKindDecision {
+	if explicit.calls != 1 || explicit.got[0].Kind != aimodel.MemoryKindDecision {
 		t.Errorf("explicit-kind input = %+v, want kind decision", explicit.got)
 	}
 }
@@ -125,9 +125,9 @@ func TestMemoryWrite_Success(t *testing.T) {
 	got := w.got[0]
 	want := MemoryWriteInput{
 		NamespaceName: "ns-demo",
-		AgentKind:     llm.AgentKindRego,
+		AgentKind:     aimodel.AgentKindRego,
 		SessionID:     42,
-		Kind:          llm.MemoryKindPreference,
+		Kind:          aimodel.MemoryKindPreference,
 		Title:         "T",
 		Content:       "normalize me",
 	}

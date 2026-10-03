@@ -12,10 +12,9 @@ import (
 	"github.com/cloudwego/eino/components/model"
 
 	// 项目内部
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // newScriptedChat 构造按次序返回给定回复的对话替身（复用 agent_tools_test.go 的 scriptedChat）。
@@ -47,7 +46,7 @@ func newTestMemory(t *testing.T, db *database.DB, chat model.BaseChatModel, embe
 	}
 	var resolver ChatResolver
 	if chat != nil {
-		resolver = slotChatResolver(map[llm.Slot]model.BaseChatModel{llm.SlotFlash: chat})
+		resolver = slotChatResolver(map[ai.Slot]model.BaseChatModel{ai.SlotFlash: chat})
 	}
 	mem, err := NewMemory(store, resolver, params, nil)
 	if err != nil {
@@ -84,10 +83,10 @@ func TestSummarize_Advances(t *testing.T) {
 	mem := newTestMemory(t, newTestSessionDB(t), chat, stubEmbedder{}, map[string]string{
 		"memory.summarySystemPrompt": "summary system prompt",
 	})
-	session := &modelsai.AgentSession{NamespaceName: "default", Summary: "old summary", SummaryUptoMessageID: 3}
-	evicted := []*modelsai.AgentMessage{
-		{BaseModel: database.BaseModel{ID: 4}, Role: llm.MessageRoleUser, Content: "u"},
-		{BaseModel: database.BaseModel{ID: 5}, Role: llm.MessageRoleAssistant, Content: "a"},
+	session := &ai.AgentSession{NamespaceName: "default", Summary: encTestValue("old summary"), SummaryUptoMessageID: 3}
+	evicted := []*ai.AgentMessage{
+		{BaseModel: database.BaseModel{ID: 4}, Role: ai.MessageRoleUser, Content: encTestValue("u")},
+		{BaseModel: database.BaseModel{ID: 5}, Role: ai.MessageRoleAssistant, Content: encTestValue("a")},
 	}
 	summary, upto, err := mem.Summarize(ctx, session, evicted)
 	if err != nil {
@@ -120,7 +119,7 @@ func TestSummarize_Errors(t *testing.T) {
 	if _, _, err := mem.Summarize(ctx, nil, nil); err == nil {
 		t.Error("Summarize(nil session) = nil error, want an error")
 	}
-	session := &modelsai.AgentSession{Summary: "keep", SummaryUptoMessageID: 7}
+	session := &ai.AgentSession{Summary: encTestValue("keep"), SummaryUptoMessageID: 7}
 	summary, upto, err := mem.Summarize(ctx, session, nil)
 	if err != nil || summary != "keep" || upto != 7 {
 		t.Errorf("Summarize(no evicted) = (%q, %d, %v), want (keep, 7, nil)", summary, upto, err)
@@ -128,14 +127,14 @@ func TestSummarize_Errors(t *testing.T) {
 	noResolver := newTestMemory(t, newTestSessionDB(t), nil, stubEmbedder{}, map[string]string{
 		"memory.summarySystemPrompt": "p",
 	})
-	evicted := []*modelsai.AgentMessage{{Role: llm.MessageRoleUser, Content: "c"}}
-	if _, _, err := noResolver.Summarize(ctx, &modelsai.AgentSession{}, evicted); err == nil {
+	evicted := []*ai.AgentMessage{{Role: ai.MessageRoleUser, Content: encTestValue("c")}}
+	if _, _, err := noResolver.Summarize(ctx, &ai.AgentSession{}, evicted); err == nil {
 		t.Error("Summarize(nil resolver) = nil error, want an error")
 	}
 	empty := newTestMemory(t, newTestSessionDB(t), newScriptedChat("   "), stubEmbedder{}, map[string]string{
 		"memory.summarySystemPrompt": "p",
 	})
-	if _, _, err := empty.Summarize(ctx, &modelsai.AgentSession{}, evicted); err == nil {
+	if _, _, err := empty.Summarize(ctx, &ai.AgentSession{}, evicted); err == nil {
 		t.Error("Summarize(empty reply) = nil error, want an error")
 	}
 }
@@ -221,8 +220,8 @@ func TestCompact_ExtractionFailureOnlyWarnings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
-		SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleUser, Content: "u1",
+	if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
+		SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("u1"),
 	}); err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
@@ -259,9 +258,9 @@ func TestCompact_ExtractionFailureOnlyWarnings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if got.Summary != "folded summary" || got.SummaryUptoMessageID == 0 {
+	if string(got.Summary.Value()) != "folded summary" || got.SummaryUptoMessageID == 0 {
 		t.Errorf("persisted summary = (%q, %d), want the folded summary with an advanced cursor",
-			got.Summary, got.SummaryUptoMessageID)
+			got.Summary.Value(), got.SummaryUptoMessageID)
 	}
 }
 
@@ -278,8 +277,8 @@ func TestCompact_DisabledSkipsExtraction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
-		SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleUser, Content: "u1",
+	if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
+		SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("u1"),
 	}); err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
@@ -315,7 +314,7 @@ func TestCompact_NoMessages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	session.Summary = "existing"
+	session.Summary = encTestValue("existing")
 	chat := newScriptedChat("unused")
 	mem := newTestMemory(t, db, chat, stubEmbedder{}, map[string]string{
 		"memory.summarySystemPrompt": "sp",
@@ -345,8 +344,8 @@ func TestCompact_SummaryFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	if _, err := store.AppendMessage(ctx, &modelsai.AgentMessage{
-		SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleUser, Content: "u1",
+	if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
+		SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("u1"),
 	}); err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
@@ -359,9 +358,9 @@ func TestCompact_SummaryFailure(t *testing.T) {
 	if gerr != nil {
 		t.Fatalf("GetSession error = %v", gerr)
 	}
-	if got.Summary != "" || got.SummaryUptoMessageID != 0 {
+	if len(got.Summary.Value()) != 0 || got.SummaryUptoMessageID != 0 {
 		t.Errorf("persisted summary = (%q, %d), want empty (no advance on failure)",
-			got.Summary, got.SummaryUptoMessageID)
+			got.Summary.Value(), got.SummaryUptoMessageID)
 	}
 }
 

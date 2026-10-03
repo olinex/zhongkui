@@ -19,7 +19,7 @@ type SSEEventValue string
 
 // SSE 事件类型常量：SSE 流上事件的 event 行取值。前端按事件类型分发解析：
 // delta 累积正文、stage 呈现执行阶段的状态与用量、done 呈现结构化产物与引用、
-// error 中断提示、ping 保活。
+// error 中断提示、ping 保活、tool_request 挂起等待前端执行客户端工具。
 const (
 	// SSEEventDelta 增量文本事件（data 为 {"delta": "..."}，可带 {"stage": "..."}）
 	SSEEventDelta SSEEventValue = "delta"
@@ -31,6 +31,9 @@ const (
 	SSEEventError SSEEventValue = "error"
 	// SSEEventPing 心跳事件（无 data 行，保持代理/网关连接）
 	SSEEventPing SSEEventValue = "ping"
+	// SSEEventToolRequest 工具执行请求事件：表示当前流已挂起、等待前端执行并审批
+	// 客户端工具调用；调用方不应期待本次流再出现 done 事件。
+	SSEEventToolRequest SSEEventValue = "tool_request"
 )
 
 // SSEEvent 是 SSE 流上的一条事件：event 行携带类型，data 行携带 JSON 负载。
@@ -111,6 +114,13 @@ func (s *SSEWriter) SendStageDelta(stage string, delta string) error {
 // SendStage 发送阶段事件（stage 事件，payload 为调用方的阶段状态负载）。
 func (s *SSEWriter) SendStage(payload any) error {
 	return WriteSSE(s.w, SSEEvent{Event: SSEEventStage, Data: payload})
+}
+
+// SendToolRequest 发送工具执行请求事件（tool_request 事件，表示本次流挂起等待
+// 前端执行并审批客户端工具调用；发送后调用方不应再发送 done）。payload 由调用方
+// 提供，须包含 callId、接口 ID、参数、已合成的请求描述符与是否需审批。
+func (s *SSEWriter) SendToolRequest(payload any) error {
+	return WriteSSE(s.w, SSEEvent{Event: SSEEventToolRequest, Data: payload})
 }
 
 // SendDone 发送完成事件（payload 为调用方结构化产物，任意可 JSON 序列化负载）。

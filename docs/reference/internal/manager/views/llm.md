@@ -277,7 +277,7 @@ type LlmBindingListOut struct {
     DisabledReason string `json:"disabledReason"`
     // IndexDimensions 知识库向量索引（knowledge_chunks.embedding 列）当前维度。
     // 索引列尚未建好或读不出时为 0；供运维在提交 embedding 档位绑定前预知目标维度，
-    // 避免只能靠绑定失败的报错才发现维度不符（该列维度由运维经 migrate ai-embedding 重建）
+    // 避免只能靠绑定失败的报错才发现维度不符（该列维度由运维经 sync embedding-dimensions 重建）
     IndexDimensions int `json:"indexDimensions"`
 }
 ```
@@ -316,7 +316,7 @@ type LlmModelCreateIn struct {
     // Name 模型本地标识，全局唯一，最长 64
     Name string `json:"name" binding:"max=64"`
     // Kind 模型类型：chat（对话）| embedding（向量化），创建后不可更改
-    Kind pkgllm.ModelKind `json:"kind" binding:"max=16"`
+    Kind llm.ModelKind `json:"kind" binding:"max=16"`
     // BaseURL 模型端点的 OpenAI 兼容接口基地址，最长 512
     BaseURL string `json:"baseURL" binding:"max=512"`
     // APIKey 访问端点的凭据（明文提交，落库为密文）
@@ -347,7 +347,7 @@ type LlmModelDetailOut struct {
     // Name 模型本地标识，全局唯一
     Name string `json:"name"`
     // Kind 模型类型：chat | embedding
-    Kind pkgllm.ModelKind `json:"kind"`
+    Kind llm.ModelKind `json:"kind"`
     // BaseURL 模型端点的 OpenAI 兼容接口基地址
     BaseURL string `json:"baseURL"`
     // APIKey 访问凭据的密文；明文不回显，需经明文权限接口查看
@@ -395,7 +395,7 @@ type LlmModelTestIn struct {
     // ID 已注册模型的 ID；大于 0 时忽略其余字段
     ID  uint64 `json:"id"`
     // Kind 模型类型：chat | embedding
-    Kind pkgllm.ModelKind `json:"kind" binding:"max=16"`
+    Kind llm.ModelKind `json:"kind" binding:"max=16"`
     // BaseURL 模型端点的 OpenAI 兼容接口基地址
     BaseURL string `json:"baseURL" binding:"max=512"`
     // APIKey 访问端点的明文凭据
@@ -545,15 +545,15 @@ LlmSlotBindingOut 定义单个档位的绑定摘要与可用性输出。 无论�
 ```go
 type LlmSlotBindingOut struct {
     // Slot 档位标识：flash | standard | advanced | embedding
-    Slot pkgllm.Slot `json:"slot"`
+    Slot aimodel.Slot `json:"slot"`
     // ModelID 绑定模型的 ID（未绑定时为 0）
     ModelID uint `json:"modelId"`
     // ModelName 绑定模型的本地标识（未绑定时为空）
     ModelName string `json:"modelName"`
     // Kind 绑定模型的类型：chat | embedding（未绑定时为空）
-    Kind pkgllm.ModelKind `json:"kind"`
+    Kind llm.ModelKind `json:"kind"`
     // RequiredKind 该档位要求的模型类型：chat | embedding
-    RequiredKind pkgllm.ModelKind `json:"requiredKind"`
+    RequiredKind llm.ModelKind `json:"requiredKind"`
     // ProviderModel 绑定模型的供应商侧模型名（未绑定时为空）
     ProviderModel string `json:"providerModel"`
     // Enabled 绑定模型是否启用
@@ -590,7 +590,7 @@ type LlmToolListOut struct {
     // Name Agent 面向的工具名，全局唯一
     Name string `json:"name"`
     // Source 工具来源：builtin | mcp
-    Source pkgllm.ToolSource `json:"source"`
+    Source aimodel.ToolSource `json:"source"`
     // McpServerName 所属 MCP 服务器的本地标识；内置工具为空
     McpServerName string `json:"mcpServerName"`
     // RemoteName MCP 服务器侧的工具名；内置工具为空

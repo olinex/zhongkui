@@ -3,7 +3,7 @@
 // 序列按常量声明顺序就地复用为条目来源，条目在包内 init 注册时快照。类名须与前端 utils/enums.ts 的
 // EnumClass 成员、i18n 键 enum.<类名>.<key> 以及消费方引用一致。助手页的工具调用阶段
 // （toolCall / toolResult）与知识库页的阶段同属 EvalStage 类型，共用 evalStage 一个枚举类。
-// 长期记忆类别/状态（memoryKind / memoryStatus）的枚举类注册已随其类型迁至 internal/pkg/llm
+// 长期记忆类别/状态（memoryKind / memoryStatus）的枚举类注册已随其类型迁至 internal/models/ai
 // （见该包的 enum.go 与 memory.go），本包统一引用该包的类型与常量。
 
 package ai

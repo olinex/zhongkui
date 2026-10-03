@@ -17,12 +17,12 @@ import (
 	// 项目内部
 
 	"zhongkui.com/zhongkui/internal/ai"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/mail"
 	"zhongkui.com/zhongkui/internal/pkg/redis"
@@ -82,8 +82,8 @@ func NewDependencyRegistry(ctx context.Context, i do.Injector) (*status.Registry
 	reg.Register(status.Spec{Name: "etcd", Category: dependencyCategoryEtcd, Probe: probeEtcd(viper, etcdLogger)})
 	reg.Register(status.Spec{Name: "s3", Category: dependencyCategoryS3, Probe: probeS3(viper, kd)})
 	reg.Register(status.Spec{Name: "smtp", Category: dependencyCategoryMail, Probe: probeSMTP(viper)})
-	reg.Register(status.Spec{Name: "llm-chat", Category: dependencyCategoryLLM, Probe: probeModel(viper, dbLogger, llm.SlotStandard)})
-	reg.Register(status.Spec{Name: "llm-embedding", Category: dependencyCategoryLLM, Probe: probeModel(viper, dbLogger, llm.SlotEmbedding)})
+	reg.Register(status.Spec{Name: "llm-chat", Category: dependencyCategoryLLM, Probe: probeModel(viper, dbLogger, aimodel.SlotStandard)})
+	reg.Register(status.Spec{Name: "llm-embedding", Category: dependencyCategoryLLM, Probe: probeModel(viper, dbLogger, aimodel.SlotEmbedding)})
 	return reg, nil
 }
 
@@ -206,7 +206,7 @@ func probeSMTP(v *viper.Viper) status.Probe {
 // /models，embedding 走一次最小向量化请求）。档位无可用绑定（含未启用/类型不符）→
 // Configured=false；配置读取或探活失败 → Configured=true、Reachable=false（英文原因）。
 // 探测结束后关闭自建连接，避免连接泄漏。
-func probeModel(v *viper.Viper, logger *logging.Logger, slot llm.Slot) status.Probe {
+func probeModel(v *viper.Viper, logger *logging.Logger, slot aimodel.Slot) status.Probe {
 	return func(ctx context.Context) status.Status {
 		if cfg, err := database.ExtractConfig(v, validator.Validate, base.CoreDbName); err != nil {
 			return status.Status{Configured: false}

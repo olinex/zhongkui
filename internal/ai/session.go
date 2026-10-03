@@ -8,10 +8,10 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/pkg/serializer"
 )
 
 // 包级错误哨兵：会话/消息查询不命中的统一错误，供上层 errors.Is 判断。
@@ -41,16 +41,16 @@ func NewSessionStore(db *database.DB) (*SessionStore, error) {
 // CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位
 // (flash/standard/advanced)，空表示生成时按 agent.defaultSlot 参数解析；agentKind 为会话所属
 // Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。
-func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title string, slot llm.Slot, agentKind llm.AgentKind) (*modelsai.AgentSession, error) {
-	kind, err := llm.ParseAgentKind(agentKind)
+func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind) (*ai.AgentSession, error) {
+	kind, err := ai.ParseAgentKind(agentKind)
 	if err != nil {
 		return nil, err
 	}
-	session := &modelsai.AgentSession{
+	session := &ai.AgentSession{
 		NamespaceName: namespaceName,
 		Title:         title,
 		TargetModel:   slot,
-		Status:        llm.SessionStatusActive,
+		Status:        ai.SessionStatusActive,
 		AgentKind:     kind,
 	}
 	if err := s.db.WithContext(ctx).Create(session).Error; err != nil {
@@ -60,8 +60,8 @@ func (s *SessionStore) CreateSession(ctx context.Context, namespaceName, title s
 }
 
 // GetSession 按 ID 查询会话；不存在时返回 ErrSessionNotFound。
-func (s *SessionStore) GetSession(ctx context.Context, id uint) (*modelsai.AgentSession, error) {
-	var session modelsai.AgentSession
+func (s *SessionStore) GetSession(ctx context.Context, id uint) (*ai.AgentSession, error) {
+	var session ai.AgentSession
 	err := s.db.WithContext(ctx).First(&session, id).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrSessionNotFound
@@ -74,7 +74,7 @@ func (s *SessionStore) GetSession(ctx context.Context, id uint) (*modelsai.Agent
 
 // ListSessions 列出命名空间下的会话，按更新时间倒序（最近活跃在前）；
 // limit/offset 非正数时不限定。
-func (s *SessionStore) ListSessions(ctx context.Context, namespaceName string, limit, offset int) ([]*modelsai.AgentSession, error) {
+func (s *SessionStore) ListSessions(ctx context.Context, namespaceName string, limit, offset int) ([]*ai.AgentSession, error) {
 	q := s.db.WithContext(ctx).Where("namespace_name = ?", namespaceName).Order("updated_at DESC")
 	if limit > 0 {
 		q = q.Limit(limit)
@@ -82,7 +82,7 @@ func (s *SessionStore) ListSessions(ctx context.Context, namespaceName string, l
 	if offset > 0 {
 		q = q.Offset(offset)
 	}
-	var sessions []*modelsai.AgentSession
+	var sessions []*ai.AgentSession
 	if err := q.Find(&sessions).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -90,7 +90,7 @@ func (s *SessionStore) ListSessions(ctx context.Context, namespaceName string, l
 }
 
 // RenameSession 重命名会话标题，返回更新后的会话。
-func (s *SessionStore) RenameSession(ctx context.Context, id uint, title string) (*modelsai.AgentSession, error) {
+func (s *SessionStore) RenameSession(ctx context.Context, id uint, title string) (*ai.AgentSession, error) {
 	session, err := s.GetSession(ctx, id)
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (s *SessionStore) RenameSession(ctx context.Context, id uint, title string)
 }
 
 // SetSessionStatus 更新会话状态（如归档），返回更新后的会话。
-func (s *SessionStore) SetSessionStatus(ctx context.Context, id uint, status llm.SessionStatus) (*modelsai.AgentSession, error) {
+func (s *SessionStore) SetSessionStatus(ctx context.Context, id uint, status ai.SessionStatus) (*ai.AgentSession, error) {
 	session, err := s.GetSession(ctx, id)
 	if err != nil {
 		return nil, err
@@ -117,10 +117,10 @@ func (s *SessionStore) SetSessionStatus(ctx context.Context, id uint, status llm
 // DB 级联不生效，须显式清理，与 Knowledge.DeleteDocument 同模式）。
 func (s *SessionStore) DeleteSession(ctx context.Context, id uint) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("session_id = ?", id).Delete(&modelsai.AgentMessage{}).Error; err != nil {
+		if err := tx.Where("session_id = ?", id).Delete(&ai.AgentMessage{}).Error; err != nil {
 			return errors.WithStack(err)
 		}
-		if err := tx.Where("id = ?", id).Delete(&modelsai.AgentSession{}).Error; err != nil {
+		if err := tx.Where("id = ?", id).Delete(&ai.AgentSession{}).Error; err != nil {
 			return errors.WithStack(err)
 		}
 		return nil
@@ -128,7 +128,7 @@ func (s *SessionStore) DeleteSession(ctx context.Context, id uint) error {
 }
 
 // AppendMessage 追加一条消息到会话；msg 为空时返回英文错误。
-func (s *SessionStore) AppendMessage(ctx context.Context, msg *modelsai.AgentMessage) (*modelsai.AgentMessage, error) {
+func (s *SessionStore) AppendMessage(ctx context.Context, msg *ai.AgentMessage) (*ai.AgentMessage, error) {
 	if msg == nil {
 		return nil, errors.New("session store: nil message")
 	}
@@ -139,7 +139,7 @@ func (s *SessionStore) AppendMessage(ctx context.Context, msg *modelsai.AgentMes
 }
 
 // ListMessages 分页列出会话消息（按创建时间升序）；limit/offset 非正数时不限定。
-func (s *SessionStore) ListMessages(ctx context.Context, sessionID uint, limit, offset int) ([]*modelsai.AgentMessage, error) {
+func (s *SessionStore) ListMessages(ctx context.Context, sessionID uint, limit, offset int) ([]*ai.AgentMessage, error) {
 	q := s.db.WithContext(ctx).Where("session_id = ?", sessionID).Order("created_at ASC, id ASC")
 	if limit > 0 {
 		q = q.Limit(limit)
@@ -147,7 +147,7 @@ func (s *SessionStore) ListMessages(ctx context.Context, sessionID uint, limit, 
 	if offset > 0 {
 		q = q.Offset(offset)
 	}
-	var messages []*modelsai.AgentMessage
+	var messages []*ai.AgentMessage
 	if err := q.Find(&messages).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -156,14 +156,14 @@ func (s *SessionStore) ListMessages(ctx context.Context, sessionID uint, limit, 
 
 // HistoryMessages 返回会话最近 maxCount 条消息（按时间升序返回，最新在后），
 // 供注入 LLM 上下文保持对话顺序；maxCount 非正数时返回全部消息。
-func (s *SessionStore) HistoryMessages(ctx context.Context, sessionID uint, maxCount int) ([]*modelsai.AgentMessage, error) {
+func (s *SessionStore) HistoryMessages(ctx context.Context, sessionID uint, maxCount int) ([]*ai.AgentMessage, error) {
 	q := s.db.WithContext(ctx).Where("session_id = ?", sessionID)
 	if maxCount > 0 {
 		q = q.Order("created_at DESC, id DESC").Limit(maxCount)
 	} else {
 		q = q.Order("created_at ASC, id ASC")
 	}
-	var messages []*modelsai.AgentMessage
+	var messages []*ai.AgentMessage
 	if err := q.Find(&messages).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -176,8 +176,8 @@ func (s *SessionStore) HistoryMessages(ctx context.Context, sessionID uint, maxC
 
 // ListMessagesAfter 返回会话中 id 大于 afterID 的消息（按 id 升序），供会话压缩取出
 // 「游标之后尚未摘要的全部消息」。
-func (s *SessionStore) ListMessagesAfter(ctx context.Context, sessionID uint, afterID uint) ([]*modelsai.AgentMessage, error) {
-	var messages []*modelsai.AgentMessage
+func (s *SessionStore) ListMessagesAfter(ctx context.Context, sessionID uint, afterID uint) ([]*ai.AgentMessage, error) {
+	var messages []*ai.AgentMessage
 	if err := s.db.WithContext(ctx).
 		Where("session_id = ? AND id > ?", sessionID, afterID).
 		Order("id ASC").Find(&messages).Error; err != nil {
@@ -188,8 +188,8 @@ func (s *SessionStore) ListMessagesAfter(ctx context.Context, sessionID uint, af
 
 // ListMessagesBefore 返回会话中 afterID 与 beforeID 之间的消息（afterID < id < beforeID，
 // 按 id 升序），供滚动摘要取出「窗口外且尚未摘要」的消息（窗口最旧消息 ID 作上界）。
-func (s *SessionStore) ListMessagesBefore(ctx context.Context, sessionID uint, beforeID uint, afterID uint) ([]*modelsai.AgentMessage, error) {
-	var messages []*modelsai.AgentMessage
+func (s *SessionStore) ListMessagesBefore(ctx context.Context, sessionID uint, beforeID uint, afterID uint) ([]*ai.AgentMessage, error) {
+	var messages []*ai.AgentMessage
 	if err := s.db.WithContext(ctx).
 		Where("session_id = ? AND id > ? AND id < ?", sessionID, afterID, beforeID).
 		Order("id ASC").Find(&messages).Error; err != nil {
@@ -199,14 +199,17 @@ func (s *SessionStore) ListMessagesBefore(ctx context.Context, sessionID uint, b
 }
 
 // UpdateSummary 更新会话的滚动摘要与其覆盖到的最后一条消息 ID，只写这两列、不触碰其它字段
-// （避免并发改写会话标题/档位等）。
+// （避免并发改写会话标题/档位等）。摘要经 crypto 序列化器加密落库，故必须以「结构体 + Select」
+// 更新以触发序列化器（map 形式会绕过序列化器把明文直写库）。
 func (s *SessionStore) UpdateSummary(ctx context.Context, sessionID uint, summary string, uptoMessageID uint) error {
-	if err := s.db.WithContext(ctx).Model(&modelsai.AgentSession{}).
+	update := &ai.AgentSession{
+		Summary:              serializer.NewCrypto([]byte(summary)),
+		SummaryUptoMessageID: uptoMessageID,
+	}
+	if err := s.db.WithContext(ctx).Model(update).
 		Where("id = ?", sessionID).
-		Updates(map[string]any{
-			"summary":                 summary,
-			"summary_upto_message_id": uptoMessageID,
-		}).Error; err != nil {
+		Select("summary", "summary_upto_message_id").
+		Updates(update).Error; err != nil {
 		return errors.WithStack(err)
 	}
 	return nil
@@ -214,10 +217,10 @@ func (s *SessionStore) UpdateSummary(ctx context.Context, sessionID uint, summar
 
 // LatestAssistantMessage 返回会话最近一条助手消息（含草稿/引用载荷）；
 // 不存在时返回 ErrMessageNotFound。
-func (s *SessionStore) LatestAssistantMessage(ctx context.Context, sessionID uint) (*modelsai.AgentMessage, error) {
-	var msg modelsai.AgentMessage
+func (s *SessionStore) LatestAssistantMessage(ctx context.Context, sessionID uint) (*ai.AgentMessage, error) {
+	var msg ai.AgentMessage
 	err := s.db.WithContext(ctx).
-		Where("session_id = ? AND role = ?", sessionID, llm.MessageRoleAssistant).
+		Where("session_id = ? AND role = ?", sessionID, ai.MessageRoleAssistant).
 		Order("created_at DESC, id DESC").
 		First(&msg).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {

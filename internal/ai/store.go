@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	coremodel "zhongkui.com/zhongkui/internal/models/core"
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -28,7 +28,7 @@ var ErrSlotNotBound = errors.New("ai: no usable model bound to the requested slo
 // 是否可用都保留一条记录，供运维定位「已绑定但被禁用/类型不符」的情况。
 type SlotInfo struct {
 	// Slot 档位标识
-	Slot llm.Slot
+	Slot ai.Slot
 	// Name 绑定模型的本地标识（llm_models.name）
 	Name string
 	// Model 供应商侧的模型名（llm_models.model）
@@ -46,30 +46,30 @@ type SlotInfo struct {
 // Snapshot 是一份不可变的 LLM 配置快照：由数据库在某一时刻的状态组装而成，构造后在
 // 运行期内只读，因此可被任意 goroutine 并发读取而无需加锁。
 type Snapshot struct {
-	slots       map[llm.Slot]llm.ModelConfig // 可用档位 → 模型端点配置
-	infos       map[llm.Slot]SlotInfo        // 全部档位绑定（含不可用）的展示信息
-	params      *llm.Params                  // 行为参数读取器（值全部取自 agent_params.value）
-	deviated    int                          // 当前值与出厂值不同的参数条数
-	enabled     bool                         // AI 能力是否可用（standard 与 embedding 档位均可用）
-	defaultSlot llm.Slot                     // 参数 agent.defaultSlot 的生效值（未装配时为空）
-	tools       []tool.BaseTool              // 已启用工具（发布前一次性挂载，发布后只读）
-	toolInfos   []*schema.ToolInfo           // 与 tools 一一对应的 schema 清单（顺序一致）
-	closeTools  func() error                 // MCP 会话关闭句柄（本次装配未拨号时为 nil）
+	slots       map[ai.Slot]llm.ModelConfig // 可用档位 → 模型端点配置
+	infos       map[ai.Slot]SlotInfo        // 全部档位绑定（含不可用）的展示信息
+	params      *Params                     // 行为参数读取器（值全部取自 agent_params.value）
+	deviated    int                         // 当前值与出厂值不同的参数条数
+	enabled     bool                        // AI 能力是否可用（standard 与 embedding 档位均可用）
+	defaultSlot ai.Slot                     // 参数 agent.defaultSlot 的生效值（未装配时为空）
+	tools       []tool.BaseTool             // 已启用工具（发布前一次性挂载，发布后只读）
+	toolInfos   []*schema.ToolInfo          // 与 tools 一一对应的 schema 清单（顺序一致）
+	closeTools  func() error                // MCP 会话关闭句柄（本次装配未拨号时为 nil）
 }
 
 // emptySnapshot 返回一份未启用且无任何绑定的空快照，用于运行时尚未完成首次装配时的
 // 安全读取（各读取方法均返回零值/错误，不会 panic）。
 func emptySnapshot() *Snapshot {
 	return &Snapshot{
-		slots:  map[llm.Slot]llm.ModelConfig{},
-		infos:  map[llm.Slot]SlotInfo{},
-		params: llm.NewParams(nil),
+		slots:  map[ai.Slot]llm.ModelConfig{},
+		infos:  map[ai.Slot]SlotInfo{},
+		params: NewParams(nil),
 	}
 }
 
 // ModelConfig 返回档位对应的模型端点配置；档位未绑定或绑定不可用时返回
 // ErrSlotNotBound，调用方据此报告「指定档位不可用」而非静默降级。
-func (s *Snapshot) ModelConfig(slot llm.Slot) (llm.ModelConfig, error) {
+func (s *Snapshot) ModelConfig(slot ai.Slot) (llm.ModelConfig, error) {
 	if s == nil {
 		return llm.ModelConfig{}, ErrSlotNotBound
 	}
@@ -81,9 +81,9 @@ func (s *Snapshot) ModelConfig(slot llm.Slot) (llm.ModelConfig, error) {
 
 // Params 返回行为参数读取器（值全部取自库内 agent_params.value；出厂值只由 migrate
 // fixture 注入 default_value，代码内不持有任何出厂值）。
-func (s *Snapshot) Params() *llm.Params {
+func (s *Snapshot) Params() *Params {
 	if s == nil {
-		return llm.NewParams(nil)
+		return NewParams(nil)
 	}
 	return s.params
 }
@@ -99,7 +99,7 @@ func (s *Snapshot) ParamOverrideCount() int {
 
 // DefaultSlot 返回参数 agent.defaultSlot 的生效值，供状态接口下发「未显式指定档位且会话未记录
 // 档位时使用的默认档位」，使前端无需自持档位字面量；快照尚未完成首次装配时返回空串。
-func (s *Snapshot) DefaultSlot() llm.Slot {
+func (s *Snapshot) DefaultSlot() ai.Slot {
 	if s == nil {
 		return ""
 	}
@@ -124,7 +124,7 @@ func (s *Snapshot) DisabledReason(lang *base.Language) string {
 		return ""
 	}
 	issues := make([]string, 0, 2)
-	for _, slot := range []llm.Slot{llm.SlotStandard, llm.SlotEmbedding} {
+	for _, slot := range []ai.Slot{ai.SlotStandard, ai.SlotEmbedding} {
 		if reason := s.slotIssue(lang, slot); reason != "" {
 			issues = append(issues, reason)
 		}
@@ -134,7 +134,7 @@ func (s *Snapshot) DisabledReason(lang *base.Language) string {
 
 // slotIssue 返回单个必需档位不可用的原因（按请求语言本地化）：区分「无绑定记录」「绑定模型
 // 被禁用」「绑定模型类型与档位不符」，档位可用时返回空串。
-func (s *Snapshot) slotIssue(lang *base.Language, slot llm.Slot) string {
+func (s *Snapshot) slotIssue(lang *base.Language, slot ai.Slot) string {
 	if s.has(slot) {
 		return ""
 	}
@@ -146,7 +146,7 @@ func (s *Snapshot) slotIssue(lang *base.Language, slot llm.Slot) string {
 		return translate.L(lang, "ai.disabled.model-disabled", map[string]any{"Slot": slot, "Model": info.Name})
 	}
 	return translate.L(lang, "ai.disabled.kind-mismatch", map[string]any{
-		"Slot": slot, "Model": info.Name, "Want": llm.SlotKind(slot),
+		"Slot": slot, "Model": info.Name, "Want": ai.SlotKind(slot),
 	})
 }
 
@@ -156,12 +156,12 @@ func (s *Snapshot) EmbeddingDimensions() int {
 	if s == nil {
 		return 0
 	}
-	return s.slots[llm.SlotEmbedding].Dimensions
+	return s.slots[ai.SlotEmbedding].Dimensions
 }
 
 // Slots 返回全部档位绑定的展示信息（含不可用绑定），按档位清单顺序。
-func (s *Snapshot) Slots() map[llm.Slot]SlotInfo {
-	out := make(map[llm.Slot]SlotInfo, len(s.infos))
+func (s *Snapshot) Slots() map[ai.Slot]SlotInfo {
+	out := make(map[ai.Slot]SlotInfo, len(s.infos))
 	if s == nil {
 		return out
 	}
@@ -172,8 +172,8 @@ func (s *Snapshot) Slots() map[llm.Slot]SlotInfo {
 }
 
 // Bindings 返回「档位 → 绑定模型本地标识」的映射，供管理端展示绑定关系。
-func (s *Snapshot) Bindings() map[llm.Slot]string {
-	out := make(map[llm.Slot]string, len(s.infos))
+func (s *Snapshot) Bindings() map[ai.Slot]string {
+	out := make(map[ai.Slot]string, len(s.infos))
 	if s == nil {
 		return out
 	}
@@ -257,7 +257,7 @@ func (s *Store) Load(ctx context.Context) (*Snapshot, error) {
 	snap := emptySnapshot()
 	for i := range bindings {
 		binding := &bindings[i]
-		slot, err := llm.ParseSlot(binding.Slot)
+		slot, err := ai.ParseSlot(binding.Slot)
 		if err != nil {
 			continue // 未知档位（历史遗留脏数据）忽略，不阻断服务
 		}
@@ -282,10 +282,10 @@ func (s *Store) Load(ctx context.Context) (*Snapshot, error) {
 	snap.params = params
 	snap.deviated = deviated
 	// 默认档位随参数一并快照：装配前已校验全部注册表键均有可解析的值，此处读取不会 panic
-	snap.defaultSlot = llm.Slot(params.String("agent.defaultSlot"))
-	snap.enabled = snap.has(llm.SlotStandard) && snap.has(llm.SlotEmbedding)
+	snap.defaultSlot = ai.Slot(params.String("agent.defaultSlot"))
+	snap.enabled = snap.has(ai.SlotStandard) && snap.has(ai.SlotEmbedding)
 	if dims := snap.EmbeddingDimensions(); dims > 0 {
-		if err := llm.CheckEmbeddingDimension(ctx, s.db, dims); err != nil {
+		if err := CheckEmbeddingDimension(ctx, s.db, dims); err != nil {
 			return nil, errors.WithStack(err)
 		}
 	}
@@ -294,7 +294,7 @@ func (s *Store) Load(ctx context.Context) (*Snapshot, error) {
 
 // ModelConfig 读取单个档位的模型端点配置；未绑定或绑定不可用时返回 ErrSlotNotBound。
 // 供不持有运行时快照的场景（如依赖状态探测）按档位单独取值。
-func (s *Store) ModelConfig(ctx context.Context, slot llm.Slot) (llm.ModelConfig, error) {
+func (s *Store) ModelConfig(ctx context.Context, slot ai.Slot) (llm.ModelConfig, error) {
 	binding, err := s.findBinding(ctx, slot)
 	if err != nil {
 		return llm.ModelConfig{}, err
@@ -314,7 +314,7 @@ func (s *Store) ModelConfig(ctx context.Context, slot llm.Slot) (llm.ModelConfig
 // 处理；读库失败返回 ("", 0, false, err)。只要存在绑定记录即返回其维度（不要求模型已启用：
 // 禁用模型不改变维度）。
 func (s *Store) EmbeddingDimensions(ctx context.Context) (string, int, bool, error) {
-	binding, err := s.findBinding(ctx, llm.SlotEmbedding)
+	binding, err := s.findBinding(ctx, ai.SlotEmbedding)
 	if err != nil {
 		if errors.Is(err, ErrSlotNotBound) {
 			return "", 0, false, nil
@@ -325,8 +325,8 @@ func (s *Store) EmbeddingDimensions(ctx context.Context) (string, int, bool, err
 }
 
 // loadBindings 读取全部档位绑定并预加载关联的模型实体。
-func (s *Store) loadBindings(ctx context.Context) ([]coremodel.LlmBinding, error) {
-	var bindings []coremodel.LlmBinding
+func (s *Store) loadBindings(ctx context.Context) ([]ai.LlmBinding, error) {
+	var bindings []ai.LlmBinding
 	if err := s.db.WithContext(ctx).Preload("Model").Find(&bindings).Error; err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -334,8 +334,8 @@ func (s *Store) loadBindings(ctx context.Context) ([]coremodel.LlmBinding, error
 }
 
 // findBinding 读取指定档位的绑定（含模型实体）；无绑定时返回 ErrSlotNotBound。
-func (s *Store) findBinding(ctx context.Context, slot llm.Slot) (*coremodel.LlmBinding, error) {
-	var binding coremodel.LlmBinding
+func (s *Store) findBinding(ctx context.Context, slot ai.Slot) (*ai.LlmBinding, error) {
+	var binding ai.LlmBinding
 	err := s.db.WithContext(ctx).Preload("Model").Where("slot = ?", string(slot)).First(&binding).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, ErrSlotNotBound
@@ -350,19 +350,19 @@ func (s *Store) findBinding(ctx context.Context, slot llm.Slot) (*coremodel.LlmB
 // 都必须有库内记录，出厂值（default_value）与当前值（value）都必须非空且可按该键声明的
 // 类型解析；任一缺失或非法即返回英文错误（提示执行 migrate up 种子化出厂值），由启动路径
 // 中止启动。第二个返回值是当前值与出厂值不同的参数条数。
-func (s *Store) loadParams(ctx context.Context) (*llm.Params, int, error) {
-	var rows []coremodel.AgentParam
+func (s *Store) loadParams(ctx context.Context) (*Params, int, error) {
+	var rows []ai.AgentParam
 	if err := s.db.WithContext(ctx).Find(&rows).Error; err != nil {
 		return nil, 0, errors.WithStack(err)
 	}
-	byKey := make(map[string]coremodel.AgentParam, len(rows))
+	byKey := make(map[string]ai.AgentParam, len(rows))
 	for i := range rows {
 		byKey[rows[i].Key] = rows[i]
 	}
-	values := make(map[string]string, len(llm.Specs))
-	missing := make([]string, 0, len(llm.Specs))
+	values := make(map[string]string, len(Specs))
+	missing := make([]string, 0, len(Specs))
 	deviated := 0
-	for _, spec := range llm.Specs {
+	for _, spec := range Specs {
 		row, ok := byKey[spec.Key]
 		if !ok || row.Value == "" {
 			missing = append(missing, spec.Key)
@@ -371,10 +371,10 @@ func (s *Store) loadParams(ctx context.Context) (*llm.Params, int, error) {
 		if row.DefaultValue == "" {
 			return nil, 0, errors.Newf("ai: agent parameter %q has no factory value (default_value) in the database; run `migrate up` to seed the agent parameter defaults", spec.Key)
 		}
-		if err := llm.ValidateValue(spec, row.DefaultValue); err != nil {
+		if err := ValidateValue(spec, row.DefaultValue); err != nil {
 			return nil, 0, errors.WithStack(err)
 		}
-		if err := llm.ValidateValue(spec, row.Value); err != nil {
+		if err := ValidateValue(spec, row.Value); err != nil {
 			return nil, 0, errors.WithStack(err)
 		}
 		values[spec.Key] = row.Value
@@ -385,21 +385,21 @@ func (s *Store) loadParams(ctx context.Context) (*llm.Params, int, error) {
 	if len(missing) > 0 {
 		return nil, 0, errors.Newf("ai: agent parameters are not seeded in the database: %s; run `migrate up` to seed the agent parameter defaults", strings.Join(missing, ", "))
 	}
-	return llm.NewParams(values), deviated, nil
+	return NewParams(values), deviated, nil
 }
 
 // has 报告档位是否已有可用绑定。
-func (s *Snapshot) has(slot llm.Slot) bool {
+func (s *Snapshot) has(slot ai.Slot) bool {
 	_, ok := s.slots[slot]
 	return ok
 }
 
 // modelConfigOf 把一条档位绑定映射为模型端点配置，并报告该绑定是否可用：模型须已启用
 // 且类型与档位匹配，否则视为不可用（返回 ok=false），避免以错误类型的客户端调用端点。
-func modelConfigOf(binding *coremodel.LlmBinding) (llm.ModelConfig, bool) {
-	slot := llm.Slot(binding.Slot)
+func modelConfigOf(binding *ai.LlmBinding) (llm.ModelConfig, bool) {
+	slot := ai.Slot(binding.Slot)
 	model := &binding.Model
-	if !model.Enabled || llm.ModelKind(model.Kind) != llm.SlotKind(slot) {
+	if !model.Enabled || llm.ModelKind(model.Kind) != ai.SlotKind(slot) {
 		return llm.ModelConfig{}, false
 	}
 	return llm.ModelConfig{

@@ -22,6 +22,8 @@ import type {
   KnowledgeDocumentUpdateIn,
   RetrievalDryRunIn,
   RetrievalDryRunOut,
+  ToolRequestPayload,
+  ToolResultIn,
 } from "./@types/ai";
 
 // ---- 知识库文档 ----
@@ -244,10 +246,12 @@ export function agentStatusGet(): AxiosPromise {
 
 // ---- 流式响应（SSE，原生 fetch 实现）----
 // Agent 生成流式处理器：delta 为答案增量文本，stage 为工具调用阶段状态事件
-// （toolCall / toolResult 的 start/done/failed，含工具名），done 为最终完整结果。
+// （toolCall / toolResult 的 start/done/failed，含工具名），done 为最终完整结果，
+// toolRequest 为模型请求调用平台原生接口（需前端人工审批执行后经 tool-result 续跑）。
 export interface AgentStreamHandlers {
   onDelta?: (delta: string) => void;
   onStage?: (stage: AgentStageEvent) => void;
+  onToolRequest?: (req: ToolRequestPayload) => void;
   onDone?: (out: AgentOutput) => void;
   onError?: (msg: string) => void;
 }
@@ -285,6 +289,24 @@ function parseEventBlock(block: string): SSERawEvent | null {
   return { type, data: JSON.parse(data) as unknown };
 }
 
+// responseErrorText 从开流前返回的非 SSE 错误响应中提取展示文案：优先统一错误封套的
+// summary（后端已本地化），其次 details（仅字符串形态），都取不到再回落到状态码描述。
+// 用于把「接口调用已超时 / 已处理 / 无权恢复」等业务提示透出给用户，而非只显示状态码。
+async function responseErrorText(rsp: Response): Promise<string> {
+  try {
+    const body = (await rsp.json()) as { summary?: unknown; details?: unknown };
+    if (typeof body.summary === "string" && body.summary) {
+      return body.summary;
+    }
+    if (typeof body.details === "string" && body.details) {
+      return body.details;
+    }
+  } catch {
+    // 响应体非 JSON（如网关错误页），忽略并按状态码兜底
+  }
+  return `Request failed with status ${rsp.status}`;
+}
+
 // streamSSEPost 启动一个 POST 的 SSE 流式请求并按事件分发，返回中止函数。
 // axios 不支持流式响应，故使用原生 fetch + ReadableStream；事件以空行（\n\n）分隔，
 // 逐块取出解析。请求头与 axios 拦截器保持一致（语言、命名空间、JWT）。
@@ -315,7 +337,7 @@ function streamSSEPost(
         body: JSON.stringify(body),
       });
       if (!rsp.ok) {
-        onError(`Request failed with status ${rsp.status}`);
+        onError(await responseErrorText(rsp));
         return;
       }
       if (!rsp.body) {
@@ -369,6 +391,34 @@ function dispatchEventBlock(block: string, onEvent: (event: SSERawEvent) => void
   }
 }
 
+// dispatchAgentEvent 分发 Agent SSE 事件：生成流与审批续跑流事件类型完全一致，
+// 故两者共用同一段分发逻辑，避免复制两遍。
+function dispatchAgentEvent(event: SSERawEvent, handlers: AgentStreamHandlers): void {
+  switch (event.type) {
+    case "delta":
+      handlers.onDelta?.((event.data as { delta: string }).delta);
+      break;
+    // 工具调用阶段事件：后端在工具调用轮仅上报阶段状态（不带增量输出），
+    // 形状与检索试运行的 stage 事件一致，故沿用同一分发路径
+    case "stage":
+      handlers.onStage?.(event.data as AgentStageEvent);
+      break;
+    // 挂起事件：模型请求调用平台原生接口，流随后正常 EOF（不发 done / error），
+    // 前端须置为「等待审批」态而非失败
+    case "tool_request":
+      handlers.onToolRequest?.(event.data as ToolRequestPayload);
+      break;
+    case "done":
+      handlers.onDone?.(event.data as AgentOutput);
+      break;
+    case "error":
+      handlers.onError?.((event.data as { error: string }).error);
+      break;
+    default:
+      break;
+  }
+}
+
 // agentStreamGenerate 启动 POST /ai/agent/${sessionID}/stream 的 SSE 流式生成，
 // 返回中止函数；调用方（组件卸载等）可随时调用中止。
 export function agentStreamGenerate(
@@ -379,26 +429,23 @@ export function agentStreamGenerate(
   return streamSSEPost(
     `/ai/agent/${sessionID}/stream`,
     data,
-    (event) => {
-      switch (event.type) {
-        case "delta":
-          handlers.onDelta?.((event.data as { delta: string }).delta);
-          break;
-        // 工具调用阶段事件：后端在工具调用轮仅上报阶段状态（不带增量输出），
-        // 形状与检索试运行的 stage 事件一致，故沿用同一分发路径
-        case "stage":
-          handlers.onStage?.(event.data as AgentStageEvent);
-          break;
-        case "done":
-          handlers.onDone?.(event.data as AgentOutput);
-          break;
-        case "error":
-          handlers.onError?.((event.data as { error: string }).error);
-          break;
-        default:
-          break;
-      }
-    },
+    (event) => dispatchAgentEvent(event, handlers),
+    (msg) => handlers.onError?.(msg),
+  );
+}
+
+// agentToolResultStream 启动 POST /ai/agent/${sessionID}/tool-result 的 SSE 续跑流：
+// 回传本轮全部待审批调用的执行结果后继续生成，事件类型与生成流完全一致（复用
+// dispatchAgentEvent），并可能再次出现 tool_request 再次挂起。返回中止函数。
+export function agentToolResultStream(
+  sessionID: number,
+  data: ToolResultIn,
+  handlers: AgentStreamHandlers,
+): () => void {
+  return streamSSEPost(
+    `/ai/agent/${sessionID}/tool-result`,
+    data,
+    (event) => dispatchAgentEvent(event, handlers),
     (msg) => handlers.onError?.(msg),
   );
 }

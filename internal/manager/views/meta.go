@@ -70,6 +70,11 @@ type FieldMeta struct {
 	// 条目经统一枚举接口 /admin/enum/get 按类名获取（形状统一为 [{key, value}]），
 	// label 由 key 经 enum.<类名>.<key> 翻译展示，value 为提交/存储值。
 	EnumType string `json:"enumType,omitempty"`
+
+	// reflectType 字段的原始 Go 类型（未解引用、未丢失容器信息）。不参与序列化，仅供同包内的
+	// 参数类型派生使用：Type 字段为展示用名称（指针已解引用），无法区分「指向结构体的指针」与
+	// 普通字符串，故保留原始类型以精确判定 JSON 参数类型。
+	reflectType reflect.Type
 }
 
 // StructMeta 描述单个接口结构体的元信息。
@@ -361,6 +366,7 @@ func getStructFieldsNamed(t reflect.Type, enumTypeName string) []*FieldMeta {
 			Kind:         kind,
 			Required:     strings.Contains(binding, "required"),
 			DefaultValue: def,
+			reflectType:  field.Type,
 		}
 		// 按 JSON 字段名查枚举类绑定表，命中则标注为枚举字段并附带枚举类名
 		if className, ok := classBindings[fieldKey]; ok && className != "" {

@@ -50,16 +50,17 @@ func CoreModels() []any {
 		&tagmodel.TagRule{},
 		&tagmodel.TagRuleVersion{},
 		&tagmodel.TagRuleSample{},
-		&coremodel.LlmModel{},
-		&coremodel.LlmBinding{},
-		&coremodel.AgentParam{},
-		&coremodel.McpServer{},
-		&coremodel.LlmTool{},
+		&aimodel.LlmModel{},
+		&aimodel.LlmBinding{},
+		&aimodel.AgentParam{},
+		&aimodel.McpServer{},
+		&aimodel.LlmTool{},
 		&aimodel.KnowledgeDocument{},
 		&aimodel.KnowledgeChunk{},
 		&aimodel.AgentSession{},
 		&aimodel.AgentMessage{},
 		&aimodel.AgentMemory{},
+		&aimodel.AgentRun{},
 	}
 }
 

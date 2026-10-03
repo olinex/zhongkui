@@ -5,6 +5,7 @@ package network
 import (
 	"compress/gzip"
 	"context"
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/datatypes"
+	"zhongkui.com/zhongkui/internal/pkg/crypto"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/s3"
@@ -704,7 +706,7 @@ type HttpResponseHeaders struct {
 
 	// RspHdrSecWebSocketAccept WebSocket 握手接受，指示服务器愿意升级到 WebSocket 连接
 	// 使用 Crypto 加密存储，WebSocket 握手响应涉及连接安全
-	RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSecWebsocketAccept" secure:"mode=\"aes-gcm\",offset=70278,length=32"`
+	RspHdrSecWebSocketAccept *serializer.Crypto `gorm:"column:rsp_hdr_sec_websocket_accept;type:String CODEC(ZSTD(3));serializer:crypto" json:"rspHdrSecWebsocketAccept" secure:"mode=\"aes-gcm\",offset=12807,length=32"`
 	// RspHdrSecWebSocketProtocol WebSocket 子协议，指示服务器从客户端的偏好中选择的子协议
 	RspHdrSecWebSocketProtocol string `gorm:"column:rsp_hdr_sec_websocket_protocol;type:String CODEC(ZSTD(3))" json:"rspHdrSecWebsocketProtocol"`
 	// RspHdrSecWebSocketExtensions WebSocket 扩展，指示服务器从客户端的偏好中选择的扩展
@@ -857,8 +859,9 @@ type HttpRequestBody struct {
 	Method string `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"method"`
 	// ReqBody 请求主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
 	ReqBody string `gorm:"type:String CODEC(ZSTD(3))" json:"reqBody"`
-	// ReqBodyHash 请求主体内容的 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
-	ReqBodyHash string `gorm:"type:String CODEC(ZSTD(3))" json:"reqBodyHash"`
+	// ReqBodyHash 请求主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
+	// 经 hash 序列化器封装，空内容时为空内容的摘要
+	ReqBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"reqBodyHash" secure:"mode=\"hmac-sha256\",offset=12808,length=32"`
 	// ReqBodyLength 请求主体内容的字节长度，空内容时为 0
 	ReqBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"reqBodyLength"`
 }
@@ -867,7 +870,7 @@ type HttpRequestBody struct {
 type bodyStoreResult struct {
 	// Key S3 对象键，内容为空时为空字符串，不执行上传
 	Key string
-	// Hash 内容 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
+	// Hash 内容 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），空内容时为空内容的摘要
 	Hash string
 	// Length 内容字节长度，空内容时为 0
 	Length int64
@@ -875,15 +878,17 @@ type bodyStoreResult struct {
 
 // storeBody 将请求/响应体内容上传至 S3，并返回对象键、内容摘要与内容长度。
 // 为避免全量缓冲正文导致内存占用不稳定，先将内容流式写入本地临时文件，
-// 写入过程中同步计算 SHA-256 摘要（内存占用恒定，与正文大小无关）。
+// 写入过程中同步计算带密钥的 HMAC-SHA256 摘要（内存占用恒定，与正文大小无关）。
+// 摘要与对象键同源：对象键即「前缀 + 摘要 + 扩展名」，故摘要不可离线伪造，
+// 避免明文摘要经 req_body / rsp_body 列泄漏内容指纹。
 // 依据摘要确定最终对象键后，通过 Exists 判断是否已存在：
 //   - 已存在：跳过上传，直接复用（内容寻址去重，避免重复数据冗余存储与重复上传）
 //   - 不存在：从临时文件上传
 //
 // 内容为空时返回空对象键，不执行上传，但摘要与长度仍如实记录。
-func storeBody(ctx context.Context, client *s3.S3Client, reader io.Reader, req bool, cryptoKey []byte) (*bodyStoreResult, error) {
-	// 流式写入临时文件并同步计算哈希，磁盘暂存替代内存全量缓冲
-	h := sha256.New()
+func storeBody(ctx context.Context, client *s3.S3Client, reader io.Reader, req bool, cryptoKey, hashKey []byte) (*bodyStoreResult, error) {
+	// 流式写入临时文件并同步计算摘要，磁盘暂存替代内存全量缓冲
+	h := hmac.New(sha256.New, hashKey)
 	tmpFile, err := s3.NewStagingTempFile()
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -917,7 +922,8 @@ func storeBody(ctx context.Context, client *s3.S3Client, reader io.Reader, req b
 }
 
 // NewHttpRequestBody 构建HTTP请求正文信息
-// 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储
+// 将解压后的请求体上传至 S3，并以内容摘要作为对象键实现去重存储。
+// 摘要密钥由请求正文字段的 secure 标签就地派生，与落库序列化器同源。
 func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Request, cryptoKey []byte) (*HttpRequestBody, error) {
 	defer req.Body.Close()
 	body, err := decompressRequestBody(req)
@@ -925,14 +931,18 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 		return nil, errors.WithStack(err)
 	}
 	defer body.Close()
-	result, err := storeBody(ctx, client, body, true, cryptoKey)
+	hashKey, err := crypto.HashKeyForField(&HttpRequestBody{}, "reqBodyHash", "json")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	result, err := storeBody(ctx, client, body, true, cryptoKey, hashKey)
 	if err != nil {
 		return nil, err
 	}
 	return &HttpRequestBody{
 		Method:        req.Method,
 		ReqBody:       result.Key,
-		ReqBodyHash:   result.Hash,
+		ReqBodyHash:   serializer.NewHashDigest(result.Hash),
 		ReqBodyLength: result.Length,
 	}, nil
 }
@@ -942,14 +952,16 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 type HttpResponseBody struct {
 	// RspBody 响应主体内容，保存至 oss，若为空字符串，则表示内容为空，避免在 oss 内存储大量无效空文件
 	RspBody string `gorm:"type:String CODEC(ZSTD(3))" json:"rspBody"`
-	// RspBodyHash 响应主体内容的 SHA-256 摘要（hex 编码），空内容时为空内容的标准摘要
-	RspBodyHash string `gorm:"type:String CODEC(ZSTD(3))" json:"rspBodyHash"`
+	// RspBodyHash 响应主体内容的 HMAC-SHA256 摘要（hex 编码，带密钥防离线爆破），
+	// 经 hash 序列化器封装，空内容时为空内容的摘要
+	RspBodyHash serializer.Hash `gorm:"type:String CODEC(ZSTD(3));serializer:hash" json:"rspBodyHash" secure:"mode=\"hmac-sha256\",offset=12809,length=32"`
 	// RspBodyLength 响应主体内容的字节长度，空内容时为 0
 	RspBodyLength int64 `gorm:"type:Int64 CODEC(ZSTD(3))" json:"rspBodyLength"`
 }
 
 // NewHttpResponseBody 构建HTTP响应正文信息
-// 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储
+// 将解压后的响应体上传至 S3，并以内容摘要作为对象键实现去重存储。
+// 摘要密钥由响应正文字段的 secure 标签就地派生，与落库序列化器同源。
 func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Response, cryptoKey []byte) (*HttpResponseBody, error) {
 	defer resp.Body.Close()
 	body, err := decompressResponseBody(resp)
@@ -957,13 +969,17 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 		return nil, errors.WithStack(err)
 	}
 	defer body.Close()
-	result, err := storeBody(ctx, client, body, false, cryptoKey)
+	hashKey, err := crypto.HashKeyForField(&HttpResponseBody{}, "rspBodyHash", "json")
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	result, err := storeBody(ctx, client, body, false, cryptoKey, hashKey)
 	if err != nil {
 		return nil, err
 	}
 	return &HttpResponseBody{
 		RspBody:       result.Key,
-		RspBodyHash:   result.Hash,
+		RspBodyHash:   serializer.NewHashDigest(result.Hash),
 		RspBodyLength: result.Length,
 	}, nil
 }

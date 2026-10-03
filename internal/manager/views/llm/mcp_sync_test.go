@@ -12,8 +12,7 @@ import (
 	// 项目内部
 	"zhongkui.com/zhongkui/internal/ai"
 	mcptool "zhongkui.com/zhongkui/internal/ai/tools/mcp"
-	core "zhongkui.com/zhongkui/internal/models/core"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 )
 
 // newSyncTestDB 构造工具同步对账测试用的 sqlite 内存库并迁移 mcp_servers / llm_tools 两表。
@@ -23,16 +22,16 @@ func newSyncTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("gorm.Open(sqlite) error = %v", err)
 	}
-	if err := db.AutoMigrate(&core.McpServer{}, &core.LlmTool{}); err != nil {
+	if err := db.AutoMigrate(&aimodel.McpServer{}, &aimodel.LlmTool{}); err != nil {
 		t.Fatalf("AutoMigrate error = %v", err)
 	}
 	return db
 }
 
 // seedSyncServer 插入一台 MCP 服务器并返回其记录。
-func seedSyncServer(t *testing.T, db *gorm.DB, name string) *core.McpServer {
+func seedSyncServer(t *testing.T, db *gorm.DB, name string) *aimodel.McpServer {
 	t.Helper()
-	server := &core.McpServer{Name: name, Transport: string(mcptool.TransportStreamableHTTP), URL: "http://" + name + ".test/mcp", TimeoutSeconds: 5, Enabled: true}
+	server := &aimodel.McpServer{Name: name, Transport: string(mcptool.TransportStreamableHTTP), URL: "http://" + name + ".test/mcp", TimeoutSeconds: 5, Enabled: true}
 	if err := db.Create(server).Error; err != nil {
 		t.Fatalf("seed server %q error = %v", name, err)
 	}
@@ -40,9 +39,9 @@ func seedSyncServer(t *testing.T, db *gorm.DB, name string) *core.McpServer {
 }
 
 // seedSyncTool 插入一行 llm_tools 并返回其记录。
-func seedSyncTool(t *testing.T, db *gorm.DB, name string, source pkgllm.ToolSource, serverID *uint, remoteName, description string, enabled bool) *core.LlmTool {
+func seedSyncTool(t *testing.T, db *gorm.DB, name string, source aimodel.ToolSource, serverID *uint, remoteName, description string, enabled bool) *aimodel.LlmTool {
 	t.Helper()
-	row := &core.LlmTool{Name: name, Source: source, McpServerID: serverID, RemoteName: remoteName, Description: description, Enabled: enabled}
+	row := &aimodel.LlmTool{Name: name, Source: source, McpServerID: serverID, RemoteName: remoteName, Description: description, Enabled: enabled}
 	if err := db.Create(row).Error; err != nil {
 		t.Fatalf("seed tool %q error = %v", name, err)
 	}
@@ -55,8 +54,8 @@ func seedSyncTool(t *testing.T, db *gorm.DB, name string, source pkgllm.ToolSour
 func TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans(t *testing.T) {
 	db := newSyncTestDB(t)
 	server := seedSyncServer(t, db, "srv-a")
-	seedSyncTool(t, db, "tool-a", pkgllm.ToolSourceMCP, &server.ID, "tool-a", "old description", true)
-	seedSyncTool(t, db, "tool-c", pkgllm.ToolSourceMCP, &server.ID, "tool-c", "stale description", true)
+	seedSyncTool(t, db, "tool-a", aimodel.ToolSourceMCP, &server.ID, "tool-a", "old description", true)
+	seedSyncTool(t, db, "tool-c", aimodel.ToolSourceMCP, &server.ID, "tool-c", "stale description", true)
 
 	out, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{
 		{Name: "tool-a", Description: "new description"},
@@ -69,7 +68,7 @@ func TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans(t *testing.T) {
 		t.Errorf("counts = (created=%d, updated=%d, removed=%d), want (1, 1, 1)", out.Created, out.Updated, out.Removed)
 	}
 
-	var a core.LlmTool
+	var a aimodel.LlmTool
 	if err := db.Where("name = ?", "tool-a").First(&a).Error; err != nil {
 		t.Fatalf("tool-a lookup error = %v", err)
 	}
@@ -80,19 +79,19 @@ func TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans(t *testing.T) {
 		t.Errorf("tool-a description = %q, want the refreshed one", a.Description)
 	}
 
-	var b core.LlmTool
+	var b aimodel.LlmTool
 	if err := db.Where("name = ?", "tool-b").First(&b).Error; err != nil {
 		t.Fatalf("tool-b lookup error = %v", err)
 	}
 	if b.Enabled {
 		t.Error("tool-b enabled = true, want false (a newly discovered tool is disabled)")
 	}
-	if b.Source != pkgllm.ToolSourceMCP || b.McpServerID == nil || *b.McpServerID != server.ID || b.RemoteName != "tool-b" {
+	if b.Source != aimodel.ToolSourceMCP || b.McpServerID == nil || *b.McpServerID != server.ID || b.RemoteName != "tool-b" {
 		t.Errorf("tool-b row = %+v, want source=mcp with the owning server and remote_name", b)
 	}
 
 	var count int64
-	if err := db.Model(&core.LlmTool{}).Where("name = ?", "tool-c").Count(&count).Error; err != nil {
+	if err := db.Model(&aimodel.LlmTool{}).Where("name = ?", "tool-c").Count(&count).Error; err != nil {
 		t.Fatalf("tool-c count error = %v", err)
 	}
 	if count != 0 {
@@ -105,13 +104,13 @@ func TestReconcileMCPTools_PreservesEnabledRefreshesAndCleans(t *testing.T) {
 func TestReconcileMCPTools_RejectsBuiltinNameCollision(t *testing.T) {
 	db := newSyncTestDB(t)
 	server := seedSyncServer(t, db, "srv-a")
-	seedSyncTool(t, db, "shared", pkgllm.ToolSourceBuiltin, nil, "", "", true)
+	seedSyncTool(t, db, "shared", aimodel.ToolSourceBuiltin, nil, "", "", true)
 
 	if _, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{{Name: "shared"}}); err == nil {
 		t.Fatal("reconcileMCPTools error = nil, want an English collision error")
 	}
 	var count int64
-	if err := db.Model(&core.LlmTool{}).Count(&count).Error; err != nil {
+	if err := db.Model(&aimodel.LlmTool{}).Count(&count).Error; err != nil {
 		t.Fatalf("count error = %v", err)
 	}
 	if count != 1 {
@@ -125,7 +124,7 @@ func TestReconcileMCPTools_RejectsConsistencyViolation(t *testing.T) {
 	db := newSyncTestDB(t)
 	server := seedSyncServer(t, db, "srv-a")
 	// 绕过创建期约束直接落一行违反不变量的脏数据（source=mcp 但无 mcp_server_id）。
-	if err := db.Create(&core.LlmTool{Name: "dirty", Source: pkgllm.ToolSourceMCP, RemoteName: "dirty"}).Error; err != nil {
+	if err := db.Create(&aimodel.LlmTool{Name: "dirty", Source: aimodel.ToolSourceMCP, RemoteName: "dirty"}).Error; err != nil {
 		t.Fatalf("seed dirty row error = %v", err)
 	}
 	if _, err := reconcileMCPTools(db, server, []ai.MCPRemoteTool{{Name: "clean"}}); err == nil {

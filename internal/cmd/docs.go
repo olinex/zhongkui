@@ -47,6 +47,7 @@ var createDocsCmd = &cobra.Command{
 			pterm.Error.Println(err.Error())
 			return errors.WithStack(err)
 		}
+		// 导出 Diátaxis 分类文档（叙事页 + 参考页 + 索引），无需数据库 / Redis / etcd。
 		if err := docs.Export(ctx, docs.Options{ProjectRoot: cwd, Root: docs.Root}); err != nil {
 			pterm.Error.Println(err.Error())
 			return nil

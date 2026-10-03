@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	// 项目内部
+	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/pkg/base"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/translate"
 )
 
@@ -25,7 +25,7 @@ func TestParamSpecsI18nKeysComplete(t *testing.T) {
 		t.Fatalf("translate.L(%q) = %q, want the key itself; the miss check of this test is unsound", missingKeySentinel, got)
 	}
 	for _, supported := range base.SupportLanguages {
-		for _, spec := range pkgllm.Specs {
+		for _, spec := range ai.Specs {
 			for _, suffix := range []string{"label", "comment"} {
 				key := fmt.Sprintf("param.%s.%s", spec.Key, suffix)
 				if got := translate.L(&supported, key, nil); got == key {

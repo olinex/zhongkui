@@ -19,7 +19,6 @@ import (
 	"zhongkui.com/zhongkui/internal/ai/tools"
 	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // stubChat 是测试用对话模型替身：实现 model.BaseChatModel，记录收到的消息，
@@ -70,7 +69,7 @@ func (s *stubRetriever) Retrieve(ctx context.Context, query string, opts ...retr
 
 // stubResolver 返回始终解析到同一个替身的档位解析器（测试用）。
 func stubResolver(chat model.BaseChatModel) ChatResolver {
-	return func(slot llm.Slot) (model.BaseChatModel, error) { return chat, nil }
+	return func(slot ai.Slot) (model.BaseChatModel, error) { return chat, nil }
 }
 
 // newTestAgent 构造基于 sqlite 内存库 + 给定替身的 Agent，配置会话上限
@@ -92,6 +91,22 @@ func newTestAgent(t *testing.T, chat model.BaseChatModel, retriever retriever.Re
 	return agent
 }
 
+// newKnowledgeToolAgent 构造带真实 knowledge_search 工具的测试 Agent：经内置工具注册表
+// 构造工具实例并取其 schema 清单，再复用 newAgentWithTools 装配（检索器替身由调用方提供）。
+func newKnowledgeToolAgent(t *testing.T, chat model.BaseChatModel, rtv retriever.Retriever) *Agent {
+	t.Helper()
+	ctx := context.Background()
+	built, err := tools.Build(ctx, "knowledge_search", tools.Deps{})
+	if err != nil {
+		t.Fatalf("tools.Build(knowledge_search) error = %v", err)
+	}
+	info, err := built.Info(ctx)
+	if err != nil {
+		t.Fatalf("knowledge_search Info error = %v", err)
+	}
+	return newAgentWithTools(t, chat, rtv, []tool.BaseTool{built}, []*schema.ToolInfo{info}, nil)
+}
+
 // TestNewAgent_ValidationErrors 测试依赖为空时返回英文错误。
 func TestNewAgent_ValidationErrors(t *testing.T) {
 	store, err := NewSessionStore(newTestSessionDB(t))
@@ -106,7 +121,7 @@ func TestNewAgent_ValidationErrors(t *testing.T) {
 		resolver ChatResolver
 		rtv      retriever.Retriever
 		store    *SessionStore
-		params   *llm.Params
+		params   *Params
 	}{
 		{"nil resolver", nil, rtv, store, params},
 		{"nil retriever", stubResolver(chat), nil, store, params},
@@ -121,15 +136,10 @@ func TestNewAgent_ValidationErrors(t *testing.T) {
 }
 
 // TestAgent_Generate_Structured 测试非流式执行：结构化 JSON 回复被解析为正文 +
-// 草稿，检索引用随 done 项输出，Rego 规则（无）下 Valid 恒真。
+// 草稿，Rego 规则（无）下 Valid 恒真；模型未调用 knowledge_search，故引用为空。
 func TestAgent_Generate_Structured(t *testing.T) {
 	chat := &stubChat{reply: `{"content": "**hello**", "draft": {"rule": {"name": "http-rule"}}}`}
-	rtv := &stubRetriever{docs: []*schema.Document{{
-		ID:       "7",
-		Content:  "chunk body",
-		MetaData: map[string]any{"documentID": "7", "title": "Doc A", "chunkIndex": 0, "score": 0.9},
-	}}}
-	agent := newTestAgent(t, chat, rtv)
+	agent := newTestAgent(t, chat, &stubRetriever{})
 
 	out, err := agent.Generate(context.Background(), AgentInput{
 		Query: "how to build a rule?", NamespaceName: "default",
@@ -142,17 +152,6 @@ func TestAgent_Generate_Structured(t *testing.T) {
 	}
 	if string(out.Draft) == "" || !json.Valid(out.Draft) {
 		t.Errorf("Generate() draft = %q, want a valid JSON draft", out.Draft)
-	}
-	if len(out.Citations) != 1 || out.Citations[0].Title != "Doc A" {
-		t.Errorf("Generate() citations = %+v, want the retrieved doc", out.Citations)
-	}
-	// 检索器应收到命名空间限定选项
-	if rtv.query != "how to build a rule?" {
-		t.Errorf("retriever query = %q, want the agent input query", rtv.query)
-	}
-	o := retriever.GetImplSpecificOptions(&RetrieveOptions{}, rtv.opts...)
-	if o.NamespaceName != "default" {
-		t.Errorf("retriever namespace = %q, want %q", o.NamespaceName, "default")
 	}
 }
 
@@ -185,15 +184,10 @@ func TestAgent_Generate_EmptyReply(t *testing.T) {
 }
 
 // TestAgent_Stream_DeltasAndDone 测试流式执行：delta 增量项之后是 done 完成项，
-// done 项携带聚合全文与引用。
+// done 项携带聚合全文；模型未调用 knowledge_search，故引用为空。
 func TestAgent_Stream_DeltasAndDone(t *testing.T) {
 	chat := &stubChat{chunks: []string{"Hello", " world", "!"}}
-	rtv := &stubRetriever{docs: []*schema.Document{{
-		ID:       "1",
-		Content:  "kb",
-		MetaData: map[string]any{"documentID": "1", "title": "KB", "chunkIndex": 0, "score": 0.8},
-	}}}
-	agent := newTestAgent(t, chat, rtv)
+	agent := newTestAgent(t, chat, &stubRetriever{})
 
 	reader, err := agent.Stream(context.Background(), AgentInput{Query: "q", NamespaceName: "ns"})
 	if err != nil {
@@ -223,8 +217,8 @@ func TestAgent_Stream_DeltasAndDone(t *testing.T) {
 	if strings.Join(deltas, "") != "Hello world!" {
 		t.Errorf("deltas = %q, want %q", strings.Join(deltas, ""), "Hello world!")
 	}
-	if done.Content != "Hello world!" || len(done.Citations) != 1 {
-		t.Errorf("done = %+v, want the aggregated content and citations", done)
+	if done.Content != "Hello world!" || len(done.Citations) != 0 {
+		t.Errorf("done = %+v, want the aggregated content and no citations", done)
 	}
 }
 
@@ -280,13 +274,11 @@ func TestValidateDraftWithRego(t *testing.T) {
 	}
 }
 
-// TestBuildAgentMessages 测试消息组装顺序：系统提示 + 历史 + 用户消息（检索知识 +
-// 业务现场 + 提问）。
+// TestBuildAgentMessages 测试消息组装顺序：系统提示 + 历史 + 用户消息（业务现场 + 提问）。
 func TestBuildAgentMessages(t *testing.T) {
 	history := []*schema.Message{schema.UserMessage("prev q"), schema.AssistantMessage("prev a", nil)}
-	docs := []*schema.Document{{ID: "1", Content: "kb body", MetaData: map[string]any{"title": "KB"}}}
-	data := llm.BusinessData{"src": "192.168.1.1"}
-	messages := buildAgentMessages(testParams(t, nil), "", nil, history, docs, data, "  current q  ")
+	data := BusinessData{"src": "192.168.1.1"}
+	messages := buildAgentMessages(testParams(t, nil), "", nil, history, data, "  current q  ")
 	if len(messages) != 4 {
 		t.Fatalf("buildAgentMessages() len = %d, want 4", len(messages))
 	}
@@ -297,7 +289,7 @@ func TestBuildAgentMessages(t *testing.T) {
 	if user.Role != schema.User {
 		t.Errorf("messages[3] role = %v, want user", user.Role)
 	}
-	for _, want := range []string{"## Retrieved Knowledge", "KB: kb body", "## Current Business Scene", "192.168.1.1", "## User Question", "current q"} {
+	for _, want := range []string{"## Current Business Scene", "192.168.1.1", "## User Question", "current q"} {
 		if !strings.Contains(user.Content, want) {
 			t.Errorf("user content missing %q: %q", want, user.Content)
 		}
@@ -307,11 +299,11 @@ func TestBuildAgentMessages(t *testing.T) {
 // TestToSchemaMessages 测试持久化消息转 eino 消息：角色映射、跳过空内容与未知角色。
 func TestToSchemaMessages(t *testing.T) {
 	messages := []*ai.AgentMessage{
-		{Role: llm.MessageRoleUser, Content: "u"},
-		{Role: llm.MessageRoleAssistant, Content: "a"},
-		{Role: llm.MessageRoleSystem, Content: "s"},
-		{Role: llm.MessageRoleUser, Content: "  "},
-		{Role: "robot", Content: "x"},
+		{Role: ai.MessageRoleUser, Content: encTestValue("u")},
+		{Role: ai.MessageRoleAssistant, Content: encTestValue("a")},
+		{Role: ai.MessageRoleSystem, Content: encTestValue("s")},
+		{Role: ai.MessageRoleUser, Content: encTestValue("  ")},
+		{Role: "robot", Content: encTestValue("x")},
 		{},
 	}
 	out := toSchemaMessages(messages)
@@ -325,15 +317,19 @@ func TestToSchemaMessages(t *testing.T) {
 }
 
 // TestStreamRun_PersistsMessages 测试 StreamRun 持久化用户与助手消息：助手消息
-// 携带正文、草稿与引用；LatestAssistantMessage 可回读。
+// 携带正文、草稿与引用（引用由模型调用 knowledge_search 触发检索后写入）；
+// LatestAssistantMessage 可回读。
 func TestStreamRun_PersistsMessages(t *testing.T) {
-	chat := &stubChat{reply: `{"content": "answer", "draft": {"rule": "r1"}}`}
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{{ID: "call-1", Type: "function", Function: schema.FunctionCall{Name: "knowledge_search", Arguments: `{"query":"hello"}`}}}},
+		{content: `{"content": "answer", "draft": {"rule": "r1"}}`},
+	}}
 	rtv := &stubRetriever{docs: []*schema.Document{{
 		ID:       "3",
 		Content:  "kb",
 		MetaData: map[string]any{"documentID": "3", "title": "KB Doc", "chunkIndex": 0, "score": 0.7},
 	}}}
-	agent := newTestAgent(t, chat, rtv)
+	agent := newKnowledgeToolAgent(t, chat, rtv)
 	session, err := agent.store.CreateSession(context.Background(), "default", "t", "m", "knowledge")
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
@@ -368,21 +364,106 @@ func TestStreamRun_PersistsMessages(t *testing.T) {
 	if len(messages) != 2 {
 		t.Fatalf("ListMessages len = %d, want 2 (user + assistant)", len(messages))
 	}
-	if messages[0].Role != llm.MessageRoleUser || messages[0].Content != "hello" {
+	if messages[0].Role != ai.MessageRoleUser || string(messages[0].Content.Value()) != "hello" {
 		t.Errorf("messages[0] = %+v, want the persisted user message", messages[0])
 	}
-	if messages[1].Role != llm.MessageRoleAssistant || messages[1].Content != "answer" {
+	if messages[1].Role != ai.MessageRoleAssistant || string(messages[1].Content.Value()) != "answer" {
 		t.Errorf("messages[1] = %+v, want the persisted assistant message", messages[1])
 	}
-	if len(messages[1].DraftJSON) == 0 || !strings.Contains(string(messages[1].DraftJSON), "r1") {
-		t.Errorf("messages[1].DraftJSON = %q, want the persisted draft", messages[1].DraftJSON)
+	if draft := messages[1].DraftJSON.Value(); len(draft) == 0 || !strings.Contains(string(draft), "r1") {
+		t.Errorf("messages[1].DraftJSON = %q, want the persisted draft", draft)
 	}
-	if len(messages[1].CitationsJSON) == 0 || !strings.Contains(string(messages[1].CitationsJSON), "KB Doc") {
-		t.Errorf("messages[1].CitationsJSON = %q, want the persisted citations", messages[1].CitationsJSON)
+	if citations := messages[1].CitationsJSON.Value(); len(citations) == 0 || !strings.Contains(string(citations), "KB Doc") {
+		t.Errorf("messages[1].CitationsJSON = %q, want the persisted citations", citations)
 	}
 	latest, err := agent.store.LatestAssistantMessage(context.Background(), session.ID)
-	if err != nil || latest.Content != "answer" {
+	if err != nil || string(latest.Content.Value()) != "answer" {
 		t.Errorf("LatestAssistantMessage() = (%+v, %v), want the answer", latest, err)
+	}
+}
+
+// TestAgent_Generate_KnowledgeToolCitations 测试模型调用 knowledge_search 后的引用回传：
+// 首轮工具调用触发一次检索，命中经采集器写入 done.Citations，命中结果作为工具消息回填次轮。
+func TestAgent_Generate_KnowledgeToolCitations(t *testing.T) {
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{{ID: "call-1", Type: "function", Function: schema.FunctionCall{Name: "knowledge_search", Arguments: `{"query":"how to build a rule"}`}}}},
+		{content: `{"content": "answer", "draft": {}}`},
+	}}
+	rtv := &stubRetriever{docs: []*schema.Document{{
+		ID:       "7",
+		Content:  "chunk body",
+		MetaData: map[string]any{"documentID": "7", "title": "Doc A", "chunkIndex": 0, "score": 0.9},
+	}}}
+	agent := newKnowledgeToolAgent(t, chat, rtv)
+
+	out, err := agent.Generate(context.Background(), AgentInput{
+		Query: "how to build a rule?", NamespaceName: "default", DocIDs: []uint{7},
+	})
+	if err != nil {
+		t.Fatalf("Generate error = %v", err)
+	}
+	if out.Content != "answer" {
+		t.Errorf("Generate() content = %q, want %q", out.Content, "answer")
+	}
+	if len(out.Citations) != 1 || out.Citations[0].Title != "Doc A" {
+		t.Errorf("Generate() citations = %+v, want the knowledge-search hit", out.Citations)
+	}
+	if chat.calls != 2 {
+		t.Fatalf("chat calls = %d, want 2 (tool round + answer round)", chat.calls)
+	}
+	toolMsg := chat.gotInputs[1][len(chat.gotInputs[1])-1]
+	if toolMsg.Role != schema.Tool || !strings.Contains(toolMsg.Content, "Doc A") {
+		t.Errorf("second-round tool message = %+v, want the knowledge hit fed back", toolMsg)
+	}
+}
+
+// TestAgent_KnowledgeTool_ScopeFromRuntime 测试命名空间/文档限定由运行上下文注入而非模型入参：
+// 模型入参只有 query，适配器据本次运行输入把命名空间与文档限定传给检索器。
+func TestAgent_KnowledgeTool_ScopeFromRuntime(t *testing.T) {
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{{ID: "call-1", Type: "function", Function: schema.FunctionCall{Name: "knowledge_search", Arguments: `{"query":"q"}`}}}},
+		{content: `{"content": "answer", "draft": {}}`},
+	}}
+	rtv := &stubRetriever{}
+	agent := newKnowledgeToolAgent(t, chat, rtv)
+
+	if _, err := agent.Generate(context.Background(), AgentInput{
+		Query: "q2", NamespaceName: "tenant-a", DocIDs: []uint{7, 9},
+	}); err != nil {
+		t.Fatalf("Generate error = %v", err)
+	}
+	if rtv.query != "q" {
+		t.Errorf("retriever query = %q, want the model-provided query %q", rtv.query, "q")
+	}
+	o := retriever.GetImplSpecificOptions(&RetrieveOptions{}, rtv.opts...)
+	if o.NamespaceName != "tenant-a" {
+		t.Errorf("retriever namespace = %q, want %q", o.NamespaceName, "tenant-a")
+	}
+	if len(o.DocIDs) != 2 || o.DocIDs[0] != 7 || o.DocIDs[1] != 9 {
+		t.Errorf("retriever docIDs = %v, want [7 9]", o.DocIDs)
+	}
+}
+
+// TestAgent_KnowledgeTool_NotCalled 测试模型未调用工具时无检索：单轮纯文本回复不触发
+// knowledge_search，检索器不被调用，done.Citations 为空。
+func TestAgent_KnowledgeTool_NotCalled(t *testing.T) {
+	chat := &scriptedChat{turns: []scriptedTurn{{content: `{"content": "answer", "draft": {}}`}}}
+	rtv := &stubRetriever{docs: []*schema.Document{{
+		ID:       "7",
+		Content:  "chunk body",
+		MetaData: map[string]any{"documentID": "7", "title": "Doc A", "chunkIndex": 0, "score": 0.9},
+	}}}
+	agent := newKnowledgeToolAgent(t, chat, rtv)
+
+	out, err := agent.Generate(context.Background(), AgentInput{Query: "q", NamespaceName: "default"})
+	if err != nil {
+		t.Fatalf("Generate error = %v", err)
+	}
+	if len(out.Citations) != 0 {
+		t.Errorf("Generate() citations = %+v, want none when the model does not call the tool", out.Citations)
+	}
+	if rtv.query != "" {
+		t.Errorf("retriever query = %q, want the retriever untouched", rtv.query)
 	}
 }
 
@@ -398,8 +479,8 @@ func TestStreamRun_InjectsHistory(t *testing.T) {
 	}
 	// 预置一轮历史（user + assistant）
 	for _, m := range []*ai.AgentMessage{
-		{SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleUser, Content: "q1"},
-		{SessionID: session.ID, NamespaceName: "default", Role: llm.MessageRoleAssistant, Content: "a1"},
+		{SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("q1")},
+		{SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleAssistant, Content: encTestValue("a1")},
 	} {
 		if _, err := agent.store.AppendMessage(ctx, m); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
@@ -477,8 +558,8 @@ func TestAgent_Generate_RegoValidation(t *testing.T) {
 }
 
 // slotChatResolver 返回按档位分发的对话解析器：命中 bySlot 时返回对应替身，其余档位返回英文错误。
-func slotChatResolver(bySlot map[llm.Slot]model.BaseChatModel) ChatResolver {
-	return func(slot llm.Slot) (model.BaseChatModel, error) {
+func slotChatResolver(bySlot map[ai.Slot]model.BaseChatModel) ChatResolver {
+	return func(slot ai.Slot) (model.BaseChatModel, error) {
 		if chat, ok := bySlot[slot]; ok {
 			return chat, nil
 		}
@@ -493,7 +574,7 @@ func TestTrimMessagesByBytes(t *testing.T) {
 	newMessages := func(contents ...string) []*ai.AgentMessage {
 		out := make([]*ai.AgentMessage, 0, len(contents))
 		for _, c := range contents {
-			out = append(out, &ai.AgentMessage{Content: c})
+			out = append(out, &ai.AgentMessage{Content: encTestValue(c)})
 		}
 		return out
 	}
@@ -518,8 +599,8 @@ func TestTrimMessagesByBytes(t *testing.T) {
 				t.Fatalf("trimMessagesByBytes() len = %d, want %d", len(got), len(tt.want))
 			}
 			for i := range tt.want {
-				if got[i].Content != tt.want[i] {
-					t.Errorf("trimMessagesByBytes()[%d] = %q, want %q", i, got[i].Content, tt.want[i])
+				if got := string(got[i].Content.Value()); got != tt.want[i] {
+					t.Errorf("trimMessagesByBytes()[%d] = %q, want %q", i, got, tt.want[i])
 				}
 			}
 		})
@@ -530,7 +611,7 @@ func TestTrimMessagesByBytes(t *testing.T) {
 // 用户消息，摘要段为独立 system 消息且以英文标题常量开头。
 func TestBuildAgentMessages_SummaryInjected(t *testing.T) {
 	history := []*schema.Message{schema.UserMessage("prev q"), schema.AssistantMessage("prev a", nil)}
-	messages := buildAgentMessages(testParams(t, nil), "  folded  ", nil, history, nil, nil, "q")
+	messages := buildAgentMessages(testParams(t, nil), "  folded  ", nil, history, nil, "q")
 	if len(messages) != 5 {
 		t.Fatalf("buildAgentMessages() len = %d, want 5 (system + summary + 2 history + user)", len(messages))
 	}
@@ -581,12 +662,12 @@ func newRollingSummaryFixture(t *testing.T, minEvicted int) *rollingSummaryFixtu
 		t.Fatalf("NewMemoryStore error = %v", err)
 	}
 	memory, err := NewMemory(memoryStore,
-		slotChatResolver(map[llm.Slot]model.BaseChatModel{llm.SlotFlash: memoryChat}), params, nil)
+		slotChatResolver(map[ai.Slot]model.BaseChatModel{ai.SlotFlash: memoryChat}), params, nil)
 	if err != nil {
 		t.Fatalf("NewMemory error = %v", err)
 	}
 	agent, err := NewAgent(ctx,
-		slotChatResolver(map[llm.Slot]model.BaseChatModel{llm.SlotStandard: agentChat}),
+		slotChatResolver(map[ai.Slot]model.BaseChatModel{ai.SlotStandard: agentChat}),
 		&stubRetriever{}, store, params, memory, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
@@ -595,18 +676,18 @@ func newRollingSummaryFixture(t *testing.T, minEvicted int) *rollingSummaryFixtu
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	appendMsg := func(role llm.MessageRole, content string) *ai.AgentMessage {
+	appendMsg := func(role ai.MessageRole, content string) *ai.AgentMessage {
 		t.Helper()
-		msg := &ai.AgentMessage{SessionID: session.ID, NamespaceName: "default", Role: role, Content: content}
+		msg := &ai.AgentMessage{SessionID: session.ID, NamespaceName: "default", Role: role, Content: encTestValue(content)}
 		if _, err := store.AppendMessage(ctx, msg); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
 		return msg
 	}
-	appendMsg(llm.MessageRoleUser, "u1")
-	appendMsg(llm.MessageRoleAssistant, "a1")
-	evictedLast := appendMsg(llm.MessageRoleUser, "u2")
-	appendMsg(llm.MessageRoleAssistant, "a2")
+	appendMsg(ai.MessageRoleUser, "u1")
+	appendMsg(ai.MessageRoleAssistant, "a1")
+	evictedLast := appendMsg(ai.MessageRoleUser, "u2")
+	appendMsg(ai.MessageRoleAssistant, "a2")
 	return &rollingSummaryFixture{
 		agent:         agent,
 		store:         store,
@@ -666,9 +747,9 @@ func TestStreamRun_RollingSummaryInjected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if got.Summary != "folded summary" || got.SummaryUptoMessageID != f.evictedLastID {
+	if string(got.Summary.Value()) != "folded summary" || got.SummaryUptoMessageID != f.evictedLastID {
 		t.Errorf("persisted summary = (%q, %d), want (%q, %d)",
-			got.Summary, got.SummaryUptoMessageID, "folded summary", f.evictedLastID)
+			got.Summary.Value(), got.SummaryUptoMessageID, "folded summary", f.evictedLastID)
 	}
 }
 
@@ -679,11 +760,11 @@ func TestBuildAgentMessages_MemoryInjected(t *testing.T) {
 	params := testParams(t, map[string]string{"memory.sectionTitle": "## Long-term Memory"})
 	history := []*schema.Message{schema.UserMessage("prev q")}
 	memories := []MemoryHit{
-		{ID: 1, Kind: llm.MemoryKindDecision, Title: "chosen rule", Content: "use deny-by-default"},
-		{ID: 2, Kind: llm.MemoryKindFact, Content: "the team prefers rego v1"},
-		{ID: 3, Kind: llm.MemoryKindFact, Title: "blank", Content: "   "},
+		{ID: 1, Kind: ai.MemoryKindDecision, Title: "chosen rule", Content: "use deny-by-default"},
+		{ID: 2, Kind: ai.MemoryKindFact, Content: "the team prefers rego v1"},
+		{ID: 3, Kind: ai.MemoryKindFact, Title: "blank", Content: "   "},
 	}
-	messages := buildAgentMessages(params, "folded", memories, history, nil, nil, "q")
+	messages := buildAgentMessages(params, "folded", memories, history, nil, "q")
 	if len(messages) != 5 {
 		t.Fatalf("buildAgentMessages() len = %d, want 5 (system + summary + memory + history + user)", len(messages))
 	}
@@ -706,8 +787,8 @@ func TestBuildAgentMessages_MemoryInjected(t *testing.T) {
 // TestBuildAgentMessages_MemorySectionSkipped 测试无记忆可用时不注入记忆分节：命中为空或全部
 // 正文为空时消息列表与引入长期记忆前完全一致。
 func TestBuildAgentMessages_MemorySectionSkipped(t *testing.T) {
-	for _, memories := range [][]MemoryHit{nil, {{ID: 1, Kind: llm.MemoryKindFact, Content: "  "}}} {
-		messages := buildAgentMessages(testParams(t, nil), "", memories, nil, nil, nil, "q")
+	for _, memories := range [][]MemoryHit{nil, {{ID: 1, Kind: ai.MemoryKindFact, Content: "  "}}} {
+		messages := buildAgentMessages(testParams(t, nil), "", memories, nil, nil, "q")
 		if len(messages) != 2 {
 			t.Fatalf("buildAgentMessages(%+v) len = %d, want 2 (system + user)", memories, len(messages))
 		}
@@ -782,7 +863,7 @@ func TestRecallMemories_DegradesToNoSection(t *testing.T) {
 
 	// Agent 类型非法：解析失败即跳过记忆分节。
 	badKind := query
-	badKind.AgentKind = llm.AgentKind("bogus")
+	badKind.AgentKind = ai.AgentKind("bogus")
 	if hits := failing.agent.recallMemories(ctx, badKind); hits != nil {
 		t.Errorf("recallMemories(invalid agent kind) = %+v, want nil", hits)
 	}
@@ -797,7 +878,7 @@ func TestStream_MemoryFailureKeepsGeneration(t *testing.T) {
 		"memory.sectionTitle": "## Long-term Memory",
 	})
 	reader, err := f.agent.Stream(context.Background(), AgentInput{
-		Query: "q", NamespaceName: "default", AgentKind: llm.AgentKindRego,
+		Query: "q", NamespaceName: "default", AgentKind: ai.AgentKindRego,
 	})
 	if err != nil {
 		t.Fatalf("Stream error = %v", err)
@@ -827,7 +908,7 @@ func TestMemoryToolContext_InjectsRuntime(t *testing.T) {
 	tc := schema.ToolCall{ID: "c1", Type: "function", Function: schema.FunctionCall{Name: "memory_write", Arguments: `{"content":"remember this"}`}}
 
 	f := newMemoryAgentFixture(t, &stubChat{reply: "x"}, nil)
-	_, err := f.agent.runTool(f.agent.memoryToolContext(ctx, AgentInput{AgentKind: llm.AgentKindRego, SessionID: 7}), tc)
+	_, err := f.agent.runTool(f.agent.memoryToolContext(ctx, AgentInput{AgentKind: ai.AgentKindRego, SessionID: 7}), tc)
 	if err == nil || !strings.Contains(err.Error(), "memory: empty namespace name") {
 		t.Errorf("runTool(with memory runtime) error = %v, want the store to reject the empty namespace", err)
 	}
@@ -888,7 +969,7 @@ func TestStreamRun_RollingSummaryBelowThreshold(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if got.Summary != "" || got.SummaryUptoMessageID != 0 {
-		t.Errorf("persisted summary = (%q, %d), want empty (not advanced)", got.Summary, got.SummaryUptoMessageID)
+	if len(got.Summary.Value()) != 0 || got.SummaryUptoMessageID != 0 {
+		t.Errorf("persisted summary = (%q, %d), want empty (not advanced)", got.Summary.Value(), got.SummaryUptoMessageID)
 	}
 }

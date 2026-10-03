@@ -5,7 +5,7 @@
 // 记忆交给运行期注入的记忆写入器落库。工具本身无状态：写入器接口 MemoryWriter 与入参
 // MemoryWriteInput 声明在本包，由 internal/ai 适配实现（internal/ai 单向依赖本包，故接口与类型
 // 必须留在本包内以避免导入环）；归属信息（命名空间 / Agent 类型 / 来源会话）与写入器一同经 ctx
-// 注入，取不到时工具返回英文错误。工具元信息（llm.ToolSpecs）与出厂行（002_fixtures.sql）由
+// 注入，取不到时工具返回英文错误。工具元信息（internal/ai 的 ToolSpecs）与出厂行（002_fixtures.sql）由
 // 另外两处提供，本文件只补实现并在 init 期登记。
 
 package tools
@@ -21,8 +21,8 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // memoryRuntimeKey 是记忆运行期写入器与归属信息在 ctx 中的键。用私有空结构体作键可避免与其他包
@@ -36,11 +36,11 @@ type MemoryWriteInput struct {
 	// NamespaceName 所属命名空间
 	NamespaceName string
 	// AgentKind 所属 Agent 类型
-	AgentKind llm.AgentKind
+	AgentKind aimodel.AgentKind
 	// SessionID 来源会话 ID，必须非 0：记忆按会话隔离，只在来源会话内可见
 	SessionID uint
 	// Kind 记忆类别（已解析为具体取值，非空）
-	Kind llm.MemoryKind
+	Kind aimodel.MemoryKind
 	// Title 记忆标题（可选，可能为空）
 	Title string
 	// Content 记忆正文（已去除首尾空白，非空）
@@ -62,7 +62,7 @@ type MemoryRuntime struct {
 	// NamespaceName 本次运行所属命名空间
 	NamespaceName string
 	// AgentKind 本次运行所属 Agent 类型
-	AgentKind llm.AgentKind
+	AgentKind aimodel.AgentKind
 	// SessionID 本次运行的来源会话 ID
 	SessionID uint
 }
@@ -78,10 +78,10 @@ func memoryRuntimeFrom(ctx context.Context) (MemoryRuntime, bool) {
 	return rt, ok
 }
 
-// memoryKindNames 返回记忆类别取值空间的字符串清单（唯一来源为 pkg/llm），供工具参数 schema 的
-// 枚举与错误文案渲染复用。
+// memoryKindNames 返回记忆类别取值空间的字符串清单（唯一来源为 internal/models/ai），供工具参数
+// schema 的枚举与错误文案渲染复用。
 func memoryKindNames() []string {
-	kinds := llm.AllMemoryKinds()
+	kinds := aimodel.AllMemoryKinds()
 	names := make([]string, 0, len(kinds))
 	for _, kind := range kinds {
 		names = append(names, string(kind))
@@ -116,20 +116,20 @@ type memoryWriteTool struct{}
 func (t *memoryWriteTool) Info(_ context.Context) (*schema.ToolInfo, error) {
 	return &schema.ToolInfo{
 		Name: "memory_write",
-		Desc: "Save one long-term memory worth reusing in later turns of this session: a stable fact, a user preference, a decision or an artifact. The namespace, agent kind and session are taken from the current run; the memory stays visible only within this session.",
+		Desc: "保存一条值得在本会话后续轮次中复用的长期记忆：稳定的事实、用户偏好、决定或产出的成果。命名空间、Agent 类型与会话取自本次运行；该记忆仅在本会话内可见。",
 		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
 			"content": {
 				Type:     schema.String,
-				Desc:     "The memory body to store. Must be non-empty.",
+				Desc:     "要存储的记忆正文，必须非空。",
 				Required: true,
 			},
 			"title": {
 				Type: schema.String,
-				Desc: "A one-line title for the memory. Optional.",
+				Desc: "记忆的单行标题，可选。",
 			},
 			"kind": {
 				Type: schema.String,
-				Desc: "The memory kind. Optional, defaults to fact.",
+				Desc: "记忆类别，可选，缺省为 fact。",
 				Enum: memoryKindNames(),
 			},
 		}),
@@ -149,7 +149,7 @@ func (t *memoryWriteTool) InvokableRun(ctx context.Context, argumentsInJSON stri
 		return "", errors.New("memory_write: content must be non-empty")
 	}
 	rawKind := strings.TrimSpace(args.Kind)
-	kind, err := llm.ParseMemoryKind(llm.MemoryKind(rawKind))
+	kind, err := aimodel.ParseMemoryKind(aimodel.MemoryKind(rawKind))
 	if err != nil {
 		return "", errors.Newf("memory_write: invalid kind %q, expected one of %s",
 			rawKind, strings.Join(memoryKindNames(), ", "))

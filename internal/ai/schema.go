@@ -1,4 +1,4 @@
-package llm
+package ai
 
 import (
 	// 标准库

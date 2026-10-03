@@ -17,9 +17,9 @@ import (
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
 	"zhongkui.com/zhongkui/internal/manager/response"
 	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkui.com/zhongkui/internal/pkg/llm"
 	"zhongkui.com/zhongkui/internal/pkg/serializer"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -31,7 +31,7 @@ type LlmModelCreateIn struct {
 	// Name 模型本地标识，全局唯一，最长 64
 	Name string `json:"name" binding:"max=64"`
 	// Kind 模型类型：chat（对话）| embedding（向量化），创建后不可更改
-	Kind pkgllm.ModelKind `json:"kind" binding:"max=16"`
+	Kind llm.ModelKind `json:"kind" binding:"max=16"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址，最长 512
 	BaseURL string `json:"baseURL" binding:"max=512"`
 	// APIKey 访问端点的凭据（明文提交，落库为密文）
@@ -82,7 +82,7 @@ type LlmModelDetailOut struct {
 	// Name 模型本地标识，全局唯一
 	Name string `json:"name"`
 	// Kind 模型类型：chat | embedding
-	Kind pkgllm.ModelKind `json:"kind"`
+	Kind llm.ModelKind `json:"kind"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址
 	BaseURL string `json:"baseURL"`
 	// APIKey 访问凭据的密文；明文不回显，需经明文权限接口查看
@@ -125,7 +125,7 @@ type LlmModelTestIn struct {
 	// ID 已注册模型的 ID；大于 0 时忽略其余字段
 	ID uint64 `json:"id"`
 	// Kind 模型类型：chat | embedding
-	Kind pkgllm.ModelKind `json:"kind" binding:"max=16"`
+	Kind llm.ModelKind `json:"kind" binding:"max=16"`
 	// BaseURL 模型端点的 OpenAI 兼容接口基地址
 	BaseURL string `json:"baseURL" binding:"max=512"`
 	// APIKey 访问端点的明文凭据
@@ -165,10 +165,10 @@ func LlmModelListGet(c *gin.Context) {
 	}
 	// 以局部扫描行承载 gorm 模型与注入的 total 列（用于分页总数），随后映射为 Out 结构
 	var rows []struct {
-		core.LlmModel
+		aimodel.LlmModel
 		utils.BaseTotalOut
 	}
-	db := middlewares.GetCoreDatabase(c).Model(&core.LlmModel{})
+	db := middlewares.GetCoreDatabase(c).Model(&aimodel.LlmModel{})
 	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -207,7 +207,7 @@ func LlmModelCreate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	kind, err := pkgllm.ParseModelKind(in.Kind)
+	kind, err := llm.ParseModelKind(in.Kind)
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
@@ -218,7 +218,7 @@ func LlmModelCreate(c *gin.Context) {
 		return
 	}
 	// 端点字段不变量由 pkgllm.ModelConfig.Validate 校验（Kind 与 Name 已在上方单独处理）
-	endpoint := pkgllm.ModelConfig{
+	endpoint := llm.ModelConfig{
 		Kind:        kind,
 		BaseURL:     baseURL,
 		APIKey:      in.APIKey,
@@ -235,7 +235,7 @@ func LlmModelCreate(c *gin.Context) {
 	// 名称唯一性预检：含软删除记录（uq_llm_models_name 为非部分索引），
 	// 以便返回明确的英文校验错误而非唯一约束冲突的 500
 	var count int64
-	if err := db.Unscoped().Model(&core.LlmModel{}).Where("name = ?", name).Count(&count).Error; err != nil {
+	if err := db.Unscoped().Model(&aimodel.LlmModel{}).Where("name = ?", name).Count(&count).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -243,7 +243,7 @@ func LlmModelCreate(c *gin.Context) {
 		response.CreateBadBodyError(errors.Newf("model name %q already exists", name)).AbortWithGinH(c)
 		return
 	}
-	instance := &core.LlmModel{
+	instance := &aimodel.LlmModel{
 		Name:           name,
 		Kind:           kind,
 		BaseURL:        baseURL,
@@ -270,7 +270,7 @@ func LlmModelDetailGet(c *gin.Context) {
 	if !ok {
 		return
 	}
-	instance := core.LlmModel{}
+	instance := aimodel.LlmModel{}
 	if err := middlewares.GetCoreDatabase(c).First(&instance, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -299,7 +299,7 @@ func LlmModelUpdate(c *gin.Context) {
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
-	instance := core.LlmModel{}
+	instance := aimodel.LlmModel{}
 	if err := db.First(&instance, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -308,7 +308,7 @@ func LlmModelUpdate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	kind, err := pkgllm.ParseModelKind(instance.Kind)
+	kind, err := llm.ParseModelKind(instance.Kind)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -324,7 +324,7 @@ func LlmModelUpdate(c *gin.Context) {
 		apiKey = string(instance.APIKeyData())
 	}
 	// 本次提交的端点配置：既用于字段不变量校验，也用于 embedding 档位的维度兼容性探测
-	endpoint := pkgllm.ModelConfig{
+	endpoint := llm.ModelConfig{
 		Name:        name,
 		Kind:        kind,
 		BaseURL:     baseURL,
@@ -340,7 +340,7 @@ func LlmModelUpdate(c *gin.Context) {
 	}
 	// 改名时做唯一性预检（排除自身，含软删除记录）
 	var count int64
-	if err := db.Unscoped().Model(&core.LlmModel{}).Where("name = ? AND id <> ?", name, instance.ID).Count(&count).Error; err != nil {
+	if err := db.Unscoped().Model(&aimodel.LlmModel{}).Where("name = ? AND id <> ?", name, instance.ID).Count(&count).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -351,8 +351,8 @@ func LlmModelUpdate(c *gin.Context) {
 	// 该模型是否正绑定在 embedding 槽位：是则写库前以新端点探测维度兼容性，
 	// 并把已验证维度一并写入（dimensions 是后端管理的只读缓存，前端不提交）
 	var embeddingBound int64
-	if err := db.Model(&core.LlmBinding{}).
-		Where("slot = ? AND model_id = ?", string(pkgllm.SlotEmbedding), instance.ID).
+	if err := db.Model(&aimodel.LlmBinding{}).
+		Where("slot = ? AND model_id = ?", string(aimodel.SlotEmbedding), instance.ID).
 		Count(&embeddingBound).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -367,7 +367,7 @@ func LlmModelUpdate(c *gin.Context) {
 	}
 	// 凭据留空时更新列中不含 api_key，保持原密文不变；未绑定 embedding 槽位时不写 dimensions
 	columns := []string{"name", "base_url", "model", "timeout_seconds", "temperature", "max_tokens", "enabled", "description"}
-	update := core.LlmModel{
+	update := aimodel.LlmModel{
 		Name:           name,
 		BaseURL:        baseURL,
 		ModelName:      modelName,
@@ -386,7 +386,7 @@ func LlmModelUpdate(c *gin.Context) {
 		columns = append(columns, "api_key")
 		update.APIKey = serializer.NewCrypto([]byte(in.APIKey))
 	}
-	if err := db.Model(&core.LlmModel{}).Where("id = ?", instance.ID).Select(columns).Updates(&update).Error; err != nil {
+	if err := db.Model(&aimodel.LlmModel{}).Where("id = ?", instance.ID).Select(columns).Updates(&update).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
@@ -412,7 +412,7 @@ func LlmModelBatchDelete(c *gin.Context) {
 	views.BatchExecute(c, ids,
 		func(id uint64) string { return fmt.Sprintf("%d", id) },
 		func(id uint64) error {
-			instance := core.LlmModel{}
+			instance := aimodel.LlmModel{}
 			if err := db.First(&instance, id).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return nil // 不存在视为成功跳过
@@ -420,13 +420,13 @@ func LlmModelBatchDelete(c *gin.Context) {
 				return errors.WithStack(err)
 			}
 			var bound int64
-			if err := db.Model(&core.LlmBinding{}).Where("model_id = ?", instance.ID).Count(&bound).Error; err != nil {
+			if err := db.Model(&aimodel.LlmBinding{}).Where("model_id = ?", instance.ID).Count(&bound).Error; err != nil {
 				return errors.WithStack(err)
 			}
 			if bound > 0 {
 				return errors.Newf("model %q is bound to a slot; unbind it before deleting", instance.Name)
 			}
-			if err := db.Delete(&core.LlmModel{}, instance.ID).Error; err != nil {
+			if err := db.Delete(&aimodel.LlmModel{}, instance.ID).Error; err != nil {
 				return errors.WithStack(err)
 			}
 			deleted++
@@ -452,10 +452,10 @@ func LlmModelTest(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	var cfg pkgllm.ModelConfig
+	var cfg llm.ModelConfig
 	if in.ID > 0 {
 		// 已注册模型：以库内记录（含解密凭据）为准，请求体其余字段被忽略
-		instance := core.LlmModel{}
+		instance := aimodel.LlmModel{}
 		if err := middlewares.GetCoreDatabase(c).First(&instance, in.ID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -466,12 +466,12 @@ func LlmModelTest(c *gin.Context) {
 		}
 		cfg = modelConfigOf(&instance)
 	} else {
-		kind, err := pkgllm.ParseModelKind(in.Kind)
+		kind, err := llm.ParseModelKind(in.Kind)
 		if err != nil {
 			response.CreateBadBodyError(err).AbortWithGinH(c)
 			return
 		}
-		cfg = pkgllm.ModelConfig{
+		cfg = llm.ModelConfig{
 			Kind:        kind,
 			BaseURL:     strings.TrimSpace(in.BaseURL),
 			APIKey:      in.APIKey,
@@ -493,7 +493,7 @@ func LlmModelTest(c *gin.Context) {
 }
 
 // newLlmModelDetailOut 将模型注册表记录映射为详情输出结构。
-func newLlmModelDetailOut(m *core.LlmModel) LlmModelDetailOut {
+func newLlmModelDetailOut(m *aimodel.LlmModel) LlmModelDetailOut {
 	return LlmModelDetailOut{
 		BaseItemOut: utils.BaseItemOut{
 			ID:        m.ID,

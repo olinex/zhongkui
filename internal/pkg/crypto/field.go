@@ -1,13 +1,17 @@
 // Package crypto 提供密码学相关工具：随机字符串生成、密码哈希，以及加密字段（secure tag）的
 // 标签解析与加密模式构造。
 //
-// 本文件提供加密字段（secure tag）的通用能力：标签解析与加密模式构造。
+// 本文件提供加密字段（secure tag）的通用能力：标签解析、加密模式构造与带密钥摘要。
 // 视图层明文查看（internal/manager/views/plaintext.go）与 GORM crypto 序列化器
 // （internal/pkg/serializer）都只是本层能力的借用者，避免各自重复实现
-// 「tag → 密钥派生 → 模式构造」链路。
+// 「tag → 密钥派生 → 模式构造 / 摘要」链路。
 package crypto
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+
 	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
@@ -18,9 +22,14 @@ import (
 // SecurityTagKey 加密字段的 secure 结构体标签键。
 const SecurityTagKey = "secure"
 
+// HmacSHA256 带密钥摘要的算法标识，用于 secure 标签中需要确定性摘要的字段
+// （如内容去重的 hash）：同一密钥与内容恒得同一摘要，可等值匹配与建唯一索引，
+// 且无密钥无法离线爆破，区别于 aes-gcm 的可逆加密（密文随机、不可等值比较）。
+const HmacSHA256 = "hmac-sha256"
+
 // CryptoTag 加密字段标签内容（secure 标签解析结果）。
 type CryptoTag struct {
-	// Mode 加密模式标识（如 aes-gcm）
+	// Mode 算法标识（aes-gcm 为可逆加密，hmac-sha256 为带密钥摘要）
 	Mode string `tag:"mode"`
 	// Offset 派生密钥的偏移量
 	Offset int `tag:"offset"`
@@ -107,4 +116,76 @@ func ModeForField(model any, path, nameTag string) (mode.Mode, error) {
 		return nil, err
 	}
 	return ModeForTag(cTag)
+}
+
+// HashKeyForTag 校验摘要字段标签的算法标识为 hmac-sha256 并派生摘要密钥，是整个
+// 带密钥摘要链路（tag → 密钥）的通用前置步骤。
+//
+// 参数：
+//   - cTag: 摘要字段标签（mode/offset/length），来自 secure tag 解析
+//
+// 返回值：
+//   - []byte: 派生出的 HMAC 密钥
+//   - error: 算法标识不是 hmac-sha256、密钥派生器未初始化或密钥派生失败时返回错误
+func HashKeyForTag(cTag CryptoTag) ([]byte, error) {
+	if cTag.Mode != HmacSHA256 {
+		return nil, errors.Newf("field mode %q is not a %s field", cTag.Mode, HmacSHA256)
+	}
+	kd, err := key.GetKeyDerivation()
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	cryptoKey, err := kd.DeriveChildKey(cTag.Offset, cTag.Length)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return cryptoKey, nil
+}
+
+// HashKeyForField 按字段路径解析模型字段的 secure 标签并派生 HMAC 摘要密钥，供需要
+// 流式计算摘要（正文体积大，无法一次性持有全部数据）的调用方复用同一条标签解析与
+// 密钥派生链路，避免各自就地实现；一次性摘要直接用 DigestForField 即可。
+//
+// nameTag 与 FieldTag 同义：字段路径按 json 名匹配，故通常传入 "json"。
+//
+// 参数：
+//   - model: 声明该字段的模型实例（或指针）
+//   - path: 字段路径（json 名，多段时逐层下降）
+//   - nameTag: 路径段匹配的字段命名标签（与 FieldTag 同义）
+//
+// 返回值：
+//   - []byte: 派生出的 HMAC 密钥
+//   - error: 字段无 secure 标签、算法标识不是 hmac-sha256、密钥派生失败时返回错误
+func HashKeyForField(model any, path, nameTag string) ([]byte, error) {
+	cTag, err := FieldTag(model, path, nameTag)
+	if err != nil {
+		return nil, err
+	}
+	return HashKeyForTag(cTag)
+}
+
+// DigestForField 按字段路径解析模型字段的 secure 标签，派生 HMAC 密钥并对数据计算
+// 十六进制 HMAC-SHA256 摘要，供需要确定性等值的摘要字段（如内容去重的 hash）使用：
+// 摘要不可逆推原文，且同一密钥与内容恒得同一摘要，可安全地做等值匹配与唯一索引。
+//
+// 与 ModeForField 同构（tag → 密钥派生 → 结果），使摘要字段与加密字段共用同一条
+// 标签解析与密钥派生链路，不必由调用方各自就地实现。
+//
+// 参数：
+//   - model: 声明该字段的模型实例（或指针）
+//   - path: 字段路径（json 名，多段时逐层下降）
+//   - nameTag: 路径段匹配的字段命名标签（与 ModeForField 同义）
+//   - data: 待摘要的原始数据
+//
+// 返回值：
+//   - string: 64 个字符的十六进制 HMAC-SHA256 摘要
+//   - error: 字段无 secure 标签、算法标识不是 hmac-sha256、密钥派生失败时返回错误
+func DigestForField(model any, path, nameTag string, data []byte) (string, error) {
+	cryptoKey, err := HashKeyForField(model, path, nameTag)
+	if err != nil {
+		return "", err
+	}
+	mac := hmac.New(sha256.New, cryptoKey)
+	mac.Write(data)
+	return hex.EncodeToString(mac.Sum(nil)), nil
 }

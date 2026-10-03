@@ -81,3 +81,55 @@ type errText string
 
 // Error 返回测试错误的描述文本。
 func (e errText) Error() string { return string(e) }
+
+// TestSSEEvent_EncodeToolRequest 测试 tool_request 事件的 SSE 线格式编码：
+// event 行为 tool_request，data 行为单行紧凑 JSON，以空行结尾。
+func TestSSEEvent_EncodeToolRequest(t *testing.T) {
+	ev := SSEEvent{Event: SSEEventToolRequest, Data: map[string]any{
+		"callId":           "call-1",
+		"apiId":            "rule.list",
+		"params":           map[string]string{"name": "x"},
+		"request":          map[string]string{"method": "GET", "path": "/api/v1/rules"},
+		"approvalRequired": true,
+	}}
+	buf, err := ev.Encode()
+	if err != nil {
+		t.Fatalf("Encode(tool_request) error = %v", err)
+	}
+	got := string(buf)
+	want := "event: tool_request\ndata: {\"apiId\":\"rule.list\",\"approvalRequired\":true," +
+		"\"callId\":\"call-1\",\"params\":{\"name\":\"x\"}," +
+		"\"request\":{\"method\":\"GET\",\"path\":\"/api/v1/rules\"}}\n\n"
+	if got != want {
+		t.Errorf("Encode(tool_request) = %q, want %q", got, want)
+	}
+	// data 行须为单行：去掉首尾以空行分隔后，data 段不含裸换行。
+	dataLine := got[len("event: tool_request\n"):]
+	if strings.Count(strings.TrimSuffix(dataLine, "\n\n"), "\n") != 0 {
+		t.Errorf("tool_request data line contains bare newline: %q", dataLine)
+	}
+}
+
+// TestSSEWriter_SendToolRequest 测试 SendToolRequest 经 httptest.NewRecorder
+// 写出的完整字节内容与 Encode() 一致。
+func TestSSEWriter_SendToolRequest(t *testing.T) {
+	payload := map[string]any{
+		"callId":           "call-2",
+		"apiId":            "rule.get",
+		"params":           map[string]any{"id": 7},
+		"request":          map[string]string{"method": "GET", "path": "/api/v1/rules/7"},
+		"approvalRequired": true,
+	}
+	rec := httptest.NewRecorder()
+	w := NewSSEWriter(rec)
+	if err := w.SendToolRequest(payload); err != nil {
+		t.Fatalf("SendToolRequest error = %v", err)
+	}
+	want, err := (SSEEvent{Event: SSEEventToolRequest, Data: payload}).Encode()
+	if err != nil {
+		t.Fatalf("Encode(tool_request) error = %v", err)
+	}
+	if got := rec.Body.String(); got != string(want) {
+		t.Errorf("SendToolRequest body = %q, want %q", got, string(want))
+	}
+}

@@ -11,30 +11,30 @@ import (
 
 	"zhongkui.com/zhongkui/internal/ai"
 	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/models/core"
+	aimodel "zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
 )
 
 // verifyEmbeddingCompat 取 core 库 knowledge_chunks.embedding 列的维度，交由
-// pkgllm.VerifyEmbeddingCompat 完成「端点实际维度 vs 列维度」的兼容性判定（两步探测的顺序
+// ai.VerifyEmbeddingCompat 完成「端点实际维度 vs 列维度」的兼容性判定（两步探测的顺序
 // 与判定规则见该函数），本函数只负责取列维度、把探测与判定失败转成英文错误。二者同为
 // 「绑定 embedding 档位」的前置校验：不兼容时由调用方以 400 拒绝请求。
 func verifyEmbeddingCompat(c *gin.Context, cfg pkgllm.ModelConfig) (int, error) {
 	db := middlewares.GetCoreDatabase(c)
-	colDim, found, err := pkgllm.ChunkEmbeddingDimension(c, db)
+	colDim, found, err := ai.ChunkEmbeddingDimension(c, db)
 	if err != nil {
 		return 0, errors.WithStack(err)
 	}
 	if !found {
 		return 0, errors.New("the knowledge index column is not available; run migrate up before binding an embedding model")
 	}
-	return pkgllm.VerifyEmbeddingCompat(c, cfg, colDim)
+	return ai.VerifyEmbeddingCompat(c, cfg, colDim)
 }
 
 // modelConfigOf 把模型注册表记录映射为模型端点配置（含解密后的明文凭据）。
 // 供连通性测试复用：ai 只导出「档位绑定 → 端点配置」的映射，未导出的模型可直接测试。
-func modelConfigOf(m *core.LlmModel) pkgllm.ModelConfig {
+func modelConfigOf(m *aimodel.LlmModel) pkgllm.ModelConfig {
 	return pkgllm.ModelConfig{
 		Name:        m.Name,
 		Kind:        m.Kind,

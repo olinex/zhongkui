@@ -13,12 +13,24 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkui.com/zhongkui/internal/pkg/database"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/logging"
 	"zhongkui.com/zhongkui/internal/pkg/testdb"
 )
+
+// TestMain 初始化全局 KeyDerivation：解析成功后文档正文经 crypto 序列化器加密落库，
+// 测试须与生产一致地派生密钥，否则写库会报 KeyDerivation not initialized。
+func TestMain(m *testing.M) {
+	pb, err := key.LoadPasswordBook("")
+	if err != nil {
+		panic("failed to load password book: " + err.Error())
+	}
+	key.InitGlobalKeyDerivation(key.NewConfigFileSecretKeyProvider("this-is-a-32-byte-secret-key!!"), pb)
+	os.Exit(m.Run())
+}
 
 // fakeMaterializer 实现 objectMaterializer 接口：返回预置的本地文件路径或固定的拉取错误。
 type fakeMaterializer struct {
@@ -47,11 +59,11 @@ type fakeIndexer struct {
 }
 
 // IndexDocument 写入分块数并回填 doc.ChunkCount；配置了错误时返回该错误。
-func (f *fakeIndexer) IndexDocument(ctx context.Context, doc *modelsai.KnowledgeDocument) error {
+func (f *fakeIndexer) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument) error {
 	if f.err != nil {
 		return f.err
 	}
-	if err := f.db.WithContext(ctx).Model(&modelsai.KnowledgeDocument{}).Where("id = ?", doc.ID).
+	if err := f.db.WithContext(ctx).Model(&ai.KnowledgeDocument{}).Where("id = ?", doc.ID).
 		Update("chunk_count", f.chunks).Error; err != nil {
 		return errors.WithStack(err)
 	}
@@ -86,13 +98,13 @@ func newParseHandler(t *testing.T, db *database.DB, files objectMaterializer, in
 }
 
 // seedParseDocument 写入一条测试知识文档（缺省命名空间 default、状态 pending）。
-func seedParseDocument(t *testing.T, db *database.DB, doc *modelsai.KnowledgeDocument) *modelsai.KnowledgeDocument {
+func seedParseDocument(t *testing.T, db *database.DB, doc *ai.KnowledgeDocument) *ai.KnowledgeDocument {
 	t.Helper()
 	if doc.NamespaceName == "" {
 		doc.NamespaceName = "default"
 	}
 	if doc.Status == "" {
-		doc.Status = string(modelsai.KnowledgeDocStatusPending)
+		doc.Status = string(ai.KnowledgeDocStatusPending)
 	}
 	if err := db.Create(doc).Error; err != nil {
 		t.Fatal(err)
@@ -111,9 +123,9 @@ func writeTempSource(t *testing.T, content string) string {
 }
 
 // reloadDocument 从库中重新读取文档行。
-func reloadDocument(t *testing.T, db *database.DB, id uint) modelsai.KnowledgeDocument {
+func reloadDocument(t *testing.T, db *database.DB, id uint) ai.KnowledgeDocument {
 	t.Helper()
-	var doc modelsai.KnowledgeDocument
+	var doc ai.KnowledgeDocument
 	if err := db.First(&doc, id).Error; err != nil {
 		t.Fatal(err)
 	}
@@ -126,7 +138,7 @@ func TestParseHandler_Do_Success(t *testing.T) {
 	convey.Convey("ParseHandler 成功路径", t, func() {
 		db := newParseTestDB(t)
 		const source = "# 标题\n\n正文内容\n"
-		doc := seedParseDocument(t, db, &modelsai.KnowledgeDocument{
+		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
 			Title:        "doc",
 			Format:       "markdown",
 			OriginalName: "doc.md",
@@ -141,8 +153,8 @@ func TestParseHandler_Do_Success(t *testing.T) {
 		convey.So(handler.Do(context.Background(), task), convey.ShouldBeNil)
 
 		got := reloadDocument(t, db, doc.ID)
-		convey.So(got.Status, convey.ShouldEqual, string(modelsai.KnowledgeDocStatusReady))
-		convey.So(got.Content, convey.ShouldEqual, source)
+		convey.So(got.Status, convey.ShouldEqual, string(ai.KnowledgeDocStatusReady))
+		convey.So(string(got.Content.Value()), convey.ShouldEqual, source)
 		convey.So(got.ChunkCount, convey.ShouldEqual, 2)
 		convey.So(got.ParseError, convey.ShouldBeEmpty)
 	})
@@ -153,7 +165,7 @@ func TestParseHandler_Do_Success(t *testing.T) {
 func TestParseHandler_Do_MaterializeFails(t *testing.T) {
 	convey.Convey("ParseHandler 原件拉取失败", t, func() {
 		db := newParseTestDB(t)
-		doc := seedParseDocument(t, db, &modelsai.KnowledgeDocument{
+		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
 			Title: "doc", Format: "markdown", ObjectKey: "knowledge/default/2.md",
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{err: errors.New("object not found")},
@@ -164,9 +176,9 @@ func TestParseHandler_Do_MaterializeFails(t *testing.T) {
 		convey.So(handler.Do(context.Background(), task), convey.ShouldNotBeNil)
 
 		got := reloadDocument(t, db, doc.ID)
-		convey.So(got.Status, convey.ShouldEqual, string(modelsai.KnowledgeDocStatusFailed))
+		convey.So(got.Status, convey.ShouldEqual, string(ai.KnowledgeDocStatusFailed))
 		convey.So(got.ParseError, convey.ShouldNotBeEmpty)
-		convey.So(got.Content, convey.ShouldBeEmpty)
+		convey.So(string(got.Content.Value()), convey.ShouldBeEmpty)
 	})
 }
 
@@ -174,7 +186,7 @@ func TestParseHandler_Do_MaterializeFails(t *testing.T) {
 func TestParseHandler_Do_AIDisabled(t *testing.T) {
 	convey.Convey("ParseHandler AI 能力不可用", t, func() {
 		db := newParseTestDB(t)
-		doc := seedParseDocument(t, db, &modelsai.KnowledgeDocument{
+		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
 			Title: "doc", Format: "markdown", ObjectKey: "knowledge/default/3.md",
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{path: writeTempSource(t, "body")},
@@ -185,7 +197,7 @@ func TestParseHandler_Do_AIDisabled(t *testing.T) {
 		convey.So(handler.Do(context.Background(), task), convey.ShouldNotBeNil)
 
 		got := reloadDocument(t, db, doc.ID)
-		convey.So(got.Status, convey.ShouldEqual, string(modelsai.KnowledgeDocStatusFailed))
+		convey.So(got.Status, convey.ShouldEqual, string(ai.KnowledgeDocStatusFailed))
 		convey.So(got.ParseError, convey.ShouldContainSubstring, "disabled")
 	})
 }
@@ -194,7 +206,7 @@ func TestParseHandler_Do_AIDisabled(t *testing.T) {
 func TestParseHandler_Do_EmptyObjectKey(t *testing.T) {
 	convey.Convey("ParseHandler 原件键为空", t, func() {
 		db := newParseTestDB(t)
-		doc := seedParseDocument(t, db, &modelsai.KnowledgeDocument{
+		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
 			Title: "doc", Format: "markdown",
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{path: writeTempSource(t, "body")},
@@ -205,7 +217,7 @@ func TestParseHandler_Do_EmptyObjectKey(t *testing.T) {
 		convey.So(handler.Do(context.Background(), task), convey.ShouldNotBeNil)
 
 		got := reloadDocument(t, db, doc.ID)
-		convey.So(got.Status, convey.ShouldEqual, string(modelsai.KnowledgeDocStatusFailed))
+		convey.So(got.Status, convey.ShouldEqual, string(ai.KnowledgeDocStatusFailed))
 		convey.So(got.ParseError, convey.ShouldNotBeEmpty)
 	})
 }
@@ -216,7 +228,7 @@ func TestParseHandler_Do_EmptyObjectKey(t *testing.T) {
 func TestParseHandler_Do_PanicConvergedToFailed(t *testing.T) {
 	convey.Convey("ParseHandler panic 兜底", t, func() {
 		db := newParseTestDB(t)
-		doc := seedParseDocument(t, db, &modelsai.KnowledgeDocument{
+		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
 			Title: "doc", Format: "pdf", ObjectKey: "knowledge/default/5.pdf",
 		})
 		handler := newParseHandler(t, db, &fakeMaterializer{panicValue: "malformed pdf"},
@@ -227,7 +239,7 @@ func TestParseHandler_Do_PanicConvergedToFailed(t *testing.T) {
 		convey.So(handler.Do(context.Background(), task), convey.ShouldNotBeNil)
 
 		got := reloadDocument(t, db, doc.ID)
-		convey.So(got.Status, convey.ShouldEqual, string(modelsai.KnowledgeDocStatusFailed))
+		convey.So(got.Status, convey.ShouldEqual, string(ai.KnowledgeDocStatusFailed))
 		convey.So(got.ParseError, convey.ShouldContainSubstring, "panicked")
 		convey.So(got.ParseError, convey.ShouldContainSubstring, "malformed pdf")
 	})
@@ -238,7 +250,7 @@ func TestParseHandler_Do_PanicConvergedToFailed(t *testing.T) {
 func TestParseHandler_Do_TruncatesParseError(t *testing.T) {
 	convey.Convey("ParseHandler 截断超长失败原因", t, func() {
 		db := newParseTestDB(t)
-		doc := seedParseDocument(t, db, &modelsai.KnowledgeDocument{
+		doc := seedParseDocument(t, db, &ai.KnowledgeDocument{
 			Title: "doc", Format: "markdown", ObjectKey: "knowledge/default/4.md",
 		})
 		longReason := strings.Repeat("啊", maxParseErrorBytes)
@@ -250,7 +262,7 @@ func TestParseHandler_Do_TruncatesParseError(t *testing.T) {
 		convey.So(handler.Do(context.Background(), task), convey.ShouldNotBeNil)
 
 		got := reloadDocument(t, db, doc.ID)
-		convey.So(got.Status, convey.ShouldEqual, string(modelsai.KnowledgeDocStatusFailed))
+		convey.So(got.Status, convey.ShouldEqual, string(ai.KnowledgeDocStatusFailed))
 		convey.So(len(got.ParseError), convey.ShouldBeLessThanOrEqualTo, maxParseErrorBytes)
 		convey.So(utf8.ValidString(got.ParseError), convey.ShouldBeTrue)
 		convey.So(strings.HasPrefix(longReason, got.ParseError), convey.ShouldBeTrue)

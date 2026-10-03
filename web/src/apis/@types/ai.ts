@@ -217,6 +217,34 @@ export interface AgentStageEvent {
   error?: string;
 }
 
+// 挂起事件负载（后端 ToolRequest）：模型请求调用某个客户端工具，需前端以用户自身凭据、
+// 经人工审批后执行，再把结果回传后端续跑。后端不解释入参，原样透传工具名与入参文本。
+// approvalRequired 固定为 true。
+export interface ToolRequestPayload {
+  // 本次调用的唯一 ID，回传结果时必须原样带回
+  callId: string;
+  // 待执行的客户端工具名（模型给出的调用名）
+  toolName: string;
+  // 模型给出的调用入参（原始 JSON 文本，由前端自行解释）
+  arguments: string;
+  approvalRequired: boolean;
+}
+
+// 单条审批结果（ToolResultItemIn）：approved=true 时 result 为工具执行结果文本、执行失败
+// 时改填 error；approved=false（用户拒绝）时 result 与 error 均留空。
+export interface ToolResultItemIn {
+  callId: string;
+  approved: boolean;
+  result: string;
+  error: string;
+}
+
+// 审批续跑请求体（ToolResultIn）：一次请求必须回传本轮全部待执行调用，
+// 后端会把运行现场一次性消费。
+export interface ToolResultIn {
+  results: ToolResultItemIn[];
+}
+
 // 单个档位的绑定模型与可用性（AgentSlotStatusOut）
 export interface AgentSlotStatusOut {
   // 档位标识（flash/standard/advanced/embedding）

@@ -1,4 +1,4 @@
-package llm
+package ai
 
 import (
 	// 标准库
@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	// 项目内部
-
+	"zhongkui.com/zhongkui/internal/models/ai"
 	"zhongkui.com/zhongkui/internal/pkg/errors"
 	"zhongkui.com/zhongkui/internal/pkg/utils"
 )
@@ -65,7 +65,7 @@ type ParamSpec struct {
 // Specs 是全部可调参数的注册表，声明顺序即前端展示顺序。新增参数必须同时补齐三处，
 // 缺一处都会被守卫拦下：在此登记（缺则经 Params 读取时 panic，编程缺陷 fail fast）、
 // 在 migrate fixture 中注入出厂值（缺则启动期强校验中止，守卫测试更早暴露）、
-// 在两份语言文件中补齐 param.<Key>.label 与 param.<Key>.comment 文案（缺则由本包的
+// 在两份语言文件中补齐 param.<Key>.label 与 param.<Key>.comment 文案（缺则由视图层的
 // i18n 键完整性测试暴露）。
 var Specs = []ParamSpec{
 	// ---- agent：Agent 对话的提示词、消息分节标题与上下文截断 ----
@@ -73,11 +73,6 @@ var Specs = []ParamSpec{
 		Key:   "agent.systemPrompt",
 		Group: "agent",
 		Kind:  ParamKindText,
-	},
-	{
-		Key:   "agent.retrievalSectionTitle",
-		Group: "agent",
-		Kind:  ParamKindString,
 	},
 	{
 		Key:   "agent.businessSectionTitle",
@@ -98,7 +93,7 @@ var Specs = []ParamSpec{
 		Key:      "agent.defaultSlot",
 		Group:    "agent",
 		Kind:     ParamKindString,
-		Options:  chatSlotValues(),
+		Options:  ai.ChatSlotValues(),
 		EnumType: "llmSlot",
 	},
 	// agent.maxToolRounds 工具调用循环的最大轮数：单轮对话内「生成 -> 执行工具 -> 再生成」
@@ -308,17 +303,6 @@ var Specs = []ParamSpec{
 	},
 }
 
-// chatSlotValues 把对话档位清单展开为 agent.defaultSlot 的封闭取值清单（embedding 不在其列，
-// 该参数只接受对话档位）。档位成员仍只声明在 AllSlots 一处，清单由此派生，新增档位无需同步
-// 修改参数注册表。
-func chatSlotValues() []string {
-	values := make([]string, 0, len(chatSlots))
-	for _, slot := range chatSlots {
-		values = append(values, string(slot))
-	}
-	return values
-}
-
 // Lookup 按键查询参数元信息，未声明时返回 ok=false。
 func Lookup(key string) (ParamSpec, bool) {
 	for _, spec := range Specs {
@@ -361,13 +345,13 @@ func OptionAllowed(spec ParamSpec, literal string) bool {
 func ValidateValue(spec ParamSpec, literal string) error {
 	kind, ok := scalarKindOf(spec.Kind)
 	if !ok {
-		return errors.Newf("llm: parameter %q has an unknown kind: %q", spec.Key, string(spec.Kind))
+		return errors.Newf("ai: parameter %q has an unknown kind: %q", spec.Key, string(spec.Kind))
 	}
 	if _, err := utils.ParseScalar(kind, literal); err != nil {
-		return errors.Newf("llm: parameter %q is not a valid %s: %q", spec.Key, string(spec.Kind), literal)
+		return errors.Newf("ai: parameter %q is not a valid %s: %q", spec.Key, string(spec.Kind), literal)
 	}
 	if !OptionAllowed(spec, literal) {
-		return errors.Newf("llm: parameter %q is not one of %s: %q", spec.Key, strings.Join(spec.Options, ", "), literal)
+		return errors.Newf("ai: parameter %q is not one of %s: %q", spec.Key, strings.Join(spec.Options, ", "), literal)
 	}
 	return nil
 }
@@ -412,7 +396,7 @@ func (p *Params) Int(key string) int {
 	v := p.value(key)
 	parsed, err := utils.ParseScalar(utils.ScalarKindInt, v)
 	if err != nil {
-		panic("llm: parameter " + key + " is not a valid int: " + v)
+		panic("ai: parameter " + key + " is not a valid int: " + v)
 	}
 	return parsed.(int)
 }
@@ -423,7 +407,7 @@ func (p *Params) Float(key string) float64 {
 	v := p.value(key)
 	parsed, err := utils.ParseScalar(utils.ScalarKindFloat, v)
 	if err != nil {
-		panic("llm: parameter " + key + " is not a valid float: " + v)
+		panic("ai: parameter " + key + " is not a valid float: " + v)
 	}
 	return parsed.(float64)
 }
@@ -435,7 +419,7 @@ func (p *Params) Bool(key string) bool {
 	v := p.value(key)
 	parsed, err := utils.ParseScalar(utils.ScalarKindBool, v)
 	if err != nil {
-		panic("llm: parameter " + key + " is not a valid bool: " + v)
+		panic("ai: parameter " + key + " is not a valid bool: " + v)
 	}
 	return parsed.(bool)
 }
@@ -445,10 +429,10 @@ func (p *Params) Bool(key string) bool {
 func (p *Params) spec(key string, kind ParamKind) ParamSpec {
 	spec, ok := Lookup(key)
 	if !ok {
-		panic("llm: undeclared parameter key: " + key)
+		panic("ai: undeclared parameter key: " + key)
 	}
 	if spec.Kind != kind {
-		panic("llm: parameter " + key + " is " + string(spec.Kind) + ", not " + string(kind))
+		panic("ai: parameter " + key + " is " + string(spec.Kind) + ", not " + string(kind))
 	}
 	return spec
 }
@@ -461,47 +445,47 @@ func (p *Params) value(key string) string {
 			return v
 		}
 	}
-	panic("llm: parameter " + key + " has no value in the database")
+	panic("ai: parameter " + key + " has no value in the database")
 }
 
 // init 校验注册表自身一致性（fail fast）：键非空且唯一、分组非空、类型合法、封闭取值清单
 // 仅出现在 string 类型上且条目非空唯一、枚举类引用必须伴随封闭取值清单。任一项不满足即
-// panic，避免非法注册表在生产中以残缺形态运行。出厂值的合法性由启动期强校验（ai 运行时
+// panic，避免非法注册表在生产中以残缺形态运行。出厂值的合法性由启动期强校验（本包运行时
 // 装配读取 agent_params 时逐键校验，含清单内校验）与 fixture 守卫测试共同保证。
 func init() {
 	seen := make(map[string]struct{}, len(Specs))
 	for _, spec := range Specs {
 		if spec.Key == "" {
-			panic("llm: parameter spec with an empty key")
+			panic("ai: parameter spec with an empty key")
 		}
 		if spec.Group == "" {
-			panic("llm: parameter " + spec.Key + " has an empty group")
+			panic("ai: parameter " + spec.Key + " has an empty group")
 		}
 		if _, dup := seen[spec.Key]; dup {
-			panic("llm: duplicate parameter key: " + spec.Key)
+			panic("ai: duplicate parameter key: " + spec.Key)
 		}
 		seen[spec.Key] = struct{}{}
 		switch spec.Kind {
 		case ParamKindString, ParamKindText, ParamKindInt, ParamKindFloat, ParamKindBool:
 		default:
-			panic("llm: parameter " + spec.Key + " has an unknown kind: " + string(spec.Kind))
+			panic("ai: parameter " + spec.Key + " has an unknown kind: " + string(spec.Kind))
 		}
 		if len(spec.Options) == 0 {
 			if spec.EnumType != "" {
-				panic("llm: parameter " + spec.Key + " declares an enum type without options")
+				panic("ai: parameter " + spec.Key + " declares an enum type without options")
 			}
 			continue
 		}
 		if spec.Kind != ParamKindString {
-			panic("llm: parameter " + spec.Key + " declares options on the non-string kind " + string(spec.Kind))
+			panic("ai: parameter " + spec.Key + " declares options on the non-string kind " + string(spec.Kind))
 		}
 		options := make(map[string]struct{}, len(spec.Options))
 		for _, option := range spec.Options {
 			if option == "" {
-				panic("llm: parameter " + spec.Key + " has an empty option")
+				panic("ai: parameter " + spec.Key + " has an empty option")
 			}
 			if _, dup := options[option]; dup {
-				panic("llm: parameter " + spec.Key + " has duplicate option: " + option)
+				panic("ai: parameter " + spec.Key + " has duplicate option: " + option)
 			}
 			options[option] = struct{}{}
 		}
