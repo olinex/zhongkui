@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/pcapgo"
-	"zhongkui.com/zhongkui/internal/capture/totel"
-	"zhongkui.com/zhongkui/internal/capture/wire"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/capture/totel"
+	"zhongkuisec.com/zhongkui/internal/capture/wire"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 type notice struct {

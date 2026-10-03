@@ -13,8 +13,8 @@ import (
 	"time"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // 通知记录状态常量，定义通知发送的三态状态机：

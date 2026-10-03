@@ -18,7 +18,7 @@ package traffic
 import (
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/traffic 原始流量审计接口路由到共享注册上下文。

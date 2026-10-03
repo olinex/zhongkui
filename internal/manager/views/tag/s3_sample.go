@@ -6,11 +6,11 @@ import (
 
 	"github.com/minio/minio-go/v7"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // 样例 S3 body 副本管理：

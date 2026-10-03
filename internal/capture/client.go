@@ -67,15 +67,15 @@ import (
 
 	"github.com/cenkalti/backoff/v5"
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/capture/totel"
-	"zhongkui.com/zhongkui/internal/capture/wire"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/capture/totel"
+	"zhongkuisec.com/zhongkui/internal/capture/wire"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // CaptureClient 抓包客户端，负责管理与远程服务器的通信、监控配置变化、执行数据包捕获和上传

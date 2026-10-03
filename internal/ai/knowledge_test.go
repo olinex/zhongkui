@@ -11,7 +11,7 @@ import (
 	"github.com/cloudwego/eino/components/retriever"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
 // almostEqual 报告两个浮点数是否在容差内近似相等。

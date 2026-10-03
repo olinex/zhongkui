@@ -17,13 +17,13 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // datasourceTestNamespace 第三方数据源测试专用命名空间，与迁移种子的 default 隔离。

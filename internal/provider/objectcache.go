@@ -5,9 +5,9 @@ import (
 	"github.com/samber/do/v2"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // newObjectCacheProvider 构建共享的通用对象缓存（s3.ObjectCache）：依次注入 Viper 配置、

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // IPAddr 是以 net.IP 为底层的通用 IP 地址类型，支持数据库、JSON 与文本之间的序列化。

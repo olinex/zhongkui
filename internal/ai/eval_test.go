@@ -12,7 +12,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // fakeChat 是测试用 chatGenerator 替身：Generate 与 Stream 分别转调配置的 gen/stream；

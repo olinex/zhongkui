@@ -12,13 +12,13 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // LlmToolListOut 定义工具注册表列表的输出项结构。

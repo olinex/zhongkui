@@ -17,8 +17,8 @@ import (
 	"github.com/creasty/defaults"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // smtpTLSPort 使用隐式 TLS 的 SMTP 端口（SSL 直连）。

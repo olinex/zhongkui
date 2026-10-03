@@ -21,8 +21,8 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // memoryRuntimeKey 是记忆运行期写入器与归属信息在 ctx 中的键。用私有空结构体作键可避免与其他包

@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai"
 )
 
 // AiRuntimeCtxName 是 AI 助手运行时在 Gin 上下文中存储的键名。

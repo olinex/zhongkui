@@ -4,7 +4,7 @@ import (
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
 )
 
 func newViperProvider() do.Provider[*viper.Viper] {

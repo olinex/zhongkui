@@ -15,10 +15,10 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai/tools"
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/ai/tools"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // testClientToolName 是本包运行现场用例使用的客户端工具名：生产 client 注册表当前为空，故用例

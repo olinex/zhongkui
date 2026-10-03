@@ -17,7 +17,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ChatClient 包装 eino OpenAI 兼容对话模型（eino-ext components/model/openai），

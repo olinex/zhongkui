@@ -14,7 +14,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/text/language"
 
-	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 )
 
 type metaTestHeader struct {

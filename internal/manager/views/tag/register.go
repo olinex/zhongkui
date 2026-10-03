@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/tag-event 标签事件接口路由。

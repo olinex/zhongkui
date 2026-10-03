@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // TestNamespace_Struct 测试 Namespace 结构体的基本属性

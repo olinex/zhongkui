@@ -4,7 +4,7 @@ import (
 	"embed"
 	"sync"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // p0f.fp 为上游基础签名库（可经 make p0f-update 刷新），p0f.local.fp 为本项目

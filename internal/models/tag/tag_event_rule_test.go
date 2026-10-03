@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestBoolExprParser 测试布尔表达式解析器的功能
@@ -251,7 +251,7 @@ func TestTagEventCondition_Fields(t *testing.T) {
 					CreatedAt: now.Add(-time.Hour),
 					UpdatedAt: now,
 				},
-				Model:          "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:          "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Dimension:      "fpTcpClientSig",
 				Item:           "4:D:A+",
 				TagEventRuleID: 100,
@@ -264,7 +264,7 @@ func TestTagEventCondition_Fields(t *testing.T) {
 			}
 
 			convey.So(condition.ID, convey.ShouldEqual, 1)
-			convey.So(condition.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			convey.So(condition.Model, convey.ShouldEqual, "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport")
 			convey.So(condition.Dimension, convey.ShouldEqual, "fpTcpClientSig")
 			convey.So(condition.Item, convey.ShouldEqual, "4:D:A+")
 			convey.So(condition.TagEventRuleID, convey.ShouldEqual, 100)

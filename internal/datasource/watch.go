@@ -5,10 +5,10 @@ import (
 	"context"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
 )
 
 // Watcher 数据源变更监听器，实现 runtime.Service 生命周期。

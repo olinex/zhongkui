@@ -8,10 +8,10 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // 包级错误哨兵：会话/消息查询不命中的统一错误，供上层 errors.Is 判断。

@@ -6,8 +6,8 @@ import (
 	"net"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 var (

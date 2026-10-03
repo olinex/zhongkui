@@ -17,14 +17,14 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // tagEventRuleValidExpr 可通过 has(tags, ?) 命中的单标签合法表达式。

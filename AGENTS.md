@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-- **Module**: `zhongkui.com/zhongkui` (Go 1.26.3)
+- **Module**: `zhongkuisec.com/zhongkui` (Go 1.26.3)
 - **Type**: 网络流量抓包与数据分析平台
 - **Stack**: Go (Gin + GORM + gRPC + Cobra + Viper + OpenTelemetry) + Vue 3 + Vuetify 3
 
@@ -30,8 +30,8 @@ import (
 	"go.uber.org/zap"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 ```
 
@@ -197,7 +197,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **分区隔离**：叙述页落在 `format='generated'`（`docconv.FormatGenerated`）的专用知识域，与人工业务文档分区隔离；同步（`SyncGeneratedDocs`，接收调用方传入的文档集与目标 format）只读写该分区，不得影响人工文档。
 - **幂等同步**：按新增 / 更新 / 删除差异计划幂等执行——正文未变的条目零写入（不重复向量化），条目下线即清理，连续两次执行且源码未变时第二次不产生任何写入。
 - **检索范围**：`knowledge_search` 不限定 format，可命中叙述页与人工文档。
-- **投影边界（参考页不入 RAG）**：进 RAG 的是**单篇**叙述页；`docs/reference/**`（逐包参考档）与 `docs/README.md` 是随 `zki create docs` 生成、落在 `docs/` 下且带 `DO NOT EDIT` 的人读产物，**不入 RAG**，避免同一份说明以整页粒度重复索引。
+- **投影边界（参考页不入 RAG）**：进 RAG 的是**单篇**叙述页；`docs/reference/**`（逐包参考档）与项目根 `README.md`（封面 + 目录）是随 `zki create docs` 生成、带 `DO NOT EDIT` 的人读产物，**不入 RAG**，避免同一份说明以整页粒度重复索引。
 
 ### 向量与模型对齐（sync embeddings / sync embedding-dimensions）
 
@@ -254,11 +254,12 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 ### 文档分类与导出（Diátaxis + gomarkdoc）
 
 - **四分类与唯一清单**：文档按 Diátaxis 组织为教程（`docs/tutorials/`）、操作指南（`docs/how-to/`）、参考（`docs/reference/`）、解释（`docs/explanation/`）四类；分类取值与全部条目（分类/标题/摘要/角色/适用场景/来源包/产物路径/渲染档）唯一登记在 `internal/docs/registry.go` 的 `Registry()`，分类取值定义在 `internal/docs/category.go`（`tutorial` / `how-to` / `reference` / `explanation`），新增或调整文档一律改此处。
-- **建议阅读角色与适用场景**：每条条目须标注一个或多个建议阅读角色（`Entry.Roles`）与一句话适用场景（`Entry.Scene`）。角色取值定义在 `internal/docs/role.go`，`Roles()` 是角色集合唯一注册点，取值为 `admin`（管理员，平台治理：用户 / 角色权限 / 命名空间 / 功能开关）、`secops`（安全运营，日常使用告警与标签：查看风险 / 编写调整 rego 规则 / 解读标签窗口统计 / 接收通知）、`ops`（运维，部署与运行：安装配置 / 数据库迁移 / 数据源接入 / 通知渠道配置 / 异步任务与队列 / 采集运行）、`dev`（研发，扩展系统能力：数据源插件 / 通知渠道类型 / 枚举类 / AI Agent 工具 / 管理端页面 / 依赖注入与生命周期 / 流水线调度），新增或调整角色一律改此处。角色与场景在三处呈现：叙述页页头 `> 分类：… · 来源：… · 角色：… · 适用场景：…`（手写 Overview 页同带角色行）、`docs/README.md` 各条目行的 `（角色：…；来源 …）` 片段、以及 `docs/README.md` 末尾的「按角色找文档」分区。守卫测试强制每条条目 Roles 与 Scene 非空、每个角色合法且至少被一条条目使用。
+- **建议阅读角色与适用场景**：每条条目须标注一个或多个建议阅读角色（`Entry.Roles`）与一句话适用场景（`Entry.Scene`）。角色取值定义在 `internal/docs/role.go`，`Roles()` 是角色集合唯一注册点，取值为 `admin`（管理员，平台治理：用户 / 角色权限 / 命名空间 / 功能开关）、`secops`（安全运营，日常使用告警与标签：查看风险 / 编写调整 rego 规则 / 解读标签窗口统计 / 接收通知）、`ops`（运维，部署与运行：安装配置 / 数据库迁移 / 数据源接入 / 通知渠道配置 / 异步任务与队列 / 采集运行）、`dev`（研发，扩展系统能力：数据源插件 / 通知渠道类型 / 枚举类 / AI Agent 工具 / 管理端页面 / 依赖注入与生命周期 / 流水线调度），新增或调整角色一律改此处。角色与场景在三处呈现：叙述页页头 `> 分类：… · 来源：… · 角色：… · 适用场景：…`（手写 Overview 页同带角色行）、项目根 `README.md` 各条目行的 `（角色：…；来源 …）` 片段、以及项目根 `README.md` 末尾的「按角色找文档」分区。守卫测试强制每条条目 Roles 与 Scene 非空、每个角色合法且至少被一条条目使用。
+- **文档入口（根 README 封面 + 目录）**：`zki create docs` 在项目根生成 `README.md` 作为文档体系的唯一入口，含封面（项目标题 + 一句话简介 + Diátaxis 四分类说明）与目录（四分类全部条目 + 末尾「按角色找文档」），并带 `DO NOT EDIT` 生成标记（来源标注 `internal/docs/registry.go`）。目录内的文档链接一律以 `docs/` 前缀书写（`internal/docs/export.go` 的 `readmeLink`），保证相对项目根可跳转；`docs/` 内不再生成独立的索引页，入口统一到根 `README.md`。
 - **单一事实来源**：教程 / 操作指南 / 解释的正文以既有功能包的 package 注释承载、经 gomarkdoc 导出，禁止在 Markdown 里重复维护同一知识；`docs/` 下除 `registry.go` 登记的手写条目（`Overview: true`）、既有 `docs/kernel/` 文档与投影页外，其余均为生成产物，首行带 `DO NOT EDIT` 生成标记（`internal/docs/export.go` 的 `generatedHeaderFormat`），不得手改。
-- **投影页（Projection）**：除「叙述档（包注释）」与「参考档（包符号）」外，第三类产物是**投影页**——正文由调用方按单一事实来源在别处渲染好，导出器只负责落盘并套用统一页头（分类固定为参考）。**约束**：投影页正文必须以「声明 → 投影」方式派生（禁止人工维护第二份说明）；投影页只进 `docs/` 供人阅读，不参与 RAG 摄取（见「投影边界（参考页不入 RAG）」）；`Options.Projections` 为空时导出行为与不传时完全一致；投影页不参与「按角色找文档」分区，与其条目仅出现在 `docs/README.md` 的「参考」分区。当前生产侧无投影页（原接口能力参考页已随「agent 调用工具请求原生接口」功能整体剔除），机制保留供后续声明源派生页面复用。
+- **投影页（Projection）**：除「叙述档（包注释）」与「参考档（包符号）」外，第三类产物是**投影页**——正文由调用方按单一事实来源在别处渲染好，导出器只负责落盘并套用统一页头（分类固定为参考）。**约束**：投影页正文必须以「声明 → 投影」方式派生（禁止人工维护第二份说明）；投影页只进 `docs/` 供人阅读，不参与 RAG 摄取（见「投影边界（参考页不入 RAG）」）；`Options.Projections` 为空时导出行为与不传时完全一致；投影页不参与「按角色找文档」分区，与其条目仅出现在项目根 `README.md` 的「参考」分区。当前生产侧无投影页（原接口能力参考页已随「agent 调用工具请求原生接口」功能整体剔除），机制保留供后续声明源派生页面复用。
 - **每个包至多一条叙述条目**：同一包的 package 注释只对应一篇叙述页，避免同包多页内容重复、被 RAG 重复索引。
-- **导出命令**：`zki create docs`（`internal/cmd/docs.go`），自带 `PersistentPreRunE` / `PersistentPostRunE` 旁路根命令全局 eager 启动，故无 DB/Redis/Etcd 亦可运行；一次导出产出全部叙述页 + `./internal/...`、`./cmd/...` 的参考页 + `docs/README.md` 索引。**抽取或生成失败不得静默**：导出出错必须以 `pterm.Error` 报错并返回错误使命令非零退出，避免参考页缺失被吞掉。
+- **导出命令**：`zki create docs`（`internal/cmd/docs.go`），自带 `PersistentPreRunE` / `PersistentPostRunE` 旁路根命令全局 eager 启动，故无 DB/Redis/Etcd 亦可运行；一次导出产出全部叙述页 + `./internal/...`、`./cmd/...` 的参考页 + 项目根 `README.md`（封面 + 目录）。**抽取或生成失败不得静默**：导出出错必须以 `pterm.Error` 报错并返回错误使命令非零退出，避免参考页缺失被吞掉。
 - **叙述档渲染约束（重要）**：叙述档在 `internal/docs/render.go` 中额外覆盖 `text` 模板（`narrativeTextTemplate`）关闭纯文本转义，因此叙述来源的 package 注释必须写成「原样 Markdown 且安全」——命令 / 路径 / 配置键 / 标识符一律用反引号包裹（否则 `_`、`*` 等会被 Markdown 解析成斜体 / 加粗）；禁止 `# ` 单井号标题（Go 文档注释只识别单井号为 heading，会渲染成固定层级并与注册表注入的 H1 标题重复、层级倒挂），顶层小节用 `## `、嵌套用 `### `；避免会被当作 HTML 标签吞掉的裸尖括号占位符。
 - **参考档保持内置转义**：参考档不覆盖 `text` 模板，沿用 gomarkdoc 内置转义——这对符号文档里的字面量 `#`、尖括号是正确行为，不得关闭。
 - **守卫测试**：`internal/docs/registry_test.go` 校验分类合法、输出路径唯一、来源包存在、叙述条目元信息完整；改注册表后必须过此测试。

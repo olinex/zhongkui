@@ -8,10 +8,10 @@ import (
 	"github.com/minio/minio-go/v7/pkg/lifecycle"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var s3Cmd = &cobra.Command{

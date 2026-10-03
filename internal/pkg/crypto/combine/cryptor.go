@@ -6,8 +6,8 @@ import (
 	"io"
 	"sync"
 
-	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/mode"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 加密算法标识常量

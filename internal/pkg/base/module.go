@@ -18,7 +18,7 @@ var modulePath = sync.OnceValue(func() string {
 	return info.Main.Path
 })
 
-// ModulePath 返回构建期写入二进制的本项目模块导入路径（如 zhongkui.com/zhongkui）。
+// ModulePath 返回构建期写入二进制的本项目模块导入路径（如 zhongkuisec.com/zhongkui）。
 // 构建信息不可用时返回空字符串，由调用方自行决定降级或报错，本包不提供文件系统回退。
 func ModulePath() string {
 	return modulePath()

@@ -10,7 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
 )
 
 const (

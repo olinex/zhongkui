@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/hibiken/asynq"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // RecoverWithStack 创建一个 panic 恢复中间件，用于捕获任务执行过程中的 panic 并记录调用栈。

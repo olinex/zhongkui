@@ -12,13 +12,13 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
-	ai "zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // AgentMemoryItemOut 定义长期记忆列表项的输出结构（独立于内部模型层，逐字段映射）。

@@ -5,9 +5,9 @@ import (
 	"context"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etl"
-	"zhongkui.com/zhongkui/internal/worker/totel"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/worker/totel"
 )
 
 // 编译期断言：确保 BatchHandler 实现了 etl.Handler 接口

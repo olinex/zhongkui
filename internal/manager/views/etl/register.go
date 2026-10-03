@@ -3,7 +3,7 @@ package etl
 import (
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/etl ETL管道监控接口路由。

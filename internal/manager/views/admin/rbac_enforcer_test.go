@@ -4,9 +4,9 @@ import (
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // newTestRbacEnforcer 基于测试数据库创建 Casbin enforcer

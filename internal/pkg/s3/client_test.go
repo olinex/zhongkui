@@ -15,9 +15,9 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // TestWithTransport 测试 WithTransport 选项能否正确设置 minio 客户端的传输层。

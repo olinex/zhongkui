@@ -13,8 +13,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // simpleSchema 单列字符串 schema。

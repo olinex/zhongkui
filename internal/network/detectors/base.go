@@ -47,9 +47,9 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // ErrDataIncomplete 表示应用层数据尚未完整到达。

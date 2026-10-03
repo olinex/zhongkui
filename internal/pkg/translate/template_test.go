@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // TestNotifyDefaultRaw 验证 notify 默认模板经 Localize 在 [[ / ]] 数据定界符下

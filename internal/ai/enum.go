@@ -10,7 +10,7 @@ package ai
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // evalStageValues 是 evalStage 枚举类的取值空间，声明顺序即枚举类条目顺序。

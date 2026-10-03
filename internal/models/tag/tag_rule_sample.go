@@ -3,8 +3,8 @@ package tag
 import (
 	"gorm.io/datatypes"
 
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // TagRuleSample 表示标签识别规则的验证样例数据。
@@ -18,7 +18,7 @@ type TagRuleSample struct {
 	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name"`
 	// NamespaceName 所属命名空间名称，同一命名空间内按 (模型, 名称) 唯一
 	NamespaceName string `gorm:"type:VARCHAR(32);uniqueIndex:uq_tag_rule_samples_namespace_name_model_name"`
-	// Model 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	// Model 目标模型类型键（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `gorm:"type:VARCHAR(255);uniqueIndex:uq_tag_rule_samples_namespace_name_model_name"`
 	// Name 样例名称，同一命名空间同一模型内唯一
 	Name string `gorm:"type:VARCHAR(128);uniqueIndex:uq_tag_rule_samples_namespace_name_model_name"`

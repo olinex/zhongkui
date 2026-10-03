@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // Tracer 全局阶段耗时追踪器实例，供各包在热点路径埋点。

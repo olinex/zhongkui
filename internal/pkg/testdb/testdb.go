@@ -19,12 +19,12 @@ import (
 
 	"github.com/spf13/viper"
 
-	"zhongkui.com/zhongkui/internal/migrations"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/migrate"
+	"zhongkuisec.com/zhongkui/internal/migrations"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/migrate"
 )
 
 // 环境变量覆盖测试库 DSN，优先级高于 config.toml

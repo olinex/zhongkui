@@ -12,14 +12,14 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/migrations"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/migrate"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/migrations"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/migrate"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var migrateUpCmd = &cobra.Command{

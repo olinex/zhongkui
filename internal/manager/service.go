@@ -18,10 +18,10 @@ import (
 
 	"github.com/samber/do/v2"
 	"go.uber.org/zap"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // RunHttpService 启动 HTTP 服务并在 context 取消时优雅关闭。

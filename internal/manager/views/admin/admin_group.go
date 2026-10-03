@@ -5,14 +5,14 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // GroupRbacPolicyIn 定义组RBAC策略输入结构体。

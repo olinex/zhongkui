@@ -7,7 +7,7 @@ import (
 
 	"github.com/gopacket/gopacket/pcap"
 	"github.com/gopacket/gopacket/pcapgo"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // PcapPacket 单个 pcap 数据包及其捕获时间戳。

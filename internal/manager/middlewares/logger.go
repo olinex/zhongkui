@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // LoggerCtxName 是 ApiLogger 在 gin.Context 中存储的键名

@@ -8,9 +8,9 @@ import (
 	"unsafe"
 
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/mode"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Crypto 持有加密字段的明文与密文

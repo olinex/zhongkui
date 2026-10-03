@@ -10,9 +10,9 @@ import (
 	"github.com/cloudwego/eino/components/embedding"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai/tools"
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/ai/tools"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // TestNewMemoryStore_NilArgs 测试构造 MemoryStore 时的空值校验：db/embed/params 为空返回

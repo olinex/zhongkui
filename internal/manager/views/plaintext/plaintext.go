@@ -7,17 +7,17 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/network/detectors"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
 // 明文查看模型注册表：

@@ -16,7 +16,7 @@ export interface RegoValidationError {
 
 /** HTTP 传输输入文档所注册的模型类型键。 */
 export const HTTP_TRANSPORT_MODEL_KEY =
-  "zhongkui.com/zhongkui/internal/models/network.HttpTransport";
+  "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport";
 
 /** 编辑器自动补全提供的常用 Rego 关键字。 */
 export const REGO_KEYWORDS = [

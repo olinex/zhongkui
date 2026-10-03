@@ -5,7 +5,7 @@ import (
 	"slices"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // init 注册 notificationEvent 枚举类（来源为事件模板注册表，读取时派生）。

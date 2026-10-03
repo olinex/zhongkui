@@ -5,7 +5,7 @@ package message
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // init 注册 channelType 枚举类（来源为渠道工厂注册表，读取时派生）。

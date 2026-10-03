@@ -20,7 +20,7 @@ import (
 	"net/http"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/admin/llm AI 助手 admin 配置接口。

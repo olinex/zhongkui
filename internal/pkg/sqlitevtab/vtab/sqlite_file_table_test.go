@@ -13,8 +13,8 @@ import (
 	_ "github.com/glebarez/go-sqlite"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // newSQLiteFileMockPool 以注入 key 的 mock db 构建 SQLiteFilePool。实际上 sqlite 文件走

@@ -3,7 +3,7 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 
-	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
 // ObjectCacheCtxName 是通用对象缓存在 Gin 上下文中存储的键名。

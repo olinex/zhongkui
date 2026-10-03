@@ -8,7 +8,7 @@ package tagengine
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // init 注册 tagRuleModel 与 tagEventDimension 枚举类（来源为目标模型注册表，读取时派生）。

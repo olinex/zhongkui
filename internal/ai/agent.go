@@ -19,11 +19,11 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/ai/tools"
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/ai/tools"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // agentNode 常量：Eino Graph 四节点管线（上下文组装 → 业务数据清洗 → LLM 生成

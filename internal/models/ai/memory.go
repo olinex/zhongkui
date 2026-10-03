@@ -13,8 +13,8 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	coremodel "zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	coremodel "zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // AgentMemory 表示一条长期记忆，按「命名空间 + Agent 类型 + 来源会话」归属与隔离，

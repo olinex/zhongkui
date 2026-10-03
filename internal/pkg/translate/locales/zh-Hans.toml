@@ -832,413 +832,413 @@ recursion = "递归错误：规则定义存在递归引用，请检查规则间�
 # =============================================================================
 
 # ---- BaseMeta ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.namespace"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.namespace"]
 other = "所属命名空间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.capture"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.capture"]
 other = "捕获器名称"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.version"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.version"]
 other = "数据版本"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.session_id"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.session_id"]
 other = "会话 ID"
 
 # ---- TimestampMeta ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.timestamp"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.timestamp"]
 other = "数据包捕获时间戳"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.created_at"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.created_at"]
 other = "记录创建时间"
 
 # ---- TraceMeta ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.trace_id"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.trace_id"]
 other = "链路追踪 ID"
 
 # ---- HttpBase ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
 other = "客户端 IP 地址"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_port"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_port"]
 other = "客户端端口号"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_isn"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_isn"]
 other = "客户端 ISN"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_ip"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_ip"]
 other = "服务器 IP 地址"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_port"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_port"]
 other = "服务器端口号"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_isn"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_isn"]
 other = "服务器 ISN"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.ip_version"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.ip_version"]
 other = "IP 协议版本"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.http_version"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.http_version"]
 other = "HTTP 协议版本"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.stream_index"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.stream_index"]
 other = "流索引"
 
 # ---- TcpFingerprint ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os"]
 other = "客户端操作系统（TCP 指纹）"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_client_os_quality"]
 other = "客户端操作系统识别置信度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
 other = "客户端 TCP 签名"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os"]
 other = "服务端操作系统（TCP 指纹）"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_server_os_quality"]
 other = "服务端操作系统识别置信度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
 other = "服务端 TCP 签名"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_tcp_mtu"]
 other = "TCP MTU 值"
 
 # ---- HttpURI ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.url"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.url"]
 other = "完整请求 URL"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.scheme"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.scheme"]
 other = "协议方案"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.host"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.host"]
 other = "主机名或 IP 地址"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.path"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.path"]
 other = "请求路径"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.file_ext"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.file_ext"]
 other = "文件扩展名"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.queries"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.queries"]
 other = "查询参数"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fragment"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fragment"]
 other = "片段标识符"
 
 # ---- HttpRequestBody ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.method"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.method"]
 other = "HTTP 请求方法"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body"]
 other = "请求主体内容"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body_hash"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body_hash"]
 other = "请求主体 SHA-256 摘要"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_body_length"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_body_length"]
 other = "请求主体字节长度"
 
 # ---- HttpRequestHeaders ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_authorization"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_authorization"]
 other = "认证凭据"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_proxy_authorization"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_proxy_authorization"]
 other = "代理认证凭据"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cache_control"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cache_control"]
 other = "缓存控制指令"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_match"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_match"]
 other = "条件匹配 ETag"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_none_match"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_none_match"]
 other = "条件不匹配 ETag"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_modified_since"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_modified_since"]
 other = "条件修改时间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_unmodified_since"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_unmodified_since"]
 other = "条件未修改时间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_range"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_if_range"]
 other = "条件范围请求"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_connection"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_connection"]
 other = "连接控制"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_keep_alive"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_keep_alive"]
 other = "持久连接控制"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept"]
 other = "可接受的响应内容类型"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_encoding"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_encoding"]
 other = "可接受的内容编码"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_language"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_accept_language"]
 other = "可接受的自然语言"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_expect"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_expect"]
 other = "期望条件"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_max_forwards"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_max_forwards"]
 other = "最大转发跳数"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cookie"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_cookie"]
 other = "HTTP Cookie"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_origin"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_origin"]
 other = "请求源"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_headers"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_headers"]
 other = "CORS 预检请求头"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_method"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_access_control_request_method"]
 other = "CORS 预检方法"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_type"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_type"]
 other = "请求内容类型"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_length"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_length"]
 other = "请求内容长度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_encoding"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_encoding"]
 other = "请求内容编码"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_language"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_content_language"]
 other = "请求内容语言"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_forwarded"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_forwarded"]
 other = "转发信息"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_via"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_via"]
 other = "代理链信息"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_range"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_range"]
 other = "范围请求"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_from"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_from"]
 other = "发送者邮箱"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_host"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_host"]
 other = "目标主机"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referer"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referer"]
 other = "引用来源"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referrer_policy"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_referrer_policy"]
 other = "引用策略"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_user_agent"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_user_agent"]
 other = "用户代理字符串"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_te"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_te"]
 other = "传输编码接受"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_transfer_encoding"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_transfer_encoding"]
 other = "传输编码"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_trailer"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_trailer"]
 other = "尾部字段声明"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_key"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_key"]
 other = "WebSocket 握手密钥"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_version"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_version"]
 other = "WebSocket 协议版本"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_protocol"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_protocol"]
 other = "WebSocket 子协议"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_extensions"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_websocket_extensions"]
 other = "WebSocket 扩展"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_site"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_site"]
 other = "Fetch 源关系"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_mode"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_mode"]
 other = "Fetch 请求模式"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_user"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_user"]
 other = "Fetch 用户激活"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_dest"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_fetch_dest"]
 other = "Fetch 请求目标"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_purpose"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_purpose"]
 other = "请求目的"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_service_worker_navigation_preload"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_service_worker_navigation_preload"]
 other = "SW 导航预加载"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua"]
 other = "用户代理品牌与版本"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_arch"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_arch"]
 other = "用户代理 CPU 架构"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_bitness"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_bitness"]
 other = "用户代理 CPU 位数"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version"]
 other = "用户代理完整版本"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version_list"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_full_version_list"]
 other = "用户代理品牌完整版本列表"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_mobile"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_mobile"]
 other = "移动设备标记"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_model"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_model"]
 other = "设备型号"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform"]
 other = "底层平台"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform_version"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_platform_version"]
 other = "平台版本"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_wow64"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_ua_wow64"]
 other = "WoW64 运行标记"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_color_scheme"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_color_scheme"]
 other = "深色/浅色模式偏好"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_motion"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_motion"]
 other = "减少动画偏好"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_transparency"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_sec_ch_prefers_reduced_transparency"]
 other = "降低透明度偏好"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_content_digest"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_content_digest"]
 other = "期望内容摘要"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_repr_digest"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_want_repr_digest"]
 other = "期望表示摘要"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade_insecure_requests"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade_insecure_requests"]
 other = "升级不安全请求"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_date"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_date"]
 other = "请求日期"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_link"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_link"]
 other = "链接关系"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_upgrade"]
 other = "协议升级"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_priority"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_priority"]
 other = "资源优先级"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.req_hdr_alt_used"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.req_hdr_alt_used"]
 other = "使用的替代服务"
 
 # ---- HttpResponseBody ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body"]
 other = "响应主体内容"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body_hash"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body_hash"]
 other = "响应主体 SHA-256 摘要"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_body_length"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_body_length"]
 other = "响应主体字节长度"
 
 # ---- HttpResponseHeaders ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_www_authenticate"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_www_authenticate"]
 other = "认证质询"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_proxy_authenticate"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_proxy_authenticate"]
 other = "代理认证质询"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_age"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_age"]
 other = "缓存年龄"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cache_control"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cache_control"]
 other = "缓存控制指令"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_clear_site_data"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_clear_site_data"]
 other = "清除站点数据"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expires"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expires"]
 other = "过期时间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_no_vary_search"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_no_vary_search"]
 other = "无变化搜索"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_last_modified"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_last_modified"]
 other = "最后修改时间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_etag"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_etag"]
 other = "实体标签"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_vary"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_vary"]
 other = "响应变化依据"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_connection"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_connection"]
 other = "连接控制"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_keep_alive"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_keep_alive"]
 other = "持久连接控制"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_patch"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_patch"]
 other = "可接受的 PATCH 媒体类型"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_post"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_post"]
 other = "可接受的 POST 媒体类型"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_set_cookie"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_set_cookie"]
 other = "设置 Cookie"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_credentials"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_credentials"]
 other = "CORS 允许凭据"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_headers"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_headers"]
 other = "CORS 允许标头"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_methods"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_methods"]
 other = "CORS 允许方法"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_origin"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_allow_origin"]
 other = "CORS 允许源"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_expose_headers"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_expose_headers"]
 other = "CORS 暴露标头"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_max_age"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_access_control_max_age"]
 other = "CORS 最大缓存时间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_timing_allow_origin"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_timing_allow_origin"]
 other = "时间允许源"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_disposition"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_disposition"]
 other = "内容处置"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_digest"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_digest"]
 other = "内容摘要"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_repr_digest"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_repr_digest"]
 other = "表示摘要"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_type"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_type"]
 other = "响应内容类型"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_length"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_length"]
 other = "响应内容长度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_encoding"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_encoding"]
 other = "响应内容编码"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_language"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_language"]
 other = "响应内容语言"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_location"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_location"]
 other = "内容位置"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_forwarded"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_forwarded"]
 other = "转发信息"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_via"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_via"]
 other = "代理链信息"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ranges"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ranges"]
 other = "接受范围请求"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_range"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_range"]
 other = "内容范围"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_location"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_location"]
 other = "重定向位置"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_refresh"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_refresh"]
 other = "刷新/重定向"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_allow"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_allow"]
 other = "允许的方法"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server"]
 other = "服务器标识"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_embedder_policy"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_embedder_policy"]
 other = "跨源嵌入器策略"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_opener_policy"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_opener_policy"]
 other = "跨源打开器策略"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_resource_policy"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_cross_origin_resource_policy"]
 other = "跨源资源策略"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy"]
 other = "内容安全策略"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy_report_only"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_content_security_policy_report_only"]
 other = "CSP 仅报告模式"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expect_ct"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_expect_ct"]
 other = "证书透明度期望"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_permissions_policy"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_permissions_policy"]
 other = "权限策略"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_strict_transport_security"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_strict_transport_security"]
 other = "严格传输安全"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_content_type_options"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_content_type_options"]
 other = "内容类型选项"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_frame_options"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_frame_options"]
 other = "框架选项"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_permitted_cross_domain_policies"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_permitted_cross_domain_policies"]
 other = "允许的跨域策略"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_powered_by"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_powered_by"]
 other = "技术引擎标识"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_xss_protection"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_x_xss_protection"]
 other = "XSS 保护"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_reporting_endpoints"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_reporting_endpoints"]
 other = "报告端点"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_report_to"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_report_to"]
 other = "报告目标"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_transfer_encoding"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_transfer_encoding"]
 other = "传输编码"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_trailer"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_trailer"]
 other = "尾部字段声明"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_accept"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_accept"]
 other = "WebSocket 握手接受"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_protocol"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_protocol"]
 other = "WebSocket 子协议"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_extensions"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_sec_websocket_extensions"]
 other = "WebSocket 扩展"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ch"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_accept_ch"]
 other = "接受客户端提示"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_critical_ch"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_critical_ch"]
 other = "关键客户端提示"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_eligible"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_eligible"]
 other = "归因报告资格"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_source"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_source"]
 other = "归因报告注册来源"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_trigger"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_attribution_reporting_register_trigger"]
 other = "归因报告注册触发器"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_date"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_date"]
 other = "响应日期"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_link"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_link"]
 other = "链接关系"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_retry_after"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_retry_after"]
 other = "重试时间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server_timing"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_server_timing"]
 other = "服务器时间"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker"]
 other = "Service Worker 标识"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker_allowed"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_service_worker_allowed"]
 other = "SW 允许路径"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_source_map"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_source_map"]
 other = "源代码映射"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_upgrade"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_upgrade"]
 other = "协议升级"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_alt_svc"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_alt_svc"]
 other = "替代服务"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_priority"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.rsp_hdr_priority"]
 other = "资源优先级"
 
 # ---- HttpFingerprint ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser"]
 other = "浏览器识别"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser_quality"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_browser_quality"]
 other = "浏览器识别置信度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_server"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_server"]
 other = "服务端识别"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_server_quality"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_server_quality"]
 other = "服务端识别置信度"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_http_language"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_http_language"]
 other = "语言识别"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fp_device_guess"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fp_device_guess"]
 other = "设备类别猜测"
 
 # ---- AppTailer ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_consumed"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_consumed"]
 other = "客户端已消耗字节数"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_start_payload_offset"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_start_payload_offset"]
 other = "客户端起始载荷偏移"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_end_payload_offset"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_end_payload_offset"]
 other = "客户端结束载荷偏移"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_start_timestamp"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_start_timestamp"]
 other = "客户端起始时间戳"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_end_timestamp"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_end_timestamp"]
 other = "客户端结束时间戳"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_consumed"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_consumed"]
 other = "服务端已消耗字节数"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_start_payload_offset"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_start_payload_offset"]
 other = "服务端起始载荷偏移"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_end_payload_offset"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_end_payload_offset"]
 other = "服务端结束载荷偏移"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_start_timestamp"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_start_timestamp"]
 other = "服务端起始时间戳"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.server_end_timestamp"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.server_end_timestamp"]
 other = "服务端结束时间戳"
 
 # ---- TagsMeta ----
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.tags"]
 other = "风险标签组合"
 
 # =============================================================================
@@ -1404,7 +1404,7 @@ other = "使用 tshark 从 pcap 文件中提取 HTTP 请求/响应数据，\n并
 other = "从代码注释生成 Diátaxis 分类文档"
 
 [cmd.create.docs.long]
-other = "扫描文档注册表，调用 gomarkdoc 将各功能包的注释导出为 Markdown（教程/操作指南/参考/解释），并生成 docs/README.md 索引。"
+other = "扫描文档注册表，调用 gomarkdoc 将各功能包的注释导出为 Markdown（教程/操作指南/参考/解释），并生成项目根 README.md（封面 + 目录）作为文档入口。"
 
 [cmd.sync.short]
 other = "同步注释生成文档与 embedding 向量，并对齐 embedding 列维度"

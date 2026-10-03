@@ -10,9 +10,9 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/network"
-	pkgErrors "zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	pkgErrors "zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // findMeta 在元信息列表中查找指定字段，未找到时返回 nil。
@@ -109,7 +109,7 @@ func TestInputMeta(t *testing.T) {
 	})
 
 	Convey("未注册模型返回 ErrModelNotRegistered", t, func() {
-		_, err := tagengine.InputMetadata("zhongkui.com/zhongkui/internal/models/network.NotExist")
+		_, err := tagengine.InputMetadata("zhongkuisec.com/zhongkui/internal/models/network.NotExist")
 		So(err, ShouldNotBeNil)
 		So(pkgErrors.Is(err, tagengine.ErrModelNotRegistered), ShouldBeTrue)
 	})

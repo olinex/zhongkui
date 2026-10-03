@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // createETLTestRouter 创建用于 ETL 路由测试的 Gin 路由引擎

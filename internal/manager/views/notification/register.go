@@ -3,7 +3,7 @@ package notification
 import (
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/notification 通知管理接口路由。

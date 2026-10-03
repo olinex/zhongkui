@@ -11,14 +11,14 @@ import (
 
 	"github.com/samber/do/v2"
 
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etl"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
-	"zhongkui.com/zhongkui/internal/provider"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
+	"zhongkuisec.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 const (

@@ -18,8 +18,8 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // sqColumn 描述自省得到的一列：列名与 ValueType。

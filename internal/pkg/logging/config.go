@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
 )
 
 // PREFIX 是日志配置在配置文件中的前缀

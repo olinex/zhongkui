@@ -13,10 +13,10 @@ import (
 	"gorm.io/gorm/logger"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // encTestValue 把明文字符串包装为加密字段值（*serializer.Crypto），供测试构造

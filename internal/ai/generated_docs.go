@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/docconv"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // GeneratedKnowledgeDoc 是由代码注释派生的生成知识文档的通用载体（叙述页等）：Key/Title 均为稳定键

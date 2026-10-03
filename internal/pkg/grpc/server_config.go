@@ -14,8 +14,8 @@ import (
 	g "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/keepalive"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ServerPrefix 是gRPC服务器设置的配置前缀。

@@ -7,11 +7,11 @@ import (
 	"fmt"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/message"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // Sender 系统层邮件直发器：持有 [smtp] 配置、日志器与消息渠道连接池，经 message

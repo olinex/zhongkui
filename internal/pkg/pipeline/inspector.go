@@ -2,7 +2,7 @@ package pipeline
 
 import (
 	"github.com/hibiken/asynq"
-	"zhongkui.com/zhongkui/internal/pkg/redis"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
 )
 
 // Inspector 任务队列检查器类型别名。

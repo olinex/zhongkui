@@ -21,7 +21,7 @@ package key
 import (
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
 )
 
 // PREFIX 定义配置项的前缀，所有密钥相关配置项都以 "crypto." 开头

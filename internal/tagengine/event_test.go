@@ -12,10 +12,10 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // TestTranslateExpression 表驱动验证标签组合表达式翻译为 clause 表达式树的渲染结果与参数顺序。
@@ -270,7 +270,7 @@ func TestDetect(t *testing.T) {
 		window := serializer.DurationNS(5 * time.Minute)
 		// hitModelTypeKey 命中分组使用的完整类型键（数据库存储语义），
 		// 验证 toEventHit 对 Model 不做 value→key 收敛、直接存完整类型键。
-		const hitModelTypeKey = "zhongkui.com/zhongkui/internal/models/network.HttpTransport"
+		const hitModelTypeKey = "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport"
 		// 确定性 UUID：两组内 u2 重复出现，用于验证命中 IDs 的去重聚合
 		u1 := serializer.MustHexUUIDv4FromString("11111111-2222-3333-4444-555555555555")
 		u2 := serializer.MustHexUUIDv4FromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")

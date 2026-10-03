@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // TestRegistry 校验文档注册表的结构不变量：分类合法、输出路径唯一且不逃逸 docs、

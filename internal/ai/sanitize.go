@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // BusinessData 是前端透传的业务数据载体（JSON 对象），作为 Agent 会话中「当前业务现场」

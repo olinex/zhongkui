@@ -1,4 +1,4 @@
-module zhongkui.com/zhongkui
+module zhongkuisec.com/zhongkui
 
 go 1.26.3
 

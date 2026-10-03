@@ -10,9 +10,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/hibiken/asynq"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 const (

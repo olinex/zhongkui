@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // SignFunc 定义签名函数的类型，接收密钥和待签名的原始值，返回签名结果字符串或错误。

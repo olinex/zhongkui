@@ -11,14 +11,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/views/user"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/views/user"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // createUserTestDB 创建用于用户路由测试的共享 PostgreSQL 测试数据库

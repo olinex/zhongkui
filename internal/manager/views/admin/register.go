@@ -4,8 +4,8 @@ package admin
 import (
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/manager/views/user"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views/user"
 )
 
 // RegisterRoutes 注册 /api/v1/admin 管理接口路由。

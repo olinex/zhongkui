@@ -5,9 +5,9 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // TestSampleObjectKey 样例 S3 body 副本对象键格式。

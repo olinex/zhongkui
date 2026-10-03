@@ -15,7 +15,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // EvalStage 是 dry-run 评估流程的阶段标识（检索 + 4 次评估调用）。

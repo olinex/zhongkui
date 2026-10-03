@@ -6,22 +6,22 @@ import (
 
 	// internal — 枚举归属包：blank import 触发各包 init() 的注册/条目派生，保证 enum.List()
 	// 覆盖全量枚举类；若某个归属包被移出本清单，其类会静默缺失，由下方空注册表断言拦截
-	_ "zhongkui.com/zhongkui/internal/ai"
-	_ "zhongkui.com/zhongkui/internal/ai/tools/mcp"
-	_ "zhongkui.com/zhongkui/internal/models/ai"
-	_ "zhongkui.com/zhongkui/internal/models/core"
-	_ "zhongkui.com/zhongkui/internal/models/network"
-	_ "zhongkui.com/zhongkui/internal/models/tag"
-	_ "zhongkui.com/zhongkui/internal/notify"
-	_ "zhongkui.com/zhongkui/internal/pkg/docconv"
-	_ "zhongkui.com/zhongkui/internal/pkg/message"
-	_ "zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
-	_ "zhongkui.com/zhongkui/internal/tagengine"
+	_ "zhongkuisec.com/zhongkui/internal/ai"
+	_ "zhongkuisec.com/zhongkui/internal/ai/tools/mcp"
+	_ "zhongkuisec.com/zhongkui/internal/models/ai"
+	_ "zhongkuisec.com/zhongkui/internal/models/core"
+	_ "zhongkuisec.com/zhongkui/internal/models/network"
+	_ "zhongkuisec.com/zhongkui/internal/models/tag"
+	_ "zhongkuisec.com/zhongkui/internal/notify"
+	_ "zhongkuisec.com/zhongkui/internal/pkg/docconv"
+	_ "zhongkuisec.com/zhongkui/internal/pkg/message"
+	_ "zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	_ "zhongkuisec.com/zhongkui/internal/tagengine"
 
 	// internal — 被测依赖
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/enum"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // missingEnumKeySentinel 是必定未注册的 i18n 键，用于验证「未命中返回键本身」这一判定前提

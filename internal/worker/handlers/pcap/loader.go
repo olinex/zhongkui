@@ -3,10 +3,10 @@ package pcap
 import (
 	"context"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // LoadPacketModelToTable 将网络数据包模型加载到数据库表中。

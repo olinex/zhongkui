@@ -16,8 +16,8 @@ import (
 	"sync"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // DatasourcePlugin 描述一种第三方数据源类型的插件化接入契约。

@@ -8,14 +8,14 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // datasourceTestNamespace 数据源热同步测试专用命名空间，与迁移种子的 default 隔离。

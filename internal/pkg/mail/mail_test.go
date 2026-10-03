@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"go.uber.org/zap"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/message"
 )
 
 // newTestLogger 构造一个无输出的 logger（Nop），避免测试打印日志噪音。

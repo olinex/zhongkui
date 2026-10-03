@@ -11,9 +11,9 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/network/detectors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // mockDetector 是用于测试的 AppProtocolDetector 实现。

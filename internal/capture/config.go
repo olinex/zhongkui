@@ -6,9 +6,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/klauspost/compress/zstd"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 const (

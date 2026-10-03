@@ -15,10 +15,10 @@ import (
 	"gorm.io/gorm/logger"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai/tools/mcp"
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/ai/tools/mcp"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // fakeTool 是测试用 eino 工具：Info 直接返回给定工具名（模拟内置/MCP 工具的 schema 来源）。

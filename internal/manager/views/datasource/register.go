@@ -4,7 +4,7 @@ package datasource
 import (
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/datasource 第三方数据源通用管理接口。

@@ -22,7 +22,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // knowledgeRuntimeKey 是知识检索运行期检索器与截断长度在 ctx 中的键。用私有空结构体作键可避免与

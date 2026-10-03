@@ -4,8 +4,8 @@ package middlewares
 
 import (
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
 )
 
 // CoreDatabaseCtxName 是数据库实例在 Gin 上下文中存储的键名。

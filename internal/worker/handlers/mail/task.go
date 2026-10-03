@@ -14,12 +14,12 @@ import (
 	"github.com/samber/do/v2"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etl"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/message"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // MailSendTask 系统级邮件直发任务类型，载荷为 MailSendInput（收件人 + 结构化消息 + 语言）。

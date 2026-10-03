@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 )
 
 // TestSecureFieldOffsets 是加密字段 offset 的全局守卫：扫描 internal/models 下全部 Go 文件，

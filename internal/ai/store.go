@@ -12,12 +12,12 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // ErrSlotNotBound 档位没有可用模型绑定的错误哨兵：该档位无绑定记录，或绑定记录指向的

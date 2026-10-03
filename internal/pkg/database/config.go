@@ -7,8 +7,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/spf13/viper"
 	"gorm.io/gorm"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // Prefix 是数据库配置在 Viper 中的键前缀，所有数据库配置项均位于 "database" 前缀之下。

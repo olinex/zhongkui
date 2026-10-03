@@ -82,8 +82,8 @@ import (
 
 	"github.com/pressly/goose/v3"
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 var (

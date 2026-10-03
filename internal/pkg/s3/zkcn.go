@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/minio/minio-go/v7"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // zkcnTempPrefix 是 Zkcn 临时文件的前缀，用于标识和清理 crash 遗留的临时文件。

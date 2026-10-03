@@ -10,8 +10,8 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // TestStaticDatasource 参考数据源的行迭代与 EOF 语义。

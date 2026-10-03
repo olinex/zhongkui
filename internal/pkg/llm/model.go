@@ -6,7 +6,7 @@ import (
 	"time"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ModelKind 是 LLM 模型类型标识：对话模型（chat）与向量化模型（embedding）。

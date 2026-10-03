@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // CaptureMetrics 单次抓包基准测试的性能指标集合。

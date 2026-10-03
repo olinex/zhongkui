@@ -22,8 +22,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // Kind 描述字段的语义类型，供前端选择相应的表单控件。

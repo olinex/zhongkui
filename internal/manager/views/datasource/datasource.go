@@ -13,15 +13,15 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/datasource"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/datasource"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // DatasourceCreateIn 定义创建第三方数据源的请求输入结构。

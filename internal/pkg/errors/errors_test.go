@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // 测试 New 创建带消息的错误。

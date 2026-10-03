@@ -16,9 +16,9 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // LlmModel 表示一个注册到平台的 LLM 模型端点（chat 或 embedding），是 LLM 配置的

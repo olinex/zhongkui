@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // SSEEventValue 是 SSE 事件类型值：SSEEvent.Event 的取值空间（独立类型，禁止与

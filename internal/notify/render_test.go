@@ -4,10 +4,10 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/enum"
-	message "zhongkui.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
+	message "zhongkuisec.com/zhongkui/internal/pkg/message"
 )
 
 // ensureTestEnumClasses 确保类感知模板函数（TenumKey/TenumValue）所需的统一枚举类已注册。
@@ -25,7 +25,7 @@ func ensureTestEnumClasses() {
 		{Key: "webhook", Value: "webhook"},
 	})
 	register("tagRuleModel", []enum.Entry{
-		{Key: "httpTransport", Value: "zhongkui.com/zhongkui/internal/models/network.HttpTransport"},
+		{Key: "httpTransport", Value: "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport"},
 	})
 	register("tagEventDimension", []enum.Entry{
 		{Key: "fpTcpClientSig", Value: "fpTcpClientSig"},
@@ -55,7 +55,7 @@ func TestRenderFuncsTemplateFuncs(t *testing.T) {
 
 		convey.Convey("TenumValue resolves a model value (full type key) to its label", func() {
 			fn := renderFuncs(zhLang)
-			out, err := message.RenderTemplateWithFuncs(`{{ TenumValue "tagRuleModel" "zhongkui.com/zhongkui/internal/models/network.HttpTransport" }}`, nil, fn)
+			out, err := message.RenderTemplateWithFuncs(`{{ TenumValue "tagRuleModel" "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport" }}`, nil, fn)
 			convey.So(err, convey.ShouldBeNil)
 			convey.So(out, convey.ShouldEqual, "HTTP 传输")
 		})

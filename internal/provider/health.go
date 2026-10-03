@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/health"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/health"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // 各服务的固定服务名，用于 etcd 服务目录键与日志标识。

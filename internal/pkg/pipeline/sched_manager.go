@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/creasty/defaults"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
 )
 
 // SchedulerTaskConfigKey 返回任务配置在 etcd 中对应的键。

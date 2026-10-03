@@ -7,10 +7,10 @@ import (
 	"time"
 
 	"github.com/smallnest/ringbuffer"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TCPState 表示TCP连接的状态，遵循标准TCP状态机。

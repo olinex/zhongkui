@@ -3,7 +3,7 @@ package ai
 import (
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/ai AI 助手（RAG + Agent）接口。

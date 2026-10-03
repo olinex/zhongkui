@@ -21,8 +21,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // mongoColumn 描述数据源的一列：字段名与 ValueType（来自前端注册时显式声明的 schema）。

@@ -11,12 +11,12 @@ import (
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // createCapturerTestDB 创建用于抓包器路由测试的共享 PostgreSQL 测试数据库

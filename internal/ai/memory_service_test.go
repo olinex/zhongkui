@@ -12,9 +12,9 @@ import (
 	"github.com/cloudwego/eino/components/model"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // newScriptedChat 构造按次序返回给定回复的对话替身（复用 agent_tools_test.go 的 scriptedChat）。

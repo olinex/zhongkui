@@ -11,14 +11,14 @@ import (
 	"github.com/spf13/cobra"
 
 	// 项目内部
-	ai "zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/docs"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/docconv"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/provider"
+	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/docs"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // syncCmd 是同步与向量对齐命令组：同步注释生成文档到知识库（RAG），并以当前 embedding 模型

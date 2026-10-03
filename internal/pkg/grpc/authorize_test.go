@@ -7,7 +7,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	g "google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // testAuthenticator 是Authenticator接口的测试实现

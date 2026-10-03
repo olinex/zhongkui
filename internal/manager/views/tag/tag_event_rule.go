@@ -14,16 +14,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // TagEventRuleValidationError 描述单条标签事件条件的校验失败详情。
@@ -48,7 +48,7 @@ func invalidTagEventRuleError(errs []TagEventRuleValidationError) *response.Code
 // Window 上限 7 天（纳秒），Threshold 上限 1000000：防止异常值导致检测查询扫描
 // 过大的时间范围或产生无意义计数，与前端 tagEventConditionSchema 保持一致。
 type TagEventRuleConditionIn struct {
-	// Model 目标模型类型键过滤条件，为空表示不限制（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	// Model 目标模型类型键过滤条件，为空表示不限制（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `json:"model" binding:"max=255"`
 	// Dimension 标签维度类型过滤条件，为空表示不限制（如 "fpTcpClientSig"）
 	Dimension string `json:"dimension" binding:"max=128"`

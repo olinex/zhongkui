@@ -13,8 +13,8 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 )
 
 // PREFIX 是 API 管理层配置在 Viper 中的键前缀，

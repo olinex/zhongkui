@@ -16,20 +16,20 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // TagRuleSampleCreateIn 定义创建标签规则样例的请求输入结构。
 // 样例归属当前请求命名空间（经命名空间中间件解析）；model 必须是已注册的目标模型类型键
-// （如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）。
+// （如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）。
 type TagRuleSampleCreateIn struct {
 	// Model 目标模型类型键
 	Model string `json:"model" binding:"required,max=255"`

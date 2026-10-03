@@ -8,7 +8,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestEthernetHeaders_Basic 测试EthernetHeaders结构体的基本功能

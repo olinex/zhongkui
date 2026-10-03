@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/alecthomas/participle/v2"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 var parser = participle.MustBuild[Tag]()

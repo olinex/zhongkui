@@ -14,10 +14,10 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/text/language"
 
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // TestMain 初始化全局 KeyDerivation 与 Gin binding 自定义验证规则。

@@ -6,7 +6,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"zhongkui.com/zhongkui/internal/pkg/status"
+	"zhongkuisec.com/zhongkui/internal/pkg/status"
 )
 
 // healthMetrics 持有健康探针状态指标的同步 gauge 仪器。

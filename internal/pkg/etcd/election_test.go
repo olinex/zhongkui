@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // mockElectionHandler 实现 ElectionHandler 接口，用于测试。

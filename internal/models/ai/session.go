@@ -6,9 +6,9 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答消息

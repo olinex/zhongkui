@@ -20,17 +20,17 @@ import (
 	"golang.org/x/text/language"
 	"gorm.io/datatypes"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // tagRuleTargetModel 引擎识别测试用的目标模型，其字段经 BuildInput 序列化为输入文档。
@@ -127,15 +127,15 @@ error.schedulerScheduleEmpty = "either cronSpec or interval must be set"
 tagrule.rego-invalid = "Rego rule violates the tag rule contract: it must be package zki with a tags rule"
 tagrule.lint-field-not-exist = "Field %s does not exist in the input document of this model, please check the spelling"
 tagrule.lint-field-hint = "Please choose a valid field from the input field panel or the completion list"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.method"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.method"]
 other = "HTTP request method"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
 other = "Client IP address"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.tags"]
 other = "Risk tag combination"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
 other = "Client TCP signature"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
 other = "Server TCP signature"
 `), "en.toml")
 	return i18n.NewLocalizer(bundle, "en")
@@ -729,7 +729,7 @@ func TestTagRuleModelMetadata(t *testing.T) {
 
 		Convey("未注册模型返回错误码 1107", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/model/metadata", map[string]any{
-				"model": "zhongkui.com/zhongkui/internal/models/network.NotExist",
+				"model": "zhongkuisec.com/zhongkui/internal/models/network.NotExist",
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 			var resp struct {
@@ -777,7 +777,7 @@ func TestTagRuleModelSamples(t *testing.T) {
 
 		Convey("未注册模型返回错误码 1107", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule/model/samples", map[string]any{
-				"model": "zhongkui.com/zhongkui/internal/models/network.NotExist",
+				"model": "zhongkuisec.com/zhongkui/internal/models/network.NotExist",
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 			var resp struct {

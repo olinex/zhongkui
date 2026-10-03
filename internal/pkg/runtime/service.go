@@ -7,9 +7,9 @@ package runtime
 import (
 	"context"
 
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/etl"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
 )
 
 // Service 统一的服务生命周期接口。

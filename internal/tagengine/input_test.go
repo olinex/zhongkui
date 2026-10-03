@@ -5,9 +5,9 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // inputTestModel 类型键测试用的简单结构体
@@ -27,7 +27,7 @@ func (inputerModel) TagRecogInput() (map[string]any, error) {
 func TestTypeKey(t *testing.T) {
 	Convey("Test TypeKey", t, func() {
 		Convey("传值实例与指针实例应返回相同的类型键", func() {
-			const expected = "zhongkui.com/zhongkui/internal/tagengine.inputTestModel"
+			const expected = "zhongkuisec.com/zhongkui/internal/tagengine.inputTestModel"
 
 			valueKey, err := TypeKey(inputTestModel{})
 			So(err, ShouldBeNil)

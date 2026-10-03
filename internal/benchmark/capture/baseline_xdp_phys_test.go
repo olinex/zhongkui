@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/capture/wire"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/capture/wire"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 // 物理网卡 XDP 测试 (双网卡方案)

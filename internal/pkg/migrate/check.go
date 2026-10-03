@@ -9,8 +9,8 @@ import (
 
 	"github.com/pterm/pterm"
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 var (

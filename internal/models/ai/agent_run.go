@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后，

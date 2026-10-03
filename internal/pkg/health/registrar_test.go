@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/status"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/status"
 )
 
 // TestKeyOf 验证服务注册键按前缀、服务名与实例 ID 拼接正确。

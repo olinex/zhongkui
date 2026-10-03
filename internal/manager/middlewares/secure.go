@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // SecureHeadersMiddleware 创建 HTTP 安全响应头中间件。

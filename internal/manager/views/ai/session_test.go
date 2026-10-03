@@ -12,10 +12,10 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	ai "zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // newSessionTestRouter 创建 AI 会话测试路由引擎，注入 i18n、日志、核心库、命名空间与 AI 运行时。

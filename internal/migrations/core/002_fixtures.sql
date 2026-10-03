@@ -665,28 +665,28 @@ ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 INSERT INTO tag_rule_samples (namespace_name, model, name, input, description) VALUES
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'curl-get',
         '{"namespace":"default","capture":"eth0","version":"v1","sessionId":"3f2504e0-4f89-11d3-9a0c-0305e82c3301","timestamp":"2026-08-15T02:01:00Z","createdAt":"2026-08-15T02:01:00Z","traceId":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","clientIp":"192.168.1.10","clientPort":51820,"clientIsn":1820150330,"serverIp":"93.184.216.34","serverPort":443,"serverIsn":3896702403,"ipVersion":4,"httpVersion":"HTTP/1.1","streamIndex":3,"method":"GET","url":"https://example.com/api/v1/health","scheme":"https","host":"example.com","path":"/api/v1/health","queries":{"verbose":["1"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"curl/8.0.1","reqHdrHost":"example.com","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"curl","fpTcpClientOs":"Linux","fpTcpClientSig":"65535:120:1:60:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
         'command line curl GET request to a health check endpoint'
     ),
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'browser-post',
         '{"namespace":"default","capture":"en0","version":"v1","sessionId":"c81d4e2e-bcf2-11e6-869b-7df92533d2db","timestamp":"2026-08-15T03:12:34Z","createdAt":"2026-08-15T03:12:34Z","traceId":"f47ac10b-58cc-4372-a567-0e02b2c3d479","clientIp":"10.0.0.55","clientPort":53210,"clientIsn":2147483648,"serverIp":"142.250.72.14","serverPort":443,"serverIsn":1500000000,"ipVersion":4,"httpVersion":"HTTP/2","streamIndex":7,"method":"POST","url":"https://api.example.com/v1/orders","scheme":"https","host":"api.example.com","path":"/v1/orders","queries":{},"reqBody":"body/request/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.zkc","reqBodyHash":"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08","reqBodyLength":42,"reqHdrUserAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36","reqHdrHost":"api.example.com","reqHdrAccept":"application/json","reqHdrContentType":"application/json","reqHdrContentLength":42,"reqHdrOrigin":"https://example.com","reqHdrReferer":"https://example.com/cart","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"Chrome","fpHttpBrowserQuality":0.98,"fpHttpServer":"nginx","fpHttpServerQuality":0.9,"fpTcpClientOs":"macOS","fpTcpClientSig":"65535:120:2:60:M1460,S,T,N,W8","fpTcpServerOs":"Linux","fpTcpServerSig":"65535:1440:1:60:M1460,S,N","fpTcpMtu":1460,"tags":[]}',
         'browser POST request with fingerprints and JSON body to an api endpoint'
     ),
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'scanner-crawler',
         '{"namespace":"default","capture":"eth0","version":"v1","sessionId":"1e8efd8e-6d34-4a1e-b6b1-4f2e1a3c9d0f","timestamp":"2026-08-15T04:45:00Z","createdAt":"2026-08-15T04:45:00Z","traceId":"9f9c1b5e-3f7a-4c2d-8b5e-2a1b3c4d5e6f","clientIp":"203.0.113.7","clientPort":40021,"clientIsn":1020304050,"serverIp":"192.0.2.10","serverPort":80,"serverIsn":2030405060,"ipVersion":4,"httpVersion":"HTTP/1.0","streamIndex":1,"method":"GET","url":"http://192.0.2.10/wp-login.php?action=login","scheme":"http","host":"","path":"/wp-login.php","fileExt":"php","queries":{"action":["login"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"python-requests/2.31.0","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpTcpClientOs":"Windows","fpTcpClientSig":"65535:14600:2:64:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
         'scanner or crawler request with missing host and query params'
     ),
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'sparse-minimal',
         '{"namespace":"default","sessionId":"00000000-0000-0000-0000-000000000000","method":"HEAD","url":"https://example.com/","scheme":"https","host":"example.com","path":"/","clientIp":"192.168.1.1","clientPort":51515,"serverIp":"93.184.216.34","serverPort":443,"ipVersion":4,"httpVersion":"HTTP/1.1","reqHdrUserAgent":"","reqHdrAuthorization":{},"reqHdrCookie":{},"tags":[]}',
         'sparse request with minimal fields and empty user agent'

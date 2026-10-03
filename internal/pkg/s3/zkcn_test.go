@@ -9,8 +9,8 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 )
 
 func TestNewZkcn(t *testing.T) {

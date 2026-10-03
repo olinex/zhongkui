@@ -3,8 +3,8 @@
 package wire
 
 import (
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 // NewPlatformWire 尝试创建平台原生抓包实现。

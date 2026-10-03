@@ -18,9 +18,9 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	pkgerrors "zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	pkgerrors "zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // extensibilityProbeKey 是本测试合成数据源类型的唯一键。

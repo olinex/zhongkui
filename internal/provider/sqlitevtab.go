@@ -5,8 +5,8 @@ import (
 	"github.com/samber/do/v2"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
 )
 
 // newSQLiteVTabPoolsProvider 创建按命名空间隔离的 sqlite vtable 池持有者（vtab.Pools）。

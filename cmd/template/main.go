@@ -11,9 +11,9 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
-	bench "zhongkui.com/zhongkui/internal/benchmark/capture"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	bench "zhongkuisec.com/zhongkui/internal/benchmark/capture"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 var (

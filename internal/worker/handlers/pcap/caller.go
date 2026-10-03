@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"zhongkui.com/zhongkui/internal/capture"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/capture"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 const (

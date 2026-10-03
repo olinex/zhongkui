@@ -5,7 +5,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // AES-GCM 相关常量

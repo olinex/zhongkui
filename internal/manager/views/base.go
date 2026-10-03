@@ -12,8 +12,8 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // HeaderOption 描述列表视图中单个列的元数据信息。

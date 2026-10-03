@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"strings"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // SetField 设置结构体字段的值（字段不可导出时经 unsafe 反射写入）。

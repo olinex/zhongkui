@@ -9,7 +9,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // TestLikePrefix 验证 LIKE 模式到字面量前缀的提取。

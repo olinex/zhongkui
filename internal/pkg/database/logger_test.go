@@ -8,7 +8,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // TestNewZapGormLogger 测试 NewZapGormLogger 函数的创建行为

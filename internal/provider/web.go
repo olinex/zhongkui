@@ -3,7 +3,7 @@ package provider
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // NewGin 创建 Gin 引擎，并按环境配置调试或发布模式。

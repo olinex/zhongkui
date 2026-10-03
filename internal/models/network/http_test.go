@@ -19,9 +19,9 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
 // mockS3Server 内存版 S3 mock 服务器

@@ -24,8 +24,8 @@ import (
 	sqlite3 "github.com/ncruces/go-sqlite3"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // dataVTab 是 sqlite vtable 适配实例：持有所属池、数据源名、schema、

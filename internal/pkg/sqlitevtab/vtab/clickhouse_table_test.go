@@ -12,8 +12,8 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // newClickHouseMockPool 以注入 key 的 mock db 构建 ClickHousePool，供无需真实 ClickHouse

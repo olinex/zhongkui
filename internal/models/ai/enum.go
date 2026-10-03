@@ -14,9 +14,9 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
 // KnowledgeDocStatus 是知识文档的处理状态标识：文档从导入到可被检索的流转状态。

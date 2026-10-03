@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	n "zhongkui.com/zhongkui/internal/models/network"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
 )
 
 var (

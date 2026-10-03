@@ -19,7 +19,7 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // TestDecodeDatasourceConfig 验证 decodeDatasourceConfig 复用解析入口：各类型返回类型化

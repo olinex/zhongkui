@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // ColumnInfo 描述数据库中的列信息。

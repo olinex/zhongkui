@@ -32,10 +32,10 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // PostgresConfig 描述一个 PostgreSQL 实例的接入配置。组件化形态便于多实例的动态注入

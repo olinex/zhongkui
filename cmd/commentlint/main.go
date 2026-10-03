@@ -8,7 +8,7 @@ package main
 import (
 	"golang.org/x/tools/go/analysis/singlechecker"
 
-	"zhongkui.com/zhongkui/internal/lint/commentlint"
+	"zhongkuisec.com/zhongkui/internal/lint/commentlint"
 )
 
 // 进程执行入口函数

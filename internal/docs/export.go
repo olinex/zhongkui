@@ -15,7 +15,7 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // generatedHeaderFormat 是生成文件顶部标注的模板（含来源导入路径）。
@@ -107,8 +107,9 @@ func Export(ctx context.Context, opts Options) error {
 		}
 	}
 
-	// 索引档：生成 docs/README.md
-	if err := writeDoc(rootDir, "README.md", indexDocument(len(refs), opts.Projections)); err != nil {
+	// 索引档：生成项目根 README.md（封面 + 目录），作为文档体系的唯一入口。
+	// 链接一律以 docs/ 前缀书写，使其相对项目根可跳转。
+	if err := writeDoc(opts.ProjectRoot, "README.md", readmeDocument(len(refs), opts.Projections)); err != nil {
 		return err
 	}
 	return nil
@@ -250,25 +251,39 @@ func referenceDocument(ref refPackage, content string) string {
 		header, ref.Name, CategoryReference.Label(), ref.ImportPath, strings.TrimRight(content, "\n"))
 }
 
-// indexDocument 生成 docs/README.md 的 Diátaxis 索引内容。
-func indexDocument(referenceCount int, projections []Projection) string {
+// readmeSourceLabel 是根 README 生成标记中展示的来源标识。
+const readmeSourceLabel = "internal/docs/registry.go"
+
+// readmeLink 把 docs/ 下的相对路径渲染为相对项目根的可跳转链接。
+func readmeLink(output string) string {
+	return "docs/" + output
+}
+
+// readmeDocument 生成项目根 README.md 的封面与目录内容。
+// 封面给出项目标题、一句话简介与文档框架说明；目录按 Diátaxis 四分类罗列全部条目，
+// 并附带「按角色找文档」分区。所有链接均以 docs/ 前缀书写，保证相对项目根可跳转。
+func readmeDocument(referenceCount int, projections []Projection) string {
 	var b strings.Builder
-	b.WriteString("# zhongkui 文档\n\n")
-	b.WriteString("本项目文档按 [Diátaxis](https://diataxis.fr/) 框架组织为四类：" +
+	b.WriteString(fmt.Sprintf(generatedHeaderFormat, readmeSourceLabel))
+	b.WriteString("\n# zhongkui\n\n")
+	b.WriteString("> 网络流量采集、标签计算与风险告警平台。\n\n")
+	b.WriteString("本文档按 [Diátaxis](https://diataxis.fr/) 框架组织为四类：" +
 		"教程（学习导向）、操作指南（任务导向）、参考（信息导向）与解释（理解导向）。\n")
 
+	b.WriteString("\n## 目录\n")
 	for _, category := range Categories() {
-		b.WriteString("\n## ")
+		b.WriteString("\n### ")
 		b.WriteString(category.Label())
 		b.WriteString("\n\n")
 
 		if category == CategoryReference {
-			b.WriteString(fmt.Sprintf("后端全部包自动导出参考文档，共 %d 篇：[reference/](reference/)\n", referenceCount))
+			b.WriteString(fmt.Sprintf("后端全部包自动导出参考文档，共 %d 篇：[docs/reference/](%s)\n",
+				referenceCount, readmeLink(category.Dir()+"/")))
 			for _, p := range projections {
 				b.WriteString("- [")
 				b.WriteString(p.Title)
 				b.WriteString("](")
-				b.WriteString(p.Output)
+				b.WriteString(readmeLink(p.Output))
 				b.WriteString(") — ")
 				b.WriteString(p.Summary)
 				b.WriteString("（角色：")
@@ -287,7 +302,7 @@ func indexDocument(referenceCount int, projections []Projection) string {
 			b.WriteString("- [")
 			b.WriteString(entry.Title)
 			b.WriteString("](")
-			b.WriteString(entry.Output)
+			b.WriteString(readmeLink(entry.Output))
 			b.WriteString(") — ")
 			b.WriteString(entry.Summary)
 			b.WriteString("（角色：")
@@ -315,7 +330,7 @@ func indexDocument(referenceCount int, projections []Projection) string {
 			b.WriteString("- [")
 			b.WriteString(entry.Title)
 			b.WriteString("](")
-			b.WriteString(entry.Output)
+			b.WriteString(readmeLink(entry.Output))
 			b.WriteString(") — ")
 			b.WriteString(entry.Summary)
 			b.WriteString("\n")

@@ -8,12 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/health"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/health"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // ServiceItemOut 单个服务实例运行状态输出项。

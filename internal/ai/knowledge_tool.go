@@ -9,8 +9,8 @@ import (
 	"github.com/cloudwego/eino/components/retriever"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai/tools"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/ai/tools"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // knowledgeCollector 是单次运行内的知识检索采集器：并发安全地累积 knowledge_search 工具每次

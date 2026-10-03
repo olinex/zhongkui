@@ -15,7 +15,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // generateSelfSignedCertPEM 生成一个自签名的 PEM 编码证书，用于测试。

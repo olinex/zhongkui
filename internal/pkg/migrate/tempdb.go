@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"strings"
 
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 type dbDialect struct {

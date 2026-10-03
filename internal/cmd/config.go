@@ -3,9 +3,9 @@ package cmd
 import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var describeConfigCmd = &cobra.Command{

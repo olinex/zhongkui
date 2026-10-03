@@ -2,12 +2,12 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/otel"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/otel"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // 各日志器在依赖注入器中的命名标签。

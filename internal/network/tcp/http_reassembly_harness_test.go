@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/network/detectors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // init 注册测试用的 HTTP 协议检测器

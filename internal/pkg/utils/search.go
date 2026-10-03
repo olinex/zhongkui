@@ -10,8 +10,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // FilterByOptionItem 定义了枚举过滤条件的可选值结构

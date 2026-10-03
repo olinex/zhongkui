@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/hibiken/asynq"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // cursorLayout 游标在 etcd 中的序列化格式，使用 RFC3339Nano 保留纳秒精度。

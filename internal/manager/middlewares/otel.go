@@ -6,8 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 	o "go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/pkg/otel"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/otel"
 )
 
 // OtelMiddleware 返回为 API 管理层接入 OpenTelemetry 链路追踪的 Gin 中间件。

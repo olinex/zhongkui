@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 var (

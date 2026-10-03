@@ -14,7 +14,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // scriptedTurn 是 stub 对话模型的一次流式/非流式响应：正文与（可选的）工具调用。

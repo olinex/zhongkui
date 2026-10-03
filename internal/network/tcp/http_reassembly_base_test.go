@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/models/network"
-	_ "zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	_ "zhongkuisec.com/zhongkui/internal/network/detectors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
 )
 
 // TestBase 验证 extractPackets 与 runRouter 在多种抓包文件下的行为。

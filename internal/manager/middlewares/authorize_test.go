@@ -10,11 +10,11 @@ import (
 	"github.com/casbin/casbin/v2/model"
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // newTestAuthorizeEnforcer 基于内存 adapter 创建 Casbin enforcer（使用 base.RbacModel）。

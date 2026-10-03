@@ -11,8 +11,8 @@ import (
 	"github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // schemaProvider 抽象一个既是 Datasource 又暴露 schema 的数据源，供测试注册。

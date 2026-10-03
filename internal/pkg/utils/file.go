@@ -9,7 +9,7 @@ import (
 	"path"
 	"strings"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // CalculateFileMD5 计算文件的 MD5 哈希值

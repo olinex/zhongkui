@@ -9,9 +9,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/models/core"
 )
 
 // DefaultNamespace 定义默认命名空间名称。

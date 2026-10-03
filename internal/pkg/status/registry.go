@@ -8,8 +8,8 @@ import (
 	"github.com/creasty/defaults"
 	"github.com/pterm/pterm"
 
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Registry 依赖自省注册表。

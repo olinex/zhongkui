@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
-	ai "zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/sse"
+	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/sse"
 )
 
 // DryRunIn 定义知识库检索试运行请求输入。

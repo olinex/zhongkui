@@ -3,8 +3,8 @@ package provider
 import (
 	"github.com/samber/do/v2"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 func newTagEngineProvider() do.Provider[*tagengine.Engine] {

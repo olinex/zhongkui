@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // TestIsValidStrongPassword 测试密码校验函数

@@ -3,7 +3,7 @@ package provider
 import (
 	"github.com/samber/do/v2"
 
-	"zhongkui.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/message"
 )
 
 // newMessagePoolProvider 创建进程级消息渠道连接池单例。

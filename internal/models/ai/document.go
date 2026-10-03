@@ -15,9 +15,9 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	coremodel "zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	coremodel "zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // KnowledgeDocument 表示一份上传到知识库的文档，是 RAG 索引的输入单元：

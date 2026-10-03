@@ -23,9 +23,9 @@ import (
 
 	"github.com/dlclark/regexp2"
 	"github.com/go-playground/validator/v10"
-	"zhongkui.com/zhongkui/internal/pkg/codes"
-	"zhongkui.com/zhongkui/internal/pkg/enum"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/codes"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 自定义校验标签名常量：各标签在注册表中按此名绑定到对应的验证函数。

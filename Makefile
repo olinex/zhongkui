@@ -311,10 +311,10 @@ COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDER  ?= $(shell whoami)
 
-LDFLAGS = -X zhongkui.com/zhongkui/internal/pkg/version.SemVer=$(VERSION) \
-          -X zhongkui.com/zhongkui/internal/pkg/version.Commit=$(COMMIT) \
-          -X zhongkui.com/zhongkui/internal/pkg/version.BuildTime=$(BUILD_TIME) \
-          -X zhongkui.com/zhongkui/internal/pkg/version.Builder=$(BUILDER)
+LDFLAGS = -X zhongkuisec.com/zhongkui/internal/pkg/version.SemVer=$(VERSION) \
+          -X zhongkuisec.com/zhongkui/internal/pkg/version.Commit=$(COMMIT) \
+          -X zhongkuisec.com/zhongkui/internal/pkg/version.BuildTime=$(BUILD_TIME) \
+          -X zhongkuisec.com/zhongkui/internal/pkg/version.Builder=$(BUILDER)
 
 # p0f 指纹签名库（随 Go 包内嵌）：
 # p0f.fp 为上游基础库（可用 make p0f-update 刷新覆盖）；p0f.local.fp 为本地定制签名，

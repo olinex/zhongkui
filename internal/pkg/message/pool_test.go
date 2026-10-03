@@ -9,7 +9,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // TestMakeKey_Canonicalization 语义等价的渠道级配置（字段顺序不同）应映射到同一资源池 Key，

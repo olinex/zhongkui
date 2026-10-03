@@ -9,11 +9,11 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	pkgllm "zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	pkgllm "zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
 // verifyEmbeddingCompat 取 core 库 knowledge_chunks.embedding 列的维度，交由

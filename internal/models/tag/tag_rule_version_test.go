@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // TestTagRuleVersion_Struct 测试 TagRuleVersion 结构体的基本属性
@@ -19,14 +19,14 @@ func TestTagRuleVersion_Struct(t *testing.T) {
 				Version:       3,
 				Name:          "admin-panel",
 				Description:   "识别管理后台登录",
-				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:         "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"admin_panel_login\"",
 			}
 			convey.So(v.NamespaceName, convey.ShouldEqual, "default")
 			convey.So(v.RuleID, convey.ShouldEqual, 7)
 			convey.So(v.Version, convey.ShouldEqual, 3)
 			convey.So(v.Name, convey.ShouldEqual, "admin-panel")
-			convey.So(v.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			convey.So(v.Model, convey.ShouldEqual, "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport")
 			convey.So(v.Rego, convey.ShouldContainSubstring, "package zki")
 		})
 
@@ -77,7 +77,7 @@ func TestTagRuleVersion_UniqueConstraint(t *testing.T) {
 				RuleID:        seedRule(db),
 				Version:       1,
 				Name:          "r1",
-				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:         "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 			}
 			convey.So(db.Create(&base).Error, convey.ShouldBeNil)

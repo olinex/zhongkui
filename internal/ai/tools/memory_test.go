@@ -16,7 +16,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
 )
 
 // fakeMemoryWriter 是 MemoryWriter 的测试替身：记录收到的入参与调用次数，按预设返回 ID 或错误。

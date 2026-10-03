@@ -22,11 +22,11 @@ import (
 	g "google.golang.org/grpc"
 	"gorm.io/gorm"
 	"gorm.io/plugin/opentelemetry/tracing"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/redis"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
 // AsynqServerMiddleware 返回 Asynq 任务处理中间件，为每个任务执行创建 trace span。

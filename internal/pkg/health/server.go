@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	otelx "zhongkui.com/zhongkui/internal/pkg/otel"
-	"zhongkui.com/zhongkui/internal/pkg/status"
-	"zhongkui.com/zhongkui/internal/pkg/version"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	otelx "zhongkuisec.com/zhongkui/internal/pkg/otel"
+	"zhongkuisec.com/zhongkui/internal/pkg/status"
+	"zhongkuisec.com/zhongkui/internal/pkg/version"
 )
 
 // Snapshot 服务运行状态的瞬时快照，供 etcd 上报与测试断言使用。

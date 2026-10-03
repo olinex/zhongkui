@@ -4,7 +4,7 @@ package middlewares
 
 import (
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // TagRuleEngineCtxName 是标签引擎在 Gin 上下文中存储的键名。

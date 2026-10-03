@@ -2,10 +2,10 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/capture"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/capture"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 var (

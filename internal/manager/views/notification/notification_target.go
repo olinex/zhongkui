@@ -13,18 +13,18 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	core "zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	message "zhongkui.com/zhongkui/internal/pkg/message"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	notifyhandler "zhongkui.com/zhongkui/internal/worker/handlers/notify"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	core "zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/notify"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	message "zhongkuisec.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	notifyhandler "zhongkuisec.com/zhongkui/internal/worker/handlers/notify"
 )
 
 // NotificationTargetCreateIn 定义创建通知目标的请求输入结构。

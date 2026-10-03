@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Format 是文档格式的取值类型，其字符串取值即落库值。

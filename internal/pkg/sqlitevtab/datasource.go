@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ValueType 描述数据源列到 SQLite 类型的亲和性映射：

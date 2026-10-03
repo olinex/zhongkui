@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // TestCommandTreeKeysComplete 验证命令树中所有 i18n key 在指定回退语言（zh-Hans）下均可解析

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // BacklogPolicy 定时任务积压（历史）触发点的补投控制策略。

@@ -5,7 +5,7 @@ package network
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // HTTPMethod 是 HTTP 请求方法的取值类型（HttpRequestBody.Method 字段）。

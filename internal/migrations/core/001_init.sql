@@ -399,7 +399,7 @@ COMMENT ON COLUMN tag_event_conditions.id IS 'the primary key of the tag event c
 COMMENT ON COLUMN tag_event_conditions.created_at IS 'the creation time of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions.updated_at IS 'the last update time of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions.tag_event_rule_id IS 'the tag event rule this condition belongs to';
-COMMENT ON COLUMN tag_event_conditions.model IS 'the target model type key filter of the condition, empty means no filter, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_event_conditions.model IS 'the target model type key filter of the condition, empty means no filter, e.g. zhongkuisec.com/zhongkui/internal/models/network.HttpTransport';
 COMMENT ON COLUMN tag_event_conditions.dimension IS 'the tag dimension type filter of the condition, empty means no filter, e.g. fpTcpClientSig';
 COMMENT ON COLUMN tag_event_conditions.item IS 'the concrete value filter of the tag dimension, empty means no filter, e.g. a fingerprint signature';
 COMMENT ON COLUMN tag_event_conditions.name IS 'the unique name of the tag event condition';
@@ -526,7 +526,7 @@ COMMENT ON COLUMN tag_rules.updated_at IS 'the last update time of the tag rule'
 COMMENT ON COLUMN tag_rules.namespace_name IS 'the namespace the tag rule belongs to';
 COMMENT ON COLUMN tag_rules.name IS 'the unique name of the rule within its group';
 COMMENT ON COLUMN tag_rules.description IS 'the description of the rule';
-COMMENT ON COLUMN tag_rules.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_rules.model IS 'the target model type key, e.g. zhongkuisec.com/zhongkui/internal/models/network.HttpTransport';
 COMMENT ON COLUMN tag_rules.rego IS 'the rego rule source, contract: package zk producing tags set';
 COMMENT ON COLUMN tag_rules.enabled IS 'is the rule enabled';
 
@@ -574,7 +574,7 @@ COMMENT ON COLUMN tag_rule_samples.id IS 'the primary key of the tag rule sample
 COMMENT ON COLUMN tag_rule_samples.created_at IS 'the creation time of the tag rule sample';
 COMMENT ON COLUMN tag_rule_samples.updated_at IS 'the last update time of the tag rule sample';
 COMMENT ON COLUMN tag_rule_samples.namespace_name IS 'the namespace the tag rule sample belongs to';
-COMMENT ON COLUMN tag_rule_samples.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_rule_samples.model IS 'the target model type key, e.g. zhongkuisec.com/zhongkui/internal/models/network.HttpTransport';
 COMMENT ON COLUMN tag_rule_samples.name IS 'the unique name of the sample within the namespace and the model';
 COMMENT ON COLUMN tag_rule_samples.input IS 'the sample input document, a JSON serialization of the target model instance';
 COMMENT ON COLUMN tag_rule_samples.description IS 'the description of the sample';

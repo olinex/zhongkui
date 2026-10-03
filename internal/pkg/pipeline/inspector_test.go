@@ -8,7 +8,7 @@ import (
 
 	"github.com/hibiken/asynq"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/redis"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
 )
 
 // TestInspectorTypeAlias 测试 Inspector 类型别名是否正确工作。

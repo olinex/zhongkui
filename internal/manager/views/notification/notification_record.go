@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 
-	core "zhongkui.com/zhongkui/internal/models/core"
+	core "zhongkuisec.com/zhongkui/internal/models/core"
 )
 
 // NotificationRecordDetailOut 定义通知记录详情输出结构。

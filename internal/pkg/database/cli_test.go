@@ -6,7 +6,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // testPGDSN 本地 dev-deps 的 postgres 连接串，用于驱动识别类用例。

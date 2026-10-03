@@ -6,12 +6,12 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/manager/views/admin"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/cliinput"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/manager/views/admin"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/cliinput"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var createCapturerCmd = &cobra.Command{

@@ -8,7 +8,7 @@ package huginn
 import (
 	"strings"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // parsedSections p0f.fp 文本的中间解析结果（对应 Rust parse::ParsedSections）。

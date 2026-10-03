@@ -11,8 +11,8 @@ import (
 	"gorm.io/gorm/logger"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // newTestReindexDB 构造重嵌入测试用的 sqlite 内存库并迁移知识文档与长期记忆两表（sqlite 不支持

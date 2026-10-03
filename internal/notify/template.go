@@ -117,9 +117,9 @@ import (
 	"text/template"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 消息模板键常量（业务相关）。模板键由各事件源在通知层固化，随 message.Message
@@ -147,8 +147,8 @@ var eventTemplateSpecs = map[string]EventTemplateSpec{
 			"DetectedAt":    "2026-01-01T00:00:00Z",
 			"DetectedAtFmt": "2026-01-01 00:00:00 UTC",
 			"Hits": []any{
-				map[string]any{"ConditionName": "条件A", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 5, "Threshold": 3, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
-				map[string]any{"ConditionName": "条件B", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 128, "Threshold": 50, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s", "RecordCount": 128},
+				map[string]any{"ConditionName": "条件A", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 5, "Threshold": 3, "Model": "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
+				map[string]any{"ConditionName": "条件B", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 128, "Threshold": 50, "Model": "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s", "RecordCount": 128},
 			},
 		},
 	},

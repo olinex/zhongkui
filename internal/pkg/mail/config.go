@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/viper"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
 )
 
 // Prefix 是系统层邮件直发配置在配置文件中的前缀（"smtp"）。

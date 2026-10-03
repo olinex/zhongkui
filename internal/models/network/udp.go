@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // UDPHeaders 表示UDP协议头部信息

@@ -14,8 +14,8 @@ import (
 	"github.com/gopacket/gopacket/layers"
 	"github.com/gopacket/gopacket/pcapgo"
 	. "github.com/smartystreets/goconvey/convey"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/huginn"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/huginn"
 )
 
 // fingerprintCase 描述一个 pcap 夹具的期望指纹结果（基线）。

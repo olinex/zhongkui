@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // TestRedisStringDatasource redis_string 的精确/未命中/类型不匹配/模式扫描行为。

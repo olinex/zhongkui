@@ -6,8 +6,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/pterm/pterm"
 	"github.com/sergi/go-diff/diffmatchpatch"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 func getDiffError(target, input string) error {

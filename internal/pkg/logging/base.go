@@ -8,7 +8,7 @@ import (
 
 	"github.com/creasty/defaults"
 	"go.uber.org/zap"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // LoggerCfg 是 zap.Config 的类型别名，用于简化导入和类型引用

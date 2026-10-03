@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/docconv"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 )
 
 // derivedGeneratedDocs 返回合成的叙述页生成文档（generated 分区），供分区差异计划测试使用。

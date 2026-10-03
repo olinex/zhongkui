@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 )
 
 // TestCryptoFieldTagPayload 验证 PacketIPv4TCP / PacketIPv6TCP 内嵌的基础包结构

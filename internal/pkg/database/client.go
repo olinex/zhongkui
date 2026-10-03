@@ -6,8 +6,8 @@ import (
 	"gorm.io/driver/clickhouse"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // DB 是 gorm.DB 的别名，用于简化类型引用

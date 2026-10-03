@@ -9,7 +9,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // lintFields 字段感知 lint 测试使用的样例输入字段元信息。

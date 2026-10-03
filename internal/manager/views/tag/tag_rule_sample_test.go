@@ -9,12 +9,12 @@ import (
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // tagRuleSampleTestNamespace 标签规则样例测试专用命名空间，
@@ -117,7 +117,7 @@ func TestTagRuleSampleCreateAndDetail(t *testing.T) {
 
 		Convey("未注册目标模型的样例被拒绝", func() {
 			w := doTagRuleRequest(r, http.MethodPost, "/tag-event/tag-rule-sample/create", map[string]any{
-				"model": "zhongkui.com/zhongkui/internal/models/unknown.Foo",
+				"model": "zhongkuisec.com/zhongkui/internal/models/unknown.Foo",
 				"name":  "sample-bad",
 				"input": map[string]any{},
 			})

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/auth"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/signature"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/auth"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/signature"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 编译期断言：确保 AccessKeyAuthenticator 实现了 Authenticator 接口

@@ -9,7 +9,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // mustCron 解析标准 cron 表达式；失败时 panic。仅用于测试。

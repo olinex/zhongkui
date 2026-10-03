@@ -17,8 +17,8 @@ import (
 	"os"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // TestConn 按数据源类型建立连接并校验连通性，失败返回带上下文的原因。

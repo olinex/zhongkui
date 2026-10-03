@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // createTestSecureConfig 创建用于测试的安全响应头配置

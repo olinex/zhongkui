@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	_ "zhongkui.com/zhongkui/internal/network/detectors"
+	_ "zhongkuisec.com/zhongkui/internal/network/detectors"
 )
 
 func TestHttpChunkedGzipReassembly(t *testing.T) {

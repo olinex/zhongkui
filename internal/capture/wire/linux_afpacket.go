@@ -12,8 +12,8 @@ import (
 	"github.com/gopacket/gopacket/pcap"
 	"golang.org/x/net/bpf"
 	"golang.org/x/sys/unix"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 const (

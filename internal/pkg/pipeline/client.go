@@ -8,8 +8,8 @@ import (
 	"context"
 
 	"github.com/hibiken/asynq"
-	"zhongkui.com/zhongkui/internal/pkg/otel"
-	"zhongkui.com/zhongkui/internal/pkg/redis"
+	"zhongkuisec.com/zhongkui/internal/pkg/otel"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
 )
 
 // enqueuer 定义了 asynq.Client 的核心方法接口，支持单元测试和追踪包装。

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
-	_ "zhongkui.com/zhongkui/internal/network/detectors"
+	_ "zhongkuisec.com/zhongkui/internal/network/detectors"
 )
 
 // TestHttpWithJpegsReassembly 校验 http_with_jpegs 抓包的流重组结果与 tshark 输出一致。

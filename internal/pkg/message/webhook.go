@@ -11,8 +11,8 @@ import (
 	"time"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // webhookHTTPClient Webhook 渠道使用的 HTTP 客户端，带整体超时避免拖垮任务执行。

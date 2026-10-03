@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // Router 是TCP包重组路由器，用于管理多个TCP重组器并将TCP包路由到相关的重组器中。

@@ -10,7 +10,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // recordingDatasource 记录每次 Open 收到的下推约束与查询上下文，内部委托

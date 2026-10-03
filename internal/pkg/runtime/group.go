@@ -3,7 +3,7 @@ package runtime
 import (
 	"context"
 
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
 )
 
 // Group 统一编排多个 Service 的启动与关闭生命周期。

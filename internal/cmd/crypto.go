@@ -7,8 +7,8 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 var passwordBookOutput string

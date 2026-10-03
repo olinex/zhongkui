@@ -7,7 +7,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // TestRedisSetDatasource redis_set 的成员枚举与升序行为。

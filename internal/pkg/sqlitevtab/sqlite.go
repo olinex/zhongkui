@@ -27,8 +27,8 @@ import (
 	sqlite3 "github.com/ncruces/go-sqlite3"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // connPoolKey 是 sqlite 连接池的固定 Key。

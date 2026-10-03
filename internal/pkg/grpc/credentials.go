@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"google.golang.org/grpc/credentials"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/signature"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/signature"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // AccessKeySecretPerRPCCredentials 实现了 gRPC 的 PerRPCCredentials 接口

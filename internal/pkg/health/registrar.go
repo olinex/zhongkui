@@ -7,8 +7,8 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
 )
 
 // ServiceInfo 写入 etcd 服务目录的单实例状态负载。

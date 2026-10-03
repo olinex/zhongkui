@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ExtractFunc 数据提取函数类型。

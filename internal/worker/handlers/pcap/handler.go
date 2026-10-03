@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/etl"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/worker/handlers/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/base"
 )
 
 // pcapHandler 包装 BatchHandler，在任务执行前后注入统计和打印统计信息

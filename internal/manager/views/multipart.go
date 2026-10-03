@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // maxFormFieldBytes 是单个普通表单字段（非 file 部分）读入内存的上限：这类字段只承载标题、

@@ -12,16 +12,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/manager/views/admin"
-	"zhongkui.com/zhongkui/internal/manager/views/datasource"
-	"zhongkui.com/zhongkui/internal/manager/views/llm"
-	"zhongkui.com/zhongkui/internal/manager/views/notification"
-	"zhongkui.com/zhongkui/internal/manager/views/tag"
-	"zhongkui.com/zhongkui/internal/manager/views/traffic"
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views/admin"
+	"zhongkuisec.com/zhongkui/internal/manager/views/datasource"
+	"zhongkuisec.com/zhongkui/internal/manager/views/llm"
+	"zhongkuisec.com/zhongkui/internal/manager/views/notification"
+	"zhongkuisec.com/zhongkui/internal/manager/views/tag"
+	"zhongkuisec.com/zhongkui/internal/manager/views/traffic"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // projectionCase 描述一组列表接口的 SearchIn → Out 映射，

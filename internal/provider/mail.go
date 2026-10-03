@@ -2,10 +2,10 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/mail"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/mail"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // newMailSenderProvider 提供进程级单例的系统邮件发送器：直接在此 provider 内从 Viper

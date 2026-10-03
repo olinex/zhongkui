@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai"
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // TestParamSpecsEnumTypesRegistered 守卫参数注册表的枚举类引用不漂移：声明了 EnumType 的参数，

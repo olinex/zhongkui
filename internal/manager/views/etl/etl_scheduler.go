@@ -4,10 +4,10 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // EtlSchedulerTaskIn 是定时任务的完整配置输入参数结构体。

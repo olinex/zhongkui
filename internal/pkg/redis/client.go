@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/redis/go-redis/v9"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Client 是 go-redis/v9 库中 redis.Client 的类型别名。

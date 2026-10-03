@@ -8,11 +8,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"gorm.io/datatypes"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // httpTransportType 已注册目标模型 *network.HttpTransport 的类型键，作为样例与规则的目标模型。

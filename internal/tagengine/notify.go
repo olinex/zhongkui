@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
 )
 
 // ruleChangeKey 规则变更广播在 etcd 中的全局键。

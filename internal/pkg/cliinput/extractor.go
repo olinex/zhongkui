@@ -35,9 +35,9 @@ import (
 	uv "github.com/go-playground/validator/v10"
 	"github.com/pterm/pterm"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // 结构体字段 tag 使用的 tag 名称。

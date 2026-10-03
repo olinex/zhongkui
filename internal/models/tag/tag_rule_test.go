@@ -9,8 +9,8 @@ import (
 
 	"github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // newTagRuleTestDB 创建共享已迁移的 PostgreSQL 测试库（testdb.Core）。
@@ -34,7 +34,7 @@ func TestTagRule_Struct(t *testing.T) {
 				NamespaceName: "default",
 				Name:          "admin-panel",
 				Description:   "识别管理后台登录",
-				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:         "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
 				Enabled:       true,
 			}
@@ -42,7 +42,7 @@ func TestTagRule_Struct(t *testing.T) {
 			convey.So(rule.NamespaceName, convey.ShouldEqual, "default")
 			convey.So(rule.Name, convey.ShouldEqual, "admin-panel")
 			convey.So(rule.Description, convey.ShouldEqual, "识别管理后台登录")
-			convey.So(rule.Model, convey.ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			convey.So(rule.Model, convey.ShouldEqual, "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport")
 			convey.So(rule.Rego, convey.ShouldContainSubstring, "package zki")
 			convey.So(rule.Enabled, convey.ShouldBeTrue)
 		})
@@ -110,7 +110,7 @@ func TestTagRule_JSONSerialization(t *testing.T) {
 				NamespaceName: "default",
 				Name:          "admin-panel",
 				Description:   "识别管理后台登录",
-				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:         "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"admin_panel_login\" if {\n    input.method == \"POST\"\n}",
 				Enabled:       true,
 			}
@@ -149,7 +149,7 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			base := TagRule{
 				NamespaceName: "default",
 				Name:          "dup",
-				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:         "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 				Enabled:       true,
 			}
@@ -169,7 +169,7 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			base := TagRule{
 				NamespaceName: "default",
 				Name:          "dup",
-				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:         "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 				Enabled:       true,
 			}
@@ -186,7 +186,7 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			base := TagRule{
 				NamespaceName: "default",
 				Name:          "dup",
-				Model:         "zhongkui.com/zhongkui/internal/models/network.HttpTransport",
+				Model:         "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport",
 				Rego:          "package zki\n\ntags contains \"a\"",
 				Enabled:       true,
 			}
@@ -194,7 +194,7 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 
 			other := base
 			other.ID = 0
-			other.Model = "zhongkui.com/zhongkui/internal/models/network.TcpStream"
+			other.Model = "zhongkuisec.com/zhongkui/internal/models/network.TcpStream"
 			convey.So(db.Create(&other).Error, convey.ShouldBeNil)
 		})
 	})

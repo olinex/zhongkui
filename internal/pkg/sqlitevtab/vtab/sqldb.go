@@ -19,8 +19,8 @@ import (
 	"sync"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // sqlDBConfig 描述一个 Key 对应的 *sql.DB 惰性构造器。

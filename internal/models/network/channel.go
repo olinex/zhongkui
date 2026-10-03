@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 var (

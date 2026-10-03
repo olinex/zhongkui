@@ -10,10 +10,10 @@ import (
 	"github.com/spf13/cobra"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/docs"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/docs"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // createDocsCmd 依据文档注册表导出 Diátaxis 分类文档的命令。

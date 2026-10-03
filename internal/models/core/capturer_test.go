@@ -5,9 +5,9 @@ import (
 
 	"github.com/smartystreets/goconvey/convey"
 	"google.golang.org/protobuf/proto"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 // TestReporterConfigKey 测试 ReporterConfigKey 函数

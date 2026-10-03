@@ -624,7 +624,7 @@ TTL toDateTime(batch * 3600) + INTERVAL 24 HOUR DELETE;
 CREATE TABLE IF NOT EXISTS tag_summings (
 	namespace LowCardinality(String) COMMENT 'the namespace of the aggregation, the primary multi-tenant grouping dimension' CODEC(ZSTD(3)),
 	minute DateTime64(6, 'UTC') COMMENT 'the minute aligned start time of the aggregation window' CODEC(DoubleDelta, ZSTD(3)),
-	model String COMMENT 'the target model type key of the tags, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport' CODEC(ZSTD(3)),
+	model String COMMENT 'the target model type key of the tags, e.g. zhongkuisec.com/zhongkui/internal/models/network.HttpTransport' CODEC(ZSTD(3)),
 	dimension String COMMENT 'the tag dimension type, e.g. fpTcpClientSig' CODEC(ZSTD(3)),
 	item String COMMENT 'the concrete value of the tag dimension' CODEC(ZSTD(3)),
 	tags Array(String) COMMENT 'the deduplicated and sorted tag array of the aggregation',
@@ -648,7 +648,7 @@ AS
 SELECT
 	namespace,
 	toStartOfMinute(timestamp) AS minute,
-	'zhongkui.com/zhongkui/internal/models/network.HttpTransport' AS model,
+	'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport' AS model,
 	sig.1 AS dimension,
 	sig.2 AS item,
 	arraySort(arrayDistinct(tags)) AS tags,

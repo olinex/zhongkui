@@ -5,8 +5,8 @@ import (
 	"github.com/samber/do/v2"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/datasource"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/datasource"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // newDatasourceWatcherProvider 创建数据源变更监听器（datasource.Watcher）provider。

@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/pcap"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 // libpcap 抓包实现相关常量。

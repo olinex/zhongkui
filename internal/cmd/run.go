@@ -7,14 +7,14 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/datasource"
-	"zhongkui.com/zhongkui/internal/manager"
-	"zhongkui.com/zhongkui/internal/pkg/runtime"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/provider"
-	"zhongkui.com/zhongkui/internal/reporter"
-	"zhongkui.com/zhongkui/internal/worker"
+	"zhongkuisec.com/zhongkui/internal/datasource"
+	"zhongkuisec.com/zhongkui/internal/manager"
+	"zhongkuisec.com/zhongkui/internal/pkg/runtime"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/reporter"
+	"zhongkuisec.com/zhongkui/internal/worker"
 )
 
 // startHealth 在独立 goroutine 中启动健康探针服务，与主服务主体并发运行。
