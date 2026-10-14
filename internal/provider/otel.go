@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/otel"
+	"zhongkuisec.com/zhongkui/internal/pkg/otel"
 )
 
 // OtelShutdowner 封装 OpenTelemetry 的关闭函数，供依赖注入器统一管理其生命周期。

@@ -5,9 +5,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // ReassemblerNode 表示重组器节点，用于在双向链表中管理TCP流的重组器实例。

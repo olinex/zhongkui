@@ -84,30 +84,19 @@ package manager
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
 
-	datasourcepkg "zhongkui.com/zhongkui/internal/datasource"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/manager/views/admin"
-	"zhongkui.com/zhongkui/internal/manager/views/ai"
-	"zhongkui.com/zhongkui/internal/manager/views/datasource"
-	"zhongkui.com/zhongkui/internal/manager/views/etl"
-	"zhongkui.com/zhongkui/internal/manager/views/llm"
-	"zhongkui.com/zhongkui/internal/manager/views/notification"
-	"zhongkui.com/zhongkui/internal/manager/views/plaintext"
-	"zhongkui.com/zhongkui/internal/manager/views/tag"
-	"zhongkui.com/zhongkui/internal/manager/views/traffic"
-	"zhongkui.com/zhongkui/internal/manager/views/user"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	datasourcepkg "zhongkuisec.com/zhongkui/internal/datasource"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // RouteRegister 注册全部 HTTP 路由：初始化全局中间件链后，
@@ -254,29 +243,10 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		Ai:                aiMiddleware,
 	}
 
-	// ==================== 全局功能开关端点 ====================
-	// /features/list - 公共接口（无需认证）：返回全部功能开关（key + enabled），
-	// 供前端获知某项功能是否开启以决定是否展示相关组件。
-	rc.V1Group.POST(
-		"/features/list",
-		rc.FeatureRegistry, // 注入功能开关注册表，读取各功能启停状态
-		views.FeaturesListGet,
-	)
-	// 功能开关列表元信息（仅输出，无请求体）
-	rc.V1Group.OPTIONS("/features/list", views.StructMetaGinHandler(
-		views.WithMethod(http.MethodPost, views.WithBodyOutput[views.FeaturesListGetOut]()),
-	))
-
-	admin.RegisterRoutes(rc)
-	traffic.RegisterRoutes(rc)
-	tag.RegisterRoutes(rc)
-	datasource.RegisterRoutes(rc)
-	plaintext.RegisterRoutes(rc)
-	user.RegisterRoutes(rc)
-	notification.RegisterRoutes(rc)
-	etl.RegisterRoutes(rc)
-	ai.RegisterRoutes(rc)
-	llm.RegisterRoutes(rc)
+	// ==================== 全局功能开关端点与业务路由 ====================
+	// 全局功能开关端点（/features/list，公共接口）与全部视图域路由统一由 registerViewRoutes
+	// 注册，使在线装配与离线接口目录装配（CollectApiCatalog）共用同一份域注册清单。
+	registerViewRoutes(rc)
 
 	return nil
 }

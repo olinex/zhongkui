@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // MacAddr 是以 net.HardwareAddr 为底层的 MAC 地址类型，支持数据库、JSON 与文本之间的序列化。

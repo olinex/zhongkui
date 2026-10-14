@@ -13,10 +13,10 @@ import (
 	"gorm.io/datatypes"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 const (
@@ -34,8 +34,8 @@ var httpTransportExample = map[string]any{
 	"namespace":           "default",
 	"capture":             "eth0",
 	"version":             "1",
-	"sessionId":           "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
-	"traceId":             "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+	"sessionID":           "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
+	"traceID":             "f47ac10b-58cc-4372-a567-0e02b2c3d479",
 	"timestamp":           "2026-08-16T10:00:00+08:00",
 	"clientIp":            "192.168.1.10",
 	"clientPort":          53452,

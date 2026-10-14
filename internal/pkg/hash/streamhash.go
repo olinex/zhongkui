@@ -6,7 +6,7 @@ import (
 	"hash/maphash"
 	"sync"
 
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 var seed maphash.Seed = maphash.Seed{}

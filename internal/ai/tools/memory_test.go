@@ -16,8 +16,11 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
 )
+
+// testSessionID 是各用例共用的固定会话键：memory_write 原样透传 SessionID，故注入与断言需一致。
+var testSessionID uint = 42
 
 // fakeMemoryWriter 是 MemoryWriter 的测试替身：记录收到的入参与调用次数，按预设返回 ID 或错误。
 type fakeMemoryWriter struct {
@@ -40,7 +43,7 @@ func memoryRuntimeCtx(w MemoryWriter) context.Context {
 		Writer:        w,
 		NamespaceName: "ns-demo",
 		AgentKind:     aimodel.AgentKindRego,
-		SessionID:     42,
+		SessionID:     testSessionID,
 	})
 }
 
@@ -126,7 +129,7 @@ func TestMemoryWrite_Success(t *testing.T) {
 	want := MemoryWriteInput{
 		NamespaceName: "ns-demo",
 		AgentKind:     aimodel.AgentKindRego,
-		SessionID:     42,
+		SessionID:     testSessionID,
 		Kind:          aimodel.MemoryKindPreference,
 		Title:         "T",
 		Content:       "normalize me",

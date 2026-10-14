@@ -9,10 +9,10 @@ import (
 	"github.com/pterm/pterm"
 	"github.com/samber/do/v2"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	_ "zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	_ "zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 const (
@@ -227,6 +227,7 @@ func init() {
 	RootCmd.AddCommand(createCmd)
 	// sync
 	syncCmd.AddCommand(syncDocsCmd)
+	syncCmd.AddCommand(syncApisCmd)
 	syncCmd.AddCommand(syncEmbeddingsCmd)
 	syncCmd.AddCommand(syncEmbeddingDimensionsCmd)
 	RootCmd.AddCommand(syncCmd)

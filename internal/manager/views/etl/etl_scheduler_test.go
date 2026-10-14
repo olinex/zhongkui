@@ -13,8 +13,8 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/text/language"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // newETLTestLocalizer 返回测试专用的 go-i18n Localizer

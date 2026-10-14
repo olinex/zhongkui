@@ -6,9 +6,9 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // missingKeySentinel 是必定未注册的 i18n 键，用于验证「未命中返回键本身」这一判定前提

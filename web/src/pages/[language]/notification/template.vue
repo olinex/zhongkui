@@ -61,7 +61,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   v-model="createEvent"
@@ -71,7 +71,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-select
                   v-model="createChannelType"
@@ -91,7 +91,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
@@ -101,7 +101,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <go-template-editor
                   v-model="createTitle"
@@ -113,7 +113,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <go-template-editor
                   v-model="createContent"
@@ -125,7 +125,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <div class="d-flex align-center ga-2">
                   <v-btn
@@ -154,14 +154,14 @@
                 />
                 <template v-if="tmplDryRunOpen && tmplDryRun">
                   <v-divider class="my-2" />
-                  <div class="text-subtitle-2">
+                  <div class="text-title-small">
                     {{ $t("model.notificationTemplate.field.title") }}
                   </div>
-                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.title }}</pre>
-                  <div class="text-subtitle-2 mt-2">
+                  <pre class="zk-code-preview text-body-medium">{{ tmplDryRun.title }}</pre>
+                  <div class="text-title-small mt-2">
                     {{ $t("model.notificationTemplate.field.content") }}
                   </div>
-                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.content }}</pre>
+                  <pre class="zk-code-preview text-body-medium">{{ tmplDryRun.content }}</pre>
                 </template>
               </v-col>
             </v-row>
@@ -179,7 +179,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   :model-value="eventNameKey(proxy.event)"
@@ -188,7 +188,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   :model-value="channelTypeNameKey(proxy.channelType)"
@@ -204,7 +204,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="updateDescription"
@@ -215,7 +215,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <go-template-editor
                   v-model="updateTitle"
@@ -228,7 +228,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <go-template-editor
                   v-model="updateContent"
@@ -241,7 +241,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <div class="d-flex align-center ga-2">
                   <v-btn
@@ -271,14 +271,14 @@
                 />
                 <template v-if="tmplDryRunOpen && tmplDryRun">
                   <v-divider class="my-2" />
-                  <div class="text-subtitle-2">
+                  <div class="text-title-small">
                     {{ $t("model.notificationTemplate.field.title") }}
                   </div>
-                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.title }}</pre>
-                  <div class="text-subtitle-2 mt-2">
+                  <pre class="zk-code-preview text-body-medium">{{ tmplDryRun.title }}</pre>
+                  <div class="text-title-small mt-2">
                     {{ $t("model.notificationTemplate.field.content") }}
                   </div>
-                  <pre class="zk-code-preview text-body-2">{{ tmplDryRun.content }}</pre>
+                  <pre class="zk-code-preview text-body-medium">{{ tmplDryRun.content }}</pre>
                 </template>
               </v-col>
             </v-row>
@@ -294,7 +294,7 @@
         size="md"
       >
         <v-form>
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="12">
               <v-select
                 v-model="renderEvent"
@@ -305,7 +305,7 @@
               />
             </v-col>
           </v-row>
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="6">
               <v-select
                 v-model="renderChannelType"
@@ -324,7 +324,7 @@
             </v-col>
           </v-row>
           <v-divider class="my-2" />
-          <v-row dense align="center">
+          <v-row density="compact" class="align-center">
             <v-col>
               <v-label>{{ $t("model.notificationTemplate.field.params") }}</v-label>
             </v-col>
@@ -338,7 +338,12 @@
               />
             </v-col>
           </v-row>
-          <v-row v-for="(row, index) in renderParams" :key="index" dense align="center">
+          <v-row
+            v-for="(row, index) in renderParams"
+            :key="index"
+            density="compact"
+            class="align-center"
+          >
             <v-col cols="5">
               <v-text-field v-model="row.key" :label="$t('model.__base.field.field')" />
             </v-col>
@@ -369,13 +374,13 @@
         <v-alert v-if="renderError" type="error" class="mt-3" :text="renderError" />
         <template v-if="renderResult">
           <v-divider class="my-3" />
-          <div class="text-subtitle-2">{{ $t("model.notificationTemplate.field.title") }}</div>
-          <pre class="zk-code-preview text-body-2">{{ renderResult.title }}</pre>
-          <div class="text-subtitle-2 mt-2">
+          <div class="text-title-small">{{ $t("model.notificationTemplate.field.title") }}</div>
+          <pre class="zk-code-preview text-body-medium">{{ renderResult.title }}</pre>
+          <div class="text-title-small mt-2">
             {{ $t("model.notificationTemplate.field.content") }}
           </div>
-          <pre class="zk-code-preview text-body-2">{{ renderResult.content }}</pre>
-          <div class="text-caption text-on-surface-variant mt-2">
+          <pre class="zk-code-preview text-body-medium">{{ renderResult.content }}</pre>
+          <div class="text-body-small on-surface-variant mt-2">
             channelType: {{ channelTypeNameKey(renderResult.channelType) }} · language:
             {{ $t(languageNameKey(renderResult.language)) }}
           </div>
@@ -697,14 +702,18 @@ onMounted(() => {
 
 // ---- 创建模板 ----
 const openCreateDialogAction = (): void => {
-  createForm.resetField("event", { value: "" });
-  createForm.resetField("channelType", { value: "*" });
-  createForm.resetField("language", { value: PLATFORM_DEFAULT_LANGUAGE });
-  createForm.resetField("title", { value: "" });
-  createForm.resetField("content", { value: "" });
-  createForm.resetField("description", { value: "" });
+  // 打开动作里原子复位全部字段：值 + 校验状态一次性重置，避免残留
+  const defaults = {
+    event: "",
+    channelType: "*",
+    language: PLATFORM_DEFAULT_LANGUAGE,
+    title: "",
+    content: "",
+    description: "",
+  };
+  createForm.resetForm({ values: defaults });
   resetEditorTools();
-  createDialogRef.value?.open({});
+  createDialogRef.value?.open(defaults);
 };
 
 const createAction = createForm.handleSubmit(async (values) => {
@@ -744,9 +753,14 @@ const detailGetAction = (item: Record<string, any>): void => {
   updateEvent.value = String(item.event ?? "");
   updateChannelType.value = String(item.channelType ?? "*");
   updateLanguage.value = String(item.language ?? PLATFORM_DEFAULT_LANGUAGE);
-  updateForm.resetField("title", { value: String(item.title ?? "") });
-  updateForm.resetField("content", { value: String(item.content ?? "") });
-  updateForm.resetField("description", { value: String(item.description ?? "") });
+  // 复位与回填同属打开动作：原子重置全部字段与校验状态，再写入本次详情
+  updateForm.resetForm({
+    values: {
+      title: String(item.title ?? ""),
+      content: String(item.content ?? ""),
+      description: String(item.description ?? ""),
+    },
+  });
   resetEditorTools();
   editDialogRef.value?.open(item);
 };

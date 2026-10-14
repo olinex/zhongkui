@@ -20,6 +20,15 @@
             @view-plaintext="viewConfigPlaintext"
           />
         </template>
+
+        <!-- 启用列：开关即时写入（后端按批设置启用态接口，单条即单元素批次），
+             写入期间按行显示 loading 并禁用，失败回退，避免重复切换同一行 -->
+        <template #cell-enabled="{ item }">
+          <enabled-switch-cell
+            v-model="item.enabled"
+            :request="(enabled: boolean) => datasourceBatchSetEnabled(enabled, [item.id])"
+          />
+        </template>
       </search-table>
 
       <plaintext-dialog ref="plaintextDialogRef" />
@@ -55,23 +64,13 @@
         prepend-icon="mdi-toggle-switch"
         @confirm="itemToggleAction"
       >
-        <template #body="{ proxy }">
+        <template #body>
           <confirm-alert
             v-if="batchState"
             :action="
               $t(batchState?.action === 'activate' ? 'action.activate' : 'action.deactivate')
             "
             :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
-          />
-          <confirm-alert
-            v-else
-            :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
-            :text="
-              $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
-                category: $t('model.datasource.name'),
-                key: proxy.name,
-              })
-            "
           />
         </template>
       </confirm-dialog>
@@ -91,7 +90,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="createName"
@@ -109,7 +108,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="createEnabled"
@@ -119,7 +118,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row v-if="isCreateSQLite" dense>
+            <v-row v-if="isCreateSQLite" density="compact">
               <v-col cols="12">
                 <v-file-input
                   v-model="createSqliteFile"
@@ -133,12 +132,12 @@
             </v-row>
             <template v-if="createConfigFields.length > 0">
               <v-divider class="my-2" />
-              <v-row dense>
+              <v-row density="compact">
                 <v-col cols="12">
                   <v-label>{{ $t("model.datasource.field.config") }}</v-label>
                 </v-col>
               </v-row>
-              <v-row v-for="f in createConfigFields" :key="f.name" dense>
+              <v-row v-for="f in createConfigFields" :key="f.name" density="compact">
                 <v-col cols="12">
                   <v-select
                     v-if="f.name === 'struct'"
@@ -165,7 +164,7 @@
                     <div v-if="createSchemaEmpty" class="zk-hint mt-2">
                       {{ $t("model.datasource.schemaRequiredHint") }}
                     </div>
-                    <div v-if="createConfigErrors[f.name]" class="text-error text-body-2 mt-1">
+                    <div v-if="createConfigErrors[f.name]" class="text-error text-body-medium mt-1">
                       {{ createConfigErrors[f.name] }}
                     </div>
                   </template>
@@ -206,7 +205,7 @@
                 </v-col>
               </v-row>
             </template>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <template v-if="canIntrospect(createType)">
                   <v-btn
@@ -231,12 +230,12 @@
                     {{ $t("model.datasource.action.testConnection") }}
                   </v-btn>
                 </template>
-                <div v-if="createIntrospectInfo" class="text-caption text-on-surface-variant mt-1">
+                <div v-if="createIntrospectInfo" class="text-body-small on-surface-variant mt-1">
                   {{ $t("model.datasource.action.introspectColumns") }}: {{ createIntrospectInfo }}
                 </div>
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
@@ -259,7 +258,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   :model-value="proxy.name"
@@ -275,7 +274,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="editEnabled"
@@ -286,7 +285,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row v-if="isEditSQLite" dense>
+            <v-row v-if="isEditSQLite" density="compact">
               <v-col cols="12">
                 <v-file-input
                   v-model="editSqliteFile"
@@ -300,12 +299,12 @@
               </v-col>
             </v-row>
             <v-divider class="my-2" />
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-label>{{ $t("model.datasource.field.config") }}</v-label>
               </v-col>
             </v-row>
-            <v-row v-for="f in editConfigFields" :key="f.name" dense>
+            <v-row v-for="f in editConfigFields" :key="f.name" density="compact">
               <v-col cols="12">
                 <v-select
                   v-if="f.name === 'struct'"
@@ -336,7 +335,7 @@
                   </div>
                   <div
                     v-if="editConfigErrors[f.name] && editable"
-                    class="text-error text-body-2 mt-1"
+                    class="text-error text-body-medium mt-1"
                   >
                     {{ editConfigErrors[f.name] }}
                   </div>
@@ -380,7 +379,7 @@
                 </v-text-field>
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <template v-if="canIntrospect(editType)">
                   <v-btn
@@ -405,12 +404,12 @@
                     {{ $t("model.datasource.action.testConnection") }}
                   </v-btn>
                 </template>
-                <div v-if="editIntrospectInfo" class="text-caption text-on-surface-variant mt-1">
+                <div v-if="editIntrospectInfo" class="text-body-small on-surface-variant mt-1">
                   {{ $t("model.datasource.action.introspectColumns") }}: {{ editIntrospectInfo }}
                 </div>
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="editDescription"
@@ -830,14 +829,13 @@ const toggleReveal = (group: "create" | "edit", field: string): void => {
 
 // ---- 创建对话框 ----
 const openCreateDialogAction = (): void => {
-  createForm.resetField("name", { value: "" });
-  createForm.resetField("type", { value: "" });
-  createForm.resetField("enabled", { value: true });
-  createForm.resetField("description", { value: "" });
+  // 打开动作里原子复位全部字段：值 + 校验状态一次性重置，避免残留
+  const defaults = { name: "", type: "", enabled: true, description: "" };
+  createForm.resetForm({ values: defaults });
   createSqliteFile.value = null;
   createIntrospectInfo.value = "";
   resetCreateConfig();
-  createDialogRef.value?.open({});
+  createDialogRef.value?.open(defaults);
 };
 
 // 数据源类型切换时重置配置表单与 sqlite 文件选择（按新类型 schema 生成默认值）
@@ -893,8 +891,10 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
       editType.value = rsp.data.type;
       editSqliteFile.value = null;
       editIntrospectInfo.value = "";
-      updateForm.resetField("enabled", { value: rsp.data.enabled });
-      updateForm.resetField("description", { value: rsp.data.description });
+      // 复位与回填同属打开动作：原子重置全部字段与校验状态，再写入本次详情
+      updateForm.resetForm({
+        values: { enabled: rsp.data.enabled, description: rsp.data.description },
+      });
       // config 为 base64 密文，需经明文接口解密后再回填编辑表单
       const plaintext = await loadDatasourceConfigPlaintext(rsp.data.config);
       loadEditConfigJson(plaintext);
@@ -990,8 +990,7 @@ const projectFields = (visible: string[]): string[] => [
   ...visible,
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1000,16 +999,6 @@ const getActions = (item: Record<string, any>): ItemActions => {
       deleteConfirmRef.value?.open(i);
     },
   };
-  switch (item.enabled) {
-    case false:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.activate = (i: Record<string, any>) => toggleAction(i, true);
-      break;
-    case true:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.deactivate = (i: Record<string, any>) => toggleAction(i, false);
-      break;
-  }
   return actions;
 };
 
@@ -1120,39 +1109,11 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 
-const toggleTarget = ref<boolean | null>(null);
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
-  batchState.value = null;
-  toggleTarget.value = enabled;
-  toggleConfirmRef.value?.open(item);
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
+const itemToggleAction = async (): Promise<void> => {
   const state = batchState.value;
   if (state) {
     batchState.value = null;
     await batchToggleAction(state.items, state.action === "activate");
-    return;
   }
-  if (toggleTarget.value === null) {
-    return;
-  }
-  await getResponse<BatchResultOut>(
-    datasourceBatchSetEnabled(toggleTarget.value, [proxy.id]),
-    async (rsp) => {
-      applyBatchResult(rsp.summary, rsp.data);
-      await searchTableRef.value?.refresh();
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
 };
 </script>

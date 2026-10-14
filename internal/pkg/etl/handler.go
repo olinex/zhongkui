@@ -3,7 +3,7 @@ package etl
 import (
 	"context"
 
-	"zhongkui.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
 )
 
 const (

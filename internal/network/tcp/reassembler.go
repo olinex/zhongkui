@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/network/detectors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 
-	n "zhongkui.com/zhongkui/internal/models/network"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
 )
 
 // Reassembler 表示一个TCP流重组器，用于从TCP数据包流中重组完整的应用层消息。

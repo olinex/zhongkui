@@ -74,8 +74,8 @@ import (
 	"github.com/samber/do/v2"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/features"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/manager/features"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // newFeatureRegistryProvider 装配全局功能开关注册表：构建系统邮件直发器（Sender）并解析

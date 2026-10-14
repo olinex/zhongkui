@@ -10,9 +10,9 @@ import (
 	"gorm.io/gorm/logger"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai"
-	mcptool "zhongkui.com/zhongkui/internal/ai/tools/mcp"
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	mcptool "zhongkuisec.com/zhongkui/internal/ai/tools/mcp"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
 )
 
 // newSyncTestDB 构造工具同步对账测试用的 sqlite 内存库并迁移 mcp_servers / llm_tools 两表。

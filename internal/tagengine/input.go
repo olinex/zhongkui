@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // extractNamespace 从目标实例中提取所属命名空间。

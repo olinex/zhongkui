@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
 // 本文件基于独立的 generic 资源池基座 resourcepool 提供消息渠道的统一生命周期入口：

@@ -8,7 +8,7 @@ import (
 	"encoding/base64"
 	"math/big"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // charset 定义了 GenerateRandomString 函数使用的字符集，

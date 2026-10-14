@@ -2,7 +2,7 @@ package middlewares
 
 import (
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
 // S3ClientCtxName 是 S3 客户端在 Gin 上下文中存储的键名。

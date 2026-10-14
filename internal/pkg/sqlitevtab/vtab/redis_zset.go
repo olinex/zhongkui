@@ -13,7 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // RedisZSetDatasource 是基于 Redis zset 结构的 vtable 数据源。

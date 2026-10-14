@@ -3,6 +3,7 @@ package ai
 import (
 	// 标准库
 	"context"
+	"maps"
 	"strings"
 	"time"
 
@@ -12,12 +13,12 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // ErrSlotNotBound 档位没有可用模型绑定的错误哨兵：该档位无绑定记录，或绑定记录指向的
@@ -165,9 +166,7 @@ func (s *Snapshot) Slots() map[ai.Slot]SlotInfo {
 	if s == nil {
 		return out
 	}
-	for slot, info := range s.infos {
-		out[slot] = info
-	}
+	maps.Copy(out, s.infos)
 	return out
 }
 
@@ -181,6 +180,16 @@ func (s *Snapshot) Bindings() map[ai.Slot]string {
 		out[slot] = info.Name
 	}
 	return out
+}
+
+// SlotContextLimit 返回档位绑定模型的上下文窗口容量（llm_models.context_tokens，token 数）：
+// agent 使用该档位模型时据此计算上下文占用比例并判定是否自动压缩。档位未绑定、绑定不可用或
+// 非对话档位（embedding）时返回 0，表示该档位关闭占用展示与自动压缩。
+func (s *Snapshot) SlotContextLimit(slot ai.Slot) int {
+	if s == nil {
+		return 0
+	}
+	return s.slots[slot].ContextTokens
 }
 
 // Tools 返回已启用工具的副本（调用方修改返回值不会影响快照内部状态）；未装配或 AI 未启用
@@ -261,7 +270,10 @@ func (s *Store) Load(ctx context.Context) (*Snapshot, error) {
 		if err != nil {
 			continue // 未知档位（历史遗留脏数据）忽略，不阻断服务
 		}
-		cfg, usable := modelConfigOf(binding)
+		cfg, usable, err := modelConfigOf(binding)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
 		snap.infos[slot] = SlotInfo{
 			Slot:       slot,
 			Name:       binding.Model.Name,
@@ -299,7 +311,10 @@ func (s *Store) ModelConfig(ctx context.Context, slot ai.Slot) (llm.ModelConfig,
 	if err != nil {
 		return llm.ModelConfig{}, err
 	}
-	cfg, usable := modelConfigOf(binding)
+	cfg, usable, err := modelConfigOf(binding)
+	if err != nil {
+		return llm.ModelConfig{}, err
+	}
 	if !usable {
 		return llm.ModelConfig{}, ErrSlotNotBound
 	}
@@ -396,21 +411,40 @@ func (s *Snapshot) has(slot ai.Slot) bool {
 
 // modelConfigOf 把一条档位绑定映射为模型端点配置，并报告该绑定是否可用：模型须已启用
 // 且类型与档位匹配，否则视为不可用（返回 ok=false），避免以错误类型的客户端调用端点。
-func modelConfigOf(binding *ai.LlmBinding) (llm.ModelConfig, bool) {
+// 高级请求配置（extra_body）与思考开关的开/关取值须为合法 JSON，解析失败即返回英文错误
+// （不静默降级），由调用方中止装配。
+func modelConfigOf(binding *ai.LlmBinding) (llm.ModelConfig, bool, error) {
 	slot := ai.Slot(binding.Slot)
 	model := &binding.Model
 	if !model.Enabled || llm.ModelKind(model.Kind) != ai.SlotKind(slot) {
-		return llm.ModelConfig{}, false
+		return llm.ModelConfig{}, false, nil
+	}
+	extraBody, err := llm.ParseExtraBody(model.ExtraBody)
+	if err != nil {
+		return llm.ModelConfig{}, false, errors.WithStack(err)
+	}
+	thinkingOnValue, err := llm.ParseJSONValue(model.ThinkingOnValue)
+	if err != nil {
+		return llm.ModelConfig{}, false, errors.WithStack(err)
+	}
+	thinkingOffValue, err := llm.ParseJSONValue(model.ThinkingOffValue)
+	if err != nil {
+		return llm.ModelConfig{}, false, errors.WithStack(err)
 	}
 	return llm.ModelConfig{
-		Name:        model.Name,
-		Kind:        llm.ModelKind(model.Kind),
-		BaseURL:     model.BaseURL,
-		APIKey:      string(model.APIKeyData()),
-		Model:       model.ModelName,
-		Timeout:     time.Duration(model.TimeoutSeconds) * time.Second,
-		Temperature: model.Temperature,
-		MaxTokens:   model.MaxTokens,
-		Dimensions:  model.Dimensions,
-	}, true
+		Name:             model.Name,
+		Kind:             llm.ModelKind(model.Kind),
+		BaseURL:          model.BaseURL,
+		APIKey:           string(model.APIKeyData()),
+		Model:            model.ModelName,
+		Timeout:          time.Duration(model.TimeoutSeconds) * time.Second,
+		Temperature:      model.Temperature,
+		MaxTokens:        model.MaxTokens,
+		ContextTokens:    model.ContextTokens,
+		Dimensions:       model.Dimensions,
+		ExtraBody:        extraBody,
+		ThinkingField:    model.ThinkingField,
+		ThinkingOnValue:  thinkingOnValue,
+		ThinkingOffValue: thinkingOffValue,
+	}, true, nil
 }

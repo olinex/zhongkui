@@ -83,6 +83,14 @@ COMMENT ON COLUMN namespaces.updated_at IS 'the last update time of the namespac
 COMMENT ON COLUMN namespaces.name IS 'the unique name of the namespace';
 COMMENT ON COLUMN namespaces.description IS 'the optional description of the namespace';
 
+-- 内置系统命名空间（system）：承载由代码声明的公开共享数据（如原生接口目录 native_api 分区），
+-- 检索时在租户命名空间之外并入本作用域即可命中共享文档。作为结构性内置行随建表种子化（值须与
+-- base.SystemNamespace 一致）；其 webhook 占位通知渠道由 002_fixtures.sql 第 7 段「为每个已存在
+-- 命名空间补齐占位渠道」自动覆盖。该命名空间对前端完全隐藏且禁止删除（见 admin_namespace.go）。
+INSERT INTO namespaces (name, description) VALUES
+    ('system', 'builtin system namespace for code-declared shared documents')
+ON CONFLICT (name) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS capturers (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -399,7 +407,7 @@ COMMENT ON COLUMN tag_event_conditions.id IS 'the primary key of the tag event c
 COMMENT ON COLUMN tag_event_conditions.created_at IS 'the creation time of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions.updated_at IS 'the last update time of the tag event condition';
 COMMENT ON COLUMN tag_event_conditions.tag_event_rule_id IS 'the tag event rule this condition belongs to';
-COMMENT ON COLUMN tag_event_conditions.model IS 'the target model type key filter of the condition, empty means no filter, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_event_conditions.model IS 'the target model type key filter of the condition, empty means no filter, e.g. zhongkuisec.com/zhongkui/internal/models/network.HttpTransport';
 COMMENT ON COLUMN tag_event_conditions.dimension IS 'the tag dimension type filter of the condition, empty means no filter, e.g. fpTcpClientSig';
 COMMENT ON COLUMN tag_event_conditions.item IS 'the concrete value filter of the tag dimension, empty means no filter, e.g. a fingerprint signature';
 COMMENT ON COLUMN tag_event_conditions.name IS 'the unique name of the tag event condition';
@@ -526,7 +534,7 @@ COMMENT ON COLUMN tag_rules.updated_at IS 'the last update time of the tag rule'
 COMMENT ON COLUMN tag_rules.namespace_name IS 'the namespace the tag rule belongs to';
 COMMENT ON COLUMN tag_rules.name IS 'the unique name of the rule within its group';
 COMMENT ON COLUMN tag_rules.description IS 'the description of the rule';
-COMMENT ON COLUMN tag_rules.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_rules.model IS 'the target model type key, e.g. zhongkuisec.com/zhongkui/internal/models/network.HttpTransport';
 COMMENT ON COLUMN tag_rules.rego IS 'the rego rule source, contract: package zk producing tags set';
 COMMENT ON COLUMN tag_rules.enabled IS 'is the rule enabled';
 
@@ -574,7 +582,7 @@ COMMENT ON COLUMN tag_rule_samples.id IS 'the primary key of the tag rule sample
 COMMENT ON COLUMN tag_rule_samples.created_at IS 'the creation time of the tag rule sample';
 COMMENT ON COLUMN tag_rule_samples.updated_at IS 'the last update time of the tag rule sample';
 COMMENT ON COLUMN tag_rule_samples.namespace_name IS 'the namespace the tag rule sample belongs to';
-COMMENT ON COLUMN tag_rule_samples.model IS 'the target model type key, e.g. zhongkui.com/zhongkui/internal/models/network.HttpTransport';
+COMMENT ON COLUMN tag_rule_samples.model IS 'the target model type key, e.g. zhongkuisec.com/zhongkui/internal/models/network.HttpTransport';
 COMMENT ON COLUMN tag_rule_samples.name IS 'the unique name of the sample within the namespace and the model';
 COMMENT ON COLUMN tag_rule_samples.input IS 'the sample input document, a JSON serialization of the target model instance';
 COMMENT ON COLUMN tag_rule_samples.description IS 'the description of the sample';
@@ -681,33 +689,39 @@ COMMENT ON COLUMN knowledge_chunks.embedding IS 'the vectorized representation o
 COMMENT ON COLUMN knowledge_chunks.search IS 'the full-text search representation of the chunk content';
 
 CREATE TABLE IF NOT EXISTS agent_sessions (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL DEFAULT 0,
     title VARCHAR(256) NOT NULL DEFAULT '',
     target_model VARCHAR(255) NOT NULL DEFAULT '',
     status VARCHAR(16) NOT NULL DEFAULT 'active',
     agent_kind VARCHAR(32) NOT NULL DEFAULT 'knowledge',
+    review_valve VARCHAR(16) NOT NULL DEFAULT 'each',
     summary BYTEA,
-    summary_upto_message_id BIGINT NOT NULL DEFAULT 0
+    message_seq BIGINT NOT NULL DEFAULT 0,
+    summary_upto_seq BIGINT NOT NULL DEFAULT 0
 );
 
-CREATE INDEX IF NOT EXISTS idx_agent_sessions_namespace
-    ON agent_sessions (namespace_name);
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_list
+    ON agent_sessions (namespace_name, user_id, updated_at DESC) WHERE deleted_at IS NULL AND status = 'active';
 
 COMMENT ON COLUMN agent_sessions.id IS 'the primary key of the agent session';
 COMMENT ON COLUMN agent_sessions.created_at IS 'the creation time of the agent session';
 COMMENT ON COLUMN agent_sessions.updated_at IS 'the last update time of the agent session';
 COMMENT ON COLUMN agent_sessions.deleted_at IS 'the soft delete time of the agent session, null means not deleted';
 COMMENT ON COLUMN agent_sessions.namespace_name IS 'the namespace the agent session belongs to';
+COMMENT ON COLUMN agent_sessions.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
 COMMENT ON COLUMN agent_sessions.title IS 'the title of the agent session, defaulting to a summary of the first user message';
 COMMENT ON COLUMN agent_sessions.target_model IS 'the default slot of the session (flash/standard/advanced), empty means resolving through the agent.defaultSlot parameter';
 COMMENT ON COLUMN agent_sessions.status IS 'the status of the agent session, default active';
 COMMENT ON COLUMN agent_sessions.agent_kind IS 'the agent kind the session belongs to, e.g. knowledge or rego';
+COMMENT ON COLUMN agent_sessions.review_valve IS 'the review valve of the session (each/auto/none), composed with the evaluated audit level to decide whether a client tool call needs manual approval';
 COMMENT ON COLUMN agent_sessions.summary IS 'the rolling summary of the session, compressing the messages already folded into it, stored encrypted with the crypto serializer, null when none';
-COMMENT ON COLUMN agent_sessions.summary_upto_message_id IS 'the id of the last message covered by the rolling summary, 0 means nothing is summarized yet';
+COMMENT ON COLUMN agent_sessions.summary_upto_seq IS 'the session-local seq of the last message covered by the rolling summary, 0 means nothing is summarized yet';
+COMMENT ON COLUMN agent_sessions.message_seq IS 'the maximum message seq allocated within the session, used for atomic seq allocation';
 
 CREATE TABLE IF NOT EXISTS agent_messages (
     id BIGSERIAL PRIMARY KEY,
@@ -715,46 +729,86 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    seq BIGINT NOT NULL,
     role VARCHAR(16) NOT NULL,
     content BYTEA,
     draft_json BYTEA,
-    citations_json BYTEA
+    citations_json BYTEA,
+    reasoning BYTEA,
+    prompt_tokens INT NOT NULL DEFAULT 0,
+    completion_tokens INT NOT NULL DEFAULT 0,
+    total_tokens INT NOT NULL DEFAULT 0,
+    elapsed_ms BIGINT NOT NULL DEFAULT 0
 );
 
-CREATE INDEX IF NOT EXISTS idx_agent_messages_session_id
-    ON agent_messages (session_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_messages_session_seq
+    ON agent_messages (session_id, user_id, seq);
 
 COMMENT ON COLUMN agent_messages.id IS 'the primary key of the agent message';
 COMMENT ON COLUMN agent_messages.created_at IS 'the creation time of the agent message';
 COMMENT ON COLUMN agent_messages.updated_at IS 'the last update time of the agent message';
 COMMENT ON COLUMN agent_messages.session_id IS 'the owning agent session id, cascade delete with the session';
 COMMENT ON COLUMN agent_messages.namespace_name IS 'the namespace the agent message belongs to';
+COMMENT ON COLUMN agent_messages.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_messages.seq IS 'the monotonically increasing seq of the message within its session (starting from 1), unique together with session_id and user_id, used as the consistent ordering key for reads, cursors and summarization';
 COMMENT ON COLUMN agent_messages.role IS 'the role of the message, e.g. user, assistant or system';
 COMMENT ON COLUMN agent_messages.content IS 'the content of the message, stored encrypted with the crypto serializer';
 COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_messages.reasoning IS 'the reasoning/chain-of-thought of the assistant reply, stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_messages.prompt_tokens IS 'the sum of prompt tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
+COMMENT ON COLUMN agent_messages.completion_tokens IS 'the sum of completion tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
+COMMENT ON COLUMN agent_messages.total_tokens IS 'the sum of total tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
+COMMENT ON COLUMN agent_messages.elapsed_ms IS 'the total elapsed time in milliseconds of this assistant reply (from the run start to the done item), 0 for user messages';
+
+CREATE TABLE IF NOT EXISTS agent_session_compactions (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    upto_seq BIGINT NOT NULL DEFAULT 0,
+    summary BYTEA,
+    reason VARCHAR(16) NOT NULL DEFAULT ''
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_session_compactions_session
+    ON agent_session_compactions (session_id, user_id, upto_seq);
+
+COMMENT ON COLUMN agent_session_compactions.id IS 'the primary key of the compaction checkpoint';
+COMMENT ON COLUMN agent_session_compactions.created_at IS 'the creation time of the compaction checkpoint';
+COMMENT ON COLUMN agent_session_compactions.updated_at IS 'the last update time of the compaction checkpoint';
+COMMENT ON COLUMN agent_session_compactions.namespace_name IS 'the namespace the compaction checkpoint belongs to';
+COMMENT ON COLUMN agent_session_compactions.session_id IS 'the owning agent session id, cascade delete with the session';
+COMMENT ON COLUMN agent_session_compactions.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_session_compactions.upto_seq IS 'the context start bound (summary_upto_seq snapshot) after this advance, monotonically increasing within a session';
+COMMENT ON COLUMN agent_session_compactions.summary IS 'the full rolling summary after this advance, stored encrypted with the crypto serializer, used to restore an earlier start bound on rollback';
+COMMENT ON COLUMN agent_session_compactions.reason IS 'the reason that advanced the summary: rolling, auto or manual';
 
 CREATE TABLE IF NOT EXISTS agent_memories (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL DEFAULT 0,
     agent_kind VARCHAR(32) NOT NULL,
-    session_id BIGINT NOT NULL DEFAULT 0,
+    session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     kind VARCHAR(16) NOT NULL DEFAULT 'fact',
     title VARCHAR(256) NOT NULL DEFAULT '',
     content BYTEA NOT NULL,
     embedding vector(1536) NOT NULL,
     search tsvector NOT NULL DEFAULT '',
-    hash CHAR(64) NOT NULL DEFAULT '',
+    hash CHAR(64) NOT NULL,
     status VARCHAR(16) NOT NULL DEFAULT 'active',
     use_count INT NOT NULL DEFAULT 0,
     last_used_at TIMESTAMPTZ
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_memories_namespace_kind
-    ON agent_memories (namespace_name, agent_kind, session_id);
+    ON agent_memories (namespace_name, user_id, agent_kind, session_id);
 
 CREATE INDEX IF NOT EXISTS idx_agent_memories_embedding
     ON agent_memories USING hnsw (embedding vector_cosine_ops);
@@ -763,15 +817,16 @@ CREATE INDEX IF NOT EXISTS idx_agent_memories_search
     ON agent_memories USING gin (search);
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_memories_scope_hash
-    ON agent_memories (namespace_name, agent_kind, session_id, hash);
+    ON agent_memories (namespace_name, user_id, agent_kind, session_id, hash);
 
 COMMENT ON COLUMN agent_memories.id IS 'the primary key of the agent memory';
 COMMENT ON COLUMN agent_memories.created_at IS 'the creation time of the agent memory';
 COMMENT ON COLUMN agent_memories.updated_at IS 'the last update time of the agent memory';
 COMMENT ON COLUMN agent_memories.deleted_at IS 'the soft delete time of the agent memory, null means not deleted';
 COMMENT ON COLUMN agent_memories.namespace_name IS 'the namespace the agent memory belongs to';
+COMMENT ON COLUMN agent_memories.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
 COMMENT ON COLUMN agent_memories.agent_kind IS 'the agent kind the memory belongs to, e.g. knowledge or rego';
-COMMENT ON COLUMN agent_memories.session_id IS 'the originating session id, the isolation dimension for retrieval and uniqueness (visible only within its originating session)';
+COMMENT ON COLUMN agent_memories.session_id IS 'the originating agent session id (a real foreign key, cascade delete with the session, no sentinel), the isolation dimension for retrieval and uniqueness (visible only within its originating session)';
 COMMENT ON COLUMN agent_memories.kind IS 'the category of the memory, e.g. fact, preference, decision or artifact';
 COMMENT ON COLUMN agent_memories.title IS 'the one-line title of the memory';
 COMMENT ON COLUMN agent_memories.content IS 'the body of the memory, stored encrypted with the crypto serializer';
@@ -783,12 +838,13 @@ COMMENT ON COLUMN agent_memories.use_count IS 'the number of times the memory ha
 COMMENT ON COLUMN agent_memories.last_used_at IS 'the last time the memory was recalled by retrieval, null when never used';
 
 CREATE TABLE IF NOT EXISTS agent_runs (
-    id SERIAL PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
-    session_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     status VARCHAR(16) NOT NULL DEFAULT 'pending',
     messages BYTEA,
     pending_calls BYTEA,
@@ -797,14 +853,8 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     expires_at TIMESTAMPTZ NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_agent_runs_namespace
-    ON agent_runs (namespace_name);
-
-CREATE INDEX IF NOT EXISTS idx_agent_runs_session_id
-    ON agent_runs (session_id);
-
-CREATE INDEX IF NOT EXISTS idx_agent_runs_status
-    ON agent_runs (status);
+CREATE INDEX IF NOT EXISTS idx_agent_runs_claim
+    ON agent_runs (session_id, namespace_name, user_id, id DESC);
 
 CREATE INDEX IF NOT EXISTS idx_agent_runs_expires_at
     ON agent_runs (expires_at);
@@ -814,13 +864,80 @@ COMMENT ON COLUMN agent_runs.created_at IS 'the creation time of the agent run';
 COMMENT ON COLUMN agent_runs.updated_at IS 'the last update time of the agent run';
 COMMENT ON COLUMN agent_runs.deleted_at IS 'the soft delete time of the agent run, null means not deleted';
 COMMENT ON COLUMN agent_runs.namespace_name IS 'the namespace the agent run belongs to';
-COMMENT ON COLUMN agent_runs.session_id IS 'the owning agent session id of the run';
+COMMENT ON COLUMN agent_runs.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_runs.session_id IS 'the owning agent session id of the run (a real foreign key, cascade delete with the session, no sentinel)';
 COMMENT ON COLUMN agent_runs.status IS 'the status of the run, its values come from the enum class agentRunStatus';
 COMMENT ON COLUMN agent_runs.messages IS 'the full message chain JSON snapshot at the moment of suspension, stored encrypted with the crypto serializer, null when not applicable';
-COMMENT ON COLUMN agent_runs.pending_calls IS 'the pending tool call list JSON (callId, api id, arguments and the synthesized request descriptor), stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_runs.pending_calls IS 'the pending tool call list JSON (callID, api id, arguments and the synthesized request descriptor), stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_runs.citations IS 'the retrieval citation list JSON at the moment of suspension, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_runs.slot IS 'the model slot of the run (flash/standard/advanced)';
 COMMENT ON COLUMN agent_runs.expires_at IS 'the expiry time of the run, after which it cannot be resumed';
+
+CREATE TABLE IF NOT EXISTS agent_live_runs (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    run_id UUID NOT NULL,
+    session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
+    status VARCHAR(16) NOT NULL DEFAULT 'running',
+    last_seq BIGINT NOT NULL DEFAULT 0,
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_live_runs_run_id
+    ON agent_live_runs (run_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_live_runs_running
+    ON agent_live_runs (session_id, user_id) WHERE status = 'running';
+
+CREATE INDEX IF NOT EXISTS idx_agent_live_runs_latest
+    ON agent_live_runs (session_id, user_id, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_agent_live_runs_expires_at
+    ON agent_live_runs (expires_at);
+
+COMMENT ON COLUMN agent_live_runs.id IS 'the primary key of the live run';
+COMMENT ON COLUMN agent_live_runs.created_at IS 'the creation time of the live run';
+COMMENT ON COLUMN agent_live_runs.updated_at IS 'the last update time of the live run';
+COMMENT ON COLUMN agent_live_runs.namespace_name IS 'the namespace the live run belongs to';
+COMMENT ON COLUMN agent_live_runs.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_live_runs.run_id IS 'the globally unique run id locating the live run and its event log';
+COMMENT ON COLUMN agent_live_runs.session_id IS 'the owning agent session id of the live run (a real foreign key, cascade delete with the session, no sentinel)';
+COMMENT ON COLUMN agent_live_runs.status IS 'the lifecycle phase of the live run, its values come from the enum class agentRunPhase';
+COMMENT ON COLUMN agent_live_runs.last_seq IS 'the maximum published event sequence of the live run, the resume cursor';
+COMMENT ON COLUMN agent_live_runs.expires_at IS 'the expiry time of the live run registration, after which it and its events can be cleaned up';
+
+CREATE TABLE IF NOT EXISTS agent_run_events (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    run_id UUID NOT NULL REFERENCES agent_live_runs(run_id) ON DELETE CASCADE,
+    session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    seq BIGINT NOT NULL,
+    type VARCHAR(16) NOT NULL,
+    payload BYTEA,
+    expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_run_events_run_seq
+    ON agent_run_events (run_id, seq);
+
+CREATE INDEX IF NOT EXISTS idx_agent_run_events_expires_at
+    ON agent_run_events (expires_at);
+
+COMMENT ON COLUMN agent_run_events.id IS 'the primary key of the run event';
+COMMENT ON COLUMN agent_run_events.created_at IS 'the time the event was persisted';
+COMMENT ON COLUMN agent_run_events.run_id IS 'the owning live run id';
+COMMENT ON COLUMN agent_run_events.session_id IS 'the owning agent session id (a real foreign key, cascade delete with the session, no sentinel)';
+COMMENT ON COLUMN agent_run_events.namespace_name IS 'the namespace the run event belongs to (a real foreign key, cascade delete with the namespace)';
+COMMENT ON COLUMN agent_run_events.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_run_events.seq IS 'the monotonic sequence of the event within its run, unique together with run_id';
+COMMENT ON COLUMN agent_run_events.type IS 'the event type, its values come from the internal enum AgentRunEventType (delta/stage/tool_request/done/error)';
+COMMENT ON COLUMN agent_run_events.payload IS 'the event payload JSON, stored encrypted with the crypto serializer, null when the event carries no payload';
+COMMENT ON COLUMN agent_run_events.expires_at IS 'the expiry time of the event, events past this moment can be hard deleted by the TTL cleanup task';
 
 CREATE TABLE IF NOT EXISTS llm_models (
     id SERIAL PRIMARY KEY,
@@ -835,9 +952,14 @@ CREATE TABLE IF NOT EXISTS llm_models (
     timeout_seconds INT NOT NULL DEFAULT 0,
     temperature DOUBLE PRECISION NOT NULL DEFAULT 0,
     max_tokens INT NOT NULL DEFAULT 0,
+    context_tokens INT NOT NULL DEFAULT 0,
     dimensions INT NOT NULL DEFAULT 0,
     enabled BOOLEAN NOT NULL DEFAULT true,
-    description VARCHAR(512) NOT NULL DEFAULT ''
+    description VARCHAR(512) NOT NULL DEFAULT '',
+    extra_body TEXT,
+    thinking_field VARCHAR(64),
+    thinking_on_value VARCHAR(256),
+    thinking_off_value VARCHAR(256)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_llm_models_name ON llm_models (name);
@@ -855,9 +977,14 @@ COMMENT ON COLUMN llm_models.model IS 'the vendor-side model name, e.g. gpt-4o-m
 COMMENT ON COLUMN llm_models.timeout_seconds IS 'the timeout in seconds of a single request, 0 means the caller default';
 COMMENT ON COLUMN llm_models.temperature IS 'the sampling temperature within [0, 2], only meaningful for chat models';
 COMMENT ON COLUMN llm_models.max_tokens IS 'the maximum number of tokens per generation, only meaningful for chat models';
+COMMENT ON COLUMN llm_models.context_tokens IS 'the context window capacity in tokens, only meaningful for chat models; the agent reads it to compute the context usage ratio and decide auto-compaction, 0 means unconfigured';
 COMMENT ON COLUMN llm_models.dimensions IS 'the vector dimensions, only meaningful for embedding models';
 COMMENT ON COLUMN llm_models.enabled IS 'is the llm model enabled, disabled models cannot be bound to a slot';
 COMMENT ON COLUMN llm_models.description IS 'the optional description of the llm model';
+COMMENT ON COLUMN llm_models.extra_body IS 'the extra request body merged into every chat request of this model, a JSON object string acting as the generic escape hatch for vendor-specific fields';
+COMMENT ON COLUMN llm_models.thinking_field IS 'the request field name of the thinking toggle, e.g. enable_thinking, only meaningful for chat models';
+COMMENT ON COLUMN llm_models.thinking_on_value IS 'the JSON value written to thinking_field when thinking is on, e.g. true';
+COMMENT ON COLUMN llm_models.thinking_off_value IS 'the JSON value written to thinking_field when thinking is off, e.g. false; the model supports the thinking toggle when thinking_field, thinking_on_value and thinking_off_value are all set';
 
 CREATE TABLE IF NOT EXISTS llm_bindings (
     id SERIAL PRIMARY KEY,
@@ -958,8 +1085,11 @@ DROP TABLE IF EXISTS agent_params;
 DROP TABLE IF EXISTS llm_bindings;
 DROP TABLE IF EXISTS llm_models;
 DROP TABLE IF EXISTS agent_memories;
+DROP TABLE IF EXISTS agent_run_events;
+DROP TABLE IF EXISTS agent_live_runs;
 DROP TABLE IF EXISTS agent_runs;
 DROP TABLE IF EXISTS agent_messages;
+DROP TABLE IF EXISTS agent_session_compactions;
 DROP TABLE IF EXISTS agent_sessions;
 DROP TABLE IF EXISTS knowledge_chunks;
 DROP TABLE IF EXISTS knowledge_documents;

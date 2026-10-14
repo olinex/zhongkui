@@ -8,8 +8,8 @@ import (
 	"github.com/samber/do/v2"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // newAiProvider 装配 AI 助手运行时（ai.Runtime）：以数据库模型注册表

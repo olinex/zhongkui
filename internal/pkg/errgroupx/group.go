@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"golang.org/x/sync/errgroup"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Group 是对 errgroup.Group 的封装，为每个协程提供错误溯源能力。

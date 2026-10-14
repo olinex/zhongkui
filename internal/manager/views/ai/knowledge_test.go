@@ -10,10 +10,10 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/docconv"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // seedImportedDocument 在测试命名空间内插入一份「导入文档」行（带 S3 原件键），返回其 ID。

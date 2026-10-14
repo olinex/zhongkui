@@ -8,7 +8,7 @@ package tag
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // tagAlertStatusValues 是 tagAlertStatus 枚举类的取值空间，取自标签事件状态常量（EventStatus*），

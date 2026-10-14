@@ -7,17 +7,16 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/network/detectors"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/network/detectors"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
 // 明文查看模型注册表：
@@ -75,7 +74,7 @@ func CryptoPlaintextGet(c *gin.Context) {
 	}
 	model, ok := plaintextModels[in.Model]
 	if !ok {
-		response.CreateBadBodyError(errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("plaintextModelNotRegistered", in.Model).AbortWithGinH(c)
 		return
 	}
 	m, err := crypto.ModeForField(model, in.Field, "json")
@@ -112,7 +111,7 @@ func S3PlaintextGet(c *gin.Context) {
 		return
 	}
 	if _, ok := plaintextModels[in.Model]; !ok {
-		response.CreateBadBodyError(errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("plaintextModelNotRegistered", in.Model).AbortWithGinH(c)
 		return
 	}
 	kd, err := key.GetKeyDerivation()

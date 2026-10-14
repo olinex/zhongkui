@@ -45,7 +45,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createName"
@@ -54,7 +54,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
@@ -75,12 +75,12 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field v-model="proxy.name" :label="$t('model.group.field.name')" disabled />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="updateDescription"
@@ -90,7 +90,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <inner-edit-table
                   v-model="proxy.policies"
@@ -288,7 +288,8 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<GroupDetailOut>(
     groupDetailGet(item.name),
     async (rsp) => {
-      updateForm.resetField("description", { value: rsp.data.description });
+      // 复位与回填同属打开动作：原子重置全部字段与校验状态
+      updateForm.resetForm({ values: { description: rsp.data.description } });
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -412,9 +413,10 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
 
 // 打开新建弹窗并重置表单。
 const openCreateDialogAction = () => {
-  createDialogRef.value?.open({ name: "", description: "" });
-  createForm.resetField("name", { value: "" });
-  createForm.resetField("description", { value: "" });
+  // 打开动作里原子复位全部字段
+  const defaults = { name: "", description: "" };
+  createForm.resetForm({ values: defaults });
+  createDialogRef.value?.open(defaults);
 };
 
 // 提交新建用户组。

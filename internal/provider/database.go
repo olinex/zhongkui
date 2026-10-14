@@ -2,18 +2,18 @@ package provider
 
 import (
 	"github.com/samber/do/v2"
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
-	apimodel "zhongkui.com/zhongkui/internal/models/api"
-	coremodel "zhongkui.com/zhongkui/internal/models/core"
-	netmodel "zhongkui.com/zhongkui/internal/models/network"
-	tagmodel "zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/config"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/otel"
-	_ "zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	apimodel "zhongkuisec.com/zhongkui/internal/models/api"
+	coremodel "zhongkuisec.com/zhongkui/internal/models/core"
+	netmodel "zhongkuisec.com/zhongkui/internal/models/network"
+	tagmodel "zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/otel"
+	_ "zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // 各数据库在依赖注入器中的命名标签。
@@ -59,8 +59,11 @@ func CoreModels() []any {
 		&aimodel.KnowledgeChunk{},
 		&aimodel.AgentSession{},
 		&aimodel.AgentMessage{},
+		&aimodel.AgentSessionCompaction{},
 		&aimodel.AgentMemory{},
 		&aimodel.AgentRun{},
+		&aimodel.AgentLiveRun{},
+		&aimodel.AgentRunEvent{},
 	}
 }
 

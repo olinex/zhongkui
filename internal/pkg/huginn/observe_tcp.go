@@ -8,7 +8,7 @@ package huginn
 import (
 	"encoding/binary"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // TCP 标志位（对应 pnet 的 TcpFlags）。

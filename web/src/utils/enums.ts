@@ -34,6 +34,9 @@ export const EnumClass = {
   agentKind: "agentKind",
   memoryKind: "memoryKind",
   memoryStatus: "memoryStatus",
+  // 客户端工具调用的审核重要级（归属 internal/ai）与会话级审核阀门（归属 internal/models/ai）
+  auditLevel: "auditLevel",
+  reviewValve: "reviewValve",
 } as const;
 
 // currentLang 当前语言（i18n locale value，如 zh-Hans / en）

@@ -16,9 +16,9 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/ai/tools"
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/ai/tools"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // stubChat 是测试用对话模型替身：实现 model.BaseChatModel，记录收到的消息，
@@ -26,25 +26,32 @@ import (
 type stubChat struct {
 	reply     string              // Generate 的完整回复
 	chunks    []string            // Stream 的分块；为空时退回单块 reply
+	reason    []string            // Stream 的思考分块（ReasoningContent），在正文分块之前外发
 	gotInputs [][]*schema.Message // 记录每次调用收到的消息列表
+	gotOpts   [][]model.Option    // 记录每次调用收到的选项
 }
 
-// Generate 记录输入消息并返回配置的完整回复。
+// Generate 记录输入消息并返回配置的完整回复（思考内容一并聚合返回）。
 func (s *stubChat) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
 	s.gotInputs = append(s.gotInputs, input)
-	return &schema.Message{Role: schema.Assistant, Content: s.reply}, nil
+	s.gotOpts = append(s.gotOpts, opts)
+	return &schema.Message{Role: schema.Assistant, Content: s.reply, ReasoningContent: strings.Join(s.reason, "")}, nil
 }
 
-// Stream 记录输入消息并返回配置的分块流，未配置分块时退回单块回复。
+// Stream 记录输入消息并返回配置的分块流，未配置分块时退回单块回复；思考分块先于正文分块外发。
 func (s *stubChat) Stream(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
 	s.gotInputs = append(s.gotInputs, input)
+	s.gotOpts = append(s.gotOpts, opts)
 	chunks := s.chunks
 	if len(chunks) == 0 {
 		chunks = []string{s.reply}
 	}
-	sr, sw := schema.Pipe[*schema.Message](len(chunks))
+	sr, sw := schema.Pipe[*schema.Message](len(chunks) + len(s.reason))
 	go func() {
 		defer sw.Close()
+		for _, r := range s.reason {
+			sw.Send(&schema.Message{Role: schema.Assistant, ReasoningContent: r}, nil)
+		}
 		for _, c := range chunks {
 			sw.Send(&schema.Message{Role: schema.Assistant, Content: c}, nil)
 		}
@@ -278,7 +285,7 @@ func TestValidateDraftWithRego(t *testing.T) {
 func TestBuildAgentMessages(t *testing.T) {
 	history := []*schema.Message{schema.UserMessage("prev q"), schema.AssistantMessage("prev a", nil)}
 	data := BusinessData{"src": "192.168.1.1"}
-	messages := buildAgentMessages(testParams(t, nil), "", nil, history, data, "  current q  ")
+	messages := buildAgentMessages(testParams(t, nil), ai.AgentKindKnowledge, "", nil, history, data, "  current q  ")
 	if len(messages) != 4 {
 		t.Fatalf("buildAgentMessages() len = %d, want 4", len(messages))
 	}
@@ -330,13 +337,13 @@ func TestStreamRun_PersistsMessages(t *testing.T) {
 		MetaData: map[string]any{"documentID": "3", "title": "KB Doc", "chunkIndex": 0, "score": 0.7},
 	}}}
 	agent := newKnowledgeToolAgent(t, chat, rtv)
-	session, err := agent.store.CreateSession(context.Background(), "default", "t", "m", "knowledge")
+	session, err := agent.store.CreateSession(context.Background(), "default", "t", "m", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 
 	reader, err := agent.StreamRun(context.Background(), AgentInput{
-		Query: "hello", SessionID: session.ID, NamespaceName: "default",
+		Query: "hello", SessionID: session.ID, NamespaceName: "default", UserID: session.UserID,
 	})
 	if err != nil {
 		t.Fatalf("StreamRun error = %v", err)
@@ -357,7 +364,7 @@ func TestStreamRun_PersistsMessages(t *testing.T) {
 	if done == nil || done.Content != "answer" {
 		t.Fatalf("StreamRun done = %+v, want the assistant content", done)
 	}
-	messages, err := agent.store.ListMessages(context.Background(), session.ID, 0, 0)
+	messages, err := agent.store.ListMessages(context.Background(), session.ID, session.UserID, 0, 0)
 	if err != nil {
 		t.Fatalf("ListMessages error = %v", err)
 	}
@@ -376,9 +383,104 @@ func TestStreamRun_PersistsMessages(t *testing.T) {
 	if citations := messages[1].CitationsJSON.Value(); len(citations) == 0 || !strings.Contains(string(citations), "KB Doc") {
 		t.Errorf("messages[1].CitationsJSON = %q, want the persisted citations", citations)
 	}
-	latest, err := agent.store.LatestAssistantMessage(context.Background(), session.ID)
+	latest, err := agent.store.LatestAssistantMessage(context.Background(), session.ID, session.UserID)
 	if err != nil || string(latest.Content.Value()) != "answer" {
 		t.Errorf("LatestAssistantMessage() = (%+v, %v), want the answer", latest, err)
+	}
+}
+
+// TestStreamRun_ReasoningStreamedAndPersisted 测试思考过程通道：携带 ReasoningContent 的模型流
+// 按到达顺序外发 reasoning 增量项（与 delta 通道并行），done 项携带思考全文；助手消息落库时
+// reasoning 列非空且可回读，正文通道与用户消息保持原样（用户消息不写思考）。
+func TestStreamRun_ReasoningStreamedAndPersisted(t *testing.T) {
+	chat := &stubChat{reason: []string{"think ", "harder"}, chunks: []string{"Hello"}}
+	agent := newTestAgent(t, chat, &stubRetriever{})
+	ctx := context.Background()
+	session, err := agent.store.CreateSession(ctx, "default", "t", "m", "knowledge", testUserID)
+	if err != nil {
+		t.Fatalf("CreateSession error = %v", err)
+	}
+
+	reader, err := agent.StreamRun(ctx, AgentInput{Query: "q", SessionID: session.ID, NamespaceName: "default", UserID: session.UserID})
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	defer reader.Close()
+	var reasoningDeltas, deltas []string
+	var done *AgentOutput
+	for {
+		item, err := reader.Recv()
+		if err != nil {
+			t.Fatalf("Recv error = %v", err)
+		}
+		if item.Done {
+			cp := item
+			done = &cp
+			break
+		}
+		if item.Reasoning != "" {
+			reasoningDeltas = append(reasoningDeltas, item.Reasoning)
+		}
+		if item.Delta != "" {
+			deltas = append(deltas, item.Delta)
+		}
+	}
+	if got := strings.Join(reasoningDeltas, ""); got != "think harder" {
+		t.Errorf("reasoning deltas = %q, want %q", got, "think harder")
+	}
+	if got := strings.Join(deltas, ""); got != "Hello" {
+		t.Errorf("content deltas = %q, want %q", got, "Hello")
+	}
+	if done == nil || done.Reasoning != "think harder" || done.Content != "Hello" {
+		t.Fatalf("done = %+v, want reasoning and content full text", done)
+	}
+	messages, err := agent.store.ListMessages(ctx, session.ID, session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("ListMessages len = %d, want 2 (user + assistant)", len(messages))
+	}
+	if messages[1].Reasoning == nil || string(messages[1].Reasoning.Value()) != "think harder" {
+		t.Errorf("persisted reasoning = %v, want %q", messages[1].Reasoning, "think harder")
+	}
+	if string(messages[1].Content.Value()) != "Hello" {
+		t.Errorf("persisted content = %q, want %q", messages[1].Content.Value(), "Hello")
+	}
+	if messages[0].Reasoning != nil {
+		t.Errorf("user message reasoning = %v, want nil", messages[0].Reasoning)
+	}
+}
+
+// thinkingStubChat 在 stubChat 之上实现 requestOptionsProvider（与 *llm.ChatClient 一致的可选能力）：
+// 记录 generate 传入的思考模式，并返回单个选项用于验证其被透传给 Stream。
+type thinkingStubChat struct {
+	stubChat
+	thinkings []string
+}
+
+// RequestOptions 记录思考模式并返回单个选项。
+func (c *thinkingStubChat) RequestOptions(thinking string) []model.Option {
+	c.thinkings = append(c.thinkings, thinking)
+	return []model.Option{model.WithTemperature(0.42)}
+}
+
+// TestGenerate_ThinkingRequestOptionsApplied 测试思考开关透传（无工具单次流式路径）：对话客户端
+// 实现 requestOptionsProvider 时，generate 以本次输入的思考模式调用其 RequestOptions，并把返回的
+// 选项透传给 Stream。
+func TestGenerate_ThinkingRequestOptionsApplied(t *testing.T) {
+	chat := &thinkingStubChat{}
+	chat.reply = "hi"
+	agent := newTestAgent(t, chat, &stubRetriever{})
+
+	if _, err := agent.Generate(context.Background(), AgentInput{Query: "q", Thinking: "on"}); err != nil {
+		t.Fatalf("Generate error = %v", err)
+	}
+	if len(chat.thinkings) != 1 || chat.thinkings[0] != "on" {
+		t.Errorf("RequestOptions thinkings = %v, want [on]", chat.thinkings)
+	}
+	if len(chat.gotOpts) != 1 || len(chat.gotOpts[0]) != 1 {
+		t.Errorf("Stream opts = %v, want exactly one option passed from RequestOptions", chat.gotOpts)
 	}
 }
 
@@ -473,21 +575,21 @@ func TestStreamRun_InjectsHistory(t *testing.T) {
 	chat := &stubChat{reply: `{"content": "a2", "draft": {}}`}
 	agent := newTestAgent(t, chat, &stubRetriever{})
 	ctx := context.Background()
-	session, err := agent.store.CreateSession(ctx, "default", "t", "m", "knowledge")
+	session, err := agent.store.CreateSession(ctx, "default", "t", "m", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	// 预置一轮历史（user + assistant）
 	for _, m := range []*ai.AgentMessage{
-		{SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("q1")},
-		{SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleAssistant, Content: encTestValue("a1")},
+		{SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: ai.MessageRoleUser, Content: encTestValue("q1")},
+		{SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: ai.MessageRoleAssistant, Content: encTestValue("a1")},
 	} {
 		if _, err := agent.store.AppendMessage(ctx, m); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
 	}
 
-	reader, err := agent.StreamRun(ctx, AgentInput{Query: "q2", SessionID: session.ID, NamespaceName: "default"})
+	reader, err := agent.StreamRun(ctx, AgentInput{Query: "q2", SessionID: session.ID, NamespaceName: "default", UserID: session.UserID})
 	if err != nil {
 		t.Fatalf("StreamRun error = %v", err)
 	}
@@ -611,7 +713,7 @@ func TestTrimMessagesByBytes(t *testing.T) {
 // 用户消息，摘要段为独立 system 消息且以英文标题常量开头。
 func TestBuildAgentMessages_SummaryInjected(t *testing.T) {
 	history := []*schema.Message{schema.UserMessage("prev q"), schema.AssistantMessage("prev a", nil)}
-	messages := buildAgentMessages(testParams(t, nil), "  folded  ", nil, history, nil, "q")
+	messages := buildAgentMessages(testParams(t, nil), ai.AgentKindKnowledge, "  folded  ", nil, history, nil, "q")
 	if len(messages) != 5 {
 		t.Fatalf("buildAgentMessages() len = %d, want 5 (system + summary + 2 history + user)", len(messages))
 	}
@@ -631,14 +733,14 @@ func TestBuildAgentMessages_SummaryInjected(t *testing.T) {
 
 // rollingSummaryFixture 是滚动摘要相关用例的共享装配：sqlite 内存库（会话与记忆同源）、按档位
 // 分流的对话替身（flash 供记忆摘要、standard 供 Agent 生成），以及一个已预置 4 条历史的会话；
-// 窗口取最近 1 条，故前 3 条被挤出，其最后一条 ID 即摘要游标上界。
+// 窗口取最近 1 条，故前 3 条被挤出，其最后一条 seq 即摘要游标上界。
 type rollingSummaryFixture struct {
-	agent         *Agent           // 被测 Agent（已注入 Memory）
-	store         *SessionStore    // 会话存储（回读摘要用）
-	session       *ai.AgentSession // 预置会话
-	memoryChat    *stubChat        // flash 档位替身：记忆摘要
-	agentChat     *stubChat        // standard 档位替身：Agent 生成
-	evictedLastID uint             // 被挤出消息的最后一条 ID
+	agent          *Agent           // 被测 Agent（已注入 Memory）
+	store          *SessionStore    // 会话存储（回读摘要用）
+	session        *ai.AgentSession // 预置会话
+	memoryChat     *stubChat        // flash 档位替身：记忆摘要
+	agentChat      *stubChat        // standard 档位替身：Agent 生成
+	evictedLastSeq uint             // 被挤出消息的最后一条 seq
 }
 
 // newRollingSummaryFixture 构造上述装配；minEvicted 为触发滚动摘要的最少被挤出消息条数。
@@ -672,13 +774,13 @@ func newRollingSummaryFixture(t *testing.T, minEvicted int) *rollingSummaryFixtu
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
 	}
-	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge")
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	appendMsg := func(role ai.MessageRole, content string) *ai.AgentMessage {
 		t.Helper()
-		msg := &ai.AgentMessage{SessionID: session.ID, NamespaceName: "default", Role: role, Content: encTestValue(content)}
+		msg := &ai.AgentMessage{SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: role, Content: encTestValue(content)}
 		if _, err := store.AppendMessage(ctx, msg); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
@@ -689,12 +791,12 @@ func newRollingSummaryFixture(t *testing.T, minEvicted int) *rollingSummaryFixtu
 	evictedLast := appendMsg(ai.MessageRoleUser, "u2")
 	appendMsg(ai.MessageRoleAssistant, "a2")
 	return &rollingSummaryFixture{
-		agent:         agent,
-		store:         store,
-		session:       session,
-		memoryChat:    memoryChat,
-		agentChat:     agentChat,
-		evictedLastID: evictedLast.ID,
+		agent:          agent,
+		store:          store,
+		session:        session,
+		memoryChat:     memoryChat,
+		agentChat:      agentChat,
+		evictedLastSeq: uint(evictedLast.Seq),
 	}
 }
 
@@ -722,7 +824,7 @@ func drainStreamRun(t *testing.T, agent *Agent, ctx context.Context, input Agent
 func TestStreamRun_RollingSummaryInjected(t *testing.T) {
 	f := newRollingSummaryFixture(t, 2)
 	ctx := context.Background()
-	drainStreamRun(t, f.agent, ctx, AgentInput{Query: "q3", SessionID: f.session.ID, NamespaceName: "default"})
+	drainStreamRun(t, f.agent, ctx, AgentInput{Query: "q3", SessionID: f.session.ID, NamespaceName: "default", UserID: f.session.UserID})
 
 	if len(f.memoryChat.gotInputs) != 1 {
 		t.Fatalf("memory chat calls = %d, want 1 (one summary request)", len(f.memoryChat.gotInputs))
@@ -743,13 +845,122 @@ func TestStreamRun_RollingSummaryInjected(t *testing.T) {
 	if in[2].Content != "a2" {
 		t.Errorf("agent input[2] = %q, want the window message a2", in[2].Content)
 	}
-	got, err := f.store.GetSession(ctx, f.session.ID)
+	got, err := f.store.GetSession(ctx, f.session.ID, f.session.NamespaceName, f.session.UserID)
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if string(got.Summary.Value()) != "folded summary" || got.SummaryUptoMessageID != f.evictedLastID {
+	if string(got.Summary.Value()) != "folded summary" || got.SummaryUptoSeq != f.evictedLastSeq {
 		t.Errorf("persisted summary = (%q, %d), want (%q, %d)",
-			got.Summary.Value(), got.SummaryUptoMessageID, "folded summary", f.evictedLastID)
+			got.Summary.Value(), got.SummaryUptoSeq, "folded summary", f.evictedLastSeq)
+	}
+}
+
+// TestAgent_CompressSession 测试统一流式压缩例程：report 依次收到 start（含占用/容量/阈值）、
+// 若干 delta、done（含折叠条数与摘要游标）；evicted 为空时只有 start + done(FoldedCount=0)；
+// 摘要模型失败时仅告警、返回 nil，且以 foldedCount=0 的 done 收尾。
+func TestAgent_CompressSession(t *testing.T) {
+	ctx := context.Background()
+	db := newTestSessionDB(t)
+	store, err := NewSessionStore(db)
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	params := testParams(t, map[string]string{
+		"memory.summarySystemPrompt":    "sp",
+		"memory.enabled":                "false",
+		"session.compactThresholdRatio": "0.8",
+	})
+	memory := newTestMemory(t, db, &stubChat{chunks: []string{"folded ", "summary"}}, stubEmbedder{}, map[string]string{
+		"memory.summarySystemPrompt": "sp",
+		"memory.enabled":             "false",
+	})
+	agentChat := &stubChat{reply: "unused"}
+	agent, err := NewAgent(ctx, stubResolver(agentChat), &stubRetriever{}, store, params, memory, nil, nil, nil, WithSlotContextLimit(func(slot ai.Slot) int {
+		switch slot {
+		case ai.SlotStandard:
+			return 128000
+		case ai.SlotFlash:
+			return 32000
+		default:
+			return 0
+		}
+	}))
+	if err != nil {
+		t.Fatalf("NewAgent error = %v", err)
+	}
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
+	if err != nil {
+		t.Fatalf("CreateSession error = %v", err)
+	}
+	appendMsg := func(role ai.MessageRole, content string) {
+		t.Helper()
+		if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
+			SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: role, Content: encTestValue(content),
+		}); err != nil {
+			t.Fatalf("AppendMessage error = %v", err)
+		}
+	}
+	appendMsg(ai.MessageRoleUser, "u1")
+	appendMsg(ai.MessageRoleAssistant, "a1")
+	appendMsg(ai.MessageRoleUser, "u2")
+	appendMsg(ai.MessageRoleAssistant, "a2")
+	evicted, err := store.ListMessagesAfter(ctx, session.ID, session.UserID, 0)
+	if err != nil {
+		t.Fatalf("ListMessagesAfter error = %v", err)
+	}
+
+	var events []CompressEvent
+	report := func(e CompressEvent) error {
+		events = append(events, e)
+		return nil
+	}
+	result := agent.CompressSession(ctx, session, evicted, "manual", "", report)
+	if result == nil || result.Summary != "folded summary" {
+		t.Fatalf("CompressSession() = %+v, want the folded summary", result)
+	}
+	if len(events) != 4 {
+		t.Fatalf("events = %+v, want start + 2 deltas + done", events)
+	}
+	start := events[0]
+	if start.Type != ai.AgentRunEventCompressStart || start.Reason != "manual" || start.Limit != 128000 || start.Threshold != 0.8 {
+		t.Errorf("start event = %+v, want the manual start with the standard slot limit", start)
+	}
+	if events[1].Type != ai.AgentRunEventCompressDelta || events[1].Delta != "folded " ||
+		events[2].Type != ai.AgentRunEventCompressDelta || events[2].Delta != "summary" {
+		t.Errorf("delta events = %+v, want the streamed summary chunks", events[1:3])
+	}
+	done := events[3]
+	if done.Type != ai.AgentRunEventCompressDone || done.FoldedCount != 4 || done.SummaryUptoSeq != 4 || done.Reason != "manual" || done.TokensBefore != start.Tokens {
+		t.Errorf("done event = %+v, want 4 folded messages and cursor 4", done)
+	}
+	if session.SummaryUptoSeq != 4 || string(session.Summary.Value()) != "folded summary" {
+		t.Errorf("session after compression = (%q, %d), want the folded summary in place", session.Summary.Value(), session.SummaryUptoSeq)
+	}
+
+	// evicted 为空：只有 start 与 foldedCount=0 的 done；显式 slot 覆盖会话档位（flash 容量 32000）。
+	events = nil
+	if got := agent.CompressSession(ctx, session, nil, "auto", ai.SlotFlash, report); got == nil {
+		t.Fatal("CompressSession(no evicted) returned nil, want the existing summary")
+	}
+	if len(events) != 2 || events[0].Type != ai.AgentRunEventCompressStart || events[0].Limit != 32000 ||
+		events[1].Type != ai.AgentRunEventCompressDone || events[1].FoldedCount != 0 {
+		t.Errorf("events = %+v, want just start(flash limit 32000) + done(foldedCount=0)", events)
+	}
+
+	// 摘要模型失败：resolver 缺失 -> 仅告警、返回 nil，以 foldedCount=0 的 done 收尾。
+	failing := newTestMemory(t, newTestSessionDB(t), nil, stubEmbedder{}, map[string]string{
+		"memory.summarySystemPrompt": "sp",
+	})
+	failingAgent, err := NewAgent(ctx, stubResolver(agentChat), &stubRetriever{}, store, params, failing, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("NewAgent(failing memory) error = %v", err)
+	}
+	events = nil
+	if got := failingAgent.CompressSession(ctx, session, evicted, "auto", "", report); got != nil {
+		t.Errorf("CompressSession(summary failure) = %+v, want nil", got)
+	}
+	if len(events) != 2 || events[1].Type != ai.AgentRunEventCompressDone || events[1].FoldedCount != 0 {
+		t.Errorf("failure events = %+v, want start + done(foldedCount=0)", events)
 	}
 }
 
@@ -764,7 +975,7 @@ func TestBuildAgentMessages_MemoryInjected(t *testing.T) {
 		{ID: 2, Kind: ai.MemoryKindFact, Content: "the team prefers rego v1"},
 		{ID: 3, Kind: ai.MemoryKindFact, Title: "blank", Content: "   "},
 	}
-	messages := buildAgentMessages(params, "folded", memories, history, nil, "q")
+	messages := buildAgentMessages(params, ai.AgentKindKnowledge, "folded", memories, history, nil, "q")
 	if len(messages) != 5 {
 		t.Fatalf("buildAgentMessages() len = %d, want 5 (system + summary + memory + history + user)", len(messages))
 	}
@@ -788,7 +999,7 @@ func TestBuildAgentMessages_MemoryInjected(t *testing.T) {
 // 正文为空时消息列表与引入长期记忆前完全一致。
 func TestBuildAgentMessages_MemorySectionSkipped(t *testing.T) {
 	for _, memories := range [][]MemoryHit{nil, {{ID: 1, Kind: ai.MemoryKindFact, Content: "  "}}} {
-		messages := buildAgentMessages(testParams(t, nil), "", memories, nil, nil, "q")
+		messages := buildAgentMessages(testParams(t, nil), ai.AgentKindKnowledge, "", memories, nil, nil, "q")
 		if len(messages) != 2 {
 			t.Fatalf("buildAgentMessages(%+v) len = %d, want 2 (system + user)", memories, len(messages))
 		}
@@ -939,7 +1150,7 @@ func TestMemoryStoreWriter_Validation(t *testing.T) {
 	if _, err := writer.WriteMemory(ctx, tools.MemoryWriteInput{NamespaceName: "ns", SessionID: 1, Content: "  "}); err == nil {
 		t.Error("WriteMemory(empty content) = nil error, want an error")
 	}
-	// 无会话（SessionID 为 0）时拒绝写入：记忆按会话隔离，无会话运行不生成记忆
+	// 无会话（SessionID 为空）时拒绝写入：记忆按会话隔离，无会话运行不生成记忆
 	if _, err := writer.WriteMemory(ctx, tools.MemoryWriteInput{NamespaceName: "ns", Content: "c"}); err == nil {
 		t.Error("WriteMemory(empty session) = nil error, want an error")
 	}
@@ -952,7 +1163,7 @@ func TestMemoryStoreWriter_Validation(t *testing.T) {
 func TestStreamRun_RollingSummaryBelowThreshold(t *testing.T) {
 	f := newRollingSummaryFixture(t, 5)
 	ctx := context.Background()
-	drainStreamRun(t, f.agent, ctx, AgentInput{Query: "q3", SessionID: f.session.ID, NamespaceName: "default"})
+	drainStreamRun(t, f.agent, ctx, AgentInput{Query: "q3", SessionID: f.session.ID, NamespaceName: "default", UserID: f.session.UserID})
 
 	if len(f.memoryChat.gotInputs) != 0 {
 		t.Fatalf("memory chat calls = %d, want 0 (below the threshold)", len(f.memoryChat.gotInputs))
@@ -965,11 +1176,282 @@ func TestStreamRun_RollingSummaryBelowThreshold(t *testing.T) {
 			t.Errorf("agent input unexpectedly carries a summary section: %q", msg.Content)
 		}
 	}
-	got, err := f.store.GetSession(ctx, f.session.ID)
+	got, err := f.store.GetSession(ctx, f.session.ID, f.session.NamespaceName, f.session.UserID)
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if len(got.Summary.Value()) != 0 || got.SummaryUptoMessageID != 0 {
-		t.Errorf("persisted summary = (%q, %d), want empty (not advanced)", got.Summary.Value(), got.SummaryUptoMessageID)
+	if len(got.Summary.Value()) != 0 || got.SummaryUptoSeq != 0 {
+		t.Errorf("persisted summary = (%q, %d), want empty (not advanced)", got.Summary.Value(), got.SummaryUptoSeq)
+	}
+}
+
+// autoCompressFixture 是自动压缩接入用例的共享装配：sqlite 内存库（会话与记忆同源）、按档位分流的
+// 对话替身（agentFlashChat / agentStandardChat 供 Agent 生成，memoryChat 供摘要），参数含小容量档位
+// 与低阈值，便于在少量 token 占用下跨越阈值；seedSession 预置带占用量的会话。
+type autoCompressFixture struct {
+	agent             *Agent        // 被测 Agent（已注入 Memory）
+	store             *SessionStore // 会话存储（回读摘要用）
+	memoryChat        *stubChat     // flash 档位替身：记忆摘要
+	agentStandardChat *stubChat     // standard 档位替身：Agent 生成
+	agentFlashChat    *stubChat     // flash 档位替身：Agent 生成
+}
+
+// newAutoCompressFixture 构造上述装配（摘要解析器用内置 flash 替身）；overrides 覆盖参数。
+func newAutoCompressFixture(t *testing.T, overrides map[string]string) *autoCompressFixture {
+	t.Helper()
+	return newAutoCompressFixtureWith(t, overrides, nil)
+}
+
+// newAutoCompressFixtureWith 同上，memoryResolver 非空时用作记忆摘要解析器（传 nil 用内置 flash
+// 替身），便于构造摘要失败的降级用例。
+func newAutoCompressFixtureWith(t *testing.T, overrides map[string]string, memoryResolver ChatResolver) *autoCompressFixture {
+	t.Helper()
+	ctx := context.Background()
+	db := newTestSessionDB(t)
+	store, err := NewSessionStore(db)
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	values := map[string]string{
+		"session.maxContextMessages":       "1",
+		"session.compactThresholdRatio":    "0.5",
+		"memory.summarySystemPrompt":       "test summary system prompt",
+		"memory.summaryMinEvictedMessages": "99",
+	}
+	for key, value := range overrides {
+		values[key] = value
+	}
+	params := testParams(t, values)
+	memoryChat := &stubChat{chunks: []string{"folded ", "summary"}}
+	memoryStore, err := NewMemoryStore(db, stubEmbedder{}, params, nil)
+	if err != nil {
+		t.Fatalf("NewMemoryStore error = %v", err)
+	}
+	if memoryResolver == nil {
+		memoryResolver = slotChatResolver(map[ai.Slot]model.BaseChatModel{ai.SlotFlash: memoryChat})
+	}
+	memory, err := NewMemory(memoryStore, memoryResolver, params, nil)
+	if err != nil {
+		t.Fatalf("NewMemory error = %v", err)
+	}
+	agentFlashChat := &stubChat{reply: `{"content": "ans-flash", "draft": {}}`}
+	agentStandardChat := &stubChat{reply: `{"content": "ans", "draft": {}}`}
+	agent, err := NewAgent(ctx,
+		slotChatResolver(map[ai.Slot]model.BaseChatModel{ai.SlotFlash: agentFlashChat, ai.SlotStandard: agentStandardChat}),
+		&stubRetriever{}, store, params, memory, nil, nil, nil,
+		WithSlotContextLimit(func(slot ai.Slot) int {
+			switch slot {
+			case ai.SlotFlash:
+				return 500
+			case ai.SlotStandard:
+				return 1000
+			default:
+				return 0
+			}
+		}))
+	if err != nil {
+		t.Fatalf("NewAgent error = %v", err)
+	}
+	return &autoCompressFixture{
+		agent:             agent,
+		store:             store,
+		memoryChat:        memoryChat,
+		agentStandardChat: agentStandardChat,
+		agentFlashChat:    agentFlashChat,
+	}
+}
+
+// seedSession 预置一个会话与其历史：u1 / a1 / u2 / a2 四条，末条助手消息携带 occupancy 的输入
+// token（ContextTokens 取最近一条助手消息的 PromptTokens），供自动压缩按占用比例判定。
+func (f *autoCompressFixture) seedSession(t *testing.T, slot ai.Slot, occupancy int) *ai.AgentSession {
+	t.Helper()
+	ctx := context.Background()
+	session, err := f.store.CreateSession(ctx, "default", "t", slot, "knowledge", testUserID)
+	if err != nil {
+		t.Fatalf("CreateSession error = %v", err)
+	}
+	appendMsg := func(role ai.MessageRole, content string, promptTokens int) {
+		t.Helper()
+		if _, err := f.store.AppendMessage(ctx, &ai.AgentMessage{
+			SessionID: session.ID, NamespaceName: "default", UserID: session.UserID,
+			Role: role, Content: encTestValue(content), PromptTokens: promptTokens,
+		}); err != nil {
+			t.Fatalf("AppendMessage error = %v", err)
+		}
+	}
+	appendMsg(ai.MessageRoleUser, "u1", 0)
+	appendMsg(ai.MessageRoleAssistant, "a1", 0)
+	appendMsg(ai.MessageRoleUser, "u2", 0)
+	appendMsg(ai.MessageRoleAssistant, "a2", occupancy)
+	return session
+}
+
+// runAutoCompress 执行一次 StreamRun（注入捕获压缩事件的报告器，不经 RunHub），返回事件序列与
+// done 项；流正常结束返回 nil 错误时 done 非空。
+func runAutoCompress(t *testing.T, agent *Agent, ctx context.Context, input AgentInput) ([]CompressEvent, *AgentOutput) {
+	t.Helper()
+	var events []CompressEvent
+	input.CompressReporter = func(e CompressEvent) error {
+		events = append(events, e)
+		return nil
+	}
+	reader, err := agent.StreamRun(ctx, input)
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	defer reader.Close()
+	var done *AgentOutput
+	for {
+		item, err := reader.Recv()
+		if err != nil {
+			break
+		}
+		if item.Done {
+			cp := item
+			done = &cp
+			break
+		}
+	}
+	return events, done
+}
+
+// TestStreamRun_AutoCompressTriggers 测试占用比例达到阈值时自动流式压缩：生成前发出
+// start → delta* → done 事件，折叠被挤出消息并推进游标、摘要落库，且压缩后摘要注入本轮生成，
+// 本轮仍正常产出 done。
+func TestStreamRun_AutoCompressTriggers(t *testing.T) {
+	f := newAutoCompressFixture(t, nil)
+	ctx := context.Background()
+	session := f.seedSession(t, ai.SlotStandard, 800) // 800 / 1000 = 0.8 >= 0.5
+	events, done := runAutoCompress(t, f.agent, ctx, AgentInput{
+		Query: "q3", SessionID: session.ID, NamespaceName: "default", UserID: session.UserID,
+		DeclaredSlot: session.TargetModel,
+	})
+
+	if done == nil || done.Content != "ans" {
+		t.Fatalf("done = %+v, want the generated answer", done)
+	}
+	if len(events) < 3 || events[0].Type != ai.AgentRunEventCompressStart {
+		t.Fatalf("events = %+v, want start → delta* → done", events)
+	}
+	start := events[0]
+	if start.Reason != "auto" || start.Tokens != 800 || start.Limit != 1000 || start.Threshold != 0.5 {
+		t.Errorf("start event = %+v, want auto with occupancy 800 / limit 1000 / threshold 0.5", start)
+	}
+	for _, e := range events[1 : len(events)-1] {
+		if e.Type != ai.AgentRunEventCompressDelta {
+			t.Errorf("middle event = %+v, want compress_delta", e)
+		}
+	}
+	last := events[len(events)-1]
+	if last.Type != ai.AgentRunEventCompressDone || last.FoldedCount != 3 || last.SummaryUptoSeq != 3 || last.Reason != "auto" {
+		t.Errorf("done event = %+v, want 3 folded messages, cursor 3, reason auto", last)
+	}
+
+	got, err := f.store.GetSession(ctx, session.ID, session.NamespaceName, session.UserID)
+	if err != nil {
+		t.Fatalf("GetSession error = %v", err)
+	}
+	if string(got.Summary.Value()) != "folded summary" || got.SummaryUptoSeq != 3 {
+		t.Errorf("persisted summary = (%q, %d), want (%q, 3)", got.Summary.Value(), got.SummaryUptoSeq, "folded summary")
+	}
+
+	// 压缩后摘要随本轮生成注入（系统提示之后、窗口历史之前的独立 system 段）。
+	if len(f.agentStandardChat.gotInputs) != 1 {
+		t.Fatalf("agent chat calls = %d, want 1", len(f.agentStandardChat.gotInputs))
+	}
+	injected := false
+	for _, msg := range f.agentStandardChat.gotInputs[0] {
+		if msg.Role == schema.System && strings.HasPrefix(msg.Content, agentSummarySectionTitle) && strings.Contains(msg.Content, "folded summary") {
+			injected = true
+		}
+	}
+	if !injected {
+		t.Errorf("agent input = %+v, want the compressed summary section injected", f.agentStandardChat.gotInputs[0])
+	}
+}
+
+// TestStreamRun_AutoCompressBelowThreshold 测试占用比例低于阈值时不压缩：无任何压缩事件、
+// 不调用摘要模型、不推进游标，生成照常完成。
+func TestStreamRun_AutoCompressBelowThreshold(t *testing.T) {
+	f := newAutoCompressFixture(t, nil)
+	ctx := context.Background()
+	session := f.seedSession(t, ai.SlotStandard, 100) // 100 / 1000 = 0.1 < 0.5
+	events, done := runAutoCompress(t, f.agent, ctx, AgentInput{
+		Query: "q3", SessionID: session.ID, NamespaceName: "default", UserID: session.UserID,
+		DeclaredSlot: session.TargetModel,
+	})
+
+	if done == nil || done.Content != "ans" {
+		t.Fatalf("done = %+v, want the generated answer", done)
+	}
+	if len(events) != 0 {
+		t.Errorf("events = %+v, want none below the threshold", events)
+	}
+	if len(f.memoryChat.gotInputs) != 0 {
+		t.Errorf("memory chat calls = %d, want 0 (no summarization)", len(f.memoryChat.gotInputs))
+	}
+	got, err := f.store.GetSession(ctx, session.ID, session.NamespaceName, session.UserID)
+	if err != nil {
+		t.Fatalf("GetSession error = %v", err)
+	}
+	if len(got.Summary.Value()) != 0 || got.SummaryUptoSeq != 0 {
+		t.Errorf("persisted summary = (%q, %d), want empty (not advanced)", got.Summary.Value(), got.SummaryUptoSeq)
+	}
+}
+
+// TestStreamRun_AutoCompressBySlot 测试触发随有效档位变化：同一 token 占用下，flash 容量更小
+// （300 / 500 >= 0.5）触发压缩，standard 容量更大（300 / 1000 < 0.5）不触发。
+func TestStreamRun_AutoCompressBySlot(t *testing.T) {
+	f := newAutoCompressFixture(t, nil)
+	ctx := context.Background()
+	const occupancy = 300
+
+	flashSession := f.seedSession(t, ai.SlotFlash, occupancy)
+	flashEvents, flashDone := runAutoCompress(t, f.agent, ctx, AgentInput{
+		Query: "q3", SessionID: flashSession.ID, NamespaceName: "default", UserID: flashSession.UserID, Slot: ai.SlotFlash,
+	})
+	if flashDone == nil || flashDone.Content != "ans-flash" {
+		t.Fatalf("flash done = %+v, want the generated answer", flashDone)
+	}
+	if len(flashEvents) == 0 || flashEvents[0].Limit != 500 {
+		t.Errorf("flash events = %+v, want compression with the flash limit 500", flashEvents)
+	}
+
+	stdSession := f.seedSession(t, ai.SlotStandard, occupancy)
+	stdEvents, stdDone := runAutoCompress(t, f.agent, ctx, AgentInput{
+		Query: "q3", SessionID: stdSession.ID, NamespaceName: "default", UserID: stdSession.UserID, Slot: ai.SlotStandard,
+	})
+	if stdDone == nil || stdDone.Content != "ans" {
+		t.Fatalf("standard done = %+v, want the generated answer", stdDone)
+	}
+	if len(stdEvents) != 0 {
+		t.Errorf("standard events = %+v, want none at the larger standard limit", stdEvents)
+	}
+}
+
+// TestStreamRun_AutoCompressFailureKeepsGeneration 测试压缩失败降级：摘要模型不可用时自动压缩
+// 仅告警、以 foldedCount=0 的 done 收尾且不推进游标，本轮生成仍正常完成（错误不外传）。
+func TestStreamRun_AutoCompressFailureKeepsGeneration(t *testing.T) {
+	f := newAutoCompressFixtureWith(t, nil, slotChatResolver(map[ai.Slot]model.BaseChatModel{}))
+	ctx := context.Background()
+	session := f.seedSession(t, ai.SlotStandard, 800)
+	events, done := runAutoCompress(t, f.agent, ctx, AgentInput{
+		Query: "q3", SessionID: session.ID, NamespaceName: "default", UserID: session.UserID,
+		DeclaredSlot: session.TargetModel,
+	})
+
+	if done == nil || done.Content != "ans" {
+		t.Fatalf("done = %+v, want the turn to survive a compression failure", done)
+	}
+	if len(events) != 2 || events[0].Type != ai.AgentRunEventCompressStart ||
+		events[1].Type != ai.AgentRunEventCompressDone || events[1].FoldedCount != 0 {
+		t.Errorf("events = %+v, want start + done(foldedCount=0)", events)
+	}
+	got, err := f.store.GetSession(ctx, session.ID, session.NamespaceName, session.UserID)
+	if err != nil {
+		t.Fatalf("GetSession error = %v", err)
+	}
+	if len(got.Summary.Value()) != 0 || got.SummaryUptoSeq != 0 {
+		t.Errorf("persisted summary = (%q, %d), want empty (not advanced on failure)", got.Summary.Value(), got.SummaryUptoSeq)
 	}
 }

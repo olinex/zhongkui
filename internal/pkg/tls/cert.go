@@ -10,7 +10,7 @@ import (
 	"math/big"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // GenerateSelfSignedCert 生成一张自签名 TLS 证书及其 PEM 格式私钥。

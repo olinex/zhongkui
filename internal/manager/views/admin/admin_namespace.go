@@ -5,15 +5,15 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	message "zhongkui.com/zhongkui/internal/pkg/message"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	message "zhongkuisec.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // NamespaceUpdateIn 定义命名空间更新输入结构体。
@@ -113,7 +113,8 @@ func NamespaceListGet(c *gin.Context) {
 		return
 	}
 	var items []*NamespaceListOut
-	db := middlewares.GetCoreDatabase(c).Model(&core.Namespace{})
+	// 内置系统命名空间承载代码声明的共享数据，对前端完全隐藏，故从列表中排除。
+	db := middlewares.GetCoreDatabase(c).Model(&core.Namespace{}).Where("name <> ?", base.SystemNamespace)
 	if query, err := utils.BuildSearchCountQuery(db, &in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -210,6 +211,11 @@ func NamespaceBatchDelete(c *gin.Context) {
 	views.BatchExecute(c, names,
 		func(name string) string { return name },
 		func(name string) error {
+			// 内置系统命名空间受保护：其行被删除会经外键 ON DELETE CASCADE 级联清空共享文档，
+			// 故在锁行之前直接拒绝。
+			if name == base.SystemNamespace {
+				return response.ErrSystemNamespaceProtected
+			}
 			return db.Transaction(func(tx *database.DB) error {
 				// 以 FOR UPDATE 行锁锁定命名空间行，与 UserGroupJoin 的命名空间校验串行化，
 				// 避免"校验无引用后，并发加入引用再删除命名空间"导致的悬挂引用（SQLite 退化为普通读）

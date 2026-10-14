@@ -16,7 +16,6 @@ navbar:
   ai:
     self: AI
     knowledge: 知识库管理
-    assistant: AI 助手
     memory: 长期记忆
   notification:
     self: 通知管理
@@ -89,7 +88,7 @@ model:
     name: 服务
     field:
       serviceName: 服务名
-      instanceId: 实例ID
+      instanceID: 实例ID
       host: 主机
       version: 版本
       pid: 进程ID
@@ -103,7 +102,7 @@ model:
     field:
       id: ID
       name: 名称
-      channelId: 渠道
+      channelID: 渠道
       channelName: 所属渠道
       channelType: 渠道类型
       channelEnabled: 渠道状态
@@ -151,16 +150,16 @@ model:
     field:
       id: ID
       eventType: 事件类型
-      eventId: 事件 ID
-      groupId: 通知组 ID
-      targetId: 目标 ID
+      eventID: 事件 ID
+      groupID: 通知组 ID
+      targetID: 目标 ID
       targetName: 目标名称
-      channelId: 渠道 ID
+      channelID: 渠道 ID
       channelName: 渠道名称
       channelType: 渠道类型
       status: 状态
       error: 错误信息
-      messageId: 消息 ID
+      messageID: 消息 ID
       payload: 消息内容
       notifiedAt: 发送时间
       createdAt: 创建时间
@@ -254,7 +253,7 @@ model:
       timeout: 超时时长
       promisc: 混杂模式
       enabled: 启用
-      sessionId: 会话ID
+      sessionID: 会话ID
       status: 状态
       configVersion: 配置版本
       globalVersion: 全局版本
@@ -300,9 +299,6 @@ model:
       createdAt: 创建时间
       updatedAt: 更新时间
       query: 诉求
-      docIDs: 知识库文档
-      businessData: 业务数据
-      regoRule: Rego 校验规则
   agentMemory:
     name: 长期记忆
     field:
@@ -317,7 +313,7 @@ model:
       createdAt: 创建时间
       updatedAt: 更新时间
       namespaceName: 命名空间
-      sessionId: 来源会话
+      sessionID: 来源会话
   llmModel:
     name: LLM 模型
     field:
@@ -330,20 +326,28 @@ model:
       timeoutSeconds: 超时（秒）
       temperature: 温度
       maxTokens: 最大输出 Token
+      contextTokens: 上下文容量 Token
       dimensions: 向量维度
       enabled: 启用
       description: 描述
+      extraBody: 额外请求配置
+      thinkingField: 思考开关字段
+      thinkingOnValue: 思考开启取值
+      thinkingOffValue: 思考关闭取值
       createdAt: 创建时间
       createdAtTime: 创建时间
       createdAtDate: 创建日期
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
+    validation:
+      jsonObject: "{path}必须是合法的 JSON 对象"
+      jsonValue: "{path}必须是合法的 JSON 值"
   llmBinding:
     name: 档位绑定
     field:
       slot: 档位
-      modelId: 模型 ID
+      modelID: 模型 ID
       modelName: 已绑定模型
       kind: 模型类型
       providerModel: 供应商模型
@@ -578,7 +582,7 @@ model:
       updatedAt: 更新时日
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
-      ruleId: 规则 ID
+      ruleID: 规则 ID
       ruleName: 规则名称
       matchAll: 全部条件满足
       status: 状态
@@ -610,7 +614,7 @@ model:
       channelName: 通知渠道
       channelType: 渠道类型
       status: 状态
-      messageId: 消息 ID
+      messageID: 消息 ID
       notifiedAt: 发送时间
   tagEventCondition:
     name: 条件
@@ -634,11 +638,11 @@ model:
       namespace: 命名空间
       timestamp: 采集时间
       createdAt: 入库时间
-      sessionId: 会话 ID
-      tcpStreamId: TCP 流 ID
+      sessionID: 会话 ID
+      tcpStreamID: TCP 流 ID
       capture: 采集器
       version: 版本号
-      traceId: 追踪 ID
+      traceID: 追踪 ID
       # IPv4 地址与端口
       ipv4Src: IPv4 源地址
       ipv4Dst: IPv4 目的地址
@@ -675,7 +679,7 @@ model:
       ipv4Version: IPv4 版本
       ipv4Ihl: IPv4 头部长度
       ipv4Tos: 服务类型
-      ipv4Id: 分片标识
+      ipv4ID: 分片标识
       ipv4Flags: 分片标志
       ipv4FragOffset: 分片偏移
       ipv4Checksum: 头部校验和
@@ -698,11 +702,11 @@ model:
       namespace: 命名空间
       timestamp: 采集时间
       createdAt: 入库时间
-      sessionId: 会话 ID
-      tcpStreamId: TCP 流 ID
+      sessionID: 会话 ID
+      tcpStreamID: TCP 流 ID
       capture: 采集器
       version: 版本号
-      traceId: 追踪 ID
+      traceID: 追踪 ID
       # IPv6 地址与端口
       ipv6Src: IPv6 源地址
       ipv6Dst: IPv6 目的地址
@@ -758,11 +762,11 @@ model:
       namespace: 命名空间
       timestamp: 采集时间
       createdAt: 入库时间
-      sessionId: 会话 ID
-      tcpStreamId: TCP 流 ID
+      sessionID: 会话 ID
+      tcpStreamID: TCP 流 ID
       capture: 采集器
       version: 版本号
-      traceId: 追踪 ID
+      traceID: 追踪 ID
       # HTTP 审计列
       method: 请求方法
       host: 主机
@@ -971,8 +975,8 @@ model:
       namespace: 命名空间
       timestamp: 采集时间
       createdAt: 入库时间
-      sessionId: 会话 ID
-      traceId: 追踪 ID
+      sessionID: 会话 ID
+      traceID: 追踪 ID
       capture: 采集器
       version: 版本号
       cli2Srv: 客户端到服务端
@@ -1003,7 +1007,7 @@ model:
       loaded: 已加载
       loadMore: 加载更多
       empty: 该传输暂无网络堆栈数据
-      noTraceId: 该记录缺少 traceId，无法关联网络堆栈
+      noTraceId: 该记录缺少 traceID，无法关联网络堆栈
       error: 网络堆栈加载失败
     # 协议头部可读化：逐字段名/值/说明（header.field.<key> 与 header.desc.<key> 的 key 与 JSON 字段名一致）
     header:
@@ -1023,7 +1027,7 @@ model:
         ipv4Ihl: 头部长度
         ipv4Tos: 服务类型
         ipv4Length: 总长度
-        ipv4Id: 标识符
+        ipv4ID: 标识符
         ipv4Flags: 标志位
         ipv4FragOffset: 分片偏移
         ipv4Ttl: 生存时间
@@ -1071,7 +1075,7 @@ model:
         ipv4Ihl: IPv4 头部长度（单位：4 字节）
         ipv4Tos: 服务类型，用于 QoS 优先级控制
         ipv4Length: IP 数据报总长度（头部 + 数据，字节）
-        ipv4Id: 标识符，用于分片重组
+        ipv4ID: 标识符，用于分片重组
         ipv4Flags: 分片标志位：DF（不分片）、MF（更多分片）
         ipv4FragOffset: 分片偏移（单位：8 字节）
         ipv4Ttl: 生存时间，每经过一跳减 1，为 0 时丢弃
@@ -1141,6 +1145,7 @@ action:
   signIn: 登录
   signOut: 退出
   language: 语言
+  aiAssistant: AI 助手
   toggleTheme: 切换主题
   accountMenu: 账号菜单
   pwdForget: 忘记密码
@@ -1151,6 +1156,8 @@ action:
   expand: 展开
   collapse: 收起
   scrollToBottom: 直达底部
+  resizeWidth: 拖拽调整宽度
+  resizeHeight: 拖拽调整高度
   reset: 重置
   create: 创建
   update: 更新
@@ -1193,6 +1200,7 @@ action:
   tagExprFieldHint: 输入 / 打开标签列表，输入 // 输入字面量 /
   addCondition: 添加条件
   removeCondition: 移除条件
+  beautifyJson: 美化
   validatePassed: 校验通过
   validateFailed: 校验未通过
   viewPlaintext: 查看明文
@@ -1208,6 +1216,7 @@ action:
   back: 返回
   backPrevious: 返回上一级
   backHome: 返回首页
+  signInAnyway: 仍要登录
   refresh: 刷新
   refreshInterval: 自动刷新间隔
   enableAutoRefresh: 开启自动刷新
@@ -1259,6 +1268,7 @@ title:
   zk: Zhong Kui
   home: 首页
   signIn: 用户登录
+  alreadySignedIn: 已登录
   pwdForget: 忘记密码
   err404: 错误 - 404
   err401: 错误 - 401
@@ -1268,7 +1278,6 @@ title:
   frontendConfigSync: 页面配置同步
   accessKey: 访问密钥
   aiKnowledge: 知识库管理
-  aiAssistant: AI 助手
   aiMemory: 长期记忆
   passwordReset: 重置密码
   userAdmin: 管理 - 用户
@@ -1331,22 +1340,20 @@ page:
     generating: 生成中…
     stop: 停止
     newSession: 新建会话
+    untitledSession: 新会话
     renameSession: 重命名会话
     deleteSession: 删除会话
     citations: 引用来源
-    draft: 结构化草稿
-    validationPassed: 校验通过
-    validationFailed: 校验未通过
-    businessDataHint: 可粘贴从既有页面（流量 / 明文 / 数据源查询）在您的登录会话与权限内取得的数据 JSON，后端仅作上下文注入，不自行取数
-    invalidJson: 业务数据不是合法 JSON
-    copyDraft: 复制草稿
-    copied: 已复制
-    openTagRulePage: 前往标签规则页
     emptyQuery: 请输入诉求
+    optimizePrompt: 优化提问
+    optimizePromptFailed: 提示词优化失败
+    undoOptimizePrompt: 撤回优化
     error: 生成失败
+    noResponse: 请求超时或网络异常，请稍后重试
     me: 我
     assistant: 助手
     hintSelectSession: 请先新建或选择一个会话开始对话
+    hintNoSession: 暂无会话，点击右上角「新建会话」开始对话
     hintFirstQuery: 输入首个问题即可开始对话，会话主题将由系统自动生成
     confirmDeleteSession: 确定删除该会话及其全部消息吗？
     slotHint: 新建会话时该档位会成为会话缺省档位
@@ -1356,6 +1363,14 @@ page:
     compactSummary: 上下文摘要
     compactExtracted: 已提取记忆条数
     compactWarnings: 提取警告
+    contextUsage: "{percent}%"
+    contextUsageTitle: "上下文占用 {used} / {limit} Tokens"
+    compressToHere: 压缩到此
+    compressStart: 正在压缩上下文…
+    compressDone: "压缩前 {before} · 已折叠 {count} 条"
+    compressCompare: "压缩前 {before} → 压缩后 {after}（占用 {percent}%）"
+    compressSucceeded: 上下文压缩完成
+    compressFailed: 上下文压缩失败
     approvalTitle: 工具调用审批
     approvalWaiting: 等待审批
     approvalParams: 调用参数
@@ -1363,6 +1378,29 @@ page:
     reject: 拒绝
     approved: 已批准
     rejected: 已拒绝
+    reviewValve: 审核阀门
+    reviewValveHint:
+      each: 每次客户端工具调用都需你人工批准后才执行
+      auto: 可自动审核与无需审核的调用直接执行，其余仍需人工批准
+      none: 仅「必须审核」的调用需人工批准，其余直接执行
+    autoApproved: 已自动批准
+    approvalBackendNote: 该调用由服务端执行，你只需批准或拒绝
+    thinking: 思考
+    thinkingHint: 开启后请求模型输出思考过程，回答将附带可折叠的思考内容
+    reasoningDefaultOnHint: 该模型默认开启思考，未配置思考开关时也会输出思考内容；可在「LLM 模型」的高级配置中填写思考开关字段与开启 / 关闭取值，以手动控制思考。
+    reasoningStreaming: 思考中…
+    reasoningDone: 思考完成
+    copyMessage: 复制
+    retryMessage: 重试
+    branchMessage: 分支
+    branchTitle: "{title}（分支）"
+    branchCreated: 已创建分支会话
+    usageTokens: "{count} tokens"
+    usageElapsed: "耗时 {seconds}s"
+    rollbackMessage: 回退
+    deleteMessage: 删除
+    confirmRollbackMessage: 确定从这一轮对话重新开始吗？该条消息及其之后的全部内容将被删除。
+    confirmDeleteMessage: 确定删除该条消息及其之后的全部内容吗？
   aiKnowledge:
     dryRun: 检索试运行
     query: 查询问题
@@ -1400,6 +1438,7 @@ page:
     warnings: 评估警告
     evalError: 评估不可用
     metaModel: 模型
+    metaElapsed: 耗时
     metaPromptTokens: 输入 Token
     metaCompletionTokens: 输出 Token
     metaTotalTokens: 合计 Token
@@ -1440,6 +1479,10 @@ page:
     apiKeyKeepHint: 凭据不以明文回显；留空表示沿用原凭据
     scopeHint: 模型注册表为全局配置，不随命名空间隔离
     dimensionsHint: 向量维度由后端在绑定 embedding 档位时探测确定；如需调整索引维度，请联系运维在服务器上执行
+    extraBodyHint: '为该模型每次请求自动合并的 JSON 对象（例如 {''{"top_k": 20}''}）；留空表示不附加'
+    thinkingHint: 字段名与开启/关闭取值三者齐备时生效；留空表示该模型不支持思考开关
+    advancedTitle: 高级配置
+    advancedHint: 额外请求字段与思考开关，均为可选；仅对话模型适用
   llmBindingAdmin:
     hint: 四个档位各绑定一个模型：对话档位需对话模型，向量化槽位需向量化模型；档位可用性以运行时快照为准
     indexDimensions: 知识库索引维度 {dimensions}
@@ -1480,6 +1523,8 @@ summary:
   pageNotFound: 页面不存在！
   notSignInYet: 请先登录。
   goingToSignIn: 正在前往登录页...
+  alreadySignedIn: 您已处于登录状态。
+  alreadySignedInHint: 无需重复登录，请选择下一步操作。
   dataLoading: 数据加载中...
   endOfData: 到头了
   noEventDetected: 未检测到事件
@@ -1569,6 +1614,9 @@ unit:
   day: 天
   second: 秒
   count: 个
+  tokenNone: 无单位
+  tokenK: 千（K）
+  tokenM: 百万（M）
 option:
   search:
     eq: 等于

@@ -5,7 +5,7 @@ package base
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // languageValues 是 language 枚举类的取值空间，按 SupportLanguages 的声明顺序派生（该顺序即枚举

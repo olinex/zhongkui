@@ -9,7 +9,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	g "google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // mockAuthenticator 是Authenticator接口的模拟实现

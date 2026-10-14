@@ -5,8 +5,8 @@ package views
 import (
 	"github.com/gin-gonic/gin"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 )
 
 // FeatureOut 功能开关输出项：键 + 启停状态 + 不可用原因。

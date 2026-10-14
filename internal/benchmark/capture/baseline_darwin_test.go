@@ -7,9 +7,9 @@ import (
 	"testing"
 
 	"go.uber.org/zap"
-	"zhongkui.com/zhongkui/internal/capture/wire"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/capture/wire"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 // === 常规基线 (darwin 上 platform = libpcap) ===

@@ -5,7 +5,7 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 
-	"zhongkui.com/zhongkui/internal/manager/features"
+	"zhongkuisec.com/zhongkui/internal/manager/features"
 )
 
 // FeatureRegistryCtxName 功能开关注册表在 Gin 上下文中存储的键名。

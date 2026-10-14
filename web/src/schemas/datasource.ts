@@ -17,11 +17,7 @@ const type = yup.string().nonNullable().required().label("model.datasource.field
 
 const enabled = yup.bool().nonNullable().required().label("model.datasource.field.enabled");
 
-const description = yup
-  .string()
-  .nonNullable()
-  .max(256)
-  .label("model.datasource.field.description");
+const description = yup.string().nonNullable().max(256).label("model.datasource.field.description");
 
 // 创建第三方数据源表单 schema（config 为连接配置 JSON 文本，由页面按类型动态拼装并单独校验）
 export const createDatasourceSchema = () =>

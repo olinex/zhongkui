@@ -6,10 +6,10 @@ import (
 	"github.com/alecthomas/participle/v2"
 	"github.com/alecthomas/participle/v2/lexer"
 
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // 布尔表达式解析器，用于解析标签事件条件中的标签组合表达式
@@ -117,7 +117,7 @@ func (a *Atom) String() string {
 // 例如: "在5分钟内，如果标签A和标签B同时出现超过3次，则触发事件"
 type TagEventCondition struct {
 	database.BaseModel
-	// Model 目标模型类型键过滤条件，对应 TagSumming 的 model 维度，为空表示不限制（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	// Model 目标模型类型键过滤条件，对应 TagSumming 的 model 维度，为空表示不限制（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `gorm:"column:model;type:VARCHAR(255)"`
 	// Dimension 标签维度类型过滤条件，对应 TagSumming 的 dimension 维度，为空表示不限制（如 "fpTcpClientSig"、"fpTcpServerSig"）
 	Dimension string `gorm:"column:dimension;type:VARCHAR(128)"`

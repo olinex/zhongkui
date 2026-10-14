@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/docconv"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 )
 
 // derivedGeneratedDocs 返回合成的叙述页生成文档（generated 分区），供分区差异计划测试使用。
@@ -101,7 +101,7 @@ func TestBuildPartitionRebuildPlan_GeneratedDeletesRemoved(t *testing.T) {
 // 故可用零值 Knowledge 验证。
 func TestSyncGeneratedDocs_EmptyNamespace(t *testing.T) {
 	k := &Knowledge{}
-	if err := k.SyncGeneratedDocs(context.Background(), "", docconv.FormatGenerated, nil); err == nil {
+	if err := k.SyncGeneratedDocs(context.Background(), "", docconv.FormatGenerated, nil, nil); err == nil {
 		t.Error("SyncGeneratedDocs(empty namespace) error = nil, want an error")
 	}
 }

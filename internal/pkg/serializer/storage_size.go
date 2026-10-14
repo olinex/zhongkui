@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // BibyteSize64 以字节为单位的存储容量类型，底层使用 int64

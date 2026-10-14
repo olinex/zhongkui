@@ -7,12 +7,15 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    __typeProbe: typeof import('./components/forms/__typeProbe.vue')['default']
     ActionButtonGroup: typeof import('./components/base/ActionButtonGroup.vue')['default']
     AdaptiveCell: typeof import('./components/table/AdaptiveCell.vue')['default']
     AdaptiveField: typeof import('./components/forms/AdaptiveField.vue')['default']
     AgentParamPanel: typeof import('./components/admin/AgentParamPanel.vue')['default']
     AppDialog: typeof import('./components/base/AppDialog.vue')['default']
     AppHeader: typeof import('./components/base/AppHeader.vue')['default']
+    AssistantDrawer: typeof import('./components/ai/AssistantDrawer.vue')['default']
+    AssistantMarkdown: typeof import('./components/ai/AssistantMarkdown.vue')['default']
     BarsChart: typeof import('./components/charts/BarsChart.vue')['default']
     BooleanChip: typeof import('./components/base/BooleanChip.vue')['default']
     Breadcrumbs: typeof import('./components/base/Breadcrumbs.vue')['default']
@@ -29,6 +32,7 @@ declare module 'vue' {
     DateRangeField: typeof import('./components/forms/DateRangeField.vue')['default']
     DatetimeField: typeof import('./components/forms/DatetimeField.vue')['default']
     DateTimeRangeField: typeof import('./components/forms/DateTimeRangeField.vue')['default']
+    EnabledSwitchCell: typeof import('./components/table/EnabledSwitchCell.vue')['default']
     EncryptedValueCell: typeof import('./components/table/EncryptedValueCell.vue')['default']
     ExpansionPanelTitle: typeof import('./components/base/ExpansionPanelTitle.vue')['default']
     ExpressionField: typeof import('./components/forms/ExpressionField.vue')['default']
@@ -36,6 +40,7 @@ declare module 'vue' {
     HexStringChip: typeof import('./components/base/HexStringChip.vue')['default']
     InnerEditTable: typeof import('./components/table/InnerEditTable.vue')['default']
     JsonChip: typeof import('./components/base/JsonChip.vue')['default']
+    JsonEditor: typeof import('./components/forms/JsonEditor.vue')['default']
     KnowledgeChunksDialog: typeof import('./components/detail/KnowledgeChunksDialog.vue')['default']
     LineChart: typeof import('./components/charts/LineChart.vue')['default']
     LlmBindingPanel: typeof import('./components/admin/LlmBindingPanel.vue')['default']
@@ -53,6 +58,7 @@ declare module 'vue' {
     RefreshControl: typeof import('./components/base/RefreshControl.vue')['default']
     RegoDryRunPanel: typeof import('./components/admin/RegoDryRunPanel.vue')['default']
     RegoEditor: typeof import('./components/forms/RegoEditor.vue')['default']
+    ResizeHandle: typeof import('./components/base/ResizeHandle.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     ScrollSearchField: typeof import('./components/forms/ScrollSearchField.vue')['default']
@@ -67,6 +73,7 @@ declare module 'vue' {
     TagRuleSamplePanel: typeof import('./components/admin/TagRuleSamplePanel.vue')['default']
     TempEditableDialog: typeof import('./components/forms/TempEditableDialog.vue')['default']
     TimeField: typeof import('./components/forms/TimeField.vue')['default']
+    TokenCountField: typeof import('./components/forms/TokenCountField.vue')['default']
     UsualDaysField: typeof import('./components/forms/UsualDaysField.vue')['default']
   }
 }

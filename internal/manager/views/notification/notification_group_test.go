@@ -15,11 +15,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // createNotificationGroupTestDB 返回共享 PostgreSQL 测试库（testdb.Core 迁移并清空全部业务表）。
@@ -238,7 +238,7 @@ func TestNotificationGroupList(t *testing.T) {
 		channelID := dbCreateNotificationChannel(db, "default", "main-channel")
 		t1 := createNotificationTarget(db, "default", "target-1", channelID)
 		t2 := createNotificationTarget(db, "default", "target-2", channelID)
-		w := doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", idA), map[string]any{"targetIds": []uint64{uint64(t1), uint64(t2)}})
+		w := doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", idA), map[string]any{"targetIDs": []uint64{uint64(t1), uint64(t2)}})
 		So(w.Code, ShouldEqual, http.StatusOK)
 		_ = idB
 
@@ -319,7 +319,7 @@ func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 			w := doNotificationGroupRequest(r, http.MethodPost, "/notification/group/create", map[string]any{
 				"name":      "group-t",
 				"isDefault": false,
-				"targetIds": []uint64{uint64(t1), uint64(t2)},
+				"targetIDs": []uint64{uint64(t1), uint64(t2)},
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var group core.NotificationGroup
@@ -333,7 +333,7 @@ func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 			otherTarget := createNotificationTarget(db, "other-ns", "other-target", otherChannelID)
 			w := doNotificationGroupRequest(r, http.MethodPost, "/notification/group/create", map[string]any{
 				"name":      "group-invalid",
-				"targetIds": []uint64{uint64(otherTarget)},
+				"targetIDs": []uint64{uint64(otherTarget)},
 			})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 			var count int64
@@ -343,11 +343,11 @@ func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 
 		Convey("编辑携带 targetIds 整集替换绑定目标", func() {
 			id := createNotificationGroup(r, db, "group-e", false)
-			doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIds": []uint64{uint64(t1), uint64(t2)}})
+			doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIDs": []uint64{uint64(t1), uint64(t2)}})
 			// 编辑仅传 t1，t2 被移除
 			w := doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{
 				"description": "updated",
-				"targetIds":   []uint64{uint64(t1)},
+				"targetIDs":   []uint64{uint64(t1)},
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
 			So(notificationGroupCountRows(db, "group_id = ?", id), ShouldEqual, 1)
@@ -355,7 +355,7 @@ func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 
 		Convey("编辑缺省 targetIds 保持既有绑定不变", func() {
 			id := createNotificationGroup(r, db, "group-keep", false)
-			doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIds": []uint64{uint64(t1), uint64(t2)}})
+			doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIDs": []uint64{uint64(t1), uint64(t2)}})
 			w := doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{
 				"description": "desc only",
 			})
@@ -365,9 +365,9 @@ func TestNotificationGroupCreateUpdateWithTargets(t *testing.T) {
 
 		Convey("编辑携带空 targetIds 解绑全部", func() {
 			id := createNotificationGroup(r, db, "group-clear", false)
-			doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIds": []uint64{uint64(t1), uint64(t2)}})
+			doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIDs": []uint64{uint64(t1), uint64(t2)}})
 			w := doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{
-				"targetIds": []uint64{},
+				"targetIDs": []uint64{},
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
 			So(notificationGroupCountRows(db, "group_id = ?", id), ShouldEqual, 0)
@@ -414,7 +414,7 @@ func TestNotificationGroupBatchDeleteCascade(t *testing.T) {
 		channelID := dbCreateNotificationChannel(db, "default", "del-channel")
 		t1 := createNotificationTarget(db, "default", "del-target-1", channelID)
 		t2 := createNotificationTarget(db, "default", "del-target-2", channelID)
-		doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIds": []uint64{uint64(t1), uint64(t2)}})
+		doNotificationGroupRequest(r, http.MethodPost, notificationGroupIDPath("/update", id), map[string]any{"targetIDs": []uint64{uint64(t1), uint64(t2)}})
 		So(notificationGroupCountRows(db, "group_id = ?", id), ShouldEqual, 2)
 
 		w := doNotificationGroupRequest(r, http.MethodPost, "/notification/group/delete", map[string]any{"ids": []uint64{uint64(id)}})

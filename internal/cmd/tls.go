@@ -8,11 +8,11 @@ import (
 
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/pkg/cliinput"
-	tlsutil "zhongkui.com/zhongkui/internal/pkg/tls"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/pkg/cliinput"
+	tlsutil "zhongkuisec.com/zhongkui/internal/pkg/tls"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // TLSInputs tls 子命令的输入参数。

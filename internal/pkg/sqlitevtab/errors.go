@@ -1,6 +1,6 @@
 package sqlitevtab
 
-import "zhongkui.com/zhongkui/internal/pkg/errors"
+import "zhongkuisec.com/zhongkui/internal/pkg/errors"
 
 // 包级错误哨兵，均带 sqlitevtab: 前缀。
 var (

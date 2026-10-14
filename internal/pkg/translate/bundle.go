@@ -11,8 +11,8 @@ import (
 
 	"github.com/nicksnyder/go-i18n/v2/i18n" // go-i18n 国际化库
 	"github.com/pelletier/go-toml/v2"       // TOML 解析库
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // embeddedLocales 嵌入的本地化文件系统

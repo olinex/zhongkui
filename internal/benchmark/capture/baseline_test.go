@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/capture/wire"
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	"zhongkuisec.com/zhongkui/internal/capture/wire"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 // FlowLevel 流量档位，控制基准测试加载的 pcap 数据量。

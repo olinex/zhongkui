@@ -8,8 +8,8 @@ package core
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // Datasource 表示一个命名空间级的第三方数据源配置，每行对应一张 sqlite vtable。

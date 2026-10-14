@@ -5,7 +5,7 @@ package docconv
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // formatValues 是 documentFormat 枚举类的取值空间，声明顺序即枚举类条目顺序。
@@ -15,6 +15,7 @@ var formatValues = []Format{
 	FormatPDF,
 	FormatDocx,
 	FormatGenerated,
+	FormatNativeApi,
 }
 
 // init 注册枚举类 documentFormat（取值空间固定，条目在注册时快照）。

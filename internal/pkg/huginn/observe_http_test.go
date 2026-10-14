@@ -7,7 +7,7 @@ package huginn
 import (
 	"testing"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // strptr 返回字符串指针，用于构造带值的 HTTP 头。

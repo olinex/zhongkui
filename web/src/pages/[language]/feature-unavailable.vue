@@ -27,7 +27,7 @@
         </template>
       </v-empty-state>
       <!-- 功能有开通入口但当前用户无开通权限：不再引导其前往无权访问的页面，改为提示联系管理员 -->
-      <p v-if="needsAdmin" class="text-body-2 text-on-surface-variant text-center mt-4">
+      <p v-if="needsAdmin" class="text-body-medium on-surface-variant text-center mt-4">
         {{ $t("page.featureUnavailable.contactAdmin") }}
       </p>
     </template>
@@ -94,7 +94,9 @@ const needsAdmin = computed(() => !!group.value?.activationRoute && !activation.
 
 // activationTo 开通入口的路由目标：合并共享的语言段参数与入口自身参数
 const activationTo = computed(() => ({
-  name: activation.value?.routeName,
+  // 开通入口路由名由导航声明动态解析，类型不满足 RouteLocationRaw 的具名路由字面量联合
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  name: activation.value?.routeName as any,
   params: { language: appStore.language, ...activation.value?.params },
 }));
 

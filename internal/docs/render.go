@@ -16,8 +16,8 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // narrativeTemplate 是叙述档模板：仅输出包注释正文，不含任何符号小节。

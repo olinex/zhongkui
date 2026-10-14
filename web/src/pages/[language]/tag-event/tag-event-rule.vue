@@ -10,7 +10,15 @@
         :create="openCreateDialogAction"
         :project-fields="projectFields"
         model-name="tagEventRule"
-      />
+      >
+        <!-- 启用态：开关即时写入（乐观更新，失败回退） -->
+        <template #cell-enabled="{ item }">
+          <enabled-switch-cell
+            v-model="item.enabled"
+            :request="(enabled: boolean) => tagEventRuleSetEnabled(item.id, enabled)"
+          />
+        </template>
+      </search-table>
 
       <confirm-dialog
         ref="deleteConfirmRef"
@@ -43,23 +51,13 @@
         prepend-icon="mdi-toggle-switch"
         @confirm="itemToggleAction"
       >
-        <template #body="{ proxy }">
+        <template #body>
           <confirm-alert
             v-if="batchState"
             :action="
               $t(batchState?.action === 'activate' ? 'action.activate' : 'action.deactivate')
             "
             :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
-          />
-          <confirm-alert
-            v-else
-            :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
-            :text="
-              $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
-                category: $t(`model.tagEventRule.name`),
-                key: proxy.name,
-              })
-            "
           />
         </template>
       </confirm-dialog>
@@ -74,7 +72,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createName"
@@ -83,7 +81,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
@@ -93,7 +91,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   v-model="createNotificationDelivery"
@@ -104,7 +102,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model.number="createSuppressWindow"
@@ -114,7 +112,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-switch
                   v-model="createMatchAll"
@@ -133,7 +131,7 @@
               </v-col>
             </v-row>
             <v-divider class="my-2" />
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col>
                 <v-label>{{ $t("model.tagEventRule.field.conditions") }}</v-label>
               </v-col>
@@ -154,7 +152,7 @@
               variant="tonal"
               class="my-2"
             >
-              <v-card-title class="d-flex align-center text-subtitle-2">
+              <v-card-title class="d-flex align-center text-title-small">
                 {{ $t("model.tagEventCondition.name") }} #{{ idx + 1 }}
                 <v-spacer />
                 <v-btn
@@ -168,7 +166,7 @@
                 />
               </v-card-title>
               <v-card-text>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="6">
                     <v-text-field
                       v-model="cond.name"
@@ -187,7 +185,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="6">
                     <v-select
                       :model-value="cond.dimension"
@@ -206,7 +204,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="6">
                     <v-text-field
                       v-model.number="cond.window"
@@ -226,7 +224,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="12">
                     <v-textarea
                       v-model="cond.description"
@@ -236,7 +234,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="12">
                     <tag-expr-editor
                       v-model="cond.expression"
@@ -250,7 +248,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense align="center">
+                <v-row density="compact" class="align-center">
                   <v-col cols="auto">
                     <v-btn
                       v-request="
@@ -275,7 +273,7 @@
               </v-card-text>
             </v-card>
             <v-divider class="my-2" />
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col cols="auto">
                 <v-btn
                   color="primary"
@@ -306,7 +304,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   :model-value="proxy.name"
@@ -315,7 +313,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="editDescription"
@@ -326,7 +324,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   v-model="editNotificationDelivery"
@@ -338,7 +336,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-switch
                   v-model="editMatchAll"
@@ -358,7 +356,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model.number="editSuppressWindow"
@@ -370,7 +368,7 @@
               </v-col>
             </v-row>
             <v-divider class="my-2" />
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col>
                 <v-label>{{ $t("model.tagEventRule.field.conditions") }}</v-label>
               </v-col>
@@ -392,7 +390,7 @@
               variant="tonal"
               class="my-2"
             >
-              <v-card-title class="d-flex align-center text-subtitle-2">
+              <v-card-title class="d-flex align-center text-title-small">
                 {{ $t("model.tagEventCondition.name") }} #{{ idx + 1 }}
                 <v-spacer />
                 <v-btn
@@ -406,7 +404,7 @@
                 />
               </v-card-title>
               <v-card-text>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="6">
                     <v-text-field
                       v-model="cond.name"
@@ -427,7 +425,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="6">
                     <v-select
                       :model-value="cond.dimension"
@@ -448,7 +446,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="6">
                     <v-text-field
                       v-model.number="cond.window"
@@ -470,7 +468,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="12">
                     <v-textarea
                       v-model="cond.description"
@@ -481,7 +479,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense>
+                <v-row density="compact">
                   <v-col cols="12">
                     <tag-expr-editor
                       v-model="cond.expression"
@@ -496,7 +494,7 @@
                     />
                   </v-col>
                 </v-row>
-                <v-row dense align="center">
+                <v-row density="compact" class="align-center">
                   <v-col cols="auto">
                     <v-btn
                       variant="tonal"
@@ -520,7 +518,7 @@
               </v-card-text>
             </v-card>
             <v-divider class="my-2" />
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col cols="auto">
                 <v-btn
                   v-request="
@@ -571,7 +569,7 @@
               </v-btn>
             </template>
             <v-expand-transition>
-              <v-list v-if="expandedVersion === v.version" class="zk-code-preview text-body-2">
+              <v-list v-if="expandedVersion === v.version" class="zk-code-preview text-body-medium">
                 <v-list-item
                   v-for="c in v.conditions"
                   :key="c.id"
@@ -836,12 +834,12 @@ const notificationOptions = computed<NotificationDeliveryOption[]>(() => [
 // 将通知方式编码字符串解为提交入参的绑定字段；默认组时两者均缺省
 const deliveryToPayload = (
   v: string,
-): { notificationGroupId?: number; notificationTargetId?: number } => {
+): { notificationGroupID?: number; notificationTargetID?: number } => {
   if (v.startsWith("group:")) {
-    return { notificationGroupId: Number(v.slice("group:".length)) };
+    return { notificationGroupID: Number(v.slice("group:".length)) };
   }
   if (v.startsWith("target:")) {
-    return { notificationTargetId: Number(v.slice("target:".length)) };
+    return { notificationTargetID: Number(v.slice("target:".length)) };
   }
   return {};
 };
@@ -1043,11 +1041,16 @@ const createConditionsValid = computed<boolean>(
 );
 
 const openCreateDialogAction = (): void => {
-  createForm.resetField("name", { value: "" });
-  createForm.resetField("description", { value: "" });
-  createForm.resetField("matchAll", { value: false });
-  createForm.resetField("suppressWindow", { value: 60 });
-  createForm.resetField("enabled", { value: true });
+  // 复位用原子 API resetForm：完整枚举全部 defineField 字段，值 + 校验状态一次性重置
+  createForm.resetForm({
+    values: {
+      name: "",
+      description: "",
+      matchAll: false,
+      suppressWindow: 60,
+      enabled: true,
+    },
+  });
   createNotificationDelivery.value = DEFAULT_DELIVERY;
   void loadNotificationOptions();
   createConditions.value = [];
@@ -1134,18 +1137,21 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
     tagEventRuleDetailGet(item.id),
     async (rsp) => {
       editRuleId = rsp.data.id;
-      updateForm.resetField("description", { value: rsp.data.description });
-      updateForm.resetField("matchAll", { value: rsp.data.matchAll });
-      updateForm.resetField("suppressWindow", {
-        value: durationToMinutes(rsp.data.suppressWindow),
+      // 复位与回填同属「准备本次打开的数据」：完整枚举 defineField 字段，原子重置值 + 校验状态
+      updateForm.resetForm({
+        values: {
+          description: rsp.data.description,
+          matchAll: rsp.data.matchAll,
+          suppressWindow: durationToMinutes(rsp.data.suppressWindow),
+          enabled: rsp.data.enabled,
+        },
       });
-      updateForm.resetField("enabled", { value: rsp.data.enabled });
       // 回填通知方式：直投目标优先，其次通知组，否则命名空间默认组
       editNotificationDelivery.value =
-        rsp.data.notificationTargetId != null
-          ? `target:${rsp.data.notificationTargetId}`
-          : rsp.data.notificationGroupId != null
-            ? `group:${rsp.data.notificationGroupId}`
+        rsp.data.notificationTargetID != null
+          ? `target:${rsp.data.notificationTargetID}`
+          : rsp.data.notificationGroupID != null
+            ? `group:${rsp.data.notificationGroupID}`
             : DEFAULT_DELIVERY;
       void loadNotificationOptions();
       editConditions.value = (rsp.data.conditions ?? []).map((c) => {
@@ -1222,8 +1228,7 @@ const itemUpdateAction = () => {
 // projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", ...visible];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     version: versionAction,
@@ -1233,16 +1238,6 @@ const getActions = (item: Record<string, any>): ItemActions => {
       deleteConfirmRef.value?.open(i);
     },
   };
-  switch (item.enabled) {
-    case false:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.activate = (i: Record<string, any>) => toggleAction(i, true);
-      break;
-    case true:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.deactivate = (i: Record<string, any>) => toggleAction(i, false);
-      break;
-  }
   return actions;
 };
 
@@ -1353,40 +1348,12 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 
-const toggleTarget = ref<boolean | null>(null);
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
-  batchState.value = null;
-  toggleTarget.value = enabled;
-  toggleConfirmRef.value?.open(item);
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
+const itemToggleAction = async (): Promise<void> => {
   const state = batchState.value;
   if (state) {
     batchState.value = null;
     await batchToggleAction(state.items, state.action === "activate");
-    return;
   }
-  if (toggleTarget.value === null) {
-    return;
-  }
-  await getResponse<BatchResultOut>(
-    tagEventRuleSetEnabled(proxy.id, toggleTarget.value),
-    async (rsp) => {
-      applyBatchResult(rsp.summary, rsp.data);
-      await searchTableRef.value?.refresh();
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
 };
 
 // ---- 版本列表与回滚 ----
@@ -1421,7 +1388,7 @@ const openRollbackConfirm = (v: TagEventRuleVersionOut): void => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemRollbackAction = async (proxy: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
-    tagEventRuleVersionRollback(proxy.ruleId, proxy.version),
+    tagEventRuleVersionRollback(proxy.ruleID, proxy.version),
     async (rsp) => {
       await searchTableRef.value?.refresh();
       versionDialog.value = false;

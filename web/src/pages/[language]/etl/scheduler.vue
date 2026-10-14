@@ -17,7 +17,7 @@
           </action-button-group>
         </div>
         <v-container fluid class="px-4 pt-0 pb-4">
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="12">
               <v-data-table :headers="schedulerVisibleHeaders" :items="schedulerItems">
                 <template #item="{ item }">
@@ -31,7 +31,20 @@
                           : undefined
                       "
                     >
-                      <adaptive-cell :header="hdr" :item="item" :actions="getSchedulerActions" />
+                      <enabled-switch-cell
+                        v-if="hdr.key === 'enabled'"
+                        v-model="item.enabled"
+                        :request="
+                          (enabled: boolean) =>
+                            schedulerTaskToggle({ typeName: item.typeName, enabled })
+                        "
+                      />
+                      <adaptive-cell
+                        v-else
+                        :header="hdr"
+                        :item="item"
+                        :actions="getSchedulerActions"
+                      />
                     </td>
                   </tr>
                 </template>
@@ -50,7 +63,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createTypeName"
@@ -59,7 +72,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="createCronSpec"
@@ -75,7 +88,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createQueue"
@@ -84,7 +97,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="createTimeout"
@@ -101,7 +114,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="createRetention"
@@ -117,7 +130,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="createEnabled"
@@ -128,7 +141,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createPayload"
@@ -137,7 +150,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="createBacklogEnabled"
@@ -148,7 +161,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="createBacklogWindow"
@@ -177,7 +190,7 @@
       >
         <template #body="{ editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   :model-value="editTypeName"
@@ -186,7 +199,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="editCronSpec"
@@ -204,7 +217,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="editQueue"
@@ -214,7 +227,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="editTimeout"
@@ -233,7 +246,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="editRetention"
@@ -251,7 +264,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="editEnabled"
@@ -263,7 +276,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="editPayload"
@@ -273,7 +286,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="editBacklogEnabled"
@@ -285,7 +298,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="editBacklogWindow"
@@ -525,7 +538,6 @@ const schedulerHeaders = ref([
     key: "__actions",
     title: i18n.global.t("model.__base.field.__actions"),
     type: BackendDataType.ACTIONS,
-    align: "start",
     sortable: false,
     fixed: "end",
   },
@@ -581,18 +593,23 @@ const scheduleModeError = (cronSpec: string, interval: string): string => {
 };
 
 const openCreateDialogAction = (): void => {
-  createForm.resetField("typeName", { value: "" });
-  createForm.resetField("cronSpec", { value: "" });
-  createForm.resetField("interval", { value: "" });
-  createForm.resetField("queue", { value: "" });
-  createForm.resetField("timeout", { value: "" });
-  createForm.resetField("maxRetry", { value: 0 });
-  createForm.resetField("retention", { value: "1h" });
-  createForm.resetField("lookback", { value: "5m" });
-  createForm.resetField("enabled", { value: true });
-  createForm.resetField("backlogEnabled", { value: true });
-  createForm.resetField("backlogWindow", { value: "0" });
-  createForm.resetField("backlogLimit", { value: 1000 });
+  // 复位是「准备本次打开的数据」的一部分：resetForm 原子重置值 + 校验状态，避免上次填写内容残留
+  createForm.resetForm({
+    values: {
+      typeName: "",
+      cronSpec: "",
+      interval: "",
+      queue: "",
+      timeout: "",
+      maxRetry: 0,
+      retention: "1h",
+      lookback: "5m",
+      enabled: true,
+      backlogEnabled: true,
+      backlogWindow: "0",
+      backlogLimit: 1000,
+    },
+  });
   createPayload.value = "{}";
   createDialogRef.value?.open({});
 };
@@ -659,17 +676,22 @@ const createAction = createForm.handleSubmit(async (values) => {
 
 const openEditDialogAction = (item: InspectorSchedulerListItem): void => {
   editTypeName.value = item.typeName;
-  editForm.resetField("cronSpec", { value: item.cronSpec ?? "" });
-  editForm.resetField("interval", { value: item.interval ?? "" });
-  editForm.resetField("queue", { value: item.queue ?? "" });
-  editForm.resetField("timeout", { value: item.timeout ?? "" });
-  editForm.resetField("maxRetry", { value: item.maxRetry ?? 0 });
-  editForm.resetField("retention", { value: item.retention ?? "1h" });
-  editForm.resetField("lookback", { value: item.lookback ?? "5m" });
-  editForm.resetField("enabled", { value: item.enabled ?? true });
-  editForm.resetField("backlogEnabled", { value: item.backlogEnabled ?? true });
-  editForm.resetField("backlogWindow", { value: item.backlogWindow ?? "0" });
-  editForm.resetField("backlogLimit", { value: item.backlogLimit ?? 1000 });
+  // 复位与回填同属「准备本次打开的数据」：resetForm 原子重置值 + 校验状态，再写入本行详情
+  editForm.resetForm({
+    values: {
+      cronSpec: item.cronSpec ?? "",
+      interval: item.interval ?? "",
+      queue: item.queue ?? "",
+      timeout: item.timeout ?? "",
+      maxRetry: item.maxRetry ?? 0,
+      retention: item.retention ?? "1h",
+      lookback: item.lookback ?? "5m",
+      enabled: item.enabled ?? true,
+      backlogEnabled: item.backlogEnabled ?? true,
+      backlogWindow: item.backlogWindow ?? "0",
+      backlogLimit: item.backlogLimit ?? 1000,
+    },
+  });
   editPayload.value = JSON.stringify(item.payload ?? {});
   editDialogRef.value?.open({ typeName: item.typeName });
 };
@@ -735,40 +757,13 @@ const itemUpdateAction = editForm.handleSubmit(async (values) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getSchedulerActions = (item: Record<string, any>): ItemActions => {
-  // 行操作：修改/立即执行/删除，以及基于当前启用状态的快速启停
+  // 行操作：修改/立即执行/删除（启停改为列表内联开关）
   const actions: ItemActions = {
     edit: () => openEditDialogAction(item as InspectorSchedulerListItem),
     run: () => runConfirmRef.value?.open(item),
     delete: () => deleteConfirmRef.value?.open(item),
   };
-  if (item.enabled) {
-    actions.deactivate = toggleAction;
-  } else {
-    actions.activate = toggleAction;
-  }
   return actions;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toggleAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    schedulerTaskToggle({ typeName: item.typeName, enabled: !item.enabled }),
-    async (rsp) => {
-      await getSchedulerListAction();
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

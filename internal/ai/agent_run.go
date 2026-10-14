@@ -1,7 +1,8 @@
-// 本文件承载运行现场（agent_runs）的挂起持久化与恢复：当工具循环命中任一 client 来源工具时，
-// 后端把挂起时刻的完整消息链、待执行调用列表、检索引用与档位落库，结束本次流等待前端回传审批
-// 决定与执行结果；此后据该现场从中断处续跑。运行现场的读写方法挂在 SessionStore 上，避免改动
-// Agent 的装配参数。
+// 本文件承载运行现场（agent_runs）的挂起持久化与恢复：当工具循环命中任一 client 来源工具、
+// 或后端工具被评估为 must 级审核时，后端把挂起时刻的完整消息链、待执行调用列表、检索引用与档位
+// 落库，结束本次流等待前端回传审批决定与执行结果；此后据该现场从中断处续跑——已批准的 backend
+// 调用由后端自行执行，client 调用沿用前端回传结果。运行现场的读写方法挂在 SessionStore 上，
+// 避免改动 Agent 的装配参数。
 
 package ai
 
@@ -17,9 +18,9 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // agentRunTTL 是运行现场的存活期限：挂起后超过该时限的现场不可恢复，前端据此提示本次调用已超时。
@@ -33,19 +34,35 @@ var (
 	ErrAgentRunConsumed = errors.New("agent run already consumed")
 	// ErrAgentRunExpired 运行现场已过期
 	ErrAgentRunExpired = errors.New("agent run expired")
-	// ErrAgentRunForbidden 运行现场归属不符（命名空间不一致）
-	ErrAgentRunForbidden = errors.New("agent run forbidden")
 )
 
-// pendingToolCall 是持久化的待执行客户端工具调用：挂起时随运行现场落库，恢复时按原始顺序回灌为
+// ToolExecOwner 标识一次挂起工具调用的执行归属：client 由前端在用户自身凭据下执行，backend 由
+// 后端在恢复时自行执行（builtin / MCP 工具，仅在审核重要级为 must 时挂起等审批）。
+type ToolExecOwner string
+
+// 执行归属常量。
+const (
+	// ToolExecOwnerClient 前端执行（既有 client 工具语义）
+	ToolExecOwnerClient ToolExecOwner = "client"
+	// ToolExecOwnerBackend 后端执行（builtin / MCP 工具，经 must 级审批后由后端执行）
+	ToolExecOwnerBackend ToolExecOwner = "backend"
+)
+
+// pendingToolCall 是持久化的待执行工具调用：挂起时随运行现场落库，恢复时按原始顺序回灌为
 // tool message。字段须保证 JSON 往返稳定（恢复时据此重建调用与结果关联）。
 type pendingToolCall struct {
 	// CallID 与模型 tool call id 一致
-	CallID string `json:"callId"`
-	// ToolName 待执行的客户端工具名
+	CallID string `json:"callID"`
+	// ToolName 待执行的工具名
 	ToolName string `json:"toolName"`
 	// Arguments 模型给出的调用入参（原始 JSON 文本）
 	Arguments string `json:"arguments"`
+	// ExecOwner 执行归属（client / backend）；兼容旧现场：空字符串一律按 client 处理
+	ExecOwner ToolExecOwner `json:"execOwner"`
+	// AuditLevel 本条调用的审核重要级（挂起前批量评估产出，随运行现场落库留痕）
+	AuditLevel AuditLevel `json:"auditLevel"`
+	// ApprovalRequired 由审核重要级与会话阀门合成得出的最终结论：true 表示需人工审核
+	ApprovalRequired bool `json:"approvalRequired"`
 }
 
 // SaveAgentRun 创建一行运行现场（状态为 pending），承载挂起时刻的运行现场。
@@ -59,14 +76,15 @@ func (s *SessionStore) SaveAgentRun(ctx context.Context, run *ai.AgentRun) error
 	return nil
 }
 
-// ClaimAgentRun 认领一次恢复请求对应的运行现场：取该会话最近一行（不按状态过滤，以便区分「不存在」
-// 与「已消费」），依次校验归属、状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并
-// 返回该现场。失败类别见包级哨兵 ErrAgentRunNotFound / ErrAgentRunForbidden / ErrAgentRunConsumed /
-// ErrAgentRunExpired，供上层映射业务码。
-func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName string) (*ai.AgentRun, error) {
+// ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件取该
+// 会话最近一行（不按状态过滤，以便区分「不存在」与「已消费」），归属不符的行在查询阶段即被过滤，
+// 表现为「不存在」；随后依次校验状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并
+// 返回该现场。失败类别见包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed / ErrAgentRunExpired，
+// 供上层映射业务码。
+func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName string, userID uint) (*ai.AgentRun, error) {
 	var run ai.AgentRun
 	err := s.db.WithContext(ctx).
-		Where("session_id = ?", sessionID).
+		Where("session_id = ? AND namespace_name = ? AND user_id = ?", sessionID, namespaceName, userID).
 		Order("id DESC").
 		First(&run).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -74,9 +92,6 @@ func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namesp
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
-	}
-	if run.NamespaceName != namespaceName {
-		return nil, ErrAgentRunForbidden
 	}
 	if run.Status != ai.AgentRunStatusPending {
 		return nil, ErrAgentRunConsumed
@@ -111,6 +126,7 @@ func prepareClientToolCall(tc schema.ToolCall, in AgentInput, requests ToolReque
 		CallID:    tc.ID,
 		ToolName:  tc.Function.Name,
 		Arguments: tc.Function.Arguments,
+		ExecOwner: ToolExecOwnerClient,
 	}, ""
 }
 
@@ -131,6 +147,7 @@ func (a *Agent) persistSuspendedRun(ctx context.Context, in AgentInput, slot ai.
 	}
 	run := &ai.AgentRun{
 		NamespaceName:    in.NamespaceName,
+		UserID:           in.UserID,
 		SessionID:        in.SessionID,
 		Status:           ai.AgentRunStatusPending,
 		MessagesJSON:     serializer.NewCrypto(messagesJSON),
@@ -148,7 +165,9 @@ type ResumeInput struct {
 	SessionID uint
 	// NamespaceName 恢复请求所属命名空间
 	NamespaceName string
-	// Results 前端回传的执行结果，按 callId 与挂起时下发的调用关联
+	// UserID 恢复请求的属主用户 ID（users.id），用于跨用户隔离
+	UserID uint
+	// Results 前端回传的执行结果，按 callID 与挂起时下发的调用关联
 	Results []ToolResult
 	// ToolReporter 工具调用阶段事件的上报回调（可空）
 	ToolReporter EvalReporter
@@ -162,7 +181,9 @@ type ResumeInput struct {
 // 认领失败直接返回对应哨兵错误（不存在/归属不符/已消费/已过期），上层据此映射业务码，本函数不
 // 额外包装以免破坏 errors.Is 语义。
 func (a *Agent) ResumeRun(ctx context.Context, in ResumeInput, opts ...compose.Option) (*schema.StreamReader[AgentOutput], error) {
-	run, err := a.store.ClaimAgentRun(ctx, in.SessionID, in.NamespaceName)
+	// 续跑同样是一次完整回答，耗时自进入本函数起算，token 用量经回调累加，随最终 done 落库。
+	metrics := newRunMetrics()
+	run, err := a.store.ClaimAgentRun(ctx, in.SessionID, in.NamespaceName, in.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -178,34 +199,52 @@ func (a *Agent) ResumeRun(ctx context.Context, in ResumeInput, opts ...compose.O
 	if err := json.Unmarshal(run.CitationsJSON.Value(), &citations); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	// 运行现场未持久化 Agent 类型，尽力从会话回填（失败留空，按缺省类型处理）。
+	// 运行现场未持久化 Agent 类型，尽力从会话回填（失败留空，按缺省类型处理）；同一会话的
+	// 审核阀门也在此取回，使续跑新产生的调用与首次挂起使用同一阀门。
 	var agentKind ai.AgentKind
-	if session, serr := a.store.GetSession(ctx, run.SessionID); serr == nil {
+	var reviewValve ai.ReviewValve
+	if session, serr := a.store.GetSession(ctx, run.SessionID, run.NamespaceName, run.UserID); serr == nil {
 		agentKind = session.AgentKind
+		reviewValve = session.ReviewValve
 	}
-	msgs = append(msgs, buildToolResultMessages(pending, in.Results, a.params.Int("agent.maxToolResultBytes"))...)
 	input := AgentInput{
 		SessionID:           run.SessionID,
 		NamespaceName:       run.NamespaceName,
+		UserID:              run.UserID,
 		AgentKind:           agentKind,
 		Slot:                run.Slot,
-		ResumeMessages:      msgs,
-		ResumeCitations:     citations,
 		ToolReporter:        in.ToolReporter,
 		ToolRequestReporter: in.ToolRequests,
+		ReviewValve:         reviewValve,
 	}
+	// 恢复时后端须能执行已批准的 backend 调用：注入与 generate 相同的工具上下文（记忆 + 知识
+	// 检索），并以采集器承接 backend knowledge_search 的新命中（执行后并入 citations 续跑产出）。
+	collector := &knowledgeCollector{results: citations}
+	toolCtx := a.memoryToolContext(ctx, input)
+	toolCtx = a.knowledgeToolContext(toolCtx, input, collector)
+	msgs = append(msgs, a.buildResumeToolMessages(ctx, toolCtx, pending, in.Results, a.params.Int("agent.maxToolResultBytes"), in.ToolReporter)...)
+	citations = collector.snapshot()
+	input.ResumeMessages = msgs
+	input.ResumeCitations = citations
 	// 本轮没有新的用户提问，须走 Stream（不落用户消息）而非 StreamRun。
-	reader, err := a.Stream(ctx, input, opts...)
+	reader, err := a.Stream(ctx, input, append(opts, compose.WithCallbacks(metrics.handler()))...)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	return a.wrapPersist(ctx, reader, input), nil
+	return a.wrapPersist(ctx, reader, input, metrics), nil
 }
 
-// buildToolResultMessages 按待执行调用的原始顺序，把前端回传结果组装为 tool message 列表：未提供
-// 结果、用户拒绝、前端执行出错分别回灌固定的英文文案或错误文本，其余回灌执行结果；文本一律按
-// maxBytes 截断（客户端工具结果按不可信外部输入处理）。执行错误只作为工具结果回灌，不作为流错误。
-func buildToolResultMessages(pending []pendingToolCall, results []ToolResult, maxBytes int) []*schema.Message {
+// buildResumeToolMessages 按待执行调用的原始顺序，把恢复现场组装为 tool message 列表：
+//   - client（owner 为空或 client）：既有逻辑——未提供结果、用户拒绝、前端执行出错分别回灌固定的
+//     英文文案或错误文本，其余回灌执行结果；文本一律按 maxBytes 截断（客户端工具结果按不可信外部
+//     输入处理）。
+//   - backend：已批准（Approved=true）时由后端用 a.runTool 执行该工具，成功取截断结果、失败取
+//     "tool execution failed: "+err；未批准或无结果时回灌「用户拒绝」固定英文文案（客户端工具拒绝
+//     文案同一风格）。执行经 reporter 上报 toolResult 阶段的 start / done / failed（reporter 为 nil
+//     时不上报，上报失败不影响回灌）。
+//
+// 执行错误只作为工具结果回灌，不作为流错误。
+func (a *Agent) buildResumeToolMessages(ctx, toolCtx context.Context, pending []pendingToolCall, results []ToolResult, maxBytes int, reporter EvalReporter) []*schema.Message {
 	byCallID := make(map[string]ToolResult, len(results))
 	for _, r := range results {
 		byCallID[r.CallID] = r
@@ -213,12 +252,22 @@ func buildToolResultMessages(pending []pendingToolCall, results []ToolResult, ma
 	out := make([]*schema.Message, 0, len(pending))
 	for _, call := range pending {
 		result, ok := byCallID[call.CallID]
+		if call.execOwner() == ToolExecOwnerBackend {
+			var text string
+			if ok && result.Approved {
+				text = a.execBackendTool(toolCtx, call, reporter)
+			} else {
+				text = declinedToolCallText
+			}
+			out = append(out, schema.ToolMessage(truncateBytes(text, maxBytes), call.CallID))
+			continue
+		}
 		var text string
 		switch {
 		case !ok:
 			text = "no result was provided for this call"
 		case !result.Approved:
-			text = "the user declined to execute this call; do not retry it without a clear reason"
+			text = declinedToolCallText
 		case result.Error != "":
 			text = result.Error
 		default:
@@ -228,3 +277,37 @@ func buildToolResultMessages(pending []pendingToolCall, results []ToolResult, ma
 	}
 	return out
 }
+
+// execBackendTool 由后端执行一次已批准的 backend 工具调用：成功返回其结果文本、失败返回
+// "tool execution failed: "+err（与 generate 的行内执行一致）；执行前后经 reporter 上报
+// toolResult 阶段的 start / done / failed（reporter 为 nil 时跳过，上报失败不改变执行结果）。
+func (a *Agent) execBackendTool(toolCtx context.Context, call pendingToolCall, reporter EvalReporter) string {
+	name := call.ToolName
+	if reporter != nil {
+		_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusStart, Tool: name})
+	}
+	start := time.Now()
+	result, err := a.runTool(toolCtx, schema.ToolCall{ID: call.CallID, Function: schema.FunctionCall{Name: call.ToolName, Arguments: call.Arguments}})
+	elapsed := time.Since(start).Milliseconds()
+	if err != nil {
+		if reporter != nil {
+			_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, ElapsedMs: elapsed, Err: err.Error()})
+		}
+		return "tool execution failed: " + err.Error()
+	}
+	if reporter != nil {
+		_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: name, ElapsedMs: elapsed})
+	}
+	return result
+}
+
+// execOwner 返回调用的执行归属：兼容旧运行现场（无该字段）——空字符串一律按 client 处理。
+func (c pendingToolCall) execOwner() ToolExecOwner {
+	if c.ExecOwner == "" {
+		return ToolExecOwnerClient
+	}
+	return c.ExecOwner
+}
+
+// declinedToolCallText 是用户拒绝执行一次挂起调用时回灌给模型的固定英文文案（client / backend 共用）。
+const declinedToolCallText = "the user declined to execute this call; do not retry it without a clear reason"

@@ -12,7 +12,7 @@
             <!-- 统一候选条目渲染：紧凑 v-list-item 风格，通过 item-title / item-subtitle / item-append 插槽定制 -->
             <v-list :items="items">
               <v-list-item v-for="item in items" :key="item[itemKeyField]" class="px-1">
-                <v-list-item-title class="text-body-2">
+                <v-list-item-title class="text-body-medium">
                   <slot name="item-title" :item="item">
                     <span class="font-weight-medium">{{ item.name }}</span>
                   </slot>
@@ -65,11 +65,12 @@
           <td
             v-show="listItemAction"
             key="__actions"
-            :class="
+            :class="[
+              'v-data-table-column--align-center',
               listItemAction
                 ? 'v-data-table-column--fixed v-data-table-column--last-fixed'
-                : undefined
-            "
+                : undefined,
+            ]"
           >
             <slot
               name="list-item-action"
@@ -79,7 +80,11 @@
               :remove-item="() => removeItem(index)"
             />
           </td>
-          <td v-for="hdr in headers" :key="hdr.key">
+          <td
+            v-for="hdr in headers"
+            :key="hdr.key"
+            :class="hdr.align ? `v-data-table-column--align-${hdr.align}` : undefined"
+          >
             <adaptive-cell :header="hdr" :item="item" />
           </td>
         </tr>
@@ -111,7 +116,8 @@ const exactHeaders = computed((): Array<TableHeader> => {
         key: "__actions",
         title: i18n.global.t(`action.remove`),
         type: BackendDataType.ACTIONS,
-        align: "start",
+        // 行级按钮列统一水平居中（固定列保持在左端的移除按钮）
+        align: "center",
         sortable: false,
         fixed: "start",
       },

@@ -16,9 +16,9 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // LlmModel 表示一个注册到平台的 LLM 模型端点（chat 或 embedding），是 LLM 配置的
@@ -46,6 +46,9 @@ type LlmModel struct {
 	Temperature float64 `gorm:"type:DOUBLE PRECISION"`
 	// MaxTokens 单次生成的最大 token 数，仅 chat 类模型有意义
 	MaxTokens int `gorm:"type:INTEGER"`
+	// ContextTokens 上下文窗口容量（token 数），仅 chat 类模型有意义：由用户创建模型时提供，
+	// agent 使用该档位模型时据此计算上下文占用比例并判定是否自动压缩；0 表示未配置
+	ContextTokens int `gorm:"type:INTEGER"`
 	// Dimensions 向量维度，仅 embedding 类模型有意义，是后端探测后写入的只读缓存：该值
 	// 不再由前端提交（前端的向量维度输入已移除），而是后端在绑定 embedding 槽位（或修改
 	// 已绑定模型的端点）时经真实探测写入，恒等于 knowledge_chunks.embedding 列的 pgvector
@@ -55,6 +58,16 @@ type LlmModel struct {
 	Enabled bool `gorm:"type:BOOLEAN;default:true"`
 	// Description 模型描述，说明用途
 	Description string `gorm:"type:VARCHAR(512)"`
+	// ExtraBody 高级请求配置；为该模型每次对话请求自动合并的 JSON 对象字符串，
+	// 承载供应商自定义字段（不同供应商字段格式各异、无法穷举，这是通用逃生通道）
+	ExtraBody string `gorm:"column:extra_body;type:TEXT"`
+	// ThinkingField 思考开关的请求字段名（如 enable_thinking）；仅 chat 类模型有意义
+	ThinkingField string `gorm:"type:VARCHAR(64)"`
+	// ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+	ThinkingOnValue string `gorm:"column:thinking_on_value;type:VARCHAR(256)"`
+	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）；
+	// 与 ThinkingField、ThinkingOnValue 三者齐备时该模型支持思考开关
+	ThinkingOffValue string `gorm:"column:thinking_off_value;type:VARCHAR(256)"`
 }
 
 // APIKeyData 返回模型访问凭据的明文字节，nil 安全（APIKey 为空或 nil 时返回 nil）。

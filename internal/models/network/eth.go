@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/gopacket/gopacket/layers"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // EthernetHeaders 表示以太网帧的头部信息

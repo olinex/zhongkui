@@ -24,12 +24,12 @@
             <div ref="scrollEl" class="pt-0 scroll-list">
               <slot name="items" :items="items" :close="() => (open = false)" />
               <div ref="sentinelEl" class="d-flex align-center justify-center pa-2">
-                <span v-if="loading" class="text-body-2 text-on-surface-variant">{{
+                <span v-if="loading" class="text-body-medium on-surface-variant">{{
                   $t("summary.dataLoading")
                 }}</span>
                 <span
                   v-else-if="!hasMore && items.length > 0"
-                  class="text-body-2 text-on-surface-variant"
+                  class="text-body-medium on-surface-variant"
                   >{{ $t("summary.endOfData") }}</span
                 >
               </div>

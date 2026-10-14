@@ -12,7 +12,7 @@ import (
 	"github.com/ledongthuc/pdf"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // convertPDF 逐页抽取 PDF 文本并拼装为 Markdown：单页直接返回该页文本；多页每页以 `## Page N`

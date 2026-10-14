@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // collectLoad 收集所有到达 load 阶段的数据批，线程安全。

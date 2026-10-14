@@ -11,7 +11,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	"golang.org/x/text/language"
 
-	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 )
 
 // frontendConfigHash 计算前端配置内容的 SHA-256 十六进制摘要

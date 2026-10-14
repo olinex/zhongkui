@@ -13,7 +13,7 @@ package features
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // IsEnabled 具备可查询启用状态的依赖提供方接口（如由 *mail.Sender 满足）：用于查询

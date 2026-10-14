@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 向量检索依赖的 pgvector 表/列/索引元数据，与 internal/migrations/core/001_init.sql 对齐。

@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // docxDocumentPath 是 DOCX 包内承载正文的部件路径。

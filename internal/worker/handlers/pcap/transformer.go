@@ -6,10 +6,10 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"github.com/pterm/pterm"
-	n "zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/huginn"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/huginn"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // TransFromPacketToModel 将数据包项转换为网络模型的数据转换函数。

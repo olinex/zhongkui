@@ -18,8 +18,19 @@
   >
     <!-- 维度为只读 schema 属性：未探测到（0）时以占位符展示，避免误认为可编辑配置 -->
     <template #cell-dimensions="{ item }">
-      <span v-if="item.dimensions" class="text-on-surface">{{ item.dimensions }}</span>
-      <span v-else class="zk-hint">—</span>
+      <span v-if="item.dimensions">{{ item.dimensions }}</span>
+      <span v-else class="zk-hint">{{ INVALID_PLACEHOLDER }}</span>
+    </template>
+
+    <!-- token 数量列按 K/M 单位展示：与输入组件、只读用量同一套换算口径（utils/token） -->
+    <template #cell-maxTokens="{ item }">
+      {{ formatTokenCount(item.maxTokens) }}
+    </template>
+
+    <!-- 上下文容量仅 chat 模型有意义：embedding 为 0，以占位符展示，避免误认为容量为 0 -->
+    <template #cell-contextTokens="{ item }">
+      <span v-if="item.contextTokens">{{ formatTokenCount(item.contextTokens) }}</span>
+      <span v-else class="zk-hint">{{ INVALID_PLACEHOLDER }}</span>
     </template>
 
     <!-- 凭据为加密列：列表出参为密文，仅以「已加密」标识占位，点击解密查看明文 -->
@@ -29,6 +40,14 @@
         :item="item"
         field-key="apiKey"
         @view-plaintext="viewApiKeyPlaintext"
+      />
+    </template>
+
+    <!-- 启用态：行内开关就地改写（后端无独立启停接口，内部走「读详情 + 整表单更新」） -->
+    <template #cell-enabled="{ item }">
+      <enabled-switch-cell
+        v-model="item.enabled"
+        :request="(enabled: boolean) => setEnabledRequest(item, enabled)"
       />
     </template>
   </search-table>
@@ -61,25 +80,6 @@
     </template>
   </confirm-dialog>
 
-  <confirm-dialog
-    ref="toggleConfirmRef"
-    :title="$t('model.llmModel.name')"
-    prepend-icon="mdi-toggle-switch"
-    @confirm="itemToggleAction"
-  >
-    <template #body="{ proxy }">
-      <confirm-alert
-        :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
-        :text="
-          $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
-            category: $t('model.llmModel.name'),
-            key: proxy.name,
-          })
-        "
-      />
-    </template>
-  </confirm-dialog>
-
   <temp-editable-dialog
     ref="createDialogRef"
     :title="$t('model.llmModel.name')"
@@ -90,7 +90,15 @@
   >
     <template #body>
       <v-form>
-        <v-row dense>
+        <!-- 索引维度由后端在绑定 embedding 档位时探测写回，前端以 alert 显式提示，置于表单开头避免被下方字段淹没 -->
+        <v-row v-if="createKind === LLM_MODEL_KIND_EMBEDDING" density="compact">
+          <v-col cols="12">
+            <v-alert type="info" class="mb-3">
+              {{ $t("page.llmModelAdmin.dimensionsHint") }}
+            </v-alert>
+          </v-col>
+        </v-row>
+        <v-row density="compact">
           <v-col cols="6">
             <v-text-field
               v-model="createName"
@@ -107,7 +115,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               v-model="createBaseURL"
@@ -118,7 +126,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               v-model="createApiKey"
@@ -130,7 +138,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-text-field
               v-model="createModel"
@@ -148,7 +156,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-number-input
               v-model="createTemperature"
@@ -160,16 +168,15 @@
             />
           </v-col>
           <v-col cols="6">
-            <v-number-input
+            <token-count-field
               v-model="createMaxTokens"
               v-bind="createMaxTokensProps"
               :label="$t('model.llmModel.field.maxTokens')"
-              :precision="0"
               :min="1"
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-switch
               v-model="createEnabled"
@@ -178,16 +185,17 @@
               color="primary"
             />
           </v-col>
-        </v-row>
-        <!-- 索引维度由后端在绑定 embedding 档位时探测写回，前端以 alert 显式提示 -->
-        <v-row v-if="createKind === LLM_MODEL_KIND_EMBEDDING" dense>
-          <v-col cols="12">
-            <v-alert type="info">
-              {{ $t("page.llmModelAdmin.dimensionsHint") }}
-            </v-alert>
+          <!-- 上下文容量仅 chat 模型需要：agent 据此计算上下文占用比例并判定自动压缩 -->
+          <v-col v-if="createKind === LLM_MODEL_KIND_CHAT" cols="6">
+            <token-count-field
+              v-model="createContextTokens"
+              v-bind="createContextTokensProps"
+              :label="$t('model.llmModel.field.contextTokens')"
+              :min="1"
+            />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-textarea
               v-model="createDescription"
@@ -197,6 +205,58 @@
             />
           </v-col>
         </v-row>
+        <!-- 高级配置（额外请求字段、思考开关）仅对话模型适用，且均为可选高级项：
+             默认收起，避免长说明文本与非常用字段占据表单主视线 -->
+        <div v-if="createKind === LLM_MODEL_KIND_CHAT" class="zk-panel">
+          <v-expansion-panels v-model="createAdvancedPanel">
+            <v-expansion-panel value="advanced">
+              <expansion-panel-title
+                icon="mdi-tune-variant"
+                :title="$t('page.llmModelAdmin.advancedTitle')"
+                :subtitle="$t('page.llmModelAdmin.advancedHint')"
+              />
+              <v-expansion-panel-text>
+                <v-row density="compact">
+                  <v-col cols="12">
+                    <v-text-field
+                      v-model="createThinkingField"
+                      v-bind="createThinkingFieldProps"
+                      :label="$t('model.llmModel.field.thinkingField')"
+                      :hint="$t('page.llmModelAdmin.thinkingHint')"
+                      persistent-hint
+                    />
+                  </v-col>
+                </v-row>
+                <v-row density="compact">
+                  <v-col cols="6">
+                    <v-text-field
+                      v-model="createThinkingOnValue"
+                      v-bind="createThinkingOnValueProps"
+                      :label="$t('model.llmModel.field.thinkingOnValue')"
+                    />
+                  </v-col>
+                  <v-col cols="6">
+                    <v-text-field
+                      v-model="createThinkingOffValue"
+                      v-bind="createThinkingOffValueProps"
+                      :label="$t('model.llmModel.field.thinkingOffValue')"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row density="compact">
+                  <v-col cols="12">
+                    <json-editor
+                      v-model="createExtraBody"
+                      :label="$t('model.llmModel.field.extraBody')"
+                      :hint="$t('page.llmModelAdmin.extraBodyHint')"
+                      :error-message="createForm.errors.value.extraBody"
+                    />
+                  </v-col>
+                </v-row>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </div>
       </v-form>
     </template>
   </temp-editable-dialog>
@@ -210,7 +270,15 @@
   >
     <template #body="{ proxy, editable }">
       <v-form>
-        <v-row dense>
+        <!-- 索引维度由后端在绑定 embedding 档位时探测写回，前端以 alert 显式提示，置于表单开头避免被下方字段淹没 -->
+        <v-row v-if="proxy.kind === LLM_MODEL_KIND_EMBEDDING" density="compact">
+          <v-col cols="12">
+            <v-alert type="info" class="mb-3">
+              {{ $t("page.llmModelAdmin.dimensionsHint") }}
+            </v-alert>
+          </v-col>
+        </v-row>
+        <v-row density="compact">
           <v-col cols="6">
             <v-text-field
               v-model="updateName"
@@ -227,7 +295,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               v-model="updateBaseURL"
@@ -237,7 +305,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               v-model="updateApiKey"
@@ -252,7 +320,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-text-field
               v-model="updateModel"
@@ -272,7 +340,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-number-input
               v-model="updateTemperature"
@@ -285,17 +353,16 @@
             />
           </v-col>
           <v-col cols="6">
-            <v-number-input
+            <token-count-field
               v-model="updateMaxTokens"
               v-bind="updateMaxTokensProps"
               :label="$t('model.llmModel.field.maxTokens')"
-              :precision="0"
               :min="1"
               :disabled="!editable"
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-switch
               v-model="updateEnabled"
@@ -305,16 +372,18 @@
               :disabled="!editable"
             />
           </v-col>
-        </v-row>
-        <!-- 索引维度由后端在绑定 embedding 档位时探测写回，前端以 alert 显式提示 -->
-        <v-row v-if="proxy.kind === LLM_MODEL_KIND_EMBEDDING" dense>
-          <v-col cols="12">
-            <v-alert type="info">
-              {{ $t("page.llmModelAdmin.dimensionsHint") }}
-            </v-alert>
+          <!-- 上下文容量仅 chat 模型需要：agent 据此计算上下文占用比例并判定自动压缩 -->
+          <v-col v-if="proxy.kind === LLM_MODEL_KIND_CHAT" cols="6">
+            <token-count-field
+              v-model="updateContextTokens"
+              v-bind="updateContextTokensProps"
+              :label="$t('model.llmModel.field.contextTokens')"
+              :min="1"
+              :disabled="!editable"
+            />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-textarea
               v-model="updateDescription"
@@ -325,6 +394,62 @@
             />
           </v-col>
         </v-row>
+        <!-- 高级配置（额外请求字段、思考开关）仅对话模型适用，且均为可选高级项：
+             默认收起，避免长说明文本与非常用字段占据表单主视线 -->
+        <div v-if="proxy.kind === LLM_MODEL_KIND_CHAT" class="zk-panel">
+          <v-expansion-panels v-model="updateAdvancedPanel">
+            <v-expansion-panel value="advanced">
+              <expansion-panel-title
+                icon="mdi-tune-variant"
+                :title="$t('page.llmModelAdmin.advancedTitle')"
+                :subtitle="$t('page.llmModelAdmin.advancedHint')"
+              />
+              <v-expansion-panel-text>
+                <v-row density="compact">
+                  <v-col cols="12">
+                    <v-text-field
+                      v-model="updateThinkingField"
+                      v-bind="updateThinkingFieldProps"
+                      :label="$t('model.llmModel.field.thinkingField')"
+                      :hint="$t('page.llmModelAdmin.thinkingHint')"
+                      persistent-hint
+                      :disabled="!editable"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row density="compact">
+                  <v-col cols="6">
+                    <v-text-field
+                      v-model="updateThinkingOnValue"
+                      v-bind="updateThinkingOnValueProps"
+                      :label="$t('model.llmModel.field.thinkingOnValue')"
+                      :disabled="!editable"
+                    />
+                  </v-col>
+                  <v-col cols="6">
+                    <v-text-field
+                      v-model="updateThinkingOffValue"
+                      v-bind="updateThinkingOffValueProps"
+                      :label="$t('model.llmModel.field.thinkingOffValue')"
+                      :disabled="!editable"
+                    />
+                  </v-col>
+                </v-row>
+                <v-row density="compact">
+                  <v-col cols="12">
+                    <json-editor
+                      v-model="updateExtraBody"
+                      :label="$t('model.llmModel.field.extraBody')"
+                      :hint="$t('page.llmModelAdmin.extraBodyHint')"
+                      :error-message="updateForm.errors.value.extraBody"
+                      :disabled="!editable"
+                    />
+                  </v-col>
+                </v-row>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </div>
       </v-form>
     </template>
   </temp-editable-dialog>
@@ -349,10 +474,12 @@ import type { BatchActions, ItemActions } from "@/components/@types/table";
 import { createLlmModelSchema, updateLlmModelSchema } from "@/schemas/llm";
 import { useAppStore } from "@/stores/app";
 import { BackendDataType } from "@/types";
+import { INVALID_PLACEHOLDER } from "@/utils/base";
 import { isEmptyCiphertext } from "@/utils/encrypted";
 import { vuetifyCfg } from "@/utils/form";
 import { EnumClass, enumLabelOf, enumOptionsOf, ensureEnum } from "@/utils/enums";
 import i18n from "@/utils/i18n";
+import { formatTokenCount } from "@/utils/token";
 
 // ---- 表单校验 schema ----
 const createForm = useForm({ validationSchema: createLlmModelSchema() });
@@ -372,9 +499,26 @@ const [createTemperature, createTemperatureProps] = createForm.defineField(
   vuetifyCfg,
 );
 const [createMaxTokens, createMaxTokensProps] = createForm.defineField("maxTokens", vuetifyCfg);
+const [createContextTokens, createContextTokensProps] = createForm.defineField(
+  "contextTokens",
+  vuetifyCfg,
+);
 const [createEnabled, createEnabledProps] = createForm.defineField("enabled", vuetifyCfg);
 const [createDescription, createDescriptionProps] = createForm.defineField(
   "description",
+  vuetifyCfg,
+);
+const [createExtraBody] = createForm.defineField("extraBody", vuetifyCfg);
+const [createThinkingField, createThinkingFieldProps] = createForm.defineField(
+  "thinkingField",
+  vuetifyCfg,
+);
+const [createThinkingOnValue, createThinkingOnValueProps] = createForm.defineField(
+  "thinkingOnValue",
+  vuetifyCfg,
+);
+const [createThinkingOffValue, createThinkingOffValueProps] = createForm.defineField(
+  "thinkingOffValue",
   vuetifyCfg,
 );
 
@@ -391,9 +535,26 @@ const [updateTemperature, updateTemperatureProps] = updateForm.defineField(
   vuetifyCfg,
 );
 const [updateMaxTokens, updateMaxTokensProps] = updateForm.defineField("maxTokens", vuetifyCfg);
+const [updateContextTokens, updateContextTokensProps] = updateForm.defineField(
+  "contextTokens",
+  vuetifyCfg,
+);
 const [updateEnabled, updateEnabledProps] = updateForm.defineField("enabled", vuetifyCfg);
 const [updateDescription, updateDescriptionProps] = updateForm.defineField(
   "description",
+  vuetifyCfg,
+);
+const [updateExtraBody] = updateForm.defineField("extraBody", vuetifyCfg);
+const [updateThinkingField, updateThinkingFieldProps] = updateForm.defineField(
+  "thinkingField",
+  vuetifyCfg,
+);
+const [updateThinkingOnValue, updateThinkingOnValueProps] = updateForm.defineField(
+  "thinkingOnValue",
+  vuetifyCfg,
+);
+const [updateThinkingOffValue, updateThinkingOffValueProps] = updateForm.defineField(
+  "thinkingOffValue",
   vuetifyCfg,
 );
 
@@ -402,48 +563,57 @@ const searchTableRef = useTemplateRef("searchTableRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
-const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 
 // ---- 凭据明文展示开关（创建/编辑各自独立，避免互相串扰）----
 const createApiKeyRevealed = ref(false);
 const editApiKeyRevealed = ref(false);
 
+// ---- 高级配置面板的展开态（创建 / 编辑各自独立）----
+// 面板为手风琴式，v-model 必须是单值（空串 = 收起）；高级字段默认收起，不占表单主视线
+const createAdvancedPanel = ref("");
+const updateAdvancedPanel = ref("");
+
 // kind 下拉选项来自统一枚举注册表（label 由后端按当前语言返回）
 const kindOptions = computed(() => enumOptionsOf(EnumClass.llmModelKind));
 // LLM_MODEL_KIND_EMBEDDING 向量化模型在 llmModelKind 枚举中的值（仅该类型模型有索引维度）
 const LLM_MODEL_KIND_EMBEDDING = "embedding";
+// LLM_MODEL_KIND_CHAT 对话模型在 llmModelKind 枚举中的值（仅该类型模型需填上下文容量）
+const LLM_MODEL_KIND_CHAT = "chat";
 
 onMounted(() => {
   void ensureEnum(EnumClass.llmModelKind);
 });
 
 // ---- 创建对话框 ----
+// 出厂默认值：每次打开都以此复位，因此上一次填写的内容不会残留
+const createDefaults = {
+  name: "",
+  kind: "",
+  baseURL: "",
+  apiKey: "",
+  model: "",
+  timeoutSeconds: 60,
+  temperature: 0.2,
+  maxTokens: 4096,
+  // 上下文容量仅 chat 模型需要：默认 0，选中 chat 后由用户填写正整数
+  contextTokens: 0,
+  enabled: true,
+  description: "",
+  // 高级请求配置与思考开关仅 chat 模型适用：默认留空
+  extraBody: "",
+  thinkingField: "",
+  thinkingOnValue: "",
+  thinkingOffValue: "",
+};
+
+// 复位是「准备本次打开的数据」的一部分，与填充默认值同在打开动作里完成。
+// 用 resetForm 而非逐字段 resetField：前者原子重置值 + errors/touched/dirty/validated/submitCount，不留残影。
 const openCreateDialogAction = (): void => {
-  const defaults = {
-    name: "",
-    kind: "",
-    baseURL: "",
-    apiKey: "",
-    model: "",
-    timeoutSeconds: 60,
-    temperature: 0.2,
-    maxTokens: 4096,
-    enabled: true,
-    description: "",
-  };
-  createForm.resetField("name", { value: defaults.name });
-  createForm.resetField("kind", { value: defaults.kind });
-  createForm.resetField("baseURL", { value: defaults.baseURL });
-  createForm.resetField("apiKey", { value: defaults.apiKey });
-  createForm.resetField("model", { value: defaults.model });
-  createForm.resetField("timeoutSeconds", { value: defaults.timeoutSeconds });
-  createForm.resetField("temperature", { value: defaults.temperature });
-  createForm.resetField("maxTokens", { value: defaults.maxTokens });
-  createForm.resetField("enabled", { value: defaults.enabled });
-  createForm.resetField("description", { value: defaults.description });
+  createForm.resetForm({ values: createDefaults });
   createApiKeyRevealed.value = false;
-  createDialogRef.value?.open(defaults);
+  createAdvancedPanel.value = "";
+  createDialogRef.value?.open(createDefaults);
 };
 
 const createAction = createForm.handleSubmit(async (values) => {
@@ -458,8 +628,15 @@ const createAction = createForm.handleSubmit(async (values) => {
       timeoutSeconds: values.timeoutSeconds,
       temperature: values.temperature,
       maxTokens: values.maxTokens,
+      // 上下文容量仅 chat 模型需要，embedding 模型提交 0（后端亦强制置 0）
+      contextTokens: values.kind === LLM_MODEL_KIND_CHAT ? values.contextTokens : 0,
       enabled: values.enabled,
       description: values.description,
+      // 高级请求配置与思考开关仅 chat 模型适用：embedding 模型一律提交空串
+      extraBody: values.kind === LLM_MODEL_KIND_CHAT ? values.extraBody : "",
+      thinkingField: values.kind === LLM_MODEL_KIND_CHAT ? values.thinkingField : "",
+      thinkingOnValue: values.kind === LLM_MODEL_KIND_CHAT ? values.thinkingOnValue : "",
+      thinkingOffValue: values.kind === LLM_MODEL_KIND_CHAT ? values.thinkingOffValue : "",
     }),
     async (rsp) => {
       await searchTableRef.value?.refresh();
@@ -488,17 +665,28 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
     llmModelDetailGet(item.id as number),
     async (rsp) => {
       editModelId = rsp.data.id;
-      updateForm.resetField("name", { value: rsp.data.name });
-      updateForm.resetField("baseURL", { value: rsp.data.baseURL });
-      // 凭据不回填密文：留空即表示沿用原凭据
-      updateForm.resetField("apiKey", { value: "" });
-      updateForm.resetField("model", { value: rsp.data.model });
-      updateForm.resetField("timeoutSeconds", { value: rsp.data.timeoutSeconds });
-      updateForm.resetField("temperature", { value: rsp.data.temperature });
-      updateForm.resetField("maxTokens", { value: rsp.data.maxTokens });
-      updateForm.resetField("enabled", { value: rsp.data.enabled });
-      updateForm.resetField("description", { value: rsp.data.description });
+      // 复位与回填同属「准备本次打开的数据」：resetForm 原子重置值 + 校验状态，再写入本次详情
+      updateForm.resetForm({
+        values: {
+          name: rsp.data.name,
+          baseURL: rsp.data.baseURL,
+          // 凭据不回填密文：留空即表示沿用原凭据
+          apiKey: "",
+          model: rsp.data.model,
+          timeoutSeconds: rsp.data.timeoutSeconds,
+          temperature: rsp.data.temperature,
+          maxTokens: rsp.data.maxTokens,
+          contextTokens: rsp.data.contextTokens,
+          enabled: rsp.data.enabled,
+          description: rsp.data.description,
+          extraBody: rsp.data.extraBody,
+          thinkingField: rsp.data.thinkingField,
+          thinkingOnValue: rsp.data.thinkingOnValue,
+          thinkingOffValue: rsp.data.thinkingOffValue,
+        },
+      });
       editApiKeyRevealed.value = false;
+      updateAdvancedPanel.value = "";
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -523,8 +711,14 @@ const itemUpdateAction = () => {
         timeoutSeconds: values.timeoutSeconds,
         temperature: values.temperature,
         maxTokens: values.maxTokens,
+        contextTokens: values.contextTokens,
         enabled: values.enabled,
         description: values.description,
+        // 高级请求配置与思考开关随更新请求发送（embedding 模型由详情回填后原样提交）
+        extraBody: values.extraBody,
+        thinkingField: values.thinkingField,
+        thinkingOnValue: values.thinkingOnValue,
+        thinkingOffValue: values.thinkingOffValue,
       }),
       async (rsp) => {
         await searchTableRef.value?.refresh();
@@ -604,8 +798,7 @@ const projectFields = (visible: string[]): string[] => [
   ...visible,
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     test: itemTestAction,
@@ -615,16 +808,6 @@ const getActions = (item: Record<string, any>): ItemActions => {
       deleteConfirmRef.value?.open(i);
     },
   };
-  switch (item.enabled) {
-    case false:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.activate = (i: Record<string, any>) => toggleAction(i, true);
-      break;
-    case true:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.deactivate = (i: Record<string, any>) => toggleAction(i, false);
-      break;
-  }
   return actions;
 };
 
@@ -707,61 +890,30 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
 };
 
 // ---- 启用/禁用 ----
-// 后端无独立的启停接口：读取详情后以整表单更新翻转载入（凭据留空即沿用原密文）
-const toggleTarget = ref<boolean | null>(null);
-
+// 后端无独立的启停接口：读取详情后以整表单更新翻转载入（凭据留空即沿用原密文）。
+// 该复合请求交由 EnabledSwitchCell 行内开关执行：组件负责乐观更新、按行 pending 与失败回退。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
-  toggleTarget.value = enabled;
-  toggleConfirmRef.value?.open(item);
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
-  if (toggleTarget.value === null) {
-    return;
-  }
-  const target = toggleTarget.value;
-  await getResponse<LlmModelDetailOut>(
-    llmModelDetailGet(proxy.id as number),
-    async (rsp) => {
-      const detail = rsp.data;
-      await getSimpleResponse(
-        llmModelUpdate(detail.id, {
-          name: detail.name,
-          baseURL: detail.baseURL,
-          apiKey: "",
-          model: detail.model,
-          timeoutSeconds: detail.timeoutSeconds,
-          temperature: detail.temperature,
-          maxTokens: detail.maxTokens,
-          enabled: target,
-          description: detail.description,
-        }),
-        async (rsp2) => {
-          await searchTableRef.value?.refresh();
-          appStore.notify({
-            text: rsp2.summary,
-            timeout: 3000,
-            color: "success",
-          });
-        },
-        async (rsp2) => {
-          appStore.notify({
-            text: rsp2.summary,
-            timeout: 3000,
-            color: "error",
-          });
-        },
-      );
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
+const setEnabledRequest = async (item: Record<string, any>, enabled: boolean) => {
+  // 详情接口返回统一信封 { code, summary, data }：axios 的 rsp.data 是整个信封，
+  // 直接取它会把信封当详情（其 id 为 undefined），更新请求因此打成
+  // /admin/llm/model/undefined/update 并返回 400。故需再取一层信封内的 data 才是详情载荷。
+  const detail = (await llmModelDetailGet(item.id as number)).data.data as LlmModelDetailOut;
+  return llmModelUpdate(detail.id, {
+    name: detail.name,
+    baseURL: detail.baseURL,
+    apiKey: "",
+    model: detail.model,
+    timeoutSeconds: detail.timeoutSeconds,
+    temperature: detail.temperature,
+    maxTokens: detail.maxTokens,
+    contextTokens: detail.contextTokens,
+    enabled: enabled,
+    description: detail.description,
+    // 高级请求配置与思考开关随整表单更新原样回传，避免启停操作误清空
+    extraBody: detail.extraBody,
+    thinkingField: detail.thinkingField,
+    thinkingOnValue: detail.thinkingOnValue,
+    thinkingOffValue: detail.thinkingOffValue,
+  });
 };
 </script>

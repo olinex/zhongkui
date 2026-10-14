@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // StaticDatasource 是内存行集的参考数据源实现，演示 Datasource 契约与下推

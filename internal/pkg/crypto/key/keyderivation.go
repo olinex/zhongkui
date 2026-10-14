@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"golang.org/x/crypto/hkdf"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // MinKeyLength 定义派生密钥的最小长度（字节）

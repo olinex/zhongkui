@@ -3,7 +3,7 @@
     :items="crumbs"
     :divider="'/'"
     density="compact"
-    class="px-0 mb-1 text-caption zk-breadcrumbs"
+    class="px-0 text-body-small zk-breadcrumbs"
   />
 </template>
 

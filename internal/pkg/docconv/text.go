@@ -4,7 +4,7 @@ import (
 	"io"
 	"strings"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // convertPlainText 从 ReaderAt 读全量文本，去 UTF-8 BOM 并清洗非法 UTF-8 字节后原样返回；

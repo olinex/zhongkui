@@ -65,13 +65,13 @@ import (
 	"context"
 
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/etl"
-	"zhongkui.com/zhongkui/internal/worker/handlers/knowledge"
-	"zhongkui.com/zhongkui/internal/worker/handlers/mail"
-	"zhongkui.com/zhongkui/internal/worker/handlers/notify"
-	"zhongkui.com/zhongkui/internal/worker/handlers/pcap"
-	"zhongkui.com/zhongkui/internal/worker/handlers/tag_event"
-	"zhongkui.com/zhongkui/internal/worker/processors/flow"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/knowledge"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/mail"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/notify"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/pcap"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/tag_event"
+	"zhongkuisec.com/zhongkui/internal/worker/processors/flow"
 )
 
 // Registry 注册所有 worker 处理器到任务队列与处理器框架。

@@ -93,7 +93,7 @@ export interface NotificationTargetItem {
   createdAt: string;
   updatedAt: string;
   name: string;
-  channelId: number;
+  channelID: number;
   channelName: string;
   channelType: string;
   channelEnabled: boolean;
@@ -113,7 +113,7 @@ export interface NotificationTargetListOut {
 // NotificationTargetCreateIn 创建通知目标入参
 export interface NotificationTargetCreateIn {
   name: string;
-  channelId: number;
+  channelID: number;
   enabled: boolean;
   config: string;
   language?: string;
@@ -153,7 +153,7 @@ export interface NotificationTargetTestSendTargetOut {
 
 // NotificationTargetTestSendOut 通知目标测试发送出参
 export interface NotificationTargetTestSendOut {
-  messageId: string;
+  messageID: string;
   title: string;
   content: string;
   language: string;
@@ -166,7 +166,7 @@ export interface NotificationTargetTestSendOut {
 export interface NotificationTargetSearchIn extends SearchIn {
   search?: string;
   name?: string;
-  channelId?: number;
+  channelID?: number;
   type?: string;
   enabled?: boolean;
   language?: string;
@@ -197,15 +197,15 @@ export interface NotificationGroupCreateIn {
   name: string;
   isDefault: boolean;
   description?: string;
-  // targetIds 创建时随组绑定的通知目标 ID 列表（可选）
-  targetIds?: number[];
+  // targetIDs 创建时随组绑定的通知目标 ID 列表（可选）
+  targetIDs?: number[];
 }
 
 // NotificationGroupUpdateIn 更新通知分组入参
 export interface NotificationGroupUpdateIn {
   description?: string;
-  // targetIds 目标 ID 列表（可选）：提供时整集替换绑定目标，空数组解绑全部；缺省保持既有绑定不变
-  targetIds?: number[];
+  // targetIDs 目标 ID 列表（可选）：提供时整集替换绑定目标，空数组解绑全部；缺省保持既有绑定不变
+  targetIDs?: number[];
 }
 
 // NotificationGroupBatchIn 通知分组批量操作入参（删除）
@@ -218,7 +218,7 @@ export interface NotificationGroupTargetItem {
   id: number;
   name: string;
   type: string;
-  channelId: number;
+  channelID: number;
   channelName: string;
   channelType: string;
   enabled: boolean;
@@ -253,12 +253,12 @@ export interface NotificationRecordItem {
   createdAt: string;
   updatedAt: string;
   eventType: string;
-  eventId: number;
-  targetId: number;
+  eventID: number;
+  targetID: number;
   targetName: string;
   channelType: string;
   status: string;
-  messageId: string;
+  messageID: string;
   notifiedAt: string | null;
 }
 
@@ -274,16 +274,16 @@ export interface NotificationRecordDetailOut {
   createdAt: string;
   updatedAt: string;
   eventType: string;
-  eventId: number;
-  groupId: number;
-  targetId: number;
+  eventID: number;
+  groupID: number;
+  targetID: number;
   targetName: string;
-  channelId: number;
+  channelID: number;
   channelName: string;
   channelType: string;
   status: string;
   error: string;
-  messageId: string;
+  messageID: string;
   payload: string;
   notifiedAt: string | null;
 }

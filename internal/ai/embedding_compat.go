@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
 // VerifyEmbeddingCompat 探测 cfg 指向的 embedding 端点实际输出的向量维度，并校验其与

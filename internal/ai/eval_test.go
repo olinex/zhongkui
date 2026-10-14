@@ -12,7 +12,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // fakeChat 是测试用 chatGenerator 替身：Generate 与 Stream 分别转调配置的 gen/stream；
@@ -427,6 +427,47 @@ func TestEvaluateStreaming(t *testing.T) {
 	}
 }
 
+// namedChat 在 fakeChat 之上补充 ModelName，用于验证阶段事件会携带模型名
+// （生产链路中 *llm.ChatClient 满足 chatModelNamer，chatModelName 据此取回）。
+type namedChat struct {
+	*fakeChat
+	name string
+}
+
+// ModelName 返回预置的模型名。
+func (c *namedChat) ModelName() string { return c.name }
+
+// TestEvaluateStageEventsCarryModel 测试阶段事件携带模型名：emit 统一注入，使前端在
+// 运行中即可 hover 查看模型，而无需等待收尾汇总（DryRunMeta.Calls）。
+func TestEvaluateStageEventsCarryModel(t *testing.T) {
+	results := []RetrievalResult{{DocumentID: "1", Title: "A", Content: "The sky is blue."}}
+	responses := []string{
+		`{"answer": "The sky is blue."}`,
+		`{"judgments": []}`,
+		`{"claims": []}`,
+		`{"questions": []}`,
+		`{"suggestions": []}`,
+	}
+	i := 0
+	chat := &namedChat{fakeChat: &fakeChat{stream: streamOf(responses, &i)}, name: "qwen3.8-flash"}
+	events := make([]StageEvent, 0, 10)
+	report := func(ev StageEvent) error {
+		events = append(events, ev)
+		return nil
+	}
+	if _, _, err := evaluate(context.Background(), testParams(t, nil), chat, uniformEmbed(), "q", results, diagnosisContext{}, report); err != nil {
+		t.Fatalf("evaluate() error = %v", err)
+	}
+	if len(events) == 0 {
+		t.Fatal("no stage events emitted")
+	}
+	for _, e := range events {
+		if e.Model != "qwen3.8-flash" {
+			t.Errorf("stage %s event Model = %q, want %q", e.Stage, e.Model, "qwen3.8-flash")
+		}
+	}
+}
+
 // TestEvaluateStreamFailed 测试流式评估的阶段失败上报：解析失败时上报带错误信息的
 // failed 事件，同时仍降级为 warning 并置 0 相关指标。
 func TestEvaluateStreamFailed(t *testing.T) {
@@ -492,5 +533,18 @@ func TestStreamChatReportError(t *testing.T) {
 	}
 	if meta.Stage != EvalStageAnswer {
 		t.Errorf("meta.Stage = %q, want %q", meta.Stage, EvalStageAnswer)
+	}
+}
+
+// TestEvalSnippet 测试评估提示词中的分块文本：整篇展开的命中（Complete）原样返回、不截断，
+// 其余按 snippetLimit 截断。
+func TestEvalSnippet(t *testing.T) {
+	long := "一二三四五六七八九十"
+
+	if got := evalSnippet(RetrievalResult{Content: long, Complete: true}, 3); got != long {
+		t.Errorf("evalSnippet(complete) = %q, want the untruncated %q", got, long)
+	}
+	if got := evalSnippet(RetrievalResult{Content: long}, 3); got != "一二三..." {
+		t.Errorf("evalSnippet(chunk) = %q, want the truncated %q", got, "一二三...")
 	}
 }

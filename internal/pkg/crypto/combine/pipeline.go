@@ -3,7 +3,7 @@ package combine
 import (
 	"io"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ---------------------------------------------------------------------------

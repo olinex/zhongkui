@@ -6,7 +6,7 @@ package core
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // notificationSourceValues 是 notificationSource 枚举类的取值空间，取自通知模板来源常量

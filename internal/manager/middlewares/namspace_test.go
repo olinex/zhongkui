@@ -13,9 +13,9 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/text/language"
-	"zhongkui.com/zhongkui/internal/manager/config"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/manager/config"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/models/core"
 )
 
 // newTestLocalizer 创建一个用于测试的 i18n 本地化器

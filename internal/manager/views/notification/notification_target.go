@@ -13,18 +13,18 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	core "zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/notify"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	message "zhongkui.com/zhongkui/internal/pkg/message"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	notifyhandler "zhongkui.com/zhongkui/internal/worker/handlers/notify"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	core "zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/notify"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	message "zhongkuisec.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	notifyhandler "zhongkuisec.com/zhongkui/internal/worker/handlers/notify"
 )
 
 // NotificationTargetCreateIn 定义创建通知目标的请求输入结构。
@@ -35,7 +35,7 @@ type NotificationTargetCreateIn struct {
 	// Name 目标名称，必填，长度 1~128（同一命名空间内唯一）
 	Name string `json:"name" binding:"required,min=1,max=128"`
 	// ChannelID 目标所属的通知渠道 ID，必填
-	ChannelID uint `json:"channelId" binding:"required"`
+	ChannelID uint `json:"channelID" binding:"required"`
 	// Enabled 是否启用，默认启用
 	Enabled bool `json:"enabled" default:"true"`
 	// Config 目标级配置（JSON 文本），必填
@@ -66,7 +66,7 @@ type NotificationTargetDetailOut struct {
 	// Name 目标名称
 	Name string `json:"name"`
 	// ChannelID 目标所属的通知渠道 ID
-	ChannelID uint `json:"channelId"`
+	ChannelID uint `json:"channelID"`
 	// ChannelName 目标所属渠道的名称
 	ChannelName string `json:"channelName"`
 	// ChannelType 目标所属渠道的类型键（如 email、webhook）
@@ -119,11 +119,11 @@ type NotificationTargetSendIn struct {
 // 回显本次异步投递请求所定位的目标与事件引用。
 type NotificationTargetSendOut struct {
 	// TargetID 本次投递的目标 ID
-	TargetID uint `json:"targetId"`
+	TargetID uint `json:"targetID"`
 	// EventType 本次投递的事件类型键
 	EventType string `json:"eventType"`
 	// EventID 本次投递的事件 ID
-	EventID uint `json:"eventId"`
+	EventID uint `json:"eventID"`
 }
 
 // NotificationTargetTestSendOut 定义通知目标 test-send 的输出结构。
@@ -132,7 +132,7 @@ type NotificationTargetSendOut struct {
 // 核对，保证「所见即所发」）；结构对渠道类型无感知，新渠道无需改动本结构即可复用。
 type NotificationTargetTestSendOut struct {
 	// MessageID 渠道返回的消息 ID
-	MessageID string `json:"messageId"`
+	MessageID string `json:"messageID"`
 	// Title 渲染后的消息标题
 	Title string `json:"title"`
 	// Content 渲染后的消息正文
@@ -527,7 +527,7 @@ func notificationTestSendFailed(c *gin.Context, err error) {
 
 // NotificationTargetSend 处理"向单个通知目标发送"的请求。
 // 按 (id, namespace) 预加载渠道校验目标存在且属于当前命名空间（缺失 404），
-// 目标或所属渠道被禁用时返回 400 + CodeNotificationSendFailed（复用 notificationTestSendFailed），
+// 目标或所属渠道被禁用时返回 400 + CodeNotificationSendFailed（详情为可本地化文案），
 // 通过后组装 notify.SendTargetInput 并投递 notify:send:target 异步任务（投递失败 500）。
 func NotificationTargetSend(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
@@ -550,7 +550,7 @@ func NotificationTargetSend(c *gin.Context) {
 	}
 	// 目标自身被禁用，或所属渠道缺失 / 被禁用时，目标不可投递，以正常业务错误返回
 	if !target.Enabled || target.Channel.ID == 0 || !target.Channel.Enabled {
-		notificationTestSendFailed(c, errors.New("notification: target or its channel is disabled"))
+		response.CreateNotificationSendFailedError("notificationTargetDisabled").AbortWithGinH(c)
 		return
 	}
 	var in NotificationTargetSendIn

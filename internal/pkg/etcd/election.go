@@ -11,9 +11,9 @@ import (
 	"fmt"
 
 	"go.etcd.io/etcd/client/v3/concurrency"
-	"zhongkui.com/zhongkui/internal/pkg/errgroupx"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/errgroupx"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // electionPrefix 是领导者选举在 etcd 中的键前缀，

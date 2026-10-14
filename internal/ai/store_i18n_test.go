@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // TestDisabledReasonLocalized 验证 AI 能力不可用的原因在全部支持语言下都解析为真实文案，

@@ -34,7 +34,7 @@
 // 无状态——写入器接口 MemoryWriter 与入参 MemoryWriteInput 声明于本包，由 internal/ai 的适配器
 // 实现向量化、精确哈希去重与语义合并；本次运行的归属信息（命名空间 / Agent 类型 / 来源会话）与
 // 写入器一同经 WithMemoryRuntime 注入 ctx，由 Agent 在派发工具前写入，取不到时工具返回英文错误。
-// MemoryWriteInput.SessionID 必须非 0：记忆按会话隔离，无会话归属的记忆不被接受。
+// MemoryWriteInput.SessionID 必须非空：记忆按会话隔离，无会话归属的记忆不被接受。
 //
 // ## MCP 工具
 //
@@ -71,9 +71,9 @@ import (
 	"github.com/cloudwego/eino/components/tool"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // Deps 是构建内置工具时可注入的运行期依赖：数据库句柄与日志记录器。构造由调用方（运行时

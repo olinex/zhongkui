@@ -150,12 +150,6 @@ export const navigationGroups: NavGroup[] = [
         namespaceScoped: true,
       },
       {
-        title: "navbar.ai.assistant",
-        icon: "mdi-robot",
-        routeName: "AI Assistant",
-        namespaceScoped: true,
-      },
-      {
         title: "navbar.ai.memory",
         icon: "mdi-brain",
         routeName: "AI Memory List",
@@ -217,11 +211,6 @@ export const navigationGroups: NavGroup[] = [
         routeName: "Admin Capturer List",
       },
       {
-        title: "navbar.admin.systemStatus",
-        icon: "mdi-server",
-        routeName: "Admin System Status",
-      },
-      {
         title: "navbar.admin.llmConfig",
         icon: "mdi-robot-happy-outline",
         routeName: "Admin LLM Config",
@@ -232,6 +221,11 @@ export const navigationGroups: NavGroup[] = [
         icon: "mdi-database-import-outline",
         routeName: "Datasource List",
         namespaceScoped: true,
+      },
+      {
+        title: "navbar.admin.systemStatus",
+        icon: "mdi-server",
+        routeName: "Admin System Status",
       },
     ],
   },

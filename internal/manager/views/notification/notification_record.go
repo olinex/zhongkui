@@ -7,13 +7,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 
-	core "zhongkui.com/zhongkui/internal/models/core"
+	core "zhongkuisec.com/zhongkui/internal/models/core"
 )
 
 // NotificationRecordDetailOut 定义通知记录详情输出结构。
@@ -23,15 +23,15 @@ type NotificationRecordDetailOut struct {
 	// EventType 事件类型，标识 EventID 指向的事件类型
 	EventType string `json:"eventType"`
 	// EventID 触发通知的事件 ID
-	EventID uint `json:"eventId"`
+	EventID uint `json:"eventID"`
 	// GroupID 发送时所属的通知组 ID，0 表示未绑定组
-	GroupID uint `json:"groupId"`
+	GroupID uint `json:"groupID"`
 	// TargetID 通知目标 ID
-	TargetID uint `json:"targetId"`
+	TargetID uint `json:"targetID"`
 	// TargetName 通知目标名称（尽力补全，目标已删除时为空字符串）
 	TargetName string `json:"targetName"`
 	// ChannelID 发送通知的渠道 ID
-	ChannelID uint `json:"channelId"`
+	ChannelID uint `json:"channelID"`
 	// ChannelName 渠道名称（尽力补全，渠道已删除时为空字符串）
 	ChannelName string `json:"channelName"`
 	// ChannelType 渠道类型键快照
@@ -41,7 +41,7 @@ type NotificationRecordDetailOut struct {
 	// Error 发送失败时的错误信息，成功时为空字符串
 	Error string `json:"error"`
 	// MessageID 渠道返回的消息 ID
-	MessageID string `json:"messageId"`
+	MessageID string `json:"messageID"`
 	// Payload 通知负载（JSON 文本）快照
 	Payload string `json:"payload"`
 	// NotifiedAt 通知实际发送成功的时间，nil 表示尚未发送成功
@@ -56,9 +56,9 @@ type NotificationRecordListOut struct {
 	// EventType 事件类型，标识 EventID 指向的事件类型
 	EventType string `json:"eventType"`
 	// EventID 触发通知的事件 ID
-	EventID uint `json:"eventId"`
+	EventID uint `json:"eventID"`
 	// TargetID 通知目标 ID
-	TargetID uint `json:"targetId"`
+	TargetID uint `json:"targetID"`
 	// TargetName 通知目标名称（尽力补全，目标已删除时为空字符串）
 	TargetName string `json:"targetName"`
 	// ChannelType 渠道类型键快照
@@ -66,7 +66,7 @@ type NotificationRecordListOut struct {
 	// Status 通知发送状态：pending/success/failed
 	Status string `json:"status"`
 	// MessageID 渠道返回的消息 ID
-	MessageID string `json:"messageId"`
+	MessageID string `json:"messageID"`
 	// NotifiedAt 通知实际发送成功的时间，nil 表示尚未发送成功
 	NotifiedAt *time.Time `json:"notifiedAt"`
 	utils.BaseTotalOut

@@ -63,7 +63,10 @@ const (
 	CodeAgentRunNotFound                          // 1116: 待恢复的运行现场不存在
 	CodeAgentRunConsumed                          // 1117: 运行现场已被消费（重复恢复）
 	CodeAgentRunExpired                           // 1118: 运行现场已过期
-	CodeAgentRunForbidden                         // 1119: 运行现场归属不符
+	CodeSystemNamespaceProtected                  // 1119: 内置系统命名空间受保护，禁止删除
+	CodeAgentLiveRunNotFound                      // 1120: 驻留运行不存在
+	CodeAgentLiveRunExpired                       // 1121: 驻留运行登记已过期
+	CodeAgentLiveRunForbidden                     // 1122: 驻留运行归属不符
 )
 
 // 预定义的常用错误实例
@@ -80,6 +83,8 @@ var (
 	ErrDefaultNoMethod = CreateCodeError(http.StatusMethodNotAllowed, http.StatusMethodNotAllowed, nil)
 	// ErrCannotDeleteCauseRelateRecord 表示因存在关联记录而无法执行删除操作
 	ErrCannotDeleteCauseRelateRecord = CreateCodeError(http.StatusBadRequest, CodeCannotDeleteCauseRelateRecord, nil)
+	// ErrSystemNamespaceProtected 表示内置系统命名空间受保护，禁止删除
+	ErrSystemNamespaceProtected = CreateCodeError(http.StatusBadRequest, CodeSystemNamespaceProtected, nil)
 )
 
 // LocalizedError 定义可本地化错误的接口
@@ -144,12 +149,35 @@ type DetailContext struct {
 
 // Localize 根据 Localizer 将 DetailContext 本地化为翻译后的字符串
 // 先从翻译文件中查找 "error.{MsgID}" 对应的消息模板，再使用 args 参数格式化模板。
-// 如果翻译文件中不存在对应的消息 ID，MustLocalizeMessage 会 panic。
+// 翻译缺失（键未登记或语言不支持）时不 panic，而是回退返回 MsgID 本身：
+// 错误详情属于「展示给用户」的内容，缺键是登记疏漏而非请求异常，绝不能把 400 放大成 500；
+// 由守卫测试（response_i18n_test.go）在构建阶段拦截漏登记的键，此处只作运行时兜底。
 func (d *DetailContext) Localize(localizer *i18n.Localizer) string {
-	template := localizer.MustLocalizeMessage(&i18n.Message{
-		ID: fmt.Sprintf("error.%s", d.MsgID),
+	key := fmt.Sprintf("error.%s", d.MsgID)
+	template, err := localizer.Localize(&i18n.LocalizeConfig{
+		MessageID:      key,
+		DefaultMessage: &i18n.Message{ID: key},
 	})
+	if err != nil || template == "" || template == key {
+		return d.MsgID
+	}
 	return fmt.Sprintf(template, d.args...)
+}
+
+// LocalizeDetail 按 msgID 与参数在给定语言下渲染错误详情文案。
+// 与 DetailContext.Localize 同源同规则（缺键回退 msgID），用于「详情需要本地化、但不经
+// CodeError 下发」的场景，典型如批量操作的逐条失败原因（BatchFailureOut.Reason 直接取
+// err.Error()，只能预先渲染成字符串）。
+//
+// 参数：
+//   - localizer: i18n 本地化器，通常取自 response.GetLocalizer(c)
+//   - msgID: 国际化消息 ID，对应翻译文件中 "error.{msgID}" 键
+//   - args: 消息模板的格式化参数
+//
+// 返回值：
+//   - string: 渲染后的本地化文案
+func LocalizeDetail(localizer *i18n.Localizer, msgID string, args ...any) string {
+	return (&DetailContext{MsgID: msgID, args: args}).Localize(localizer)
 }
 
 // summaryLocalize 根据 Localizer 将错误码本地化为翻译后的摘要字符串
@@ -216,7 +244,30 @@ func CreateBadBodyError(err error) *CodeError {
 	if vErr, ok := err.(validator.ValidationErrors); ok {
 		return CreateCodeError(http.StatusBadRequest, CodeBadBody, vErr)
 	}
+	// 上游助手已构造 CodeError 时直接透传：这类错误自带响应意图（业务码 + 可本地化详情），
+	// 再包一层会把它降级成英文诊断字符串，破坏本地化（如 ReadMultipartFile 的超限错误）。
+	if codeErr, ok := err.(*CodeError); ok {
+		return codeErr
+	}
 	return CreateCodeError(http.StatusBadRequest, CodeBadBody, err)
+}
+
+// CreateBadBodyMessageError 创建一个请求体错误、详情为可本地化消息的 CodeError
+// 与 CreateBadBodyError 的分工：后者承载 error 对象（详情原样输出，不做本地化），适用于
+// 「原因本身是诊断信息」的场景；本函数用于「拒绝原因需要展示给用户」的场景，详情经
+// DetailContext 按请求语言本地化，故 msgID 对应的键须在 en.toml / zh-Hans.toml 的 [error] 表中齐备。
+//
+// 参数：
+//   - msgID: 国际化消息 ID，对应翻译文件中 "error.{msgID}" 键
+//   - args: 消息模板的格式化参数
+//
+// 返回值：
+//   - *CodeError: HTTP 状态码为 400，业务码为 CodeBadBody 的错误实例
+func CreateBadBodyMessageError(msgID string, args ...any) *CodeError {
+	return CreateCodeError(http.StatusBadRequest, CodeBadBody, &DetailContext{
+		MsgID: msgID,
+		args:  args,
+	})
 }
 
 // CreateBadQueryError 创建一个查询参数错误的 CodeError
@@ -253,15 +304,58 @@ func CreateSchedulerTaskError(msgID string, args ...any) *CodeError {
 // 用于「请求体本身合法、冲突在于系统当前配置」的拒绝场景，典型如 embedding 模型的实际输出
 // 维度与知识库索引（knowledge_chunks.embedding 列）维度不兼容：此类冲突不是请求体格式问题，
 // 故不使用 CodeBadBody（1002），而使用专门的业务码，便于前端与管理台区分处置方式。
-// 错误详情为原始 error 对象（英文，含修复步骤）。
+// 错误详情使用 DetailContext 包装，按请求语言本地化（含可执行的修复步骤），故 msgID 对应的
+// 键须在 en.toml / zh-Hans.toml 的 [error] 表中齐备；参数用于填充文案中的模型名与维度数字。
 //
 // 参数：
-//   - err: 不兼容原因（原始 error 对象）
+//   - msgID: 国际化消息 ID，对应翻译文件中 "error.{msgID}" 键
+//   - args: 消息模板的格式化参数
 //
 // 返回值：
 //   - *CodeError: HTTP 状态码为 400，业务码为 CodeLlmBindingIncompatible 的错误实例
-func CreateLlmBindingIncompatibleError(err error) *CodeError {
-	return CreateCodeError(http.StatusBadRequest, CodeLlmBindingIncompatible, err)
+func CreateLlmBindingIncompatibleError(msgID string, args ...any) *CodeError {
+	return CreateCodeError(http.StatusBadRequest, CodeLlmBindingIncompatible, &DetailContext{
+		MsgID: msgID,
+		args:  args,
+	})
+}
+
+// CreateNotificationSendFailedError 创建一个通知发送失败（业务拒绝）的 CodeError
+// 用于「请求体合法但目标不可投递」的场景（如通知目标或其所属渠道被禁用）：用 400 +
+// CodeNotificationSendFailed，详情经 DetailContext 按请求语言本地化，供前端直接在 UI 展示；
+// 投递侧的真实故障（渠道报错等诊断信息）仍走 CreateCodeError 承载原始 error，不走本函数。
+// msgID 对应的键须在 en.toml / zh-Hans.toml 的 [error] 表中齐备。
+//
+// 参数：
+//   - msgID: 国际化消息 ID，对应翻译文件中 "error.{msgID}" 键
+//   - args: 消息模板的格式化参数
+//
+// 返回值：
+//   - *CodeError: HTTP 状态码为 400，业务码为 CodeNotificationSendFailed 的错误实例
+func CreateNotificationSendFailedError(msgID string, args ...any) *CodeError {
+	return CreateCodeError(http.StatusBadRequest, CodeNotificationSendFailed, &DetailContext{
+		MsgID: msgID,
+		args:  args,
+	})
+}
+
+// CreateTagRuleSampleInputError 创建一个标签规则样例输入非法的 CodeError
+// 用于「样例输入与目标模型定义不符」的拒绝场景（如引用的 S3 body 字段值不是字符串）：
+// 用 400 + CodeTagRuleSampleInputInvalid，详情经 DetailContext 按请求语言本地化；
+// 样例输入的 JSON 反序列化失败等诊断仍走 CreateCodeError 承载原始错误，不走本函数。
+// msgID 对应的键须在 en.toml / zh-Hans.toml 的 [error] 表中齐备。
+//
+// 参数：
+//   - msgID: 国际化消息 ID，对应翻译文件中 "error.{msgID}" 键
+//   - args: 消息模板的格式化参数
+//
+// 返回值：
+//   - *CodeError: HTTP 状态码为 400，业务码为 CodeTagRuleSampleInputInvalid 的错误实例
+func CreateTagRuleSampleInputError(msgID string, args ...any) *CodeError {
+	return CreateCodeError(http.StatusBadRequest, CodeTagRuleSampleInputInvalid, &DetailContext{
+		MsgID: msgID,
+		args:  args,
+	})
 }
 
 // CreateBadUrlParamError 创建一个 URL 路径参数错误的 CodeError

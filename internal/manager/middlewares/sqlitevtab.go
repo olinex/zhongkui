@@ -6,7 +6,7 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
 )
 
 // SQLiteVTabPoolsCtxName sqlite vtable 池持有者在 Gin 上下文中存储的键名。

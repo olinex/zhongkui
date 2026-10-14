@@ -7,8 +7,8 @@ import (
 	"text/template"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // TestSupportLanguages 测试应用支持的语言列表
@@ -95,7 +95,7 @@ func ensureTestEnumClasses() {
 		{
 			Name: "tagRuleModel",
 			Entries: []enum.Entry{
-				{Key: "httpTransport", Value: "zhongkui.com/zhongkui/internal/models/network.HttpTransport"},
+				{Key: "httpTransport", Value: "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport"},
 			},
 		},
 		{
@@ -169,8 +169,8 @@ func TestRenderNotifyTemplateWithFuncs(t *testing.T) {
 				"RuleName":   "告警规则",
 				"DetectedAt": "2026-01-01T00:00:00Z",
 				"Hits": []map[string]any{
-					{"ConditionName": "C1", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 12, "Threshold": 10, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
-					{"ConditionName": "C2", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 8, "Threshold": 5, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport"},
+					{"ConditionName": "C1", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 12, "Threshold": 10, "Model": "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
+					{"ConditionName": "C2", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 8, "Threshold": 5, "Model": "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport"},
 				},
 			})
 			So(rendered, ShouldContainSubstring, "命名空间 : default")
@@ -191,7 +191,7 @@ func TestRenderNotifyTemplateWithFuncs(t *testing.T) {
 				"RuleName":   "rule",
 				"DetectedAt": "2026-01-01T00:00:00Z",
 				"Hits": []map[string]any{
-					{"ConditionName": "C1", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 8, "Threshold": 5, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s"},
+					{"ConditionName": "C1", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 8, "Threshold": 5, "Model": "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s"},
 				},
 			})
 			So(rendered, ShouldContainSubstring, "Namespace   : default")

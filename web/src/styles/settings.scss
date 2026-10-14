@@ -10,5 +10,14 @@
 @use "vuetify/settings" with (
   $border-radius-root: 6px,
   $body-font-family: ("Roboto", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif),
-  $heading-font-family: ("Roboto", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif)
+  $heading-font-family: ("Roboto", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, -apple-system, "Segoe UI", sans-serif),
+  // Vuetify 4 默认下调了断点（md 840 / lg 1145 / xl 1545 / xxl 2138）与容器宽度
+  // （md 700 / lg 1000 / xl 1400 / xxl 2000）。此处恢复 v3 断点，容器最大宽度由断点
+  // 推导，随之恢复为 900 / 1200 / 1800 / 2400，保持既有响应式布局的视觉不变。
+  $grid-breakpoints: (
+    "md": 960px,
+    "lg": 1280px,
+    "xl": 1920px,
+    "xxl": 2560px
+  )
 );

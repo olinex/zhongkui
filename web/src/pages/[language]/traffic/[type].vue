@@ -59,7 +59,7 @@
       <!-- 明文查看对话框（共享组件：加密/S3 字段解密展示与下载） -->
       <plaintext-dialog ref="plaintextDialogRef" />
 
-      <!-- 网络堆栈对话框：以选中传输的 traceId 展示其所在 TCP 流的网络堆栈，
+      <!-- 网络堆栈对话框：以选中传输的 traceID 展示其所在 TCP 流的网络堆栈，
            并按 AppTailer payload offset 相交高亮请求/响应包 -->
       <network-stack-dialog v-model="stackDialog" :transport="stackTransport" />
     </template>
@@ -139,17 +139,17 @@ const searchTableRef = useTemplateRef("searchTableRef");
 // 默认排序：按抓包时间倒序，最新记录置顶
 const defaultOrderBy: SortItem[] = [{ key: "timestamp", order: "desc" }];
 
-// projectFields 字段投影：列表仅返回可见列 + 行操作定位字段（id/namespace，http-transport 另含 traceId），
+// projectFields 字段投影：列表仅返回可见列 + 行操作定位字段（id/namespace，http-transport 另含 traceID），
 // 行详情/收藏样例/堆栈下钻经 detail 接口拉取全字段
 const projectFields = (visible: string[]): string[] => {
-  return ["id", "namespace", ...(type.value === "http-transport" ? ["traceId"] : []), ...visible];
+  return ["id", "namespace", ...(type.value === "http-transport" ? ["traceID"] : []), ...visible];
 };
 
 const detailDialog = ref(false);
 const detailLoading = ref(false);
 const detailItem = ref<Record<string, unknown> | null>(null);
 
-// 网络堆栈对话框：选中 http-transport 行（携带 traceId 与 AppTailer offset）后打开
+// 网络堆栈对话框：选中 http-transport 行（携带 traceID 与 AppTailer offset）后打开
 const stackDialog = ref(false);
 const stackTransport = ref<Record<string, unknown> | null>(null);
 // openStack 打开网络堆栈对话框：经 detail 接口拉取全字段（含 AppTailer payload offset）后下钻
@@ -212,7 +212,7 @@ const IPV4_TCP_EXTRA_KEYS = [
   "ipv4Version",
   "ipv4Ihl",
   "ipv4Tos",
-  "ipv4Id",
+  "ipv4ID",
   "ipv4Flags",
   "ipv4FragOffset",
   "ipv4Checksum",
@@ -457,7 +457,6 @@ const actionsHeader: TableHeader = {
   key: "__actions",
   title: i18n.global.t("model.__base.field.__actions"),
   type: BackendDataType.ACTIONS,
-  align: "center",
   sortable: false,
   fixed: "end",
 };
@@ -468,7 +467,7 @@ const headers = computed((): Array<TableHeader> => {
     h("namespace"),
     { ...h("timestamp", BackendDataType.DATETIME), sortable: true },
     h("createdAt", BackendDataType.DATETIME),
-    h("sessionId", BackendDataType.UUID),
+    h("sessionID", BackendDataType.UUID),
   ];
   const commonTail: Array<TableHeader> = [h("capture"), h("version")];
   // TCP 常用审计字段：序号、确认号、经典六标志位、窗口大小
@@ -492,7 +491,7 @@ const headers = computed((): Array<TableHeader> => {
   if (type.value === "http-transport") {
     return [
       ...common,
-      h("traceId", BackendDataType.UUID),
+      h("traceID", BackendDataType.UUID),
       h("method"),
       h("host"),
       h("path"),
@@ -516,7 +515,7 @@ const headers = computed((): Array<TableHeader> => {
   const ipv4 = type.value === "ipv4-tcp";
   return [
     ...common,
-    h("tcpStreamId", BackendDataType.HEX),
+    h("tcpStreamID", BackendDataType.HEX),
     h(ipv4 ? "ipv4Src" : "ipv6Src"),
     h(ipv4 ? "ipv4Dst" : "ipv6Dst"),
     h("srcPort", BackendDataType.UINT16),
@@ -785,8 +784,8 @@ const rowActions = (item: Record<string, unknown>): ItemActions => {
   if (TrafficModelKeys[type.value]) {
     actions.favoriteSample = () => void favoriteSampleAction(item);
   }
-  // http-transport 携带 traceId 时提供网络堆栈下钻入口（前端按 payload offset 高亮请求/响应包）
-  if (type.value === "http-transport" && item.traceId) {
+  // http-transport 携带 traceID 时提供网络堆栈下钻入口（前端按 payload offset 高亮请求/响应包）
+  if (type.value === "http-transport" && item.traceID) {
     actions.viewStack = () => openStack(item);
   }
   return actions;
@@ -814,11 +813,11 @@ const detailFields = computed((): DetailField[] => {
     "namespace",
     "timestamp",
     "createdAt",
-    "sessionId",
-    "tcpStreamId",
+    "sessionID",
+    "tcpStreamID",
     "capture",
     "version",
-    "traceId",
+    "traceID",
   ];
   const entries = Object.entries(item).filter(([, value]) => {
     return value !== null && value !== undefined && value !== "";

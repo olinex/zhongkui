@@ -73,7 +73,7 @@ export const TrafficExtraFieldTypes: Record<string, BackendDataType> = {
   ipv4Version: BackendDataType.UINT8,
   ipv4Ihl: BackendDataType.UINT8,
   ipv4Tos: BackendDataType.UINT8,
-  ipv4Id: BackendDataType.UINT16,
+  ipv4ID: BackendDataType.UINT16,
   ipv4Flags: BackendDataType.UINT8,
   ipv4FragOffset: BackendDataType.UINT16,
   ipv4Checksum: BackendDataType.UINT16,
@@ -106,8 +106,8 @@ export const TrafficFieldTypes: Record<TrafficType, Record<string, BackendDataTy
     ...TrafficExtraFieldTypes,
     timestamp: BackendDataType.DATETIME,
     createdAt: BackendDataType.DATETIME,
-    sessionId: BackendDataType.UUID,
-    tcpStreamId: BackendDataType.HEX,
+    sessionID: BackendDataType.UUID,
+    tcpStreamID: BackendDataType.HEX,
     srcPort: BackendDataType.UINT16,
     dstPort: BackendDataType.UINT16,
     seq: BackendDataType.UINT32,
@@ -128,8 +128,8 @@ export const TrafficFieldTypes: Record<TrafficType, Record<string, BackendDataTy
     ...TrafficExtraFieldTypes,
     timestamp: BackendDataType.DATETIME,
     createdAt: BackendDataType.DATETIME,
-    sessionId: BackendDataType.UUID,
-    tcpStreamId: BackendDataType.HEX,
+    sessionID: BackendDataType.UUID,
+    tcpStreamID: BackendDataType.HEX,
     srcPort: BackendDataType.UINT16,
     dstPort: BackendDataType.UINT16,
     seq: BackendDataType.UINT32,
@@ -150,8 +150,8 @@ export const TrafficFieldTypes: Record<TrafficType, Record<string, BackendDataTy
     ...TrafficExtraFieldTypes,
     timestamp: BackendDataType.DATETIME,
     createdAt: BackendDataType.DATETIME,
-    sessionId: BackendDataType.UUID,
-    traceId: BackendDataType.UUID,
+    sessionID: BackendDataType.UUID,
+    traceID: BackendDataType.UUID,
     clientPort: BackendDataType.UINT16,
     serverPort: BackendDataType.UINT16,
     reqBodyLength: BackendDataType.DECIMAL_BYTE,
@@ -191,7 +191,7 @@ export function trafficListOptions(type: TrafficType): AxiosPromise {
 }
 
 // trafficStackListGet HTTP 传输关联网络堆栈列表（分页 + 排序 + 过滤）
-// 以 HttpTransport 的 traceId + 时间范围查询组成该 TCP 流的全部网络堆栈记录；
+// 以 HttpTransport 的 traceID + 时间范围查询组成该 TCP 流的全部网络堆栈记录；
 // 前端借助 HttpTransport.AppTailer 的 payload offset 与记录的
 // payloadStartOffset/payloadEndOffset 相交，高亮请求/响应对应的数据包
 export function trafficStackListGet(data: SearchIn): AxiosPromise {

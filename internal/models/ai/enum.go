@@ -1,8 +1,10 @@
 // 本文件声明知识文档处理状态（KnowledgeDocStatus）、Agent 类型（AgentKind）、运行现场状态
-// （AgentRunStatus）、会话状态（SessionStatus）、消息角色（MessageRole）、记忆类别（MemoryKind）、
-// 记忆状态（MemoryStatus）、工具来源（ToolSource）与模型档位（Slot）的取值空间，并把这些取值空间
-// 注册为枚举类 knowledgeDocStatus / agentKind / agentRunStatus / memoryKind / memoryStatus /
-// llmToolSource / llmSlot。取值的唯一来源是本文件内的类型化常量，取值序列就地复用为条目来源，
+// （AgentRunStatus）、运行生命周期阶段（AgentRunPhase）、会话状态（SessionStatus）、消息角色
+// （MessageRole）、记忆类别（MemoryKind）、记忆状态（MemoryStatus）、工具来源（ToolSource）、
+// 模型档位（Slot）与会话审核阀门（ReviewValve）的取值空间，并把这些取值空间注册为枚举类
+// knowledgeDocStatus / agentKind / agentRunStatus / agentRunPhase /
+// memoryKind / memoryStatus / llmToolSource / llmSlot / reviewValve（审核阀门的取值常量与取值
+// 序列在 valve.go）。取值的唯一来源是类型化常量，取值序列就地复用为条目来源，
 // 条目在包内 init 注册时快照。类名须与前端 utils/enums.ts 的 EnumClass 成员、i18n 键
 // enum.<类名>.<key> 以及消费方引用一致。档位枚举类 llmSlot 的取值空间 Slot / AllSlots 与全部
 // 解析/校验 helper 一并声明于本文件（原先声明在 internal/models/core，因 Slot 被本包的持久化模型
@@ -14,9 +16,9 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
 // KnowledgeDocStatus 是知识文档的处理状态标识：文档从导入到可被检索的流转状态。
@@ -34,13 +36,15 @@ const (
 	KnowledgeDocStatusFailed KnowledgeDocStatus = "failed"
 )
 
-// AgentKind 是 Agent 类型的标识：知识检索/知识库运营（knowledge）与 Rego 规则生成（rego）。
-// 会话与长期记忆均按「命名空间 + AgentKind」归属与隔离，取值与 agent_sessions.agent_kind、
-// agent_memories.agent_kind 列的取值一致。
+// AgentKind 是 Agent 类型的标识：通用对话（general）、知识检索/知识库运营（knowledge）与
+// Rego 规则生成（rego）。会话与长期记忆均按「命名空间 + AgentKind」归属与隔离，取值与
+// agent_sessions.agent_kind、agent_memories.agent_kind 列的取值一致。
 type AgentKind string
 
 // Agent 类型常量。
 const (
+	// AgentKindGeneral 通用对话 Agent（不绑定知识库运营与 Rego 规则生成场景，纯 Markdown 回答）
+	AgentKindGeneral AgentKind = "general"
 	// AgentKindKnowledge 知识检索/知识库运营 Agent
 	AgentKindKnowledge AgentKind = "knowledge"
 	// AgentKindRego Rego 规则生成 Agent
@@ -60,6 +64,56 @@ const (
 	AgentRunStatusConsumed AgentRunStatus = "consumed"
 	// AgentRunStatusExpired 已过期：运行现场超过存活期限，不可恢复
 	AgentRunStatusExpired AgentRunStatus = "expired"
+)
+
+// AgentRunPhase 是驻留运行（RunHub 管理的 liveRun）生命周期阶段的标识：运行中（running）、
+// 已完成（done）、失败（failed）、已取消（cancelled）与挂起待审批（suspended），取值与
+// agent_live_runs.status 列的取值一致。与运行现场状态 AgentRunStatus 是不同概念：
+// AgentRunStatus 描述 agent_runs 中「待恢复现场」的消费状态，AgentRunPhase 描述一次
+// 在途运行的生命周期阶段。
+type AgentRunPhase string
+
+// 运行生命周期阶段常量。
+const (
+	// AgentRunPhaseRunning 运行中：图循环正在执行
+	AgentRunPhaseRunning AgentRunPhase = "running"
+	// AgentRunPhaseDone 已完成：图循环正常结束
+	AgentRunPhaseDone AgentRunPhase = "done"
+	// AgentRunPhaseFailed 失败：图循环以错误结束
+	AgentRunPhaseFailed AgentRunPhase = "failed"
+	// AgentRunPhaseCancelled 已取消：被显式停止或退订宽限到点自动取消
+	AgentRunPhaseCancelled AgentRunPhase = "cancelled"
+	// AgentRunPhaseSuspended 挂起待审批：命中客户端工具，等待前端回传审批与执行结果
+	AgentRunPhaseSuspended AgentRunPhase = "suspended"
+)
+
+// AgentRunEventType 是驻留运行事件日志（agent_run_events.type）与 SSE 事件类型的标识：
+// 增量文本（delta）、思考过程增量（reasoning）、阶段状态（stage）、工具执行请求
+// （tool_request）、上下文压缩开始（compress_start）、压缩摘要增量（compress_delta）、
+// 压缩完成（compress_done）、完成（done）与错误（error）。取值与 sse.SSEEventValue 常量
+// 一一对应，仅内部流转使用，**不注册枚举类**（不面向用户展示，无 i18n label）。
+type AgentRunEventType string
+
+// 运行事件类型常量。
+const (
+	// AgentRunEventDelta 增量文本事件
+	AgentRunEventDelta AgentRunEventType = "delta"
+	// AgentRunEventReasoning 思考过程增量事件（模型返回的思考/推理内容增量）
+	AgentRunEventReasoning AgentRunEventType = "reasoning"
+	// AgentRunEventStage 阶段状态事件
+	AgentRunEventStage AgentRunEventType = "stage"
+	// AgentRunEventToolRequest 工具执行请求事件（运行挂起等待前端执行并审批客户端工具）
+	AgentRunEventToolRequest AgentRunEventType = "tool_request"
+	// AgentRunEventCompressStart 上下文压缩开始事件（携带压缩原因、占用 token、容量与阈值）
+	AgentRunEventCompressStart AgentRunEventType = "compress_start"
+	// AgentRunEventCompressDelta 上下文压缩摘要增量事件（携带摘要生成的增量文本）
+	AgentRunEventCompressDelta AgentRunEventType = "compress_delta"
+	// AgentRunEventCompressDone 上下文压缩完成事件（携带压缩前后占用、折叠条数与摘要游标）
+	AgentRunEventCompressDone AgentRunEventType = "compress_done"
+	// AgentRunEventDone 完成事件
+	AgentRunEventDone AgentRunEventType = "done"
+	// AgentRunEventError 错误事件
+	AgentRunEventError AgentRunEventType = "error"
 )
 
 // SessionStatus 是 Agent 会话状态的标识：活跃（active）与归档（archived），取值与
@@ -265,13 +319,36 @@ var knowledgeDocStatusValues = []KnowledgeDocStatus{
 }
 
 // agentKindValues 是 agentKind 枚举类的取值空间，声明顺序即枚举类条目顺序与前端下拉的展示顺序。
-var agentKindValues = []AgentKind{AgentKindKnowledge, AgentKindRego}
+var agentKindValues = []AgentKind{AgentKindGeneral, AgentKindKnowledge, AgentKindRego}
 
 // agentRunStatusValues 是 agentRunStatus 枚举类的取值空间，声明顺序即枚举类条目顺序与前端展示顺序。
 var agentRunStatusValues = []AgentRunStatus{
 	AgentRunStatusPending,
 	AgentRunStatusConsumed,
 	AgentRunStatusExpired,
+}
+
+// agentRunPhaseValues 是 agentRunPhase 枚举类的取值空间，声明顺序即枚举类条目顺序与前端展示顺序。
+var agentRunPhaseValues = []AgentRunPhase{
+	AgentRunPhaseRunning,
+	AgentRunPhaseDone,
+	AgentRunPhaseFailed,
+	AgentRunPhaseCancelled,
+	AgentRunPhaseSuspended,
+}
+
+// agentRunEventValues 是 AgentRunEventType 的取值空间，声明顺序即事件流转顺序。运行事件类型
+// 不注册枚举类（不面向用户），此清单仅供遍历与「与 SSE 事件名映射」的守卫测试使用。
+var agentRunEventValues = []AgentRunEventType{
+	AgentRunEventDelta,
+	AgentRunEventReasoning,
+	AgentRunEventStage,
+	AgentRunEventToolRequest,
+	AgentRunEventCompressStart,
+	AgentRunEventCompressDelta,
+	AgentRunEventCompressDone,
+	AgentRunEventDone,
+	AgentRunEventError,
 }
 
 // memoryKindValues 是 memoryKind 枚举类的取值空间，声明顺序即枚举类条目顺序与前端展示顺序。
@@ -333,6 +410,33 @@ func ParseAgentRunStatus(raw AgentRunStatus) (AgentRunStatus, error) {
 	return "", errors.Newf("invalid agent run status %q", raw)
 }
 
+// AllAgentRunPhases 返回全部运行生命周期阶段的副本，声明顺序即枚举类条目顺序与前端展示顺序；
+// 供 RunHub 与视图层复用，调用方修改返回值不影响该取值空间。
+func AllAgentRunPhases() []AgentRunPhase {
+	phases := make([]AgentRunPhase, len(agentRunPhaseValues))
+	copy(phases, agentRunPhaseValues)
+	return phases
+}
+
+// ParseAgentRunPhase 解析并校验运行生命周期阶段：不在取值空间内的取值（含空串）返回英文错误；
+// 合法取值原样返回。阶段没有缺省值（写入路径显式使用 running），故空串视为非法。
+func ParseAgentRunPhase(raw AgentRunPhase) (AgentRunPhase, error) {
+	for _, known := range agentRunPhaseValues {
+		if known == raw {
+			return raw, nil
+		}
+	}
+	return "", errors.Newf("invalid agent run phase %q", raw)
+}
+
+// AllAgentRunEventTypes 返回全部运行事件类型的副本，声明顺序即事件流转顺序；供 RunHub 与视图层
+// 复用，调用方修改返回值不影响该取值空间。
+func AllAgentRunEventTypes() []AgentRunEventType {
+	types := make([]AgentRunEventType, len(agentRunEventValues))
+	copy(types, agentRunEventValues)
+	return types
+}
+
 // AllMemoryKinds 返回全部记忆类别的副本，声明顺序即枚举类条目顺序与前端展示顺序；供记忆服务、
 // 工具层与视图层复用，调用方修改返回值不影响该取值空间。
 func AllMemoryKinds() []MemoryKind {
@@ -374,18 +478,22 @@ func ParseMemoryStatus(raw MemoryStatus) (MemoryStatus, error) {
 	return "", errors.Newf("invalid memory status %q", raw)
 }
 
-// init 注册枚举类 knowledgeDocStatus / agentKind / agentRunStatus / memoryKind / memoryStatus /
-// llmToolSource / llmSlot（取值空间固定，条目在注册时快照）。agentKind 复用 agentKindValues，
-// Agent 类型成员仍只在本文件一处声明；agentRunStatus 复用 agentRunStatusValues，运行现场状态成员
-// 仍只在本文件一处声明；memoryKind / memoryStatus 复用本文件的两份取值序列，记忆类别/状态成员仍
-// 只在本文件一处声明；llmToolSource 复用 toolSourceValues；llmSlot 的取值空间直接复用本文件的
-// AllSlots 清单，档位成员仍只在该清单一处声明。
+// init 注册枚举类 knowledgeDocStatus / agentKind / agentRunStatus / agentRunPhase / memoryKind /
+// memoryStatus / llmToolSource / llmSlot / reviewValve（取值空间固定，条目在注册时快照）。agentKind
+// 复用 agentKindValues，Agent 类型成员仍只在本文件一处声明；agentRunStatus 复用 agentRunStatusValues，
+// 运行现场状态成员仍只在本文件一处声明；agentRunPhase 复用 agentRunPhaseValues，运行生命周期阶段
+// 成员仍只在本文件一处声明；memoryKind / memoryStatus 复用本文件的两份取值序列，记忆
+// 类别/状态成员仍只在本文件一处声明；llmToolSource 复用 toolSourceValues；llmSlot 的取值空间直接
+// 复用本文件的 AllSlots 清单，档位成员仍只在该清单一处声明；reviewValve 复用 valve.go 的
+// reviewValveValues，审核阀门成员仍在 valve.go 一处声明。
 func init() {
 	enum.Register(enum.Type{Name: "knowledgeDocStatus", Entries: enum.EntriesOf(knowledgeDocStatusValues)})
 	enum.Register(enum.Type{Name: "agentKind", Entries: enum.EntriesOf(agentKindValues)})
 	enum.Register(enum.Type{Name: "agentRunStatus", Entries: enum.EntriesOf(agentRunStatusValues)})
+	enum.Register(enum.Type{Name: "agentRunPhase", Entries: enum.EntriesOf(agentRunPhaseValues)})
 	enum.Register(enum.Type{Name: "memoryKind", Entries: enum.EntriesOf(memoryKindValues)})
 	enum.Register(enum.Type{Name: "memoryStatus", Entries: enum.EntriesOf(memoryStatusValues)})
 	enum.Register(enum.Type{Name: "llmToolSource", Entries: enum.EntriesOf(toolSourceValues)})
 	enum.Register(enum.Type{Name: "llmSlot", Entries: enum.EntriesOf(AllSlots)})
+	enum.Register(enum.Type{Name: "reviewValve", Entries: enum.EntriesOf(reviewValveValues)})
 }

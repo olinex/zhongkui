@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // groupEntry 表示一个元数据分组下的所有重组器节点。

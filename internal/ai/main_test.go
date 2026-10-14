@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 )
 
 // TestMain 初始化 ai 包测试的前置条件：生成文档的派生摘要与落库摘要共用 hash 字段的 HMAC 密钥，

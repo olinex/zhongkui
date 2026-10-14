@@ -107,8 +107,14 @@ export interface AgentSessionItem {
   status: string;
   // 会话所属 Agent 类型（knowledge/rego），取值集合与展示文案由后端枚举类 agentKind 下发
   agentKind: string;
+  // 会话级审核阀门（each/auto/none），取值集合与展示文案由后端枚举类 reviewValve 下发
+  reviewValve: string;
   // 会话滚动摘要，无摘要时为空串
   summary: string;
+  // 该会话当前上下文占用 token：最近一条助手消息的 PromptTokens，无助手消息为 0
+  contextTokens: number;
+  // 按该会话当前有效档位解析的上下文容量 token；≤0 表示该档位未配置容量
+  contextLimit: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -118,16 +124,31 @@ export interface AgentSessionCreateIn {
   slot?: string;
   // 会话所属 Agent 类型（knowledge/rego），可选；缺省由后端取 knowledge
   agentKind?: string;
+  // 会话初始审核阀门（each/auto/none），可选；缺省由后端取会话列默认值
+  reviewValve?: string;
 }
 export interface AgentSessionRenameIn {
   id: number;
   title: string;
 }
-// 会话压缩输出（AgentSessionCompactOut）：刷新后的摘要、成功落库的长期记忆条数与非致命告警
-export interface AgentSessionCompactOut {
-  summary: string;
-  extracted: number;
-  warnings: string[];
+// 更新单个会话审核阀门的请求体（reviewValve 取值由后端枚举类校验）
+export interface AgentSessionValveIn {
+  reviewValve: string;
+}
+// 会话压缩请求体（AgentSessionCompactIn）：userMessageIndex 为可选折叠边界
+export interface AgentSessionCompactIn {
+  // 折叠边界的用户消息序号（从 1 起，仅计用户消息、按 seq 升序）；省略或 0 表示全量压缩
+  userMessageIndex?: number;
+}
+// 提示词优化请求体（AgentPromptOptimizeIn）：query 为待优化的用户诉求
+export interface AgentPromptOptimizeIn {
+  // 待优化的用户诉求（必填）
+  query: string;
+}
+// 提示词优化响应体（AgentPromptOptimizeOut）：query 为优化后的提问文本
+export interface AgentPromptOptimizeOut {
+  // 优化后的提问文本（供前端整体替换输入框内容）
+  query: string;
 }
 
 // 长期记忆（AgentMemory）
@@ -154,7 +175,7 @@ export interface AgentMemoryDetailOut extends AgentMemoryItemOut {
   // 所属命名空间
   namespaceName: string;
   // 来源会话 ID（记忆按会话隔离，仅在来源会话内可见）
-  sessionId: number;
+  sessionID: number;
 }
 export interface AgentMemoryStatusIn {
   // 目标状态（active/archived）
@@ -178,6 +199,28 @@ export interface AgentMessageItem {
   draft?: unknown; // 助手消息的结构化草稿 JSON 对象（自由形态）
   citations?: RetrievalResult[];
   createdAt: string;
+  // 助手回答的用量元信息：本轮全部模型调用的 token 累计（提示 / 补全 / 合计）与总耗时（毫秒），
+  // 随消息落库，故重新加载历史会话后仍可展示；用户消息与历史遗留消息一律为 0。
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  elapsedMs: number;
+  // 助手消息的思考过程全文（无思考时缺省），供刷新 / 重开抽屉后回显历史思考过程
+  reasoning?: string;
+}
+
+// 截断会话消息请求体（AgentMessageTruncateIn）：从第 userMessageIndex 条用户消息（从 1 起，
+// 仅按用户消息计数、按消息 seq 升序计）起，删除该条及其之后的全部消息（含助手回复）。
+export interface AgentMessageTruncateIn {
+  userMessageIndex: number;
+}
+
+// 会话分支请求体（AgentSessionBranchIn）：以第 userMessageIndex 条用户消息（从 1 起，
+// 仅按用户消息计数、按消息 seq 升序计）所在轮次为结尾，把该轮及之前的全部消息复制到新会话。
+export interface AgentSessionBranchIn {
+  userMessageIndex: number;
+  // 新会话标题，可选；缺省由后端沿用源会话标题
+  title?: string;
 }
 
 // 流式生成请求体（AgentStreamIn）
@@ -188,6 +231,8 @@ export interface AgentStreamIn {
   regoRule?: string;
   // 本次生成的显式档位（flash/standard/advanced），空表示回退到会话档位与 agent.defaultSlot
   slot?: string;
+  // 思考开关（on/off）：仅当当前档位绑定模型支持思考开关时携带，空 / 缺省表示不注入
+  thinking?: "on" | "off";
 }
 
 // SSE done 事件负载（后端 AgentOutput）
@@ -198,6 +243,41 @@ export interface AgentOutput {
   draft?: unknown;
   valid: boolean;
   validationDetail?: string;
+  // 仅在 done 项上给出的用量元信息：本轮全部模型调用的 token 累计与总耗时（毫秒），
+  // 与消息列表中的同名字段语义一致（前者是刚生成完的实时值，后者是回读落库值）
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  elapsedMs?: number;
+  // 本次思考过程全文（无思考时为空 / 缺省）
+  reasoning?: string;
+}
+
+// 上下文压缩开始事件载荷（compress_start）
+export interface CompressStartPayload {
+  // 压缩原因（auto 自动 / manual 手动）
+  reason: string;
+  // 压缩前会话占用 token
+  tokens: number;
+  // 本次有效档位的上下文容量 token（≤0 表示未配置）
+  limit: number;
+  // 触发压缩的占用比例阈值
+  threshold: number;
+}
+// 上下文压缩摘要增量事件载荷（compress_delta）：摘要生成的实时增量文本
+export interface CompressDeltaPayload {
+  delta: string;
+}
+// 上下文压缩完成事件载荷（compress_done）
+export interface CompressDonePayload {
+  // 压缩原因（auto 自动 / manual 手动）
+  reason: string;
+  // 压缩前会话占用 token（仅成功压缩时有效；字段可能因后端 omitempty 缺失）
+  tokensBefore?: number;
+  // 本次折叠的消息条数（0 表示未折叠，如无消息可折叠或压缩失败）
+  foldedCount?: number;
+  // 压缩后滚动摘要游标（仅成功压缩时有效；字段可能因 omitempty 缺失）
+  summaryUptoSeq?: number;
 }
 
 // 评估阶段标识与阶段状态：取值集合与展示文案一律由后端枚举类 evalStage / evalStageStatus
@@ -217,23 +297,30 @@ export interface AgentStageEvent {
   error?: string;
 }
 
-// 挂起事件负载（后端 ToolRequest）：模型请求调用某个客户端工具，需前端以用户自身凭据、
-// 经人工审批后执行，再把结果回传后端续跑。后端不解释入参，原样透传工具名与入参文本。
-// approvalRequired 固定为 true。
+// 挂起事件负载（后端 ToolRequest）：模型请求调用某个工具，需经人工审批后执行。execOwner 指明
+// 执行归属：client（默认，字段缺失时按此处理）由前端以用户自身凭据执行，再把结果回传后端续跑；
+// backend 由后端在审批通过后自行执行，前端仅做批准 / 拒绝。后端不解释入参，原样透传工具名与入参文本。
+// auditLevel 为后端评估产出的审核重要级（取值集合与展示文案由后端枚举类 auditLevel 下发）；
+// approvalRequired 由后端按审核重要级与会话阀门合成得出，为 false 时无需人工审批。
 export interface ToolRequestPayload {
   // 本次调用的唯一 ID，回传结果时必须原样带回
-  callId: string;
-  // 待执行的客户端工具名（模型给出的调用名）
+  callID: string;
+  // 待执行的工具名（模型给出的调用名）
   toolName: string;
   // 模型给出的调用入参（原始 JSON 文本，由前端自行解释）
   arguments: string;
+  // 本次调用的审核重要级（must/suggest/auto/none），经枚举注册表渲染展示名
+  auditLevel: string;
+  // 是否需要人工审批：由后端按审核重要级与会话阀门合成，可能为 false（自动批准）
   approvalRequired: boolean;
+  // 执行归属：client 由前端执行（默认，字段缺失时按此处理）、backend 由后端执行（前端仅审批）
+  execOwner?: "client" | "backend";
 }
 
 // 单条审批结果（ToolResultItemIn）：approved=true 时 result 为工具执行结果文本、执行失败
 // 时改填 error；approved=false（用户拒绝）时 result 与 error 均留空。
 export interface ToolResultItemIn {
-  callId: string;
+  callID: string;
   approved: boolean;
   result: string;
   error: string;
@@ -257,6 +344,25 @@ export interface AgentSlotStatusOut {
   bound: boolean;
   // 该档位当前是否可解析到已构建的客户端
   available: boolean;
+  // 该档位绑定模型是否支持思考开关（思考字段名与开 / 关取值齐备时为 true）
+  thinkingToggle: boolean;
+  // 该档位模型的上下文窗口 token 容量；≤0 表示该档位关闭占用百分比展示与自动压缩
+  contextTokenLimit: number;
+}
+
+// 在途运行态（AgentLiveRunOut）：供刷新 / 重开抽屉后发现「在跑 / 待审批」并据 runID 续播；
+// phase 取值集合与展示文案由后端枚举类 agentRunPhase 下发（前端仅透传消费）。
+export interface AgentLiveRunOut {
+  // 当前运行标识（与后端 json tag `runID` 一致）
+  runID: string;
+  // 运行阶段（running/suspended/done/failed/cancelled）
+  phase: string;
+  // 服务端已发布的最大事件序号（供前端判断续播进度）
+  lastSeq: number;
+  // 是否处于等待人工审批（挂起）
+  awaitingApproval: boolean;
+  // 本轮待审批调用（挂起时非空）
+  pendingCalls: ToolRequestPayload[];
 }
 
 // AI 状态（AgentStatusOut）
@@ -272,10 +378,19 @@ export interface AgentStatusOut {
   // 未显式指定档位且会话未记录档位时使用的默认档位（后端参数 agent.defaultSlot 的生效值），
   // 前端档位下拉据此取初值，不在前端声明档位字面量
   defaultSlot: string;
+  // 通用助手创建会话时使用的 Agent 类型，取值由后端下发
+  assistantAgentKind: string;
+  // 会话尚未创建（草稿态）时审核阀门下拉的初始值（后端默认阀门），前端据此取初值，
+  // 不在前端声明阀门字面量
+  defaultReviewValve: string;
   // 当前生效值与出厂值不同的行为参数条数（0 表示全部参数仍为出厂值）
   paramOverrideCount: number;
   // AI 能力不可用的原因说明（按请求语言返回；可用时为空）
   reason: string;
+  // 目标会话的在途运行态（无在途运行时为 null），供刷新后前端发现「在跑 / 待审批」并续播
+  liveRun?: AgentLiveRunOut | null;
+  // 触发自动压缩的占用比例阈值
+  compactThresholdRatio: number;
 }
 
 // 检索试运行参数默认值（来自后端 [llm].rerank 配置，供前端对话框预填展示）
@@ -360,6 +475,8 @@ export interface DryRunCallMeta {
 // SSE stage 事件负载：status 非空为阶段状态事件，delta 非空为该阶段的增量输出事件
 export interface DryRunStageEvent {
   stage: EvalStage;
+  // 该阶段调用的对话模型名（评估阶段共用同一档位模型；检索阶段不带）
+  model?: string;
   status?: EvalStageStatus;
   delta?: string;
   elapsedMs: number;

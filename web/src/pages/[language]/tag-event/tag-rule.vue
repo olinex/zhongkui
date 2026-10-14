@@ -26,6 +26,13 @@
                 $t("model.__base.value.blank")
               }}
             </template>
+            <!-- 启用态：开关即时写入（乐观更新，失败回退） -->
+            <template #cell-enabled="{ item }">
+              <enabled-switch-cell
+                v-model="item.enabled"
+                :request="(enabled: boolean) => tagRuleSetEnabled(item.id, enabled)"
+              />
+            </template>
           </search-table>
         </template>
         <template #samples>
@@ -64,23 +71,13 @@
         prepend-icon="mdi-toggle-switch"
         @confirm="itemToggleAction"
       >
-        <template #body="{ proxy }">
+        <template #body>
           <confirm-alert
             v-if="batchState"
             :action="
               $t(batchState?.action === 'activate' ? 'action.activate' : 'action.deactivate')
             "
             :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
-          />
-          <confirm-alert
-            v-else
-            :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
-            :text="
-              $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
-                category: $t(`model.tagRule.name`),
-                key: proxy.name,
-              })
-            "
           />
         </template>
       </confirm-dialog>
@@ -95,7 +92,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createName"
@@ -104,7 +101,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   v-model="createModel"
@@ -115,7 +112,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
@@ -125,7 +122,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="createEnabled"
@@ -137,7 +134,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <rego-editor
                   v-model="createRego"
@@ -153,7 +150,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col cols="auto">
                 <v-btn v-request="validateCreateRegoNow" variant="tonal" size="small">
                   {{ $t("action.validate") }}
@@ -194,7 +191,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   :model-value="proxy.name"
@@ -203,7 +200,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   :model-value="proxy.model"
@@ -214,7 +211,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="editDescription"
@@ -225,7 +222,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="editEnabled"
@@ -238,7 +235,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <rego-editor
                   v-model="editRego"
@@ -255,7 +252,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col cols="auto">
                 <v-btn
                   variant="tonal"
@@ -327,7 +324,7 @@
               </v-btn>
             </template>
             <v-expand-transition>
-              <pre v-if="expandedVersion === v.version" class="zk-code-preview text-body-2">{{
+              <pre v-if="expandedVersion === v.version" class="zk-code-preview text-body-medium">{{
                 v.rego
               }}</pre>
             </v-expand-transition>
@@ -728,8 +725,7 @@ watch(editModel, (val) => {
 // projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", ...visible];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     version: versionAction,
@@ -739,16 +735,6 @@ const getActions = (item: Record<string, any>): ItemActions => {
       deleteConfirmRef.value?.open(i);
     },
   };
-  switch (item.enabled) {
-    case false:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.activate = (i: Record<string, any>) => toggleAction(i, true);
-      break;
-    case true:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.deactivate = (i: Record<string, any>) => toggleAction(i, false);
-      break;
-  }
   return actions;
 };
 
@@ -759,8 +745,13 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
     async (rsp) => {
       editRuleId = rsp.data.id;
       editModel.value = rsp.data.model || HTTP_TRANSPORT_MODEL_KEY;
-      updateForm.resetField("description", { value: rsp.data.description });
-      updateForm.resetField("enabled", { value: rsp.data.enabled });
+      // 复位与回填同属「准备本次打开的数据」：完整枚举 defineField 字段，原子重置值 + 校验状态
+      updateForm.resetForm({
+        values: {
+          description: rsp.data.description,
+          enabled: rsp.data.enabled,
+        },
+      });
       editRego.value = rsp.data.rego;
       editExtraFields.value = [];
       editFields.value = [];
@@ -783,10 +774,15 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
 };
 
 const openCreateDialogAction = (): void => {
-  createForm.resetField("name", { value: "" });
-  createForm.resetField("model", { value: HTTP_TRANSPORT_MODEL_KEY });
-  createForm.resetField("description", { value: "" });
-  createForm.resetField("enabled", { value: true });
+  // 复位用原子 API resetForm：完整枚举全部 defineField 字段，值 + 校验状态一次性重置
+  createForm.resetForm({
+    values: {
+      name: "",
+      model: HTTP_TRANSPORT_MODEL_KEY,
+      description: "",
+      enabled: true,
+    },
+  });
   createRego.value = "";
   createExtraFields.value = [];
   createSamples.value = [];
@@ -978,40 +974,12 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 
-const toggleTarget = ref<boolean | null>(null);
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
-  batchState.value = null;
-  toggleTarget.value = enabled;
-  toggleConfirmRef.value?.open(item);
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
+const itemToggleAction = async (): Promise<void> => {
   const state = batchState.value;
   if (state) {
     batchState.value = null;
     await batchToggleAction(state.items, state.action === "activate");
-    return;
   }
-  if (toggleTarget.value === null) {
-    return;
-  }
-  await getResponse<BatchResultOut>(
-    tagRuleSetEnabled(proxy.id, toggleTarget.value),
-    async (rsp) => {
-      applyBatchResult(rsp.summary, rsp.data);
-      await searchTableRef.value?.refresh();
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
 };
 
 // ---- 复用同一模型下其他规则的字段 ----
@@ -1074,7 +1042,7 @@ const openRollbackConfirm = (v: TagRuleVersionOut): void => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const itemRollbackAction = async (proxy: Record<string, any>): Promise<void> => {
   await getSimpleResponse(
-    tagRuleVersionRollback(proxy.ruleId, proxy.version),
+    tagRuleVersionRollback(proxy.ruleID, proxy.version),
     async (rsp) => {
       await searchTableRef.value?.refresh();
       versionDialog.value = false;

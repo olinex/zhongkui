@@ -1,8 +1,8 @@
 package tag
 
 import (
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // MaxTagRuleVersions 每条规则最多保留的历史版本数。
@@ -27,7 +27,7 @@ type TagRuleVersion struct {
 	Name string `gorm:"type:VARCHAR(128)"`
 	// Description 快照时的规则描述
 	Description string `gorm:"type:VARCHAR(512)"`
-	// Model 快照时的目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	// Model 快照时的目标模型类型键（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `gorm:"type:VARCHAR(255)"`
 	// Rego 快照时的 Rego 规则源码
 	Rego string `gorm:"type:TEXT"`

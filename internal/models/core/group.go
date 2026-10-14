@@ -1,7 +1,7 @@
 package core
 
 import (
-	"zhongkui.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 )
 
 // Group 表示系统中的用户组实体。

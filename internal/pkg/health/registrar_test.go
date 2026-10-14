@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
-	"zhongkui.com/zhongkui/internal/pkg/status"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/status"
 )
 
 // TestKeyOf 验证服务注册键按前缀、服务名与实例 ID 拼接正确。
@@ -37,7 +37,7 @@ func TestServiceInfoJSON(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	s := string(raw)
-	for _, key := range []string{"serviceName", "instanceId", "live", "ready", "started"} {
+	for _, key := range []string{"serviceName", "instanceID", "live", "ready", "started"} {
 		if !strings.Contains(s, key) {
 			t.Fatalf("json %s missing key %q", s, key)
 		}

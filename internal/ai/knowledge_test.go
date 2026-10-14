@@ -11,7 +11,8 @@ import (
 	"github.com/cloudwego/eino/components/retriever"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
 // almostEqual 报告两个浮点数是否在容差内近似相等。
@@ -300,10 +301,10 @@ func TestTruncateText(t *testing.T) {
 }
 
 // TestToSchemaDocuments_RoundTrip 测试 RetrievalResult → schema.Document →
-// ToRetrievalResults 往返不丢字段。
+// ToRetrievalResults 往返不丢字段（含 small-to-big 的 Complete 标记）。
 func TestToSchemaDocuments_RoundTrip(t *testing.T) {
 	results := []*RetrievalResult{
-		{DocumentID: "7", Title: "T1", ChunkIndex: 2, Content: "text", Score: 0.5},
+		{DocumentID: "7", Title: "T1", ChunkIndex: 2, Content: "text", Score: 0.5, Complete: true},
 		{DocumentID: "8", Title: "T2", ChunkIndex: 0, Content: "other", Score: 0.1},
 	}
 	docs := toSchemaDocuments(results)
@@ -314,7 +315,7 @@ func TestToSchemaDocuments_RoundTrip(t *testing.T) {
 	for i, r := range back {
 		w := *results[i]
 		if r.DocumentID != w.DocumentID || r.Title != w.Title || r.ChunkIndex != w.ChunkIndex ||
-			r.Content != w.Content || !almostEqual(r.Score, w.Score) {
+			r.Content != w.Content || !almostEqual(r.Score, w.Score) || r.Complete != w.Complete {
 			t.Errorf("round trip[%d] = %+v, want %+v", i, r, w)
 		}
 	}

@@ -2,7 +2,7 @@ package translate
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // resolveLang 将可能为 nil 的语言归一化为有效语言：nil 时回退平台默认语言。

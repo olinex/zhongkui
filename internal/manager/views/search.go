@@ -3,8 +3,8 @@ package views
 
 import (
 	"time"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 type Pagination struct {
@@ -1808,24 +1808,24 @@ func (i *namespaceHttpTransportListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type sessionIdHttpTransportListGetFilterByItem struct {
+type sessionIDHttpTransportListGetFilterByItem struct {
 	Action string             `mapstructure:"action" binding:"required,oneof=eq neq"`
 	Value  serializer.HexUUID `mapstructure:"value" binding:""`
 }
 
-func (i *sessionIdHttpTransportListGetFilterByItem) GetName() string {
-	return "sessionId"
+func (i *sessionIDHttpTransportListGetFilterByItem) GetName() string {
+	return "sessionID"
 }
 
-func (i *sessionIdHttpTransportListGetFilterByItem) GetColumn() string {
+func (i *sessionIDHttpTransportListGetFilterByItem) GetColumn() string {
 	return "session_id"
 }
 
-func (i *sessionIdHttpTransportListGetFilterByItem) GetAction() string {
+func (i *sessionIDHttpTransportListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *sessionIdHttpTransportListGetFilterByItem) GetValue() any {
+func (i *sessionIDHttpTransportListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
@@ -2024,7 +2024,7 @@ type HttpTransportListGetFilterBy struct {
 	CreatedAtFrom createdAtFromHttpTransportListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
 	CreatedAtTo   createdAtToHttpTransportListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
 	Namespace     namespaceHttpTransportListGetFilterByItem     `mapstructure:"namespace" binding:"required"`
-	SessionId     *sessionIdHttpTransportListGetFilterByItem    `mapstructure:"sessionId"`
+	SessionID     *sessionIDHttpTransportListGetFilterByItem    `mapstructure:"sessionID"`
 	ClientIp      *clientIpHttpTransportListGetFilterByItem     `mapstructure:"clientIp"`
 	ServerIp      *serverIpHttpTransportListGetFilterByItem     `mapstructure:"serverIp"`
 	ClientPort    *clientPortHttpTransportListGetFilterByItem   `mapstructure:"clientPort"`
@@ -2070,8 +2070,8 @@ func (s *HttpTransportListGetSearchIn) GetFilterBy() map[string]utils.FilterByIt
 	items["createdAtFrom"] = &s.FilterBy.CreatedAtFrom
 	items["createdAtTo"] = &s.FilterBy.CreatedAtTo
 	items["namespace"] = &s.FilterBy.Namespace
-	if s.FilterBy.SessionId != nil {
-		items["sessionId"] = s.FilterBy.SessionId
+	if s.FilterBy.SessionID != nil {
+		items["sessionID"] = s.FilterBy.SessionID
 	}
 	if s.FilterBy.ClientIp != nil {
 		items["clientIp"] = s.FilterBy.ClientIp
@@ -2130,13 +2130,13 @@ func (s *HttpTransportListGetSearchIn) ResolveSelectColumns() []string {
 			add("capture")
 		case "version":
 			add("version")
-		case "sessionId":
+		case "sessionID":
 			add("session_id")
 		case "timestamp":
 			add("timestamp")
 		case "createdAt":
 			add("created_at")
-		case "traceId":
+		case "traceID":
 			add("trace_id")
 		case "clientIp":
 			add("client_ip")
@@ -2555,7 +2555,7 @@ func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "sessionId",
+				Name: "sessionID",
 				Type: "serializer.HexUUID",
 				Actions: []string{
 					"eq",
@@ -2643,10 +2643,10 @@ func (s *HttpTransportListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"namespace",
 			"capture",
 			"version",
-			"sessionId",
+			"sessionID",
 			"timestamp",
 			"createdAt",
-			"traceId",
+			"traceID",
 			"clientIp",
 			"clientPort",
 			"clientIsn",
@@ -2963,45 +2963,45 @@ func (i *namespaceIpv4TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type sessionIdIpv4TcpListGetFilterByItem struct {
+type sessionIDIpv4TcpListGetFilterByItem struct {
 	Action string             `mapstructure:"action" binding:"required,oneof=eq neq"`
 	Value  serializer.HexUUID `mapstructure:"value" binding:""`
 }
 
-func (i *sessionIdIpv4TcpListGetFilterByItem) GetName() string {
-	return "sessionId"
+func (i *sessionIDIpv4TcpListGetFilterByItem) GetName() string {
+	return "sessionID"
 }
 
-func (i *sessionIdIpv4TcpListGetFilterByItem) GetColumn() string {
+func (i *sessionIDIpv4TcpListGetFilterByItem) GetColumn() string {
 	return "session_id"
 }
 
-func (i *sessionIdIpv4TcpListGetFilterByItem) GetAction() string {
+func (i *sessionIDIpv4TcpListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *sessionIdIpv4TcpListGetFilterByItem) GetValue() any {
+func (i *sessionIDIpv4TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type tcpStreamIdIpv4TcpListGetFilterByItem struct {
+type tcpStreamIDIpv4TcpListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq"`
 	Value  string `mapstructure:"value" binding:""`
 }
 
-func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetName() string {
-	return "tcpStreamId"
+func (i *tcpStreamIDIpv4TcpListGetFilterByItem) GetName() string {
+	return "tcpStreamID"
 }
 
-func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetColumn() string {
+func (i *tcpStreamIDIpv4TcpListGetFilterByItem) GetColumn() string {
 	return "tcp_stream_id"
 }
 
-func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetAction() string {
+func (i *tcpStreamIDIpv4TcpListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *tcpStreamIdIpv4TcpListGetFilterByItem) GetValue() any {
+func (i *tcpStreamIDIpv4TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
@@ -3095,8 +3095,8 @@ type Ipv4TcpListGetFilterBy struct {
 	CreatedAtFrom createdAtFromIpv4TcpListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
 	CreatedAtTo   createdAtToIpv4TcpListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
 	Namespace     namespaceIpv4TcpListGetFilterByItem     `mapstructure:"namespace" binding:"required"`
-	SessionId     *sessionIdIpv4TcpListGetFilterByItem    `mapstructure:"sessionId"`
-	TcpStreamId   *tcpStreamIdIpv4TcpListGetFilterByItem  `mapstructure:"tcpStreamId"`
+	SessionID     *sessionIDIpv4TcpListGetFilterByItem    `mapstructure:"sessionID"`
+	TcpStreamID   *tcpStreamIDIpv4TcpListGetFilterByItem  `mapstructure:"tcpStreamID"`
 	Ipv4Src       *ipv4SrcIpv4TcpListGetFilterByItem      `mapstructure:"ipv4Src"`
 	Ipv4Dst       *ipv4DstIpv4TcpListGetFilterByItem      `mapstructure:"ipv4Dst"`
 	SrcPort       *srcPortIpv4TcpListGetFilterByItem      `mapstructure:"srcPort"`
@@ -3137,11 +3137,11 @@ func (s *Ipv4TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 	items["createdAtFrom"] = &s.FilterBy.CreatedAtFrom
 	items["createdAtTo"] = &s.FilterBy.CreatedAtTo
 	items["namespace"] = &s.FilterBy.Namespace
-	if s.FilterBy.SessionId != nil {
-		items["sessionId"] = s.FilterBy.SessionId
+	if s.FilterBy.SessionID != nil {
+		items["sessionID"] = s.FilterBy.SessionID
 	}
-	if s.FilterBy.TcpStreamId != nil {
-		items["tcpStreamId"] = s.FilterBy.TcpStreamId
+	if s.FilterBy.TcpStreamID != nil {
+		items["tcpStreamID"] = s.FilterBy.TcpStreamID
 	}
 	if s.FilterBy.Ipv4Src != nil {
 		items["ipv4Src"] = s.FilterBy.Ipv4Src
@@ -3185,7 +3185,7 @@ func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string {
 			add("capture")
 		case "version":
 			add("version")
-		case "sessionId":
+		case "sessionID":
 			add("session_id")
 		case "timestamp":
 			add("timestamp")
@@ -3213,7 +3213,7 @@ func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string {
 			add("ipv4_tos")
 		case "ipv4Length":
 			add("ipv4_length")
-		case "ipv4Id":
+		case "ipv4ID":
 			add("ipv4_id")
 		case "ipv4Flags":
 			add("ipv4_flags")
@@ -3277,7 +3277,7 @@ func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string {
 			add("fp_sig")
 		case "fpMtu":
 			add("fp_mtu")
-		case "tcpStreamId":
+		case "tcpStreamID":
 			add("tcp_stream_id")
 		case "payload":
 			add("payload")
@@ -3328,7 +3328,7 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "sessionId",
+				Name: "sessionID",
 				Type: "serializer.HexUUID",
 				Actions: []string{
 					"eq",
@@ -3336,7 +3336,7 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "tcpStreamId",
+				Name: "tcpStreamID",
 				Type: "string",
 				Actions: []string{
 					"eq",
@@ -3388,7 +3388,7 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"namespace",
 			"capture",
 			"version",
-			"sessionId",
+			"sessionID",
 			"timestamp",
 			"createdAt",
 			"truncated",
@@ -3402,7 +3402,7 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"ipv4Ihl",
 			"ipv4Tos",
 			"ipv4Length",
-			"ipv4Id",
+			"ipv4ID",
 			"ipv4Flags",
 			"ipv4FragOffset",
 			"ipv4Ttl",
@@ -3434,7 +3434,7 @@ func (s *Ipv4TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"fpOsQuality",
 			"fpSig",
 			"fpMtu",
-			"tcpStreamId",
+			"tcpStreamID",
 			"payload",
 		},
 	}
@@ -3567,45 +3567,45 @@ func (i *namespaceIpv6TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type sessionIdIpv6TcpListGetFilterByItem struct {
+type sessionIDIpv6TcpListGetFilterByItem struct {
 	Action string             `mapstructure:"action" binding:"required,oneof=eq neq"`
 	Value  serializer.HexUUID `mapstructure:"value" binding:""`
 }
 
-func (i *sessionIdIpv6TcpListGetFilterByItem) GetName() string {
-	return "sessionId"
+func (i *sessionIDIpv6TcpListGetFilterByItem) GetName() string {
+	return "sessionID"
 }
 
-func (i *sessionIdIpv6TcpListGetFilterByItem) GetColumn() string {
+func (i *sessionIDIpv6TcpListGetFilterByItem) GetColumn() string {
 	return "session_id"
 }
 
-func (i *sessionIdIpv6TcpListGetFilterByItem) GetAction() string {
+func (i *sessionIDIpv6TcpListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *sessionIdIpv6TcpListGetFilterByItem) GetValue() any {
+func (i *sessionIDIpv6TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type tcpStreamIdIpv6TcpListGetFilterByItem struct {
+type tcpStreamIDIpv6TcpListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq"`
 	Value  string `mapstructure:"value" binding:""`
 }
 
-func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetName() string {
-	return "tcpStreamId"
+func (i *tcpStreamIDIpv6TcpListGetFilterByItem) GetName() string {
+	return "tcpStreamID"
 }
 
-func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetColumn() string {
+func (i *tcpStreamIDIpv6TcpListGetFilterByItem) GetColumn() string {
 	return "tcp_stream_id"
 }
 
-func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetAction() string {
+func (i *tcpStreamIDIpv6TcpListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *tcpStreamIdIpv6TcpListGetFilterByItem) GetValue() any {
+func (i *tcpStreamIDIpv6TcpListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
@@ -3699,8 +3699,8 @@ type Ipv6TcpListGetFilterBy struct {
 	CreatedAtFrom createdAtFromIpv6TcpListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
 	CreatedAtTo   createdAtToIpv6TcpListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
 	Namespace     namespaceIpv6TcpListGetFilterByItem     `mapstructure:"namespace" binding:"required"`
-	SessionId     *sessionIdIpv6TcpListGetFilterByItem    `mapstructure:"sessionId"`
-	TcpStreamId   *tcpStreamIdIpv6TcpListGetFilterByItem  `mapstructure:"tcpStreamId"`
+	SessionID     *sessionIDIpv6TcpListGetFilterByItem    `mapstructure:"sessionID"`
+	TcpStreamID   *tcpStreamIDIpv6TcpListGetFilterByItem  `mapstructure:"tcpStreamID"`
 	Ipv6Src       *ipv6SrcIpv6TcpListGetFilterByItem      `mapstructure:"ipv6Src"`
 	Ipv6Dst       *ipv6DstIpv6TcpListGetFilterByItem      `mapstructure:"ipv6Dst"`
 	SrcPort       *srcPortIpv6TcpListGetFilterByItem      `mapstructure:"srcPort"`
@@ -3741,11 +3741,11 @@ func (s *Ipv6TcpListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
 	items["createdAtFrom"] = &s.FilterBy.CreatedAtFrom
 	items["createdAtTo"] = &s.FilterBy.CreatedAtTo
 	items["namespace"] = &s.FilterBy.Namespace
-	if s.FilterBy.SessionId != nil {
-		items["sessionId"] = s.FilterBy.SessionId
+	if s.FilterBy.SessionID != nil {
+		items["sessionID"] = s.FilterBy.SessionID
 	}
-	if s.FilterBy.TcpStreamId != nil {
-		items["tcpStreamId"] = s.FilterBy.TcpStreamId
+	if s.FilterBy.TcpStreamID != nil {
+		items["tcpStreamID"] = s.FilterBy.TcpStreamID
 	}
 	if s.FilterBy.Ipv6Src != nil {
 		items["ipv6Src"] = s.FilterBy.Ipv6Src
@@ -3789,7 +3789,7 @@ func (s *Ipv6TcpListGetSearchIn) ResolveSelectColumns() []string {
 			add("capture")
 		case "version":
 			add("version")
-		case "sessionId":
+		case "sessionID":
 			add("session_id")
 		case "timestamp":
 			add("timestamp")
@@ -3871,7 +3871,7 @@ func (s *Ipv6TcpListGetSearchIn) ResolveSelectColumns() []string {
 			add("fp_sig")
 		case "fpMtu":
 			add("fp_mtu")
-		case "tcpStreamId":
+		case "tcpStreamID":
 			add("tcp_stream_id")
 		case "payload":
 			add("payload")
@@ -3922,7 +3922,7 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "sessionId",
+				Name: "sessionID",
 				Type: "serializer.HexUUID",
 				Actions: []string{
 					"eq",
@@ -3930,7 +3930,7 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "tcpStreamId",
+				Name: "tcpStreamID",
 				Type: "string",
 				Actions: []string{
 					"eq",
@@ -3982,7 +3982,7 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"namespace",
 			"capture",
 			"version",
-			"sessionId",
+			"sessionID",
 			"timestamp",
 			"createdAt",
 			"truncated",
@@ -4023,7 +4023,7 @@ func (s *Ipv6TcpListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"fpOsQuality",
 			"fpSig",
 			"fpMtu",
-			"tcpStreamId",
+			"tcpStreamID",
 			"payload",
 		},
 	}
@@ -4633,12 +4633,22 @@ func (s *LlmModelListGetSearchIn) ResolveSelectColumns() []string {
 			add("temperature")
 		case "maxTokens":
 			add("max_tokens")
+		case "contextTokens":
+			add("context_tokens")
 		case "dimensions":
 			add("dimensions")
 		case "enabled":
 			add("enabled")
 		case "description":
 			add("description")
+		case "extraBody":
+			add("extra_body")
+		case "thinkingField":
+			add("thinking_field")
+		case "thinkingOnValue":
+			add("thinking_on_value")
+		case "thinkingOffValue":
+			add("thinking_off_value")
 		}
 	}
 	return columns
@@ -4776,9 +4786,14 @@ func (s *LlmModelListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"timeoutSeconds",
 			"temperature",
 			"maxTokens",
+			"contextTokens",
 			"dimensions",
 			"enabled",
 			"description",
+			"extraBody",
+			"thinkingField",
+			"thinkingOnValue",
+			"thinkingOffValue",
 		},
 	}
 }
@@ -6334,24 +6349,24 @@ func (i *createdAtToNetworkStackListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type traceIdNetworkStackListGetFilterByItem struct {
+type traceIDNetworkStackListGetFilterByItem struct {
 	Action string             `mapstructure:"action" binding:"required,oneof=eq"`
 	Value  serializer.HexUUID `mapstructure:"value" binding:"required"`
 }
 
-func (i *traceIdNetworkStackListGetFilterByItem) GetName() string {
-	return "traceId"
+func (i *traceIDNetworkStackListGetFilterByItem) GetName() string {
+	return "traceID"
 }
 
-func (i *traceIdNetworkStackListGetFilterByItem) GetColumn() string {
+func (i *traceIDNetworkStackListGetFilterByItem) GetColumn() string {
 	return "trace_id"
 }
 
-func (i *traceIdNetworkStackListGetFilterByItem) GetAction() string {
+func (i *traceIDNetworkStackListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *traceIdNetworkStackListGetFilterByItem) GetValue() any {
+func (i *traceIDNetworkStackListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
@@ -6376,24 +6391,24 @@ func (i *namespaceNetworkStackListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type sessionIdNetworkStackListGetFilterByItem struct {
+type sessionIDNetworkStackListGetFilterByItem struct {
 	Action string             `mapstructure:"action" binding:"required,oneof=eq neq"`
 	Value  serializer.HexUUID `mapstructure:"value" binding:""`
 }
 
-func (i *sessionIdNetworkStackListGetFilterByItem) GetName() string {
-	return "sessionId"
+func (i *sessionIDNetworkStackListGetFilterByItem) GetName() string {
+	return "sessionID"
 }
 
-func (i *sessionIdNetworkStackListGetFilterByItem) GetColumn() string {
+func (i *sessionIDNetworkStackListGetFilterByItem) GetColumn() string {
 	return "session_id"
 }
 
-func (i *sessionIdNetworkStackListGetFilterByItem) GetAction() string {
+func (i *sessionIDNetworkStackListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *sessionIdNetworkStackListGetFilterByItem) GetValue() any {
+func (i *sessionIDNetworkStackListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
@@ -6423,9 +6438,9 @@ type NetworkStackListGetFilterBy struct {
 	TimestampTo   timestampToNetworkStackListGetFilterByItem   `mapstructure:"timestampTo" binding:"required"`
 	CreatedAtFrom createdAtFromNetworkStackListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
 	CreatedAtTo   createdAtToNetworkStackListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
-	TraceId       traceIdNetworkStackListGetFilterByItem       `mapstructure:"traceId" binding:"required"`
+	TraceID       traceIDNetworkStackListGetFilterByItem       `mapstructure:"traceID" binding:"required"`
 	Namespace     *namespaceNetworkStackListGetFilterByItem    `mapstructure:"namespace"`
-	SessionId     *sessionIdNetworkStackListGetFilterByItem    `mapstructure:"sessionId"`
+	SessionID     *sessionIDNetworkStackListGetFilterByItem    `mapstructure:"sessionID"`
 	Cli2Srv       *cli2SrvNetworkStackListGetFilterByItem      `mapstructure:"cli2Srv"`
 }
 
@@ -6474,12 +6489,12 @@ func (s *NetworkStackListGetSearchIn) GetFilterBy() map[string]utils.FilterByIte
 	items["timestampTo"] = &s.FilterBy.TimestampTo
 	items["createdAtFrom"] = &s.FilterBy.CreatedAtFrom
 	items["createdAtTo"] = &s.FilterBy.CreatedAtTo
-	items["traceId"] = &s.FilterBy.TraceId
+	items["traceID"] = &s.FilterBy.TraceID
 	if s.FilterBy.Namespace != nil {
 		items["namespace"] = s.FilterBy.Namespace
 	}
-	if s.FilterBy.SessionId != nil {
-		items["sessionId"] = s.FilterBy.SessionId
+	if s.FilterBy.SessionID != nil {
+		items["sessionID"] = s.FilterBy.SessionID
 	}
 	if s.FilterBy.Cli2Srv != nil {
 		items["cli2Srv"] = s.FilterBy.Cli2Srv
@@ -6512,9 +6527,9 @@ func (s *NetworkStackListGetSearchIn) ResolveSelectColumns() []string {
 			add("capture")
 		case "version":
 			add("version")
-		case "sessionId":
+		case "sessionID":
 			add("session_id")
-		case "traceId":
+		case "traceID":
 			add("trace_id")
 		case "timestamp":
 			add("timestamp")
@@ -6580,7 +6595,7 @@ func (s *NetworkStackListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "traceId",
+				Name: "traceID",
 				Type: "serializer.HexUUID",
 				Actions: []string{
 					"eq",
@@ -6594,7 +6609,7 @@ func (s *NetworkStackListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "sessionId",
+				Name: "sessionID",
 				Type: "serializer.HexUUID",
 				Actions: []string{
 					"eq",
@@ -6613,8 +6628,8 @@ func (s *NetworkStackListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"namespace",
 			"capture",
 			"version",
-			"sessionId",
-			"traceId",
+			"sessionID",
+			"traceID",
 			"timestamp",
 			"createdAt",
 			"cli2Srv",
@@ -7886,9 +7901,9 @@ func (s *NotificationRecordListGetSearchIn) ResolveSelectColumns() []string {
 			add("updated_at")
 		case "eventType":
 			add("event_type")
-		case "eventId":
+		case "eventID":
 			add("event_id")
-		case "targetId":
+		case "targetID":
 			add("target_id")
 		case "targetName":
 			add("target_id")
@@ -7896,7 +7911,7 @@ func (s *NotificationRecordListGetSearchIn) ResolveSelectColumns() []string {
 			add("channel_type")
 		case "status":
 			add("status")
-		case "messageId":
+		case "messageID":
 			add("message_id")
 		case "notifiedAt":
 			add("notified_at")
@@ -8018,12 +8033,12 @@ func (s *NotificationRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"createdAt",
 			"updatedAt",
 			"eventType",
-			"eventId",
-			"targetId",
+			"eventID",
+			"targetID",
 			"targetName",
 			"channelType",
 			"status",
-			"messageId",
+			"messageID",
 			"notifiedAt",
 		},
 	}
@@ -8216,24 +8231,24 @@ func (i *nameNotificationTargetListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
-type channelIdNotificationTargetListGetFilterByItem struct {
+type channelIDNotificationTargetListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq neq"`
 	Value  uint   `mapstructure:"value" binding:""`
 }
 
-func (i *channelIdNotificationTargetListGetFilterByItem) GetName() string {
-	return "channelId"
+func (i *channelIDNotificationTargetListGetFilterByItem) GetName() string {
+	return "channelID"
 }
 
-func (i *channelIdNotificationTargetListGetFilterByItem) GetColumn() string {
+func (i *channelIDNotificationTargetListGetFilterByItem) GetColumn() string {
 	return "channel_id"
 }
 
-func (i *channelIdNotificationTargetListGetFilterByItem) GetAction() string {
+func (i *channelIDNotificationTargetListGetFilterByItem) GetAction() string {
 	return i.Action
 }
 
-func (i *channelIdNotificationTargetListGetFilterByItem) GetValue() any {
+func (i *channelIDNotificationTargetListGetFilterByItem) GetValue() any {
 	return i.Value
 }
 
@@ -8308,7 +8323,7 @@ type NotificationTargetListGetFilterBy struct {
 	UpdatedAtTime *updatedAtTimeNotificationTargetListGetFilterByItem `mapstructure:"updatedAtTime"`
 	UpdatedAtDate *updatedAtDateNotificationTargetListGetFilterByItem `mapstructure:"updatedAtDate"`
 	Name          *nameNotificationTargetListGetFilterByItem          `mapstructure:"name"`
-	ChannelId     *channelIdNotificationTargetListGetFilterByItem     `mapstructure:"channelId"`
+	ChannelID     *channelIDNotificationTargetListGetFilterByItem     `mapstructure:"channelID"`
 	Type          *typeNotificationTargetListGetFilterByItem          `mapstructure:"type"`
 	Enabled       *enabledNotificationTargetListGetFilterByItem       `mapstructure:"enabled"`
 	Language      *languageNotificationTargetListGetFilterByItem      `mapstructure:"language"`
@@ -8370,8 +8385,8 @@ func (s *NotificationTargetListGetSearchIn) GetFilterBy() map[string]utils.Filte
 	if s.FilterBy.Name != nil {
 		items["name"] = s.FilterBy.Name
 	}
-	if s.FilterBy.ChannelId != nil {
-		items["channelId"] = s.FilterBy.ChannelId
+	if s.FilterBy.ChannelID != nil {
+		items["channelID"] = s.FilterBy.ChannelID
 	}
 	if s.FilterBy.Type != nil {
 		items["type"] = s.FilterBy.Type
@@ -8412,7 +8427,7 @@ func (s *NotificationTargetListGetSearchIn) ResolveSelectColumns() []string {
 			add("updated_at")
 		case "name":
 			add("name")
-		case "channelId":
+		case "channelID":
 			add("channel_id")
 		case "type":
 			add("type")
@@ -8541,7 +8556,7 @@ func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions {
 				},
 			},
 			{
-				Name: "channelId",
+				Name: "channelID",
 				Type: "uint",
 				Actions: []string{
 					"eq",
@@ -8576,7 +8591,7 @@ func (s *NotificationTargetListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"createdAt",
 			"updatedAt",
 			"name",
-			"channelId",
+			"channelID",
 			"type",
 			"enabled",
 			"config",
@@ -9984,7 +9999,7 @@ func (s *TagEventRecordListGetSearchIn) ResolveSelectColumns() []string {
 			add("created_at")
 		case "updatedAt":
 			add("updated_at")
-		case "ruleId":
+		case "ruleID":
 			add("rule_id")
 		case "ruleName":
 			add("rule_name")
@@ -10153,7 +10168,7 @@ func (s *TagEventRecordListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"id",
 			"createdAt",
 			"updatedAt",
-			"ruleId",
+			"ruleID",
 			"ruleName",
 			"matchAll",
 			"status",

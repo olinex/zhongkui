@@ -43,7 +43,7 @@
                     color="info"
                     :length="10"
                   />
-                  <span v-else class="text-body-2 text-on-surface">{{ field.display }}</span>
+                  <span v-else class="text-body-medium">{{ field.display }}</span>
                 </td>
               </tr>
             </tbody>
@@ -77,15 +77,15 @@
                 :class="{ 'zk-row-selected': expanded.has(chunk.index) }"
                 @click="toggleChunk(chunk.index)"
               >
-                <span class="chunk-index font-mono text-caption">#{{ chunk.index }}</span>
-                <span class="chunk-path text-body-2 text-on-surface">
+                <span class="chunk-index font-mono text-body-small">#{{ chunk.index }}</span>
+                <span class="chunk-path text-body-medium">
                   {{ chunk.headingPath || blankText }}
                 </span>
                 <v-chip v-for="kind in chunk.kinds" :key="kind" size="small">
                   {{ enumLabelOf(EnumClass.chunkUnitKind, kind) }}
                 </v-chip>
                 <v-spacer />
-                <span class="text-caption text-on-surface-variant">
+                <span class="text-body-small on-surface-variant">
                   {{ chunkMetaTextOf(chunk) }}
                 </span>
                 <v-icon
@@ -96,7 +96,7 @@
               <v-expand-transition>
                 <pre
                   v-show="expanded.has(chunk.index)"
-                  class="zk-code-preview chunk-body font-mono text-caption text-on-surface"
+                  class="zk-code-preview chunk-body font-mono text-body-small"
                   >{{ chunk.content }}</pre>
               </v-expand-transition>
             </div>

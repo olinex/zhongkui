@@ -128,7 +128,7 @@ func TestTypeResolve(t *testing.T) {
 		typ := &Type{
 			Name: "tagRuleModel",
 			Entries: []Entry{
-				{Key: "httpTransport", Value: "zhongkui.com/zhongkui/internal/models/network.HttpTransport"},
+				{Key: "httpTransport", Value: "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport"},
 			},
 		}
 
@@ -137,10 +137,10 @@ func TestTypeResolve(t *testing.T) {
 		})
 
 		Convey("按 value 解析命中（数据库存储语义）", func() {
-			e, ok := typ.Resolve("zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			e, ok := typ.Resolve("zhongkuisec.com/zhongkui/internal/models/network.HttpTransport")
 			So(ok, ShouldBeTrue)
 			So(e.Key, ShouldEqual, "httpTransport")
-			So(e.Value, ShouldEqual, "zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			So(e.Value, ShouldEqual, "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport")
 		})
 
 		Convey("按 key 解析命中（展示语义）", func() {
@@ -159,7 +159,7 @@ func TestTypeResolve(t *testing.T) {
 			So(ok, ShouldBeTrue)
 			_, ok = typ.EntryByKey("nope")
 			So(ok, ShouldBeFalse)
-			_, ok = typ.EntryByValue("zhongkui.com/zhongkui/internal/models/network.HttpTransport")
+			_, ok = typ.EntryByValue("zhongkuisec.com/zhongkui/internal/models/network.HttpTransport")
 			So(ok, ShouldBeTrue)
 			_, ok = typ.EntryByValue("nope")
 			So(ok, ShouldBeFalse)

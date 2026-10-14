@@ -9,13 +9,13 @@ import (
 	"github.com/hibiken/asynq"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // fakeEnqueuer 实现 eventEnqueuer 接口，追加记录投递的任务供断言使用。
@@ -144,7 +144,7 @@ func TestEventDetectHandler_PersistEvents(t *testing.T) {
 		u2 := serializer.MustHexUUIDv4FromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
 		// hitModelTypeKey 命中明细携带的完整类型键（数据库存储语义），
 		// 验证 toEventModel 原样透传、不做短键收敛。
-		const hitModelTypeKey = "zhongkui.com/zhongkui/internal/models/network.HttpTransport"
+		const hitModelTypeKey = "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport"
 		events := []*tagengine.TagEventRecord{
 			{
 				Namespace: "default", RuleID: ruleA.ID, RuleName: "rule-a", MatchAll: false,

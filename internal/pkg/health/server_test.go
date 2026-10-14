@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/status"
+	"zhongkuisec.com/zhongkui/internal/pkg/status"
 )
 
 // depProbeOK 返回一个始终就绪（可达）的依赖探测项。

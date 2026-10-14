@@ -22,16 +22,16 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // invalidTagRuleError 构造标签规则校验失败的错误响应（HTTP 400，携带结构化校验错误详情）。
@@ -112,7 +112,7 @@ type TagRuleCreateIn struct {
 	Name string `json:"name" binding:"required,min=1,max=128,alphanumspecial=_-"`
 	// Description 规则描述，说明规则意图，最长 512 字符
 	Description string `json:"description" binding:"max=512"`
-	// Model 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	// Model 目标模型类型键（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `json:"model" binding:"required,max=255"`
 	// Rego Rego 规则源码，遵循 package zki + tags contains 契约，最长 64KiB
 	Rego string `json:"rego" binding:"required,max=65536"`
@@ -169,7 +169,7 @@ type TagRuleListOut struct {
 type TagRuleVersionOut struct {
 	utils.BaseItemOut
 	// RuleID 所属标签规则 ID
-	RuleID uint `json:"ruleId"`
+	RuleID uint `json:"ruleID"`
 	// Version 版本号，同一规则内从 1 递增
 	Version uint `json:"version"`
 	// Name 快照时刻的规则名称
@@ -202,7 +202,7 @@ type TagRuleValidateOut struct {
 
 // TagRuleModelIn 定义标签规则目标模型相关接口的请求输入结构。
 type TagRuleModelIn struct {
-	// Model 目标模型类型键（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）
+	// Model 目标模型类型键（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）
 	Model string `json:"model" binding:"required"`
 }
 

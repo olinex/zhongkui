@@ -10,7 +10,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // stubReasoned 具备不可用原因说明能力的桩功能：模拟 AI 助手（可用性与原因均由运行时实时判定）。

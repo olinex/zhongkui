@@ -14,7 +14,7 @@ import (
 	"text/template"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 type benchConfig struct {

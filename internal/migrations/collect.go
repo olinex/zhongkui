@@ -4,10 +4,10 @@ package migrations
 import (
 	"embed"
 
-	migcore "zhongkui.com/zhongkui/internal/migrations/core"
-	migraw "zhongkui.com/zhongkui/internal/migrations/raw"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	migcore "zhongkuisec.com/zhongkui/internal/migrations/core"
+	migraw "zhongkuisec.com/zhongkui/internal/migrations/raw"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // MigrationFor 根据数据库名返回对应数据库的嵌入式迁移文件集，未知库名将 panic。

@@ -6,8 +6,8 @@ import (
 	"reflect"
 
 	"gorm.io/gorm/schema"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Hash 是数据库摘要字段的类型化封装：字段持有由 crypto 层预计算的十六进制

@@ -10,9 +10,9 @@ import (
 	"github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/etl"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
-	message "zhongkui.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/etl"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	message "zhongkuisec.com/zhongkui/internal/pkg/message"
 )
 
 // fakeETLTask 实现 etl.Task 接口的测试替身。

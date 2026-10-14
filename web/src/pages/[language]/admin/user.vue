@@ -10,7 +10,16 @@
         :create="openCreateDialogAction"
         :project-fields="projectFields"
         model-name="user"
-      />
+      >
+        <!-- 启用列：开关即时写入，写入期间按行显示 loading 并禁用，失败回退，
+             避免重复切换同一行 -->
+        <template #cell-active="{ item }">
+          <enabled-switch-cell
+            v-model="item.active"
+            :request="(enabled: boolean) => userSetActive(item.unionID, enabled)"
+          />
+        </template>
+      </search-table>
       <confirm-dialog
         ref="batchConfirmRef"
         :title="$t('model.user.name')"
@@ -36,7 +45,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createUsername"
@@ -45,7 +54,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <password-field
                   v-model="createPassword"
@@ -61,7 +70,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-text-field
                   v-model="createNickleName"
@@ -89,7 +98,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col col="12">
                 <v-text-field
                   v-model="proxy.username"
@@ -98,7 +107,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col col="6">
                 <v-text-field
                   v-model="proxy.nickleName"
@@ -116,7 +125,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col col="12">
                 <inner-edit-table
                   v-model="proxy.groups"
@@ -185,7 +194,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-radio-group v-model="resetMode" inline>
                   <v-radio :label="$t('model.user.field.randomPassword')" value="random" />
@@ -193,7 +202,7 @@
                 </v-radio-group>
               </v-col>
             </v-row>
-            <v-row v-if="resetMode === 'manual'" dense>
+            <v-row v-if="resetMode === 'manual'" density="compact">
               <v-col cols="6">
                 <password-field
                   v-model="resetNewPassword"
@@ -227,7 +236,7 @@
             <copy-btn :value="resetResultPassword" />
           </template>
         </v-text-field>
-        <p class="text-body-2 text-on-surface-variant mt-2">
+        <p class="text-body-medium on-surface-variant mt-2">
           {{ $t("model.user.field.passwordResetNotice") }}
         </p>
         <template #footer>
@@ -273,7 +282,7 @@ import { useForm } from "vee-validate";
 import { adminResetPasswordSchema, changeProfileSchema, createUserSchema } from "@/schemas/user";
 import { vuetifyCfg } from "@/utils/form";
 
-const { defineField, handleSubmit, meta, resetField } = useForm({
+const { defineField, handleSubmit, meta, resetForm } = useForm({
   validationSchema: changeProfileSchema,
 });
 
@@ -340,21 +349,12 @@ const namespaceOpts = computed(() => {
 // 避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "unionID", "active", ...visible];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     resetPassword: resetPasswordAction,
     resetFrontendConfig: resetFrontendConfigAction,
   };
-  switch (item.active) {
-    case false:
-      actions.activate = activateAction;
-      break;
-    case true:
-      actions.deactivate = deactivateAction;
-      break;
-  }
   return actions;
 };
 
@@ -363,8 +363,13 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<UserDetailOut>(
     userDetailGet(item.unionID),
     async (rsp) => {
-      resetField("nickleName", { value: rsp.data.nickleName });
-      resetField("email", { value: rsp.data.email });
+      // 复位与回填同属打开动作：原子重置全部字段与校验状态
+      resetForm({
+        values: {
+          nickleName: rsp.data.nickleName,
+          email: rsp.data.email,
+        },
+      });
       editDialogRef.value?.open({
         ...rsp.data,
         nickleName,
@@ -410,18 +415,16 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
 };
 
 const openCreateDialogAction = () => {
-  createForm.resetField("username", { value: "" });
-  createForm.resetField("password", { value: "" });
-  createForm.resetField("passwordAgain", { value: "" });
-  createForm.resetField("nickleName", { value: "" });
-  createForm.resetField("email", { value: "" });
-  createDialogRef.value?.open({
+  // 打开动作里原子复位全部字段；密码等凭据字段留空
+  const defaults = {
     username: "",
     password: "",
     passwordAgain: "",
     nickleName: "",
     email: "",
-  });
+  };
+  createForm.resetForm({ values: defaults });
+  createDialogRef.value?.open(defaults);
 };
 
 const createAction = createForm.handleSubmit(async (values) => {
@@ -451,42 +454,6 @@ const createAction = createForm.handleSubmit(async (values) => {
     },
   );
 });
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const activateAction = async (item: Record<string, any>): Promise<void> => {
-  await getResponse<BatchResultOut>(
-    userSetActive(item.unionID, true),
-    async (rsp) => {
-      applyBatchResult(rsp.summary, rsp.data);
-      await searchTableRef.value?.refresh();
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const deactivateAction = async (item: Record<string, any>): Promise<void> => {
-  await getResponse<BatchResultOut>(
-    userSetActive(item.unionID, false),
-    async (rsp) => {
-      applyBatchResult(rsp.summary, rsp.data);
-      await searchTableRef.value?.refresh();
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-};
 
 // ---- 批量启用/禁用 ----
 // applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要
@@ -534,9 +501,9 @@ const batchAction = async (): Promise<void> => {
     return;
   }
   batchState.value = null;
-  const unionIds = state.items.map((i) => i.unionID as string);
+  const unionIDs = state.items.map((i) => i.unionID as string);
   await getResponse<BatchResultOut>(
-    userSetActive(unionIds, state.action === "activate"),
+    userSetActive(unionIDs, state.action === "activate"),
     async (rsp) => {
       applyBatchResult(rsp.summary, rsp.data);
       searchTableRef.value?.clearSelection?.();
@@ -608,8 +575,8 @@ const resetConfirmDisabled = computed(() => {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const resetPasswordAction = async (item: Record<string, any>): Promise<void> => {
   resetMode.value = "random";
-  resetPasswordForm.resetField("newPassword", { value: "" });
-  resetPasswordForm.resetField("newPasswordAgain", { value: "" });
+  // 打开重置密码弹窗的动作：原子复位密码字段（凭据留空）
+  resetPasswordForm.resetForm({ values: { newPassword: "", newPasswordAgain: "" } });
   resetUnionID.value = item.unionID;
   resetPasswordDialogRef.value?.open({});
 };

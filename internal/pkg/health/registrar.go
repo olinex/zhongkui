@@ -7,8 +7,8 @@ import (
 	"time"
 
 	clientv3 "go.etcd.io/etcd/client/v3"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
 )
 
 // ServiceInfo 写入 etcd 服务目录的单实例状态负载。
@@ -16,7 +16,7 @@ type ServiceInfo struct {
 	// ServiceName 服务名称
 	ServiceName string `json:"serviceName"`
 	// InstanceID 实例唯一标识
-	InstanceID string `json:"instanceId"`
+	InstanceID string `json:"instanceID"`
 	// Host 实例所在主机地址
 	Host string `json:"host"`
 	// Version 实例运行版本

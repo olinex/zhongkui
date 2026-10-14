@@ -63,7 +63,7 @@ export interface CapturerStatusItemOut {
   namespace: string;
   name: string;
   version: string;
-  sessionId: string;
+  sessionID: string;
   // 运行状态短键（running / stopped），经 model.capturer.option.status.* 渲染标签。
   status: string;
   configVersion: number;
@@ -142,10 +142,10 @@ export interface TagEventRuleCreateIn {
   /** suppressWindow 以纳秒为单位（前端按分钟换算） */
   suppressWindow: number;
   enabled: boolean;
-  /** notificationGroupId 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
-  notificationGroupId?: number;
-  /** notificationTargetId 规则直绑的通知目标 ID，缺省表示未直绑目标；与通知组互斥 */
-  notificationTargetId?: number;
+  /** notificationGroupID 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
+  notificationGroupID?: number;
+  /** notificationTargetID 规则直绑的通知目标 ID，缺省表示未直绑目标；与通知组互斥 */
+  notificationTargetID?: number;
   conditions: TagEventRuleConditionIn[];
 }
 
@@ -155,10 +155,10 @@ export interface TagEventRuleUpdateIn {
   /** suppressWindow 以纳秒为单位（前端按分钟换算） */
   suppressWindow: number;
   enabled: boolean;
-  /** notificationGroupId 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
-  notificationGroupId?: number;
-  /** notificationTargetId 规则直绑的通知目标 ID，缺省表示未直绑目标；与通知组互斥 */
-  notificationTargetId?: number;
+  /** notificationGroupID 规则绑定的通知组 ID，缺省表示未绑定（使用命名空间默认组） */
+  notificationGroupID?: number;
+  /** notificationTargetID 规则直绑的通知目标 ID，缺省表示未直绑目标；与通知组互斥 */
+  notificationTargetID?: number;
   conditions: TagEventRuleConditionIn[];
 }
 
@@ -194,7 +194,7 @@ export interface TagEventRecordItem {
   id: number;
   createdAt: string;
   updatedAt: string;
-  ruleId: number;
+  ruleID: number;
   ruleName: string;
   matchAll: boolean;
   status: string;
@@ -240,13 +240,13 @@ export interface TagEventRecordHitRecordsOut {
 // TagEventRecordSendOut 标签事件关联的通知发送记录项
 export interface TagEventRecordSendOut {
   id: number;
-  targetId: number;
+  targetID: number;
   targetName: string;
-  channelId: number;
+  channelID: number;
   channelName: string;
   channelType: string;
   status: string;
-  messageId: string;
+  messageID: string;
   error: string;
   payload: string;
   notifiedAt: string | null;
@@ -257,7 +257,7 @@ export interface TagEventRecordDetailOut {
   id: number;
   createdAt: string;
   updatedAt: string;
-  ruleId: number;
+  ruleID: number;
   ruleName: string;
   matchAll: boolean;
   status: string;

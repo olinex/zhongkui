@@ -10,7 +10,7 @@ import (
 	gpool "github.com/jolestar/go-commons-pool/v2"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // Manager 泛型资源池管理器：按不透明 Key 惰性维护一组独立的 go-commons-pool

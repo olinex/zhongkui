@@ -22,7 +22,7 @@ package combine
 
 import (
 	"github.com/klauspost/compress/zstd"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // NewZstdAESGCMPipelineWithLevel 创建使用指定压缩级别的 Zstd+AES-GCM 管道。

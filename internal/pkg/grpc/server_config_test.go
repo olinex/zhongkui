@@ -6,8 +6,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 	"github.com/spf13/viper"
-	"zhongkui.com/zhongkui/internal/pkg/tls"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/tls"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // testValidate 测试用的验证器实例

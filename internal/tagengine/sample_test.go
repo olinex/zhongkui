@@ -8,11 +8,11 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"gorm.io/datatypes"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/testdb"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // httpTransportType 已注册目标模型 *network.HttpTransport 的类型键，作为样例与规则的目标模型。
@@ -95,8 +95,8 @@ func TestValidateGroupRuntime(t *testing.T) {
 			"reqHdrContentLength": 42,
 			"clientIp": "10.0.0.55",
 			"serverIp": "142.250.72.14",
-			"sessionId": "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
-			"traceId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+			"sessionID": "c81d4e2e-bcf2-11e6-869b-7df92533d2db",
+			"traceID": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
 			"timestamp": "2026-08-15T03:12:34Z"
 		}`)
 		// 该样例不含 reqHdrContentLength，反序列化后字段为零值 0，
@@ -109,7 +109,7 @@ func TestValidateGroupRuntime(t *testing.T) {
 			"reqHdrUserAgent": "curl/8.0.1",
 			"clientIp": "192.168.1.10",
 			"serverIp": "93.184.216.34",
-			"sessionId": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+			"sessionID": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
 		}`)
 
 		Convey("合法规则运行期校验通过", func() {
@@ -132,7 +132,7 @@ func TestValidateGroupRuntime(t *testing.T) {
 
 		Convey("样例无法反序列化为目标模型时返回错误", func() {
 			insertSample(t, db, "bad-session", `{
-				"sessionId": "not-a-uuid",
+				"sessionID": "not-a-uuid",
 				"method": "GET"
 			}`)
 			issues, err := tagengine.ValidateGroupRuntime(context.Background(), db, sampleRules(validSampleRego))

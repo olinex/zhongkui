@@ -12,11 +12,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/mode"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	t "zhongkui.com/zhongkui/internal/pkg/tag"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/mode"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	t "zhongkuisec.com/zhongkui/internal/pkg/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // SecurityTagKey 加密字段的 secure 结构体标签键。

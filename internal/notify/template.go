@@ -108,6 +108,21 @@
 //
 // 通知组未绑定目标、目标或所属渠道禁用等场景静默跳过（不视为错误）。异步投递的 asynq 任务
 // notify:send:group（扇出为逐目标 notify:send:target）见 internal/worker/handlers/notify。
+//
+// ## 七、模板解析与持久化约定
+//
+// 持久化模板行 core.NotificationTemplate 以 (namespace_name, event, channel_type, language)
+// 复合唯一，`channel_type` 与 `language` 支持 "*" 通配，`source` 区分内置默认（default）与
+// 用户覆盖（override）。内置默认模板不再物化落库：`notification_templates` 仅承载命名空间
+// 维度的覆盖行，"恢复默认"即删除该事件行，渲染自动回退 i18n 默认。
+//
+// `resolveTemplate` 的解析优先级由高到低：(事件, 渠道, 语言) → (事件, 渠道, "*") →
+// (事件, "*", 语言) → (事件, "*", "*")；总分并列时优先精确渠道而非精确语言，仍平局按
+// 模板行 ID 升序，保证确定性。
+//
+// 模板统一经 message.RenderTemplateWithFuncs 渲染，底层 text/template 开启 missingkey=zero：
+// 模板引用而 params 缺失的键渲染为空/零值而非报错。i18n 键中不含语言（语言维度由各语言
+// 文件承载），较长正文经 "@相对路径" 外置文件（如 locales/notify/*.txt）。
 package notify
 
 import (
@@ -117,9 +132,9 @@ import (
 	"text/template"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 消息模板键常量（业务相关）。模板键由各事件源在通知层固化，随 message.Message
@@ -147,8 +162,8 @@ var eventTemplateSpecs = map[string]EventTemplateSpec{
 			"DetectedAt":    "2026-01-01T00:00:00Z",
 			"DetectedAtFmt": "2026-01-01 00:00:00 UTC",
 			"Hits": []any{
-				map[string]any{"ConditionName": "条件A", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 5, "Threshold": 3, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
-				map[string]any{"ConditionName": "条件B", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 128, "Threshold": 50, "Model": "zhongkui.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s", "RecordCount": 128},
+				map[string]any{"ConditionName": "条件A", "Dimension": "fpTcpClientSig", "Item": "10.0.0.1", "Count": 5, "Threshold": 3, "Model": "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport", "Window": "5m0s", "RecordCount": 5},
+				map[string]any{"ConditionName": "条件B", "Dimension": "fpTcpServerSig", "Item": "443", "Count": 128, "Threshold": 50, "Model": "zhongkuisec.com/zhongkui/internal/models/network.HttpTransport", "Window": "10m0s", "RecordCount": 128},
 			},
 		},
 	},

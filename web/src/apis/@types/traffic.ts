@@ -8,9 +8,9 @@ export interface TrafficListItem {
   namespace: string;
   timestamp: string;
   createdAt: string;
-  sessionId: string;
-  tcpStreamId?: string | null;
-  traceId?: string | null;
+  sessionID: string;
+  tcpStreamID?: string | null;
+  traceID?: string | null;
   capture?: string | null;
   version?: string | null;
   // ipv4-tcp / ipv6-tcp 网络层字段
@@ -77,8 +77,8 @@ export interface NetworkStackListItem {
   namespace: string;
   timestamp: string;
   createdAt: string;
-  sessionId: string;
-  traceId: string;
+  sessionID: string;
+  traceID: string;
   capture?: string | null;
   version?: string | null;
   cli2Srv: boolean;

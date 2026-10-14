@@ -7,7 +7,7 @@ import (
 	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/tls"
+	"zhongkuisec.com/zhongkui/internal/pkg/tls"
 )
 
 // ============================================

@@ -20,9 +20,9 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/version"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/version"
 )
 
 // ConnConfig 是连接一个远程 MCP 服务器所需的全部信息；Headers 承载 Authorization 等凭据，

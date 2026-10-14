@@ -3,8 +3,8 @@ package cmd
 import (
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
-	"zhongkui.com/zhongkui/internal/pkg/version"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/pkg/version"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 var versionCmd = &cobra.Command{

@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"testing"
 
-	n "zhongkui.com/zhongkui/internal/models/network"
+	n "zhongkuisec.com/zhongkui/internal/models/network"
 
 	. "github.com/smartystreets/goconvey/convey"
 )

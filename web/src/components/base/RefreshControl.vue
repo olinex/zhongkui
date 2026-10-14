@@ -12,7 +12,7 @@
           :title="$t('action.refreshInterval')"
           :aria-label="$t('action.refreshInterval')"
         >
-          <span class="text-caption font-weight-medium">{{ intervalLabel }}</span>
+          <span class="text-body-small font-weight-medium">{{ intervalLabel }}</span>
           <v-icon size="small" class="ml-1">mdi-chevron-down</v-icon>
         </v-btn>
       </template>
@@ -23,7 +23,7 @@
           :active="interval === opt.value"
           @click="selectInterval(opt.value)"
         >
-          <v-list-item-title class="text-caption">{{ opt.title }}</v-list-item-title>
+          <v-list-item-title class="text-body-small">{{ opt.title }}</v-list-item-title>
         </v-list-item>
       </v-list>
     </v-menu>
@@ -44,9 +44,9 @@
         :width="3"
         color="primary"
       >
-        <v-icon size="small" class="text-on-surface">mdi-pause</v-icon>
+        <v-icon size="small">mdi-pause</v-icon>
       </v-progress-circular>
-      <v-icon v-else size="small" class="text-on-surface">mdi-play</v-icon>
+      <v-icon v-else size="small">mdi-play</v-icon>
     </v-btn>
 
     <!-- 第三段：手动刷新 -->

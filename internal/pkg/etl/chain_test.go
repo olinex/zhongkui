@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // fakeTask 测试用任务实现，满足 etl.Task 接口。

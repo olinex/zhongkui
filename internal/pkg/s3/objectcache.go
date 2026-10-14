@@ -31,7 +31,7 @@ import (
 
 	// 项目内部
 	"github.com/creasty/defaults"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // objectCachePrefix 本模块缓存目录的共同名称组件（prefix）：内存与磁盘缓存目录都由它拼接

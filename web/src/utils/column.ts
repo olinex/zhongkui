@@ -7,6 +7,17 @@ import { useConfigSyncStore } from "@/stores/configSync";
 // 表格列配置在 localStorage 中的存储键前缀
 const COLUMN_STORAGE_PREFIX = "table-columns:";
 
+// 行操作列（__actions）约定：该列专用于摆放行级按钮，统一水平居中并固定置尾。
+// 在共享列工具统一覆写，页面 / 表格无需（也不应）就地声明其 align / fixed，
+// 避免各列表页（SearchTable 与原生 v-data-table）对齐不一致。
+const ACTIONS_COLUMN_KEY = "__actions";
+
+const normalizeActionsHeader = (headers: Array<TableHeader>): Array<TableHeader> => {
+  return headers.map((hdr) =>
+    hdr.key === ACTIONS_COLUMN_KEY ? { ...hdr, align: "center", fixed: "end" } : hdr,
+  );
+};
+
 // 持久化的列配置：order 为全量可切换列顺序，visible 为可见列子集（顺序遵循 order）
 interface ColumnConfig {
   order: string[];
@@ -59,7 +70,7 @@ export function useColumnVisibility(
 ) {
   // 全量可切换列（排除固定列），顺序跟随表头定义
   const allToggleable = computed(() => {
-    return headers.value.filter((hdr) => !hdr.fixed);
+    return normalizeActionsHeader(headers.value).filter((hdr) => !hdr.fixed);
   });
 
   // 用户自定义的列顺序（全量可切换列，持久化）；隐藏列也保留位置，重新勾选后回到原位
@@ -100,12 +111,13 @@ export function useColumnVisibility(
 
   // 可见表头：按用户顺序输出可见列，固定列（如操作列）始终置尾
   const visibleHeaders = computed(() => {
-    const byKey = new Map(headers.value.map((hdr) => [hdr.key, hdr]));
+    const normalized = normalizeActionsHeader(headers.value);
+    const byKey = new Map(normalized.map((hdr) => [hdr.key, hdr]));
     const visibleSet = new Set(visibleKeys.value);
     const ordered = columnOrder.value
       .map((key) => byKey.get(key))
       .filter((hdr): hdr is TableHeader => hdr !== undefined && visibleSet.has(hdr.key));
-    const fixed = headers.value.filter((hdr) => hdr.fixed);
+    const fixed = normalized.filter((hdr) => hdr.fixed);
     return [...ordered, ...fixed];
   });
 

@@ -4,7 +4,7 @@ package datasource
 import (
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
 // RegisterRoutes 注册 /api/v1/datasource 第三方数据源通用管理接口。
@@ -34,48 +34,48 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 第三方数据源类型枚举 - 返回 redis / mysql 类型及各自配置字段 schema，供前端动态渲染
 		dsGroup.POST("/types", DatasourceTypeConfigGet)
 		// 第三方数据源类型枚举元信息
-		dsGroup.OPTIONS("/types", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceTypesOut]())))
+		views.RegisterApi(dsGroup, "/types", "第三方数据源类型枚举 - 返回 redis / mysql 类型及各自配置字段 schema，供前端动态渲染", views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceTypesOut]()))
 		// 第三方数据源列表查询 - 支持分页、搜索和排序
 		dsGroup.POST("/list", DatasourceListGet)
 		// 第三方数据源列表自省信息 - 返回搜索选项、表格列与出参结构体定义
-		dsGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.DatasourceListGetSearchIn, *DatasourceListOut]())
+		views.RegisterListApi[*views.DatasourceListGetSearchIn, *DatasourceListOut](dsGroup, "/list", "第三方数据源列表查询 - 支持分页、搜索和排序")
 		// 创建第三方数据源 - 注册 vtable 校验配置后落库（归属当前请求命名空间）
 		dsGroup.POST("/create", DatasourceCreate)
 		// 创建第三方数据源元信息
-		dsGroup.OPTIONS("/create", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceCreateIn]())))
+		views.RegisterApi(dsGroup, "/create", "创建第三方数据源 - 注册 vtable 校验配置后落库（归属当前请求命名空间）", views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceCreateIn]()))
 		// 测试第三方数据源连接 - 预检连通性，不落库不注册 vtable，失败原因放 body 返回
 		dsGroup.POST("/test", DatasourceTest)
 		// 测试第三方数据源连接元信息
-		dsGroup.OPTIONS("/test", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceTestIn](), views.WithBodyOutput[DatasourceTestOut]())))
+		views.RegisterApi(dsGroup, "/test", "测试第三方数据源连接 - 预检连通性，不落库不注册 vtable，失败原因放 body 返回", views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceTestIn](), views.WithBodyOutput[DatasourceTestOut]()))
 		// 自省第三方数据源表结构 - 预检列定义，不落库不注册 vtable；sqlite_file 上传 .db 文件
 		dsGroup.POST("/introspect", DatasourceIntrospect)
 		// 自省第三方数据源表结构元信息
-		dsGroup.OPTIONS("/introspect", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceIntrospectIn](), views.WithBodyOutput[DatasourceIntrospectOut]())))
+		views.RegisterApi(dsGroup, "/introspect", "自省第三方数据源表结构 - 预检列定义，不落库不注册 vtable；sqlite_file 上传 .db 文件", views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceIntrospectIn](), views.WithBodyOutput[DatasourceIntrospectOut]()))
 		// 第三方数据源详情查询 - 根据ID获取数据源完整信息
 		dsGroup.POST("/:id/get", DatasourceDetailGet)
 		// 第三方数据源详情元信息
-		dsGroup.OPTIONS("/:id/get", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceDetailOut]())))
+		views.RegisterApi(dsGroup, "/:id/get", "第三方数据源详情查询 - 根据ID获取数据源完整信息", views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceDetailOut]()))
 		// 更新第三方数据源 - 更新启用状态/配置/描述（名称不可变），覆盖注册相应 vtable
 		dsGroup.POST("/:id/update", DatasourceUpdate)
 		// 更新第三方数据源元信息
-		dsGroup.OPTIONS("/:id/update", views.StructMetaGinHandler(views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceUpdateIn]())))
+		views.RegisterApi(dsGroup, "/:id/update", "更新第三方数据源 - 更新启用状态/配置/描述（名称不可变），覆盖注册相应 vtable", views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceUpdateIn]()))
 		// 删除第三方数据源 - 批量删除并注销相应 vtable
 		dsGroup.POST("/delete", DatasourceBatchDelete)
 		// 删除第三方数据源元信息
-		dsGroup.OPTIONS("/delete", views.StructMetaGinHandler(
+		views.RegisterApi(dsGroup, "/delete", "删除第三方数据源 - 批量删除并注销相应 vtable",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceBatchIn](), views.WithBodyOutput[views.BatchResultOut]()),
-		))
+		)
 		// 启用第三方数据源 - 批量启用并注册相应 vtable
 		dsGroup.POST("/enable", DatasourceBatchSetEnabled(true))
 		// 启用第三方数据源元信息
-		dsGroup.OPTIONS("/enable", views.StructMetaGinHandler(
+		views.RegisterApi(dsGroup, "/enable", "启用第三方数据源 - 批量启用并注册相应 vtable",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceBatchIn](), views.WithBodyOutput[views.BatchResultOut]()),
-		))
+		)
 		// 停用第三方数据源 - 批量停用并注销相应 vtable
 		dsGroup.POST("/disable", DatasourceBatchSetEnabled(false))
 		// 停用第三方数据源元信息
-		dsGroup.OPTIONS("/disable", views.StructMetaGinHandler(
+		views.RegisterApi(dsGroup, "/disable", "停用第三方数据源 - 批量停用并注销相应 vtable",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceBatchIn](), views.WithBodyOutput[views.BatchResultOut]()),
-		))
+		)
 	}
 }

@@ -21,7 +21,7 @@ import (
 	"slices"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 渠道类型键常量，用于 notification_channels.type 列、目标类型快照与通知记录。

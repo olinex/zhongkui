@@ -7,7 +7,7 @@ import (
 
 	g "google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // AccessKeyUserId 是上下文(Context)中存储用户ID的键名

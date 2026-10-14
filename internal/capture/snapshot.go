@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	reporter_v1 "zhongkui.com/zhongkui/internal/pkg/protobuf/reporter/v1"
+	reporter_v1 "zhongkuisec.com/zhongkui/internal/pkg/protobuf/reporter/v1"
 )
 
 // captureSnapshot 表示捕获状态的快照

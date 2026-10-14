@@ -8,13 +8,13 @@ import (
 	"github.com/gopacket/gopacket"
 	"github.com/gopacket/gopacket/layers"
 	"gorm.io/gorm"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // TcpOptionOut 视图层 TCP 选项镜像结构（对应 network.TCPOption）。
@@ -55,7 +55,7 @@ type Ipv4TcpListGetListItemOut struct {
 	// Version 抓包器版本
 	Version string `json:"version"`
 	// SessionID 会话标识
-	SessionID serializer.HexUUID `json:"sessionId"`
+	SessionID serializer.HexUUID `json:"sessionID"`
 	// ---- TimestampMeta ----
 	// Timestamp 采集时间
 	Timestamp time.Time `json:"timestamp"`
@@ -87,8 +87,8 @@ type Ipv4TcpListGetListItemOut struct {
 	IPv4TOS uint8 `json:"ipv4Tos"`
 	// IPv4Length 总长度
 	IPv4Length uint16 `json:"ipv4Length"`
-	// IPv4Id 标识符
-	IPv4Id uint16 `json:"ipv4Id"`
+	// IPv4ID 标识符
+	IPv4ID uint16 `json:"ipv4ID"`
 	// IPv4Flags 标志位
 	IPv4Flags layers.IPv4Flag `json:"ipv4Flags"`
 	// IPv4FragOffset 分片偏移
@@ -155,7 +155,7 @@ type Ipv4TcpListGetListItemOut struct {
 	FpMtu uint16 `json:"fpMtu"`
 	// ---- 流与载荷 ----
 	// TcpStreamID TCP 流标识
-	TcpStreamID string `json:"tcpStreamId"`
+	TcpStreamID string `json:"tcpStreamID"`
 	// Payload 数据包载荷（base64 密文，明文经明文权限接口查看）
 	Payload *serializer.Crypto `json:"payload" form:"kind:crypto"`
 }
@@ -238,7 +238,7 @@ func newIpv4TcpListGetListItemOut(p *network.PacketIPv4TCP) *Ipv4TcpListGetListI
 		IPv4IHL:        p.IPv4IHL,
 		IPv4TOS:        p.IPv4TOS,
 		IPv4Length:     p.IPv4Length,
-		IPv4Id:         p.IPv4Id,
+		IPv4ID:         p.IPv4ID,
 		IPv4Flags:      p.IPv4Flags,
 		IPv4FragOffset: p.IPv4FragOffset,
 		IPv4TTL:        p.IPv4TTL,

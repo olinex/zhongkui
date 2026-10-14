@@ -45,7 +45,9 @@ export function useChartTheme(): ComputedRef<ChartTheme> {
   const theme = useTheme();
 
   return computed<ChartTheme>(() => {
-    const colors = theme.global.current.value.colors;
+    // Vuetify 4 的主题颜色值类型放宽为 Color（string | number | RGB | HSV ...），
+    // 本项目主题均由十六进制字符串定义，此处按字符串表收窄以适配图表取色
+    const colors = theme.global.current.value.colors as unknown as Record<string, string>;
     const textColor = colors["on-surface"] || colors["on-background"] || "#E6E8EC";
     const subTextColor = colors["on-surface-variant"] || textColor;
     return {

@@ -5,7 +5,7 @@ package api
 import (
 	"time"
 
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // ApiNodeTtlHours 接口路径节点记录的默认过期时长（小时）。

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"zhongkui.com/zhongkui/internal/pkg/status"
+	"zhongkuisec.com/zhongkui/internal/pkg/status"
 )
 
 // probeOK 写入 200 响应，正文为给定文本。

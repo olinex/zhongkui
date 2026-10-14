@@ -15,7 +15,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // EvalStage 是 dry-run 评估流程的阶段标识（检索 + 4 次评估调用）。
@@ -81,6 +81,8 @@ type CallMeta struct {
 type StageEvent struct {
 	// Stage 阶段标识
 	Stage EvalStage `json:"stage"`
+	// Model 该阶段调用的对话模型名（评估链路各阶段共用同一档位模型；检索等非对话阶段为空）
+	Model string `json:"model,omitempty"`
 	// Status 阶段状态（start/done/failed）；增量事件为空
 	Status EvalStageStatus `json:"status,omitempty"`
 	// Delta 该阶段的模型增量原始输出；状态事件为空
@@ -459,6 +461,15 @@ func suggestionsSystemPrompt(params *Params, languageTag string) string {
 		"；JSON 键与类别标识保持英文。"
 }
 
+// evalSnippet 返回分块在评估提示词中的文本：整篇展开的命中（Complete）原样返回，其余按
+// snippetLimit 截断。评估必须看到与实际检索一致的完整内容，否则会把「整篇已展开」误判为覆盖不足。
+func evalSnippet(r RetrievalResult, snippetLimit int) string {
+	if r.Complete {
+		return r.Content
+	}
+	return truncateText(r.Content, snippetLimit)
+}
+
 // buildSuggestionsPrompt 构造改进建议请求的用户消息：列出查询、实际生效的检索参数、生成的
 // 回答、量化指标、带相关性判定的检索分块与降级警告，使模型能区分「知识不全」与「排序/参数
 // 不当」两类问题。answer 为空（生成失败）时省略回答段。
@@ -482,10 +493,10 @@ func buildSuggestionsPrompt(query string, ev *DryRunEvaluation, results []Retrie
 	}
 	for i, r := range results {
 		if j, ok := judged[i]; ok {
-			fmt.Fprintf(&sb, "[%d] %s（relevant=%t, score=%g）\n%s\n\n", i, r.Title, j.Relevant, j.Score, truncateText(r.Content, snippetLimit))
+			fmt.Fprintf(&sb, "[%d] %s（relevant=%t, score=%g）\n%s\n\n", i, r.Title, j.Relevant, j.Score, evalSnippet(r, snippetLimit))
 			continue
 		}
-		fmt.Fprintf(&sb, "[%d] %s（未评判）\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
+		fmt.Fprintf(&sb, "[%d] %s（未评判）\n%s\n\n", i, r.Title, evalSnippet(r, snippetLimit))
 	}
 	if len(ev.Warnings) > 0 {
 		fmt.Fprintf(&sb, "告警：\n- %s\n", strings.Join(ev.Warnings, "\n- "))
@@ -499,7 +510,7 @@ func buildEvalChunkPrompt(query string, results []RetrievalResult, snippetLimit 
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "查询：%s\n\n上下文分块：\n", query)
 	for i, r := range results {
-		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
+		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, r.Title, evalSnippet(r, snippetLimit))
 	}
 	return sb.String()
 }
@@ -510,7 +521,7 @@ func buildClaimsPrompt(answer string, results []RetrievalResult, snippetLimit in
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "回答：\n%s\n\n上下文分块：\n", answer)
 	for i, r := range results {
-		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, r.Title, truncateText(r.Content, snippetLimit))
+		fmt.Fprintf(&sb, "[%d] %s\n%s\n\n", i, r.Title, evalSnippet(r, snippetLimit))
 	}
 	return sb.String()
 }
@@ -644,6 +655,10 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 	}
 	calls := make([]CallMeta, 0, 5)
 
+	// 评估链路各阶段共用同一档位模型，故在进入阶段流转前解析一次模型名，
+	// 由 emit 统一注入每个阶段事件，使前端在运行中即可 hover 查看模型（无需等待汇总）
+	modelName := chatModelName(chat)
+
 	// emit 上报阶段事件；首次写失败（客户端断开）被记录后，后续 emit 直接返回该错误，
 	// 使剩余阶段立即中止，避免继续产生无谓的大模型调用开销
 	var emitErr error
@@ -654,6 +669,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 		if report == nil {
 			return nil
 		}
+		ev.Model = modelName
 		emitErr = report(ev)
 		return emitErr
 	}

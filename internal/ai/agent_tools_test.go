@@ -14,11 +14,12 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
-// scriptedTurn 是 stub 对话模型的一次流式/非流式响应：正文与（可选的）工具调用。
+// scriptedTurn 是 stub 对话模型的一次流式/非流式响应：思考过程（可选）、正文与（可选的）工具调用。
 type scriptedTurn struct {
+	reason    string
 	content   string
 	toolCalls []schema.ToolCall
 }
@@ -30,12 +31,14 @@ type scriptedChat struct {
 	calls     int
 	gotInputs [][]*schema.Message
 	gotTools  [][]*schema.ToolInfo
+	gotOpts   [][]model.Option
 }
 
 // Generate 记录输入与工具清单，并按次序返回预置的下一轮非流式响应。
 func (c *scriptedChat) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
 	c.gotInputs = append(c.gotInputs, input)
 	c.gotTools = append(c.gotTools, model.GetCommonOptions(&model.Options{}, opts...).Tools)
+	c.gotOpts = append(c.gotOpts, opts)
 	turn := c.pick()
 	return &schema.Message{Role: schema.Assistant, Content: turn.content, ToolCalls: turn.toolCalls}, nil
 }
@@ -44,10 +47,14 @@ func (c *scriptedChat) Generate(ctx context.Context, input []*schema.Message, op
 func (c *scriptedChat) Stream(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
 	c.gotInputs = append(c.gotInputs, input)
 	c.gotTools = append(c.gotTools, model.GetCommonOptions(&model.Options{}, opts...).Tools)
+	c.gotOpts = append(c.gotOpts, opts)
 	turn := c.pick()
 	sr, sw := schema.Pipe[*schema.Message](4)
 	go func() {
 		defer sw.Close()
+		if turn.reason != "" {
+			sw.Send(&schema.Message{Role: schema.Assistant, ReasoningContent: turn.reason}, nil)
+		}
 		if turn.content != "" {
 			sw.Send(&schema.Message{Role: schema.Assistant, Content: turn.content}, nil)
 		}
@@ -186,8 +193,55 @@ func TestAgent_Tools_NoToolsUnchanged(t *testing.T) {
 	}
 }
 
+// thinkingScriptedChat 在 scriptedChat 之上实现 requestOptionsProvider，记录 generate 传入的思考
+// 模式并返回单个选项，用于验证工具循环每轮 Stream 都带上思考选项。
+type thinkingScriptedChat struct {
+	scriptedChat
+	thinkings []string
+}
+
+// RequestOptions 记录思考模式并返回单个选项。
+func (c *thinkingScriptedChat) RequestOptions(thinking string) []model.Option {
+	c.thinkings = append(c.thinkings, thinking)
+	return []model.Option{model.WithTemperature(0.42)}
+}
+
+// TestAgent_Tools_ThinkingRequestOptionsEachRound 测试含工具时工具循环每轮 Stream 都携带
+// requestOptionsProvider 返回的思考选项（与工具选项一并传入）。
+func TestAgent_Tools_ThinkingRequestOptionsEachRound(t *testing.T) {
+	built := &recordingTool{name: "weather", run: func(ctx context.Context, args string) (string, error) {
+		return "sunny", nil
+	}}
+	infos := []*schema.ToolInfo{{Name: "weather", Desc: "weather tool"}}
+	chat := &thinkingScriptedChat{scriptedChat: scriptedChat{turns: []scriptedTurn{
+		{
+			content:   "checking",
+			toolCalls: []schema.ToolCall{{ID: "call-1", Type: "function", Function: schema.FunctionCall{Name: "weather", Arguments: `{"city":"sf"}`}}},
+		},
+		{content: "final answer"},
+	}}}
+	agent := newAgentWithTools(t, chat, &stubRetriever{}, []tool.BaseTool{built}, infos, nil)
+
+	if _, err := agent.Generate(context.Background(), AgentInput{Query: "q", Thinking: "off"}); err != nil {
+		t.Fatalf("Generate error = %v", err)
+	}
+	if len(chat.thinkings) != 1 || chat.thinkings[0] != "off" {
+		t.Errorf("RequestOptions thinkings = %v, want [off]", chat.thinkings)
+	}
+	if len(chat.gotOpts) != 2 {
+		t.Fatalf("Stream calls = %d, want 2 (tool round + answer round)", len(chat.gotOpts))
+	}
+	for i, opts := range chat.gotOpts {
+		// 每轮应同时携带工具选项与来自 RequestOptions 的思考选项。
+		if len(opts) != 2 {
+			t.Errorf("round %d opts = %d, want tools + thinking option", i, len(opts))
+		}
+	}
+}
+
 // TestAgent_Tools_ExecutesToolThenAnswers 测试含工具时首轮返回 ToolCalls：工具被执行、发生
-// 二次生成，最终外发文本只含答案轮文本，上报 toolCall(start) 与 toolResult(done)。
+// 二次生成，两轮正文都随流外发（工具轮的前导说明文本不隐藏），done 正文与实时增量一致，
+// 上报 toolCall(start) 与 toolResult(done)。
 func TestAgent_Tools_ExecutesToolThenAnswers(t *testing.T) {
 	built := &recordingTool{name: "weather", run: func(ctx context.Context, args string) (string, error) {
 		return "sunny", nil
@@ -211,11 +265,8 @@ func TestAgent_Tools_ExecutesToolThenAnswers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stream error = %v", err)
 	}
-	if deltas != "final answer" || done.Content != "final answer" {
-		t.Errorf("output = (%q, %q), want only the answer round text", deltas, done.Content)
-	}
-	if strings.Contains(deltas, "let me check") {
-		t.Errorf("deltas = %q, want no intermediate-round text", deltas)
+	if deltas != "let me check the weatherfinal answer" || done.Content != deltas {
+		t.Errorf("output = (%q, %q), want every round's text streamed and done matching deltas", deltas, done.Content)
 	}
 	if chat.calls != 2 {
 		t.Fatalf("chat calls = %d, want 2 (tool round + answer round)", chat.calls)
@@ -246,6 +297,59 @@ func TestAgent_Tools_ExecutesToolThenAnswers(t *testing.T) {
 	}
 	if ev := rec.findEvent(EvalStageToolResult, EvalStatusDone, "weather"); ev == nil {
 		t.Errorf("events = %+v, want a toolResult done event for weather", rec.events)
+	}
+}
+
+// TestAgent_Tools_ReasoningNotFedBack 测试工具循环不把思考内容回灌给模型：本轮思考全程随流外发
+// （done 的 Reasoning 汇总各轮思考），但追加进下一轮上下文的 assistant（含 ToolCalls）消息其
+// ReasoningContent 已被清空，故模型侧上下文不含思考内容。
+func TestAgent_Tools_ReasoningNotFedBack(t *testing.T) {
+	built := &recordingTool{name: "weather", run: func(ctx context.Context, args string) (string, error) {
+		return "sunny", nil
+	}}
+	infos := []*schema.ToolInfo{{Name: "weather", Desc: "weather tool"}}
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{
+			reason:    "let me check the weather",
+			content:   "checking",
+			toolCalls: []schema.ToolCall{{ID: "call-1", Type: "function", Function: schema.FunctionCall{Name: "weather", Arguments: `{"city":"sf"}`}}},
+		},
+		{reason: "now I can answer", content: "final answer"},
+	}}
+	agent := newAgentWithTools(t, chat, &stubRetriever{}, []tool.BaseTool{built}, infos, nil)
+
+	out, err := agent.Generate(context.Background(), AgentInput{Query: "q"})
+	if err != nil {
+		t.Fatalf("Generate error = %v", err)
+	}
+	// 思考过程照常随流外发：done 的 Reasoning 汇总两轮思考。
+	if want := "let me check the weathernow I can answer"; out.Reasoning != want {
+		t.Errorf("done reasoning = %q, want %q streamed to the user", out.Reasoning, want)
+	}
+	if len(chat.gotInputs) != 2 {
+		t.Fatalf("chat calls = %d, want 2 (tool round + answer round)", len(chat.gotInputs))
+	}
+	// 第二轮上下文里带 ToolCalls 的 assistant 消息不得携带思考内容。
+	var toolCallMsg *schema.Message
+	for _, m := range chat.gotInputs[1] {
+		if len(m.ToolCalls) > 0 {
+			toolCallMsg = m
+			break
+		}
+	}
+	if toolCallMsg == nil {
+		t.Fatalf("second call input = %+v, want the assistant tool-call message", chat.gotInputs[1])
+	}
+	if toolCallMsg.ReasoningContent != "" {
+		t.Errorf("fed-back assistant reasoning = %q, want empty (thinking must not be fed back)", toolCallMsg.ReasoningContent)
+	}
+	// 送入模型的每一条消息都不应携带思考内容。
+	for i, input := range chat.gotInputs {
+		for _, m := range input {
+			if m.ReasoningContent != "" {
+				t.Errorf("call %d message = %+v, want no reasoning in the model context", i, m)
+			}
+		}
 	}
 }
 
@@ -348,5 +452,72 @@ func TestAgent_Tools_ReporterErrorAbortsLoop(t *testing.T) {
 	}
 	if chat.calls != 1 {
 		t.Errorf("chat calls = %d, want 1 (no further model call)", chat.calls)
+	}
+}
+
+// chunkedPreambleChat 是「前导文本被切成一串分块后才给出工具调用」的模型替身：首轮逐块下发
+// 前导文本再下发 ToolCalls，次轮逐块下发答案，用于确认工具轮的前导文本被逐块外发且与 done 一致。
+type chunkedPreambleChat struct{ calls int }
+
+// Generate 实现 model.BaseChatModel，供需要非流式响应的路径使用。
+func (c *chunkedPreambleChat) Generate(ctx context.Context, in []*schema.Message, opts ...model.Option) (*schema.Message, error) {
+	return &schema.Message{Role: schema.Assistant, Content: "g"}, nil
+}
+
+// Stream 按轮次逐块下发：首轮为多块前导文本 + 工具调用，其余轮为多块答案。
+func (c *chunkedPreambleChat) Stream(ctx context.Context, in []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
+	c.calls++
+	round := c.calls
+	sr, sw := schema.Pipe[*schema.Message](4)
+	go func() {
+		defer sw.Close()
+		send := func(content string) {
+			sw.Send(&schema.Message{Role: schema.Assistant, Content: content}, nil)
+		}
+		if round == 1 {
+			send("let ")
+			send("me ")
+			send("check ")
+			sw.Send(&schema.Message{Role: schema.Assistant, ToolCalls: []schema.ToolCall{{
+				ID:       "call-1",
+				Type:     "function",
+				Function: schema.FunctionCall{Name: "weather", Arguments: `{}`},
+			}}}, nil)
+			return
+		}
+		send("final ")
+		send("answer")
+	}()
+	return sr, nil
+}
+
+// TestAgent_Tools_ChunkedPreambleStreamsToo 测试前导文本被切成一串分块、工具调用在其后才出现
+// 时：前导文本逐块随流外发（不再被抑制），答案轮同样逐块外发，且 done 正文与实时增量完全一致
+// ——前端在 done 时以正文覆盖增量，两者一致才不会出现文本跳变或丢失。
+func TestAgent_Tools_ChunkedPreambleStreamsToo(t *testing.T) {
+	built := &recordingTool{name: "weather", run: func(ctx context.Context, args string) (string, error) {
+		return "sunny", nil
+	}}
+	infos := []*schema.ToolInfo{{Name: "weather", Desc: "weather tool"}}
+	chat := &chunkedPreambleChat{}
+	agent := newAgentWithTools(t, chat, &stubRetriever{}, []tool.BaseTool{built}, infos, nil)
+
+	reader, err := agent.Stream(context.Background(), AgentInput{Query: "q"})
+	if err != nil {
+		t.Fatalf("Stream error = %v", err)
+	}
+	deltas, done, err := collectStream(t, reader)
+	if err != nil {
+		t.Fatalf("stream error = %v", err)
+	}
+	want := "let me check final answer"
+	if deltas != want {
+		t.Errorf("deltas = %q, want every round's text forwarded chunk by chunk", deltas)
+	}
+	if done.Content != deltas {
+		t.Errorf("done content = %q, want it to match the streamed deltas %q", done.Content, deltas)
+	}
+	if chat.calls != 2 {
+		t.Errorf("chat calls = %d, want 2 (tool round + answer round)", chat.calls)
 	}
 }

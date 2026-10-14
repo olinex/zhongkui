@@ -7,7 +7,7 @@ import (
 
 	"github.com/gopacket/gopacket/layers"
 	. "github.com/smartystreets/goconvey/convey"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // TestUDPHeaders_Basic 测试UDPHeaders结构体的基本功能
@@ -154,7 +154,7 @@ func TestPacketIPv4UDP_Basic(t *testing.T) {
 						IPv4IHL:        5,
 						IPv4TOS:        0,
 						IPv4Length:     1024,
-						IPv4Id:         12345,
+						IPv4ID:         12345,
 						IPv4Flags:      layers.IPv4Flag(0x02), // DF flag
 						IPv4FragOffset: 0,
 						IPv4TTL:        64,

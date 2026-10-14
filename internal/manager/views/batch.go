@@ -9,7 +9,7 @@ package views
 import (
 	"encoding/json"
 
-	"zhongkui.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 
 	"github.com/gin-gonic/gin"
 	uv "github.com/go-playground/validator/v10"

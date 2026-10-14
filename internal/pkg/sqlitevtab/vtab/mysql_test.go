@@ -9,8 +9,8 @@ import (
 	"database/sql"
 	"testing"
 
-	"zhongkui.com/zhongkui/internal/pkg/resourcepool"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // newMySQLMockPool 以注入 key 的 mock db 构建 MySQLPool，供无需真实 MySQL 的测试使用。

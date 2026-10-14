@@ -11,14 +11,15 @@ import (
 	"github.com/spf13/cobra"
 
 	// 项目内部
-	ai "zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/docs"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/docconv"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/provider"
+	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/docs"
+	"zhongkuisec.com/zhongkui/internal/manager"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // syncCmd 是同步与向量对齐命令组：同步注释生成文档到知识库（RAG），并以当前 embedding 模型
@@ -31,21 +32,17 @@ var syncCmd = &cobra.Command{
 	},
 }
 
-// syncDocsCmd 从源码注释同步生成文档到指定命名空间的 RAG：叙述页（包注释自动生成）落
-// format=generated；按内容 hash 差异计划幂等同步，只读写该分区、不触碰人工文档。走常规工具箱以
-// 取得数据库与 embedding；不复用 create docs 的离线注入器。
+// syncDocsCmd 从源码注释同步生成文档到 RAG：叙述页（包注释自动生成）落 format=generated，
+// 幂等同步到内置系统命名空间（base.SystemNamespace）：按内容 hash 差异计划新增、更新正文变化的
+// 条目、删除已下线条目，正文未变的条目零写入，只读写该分区、不触碰人工文档。叙述页是代码声明的
+// 公开共享数据，对所有命名空间的检索可见，与 sync apis 的语义一致，故无需运维指定命名空间。
+// 走常规工具箱以取得数据库与 embedding；不复用 create docs 的离线注入器。
 var syncDocsCmd = &cobra.Command{
 	Use:   "docs",
 	Short: "cmd.sync.docs.short",
 	Long:  "cmd.sync.docs.long",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
-		v := provider.MustInvokeViper(i)
-		namespace := strings.TrimSpace(v.GetString("namespace"))
-		if namespace == "" {
-			pterm.Error.Println(translate.T("cli.sync.docs.no-namespace", nil))
-			return
-		}
 		rt := provider.MustInvokeAi(ctx, i)
 		if !rt.Enabled() {
 			pterm.Error.Println(translate.T("cli.sync.docs.disabled", nil))
@@ -66,13 +63,49 @@ var syncDocsCmd = &cobra.Command{
 		for _, n := range narratives {
 			narrativeDocs = append(narrativeDocs, ai.GeneratedKnowledgeDoc{Key: n.Key, Title: n.Title, Content: n.Content})
 		}
-		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, namespace, docconv.FormatGenerated, narrativeDocs); err != nil {
+		model := embeddingModelName(rt)
+		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatGenerated, narrativeDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
 			pterm.Error.Println(translate.T("cli.sync.docs.failed", map[string]any{"Err": err}))
 			return
 		}
 		pterm.Success.Println(translate.T("cli.sync.docs.done", map[string]any{
-			"Namespace":  namespace,
+			"Namespace":  base.SystemNamespace,
 			"Narratives": len(narrativeDocs),
+		}))
+	},
+}
+
+// syncApisCmd 把注册期声明的原生接口目录（单行用途 + 入参/出参元信息）渲染为知识文档，
+// 幂等同步到内置系统命名空间（base.SystemNamespace）的 native_api 分区：新增、更新正文变化的
+// 条目、删除已下线或已退出 RAG 的条目，正文未变的条目零写入。接口目录是代码声明的公开共享
+// 数据，对所有命名空间的检索可见，故无需运维指定命名空间。目录经离线装配取得（无需 DB /
+// Redis / Etcd），但写库与向量化仍走常规工具箱以取得数据库与 embedding；只读写 native_api
+// 分区，不触碰其余分区。
+var syncApisCmd = &cobra.Command{
+	Use:   "apis",
+	Short: "cmd.sync.apis.short",
+	Long:  "cmd.sync.apis.long",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, i := cmdToolBox(cmd)
+		rt := provider.MustInvokeAi(ctx, i)
+		if !rt.Enabled() {
+			pterm.Error.Println(translate.T("cli.sync.apis.disabled", nil))
+			return
+		}
+		// 离线装配接口目录，仅取纳入 RAG 的接口渲染为生成文档；标题即稳定去重键。
+		catalog := manager.CollectApiKnowledgeDocs()
+		apiDocs := make([]ai.GeneratedKnowledgeDoc, 0, len(catalog))
+		for _, doc := range catalog {
+			apiDocs = append(apiDocs, ai.GeneratedKnowledgeDoc{Key: doc.Title, Title: doc.Title, Content: doc.Content})
+		}
+		model := embeddingModelName(rt)
+		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatNativeApi, apiDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
+			pterm.Error.Println(translate.T("cli.sync.apis.failed", map[string]any{"Err": err}))
+			return
+		}
+		pterm.Success.Println(translate.T("cli.sync.apis.done", map[string]any{
+			"Namespace": base.SystemNamespace,
+			"Apis":      len(apiDocs),
 		}))
 	},
 }
@@ -98,13 +131,14 @@ var syncEmbeddingsCmd = &cobra.Command{
 			pterm.Error.Println(translate.T("cli.sync.embeddings.disabled", nil))
 			return
 		}
+		model := embeddingModelName(rt)
 		comps := rt.Current()
-		docs, err := comps.Knowledge.ReindexNamespace(ctx, namespace)
+		docs, err := comps.Knowledge.ReindexNamespace(ctx, namespace, newSyncProgress(namespace, model))
 		if err != nil {
 			pterm.Error.Println(translate.T("cli.sync.embeddings.failed", map[string]any{"Err": err}))
 			return
 		}
-		memories, err := comps.Memory.ReindexEmbeddings(ctx, namespace)
+		memories, err := comps.Memory.ReindexEmbeddings(ctx, namespace, newSyncProgress(namespace, model))
 		if err != nil {
 			pterm.Error.Println(translate.T("cli.sync.embeddings.failed", map[string]any{"Err": err}))
 			return
@@ -152,7 +186,7 @@ func runReconcileEmbeddingCmd(cmd *cobra.Command, args []string) {
 // 完成后需重新索引知识库文档、记忆向量需重新积累。
 func reconcileCoreAISchema(ctx context.Context, gormDB *database.DB, target int) error {
 	if target <= 0 {
-		return errors.New("the --dimensions flag is required and must be a positive integer")
+		return errors.New(translate.T("cli.sync.embedding-dimensions-flag-required", nil))
 	}
 	store, err := ai.NewStore(gormDB)
 	if err != nil {
@@ -163,10 +197,11 @@ func reconcileCoreAISchema(ctx context.Context, gormDB *database.DB, target int)
 		return errors.Newf("failed to read ai embedding dimension: %v", err)
 	}
 	if bound && dimensions != target {
-		return errors.Newf(
-			"the embedding slot is bound to model %q with %d dimensions; unbind it before resizing the index to %d",
-			name, dimensions, target,
-		)
+		return errors.New(translate.T("cli.sync.embedding-dimensions-slot-bound", map[string]any{
+			"Name":       name,
+			"Dimensions": dimensions,
+			"Target":     target,
+		}))
 	}
 	reconciled, err := ai.ReconcileEmbeddingColumn(ctx, gormDB, target)
 	if err != nil {
@@ -181,7 +216,6 @@ func reconcileCoreAISchema(ctx context.Context, gormDB *database.DB, target int)
 }
 
 func init() {
-	syncDocsCmd.Flags().String("namespace", "", "flag.sync.namespace")
 	syncEmbeddingsCmd.Flags().String("namespace", "", "flag.sync.namespace")
 	syncEmbeddingDimensionsCmd.Flags().Int("dimensions", 0, "flag.sync.embedding-dimensions.dimensions")
 }

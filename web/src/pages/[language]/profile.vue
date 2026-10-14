@@ -15,7 +15,7 @@
         >
           <template #body>
             <v-form>
-              <v-row dense>
+              <v-row density="compact">
                 <v-col cols="9">
                   <datetime-field
                     v-model="expiredAt"
@@ -23,7 +23,7 @@
                     :label="$t('model.accessKey.field.expiredAt')"
                   />
                 </v-col>
-                <v-col cols="3" align-self="center">
+                <v-col cols="3" class="align-self-center">
                   <v-switch
                     v-model="enabled"
                     v-bind="enabledProps"
@@ -32,7 +32,7 @@
                   />
                 </v-col>
               </v-row>
-              <v-row dense>
+              <v-row density="compact">
                 <v-col cols="12">
                   <v-textarea
                     v-model="description"
@@ -67,8 +67,8 @@
 
         <div class="d-flex align-center mb-5">
           <div>
-            <h1 class="text-h5 font-weight-bold mb-0">{{ $t("title.userProfile") }}</h1>
-            <p class="text-body-2 text-on-surface-variant mb-0">{{ $t("profile.pageSubtitle") }}</p>
+            <h1 class="text-headline-small font-weight-bold mb-0">{{ $t("title.userProfile") }}</h1>
+            <p class="text-body-medium on-surface-variant mb-0">{{ $t("profile.pageSubtitle") }}</p>
           </div>
           <v-spacer />
           <v-btn
@@ -97,9 +97,11 @@
                 <v-avatar size="96" color="primary" variant="tonal" class="mx-auto mb-4">
                   <v-img src="@/assets/logo.png" cover />
                 </v-avatar>
-                <div class="text-h6 font-weight-bold text-truncate">{{ userStore.nickleName }}</div>
-                <div class="text-body-2 text-on-surface-variant text-truncate mb-3">
-                  {{ userStore.email || "—" }}
+                <div class="text-title-large font-weight-bold text-truncate">
+                  {{ userStore.nickleName }}
+                </div>
+                <div class="text-body-medium on-surface-variant text-truncate mb-3">
+                  {{ userStore.email || INVALID_PLACEHOLDER }}
                 </div>
                 <hex-string-chip
                   size="x-small"
@@ -124,7 +126,7 @@
                   />
                   <v-expansion-panel-text>
                     <v-form>
-                      <v-row dense>
+                      <v-row density="compact">
                         <v-col cols="12" sm="6">
                           <v-text-field
                             v-model="nickleName"
@@ -165,7 +167,6 @@
                     <div class="d-flex justify-end mb-2">
                       <v-btn
                         color="primary"
-                        size="small"
                         prepend-icon="mdi-plus"
                         @click="openCreateAccessDialogAction"
                       >
@@ -175,10 +176,8 @@
 
                     <!-- 空状态 -->
                     <div v-if="accessKeys.length === 0" class="text-center pa-8">
-                      <v-icon size="48" class="mb-3 text-on-surface-variant"
-                        >mdi-key-off-outline</v-icon
-                      >
-                      <div class="text-body-2 text-on-surface-variant">
+                      <v-icon size="48" class="mb-3 on-surface-variant">mdi-key-off-outline</v-icon>
+                      <div class="text-body-medium on-surface-variant">
                         {{ $t("profile.emptyAccessKeys") }}
                       </div>
                     </div>
@@ -189,14 +188,16 @@
                         <v-divider v-if="index > 0" />
                         <div class="py-4">
                           <div class="d-flex align-center ga-3 flex-wrap">
-                            <boolean-chip :value="key.enabled" />
-                            <span class="font-mono text-body-2 font-weight-medium">{{
+                            <enabled-switch-cell
+                              v-model="key.enabled"
+                              :request="(enabled: boolean) => accessKeyEnabled(key.id, enabled)"
+                            />
+                            <span class="font-mono text-body-medium font-weight-medium">{{
                               key.accessKeyID
                             }}</span>
                             <copy-btn :value="key.accessKeyID" />
                             <v-spacer />
                             <v-btn
-                              size="small"
                               variant="text"
                               prepend-icon="mdi-content-copy"
                               @click="copyToClipboard(key.accessKeySecret)"
@@ -204,15 +205,6 @@
                               {{ $t("action.copySecret") }}
                             </v-btn>
                             <v-btn
-                              size="small"
-                              variant="text"
-                              :color="key.enabled ? undefined : 'success'"
-                              @click="accessKeyEnabledAction(key.id, !key.enabled)"
-                            >
-                              {{ $t(key.enabled ? "action.deactivate" : "action.activate") }}
-                            </v-btn>
-                            <v-btn
-                              size="small"
                               variant="text"
                               color="error"
                               prepend-icon="mdi-delete-outline"
@@ -223,7 +215,7 @@
                           </div>
                           <div
                             v-if="key.description"
-                            class="text-body-2 text-on-surface-variant mt-2"
+                            class="text-body-medium on-surface-variant mt-2"
                           >
                             {{ key.description }}
                           </div>
@@ -291,7 +283,7 @@
                   />
                   <v-expansion-panel-text>
                     <v-form>
-                      <v-row dense>
+                      <v-row density="compact">
                         <v-col cols="12">
                           <password-field
                             v-model="oldPassword"
@@ -365,6 +357,7 @@ import router from "@/router";
 import type { accessKeyOut } from "@/apis/@types/user";
 import { DateTime } from "luxon";
 import { copyToClipboard } from "@/utils/clipboard";
+import { INVALID_PLACEHOLDER } from "@/utils/base";
 
 const route = useRoute();
 const appStore = useAppStore();
@@ -420,16 +413,13 @@ const openConfirmDialogAction = (key: accessKeyOut) => {
 };
 
 const openCreateAccessDialogAction = () => {
+  // 打开动作里原子复位全部字段：默认启用、不限过期时间、描述留空
   const defaults = {
     enabled: true,
     expiredAt: null,
     description: "",
   };
-  accessKeyCreateForm.resetField("enabled", { value: defaults.enabled });
-  accessKeyCreateForm.resetField("expiredAt", { value: defaults.expiredAt });
-  accessKeyCreateForm.resetField("description", {
-    value: defaults.description,
-  });
+  accessKeyCreateForm.resetForm({ values: defaults });
   createAccessDialogRef.value?.open(defaults);
 };
 
@@ -534,27 +524,6 @@ const accessKeyRemoveAction = async (key: accessKeyOut): Promise<void> => {
     accessKeyRemove(key.id),
     async (rsp) => {
       accessKeys.value = accessKeys.value.filter((item) => item.id !== key.id);
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-};
-
-const accessKeyEnabledAction = async (id: number, enabled: boolean): Promise<void> => {
-  await getResponse<accessKeyOut>(
-    accessKeyEnabled(id, enabled),
-    async (rsp) => {
-      accessKeys.value = accessKeys.value.map((item) => (item.id !== id ? item : rsp.data));
       appStore.notify({
         text: rsp.summary,
         timeout: 3000,

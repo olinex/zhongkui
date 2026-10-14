@@ -10,9 +10,9 @@ import (
 
 	clientv3 "go.etcd.io/etcd/client/v3"
 	g "google.golang.org/grpc"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
 // EtcdClient 是 etcd client/v3 客户端的类型别名，指向 clientv3.Client。

@@ -13,15 +13,15 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/datasource"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab/vtab"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/datasource"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // DatasourceCreateIn 定义创建第三方数据源的请求输入结构。
@@ -262,13 +262,13 @@ func DatasourceCreate(c *gin.Context) {
 	objectKey := ""
 	if in.Type == vtab.DatasourceTypeSQLiteFile {
 		if file == nil {
-			response.CreateBadBodyError(errors.New("creating a sqlite datasource requires an uploaded .db file")).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("datasourceSqliteFileRequired").AbortWithGinH(c)
 			return
 		}
 		objectKey = vtab.SQLiteObjectKey(namespace, in.Name)
 		if err := pools.StoreSQLiteObject(c, namespace, in.Name, file); err != nil {
 			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
-				response.CreateBadBodyError(errors.New("creating a sqlite datasource requires S3 object storage to be enabled")).AbortWithGinH(c)
+				response.CreateBadBodyMessageError("datasourceSqliteS3Required").AbortWithGinH(c)
 			} else {
 				response.CreateAccidentError(err).AbortWithGinH(c)
 			}
@@ -389,7 +389,7 @@ func DatasourceUpdate(c *gin.Context) {
 	if instance.Type == vtab.DatasourceTypeSQLiteFile && file != nil {
 		if err := pools.StoreSQLiteObject(c, namespace, instance.Name, file); err != nil {
 			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
-				response.CreateBadBodyError(errors.New("updating a sqlite datasource requires S3 object storage to be enabled")).AbortWithGinH(c)
+				response.CreateBadBodyMessageError("datasourceSqliteS3Required").AbortWithGinH(c)
 			} else {
 				response.CreateAccidentError(err).AbortWithGinH(c)
 			}

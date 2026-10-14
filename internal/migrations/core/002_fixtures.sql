@@ -665,30 +665,30 @@ ON CONFLICT (ptype, v0, v1, v2) DO NOTHING;
 INSERT INTO tag_rule_samples (namespace_name, model, name, input, description) VALUES
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'curl-get',
-        '{"namespace":"default","capture":"eth0","version":"v1","sessionId":"3f2504e0-4f89-11d3-9a0c-0305e82c3301","timestamp":"2026-08-15T02:01:00Z","createdAt":"2026-08-15T02:01:00Z","traceId":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","clientIp":"192.168.1.10","clientPort":51820,"clientIsn":1820150330,"serverIp":"93.184.216.34","serverPort":443,"serverIsn":3896702403,"ipVersion":4,"httpVersion":"HTTP/1.1","streamIndex":3,"method":"GET","url":"https://example.com/api/v1/health","scheme":"https","host":"example.com","path":"/api/v1/health","queries":{"verbose":["1"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"curl/8.0.1","reqHdrHost":"example.com","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"curl","fpTcpClientOs":"Linux","fpTcpClientSig":"65535:120:1:60:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
+        '{"namespace":"default","capture":"eth0","version":"v1","sessionID":"3f2504e0-4f89-11d3-9a0c-0305e82c3301","timestamp":"2026-08-15T02:01:00Z","createdAt":"2026-08-15T02:01:00Z","traceID":"6ba7b810-9dad-11d1-80b4-00c04fd430c8","clientIp":"192.168.1.10","clientPort":51820,"clientIsn":1820150330,"serverIp":"93.184.216.34","serverPort":443,"serverIsn":3896702403,"ipVersion":4,"httpVersion":"HTTP/1.1","streamIndex":3,"method":"GET","url":"https://example.com/api/v1/health","scheme":"https","host":"example.com","path":"/api/v1/health","queries":{"verbose":["1"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"curl/8.0.1","reqHdrHost":"example.com","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"curl","fpTcpClientOs":"Linux","fpTcpClientSig":"65535:120:1:60:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
         'command line curl GET request to a health check endpoint'
     ),
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'browser-post',
-        '{"namespace":"default","capture":"en0","version":"v1","sessionId":"c81d4e2e-bcf2-11e6-869b-7df92533d2db","timestamp":"2026-08-15T03:12:34Z","createdAt":"2026-08-15T03:12:34Z","traceId":"f47ac10b-58cc-4372-a567-0e02b2c3d479","clientIp":"10.0.0.55","clientPort":53210,"clientIsn":2147483648,"serverIp":"142.250.72.14","serverPort":443,"serverIsn":1500000000,"ipVersion":4,"httpVersion":"HTTP/2","streamIndex":7,"method":"POST","url":"https://api.example.com/v1/orders","scheme":"https","host":"api.example.com","path":"/v1/orders","queries":{},"reqBody":"body/request/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.zkc","reqBodyHash":"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08","reqBodyLength":42,"reqHdrUserAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36","reqHdrHost":"api.example.com","reqHdrAccept":"application/json","reqHdrContentType":"application/json","reqHdrContentLength":42,"reqHdrOrigin":"https://example.com","reqHdrReferer":"https://example.com/cart","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"Chrome","fpHttpBrowserQuality":0.98,"fpHttpServer":"nginx","fpHttpServerQuality":0.9,"fpTcpClientOs":"macOS","fpTcpClientSig":"65535:120:2:60:M1460,S,T,N,W8","fpTcpServerOs":"Linux","fpTcpServerSig":"65535:1440:1:60:M1460,S,N","fpTcpMtu":1460,"tags":[]}',
+        '{"namespace":"default","capture":"en0","version":"v1","sessionID":"c81d4e2e-bcf2-11e6-869b-7df92533d2db","timestamp":"2026-08-15T03:12:34Z","createdAt":"2026-08-15T03:12:34Z","traceID":"f47ac10b-58cc-4372-a567-0e02b2c3d479","clientIp":"10.0.0.55","clientPort":53210,"clientIsn":2147483648,"serverIp":"142.250.72.14","serverPort":443,"serverIsn":1500000000,"ipVersion":4,"httpVersion":"HTTP/2","streamIndex":7,"method":"POST","url":"https://api.example.com/v1/orders","scheme":"https","host":"api.example.com","path":"/v1/orders","queries":{},"reqBody":"body/request/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08.zkc","reqBodyHash":"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08","reqBodyLength":42,"reqHdrUserAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36","reqHdrHost":"api.example.com","reqHdrAccept":"application/json","reqHdrContentType":"application/json","reqHdrContentLength":42,"reqHdrOrigin":"https://example.com","reqHdrReferer":"https://example.com/cart","reqHdrAuthorization":{},"reqHdrCookie":{},"fpHttpBrowser":"Chrome","fpHttpBrowserQuality":0.98,"fpHttpServer":"nginx","fpHttpServerQuality":0.9,"fpTcpClientOs":"macOS","fpTcpClientSig":"65535:120:2:60:M1460,S,T,N,W8","fpTcpServerOs":"Linux","fpTcpServerSig":"65535:1440:1:60:M1460,S,N","fpTcpMtu":1460,"tags":[]}',
         'browser POST request with fingerprints and JSON body to an api endpoint'
     ),
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'scanner-crawler',
-        '{"namespace":"default","capture":"eth0","version":"v1","sessionId":"1e8efd8e-6d34-4a1e-b6b1-4f2e1a3c9d0f","timestamp":"2026-08-15T04:45:00Z","createdAt":"2026-08-15T04:45:00Z","traceId":"9f9c1b5e-3f7a-4c2d-8b5e-2a1b3c4d5e6f","clientIp":"203.0.113.7","clientPort":40021,"clientIsn":1020304050,"serverIp":"192.0.2.10","serverPort":80,"serverIsn":2030405060,"ipVersion":4,"httpVersion":"HTTP/1.0","streamIndex":1,"method":"GET","url":"http://192.0.2.10/wp-login.php?action=login","scheme":"http","host":"","path":"/wp-login.php","fileExt":"php","queries":{"action":["login"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"python-requests/2.31.0","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpTcpClientOs":"Windows","fpTcpClientSig":"65535:14600:2:64:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
+        '{"namespace":"default","capture":"eth0","version":"v1","sessionID":"1e8efd8e-6d34-4a1e-b6b1-4f2e1a3c9d0f","timestamp":"2026-08-15T04:45:00Z","createdAt":"2026-08-15T04:45:00Z","traceID":"9f9c1b5e-3f7a-4c2d-8b5e-2a1b3c4d5e6f","clientIp":"203.0.113.7","clientPort":40021,"clientIsn":1020304050,"serverIp":"192.0.2.10","serverPort":80,"serverIsn":2030405060,"ipVersion":4,"httpVersion":"HTTP/1.0","streamIndex":1,"method":"GET","url":"http://192.0.2.10/wp-login.php?action=login","scheme":"http","host":"","path":"/wp-login.php","fileExt":"php","queries":{"action":["login"]},"reqBody":"","reqBodyHash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","reqBodyLength":0,"reqHdrUserAgent":"python-requests/2.31.0","reqHdrAccept":"*/*","reqHdrAuthorization":{},"reqHdrCookie":{},"fpTcpClientOs":"Windows","fpTcpClientSig":"65535:14600:2:64:M1460,S,T,N,W8","fpTcpMtu":1460,"tags":[]}',
         'scanner or crawler request with missing host and query params'
     ),
     (
         'default',
-        'zhongkui.com/zhongkui/internal/models/network.HttpTransport',
+        'zhongkuisec.com/zhongkui/internal/models/network.HttpTransport',
         'sparse-minimal',
-        '{"namespace":"default","sessionId":"00000000-0000-0000-0000-000000000000","method":"HEAD","url":"https://example.com/","scheme":"https","host":"example.com","path":"/","clientIp":"192.168.1.1","clientPort":51515,"serverIp":"93.184.216.34","serverPort":443,"ipVersion":4,"httpVersion":"HTTP/1.1","reqHdrUserAgent":"","reqHdrAuthorization":{},"reqHdrCookie":{},"tags":[]}',
+        '{"namespace":"default","sessionID":"00000000-0000-0000-0000-000000000000","method":"HEAD","url":"https://example.com/","scheme":"https","host":"example.com","path":"/","clientIp":"192.168.1.1","clientPort":51515,"serverIp":"93.184.216.34","serverPort":443,"ipVersion":4,"httpVersion":"HTTP/1.1","reqHdrUserAgent":"","reqHdrAuthorization":{},"reqHdrCookie":{},"tags":[]}',
         'sparse request with minimal fields and empty user agent'
     )
 ON CONFLICT (namespace_name, model, name) DO NOTHING;
@@ -733,14 +733,61 @@ FROM (VALUES
 - 当回答需要引用知识库中的既有资料时，调用内置工具 knowledge_search（可用不同查询多次调用）；当引用了它的结果时，按命中条目的标题标注来源。
 - 绝不编造所给上下文之外的事实。$$
     ),
+    (
+        'agent.generalSystemPrompt',
+        $$你是「ZhongKui AI」，一个网络流量采集与分析平台的内置助手。你帮助用户查看已采集的数据包、编写标签规则、查询数据源并操作平台。
+
+直接输出面向用户的 Markdown 正文，不要用 JSON 或代码块包裹整段回答。回答语言与用户提问的语言保持一致。
+
+规则：
+- 回答使用 Markdown 编排：标题、列表、表格、代码块均可；代码块请标注语言。
+- 需要引用平台知识库中的既有资料时，调用内置工具 knowledge_search（可用不同查询多次调用）；引用其命中结果时，按命中条目的标题标注来源。
+- 绝不编造所给上下文与工具结果之外的事实。$$
+    ),
+    (
+        'agent.auditLevelSystemPrompt',
+        $$你是客户端工具调用的「审核重要级」评估器。用户会给出本次运行中一批待前端执行的客户端工具调用，每条含 callID、toolName、arguments，并可能附有 description（该工具用途的说明）。你须逐条判断其审核重要级。
+
+判据（从严到从宽；取满足的最宽一档，相邻档位难以区分时取更严的一档）：
+- must（必须审核）：具有不可逆副作用、破坏性或敏感性的调用。如删除/覆盖/修改既有数据、执行命令或脚本、对外发起写请求或通知、变更权限或凭据或配置。
+- suggest（建议审核）：会改变数据但可逆、风险可控的调用。如新增记录、创建资源、可撤销的写入。
+- auto（可自动审核）：只读但结果依赖可变业务数据、可能有规模或成本的调用。如通用查询、检索、统计、导出。
+- none（无需审核）：只读且不依赖业务数据的纯信息获取。如读取当前时间、读取静态字典或枚举、健康检查。
+
+判定规则：
+- 须同时参考 toolName、description 与 arguments；toolName 语义不清时以 description 为准，description 缺失时以 arguments 推断。
+- 信息不足以判断时取 must。
+
+仅回复一个 JSON 对象，形如 {"levels": [{"callID": "...", "level": "must"}]}，其中 callID 原样复制待评估调用的 callID，level 取 must、suggest、auto、none 之一。必须覆盖全部调用，不要输出任何多余文字。$$
+    ),
+    (
+        'agent.promptOptimizeSystemPrompt',
+        $$你是「提问优化器」。用户会给你一段原始诉求，你需要把它改写成一个更清晰、更具体、更易被模型正确理解的提问。
+
+改写要求：
+- 补齐必要的背景、上下文与范围限定，使提问脱离原始语境也能被准确理解。
+- 澄清含糊的指代（如「这个」「那边」「之前那个」），用明确的对象替换。
+- 把隐含的约束与期望显式写出，并指明期望的输出形式与粒度（如列表、步骤、脚本、表格，或需要多深的细节）。
+- 保留原始意图与全部关键信息，不得改变或曲解用户诉求的本意。
+
+必须避免：
+- 不新增用户未提出的需求，不扩大或缩小原始诉求的范围。
+- 不替用户做业务决策，不臆造事实，不引入任何未经用户提供的信息。
+
+输出要求：
+- 仅输出改写后的提问正文本身，不要任何解释、前言、后缀、引号包裹或代码块包裹。
+- 输出语言必须与原始诉求保持一致。$$
+    ),
     ('agent.businessSectionTitle', '## 当前业务现场'),
     ('agent.questionSectionTitle', '## 用户提问'),
     ('agent.retrievedDocSnippetLimit', '500'),
     ('agent.defaultSlot', 'standard'),
-    ('agent.maxToolRounds', '3'),
-    ('agent.maxToolResultBytes', '8192'),
+    ('agent.maxToolRounds', '10'),
+    ('agent.maxToolResultBytes', '32768'),
+    ('agent.runDetachGraceSeconds', '90'),
     ('retrieval.topK', '5'),
     ('retrieval.candidates', '30'),
+    ('retrieval.expandDocLimit', '26000'),
     ('retrieval.fusion', 'rrf'),
     ('retrieval.weightVector', '0.6'),
     ('retrieval.weightKeyword', '0.4'),
@@ -752,6 +799,7 @@ FROM (VALUES
     ('retrieval.rerankTemperature', '0.2'),
     ('session.maxContextMessages', '20'),
     ('session.maxContextBytes', '32768'),
+    ('session.compactThresholdRatio', '0.8'),
     (
         'session.topicSystemPrompt',
         $$你根据首个用户消息为一次会话命名。请产出一个能概括该会话主题的简短标题，语言与消息一致。控制在 20 个字符以内，须具体、忠于事实：不要引号、不要行尾标点、不要「Topic:」这类前缀，也不要换行。仅回复标题文本。$$
@@ -768,6 +816,7 @@ FROM (VALUES
         $$你负责维护一段用户与助手之间多轮长对话的滚动摘要。把既有摘要与新近挤出的消息合并为一份更新后的摘要。保持简洁、忠于事实，语言与对话一致。保留其中的决定、约束、标识符、名称与尚未解决的问题。仅回复更新后的摘要文本，不要任何前言。$$
     ),
     ('memory.summaryMinEvictedMessages', '6'),
+    ('memory.evictedMessageByteLimit', '2000'),
     (
         'memory.extractSystemPrompt',
         $$你从一段用户与助手的对话中抽取可长期复用的记忆。只抽取最值得复用的条目：稳定的事实、用户偏好、决定与产出的成果。每条记忆须自包含，脱离原对话也能被理解。仅回复一个形如 {"memories": [{"kind": "fact", "title": "...", "content": "..."}]} 的 JSON 对象，其中 kind 取 fact、preference、decision、artifact 之一。没有值得记忆的内容时回复 {"memories": []}。$$

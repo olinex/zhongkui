@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"zhongkui.com/zhongkui/internal/models/network"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/models/network"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 var (
@@ -79,7 +79,7 @@ func Register(target Target) {
 }
 
 // TypeKey 计算目标模型实例的类型键。
-// 类型键格式为 pkgpath.TypeName（如 zhongkui.com/zhongkui/internal/models/network.HttpTransport），
+// 类型键格式为 pkgpath.TypeName（如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport），
 // 作为数据库规则的模型分组标识（TagRule.Model 等模型字段的取值）。
 // 指针自动解引用。可打标模型须在全局注册表（见 registry.go）中登记。
 func TypeKey(target any) (string, error) {

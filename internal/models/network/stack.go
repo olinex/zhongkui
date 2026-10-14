@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gopacket/gopacket"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // NetworkFrame 表示单个数据包展平后的网络协议栈记录列表。

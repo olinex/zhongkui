@@ -16,20 +16,20 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/models/tag"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/models/tag"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // TagRuleSampleCreateIn 定义创建标签规则样例的请求输入结构。
 // 样例归属当前请求命名空间（经命名空间中间件解析）；model 必须是已注册的目标模型类型键
-// （如 zhongkui.com/zhongkui/internal/models/network.HttpTransport）。
+// （如 zhongkuisec.com/zhongkui/internal/models/network.HttpTransport）。
 type TagRuleSampleCreateIn struct {
 	// Model 目标模型类型键
 	Model string `json:"model" binding:"required,max=255"`
@@ -81,6 +81,11 @@ type TagRuleSampleListOut struct {
 // invalidTagRuleSampleInputError 构造样例输入文档无法反序列化为目标模型的错误响应（HTTP 400）。
 // 反序列化失败说明字段类型与模型定义不符，样例不可用于规则运行期校验，写入时直接拒绝。
 func invalidTagRuleSampleInputError(err error) *response.CodeError {
+	// 上游助手（如 SampleBodyObjectKeys）已构造 CodeError 时直接透传，保留其可本地化详情；
+	// 否则（JSON 反序列化失败等）详情取诊断文案。
+	if codeErr, ok := err.(*response.CodeError); ok {
+		return codeErr
+	}
 	return response.CreateCodeError(http.StatusBadRequest, response.CodeTagRuleSampleInputInvalid, err.Error())
 }
 

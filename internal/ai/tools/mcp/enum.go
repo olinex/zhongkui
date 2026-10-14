@@ -5,7 +5,7 @@ package mcp
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // Transport 是远程 MCP 服务器传输方式的取值类型（mcp_servers.transport 与视图层 transport 字段）。

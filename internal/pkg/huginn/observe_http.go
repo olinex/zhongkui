@@ -11,7 +11,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // HTTP/1.x 解析失败的错误哨兵（对应 Http1ParseError 的各变体）。

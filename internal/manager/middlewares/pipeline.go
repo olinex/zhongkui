@@ -4,7 +4,7 @@ package middlewares
 
 import (
 	"github.com/gin-gonic/gin"
-	"zhongkui.com/zhongkui/internal/pkg/pipeline"
+	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
 )
 
 // PipelineInspectorCtxName Pipeline 检查器在 Gin 上下文中存储的键名。

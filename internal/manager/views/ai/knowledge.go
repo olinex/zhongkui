@@ -19,17 +19,17 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
-	ai "zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	modelsai "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/docconv"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/s3"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	"zhongkui.com/zhongkui/internal/worker/handlers/knowledge"
+	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/s3"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/knowledge"
 )
 
 // maxUploadBytes 文档导入请求体的上限（含 multipart 表单开销），64 MiB。
@@ -210,7 +210,7 @@ func KnowledgeDocumentCreate(c *gin.Context) {
 	}
 	comps := middlewares.GetAi(c)
 	if comps.Knowledge == nil {
-		response.CreateBadBodyError(errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("aiFeatureDisabled").AbortWithGinH(c)
 		return
 	}
 	if err := comps.Knowledge.IndexDocument(c, doc); err != nil {
@@ -289,8 +289,7 @@ func KnowledgeDocumentUpdate(c *gin.Context) {
 	// 导入文档：正文由解析流水线产生，只读；携带非空内容显式拒绝，标题变更不触发重新解析。
 	if instance.ObjectKey != "" {
 		if in.Content != "" {
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-				errors.New("imported document content is read-only; reparse the document to refresh it")).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("knowledgeImportedContentReadOnly").AbortWithGinH(c)
 			return
 		}
 		if err := db.WithContext(c).Model(&modelsai.KnowledgeDocument{}).
@@ -355,7 +354,7 @@ func KnowledgeDocumentBatchDelete(c *gin.Context) {
 			instance := modelsai.KnowledgeDocument{}
 			if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&instance).Error; err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
-					return fmt.Errorf("knowledge document %d not found", id)
+					return errors.New(response.LocalizeDetail(response.GetLocalizer(c), "knowledgeDocumentNotFound", id))
 				}
 				return errors.WithStack(err)
 			}
@@ -397,7 +396,7 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 	}
 	comps := middlewares.GetAi(c)
 	if comps.Knowledge == nil {
-		response.CreateBadBodyError(errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("aiFeatureDisabled").AbortWithGinH(c)
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
@@ -414,8 +413,7 @@ func KnowledgeDocumentReindex(c *gin.Context) {
 	}
 	if doc.ObjectKey != "" {
 		if doc.Status == string(modelsai.KnowledgeDocStatusPending) || doc.Status == string(modelsai.KnowledgeDocStatusParsing) {
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-				errors.New("document is already being parsed; wait for it to finish before reindexing")).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("knowledgeDocumentParsing").AbortWithGinH(c)
 			return
 		}
 		if err := db.WithContext(c).Model(&modelsai.KnowledgeDocument{}).
@@ -610,13 +608,12 @@ func (c *knowledgeUploadCounter) Read(p []byte) (int, error) {
 // 字段：title（可选，缺省取文件名去扩展名）、file（必填，必须为最后一个表单部分）。
 // 处理顺序：请求体限流 → 流式解析表单 → docconv.Detect 做唯一权威格式校验 → AI 启用校验 →
 // 插入 pending 文档行 → 流式加密上传原件并统计字节数 → 回填 size_bytes/object_key →
-// 投递解析任务。任一步失败按「DB 行 ↔ S3 原件共存亡」回滚已产生的副作用，并返回英文错误。
+// 投递解析任务。任一步失败按「DB 行 ↔ S3 原件共存亡」回滚已产生的副作用，并返回按请求语言本地化的错误。
 func KnowledgeDocumentUpload(c *gin.Context) {
 	// 请求体上限（含 multipart 表单开销）：先按 Content-Length 早拒，再用 MaxBytesReader
-	// 兜底分块传输/长度未知的场景，二者共同保证超限请求以明确英文错误返回 400。
+	// 兜底分块传输/长度未知的场景，二者共同保证超限请求以按请求语言本地化的错误返回 400。
 	if c.Request.ContentLength > maxUploadBytes {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-			errors.Newf("request body exceeds the maximum upload size of %d bytes", maxUploadBytes)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("knowledgeUploadTooLarge", maxUploadBytes).AbortWithGinH(c)
 		return
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxUploadBytes)
@@ -631,8 +628,7 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 		return
 	}
 	if file == nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-			errors.New(`multipart field "file" is required`)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("knowledgeUploadFileRequired").AbortWithGinH(c)
 		return
 	}
 	// 原始文件名取自 *multipart.Part（file 部分），Detect 以它做唯一权威的格式校验；
@@ -643,12 +639,12 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 	}
 	format, err := docconv.Detect(originalName)
 	if err != nil {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, err).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("knowledgeUnsupportedFormat", originalName).AbortWithGinH(c)
 		return
 	}
 	// AI 未启用时导入无意义（正文必须由解析流水线产生）：直接 400，不落库、不上传。
 	if !middlewares.GetAiRuntime(c).Enabled() {
-		response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody, errors.New("ai feature is disabled")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("aiFeatureDisabled").AbortWithGinH(c)
 		return
 	}
 	namespace, ok := middlewares.RequireNamespace(c)
@@ -687,8 +683,7 @@ func KnowledgeDocumentUpload(c *gin.Context) {
 		rollback()
 		var maxErr *http.MaxBytesError
 		if errors.As(err, &maxErr) {
-			response.CreateCodeError(http.StatusBadRequest, response.CodeBadBody,
-				errors.Newf("request body exceeds the maximum upload size of %d bytes", maxUploadBytes)).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("knowledgeUploadTooLarge", maxUploadBytes).AbortWithGinH(c)
 			return
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)

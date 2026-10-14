@@ -58,17 +58,21 @@ $zk-font-weight-semibold: 600;
 // ---------------------------------------------------------------------------
 // 控件 / 外框高度
 //   control-height-compact        输入控件高度（Vuetify density="compact"）
+//   control-height-dense          输入控件高度（数据表页脚等需再压一档的紧凑控件）
 //   control-height-default        输入控件高度（Vuetify density="default"）
 //   toolbar-height-compact        紧凑工具栏高度（对话框标题栏）
 //   table-row-height-compact      紧凑数据表行高
 //   table-header-height-compact   紧凑数据表表头高度
+//   panel-title-height-compact    展开面板标题区紧凑高度（收起态单行，如助手思考过程）
 // ---------------------------------------------------------------------------
 
 $zk-control-height-compact: 40px;
+$zk-control-height-dense: 32px;
 $zk-control-height-default: 48px;
 $zk-toolbar-height-compact: 48px;
 $zk-table-row-height-compact: 36px;
 $zk-table-header-height-compact: 40px;
+$zk-panel-title-height-compact: 32px;
 
 // ---------------------------------------------------------------------------
 // 间距（4px 基准刻度）
@@ -129,6 +133,10 @@ $zk-dialog-width-xl: 1100px;
 $zk-container-max-width: 1440px;
 $zk-container-max-width-narrow: 480px;
 
+// 首页「快速开始」快捷入口网格的轨道最小宽度：可用宽度足够时一行恰好 4 个，
+// 不足时按此值逐级减少列数（见 pages/[language]/index.vue 的 .quick-link-grid）。
+$zk-quick-link-min-width: 200px;
+
 // ---------------------------------------------------------------------------
 // 居中表面（认证 / 错误页）
 // 全屏居中骨架（CentralLayout）的单一表面宽度：认证页与错误页共用同一固定值，
@@ -153,10 +161,26 @@ $zk-centered-surface-width: 420px;
 $zk-dropdown-max-height: 300px;
 $zk-select-min-width: 240px;
 $zk-select-max-width: 360px;
+
+// token 单位选择器触发区最小宽度：使「无单位（空后缀）/ K / M」切换时宽度不抖动
+$zk-token-unit-trigger-min-width: 44px;
 $zk-popover-max-width: 420px;
 $zk-popover-max-height: 320px;
 $zk-preview-max-height: 480px;
 $zk-placeholder-min-height: 48px;
+
+// ---------------------------------------------------------------------------
+// 可拖拽边框（Resize Handle）
+// 可拖拽边框的常驻握把：形状随可调整的轴向切换，让用户静态即可分辨
+// 「可拖宽」（左右边框，竖条握把）与「可拖高」（上下边框，横条握把）。
+//   resize-grip-length     握把长边（沿边框走向）
+//   resize-grip-thickness  握把短边（垂直边框走向）
+//   resize-grip-opacity    常态不透明度（悬停 / 拖拽时转 primary）
+// ---------------------------------------------------------------------------
+
+$zk-resize-grip-length: $zk-space-5;
+$zk-resize-grip-thickness: $zk-space-1;
+$zk-resize-grip-opacity: 0.24;
 
 // ---------------------------------------------------------------------------
 // 编辑器外壳（CodeMirror 族）
@@ -177,6 +201,20 @@ $zk-editor-header-min-height: 24px;
 // ---------------------------------------------------------------------------
 
 $zk-surface-subtle-opacity: 0.06;
+
+// ---------------------------------------------------------------------------
+// 开关（Switch）轨道
+//   switch-track-opacity      关闭态轨道填充不透明度。Vuetify 关闭态用 surface-variant
+//                             以 0.6 不透明度填充，深色主题下该色（#1D242E）与底色
+//                             surface（#151A21）几乎同色、轨道不可见；改用 on-surface
+//                             半透明后取足不透明度，对底色约 3:1（非文本 UI 组件要求）
+//   switch-disabled-opacity   开关禁用态整体不透明度。Vuetify 统一压暗值为 0.26，
+//                             开关的形态由轨道填充承载（不像复选框有描边轮廓），压到
+//                             0.26 后形态丢失，故为开关单独抬高一档，仍明显暗于可用态
+// ---------------------------------------------------------------------------
+
+$zk-switch-track-opacity: 0.38;
+$zk-switch-disabled-opacity: 0.45;
 
 // ---------------------------------------------------------------------------
 // Z-index 层级
@@ -223,10 +261,12 @@ $zk-shadow-md:
   --zk-font-weight-medium: #{$zk-font-weight-medium};
   --zk-font-weight-semibold: #{$zk-font-weight-semibold};
   --zk-control-height-compact: #{$zk-control-height-compact};
+  --zk-control-height-dense: #{$zk-control-height-dense};
   --zk-control-height-default: #{$zk-control-height-default};
   --zk-toolbar-height-compact: #{$zk-toolbar-height-compact};
   --zk-table-row-height-compact: #{$zk-table-row-height-compact};
   --zk-table-header-height-compact: #{$zk-table-header-height-compact};
+  --zk-panel-title-height-compact: #{$zk-panel-title-height-compact};
   --zk-space-1: #{$zk-space-1};
   --zk-space-2: #{$zk-space-2};
   --zk-space-3: #{$zk-space-3};
@@ -246,19 +286,26 @@ $zk-shadow-md:
   --zk-dialog-width-xl: #{$zk-dialog-width-xl};
   --zk-container-max-width: #{$zk-container-max-width};
   --zk-container-max-width-narrow: #{$zk-container-max-width-narrow};
+  --zk-quick-link-min-width: #{$zk-quick-link-min-width};
   --zk-centered-surface-width: #{$zk-centered-surface-width};
   --zk-dropdown-max-height: #{$zk-dropdown-max-height};
   --zk-select-min-width: #{$zk-select-min-width};
   --zk-select-max-width: #{$zk-select-max-width};
+  --zk-token-unit-trigger-min-width: #{$zk-token-unit-trigger-min-width};
   --zk-popover-max-width: #{$zk-popover-max-width};
   --zk-popover-max-height: #{$zk-popover-max-height};
   --zk-preview-max-height: #{$zk-preview-max-height};
   --zk-placeholder-min-height: #{$zk-placeholder-min-height};
+  --zk-resize-grip-length: #{$zk-resize-grip-length};
+  --zk-resize-grip-thickness: #{$zk-resize-grip-thickness};
+  --zk-resize-grip-opacity: #{$zk-resize-grip-opacity};
   --zk-editor-font-size: #{$zk-editor-font-size};
   --zk-editor-min-height: #{$zk-editor-min-height};
   --zk-editor-padding: #{$zk-editor-padding};
   --zk-editor-header-min-height: #{$zk-editor-header-min-height};
   --zk-surface-subtle-opacity: #{$zk-surface-subtle-opacity};
+  --zk-switch-track-opacity: #{$zk-switch-track-opacity};
+  --zk-switch-disabled-opacity: #{$zk-switch-disabled-opacity};
   --zk-z-dialog: #{$zk-z-dialog};
   --zk-z-fullscreen: #{$zk-z-fullscreen};
   --zk-z-tooltip: #{$zk-z-tooltip};

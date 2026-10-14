@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // runReconcile 以给定的当前列维度驱动 reconcileEmbeddingColumn 内核，并捕获实际执行的 DDL。

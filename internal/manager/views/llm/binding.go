@@ -7,13 +7,13 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/llm"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
 // LlmSlotBindingOut 定义单个档位的绑定摘要与可用性输出。
@@ -23,7 +23,7 @@ type LlmSlotBindingOut struct {
 	// Slot 档位标识：flash | standard | advanced | embedding
 	Slot aimodel.Slot `json:"slot"`
 	// ModelID 绑定模型的 ID（未绑定时为 0）
-	ModelID uint `json:"modelId"`
+	ModelID uint `json:"modelID"`
 	// ModelName 绑定模型的本地标识（未绑定时为空）
 	ModelName string `json:"modelName"`
 	// Kind 绑定模型的类型：chat | embedding（未绑定时为空）
@@ -60,7 +60,7 @@ type LlmBindingListOut struct {
 // LlmBindingSetIn 定义绑定档位的请求输入结构。
 type LlmBindingSetIn struct {
 	// ModelID 待绑定的模型 ID
-	ModelID uint `json:"modelId"`
+	ModelID uint `json:"modelID"`
 }
 
 // LlmBindingListGet 处理获取档位绑定情况的请求。
@@ -135,7 +135,7 @@ func LlmBindingSet(c *gin.Context) {
 		return
 	}
 	if in.ModelID == 0 {
-		response.CreateBadBodyError(errors.New("modelId must be a positive integer")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmBindingModelIDInvalid").AbortWithGinH(c)
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
@@ -149,24 +149,32 @@ func LlmBindingSet(c *gin.Context) {
 		return
 	}
 	if !instance.Enabled {
-		response.CreateBadBodyError(errors.Newf("model %q is disabled and cannot be bound to a slot", instance.Name)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmBindingModelDisabled", instance.Name).AbortWithGinH(c)
 		return
 	}
 	if want := aimodel.SlotKind(slot); instance.Kind != want {
-		response.CreateBadBodyError(errors.Newf(
-			"model %q is a %s model and cannot be bound to the %q slot (which requires a %s model)",
-			instance.Name, instance.Kind, slot, want)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError(
+			"llmBindingKindMismatch", instance.Name, instance.Kind, slot, want).AbortWithGinH(c)
 		return
 	}
 	if slot == aimodel.SlotEmbedding {
-		verified, err := verifyEmbeddingCompat(c, modelConfigOf(&instance))
+		cfg, err := modelConfigOf(&instance)
+		if err != nil {
+			// 库内模型的高级请求配置/思考取值非法，属服务端数据问题
+			response.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+		verified, err := verifyEmbeddingCompat(c, cfg)
 		if err != nil {
 			// 维度不兼容属于「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，
 			// 用专门的业务码（并附含修复步骤的详情）；端点不可达 / 凭据无效等错误
 			// 仍是请求侧问题，按请求体错误透出
 			var mismatch *ai.EmbeddingDimensionMismatchError
 			if errors.As(err, &mismatch) {
-				response.CreateLlmBindingIncompatibleError(mismatch).AbortWithGinH(c)
+				response.CreateLlmBindingIncompatibleError(
+					"llmBindingIncompatibleDimension",
+					mismatch.Model, mismatch.IndexDimension, mismatch.NativeDimension, mismatch.NativeDimension,
+				).AbortWithGinH(c)
 				return
 			}
 			response.CreateBadBodyError(err).AbortWithGinH(c)

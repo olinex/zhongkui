@@ -3,7 +3,7 @@ package translate
 import (
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"github.com/nicksnyder/go-i18n/v2/i18n/template"
-	"zhongkui.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 )
 
 // dataDelimParser 是 translate 层使用的全局文本解析器：将 go-i18n 的模板定界符

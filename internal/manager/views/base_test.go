@@ -18,10 +18,10 @@ import (
 	"github.com/pelletier/go-toml/v2"
 	. "github.com/smartystreets/goconvey/convey"
 	"golang.org/x/text/language"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 func TestMain(m *testing.M) {
@@ -90,18 +90,19 @@ error.emptyUrlParam = "empty url param: %s"
 error.badUrlParam = "bad url param: %s"
 error.schedulerScheduleConflict = "cronSpec and interval are mutually exclusive, set only one"
 error.schedulerScheduleEmpty = "either cronSpec or interval must be set"
+error.multipartFieldTooLarge = "multipart field %q exceeds the maximum size of %d bytes"
 tagrule.rego-invalid = "Rego rule violates the tag rule contract: it must be package zki with a tags rule"
 tagrule.lint-field-not-exist = "Field %s does not exist in the input document of this model, please check the spelling"
 tagrule.lint-field-hint = "Please choose a valid field from the input field panel or the completion list"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.method"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.method"]
 other = "HTTP request method"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.client_ip"]
 other = "Client IP address"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.tags"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.tags"]
 other = "Risk tag combination"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpClientSig"]
 other = "Client TCP signature"
-["input.zhongkui.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
+["input.zhongkuisec.com/zhongkui/internal/models/network.HttpTransport.fpTcpServerSig"]
 other = "Server TCP signature"
 `), "en.toml")
 	return i18n.NewLocalizer(bundle, "en")

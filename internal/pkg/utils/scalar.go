@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ScalarKind 是 JSON 标量值的类型标识，用于在「文本字面量」与「强类型值」之间做统一转换。

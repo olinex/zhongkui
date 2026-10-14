@@ -6,9 +6,9 @@ import (
 	ut "github.com/go-playground/universal-translator"
 	uv "github.com/go-playground/validator/v10"
 	"github.com/samber/do/v2"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 func genValidatorFuncs(_ do.Injector) (map[string]uv.Func, error) {

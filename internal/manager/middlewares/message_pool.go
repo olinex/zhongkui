@@ -5,7 +5,7 @@ package middlewares
 import (
 	"github.com/gin-gonic/gin"
 
-	"zhongkui.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/message"
 )
 
 // MessagePoolCtxName 消息渠道连接池在 Gin 上下文中存储的键名。

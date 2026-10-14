@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/minio/minio-go/v7"
-	"zhongkui.com/zhongkui/internal/capture/totel"
-	"zhongkui.com/zhongkui/internal/pkg/crypto/combine"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/capture/totel"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 func (c *capturer) uploadOne(ctx context.Context, objectKey, filePath string, n notice) (err error) {

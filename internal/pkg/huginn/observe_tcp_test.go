@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"testing"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // tcpOptBytes 构造单个 TCP 选项字节（kind + 长度 + 数据；EOL/NOP 无长度字段）。

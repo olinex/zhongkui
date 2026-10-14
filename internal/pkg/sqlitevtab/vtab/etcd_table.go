@@ -14,7 +14,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/sqlitevtab"
+	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
 // etcdKeyPlan 描述一次 etcd 数据源查询的 key 解析计划：精确等值 / 前缀范围 / 全量范围。

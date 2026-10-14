@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"zhongkui.com/zhongkui/internal/benchmark/capture"
+	"zhongkuisec.com/zhongkui/internal/benchmark/capture"
 )
 
 func main() {

@@ -5,8 +5,8 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/tagengine"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/tagengine"
 )
 
 // registryValidModel 含共享 ID 锚点（serializer.HexUUID）的合法目标模型。
@@ -83,7 +83,7 @@ func recoverPanic(fn func()) (recovered any) {
 func TestModelKey(t *testing.T) {
 	Convey("Test ModelKey", t, func() {
 		Convey("完整类型键取末段并转小驼峰", func() {
-			So(tagengine.ModelKey("zhongkui.com/zhongkui/internal/models/network.HttpTransport"), ShouldEqual, "httpTransport")
+			So(tagengine.ModelKey("zhongkuisec.com/zhongkui/internal/models/network.HttpTransport"), ShouldEqual, "httpTransport")
 		})
 
 		Convey("已是枚举短键时幂等", func() {

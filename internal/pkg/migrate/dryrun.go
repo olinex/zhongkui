@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/pterm/pterm"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // DryRunResult 描述一次迁移演练的结果。

@@ -8,18 +8,18 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	"zhongkui.com/zhongkui/internal/manager/views/user"
-	"zhongkui.com/zhongkui/internal/models/core"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/crypto"
-	"zhongkui.com/zhongkui/internal/pkg/database"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	"zhongkuisec.com/zhongkui/internal/manager/views/user"
+	"zhongkuisec.com/zhongkui/internal/models/core"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // randomPasswordLength 定义管理员重置用户密码时随机生成密码的长度，
@@ -306,10 +306,10 @@ func UserUpdate(c *gin.Context) {
 }
 
 // UserBatchActiveIn 批量设置用户激活状态的请求输入结构。
-// UnionIds 接受标量（单个 unionID 字符串）或数组（多个 unionID 字符串）。
+// UnionIDs 接受标量（单个 unionID 字符串）或数组（多个 unionID 字符串）。
 type UserBatchActiveIn struct {
-	// UnionIds 待设置激活状态的用户 unionID 列表。
-	UnionIds views.FlexList[serializer.HexUUID] `json:"unionIds"`
+	// UnionIDs 待设置激活状态的用户 unionID 列表。
+	UnionIDs views.FlexList[serializer.HexUUID] `json:"unionIDs"`
 }
 
 // UserBatchSetActive 批量设置用户激活/禁用状态的处理函数工厂。
@@ -327,7 +327,7 @@ func UserBatchSetActive(active bool) gin.HandlerFunc {
 			response.CreateBadBodyError(err).AbortWithGinH(c)
 			return
 		}
-		unionIds := []serializer.HexUUID(in.UnionIds)
+		unionIds := []serializer.HexUUID(in.UnionIDs)
 		if !views.ValidFlexLen(c, unionIds) {
 			return
 		}

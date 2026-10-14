@@ -14,14 +14,14 @@ import (
 
 	// 项目内部
 
-	"zhongkui.com/zhongkui/internal/ai"
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/manager/views"
-	aimodel "zhongkui.com/zhongkui/internal/models/ai"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/serializer"
-	"zhongkui.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/manager/views"
+	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
 
 // McpServerCreateIn 定义注册 MCP 服务器端点的请求输入结构。
@@ -209,14 +209,14 @@ func McpServerCreate(c *gin.Context) {
 	}
 	db := middlewares.GetCoreDatabase(c)
 	// 名称唯一性预检：含软删除记录（uq_mcp_servers_name 为非部分索引），
-	// 以便返回明确的英文校验错误而非唯一约束冲突的 500
+	// 以便返回按请求语言本地化的校验错误而非唯一约束冲突的 500
 	var count int64
 	if err := db.Unscoped().Model(&aimodel.McpServer{}).Where("name = ?", in.Name).Count(&count).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	if count > 0 {
-		response.CreateBadBodyError(errors.Newf("mcp server name %q already exists", in.Name)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("mcpServerNameExists", in.Name).AbortWithGinH(c)
 		return
 	}
 	// 请求头留空表示无请求头：以 nil 明文入库，而非空串的密文（保持列为空）
@@ -290,7 +290,7 @@ func McpServerUpdate(c *gin.Context) {
 		return
 	}
 	if count > 0 {
-		response.CreateBadBodyError(errors.Newf("mcp server name %q already exists", in.Name)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("mcpServerNameExists", in.Name).AbortWithGinH(c)
 		return
 	}
 	columns := []string{"name", "transport", "url", "timeout_seconds", "enabled", "description"}
@@ -575,14 +575,14 @@ func newMcpServerDetailOut(m *aimodel.McpServer) McpServerDetailOut {
 }
 
 // decodeMcpHeaders 把密文列解出的明文请求头解析为 map[string]string；为空返回 nil（表示无请求头），
-// JSON 非法返回固定的英文错误——错误文本不携带原始明文，避免凭据经错误信息泄漏。
+// JSON 非法返回固定的本地化错误——错误文本不携带原始明文，避免凭据经错误信息泄漏。
 func decodeMcpHeaders(raw []byte) (map[string]string, error) {
 	if len(raw) == 0 {
 		return nil, nil
 	}
 	var headers map[string]string
 	if err := json.Unmarshal(raw, &headers); err != nil {
-		return nil, errors.New("the request headers are not a valid JSON object")
+		return nil, response.CreateBadBodyMessageError("mcpHeadersInvalid")
 	}
 	if len(headers) == 0 {
 		return nil, nil

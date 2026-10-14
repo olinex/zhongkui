@@ -51,10 +51,10 @@
       <tbody>
         <tr v-for="row in rows" :key="row.slot">
           <td>
-            <div class="text-on-surface">{{ enumLabelOf(EnumClass.llmSlot, row.slot) }}</div>
+            <div>{{ enumLabelOf(EnumClass.llmSlot, row.slot) }}</div>
           </td>
           <td>
-            <div v-if="row.bound" class="text-on-surface">{{ row.modelName }}</div>
+            <div v-if="row.bound">{{ row.modelName }}</div>
             <div v-else class="zk-hint">
               {{ $t("page.llmBindingAdmin.unbound") }}
             </div>
@@ -63,14 +63,17 @@
             </div>
           </td>
           <td>
-            <span v-if="row.bound" class="text-on-surface">
+            <span v-if="row.bound">
               {{ enumLabelOf(EnumClass.llmModelKind, row.kind) }}
             </span>
-            <span v-else class="zk-hint">—</span>
+            <span v-else class="zk-hint">{{ INVALID_PLACEHOLDER }}</span>
           </td>
+          <!-- 向量维度仅对向量（embedding）槽位有效：对话档位即便已绑定模型也无维度，展示占位符而非 0 -->
           <td>
-            <span v-if="row.bound" class="text-on-surface">{{ row.dimensions }}</span>
-            <span v-else class="zk-hint">—</span>
+            <span v-if="row.bound && row.requiredKind === LLM_MODEL_KIND_EMBEDDING">
+              {{ row.dimensions }}
+            </span>
+            <span v-else class="zk-hint">{{ INVALID_PLACEHOLDER }}</span>
           </td>
           <td>
             <boolean-chip :value="row.available" />
@@ -145,8 +148,13 @@ import type {
 } from "@/apis/@types/llm";
 import { getResponse, getSimpleResponse } from "@/apis/base";
 import { useAppStore } from "@/stores/app";
+import { INVALID_PLACEHOLDER } from "@/utils/base";
 import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
 import i18n from "@/utils/i18n";
+
+// LLM_MODEL_KIND_EMBEDDING 向量化模型在 llmModelKind 枚举中的值；
+// 档位的向量维度仅在其 requiredKind 为该值时有效，否则应展示无效占位符
+const LLM_MODEL_KIND_EMBEDDING = "embedding";
 
 const appStore = useAppStore();
 const unbindConfirmRef = useTemplateRef("unbindConfirmRef");
@@ -197,7 +205,7 @@ const canBind = (row: LlmSlotBindingOut): boolean => {
   if (selected === null || selected === undefined) {
     return false;
   }
-  return !(row.bound && row.modelId === selected);
+  return !(row.bound && row.modelID === selected);
 };
 
 const notifyError = (text: string): void => {
@@ -212,7 +220,7 @@ const loadBindings = async (): Promise<void> => {
       bindingState.value = rsp.data;
       const next: Record<string, number | null> = {};
       for (const slot of rsp.data.slots ?? []) {
-        next[slot.slot] = slot.bound ? slot.modelId : null;
+        next[slot.slot] = slot.bound ? slot.modelID : null;
       }
       selection.value = next;
     },
@@ -248,14 +256,14 @@ const refreshAction = async (showLoading = false): Promise<void> => {
 };
 
 const bindAction = async (slot: string): Promise<void> => {
-  const modelId = selection.value[slot];
-  if (modelId === null || modelId === undefined) {
+  const modelID = selection.value[slot];
+  if (modelID === null || modelID === undefined) {
     return;
   }
   submittingSlot.value = slot;
   try {
     await getSimpleResponse(
-      llmBindingSet(slot, { modelId }),
+      llmBindingSet(slot, { modelID }),
       async (rsp) => {
         await loadBindings();
         appStore.notify({
@@ -265,8 +273,8 @@ const bindAction = async (slot: string): Promise<void> => {
         });
       },
       async (rsp) => {
-        // 绑定失败原因（类型不符 / 模型未启用 / 维度与知识库索引不兼容）由后端以英文 details
-        // 返回，缺失时回退本地化的 summary
+        // 绑定失败原因（类型不符 / 模型未启用 / 维度与知识库索引不兼容）由后端按请求语言本地化
+        // 返回（详情含可执行的修复步骤，故优先展示），缺失时回退本地化的 summary
         notifyError(typeof rsp.details === "string" ? rsp.details : rsp.summary);
         await loadBindings();
       },

@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/translate"
-	"zhongkui.com/zhongkui/internal/provider"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/provider"
 )
 
 // describeDepsCmd 打印外部依赖连通性状态的命令（内部 → 外部依赖方向）。

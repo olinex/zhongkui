@@ -50,7 +50,7 @@
   >
     <template #body="{ proxy, editable }">
       <v-form>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               v-model="editName"
@@ -60,7 +60,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               :model-value="proxy.model"
@@ -69,7 +69,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-textarea
               v-model="editDescription"
@@ -80,7 +80,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-textarea
               :model-value="proxy.inputJson"
@@ -260,8 +260,13 @@ const editAction = async (item: Record<string, any>): Promise<void> => {
     tagRuleSampleDetailGet(item.id),
     async (rsp) => {
       editSampleId = rsp.data.id;
-      updateForm.resetField("name", { value: rsp.data.name });
-      updateForm.resetField("description", { value: rsp.data.description });
+      // 复位与回填同属「准备本次打开的数据」：values 完整枚举全部 defineField 字段
+      updateForm.resetForm({
+        values: {
+          name: rsp.data.name,
+          description: rsp.data.description,
+        },
+      });
       editDialogRef.value?.open({
         ...rsp.data,
         inputJson: JSON.stringify(rsp.data.input ?? {}, null, 2),

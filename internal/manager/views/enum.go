@@ -12,12 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/manager/middlewares"
-	"zhongkui.com/zhongkui/internal/manager/response"
-	"zhongkui.com/zhongkui/internal/pkg/base"
-	"zhongkui.com/zhongkui/internal/pkg/enum"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // EnumEntryOut 枚举条目出参：key（i18n 定位）、value（数据库存储）、label（按请求语言翻译）。
@@ -56,7 +55,7 @@ func EnumGet(c *gin.Context) {
 	}
 	t, ok := enum.Get(in.Type)
 	if !ok {
-		response.CreateBadBodyError(errors.Newf("enum: unknown type %q", in.Type)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("enumUnknownType", in.Type).AbortWithGinH(c)
 		return
 	}
 	lang := enumRequestLang(c, in.Lang)

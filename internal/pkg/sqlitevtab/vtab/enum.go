@@ -9,7 +9,7 @@ package vtab
 
 import (
 	// 项目内部
-	"zhongkui.com/zhongkui/internal/pkg/enum"
+	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
 
 // datasourceStructValues 是 datasourceStruct 枚举类的取值空间，取自本包的 Redis 数据结构类型常量

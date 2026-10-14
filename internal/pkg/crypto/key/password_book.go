@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"zhongkui.com/zhongkui/internal/pkg/errors"
-	"zhongkui.com/zhongkui/internal/pkg/translate"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
 // PasswordBookSize 定义密码本的固定大小（字节数）

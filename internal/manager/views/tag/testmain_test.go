@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	uv "github.com/go-playground/validator/v10"
 
-	"zhongkui.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkui.com/zhongkui/internal/pkg/validator"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // TestMain 初始化全局 KeyDerivation 与 Gin binding 自定义验证规则。

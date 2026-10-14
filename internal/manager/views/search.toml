@@ -1160,14 +1160,14 @@ required = true
 actions = ["eq"]
 
 [[Ipv4TcpListGet.filterByFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 fieldType = "serializer.HexUUID"
 column = "session_id"
 binding = ""
 actions = ["eq", "neq"]
 
 [[Ipv4TcpListGet.filterByFields]]
-fieldName = "tcpStreamId"
+fieldName = "tcpStreamID"
 fieldType = "string"
 column = "tcp_stream_id"
 binding = ""
@@ -1218,7 +1218,7 @@ column = "capture"
 fieldName = "version"
 column = "version"
 [[Ipv4TcpListGet.selectFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 column = "session_id"
 [[Ipv4TcpListGet.selectFields]]
 fieldName = "timestamp"
@@ -1260,7 +1260,7 @@ column = "ipv4_tos"
 fieldName = "ipv4Length"
 column = "ipv4_length"
 [[Ipv4TcpListGet.selectFields]]
-fieldName = "ipv4Id"
+fieldName = "ipv4ID"
 column = "ipv4_id"
 [[Ipv4TcpListGet.selectFields]]
 fieldName = "ipv4Flags"
@@ -1356,7 +1356,7 @@ column = "fp_sig"
 fieldName = "fpMtu"
 column = "fp_mtu"
 [[Ipv4TcpListGet.selectFields]]
-fieldName = "tcpStreamId"
+fieldName = "tcpStreamID"
 column = "tcp_stream_id"
 [[Ipv4TcpListGet.selectFields]]
 fieldName = "payload"
@@ -1412,14 +1412,14 @@ required = true
 actions = ["eq"]
 
 [[Ipv6TcpListGet.filterByFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 fieldType = "serializer.HexUUID"
 column = "session_id"
 binding = ""
 actions = ["eq", "neq"]
 
 [[Ipv6TcpListGet.filterByFields]]
-fieldName = "tcpStreamId"
+fieldName = "tcpStreamID"
 fieldType = "string"
 column = "tcp_stream_id"
 binding = ""
@@ -1469,7 +1469,7 @@ column = "capture"
 fieldName = "version"
 column = "version"
 [[Ipv6TcpListGet.selectFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 column = "session_id"
 [[Ipv6TcpListGet.selectFields]]
 fieldName = "timestamp"
@@ -1592,7 +1592,7 @@ column = "fp_sig"
 fieldName = "fpMtu"
 column = "fp_mtu"
 [[Ipv6TcpListGet.selectFields]]
-fieldName = "tcpStreamId"
+fieldName = "tcpStreamID"
 column = "tcp_stream_id"
 [[Ipv6TcpListGet.selectFields]]
 fieldName = "payload"
@@ -1648,7 +1648,7 @@ required = true
 actions = ["eq"]
 
 [[HttpTransportListGet.filterByFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 fieldType = "serializer.HexUUID"
 column = "session_id"
 binding = ""
@@ -1734,7 +1734,7 @@ column = "capture"
 fieldName = "version"
 column = "version"
 [[HttpTransportListGet.selectFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 column = "session_id"
 [[HttpTransportListGet.selectFields]]
 fieldName = "timestamp"
@@ -1743,7 +1743,7 @@ column = "timestamp"
 fieldName = "createdAt"
 column = "created_at"
 [[HttpTransportListGet.selectFields]]
-fieldName = "traceId"
+fieldName = "traceID"
 column = "trace_id"
 [[HttpTransportListGet.selectFields]]
 fieldName = "clientIp"
@@ -2304,7 +2304,7 @@ column = "tags"
 
 
 # 原始流量审计 - 网络堆栈（HTTP 传输关联下钻）
-# 以 HttpTransport 的 traceId 为键查询组成该 TCP 流的全部网络堆栈记录；
+# 以 HttpTransport 的 traceID 为键查询组成该 TCP 流的全部网络堆栈记录；
 # timestamp / created_at 双时间范围必填，命中分区键防全表扫描。
 [NetworkStackListGet]
 [[NetworkStackListGet.orderByFields]]
@@ -2360,7 +2360,7 @@ required = true
 actions = ["lte"]
 
 [[NetworkStackListGet.filterByFields]]
-fieldName = "traceId"
+fieldName = "traceID"
 fieldType = "serializer.HexUUID"
 column = "trace_id"
 binding = "required"
@@ -2375,7 +2375,7 @@ binding = ""
 actions = ["eq"]
 
 [[NetworkStackListGet.filterByFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 fieldType = "serializer.HexUUID"
 column = "session_id"
 binding = ""
@@ -2399,10 +2399,10 @@ column = "capture"
 fieldName = "version"
 column = "version"
 [[NetworkStackListGet.selectFields]]
-fieldName = "sessionId"
+fieldName = "sessionID"
 column = "session_id"
 [[NetworkStackListGet.selectFields]]
-fieldName = "traceId"
+fieldName = "traceID"
 column = "trace_id"
 [[NetworkStackListGet.selectFields]]
 fieldName = "timestamp"
@@ -2633,7 +2633,7 @@ actions = [
 ]
 
 [[NotificationTargetListGet.filterByFields]]
-fieldName = "channelId"
+fieldName = "channelID"
 fieldType = "uint"
 column = "channel_id"
 binding = ""
@@ -2675,7 +2675,7 @@ column = "updated_at"
 fieldName = "name"
 column = "name"
 [[NotificationTargetListGet.selectFields]]
-fieldName = "channelId"
+fieldName = "channelID"
 column = "channel_id"
 [[NotificationTargetListGet.selectFields]]
 fieldName = "type"
@@ -3036,10 +3036,10 @@ column = "updated_at"
 fieldName = "eventType"
 column = "event_type"
 [[NotificationRecordListGet.selectFields]]
-fieldName = "eventId"
+fieldName = "eventID"
 column = "event_id"
 [[NotificationRecordListGet.selectFields]]
-fieldName = "targetId"
+fieldName = "targetID"
 column = "target_id"
 # 目标名称由处理器第二趟尽力回填（按 target_id 查询目标表），
 # column 取回填所依赖的关联键列 target_id，避免投影 SELECT 引用不存在于本表的列
@@ -3053,7 +3053,7 @@ column = "channel_type"
 fieldName = "status"
 column = "status"
 [[NotificationRecordListGet.selectFields]]
-fieldName = "messageId"
+fieldName = "messageID"
 column = "message_id"
 [[NotificationRecordListGet.selectFields]]
 fieldName = "notifiedAt"
@@ -3172,7 +3172,7 @@ column = "created_at"
 fieldName = "updatedAt"
 column = "updated_at"
 [[TagEventRecordListGet.selectFields]]
-fieldName = "ruleId"
+fieldName = "ruleID"
 column = "rule_id"
 [[TagEventRecordListGet.selectFields]]
 fieldName = "ruleName"
@@ -3532,6 +3532,10 @@ fieldName = "maxTokens"
 column = "max_tokens"
 
 [[LlmModelListGet.selectFields]]
+fieldName = "contextTokens"
+column = "context_tokens"
+
+[[LlmModelListGet.selectFields]]
 fieldName = "dimensions"
 column = "dimensions"
 
@@ -3542,6 +3546,22 @@ column = "enabled"
 [[LlmModelListGet.selectFields]]
 fieldName = "description"
 column = "description"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "extraBody"
+column = "extra_body"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "thinkingField"
+column = "thinking_field"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "thinkingOnValue"
+column = "thinking_on_value"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "thinkingOffValue"
+column = "thinking_off_value"
 
 # MCP 服务器注册表列表（admin 配置 API：/api/v1/admin/llm/mcp/list）
 # 注册表为全局配置（不按命名空间隔离），过滤/排序覆盖时间、名称、传输方式与启用状态

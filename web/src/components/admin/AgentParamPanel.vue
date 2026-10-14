@@ -61,7 +61,7 @@
           <!-- 每项带顶部分隔线：与标题行共同构成「把手 / 内容」边界 -->
           <div v-for="item in groupItems(group)" :key="item.key" class="param-item zk-hairline-top">
             <div class="d-flex align-center mb-1">
-              <span class="text-body-2 text-on-surface font-weight-500">{{ item.label }}</span>
+              <span class="text-body-medium font-weight-500">{{ item.label }}</span>
               <!-- 参数键与出厂值放进 popover：tooltip 离开 activator 即收起，承载不了可点击的复制按钮 -->
               <v-menu
                 location="top"

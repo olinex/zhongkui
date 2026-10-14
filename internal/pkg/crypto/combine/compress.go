@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/klauspost/compress/zstd"
-	"zhongkui.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // 压缩算法标识常量
