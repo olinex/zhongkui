@@ -3,10 +3,12 @@
     <app-header />
     <v-navigation-drawer
       v-model:rail="rail"
-      :expand-on-hover="!pinned"
+      :expand-on-hover="expandOnHover"
       permanent
       width="220"
       class="zk-hairline-right"
+      @mouseenter="drawerHovered = true"
+      @mouseleave="onDrawerLeave"
     >
       <!-- 固定展开切换：点击后侧边栏保持展开，不再随鼠标悬停收起；偏好持久化到本地 -->
       <template #append>
@@ -67,7 +69,7 @@
               <!-- 功能未开启的子项不隐藏，而以次级文本色置为不可用态；点击进入该页面后由
                    路由守卫统一引导到「功能不可用」说明页 -->
               <template v-if="isChildUnavailable(parent, child)" #title>
-                <span class="text-on-surface-variant">{{ $t(child.title) }}</span>
+                <span class="on-surface-variant">{{ $t(child.title) }}</span>
               </template>
               <!-- 子项标识：功能不可用（锁定）优先于受命名空间影响，两者同时命中时只展示锁定 -->
               <template v-if="childBadge(parent, child)" #append>
@@ -79,11 +81,14 @@
       </v-list>
     </v-navigation-drawer>
     <v-main class="d-flex mb-6">
-      <v-container class="pa-4 pa-md-6 zk-page-container">
+      <v-container class="px-4 px-md-6 pt-0 pb-4 pb-md-6 zk-page-container">
         <slot name="prepend" />
         <!--
           页面标题以面包屑形式展示：首页可点击返回，导航树匹配到的祖先层级
-          （如流量审计/管理）暂为纯文本，未来多级路径加深时自动跟随导航树增深
+          （如流量审计/管理）暂为纯文本，未来多级路径加深时自动跟随导航树增深。
+          容器显式 pt-0：Vuetify .v-container 默认带 16px 全向内边距，不清零顶部会使
+          面包屑上距被顶到 24px、下距仅 8px 而显得偏低；清零后顶隙完全由面包屑自身的
+          上下对称内边距承担，使其垂直居中于 AppBar 与内容表面之间、不再单独占据一行。
         -->
         <breadcrumbs />
         <!--
@@ -152,7 +157,12 @@ const props = defineProps({
 // 不保留当前路由的其它参数（如 /traffic/:type 的 type），避免把不匹配的参数带入
 // 目标路由触发 Vue Router "Discarded invalid param(s)" 告警。
 const childTo = (child: NavChild) => {
-  return { name: child.routeName, params: { language: route.params.language, ...child.params } };
+  // 导航声明的路由名为宽泛字符串，类型不满足 RouteLocationRaw 的具名路由字面量联合
+
+  return {
+    name: child.routeName as any,
+    params: { language: route.params.language, ...child.params },
+  };
 };
 
 // 子项激活判断：路由名一致且参数一致（同名路由的不同参数子项互斥高亮）
@@ -170,13 +180,34 @@ const pinned = ref(localManager.getNavPinned());
 // 是否将导航抽屉收起为窄栏（悬停时展开）。
 const rail = ref(!pinned.value);
 
+// 指针是否位于抽屉内：由抽屉根元素的 mouseenter / mouseleave 维护，用于判断
+// 「取消固定」的瞬间抽屉是否正被悬停撑开。
+const drawerHovered = ref(false);
+
+// 悬停展开是否已交还给抽屉。取消固定的瞬间指针仍悬停在抽屉内时，Vuetify 会按
+// 「已悬停」把抽屉继续渲染成展开宽度（220px），而布局已按 rail 收窄到 56px——
+// 于是抽屉覆盖在刚刚展开的主体内容之上。故此刻先暂停悬停展开让抽屉与布局一起
+// 收窄，待指针离开抽屉后再交还（见 onDrawerLeave）。
+const hoverExpandEnabled = ref(true);
+
+// 仅在未固定、且悬停展开已交还时启用 expand-on-hover
+const expandOnHover = computed(() => !pinned.value && hoverExpandEnabled.value);
+
 // 切换固定展开：固定时展开抽屉，取消固定时恢复 rail 收起模式，并持久化偏好
 const togglePinned = () => {
   pinned.value = !pinned.value;
   localManager.setNavPinned(pinned.value);
   rail.value = !pinned.value;
+  // 取消固定且指针仍在抽屉内时，暂停悬停展开（固定时不生效，故无需区分）
+  hoverExpandEnabled.value = pinned.value || !drawerHovered.value;
   // 页面配置变更：通知前端配置同步 store 防抖上传
   useConfigSyncStore().notifyLocalChange();
+};
+
+// 指针离开抽屉：交还悬停展开，之后抽屉按悬停正常展开
+const onDrawerLeave = () => {
+  drawerHovered.value = false;
+  hoverExpandEnabled.value = true;
 };
 
 const mainNav = ref(props.currentNav);

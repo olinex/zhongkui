@@ -145,7 +145,7 @@ func insertNotificationTargetTestChannel(db *database.DB, namespace, name, typ, 
 func notificationTargetCreateBody(name string, channelID uint, overrides map[string]any) map[string]any {
 	body := map[string]any{
 		"name":      name,
-		"channelId": channelID,
+		"channelID": channelID,
 		"enabled":   true,
 		"config":    `{"to":"ops@example.com"}`,
 		"language":  "zh-Hans",
@@ -250,7 +250,7 @@ func TestNotificationTargetList(t *testing.T) {
 
 		Convey("按渠道 ID 等值过滤", func() {
 			w := doNotificationTargetRequest(r, http.MethodPost, "/notification/target/list", map[string]any{
-				"filterBy": map[string]any{"channelId": map[string]any{"action": "eq", "value": chA.ID}},
+				"filterBy": map[string]any{"channelID": map[string]any{"action": "eq", "value": chA.ID}},
 			})
 			So(w.Code, ShouldEqual, http.StatusOK)
 			var resp struct {
@@ -339,7 +339,7 @@ func TestNotificationTargetUpdate(t *testing.T) {
 
 		Convey("更新配置与语言生效，渠道 ID 保持不变", func() {
 			w := doNotificationTargetRequest(r, http.MethodPost, notificationTargetIDPath("/update", targetID), map[string]any{
-				"channelId":   chB.ID, // 不可变字段，应被忽略
+				"channelID":   chB.ID, // 不可变字段，应被忽略
 				"enabled":     false,
 				"config":      `{"url":"https://example.com/hook"}`,
 				"language":    "en",

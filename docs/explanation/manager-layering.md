@@ -3,6 +3,8 @@
 > 分类：解释 · 来源：`zhongkuisec.com/zhongkui/internal/manager` · 角色：研发 · 适用场景：新增后端接口、需要遵循管理端分层约束时阅读。
 > 说明管理端分层结构以及视图层 In/Out 解耦约束。
 
+本文件承载「原生接口知识目录」的离线装配：以空操作中间件构造最小注册上下文，调用与在线 路由注册（RouteRegister）同一份域注册清单，从而在无 DB / Redis / Etcd 的环境下取得与生产一致 的接口目录快照，供 zki sync apis 与守卫测试消费。
+
 Package manager 提供 API 管理层的核心能力：HTTP 服务的启动与生命周期编排、配置管理、JWT 认证 与 RBAC 授权中间件，以及把路由分发给各业务子包的 RegisterRoutes。
 
 ## 定位与分层

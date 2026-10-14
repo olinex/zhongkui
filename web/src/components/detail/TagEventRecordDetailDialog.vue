@@ -15,7 +15,7 @@
     <template v-else-if="detail">
       <!-- 一、事件基础信息 -->
       <v-card variant="tonal" class="mb-4">
-        <v-card-title class="text-subtitle-1 font-weight-medium">
+        <v-card-title class="text-body-large font-weight-medium">
           {{ $t("model.tagEventRecord.content.info") }}
         </v-card-title>
         <v-card-text>
@@ -34,7 +34,7 @@
 
       <!-- 二、命中明细 -->
       <v-card variant="tonal" class="mb-4">
-        <v-card-title class="text-subtitle-1 font-weight-medium">
+        <v-card-title class="text-body-large font-weight-medium">
           {{ $t("model.tagEventRecord.content.hits") }}
         </v-card-title>
         <v-card-text>
@@ -84,7 +84,7 @@
 
       <!-- 三、关联发送记录 -->
       <v-card variant="tonal">
-        <v-card-title class="text-subtitle-1 font-weight-medium">
+        <v-card-title class="text-body-large font-weight-medium">
           {{ $t("model.tagEventRecord.content.sends") }}
         </v-card-title>
         <v-card-text>
@@ -100,7 +100,7 @@
                 <th>{{ $t("model.tagEventRecordSend.field.channelName") }}</th>
                 <th>{{ $t("model.tagEventRecordSend.field.channelType") }}</th>
                 <th>{{ $t("model.tagEventRecordSend.field.status") }}</th>
-                <th>{{ $t("model.tagEventRecordSend.field.messageId") }}</th>
+                <th>{{ $t("model.tagEventRecordSend.field.messageID") }}</th>
                 <th>{{ $t("model.tagEventRecordSend.field.notifiedAt") }}</th>
               </tr>
             </thead>
@@ -119,7 +119,7 @@
                   </v-chip>
                 </td>
                 <td>
-                  {{ send.messageId || $t("model.__base.value.null") }}
+                  {{ send.messageID || $t("model.__base.value.null") }}
                 </td>
                 <td>{{ formatDatetime(send.notifiedAt) }}</td>
               </tr>
@@ -228,7 +228,7 @@ const baseFields = computed<DetailField[]>(() => {
   const label = (key: string): string => i18n.global.t(`model.tagEventRecord.field.${key}`);
   return [
     { key: "ruleName", label: label("ruleName"), display: item.ruleName },
-    { key: "ruleId", label: label("ruleId"), display: String(item.ruleId) },
+    { key: "ruleID", label: label("ruleID"), display: String(item.ruleID) },
     {
       key: "matchAll",
       label: label("matchAll"),

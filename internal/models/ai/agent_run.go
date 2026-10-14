@@ -22,14 +22,16 @@ type AgentRun struct {
 	// Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
 	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
 	// NamespaceName 所属命名空间名称，多租户隔离字段
-	NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32);index:idx_agent_runs_namespace"`
-	// SessionID 所属会话 ID，恢复请求据此校验运行现场归属
-	SessionID uint `json:"sessionId" gorm:"type:BIGINT;index:idx_agent_runs_session_id"`
+	NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32)"`
+	// UserID 数据属主用户 ID（users.id），用于跨用户隔离
+	UserID uint `json:"userID" gorm:"type:BIGINT;not null"`
+	// SessionID 所属会话 ID（真外键，随会话级联删除，无哨兵值），恢复请求据此校验运行现场归属
+	SessionID uint `json:"sessionID" gorm:"type:BIGINT"`
 	// Status 运行现场状态，取值来自枚举类 agentRunStatus（pending/consumed/expired）
-	Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16);index:idx_agent_runs_status"`
+	Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16)"`
 	// MessagesJSON 挂起时刻的完整消息链 JSON（含用户原文，经 crypto 序列化器加密落库）
 	MessagesJSON *serializer.Crypto `json:"messages" gorm:"column:messages;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12814,length=32"`
-	// PendingCallsJSON 待执行调用列表 JSON：callId、工具名与调用入参文本
+	// PendingCallsJSON 待执行调用列表 JSON：callID、工具名与调用入参文本
 	// （工具入参可能携带凭据，经 crypto 序列化器加密落库）
 	PendingCallsJSON *serializer.Crypto `json:"pendingCalls" gorm:"column:pending_calls;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12815,length=32"`
 	// CitationsJSON 检索引用列表 JSON，用于恢复后的最终轮产出引用

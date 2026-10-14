@@ -60,7 +60,7 @@ type AgentMemoryDetailOut struct {
 	// AgentKind 记忆所属 Agent 类型（knowledge/rego）
 	AgentKind modelsai.AgentKind `json:"agentKind"`
 	// SessionID 来源会话 ID（记忆按会话隔离，仅在来源会话内可见）
-	SessionID uint `json:"sessionId"`
+	SessionID uint `json:"sessionID"`
 	// Kind 记忆类别（fact/preference/decision/artifact）
 	Kind modelsai.MemoryKind `json:"kind"`
 	// Title 记忆标题
@@ -137,6 +137,10 @@ func AgentMemoryListGet(c *gin.Context) {
 	if comps == nil {
 		return
 	}
+	userID, ok := middlewares.RequireUserID(c)
+	if !ok {
+		return
+	}
 	var in views.AgentMemoryListGetSearchIn
 	if err := defaults.Set(&in); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -148,6 +152,7 @@ func AgentMemoryListGet(c *gin.Context) {
 	}
 	query := ai.MemoryQuery{
 		NamespaceName: namespace,
+		UserID:        userID,
 		Offset:        int((in.Page - 1) * in.PageSize),
 		Limit:         int(in.PageSize),
 	}
@@ -189,11 +194,15 @@ func AgentMemoryDetailGet(c *gin.Context) {
 	if comps == nil {
 		return
 	}
+	userID, ok := middlewares.RequireUserID(c)
+	if !ok {
+		return
+	}
 	id, ok := views.GetUint64Param(c, "id")
 	if !ok {
 		return
 	}
-	mem, err := comps.Memory.Get(c, namespace, uint(id))
+	mem, err := comps.Memory.Get(c, namespace, userID, uint(id))
 	if err != nil {
 		if errors.Is(err, ai.ErrMemoryNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -216,6 +225,10 @@ func AgentMemoryBatchDelete(c *gin.Context) {
 	if comps == nil {
 		return
 	}
+	userID, ok := middlewares.RequireUserID(c)
+	if !ok {
+		return
+	}
 	var in AgentMemoryBatchIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
@@ -228,13 +241,13 @@ func AgentMemoryBatchDelete(c *gin.Context) {
 	views.BatchExecute(c, ids,
 		func(id uint) string { return strconv.FormatUint(uint64(id), 10) },
 		func(id uint) error {
-			if _, err := comps.Memory.Get(c, namespace, id); err != nil {
+			if _, err := comps.Memory.Get(c, namespace, userID, id); err != nil {
 				if errors.Is(err, ai.ErrMemoryNotFound) {
 					return fmt.Errorf("memory %d not found", id)
 				}
 				return errors.WithStack(err)
 			}
-			return comps.Memory.Delete(c, namespace, []uint{id})
+			return comps.Memory.Delete(c, namespace, userID, []uint{id})
 		},
 	)
 }
@@ -250,6 +263,10 @@ func AgentMemorySetStatus(c *gin.Context) {
 	if comps == nil {
 		return
 	}
+	userID, ok := middlewares.RequireUserID(c)
+	if !ok {
+		return
+	}
 	id, ok := views.GetUint64Param(c, "id")
 	if !ok {
 		return
@@ -259,7 +276,7 @@ func AgentMemorySetStatus(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	if err := comps.Memory.SetStatus(c, namespace, uint(id), in.Status); err != nil {
+	if err := comps.Memory.SetStatus(c, namespace, userID, uint(id), in.Status); err != nil {
 		if errors.Is(err, ai.ErrMemoryNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
 			return

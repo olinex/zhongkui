@@ -13,6 +13,11 @@
             append-icon="mdi-chevron-down"
             @click="refreshAvailableNamespace"
           >
+            <!-- 命名空间图标用 primary：与导航标识徽章的「命名空间」变体同色（归属用 primary，
+                 非状态色），提示此处可切换命名空间 -->
+            <template #prepend>
+              <v-icon icon="mdi-alpha-n-box-outline" color="primary" />
+            </template>
             {{ appStore.namespace }}
           </v-btn>
         </template>
@@ -31,11 +36,23 @@
       </v-menu>
     </template>
     <template #append>
+      <v-btn
+        v-show="userStore.valid"
+        variant="text"
+        icon="mdi-robot-outline"
+        :title="$t('action.aiAssistant')"
+        :aria-label="$t('action.aiAssistant')"
+        @click="assistantStore.open()"
+      />
       <v-menu transition="scale-transition">
         <template #activator="{ props }">
-          <v-btn v-bind="props" variant="text" prepend-icon="mdi-translate">
-            {{ $t("action.language") }}
-          </v-btn>
+          <v-btn
+            v-bind="props"
+            variant="text"
+            icon="mdi-translate"
+            :title="$t('action.language')"
+            :aria-label="$t('action.language')"
+          />
         </template>
         <v-card class="mx-auto">
           <v-list>
@@ -52,7 +69,6 @@
       </v-menu>
       <v-btn
         v-model="appStore.theme"
-        class="mr-2"
         variant="text"
         :icon="appStore.theme === DARK_THEME ? 'mdi-weather-night' : 'mdi-weather-sunny'"
         :title="$t('action.toggleTheme')"
@@ -61,8 +77,8 @@
       />
       <v-btn
         v-show="!userStore.valid && !loginCurrent"
-        class="mr-2"
-        variant="text"
+        variant="outlined"
+        color="primary"
         @click="gotoSignIn"
       >
         {{ $t("action.signIn") }}
@@ -100,6 +116,7 @@
 <script setup lang="ts" name="app-header">
 import { DARK_THEME } from "@/stores/local";
 import { useAppStore } from "@/stores/app";
+import { useAssistantStore } from "@/stores/assistant";
 import { useConfigSyncStore } from "@/stores/configSync";
 import router from "@/router";
 import { useUserStore } from "@/stores/user";
@@ -110,6 +127,7 @@ import { asLanguagePath } from "@/router";
 const route = useRoute();
 const appStore = useAppStore();
 const userStore = useUserStore();
+const assistantStore = useAssistantStore();
 
 const avaliableNamespaces = ref([] as string[]);
 

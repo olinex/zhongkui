@@ -26,7 +26,7 @@ const (
 // ParsePayload 知识文档解析任务载荷，仅携带目标文档 ID。
 type ParsePayload struct {
 	// DocumentID 待解析的知识文档 ID，必填
-	DocumentID uint `json:"documentId" binding:"required"`
+	DocumentID uint `json:"documentID" binding:"required"`
 }
 
 // NewParseTask 把文档 ID 编码为 ai:doc:parse 异步任务；ID 缺失（为零值）返回错误。

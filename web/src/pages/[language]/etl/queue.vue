@@ -6,7 +6,7 @@
       <v-card flat>
         <v-card-text class="px-4 pt-3 pb-2">
           <v-form class="filter-form zk-filter-form">
-            <v-row dense align-center>
+            <v-row density="compact" class="align-center">
               <v-col cols="auto">
                 <v-select
                   v-model="queue"
@@ -34,7 +34,7 @@
           </action-button-group>
         </div>
         <v-container fluid class="px-4 pt-0 pb-4">
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="6">
               <bars-chart :option="barsOption" />
             </v-col>
@@ -42,7 +42,7 @@
               <line-chart :option="lineOption" />
             </v-col>
           </v-row>
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="12">
               <v-data-table :headers="queueVisibleHeaders" :items="queueItems">
                 <template #item="{ item }">
@@ -56,7 +56,15 @@
                           : undefined
                       "
                     >
-                      <adaptive-cell :header="hdr" :item="item" :actions="getQueueActions" />
+                      <enabled-switch-cell
+                        v-if="hdr.key === 'running'"
+                        :model-value="item.running"
+                        :request="
+                          (enabled: boolean) => inspectorQueuePauseToggle(item.name, !enabled)
+                        "
+                        @update:model-value="(v: boolean) => (item.running = v)"
+                      />
+                      <adaptive-cell v-else :header="hdr" :item="item" />
                     </td>
                   </tr>
                 </template>
@@ -78,7 +86,7 @@ meta:
 </route>
 
 <script setup lang="ts">
-import { getResponse, getSimpleResponse } from "@/apis/base";
+import { getResponse } from "@/apis/base";
 import type {
   InspectorDailyStatItem,
   InspectorDailyStatListOut,
@@ -91,7 +99,7 @@ import {
   inspectorQueuePauseToggle,
 } from "@/apis/etl";
 import { useAppStore } from "@/stores/app";
-import type { ItemActions, TableHeader } from "@/components/@types/table";
+import type { TableHeader } from "@/components/@types/table";
 import i18n, { localeDateFormat } from "@/utils/i18n";
 import { useColumnVisibility } from "@/utils/column";
 import { BackendDataType } from "@/types";
@@ -160,14 +168,6 @@ const queueHeaders = ref([
     type: BackendDataType.DATETIME,
     align: "start",
     sortable: true,
-  },
-  {
-    key: "__actions",
-    title: i18n.global.t("model.__base.field.__actions"),
-    type: BackendDataType.ACTIONS,
-    align: "start",
-    sortable: false,
-    fixed: "end",
   },
 ] as Array<TableHeader>);
 // 队列表格的列显示配置：持久化到 localStorage，表头/行渲染统一使用 visibleHeaders
@@ -335,46 +335,6 @@ const getDailyStatAction = async (data: InspectorDailyStatIn): Promise<void> => 
       });
     },
   );
-};
-
-// pauseToggleQueueAction 切换队列暂停/恢复，并就地更新对应行状态
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const pauseToggleQueueAction = async (item: Record<string, any>): Promise<void> => {
-  await getSimpleResponse(
-    inspectorQueuePauseToggle(item.name, item.running),
-    async (rsp) => {
-      queueItems.value = queueItems.value.map((queue) => {
-        return {
-          ...queue,
-          running: queue.name === item.name ? !item.running : item.running,
-        };
-      });
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-};
-
-// getQueueActions 依据队列运行状态生成行操作（暂停或恢复）
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getQueueActions = (item: Record<string, any>): ItemActions => {
-  const actions: ItemActions = {};
-  if (item.running) {
-    actions.pause = pauseToggleQueueAction;
-  } else {
-    actions.unpause = pauseToggleQueueAction;
-  }
-  return actions;
 };
 
 // 页面挂载后首次加载数据

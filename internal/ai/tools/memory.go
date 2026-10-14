@@ -39,6 +39,8 @@ type MemoryWriteInput struct {
 	AgentKind aimodel.AgentKind
 	// SessionID 来源会话 ID，必须非 0：记忆按会话隔离，只在来源会话内可见
 	SessionID uint
+	// UserID 数据属主用户 ID（users.id），用于跨用户隔离
+	UserID uint
 	// Kind 记忆类别（已解析为具体取值，非空）
 	Kind aimodel.MemoryKind
 	// Title 记忆标题（可选，可能为空）
@@ -65,6 +67,8 @@ type MemoryRuntime struct {
 	AgentKind aimodel.AgentKind
 	// SessionID 本次运行的来源会话 ID
 	SessionID uint
+	// UserID 本次运行的数据属主用户 ID（users.id），用于跨用户隔离
+	UserID uint
 }
 
 // WithMemoryRuntime 把记忆运行期写入器与归属信息写入 ctx，供 memory_write 在工具循环中取回。
@@ -162,6 +166,7 @@ func (t *memoryWriteTool) InvokableRun(ctx context.Context, argumentsInJSON stri
 		NamespaceName: rt.NamespaceName,
 		AgentKind:     rt.AgentKind,
 		SessionID:     rt.SessionID,
+		UserID:        rt.UserID,
 		Kind:          kind,
 		Title:         args.Title,
 		Content:       content,

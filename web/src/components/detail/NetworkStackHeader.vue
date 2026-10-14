@@ -4,12 +4,12 @@
     <json-chip v-if="!decoded" :value="headers" color="info" density="compact" />
     <!-- 已知协议：显示一行可读摘要，点击打开逐字段说明表格 -->
     <div v-else class="zk-stack-header" @click="dialog = true">
-      <div class="zk-stack-header-primary font-mono text-body-2" :title="summary?.primary">
+      <div class="zk-stack-header-primary font-mono text-body-medium" :title="summary?.primary">
         {{ summary?.primary }}
       </div>
       <div
         v-if="summary?.secondary"
-        class="zk-stack-header-secondary text-caption"
+        class="zk-stack-header-secondary text-body-small"
         :title="summary?.secondary"
       >
         {{ summary?.secondary }}
@@ -45,11 +45,11 @@
           <tbody>
             <tr v-for="row in rows" :key="row.key">
               <td>
-                <div class="text-body-2">{{ row.label }}</div>
-                <div class="font-mono text-caption text-on-surface-variant">{{ row.key }}</div>
+                <div class="text-body-medium">{{ row.label }}</div>
+                <div class="font-mono text-body-small on-surface-variant">{{ row.key }}</div>
               </td>
-              <td class="font-mono text-body-2">{{ row.value }}</td>
-              <td class="text-body-2 text-on-surface-variant">{{ row.desc }}</td>
+              <td class="font-mono text-body-medium">{{ row.value }}</td>
+              <td class="text-body-medium on-surface-variant">{{ row.desc }}</td>
             </tr>
           </tbody>
         </v-table>

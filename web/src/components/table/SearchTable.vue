@@ -1,6 +1,6 @@
 <template>
   <v-card flat>
-    <v-card-title class="px-4 pt-3 pb-2 text-subtitle-1 font-weight-bold">
+    <v-card-title class="px-4 pt-3 pb-2 text-body-large font-weight-bold">
       {{ title }}
     </v-card-title>
     <!-- 筛选区：高级条件编辑器常驻一行；页面可通过 extra-filters 插槽追加额外筛选字段（如流量时间窗口）。
@@ -12,7 +12,7 @@
     <!-- 操作按钮行：独占一行、右对齐、紧贴列表上方；批量模式就地切换为批量操作（v-btn-group），不额外插入一行，避免列表垂直位移 -->
     <div class="px-4 pb-2 d-flex justify-end align-center ga-2">
       <template v-if="batchActions && selectItems.length > 0">
-        <span class="text-body-2 text-no-wrap">{{
+        <span class="text-body-medium text-no-wrap">{{
           $t("notice.selectedCount", { count: selectItems.length })
         }}</span>
         <v-btn-group variant="tonal" color="primary" density="compact" divided>
@@ -81,11 +81,12 @@
             <td
               v-for="hdr in visibleHeaders"
               :key="hdr.key"
-              :class="
+              :class="[
+                hdr.align ? `v-data-table-column--align-${hdr.align}` : undefined,
                 hdr.fixed === 'end'
                   ? 'v-data-table-column--fixed-end v-data-table-column--first-fixed-end'
-                  : undefined
-              "
+                  : undefined,
+              ]"
             >
               <!-- 允许页面按列名提供 cell-<key> 具名插槽覆盖默认渲染（如 model 列显示可读名称）；
                    或经通用 cell 插槽统一接管全部单元格（如流量页加密/S3 单元格分发） -->
@@ -211,13 +212,12 @@ function extractTableHeaders(out: SearchOptionsOut): Array<TableHeader> {
     return header;
   });
   if (props.actions) {
+    // align / fixed 由 useColumnVisibility 依操作列约定统一覆写（居中 + 固定置尾）
     headers.push({
       key: "__actions",
       title: i18n.global.t(`model.__base.field.__actions`),
       type: BackendDataType.ACTIONS,
-      align: "center",
       sortable: false,
-      fixed: "end",
     });
   }
   return headers;
@@ -282,7 +282,7 @@ const props = defineProps({
     default: undefined,
   },
   // 字段投影：默认按当前可见列 + id 生成 fields 请求参数；
-  // 页面可覆写以补充行操作所需的隐藏字段（如用户页 unionID、流量页 namespace/traceId）
+  // 页面可覆写以补充行操作所需的隐藏字段（如用户页 unionID、流量页 namespace/traceID）
   projectFields: {
     type: Function as PropType<(visibleKeys: string[]) => string[]>,
     default: (visible: string[]) => ["id", ...visible],
@@ -333,7 +333,8 @@ const selectItems = ref([] as Record<string, any>[]);
 const optionsTableHeaders = ref([] as Array<TableHeader>);
 const optionsSearchHeaders = ref({} as Record<string, FilterByOption>);
 
-// 表格表头：优先取页面自定义源（headers prop），否则由 OPTIONS 派生
+// 表格表头：优先取页面自定义源（headers prop），否则由 OPTIONS 派生。
+// 行操作列（__actions）的居中 + 置尾由 useColumnVisibility 统一覆写，此处无需处理
 const tableHeaders = computed((): Array<TableHeader> => {
   return props.headers ? toValue(props.headers) : optionsTableHeaders.value;
 });

@@ -74,6 +74,26 @@ var Specs = []ParamSpec{
 		Group: "agent",
 		Kind:  ParamKindText,
 	},
+	// agent.generalSystemPrompt 通用对话 Agent（general 类型）的系统提示词，要求直接输出 Markdown 正文。
+	{
+		Key:   "agent.generalSystemPrompt",
+		Group: "agent",
+		Kind:  ParamKindText,
+	},
+	// agent.auditLevelSystemPrompt 客户端工具调用「审核重要级」评估器的系统提示词：在 client 工具
+	// 挂起前对本次全部待执行调用做一次批量分类，产出四档重要级，要求仅输出 JSON。
+	{
+		Key:   "agent.auditLevelSystemPrompt",
+		Group: "agent",
+		Kind:  ParamKindText,
+	},
+	// agent.promptOptimizeSystemPrompt 提示词优化（把用户诉求改写为更清晰提问）的系统提示词：
+	// 单轮调用，要求仅输出改写后的提问正文本身。
+	{
+		Key:   "agent.promptOptimizeSystemPrompt",
+		Group: "agent",
+		Kind:  ParamKindText,
+	},
 	{
 		Key:   "agent.businessSectionTitle",
 		Group: "agent",
@@ -104,9 +124,17 @@ var Specs = []ParamSpec{
 		Kind:  ParamKindInt,
 	},
 	// agent.maxToolResultBytes 单次工具结果注入模型上下文前的字节上限：超出部分被截断，
-	// 用于限制工具结果对上下文的占用。
+	// 用于限制工具结果对上下文的占用。默认值须容纳「整篇展开的知识文档 + 其余命中」，
+	// 与 retrieval.expandDocLimit 保持量级一致（见该参数说明）。
 	{
 		Key:   "agent.maxToolResultBytes",
+		Group: "agent",
+		Kind:  ParamKindInt,
+	},
+	// agent.runDetachGraceSeconds 驻留运行退订宽限秒数：某 running 运行的最后一名订阅者退订后，
+	// 经过该宽限期仍无订阅者的运行被自动取消（避免无人观看仍持续烧 token）；<=0 表示关闭自动取消。
+	{
+		Key:   "agent.runDetachGraceSeconds",
 		Group: "agent",
 		Kind:  ParamKindInt,
 	},
@@ -119,6 +147,15 @@ var Specs = []ParamSpec{
 	},
 	{
 		Key:   "retrieval.candidates",
+		Group: "retrieval",
+		Kind:  ParamKindInt,
+	},
+	// retrieval.expandDocLimit 一次检索中整篇展开（small-to-big，父块 = 整篇文档）的累计长度上限
+	// （rune 数）：按结果顺序逐篇展开，单篇超过该值、或展开后累计超过该值的文档降级保持原分块结果
+	// （绝不截断整篇），使一次检索注入模型的整篇内容有确定上界；非正数表示关闭整篇展开。
+	// 默认值须覆盖代码生成的接口知识文档规模，且与 agent.maxToolResultBytes 匹配。
+	{
+		Key:   "retrieval.expandDocLimit",
 		Group: "retrieval",
 		Kind:  ParamKindInt,
 	},
@@ -164,6 +201,12 @@ var Specs = []ParamSpec{
 		Key:   "session.maxContextBytes",
 		Group: "session",
 		Kind:  ParamKindInt,
+	},
+	// session.compactThresholdRatio 触发自动压缩的占用比例阈值（占用 token / 档位容量）。
+	{
+		Key:   "session.compactThresholdRatio",
+		Group: "session",
+		Kind:  ParamKindFloat,
 	},
 	// session.topicSystemPrompt 会话短主题生成的系统提示词。
 	{
@@ -224,6 +267,12 @@ var Specs = []ParamSpec{
 	// memory.summaryMinEvictedMessages 触发滚动摘要的最少未摘要消息条数。
 	{
 		Key:   "memory.summaryMinEvictedMessages",
+		Group: "memory",
+		Kind:  ParamKindInt,
+	},
+	// memory.evictedMessageByteLimit 滚动摘要与记忆抽取提示词中单条被折叠消息正文的字节上限。
+	{
+		Key:   "memory.evictedMessageByteLimit",
 		Group: "memory",
 		Kind:  ParamKindInt,
 	},

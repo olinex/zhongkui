@@ -47,7 +47,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <chip-search-field
                   v-model="createNamespace"
@@ -62,19 +62,15 @@
                   init
                 >
                   <template #chip="{ props, item }">
-                    <v-chip v-bind="props">{{ item.raw.name }}</v-chip>
+                    <v-chip v-bind="props">{{ item.name }}</v-chip>
                   </template>
                   <template #item="{ props, item }">
-                    <v-list-item
-                      v-bind="props"
-                      :title="item.raw.name"
-                      :subtitle="item.raw.description"
-                    />
+                    <v-list-item v-bind="props" :title="item.name" :subtitle="item.description" />
                   </template>
                 </chip-search-field>
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="9">
                 <v-text-field
                   v-model="createName"
@@ -90,7 +86,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createDevice"
@@ -99,7 +95,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createBpfExpr"
@@ -108,7 +104,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-number-input
                   v-model="createSnapLen"
@@ -124,7 +120,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-switch
                   v-model="createPromisc"
@@ -154,7 +150,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <chip-search-field
                   v-model="proxy.namespace"
@@ -168,12 +164,12 @@
                   disabled
                 >
                   <template #chip="{ props, item }">
-                    <v-chip v-bind="props" :label="item.raw.name" />
+                    <v-chip v-bind="props" :label="item.name" />
                   </template>
                 </chip-search-field>
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="9">
                 <v-text-field
                   v-model="proxy.name"
@@ -189,7 +185,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="updateDevice"
@@ -199,7 +195,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="updateBpfExpr"
@@ -209,7 +205,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-number-input
                   v-model="updateSnapLen"
@@ -227,7 +223,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="6">
                 <v-switch
                   v-model="updatePromisc"
@@ -357,12 +353,17 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<CapturerDetailOut>(
     capturerDetailGet(item.id as number),
     async (rsp) => {
-      updateForm.resetField("device", { value: rsp.data.config.device });
-      updateForm.resetField("bpfExpr", { value: rsp.data.config.bpfExpr });
-      updateForm.resetField("snapLen", { value: rsp.data.config.snapLen });
-      updateForm.resetField("timeout", { value: rsp.data.config.timeout });
-      updateForm.resetField("promisc", { value: rsp.data.config.promisc });
-      updateForm.resetField("enabled", { value: rsp.data.config.enabled });
+      // 复位与回填同属「准备本次打开的数据」：values 完整枚举该表单全部 defineField 字段
+      updateForm.resetForm({
+        values: {
+          device: rsp.data.config.device,
+          bpfExpr: rsp.data.config.bpfExpr,
+          snapLen: rsp.data.config.snapLen,
+          timeout: rsp.data.config.timeout,
+          promisc: rsp.data.config.promisc,
+          enabled: rsp.data.config.enabled,
+        },
+      });
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -466,15 +467,9 @@ const openCreateDialogAction = () => {
     bpfExpr: "tcp port 80",
     enabled: true,
   };
-  createForm.resetField("namespace", { value: defaults.namespace });
-  createForm.resetField("name", { value: defaults.name });
-  createForm.resetField("version", { value: defaults.version });
-  createForm.resetField("device", { value: defaults.device });
-  createForm.resetField("snapLen", { value: defaults.snapLen });
-  createForm.resetField("promisc", { value: defaults.promisc });
-  createForm.resetField("timeout", { value: defaults.timeout });
-  createForm.resetField("bpfExpr", { value: defaults.bpfExpr });
-  createForm.resetField("enabled", { value: defaults.enabled });
+  // 复位是「准备本次打开的数据」的一部分：resetForm 原子重置全部字段值与校验状态，
+  // values 完整枚举该表单全部 defineField 字段，避免未列出字段被重置为初始值造成残影。
+  createForm.resetForm({ values: defaults });
   createDialogRef.value?.open(defaults);
 };
 

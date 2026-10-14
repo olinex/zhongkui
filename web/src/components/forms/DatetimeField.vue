@@ -39,12 +39,18 @@
           </v-tabs-window>
         </div>
         <div class="picker-panel-footer">
-          <v-btn v-show="tab === 'date'" @click="previousDate">{{
+          <v-btn v-show="tab === 'date'" variant="text" @click="previousDate">{{
             $t("action.previousDate")
           }}</v-btn>
-          <v-btn v-show="tab === 'date'" @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
-          <v-btn v-show="tab === 'date'" @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
-          <v-btn v-show="tab === 'time'" @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
+          <v-btn v-show="tab === 'date'" variant="text" @click="currentDate">{{
+            $t("action.currentDate")
+          }}</v-btn>
+          <v-btn v-show="tab === 'date'" variant="text" @click="nextDate">{{
+            $t("action.nextDate")
+          }}</v-btn>
+          <v-btn v-show="tab === 'time'" variant="text" @click="currentTime">{{
+            $t("action.currentTime")
+          }}</v-btn>
         </div>
       </v-card>
     </v-menu>
@@ -75,12 +81,18 @@
           </v-tabs-window>
         </div>
         <div class="picker-panel-footer">
-          <v-btn v-show="tab === 'date'" @click="previousDate">{{
+          <v-btn v-show="tab === 'date'" variant="text" @click="previousDate">{{
             $t("action.previousDate")
           }}</v-btn>
-          <v-btn v-show="tab === 'date'" @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
-          <v-btn v-show="tab === 'date'" @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
-          <v-btn v-show="tab === 'time'" @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
+          <v-btn v-show="tab === 'date'" variant="text" @click="currentDate">{{
+            $t("action.currentDate")
+          }}</v-btn>
+          <v-btn v-show="tab === 'date'" variant="text" @click="nextDate">{{
+            $t("action.nextDate")
+          }}</v-btn>
+          <v-btn v-show="tab === 'time'" variant="text" @click="currentTime">{{
+            $t("action.currentTime")
+          }}</v-btn>
         </div>
       </v-card>
     </v-dialog>
@@ -205,7 +217,7 @@ const updateDate = (value: Date | null) => {
 };
 
 // updateTime 更新时间部分，保留绑定值原有的年月日
-const updateTime = (value: string) => {
+const updateTime = (value: string | null) => {
   if (value === null) {
     emits("update:modelValue", null);
   } else if (props.modelValue instanceof DateTime) {

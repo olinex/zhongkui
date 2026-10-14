@@ -104,6 +104,9 @@ type KnowledgeHit struct {
     Content string
     // Score 检索相关度分数
     Score float64
+    // Complete 内容是否为整篇文档展开结果（small-to-big）：为 true 时不再按 SnippetLimit 截断，
+    // 由上层（internal/ai）在检索结果上标记。
+    Complete bool
 }
 ```
 
@@ -148,6 +151,8 @@ type MemoryRuntime struct {
     AgentKind aimodel.AgentKind
     // SessionID 本次运行的来源会话 ID
     SessionID uint
+    // UserID 本次运行的数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint
 }
 ```
 
@@ -164,6 +169,8 @@ type MemoryWriteInput struct {
     AgentKind aimodel.AgentKind
     // SessionID 来源会话 ID，必须非 0：记忆按会话隔离，只在来源会话内可见
     SessionID uint
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint
     // Kind 记忆类别（已解析为具体取值，非空）
     Kind aimodel.MemoryKind
     // Title 记忆标题（可选，可能为空）

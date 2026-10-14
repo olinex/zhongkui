@@ -378,7 +378,7 @@ type CapturerStatusItemOut struct {
 	// Version 版本号
 	Version string `json:"version"`
 	// SessionID 最新在线会话 ID
-	SessionID string `json:"sessionId"`
+	SessionID string `json:"sessionID"`
 	// Status 运行状态短键（running / stopped）
 	Status string `json:"status"`
 	// ConfigVersion 配置版本

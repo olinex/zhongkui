@@ -84,7 +84,6 @@ package manager
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/samber/do/v2"
@@ -94,16 +93,6 @@ import (
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
-	"zhongkuisec.com/zhongkui/internal/manager/views/admin"
-	"zhongkuisec.com/zhongkui/internal/manager/views/ai"
-	"zhongkuisec.com/zhongkui/internal/manager/views/datasource"
-	"zhongkuisec.com/zhongkui/internal/manager/views/etl"
-	"zhongkuisec.com/zhongkui/internal/manager/views/llm"
-	"zhongkuisec.com/zhongkui/internal/manager/views/notification"
-	"zhongkuisec.com/zhongkui/internal/manager/views/plaintext"
-	"zhongkuisec.com/zhongkui/internal/manager/views/tag"
-	"zhongkuisec.com/zhongkui/internal/manager/views/traffic"
-	"zhongkuisec.com/zhongkui/internal/manager/views/user"
 	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/validator"
@@ -254,29 +243,10 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 		Ai:                aiMiddleware,
 	}
 
-	// ==================== 全局功能开关端点 ====================
-	// /features/list - 公共接口（无需认证）：返回全部功能开关（key + enabled），
-	// 供前端获知某项功能是否开启以决定是否展示相关组件。
-	rc.V1Group.POST(
-		"/features/list",
-		rc.FeatureRegistry, // 注入功能开关注册表，读取各功能启停状态
-		views.FeaturesListGet,
-	)
-	// 功能开关列表元信息（仅输出，无请求体）
-	rc.V1Group.OPTIONS("/features/list", views.StructMetaGinHandler(
-		views.WithMethod(http.MethodPost, views.WithBodyOutput[views.FeaturesListGetOut]()),
-	))
-
-	admin.RegisterRoutes(rc)
-	traffic.RegisterRoutes(rc)
-	tag.RegisterRoutes(rc)
-	datasource.RegisterRoutes(rc)
-	plaintext.RegisterRoutes(rc)
-	user.RegisterRoutes(rc)
-	notification.RegisterRoutes(rc)
-	etl.RegisterRoutes(rc)
-	ai.RegisterRoutes(rc)
-	llm.RegisterRoutes(rc)
+	// ==================== 全局功能开关端点与业务路由 ====================
+	// 全局功能开关端点（/features/list，公共接口）与全部视图域路由统一由 registerViewRoutes
+	// 注册，使在线装配与离线接口目录装配（CollectApiCatalog）共用同一份域注册清单。
+	registerViewRoutes(rc)
 
 	return nil
 }

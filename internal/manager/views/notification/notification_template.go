@@ -95,9 +95,9 @@ type NotificationTemplateRestoreDefaultIn struct {
 type NotificationTemplateRenderTestIn struct {
 	// Event 事件类型键，必填
 	Event string `json:"event" binding:"required"`
-	// ChannelType 渠道类型键，缺省使用 "*" 通配
-	ChannelType string `json:"channelType"`
-	// Language 语言（base.Language），缺省使用平台默认语言
+	// ChannelType 渠道类型键，缺省经 defaults 库以 "*"（通配）兜底
+	ChannelType string `json:"channelType" default:"*"`
+	// Language 语言（base.Language），空表示平台默认语言（运行时由平台 Env.Lang 决定，非静态默认值）
 	Language base.Language `json:"language"`
 	// Params 模板参数，供 Go text/template 渲染
 	Params map[string]any `json:"params"`
@@ -144,9 +144,9 @@ type NotificationTemplateValidateOut struct {
 type NotificationTemplateDryRunIn struct {
 	// Event 事件类型键，必填，用于选取该事件的样例参数
 	Event string `json:"event" binding:"required"`
-	// ChannelType 渠道类型键，仅回显，缺省使用 "*" 通配
-	ChannelType string `json:"channelType"`
-	// Language 语言（base.Language），仅回显，缺省使用平台默认语言
+	// ChannelType 渠道类型键，仅回显，缺省经 defaults 库以 "*"（通配）兜底
+	ChannelType string `json:"channelType" default:"*"`
+	// Language 语言（base.Language），仅回显，空表示平台默认语言（运行时由平台 Env.Lang 决定，非静态默认值）
 	Language base.Language `json:"language"`
 	// Title 标题模板
 	Title string `json:"title"`
@@ -253,23 +253,23 @@ func NotificationTemplateCreate(c *gin.Context) {
 		return
 	}
 	if _, ok := notify.EventSpecOf(in.Event); !ok {
-		notificationTemplateBadInput(c, errors.Newf("notification template: unknown event %q", in.Event))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateUnknownEvent", in.Event))
 		return
 	}
 	if !slices.Contains(notify.SupportedChannels(), in.ChannelType) {
-		notificationTemplateBadInput(c, errors.Newf("notification template: unsupported channel type %q", in.ChannelType))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateUnsupportedChannel", in.ChannelType))
 		return
 	}
 	if !slices.Contains(notify.SupportedLanguages(), in.Language.String()) {
-		notificationTemplateBadInput(c, errors.Newf("notification template: unsupported language %q", in.Language.String()))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateUnsupportedLanguage", in.Language.String()))
 		return
 	}
 	if err := notify.ValidateTemplateSyntax("title", in.Title); err != nil {
-		notificationTemplateBadInput(c, errors.Newf("notification template: invalid title: %v", err))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateInvalidTitle", err.Error()))
 		return
 	}
 	if err := notify.ValidateTemplateSyntax("content", in.Content); err != nil {
-		notificationTemplateBadInput(c, errors.Newf("notification template: invalid content: %v", err))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateInvalidContent", err.Error()))
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
@@ -282,9 +282,8 @@ func NotificationTemplateCreate(c *gin.Context) {
 		return
 	}
 	if conflict > 0 {
-		notificationTemplateBadInput(c, errors.Newf(
-			"notification template for event %q, channel %q, language %q already exists",
-			in.Event, in.ChannelType, in.Language.String()))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError(
+			"notificationTemplateExists", in.Event, in.ChannelType, in.Language.String()))
 		return
 	}
 	instance := &core.NotificationTemplate{
@@ -318,19 +317,19 @@ func NotificationTemplateUpdate(c *gin.Context) {
 		return
 	}
 	if in.Title == "" {
-		notificationTemplateBadInput(c, errors.New("notification template: title is required"))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateTitleRequired"))
 		return
 	}
 	if in.Content == "" {
-		notificationTemplateBadInput(c, errors.New("notification template: content is required"))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateContentRequired"))
 		return
 	}
 	if err := notify.ValidateTemplateSyntax("title", in.Title); err != nil {
-		notificationTemplateBadInput(c, errors.Newf("notification template: invalid title: %v", err))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateInvalidTitle", err.Error()))
 		return
 	}
 	if err := notify.ValidateTemplateSyntax("content", in.Content); err != nil {
-		notificationTemplateBadInput(c, errors.Newf("notification template: invalid content: %v", err))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateInvalidContent", err.Error()))
 		return
 	}
 	db := middlewares.GetCoreDatabase(c)
@@ -396,10 +395,8 @@ func NotificationTemplateRenderTest(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
+	// 渠道类型缺省 "*" 由 defaults 库在绑定前填充；语言空值表示平台默认语言，运行时回退。
 	channelType := in.ChannelType
-	if channelType == "" {
-		channelType = "*"
-	}
 	lang := in.Language
 	if lang.String() == "" {
 		lang = *base.DefaultLanguage
@@ -457,20 +454,18 @@ func NotificationTemplateDryRun(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
+	// 渠道类型缺省 "*" 由 defaults 库在绑定前填充；语言空值表示平台默认语言，运行时回退。
 	channelType := in.ChannelType
-	if channelType == "" {
-		channelType = "*"
-	}
 	lang := in.Language
 	if lang.String() == "" {
 		lang = *base.DefaultLanguage
 	}
 	if err := notify.ValidateTemplateSyntax("title", in.Title); err != nil {
-		notificationTemplateBadInput(c, errors.Newf("notification template title invalid: %v", err))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateInvalidTitle", err.Error()))
 		return
 	}
 	if err := notify.ValidateTemplateSyntax("content", in.Content); err != nil {
-		notificationTemplateBadInput(c, errors.Newf("notification template content invalid: %v", err))
+		notificationTemplateBadInput(c, response.CreateBadBodyMessageError("notificationTemplateInvalidContent", err.Error()))
 		return
 	}
 	// 以事件内置样例参数渲染；未注册样例参数时回退为空 map（missingkey=zero 下缺失键渲染为空）

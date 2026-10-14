@@ -82,6 +82,11 @@ type FieldMeta struct {
 type StructMeta struct {
 	Name   string       `json:"name"`   // 结构体类型名
 	Fields []*FieldMeta `json:"fields"` // 字段元信息列表
+
+	// reflectType 结构体的原始 Go 类型（已解引用）。不参与序列化，仅供同包内生成 JSON 示例
+	// 与递归展开具名嵌套结构体使用：Fields 只保留展示用类型名（指针已解引用），无法据此
+	// 还原嵌套结构。手工构造的 StructMeta（如测试）为零值 nil，此时示例与嵌套展开降级跳过。
+	reflectType reflect.Type
 }
 
 // MethodMeta 描述某个 HTTP 方法对应的接口元信息。
@@ -104,6 +109,11 @@ type metadataOptions struct {
 	headerOutput reflect.Type
 	bodyInput    reflect.Type
 	bodyOutput   reflect.Type
+	// description 接口单行用途说明，由注册 helper（RegisterApi / RegisterListApi）写入，
+	// 供接口知识目录入 RAG 使用。
+	description string
+	// ragDisabled 标记该接口被显式排除出 RAG 接口知识目录；零值（未声明）表示纳入。
+	ragDisabled bool
 	// methods 保存按 HTTP 方法分组的方法级配置，key 为 HTTP 方法名（如 GET、POST）
 	methods map[string]*metadataOptions
 }
@@ -165,6 +175,15 @@ func WithBodyOutput[T any]() MetadataOption {
 	}
 }
 
+// WithRagEnabled 设置该接口是否纳入 RAG 接口知识目录，缺省纳入（true）。
+// 传 false 使接口退出同步文档集，下次同步时其 native_api 分区条目被幂等删除；
+// 该选项仅对经 RegisterApi / RegisterListApi 声明的接口生效。
+func WithRagEnabled(enabled bool) MetadataOption {
+	return func(o *metadataOptions) {
+		o.ragDisabled = !enabled
+	}
+}
+
 // StructMetaGinHandler 创建一个返回接口结构体元信息的 Gin 处理器（配合 OPTIONS 方法使用）。
 // 通过 WithMethod 按 HTTP 方法指定接口的请求头输入/输出、请求体输入/输出四类可选结构体，
 // 同一路径下所有方法的结果汇总在一个 ApiMeta（map）中返回；
@@ -180,6 +199,12 @@ func StructMetaGinHandler(opts ...MetadataOption) gin.HandlerFunc {
 	for _, opt := range opts {
 		opt(options)
 	}
+	return structMetaHandler(options)
+}
+
+// structMetaHandler 由已应用选项的配置构建元信息处理器（供 StructMetaGinHandler 与接口目录
+// 注册 helper 复用，避免两处各自构建导致行为漂移）。
+func structMetaHandler(options *metadataOptions) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		response.SimpleOK.AbortWithGinW(c, buildApiMeta(options))
 	}
@@ -233,14 +258,24 @@ type ListMeta struct {
 //	  }
 //	}
 func ListMetaGinHandler[M utils.SearcherIn, N utils.TotalOut](opts ...MetadataOption) gin.HandlerFunc {
+	return listMetaHandler[M, N](listMetaOptions[M, N](opts...))
+}
+
+// listMetaOptions 应用选项并补齐列表接口的 POST 入参出参（搜索输入与列表输出结构体）；
+// 显式注册的 POST 方法优先级更高。供 ListMetaGinHandler 与接口目录注册 helper 复用。
+func listMetaOptions[M utils.SearcherIn, N utils.TotalOut](opts ...MetadataOption) *metadataOptions {
 	options := &metadataOptions{}
 	for _, opt := range opts {
 		opt(options)
 	}
-	// 列表接口的 POST 入参出参即搜索输入与列表输出结构体；显式注册的 POST 方法优先级更高
 	if _, exists := options.methods[http.MethodPost]; !exists {
 		WithMethod(http.MethodPost, WithBodyInput[M](), WithBodyOutput[N]())(options)
 	}
+	return options
+}
+
+// listMetaHandler 由已应用选项的配置构建列表接口自省处理器。
+func listMetaHandler[M utils.SearcherIn, N utils.TotalOut](options *metadataOptions) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var in M
 		var out N
@@ -271,9 +306,45 @@ func getStructMeta(t reflect.Type) *StructMeta {
 		tt = tt.Elem()
 	}
 	return &StructMeta{
-		Name:   tt.Name(),
-		Fields: GetStructFields(t),
+		Name:        tt.Name(),
+		Fields:      GetStructFields(t),
+		reflectType: tt,
 	}
+}
+
+// IsScalarStructType 判断结构体类型是否应作为标量呈现（不展开为字段表、示例中不展开为对象）：
+// 目前仅 time.Time —— 其内部字段为 wall/ext/loc，展开无意义。
+func IsScalarStructType(t reflect.Type) bool {
+	if t == nil {
+		return false
+	}
+	return t.PkgPath() == "time" && t.Name() == "Time"
+}
+
+// NestedStructType 返回字段所引用的具名结构体类型：逐层剥离指针、切片、数组与 map 的值类型后，
+// 若得到具名结构体且不属于标量呈现类型（见 IsScalarStructType），返回 (t, true)；
+// 非结构体、未具名结构体（Name 为空）或标量结构体一律返回 (nil, false)。
+// 供接口知识文档递归展开嵌套类型字段定义使用。
+func NestedStructType(field *FieldMeta) (reflect.Type, bool) {
+	if field == nil || field.reflectType == nil {
+		return nil, false
+	}
+	t := derefType(field.reflectType)
+	for t != nil && (t.Kind() == reflect.Slice || t.Kind() == reflect.Array || t.Kind() == reflect.Map) {
+		t = derefType(t.Elem())
+	}
+	if t == nil || t.Kind() != reflect.Struct || t.Name() == "" || IsScalarStructType(t) {
+		return nil, false
+	}
+	return t, true
+}
+
+// derefType 逐层剥离指针，返回底层类型；入参为 nil 时原样返回。
+func derefType(t reflect.Type) reflect.Type {
+	for t != nil && t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	return t
 }
 
 // getStructFields 通过反射提取结构体的字段元信息列表（OPTIONS 元信息与多态类型

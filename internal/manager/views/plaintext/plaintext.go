@@ -16,7 +16,6 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
-	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
@@ -75,7 +74,7 @@ func CryptoPlaintextGet(c *gin.Context) {
 	}
 	model, ok := plaintextModels[in.Model]
 	if !ok {
-		response.CreateBadBodyError(errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("plaintextModelNotRegistered", in.Model).AbortWithGinH(c)
 		return
 	}
 	m, err := crypto.ModeForField(model, in.Field, "json")
@@ -112,7 +111,7 @@ func S3PlaintextGet(c *gin.Context) {
 		return
 	}
 	if _, ok := plaintextModels[in.Model]; !ok {
-		response.CreateBadBodyError(errors.Newf("plaintext: model %q not registered", in.Model)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("plaintextModelNotRegistered", in.Model).AbortWithGinH(c)
 		return
 	}
 	kd, err := key.GetKeyDerivation()

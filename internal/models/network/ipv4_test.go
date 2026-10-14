@@ -131,7 +131,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4IHL:        5,
 				IPv4TOS:        0,
 				IPv4Length:     1500,
-				IPv4Id:         12345,
+				IPv4ID:         12345,
 				IPv4Flags:      layers.IPv4DontFragment,
 				IPv4FragOffset: 0,
 				IPv4TTL:        64,
@@ -146,7 +146,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 			So(headers.IPv4Version, ShouldEqual, 4)
 			So(headers.IPv4IHL, ShouldEqual, 5)
 			So(headers.IPv4Length, ShouldEqual, 1500)
-			So(headers.IPv4Id, ShouldEqual, 12345)
+			So(headers.IPv4ID, ShouldEqual, 12345)
 			So(headers.IPv4Flags, ShouldEqual, layers.IPv4DontFragment)
 			So(headers.IPv4TTL, ShouldEqual, 64)
 			So(headers.IPv4IPProtocol, ShouldEqual, layers.IPProtocolTCP)
@@ -187,7 +187,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 				IPv4IHL:        5,
 				IPv4TOS:        0,
 				IPv4Length:     1500,
-				IPv4Id:         12345,
+				IPv4ID:         12345,
 				IPv4Flags:      layers.IPv4DontFragment,
 				IPv4FragOffset: 0,
 				IPv4TTL:        64,
@@ -213,7 +213,7 @@ func TestIPv4Headers_Basic(t *testing.T) {
 			So(decoded.IPv4Version, ShouldEqual, original.IPv4Version)
 			So(decoded.IPv4IHL, ShouldEqual, original.IPv4IHL)
 			So(decoded.IPv4Length, ShouldEqual, original.IPv4Length)
-			So(decoded.IPv4Id, ShouldEqual, original.IPv4Id)
+			So(decoded.IPv4ID, ShouldEqual, original.IPv4ID)
 			So(decoded.IPv4Flags, ShouldEqual, original.IPv4Flags)
 			So(decoded.IPv4TTL, ShouldEqual, original.IPv4TTL)
 			So(decoded.IPv4IPProtocol, ShouldEqual, original.IPv4IPProtocol)
@@ -289,7 +289,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.IPv4Version, ShouldEqual, 4)
 			So(headers.IPv4IHL, ShouldEqual, 5)
 			So(headers.IPv4Length, ShouldEqual, 1500)
-			So(headers.IPv4Id, ShouldEqual, 12345)
+			So(headers.IPv4ID, ShouldEqual, 12345)
 			So(headers.IPv4Flags, ShouldEqual, layers.IPv4DontFragment)
 			So(headers.IPv4TTL, ShouldEqual, 64)
 			So(headers.IPv4IPProtocol, ShouldEqual, layers.IPProtocolTCP)
@@ -328,7 +328,7 @@ func TestNewIPv4Headers(t *testing.T) {
 			So(headers.IPv4Version, ShouldEqual, 4)
 			So(headers.IPv4TOS, ShouldEqual, 0x10)
 			So(headers.IPv4Length, ShouldEqual, 576)
-			So(headers.IPv4Id, ShouldEqual, 54321)
+			So(headers.IPv4ID, ShouldEqual, 54321)
 			So(headers.IPv4Flags, ShouldEqual, layers.IPv4MoreFragments)
 			So(headers.IPv4FragOffset, ShouldEqual, 100)
 			So(headers.IPv4TTL, ShouldEqual, 128)

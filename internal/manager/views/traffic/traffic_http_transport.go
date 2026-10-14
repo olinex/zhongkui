@@ -33,7 +33,7 @@ type HttpTransportListGetListItemOut struct {
 	// Version 抓包器版本
 	Version string `json:"version"`
 	// SessionID 会话标识
-	SessionID serializer.HexUUID `json:"sessionId"`
+	SessionID serializer.HexUUID `json:"sessionID"`
 	// ---- TimestampMeta ----
 	// Timestamp 采集时间
 	Timestamp time.Time `json:"timestamp"`
@@ -41,7 +41,7 @@ type HttpTransportListGetListItemOut struct {
 	CreatedAt time.Time `json:"createdAt"`
 	// ---- TraceMeta ----
 	// TraceID 跟踪标识，用于串联相关数据
-	TraceID serializer.HexUUID `json:"traceId"`
+	TraceID serializer.HexUUID `json:"traceID"`
 	// ---- HttpBase ----
 	// ClientIP 客户端 IP 地址
 	ClientIP serializer.IPAddr `json:"clientIp"`
@@ -437,10 +437,10 @@ type NetworkStackListGetListItemOut struct {
 	// Version 抓包器版本
 	Version string `json:"version"`
 	// SessionID 会话标识
-	SessionID serializer.HexUUID `json:"sessionId"`
+	SessionID serializer.HexUUID `json:"sessionID"`
 	// ---- TraceMeta ----
 	// TraceID 跟踪标识，用于串联相关数据
-	TraceID serializer.HexUUID `json:"traceId"`
+	TraceID serializer.HexUUID `json:"traceID"`
 	// ---- TimestampMeta ----
 	// Timestamp 采集时间
 	Timestamp time.Time `json:"timestamp"`

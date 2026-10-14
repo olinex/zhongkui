@@ -7,6 +7,7 @@
 - [Constants](<#constants>)
 - [func Hostname\(\) string](<#Hostname>)
 - [func ModulePath\(\) string](<#ModulePath>)
+- [func NamespaceScope\(namespaceName string\) \[\]string](<#NamespaceScope>)
 - [type GlobalEnv](<#GlobalEnv>)
 - [type Language](<#Language>)
   - [func MustParseLanguage\(lang string\) \*Language](<#MustParseLanguage>)
@@ -65,6 +66,9 @@ m = (p.obj == "*" || r.obj == p.obj) && \
 
     // 内置命名空间
     DefaultNamespace = "default"
+    // SystemNamespace 内置系统命名空间：承载由代码声明的公开共享数据（如原生接口目录），
+    // 对所有命名空间的检索可见；不在命名空间列表/选择器中暴露，且禁止删除。
+    SystemNamespace = "system"
 
     // 权限点前缀：api 为接口层（object = api:{FullPath}，action = HTTP 方法），
     // plaintext 为明文查看数据层（object = plaintext:{subtype}:{model}:{field}，action = 语义动作）
@@ -172,6 +176,19 @@ func ModulePath() string
 ```
 
 ModulePath 返回构建期写入二进制的本项目模块导入路径（如 zhongkuisec.com/zhongkui）。 构建信息不可用时返回空字符串，由调用方自行决定降级或报错，本包不提供文件系统回退。
+
+<a name="NamespaceScope"></a>
+## func NamespaceScope
+
+```go
+func NamespaceScope(namespaceName string) []string
+```
+
+NamespaceScope 返回一次跨命名空间操作应覆盖的命名空间集合：调用方限定的命名空间（如非空） 加上内置系统命名空间（承载由代码声明的公开共享数据，对所有租户可见）。
+
+命名空间为空时不追加系统作用域，保持既有「空命名空间不命中任何数据」的语义；命名空间本身 为系统命名空间时不重复。结果按「调用方命名空间在前、系统命名空间在后」排列，可直接用于 SQL 的 \`IN\` 条件（如 \`namespace\_name IN ?\`）。
+
+注意与视图层「可见命名空间」的区别：后者（user.go 的 visibleNamespaces）是从展示列表中 剔除系统命名空间，与本函数方向相反。
 
 <a name="GlobalEnv"></a>
 ## type GlobalEnv

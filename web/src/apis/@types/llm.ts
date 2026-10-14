@@ -17,9 +17,16 @@ export interface LlmModelItem {
   timeoutSeconds: number;
   temperature: number;
   maxTokens: number;
+  contextTokens: number;
   dimensions: number;
   enabled: boolean;
   description: string;
+  // extraBody 高级请求配置：每次请求自动合并的 JSON 对象（原始 JSON 文本，空表示不附加）；
+  // thinkingField 思考开关的请求字段名，与 thinkingOnValue / thinkingOffValue 三者齐备时该模型支持思考开关
+  extraBody: string;
+  thinkingField: string;
+  thinkingOnValue: string;
+  thinkingOffValue: string;
 }
 
 // LlmModelDetailOut LLM 模型详情出参；字段与列表项一致（apiKey 同为密文，
@@ -33,6 +40,7 @@ export interface LlmModelListOut {
 }
 
 // LlmModelCreateIn 注册 LLM 模型端点入参；kind 创建后不可更改；
+// contextTokens 为上下文窗口容量，chat 类模型必填正整数，embedding 类留 0；
 // dimensions 为数据库 schema 属性，由后端探测写回，不接受前端提交
 export interface LlmModelCreateIn {
   name: string;
@@ -43,12 +51,20 @@ export interface LlmModelCreateIn {
   timeoutSeconds: number;
   temperature: number;
   maxTokens: number;
+  contextTokens: number;
   enabled: boolean;
   description?: string;
+  // extraBody 高级请求配置（JSON 对象文本，空表示不附加）；thinkingField / thinkingOnValue /
+  // thinkingOffValue 为思考开关字段名与开/关取值，三者齐备时该模型支持思考开关
+  extraBody?: string;
+  thinkingField?: string;
+  thinkingOnValue?: string;
+  thinkingOffValue?: string;
 }
 
 // LlmModelUpdateIn 更新 LLM 模型端点入参；不含 kind（类型不可变），
-// apiKey 留空表示沿用原凭据；dimensions 为数据库 schema 属性，由后端探测写回，不接受前端提交
+// apiKey 留空表示沿用原凭据；contextTokens 为上下文窗口容量，chat 类模型必填正整数；
+// dimensions 为数据库 schema 属性，由后端探测写回，不接受前端提交
 export interface LlmModelUpdateIn {
   name: string;
   baseURL: string;
@@ -57,8 +73,15 @@ export interface LlmModelUpdateIn {
   timeoutSeconds: number;
   temperature: number;
   maxTokens: number;
+  contextTokens: number;
   enabled: boolean;
   description?: string;
+  // extraBody 高级请求配置（JSON 对象文本，空表示不附加）；thinkingField / thinkingOnValue /
+  // thinkingOffValue 为思考开关字段名与开/关取值，三者齐备时该模型支持思考开关
+  extraBody?: string;
+  thinkingField?: string;
+  thinkingOnValue?: string;
+  thinkingOffValue?: string;
 }
 
 // LlmModelSearchIn LLM 模型搜索入参
@@ -96,7 +119,7 @@ export interface LlmModelTestOut {
 // LlmSlotBindingOut 单个档位的绑定摘要与可用性；requiredKind 为该档位要求的模型类型
 export interface LlmSlotBindingOut {
   slot: string;
-  modelId: number;
+  modelID: number;
   modelName: string;
   kind: string;
   requiredKind: string;
@@ -119,7 +142,7 @@ export interface LlmBindingListOut {
 
 // LlmBindingSetIn 绑定档位入参
 export interface LlmBindingSetIn {
-  modelId: number;
+  modelID: number;
 }
 
 // ---- Agent 参数（/admin/llm/param）----

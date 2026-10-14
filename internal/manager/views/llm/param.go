@@ -126,7 +126,7 @@ func LlmParamSet(c *gin.Context) {
 		return
 	}
 	if len(in.Items) == 0 {
-		response.CreateBadBodyError(errors.New("items must not be empty")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmParamItemsEmpty").AbortWithGinH(c)
 		return
 	}
 	type paramUpdate struct {
@@ -137,7 +137,7 @@ func LlmParamSet(c *gin.Context) {
 	for _, item := range in.Items {
 		spec, ok := ai.Lookup(item.Key)
 		if !ok {
-			response.CreateBadBodyError(errors.Newf("parameter %q is not declared in the registry", item.Key)).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("llmParamNotDeclared", item.Key).AbortWithGinH(c)
 			return
 		}
 		value, err := normalizeParamValue(spec, item.Value)
@@ -182,19 +182,19 @@ func LlmParamReset(c *gin.Context) {
 			}
 		}
 		if len(keys) == 0 {
-			response.CreateBadBodyError(errors.Newf("parameter group %q is not declared in the registry", group)).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("llmParamGroupNotDeclared", group).AbortWithGinH(c)
 			return
 		}
 	} else if len(in.Keys) > 0 {
 		for _, key := range in.Keys {
 			if _, ok := ai.Lookup(key); !ok {
-				response.CreateBadBodyError(errors.Newf("parameter %q is not declared in the registry", key)).AbortWithGinH(c)
+				response.CreateBadBodyMessageError("llmParamNotDeclared", key).AbortWithGinH(c)
 				return
 			}
 			keys = append(keys, key)
 		}
 	} else {
-		response.CreateBadBodyError(errors.New("either keys or group must be provided")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmParamKeysOrGroup").AbortWithGinH(c)
 		return
 	}
 	if err := resetAgentParam(middlewares.GetCoreDatabase(c), keys); err != nil {
@@ -273,18 +273,18 @@ func paramComment(lang *base.Language, spec ai.ParamSpec) string {
 // normalizeParamValue 把请求中的 JSON 原生值按注册表声明的类型归一化为库内文本字面量。
 // 返回空串表示「恢复出厂值」，由调用方把当前值写回 default_value：入参为 null，或字符串类
 // 参数传入空串时即为该情形；数值与布尔类参数的空串按零值处理（表单清空的既有契约）；
-// 类型不符或声明了封闭取值清单却传入清单外的值（如 retrieval.fusion）时返回英文错误，
-// 避免非法值落库。
+// 类型不符或声明了封闭取值清单却传入清单外的值（如 retrieval.fusion）时返回按请求语言
+// 本地化的错误，避免非法值落库。
 func normalizeParamValue(spec ai.ParamSpec, value any) (string, error) {
 	if value == nil {
 		return "", nil
 	}
 	literal, err := utils.FormatScalar(paramScalarKind(spec.Kind), value)
 	if err != nil {
-		return "", errors.Newf("parameter %q expects value of type %s: %v", spec.Key, spec.Kind, err)
+		return "", response.CreateBadBodyMessageError("llmParamValueTypeInvalid", spec.Key, spec.Kind)
 	}
 	if literal != "" && !ai.OptionAllowed(spec, literal) {
-		return "", errors.Newf("parameter %q expects one of %s, got %q",
+		return "", response.CreateBadBodyMessageError("llmParamValueNotAllowed",
 			spec.Key, strings.Join(spec.Options, ", "), literal)
 	}
 	return literal, nil

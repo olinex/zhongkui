@@ -39,13 +39,13 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 流量列表查询 - 分页查询 IPv4 TCP 包全字段
 		ipv4TcpGroup.POST("/list", Ipv4TcpListGet)
 		// 流量列表元信息
-		ipv4TcpGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.Ipv4TcpListGetSearchIn, *Ipv4TcpListGetListItemOut]())
+		views.RegisterListApi[*views.Ipv4TcpListGetSearchIn, *Ipv4TcpListGetListItemOut](ipv4TcpGroup, "/list", "流量列表查询 - 分页查询 IPv4 TCP 包全字段")
 		// 行详情查询 - 按 namespace + id 返回单条全字段记录
 		ipv4TcpGroup.POST("/detail", Ipv4TcpDetailGet)
 		// 行详情元信息
-		ipv4TcpGroup.OPTIONS("/detail", views.StructMetaGinHandler(
+		views.RegisterApi(ipv4TcpGroup, "/detail", "行详情查询 - 按 namespace + id 返回单条全字段记录",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[Ipv4TcpDetailGetIn](), views.WithBodyOutput[Ipv4TcpListGetListItemOut]()),
-		))
+		)
 	}
 
 	// ========== IPv6 TCP 包：/api/v1/traffic/ipv6-tcp ==========
@@ -54,13 +54,13 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 流量列表查询 - 分页查询 IPv6 TCP 包全字段
 		ipv6TcpGroup.POST("/list", Ipv6TcpListGet)
 		// 流量列表元信息
-		ipv6TcpGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.Ipv6TcpListGetSearchIn, *Ipv6TcpListGetListItemOut]())
+		views.RegisterListApi[*views.Ipv6TcpListGetSearchIn, *Ipv6TcpListGetListItemOut](ipv6TcpGroup, "/list", "流量列表查询 - 分页查询 IPv6 TCP 包全字段")
 		// 行详情查询 - 按 namespace + id 返回单条全字段记录
 		ipv6TcpGroup.POST("/detail", Ipv6TcpDetailGet)
 		// 行详情元信息
-		ipv6TcpGroup.OPTIONS("/detail", views.StructMetaGinHandler(
+		views.RegisterApi(ipv6TcpGroup, "/detail", "行详情查询 - 按 namespace + id 返回单条全字段记录",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[Ipv6TcpDetailGetIn](), views.WithBodyOutput[Ipv6TcpListGetListItemOut]()),
-		))
+		)
 	}
 
 	// ========== HTTP 传输：/api/v1/traffic/http-transport ==========
@@ -69,16 +69,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 流量列表查询 - 分页查询 HTTP 传输全字段
 		httpTransportGroup.POST("/list", HttpTransportListGet)
 		// 流量列表元信息
-		httpTransportGroup.OPTIONS("/list", views.ListMetaGinHandler[*views.HttpTransportListGetSearchIn, *HttpTransportListGetListItemOut]())
+		views.RegisterListApi[*views.HttpTransportListGetSearchIn, *HttpTransportListGetListItemOut](httpTransportGroup, "/list", "流量列表查询 - 分页查询 HTTP 传输全字段")
 		// 行详情查询 - 按 namespace + id 返回单条全字段记录
 		httpTransportGroup.POST("/detail", HttpTransportDetailGet)
 		// 行详情元信息
-		httpTransportGroup.OPTIONS("/detail", views.StructMetaGinHandler(
+		views.RegisterApi(httpTransportGroup, "/detail", "行详情查询 - 按 namespace + id 返回单条全字段记录",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[HttpTransportDetailGetIn](), views.WithBodyOutput[HttpTransportListGetListItemOut]()),
-		))
+		)
 		// 关联网络堆栈列表查询 - 以 HttpTransport 的 traceId 分页查询组成该 TCP 流的网络堆栈
 		httpTransportGroup.POST("/stack/list", HttpTransportStackListGet)
 		// 关联网络堆栈列表元信息
-		httpTransportGroup.OPTIONS("/stack/list", views.ListMetaGinHandler[*views.NetworkStackListGetSearchIn, *NetworkStackListGetListItemOut]())
+		views.RegisterListApi[*views.NetworkStackListGetSearchIn, *NetworkStackListGetListItemOut](httpTransportGroup, "/stack/list", "关联网络堆栈列表查询 - 以 HttpTransport 的 traceId 分页查询组成该 TCP 流的网络堆栈")
 	}
 }

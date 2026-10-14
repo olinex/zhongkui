@@ -1,7 +1,7 @@
 // 服务状态实例出参类型。
 export interface ServiceItemOut {
   serviceName: string;
-  instanceId: string;
+  instanceID: string;
   host: string;
   version: string;
   pid: number;

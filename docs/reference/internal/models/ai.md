@@ -4,6 +4,7 @@
 
 ## Index
 
+- [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func ChatSlotValues\(\) \[\]string](<#ChatSlotValues>)
 - [func InvalidChatSlotError\(value Slot\) error](<#InvalidChatSlotError>)
@@ -11,14 +12,22 @@
 - [type AgentKind](<#AgentKind>)
   - [func AllAgentKinds\(\) \[\]AgentKind](<#AllAgentKinds>)
   - [func ParseAgentKind\(raw AgentKind\) \(AgentKind, error\)](<#ParseAgentKind>)
+- [type AgentLiveRun](<#AgentLiveRun>)
 - [type AgentMemory](<#AgentMemory>)
 - [type AgentMessage](<#AgentMessage>)
 - [type AgentParam](<#AgentParam>)
 - [type AgentRun](<#AgentRun>)
+- [type AgentRunEvent](<#AgentRunEvent>)
+- [type AgentRunEventType](<#AgentRunEventType>)
+  - [func AllAgentRunEventTypes\(\) \[\]AgentRunEventType](<#AllAgentRunEventTypes>)
+- [type AgentRunPhase](<#AgentRunPhase>)
+  - [func AllAgentRunPhases\(\) \[\]AgentRunPhase](<#AllAgentRunPhases>)
+  - [func ParseAgentRunPhase\(raw AgentRunPhase\) \(AgentRunPhase, error\)](<#ParseAgentRunPhase>)
 - [type AgentRunStatus](<#AgentRunStatus>)
   - [func AllAgentRunStatuses\(\) \[\]AgentRunStatus](<#AllAgentRunStatuses>)
   - [func ParseAgentRunStatus\(raw AgentRunStatus\) \(AgentRunStatus, error\)](<#ParseAgentRunStatus>)
 - [type AgentSession](<#AgentSession>)
+- [type AgentSessionCompaction](<#AgentSessionCompaction>)
 - [type KnowledgeChunk](<#KnowledgeChunk>)
 - [type KnowledgeDocStatus](<#KnowledgeDocStatus>)
 - [type KnowledgeDocument](<#KnowledgeDocument>)
@@ -35,6 +44,7 @@
   - [func AllMemoryStatuses\(\) \[\]MemoryStatus](<#AllMemoryStatuses>)
   - [func ParseMemoryStatus\(raw MemoryStatus\) \(MemoryStatus, error\)](<#ParseMemoryStatus>)
 - [type MessageRole](<#MessageRole>)
+- [type ReviewValve](<#ReviewValve>)
 - [type SessionStatus](<#SessionStatus>)
 - [type Slot](<#Slot>)
   - [func ParseChatSlot\(value Slot\) \(Slot, bool\)](<#ParseChatSlot>)
@@ -42,6 +52,14 @@
   - [func ResolveSlot\(requested, declared, fallback Slot\) \(Slot, error\)](<#ResolveSlot>)
 - [type ToolSource](<#ToolSource>)
 
+
+## Constants
+
+<a name="DefaultReviewValve"></a>DefaultReviewValve 出厂默认阀门：会话未创建或未记录阀门时的默认档位，取「逐一审核」以保持 引入本特性前「一律人工审核」的既有行为，与 agent\_sessions.review\_valve 列的默认值一致。
+
+```go
+const DefaultReviewValve = ReviewValveEach
+```
 
 ## Variables
 
@@ -81,16 +99,18 @@ SlotKind 返回档位要求的模型类型：embedding 档位要求向量模型�
 <a name="AgentKind"></a>
 ## type AgentKind
 
-AgentKind 是 Agent 类型的标识：知识检索/知识库运营（knowledge）与 Rego 规则生成（rego）。 会话与长期记忆均按「命名空间 \+ AgentKind」归属与隔离，取值与 agent\_sessions.agent\_kind、 agent\_memories.agent\_kind 列的取值一致。
+AgentKind 是 Agent 类型的标识：通用对话（general）、知识检索/知识库运营（knowledge）与 Rego 规则生成（rego）。会话与长期记忆均按「命名空间 \+ AgentKind」归属与隔离，取值与 agent\_sessions.agent\_kind、agent\_memories.agent\_kind 列的取值一致。
 
 ```go
 type AgentKind string
 ```
 
-<a name="AgentKindKnowledge"></a>Agent 类型常量。
+<a name="AgentKindGeneral"></a>Agent 类型常量。
 
 ```go
 const (
+    // AgentKindGeneral 通用对话 Agent（不绑定知识库运营与 Rego 规则生成场景，纯 Markdown 回答）
+    AgentKindGeneral AgentKind = "general"
     // AgentKindKnowledge 知识检索/知识库运营 Agent
     AgentKindKnowledge AgentKind = "knowledge"
     // AgentKindRego Rego 规则生成 Agent
@@ -116,10 +136,40 @@ func ParseAgentKind(raw AgentKind) (AgentKind, error)
 
 ParseAgentKind 解析并校验 Agent 类型取值：空串取缺省值 knowledge；非空但不在取值空间内的 取值返回英文错误；合法取值原样返回。取值清单只在 internal/models/ai 声明，调用方不再各自 校验并拼错误文案。
 
+<a name="AgentLiveRun"></a>
+## type AgentLiveRun
+
+AgentLiveRun 表示一次驻留运行（RunHub 管理的 liveRun）的持久化登记：记录运行标识、 归属（命名空间 \+ 会话）、生命周期阶段、已发布的最大事件序号与过期时间，供刷新后 发现并重连在途运行。对应表为 agent\_live\_runs。该表不含用户内容，无需加密。 与 AgentRun（agent\_runs，审批挂起现场）是不同概念：前者描述在途运行的生命周期， 后者保存挂起时刻的运行现场。
+
+```go
+type AgentLiveRun struct {
+    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32)"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `json:"userID" gorm:"type:BIGINT;not null;uniqueIndex:uq_agent_live_runs_running,priority:2"`
+    // RunID 运行标识（全局唯一，随机生成的 UUID），事件日志与取消请求据此定位运行
+    RunID serializer.HexUUID `json:"runID" gorm:"type:UUID;uniqueIndex:uq_agent_live_runs_run_id"`
+    // SessionID 所属会话 ID（真外键，随会话级联删除，无哨兵值）；与 UserID 共同构成部分唯一索引
+    // uq_agent_live_runs_running（仅 status='running' 行参与），保证单会话单在途驻留运行
+    SessionID uint `json:"sessionID" gorm:"type:BIGINT;uniqueIndex:uq_agent_live_runs_running,priority:1,where:status = 'running'"`
+    // Phase 运行生命周期阶段，取值来自枚举类 agentRunPhase，落库列名为 status
+    // （running/done/failed/cancelled/suspended）
+    Phase AgentRunPhase `json:"phase" gorm:"column:status;type:VARCHAR(16)"`
+    // LastSeq 已发布的最大事件序号，续播起点（?after=）据此定位
+    LastSeq uint64 `json:"lastSeq" gorm:"type:BIGINT"`
+    // ExpiresAt 运行登记过期时间，超过该时刻的运行登记与事件可被 TTL 清理
+    ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_live_runs_expires_at"`
+}
+```
+
 <a name="AgentMemory"></a>
 ## type AgentMemory
 
-AgentMemory 表示一条长期记忆，按「命名空间 \+ Agent 类型 \+ 来源会话」归属与隔离， 仅在其来源会话内可见。对应表为 agent\_memories。
+AgentMemory 表示一条长期记忆，按「命名空间 \+ 属主用户 \+ Agent 类型 \+ 来源会话」归属与隔离， 仅在其来源会话内可见。对应表为 agent\_memories。
 
 ```go
 type AgentMemory struct {
@@ -127,12 +177,15 @@ type AgentMemory struct {
 
     // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
     Namespace coremodel.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
-    // NamespaceName 所属命名空间名称，多租户隔离字段，与 AgentKind、SessionID 组成复合索引
-    NamespaceName string `gorm:"type:VARCHAR(32);index:idx_agent_memories_namespace_kind,priority:1"`
-    // AgentKind 所属 Agent 类型（如 knowledge/rego），与 NamespaceName、SessionID 组成复合索引
-    AgentKind AgentKind `gorm:"type:VARCHAR(32);index:idx_agent_memories_namespace_kind,priority:2"`
-    // SessionID 来源会话 ID，检索与唯一性均以它为隔离维度（记忆只在来源会话内可见，不手动新增）
-    SessionID uint `gorm:"type:BIGINT;index:idx_agent_memories_namespace_kind,priority:3"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段，与 UserID、AgentKind、SessionID 组成复合索引
+    NamespaceName string `gorm:"type:VARCHAR(32);index:idx_agent_memories_namespace_kind,priority:1;uniqueIndex:uq_agent_memories_scope_hash,priority:1"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离，与 NamespaceName、AgentKind、SessionID 组成复合索引
+    UserID uint `gorm:"type:BIGINT;not null;index:idx_agent_memories_namespace_kind,priority:2;uniqueIndex:uq_agent_memories_scope_hash,priority:2"`
+    // AgentKind 所属 Agent 类型（如 knowledge/rego），与 NamespaceName、UserID、SessionID 组成复合索引
+    AgentKind AgentKind `gorm:"type:VARCHAR(32);index:idx_agent_memories_namespace_kind,priority:3;uniqueIndex:uq_agent_memories_scope_hash,priority:3"`
+    // SessionID 来源会话 ID（真外键，无哨兵值，随会话级联删除），检索与唯一性均以它为隔离维度
+    // （记忆只在来源会话内可见，不手动新增）
+    SessionID uint `gorm:"type:BIGINT;index:idx_agent_memories_namespace_kind,priority:4;uniqueIndex:uq_agent_memories_scope_hash,priority:4"`
     // Kind 记忆类别（fact/preference/decision/artifact），默认 fact
     Kind MemoryKind `gorm:"type:VARCHAR(16)"`
     // Title 一句话标题，便于在记忆列表中识别
@@ -143,8 +196,8 @@ type AgentMemory struct {
     Embedding []float32 `gorm:"type:vector(1536);serializer:json"`
     // Search 记忆正文的全文检索表示（tsvector），用于关键词检索
     Search string `gorm:"type:tsvector"`
-    // Hash 规范化正文的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于精确去重
-    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash" secure:"mode=\"hmac-sha256\",offset=12806,length=32"`
+    // Hash 规范化正文的 HMAC-SHA256 十六进制摘要（带密钥，防离线爆破），经 hash 序列化器封装，用于精确去重，与隔离维度组成唯一索引
+    Hash serializer.Hash `json:"hash" gorm:"type:CHAR(64);serializer:hash;uniqueIndex:uq_agent_memories_scope_hash,priority:5" secure:"mode=\"hmac-sha256\",offset=12806,length=32"`
     // Status 记忆状态（active/archived），默认 active
     Status MemoryStatus `gorm:"type:VARCHAR(16)"`
     // UseCount 被检索命中的次数，默认 0
@@ -157,7 +210,7 @@ type AgentMemory struct {
 <a name="AgentMessage"></a>
 ## type AgentMessage
 
-AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文 （Content），以及助手回复的草稿载荷（DraftJSON）与引用来源列表 （CitationsJSON）。对应表为 agent\_messages。
+AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文 （Content），以及助手回复的草稿载荷（DraftJSON）、引用来源列表（CitationsJSON） 与思考过程（Reasoning）。对应表为 agent\_messages。
 
 ```go
 type AgentMessage struct {
@@ -166,9 +219,14 @@ type AgentMessage struct {
     // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
     Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
     // SessionID 所属会话 ID，会话删除时消息级联删除
-    SessionID uint `gorm:"type:BIGINT;index"`
+    SessionID uint `gorm:"type:BIGINT"`
     // NamespaceName 所属命名空间名称，多租户隔离字段
     NamespaceName string `gorm:"type:VARCHAR(32)"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `gorm:"type:BIGINT;not null"`
+    // Seq 消息在所属会话内的单调递增序号（从 1 起），与 SessionID、UserID 共同唯一，
+    // 作为消息读取/游标/摘要的一致排序键
+    Seq uint64 `gorm:"type:BIGINT;not null"`
     // Role 消息角色：user/assistant/system 等
     Role MessageRole `gorm:"type:VARCHAR(16)"`
     // Content 消息正文内容（含用户原文与模型输出，经 crypto 序列化器加密落库）
@@ -177,6 +235,16 @@ type AgentMessage struct {
     DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12812,length=32"`
     // CitationsJSON 引用来源列表（JSON），可空，经 crypto 序列化器加密落库（引用携带知识库正文）
     CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12813,length=32"`
+    // Reasoning 助手回复的思考过程，加密落库、可空（模型未返回思考内容时为 NULL）
+    Reasoning *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
+    // PromptTokens 本轮助手回答全部模型调用的输入 token 累加（明文数值，用户消息恒为 0）
+    PromptTokens int `gorm:"type:INT"`
+    // CompletionTokens 本轮助手回答全部模型调用的输出 token 累加（明文数值，用户消息恒为 0）
+    CompletionTokens int `gorm:"type:INT"`
+    // TotalTokens 本轮助手回答全部模型调用的 token 总量累加（明文数值，用户消息恒为 0）
+    TotalTokens int `gorm:"type:INT"`
+    // ElapsedMs 本轮助手回答的总耗时（毫秒，明文数值，用户消息恒为 0）
+    ElapsedMs int64 `gorm:"type:BIGINT"`
 }
 ```
 
@@ -212,11 +280,13 @@ type AgentRun struct {
     // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
     Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
     // NamespaceName 所属命名空间名称，多租户隔离字段
-    NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32);index:idx_agent_runs_namespace"`
-    // SessionID 所属会话 ID，恢复请求据此校验运行现场归属
-    SessionID uint `json:"sessionId" gorm:"type:BIGINT;index:idx_agent_runs_session_id"`
+    NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32)"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `json:"userID" gorm:"type:BIGINT;not null"`
+    // SessionID 所属会话 ID（真外键，随会话级联删除，无哨兵值），恢复请求据此校验运行现场归属
+    SessionID uint `json:"sessionID" gorm:"type:BIGINT"`
     // Status 运行现场状态，取值来自枚举类 agentRunStatus（pending/consumed/expired）
-    Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16);index:idx_agent_runs_status"`
+    Status AgentRunStatus `json:"status" gorm:"type:VARCHAR(16)"`
     // MessagesJSON 挂起时刻的完整消息链 JSON（含用户原文，经 crypto 序列化器加密落库）
     MessagesJSON *serializer.Crypto `json:"messages" gorm:"column:messages;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12814,length=32"`
     // PendingCallsJSON 待执行调用列表 JSON：callId、工具名与调用入参文本
@@ -231,6 +301,123 @@ type AgentRun struct {
     ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_runs_expires_at"`
 }
 ```
+
+<a name="AgentRunEvent"></a>
+## type AgentRunEvent
+
+AgentRunEvent 表示驻留运行事件日志中的一条事件：按 \(RunID, Seq\) 唯一，payload 为 已序列化的 JSON 负载（含助手正文与引用等用户内容，经 crypto 序列化器加密落库）。 对应表为 agent\_run\_events，按 expires\_at TTL 硬删除（表无 deleted\_at 列，避免与 \(run\_id, seq\) 唯一索引冲突）。该表是断线续播的回放来源，也是落库兜底。
+
+```go
+type AgentRunEvent struct {
+    // ID 主键
+    ID  uint `gorm:"primarykey"`
+    // CreatedAt 事件落库时间
+    CreatedAt time.Time
+    // RunID 所属运行标识
+    RunID serializer.HexUUID `json:"runID" gorm:"type:UUID;uniqueIndex:uq_agent_run_events_run_seq,priority:1"`
+    // SessionID 所属会话 ID（真外键，随会话级联删除，无哨兵值）
+    SessionID uint `json:"sessionID" gorm:"type:BIGINT"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `json:"namespaceName" gorm:"type:VARCHAR(32)"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `json:"userID" gorm:"type:BIGINT;not null"`
+    // Seq 事件在所属运行内的单调自增序号（从 1 起），与 RunID 共同唯一
+    Seq uint64 `json:"seq" gorm:"type:BIGINT;uniqueIndex:uq_agent_run_events_run_seq,priority:2"`
+    // Type 事件类型，取值来自内部枚举 AgentRunEventType（delta/stage/tool_request/done/error）
+    Type AgentRunEventType `json:"type" gorm:"type:VARCHAR(16)"`
+    // Payload 事件负载 JSON（含用户内容，经 crypto 序列化器加密落库），可空
+    Payload *serializer.Crypto `json:"payload" gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12817,length=32"`
+    // ExpiresAt 事件过期时间，超过该时刻的事件可被 TTL 清理任务硬删除
+    ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_run_events_expires_at"`
+}
+```
+
+<a name="AgentRunEventType"></a>
+## type AgentRunEventType
+
+AgentRunEventType 是驻留运行事件日志（agent\_run\_events.type）与 SSE 事件类型的标识： 增量文本（delta）、思考过程增量（reasoning）、阶段状态（stage）、工具执行请求 （tool\_request）、上下文压缩开始（compress\_start）、压缩摘要增量（compress\_delta）、 压缩完成（compress\_done）、完成（done）与错误（error）。取值与 sse.SSEEventValue 常量 一一对应，仅内部流转使用，\*\*不注册枚举类\*\*（不面向用户展示，无 i18n label）。
+
+```go
+type AgentRunEventType string
+```
+
+<a name="AgentRunEventDelta"></a>运行事件类型常量。
+
+```go
+const (
+    // AgentRunEventDelta 增量文本事件
+    AgentRunEventDelta AgentRunEventType = "delta"
+    // AgentRunEventReasoning 思考过程增量事件（模型返回的思考/推理内容增量）
+    AgentRunEventReasoning AgentRunEventType = "reasoning"
+    // AgentRunEventStage 阶段状态事件
+    AgentRunEventStage AgentRunEventType = "stage"
+    // AgentRunEventToolRequest 工具执行请求事件（运行挂起等待前端执行并审批客户端工具）
+    AgentRunEventToolRequest AgentRunEventType = "tool_request"
+    // AgentRunEventCompressStart 上下文压缩开始事件（携带压缩原因、占用 token、容量与阈值）
+    AgentRunEventCompressStart AgentRunEventType = "compress_start"
+    // AgentRunEventCompressDelta 上下文压缩摘要增量事件（携带摘要生成的增量文本）
+    AgentRunEventCompressDelta AgentRunEventType = "compress_delta"
+    // AgentRunEventCompressDone 上下文压缩完成事件（携带压缩前后占用、折叠条数与摘要游标）
+    AgentRunEventCompressDone AgentRunEventType = "compress_done"
+    // AgentRunEventDone 完成事件
+    AgentRunEventDone AgentRunEventType = "done"
+    // AgentRunEventError 错误事件
+    AgentRunEventError AgentRunEventType = "error"
+)
+```
+
+<a name="AllAgentRunEventTypes"></a>
+### func AllAgentRunEventTypes
+
+```go
+func AllAgentRunEventTypes() []AgentRunEventType
+```
+
+AllAgentRunEventTypes 返回全部运行事件类型的副本，声明顺序即事件流转顺序；供 RunHub 与视图层 复用，调用方修改返回值不影响该取值空间。
+
+<a name="AgentRunPhase"></a>
+## type AgentRunPhase
+
+AgentRunPhase 是驻留运行（RunHub 管理的 liveRun）生命周期阶段的标识：运行中（running）、 已完成（done）、失败（failed）、已取消（cancelled）与挂起待审批（suspended），取值与 agent\_live\_runs.status 列的取值一致。与运行现场状态 AgentRunStatus 是不同概念： AgentRunStatus 描述 agent\_runs 中「待恢复现场」的消费状态，AgentRunPhase 描述一次 在途运行的生命周期阶段。
+
+```go
+type AgentRunPhase string
+```
+
+<a name="AgentRunPhaseRunning"></a>运行生命周期阶段常量。
+
+```go
+const (
+    // AgentRunPhaseRunning 运行中：图循环正在执行
+    AgentRunPhaseRunning AgentRunPhase = "running"
+    // AgentRunPhaseDone 已完成：图循环正常结束
+    AgentRunPhaseDone AgentRunPhase = "done"
+    // AgentRunPhaseFailed 失败：图循环以错误结束
+    AgentRunPhaseFailed AgentRunPhase = "failed"
+    // AgentRunPhaseCancelled 已取消：被显式停止或退订宽限到点自动取消
+    AgentRunPhaseCancelled AgentRunPhase = "cancelled"
+    // AgentRunPhaseSuspended 挂起待审批：命中客户端工具，等待前端回传审批与执行结果
+    AgentRunPhaseSuspended AgentRunPhase = "suspended"
+)
+```
+
+<a name="AllAgentRunPhases"></a>
+### func AllAgentRunPhases
+
+```go
+func AllAgentRunPhases() []AgentRunPhase
+```
+
+AllAgentRunPhases 返回全部运行生命周期阶段的副本，声明顺序即枚举类条目顺序与前端展示顺序； 供 RunHub 与视图层复用，调用方修改返回值不影响该取值空间。
+
+<a name="ParseAgentRunPhase"></a>
+### func ParseAgentRunPhase
+
+```go
+func ParseAgentRunPhase(raw AgentRunPhase) (AgentRunPhase, error)
+```
+
+ParseAgentRunPhase 解析并校验运行生命周期阶段：不在取值空间内的取值（含空串）返回英文错误； 合法取值原样返回。阶段没有缺省值（写入路径显式使用 running），故空串视为非法。
 
 <a name="AgentRunStatus"></a>
 ## type AgentRunStatus
@@ -284,7 +471,9 @@ type AgentSession struct {
     // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
     Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
     // NamespaceName 所属命名空间名称，多租户隔离字段
-    NamespaceName string `gorm:"type:VARCHAR(32);index:idx_agent_sessions_namespace"`
+    NamespaceName string `gorm:"type:VARCHAR(32)"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `gorm:"type:BIGINT;not null"`
     // Title 会话标题，默认取首条用户消息的摘要，可由用户重命名
     Title string `gorm:"type:VARCHAR(256)"`
     // TargetModel 会话缺省档位（列名沿用历史命名）：取值 flash/standard/advanced，空表示按
@@ -294,11 +483,42 @@ type AgentSession struct {
     Status SessionStatus `gorm:"type:VARCHAR(16)"`
     // AgentKind 会话所属 Agent 类型（如 knowledge/rego），记忆归属与检索据此隔离
     AgentKind AgentKind `gorm:"type:VARCHAR(32);default:knowledge"`
+    // ReviewValve 会话级审核阀门（each/auto/none），与本会话内 client 工具调用评估出的审核
+    // 重要级合成，决定该调用是否需人工审核；空表示按列默认值 each（逐一审核）
+    ReviewValve ReviewValve `gorm:"type:VARCHAR(16);default:each"`
     // Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空
     // （正文含用户原文，经 crypto 序列化器加密落库）
     Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12810,length=32"`
-    // SummaryUptoMessageID 滚动摘要已覆盖的最后一条消息 ID，0 表示尚未摘要任何消息
-    SummaryUptoMessageID uint `gorm:"type:BIGINT"`
+    // MessageSeq 会话内已分配的最大消息序号（seq），供消息 seq 原子分配
+    MessageSeq uint `gorm:"type:BIGINT;not null"`
+    // SummaryUptoSeq 滚动摘要已覆盖的最后一条消息的会话内序号（seq），0 表示尚未摘要任何消息
+    SummaryUptoSeq uint `gorm:"type:BIGINT"`
+}
+```
+
+<a name="AgentSessionCompaction"></a>
+## type AgentSessionCompaction
+
+AgentSessionCompaction 表示一次滚动摘要推进（静默滚动或压缩）留下的压缩检查点：记录推进后的 上下文起点（UptoSeq）与该时刻的摘要全文（加密落库），与 AgentSession 的 Summary/SummaryUptoSeq 对应，作为回滚时「逐级回退 start bound」的可恢复起点。对应表为 agent\_session\_compactions。
+
+```go
+type AgentSessionCompaction struct {
+    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `gorm:"type:VARCHAR(32)"`
+    // SessionID 所属会话 ID，会话删除时检查点级联删除（真外键，无哨兵值）
+    SessionID uint `gorm:"type:BIGINT"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `gorm:"type:BIGINT;not null"`
+    // UptoSeq 本次推进后的上下文起点（即当时的 summary_upto_seq 快照），同一会话内随推进单调递增
+    UptoSeq uint64 `gorm:"type:BIGINT"`
+    // Summary 本次推进后的会话摘要全文（对应 AgentSession.Summary，经 crypto 序列化器加密落库）
+    Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12818,length=32"`
+    // Reason 触发本次推进的原因：rolling（静默滚动）/ auto（自动压缩）/ manual（手动压缩）
+    Reason string `gorm:"type:VARCHAR(16)"`
 }
 ```
 
@@ -439,6 +659,9 @@ type LlmModel struct {
     Temperature float64 `gorm:"type:DOUBLE PRECISION"`
     // MaxTokens 单次生成的最大 token 数，仅 chat 类模型有意义
     MaxTokens int `gorm:"type:INTEGER"`
+    // ContextTokens 上下文窗口容量（token 数），仅 chat 类模型有意义：由用户创建模型时提供，
+    // agent 使用该档位模型时据此计算上下文占用比例并判定是否自动压缩；0 表示未配置
+    ContextTokens int `gorm:"type:INTEGER"`
     // Dimensions 向量维度，仅 embedding 类模型有意义，是后端探测后写入的只读缓存：该值
     // 不再由前端提交（前端的向量维度输入已移除），而是后端在绑定 embedding 槽位（或修改
     // 已绑定模型的端点）时经真实探测写入，恒等于 knowledge_chunks.embedding 列的 pgvector
@@ -448,6 +671,16 @@ type LlmModel struct {
     Enabled bool `gorm:"type:BOOLEAN;default:true"`
     // Description 模型描述，说明用途
     Description string `gorm:"type:VARCHAR(512)"`
+    // ExtraBody 高级请求配置；为该模型每次对话请求自动合并的 JSON 对象字符串，
+    // 承载供应商自定义字段（不同供应商字段格式各异、无法穷举，这是通用逃生通道）
+    ExtraBody string `gorm:"column:extra_body;type:TEXT"`
+    // ThinkingField 思考开关的请求字段名（如 enable_thinking）；仅 chat 类模型有意义
+    ThinkingField string `gorm:"type:VARCHAR(64)"`
+    // ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+    ThinkingOnValue string `gorm:"column:thinking_on_value;type:VARCHAR(256)"`
+    // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）；
+    // 与 ThinkingField、ThinkingOnValue 三者齐备时该模型支持思考开关
+    ThinkingOffValue string `gorm:"column:thinking_off_value;type:VARCHAR(256)"`
 }
 ```
 
@@ -625,6 +858,28 @@ const (
     MessageRoleAssistant MessageRole = "assistant"
     // MessageRoleSystem 系统消息
     MessageRoleSystem MessageRole = "system"
+)
+```
+
+<a name="ReviewValve"></a>
+## type ReviewValve
+
+ReviewValve 是 Agent 会话的审核阀门标识：会话级持久化的三档开关，取值 each / auto / none， 依次对应「逐一审核 / 自动审核 / 无需审核」，与 agent\_sessions.review\_valve 列的取值一致。 阀门与该会话内 client 工具调用的审核重要级合成后决定调用是否需人工审核。
+
+```go
+type ReviewValve string
+```
+
+<a name="ReviewValveEach"></a>审核阀门常量。
+
+```go
+const (
+    // ReviewValveEach 逐一审核：本会话内任何重要级的调用均需人工审核
+    ReviewValveEach ReviewValve = "each"
+    // ReviewValveAuto 自动审核：仅 must / suggest 重要级的调用需人工审核，其余自动执行
+    ReviewValveAuto ReviewValve = "auto"
+    // ReviewValveNone 无需审核：仅 must 重要级的调用需人工审核，其余自动执行
+    ReviewValveNone ReviewValve = "none"
 )
 ```
 

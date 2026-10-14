@@ -334,7 +334,7 @@ func NotificationChannelBatchDelete(c *gin.Context) {
 			}
 			if message.IsPlaceholderType(instance.Type) {
 				// 占位符渠道为系统固定数据，禁止删除
-				return errors.Newf("channel %q is a builtin placeholder and cannot be deleted", instance.Name)
+				return errors.New(response.LocalizeDetail(response.GetLocalizer(c), "notificationChannelBuiltin", instance.Name))
 			}
 			return db.WithContext(c).Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&core.NotificationChannel{}).Error
 		},

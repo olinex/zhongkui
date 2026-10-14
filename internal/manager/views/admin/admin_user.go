@@ -306,10 +306,10 @@ func UserUpdate(c *gin.Context) {
 }
 
 // UserBatchActiveIn 批量设置用户激活状态的请求输入结构。
-// UnionIds 接受标量（单个 unionID 字符串）或数组（多个 unionID 字符串）。
+// UnionIDs 接受标量（单个 unionID 字符串）或数组（多个 unionID 字符串）。
 type UserBatchActiveIn struct {
-	// UnionIds 待设置激活状态的用户 unionID 列表。
-	UnionIds views.FlexList[serializer.HexUUID] `json:"unionIds"`
+	// UnionIDs 待设置激活状态的用户 unionID 列表。
+	UnionIDs views.FlexList[serializer.HexUUID] `json:"unionIDs"`
 }
 
 // UserBatchSetActive 批量设置用户激活/禁用状态的处理函数工厂。
@@ -327,7 +327,7 @@ func UserBatchSetActive(active bool) gin.HandlerFunc {
 			response.CreateBadBodyError(err).AbortWithGinH(c)
 			return
 		}
-		unionIds := []serializer.HexUUID(in.UnionIds)
+		unionIds := []serializer.HexUUID(in.UnionIDs)
 		if !views.ValidFlexLen(c, unionIds) {
 			return
 		}

@@ -262,7 +262,7 @@ type PacketIPv4TCP struct {
 	TCPHeaders           // 嵌入TCP头部信息
 	PacketTCPFingerprint // 嵌入TCP被动指纹信息
 	// TCP 流标识符（双向一致）
-	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamId"`
+	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamID"`
 	// 加密存储的 TCP 载荷
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=38278,length=32"`
 }
@@ -342,7 +342,7 @@ type PacketIPv6TCP struct {
 	TCPHeaders           // 嵌入TCP头部信息
 	PacketTCPFingerprint // 嵌入TCP被动指纹信息
 	// TCP 流标识符（双向一致）
-	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamId"`
+	TCPStreamID string `gorm:"column:tcp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"tcpStreamID"`
 	// 加密存储的 TCP 载荷
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=50359,length=32"`
 }

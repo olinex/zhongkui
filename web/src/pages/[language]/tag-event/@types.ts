@@ -19,7 +19,7 @@ export interface TagRuleListOut extends TagRuleBaseDetailOut {
 }
 
 export interface TagRuleVersionOut extends NormalModelOut {
-  ruleId: number;
+  ruleID: number;
   version: number;
   name: string;
   description: string;
@@ -142,10 +142,10 @@ export interface TagEventRuleBaseDetailOut extends NormalModelOut {
 }
 
 export interface TagEventRuleDetailOut extends TagEventRuleBaseDetailOut {
-  /** notificationGroupId 规则绑定的通知组 ID，null 表示未绑定（使用命名空间默认组）。仅详情返回 */
-  notificationGroupId: number | null;
-  /** notificationTargetId 规则直绑的通知目标 ID，null 表示未直绑目标。仅详情返回 */
-  notificationTargetId: number | null;
+  /** notificationGroupID 规则绑定的通知组 ID，null 表示未绑定（使用命名空间默认组）。仅详情返回 */
+  notificationGroupID: number | null;
+  /** notificationTargetID 规则直绑的通知目标 ID，null 表示未直绑目标。仅详情返回 */
+  notificationTargetID: number | null;
   conditions: TagEventRuleConditionOut[];
   version: number;
   versionCount: number;
@@ -156,7 +156,7 @@ export interface TagEventRuleListOut extends TagEventRuleBaseDetailOut {
 }
 
 export interface TagEventRuleVersionOut extends NormalModelOut {
-  ruleId: number;
+  ruleID: number;
   version: number;
   name: string;
   matchAll: boolean;

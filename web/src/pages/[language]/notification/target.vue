@@ -12,8 +12,8 @@
         model-name="notificationTarget"
       >
         <!-- 渠道列显示渠道名称（与创建/编辑表单一致），而非渠道 ID -->
-        <template #cell-channelId="{ item }">
-          {{ item.channelName || item.channelId }}
+        <template #cell-channelID="{ item }">
+          {{ item.channelName || item.channelID }}
         </template>
         <!-- 目标类型列显示可读名称（与渠道类型一致），而非原始类型键 -->
         <template #cell-type="{ value }">
@@ -30,6 +30,13 @@
             :item="item"
             field-key="config"
             @view-plaintext="viewConfigPlaintext"
+          />
+        </template>
+        <!-- 启用态：开关即时写入（乐观更新，失败回退） -->
+        <template #cell-enabled="{ item }">
+          <enabled-switch-cell
+            v-model="item.enabled"
+            :request="(enabled: boolean) => notificationTargetBatchSetEnabled(enabled, [item.id])"
           />
         </template>
       </search-table>
@@ -67,23 +74,13 @@
         prepend-icon="mdi-toggle-switch"
         @confirm="itemToggleAction"
       >
-        <template #body="{ proxy }">
+        <template #body>
           <confirm-alert
             v-if="batchState"
             :action="
               $t(batchState?.action === 'activate' ? 'action.activate' : 'action.deactivate')
             "
             :text="$t('notice.batchConfirm', { count: batchState?.items.length ?? 0 })"
-          />
-          <confirm-alert
-            v-else
-            :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
-            :text="
-              $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
-                category: $t(`model.notificationTarget.name`),
-                key: proxy.name,
-              })
-            "
           />
         </template>
       </confirm-dialog>
@@ -102,7 +99,7 @@
       >
         <template #body>
           <v-form ref="createFormRef">
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createName"
@@ -112,7 +109,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   v-model="createLanguage"
@@ -123,7 +120,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
@@ -132,7 +129,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="createEnabled"
@@ -142,22 +139,22 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   v-model="createChannelId"
                   :items="channelOptions"
                   item-title="name"
                   item-value="id"
-                  :label="$t('model.notificationTarget.field.channelId')"
-                  :rules="requiredRule($t('model.notificationTarget.field.channelId'))"
+                  :label="$t('model.notificationTarget.field.channelID')"
+                  :rules="requiredRule($t('model.notificationTarget.field.channelID'))"
                   required
                   clearable
                 />
               </v-col>
             </v-row>
             <v-divider class="my-2" />
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col>
                 <v-label>{{ $t("model.notificationTarget.field.config") }}</v-label>
               </v-col>
@@ -168,7 +165,7 @@
               </v-col>
             </v-row>
             <template v-for="field in createSchema" :key="field.name">
-              <v-row dense>
+              <v-row density="compact">
                 <v-col cols="12">
                   <v-text-field
                     v-if="field.kind === 'string' || field.kind === 'password'"
@@ -211,7 +208,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   :model-value="proxy.name"
@@ -220,7 +217,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
                   v-model="editLanguage"
@@ -232,7 +229,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="editDescription"
@@ -242,7 +239,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="editEnabled"
@@ -253,20 +250,20 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-select
-                  :model-value="proxy.channelId"
+                  :model-value="proxy.channelID"
                   :items="channelOptions"
                   item-title="name"
                   item-value="id"
-                  :label="$t('model.notificationTarget.field.channelId')"
+                  :label="$t('model.notificationTarget.field.channelID')"
                   disabled
                 />
               </v-col>
             </v-row>
             <v-divider class="my-2" />
-            <v-row dense align="center">
+            <v-row density="compact" class="align-center">
               <v-col>
                 <v-label>{{ $t("model.notificationTarget.field.config") }}</v-label>
               </v-col>
@@ -277,7 +274,7 @@
               </v-col>
             </v-row>
             <template v-for="field in editSchema" :key="field.name">
-              <v-row dense>
+              <v-row density="compact">
                 <v-col cols="12">
                   <v-text-field
                     v-if="field.kind === 'string' || field.kind === 'password'"
@@ -320,30 +317,30 @@
         icon="mdi-send-check-outline"
         size="md"
       >
-        <div v-if="testSendLoading" class="d-flex align-center ga-2 text-on-surface-variant">
+        <div v-if="testSendLoading" class="d-flex align-center ga-2 on-surface-variant">
           <v-progress-circular indeterminate size="20" />
           <span>{{ $t("summary.dataLoading") }}</span>
         </div>
         <v-alert v-else-if="testSendError" type="error" :text="testSendError" />
         <template v-else-if="testSendResult">
-          <div class="text-h6">{{ testSendResult.title }}</div>
-          <pre class="zk-code-preview text-body-2">{{ testSendResult.content }}</pre>
+          <div class="text-title-large">{{ testSendResult.title }}</div>
+          <pre class="zk-code-preview text-body-medium">{{ testSendResult.content }}</pre>
           <v-divider class="my-2" />
-          <div class="text-caption text-on-surface-variant">
-            messageId: {{ testSendResult.messageId }}
+          <div class="text-body-small on-surface-variant">
+            messageID: {{ testSendResult.messageID }}
           </div>
-          <div class="text-caption text-on-surface-variant">
+          <div class="text-body-small on-surface-variant">
             {{ $t("model.notificationTarget.field.language") }}:
             {{ $t(languageNameKey(testSendResult.language)) }}
           </div>
           <v-divider class="my-2" />
-          <div class="text-subtitle-2">{{ $t("model.notificationChannel.name") }}</div>
-          <pre class="zk-code-preview text-body-2">{{
+          <div class="text-title-small">{{ $t("model.notificationChannel.name") }}</div>
+          <pre class="zk-code-preview text-body-medium">{{
             JSON.stringify(testSendResult.channel, null, 2)
           }}</pre>
           <v-divider class="my-2" />
-          <div class="text-subtitle-2">{{ $t("model.notificationTarget.name") }}</div>
-          <pre class="zk-code-preview text-body-2">{{
+          <div class="text-title-small">{{ $t("model.notificationTarget.name") }}</div>
+          <pre class="zk-code-preview text-body-medium">{{
             JSON.stringify(testSendResult.target, null, 2)
           }}</pre>
         </template>
@@ -614,7 +611,7 @@ const createAction = async (): Promise<void> => {
     notificationTargetCreate({
       // 目标名称为单行文本输入，去除首尾空白避免误输入不可见空白
       name: createName.value.trim(),
-      channelId: createChannelId.value as number,
+      channelID: createChannelId.value as number,
       enabled: createEnabled.value,
       config: JSON.stringify(serializeConfig(createSchema.value, createConfigValues.value)),
       language: createLanguage.value,
@@ -782,8 +779,7 @@ const projectFields = (visible: string[]): string[] => [
   ...visible,
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     testSend: testSendAction,
@@ -793,16 +789,6 @@ const getActions = (item: Record<string, any>): ItemActions => {
       deleteConfirmRef.value?.open(i);
     },
   };
-  switch (item.enabled) {
-    case false:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.activate = (i: Record<string, any>) => toggleAction(i, true);
-      break;
-    case true:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.deactivate = (i: Record<string, any>) => toggleAction(i, false);
-      break;
-  }
   return actions;
 };
 
@@ -913,39 +899,11 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
   );
 };
 
-const toggleTarget = ref<boolean | null>(null);
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
-  batchState.value = null;
-  toggleTarget.value = enabled;
-  toggleConfirmRef.value?.open(item);
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
+const itemToggleAction = async (): Promise<void> => {
   const state = batchState.value;
   if (state) {
     batchState.value = null;
     await batchToggleAction(state.items, state.action === "activate");
-    return;
   }
-  if (toggleTarget.value === null) {
-    return;
-  }
-  await getResponse<BatchResultOut>(
-    notificationTargetBatchSetEnabled(toggleTarget.value, [proxy.id]),
-    async (rsp) => {
-      applyBatchResult(rsp.summary, rsp.data);
-      await searchTableRef.value?.refresh();
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
 };
 </script>

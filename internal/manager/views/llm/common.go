@@ -11,6 +11,7 @@ import (
 
 	"zhongkuisec.com/zhongkui/internal/ai"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	pkgllm "zhongkuisec.com/zhongkui/internal/pkg/llm"
@@ -18,8 +19,9 @@ import (
 
 // verifyEmbeddingCompat 取 core 库 knowledge_chunks.embedding 列的维度，交由
 // ai.VerifyEmbeddingCompat 完成「端点实际维度 vs 列维度」的兼容性判定（两步探测的顺序
-// 与判定规则见该函数），本函数只负责取列维度、把探测与判定失败转成英文错误。二者同为
-// 「绑定 embedding 档位」的前置校验：不兼容时由调用方以 400 拒绝请求。
+// 与判定规则见该函数），本函数只负责取列维度：列不可用时返回按请求语言本地化的 400 拒绝，
+// 其余探测与判定失败转成错误。二者同为「绑定 embedding 档位」的前置校验：不兼容时由调用方
+// 以 400 拒绝请求。
 func verifyEmbeddingCompat(c *gin.Context, cfg pkgllm.ModelConfig) (int, error) {
 	db := middlewares.GetCoreDatabase(c)
 	colDim, found, err := ai.ChunkEmbeddingDimension(c, db)
@@ -27,25 +29,44 @@ func verifyEmbeddingCompat(c *gin.Context, cfg pkgllm.ModelConfig) (int, error) 
 		return 0, errors.WithStack(err)
 	}
 	if !found {
-		return 0, errors.New("the knowledge index column is not available; run migrate up before binding an embedding model")
+		return 0, response.CreateBadBodyMessageError("llmKnowledgeIndexUnavailable")
 	}
 	return ai.VerifyEmbeddingCompat(c, cfg, colDim)
 }
 
 // modelConfigOf 把模型注册表记录映射为模型端点配置（含解密后的明文凭据）。
 // 供连通性测试复用：ai 只导出「档位绑定 → 端点配置」的映射，未导出的模型可直接测试。
-func modelConfigOf(m *aimodel.LlmModel) pkgllm.ModelConfig {
-	return pkgllm.ModelConfig{
-		Name:        m.Name,
-		Kind:        m.Kind,
-		BaseURL:     m.BaseURL,
-		APIKey:      string(m.APIKeyData()),
-		Model:       m.ModelName,
-		Timeout:     time.Duration(m.TimeoutSeconds) * time.Second,
-		Temperature: m.Temperature,
-		MaxTokens:   m.MaxTokens,
-		Dimensions:  m.Dimensions,
+// 高级请求配置（extra_body）与思考开关的开/关取值须为合法 JSON，解析失败即返回英文错误
+// （不静默降级），由调用方拒绝请求或记为事故。
+func modelConfigOf(m *aimodel.LlmModel) (pkgllm.ModelConfig, error) {
+	extraBody, err := pkgllm.ParseExtraBody(m.ExtraBody)
+	if err != nil {
+		return pkgllm.ModelConfig{}, errors.WithStack(err)
 	}
+	thinkingOnValue, err := pkgllm.ParseJSONValue(m.ThinkingOnValue)
+	if err != nil {
+		return pkgllm.ModelConfig{}, errors.WithStack(err)
+	}
+	thinkingOffValue, err := pkgllm.ParseJSONValue(m.ThinkingOffValue)
+	if err != nil {
+		return pkgllm.ModelConfig{}, errors.WithStack(err)
+	}
+	return pkgllm.ModelConfig{
+		Name:             m.Name,
+		Kind:             m.Kind,
+		BaseURL:          m.BaseURL,
+		APIKey:           string(m.APIKeyData()),
+		Model:            m.ModelName,
+		Timeout:          time.Duration(m.TimeoutSeconds) * time.Second,
+		Temperature:      m.Temperature,
+		MaxTokens:        m.MaxTokens,
+		ContextTokens:    m.ContextTokens,
+		Dimensions:       m.Dimensions,
+		ExtraBody:        extraBody,
+		ThinkingField:    m.ThinkingField,
+		ThinkingOnValue:  thinkingOnValue,
+		ThinkingOffValue: thinkingOffValue,
+	}, nil
 }
 
 // afterConfigWrite 三组写路径（模型 / 档位绑定 / Agent 参数）统一的提交后置动作：

@@ -89,7 +89,7 @@ LlmBindingUnbind 处理解绑档位的请求。 删除该槽位的绑定记录�
 func LlmModelBatchDelete(c *gin.Context)
 ```
 
-LlmModelBatchDelete 批量删除 LLM 模型。 逐条先校验是否仍被档位绑定（被绑定时返回明确英文错误，避免触发外键 RESTRICT 的 500）， 再软删除；模型不存在视为成功跳过（幂等）。全部条目处理完毕后统一重建运行时并广播变更。
+LlmModelBatchDelete 批量删除 LLM 模型。 逐条先校验是否仍被档位绑定（被绑定时返回按请求语言本地化的错误，避免触发外键 RESTRICT 的 500）， 再软删除；模型不存在视为成功跳过（幂等）。全部条目处理完毕后统一重建运行时并广播变更。
 
 <a name="LlmModelCreate"></a>
 ## func LlmModelCreate
@@ -170,7 +170,7 @@ LlmParamSet 处理批量写入 Agent 参数的请求。 先全量校验（键必
 func LlmToolBatchDelete(c *gin.Context)
 ```
 
-LlmToolBatchDelete 批量删除工具。 内置工具（source='builtin'）由代码内注册表声明、生命周期由代码掌握，接口不得删除：只要本批 任一 ID 命中内置工具，就\*\*整批拒绝\*\*并返回明确的英文错误（不做部分删除）。校验通过后逐条软删除， 工具不存在视为成功跳过（幂等）；全部条目处理完毕后统一重建运行时并广播变更。
+LlmToolBatchDelete 批量删除工具。 内置工具（source='builtin'）由代码内注册表声明、生命周期由代码掌握，接口不得删除：只要本批 任一 ID 命中内置工具，就\*\*整批拒绝\*\*并返回按请求语言本地化的错误（不做部分删除）。校验通过后逐条软删除， 工具不存在视为成功跳过（幂等）；全部条目处理完毕后统一重建运行时并广播变更。
 
 <a name="LlmToolListGet"></a>
 ## func LlmToolListGet
@@ -290,7 +290,7 @@ LlmBindingSetIn 定义绑定档位的请求输入结构。
 ```go
 type LlmBindingSetIn struct {
     // ModelID 待绑定的模型 ID
-    ModelID uint `json:"modelId"`
+    ModelID uint `json:"modelID"`
 }
 ```
 
@@ -329,10 +329,21 @@ type LlmModelCreateIn struct {
     Temperature float64 `json:"temperature" default:"0.2"`
     // MaxTokens 单次生成的最大 token 数，默认 4096（仅 chat 模型有意义）
     MaxTokens int `json:"maxTokens" default:"4096"`
+    // ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
+    ContextTokens int `json:"contextTokens"`
     // Enabled 是否启用，默认启用；禁用的模型不可绑定到档位
     Enabled bool `json:"enabled" default:"true"`
     // Description 模型描述，最长 512
     Description string `json:"description" binding:"max=512"`
+    // ExtraBody 高级请求配置：为该模型每次对话请求自动合并的 JSON 对象（原始 JSON 文本，如 {"reasoning_effort":"high"}）；
+    // 空表示不附加，须为合法 JSON 对象否则拒绝
+    ExtraBody string `json:"extraBody"`
+    // ThinkingField 思考开关的请求字段名（如 enable_thinking）；与开/关取值三者齐备时该模型支持思考开关
+    ThinkingField string `json:"thinkingField" binding:"max=64"`
+    // ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+    ThinkingOnValue string `json:"thinkingOnValue"`
+    // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
+    ThinkingOffValue string `json:"thinkingOffValue"`
 }
 ```
 
@@ -360,6 +371,8 @@ type LlmModelDetailOut struct {
     Temperature float64 `json:"temperature"`
     // MaxTokens 单次生成的最大 token 数
     MaxTokens int `json:"maxTokens"`
+    // ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义（embedding 模型为 0）
+    ContextTokens int `json:"contextTokens"`
     // Dimensions 已验证向量维度：后端在绑定 embedding 档位时经真实探测写入的只读缓存
     // （仅 embedding 模型有意义），前端只读、不可提交
     Dimensions int `json:"dimensions"`
@@ -367,6 +380,14 @@ type LlmModelDetailOut struct {
     Enabled bool `json:"enabled"`
     // Description 模型描述
     Description string `json:"description"`
+    // ExtraBody 高级请求配置：为该模型每次对话请求自动合并的 JSON 对象（原始 JSON 文本，空表示不附加）
+    ExtraBody string `json:"extraBody"`
+    // ThinkingField 思考开关的请求字段名（如 enable_thinking）；与开/关取值三者齐备时该模型支持思考开关
+    ThinkingField string `json:"thinkingField"`
+    // ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+    ThinkingOnValue string `json:"thinkingOnValue"`
+    // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
+    ThinkingOffValue string `json:"thinkingOffValue"`
 }
 ```
 
@@ -446,10 +467,21 @@ type LlmModelUpdateIn struct {
     Temperature float64 `json:"temperature"`
     // MaxTokens 单次生成的最大 token 数（仅 chat 模型有意义）
     MaxTokens int `json:"maxTokens"`
+    // ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
+    ContextTokens int `json:"contextTokens"`
     // Enabled 是否启用；禁用的模型不可绑定到档位
     Enabled bool `json:"enabled"`
     // Description 模型描述，最长 512
     Description string `json:"description" binding:"max=512"`
+    // ExtraBody 高级请求配置：为该模型每次对话请求自动合并的 JSON 对象（原始 JSON 文本，如 {"reasoning_effort":"high"}）；
+    // 空表示不附加，须为合法 JSON 对象否则拒绝
+    ExtraBody string `json:"extraBody"`
+    // ThinkingField 思考开关的请求字段名（如 enable_thinking）；与开/关取值三者齐备时该模型支持思考开关
+    ThinkingField string `json:"thinkingField" binding:"max=64"`
+    // ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+    ThinkingOnValue string `json:"thinkingOnValue"`
+    // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
+    ThinkingOffValue string `json:"thinkingOffValue"`
 }
 ```
 
@@ -547,7 +579,7 @@ type LlmSlotBindingOut struct {
     // Slot 档位标识：flash | standard | advanced | embedding
     Slot aimodel.Slot `json:"slot"`
     // ModelID 绑定模型的 ID（未绑定时为 0）
-    ModelID uint `json:"modelId"`
+    ModelID uint `json:"modelID"`
     // ModelName 绑定模型的本地标识（未绑定时为空）
     ModelName string `json:"modelName"`
     // Kind 绑定模型的类型：chat | embedding（未绑定时为空）

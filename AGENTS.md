@@ -55,6 +55,7 @@ import (
   - `errors.WithStack(err)` — 包裹第三方/stdlib 错误（最常见）
   - `errors.Is(err, target)` — 错误链比较
 - Sequential error checks use `if-else` cascading style; error 始终是最后一个返回值。
+- 面向用户的业务错误详情必须走 i18n：需要展示给用户的拒绝原因（如档位绑定失败）一律经 `response.DetailContext` 构造（`CreateBadQueryError` / `CreateSchedulerTaskError` / `CreateBadBodyMessageError` / `CreateLlmBindingIncompatibleError` 等以 `msgID + args` 传参），键写入 `internal/pkg/translate/locales/{zh-Hans,en}.toml` 的 `[error]` 表并保持中英齐备；禁止把 `errors.New`/`errors.Newf` 产出的英文文案直接作为 `details` 下发（`CreateBadBodyError(err)` 仅用于「原因本身是诊断信息、无需本地化」的场景，如端点不可达、凭据无效）。
 
 ```go
 if cryptoKey, err := j.cfg.ExtractCryptoKey(j.kd); err != nil {
@@ -112,6 +113,20 @@ Composite indexes / unique constraints use `uq`/`idx` prefix:
 - **`map` 更新绕过序列化器**：`Updates(map[string]any{...})` / `Update(col, v)` 不经 field serializer，明文直写；加密字段必须走「结构体 + `Select(列...)`」更新以触发序列化器（先例见 `internal/ai/memory.go`、`internal/manager/views/ai/knowledge.go`、`internal/worker/handlers/knowledge/parse.go`）。
 - **`Scan` 到本地结构体不解密**：检索/汇总行结构体须内嵌模型结构体（如 `struct{ ai.KnowledgeChunk; Score float64 }`）以继承 serializer tag，否则静默拿到密文。
 - **已接受的残留明文**：全文检索列 `tsvector`（`search`）、向量列 `embedding`、`title` 保持明文可检索语义，不得写入需加密的正文；业务 Out 直接返回明文字段，无需注册 `plaintextModels`（后者仅用于前端持有密文时的 RBAC 解密查看）。
+- **运行事件负载一并加密**：`agent_run_events.payload` 声明为 `*serializer.Crypto`（可空 `BYTEA`，`offset=12817`），写路径经「结构体 + `Create`」触发序列化器；`agent_live_runs` 不含用户内容，保持明文。
+
+### AI 运行与连接解耦（RunHub）
+
+- **脱管上下文 + 禁止 gin 逃逸**：一次生成由进程级 `RunHub`（`internal/ai/run_hub.go`）在独立 goroutine 中执行，其基础上下文为 `context.WithoutCancel(c.Request.Context())`（`ai.NewDetachedContext`），再叠加 `agentRunMaxDuration` 上界兜底；`DetachedContext` 只承载普通 `context.Context`，**禁止持有 `*gin.Context`**（handler 返回后不可再用）。浏览器断开（关抽屉 / 刷新 / 断网）仅使订阅者退订，运行继续；`RunHub` 经组件访问器在「使用时」解析当前组件，跨配置热重载存活、不重建。
+- **退订宽限自动取消**：某 running 运行的最后一名订阅者退订后，经参数 `agent.runDetachGraceSeconds`（出厂 90，`<=0` 关闭）仍无订阅者时自动取消该运行，避免无人观看仍持续烧 token；定时器回调在持锁下二次确认「仍无订阅者且仍 running」后才取消，避免与新订阅者竞态。
+- **SSE 带序号可续播**：事件行携带 `id:`（事件序号）。`POST /agent/:sessionID/stream` 启动驻留运行后立即以 `after` 为起点订阅并转发（回放 + 实时）；刷新后经 `GET /agent/:sessionID/stream?after=<lastSeq>` 续播（仅回放 `seq > after` 的事件）；`POST /agent/:sessionID/run/cancel` 取消在途运行（已收敛终态时幂等返回 `cancelled=true`）。事件先写每会话内存环形缓冲（回放优先）再异步落库兜底。同一 path 的 GET/POST 元信息必须合并进**单次** `views.RegisterApi`（其内部只注册一次 `OPTIONS`，重复注册同一 path 会 panic）。
+- **刷新后发现在途运行**：`POST /status` 携带可选 `sessionID` 时返回 `liveRun` 快照（`runId/phase/lastSeq/awaitingApproval/pendingCalls`），待审批现场由 `tool_request` 事件重建；运行不存在（`ErrAgentLiveRunNotFound`）视为无 `liveRun`，不报错。
+- **运行阶段枚举**：`AgentRunPhase`（running/done/failed/cancelled/suspended）在 `internal/models/ai/enum.go` 唯一注册（类名 `agentRunPhase`），条目与 `enum.agentRunPhase.<key>` 双语文案同源；`AgentRunEventType` 为内部事件类型，不注册进枚举注册表。
+- **AI 六表真外键 + 级联删除**：`agent_messages` / `agent_memories` / `agent_runs` / `agent_live_runs` / `agent_run_events` 的 `session_id` / `namespace_name` / `run_id` 一律为真外键并显式 `ON DELETE CASCADE`，主键统一 `BIGSERIAL`；禁止以 `session_id = 0` / `namespace_name = ''` 等哨兵值做软引用（数据库直接拒绝悬空引用）。
+- **消息有序性以 `seq` 为准**：`agent_messages.seq` 为会话内单调序号（由 `agent_sessions.message_seq` 在单事务内原子分配），唯一索引 `uq_agent_messages_session_seq (session_id, user_id, seq)`；消息列表 / 历史窗口 / 游标区间 / 滚动摘要游标一律按 `seq` 读写，不再依赖 `created_at` / `id`；`agent_sessions.summary_upto_seq` 记录摘要已覆盖的最大 `seq`。
+- **单会话单在途驻留运行**：`agent_live_runs` 上建部分唯一索引 `uq_agent_live_runs_running (session_id, user_id) WHERE status='running'`；`RunHub.Start` 登记前先收敛同会话在途运行（取消并等待其终态、带超时）再登记，冲突错误转为明确错误，避免孤儿运行。
+- **过期运行数据后台清理**：`internal/ai/run_cleanup.go` 随 `Runtime.Start` 启动（无 etcd 也启动）、随 `Runtime.Shutdown` 停止并等待退出，分批硬删 `agent_runs` / `agent_live_runs` / `agent_run_events` 的过期行；后两表及 `agent_run_events` 新增 `expires_at` 列，事件写入时按与驻留登记同口径填充。
+- **只列活跃会话**：`ListSessions` 仅返回 `status='active'` 的会话。
 
 ### Dependency Injection
 
@@ -151,6 +166,13 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - 翻译入口 `internal/cmd/i18n.go`：命令树本地化在 `Execute()` 的 `localizeCmdTree()`（将字段值作为 key 经 `translate.T` 就地替换）
 - 覆盖 cobra 内置英文命令：`internal/cmd/help.go`（中文 help）、`internal/cmd/completion.go`（中文 completion），根命令 `init()` 中 `RootCmd.SetHelpCommand(helpCmd)` 注册
 - `--help` 不触发 `PersistentPreRunE`，故语言切换必须放在 `Execute()` 入口的 `localizeCmdTree()` 中
+- **长文案走外部文件引用**：locale TOML 中长文本（尤其 HTML 邮件正文）写作 `key = "@相对路径"`，由 `internal/pkg/translate/bundle.go` 的 `resolveExternalLocales` 在解析前就地展开为同目录文件内容；内置（`//go:embed locales`，须递归以含 `locales/emails/*.html`）与磁盘两来源统一经 `fs.FS` 处理，改模板只编辑外部文件、无需改 TOML
+- **长耗时 LLM 任务的进度与汇总**：CLI 中会调用 LLM（尤其是 embedding）的长耗时任务，必须提供「运行期实时进度条 + 结束后明细汇总表」：进度条展示已完成/总数、百分比、处理速度与预计剩余时间；结束后以表格逐条展示条目、动作、耗时、输入 token、输出 token，并附合计行
+- **表头与空任务**：任务开始时一次性打印目标命名空间、使用的模型名与待处理总数；待处理总数为 0 时不创建进度条，改为打印「内容已是最新，无需处理」
+- **上报契约**：进度与用量经可选上报接口（`internal/ai` 的 `SyncReporter`）注入；应用运行期（HTTP 视图层、worker）传 nil，保持零输出、零行为变化——进度输出只属于 CLI
+- **用量降级**：embedding 供应商未返回 usage 时，token 列以 `-` 展示，绝不因此报错或中断
+- **用量来源**：token 用量经上下文级 eino 回调（`callbacks.InitCallbacks`）采集，禁止改动进程级全局回调（`callbacks.InitCallbackHandlers` / `AppendGlobalHandlers`）
+- **同步进度文案 i18n**：相关运行文案统一走 `translate.T`，键归属 `cli.sync.progress.*`，`zh-Hans.toml` 必备、`en.toml` 同步维护，数据占位统一 `[[.X]]`
 
 ### Protobuf
 
@@ -176,10 +198,22 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 ### 长期记忆（Long-Term Memory）
 
-- **隔离维度固定为「命名空间 + Agent 类型 + 来源会话」**：`agent_memories` 的记忆只在来源会话内可见，跨越会话互不检索。唯一索引 `uq_agent_memories_scope_hash` 与检索索引 `idx_agent_memories_namespace_kind` 均须包含 `session_id`；存储层的精确去重、语义合并与向量/关键词两路检索的 Where 一律带 `session_id`，禁止只按 namespace + agent_kind 过滤。
-- **无会话运行不生成记忆**：`session_id = 0`（无会话运行）时 `MemoryStore.Write` 拒绝写入、`Retrieve` 直接返回空、Agent 不注入记忆运行时（`memoryToolContext` 原样返回 ctx）也不检索；避免落进任何会话都检索不到的孤儿桶。
+- **隔离维度固定为「命名空间 + 属主用户 + Agent 类型 + 来源会话」**：`agent_memories` 的记忆只在同属主、同来源会话内可见，跨越用户或会话互不检索。唯一索引 `uq_agent_memories_scope_hash` 与检索索引 `idx_agent_memories_namespace_kind` 均须包含 `user_id` 与 `session_id`；存储层的精确去重、语义合并与向量/关键词两路检索的 Where 及 `ON CONFLICT` 目标列一律含 `user_id`，禁止只按 namespace + agent_kind 过滤。
+- **无会话运行不生成记忆**：无会话运行（`session_id` 为空）时 `MemoryStore.Write` 拒绝写入、`Retrieve` 直接返回空、Agent 不注入记忆运行时（`memoryToolContext` 原样返回 ctx）也不检索；`session_id` 已是真外键（`ON DELETE CASCADE`），数据库拒绝悬空引用（不再有 `session_id = 0` 哨兵），避免落进任何会话都检索不到的孤儿桶。
 - **管理端不提供新增/编辑**：记忆由 Agent 运行期经 `memory_write` 工具生成，管理接口仅保留列表 / 详情 / 删除 / 启停，`AgentMemoryCreateIn` / `AgentMemoryUpdateIn` 及其路由、RBAC 权限点与前端入口一律不得存在。
 - **检索去重复用知识库文本 n-gram（4-gram Jaccard、阈值 `memory.dedupeThreshold`）**；写入去重是 sha256 精确去重 + pgvector 余弦语义合并，两者语义不同，禁止混用。
+
+### 上下文压缩（Context Compaction）
+
+- **容量口径按档位区分**：token 容量随绑定模型走，取自模型注册表 `llm_models.context_tokens`（创建 / 编辑 **chat** 模型时由用户提供，必填正整数；embedding 模型不涉及、留 0），**不再是 agent 参数**；agent 经运行时快照按当前有效档位读取该容量（`Snapshot.SlotContextLimit`，绑定不可用 / 非对话档位为 0，即关闭占用展示与自动压缩）。触发比例仍为参数 `session.compactThresholdRatio`；会话占用取该会话**最近一条助手消息的真实 `PromptTokens`**（无助手消息为 0）；占用比例 = 占用 / **当前有效档位**容量，有效档位按既有解析规则（显式 `slot` → 会话 `target_model` → `agent.defaultSlot`）。
+- **占用比例随档位变化**：切换档位即按新档位容量重算比例；前端容量取自 `AgentStatusOut.slots[].contextTokenLimit`，切换不额外请求。
+- **自动触发条件**：`StreamRun` 在持久化本轮用户消息**之前**按有效档位感知占用；容量 >0 且 `占用/容量 >= compactThresholdRatio` 时**强制推进滚动摘要**（折叠窗口外、尚未被摘要覆盖的全部消息，忽略 `memory.summaryMinEvictedMessages` 下限），并把 `summary_upto_seq` 推进到折叠上界；失败仅告警、绝不中断生成。
+- **压缩事件与流式呈现**：`AgentRunEventType` 新增 `compress_start` / `compress_delta` / `compress_done`（与 `sse.SSEEventValue` 同名常量一一对应，沿用「不注册枚举类、无 i18n 枚举 label」约定）；自动压缩经 `AgentInput.CompressReporter`（仿 `ToolReporter`）由 RunHub 发布（带序号、可续播），手动压缩由 SSE 端点直接写出（无 id、一次性流）；前端按事件呈现「开始 → 摘要流式增量 → 压缩前占用 + 折叠条数」，并在随后生成的 `done.PromptTokens` 补全「压缩前 X → 压缩后 Y」真实对比。
+- **边界语义**：仅**助手回复**可作为压缩边界（用户消息不可作为压缩起点）；边界口径为「第 N 条用户消息（从 1 起，仅计 role=user、按 seq 升序）之后的**首条助手消息** seq」，折叠该轮及其更早的未摘要消息，更晚消息不受影响。
+- **手动压缩端点**：`POST /ai/session/:id/compact` 为 **SSE 流式**（请求体可选 `userMessageIndex`，不传保持全量语义），正常以流 EOF 收敛；越界 / 该轮尚无助手回复沿用既有本地化 404（`ErrMessageNotFound` 语义）；摘要以脱管上下文（`context.WithoutCancel`）完成并落库，**客户端断连不影响持久化**。
+- **复用既有滚动摘要**：压缩即前缀折叠（`agent_sessions.summary` + `summary_upto_seq`）；摘要流式生成由 flash 档位模型 `Stream` 逐块产出。压缩**不删除**消息，只前移上下文起点；每次推进摘要（静默滚动或压缩）在同一事务内追加一条**压缩检查点**（表 `agent_session_compactions`，`summary` 经 crypto 加密、随会话与命名空间级联删除）。
+- **回滚感知的 start bound**：`TruncateMessagesFromUserMessage` 在删除消息的同一事务内，若截断点落在已压缩区间（`summary_upto_seq ≥` 截断起始 seq），恢复「`upto_seq` < 截断起始 seq」的最近检查点的摘要与游标，并作废 `upto_seq ≥` 截断点的检查点；无可用检查点时清空摘要、`summary_upto_seq` 置 0；压缩期间抽取的长期记忆**不受**回滚影响。
+- **会话删除为真实（硬）删除**：`DeleteSession` 经 `Unscoped` 硬删会话行，连同消息 / 压缩检查点 / 长期记忆 / 挂起运行现场 / 驻留运行登记及事件一并整行删除（不再软删除）。
 
 ### RAG 检索（内置工具编排）
 
@@ -187,24 +221,53 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **工具入参仅 `query`**：`knowledge_search` 的入参 schema 只暴露 `query`（必填）；命名空间（`AgentInput.NamespaceName`）与文档限定（`AgentInput.DocIDs`）由本次运行上下文经 `knowledgeToolContext` 注入到 `internal/ai` 侧适配器（`knowledgeSearcherAdapter`），模型入参**不得**携带或改变租户/文档范围——这是多租户安全边界，topK / 融合 / 权重等沿用 `retrieval.*` 参数，模型同样不可越权。
 - **引用经采集器回传**：工具命中由运行期知识采集器（`internal/ai/knowledge_tool.go` 的 `knowledgeCollector`，节点 1 创建、互斥锁保护）累积，节点 4 `finalizeOutput` 读采集器写入 `out.Citations`；禁止在工具 goroutine 内直接写 Eino 图状态。模型未调用工具时 `out.Citations` 为空。
 - **参数治理**：单条命中内容截断沿用 `agent.retrievedDocSnippetLimit`（语义为 `knowledge_search` 单条命中截断长度）；`agent.retrievalSectionTitle` 已删除，用户消息不再内嵌检索知识段（只由业务数据段 + 提问段拼成）。
+- **父子索引（small-to-big，父块 = 整篇文档）**：`Retriever.Retrieve` 在重排得最终 TopK 后调用 `expandDocuments`——按 `document_id` 取回命中分块所属文档的整篇检索文本（`loadDocFullTexts`，按 `chunk_index` 升序拼接「标题路径 + 正文」），同文档仅保留首条命中并替换为整篇全文、标记 `RetrievalResult.Complete=true`，同文档其余命中删除。展开发生在重排之后：向量 / 关键词 / 重排都作用于语义聚焦的小分块，仅最终返回内容提升为整篇，无需改 schema 或通用分块器（表格的原子性保留）。
+  - **整篇展开预算 `retrieval.expandDocLimit`**（rune 数，默认 26000）：按结果顺序**逐篇累计**展开，单篇超过该值或累计后超出该值的文档**退回分块**而非截断整篇；非正数关闭展开。默认值取「覆盖全部 199 篇生成文档（最大者 `http-transport/list` 约 25042 rune）」，与 `agent.maxToolResultBytes` 量级配套——若调低，须同步核验 `agent.maxToolResultBytes` 仍能容纳「整篇展开 + 其余分块命中」的工具结果 JSON，否则会在 `internal/ai/agent.go` 处被二次截断成非法 JSON。
+  - **`Complete` 表达「不再截断」**：为 true 时消费方一律原样返回、不做片段截断——`internal/ai/tools/knowledge.go` 的 `knowledge_search`（`hit.Complete` 时不走 `truncateSnippet`）、`internal/ai/eval.go` 的 `evalSnippet` 均据此豁免 `SnippetLimit`。`Complete` 经 `schema.Document.MetaData` 与 `ToRetrievalResults` 往返，但**不参与线序列化**（`json:"-"`），前端契约不变。
+  - **失败不中断**：取数失败按「增强逻辑失败绝不中断检索」处理——`r.warnf` 告警后返回原分块结果（与使用统计回写同策略）。
 - **不得预设知识库内容范畴**：知识库由用户自行上传维护，内容随命名空间而异，任何一侧都不得假定它是「平台知识」或某一领域资料。工具描述（`knowledgeSearchTool.Info`）、参数说明与系统提示（`agent.systemPrompt`）一律用中性措辞——如「检索用户维护的知识库中的文档片段」「当回答需要引用知识库中的既有资料时调用」；描述检索能力时须写明「语义与关键词混合检索」，不得简化为「语义相似度检索」。系统提示 `agent.systemPrompt` 需引导模型按需调用 `knowledge_search` 并按命中条目标题引用来源。
 - **三层链路与出厂默认**：内置工具元信息（`internal/ai` 的 `ToolSpecs`）、出厂行（`002_fixtures.sql` 的 `llm_tools` 段）、实现注册表（`internal/ai/tools` 的 `Register`）三处必须同步，由 `internal/ai/tools_fixture_test.go` 双向守卫；`knowledge_search` 是只读基础能力，出厂 `enabled=true`，管理员仍可在「工具」页停用，停用后不再进入模型可用工具清单。
 - **dry-run 不走工具**：检索试运行（`Retriever.DryRun` 与视图层 dry-run 端点）保持「确定性检索 → 生成 → RAGAS 评估」链路不变，仍用于评估 RAG 本身，不经 LLM 工具编排。
 
 ### 注释生成文档入 RAG（generated 分区）
 
-- **仅由命令行全量扫库更新、禁止人工维护**：叙述页由代码注释派生（`internal/docs` 的 `Registry()` 自动生成条目，经 `internal/docs.GeneratedNarrativeDocuments` 渲染），禁止人工维护第二份说明；运行期不再隐式写库，仅由 `zki sync docs --namespace <ns>` 走常规工具箱（DB + embedding）全量扫库同步，只入 RAG 不落盘（与「自省注入的知识库不可被随意修改」的既有约定一致）。
+- **仅由命令行全量扫库更新、禁止人工维护**：叙述页由代码注释派生（`internal/docs` 的 `Registry()` 自动生成条目，经 `internal/docs.GeneratedNarrativeDocuments` 渲染），禁止人工维护第二份说明；运行期不再隐式写库，仅由 `zki sync docs` 走常规工具箱（DB + embedding）全量扫库同步，只入 RAG 不落盘（与「自省注入的知识库不可被随意修改」的既有约定一致）。
+- **固定写内置系统命名空间**：叙述页与原生接口目录同属代码声明的公开共享数据，`zki sync docs` 与 `zki sync apis` 一致，固定同步至 `base.SystemNamespace`（无 `--namespace` 参数），经 `base.NamespaceScope` 对所有命名空间的检索可见。
 - **分区隔离**：叙述页落在 `format='generated'`（`docconv.FormatGenerated`）的专用知识域，与人工业务文档分区隔离；同步（`SyncGeneratedDocs`，接收调用方传入的文档集与目标 format）只读写该分区，不得影响人工文档。
 - **幂等同步**：按新增 / 更新 / 删除差异计划幂等执行——正文未变的条目零写入（不重复向量化），条目下线即清理，连续两次执行且源码未变时第二次不产生任何写入。
 - **检索范围**：`knowledge_search` 不限定 format，可命中叙述页与人工文档。
 - **投影边界（参考页不入 RAG）**：进 RAG 的是**单篇**叙述页；`docs/reference/**`（逐包参考档）与项目根 `README.md`（封面 + 目录）是随 `zki create docs` 生成、带 `DO NOT EDIT` 的人读产物，**不入 RAG**，避免同一份说明以整页粒度重复索引。
 
+### 原生接口知识目录（注册期声明 + RAG 同步）
+
+- **注册期单一声明点**：全部原生接口的 OPTIONS 元信息必须经 [catalog.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/manager/views/catalog.go) 的 `RegisterApi` / `RegisterListApi[M,N]` 声明；禁止在 helper 之外直接调用 `StructMetaGinHandler` / `ListMetaGinHandler`（守卫测试扫描 `internal/manager/views/**` 非测试源码拦截裸用）。
+- **fail-fast**：helper 的 `description`（单行中文用途，取自该接口处理器注释）去空白后为空即 panic；声明缺失用途的接口不允许进入 RAG。
+- **声明内容**：helper 在向 gin 注册 OPTIONS 元信息路由的同时，把「完整路径（`group.BasePath()` + 相对路径）、各方法入参 / 出参元信息、单行用途、RAG 开关」记入进程内注册表，键为 `(HTTP 方法, 完整路径)`，重复登记以最后一次为准，导出按（路径, 方法）确定性排序。
+- **RAG 开关**：`WithRagEnabled(bool)` 逐接口控制，缺省纳入；声明为不纳入的接口从同步文档集排除，下次同步时其 `native_api` 分区条目被幂等删除。
+- **离线装配**：[catalog.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/manager/catalog.go) 的 `CollectApiCatalog()` / `CollectApiKnowledgeDocs()` 以空操作中间件构造最小 `views.RegisterContext`，在无 DB / Redis / Etcd 环境下取得与生产一致的目录；在线装配（`RouteRegister`）与离线装配必须共用同一份域注册清单 `registerViewRoutes(rc)`，新增 / 移除视图域只改该函数，避免两份清单漂移。
+- **RAG 分区**：接口知识落在专用分区 `docconv.FormatNativeApi`（值 `native_api`，已登记进 `documentFormat` 枚举并具备中英 label，见 [docconv.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/pkg/docconv/docconv.go)），与叙述页分区 `generated` 及人工文档严格隔离；同步只读写本分区。
+- **子命令**：`zki sync apis`（[sync.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/cmd/sync.go)）把注册期声明的接口目录渲染为 Markdown 知识文档后，复用 `Knowledge.SyncGeneratedDocs` 幂等同步到内置系统命名空间（`base.SystemNamespace`）的 `native_api` 分区——接口目录是代码声明的公开共享数据，故**不需要** `--namespace`；AI 运行时未启用时以本地化错误终止，不触碰数据；正文未变零写入，接口下线或退出 RAG 即清理。
+- **文档渲染形态（检索可读性约束）**：`renderApiKnowledgeDoc` 段落顺序固定为「用途 / 请求 / 请求示例 / 请求头入参 / 入参 / 响应头出参 / 出参 / 响应示例」，四类结构体节各自自包含（同一节内某类型只定义一次，跨节各自重复，便于分块检索时无需依赖整篇展开即可读到本节的类型定义）。每节渲染为「顶层字段表 + 具名嵌套类型子节」：子节标题为 `### <字段路径>（<类型全名>）`，字段路径对切片/数组追加 `[]`、map 追加 `{}`（如 `options[]`），递归展开深度上限 `nestedSectionMaxDepth`；`time.Time` 等标量结构体不展开，类型名集合防环。枚举列内联该枚举类全部取值（`<类名>：<值1>、<值2>`，未注册时退化为仅类名）；`Enum` / `EnumType` 与 `default` 均取自既有标签，不新增标签。
+- **示例生成必须确定性**：[catalog_example.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/manager/views/catalog_example.go) 的 `BuildJSONExample` 逐字节幂等——示例正文参与文档内容摘要（HMAC-SHA256）比对，用 map 组装对象（遍历顺序随机）会导致每次同步都判定「内容已变更」而全量重嵌入。一律按结构体字段声明顺序手工拼装；取值只用类型化占位，不臆造业务样例——枚举字段取枚举类首个 value、有 `default` 标签取该默认值（注意 `utils.ParseScalar` 整数返回 `int`、浮点返回 `float64`，两者都要处理）、字符串 `"string"`、数值 `0`、布尔 `false`、`time.Time` 固定字面量、对象递归展开、数组取单元素示例；深度上限 `jsonExampleMaxDepth` + 类型名集合防环。
+- **预算分页（分块可读性约束）**：字段表与示例代码块按预算切分，使单个分块即可读到完整内容、无需依赖整篇展开——`writeFieldTable` 逐行累积，超 `fieldTableMaxRunes`（480 rune，含表头预算）即另起一张表（重复表头，保证每张表自包含）；`writeExampleSection` 经 `splitJSONExampleBlocks` 在顶层字段边界分组，每组收口为独立合法 JSON 对象且 ≤ `exampleBlockMaxRunes`（480 rune）。两处常量与切分逻辑须保持确定性（同一输入逐字节幂等）。已知不足：单个顶层 key 包裹巨型嵌套数组（如 `{"items":[...]}`）时无法在示例层继续拆分，此类示例依赖整篇展开交付。
+- **后续约定**：Agent 客户端工具 `api_invoke`（后续 spec）的白名单与参数构造必须复用本目录作为「有哪些原生接口可调用、各自用途与入参出参」的唯一事实来源。
+
+### 内置系统命名空间（system，代码声明的公开共享数据）
+
+- **定位与单一常量**：`base.SystemNamespace = "system"`（[consts.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/pkg/base/consts.go)）承载**由代码声明、对所有租户公开共享**的数据，与 `base.DefaultNamespace` 并列为内置命名空间。首个占用者为原生接口目录（`native_api` 分区）。禁止在任何位置写 `"system"` 字面量。
+- **只存一份，禁止复制**：共享数据**不得**按命名空间各复制一份（那会重复索引、重复消耗 embedding token）；一律单份落在 system 作用域，经检索并入生效。
+- **真实行 + 种子化**：`knowledge_documents` / `knowledge_chunks` 的 `namespace_name` 为 `NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE`，故 system 必须有真实命名空间行；该行作为结构性内置行由 `001_init.sql` 紧随 `namespaces` 建表后种子化（值须与 `base.SystemNamespace` 一致，不新增独立迁移文件），其 webhook 占位通知渠道由 `002_fixtures.sql` 第 7 段「为每个已存在命名空间补齐占位渠道」自动覆盖（维持「每个命名空间必有占位渠道」不变式）。
+- **检索并入**：检索在调用方限定命名空间之外自动并入 system 作用域，由公用函数 [base.NamespaceScope](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/pkg/base/namespace.go) 统一解析（空命名空间不追加，保持「空命名空间不命中」语义；system 自身不重复）；凡是按命名空间取数的跨租户操作都应复用它，向量路与关键词路两处 SQL 必须一并使用。`WithDocIDs` 的文档限定保持不变，显式限定文档时不穿透 system。
+- **对前端完全隐藏**：`system` 不出现在命名空间列表（[admin_namespace.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/manager/views/admin/admin_namespace.go) 的 `NamespaceListGet` 过滤 `name <> system`）与用户可访问命名空间（[user.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/manager/views/user/user.go) 的 `visibleNamespaces` 过滤），前端无需改动。
+- **禁止删除**：`NamespaceBatchDelete` 对 system 直接拒绝（业务码 `1120` / `ErrSystemNamespaceProtected`），避免经外键级联清空共享文档；不修改 `core.Cache` 本身（`NamespaceExist` 等仍须能识别该真实命名空间）。
+
 ### 向量与模型对齐（sync embeddings / sync embedding-dimensions）
 
 - **命令分组**：两条命令同属 `zki sync` 组、互为并列：`zki sync embedding-dimensions --dimensions <n>` 只改 schema（列维度），`zki sync embeddings --namespace <ns>` 只改内容（重嵌入向量）。`embedding-dimensions` 不是 goose 迁移、也不产迁移文件，故不归 `zki migrate`。
 - **分工**：列维度重建（`ALTER TYPE` + 清空 + 重建 HNSW）属 `zki sync embedding-dimensions`（须先解绑 embedding 档位）；内容重嵌入属 `zki sync embeddings --namespace <ns>`（以当前 embedding 模型重算知识库文档分块向量 `Knowledge.ReindexNamespace` 与全部 active 长期记忆向量 `MemoryStore.ReindexEmbeddings`）。两者互不替代。
-- **范围与边界**：`sync embeddings` 按命名空间隔离，只重算 `knowledge_chunks` 的向量与 `agent_memories.embedding`，不改文档/记忆正文，也不重写 `search`（tsvector）列；`--namespace` 必填。
+- **范围与边界**：`sync embeddings` 按命名空间隔离，只重算 `knowledge_chunks` 的向量与 `agent_memories.embedding`，不改文档/记忆正文，也不重写 `search`（tsvector）列；`--namespace` 必填。内置系统命名空间的共享文档（如原生接口目录）不随租户命名空间重嵌入，需显式执行 `zki sync embeddings --namespace system` 对齐；`zki sync apis` 在正文变更时会自行重新向量化。
 - **破坏性提醒**：`sync embedding-dimensions` 的 DDL 会 `DELETE` 整张 `knowledge_chunks` 与 `agent_memories`（不只是清向量），故维度变更后长期记忆已无内容可重嵌入（只能重新积累），知识库文档由 `knowledge_documents` 原文经 `sync embeddings` 重建；「同维度换模型」时迁移不触发清表，此时长期记忆与知识库文档都需要 `sync embeddings` 对齐。
+- **索引维度由运维独占**：前端不提交 `dimensions`（Create / Update / Test 入参均无该字段），`llm_models.dimensions` 仅为绑定校验时探测写入的只读缓存；绑定或修改已绑 embedding 档位时经 `verifyEmbeddingCompat`（`ProbeEmbeddingDimensions` 两步探测：先原生维度、再按列维度定向）校验其与 `knowledge_chunks.embedding` 列维度一致，不匹配返回 400 并指引先执行 `zki sync embedding-dimensions`；目标维度仅由该命令 `--dimensions` 显式指定，不做隐式推断。
 
 ### 客户端工具与人工审批（client 工具挂起 / 恢复）
 
@@ -215,6 +278,12 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **单点声明**：运行现场 TTL（`agentRunTTL`，10 分钟）、状态取值（`pending/consumed/expired`，`internal/models/ai` 的 `AgentRunStatus`）与失败类别（`internal/ai` 的 `ErrAgentRun*` 哨兵）必须单点声明，禁止就地字面量。
 - **新增 / 修改工具三处同步**：必须同步 `internal/ai` 的 `ToolSpecs` 元信息注册表、实现（builtin 为 `internal/ai/tools`，client 为 `internal/ai/client_tools.go` 的 schema 注册表）与 `002_fixtures.sql` 出厂行，由守卫测试 `internal/ai/tools_fixture_test.go` 双向守卫。
 - **前端审批契约**：前端收到 `tool_request` 必须进入「等待审批」态而非已完成 / 失败；审批面板须展示工具名与调用参数；批准后以用户自身凭据执行，拒绝时不得发起任何调用；同一轮多个调用必须一次性整体提交（运行现场一次性消费）；开流前返回的业务错误（超时 / 重复提交 / 无权恢复）须以后端 `summary` 提示用户。
+- **两轴合成（审核重要级 × 审核阀门）**：`approvalRequired` 由**四档审核重要级** `auditLevel`（`must` 必须审核 / `suggest` 建议审核 / `auto` 可自动审核 / `none` 无需审核，由后端评估产出）与**三档会话级审核阀门** `reviewValve`（`each` 逐一审核 / `auto` 自动审核 / `none` 无需审核，持久化于 `agent_sessions.review_valve`）合成得出。
+- **判定矩阵（后端单点）**：`approvalRequired = level==must || valve==each || (valve==auto && level∉{auto,none})`；「必须审核」为绝对下界（任何阀门下均需人工），「逐一审核」阀门下任何重要级均需人工，「自动审核」仅 `auto` / `none` 可自动，「无需审核」仅 `must` 需人工。规则唯一实现在 `internal/ai` 的 `NeedsHumanReview`，前端只消费下发的 `approvalRequired`，不得重复实现该规则。
+- **评估独立且保守回落**：重要级由后端在挂起前以**一次**独立 LLM 调用对本次全部待执行调用批量分类产出（优先 `flash` 档位、不可用回退本次运行档位）；评估失败、输出无法解析、条数不匹配或档位非法时一律回落 `must` 并告警，绝不中断挂起。
+- **默认阀门 `each`**：`models/ai.DefaultReviewValve` 取 `each` 且与 `agent_sessions.review_valve` 列默认值一致，保持引入本特性前「一律人工审核」的既有行为，不产生静默行为变更。
+- **定位为判定单点而非安全兜底**：client 工具由前端持用户凭据执行，后端不从技术上阻止前端绕过；后端合成出的 `approvalRequired` 仅供告知与审计留痕（`agent_runs.pending_calls` 记录每条调用的 `auditLevel` 与 `approvalRequired`），真正的闸门在前端。
+- **枚举归属**：`auditLevel` 归 `internal/ai`（评估子系统归属包），`reviewValve` 归 `internal/models/ai`（会话模型列取值空间），各自在归属包 `init()` 注册，前端经 `enum.auditLevel.*` / `enum.reviewValve.*` 渲染。
 
 ### LLM 提示词与工具文案（中文约束）
 
@@ -223,6 +292,14 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **输出语言由提示词声明或代码追加**：回答语言以「跟随用户提问语言」为原则（在 `agent.systemPrompt` 内声明）；`eval.suggestionsSystemPrompt` 的建议正文语言由 `suggestionsSystemPrompt` 在代码侧追加 BCP-47 语言标签指令，禁止把语言约束写进可编辑的提示词正文（否则管理员编辑提示词时会丢失）。
 - **错误信息仍用英文**：工具与内部流程返回的 `error` 面向排障而非终端用户（同 `internal/ai/tools` 包注释），保持英文，不属于本约束所指的「提示词」范畴。
 - **出厂值只对新装库生效**：提示词经 `002_fixtures.sql` 以 `ON CONFLICT (key) DO NOTHING` 种子化，调整文案仅影响新装库；已部署库的存量 `value` / `default_value` 不回填，由管理员在参数页改写。
+- **`agent_params` 是参数值唯一来源**：只读列 `default_value`（仅 `002_fixtures.sql` 注入、接口不可写）与生效列 `value`；代码内零提示词 / 出厂值字面量（`internal/ai` 注册表只留 key / group / kind / comment）。`harness.Load` 启动强校验「注册表键集合 == 库内行集合」且值可按 kind 解析，缺键即 panic 并提示 `migrate up`；「恢复默认」= 将 `value` 回写 `default_value`（不删行）。
+
+### LLM 客户端超时（流式 vs 非流式）
+
+- **禁止以整请求超时约束流式生成**：构造对话客户端时必须经 `einoopenai.ChatModelConfig.HTTPClient` 注入自定义 `*http.Client`（`internal/pkg/llm.NewChatClient` → `newChatHTTPClient`），**不得**使用 `ChatModelConfig.Timeout`——后者在未提供 HTTPClient 时被 eino-ext 落为 `&http.Client{Timeout: t}`，而该超时覆盖整个请求生命周期（含响应正文读取），对 SSE 流式生成同样生效，任何耗时超过 `t` 的长回答都会在读取正文阶段被中断，报 `failed to receive stream chunk: context deadline exceeded (Client.Timeout or context cancellation while reading body)`（曾在检索试运行「生成回答」阶段复现）。
+- **`ModelConfig.Timeout` 的语义按调用方式分流**：流式 `Stream` 中该值仅用作连接建立与响应头（首字节）上限（`DialContext` / `TLSHandshakeTimeout` / `ResponseHeaderTimeout`），整体生成时长交由调用方 context（如 HTTP 请求生命周期）约束；非流式 `Generate` 中该值经 `context.WithTimeout` 施加整请求截止时间。`t <= 0` 表示不施加任何超时。
+- **回归测试**：`internal/pkg/llm/client_test.go` 的 `TestChatClient_StreamExceedsModelTimeout`（服务端停顿远超模型超时后仍读完全部增量）与 `TestNewChatHTTPClient_NoTotalTimeout`（断言 `http.Client.Timeout == 0`）为守卫，禁止改回整请求超时。
+- **禁止在 `NewChatClient` 注入 `response_format`**：同一份档位客户端被结构化输出（重排、记忆抽取、审核分级、dry-run 评估、Agent 主对话）与自由文本输出（会话主题 `session.topicSystemPrompt`、滚动摘要 `memory.summarySystemPrompt`）共用，而 OpenAI 兼容供应商在 `response_format=json_object` 下会校验消息中必须出现 "json" 字样，自由文本提示词不含该字样会被整请求以 400 拒绝（曾在会话创建时复现：`'messages' must contain the word 'json' in some form, to use 'response_format' of type 'json_object'`，主题生成被静默降级为主题兜底、滚动摘要直接失败）。eino 的 `model.Option` 没有按次设置 `response_format` 的入口，故结构化输出**一律由各系统提示词显式声明所要求的 JSON 形状保证**，且各解析函数必须容忍 ```json 围栏包裹（`stripJSONFence` / `parseRerankIndices` / `parseExtractedMemories` / `parseAuditLevels`）。
 
 ### 枚举统一注册表（enum 注册表 / search-generate 规范）
 
@@ -235,7 +312,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **i18n label 键**：统一前缀 `enum.<类名>.<key>`（如 `enum.notificationEvent.tag_event_record`、`enum.httpMethod.GET`），只允许经 **key** 翻译 label，禁止经 value 翻译；中英文 `zh-Hans.toml` / `en.toml` 结构一一对应，新增枚举条目（含注册表来源的新渠道/事件）必须同步补两语言键，未命中回退显示 key 本身。**禁止**任何 `model.*.option.*` 平铺或分组键。键完整性由 `internal/manager/views/enum_i18n_test.go` 的 `TestEnumClassesHaveBilingualLabels` 兜底：遍历 `enum.List()` 断言每个类每个条目的 label 键在每种支持语言下均可解析（解析结果不等于 key），新增枚举类/条目必须同步补两语言翻译文件。
 - **统一枚举接口**：`POST /admin/enum/get`（按 `{type, lang}` 返回单类条目）与 `POST /admin/enum/list`（按 `lang` 返回全量类条目），出参条目均为 `{key, value, label}`，label 跟随请求语言。前端按（枚举类, 语言）组合缓存（`stores/enums.ts`），仅后端进程重启才可能更新，页面间不重复请求。
 - **前端消费契约**：类名常量集中在 `utils/enums.ts` 的 `EnumClass`；`enumFieldTypeOfMeta` 从 meta `bodyOutput` 取字段 `enumType`，`ensureEnum` / `enumEntriesOf` / `enumLabelOf`（value/key 双解析优先 value）/ `enumOptionsOf` 统一经枚举 store；表头/筛选（SearchTable.vue、AdaptiveCell.vue）与页面下拉一律按 `enumType` 定位枚举类，禁止手工维护选项字面量。通知模板 `t` 函数类感知：`t "<类名>" <key|value>` 优先按 value 匹配再按 key 匹配，经 `enum.<类名>.<key>` 渲染 label。
-- **目标模型枚举（tagRuleModel）**：Key 为 `tagengine.ModelKey` 推导的短展示键（camelCase，如 `httpTransport`），Value 为完整类型键（数据库存储语义，驱动 `WHERE model = ?` 匹配 tag_summings）；`TagEventRecordHit.Model` 落库存枚举短键（`toEventHit` 收敛），通知模板 `t "tagRuleModel" .Model` 与展示经同一枚举类收敛；S3 明文查看接口的模型 `switch` 经 `tagengine.ModelKey` 幂等匹配（兼容完整类型键/枚举键两种入参）。禁止 snake_case 与完整类型键作为展示键双写。
+- **目标模型枚举（tagRuleModel）**：Key 为 `tagengine.ModelKey` 推导的短展示键（camelCase，如 `httpTransport`），Value 为完整类型键（数据库存储语义，驱动 `WHERE model = ?` 匹配 tag_summings）；`TagEventRecordHit.Model` 落库存**完整类型键（value）**（`toEventHit` 直存 `hit.Model`、不做 value→key 预转换，与 `TagRule.Model` / `TagSumming.Model` / `TagEventCondition.Model` 一致），展示 label 由消费方经 `tagRuleModel` 枚举类按 `enum.tagRuleModel.<ModelKey>` 推导，通知模板 `t "tagRuleModel" .Model` 与展示经同一枚举类收敛；S3 明文查看接口的模型 `switch` 经 `tagengine.ModelKey` 幂等匹配（兼容完整类型键/枚举键两种入参）。禁止 snake_case 与完整类型键作为展示键双写。
 - **前端禁止声明枚举字面量**：枚举的取值集合、默认值与展示文案**一律由后端接口返回**，前端不得在任何文件中书写枚举取值数组或取值常量——包括 `const SLOT_ORDER = ["flash", "standard", "advanced", "embedding"]`（取值集合）与 `const DEFAULT_SLOT = "standard"`（默认值）这类形式。理由：字面量一旦落在前端就会与后端注册表/参数配置漂移（曾出现助手页把默认档位写死 `standard`，运维把参数 `agent.defaultSlot` 改为 `advanced` 后该页仍按 `standard` 生成）。取值集合与默认值经接口下发（搜索类走 `enumType` / 参数类走 `options` + `enumType` / 状态类走 `defaultSlot` 等），选项文案经 `enum.<类名>.<key>` 渲染，需要固定展示顺序时以接口返回顺序为准，前端不再自行排序。
 - **参数注册表的枚举取值**：参数注册表（`internal/ai` 的 `ParamSpec`）中取值空间属于某个枚举类的参数，必须同时声明 `Options`（封闭取值清单：可选项与写入校验的唯一来源，由枚举/业务注册表**派生**得出，禁止重复书写字面量）与 `EnumType`（枚举类名，仅供消费方按 `enum.<类名>.<key>` 渲染 label）；`param/list` 出参带 `enumType`，前端据此经枚举 store 渲染下拉项文案，未声明 `EnumType` 时字面量本身即文案（如 `retrieval.fusion`）。枚举类名与取值清单的一致性由 `internal/manager/views/llm/param_enum_test.go` 的守卫测试兜底。
 
@@ -263,6 +340,70 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **叙述档渲染约束（重要）**：叙述档在 `internal/docs/render.go` 中额外覆盖 `text` 模板（`narrativeTextTemplate`）关闭纯文本转义，因此叙述来源的 package 注释必须写成「原样 Markdown 且安全」——命令 / 路径 / 配置键 / 标识符一律用反引号包裹（否则 `_`、`*` 等会被 Markdown 解析成斜体 / 加粗）；禁止 `# ` 单井号标题（Go 文档注释只识别单井号为 heading，会渲染成固定层级并与注册表注入的 H1 标题重复、层级倒挂），顶层小节用 `## `、嵌套用 `### `；避免会被当作 HTML 标签吞掉的裸尖括号占位符。
 - **参考档保持内置转义**：参考档不覆盖 `text` 模板，沿用 gomarkdoc 内置转义——这对符号文档里的字面量 `#`、尖括号是正确行为，不得关闭。
 - **守卫测试**：`internal/docs/registry_test.go` 校验分类合法、输出路径唯一、来源包存在、叙述条目元信息完整；改注册表后必须过此测试。
+
+### 密码重置（忘记密码）安全链路
+
+- **公共路由与开关**：`POST /api/v1/user/password/forgot`（申请）与 `POST /api/v1/user/password/reset`（凭令牌重置）均为公共路由（无需认证）；可发性由功能开关注册表判断（`features.PasswordResetKey`）。
+- **防枚举**：`forgot` 无论账号与邮箱是否匹配一律返回成功；仅命中的 `Active` 用户才生成令牌、发信并落库。
+- **令牌只存摘要**：`user_password_resets.token_hash` 存 SHA-256 十六进制（`CHAR(64)`，唯一索引）；原始高熵令牌只出现在邮件链接，库泄露不可直接使用。
+- **单次有效**：重置成功时在同一事务内把该用户全部未使用令牌置 `used = true`（多封邮件仅一次可用）；校验条件为 `token_hash = ? AND used = false AND expired_at > now`。
+- **链接格式**：`{FrontendBaseURL}/{lang}/auth/reset-password?token=...`，语言段取 `base.DefaultLanguage`；`FrontendBaseURL` 是 `manager.Config` 顶层项目级配置。
+- **不可用语义**：SMTP 未启用或 `host` / `from` 缺失时关闭 `PasswordResetKey`，`forgot` 返回业务码 `CodePasswordResetUnavailable`，不生成令牌、不发信。
+
+### Agent 业务数据边界（前端取数透传）
+
+- **不持有登录态、不取业务数据**：AI 通道不引入取数能力，业务数据一律由前端以用户登录会话调用既有授权读接口取得，组装为上下文随生成请求透传。
+- **后端只做边界与清洗**：后端仅施加尺寸 / 条数边界与 `SanitizeBusinessData` 清洗，原样注入 LLM，不自行查询业务库；`businessData` 不落库。
+- **越权规避**：如此据以规避水平越权与提权；若未来新增后端侧取数，必须走用户会话 + 既有鉴权，禁止在 AI 包内直连业务库。
+
+### 标签引擎与 rego（Tag Engine）
+
+- **Rego 契约单一事实**：标签规则必须 `package zki` 并产出 `tags` 规则（`contains` / 赋值），引擎查询 `data.zki.tags`；写入必经两层校验——`ValidateRego` / `InspectRego`（语法 + 契约）与 `ValidateGroup`（`CompileGroup` 组级语义，拦截跨规则冲突）。
+- **目标模型注册表为单一来源**：可打标模型在 `internal/tagengine/registry.go` 的 `Target`（`Type` + `Dimensions`）登记；`TagRule.Model` / `TagSumming.Model` / `TagEventCondition.Model` 与命中明细 `Model` 一律存**完整类型键**（`pkgpath.TypeName`），展示 label 经 `tagRuleModel` 枚举类按 `enum.tagRuleModel.<ModelKey>` 推导，禁止 snake_case 双写。
+- **ID 类型锚点**：所有目标模型须有唯一 `ID` 字段且类型为 `serializer.HexUUID`（注册时反射校验，违规 panic），保证 `tag_summings.ids`（`Array(UUID)`）跨模型统一。
+- **运行期样例校验是写入硬门禁**：创建 / 更新 / 启用 / 回滚必过 `ValidateGroupRuntime`；样例存 `tag_rule_samples`，按（命名空间, 模型）隔离、由 `EnsureModelSamples` / `ListModelSamples` 懒供给；空组、未注册模型、无样例的降级语义见 `internal/tagengine/base.go` 包注释。
+- **第三方数据源按命名空间池**：`vtab.Pools` 为每个命名空间独立持池，数据源以本地名注册（无 `{namespace}__` 前缀）；`Engine` 求值前按命名空间把池绑定到 ctx（`WithDatasourcePool`），builtin `sqlite.query` 从 ctx 取池；同名数据源跨命名空间不复用连接与凭据。
+- **`sqlite.query` 全局注册**：经 `rego.RegisterBuiltin2` 同时注册 `ast` 与 `topdown`，使校验 / dry-run / 样例校验 / 识别全路径可用；生产识别时内置函数报错令规则体不满足（安全闭合），dry-run 与样例校验启用 `StrictBuiltinErrors` 让错误浮出。
+- **标签事件检测语义**：`Detect` 将全部启用条件组装为单条 UNION ALL 查询，`SUM(cnt) > threshold` 为命中；`GroupEvents` 中 `MatchAll = false` 任一条件命中即触发、`= true` 需全部条件命中；非法表达式条件跳过而不报错。
+
+### 数据源插件体系（Datasource）
+
+- **插件自注册**：新增数据源类型实现 `vtab.DatasourcePlugin` 并在该类型所在文件的 `init()` 调 `vtab.RegisterDatasourceType` 自注册（重复 Key panic，启动期快速失败），禁止按类型分发 switch 或维护平行类型清单。
+- **类型键唯一来源**：类型键常量（`DatasourceTypeRedis` 等，见 `internal/pkg/sqlitevtab/vtab/register.go`）是 `Datasource.Type` 的唯一来源，模型层不再复定义。
+- **schema 必填与预检边界**：表型数据源（mysql / postgres / clickhouse / sqlite_file）与 mongo 的 `schema` 必填，注册期不再自动自省；redis / etcd 结构固定由实现给出。`/datasource/test`、`/datasource/introspect` 为纯预检——不落库、不注册 vtable，失败置响应体而非 HTTP 5xx。
+- **重载以存库 config 为准**：`Reload` / `SyncOne` 以存库 config 重调 `Pools.Register`；存量缺 `schema` 的行重载必然失败，需重建。
+- **命名空间隔离与池化**：每个命名空间独立 `SQLitePool`，vtable 以裸名 `{name}` 注册、凭据不串扰；第三方连接经 `internal/pkg/resourcepool` 句柄池化、取数即还，池 Key 不含密码。
+- **超集契约**：表型下推仅为优化，返回必须是真实匹配行的超集（由 sqlite 逐行复查）。
+- **原件加密留存**：`sqlite_file` 原件经 `s3.ObjectCache` 加密留存，`Materialize` 按需拉取解密；未启用 S3 时注册报错。
+
+### 采集与流量（Capture & Traffic）
+
+- **抓包统一经 `wire.Wire`**：以 `Name` / `LinkType` / `SetBPFFilter` / `ZeroCopyReadPacketData` / `Close` 为契约，由 `wire.NewWire` 选路（Linux XDP Native → Generic → afpacket；Darwin 与其他走 libpcap）；禁止直接 `pcap.OpenLive`。
+- **先落盘再上传**：Zstd + AES-GCM 流式写出 `.zkcn` 分片，对象键 `pcap/{namespace}/{name}/{version}/{unixmilli}_{sessionID}.zkcn`。
+- **平台一致性经 gRPC**：以 `reporter_v1` 的 Watch / Feedback 交互；配置存 etcd、元数据存 DB，写操作需双写。
+- **状态观测键**：`{GLOBAL}/reporter/{namespace}/{name}/{version}/sts/{sessionID}`（带租约）；一资源一行，取 `timestamp` 最大的会话。
+- **流量审计只读**：独立路由组 `/api/v1/traffic`，只读查询 raw 库（ClickHouse），强制双时间范围；加密字段以 base64 密文、S3 body 以对象键返回，明文查看走 `/api/v1/plaintext/crypto` 与 `/api/v1/plaintext/s3`。
+- **网络堆栈定位**：`network_stacks` 的 `payloadStartOffset` / `payloadEndOffset` 与 `HttpTransport.AppTailer` 的方向 offset 相交；堆栈以 `traceId` 关联。
+- **ClickHouse 过滤走跳过索引**：高基数字段 `bloom_filter(0.02) GRANULARITY 4`，低基数字段 `set(N) GRANULARITY 1`；不扩展 `ORDER BY`。
+
+### 动作接口批量化（Batch Operations）
+
+- **集合化动作路径**：可集合化动作（`delete` / `enable` / `disable` / `activate` / `deactivate`）统一 `POST /{resource}/{action}`、标识符入 body；`join-group` / `leave-group` / `password/reset` / `frontend-config/reset` 等非集合化动作保留路径标识符（见 Key Rules #7）。
+- **入参 `views.FlexList[T]`**：由 `internal/manager/views/batch.go` 反序列化，同时接受标量与数组；`views.ValidFlexLen` 约束长度 1..100，越界返回 400。字段名按资源而定：user 用 `unionIds`（`serializer.HexUUID`），group / namespace 用 `names`，capturer / tag-rule / tag-rule-sample / tag-event-rule 用 `ids`。
+- **出参 `views.BatchResultOut`**：`{Succeeded, Failed []BatchFailureOut}`，经 `views.BatchExecute` 逐条独立执行、失败不中断并汇总；HTTP 200 仅表示请求已处理，不代表全部成功。
+- **幂等语义**：不存在项与已处于目标状态项计入 `succeeded`；引用冲突 / 校验失败 / DB 错误计入 `failed`。命名空间类资源恒按中间件注入的 `namespace_name` 隔离，不随 body 传入。
+- **权限点与自省**：权限点同步为去标识符段路径（`api:{FullPath}` + `POST` / `OPTIONS`，见 `rbac_policy_templates` / `rbac_policies`）；每个动作接口注册 `OPTIONS` 自省（`WithBodyInput` + `WithBodyOutput[BatchResultOut]`）。
+- **前端**：`SearchTable.vue` 传 `batchActions` 时启用勾选列与批量栏（暴露 `clearSelection` / `selectItems`）；单条行操作与批量走同一接口（body 传标量或单元素数组）。
+
+### 列表字段投影（fields / detail）
+
+- **请求契约**：全部 `POST /xxx/list` 支持可选 `fields: []string`（camelCase，与列表项 JSON 键一致）；请求非空即投影，缺失 / 为空退回类型化全字段 Out。
+- **后端投影**：searcher 实现 `utils.FieldProjector`（`GetFields()` + `ResolveSelectColumns()`）；`BuildSearchDataQuery` 在解析出非空列时 `Select(columns...)`（count 不受影响），`BuildSearchQuery` 投影时在投影列尾追加 `COUNT(*) OVER() AS total` 以保持 total 契约。
+- **`ResolveSelectColumns` 语义**：`GetFields()` 为空 → 返回 nil（不投影）；白名单（`search.toml` 的 `selectFields`）为空 → 返回空列；否则按白名单解析（未知字段静默忽略、去重，白名单含 `id` 时恒含 `id`）。
+- **`selectFields` 完整性**：`search.toml` 中全部 `ListGet` 类型必须配置（fieldName 为 Out 的 JSON 键、column 为数据库列、含 `id`；`NetworkStackListGet` 无 `id`），且须覆盖该类型 Out 的全部 JSON 键，由视图层完整性测试（反射 `GetOptions().Fields` 与 Out 键集合双向比对）fail-closed 兜底。
+- **输出形态**：投影路径经 `utils.ProjectSearchItems[T]` / `utils.ProjectItemFields` 产出 `utils.SearchProjectedOut{total, items []map[string]any}`（每项键 = 请求字段 ∩ 白名单 ∪ `id`）；`SearchOptions.Fields` 经 `OPTIONS` 自省下发。
+- **流量三类型的 `id` 与详情**：`HttpTransport` / `PacketIPv4TCP` / `PacketIPv6TCP` 新增 `id`（`serializer.HexUUID`，写路径生成）；行详情 / 收藏样例 / 堆栈下钻改走 `POST /traffic/{type}/detail`（入参 `{namespace, id}`，未命中 404）拉全字段。
+- **前端**：`SearchTable.vue` 的 `projectFields`（默认 `(visible) => ["id", ...visible]`）决定随请求发送的 `fields`；行操作依赖隐藏列时页面须覆写补齐。
 
 ---
 
@@ -318,6 +459,7 @@ import type { App } from "vue";
 - 全部使用 POST；URL 模式 `/{resource}/{identifier}/{action}`（`/admin/user/{unionID}/get`）
 - 统一响应处理：`getResponse()` 回调，含 `success` / `failed` / `noResponse` / `noRequest`
 - JWT 经自定义 `X-Jwtoken` 头传递（前端常量 `X_JWT_HEADER_NAME`，后端默认 `headerName: "X-Jwtoken"`，同时签发 Cookie `jwtoken`）
+- 全局登录态捕获：后端仅在 JWT 无效 / 过期 / 用户不存在时返回 HTTP 401，而多数调用点省略 `failed` 回调（枚举预取、功能开关加载等），`getResponse` 会静默吞掉错误、用户只看到空数据。故 `apis/base.ts` 的响应拦截器在 401 时广播 `AUTH_FAILED_EVENT`，由 `router/index.ts` 订阅：**仅当已登录（`userStore.exists`）且不在 401 / 登录页时**复位会话（`signOut`）并跳转 401 页面（带 `redirect` 保留原路径）。拦截器只广播、不复位不跳转，避免 `apis` 层反向依赖 `router` / `stores/user`；订阅注册在 router 模块（先于应用挂载求值），以免漏掉首次导航阶段发起的请求。403（`CodeAuthorizeFailed`，权限不足）不参与跳转——权限不足不等同于会话失效
 
 ### i18n
 
@@ -364,6 +506,10 @@ export const useAppStore = defineStore("app", {
 
 - `vee-validate` + `yup`，校验 schema 放 `@/schemas/`
 - `useForm` + `defineField` 模式，配 `vuetifyCfg` 适配器；提交逻辑用 `handleSubmit` 包裹
+- 对话框表单的复位统一放在**打开动作**里（与填充默认值 / 回填详情同一处），不在关闭时复位：复位本就是「准备本次打开的数据」的一部分，挂在打开路径上就天然覆盖关闭按钮 / ESC / 点击遮罩 / 程序化关闭等所有关闭方式，且不会在关闭淡出动画中把表单清空。创建类表单更必须如此——首次打开之前不存在任何关闭事件，默认值只能由打开动作写入。
+- 复位须用原子 API `resetForm({ values })`（或 `resetForm()`），一次性重置值 + `errors` / `touched` / `dirty` / `validated` / `submitCount`；不要逐字段 `resetField`，它不重置表单级校验状态，且要求枚举全部字段，容易漏项。
+- 注意字段状态归**调用方组件**所有：`defineField` 在页面/面板的 setup 中调用，故对话框关闭不会卸载字段，残留的值与校验状态必须由调用方显式复位。
+- 对话框组件（`TempEditableDialog`）只负责开关与自身可编辑态（任何关闭途径都要退出可编辑态），不承担表单复位职责。
 
 ### String Input Trimming 字符串输入去空白
 
@@ -386,6 +532,7 @@ export const useAppStore = defineStore("app", {
 | `web/src/styles/settings.scss` | Vuetify SASS 覆写（`$border-radius-root` / `$body-font-family` 等） |
 | `web/src/components/base/AppDialog.vue` | 对话框骨架 |
 | `web/src/components/base/ExpansionPanelTitle.vue` | 展开面板标题区骨架 |
+| `web/src/components/base/ResizeHandle.vue` | 可拖拽边框手柄（握把视觉 + 指针拖拽逻辑） |
 | `web/src/utils/editorHighlight.ts` | 编辑器语法高亮配色 |
 | `web/src/utils/chartTheme.ts` | 图表主题合成 |
 | `web/src/layouts/{MainLayout,CentralLayout}.vue`、`web/src/components/base/AppHeader.vue` | 布局骨架 |
@@ -394,7 +541,7 @@ export const useAppStore = defineStore("app", {
 
 | 层 | 位置 | 职责 | 允许内容 |
 |----|------|------|----------|
-| 1 令牌层 | `web/src/styles/tokens.scss` | **唯一数值来源** | `$zk-*`（SASS）+ `--zk-*`（CSS 变量）双导出：字体族、字号档位、字重、控件高度、工具栏高度、表格行高、4px 间距栅格、圆角四档、hairline 边框、对话框宽度四档、容器宽度、内容尺寸约束、编辑器外壳、面板表面透明度、z-index、过渡时长、阴影 |
+| 1 令牌层 | `web/src/styles/tokens.scss` | **唯一数值来源** | `$zk-*`（SASS）+ `--zk-*`（CSS 变量）双导出：字体族、字号档位、字重、控件高度、工具栏高度、表格行高、4px 间距栅格、圆角四档、hairline 边框、对话框宽度四档、容器宽度、内容尺寸约束、可拖拽握把、编辑器外壳、面板表面透明度、z-index、过渡时长、阴影 |
 | 2 主题层 | `web/src/plugins/vuetify.ts` | **唯一颜色来源** + 组件默认值 | `theme.colors`（导出为 `--v-theme-*`）+ `defaults`（组件 `variant` / `density` / `rounded` / `elevation` / `maxWidth`） |
 | 3 外壳层 | `web/src/styles/main.scss` | 跨组件复用外观 | `.zk-*` 复用类 + Vuetify / CodeMirror 内部类覆盖 |
 | 4 组件层 | `*.vue` 的 `<style scoped>` | **仅**布局定位 | flex / grid、尺寸约束、溢出、定位 |
@@ -415,7 +562,7 @@ export const useAppStore = defineStore("app", {
 | 排版 | `.zk-section-title` / `.zk-section-subtitle` / `.zk-editor-title` / `.zk-hint` / `.zk-error-text` / `.zk-label-caps` / `.zk-mono-emphasis` / `.zk-metric` / `.zk-step-badge` | 区块标题、次级标题（主标题旁的同级弱化标题，如对话框标题后的实体名）、编辑器标题、提示、字段错误、分组标签、技术标识强调、指标值、步骤徽标 |
 | 编辑器 | `.zk-editor`（+ `.is-error`）/ `.zk-editor-header` | CodeMirror 外壳（主题感知 hairline + `radius-sm`）与标题行 |
 | 请求态 | `.zk-request-loading` / `.zk-request-spinner` | `v-request` 加载态：隐藏按钮原内容并注入 spinner 覆盖层 |
-| 布局 | `.zk-page-container` / `.zk-centered-layout` / `.zk-centered-surface` / `.zk-filter-form` / `.zk-breadcrumbs` / `.zk-refresh-group` | 页面容器、居中骨架、筛选表单（压掉空提示区以保持单行）、面包屑、刷新分体按钮组 |
+| 布局 | `.zk-page-container` / `.zk-centered-layout` / `.zk-centered-surface` / `.zk-filter-form` / `.zk-breadcrumbs` / `.zk-refresh-group` | 页面容器、居中骨架、筛选表单（压掉空提示区以保持单行）、面包屑（兼任页面上方顶隙、居中于 AppBar 与内容表面之间）、刷新分体按钮组 |
 | 交互态 | `.zk-drag-over` / `.zk-row-hover` / `.zk-row-selected` | 拖拽悬停行、可点击行悬停（primary 6%）、常驻选中行（展开面板为「描边盒 + 盒内平铺条目」，盒由外层容器提供，见「展开面板族」） |
 | 网络栈对比 | `.zk-stack-packet`（+ `-request` / `-response`）、`.zk-stack-header`（+ `-primary` / `-secondary`）、`.zk-stack-compare-header` / `-empty`、`.zk-clause-card` | 包卡片（灰色左侧标记条）、协议头摘要 chip、两列对齐占位、筛选子句卡片 |
 
@@ -435,7 +582,7 @@ export const useAppStore = defineStore("app", {
 - 间距只走 4px 栅格（`--zk-space-1..6` = 4/8/12/16/24/32px）；Vuetify 密度工具类（如 `pa-4` / `pa-md-6`）映射同一节奏（`pa-4` = 16px、`pa-md-6` = 24px），自定义 margin / padding 一律取令牌，禁止自由像素值
 - 字号只取令牌档位：`--zk-font-size-caption`(12px) / `body`(14px) / `subtitle`(16px) / `title`(20px) / `heading`(24px)；字重只取 `--zk-font-weight-regular|medium|semibold`（400/500/600）
 - 对话框宽度只有 `sm` / `md` / `lg` / `xl` 四档（`--zk-dialog-width-sm|md|lg|xl`）
-- 控件高度、工具栏高度、表格行高一律取令牌（`--zk-control-height-compact|default`、`--zk-toolbar-height-compact`、`--zk-table-row-height-compact`、`--zk-table-header-height-compact`）
+- 控件高度、工具栏高度、表格行高一律取令牌（`--zk-control-height-compact|default`、`--zk-toolbar-height-compact`、`--zk-table-row-height-compact`、`--zk-table-header-height-compact`、`--zk-panel-title-height-compact`）
 - 边框一律用 hairline 令牌（`--zk-hairline-width` / `--zk-hairline-opacity`，亮色主题强化值 `--zk-hairline-opacity-strong`）或 `.zk-hairline*` 外壳类
 - 全屏居中页（认证页 / 错误页）的表面宽度固定 `--zk-centered-surface-width`(420px)，不随视口放大；高度上限由 `100dvh` 减去 Vuetify 布局偏移（`--v-layout-top` / `--v-layout-bottom`）推导，超出时表面内部滚动。禁止用 `vw` / 百分比表达宽度；高度也必须与内容无关（`height: 100%` 会与 `v-main` 的 `flex: 1 0 auto` 形成循环，永不收缩）
 
@@ -584,6 +731,8 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 
 行高跟随 Vuetify 组件默认值，不另立一套 line-height scale。
 
+**无效值占位符**：字段在当前上下文无意义 / 不适用时（如非向量档位的「向量维度」、未填写的可选值），统一以 em dash「—」占位（配 `class="zk-hint"`），与正常取值区分。该字符经 `utils/base.ts` 的 `INVALID_PLACEHOLDER` 引用，禁止就地写 `0` / 空串 / 其它符号充当无效值。
+
 **`.font-mono` 用途**：ID（union ID / rule ID / task ID）、哈希、十六进制值、字节 / 包计数：
 
 ```vue
@@ -629,18 +778,25 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 
 ### 组件与变体约定（Component & Variant）
 
-- **默认值集中声明**：凡 `plugins/vuetify.ts` 的 `defaults` 已覆盖的属性（`variant` / `density` / `rounded` / `elevation` / `maxWidth` / `size`），用法处**禁止**重复声明。默认值全清单见本节末「组件默认值清单」，与 `plugins/vuetify.ts` 的 `defaults` 对象逐项对应。
+- **默认值集中声明**：凡 `plugins/vuetify.ts` 的 `defaults` 已覆盖的属性（`variant` / `density` / `rounded` / `elevation` / `maxWidth` / `size` / `inset`），用法处**禁止**重复声明。默认值全清单见本节末「组件默认值清单」，与 `plugins/vuetify.ts` 的 `defaults` 对象逐项对应。
+- **开关统一内嵌轨道**：全站 `v-switch` 由 `defaults` 固定为 `size: "small"` + `inset: true`（内嵌轨道胶囊 + 缩小滑块的经典形态），用法处**禁止**再声明 `size` / `inset`——否则会在同一页面内出现细轨道与胶囊轨道并存的两种形态。`density` 不在其中：抽屉工具条、条件卡片等紧凑容器内仍按容器高度就地声明 `density="compact"`。先例反例：`pages/[language]/admin/capturer.vue`（曾与 `notification/*` 各页开关形态不一）。
 - **一个功能族一个变体基线**：同一功能族的组件（全部对话框、全部 CodeMirror 编辑器、全部信息面板、全部 chip、全部日期时间字段）共享同一骨架与同一视觉基线；需要变体时必须**成对定义**（如 `size: "sm" | "md" | "lg" | "xl"`）并在样式层集中实现，禁止各组件内自写一套。
 - **输入族变体基线**：所有输入类组件（`VTextField` / `VSelect` / `VAutocomplete` / `VCombobox` / `VTextarea` / `VNumberInput` / `VFileInput` / `VField`）必须**全部**在 `plugins/vuetify.ts` 的 `defaults` 中登记 `variant: "outlined"` + `density: "compact"`。理由：Vuetify 这些组件**自带的默认 variant 是 `filled`**，漏登记不会报错，只会静默退化为灰色填充，与同族 outlined 控件并排时明显分裂（`VNumberInput` / `VFileInput` 曾长期如此）。新增或升级 Vuetify 输入组件时必须同步补登记，并在本节末「组件默认值清单」中更新对应行——该清单与 `defaults` 对象必须逐项一致。
 - **扩展面板单展开**：`VExpansionPanels` 已由 `plugins/vuetify.ts` 的 `defaults` 固定为 `variant: "accordion"`，语义是**同一时刻只展开一项**，用法处**禁止**声明 `multiple`。理由：`multiple` 与 `variant` 在 Vuetify 内是**正交**的两组属性（`variant` 只落 `--variant-accordion` 样式类，是否允许多开只由 `multiple` 决定），一旦声明就只保留手风琴外观、却突破其单开语义，出现多个面板同时展开；同一手风琴内的 `v-model` 也必须是**单值**（无展开项时为空串），不得声明为数组。先例：`components/admin/AgentParamPanel.vue`、`pages/[language]/ai/knowledge.vue`。
 - **展开面板标题区**：全部 `v-expansion-panels` 的标题一律走 `web/src/components/base/ExpansionPanelTitle.vue`（图标头像 + `.zk-section-title` 标题 + `.zk-hint` 说明；右侧 `actions` 槽插在组件统一渲染的 chevron 之前），**禁止**在用法处自写 `v-expansion-panel-title` 结构或手写 chevron。状态类图标需要旋转动效（运行中 / 加载态）时走组件的 `spin` prop（复用 `@mdi/font` 的 `.mdi-spin` 动画），用法处不得另挂图标。先例：`pages/[language]/profile.vue`、`components/admin/AgentParamPanel.vue`、`components/admin/RegoDryRunPanel.vue`、`components/admin/TagEventRuleDryRunPanel.vue`、`pages/[language]/ai/knowledge.vue`、`components/forms/DatasourceGuidePanel.vue`。
-- **展开面板族 = 描边盒 + 盒内平铺条目**：全站 `v-expansion-panels` 一律呈现「一个 hairline 描边盒，盒内以面板间 1px 分隔线分条」，条目自身无边框、无悬浮阴影。描边盒**只能由外层容器提供，且恰好一层**（`.zk-panel` 包裹 div、`TabView` 卡片、`.zk-editor` 外壳三种皆可，按所在页面结构择一）；`v-expansion-panels` 自身**禁止**再带 `.zk-panel` / `.zk-editor` / `.zk-hairline` 等描边类（曾出现面板组自身带 `.zk-panel`、外层参考栏也带 `.zk-panel` 的双层框，以及「有阴影 / 无边框平铺 / 有边框」三种观感并存）。`.v-expansion-panel__shadow` 抬升阴影已由 `styles/main.scss` 全局 `display: none`，用法处不得覆写或重新引入。其余外观（标题 `16px 24px` / 48px、展开态 64px；内容 `8px 24px 16px` 内边距；手风琴 variant 下展开项 `margin-top: 0`）保持 Vuetify 默认，禁止在用法处覆写内边距 / 底色 / hover 遮罩。先例：`pages/[language]/profile.vue`（包裹 div 提供盒）、`components/admin/AgentParamPanel.vue`（TabView 卡片提供盒）、`components/admin/{Rego,TagEventRule}DryRunPanel.vue`（`.zk-editor` 外壳提供盒）、`components/forms/DatasourceGuidePanel.vue`（外层参考栏提供盒，根节点已去掉自身描边）。
+- **标题行元信息收敛为 icon + tooltip**：阶段 / 条目级的运行元信息（模型名、耗时、Token 用量、失败原因等）**禁止**常驻标题行——长文本会挤占并压缩标题可读性。一律收敛为标题行 `actions` 槽内的 info 图标（`mdi-information-outline`，`size="x-small"`，`color="primary"`），hover 经 `v-tooltip` 按需展示、逐行左对齐；无内容时不渲染图标。tooltip 宽度用 `max-width` 属性限制（浮层内容为行内样式，CSS 类覆盖无效）。阶段级元信息（尤其模型名）必须由流式阶段事件（`ai.StageEvent`）随每次阶段状态实时携带，**禁止**只依赖收尾汇总（`DryRunMeta.Calls`）——否则运行中 hover 取不到值。明细每一项统一写作「**标签: 值**」（含模型、耗时、输入 / 输出 / 合计 Token、失败原因），不得混用「标签 值」的空格分隔——同一组文案（如 `metaTotalTokens`）在 tooltip 与汇总脚注等多处复用时，写法必须一致，否则读者无从判断字段边界。先例：`pages/[language]/ai/knowledge.vue`（检索试运行阶段元信息 + 汇总脚注）+ `internal/ai/eval.go` 的 `evaluate` 经 `emit` 统一注入 `StageEvent.Model`。
+- **展开面板族 = 描边盒 + 盒内平铺条目**：全站 `v-expansion-panels` 一律呈现「一个 hairline 描边盒，盒内以面板间 1px 分隔线分条」，条目自身无边框、无悬浮阴影。描边盒**只能由外层容器提供，且恰好一层**（`.zk-panel` 包裹 div、`TabView` 卡片、`.zk-editor` 外壳三种皆可，按所在页面结构择一）；`v-expansion-panels` 自身**禁止**再带 `.zk-panel` / `.zk-editor` / `.zk-hairline` 等描边类（曾出现面板组自身带 `.zk-panel`、外层参考栏也带 `.zk-panel` 的双层框，以及「有阴影 / 无边框平铺 / 有边框」三种观感并存）。`.v-expansion-panel__shadow` 抬升阴影已由 `styles/main.scss` 全局 `display: none`；`.v-expansion-panel-title__icon` 亦由 `styles/main.scss` 全局补 `align-items: center`（Vuetify 未声明该属性，图标为固定尺寸无法被 stretch，会退化为顶部对齐，致 `x-small` 元信息图标与展开箭头垂直错位）。两处覆盖均用「两个类」选择器（0-2-0）以在浮层内同样命中，用法处不得覆写或重新引入。其余外观（标题 `16px 24px` / 48px、展开态 64px；内容 `8px 24px 16px` 内边距；手风琴 variant 下展开项 `margin-top: 0`）保持 Vuetify 默认，禁止在用法处覆写内边距 / 底色 / hover 遮罩。标题区存在唯一变体：`ExpansionPanelTitle` 的 `size="sm"`——收起态压到单行（最小高度取令牌 `--zk-panel-title-height-compact`，纵向内边距 4px，标题与说明并排、头像缩至 24px），只收纵向与最小高度、横向仍为 24px，以维持「标题头像左边缘 ↔ 展开后正文左边缘」的对齐；样式实现在 `styles/main.scss` 同一区块的 `.zk-expansion-title--sm`（展开态需连带 `.v-expansion-panel--active` 祖先才压得过其 `min-height: 64px`），仅供**默认收起、仅作收纳入口**的折叠块使用（`components/ai/AssistantDrawer.vue` 的思考过程——它绝大多数时候不被展开），其余面板一律保留 `md` 默认值。先例：`pages/[language]/profile.vue`（包裹 div 提供盒）、`components/admin/AgentParamPanel.vue`（TabView 卡片提供盒）、`components/admin/{Rego,TagEventRule}DryRunPanel.vue`（`.zk-editor` 外壳提供盒）、`components/forms/DatasourceGuidePanel.vue`（外层参考栏提供盒，根节点已去掉自身描边）。
 - **对话框**：一律走 `web/src/components/base/AppDialog.vue` 骨架（紧凑工具栏「图标 + 标题 + 关闭图标按钮」+ `VDivider` + 可滚动主体 + 可选右对齐页脚）；宽度只取 `size` 四档（映射 `--zk-dialog-width-sm|md|lg|xl`），禁止自由 px。例外：全屏 + 底部过渡形态的 `NetworkStackDialog.vue` 保留原生 `VDialog`。
+- **可拖拽边框**：可拖拽边框一律走 `web/src/components/base/ResizeHandle.vue`（`v-model` 尺寸 + `side` 四边 + `min` / `max`），禁止在用法处自写指针拖拽逻辑。组件贴合父容器指定边，父容器须 `position: relative`；`side` 为 `left` / `right` 调宽、`top` / `bottom` 调高。常驻握把短条的**朝向随轴向切换**，让用户静态即可分辨能力边界——**左右边框为竖条（可拖宽，光标 `col-resize`）**、**上下边框为横条（可拖高，光标 `row-resize`）**，悬停 / 拖拽时转 `primary`；握把的尺寸与常态不透明度取令牌 `--zk-resize-grip-length` / `--zk-resize-grip-thickness` / `--zk-resize-grip-opacity`，禁止在组件外自定义握把外观。先例：`components/ai/AssistantDrawer.vue`（左缘调宽，`min` 320 / `max` 取视口与设计上限收敛值）。
+- **长耗时任务对话框的关闭语义**：承载长耗时任务（检索试运行等）的对话框，运行中必须 `:persistent="running"`——点背景 / ESC 不关闭，避免等待期间误触丢失进度；X / 关闭按钮仍可主动关闭（`persistent` 只拦截点击外部与 ESC，不拦截 `v-model` 变更）。任务状态须挂页面级，关闭时**不得**中止流或清空状态：运行在后台继续，重开续看实时进度 / 结果，仅「重新运行」时清空；工具栏入口以 `ActionButton.spin`（运行中图标转 `mdi-loading` 并旋转，复用 `@mdi/font` 的 `.mdi-spin`）展示运行中指示，且必须保持可点击——**禁止**用 `VBtn` 的 `loading` 表达运行中：它会落 `.v-btn--loading{pointer-events:none}` 吞掉点击（曾导致后台运行期间无法重开对话框）。先例：`pages/[language]/ai/knowledge.vue`（检索试运行）。
 - **代码编辑器**：全部 CodeMirror 编辑器共享 `.zk-editor` 外壳（主题感知 hairline 描边、`--zk-radius-sm`、统一内边距 / 最小高度 / 字号），校验失败态加 `.is-error` 修饰类；语法配色继续复用 `utils/editorHighlight.ts`。
+- **输入光标随主题联动**：凡可输入的光标（原生 caret）颜色必须与全局主题联动——**深色近白、浅色近黑**，即与正文同色（`rgb(var(--v-theme-on-surface))`），不得固定为黑白字面量。原生 Vuetify 输入族（`VTextField` / `VTextarea` / `VSelect` 等）由 `VField.css` 的 `color: rgb(var(--v-theme-on-surface))` 自动带动，无需处理，**禁止**覆盖其 `caret-color`（Vuetify 自身为 `VSelect` / `VCombobox` / `VAutocomplete` / `VOtpInput` 置 `caret-color: transparent` 以隐藏 caret、改由选中项呈现，覆盖会破坏该行为）。自定义输入组件（以 CodeMirror 编辑器为代表）必须显式遵守：CodeMirror 的 baseTheme 只在 `&light` / `&dark` 两个分支里给 caret 定色，而分支由 `EditorView.darkTheme` facet 决定——本项目只切换语法高亮、**从不设置该 facet**，于是深色主题下仍走 `&light` 分支、caret 落为黑色，在深色编辑区中不可见（即先例缺陷）。统一修正在 `styles/main.scss` 的 CodeMirror 段：用 `.cm-editor.cm-focused .cm-content { caret-color: rgb(var(--v-theme-on-surface)) }`（0-3-0，压过 baseTheme 的 0-2-0，因其样式在挂载时才注入、晚于本文件、同权重会反压）覆盖，**不加 `!important`**（`drawSelection()` 启用后 baseTheme 会以 `caret-color: transparent !important` 隐藏原生 caret，不可与之争夺）；用法处与各编辑器 `<style scoped>` **禁止**再自写 `caret-color` / `caretColor`。若将来某编辑器启用 `drawSelection()`（改为绘制光标），必须同时把绘制光标纳入同一变量——`.cm-editor.cm-focused .cm-cursor, .cm-editor.cm-focused .cm-dropCursor { border-left-color: rgb(var(--v-theme-on-surface)); }`（0-3-0，压过 baseTheme 的 `&dark .cm-cursor` 0-2-0），否则该编辑器会退回黑白 caret。先例：`components/forms/JsonEditor.vue`（用户选中的 `.json-editor-host > .cm-content`）。
 - **图标按钮**：统一 `variant="text"`（`density="compact"` 由 `VBtn` 默认值提供）+ `:title`（tooltip）+ `:aria-label`。
 - **图标语义**：操作类用 `mdi-*` 动词图标（`mdi-close` / `mdi-refresh` / `mdi-delete`）；状态类用「语义色 + 图标」组合（`color="success|warning|error|info"`）；禁止装饰性图标，禁止只靠颜色表达状态。
 - **密码类字段的明文 / 掩码切换图标**：`append-inner-icon` 表达字段**当前状态**，而非点击后将执行的动作——已明文展示时为 `mdi-eye`，处于掩码态时为 `mdi-eye-off`。`type` 与图标必须由同一开关驱动、方向一致：`:type="revealed ? 'text' : 'password'"` 配 `:append-inner-icon="revealed ? 'mdi-eye' : 'mdi-eye-off'"`，`@click:append-inner` 翻转该开关。禁止反向映射（掩码态显示睁眼图标）。先例：`components/forms/PasswordField.vue`、`components/admin/LlmModelPanel.vue`、`pages/[language]/datasource.vue`、`pages/[language]/notification/channel.vue`。
 - **组件自有内边距不外覆**：自带内边距的组件（`v-btn` / `v-chip` / `v-list-item` / `v-text-field` 等）其内部间距由组件自身拥有，用法处**禁止**用间距工具类覆盖其**纵向**内边距（`pa-*` / `py-*` / `pt-*` / `pb-*`）。理由：Vuetify 间距工具类带 `!important`、会覆盖组件内边距，而组件高度是固定值（`VBtn` 的 `--v-btn-height` 在 `density="compact"` 下仅 24px）——上下各吃 8px 后内容区只剩 8px，装不下 20px 的行盒，文字会**溢出到背景之外**（登录页曾出现「登录」二字突破按钮底色 4px）。仅**横向**覆盖（`px-*`）不触发该问题，可用于有意收紧横向留白。按钮行的间距一律由容器提供：`v-card-actions` 自带 `padding: 8px` + `gap: 8px`，其余场景用容器的 `ga-*`。
+- **无背景 / 无边框的独立控件必须自带对称内边距**：一个控件若视觉上既无底色也无描边、且**作为独立可点击单元与相邻控件并排**（工具条里的下拉、裸输入框等），其左右内边距必须由**控件自身**声明为对称值——不得为 0，也不得把内侧留白推给外层容器的 `padding` 或兄弟元素的 `margin` 拼凑。理由：`plain` / `underlined` 是 Vuetify 为「与周围文字齐平的内联输入」设计的变体，**有意把取值区内边距归零**（`.v-field--variant-plain.v-field { --v-field-padding-start/end: 0 }`）；而全站输入族默认登记为 `outlined`（见「输入族变体基线」）自带 16px 对称内边距，所以某一处显式改用 plain 就会成为全站唯一「内容贴死边界」的例外，无从判断留白是设计还是遗漏。再叠加 `v-select` 恒带 `append-inner` 插槽而命中的 `.v-field--appended` 6px **单侧**右内边距，还会进一步退化成左右不对称。正确做法是在该控件的 `.v-field` 上补回对称内边距（直接写 `padding-inline`，或用 `--v-field-padding-start/end` 自定义属性并抹平 append 的单侧偏移），使「外边界 → 内容 → 内部图标 → 外边界」各段间距相等。判断标准是**该控件是否作为独立单元与相邻控件并排**：是则必须自带对称内边距；反之，控件本身是**内联输入**（嵌在表格单元格 / 表单正文里、须与相邻文字左边缘齐平，如 `components/table/AdaptiveCell.vue`）时保留 0 内边距才是正确目标，不受此约束。同一容器内若有多个控件需要文字左边缘对齐（如对话框底部的正文输入框与工具条控件），对齐点 = **容器内边距 + 控件自身内边距**之和，两处必须一并核算，不能只算其中一层。先例：`components/ai/AssistantDrawer.vue` 的档位 / 审核阀门两个下拉（补 4px 对称内边距）与正文输入框（补 12px 对称内边距，与「容器 8px + 控件 4px」的控件文字左边缘对齐）。
+- **列表 / 下拉选项的内聚与字号**：`v-list-item` 用作下拉选项或列表项时，图标与其相邻文本之间的间距**两侧**都由全局样式统一收紧到 8px（`--zk-space-2`）——Vuetify 在两者之间插入一个 32px 的 `.v-list-item__spacer`（前置侧为「图标 → 文本」，尾部侧为「文本 → 图标」），会把图标与文本拉散成两个互不相干的块；说明性副文本（`v-list-item-subtitle`）统一降一档为 caption（`--zk-font-size-caption`，12px）——Vuetify 默认 0.875rem（14px）与正文本同号、只靠颜色降级，在密集的选项里偏重。两处覆盖均登记在 `styles/main.scss`，用法处**禁止**就地覆写：下拉菜单挂在 `document.body` 下的 `.v-overlay-container` 里、**不在** `.v-application` 内，故不能带 `.v-application` 前缀，改用「四个类」（0-4-0）压过 Vuetify 自身的 `.v-list-item__{prepend,append} > .v-icon ~ .v-list-item__spacer`（0-3-0），才能同时命中应用内与浮层内并与注入顺序无关。先例：`components/ai/AssistantDrawer.vue` 的审核阀门下拉选项（图标 → 标题 32px → 8px）。
 - **列表页骨架**：**搜索驱动列表页**（后端提供 `SearchIn` / `SearchOut` / `SearchOptionsOut` 搜索契约）必须使用 `web/src/components/table/SearchTable.vue`，禁止手写骨架；**非搜索驱动列表页**（客户端数据 / 看板类，后端无搜索契约，如 `pages/[language]/etl/{task,queue,scheduler}.vue`）**不得**强行套用 `SearchTable`，但必须逐项复用其视觉骨架：扁平卡片（`<v-card flat>`）内的「筛选行（`px-4 pt-3 pb-2` + `.zk-filter-form`）→ 操作按钮行（`px-4 pb-2 d-flex justify-end align-center ga-2` + `action-button-group` + `column-visibility-menu`）→ `<v-container fluid class="px-4 pt-0 pb-4">` 包裹的表格」；单元格一律用 `adaptive-cell`，列显示配置一律用 `useColumnVisibility`。理由：骨架一致是硬要求、组件复用是手段——当组件契约不匹配时，以「逐项复用骨架类」达成同一视觉结果，禁止各自发明间距与结构。
 - **全屏居中页骨架**：认证页（登录 / 忘记密码 / 重置密码 / 重置成功）、错误页（401 / 404）与功能不可用说明页（`pages/[language]/feature-unavailable.vue`）必须走 `web/src/layouts/CentralLayout.vue`，不得自建居中容器；尺寸与滚动由骨架的 `.zk-centered-layout` / `.zk-centered-surface` 外壳类统一承载——宽度固定 `--zk-centered-surface-width`(420px)、不随视口放大，高度上限取 `v-main` 的可视高度、超出由表面内部滚动（页面整体不滚动）。页面只提供内容，**禁止**在页面内声明居中、宽度或高度（曾出现登录页卡片内联 `style="width: min(420px, 100%)"` 与骨架内联 `height="100%"`，前者随分辨率被撑到 868px）。
 
@@ -676,6 +832,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 | 组件 | 默认值 | 约定 |
 |------|--------|------|
 | `VField` / `VTextField` / `VSelect` / `VAutocomplete` / `VCombobox` / `VTextarea` / `VNumberInput` / `VFileInput` | `variant: "outlined"`, `density: "compact"` | 输入族统一 outlined + compact |
+| `VSwitch` | `size: "small"`, `inset: true` | 开关统一 small 内嵌轨道形态 |
 | `VDataTable` / `VDataTableServer` | `density: "compact"` | 表格恒为紧凑 |
 | `VDialog` | `rounded: "lg"`, `maxWidth: "var(--zk-dialog-width-md)"` | 12px 圆角，默认 `md` 宽度档 |
 | `VCard` | `elevation: 0` | 扁平 + hairline 描边的表面 |
@@ -721,6 +878,10 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 | `lg` | `--zk-dialog-width-lg` | 900px |
 | `xl` | `--zk-dialog-width-xl` | 1100px |
 
+**发起后端请求的按钮统一走 `v-request`**：主流程按钮（登录、各 CRUD 提交、批量动作、确认框确认）一律 `v-request="handler"`，禁止裸 `@click`；纯导航 / 纯前端按钮不得加。指令接管点击：pending 期禁用并注入 `.zk-request-loading` spinner，`finally` 复位；只管理 DOM 层、不吞 handler 错误；handler 必须返回 Promise（同步逻辑包 `async`）。全局注册于 `plugins/index.ts`，实现见 `web/src/directives/request.ts`。
+
+**一对多编辑统一复用 `InnerEditTable`**：用户权限组、通知目标、用户组策略等一对多编辑一律用 `web/src/components/table/InnerEditTable.vue`，禁止另建同类组件。候选条目由组件统一渲染为紧凑 `v-list-item`，经 `item-title` / `item-subtitle` / `item-append` 插槽定制；已选判定用 `isBound`（按键 `itemKeyField`）；字段名定制走 `itemKeyField` / `subtitleField` prop，不得改组件骨架或回退大卡片。
+
 ### 视觉层级与文本规范（Visual Hierarchy & Text）
 
 **优先用视觉结构表达功能划分，而不是写说明文本**：区块靠「标题 + 分隔/边界 + 间距」表达层级，提示收敛为 icon / tooltip。
@@ -745,6 +906,8 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 - 说明/提示类文本**必须**缩到 `text-caption`（12px）以与字段名（14px）形成字号区分，而不是和字段名同样字号。
 - 不要用 `text-medium-emphasis` / `text-low-emphasis` 表达「次要」——统一改用 `text-on-surface-variant`。
 - 表头一律 caption + `text-on-surface-variant` + 600 + uppercase，由 `styles/main.scss` 的 `.v-data-table th` 统一实现，页面不得重复声明。
+- 表格行操作列（`__actions`）专用于摆放行级按钮，其表头与单元格一律水平居中并固定置尾；该约定由 `utils/column.ts` 的 `useColumnVisibility` 统一覆写，页面与表格不得就地声明该列的 `align` / `fixed`。
+- **列表启用态一律用行内开关**：列表页 / 面板的行级「启用 / 禁用 / 启停」不使用操作列（`__actions`）菜单，一律在对应状态列内用 `EnabledSwitchCell`（`components/table/EnabledSwitchCell.vue`）就地开关——即时调用后端接口、乐观更新、按行 pending、失败回退；布尔字段用 `v-model` 绑定行字段，非布尔状态（枚举 / 布尔派生）用 `:model-value` + `@update:model-value` 映射。批量启停仍保留在批量操作中。
 
 **icon**：可点击项一律带图标；状态一律「图标 + 语义色」，不只靠颜色。语义色（`success` / `warning` / `error` / `info`）只表达状态，`primary` 只表达动作与选中。
 
@@ -802,9 +965,10 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 
 ### 布局约定（Layout）
 
-- **导航抽屉**（`MainLayout.vue`）：常驻抽屉 `width="220"`，开启 `rail` + `expand-on-hover`——收起为 56px rail，悬停展开。抽屉底部 `#append` 槽提供固定按钮（纯图标 `v-btn`、`variant="text"`、居中），让用户常驻展开（`expand-on-hover="!pinned"`），偏好持久化到 `localStorage`（`localManager.getNavPinned` / `setNavPinned`）。父级项作为分组标题（`color="primary"`）并遵循**手风琴行为**（`v-list-group` + `open-strategy="single"` + `v-model:opened`）：默认只展开当前路由所在分组，点击其他分组会收起上一个，点击已展开分组则收起它；展开状态用 Vuetify chevron 指示，展开 / 收起的高度过渡加速到 `0.15s`（见 `MainLayout.vue` 的 `:deep(.v-list-group__items)` 覆写）。rail 模式下全部分组收起，以免在 56px 宽度内溢出；悬停 rail 时重新展开当前路由所在分组。子项缩进 16px（`margin-left: 16px`，`variant="tonal"`）。抽屉与内容区之间由 `.zk-hairline-right` 外壳类分隔。**功能开关只标注可用性、不参与过滤**：功能关闭的子项仍展示，以不可用态呈现（标题 `text-on-surface-variant` 置灰 + 锁定标识，见「功能开关与不可用态 · 导航标识徽章」），点击进入页面后由路由守卫统一引导到「功能不可用」说明页。一级分组标题行同样带标识：全部子项不可用时跟随展示锁定标识，全部子项受命名空间影响时跟随展示命名空间标识（两者同时命中时锁定优先）。
-- **内容区**：`<v-main class="d-flex mb-6">` 包裹 `<v-container class="pa-4 pa-md-6 zk-page-container">`。`.zk-page-container` 把内容上限压在 **`--zk-container-max-width`（1440px）** 并水平居中；页面内容放在 `rounded="lg"` 的 `v-sheet` 中（12px，与全局 `.v-card` 圆角对齐，避免圆角卡片嵌在直角容器里留下月牙形空底）。页面不得自行内联 `max-width`，也不得改动容器内边距。认证页、错误页与功能不可用说明页改用 `CentralLayout`（见「组件与变体约定 · 全屏居中页骨架」）。
-- **AppBar**（`AppHeader.vue`）：扁平（`elevation="0"`），与页面内容之间由 `.zk-hairline-bottom` 外壳类分隔。工具栏按钮用 `variant="text"`。
+- **导航抽屉**（`MainLayout.vue`）：常驻抽屉 `width="220"`，开启 `rail` + `expand-on-hover`——收起为 56px rail，悬停展开。抽屉底部 `#append` 槽提供固定按钮（纯图标 `v-btn`、`variant="text"`、居中），让用户常驻展开（`expand-on-hover` 由「未固定」且「悬停展开已交还」共同决定，见下），偏好持久化到 `localStorage`（`localManager.getNavPinned` / `setNavPinned`）。父级项作为分组标题（`color="primary"`）并遵循**手风琴行为**（`v-list-group` + `open-strategy="single"` + `v-model:opened`）：默认只展开当前路由所在分组，点击其他分组会收起上一个，点击已展开分组则收起它；展开状态用 Vuetify chevron 指示，展开 / 收起的高度过渡加速到 `0.15s`（见 `MainLayout.vue` 的 `:deep(.v-list-group__items)` 覆写）。rail 模式下全部分组收起，以免在 56px 宽度内溢出；悬停 rail 时重新展开当前路由所在分组。子项缩进 16px（`margin-left: 16px`，`variant="tonal"`）。抽屉与内容区之间由 `.zk-hairline-right` 外壳类分隔。**功能开关只标注可用性、不参与过滤**：功能关闭的子项仍展示，以不可用态呈现（标题 `text-on-surface-variant` 置灰 + 锁定标识，见「功能开关与不可用态 · 导航标识徽章」），点击进入页面后由路由守卫统一引导到「功能不可用」说明页。一级分组标题行同样带标识：全部子项不可用时跟随展示锁定标识，全部子项受命名空间影响时跟随展示命名空间标识（两者同时命中时锁定优先）。**rail 收起态仅展示图标**：由 `main.scss` 统一覆写（同一处选集覆盖「不悬停展开」与「悬停展开但未悬停」两个分支），隐藏 `.v-list-item__content` 与整块 `.v-list-item__append`，只保留 `#prepend` 图标——Vuetify 原生 rail 只把 `.v-list-item__content` 的 `min-width` 归零，56px 内标题仍被挤成 0 宽并露出半个首字，同时 `#append` 的标识与展开箭头继续占宽溢出裁切；抽屉展开（悬停展开中 / pin 固定）时规则不命中，标题、标识与展开箭头自动恢复。页面与组件不得就此另行就地覆写。**取消固定需与 hover 展开交接**：Vuetify 在 `rail && expandOnHover` 时把布局让位量恒定为 56px，而元素渲染宽度在悬停时仍是 220px；点击 pin 取消固定的瞬间指针本就悬停在抽屉内（`isHovering` 只由 mouseenter/mouseleave 驱动、与 `expandOnHover` 无关），于是布局已收窄 56px 而抽屉仍渲染 220px，会盖住刚展开的主体。故 `MainLayout.vue` 在「取消固定且指针仍在抽屉内」时先暂停 `expand-on-hover`（`hoverExpandEnabled`），让抽屉与布局同步收窄，待指针离开抽屉后再交还；不得退化为在抽屉内改回 `rail` 之外的其他收窄方式。
+- **内容区**：`<v-main class="d-flex mb-6">` 包裹 `<v-container class="px-4 px-md-6 pt-0 pb-4 pb-md-6 zk-page-container">`。`.zk-page-container` 把内容上限压在 **`--zk-container-max-width`（1440px）** 并水平居中；页面内容放在 `rounded="lg"` 的 `v-sheet` 中（12px，与全局 `.v-card` 圆角对齐，避免圆角卡片嵌在直角容器里留下月牙形空底）。**容器显式 `pt-0`**：Vuetify `.v-container` 默认带 16px 全向内边距，不清零顶部会让面包屑上距被顶到 24px、下距仅 8px 而显得偏低；清零后该顶隙完全由容器首个元素（面包屑 `.zk-breadcrumbs`）的上下对称 `padding-block` 承担，使面包屑垂直居中于 AppBar 与内容表面之间、带高与内容区左侧的对齐留白同值 40px（容器 `px-md-6` 24px + 卡片 `px-4` 16px，即行高 16px + `padding-block` 各 12px）、不再单独占据一整行——页面不得给面包屑追加 `mb-*`（会重新把内容表面推下去一行）。页面不得自行内联 `max-width`，也不得改动容器内边距。认证页、错误页与功能不可用说明页改用 `CentralLayout`（见「组件与变体约定 · 全屏居中页骨架」）。
+- **AppBar**（`AppHeader.vue`）：扁平（`elevation="0"`），与页面内容之间由 `.zk-hairline-bottom` 外壳类分隔。工具栏按钮用 `variant="text"`。**两侧按钮簇由容器统一间距**：`.v-toolbar__prepend` 与 `.v-toolbar__append` 内的按钮间隔统一为 `--zk-space-3`（12px），由 `main.scss` 对 `.v-application .v-app-bar` 下的这两个容器声明 `gap` 实现——Vuetify 的这两个簇虽是 flex 容器但未设 `gap`，簇内按钮之间没有任何默认间距（默认外边距只作用于 `.v-toolbar__content > .v-btn:first-child / :last-child`），此前靠各按钮零散的 `mr-2` 撑开，导致右侧末尾按钮缺外边距、左侧 logo 与命名空间切换按钮完全贴合。故顶栏按钮一律不得自行声明 `mr-*` / `ml-*` 来调间距，新增控件直接受益于容器 `gap`。
+- **数据表页脚**：每页数目下拉（`.v-data-table-footer__items-per-page .v-select`）比常规紧凑控件再压一档，高度统一为 `--zk-control-height-dense`（32px）——由 `main.scss` 覆写 `--v-input-control-height`，SearchTable / 原生 `v-data-table` / InnerEditTable 共用；页面与组件不得就地调整该控件高度。
 - **全局 focus**：`:focus-visible` 渲染 2px `primary` 描边 + 2px offset（`main.scss`），禁止抑制或替换。
 - **表单 / 列表页组装顺序**：每个列表页依次由 `TabView`（标签栏）→ 筛选行 → `ActionButtonGroup` → `SearchTable` 组成：
   - 标签栏独占页面 sheet 顶部一行。
@@ -963,7 +1127,7 @@ meta:
 4. 类型安全：TypeScript strict mode；Go 适当使用泛型
 5. 错误处理：禁止忽略错误，始终包裹上下文
 6. DI：新依赖一律走 `provider/` → `Inject` → `Invoke`
-7. API：RESTful 资源命名 + POST，URL 模式 `{resource}/{id}/{action}`
+7. API：RESTful 资源命名 + POST，URL 模式 `{resource}/{id}/{action}`；集合化动作（delete / enable / disable / activate / deactivate）统一 `POST /{resource}/{action}`、标识符入 body（见「动作接口批量化（Batch Operations）」），`join-group` / `leave-group` / `password/reset` 等非集合化动作保留路径标识符
 8. 测试文件与被测源码放在一起（`_test.go` / `_test.ts`）
 9. 代码与注释中禁止 emoji，除非显式要求
 10. 提交前运行 `pnpm lint`（web 前端 ESLint）、`pnpm lint:style`（Stylelint）与 `pnpm type-check`（vue-tsc），三者全部通过

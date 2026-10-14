@@ -23,7 +23,7 @@
           />
         </div>
         <div class="picker-panel-footer">
-          <v-btn @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
+          <v-btn variant="text" @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
         </div>
       </v-card>
     </v-menu>
@@ -38,7 +38,7 @@
           />
         </div>
         <div class="picker-panel-footer">
-          <v-btn @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
+          <v-btn variant="text" @click="currentTime">{{ $t("action.currentTime") }}</v-btn>
         </div>
       </v-card>
     </v-dialog>

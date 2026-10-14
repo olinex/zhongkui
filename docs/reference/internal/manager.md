@@ -4,9 +4,29 @@
 
 ## Index
 
+- [func CollectApiCatalog\(\) \[\]views.ApiDescriptor](<#CollectApiCatalog>)
+- [func CollectApiKnowledgeDocs\(\) \[\]views.ApiKnowledgeDoc](<#CollectApiKnowledgeDocs>)
 - [func RouteRegister\(ctx context.Context, i do.Injector\) error](<#RouteRegister>)
 - [func RunHttpService\(ctx context.Context, i do.Injector\) error](<#RunHttpService>)
 
+
+<a name="CollectApiCatalog"></a>
+## func CollectApiCatalog
+
+```go
+func CollectApiCatalog() []views.ApiDescriptor
+```
+
+CollectApiCatalog 离线装配全部视图域并返回原生接口目录快照（无需 DB / Redis / Etcd）。
+
+<a name="CollectApiKnowledgeDocs"></a>
+## func CollectApiKnowledgeDocs
+
+```go
+func CollectApiKnowledgeDocs() []views.ApiKnowledgeDoc
+```
+
+CollectApiKnowledgeDocs 离线装配全部视图域并返回纳入 RAG 的原生接口知识文档。
 
 <a name="RouteRegister"></a>
 ## func RouteRegister

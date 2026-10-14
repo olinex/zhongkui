@@ -94,7 +94,7 @@ type AuthConfig struct {
     TokenTimeout time.Duration `mapstructure:"tokenTimeout" default:"1h" comment:"JWT 令牌有效时长，过期后需重新签发或刷新"`
     // TokenRefreshTimeout 是 JWT 令牌的刷新超时时间，
     // 令牌在此时间后无法再刷新，必须重新认证登录
-    TokenRefreshTimeout time.Duration `mapstructure:"tokenRefreshTimeout" default:"1d" comment:"JWT 令牌刷新超时时间，超时后必须重新登录"`
+    TokenRefreshTimeout time.Duration `mapstructure:"tokenRefreshTimeout" default:"24h" comment:"JWT 令牌刷新超时时间，超时后必须重新登录"`
     // HeaderName 是携带 JWT 令牌的 HTTP 请求头名称，
     // 客户端需要在此请求头中传递令牌以完成身份认证
     HeaderName string `mapstructure:"headerName" default:"X-Jwtoken" comment:"携带 JWT 令牌的 HTTP 请求头名称"`

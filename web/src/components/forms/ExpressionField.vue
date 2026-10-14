@@ -26,12 +26,14 @@
             closable
             @click:close="removeSelection(index)"
           >
-            `{{ item.raw.field.title }}`&nbsp;{{ item.raw.action.title }}
-            <span v-show="item.raw.value.value !== null">&nbsp;`{{ item.raw.value.title }}`</span>
+            `{{ asFilterItem(item).field.title }}`&nbsp;{{ asFilterItem(item).action.title }}
+            <span v-show="asFilterItem(item).value.value !== null"
+              >&nbsp;`{{ asFilterItem(item).value.title }}`</span
+            >
           </v-chip>
         </template>
         <clause-field
-          :model-value="item.raw"
+          :model-value="asFilterItem(item)"
           :selected-field-actions="selectedFieldActions"
           :headers="props.headers"
           :modify="true"
@@ -49,7 +51,14 @@
       >
         <template #activator="{ props: actProps }">
           <v-chip color="primary" v-bind="actProps" append-icon="mdi-plus-circle">
-            <v-avatar>{{ props.modelValue.length }}</v-avatar>
+            <!-- 计数徽标：头像落在 prepend 槽并显式 start —— 只有 `v-avatar--start` 才带
+                 Vuetify 为「chip 内前导头像」准备的内建间距（margin-inline-end）。
+                 默认槽里的裸头像只会落进 .v-chip__content（inline-flex 且无 gap），
+                 与文本紧贴；而 prepend 槽自身不注入 start 默认值（VChip 仅在设置了
+                 prepend-icon / prepend-avatar 属性时才启用该 defaults），故必须显式声明 -->
+            <template #prepend>
+              <v-avatar start>{{ props.modelValue.length }}</v-avatar>
+            </template>
             {{ $t("model.__base.content.condition") }}
           </v-chip>
         </template>
@@ -75,6 +84,11 @@ export interface FilterItem {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   value: { value: any; title: string };
 }
+
+// Vuetify 的 selection 槽运行期传入的是原始筛选项（VSelect.js 里 `item: item.raw`），
+// 但槽位的静态类型被标注为 ListItem<any>，声明与实现不符——直接访问 .field / .action
+// 会被报「类型上不存在该属性」。此处按运行时事实收口为 FilterItem，避免把类型断言散进模板。
+const asFilterItem = (item: unknown): FilterItem => item as FilterItem;
 
 const addMenuOpened = ref(false);
 

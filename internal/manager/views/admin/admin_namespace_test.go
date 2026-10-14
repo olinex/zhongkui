@@ -136,6 +136,34 @@ func TestNamespaceListGet(t *testing.T) {
 
 			So(w.Code, ShouldEqual, http.StatusOK)
 		})
+
+		Convey("应隐藏内置系统命名空间", func() {
+			// system 行由迁移种子化，作为对照再建一个普通命名空间
+			So(db.Create(&core.Namespace{Name: "visible-ns", Description: "可见命名空间"}).Error, ShouldBeNil)
+
+			reqBody := map[string]any{
+				"page":     1,
+				"pageSize": 50,
+			}
+			body, _ := json.Marshal(reqBody)
+
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/namespace/list", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int `json:"code"`
+				Data struct {
+					Items []map[string]any `json:"items"`
+				} `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			for _, item := range resp.Data.Items {
+				So(item["name"], ShouldNotEqual, base.SystemNamespace)
+			}
+		})
 	})
 }
 
@@ -404,6 +432,29 @@ func TestNamespaceDelete(t *testing.T) {
 			}
 			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
 			So(resp.Data.Succeeded, ShouldEqual, 1)
+		})
+
+		Convey("应拒绝删除内置系统命名空间", func() {
+			payload := []byte(`{"names":"` + base.SystemNamespace + `"}`)
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/namespace/delete",
+				bytes.NewReader(payload))
+			req.Header.Set("Content-Type", "application/json")
+			r.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusOK)
+			var resp struct {
+				Code int                  `json:"code"`
+				Data views.BatchResultOut `json:"data"`
+			}
+			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
+			So(resp.Data.Succeeded, ShouldEqual, 0)
+			So(len(resp.Data.Failed), ShouldEqual, 1)
+			So(resp.Data.Failed[0].ID, ShouldEqual, base.SystemNamespace)
+
+			// system 行仍存在（未被删除）
+			var ns core.Namespace
+			So(db.First(&ns, "name = ?", base.SystemNamespace).Error, ShouldBeNil)
 		})
 	})
 }

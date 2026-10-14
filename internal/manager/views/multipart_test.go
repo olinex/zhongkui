@@ -15,6 +15,9 @@ import (
 	// 第三方
 	"github.com/gin-gonic/gin"
 	. "github.com/smartystreets/goconvey/convey"
+
+	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 )
 
 // newMultipartContext 构造携带 multipart/form-data 请求体的 gin 测试上下文，body 由 build 写入。
@@ -69,7 +72,10 @@ func TestReadMultipartFile(t *testing.T) {
 		called := false
 		file, err := ReadMultipartFile(c, func(string, []byte) { called = true })
 		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldContainSubstring, "exceeds the maximum size")
+		// 超限详情为可本地化的 DetailContext，须经 ToGinH 按语言渲染后再校验文案。
+		codeErr, ok := err.(*response.CodeError)
+		So(ok, ShouldBeTrue)
+		So(codeErr.ToGinH(newBaseTestLocalizer(), nil)["details"], ShouldContainSubstring, "exceeds the maximum size")
 		So(file, ShouldBeNil)
 		So(called, ShouldBeFalse)
 	})

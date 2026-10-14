@@ -76,17 +76,17 @@ func TestNewMemory_NilArgs(t *testing.T) {
 }
 
 // TestSummarize_Advances 测试滚动摘要推进：返回模型回复（去首尾空白）与被挤出消息的最后一条
-// ID，且请求携带配置的摘要系统提示与「既有摘要 + 被挤出消息」的用户提示。
+// seq，且请求携带配置的摘要系统提示与「既有摘要 + 被挤出消息」的用户提示。
 func TestSummarize_Advances(t *testing.T) {
 	ctx := context.Background()
 	chat := newScriptedChat("  new summary  ")
 	mem := newTestMemory(t, newTestSessionDB(t), chat, stubEmbedder{}, map[string]string{
 		"memory.summarySystemPrompt": "summary system prompt",
 	})
-	session := &ai.AgentSession{NamespaceName: "default", Summary: encTestValue("old summary"), SummaryUptoMessageID: 3}
+	session := &ai.AgentSession{NamespaceName: "default", Summary: encTestValue("old summary"), SummaryUptoSeq: 3}
 	evicted := []*ai.AgentMessage{
-		{BaseModel: database.BaseModel{ID: 4}, Role: ai.MessageRoleUser, Content: encTestValue("u")},
-		{BaseModel: database.BaseModel{ID: 5}, Role: ai.MessageRoleAssistant, Content: encTestValue("a")},
+		{Seq: 4, Role: ai.MessageRoleUser, Content: encTestValue("u")},
+		{Seq: 5, Role: ai.MessageRoleAssistant, Content: encTestValue("a")},
 	}
 	summary, upto, err := mem.Summarize(ctx, session, evicted)
 	if err != nil {
@@ -119,7 +119,7 @@ func TestSummarize_Errors(t *testing.T) {
 	if _, _, err := mem.Summarize(ctx, nil, nil); err == nil {
 		t.Error("Summarize(nil session) = nil error, want an error")
 	}
-	session := &ai.AgentSession{Summary: encTestValue("keep"), SummaryUptoMessageID: 7}
+	session := &ai.AgentSession{Summary: encTestValue("keep"), SummaryUptoSeq: 7}
 	summary, upto, err := mem.Summarize(ctx, session, nil)
 	if err != nil || summary != "keep" || upto != 7 {
 		t.Errorf("Summarize(no evicted) = (%q, %d, %v), want (keep, 7, nil)", summary, upto, err)
@@ -136,6 +136,43 @@ func TestSummarize_Errors(t *testing.T) {
 	})
 	if _, _, err := empty.Summarize(ctx, &ai.AgentSession{}, evicted); err == nil {
 		t.Error("Summarize(empty reply) = nil error, want an error")
+	}
+}
+
+// TestSummarizeStream_DeltasAndCallbackError 测试流式摘要：onDelta 非空时逐块回调的增量拼接
+// 等于最终摘要（游标同 Summarize）；回调返回错误时立即中止并透传该错误。
+func TestSummarizeStream_DeltasAndCallbackError(t *testing.T) {
+	ctx := context.Background()
+	session := &ai.AgentSession{NamespaceName: "default", Summary: encTestValue("old summary"), SummaryUptoSeq: 3}
+	evicted := []*ai.AgentMessage{
+		{Seq: 4, Role: ai.MessageRoleUser, Content: encTestValue("u")},
+		{Seq: 5, Role: ai.MessageRoleAssistant, Content: encTestValue("a")},
+	}
+	chat := &stubChat{chunks: []string{"folded ", "summary"}}
+	mem := newTestMemory(t, newTestSessionDB(t), chat, stubEmbedder{}, map[string]string{
+		"memory.summarySystemPrompt": "sp",
+	})
+	var deltas []string
+	summary, upto, err := mem.SummarizeStream(ctx, session, evicted, func(d string) error {
+		deltas = append(deltas, d)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("SummarizeStream error = %v", err)
+	}
+	if summary != "folded summary" || upto != 5 {
+		t.Errorf("SummarizeStream() = (%q, %d), want (%q, 5)", summary, upto, "folded summary")
+	}
+	if strings.Join(deltas, "") != summary {
+		t.Errorf("deltas = %q, want them to concatenate to %q", strings.Join(deltas, ""), summary)
+	}
+
+	wantErr := errors.New("summary sink closed")
+	errMem := newTestMemory(t, newTestSessionDB(t), &stubChat{chunks: []string{"a", "b"}}, stubEmbedder{}, map[string]string{
+		"memory.summarySystemPrompt": "sp",
+	})
+	if _, _, err := errMem.SummarizeStream(ctx, session, evicted, func(string) error { return wantErr }); !errors.Is(err, wantErr) {
+		t.Errorf("SummarizeStream(callback error) = %v, want %v", err, wantErr)
 	}
 }
 
@@ -216,12 +253,12 @@ func TestCompact_ExtractionFailureOnlyWarnings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge")
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
-		SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("u1"),
+		SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: ai.MessageRoleUser, Content: encTestValue("u1"),
 	}); err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
@@ -254,13 +291,13 @@ func TestCompact_ExtractionFailureOnlyWarnings(t *testing.T) {
 	if got := chat.gotInputs[1][0].Content; got != "ep" {
 		t.Errorf("extraction system prompt = %q, want the configured prompt", got)
 	}
-	got, err := store.GetSession(ctx, session.ID)
+	got, err := store.GetSession(ctx, session.ID, session.NamespaceName, session.UserID)
 	if err != nil {
 		t.Fatalf("GetSession error = %v", err)
 	}
-	if string(got.Summary.Value()) != "folded summary" || got.SummaryUptoMessageID == 0 {
+	if string(got.Summary.Value()) != "folded summary" || got.SummaryUptoSeq == 0 {
 		t.Errorf("persisted summary = (%q, %d), want the folded summary with an advanced cursor",
-			got.Summary.Value(), got.SummaryUptoMessageID)
+			got.Summary.Value(), got.SummaryUptoSeq)
 	}
 }
 
@@ -273,12 +310,12 @@ func TestCompact_DisabledSkipsExtraction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge")
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
-		SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("u1"),
+		SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: ai.MessageRoleUser, Content: encTestValue("u1"),
 	}); err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
@@ -310,7 +347,7 @@ func TestCompact_NoMessages(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge")
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
@@ -340,12 +377,12 @@ func TestCompact_SummaryFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewSessionStore error = %v", err)
 	}
-	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge")
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
-		SessionID: session.ID, NamespaceName: "default", Role: ai.MessageRoleUser, Content: encTestValue("u1"),
+		SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: ai.MessageRoleUser, Content: encTestValue("u1"),
 	}); err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
@@ -354,13 +391,80 @@ func TestCompact_SummaryFailure(t *testing.T) {
 	if err == nil || result != nil {
 		t.Errorf("Compact() = (%+v, %v), want (nil, error)", result, err)
 	}
-	got, gerr := store.GetSession(ctx, session.ID)
+	got, gerr := store.GetSession(ctx, session.ID, session.NamespaceName, session.UserID)
 	if gerr != nil {
 		t.Fatalf("GetSession error = %v", gerr)
 	}
-	if len(got.Summary.Value()) != 0 || got.SummaryUptoMessageID != 0 {
+	if len(got.Summary.Value()) != 0 || got.SummaryUptoSeq != 0 {
 		t.Errorf("persisted summary = (%q, %d), want empty (no advance on failure)",
-			got.Summary.Value(), got.SummaryUptoMessageID)
+			got.Summary.Value(), got.SummaryUptoSeq)
+	}
+}
+
+// memoryIDsForUser 按属主用户直读长期记忆 ID（绕过序列化器，仅用于隔离用例定位被测行）。
+func memoryIDsForUser(t *testing.T, db *database.DB, userID uint) []uint {
+	t.Helper()
+	var ids []uint
+	if err := db.Raw("SELECT id FROM agent_memories WHERE user_id = ? ORDER BY id ASC", userID).Scan(&ids).Error; err != nil {
+		t.Fatalf("listing memory ids for user %d error = %v", userID, err)
+	}
+	return ids
+}
+
+// TestMemoryStore_CrossUserIsolation 测试长期记忆的跨用户隔离：同一命名空间下，用户只可见、
+// 可改、可删属于自己的记忆；对他人记忆的详情、启停一律视为不存在（ErrMemoryNotFound），
+// 删除他人记忆不生效。
+func TestMemoryStore_CrossUserIsolation(t *testing.T) {
+	ctx := context.Background()
+	db := newTestSessionDB(t)
+	store, err := NewMemoryStore(db, stubEmbedder{}, testParams(t, nil), nil)
+	if err != nil {
+		t.Fatalf("NewMemoryStore error = %v", err)
+	}
+	// 同一命名空间下，用户 1 与用户 2 各有一条长期记忆。
+	if err := db.Exec("INSERT INTO agent_memories (session_id, namespace_name, user_id, agent_kind, status) VALUES (?, ?, ?, ?, ?)",
+		1, "default", testUserID, ai.AgentKindKnowledge, ai.MemoryStatusActive).Error; err != nil {
+		t.Fatalf("inserting the owner memory error = %v", err)
+	}
+	if err := db.Exec("INSERT INTO agent_memories (session_id, namespace_name, user_id, agent_kind, status) VALUES (?, ?, ?, ?, ?)",
+		2, "default", testOtherUserID, ai.AgentKindKnowledge, ai.MemoryStatusActive).Error; err != nil {
+		t.Fatalf("inserting the other user memory error = %v", err)
+	}
+	ownerIDs := memoryIDsForUser(t, db, testUserID)
+	if len(ownerIDs) != 1 {
+		t.Fatalf("owner memory count = %d, want 1", len(ownerIDs))
+	}
+	ownerID := ownerIDs[0]
+
+	// 列表按属主过滤：各自只看到自己的那一条
+	ownerList, total, err := store.List(ctx, MemoryQuery{NamespaceName: "default", UserID: testUserID})
+	if err != nil {
+		t.Fatalf("List(owner) error = %v", err)
+	}
+	if total != 1 || len(ownerList) != 1 || ownerList[0].ID != ownerID {
+		t.Errorf("List(owner) = (%d items, total %d), want only the owner's memory", len(ownerList), total)
+	}
+	// 详情：他人读取视为不存在
+	if _, err := store.Get(ctx, "default", testOtherUserID, ownerID); !errors.Is(err, ErrMemoryNotFound) {
+		t.Errorf("Get(cross-user) error = %v, want ErrMemoryNotFound", err)
+	}
+	// 启停：他人操作视为不存在
+	if err := store.SetStatus(ctx, "default", testOtherUserID, ownerID, ai.MemoryStatusArchived); !errors.Is(err, ErrMemoryNotFound) {
+		t.Errorf("SetStatus(cross-user) error = %v, want ErrMemoryNotFound", err)
+	}
+	// 删除：他人删除不生效，属主仍可读到
+	if err := store.Delete(ctx, "default", testOtherUserID, []uint{ownerID}); err != nil {
+		t.Fatalf("Delete(cross-user) error = %v, want nil (no rows affected)", err)
+	}
+	if _, err := store.Get(ctx, "default", testUserID, ownerID); err != nil {
+		t.Errorf("Get(owner after cross-user delete) error = %v, want the memory to survive", err)
+	}
+	// 属主自身删除生效
+	if err := store.Delete(ctx, "default", testUserID, []uint{ownerID}); err != nil {
+		t.Fatalf("Delete(owner) error = %v", err)
+	}
+	if _, err := store.Get(ctx, "default", testUserID, ownerID); !errors.Is(err, ErrMemoryNotFound) {
+		t.Errorf("Get(owner after delete) error = %v, want ErrMemoryNotFound", err)
 	}
 }
 

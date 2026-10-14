@@ -81,6 +81,11 @@ type TagRuleSampleListOut struct {
 // invalidTagRuleSampleInputError 构造样例输入文档无法反序列化为目标模型的错误响应（HTTP 400）。
 // 反序列化失败说明字段类型与模型定义不符，样例不可用于规则运行期校验，写入时直接拒绝。
 func invalidTagRuleSampleInputError(err error) *response.CodeError {
+	// 上游助手（如 SampleBodyObjectKeys）已构造 CodeError 时直接透传，保留其可本地化详情；
+	// 否则（JSON 反序列化失败等）详情取诊断文案。
+	if codeErr, ok := err.(*response.CodeError); ok {
+		return codeErr
+	}
 	return response.CreateCodeError(http.StatusBadRequest, response.CodeTagRuleSampleInputInvalid, err.Error())
 }
 

@@ -38,6 +38,45 @@ func TestSSEEvent_Encode(t *testing.T) {
 	}
 }
 
+// TestSSEIDEvent_Encode 测试带序号事件的 SSE 线格式编码：在 event 行前恒输出
+// `id: <n>` 行；无序号事件（SSEEvent）则不含 id 行。
+func TestSSEIDEvent_Encode(t *testing.T) {
+	ev := SSEIDEvent{ID: 42, SSEEvent: SSEEvent{Event: SSEEventDelta, Data: map[string]string{"delta": "hi"}}}
+	buf, err := ev.Encode()
+	if err != nil {
+		t.Fatalf("Encode(id) error = %v", err)
+	}
+	if got, want := string(buf), "id: 42\nevent: delta\ndata: {\"delta\":\"hi\"}\n\n"; got != want {
+		t.Errorf("Encode(id) = %q, want %q", got, want)
+	}
+
+	plain := SSEEvent{Event: SSEEventPing}
+	buf, err = plain.Encode()
+	if err != nil {
+		t.Fatalf("Encode(plain) error = %v", err)
+	}
+	if strings.Contains(string(buf), "id:") {
+		t.Errorf("Encode(plain) should not contain id line, got %q", string(buf))
+	}
+}
+
+// TestSSEWriter_SendEvent 测试 SendEvent 原样透传带序号事件，写出的字节与 Encode 一致。
+func TestSSEWriter_SendEvent(t *testing.T) {
+	ev := SSEIDEvent{ID: 7, SSEEvent: SSEEvent{Event: SSEEventStage, Data: map[string]string{"stage": "retrieve"}}}
+	rec := httptest.NewRecorder()
+	w := NewSSEWriter(rec)
+	if err := w.SendEvent(ev); err != nil {
+		t.Fatalf("SendEvent error = %v", err)
+	}
+	want, err := ev.Encode()
+	if err != nil {
+		t.Fatalf("Encode error = %v", err)
+	}
+	if got := rec.Body.String(); got != string(want) {
+		t.Errorf("SendEvent body = %q, want %q", got, string(want))
+	}
+}
+
 // TestSSEWriter_HeadersAndEvents 测试 SSEWriter 设置流式响应头，语义化发送方法
 // 产出正确的 event/data 序列。
 func TestSSEWriter_HeadersAndEvents(t *testing.T) {
@@ -82,12 +121,24 @@ type errText string
 // Error 返回测试错误的描述文本。
 func (e errText) Error() string { return string(e) }
 
+// TestSSEWriter_SendReasoning 测试思考过程增量事件：reasoning 事件 + data {"delta": "..."}。
+func TestSSEWriter_SendReasoning(t *testing.T) {
+	rec := httptest.NewRecorder()
+	w := NewSSEWriter(rec)
+	if err := w.SendReasoning("think"); err != nil {
+		t.Fatalf("SendReasoning error = %v", err)
+	}
+	if got, want := rec.Body.String(), "event: reasoning\ndata: {\"delta\":\"think\"}\n\n"; got != want {
+		t.Errorf("SendReasoning body = %q, want %q", got, want)
+	}
+}
+
 // TestSSEEvent_EncodeToolRequest 测试 tool_request 事件的 SSE 线格式编码：
 // event 行为 tool_request，data 行为单行紧凑 JSON，以空行结尾。
 func TestSSEEvent_EncodeToolRequest(t *testing.T) {
 	ev := SSEEvent{Event: SSEEventToolRequest, Data: map[string]any{
-		"callId":           "call-1",
-		"apiId":            "rule.list",
+		"callID":           "call-1",
+		"apiID":            "rule.list",
 		"params":           map[string]string{"name": "x"},
 		"request":          map[string]string{"method": "GET", "path": "/api/v1/rules"},
 		"approvalRequired": true,
@@ -97,8 +148,8 @@ func TestSSEEvent_EncodeToolRequest(t *testing.T) {
 		t.Fatalf("Encode(tool_request) error = %v", err)
 	}
 	got := string(buf)
-	want := "event: tool_request\ndata: {\"apiId\":\"rule.list\",\"approvalRequired\":true," +
-		"\"callId\":\"call-1\",\"params\":{\"name\":\"x\"}," +
+	want := "event: tool_request\ndata: {\"apiID\":\"rule.list\",\"approvalRequired\":true," +
+		"\"callID\":\"call-1\",\"params\":{\"name\":\"x\"}," +
 		"\"request\":{\"method\":\"GET\",\"path\":\"/api/v1/rules\"}}\n\n"
 	if got != want {
 		t.Errorf("Encode(tool_request) = %q, want %q", got, want)
@@ -114,8 +165,8 @@ func TestSSEEvent_EncodeToolRequest(t *testing.T) {
 // 写出的完整字节内容与 Encode() 一致。
 func TestSSEWriter_SendToolRequest(t *testing.T) {
 	payload := map[string]any{
-		"callId":           "call-2",
-		"apiId":            "rule.get",
+		"callID":           "call-2",
+		"apiID":            "rule.get",
 		"params":           map[string]any{"id": 7},
 		"request":          map[string]string{"method": "GET", "path": "/api/v1/rules/7"},
 		"approvalRequired": true,

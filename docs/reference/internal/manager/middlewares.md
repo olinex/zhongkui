@@ -39,6 +39,7 @@
 - [func RbacPolicyAuthorizeMiddleware\(\) gin.HandlerFunc](<#RbacPolicyAuthorizeMiddleware>)
 - [func RbacPolicyMiddleware\(policy \*casbin.Enforcer\) gin.HandlerFunc](<#RbacPolicyMiddleware>)
 - [func RequireNamespace\(c \*gin.Context\) \(string, bool\)](<#RequireNamespace>)
+- [func RequireUserID\(c \*gin.Context\) \(uint, bool\)](<#RequireUserID>)
 - [func S3ClientMiddleware\(client \*s3.S3Client\) gin.HandlerFunc](<#S3ClientMiddleware>)
 - [func SQLiteVTabPoolsMiddleware\(pools \*vtab.Pools\) gin.HandlerFunc](<#SQLiteVTabPoolsMiddleware>)
 - [func SecureHeadersMiddleware\(cfg \*config.SecureConfig\) gin.HandlerFunc](<#SecureHeadersMiddleware>)
@@ -735,6 +736,26 @@ RequireNamespace 从请求上下文获取当前请求所属的命名空间名称
 
 - string: 当前请求所属的命名空间名称；获取失败时为空串
 - bool: 是否成功获取；false 表示命名空间缺失，请求已被中断
+
+<a name="RequireUserID"></a>
+## func RequireUserID
+
+```go
+func RequireUserID(c *gin.Context) (uint, bool)
+```
+
+RequireUserID 从请求上下文获取当前请求用户 ID（users.id）。
+
+与 GetUser 的区别在于：用户缺失时不会返回错误值由调用方处理，而是直接中断请求并返回 false， 适用于必须已认证才能继续执行的处理器。
+
+参数：
+
+- c: Gin 请求上下文
+
+返回值：
+
+- uint: 当前请求用户 ID；获取失败时为 0
+- bool: 是否成功获取；false 表示用户缺失，请求已被中断
 
 <a name="S3ClientMiddleware"></a>
 ## func S3ClientMiddleware

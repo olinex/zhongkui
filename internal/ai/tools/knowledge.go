@@ -41,6 +41,9 @@ type KnowledgeHit struct {
 	Content string
 	// Score 检索相关度分数
 	Score float64
+	// Complete 内容是否为整篇文档展开结果（small-to-big）：为 true 时不再按 SnippetLimit 截断，
+	// 由上层（internal/ai）在检索结果上标记。
+	Complete bool
 }
 
 // KnowledgeSearcher 是知识检索器接口：由上层（internal/ai）的适配器实现，
@@ -147,11 +150,16 @@ func (t *knowledgeSearchTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	}
 	results := make([]knowledgeSearchItem, 0, len(hits))
 	for _, hit := range hits {
+		// 整篇展开的命中（Complete）已是完整规格，截断只会让模型看不到字段定义，故原样返回
+		content := hit.Content
+		if !hit.Complete {
+			content = truncateSnippet(hit.Content, rt.SnippetLimit)
+		}
 		results = append(results, knowledgeSearchItem{
 			DocumentID: hit.DocumentID,
 			Title:      hit.Title,
 			ChunkIndex: hit.ChunkIndex,
-			Content:    truncateSnippet(hit.Content, rt.SnippetLimit),
+			Content:    content,
 			Score:      hit.Score,
 		})
 	}

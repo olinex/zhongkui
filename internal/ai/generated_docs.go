@@ -4,6 +4,7 @@ import (
 	// 标准库
 	"context"
 	"strings"
+	"time"
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/models/ai"
@@ -69,8 +70,10 @@ func (p partitionRebuildPlan) empty() bool {
 // 中新出现的条目、更新正文变化的条目、删除库中已有但文档集已移除的条目；正文未变的条目原样保留
 // （不重复向量化、不产生重复条目）。文档集由调用方从注释抽取模型派生后传入，本方法不再自行派生。
 // 全程逐条幂等，任一步失败即返回错误（已成功处理的条目不回滚，下次触发按同一差异计划继续收敛）。
+// report 为进度上报入口（为 nil 时不上报）：计划构建后上报一次 Start(计划总条数)，每条成功后上报
+// 一次 Step（含动作、标题、耗时与 token 用量），结束（含提前失败）时经 defer 上报一次 Finish。
 // namespaceName 为空时返回英文错误。
-func (k *Knowledge) SyncGeneratedDocs(ctx context.Context, namespaceName string, format docconv.Format, docs []GeneratedKnowledgeDoc) error {
+func (k *Knowledge) SyncGeneratedDocs(ctx context.Context, namespaceName string, format docconv.Format, docs []GeneratedKnowledgeDoc, report SyncReporter) error {
 	if strings.TrimSpace(namespaceName) == "" {
 		return errors.New("knowledge: empty namespace for generated docs sync")
 	}
@@ -82,7 +85,15 @@ func (k *Knowledge) SyncGeneratedDocs(ctx context.Context, namespaceName string,
 	if err != nil {
 		return errors.WithStack(err)
 	}
-	return k.applyPartitionRebuildPlan(ctx, namespaceName, format, plan)
+	// 删除项在计划里只保留 ID，标题取自既有文档摘要，供删除 Step 上报条目名
+	titles := make(map[uint]string, len(existing))
+	for _, doc := range existing {
+		titles[doc.ID] = doc.Title
+	}
+	total := len(plan.create) + len(plan.update) + len(plan.delete)
+	reportStart(report, total)
+	defer reportFinish(report)
+	return k.applyPartitionRebuildPlan(ctx, namespaceName, format, plan, titles, report)
 }
 
 // loadPartitionDocuments 读取命名空间下指定 format 分区的文档摘要（仅 id/title/hash，含软删除过滤，
@@ -136,9 +147,11 @@ func buildPartitionRebuildPlan(derived []GeneratedKnowledgeDoc, existing []exist
 }
 
 // applyPartitionRebuildPlan 执行差异计划：新增文档按 format 落库后建索引；更新文档先落新正文再
-// 重建索引；删除文档复用 DeleteDocument（同时清理分块）。
-func (k *Knowledge) applyPartitionRebuildPlan(ctx context.Context, namespaceName string, format docconv.Format, plan partitionRebuildPlan) error {
+// 重建索引；删除文档复用 DeleteDocument（同时清理分块）。每步计时并经 indexDocument 取回 token
+// 用量，逐条上报进度（report 为 nil 时不上报）；titles 提供删除项（计划中仅有 ID）的条目名。
+func (k *Knowledge) applyPartitionRebuildPlan(ctx context.Context, namespaceName string, format docconv.Format, plan partitionRebuildPlan, titles map[uint]string, report SyncReporter) error {
 	for _, item := range plan.create {
+		start := time.Now()
 		doc := &ai.KnowledgeDocument{
 			NamespaceName: namespaceName,
 			Title:         item.Title,
@@ -149,11 +162,20 @@ func (k *Knowledge) applyPartitionRebuildPlan(ctx context.Context, namespaceName
 		if err := k.db.WithContext(ctx).Create(doc).Error; err != nil {
 			return errors.WithStack(err)
 		}
-		if err := k.IndexDocument(ctx, doc); err != nil {
+		usage, err := k.indexDocument(ctx, doc)
+		if err != nil {
 			return err
 		}
+		reportStep(report, SyncProgressItem{
+			Title:     item.Title,
+			Action:    SyncActionCreate,
+			Count:     1,
+			ElapsedMs: time.Since(start).Milliseconds(),
+			Usage:     usage,
+		})
 	}
 	for _, item := range plan.update {
+		start := time.Now()
 		// 采用结构体 Select 更新以触发 crypto 序列化器加密存储（map 更新不会走序列化器）
 		if err := k.db.WithContext(ctx).Model(&ai.KnowledgeDocument{}).Where("id = ?", item.DocID).
 			Select("content").Updates(&ai.KnowledgeDocument{Content: serializer.NewCrypto([]byte(item.Content))}).Error; err != nil {
@@ -165,14 +187,30 @@ func (k *Knowledge) applyPartitionRebuildPlan(ctx context.Context, namespaceName
 			Content:       serializer.NewCrypto([]byte(item.Content)),
 		}
 		doc.ID = item.DocID
-		if err := k.Reindex(ctx, doc); err != nil {
+		usage, err := k.indexDocument(ctx, doc)
+		if err != nil {
 			return err
 		}
+		reportStep(report, SyncProgressItem{
+			Title:     item.Title,
+			Action:    SyncActionUpdate,
+			Count:     1,
+			ElapsedMs: time.Since(start).Milliseconds(),
+			Usage:     usage,
+		})
 	}
 	for _, docID := range plan.delete {
+		start := time.Now()
 		if err := k.DeleteDocument(ctx, docID); err != nil {
 			return err
 		}
+		reportStep(report, SyncProgressItem{
+			Title:     titles[docID],
+			Action:    SyncActionDelete,
+			Count:     1,
+			ElapsedMs: time.Since(start).Milliseconds(),
+			Usage:     EmbedUsage{},
+		})
 	}
 	return nil
 }

@@ -5,13 +5,13 @@
       <v-container class="pa-4 pa-md-6 zk-page-container">
         <!-- 欢迎区域 -->
         <div class="mb-8">
-          <h1 class="text-h4 font-weight-bold">{{ $t("title.zk") }}</h1>
-          <p class="text-h6 text-on-surface-variant mt-2">{{ $t("home.subtitle") }}</p>
+          <h1 class="text-headline-large font-weight-bold">{{ $t("title.zk") }}</h1>
+          <p class="text-title-large on-surface-variant mt-2">{{ $t("home.subtitle") }}</p>
         </div>
 
         <!-- 快速开始区域 -->
         <div class="d-flex align-center mb-4">
-          <h2 class="text-h6">{{ $t("home.quickStart.self") }}</h2>
+          <h2 class="text-title-large">{{ $t("home.quickStart.self") }}</h2>
           <v-spacer />
           <v-btn
             :text="$t('home.quickStart.addGroup')"
@@ -42,7 +42,7 @@
             </template>
             <template v-else>
               <h3
-                class="text-subtitle-1 font-weight-bold quick-group-title"
+                class="text-body-large font-weight-bold quick-group-title"
                 :title="$t('home.quickStart.renameGroup')"
                 @click="startRename(group)"
               >
@@ -69,53 +69,46 @@
             />
           </div>
 
-          <!-- 链接以卡片展示，样式与分组化之前的快速开始一致 -->
-          <v-row dense>
-            <v-col
+          <!-- 链接以卡片展示；网格按可用宽度自适应排布，宽度足够时一行 4 个 -->
+          <div class="quick-link-grid">
+            <v-card
               v-for="(link, index) in group.links"
               :key="linkKey(link)"
-              cols="12"
-              sm="6"
-              md="4"
-              lg="3"
+              class="quick-link-card zk-interactive-card"
+              :class="{
+                'quick-link-dragging': isDragging(group.id, index),
+                'zk-drag-over': isDropTarget(group.id, index),
+              }"
+              draggable="true"
+              @click="goto(link)"
+              @dragstart="onDragStart($event, group.id, index)"
+              @dragover.prevent="onDragOver(group.id, index)"
+              @dragleave="onDragLeave($event, group.id, index)"
+              @drop.prevent="onDrop(group.id, index)"
+              @dragend="onDragEnd"
             >
-              <v-card
-                class="quick-link-card zk-interactive-card"
-                :class="{
-                  'quick-link-dragging': isDragging(group.id, index),
-                  'zk-drag-over': isDropTarget(group.id, index),
-                }"
-                draggable="true"
-                @click="goto(link)"
-                @dragstart="onDragStart($event, group.id, index)"
-                @dragover.prevent="onDragOver(group.id, index)"
-                @dragleave="onDragLeave($event, group.id, index)"
-                @drop.prevent="onDrop(group.id, index)"
-                @dragend="onDragEnd"
-              >
-                <v-card-item class="pa-2">
-                  <template #prepend>
-                    <v-avatar color="primary" variant="tonal" size="36">
-                      <v-icon size="small" :icon="link.icon" />
-                    </v-avatar>
-                  </template>
-                  <v-card-title class="text-body-2 ps-1">{{ $t(link.title) }}</v-card-title>
-                  <!-- 移除按钮：仅在悬停卡片时可见 -->
-                  <template #append>
-                    <v-btn
-                      class="quick-link-remove"
-                      icon="mdi-close"
-                      size="x-small"
-                      variant="text"
-                      :title="$t('home.quickStart.removeLink')"
-                      :aria-label="$t('home.quickStart.removeLink')"
-                      @click.stop="store.removeLink(group.id, index)"
-                    />
-                  </template>
-                </v-card-item>
-              </v-card>
-            </v-col>
-          </v-row>
+              <v-card-item class="pa-2">
+                <template #prepend>
+                  <v-avatar color="primary" variant="tonal" size="36">
+                    <v-icon size="small" :icon="link.icon" />
+                  </v-avatar>
+                </template>
+                <v-card-title class="text-body-medium ps-1">{{ $t(link.title) }}</v-card-title>
+                <!-- 移除按钮：仅在悬停卡片时可见 -->
+                <template #append>
+                  <v-btn
+                    class="quick-link-remove"
+                    icon="mdi-close"
+                    size="x-small"
+                    variant="text"
+                    :title="$t('home.quickStart.removeLink')"
+                    :aria-label="$t('home.quickStart.removeLink')"
+                    @click.stop="store.removeLink(group.id, index)"
+                  />
+                </template>
+              </v-card-item>
+            </v-card>
+          </div>
 
           <!-- 空分组的放置区 -->
           <div
@@ -167,7 +160,9 @@
                 <template #prepend>
                   <v-icon size="small">{{ child.icon }}</v-icon>
                 </template>
-                <v-list-item-title class="text-body-2">{{ $t(child.title) }}</v-list-item-title>
+                <v-list-item-title class="text-body-medium">{{
+                  $t(child.title)
+                }}</v-list-item-title>
                 <template #append>
                   <v-icon v-if="linkExists(child)" size="small">mdi-check</v-icon>
                 </template>
@@ -408,6 +403,19 @@ const onDragEnd = () => {
 
 .quick-group-name-input {
   max-width: var(--zk-container-max-width-narrow);
+}
+
+/* 快捷入口网格：按可用宽度自适应排布，一行最多 4 个。
+   轨道最小宽度取「--zk-quick-link-min-width」与「(100% - 3 × 间距) / 4」中的较大值：
+   后者保证可用宽度足够时恰好 4 列（自动填充不会溢出为第 5 列），
+   不足时回落到固定最小宽度，逐级减少为 3 / 2 / 1 列。 */
+.quick-link-grid {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(max(var(--zk-quick-link-min-width), calc((100% - 3 * var(--zk-space-2)) / 4)), 1fr)
+  );
+  gap: var(--zk-space-2);
 }
 
 /* 链接卡片：悬停反馈来自全局的 .zk-interactive-card 外壳。 */

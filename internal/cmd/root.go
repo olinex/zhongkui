@@ -227,6 +227,7 @@ func init() {
 	RootCmd.AddCommand(createCmd)
 	// sync
 	syncCmd.AddCommand(syncDocsCmd)
+	syncCmd.AddCommand(syncApisCmd)
 	syncCmd.AddCommand(syncEmbeddingsCmd)
 	syncCmd.AddCommand(syncEmbeddingDimensionsCmd)
 	RootCmd.AddCommand(syncCmd)

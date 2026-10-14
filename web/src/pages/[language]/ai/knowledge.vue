@@ -90,7 +90,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="uploadTitle"
@@ -100,7 +100,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-file-input
                   v-model="uploadFile"
@@ -127,7 +127,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createTitle"
@@ -136,7 +136,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createContent"
@@ -164,7 +164,7 @@
             <v-alert v-if="editParseError" type="error" density="compact" class="mb-2">
               {{ $t("page.aiKnowledge.parseError") }}: {{ editParseError }}
             </v-alert>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="editTitle"
@@ -174,7 +174,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="editContent"
@@ -187,7 +187,7 @@
               </v-col>
             </v-row>
             <!-- 正文只读提示：仅导入文档展示（正文由解析流水线从原件生成，只能改标题） -->
-            <v-row v-if="editDocumentImported" dense>
+            <v-row v-if="editDocumentImported" density="compact">
               <v-col cols="12" class="zk-hint">
                 {{ $t("page.aiKnowledge.importedContentReadOnly") }}
               </v-col>
@@ -204,17 +204,17 @@
       />
 
       <!-- 检索试运行对话框：输入查询与可选参数，运行完整检索链路（混合检索 → 生成回答 → 四项量化指标）并展示结果 -->
-      <!-- AppDialog 未定义 after-leave 事件，此监听经根节点属性透传落到内部 VDialog，
-           保留"关闭动画结束后再重置检索试运行状态"的原有行为 -->
+      <!-- 运行中 persistent：点背景 / ESC 不关闭，避免等待期间误触丢失进度（X / 关闭按钮仍可主动关闭）。
+           关闭对话框既中止流也不清空状态，运行在后台继续，重开即可续看（状态挂页面级，见 openDryRunDialog） -->
       <app-dialog
         v-model="dryRunDialog"
         :title="$t('page.aiKnowledge.dryRun')"
         icon="mdi-flask-outline"
         size="md"
-        @after-leave="resetDryRunDialog"
+        :persistent="dryRunRunning"
       >
         <v-form @submit.prevent="runDryRunAction">
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="12">
               <v-text-field
                 v-model="dryRunQuery"
@@ -224,7 +224,7 @@
             </v-col>
           </v-row>
           <!-- 高级参数：默认折叠隐藏；未展开时展示后端默认值提示，展开后表单已预填默认值 -->
-          <v-row dense align="center">
+          <v-row density="compact" class="align-center">
             <v-col cols="auto">
               <v-btn
                 variant="text"
@@ -257,7 +257,7 @@
           </v-row>
           <template v-if="showAdvancedParams">
             <div class="advanced-params zk-hairline-top">
-              <v-row dense>
+              <v-row density="compact">
                 <v-col cols="12" sm="4">
                   <v-text-field
                     v-model.number="dryRunTopK"
@@ -287,7 +287,7 @@
                   />
                 </v-col>
               </v-row>
-              <v-row dense>
+              <v-row density="compact">
                 <v-col cols="12" sm="6">
                   <v-text-field
                     v-model.number="dryRunWeightVector"
@@ -343,20 +343,38 @@
                 :title="stageLabelOf(stage.stage)"
                 :spin="dryRunRunning && stage.status === 'start'"
               >
+                <!-- 阶段元信息（模型 / 耗时 / Token / 失败原因）不在标题行常驻：长文本会挤占阶段标题，
+                     改为 info 图标按需 hover 展示（见 AGENTS.md「展开面板标题区」）；无内容时不渲染图标 -->
                 <template #actions>
-                  <span
-                    class="stage-meta text-caption text-on-surface-variant"
-                    :title="stageMetaTextOf(stage)"
+                  <v-tooltip
+                    v-if="stageMetaLinesOf(stage).length > 0"
+                    :max-width="STAGE_META_TOOLTIP_MAX_WIDTH"
+                    location="top"
                   >
-                    {{ stageMetaTextOf(stage) }}
-                  </span>
+                    <template #activator="{ props: tooltipProps }">
+                      <v-icon
+                        v-bind="tooltipProps"
+                        icon="mdi-information-outline"
+                        size="x-small"
+                        color="primary"
+                        :aria-label="stageMetaLinesOf(stage).join(' · ')"
+                      />
+                    </template>
+                    <div
+                      v-for="(line, idx) in stageMetaLinesOf(stage)"
+                      :key="idx"
+                      class="stage-meta-line"
+                    >
+                      {{ line }}
+                    </div>
+                  </v-tooltip>
                 </template>
               </expansion-panel-title>
               <v-expansion-panel-text>
                 <pre
                   v-if="stage.output"
                   :ref="(el) => bindStageOutputEl(stage.stage, el)"
-                  class="zk-code-preview stage-output font-mono text-caption text-on-surface"
+                  class="zk-code-preview stage-output font-mono text-body-small"
                   >{{ stage.output }}</pre>
                 <p v-else class="zk-hint">{{ $t("page.aiKnowledge.stageNoOutput") }}</p>
               </v-expansion-panel-text>
@@ -364,26 +382,25 @@
           </v-expansion-panels>
           <!-- 汇总脚注：检索与总计耗时、全部调用合计 token（运行结束后由汇总结果回填） -->
           <div v-if="dryRunResult" class="metric-footnote zk-hint">
-            {{ $t("page.aiKnowledge.metaRetrieveElapsed") }}
-            {{ dryRunResult.meta.retrieveElapsedMs }} ms ·
-            {{ $t("page.aiKnowledge.metaTotal") }}
+            {{ $t("page.aiKnowledge.metaRetrieveElapsed") }}:
+            {{ dryRunResult.meta.retrieveElapsedMs }} ms · {{ $t("page.aiKnowledge.metaTotal") }}:
             {{ dryRunResult.meta.totalElapsedMs }} ms ·
-            {{ $t("page.aiKnowledge.metaTotalTokens") }}
-            {{ dryRunResult.meta.usage.totalTokens }}
+            {{ $t("page.aiKnowledge.metaTotalTokens") }}:
+            {{ formatTokenCount(dryRunResult.meta.usage.totalTokens) }}
           </div>
         </div>
 
         <template v-if="dryRunResult">
           <!-- 评估警告与评估不可用提示：置顶展示，先于回答与指标 -->
           <v-alert v-if="dryRunWarnings.length > 0" type="warning" class="mt-4">
-            <div class="text-caption text-on-surface-variant">
+            <div class="text-body-small on-surface-variant">
               <div>{{ $t("page.aiKnowledge.warnings") }}:</div>
               <div v-for="(warning, idx) in dryRunWarnings" :key="idx">
                 {{ warning }}
               </div>
             </div>
           </v-alert>
-          <p v-if="dryRunResult.evalError" class="text-caption text-on-surface-variant mt-3">
+          <p v-if="dryRunResult.evalError" class="text-body-small on-surface-variant mt-3">
             {{ $t("page.aiKnowledge.evalError") }}: {{ dryRunResult.evalError }}
           </p>
 
@@ -392,7 +409,7 @@
             <div class="result-block">
               <div class="zk-code-preview answer-block">
                 <div class="result-label zk-label-caps">{{ $t("page.aiKnowledge.answer") }}</div>
-                <p class="answer-body text-body-2 text-on-surface">
+                <p class="answer-body text-body-medium">
                   {{ dryRunResult.evaluation.answer || $t("model.__base.value.blank") }}
                 </p>
               </div>
@@ -436,10 +453,10 @@
                   <template #prepend>
                     <v-icon :icon="suggestionIconOf(suggestion.category)" size="small" />
                   </template>
-                  <v-list-item-title class="text-body-2 text-on-surface">
+                  <v-list-item-title class="text-body-medium">
                     {{ suggestionCategoryLabelOf(suggestion.category) }}
                   </v-list-item-title>
-                  <p class="text-body-2 text-on-surface mt-1">{{ suggestion.detail }}</p>
+                  <p class="text-body-medium mt-1">{{ suggestion.detail }}</p>
                 </v-list-item>
               </v-list>
             </div>
@@ -457,14 +474,14 @@
                   <v-expansion-panel-text>
                     <v-list class="bg-transparent">
                       <v-list-item v-for="(result, idx) in dryRunResult.results" :key="idx">
-                        <v-list-item-title class="text-body-2 text-on-surface">
+                        <v-list-item-title class="text-body-medium">
                           {{ result.title }}
                         </v-list-item-title>
-                        <v-list-item-subtitle class="text-caption text-on-surface-variant">
+                        <v-list-item-subtitle class="text-body-small on-surface-variant">
                           #{{ result.chunkIndex }} · {{ result.documentID }} ·
                           {{ result.score.toFixed(2) }}
                         </v-list-item-subtitle>
-                        <p class="text-body-2 text-on-surface mt-1">{{ result.content }}</p>
+                        <p class="text-body-medium mt-1">{{ result.content }}</p>
                       </v-list-item>
                     </v-list>
                   </v-expansion-panel-text>
@@ -493,11 +510,11 @@
                             size="small"
                           />
                         </template>
-                        <v-list-item-title class="text-body-2 text-on-surface">
+                        <v-list-item-title class="text-body-medium">
                           #{{ judgment.index }} · {{ judgment.reason }}
                         </v-list-item-title>
                         <template #append>
-                          <span class="text-caption text-on-surface-variant">
+                          <span class="text-body-small on-surface-variant">
                             {{ judgment.score.toFixed(2) }}
                           </span>
                         </template>
@@ -529,11 +546,11 @@
                             size="small"
                           />
                         </template>
-                        <v-list-item-title class="text-body-2 text-on-surface">
+                        <v-list-item-title class="text-body-medium">
                           {{ claim.statement }}
                         </v-list-item-title>
                         <template #append>
-                          <span class="text-caption text-on-surface-variant">
+                          <span class="text-body-small on-surface-variant">
                             #{{ claim.chunkIndexes.join(", #") }}
                           </span>
                         </template>
@@ -558,7 +575,7 @@
                         v-for="(question, idx) in dryRunResult.evaluation.reverseQuestions"
                         :key="idx"
                       >
-                        <v-list-item-title class="text-body-2 text-on-surface">
+                        <v-list-item-title class="text-body-medium">
                           {{ question }}
                         </v-list-item-title>
                       </v-list-item>
@@ -571,19 +588,19 @@
 
           <!-- 评估被跳过（如 chat 未启用）：仍展示检索分块 -->
           <div v-if="!dryRunResult.evaluation" class="mt-4">
-            <div class="text-h6 text-on-surface font-weight-600">
+            <div class="text-title-large font-weight-600">
               {{ $t("page.aiKnowledge.retrievedChunks") }}
             </div>
             <v-list class="bg-transparent">
               <v-list-item v-for="(result, idx) in dryRunResult.results" :key="idx">
-                <v-list-item-title class="text-body-2 text-on-surface">
+                <v-list-item-title class="text-body-medium">
                   {{ result.title }}
                 </v-list-item-title>
-                <v-list-item-subtitle class="text-caption text-on-surface-variant">
+                <v-list-item-subtitle class="text-body-small on-surface-variant">
                   #{{ result.chunkIndex }} · {{ result.documentID }} ·
                   {{ result.score.toFixed(2) }}
                 </v-list-item-subtitle>
-                <p class="text-body-2 text-on-surface mt-1">{{ result.content }}</p>
+                <p class="text-body-medium mt-1">{{ result.content }}</p>
               </v-list-item>
             </v-list>
           </div>
@@ -647,6 +664,7 @@ import { useAppStore } from "@/stores/app";
 import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
+import { formatTokenCount } from "@/utils/token";
 
 // ---- 表单校验 schema（正文为多行文本域，内容中的空白具有语义，不做 trim）----
 const createDocSchema = yup.object({
@@ -694,8 +712,8 @@ const [editContent, editContentProps] = updateForm.defineField("content", vuetif
 
 // ---- 创建对话框 ----
 const openCreateDialogAction = (): void => {
-  createForm.resetField("title", { value: "" });
-  createForm.resetField("content", { value: "" });
+  // 复位用原子 API resetForm：完整枚举全部 defineField 字段，值 + 校验状态一次性重置
+  createForm.resetForm({ values: { title: "", content: "" } });
   createDialogRef.value?.open({});
 };
 
@@ -784,8 +802,13 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
       // 以详情 originalName 判定导入文档：列表出参不含该字段，详情才是权威来源
       editDocumentImported.value = !!rsp.data.originalName;
       editParseError.value = rsp.data.parseError;
-      updateForm.resetField("title", { value: rsp.data.title });
-      updateForm.resetField("content", { value: rsp.data.content });
+      // 复位与回填同属「准备本次打开的数据」：完整枚举 defineField 字段，原子重置值 + 校验状态
+      updateForm.resetForm({
+        values: {
+          title: rsp.data.title,
+          content: rsp.data.content,
+        },
+      });
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -1184,6 +1207,8 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
 // 单个阶段的前端运行态：status 为后端上报的阶段状态，output 为该阶段模型原始输出增量累计
 interface DryRunStageState {
   stage: EvalStage;
+  // 该阶段调用的对话模型名（随阶段事件下发，运行中即有值；检索阶段为空）
+  model: string;
   status: EvalStageStatus;
   elapsedMs: number;
   usage?: DryRunCallUsage;
@@ -1338,12 +1363,14 @@ const applyStageEvent = (ev: DryRunStageEvent): void => {
   const target = dryRunStages.value.find((item) => item.stage === ev.stage);
   if (target) {
     target.status = ev.status ?? target.status;
+    target.model = ev.model ?? target.model;
     target.elapsedMs = ev.elapsedMs ?? target.elapsedMs;
     target.usage = ev.usage ?? target.usage;
     target.error = ev.error ?? target.error;
   } else {
     dryRunStages.value.push({
       stage: ev.stage,
+      model: ev.model ?? "",
       status: ev.status ?? "start",
       elapsedMs: ev.elapsedMs ?? 0,
       usage: ev.usage,
@@ -1363,34 +1390,34 @@ const appendStageDelta = (stage: EvalStage, delta: string): void => {
   }
 };
 
-// modelOfStage 该阶段实际调用的模型名：仅后端汇总的调用元信息携带（流式阶段事件不含），
-// 故运行结束后才有值，运行中为空串
-const modelOfStage = (stage: EvalStage): string =>
-  dryRunResult.value?.meta.calls.find((call) => call.stage === stage)?.model ?? "";
+// STAGE_META_TOOLTIP_MAX_WIDTH 阶段元信息 tooltip 的最大宽度（px）：超长失败原因在此宽度内换行，
+// 避免 tooltip 被撑到过宽。经 max-width 属性下发（Vuetify 以行内样式落到浮层内容，CSS 类无法覆盖）
+const STAGE_META_TOOLTIP_MAX_WIDTH = 360;
 
-// stageMetaTextOf 阶段行右侧摘要：模型、耗时、token 用量与失败原因（无内容时为空串）。
-// 这里是调用信息的唯一落点——原「调用元信息」列表除模型名与合计 Token 外的字段均与此重复，
-// 已整块合并进来，不再单独成块（见 AGENTS.md「展开面板族」）
-const stageMetaTextOf = (stage: DryRunStageState): string => {
-  const parts: string[] = [];
-  const model = modelOfStage(stage.stage);
-  if (model) {
-    parts.push(`${i18n.global.t("page.aiKnowledge.metaModel")} ${model}`);
+// stageMetaLinesOf 阶段元信息明细（逐行一项）：模型、耗时、输入/输出/合计 Token 与失败原因。
+// 这里是调用信息的唯一落点（原「调用元信息」列表的字段均已并入）；由标题行的 info 图标以 tooltip
+// 按需展示，不在标题行常驻，避免长文本挤占阶段标题。无内容时返回空数组（据此决定是否渲染图标）。
+// 模型名随阶段事件下发（stage.model），运行中即可展示，无需等待汇总。
+// 每项统一为「标签: 值」，与失败原因的写法保持一致，明细读起来段落清晰、不依赖标点猜测字段边界。
+const stageMetaLinesOf = (stage: DryRunStageState): string[] => {
+  const lines: string[] = [];
+  if (stage.model) {
+    lines.push(`${i18n.global.t("page.aiKnowledge.metaModel")}: ${stage.model}`);
   }
   if (stage.elapsedMs > 0) {
-    parts.push(`${stage.elapsedMs} ms`);
+    lines.push(`${i18n.global.t("page.aiKnowledge.metaElapsed")}: ${stage.elapsedMs} ms`);
   }
   if (stage.usage) {
-    parts.push(
-      `${i18n.global.t("page.aiKnowledge.metaPromptTokens")} ${stage.usage.promptTokens}`,
-      `${i18n.global.t("page.aiKnowledge.metaCompletionTokens")} ${stage.usage.completionTokens}`,
-      `${i18n.global.t("page.aiKnowledge.metaTotalTokens")} ${stage.usage.totalTokens}`,
+    lines.push(
+      `${i18n.global.t("page.aiKnowledge.metaPromptTokens")}: ${formatTokenCount(stage.usage.promptTokens)}`,
+      `${i18n.global.t("page.aiKnowledge.metaCompletionTokens")}: ${formatTokenCount(stage.usage.completionTokens)}`,
+      `${i18n.global.t("page.aiKnowledge.metaTotalTokens")}: ${formatTokenCount(stage.usage.totalTokens)}`,
     );
   }
   if (stage.error) {
-    parts.push(`${i18n.global.t("page.aiKnowledge.stageFailed")}: ${stage.error}`);
+    lines.push(`${i18n.global.t("page.aiKnowledge.stageFailed")}: ${stage.error}`);
   }
-  return parts.join(" · ");
+  return lines;
 };
 
 // loadDryRunDefaults 拉取后端 [llm].rerank 配置的默认参数并预填表单：
@@ -1434,33 +1461,20 @@ const stopDryRunAction = (): void => {
   dryRunRunning.value = false;
 };
 
-// resetDryRunDialog 清空检索试运行的全部状态：关闭对话框后查询、参数、过程与结果
-// 均不残留，下次打开为全新输入
-const resetDryRunDialog = (): void => {
-  stopDryRunAction();
-  dryRunQuery.value = "";
-  dryRunResult.value = null;
-  dryRunStages.value = [];
-  expandedStage.value = "";
-  stageOutputEls.clear();
-  dryRunDefaults.value = null;
-  showAdvancedParams.value = false;
-  dryRunTopK.value = null;
-  dryRunCandidates.value = null;
-  dryRunFusion.value = null;
-  dryRunWeightVector.value = null;
-  dryRunWeightKeyword.value = null;
-  resultPanel.value = "";
-};
+// 页面卸载时中止仍在后台运行的检索试运行流：试运行状态随组件销毁，继续运行没有意义，
+// 且避免请求悬挂与对已卸载组件写状态（关闭对话框不中止，故需在此兜底）
+onUnmounted(stopDryRunAction);
 
+// openDryRunDialog 打开检索试运行对话框：状态挂在页面级，关闭对话框不再清空，
+// 故重开沿用上次输入与结果（运行中则续看实时进度）；默认值仅在首次打开时拉取
 const openDryRunDialog = async (): Promise<void> => {
-  // 打开时重置状态并拉取后端默认值预填，供折叠提示与展开表单展示
-  resetDryRunDialog();
   dryRunDialog.value = true;
   // 阶段名与建议归类经统一枚举注册表渲染 label，按当前语言预取（缓存到达后模板自动刷新）
   void ensureEnum(EnumClass.evalStage);
   void ensureEnum(EnumClass.diagnosisCategory);
-  await loadDryRunDefaults();
+  if (!dryRunDefaults.value) {
+    await loadDryRunDefaults();
+  }
 };
 
 const runDryRunAction = (): void => {
@@ -1526,18 +1540,20 @@ const toolbarActions = computed<ActionButton[]>(() => [
     onClick: openUploadDialogAction,
   },
   {
-    icon: "mdi-flask-outline",
+    // 运行中图标转 mdi-loading 并旋转，表达后台仍在进行（保持可点击）；不得用 VBtn 的 loading
+    icon: dryRunRunning.value ? "mdi-loading" : "mdi-flask-outline",
     title: i18n.global.t("page.aiKnowledge.dryRun"),
     // 检索试运行对知识库管理是核心能力，收起工具栏时也保持展示
     alwaysShow: true,
+    // 关闭对话框后运行仍在后台继续，据此可看出仍在进行并点击重开续看
+    spin: dryRunRunning.value,
     onClick: openDryRunDialog,
   },
 ]);
 </script>
 
 <style scoped>
-/* 高级参数区：与上方表单的分隔线走 .zk-hairline-top。v-row dense 自带 -4px 负外边距，
-   必须由容器内边距吸收，否则表单会向上压进折叠按钮的盒子造成重叠 */
+/* 高级参数区：与上方表单的分隔线走 .zk-hairline-top；容器内边距用于与折叠按钮之间留出间距 */
 .advanced-params {
   margin-top: var(--zk-space-1);
   padding: var(--zk-space-2) 0 var(--zk-space-1);
@@ -1555,13 +1571,10 @@ const toolbarActions = computed<ActionButton[]>(() => [
   padding: var(--zk-space-3);
 }
 
-/* 阶段行右侧元信息：面板标题行高固定，超长内容（如失败原因）以省略号收束，完整文本经 title 提示；
-   min-width: 0 让该项可被压缩，否则 nowrap 文本会撑破标题行 */
-.stage-meta {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* 阶段元信息 tooltip 内容：逐行左对齐展示（浮层内默认居中，长失败原因换行后需左对齐才成体例） */
+.stage-meta-line {
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 
 /* 阶段模型原始输出：等宽走 .font-mono，底色 / 换行 / 内边距走 .zk-code-preview，

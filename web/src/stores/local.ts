@@ -21,6 +21,15 @@ const QUICK_START_KEY: string = "quick-start";
 // 直达底部悬浮按钮拖动后的位置（JSON 字符串 {left, top}，单位为 px）
 const SCROLL_FAB_POS_KEY: string = "scroll-fab-pos";
 
+// AI 运行续播游标（按会话持久化最后一次已消费的 SSE 事件序号）的存储键前缀
+const AGENT_RUN_SEQ_KEY_PREFIX: string = "agent-run-seq-";
+
+// AI 助手「思考」开关的用户偏好（跨会话记忆，重开抽屉保持上次选择）
+const AGENT_THINKING_KEY: string = "agent-thinking";
+
+// 上次选中的 AI 助手会话 ID（跨刷新恢复当前会话，供刷新后打开抽屉即自动续播）
+const AGENT_ACTIVE_SESSION_KEY: string = "agent-active-session";
+
 const LANGUAGE_KEY: string = "locale";
 const AVAILABLE_LOCALES: SupportLanguage[] = [SupportLanguage.English, SupportLanguage.ZhHans];
 export const DEFAULT_LOCALE: SupportLanguage = SupportLanguage.English;
@@ -84,6 +93,42 @@ export const localManager = {
   // 清除直达底部悬浮按钮的位置记录（视口尺寸变化时复位回右下角贴靠）
   clearScrollFabPos(): void {
     localStorage.removeItem(SCROLL_FAB_POS_KEY);
+  },
+
+  // 读取某会话的最后已消费事件序号（无记录返回 0），供运行续播的 after 参数使用
+  getAgentRunSeq(sessionID: number): number {
+    const raw = localStorage.getItem(`${AGENT_RUN_SEQ_KEY_PREFIX}${sessionID}`);
+    const value = raw === null ? NaN : Number(raw);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  },
+  // 写入某会话的最后已消费事件序号（非正整数一律归零）
+  setAgentRunSeq(sessionID: number, seq: number): void {
+    const value = Number.isFinite(seq) && seq > 0 ? Math.floor(seq) : 0;
+    localStorage.setItem(`${AGENT_RUN_SEQ_KEY_PREFIX}${sessionID}`, String(value));
+  },
+
+  // 读取 AI 助手「思考」开关偏好；未设置过时默认关闭（false）
+  getAgentThinking(): boolean {
+    return localStorage.getItem(AGENT_THINKING_KEY) === "true";
+  },
+  // 写入 AI 助手「思考」开关偏好
+  setAgentThinking(on: boolean): void {
+    localStorage.setItem(AGENT_THINKING_KEY, String(on));
+  },
+
+  // 读取上次选中的 AI 助手会话 ID（无记录返回 null），供刷新后恢复当前会话并自动续播
+  getAgentActiveSession(): number | null {
+    const raw = localStorage.getItem(AGENT_ACTIVE_SESSION_KEY);
+    const value = raw === null ? NaN : Number(raw);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : null;
+  },
+  // 写入当前选中的 AI 助手会话 ID（传入 null 或非正整数时清除记录，表示处于待创建态）
+  setAgentActiveSession(sessionID: number | null): void {
+    if (sessionID !== null && Number.isFinite(sessionID) && sessionID > 0) {
+      localStorage.setItem(AGENT_ACTIVE_SESSION_KEY, String(Math.floor(sessionID)));
+      return;
+    }
+    localStorage.removeItem(AGENT_ACTIVE_SESSION_KEY);
   },
 
   getJwt(): string | void {

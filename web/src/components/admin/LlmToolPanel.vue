@@ -28,16 +28,12 @@
       </div>
     </template>
 
-    <!-- 启用列：开关即时写入（后端按批设置启用态接口，单条即单元素批次）；写入期间按行显示
-         loading 并禁用，避免重复切换同一行 -->
+    <!-- 启用列：开关即时写入（后端按批设置启用态接口，单条即单元素批次）；写入与失败回退
+         由共享开关组件按行处理 -->
     <template #cell-enabled="{ item }">
-      <v-switch
-        :model-value="item.enabled === true"
-        color="primary"
-        hide-details
-        :loading="isRowPending(item)"
-        :disabled="isRowPending(item)"
-        @update:model-value="(value: boolean | null) => itemToggleAction(item, value === true)"
+      <enabled-switch-cell
+        v-model="item.enabled"
+        :request="(enabled: boolean) => llmToolSetEnabled({ ids: item.id, enabled })"
       />
     </template>
   </search-table>
@@ -65,7 +61,7 @@ import {
   llmToolSetEnabled,
 } from "@/apis/llm";
 import type { BatchResultOut } from "@/apis/@types/admin";
-import { getResponse, getSimpleResponse } from "@/apis/base";
+import { getResponse } from "@/apis/base";
 import type { BatchActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
 import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
@@ -95,48 +91,6 @@ const projectFields = (visible: string[]): string[] => [
   "mcpServerName",
   ...visible,
 ];
-
-// ---- 启用开关（即时写入）----
-// enabledPending 启用态写入进行中的行 id 集合：按行维度记录，使 loading 与禁用只作用于被点击的行，
-// 不影响其他行与整表
-const enabledPending = ref(new Set<number>());
-
-// isRowPending 判断指定行是否正在写入启用态（开关据此显示 loading 并禁用，避免重复切换）
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isRowPending = (item: Record<string, any>): boolean =>
-  enabledPending.value.has(item.id as number);
-
-// 乐观更新行内状态：请求失败时回退为原状态并提示，成功后无需整表刷新
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (item: Record<string, any>, enabled: boolean): Promise<void> => {
-  const id = item.id as number;
-  const previous = item.enabled === true;
-  item.enabled = enabled;
-  enabledPending.value.add(id);
-  try {
-    await getSimpleResponse(
-      llmToolSetEnabled({ ids: id, enabled }),
-      async (rsp) => {
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "success",
-        });
-      },
-      async (rsp) => {
-        item.enabled = previous;
-        appStore.notify({
-          text: rsp.summary,
-          timeout: 3000,
-          color: "error",
-        });
-      },
-    );
-  } finally {
-    // 请求结束（无论成功或失败）清除该行的进行中标记
-    enabledPending.value.delete(id);
-  }
-};
 
 // ---- 批量删除 ----
 // applyBatchResult 统一处理 BatchResultOut 响应：存在失败条目时以 error 提示失败数，否则沿用成功摘要

@@ -109,7 +109,7 @@ export const HEADER_FIELDS: Record<number, HeaderFieldMeta[]> = {
     { key: "ipv4Ihl", kind: "raw" },
     { key: "ipv4Tos", kind: "raw" },
     { key: "ipv4Length", kind: "raw" },
-    { key: "ipv4Id", kind: "raw" },
+    { key: "ipv4ID", kind: "raw" },
     { key: "ipv4Flags", kind: "ipv4Flags" },
     { key: "ipv4FragOffset", kind: "raw" },
     { key: "ipv4Ttl", kind: "raw" },

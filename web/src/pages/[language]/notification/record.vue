@@ -42,16 +42,16 @@
 
         <v-divider class="my-3" />
 
-        <div class="text-subtitle-2 font-weight-medium mb-2">
+        <div class="text-title-small font-weight-medium mb-2">
           {{ $t("model.notificationRecord.field.payload") }}
         </div>
-        <pre class="zk-code-preview text-body-2">{{ detailPayload }}</pre>
+        <pre class="zk-code-preview text-body-medium">{{ detailPayload }}</pre>
 
         <v-alert v-if="detailError" type="error" class="mt-3">
-          <div class="text-subtitle-2 font-weight-medium mb-1">
+          <div class="text-title-small font-weight-medium mb-1">
             {{ $t("model.notificationRecord.field.error") }}
           </div>
-          <div class="text-body-2 error-view">{{ detailError }}</div>
+          <div class="text-body-medium error-view">{{ detailError }}</div>
         </v-alert>
       </app-dialog>
     </template>
@@ -149,7 +149,7 @@ const detailFields = computed<DetailField[]>(() => {
   const label = (key: string): string => i18n.global.t(`model.notificationRecord.field.${key}`);
   return [
     { key: "eventType", label: label("eventType"), display: eventTypeLabel(item.eventType) },
-    { key: "eventId", label: label("eventId"), display: String(item.eventId) },
+    { key: "eventID", label: label("eventID"), display: String(item.eventID) },
     { key: "targetName", label: label("targetName"), display: item.targetName },
     { key: "channelName", label: label("channelName"), display: item.channelName },
     {
@@ -162,7 +162,7 @@ const detailFields = computed<DetailField[]>(() => {
       label: label("status"),
       display: enumLabelOf(EnumClass.notificationRecordStatus, item.status),
     },
-    { key: "messageId", label: label("messageId"), display: item.messageId },
+    { key: "messageID", label: label("messageID"), display: item.messageID },
     { key: "notifiedAt", label: label("notifiedAt"), display: formatDatetime(item.notifiedAt) },
   ];
 });

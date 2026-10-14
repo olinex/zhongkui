@@ -56,7 +56,7 @@
 // （memory.dedupeThreshold），仅当两者都不命中时新增一行，并同步向量列与全文检索列；
 // MemoryStore.Retrieve 复用与 RAG 相同的「向量 + 关键词 → RRF → 内容去重 → topK」管线，受
 // memory.maxItems / memory.maxItemBytes 约束。记忆按「命名空间 + Agent 类型 + 会话」归属与
-// 隔离，SessionID 为 0 的写入被拒绝，避免产生无会话归属的记忆。Memory 另提供 Summarize /
+// 隔离，SessionID 为空的写入被拒绝，避免产生无会话归属的记忆。Memory 另提供 Summarize /
 // Compact / GenerateTopic / Recall，均取 flash 档位，保证记忆维护的低成本。
 //
 // ## 会话与工具
@@ -65,6 +65,29 @@
 // 以 ErrSessionNotFound / ErrMessageNotFound 区分未找到场景；StreamRun 在流式生成前后完成历史
 // 加载、用户消息落库与助手消息落库。Store.LoadTools 依据数据库中的启用工具装配 ToolSet（含
 // mcp 分组拨号与内置工具），工具契约与内置实现见 internal/ai/tools。
+//
+// ## 设计要点
+//
+// 分块概览（`BuildChunkOverview`）为读时派生：只读 `knowledge_chunks` 的 `chunk_index`/`heading_path`/`content`
+// 聚合摘要与逐块明细，不改表、不改索引写入路径；`Stale` 表示索引落后于正文（`sha256(content) != doc.Hash`），
+// 结构单元识别复用切片器解析（`DescribeChunk`），标题为硬边界只存在于 `heading_path`、不进分块正文。
+//
+// 检索试运行（`Retriever.DryRun`）以 SSE 流式上报：`EvalReporter` 为函数类型别名（非单方法接口），逐阶段
+// 上报 `start`/`done`/`failed` 与增量 `delta`，并汇总各次调用耗时与 token（`DryRunMeta`）；除一次确定性检索外
+// 有 `answer` / `chunkRelevance` / `claims` / `reverseQuestions` / `suggestions` 五个 LLM 阶段，任一阶段失败一律
+// 降级为 warning、对应指标置 0，绝不中断整条链路（`suggestions` 阶段即使回答生成失败也执行）；指标为自研轻量
+// 实现。DryRun 不落库、不经工具编排（评估对象是确定性检索管线本身）。
+//
+// MCP 工具装配：首版仅支持远程传输 `streamable_http` 与 `sse`，不支持 stdio 本地进程（schema 层无
+// command/args/env）；单个 MCP 服务器的连接/握手/工具清单失败只跳过该服务器的工具并告警，不使快照重建
+// 失败（区别于「配置非法」的整包回退）；快照持有 MCP 会话关闭句柄，`Invalidate` 替换后须关闭旧快照连接。
+//
+// 会话短主题由 `Memory.GenerateTopic` 依据首条用户消息生成并写入 `agent_sessions.title`（只生成一次），
+// 生成失败回退为按 64 字节截断（`SessionTopicFallback`）且绝不阻断会话创建。
+//
+// 档位选型（Agent 侧）：本次运行的档位按「显式 `Slot` → 调用点声明的 `DeclaredSlot` → 参数
+// `agent.defaultSlot`」三级回退解析（`resolveInputSlot`）；指定了未绑定的档位一律返回英文错误，
+// 绝不静默切换到其他档位；`embedding` 槽位只承担向量化、不参与对话档位选择。
 package ai
 
 import (
@@ -92,6 +115,8 @@ type Components struct {
 	// Tools 已启用的工具（AI 未启用时为空），视图层 / Agent 由它取得工具清单与 schema；
 	// AI 启用但无启用工具时为空切片（非 nil）
 	Tools []tool.BaseTool
+	// Hub 驻留运行执行器（把生成生命周期与浏览器连接解耦），供视图层启动 / 订阅 / 取消在途运行
+	Hub *RunHub
 }
 
 // Enabled 报告 AI 能力是否已完整装配（未启用或装配不完整时返回 false）。

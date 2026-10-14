@@ -71,6 +71,6 @@ ParsePayload 知识文档解析任务载荷，仅携带目标文档 ID。
 ```go
 type ParsePayload struct {
     // DocumentID 待解析的知识文档 ID，必填
-    DocumentID uint `json:"documentId" binding:"required"`
+    DocumentID uint `json:"documentID" binding:"required"`
 }
 ```

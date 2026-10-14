@@ -44,10 +44,21 @@ type LlmModelCreateIn struct {
 	Temperature float64 `json:"temperature" default:"0.2"`
 	// MaxTokens 单次生成的最大 token 数，默认 4096（仅 chat 模型有意义）
 	MaxTokens int `json:"maxTokens" default:"4096"`
+	// ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
+	ContextTokens int `json:"contextTokens"`
 	// Enabled 是否启用，默认启用；禁用的模型不可绑定到档位
 	Enabled bool `json:"enabled" default:"true"`
 	// Description 模型描述，最长 512
 	Description string `json:"description" binding:"max=512"`
+	// ExtraBody 高级请求配置：为该模型每次对话请求自动合并的 JSON 对象（原始 JSON 文本，如 {"reasoning_effort":"high"}）；
+	// 空表示不附加，须为合法 JSON 对象否则拒绝
+	ExtraBody string `json:"extraBody"`
+	// ThinkingField 思考开关的请求字段名（如 enable_thinking）；与开/关取值三者齐备时该模型支持思考开关
+	ThinkingField string `json:"thinkingField" binding:"max=64"`
+	// ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+	ThinkingOnValue string `json:"thinkingOnValue"`
+	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
+	ThinkingOffValue string `json:"thinkingOffValue"`
 }
 
 // LlmModelUpdateIn 定义更新 LLM 模型端点的请求输入结构。
@@ -68,10 +79,21 @@ type LlmModelUpdateIn struct {
 	Temperature float64 `json:"temperature"`
 	// MaxTokens 单次生成的最大 token 数（仅 chat 模型有意义）
 	MaxTokens int `json:"maxTokens"`
+	// ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
+	ContextTokens int `json:"contextTokens"`
 	// Enabled 是否启用；禁用的模型不可绑定到档位
 	Enabled bool `json:"enabled"`
 	// Description 模型描述，最长 512
 	Description string `json:"description" binding:"max=512"`
+	// ExtraBody 高级请求配置：为该模型每次对话请求自动合并的 JSON 对象（原始 JSON 文本，如 {"reasoning_effort":"high"}）；
+	// 空表示不附加，须为合法 JSON 对象否则拒绝
+	ExtraBody string `json:"extraBody"`
+	// ThinkingField 思考开关的请求字段名（如 enable_thinking）；与开/关取值三者齐备时该模型支持思考开关
+	ThinkingField string `json:"thinkingField" binding:"max=64"`
+	// ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+	ThinkingOnValue string `json:"thinkingOnValue"`
+	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
+	ThinkingOffValue string `json:"thinkingOffValue"`
 }
 
 // LlmModelDetailOut 定义 LLM 模型端点的详情输出结构。
@@ -95,6 +117,8 @@ type LlmModelDetailOut struct {
 	Temperature float64 `json:"temperature"`
 	// MaxTokens 单次生成的最大 token 数
 	MaxTokens int `json:"maxTokens"`
+	// ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义（embedding 模型为 0）
+	ContextTokens int `json:"contextTokens"`
 	// Dimensions 已验证向量维度：后端在绑定 embedding 档位时经真实探测写入的只读缓存
 	// （仅 embedding 模型有意义），前端只读、不可提交
 	Dimensions int `json:"dimensions"`
@@ -102,6 +126,14 @@ type LlmModelDetailOut struct {
 	Enabled bool `json:"enabled"`
 	// Description 模型描述
 	Description string `json:"description"`
+	// ExtraBody 高级请求配置：为该模型每次对话请求自动合并的 JSON 对象（原始 JSON 文本，空表示不附加）
+	ExtraBody string `json:"extraBody"`
+	// ThinkingField 思考开关的请求字段名（如 enable_thinking）；与开/关取值三者齐备时该模型支持思考开关
+	ThinkingField string `json:"thinkingField"`
+	// ThinkingOnValue 开启思考时写入 ThinkingField 的取值（JSON 文本，如 true）
+	ThinkingOnValue string `json:"thinkingOnValue"`
+	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
+	ThinkingOffValue string `json:"thinkingOffValue"`
 }
 
 // LlmModelListOut 定义 LLM 模型列表的输出项结构。
@@ -214,7 +246,7 @@ func LlmModelCreate(c *gin.Context) {
 	}
 	name, baseURL, modelName := strings.TrimSpace(in.Name), strings.TrimSpace(in.BaseURL), strings.TrimSpace(in.Model)
 	if name == "" {
-		response.CreateBadBodyError(errors.New("name must be non-empty")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmModelNameEmpty").AbortWithGinH(c)
 		return
 	}
 	// 端点字段不变量由 pkgllm.ModelConfig.Validate 校验（Kind 与 Name 已在上方单独处理）
@@ -231,29 +263,57 @@ func LlmModelCreate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
+	// 上下文容量仅 chat 模型必填（正整数），embedding 模型不涉及、强制留 0
+	contextTokens := 0
+	if kind == llm.ModelKindChat {
+		if in.ContextTokens <= 0 {
+			response.CreateBadBodyMessageError("llmModelContextTokensInvalid").AbortWithGinH(c)
+			return
+		}
+		contextTokens = in.ContextTokens
+	}
+	// 高级请求配置与思考开关的开/关取值须为合法 JSON（非法即以本地化 400 拒绝、不落库）；
+	// 解析仅用于校验，落库保存调用方提交的原始 JSON 文本
+	if _, err := llm.ParseExtraBody(in.ExtraBody); err != nil {
+		response.CreateBadBodyMessageError("extraBodyInvalid").AbortWithGinH(c)
+		return
+	}
+	if _, err := llm.ParseJSONValue(in.ThinkingOnValue); err != nil {
+		response.CreateBadBodyMessageError("thinkingValueInvalid").AbortWithGinH(c)
+		return
+	}
+	if _, err := llm.ParseJSONValue(in.ThinkingOffValue); err != nil {
+		response.CreateBadBodyMessageError("thinkingValueInvalid").AbortWithGinH(c)
+		return
+	}
 	db := middlewares.GetCoreDatabase(c)
 	// 名称唯一性预检：含软删除记录（uq_llm_models_name 为非部分索引），
-	// 以便返回明确的英文校验错误而非唯一约束冲突的 500
+	// 以便返回按请求语言本地化的校验错误而非唯一约束冲突的 500
 	var count int64
 	if err := db.Unscoped().Model(&aimodel.LlmModel{}).Where("name = ?", name).Count(&count).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
 	if count > 0 {
-		response.CreateBadBodyError(errors.Newf("model name %q already exists", name)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmModelNameExists", name).AbortWithGinH(c)
 		return
 	}
 	instance := &aimodel.LlmModel{
-		Name:           name,
-		Kind:           kind,
-		BaseURL:        baseURL,
-		APIKey:         serializer.NewCrypto([]byte(in.APIKey)),
-		ModelName:      modelName,
-		TimeoutSeconds: in.TimeoutSeconds,
-		Temperature:    in.Temperature,
-		MaxTokens:      in.MaxTokens,
-		Enabled:        in.Enabled,
-		Description:    in.Description,
+		Name:             name,
+		Kind:             kind,
+		BaseURL:          baseURL,
+		APIKey:           serializer.NewCrypto([]byte(in.APIKey)),
+		ModelName:        modelName,
+		TimeoutSeconds:   in.TimeoutSeconds,
+		Temperature:      in.Temperature,
+		MaxTokens:        in.MaxTokens,
+		ContextTokens:    contextTokens,
+		Enabled:          in.Enabled,
+		Description:      in.Description,
+		ExtraBody:        in.ExtraBody,
+		ThinkingField:    in.ThinkingField,
+		ThinkingOnValue:  in.ThinkingOnValue,
+		ThinkingOffValue: in.ThinkingOffValue,
 	}
 	if err := db.Create(instance).Error; err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -315,7 +375,7 @@ func LlmModelUpdate(c *gin.Context) {
 	}
 	name, baseURL, modelName := strings.TrimSpace(in.Name), strings.TrimSpace(in.BaseURL), strings.TrimSpace(in.Model)
 	if name == "" {
-		response.CreateBadBodyError(errors.New("name must be non-empty")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmModelNameEmpty").AbortWithGinH(c)
 		return
 	}
 	// 凭据留空即沿用原值：解密读回后参与完整性校验，但不出现在更新列中
@@ -338,6 +398,29 @@ func LlmModelUpdate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
+	// 上下文容量仅 chat 模型必填（正整数），embedding 模型不涉及、强制留 0
+	contextTokens := 0
+	if kind == llm.ModelKindChat {
+		if in.ContextTokens <= 0 {
+			response.CreateBadBodyMessageError("llmModelContextTokensInvalid").AbortWithGinH(c)
+			return
+		}
+		contextTokens = in.ContextTokens
+	}
+	// 高级请求配置与思考开关的开/关取值须为合法 JSON（非法即以本地化 400 拒绝、不落库）；
+	// 解析仅用于校验，落库保存调用方提交的原始 JSON 文本
+	if _, err := llm.ParseExtraBody(in.ExtraBody); err != nil {
+		response.CreateBadBodyMessageError("extraBodyInvalid").AbortWithGinH(c)
+		return
+	}
+	if _, err := llm.ParseJSONValue(in.ThinkingOnValue); err != nil {
+		response.CreateBadBodyMessageError("thinkingValueInvalid").AbortWithGinH(c)
+		return
+	}
+	if _, err := llm.ParseJSONValue(in.ThinkingOffValue); err != nil {
+		response.CreateBadBodyMessageError("thinkingValueInvalid").AbortWithGinH(c)
+		return
+	}
 	// 改名时做唯一性预检（排除自身，含软删除记录）
 	var count int64
 	if err := db.Unscoped().Model(&aimodel.LlmModel{}).Where("name = ? AND id <> ?", name, instance.ID).Count(&count).Error; err != nil {
@@ -345,7 +428,7 @@ func LlmModelUpdate(c *gin.Context) {
 		return
 	}
 	if count > 0 {
-		response.CreateBadBodyError(errors.Newf("model name %q already exists", name)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmModelNameExists", name).AbortWithGinH(c)
 		return
 	}
 	// 该模型是否正绑定在 embedding 槽位：是则写库前以新端点探测维度兼容性，
@@ -366,16 +449,21 @@ func LlmModelUpdate(c *gin.Context) {
 		}
 	}
 	// 凭据留空时更新列中不含 api_key，保持原密文不变；未绑定 embedding 槽位时不写 dimensions
-	columns := []string{"name", "base_url", "model", "timeout_seconds", "temperature", "max_tokens", "enabled", "description"}
+	columns := []string{"name", "base_url", "model", "timeout_seconds", "temperature", "max_tokens", "context_tokens", "enabled", "description", "extra_body", "thinking_field", "thinking_on_value", "thinking_off_value"}
 	update := aimodel.LlmModel{
-		Name:           name,
-		BaseURL:        baseURL,
-		ModelName:      modelName,
-		TimeoutSeconds: in.TimeoutSeconds,
-		Temperature:    in.Temperature,
-		MaxTokens:      in.MaxTokens,
-		Enabled:        in.Enabled,
-		Description:    in.Description,
+		Name:             name,
+		BaseURL:          baseURL,
+		ModelName:        modelName,
+		TimeoutSeconds:   in.TimeoutSeconds,
+		Temperature:      in.Temperature,
+		MaxTokens:        in.MaxTokens,
+		ContextTokens:    contextTokens,
+		Enabled:          in.Enabled,
+		Description:      in.Description,
+		ExtraBody:        in.ExtraBody,
+		ThinkingField:    in.ThinkingField,
+		ThinkingOnValue:  in.ThinkingOnValue,
+		ThinkingOffValue: in.ThinkingOffValue,
 	}
 	if embeddingBound > 0 {
 		columns = append(columns, "dimensions")
@@ -395,7 +483,7 @@ func LlmModelUpdate(c *gin.Context) {
 }
 
 // LlmModelBatchDelete 批量删除 LLM 模型。
-// 逐条先校验是否仍被档位绑定（被绑定时返回明确英文错误，避免触发外键 RESTRICT 的 500），
+// 逐条先校验是否仍被档位绑定（被绑定时返回按请求语言本地化的错误，避免触发外键 RESTRICT 的 500），
 // 再软删除；模型不存在视为成功跳过（幂等）。全部条目处理完毕后统一重建运行时并广播变更。
 func LlmModelBatchDelete(c *gin.Context) {
 	var in LlmModelBatchIn
@@ -424,7 +512,7 @@ func LlmModelBatchDelete(c *gin.Context) {
 				return errors.WithStack(err)
 			}
 			if bound > 0 {
-				return errors.Newf("model %q is bound to a slot; unbind it before deleting", instance.Name)
+				return errors.New(response.LocalizeDetail(response.GetLocalizer(c), "llmModelBound", instance.Name))
 			}
 			if err := db.Delete(&aimodel.LlmModel{}, instance.ID).Error; err != nil {
 				return errors.WithStack(err)
@@ -464,7 +552,13 @@ func LlmModelTest(c *gin.Context) {
 			response.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}
-		cfg = modelConfigOf(&instance)
+		resolved, err := modelConfigOf(&instance)
+		if err != nil {
+			// 库内模型的高级请求配置/思考取值非法，属服务端数据问题
+			response.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+		cfg = resolved
 	} else {
 		kind, err := llm.ParseModelKind(in.Kind)
 		if err != nil {
@@ -500,16 +594,21 @@ func newLlmModelDetailOut(m *aimodel.LlmModel) LlmModelDetailOut {
 			CreatedAt: m.CreatedAt,
 			UpdatedAt: m.UpdatedAt,
 		},
-		Name:           m.Name,
-		Kind:           m.Kind,
-		BaseURL:        m.BaseURL,
-		APIKey:         m.APIKey,
-		Model:          m.ModelName,
-		TimeoutSeconds: m.TimeoutSeconds,
-		Temperature:    m.Temperature,
-		MaxTokens:      m.MaxTokens,
-		Dimensions:     m.Dimensions,
-		Enabled:        m.Enabled,
-		Description:    m.Description,
+		Name:             m.Name,
+		Kind:             m.Kind,
+		BaseURL:          m.BaseURL,
+		APIKey:           m.APIKey,
+		Model:            m.ModelName,
+		TimeoutSeconds:   m.TimeoutSeconds,
+		Temperature:      m.Temperature,
+		MaxTokens:        m.MaxTokens,
+		ContextTokens:    m.ContextTokens,
+		Dimensions:       m.Dimensions,
+		Enabled:          m.Enabled,
+		Description:      m.Description,
+		ExtraBody:        m.ExtraBody,
+		ThinkingField:    m.ThinkingField,
+		ThinkingOnValue:  m.ThinkingOnValue,
+		ThinkingOffValue: m.ThinkingOffValue,
 	}
 }

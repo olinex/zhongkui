@@ -118,8 +118,8 @@ type IPv4Headers struct {
 	IPv4TOS uint8 `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Tos"`
 	// IPv4Length 总长度，含头部与数据，单位字节（16 位）
 	IPv4Length uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Length"`
-	// IPv4Id 标识符，用于分片重组（16 位）
-	IPv4Id uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4Id"`
+	// IPv4ID 标识符，用于分片重组（16 位）
+	IPv4ID uint16 `gorm:"type:UInt16 CODEC(ZSTD(3))" json:"ipv4ID"`
 	// IPv4Flags 标志位，包含 DF、MF（3 位）
 	IPv4Flags layers.IPv4Flag `gorm:"type:UInt8 CODEC(ZSTD(3))" json:"ipv4Flags"`
 	// IPv4FragOffset 分片偏移，以 8 字节为单位（13 位）
@@ -175,7 +175,7 @@ func NewIPv4Headers(ipv4 *layers.IPv4) *IPv4Headers {
 		IPv4IHL:        ipv4.IHL,
 		IPv4TOS:        ipv4.TOS,
 		IPv4Length:     ipv4.Length,
-		IPv4Id:         ipv4.Id,
+		IPv4ID:         ipv4.Id,
 		IPv4Flags:      ipv4.Flags,
 		IPv4FragOffset: ipv4.FragOffset,
 		IPv4TTL:        ipv4.TTL,

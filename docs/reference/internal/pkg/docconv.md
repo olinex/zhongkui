@@ -43,6 +43,10 @@ const (
     // 该格式非用户导入格式，与人工导入文档相互隔离：同步生成文档时只操作该分区的文档，
     // 绝不触碰其余格式的文档。
     FormatGenerated Format = "generated"
+    // FormatNativeApi 由注册期接口目录自动生成的原生接口知识文档专用分区（落库值 native_api）。
+    // 该格式非用户导入格式，与叙述页分区（generated）及人工文档相互隔离：同步接口知识时只操作
+    // 该分区，绝不触碰其余格式的文档。
+    FormatNativeApi Format = "native_api"
 )
 ```
 

@@ -36,7 +36,7 @@ func TestKnowledgeReindexNamespace_EmptyNamespace(t *testing.T) {
 		t.Fatalf("NewKnowledge error = %v", err)
 	}
 	for _, ns := range []string{"", "   ", "\t\n"} {
-		got, err := knowledge.ReindexNamespace(context.Background(), ns)
+		got, err := knowledge.ReindexNamespace(context.Background(), ns, nil)
 		if err == nil {
 			t.Fatalf("ReindexNamespace(%q) = (%d, nil), want an error", ns, got)
 		}
@@ -52,7 +52,7 @@ func TestKnowledgeReindexNamespace_UnknownNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewKnowledge error = %v", err)
 	}
-	got, err := knowledge.ReindexNamespace(context.Background(), "absent")
+	got, err := knowledge.ReindexNamespace(context.Background(), "absent", nil)
 	if err != nil {
 		t.Fatalf("ReindexNamespace(absent) error = %v", err)
 	}
@@ -68,7 +68,7 @@ func TestMemoryStoreReindexEmbeddings_EmptyNamespace(t *testing.T) {
 		t.Fatalf("NewMemoryStore error = %v", err)
 	}
 	for _, ns := range []string{"", "   ", "\t\n"} {
-		got, err := store.ReindexEmbeddings(context.Background(), ns)
+		got, err := store.ReindexEmbeddings(context.Background(), ns, nil)
 		if err == nil {
 			t.Fatalf("ReindexEmbeddings(%q) = (%d, nil), want an error", ns, got)
 		}
@@ -84,7 +84,7 @@ func TestMemoryStoreReindexEmbeddings_UnknownNamespace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewMemoryStore error = %v", err)
 	}
-	got, err := store.ReindexEmbeddings(context.Background(), "absent")
+	got, err := store.ReindexEmbeddings(context.Background(), "absent", nil)
 	if err != nil {
 		t.Fatalf("ReindexEmbeddings(absent) error = %v", err)
 	}

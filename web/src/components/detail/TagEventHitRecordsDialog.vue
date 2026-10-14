@@ -21,7 +21,9 @@
           :aria-label="$t('action.previousRecord')"
           @click="currentIndex -= 1"
         />
-        <span class="text-caption text-no-wrap">{{ currentIndex + 1 }} / {{ items.length }}</span>
+        <span class="text-body-small text-no-wrap"
+          >{{ currentIndex + 1 }} / {{ items.length }}</span
+        >
         <v-btn
           icon="mdi-chevron-right"
           size="small"
@@ -40,7 +42,7 @@
     <template v-else>
       <!-- 命中摘要 -->
       <v-card variant="tonal" class="mb-4">
-        <v-card-title class="text-subtitle-1 font-weight-medium">
+        <v-card-title class="text-body-large font-weight-medium">
           {{ $t("model.tagEventRecordHit.name") }}
         </v-card-title>
         <v-card-text>

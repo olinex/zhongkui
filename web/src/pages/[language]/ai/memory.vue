@@ -9,7 +9,19 @@
         :batch-actions="getBatchActions"
         :project-fields="projectFields"
         model-name="agentMemory"
-      />
+      >
+        <!-- 状态列：字符串 status 映射为布尔开关（active ⇄ archived），开关即时写入启停 -->
+        <template #cell-status="{ item }">
+          <enabled-switch-cell
+            :model-value="item.status === 'active'"
+            :request="
+              (enabled: boolean) =>
+                agentMemoryStatusSet(item.id, { status: enabled ? 'active' : 'archived' })
+            "
+            @update:model-value="(v: boolean) => (item.status = v ? 'active' : 'archived')"
+          />
+        </template>
+      </search-table>
 
       <!-- 删除确认对话框：单条删除与批量删除共用 -->
       <confirm-dialog
@@ -55,7 +67,7 @@ import {
   agentMemoryListOptions,
   agentMemoryStatusSet,
 } from "@/apis/ai";
-import { getResponse, getSimpleResponse } from "@/apis/base";
+import { getResponse } from "@/apis/base";
 import type { BatchResultOut } from "@/apis/@types/admin";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
 import { useAppStore } from "@/stores/app";
@@ -65,47 +77,19 @@ const appStore = useAppStore();
 const searchTableRef = useTemplateRef("searchTableRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 
-// ---- 启停记忆（active ⇄ archived）----
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemStatusAction = async (item: Record<string, any>): Promise<void> => {
-  // 目标状态取当前状态的反面：生效记忆归档、归档记忆重新启用
-  const status = item.status === "active" ? "archived" : "active";
-  await getSimpleResponse(
-    agentMemoryStatusSet(item.id, { status }),
-    async (rsp) => {
-      await searchTableRef.value?.refresh();
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "success",
-      });
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
-};
-
 // ---- 列表操作 ----
 // projectFields 字段投影：行操作依赖 id/title/status 恒定投影，避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "title", "status", ...visible];
 
-// 记忆由 Agent 运行期按会话生成，管理端不提供新增/编辑，仅保留删除与启停。
+// 记忆由 Agent 运行期按会话生成，管理端不提供新增/编辑，仅保留删除；启停已改为状态列内联开关。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
-  const actions: ItemActions = {
+  return {
     delete: () => {
       batchState.value = null;
       deleteConfirmRef.value?.open(item);
     },
   };
-  // 启停动作按当前状态动态命名：生效 → 归档，归档 → 启用（名称经 action.<key> 渲染）
-  actions[item.status === "active" ? "archive" : "activate"] = () => itemStatusAction(item);
-  return actions;
 };
 
 // ---- 批量删除 ----

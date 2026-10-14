@@ -3,6 +3,7 @@ import axios, { AxiosError, type AxiosPromise, HttpStatusCode } from "axios";
 import { useAppStore } from "@/stores/app";
 import { localManager } from "@/stores/local";
 import { HttpHeader } from "@/types";
+import { mitter } from "@/utils/mitter";
 
 import {
   type BaseHeaders,
@@ -18,6 +19,10 @@ export const current_base_url = (): string => {
   consola.info("current_base_url", baseURL);
   return baseURL;
 };
+
+// AUTH_FAILED_EVENT 全局鉴权失败事件名：已登录却收到后端 HTTP 401 时由响应拦截器广播，
+// 订阅方据此统一复位会话并跳转 401 页面（见 router/index.ts）。
+export const AUTH_FAILED_EVENT: string = "base:auth-failed";
 
 export const request = axios.create({
   baseURL: current_base_url(),
@@ -56,6 +61,21 @@ request.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// 鉴权失败统一捕获：后端仅在 JWT 无效 / 过期 / 用户不存在时返回 401（见后端
+// middlewares/authenticate.go），而各调用点的 failed 回调大多省略（如枚举预取、
+// 功能开关加载），401 只会被 getResponse 静默吞掉——用户看到空下拉框却无任何提示。
+// 故在唯一的请求出口广播事件，由订阅方按「是否已登录」判定后跳转 401 页面。
+// 此处只广播不复位、不跳转：apis 层不反向依赖 router 与 stores/user。
+request.interceptors.response.use(
+  (rsp) => rsp,
+  (err: AxiosError) => {
+    if (err.response?.status === HttpStatusCode.Unauthorized) {
+      mitter.emit(AUTH_FAILED_EVENT);
+    }
+    return Promise.reject(err);
+  },
+);
 
 export function getJwtHeader(): Record<string, string> {
   return {

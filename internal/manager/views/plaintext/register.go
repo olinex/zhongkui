@@ -24,13 +24,13 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 加密字段明文解密 - 请求携带模型注册名 + 字段 + base64 密文，按字段权限点静态授权后返回明文
 	plaintextGroup.POST("/crypto", CryptoPlaintextGet)
 	// 加密字段明文解密元信息
-	plaintextGroup.OPTIONS("/crypto", views.StructMetaGinHandler(
+	views.RegisterApi(plaintextGroup, "/crypto", "加密字段明文解密 - 请求携带模型注册名 + 字段 + base64 密文，按字段权限点静态授权后返回明文",
 		views.WithMethod(http.MethodPost, views.WithBodyInput[CryptoPlaintextIn]()),
-	))
+	)
 	// S3 body 明文读取 - 请求携带模型注册名 + 字段 + 对象键，按字段权限点静态授权后返回明文
 	plaintextGroup.POST("/s3", S3PlaintextGet)
 	// S3 body 明文读取元信息
-	plaintextGroup.OPTIONS("/s3", views.StructMetaGinHandler(
+	views.RegisterApi(plaintextGroup, "/s3", "S3 body 明文读取 - 请求携带模型注册名 + 字段 + 对象键，按字段权限点静态授权后返回明文",
 		views.WithMethod(http.MethodPost, views.WithBodyInput[S3PlaintextIn]()),
-	))
+	)
 }

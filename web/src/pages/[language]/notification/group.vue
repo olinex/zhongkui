@@ -74,7 +74,7 @@
       >
         <template #body>
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   v-model="createName"
@@ -83,7 +83,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="createDescription"
@@ -93,7 +93,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   v-model="createIsDefault"
@@ -103,7 +103,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <inner-edit-table
                   v-model="createTargetItems"
@@ -156,7 +156,7 @@
       >
         <template #body="{ proxy, editable }">
           <v-form>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
                   :model-value="proxy.name"
@@ -165,7 +165,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-switch
                   :model-value="proxy.isDefault"
@@ -175,7 +175,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <v-textarea
                   v-model="updateDescription"
@@ -186,7 +186,7 @@
                 />
               </v-col>
             </v-row>
-            <v-row dense>
+            <v-row density="compact">
               <v-col cols="12">
                 <inner-edit-table
                   v-model="editTargetItems"
@@ -343,11 +343,11 @@ const targetSearchHeaders: Record<string, SearchAction> = { name: SearchAction.C
 const createTargetItems = ref<NotificationGroupTargetItem[]>([]);
 
 const openCreateDialogAction = (): void => {
-  createForm.resetField("name", { value: "" });
-  createForm.resetField("isDefault", { value: false });
-  createForm.resetField("description", { value: "" });
+  // 打开动作里原子复位全部字段：值 + 校验状态一次性重置，避免残留
+  const defaults = { name: "", isDefault: false, description: "" };
+  createForm.resetForm({ values: defaults });
   createTargetItems.value = [];
-  createDialogRef.value?.open({ name: "", isDefault: false, description: "" });
+  createDialogRef.value?.open(defaults);
 };
 
 const createAction = createForm.handleSubmit(async (values) => {
@@ -357,7 +357,7 @@ const createAction = createForm.handleSubmit(async (values) => {
       name: (values.name as string).trim(),
       isDefault: values.isDefault,
       description: values.description,
-      targetIds: createTargetItems.value.map((t) => t.id),
+      targetIDs: createTargetItems.value.map((t) => t.id),
     }),
     async (rsp) => {
       await searchTableRef.value?.refresh();
@@ -379,7 +379,7 @@ const createAction = createForm.handleSubmit(async (values) => {
 
 // ---- 编辑分组（描述 + 绑定目标）----
 const editTargetItems = ref<NotificationGroupTargetItem[]>([]);
-// 打开编辑对话框时的初始绑定目标，用于判断绑定目标是否被修改（targetIds 不在
+// 打开编辑对话框时的初始绑定目标，用于判断绑定目标是否被修改（targetIDs 不在
 // vee-validate 表单内，无法复用 form.meta.dirty，需单独跟踪以驱动确认按钮可用态）
 let editTargetsInitial: number[] = [];
 
@@ -394,7 +394,8 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<NotificationGroupDetailOut>(
     notificationGroupDetailGet(item.id),
     async (rsp) => {
-      updateForm.resetField("description", { value: rsp.data.description });
+      // 复位与回填同属打开动作：原子重置全部字段与校验状态，再写入本次详情
+      updateForm.resetForm({ values: { description: rsp.data.description } });
       editTargetsInitial = (rsp.data.targets ?? []).map((t) => t.id);
       editTargetItems.value = rsp.data.targets ?? [];
       editDialogRef.value?.open(rsp.data);
@@ -415,7 +416,7 @@ const itemUpdateAction = (proxy: Record<string, any>) => {
     await getSimpleResponse(
       notificationGroupUpdate(proxy.id, {
         description: values.description,
-        targetIds: editTargetItems.value.map((t) => t.id),
+        targetIDs: editTargetItems.value.map((t) => t.id),
       }),
       async (rsp) => {
         await searchTableRef.value?.refresh();

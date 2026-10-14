@@ -27,6 +27,16 @@ const editable = ref(false);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const proxy = ref({} as Record<string, any>);
 
+const emits = defineEmits(["confirm"]);
+
+// 无论关闭按钮、ESC 还是点击遮罩关闭，都要退出可编辑态；统一监听 dialog 落回 false，
+// 避免只在「关闭」按钮的处理函数里复位导致其他关闭途径漏掉。
+watch(dialog, (opened) => {
+  if (!opened) {
+    editable.value = false;
+  }
+});
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const open = (item: Record<string, any>) => {
   proxy.value = { ...item };
@@ -34,7 +44,6 @@ const open = (item: Record<string, any>) => {
 };
 
 const close = () => {
-  editable.value = false;
   dialog.value = false;
 };
 
@@ -45,8 +54,6 @@ const confirm = async () => {
   await Promise.resolve(result);
   close();
 };
-
-const emits = defineEmits(["confirm"]);
 
 defineProps({
   prependIcon: {

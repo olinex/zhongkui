@@ -20,6 +20,7 @@ import (
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
@@ -39,10 +40,13 @@ type RetrievalResult struct {
 	Title string `json:"title"`
 	// ChunkIndex 分块在文档内的序号
 	ChunkIndex int `json:"chunkIndex"`
-	// Content 该块的检索文本（标题路径 + 正文）
+	// Content 该块的检索文本（标题路径 + 正文）；Complete 为 true 时为整篇文档全文
 	Content string `json:"content"`
 	// Score 检索相关度分数（融合后得分）
 	Score float64 `json:"score"`
+	// Complete 内容是否为整篇文档展开结果（见 expandDocuments）：为 true 时消费方不再截断。
+	// 不参与线序列化，保持前端契约不变。
+	Complete bool `json:"-"`
 }
 
 // chunkKey 是融合打分时识别同一分块的键。
@@ -112,8 +116,16 @@ func NewKnowledge(db *database.DB, embed embedder, params *Params) (*Knowledge, 
 // 最后更新 doc.ChunkCount 与 doc.Hash。分块正文的全文检索表示经
 // to_tsvector('simple', ...) SQL 表达式写入 search 列。
 func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument) error {
+	_, err := k.indexDocument(ctx, doc)
+	return err
+}
+
+// indexDocument 是 IndexDocument 的实现体，同时返回本次向量化的 token 用量（EmbedUsage）：
+// 逐块计算索引文本后经 embedStringsWithUsage 向量化，其余切片、hash 计算与事务落库逻辑与
+// IndexDocument 完全一致。供需要上报用量的同步链路（ReindexNamespace、SyncGeneratedDocs）复用。
+func (k *Knowledge) indexDocument(ctx context.Context, doc *ai.KnowledgeDocument) (EmbedUsage, error) {
 	if doc == nil {
-		return errors.New("knowledge: nil document")
+		return EmbedUsage{}, errors.New("knowledge: nil document")
 	}
 	plaintext := string(doc.Content.Value())
 	chunks, err := k.chunker.Transform(ctx, []*schema.Document{{
@@ -126,7 +138,7 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 		},
 	}})
 	if err != nil {
-		return errors.WithStack(err)
+		return EmbedUsage{}, errors.WithStack(err)
 	}
 	// 每块索引文本 = 标题路径 + 正文，向量化与全文检索共用该文本
 	texts := make([]string, len(chunks))
@@ -135,17 +147,18 @@ func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument
 		texts[i] = strings.TrimSpace(path + "\n" + c.Content)
 	}
 	vectors := make([][]float64, len(chunks))
+	var usage EmbedUsage
 	if len(texts) > 0 {
-		if vectors, err = k.embed.EmbedStrings(ctx, texts); err != nil {
-			return errors.WithStack(err)
+		if vectors, usage, err = embedStringsWithUsage(ctx, k.embed, texts); err != nil {
+			return EmbedUsage{}, errors.WithStack(err)
 		}
 	}
 	// 内容摘要为带密钥的 HMAC-SHA256：明文不落库，同时摘要确定可比，供过期判定使用
 	hash, err := crypto.DigestForField(&ai.KnowledgeDocument{}, "hash", "json", []byte(plaintext))
 	if err != nil {
-		return errors.WithStack(err)
+		return EmbedUsage{}, errors.WithStack(err)
 	}
-	return k.db.Transaction(func(tx *gorm.DB) error {
+	return usage, k.db.Transaction(func(tx *gorm.DB) error {
 		// 单事务内先清旧块再插入新块，保证索引原子替换
 		if err := tx.Where("document_id = ?", doc.ID).Delete(&ai.KnowledgeChunk{}).Error; err != nil {
 			return errors.WithStack(err)
@@ -190,11 +203,13 @@ func (k *Knowledge) Reindex(ctx context.Context, doc *ai.KnowledgeDocument) erro
 }
 
 // ReindexNamespace 以当前 embedding 模型为准，重建命名空间下全部知识文档的分块与向量索引：
-// 逐篇读取文档正文（经 crypto 序列化器解密）后复用 IndexDocument 重新切片、向量化与落库，
+// 逐篇读取文档正文（经 crypto 序列化器解密）后复用 indexDocument 重新切片、向量化与落库，
 // 供更换 embedding 模型（维度或语义变化）后让 knowledge_chunks 与当前模型对齐。仅处理未软删除
 // 的文档，不改文档正文；返回实际重建的文档篇数，中途失败即返回该错误（已处理的文档不回滚，
-// 再次执行按同一全集继续收敛）。namespaceName 为空时返回英文错误。
-func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string) (int, error) {
+// 再次执行按同一全集继续收敛）。report 为进度上报入口（为 nil 时不上报）：查询文档后上报一次
+// Start(文档总数)，每篇成功后上报一次 Step（Action=SyncActionReindex，含标题、耗时与 token 用量），
+// 结束（含提前失败）时经 defer 上报一次 Finish。namespaceName 为空时返回英文错误。
+func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string, report SyncReporter) (int, error) {
 	if strings.TrimSpace(namespaceName) == "" {
 		return 0, errors.New("knowledge: empty namespace for reindex")
 	}
@@ -205,10 +220,21 @@ func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string) 
 		Find(&docs).Error; err != nil {
 		return 0, errors.WithStack(err)
 	}
+	reportStart(report, len(docs))
+	defer reportFinish(report)
 	for i := range docs {
-		if err := k.Reindex(ctx, &docs[i]); err != nil {
+		start := time.Now()
+		usage, err := k.indexDocument(ctx, &docs[i])
+		if err != nil {
 			return i, err
 		}
+		reportStep(report, SyncProgressItem{
+			Title:     docs[i].Title,
+			Action:    SyncActionReindex,
+			Count:     1,
+			ElapsedMs: time.Since(start).Milliseconds(),
+			Usage:     usage,
+		})
 	}
 	return len(docs), nil
 }
@@ -399,15 +425,19 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 	if err != nil {
 		return nil, err
 	}
-	var docs []*schema.Document
+	var final []*RetrievalResult
 	if chat == nil {
-		docs = toSchemaDocuments(selectTopK(cands, o.TopK))
+		final = selectTopK(cands, o.TopK)
 	} else if ranked, rerankErr := r.rerank(ctx, chat, query, cands, o.TopK); rerankErr != nil {
 		// 重排失败（调用错误或 JSON 解析失败）：降级为融合排序前 TopK。
-		docs = toSchemaDocuments(selectTopK(cands, o.TopK))
+		final = selectTopK(cands, o.TopK)
 	} else {
-		docs = toSchemaDocuments(ranked)
+		final = ranked
 	}
+	// small-to-big：命中分块所属文档整篇并入结果（见 expandDocuments）。展开发生在重排之后，
+	// 使向量/关键词/重排都作用于语义聚焦的小分块，仅最终返回的内容提升为整篇。
+	final = r.expandDocuments(ctx, final)
+	docs := toSchemaDocuments(final)
 	// 命中回写使用统计：仅统计最终返回的文档，异步执行且失败仅告警，不影响检索结果
 	r.touchUsageAsync(ctx, docs)
 	return docs, nil
@@ -497,7 +527,7 @@ func (r *Retriever) vectorRetrieve(ctx context.Context, o *RetrieveOptions, vec 
 	q := r.db.Table("knowledge_chunks AS c").
 		Select("c.document_id, c.chunk_index, c.heading_path, c.content, d.title, (1 - (c.embedding <=> ?::vector)) AS score", lit).
 		Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.deleted_at IS NULL").
-		Where("c.namespace_name = ?", o.NamespaceName)
+		Where("c.namespace_name IN ?", base.NamespaceScope(o.NamespaceName))
 	if len(o.DocIDs) > 0 {
 		q = q.Where("c.document_id IN ?", o.DocIDs)
 	}
@@ -523,7 +553,7 @@ func (r *Retriever) keywordRetrieve(ctx context.Context, o *RetrieveOptions, que
 	q := r.db.Table("knowledge_chunks AS c").
 		Select("c.document_id, c.chunk_index, c.heading_path, c.content, d.title, ts_rank(c.search, plainto_tsquery('simple', ?)) AS score", query).
 		Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.deleted_at IS NULL").
-		Where("c.namespace_name = ?", o.NamespaceName).
+		Where("c.namespace_name IN ?", base.NamespaceScope(o.NamespaceName)).
 		Where("c.search @@ plainto_tsquery('simple', ?)", query)
 	if len(o.DocIDs) > 0 {
 		q = q.Where("c.document_id IN ?", o.DocIDs)
@@ -827,7 +857,7 @@ func selectTopK(cands []*RetrievalResult, topK int) []*RetrievalResult {
 }
 
 // toSchemaDocuments 将检索结果转为 eino schema.Document，MetaData 携带 documentID、
-// title、chunkIndex、score，Content 为该块检索文本。
+// title、chunkIndex、score 与 complete（内容是否为整篇展开结果），Content 为该块检索文本。
 func toSchemaDocuments(results []*RetrievalResult) []*schema.Document {
 	out := make([]*schema.Document, 0, len(results))
 	for _, r := range results {
@@ -839,8 +869,127 @@ func toSchemaDocuments(results []*RetrievalResult) []*schema.Document {
 				"title":      r.Title,
 				"chunkIndex": r.ChunkIndex,
 				"score":      r.Score,
+				"complete":   r.Complete,
 			},
 		})
+	}
+	return out
+}
+
+// expandDocuments 对最终检索结果做 small-to-big 展开（父块 = 整篇文档）：命中分块所属文档整篇
+// 拼回后替换该文档首条命中的内容并标记 Complete，同文档的其余命中删除，从而在保持检索粒度
+// 的同时让消费方拿到完整规格（分块内容在工具与评估侧会被截断，整篇展开则不再截断）。
+// 展开受 retrieval.expandDocLimit 限制（整篇 rune 数超限的文档保持原分块结果）；取数失败仅告警，
+// 与使用统计回写同策略：增强逻辑失败绝不中断检索。
+func (r *Retriever) expandDocuments(ctx context.Context, results []*RetrievalResult) []*RetrievalResult {
+	if len(results) == 0 {
+		return results
+	}
+	limit := r.params.Int("retrieval.expandDocLimit")
+	if limit <= 0 {
+		return results
+	}
+	docIDs := resultDocumentIDs(results)
+	if len(docIDs) == 0 {
+		return results
+	}
+	fullTexts, err := r.loadDocFullTexts(ctx, docIDs)
+	if err != nil {
+		r.warnf(ctx, "retriever: load documents for small-to-big expansion failed: %v", err)
+		return results
+	}
+	return mergeExpandedResults(results, fullTexts, limit)
+}
+
+// resultDocumentIDs 提取检索结果中的去重文档 ID（保持首次出现顺序），非数字 ID 直接跳过。
+func resultDocumentIDs(results []*RetrievalResult) []uint {
+	ids := make([]uint, 0, len(results))
+	seen := make(map[uint]struct{}, len(results))
+	for _, res := range results {
+		if res == nil {
+			continue
+		}
+		id, err := strconv.ParseUint(res.DocumentID, 10, 64)
+		if err != nil || id == 0 {
+			continue
+		}
+		if _, dup := seen[uint(id)]; dup {
+			continue
+		}
+		seen[uint(id)] = struct{}{}
+		ids = append(ids, uint(id))
+	}
+	return ids
+}
+
+// loadDocFullTexts 读取给定文档的整篇检索文本：按分块序号升序拼接「标题路径 + 正文」，
+// 与单条命中返回的文本形态一致（见 rowsToResults）。仅读取未软删除的文档；无分块的文档不出现。
+func (r *Retriever) loadDocFullTexts(ctx context.Context, docIDs []uint) (map[uint]string, error) {
+	var alive []uint
+	// KnowledgeDocument 使用 gorm.Model（含 DeletedAt），软删除文档由 GORM 默认作用域自动排除
+	if err := r.db.WithContext(ctx).Model(&ai.KnowledgeDocument{}).
+		Where("id IN ?", docIDs).
+		Pluck("id", &alive).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	if len(alive) == 0 {
+		return nil, nil
+	}
+	var chunks []ai.KnowledgeChunk
+	if err := r.db.WithContext(ctx).
+		Select("document_id", "chunk_index", "heading_path", "content").
+		Where("document_id IN ?", alive).
+		Order("document_id, chunk_index").
+		Find(&chunks).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	full := make(map[uint]string, len(alive))
+	for _, chunk := range chunks {
+		full[chunk.DocumentID] += strings.TrimSpace(string(chunk.HeadingPath.Value())+"\n"+string(chunk.Content.Value())) + "\n\n"
+	}
+	for id, text := range full {
+		full[id] = strings.TrimSpace(text)
+	}
+	return full, nil
+}
+
+// mergeExpandedResults 以整篇文档文本合并检索结果（纯函数，便于单测）：按原顺序遍历，同文档
+// 仅保留首条命中，其内容替换为整篇全文并标记 Complete，同文档其余命中删除；整篇展开的总量受
+// limit 约束——单篇超限、或展开后累计超过 limit 的文档一律降级保持原分块结果（绝不截断整篇），
+// 使一次检索注入模型的整篇内容有确定上界（limit 是「一次检索的展开预算」而非「单篇上限」）；
+// fullTexts 未覆盖的文档原样保留。
+func mergeExpandedResults(results []*RetrievalResult, fullTexts map[uint]string, limit int) []*RetrievalResult {
+	if len(results) == 0 || len(fullTexts) == 0 || limit <= 0 {
+		return results
+	}
+	out := make([]*RetrievalResult, 0, len(results))
+	emitted := make(map[uint]bool, len(fullTexts))
+	expanded := 0
+	for _, res := range results {
+		if res == nil {
+			continue
+		}
+		id, err := strconv.ParseUint(res.DocumentID, 10, 64)
+		full, ok := fullTexts[uint(id)]
+		if err != nil || !ok {
+			out = append(out, res)
+			continue
+		}
+		// 该文档已经展开过：同文档其余命中直接丢弃（内容已由整篇覆盖），不可再作为分块重复返回
+		if emitted[uint(id)] {
+			continue
+		}
+		size := utf8.RuneCountInString(full)
+		if size > limit || expanded+size > limit {
+			out = append(out, res)
+			continue
+		}
+		emitted[uint(id)] = true
+		expanded += size
+		clone := *res
+		clone.Content = full
+		clone.Complete = true
+		out = append(out, &clone)
 	}
 	return out
 }
@@ -929,6 +1078,9 @@ func ToRetrievalResults(docs []*schema.Document) []RetrievalResult {
 			}
 			if v, ok := d.MetaData["score"].(float64); ok {
 				r.Score = v
+			}
+			if v, ok := d.MetaData["complete"].(bool); ok {
+				r.Complete = v
 			}
 		}
 		out = append(out, r)

@@ -80,6 +80,7 @@ func (a *knowledgeSearcherAdapter) Search(ctx context.Context, query string) ([]
 			ChunkIndex: r.ChunkIndex,
 			Content:    r.Content,
 			Score:      r.Score,
+			Complete:   r.Complete,
 		})
 	}
 	return hits, nil

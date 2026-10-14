@@ -29,9 +29,9 @@ type NotificationGroupCreateIn struct {
 	IsDefault bool `json:"isDefault" default:"false"`
 	// Description 组描述，最长 256 字符
 	Description string `json:"description" binding:"max=256"`
-	// TargetIds 创建时随组绑定的目标 ID 列表（可选，均须属于当前命名空间），
+	// TargetIDs 创建时随组绑定的目标 ID 列表（可选，均须属于当前命名空间），
 	// 缺省或空表示不绑定；在创建事务内完成绑定，保证组与关联原子落库
-	TargetIds []uint64 `json:"targetIds"`
+	TargetIDs []uint64 `json:"targetIDs"`
 }
 
 // NotificationGroupUpdateIn 定义更新通知目标组的请求输入结构。
@@ -39,9 +39,9 @@ type NotificationGroupCreateIn struct {
 type NotificationGroupUpdateIn struct {
 	// Description 组描述，最长 256 字符
 	Description string `json:"description" binding:"max=256"`
-	// TargetIds 目标 ID 列表（可选）：缺省（null）时保持既有绑定不变，
+	// TargetIDs 目标 ID 列表（可选）：缺省（null）时保持既有绑定不变，
 	// 提供数组（可为空）时整集替换，空数组表示解绑全部
-	TargetIds *[]uint64 `json:"targetIds"`
+	TargetIDs *[]uint64 `json:"targetIDs"`
 }
 
 // NotificationGroupTargetOut 定义通知详情中单条绑定目标的输出结构，
@@ -54,7 +54,7 @@ type NotificationGroupTargetOut struct {
 	// Type 目标渠道类型键快照
 	Type string `json:"type"`
 	// ChannelID 目标所属的通知渠道 ID
-	ChannelID uint `json:"channelId"`
+	ChannelID uint `json:"channelID"`
 	// ChannelName 目标所属渠道名称
 	ChannelName string `json:"channelName"`
 	// ChannelType 目标所属渠道类型键
@@ -291,16 +291,16 @@ func NotificationGroupCreate(c *gin.Context) {
 			return errors.WithStack(err)
 		}
 		// 创建时随组绑定目标（可选）
-		if len(in.TargetIds) > 0 {
-			if err := replaceNotificationGroupTargetsTx(tx, namespace, instance.ID, in.TargetIds); err != nil {
+		if len(in.TargetIDs) > 0 {
+			if err := replaceNotificationGroupTargetsTx(tx, namespace, instance.ID, in.TargetIDs); err != nil {
 				return err
 			}
 		}
 		return nil
 	}); err != nil {
 		if errors.Is(err, errNotificationGroupTargetInvalid) {
-			// 目标缺失或跨命名空间：返回 400 且不透出内部哨兵错误详情
-			response.CreateBadBodyError(nil).AbortWithGinH(c)
+			// 目标缺失或跨命名空间：返回 400 且详情为可本地化文案，不透出内部哨兵错误
+			response.CreateBadBodyMessageError("notificationGroupTargetInvalid").AbortWithGinH(c)
 			return
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -343,16 +343,16 @@ func NotificationGroupUpdate(c *gin.Context) {
 			return err
 		}
 		// 编辑时若携带 targetIds 则整集替换绑定目标（缺省不改动既有绑定）
-		if in.TargetIds != nil {
-			if err := replaceNotificationGroupTargetsTx(tx, namespace, instance.ID, *in.TargetIds); err != nil {
+		if in.TargetIDs != nil {
+			if err := replaceNotificationGroupTargetsTx(tx, namespace, instance.ID, *in.TargetIDs); err != nil {
 				return err
 			}
 		}
 		return nil
 	}); err != nil {
 		if errors.Is(err, errNotificationGroupTargetInvalid) {
-			// 目标缺失或跨命名空间：返回 400 且不透出内部哨兵错误详情
-			response.CreateBadBodyError(nil).AbortWithGinH(c)
+			// 目标缺失或跨命名空间：返回 400 且详情为可本地化文案，不透出内部哨兵错误
+			response.CreateBadBodyMessageError("notificationGroupTargetInvalid").AbortWithGinH(c)
 			return
 		}
 		response.CreateAccidentError(err).AbortWithGinH(c)

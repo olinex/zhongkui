@@ -93,3 +93,8 @@ pools := vtab.NewPools(store)                     // store 为可选的 S3 对�
 - DatasourceListOut.type 经 init() 的 views.AddEnumBinding 绑定枚举类 datasourceType。
 
 新增类型后，配置字段以结构体标签为准，前端表单会自动出现对应字段，无需改前端。
+
+## 六、约束
+
+- 表型数据源（`mysql` / `postgres` / `clickhouse` / `sqlite_file`）与 `mongo` 的配置必须 携带完整 `schema`，后端注册阶段不再自动自省；列定义由前端 `/datasource/introspect` 自省生成或手动填写。启动 `Reload` 与热同步 `SyncOne` 均以存库 config 重调 `Pools.Register`，故库中缺 `schema` 的存量旧行重载会失败，须以带完整 schema 的配置重建。
+- 预检经 `POST /datasource/test`、`POST /datasource/introspect` 暴露，只建连探活 / 自省列 定义，不落库、不注册 vtable；成功与失败原因均放响应体返回（失败不作 HTTP 5xx）。

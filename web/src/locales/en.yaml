@@ -16,7 +16,6 @@ navbar:
   ai:
     self: AI
     knowledge: Knowledge Base
-    assistant: AI Assistant
     memory: Memory
   notification:
     self: Notifications
@@ -90,7 +89,7 @@ model:
     name: Service
     field:
       serviceName: Service Name
-      instanceId: Instance ID
+      instanceID: Instance ID
       host: Host
       version: Version
       pid: PID
@@ -104,7 +103,7 @@ model:
     field:
       id: ID
       name: Name
-      channelId: Channel
+      channelID: Channel
       channelName: Channel Name
       channelType: Channel Type
       channelEnabled: Channel Status
@@ -152,16 +151,16 @@ model:
     field:
       id: ID
       eventType: Event Type
-      eventId: Event ID
-      groupId: Notification Group ID
-      targetId: Target ID
+      eventID: Event ID
+      groupID: Notification Group ID
+      targetID: Target ID
       targetName: Target Name
-      channelId: Channel ID
+      channelID: Channel ID
       channelName: Channel Name
       channelType: Channel Type
       status: Status
       error: Error Message
-      messageId: Message ID
+      messageID: Message ID
       payload: Message Content
       notifiedAt: Sent At
       createdAt: Created At
@@ -255,7 +254,7 @@ model:
       timeout: Timeout
       promisc: Promiscuous Mode
       enabled: Enabled
-      sessionId: Session ID
+      sessionID: Session ID
       status: Status
       configVersion: Config Version
       globalVersion: Global Version
@@ -300,10 +299,7 @@ model:
       summary: Context Summary
       createdAt: Created At
       updatedAt: Updated At
-      query: Request
-      docIDs: Documents
-      businessData: Business Data
-      regoRule: Rego Validation Rule
+      query: Query
   agentMemory:
     name: Memory
     field:
@@ -318,7 +314,7 @@ model:
       createdAt: Created At
       updatedAt: Updated At
       namespaceName: Namespace
-      sessionId: Source Session
+      sessionID: Source Session
   llmModel:
     name: LLM Model
     field:
@@ -331,20 +327,28 @@ model:
       timeoutSeconds: Timeout (s)
       temperature: Temperature
       maxTokens: Max Tokens
+      contextTokens: Context Tokens
       dimensions: Dimensions
       enabled: Enabled
       description: Description
+      extraBody: Extra Request Body
+      thinkingField: Thinking Field
+      thinkingOnValue: Thinking On Value
+      thinkingOffValue: Thinking Off Value
       createdAt: Created At
       createdAtTime: Created At Time
       createdAtDate: Created At Date
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
+    validation:
+      jsonObject: "{path} must be a valid JSON object"
+      jsonValue: "{path} must be a valid JSON value"
   llmBinding:
     name: Slot Binding
     field:
       slot: Slot
-      modelId: Model ID
+      modelID: Model ID
       modelName: Bound Model
       kind: Model Kind
       providerModel: Provider Model
@@ -581,7 +585,7 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated Time
       updatedAtDate: Updated Date
-      ruleId: Rule ID
+      ruleID: Rule ID
       ruleName: Rule Name
       matchAll: Match All Conditions
       status: Status
@@ -613,7 +617,7 @@ model:
       channelName: Notification Channel
       channelType: Channel Type
       status: Status
-      messageId: Message ID
+      messageID: Message ID
       notifiedAt: Notified At
   tagEventCondition:
     name: Condition
@@ -637,11 +641,11 @@ model:
       namespace: Namespace
       timestamp: Capture Time
       createdAt: Ingestion Time
-      sessionId: Session ID
-      tcpStreamId: TCP Stream ID
+      sessionID: Session ID
+      tcpStreamID: TCP Stream ID
       capture: Capturer
       version: Version
-      traceId: Trace ID
+      traceID: Trace ID
       # IPv4 address & ports
       ipv4Src: IPv4 Source Address
       ipv4Dst: IPv4 Destination Address
@@ -678,7 +682,7 @@ model:
       ipv4Version: IPv4 Version
       ipv4Ihl: IPv4 Header Length
       ipv4Tos: Type of Service
-      ipv4Id: Fragment ID
+      ipv4ID: Fragment ID
       ipv4Flags: Fragment Flags
       ipv4FragOffset: Fragment Offset
       ipv4Checksum: Header Checksum
@@ -701,11 +705,11 @@ model:
       namespace: Namespace
       timestamp: Capture Time
       createdAt: Ingestion Time
-      sessionId: Session ID
-      tcpStreamId: TCP Stream ID
+      sessionID: Session ID
+      tcpStreamID: TCP Stream ID
       capture: Capturer
       version: Version
-      traceId: Trace ID
+      traceID: Trace ID
       # IPv6 address & ports
       ipv6Src: IPv6 Source Address
       ipv6Dst: IPv6 Destination Address
@@ -761,11 +765,11 @@ model:
       namespace: Namespace
       timestamp: Capture Time
       createdAt: Ingestion Time
-      sessionId: Session ID
-      tcpStreamId: TCP Stream ID
+      sessionID: Session ID
+      tcpStreamID: TCP Stream ID
       capture: Capturer
       version: Version
-      traceId: Trace ID
+      traceID: Trace ID
       # HTTP audit columns
       method: Request Method
       host: Host
@@ -974,8 +978,8 @@ model:
       namespace: Namespace
       timestamp: Capture Time
       createdAt: Ingestion Time
-      sessionId: Session ID
-      traceId: Trace ID
+      sessionID: Session ID
+      traceID: Trace ID
       capture: Capturer
       version: Version
       cli2Srv: Client to Server
@@ -1006,7 +1010,7 @@ model:
       loaded: Loaded
       loadMore: Load More
       empty: No network stack data for this transport
-      noTraceId: This record has no traceId to associate a network stack
+      noTraceId: This record has no traceID to associate a network stack
       error: Failed to load network stack
     # Human-readable protocol headers: per-field name/value/description (header.field.<key> and header.desc.<key> keys match JSON field names)
     header:
@@ -1026,7 +1030,7 @@ model:
         ipv4Ihl: Header Length
         ipv4Tos: Type of Service
         ipv4Length: Total Length
-        ipv4Id: Identification
+        ipv4ID: Identification
         ipv4Flags: Flags
         ipv4FragOffset: Fragment Offset
         ipv4Ttl: Time to Live
@@ -1074,7 +1078,7 @@ model:
         ipv4Ihl: IPv4 header length in 32-bit words
         ipv4Tos: Type of service for QoS prioritization
         ipv4Length: Total IP datagram length (header + data) in bytes
-        ipv4Id: Identification used for fragment reassembly
+        ipv4ID: Identification used for fragment reassembly
         ipv4Flags: "Fragment flags: DF (don't fragment), MF (more fragments)"
         ipv4FragOffset: Fragment offset in 8-byte units
         ipv4Ttl: Time to live, decremented by one per hop; packet is dropped at 0
@@ -1144,6 +1148,7 @@ action:
   signIn: Sign In
   signOut: Sign Out
   language: Language
+  aiAssistant: AI Assistant
   toggleTheme: Toggle theme
   accountMenu: Account menu
   pwdForget: Forgot Password
@@ -1154,6 +1159,8 @@ action:
   expand: Expand
   collapse: Collapse
   scrollToBottom: Jump to Bottom
+  resizeWidth: Drag to resize width
+  resizeHeight: Drag to resize height
   reset: Reset
   create: Create
   update: Update
@@ -1202,6 +1209,7 @@ action:
   tagExprFieldHint: Type "/" to open the tag list, "//" to insert a literal "/"
   addCondition: Add Condition
   removeCondition: Remove Condition
+  beautifyJson: Beautify JSON
   validatePassed: Validation Passed
   validateFailed: Validation Failed
   viewPlaintext: View Plaintext
@@ -1217,6 +1225,7 @@ action:
   back: Back
   backPrevious: Back to Previous Level
   backHome: Back to Home
+  signInAnyway: Sign In Anyway
   refresh: Refresh
   refreshInterval: Auto refresh interval
   enableAutoRefresh: Start auto refresh
@@ -1262,6 +1271,7 @@ title:
   zk: Zhong Kui
   home: Home Page
   signIn: User Sign In
+  alreadySignedIn: Already Signed In
   pwdForget: Forgot Password
   err404: Error - 404
   err401: Error - 401
@@ -1271,7 +1281,6 @@ title:
   frontendConfigSync: Frontend Config Sync
   accessKey: Access Key
   aiKnowledge: Knowledge Base
-  aiAssistant: AI Assistant
   aiMemory: Memory
   passwordReset: Password Reset
   userAdmin: Admin - User
@@ -1334,22 +1343,20 @@ page:
     generating: Generating…
     stop: Stop
     newSession: New Session
+    untitledSession: New Session
     renameSession: Rename Session
     deleteSession: Delete Session
     citations: Citations
-    draft: Draft
-    validationPassed: Valid
-    validationFailed: Invalid
-    businessDataHint: Paste JSON you obtained from existing pages (traffic / plaintext / datasource query) under your own login session; the backend injects it as context only and never fetches data itself
-    invalidJson: Business data is not valid JSON
-    copyDraft: Copy Draft
-    copied: Copied
-    openTagRulePage: Go to Tag Rules
     emptyQuery: Please enter a request
+    optimizePrompt: Optimize prompt
+    optimizePromptFailed: Prompt optimization failed
+    undoOptimizePrompt: Undo optimization
     error: Generation failed
+    noResponse: Request timed out or network error. Please try again.
     me: Me
     assistant: Assistant
     hintSelectSession: Create or select a session to start
+    hintNoSession: No sessions yet — click “New Session” at the top right to start
     hintFirstQuery: Send your first question to start; the session topic is generated automatically
     confirmDeleteSession: Delete this session and all its messages?
     slotHint: It also becomes the session default slot when creating a session
@@ -1359,6 +1366,14 @@ page:
     compactSummary: Context Summary
     compactExtracted: Extracted Memories
     compactWarnings: Extraction Warnings
+    contextUsage: "{percent}%"
+    contextUsageTitle: "Context usage {used} / {limit} Tokens"
+    compressToHere: Compact to here
+    compressStart: Compacting context…
+    compressDone: "Before {before} · folded {count}"
+    compressCompare: "Before {before} → after {after} ({percent}%)"
+    compressSucceeded: Context compaction done
+    compressFailed: Context compaction failed
     approvalTitle: Tool Call Approval
     approvalWaiting: Awaiting approval
     approvalParams: Arguments
@@ -1366,6 +1381,29 @@ page:
     reject: Reject
     approved: Approved
     rejected: Rejected
+    reviewValve: Review valve
+    reviewValveHint:
+      each: Approve every client tool call before it runs
+      auto: Auto-approve calls safe to run automatically, others still need approval
+      none: Only calls requiring mandatory review need approval, the rest run directly
+    autoApproved: Auto-approved
+    approvalBackendNote: This call runs on the server — you only need to approve or reject
+    thinking: Thinking
+    thinkingHint: When enabled, the model's reasoning process is requested and shown with the answer
+    reasoningDefaultOnHint: This model enables thinking by default, so reasoning is output even without a thinking switch; fill in the model's Thinking Field and its on/off values under Advanced in "LLM Model" to control it manually.
+    reasoningStreaming: Thinking…
+    reasoningDone: Reasoning complete
+    copyMessage: Copy
+    retryMessage: Retry
+    branchMessage: Branch
+    branchTitle: "{title} (branch)"
+    branchCreated: Branch session created
+    usageTokens: "{count} tokens"
+    usageElapsed: "{seconds}s"
+    rollbackMessage: Roll back
+    deleteMessage: Delete
+    confirmRollbackMessage: Restart from this turn? This message and everything after it will be deleted.
+    confirmDeleteMessage: Delete this message and everything after it?
   aiKnowledge:
     dryRun: Dry Run
     query: Query
@@ -1403,6 +1441,7 @@ page:
     warnings: Warnings
     evalError: Evaluation Unavailable
     metaModel: Model
+    metaElapsed: Elapsed
     metaPromptTokens: Prompt Tokens
     metaCompletionTokens: Completion Tokens
     metaTotalTokens: Total Tokens
@@ -1443,6 +1482,10 @@ page:
     apiKeyKeepHint: The key is never echoed in plaintext; leave blank to keep the existing key
     scopeHint: The model registry is global configuration and is not isolated per namespace
     dimensionsHint: The vector dimensions are probed by the backend when an embedding slot is bound; to change the index dimensions, contact the operations team to run the server-side command
+    extraBodyHint: 'A JSON object merged into every request for this model (e.g. {''{"top_k": 20}''}); leave blank to add nothing'
+    thinkingHint: "Takes effect only when the field name and both on/off values are provided; leave blank to disable it for this model"
+    advancedTitle: Advanced Settings
+    advancedHint: "Extra request fields and the thinking switch are both optional; chat models only"
   llmBindingAdmin:
     hint: "Each of the four slots binds one model: chat slots require a chat model and the embedding slot requires an embedding model; slot availability comes from the runtime snapshot"
     indexDimensions: "Knowledge index dimensions: {dimensions}"
@@ -1483,6 +1526,8 @@ summary:
   pageNotFound: Page Does Not Exist!
   notSignInYet: Please must sign in first.
   goingToSignIn: Going to sign in page...
+  alreadySignedIn: You are already signed in.
+  alreadySignedInHint: No need to sign in again. Please choose what to do next.
   dataLoading: Data is loading...
   endOfData: No more data
   noEventDetected: No events detected
@@ -1572,6 +1617,9 @@ unit:
   day: d
   second: s
   count: cnt
+  tokenNone: No unit
+  tokenK: Thousand (K)
+  tokenM: Million (M)
 option:
   search:
     eq: Equal

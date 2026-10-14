@@ -60,7 +60,7 @@ type PacketIPv4UDP struct {
 	PacketIPv4 // 嵌入IPv4数据包基础结构
 	UDPHeaders // 嵌入UDP头部信息
 	// UDPStreamID UDP 流唯一标识，由四元组哈希生成的 16 字符十六进制串
-	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
+	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamID"`
 	// Payload UDP 载荷，加密存储
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=65045,length=32"`
 }
@@ -87,7 +87,7 @@ type PacketIPv6UDP struct {
 	PacketIPv6 // 嵌入IPv6数据包基础结构
 	UDPHeaders // 嵌入UDP头部信息
 	// UDPStreamID UDP 流唯一标识，由四元组哈希生成的 16 字符十六进制串
-	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamId"`
+	UDPStreamID string `gorm:"column:udp_stream_id;type:FixedString(16) CODEC(ZSTD(3))" json:"udpStreamID"`
 	// Payload UDP 载荷，加密存储
 	Payload *serializer.Crypto `gorm:"type:String CODEC(ZSTD(3));serializer:crypto" json:"payload" secure:"mode=\"aes-gcm\",offset=40914,length=32"`
 }

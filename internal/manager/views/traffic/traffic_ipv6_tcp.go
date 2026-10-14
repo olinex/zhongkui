@@ -31,7 +31,7 @@ type Ipv6TcpListGetListItemOut struct {
 	// Version 抓包器版本
 	Version string `json:"version"`
 	// SessionID 会话标识
-	SessionID serializer.HexUUID `json:"sessionId"`
+	SessionID serializer.HexUUID `json:"sessionID"`
 	// ---- TimestampMeta ----
 	// Timestamp 采集时间
 	Timestamp time.Time `json:"timestamp"`
@@ -122,7 +122,7 @@ type Ipv6TcpListGetListItemOut struct {
 	FpMtu uint16 `json:"fpMtu"`
 	// ---- 流与载荷 ----
 	// TcpStreamID TCP 流标识
-	TcpStreamID string `json:"tcpStreamId"`
+	TcpStreamID string `json:"tcpStreamID"`
 	// Payload 数据包载荷（base64 密文，明文经明文权限接口查看）
 	Payload *serializer.Crypto `json:"payload" form:"kind:crypto"`
 }

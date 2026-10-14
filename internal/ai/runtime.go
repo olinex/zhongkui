@@ -53,6 +53,13 @@ type Runtime struct {
 	logger  *logging.Logger              // 日志记录器
 	watcher *etcd.Watcher                // 变更监听器
 	current atomic.Pointer[runtimeState] // 当前装配态（原子替换）
+	hub     *RunHub                      // 驻留运行执行器（不随 Invalidate 重建，跨配置热重载存活）
+	// cleaner 过期运行数据清理器（生命周期随 Start/Shutdown，无 etcd 也运行）
+	cleaner *runCleaner
+	// cleanerCancel 清理任务的取消函数（Start 时设置，Shutdown 时调用）
+	cleanerCancel context.CancelFunc
+	// cleanerDone 清理任务退出信号（Shutdown 据此等待其停止）
+	cleanerDone chan struct{}
 }
 
 // NewRuntime 构造运行时并完成首次装配：读取数据库配置、构建客户端与组件、建立维度
@@ -68,6 +75,32 @@ func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, l
 		return nil, errors.New("ai runtime: nil logger")
 	}
 	rt := &Runtime{db: db, store: store, client: client, logger: logger}
+	// 过期运行数据清理器：独立持有会话存储（与装配态解耦，Agent 未启用时也照常清理）。
+	sessions, err := NewSessionStore(db)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	rt.cleaner = newRunCleaner(sessions, logger)
+	// 驻留运行执行器经访问器解析「使用时」的当前组件，故先于首次装配构造，且不随 Invalidate
+	// 重建，使配置热重载不打断在途运行。
+	rt.hub = NewRunHub(RunHubDeps{
+		Agent: func() RunExecutor {
+			// 显式判空后返回裸接口，避免把 typed-nil 的 *Agent 包进非 nil 接口导致「未装配」误判。
+			if agent := rt.Current().Agent; agent != nil {
+				return agent
+			}
+			return nil
+		},
+		Params: func() *Params { return rt.Params() },
+		Store: func() RunStore {
+			sessions := rt.Current().Sessions
+			if sessions == nil {
+				return nil
+			}
+			return sessions
+		},
+		Logger: logger,
+	})
 	rt.swapState(emptyState())
 	st, err := rt.build(ctx)
 	if err != nil {
@@ -111,6 +144,11 @@ func (r *Runtime) DisabledReason(lang *base.Language) string {
 // Params 返回当前行为参数读取器（值全部取自库内 agent_params.value）。
 func (r *Runtime) Params() *Params {
 	return r.Snapshot().Params()
+}
+
+// RunHub 返回驻留运行执行器（进程级单例，跨配置热重载存活），供依赖状态探测与视图层取用。
+func (r *Runtime) RunHub() *RunHub {
+	return r.hub
 }
 
 // Chat 按档位返回已构建的对话客户端；档位未绑定或绑定不可用时返回英文错误，调用方
@@ -168,8 +206,21 @@ func (r *Runtime) TestModel(ctx context.Context, cfg llm.ModelConfig) error {
 }
 
 // Start 阻塞运行配置变更监听，直到 ctx 取消（实现 runtime.Service 生命周期）。
-// 未绑定 etcd 客户端时直接返回（无监听能力）。
+// 同时启动过期运行数据清理任务：先启动清理（其生命周期随 Start/Shutdown），再进入监听分支；
+// 未绑定 etcd 客户端时清理任务仍在后台运行，直到 ctx 取消或 Shutdown 停止。
 func (r *Runtime) Start(ctx context.Context) error {
+	// 先启动清理任务：即使无 etcd 也照常清理。
+	cctx, cancel := context.WithCancel(ctx)
+	r.cleanerCancel = cancel
+	done := make(chan struct{})
+	r.cleanerDone = done
+	cleaner := r.cleaner
+	go func() {
+		defer close(done)
+		if cleaner != nil {
+			cleaner.run(cctx)
+		}
+	}()
 	if r.watcher == nil {
 		r.logger.Ctx(ctx).Info("ai change watch skipped: no etcd client")
 		return nil
@@ -180,17 +231,36 @@ func (r *Runtime) Start(ctx context.Context) error {
 // Shutdown 停止配置变更监听（实现 runtime.Service 生命周期，实际停止依赖 Start 的 ctx
 // 取消）；同时满足 samber/do 的 ShutdownerWithContext 约定，由注入器在关闭阶段调用。
 // 除既有监听关闭外，再关闭当前快照持有的 MCP 会话（失败只记英文告警）；CloseTools 幂等，
-// 故重复调用安全。
+// 故重复调用安全。过期运行数据清理任务先取消、末尾等待其停止（幂等：未启动时字段为 nil）。
 func (r *Runtime) Shutdown(ctx context.Context) error {
+	// 先取消清理任务（其循环在 ctx.Done 处退出），末尾再等待其真正停止。
+	if r.cleanerCancel != nil {
+		r.cleanerCancel()
+	}
+	// 先关闭驻留运行执行器（取消全部在途运行并等待终态落库），再关工具与监听，保证在途运行的
+	// 事件与终态在连接被关闭前完成持久化。
+	if r.hub != nil {
+		if err := r.hub.Shutdown(ctx); err != nil {
+			r.logger.Ctx(ctx).Warnf("ai: shutting down the run hub failed: %v", err)
+		}
+	}
 	if st := r.current.Load(); st != nil {
 		if err := st.snapshot.CloseTools(); err != nil {
 			r.logger.Ctx(ctx).Warnf("ai: closing the MCP sessions on shutdown failed: %v", err)
 		}
 	}
-	if r.watcher == nil {
-		return nil
+	var err error
+	if r.watcher != nil {
+		err = r.watcher.Shutdown(ctx)
 	}
-	return r.watcher.Shutdown(ctx)
+	if r.cleanerDone != nil {
+		select {
+		case <-r.cleanerDone:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	return err
 }
 
 // build 依据数据库当前状态装配一份完整运行态：快照 → 已启用工具 → 各对话档位客户端 →
@@ -206,7 +276,7 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 	st := &runtimeState{
 		snapshot: snap,
 		chats:    map[ai.Slot]model.BaseChatModel{},
-		comps:    &Components{Params: snap.Params()},
+		comps:    &Components{Params: snap.Params(), Hub: r.hub},
 	}
 	if !snap.Enabled() {
 		return st, nil
@@ -276,7 +346,7 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	agent, err := NewAgent(ctx, r.chatResolver(st.chats), retriever, sessions, snap.Params(), memoryService, r.logger, snap.Tools(), snap.ToolInfos())
+	agent, err := NewAgent(ctx, r.chatResolver(st.chats), retriever, sessions, snap.Params(), memoryService, r.logger, snap.Tools(), snap.ToolInfos(), WithSlotContextLimit(snap.SlotContextLimit))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -288,6 +358,7 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 		Memory:    memoryService,
 		Params:    snap.Params(),
 		Tools:     snap.Tools(),
+		Hub:       r.hub,
 	}
 	return st, nil
 }

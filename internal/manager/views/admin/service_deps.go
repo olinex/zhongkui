@@ -22,7 +22,7 @@ type ServiceItemOut struct {
 	// ServiceName 服务名（web / grpc / worker / capturer）
 	ServiceName string `json:"serviceName"`
 	// InstanceID 实例 ID（host-pid）
-	InstanceID string `json:"instanceId"`
+	InstanceID string `json:"instanceID"`
 	// Host 所在主机名
 	Host string `json:"host"`
 	// Version 服务版本

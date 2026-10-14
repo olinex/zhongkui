@@ -37,7 +37,7 @@ func TestServiceInfoJSON(t *testing.T) {
 		t.Fatalf("marshal: %v", err)
 	}
 	s := string(raw)
-	for _, key := range []string{"serviceName", "instanceId", "live", "ready", "started"} {
+	for _, key := range []string{"serviceName", "instanceID", "live", "ready", "started"} {
 		if !strings.Contains(s, key) {
 			t.Fatalf("json %s missing key %q", s, key)
 		}

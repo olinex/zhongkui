@@ -461,7 +461,7 @@ TagEventRecordDetailOut 定义标签事件记录详情输出结构。 嵌入 Bas
 type TagEventRecordDetailOut struct {
     utils.BaseItemOut
     // RuleID 所属标签事件规则 ID
-    RuleID uint `json:"ruleId"`
+    RuleID uint `json:"ruleID"`
     // RuleName 规则名称快照
     RuleName string `json:"ruleName"`
     // MatchAll 规则 MatchAll 快照
@@ -546,7 +546,7 @@ TagEventRecordListOut 定义标签事件记录列表的输出项结构。 嵌入
 type TagEventRecordListOut struct {
     utils.BaseItemOut
     // RuleID 所属标签事件规则 ID
-    RuleID uint `json:"ruleId"`
+    RuleID uint `json:"ruleID"`
     // RuleName 规则名称快照
     RuleName string `json:"ruleName"`
     // MatchAll 规则 MatchAll 快照
@@ -569,11 +569,11 @@ type TagEventRecordSendOut struct {
     // ID 发送记录 ID
     ID  uint `json:"id"`
     // TargetID 通知目标 ID
-    TargetID uint `json:"targetId"`
+    TargetID uint `json:"targetID"`
     // TargetName 通知目标名称（尽力补全）
     TargetName string `json:"targetName"`
     // ChannelID 发送通知的渠道 ID
-    ChannelID uint `json:"channelId"`
+    ChannelID uint `json:"channelID"`
     // ChannelName 渠道名称（尽力补全）
     ChannelName string `json:"channelName"`
     // ChannelType 渠道类型键快照
@@ -581,7 +581,7 @@ type TagEventRecordSendOut struct {
     // Status 通知发送状态：pending/success/failed
     Status string `json:"status"`
     // MessageID 渠道返回的消息 ID
-    MessageID string `json:"messageId"`
+    MessageID string `json:"messageID"`
     // Error 发送失败时的错误信息，成功时为空字符串
     Error string `json:"error"`
     // Payload 通知负载（JSON 文本）快照
@@ -700,10 +700,10 @@ type TagEventRuleCreateIn struct {
     Enabled bool `json:"enabled" default:"true"`
     // NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定（使用命名空间默认组）。
     // 与 NotificationTargetID 互斥，二者至多一个非 nil；通知目标优先级高于通知组。
-    NotificationGroupID *uint `json:"notificationGroupId"`
+    NotificationGroupID *uint `json:"notificationGroupID"`
     // NotificationTargetID 规则直绑的通知目标 ID，nil 表示未直绑目标。
     // 与 NotificationGroupID 互斥；非 nil 时将直接向该目标发送而绕过通知组。
-    NotificationTargetID *uint `json:"notificationTargetId"`
+    NotificationTargetID *uint `json:"notificationTargetID"`
     // Conditions 条件列表，至少一条
     Conditions []*TagEventRuleConditionIn `json:"conditions" binding:"required,min=1,dive"`
 }
@@ -719,9 +719,9 @@ type TagEventRuleDetailOut struct {
     TagEventRuleBaseDetailOut
     // NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定（使用命名空间默认组）。
     // 仅详情返回，列表不展示。
-    NotificationGroupID *uint `json:"notificationGroupId"`
+    NotificationGroupID *uint `json:"notificationGroupID"`
     // NotificationTargetID 规则直绑的通知目标 ID，nil 表示未直绑目标。仅详情返回，列表不展示。
-    NotificationTargetID *uint `json:"notificationTargetId"`
+    NotificationTargetID *uint `json:"notificationTargetID"`
     // Conditions 规则下的全部条件
     Conditions []*TagEventRuleConditionOut `json:"conditions"`
     // Version 最新历史版本号，0 表示尚无历史版本
@@ -798,9 +798,9 @@ type TagEventRuleUpdateIn struct {
     Enabled bool `json:"enabled"`
     // NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定（使用命名空间默认组）。
     // 与 NotificationTargetID 互斥，二者至多一个非 nil。
-    NotificationGroupID *uint `json:"notificationGroupId"`
+    NotificationGroupID *uint `json:"notificationGroupID"`
     // NotificationTargetID 规则直绑的通知目标 ID，nil 表示未直绑目标。与 NotificationGroupID 互斥。
-    NotificationTargetID *uint `json:"notificationTargetId"`
+    NotificationTargetID *uint `json:"notificationTargetID"`
     // Conditions 条件列表，至少一条（更新后完全替换既有条件）
     Conditions []*TagEventRuleConditionIn `json:"conditions" binding:"required,min=1,dive"`
 }
@@ -857,7 +857,7 @@ TagEventRuleVersionOut 定义标签事件规则历史版本的输出结构。 �
 type TagEventRuleVersionOut struct {
     utils.BaseItemOut
     // RuleID 所属标签事件规则 ID
-    RuleID uint `json:"ruleId"`
+    RuleID uint `json:"ruleID"`
     // Version 版本号，同一规则内从 1 递增
     Version uint `json:"version"`
     // Name 快照时刻的规则名称
@@ -1313,7 +1313,7 @@ TagRuleVersionOut 定义标签规则历史版本的输出结构。 存储规则�
 type TagRuleVersionOut struct {
     utils.BaseItemOut
     // RuleID 所属标签规则 ID
-    RuleID uint `json:"ruleId"`
+    RuleID uint `json:"ruleID"`
     // Version 版本号，同一规则内从 1 递增
     Version uint `json:"version"`
     // Name 快照时刻的规则名称

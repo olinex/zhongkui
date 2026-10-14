@@ -6,7 +6,7 @@
       <v-card flat>
         <v-card-text class="px-4 pt-3 pb-2">
           <v-form class="filter-form zk-filter-form">
-            <v-row dense align-center>
+            <v-row density="compact" class="align-center">
               <v-col cols="auto">
                 <v-select
                   v-model="queue"
@@ -34,7 +34,7 @@
           </action-button-group>
         </div>
         <v-container fluid class="px-4 pt-0 pb-4">
-          <v-row dense>
+          <v-row density="compact">
             <v-col cols="12">
               <v-data-table-server
                 v-model:page="page"
@@ -371,7 +371,6 @@ const taskHeaders = ref([
     key: "__actions",
     title: i18n.global.t("model.__base.field.__actions"),
     type: BackendDataType.ACTIONS,
-    align: "start",
     sortable: false,
     fixed: "end",
   },

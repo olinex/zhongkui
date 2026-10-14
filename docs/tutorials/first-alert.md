@@ -74,3 +74,13 @@ event.go 的 Detect 把全部启用条件组装为一条 UNION ALL 查询：每�
 3. 状态变更提交前投递通知发送任务（notify:send:group 或 notify:send:target）， 由通知服务按模板渲染后发出。
 
 走完以上步骤，你就能在标签事件记录中看到状态为 alerting 的第一条风险告警。
+
+## 7. 规则写入的运行期样例校验
+
+除语法与组级语义编译外，规则写入（创建 / 更新 / 启用 / 回滚）还要通过第二层运行期校验 `ValidateGroupRuntime`：把"变更后的规则组"作用到该目标模型预置的验证样例上评估，捕获 "编译通过、作用到数据即报错"的规则。样例存于 `tag_rule_samples`，按（命名空间, 模型）隔离， 内容为目标模型实例的 JSON 序列化——必须能反序列化回目标类型，顺带校验样例与模型 schema 一致。 样例由 `EnsureModelSamples` / `ListModelSamples` 按命名空间懒供给：无样例时落库零值文档 `default`， HttpTransport 另预置真实样例 `http-example`；并发供给由唯一约束幂等兜底。 评估启用 `StrictBuiltinErrors`，让 `sqlite.query` 等内置函数的类型错误浮出为评估错误。 降级语义：规则组为空直接放行；未注册模型返回 `ErrModelNotRegistered`； 该命名空间无样例返回 `ErrSampleNotProvisioned`，由调用方决定是否放行（写入路径记告警后放行）。
+
+## 8. 第三方数据源：按命名空间池与本地名引用
+
+`vtab.Pools` 为每个命名空间独立持有一个 `*sqlitevtab.SQLitePool`，第三方数据源（经数据源 插件登记为 sqlite vtable）以本地名注册在所属命名空间的池内，无 `{namespace}__` 前缀。 同名数据源在不同命名空间各自注册为独立 vtable、各自持有独立连接与凭据，绝不跨命名空间 复用（隔离连接与凭据，避免跨租户串扰），故 rego 规则中直接引用本地名即可。
+
+`Engine` 在求值前按目标实例所属命名空间解析对应池并绑定到求值 ctx（`WithDatasourcePool`）， builtin `sqlite.query` 从 ctx 取池执行查询；`Engine` 未绑定 pools 时不提供第三方数据源查询。 数据源的注册 / 注销由 `datasource.Reload`（启动重载）与 `datasource.SyncOne`（变更同步） 驱动，引擎自身只消费已注册的 vtable。

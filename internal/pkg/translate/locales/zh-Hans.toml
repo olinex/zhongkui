@@ -91,7 +91,10 @@
 1116 = "待审批的接口调用已不存在，请重新发起提问"
 1117 = "该接口调用已被处理，请勿重复提交"
 1118 = "本次接口调用已超时，请重新发起提问"
-1119 = "无权恢复该接口调用"
+1119 = "内置系统命名空间受保护，禁止删除"
+1120 = "该会话没有在途运行"
+1121 = "该会话的驻留运行已过期"
+1122 = "无权访问该会话的在途运行"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -100,6 +103,55 @@ schedulerScheduleConflict = "cronSpec 与 interval 不能同时设置，请二�
 schedulerScheduleEmpty = "cronSpec 与 interval 至少需设置一个"
 schedulerTaskCreateExist = "定时任务类型 %s 已存在"
 schedulerTaskUpdateNotExist = "定时任务类型 %s 不存在"
+llmBindingModelIDInvalid = "modelId 必须为正整数"
+llmBindingModelDisabled = "模型 %s 已停用，无法绑定到档位"
+llmBindingKindMismatch = "模型 %s 是 %s 模型，无法绑定到 %s 档位（该档位需要 %s 模型）"
+llmBindingIncompatibleDimension = "embedding 模型 %s 与知识库索引维度 %d 不兼容（该模型实际返回 %d 维）；请先解绑 embedding 档位（若已绑定），执行 `sync embedding-dimensions --dimensions %d` 重建索引后再绑定"
+enumUnknownType = "未知的枚举类 `%s`"
+aiFeatureDisabled = "AI 功能未启用，请先在档位绑定中启用所需模型"
+knowledgeImportedContentReadOnly = "导入文档的正文为只读内容，请重新解析文档以刷新"
+knowledgeDocumentParsing = "文档正在解析中，请等待解析完成后再重新索引"
+knowledgeDocumentNotFound = "知识库文档 %d 不存在"
+knowledgeUploadTooLarge = "请求体超过最大上传大小 %d 字节"
+knowledgeUploadFileRequired = "缺少 multipart 字段 `file`"
+knowledgeUnsupportedFormat = "不支持的文档格式 `%s`（仅支持 .md/.markdown/.txt/.pdf/.docx）"
+datasourceSqliteFileRequired = "创建 sqlite 数据源需要上传 .db 文件"
+datasourceSqliteS3Required = "sqlite 数据源需要启用 S3 对象存储"
+llmToolBuiltinUndeletable = "该批次包含 %d 个内置工具，无法删除"
+llmParamItemsEmpty = "items 不能为空"
+llmParamNotDeclared = "参数 `%q` 未在注册表中声明"
+llmParamGroupNotDeclared = "参数分组 `%q` 未在注册表中声明"
+llmParamKeysOrGroup = "必须提供 keys 或 group 之一"
+llmParamValueTypeInvalid = "参数 `%q` 的值类型应为 %s，请检查输入"
+llmParamValueNotAllowed = "参数 `%q` 的取值必须为 %s 之一，实际为 `%q`"
+llmModelNameEmpty = "模型名称不能为空"
+llmModelNameExists = "模型名称 `%q` 已存在"
+llmModelContextTokensInvalid = "上下文容量必须是正整数（对话模型必填）"
+llmModelBound = "模型 `%q` 已绑定到档位，请先解绑再删除"
+extraBodyInvalid = "高级请求配置须为合法的 JSON 对象"
+thinkingValueInvalid = "思考开/关取值须为合法 JSON"
+mcpServerNameExists = "MCP 服务器名称 `%q` 已存在"
+mcpToolEmptyName = "远端返回的工具存在空名称，无法同步"
+mcpToolNameTaken = "工具名称 `%q` 已被工具 #%d 占用，无法从 MCP 服务器 `%q` 同步"
+mcpHeadersInvalid = "请求头不是合法的 JSON 对象"
+llmKnowledgeIndexUnavailable = "知识库索引列尚不可用，请先执行 migrate up 再绑定 embedding 模型"
+plaintextModelNotRegistered = "明文解析：模型 `%q` 未注册"
+notificationTargetDisabled = "通知目标或其所属渠道已被禁用"
+notificationChannelBuiltin = "渠道 `%q` 为内置占位渠道，无法删除"
+notificationGroupTargetInvalid = "通知组绑定的目标不属于当前命名空间"
+notificationTemplateUnknownEvent = "通知模板：未知事件 `%q`"
+notificationTemplateUnsupportedChannel = "通知模板：不支持的渠道类型 `%q`"
+notificationTemplateUnsupportedLanguage = "通知模板：不支持的语言 `%q`"
+notificationTemplateInvalidTitle = "通知模板标题的模板语法非法：%s"
+notificationTemplateInvalidContent = "通知模板正文的模板语法非法：%s"
+notificationTemplateExists = "事件 `%q`、渠道 `%q`、语言 `%q` 的通知模板已存在"
+notificationTemplateTitleRequired = "通知模板标题不能为空"
+notificationTemplateContentRequired = "通知模板正文不能为空"
+multipartFieldTooLarge = "multipart 字段 `%q` 超过最大大小 %d 字节"
+sampleFieldNotString = "样例：模型 `%q` 的字段 `%q` 不是字符串"
+tagEventRuleNotifyMutuallyExclusive = "通知组与通知目标互斥，二者至多设置一个"
+tagEventRuleNotifyGroupNotFound = "通知组 %d 在命名空间 %s 中不存在"
+tagEventRuleNotifyTargetNotFound = "通知目标 %d 在命名空间 %s 中不存在"
 
 [validator]
 strongPassword = "字段须为强密码（至少各包含一个小写字母/大写字母/数字/特殊字符@$!%*?&）"
@@ -555,9 +607,6 @@ other = "  流 [[.Stream]] 事务 [[.Tx]]：解析 HTTP 响应失败：[[.Err]]"
 [cli.docs.generated]
 other = "文档已生成至 [[.Dir]]"
 
-[cli.sync.docs.no-namespace]
-other = "缺少 --namespace：请指定目标命名空间"
-
 [cli.sync.docs.disabled]
 other = "AI 能力未启用，无法同步注释生成文档"
 
@@ -566,6 +615,15 @@ other = "已为命名空间 [[.Namespace]] 同步叙述页 [[.Narratives]] 条"
 
 [cli.sync.docs.failed]
 other = "同步注释生成文档失败：[[.Err]]"
+
+[cli.sync.apis.disabled]
+other = "AI 能力未启用，无法同步原生接口知识"
+
+[cli.sync.apis.done]
+other = "已为命名空间 [[.Namespace]] 同步原生接口 [[.Apis]] 条"
+
+[cli.sync.apis.failed]
+other = "同步原生接口知识失败：[[.Err]]"
 
 [cli.sync.embeddings.no-namespace]
 other = "缺少 --namespace：请指定目标命名空间"
@@ -579,11 +637,65 @@ other = "已为命名空间 [[.Namespace]] 重算知识文档 [[.Documents]] 篇
 [cli.sync.embeddings.failed]
 other = "重算向量表示失败：[[.Err]]"
 
+[cli.sync.progress.header]
+other = "命名空间 [[.Namespace]] · 模型 [[.Model]] · 待处理 [[.Total]] 项"
+
+[cli.sync.progress.rate-title]
+other = "速度 [[.Rate]] 项/秒 · 预计剩余 [[.Eta]] · 已完成 [[.Done]]/[[.Total]]"
+
+[cli.sync.progress.empty]
+other = "内容已是最新，无需处理"
+
+[cli.sync.progress.total-row]
+other = "合计"
+
+[cli.sync.progress.count]
+other = "[[.Count]] 项"
+
+[cli.sync.progress.memory-item]
+other = "长期记忆（[[.Count]] 条）"
+
+[cli.sync.progress.col.item]
+other = "条目"
+
+[cli.sync.progress.col.action]
+other = "动作"
+
+[cli.sync.progress.col.elapsed]
+other = "耗时"
+
+[cli.sync.progress.col.prompt]
+other = "输入 Token"
+
+[cli.sync.progress.col.completion]
+other = "输出 Token"
+
+[cli.sync.progress.action.create]
+other = "新增"
+
+[cli.sync.progress.action.update]
+other = "更新"
+
+[cli.sync.progress.action.delete]
+other = "删除"
+
+[cli.sync.progress.action.reindex]
+other = "重建"
+
+[cli.sync.progress.action.memory]
+other = "记忆"
+
 [cli.sync.embedding-dimensions-section]
 other = "正在校准 [[.DB]] 库的 embedding 列维度"
 
 [cli.sync.embedding-dimensions-failed]
 other = "校准 [[.DB]] 库 embedding 列维度失败：[[.Err]]"
+
+[cli.sync.embedding-dimensions-flag-required]
+other = "必须通过 --dimensions 指定目标维度，且须为正整数"
+
+[cli.sync.embedding-dimensions-slot-bound]
+other = "embedding 档位已绑定模型 \"[[.Name]]\"（[[.Dimensions]] 维），请先解绑再重建索引为 [[.Target]] 维"
 
 [cli.sync.embedding-dimensions-reconciled]
 other = "已将 embedding 列维度校准为 [[.Dimensions]]，请重新索引知识库文档"
@@ -1413,7 +1525,13 @@ other = "同步注释生成文档与 embedding 向量，并对齐 embedding 列�
 other = "同步注释生成文档到 RAG"
 
 [cmd.sync.docs.long]
-other = "抽取源码注释并生成叙述页文档，按内容 hash 差异计划幂等同步到指定命名空间的 RAG（format=generated）；新增/更新/删除按差异收敛，内容未变则零写入，只读写该分区、不触碰人工文档，只入 RAG 不落盘。"
+other = "抽取源码注释并生成叙述页文档，按内容 hash 差异计划幂等同步到内置系统命名空间（system）的 RAG（format=generated），对所有命名空间的检索可见；新增/更新/删除按差异收敛，内容未变则零写入，只读写该分区、不触碰人工文档，只入 RAG 不落盘。"
+
+[cmd.sync.apis.short]
+other = "同步原生接口知识到 RAG"
+
+[cmd.sync.apis.long]
+other = "装配视图层注册期声明的原生接口目录（含用途与入参出参元信息），按内容 hash 差异计划幂等同步到内置系统命名空间（system）的 RAG（format=native_api），对所有命名空间的检索可见；新增/更新/删除按差异收敛，内容未变则零写入，只读写该分区、不触碰叙述页与人工文档，只入 RAG 不落盘。"
 
 [cmd.sync.embeddings.short]
 other = "以当前 embedding 模型重算命名空间下的向量表示"
@@ -1813,6 +1931,9 @@ other = "MCP 工具"
 other = "客户端工具"
 
 # Agent 类型（枚举类 agentKind）
+[enum.agentKind.general]
+other = "通用助手"
+
 [enum.agentKind.knowledge]
 other = "知识检索"
 
@@ -1848,6 +1969,22 @@ other = "已消费"
 
 [enum.agentRunStatus.expired]
 other = "已过期"
+
+# 驻留运行生命周期阶段（枚举类 agentRunPhase）
+[enum.agentRunPhase.running]
+other = "运行中"
+
+[enum.agentRunPhase.done]
+other = "已完成"
+
+[enum.agentRunPhase.failed]
+other = "已失败"
+
+[enum.agentRunPhase.cancelled]
+other = "已取消"
+
+[enum.agentRunPhase.suspended]
+other = "待审批"
 
 # MCP 远端传输方式（枚举类 mcpTransport）
 [enum.mcpTransport.sse]
@@ -1945,6 +2082,9 @@ other = "Word 文档"
 [enum.documentFormat.generated]
 other = "生成文档"
 
+[enum.documentFormat.native_api]
+other = "原生接口"
+
 [enum.knowledgeDocStatus.pending]
 other = "待解析"
 
@@ -1956,6 +2096,33 @@ other = "就绪"
 
 [enum.knowledgeDocStatus.failed]
 other = "解析失败"
+
+# =============================================================================
+# 客户端工具调用的审核重要级与会话级审核阀门（枚举类 auditLevel / reviewValve，
+# 归属包 internal/ai 与 internal/models/ai）。auditLevel 为后端评估产出的四档重要级，
+# reviewValve 为前端为用户提供的会话级三档阀门，二者合成决定调用是否需人工审核。
+# =============================================================================
+
+[enum.auditLevel.must]
+other = "必须审核"
+
+[enum.auditLevel.suggest]
+other = "建议审核"
+
+[enum.auditLevel.auto]
+other = "可自动审核"
+
+[enum.auditLevel.none]
+other = "无需审核"
+
+[enum.reviewValve.each]
+other = "逐一审核"
+
+[enum.reviewValve.auto]
+other = "自动审核"
+
+[enum.reviewValve.none]
+other = "无需审核"
 
 # =============================================================================
 # AI capability disabled reasons (ai.disabled.*)
@@ -1999,6 +2166,24 @@ other = "系统提示词"
 [param.agent.systemPrompt.comment]
 other = "Agent 对话的系统提示词，要求模型输出 {\"content\":..., \"draft\":{...}} 形状的 JSON"
 
+[param.agent.generalSystemPrompt.label]
+other = "通用对话系统提示词"
+
+[param.agent.generalSystemPrompt.comment]
+other = "通用对话 Agent（general 类型）的系统提示词，要求直接输出 Markdown 正文"
+
+[param.agent.auditLevelSystemPrompt.label]
+other = "审核重要级评估提示词"
+
+[param.agent.auditLevelSystemPrompt.comment]
+other = "client 工具挂起前对本次全部待执行调用做一次批量分类的系统提示词，要求仅输出按 callID 对齐四档重要级（must/suggest/auto/none）的 JSON"
+
+[param.agent.promptOptimizeSystemPrompt.label]
+other = "提问优化提示词"
+
+[param.agent.promptOptimizeSystemPrompt.comment]
+other = "把用户原始诉求改写为更清晰、更具体、更易被正确理解的提问的系统提示词，要求仅输出改写后的提问正文本身"
+
 [param.agent.businessSectionTitle.label]
 other = "业务现场分节标题"
 
@@ -2035,6 +2220,12 @@ other = "工具结果字节上限"
 [param.agent.maxToolResultBytes.comment]
 other = "单个工具返回结果注入模型上下文前的字节上限，超出部分被截断"
 
+[param.agent.runDetachGraceSeconds.label]
+other = "退订宽限秒数"
+
+[param.agent.runDetachGraceSeconds.comment]
+other = "驻留运行最后一名订阅者退订后，超过该秒数仍无订阅者则自动取消运行；<=0 表示关闭自动取消"
+
 # ---- retrieval：混合检索融合与 LLM 重排 ----
 [param.retrieval.topK.label]
 other = "最终引用条数"
@@ -2047,6 +2238,12 @@ other = "重排候选条数"
 
 [param.retrieval.candidates.comment]
 other = "融合后送入 LLM 重排的候选条数（每条检索路各取该条数）"
+
+[param.retrieval.expandDocLimit.label]
+other = "整篇展开预算"
+
+[param.retrieval.expandDocLimit.comment]
+other = "一次检索中整篇展开的累计长度上限（字符数）：按结果顺序逐篇展开，单篇超过该值或展开后累计超过该值的文档降级保持原分块且不再截断整篇；非正数表示关闭整篇展开"
 
 [param.retrieval.fusion.label]
 other = "融合策略"
@@ -2096,6 +2293,12 @@ other = "业务数据注入上限"
 
 [param.session.maxContextBytes.comment]
 other = "前端透传 businessData 单次注入的总大小上限（字节）"
+
+[param.session.compactThresholdRatio.label]
+other = "自动压缩阈值"
+
+[param.session.compactThresholdRatio.comment]
+other = "触发自动压缩的占用比例阈值（占用 token / 档位容量）"
 
 [param.session.topicSystemPrompt.label]
 other = "会话主题提示词"
@@ -2157,6 +2360,12 @@ other = "摘要触发条数"
 
 [param.memory.summaryMinEvictedMessages.comment]
 other = "窗口外未摘要消息达到该条数时触发滚动摘要"
+
+[param.memory.evictedMessageByteLimit.label]
+other = "摘要单条消息字节上限"
+
+[param.memory.evictedMessageByteLimit.comment]
+other = "滚动摘要与记忆抽取提示词中单条被折叠消息正文的字节上限，超出部分按 UTF-8 边界截断；调大更利于摘要完整性，代价是更多输入 token。"
 
 [param.memory.extractSystemPrompt.label]
 other = "记忆抽取提示词"

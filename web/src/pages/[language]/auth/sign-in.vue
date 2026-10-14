@@ -58,6 +58,8 @@ meta:
   title: title.signIn
   requiresAuth: false
   requiresPerm: false
+  # 仅面向未登录用户：已登录时由路由守卫按 redirect/主页自动放行，避免重复登录
+  guestOnly: true
 </route>
 
 <script setup lang="ts">

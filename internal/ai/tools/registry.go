@@ -34,7 +34,7 @@
 // 无状态——写入器接口 MemoryWriter 与入参 MemoryWriteInput 声明于本包，由 internal/ai 的适配器
 // 实现向量化、精确哈希去重与语义合并；本次运行的归属信息（命名空间 / Agent 类型 / 来源会话）与
 // 写入器一同经 WithMemoryRuntime 注入 ctx，由 Agent 在派发工具前写入，取不到时工具返回英文错误。
-// MemoryWriteInput.SessionID 必须非 0：记忆按会话隔离，无会话归属的记忆不被接受。
+// MemoryWriteInput.SessionID 必须非空：记忆按会话隔离，无会话归属的记忆不被接受。
 //
 // ## MCP 工具
 //

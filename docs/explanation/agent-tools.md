@@ -19,7 +19,7 @@ Deps 承载构造工具时可注入的运行期依赖（core 库句柄与日志�
 
 ## 叶层约束与 memory_write
 
-本包是「工具」这一能力的叶层：internal/ai 单向依赖本包，故凡需被 internal/ai 适配实现、又需 被工具实现引用的接口与入参，必须声明在本包内以避免导入环。`memory_write` 即典型：它让 Agent 在 工具循环中自主把一条值得在后续轮次复用、且仅在本会话内可见的长期记忆交给写入器落库。工具自身 无状态——写入器接口 MemoryWriter 与入参 MemoryWriteInput 声明于本包，由 internal/ai 的适配器 实现向量化、精确哈希去重与语义合并；本次运行的归属信息（命名空间 / Agent 类型 / 来源会话）与 写入器一同经 WithMemoryRuntime 注入 ctx，由 Agent 在派发工具前写入，取不到时工具返回英文错误。 MemoryWriteInput.SessionID 必须非 0：记忆按会话隔离，无会话归属的记忆不被接受。
+本包是「工具」这一能力的叶层：internal/ai 单向依赖本包，故凡需被 internal/ai 适配实现、又需 被工具实现引用的接口与入参，必须声明在本包内以避免导入环。`memory_write` 即典型：它让 Agent 在 工具循环中自主把一条值得在后续轮次复用、且仅在本会话内可见的长期记忆交给写入器落库。工具自身 无状态——写入器接口 MemoryWriter 与入参 MemoryWriteInput 声明于本包，由 internal/ai 的适配器 实现向量化、精确哈希去重与语义合并；本次运行的归属信息（命名空间 / Agent 类型 / 来源会话）与 写入器一同经 WithMemoryRuntime 注入 ctx，由 Agent 在派发工具前写入，取不到时工具返回英文错误。 MemoryWriteInput.SessionID 必须非空：记忆按会话隔离，无会话归属的记忆不被接受。
 
 ## MCP 工具
 

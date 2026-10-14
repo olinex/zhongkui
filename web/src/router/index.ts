@@ -16,7 +16,9 @@ import { useEnumsStore } from "@/stores/enums";
 import { useFeaturesStore } from "@/stores/features";
 import { useUserStore } from "@/stores/user";
 import i18n from "@/utils/i18n";
+import { mitter } from "@/utils/mitter";
 
+import { AUTH_FAILED_EVENT } from "@/apis/base";
 import { featureOfRoute } from "@/navigation";
 import { SupportLanguage } from "@/types";
 import { isEnumValue } from "@/utils/options";
@@ -41,19 +43,55 @@ router.onError((err, to) => {
   }
 });
 
+// 全局登录态捕获：已登录（userStore.exists）却收到后端 401（JWT 无效 / 过期 /
+// 用户不存在，由 apis/base.ts 的响应拦截器广播），说明服务端会话已失效。
+// 此时复位本地会话并跳转 401 页面——与守卫的失效出口同一落点，由该页引导回登录页，
+// 并在重新登录后回到原路径。订阅必须在此模块注册：它先于应用挂载求值，
+// 而路由守卫在首次导航时即可能发起请求，晚注册会漏掉启动阶段的 401。
+mitter.on(AUTH_FAILED_EVENT, () => {
+  const userStore = useUserStore();
+  // 尚未加载出登录态（如启动时本地残留失效令牌）不打扰用户：
+  // 该情形由 userStore.load 的失败回调自行复位，停留在公开页面即可
+  if (!userStore.exists) {
+    return;
+  }
+  const current = router.currentRoute.value;
+  // 已在 401 / 登录页时不再跳转，避免与守卫的重定向互相覆盖
+  if (current.name === "401" || current.name === "Sign In") {
+    return;
+  }
+  consola.warn("auth failed while signed in, redirect to 401");
+  userStore.signOut();
+  router.replace({
+    name: "401",
+    params: {
+      language: useAppStore().language,
+    },
+    query: {
+      ...current.query,
+      redirect: current.fullPath,
+    },
+  });
+});
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
   // 受保护路由需等待用户状态初始化完成后再校验登录态，
-  // 避免授权信息尚未加载完成就被误判为未登录而重定向到 401 页面
-  if (to.meta.requiresAuth && !userStore.initial) {
+  // 避免授权信息尚未加载完成就被误判为未登录而重定向到 401 页面；
+  // 仅面向未登录用户的页面（guestOnly）同样需要先确定登录态，
+  // 才能在已登录时判定是否跳过该页
+  if ((to.meta.requiresAuth || to.meta.guestOnly) && !userStore.initial) {
     await userStore.init();
   }
   const appStore = useAppStore();
   const params = to.params as Record<string, unknown>;
-  let lang = params.language as SupportLanguage;
+  const lang = params.language as SupportLanguage;
+  // 以下重定向分支一律以 next(location) 结束并立即返回：若沿用 router.replace 后继续执行、
+  // 最终再下一次 next()，同一次导航会派生两条导航（新的 replace 与原来的 next），二者可能
+  // 互相取消，使重定向偶发失效（失效会话进入 401 页后停在原地不再跳转即其一）。next(location)
+  // 由 vue-router 原子地中止本次导航并开启目标导航，避免该竞态。
   if (to.path === "/") {
-    lang = appStore.language;
-    await router.replace({
+    return next({
       name: "Home",
       params: {
         language: appStore.language,
@@ -62,8 +100,7 @@ router.beforeEach(async (to, from, next) => {
     });
   } else if (!isEnumValue(SupportLanguage, lang)) {
     consola.warn("language not found, redirect to 404");
-    lang = appStore.language;
-    await router.replace({
+    return next({
       name: "404",
       params: {
         language: appStore.language,
@@ -73,11 +110,27 @@ router.beforeEach(async (to, from, next) => {
         redirect: to.fullPath,
       },
     });
+  } else if (to.meta.guestOnly && userStore.exists && to.query.force !== "1") {
+    // 已登录用户访问仅面向未登录用户的页面（登录页）时，不静默跳转主页
+    // （看起来像故障），而是先到「已登录」中转页说明状态，由用户选择
+    // 返回上一级 / 返回首页 / 仍要登录。中转页选择「仍要登录」时携带 force=1
+    // 重新进入登录页，此处据此放行，避免来回重定向形成循环。
+    consola.info("already signed in, redirect to already-signed-in interlude");
+    return next({
+      name: "Already Signed In",
+      params: {
+        language: appStore.language,
+      },
+      query: {
+        // 保留登录页原定的回跳目标，供「仍要登录」完成后继续前往
+        ...(to.query.redirect ? { redirect: to.query.redirect } : {}),
+      },
+    });
   } else if (to.meta.requiresAuth && !(await userStore.ensureValid())) {
     // ensureValid 会在令牌过期但本地仍有会话时先尝试刷新恢复（滑动过期），
     // 刷新失败才视为会话失效，跳转 401 页面
     consola.warn("user not valid, redirect to 401");
-    await router.replace({
+    return next({
       name: "401",
       params: {
         language: appStore.language,

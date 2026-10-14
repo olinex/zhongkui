@@ -169,7 +169,7 @@ type TagRuleListOut struct {
 type TagRuleVersionOut struct {
 	utils.BaseItemOut
 	// RuleID 所属标签规则 ID
-	RuleID uint `json:"ruleId"`
+	RuleID uint `json:"ruleID"`
 	// Version 版本号，同一规则内从 1 递增
 	Version uint `json:"version"`
 	// Name 快照时刻的规则名称

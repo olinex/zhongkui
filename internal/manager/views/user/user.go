@@ -405,6 +405,19 @@ func UserSelfJwtRefresh(c *gin.Context) {
 	response.SimpleOK.AbortWithGinW(c, UserTokenOut{Token: newToken})
 }
 
+// visibleNamespaces 过滤内置系统命名空间：它承载代码声明的共享数据（如原生接口目录），
+// 不作为可切换的租户暴露给前端命名空间选择器。
+func visibleNamespaces(names []string) []string {
+	out := make([]string, 0, len(names))
+	for _, name := range names {
+		if name == base.SystemNamespace {
+			continue
+		}
+		out = append(out, name)
+	}
+	return out
+}
+
 // UserSelfAuthorizationInfoGet 获取用户授权信息
 // 路由：POST /api/v1/user/self/authorization-info/get
 // 功能：获取当前用户的RBAC策略和可访问的命名空间
@@ -444,7 +457,7 @@ func UserSelfAuthorizationInfoGet(c *gin.Context) {
 	out := AuthorizationInfoOut{
 		Model:      base.RbacModel,
 		Policies:   make([][]string, 0, len(groups)+len(policies)),
-		Namespaces: core.Cache.All(c),
+		Namespaces: visibleNamespaces(core.Cache.All(c)),
 	}
 
 	// 将策略和用户组信息合并

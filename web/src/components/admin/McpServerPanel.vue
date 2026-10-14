@@ -25,6 +25,14 @@
         @view-plaintext="viewHeadersPlaintext"
       />
     </template>
+
+    <!-- 启用态：行内开关就地改写（后端无独立启停接口，内部走「读详情 + 整表单更新」） -->
+    <template #cell-enabled="{ item }">
+      <enabled-switch-cell
+        v-model="item.enabled"
+        :request="(enabled: boolean) => setEnabledRequest(item, enabled)"
+      />
+    </template>
   </search-table>
 
   <!-- 共享明文对话框：查看 MCP 服务器请求头明文 -->
@@ -55,25 +63,6 @@
     </template>
   </confirm-dialog>
 
-  <confirm-dialog
-    ref="toggleConfirmRef"
-    :title="$t('model.mcpServer.name')"
-    prepend-icon="mdi-toggle-switch"
-    @confirm="itemToggleAction"
-  >
-    <template #body="{ proxy }">
-      <confirm-alert
-        :action="$t(toggleTarget === true ? 'action.activate' : 'action.deactivate')"
-        :text="
-          $t(toggleTarget === true ? 'notice.enableConfirm' : 'notice.disableConfirm', {
-            category: $t('model.mcpServer.name'),
-            key: proxy.name,
-          })
-        "
-      />
-    </template>
-  </confirm-dialog>
-
   <temp-editable-dialog
     ref="createDialogRef"
     :title="$t('model.mcpServer.name')"
@@ -84,7 +73,7 @@
   >
     <template #body>
       <v-form>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-text-field
               v-model="createName"
@@ -101,7 +90,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               v-model="createUrl"
@@ -112,19 +101,17 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
-            <v-textarea
+            <json-editor
               v-model="createHeaders"
-              v-bind="createHeadersProps"
               :label="$t('model.mcpServer.field.headers')"
               :hint="$t('page.mcpServerAdmin.headersHint')"
-              persistent-hint
-              rows="2"
+              :error-message="createForm.errors.value.headers"
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-number-input
               v-model="createTimeoutSeconds"
@@ -143,7 +130,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-textarea
               v-model="createDescription"
@@ -166,7 +153,7 @@
   >
     <template #body="{ editable }">
       <v-form>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-text-field
               v-model="updateName"
@@ -185,7 +172,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-text-field
               v-model="updateUrl"
@@ -195,20 +182,18 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
-            <v-textarea
+            <json-editor
               v-model="updateHeaders"
-              v-bind="updateHeadersProps"
               :label="$t('model.mcpServer.field.headers')"
               :hint="$t('page.mcpServerAdmin.headersKeepHint')"
-              persistent-hint
-              rows="2"
+              :error-message="updateForm.errors.value.headers"
               :disabled="!editable"
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="6">
             <v-number-input
               v-model="updateTimeoutSeconds"
@@ -229,7 +214,7 @@
             />
           </v-col>
         </v-row>
-        <v-row dense>
+        <v-row density="compact">
           <v-col cols="12">
             <v-textarea
               v-model="updateDescription"
@@ -277,7 +262,7 @@ const updateForm = useForm({ validationSchema: mcpServerSchema() });
 const [createName, createNameProps] = createForm.defineField("name", vuetifyCfg);
 const [createTransport, createTransportProps] = createForm.defineField("transport", vuetifyCfg);
 const [createUrl, createUrlProps] = createForm.defineField("url", vuetifyCfg);
-const [createHeaders, createHeadersProps] = createForm.defineField("headers", vuetifyCfg);
+const [createHeaders] = createForm.defineField("headers", vuetifyCfg);
 const [createTimeoutSeconds, createTimeoutSecondsProps] = createForm.defineField(
   "timeoutSeconds",
   vuetifyCfg,
@@ -291,7 +276,7 @@ const [createDescription, createDescriptionProps] = createForm.defineField(
 const [updateName, updateNameProps] = updateForm.defineField("name", vuetifyCfg);
 const [updateTransport, updateTransportProps] = updateForm.defineField("transport", vuetifyCfg);
 const [updateUrl, updateUrlProps] = updateForm.defineField("url", vuetifyCfg);
-const [updateHeaders, updateHeadersProps] = updateForm.defineField("headers", vuetifyCfg);
+const [updateHeaders] = updateForm.defineField("headers", vuetifyCfg);
 const [updateTimeoutSeconds, updateTimeoutSecondsProps] = updateForm.defineField(
   "timeoutSeconds",
   vuetifyCfg,
@@ -307,7 +292,6 @@ const searchTableRef = useTemplateRef("searchTableRef");
 const createDialogRef = useTemplateRef("createDialogRef");
 const editDialogRef = useTemplateRef("editDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
-const toggleConfirmRef = useTemplateRef("toggleConfirmRef");
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 
 // transport 下拉选项来自统一枚举注册表（label 由后端按当前语言返回）
@@ -318,6 +302,8 @@ onMounted(() => {
 });
 
 // ---- 创建对话框 ----
+// 复位是「准备本次打开的数据」的一部分：resetForm 原子重置全部字段值与校验状态，再打开对话框。
+// values 完整枚举该表单全部 defineField 字段，避免未列出字段被重置为初始值造成残影。
 const openCreateDialogAction = (): void => {
   const defaults = {
     name: "",
@@ -329,13 +315,7 @@ const openCreateDialogAction = (): void => {
     enabled: true,
     description: "",
   };
-  createForm.resetField("name", { value: defaults.name });
-  createForm.resetField("transport", { value: defaults.transport });
-  createForm.resetField("url", { value: defaults.url });
-  createForm.resetField("headers", { value: defaults.headers });
-  createForm.resetField("timeoutSeconds", { value: defaults.timeoutSeconds });
-  createForm.resetField("enabled", { value: defaults.enabled });
-  createForm.resetField("description", { value: defaults.description });
+  createForm.resetForm({ values: defaults });
   createDialogRef.value?.open(defaults);
 };
 
@@ -378,14 +358,19 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
     mcpServerDetailGet(item.id as number),
     async (rsp) => {
       editServerId = rsp.data.id;
-      updateForm.resetField("name", { value: rsp.data.name });
-      updateForm.resetField("transport", { value: rsp.data.transport });
-      updateForm.resetField("url", { value: rsp.data.url });
-      // 请求头不回填密文：留空即表示沿用原凭据
-      updateForm.resetField("headers", { value: "" });
-      updateForm.resetField("timeoutSeconds", { value: rsp.data.timeoutSeconds });
-      updateForm.resetField("enabled", { value: rsp.data.enabled });
-      updateForm.resetField("description", { value: rsp.data.description });
+      // 复位与回填同属「准备本次打开的数据」：values 完整枚举全部 defineField 字段
+      updateForm.resetForm({
+        values: {
+          name: rsp.data.name,
+          transport: rsp.data.transport,
+          url: rsp.data.url,
+          // 请求头不回填密文：留空即表示沿用原凭据
+          headers: "",
+          timeoutSeconds: rsp.data.timeoutSeconds,
+          enabled: rsp.data.enabled,
+          description: rsp.data.description,
+        },
+      });
       editDialogRef.value?.open(rsp.data);
     },
     async (rsp) => {
@@ -507,8 +492,7 @@ const viewHeadersPlaintext = async (item: Record<string, unknown>): Promise<void
 // 避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", "name", "enabled", ...visible];
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const getActions = (item: Record<string, any>): ItemActions => {
+const getActions = (): ItemActions => {
   const actions: ItemActions = {
     edit: detailGetAction,
     test: itemTestAction,
@@ -519,16 +503,6 @@ const getActions = (item: Record<string, any>): ItemActions => {
       deleteConfirmRef.value?.open(i);
     },
   };
-  switch (item.enabled) {
-    case false:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.activate = (i: Record<string, any>) => toggleAction(i, true);
-      break;
-    case true:
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      actions.deactivate = (i: Record<string, any>) => toggleAction(i, false);
-      break;
-  }
   return actions;
 };
 
@@ -611,59 +585,22 @@ const itemDeleteAction = async (proxy: Record<string, any>): Promise<void> => {
 };
 
 // ---- 启用/禁用 ----
-// 后端无独立的启停接口：读取详情后以整表单更新翻转载入（凭据留空即沿用原密文）
-const toggleTarget = ref<boolean | null>(null);
-
+// 后端无独立的启停接口：读取详情后以整表单更新翻转载入（凭据留空即沿用原密文）。
+// 该复合请求交由 EnabledSwitchCell 行内开关执行：组件负责乐观更新、按行 pending 与失败回退。
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-const toggleAction = (item: Record<string, any>, enabled: boolean): void => {
-  toggleTarget.value = enabled;
-  toggleConfirmRef.value?.open(item);
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const itemToggleAction = async (proxy: Record<string, any>): Promise<void> => {
-  if (toggleTarget.value === null) {
-    return;
-  }
-  const target = toggleTarget.value;
-  await getResponse<McpServerDetailOut>(
-    mcpServerDetailGet(proxy.id as number),
-    async (rsp) => {
-      const detail = rsp.data;
-      await getSimpleResponse(
-        mcpServerUpdate(detail.id, {
-          name: detail.name,
-          transport: detail.transport,
-          url: detail.url,
-          headers: "",
-          timeoutSeconds: detail.timeoutSeconds,
-          enabled: target,
-          description: detail.description,
-        }),
-        async (rsp2) => {
-          await searchTableRef.value?.refresh();
-          appStore.notify({
-            text: rsp2.summary,
-            timeout: 3000,
-            color: "success",
-          });
-        },
-        async (rsp2) => {
-          appStore.notify({
-            text: rsp2.summary,
-            timeout: 3000,
-            color: "error",
-          });
-        },
-      );
-    },
-    async (rsp) => {
-      appStore.notify({
-        text: rsp.summary,
-        timeout: 3000,
-        color: "error",
-      });
-    },
-  );
+const setEnabledRequest = async (item: Record<string, any>, enabled: boolean) => {
+  // 详情接口返回统一信封 { code, summary, data }：axios 的 rsp.data 是整个信封，
+  // 直接取它会把信封当详情（其 id 为 undefined），更新请求因此打成
+  // /admin/mcp/server/undefined/update 并返回 400。故需再取一层信封内的 data 才是详情载荷。
+  const detail = (await mcpServerDetailGet(item.id as number)).data.data as McpServerDetailOut;
+  return mcpServerUpdate(detail.id, {
+    name: detail.name,
+    transport: detail.transport,
+    url: detail.url,
+    headers: "",
+    timeoutSeconds: detail.timeoutSeconds,
+    enabled: enabled,
+    description: detail.description,
+  });
 };
 </script>

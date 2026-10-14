@@ -12,10 +12,18 @@ import type { FlexIDs } from "./@types/admin";
 import type {
   AgentOutput,
   AgentMemoryStatusIn,
+  AgentMessageTruncateIn,
+  AgentPromptOptimizeIn,
+  AgentSessionBranchIn,
+  AgentSessionCompactIn,
   AgentSessionCreateIn,
   AgentSessionRenameIn,
+  AgentSessionValveIn,
   AgentStageEvent,
   AgentStreamIn,
+  CompressDeltaPayload,
+  CompressDonePayload,
+  CompressStartPayload,
   DryRunStageEvent,
   EvalStage,
   KnowledgeDocumentCreateIn,
@@ -141,8 +149,29 @@ export function agentSessionListGet(): AxiosPromise {
   );
 }
 
+// agentSessionCreate 创建会话：后端会据首个问题同步调用 LLM 生成会话主题，
+// 故显式覆盖 axios 实例的全局短超时（1s），避免远端模型响应稍慢时客户端提前判失败——
+// 请求被中止后 getResponse 无成功/失败回调可触发，前端既不建流也无提示（会话已在后端创建）。
 export function agentSessionCreate(data: AgentSessionCreateIn): AxiosPromise {
   return request.post("/ai/session/create", data, {
+    headers: getJwtHeader(),
+    timeout: 60000,
+  });
+}
+
+// agentPromptOptimize 优化用户提问：把当前诉求改写为更清晰、更易被正确理解的提问。
+// 该接口在后端单轮调用 LLM，故显式覆盖 axios 实例的全局短超时（60s），避免模型响应稍慢被误判失败。
+export function agentPromptOptimize(data: AgentPromptOptimizeIn): AxiosPromise {
+  return request.post("/ai/prompt/optimize", data, {
+    headers: getJwtHeader(),
+    timeout: 60000,
+  });
+}
+
+// agentSessionBranch 以某轮对话为结尾分支出新会话：把该轮及之前的全部消息复制到新会话，
+// 出参 data 为新建的会话项，前端据其切换到新会话。
+export function agentSessionBranch(id: number, data: AgentSessionBranchIn): AxiosPromise {
+  return request.post(`/ai/session/${id}/branch`, data, {
     headers: getJwtHeader(),
   });
 }
@@ -159,6 +188,13 @@ export function agentSessionDetailGet(id: number): AxiosPromise {
 
 export function agentSessionRename(id: number, data: AgentSessionRenameIn): AxiosPromise {
   return request.post(`/ai/session/${id}/rename`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// agentSessionValveSet 更新单个会话的审核阀门：返回更新后的会话项（与 rename 同风格）
+export function agentSessionValveSet(id: number, data: AgentSessionValveIn): AxiosPromise {
+  return request.post(`/ai/session/${id}/valve`, data, {
     headers: getJwtHeader(),
   });
 }
@@ -183,14 +219,29 @@ export function agentMessageListGet(id: number): AxiosPromise {
   );
 }
 
-// 压缩会话上下文并抽取长期记忆：返回刷新后的摘要、成功落库的记忆条数与非致命告警
-export function agentSessionCompact(id: number): AxiosPromise {
-  return request.post(
+// agentMessageTruncate 从某一轮用户消息起截断会话消息：删除该轮提问（按其用户在会话内的序号定位）
+// 及其之后的全部消息。供「回退 / 删除到某一轮对话」使用。
+export function agentMessageTruncate(id: number, data: AgentMessageTruncateIn): AxiosPromise {
+  return request.post(`/ai/session/${id}/messages/truncate`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// agentSessionCompactStream 启动 POST /ai/session/${id}/compact 的 SSE 流式压缩：
+// 依次下发 compress_start / compress_delta / compress_done（无 id 行），正常以 EOF 收敛；
+// 越界等本地化 JSON 404 由 streamSSE 的错误回调上报。返回中止函数。
+export function agentSessionCompactStream(
+  id: number,
+  data: AgentSessionCompactIn,
+  handlers: AgentStreamHandlers,
+): () => void {
+  return streamSSE(
+    "POST",
     `/ai/session/${id}/compact`,
-    {},
-    {
-      headers: getJwtHeader(),
-    },
+    data,
+    (event) => dispatchAgentEvent(event, handlers),
+    (msg) => handlers.onError?.(msg),
+    () => handlers.onComplete?.(),
   );
 }
 
@@ -234,14 +285,12 @@ export function agentMemoryStatusSet(id: number, data: AgentMemoryStatusIn): Axi
 }
 
 // ---- AI 状态 ----
-export function agentStatusGet(): AxiosPromise {
-  return request.post(
-    "/ai/status",
-    {},
-    {
-      headers: getJwtHeader(),
-    },
-  );
+// agentStatusGet 查询 AI 助手状态；显式传入 sessionID 时请求体携带该会话 ID，
+// 后端据此在出参中回带该会话的在途运行态（AgentStatusOut.liveRun，无在途运行时为 null）。
+export function agentStatusGet(sessionID?: number): AxiosPromise {
+  return request.post("/ai/status", sessionID ? { sessionID } : {}, {
+    headers: getJwtHeader(),
+  });
 }
 
 // ---- 流式响应（SSE，原生 fetch 实现）----
@@ -249,11 +298,25 @@ export function agentStatusGet(): AxiosPromise {
 // （toolCall / toolResult 的 start/done/failed，含工具名），done 为最终完整结果，
 // toolRequest 为模型请求调用平台原生接口（需前端人工审批执行后经 tool-result 续跑）。
 export interface AgentStreamHandlers {
+  // onSeq 每个带 id 的 SSE 事件到达时回调其序号（seq）；供前端持久化续播游标，
+  // 与事件类型分发并行（无论事件是否被消费都会回调）
+  onSeq?: (seq: number) => void;
   onDelta?: (delta: string) => void;
+  // onReasoning 思考过程增量（reasoning 事件）：与正文增量并行累积，供折叠区块实时呈现
+  onReasoning?: (delta: string) => void;
   onStage?: (stage: AgentStageEvent) => void;
   onToolRequest?: (req: ToolRequestPayload) => void;
+  // 上下文压缩开始：携带压缩原因、压缩前占用 token、有效档位容量与触发阈值
+  onCompressStart?: (payload: CompressStartPayload) => void;
+  // 上下文压缩摘要增量：摘要生成的实时增量文本
+  onCompressDelta?: (payload: CompressDeltaPayload) => void;
+  // 上下文压缩完成：携带折叠条数与压缩前后信息
+  onCompressDone?: (payload: CompressDonePayload) => void;
   onDone?: (out: AgentOutput) => void;
   onError?: (msg: string) => void;
+  // onComplete 流正常结束（EOF）时回调（主动中止不触发）：挂起流以逐条 tool_request 结束后
+  // 正常 EOF，前端据此确认本轮挂起调用已全部送达，再统一判定是否可整体提交
+  onComplete?: () => void;
 }
 
 // 检索试运行流式处理器：stage 为阶段状态事件（start/done/failed），
@@ -265,19 +328,27 @@ export interface RetrievalDryRunStreamHandlers {
   onError?: (msg: string) => void;
 }
 
-// 解析后的原始 SSE 事件（事件类型 + 已反序列化的 JSON 负载）。
+// 解析后的原始 SSE 事件（事件类型 + 可选序号 + 已反序列化的 JSON 负载）。
 interface SSERawEvent {
   type: string;
+  // id 事件序号（SSE `id:` 行），无该行时为 undefined；供续播去重与游标持久化
+  id?: number;
   data: unknown;
 }
 
-// parseEventBlock 解析单个 SSE 事件块（`event:` / `data:` 行）；缺少任一字段时返回 null。
+// parseEventBlock 解析单个 SSE 事件块（`id:` / `event:` / `data:` 行）；缺少 type 或 data 时返回 null。
 // ping 事件无 data，仅作保活，因此自然被丢弃。
 function parseEventBlock(block: string): SSERawEvent | null {
   let type = "";
   let data = "";
+  let id: number | undefined;
   for (const line of block.split("\n")) {
-    if (line.startsWith("event:")) {
+    if (line.startsWith("id:")) {
+      const parsed = Number(line.slice("id:".length).trim());
+      if (Number.isFinite(parsed)) {
+        id = parsed;
+      }
+    } else if (line.startsWith("event:")) {
       type = line.slice("event:".length).trim();
     } else if (line.startsWith("data:")) {
       data = line.slice("data:".length).trim();
@@ -286,7 +357,7 @@ function parseEventBlock(block: string): SSERawEvent | null {
   if (!type || !data) {
     return null;
   }
-  return { type, data: JSON.parse(data) as unknown };
+  return { type, id, data: JSON.parse(data) as unknown };
 }
 
 // responseErrorText 从开流前返回的非 SSE 错误响应中提取展示文案：优先统一错误封套的
@@ -307,14 +378,16 @@ async function responseErrorText(rsp: Response): Promise<string> {
   return `Request failed with status ${rsp.status}`;
 }
 
-// streamSSEPost 启动一个 POST 的 SSE 流式请求并按事件分发，返回中止函数。
-// axios 不支持流式响应，故使用原生 fetch + ReadableStream；事件以空行（\n\n）分隔，
-// 逐块取出解析。请求头与 axios 拦截器保持一致（语言、命名空间、JWT）。
-function streamSSEPost(
+// streamSSE 启动一个 SSE 流式请求（POST 携带 JSON 体；GET 不携带请求体，用于 ?after= 续播）并按事件
+// 分发，返回中止函数。axios 不支持流式响应，故使用原生 fetch + ReadableStream；事件以空行（\n\n）
+// 分隔，逐块取出解析。请求头与 axios 拦截器保持一致（语言、命名空间、JWT）。
+function streamSSE(
+  method: "POST" | "GET",
   path: string,
   body: unknown,
   onEvent: (event: SSERawEvent) => void,
   onError: (msg: string) => void,
+  onComplete?: () => void,
 ): () => void {
   const controller = new AbortController();
 
@@ -322,7 +395,7 @@ function streamSSEPost(
     const store = useAppStore();
     try {
       const rsp = await fetch(`${current_base_url()}${path}`, {
-        method: "POST",
+        method,
         signal: controller.signal,
         headers: {
           [HttpHeader.CONTENT_TYPE]: "application/json",
@@ -334,7 +407,7 @@ function streamSSEPost(
           [HttpHeader.NAMESPACE]: encodeURIComponent(store.namespace),
           [X_JWT_HEADER_NAME]: localManager.getJwt() || "",
         },
-        body: JSON.stringify(body),
+        body: method === "POST" ? JSON.stringify(body) : undefined,
       });
       if (!rsp.ok) {
         onError(await responseErrorText(rsp));
@@ -365,6 +438,8 @@ function streamSSEPost(
       if (buffer.trim()) {
         dispatchEventBlock(buffer, onEvent);
       }
+      // 流正常读到 EOF：通知调用方（主动中止不会走到这里）。
+      onComplete?.();
     } catch (err) {
       if (controller.signal.aborted) {
         // 调用方主动中止，静默结束。
@@ -392,11 +467,19 @@ function dispatchEventBlock(block: string, onEvent: (event: SSERawEvent) => void
 }
 
 // dispatchAgentEvent 分发 Agent SSE 事件：生成流与审批续跑流事件类型完全一致，
-// 故两者共用同一段分发逻辑，避免复制两遍。
+// 故两者共用同一段分发逻辑，避免复制两遍。带 id 的事件先回调 onSeq（持久化续播游标），
+// 再按类型分发；事件类型未知时仍会回调 onSeq（游标不丢）。
 function dispatchAgentEvent(event: SSERawEvent, handlers: AgentStreamHandlers): void {
+  if (event.id !== undefined) {
+    handlers.onSeq?.(event.id);
+  }
   switch (event.type) {
     case "delta":
       handlers.onDelta?.((event.data as { delta: string }).delta);
+      break;
+    // 思考过程增量事件：负载 {delta}，与正文 delta 同为增量文本，独立分发到 onReasoning
+    case "reasoning":
+      handlers.onReasoning?.((event.data as { delta: string }).delta);
       break;
     // 工具调用阶段事件：后端在工具调用轮仅上报阶段状态（不带增量输出），
     // 形状与检索试运行的 stage 事件一致，故沿用同一分发路径
@@ -407,6 +490,17 @@ function dispatchAgentEvent(event: SSERawEvent, handlers: AgentStreamHandlers): 
     // 前端须置为「等待审批」态而非失败
     case "tool_request":
       handlers.onToolRequest?.(event.data as ToolRequestPayload);
+      break;
+    // 上下文压缩事件（compress_start / compress_delta / compress_done）：手动压缩流为无 id
+    // 事件，不触发 onSeq，仅按类型分发
+    case "compress_start":
+      handlers.onCompressStart?.(event.data as CompressStartPayload);
+      break;
+    case "compress_delta":
+      handlers.onCompressDelta?.(event.data as CompressDeltaPayload);
+      break;
+    case "compress_done":
+      handlers.onCompressDone?.(event.data as CompressDonePayload);
       break;
     case "done":
       handlers.onDone?.(event.data as AgentOutput);
@@ -426,11 +520,43 @@ export function agentStreamGenerate(
   data: AgentStreamIn,
   handlers: AgentStreamHandlers,
 ): () => void {
-  return streamSSEPost(
+  return streamSSE(
+    "POST",
     `/ai/agent/${sessionID}/stream`,
     data,
     (event) => dispatchAgentEvent(event, handlers),
     (msg) => handlers.onError?.(msg),
+    () => handlers.onComplete?.(),
+  );
+}
+
+// agentStreamResume 续播某会话的在途运行：GET /ai/agent/${sessionID}/stream?after=<seq>，
+// 先回放序号 > after 的已落库事件，再接实时流；运行已结束则回放后补 done/error 并关闭。
+// 事件语义与生成流一致（复用 dispatchAgentEvent）。返回中止函数。
+export function agentStreamResume(
+  sessionID: number,
+  after: number,
+  handlers: AgentStreamHandlers,
+): () => void {
+  return streamSSE(
+    "GET",
+    `/ai/agent/${sessionID}/stream?after=${encodeURIComponent(String(Math.max(0, Math.floor(after))))}`,
+    undefined,
+    (event) => dispatchAgentEvent(event, handlers),
+    (msg) => handlers.onError?.(msg),
+    () => handlers.onComplete?.(),
+  );
+}
+
+// agentRunCancel 显式停止某会话的在途运行：POST /ai/agent/${sessionID}/run/cancel，
+// 服务端立即取消该运行（区别于仅断连接的 detach）。
+export function agentRunCancel(sessionID: number): AxiosPromise {
+  return request.post(
+    `/ai/agent/${sessionID}/run/cancel`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
   );
 }
 
@@ -442,11 +568,13 @@ export function agentToolResultStream(
   data: ToolResultIn,
   handlers: AgentStreamHandlers,
 ): () => void {
-  return streamSSEPost(
+  return streamSSE(
+    "POST",
     `/ai/agent/${sessionID}/tool-result`,
     data,
     (event) => dispatchAgentEvent(event, handlers),
     (msg) => handlers.onError?.(msg),
+    () => handlers.onComplete?.(),
   );
 }
 
@@ -456,7 +584,8 @@ export function knowledgeRetrievalDryRunStream(
   data: RetrievalDryRunIn,
   handlers: RetrievalDryRunStreamHandlers,
 ): () => void {
-  return streamSSEPost(
+  return streamSSE(
+    "POST",
     "/ai/retrieval/dry-run",
     data,
     (event) => {

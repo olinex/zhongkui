@@ -22,9 +22,9 @@
           />
         </div>
         <div class="picker-panel-footer">
-          <v-btn @click="previousDate">{{ $t("action.previousDate") }}</v-btn>
-          <v-btn @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
-          <v-btn @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
+          <v-btn variant="text" @click="previousDate">{{ $t("action.previousDate") }}</v-btn>
+          <v-btn variant="text" @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
+          <v-btn variant="text" @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
         </div>
       </v-card>
     </v-menu>
@@ -38,9 +38,9 @@
           />
         </div>
         <div class="picker-panel-footer">
-          <v-btn @click="previousDate">{{ $t("action.previousDate") }}</v-btn>
-          <v-btn @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
-          <v-btn @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
+          <v-btn variant="text" @click="previousDate">{{ $t("action.previousDate") }}</v-btn>
+          <v-btn variant="text" @click="currentDate">{{ $t("action.currentDate") }}</v-btn>
+          <v-btn variant="text" @click="nextDate">{{ $t("action.nextDate") }}</v-btn>
         </div>
       </v-card>
     </v-dialog>

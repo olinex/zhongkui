@@ -16,12 +16,12 @@ var (
 // VXLAN（Virtual Extensible LAN）是一种网络虚拟化技术，用于在现有IP网络上创建虚拟二层网络
 // 该结构体存储VXLAN头部的主要字段，便于后续分析和存储
 type VXLANChannel struct {
-	ValidIDFlag      bool   `json:"validIdFlag"`      // VNI有效标志位，表示VNI字段是否包含有效数据
+	ValidIDFlag      bool   `json:"validIDFlag"`      // VNI有效标志位，表示VNI字段是否包含有效数据
 	VNI              uint32 `json:"vni"`              // 虚拟网络标识符（VXLAN Network Identifier），24位，用于标识虚拟网络
 	GBPExtension     bool   `json:"gbpExtension"`     // 组策略扩展标志，表示是否包含组策略扩展头
 	GBPDontLearn     bool   `json:"gbpDontLearn"`     // 组策略不学习标志，控制MAC地址学习行为
 	GBPApplied       bool   `json:"gbpApplied"`       // 组策略应用标志，表示组策略是否已应用
-	GBPGroupPolicyID uint16 `json:"gbpGroupPolicyId"` // 组策略ID，用于分组策略控制
+	GBPGroupPolicyID uint16 `json:"gbpGroupPolicyID"` // 组策略ID，用于分组策略控制
 }
 
 // NewVXLANChannel 从gopacket VXLAN层创建VXLANChannel

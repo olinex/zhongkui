@@ -31,7 +31,7 @@ import (
 type TagEventRecordListOut struct {
 	utils.BaseItemOut
 	// RuleID 所属标签事件规则 ID
-	RuleID uint `json:"ruleId"`
+	RuleID uint `json:"ruleID"`
 	// RuleName 规则名称快照
 	RuleName string `json:"ruleName"`
 	// MatchAll 规则 MatchAll 快照
@@ -73,11 +73,11 @@ type TagEventRecordSendOut struct {
 	// ID 发送记录 ID
 	ID uint `json:"id"`
 	// TargetID 通知目标 ID
-	TargetID uint `json:"targetId"`
+	TargetID uint `json:"targetID"`
 	// TargetName 通知目标名称（尽力补全）
 	TargetName string `json:"targetName"`
 	// ChannelID 发送通知的渠道 ID
-	ChannelID uint `json:"channelId"`
+	ChannelID uint `json:"channelID"`
 	// ChannelName 渠道名称（尽力补全）
 	ChannelName string `json:"channelName"`
 	// ChannelType 渠道类型键快照
@@ -85,7 +85,7 @@ type TagEventRecordSendOut struct {
 	// Status 通知发送状态：pending/success/failed
 	Status string `json:"status"`
 	// MessageID 渠道返回的消息 ID
-	MessageID string `json:"messageId"`
+	MessageID string `json:"messageID"`
 	// Error 发送失败时的错误信息，成功时为空字符串
 	Error string `json:"error"`
 	// Payload 通知负载（JSON 文本）快照
@@ -100,7 +100,7 @@ type TagEventRecordSendOut struct {
 type TagEventRecordDetailOut struct {
 	utils.BaseItemOut
 	// RuleID 所属标签事件规则 ID
-	RuleID uint `json:"ruleId"`
+	RuleID uint `json:"ruleID"`
 	// RuleName 规则名称快照
 	RuleName string `json:"ruleName"`
 	// MatchAll 规则 MatchAll 快照

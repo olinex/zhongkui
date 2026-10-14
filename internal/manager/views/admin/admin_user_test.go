@@ -414,7 +414,7 @@ func TestUserSetActive(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/activate",
-				bytes.NewReader([]byte(`{"unionIds":"`+user.UnionID.String()+`"}`)))
+				bytes.NewReader([]byte(`{"unionIDs":"`+user.UnionID.String()+`"}`)))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -440,7 +440,7 @@ func TestUserSetActive(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/deactivate",
-				bytes.NewReader([]byte(`{"unionIds":["`+user.UnionID.String()+`"]}`)))
+				bytes.NewReader([]byte(`{"unionIDs":["`+user.UnionID.String()+`"]}`)))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 
@@ -455,7 +455,7 @@ func TestUserSetActive(t *testing.T) {
 		Convey("应返回错误当 unionIds 为空数组时", func() {
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/user/activate",
-				bytes.NewReader([]byte(`{"unionIds":[]}`)))
+				bytes.NewReader([]byte(`{"unionIDs":[]}`)))
 			req.Header.Set("Content-Type", "application/json")
 			r.ServeHTTP(w, req)
 

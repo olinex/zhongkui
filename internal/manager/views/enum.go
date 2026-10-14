@@ -16,7 +16,6 @@ import (
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/enum"
-	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
@@ -56,7 +55,7 @@ func EnumGet(c *gin.Context) {
 	}
 	t, ok := enum.Get(in.Type)
 	if !ok {
-		response.CreateBadBodyError(errors.Newf("enum: unknown type %q", in.Type)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("enumUnknownType", in.Type).AbortWithGinH(c)
 		return
 	}
 	lang := enumRequestLang(c, in.Lang)

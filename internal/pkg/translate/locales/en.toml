@@ -91,7 +91,10 @@
 1116 = "The pending API invocation no longer exists, please start a new question"
 1117 = "This API invocation has already been processed, please do not submit it again"
 1118 = "This API invocation has timed out, please start a new question"
-1119 = "You are not allowed to resume this API invocation"
+1119 = "The builtin system namespace is protected and cannot be deleted"
+1120 = "There is no live run for this session"
+1121 = "The live run of this session has expired"
+1122 = "You are not allowed to access the live run of this session"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -100,6 +103,55 @@ schedulerScheduleConflict = "cronSpec and interval are mutually exclusive, set o
 schedulerScheduleEmpty = "either cronSpec or interval must be set"
 schedulerTaskCreateExist = "Scheduler task type %s already exists"
 schedulerTaskUpdateNotExist = "Scheduler task type %s does not exist"
+llmBindingModelIDInvalid = "modelId must be a positive integer"
+llmBindingModelDisabled = "model %s is disabled and cannot be bound to a slot"
+llmBindingKindMismatch = "model %s is a %s model and cannot be bound to the %s slot (which requires a %s model)"
+llmBindingIncompatibleDimension = "embedding model %s is incompatible with the knowledge index dimension %d (the model returned %d dimensions); unbind the embedding slot if it is bound, then run `sync embedding-dimensions --dimensions %d` before binding"
+enumUnknownType = "unknown enum type `%s`"
+aiFeatureDisabled = "the AI feature is disabled"
+knowledgeImportedContentReadOnly = "imported document content is read-only; reparse the document to refresh it"
+knowledgeDocumentParsing = "the document is already being parsed; wait for it to finish before reindexing"
+knowledgeDocumentNotFound = "knowledge document %d not found"
+knowledgeUploadTooLarge = "request body exceeds the maximum upload size of %d bytes"
+knowledgeUploadFileRequired = "multipart field `file` is required"
+knowledgeUnsupportedFormat = "unsupported document format `%s` (only .md/.markdown/.txt/.pdf/.docx are supported)"
+datasourceSqliteFileRequired = "creating a sqlite datasource requires an uploaded .db file"
+datasourceSqliteS3Required = "a sqlite datasource requires S3 object storage to be enabled"
+llmToolBuiltinUndeletable = "the batch contains %d builtin tool(s), which cannot be deleted"
+llmParamItemsEmpty = "items must not be empty"
+llmParamNotDeclared = "parameter `%q` is not declared in the registry"
+llmParamGroupNotDeclared = "parameter group `%q` is not declared in the registry"
+llmParamKeysOrGroup = "either keys or group must be provided"
+llmParamValueTypeInvalid = "parameter `%q` expects a value of type %s, please check the input"
+llmParamValueNotAllowed = "parameter `%q` expects one of %s, got `%q`"
+llmModelNameEmpty = "model name must be non-empty"
+llmModelNameExists = "model name `%q` already exists"
+llmModelContextTokensInvalid = "context tokens must be a positive integer (required for chat models)"
+llmModelBound = "model `%q` is bound to a slot; unbind it before deleting"
+extraBodyInvalid = "the advanced request config must be a valid JSON object"
+thinkingValueInvalid = "the thinking on/off values must be valid JSON"
+mcpServerNameExists = "mcp server name `%q` already exists"
+mcpToolEmptyName = "a tool returned by the remote has an empty name and cannot be synchronized"
+mcpToolNameTaken = "tool name `%q` is already taken by tool #%d and cannot be synchronized from MCP server `%q`"
+mcpHeadersInvalid = "the request headers are not a valid JSON object"
+llmKnowledgeIndexUnavailable = "the knowledge index column is not available; run migrate up before binding an embedding model"
+plaintextModelNotRegistered = "plaintext: model `%q` not registered"
+notificationTargetDisabled = "the notification target or its channel is disabled"
+notificationChannelBuiltin = "channel `%q` is a builtin placeholder and cannot be deleted"
+notificationGroupTargetInvalid = "the notification group target does not belong to the current namespace"
+notificationTemplateUnknownEvent = "notification template: unknown event `%q`"
+notificationTemplateUnsupportedChannel = "notification template: unsupported channel type `%q`"
+notificationTemplateUnsupportedLanguage = "notification template: unsupported language `%q`"
+notificationTemplateInvalidTitle = "notification template title has invalid syntax: %s"
+notificationTemplateInvalidContent = "notification template content has invalid syntax: %s"
+notificationTemplateExists = "notification template for event `%q`, channel `%q`, language `%q` already exists"
+notificationTemplateTitleRequired = "notification template: title is required"
+notificationTemplateContentRequired = "notification template: content is required"
+multipartFieldTooLarge = "multipart field `%q` exceeds the maximum size of %d bytes"
+sampleFieldNotString = "sample: field `%q` of model `%q` is not a string"
+tagEventRuleNotifyMutuallyExclusive = "notification group and notification target are mutually exclusive, set at most one"
+tagEventRuleNotifyGroupNotFound = "notification group %d does not exist in namespace %s"
+tagEventRuleNotifyTargetNotFound = "notification target %d does not exist in namespace %s"
 
 [validator]
 strongPassword = "The field must be a strong password (containing at least one lowercase letter, one uppercase letter, one number, and one special character @$!%*?& respectively)"
@@ -290,7 +342,13 @@ other = "Sync comment-generated docs and embedding vectors, and reconcile the em
 other = "Sync comment-generated documents into RAG"
 
 [cmd.sync.docs.long]
-other = "Extract source comments and generate narrative pages, then idempotently sync them into the target namespace's RAG (format=generated) via a content-hash diff plan. Additions/updates/deletions converge via the diff plan, unchanged content results in zero writes, the partition is read/written in isolation without touching manual documents, and nothing is written to disk."
+other = "Extract source comments and generate narrative pages, then idempotently sync them into the builtin system namespace's RAG (format=generated) via a content-hash diff plan, visible to retrieval from every namespace. Additions/updates/deletions converge via the diff plan, unchanged content results in zero writes, the partition is read/written in isolation without touching manual documents, and nothing is written to disk."
+
+[cmd.sync.apis.short]
+other = "Sync native API knowledge into RAG"
+
+[cmd.sync.apis.long]
+other = "Assemble the native API catalog declared at view route registration (including purpose and request/response metadata), then idempotently sync it into the builtin system namespace's RAG (format=native_api) via a content-hash diff plan, visible to retrieval from every namespace. Additions/updates/deletions converge via the diff plan, unchanged content results in zero writes, the partition is read/written in isolation without touching narrative pages or manual documents, and nothing is written to disk."
 
 [cmd.sync.embeddings.short]
 other = "Recompute embedding vectors in a namespace with the current model"
@@ -918,9 +976,6 @@ other = "  stream [[.Stream]] tx [[.Tx]]: failed to parse HTTP response: [[.Err]
 [cli.docs.generated]
 other = "Documentation generated at [[.Dir]]"
 
-[cli.sync.docs.no-namespace]
-other = "Missing --namespace: specify the target namespace"
-
 [cli.sync.docs.disabled]
 other = "AI is not enabled; cannot sync comment-generated documents"
 
@@ -929,6 +984,15 @@ other = "Synchronized [[.Narratives]] narrative page(s) for namespace [[.Namespa
 
 [cli.sync.docs.failed]
 other = "Failed to sync comment-generated documents: [[.Err]]"
+
+[cli.sync.apis.disabled]
+other = "AI is not enabled; cannot sync native API knowledge"
+
+[cli.sync.apis.done]
+other = "Synchronized [[.Apis]] native API(s) for namespace [[.Namespace]]"
+
+[cli.sync.apis.failed]
+other = "Failed to sync native API knowledge: [[.Err]]"
 
 [cli.sync.embeddings.no-namespace]
 other = "Missing --namespace: specify the target namespace"
@@ -942,11 +1006,65 @@ other = "Recomputed [[.Documents]] knowledge document(s) and [[.Memories]] long-
 [cli.sync.embeddings.failed]
 other = "Failed to recompute embedding vectors: [[.Err]]"
 
+[cli.sync.progress.header]
+other = "Namespace [[.Namespace]] · Model [[.Model]] · Pending [[.Total]] items"
+
+[cli.sync.progress.rate-title]
+other = "Rate [[.Rate]] items/s · ETA [[.Eta]] · Done [[.Done]]/[[.Total]]"
+
+[cli.sync.progress.empty]
+other = "Content is up to date, nothing to process"
+
+[cli.sync.progress.total-row]
+other = "Total"
+
+[cli.sync.progress.count]
+other = "[[.Count]] items"
+
+[cli.sync.progress.memory-item]
+other = "Long-term memories ([[.Count]])"
+
+[cli.sync.progress.col.item]
+other = "Item"
+
+[cli.sync.progress.col.action]
+other = "Action"
+
+[cli.sync.progress.col.elapsed]
+other = "Elapsed"
+
+[cli.sync.progress.col.prompt]
+other = "Input Tokens"
+
+[cli.sync.progress.col.completion]
+other = "Output Tokens"
+
+[cli.sync.progress.action.create]
+other = "Create"
+
+[cli.sync.progress.action.update]
+other = "Update"
+
+[cli.sync.progress.action.delete]
+other = "Delete"
+
+[cli.sync.progress.action.reindex]
+other = "Reindex"
+
+[cli.sync.progress.action.memory]
+other = "Memory"
+
 [cli.sync.embedding-dimensions-section]
 other = "Reconciling the embedding column dimension on [[.DB]]"
 
 [cli.sync.embedding-dimensions-failed]
 other = "Failed to reconcile the embedding column dimension on [[.DB]]: [[.Err]]"
+
+[cli.sync.embedding-dimensions-flag-required]
+other = "the --dimensions flag is required and must be a positive integer"
+
+[cli.sync.embedding-dimensions-slot-bound]
+other = "the embedding slot is bound to model \"[[.Name]]\" with [[.Dimensions]] dimensions; unbind it before resizing the index to [[.Target]]"
 
 [cli.sync.embedding-dimensions-reconciled]
 other = "Embedding column dimension reconciled to [[.Dimensions]], please reindex the knowledge base documents"
@@ -2336,6 +2454,9 @@ other = "MCP Tool"
 other = "Client Tool"
 
 # Agent kind (enum class agentKind)
+[enum.agentKind.general]
+other = "General Assistant"
+
 [enum.agentKind.knowledge]
 other = "Knowledge Retrieval"
 
@@ -2371,6 +2492,22 @@ other = "Consumed"
 
 [enum.agentRunStatus.expired]
 other = "Expired"
+
+# Live run lifecycle phase (enum class agentRunPhase)
+[enum.agentRunPhase.running]
+other = "Running"
+
+[enum.agentRunPhase.done]
+other = "Done"
+
+[enum.agentRunPhase.failed]
+other = "Failed"
+
+[enum.agentRunPhase.cancelled]
+other = "Cancelled"
+
+[enum.agentRunPhase.suspended]
+other = "Awaiting Approval"
 
 # MCP remote transport (enum class mcpTransport)
 [enum.mcpTransport.sse]
@@ -2471,6 +2608,9 @@ other = "Word document"
 [enum.documentFormat.generated]
 other = "Generated"
 
+[enum.documentFormat.native_api]
+other = "Native API"
+
 [enum.knowledgeDocStatus.pending]
 other = "Pending"
 
@@ -2482,6 +2622,35 @@ other = "Ready"
 
 [enum.knowledgeDocStatus.failed]
 other = "Failed"
+
+# =============================================================================
+# Audit levels of client tool calls and the session-level review valve
+# (enum classes auditLevel / reviewValve, owned by internal/ai and internal/models/ai).
+# auditLevel is the four-level importance produced by the backend evaluation, and
+# reviewValve is the session-level three-level switch offered to users; the two are
+# composed to decide whether a call needs manual approval.
+# =============================================================================
+
+[enum.auditLevel.must]
+other = "Must review"
+
+[enum.auditLevel.suggest]
+other = "Suggested review"
+
+[enum.auditLevel.auto]
+other = "Auto review"
+
+[enum.auditLevel.none]
+other = "No review"
+
+[enum.reviewValve.each]
+other = "Review each"
+
+[enum.reviewValve.auto]
+other = "Auto review"
+
+[enum.reviewValve.none]
+other = "No review"
 
 # =============================================================================
 # AI capability disabled reasons (ai.disabled.*)
@@ -2529,6 +2698,24 @@ other = "System Prompt"
 [param.agent.systemPrompt.comment]
 other = "System prompt of the Agent conversation; the model must output JSON shaped as {\"content\":..., \"draft\":{...}}"
 
+[param.agent.generalSystemPrompt.label]
+other = "General chat system prompt"
+
+[param.agent.generalSystemPrompt.comment]
+other = "System prompt for the general chat agent (kind general), which must output Markdown directly."
+
+[param.agent.auditLevelSystemPrompt.label]
+other = "Audit level evaluation prompt"
+
+[param.agent.auditLevelSystemPrompt.comment]
+other = "System prompt that batch-classifies all pending calls of a run before client tools suspend, and must output only JSON levels (must/suggest/auto/none) aligned by callID"
+
+[param.agent.promptOptimizeSystemPrompt.label]
+other = "Prompt optimization system prompt"
+
+[param.agent.promptOptimizeSystemPrompt.comment]
+other = "System prompt that rewrites the user's original request into a clearer, more specific, more understandable question, and must output only the rewritten question text itself"
+
 [param.agent.businessSectionTitle.label]
 other = "Business Scene Section Title"
 
@@ -2565,6 +2752,12 @@ other = "Tool Result Byte Limit"
 [param.agent.maxToolResultBytes.comment]
 other = "Byte limit of a single tool result before it is injected into the model context; the excess is truncated"
 
+[param.agent.runDetachGraceSeconds.label]
+other = "Detach Grace Seconds"
+
+[param.agent.runDetachGraceSeconds.comment]
+other = "After the last subscriber of a live run detaches, the run is auto-cancelled if no subscriber returns within this many seconds; <=0 disables the auto-cancel"
+
 # ---- retrieval: hybrid retrieval fusion and LLM reranking ----
 [param.retrieval.topK.label]
 other = "Final Reference Count"
@@ -2577,6 +2770,12 @@ other = "Rerank Candidate Count"
 
 [param.retrieval.candidates.comment]
 other = "Number of candidates sent to LLM reranking after fusion (taken from each retrieval path)"
+
+[param.retrieval.expandDocLimit.label]
+other = "Whole-document Expansion Budget"
+
+[param.retrieval.expandDocLimit.comment]
+other = "Maximum total length (characters) of whole-document expansion within one retrieval: documents are expanded in result order, and a document exceeding the limit by itself, or exceeding the cumulative budget after expansion, falls back to its chunks without truncating the whole document; non-positive disables the expansion"
 
 [param.retrieval.fusion.label]
 other = "Fusion Strategy"
@@ -2626,6 +2825,12 @@ other = "Business Data Injection Limit"
 
 [param.session.maxContextBytes.comment]
 other = "Total size limit (bytes) of a single businessData payload injected from the frontend"
+
+[param.session.compactThresholdRatio.label]
+other = "Auto-compaction Threshold"
+
+[param.session.compactThresholdRatio.comment]
+other = "Usage ratio threshold (context tokens / slot capacity) that triggers auto-compaction"
 
 [param.session.topicSystemPrompt.label]
 other = "Session Topic Prompt"
@@ -2687,6 +2892,12 @@ other = "Summary Trigger Count"
 
 [param.memory.summaryMinEvictedMessages.comment]
 other = "Number of unsummarized messages outside the window that triggers the rolling summary"
+
+[param.memory.evictedMessageByteLimit.label]
+other = "Summary message byte limit"
+
+[param.memory.evictedMessageByteLimit.comment]
+other = "Byte cap for a single evicted message's content in the rolling-summary and memory-extraction prompts; longer values improve summary fidelity at the cost of more input tokens."
 
 [param.memory.extractSystemPrompt.label]
 other = "Memory Extraction Prompt"

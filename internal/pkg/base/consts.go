@@ -39,6 +39,9 @@ m = (p.obj == "*" || r.obj == p.obj) && \
 
 	// 内置命名空间
 	DefaultNamespace = "default"
+	// SystemNamespace 内置系统命名空间：承载由代码声明的公开共享数据（如原生接口目录），
+	// 对所有命名空间的检索可见；不在命名空间列表/选择器中暴露，且禁止删除。
+	SystemNamespace = "system"
 
 	// 全局权限点（permission point）格式规范：
 	//   object = {prefix}:{subtype}:{model}:{field}

@@ -117,7 +117,7 @@ type BaseMeta struct {
 	Namespace string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3));primaryKey" json:"namespace"` // 命名空间名称
 	Capture   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"capture"`              // 抓包实例标识
 	Version   string             `gorm:"type:LowCardinality(String) CODEC(ZSTD(3))" json:"version"`              // 数据版本
-	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"sessionId"`                              // 会话唯一标识
+	SessionID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"sessionID"`                              // 会话唯一标识
 }
 
 // RowMeta 行唯一标识元数据
@@ -136,7 +136,7 @@ type TimestampMeta struct {
 // TraceMeta 表示链路追踪元数据，携带用于关联同一请求各环节的追踪 ID
 type TraceMeta struct {
 	// TraceID 链路追踪 ID，用于关联同一请求各环节的追踪记录
-	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"traceId"`
+	TraceID serializer.HexUUID `gorm:"type:UUID CODEC(ZSTD(3))" json:"traceID"`
 }
 
 // DirectionMeta 表示数据包方向元数据

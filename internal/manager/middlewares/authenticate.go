@@ -254,9 +254,10 @@ func (j *JwtAuthenticator) Refresh(c *gin.Context) (string, *response.CodeError)
 	if now.Sub(claims.ExpiresAt.Time) > j.cfg.TokenRefreshTimeout {
 		return "", ErrJwtTimeoutToken
 	}
-	if claims.ExpiresAt.Sub(now) > 0 || claims.NotBefore.Sub(now) > 0 {
-		return j.appendPrefix(token.Raw), nil
-	}
+	// 在刷新窗口内一律重新签发（滑动过期）。前端在令牌剩余寿命的 90% 处触发刷新，
+	// 若此处对未过期令牌原样返回，exp 不会延后，前端按「剩余寿命 × 0.9」重排的续期
+	// 定时会等比收缩至毫秒级，既产生密集的刷新请求，也会在过期瞬间让在途请求拿到
+	// 401 而被强制登出（进而卸载 AI 抽屉、中止在途 SSE 流）。
 	return j.Sign(&core.User{
 		UnionID:    claims.UnionID,
 		NickleName: claims.NickleName,
@@ -334,6 +335,26 @@ func GetUser(c *gin.Context) (*core.User, *response.CodeError) {
 	} else {
 		return nil, ErrUserNotExist
 	}
+}
+
+// RequireUserID 从请求上下文获取当前请求用户 ID（users.id）。
+//
+// 与 GetUser 的区别在于：用户缺失时不会返回错误值由调用方处理，而是直接中断请求并返回 false，
+// 适用于必须已认证才能继续执行的处理器。
+//
+// 参数：
+//   - c: Gin 请求上下文
+//
+// 返回值：
+//   - uint: 当前请求用户 ID；获取失败时为 0
+//   - bool: 是否成功获取；false 表示用户缺失，请求已被中断
+func RequireUserID(c *gin.Context) (uint, bool) {
+	user, err := GetUser(c)
+	if err != nil {
+		err.AbortWithGinH(c)
+		return 0, false
+	}
+	return user.ID, true
 }
 
 // GetAuth 从 Gin 上下文中获取认证器实例

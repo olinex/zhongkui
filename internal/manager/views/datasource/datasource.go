@@ -262,13 +262,13 @@ func DatasourceCreate(c *gin.Context) {
 	objectKey := ""
 	if in.Type == vtab.DatasourceTypeSQLiteFile {
 		if file == nil {
-			response.CreateBadBodyError(errors.New("creating a sqlite datasource requires an uploaded .db file")).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("datasourceSqliteFileRequired").AbortWithGinH(c)
 			return
 		}
 		objectKey = vtab.SQLiteObjectKey(namespace, in.Name)
 		if err := pools.StoreSQLiteObject(c, namespace, in.Name, file); err != nil {
 			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
-				response.CreateBadBodyError(errors.New("creating a sqlite datasource requires S3 object storage to be enabled")).AbortWithGinH(c)
+				response.CreateBadBodyMessageError("datasourceSqliteS3Required").AbortWithGinH(c)
 			} else {
 				response.CreateAccidentError(err).AbortWithGinH(c)
 			}
@@ -389,7 +389,7 @@ func DatasourceUpdate(c *gin.Context) {
 	if instance.Type == vtab.DatasourceTypeSQLiteFile && file != nil {
 		if err := pools.StoreSQLiteObject(c, namespace, instance.Name, file); err != nil {
 			if errors.Is(err, vtab.ErrSQLiteStoreNotInjected) {
-				response.CreateBadBodyError(errors.New("updating a sqlite datasource requires S3 object storage to be enabled")).AbortWithGinH(c)
+				response.CreateBadBodyMessageError("datasourceSqliteS3Required").AbortWithGinH(c)
 			} else {
 				response.CreateAccidentError(err).AbortWithGinH(c)
 			}

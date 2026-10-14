@@ -10,7 +10,11 @@ const name = yup
   .min(1)
   .max(128)
   .label("model.tagRuleSample.field.name");
-const description = yup.string().nonNullable().max(512).label("model.tagRuleSample.field.description");
+const description = yup
+  .string()
+  .nonNullable()
+  .max(512)
+  .label("model.tagRuleSample.field.description");
 
 // 更新仅允许修改 name/description，model 与 input 不可变
 export const updateTagRuleSampleSchema = yup.object({

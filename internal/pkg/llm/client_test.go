@@ -3,12 +3,20 @@ package llm
 import (
 	// 标准库
 	"context"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	// 第三方
+	"github.com/cloudwego/eino/callbacks"
+	"github.com/cloudwego/eino/components"
 	"github.com/cloudwego/eino/components/embedding"
+	"github.com/cloudwego/eino/schema"
 )
 
 // fakeEmbedder 记录每次收到的批次文本，并返回与入参等长的占位向量（第 i 个向量的唯一元素为
@@ -24,6 +32,25 @@ func (f *fakeEmbedder) EmbedStrings(_ context.Context, texts []string, _ ...embe
 	for i, s := range texts {
 		out[i] = []float64{float64(len(s))}
 	}
+	return out, nil
+}
+
+// callbackEmbedder 在每次调用时按批发送 eino 回调并上报固定的 token 用量，用于验证
+// EmbedClient 的用量采集路径。
+type callbackEmbedder struct{ promptPerBatch int }
+
+// EmbedStrings 发送 eino 起止回调并上报固定 token 用量，向量元素为文本长度。
+func (c *callbackEmbedder) EmbedStrings(ctx context.Context, texts []string, _ ...embedding.Option) ([][]float64, error) {
+	ctx = callbacks.EnsureRunInfo(ctx, "fake", components.ComponentOfEmbedding)
+	ctx = callbacks.OnStart(ctx, &embedding.CallbackInput{Texts: texts})
+	out := make([][]float64, len(texts))
+	for i, s := range texts {
+		out[i] = []float64{float64(len(s))}
+	}
+	_ = callbacks.OnEnd(ctx, &embedding.CallbackOutput{
+		Embeddings: out,
+		TokenUsage: &embedding.TokenUsage{PromptTokens: c.promptPerBatch, TotalTokens: c.promptPerBatch},
+	})
 	return out, nil
 }
 
@@ -147,4 +174,224 @@ func TestEmbedClient_EmbedStringsBatching(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestEmbedClient_EmbedStringsWithUsage 验证 EmbedStringsWithUsage 采集底层向量化组件经 eino
+// 回调上报的 token 用量：单批时等于该批上报值，超批时等于各批之和，且向量顺序与入参一致。
+func TestEmbedClient_EmbedStringsWithUsage(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("within cap reports single batch usage", func(t *testing.T) {
+		client := &EmbedClient{embedder: &callbackEmbedder{promptPerBatch: 7}}
+		texts := []string{"a", "bb", "ccc"}
+		vectors, usage, err := client.EmbedStringsWithUsage(ctx, texts)
+		if err != nil {
+			t.Fatalf("EmbedStringsWithUsage() error = %v", err)
+		}
+		if usage.PromptTokens != 7 || usage.TotalTokens != 7 {
+			t.Errorf("usage = %+v, want prompt/total = 7", usage)
+		}
+		if len(vectors) != len(texts) {
+			t.Fatalf("len(vectors) = %d, want %d", len(vectors), len(texts))
+		}
+		for i, v := range vectors {
+			if len(v) != 1 || v[0] != float64(i+1) {
+				t.Fatalf("vectors[%d] = %v, want [%d]", i, v, i+1)
+			}
+		}
+	})
+
+	t.Run("over cap accumulates usage across batches", func(t *testing.T) {
+		client := &EmbedClient{embedder: &callbackEmbedder{promptPerBatch: 7}}
+		texts := make([]string, embedBatchSize*2+3)
+		for i := range texts {
+			texts[i] = strings.Repeat("x", i+1)
+		}
+		vectors, usage, err := client.EmbedStringsWithUsage(ctx, texts)
+		if err != nil {
+			t.Fatalf("EmbedStringsWithUsage() error = %v", err)
+		}
+		if want := 7 * 3; usage.PromptTokens != want || usage.TotalTokens != want {
+			t.Errorf("usage = %+v, want prompt/total = %d", usage, want)
+		}
+		if len(vectors) != len(texts) {
+			t.Fatalf("len(vectors) = %d, want %d", len(vectors), len(texts))
+		}
+		for i, v := range vectors {
+			if len(v) != 1 || v[0] != float64(i+1) {
+				t.Fatalf("vectors[%d] = %v, want [%d]", i, v, i+1)
+			}
+		}
+	})
+}
+
+// TestRequestExtraFields 验证依据思考模式开关合并请求字段：仅 ExtraBody、仅思考开关（on/off
+// 分别写入正确取值）、思考字段覆盖 ExtraBody 同名键、未知 thinking 不注入、以及两者皆空返回 nil。
+func TestRequestExtraFields(t *testing.T) {
+	thinkingCfg := ModelConfig{ThinkingField: "enable_thinking", ThinkingOnValue: true, ThinkingOffValue: false}
+	cases := []struct {
+		name     string
+		cfg      ModelConfig
+		thinking string
+		want     map[string]any
+	}{
+		{
+			name:     "extra body only",
+			cfg:      ModelConfig{ExtraBody: map[string]any{"top_k": 20}},
+			thinking: "",
+			want:     map[string]any{"top_k": 20},
+		},
+		{
+			name:     "thinking on only",
+			cfg:      thinkingCfg,
+			thinking: "on",
+			want:     map[string]any{"enable_thinking": true},
+		},
+		{
+			name:     "thinking off only",
+			cfg:      thinkingCfg,
+			thinking: "off",
+			want:     map[string]any{"enable_thinking": false},
+		},
+		{
+			name: "thinking on overrides extra body key",
+			cfg: ModelConfig{
+				ExtraBody:        map[string]any{"enable_thinking": "legacy", "top_k": 20},
+				ThinkingField:    "enable_thinking",
+				ThinkingOnValue:  true,
+				ThinkingOffValue: false,
+			},
+			thinking: "on",
+			want:     map[string]any{"enable_thinking": true, "top_k": 20},
+		},
+		{
+			name: "unknown thinking leaves extra body untouched",
+			cfg: ModelConfig{
+				ExtraBody:        map[string]any{"enable_thinking": "legacy"},
+				ThinkingField:    "enable_thinking",
+				ThinkingOnValue:  true,
+				ThinkingOffValue: false,
+			},
+			thinking: "auto",
+			want:     map[string]any{"enable_thinking": "legacy"},
+		},
+		{
+			name:     "empty extra body and no thinking returns nil",
+			cfg:      ModelConfig{},
+			thinking: "on",
+			want:     nil,
+		},
+	}
+	for _, tt := range cases {
+		if got := requestExtraFields(tt.cfg, tt.thinking); !reflect.DeepEqual(got, tt.want) {
+			t.Errorf("requestExtraFields(%s) = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+// TestChatClient_RequestOptions 验证 RequestOptions 在合并结果非空时返回单个选项、为空时返回空切片，
+// 且合并过程不写回配置快照的 ExtraBody（拷贝语义）。
+func TestChatClient_RequestOptions(t *testing.T) {
+	extra := map[string]any{"top_k": 20}
+	client := &ChatClient{cfg: ModelConfig{
+		ExtraBody:       extra,
+		ThinkingField:   "enable_thinking",
+		ThinkingOnValue: true,
+	}}
+	if opts := client.RequestOptions(""); len(opts) != 1 {
+		t.Errorf("RequestOptions(\"\") returned %d options, want 1", len(opts))
+	}
+	if opts := client.RequestOptions("on"); len(opts) != 1 {
+		t.Errorf("RequestOptions(\"on\") returned %d options, want 1", len(opts))
+	}
+	if opts := (&ChatClient{}).RequestOptions("on"); len(opts) != 0 {
+		t.Errorf("RequestOptions with empty config returned %d options, want 0", len(opts))
+	}
+	if _, ok := extra["enable_thinking"]; ok {
+		t.Errorf("cfg.ExtraBody was mutated with the thinking field: %v", extra)
+	}
+}
+
+// TestNewChatHTTPClient_NoTotalTimeout 验证对话专用 HTTP 客户端不设整请求超时
+// （http.Client.Timeout），仅以响应头超时约束首字节，避免流式长回答被整体时长中断。
+func TestNewChatHTTPClient_NoTotalTimeout(t *testing.T) {
+	client := newChatHTTPClient(30 * time.Second)
+	if client.Timeout != 0 {
+		t.Errorf("client.Timeout = %v, want 0 (no whole-request timeout)", client.Timeout)
+	}
+	transport, ok := client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("client.Transport = %T, want *http.Transport", client.Transport)
+	}
+	if transport.ResponseHeaderTimeout != 30*time.Second {
+		t.Errorf("ResponseHeaderTimeout = %v, want 30s", transport.ResponseHeaderTimeout)
+	}
+	if zero := newChatHTTPClient(0); zero.Timeout != 0 {
+		t.Errorf("newChatHTTPClient(0).Timeout = %v, want 0", zero.Timeout)
+	}
+}
+
+// TestChatClient_StreamExceedsModelTimeout 验证流式生成的整体时长可以超过模型超时而不被中断：
+// 服务端先发首块，再停顿远超模型超时的时长，客户端仍应读完全部增量。这是对「整请求超时
+// （http.Client.Timeout）中断流式响应、报 context deadline exceeded ... while reading body」
+// 的回归测试。
+func TestChatClient_StreamExceedsModelTimeout(t *testing.T) {
+	const modelTimeout = 150 * time.Millisecond
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			t.Errorf("response writer does not support flushing")
+			return
+		}
+		writeChunk := func(content string) {
+			_, _ = io.WriteString(w, `data: {"id":"1","object":"chat.completion.chunk","created":0,"model":"m","choices":[{"index":0,"delta":{"content":"`+content+`"},"finish_reason":null}]}`+"\n\n")
+			flusher.Flush()
+		}
+		writeChunk("hel")
+		// 停顿远超模型超时：旧实现（http.Client.Timeout）会在此中断
+		time.Sleep(4 * modelTimeout)
+		writeChunk("lo")
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		flusher.Flush()
+	}))
+	defer srv.Close()
+
+	chat, err := NewChatClient(context.Background(), ModelConfig{
+		Kind:        ModelKindChat,
+		BaseURL:     srv.URL + "/v1",
+		APIKey:      "sk-test",
+		Model:       "gpt-test",
+		Timeout:     modelTimeout,
+		Temperature: 0.5,
+		MaxTokens:   16,
+	})
+	if err != nil {
+		t.Fatalf("NewChatClient() error = %v", err)
+	}
+	start := time.Now()
+	reader, err := chat.Stream(context.Background(), []*schema.Message{schema.UserMessage("hi")})
+	if err != nil {
+		t.Fatalf("Stream() error = %v", err)
+	}
+	defer reader.Close()
+	var sb strings.Builder
+	for {
+		chunk, recvErr := reader.Recv()
+		if errors.Is(recvErr, io.EOF) {
+			break
+		}
+		if recvErr != nil {
+			t.Fatalf("Recv() error = %v", recvErr)
+		}
+		if chunk != nil {
+			sb.WriteString(chunk.Content)
+		}
+	}
+	if sb.String() != "hello" {
+		t.Errorf("streamed content = %q, want %q", sb.String(), "hello")
+	}
+	if elapsed := time.Since(start); elapsed <= modelTimeout {
+		t.Errorf("elapsed = %v, want > model timeout %v (stream should outlive the model timeout)", elapsed, modelTimeout)
+	}
 }

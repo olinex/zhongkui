@@ -83,10 +83,10 @@ type TagEventRuleCreateIn struct {
 	Enabled bool `json:"enabled" default:"true"`
 	// NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定（使用命名空间默认组）。
 	// 与 NotificationTargetID 互斥，二者至多一个非 nil；通知目标优先级高于通知组。
-	NotificationGroupID *uint `json:"notificationGroupId"`
+	NotificationGroupID *uint `json:"notificationGroupID"`
 	// NotificationTargetID 规则直绑的通知目标 ID，nil 表示未直绑目标。
 	// 与 NotificationGroupID 互斥；非 nil 时将直接向该目标发送而绕过通知组。
-	NotificationTargetID *uint `json:"notificationTargetId"`
+	NotificationTargetID *uint `json:"notificationTargetID"`
 	// Conditions 条件列表，至少一条
 	Conditions []*TagEventRuleConditionIn `json:"conditions" binding:"required,min=1,dive"`
 }
@@ -104,9 +104,9 @@ type TagEventRuleUpdateIn struct {
 	Enabled bool `json:"enabled"`
 	// NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定（使用命名空间默认组）。
 	// 与 NotificationTargetID 互斥，二者至多一个非 nil。
-	NotificationGroupID *uint `json:"notificationGroupId"`
+	NotificationGroupID *uint `json:"notificationGroupID"`
 	// NotificationTargetID 规则直绑的通知目标 ID，nil 表示未直绑目标。与 NotificationGroupID 互斥。
-	NotificationTargetID *uint `json:"notificationTargetId"`
+	NotificationTargetID *uint `json:"notificationTargetID"`
 	// Conditions 条件列表，至少一条（更新后完全替换既有条件）
 	Conditions []*TagEventRuleConditionIn `json:"conditions" binding:"required,min=1,dive"`
 }
@@ -157,9 +157,9 @@ type TagEventRuleDetailOut struct {
 	TagEventRuleBaseDetailOut
 	// NotificationGroupID 规则绑定的通知组 ID，nil 表示未绑定（使用命名空间默认组）。
 	// 仅详情返回，列表不展示。
-	NotificationGroupID *uint `json:"notificationGroupId"`
+	NotificationGroupID *uint `json:"notificationGroupID"`
 	// NotificationTargetID 规则直绑的通知目标 ID，nil 表示未直绑目标。仅详情返回，列表不展示。
-	NotificationTargetID *uint `json:"notificationTargetId"`
+	NotificationTargetID *uint `json:"notificationTargetID"`
 	// Conditions 规则下的全部条件
 	Conditions []*TagEventRuleConditionOut `json:"conditions"`
 	// Version 最新历史版本号，0 表示尚无历史版本
@@ -180,7 +180,7 @@ type TagEventRuleListOut struct {
 type TagEventRuleVersionOut struct {
 	utils.BaseItemOut
 	// RuleID 所属标签事件规则 ID
-	RuleID uint `json:"ruleId"`
+	RuleID uint `json:"ruleID"`
 	// Version 版本号，同一规则内从 1 递增
 	Version uint `json:"version"`
 	// Name 快照时刻的规则名称
@@ -880,7 +880,7 @@ func validateTagEventRuleConditions(c *gin.Context, conds []*TagEventRuleConditi
 // 校验通过返回 true。不设置任何绑定是合法的（表示使用命名空间默认组）。
 func validateTagEventRuleNotification(c *gin.Context, namespace string, groupID, targetID *uint) bool {
 	if groupID != nil && targetID != nil {
-		response.CreateBadBodyError(errors.New("notification group and target are mutually exclusive")).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("tagEventRuleNotifyMutuallyExclusive").AbortWithGinH(c)
 		return false
 	}
 	db := middlewares.GetCoreDatabase(c)
@@ -892,7 +892,7 @@ func validateTagEventRuleNotification(c *gin.Context, namespace string, groupID,
 			return false
 		}
 		if count == 0 {
-			response.CreateBadBodyError(errors.Newf("notification group %d does not exist in namespace %s", *groupID, namespace)).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("tagEventRuleNotifyGroupNotFound", *groupID, namespace).AbortWithGinH(c)
 			return false
 		}
 	}
@@ -904,7 +904,7 @@ func validateTagEventRuleNotification(c *gin.Context, namespace string, groupID,
 			return false
 		}
 		if count == 0 {
-			response.CreateBadBodyError(errors.Newf("notification target %d does not exist in namespace %s", *targetID, namespace)).AbortWithGinH(c)
+			response.CreateBadBodyMessageError("tagEventRuleNotifyTargetNotFound", *targetID, namespace).AbortWithGinH(c)
 			return false
 		}
 	}

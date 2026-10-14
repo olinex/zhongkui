@@ -87,9 +87,7 @@
               <div class="zk-editor-title">{{ $t(s.titleKey) }}</div>
               <div class="sample-desc zk-hint">{{ $t(s.descKey) }}</div>
             </div>
-            <v-icon size="18" class="sample-arrow text-on-surface-variant"
-              >mdi-chevron-right</v-icon
-            >
+            <v-icon size="18" class="sample-arrow on-surface-variant">mdi-chevron-right</v-icon>
           </v-card>
         </div>
       </v-expansion-panel-text>

@@ -178,7 +178,7 @@ type ServiceInfo struct {
     // ServiceName 服务名称
     ServiceName string `json:"serviceName"`
     // InstanceID 实例唯一标识
-    InstanceID string `json:"instanceId"`
+    InstanceID string `json:"instanceID"`
     // Host 实例所在主机地址
     Host string `json:"host"`
     // Version 实例运行版本

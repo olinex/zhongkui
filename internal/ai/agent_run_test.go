@@ -67,6 +67,7 @@ func (f *agentRunFixture) input(query string) AgentInput {
 		Query:               query,
 		SessionID:           f.session.ID,
 		NamespaceName:       "default",
+		UserID:              f.session.UserID,
 		ToolRequestReporter: f.reportRequest,
 	}
 }
@@ -76,6 +77,7 @@ func (f *agentRunFixture) resumeInput(results ...ToolResult) ResumeInput {
 	return ResumeInput{
 		SessionID:     f.session.ID,
 		NamespaceName: "default",
+		UserID:        f.session.UserID,
 		Results:       results,
 		ToolRequests:  f.reportRequest,
 	}
@@ -116,19 +118,27 @@ func newAgentRunFixture(t *testing.T, chat model.BaseChatModel, rtv retriever.Re
 		infos = append(infos, info)
 	}
 	infos = append(infos, ensureTestClientTool())
-	agent, err := NewAgent(ctx, stubResolver(chat), rtv, store,
+	// 挂起前会另行调用 flash 档位对本次全部待执行调用做一次审核重要级评估（见 evaluateAuditLevels）；
+	// 该评估走独立替身，避免消费本次运行档位脚本化的轮次序列（其轮次只应对应各次生成）。评估替身
+	// 对 fixture 里的 backend 工具 knowledge_search（call-ks）显式判为非 must，使其照旧行内执行；
+	// client 工具不在输出中即保守回落 must，但会话阀门 each 已使其一律需人工审核，不影响既有断言。
+	resolver := slotChatResolver(map[ai.Slot]model.BaseChatModel{
+		ai.SlotFlash:    &stubChat{reply: `{"levels": [{"callID": "call-ks", "level": "none"}]}`},
+		ai.SlotStandard: chat,
+	})
+	agent, err := NewAgent(ctx, resolver, rtv, store,
 		testParams(t, map[string]string{"agent.maxToolRounds": "5"}), nil, nil, built, infos)
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
 	}
-	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge")
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
 	return &agentRunFixture{agent: agent, store: store, session: session}
 }
 
-// clientCall 构造一次 test_client_tool 的工具调用（callId + 入参 JSON 文本）。
+// clientCall 构造一次 test_client_tool 的工具调用（callID + 入参 JSON 文本）。
 func clientCall(id, arguments string) schema.ToolCall {
 	return schema.ToolCall{ID: id, Type: "function", Function: schema.FunctionCall{
 		Name: testClientToolName, Arguments: arguments,
@@ -232,6 +242,51 @@ func TestAgentRun_SuspendThenRejectResume(t *testing.T) {
 	last := chat.gotInputs[1][len(chat.gotInputs[1])-1]
 	if last.Role != schema.Tool || !strings.Contains(last.Content, "declined") {
 		t.Errorf("fed-back tool message = %+v, want the decline notice", last)
+	}
+}
+
+// TestAgentRun_ResumeKeepsSuspendedRoundText 测试挂起轮的前导说明文本在续跑时被并回最终 done
+// 正文：该文本已随上次运行的流逐块外发给用户，而续跑的流只含新生成的正文；前端在 done 时以
+// done 正文覆盖已累积的增量，若不并回，用户已看到的文本会凭空消失。
+func TestAgentRun_ResumeKeepsSuspendedRoundText(t *testing.T) {
+	ctx := context.Background()
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{
+			content:   "let me check the page ",
+			toolCalls: []schema.ToolCall{clientCall("call-1", `{"payload":"page-1"}`)},
+		},
+		{content: "final answer"},
+	}}
+	f := newAgentRunFixture(t, chat, &stubRetriever{}, false)
+
+	reader, err := f.agent.StreamRun(ctx, f.input("q"))
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	deltas, done, err := collectStream(t, reader)
+	if err != nil {
+		t.Fatalf("suspend stream error = %v, want a clean end", err)
+	}
+	if done.Done {
+		t.Fatal("suspend stream produced a done item, want tool_request as the terminal state")
+	}
+	if deltas != "let me check the page " {
+		t.Fatalf("suspend deltas = %q, want the round text streamed before suspension", deltas)
+	}
+
+	resumeReader, err := f.agent.ResumeRun(ctx, f.resumeInput(ToolResult{CallID: "call-1", Approved: true, Result: "ok"}))
+	if err != nil {
+		t.Fatalf("ResumeRun error = %v", err)
+	}
+	resumedDeltas, resumed, err := collectStream(t, resumeReader)
+	if err != nil {
+		t.Fatalf("resume stream error = %v", err)
+	}
+	if resumedDeltas != "final answer" {
+		t.Errorf("resume deltas = %q, want only the newly generated text", resumedDeltas)
+	}
+	if want := "let me check the page final answer"; !resumed.Done || resumed.Content != want {
+		t.Fatalf("resumed output = %+v, want content %q (streamed text kept)", resumed, want)
 	}
 }
 
@@ -433,9 +488,9 @@ func TestAgentRun_ResuspendOnResume(t *testing.T) {
 	}
 }
 
-// TestAgentRun_ForbiddenNamespace 测试归属不符：命名空间与运行现场不一致时恢复返回
-// ErrAgentRunForbidden。
-func TestAgentRun_ForbiddenNamespace(t *testing.T) {
+// TestAgentRun_ForeignNamespaceNotFound 测试归属隔离：命名空间与运行现场不一致时，运行现场在
+// 查询阶段即被过滤，恢复返回 ErrAgentRunNotFound（不泄露其存在性）。
+func TestAgentRun_ForeignNamespaceNotFound(t *testing.T) {
 	ctx := context.Background()
 	chat := &scriptedChat{turns: []scriptedTurn{
 		{toolCalls: []schema.ToolCall{clientCall("call-1", `{"payload":"x"}`)}},
@@ -454,10 +509,53 @@ func TestAgentRun_ForbiddenNamespace(t *testing.T) {
 	_, err = f.agent.ResumeRun(ctx, ResumeInput{
 		SessionID:     f.session.ID,
 		NamespaceName: "another-namespace",
+		UserID:        f.session.UserID,
 		Results:       []ToolResult{{CallID: "call-1", Approved: true}},
 		ToolRequests:  f.reportRequest,
 	})
-	if !errors.Is(err, ErrAgentRunForbidden) {
-		t.Fatalf("ResumeRun(foreign namespace) error = %v, want ErrAgentRunForbidden", err)
+	if !errors.Is(err, ErrAgentRunNotFound) {
+		t.Fatalf("ResumeRun(foreign namespace) error = %v, want ErrAgentRunNotFound", err)
+	}
+}
+
+// TestSessionStore_CreateLiveRun_PartialUnique 校验 CreateLiveRun 以部分唯一索引
+// uq_agent_live_runs_running 实现「单会话单在途」：同 (session_id, user_id) 的第二个 running
+// 登记被 ON CONFLICT DO NOTHING 拒绝并返回 ErrAgentLiveRunAlreadyRunning；首个收敛为终态后新
+// running 可再次登记（终态行不占用该部分唯一索引）。
+func TestSessionStore_CreateLiveRun_PartialUnique(t *testing.T) {
+	ctx := context.Background()
+	store, err := NewSessionStore(testdb.Core(t))
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
+	if err != nil {
+		t.Fatalf("CreateSession error = %v", err)
+	}
+	newLiveRun := func(phase ai.AgentRunPhase) *ai.AgentLiveRun {
+		return &ai.AgentLiveRun{
+			NamespaceName: "default",
+			UserID:        session.UserID,
+			RunID:         newAgentRunID(),
+			SessionID:     session.ID,
+			Phase:         phase,
+			ExpiresAt:     time.Now().Add(time.Hour),
+		}
+	}
+
+	first := newLiveRun(ai.AgentRunPhaseRunning)
+	if err := store.CreateLiveRun(ctx, first); err != nil {
+		t.Fatalf("CreateLiveRun(first running) error = %v", err)
+	}
+	if err := store.CreateLiveRun(ctx, newLiveRun(ai.AgentRunPhaseRunning)); !errors.Is(err, ErrAgentLiveRunAlreadyRunning) {
+		t.Fatalf("CreateLiveRun(second running) error = %v, want ErrAgentLiveRunAlreadyRunning", err)
+	}
+
+	// 首个收敛为终态后不再占用部分唯一索引，新 running 可重新登记。
+	if err := store.FinishLiveRun(ctx, first.RunID, session.UserID, ai.AgentRunPhaseDone, 0); err != nil {
+		t.Fatalf("FinishLiveRun error = %v", err)
+	}
+	if err := store.CreateLiveRun(ctx, newLiveRun(ai.AgentRunPhaseRunning)); err != nil {
+		t.Fatalf("CreateLiveRun(after the previous converged) error = %v, want success", err)
 	}
 }

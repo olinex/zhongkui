@@ -3,6 +3,7 @@ package llm
 import (
 	// 标准库
 	"context"
+	"maps"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -150,9 +151,7 @@ func (c *MarkdownChunker) chunk(doc *schema.Document) []*schema.Document {
 // newChunkDoc 组装一个 chunk 文档：保留输入 MetaData，补充 chunkIndex/headingPath。
 func newChunkDoc(src *schema.Document, index int, headingPath, content string) *schema.Document {
 	meta := make(map[string]any, len(src.MetaData)+2)
-	for k, v := range src.MetaData {
-		meta[k] = v
-	}
+	maps.Copy(meta, src.MetaData)
 	meta["chunkIndex"] = index
 	meta["headingPath"] = headingPath
 	id := src.ID

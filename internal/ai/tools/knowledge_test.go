@@ -160,6 +160,24 @@ func TestKnowledgeSearch_SnippetTruncation(t *testing.T) {
 	}
 }
 
+// TestKnowledgeSearch_CompleteNotTruncated 覆盖整篇展开的命中（Complete=true）不受 SnippetLimit
+// 截断：整篇已是完整规格，截断只会让模型看不到字段定义。
+func TestKnowledgeSearch_CompleteNotTruncated(t *testing.T) {
+	long := "一二三四五六七八九十"
+	s := &fakeKnowledgeSearcher{hits: []KnowledgeHit{{DocumentID: "d", Content: long, Complete: true}}}
+	out, err := (&knowledgeSearchTool{}).InvokableRun(knowledgeRuntimeCtx(s, 3), `{"query":"q"}`)
+	if err != nil {
+		t.Fatalf("InvokableRun error = %v", err)
+	}
+	var decoded knowledgeSearchResult
+	if err := json.Unmarshal([]byte(out), &decoded); err != nil {
+		t.Fatalf("result %q is not valid JSON: %v", out, err)
+	}
+	if got := decoded.Results[0].Content; got != long {
+		t.Errorf("complete content = %q, want the untruncated %q", got, long)
+	}
+}
+
 // TestKnowledgeSearch_Info 覆盖 Info：工具名为 knowledge_search；参数 schema 中 query 存在、类型
 // 为 string 且必填；不存在 namespace / docIDs / topK 之类越权入参。
 func TestKnowledgeSearch_Info(t *testing.T) {

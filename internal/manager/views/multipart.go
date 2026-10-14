@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
@@ -50,7 +51,7 @@ func ReadMultipartFile(c *gin.Context, cb func(name string, body []byte)) (io.Re
 		}
 		if len(body) > maxFormFieldBytes {
 			// 超限字段：立即报错，不再排空剩余数据（避免为滥用请求空耗带宽/时间），交由服务端中止。
-			return nil, errors.Newf("multipart field %q exceeds the maximum size of %d bytes", name, maxFormFieldBytes)
+			return nil, response.CreateBadBodyMessageError("multipartFieldTooLarge", name, maxFormFieldBytes)
 		}
 		if err := part.Close(); err != nil {
 			return nil, errors.WithStack(err)

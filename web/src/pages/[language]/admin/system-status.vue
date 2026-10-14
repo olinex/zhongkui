@@ -19,7 +19,7 @@
         </template>
 
         <template #service>
-          <v-data-table :items="serviceItems" :headers="serviceHeaders" item-value="instanceId">
+          <v-data-table :items="serviceItems" :headers="serviceHeaders" item-value="instanceID">
             <template #[`item.startedAt`]="{ item }">
               <span v-if="isValidDateTime(item.startedAt)">{{
                 formatStartedAt(item.startedAt)
@@ -90,7 +90,7 @@ const refreshing = ref(false);
 // 服务状态列标题跟随语言变化，故用 computed 声明。
 const serviceHeaders = computed(() => [
   { key: "serviceName", title: i18n.global.t("model.service.field.serviceName"), sortable: true },
-  { key: "instanceId", title: i18n.global.t("model.service.field.instanceId"), sortable: true },
+  { key: "instanceID", title: i18n.global.t("model.service.field.instanceID"), sortable: true },
   { key: "host", title: i18n.global.t("model.service.field.host"), sortable: true },
   { key: "version", title: i18n.global.t("model.service.field.version"), sortable: true },
   { key: "pid", title: i18n.global.t("model.service.field.pid"), sortable: true },
@@ -106,7 +106,7 @@ const capturerHeaders = computed(() => [
   { key: "namespace", title: i18n.global.t("model.capturer.field.namespace"), sortable: true },
   { key: "name", title: i18n.global.t("model.capturer.field.name"), sortable: true },
   { key: "version", title: i18n.global.t("model.capturer.field.version"), sortable: true },
-  { key: "sessionId", title: i18n.global.t("model.capturer.field.sessionId"), sortable: true },
+  { key: "sessionID", title: i18n.global.t("model.capturer.field.sessionID"), sortable: true },
   { key: "status", title: i18n.global.t("model.capturer.field.status"), sortable: true },
   {
     key: "configVersion",

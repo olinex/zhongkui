@@ -42,10 +42,10 @@ export function userUpdate(unionID: string, data: profileChangeIn): AxiosPromise
   });
 }
 
-export function userSetActive(unionIds: FlexUnionIds, active: boolean): AxiosPromise {
+export function userSetActive(unionIDs: FlexUnionIds, active: boolean): AxiosPromise {
   return request.post(
     `/admin/user/${active ? "activate" : "deactivate"}`,
-    { unionIds },
+    { unionIDs },
     {
       headers: getJwtHeader(),
     },

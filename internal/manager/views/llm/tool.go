@@ -180,7 +180,7 @@ func LlmToolSetEnabled(c *gin.Context) {
 
 // LlmToolBatchDelete 批量删除工具。
 // 内置工具（source='builtin'）由代码内注册表声明、生命周期由代码掌握，接口不得删除：只要本批
-// 任一 ID 命中内置工具，就**整批拒绝**并返回明确的英文错误（不做部分删除）。校验通过后逐条软删除，
+// 任一 ID 命中内置工具，就**整批拒绝**并返回按请求语言本地化的错误（不做部分删除）。校验通过后逐条软删除，
 // 工具不存在视为成功跳过（幂等）；全部条目处理完毕后统一重建运行时并广播变更。
 func LlmToolBatchDelete(c *gin.Context) {
 	var in LlmToolBatchIn
@@ -201,8 +201,7 @@ func LlmToolBatchDelete(c *gin.Context) {
 		return
 	}
 	if builtin > 0 {
-		response.CreateBadBodyError(errors.Newf(
-			"the batch contains %d builtin tool(s), which cannot be deleted", builtin)).AbortWithGinH(c)
+		response.CreateBadBodyMessageError("llmToolBuiltinUndeletable", builtin).AbortWithGinH(c)
 		return
 	}
 	deleted := 0

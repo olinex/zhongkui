@@ -83,7 +83,7 @@ func TestNetworkStackListGetSearchInBinding(t *testing.T) {
 				"timestampTo": {"action": "lte", "value": "2026-08-20T23:59:59Z"},
 				"createdAtFrom": {"action": "gte", "value": "2026-08-20T00:00:00Z"},
 				"createdAtTo": {"action": "lte", "value": "2026-08-20T23:59:59Z"},
-				"traceId": {"action": "eq", "value": "0c0a2b3c4d5e6f708192a3b4c5d6e7f8"},
+				"traceID": {"action": "eq", "value": "0c0a2b3c4d5e6f708192a3b4c5d6e7f8"},
 				"namespace": {"action": "eq", "value": "default"},
 				"cli2Srv": {"action": "eq", "value": true}
 			}
@@ -97,7 +97,7 @@ func TestNetworkStackListGetSearchInBinding(t *testing.T) {
 		convey.So(defaults.Set(&in), convey.ShouldBeNil)
 		convey.So(c.ShouldBindBodyWithJSON(&in), convey.ShouldBeNil)
 		convey.So(in.FilterBy.TimestampFrom.Value, convey.ShouldEqual, time.Date(2026, 8, 20, 0, 0, 0, 0, time.UTC))
-		convey.So(in.FilterBy.TraceId.Value, convey.ShouldNotBeNil)
+		convey.So(in.FilterBy.TraceID.Value, convey.ShouldNotBeNil)
 		convey.So(in.FilterBy.Namespace.Value, convey.ShouldEqual, "default")
 		convey.So(in.FilterBy.Cli2Srv.Value, convey.ShouldBeTrue)
 	})
@@ -128,7 +128,7 @@ func TestNetworkStackListGetSearchInBinding(t *testing.T) {
 			"page": 1,
 			"pageSize": 10,
 			"filterBy": {
-				"traceId": {"action": "eq", "value": "0c0a2b3c4d5e6f708192a3b4c5d6e7f8"}
+				"traceID": {"action": "eq", "value": "0c0a2b3c4d5e6f708192a3b4c5d6e7f8"}
 			}
 		}`
 

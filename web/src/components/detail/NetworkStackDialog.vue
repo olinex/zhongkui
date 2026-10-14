@@ -1,5 +1,5 @@
 <template>
-  <!-- 网络堆栈对话框：以 HttpTransport 的 traceId 查询组成该 TCP 流的全部网络堆栈记录，
+  <!-- 网络堆栈对话框：以 HttpTransport 的 traceID 查询组成该 TCP 流的全部网络堆栈记录，
        按 seq 分组为“包”，并根据 AppTailer 的 payload offset 与记录的
        payloadStartOffset/payloadEndOffset 相交，高亮请求包与响应包 -->
   <!-- 未走 AppDialog：本对话框为 fullscreen + dialog-bottom-transition 形态（骨架仅覆盖
@@ -16,10 +16,10 @@
           {{ $t("model.networkStack.name") }}
         </v-toolbar-title>
         <span
-          v-if="transport?.traceId"
-          class="font-mono text-caption text-on-surface-variant text-truncate"
+          v-if="transport?.traceID"
+          class="font-mono text-body-small on-surface-variant text-truncate"
         >
-          {{ transport.traceId }}
+          {{ transport.traceID }}
         </span>
         <v-spacer />
         <v-btn
@@ -36,7 +36,7 @@
         <v-sheet v-if="transport" class="pa-3 mb-3 rounded">
           <div class="d-flex align-center ga-2 flex-wrap">
             <v-chip color="primary">{{ method }}</v-chip>
-            <span class="font-mono text-body-2">{{ host }}{{ path }}</span>
+            <span class="font-mono text-body-medium">{{ host }}{{ path }}</span>
           </div>
           <div class="d-flex align-center ga-3 mt-2 flex-wrap">
             <v-chip color="primary" prepend-icon="mdi-arrow-up-bold">
@@ -45,10 +45,8 @@
             <v-chip color="success" prepend-icon="mdi-arrow-down-bold">
               {{ $t("model.networkStack.summary.responses") }} {{ responseCount }}
             </v-chip>
-            <v-chip>
-              {{ $t("model.networkStack.summary.packets") }} {{ packets.length }}
-            </v-chip>
-            <span v-if="hasMore" class="text-caption text-on-surface-variant">
+            <v-chip> {{ $t("model.networkStack.summary.packets") }} {{ packets.length }} </v-chip>
+            <span v-if="hasMore" class="text-body-small on-surface-variant">
               {{ $t("model.networkStack.summary.loaded") }} {{ items.length }}/{{ total }}
             </span>
           </div>
@@ -57,12 +55,12 @@
         <v-alert v-if="error" type="error" class="mb-3">
           {{ error }}
         </v-alert>
-        <div v-if="!transport" class="text-center my-8 text-on-surface-variant">
+        <div v-if="!transport" class="text-center my-8 on-surface-variant">
           {{ $t("model.networkStack.summary.noTraceId") }}
         </div>
         <div
           v-else-if="!loading && packets.length === 0"
-          class="text-center my-8 text-on-surface-variant"
+          class="text-center my-8 on-surface-variant"
         >
           {{ $t("model.networkStack.summary.empty") }}
         </div>
@@ -89,7 +87,7 @@
               <v-card-item>
                 <template #prepend>
                   <v-avatar :color="packetColor(cell.packet.kind)" variant="tonal" size="small">
-                    <span class="font-mono text-caption">{{ cell.packet.seq }}</span>
+                    <span class="font-mono text-body-small">{{ cell.packet.seq }}</span>
                   </v-avatar>
                 </template>
                 <template #title>
@@ -97,10 +95,10 @@
                     <v-chip :color="packetColor(cell.packet.kind)">
                       {{ packetKindText(cell.packet.kind) }}
                     </v-chip>
-                    <span class="font-mono text-caption text-on-surface-variant">
+                    <span class="font-mono text-body-small on-surface-variant">
                       [{{ cell.packet.start }} , {{ cell.packet.end }})
                     </span>
-                    <span class="text-caption text-on-surface-variant">
+                    <span class="text-body-small on-surface-variant">
                       {{ localeDatetimeFormat(DateTime.fromISO(cell.packet.timestamp)) }}
                     </span>
                   </div>
@@ -119,7 +117,7 @@
                           {{ levelName(layer.level) }}
                         </v-chip>
                       </td>
-                      <td class="layer-proto-col text-no-wrap font-mono text-body-2">
+                      <td class="layer-proto-col text-no-wrap font-mono text-body-medium">
                         {{ protoName(layer.proto) }}
                       </td>
                       <td>
@@ -165,7 +163,7 @@ import i18n, { localeDatetimeFormat } from "@/utils/i18n";
 
 const PAGE_SIZE = 100;
 // 时间窗口余量：以 AppTailer 时间锚点（请求/响应段起止采集时间）向两侧扩展，
-// 覆盖整条 TCP 流的握手/确认等非载荷包与入库延迟；traceId 已限定到单条流，
+// 覆盖整条 TCP 流的握手/确认等非载荷包与入库延迟；traceID 已限定到单条流，
 // 窗口放宽不影响结果正确性，仅影响查询命中的小时分区数量
 const TIME_MARGIN = { hours: 1 };
 
@@ -266,7 +264,7 @@ const anchorTimes = computed<DateTime[]>(() => {
   return out;
 });
 
-// buildSearchIn 构造 stack/list 查询：traceId 必填 + 双时间范围（延续 raw 列表防全表扫描约定）
+// buildSearchIn 构造 stack/list 查询：traceID 必填 + 双时间范围（延续 raw 列表防全表扫描约定）
 const buildSearchIn = (): SearchIn => {
   const t = props.transport ?? {};
   let start = DateTime.now().minus({ day: 1 });
@@ -282,7 +280,7 @@ const buildSearchIn = (): SearchIn => {
     timestampTo: { action: SearchAction.LESS_EQUAL, value: toIso(end) },
     createdAtFrom: { action: SearchAction.GREATER_EQUAL, value: toIso(start) },
     createdAtTo: { action: SearchAction.LESS_EQUAL, value: toIso(end) },
-    traceId: { action: SearchAction.EQUAL, value: String(t.traceId) },
+    traceID: { action: SearchAction.EQUAL, value: String(t.traceID) },
   };
   if (typeof t.namespace === "string" && t.namespace !== "") {
     filterBy.namespace = { action: SearchAction.EQUAL, value: t.namespace };
@@ -306,7 +304,7 @@ const buildSearchIn = (): SearchIn => {
 };
 
 const fetchPage = async (): Promise<boolean> => {
-  if (!props.transport?.traceId) {
+  if (!props.transport?.traceID) {
     return false;
   }
   loading.value = true;

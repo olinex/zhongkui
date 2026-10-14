@@ -6,6 +6,7 @@ import (
 
 	"github.com/minio/minio-go/v7"
 
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/models/network"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto/combine"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
@@ -43,7 +44,7 @@ func SampleBodyObjectKeys(model string, input map[string]any) (map[string]string
 		}
 		key, ok := value.(string)
 		if !ok {
-			return nil, errors.Newf("sample: field %q of model %q is not a string", field, model)
+			return nil, response.CreateTagRuleSampleInputError("sampleFieldNotString", field, model)
 		}
 		if key == "" {
 			continue
