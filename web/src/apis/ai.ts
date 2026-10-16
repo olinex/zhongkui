@@ -110,6 +110,46 @@ export function knowledgeDocumentChunksGet(id: number): AxiosPromise {
   );
 }
 
+// 系统命名空间知识库文档列表：系统内置命名空间的只读接口，数据范围恒为系统命名空间
+// （不取自客户端命名空间），供知识库页「系统知识库（只读）」视图读取列表。
+export function knowledgeSystemDocumentListGet(data: SearchIn): AxiosPromise {
+  return request.post("/ai/doc/system/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// 系统命名空间知识库文档列表参数：与列表接口同源的只读接口，供「系统知识库（只读）」
+// 视图预取筛选项 / 字段元信息，数据范围恒为系统命名空间。
+export function knowledgeSystemDocumentListOptions(): AxiosPromise {
+  return request.options("/ai/doc/system/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+// 系统命名空间知识库文档详情：系统内置命名空间的只读接口，数据范围恒为系统命名空间，
+// 供引用溯源详情页读取来源文档正文。
+export function knowledgeSystemDocumentDetailGet(id: number): AxiosPromise {
+  return request.post(
+    `/ai/doc/system/${id}/get`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// 系统命名空间知识库文档分块明细：系统内置命名空间的只读接口，数据范围恒为系统命名空间，
+// 供引用溯源详情页读取来源文档分块明细。
+export function knowledgeSystemDocumentChunksGet(id: number): AxiosPromise {
+  return request.post(
+    `/ai/doc/system/${id}/chunks`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
 // knowledgeDocumentDownload 下载导入文档原件：响应为二进制流（不走 getResponse 的 JSON 成功
 // 回调，由调用方直接处理 Blob；原件文件名在 Content-Disposition 响应头中）。仅导入文档可下载，
 // 手动录入文档返回 404。
@@ -313,7 +353,10 @@ export interface AgentStreamHandlers {
   // 上下文压缩完成：携带折叠条数与压缩前后信息
   onCompressDone?: (payload: CompressDonePayload) => void;
   onDone?: (out: AgentOutput) => void;
-  onError?: (msg: string) => void;
+  // onError 流以错误收尾：msg 为后端本地化摘要；phase 为 error 事件携带的运行生命周期终态阶段
+  // （failed/cancelled，取值来自后端枚举类 agentRunPhase），供前端区分「失败」与「已取消」并据此
+  // 展示中断提示；非 error 事件触发的传输层错误（如开流失败）无 phase。
+  onError?: (msg: string, phase?: string) => void;
   // onComplete 流正常结束（EOF）时回调（主动中止不触发）：挂起流以逐条 tool_request 结束后
   // 正常 EOF，前端据此确认本轮挂起调用已全部送达，再统一判定是否可整体提交
   onComplete?: () => void;
@@ -505,9 +548,12 @@ function dispatchAgentEvent(event: SSERawEvent, handlers: AgentStreamHandlers): 
     case "done":
       handlers.onDone?.(event.data as AgentOutput);
       break;
-    case "error":
-      handlers.onError?.((event.data as { error: string }).error);
+    case "error": {
+      // error 事件负载同时携带运行生命周期终态阶段（failed/cancelled），供前端据此展示中断提示
+      const payload = event.data as { error: string; phase?: string };
+      handlers.onError?.(payload.error, payload.phase);
       break;
+    }
     default:
       break;
   }

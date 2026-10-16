@@ -95,6 +95,7 @@
 1120 = "There is no live run for this session"
 1121 = "The live run of this session has expired"
 1122 = "You are not allowed to access the live run of this session"
+1123 = "Too many requests, please try again later"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"

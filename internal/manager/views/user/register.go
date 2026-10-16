@@ -30,10 +30,11 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 忘记密码 - 未登录态提交账号名与邮箱，校验一致后发送带重置链接的邮件
 		userGroup.POST(
 			"/password/forgot",
-			ctx.CoreDatabase,    // 数据库连接，校验账号名/邮箱并落重置令牌
-			ctx.FeatureRegistry, // 功能开关注册表，判断密码重置功能是否可用
-			ctx.PipelineClient,  // 管道投递客户端，入队 mail:send 异步任务
-			UserPasswordForgot,  // 忘记密码处理函数
+			ctx.CoreDatabase,         // 数据库连接，校验账号名/邮箱并落重置令牌
+			ctx.FeatureRegistry,      // 功能开关注册表，判断密码重置功能是否可用
+			ctx.PipelineClient,       // 管道投递客户端，入队 mail:send 异步任务
+			ctx.PasswordResetLimiter, // 限流器，按请求来源地址维度限制申请频率，抬升枚举成本
+			UserPasswordForgot,       // 忘记密码处理函数
 		)
 		// 忘记密码元信息
 		views.RegisterApi(userGroup, "/password/forgot", "忘记密码 - 未登录态提交账号名与邮箱，校验一致后发送带重置链接的邮件",

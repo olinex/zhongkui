@@ -111,7 +111,18 @@
             />
           </v-col>
         </v-row>
-        <v-row density="compact">
+        <!-- 启用开关置于超时数值字段左侧，并与数值字段垂直居中对齐：开关为单行控件而
+             数值字段更高（含浮动标签），不居中的话开关会顶在行首；该排列与 LLM 模型面板
+             同一「开关 + 数值」组合保持一致 -->
+        <v-row density="compact" class="align-center">
+          <v-col cols="6">
+            <v-switch
+              v-model="createEnabled"
+              v-bind="createEnabledProps"
+              :label="$t('model.mcpServer.field.enabled')"
+              color="primary"
+            />
+          </v-col>
           <v-col cols="6">
             <v-number-input
               v-model="createTimeoutSeconds"
@@ -119,14 +130,6 @@
               :label="$t('model.mcpServer.field.timeoutSeconds')"
               :precision="0"
               :min="1"
-            />
-          </v-col>
-          <v-col cols="6">
-            <v-switch
-              v-model="createEnabled"
-              v-bind="createEnabledProps"
-              :label="$t('model.mcpServer.field.enabled')"
-              color="primary"
             />
           </v-col>
         </v-row>
@@ -193,7 +196,17 @@
             />
           </v-col>
         </v-row>
-        <v-row density="compact">
+        <!-- 同创建对话框：启用开关在左、超时数值在右，行内垂直居中 -->
+        <v-row density="compact" class="align-center">
+          <v-col cols="6">
+            <v-switch
+              v-model="updateEnabled"
+              v-bind="updateEnabledProps"
+              :label="$t('model.mcpServer.field.enabled')"
+              color="primary"
+              :disabled="!editable"
+            />
+          </v-col>
           <v-col cols="6">
             <v-number-input
               v-model="updateTimeoutSeconds"
@@ -201,15 +214,6 @@
               :label="$t('model.mcpServer.field.timeoutSeconds')"
               :precision="0"
               :min="1"
-              :disabled="!editable"
-            />
-          </v-col>
-          <v-col cols="6">
-            <v-switch
-              v-model="updateEnabled"
-              v-bind="updateEnabledProps"
-              :label="$t('model.mcpServer.field.enabled')"
-              color="primary"
               :disabled="!editable"
             />
           </v-col>
@@ -350,14 +354,14 @@ const createAction = createForm.handleSubmit(async (values) => {
 });
 
 // ---- 编辑对话框 ----
-let editServerId = 0;
+let editServerID = 0;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<McpServerDetailOut>(
     mcpServerDetailGet(item.id as number),
     async (rsp) => {
-      editServerId = rsp.data.id;
+      editServerID = rsp.data.id;
       // 复位与回填同属「准备本次打开的数据」：values 完整枚举全部 defineField 字段
       updateForm.resetForm({
         values: {
@@ -386,7 +390,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
 const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
-      mcpServerUpdate(editServerId, {
+      mcpServerUpdate(editServerID, {
         name: (values.name as string).trim(),
         transport: values.transport,
         url: (values.url as string).trim(),

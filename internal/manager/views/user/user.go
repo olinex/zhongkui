@@ -48,6 +48,9 @@ var (
 	// ErrPasswordResetTokenInvalid 表示密码重置令牌无效或已过期
 	// 令牌不存在、已使用或超过有效期时触发
 	ErrPasswordResetTokenInvalid = response.CreateCodeError(http.StatusBadRequest, response.CodePasswordResetTokenInvalid, nil)
+	// ErrTooManyRequests 表示申请过于频繁（命中忘记密码申请的来源地址维度限流）
+	// 同一来源地址在限流窗口内提交次数超出上限时触发
+	ErrTooManyRequests = response.CreateCodeError(http.StatusTooManyRequests, response.CodeTooManyRequests, nil)
 )
 
 // UserProfileChangeIn 定义用户个人资料修改的输入结构体
@@ -188,11 +191,23 @@ func UserPasswordLogin(c *gin.Context) {
 	}
 }
 
+// passwordResetLimitKey 计算忘记密码申请的来源维度限流键。
+// 维度取请求来源地址：字典攻击会不断更换「账号名 + 邮箱」组合（每猜一个组合都是新键），
+// 按组合计数永不触发，只有来源地址才是攻击者难以逐个更换的请求侧常量。
+// 以 SHA-256 十六进制摘要收敛键长，并避免来源地址明文落入 Redis 键空间。
+func passwordResetLimitKey(ip string) string {
+	sum := sha256.Sum256([]byte(ip))
+	return "password-reset:" + hex.EncodeToString(sum[:])
+}
+
 // UserPasswordForgot 处理忘记密码申请请求
 // 路由：POST /api/v1/user/password/forgot
 // 功能：系统未启用或未配置 SMTP 时直接禁止（避免开放无意义功能）；校验账号名与
 // 邮箱与库内一致后，生成带有效期的重置令牌并异步发送一封含重置链接的邮件至用户邮箱。
-// 为避免账号枚举，无论校验结果如何，均统一返回成功响应。
+//
+// 防枚举与限流：为避免攻击者据响应差异批量验证「账号名↔邮箱」配对（撞库前的标准情报收集），
+// 无论账号是否存在、是否与邮箱匹配，一律返回同一成功响应，差异（未命中 / 落库失败 / 入队失败）
+// 只写入服务端日志；同时对请求来源地址按配置限额做窗口限流（ErrTooManyRequests）。
 func UserPasswordForgot(c *gin.Context) {
 	var in UserPasswordForgotIn
 	// 绑定并验证请求体
@@ -206,17 +221,30 @@ func UserPasswordForgot(c *gin.Context) {
 		ErrPasswordResetUnavailable.AbortWithGinH(c)
 		return
 	}
+	// 按请求来源地址维度限流：账号枚举会不断更换「账号名 + 邮箱」组合（每次都是新键），
+	// 按组合计数永不触发；来源地址才是能对枚举总量形成约束的请求侧常量。
+	// Redis 故障时限流不可用，此处选择放行而非拒绝——限流属纵深防御，不应因缓存故障阻断正常的
+	// 密码找回；即使放行，防枚举的统一响应与日志留痕仍然生效。
+	if allowed, err := middlewares.GetPasswordResetLimiter(c).Allow(c, passwordResetLimitKey(c.ClientIP())); err != nil {
+		logger.Warnf(c, nil, "password reset rate limiter unavailable, allow the request, cause: %v", err)
+	} else if !allowed {
+		ErrTooManyRequests.AbortWithGinH(c)
+		return
+	}
 	db := middlewares.GetCoreDatabase(c)
-	// 校验账号名与邮箱与库内一致；不一致或不存在时不发送邮件，但统一返回成功，避免账号枚举
+	// 校验账号名与邮箱与库内一致；不一致或账号不存在时不发信，但响应与命中情形保持一致，
+	// 差异只写日志，避免攻击者据响应差异批量验证「账号名↔邮箱」配对关系。
 	var user core.User
 	if err := db.Take(&user, &core.User{Username: in.Username, Email: in.Email, Active: true}).Error; err != nil || user.ID == 0 {
+		logger.Warnf(c, nil, "password reset request was not matched by an active account, username=%s email=%s", in.Username, in.Email)
 		response.SimpleOK.AbortWithGinH(c)
 		return
 	}
 	// 生成高熵随机令牌，仅将 SHA-256 摘要入库，防止数据库泄露后令牌被直接使用
 	token, err := crypto.GenerateRandomBase64String(48)
 	if err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
+		logger.Errorf(c, nil, "cannot generate password reset token for user %s, cause: %v", user.UnionID.String(), err)
+		response.SimpleOK.AbortWithGinH(c)
 		return
 	}
 	sum := sha256.Sum256([]byte(token))
@@ -229,7 +257,7 @@ func UserPasswordForgot(c *gin.Context) {
 	}
 	if err := db.Create(&reset).Error; err != nil {
 		logger.Errorf(c, nil, "cannot create password reset record for user %s, cause: %v", user.UnionID.String(), err)
-		response.CreateAccidentError(err).AbortWithGinH(c)
+		response.SimpleOK.AbortWithGinH(c)
 		return
 	}
 	// 组装前端重置链接（含语言段与令牌参数），供用户点击或在浏览器中复制访问
@@ -255,12 +283,13 @@ func UserPasswordForgot(c *gin.Context) {
 		Language: lang,
 	})
 	if err != nil {
-		response.CreateAccidentError(err).AbortWithGinH(c)
+		logger.Errorf(c, nil, "cannot build password reset mail task for user %s, cause: %v", user.UnionID.String(), err)
+		response.SimpleOK.AbortWithGinH(c)
 		return
 	}
 	if _, err = middlewares.GetPipelineClient(c).EnqueueContext(c, task, asynq.MaxRetry(3)); err != nil {
 		logger.Errorf(c, nil, "cannot enqueue password reset mail for user %s, cause: %v", user.UnionID.String(), err)
-		response.CreateAccidentError(err).AbortWithGinH(c)
+		response.SimpleOK.AbortWithGinH(c)
 		return
 	}
 	response.SimpleOK.AbortWithGinH(c)

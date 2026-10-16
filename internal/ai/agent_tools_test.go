@@ -130,6 +130,17 @@ func (r *eventRecorder) findEvent(stage EvalStage, status EvalStageStatus, toolN
 	return nil
 }
 
+// findEventByCallID 返回首个匹配阶段/状态/调用标识的事件（未找到返回 nil）。
+func (r *eventRecorder) findEventByCallID(stage EvalStage, status EvalStageStatus, callID string) *StageEvent {
+	for i := range r.events {
+		ev := &r.events[i]
+		if ev.Stage == stage && ev.Status == status && ev.CallID == callID {
+			return ev
+		}
+	}
+	return nil
+}
+
 // newAgentWithTools 构造带工具清单的测试 Agent（复用 testParams 与内存会话库）。
 func newAgentWithTools(t *testing.T, chat model.BaseChatModel, rtv retriever.Retriever, built []tool.BaseTool, infos []*schema.ToolInfo, overrides map[string]string) *Agent {
 	t.Helper()
@@ -297,6 +308,88 @@ func TestAgent_Tools_ExecutesToolThenAnswers(t *testing.T) {
 	}
 	if ev := rec.findEvent(EvalStageToolResult, EvalStatusDone, "weather"); ev == nil {
 		t.Errorf("events = %+v, want a toolResult done event for weather", rec.events)
+	}
+}
+
+// TestAgent_Tools_MultipleSameToolCallsCarryCallID 测试一次回答内模型对同一工具的多轮调用：每次
+// 调用的 toolCall(start) 与 toolResult(done) 各自携带该次调用的 callID，供前端把同一次调用的
+// 「发起」与「结果」归并到同一行，并按调用顺序自上而下成行展示。
+func TestAgent_Tools_MultipleSameToolCallsCarryCallID(t *testing.T) {
+	built := &recordingTool{name: "search", run: func(ctx context.Context, args string) (string, error) {
+		return "hit:" + args, nil
+	}}
+	infos := []*schema.ToolInfo{{Name: "search", Desc: "search tool"}}
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{{ID: "call-1", Type: "function", Function: schema.FunctionCall{Name: "search", Arguments: `{"q":"a"}`}}}},
+		{toolCalls: []schema.ToolCall{{ID: "call-2", Type: "function", Function: schema.FunctionCall{Name: "search", Arguments: `{"q":"b"}`}}}},
+		{content: "final answer"},
+	}}
+	rec := &eventRecorder{}
+	agent := newAgentWithTools(t, chat, &stubRetriever{}, []tool.BaseTool{built}, infos, nil)
+
+	reader, err := agent.Stream(context.Background(), AgentInput{Query: "q", ToolReporter: rec.report})
+	if err != nil {
+		t.Fatalf("Stream error = %v", err)
+	}
+	if _, _, err := collectStream(t, reader); err != nil {
+		t.Fatalf("stream error = %v", err)
+	}
+	if built.runCalls != 2 {
+		t.Fatalf("tool run calls = %d, want 2 (two rounds calling the same tool)", built.runCalls)
+	}
+	for _, id := range []string{"call-1", "call-2"} {
+		if ev := rec.findEventByCallID(EvalStageToolCall, EvalStatusStart, id); ev == nil {
+			t.Errorf("events = %+v, want a toolCall start event carrying callID %q", rec.events, id)
+		}
+		if ev := rec.findEventByCallID(EvalStageToolResult, EvalStatusDone, id); ev == nil {
+			t.Errorf("events = %+v, want a toolResult done event carrying callID %q", rec.events, id)
+		}
+	}
+}
+
+// TestAgent_Tools_ParallelCallsShareRound 测试同轮内并发发起多次调用：这些调用的 toolCall(start) 与
+// toolResult(done) 阶段事件携带同一轮次（Round 相同），供前端把「一次思考 → N 次并行调用」聚为一组
+// 展示；跨轮则轮次递增。
+func TestAgent_Tools_ParallelCallsShareRound(t *testing.T) {
+	built := &recordingTool{name: "search", run: func(ctx context.Context, args string) (string, error) {
+		return "hit:" + args, nil
+	}}
+	infos := []*schema.ToolInfo{{Name: "search", Desc: "search tool"}}
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{
+			{ID: "call-1", Type: "function", Function: schema.FunctionCall{Name: "search", Arguments: `{"q":"a"}`}},
+			{ID: "call-2", Type: "function", Function: schema.FunctionCall{Name: "search", Arguments: `{"q":"b"}`}},
+		}},
+		{toolCalls: []schema.ToolCall{{ID: "call-3", Type: "function", Function: schema.FunctionCall{Name: "search", Arguments: `{"q":"c"}`}}}},
+		{content: "final answer"},
+	}}
+	rec := &eventRecorder{}
+	agent := newAgentWithTools(t, chat, &stubRetriever{}, []tool.BaseTool{built}, infos, nil)
+
+	reader, err := agent.Stream(context.Background(), AgentInput{Query: "q", ToolReporter: rec.report})
+	if err != nil {
+		t.Fatalf("Stream error = %v", err)
+	}
+	if _, _, err := collectStream(t, reader); err != nil {
+		t.Fatalf("stream error = %v", err)
+	}
+	// 第一轮并发发起 call-1 / call-2（同为 Round 1），第二轮发起 call-3（Round 2）。
+	wantRound := map[string]int{"call-1": 1, "call-2": 1, "call-3": 2}
+	for id, want := range wantRound {
+		start := rec.findEventByCallID(EvalStageToolCall, EvalStatusStart, id)
+		if start == nil {
+			t.Fatalf("events = %+v, want a toolCall start event for %s", rec.events, id)
+		}
+		if start.Round != want {
+			t.Errorf("toolCall start %s round = %d, want %d", id, start.Round, want)
+		}
+		done := rec.findEventByCallID(EvalStageToolResult, EvalStatusDone, id)
+		if done == nil {
+			t.Fatalf("events = %+v, want a toolResult done event for %s", rec.events, id)
+		}
+		if done.Round != want {
+			t.Errorf("toolResult done %s round = %d, want %d", id, done.Round, want)
+		}
 	}
 }
 

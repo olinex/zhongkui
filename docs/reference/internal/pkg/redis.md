@@ -13,6 +13,9 @@
   - [func ExtractConfig\(viper \*viper.Viper, validate \*validator.Validate, name string\) \(\*Config, error\)](<#ExtractConfig>)
   - [func \(c \*Config\) ToOptions\(\) \*redis.Options](<#Config.ToOptions>)
   - [func \(c \*Config\) ToSentinelOptions\(\) \*redis.FailoverOptions](<#Config.ToSentinelOptions>)
+- [type FixedWindowLimiter](<#FixedWindowLimiter>)
+  - [func NewFixedWindowLimiter\(client \*Client, limit int, window time.Duration\) \*FixedWindowLimiter](<#NewFixedWindowLimiter>)
+  - [func \(l \*FixedWindowLimiter\) Allow\(ctx context.Context, key string\) \(bool, error\)](<#FixedWindowLimiter.Allow>)
 
 
 ## Constants
@@ -285,3 +288,50 @@ func (c *Config) ToSentinelOptions() *redis.FailoverOptions
 ```
 
 ToSentinelOptions 将Config转换为redis.FailoverOptions 用于创建Redis Sentinel高可用客户端连接 返回值: \*redis.FailoverOptions \- 配置好的Redis Sentinel选项，可以直接用于创建Redis Sentinel客户端 注意: 此方法仅适用于Type为"sentinel"的配置
+
+<a name="FixedWindowLimiter"></a>
+## type FixedWindowLimiter
+
+FixedWindowLimiter 基于 Redis 的固定窗口计数器限流器。
+
+以固定长度的时间窗口统计「维度键」对应的请求次数，超过上限即判定为超限。 计数落在 Redis 而非进程内，使多实例部署下各节点共享同一份计数； 本类型不感知业务语义，维度键由调用方按业务含义生成。
+
+```go
+type FixedWindowLimiter struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewFixedWindowLimiter"></a>
+### func NewFixedWindowLimiter
+
+```go
+func NewFixedWindowLimiter(client *Client, limit int, window time.Duration) *FixedWindowLimiter
+```
+
+NewFixedWindowLimiter 创建固定窗口限流器。
+
+参数：
+
+- client：承载窗口计数器的 Redis 客户端
+- limit：单个窗口内允许的请求次数上限
+- window：窗口时长
+
+<a name="FixedWindowLimiter.Allow"></a>
+### func \(\*FixedWindowLimiter\) Allow
+
+```go
+func (l *FixedWindowLimiter) Allow(ctx context.Context, key string) (bool, error)
+```
+
+Allow 以 key 为维度统计当前窗口内的请求次数并判断是否放行。
+
+参数：
+
+- ctx：请求上下文
+- key：限流维度键，调用方负责按业务语义生成
+
+返回值：
+
+- bool：true 表示未超限可放行，false 表示已达上限
+- error：Redis 访问失败时的错误；失败时是否放行由调用方决定

@@ -541,7 +541,7 @@ func TestSessionStore_UpdateSummaryAndCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
-	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "summary-1", uint(msg.Seq), "rolling"); err != nil {
+	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "summary-1", uint(msg.Seq), "rolling", CompactionMetrics{TokensBefore: 4096, FoldedCount: 3}); err != nil {
 		t.Fatalf("UpdateSummaryAndCheckpoint error = %v", err)
 	}
 	var checkpoints []ai.AgentSessionCompaction
@@ -553,6 +553,10 @@ func TestSessionStore_UpdateSummaryAndCheckpoint(t *testing.T) {
 	}
 	if checkpoints[0].UptoSeq != msg.Seq || checkpoints[0].Reason != "rolling" || string(checkpoints[0].Summary.Value()) != "summary-1" {
 		t.Errorf("checkpoint = %+v, want (upto_seq=%d, rolling, summary-1)", checkpoints[0], msg.Seq)
+	}
+	// 展示度量随检查点落库，供刷新后回显历史压缩记录。
+	if checkpoints[0].TokensBefore != 4096 || checkpoints[0].FoldedCount != 3 {
+		t.Errorf("checkpoint metrics = (tokens_before=%d, folded_count=%d), want (4096, 3)", checkpoints[0].TokensBefore, checkpoints[0].FoldedCount)
 	}
 	// 检查点摘要列为密文：直读原始列不得出现明文。
 	var row struct {
@@ -588,10 +592,10 @@ func TestSessionStore_TruncateRollsBackToEarlierCheckpoint(t *testing.T) {
 	roles := []ai.MessageRole{ai.MessageRoleUser, ai.MessageRoleAssistant, ai.MessageRoleUser, ai.MessageRoleAssistant, ai.MessageRoleUser, ai.MessageRoleAssistant}
 	appendSessionMessages(t, store, session, roles, []string{"u1", "a1", "u2", "a2", "u3", "a3"})
 	// 两次推进：seq=2 记为 s2（第一轮后）、seq=4 记为 s4（第二轮后）。
-	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s2", 2, "rolling"); err != nil {
+	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s2", 2, "rolling", CompactionMetrics{}); err != nil {
 		t.Fatalf("UpdateSummaryAndCheckpoint(2) error = %v", err)
 	}
-	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s4", 4, "auto"); err != nil {
+	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s4", 4, "auto", CompactionMetrics{}); err != nil {
 		t.Fatalf("UpdateSummaryAndCheckpoint(4) error = %v", err)
 	}
 	// 回滚到第 2 轮提问（u2，seq=3）：当前游标 4 ≥ 3，回退到 upto_seq < 3 的最近检查点（seq=2）。
@@ -625,7 +629,7 @@ func TestSessionStore_TruncateRollsBackToStart(t *testing.T) {
 	}
 	roles := []ai.MessageRole{ai.MessageRoleUser, ai.MessageRoleAssistant, ai.MessageRoleUser, ai.MessageRoleAssistant}
 	appendSessionMessages(t, store, session, roles, []string{"u1", "a1", "u2", "a2"})
-	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s4", 4, "auto"); err != nil {
+	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s4", 4, "auto", CompactionMetrics{}); err != nil {
 		t.Fatalf("UpdateSummaryAndCheckpoint error = %v", err)
 	}
 	if err := store.TruncateMessagesFromUserMessage(ctx, session.ID, session.UserID, 1); err != nil {
@@ -659,7 +663,7 @@ func TestSessionStore_TruncateKeepsSummaryWhenNotCovered(t *testing.T) {
 	roles := []ai.MessageRole{ai.MessageRoleUser, ai.MessageRoleAssistant, ai.MessageRoleUser, ai.MessageRoleAssistant}
 	appendSessionMessages(t, store, session, roles, []string{"u1", "a1", "u2", "a2"})
 	// 游标仅推进到 seq=2（覆盖第一轮），回滚点在第 2 轮（seq=3）未被覆盖。
-	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s2", 2, "rolling"); err != nil {
+	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s2", 2, "rolling", CompactionMetrics{}); err != nil {
 		t.Fatalf("UpdateSummaryAndCheckpoint error = %v", err)
 	}
 	if err := store.TruncateMessagesFromUserMessage(ctx, session.ID, session.UserID, 2); err != nil {
@@ -691,7 +695,7 @@ func TestSessionStore_TruncateKeepsMemories(t *testing.T) {
 	}
 	roles := []ai.MessageRole{ai.MessageRoleUser, ai.MessageRoleAssistant, ai.MessageRoleUser, ai.MessageRoleAssistant}
 	appendSessionMessages(t, store, session, roles, []string{"u1", "a1", "u2", "a2"})
-	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s4", 4, "auto"); err != nil {
+	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "s4", 4, "auto", CompactionMetrics{}); err != nil {
 		t.Fatalf("UpdateSummaryAndCheckpoint error = %v", err)
 	}
 	if err := db.Exec("INSERT INTO agent_memories (session_id, namespace_name, user_id, agent_kind) VALUES (?, ?, ?, ?)",
@@ -801,7 +805,7 @@ func TestSessionStore_EncryptedAtRest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AppendMessage error = %v", err)
 	}
-	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "secret-summary", uint(msg.Seq), "rolling"); err != nil {
+	if err := store.UpdateSummaryAndCheckpoint(ctx, session, "secret-summary", uint(msg.Seq), "rolling", CompactionMetrics{}); err != nil {
 		t.Fatalf("UpdateSummaryAndCheckpoint error = %v", err)
 	}
 

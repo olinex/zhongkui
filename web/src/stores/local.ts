@@ -30,6 +30,10 @@ const AGENT_THINKING_KEY: string = "agent-thinking";
 // 上次选中的 AI 助手会话 ID（跨刷新恢复当前会话，供刷新后打开抽屉即自动续播）
 const AGENT_ACTIVE_SESSION_KEY: string = "agent-active-session";
 
+// AI 助手待发提问队列（按会话持久化，值为 JSON 字符串数组）的存储键前缀：
+// 生成中提交的追问先入队，随会话本地记忆，刷新 / 切换会话后仍保留待发顺序
+const AGENT_QUEUE_KEY_PREFIX: string = "agent-queue-";
+
 const LANGUAGE_KEY: string = "locale";
 const AVAILABLE_LOCALES: SupportLanguage[] = [SupportLanguage.English, SupportLanguage.ZhHans];
 export const DEFAULT_LOCALE: SupportLanguage = SupportLanguage.English;
@@ -129,6 +133,37 @@ export const localManager = {
       return;
     }
     localStorage.removeItem(AGENT_ACTIVE_SESSION_KEY);
+  },
+
+  // 读取某会话的待发提问队列（本地持久化的正文数组）；无记录或数据损坏时返回空数组
+  getAgentQueue(sessionID: number): string[] {
+    const raw = localStorage.getItem(`${AGENT_QUEUE_KEY_PREFIX}${sessionID}`);
+    if (!raw) {
+      return [];
+    }
+    try {
+      const list = JSON.parse(raw) as unknown;
+      if (Array.isArray(list)) {
+        return list.filter(
+          (text): text is string => typeof text === "string" && text.trim() !== "",
+        );
+      }
+    } catch {
+      // 损坏的本地数据忽略，按空队列处理
+    }
+    return [];
+  },
+  // 写入某会话的待发提问队列（空队列直接清除记录，避免残留空数组）
+  setAgentQueue(sessionID: number, texts: string[]): void {
+    if (texts.length === 0) {
+      localStorage.removeItem(`${AGENT_QUEUE_KEY_PREFIX}${sessionID}`);
+      return;
+    }
+    localStorage.setItem(`${AGENT_QUEUE_KEY_PREFIX}${sessionID}`, JSON.stringify(texts));
+  },
+  // 清除某会话的待发提问队列（会话删除时调用，避免留下孤儿记录）
+  clearAgentQueue(sessionID: number): void {
+    localStorage.removeItem(`${AGENT_QUEUE_KEY_PREFIX}${sessionID}`);
   },
 
   getJwt(): string | void {

@@ -142,7 +142,7 @@
             <v-row density="compact">
               <v-col cols="12">
                 <v-select
-                  v-model="createChannelId"
+                  v-model="createChannelID"
                   :items="channelOptions"
                   item-title="name"
                   item-value="id"
@@ -554,7 +554,7 @@ const requiredRule = (path: string) => [
 
 // ---- 创建对话框 ----
 const createName = ref("");
-const createChannelId = ref<number | null>(null);
+const createChannelID = ref<number | null>(null);
 const createEnabled = ref(true);
 const createLanguage = ref("zh-Hans");
 const createConfigValues = ref<Record<string, string>>({});
@@ -562,7 +562,7 @@ const createDescription = ref("");
 
 // 选中的渠道 → 渠道类型 → 目标配置 schema
 const selectedChannel = computed<NotificationChannelItem | undefined>(() =>
-  channelOptions.value.find((c) => c.id === createChannelId.value),
+  channelOptions.value.find((c) => c.id === createChannelID.value),
 );
 const createChannelType = computed<string>(() => selectedChannel.value?.type ?? "");
 const createSchema = computed<NotificationChannelTypeField[]>(() =>
@@ -570,7 +570,7 @@ const createSchema = computed<NotificationChannelTypeField[]>(() =>
 );
 
 // 渠道切换后重置配置字段（按新 schema 的默认值）
-watch(createChannelId, () => {
+watch(createChannelID, () => {
   createConfigValues.value = schemaDefaultValues(createSchema.value);
 });
 
@@ -585,12 +585,12 @@ const createConfigState = computed<{ valid: boolean; errors: Record<string, stri
 
 const createFormValid = computed<boolean>(
   () =>
-    !!createName.value.trim() && createChannelId.value !== null && createConfigState.value.valid,
+    !!createName.value.trim() && createChannelID.value !== null && createConfigState.value.valid,
 );
 
 const openCreateDialogAction = async (): Promise<void> => {
   createName.value = "";
-  createChannelId.value = null;
+  createChannelID.value = null;
   createEnabled.value = true;
   createLanguage.value = "zh-Hans";
   createDescription.value = "";
@@ -611,7 +611,7 @@ const createAction = async (): Promise<void> => {
     notificationTargetCreate({
       // 目标名称为单行文本输入，去除首尾空白避免误输入不可见空白
       name: createName.value.trim(),
-      channelID: createChannelId.value as number,
+      channelID: createChannelID.value as number,
       enabled: createEnabled.value,
       config: JSON.stringify(serializeConfig(createSchema.value, createConfigValues.value)),
       language: createLanguage.value,
@@ -636,7 +636,7 @@ const createAction = async (): Promise<void> => {
 };
 
 // ---- 编辑对话框 ----
-let editTargetId = 0;
+let editTargetID = 0;
 const editChannelType = ref("");
 const editEnabled = ref(true);
 const editLanguage = ref("zh-Hans");
@@ -657,7 +657,7 @@ const editFormValid = computed<boolean>(() => editConfigState.value.valid);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
-  editTargetId = item.id as number;
+  editTargetID = item.id as number;
   editChannelType.value = String(item.channelType ?? "");
   editEnabled.value = Boolean(item.enabled);
   editLanguage.value = String(item.language ?? "zh-Hans");
@@ -709,7 +709,7 @@ const itemUpdateAction = async (): Promise<void> => {
     return;
   }
   await getSimpleResponse(
-    notificationTargetUpdate(editTargetId, {
+    notificationTargetUpdate(editTargetID, {
       enabled: editEnabled.value,
       config: JSON.stringify(serializeConfig(editSchema.value, editConfigValues.value)),
       language: editLanguage.value,

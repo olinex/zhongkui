@@ -556,14 +556,14 @@ const createAction = createForm.handleSubmit(async (values) => {
 });
 
 // ---- 编辑对话框 ----
-let editChannelId = 0;
+let editChannelID = 0;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<NotificationChannelItem>(
     notificationChannelDetailGet(item.id),
     async (rsp) => {
-      editChannelId = rsp.data.id;
+      editChannelID = rsp.data.id;
       editType.value = rsp.data.type;
       // 复位与回填同属打开动作：原子重置全部字段与校验状态，再写入本次详情
       updateForm.resetForm({
@@ -624,7 +624,7 @@ const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     validateEditConfig();
     await getSimpleResponse(
-      notificationChannelUpdate(editChannelId, {
+      notificationChannelUpdate(editChannelID, {
         enabled: values.enabled,
         config: dumpEditConfigJson(),
         description: values.description,

@@ -1,10 +1,11 @@
 <template>
   <!-- 可拖拽边框手柄：贴父容器指定边，父容器须 position: relative。
+       落位可选贴容器边框内侧（默认）或越过边框贴到外侧（placement="outside"）。
        常驻握把短条的朝向随可调轴向切换——左右边框为竖条（可拖宽）、
        上下边框为横条（可拖高），让用户静态即可分辨能拖宽还是能拖高 -->
   <div
     class="resize-handle"
-    :class="[`is-${side}`, { 'is-resizing': resizing }]"
+    :class="[`is-${side}`, `is-${placement}`, { 'is-resizing': resizing }]"
     role="separator"
     :aria-orientation="isWidthResize ? 'vertical' : 'horizontal'"
     :title="label"
@@ -19,16 +20,24 @@ import i18n from "@/utils/i18n";
 // ResizeSide 可拖拽边：left / right 调宽，top / bottom 调高
 type ResizeSide = "left" | "right" | "top" | "bottom";
 
-const props = defineProps<{
-  /** 当前尺寸（px），双向绑定；组件据拖拽位移实时回写收敛后的值。 */
-  modelValue: number;
-  /** 可拖拽边：left / right 调宽，top / bottom 调高。 */
-  side: ResizeSide;
-  /** 尺寸下限（px）。 */
-  min: number;
-  /** 尺寸上限（px）。 */
-  max: number;
-}>();
+// ResizePlacement 命中条落位：inside 贴容器边框内侧（默认），outside 越过边框贴到容器外侧
+type ResizePlacement = "inside" | "outside";
+
+const props = withDefaults(
+  defineProps<{
+    /** 当前尺寸（px），双向绑定；组件据拖拽位移实时回写收敛后的值。 */
+    modelValue: number;
+    /** 可拖拽边：left / right 调宽，top / bottom 调高。 */
+    side: ResizeSide;
+    /** 命中条落位：inside 贴容器边框内侧（默认，占容器内容区 8px）；outside 越过边框贴到外侧。 */
+    placement?: ResizePlacement;
+    /** 尺寸下限（px）。 */
+    min: number;
+    /** 尺寸上限（px）。 */
+    max: number;
+  }>(),
+  { placement: "inside" },
+);
 
 const emits = defineEmits<{
   "update:modelValue": [value: number];
@@ -152,5 +161,24 @@ onUnmounted(onPointerUp);
 .resize-handle:hover::before,
 .resize-handle.is-resizing::before {
   background: rgb(var(--v-theme-primary));
+}
+
+/* 落位 outside —— 命中条整体越过容器边框、贴到容器外侧，不再占用容器内容区的 8px。
+   前提：该方向上的祖先不得裁剪溢出（如 VNavigationDrawer 内容区为 overflow-x: hidden），
+   否则命中条会被整个裁掉，既看不见也点不到 */
+.resize-handle.is-left.is-outside {
+  inset-inline-start: calc(-1 * var(--zk-space-2));
+}
+
+.resize-handle.is-right.is-outside {
+  inset-inline-end: calc(-1 * var(--zk-space-2));
+}
+
+.resize-handle.is-top.is-outside {
+  inset-block-start: calc(-1 * var(--zk-space-2));
+}
+
+.resize-handle.is-bottom.is-outside {
+  inset-block-end: calc(-1 * var(--zk-space-2));
 }
 </style>

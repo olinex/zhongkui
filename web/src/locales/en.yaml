@@ -277,6 +277,7 @@ model:
     field:
       id: ID
       title: Title
+      namespaceName: Namespace
       content: Content
       chunkCount: Chunks
       format: Format
@@ -1010,7 +1011,7 @@ model:
       loaded: Loaded
       loadMore: Load More
       empty: No network stack data for this transport
-      noTraceId: This record has no traceID to associate a network stack
+      noTraceID: This record has no traceID to associate a network stack
       error: Failed to load network stack
     # Human-readable protocol headers: per-field name/value/description (header.field.<key> and header.desc.<key> keys match JSON field names)
     header:
@@ -1166,6 +1167,7 @@ action:
   update: Update
   delete: Delete
   edit: Edit
+  pinTop: Pin to Top
   close: Close
   confirm: Confirm
   activate: Activate
@@ -1282,6 +1284,7 @@ title:
   accessKey: Access Key
   aiKnowledge: Knowledge Base
   aiMemory: Memory
+  aiDocumentDetail: Knowledge Document Detail
   passwordReset: Password Reset
   userAdmin: Admin - User
   groupAdmin: Admin - Group
@@ -1340,24 +1343,31 @@ page:
     contactAdmin: This feature must be activated by an administrator. Please contact your administrator.
   aiAssistant:
     generate: Generate
+    enqueueQuery: Add to Queue
+    awaitingResponse: Awaiting response…
     generating: Generating…
+    queuedQueryLocked: Clear the input first to edit a queued question
     stop: Stop
     newSession: New Session
     untitledSession: New Session
     renameSession: Rename Session
     deleteSession: Delete Session
     citations: Citations
+    citationOpen: Open source in a new tab
     emptyQuery: Please enter a request
     optimizePrompt: Optimize prompt
     optimizePromptFailed: Prompt optimization failed
     undoOptimizePrompt: Undo optimization
     error: Generation failed
+    runFailed: This answer did not finish normally (the run errored or timed out); the above is what had been generated before the interruption.
+    runCancelled: This answer was cancelled; the above is what had been generated before the cancellation.
     noResponse: Request timed out or network error. Please try again.
     me: Me
     assistant: Assistant
     hintSelectSession: Create or select a session to start
     hintNoSession: No sessions yet — click “New Session” at the top right to start
     hintFirstQuery: Send your first question to start; the session topic is generated automatically
+    questionRail: Question navigation
     confirmDeleteSession: Delete this session and all its messages?
     slotHint: It also becomes the session default slot when creating a session
     disabled: AI feature is disabled
@@ -1393,6 +1403,7 @@ page:
     reasoningDefaultOnHint: This model enables thinking by default, so reasoning is output even without a thinking switch; fill in the model's Thinking Field and its on/off values under Advanced in "LLM Model" to control it manually.
     reasoningStreaming: Thinking…
     reasoningDone: Reasoning complete
+    parallelCalls: Parallel calls ×{count}
     copyMessage: Copy
     retryMessage: Retry
     branchMessage: Branch
@@ -1477,6 +1488,10 @@ page:
     importFileHint: Supports Markdown / TXT / PDF / DOCX, up to 64 MB per file
     importedContentReadOnly: The content is parsed from the imported source and is read-only; only the title can be changed
     parseError: Parse Error
+    scopeCurrent: Current namespace
+    scopeSystem: System knowledge base
+    scopeSystemHint: System knowledge is code-declared shared knowledge, read-only for viewing
+    documentUnreadable: This knowledge document does not exist or is out of readable scope
   llmModelAdmin:
     baseURLHint: OpenAI-compatible base URL of the provider (e.g. https://dashscope.aliyuncs.com/compatible-mode/v1)
     apiKeyKeepHint: The key is never echoed in plaintext; leave blank to keep the existing key

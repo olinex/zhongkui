@@ -645,7 +645,7 @@ const editSamples = ref<SampleOption[]>([]);
 const editSampleInput = ref<Record<string, unknown> | null>(null);
 const editModel = ref("");
 let editTimer: ReturnType<typeof setTimeout> | undefined;
-let editRuleId = 0;
+let editRuleID = 0;
 
 const editRegoErrors = computed<RegoValidationError[]>(() => {
   const errs: RegoValidationError[] = [];
@@ -743,7 +743,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<TagRuleDetailOut>(
     tagRuleDetailGet(item.id),
     async (rsp) => {
-      editRuleId = rsp.data.id;
+      editRuleID = rsp.data.id;
       editModel.value = rsp.data.model || HTTP_TRANSPORT_MODEL_KEY;
       // 复位与回填同属「准备本次打开的数据」：完整枚举 defineField 字段，原子重置值 + 校验状态
       updateForm.resetForm({
@@ -843,7 +843,7 @@ const itemUpdateAction = () => {
       return;
     }
     await getSimpleResponse(
-      tagRuleUpdate(editRuleId, {
+      tagRuleUpdate(editRuleID, {
         description: values.description,
         rego: editRego.value,
         enabled: values.enabled,
@@ -988,7 +988,7 @@ const reuseFieldsAction = async (): Promise<void> => {
     tagRuleListGet({ greedy: false, page: 1, pageSize: 100 }),
     async (rsp) => {
       const siblings = rsp.data.items.filter(
-        (r) => r.id !== editRuleId && r.model === editModel.value,
+        (r) => r.id !== editRuleID && r.model === editModel.value,
       );
       const fields = new Set<string>();
       for (const rule of siblings) {

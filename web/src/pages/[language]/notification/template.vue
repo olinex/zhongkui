@@ -745,11 +745,11 @@ const createAction = createForm.handleSubmit(async (values) => {
 });
 
 // ---- 编辑模板（列表项已含编辑所需全部字段，直接回填，无需额外详情接口）----
-let editTemplateId = 0;
+let editTemplateID = 0;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = (item: Record<string, any>): void => {
-  editTemplateId = item.id as number;
+  editTemplateID = item.id as number;
   updateEvent.value = String(item.event ?? "");
   updateChannelType.value = String(item.channelType ?? "*");
   updateLanguage.value = String(item.language ?? PLATFORM_DEFAULT_LANGUAGE);
@@ -769,7 +769,7 @@ const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
       notificationTemplateUpdate({
-        id: editTemplateId,
+        id: editTemplateID,
         // 标题单行文本提交前去除首尾空白（正文/描述为多行文本域，空白具有语义，豁免 trim）
         title: (values.title as string).trim(),
         content: values.content,

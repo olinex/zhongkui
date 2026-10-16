@@ -95,6 +95,12 @@ type StageEvent struct {
 	Err string `json:"error,omitempty"`
 	// Tool 本轮事件的工具名（仅 toolCall / toolResult 阶段有值，其他阶段为空）
 	Tool string `json:"tool,omitempty"`
+	// CallID 本次工具调用的唯一标识（仅 toolCall / toolResult 阶段有值），供前端把同一次调用的
+	// 「发起」与「结果」归并到同一行；缺失时（如达到轮数上限的整体失败）为空。
+	CallID string `json:"callID,omitempty"`
+	// Round 本次工具调用所属的轮次（从 1 起，仅 toolCall / toolResult 阶段有值），供前端把同一轮
+	// 内并发发起的多次调用聚为一组展示（一次思考 → N 次并行调用）。
+	Round int `json:"round"`
 }
 
 // EvalReporter 是评估阶段事件的实时上报回调：返回错误（如 SSE 写失败/客户端断开）

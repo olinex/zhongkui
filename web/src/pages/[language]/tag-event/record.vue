@@ -18,7 +18,7 @@
       </search-table>
 
       <!-- 记录详情对话框（只读）；与流量审计等列表一致，通过 row 点击/操作按钮打开 -->
-      <tag-event-record-detail-dialog v-model="detailDialog" :record-id="detailId" />
+      <tag-event-record-detail-dialog v-model="detailDialog" :recordID="detailID" />
     </template>
   </main-layout>
 </template>
@@ -39,7 +39,7 @@ import type { ItemActions } from "@/components/@types/table";
 
 // 详情对话框可见性与当前查看的记录 ID
 const detailDialog = ref(false);
-const detailId = ref(0);
+const detailID = ref(0);
 
 // projectFields 字段投影：行操作依赖字段恒定投影（id 定位详情），避免用户隐藏对应列后行操作失效
 const projectFields = (visible: string[]): string[] => ["id", ...visible];
@@ -69,7 +69,7 @@ const statusColor = (status: string | undefined): string | undefined => {
 // 打开详情对话框：记录 ID 由行数据提供
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const openDetail = (item: Record<string, any>): void => {
-  detailId.value = Number(item.id);
+  detailID.value = Number(item.id);
   detailDialog.value = true;
 };
 </script>

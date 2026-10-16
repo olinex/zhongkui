@@ -8,6 +8,8 @@ export type KnowledgeDocStatus = string;
 export interface KnowledgeDocumentItem {
   id: number;
   title: string;
+  // 文档所属命名空间名，系统视图行内据此跳转详情页
+  namespaceName?: string;
   // 文档来源格式（markdown/txt/pdf/docx），手动录入文档固定为 markdown
   format: DocumentFormat;
   // 文档处理状态（pending/parsing/ready/failed），手动录入文档固定为 ready
@@ -189,6 +191,8 @@ export interface RetrievalResult {
   chunkIndex: number;
   content: string;
   score: number;
+  // 来源文档所属命名空间名，用于选择读取接口/溯源跳转
+  namespaceName: string;
 }
 
 // 会话消息（AgentMessageItem）
@@ -207,6 +211,24 @@ export interface AgentMessageItem {
   elapsedMs: number;
   // 助手消息的思考过程全文（无思考时缺省），供刷新 / 重开抽屉后回显历史思考过程
   reasoning?: string;
+  // 本条助手消息所属运行的生命周期终态阶段（done/failed/cancelled，取值来自后端枚举类
+  // agentRunPhase）：failed/cancelled 表示本轮被中断，前端据此展示中断提示；用户消息与在途
+  // 运行的阶段性落库行缺省
+  phase?: string;
+  // 该消息所锚定的历史压缩记录（压缩游标等于本条消息 seq 时由后端给出）：供刷新 / 重进会话后
+  // 回显过往的压缩推进（含静默滚动 rolling）；无则为缺省
+  compress?: AgentMessageCompressItem;
+}
+
+// 消息所锚定的历史压缩记录（AgentMessageCompressOut）：仅承载回显所需的度量字段，
+// 不含摘要全文与游标本身。
+export interface AgentMessageCompressItem {
+  // 推进原因（rolling 静默滚动 / auto 自动压缩 / manual 手动压缩）
+  reason: string;
+  // 推进前会话上下文占用 token
+  tokensBefore: number;
+  // 本次折叠进摘要的消息条数
+  foldedCount: number;
 }
 
 // 截断会话消息请求体（AgentMessageTruncateIn）：从第 userMessageIndex 条用户消息（从 1 起，
@@ -287,7 +309,11 @@ export type EvalStage = string;
 export type EvalStageStatus = string;
 
 // SSE stage 事件负载（Agent 生成流）：status 非空为阶段状态事件（start/done/failed）；
-// tool 为本轮事件的工具名（仅 toolCall / toolResult 阶段有值），error 仅 failed 有值
+// tool 为本轮事件的工具名（仅 toolCall / toolResult 阶段有值），error 仅 failed 有值；
+// callID 为本次工具调用的唯一标识（仅 toolCall / toolResult 阶段有值），供前端把同一次调用的
+// 「发起」与「结果」归并到同一行；缺失时（如达到轮数上限的整体失败）为空；
+// round 为该次调用所属轮次（从 1 起，仅 toolCall / toolResult 阶段有值），供前端把同一轮内
+// 并发发起的多次调用聚为一组展示
 export interface AgentStageEvent {
   stage: EvalStage;
   status?: EvalStageStatus;
@@ -295,6 +321,8 @@ export interface AgentStageEvent {
   elapsedMs: number;
   tool?: string;
   error?: string;
+  callID?: string;
+  round?: number;
 }
 
 // 挂起事件负载（后端 ToolRequest）：模型请求调用某个工具，需经人工审批后执行。execOwner 指明

@@ -426,7 +426,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 			if round == maxRounds-1 {
 				err := errors.Newf("agent: reached the tool-call round bound (%d) with pending tool calls, using this round's text as the answer", maxRounds)
 				if reporter != nil {
-					if rerr := reporter(StageEvent{Stage: EvalStageToolCall, Status: EvalStatusFailed, Err: err.Error()}); rerr != nil {
+					if rerr := reporter(StageEvent{Stage: EvalStageToolCall, Status: EvalStatusFailed, Round: round + 1, Err: err.Error()}); rerr != nil {
 						outSW.Send(nil, errors.WithStack(rerr))
 					}
 				}
@@ -455,7 +455,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 			for _, tc := range msg.ToolCalls {
 				name := tc.Function.Name
 				if reporter != nil {
-					if rerr := reporter(StageEvent{Stage: EvalStageToolCall, Status: EvalStatusStart, Tool: name}); rerr != nil {
+					if rerr := reporter(StageEvent{Stage: EvalStageToolCall, Status: EvalStatusStart, Tool: name, CallID: tc.ID, Round: round + 1}); rerr != nil {
 						outSW.Send(nil, errors.WithStack(rerr))
 						return
 					}
@@ -463,7 +463,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 				// client 来源工具不在本地工具索引 a.toolIndex 中，须特判：仅当本次运行有持久化会话
 				// 且具备审批通道时登记为待执行调用；否则记录回灌文案（稍后按工具失败回灌）。
 				if isClientTool(name) {
-					call, failText := prepareClientToolCall(tc, in, toolRequests)
+					call, failText := prepareClientToolCall(tc, in, round+1, toolRequests)
 					entries = append(entries, toolCallEntry{tc: tc, owner: ToolExecOwnerClient, call: call, failText: failText})
 					continue
 				}
@@ -503,7 +503,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 				case e.owner == ToolExecOwnerClient && e.failText != "":
 					// 无持久化会话或审批通道：client 工具按失败回灌，不产生任何 ToolRequest。
 					if reporter != nil {
-						if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, Err: e.failText}); rerr != nil {
+						if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, CallID: e.tc.ID, Round: round + 1, Err: e.failText}); rerr != nil {
 							outSW.Send(nil, errors.WithStack(rerr))
 							return
 						}
@@ -523,6 +523,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 						ExecOwner:        ToolExecOwnerBackend,
 						AuditLevel:       AuditLevelMust,
 						ApprovalRequired: true,
+						Round:            round + 1,
 					})
 				default:
 					// backend 工具行内执行：失败把错误文本作为结果回填让模型自行纠错，绝不当作流错误
@@ -533,7 +534,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 					if execErr != nil {
 						result = "tool execution failed: " + execErr.Error()
 						if reporter != nil {
-							if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, ElapsedMs: elapsed, Err: execErr.Error()}); rerr != nil {
+							if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, CallID: e.tc.ID, Round: round + 1, ElapsedMs: elapsed, Err: execErr.Error()}); rerr != nil {
 								outSW.Send(nil, errors.WithStack(rerr))
 								return
 							}
@@ -541,7 +542,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 					} else {
 						result = truncateBytes(result, maxBytes)
 						if reporter != nil {
-							if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: name, ElapsedMs: elapsed}); rerr != nil {
+							if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: name, CallID: e.tc.ID, Round: round + 1, ElapsedMs: elapsed}); rerr != nil {
 								outSW.Send(nil, errors.WithStack(rerr))
 								return
 							}
@@ -899,7 +900,15 @@ func (a *Agent) refreshSummary(ctx context.Context, session *ai.AgentSession, hi
 		a.warnf(ctx, "agent: rolling summary failed, keeping the previous summary: %v", err)
 		return existing
 	}
-	if err := a.store.UpdateSummaryAndCheckpoint(ctx, session, summary, upto, "rolling"); err != nil {
+	// 推进前先取该时刻的上下文占用（最近一条助手消息的 PromptTokens）作为度量：与是否展示无关，
+	// 三种推进原因都落真实值；是否回显由读取侧按 reason 决定。取占用失败则放弃本次推进（保留原
+	// 摘要、本轮不折叠）——检查点度量必须是真实值，绝不落 0 兜底。
+	contextTokens, err := a.store.ContextTokens(ctx, session.ID, session.UserID)
+	if err != nil {
+		a.warnf(ctx, "agent: loading the context usage for the rolling summary failed, keeping the previous summary: %v", err)
+		return existing
+	}
+	if err := a.store.UpdateSummaryAndCheckpoint(ctx, session, summary, upto, "rolling", CompactionMetrics{TokensBefore: contextTokens, FoldedCount: len(evicted)}); err != nil {
 		a.warnf(ctx, "agent: persisting the rolling summary failed, keeping the previous summary: %v", err)
 		return existing
 	}
@@ -917,7 +926,16 @@ func (a *Agent) CompressSession(ctx context.Context, session *ai.AgentSession, e
 	if session == nil || a.memory == nil {
 		return nil
 	}
-	contextTokens, _ := a.store.ContextTokens(ctx, session.ID, session.UserID)
+	// 先取压缩前的上下文占用作为检查点度量：必须是真实值，绝不落 0 兜底。取占用失败按压缩失败
+	// 同等处理——告警、上报 foldedCount=0 的 compress_done、不推进游标。
+	contextTokens, err := a.store.ContextTokens(ctx, session.ID, session.UserID)
+	if err != nil {
+		a.warnf(ctx, "agent: loading the context usage for the session compression failed, keeping the previous summary: %v", err)
+		if report != nil {
+			report(CompressEvent{Type: ai.AgentRunEventCompressDone, FoldedCount: 0})
+		}
+		return nil
+	}
 	if slot == "" {
 		slot = session.TargetModel
 	}
@@ -943,12 +961,13 @@ func (a *Agent) CompressSession(ctx context.Context, session *ai.AgentSession, e
 		}
 		return &CompactResult{Summary: string(session.Summary.Value())}
 	}
-	result, err := a.memory.CompactStream(ctx, session, evicted, reason, func(d string) error {
-		if report == nil {
-			return nil
-		}
-		return report(CompressEvent{Type: ai.AgentRunEventCompressDelta, Delta: d})
-	})
+	result, err := a.memory.CompactStream(ctx, session, evicted, reason,
+		CompactionMetrics{TokensBefore: contextTokens, FoldedCount: len(evicted)}, func(d string) error {
+			if report == nil {
+				return nil
+			}
+			return report(CompressEvent{Type: ai.AgentRunEventCompressDelta, Delta: d})
+		})
 	if err != nil {
 		a.warnf(ctx, "agent: session compression failed, keeping the previous summary: %v", err)
 		if report != nil {
@@ -1013,43 +1032,150 @@ func (a *Agent) warnf(ctx context.Context, format string, args ...any) {
 	a.logger.Ctx(ctx).Warnf(format, args...)
 }
 
-// wrapPersist 包装图输出流：收到 done 项时，先把本轮用量与耗时（metrics 快照）写入该 done 项，
-// 会话存在时再持久化助手回复，最后向外发送 done——先赋值后落库、后下发，保证「落库」与「SSE
-// 载荷」取到同一份数值。持久化失败把错误作为流错误发送；SessionID 为 0 时只跳过落库，用量与
-// 耗时仍随 done 下发（无状态运行也能展示）。
+// assistantCheckpointBytes 是助手回复阶段性落库的字节阈值：本轮累积的正文与思考过程增量合计每达到
+// 该阈值即写库一次，使长耗时运行的中途产物随时可回读（刷新后仍可见）。等待越久产出越多，若仅在
+// done 时一次性落库，一旦中断（超时 / 取消 / 报错）整轮产物即丢失，重试成本随产出线性增长。
+const assistantCheckpointBytes = 2048
+
+// interruptedPhase 把「本轮运行被中断」的错误归类为生命周期终态阶段：取消（含退订宽限自动取消）归
+// cancelled，其余（运行上界 deadline 触发、模型报错等）归 failed。取消既可能体现为承载本次运行的
+// 上下文被取消（ctx.Err()），也可能体现为流自身返回包装过的 context.Canceled 错误，两者都识别。
+// 该阶段随助手消息落库（agent_messages.phase），并由 RunHub 以同名阶段写入 error 事件负载，使前端
+// 据阶段展示「本轮被中断」而无需依赖正文里的提示文案。
+func interruptedPhase(ctx context.Context, err error) ai.AgentRunPhase {
+	if errors.Is(ctx.Err(), context.Canceled) || errors.Is(err, context.Canceled) {
+		return ai.AgentRunPhaseCancelled
+	}
+	return ai.AgentRunPhaseFailed
+}
+
+// wrapPersist 包装图输出流并把本轮助手回复落库：
+//   - 流中累积的正文（delta）与思考过程（reasoning）增量合计每达到 assistantCheckpointBytes 即
+//     阶段性写库一次——首次落库走 AppendMessage 分配消息行并记下其 ID，其后按该 ID 原地更新同一行，
+//     使长耗时运行的中途产物随时可回读，而非仅在成功结束时一次性落库；阶段性落库失败只记录告警，
+//     不中断正在进行的生成（DB 短暂抖动不应毁掉一轮昂贵的模型调用）；
+//   - 收到 done 项时，先把本轮用量与耗时（metrics 快照）写入该 done 项，会话存在时再以同一行终态化
+//     落库（写入阶段 done），最后向外发送 done——先赋值后落库、后下发，保证「落库」与「SSE 载荷」
+//     取到同一份数值；此处落库失败把错误作为流错误发送；
+//   - 流以非 EOF 错误结束（超时 / 取消 / 模型报错）时，先把已累积的正文与思考落库并写入中断阶段
+//     （cancelled / failed），再照常把错误作为流错误下发——中断前的产物与「本轮被中断」这一事实
+//     一并保留，且提示文案由前端据阶段渲染，不混入正文；
+//   - 流以无 done 的 EOF 结束（挂起等待工具审批）时，回收阶段性落库的那一行——挂起不是终局，续跑
+//     会把本回合已外发的正文并回最终 done，留着残篇会在续跑后形成同一回合的两条助手消息。
+//
+// SessionID 为 0 时只跳过落库，用量与耗时仍随 done 下发（无状态运行也能展示）。
 func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOutput], input AgentInput, metrics *runMetrics) *schema.StreamReader[AgentOutput] {
 	outSR, outSW := schema.Pipe[AgentOutput](64)
 	go func() {
 		defer outSW.Close()
 		defer in.Close()
+		// persistCtx 是落库专用上下文：与本次运行的生命周期解耦（剥离 deadline 与取消），使「运行因
+		// 超时 / 取消被中断」这一刻仍能落库已产出的中间产物——这正是阶段性落库要挽救的场景。运行
+		// 上下文本身带 30 分钟 deadline，触发中断时它已过期，若直接用它落库，写入必因
+		// context deadline exceeded 失败，本次修复在其最需要的场景下即失效。
+		persistCtx := context.WithoutCancel(ctx)
+		// contentBuf / reasoningBuf 累积本轮尚未落库的正文与思考增量；assistantMsgID 为已落库助手
+		// 消息行的 ID（0 表示本次运行尚未落库）；flushedContent / flushedReasoning 记录上次落库时的
+		// 字节数，用于按增量阈值判断下次落库时机。
+		var (
+			contentBuf       strings.Builder
+			reasoningBuf     strings.Builder
+			assistantMsgID   uint
+			flushedContent   int
+			flushedReasoning int
+			// finalized 标记本轮已按 done 终态化落库，使「无 done 的 EOF」能唯一识别为挂起。
+			finalized bool
+		)
+		// checkpoint 把当前累积的正文 / 思考增量连同给定的生命周期终态阶段落库（阶段性落库传空阶段，
+		// 中断落库传 cancelled / failed）。尚无已落库行且两者皆空时不落库，避免产生空的助手消息行。
+		checkpoint := func(phase ai.AgentRunPhase) error {
+			if input.SessionID == 0 {
+				return nil
+			}
+			content := contentBuf.String()
+			reasoning := reasoningBuf.String()
+			if assistantMsgID == 0 && content == "" && reasoning == "" {
+				return nil
+			}
+			msg := &ai.AgentMessage{
+				SessionID:     input.SessionID,
+				NamespaceName: input.NamespaceName,
+				UserID:        input.UserID,
+				Role:          ai.MessageRoleAssistant,
+				Content:       serializer.NewCrypto([]byte(content)),
+				Phase:         phase,
+			}
+			// ID 由内嵌 BaseModel 提升而来，复合字面量不可直接赋值，故构造后单独置入。
+			msg.ID = assistantMsgID
+			if reasoning != "" {
+				msg.Reasoning = serializer.NewCrypto([]byte(reasoning))
+			}
+			if assistantMsgID == 0 {
+				appended, err := a.store.AppendMessage(persistCtx, msg)
+				if err != nil {
+					return err
+				}
+				assistantMsgID = appended.ID
+			} else if err := a.store.UpdateAssistantMessage(persistCtx, msg); err != nil {
+				return err
+			}
+			flushedContent, flushedReasoning = contentBuf.Len(), reasoningBuf.Len()
+			return nil
+		}
 		for {
 			item, err := in.Recv()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
+					// 无 done 的 EOF 即「本轮流因待审批工具调用挂起」（见节点 3 的挂起分支：只发
+					// tool_request，不产出 done）。挂起并非终局——续跑会把本回合已外发的助手正文
+					// 并回最终 done（validateOutput 的 turnEmittedText 拼接），故此处回收阶段性落库
+					// 的那一行，否则续跑结束会在同一回合留下两条助手消息（中断前的残篇 + 完整回复）。
+					// 回收失败仅告警：挂起现场已落库，多一行残篇不应妨碍本轮挂起。
+					if !finalized && assistantMsgID != 0 {
+						if derr := a.store.DeleteMessage(persistCtx, assistantMsgID, input.UserID); derr != nil {
+							a.warnf(ctx, "agent: discarding the suspended assistant message row failed: %v", derr)
+						}
+					}
 					return
+				}
+				if cerr := checkpoint(interruptedPhase(ctx, err)); cerr != nil {
+					a.warnf(ctx, "agent: persisting the interrupted assistant message failed: %v", cerr)
 				}
 				outSW.Send(AgentOutput{}, errors.WithStack(err))
 				return
 			}
-			if item.Done {
+			switch {
+			case item.Done:
 				item.PromptTokens, item.CompletionTokens, item.TotalTokens, item.ElapsedMs = metrics.snapshot()
 				if input.SessionID != 0 {
-					if err := a.persistAssistantMessage(ctx, input, item); err != nil {
+					if err := a.finalizeAssistantMessage(persistCtx, input, item, assistantMsgID); err != nil {
 						outSW.Send(AgentOutput{}, errors.WithStack(err))
 						return
 					}
+					finalized = true
 				}
+			case item.Delta != "":
+				contentBuf.WriteString(item.Delta)
+			case item.Reasoning != "":
+				reasoningBuf.WriteString(item.Reasoning)
 			}
 			outSW.Send(item, nil)
+			// 先下发再落库：用户能尽早看到增量，落库只在其后补做；增量未达阈值时不落库。
+			if !item.Done && contentBuf.Len()-flushedContent+reasoningBuf.Len()-flushedReasoning >= assistantCheckpointBytes {
+				if cerr := checkpoint(""); cerr != nil {
+					a.warnf(ctx, "agent: persisting the assistant message checkpoint failed: %v", cerr)
+				}
+			}
 		}
 	}()
 	return outSR
 }
 
-// persistAssistantMessage 把 done 项持久化为会话的助手消息：正文始终落库，
-// 结构化草稿与引用来源非空时随消息写入；本轮用量与耗时为明文数值，随消息一并落库
-// （用户消息不参与本函数，故其用量列保持 0）。
-func (a *Agent) persistAssistantMessage(ctx context.Context, input AgentInput, done AgentOutput) error {
+// finalizeAssistantMessage 把 done 项终态化落库为会话的助手消息：msgID 非 0 时按该 ID 原地更新本
+// 运行阶段性落库的那一行（沿用其已分配好的会话内序号），为 0 时新建一行（本运行全程未触发阶段性
+// 落库）。正文始终落库并写入终态阶段 done，结构化草稿与引用来源非空时随消息写入；本轮用量与耗时为
+// 明文数值，随消息一并落库（用户消息不参与本函数，故其用量列保持 0）。
+func (a *Agent) finalizeAssistantMessage(ctx context.Context, input AgentInput, done AgentOutput, msgID uint) error {
 	msg := &ai.AgentMessage{
 		SessionID:        input.SessionID,
 		NamespaceName:    input.NamespaceName,
@@ -1060,7 +1186,10 @@ func (a *Agent) persistAssistantMessage(ctx context.Context, input AgentInput, d
 		CompletionTokens: done.CompletionTokens,
 		TotalTokens:      done.TotalTokens,
 		ElapsedMs:        done.ElapsedMs,
+		Phase:            ai.AgentRunPhaseDone,
 	}
+	// ID 由内嵌 BaseModel 提升而来，复合字面量不可直接赋值，故构造后单独置入（0 表示新建一行）。
+	msg.ID = msgID
 	if len(done.Draft) > 0 && string(done.Draft) != "null" {
 		msg.DraftJSON = serializer.NewCrypto(done.Draft)
 	}
@@ -1072,10 +1201,11 @@ func (a *Agent) persistAssistantMessage(ctx context.Context, input AgentInput, d
 	if done.Reasoning != "" {
 		msg.Reasoning = serializer.NewCrypto([]byte(done.Reasoning))
 	}
-	if _, err := a.store.AppendMessage(ctx, msg); err != nil {
+	if msgID == 0 {
+		_, err := a.store.AppendMessage(ctx, msg)
 		return err
 	}
-	return nil
+	return a.store.UpdateAssistantMessage(ctx, msg)
 }
 
 // assembleContext 是节点 1：校验提问非空，将完整输入写入图状态（供后续节点

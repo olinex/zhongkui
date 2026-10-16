@@ -214,4 +214,4 @@ SendStageDelta 发送带阶段标识的增量文本（delta 事件，data 为 \{
 func (s *SSEWriter) SendToolRequest(payload any) error
 ```
 
-SendToolRequest 发送工具执行请求事件（tool\_request 事件，表示本次流挂起等待 前端执行并审批客户端工具调用；发送后调用方不应再发送 done）。payload 由调用方 提供，须包含 callId、接口 ID、参数、已合成的请求描述符与是否需审批。
+SendToolRequest 发送工具执行请求事件（tool\_request 事件，表示本次流挂起等待 前端执行并审批客户端工具调用；发送后调用方不应再发送 done）。payload 由调用方 提供，须包含 callID、接口 ID、参数、已合成的请求描述符与是否需审批。

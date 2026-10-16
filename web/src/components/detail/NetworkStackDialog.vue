@@ -56,7 +56,7 @@
           {{ error }}
         </v-alert>
         <div v-if="!transport" class="text-center my-8 on-surface-variant">
-          {{ $t("model.networkStack.summary.noTraceId") }}
+          {{ $t("model.networkStack.summary.noTraceID") }}
         </div>
         <div
           v-else-if="!loading && packets.length === 0"

@@ -14,6 +14,7 @@ import (
 
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 	"zhongkuisec.com/zhongkui/internal/manager/views/admin"
+	"zhongkuisec.com/zhongkui/internal/manager/views/ai"
 	"zhongkuisec.com/zhongkui/internal/manager/views/datasource"
 	"zhongkuisec.com/zhongkui/internal/manager/views/llm"
 	"zhongkuisec.com/zhongkui/internal/manager/views/notification"
@@ -32,7 +33,7 @@ type projectionCase struct {
 	out  any
 }
 
-// searchProjectionCases 全部 22 个已实现字段投影的列表接口映射。
+// searchProjectionCases 全部 24 个已实现字段投影的列表接口映射。
 func searchProjectionCases() []projectionCase {
 	return []projectionCase{
 		{"UserListGet", &views.UserListGetSearchIn{}, &admin.UserListOut{}},
@@ -57,10 +58,12 @@ func searchProjectionCases() []projectionCase {
 		{"LlmModelListGet", &views.LlmModelListGetSearchIn{}, &llm.LlmModelListOut{}},
 		{"McpServerListGet", &views.McpServerListGetSearchIn{}, &llm.McpServerListOut{}},
 		{"LlmToolListGet", &views.LlmToolListGetSearchIn{}, &llm.LlmToolListOut{}},
+		{"KnowledgeDocumentListGet", &views.KnowledgeDocumentListGetSearchIn{}, &ai.KnowledgeDocumentListOut{}},
+		{"AgentMemoryListGet", &views.AgentMemoryListGetSearchIn{}, &ai.AgentMemoryListOut{}},
 	}
 }
 
-// TestSelectFieldsCompleteness 校验 22 个列表接口的投影白名单与 Out JSON 键集合双向一致：
+// TestSelectFieldsCompleteness 校验 24 个列表接口的投影白名单与 Out JSON 键集合双向一致：
 // GetOptions().Fields 中的每个键都必须能在 Out 上序列化输出，
 // Out 的每个 JSON 键也都必须在投影白名单中（否则前端列设置无法勾选该列）。
 func TestSelectFieldsCompleteness(t *testing.T) {

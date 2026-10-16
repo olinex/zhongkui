@@ -51,6 +51,7 @@
 - [type ChunkOverviewItem](<#ChunkOverviewItem>)
 - [type ChunkOverviewSummary](<#ChunkOverviewSummary>)
 - [type CompactResult](<#CompactResult>)
+- [type CompactionMetrics](<#CompactionMetrics>)
 - [type Components](<#Components>)
   - [func \(c \*Components\) Enabled\(\) bool](<#Components.Enabled>)
 - [type CompressEvent](<#CompressEvent>)
@@ -86,7 +87,7 @@
 - [type Memory](<#Memory>)
   - [func NewMemory\(store \*MemoryStore, resolver ChatResolver, params \*Params, logger \*logging.Logger\) \(\*Memory, error\)](<#NewMemory>)
   - [func \(m \*Memory\) Compact\(ctx context.Context, session \*ai.AgentSession\) \(\*CompactResult, error\)](<#Memory.Compact>)
-  - [func \(m \*Memory\) CompactStream\(ctx context.Context, session \*ai.AgentSession, evicted \[\]\*ai.AgentMessage, reason string, onDelta func\(string\) error\) \(\*CompactResult, error\)](<#Memory.CompactStream>)
+  - [func \(m \*Memory\) CompactStream\(ctx context.Context, session \*ai.AgentSession, evicted \[\]\*ai.AgentMessage, reason string, metrics CompactionMetrics, onDelta func\(string\) error\) \(\*CompactResult, error\)](<#Memory.CompactStream>)
   - [func \(m \*Memory\) Delete\(ctx context.Context, namespaceName string, userID uint, ids \[\]uint\) error](<#Memory.Delete>)
   - [func \(m \*Memory\) GenerateTopic\(ctx context.Context, query string\) string](<#Memory.GenerateTopic>)
   - [func \(m \*Memory\) Get\(ctx context.Context, namespaceName string, userID uint, id uint\) \(\*ai.AgentMemory, error\)](<#Memory.Get>)
@@ -168,12 +169,14 @@
   - [func \(s \*SessionStore\) DeleteExpiredAgentRuns\(ctx context.Context, now time.Time, limit int\) \(int64, error\)](<#SessionStore.DeleteExpiredAgentRuns>)
   - [func \(s \*SessionStore\) DeleteExpiredLiveRuns\(ctx context.Context, now time.Time, limit int\) \(int64, error\)](<#SessionStore.DeleteExpiredLiveRuns>)
   - [func \(s \*SessionStore\) DeleteExpiredRunEvents\(ctx context.Context, now time.Time, limit int\) \(int64, error\)](<#SessionStore.DeleteExpiredRunEvents>)
+  - [func \(s \*SessionStore\) DeleteMessage\(ctx context.Context, id, userID uint\) error](<#SessionStore.DeleteMessage>)
   - [func \(s \*SessionStore\) DeleteSession\(ctx context.Context, id uint, namespaceName string, userID uint\) error](<#SessionStore.DeleteSession>)
   - [func \(s \*SessionStore\) FinishLiveRun\(ctx context.Context, runID serializer.HexUUID, userID uint, phase ai.AgentRunPhase, lastSeq uint64\) error](<#SessionStore.FinishLiveRun>)
   - [func \(s \*SessionStore\) GetSession\(ctx context.Context, id uint, namespaceName string, userID uint\) \(\*ai.AgentSession, error\)](<#SessionStore.GetSession>)
   - [func \(s \*SessionStore\) HistoryMessages\(ctx context.Context, sessionID, userID uint, maxCount int\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.HistoryMessages>)
   - [func \(s \*SessionStore\) LatestAssistantMessage\(ctx context.Context, sessionID, userID uint\) \(\*ai.AgentMessage, error\)](<#SessionStore.LatestAssistantMessage>)
   - [func \(s \*SessionStore\) LatestLiveRun\(ctx context.Context, sessionID, userID uint\) \(\*ai.AgentLiveRun, error\)](<#SessionStore.LatestLiveRun>)
+  - [func \(s \*SessionStore\) ListCompactions\(ctx context.Context, sessionID, userID uint\) \(\[\]\*ai.AgentSessionCompaction, error\)](<#SessionStore.ListCompactions>)
   - [func \(s \*SessionStore\) ListMessages\(ctx context.Context, sessionID, userID uint, limit, offset int\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessages>)
   - [func \(s \*SessionStore\) ListMessagesAfter\(ctx context.Context, sessionID, userID uint, afterSeq uint\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessagesAfter>)
   - [func \(s \*SessionStore\) ListMessagesBefore\(ctx context.Context, sessionID, userID uint, beforeSeq uint, afterSeq uint\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessagesBefore>)
@@ -183,9 +186,10 @@
   - [func \(s \*SessionStore\) SaveAgentRun\(ctx context.Context, run \*ai.AgentRun\) error](<#SessionStore.SaveAgentRun>)
   - [func \(s \*SessionStore\) SetSessionStatus\(ctx context.Context, id uint, namespaceName string, userID uint, status ai.SessionStatus\) \(\*ai.AgentSession, error\)](<#SessionStore.SetSessionStatus>)
   - [func \(s \*SessionStore\) TruncateMessagesFromUserMessage\(ctx context.Context, sessionID, userID uint, userMessageIndex int\) error](<#SessionStore.TruncateMessagesFromUserMessage>)
+  - [func \(s \*SessionStore\) UpdateAssistantMessage\(ctx context.Context, msg \*ai.AgentMessage\) error](<#SessionStore.UpdateAssistantMessage>)
   - [func \(s \*SessionStore\) UpdateLiveRunSeq\(ctx context.Context, runID serializer.HexUUID, lastSeq uint64\) error](<#SessionStore.UpdateLiveRunSeq>)
   - [func \(s \*SessionStore\) UpdateSessionValve\(ctx context.Context, id uint, namespaceName string, userID uint, valve ai.ReviewValve\) \(\*ai.AgentSession, error\)](<#SessionStore.UpdateSessionValve>)
-  - [func \(s \*SessionStore\) UpdateSummaryAndCheckpoint\(ctx context.Context, session \*ai.AgentSession, summary string, uptoSeq uint, reason string\) error](<#SessionStore.UpdateSummaryAndCheckpoint>)
+  - [func \(s \*SessionStore\) UpdateSummaryAndCheckpoint\(ctx context.Context, session \*ai.AgentSession, summary string, uptoSeq uint, reason string, metrics CompactionMetrics\) error](<#SessionStore.UpdateSummaryAndCheckpoint>)
 - [type SlotInfo](<#SlotInfo>)
 - [type Snapshot](<#Snapshot>)
   - [func \(s \*Snapshot\) Bindings\(\) map\[ai.Slot\]string](<#Snapshot.Bindings>)
@@ -1227,6 +1231,20 @@ type CompactResult struct {
 }
 ```
 
+<a name="CompactionMetrics"></a>
+## type CompactionMetrics
+
+CompactionMetrics 携带一次摘要推进（\`CompactStream\` / \`Compact\` 产出）的展示度量，随检查点一并 落库。三种推进原因（rolling / auto / manual）都必须填入真实值：取值与是否展示无关，是否回显交由 读取侧按检查点的 reason 决定。
+
+```go
+type CompactionMetrics struct {
+    // TokensBefore 推进动作发生前的会话上下文占用 token
+    TokensBefore int
+    // FoldedCount 折叠进摘要的消息条数
+    FoldedCount int
+}
+```
+
 <a name="Components"></a>
 ## type Components
 
@@ -1744,10 +1762,10 @@ Compact 压缩一个会话：先把 summary\_upto\_seq 之后的全部消息折�
 ### func \(\*Memory\) CompactStream
 
 ```go
-func (m *Memory) CompactStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, reason string, onDelta func(string) error) (*CompactResult, error)
+func (m *Memory) CompactStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, reason string, metrics CompactionMetrics, onDelta func(string) error) (*CompactResult, error)
 ```
 
-CompactStream 折叠给定 evicted（seq 升序、均 \> 当前游标）进滚动摘要并落库，再按 memory.enabled 抽取长期记忆；onDelta 经 SummarizeStream 逐块回调摘要增量。语义与 Compact 等价，区别是折叠集合 由调用方给定且摘要可流式产出。reason 为本次推进的原因（auto / manual），随摘要落库一并写入 压缩检查点，供回滚恢复更早的上下文起点。
+CompactStream 折叠给定 evicted（seq 升序、均 \> 当前游标）进滚动摘要并落库，再按 memory.enabled 抽取长期记忆；onDelta 经 SummarizeStream 逐块回调摘要增量。语义与 Compact 等价，区别是折叠集合 由调用方给定且摘要可流式产出。reason 为本次推进的原因（rolling / auto / manual），metrics 为该次 推进的真实度量（压缩前占用与折叠条数），二者随摘要落库一并写入压缩检查点——reason 供回滚恢复更早 的上下文起点、并供读取侧判定是否回显，metrics 供刷新后回显历史压缩记录。
 
 <a name="Memory.Delete"></a>
 ### func \(\*Memory\) Delete
@@ -2153,7 +2171,7 @@ type ResumeInput struct {
     NamespaceName string
     // UserID 恢复请求的属主用户 ID（users.id），用于跨用户隔离
     UserID uint
-    // Results 前端回传的执行结果，按 callId 与挂起时下发的调用关联
+    // Results 前端回传的执行结果，按 callID 与挂起时下发的调用关联
     Results []ToolResult
     // ToolReporter 工具调用阶段事件的上报回调（可空）
     ToolReporter EvalReporter
@@ -2171,6 +2189,9 @@ RetrievalResult 是一条检索结果的视图层载体（json 序列化给 view
 type RetrievalResult struct {
     // DocumentID 所属知识文档 ID（字符串形式）
     DocumentID string `json:"documentID"`
+    // NamespaceName 所属知识文档所在的命名空间名（检索范围为调用方命名空间 + 内置系统命名空间，
+    // 同一文档 ID 可能在两者同时存在，故需据此消歧）
+    NamespaceName string `json:"namespaceName"`
     // Title 所属文档标题
     Title string `json:"title"`
     // ChunkIndex 分块在文档内的序号
@@ -2635,6 +2656,15 @@ func (s *SessionStore) DeleteExpiredRunEvents(ctx context.Context, now time.Time
 
 DeleteExpiredRunEvents 分批硬删除超过 now 的事件日志（兜底清理未被外键级联的事件）。
 
+<a name="SessionStore.DeleteMessage"></a>
+### func \(\*SessionStore\) DeleteMessage
+
+```go
+func (s *SessionStore) DeleteMessage(ctx context.Context, id, userID uint) error
+```
+
+DeleteMessage 硬删除一条消息行（按消息 ID 定位，并限定属主用户），供驻留运行在「本次流以挂起 结束」时回收其阶段性落库的那一行：挂起不是终局，续跑会把本回合已外发的正文并回最终 done，留着 这一行会在续跑结束后形成同一回合的两条助手消息。消息行本无 deleted\_at 列（见 DeleteSession）， 故这里即硬删；目标行不存在（含归属不符）时返回 ErrMessageNotFound。
+
 <a name="SessionStore.DeleteSession"></a>
 ### func \(\*SessionStore\) DeleteSession
 
@@ -2688,6 +2718,15 @@ func (s *SessionStore) LatestLiveRun(ctx context.Context, sessionID, userID uint
 ```
 
 LatestLiveRun 返回某会话最近一条驻留运行登记（按 id 倒序），并限定属主用户； 不存在时返回 ErrAgentRunNotFound。
+
+<a name="SessionStore.ListCompactions"></a>
+### func \(\*SessionStore\) ListCompactions
+
+```go
+func (s *SessionStore) ListCompactions(ctx context.Context, sessionID, userID uint) ([]*ai.AgentSessionCompaction, error)
+```
+
+ListCompactions 返回会话内按 upto\_seq 升序的全部压缩检查点（限定属主用户），供消息列表在刷新后 回显历史压缩记录。仅取展示所需列——刻意不 Select summary，避免为回显而无谓解密摘要。
 
 <a name="SessionStore.ListMessages"></a>
 ### func \(\*SessionStore\) ListMessages
@@ -2770,6 +2809,15 @@ func (s *SessionStore) TruncateMessagesFromUserMessage(ctx context.Context, sess
 
 TruncateMessagesFromUserMessage 截断会话消息：删除会话内第 userMessageIndex 条（从 1 起，仅按 用户消息计数、按 seq 升序定位）用户消息，以及该条之后的全部消息（含助手回复），供「回退 / 删除到 某一轮对话」使用。目标用户消息不存在（序号越界）时返回 ErrMessageNotFound。 单事务执行，避免截断中途留下不一致的会话内容。截断落在已压缩区间内（summary\_upto\_seq ≥ 被截断 起始 seq）时，按压缩检查点回退上下文起点：恢复「upto\_seq \< 起始 seq」的最近一个检查点的摘要与 游标，无可用检查点则清空摘要、summary\_upto\_seq 置 0（回到最开始）；并作废（删除）upto\_seq ≥ 起始 seq 的检查点。截断点尚未被摘要覆盖（summary\_upto\_seq \< 起始 seq）时摘要与游标保持不变。回滚不删除 压缩期间抽取的长期记忆（agent\_memories），也不做级联删除。后续追加仍按会话 message\_seq 单调分配， 序号不复用。
 
+<a name="SessionStore.UpdateAssistantMessage"></a>
+### func \(\*SessionStore\) UpdateAssistantMessage
+
+```go
+func (s *SessionStore) UpdateAssistantMessage(ctx context.Context, msg *ai.AgentMessage) error
+```
+
+UpdateAssistantMessage 原地更新一条已落库的助手消息（按消息 ID 定位，并限定属主用户），供运行 途中把阶段性落库的那一行继续累积正文 / 思考，以及运行终结时写入生命周期终态阶段（phase：done / failed / cancelled）。不重分配 seq，故消息在会话内的顺序与只读游标不变。必须用「结构体 \+ Select」 写这几列（正文 / 思考 / 草稿 / 引用为密文列，走 crypto 序列化器；map 形式会绕过序列化器把明文直写 库，见 UpdateSummaryAndCheckpoint）。msg 为空或 ID 为 0 时返回英文错误；目标消息不存在（含归属 不符）时返回 ErrMessageNotFound。
+
 <a name="SessionStore.UpdateLiveRunSeq"></a>
 ### func \(\*SessionStore\) UpdateLiveRunSeq
 
@@ -2792,10 +2840,10 @@ UpdateSessionValve 更新会话的审核阀门（each/auto/none），返回更�
 ### func \(\*SessionStore\) UpdateSummaryAndCheckpoint
 
 ```go
-func (s *SessionStore) UpdateSummaryAndCheckpoint(ctx context.Context, session *ai.AgentSession, summary string, uptoSeq uint, reason string) error
+func (s *SessionStore) UpdateSummaryAndCheckpoint(ctx context.Context, session *ai.AgentSession, summary string, uptoSeq uint, reason string, metrics CompactionMetrics) error
 ```
 
-UpdateSummaryAndCheckpoint 在单事务内推进会话的滚动摘要：更新 agent\_sessions 的 summary 与 summary\_upto\_seq，并追加一条 agent\_session\_compactions 压缩检查点（记录推进后的游标与摘要全文， 供回滚逐级回退 start bound）。reason 取 rolling（静默滚动）/ auto（自动压缩）/ manual（手动压缩）。 摘要经 crypto 序列化器加密落库，故会话更新必须以「结构体 \+ Select」写这两列、不触碰其它字段 （避免并发改写会话标题/档位等；map 形式会绕过序列化器把明文直写库）；检查点同样是密文列，走 Create 结构体路径加密。session 必须带有 ID / UserID / NamespaceName（调用点均持有已加载的会话）。
+UpdateSummaryAndCheckpoint 在单事务内推进会话的滚动摘要：更新 agent\_sessions 的 summary 与 summary\_upto\_seq，并追加一条 agent\_session\_compactions 压缩检查点（记录推进后的游标、摘要全文与 展示度量，供回滚逐级回退 start bound，以及刷新后回显历史压缩记录）。reason 取 rolling（静默滚动）/ auto（自动压缩）/ manual（手动压缩）；metrics 为该次推进的真实展示度量（三种原因都必须填真值， 取值与是否展示无关——是否回显交由读取侧按 reason 决定）。 摘要经 crypto 序列化器加密落库，故会话更新必须以「结构体 \+ Select」写这两列、不触碰其它字段 （避免并发改写会话标题/档位等；map 形式会绕过序列化器把明文直写库）；检查点同样是密文列，走 Create 结构体路径加密。session 必须带有 ID / UserID / NamespaceName（调用点均持有已加载的会话）。
 
 <a name="SlotInfo"></a>
 ## type SlotInfo
@@ -2972,6 +3020,12 @@ type StageEvent struct {
     Err string `json:"error,omitempty"`
     // Tool 本轮事件的工具名（仅 toolCall / toolResult 阶段有值，其他阶段为空）
     Tool string `json:"tool,omitempty"`
+    // CallID 本次工具调用的唯一标识（仅 toolCall / toolResult 阶段有值），供前端把同一次调用的
+    // 「发起」与「结果」归并到同一行；缺失时（如达到轮数上限的整体失败）为空。
+    CallID string `json:"callID,omitempty"`
+    // Round 本次工具调用所属的轮次（从 1 起，仅 toolCall / toolResult 阶段有值），供前端把同一轮
+    // 内并发发起的多次调用聚为一组展示（一次思考 → N 次并行调用）。
+    Round int `json:"round"`
 }
 ```
 
@@ -3125,7 +3179,7 @@ ToolResult 是前端回传的一次客户端工具调用执行结果（对应恢
 
 ```go
 type ToolResult struct {
-    // CallID 与 tool_request 下发的 callId 一致
+    // CallID 与 tool_request 下发的 callID 一致
     CallID string `json:"callID"`
     // Approved 用户是否批准执行该调用
     Approved bool `json:"approved"`

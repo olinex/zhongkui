@@ -690,6 +690,16 @@ type CompactResult struct {
 	Warnings []string
 }
 
+// CompactionMetrics 携带一次摘要推进（`CompactStream` / `Compact` 产出）的展示度量，随检查点一并
+// 落库。三种推进原因（rolling / auto / manual）都必须填入真实值：取值与是否展示无关，是否回显交由
+// 读取侧按检查点的 reason 决定。
+type CompactionMetrics struct {
+	// TokensBefore 推进动作发生前的会话上下文占用 token
+	TokensBefore int
+	// FoldedCount 折叠进摘要的消息条数
+	FoldedCount int
+}
+
 // Recall 以查询文本在「命名空间 + Agent 类型 + 会话」范围内检索长期记忆，记忆只在其来源会话内
 // 可见；语义完全委托 MemoryStore.Retrieve（memory.enabled=false 时返回空且不报错）。
 func (m *Memory) Recall(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID, userID uint, query string) ([]MemoryHit, error) {
@@ -837,9 +847,10 @@ func (m *Memory) GenerateTopic(ctx context.Context, query string) string {
 
 // CompactStream 折叠给定 evicted（seq 升序、均 > 当前游标）进滚动摘要并落库，再按 memory.enabled
 // 抽取长期记忆；onDelta 经 SummarizeStream 逐块回调摘要增量。语义与 Compact 等价，区别是折叠集合
-// 由调用方给定且摘要可流式产出。reason 为本次推进的原因（auto / manual），随摘要落库一并写入
-// 压缩检查点，供回滚恢复更早的上下文起点。
-func (m *Memory) CompactStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, reason string, onDelta func(string) error) (*CompactResult, error) {
+// 由调用方给定且摘要可流式产出。reason 为本次推进的原因（rolling / auto / manual），metrics 为该次
+// 推进的真实度量（压缩前占用与折叠条数），二者随摘要落库一并写入压缩检查点——reason 供回滚恢复更早
+// 的上下文起点、并供读取侧判定是否回显，metrics 供刷新后回显历史压缩记录。
+func (m *Memory) CompactStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, reason string, metrics CompactionMetrics, onDelta func(string) error) (*CompactResult, error) {
 	if session == nil {
 		return nil, errors.New("memory: nil session")
 	}
@@ -851,7 +862,7 @@ func (m *Memory) CompactStream(ctx context.Context, session *ai.AgentSession, ev
 	if err != nil {
 		return nil, err
 	}
-	if err := m.sessions.UpdateSummaryAndCheckpoint(ctx, session, summary, upto, reason); err != nil {
+	if err := m.sessions.UpdateSummaryAndCheckpoint(ctx, session, summary, upto, reason, metrics); err != nil {
 		return nil, err
 	}
 	session.Summary = serializer.NewCrypto([]byte(summary))
@@ -879,7 +890,9 @@ func (m *Memory) Compact(ctx context.Context, session *ai.AgentSession) (*Compac
 	if err != nil {
 		return nil, err
 	}
-	return m.CompactStream(ctx, session, msgs, "manual", nil)
+	// 度量与是否展示无关：三种推进原因均落真实值，读取侧再按 reason 决定是否回显。
+	contextTokens, _ := m.sessions.ContextTokens(ctx, session.ID, session.UserID)
+	return m.CompactStream(ctx, session, msgs, "manual", CompactionMetrics{TokensBefore: contextTokens, FoldedCount: len(msgs)}, nil)
 }
 
 // extract 从被摘要的消息中抽取长期记忆并落库：用 flash 档位生成结果、容错解析 JSON，逐条经

@@ -27,7 +27,7 @@
           <!-- 分组标题：标题（点击可重命名）+ 操作按钮 -->
           <div class="d-flex align-center mb-3 ga-2">
             <v-icon color="primary">mdi-folder-multiple-outline</v-icon>
-            <template v-if="editingGroupId === group.id">
+            <template v-if="editingGroupID === group.id">
               <v-text-field
                 v-model="groupTitleDraft"
                 variant="underlined"
@@ -230,30 +230,30 @@ const addGroupAction = () => {
   }
 };
 
-const editingGroupId = ref("");
+const editingGroupID = ref("");
 const groupTitleDraft = ref("");
 
 // startRename 进入指定分组标题的编辑态，草稿预填当前显示名。
 const startRename = (group: QuickStartGroup) => {
-  editingGroupId.value = group.id;
+  editingGroupID.value = group.id;
   groupTitleDraft.value = displayTitle(group.title);
 };
 
 // cancelRename 退出分组标题编辑态。
 const cancelRename = () => {
-  editingGroupId.value = "";
+  editingGroupID.value = "";
 };
 
 // commitRename 提交分组重命名：标题为空则放弃修改。
 const commitRename = (id: string) => {
-  if (!editingGroupId.value) {
+  if (!editingGroupID.value) {
     return;
   }
   const title = groupTitleDraft.value.trim();
   if (title) {
     store.renameGroup(id, title);
   }
-  editingGroupId.value = "";
+  editingGroupID.value = "";
 };
 
 const confirmDialogRef = useTemplateRef("confirmDialogRef");
@@ -270,12 +270,12 @@ const deleteGroupAction = (payload: { group: QuickStartGroup }) => {
 
 // --- 添加链接对话框 ---
 const addLinkDialog = ref(false);
-const addLinkTargetGroupId = ref("");
+const addLinkTargetGroupID = ref("");
 const linkSearch = ref("");
 
 // openAddLinkDialog 打开添加链接对话框并重置搜索词。
-const openAddLinkDialog = (groupId: string) => {
-  addLinkTargetGroupId.value = groupId;
+const openAddLinkDialog = (groupID: string) => {
+  addLinkTargetGroupID.value = groupID;
   linkSearch.value = "";
   addLinkDialog.value = true;
 };
@@ -317,7 +317,7 @@ const filteredNavigation = computed(() => {
 
 // linkExists 判断某导航项是否已存在于目标分组中（用于禁用重复添加）。
 const linkExists = (child: NavChild): boolean => {
-  const group = store.groups.find((g) => g.id === addLinkTargetGroupId.value);
+  const group = store.groups.find((g) => g.id === addLinkTargetGroupID.value);
   if (!group) {
     return false;
   }
@@ -326,7 +326,7 @@ const linkExists = (child: NavChild): boolean => {
 
 // addLinkToCurrent 把选中的导航项添加到目标分组。
 const addLinkToCurrent = (child: NavChild) => {
-  store.addLink(addLinkTargetGroupId.value, child);
+  store.addLink(addLinkTargetGroupID.value, child);
 };
 
 // --- 导航跳转 ---
@@ -337,53 +337,53 @@ const goto = (link: QuickStartLink) => {
 };
 
 // --- 拖拽排序（原生 HTML5 DnD） ---
-const dragSource = ref<{ groupId: string; index: number } | null>(null);
-const dropTarget = ref<{ groupId: string; index: number } | null>(null);
+const dragSource = ref<{ groupID: string; index: number } | null>(null);
+const dropTarget = ref<{ groupID: string; index: number } | null>(null);
 
 // isDragging 判断指定链接是否为当前拖拽源。
-const isDragging = (groupId: string, index: number): boolean => {
-  return dragSource.value?.groupId === groupId && dragSource.value?.index === index;
+const isDragging = (groupID: string, index: number): boolean => {
+  return dragSource.value?.groupID === groupID && dragSource.value?.index === index;
 };
 
 // isDropTarget 判断指定链接是否为当前放置目标。
-const isDropTarget = (groupId: string, index: number): boolean => {
-  return dropTarget.value?.groupId === groupId && dropTarget.value?.index === index;
+const isDropTarget = (groupID: string, index: number): boolean => {
+  return dropTarget.value?.groupID === groupID && dropTarget.value?.index === index;
 };
 
 // onDragStart 记录拖拽源并设置 dataTransfer 数据。
-const onDragStart = (event: DragEvent, groupId: string, index: number) => {
-  dragSource.value = { groupId, index };
+const onDragStart = (event: DragEvent, groupID: string, index: number) => {
+  dragSource.value = { groupID, index };
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", `${groupId}:${index}`);
+    event.dataTransfer.setData("text/plain", `${groupID}:${index}`);
   }
 };
 
 // onDragOver 更新当前放置目标（变更时）。
-const onDragOver = (groupId: string, index: number) => {
+const onDragOver = (groupID: string, index: number) => {
   const current = dropTarget.value;
-  if (current?.groupId !== groupId || current?.index !== index) {
-    dropTarget.value = { groupId, index };
+  if (current?.groupID !== groupID || current?.index !== index) {
+    dropTarget.value = { groupID, index };
   }
 };
 
-const onDragLeave = (event: DragEvent, groupId: string, index: number) => {
+const onDragLeave = (event: DragEvent, groupID: string, index: number) => {
   // 子元素间移动会触发 dragleave，目标仍在其内部时忽略
   const related = event.relatedTarget as Node | null;
   const currentTarget = event.currentTarget as HTMLElement | null;
   if (related && currentTarget?.contains(related)) {
     return;
   }
-  if (dropTarget.value?.groupId === groupId && dropTarget.value?.index === index) {
+  if (dropTarget.value?.groupID === groupID && dropTarget.value?.index === index) {
     dropTarget.value = null;
   }
 };
 
 // onDrop 将拖拽源移动到放置目标位置。
-const onDrop = (groupId: string, index: number) => {
+const onDrop = (groupID: string, index: number) => {
   const source = dragSource.value;
   if (source) {
-    store.moveLink(source.groupId, source.index, groupId, index);
+    store.moveLink(source.groupID, source.index, groupID, index);
   }
   dragSource.value = null;
   dropTarget.value = null;

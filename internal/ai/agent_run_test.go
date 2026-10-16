@@ -559,3 +559,137 @@ func TestSessionStore_CreateLiveRun_PartialUnique(t *testing.T) {
 		t.Fatalf("CreateLiveRun(after the previous converged) error = %v, want success", err)
 	}
 }
+
+// deadlineChat 是「先下发正文与思考，再等上下文过期并以过期错误中断」的模型替身，忠实复现长耗时
+// 运行被运行上界（deadline）中断的场景：用于确认中断时已产出的内容被落库、正文保持纯净（提示文案由
+// 前端据 phase 渲染而非混入正文）、助手消息落库为 failed 阶段，且落库不被已过期的运行上下文拖垮
+// （落库走 WithoutCancel 的 persistCtx）。
+type deadlineChat struct {
+	reason  string
+	content string
+}
+
+// Generate 实现 model.BaseChatModel；本替身只服务于流式路径，非流式调用一律报错而非返回 nil。
+func (c *deadlineChat) Generate(ctx context.Context, in []*schema.Message, opts ...model.Option) (*schema.Message, error) {
+	return nil, errors.New("deadlineChat: only the streaming path is supported")
+}
+
+// Stream 先下发思考与正文分片，随后阻塞到 ctx 过期，再以该错误结束消息流。
+func (c *deadlineChat) Stream(ctx context.Context, in []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
+	sr, sw := schema.Pipe[*schema.Message](4)
+	go func() {
+		defer sw.Close()
+		if c.reason != "" {
+			sw.Send(&schema.Message{Role: schema.Assistant, ReasoningContent: c.reason}, nil)
+		}
+		if c.content != "" {
+			sw.Send(&schema.Message{Role: schema.Assistant, Content: c.content}, nil)
+		}
+		<-ctx.Done()
+		sw.Send(nil, errors.WithStack(ctx.Err()))
+	}()
+	return sr, nil
+}
+
+// TestStreamRun_RunDeadlinePersistsPartialAssistantMessage 测试运行被 deadline 中断时阶段性落库
+// 兜住中间产物：已产出的思考与正文落库为助手消息，正文保持纯净（中断提示由前端据 phase 渲染，绝不
+// 混入正文以免喂回模型），且助手消息落库为 failed 阶段；落库不受已过期的运行上下文影响（否则
+// 「超时被中断」这一最需要落库的场景恰好写不进库）。
+func TestStreamRun_RunDeadlinePersistsPartialAssistantMessage(t *testing.T) {
+	content := strings.Repeat("c", assistantCheckpointBytes*2)
+	reasoning := strings.Repeat("r", assistantCheckpointBytes)
+	f := newAgentRunFixture(t, &deadlineChat{reason: reasoning, content: content}, &stubRetriever{}, false)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	reader, err := f.agent.StreamRun(ctx, f.input("q"))
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	if _, _, err := collectStream(t, reader); err == nil {
+		t.Fatal("stream error = nil, want the run deadline error")
+	}
+
+	messages, err := f.store.ListMessages(context.Background(), f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("ListMessages len = %d, want 2 (user + the interrupted assistant reply)", len(messages))
+	}
+	if got, want := string(messages[1].Content.Value()), content; got != want {
+		t.Errorf("persisted assistant content = %q, want the partial content only (the notice must not be mixed into the content)", got)
+	}
+	if got := string(messages[1].Reasoning.Value()); got != reasoning {
+		t.Errorf("persisted assistant reasoning = %q, want the partial reasoning", got)
+	}
+	if got := messages[1].Phase; got != ai.AgentRunPhaseFailed {
+		t.Errorf("persisted assistant phase = %q, want failed", got)
+	}
+}
+
+// TestWrapPersist_CancelledRunPersistsCancelledPhase 测试运行被取消时助手消息落库为 cancelled 阶段
+// （而非 failed）：取消既可能体现为承载上下文被取消，也可能体现为流返回包装过的 context.Canceled
+// 错误，本用例直接驱动 wrapPersist 以「已取消的上下文 + 包装 context.Canceled 的流错误」复现，
+// 确认中断阶段归类为 cancelled（分类见 interruptedPhase）。
+func TestWrapPersist_CancelledRunPersistsCancelledPhase(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	f := newAgentRunFixture(t, &scriptedChat{turns: []scriptedTurn{{content: "unused"}}}, &stubRetriever{}, false)
+
+	inSR, inSW := schema.Pipe[AgentOutput](8)
+	go func() {
+		defer inSW.Close()
+		inSW.Send(AgentOutput{Delta: strings.Repeat("p", assistantCheckpointBytes*2)}, nil)
+		cancel()
+		inSW.Send(AgentOutput{}, errors.WithStack(context.Canceled))
+	}()
+	if _, _, err := collectStream(t, f.agent.wrapPersist(ctx, inSR, f.input("q"), newRunMetrics())); err == nil {
+		t.Fatal("stream error = nil, want the cancellation error")
+	}
+
+	messages, err := f.store.ListMessages(context.Background(), f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 1 {
+		t.Fatalf("ListMessages len = %d, want 1 (the cancelled assistant reply)", len(messages))
+	}
+	if got := messages[0].Phase; got != ai.AgentRunPhaseCancelled {
+		t.Errorf("persisted assistant phase = %q, want cancelled", got)
+	}
+}
+
+// TestWrapPersist_SuspensionDiscardsCheckpointedRow 测试「无 done 的 EOF」（挂起等待工具审批）时
+// 回收阶段性落库的助手行：挂起不是终局，续跑会把本回合已外发的正文并回最终 done，留着残篇会在续跑
+// 结束后留下同一回合的两条助手消息。直接驱动 wrapPersist（不经图循环），使「落库残篇 → 挂起时回收」
+// 在无并发写库下确定复现：会话的 message_seq 已自增到 1（证明残篇确实落库过）而消息行为 0（证明它被
+// 回收）；若残篇未落库则 message_seq 仍为 0，若未被回收则消息行为 1。
+func TestWrapPersist_SuspensionDiscardsCheckpointedRow(t *testing.T) {
+	ctx := context.Background()
+	f := newAgentRunFixture(t, &scriptedChat{turns: []scriptedTurn{{content: "unused"}}}, &stubRetriever{}, false)
+
+	inSR, inSW := schema.Pipe[AgentOutput](8)
+	go func() {
+		defer inSW.Close()
+		inSW.Send(AgentOutput{Delta: strings.Repeat("p", assistantCheckpointBytes*2)}, nil)
+	}()
+	if _, _, err := collectStream(t, f.agent.wrapPersist(ctx, inSR, f.input("q"), newRunMetrics())); err != nil {
+		t.Fatalf("stream error = %v, want a clean end (the stream ended with EOF, as on suspension)", err)
+	}
+
+	messages, err := f.store.ListMessages(ctx, f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 0 {
+		t.Fatalf("ListMessages len = %d, want 0 (the checkpointed row must be discarded on suspension)", len(messages))
+	}
+	session, err := f.store.GetSession(ctx, f.session.ID, "default", f.session.UserID)
+	if err != nil {
+		t.Fatalf("GetSession error = %v", err)
+	}
+	if session.MessageSeq != 1 {
+		t.Errorf("session message_seq = %d, want 1 (a checkpoint row was allocated before being discarded)", session.MessageSeq)
+	}
+}

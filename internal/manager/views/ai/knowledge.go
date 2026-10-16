@@ -24,6 +24,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/s3"
@@ -41,6 +42,8 @@ type KnowledgeDocumentItemOut struct {
 	ID uint `json:"id"`
 	// Title 文档标题
 	Title string `json:"title"`
+	// NamespaceName 文档所属命名空间名（供前端按来源命名空间溯源跳转）
+	NamespaceName string `json:"namespaceName"`
 	// ChunkCount 文档被切分的知识分块数量
 	ChunkCount int `json:"chunkCount"`
 	// Format 文档来源格式（取值为 documentFormat 枚举类的值：markdown/txt/pdf/docx）
@@ -182,6 +185,40 @@ func KnowledgeDocumentListGet(c *gin.Context) {
 	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
+// KnowledgeSystemDocumentListGet 处理获取系统命名空间知识库文档列表的请求。
+// 与 KnowledgeDocumentListGet 同构，唯一区别是数据范围恒为内置系统命名空间
+// （base.SystemNamespace），不取自客户端命名空间，故为纯只读接口。
+func KnowledgeSystemDocumentListGet(c *gin.Context) {
+	var in views.KnowledgeDocumentListGetSearchIn
+	if err := defaults.Set(&in); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	var items []*KnowledgeDocumentListOut
+	if query, err := utils.BuildSearchCountQuery(
+		middlewares.GetCoreDatabase(c).Model(&modelsai.KnowledgeDocument{}).
+			Where("namespace_name = ?", base.SystemNamespace), &in); err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	} else if err := query.Find(&items).Error; err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	var total uint
+	if len(items) > 0 {
+		total = items[0].GetTotal()
+	}
+	projected := utils.ProjectSearchItems(items, &in, func(o **KnowledgeDocumentListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
+}
+
 // KnowledgeDocumentCreate 处理创建知识库文档的请求。
 // 先落库保存文档，随后调用知识库索引将其切块向量化；AI 功能未启用时返回 400，
 // 文档保留（chunkCount=0），待启用后经 reindex 接口重建索引。
@@ -235,6 +272,43 @@ func KnowledgeDocumentDetailGet(c *gin.Context) {
 	instance := modelsai.KnowledgeDocument{}
 	if err := middlewares.GetCoreDatabase(c).WithContext(c).
 		Where("id = ? AND namespace_name = ?", id, namespace).
+		First(&instance).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.ErrDefaultPageNotFound.AbortWithGinH(c)
+			return
+		}
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	response.SimpleOK.AbortWithGinW(c, KnowledgeDocumentDetailOut{
+		ID:           instance.ID,
+		Title:        instance.Title,
+		Content:      string(instance.Content.Value()),
+		ChunkCount:   instance.ChunkCount,
+		UseCount:     instance.UseCount,
+		LastUsedAt:   instance.LastUsedAt,
+		Hash:         instance.Hash.Digest(),
+		Format:       instance.Format,
+		Status:       instance.Status,
+		SizeBytes:    instance.SizeBytes,
+		OriginalName: instance.OriginalName,
+		ParseError:   instance.ParseError,
+		CreatedAt:    instance.CreatedAt,
+		UpdatedAt:    instance.UpdatedAt,
+	})
+}
+
+// KnowledgeSystemDocumentDetailGet 处理获取系统命名空间知识库文档详情的请求。
+// 与 KnowledgeDocumentDetailGet 同构，数据范围恒为内置系统命名空间（base.SystemNamespace），
+// 不存在时返回 404；纯只读接口。
+func KnowledgeSystemDocumentDetailGet(c *gin.Context) {
+	id, ok := views.GetUint64Param(c, "id")
+	if !ok {
+		return
+	}
+	instance := modelsai.KnowledgeDocument{}
+	if err := middlewares.GetCoreDatabase(c).WithContext(c).
+		Where("id = ? AND namespace_name = ?", id, base.SystemNamespace).
 		First(&instance).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
@@ -531,6 +605,74 @@ func KnowledgeDocumentChunksGet(c *gin.Context) {
 	db := middlewares.GetCoreDatabase(c)
 	doc := modelsai.KnowledgeDocument{}
 	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, namespace).First(&doc).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			response.ErrDefaultPageNotFound.AbortWithGinH(c)
+			return
+		}
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	overview, err := ai.BuildChunkOverview(c, db, middlewares.GetAi(c).Params, &doc)
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	out := KnowledgeDocumentChunksOut{
+		Summary: KnowledgeDocumentIndexSummaryOut{
+			ChunkCount:       overview.Summary.ChunkCount,
+			ContentChars:     overview.Summary.ContentChars,
+			ChunkCharsTotal:  overview.Summary.ChunkCharsTotal,
+			ChunkCharsAvg:    overview.Summary.ChunkCharsAvg,
+			ChunkCharsMin:    overview.Summary.ChunkCharsMin,
+			ChunkCharsMax:    overview.Summary.ChunkCharsMax,
+			HeadingPathCount: overview.Summary.HeadingPathCount,
+			AtomicChunkCount: overview.Summary.AtomicChunkCount,
+			ChunkSize:        overview.Summary.ChunkSize,
+			ChunkOverlap:     overview.Summary.ChunkOverlap,
+			Indexed:          overview.Summary.Indexed,
+			Stale:            overview.Summary.Stale,
+			IndexedAt:        overview.Summary.IndexedAt,
+			Hash:             overview.Summary.Hash,
+		},
+		// 空数组而非 null，保证前端拿到稳定结构
+		Chunks: make([]KnowledgeDocumentChunkOut, 0, len(overview.Chunks)),
+	}
+	// 向量模型取自运行时快照的 embedding 档位绑定（未绑定时留空）
+	if info, ok := middlewares.GetAiRuntime(c).Snapshot().Slots()[modelsai.SlotEmbedding]; ok {
+		out.Summary.EmbeddingModel = info.Model
+	}
+	// 向量维度取 embedding 列的实际维度（表或列不可读时记 0），与状态接口共用同一读取来源
+	if n, found, err := ai.ChunkEmbeddingDimension(c, db); err == nil && found {
+		out.Summary.EmbeddingDimensions = n
+	}
+	for _, chunk := range overview.Chunks {
+		kinds := make([]string, 0, len(chunk.Kinds))
+		for _, kind := range chunk.Kinds {
+			kinds = append(kinds, string(kind))
+		}
+		out.Chunks = append(out.Chunks, KnowledgeDocumentChunkOut{
+			Index:       chunk.Index,
+			HeadingPath: chunk.HeadingPath,
+			Content:     chunk.Content,
+			Chars:       chunk.Chars,
+			Lines:       chunk.Lines,
+			Kinds:       kinds,
+		})
+	}
+	response.SimpleOK.AbortWithGinW(c, out)
+}
+
+// KnowledgeSystemDocumentChunksGet 处理获取系统命名空间知识库文档分块明细的请求。
+// 与 KnowledgeDocumentChunksGet 同构，数据范围恒为内置系统命名空间（base.SystemNamespace），
+// 不存在时返回 404；纯只读接口。
+func KnowledgeSystemDocumentChunksGet(c *gin.Context) {
+	id, ok := views.GetUint64Param(c, "id")
+	if !ok {
+		return
+	}
+	db := middlewares.GetCoreDatabase(c)
+	doc := modelsai.KnowledgeDocument{}
+	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", id, base.SystemNamespace).First(&doc).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
 			return

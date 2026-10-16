@@ -33,6 +33,9 @@
 - [func KnowledgeDocumentReindex\(c \*gin.Context\)](<#KnowledgeDocumentReindex>)
 - [func KnowledgeDocumentUpdate\(c \*gin.Context\)](<#KnowledgeDocumentUpdate>)
 - [func KnowledgeDocumentUpload\(c \*gin.Context\)](<#KnowledgeDocumentUpload>)
+- [func KnowledgeSystemDocumentChunksGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentChunksGet>)
+- [func KnowledgeSystemDocumentDetailGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentDetailGet>)
+- [func KnowledgeSystemDocumentListGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentListGet>)
 - [func RegisterRoutes\(ctx \*views.RegisterContext\)](<#RegisterRoutes>)
 - [func RetrievalDryRunStream\(c \*gin.Context\)](<#RetrievalDryRunStream>)
 - [func RetrievalOptions\(c \*gin.Context\)](<#RetrievalOptions>)
@@ -43,6 +46,7 @@
 - [type AgentMemoryItemOut](<#AgentMemoryItemOut>)
 - [type AgentMemoryListOut](<#AgentMemoryListOut>)
 - [type AgentMemoryStatusIn](<#AgentMemoryStatusIn>)
+- [type AgentMessageCompressOut](<#AgentMessageCompressOut>)
 - [type AgentMessageItemOut](<#AgentMessageItemOut>)
 - [type AgentMessageListOut](<#AgentMessageListOut>)
 - [type AgentMessageTruncateIn](<#AgentMessageTruncateIn>)
@@ -262,7 +266,7 @@ func AgentToolResult(c *gin.Context)
 AgentToolResult 处理回传客户端工具调用结果并续跑挂起运行的请求（SSE，路由 /agent/:sessionID/tool\-result）。 挂起运行由 Agent 命中 client 来源工具时落库，本接口把前端在用户自身凭据下、经人工审批后得到的 执行结果回灌，从中断处续跑。流程：
 
 1. 校验命名空间、会话 ID、AI 功能与会话归属（404 语义同其它接口，避免泄露资源存在性）；
-2. 绑定请求体（须覆盖挂起时下发的全部 callId；同一轮多个调用一次性回传）；
+2. 绑定请求体（须覆盖挂起时下发的全部 callID；同一轮多个调用一次性回传）；
 3. 调用 ResumeRun 认领运行现场（校验归属/状态/过期并原子消费）并重建续跑流；
 4. 仅当 ResumeRun 成功后才构造 SSE 写手：NewSSEWriter 一旦构造即写入响应头，此后无法再返回 JSON 错误，故失败时按 errors.Is 映射业务码以 JSON 中断（此时尚未构造 SSE 写手）；
 5. 成功后以与流式生成一致的事件语义透传续跑输出（delta/stage/done），再次命中 client 工具时 再次下发 tool\_request 并以 io.EOF 正常结束。
@@ -353,6 +357,33 @@ func KnowledgeDocumentUpload(c *gin.Context)
 ```
 
 KnowledgeDocumentUpload 处理导入知识库文档（multipart/form\-data）的请求。 字段：title（可选，缺省取文件名去扩展名）、file（必填，必须为最后一个表单部分）。 处理顺序：请求体限流 → 流式解析表单 → docconv.Detect 做唯一权威格式校验 → AI 启用校验 → 插入 pending 文档行 → 流式加密上传原件并统计字节数 → 回填 size\_bytes/object\_key → 投递解析任务。任一步失败按「DB 行 ↔ S3 原件共存亡」回滚已产生的副作用，并返回按请求语言本地化的错误。
+
+<a name="KnowledgeSystemDocumentChunksGet"></a>
+## func KnowledgeSystemDocumentChunksGet
+
+```go
+func KnowledgeSystemDocumentChunksGet(c *gin.Context)
+```
+
+KnowledgeSystemDocumentChunksGet 处理获取系统命名空间知识库文档分块明细的请求。 与 KnowledgeDocumentChunksGet 同构，数据范围恒为内置系统命名空间（base.SystemNamespace）， 不存在时返回 404；纯只读接口。
+
+<a name="KnowledgeSystemDocumentDetailGet"></a>
+## func KnowledgeSystemDocumentDetailGet
+
+```go
+func KnowledgeSystemDocumentDetailGet(c *gin.Context)
+```
+
+KnowledgeSystemDocumentDetailGet 处理获取系统命名空间知识库文档详情的请求。 与 KnowledgeDocumentDetailGet 同构，数据范围恒为内置系统命名空间（base.SystemNamespace）， 不存在时返回 404；纯只读接口。
+
+<a name="KnowledgeSystemDocumentListGet"></a>
+## func KnowledgeSystemDocumentListGet
+
+```go
+func KnowledgeSystemDocumentListGet(c *gin.Context)
+```
+
+KnowledgeSystemDocumentListGet 处理获取系统命名空间知识库文档列表的请求。 与 KnowledgeDocumentListGet 同构，唯一区别是数据范围恒为内置系统命名空间 （base.SystemNamespace），不取自客户端命名空间，故为纯只读接口。
 
 <a name="RegisterRoutes"></a>
 ## func RegisterRoutes
@@ -522,6 +553,22 @@ type AgentMemoryStatusIn struct {
 }
 ```
 
+<a name="AgentMessageCompressOut"></a>
+## type AgentMessageCompressOut
+
+AgentMessageCompressOut 定义消息所锚定的历史压缩记录展示项：仅承载前端回显所需的最小字段， 不含摘要全文与游标本身。
+
+```go
+type AgentMessageCompressOut struct {
+    // Reason 触发本次推进的原因（rolling 静默滚动 / auto 自动压缩 / manual 手动压缩）
+    Reason string `json:"reason"`
+    // TokensBefore 推进前会话上下文占用 token（三种原因均为真实值）
+    TokensBefore int `json:"tokensBefore"`
+    // FoldedCount 本次折叠进摘要的消息条数（三种原因均为真实条数）
+    FoldedCount int `json:"foldedCount"`
+}
+```
+
 <a name="AgentMessageItemOut"></a>
 ## type AgentMessageItemOut
 
@@ -549,6 +596,12 @@ type AgentMessageItemOut struct {
     TotalTokens int `json:"totalTokens"`
     // ElapsedMs 本轮助手回答的总耗时（毫秒，用户消息为 0）
     ElapsedMs int64 `json:"elapsedMs"`
+    // Phase 本条助手消息所属运行的生命周期终态阶段（done/failed/cancelled），空表示尚未终结
+    // （用户消息与在途运行的阶段性落库行）；前端据 failed/cancelled 展示「本轮被中断」提示
+    Phase modelsai.AgentRunPhase `json:"phase,omitempty"`
+    // Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
+    // 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
+    Compress *AgentMessageCompressOut `json:"compress,omitempty"`
     // CreatedAt 创建时间
     CreatedAt time.Time `json:"createdAt"`
 }
@@ -862,7 +915,7 @@ AgentToolResultIn 定义恢复挂起运行、回传客户端工具调用结果�
 
 ```go
 type AgentToolResultIn struct {
-    // Results 本次回传的执行结果列表；须覆盖挂起时下发的全部 callId（缺失者按「未提供结果」回灌）
+    // Results 本次回传的执行结果列表；须覆盖挂起时下发的全部 callID（缺失者按「未提供结果」回灌）
     Results []AgentToolResultItemIn `json:"results" binding:"required,dive"`
 }
 ```
@@ -870,7 +923,7 @@ type AgentToolResultIn struct {
 <a name="AgentToolResultItemIn"></a>
 ## type AgentToolResultItemIn
 
-AgentToolResultItemIn 定义单条客户端工具调用结果：与挂起时下发的 tool\_request 按 callId 对应。
+AgentToolResultItemIn 定义单条客户端工具调用结果：与挂起时下发的 tool\_request 按 callID 对应。
 
 ```go
 type AgentToolResultItemIn struct {
@@ -1069,6 +1122,8 @@ type KnowledgeDocumentItemOut struct {
     ID  uint `json:"id"`
     // Title 文档标题
     Title string `json:"title"`
+    // NamespaceName 文档所属命名空间名（供前端按来源命名空间溯源跳转）
+    NamespaceName string `json:"namespaceName"`
     // ChunkCount 文档被切分的知识分块数量
     ChunkCount int `json:"chunkCount"`
     // Format 文档来源格式（取值为 documentFormat 枚举类的值：markdown/txt/pdf/docx）

@@ -3365,6 +3365,10 @@ fieldName = "title"
 column = "title"
 
 [[KnowledgeDocumentListGet.selectFields]]
+fieldName = "namespaceName"
+column = "namespace_name"
+
+[[KnowledgeDocumentListGet.selectFields]]
 fieldName = "chunkCount"
 column = "chunk_count"
 

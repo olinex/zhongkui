@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"net"
+	"net/netip"
 	"strings"
 
 	"gorm.io/gorm/schema"
@@ -282,4 +283,132 @@ func (i *IPv6Addr) Scan(value any) error {
 	}
 	*i = IPv6Addr(ip.To16())
 	return nil
+}
+
+// CIDR 是以 netip.Prefix 为底层的 IP 网段类型，支持数据库、JSON 与文本之间的序列化。
+//
+// 与只承载单个地址的 IPAddr 不同，CIDR 承载「网段」语义（如来源网段、允许清单），
+// 其解析统一归一化为掩码后的规范形式——掩码外的位一律置零，`10.0.0.1/24`
+// 归一化为 `10.0.0.0/24`：postgres 的 `cidr` 列拒绝「掩码外含非零位」的输入，
+// 归一化可保证写入在各后端一致。不含 `/` 的裸地址（如 `192.168.1.1`）按单主机
+// 网段处理，自动补 `/32` 或 `/128`，与 Gin `SetTrustedProxies` 的写法一致。
+type CIDR netip.Prefix
+
+// NewCIDR 从任意值（字符串、字节切片或 netip.Prefix）解析并返回一个 *CIDR。
+func NewCIDR(value any) (*CIDR, error) {
+	var c CIDR
+	if err := c.Scan(value); err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &c, nil
+}
+
+// String 返回网段的可读字符串表示；零值（无效网段）返回空字符串。
+func (c CIDR) String() string {
+	prefix := netip.Prefix(c)
+	if !prefix.IsValid() {
+		return ""
+	}
+	return prefix.String()
+}
+
+// MarshalText 实现 encoding.TextMarshaler 接口，输出网段文本；零值输出空文本。
+func (c CIDR) MarshalText() ([]byte, error) {
+	return []byte(c.String()), nil
+}
+
+// UnmarshalText 实现 encoding.TextUnmarshaler 接口，从网段文本解析；空文本置为零值。
+func (c *CIDR) UnmarshalText(text []byte) error {
+	return c.Scan(string(text))
+}
+
+// UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析网段；null 或空值置为零值。
+func (c *CIDR) UnmarshalJSON(data []byte) error {
+	value := string(data)
+	if value == "null" || value == "" {
+		*c = CIDR{}
+		return nil
+	}
+	// 移除引号
+	return c.Scan(strings.Trim(value, "\""))
+}
+
+// MarshalJSON 实现 json.Marshaler 接口，将网段序列化为 JSON 字符串。
+func (c CIDR) MarshalJSON() ([]byte, error) {
+	return json.Marshal(c.String())
+}
+
+// GormDBDataType 返回该类型在 GORM 中对应的数据库列类型：postgres 为原生 CIDR 列，
+// clickhouse 无原生网段类型故落 String，其余为空。
+func (c CIDR) GormDBDataType(db *database.DB, field *schema.Field) string {
+	switch db.Dialector.Name() {
+	case "postgres":
+		return "CIDR"
+	case "clickhouse":
+		return "String"
+	default:
+		return ""
+	}
+}
+
+// Value 实现 driver.Valuer 接口，返回写入数据库的值（网段文本）；零值返回 nil。
+func (c CIDR) Value() (driver.Value, error) {
+	if !netip.Prefix(c).IsValid() {
+		return nil, nil
+	}
+	return c.String(), nil
+}
+
+// Scan 实现 sql.Scanner 接口，从数据库值解析网段；nil 或空文本置为零值。
+func (c *CIDR) Scan(value any) error {
+	if value == nil {
+		*c = CIDR{}
+		return nil
+	}
+	switch v := value.(type) {
+	case string:
+		return c.scanText(v)
+	case []byte:
+		return c.scanText(string(v))
+	case netip.Prefix:
+		if !v.IsValid() {
+			*c = CIDR{}
+			return nil
+		}
+		*c = CIDR(v.Masked())
+		return nil
+	default:
+		return errors.Newf(`Unsupport cidr value type: %T`, value)
+	}
+}
+
+// scanText 从网段文本解析：空文本置为零值，非法文本返回错误。
+func (c *CIDR) scanText(value string) error {
+	if value == "" {
+		*c = CIDR{}
+		return nil
+	}
+	prefix, err := parseCIDR(value)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	*c = CIDR(prefix)
+	return nil
+}
+
+// parseCIDR 把网段文本解析为归一化网段：含 `/` 时按 CIDR 解析，不含 `/` 时按
+// 单主机网段解析（补 `/32` 或 `/128`）；结果一律取掩码后的规范形式。
+func parseCIDR(value string) (netip.Prefix, error) {
+	if !strings.Contains(value, "/") {
+		addr, err := netip.ParseAddr(value)
+		if err != nil {
+			return netip.Prefix{}, errors.WithStack(err)
+		}
+		return netip.PrefixFrom(addr, addr.BitLen()).Masked(), nil
+	}
+	prefix, err := netip.ParsePrefix(value)
+	if err != nil {
+		return netip.Prefix{}, errors.WithStack(err)
+	}
+	return prefix.Masked(), nil
 }

@@ -198,9 +198,12 @@ $zk-editor-header-min-height: 24px;
 // ---------------------------------------------------------------------------
 // 面板表面
 //   弱化面板背景不透明度（代码块、键值行、预览区）
+//   抬升面板背景不透明度：叠加在弱化面板之上的次级容器（如输入框上方的待发提问条目），
+//   取比弱化面板更强的灰度以拉开层级
 // ---------------------------------------------------------------------------
 
 $zk-surface-subtle-opacity: 0.06;
+$zk-surface-raised-opacity: 0.1;
 
 // ---------------------------------------------------------------------------
 // 开关（Switch）轨道
@@ -304,6 +307,7 @@ $zk-shadow-md:
   --zk-editor-padding: #{$zk-editor-padding};
   --zk-editor-header-min-height: #{$zk-editor-header-min-height};
   --zk-surface-subtle-opacity: #{$zk-surface-subtle-opacity};
+  --zk-surface-raised-opacity: #{$zk-surface-raised-opacity};
   --zk-switch-track-opacity: #{$zk-switch-track-opacity};
   --zk-switch-disabled-opacity: #{$zk-switch-disabled-opacity};
   --zk-z-dialog: #{$zk-z-dialog};

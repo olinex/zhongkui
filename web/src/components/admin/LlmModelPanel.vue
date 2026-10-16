@@ -176,7 +176,7 @@
             />
           </v-col>
         </v-row>
-        <v-row density="compact">
+        <v-row density="compact" class="align-center">
           <v-col cols="6">
             <v-switch
               v-model="createEnabled"
@@ -362,7 +362,7 @@
             />
           </v-col>
         </v-row>
-        <v-row density="compact">
+        <v-row density="compact" class="align-center">
           <v-col cols="6">
             <v-switch
               v-model="updateEnabled"
@@ -657,14 +657,14 @@ const createAction = createForm.handleSubmit(async (values) => {
 });
 
 // ---- 编辑对话框 ----
-let editModelId = 0;
+let editModelID = 0;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<LlmModelDetailOut>(
     llmModelDetailGet(item.id as number),
     async (rsp) => {
-      editModelId = rsp.data.id;
+      editModelID = rsp.data.id;
       // 复位与回填同属「准备本次打开的数据」：resetForm 原子重置值 + 校验状态，再写入本次详情
       updateForm.resetForm({
         values: {
@@ -702,7 +702,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
 const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
-      llmModelUpdate(editModelId, {
+      llmModelUpdate(editModelID, {
         name: (values.name as string).trim(),
         baseURL: (values.baseURL as string).trim(),
         // 空串表示沿用原凭据（后端按留空处理）

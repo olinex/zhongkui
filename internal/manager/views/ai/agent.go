@@ -135,8 +135,25 @@ type AgentMessageItemOut struct {
 	TotalTokens int `json:"totalTokens"`
 	// ElapsedMs 本轮助手回答的总耗时（毫秒，用户消息为 0）
 	ElapsedMs int64 `json:"elapsedMs"`
+	// Phase 本条助手消息所属运行的生命周期终态阶段（done/failed/cancelled），空表示尚未终结
+	// （用户消息与在途运行的阶段性落库行）；前端据 failed/cancelled 展示「本轮被中断」提示
+	Phase modelsai.AgentRunPhase `json:"phase,omitempty"`
+	// Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
+	// 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
+	Compress *AgentMessageCompressOut `json:"compress,omitempty"`
 	// CreatedAt 创建时间
 	CreatedAt time.Time `json:"createdAt"`
+}
+
+// AgentMessageCompressOut 定义消息所锚定的历史压缩记录展示项：仅承载前端回显所需的最小字段，
+// 不含摘要全文与游标本身。
+type AgentMessageCompressOut struct {
+	// Reason 触发本次推进的原因（rolling 静默滚动 / auto 自动压缩 / manual 手动压缩）
+	Reason string `json:"reason"`
+	// TokensBefore 推进前会话上下文占用 token（三种原因均为真实值）
+	TokensBefore int `json:"tokensBefore"`
+	// FoldedCount 本次折叠进摘要的消息条数（三种原因均为真实条数）
+	FoldedCount int `json:"foldedCount"`
 }
 
 // AgentMessageListOut 定义 AI 助手会话消息列表输出。
@@ -341,6 +358,7 @@ func newAgentMessageItemOut(m *modelsai.AgentMessage) AgentMessageItemOut {
 		CompletionTokens: m.CompletionTokens,
 		TotalTokens:      m.TotalTokens,
 		ElapsedMs:        m.ElapsedMs,
+		Phase:            m.Phase,
 		CreatedAt:        m.CreatedAt,
 	}
 	if draft := m.DraftJSON.Value(); len(draft) > 0 {
@@ -731,9 +749,27 @@ func AgentMessageListGet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
+	// 历史压缩记录：取该会话的全部压缩检查点（含静默滚动 rolling），按压缩游标 upto_seq 归并——
+	// 游标等于某条消息 seq 即把该记录锚定到这条消息上。静默滚动推进不产生实时事件，故其记录仅在
+	// 刷新 / 重进会话时随历史回显。
+	checkpoints, err := comps.Sessions.ListCompactions(c, uint(id), userID)
+	if err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
+	compressBySeq := make(map[uint64]*AgentMessageCompressOut, len(checkpoints))
+	for _, cp := range checkpoints {
+		compressBySeq[cp.UptoSeq] = &AgentMessageCompressOut{
+			Reason:       cp.Reason,
+			TokensBefore: cp.TokensBefore,
+			FoldedCount:  cp.FoldedCount,
+		}
+	}
 	out := make(AgentMessageListOut, 0, len(messages))
 	for _, m := range messages {
-		out = append(out, newAgentMessageItemOut(m))
+		item := newAgentMessageItemOut(m)
+		item.Compress = compressBySeq[m.Seq]
+		out = append(out, item)
 	}
 	response.SimpleOK.AbortWithGinW(c, out)
 }

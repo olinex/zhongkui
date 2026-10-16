@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/viper"
 	"zhongkuisec.com/zhongkui/internal/pkg/config"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // PREFIX 是 API 管理层配置在 Viper 中的键前缀，
@@ -189,6 +190,12 @@ type Config struct {
 	// FrontendBaseURL 是前端站点的基础地址（含协议与端口），项目级配置，
 	// 用于构造外部可访问的前端链接（如密码重置链接）
 	FrontendBaseURL string `mapstructure:"frontendBaseURL" default:"http://127.0.0.1:8000" comment:"前端站点基础地址（含协议与端口），项目级配置"`
+	// TrustedProxies 是受信代理的 IP / 网段列表（serializer.CIDR），Gin 据此判定是否采信
+	// X-Forwarded-For 等代理头来推导客户端地址；默认空列表表示不信任任何代理，
+	// 此时 ClientIP 退化为 TCP 对端地址，反向代理部署时须显式填入代理网段。
+	// 元素按网段类型解析（裸地址补 /32 或 /128，掩码外的位归一化为零），
+	// 非法网段在配置提取阶段即报错，使启动失败而非带病运行
+	TrustedProxies []serializer.CIDR `mapstructure:"trustedProxies" default:"[]" comment:"受信代理 IP / 网段列表，默认空表示不信任任何代理（ClientIP 退化为 TCP 对端地址），反向代理部署时须显式填入代理网段"`
 	// Namespace 是多命名空间（多租户）识别配置
 	Namespace NamespaceConfig `mapstructure:"namespace" comment:"多命名空间（多租户）识别配置"`
 	// Auth 是 JWT 认证相关配置
@@ -203,6 +210,12 @@ type Config struct {
 type PasswordResetConfig struct {
 	// TokenTTL 是重置令牌的有效时长，过期后用户需重新发起申请
 	TokenTTL time.Duration `mapstructure:"tokenTTL" default:"30m" comment:"重置密码令牌有效时长，过期后需重新申请"`
+	// RateLimit 是同一请求来源地址在 RateLimitWindow 窗口内允许提交的忘记密码申请次数上限，
+	// 用于抬升账号枚举与撞库配对探测的成本——枚举会不断更换「账号名 + 邮箱」组合，
+	// 按组合计数无法生效，只有来源地址能对枚举总量形成约束
+	RateLimit int `mapstructure:"rateLimit" default:"5" comment:"同一请求来源地址在窗口内允许提交的忘记密码申请次数上限"`
+	// RateLimitWindow 是限流窗口时长，窗口届满后计数自动清零重新起算
+	RateLimitWindow time.Duration `mapstructure:"rateLimitWindow" default:"1h" comment:"忘记密码申请限流窗口时长"`
 }
 
 // ConfigMiddleware 创建一个将配置注入 Gin 上下文的中间件。

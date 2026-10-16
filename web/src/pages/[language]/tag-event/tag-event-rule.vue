@@ -1101,7 +1101,7 @@ const createAction = createForm.handleSubmit(async (values) => {
 });
 
 // ---- 编辑对话框 ----
-let editRuleId = 0;
+let editRuleID = 0;
 const editConditions = ref<ConditionDraft[]>([]);
 
 const addEditCondition = (): void => {
@@ -1136,7 +1136,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<TagEventRuleDetailOut>(
     tagEventRuleDetailGet(item.id),
     async (rsp) => {
-      editRuleId = rsp.data.id;
+      editRuleID = rsp.data.id;
       // 复位与回填同属「准备本次打开的数据」：完整枚举 defineField 字段，原子重置值 + 校验状态
       updateForm.resetForm({
         values: {
@@ -1197,7 +1197,7 @@ const itemUpdateAction = () => {
       return;
     }
     await getSimpleResponse(
-      tagEventRuleUpdate(editRuleId, {
+      tagEventRuleUpdate(editRuleID, {
         description: values.description,
         matchAll: values.matchAll,
         suppressWindow: values.suppressWindow * 60e9,

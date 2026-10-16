@@ -1,10 +1,13 @@
 <template>
   <v-navigation-drawer v-model="opened" location="right" temporary :width="drawerWidth">
     <div class="assistant-drawer d-flex flex-column h-100">
-      <!-- 左缘拖拽手柄：向左拖动即增宽（抽屉贴右缘），握把样式与通用手柄组件一致 -->
+      <!-- 左缘拖拽手柄：向左拖动即增宽（抽屉贴右缘），握把样式与通用手柄组件一致。
+           placement="outside"：8px 命中条越过抽屉边框贴到外侧，不再压住柜内内容；
+           代价是内容区须放开横向裁剪，见 <style> 中的 :deep(.v-navigation-drawer__content) -->
       <resize-handle
         v-model="drawerWidth"
         side="left"
+        placement="outside"
         :min="DRAWER_WIDTH_MIN"
         :max="maxDrawerWidth"
       />
@@ -58,7 +61,7 @@
             :key="s.id"
             class="session-row zk-row-hover"
             :class="{
-              'zk-row-selected': activeSessionId === s.id,
+              'zk-row-selected': activeSessionID === s.id,
               'zk-hairline-top': idx > 0,
             }"
             @click="pickSession(s.id)"
@@ -89,76 +92,353 @@
         </div>
       </section>
 
-      <!-- 消息区 -->
-      <div
-        v-if="!sessionListMode"
-        ref="messagesRef"
-        class="assistant-messages flex-grow-1 overflow-y-auto pa-3"
-      >
-        <!-- 空态提示：仅在没有会话且消息区为空时展示。待创建态下首条消息会在创建等待期
-             本地回显（见 echoUserQuery），此时消息区已有内容，不能再被空态提示顶掉 -->
+      <!-- 消息区：提问轨由 assistant-question-rail 自行绝对定位在抽屉左缘（整高、不随正文滚动），
+           故这里只有滚动正文；ps-6(24px) 让出 8px 轨 + 8px 间隙，余量 8px 与全抽屉的 8px
+           内边距观感一致（左缘拖拽手柄已改为贴到抽屉外侧，不再占这里的横向空间）
+           少于两个提问时轨道不渲染，左内边距仍保留（值不足以按提问数变化） -->
+      <div v-if="!sessionListMode" class="assistant-conversation d-flex flex-grow-1 min-h-0">
+        <assistant-question-rail
+          v-if="userQuestions.length >= 2"
+          :questions="userQuestions"
+          :active-key="activeQuestionKey"
+          :at-bottom="messagesAtBottom"
+          :panel-max-width="questionPanelMaxWidth"
+          @select="scrollToTurn"
+          @bottom="scrollToBottom"
+        />
         <div
-          v-if="!activeSessionId && messages.length === 0"
-          class="d-flex flex-column align-center justify-center h-100 text-center"
+          ref="messagesRef"
+          class="assistant-messages flex-grow-1 overflow-y-auto py-3 pe-3 ps-6"
+          @scroll.passive="updateActiveQuestion"
         >
-          <div class="zk-hint">
-            {{
-              $t(
-                draftMode || sessions.length === 0
-                  ? "page.aiAssistant.hintFirstQuery"
-                  : "page.aiAssistant.hintSelectSession",
-              )
-            }}
-          </div>
-        </div>
-        <template v-else>
+          <!-- 空态提示：仅在没有会话且消息区为空时展示。待创建态下首条消息会在创建等待期
+             本地回显（见 echoUserQuery），此时消息区已有内容，不能再被空态提示顶掉 -->
           <div
-            v-for="m in messages"
-            :key="m.key"
-            class="assistant-turn d-flex flex-column mb-4"
-            :class="m.role === 'user' ? 'assistant-turn--user' : 'assistant-turn--assistant'"
+            v-if="!activeSessionID && messages.length === 0"
+            class="d-flex flex-column align-center justify-center h-100 text-center"
           >
-            <!-- 仅用户消息用气泡框包裹；助手回答内容多，气泡会把正文压成窄长条，
-                 故改为直接铺满消息区宽度（见 .assistant-bubble--assistant） -->
+            <div class="zk-hint">
+              {{
+                $t(
+                  draftMode || sessions.length === 0
+                    ? "page.aiAssistant.hintFirstQuery"
+                    : "page.aiAssistant.hintSelectSession",
+                )
+              }}
+            </div>
+          </div>
+          <template v-else>
             <div
-              class="assistant-bubble"
-              :class="
-                m.role === 'user'
-                  ? 'zk-chat-bubble bg-primary zk-chat-bubble--user assistant-bubble--user'
-                  : 'assistant-bubble--assistant'
-              "
+              v-for="m in messages"
+              :key="m.key"
+              :ref="(el) => setTurnRef(m.key, el)"
+              class="assistant-turn d-flex flex-column mb-4"
+              :class="m.role === 'user' ? 'assistant-turn--user' : 'assistant-turn--assistant'"
             >
-              <div class="d-flex align-center mb-1">
-                <span class="zk-hint">
-                  {{ $t(m.role === "user" ? "page.aiAssistant.me" : "page.aiAssistant.assistant") }}
-                </span>
-                <v-spacer />
-                <span v-if="m.streaming" class="zk-hint">
-                  {{ $t("page.aiAssistant.generating") }}
-                </span>
-              </div>
-              <!-- 工具调用阶段：图标 + 阶段名 + 工具名 + 耗时/失败原因 -->
-              <div v-if="m.stages && m.stages.length > 0" class="assistant-stages">
-                <div v-for="s in m.stages" :key="s.key" class="assistant-stage">
-                  <v-icon
-                    :icon="stageIconOf(s, m.streaming === true)"
-                    :color="stageColorOf(s, m.streaming === true)"
-                    size="small"
-                    :class="{ 'mdi-spin': m.streaming === true && s.status === 'start' }"
-                  />
-                  <span class="text-body-medium">{{ stageLabelOf(s.stage) }}</span>
-                  <span v-if="s.tool" class="zk-hint font-mono">{{ s.tool }}</span>
+              <!-- 仅用户消息用气泡框包裹；助手回答内容多，气泡会把正文压成窄长条，
+                 故改为直接铺满消息区宽度（见 .assistant-bubble--assistant） -->
+              <div
+                class="assistant-bubble"
+                :class="
+                  m.role === 'user'
+                    ? 'zk-chat-bubble bg-primary zk-chat-bubble--user assistant-bubble--user'
+                    : 'assistant-bubble--assistant'
+                "
+              >
+                <div class="d-flex align-center mb-1">
+                  <span class="zk-hint">
+                    {{
+                      $t(m.role === "user" ? "page.aiAssistant.me" : "page.aiAssistant.assistant")
+                    }}
+                  </span>
                   <v-spacer />
-                  <span v-if="s.elapsedMs > 0 || s.error" class="zk-hint">
-                    {{ stageMetaTextOf(s) }}
+                  <span v-if="m.streaming" class="zk-hint">
+                    {{
+                      $t(
+                        awaitingFirstResponse(m)
+                          ? "page.aiAssistant.awaitingResponse"
+                          : "page.aiAssistant.generating",
+                      )
+                    }}
                   </span>
                 </div>
+                <!-- 工具调用阶段：按轮聚组展示——该轮思考折叠块渲染一次、置于组上方，组内各调用行自上而下
+                   成行；一轮内并发多次调用时以并行计数与左侧细线框成一组，体现「一次思考 → N 次并行调用」 -->
+                <div v-if="m.stages && m.stages.length > 0" class="assistant-stages">
+                  <template v-for="g in stageGroupsOf(m)" :key="g.key">
+                    <div v-if="g.reasoningText" class="zk-panel assistant-reasoning">
+                      <v-expansion-panels>
+                        <v-expansion-panel :value="REASONING_PANEL">
+                          <expansion-panel-title
+                            icon="mdi-brain"
+                            size="sm"
+                            :title="$t('page.aiAssistant.reasoningDone')"
+                          />
+                          <v-expansion-panel-text>
+                            <div class="assistant-reasoning-body">
+                              <assistant-markdown :content="g.reasoningText" />
+                            </div>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
+                    <div
+                      class="assistant-stage-group"
+                      :class="{ 'assistant-stage-group--parallel': g.stages.length > 1 }"
+                    >
+                      <div
+                        v-if="g.stages.length > 1"
+                        class="zk-hint assistant-stage-parallel-label"
+                      >
+                        {{ $t("page.aiAssistant.parallelCalls", { count: g.stages.length }) }}
+                      </div>
+                      <div v-for="s in g.stages" :key="s.key" class="assistant-stage">
+                        <v-icon
+                          :icon="stageIconOf(s, m.streaming === true)"
+                          :color="stageColorOf(s, m.streaming === true)"
+                          size="small"
+                          :class="{ 'mdi-spin': m.streaming === true && s.status === 'start' }"
+                        />
+                        <span class="text-body-medium">{{ stageLabelOf(s.stage) }}</span>
+                        <span v-if="s.tool" class="zk-hint font-mono">{{ s.tool }}</span>
+                        <v-spacer />
+                        <span v-if="s.elapsedMs > 0 || s.error" class="zk-hint">
+                          {{ stageMetaTextOf(s) }}
+                        </span>
+                      </div>
+                    </div>
+                  </template>
+                </div>
+                <!-- 思考过程折叠区块（末段，即产出回答前那一轮）：展示模型的思考过程，复用统一 Markdown
+                   渲染入口；流式期间默认展开，结束后自动折叠，用户可手动切换。此前各轮的思考块已渲染在
+                   对应调用行上方（见上）。
+                   标题不另设文案：状态（思考中… / 思考完成）本身已说明该区块的主体内容，
+                   再叠一句「思考过程」属重复信息，故直接以状态作标题、不再挂说明行 -->
+                <div
+                  v-if="m.role === 'assistant' && topReasoningText(m)"
+                  class="zk-panel assistant-reasoning"
+                >
+                  <v-expansion-panels
+                    :model-value="m.reasoningExpanded ? REASONING_PANEL : ''"
+                    @update:model-value="(v: unknown) => setReasoningExpanded(m, v)"
+                  >
+                    <v-expansion-panel :value="REASONING_PANEL">
+                      <expansion-panel-title
+                        icon="mdi-brain"
+                        size="sm"
+                        :title="
+                          m.reasoningStreaming
+                            ? $t('page.aiAssistant.reasoningStreaming')
+                            : $t('page.aiAssistant.reasoningDone')
+                        "
+                      >
+                        <!-- 思考来源说明：当前档位模型未配置思考开关（开关已隐藏），却仍产出思考内容，
+                           说明是该模型默认开启思考。以警示图标 + 悬浮提示解释来源，并指引管理员在
+                           「LLM 模型」高级配置中填写思考开关字段与开 / 关取值，从而手动控制思考 -->
+                        <v-tooltip
+                          v-if="!slotThinkingToggle"
+                          location="top"
+                          :max-width="REASONING_NOTE_MAX_WIDTH"
+                          :text="$t('page.aiAssistant.reasoningDefaultOnHint')"
+                        >
+                          <template #activator="{ props: reasonNoteProps }">
+                            <v-icon
+                              v-bind="reasonNoteProps"
+                              icon="mdi-alert-circle-outline"
+                              size="x-small"
+                              color="warning"
+                            />
+                          </template>
+                        </v-tooltip>
+                      </expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <div class="assistant-reasoning-body">
+                          <assistant-markdown
+                            :content="topReasoningText(m)"
+                            :streaming="m.reasoningStreaming === true"
+                          />
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </div>
+                <!-- 助手消息渲染 Markdown 富文本；用户消息按纯文本展示 -->
+                <assistant-markdown
+                  v-if="m.role === 'assistant' && m.content"
+                  :content="m.content"
+                  :streaming="m.streaming === true"
+                />
+                <div v-else-if="m.content" class="assistant-plain text-body-medium">
+                  {{ m.content }}
+                </div>
+                <!-- 运行未正常结束提示：助手消息 phase 为 failed / cancelled 时展示，按阶段取文案
+                   （由前端 i18n 提供，不落库、不混入正文）；以警示图标 + 弱化底与正文区分 -->
+                <div
+                  v-if="interruptedTextOf(m)"
+                  class="assistant-interrupted zk-panel--subtle mt-2"
+                >
+                  <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
+                  <span class="zk-hint ms-2">{{ interruptedTextOf(m) }}</span>
+                </div>
+                <!-- 人工审批面板：模型请求调用平台原生接口，逐条展示并需用户批准执行 / 拒绝 -->
+                <div
+                  v-if="m.pendingCalls && m.pendingCalls.length > 0"
+                  class="zk-hairline-top mt-2 pt-2"
+                >
+                  <div class="d-flex align-center mb-1">
+                    <v-icon icon="mdi-shield-key-outline" size="small" class="me-1" />
+                    <span class="zk-label-caps">{{ $t("page.aiAssistant.approvalTitle") }}</span>
+                    <v-spacer />
+                    <span v-if="m.awaitingApproval" class="zk-hint">
+                      {{ $t("page.aiAssistant.approvalWaiting") }}
+                    </span>
+                  </div>
+                  <div
+                    v-for="c in m.pendingCalls"
+                    :key="c.callID"
+                    class="zk-panel--subtle pa-2 mb-2"
+                  >
+                    <div class="d-flex align-center">
+                      <span class="zk-mono-emphasis">{{ c.toolName }}</span>
+                      <!-- 审核重要级徽章（label 经枚举类 auditLevel 按当前语言渲染） -->
+                      <v-chip
+                        v-if="c.auditLevel"
+                        size="x-small"
+                        color="info"
+                        variant="tonal"
+                        class="ms-2"
+                      >
+                        {{ enumLabelOf(EnumClass.auditLevel, c.auditLevel) }}
+                      </v-chip>
+                      <v-spacer />
+                      <!-- 免审批调用：自动批准标识，不展示批准 / 拒绝按钮 -->
+                      <v-chip
+                        v-if="c.approvalRequired === false"
+                        size="x-small"
+                        color="info"
+                        class="me-2"
+                      >
+                        {{ $t("page.aiAssistant.autoApproved") }}
+                      </v-chip>
+                      <v-chip v-if="c.decision === 'approved'" size="x-small" color="success">
+                        {{ $t("page.aiAssistant.approved") }}
+                      </v-chip>
+                      <v-chip v-else-if="c.decision === 'rejected'" size="x-small" color="error">
+                        {{ $t("page.aiAssistant.rejected") }}
+                      </v-chip>
+                    </div>
+                    <!-- 后端执行的调用：前端仅审批，工具由服务端执行，用户无需（也无法）本地执行 -->
+                    <div v-if="c.execOwner === 'backend'" class="zk-hint mt-1">
+                      {{ $t("page.aiAssistant.approvalBackendNote") }}
+                    </div>
+                    <template v-if="c.arguments">
+                      <div class="zk-hint mt-1">{{ $t("page.aiAssistant.approvalParams") }}</div>
+                      <div class="zk-code-preview font-mono assistant-approval-block">
+                        {{ c.arguments }}
+                      </div>
+                    </template>
+                    <div v-if="c.error" class="zk-error-text mt-1">{{ c.error }}</div>
+                    <div
+                      v-else-if="c.result"
+                      class="zk-code-preview font-mono assistant-approval-block"
+                    >
+                      {{ c.result }}
+                    </div>
+                    <div v-if="!c.decision" class="d-flex mt-2">
+                      <v-btn
+                        size="small"
+                        variant="tonal"
+                        color="primary"
+                        @click="approveCall(m, c)"
+                      >
+                        {{ $t("page.aiAssistant.approve") }}
+                      </v-btn>
+                      <v-btn size="small" variant="text" class="ms-2" @click="rejectCall(m, c)">
+                        {{ $t("page.aiAssistant.reject") }}
+                      </v-btn>
+                    </div>
+                  </div>
+                </div>
+                <template v-if="citationsOf(m).length > 0">
+                  <v-divider class="my-2" />
+                  <div class="zk-label-caps mb-1">{{ $t("page.aiAssistant.citations") }}</div>
+                  <v-list class="bg-transparent" density="compact">
+                    <v-list-item v-for="(c, idx) in citationsOf(m)" :key="idx">
+                      <v-list-item-title class="text-body-medium">
+                        <!-- 来源命名空间可溯源（含历史消息缺失该字段的降级）时标题渲染为链接，
+                           直接跳转文档详情页；缺失则保持纯文本，避免产生无效跳转 -->
+                        <a
+                          v-if="c.namespaceName"
+                          class="assistant-citation-link"
+                          :href="knowledgeDocumentHref(c.documentID, c.namespaceName)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          :title="$t('page.aiAssistant.citationOpen')"
+                        >
+                          {{ c.title }}
+                        </a>
+                        <template v-else>{{ c.title }}</template>
+                      </v-list-item-title>
+                      <v-list-item-subtitle class="assistant-citation-text">
+                        {{ c.content }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                </template>
+              </div>
+              <!-- 助手回答快捷操作：回答完（非生成中）后常驻展示——助手内容多且已去掉气泡，
+                 操作不必再靠悬停去发现；复制整段回答 / 重试本轮 / 以本轮为结尾分支出新会话 -->
+              <div
+                v-if="m.role === 'assistant' && !m.streaming"
+                class="assistant-message-actions assistant-message-actions--persistent"
+              >
+                <!-- 用量说明置于操作图标之后、同一行：末尾先给三个操作，再补「花了多少 token、多久」 -->
+                <div class="assistant-message-buttons">
+                  <v-btn
+                    icon="mdi-content-copy"
+                    size="small"
+                    variant="text"
+                    :title="$t('page.aiAssistant.copyMessage')"
+                    :aria-label="$t('page.aiAssistant.copyMessage')"
+                    @click="copyMessage(m)"
+                  />
+                  <v-btn
+                    icon="mdi-refresh"
+                    size="small"
+                    variant="text"
+                    :disabled="busy"
+                    :title="$t('page.aiAssistant.retryMessage')"
+                    :aria-label="$t('page.aiAssistant.retryMessage')"
+                    @click="retryMessage(m)"
+                  />
+                  <v-btn
+                    icon="mdi-source-branch"
+                    size="small"
+                    variant="text"
+                    :disabled="busy"
+                    :title="$t('page.aiAssistant.branchMessage')"
+                    :aria-label="$t('page.aiAssistant.branchMessage')"
+                    @click="branchMessage(m)"
+                  />
+                  <v-btn
+                    icon="mdi-archive-arrow-down-outline"
+                    size="small"
+                    variant="text"
+                    :disabled="busy || m.compress?.phase === 'running'"
+                    :title="$t('page.aiAssistant.compressToHere')"
+                    :aria-label="$t('page.aiAssistant.compressToHere')"
+                    @click="compactToHere(m)"
+                  />
+                </div>
+                <span v-if="usageTextOf(m)" class="zk-hint">{{ usageTextOf(m) }}</span>
               </div>
               <!-- 上下文压缩展示块：自动压缩挂本轮助手消息、手动压缩挂被点击的助手消息，
-                   仅当该消息带压缩态时展示，以弱化底与边界和正文区分 -->
+                 仅当该消息带压缩态时展示。属运行元信息（手动压缩语义即「压缩到此」），
+                 故置于该轮快捷操作行下方、作为整轮最后一条提示——既不与正文 / 思考块抢位置，
+                 也让操作行紧贴它所操作的正文 -->
               <div
                 v-if="m.compress"
-                class="assistant-compress zk-panel--subtle"
+                class="assistant-compress zk-panel--subtle mt-2"
                 :class="{ 'assistant-compress--failed': m.compress.phase === 'failed' }"
               >
                 <div class="d-flex align-center">
@@ -178,232 +458,43 @@
                   {{ m.compress.draft }}
                 </div>
               </div>
-              <!-- 思考过程折叠区块：展示模型的思考过程，复用统一 Markdown 渲染入口；
-                   流式期间默认展开，结束后自动折叠，用户可手动切换。
-                   标题不另设文案：状态（思考中… / 思考完成）本身已说明该区块的主体内容，
-                   再叠一句「思考过程」属重复信息，故直接以状态作标题、不再挂说明行 -->
-              <div
-                v-if="m.role === 'assistant' && m.reasoning"
-                class="zk-panel assistant-reasoning"
-              >
-                <v-expansion-panels
-                  :model-value="m.reasoningExpanded ? REASONING_PANEL : ''"
-                  @update:model-value="(v: unknown) => setReasoningExpanded(m, v)"
-                >
-                  <v-expansion-panel :value="REASONING_PANEL">
-                    <expansion-panel-title
-                      icon="mdi-brain"
-                      size="sm"
-                      :title="
-                        m.reasoningStreaming
-                          ? $t('page.aiAssistant.reasoningStreaming')
-                          : $t('page.aiAssistant.reasoningDone')
-                      "
-                    >
-                      <!-- 思考来源说明：当前档位模型未配置思考开关（开关已隐藏），却仍产出思考内容，
-                           说明是该模型默认开启思考。以警示图标 + 悬浮提示解释来源，并指引管理员在
-                           「LLM 模型」高级配置中填写思考开关字段与开 / 关取值，从而手动控制思考 -->
-                      <v-tooltip
-                        v-if="!slotThinkingToggle"
-                        location="top"
-                        :max-width="REASONING_NOTE_MAX_WIDTH"
-                        :text="$t('page.aiAssistant.reasoningDefaultOnHint')"
-                      >
-                        <template #activator="{ props: reasonNoteProps }">
-                          <v-icon
-                            v-bind="reasonNoteProps"
-                            icon="mdi-alert-circle-outline"
-                            size="x-small"
-                            color="warning"
-                          />
-                        </template>
-                      </v-tooltip>
-                    </expansion-panel-title>
-                    <v-expansion-panel-text>
-                      <assistant-markdown
-                        :content="m.reasoning"
-                        :streaming="m.reasoningStreaming === true"
-                      />
-                    </v-expansion-panel-text>
-                  </v-expansion-panel>
-                </v-expansion-panels>
-              </div>
-              <!-- 助手消息渲染 Markdown 富文本；用户消息按纯文本展示 -->
-              <assistant-markdown
-                v-if="m.role === 'assistant' && m.content"
-                :content="m.content"
-                :streaming="m.streaming === true"
-              />
-              <div v-else-if="m.content" class="assistant-plain text-body-medium">
-                {{ m.content }}
-              </div>
-              <!-- 人工审批面板：模型请求调用平台原生接口，逐条展示并需用户批准执行 / 拒绝 -->
-              <div
-                v-if="m.pendingCalls && m.pendingCalls.length > 0"
-                class="zk-hairline-top mt-2 pt-2"
-              >
-                <div class="d-flex align-center mb-1">
-                  <v-icon icon="mdi-shield-key-outline" size="small" class="me-1" />
-                  <span class="zk-label-caps">{{ $t("page.aiAssistant.approvalTitle") }}</span>
-                  <v-spacer />
-                  <span v-if="m.awaitingApproval" class="zk-hint">
-                    {{ $t("page.aiAssistant.approvalWaiting") }}
-                  </span>
-                </div>
-                <div v-for="c in m.pendingCalls" :key="c.callID" class="zk-panel--subtle pa-2 mb-2">
-                  <div class="d-flex align-center">
-                    <span class="zk-mono-emphasis">{{ c.toolName }}</span>
-                    <!-- 审核重要级徽章（label 经枚举类 auditLevel 按当前语言渲染） -->
-                    <v-chip
-                      v-if="c.auditLevel"
-                      size="x-small"
-                      color="info"
-                      variant="tonal"
-                      class="ms-2"
-                    >
-                      {{ enumLabelOf(EnumClass.auditLevel, c.auditLevel) }}
-                    </v-chip>
-                    <v-spacer />
-                    <!-- 免审批调用：自动批准标识，不展示批准 / 拒绝按钮 -->
-                    <v-chip
-                      v-if="c.approvalRequired === false"
-                      size="x-small"
-                      color="info"
-                      class="me-2"
-                    >
-                      {{ $t("page.aiAssistant.autoApproved") }}
-                    </v-chip>
-                    <v-chip v-if="c.decision === 'approved'" size="x-small" color="success">
-                      {{ $t("page.aiAssistant.approved") }}
-                    </v-chip>
-                    <v-chip v-else-if="c.decision === 'rejected'" size="x-small" color="error">
-                      {{ $t("page.aiAssistant.rejected") }}
-                    </v-chip>
-                  </div>
-                  <!-- 后端执行的调用：前端仅审批，工具由服务端执行，用户无需（也无法）本地执行 -->
-                  <div v-if="c.execOwner === 'backend'" class="zk-hint mt-1">
-                    {{ $t("page.aiAssistant.approvalBackendNote") }}
-                  </div>
-                  <template v-if="c.arguments">
-                    <div class="zk-hint mt-1">{{ $t("page.aiAssistant.approvalParams") }}</div>
-                    <div class="zk-code-preview font-mono assistant-approval-block">
-                      {{ c.arguments }}
-                    </div>
-                  </template>
-                  <div v-if="c.error" class="zk-error-text mt-1">{{ c.error }}</div>
-                  <div
-                    v-else-if="c.result"
-                    class="zk-code-preview font-mono assistant-approval-block"
-                  >
-                    {{ c.result }}
-                  </div>
-                  <div v-if="!c.decision" class="d-flex mt-2">
-                    <v-btn size="small" variant="tonal" color="primary" @click="approveCall(m, c)">
-                      {{ $t("page.aiAssistant.approve") }}
-                    </v-btn>
-                    <v-btn size="small" variant="text" class="ms-2" @click="rejectCall(m, c)">
-                      {{ $t("page.aiAssistant.reject") }}
-                    </v-btn>
-                  </div>
-                </div>
-              </div>
-              <template v-if="citationsOf(m).length > 0">
-                <v-divider class="my-2" />
-                <div class="zk-label-caps mb-1">{{ $t("page.aiAssistant.citations") }}</div>
-                <v-list class="bg-transparent" density="compact">
-                  <v-list-item v-for="(c, idx) in citationsOf(m)" :key="idx">
-                    <v-list-item-title class="text-body-medium">
-                      {{ c.title }}
-                    </v-list-item-title>
-                    <v-list-item-subtitle class="assistant-citation-text">
-                      {{ c.content }}
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
-              </template>
-            </div>
-            <!-- 助手回答快捷操作：回答完（非生成中）后常驻展示——助手内容多且已去掉气泡，
-                 操作不必再靠悬停去发现；复制整段回答 / 重试本轮 / 以本轮为结尾分支出新会话 -->
-            <div
-              v-if="m.role === 'assistant' && !m.streaming"
-              class="assistant-message-actions assistant-message-actions--persistent"
-            >
-              <!-- 用量说明置于操作图标之后、同一行：末尾先给三个操作，再补「花了多少 token、多久」 -->
-              <div class="assistant-message-buttons">
-                <v-btn
-                  icon="mdi-content-copy"
-                  size="small"
-                  variant="text"
-                  :title="$t('page.aiAssistant.copyMessage')"
-                  :aria-label="$t('page.aiAssistant.copyMessage')"
-                  @click="copyMessage(m)"
-                />
-                <v-btn
-                  icon="mdi-refresh"
-                  size="small"
-                  variant="text"
-                  :disabled="busy"
-                  :title="$t('page.aiAssistant.retryMessage')"
-                  :aria-label="$t('page.aiAssistant.retryMessage')"
-                  @click="retryMessage(m)"
-                />
-                <v-btn
-                  icon="mdi-source-branch"
-                  size="small"
-                  variant="text"
-                  :disabled="busy"
-                  :title="$t('page.aiAssistant.branchMessage')"
-                  :aria-label="$t('page.aiAssistant.branchMessage')"
-                  @click="branchMessage(m)"
-                />
-                <v-btn
-                  icon="mdi-archive-arrow-down-outline"
-                  size="small"
-                  variant="text"
-                  :disabled="busy || compacting || m.compress?.phase === 'running'"
-                  :title="$t('page.aiAssistant.compressToHere')"
-                  :aria-label="$t('page.aiAssistant.compressToHere')"
-                  @click="compactToHere(m)"
-                />
-              </div>
-              <span v-if="usageTextOf(m)" class="zk-hint">{{ usageTextOf(m) }}</span>
-            </div>
-            <!-- 用户消息快捷操作：悬停该轮时淡入（左侧创建时间 + 复制 / 回退 / 删除）；生成中禁用，
+              <!-- 用户消息快捷操作：悬停该轮时淡入（左侧创建时间 + 复制 / 回退 / 删除）；生成中禁用，
                  避免截断在途运行正在使用的消息 -->
-            <div v-if="m.role === 'user'" class="assistant-message-actions">
-              <span class="zk-hint">{{ messageTimeOf(m) }}</span>
-              <div class="assistant-message-buttons">
-                <v-btn
-                  icon="mdi-content-copy"
-                  size="small"
-                  variant="text"
-                  :disabled="busy"
-                  :title="$t('page.aiAssistant.copyMessage')"
-                  :aria-label="$t('page.aiAssistant.copyMessage')"
-                  @click="copyMessage(m)"
-                />
-                <v-btn
-                  icon="mdi-undo-variant"
-                  size="small"
-                  variant="text"
-                  :disabled="busy"
-                  :title="$t('page.aiAssistant.rollbackMessage')"
-                  :aria-label="$t('page.aiAssistant.rollbackMessage')"
-                  @click="openMessageAction(m, true)"
-                />
-                <v-btn
-                  icon="mdi-delete-outline"
-                  size="small"
-                  variant="text"
-                  :disabled="busy"
-                  :title="$t('page.aiAssistant.deleteMessage')"
-                  :aria-label="$t('page.aiAssistant.deleteMessage')"
-                  @click="openMessageAction(m, false)"
-                />
+              <div v-if="m.role === 'user'" class="assistant-message-actions">
+                <span class="zk-hint">{{ messageTimeOf(m) }}</span>
+                <div class="assistant-message-buttons">
+                  <v-btn
+                    icon="mdi-content-copy"
+                    size="small"
+                    variant="text"
+                    :disabled="busy"
+                    :title="$t('page.aiAssistant.copyMessage')"
+                    :aria-label="$t('page.aiAssistant.copyMessage')"
+                    @click="copyMessage(m)"
+                  />
+                  <v-btn
+                    icon="mdi-undo-variant"
+                    size="small"
+                    variant="text"
+                    :disabled="busy"
+                    :title="$t('page.aiAssistant.rollbackMessage')"
+                    :aria-label="$t('page.aiAssistant.rollbackMessage')"
+                    @click="openMessageAction(m, true)"
+                  />
+                  <v-btn
+                    icon="mdi-delete-outline"
+                    size="small"
+                    variant="text"
+                    :disabled="busy"
+                    :title="$t('page.aiAssistant.deleteMessage')"
+                    :aria-label="$t('page.aiAssistant.deleteMessage')"
+                    @click="openMessageAction(m, false)"
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        </template>
+          </template>
+        </div>
       </div>
 
       <!-- 输入区：与消息区之间不设分隔线，让输入框直接落在对话内部，读作同一整体 -->
@@ -417,6 +508,42 @@
         <!-- 单一边框容器：正文在上，档位选择与发送按钮内置其底部（对齐主流对话产品）。
              底色取弱化面板（on-surface 6% + hairline），让输入区在消息流中凸显出来 -->
         <div class="assistant-composer zk-panel zk-panel--subtle">
+          <!-- 待发提问队列：当前回答进行中提交的追问按序堆叠在输入框上方，本轮结束后自动依次投递。
+               每项可置顶（移到队首）/ 修改（出队并回填输入框）/ 删除；后两者在输入框已有内容时
+               一并禁用，避免回填覆盖用户已写内容 -->
+          <div v-if="activeQueue.length > 0" class="assistant-queue">
+            <div v-for="item in activeQueue" :key="item.key" class="assistant-queue-item">
+              <v-icon icon="mdi-clock-outline" size="x-small" class="assistant-queue-icon" />
+              <span class="assistant-queue-text">{{ item.text }}</span>
+              <v-btn
+                icon="mdi-arrow-up-bold-outline"
+                size="x-small"
+                variant="text"
+                :title="$t('action.pinTop')"
+                :aria-label="$t('action.pinTop')"
+                @click="pinQueued(item)"
+              />
+              <v-btn
+                icon="mdi-pencil-outline"
+                size="x-small"
+                variant="text"
+                :disabled="!canModifyQueued"
+                :title="
+                  canModifyQueued ? $t('action.edit') : $t('page.aiAssistant.queuedQueryLocked')
+                "
+                :aria-label="$t('action.edit')"
+                @click="editQueued(item)"
+              />
+              <v-btn
+                icon="mdi-delete-outline"
+                size="x-small"
+                variant="text"
+                :title="$t('action.delete')"
+                :aria-label="$t('action.delete')"
+                @click="removeQueued(item)"
+              />
+            </div>
+          </div>
           <v-textarea
             v-model="query"
             variant="plain"
@@ -547,8 +674,9 @@
                 :aria-label="$t('page.aiAssistant.stop')"
                 @click="cancelGeneration"
               />
-              <!-- 发送 / 停止：创建会话（后端需同步生成主题，耗时明显）途中发送按钮转入加载态，
-                   既挡住重复提交，也把「回车已受理、正在处理」显式交给用户 -->
+              <!-- 发送 / 排队：创建会话（后端需同步生成主题，耗时明显）途中发送按钮转入加载态，
+                   既挡住重复提交，也把「回车已受理、正在处理」显式交给用户；当前回答进行中或
+                   上下文压缩在途时，同一按钮转入「加入待发队列」，把追问排在队尾，待运行结束自动依次投递 -->
               <v-btn
                 v-else
                 icon="mdi-arrow-up"
@@ -556,10 +684,12 @@
                 variant="flat"
                 color="primary"
                 :loading="creating"
-                :disabled="!canSend"
-                :title="$t('page.aiAssistant.generate')"
-                :aria-label="$t('page.aiAssistant.generate')"
-                @click="sendQuery"
+                :disabled="!canSend && !canEnqueueQueued"
+                :title="$t(busy ? 'page.aiAssistant.enqueueQuery' : 'page.aiAssistant.generate')"
+                :aria-label="
+                  $t(busy ? 'page.aiAssistant.enqueueQuery' : 'page.aiAssistant.generate')
+                "
+                @click="onSubmitClick"
               />
             </div>
           </div>
@@ -680,6 +810,7 @@ import { getResponse, getSimpleResponse } from "@/apis/base";
 import { useAgentRunStore } from "@/stores/agentRun";
 import { useAppStore } from "@/stores/app";
 import { localManager } from "@/stores/local";
+import { knowledgeDocumentHref } from "@/utils/ai";
 import { copyToClipboard } from "@/utils/clipboard";
 import { EnumClass, enumEntriesOf, enumLabelOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
@@ -773,7 +904,7 @@ const messagesRef = useTemplateRef("messagesRef");
 // ---- 会话与消息状态 ----
 const sessions = ref<AgentSessionItem[]>([]);
 // 当前会话 ID：初值取本地上次记录，使刷新后打开抽屉即恢复原会话并自动续播（见 initialize）
-const activeSessionId = ref<number | null>(localManager.getAgentActiveSession());
+const activeSessionID = ref<number | null>(localManager.getAgentActiveSession());
 // draftMode 待创建态：点「新建会话」已进入新会话但尚未发出首条消息；会话在首条消息发出时
 // 才真正创建，主题由后端据该消息生成，故此时不存在任何会话 ID。
 // 该态只影响空态提示文案——未选中会话本身（无论是否点过「新建会话」）即允许直接发送并建会话
@@ -781,13 +912,13 @@ const draftMode = ref(false);
 // sessionListMode 会话列表态：由头部列表按钮切换，为 true 时用会话列表替换消息区与输入区，
 // 在侧边栏内直接平铺全部会话，供逐行切换 / 重命名 / 删除
 const sessionListMode = ref(false);
-// renamingSessionId / deletingSessionId 当前操作的目标会话 id：列表行内的重命名 / 删除
-// 按行定位，不复用 activeSessionId，避免误操作到当前选中会话之外的行
-const renamingSessionId = ref<number | null>(null);
-const deletingSessionId = ref<number | null>(null);
+// renamingSessionID / deletingSessionID 当前操作的目标会话 id：列表行内的重命名 / 删除
+// 按行定位，不复用 activeSessionID，避免误操作到当前选中会话之外的行
+const renamingSessionID = ref<number | null>(null);
+const deletingSessionID = ref<number | null>(null);
 
-// AgentStageState 工具调用阶段视图模型：一次生成中每个「阶段 + 工具名」组合一行，
-// 后续同键状态事件仅更新该行
+// AgentStageState 工具调用阶段视图模型：一次工具调用一行，同一次调用的「发起（toolCall）」与
+// 「结果（toolResult）」按 callID 递进收敛到同一行；无 callID 时回退按「阶段 + 工具名」归并
 interface AgentStageState {
   key: string;
   stage: EvalStage;
@@ -795,6 +926,30 @@ interface AgentStageState {
   status?: EvalStageStatus;
   elapsedMs: number;
   error?: string;
+  // callID 本次工具调用的唯一标识（命中该值的事件归并到本行）；缺失时为空，按旧键回退归并
+  callID?: string;
+  // round 本次调用所属轮次（从 1 起）：同一轮内并发发起的多次调用据此聚为一组；缺失时该行独成一组
+  round?: number;
+}
+
+// AgentStageGroup 一轮工具调用的展示分组：同轮（round 相同且相邻）的调用行归为一组，组上方渲染
+// 该轮思考折叠块一次，组内多行以并行计数与左侧细线呈现「一次思考 → N 次并行调用」的从属关系
+interface AgentStageGroup {
+  key: string;
+  round?: number;
+  stages: AgentStageState[];
+  // reasoningText 该轮思考文本：取锚定到本组任一次调用的思考分段（同轮思考只归属首个调用行）
+  reasoningText: string;
+}
+
+// ReasoningSegment 一段模型思考：live 期间按「轮」切分。anchorCallID 非空表示该段紧随其后的那次
+// 工具调用（渲染在该调用行上方）；为空表示最后一轮（产出回答前），维持在回答正文上方。
+// 与阶段行同为 live-only 视图态，不落库；刷新后回退为整条 reasoning 单块展示
+interface ReasoningSegment {
+  key: string;
+  text: string;
+  streaming: boolean;
+  anchorCallID?: string;
 }
 
 // PendingCallState 单条待审批的工具调用视图模型：toolName / arguments 为后端原样下发的
@@ -819,17 +974,18 @@ interface PendingCallState {
   submitted?: boolean;
 }
 
-// CompressState 上下文压缩的展示态（自动挂在当前助手消息、手动挂在被点击的助手消息）：
+// CompressState 上下文压缩的展示态（自动挂在当前助手消息、手动挂在被点击的助手消息、静默滚动
+// 与其余推进一样在刷新后随历史回显挂在被折叠的最后一条消息）：
 //   phase       压缩阶段（running 进行中 / done 完成 / failed 失败）
 //   draft       compress_delta 累积的摘要增量（流式呈现）
-//   reason      压缩原因（auto 自动 / manual 手动）
-//   tokensBefore 压缩前占用 token（取自 compress_start）
-//   foldedCount  本次折叠的消息条数（取自 compress_done）
-//   tokensAfter  压缩后占用 token（下一次生成 done.promptTokens 回填，供前后对比）
+//   reason      推进原因（auto 自动 / manual 手动 / rolling 静默滚动）
+//   tokensBefore 推进前占用 token（实时的取自 compress_start，历史的取自压缩检查点）
+//   foldedCount  本次折叠的消息条数（实时的取自 compress_done，历史的取自压缩检查点）
+//   tokensAfter  压缩后占用 token（下一次生成 done.promptTokens 回填，供前后对比；历史回显无此项）
 interface CompressState {
   phase: "running" | "done" | "failed";
   draft: string;
-  reason: "auto" | "manual";
+  reason: "auto" | "manual" | "rolling";
   tokensBefore?: number;
   foldedCount?: number;
   tokensAfter?: number;
@@ -841,6 +997,9 @@ interface CompressState {
 // compress 承载本轮（自动）或手动触发的上下文压缩展示态
 interface ChatMessage {
   key: number;
+  // id 服务端消息主键：历史消息自列表接口带回；仅存于内存的即时气泡（尚未回读服务端）无此项。
+  // 续播中断运行时就地复用该行重建本轮内容，避免与已落库的中间产物重影
+  id?: number;
   role: "user" | "assistant" | "system";
   content: string;
   // createdAt 消息创建时间（ISO 文本）：历史消息取自后端，即时发出、尚未回读服务端的消息取本地时间
@@ -849,6 +1008,9 @@ interface ChatMessage {
   streaming?: boolean;
   // reasoning 助手思考过程全文：流式期间为累积增量，done 到达后收敛为全文（历史消息取自列表接口）
   reasoning?: string;
+  // reasoningSegments 思考过程按「轮」的分段（live-only）：每段锚定到其后的那次工具调用并渲染在
+  // 该调用行上方，末段（产出回答前）维持在正文上方；历史消息不携带，回退整条 reasoning 单块展示
+  reasoningSegments?: ReasoningSegment[];
   // reasoningStreaming 思考过程是否仍在流式生成（驱动折叠区块的展开态与状态文案）
   reasoningStreaming?: boolean;
   // reasoningExpanded 思考过程区块当前是否展开：流式期间默认展开、结束自动折叠，用户可手动切换
@@ -866,6 +1028,10 @@ interface ChatMessage {
   elapsedMs?: number;
   // compress 本次上下文压缩的展示态（自动挂在当前助手消息、手动挂在被点击的助手消息）
   compress?: CompressState;
+  // phase 本条助手消息所属运行的生命周期终态阶段（done/failed/cancelled，取值来自后端枚举类
+  // agentRunPhase）：为 failed/cancelled 时渲染中断提示横幅（文案由前端 i18n 提供，不落库、不混入
+  // 正文）；历史消息取自列表接口，在途消息由 error 事件回填
+  phase?: string;
 }
 
 let messageKey = 0;
@@ -991,7 +1157,7 @@ const contextUsedTokens = computed<number>(() => {
       return m.promptTokens;
     }
   }
-  const id = activeSessionId.value;
+  const id = activeSessionID.value;
   if (id !== null) {
     const session = sessions.value.find((s) => s.id === id);
     if (session) {
@@ -1004,12 +1170,12 @@ const contextUsedTokens = computed<number>(() => {
 // headerTitle 头部标题：进入某个会话后展示该会话主题；会话尚无主题（主题由首条消息发出后
 // 由后端生成）时回落为「新会话」；未选中任何会话且非待创建态时保持原「AI 助手」标题
 const headerTitle = computed<string>(() => {
-  if (activeSessionId.value === null) {
+  if (activeSessionID.value === null) {
     return draftMode.value
       ? i18n.global.t("page.aiAssistant.untitledSession")
       : i18n.global.t("action.aiAssistant");
   }
-  const session = sessions.value.find((s) => s.id === activeSessionId.value);
+  const session = sessions.value.find((s) => s.id === activeSessionID.value);
   return session?.title?.trim() || i18n.global.t("page.aiAssistant.untitledSession");
 });
 
@@ -1113,17 +1279,19 @@ const stageMetaTextOf = (stage: AgentStageState): string => {
   return parts.join(" · ");
 };
 
-// applyAgentStage 应用一次工具调用阶段事件：按「阶段 + 工具名」归并到同一行
-// （同一工具的多轮调用各自成行），后续同键事件仅更新状态/耗时/失败原因
+// applyAgentStage 应用一次工具调用阶段事件：优先按 callID 归并到该次调用所在行，使同一次调用的
+// 「发起（toolCall）」与「结果（toolResult）」递进收敛到同一行；无 callID 时回退按「阶段 + 工具名」
+// 归并（如达到轮数上限的整体失败事件）。命中同一行时同时更新阶段标签、状态、耗时与失败原因
 const applyAgentStage = (key: number, ev: AgentStageEvent): void => {
   const msg = messages.value.find((m) => m.key === key);
   if (!msg) {
     return;
   }
   const stages = (msg.stages ??= []);
-  const stageKey = `${ev.stage}:${ev.tool ?? ""}`;
+  const stageKey = ev.callID ?? `${ev.stage}:${ev.tool ?? ""}`;
   const target = stages.find((s) => s.key === stageKey);
   if (target) {
+    target.stage = ev.stage;
     target.status = ev.status ?? target.status;
     if (ev.elapsedMs > 0) {
       target.elapsedMs = ev.elapsedMs;
@@ -1139,9 +1307,114 @@ const applyAgentStage = (key: number, ev: AgentStageEvent): void => {
       status: ev.status,
       elapsedMs: ev.elapsedMs,
       error: ev.error,
+      callID: ev.callID,
+      round: ev.round,
     });
   }
   scrollToBottom();
+};
+
+// stageGroupsOf 把阶段行按轮聚组：round 相同且相邻的行归为一组（后端每轮从 1 递增下发 round），
+// 使「一次思考 → N 次并行调用」的从属关系一眼可读；无 round 的行（旧数据 / 回退键）各自成组。
+// 组内思考取锚定到本组任一次调用的分段文本（同轮思考只归属首个调用行，故取到即该轮思考）
+const stageGroupsOf = (m: ChatMessage): AgentStageGroup[] => {
+  const groups: AgentStageGroup[] = [];
+  for (const s of m.stages ?? []) {
+    const last = groups[groups.length - 1];
+    if (last && last.round !== undefined && s.round === last.round) {
+      last.stages.push(s);
+      continue;
+    }
+    groups.push({ key: `g-${s.key}`, round: s.round, stages: [s], reasoningText: "" });
+  }
+  for (const g of groups) {
+    for (const s of g.stages) {
+      if (!s.callID) {
+        continue;
+      }
+      const text = anchoredReasoningTextOf(m, s.callID);
+      if (text) {
+        g.reasoningText = text;
+        break;
+      }
+    }
+  }
+  return groups;
+};
+
+// awaitingFirstResponse 判断该助手消息是否仍处于「请求已发出、尚无任何产出」的等待首包阶段：
+// 流式已开始但正文 / 思考 / 工具阶段均未到达（含模型首包前的长等待与被中断前的空档）。
+// 此阶段以「等待响应中…」替代「生成中…」，避免长等待被误读为服务异常而触发刷新或重复提交
+const awaitingFirstResponse = (m: ChatMessage): boolean =>
+  m.streaming === true &&
+  m.content.trim() === "" &&
+  !m.reasoning &&
+  !(m.stages && m.stages.length > 0);
+
+// ---- 思考过程分段 ----
+// reasoningSegmentSeq 思考分段的自增键序列：分段为 live-only 视图态，键仅需在本消息内唯一
+let reasoningSegmentSeq = 0;
+const nextReasoningSegmentKey = (): string => `rs-${(reasoningSegmentSeq += 1)}`;
+
+// appendReasoning 把一段思考增量累加进消息的思考分段：追加到当前未锚定的末段；若末段已锚定
+// （该轮思考已归属其后的那次调用）则新开一段。同时维持整条 reasoning 累积与展开态，供上方
+// 折叠区块驱动（末段即「正文上方那块」）
+const appendReasoning = (m: ChatMessage, delta: string): void => {
+  const segments = (m.reasoningSegments ??= []);
+  let seg = segments[segments.length - 1];
+  if (!seg || seg.anchorCallID) {
+    seg = { key: nextReasoningSegmentKey(), text: "", streaming: true };
+    segments.push(seg);
+  }
+  seg.text += delta;
+  seg.streaming = true;
+  m.reasoning = (m.reasoning ?? "") + delta;
+  m.reasoningStreaming = true;
+  m.reasoningExpanded = true;
+};
+
+// anchorReasoningSegment 把当前未锚定的思考分段锚定到刚发起的那次工具调用（渲染在该调用行上方）。
+// 已锚定或尚无文本的分段不改动：一轮内多个调用时该轮思考只归属首个调用行
+const anchorReasoningSegment = (m: ChatMessage, callID: string): void => {
+  const segments = m.reasoningSegments;
+  if (!segments || segments.length === 0) {
+    return;
+  }
+  const seg = segments[segments.length - 1];
+  if (seg.anchorCallID || seg.text === "") {
+    return;
+  }
+  seg.anchorCallID = callID;
+  seg.streaming = false;
+};
+
+// endReasoningStreaming 结束思考流式：闭合末段并收起折叠区块（保留已累积内容）
+const endReasoningStreaming = (m: ChatMessage): void => {
+  m.reasoningStreaming = false;
+  m.reasoningExpanded = false;
+  const segments = m.reasoningSegments;
+  if (segments && segments.length > 0) {
+    segments[segments.length - 1].streaming = false;
+  }
+};
+
+// anchoredReasoningTextOf 返回某次调用行上方要渲染的思考文本（锚定到该次调用的分段）；
+// 无分段或该调用未锚定任何分段时返回空串（不占位）
+const anchoredReasoningTextOf = (m: ChatMessage, callID?: string): string => {
+  if (!callID || !m.reasoningSegments) {
+    return "";
+  }
+  return m.reasoningSegments.find((s) => s.anchorCallID === callID)?.text ?? "";
+};
+
+// topReasoningText 返回正文上方那块的思考文本：末段（无 anchorCallID，即产出回答前那一轮）。
+// 历史消息无分段时回退整条 reasoning，保持刷新后行为不变
+const topReasoningText = (m: ChatMessage): string => {
+  if (!m.reasoningSegments) {
+    return m.reasoning ?? "";
+  }
+  const unanchored = m.reasoningSegments.filter((s) => !s.anchorCallID);
+  return unanchored[unanchored.length - 1]?.text ?? "";
 };
 
 const scrollToBottom = (): void => {
@@ -1152,6 +1425,107 @@ const scrollToBottom = (): void => {
     }
   });
 };
+
+// ---- 提问导航（消息区左侧快速回顾）----
+// TURN_SCROLL_GAP 跳转后提问轮顶边与消息区上沿的间距。JS 无法读取 CSS 令牌，
+// 故在此声明常量（同 ScrollToBottomFab 的 FAB_SIZE / MARGIN 先例）；取 --zk-space-4(16px)，
+// 扣除滚动区自带的 12px 上内边距后仍留 4px 呼吸量
+const TURN_SCROLL_GAP = 16;
+// ACTIVE_TOP_EPSILON 判定「提问已进入视口」的容差：顶边越过上沿该像素数即视为当前提问。
+// 必须 ≥ TURN_SCROLL_GAP：跳转后目标轮顶边停在「上沿 + TURN_SCROLL_GAP」处（见 scrollToTurn），
+// 若容差小于该间距，刚跳到的这一轮永远不满足条件，高亮会错落到前一轮
+// （点第 1 个不高亮、点第 2 个却亮第 1 个）。多出的 8px 为亚像素与平滑滚动终值的余量
+const ACTIVE_TOP_EPSILON = TURN_SCROLL_GAP + 8;
+
+// turnRefs 各轮消息的 DOM 元素（键为消息 key）：供提问轨定位滚动与判定当前提问。
+// 轮卸载（删除 / 回退）时 Vue 以 null 回调，此处同步剔除，避免命中已卸载节点
+const turnRefs = new Map<number, HTMLElement>();
+const setTurnRef = (key: number, el: unknown): void => {
+  if (el instanceof HTMLElement) {
+    turnRefs.set(key, el);
+  } else {
+    turnRefs.delete(key);
+  }
+};
+
+// userQuestions 提问轨条目：仅取用户消息，正文归一化空白后作为标题（同时用作悬浮提示与无障碍名称）
+const userQuestions = computed<{ key: number; text: string }[]>(() =>
+  messages.value
+    .filter((m) => m.role === "user")
+    .map((m) => ({ key: m.key, text: m.content.replace(/\s+/g, " ").trim() })),
+);
+
+// activeQuestionKey 当前视口内的提问 key：轨上的圆点与面板行据此高亮，无匹配时为 undefined
+const activeQuestionKey = ref<number | undefined>(undefined);
+
+// messagesAtBottom 消息区是否已滚到底部：提问轨据此决定是否展示「直达底部」按钮。
+// 初值取 true——内容不足以滚动（本就无跳转目标）是最常见的首帧状态，避免按钮闪一下再消失
+const messagesAtBottom = ref(true);
+
+// updateActiveQuestion 按滚动位置重算当前提问：取最后一个顶边未越过视口上沿的提问。
+// 位置用 rect 差值现算（不读 offsetTop，也不依赖 offsetParent），流式期间轮高逐帧变化，
+// 故不缓存；提问数有限，扫描开销可忽略
+const updateActiveQuestion = (): void => {
+  const scroller = messagesRef.value;
+  if (!scroller) {
+    return;
+  }
+  const top = scroller.getBoundingClientRect().top;
+  // 已滚到底部（且确实存在可滚动余量）时，视为当前提问为最后一个：末轮下方的内容不足以
+  // 把它的顶边推到激活线，若不作此兜底，点最后一个圆点会永远判定不上、高亮停在前一轮
+  const scrollable = scroller.scrollHeight - scroller.clientHeight > 1;
+  const atBottom =
+    scrollable &&
+    scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - ACTIVE_TOP_EPSILON;
+  // 无滚动余量时同样视作「已在底部」：内容一屏放得下，本就没有可跳转的下方
+  messagesAtBottom.value =
+    !scrollable ||
+    scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - ACTIVE_TOP_EPSILON;
+  if (atBottom) {
+    const last = userQuestions.value[userQuestions.value.length - 1];
+    if (last) {
+      activeQuestionKey.value = last.key;
+      return;
+    }
+  }
+  let active: number | undefined;
+  for (const q of userQuestions.value) {
+    const turn = turnRefs.get(q.key);
+    if (turn && turn.getBoundingClientRect().top - top <= ACTIVE_TOP_EPSILON) {
+      active = q.key;
+    }
+  }
+  activeQuestionKey.value = active;
+};
+
+// scrollToTurn 平滑滚动到指定提问所在轮：目标位置为「该轮相对滚动区顶边的位移 + 当前
+// scrollTop」，即该轮顶边落到视口上沿下 TURN_SCROLL_GAP 处；滚动动效由 .assistant-messages
+// 的 scroll-behavior: smooth 提供。先 nextTick 以确保目标轮已挂载并注册
+const scrollToTurn = async (key: number): Promise<void> => {
+  // 先置高亮：平滑滚动期间 scroll 事件会按中间位置反复重算，最终虽会收敛到同一 key，
+  // 但立即置位可让被点的圆点在点击瞬间就变蓝，不必等动画结束
+  activeQuestionKey.value = key;
+  await nextTick();
+  const scroller = messagesRef.value;
+  const turn = turnRefs.get(key);
+  if (!scroller || !turn) {
+    return;
+  }
+  const offset = turn.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+  scroller.scrollTop = Math.max(0, scroller.scrollTop + offset - TURN_SCROLL_GAP);
+};
+
+// questionPanelMaxWidth 提问面板最大宽度：按抽屉宽度收敛并预留右侧余量，
+// 避免浮层越过抽屉右缘触发 Vuetify 翻边（翻到页面正文上）
+const questionPanelMaxWidth = computed<number>(() => Math.max(200, drawerWidth.value - 48));
+
+// 消息区首帧挂载、消息条数变化、抽屉宽度变化都会改变各问位置，需重算当前提问
+watch(messagesRef, () => void nextTick(updateActiveQuestion));
+watch(
+  () => messages.value.length,
+  () => void nextTick(updateActiveQuestion),
+);
+watch(drawerWidth, () => void nextTick(updateActiveQuestion));
 
 // ---- 会话加载 ----
 const notifyError = (text: string): void => {
@@ -1171,10 +1545,10 @@ const loadSessions = async (): Promise<void> => {
       sessions.value = rsp.data ?? [];
       // 当前选中会话若已被删除则清空选中态
       if (
-        activeSessionId.value !== null &&
-        !sessions.value.some((s) => s.id === activeSessionId.value)
+        activeSessionID.value !== null &&
+        !sessions.value.some((s) => s.id === activeSessionID.value)
       ) {
-        activeSessionId.value = null;
+        activeSessionID.value = null;
         messages.value = [];
       }
     },
@@ -1191,6 +1565,7 @@ const loadMessages = async (id: number): Promise<void> => {
     async (rsp) => {
       messages.value = (rsp.data ?? []).map((m) => ({
         key: nextKey(),
+        id: m.id,
         role: m.role as ChatMessage["role"],
         content: m.content ?? "",
         createdAt: m.createdAt,
@@ -1200,6 +1575,23 @@ const loadMessages = async (id: number): Promise<void> => {
         completionTokens: m.completionTokens,
         totalTokens: m.totalTokens,
         elapsedMs: m.elapsedMs,
+        phase: m.phase,
+        // 历史压缩记录：后端按压缩游标把过往的压缩推进（含静默滚动 rolling）锚定到被折叠的最后
+        // 一条消息，回显为完成态（无流式摘要增量、无压缩后占用对比），复用现有压缩块渲染
+        compress: m.compress
+          ? {
+              phase: "done" as const,
+              draft: "",
+              reason:
+                m.compress.reason === "manual"
+                  ? "manual"
+                  : m.compress.reason === "rolling"
+                    ? "rolling"
+                    : "auto",
+              tokensBefore: m.compress.tokensBefore,
+              foldedCount: m.compress.foldedCount,
+            }
+          : undefined,
       }));
       scrollToBottom();
     },
@@ -1219,11 +1611,11 @@ const pickSession = async (id: number): Promise<void> => {
 
 const selectSession = async (id: number): Promise<void> => {
   // 切换会话：先退订上一会话的在途流（仅断连接，不取消服务端），切换后再按新会话的状态重订阅续播
-  if (activeSessionId.value !== null && activeSessionId.value !== id) {
-    agentRun.detach(activeSessionId.value);
+  if (activeSessionID.value !== null && activeSessionID.value !== id) {
+    agentRun.detach(activeSessionID.value);
   }
   draftMode.value = false;
-  activeSessionId.value = id;
+  activeSessionID.value = id;
   messages.value = [];
   streaming.value = false;
   // 会话记录了缺省档位时同步到档位下拉；未记录时保持当前选择
@@ -1238,6 +1630,9 @@ const selectSession = async (id: number): Promise<void> => {
   await loadMessages(id);
   // 载入历史后探测该会话是否有在途运行（在跑 / 待审批），有则续播
   await resumeLiveRun(id);
+  // 载入该会话本地记忆的待发队列；切到空闲会话时自动投递其队首提问（在途运行中由 busy 闸门挡下）
+  ensureQueueLoaded(id);
+  drainQueuedQuery(id);
 };
 
 // ---- 会话增删改 ----
@@ -1250,36 +1645,36 @@ const toggleSessionList = (): void => {
 // 由列表触发时同步退回对话视图，让用户直接落到输入区
 const startNewSession = (): void => {
   // 进入待创建态：退订上一会话的在途流（不取消服务端，用户可能稍后切回）
-  if (activeSessionId.value !== null) {
-    agentRun.detach(activeSessionId.value);
+  if (activeSessionID.value !== null) {
+    agentRun.detach(activeSessionID.value);
   }
   sessionListMode.value = false;
   draftMode.value = true;
-  activeSessionId.value = null;
+  activeSessionID.value = null;
   messages.value = [];
   streaming.value = false;
 };
 
 // openRenameSessionDialog 打开某一行的重命名对话框：标题预填该行原文
 const openRenameSessionDialog = (session: AgentSessionItem): void => {
-  renamingSessionId.value = session.id;
+  renamingSessionID.value = session.id;
   renameForm.resetForm({ values: { title: session.title } });
   renameSessionDialogRef.value?.open({});
 };
 
 // openDeleteSessionDialog 打开某一行的删除确认对话框
 const openDeleteSessionDialog = (session: AgentSessionItem): void => {
-  deletingSessionId.value = session.id;
+  deletingSessionID.value = session.id;
   deleteConfirmRef.value?.open({});
 };
 
 const renameSessionAction = renameForm.handleSubmit(async (values) => {
-  if (renamingSessionId.value === null) {
+  if (renamingSessionID.value === null) {
     return;
   }
   await getSimpleResponse(
-    agentSessionRename(renamingSessionId.value, {
-      id: renamingSessionId.value,
+    agentSessionRename(renamingSessionID.value, {
+      id: renamingSessionID.value,
       title: (values.title as string).trim(),
     }),
     async (rsp) => {
@@ -1300,11 +1695,11 @@ const updateReviewValve = async (value: string | null): Promise<void> => {
     return;
   }
   reviewValve.value = value;
-  if (activeSessionId.value === null) {
+  if (activeSessionID.value === null) {
     return;
   }
   await getSimpleResponse(
-    agentSessionValveSet(activeSessionId.value, { reviewValve: value }),
+    agentSessionValveSet(activeSessionID.value, { reviewValve: value }),
     async (rsp) => {
       await loadSessions();
       appStore.notify({ text: rsp.summary, timeout: 3000, color: "success" });
@@ -1317,10 +1712,10 @@ const updateReviewValve = async (value: string | null): Promise<void> => {
 };
 
 const deleteSessionAction = async (): Promise<void> => {
-  if (deletingSessionId.value === null) {
+  if (deletingSessionID.value === null) {
     return;
   }
-  const id = deletingSessionId.value;
+  const id = deletingSessionID.value;
   // 删除会话前退订其（若为当前会话的）在途流，避免残留订阅
   agentRun.detach(id);
   streaming.value = false;
@@ -1328,8 +1723,11 @@ const deleteSessionAction = async (): Promise<void> => {
     agentSessionDelete(id),
     async (rsp) => {
       sessions.value = sessions.value.filter((s) => s.id !== id);
-      if (activeSessionId.value === id) {
-        activeSessionId.value = null;
+      // 会话已删除：其待发队列一并清除，避免本地留下孤儿记录（内存分桶与本地记忆同步清理）
+      delete agentQueues.value[id];
+      localManager.clearAgentQueue(id);
+      if (activeSessionID.value === id) {
+        activeSessionID.value = null;
         messages.value = [];
       }
       appStore.notify({ text: rsp.summary, timeout: 3000, color: "success" });
@@ -1351,6 +1749,10 @@ const creating = ref(false);
 // optimizing 是否正在优化提问：调用提示词优化接口改写当前输入，
 // 与 streaming / 待审批 / 创建会话同为运行态，期间禁止提交（见 canSend）
 const optimizing = ref(false);
+// compacting 是否正在手动压缩上下文（「压缩到此」触发的独立一次性 SSE 流）：
+// 与 streaming / 待审批 / 创建会话同为运行态——在途期间不得再向后端发起生成（见 canSend），
+// 但提问仍可转入待发队列排队（见 canEnqueueQueued / onSubmitClick）
+const compacting = ref(false);
 
 // awaitingApproval 是否存在等待人工审批的接口调用：为 true 时本轮生成已挂起，禁止再发起新生成
 const awaitingApproval = computed<boolean>(() =>
@@ -1361,9 +1763,15 @@ const awaitingApproval = computed<boolean>(() =>
 // 不要求已有会话——未选中会话时发送即先创建会话（主题由后端据该问题生成），
 // 因此打开抽屉后可直接输入并发出首条消息，无需先点「新建会话」。
 // creating 必须一并纳入闸门：创建途中再次回车/点击会带着同一问题重复建会话
-// （正文已在回显时清空，见 echoUserQuery）；optimizing 同理，优化途中输入框内容即将被整体替换
+// （正文已在回显时清空，见 echoUserQuery）；optimizing 同理，优化途中输入框内容即将被整体替换；
+// compacting 同理，压缩流在途时上下文正被折叠，此时新提问只能进待发队列（见 canEnqueueQueued）
 const canSend = computed<boolean>(
-  () => aiEnabled.value && !awaitingApproval.value && !creating.value && !optimizing.value,
+  () =>
+    aiEnabled.value &&
+    !awaitingApproval.value &&
+    !creating.value &&
+    !optimizing.value &&
+    !compacting.value,
 );
 
 // composerActionsEnabled 输入区动作（优化 / 撤回）的公共闸门：AI 可用，且无在途生成 / 待审批 /
@@ -1400,9 +1808,141 @@ watch(query, (value) => {
 });
 
 // ---- 用户消息快捷操作（复制 / 回退 / 删除）----
-// busy 当前会话是否正忙（生成中 / 等待审批 / 创建会话中）：忙时禁止截断，避免删除在途运行正在使用的
-// 消息，导致服务端与本地内容错位
-const busy = computed<boolean>(() => streaming.value || awaitingApproval.value || creating.value);
+// busy 当前会话是否正忙（生成中 / 等待审批 / 创建会话中 / 手动压缩中）：忙时禁止截断，避免删除在途运行正在使用的
+// 消息，导致服务端与本地内容错位；发送入口亦据此把新提问转入待发队列（见 onSubmitClick / onComposerEnter）
+const busy = computed<boolean>(
+  () => streaming.value || awaitingApproval.value || creating.value || compacting.value,
+);
+
+// ---- 待发提问队列（生成中提交的追问）----
+// QueuedQuery 队列中的一条待发提问；key 仅用于列表渲染与操作定位，不随正文持久化
+interface QueuedQuery {
+  key: number;
+  text: string;
+}
+
+// agentQueues 各会话的待发队列（按会话 ID 分桶，内存态；正文由 localManager 持久化）
+const agentQueues = ref<Record<number, QueuedQuery[]>>({});
+
+// activeQueue 当前会话的待发队列（未选中会话时为空）
+const activeQueue = computed<QueuedQuery[]>(() =>
+  activeSessionID.value === null ? [] : (agentQueues.value[activeSessionID.value] ?? []),
+);
+
+// canModifyQueued 队列项能否「修改」：修改即「出队 + 回填输入框」，输入框已写好内容时
+// 回填会覆盖用户输入，故仅在输入框为空时可用。删除与置顶都不触碰输入框，不受此限。
+const canModifyQueued = computed<boolean>(() => query.value.trim() === "");
+
+// canEnqueueQueued 运行中能否把当前输入转入待发队列：队列按会话归属，故须已选中会话；
+// 创建会话（尚无会话可归属）与优化途中（输入将被整体改写）仍禁止；
+// 手动压缩在途则允许——此时新提问发不出去，排队正是唯一去处（见 canSend / busy）
+const canEnqueueQueued = computed<boolean>(
+  () =>
+    aiEnabled.value &&
+    activeSessionID.value !== null &&
+    query.value.trim() !== "" &&
+    !creating.value &&
+    !optimizing.value,
+);
+
+// ensureQueueLoaded 懒加载某会话的队列：首次访问时从本地记忆恢复，按恢复顺序生成列表 key
+const ensureQueueLoaded = (sessionID: number): void => {
+  if (agentQueues.value[sessionID]) {
+    return;
+  }
+  agentQueues.value[sessionID] = localManager
+    .getAgentQueue(sessionID)
+    .map((text) => ({ key: nextKey(), text }));
+};
+
+// persistQueue 把某会话的队列正文写回本地记忆（空队列自动清除记录）
+const persistQueue = (sessionID: number): void => {
+  localManager.setAgentQueue(
+    sessionID,
+    (agentQueues.value[sessionID] ?? []).map((it) => it.text),
+  );
+};
+
+// enqueueQuery 把当前输入转入待发队列：入队后清空输入框，队列项堆叠在输入框上方，
+// 待当前回答结束后自动依次投递（见 drainQueuedQuery）
+const enqueueQuery = (): void => {
+  const sessionID = activeSessionID.value;
+  const text = query.value.trim();
+  if (sessionID === null || text === "") {
+    return;
+  }
+  ensureQueueLoaded(sessionID);
+  agentQueues.value[sessionID].push({ key: nextKey(), text });
+  query.value = "";
+  persistQueue(sessionID);
+};
+
+// removeQueued 删除一条待发提问：只操作队列本身、不触碰输入框，故任何情况下都可用
+const removeQueued = (target: QueuedQuery): void => {
+  const sessionID = activeSessionID.value;
+  if (sessionID === null) {
+    return;
+  }
+  ensureQueueLoaded(sessionID);
+  agentQueues.value[sessionID] = agentQueues.value[sessionID].filter((it) => it.key !== target.key);
+  persistQueue(sessionID);
+};
+
+// editQueued 修改一条待发提问：即「先出队，再把正文回填到输入框」，交由用户改完再提交；
+// 要求输入框为空，否则回填会覆盖用户已写内容（见 canModifyQueued）
+const editQueued = (target: QueuedQuery): void => {
+  const sessionID = activeSessionID.value;
+  if (sessionID === null || !canModifyQueued.value) {
+    return;
+  }
+  ensureQueueLoaded(sessionID);
+  agentQueues.value[sessionID] = agentQueues.value[sessionID].filter((it) => it.key !== target.key);
+  query.value = target.text;
+  persistQueue(sessionID);
+};
+
+// pinQueued 置顶一条待发提问：移到队首，成为下一个自动投递的问题
+const pinQueued = (target: QueuedQuery): void => {
+  const sessionID = activeSessionID.value;
+  if (sessionID === null) {
+    return;
+  }
+  ensureQueueLoaded(sessionID);
+  const list = agentQueues.value[sessionID];
+  const index = list.findIndex((it) => it.key === target.key);
+  if (index <= 0) {
+    return;
+  }
+  const [item] = list.splice(index, 1);
+  list.unshift(item);
+  persistQueue(sessionID);
+};
+
+// drainQueuedQuery 当前回答结束后自动投递队首提问：仅当目标会话即当前会话且无在途运行时执行
+// （切走的会话其队列留待切回时再投递，避免把消息推入非当前会话的消息区）；先出队持久化再发起生成
+const drainQueuedQuery = (sessionID: number): void => {
+  if (sessionID !== activeSessionID.value || busy.value) {
+    return;
+  }
+  ensureQueueLoaded(sessionID);
+  const list = agentQueues.value[sessionID];
+  if (!list || list.length === 0) {
+    return;
+  }
+  const [head] = list.splice(0, 1);
+  persistQueue(sessionID);
+  optimizeUndo.value = null;
+  startStream(sessionID, head.text);
+};
+
+// onSubmitClick 发送按钮 / 回车统一入口：空闲时直接发送，运行中（生成 / 待审批 / 建会话 / 压缩）则转入待发队列排队
+const onSubmitClick = (): void => {
+  if (busy.value) {
+    enqueueQuery();
+    return;
+  }
+  void sendQuery();
+};
 
 // messageTimeOf 该条消息创建时间的展示文本（本地化）；缺失时返回空串（信息属补充，不占位）
 const messageTimeOf = (m: ChatMessage): string =>
@@ -1427,6 +1967,21 @@ const usageTextOf = (m: ChatMessage): string => {
     );
   }
   return parts.join(" · ");
+};
+
+// interruptedTextOf 取某条助手消息的中断提示文案：phase 为 failed / cancelled 时按阶段返回提示，
+// 其余（done / 空 / 用户消息）返回空串由模板整块隐藏。文案由前端 i18n 提供，不落库、不混入正文
+const interruptedTextOf = (m: ChatMessage): string => {
+  if (m.role !== "assistant") {
+    return "";
+  }
+  if (m.phase === "cancelled") {
+    return i18n.global.t("page.aiAssistant.runCancelled");
+  }
+  if (m.phase === "failed") {
+    return i18n.global.t("page.aiAssistant.runFailed");
+  }
+  return "";
 };
 
 // userMessageIndexOf 目标消息在会话内的用户消息序号（从 1 起，仅计用户消息、按消息顺序计），与后端
@@ -1467,7 +2022,7 @@ const precedingUserMessageOf = (key: number): ChatMessage | undefined => {
 // retryMessage 重试该轮回答：先截断服务端的本轮提问及其后全部内容（连同这条回答一并删除），
 // 再以原提问重新发起生成，等价于「删除当前回答并重新生成」
 const retryMessage = async (m: ChatMessage): Promise<void> => {
-  const sessionID = activeSessionId.value;
+  const sessionID = activeSessionID.value;
   const question = precedingUserMessageOf(m.key);
   if (sessionID === null || !question || busy.value) {
     return;
@@ -1496,7 +2051,7 @@ const retryMessage = async (m: ChatMessage): Promise<void> => {
 // branchMessage 分支：以本轮回答为结尾，把该轮及之前的全部消息复制到新会话并切换过去，
 // 便于在原会话之外基于同一段上下文另起一条对话支线
 const branchMessage = async (m: ChatMessage): Promise<void> => {
-  const sessionID = activeSessionId.value;
+  const sessionID = activeSessionID.value;
   const question = precedingUserMessageOf(m.key);
   if (sessionID === null || !question || busy.value) {
     return;
@@ -1556,7 +2111,7 @@ const openMessageAction = (m: ChatMessage, rollback: boolean): void => {
 // （保留目标之前的历史），回退模式再把目标正文原样回填输入框
 const confirmMessageAction = async (): Promise<void> => {
   const target = pendingMessage.value;
-  const sessionID = activeSessionId.value;
+  const sessionID = activeSessionID.value;
   if (!target || sessionID === null) {
     return;
   }
@@ -1626,8 +2181,7 @@ const applyToolRequest = (assistantKey: number, req: ToolRequestPayload): void =
 };
 
 // ---- 上下文压缩 ----
-// compacting 手动压缩是否进行中：仅允许串行触发（手动压缩为独立一次性 SSE 流）
-const compacting = ref(false);
+// （手动压缩在途标记 compacting 与 streaming / creating 等运行态一并声明，见上方输入区）
 // pendingCompact 手动压缩的待补全项：压缩那一刻尚无后续生成，先展示「压缩前占用 + 折叠条数」，
 // 待该会话随后首次生成的 done.promptTokens 到达再补上「压缩后占用」并清空
 const pendingCompact = ref<{
@@ -1735,11 +2289,19 @@ const compressTextOf = (m: ChatMessage): string => {
   });
 };
 
+// finishCompact 手动压缩收尾：落下在途标记并随即投递排队中的提问（压缩期间不允许直接发起生成，
+// 提问只能进待发队列，见 canSend / canEnqueueQueued）。压缩流的完成 / 失败 / 关闭三处均经此收尾
+const finishCompact = (sessionID: number): void => {
+  compacting.value = false;
+  drainQueuedQuery(sessionID);
+};
+
 // compactToHere 手动把上下文压缩到该助手消息所属轮次：以该轮提问的用户消息序号为折叠边界调
 // 独立 SSE 压缩流，事件复用自动压缩的展示块逻辑挂到该消息；压缩后占用待随后首次生成补全
 const compactToHere = (m: ChatMessage): void => {
-  const sessionID = activeSessionId.value;
-  if (sessionID === null || busy.value || compacting.value) {
+  const sessionID = activeSessionID.value;
+  // busy 已含 compacting：手动压缩亦属在途运行，串行触发由同一闸门兜住
+  if (sessionID === null || busy.value) {
     return;
   }
   const question = precedingUserMessageOf(m.key);
@@ -1768,7 +2330,7 @@ const compactToHere = (m: ChatMessage): void => {
           timeout: 3000,
           color: "success",
         });
-        compacting.value = false;
+        finishCompact(sessionID);
       },
       onError: (message) => {
         const target = messages.value.find((x) => x.key === m.key);
@@ -1781,10 +2343,10 @@ const compactToHere = (m: ChatMessage): void => {
         }
         // 优先展示后端本地化摘要，缺失时回落到通用压缩失败文案
         notifyError(message || i18n.global.t("page.aiAssistant.compressFailed"));
-        compacting.value = false;
+        finishCompact(sessionID);
       },
       onComplete: () => {
-        compacting.value = false;
+        finishCompact(sessionID);
       },
     },
   );
@@ -1792,11 +2354,14 @@ const compactToHere = (m: ChatMessage): void => {
 
 // consumeAgentStream 消费一次 Agent SSE 流（首轮生成 / 审批续跑 / 续播共用同一套回调）：
 // 增量累积到消息、阶段事件归并到阶段行、done 回填结果；收到 tool_request 则挂起等待审批；
-// onSeq 持久化续播游标；退订句柄交由 agentRun store 持有（组件重挂载不影响在途流）
+// onSeq 持久化续播游标；退订句柄交由 agentRun store 持有（组件重挂载不影响在途流）。
+// opts.historical 为真表示本次是回放已收敛运行（中断后重开抽屉 / 刷新续播）：中断已是既成事实，
+// 不再弹错误提示打扰用户；中断提示由模板据消息的 phase（failed/cancelled）静态渲染，无需回放补写
 const consumeAgentStream = (
   sessionID: number,
   assistantKey: number,
   start: StreamStarter,
+  opts?: { historical?: boolean },
 ): void => {
   streaming.value = true;
   const unsubscribe = start({
@@ -1813,22 +2378,24 @@ const consumeAgentStream = (
         scrollToBottom();
       }
     },
-    // 思考过程增量事件：累积到当前助手消息的 reasoning，流式期间默认展开折叠区块
+    // 思考过程增量事件：累积到当前助手消息的思考分段（按「轮」切分），流式期间默认展开折叠区块
     onReasoning: (delta: string) => {
       const msg = messages.value.find((m) => m.key === assistantKey);
       if (msg) {
         pruneSubmittedCalls(msg);
-        msg.reasoning = (msg.reasoning ?? "") + delta;
-        msg.reasoningStreaming = true;
-        msg.reasoningExpanded = true;
+        appendReasoning(msg, delta);
         scrollToBottom();
       }
     },
-    // 工具调用阶段事件：工具调用轮不产生答案增量，仅实时累积阶段行（含工具名）
+    // 工具调用阶段事件：一次调用发起（toolCall/start）时把当前未锚定的思考分段锚定到该次调用，
+    // 使其渲染在该调用行上方；阶段行按 callID 归并递进
     onStage: (ev: AgentStageEvent) => {
       const msg = messages.value.find((m) => m.key === assistantKey);
       if (msg) {
         pruneSubmittedCalls(msg);
+        if (ev.stage === "toolCall" && ev.status === "start" && ev.callID) {
+          anchorReasoningSegment(msg, ev.callID);
+        }
       }
       applyAgentStage(assistantKey, ev);
     },
@@ -1840,8 +2407,7 @@ const consumeAgentStream = (
       // 本轮挂起：思考过程流随之结束，折叠区块自动收起
       const msg = messages.value.find((m) => m.key === assistantKey);
       if (msg) {
-        msg.reasoningStreaming = false;
-        msg.reasoningExpanded = false;
+        endReasoningStreaming(msg);
       }
       streaming.value = false;
       void loadSessions();
@@ -1865,8 +2431,7 @@ const consumeAgentStream = (
         msg.elapsedMs = out.elapsedMs;
         // 思考过程随 done 收敛为全文并结束流式；折叠区块自动收起（无思考时保持既有值不变）
         msg.reasoning = out.reasoning ?? msg.reasoning;
-        msg.reasoningStreaming = false;
-        msg.reasoningExpanded = false;
+        endReasoningStreaming(msg);
         msg.streaming = false;
         // 自动压缩已于本轮完成：本轮 done.promptTokens 即压缩后的真实占用，补全前后对比
         if (msg.compress?.phase === "done") {
@@ -1881,14 +2446,18 @@ const consumeAgentStream = (
       void loadSessions();
     },
     // 流正常 EOF：本轮挂起调用已全部送达。若全部为免审批调用（或用户已全部决策），
-    // 在此统一触发整体提交；仍需人工决策的调用保持等待，不受影响
+    // 在此统一触发整体提交；仍需人工决策的调用保持等待，不受影响。
+    // 同时在此（流已完全关闭、可安全另起一条连接）自动投递队首待发提问
     onComplete: () => {
       const msg = messages.value.find((m) => m.key === assistantKey);
       if (msg) {
         trySubmitApprovals(msg);
       }
+      if (!opts?.historical) {
+        drainQueuedQuery(sessionID);
+      }
     },
-    onError: (message: string) => {
+    onError: (message: string, phase?: string) => {
       agentRun.settle(sessionID);
       const msg = messages.value.find((m) => m.key === assistantKey);
       // 优先展示后端本地化摘要，缺失时回落到通用失败文案
@@ -1896,17 +2465,23 @@ const consumeAgentStream = (
       if (msg) {
         msg.streaming = false;
         // 思考过程随失败结束流式，折叠区块自动收起（保留已累积的思考内容）
-        msg.reasoningStreaming = false;
-        msg.reasoningExpanded = false;
+        endReasoningStreaming(msg);
         // 恢复失败的调用已不可执行，清空待审批态避免界面卡在等待中
         msg.awaitingApproval = false;
         msg.pendingCalls = undefined;
-        if (!msg.content) {
-          msg.content = text;
+        // 运行生命周期阶段随 error 事件回填：failed/cancelled 时由模板据阶段渲染中断提示横幅
+        // （文案由前端 i18n 提供，不再拼接进正文，避免提示语混入后续喂回模型的内容）
+        if (phase) {
+          msg.phase = phase;
         }
       }
       streaming.value = false;
-      notifyError(text);
+      // 回放已收敛运行的中断（续播）不再弹提示：该中断在用户离开时即已发生，重开抽屉时再提示属打扰
+      if (!opts?.historical) {
+        notifyError(text);
+        // 本轮以失败收尾（不再触发 onComplete 时）同样投递队首待发提问；重复调用由 busy 闸门兜住
+        drainQueuedQuery(sessionID);
+      }
     },
   });
   agentRun.attach(sessionID, unsubscribe);
@@ -1917,7 +2492,7 @@ const consumeAgentStream = (
 // trySubmitApprovals 当本轮（尚未回传的）待审批调用全部已决策时，一次性回传全部结果并续跑；
 // 后端把运行现场一次性消费，故同一轮必须整体提交，不能逐条提交
 const trySubmitApprovals = (msg: ChatMessage): void => {
-  if (activeSessionId.value === null || msg.awaitingApproval !== true) {
+  if (activeSessionID.value === null || msg.awaitingApproval !== true) {
     return;
   }
   const batch = (msg.pendingCalls ?? []).filter((c) => c.submitted !== true);
@@ -1934,7 +2509,7 @@ const trySubmitApprovals = (msg: ChatMessage): void => {
     c.submitted = true;
   });
   msg.awaitingApproval = false;
-  const sessionID = activeSessionId.value;
+  const sessionID = activeSessionID.value;
   agentRun.markAwaiting(sessionID, false);
   consumeAgentStream(sessionID, msg.key, (handlers) =>
     agentToolResultStream(sessionID, { results }, handlers),
@@ -2041,7 +2616,7 @@ const createSessionForQuery = async (firstQuery: string, userKey: number): Promi
       async (rsp) => {
         created = true;
         sessions.value = [rsp.data, ...sessions.value];
-        activeSessionId.value = rsp.data.id;
+        activeSessionID.value = rsp.data.id;
         draftMode.value = false;
         // 首条消息已本地回显：startStream 据其补流式占位消息，不再重复推送用户气泡
         startStream(rsp.data.id, firstQuery, userKey);
@@ -2071,6 +2646,12 @@ const onComposerEnter = (event: KeyboardEvent): void => {
     return;
   }
   event.preventDefault();
+  // 运行中（生成 / 待审批 / 建会话 / 压缩）回车即把当前输入转入待发队列，让用户可连续抛出多个追问，
+  // 而不必等本轮回答结束
+  if (busy.value) {
+    enqueueQuery();
+    return;
+  }
   if (!streaming.value && !awaitingApproval.value && !creating.value && !optimizing.value) {
     void sendQuery();
   }
@@ -2095,12 +2676,12 @@ const sendQuery = async (): Promise<void> => {
   // （主题由后端生成并回传），创建成功后才发起流式生成。创建会话需后端同步调模型生成主题、
   // 耗时明显，故先本地回显用户气泡并让发送按钮转入加载态（见 canSend / creating），
   // 让「回车已被受理」在等待期即刻可见；创建未成功再回滚回显
-  if (activeSessionId.value === null) {
+  if (activeSessionID.value === null) {
     const userKey = echoUserQuery(q);
     await createSessionForQuery(q, userKey);
     return;
   }
-  startStream(activeSessionId.value, q);
+  startStream(activeSessionID.value, q);
 };
 
 // optimizePrompt 优化提问：调用提示词优化接口，把当前输入改写为更清晰、更易被正确理解的提问。
@@ -2144,7 +2725,7 @@ const undoOptimizePrompt = (): void => {
 // cancelGeneration 点「停止」：显式请求服务端取消当前运行（真正中止，区别于仅断连接），
 // 并退订当前流；本地停止闪烁占位消息，保留已生成的增量内容
 const cancelGeneration = (): void => {
-  const sessionID = activeSessionId.value;
+  const sessionID = activeSessionID.value;
   if (sessionID !== null) {
     // 显式停止以服务端为准，客户端失败（如运行已结束）不阻断本地复位
     void agentRunCancel(sessionID).catch(() => undefined);
@@ -2156,6 +2737,10 @@ const cancelGeneration = (): void => {
   const last = messages.value[messages.value.length - 1];
   if (last && last.streaming) {
     last.streaming = false;
+  }
+  // 主动停止后同样自动投递队首待发提问（已退订旧流，可安全另起连接）
+  if (sessionID !== null) {
+    drainQueuedQuery(sessionID);
   }
 };
 
@@ -2188,14 +2773,38 @@ const abandonLocalRun = (id: number): void => {
     last.streaming = false;
     last.awaitingApproval = false;
     // 思考过程随运行中断结束流式并收起折叠区块（保留已累积的思考内容），避免残留「思考中…」
-    last.reasoningStreaming = false;
-    last.reasoningExpanded = false;
+    endReasoningStreaming(last);
   }
   agentRun.settle(id);
 };
 
+// resetAssistantProgress 清空一条助手消息的「本轮增量态」（正文、思考分段、工具调用行、待审批项
+// 与压缩展示态）：续播前进度未知时先把承载消息清空，再从持久化事件从头重建，避免重建出的增量与
+// 已落库的正文相互叠加（重影）；历史消息为只读展示，清空后即由回放补齐。id / createdAt / phase 为
+// 落库的既有事实（非本轮增量），一并保留——phase 为 failed / cancelled 时终端仍据此展示中断提示，
+// 即使回放无法重现 error 事件也不丢该事实。
+const resetAssistantProgress = (msg: ChatMessage): void => {
+  msg.content = "";
+  msg.reasoning = undefined;
+  msg.reasoningSegments = undefined;
+  msg.reasoningStreaming = undefined;
+  msg.reasoningExpanded = undefined;
+  msg.stages = undefined;
+  msg.pendingCalls = undefined;
+  msg.awaitingApproval = false;
+  msg.citations = undefined;
+  msg.compress = undefined;
+  msg.promptTokens = undefined;
+  msg.completionTokens = undefined;
+  msg.totalTokens = undefined;
+  msg.elapsedMs = undefined;
+};
+
 // resumeLiveRun 会话打开 / 切换 / 刷新后：探测在途运行态并复用 consumeAgentStream 回放续播。
-// 在跑则续接实时流；待审批则据 live-run 重建待审批项（回放的 tool_request 亦会重建，按 callID 幂等）。
+// 在跑则续接实时流；待审批则据 live-run 重建待审批项（回放的 tool_request 亦会重建，按 callID
+// 幂等）；已中断（failed / cancelled）则据已落库事件回放，重建本轮已生成的正文 / 思考 / 工具行
+// （中断提示由模板据该行落库的 phase 静态渲染）——后端已把中断前的中间产物阶段性落库，回放即从零
+// 重建该行。
 const resumeLiveRun = async (id: number): Promise<void> => {
   // 重订阅前先退订旧流，保证同一会话至多一条订阅
   agentRun.detach(id);
@@ -2206,17 +2815,43 @@ const resumeLiveRun = async (id: number): Promise<void> => {
   }
   const isStreaming = live.phase === "running";
   const isAwaiting = live.awaitingApproval === true;
-  // 服务端运行已收敛终态（done / failed / cancelled）且本地无在途态：无可续播内容（本轮作答
-  // 已收尾后关抽屉再重开即属此列），直接返回，避免误建一个空的助手占位气泡
+  // 已中断（failed / cancelled）：本轮已产出的中间产物已落库，回放即可重建，故本地无在途态时
+  // 仍继续续播（区别于已正常收尾的 done）
+  const isInterrupted = !isStreaming && !isAwaiting && live.phase !== "done";
+  // 服务端运行已收敛终态（done / failed / cancelled）且本地无在途态、亦非中断回放：无可续播内容
+  // （本轮作答已收尾后关抽屉再重开即属此列），直接返回，避免误建一个空的助手占位气泡
   const local = agentRun.runs[id];
-  if (!isStreaming && !isAwaiting && !local?.streaming && !local?.awaitingApproval) {
+  if (
+    !isStreaming &&
+    !isAwaiting &&
+    !local?.streaming &&
+    !local?.awaitingApproval &&
+    !isInterrupted
+  ) {
     return;
   }
-  // 复用仍在的流式 / 待审批占位消息（同页关抽屉后重开）；否则新建占位消息（刷新 / 切换会话）
+  // 决定承载消息与续播起点：
+  //   同页关抽屉后重开（该气泡仍在流式 / 待审批）→ 复用该气泡，只补游标之后的增量；
+  //   其余情形（刷新 / 切换会话 / 中断后重开）→ 复用已落库的末条助手消息（中断时后端已把中间产物
+  //   落库为该行），或新建占位气泡，并从序号 0 完整回放重建——内存正文为空却只收游标之后的增量
+  //   会出现头部缺口。
   let msg = messages.value[messages.value.length - 1];
-  if (!msg || msg.role !== "assistant" || (!msg.streaming && !msg.awaitingApproval)) {
-    msg = { key: nextKey(), role: "assistant", content: "" };
-    messages.value.push(msg);
+  let after = agentRun.lastSeqOf(id);
+  const resumedInPlace =
+    !!msg && msg.role === "assistant" && (msg.streaming === true || msg.awaitingApproval === true);
+  if (!resumedInPlace) {
+    if (!msg || msg.role !== "assistant" || msg.id === undefined) {
+      // 无已落库的助手行可供承载：运行仍在途时新建占位气泡；已中断则本轮未产出任何正文 / 思考，
+      // 无产物可续播，不再造空气泡
+      if (isInterrupted) {
+        return;
+      }
+      msg = { key: nextKey(), role: "assistant", content: "" };
+      messages.value.push(msg);
+    } else {
+      resetAssistantProgress(msg);
+    }
+    after = 0;
   }
   msg.streaming = isStreaming;
   msg.awaitingApproval = isAwaiting;
@@ -2239,9 +2874,10 @@ const resumeLiveRun = async (id: number): Promise<void> => {
   });
   streaming.value = isStreaming;
   scrollToBottom();
-  // 从持久化的续播游标回放：同页重开无缺口，刷新后由 done.content 收敛
-  const after = agentRun.lastSeqOf(id);
-  consumeAgentStream(id, msg.key, (handlers) => agentStreamResume(id, after, handlers));
+  // 从上述起点回放：同页重开无缺口，跨页由序号 0 完整重建；historical 抑制回放中断的错误提示
+  consumeAgentStream(id, msg.key, (handlers) => agentStreamResume(id, after, handlers), {
+    historical: !isStreaming && !isAwaiting,
+  });
   // 待审批续播时并非「生成中」：consumeAgentStream 默认置为生成中，这里按实际阶段校正
   streaming.value = isStreaming;
 };
@@ -2259,8 +2895,8 @@ const initialize = async (): Promise<void> => {
   void ensureEnum(EnumClass.auditLevel);
   await Promise.all([loadStatus(), loadSessions()]);
   // 刷新后恢复上次会话：会话仍在则回填其档位 / 阀门并载入历史，供随后 watch(opened) 续播；
-  // 会话已删除时 loadSessions 已把 activeSessionId 清空，此处自然跳过
-  const restored = activeSessionId.value;
+  // 会话已删除时 loadSessions 已把 activeSessionID 清空，此处自然跳过
+  const restored = activeSessionID.value;
   if (restored !== null) {
     const target = sessions.value.find((s) => s.id === restored);
     if (target?.slot) {
@@ -2270,11 +2906,13 @@ const initialize = async (): Promise<void> => {
       reviewValve.value = target.reviewValve;
     }
     await loadMessages(restored);
+    // 恢复该会话本地记忆的待发提问队列，供随后 watch(opened) 续播判定后投递
+    ensureQueueLoaded(restored);
   }
 };
 
 // 当前会话跨刷新持久化：刷新后据该记录恢复会话并自动续播（见 initialize）
-watch(activeSessionId, (value) => {
+watch(activeSessionID, (value) => {
   localManager.setAgentActiveSession(value);
 });
 
@@ -2285,16 +2923,22 @@ watch(opened, async (value) => {
       // 首开需等初始化（会话列表 + 历史消息）就绪后再续播，否则续播会缺少可复用的占位消息
       await initialize();
     }
-    // 重开抽屉：若当前会话有在途运行则续播（宽限期内重连即停表续跑）
-    if (activeSessionId.value !== null) {
-      void resumeLiveRun(activeSessionId.value);
+    // 重开抽屉：若当前会话有在途运行则续播（宽限期内重连即停表续跑）；
+    // 续播判定完成后（busy 已如实反映在途运行）再投递队首待发提问——关抽屉期间完成的运行
+    // 不会再触发流回调，仅在此补投递
+    const id = activeSessionID.value;
+    if (id !== null) {
+      void resumeLiveRun(id).then(() => {
+        ensureQueueLoaded(id);
+        drainQueuedQuery(id);
+      });
     }
     return;
   }
   // 关闭抽屉：仅退订（不取消服务端运行）。退订本身即触发服务端退订宽限计时——宽限内重开即
   // 停表续跑，宽限内始终无订阅者才由服务端自动取消；会话与消息由组件自身持有，重开时仍可见。
-  if (activeSessionId.value !== null) {
-    agentRun.detach(activeSessionId.value);
+  if (activeSessionID.value !== null) {
+    agentRun.detach(activeSessionID.value);
   }
 });
 
@@ -2306,8 +2950,8 @@ onMounted(() => {
 // 不取消服务端运行，让宽限窗口吸收瞬时卸载 / 重挂载
 onUnmounted(() => {
   window.removeEventListener("resize", onViewportResize);
-  if (activeSessionId.value !== null) {
-    agentRun.detach(activeSessionId.value);
+  if (activeSessionID.value !== null) {
+    agentRun.detach(activeSessionID.value);
   }
 });
 </script>
@@ -2319,8 +2963,28 @@ onUnmounted(() => {
   min-height: 0;
 }
 
+/* 左缘拖拽手柄按 placement="outside" 贴到抽屉外侧，其 8px 命中条会越出内容区左缘；
+   而内容区默认 overflow-x: hidden（Vuetify 的 $navigation-drawer-content-overflow-x），
+   会把整条命中条裁掉，故此处放开裁剪。本抽屉内容由 .assistant-drawer 的 h-100 精确撑满，
+   内容区自身不产生纵向溢出（真正的滚动容器是 .assistant-messages），故放开 overflow-y
+   不改变滚动行为——顺带说明：CSS 不允许 overflow-x: visible 与 overflow-y: auto 共存，
+   这里的 overflow: visible 是唯一写法 */
+/* stylelint-disable selector-class-pattern -- Vuetify 内部 BEM 元素名 */
+:deep(.v-navigation-drawer__content) {
+  overflow: visible;
+}
+/* stylelint-enable selector-class-pattern */
+
 .assistant-messages {
+  /* 平滑滚动供提问轨的跳转使用（见 scrollToTurn） */
   scroll-behavior: smooth;
+}
+
+/* 消息区容器：只承载滚动正文（提问轨绝对定位在抽屉左缘，不占这里的流）。
+   min-height: 0 必需——纵向 flex 子项默认 min-height: auto 会被内容高度撑破，
+   滚动交给 .assistant-messages 自身承担 */
+.assistant-conversation {
+  min-height: 0;
 }
 
 /* 输入框：外观基线取自 .zk-panel + .zk-panel--subtle（带上灰度底以凸显输入区），
@@ -2345,6 +3009,39 @@ onUnmounted(() => {
    保证换行宽度与可视区一致 */
 .assistant-composer :deep(.v-textarea textarea) {
   padding-inline: var(--zk-space-3);
+}
+
+/* 待发提问队列：堆叠在正文输入区上方，与正文同处一个边框容器内；层级靠间距与略强于面板的
+   灰度底区分（抬升底色叠于 .zk-panel--subtle 的弱化底色之上），不在 div 之间加分隔线 */
+.assistant-queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--zk-space-1);
+  padding: var(--zk-space-2) var(--zk-space-2) 0;
+}
+
+.assistant-queue-item {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-1);
+  padding: 2px var(--zk-space-1) 2px var(--zk-space-2);
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-raised-opacity));
+}
+
+/* 队列正文单行截断：超长追问不撑高堆叠区，完整内容可经「修改」回填到输入框查看 */
+.assistant-queue-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--zk-font-size-caption);
+}
+
+.assistant-queue-icon {
+  flex: 0 0 auto;
+  opacity: 0.55;
 }
 
 /* 容器底部工具条：控件自左依次排列，末位按钮（发送 / 停止）靠右，
@@ -2558,10 +3255,42 @@ onUnmounted(() => {
   padding: var(--zk-space-1) 0;
 }
 
-/* 上下文压缩展示块：外观基线取自 .zk-panel--subtle（弱化底 + 圆角），
-   与正文 / 阶段行留出上下间距以示区别；失败态补一条错误色描边 */
+/* 一轮工具调用的展示组：组内各调用行自上而下排列；相邻组之间留一丝间距以区分轮次 */
+.assistant-stage-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.assistant-stage-group + .assistant-stage-group {
+  margin-top: var(--zk-space-1);
+}
+
+/* 并行调用组：以左侧细线（边界包含关系）体现「同一轮内 N 次并发调用」，而非在行间加分隔边框 */
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
+.assistant-stage-group--parallel {
+  padding-left: var(--zk-space-3);
+  border-left: var(--zk-hairline-width) solid
+    rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
+}
+
+/* 并行调用计数提示：仅多行时展示，与首行留出间距并弱化呈现 */
+.assistant-stage-parallel-label {
+  margin-bottom: var(--zk-space-1);
+}
+
+/* 上下文压缩展示块：外观基线取自 .zk-panel--subtle（弱化底 + 圆角），失败态补一条错误色描边。
+   位于该轮快捷操作行下方（模板上的 mt-2 提供间距）。width: 100% 必需：它位于 .assistant-turn
+   这一 align-items: flex-start 的纵向 flex 内，不撑满会被收缩成内容宽，running 态的摘要增量
+   预览随之被压成窄条 */
 .assistant-compress {
-  margin: var(--zk-space-2) 0;
+  width: 100%;
+  padding: var(--zk-space-2);
+}
+
+/* 运行未正常结束提示：警示图标 + 文案横向排布，与正文之间靠间距与弱化底区分 */
+.assistant-interrupted {
+  display: flex;
+  align-items: center;
   padding: var(--zk-space-2);
 }
 
@@ -2570,6 +3299,14 @@ onUnmounted(() => {
 .assistant-reasoning {
   margin: var(--zk-space-2) 0;
   overflow: hidden;
+}
+
+/* 思考正文（折叠块展开区）：限高滚动，长思考不撑高消息区。高度上限取全站长文本区令牌
+   --zk-preview-max-height（同文档正文 / 分块正文 / 明文预览），不另立数值；约束落在正文
+   自己的容器上（而非面板正文根元素），滚动条只随正文出现，面板内边距不参与滚动 */
+.assistant-reasoning-body {
+  max-height: var(--zk-preview-max-height);
+  overflow-y: auto;
 }
 
 /* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
@@ -2582,6 +3319,17 @@ onUnmounted(() => {
   max-height: calc(var(--zk-editor-min-height) * 1.5);
   overflow: auto;
   margin-top: var(--zk-space-1);
+}
+
+/* 引用标题链接：命名空间可溯源时标题渲染为链接，颜色走主题 primary，默认无下划线，
+   悬停显现下划线，与站内其它文本链接风格一致 */
+.assistant-citation-link {
+  color: rgb(var(--v-theme-primary));
+  text-decoration: none;
+}
+
+.assistant-citation-link:hover {
+  text-decoration: underline;
 }
 
 /* 引用正文两行截断，避免单条引用撑爆气泡 */

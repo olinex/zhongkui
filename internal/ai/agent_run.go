@@ -63,6 +63,9 @@ type pendingToolCall struct {
 	AuditLevel AuditLevel `json:"auditLevel"`
 	// ApprovalRequired 由审核重要级与会话阀门合成得出的最终结论：true 表示需人工审核
 	ApprovalRequired bool `json:"approvalRequired"`
+	// Round 该次调用所属的轮次（从 1 起，挂起前由工具循环写入）；恢复续跑时据此让阶段事件沿用
+	// 同一轮次，使同一轮内并发发起的调用在前端仍聚为一组
+	Round int `json:"round,omitempty"`
 }
 
 // SaveAgentRun 创建一行运行现场（状态为 pending），承载挂起时刻的运行现场。
@@ -118,7 +121,7 @@ func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namesp
 // prepareClientToolCall 处理一次 client 来源工具调用：仅当本次运行有持久化会话且具备审批通道时，
 // 原样登记待执行调用（工具名与入参文本，后端不做解释），待本轮结束统一挂起；否则返回回灌给模型的
 // 英文错误文本，此时不产生任何 ToolRequest。
-func prepareClientToolCall(tc schema.ToolCall, in AgentInput, requests ToolRequestReporter) (*pendingToolCall, string) {
+func prepareClientToolCall(tc schema.ToolCall, in AgentInput, round int, requests ToolRequestReporter) (*pendingToolCall, string) {
 	if in.SessionID == 0 || requests == nil {
 		return nil, "client tool calls require a persisted session and an approval channel; this call cannot be executed"
 	}
@@ -127,6 +130,7 @@ func prepareClientToolCall(tc schema.ToolCall, in AgentInput, requests ToolReque
 		ToolName:  tc.Function.Name,
 		Arguments: tc.Function.Arguments,
 		ExecOwner: ToolExecOwnerClient,
+		Round:     round,
 	}, ""
 }
 
@@ -273,6 +277,15 @@ func (a *Agent) buildResumeToolMessages(ctx, toolCtx context.Context, pending []
 		default:
 			text = result.Result
 		}
+		// client 分支同 backend 分支一样上报 toolResult 终态，使前端该次调用行从「发起」收敛
+		// 为 done / failed（而非停在「发起」态）。
+		if reporter != nil {
+			if result.Error != "" {
+				_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: call.ToolName, CallID: call.CallID, Round: call.Round, Err: result.Error})
+			} else {
+				_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: call.ToolName, CallID: call.CallID, Round: call.Round})
+			}
+		}
 		out = append(out, schema.ToolMessage(truncateBytes(text, maxBytes), call.CallID))
 	}
 	return out
@@ -284,19 +297,19 @@ func (a *Agent) buildResumeToolMessages(ctx, toolCtx context.Context, pending []
 func (a *Agent) execBackendTool(toolCtx context.Context, call pendingToolCall, reporter EvalReporter) string {
 	name := call.ToolName
 	if reporter != nil {
-		_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusStart, Tool: name})
+		_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusStart, Tool: name, CallID: call.CallID, Round: call.Round})
 	}
 	start := time.Now()
 	result, err := a.runTool(toolCtx, schema.ToolCall{ID: call.CallID, Function: schema.FunctionCall{Name: call.ToolName, Arguments: call.Arguments}})
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
 		if reporter != nil {
-			_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, ElapsedMs: elapsed, Err: err.Error()})
+			_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, CallID: call.CallID, Round: call.Round, ElapsedMs: elapsed, Err: err.Error()})
 		}
 		return "tool execution failed: " + err.Error()
 	}
 	if reporter != nil {
-		_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: name, ElapsedMs: elapsed})
+		_ = reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: name, CallID: call.CallID, Round: call.Round, ElapsedMs: elapsed})
 	}
 	return result
 }

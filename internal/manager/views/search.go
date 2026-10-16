@@ -3,6 +3,7 @@ package views
 
 import (
 	"time"
+
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/utils"
 )
@@ -4208,6 +4209,8 @@ func (s *KnowledgeDocumentListGetSearchIn) ResolveSelectColumns() []string {
 			add("id")
 		case "title":
 			add("title")
+		case "namespaceName":
+			add("namespace_name")
 		case "chunkCount":
 			add("chunk_count")
 		case "format":
@@ -4274,6 +4277,7 @@ func (s *KnowledgeDocumentListGetSearchIn) GetOptions() *utils.SearchOptions {
 		Fields: []string{
 			"id",
 			"title",
+			"namespaceName",
 			"chunkCount",
 			"format",
 			"status",

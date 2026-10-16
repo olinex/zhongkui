@@ -73,6 +73,22 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 下载知识库文档原件元信息（二进制流响应不适配结构体元信息，仅登记请求方法）
 	views.RegisterApi(docGroup, "/:id/download", "下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）", views.WithMethod(http.MethodPost))
 
+	// ========== 系统命名空间知识库（只读）：/api/v1/ai/doc/system ==========
+	// 系统命名空间承载代码声明的公开共享知识，对前端以只读方式开放；不提供任何写方法。
+	systemGroup := docGroup.Group("/system")
+	// 系统命名空间知识库文档列表查询 - 只读，数据范围恒为内置系统命名空间。
+	systemGroup.POST("/list", KnowledgeSystemDocumentListGet)
+	// 系统命名空间知识库文档列表元信息
+	views.RegisterListApi[*views.KnowledgeDocumentListGetSearchIn, *KnowledgeDocumentListOut](systemGroup, "/list", "系统命名空间知识库文档列表查询 - 只读，数据范围恒为内置系统命名空间")
+	// 系统命名空间知识库文档详情 - 只读。
+	systemGroup.POST("/:id/get", KnowledgeSystemDocumentDetailGet)
+	// 系统命名空间知识库文档详情元信息
+	views.RegisterApi(systemGroup, "/:id/get", "系统命名空间知识库文档详情 - 只读", views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentDetailOut]()))
+	// 系统命名空间知识库文档分块明细 - 只读。
+	systemGroup.POST("/:id/chunks", KnowledgeSystemDocumentChunksGet)
+	// 系统命名空间知识库文档分块明细元信息
+	views.RegisterApi(systemGroup, "/:id/chunks", "系统命名空间知识库文档分块明细 - 只读", views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]()))
+
 	// ========== 知识库检索试运行：/api/v1/ai/retrieval ==========
 	// 知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估
 	aiGroup.POST("/retrieval/dry-run", RetrievalDryRunStream)

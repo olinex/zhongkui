@@ -739,7 +739,8 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     prompt_tokens INT NOT NULL DEFAULT 0,
     completion_tokens INT NOT NULL DEFAULT 0,
     total_tokens INT NOT NULL DEFAULT 0,
-    elapsed_ms BIGINT NOT NULL DEFAULT 0
+    elapsed_ms BIGINT NOT NULL DEFAULT 0,
+    phase VARCHAR(16) NOT NULL DEFAULT ''
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_messages_session_seq
@@ -761,6 +762,7 @@ COMMENT ON COLUMN agent_messages.prompt_tokens IS 'the sum of prompt tokens over
 COMMENT ON COLUMN agent_messages.completion_tokens IS 'the sum of completion tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.total_tokens IS 'the sum of total tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.elapsed_ms IS 'the total elapsed time in milliseconds of this assistant reply (from the run start to the done item), 0 for user messages';
+COMMENT ON COLUMN agent_messages.phase IS 'the terminal lifecycle phase of the run that produced this assistant message (done/failed/cancelled), empty while the run is still in flight or for user messages; the render layer derives the interrupted/cancelled notice from it rather than keeping such text in the content';
 
 CREATE TABLE IF NOT EXISTS agent_session_compactions (
     id BIGSERIAL PRIMARY KEY,
@@ -771,7 +773,9 @@ CREATE TABLE IF NOT EXISTS agent_session_compactions (
     user_id BIGINT NOT NULL DEFAULT 0,
     upto_seq BIGINT NOT NULL DEFAULT 0,
     summary BYTEA,
-    reason VARCHAR(16) NOT NULL DEFAULT ''
+    reason VARCHAR(16) NOT NULL DEFAULT '',
+    tokens_before INT NOT NULL DEFAULT 0,
+    folded_count INT NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_session_compactions_session
@@ -786,6 +790,8 @@ COMMENT ON COLUMN agent_session_compactions.user_id IS 'the owning user id for c
 COMMENT ON COLUMN agent_session_compactions.upto_seq IS 'the context start bound (summary_upto_seq snapshot) after this advance, monotonically increasing within a session';
 COMMENT ON COLUMN agent_session_compactions.summary IS 'the full rolling summary after this advance, stored encrypted with the crypto serializer, used to restore an earlier start bound on rollback';
 COMMENT ON COLUMN agent_session_compactions.reason IS 'the reason that advanced the summary: rolling, auto or manual';
+COMMENT ON COLUMN agent_session_compactions.tokens_before IS 'the context token usage right before this advance, always filled with the real value for all reasons (rolling/auto/manual); whether it is rendered is decided by the read path, independently of its value';
+COMMENT ON COLUMN agent_session_compactions.folded_count IS 'the number of messages folded into the rolling summary by this advance, always the real count for all reasons (rolling/auto/manual)';
 
 CREATE TABLE IF NOT EXISTS agent_memories (
     id BIGSERIAL PRIMARY KEY,

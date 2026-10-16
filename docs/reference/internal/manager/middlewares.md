@@ -21,6 +21,7 @@
 - [func GetMessagePool\(c \*gin.Context\) \*message.Pool](<#GetMessagePool>)
 - [func GetNamespace\(c \*gin.Context\) \(string, \*response.CodeError\)](<#GetNamespace>)
 - [func GetObjectCache\(c \*gin.Context\) \*s3.ObjectCache](<#GetObjectCache>)
+- [func GetPasswordResetLimiter\(c \*gin.Context\) \*redis.FixedWindowLimiter](<#GetPasswordResetLimiter>)
 - [func GetPipelineClient\(c \*gin.Context\) \*pipeline.Client](<#GetPipelineClient>)
 - [func GetPipelineInspector\(c \*gin.Context\) \*pipeline.Inspector](<#GetPipelineInspector>)
 - [func GetRawDatabase\(c \*gin.Context\) \*database.DB](<#GetRawDatabase>)
@@ -33,6 +34,7 @@
 - [func NamespaceMiddleware\(cfg \*config.NamespaceConfig\) gin.HandlerFunc](<#NamespaceMiddleware>)
 - [func ObjectCacheMiddleware\(cache \*s3.ObjectCache\) gin.HandlerFunc](<#ObjectCacheMiddleware>)
 - [func OtelMiddleware\(\) gin.HandlerFunc](<#OtelMiddleware>)
+- [func PasswordResetLimiterMiddleware\(limiter \*redis.FixedWindowLimiter\) gin.HandlerFunc](<#PasswordResetLimiterMiddleware>)
 - [func PipelineClientMiddleware\(client \*pipeline.Client\) gin.HandlerFunc](<#PipelineClientMiddleware>)
 - [func PipelineInspectorMiddleware\(inspector \*pipeline.Inspector\) gin.HandlerFunc](<#PipelineInspectorMiddleware>)
 - [func RawDatabaseMiddleware\(db \*database.DB\) gin.HandlerFunc](<#RawDatabaseMiddleware>)
@@ -148,6 +150,12 @@ const NamespaceCtxName = "namespace"
 
 ```go
 const ObjectCacheCtxName = "objectcache"
+```
+
+<a name="PasswordResetLimiterCtxName"></a>PasswordResetLimiterCtxName 密码重置申请限流器在 Gin 上下文中存储的键名。 通过此键将 \*redis.FixedWindowLimiter 注入请求上下文，供忘记密码处理器按请求来源 维度判定是否超限。
+
+```go
+const PasswordResetLimiterCtxName = "password-reset-limiter"
 ```
 
 <a name="RawDatabaseCtxName"></a>RawDatabaseCtxName 是 raw 库（ClickHouse）在 Gin 上下文中存储的键名。 通过此键将 \*database.DB 实例注入到请求上下文中，供后续处理函数读取。
@@ -460,6 +468,15 @@ GetObjectCache 从 Gin 请求上下文中获取通用对象缓存实例。
 
 - \*s3.ObjectCache: 通用对象缓存实例
 
+<a name="GetPasswordResetLimiter"></a>
+## func GetPasswordResetLimiter
+
+```go
+func GetPasswordResetLimiter(c *gin.Context) *redis.FixedWindowLimiter
+```
+
+GetPasswordResetLimiter 从 Gin 请求上下文中获取密码重置申请限流器。 上下文中不存在时触发 panic，通常意味着未注册 PasswordResetLimiterMiddleware。
+
 <a name="GetPipelineClient"></a>
 ## func GetPipelineClient
 
@@ -647,6 +664,15 @@ func OtelMiddleware() gin.HandlerFunc
 ```
 
 OtelMiddleware 返回为 API 管理层接入 OpenTelemetry 链路追踪的 Gin 中间件。
+
+<a name="PasswordResetLimiterMiddleware"></a>
+## func PasswordResetLimiterMiddleware
+
+```go
+func PasswordResetLimiterMiddleware(limiter *redis.FixedWindowLimiter) gin.HandlerFunc
+```
+
+PasswordResetLimiterMiddleware 创建密码重置申请限流中间件：将限流器注入请求上下文， 供处理器按请求来源维度调用其 Allow 判定是否超限。
 
 <a name="PipelineClientMiddleware"></a>
 ## func PipelineClientMiddleware

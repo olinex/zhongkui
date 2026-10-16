@@ -207,6 +207,60 @@ func (s *SessionStore) AppendMessage(ctx context.Context, msg *ai.AgentMessage) 
 	return msg, nil
 }
 
+// UpdateAssistantMessage 原地更新一条已落库的助手消息（按消息 ID 定位，并限定属主用户），供运行
+// 途中把阶段性落库的那一行继续累积正文 / 思考，以及运行终结时写入生命周期终态阶段（phase：done /
+// failed / cancelled）。不重分配 seq，故消息在会话内的顺序与只读游标不变。必须用「结构体 + Select」
+// 写这几列（正文 / 思考 / 草稿 / 引用为密文列，走 crypto 序列化器；map 形式会绕过序列化器把明文直写
+// 库，见 UpdateSummaryAndCheckpoint）。msg 为空或 ID 为 0 时返回英文错误；目标消息不存在（含归属
+// 不符）时返回 ErrMessageNotFound。
+func (s *SessionStore) UpdateAssistantMessage(ctx context.Context, msg *ai.AgentMessage) error {
+	if msg == nil || msg.ID == 0 {
+		return errors.New("session store: nil or unidentified message")
+	}
+	update := &ai.AgentMessage{
+		Content:          msg.Content,
+		Reasoning:        msg.Reasoning,
+		DraftJSON:        msg.DraftJSON,
+		CitationsJSON:    msg.CitationsJSON,
+		PromptTokens:     msg.PromptTokens,
+		CompletionTokens: msg.CompletionTokens,
+		TotalTokens:      msg.TotalTokens,
+		ElapsedMs:        msg.ElapsedMs,
+		Phase:            msg.Phase,
+	}
+	res := s.db.WithContext(ctx).Model(update).
+		Where("id = ? AND user_id = ?", msg.ID, msg.UserID).
+		Select("content", "reasoning", "draft_json", "citations_json", "prompt_tokens", "completion_tokens", "total_tokens", "elapsed_ms", "phase").
+		Updates(update)
+	if res.Error != nil {
+		return errors.WithStack(res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return ErrMessageNotFound
+	}
+	return nil
+}
+
+// DeleteMessage 硬删除一条消息行（按消息 ID 定位，并限定属主用户），供驻留运行在「本次流以挂起
+// 结束」时回收其阶段性落库的那一行：挂起不是终局，续跑会把本回合已外发的正文并回最终 done，留着
+// 这一行会在续跑结束后形成同一回合的两条助手消息。消息行本无 deleted_at 列（见 DeleteSession），
+// 故这里即硬删；目标行不存在（含归属不符）时返回 ErrMessageNotFound。
+func (s *SessionStore) DeleteMessage(ctx context.Context, id, userID uint) error {
+	if id == 0 {
+		return errors.New("session store: unidentified message")
+	}
+	res := s.db.WithContext(ctx).
+		Where("id = ? AND user_id = ?", id, userID).
+		Delete(&ai.AgentMessage{})
+	if res.Error != nil {
+		return errors.WithStack(res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return ErrMessageNotFound
+	}
+	return nil
+}
+
 // TruncateMessagesFromUserMessage 截断会话消息：删除会话内第 userMessageIndex 条（从 1 起，仅按
 // 用户消息计数、按 seq 升序定位）用户消息，以及该条之后的全部消息（含助手回复），供「回退 / 删除到
 // 某一轮对话」使用。目标用户消息不存在（序号越界）时返回 ErrMessageNotFound。
@@ -487,12 +541,14 @@ func (s *SessionStore) ListMessagesBefore(ctx context.Context, sessionID, userID
 }
 
 // UpdateSummaryAndCheckpoint 在单事务内推进会话的滚动摘要：更新 agent_sessions 的 summary 与
-// summary_upto_seq，并追加一条 agent_session_compactions 压缩检查点（记录推进后的游标与摘要全文，
-// 供回滚逐级回退 start bound）。reason 取 rolling（静默滚动）/ auto（自动压缩）/ manual（手动压缩）。
+// summary_upto_seq，并追加一条 agent_session_compactions 压缩检查点（记录推进后的游标、摘要全文与
+// 展示度量，供回滚逐级回退 start bound，以及刷新后回显历史压缩记录）。reason 取 rolling（静默滚动）/
+// auto（自动压缩）/ manual（手动压缩）；metrics 为该次推进的真实展示度量（三种原因都必须填真值，
+// 取值与是否展示无关——是否回显交由读取侧按 reason 决定）。
 // 摘要经 crypto 序列化器加密落库，故会话更新必须以「结构体 + Select」写这两列、不触碰其它字段
 // （避免并发改写会话标题/档位等；map 形式会绕过序列化器把明文直写库）；检查点同样是密文列，走
 // Create 结构体路径加密。session 必须带有 ID / UserID / NamespaceName（调用点均持有已加载的会话）。
-func (s *SessionStore) UpdateSummaryAndCheckpoint(ctx context.Context, session *ai.AgentSession, summary string, uptoSeq uint, reason string) error {
+func (s *SessionStore) UpdateSummaryAndCheckpoint(ctx context.Context, session *ai.AgentSession, summary string, uptoSeq uint, reason string, metrics CompactionMetrics) error {
 	if session == nil {
 		return errors.New("session store: nil session")
 	}
@@ -514,12 +570,28 @@ func (s *SessionStore) UpdateSummaryAndCheckpoint(ctx context.Context, session *
 			UptoSeq:       uint64(uptoSeq),
 			Summary:       serializer.NewCrypto([]byte(summary)),
 			Reason:        reason,
+			TokensBefore:  metrics.TokensBefore,
+			FoldedCount:   metrics.FoldedCount,
 		}
 		if err := tx.Create(checkpoint).Error; err != nil {
 			return errors.WithStack(err)
 		}
 		return nil
 	})
+}
+
+// ListCompactions 返回会话内按 upto_seq 升序的全部压缩检查点（限定属主用户），供消息列表在刷新后
+// 回显历史压缩记录。仅取展示所需列——刻意不 Select summary，避免为回显而无谓解密摘要。
+func (s *SessionStore) ListCompactions(ctx context.Context, sessionID, userID uint) ([]*ai.AgentSessionCompaction, error) {
+	var checkpoints []*ai.AgentSessionCompaction
+	if err := s.db.WithContext(ctx).
+		Select("id", "upto_seq", "reason", "tokens_before", "folded_count").
+		Where("session_id = ? AND user_id = ?", sessionID, userID).
+		Order("upto_seq ASC").
+		Find(&checkpoints).Error; err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return checkpoints, nil
 }
 
 // LatestAssistantMessage 返回会话最近一条助手消息（含草稿/引用载荷），并限定属主用户；

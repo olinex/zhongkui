@@ -129,8 +129,8 @@ export const useQuickStartStore = defineStore("quickStart", {
       this.groups = this.groups.filter((g) => g.id !== id);
       this.persist();
     },
-    addLink(groupId: string, link: NavChild) {
-      const group = this.groups.find((g) => g.id === groupId);
+    addLink(groupID: string, link: NavChild) {
+      const group = this.groups.find((g) => g.id === groupID);
       if (!group) {
         return;
       }
@@ -140,17 +140,17 @@ export const useQuickStartStore = defineStore("quickStart", {
       group.links.push({ ...link });
       this.persist();
     },
-    removeLink(groupId: string, index: number) {
-      const group = this.groups.find((g) => g.id === groupId);
+    removeLink(groupID: string, index: number) {
+      const group = this.groups.find((g) => g.id === groupID);
       if (group) {
         group.links.splice(index, 1);
         this.persist();
       }
     },
     // moveLink 将链接从源分组移动/排序到目标分组指定位置
-    moveLink(fromGroupId: string, fromIndex: number, toGroupId: string, toIndex: number) {
-      const fromGroup = this.groups.find((g) => g.id === fromGroupId);
-      const toGroup = this.groups.find((g) => g.id === toGroupId);
+    moveLink(fromGroupID: string, fromIndex: number, toGroupID: string, toIndex: number) {
+      const fromGroup = this.groups.find((g) => g.id === fromGroupID);
+      const toGroup = this.groups.find((g) => g.id === toGroupID);
       if (!fromGroup || !toGroup) {
         return;
       }
@@ -159,7 +159,7 @@ export const useQuickStartStore = defineStore("quickStart", {
         return;
       }
       // 同分组内向后移动时，源元素移除后目标索引需前移一位
-      if (fromGroupId === toGroupId && fromIndex < toIndex) {
+      if (fromGroupID === toGroupID && fromIndex < toIndex) {
         toIndex -= 1;
       }
       toGroup.links.splice(Math.min(toIndex, toGroup.links.length), 0, link);

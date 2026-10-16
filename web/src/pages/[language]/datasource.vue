@@ -880,14 +880,14 @@ const createAction = createForm.handleSubmit(async (values) => {
 });
 
 // ---- 编辑对话框 ----
-let editDatasourceId = 0;
+let editDatasourceID = 0;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<DatasourceItem>(
     datasourceDetailGet(item.id),
     async (rsp) => {
-      editDatasourceId = rsp.data.id;
+      editDatasourceID = rsp.data.id;
       editType.value = rsp.data.type;
       editSqliteFile.value = null;
       editIntrospectInfo.value = "";
@@ -915,7 +915,7 @@ const itemUpdateAction = () => {
     validateEditConfig();
     await getSimpleResponse(
       datasourceUpdate(
-        editDatasourceId,
+        editDatasourceID,
         {
           enabled: values.enabled,
           config: dumpEditConfigJson(),

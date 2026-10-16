@@ -78,6 +78,11 @@ type AgentMessage struct {
 	TotalTokens int `gorm:"type:INT"`
 	// ElapsedMs 本轮助手回答的总耗时（毫秒，明文数值，用户消息恒为 0）
 	ElapsedMs int64 `gorm:"type:BIGINT"`
+	// Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled），
+	// 空表示尚未终结（运行在途的阶段性落库行）。运行被中断（超时 / 报错 / 取消）时据此表达
+	// 「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文拼接提示文案（提示语若混入正文，
+	// 会被喂回模型污染下一轮上下文）；用户消息恒为空。
+	Phase AgentRunPhase `gorm:"type:VARCHAR(16)"`
 }
 
 // AgentSessionCompaction 表示一次滚动摘要推进（静默滚动或压缩）留下的压缩检查点：记录推进后的
@@ -100,4 +105,9 @@ type AgentSessionCompaction struct {
 	Summary *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12818,length=32"`
 	// Reason 触发本次推进的原因：rolling（静默滚动）/ auto（自动压缩）/ manual（手动压缩）
 	Reason string `gorm:"type:VARCHAR(16)"`
+	// TokensBefore 本次推进时（推进动作发生前）的会话上下文占用 token，三种原因均赋予该时刻的
+	// 真实占用（不因是否展示而留空）；是否回显由读取侧按 Reason 决定，与取值无关
+	TokensBefore int `gorm:"type:INT"`
+	// FoldedCount 本次推进折叠进摘要的消息条数（三种原因均为真实条数）
+	FoldedCount int `gorm:"type:INT"`
 }

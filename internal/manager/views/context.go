@@ -48,6 +48,8 @@ type RegisterContext struct {
 	TagRuleEngine gin.HandlerFunc
 	// FeatureRegistry 全局功能开关注册表中间件。
 	FeatureRegistry gin.HandlerFunc
+	// PasswordResetLimiter 密码重置申请限流中间件，将限流器注入请求上下文。
+	PasswordResetLimiter gin.HandlerFunc
 	// MessagePool 消息渠道连接池中间件。
 	MessagePool gin.HandlerFunc
 	// SQLiteVTabPools SQLite vtable 池持有者中间件。

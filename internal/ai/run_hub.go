@@ -478,11 +478,12 @@ func (h *RunHub) execute(run *liveRun, runCtx context.Context, in AgentInput) {
 	h.finish(run, phase, errMsg)
 }
 
-// finish 收敛一次运行到终态：failed/cancelled 追加一条 error 事件，随后停止宽限定时器、封存
-// 落库 goroutine 并等待其抽干、写回终态阶段与最终序号、关闭全部订阅者通道并从在途表中移除。
+// finish 收敛一次运行到终态：failed/cancelled 追加一条 error 事件（负载同时携带阶段，供前端据以
+// 展示「本轮被中断」而非仅弹瞬时错误），随后停止宽限定时器、封存落库 goroutine 并等待其抽干、写回
+// 终态阶段与最终序号、关闭全部订阅者通道并从在途表中移除。
 func (h *RunHub) finish(run *liveRun, phase ai.AgentRunPhase, errMsg string) {
 	if errMsg != "" {
-		h.publishJSON(run, ai.AgentRunEventError, map[string]string{"error": errMsg})
+		h.publishJSON(run, ai.AgentRunEventError, map[string]string{"error": errMsg, "phase": string(phase)})
 	}
 	run.mu.Lock()
 	run.finished = true

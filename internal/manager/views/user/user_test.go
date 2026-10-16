@@ -16,6 +16,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/hibiken/asynq"
 	. "github.com/smartystreets/goconvey/convey"
@@ -34,6 +35,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/mail"
 	"zhongkuisec.com/zhongkui/internal/pkg/message"
 	"zhongkuisec.com/zhongkui/internal/pkg/pipeline"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 	mailhandler "zhongkuisec.com/zhongkui/internal/worker/handlers/mail"
@@ -1245,13 +1247,28 @@ func TestUserSelfFrontendConfig(t *testing.T) {
 	})
 }
 
+// newTestPasswordResetLimiter 用内存版 Redis（miniredis）构造忘记密码申请限流器，
+// 使限流计数无需真实 Redis 即可在测试中生效；Redis 客户端与内存实例随测试结束自动关闭。
+func newTestPasswordResetLimiter(t *testing.T, limit int) *redis.FixedWindowLimiter {
+	t.Helper()
+	mr := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Config{Type: redis.NormalType, Addr: mr.Addr()})
+	t.Cleanup(func() {
+		// 此处已脱离 goconvey 断言上下文，直接忽略关闭错误即可
+		_ = client.Shutdown()
+	})
+	return redis.NewFixedWindowLimiter(client, limit, time.Hour)
+}
+
 // setupPasswordResetRouter 创建一个用于密码重置接口（forgot/reset）的测试引擎，
-// 注入核心数据库、日志、功能开关注册表（由 [smtp] 配置派生）、项目级配置与假 pipeline 投递客户端。
-func setupPasswordResetRouter(db *database.DB, enq *fakePipelineEnqueuer, mailCfg *mail.Config) *gin.Engine {
+// 注入核心数据库、日志、功能开关注册表（由 [smtp] 配置派生）、项目级配置、假 pipeline 投递客户端
+// 与「请求来源地址」维度的申请限流器。
+func setupPasswordResetRouter(db *database.DB, enq *fakePipelineEnqueuer, mailCfg *mail.Config, limiter *redis.FixedWindowLimiter) *gin.Engine {
 	r := setupUserSelfTestRouterWithDB(db)
 	r.Use(injectLoggerMiddleware(createTestLoggingLogger()))
 	r.Use(middlewares.PipelineClientMiddleware(newFakePipelineClient(enq)))
 	r.Use(middlewares.FeatureRegistryMiddleware(features.NewRegistry(features.PasswordReset(mail.NewSender(mailCfg, createTestLoggingLogger(), message.NewPool())))))
+	r.Use(middlewares.PasswordResetLimiterMiddleware(limiter))
 	r.Use(func(c *gin.Context) {
 		c.Set(config.ConfigCtxName, &config.Config{
 			FrontendBaseURL: "http://127.0.0.1:8000",
@@ -1273,12 +1290,12 @@ func TestUserPasswordForgot(t *testing.T) {
 		user := createTestUserInDB(db, "forgotuser", "忘记密码用户", "forgot@example.com", "OldP@ssw0rd", true)
 		enq := &fakePipelineEnqueuer{}
 		enabledCfg := &mail.Config{Enabled: true, Host: "smtp.example.com", From: "no-reply@example.com"}
-		r := setupPasswordResetRouter(db, enq, enabledCfg)
+		r := setupPasswordResetRouter(db, enq, enabledCfg, newTestPasswordResetLimiter(t, 5))
 		r.POST("/api/v1/user/password/forgot", UserPasswordForgot)
 
 		Convey("SMTP 未启用时返回 400 CodePasswordResetUnavailable", func() {
 			disabledCfg := &mail.Config{Enabled: false}
-			r2 := setupPasswordResetRouter(db, enq, disabledCfg)
+			r2 := setupPasswordResetRouter(db, enq, disabledCfg, newTestPasswordResetLimiter(t, 5))
 			r2.POST("/api/v1/user/password/forgot", UserPasswordForgot)
 
 			body, _ := json.Marshal(map[string]any{"username": user.Username, "email": user.Email})
@@ -1338,6 +1355,60 @@ func TestUserPasswordForgot(t *testing.T) {
 
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
 		})
+
+		Convey("同一来源地址在窗口内提交次数超过上限时返回 429 CodeTooManyRequests", func() {
+			// 限流维度为请求来源地址：上限设为 2，同一来源（httptest 默认 RemoteAddr 相同）
+			// 连续提交 3 个「互不相同」的账号名 / 邮箱组合，第三次仍应被拒绝。
+			// 若限流维度仍是「账号名 + 邮箱」，三次各为新键皆会放行——本用例即该维度的回归证明。
+			r2 := setupPasswordResetRouter(db, enq, enabledCfg, newTestPasswordResetLimiter(t, 2))
+			r2.POST("/api/v1/user/password/forgot", UserPasswordForgot)
+
+			post := func(username, email string) int {
+				body, _ := json.Marshal(map[string]any{"username": username, "email": email})
+				w := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/forgot", bytes.NewReader(body))
+				req.Header.Set("Content-Type", "application/json")
+				r2.ServeHTTP(w, req)
+				return w.Code
+			}
+
+			// 三个组合互不相同（且均不匹配库内账号，命中防枚举统一响应以 200 放行）
+			So(post("guessone", "guessone@example.com"), ShouldEqual, http.StatusOK)
+			So(post("guesstwo", "guesstwo@example.com"), ShouldEqual, http.StatusOK)
+
+			body, _ := json.Marshal(map[string]any{"username": "guessthree", "email": "guessthree@example.com"})
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/forgot", bytes.NewReader(body))
+			req.Header.Set("Content-Type", "application/json")
+			r2.ServeHTTP(w, req)
+
+			So(w.Code, ShouldEqual, http.StatusTooManyRequests)
+			var rsp map[string]any
+			So(json.Unmarshal(w.Body.Bytes(), &rsp), ShouldBeNil)
+			So(rsp["code"], ShouldEqual, float64(resp.CodeTooManyRequests))
+		})
+
+		Convey("不同来源地址各自独立计数，互不影响", func() {
+			// 上限设为 1：同一来源第二次提交即超限，而另一来源仍可正常申请
+			r2 := setupPasswordResetRouter(db, enq, enabledCfg, newTestPasswordResetLimiter(t, 1))
+			r2.POST("/api/v1/user/password/forgot", UserPasswordForgot)
+
+			post := func(remoteAddr, username, email string) int {
+				body, _ := json.Marshal(map[string]any{"username": username, "email": email})
+				w := httptest.NewRecorder()
+				req := httptest.NewRequest(http.MethodPost, "/api/v1/user/password/forgot", bytes.NewReader(body))
+				req.RemoteAddr = remoteAddr
+				req.Header.Set("Content-Type", "application/json")
+				r2.ServeHTTP(w, req)
+				return w.Code
+			}
+
+			So(post("192.0.2.10:1234", "guessone", "guessone@example.com"), ShouldEqual, http.StatusOK)
+			// 同一来源再次提交（源端口不同不影响来源地址维度）即达到上限
+			So(post("192.0.2.10:5678", "guesstwo", "guesstwo@example.com"), ShouldEqual, http.StatusTooManyRequests)
+			// 另一来源使用独立窗口，不受前一来源的计数影响
+			So(post("192.0.2.11:1234", "guessthree", "guessthree@example.com"), ShouldEqual, http.StatusOK)
+		})
 	})
 }
 
@@ -1350,7 +1421,7 @@ func TestUserPasswordResetByToken(t *testing.T) {
 			So(db.Rollback().Error, ShouldBeNil)
 		})
 		user := createTestUserInDB(db, "resettokenuser", "令牌重置用户", "resettoken@example.com", "OldP@ssw0rd", true)
-		r := setupPasswordResetRouter(db, &fakePipelineEnqueuer{}, &mail.Config{Enabled: true, Host: "smtp.example.com", From: "no-reply@example.com"})
+		r := setupPasswordResetRouter(db, &fakePipelineEnqueuer{}, &mail.Config{Enabled: true, Host: "smtp.example.com", From: "no-reply@example.com"}, newTestPasswordResetLimiter(t, 5))
 		r.POST("/api/v1/user/password/reset", UserPasswordResetByToken)
 
 		// 生成有效令牌并入库；仅哈希入库

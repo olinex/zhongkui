@@ -276,6 +276,7 @@ model:
     field:
       id: ID
       title: 标题
+      namespaceName: 命名空间
       content: 内容
       chunkCount: 分块数
       format: 格式
@@ -1007,7 +1008,7 @@ model:
       loaded: 已加载
       loadMore: 加载更多
       empty: 该传输暂无网络堆栈数据
-      noTraceId: 该记录缺少 traceID，无法关联网络堆栈
+      noTraceID: 该记录缺少 traceID，无法关联网络堆栈
       error: 网络堆栈加载失败
     # 协议头部可读化：逐字段名/值/说明（header.field.<key> 与 header.desc.<key> 的 key 与 JSON 字段名一致）
     header:
@@ -1163,6 +1164,7 @@ action:
   update: 更新
   delete: 删除
   edit: 修改
+  pinTop: 置顶
   close: 关闭
   confirm: 确认
   activate: 启用
@@ -1279,6 +1281,7 @@ title:
   accessKey: 访问密钥
   aiKnowledge: 知识库管理
   aiMemory: 长期记忆
+  aiDocumentDetail: 知识文档详情
   passwordReset: 重置密码
   userAdmin: 管理 - 用户
   groupAdmin: 管理 - 用户组
@@ -1337,24 +1340,31 @@ page:
     contactAdmin: 该功能需要管理员开通，请联系管理员
   aiAssistant:
     generate: 生成
+    enqueueQuery: 加入待发队列
+    awaitingResponse: 等待响应中…
     generating: 生成中…
+    queuedQueryLocked: 输入框已有内容，需先清空才能修改排队中的提问
     stop: 停止
     newSession: 新建会话
     untitledSession: 新会话
     renameSession: 重命名会话
     deleteSession: 删除会话
     citations: 引用来源
+    citationOpen: 在新标签页打开来源
     emptyQuery: 请输入诉求
     optimizePrompt: 优化提问
     optimizePromptFailed: 提示词优化失败
     undoOptimizePrompt: 撤回优化
     error: 生成失败
+    runFailed: 本次回答未正常结束（运行出错或超时），以上为中断前已生成的内容。
+    runCancelled: 本次回答已被取消，以上为取消前已生成的内容。
     noResponse: 请求超时或网络异常，请稍后重试
     me: 我
     assistant: 助手
     hintSelectSession: 请先新建或选择一个会话开始对话
     hintNoSession: 暂无会话，点击右上角「新建会话」开始对话
     hintFirstQuery: 输入首个问题即可开始对话，会话主题将由系统自动生成
+    questionRail: 提问导航
     confirmDeleteSession: 确定删除该会话及其全部消息吗？
     slotHint: 新建会话时该档位会成为会话缺省档位
     disabled: AI 能力未启用
@@ -1390,6 +1400,7 @@ page:
     reasoningDefaultOnHint: 该模型默认开启思考，未配置思考开关时也会输出思考内容；可在「LLM 模型」的高级配置中填写思考开关字段与开启 / 关闭取值，以手动控制思考。
     reasoningStreaming: 思考中…
     reasoningDone: 思考完成
+    parallelCalls: 并行调用 ×{count}
     copyMessage: 复制
     retryMessage: 重试
     branchMessage: 分支
@@ -1474,6 +1485,10 @@ page:
     importFileHint: 支持 Markdown / TXT / PDF / DOCX，单文件不超过 64 MB
     importedContentReadOnly: 正文来自导入原件的解析结果，只读；仅可修改标题
     parseError: 解析错误
+    scopeCurrent: 当前命名空间
+    scopeSystem: 系统知识库
+    scopeSystemHint: 系统知识库为代码声明的共享知识，仅供查看，不可编辑
+    documentUnreadable: 该知识文档不存在或不在可读范围内
   llmModelAdmin:
     baseURLHint: 供应商的 OpenAI 兼容接口基地址（例如 https://dashscope.aliyuncs.com/compatible-mode/v1）
     apiKeyKeepHint: 凭据不以明文回显；留空表示沿用原凭据

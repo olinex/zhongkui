@@ -749,6 +749,51 @@ html {
 }
 
 // ---------------------------------------------------------------------------
+// 提问导航圆点
+// AI 助手消息区左侧「提问轨」上的圆点：常态为低透明度 on-surface 实心点，
+// 当前视口内的提问转 primary（primary 只表达选中态）。
+// 外观分两层：命中区按钮（.zk-question-dot）清零 UA 描边与底色，视觉圆点
+// （.zk-question-mark）承载底色 / 圆角 / 过渡——按钮放大到轨宽即可消除「点偏落空」，
+// 故外观登记在外壳层而非组件 scoped（组件层不宜声明 border / background-color）。
+// 尺寸与定位由组件 scoped 保留；`is-active` 状态类沿用 ResizeHandle 的 is-* 惯例。
+// ---------------------------------------------------------------------------
+
+.zk-question-dot {
+  border: 0;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.zk-question-mark {
+  border-radius: var(--zk-radius-pill);
+  background-color: rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
+  transition: background-color var(--zk-transition-fast) ease;
+}
+
+.zk-question-dot.is-active .zk-question-mark {
+  background-color: rgb(var(--v-theme-primary));
+}
+
+// ---------------------------------------------------------------------------
+// 提问导航：轨底「直达底部」特殊按钮
+// 与提问圆点同规格、同节奏，只靠「箭头 vs 实心圆点」的形状差异表达两种不同动作，
+// 故颜色取与圆点相同的字号级 on-surface 强度，不额外加描边 / 底色。
+// 尺寸与定位（命中区 8×16、标记 8px）由组件 scoped 保留。
+// ---------------------------------------------------------------------------
+
+.zk-rail-bottom {
+  border: 0;
+  background-color: transparent;
+  color: rgb(var(--v-theme-on-surface), var(--zk-hairline-opacity-strong));
+  cursor: pointer;
+  transition: color var(--zk-transition-fast) ease;
+}
+
+.zk-rail-bottom:hover {
+  color: rgb(var(--v-theme-primary));
+}
+
+// ---------------------------------------------------------------------------
 // 定向 hairline 分隔线
 // 与 .zk-hairline（四周描边）同源的定向分隔线：
 //   --right  侧边导航抽屉与内容区之间

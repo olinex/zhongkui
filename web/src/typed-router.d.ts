@@ -25,6 +25,7 @@ declare module 'vue-router/auto-routes' {
     'Admin Namespace List': RouteRecordInfo<'Admin Namespace List', '/:language/admin/namespace', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Admin System Status': RouteRecordInfo<'Admin System Status', '/:language/admin/system-status', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Admin User List': RouteRecordInfo<'Admin User List', '/:language/admin/user', { language: ParamValue<true> }, { language: ParamValue<false> }>,
+    'AI Document Detail': RouteRecordInfo<'AI Document Detail', '/:language/ai/document/:id', { language: ParamValue<true>, id: ParamValue<true> }, { language: ParamValue<false>, id: ParamValue<false> }>,
     'AI Knowledge List': RouteRecordInfo<'AI Knowledge List', '/:language/ai/knowledge', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'AI Memory List': RouteRecordInfo<'AI Memory List', '/:language/ai/memory', { language: ParamValue<true> }, { language: ParamValue<false> }>,
     'Already Signed In': RouteRecordInfo<'Already Signed In', '/:language/auth/already-signed-in', { language: ParamValue<true> }, { language: ParamValue<false> }>,

@@ -153,7 +153,7 @@ import i18n, { localeDatetimeFormat, localDurationFormat } from "@/utils/i18n";
 
 const props = defineProps<{
   modelValue: boolean;
-  recordId: number;
+  recordID: number;
 }>();
 
 const emits = defineEmits<{
@@ -172,7 +172,7 @@ const errorText = ref("");
 
 // 打开且携带有效记录 ID 时拉取详情；切换记录（并行打开另一个）时重新请求
 watch(
-  () => [props.modelValue, props.recordId] as const,
+  () => [props.modelValue, props.recordID] as const,
   ([open, id]) => {
     if (!open) {
       return;

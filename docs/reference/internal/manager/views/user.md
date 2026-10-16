@@ -61,6 +61,9 @@ var (
     // ErrPasswordResetTokenInvalid 表示密码重置令牌无效或已过期
     // 令牌不存在、已使用或超过有效期时触发
     ErrPasswordResetTokenInvalid = response.CreateCodeError(http.StatusBadRequest, response.CodePasswordResetTokenInvalid, nil)
+    // ErrTooManyRequests 表示申请过于频繁（命中忘记密码申请的来源地址维度限流）
+    // 同一来源地址在限流窗口内提交次数超出上限时触发
+    ErrTooManyRequests = response.CreateCodeError(http.StatusTooManyRequests, response.CodeTooManyRequests, nil)
 )
 ```
 
@@ -80,7 +83,9 @@ RegisterRoutes 注册 /api/v1/user 用户接口路由。 用户相关接口，�
 func UserPasswordForgot(c *gin.Context)
 ```
 
-UserPasswordForgot 处理忘记密码申请请求 路由：POST /api/v1/user/password/forgot 功能：系统未启用或未配置 SMTP 时直接禁止（避免开放无意义功能）；校验账号名与 邮箱与库内一致后，生成带有效期的重置令牌并异步发送一封含重置链接的邮件至用户邮箱。 为避免账号枚举，无论校验结果如何，均统一返回成功响应。
+UserPasswordForgot 处理忘记密码申请请求 路由：POST /api/v1/user/password/forgot 功能：系统未启用或未配置 SMTP 时直接禁止（避免开放无意义功能）；校验账号名与 邮箱与库内一致后，生成带有效期的重置令牌并异步发送一封含重置链接的邮件至用户邮箱。
+
+防枚举与限流：为避免攻击者据响应差异批量验证「账号名↔邮箱」配对（撞库前的标准情报收集）， 无论账号是否存在、是否与邮箱匹配，一律返回同一成功响应，差异（未命中 / 落库失败 / 入队失败） 只写入服务端日志；同时对请求来源地址按配置限额做窗口限流（ErrTooManyRequests）。
 
 <a name="UserPasswordLogin"></a>
 ## func UserPasswordLogin

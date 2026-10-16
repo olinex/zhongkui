@@ -36,6 +36,9 @@ const rrfK = 60
 type RetrievalResult struct {
 	// DocumentID 所属知识文档 ID（字符串形式）
 	DocumentID string `json:"documentID"`
+	// NamespaceName 所属知识文档所在的命名空间名（检索范围为调用方命名空间 + 内置系统命名空间，
+	// 同一文档 ID 可能在两者同时存在，故需据此消歧）
+	NamespaceName string `json:"namespaceName"`
 	// Title 所属文档标题
 	Title string `json:"title"`
 	// ChunkIndex 分块在文档内的序号
@@ -525,7 +528,7 @@ func (r *Retriever) vectorRetrieve(ctx context.Context, o *RetrieveOptions, vec 
 	}
 	lit := vectorLiteral(vec)
 	q := r.db.Table("knowledge_chunks AS c").
-		Select("c.document_id, c.chunk_index, c.heading_path, c.content, d.title, (1 - (c.embedding <=> ?::vector)) AS score", lit).
+		Select("c.document_id, c.namespace_name, c.chunk_index, c.heading_path, c.content, d.title, (1 - (c.embedding <=> ?::vector)) AS score", lit).
 		Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.deleted_at IS NULL").
 		Where("c.namespace_name IN ?", base.NamespaceScope(o.NamespaceName))
 	if len(o.DocIDs) > 0 {
@@ -551,7 +554,7 @@ func (r *Retriever) keywordRetrieve(ctx context.Context, o *RetrieveOptions, que
 		return nil, nil
 	}
 	q := r.db.Table("knowledge_chunks AS c").
-		Select("c.document_id, c.chunk_index, c.heading_path, c.content, d.title, ts_rank(c.search, plainto_tsquery('simple', ?)) AS score", query).
+		Select("c.document_id, c.namespace_name, c.chunk_index, c.heading_path, c.content, d.title, ts_rank(c.search, plainto_tsquery('simple', ?)) AS score", query).
 		Joins("JOIN knowledge_documents AS d ON d.id = c.document_id AND d.deleted_at IS NULL").
 		Where("c.namespace_name IN ?", base.NamespaceScope(o.NamespaceName)).
 		Where("c.search @@ plainto_tsquery('simple', ?)", query)
@@ -865,11 +868,12 @@ func toSchemaDocuments(results []*RetrievalResult) []*schema.Document {
 			ID:      r.DocumentID,
 			Content: r.Content,
 			MetaData: map[string]any{
-				"documentID": r.DocumentID,
-				"title":      r.Title,
-				"chunkIndex": r.ChunkIndex,
-				"score":      r.Score,
-				"complete":   r.Complete,
+				"documentID":    r.DocumentID,
+				"namespaceName": r.NamespaceName,
+				"title":         r.Title,
+				"chunkIndex":    r.ChunkIndex,
+				"score":         r.Score,
+				"complete":      r.Complete,
 			},
 		})
 	}
@@ -1070,6 +1074,9 @@ func ToRetrievalResults(docs []*schema.Document) []RetrievalResult {
 			if v, ok := d.MetaData["documentID"].(string); ok {
 				r.DocumentID = v
 			}
+			if v, ok := d.MetaData["namespaceName"].(string); ok {
+				r.NamespaceName = v
+			}
 			if v, ok := d.MetaData["title"].(string); ok {
 				r.Title = v
 			}
@@ -1097,11 +1104,12 @@ func rowsToResults(rows []struct {
 	out := make([]*RetrievalResult, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, &RetrievalResult{
-			DocumentID: strconv.FormatUint(uint64(row.DocumentID), 10),
-			Title:      row.Title,
-			ChunkIndex: row.ChunkIndex,
-			Content:    strings.TrimSpace(string(row.HeadingPath.Value()) + "\n" + string(row.Content.Value())),
-			Score:      row.Score,
+			DocumentID:    strconv.FormatUint(uint64(row.DocumentID), 10),
+			NamespaceName: row.NamespaceName,
+			Title:         row.Title,
+			ChunkIndex:    row.ChunkIndex,
+			Content:       strings.TrimSpace(string(row.HeadingPath.Value()) + "\n" + string(row.Content.Value())),
+			Score:         row.Score,
 		})
 	}
 	return out

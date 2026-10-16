@@ -149,7 +149,7 @@ const detailItem = ref<Record<string, any> | null>(null);
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 const plaintextLoading = ref("");
 
-let editSampleId = 0;
+let editSampleID = 0;
 
 const updateForm = useForm({ validationSchema: updateTagRuleSampleSchema });
 const [editName, editNameProps] = updateForm.defineField("name", vuetifyCfg);
@@ -259,7 +259,7 @@ const editAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<TagRuleSampleDetailOut>(
     tagRuleSampleDetailGet(item.id),
     async (rsp) => {
-      editSampleId = rsp.data.id;
+      editSampleID = rsp.data.id;
       // 复位与回填同属「准备本次打开的数据」：values 完整枚举全部 defineField 字段
       updateForm.resetForm({
         values: {
@@ -285,7 +285,7 @@ const editAction = async (item: Record<string, any>): Promise<void> => {
 const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     await getSimpleResponse(
-      tagRuleSampleUpdate(editSampleId, {
+      tagRuleSampleUpdate(editSampleID, {
         // 名称单行文本提交前去除首尾空白，避免误输入空白创建出看似相同实则不同的记录
         name: (values.name as string).trim(),
         description: values.description,

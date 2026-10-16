@@ -37,6 +37,16 @@
   - [func \(b ByteSegments\) MarshalJSON\(\) \(\[\]byte, error\)](<#ByteSegments.MarshalJSON>)
   - [func \(b \*ByteSegments\) Unmarshal\(raw \[\]byte\) error](<#ByteSegments.Unmarshal>)
   - [func \(b \*ByteSegments\) UnmarshalJSON\(data \[\]byte\) error](<#ByteSegments.UnmarshalJSON>)
+- [type CIDR](<#CIDR>)
+  - [func NewCIDR\(value any\) \(\*CIDR, error\)](<#NewCIDR>)
+  - [func \(c CIDR\) GormDBDataType\(db \*database.DB, field \*schema.Field\) string](<#CIDR.GormDBDataType>)
+  - [func \(c CIDR\) MarshalJSON\(\) \(\[\]byte, error\)](<#CIDR.MarshalJSON>)
+  - [func \(c CIDR\) MarshalText\(\) \(\[\]byte, error\)](<#CIDR.MarshalText>)
+  - [func \(c \*CIDR\) Scan\(value any\) error](<#CIDR.Scan>)
+  - [func \(c CIDR\) String\(\) string](<#CIDR.String>)
+  - [func \(c \*CIDR\) UnmarshalJSON\(data \[\]byte\) error](<#CIDR.UnmarshalJSON>)
+  - [func \(c \*CIDR\) UnmarshalText\(text \[\]byte\) error](<#CIDR.UnmarshalText>)
+  - [func \(c CIDR\) Value\(\) \(driver.Value, error\)](<#CIDR.Value>)
 - [type Crypto](<#Crypto>)
   - [func NewCrypto\(value \[\]byte\) \*Crypto](<#NewCrypto>)
   - [func \(c \*Crypto\) Cipher\(\) \[\]byte](<#Crypto.Cipher>)
@@ -476,6 +486,98 @@ func (b *ByteSegments) UnmarshalJSON(data []byte) error
 ```
 
 UnmarshalJSON 从 base64 字符串解码并解析出 ByteSegments。
+
+<a name="CIDR"></a>
+## type CIDR
+
+CIDR 是以 netip.Prefix 为底层的 IP 网段类型，支持数据库、JSON 与文本之间的序列化。
+
+与只承载单个地址的 IPAddr 不同，CIDR 承载「网段」语义（如来源网段、允许清单）， 其解析统一归一化为掩码后的规范形式——掩码外的位一律置零，\`10.0.0.1/24\` 归一化为 \`10.0.0.0/24\`：postgres 的 \`cidr\` 列拒绝「掩码外含非零位」的输入， 归一化可保证写入在各后端一致。不含 \`/\` 的裸地址（如 \`192.168.1.1\`）按单主机 网段处理，自动补 \`/32\` 或 \`/128\`，与 Gin \`SetTrustedProxies\` 的写法一致。
+
+```go
+type CIDR netip.Prefix
+```
+
+<a name="NewCIDR"></a>
+### func NewCIDR
+
+```go
+func NewCIDR(value any) (*CIDR, error)
+```
+
+NewCIDR 从任意值（字符串、字节切片或 netip.Prefix）解析并返回一个 \*CIDR。
+
+<a name="CIDR.GormDBDataType"></a>
+### func \(CIDR\) GormDBDataType
+
+```go
+func (c CIDR) GormDBDataType(db *database.DB, field *schema.Field) string
+```
+
+GormDBDataType 返回该类型在 GORM 中对应的数据库列类型：postgres 为原生 CIDR 列， clickhouse 无原生网段类型故落 String，其余为空。
+
+<a name="CIDR.MarshalJSON"></a>
+### func \(CIDR\) MarshalJSON
+
+```go
+func (c CIDR) MarshalJSON() ([]byte, error)
+```
+
+MarshalJSON 实现 json.Marshaler 接口，将网段序列化为 JSON 字符串。
+
+<a name="CIDR.MarshalText"></a>
+### func \(CIDR\) MarshalText
+
+```go
+func (c CIDR) MarshalText() ([]byte, error)
+```
+
+MarshalText 实现 encoding.TextMarshaler 接口，输出网段文本；零值输出空文本。
+
+<a name="CIDR.Scan"></a>
+### func \(\*CIDR\) Scan
+
+```go
+func (c *CIDR) Scan(value any) error
+```
+
+Scan 实现 sql.Scanner 接口，从数据库值解析网段；nil 或空文本置为零值。
+
+<a name="CIDR.String"></a>
+### func \(CIDR\) String
+
+```go
+func (c CIDR) String() string
+```
+
+String 返回网段的可读字符串表示；零值（无效网段）返回空字符串。
+
+<a name="CIDR.UnmarshalJSON"></a>
+### func \(\*CIDR\) UnmarshalJSON
+
+```go
+func (c *CIDR) UnmarshalJSON(data []byte) error
+```
+
+UnmarshalJSON 实现 json.Unmarshaler 接口，从 JSON 值解析网段；null 或空值置为零值。
+
+<a name="CIDR.UnmarshalText"></a>
+### func \(\*CIDR\) UnmarshalText
+
+```go
+func (c *CIDR) UnmarshalText(text []byte) error
+```
+
+UnmarshalText 实现 encoding.TextUnmarshaler 接口，从网段文本解析；空文本置为零值。
+
+<a name="CIDR.Value"></a>
+### func \(CIDR\) Value
+
+```go
+func (c CIDR) Value() (driver.Value, error)
+```
+
+Value 实现 driver.Valuer 接口，返回写入数据库的值（网段文本）；零值返回 nil。
 
 <a name="Crypto"></a>
 ## type Crypto

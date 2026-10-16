@@ -97,6 +97,7 @@
 - [func Models\(dbName string\) \[\]any](<#Models>)
 - [func MustInvokeAi\(ctx context.Context, i do.Injector\) \*ai.Runtime](<#MustInvokeAi>)
 - [func MustInvokeApiLogger\(i do.Injector\) \*logging.Logger](<#MustInvokeApiLogger>)
+- [func MustInvokeCacheRedis\(i do.Injector\) \*redis.Client](<#MustInvokeCacheRedis>)
 - [func MustInvokeCaptureClient\(i do.Injector\) \*capture.CaptureClient](<#MustInvokeCaptureClient>)
 - [func MustInvokeCaptureLogger\(i do.Injector\) \*logging.Logger](<#MustInvokeCaptureLogger>)
 - [func MustInvokeCoreDatabase\(i do.Injector\) \*database.DB](<#MustInvokeCoreDatabase>)
@@ -1053,6 +1054,15 @@ func MustInvokeApiLogger(i do.Injector) *logging.Logger
 ```
 
 MustInvokeApiLogger 从依赖注入器解析 API 日志器，失败时 panic。
+
+<a name="MustInvokeCacheRedis"></a>
+## func MustInvokeCacheRedis
+
+```go
+func MustInvokeCacheRedis(i do.Injector) *redis.Client
+```
+
+MustInvokeCacheRedis 从依赖注入器解析缓存 Redis 客户端；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeCaptureClient"></a>
 ## func MustInvokeCaptureClient

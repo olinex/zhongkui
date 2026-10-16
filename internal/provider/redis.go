@@ -57,6 +57,11 @@ func InvokeCacheRedis(i do.Injector) (*redis.Client, error) {
 	return do.InvokeNamed[*redis.Client](i, CacheRedisLabel)
 }
 
+// MustInvokeCacheRedis 从依赖注入器解析缓存 Redis 客户端；失败时 panic（仅用于启动关键依赖）。
+func MustInvokeCacheRedis(i do.Injector) *redis.Client {
+	return do.MustInvokeNamed[*redis.Client](i, CacheRedisLabel)
+}
+
 // InvokePipelineRedis 从依赖注入器解析管道 Redis 客户端，错误交由调用方处理。
 func InvokePipelineRedis(i do.Injector) (*redis.Client, error) {
 	return do.InvokeNamed[*redis.Client](i, PipelineRedisLabel)

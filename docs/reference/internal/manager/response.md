@@ -78,6 +78,7 @@ const (
     CodeAgentLiveRunNotFound                      // 1120: 驻留运行不存在
     CodeAgentLiveRunExpired                       // 1121: 驻留运行登记已过期
     CodeAgentLiveRunForbidden                     // 1122: 驻留运行归属不符
+    CodeTooManyRequests                           // 1123: 请求过于频繁（命中公共接口限流）
 )
 ```
 

@@ -95,6 +95,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/redis"
 	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 	"zhongkuisec.com/zhongkui/internal/provider"
 )
@@ -132,8 +133,21 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	featureRegistry := provider.MustInvokeFeatureRegistry(i)
 	messagePool := provider.MustInvokeMessagePool(i)
 	aiRuntime := provider.MustInvokeAi(ctx, i)
+	cacheRedis := provider.MustInvokeCacheRedis(i)
 	cfg, err := config.ExtractConfig(viper, validator.Validate)
 	if err != nil {
+		return errors.WithStack(err)
+	}
+
+	// 受信代理网段：Gin 默认信任所有代理并采信 X-Forwarded-For，来源地址可被伪造，
+	// 故按配置收紧——默认空列表即不信任任何代理，ClientIP 退化为 TCP 对端地址；
+	// 反向代理部署时须在 api.trustedProxies 显式填入代理网段。配置值已按网段类型
+	// 在校验阶段解析（非法网段启动即失败），此处仅转换回 Gin 需要的文本列表
+	trustedProxies := make([]string, 0, len(cfg.TrustedProxies))
+	for _, proxy := range cfg.TrustedProxies {
+		trustedProxies = append(trustedProxies, proxy.String())
+	}
+	if err := engine.SetTrustedProxies(trustedProxies); err != nil {
 		return errors.WithStack(err)
 	}
 
@@ -190,6 +204,11 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	tagRuleEngineMiddleware := middlewares.TagRuleEngineMiddleware(tagEngine)
 	// FeatureRegistry - 全局功能开关注册表中间件
 	featureRegistryMiddleware := middlewares.FeatureRegistryMiddleware(featureRegistry)
+	// PasswordResetLimiter - 忘记密码申请限流中间件：按请求来源地址限制申请频率，
+	// 抬升账号枚举与撞库配对探测的成本
+	passwordResetLimiterMiddleware := middlewares.PasswordResetLimiterMiddleware(
+		redis.NewFixedWindowLimiter(cacheRedis, cfg.PasswordReset.RateLimit, cfg.PasswordReset.RateLimitWindow),
+	)
 	// MessagePool - 消息渠道连接池中间件
 	messagePoolMiddleware := middlewares.MessagePoolMiddleware(messagePool)
 	// SQLiteVTabPools - SQLite vtable 池持有者中间件
@@ -221,26 +240,27 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	// 创建API版本根路径组：/api/v1
 	// 所有业务API都挂载在此路径下，便于版本管理和路由组织
 	rc := &views.RegisterContext{
-		Engine:            engine,
-		V1Group:           engine.Group("/api/v1"),
-		Injector:          i,
-		Authenticator:     authenticatorMiddleware,
-		ForceAuthenticate: forceAuthenticateMiddleware,
-		Policy:            policyMiddleware,
-		Authorize:         authorizeMiddleware,
-		CoreDatabase:      coreDatabaseMiddleware,
-		RawDatabase:       rawDatabaseMiddleware,
-		S3:                s3Middleware,
-		ObjectCache:       objectCacheMiddleware,
-		Etcd:              etcdMiddleware,
-		Namespace:         namespaceMiddleware,
-		PipelineInspector: pipelineInspectorMiddleware,
-		PipelineClient:    pipelineClientMiddleware,
-		TagRuleEngine:     tagRuleEngineMiddleware,
-		FeatureRegistry:   featureRegistryMiddleware,
-		MessagePool:       messagePoolMiddleware,
-		SQLiteVTabPools:   sqliteVTabPoolsMiddleware,
-		Ai:                aiMiddleware,
+		Engine:               engine,
+		V1Group:              engine.Group("/api/v1"),
+		Injector:             i,
+		Authenticator:        authenticatorMiddleware,
+		ForceAuthenticate:    forceAuthenticateMiddleware,
+		Policy:               policyMiddleware,
+		Authorize:            authorizeMiddleware,
+		CoreDatabase:         coreDatabaseMiddleware,
+		RawDatabase:          rawDatabaseMiddleware,
+		S3:                   s3Middleware,
+		ObjectCache:          objectCacheMiddleware,
+		Etcd:                 etcdMiddleware,
+		Namespace:            namespaceMiddleware,
+		PipelineInspector:    pipelineInspectorMiddleware,
+		PipelineClient:       pipelineClientMiddleware,
+		TagRuleEngine:        tagRuleEngineMiddleware,
+		FeatureRegistry:      featureRegistryMiddleware,
+		PasswordResetLimiter: passwordResetLimiterMiddleware,
+		MessagePool:          messagePoolMiddleware,
+		SQLiteVTabPools:      sqliteVTabPoolsMiddleware,
+		Ai:                   aiMiddleware,
 	}
 
 	// ==================== 全局功能开关端点与业务路由 ====================

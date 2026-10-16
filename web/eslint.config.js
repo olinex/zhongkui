@@ -35,6 +35,10 @@ export default [
         },
       ],
       "vue/multi-word-component-names": "off",
+      // 标识符统一以全大写 `ID` 结尾（如 documentID / recordID）。此类驼峰名经 kebab 化会
+      // 被拆成 `document-i-d`（连续大写字母各成一词），可读性极差；故对此类 prop 名豁免
+      // 连字符要求，模板内保持 `:documentID=` 形式（Vue 的 camelize 与连字符形式等价）。
+      "vue/attribute-hyphenation": ["error", "always", { ignore: ["documentID", "recordID"] }],
     },
   },
 

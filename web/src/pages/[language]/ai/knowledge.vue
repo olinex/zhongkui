@@ -1,36 +1,87 @@
 <template>
   <main-layout current-nav="ai">
     <template #body>
-      <search-table
-        ref="searchTableRef"
-        :list-request="knowledgeDocumentListGet"
-        :options-request="knowledgeDocumentListOptions"
-        :actions="getActions"
-        :batch-actions="getBatchActions"
-        :create="openCreateDialogAction"
-        :toolbar-actions="toolbarActions"
-        :project-fields="projectFields"
-        model-name="aiDocument"
+      <!--
+        知识范围分栏：当前命名空间（可写）与系统知识库（只读共享）各为一个 tab、各挂一张独立列表卡片。
+        分栏形式与 /admin/llm-config 的 tab 栏一致；两张卡片各自持有筛选 / 列设置 / 勾选状态，
+        切换分栏即切换卡片，不再共用一张表切换数据源（旧实现需清勾选与骨架化避免旧数据错位）。
+        只读分栏不挂新建 / 批量 / 页面动作三处入口，故其列表恒为只读。
+      -->
+      <tab-view
+        v-model="scope"
+        :items="[
+          { key: 'current', label: $t('page.aiKnowledge.scopeCurrent') },
+          { key: 'system', label: $t('page.aiKnowledge.scopeSystem') },
+        ]"
       >
-        <!-- 状态列：按处理状态着色，进行中（parsing）附加载指示 -->
-        <template #cell-status="{ item }">
-          <v-chip :color="statusColor(item.status)">
-            <v-progress-circular
-              v-if="statusSpinning(item.status)"
-              indeterminate
-              size="12"
-              width="2"
-              class="me-1"
-            />
-            {{ enumLabelOf(EnumClass.knowledgeDocStatus, item.status) }}
-          </v-chip>
+        <template #current>
+          <search-table
+            ref="searchTableRef"
+            :list-request="knowledgeDocumentListGet"
+            :options-request="knowledgeDocumentListOptions"
+            :actions="getActions"
+            :batch-actions="getBatchActions"
+            :create="openCreateDialogAction"
+            :toolbar-actions="toolbarActions"
+            :project-fields="projectFields"
+            model-name="aiDocument"
+          >
+            <!-- 状态列：按处理状态着色，进行中（parsing）附加载指示 -->
+            <template #cell-status="{ item }">
+              <v-chip :color="statusColor(item.status)">
+                <v-progress-circular
+                  v-if="statusSpinning(item.status)"
+                  indeterminate
+                  size="12"
+                  width="2"
+                  class="me-1"
+                />
+                {{ enumLabelOf(EnumClass.knowledgeDocStatus, item.status) }}
+              </v-chip>
+            </template>
+
+            <!-- 原件大小列：字节数经本地 formatBytes 转为人类可读文本（手工录入无原件，展示为空） -->
+            <template #cell-sizeBytes="{ item }">
+              {{ formatBytes(item.sizeBytes) }}
+            </template>
+          </search-table>
         </template>
 
-        <!-- 原件大小列：字节数经本地 formatBytes 转为人类可读文本（手工录入无原件，展示为空） -->
-        <template #cell-sizeBytes="{ item }">
-          {{ formatBytes(item.sizeBytes) }}
+        <template #system>
+          <!-- 只读说明：与注册表类页面（如 LLM 模型面板）的作用域提醒同构——常驻列表上方，
+               避免用户误把系统知识库当作可编辑的作用域内数据 -->
+          <div class="px-4 pt-4">
+            <v-alert type="info">
+              {{ $t("page.aiKnowledge.scopeSystemHint") }}
+            </v-alert>
+          </div>
+          <search-table
+            :list-request="knowledgeSystemDocumentListGet"
+            :options-request="knowledgeSystemDocumentListOptions"
+            :actions="getSystemActions"
+            :toolbar-actions="[]"
+            :project-fields="projectFields"
+            model-name="aiDocument"
+          >
+            <template #cell-status="{ item }">
+              <v-chip :color="statusColor(item.status)">
+                <v-progress-circular
+                  v-if="statusSpinning(item.status)"
+                  indeterminate
+                  size="12"
+                  width="2"
+                  class="me-1"
+                />
+                {{ enumLabelOf(EnumClass.knowledgeDocStatus, item.status) }}
+              </v-chip>
+            </template>
+
+            <template #cell-sizeBytes="{ item }">
+              {{ formatBytes(item.sizeBytes) }}
+            </template>
+          </search-table>
         </template>
-      </search-table>
+      </tab-view>
 
       <!-- 删除确认对话框：单条删除与批量删除共用 -->
       <confirm-dialog
@@ -164,6 +215,13 @@
             <v-alert v-if="editParseError" type="error" density="compact" class="mb-2">
               {{ $t("page.aiKnowledge.parseError") }}: {{ editParseError }}
             </v-alert>
+
+            <!-- 正文只读提示：仅导入文档展示（正文由解析流水线从原件生成，只能改标题）；
+                 置于字段上方——先说明填写约束再进入表单，与注册表类页面的作用域提醒同构 -->
+            <v-alert v-if="editDocumentImported" type="info" class="mb-4">
+              {{ $t("page.aiKnowledge.importedContentReadOnly") }}
+            </v-alert>
+
             <v-row density="compact">
               <v-col cols="12">
                 <v-text-field
@@ -186,12 +244,6 @@
                 />
               </v-col>
             </v-row>
-            <!-- 正文只读提示：仅导入文档展示（正文由解析流水线从原件生成，只能改标题） -->
-            <v-row v-if="editDocumentImported" density="compact">
-              <v-col cols="12" class="zk-hint">
-                {{ $t("page.aiKnowledge.importedContentReadOnly") }}
-              </v-col>
-            </v-row>
           </v-form>
         </template>
       </temp-editable-dialog>
@@ -199,8 +251,9 @@
       <!-- 分块明细对话框：展示文档级索引摘要与逐块构建明细（读时派生，不改表） -->
       <knowledge-chunks-dialog
         v-model="chunksDialog"
-        :document-id="chunksDocumentId"
+        :documentID="chunksDocumentID"
         :document-title="chunksDocumentTitle"
+        :chunks-request="chunksRequest"
       />
 
       <!-- 检索试运行对话框：输入查询与可选参数，运行完整检索链路（混合检索 → 生成回答 → 四项量化指标）并展示结果 -->
@@ -628,6 +681,7 @@ import * as yup from "yup";
 import { useForm } from "vee-validate";
 
 import {
+  knowledgeDocumentChunksGet,
   knowledgeDocumentCreate,
   knowledgeDocumentDelete,
   knowledgeDocumentDetailGet,
@@ -639,6 +693,9 @@ import {
   knowledgeDocumentUpload,
   knowledgeRetrievalDryRunStream,
   knowledgeRetrievalOptions,
+  knowledgeSystemDocumentChunksGet,
+  knowledgeSystemDocumentListGet,
+  knowledgeSystemDocumentListOptions,
 } from "@/apis/ai";
 import type {
   DiagnosisCategory,
@@ -661,6 +718,7 @@ import axios from "axios";
 import type { BatchActions, ItemActions } from "@/components/@types/table";
 import type { ActionButton } from "@/components/base/ActionButtonGroup.vue";
 import { useAppStore } from "@/stores/app";
+import { knowledgeDocumentHref } from "@/utils/ai";
 import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
 import { vuetifyCfg } from "@/utils/form";
 import i18n from "@/utils/i18n";
@@ -699,6 +757,11 @@ const editDialogRef = useTemplateRef("editDialogRef");
 const uploadDialogRef = useTemplateRef("uploadDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const reindexConfirmRef = useTemplateRef("reindexConfirmRef");
+
+// ---- 知识范围分栏（当前命名空间可写 / 系统知识库只读共享）----
+// scope 为当前激活的分栏键，取值与 tab-view 的 items 键一致；两个分栏各挂一张独立列表卡片，
+// 各自的列表 / 选项请求与行内操作在模板中就位绑定，故此处不再需要随视图切换的 computed 转发
+const scope = ref("current");
 
 // ---- 表单 ----
 const createForm = useForm({ validationSchema: createDocSchema });
@@ -787,7 +850,7 @@ const uploadAction = async (): Promise<void> => {
 };
 
 // ---- 编辑对话框 ----
-let editDocumentId = 0;
+let editDocumentID = 0;
 // 当前编辑文档是否为导入文档（详情 originalName 非空）；导入文档正文只读，仅标题可改
 const editDocumentImported = ref(false);
 // 当前编辑文档的解析失败原因（非 failed 为空），在编辑对话框内提示
@@ -798,7 +861,7 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
   await getResponse<KnowledgeDocumentDetail>(
     knowledgeDocumentDetailGet(item.id),
     async (rsp) => {
-      editDocumentId = rsp.data.id;
+      editDocumentID = rsp.data.id;
       // 以详情 originalName 判定导入文档：列表出参不含该字段，详情才是权威来源
       editDocumentImported.value = !!rsp.data.originalName;
       editParseError.value = rsp.data.parseError;
@@ -830,7 +893,7 @@ const updateConfirmDisabled = computed(
 const itemUpdateAction = () => {
   updateForm.handleSubmit(async (values) => {
     const payload: KnowledgeDocumentUpdateIn = {
-      id: editDocumentId,
+      id: editDocumentID,
       title: (values.title as string).trim(),
     };
     // 导入文档正文只读：提交时不携带 content（后端对携带非空 content 的导入文档返回 400）
@@ -838,7 +901,7 @@ const itemUpdateAction = () => {
       payload.content = values.content;
     }
     await getSimpleResponse(
-      knowledgeDocumentUpdate(editDocumentId, payload),
+      knowledgeDocumentUpdate(editDocumentID, payload),
       async (rsp) => {
         await searchTableRef.value?.refresh();
         appStore.notify({
@@ -860,10 +923,12 @@ const itemUpdateAction = () => {
 
 // ---- 列表操作 ----
 // projectFields 字段投影：行操作依赖字段恒定投影，避免用户隐藏对应列后行操作失效。
-// format/status/sizeBytes 为状态徽标渲染与「导入文档判定（下载/重新解析入口）」所依赖，恒定投影
+// format/status/sizeBytes 为状态徽标渲染与「导入文档判定（下载/重新解析入口）」所依赖，恒定投影；
+// namespaceName 供系统视图行内跳转详情页携带来源命名空间，恒定投影
 const projectFields = (visible: string[]): string[] => [
   "id",
   "title",
+  "namespaceName",
   "format",
   "status",
   "sizeBytes",
@@ -920,15 +985,20 @@ const formatBytes = (value: unknown): string => {
   return `${text} ${units[unit]}`;
 };
 
+// openDocumentDetail 打开本站知识文档详情页（新标签）：携带行数据里的来源命名空间，
+// 详情页据此在与来源一致的接口间切换（自身命名空间 → 可写接口，其他命名空间 → 系统只读接口）。
+// 两个分栏共用同一入口，故系统知识库与当前命名空间的「查看详情」行为完全一致
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const openDocumentDetail = (item: Record<string, any>): void => {
+  window.open(knowledgeDocumentHref(String(item.id), String(item.namespaceName ?? "")), "_blank");
+};
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getActions = (item: Record<string, any>): ItemActions => {
   const actions: ItemActions = {
+    detail: () => openDocumentDetail(item),
     edit: () => detailGetAction(item),
-    chunks: () => {
-      chunksDocumentId.value = item.id as number;
-      chunksDocumentTitle.value = item.title as string;
-      chunksDialog.value = true;
-    },
+    chunks: () => openChunksDialog(item, knowledgeDocumentChunksGet),
   };
   // 导入文档「重新解析」（后端重新下载原件 → 重新解析 → 重建索引）：与手工文档的「重新索引」
   // 共用同一接口，仅按来源切换文案，避免两个入口造成歧义。
@@ -949,11 +1019,35 @@ const getActions = (item: Record<string, any>): ItemActions => {
   return actions;
 };
 
+// getSystemActions 系统知识库视图的行内操作（只读）：仅查看详情与分块明细，不提供编辑/删除/重新索引
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getSystemActions = (item: Record<string, any>): ItemActions => ({
+  // 查看详情：与当前命名空间共用同一入口（新标签打开本站知识文档详情页）
+  detail: () => openDocumentDetail(item),
+  // 分块明细：系统分栏须走只读系统接口（常规接口的数据范围不含系统命名空间）
+  chunks: () => openChunksDialog(item, knowledgeSystemDocumentChunksGet),
+});
+
 // ---- 分块明细 ----
 // 明细由后端读时派生（不改表），打开对话框时按当前文档 id 现取现算
 const chunksDialog = ref(false);
-const chunksDocumentId = ref(0);
+const chunksDocumentID = ref(0);
 const chunksDocumentTitle = ref("");
+// 分块请求按来源下发：缺省为当前命名空间的常规接口，系统知识库分栏切到只读系统接口
+const chunksRequest = ref(knowledgeDocumentChunksGet);
+
+// openChunksDialog 打开分块明细对话框：两个分栏共用同一入口，避免各自维护
+// documentID / 标题 / 请求三处状态；request 由调用方按来源传入
+const openChunksDialog = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  item: Record<string, any>,
+  request: typeof knowledgeDocumentChunksGet,
+): void => {
+  chunksDocumentID.value = item.id as number;
+  chunksDocumentTitle.value = item.title as string;
+  chunksRequest.value = request;
+  chunksDialog.value = true;
+};
 
 // ---- 重新索引 / 重新解析 ----
 // 当前确认对话框对应的操作键：手工文档为 reindex（重新索引），导入文档为 reparse（重新解析）
