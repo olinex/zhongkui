@@ -1415,6 +1415,20 @@ page:
     deleteMessage: Delete
     confirmRollbackMessage: Restart from this turn? This message and everything after it will be deleted.
     confirmDeleteMessage: Delete this message and everything after it?
+    questionnaireTitle: AI Question
+    questionnaireOther: Other
+    questionnaireCustomPlaceholder: Type your answer
+    questionnaireSubmit: Submit
+    questionnaireCancel: Cancel
+    questionnairePrev: Previous
+    questionnaireNext: Next
+    questionnaireUnanswered: Unanswered questions are submitted as unanswered
+    questionnaireReanswer: Reanswer
+    questionnaireReanswerBusy: Still generating this turn. You can reanswer once it finishes.
+    confirmReanswerQuestionnaire: Reanswer this question? Everything after it will be cleared and regenerated.
+    questionnaireNoAnswer: Not answered
+    questionnairePendingHint: AI is waiting for your answer above. Please answer first.
+    questionnaireJump: View Question
   aiKnowledge:
     dryRun: Dry Run
     query: Query

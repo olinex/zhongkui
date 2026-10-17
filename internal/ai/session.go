@@ -4,6 +4,8 @@ import (
 	// 标准库
 	"context"
 	"database/sql"
+	"encoding/json"
+	"time"
 
 	// 第三方
 	"gorm.io/gorm"
@@ -207,12 +209,30 @@ func (s *SessionStore) AppendMessage(ctx context.Context, msg *ai.AgentMessage) 
 	return msg, nil
 }
 
+// GetMessage 按消息 ID 查询一条消息（限定属主用户），供运行层取回问卷锚点行上的载荷；不存在
+// （含归属不符）时返回 ErrMessageNotFound。
+func (s *SessionStore) GetMessage(ctx context.Context, id, userID uint) (*ai.AgentMessage, error) {
+	if id == 0 {
+		return nil, errors.New("session store: unidentified message")
+	}
+	var msg ai.AgentMessage
+	err := s.db.WithContext(ctx).Where("id = ? AND user_id = ?", id, userID).First(&msg).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, ErrMessageNotFound
+	}
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return &msg, nil
+}
+
 // UpdateAssistantMessage 原地更新一条已落库的助手消息（按消息 ID 定位，并限定属主用户），供运行
 // 途中把阶段性落库的那一行继续累积正文 / 思考，以及运行终结时写入生命周期终态阶段（phase：done /
-// failed / cancelled）。不重分配 seq，故消息在会话内的顺序与只读游标不变。必须用「结构体 + Select」
-// 写这几列（正文 / 思考 / 草稿 / 引用为密文列，走 crypto 序列化器；map 形式会绕过序列化器把明文直写
-// 库，见 UpdateSummaryAndCheckpoint）。msg 为空或 ID 为 0 时返回英文错误；目标消息不存在（含归属
-// 不符）时返回 ErrMessageNotFound。
+// failed / cancelled / suspended）。不重分配 seq，故消息在会话内的顺序与只读游标不变。必须用「结构体 +
+// Select」写这几列（正文 / 思考 / 草稿 / 引用 / 问卷为密文列，走 crypto 序列化器；map 形式会绕过序列化器
+// 把明文直写库，见 UpdateSummaryAndCheckpoint）。问卷载荷列仅在其非空时才纳入更新集合——阶段性落库
+// （checkpoint）刻意不携带它，避免把锚点行上已写入的问卷载荷覆盖为 NULL。msg 为空或 ID 为 0 时返回
+// 英文错误；目标消息不存在（含归属不符）时返回 ErrMessageNotFound。
 func (s *SessionStore) UpdateAssistantMessage(ctx context.Context, msg *ai.AgentMessage) error {
 	if msg == nil || msg.ID == 0 {
 		return errors.New("session store: nil or unidentified message")
@@ -228,9 +248,14 @@ func (s *SessionStore) UpdateAssistantMessage(ctx context.Context, msg *ai.Agent
 		ElapsedMs:        msg.ElapsedMs,
 		Phase:            msg.Phase,
 	}
+	columns := []string{"content", "reasoning", "draft_json", "citations_json", "prompt_tokens", "completion_tokens", "total_tokens", "elapsed_ms", "phase"}
+	if msg.QuestionnaireJSON != nil {
+		update.QuestionnaireJSON = msg.QuestionnaireJSON
+		columns = append(columns, "questionnaire_json")
+	}
 	res := s.db.WithContext(ctx).Model(update).
 		Where("id = ? AND user_id = ?", msg.ID, msg.UserID).
-		Select("content", "reasoning", "draft_json", "citations_json", "prompt_tokens", "completion_tokens", "total_tokens", "elapsed_ms", "phase").
+		Select(columns).
 		Updates(update)
 	if res.Error != nil {
 		return errors.WithStack(res.Error)
@@ -322,6 +347,104 @@ func (s *SessionStore) TruncateMessagesFromUserMessage(ctx context.Context, sess
 		}
 		return nil
 	})
+}
+
+// ReanswerQuestionnaire 回退一次已提交的问卷，供用户在锚点消息上重新作答：定位该会话中承载问卷的
+// 助手锚点行，删除其后的全部消息（该回合此前的最终回答及其后各轮），把锚点行正文清空并重置为
+// suspended（待回答），并把承载该问卷的运行现场重置为 pending、刷新其存活期限——使用户经既有
+// tool-result 续跑时仍沿用同一现场与同一锚点行；该锚点之后的更晚现场一律置为已消费（其对应回合
+// 已被截断，现场不再可用）。返回锚点行上的问卷载荷（题目 + 上次答案），供前端预填重开问卷。
+//
+// 锚点消息不存在、不属于该会话与属主，或不是携带问卷载荷的助手消息时返回 ErrMessageNotFound；
+// 承载该问卷的运行现场不存在时返回 ErrAgentRunNotFound；该现场已过期（超过 agentRunTTL）时返回
+// ErrAgentRunExpired（与恢复链路的「已过期」语义一致，前端据此给出本地化提示）。单事务执行，避免
+// 截断与现场重置中途留下不一致状态。
+func (s *SessionStore) ReanswerQuestionnaire(ctx context.Context, sessionID, userID uint, messageID uint) (*QuestionnairePayload, []PendingCall, error) {
+	if messageID == 0 {
+		return nil, nil, errors.New("session store: unidentified message")
+	}
+	payload := new(QuestionnairePayload)
+	// calls 由现场中的待执行调用转换而来，供前端重答后原样回传（callID 须与挂起时一致）。
+	var calls []PendingCall
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var anchor ai.AgentMessage
+		err := tx.Where("id = ? AND session_id = ? AND user_id = ? AND role = ?",
+			messageID, sessionID, userID, ai.MessageRoleAssistant).First(&anchor).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrMessageNotFound
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if anchor.QuestionnaireJSON == nil {
+			return ErrMessageNotFound
+		}
+		if derr := json.Unmarshal(anchor.QuestionnaireJSON.Value(), payload); derr != nil {
+			return errors.WithStack(derr)
+		}
+		var run ai.AgentRun
+		err = tx.Where("session_id = ? AND user_id = ? AND anchor_message_id = ?", sessionID, userID, messageID).
+			Order("id DESC").First(&run).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrAgentRunNotFound
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if time.Now().After(run.ExpiresAt) {
+			// 与 ClaimAgentRun 一致：过期现场尽力置为 expired，失败仅忽略（不影响「已过期」这一结论）。
+			_ = tx.Model(&ai.AgentRun{}).Where("id = ?", run.ID).Update("status", ai.AgentRunStatusExpired).Error
+			return ErrAgentRunExpired
+		}
+		// 取回现场中的待执行调用并转为待回传列表：审核重要级与审批合成结论未随现场持久化，问卷类调用
+		// 由前端按工具名识别、豁免审批（不读此列），其余调用保守置为「需人工审批」，避免回退后未经用户
+		// 决策即自动执行。
+		var pending []pendingToolCall
+		if derr := json.Unmarshal(run.PendingCallsJSON.Value(), &pending); derr != nil {
+			return errors.WithStack(derr)
+		}
+		calls = make([]PendingCall, 0, len(pending))
+		for _, call := range pending {
+			calls = append(calls, PendingCall{
+				CallID:           call.CallID,
+				ToolName:         call.ToolName,
+				Arguments:        call.Arguments,
+				ExecOwner:        call.ExecOwner,
+				ApprovalRequired: !isQuestionnaireTool(call.ToolName),
+			})
+		}
+		// 截断锚点之后的消息：该回合此前的最终回答及其后各轮（更早轮次保持不变）。
+		if derr := tx.Where("session_id = ? AND user_id = ? AND seq > ?", sessionID, userID, anchor.Seq).
+			Delete(&ai.AgentMessage{}).Error; derr != nil {
+			return errors.WithStack(derr)
+		}
+		// 锚点行清空正文并重置为待回答（保留问卷载荷，供前端预填重开）：走「结构体 + Select」以触发
+		// crypto 序列化器（map 会绕过序列化器把明文直写库）。
+		blank := &ai.AgentMessage{Content: serializer.NewCrypto([]byte("")), Phase: ai.AgentRunPhaseSuspended}
+		if uerr := tx.Model(blank).Where("id = ? AND user_id = ?", anchor.ID, userID).
+			Select("content", "phase").Updates(blank).Error; uerr != nil {
+			return errors.WithStack(uerr)
+		}
+		// 重置承载现场为 pending 并刷新存活期限；更晚现场（其回合已被截断）一律置为已消费。
+		res := tx.Model(&ai.AgentRun{}).Where("id = ?", run.ID).
+			Updates(map[string]any{"status": ai.AgentRunStatusPending, "expires_at": time.Now().Add(agentRunTTL)})
+		if res.Error != nil {
+			return errors.WithStack(res.Error)
+		}
+		if res.RowsAffected == 0 {
+			return ErrAgentRunNotFound
+		}
+		if lerr := tx.Model(&ai.AgentRun{}).
+			Where("session_id = ? AND user_id = ? AND id > ?", sessionID, userID, run.ID).
+			Update("status", ai.AgentRunStatusConsumed).Error; lerr != nil {
+			return errors.WithStack(lerr)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return payload, calls, nil
 }
 
 // latestCompactionBefore 在事务内返回会话中「upto_seq < beforeSeq」的最近一条压缩检查点（按 upto_seq

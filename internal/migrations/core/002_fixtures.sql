@@ -141,6 +141,8 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/tool-result', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/tool-result', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'OPTIONS', 'allow'),
     -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
@@ -431,6 +433,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS'),
     ('api:/api/v1/ai/agent/:sessionID/tool-result', 'POST'),
     ('api:/api/v1/ai/agent/:sessionID/tool-result', 'OPTIONS'),
+    ('api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'POST'),
+    ('api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'OPTIONS'),
     ('api:/api/v1/ai/status', 'POST'),
     ('api:/api/v1/ai/status', 'OPTIONS'),
     -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
@@ -885,14 +889,16 @@ ON CONFLICT (key) DO NOTHING;
 -- source 与注册表声明分组的工具来源一致：builtin 取内置来源字面量，client 取客户端来源字面量。
 -- 新增一个工具时，必须在此追加一条 llm_tools 的 INSERT 出厂行：mcp_server_id 为 NULL、
 -- remote_name 与 description 为空串；enabled 的出厂默认值按工具语义定向决定——写库类工具
--- （如 memory_write）取 false，需管理员在工具面板显式启用；只读基础能力（如 knowledge_search）
--- 取 true，管理员仍可在工具面板停用。守卫测试 internal/ai/tools_fixture_test.go 断言注册表键
--- 集合与本段各来源行集合双向一致，忘记追加即会暴露漂移。当前注册表已声明 memory_write 与
--- knowledge_search（builtin）两个工具，client 分组暂无登记项，故此处只种下这两条出厂行。
+-- （如 memory_write）取 false，需管理员在工具面板显式启用；只读基础能力（如 knowledge_search、
+-- client 的 ask_user）取 true，管理员仍可在工具面板停用。守卫测试 internal/ai/tools_fixture_test.go
+-- 断言注册表键集合与本段各来源行集合双向一致，忘记追加即会暴露漂移。当前注册表已声明 memory_write
+-- 与 knowledge_search（builtin）两个工具，以及 ask_user（client）——问卷类只读交互能力，故此处种
+-- 下这三条出厂行。
 INSERT INTO llm_tools (name, source, mcp_server_id, remote_name, description, enabled)
 VALUES
     ('memory_write', 'builtin', NULL, '', '', false),
-    ('knowledge_search', 'builtin', NULL, '', '', true)
+    ('knowledge_search', 'builtin', NULL, '', '', true),
+    ('ask_user', 'client', NULL, '', '', true)
 ON CONFLICT (name) DO NOTHING;
 
 -- +goose Down

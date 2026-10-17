@@ -28,10 +28,14 @@ var ToolSpecs = []ToolSpec{
 		Name:  "knowledge_search",
 		Group: "builtin",
 	},
-	// ---- client：客户端工具（当前无登记项）----
+	// ---- client：客户端工具 ----
 	// client 分组的工具由前端在用户自身凭据下执行，后端只并入其 schema（见 internal/ai 的
 	// client_tools.go 注册表），不构建本地执行器、不拨号任何远端；模型调用后由后端把待执行调用
-	// 经 SSE 下发给前端并等待用户审批与执行结果。该分组是保留的扩展点，当前注册表为空。
+	// 经 SSE 下发给前端并等待用户审批与执行结果。该分组当前登记 ask_user（问卷类只读交互能力）。
+	{
+		Name:  askUserToolName,
+		Group: "client",
+	},
 }
 
 // LookupTool 按名查询内置工具元信息，未声明时返回 ok=false（同名函数 Lookup 已被参数注册表

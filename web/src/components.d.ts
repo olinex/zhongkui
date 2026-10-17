@@ -14,6 +14,7 @@ declare module 'vue' {
     AgentParamPanel: typeof import('./components/admin/AgentParamPanel.vue')['default']
     AppDialog: typeof import('./components/base/AppDialog.vue')['default']
     AppHeader: typeof import('./components/base/AppHeader.vue')['default']
+    AskUserQuestionnaire: typeof import('./components/ai/AskUserQuestionnaire.vue')['default']
     AssistantDrawer: typeof import('./components/ai/AssistantDrawer.vue')['default']
     AssistantMarkdown: typeof import('./components/ai/AssistantMarkdown.vue')['default']
     AssistantQuestionRail: typeof import('./components/ai/AssistantQuestionRail.vue')['default']

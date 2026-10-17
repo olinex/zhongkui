@@ -172,6 +172,10 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	aiGroup.POST("/agent/:sessionID/tool-result", AgentToolResult)
 	// 回传工具调用结果元信息（SSE 流式：仅注册请求体输入）
 	views.RegisterApi(aiGroup, "/agent/:sessionID/tool-result", "回传客户端工具调用结果并续跑挂起运行（SSE 流式：继续输出 delta/stage/done 或再次挂起）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentToolResultIn]()))
+	// 回退（重新回答）一次已提交问卷 - 删除锚点之后的回复、重置锚点与现场，返回问卷载荷供预填重开
+	aiGroup.POST("/agent/:sessionID/questionnaire/reanswer", AgentQuestionnaireReanswer)
+	// 问卷回退元信息
+	views.RegisterApi(aiGroup, "/agent/:sessionID/questionnaire/reanswer", "回退（重新回答）一次已提交问卷 - 删除该问卷锚点之后的回复、把锚点与本轮运行现场重置为待回答，返回问卷载荷（题目 + 上次答案）供前端预填重开", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentQuestionnaireReanswerIn](), views.WithBodyOutput[AgentQuestionnaireOut]()))
 	// 取消某会话在途运行（落 cancelled 终态，可回放）
 	aiGroup.POST("/agent/:sessionID/run/cancel", AgentRunCancel)
 	// 取消某会话在途运行元信息

@@ -12,8 +12,10 @@ import type { FlexIDs } from "./@types/admin";
 import type {
   AgentOutput,
   AgentMemoryStatusIn,
+  AgentMessageQuestionnaire,
   AgentMessageTruncateIn,
   AgentPromptOptimizeIn,
+  AgentQuestionnaireReanswerIn,
   AgentSessionBranchIn,
   AgentSessionCompactIn,
   AgentSessionCreateIn,
@@ -263,6 +265,18 @@ export function agentMessageListGet(id: number): AxiosPromise {
 // 及其之后的全部消息。供「回退 / 删除到某一轮对话」使用。
 export function agentMessageTruncate(id: number, data: AgentMessageTruncateIn): AxiosPromise {
   return request.post(`/ai/session/${id}/messages/truncate`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// agentQuestionnaireReanswer 回退（重新回答）一次已提交的问卷：定位问卷锚点消息，删除其后的全部消息
+// 并重置关联运行现场为待回答，返回问卷载荷（题目 + 上次答案，供前端预填重开）与待执行调用列表
+// （供重答后经 agentToolResultStream 原样回传续跑）。
+export function agentQuestionnaireReanswer(
+  sessionID: number,
+  data: AgentQuestionnaireReanswerIn,
+): AxiosPromise<AgentMessageQuestionnaire> {
+  return request.post(`/ai/agent/${sessionID}/questionnaire/reanswer`, data, {
     headers: getJwtHeader(),
   });
 }

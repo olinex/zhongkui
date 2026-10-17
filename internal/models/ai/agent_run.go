@@ -39,6 +39,9 @@ type AgentRun struct {
 	CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12816,length=32"`
 	// Slot 本次运行使用的档位，取值来自枚举类 llmSlot
 	Slot Slot `json:"slot" gorm:"type:VARCHAR(255)"`
+	// AnchorMessageID 本现场的挂起锚点消息 ID（agent_messages.id）：挂起时承载本回合最终回答（问卷挂起
+	// 还承载问卷载荷）的助手消息行；续跑据此原地终态化该行而非新增。旁路调用（运行期共享状态缺失）为 0
+	AnchorMessageID uint `json:"anchorMessageID" gorm:"type:BIGINT"`
 	// ExpiresAt 运行现场过期时间，超过该时刻的现场不可恢复
 	ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_runs_expires_at"`
 }

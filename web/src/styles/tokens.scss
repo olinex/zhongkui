@@ -155,7 +155,8 @@ $zk-centered-surface-width: 420px;
 //   popover-max-width          浮层（popover / 提示面板）内容最大宽度
 //   popover-max-height         浮层内长文本最大高度（超出内部滚动）
 //   preview-max-height         明文 / 长文本预览区最大高度
-//   placeholder-min-height     占位行最小高度（对齐相邻内容行，避免行高塌缩）
+//   reasoning-max-height       思考过程滚动区最大高度（取 preview-max-height 的 1/3：
+//                              思考过程是流式增量长文本，独占一屏高度会挤掉正文
 // ---------------------------------------------------------------------------
 
 $zk-dropdown-max-height: 300px;
@@ -167,6 +168,7 @@ $zk-token-unit-trigger-min-width: 44px;
 $zk-popover-max-width: 420px;
 $zk-popover-max-height: 320px;
 $zk-preview-max-height: 480px;
+$zk-reasoning-max-height: 160px;
 $zk-placeholder-min-height: 48px;
 
 // ---------------------------------------------------------------------------
@@ -298,6 +300,7 @@ $zk-shadow-md:
   --zk-popover-max-width: #{$zk-popover-max-width};
   --zk-popover-max-height: #{$zk-popover-max-height};
   --zk-preview-max-height: #{$zk-preview-max-height};
+  --zk-reasoning-max-height: #{$zk-reasoning-max-height};
   --zk-placeholder-min-height: #{$zk-placeholder-min-height};
   --zk-resize-grip-length: #{$zk-resize-grip-length};
   --zk-resize-grip-thickness: #{$zk-resize-grip-thickness};

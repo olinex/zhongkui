@@ -2462,6 +2462,12 @@ other = "知识库检索"
 [tool.knowledge_search.comment]
 other = "Agent 按需检索当前命名空间的知识库，可自行决定检索时机与查询语句并多次调用"
 
+[tool.ask_user.label]
+other = "向用户提问"
+
+[tool.ask_user.comment]
+other = "模型在信息不足或需用户在多个方案间抉择时向用户提问；由前端呈现问卷、用户作答后回传结果，可一次提多个问题，每题提供候选答案"
+
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)
 # 自定义 OPA 内置函数说明：接口层按请求语言翻译后随函数元信息返回，

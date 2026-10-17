@@ -218,6 +218,26 @@ export interface AgentMessageItem {
   // 该消息所锚定的历史压缩记录（压缩游标等于本条消息 seq 时由后端给出）：供刷新 / 重进会话后
   // 回显过往的压缩推进（含静默滚动 rolling）；无则为缺省
   compress?: AgentMessageCompressItem;
+  // 该助手消息所承载的问卷载荷（主动提问 ask_user 的锚点行）：供渲染历史问卷卡片、「重新回答」
+  // 入口，以及据 phase=suspended + awaiting 重建待回答问卷面板；无则为缺省
+  questionnaire?: AgentMessageQuestionnaire;
+}
+
+// 助手消息所承载的问卷展示项（后端 AgentQuestionnaireOut）：题目、用户作答与是否仍待回答。
+export interface AgentMessageQuestionnaire {
+  // 问卷题目列表（每题含候选项与可选说明）
+  questions: QuestionnaireQuestion[];
+  // 用户作答列表（未作答或取消回答时为空）
+  answers?: QuestionnaireAnswer[];
+  // 是否仍待用户回答（消息 phase 为 suspended 且问卷尚无作答）
+  awaiting: boolean;
+  // 重新回答接口出参携带的待执行调用（供重答后经既有 tool-result 回传续跑）；消息列表出参不含
+  pendingCalls?: ToolRequestPayload[];
+}
+
+// 回退（重新回答）一次问卷的请求体（AgentQuestionnaireReanswerIn）：messageID 为问卷锚点消息 id。
+export interface AgentQuestionnaireReanswerIn {
+  messageID: number;
 }
 
 // 消息所锚定的历史压缩记录（AgentMessageCompressOut）：仅承载回显所需的度量字段，
@@ -343,6 +363,10 @@ export interface ToolRequestPayload {
   approvalRequired: boolean;
   // 执行归属：client 由前端执行（默认，字段缺失时按此处理）、backend 由后端执行（前端仅审批）
   execOwner?: "client" | "backend";
+  // 本次挂起所锚定的助手消息 ID（服务端 agent_messages.id）：挂起一律把本回合的助手消息落为锚点行，
+  // 故正常挂起均携带，前端据此把挂起定位到本地气泡；「重新回答」须按其截断其后消息并可重答。
+  // 仅旁路调用（服务端未注入运行期共享状态）缺省
+  messageID?: number;
 }
 
 // 单条审批结果（ToolResultItemIn）：approved=true 时 result 为工具执行结果文本、执行失败
@@ -358,6 +382,38 @@ export interface ToolResultItemIn {
 // 后端会把运行现场一次性消费。
 export interface ToolResultIn {
   results: ToolResultItemIn[];
+}
+
+// 主动提问问卷：模型在信息不足时经 client 工具 ask_user 向用户发起一组带候选的提问，前端据此
+// 渲染问卷面板并阻塞会话，直到用户提交或取消。后端不解释问卷语义，原样透传题目与（可选的）
+// 上次答案，前端负责渲染与把作答归一化回传。
+export interface QuestionnaireOption {
+  // 候选项主文案（选中后作为该题作答文本回传）
+  text: string;
+  // 候选项次要说明，可为空
+  detail?: string;
+}
+export interface QuestionnaireQuestion {
+  // 题目唯一标识，作答回传时原样带回
+  id: string;
+  // 题干
+  question: string;
+  // 候选项列表（「其他」自由作答项由前端恒定追加，不在其中）
+  options: QuestionnaireOption[];
+}
+// 单题作答：answered=false 表示该题未作答（answer 为空、custom 为假）
+export interface QuestionnaireAnswer {
+  questionID: string;
+  answered: boolean;
+  // 作答文本：选候选项时为该候选项 text，选「其他」时为自定义输入文本
+  answer: string;
+  // 是否为「其他」自定义作答
+  custom: boolean;
+}
+// 问卷载荷：questions 为题目；answers 为可选的上次答案，供前端预填
+export interface QuestionnairePayload {
+  questions: QuestionnaireQuestion[];
+  answers?: QuestionnaireAnswer[];
 }
 
 // 单个档位的绑定模型与可用性（AgentSlotStatusOut）

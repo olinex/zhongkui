@@ -1058,3 +1058,80 @@ html {
   min-width: 340px;
   max-width: 100%;
 }
+
+// ---------------------------------------------------------------------------
+// 问卷面板步骤条（VStepper 紧凑变体）
+// AI 助手「主动提问」问卷一轮内可能合并出多道题，逐题呈现时复用 Vuetify 的 v-stepper
+// （步骤条）。组件默认按「独立卡片」尺度设计——步骤项 24px 内边距、头部自带抬升阴影、
+// 窗口四周 24px 外边距，直接嵌进抽屉内的紧凑面板会明显偏散，头部阴影还会与面板自身的
+// hairline 描边叠出第二层浮起感。故只在此收敛四处：
+//   1) 头部阴影（$stepper-header-elevation）清零：面板已有一层描边，不再叠浮起感；
+//   2) 头部并入面板标题行（用法处把它放在标题行的 flex 容器内），故它不再独占一条横向带：
+//      自身占满标题右侧剩余宽度、徽标靠右对齐、徽标间隔 8px（Vuetify 默认 space-between
+//      会把仅有的几个徽标散开），并把步骤项内边距归零——高度由标题行的 8px 内边距提供；
+//   3) 步骤间连线收成 8px 短段：连线是步骤条最典型的视觉信号，保留；但 Vuetify 默认
+//      `flex: 1 1 100%` + `margin: 0 -16px`（按 24px 步骤项内边距配的），照搬会吃掉首项的
+//      自适应左边距、把徽标顶回左侧，负外边距还会压到徽标上——故改为定宽不伸缩、外边距归零；
+//   4) 窗口外边距收到 8px（--zk-space-2）、上边归零——上边紧邻的标题行自带 8px 下内边距，
+//      再留 8px 会变成 16px 的悬空；横向 8px 与标题行内边距同一档，题干 / 候选项高亮带的左边缘
+//      与标题图标对齐。滚动与高度上限由窗口自身承载——外层 .zk-panel 需 overflow: hidden，
+//      滚动只能落在窗口上；
+//   5) 当前题徽标改用主色实底：Vuetify 给「已作答题」与「当前题」同一个 surface-variant
+//      底，面板需要一眼看出「现在在第几题」。
+// 步骤徽标只呈序号：用法处不传 title（Vuetify 无 title 时只渲染序号头像），徽标内容由
+// 用法处的 #icon 插槽自绘（当前题显序号、已作答题显对勾），窄面板内不溢出、无需按断点隐藏标题。
+// 用法处（AskUserQuestionnaire.vue）只挂 .zk-questionnaire-stepper，尺度不得再就地覆写。
+// ---------------------------------------------------------------------------
+
+.zk-questionnaire-stepper .v-stepper-header {
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: var(--zk-space-2);
+  box-shadow: none;
+}
+
+// 徽标组靠右：用首项的自适应左边距（而非 justify-content: flex-end）——头部自带 overflow-x: auto，
+// 题数多到横向溢出时 flex-end 会把左侧溢出的徽标顶到不可滚到的位置
+.zk-questionnaire-stepper .v-stepper-header .v-stepper-item:first-child {
+  margin-inline-start: auto;
+}
+
+.zk-questionnaire-stepper .v-stepper-header .v-stepper-item {
+  padding: 0;
+}
+
+// 徽标右外边距归零：Vuetify 的 8px（$stepper-item-avatar-margin-inline-end）是留给标题文字的
+// 间隔；本组件不传 title / subtitle，它就变成按钮盒内的死区，而 hover / focus 的叠色层
+// （.v-stepper-item__overlay）铺满整个按钮盒——于是叠色向右多出一截，看着不对称。
+// 归零后按钮盒与 24px 圆徽标等大，叠色层再改成圆形即可与徽标同心同形（方角会在圆外露四角）
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 元素名 */
+.zk-questionnaire-stepper .v-stepper-header .v-stepper-item__avatar {
+  margin-inline-end: 0;
+}
+
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 元素名 */
+.zk-questionnaire-stepper .v-stepper-header .v-stepper-item__overlay {
+  border-radius: 50%;
+}
+
+// 步骤间连线：固定 8px 短段（不伸缩），徽标间距 = 头部 gap 8px + 连线 8px + gap 8px
+.zk-questionnaire-stepper .v-stepper-header .v-divider {
+  flex: none;
+  width: var(--zk-space-2);
+  margin: 0;
+}
+
+.zk-questionnaire-stepper .v-stepper-window {
+  margin: 0 var(--zk-space-2) var(--zk-space-2);
+  max-height: var(--zk-preview-max-height);
+  overflow-y: auto;
+}
+
+// 步骤徽标的着色：Vuetify 给「已作答题」与「当前题」同一个 surface-variant 底（前者显对勾、
+// 后者显序号），问卷面板需要一眼看出「现在在第几题」，故当前题改用主色实底 + on-primary 数字。
+// 徽标内容由用法处的 #icon 插槽给出（当前题显序号、已作答题显对勾）。
+/* stylelint-disable-next-line selector-class-pattern -- Vuetify 内部 BEM 类名 */
+.zk-questionnaire-stepper .v-stepper-item--selected .v-stepper-item__avatar {
+  background: rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-on-primary));
+}

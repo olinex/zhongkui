@@ -79,19 +79,28 @@ func (s *SessionStore) SaveAgentRun(ctx context.Context, run *ai.AgentRun) error
 	return nil
 }
 
-// ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件取该
-// 会话最近一行（不按状态过滤，以便区分「不存在」与「已消费」），归属不符的行在查询阶段即被过滤，
-// 表现为「不存在」；随后依次校验状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并
-// 返回该现场。失败类别见包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed / ErrAgentRunExpired，
-// 供上层映射业务码。
+// ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件，优先
+// 取该会话最新的 pending 现场，无 pending 时再取最新一行用于区分「不存在 / 已消费 / 已过期」——回退
+// （reanswer）会把较早的问卷现场重置为 pending 并把更晚的现场置为已消费，故必须按状态优先而非单纯
+// 按 id 取最新，否则会认领到已消费的现场。归属不符的行在查询阶段即被过滤，表现为「不存在」；随后
+// 依次校验状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并返回该现场。失败类别见
+// 包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed / ErrAgentRunExpired，供上层映射业务码。
 func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName string, userID uint) (*ai.AgentRun, error) {
+	scope := "session_id = ? AND namespace_name = ? AND user_id = ?"
 	var run ai.AgentRun
 	err := s.db.WithContext(ctx).
-		Where("session_id = ? AND namespace_name = ? AND user_id = ?", sessionID, namespaceName, userID).
+		Where(scope+" AND status = ?", sessionID, namespaceName, userID, ai.AgentRunStatusPending).
 		Order("id DESC").
 		First(&run).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, ErrAgentRunNotFound
+		// 无 pending 现场：取最新一行只为区分「已消费 / 已过期 / 不存在」，不参与认领。
+		err = s.db.WithContext(ctx).
+			Where(scope, sessionID, namespaceName, userID).
+			Order("id DESC").
+			First(&run).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAgentRunNotFound
+		}
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -135,19 +144,20 @@ func prepareClientToolCall(tc schema.ToolCall, in AgentInput, round int, request
 }
 
 // persistSuspendedRun 把挂起时刻的运行现场落库：完整消息链、待执行调用列表、检索引用、档位、归属
-// 与过期时间。任一序列化或落库失败返回错误，调用方据此中止挂起。
-func (a *Agent) persistSuspendedRun(ctx context.Context, in AgentInput, slot ai.Slot, messages []*schema.Message, collector *knowledgeCollector, pending []pendingToolCall) error {
+// 与过期时间。任一序列化或落库失败返回错误，调用方据此中止挂起。返回值为新落库现场的 ID，供问卷
+// 挂起在写好锚点消息行后把其 ID 回写现场（见 SetAgentRunAnchor）。
+func (a *Agent) persistSuspendedRun(ctx context.Context, in AgentInput, slot ai.Slot, messages []*schema.Message, collector *knowledgeCollector, pending []pendingToolCall) (uint, error) {
 	messagesJSON, err := json.Marshal(messages)
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	pendingJSON, err := json.Marshal(pending)
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	citationsJSON, err := json.Marshal(collector.snapshot())
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	run := &ai.AgentRun{
 		NamespaceName:    in.NamespaceName,
@@ -160,7 +170,29 @@ func (a *Agent) persistSuspendedRun(ctx context.Context, in AgentInput, slot ai.
 		Slot:             slot,
 		ExpiresAt:        time.Now().Add(agentRunTTL),
 	}
-	return a.store.SaveAgentRun(ctx, run)
+	if err := a.store.SaveAgentRun(ctx, run); err != nil {
+		return 0, err
+	}
+	return run.ID, nil
+}
+
+// SetAgentRunAnchor 把挂起锚点消息 ID 回写到运行现场：挂起时 wrapPersist 写好承载本回合最终回答（问卷
+// 挂起还承载问卷载荷）的助手消息行后调用，使续跑能原地终态化该行、回退接口能据锚点截断其后消息。现场
+// 不存在（含归属不符）时返回 ErrAgentRunNotFound。
+func (s *SessionStore) SetAgentRunAnchor(ctx context.Context, runID, anchorMessageID uint) error {
+	if runID == 0 {
+		return errors.New("session store: unidentified agent run")
+	}
+	res := s.db.WithContext(ctx).Model(&ai.AgentRun{}).
+		Where("id = ?", runID).
+		Update("anchor_message_id", anchorMessageID)
+	if res.Error != nil {
+		return errors.WithStack(res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return ErrAgentRunNotFound
+	}
+	return nil
 }
 
 // ResumeInput 是一次恢复运行的入参。
@@ -220,6 +252,18 @@ func (a *Agent) ResumeRun(ctx context.Context, in ResumeInput, opts ...compose.O
 		ToolReporter:        in.ToolReporter,
 		ToolRequestReporter: in.ToolRequests,
 		ReviewValve:         reviewValve,
+	}
+	// 挂起续跑：本次运行的助手消息行就是挂起时写下的锚点行（run.AnchorMessageID），终态化须原地写回该行
+	// 而非新增。问卷挂起时取回锚点行上的问卷载荷（题目 + 上次答案）并把本次回传的答案并入，使终态化后该行
+	// 仍保留问卷卡片数据；非问卷挂起（锚点行无问卷载荷）时仅为复用该行，不并入任何问卷数据。
+	input.Questionnaire = &questionnaireState{anchorID: run.AnchorMessageID}
+	if run.AnchorMessageID != 0 {
+		if payload := a.loadAnchorQuestionnaire(ctx, run.AnchorMessageID, run.UserID); payload != nil {
+			if answers := questionnaireAnswersFromResults(pending, in.Results); answers != nil {
+				payload.Answers = answers
+			}
+			input.Questionnaire.payload = payload
+		}
 	}
 	// 恢复时后端须能执行已批准的 backend 调用：注入与 generate 相同的工具上下文（记忆 + 知识
 	// 检索），并以采集器承接 backend knowledge_search 的新命中（执行后并入 citations 续跑产出）。
@@ -320,6 +364,54 @@ func (c pendingToolCall) execOwner() ToolExecOwner {
 		return ToolExecOwnerClient
 	}
 	return c.ExecOwner
+}
+
+// loadAnchorQuestionnaire 取回问卷锚点消息行上的问卷载荷（题目与上次答案）；行不存在、未携带问卷载荷
+// 或载荷无法解码时返回 nil（此时续跑按「无问卷载荷」处理，不写回问卷）。
+func (a *Agent) loadAnchorQuestionnaire(ctx context.Context, messageID, userID uint) *QuestionnairePayload {
+	msg, err := a.store.GetMessage(ctx, messageID, userID)
+	if err != nil || msg.QuestionnaireJSON == nil {
+		return nil
+	}
+	var payload QuestionnairePayload
+	if err := json.Unmarshal(msg.QuestionnaireJSON.Value(), &payload); err != nil {
+		a.warnf(ctx, "agent: decoding the questionnaire anchor payload failed: %v", err)
+		return nil
+	}
+	return &payload
+}
+
+// questionnaireAnswersFromResults 从恢复现场回传的结果中取出问卷答案：按 pending 原序遍历**全部**问卷类
+// 调用（一轮内可有多条 ask_user 调用，其题目在挂起时已合并为一张问卷），逐条取回其 Result（前端回传的
+// {"answers":[...]} JSON）并把答案依序合并。未回传结果、用户取消（Approved=false）、执行出错、结果为空
+// 或载荷非法的调用被跳过；全部调用都取不到答案时返回 nil——此时锚点行只保留题目（无答案），与「取消
+// 回答」的语义一致。
+func questionnaireAnswersFromResults(pending []pendingToolCall, results []ToolResult) []QuestionnaireAnswer {
+	byCallID := make(map[string]ToolResult, len(results))
+	for _, r := range results {
+		byCallID[r.CallID] = r
+	}
+	var answers []QuestionnaireAnswer
+	for _, call := range pending {
+		if !isQuestionnaireTool(call.ToolName) {
+			continue
+		}
+		result, ok := byCallID[call.CallID]
+		if !ok || !result.Approved || result.Error != "" || result.Result == "" {
+			continue
+		}
+		var payload struct {
+			Answers []QuestionnaireAnswer `json:"answers"`
+		}
+		if err := json.Unmarshal([]byte(result.Result), &payload); err != nil {
+			continue
+		}
+		answers = append(answers, payload.Answers...)
+	}
+	if len(answers) == 0 {
+		return nil
+	}
+	return answers
 }
 
 // declinedToolCallText 是用户拒绝执行一次挂起调用时回灌给模型的固定英文文案（client / backend 共用）。

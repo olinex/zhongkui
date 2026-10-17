@@ -58,10 +58,38 @@ type ToolRequest struct {
 	ApprovalRequired bool `json:"approvalRequired"`
 	// ExecOwner 执行归属（client / backend）；为空时按 client 处理
 	ExecOwner ToolExecOwner `json:"execOwner"`
+	// MessageID 本次挂起所锚定的助手消息 ID（agent_messages.id）：挂起必定把本回合的助手消息行落为
+	// 锚点（问卷挂起写问卷载荷、其余挂起仅置 phase=suspended），故正常挂起恒非零，前端据此在实时会话
+	// 内即刻把挂起定位到具体助手消息行（「重新回答」须按它截断其后消息）。仅运行期共享状态缺失的旁路
+	// 调用为 0（省略，此时无处可锚）
+	MessageID uint `json:"messageID,omitempty"`
 }
 
 // ToolRequestReporter 上报一条待执行的工具调用请求；返回错误（写失败/客户端断开）时挂起中止。
 type ToolRequestReporter func(ToolRequest) error
+
+// reportToolRequests 按原序逐条上报挂起时的待执行调用；messageID 为该挂起所锚定的助手消息行 ID
+// （运行期共享状态缺失的旁路调用传 0，载荷据此省略该字段）。任一条写失败即中止后续上报并返回错误（写失败/客户端断开）。
+func reportToolRequests(reporter ToolRequestReporter, requests []pendingToolCall, messageID uint) error {
+	if reporter == nil {
+		return nil
+	}
+	for i := range requests {
+		call := requests[i]
+		if err := reporter(ToolRequest{
+			CallID:           call.CallID,
+			ToolName:         call.ToolName,
+			Arguments:        call.Arguments,
+			AuditLevel:       call.AuditLevel,
+			ApprovalRequired: call.ApprovalRequired,
+			ExecOwner:        call.ExecOwner,
+			MessageID:        messageID,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 // ToolResult 是前端回传的一次客户端工具调用执行结果（对应恢复请求的载荷），按 CallID 与挂起时
 // 下发的 tool_request 关联。
@@ -147,6 +175,12 @@ type AgentInput struct {
 	ResumeMessages []*schema.Message `json:"-"`
 	// ResumeCitations 恢复运行要产出的检索引用（不对外暴露），由挂起时刻持久化的引用预置进采集器。
 	ResumeCitations []RetrievalResult `json:"-"`
+	// Questionnaire 问卷挂起与续跑之间共享的运行期状态（不对外暴露）：由 StreamRun / ResumeRun 在
+	// 进入图前分配，随 AgentInput 以指针形式在节点 3 与 wrapPersist 之间共享（结构体按值拷贝只复制
+	// 指针，两侧指向同一对象）。节点 3 在问卷挂起时写入载荷与现场 ID；wrapPersist 据此决定「保留
+	// 锚点行」还是按既有逻辑回收阶段性落库行，并在续跑时把终态回答写回锚点行。非问卷运行的指针仍然
+	// 存在但载荷为 nil，行为与引入问卷前完全一致。
+	Questionnaire *questionnaireState `json:"-"`
 	// ReviewValve 会话级审核阀门（不对外暴露），由 StreamRun / ResumeRun 从会话读取注入，不对外暴露；
 	// 与每条调用的审核重要级合成得出最终是否需人工审核。
 	ReviewValve ai.ReviewValve `json:"-"`
@@ -165,6 +199,25 @@ type ChatResolver = func(slot ai.Slot) (model.BaseChatModel, error)
 // 实现了它；未实现该接口（或返回空切片）时 generate 不注入任何思考选项，保持既有行为。
 type requestOptionsProvider interface {
 	RequestOptions(thinking string) []model.Option
+}
+
+// questionnaireState 是本轮挂起与续跑之间共享的运行期状态：由 StreamRun / ResumeRun 在进入图前分配，
+// 经 AgentInput.Questionnaire 以指针形式在节点 3 与 wrapPersist 之间共享（结构体值拷贝只复制指针，两侧
+// 仍指向同一对象），使节点 3 挂起时写入的信息能被流包装层读到。名称为历史沿革（最初为问卷引入），
+// 现同时承载人工审批等非问卷挂起的锚点信息。
+type questionnaireState struct {
+	// payload 本次问卷载荷（题目；续跑终态化时并入用户答案）；nil 表示本轮不是问卷挂起（人工审批等），
+	// 锚点行不写问卷载荷
+	payload *QuestionnairePayload
+	// runID 承载本次挂起的运行现场 ID（挂起时由节点 3 写入）：写好锚点消息行后据它把锚点 ID 回写到现场
+	runID uint
+	// anchorID 承载本回合助手消息的锚点行 ID（挂起时由 wrapPersist 写入并回写现场）：续跑时作为终态
+	// 回答的写回目标（原地更新该行而非新增一行助手消息）
+	anchorID uint
+	// pending 本次挂起时暂存的待执行调用（挂起时由节点 3 写入）：节点 3 挂起时不即时下发，交由
+	// wrapPersist 在锚点行落库、拿到 messageID 后再逐条下发，使 tool_request 载荷能带上锚点 ID。
+	// 问卷挂起与人工审批挂起都经此处；仅运行期共享状态缺失的旁路调用由节点 3 即时下发（messageID 恒 0）
+	pending []pendingToolCall
 }
 
 // AgentState 是图运行期间的共享状态，经 compose.ProcessState 在节点间传递
@@ -450,6 +503,9 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 				owner    ToolExecOwner
 				call     *pendingToolCall // client 调用（具备挂起通道时非 nil）
 				failText string           // client 工具在无会话/无通道时的回灌文案（非空即按失败回灌）
+				// questionnaire 非 nil 表示该 client 调用是问卷类（ask_user）且入参合法：豁免审核
+				// 重要级评估与阀门合成，挂起时据其载荷写入本回合的锚点消息行
+				questionnaire *QuestionnairePayload
 			}
 			entries := make([]toolCallEntry, 0, len(msg.ToolCalls))
 			for _, tc := range msg.ToolCalls {
@@ -464,17 +520,36 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 				// 且具备审批通道时登记为待执行调用；否则记录回灌文案（稍后按工具失败回灌）。
 				if isClientTool(name) {
 					call, failText := prepareClientToolCall(tc, in, round+1, toolRequests)
-					entries = append(entries, toolCallEntry{tc: tc, owner: ToolExecOwnerClient, call: call, failText: failText})
+					entry := toolCallEntry{tc: tc, owner: ToolExecOwnerClient, call: call, failText: failText}
+					// 问卷类调用：解析入参为问卷载荷。入参非法时不挂起（撤销待执行登记、按工具失败回灌），
+					// 让模型据错误文本修正后重试，避免给用户弹出一个残缺问卷。
+					if isQuestionnaireTool(name) && call != nil {
+						payload, perr := parseQuestionnaireArgs(tc.Function.Arguments)
+						if perr != nil {
+							entry.call = nil
+							entry.failText = "invalid ask_user arguments: " + perr.Error()
+						} else {
+							entry.questionnaire = payload
+						}
+					}
+					entries = append(entries, entry)
 					continue
 				}
 				entries = append(entries, toolCallEntry{tc: tc, owner: ToolExecOwnerBackend})
 			}
 			// 挂起通道具备时，对本次全部调用（client + backend）做一次批量评估，产出与调用顺序对齐的
 			// 审核重要级：backend 据 must 级决定是否挂起，client 据档位与会话阀门合成决定是否需人工审核。
+			// 问卷类调用（ask_user）豁免该评估：它不入 evalCalls（不消耗评估），但 levels 仍与 entries
+			// 逐位对齐（豁免位留空值 none），使下游继续可直接用 levels[i]。
 			var levels []AuditLevel
 			if canSuspend {
 				evalCalls := make([]pendingToolCall, 0, len(entries))
-				for _, e := range entries {
+				// evalIdx 记录 evalCalls 第 k 项对应的 entries 下标，回填时据此对齐。
+				evalIdx := make([]int, 0, len(entries))
+				for ei, e := range entries {
+					if e.questionnaire != nil {
+						continue
+					}
 					if e.owner == ToolExecOwnerBackend {
 						evalCalls = append(evalCalls, pendingToolCall{
 							CallID:    e.tc.ID,
@@ -482,17 +557,30 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 							Arguments: e.tc.Function.Arguments,
 							ExecOwner: ToolExecOwnerBackend,
 						})
+						evalIdx = append(evalIdx, ei)
 						continue
 					}
 					if e.call != nil {
 						evalCalls = append(evalCalls, *e.call)
+						evalIdx = append(evalIdx, ei)
 					}
 				}
-				levels = a.evaluateAuditLevels(ctx, slot, evalCalls)
+				levels = make([]AuditLevel, len(entries))
+				for k, level := range a.evaluateAuditLevels(ctx, slot, evalCalls) {
+					if k < len(evalIdx) {
+						levels[evalIdx[k]] = level
+					}
+				}
 			}
 			// pending 收集本轮需挂起等审批的调用；非空即本轮结束时挂起。阀门空值保守按「逐一审核」，
-			// 避免误放行。
+			// 避免误放行。questionnaire 记录本轮的问卷载荷：一轮内可有多条问卷类（ask_user）调用，其
+			// 题目按调用顺序合并为同一张问卷（前端只弹一个面板、作答后逐条回传结果），交由 wrapPersist
+			// 写入锚点行。
 			var pending []pendingToolCall
+			var questionnaire *QuestionnairePayload
+			// seenQuestionIDs 记录已并入本轮问卷的题目 id：答案按题目 id 归属，id 重复即无法拆分，
+			// 故对含重复 id 的调用改按工具失败回灌，让模型修正后重试。
+			seenQuestionIDs := make(map[string]struct{})
 			valve := in.ReviewValve
 			if valve == "" {
 				valve = ai.ReviewValveEach
@@ -509,6 +597,29 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 						}
 					}
 					current = append(current, schema.ToolMessage(e.failText, e.tc.ID))
+				case e.questionnaire != nil:
+					// 问卷类调用：豁免审核重要级与阀门合成，恒 none / false，直接挂起等前端弹问卷。
+					// 同一回合内多条 ask_user 的题目合并为同一张问卷；含重复题目 id 的调用会让回传答案
+					// 无法归属，此时该条调用改按工具失败回灌，让模型修正后重试。
+					if dup := markQuestionIDs(seenQuestionIDs, e.questionnaire.Questions); dup != "" {
+						text := "duplicate ask_user question id: " + dup
+						if reporter != nil {
+							if rerr := reporter(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, CallID: e.tc.ID, Round: round + 1, Err: text}); rerr != nil {
+								outSW.Send(nil, errors.WithStack(rerr))
+								return
+							}
+						}
+						current = append(current, schema.ToolMessage(text, e.tc.ID))
+					} else {
+						call := *e.call
+						call.AuditLevel = AuditLevelNone
+						call.ApprovalRequired = false
+						pending = append(pending, call)
+						if questionnaire == nil {
+							questionnaire = &QuestionnairePayload{}
+						}
+						questionnaire.Questions = append(questionnaire.Questions, e.questionnaire.Questions...)
+					}
 				case e.owner == ToolExecOwnerClient:
 					call := *e.call
 					call.AuditLevel = levels[i]
@@ -553,11 +664,24 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 			}
 			// 本轮有待审批调用：挂起本次运行——先持久化运行现场，再置挂起标志，最后按原序逐条下发
 			// tool_request；随后结束本次流（defer outSW.Close()）且不产出 done。无待审批调用则维持
-			// 既有行为进入下一轮。
+			// 既有行为进入下一轮。问卷挂起是例外：其下发延后到 wrapPersist 写好锚点行之后（见下），
+			// 以便载荷带上锚点消息 ID。
 			if len(pending) > 0 {
-				if err := a.persistSuspendedRun(ctx, in, slot, current, collector, pending); err != nil {
+				runID, err := a.persistSuspendedRun(ctx, in, slot, current, collector, pending)
+				if err != nil {
 					outSW.Send(nil, errors.WithStack(err))
 					return
+				}
+				// 挂起：把本轮载荷与现场 ID 写入运行期共享状态，由 wrapPersist 在流以挂起结束时据此把本回合的
+				// 助手消息行落为锚点（问卷挂起写入问卷载荷、其余挂起仅置 phase=suspended），并把其 ID 回写现场。
+				// 本轮调用一并暂存而非即时下发：锚点消息 ID 要到 wrapPersist 落库后才可知，届时下发才能把该 ID
+				// 带进 tool_request 载荷（前端实时会话据此把挂起定位到具体助手消息行）。仅当运行期共享状态存在
+				// （StreamRun / ResumeRun 均会置入）时才如此；否则回落为即时下发（messageID 恒 0），与该状态引入前一致。
+				stashSuspension := in.Questionnaire != nil
+				if stashSuspension {
+					in.Questionnaire.payload = questionnaire // 非问卷挂起为 nil（锚点行不写问卷载荷）
+					in.Questionnaire.runID = runID
+					in.Questionnaire.pending = pending
 				}
 				if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 					st.suspended = true
@@ -566,16 +690,9 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 					outSW.Send(nil, errors.WithStack(err))
 					return
 				}
-				for i := range pending {
-					call := pending[i]
-					if err := toolRequests(ToolRequest{
-						CallID:           call.CallID,
-						ToolName:         call.ToolName,
-						Arguments:        call.Arguments,
-						AuditLevel:       call.AuditLevel,
-						ApprovalRequired: call.ApprovalRequired,
-						ExecOwner:        call.ExecOwner,
-					}); err != nil {
+				// 未暂存（运行期共享状态缺失，无处可锚）：仍在此时即时下发，messageID 恒 0
+				if !stashSuspension {
+					if err := reportToolRequests(toolRequests, pending, 0); err != nil {
 						outSW.Send(nil, errors.WithStack(err))
 						return
 					}
@@ -805,6 +922,10 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 			return nil, errors.WithStack(err)
 		}
 	}
+	// 挂起运行期共享状态：本指针随 input 值拷贝进入图与 wrapPersist，节点 3 在挂起时写入载荷（仅问卷
+	// 挂起）与现场 ID，wrapPersist 据此把本回合的助手消息行落为「挂起锚点」（见 questionnaireState）。
+	// 未挂起的运行该状态自始至终为空。
+	input.Questionnaire = &questionnaireState{}
 	reader, err := a.Stream(ctx, input, append(opts, compose.WithCallbacks(metrics.handler()))...)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -1060,8 +1181,10 @@ func interruptedPhase(ctx context.Context, err error) ai.AgentRunPhase {
 //   - 流以非 EOF 错误结束（超时 / 取消 / 模型报错）时，先把已累积的正文与思考落库并写入中断阶段
 //     （cancelled / failed），再照常把错误作为流错误下发——中断前的产物与「本轮被中断」这一事实
 //     一并保留，且提示文案由前端据阶段渲染，不混入正文；
-//   - 流以无 done 的 EOF 结束（挂起等待工具审批）时，回收阶段性落库的那一行——挂起不是终局，续跑
-//     会把本回合已外发的正文并回最终 done，留着残篇会在续跑后形成同一回合的两条助手消息。
+//   - 流以无 done 的 EOF 结束（挂起等待工具审批）时：问卷挂起（本轮带 ask_user 调用）保留下方锚点行
+//     ——写入问卷载荷、phase 置 suspended，并把其 ID 回写运行现场；其余挂起则回收阶段性落库的那一行
+//     ——挂起不是终局，续跑会把本回合已外发的正文并回最终 done，留着残篇会在续跑后形成同一回合的
+//     两条助手消息。
 //
 // SessionID 为 0 时只跳过落库，用量与耗时仍随 done 下发（无状态运行也能展示）。
 func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOutput], input AgentInput, metrics *runMetrics) *schema.StreamReader[AgentOutput] {
@@ -1086,6 +1209,11 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 			// finalized 标记本轮已按 done 终态化落库，使「无 done 的 EOF」能唯一识别为挂起。
 			finalized bool
 		)
+		// 问卷续跑：本次运行的助手消息行就是挂起时写下的锚点行，终态化须原地写回该行（不另起新行），
+		// 从而维持「同一回合只有一条助手消息」的不变式。
+		if input.Questionnaire != nil && input.Questionnaire.anchorID != 0 {
+			assistantMsgID = input.Questionnaire.anchorID
+		}
 		// checkpoint 把当前累积的正文 / 思考增量连同给定的生命周期终态阶段落库（阶段性落库传空阶段，
 		// 中断落库传 cancelled / failed）。尚无已落库行且两者皆空时不落库，避免产生空的助手消息行。
 		checkpoint := func(phase ai.AgentRunPhase) error {
@@ -1126,11 +1254,32 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 			item, err := in.Recv()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					// 无 done 的 EOF 即「本轮流因待审批工具调用挂起」（见节点 3 的挂起分支：只发
-					// tool_request，不产出 done）。挂起并非终局——续跑会把本回合已外发的助手正文
-					// 并回最终 done（validateOutput 的 turnEmittedText 拼接），故此处回收阶段性落库
-					// 的那一行，否则续跑结束会在同一回合留下两条助手消息（中断前的残篇 + 完整回复）。
-					// 回收失败仅告警：挂起现场已落库，多一行残篇不应妨碍本轮挂起。
+					// 无 done 的 EOF 即「本轮流因待审批 / 待作答的工具调用挂起」（见节点 3 的挂起分支：只发
+					// tool_request，不产出 done）。挂起一律把本回合的助手消息行落为「锚点」并保留：phase 置
+					// suspended，其 ID 回写运行现场——续跑据此原地终态化该行（不再新增一行，故同一回合恒只有一条
+					// 助手消息），回退 / 「重新回答」接口据此截断其后消息，用户刷新后也能据它重建现场。问卷挂起
+					// 额外写入问卷载荷；其余挂起不写载荷、仅以其为锚点。锚点行落库后才逐条下发本轮挂起的调用，
+					// 使 tool_request 载荷带上锚点消息 ID。落库 / 上报失败均仅告警：挂起现场已落库，本轮挂起已
+					// 成立，多一行残篇（或锚点缺失）不应妨碍它。
+					// 以 !finalized 为前提：已按 done 终态化的轮次其流同样以 EOF 结束，若不加此判据，续跑（或
+					// 再次挂起）的 EOF 会把刚终态化的行再次覆盖为 suspended。
+					// 运行期共享状态缺失（旁路调用，Questionnaire 为 nil）时无处可锚，回落为回收阶段性落库行：
+					// 挂起并非终局，续跑会把本回合已外发的助手正文并回最终 done（validateOutput 的 turnEmittedText
+					// 拼接），留着残篇会在续跑结束后留下同一回合的两条助手消息。
+					if !finalized && input.Questionnaire != nil && input.Questionnaire.runID != 0 {
+						// 正文并回恢复运行前已外发的助手正文（turnEmittedText），与续跑终态化时的拼接口径一致，
+						// 使锚点行在续跑前就完整呈现本回合已产出的文本（刷新后不丢前导说明）。
+						content := turnEmittedText(input.ResumeMessages) + contentBuf.String()
+						if aerr := a.persistSuspensionAnchor(persistCtx, input, assistantMsgID, content, reasoningBuf.String()); aerr != nil {
+							a.warnf(ctx, "agent: persisting the suspended anchor message failed: %v", aerr)
+						}
+						// 锚点行已落库并回写现场：此刻才逐条下发本轮挂起的调用，使载荷带上锚点消息 ID。
+						// 上报失败（客户端断开）仅告警：挂起现场与锚点行均已落库，本轮挂起已成立，不必再抛错。
+						if rerr := reportToolRequests(input.ToolRequestReporter, input.Questionnaire.pending, input.Questionnaire.anchorID); rerr != nil {
+							a.warnf(ctx, "agent: reporting the suspended tool requests failed: %v", rerr)
+						}
+						return
+					}
 					if !finalized && assistantMsgID != 0 {
 						if derr := a.store.DeleteMessage(persistCtx, assistantMsgID, input.UserID); derr != nil {
 							a.warnf(ctx, "agent: discarding the suspended assistant message row failed: %v", derr)
@@ -1201,11 +1350,64 @@ func (a *Agent) finalizeAssistantMessage(ctx context.Context, input AgentInput, 
 	if done.Reasoning != "" {
 		msg.Reasoning = serializer.NewCrypto([]byte(done.Reasoning))
 	}
+	// 问卷续跑：把锚点行上的问卷载荷（题目 + 本次并入的用户答案）随终态化写回同一行，供历史回显
+	// 问卷卡片与回退重答。非问卷运行该载荷为空，仅当存在时写入（避免无谓覆盖既有值）。
+	if input.Questionnaire != nil && input.Questionnaire.payload != nil {
+		if b, err := json.Marshal(input.Questionnaire.payload); err == nil {
+			msg.QuestionnaireJSON = serializer.NewCrypto(b)
+		}
+	}
 	if msgID == 0 {
 		_, err := a.store.AppendMessage(ctx, msg)
 		return err
 	}
 	return a.store.UpdateAssistantMessage(ctx, msg)
+}
+
+// persistSuspensionAnchor 把本回合的助手消息行落为「挂起锚点」：正文取本轮已外发的助手正文（已在调用处
+// 并回恢复运行前的正文，可能为空）、phase 置 suspended；问卷挂起额外写入问卷载荷（题目，答案由续跑终态化
+// 时并入），其余挂起不写载荷、仅以其为锚点。msgID 非 0 时原地更新阶段性落库的那一行（沿用其已分配好的
+// 会话内序号），为 0 时新建一行（无任何已外发正文时即为空行——挂起仍须有锚点以承载 messageID 并供续跑
+// 原地终态化）。落库成功后把锚点 ID 记入运行期共享状态并回写运行现场（agent_runs.anchor_message_id），
+// 使续跑与回退接口都能定位它。
+func (a *Agent) persistSuspensionAnchor(ctx context.Context, input AgentInput, msgID uint, content, reasoning string) error {
+	q := input.Questionnaire
+	if q == nil || q.runID == 0 {
+		return nil
+	}
+	msg := &ai.AgentMessage{
+		SessionID:     input.SessionID,
+		NamespaceName: input.NamespaceName,
+		UserID:        input.UserID,
+		Role:          ai.MessageRoleAssistant,
+		Content:       serializer.NewCrypto([]byte(content)),
+		Phase:         ai.AgentRunPhaseSuspended,
+	}
+	if q.payload != nil {
+		b, err := json.Marshal(q.payload)
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		msg.QuestionnaireJSON = serializer.NewCrypto(b)
+	}
+	// ID 由内嵌 BaseModel 提升而来，复合字面量不可直接赋值，故构造后单独置入（0 表示新建一行）。
+	msg.ID = msgID
+	if reasoning != "" {
+		msg.Reasoning = serializer.NewCrypto([]byte(reasoning))
+	}
+	if msgID == 0 {
+		appended, aerr := a.store.AppendMessage(ctx, msg)
+		if aerr != nil {
+			return aerr
+		}
+		q.anchorID = appended.ID
+	} else {
+		if aerr := a.store.UpdateAssistantMessage(ctx, msg); aerr != nil {
+			return aerr
+		}
+		q.anchorID = msgID
+	}
+	return a.store.SetAgentRunAnchor(ctx, q.runID, q.anchorID)
 }
 
 // assembleContext 是节点 1：校验提问非空，将完整输入写入图状态（供后续节点

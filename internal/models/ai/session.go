@@ -70,6 +70,9 @@ type AgentMessage struct {
 	CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12813,length=32"`
 	// Reasoning 助手回复的思考过程，加密落库、可空（模型未返回思考内容时为 NULL）
 	Reasoning *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
+	// QuestionnaireJSON 本回合 ask_user 问卷载荷（题目与用户答案，JSON），可空，经 crypto 序列化器
+	// 加密落库。问卷挂起时写入锚点消息行，续跑终态化后保留以支撑历史回显与回退重答。
+	QuestionnaireJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12820,length=32"`
 	// PromptTokens 本轮助手回答全部模型调用的输入 token 累加（明文数值，用户消息恒为 0）
 	PromptTokens int `gorm:"type:INT"`
 	// CompletionTokens 本轮助手回答全部模型调用的输出 token 累加（明文数值，用户消息恒为 0）
@@ -78,10 +81,10 @@ type AgentMessage struct {
 	TotalTokens int `gorm:"type:INT"`
 	// ElapsedMs 本轮助手回答的总耗时（毫秒，明文数值，用户消息恒为 0）
 	ElapsedMs int64 `gorm:"type:BIGINT"`
-	// Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled），
-	// 空表示尚未终结（运行在途的阶段性落库行）。运行被中断（超时 / 报错 / 取消）时据此表达
-	// 「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文拼接提示文案（提示语若混入正文，
-	// 会被喂回模型污染下一轮上下文）；用户消息恒为空。
+	// Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled，
+	// 以及问卷挂起期的 suspended），空表示尚未终结（运行在途的阶段性落库行）。运行被中断
+	// （超时 / 报错 / 取消）时据此表达「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文
+	// 拼接提示文案（提示语若混入正文，会被喂回模型污染下一轮上下文）；用户消息恒为空。
 	Phase AgentRunPhase `gorm:"type:VARCHAR(16)"`
 }
 

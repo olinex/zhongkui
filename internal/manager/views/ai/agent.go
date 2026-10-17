@@ -141,6 +141,9 @@ type AgentMessageItemOut struct {
 	// Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
 	// 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
 	Compress *AgentMessageCompressOut `json:"compress,omitempty"`
+	// Questionnaire 该助手消息所承载的问卷载荷（题目 + 用户答案 + 是否待回答），无则省略；
+	// 供前端渲染历史问卷卡片、「重新回答」入口，以及据 phase=suspended + awaiting 重建问卷面板
+	Questionnaire *AgentQuestionnaireOut `json:"questionnaire,omitempty"`
 	// CreatedAt 创建时间
 	CreatedAt time.Time `json:"createdAt"`
 }
@@ -154,6 +157,26 @@ type AgentMessageCompressOut struct {
 	TokensBefore int `json:"tokensBefore"`
 	// FoldedCount 本次折叠进摘要的消息条数（三种原因均为真实条数）
 	FoldedCount int `json:"foldedCount"`
+}
+
+// AgentQuestionnaireOut 定义助手消息所承载的问卷展示项：题目、用户作答与是否仍待回答。供前端渲染
+// 历史问卷卡片、「重新回答」入口，以及在刷新 / 重进后据 phase=suspended 重建问卷面板。
+type AgentQuestionnaireOut struct {
+	// Questions 问卷题目列表（每题含候选项与可选说明）
+	Questions []ai.QuestionnaireQuestion `json:"questions"`
+	// Answers 用户作答列表（未作答或取消回答时为空）
+	Answers []ai.QuestionnaireAnswer `json:"answers,omitempty"`
+	// Awaiting 是否仍待用户回答：消息 phase 为 suspended 且问卷尚无作答
+	Awaiting bool `json:"awaiting"`
+	// PendingCalls 承载该问卷的运行现场中的待执行调用（仅在「重新回答」接口的出参中携带），供前端
+	// 重答后经既有 tool-result 原样回传续跑；消息列表出参不含此项（历史卡片无需回传）
+	PendingCalls []AgentPendingCallOut `json:"pendingCalls,omitempty"`
+}
+
+// AgentQuestionnaireReanswerIn 定义回退（重新回答）一次问卷的请求输入。
+type AgentQuestionnaireReanswerIn struct {
+	// MessageID 问卷锚点消息 ID（会话消息列表出参的 id），必填
+	MessageID uint `json:"messageID" binding:"required"`
 }
 
 // AgentMessageListOut 定义 AI 助手会话消息列表输出。
@@ -368,6 +391,16 @@ func newAgentMessageItemOut(m *modelsai.AgentMessage) AgentMessageItemOut {
 		var citations []ai.RetrievalResult
 		if err := json.Unmarshal(citationsJSON, &citations); err == nil {
 			out.Citations = citations
+		}
+	}
+	if questionnaireJSON := m.QuestionnaireJSON.Value(); len(questionnaireJSON) > 0 {
+		var payload ai.QuestionnairePayload
+		if err := json.Unmarshal(questionnaireJSON, &payload); err == nil && len(payload.Questions) > 0 {
+			out.Questionnaire = &AgentQuestionnaireOut{
+				Questions: payload.Questions,
+				Answers:   payload.Answers,
+				Awaiting:  m.Phase == modelsai.AgentRunPhaseSuspended && len(payload.Answers) == 0,
+			}
 		}
 	}
 	return out
@@ -977,9 +1010,15 @@ func newAgentLiveRunOut(st *ai.LiveRunStatus) *AgentLiveRunOut {
 		LastSeq:          st.LastSeq,
 		AwaitingApproval: st.Phase == modelsai.AgentRunPhaseSuspended,
 	}
-	out.PendingCalls = make([]AgentPendingCallOut, 0, len(st.PendingCalls))
-	for _, call := range st.PendingCalls {
-		out.PendingCalls = append(out.PendingCalls, AgentPendingCallOut{
+	out.PendingCalls = newAgentPendingCallOuts(st.PendingCalls)
+	return out
+}
+
+// newAgentPendingCallOuts 把待执行调用映射为视图层输出项（供续播快照与问卷「重新回答」出参共用）。
+func newAgentPendingCallOuts(calls []ai.PendingCall) []AgentPendingCallOut {
+	out := make([]AgentPendingCallOut, 0, len(calls))
+	for _, call := range calls {
+		out = append(out, AgentPendingCallOut{
 			CallID:           call.CallID,
 			ToolName:         call.ToolName,
 			Arguments:        call.Arguments,
@@ -1177,6 +1216,58 @@ func AgentToolResult(c *gin.Context) {
 	sseWriter = sse.NewSSEWriter(c.Writer)
 	defer reader.Close()
 	pumpAgentStream(sseWriter, reader)
+}
+
+// AgentQuestionnaireReanswer 处理回退（重新回答）一次已提交问卷的请求（路由
+// POST /agent/:sessionID/questionnaire/reanswer）。
+// 供前端在历史问卷卡片上点击「重新回答」使用：删除该问卷锚点消息之后的全部消息、清空锚点正文并重置为
+// suspended，并把承载该问卷的运行现场重置为 pending（刷新存活期限），使改答后经既有 tool-result 接口
+// 按新答案续跑、写回同一锚点行。出参返回问卷载荷（题目 + 上次答案），供前端预填重开问卷。
+// 锚点消息不存在 / 不属于该会话与属主返回 404（避免泄露资源存在性）；承载现场不存在同样返回 404；
+// 现场已过期按既有「已过期」语义以 400 拒绝（前端按后端本地化提示）。
+func AgentQuestionnaireReanswer(c *gin.Context) {
+	namespace, ok := middlewares.RequireNamespace(c)
+	if !ok {
+		return
+	}
+	sessionID, ok := views.GetUint64Param(c, "sessionID")
+	if !ok {
+		return
+	}
+	comps := requireAiEnabled(c)
+	if comps == nil {
+		return
+	}
+	userID, ok := middlewares.RequireUserID(c)
+	if !ok {
+		return
+	}
+	if session := getOwnedAgentSession(c, comps, uint(sessionID), namespace, userID); session == nil {
+		return
+	}
+	var in AgentQuestionnaireReanswerIn
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
+	payload, calls, err := comps.Sessions.ReanswerQuestionnaire(c, uint(sessionID), userID, in.MessageID)
+	if err != nil {
+		switch {
+		case errors.Is(err, ai.ErrMessageNotFound), errors.Is(err, ai.ErrAgentRunNotFound):
+			response.ErrDefaultPageNotFound.AbortWithGinH(c)
+		case errors.Is(err, ai.ErrAgentRunExpired):
+			response.CreateCodeError(http.StatusBadRequest, response.CodeAgentRunExpired, nil).AbortWithGinH(c)
+		default:
+			response.CreateAccidentError(err).AbortWithGinH(c)
+		}
+		return
+	}
+	response.SimpleOK.AbortWithGinW(c, AgentQuestionnaireOut{
+		Questions:    payload.Questions,
+		Answers:      payload.Answers,
+		Awaiting:     true,
+		PendingCalls: newAgentPendingCallOuts(calls),
+	})
 }
 
 // AgentStatusGet 处理获取 AI 助手状态的请求（不强制启用，始终 200）。

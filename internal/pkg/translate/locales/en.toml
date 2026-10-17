@@ -2994,6 +2994,12 @@ other = "Knowledge Base Search"
 [tool.knowledge_search.comment]
 other = "Called by the agent on demand to search the knowledge base of the current namespace; the agent decides when to search and which query to use, and may call it multiple times"
 
+[tool.ask_user.label]
+other = "Ask User"
+
+[tool.ask_user.comment]
+other = "Called by the model when information is insufficient or the user must choose among options; the frontend presents the questions and returns the user's answers, allowing multiple questions at once with candidate answers per question"
+
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)
 # Custom OPA builtin descriptions: localized by the view layer per request

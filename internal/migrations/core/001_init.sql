@@ -736,6 +736,7 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     draft_json BYTEA,
     citations_json BYTEA,
     reasoning BYTEA,
+    questionnaire_json BYTEA,
     prompt_tokens INT NOT NULL DEFAULT 0,
     completion_tokens INT NOT NULL DEFAULT 0,
     total_tokens INT NOT NULL DEFAULT 0,
@@ -758,11 +759,12 @@ COMMENT ON COLUMN agent_messages.content IS 'the content of the message, stored 
 COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_messages.reasoning IS 'the reasoning/chain-of-thought of the assistant reply, stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_messages.questionnaire_json IS 'the ask_user questionnaire payload of this turn (questions and the user answers, JSON) carried by the anchor assistant message, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_messages.prompt_tokens IS 'the sum of prompt tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.completion_tokens IS 'the sum of completion tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.total_tokens IS 'the sum of total tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.elapsed_ms IS 'the total elapsed time in milliseconds of this assistant reply (from the run start to the done item), 0 for user messages';
-COMMENT ON COLUMN agent_messages.phase IS 'the terminal lifecycle phase of the run that produced this assistant message (done/failed/cancelled), empty while the run is still in flight or for user messages; the render layer derives the interrupted/cancelled notice from it rather than keeping such text in the content';
+COMMENT ON COLUMN agent_messages.phase IS 'the terminal lifecycle phase of the run that produced this assistant message (done/failed/cancelled) or suspended while an ask_user questionnaire is awaiting the answers, empty while the run is still in flight or for user messages; the render layer derives the interrupted/cancelled notice from it rather than keeping such text in the content';
 
 CREATE TABLE IF NOT EXISTS agent_session_compactions (
     id BIGSERIAL PRIMARY KEY,
@@ -856,6 +858,7 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     pending_calls BYTEA,
     citations BYTEA,
     slot VARCHAR(255) NOT NULL DEFAULT '',
+    anchor_message_id BIGINT NOT NULL DEFAULT 0,
     expires_at TIMESTAMPTZ NOT NULL
 );
 
@@ -877,6 +880,7 @@ COMMENT ON COLUMN agent_runs.messages IS 'the full message chain JSON snapshot a
 COMMENT ON COLUMN agent_runs.pending_calls IS 'the pending tool call list JSON (callID, api id, arguments and the synthesized request descriptor), stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_runs.citations IS 'the retrieval citation list JSON at the moment of suspension, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_runs.slot IS 'the model slot of the run (flash/standard/advanced)';
+COMMENT ON COLUMN agent_runs.anchor_message_id IS 'the questionnaire anchor assistant message id of the run (agent_messages.id), which carries the questionnaire payload and the final answer of that turn, 0 when the suspension is not questionnaire-driven';
 COMMENT ON COLUMN agent_runs.expires_at IS 'the expiry time of the run, after which it cannot be resumed';
 
 CREATE TABLE IF NOT EXISTS agent_live_runs (
