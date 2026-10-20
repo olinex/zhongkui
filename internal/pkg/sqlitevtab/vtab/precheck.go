@@ -28,7 +28,7 @@ import (
 func TestConn(ctx context.Context, typ string, cfgData []byte) error {
 	cfg, err := decodeDatasourceConfig(typ, cfgData)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	p, ok := lookupDatasourcePlugin(typ)
 	if !ok {
@@ -46,7 +46,7 @@ func TestConn(ctx context.Context, typ string, cfgData []byte) error {
 func IntrospectSchema(ctx context.Context, typ string, cfgData []byte, file io.Reader) ([]DatasourceColumn, error) {
 	cfg, err := decodeDatasourceConfig(typ, cfgData)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	p, ok := lookupDatasourcePlugin(typ)
 	if !ok {
@@ -73,7 +73,7 @@ func introspectSQLiteFile(ctx context.Context, table string, r io.Reader) ([]Dat
 	defer pool.Close(ctx)
 	ds, err := NewSQLiteFileDatasource(ctx, pool, table)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return schemaColumnsOut(ds.datasourceSchema()), nil
 }

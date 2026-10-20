@@ -153,7 +153,7 @@ func TestSummarizeStream_DeltasAndCallbackError(t *testing.T) {
 		"memory.summarySystemPrompt": "sp",
 	})
 	var deltas []string
-	summary, upto, err := mem.SummarizeStream(ctx, session, evicted, func(d string) error {
+	summary, upto, _, err := mem.SummarizeStream(ctx, session, evicted, func(d string) error {
 		deltas = append(deltas, d)
 		return nil
 	})
@@ -171,7 +171,7 @@ func TestSummarizeStream_DeltasAndCallbackError(t *testing.T) {
 	errMem := newTestMemory(t, newTestSessionDB(t), &stubChat{chunks: []string{"a", "b"}}, stubEmbedder{}, map[string]string{
 		"memory.summarySystemPrompt": "sp",
 	})
-	if _, _, err := errMem.SummarizeStream(ctx, session, evicted, func(string) error { return wantErr }); !errors.Is(err, wantErr) {
+	if _, _, _, err := errMem.SummarizeStream(ctx, session, evicted, func(string) error { return wantErr }); !errors.Is(err, wantErr) {
 		t.Errorf("SummarizeStream(callback error) = %v, want %v", err, wantErr)
 	}
 }

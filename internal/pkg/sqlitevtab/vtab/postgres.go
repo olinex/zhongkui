@@ -174,11 +174,11 @@ func (postgresPlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader
 	pool := NewPostgresPool(&PostgresConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
 	ds, err := NewPostgresDatasource(ctx, pool, c.Table)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	schema, err := schemaOf(ds)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return schemaColumnsOut(schema), nil
 }
@@ -199,7 +199,7 @@ func (postgresPlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, _ 
 	})
 	cols, err := parseDatasourceColumns(c.Schema)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return NewPostgresDatasourceWithSchema(poolHandle, c.Table, cols)
 }

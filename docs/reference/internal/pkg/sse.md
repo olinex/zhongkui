@@ -20,6 +20,7 @@
   - [func \(s \*SSEWriter\) SendReasoning\(delta string\) error](<#SSEWriter.SendReasoning>)
   - [func \(s \*SSEWriter\) SendStage\(payload any\) error](<#SSEWriter.SendStage>)
   - [func \(s \*SSEWriter\) SendStageDelta\(stage string, delta string\) error](<#SSEWriter.SendStageDelta>)
+  - [func \(s \*SSEWriter\) SendState\(payload any\) error](<#SSEWriter.SendState>)
   - [func \(s \*SSEWriter\) SendToolRequest\(payload any\) error](<#SSEWriter.SendToolRequest>)
 
 
@@ -64,7 +65,7 @@ SSEEventValue 是 SSE 事件类型值：SSEEvent.Event 的取值空间（独立�
 type SSEEventValue string
 ```
 
-<a name="SSEEventDelta"></a>SSE 事件类型常量：SSE 流上事件的 event 行取值。前端按事件类型分发解析： delta 累积正文、reasoning 累积思考过程、stage 呈现执行阶段的状态与用量、 done 呈现结构化产物与引用、error 中断提示、ping 保活、tool\_request 挂起等待前端 执行客户端工具，compress\_start/compress\_delta/compress\_done 呈现会话上下文压缩的 开始、摘要增量与完成。
+<a name="SSEEventDelta"></a>SSE 事件类型常量：SSE 流上事件的 event 行取值。前端按事件类型分发解析： delta 累积正文、reasoning 累积思考过程、stage 呈现执行阶段的状态与用量、 block 呈现有序内容块的创建与收敛、done 呈现结构化产物与引用、error 中断提示、 ping 保活、tool\_request 挂起等待前端执行客户端工具，compress\_start/compress\_delta/ compress\_done 呈现会话上下文压缩的开始、摘要增量与完成。
 
 ```go
 const (
@@ -89,6 +90,12 @@ const (
     SSEEventCompressDelta SSEEventValue = "compress_delta"
     // SSEEventCompressDone 上下文压缩完成事件（data 含压缩前后占用、折叠条数与滚动摘要游标）
     SSEEventCompressDone SSEEventValue = "compress_done"
+    // SSEEventState 会话交互状态事件（data 为 {"state": "...", "substate": "..."}，下发
+    // 后端推导出的会话交互主状态与子状态）
+    SSEEventState SSEEventValue = "state"
+    // SSEEventBlock 内容块事件（data 含 {seq, kind, payload} 的有序内容块，块创建与收敛各下发
+    // 一次；前端据 {seq, kind} 归并增量到当前开放块）
+    SSEEventBlock SSEEventValue = "block"
 )
 ```
 
@@ -206,6 +213,15 @@ func (s *SSEWriter) SendStageDelta(stage string, delta string) error
 ```
 
 SendStageDelta 发送带阶段标识的增量文本（delta 事件，data 为 \{"stage": "...", "delta": "..."\}），供多阶段流式过程（如检索试运行）把增量 归属到具体阶段。
+
+<a name="SSEWriter.SendState"></a>
+### func \(\*SSEWriter\) SendState
+
+```go
+func (s *SSEWriter) SendState(payload any) error
+```
+
+SendState 发送会话交互状态事件（state 事件，payload 由调用方提供，须含描述交互主状态的 state 与子状态的 substate 字段），供前端以单一状态源驱动界面。
 
 <a name="SSEWriter.SendToolRequest"></a>
 ### func \(\*SSEWriter\) SendToolRequest

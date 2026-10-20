@@ -162,7 +162,7 @@ func GenerateStrongPassword(length int) (string, error) {
 	for _, charset := range strongPasswordCharsets {
 		idx, err := randomIndex(len(charset))
 		if err != nil {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 		password = append(password, charset[idx])
 	}
@@ -170,7 +170,7 @@ func GenerateStrongPassword(length int) (string, error) {
 	for len(password) < length {
 		idx, err := randomIndex(len(all))
 		if err != nil {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 		password = append(password, all[idx])
 	}
@@ -178,7 +178,7 @@ func GenerateStrongPassword(length int) (string, error) {
 	for i := len(password) - 1; i > 0; i-- {
 		j, err := randomIndex(i + 1)
 		if err != nil {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 		password[i], password[j] = password[j], password[i]
 	}

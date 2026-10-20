@@ -37,6 +37,9 @@ export const EnumClass = {
   // 客户端工具调用的审核重要级（归属 internal/ai）与会话级审核阀门（归属 internal/models/ai）
   auditLevel: "auditLevel",
   reviewValve: "reviewValve",
+  // 会话交互主状态 / 子状态（归属 internal/models/ai）：状态唯一权威来源，label 由后端枚举注册表下发
+  agentInteractionState: "agentInteractionState",
+  agentInteractionSubstate: "agentInteractionSubstate",
 } as const;
 
 // currentLang 当前语言（i18n locale value，如 zh-Hans / en）

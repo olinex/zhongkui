@@ -314,7 +314,7 @@ func parseType(s string) (labelType, string, error) {
 func parseLabel(value string) (label, error) {
 	ty, rest, err := parseType(value)
 	if err != nil {
-		return label{}, err
+		return label{}, errors.WithStack(err)
 	}
 	if !strings.HasPrefix(rest, ":") {
 		return label{}, errors.Newf("parse label failed: %s", value)
@@ -652,21 +652,21 @@ func parseTCPSignature(value string) (tcpSignature, error) {
 
 	version, err := parseIPVersion(parts[0])
 	if err != nil {
-		return tcpSignature{}, err
+		return tcpSignature{}, errors.WithStack(err)
 	}
 	ittl, err := parseTTL(parts[1])
 	if err != nil {
-		return tcpSignature{}, err
+		return tcpSignature{}, errors.WithStack(err)
 	}
 	olen, err := parseUint8(parts[2])
 	if err != nil {
-		return tcpSignature{}, err
+		return tcpSignature{}, errors.WithStack(err)
 	}
 	var mss *uint16
 	if parts[3] != "*" {
 		v, err := parseUint16(parts[3])
 		if err != nil {
-			return tcpSignature{}, err
+			return tcpSignature{}, errors.WithStack(err)
 		}
 		mss = &v
 	}
@@ -676,13 +676,13 @@ func parseTCPSignature(value string) (tcpSignature, error) {
 	}
 	wsize, err := parseWindowSize(winParts[0])
 	if err != nil {
-		return tcpSignature{}, err
+		return tcpSignature{}, errors.WithStack(err)
 	}
 	var wscale *uint8
 	if winParts[1] != "*" {
 		v, err := parseUint8(winParts[1])
 		if err != nil {
-			return tcpSignature{}, err
+			return tcpSignature{}, errors.WithStack(err)
 		}
 		wscale = &v
 	}
@@ -692,7 +692,7 @@ func parseTCPSignature(value string) (tcpSignature, error) {
 		for _, token := range strings.Split(parts[5], ",") {
 			opt, err := parseTCPOption(token)
 			if err != nil {
-				return tcpSignature{}, err
+				return tcpSignature{}, errors.WithStack(err)
 			}
 			olayout = append(olayout, opt)
 		}
@@ -706,7 +706,7 @@ func parseTCPSignature(value string) (tcpSignature, error) {
 		for _, token := range strings.Split(parts[6], ",") {
 			q, err := parseQuirk(token)
 			if err != nil {
-				return tcpSignature{}, err
+				return tcpSignature{}, errors.WithStack(err)
 			}
 			quirks = append(quirks, q)
 		}
@@ -714,7 +714,7 @@ func parseTCPSignature(value string) (tcpSignature, error) {
 
 	pclass, err := parsePayloadSize(parts[7])
 	if err != nil {
-		return tcpSignature{}, err
+		return tcpSignature{}, errors.WithStack(err)
 	}
 
 	return tcpSignature{
@@ -786,7 +786,7 @@ func parseHTTPSignature(value string) (httpSignature, error) {
 
 	version, err := parseHTTPVersion(parts[0])
 	if err != nil {
-		return httpSignature{}, err
+		return httpSignature{}, errors.WithStack(err)
 	}
 
 	horder := make([]httpHeader, 0, 4)

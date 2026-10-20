@@ -735,8 +735,6 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     content BYTEA,
     draft_json BYTEA,
     citations_json BYTEA,
-    reasoning BYTEA,
-    questionnaire_json BYTEA,
     prompt_tokens INT NOT NULL DEFAULT 0,
     completion_tokens INT NOT NULL DEFAULT 0,
     total_tokens INT NOT NULL DEFAULT 0,
@@ -758,13 +756,40 @@ COMMENT ON COLUMN agent_messages.role IS 'the role of the message, e.g. user, as
 COMMENT ON COLUMN agent_messages.content IS 'the content of the message, stored encrypted with the crypto serializer';
 COMMENT ON COLUMN agent_messages.draft_json IS 'the draft payload of the assistant reply, e.g. intermediate tool-call states, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_messages.citations_json IS 'the citation source list of the assistant reply, stored encrypted with the crypto serializer, null when not applicable';
-COMMENT ON COLUMN agent_messages.reasoning IS 'the reasoning/chain-of-thought of the assistant reply, stored encrypted with the crypto serializer, null when not applicable';
-COMMENT ON COLUMN agent_messages.questionnaire_json IS 'the ask_user questionnaire payload of this turn (questions and the user answers, JSON) carried by the anchor assistant message, stored encrypted with the crypto serializer, null when not applicable';
 COMMENT ON COLUMN agent_messages.prompt_tokens IS 'the sum of prompt tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.completion_tokens IS 'the sum of completion tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.total_tokens IS 'the sum of total tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.elapsed_ms IS 'the total elapsed time in milliseconds of this assistant reply (from the run start to the done item), 0 for user messages';
 COMMENT ON COLUMN agent_messages.phase IS 'the terminal lifecycle phase of the run that produced this assistant message (done/failed/cancelled) or suspended while an ask_user questionnaire is awaiting the answers, empty while the run is still in flight or for user messages; the render layer derives the interrupted/cancelled notice from it rather than keeping such text in the content';
+
+-- Agent 会话消息内容块（agent_message_blocks）：一轮助手回答（agent_messages 的助手行）的思考段 /
+-- 工具调用组 / 授权待审 / 主动提问 / 正文段各按其真实产生时序落为一个块。块于内容真实产生的时点创建，
+-- block_seq 在同一消息内单调递增（从 1 起），块的顺序即内容真实产生的顺序。块为展示事实，不参与模型
+-- 上下文回灌（助手消息回灌模型的正文仍取 agent_messages.content）；块随所属助手消息级联删除。
+CREATE TABLE IF NOT EXISTS agent_message_blocks (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL DEFAULT 0,
+    message_id BIGINT NOT NULL REFERENCES agent_messages(id) ON DELETE CASCADE,
+    block_seq BIGINT NOT NULL,
+    kind VARCHAR(16) NOT NULL,
+    payload BYTEA
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_message_blocks_message_seq
+    ON agent_message_blocks (message_id, block_seq);
+
+COMMENT ON COLUMN agent_message_blocks.id IS 'the primary key of the agent message block';
+COMMENT ON COLUMN agent_message_blocks.created_at IS 'the creation time of the agent message block';
+COMMENT ON COLUMN agent_message_blocks.updated_at IS 'the last update time of the agent message block';
+COMMENT ON COLUMN agent_message_blocks.namespace_name IS 'the namespace the agent message block belongs to';
+COMMENT ON COLUMN agent_message_blocks.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_message_blocks.message_id IS 'the owning assistant message id (agent_messages.id), a real foreign key, cascade delete with the message, no sentinel';
+COMMENT ON COLUMN agent_message_blocks.block_seq IS 'the monotonically increasing seq of the block within its message (starting from 1), unique together with message_id, defining the real generation order of the content';
+COMMENT ON COLUMN agent_message_blocks.kind IS 'the block kind, its values come from the internal enum AgentMessageBlockKind (reasoning/tool_calls/approval/questionnaire/content)';
+COMMENT ON COLUMN agent_message_blocks.payload IS 'the block payload JSON (reasoning text / tool-call records / approval list / questionnaire questions and answers / content text), stored encrypted with the crypto serializer, null when not applicable';
 
 CREATE TABLE IF NOT EXISTS agent_session_compactions (
     id BIGSERIAL PRIMARY KEY,
@@ -777,7 +802,8 @@ CREATE TABLE IF NOT EXISTS agent_session_compactions (
     summary BYTEA,
     reason VARCHAR(16) NOT NULL DEFAULT '',
     tokens_before INT NOT NULL DEFAULT 0,
-    folded_count INT NOT NULL DEFAULT 0
+    folded_count INT NOT NULL DEFAULT 0,
+    tokens_after INT NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_session_compactions_session
@@ -794,6 +820,7 @@ COMMENT ON COLUMN agent_session_compactions.summary IS 'the full rolling summary
 COMMENT ON COLUMN agent_session_compactions.reason IS 'the reason that advanced the summary: rolling, auto or manual';
 COMMENT ON COLUMN agent_session_compactions.tokens_before IS 'the context token usage right before this advance, always filled with the real value for all reasons (rolling/auto/manual); whether it is rendered is decided by the read path, independently of its value';
 COMMENT ON COLUMN agent_session_compactions.folded_count IS 'the number of messages folded into the rolling summary by this advance, always the real count for all reasons (rolling/auto/manual)';
+COMMENT ON COLUMN agent_session_compactions.tokens_after IS 'the estimated context token usage right after this advance (before minus the folded content plus the new summary); filled for auto/manual compactions, 0 means no estimate (rolling advances and failed estimations)';
 
 CREATE TABLE IF NOT EXISTS agent_memories (
     id BIGSERIAL PRIMARY KEY,
@@ -1098,6 +1125,7 @@ DROP TABLE IF EXISTS agent_memories;
 DROP TABLE IF EXISTS agent_run_events;
 DROP TABLE IF EXISTS agent_live_runs;
 DROP TABLE IF EXISTS agent_runs;
+DROP TABLE IF EXISTS agent_message_blocks;
 DROP TABLE IF EXISTS agent_messages;
 DROP TABLE IF EXISTS agent_session_compactions;
 DROP TABLE IF EXISTS agent_sessions;

@@ -9,12 +9,32 @@ import (
 )
 
 // fakeExpiredStore 是 ExpiredRunStore 的内存替身：三张表各以过期时刻切片表示行，删除时移除
-// 所有早于 now 的行（至多 limit 行），并返回删除条数。
+// 所有早于 now 的行（至多 limit 行），并返回删除条数。收敛（存活性）以调用计数表示——其真实行为
+// 由数据库层测试覆盖（见 session_liveness_test.go），此处只断言清扫任务会先收敛再删除。
 type fakeExpiredStore struct {
 	mu        sync.Mutex
 	liveRuns  []time.Time
 	runEvents []time.Time
 	agentRuns []time.Time
+	// convergePendingCalls / convergeRunningCalls 收敛步骤被调用的批次数（供清扫顺序断言）
+	convergePendingCalls int
+	convergeRunningCalls int
+}
+
+// ConvergeExpiredPendingRuns 记录一次「收敛过期挂起现场」的调用（内存替身不做真实收敛）。
+func (s *fakeExpiredStore) ConvergeExpiredPendingRuns(ctx context.Context, now time.Time, limit int) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.convergePendingCalls++
+	return 0, nil
+}
+
+// ConvergeExpiredRunningLiveRuns 记录一次「收敛超期 running 在途运行」的调用（内存替身不做真实收敛）。
+func (s *fakeExpiredStore) ConvergeExpiredRunningLiveRuns(ctx context.Context, now time.Time, limit int) (int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.convergeRunningCalls++
+	return 0, nil
 }
 
 // deleteExpired 从 *rows 中移除至多 limit 个早于 now 的行，返回删除条数。
@@ -97,6 +117,31 @@ func TestRunCleaner_SweepBatched(t *testing.T) {
 	}
 	if live, _, _ := store.counts(); live != 0 {
 		t.Errorf("live runs after batched sweep = %d, want 0", live)
+	}
+}
+
+// TestRunCleaner_SweepConvergesBeforeDeleting 测试清扫任务先执行存活性收敛（过期挂起现场、超期 running
+// 在途运行）再硬删除过期行：收敛步骤各被调用一次，且删除仍在收敛之后发生（过期行最终被移除）。
+func TestRunCleaner_SweepConvergesBeforeDeleting(t *testing.T) {
+	now := time.Now()
+	store := &fakeExpiredStore{
+		liveRuns:  []time.Time{now.Add(-time.Hour)},
+		agentRuns: []time.Time{now.Add(-time.Hour)},
+	}
+	c := newRunCleaner(store, nil)
+	c.now = func() time.Time { return now }
+
+	if err := c.sweep(context.Background()); err != nil {
+		t.Fatalf("sweep error = %v", err)
+	}
+	store.mu.Lock()
+	pending, running := store.convergePendingCalls, store.convergeRunningCalls
+	store.mu.Unlock()
+	if pending != 1 || running != 1 {
+		t.Errorf("converge calls = (pending %d, running %d), want (1, 1)", pending, running)
+	}
+	if live, _, agent := store.counts(); live != 0 || agent != 0 {
+		t.Errorf("counts after sweep = (live %d, agent %d), want (0, 0): expired rows still deleted", live, agent)
 	}
 }
 

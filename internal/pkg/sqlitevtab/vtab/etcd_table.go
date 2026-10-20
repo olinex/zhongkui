@@ -14,6 +14,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
@@ -78,12 +79,12 @@ func (d *EtcdDatasource) resolveKeyPlan(pushdown []sqlitevtab.Constraint) etcdKe
 func (d *EtcdDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	cli, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	rows, err := d.fetch(ctx, cli, d.resolveKeyPlan(pushdown))
 	d.pool.Release(ctx, cli)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return newRedisRows(rows), nil
 }
@@ -103,7 +104,7 @@ func (d *EtcdDatasource) fetch(ctx context.Context, cli *clientv3.Client, plan e
 		resp, err = cli.Get(ctx, "", clientv3.WithFromKey())
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	rows := make([][]any, 0, len(resp.Kvs))
 	for _, kv := range resp.Kvs {

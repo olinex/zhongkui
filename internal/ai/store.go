@@ -309,11 +309,11 @@ func (s *Store) Load(ctx context.Context) (*Snapshot, error) {
 func (s *Store) ModelConfig(ctx context.Context, slot ai.Slot) (llm.ModelConfig, error) {
 	binding, err := s.findBinding(ctx, slot)
 	if err != nil {
-		return llm.ModelConfig{}, err
+		return llm.ModelConfig{}, errors.WithStack(err)
 	}
 	cfg, usable, err := modelConfigOf(binding)
 	if err != nil {
-		return llm.ModelConfig{}, err
+		return llm.ModelConfig{}, errors.WithStack(err)
 	}
 	if !usable {
 		return llm.ModelConfig{}, ErrSlotNotBound
@@ -334,7 +334,7 @@ func (s *Store) EmbeddingDimensions(ctx context.Context) (string, int, bool, err
 		if errors.Is(err, ErrSlotNotBound) {
 			return "", 0, false, nil
 		}
-		return "", 0, false, err
+		return "", 0, false, errors.WithStack(err)
 	}
 	return binding.Model.Name, binding.Model.Dimensions, true, nil
 }

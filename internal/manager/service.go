@@ -57,6 +57,6 @@ func RunHttpService(ctx context.Context, i do.Injector) error {
 	case err := <-errCh:
 		// 服务启动失败
 		apiLogger.Ctx(ctx).Fatal("failed to start http server", zap.Error(err))
-		return err
+		return errors.WithStack(err)
 	}
 }

@@ -155,9 +155,10 @@ type QuestionnaireAnswer struct {
 	Custom bool `json:"custom"`
 }
 
-// QuestionnairePayload 是一次 ask_user 问卷的完整载荷：Questions 为题目，Answers 为用户的作答
-// （挂起时为空，续跑终态化后承载答案，供历史回显与回退重答）。它既是 run 现场的回落依据，也是
-// agent_messages.questionnaire_json 的落库形态。
+// QuestionnairePayload 是「一轮」ask_user 问卷的完整载荷：Questions 为该轮的题目，Answers 为该轮用户的
+// 作答（首次挂起时为空，续跑终态化后承载答案，供历史回显与回退重答）。同一回合内模型可多轮提问（拿到上一轮
+// 答案后再次调用 ask_user），每一轮各自成一个 questionnaire 块、按 block_seq 先后**并列**存储，前端据此把
+// 各轮渲染成各自独立的问答框并把最新一轮沉在底部。它既是 run 现场的回落依据，也是回退（重新回答）接口的出参形态。
 type QuestionnairePayload struct {
 	// Questions 本次问卷的题目列表
 	Questions []QuestionnaireQuestion `json:"questions"`
@@ -219,6 +220,78 @@ func markQuestionIDs(seen map[string]struct{}, questions []QuestionnaireQuestion
 		seen[id] = struct{}{}
 	}
 	return ""
+}
+
+// appendQuestionnaireRound 把本轮挂起的问卷载荷作为一轮追加到锚点行已累计的各轮之后。非问卷挂起（本轮
+// 载荷为空或无题目）时返回原列表，使锚点行上已累计的各轮不被抹掉；纯代码侧无需按题目 id 去重——各轮
+// 并列存储、答案按轮归属，跨轮重名不再影响答案拆分（同轮内的重复 id 仍由 markQuestionIDs 拦下并按工具
+// 失败回灌）。
+func appendQuestionnaireRound(rounds []QuestionnairePayload, next *QuestionnairePayload) []QuestionnairePayload {
+	if next == nil || len(next.Questions) == 0 {
+		return rounds
+	}
+	return append(rounds, *next)
+}
+
+// attachRoundAnswers 把本轮回传的答案并入**最后一轮**（本次挂起新追加的那一轮）：按题目 id 归并（同 id 以
+// 新答案为准并保持其原位置），新题目 id 追加在末尾。每次续跑只回传本轮题目的答案，故须并入末轮；只并入
+// 末轮使各轮答案互不覆盖——此前各轮的答案各自留在自己的载荷里。
+func attachRoundAnswers(rounds []QuestionnairePayload, answers []QuestionnaireAnswer) []QuestionnairePayload {
+	if len(rounds) == 0 || len(answers) == 0 {
+		return rounds
+	}
+	last := &rounds[len(rounds)-1]
+	merged := make([]QuestionnaireAnswer, 0, len(last.Answers)+len(answers))
+	at := make(map[string]int, len(last.Answers))
+	for _, a := range last.Answers {
+		at[a.QuestionID] = len(merged)
+		merged = append(merged, a)
+	}
+	for _, a := range answers {
+		if i, ok := at[a.QuestionID]; ok {
+			merged[i] = a
+			continue
+		}
+		at[a.QuestionID] = len(merged)
+		merged = append(merged, a)
+	}
+	last.Answers = merged
+	return rounds
+}
+
+// clearLastRoundAnswers 清空**末轮**（本次挂起对应的那一轮）的用户答案。用于「取消回答」：末轮因回退重开
+// 可能仍带着上次作答的答案（供预填重开），取消后须回到未作答——不清则终态化写回的仍是旧答案，刷新 /
+// 重进会把它当作本次作答展示。返回新的切片（不原地改动入参），空列表时原样返回。
+func clearLastRoundAnswers(rounds []QuestionnairePayload) []QuestionnairePayload {
+	if len(rounds) == 0 {
+		return rounds
+	}
+	out := append([]QuestionnairePayload(nil), rounds...)
+	out[len(out)-1].Answers = nil
+	return out
+}
+
+// FullyAnswered 报告**单轮**载荷中的题目是否全部已作答：逐题按 id 取**首个**匹配答案（与前端
+// questionnaireAnswerTextOf 的判定一致），答案存在且 Answered=true 视为已作答。多轮提问的各轮各自成一份
+// 载荷，故视图层只需对**末轮**调用它即可判定 awaiting：末轮仍存在未作答的题目等价于「该轮仍在等用户作答」；
+// 非问卷挂起（末轮在此之前已作答）时它恒为 true、不误判。
+func (p QuestionnairePayload) FullyAnswered() bool {
+	if len(p.Questions) == 0 {
+		return false
+	}
+	answered := make(map[string]bool, len(p.Answers))
+	for _, a := range p.Answers {
+		if _, dup := answered[a.QuestionID]; dup {
+			continue
+		}
+		answered[a.QuestionID] = a.Answered
+	}
+	for _, q := range p.Questions {
+		if !answered[q.ID] {
+			return false
+		}
+	}
+	return true
 }
 
 // init 在启动期经 client schema 注册表登记 ask_user；client 工具只登记入参契约，执行落于前端。

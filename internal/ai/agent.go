@@ -85,7 +85,7 @@ func reportToolRequests(reporter ToolRequestReporter, requests []pendingToolCall
 			ExecOwner:        call.ExecOwner,
 			MessageID:        messageID,
 		}); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 	return nil
@@ -121,6 +121,12 @@ type CompressEvent struct {
 	Threshold float64 `json:"threshold,omitempty"`
 	// TokensBefore 压缩前占用 token（仅 compress_done）
 	TokensBefore int `json:"tokensBefore,omitempty"`
+	// TokensAfter 压缩后占用 token 的即时估算（仅 compress_done）：压缩前占用 − 被折叠内容占用 +
+	// 新摘要占用，优先取摘要模型用量算出的估值，用量缺失或其估值不可用时回落为按字节折算的估值
+	// （见 estimatedCompactedTokens），亦即压缩完成即刻总能给出一个可展示的值——两种口径都不可用时
+	// 才缺省（前端回落为仅展示压缩前占用与折叠条数）。该值仅作即时展示并与检查点同时落库，待在途
+	// 或后续生成由供应商测得的真实 prompt tokens 到达后覆盖为精确值。
+	TokensAfter int `json:"tokensAfter,omitempty"`
 	// FoldedCount 本次折叠的消息条数（仅 compress_done）
 	FoldedCount int `json:"foldedCount,omitempty"`
 	// SummaryUptoSeq 压缩后滚动摘要游标（仅 compress_done）
@@ -181,6 +187,11 @@ type AgentInput struct {
 	// 锚点行」还是按既有逻辑回收阶段性落库行，并在续跑时把终态回答写回锚点行。非问卷运行的指针仍然
 	// 存在但载荷为 nil，行为与引入问卷前完全一致。
 	Questionnaire *questionnaireState `json:"-"`
+	// blocks 本次运行的块构建器（不对外暴露）：由 StreamRun / PrepareResume 在进入图前创建（续跑时以锚点
+	// 消息 ID 与已有块序号重整），随 AgentInput 以指针形式在节点（工具调用 / 思考与正文增量）与 wrapPersist
+	// 之间共享——结构体按值拷贝只复制指针，各处指向同一构建器，使块的时序唯一来源在本包内单点成立。
+	// 与 Questionnaire / ToolReporter 同为 json:"-"。无会话运行同样具备该构建器（仅不落库，块事件仍随流下发）。
+	blocks *blockBuilder `json:"-"`
 	// ReviewValve 会话级审核阀门（不对外暴露），由 StreamRun / ResumeRun 从会话读取注入，不对外暴露；
 	// 与每条调用的审核重要级合成得出最终是否需人工审核。
 	ReviewValve ai.ReviewValve `json:"-"`
@@ -206,9 +217,9 @@ type requestOptionsProvider interface {
 // 仍指向同一对象），使节点 3 挂起时写入的信息能被流包装层读到。名称为历史沿革（最初为问卷引入），
 // 现同时承载人工审批等非问卷挂起的锚点信息。
 type questionnaireState struct {
-	// payload 本次问卷载荷（题目；续跑终态化时并入用户答案）；nil 表示本轮不是问卷挂起（人工审批等），
-	// 锚点行不写问卷载荷
-	payload *QuestionnairePayload
+	// rounds 本回合已累计的各轮问卷载荷（每轮各自一份题目；续跑终态化时把答案并入对应轮次）。nil /
+	// 空表示本回合尚无问卷挂起——非问卷挂起（人工审批等）恒不追加，锚点行不写问卷载荷
+	rounds []QuestionnairePayload
 	// runID 承载本次挂起的运行现场 ID（挂起时由节点 3 写入）：写好锚点消息行后据它把锚点 ID 回写到现场
 	runID uint
 	// anchorID 承载本回合助手消息的锚点行 ID（挂起时由 wrapPersist 写入并回写现场）：续跑时作为终态
@@ -218,6 +229,10 @@ type questionnaireState struct {
 	// wrapPersist 在锚点行落库、拿到 messageID 后再逐条下发，使 tool_request 载荷能带上锚点 ID。
 	// 问卷挂起与人工审批挂起都经此处；仅运行期共享状态缺失的旁路调用由节点 3 即时下发（messageID 恒 0）
 	pending []pendingToolCall
+	// loadedRounds 本次续跑从锚点已有 questionnaire 块载入的轮次数（首次运行恒 0）。wrapPersist 据它把
+	// rounds[loadedRounds:] 视为本次运行新产生的轮次（经块构建器新建 questionnaire 块），而此前各轮的
+	// 块已在锚点消息里（只回填其作答，不重复建块）。
+	loadedRounds int
 }
 
 // AgentState 是图运行期间的共享状态，经 compose.ProcessState 在节点间传递
@@ -235,6 +250,11 @@ type AgentState struct {
 // AgentOutput 是图输出（流式项）：流中先出现若干 delta 增量项，最后出现一个
 // done 完成项（含结构化产物与校验结果）；聚合后即为单次问答的完整产物。
 type AgentOutput struct {
+	// MessageID 本回合助手消息的落库行 ID（仅 done 项，且仅当本次运行持久化了会话时给出；无会话的
+	// 旁路运行为 0）：落库后才可知，故由持久化收尾处回填。供前端实时会话把本地气泡绑定到该行——
+	// 「压缩到此」等按消息 ID 定位的操作由此无需先回读历史即可发起（与 tool_request 载荷携带挂起
+	// 锚点 ID 同源同义，见 reportToolRequests）。
+	MessageID uint `json:"messageID,omitempty"`
 	// Delta 流式增量文本（仅中间 delta 项）
 	Delta string `json:"delta,omitempty"`
 	// Reasoning 思考过程增量/全文（中间项为增量片段，done 项为思考过程全文）
@@ -259,6 +279,10 @@ type AgentOutput struct {
 	TotalTokens int `json:"totalTokens"`
 	// ElapsedMs 本轮总耗时（毫秒），从 StreamRun 开始到 done 项产出（仅 done 项）
 	ElapsedMs int64 `json:"elapsedMs"`
+	// Blocks 本次流项承载的「新增块事件」（仅内传，不对外序列化）：由本包在内容真实产生时点从块构建器
+	// 取出并挂到对应的流项上，供 run_hub 以 block 事件下发（前端据 {seq, kind} 归并增量到当前开放块）。
+	// 与 delta / reasoning 增量、done 项同源同序。
+	Blocks []AgentBlockEvent `json:"-"`
 }
 
 // init 注册 AgentOutput 的流块聚合函数：图 Invoke 降级路径把 [delta..., done]
@@ -385,6 +409,8 @@ func NewAgent(ctx context.Context, resolver ChatResolver, retriever retriever.Re
 			return nil, errors.WithStack(err)
 		}
 	}
+	// 构造期图编译（非活动链路）：compile 只在构造 Agent 时发生一次、与任何一次运行 / 请求无关，
+	// 故用 Background；运行期的上下文（含取消）由 runnable.Stream / Invoke 的入参 ctx 承载。
 	runnable, err := g.Compile(context.Background())
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -421,6 +447,9 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 	}); err != nil {
 		return nil, errors.WithStack(err)
 	}
+	// builder 是本轮运行的块构建器：工具调用 / 结果的发起与回填在此写入，与节点 4 的思考 / 正文增量、
+	// wrapPersist 的挂起建块 / 收敛共享同一构建器，故块时序单点来源在本包内成立。为 nil（旁路调用）时跳过。
+	builder := in.blocks
 	chat, err := a.resolver(slot)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -587,6 +616,15 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 			}
 			for i, e := range entries {
 				name := e.tc.Function.Name
+				// 登记本次工具调用的发起：按轮次（round）归入同一 tool_calls 块（同轮并发调用同块）。
+				// 审核重要级 / 执行归属取自本次评估与归属判定；问卷类调用豁免评估时该轮为空值 none。
+				if builder != nil {
+					level := AuditLevelNone
+					if i < len(levels) {
+						level = levels[i]
+					}
+					builder.AddToolCall(StageEvent{Stage: EvalStageToolCall, Status: EvalStatusStart, Tool: name, CallID: e.tc.ID, Round: round + 1}, e.tc.Function.Arguments, level, e.owner)
+				}
 				switch {
 				case e.owner == ToolExecOwnerClient && e.failText != "":
 					// 无持久化会话或审批通道：client 工具按失败回灌，不产生任何 ToolRequest。
@@ -595,6 +633,9 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 							outSW.Send(nil, errors.WithStack(rerr))
 							return
 						}
+					}
+					if builder != nil {
+						builder.AddToolResult(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, CallID: e.tc.ID, Round: round + 1, Err: e.failText}, "")
 					}
 					current = append(current, schema.ToolMessage(e.failText, e.tc.ID))
 				case e.questionnaire != nil:
@@ -609,6 +650,9 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 								return
 							}
 						}
+						if builder != nil {
+							builder.AddToolResult(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, CallID: e.tc.ID, Round: round + 1, Err: text}, "")
+						}
 						current = append(current, schema.ToolMessage(text, e.tc.ID))
 					} else {
 						call := *e.call
@@ -616,6 +660,8 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 						call.ApprovalRequired = false
 						pending = append(pending, call)
 						if questionnaire == nil {
+							// 本轮提问前模型已外发的正文由先出现的 content 块自然承载（该轮正文分块已随流
+							// 外发并归入 content 块），故问卷载荷只记题目，不再另存前导说明。
 							questionnaire = &QuestionnairePayload{}
 						}
 						questionnaire.Questions = append(questionnaire.Questions, e.questionnaire.Questions...)
@@ -650,6 +696,9 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 								return
 							}
 						}
+						if builder != nil {
+							builder.AddToolResult(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusFailed, Tool: name, CallID: e.tc.ID, Round: round + 1, ElapsedMs: elapsed, Err: execErr.Error()}, result)
+						}
 					} else {
 						result = truncateBytes(result, maxBytes)
 						if reporter != nil {
@@ -657,6 +706,9 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 								outSW.Send(nil, errors.WithStack(rerr))
 								return
 							}
+						}
+						if builder != nil {
+							builder.AddToolResult(StageEvent{Stage: EvalStageToolResult, Status: EvalStatusDone, Tool: name, CallID: e.tc.ID, Round: round + 1, ElapsedMs: elapsed}, result)
 						}
 					}
 					current = append(current, schema.ToolMessage(result, e.tc.ID))
@@ -679,7 +731,11 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 				// （StreamRun / ResumeRun 均会置入）时才如此；否则回落为即时下发（messageID 恒 0），与该状态引入前一致。
 				stashSuspension := in.Questionnaire != nil
 				if stashSuspension {
-					in.Questionnaire.payload = questionnaire // 非问卷挂起为 nil（锚点行不写问卷载荷）
+					// 各轮并列追加而非并入同一份：同一回合内模型可在拿到上一轮答案后再次提问，锚点行的
+					// 问卷载荷须把本轮作为新的一轮追加到已累计的各轮之后（一轮一份，见 appendQuestionnaireRound），
+					// 前端据此把各轮渲染成各自独立的问答框。追加而非覆盖的同时也保证此前的题目与答案不被抹掉；
+					// 非问卷挂起（本轮载荷为空）时保留已累计的各轮，使锚点行的问卷卡片不被抹掉。
+					in.Questionnaire.rounds = appendQuestionnaireRound(in.Questionnaire.rounds, questionnaire)
 					in.Questionnaire.runID = runID
 					in.Questionnaire.pending = pending
 				}
@@ -765,7 +821,12 @@ func buildToolInfoIndex(infos []*schema.ToolInfo) map[string]*schema.ToolInfo {
 
 // runTool 派发一次工具调用：按工具名在索引中查找并断言为 tool.InvokableTool，取不到或类型
 // 不符即视为执行失败（返回英文错误），否则以 JSON 参数串调用 InvokableRun 并返回其结果。
+// 入口先检查 ctx.Err()：会话被中止时立即返回取消错误，使工具阶段随取消即时感知，无需等到下一次
+// 模型调用才收敛（工具执行本身也应尊重传入 ctx，见内部 tools 的 InvokableRun）。
 func (a *Agent) runTool(ctx context.Context, tc schema.ToolCall) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", errors.WithStack(err)
+	}
 	name := tc.Function.Name
 	built, ok := a.toolIndex[name]
 	if !ok || built == nil {
@@ -777,7 +838,7 @@ func (a *Agent) runTool(ctx context.Context, tc schema.ToolCall) (string, error)
 	}
 	res, err := invokable.InvokableRun(ctx, tc.Function.Arguments)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	return res, nil
 }
@@ -829,7 +890,7 @@ func (a *Agent) resolveInputSlot(input *AgentInput) error {
 // Generate 非流式执行一次对话，返回最终结构化产物（done 项）。
 func (a *Agent) Generate(ctx context.Context, input AgentInput, opts ...compose.Option) (AgentOutput, error) {
 	if err := a.resolveInputSlot(&input); err != nil {
-		return AgentOutput{}, err
+		return AgentOutput{}, errors.WithStack(err)
 	}
 	out, err := a.runnable.Invoke(ctx, input, opts...)
 	if err != nil {
@@ -842,7 +903,7 @@ func (a *Agent) Generate(ctx context.Context, input AgentInput, opts ...compose.
 // 完成项）。调用方负责关闭返回的 reader。
 func (a *Agent) Stream(ctx context.Context, input AgentInput, opts ...compose.Option) (*schema.StreamReader[AgentOutput], error) {
 	if err := a.resolveInputSlot(&input); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	reader, err := a.runnable.Stream(ctx, input, opts...)
 	if err != nil {
@@ -875,7 +936,7 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 		session, err := a.store.GetSession(ctx, input.SessionID, input.NamespaceName, input.UserID)
 		if err != nil {
 			if errors.Is(err, ErrSessionNotFound) {
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 			return nil, errors.WithStack(err)
 		}
@@ -895,7 +956,7 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 		// agent.defaultSlot（这里的解析与 a.Stream 内的再次解析幂等）。占用比例达到阈值时先
 		// 自动流式压缩——折叠被挤出消息进滚动摘要并落库；压缩失败仅告警、绝不中断生成。
 		if err := a.resolveInputSlot(&input); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if limit := a.contextLimit(input.Slot); limit > 0 {
 			threshold := a.params.Float("session.compactThresholdRatio")
@@ -926,6 +987,10 @@ func (a *Agent) StreamRun(ctx context.Context, input AgentInput, opts ...compose
 	// 挂起）与现场 ID，wrapPersist 据此把本回合的助手消息行落为「挂起锚点」（见 questionnaireState）。
 	// 未挂起的运行该状态自始至终为空。
 	input.Questionnaire = &questionnaireState{}
+	// 块构建器：本次运行的块时序唯一来源，随 input 以指针形式在节点 3（工具调用 / 结果）、节点 4（思考 /
+	// 正文增量）与 wrapPersist（挂起建块 / 收敛 / 落库）之间共享。首次运行尚无助手消息行，故 messageID
+	// 为 0，待首次落库拿到行 ID 后经 SetMessageID 补正。
+	input.blocks = newBlockBuilder(0, a.params.Int("agent.maxToolResultBytes"))
 	reader, err := a.Stream(ctx, input, append(opts, compose.WithCallbacks(metrics.handler()))...)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -941,7 +1006,7 @@ func (a *Agent) RunDetached(ctx context.Context, in AgentInput, onEvent func(Age
 	in.ToolRequestReporter = onToolRequest
 	reader, err := a.StreamRun(ctx, in)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	defer reader.Close()
 	for {
@@ -950,11 +1015,40 @@ func (a *Agent) RunDetached(ctx context.Context, in AgentInput, onEvent func(Age
 			if errors.Is(err, io.EOF) {
 				return nil
 			}
-			return err
+			return errors.WithStack(err)
 		}
 		if onEvent != nil {
 			if err := onEvent(item); err != nil {
-				return err
+				return errors.WithStack(err)
+			}
+		}
+	}
+}
+
+// ResumeDetached 以已备好的续跑输入脱管执行一次续跑并把输出抽干到回调（供 RunHub 驻留执行）：
+// 抽干语义与 RunDetached 一致（onEvent 收每个流项、onToolRequest 收再次挂起时下发的客户端工具请求），
+// 区别仅在于输入由 PrepareResume 备好——不重载历史、不追加用户消息。调用方须传入脱管上下文，使客户端
+// 断开不中止图循环、且最终 done 仍以脱管 ctx 落库。
+func (a *Agent) ResumeDetached(ctx context.Context, in AgentInput, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error {
+	in.ToolRequestReporter = onToolRequest
+	metrics := newRunMetrics()
+	reader, err := a.Stream(ctx, in, compose.WithCallbacks(metrics.handler()))
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	reader = a.wrapPersist(ctx, reader, in, metrics)
+	defer reader.Close()
+	for {
+		item, err := reader.Recv()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return errors.WithStack(err)
+		}
+		if onEvent != nil {
+			if err := onEvent(item); err != nil {
+				return errors.WithStack(err)
 			}
 		}
 	}
@@ -1021,9 +1115,10 @@ func (a *Agent) refreshSummary(ctx context.Context, session *ai.AgentSession, hi
 		a.warnf(ctx, "agent: rolling summary failed, keeping the previous summary: %v", err)
 		return existing
 	}
-	// 推进前先取该时刻的上下文占用（最近一条助手消息的 PromptTokens）作为度量：与是否展示无关，
-	// 三种推进原因都落真实值；是否回显由读取侧按 reason 决定。取占用失败则放弃本次推进（保留原
-	// 摘要、本轮不折叠）——检查点度量必须是真实值，绝不落 0 兜底。
+	// 推进前先取该时刻的上下文占用（最近一条有用量记录的助手消息的 PromptTokens，见 ContextTokens）
+	// 作为度量：与是否展示无关，三种推进原因都落值；是否回显由读取侧按 reason 决定。取占用失败则放弃
+	// 本次推进（保留原摘要、本轮不折叠）。注意该指标本就可能为 0——会话尚无任何一次真实测量（例如
+	// 唯一一轮回复被取消）时它取不到值，0 表示「尚无测量」而非「占用为 0」。
 	contextTokens, err := a.store.ContextTokens(ctx, session.ID, session.UserID)
 	if err != nil {
 		a.warnf(ctx, "agent: loading the context usage for the rolling summary failed, keeping the previous summary: %v", err)
@@ -1047,8 +1142,10 @@ func (a *Agent) CompressSession(ctx context.Context, session *ai.AgentSession, e
 	if session == nil || a.memory == nil {
 		return nil
 	}
-	// 先取压缩前的上下文占用作为检查点度量：必须是真实值，绝不落 0 兜底。取占用失败按压缩失败
-	// 同等处理——告警、上报 foldedCount=0 的 compress_done、不推进游标。
+	// 先取压缩前的上下文占用作为检查点度量（最近一条有用量记录的助手消息的 PromptTokens，见
+	// ContextTokens）。取占用失败按压缩失败同等处理——告警、上报 foldedCount=0 的 compress_done、
+	// 不推进游标。该值本就可能为 0：会话尚无任何一次真实测量（例如唯一一轮回复被取消）时取不到
+	// 基线，0 表示「尚无测量」，前端据此不展示前后对比（见可视化侧 compressTextOf）。
 	contextTokens, err := a.store.ContextTokens(ctx, session.ID, session.UserID)
 	if err != nil {
 		a.warnf(ctx, "agent: loading the context usage for the session compression failed, keeping the previous summary: %v", err)
@@ -1101,6 +1198,7 @@ func (a *Agent) CompressSession(ctx context.Context, session *ai.AgentSession, e
 			Type:           ai.AgentRunEventCompressDone,
 			Reason:         reason,
 			TokensBefore:   contextTokens,
+			TokensAfter:    result.TokensAfter,
 			FoldedCount:    len(evicted),
 			SummaryUptoSeq: session.SummaryUptoSeq,
 		})
@@ -1196,7 +1294,12 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 		// 超时 / 取消被中断」这一刻仍能落库已产出的中间产物——这正是阶段性落库要挽救的场景。运行
 		// 上下文本身带 30 分钟 deadline，触发中断时它已过期，若直接用它落库，写入必因
 		// context deadline exceeded 失败，本次修复在其最需要的场景下即失效。
+		// 注意：persistCtx 仅用于落库，事件下发（outSW.Send）一律在运行 ctx 的生命周期内进行，不得
+		// 借用它——取消后内容事件的下发由 RunHub 的 publish 取消前置条件统一抑制。
 		persistCtx := context.WithoutCancel(ctx)
+		// builder 是本轮运行的块构建器：节点 3 的工具调用 / 结果、节点 4 的思考与正文增量、本层的挂起
+		// 建块与收敛共享同一构建器，故块的时序唯一来源在本包内单点成立。为 nil（旁路调用）时跳过建块。
+		builder := input.blocks
 		// contentBuf / reasoningBuf 累积本轮尚未落库的正文与思考增量；assistantMsgID 为已落库助手
 		// 消息行的 ID（0 表示本次运行尚未落库）；flushedContent / flushedReasoning 记录上次落库时的
 		// 字节数，用于按增量阈值判断下次落库时机。
@@ -1214,15 +1317,15 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 		if input.Questionnaire != nil && input.Questionnaire.anchorID != 0 {
 			assistantMsgID = input.Questionnaire.anchorID
 		}
-		// checkpoint 把当前累积的正文 / 思考增量连同给定的生命周期终态阶段落库（阶段性落库传空阶段，
-		// 中断落库传 cancelled / failed）。尚无已落库行且两者皆空时不落库，避免产生空的助手消息行。
+		// checkpoint 把当前累积的正文连同给定的生命周期终态阶段落库（阶段性落库传空阶段，中断落库传
+		// cancelled / failed）。尚无已落库行且正文为空时不落库，避免产生空的助手消息行。思考过程不再落
+		// 消息列，一律由 reasoning 块承载（见 flushBlocks）。
 		checkpoint := func(phase ai.AgentRunPhase) error {
 			if input.SessionID == 0 {
 				return nil
 			}
 			content := contentBuf.String()
-			reasoning := reasoningBuf.String()
-			if assistantMsgID == 0 && content == "" && reasoning == "" {
+			if assistantMsgID == 0 && content == "" {
 				return nil
 			}
 			msg := &ai.AgentMessage{
@@ -1235,20 +1338,84 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 			}
 			// ID 由内嵌 BaseModel 提升而来，复合字面量不可直接赋值，故构造后单独置入。
 			msg.ID = assistantMsgID
-			if reasoning != "" {
-				msg.Reasoning = serializer.NewCrypto([]byte(reasoning))
-			}
 			if assistantMsgID == 0 {
 				appended, err := a.store.AppendMessage(persistCtx, msg)
 				if err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				assistantMsgID = appended.ID
 			} else if err := a.store.UpdateAssistantMessage(persistCtx, msg); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			flushedContent, flushedReasoning = contentBuf.Len(), reasoningBuf.Len()
 			return nil
+		}
+		// flushBlocks 把构建器待落库的块写入 agent_message_blocks：尚无助手消息行时先建一行取 ID，再逐条
+		// AppendBlock（新建）/ UpdateBlock（同块更新）。无待写入或本次运行无会话时为空操作（仅清空待写入集）。
+		// 块的 MessageID 一律以当前 assistantMsgID 覆盖——构建器在拿到消息行 ID 前产出的写入其 MessageID
+		// 仍为 0，此处统一补正，避免孤儿块。
+		flushBlocks := func(ctx context.Context) error {
+			if builder == nil {
+				return nil
+			}
+			writes := builder.DrainWrites()
+			if len(writes) == 0 || input.SessionID == 0 {
+				return nil
+			}
+			if assistantMsgID == 0 {
+				appended, err := a.store.AppendMessage(ctx, &ai.AgentMessage{
+					SessionID:     input.SessionID,
+					NamespaceName: input.NamespaceName,
+					UserID:        input.UserID,
+					Role:          ai.MessageRoleAssistant,
+					Content:       serializer.NewCrypto([]byte(contentBuf.String())),
+				})
+				if err != nil {
+					return errors.WithStack(err)
+				}
+				assistantMsgID = appended.ID
+				builder.SetMessageID(assistantMsgID)
+			}
+			for _, w := range writes {
+				block := &ai.AgentMessageBlock{
+					NamespaceName: input.NamespaceName,
+					UserID:        input.UserID,
+					MessageID:     assistantMsgID,
+					BlockSeq:      w.BlockSeq,
+					Kind:          w.Kind,
+					Payload:       serializer.NewCrypto(w.Payload),
+				}
+				if w.Created {
+					if err := a.store.AppendBlock(ctx, block); err != nil {
+						return errors.WithStack(err)
+					}
+				} else if err := a.store.UpdateBlock(ctx, block); err != nil {
+					return errors.WithStack(err)
+				}
+			}
+			return nil
+		}
+		// converge 收敛块构建器并把待落库块写入库：终态化 / 挂起 / 中断 / 失败前调用，使尚在开放的块收敛为
+		// 终态并落库（此后块序列保持不变）。落库失败仅告警——块是展示事实，不应因落库抖动毁掉已产出的一轮。
+		converge := func(ctx context.Context) {
+			if builder != nil {
+				builder.Close()
+			}
+			if berr := flushBlocks(ctx); berr != nil {
+				a.warnf(ctx, "agent: persisting the assistant message blocks failed: %v", berr)
+			}
+		}
+		// syncQuestionnaire 把锚点已有各轮 questionnaire 块的作答回填为本次续跑的结果：仅在问卷续跑
+		// （Questionnaire 非空且已载入既有轮次、锚点存在）时生效，供各终态路径在收敛落库后调用——续跑
+		// 未再次挂起（直接 done / 中断 / 失败）时，此前挂起写下的问卷块也须补上本次作答，否则刷新后仍
+		// 呈「未作答」。非问卷续跑（loadedRounds 为 0）时为空操作。失败仅告警（块是展示事实）。
+		syncQuestionnaire := func(ctx context.Context) {
+			if input.Questionnaire == nil || input.Questionnaire.anchorID == 0 {
+				return
+			}
+			if berr := a.syncAnchorQuestionnaireBlocks(ctx, input, input.Questionnaire.anchorID); berr != nil {
+				a.warnf(ctx, "agent: syncing the anchor questionnaire blocks failed: %v", berr)
+			}
 		}
 		for {
 			item, err := in.Recv()
@@ -1266,16 +1433,40 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 					// 运行期共享状态缺失（旁路调用，Questionnaire 为 nil）时无处可锚，回落为回收阶段性落库行：
 					// 挂起并非终局，续跑会把本回合已外发的助手正文并回最终 done（validateOutput 的 turnEmittedText
 					// 拼接），留着残篇会在续跑结束后留下同一回合的两条助手消息。
+					// 额外注意：问卷载荷不再写消息列，一律由 questionnaire 块承载（见下方挂起建块）。
 					if !finalized && input.Questionnaire != nil && input.Questionnaire.runID != 0 {
+						q := input.Questionnaire
 						// 正文并回恢复运行前已外发的助手正文（turnEmittedText），与续跑终态化时的拼接口径一致，
 						// 使锚点行在续跑前就完整呈现本回合已产出的文本（刷新后不丢前导说明）。
 						content := turnEmittedText(input.ResumeMessages) + contentBuf.String()
-						if aerr := a.persistSuspensionAnchor(persistCtx, input, assistantMsgID, content, reasoningBuf.String()); aerr != nil {
+						// 挂起建块：待审批调用落为 approval 块、本轮新产生的问卷各轮落为 questionnaire 块
+						// （此前各轮的问卷块已在锚点消息里，只回填其作答）。建块先于锚点行落库，使块序号与
+						// 真实产生时序一致。
+						if builder != nil {
+							a.addSuspensionBlocks(builder, q)
+						}
+						if aerr := a.persistSuspensionAnchor(persistCtx, input, assistantMsgID, content); aerr != nil {
 							a.warnf(ctx, "agent: persisting the suspended anchor message failed: %v", aerr)
+						}
+						// 锚点行落库后：把其 ID 交给构建器并收敛、落库本轮新产生的块，再回填锚点已有问卷块
+						// 的作答。块须在拿到锚点 ID 之后才落库，故顺序不可颠倒。
+						if q.anchorID != 0 {
+							assistantMsgID = q.anchorID
+							if builder != nil {
+								builder.SetMessageID(q.anchorID)
+							}
+						}
+						converge(persistCtx)
+						syncQuestionnaire(persistCtx)
+						// 本轮挂起产生的块事件随最后一个流项下发（此前无承载项），使前端能实时渲染。
+						if builder != nil {
+							if events := builder.DrainEvents(); len(events) > 0 {
+								outSW.Send(AgentOutput{Blocks: events}, nil)
+							}
 						}
 						// 锚点行已落库并回写现场：此刻才逐条下发本轮挂起的调用，使载荷带上锚点消息 ID。
 						// 上报失败（客户端断开）仅告警：挂起现场与锚点行均已落库，本轮挂起已成立，不必再抛错。
-						if rerr := reportToolRequests(input.ToolRequestReporter, input.Questionnaire.pending, input.Questionnaire.anchorID); rerr != nil {
+						if rerr := reportToolRequests(input.ToolRequestReporter, q.pending, q.anchorID); rerr != nil {
 							a.warnf(ctx, "agent: reporting the suspended tool requests failed: %v", rerr)
 						}
 						return
@@ -1285,22 +1476,36 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 							a.warnf(ctx, "agent: discarding the suspended assistant message row failed: %v", derr)
 						}
 					}
+					// 本回合的落库行被回收（旁路调用，无处可锚）：构建器待落库的块一并丢弃——其从属消息行
+					// 已不存在，留着会变成孤儿块。
+					if builder != nil {
+						builder.Close()
+						builder.DrainWrites()
+					}
 					return
 				}
 				if cerr := checkpoint(interruptedPhase(ctx, err)); cerr != nil {
 					a.warnf(ctx, "agent: persisting the interrupted assistant message failed: %v", cerr)
 				}
+				converge(persistCtx)
+				syncQuestionnaire(persistCtx)
 				outSW.Send(AgentOutput{}, errors.WithStack(err))
 				return
 			}
 			switch {
 			case item.Done:
 				item.PromptTokens, item.CompletionTokens, item.TotalTokens, item.ElapsedMs = metrics.snapshot()
+				// 先收敛并落库块（含回填锚点已有问卷块的本次作答），再按 done 终态化助手消息行（沿用同一条已落库行）。
+				converge(persistCtx)
+				syncQuestionnaire(persistCtx)
 				if input.SessionID != 0 {
-					if err := a.finalizeAssistantMessage(persistCtx, input, item, assistantMsgID); err != nil {
-						outSW.Send(AgentOutput{}, errors.WithStack(err))
+					finalizedID, ferr := a.finalizeAssistantMessage(persistCtx, input, item, assistantMsgID)
+					if ferr != nil {
+						outSW.Send(AgentOutput{}, errors.WithStack(ferr))
 						return
 					}
+					// 随 done 项下发本回合助手消息的落库行 ID：前端实时会话据此把本地气泡绑定到该行
+					item.MessageID = finalizedID
 					finalized = true
 				}
 			case item.Delta != "":
@@ -1308,12 +1513,33 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 			case item.Reasoning != "":
 				reasoningBuf.WriteString(item.Reasoning)
 			}
+			// 块事件与增量同源同序：把本流项到达前构建器新产生的块事件（创建 / 收敛）挂到本项上，供
+			// run_hub 以 block 事件下发（前端据 {seq, kind} 归并增量到当前开放块）。
+			if builder != nil {
+				item.Blocks = builder.DrainEvents()
+			}
 			outSW.Send(item, nil)
 			// 先下发再落库：用户能尽早看到增量，落库只在其后补做；增量未达阈值时不落库。
 			if !item.Done && contentBuf.Len()-flushedContent+reasoningBuf.Len()-flushedReasoning >= assistantCheckpointBytes {
 				if cerr := checkpoint(""); cerr != nil {
 					a.warnf(ctx, "agent: persisting the assistant message checkpoint failed: %v", cerr)
 				}
+				if berr := flushBlocks(persistCtx); berr != nil {
+					a.warnf(ctx, "agent: persisting the assistant message blocks failed: %v", berr)
+				}
+			}
+			// 分块边界检查取消（放在处理完当前分块之后）：会话被中止时立即落库已产出的部分正文 / 思考
+			// （cancelled 阶段）并结束本流，使取消能被及时感知。置于循环底部而非顶部，是为了不丢弃管
+			// 道中已缓冲、尚未读取的分块——取消先于首个 Recv 发生时若在顶部早退，会把已外发到管道的
+			// 部分正文整段丢弃、导致「保留部分正文」不成立；底部检查则先取尽已到达的分块再收尾。
+			if cerr := ctx.Err(); cerr != nil {
+				if perr := checkpoint(interruptedPhase(ctx, cerr)); perr != nil {
+					a.warnf(ctx, "agent: persisting the interrupted assistant message failed: %v", perr)
+				}
+				converge(persistCtx)
+				syncQuestionnaire(persistCtx)
+				outSW.Send(AgentOutput{}, errors.WithStack(cerr))
+				return
 			}
 		}
 	}()
@@ -1323,8 +1549,9 @@ func (a *Agent) wrapPersist(ctx context.Context, in *schema.StreamReader[AgentOu
 // finalizeAssistantMessage 把 done 项终态化落库为会话的助手消息：msgID 非 0 时按该 ID 原地更新本
 // 运行阶段性落库的那一行（沿用其已分配好的会话内序号），为 0 时新建一行（本运行全程未触发阶段性
 // 落库）。正文始终落库并写入终态阶段 done，结构化草稿与引用来源非空时随消息写入；本轮用量与耗时为
-// 明文数值，随消息一并落库（用户消息不参与本函数，故其用量列保持 0）。
-func (a *Agent) finalizeAssistantMessage(ctx context.Context, input AgentInput, done AgentOutput, msgID uint) error {
+// 明文数值，随消息一并落库（用户消息不参与本函数，故其用量列保持 0）。返回该助手消息的落库行 ID，
+// 供调用方回填进 done 项下发给前端（新建行时即新分配的行 ID，原地更新时即 msgID）。
+func (a *Agent) finalizeAssistantMessage(ctx context.Context, input AgentInput, done AgentOutput, msgID uint) (uint, error) {
 	msg := &ai.AgentMessage{
 		SessionID:        input.SessionID,
 		NamespaceName:    input.NamespaceName,
@@ -1347,30 +1574,26 @@ func (a *Agent) finalizeAssistantMessage(ctx context.Context, input AgentInput, 
 			msg.CitationsJSON = serializer.NewCrypto(b)
 		}
 	}
-	if done.Reasoning != "" {
-		msg.Reasoning = serializer.NewCrypto([]byte(done.Reasoning))
-	}
-	// 问卷续跑：把锚点行上的问卷载荷（题目 + 本次并入的用户答案）随终态化写回同一行，供历史回显
-	// 问卷卡片与回退重答。非问卷运行该载荷为空，仅当存在时写入（避免无谓覆盖既有值）。
-	if input.Questionnaire != nil && input.Questionnaire.payload != nil {
-		if b, err := json.Marshal(input.Questionnaire.payload); err == nil {
-			msg.QuestionnaireJSON = serializer.NewCrypto(b)
-		}
-	}
 	if msgID == 0 {
-		_, err := a.store.AppendMessage(ctx, msg)
-		return err
+		appended, err := a.store.AppendMessage(ctx, msg)
+		if err != nil {
+			return 0, errors.WithStack(err)
+		}
+		return appended.ID, nil
 	}
-	return a.store.UpdateAssistantMessage(ctx, msg)
+	if err := a.store.UpdateAssistantMessage(ctx, msg); err != nil {
+		return 0, errors.WithStack(err)
+	}
+	return msgID, nil
 }
 
 // persistSuspensionAnchor 把本回合的助手消息行落为「挂起锚点」：正文取本轮已外发的助手正文（已在调用处
-// 并回恢复运行前的正文，可能为空）、phase 置 suspended；问卷挂起额外写入问卷载荷（题目，答案由续跑终态化
-// 时并入），其余挂起不写载荷、仅以其为锚点。msgID 非 0 时原地更新阶段性落库的那一行（沿用其已分配好的
-// 会话内序号），为 0 时新建一行（无任何已外发正文时即为空行——挂起仍须有锚点以承载 messageID 并供续跑
-// 原地终态化）。落库成功后把锚点 ID 记入运行期共享状态并回写运行现场（agent_runs.anchor_message_id），
-// 使续跑与回退接口都能定位它。
-func (a *Agent) persistSuspensionAnchor(ctx context.Context, input AgentInput, msgID uint, content, reasoning string) error {
+// 并回恢复运行前的正文，可能为空）、phase 置 suspended。问卷题目 / 作答与授权清单不再写消息列，一律由
+// questionnaire / approval 块承载（见 addSuspensionBlocks）。msgID 非 0 时原地更新阶段性落库的那一行
+// （沿用其已分配好的会话内序号），为 0 时新建一行（无任何已外发正文时即为空行——挂起仍须有锚点以承载
+// messageID 并供续跑原地终态化）。落库成功后把锚点 ID 记入运行期共享状态并回写运行现场
+// （agent_runs.anchor_message_id），使续跑与回退接口都能定位它。
+func (a *Agent) persistSuspensionAnchor(ctx context.Context, input AgentInput, msgID uint, content string) error {
 	q := input.Questionnaire
 	if q == nil || q.runID == 0 {
 		return nil
@@ -1383,18 +1606,8 @@ func (a *Agent) persistSuspensionAnchor(ctx context.Context, input AgentInput, m
 		Content:       serializer.NewCrypto([]byte(content)),
 		Phase:         ai.AgentRunPhaseSuspended,
 	}
-	if q.payload != nil {
-		b, err := json.Marshal(q.payload)
-		if err != nil {
-			return errors.WithStack(err)
-		}
-		msg.QuestionnaireJSON = serializer.NewCrypto(b)
-	}
 	// ID 由内嵌 BaseModel 提升而来，复合字面量不可直接赋值，故构造后单独置入（0 表示新建一行）。
 	msg.ID = msgID
-	if reasoning != "" {
-		msg.Reasoning = serializer.NewCrypto([]byte(reasoning))
-	}
 	if msgID == 0 {
 		appended, aerr := a.store.AppendMessage(ctx, msg)
 		if aerr != nil {
@@ -1408,6 +1621,80 @@ func (a *Agent) persistSuspensionAnchor(ctx context.Context, input AgentInput, m
 		q.anchorID = msgID
 	}
 	return a.store.SetAgentRunAnchor(ctx, q.runID, q.anchorID)
+}
+
+// addSuspensionBlocks 把本轮挂起产生的内容落为块：待审批调用（非问卷类）落为一个 approval 块，本轮新
+// 产生的每一轮问卷各落为一个 questionnaire 块（此前各轮的问卷块已在锚点消息里，不重复建块，只回填其
+// 作答——见 syncAnchorQuestionnaireBlocks）。因同一回合内可同时有 backend 待审批调用与 ask_user 问卷
+// 挂起，两类块可并存。
+func (a *Agent) addSuspensionBlocks(builder *blockBuilder, q *questionnaireState) {
+	var approvalCalls []PendingCall
+	for _, call := range toPendingCalls(q.pending) {
+		if isQuestionnaireTool(call.ToolName) {
+			continue
+		}
+		approvalCalls = append(approvalCalls, call)
+	}
+	if len(approvalCalls) > 0 {
+		builder.AddApproval(approvalCalls)
+	}
+	start := q.loadedRounds
+	if start > len(q.rounds) {
+		start = len(q.rounds)
+	}
+	for _, round := range q.rounds[start:] {
+		if len(round.Questions) > 0 {
+			builder.AddQuestionnaire(round.Questions)
+		}
+	}
+}
+
+// syncAnchorQuestionnaireBlocks 把锚点消息上**已有**的各轮 questionnaire 块回填本次作答：按 block_seq
+// 升序与本次载入的各轮（rounds 的前 loadedRounds 轮）一一对应，更新其 Answers 并置 Awaiting=false。
+// 本次运行新产生的轮次由 addSuspensionBlocks 经 AddQuestionnaire 新建块承载（Awaiting=true），不在此
+// 回填。无续跑载入（loadedRounds 为 0）或锚点缺失时为空操作。
+func (a *Agent) syncAnchorQuestionnaireBlocks(ctx context.Context, input AgentInput, messageID uint) error {
+	q := input.Questionnaire
+	if q == nil || messageID == 0 || q.loadedRounds == 0 {
+		return nil
+	}
+	blocks, err := a.store.ListBlocksByMessage(ctx, messageID, input.NamespaceName, input.UserID)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	idx := 0
+	for _, blk := range blocks {
+		if idx >= q.loadedRounds {
+			break
+		}
+		if blk.Kind != ai.AgentMessageBlockKindQuestionnaire || blk.Payload == nil {
+			continue
+		}
+		var payload QuestionnaireBlockPayload
+		if derr := decodeBlockPayload(blk.Payload.Value(), &payload); derr != nil {
+			idx++
+			continue
+		}
+		if idx < len(q.rounds) {
+			payload.Answers = q.rounds[idx].Answers
+		}
+		payload.Awaiting = false
+		data, merr := encodeBlockPayload(payload)
+		if merr != nil {
+			return merr
+		}
+		if uerr := a.store.UpdateBlock(ctx, &ai.AgentMessageBlock{
+			NamespaceName: input.NamespaceName,
+			UserID:        input.UserID,
+			MessageID:     messageID,
+			BlockSeq:      blk.BlockSeq,
+			Payload:       serializer.NewCrypto(data),
+		}); uerr != nil {
+			return uerr
+		}
+		idx++
+	}
+	return nil
 }
 
 // assembleContext 是节点 1：校验提问非空，将完整输入写入图状态（供后续节点
@@ -1488,7 +1775,22 @@ func (a *Agent) validateOutput(ctx context.Context, in *schema.StreamReader[*sch
 		defer in.Close()
 		var chunks []*schema.Message
 		var reasoning strings.Builder
+		// 块构建器（与节点 3 / wrapPersist 共享）：思考与正文增量在真实产生时点写入，使块时序单点来源
+		// 在本包内成立。为 nil（旁路调用）时跳过建块。
+		var builder *blockBuilder
+		if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
+			builder = st.input.blocks
+			return nil
+		}); err != nil {
+			outSW.Send(AgentOutput{}, errors.WithStack(err))
+			return
+		}
 		for {
+			// 分块边界检查取消：会话被中止时立即返回取消错误，使下游尽快收敛，不等下一次回收。
+			if cerr := ctx.Err(); cerr != nil {
+				outSW.Send(AgentOutput{}, errors.WithStack(cerr))
+				return
+			}
 			chunk, err := in.Recv()
 			if err != nil {
 				if errors.Is(err, io.EOF) {
@@ -1499,10 +1801,16 @@ func (a *Agent) validateOutput(ctx context.Context, in *schema.StreamReader[*sch
 			}
 			chunks = append(chunks, chunk)
 			if chunk.Content != "" {
+				if builder != nil {
+					builder.AddContent(chunk.Content)
+				}
 				outSW.Send(AgentOutput{Delta: chunk.Content}, nil)
 			}
 			if chunk.ReasoningContent != "" {
 				reasoning.WriteString(chunk.ReasoningContent)
+				if builder != nil {
+					builder.AddReasoning(chunk.ReasoningContent)
+				}
 				outSW.Send(AgentOutput{Reasoning: chunk.ReasoningContent}, nil)
 			}
 		}

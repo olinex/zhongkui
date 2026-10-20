@@ -461,6 +461,6 @@ func (srv *ReporterService) Run(ctx context.Context) (err error) {
 	case err := <-errCh:
 		// 服务启动失败
 		srv.logger.Fatal("failed to start grpc server", zap.Error(err))
-		return err
+		return errors.WithStack(err)
 	}
 }

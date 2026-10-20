@@ -234,7 +234,7 @@ func runRouter(paths ...string) error {
 	wg, ctx := errgroupx.WithContext(ctx)
 	logger, err := logging.NewDefaultLogger()
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	srcChan := make(chan *network.PacketIPv4TCP, 100)
 	dstChan := make(chan any, 100)
@@ -242,7 +242,7 @@ func runRouter(paths ...string) error {
 		defer close(srcChan)
 		for _, path := range paths {
 			if err := extractPackets(ctx, path, srcChan); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 		return nil
@@ -323,7 +323,7 @@ func extractHttpTransports(ctx context.Context, pcapPath string) ([]*network.Htt
 
 	logger, err := logging.NewDebugLogger()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	srcChan := make(chan *network.PacketIPv4TCP, 100)
@@ -364,7 +364,7 @@ func extractHttpTransports(ctx context.Context, pcapPath string) ([]*network.Htt
 	})
 
 	if err := wg.Wait(); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return apps, nil
 }

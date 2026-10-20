@@ -239,7 +239,7 @@ func parseDatasourceColumns(cols []DatasourceColumn) ([]sqlitevtab.Column, error
 		seen[c.Name] = struct{}{}
 		vt, err := columnValueType(c.Type)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		out = append(out, sqlitevtab.Column{Name: c.Name, ValueType: vt})
 	}
@@ -303,12 +303,12 @@ func redisDatasourceFactory(pool *RedisPool, structType string) (sqlitevtab.Data
 // 自动自省。
 func registerInto(ctx context.Context, pool *sqlitevtab.SQLitePool, store *s3.ObjectCache, namespace, name, typ string, cfgData []byte) error {
 	if err := ValidateLocalName(name); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	config, err := decodeDatasourceConfig(typ, cfgData)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	p, ok := lookupDatasourcePlugin(typ)
@@ -318,12 +318,12 @@ func registerInto(ctx context.Context, pool *sqlitevtab.SQLitePool, store *s3.Ob
 
 	ds, err := p.Register(ctx, pool, store, namespace, name, config)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	schema, err := schemaOf(ds)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	makeDS := func(resourcepool.Key) (sqlitevtab.Datasource, error) { return ds, nil }
 	return pool.RegisterDatasource(ctx, name, schema, makeDS)
@@ -348,7 +348,7 @@ func schemaOf(ds sqlitevtab.Datasource) (sqlitevtab.Schema, error) {
 func ValidateConfigJSON(typ string, cfgData []byte) error {
 	cfg, err := decodeDatasourceConfig(typ, cfgData)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	// 委托各类型插件校验配置与类型的一致性（Redis 额外校验客户端要暴露的结构类型，其余
 	// 类型仅做解码级结构校验）。

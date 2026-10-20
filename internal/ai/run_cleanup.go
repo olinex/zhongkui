@@ -10,9 +10,14 @@ import (
 	"context"
 	"time"
 
+	// 第三方
+	"gorm.io/gorm"
+
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 // 清理任务的运行期常量。
@@ -28,12 +33,119 @@ const (
 // ExpiredRunStore 过期运行数据清理所需的持久化能力（由 *SessionStore 实现）。抽出接口便于
 // 测试注入内存替身。
 type ExpiredRunStore interface {
+	// ConvergeExpiredPendingRuns 收敛一批已过期的挂起运行现场为失败：作废现场并写回锚点助手消息终局，
+	// 使会话回落 暂停/失败（见 ConvergeExpiredPendingRuns 实现）。返回收敛行数。
+	ConvergeExpiredPendingRuns(ctx context.Context, now time.Time, limit int) (int64, error)
+	// ConvergeExpiredRunningLiveRuns 收敛一批已过期且仍登记为 running 的在途运行为失败：置失败并写回
+	// 会话最近一条助手消息终局（见 ConvergeExpiredRunningLiveRuns 实现）。返回收敛行数。
+	ConvergeExpiredRunningLiveRuns(ctx context.Context, now time.Time, limit int) (int64, error)
 	// DeleteExpiredLiveRuns 硬删除一批超过 now 的运行登记，返回删除行数
 	DeleteExpiredLiveRuns(ctx context.Context, now time.Time, limit int) (int64, error)
 	// DeleteExpiredRunEvents 硬删除一批超过 now 的事件日志（兜底清理未被级联的事件），返回删除行数
 	DeleteExpiredRunEvents(ctx context.Context, now time.Time, limit int) (int64, error)
 	// DeleteExpiredAgentRuns 硬删除一批超过 now 的挂起运行现场（绕过 GORM 软删），返回删除行数
 	DeleteExpiredAgentRuns(ctx context.Context, now time.Time, limit int) (int64, error)
+}
+
+// ConvergeOrphanLiveRun 把一个内存中已无对应活动的在途运行登记（running / suspended）收敛为失败：
+// 置其阶段为 failed，并把该会话最近一条助手消息的终局阶段置为 failed，使会话派生回落 暂停/失败。
+// 用于两处：状态推导读取路径发现孤儿（进程重启 / goroutine 丢失）时的即时兜底，以及过期清理任务对
+// 超期 running 登记的收敛。登记已被收敛（或已被删除）时幂等返回 nil。不删除任何消息、长期记忆与
+// 压缩检查点。
+func (s *SessionStore) ConvergeOrphanLiveRun(ctx context.Context, runID serializer.HexUUID, sessionID, userID uint) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// WHERE 覆盖 running 与 suspended：孤儿既可能是进程重启前正在生成（running）的运行，也可能是
+		// 挂起现场已作废（过期 / 被截断）后残留的 suspended 登记。
+		res := tx.Model(&ai.AgentLiveRun{}).
+			Where("run_id = ? AND user_id = ? AND status IN ?", runID, userID,
+				[]ai.AgentRunPhase{ai.AgentRunPhaseRunning, ai.AgentRunPhaseSuspended}).
+			Update("status", ai.AgentRunPhaseFailed)
+		if res.Error != nil {
+			return errors.WithStack(res.Error)
+		}
+		if res.RowsAffected == 0 {
+			// 已被并发收敛 / 已删除：不重复写回锚点，幂等返回。
+			return nil
+		}
+		var msg ai.AgentMessage
+		err := tx.Where("session_id = ? AND user_id = ? AND role = ?", sessionID, userID, ai.MessageRoleAssistant).
+			Order("seq DESC").First(&msg).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if err := tx.Model(&ai.AgentMessage{}).Where("id = ?", msg.ID).
+			Update("phase", ai.AgentRunPhaseFailed).Error; err != nil {
+			return errors.WithStack(err)
+		}
+		return nil
+	})
+}
+
+// ConvergeExpiredRunningLiveRuns 分批收敛已过期且仍登记为 running 的在途运行：逐行经
+// ConvergeOrphanLiveRun 置失败并写回会话最近助手消息终局。收敛后阶段变为 failed，故同一批不会重复命中
+// （分批循环可自然抽干）。仅收敛 running；suspended / done / failed / cancelled 的过期登记留给删除步骤。
+func (s *SessionStore) ConvergeExpiredRunningLiveRuns(ctx context.Context, now time.Time, limit int) (int64, error) {
+	if limit <= 0 {
+		limit = runCleanupBatchSize
+	}
+	var rows []ai.AgentLiveRun
+	if err := s.db.WithContext(ctx).
+		Where("status = ? AND expires_at < ?", ai.AgentRunPhaseRunning, now).
+		Order("id ASC").Limit(limit).Find(&rows).Error; err != nil {
+		return 0, errors.WithStack(err)
+	}
+	var converged int64
+	for _, row := range rows {
+		if err := s.ConvergeOrphanLiveRun(ctx, row.RunID, row.SessionID, row.UserID); err != nil {
+			return converged, errors.WithStack(err)
+		}
+		converged++
+	}
+	return converged, nil
+}
+
+// ConvergeExpiredPendingRuns 分批收敛已过期的挂起运行现场：把其锚点助手消息终局置为 failed（使会话回落
+// 暂停/失败），并把现场本身置为 expired（作废，不再可恢复）。单事务内对一批（≤ limit）执行，收敛后状态
+// 变为 expired，故同一批不会重复命中。不删除任何消息、长期记忆与压缩检查点。
+func (s *SessionStore) ConvergeExpiredPendingRuns(ctx context.Context, now time.Time, limit int) (int64, error) {
+	if limit <= 0 {
+		limit = runCleanupBatchSize
+	}
+	var converged int64
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var runs []ai.AgentRun
+		if err := tx.Where("status = ? AND expires_at < ?", ai.AgentRunStatusPending, now).
+			Order("id ASC").Limit(limit).Find(&runs).Error; err != nil {
+			return errors.WithStack(err)
+		}
+		if len(runs) == 0 {
+			return nil
+		}
+		ids := make([]uint, 0, len(runs))
+		anchors := make([]uint, 0, len(runs))
+		for _, run := range runs {
+			ids = append(ids, run.ID)
+			if run.AnchorMessageID != 0 {
+				anchors = append(anchors, run.AnchorMessageID)
+			}
+		}
+		if len(anchors) > 0 {
+			if err := tx.Model(&ai.AgentMessage{}).Where("id IN ?", anchors).
+				Update("phase", ai.AgentRunPhaseFailed).Error; err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		if err := tx.Model(&ai.AgentRun{}).Where("id IN ?", ids).
+			Update("status", ai.AgentRunStatusExpired).Error; err != nil {
+			return errors.WithStack(err)
+		}
+		converged = int64(len(runs))
+		return nil
+	})
+	return converged, errors.WithStack(err)
 }
 
 // DeleteExpiredLiveRuns 分批硬删除超过 now 的运行登记；其事件经 run_id 外键级联删除。
@@ -123,18 +235,27 @@ func (c *runCleaner) run(ctx context.Context) {
 	}
 }
 
-// sweep 对三张表分别循环分批删除，直到某批删除数小于 batch（即已抽干）为止；任一步失败记告警
-// 并返回错误（调用方在 run 中忽略，避免一次失败终止整个清理任务）。
+// sweep 先收敛再删除：把过期的挂起现场与超期仍登记为 running 的在途运行收敛为失败（写回锚点 / 最近
+// 助手消息终局），使会话派生回落 `暂停/失败`；随后再分批硬删除三张表的过期行。收敛与删除分开，是为了
+// 避免「先删登记后会话无从判定为失败」——登记删除后便无从定位该写回哪条消息。任一步失败记告警并返回
+// 错误（调用方在 run 中忽略，避免一次失败终止整个清理任务）。
 func (c *runCleaner) sweep(ctx context.Context) error {
 	now := c.now()
+	// 收敛：过期挂起现场（→ failed 语义 + 作废）、超期 running 在途运行（→ failed + 写回终局）。
+	if err := c.sweepTable(ctx, now, "converging expired pending runs", c.store.ConvergeExpiredPendingRuns); err != nil {
+		return errors.WithStack(err)
+	}
+	if err := c.sweepTable(ctx, now, "converging expired running live runs", c.store.ConvergeExpiredRunningLiveRuns); err != nil {
+		return errors.WithStack(err)
+	}
 	if err := c.sweepTable(ctx, now, "live runs", c.store.DeleteExpiredLiveRuns); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err := c.sweepTable(ctx, now, "run events", c.store.DeleteExpiredRunEvents); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err := c.sweepTable(ctx, now, "agent runs", c.store.DeleteExpiredAgentRuns); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -153,7 +274,7 @@ func (c *runCleaner) sweepTable(
 			if c.logger != nil {
 				c.logger.Ctx(ctx).Warnf("ai: run cleanup: deleting expired %s failed: %v", label, err)
 			}
-			return err
+			return errors.WithStack(err)
 		}
 		if affected < int64(c.batch) {
 			return nil

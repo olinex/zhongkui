@@ -453,26 +453,26 @@ func UserGroupJoin(c *gin.Context) {
 		// 验证用户存在且处于激活状态（行锁防并发禁用）
 		var user core.User
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&user, "union_id = ? AND active = true", unionID).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		// 验证用户组存在（行锁防并发删除）
 		var group core.Group
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&group, "name = ?", in.GroupName).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		// 验证命名空间存在（行锁防并发删除；通配命名空间跳过）
 		if in.Namespace != base.WideMatchLabel {
 			var namespace core.Namespace
 			if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&namespace, "name = ?", in.Namespace).Error; err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 
 		// 行锁保持期间通过 enforcer 增量写入用户组关联（独立连接写入，锁由本事务持有直至提交）
 		if _, err := enforcer.AddGroupingPolicy(unionID.String(), in.GroupName, in.Namespace); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return nil
 	}); err != nil {

@@ -120,7 +120,7 @@ func NewKnowledge(db *database.DB, embed embedder, params *Params) (*Knowledge, 
 // to_tsvector('simple', ...) SQL 表达式写入 search 列。
 func (k *Knowledge) IndexDocument(ctx context.Context, doc *ai.KnowledgeDocument) error {
 	_, err := k.indexDocument(ctx, doc)
-	return err
+	return errors.WithStack(err)
 }
 
 // indexDocument 是 IndexDocument 的实现体，同时返回本次向量化的 token 用量（EmbedUsage）：
@@ -229,7 +229,7 @@ func (k *Knowledge) ReindexNamespace(ctx context.Context, namespaceName string, 
 		start := time.Now()
 		usage, err := k.indexDocument(ctx, &docs[i])
 		if err != nil {
-			return i, err
+			return i, errors.WithStack(err)
 		}
 		reportStep(report, SyncProgressItem{
 			Title:     docs[i].Title,
@@ -426,7 +426,7 @@ func (r *Retriever) Retrieve(ctx context.Context, query string, opts ...retrieve
 	// 直接返回融合排序前 TopK；档位未绑定时返回英文错误，不切换到其他档位。
 	chat, err := r.resolveRerankChat()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	var final []*RetrievalResult
 	if chat == nil {
@@ -459,14 +459,14 @@ func (r *Retriever) DryRun(ctx context.Context, query string, report EvalReporte
 	var reportErr error
 	emit := func(ev StageEvent) error {
 		if report == nil || reportErr != nil {
-			return reportErr
+			return errors.WithStack(reportErr)
 		}
 		reportErr = report(ev)
-		return reportErr
+		return errors.WithStack(reportErr)
 	}
 
 	if err := emit(StageEvent{Stage: EvalStageRetrieve, Status: EvalStatusStart}); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	retrieveStart := time.Now()
 	docs, err := r.Retrieve(ctx, query, opts...)
@@ -477,7 +477,7 @@ func (r *Retriever) DryRun(ctx context.Context, query string, report EvalReporte
 	}
 	results := ToRetrievalResults(docs)
 	if err := emit(StageEvent{Stage: EvalStageRetrieve, Status: EvalStatusDone, ElapsedMs: retrieveElapsed}); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	out := &DryRunResult{
@@ -493,14 +493,14 @@ func (r *Retriever) DryRun(ctx context.Context, query string, report EvalReporte
 	// 由调用方以 SSE error 事件明确告知用户。
 	chat, err := r.resolveRerankChat()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	// 改进建议需引用本次实际生效的检索参数（与 Retrieve 走上完全相同的默认值与归一化），
 	// 并需要请求语言标签
 	diag := diagnosisContext{Options: *r.retrieveOptions(opts...), Language: languageTag}
 	ev, calls, evalErr := evaluate(ctx, r.params, chat, r.embed, query, results, diag, emit)
 	if reportErr != nil {
-		return nil, reportErr
+		return nil, errors.WithStack(reportErr)
 	}
 	if evalErr != nil {
 		out.EvalError = evalErr.Error()

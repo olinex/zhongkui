@@ -14,6 +14,7 @@ import (
 
 	// internal — 被测依赖
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
@@ -54,7 +55,7 @@ func TestUserFacingErrorDetailsHaveBilingualText(t *testing.T) {
 	found := make(map[string]string)
 	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			return walkErr
+			return errors.WithStack(walkErr)
 		}
 		if d.IsDir() {
 			switch d.Name() {
@@ -173,7 +174,7 @@ func stringLiteral(expr ast.Expr) (string, bool) {
 func repoRoot() (string, error) {
 	dir, err := os.Getwd()
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {

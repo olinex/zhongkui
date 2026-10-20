@@ -301,7 +301,7 @@ func (c *dataCursor) Close() error {
 		}
 		c.ds = nil
 	}
-	return closeErr
+	return errors.WithStack(closeErr)
 }
 
 // decodePlan 将 BestIndex 生成的 "column:op" 计划解码为下推约束列表。

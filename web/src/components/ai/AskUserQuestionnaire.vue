@@ -38,10 +38,14 @@
                 v-for="(opt, oi) in q.options"
                 :key="oi"
                 class="assistant-questionnaire-option zk-row-hover"
-                :class="{ 'zk-row-selected': states[qi].selected === oi }"
+                :class="{
+                  'zk-row-selected': states[qi].selected === oi,
+                  'assistant-questionnaire-option--disabled': disabled,
+                }"
                 role="radio"
                 :aria-checked="states[qi].selected === oi"
-                tabindex="0"
+                :aria-disabled="disabled"
+                :tabindex="disabled ? -1 : 0"
                 @click="toggleOption(qi, oi)"
                 @keydown.enter.prevent="toggleOption(qi, oi)"
                 @keydown.space.prevent="toggleOption(qi, oi)"
@@ -60,10 +64,14 @@
               <!-- 「其他」：每题恒定附带的自由作答项，选中后展开自定义输入框 -->
               <div
                 class="assistant-questionnaire-option zk-row-hover"
-                :class="{ 'zk-row-selected': states[qi].selected === OTHER }"
+                :class="{
+                  'zk-row-selected': states[qi].selected === OTHER,
+                  'assistant-questionnaire-option--disabled': disabled,
+                }"
                 role="radio"
                 :aria-checked="states[qi].selected === OTHER"
-                tabindex="0"
+                :aria-disabled="disabled"
+                :tabindex="disabled ? -1 : 0"
                 @click="toggleOther(qi)"
                 @keydown.enter.prevent="toggleOther(qi)"
                 @keydown.space.prevent="toggleOther(qi)"
@@ -87,6 +95,7 @@
               class="assistant-questionnaire-custom"
               density="compact"
               hide-details
+              :disabled="disabled"
               :placeholder="$t('page.aiAssistant.questionnaireCustomPlaceholder')"
             />
           </div>
@@ -95,22 +104,36 @@
     </v-stepper>
 
     <!-- 页脚两行：作答规则说明独占一行（与下方动作行留一个 4px 间距，读作说明而非按钮的一部分），
-         动作行右对齐。窄抽屉下多一个「上一题」按钮也不会把说明挤成多行 -->
+         动作行右对齐。窄抽屉下多一个「上一题」按钮也不会把说明挤成多行。
+         只读态（disabled）下改用说明文本：现场不可用、无法提交作答，引导用户另起新提问 -->
     <div class="zk-hairline-top pa-2">
-      <div class="zk-hint">{{ $t("page.aiAssistant.questionnaireUnanswered") }}</div>
+      <div class="zk-hint">
+        {{
+          disabled
+            ? $t("page.aiAssistant.questionnaireUnavailable")
+            : $t("page.aiAssistant.questionnaireUnanswered")
+        }}
+      </div>
       <div class="d-flex align-center justify-end ga-2 mt-1">
         <!-- 取消回答：退出问卷（以「拒绝」语义回传，模型收到既有拒绝文案） -->
-        <v-btn size="small" variant="text" @click="emits('cancel')">
+        <v-btn size="small" variant="text" :disabled="disabled" @click="emits('cancel')">
           {{ $t("page.aiAssistant.questionnaireCancel") }}
         </v-btn>
-        <v-btn v-if="!isFirst" size="small" variant="text" @click="goPrev">
+        <v-btn v-if="!isFirst" size="small" variant="text" :disabled="disabled" @click="goPrev">
           {{ $t("page.aiAssistant.questionnairePrev") }}
         </v-btn>
         <!-- 末题才可提交：中间步骤只提供「下一题」，提交时机与进度末尾对齐 -->
-        <v-btn v-if="!isLast" size="small" variant="tonal" @click="goNext">
+        <v-btn v-if="!isLast" size="small" variant="tonal" :disabled="disabled" @click="goNext">
           {{ $t("page.aiAssistant.questionnaireNext") }}
         </v-btn>
-        <v-btn v-else size="small" variant="tonal" color="primary" @click="submit">
+        <v-btn
+          v-else
+          size="small"
+          variant="tonal"
+          color="primary"
+          :disabled="disabled"
+          @click="submit"
+        >
           {{ $t("page.aiAssistant.questionnaireSubmit") }}
         </v-btn>
       </div>
@@ -137,6 +160,8 @@ interface QuestionState {
 const props = defineProps<{
   /** 问卷载荷：题目与可选的上次答案（用于预填）。 */
   payload: QuestionnairePayload;
+  /** 是否降级为只读展示（禁用全部作答与提交 / 取消交互）：承载问卷的运行现场不可用时为 true。 */
+  disabled?: boolean;
 }>();
 
 // 问卷作答结果与取消事件；取消无载荷，始终可用
@@ -191,14 +216,16 @@ const goNext = (): void => {
   if (!isLast.value) current.value += 1;
 };
 
-// 切换候选项：再次点击已选项即取消选择（清空该题作答）
+// 切换候选项：再次点击已选项即取消选择（清空该题作答）；只读态下不接受作答
 const toggleOption = (qi: number, oi: number): void => {
+  if (props.disabled) return;
   const st = states.value[qi];
   st.selected = st.selected === oi ? null : oi;
 };
 
-// 切换「其他」：再次点击收起并清空该题作答
+// 切换「其他」：再次点击收起并清空该题作答；只读态下不接受作答
 const toggleOther = (qi: number): void => {
+  if (props.disabled) return;
   const st = states.value[qi];
   st.selected = st.selected === OTHER ? null : OTHER;
 };
@@ -244,6 +271,13 @@ const submit = (): void => {
   gap: var(--zk-space-2);
   padding: var(--zk-space-1) var(--zk-space-2);
   cursor: pointer;
+}
+
+/* 只读态（现场不可用）：禁作答，取消指针反馈，与可作答态在视觉上区分 */
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
+.assistant-questionnaire-option--disabled {
+  cursor: default;
+  pointer-events: none;
 }
 
 /* 候选项文本块：占满行内剩余宽度，长文案可换行 */

@@ -364,12 +364,12 @@ func TagEventRuleCreate(c *gin.Context) {
 	db := middlewares.GetCoreDatabase(c)
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
 		if err := tx.Create(instance).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		for _, cond := range conds {
 			cond.TagEventRuleID = instance.ID
 			if err := tx.Create(cond).Error; err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 		return nil
@@ -426,10 +426,10 @@ func TagEventRuleUpdate(c *gin.Context) {
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
 		currentConds, err := loadTagEventRuleConditions(tx, instance.ID)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if err := snapshotTagEventRuleVersion(tx, &instance, currentConds); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if err := tx.Model(&tag.TagEventRule{}).Where("id = ? AND namespace_name = ?", instance.ID, namespace).Updates(map[string]any{
 			"description":            candidate.Description,
@@ -439,17 +439,17 @@ func TagEventRuleUpdate(c *gin.Context) {
 			"notification_group_id":  candidate.NotificationGroupID,
 			"notification_target_id": candidate.NotificationTargetID,
 		}).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		// 显式删除既有条件
 		if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		for _, cond := range newConds {
 			cond.TagEventRuleID = instance.ID
 		}
 		if err := tx.Create(&newConds).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return pruneTagEventRuleVersions(tx, instance.ID, namespace)
 	}); err != nil {
@@ -497,10 +497,10 @@ func TagEventRuleBatchDelete(c *gin.Context) {
 			return db.WithContext(c).Transaction(func(tx *database.DB) error {
 				// 显式级联删除条件与历史版本
 				if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				if err := tx.Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventRuleVersion{}).Error; err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				return tx.Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagEventRule{}).Error
 			})
@@ -698,10 +698,10 @@ func TagEventRuleVersionRollback(c *gin.Context) {
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
 		currentConds, err := loadTagEventRuleConditions(tx, instance.ID)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if err := snapshotTagEventRuleVersion(tx, &instance, currentConds); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if err := tx.Model(&tag.TagEventRule{}).Where("id = ? AND namespace_name = ?", instance.ID, namespace).Updates(map[string]any{
 			"name":            candidate.Name,
@@ -709,16 +709,16 @@ func TagEventRuleVersionRollback(c *gin.Context) {
 			"suppress_window": candidate.SuppressWindow,
 			"description":     candidate.Description,
 		}).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if err := tx.Where("tag_event_rule_id = ?", instance.ID).Delete(&tag.TagEventCondition{}).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		for _, cond := range newConds {
 			cond.TagEventRuleID = instance.ID
 		}
 		if err := tx.Create(&newConds).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return pruneTagEventRuleVersions(tx, instance.ID, namespace)
 	}); err != nil {
@@ -966,11 +966,11 @@ func snapshotTagEventRuleVersion(tx *database.DB, rule *tag.TagEventRule, conds 
 		Where("rule_id = ? AND namespace_name = ?", rule.ID, rule.NamespaceName).
 		Select("COALESCE(MAX(version), 0)").
 		Scan(&maxVersion).Error; err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	conditions, err := marshalConditions(conds)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	version := &tag.TagEventRuleVersion{
 		RuleID:         rule.ID,
@@ -993,7 +993,7 @@ func pruneTagEventRuleVersions(tx *database.DB, ruleID uint, namespace string) e
 		Order("version DESC").
 		Offset(tag.MaxTagEventRuleVersions).
 		Pluck("version", &versions).Error; err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if len(versions) == 0 {
 		return nil

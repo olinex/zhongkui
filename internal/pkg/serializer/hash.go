@@ -93,7 +93,7 @@ func (hs HashSerializer) Scan(ctx context.Context, field *schema.Field, dst refl
 // （匹配 CHAR(64) NOT NULL DEFAULT ” 列定义）。
 func (hs HashSerializer) Value(ctx context.Context, field *schema.Field, dst reflect.Value, fieldValue any) (any, error) {
 	if _, err := hs.validateTag(field); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	h, ok := fieldValue.(Hash)
 	if !ok {

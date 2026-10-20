@@ -7,6 +7,7 @@ import (
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/ai/tools/mcp"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // MCPRemoteTool 是远端 MCP 服务器 tools/list 返回的一个工具的展示信息：服务器侧的工具名与
@@ -27,14 +28,14 @@ func ProbeMCPServer(ctx context.Context, transport, url string, headers map[stri
 		Timeout:   timeout,
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	defer func() {
 		_ = conn.Close()
 	}()
 	tools, err := conn.ListAllTools(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return tools, nil
 }

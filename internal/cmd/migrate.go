@@ -170,7 +170,7 @@ func runMigrateCmd(action string) func(cmd *cobra.Command, args []string) {
 func migrateDB(ctx context.Context, v *viper.Viper, gormDB *database.DB, dbName string, args []string, action string) error {
 	m, err := createMigratorForDB(v, gormDB, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	defer m.Close()
 
@@ -234,7 +234,7 @@ func runDryRunMigrateCmd(cmd *cobra.Command, args []string) {
 func migrateDryRunDB(ctx context.Context, v *viper.Viper, dbName string) error {
 	dbCfg, err := getDBConfig(v, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	mc := migrate.NewConfig(dbCfg.Driver, dbCfg.DSN).
@@ -284,7 +284,7 @@ func runCheckMigrateCmd(cmd *cobra.Command, args []string) {
 func migrateCheckDB(ctx context.Context, v *viper.Viper, dbName string, keepTemp bool, models []any) error {
 	dbCfg, err := getDBConfig(v, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	mc := migrate.NewConfig(dbCfg.Driver, dbCfg.DSN).
@@ -298,7 +298,7 @@ func migrateCheckDB(ctx context.Context, v *viper.Viper, dbName string, keepTemp
 func migrateDiffDB(ctx context.Context, v *viper.Viper, dbName string) error {
 	dbCfg, err := getDBConfig(v, dbName)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	mc := migrate.NewConfig(dbCfg.Driver, dbCfg.DSN).

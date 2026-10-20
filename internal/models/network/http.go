@@ -937,7 +937,7 @@ func NewHttpRequestBody(ctx context.Context, client *s3.S3Client, req *http.Requ
 	}
 	result, err := storeBody(ctx, client, body, true, cryptoKey, hashKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &HttpRequestBody{
 		Method:        req.Method,
@@ -975,7 +975,7 @@ func NewHttpResponseBody(ctx context.Context, client *s3.S3Client, resp *http.Re
 	}
 	result, err := storeBody(ctx, client, body, false, cryptoKey, hashKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &HttpResponseBody{
 		RspBody:       result.Key,

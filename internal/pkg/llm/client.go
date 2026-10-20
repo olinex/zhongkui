@@ -213,7 +213,7 @@ func (e *EmbedClient) EmbedStringsWithUsage(ctx context.Context, texts []string,
 	}, handler)
 	vectors, err := e.EmbedStrings(ctx, texts, opts...)
 	if err != nil {
-		return nil, embedding.TokenUsage{}, err
+		return nil, embedding.TokenUsage{}, errors.WithStack(err)
 	}
 	return vectors, usage, nil
 }

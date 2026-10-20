@@ -81,13 +81,13 @@ func setValue(fieldVal reflect.Value, value *Value) error {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		v, err := getInt64(value)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		fieldVal.SetInt(v)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		v, err := getInt64(value)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		fieldVal.SetUint(uint64(v))
 	case reflect.Float32, reflect.Float64:

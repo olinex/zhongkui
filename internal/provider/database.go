@@ -59,6 +59,7 @@ func CoreModels() []any {
 		&aimodel.KnowledgeChunk{},
 		&aimodel.AgentSession{},
 		&aimodel.AgentMessage{},
+		&aimodel.AgentMessageBlock{},
 		&aimodel.AgentSessionCompaction{},
 		&aimodel.AgentMemory{},
 		&aimodel.AgentRun{},

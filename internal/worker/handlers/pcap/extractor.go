@@ -165,5 +165,5 @@ func ExtractPacketFromPcap(ctx context.Context, task etl.Task, channel chan<- an
 		return nil
 	})
 	err = wg.Wait()
-	return err
+	return errors.WithStack(err)
 }

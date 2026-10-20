@@ -59,7 +59,7 @@ func ParseCryptoTag(tag string) (CryptoTag, error) {
 func FieldTag(model any, path, nameTag string) (CryptoTag, error) {
 	secure, err := utils.ExtractFieldTag(model, path, nameTag, SecurityTagKey)
 	if err != nil {
-		return CryptoTag{}, err
+		return CryptoTag{}, errors.WithStack(err)
 	}
 	if secure == "" {
 		return CryptoTag{}, errors.Newf("field %s is not a secure field", path)
@@ -102,7 +102,7 @@ func ModeForTag(cTag CryptoTag) (mode.Mode, error) {
 func ModeFromTag(tag string) (mode.Mode, error) {
 	cTag, err := ParseCryptoTag(tag)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return ModeForTag(cTag)
 }
@@ -113,7 +113,7 @@ func ModeFromTag(tag string) (mode.Mode, error) {
 func ModeForField(model any, path, nameTag string) (mode.Mode, error) {
 	cTag, err := FieldTag(model, path, nameTag)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return ModeForTag(cTag)
 }
@@ -159,7 +159,7 @@ func HashKeyForTag(cTag CryptoTag) ([]byte, error) {
 func HashKeyForField(model any, path, nameTag string) ([]byte, error) {
 	cTag, err := FieldTag(model, path, nameTag)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return HashKeyForTag(cTag)
 }
@@ -183,7 +183,7 @@ func HashKeyForField(model any, path, nameTag string) ([]byte, error) {
 func DigestForField(model any, path, nameTag string, data []byte) (string, error) {
 	cryptoKey, err := HashKeyForField(model, path, nameTag)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	mac := hmac.New(sha256.New, cryptoKey)
 	mac.Write(data)

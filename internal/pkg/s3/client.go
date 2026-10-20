@@ -477,7 +477,7 @@ func (r *etagVerifyingReader) Read(p []byte) (n int, err error) {
 			)
 		}
 	}
-	return n, err
+	return n, errors.WithStack(err)
 }
 
 // VerifyDownloadIntegrity 返回一个包装了 src 的 Reader，对流经数据进行 MD5 校验。

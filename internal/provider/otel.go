@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/samber/do/v2"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/otel"
 )
 
@@ -22,7 +23,7 @@ func otelShutdownerProvider(ctx context.Context) do.Provider[*OtelShutdowner] {
 	return func(i do.Injector) (*OtelShutdowner, error) {
 		shutdown, err := otel.Setup(ctx)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		return &OtelShutdowner{shutdown: shutdown}, nil
 	}

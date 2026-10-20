@@ -260,7 +260,7 @@ func (r *Runtime) Shutdown(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
-	return err
+	return errors.WithStack(err)
 }
 
 // build 依据数据库当前状态装配一份完整运行态：快照 → 已启用工具 → 各对话档位客户端 →

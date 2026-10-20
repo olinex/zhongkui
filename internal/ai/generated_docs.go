@@ -79,7 +79,7 @@ func (k *Knowledge) SyncGeneratedDocs(ctx context.Context, namespaceName string,
 	}
 	existing, err := k.loadPartitionDocuments(ctx, namespaceName, format)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	plan, err := buildPartitionRebuildPlan(docs, existing)
 	if err != nil {
@@ -124,7 +124,7 @@ func buildPartitionRebuildPlan(derived []GeneratedKnowledgeDoc, existing []exist
 		seen[item.Title] = struct{}{}
 		hash, err := contentDigest(item.Content)
 		if err != nil {
-			return partitionRebuildPlan{}, err
+			return partitionRebuildPlan{}, errors.WithStack(err)
 		}
 		doc, ok := byTitle[item.Title]
 		switch {
@@ -164,7 +164,7 @@ func (k *Knowledge) applyPartitionRebuildPlan(ctx context.Context, namespaceName
 		}
 		usage, err := k.indexDocument(ctx, doc)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		reportStep(report, SyncProgressItem{
 			Title:     item.Title,
@@ -189,7 +189,7 @@ func (k *Knowledge) applyPartitionRebuildPlan(ctx context.Context, namespaceName
 		doc.ID = item.DocID
 		usage, err := k.indexDocument(ctx, doc)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		reportStep(report, SyncProgressItem{
 			Title:     item.Title,
@@ -202,7 +202,7 @@ func (k *Knowledge) applyPartitionRebuildPlan(ctx context.Context, namespaceName
 	for _, docID := range plan.delete {
 		start := time.Now()
 		if err := k.DeleteDocument(ctx, docID); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		reportStep(report, SyncProgressItem{
 			Title:     titles[docID],

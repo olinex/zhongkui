@@ -141,8 +141,8 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/tool-result', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/tool-result', 'OPTIONS', 'allow'),
-    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'POST', 'allow'),
-    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/input/rerun', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/agent/:sessionID/input/rerun', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/status', 'OPTIONS', 'allow'),
     -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
@@ -433,8 +433,8 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/ai/agent/:sessionID/stream', 'OPTIONS'),
     ('api:/api/v1/ai/agent/:sessionID/tool-result', 'POST'),
     ('api:/api/v1/ai/agent/:sessionID/tool-result', 'OPTIONS'),
-    ('api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'POST'),
-    ('api:/api/v1/ai/agent/:sessionID/questionnaire/reanswer', 'OPTIONS'),
+    ('api:/api/v1/ai/agent/:sessionID/input/rerun', 'POST'),
+    ('api:/api/v1/ai/agent/:sessionID/input/rerun', 'OPTIONS'),
     ('api:/api/v1/ai/status', 'POST'),
     ('api:/api/v1/ai/status', 'OPTIONS'),
     -- AI 助手接口：长期记忆管理（列表/详情/批量删除/启停）
@@ -818,6 +818,7 @@ FROM (VALUES
     ('session.maxContextMessages', '20'),
     ('session.maxContextBytes', '32768'),
     ('session.compactThresholdRatio', '0.8'),
+    ('session.maxUserTurns', '20'),
     (
         'session.topicSystemPrompt',
         $$你根据首个用户消息为一次会话命名。请产出一个能概括该会话主题的简短标题，语言与消息一致。控制在 20 个字符以内，须具体、忠于事实：不要引号、不要行尾标点、不要「Topic:」这类前缀，也不要换行。仅回复标题文本。$$
@@ -892,12 +893,32 @@ ON CONFLICT (key) DO NOTHING;
 -- （如 memory_write）取 false，需管理员在工具面板显式启用；只读基础能力（如 knowledge_search、
 -- client 的 ask_user）取 true，管理员仍可在工具面板停用。守卫测试 internal/ai/tools_fixture_test.go
 -- 断言注册表键集合与本段各来源行集合双向一致，忘记追加即会暴露漂移。当前注册表已声明 memory_write
--- 与 knowledge_search（builtin）两个工具，以及 ask_user（client）——问卷类只读交互能力，故此处种
--- 下这三条出厂行。
+-- 与 knowledge_search（builtin）两个工具，以及 ask_user（client）——问卷类只读交互能力；此外又新增
+-- 了「数学 / 时间 / 文本 / 编码 / 数据」五类共 13 个通用内置工具（math_eval、unit_convert、
+-- base_convert、datetime_calc、regex、json_diff、text_stats、hash、encode_convert、uuid、json、
+-- csv_parse、url_parse），以及「高阶方程计算」4 个工具（poly_solve、linear_solve、root_find、
+-- nonlinear_solve），均为只读纯计算能力，故出厂 enabled=true，故此处种下这些出厂行。
 INSERT INTO llm_tools (name, source, mcp_server_id, remote_name, description, enabled)
 VALUES
     ('memory_write', 'builtin', NULL, '', '', false),
     ('knowledge_search', 'builtin', NULL, '', '', true),
+    ('math_eval', 'builtin', NULL, '', '', true),
+    ('unit_convert', 'builtin', NULL, '', '', true),
+    ('base_convert', 'builtin', NULL, '', '', true),
+    ('datetime_calc', 'builtin', NULL, '', '', true),
+    ('regex', 'builtin', NULL, '', '', true),
+    ('json_diff', 'builtin', NULL, '', '', true),
+    ('text_stats', 'builtin', NULL, '', '', true),
+    ('hash', 'builtin', NULL, '', '', true),
+    ('encode_convert', 'builtin', NULL, '', '', true),
+    ('uuid', 'builtin', NULL, '', '', true),
+    ('json', 'builtin', NULL, '', '', true),
+    ('csv_parse', 'builtin', NULL, '', '', true),
+    ('url_parse', 'builtin', NULL, '', '', true),
+    ('poly_solve', 'builtin', NULL, '', '', true),
+    ('linear_solve', 'builtin', NULL, '', '', true),
+    ('root_find', 'builtin', NULL, '', '', true),
+    ('nonlinear_solve', 'builtin', NULL, '', '', true),
     ('ask_user', 'client', NULL, '', '', true)
 ON CONFLICT (name) DO NOTHING;
 

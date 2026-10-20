@@ -129,7 +129,7 @@ func runLifecycleApply(ctx context.Context, client *s3.S3Client) error {
 			}
 			days, err := promptExpireDays()
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			selected[action] = true
 			rules = append(rules, s3.LifecycleRuleConfig{

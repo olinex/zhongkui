@@ -8,10 +8,12 @@ package reporter_v1
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -48,14 +50,14 @@ func (c *reporterServiceClient) Watch(ctx context.Context, in *WatchRequest, opt
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &ReporterService_ServiceDesc.Streams[0], ReporterService_Watch_FullMethodName, cOpts...)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	x := &grpc.GenericClientStream[WatchRequest, WatchResponse]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return x, nil
 }
@@ -67,7 +69,7 @@ func (c *reporterServiceClient) Feedback(ctx context.Context, opts ...grpc.CallO
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &ReporterService_ServiceDesc.Streams[1], ReporterService_Feedback_FullMethodName, cOpts...)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	x := &grpc.GenericClientStream[FeedbackRequest, emptypb.Empty]{ClientStream: stream}
 	return x, nil
@@ -126,7 +128,7 @@ func RegisterReporterServiceServer(s grpc.ServiceRegistrar, srv ReporterServiceS
 func _ReporterService_Watch_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(WatchRequest)
 	if err := stream.RecvMsg(m); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	return srv.(ReporterServiceServer).Watch(m, &grpc.GenericServerStream[WatchRequest, WatchResponse]{ServerStream: stream})
 }

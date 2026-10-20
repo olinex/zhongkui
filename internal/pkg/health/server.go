@@ -144,7 +144,7 @@ func (s *Server) Start(ctx context.Context, logger *logging.Logger, serviceName 
 		return nil
 	case err := <-errCh:
 		s.listening.Store(false)
-		return err
+		return errors.WithStack(err)
 	}
 }
 

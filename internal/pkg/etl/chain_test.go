@@ -334,7 +334,7 @@ func TestChainBufferTimeoutFlush(t *testing.T) {
 			}
 		}
 		if err := send(0); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		select {
 		case <-firstFlushed:
@@ -342,7 +342,7 @@ func TestChainBufferTimeoutFlush(t *testing.T) {
 			return ctx.Err()
 		}
 		if err := send(1); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return send(2)
 	}
@@ -455,7 +455,7 @@ func TestHandlerRegisterRegistry(t *testing.T) {
 		do: func(ctx context.Context, task Task) error {
 			c, err := GetHandlerParam[cfg](ctx)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			got = c.Name
 			return nil

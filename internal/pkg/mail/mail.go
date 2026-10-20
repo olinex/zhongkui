@@ -55,7 +55,7 @@ func (s *Sender) Enabled() bool { return s.ready() == nil }
 // 组装邮件渠道级与目标级 JSON 配置，最终调用注入的消息渠道连接池（Pool.Send）投递。
 func (s *Sender) Send(ctx context.Context, to string, msg message.Message, lang string) error {
 	if err := s.ready(); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// 解析目标语言：空字符串使用平台默认；非法语言回退默认并告警。

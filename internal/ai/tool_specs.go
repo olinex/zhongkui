@@ -28,6 +28,76 @@ var ToolSpecs = []ToolSpec{
 		Name:  "knowledge_search",
 		Group: "builtin",
 	},
+	// ---- builtin：通用工具（数学 / 时间 / 文本 / 编码 / 数据） ----
+	{
+		Name:  "math_eval",
+		Group: "builtin",
+	},
+	{
+		Name:  "unit_convert",
+		Group: "builtin",
+	},
+	{
+		Name:  "base_convert",
+		Group: "builtin",
+	},
+	{
+		Name:  "datetime_calc",
+		Group: "builtin",
+	},
+	{
+		Name:  "regex",
+		Group: "builtin",
+	},
+	{
+		Name:  "json_diff",
+		Group: "builtin",
+	},
+	{
+		Name:  "text_stats",
+		Group: "builtin",
+	},
+	{
+		Name:  "hash",
+		Group: "builtin",
+	},
+	{
+		Name:  "encode_convert",
+		Group: "builtin",
+	},
+	{
+		Name:  "uuid",
+		Group: "builtin",
+	},
+	{
+		Name:  "json",
+		Group: "builtin",
+	},
+	{
+		Name:  "csv_parse",
+		Group: "builtin",
+	},
+	{
+		Name:  "url_parse",
+		Group: "builtin",
+	},
+	// ---- builtin：通用工具（高阶方程计算） ----
+	{
+		Name:  "poly_solve",
+		Group: "builtin",
+	},
+	{
+		Name:  "linear_solve",
+		Group: "builtin",
+	},
+	{
+		Name:  "root_find",
+		Group: "builtin",
+	},
+	{
+		Name:  "nonlinear_solve",
+		Group: "builtin",
+	},
 	// ---- client：客户端工具 ----
 	// client 分组的工具由前端在用户自身凭据下执行，后端只并入其 schema（见 internal/ai 的
 	// client_tools.go 注册表），不构建本地执行器、不拨号任何远端；模型调用后由后端把待执行调用

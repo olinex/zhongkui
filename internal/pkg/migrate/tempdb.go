@@ -68,12 +68,12 @@ func sqlDriverName(gormDriver string) string {
 func EnsureDatabase(ctx context.Context, driver, dsn string) error {
 	d, err := dialectFor(driver)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	adminDSN, dbName, err := parseDSN(dsn, d)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	adminDB, err := sql.Open(sqlDriverName(driver), adminDSN)
@@ -117,7 +117,7 @@ func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error) {
 
 	dialect, err := dialectFor(cfg.Driver)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	return createTempDB(ctx, cfg, suffix, dialect)
@@ -126,7 +126,7 @@ func CreateTempDB(ctx context.Context, cfg *Config) (*TempDB, error) {
 func createTempDB(ctx context.Context, cfg *Config, suffix string, d dbDialect) (*TempDB, error) {
 	adminDSN, dbName, err := parseDSN(cfg.DSN, d)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	driver := sqlDriverName(cfg.Driver)
@@ -180,7 +180,7 @@ func (t *TempDB) Close(ctx context.Context) error {
 func (t *TempDB) dropDB(ctx context.Context) error {
 	adminDSN, _, err := parseDSN(t.cfg.DSN, t.dialect)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	adminDB, err := sql.Open(sqlDriverName(t.cfg.Driver), adminDSN)

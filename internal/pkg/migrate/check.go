@@ -156,7 +156,7 @@ func Check(ctx context.Context, cfg *Config, models []any) error {
 		pterm.Info.Println(translate.T("cli.migrate.check-preserved", map[string]any{"DB": tempDB.name}))
 	}
 
-	return err
+	return errors.WithStack(err)
 }
 
 // CheckModels 比对给定数据库结构与模型声明，输出差异表格。

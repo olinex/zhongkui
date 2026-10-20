@@ -32,6 +32,11 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
+// approxBytesPerToken 估算压缩后占用时用于「字节 → token」折算的经验比：中英文混合的提示词大致
+// 每 3 字节 1 token（英文偏 4、中文偏 2）。该折算只服务压缩完成即刻展示的估算，后续生成由供应商
+// 测得的真实 prompt tokens 到达后即被覆盖（见 SessionStore.ContextUsage）。
+const approxBytesPerToken = 3
+
 // sessionTopicByteLimit 是会话短主题的字节上限（按 UTF-8 rune 边界截断，不产生残缺字符）。
 const sessionTopicByteLimit = 64
 
@@ -144,7 +149,7 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 	}
 	kind, err := ai.ParseMemoryKind(in.Kind)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	title := strings.TrimSpace(in.Title)
 	// 内容摘要为带密钥的 HMAC-SHA256：明文不落库，同时摘要确定可比，供精确去重与唯一索引使用
@@ -188,7 +193,7 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 			Order("id ASC").First(&existing).Error
 		if findErr == nil {
 			if err := s.refreshMemory(tx, existing.ID, in.UserID, true, values, searchText); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			return s.reload(tx, namespaceName, in.UserID, existing.ID, &out)
 		}
@@ -211,7 +216,7 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 		}
 		if nearest.ID != 0 && 1-nearest.Distance >= s.params.Float("memory.dedupeThreshold") {
 			if err := s.refreshMemory(tx, nearest.ID, in.UserID, false, values, searchText); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			return s.reload(tx, namespaceName, in.UserID, nearest.ID, &out)
 		}
@@ -239,17 +244,17 @@ func (s *MemoryStore) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai
 				return errors.WithStack(err)
 			}
 			if err := s.refreshMemory(tx, got.ID, in.UserID, true, values, searchText); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			return s.reload(tx, namespaceName, in.UserID, got.ID, &out)
 		}
 		if err := s.writeMemorySearch(tx, id, searchText); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return s.reload(tx, namespaceName, in.UserID, id, &out)
 	})
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return out, nil
 }
@@ -293,7 +298,7 @@ func (s *MemoryStore) ReindexEmbeddings(ctx context.Context, namespaceName strin
 		}
 		vectors, usage, err := embedStringsWithUsage(ctx, s.embed, texts)
 		if err != nil {
-			return start, err
+			return start, errors.WithStack(err)
 		}
 		if len(vectors) != len(batch) {
 			return start, errors.Newf("memory: embedder returned %d vectors for %d memories", len(vectors), len(rows))
@@ -346,11 +351,11 @@ func (s *MemoryStore) Retrieve(ctx context.Context, namespaceName string, agentK
 	}
 	vecHits, vecKinds, err := s.vectorSearch(ctx, namespaceName, agentKind, sessionID, userID, vectors[0], candidates)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	kwHits, kwKinds, err := s.keywordSearch(ctx, namespaceName, agentKind, sessionID, userID, query, candidates)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	fused := fuseRRF(vecHits, kwHits)
 	fused = dedupeSimilarResultsWithCutoff(fused, s.params.Float("memory.dedupeThreshold"))
@@ -488,7 +493,7 @@ func (s *MemoryStore) Delete(ctx context.Context, namespaceName string, userID u
 // SetStatus 设置指定命名空间下、属于该用户的一条记忆的状态；status 不在取值空间内时返回英文错误。
 func (s *MemoryStore) SetStatus(ctx context.Context, namespaceName string, userID uint, id uint, status ai.MemoryStatus) error {
 	if _, err := ai.ParseMemoryStatus(status); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	namespaceName = strings.TrimSpace(namespaceName)
 	if namespaceName == "" {
@@ -523,7 +528,7 @@ func (w memoryStoreWriter) WriteMemory(ctx context.Context, in tools.MemoryWrite
 	}
 	mem, err := w.store.Write(ctx, in)
 	if err != nil {
-		return 0, err
+		return 0, errors.WithStack(err)
 	}
 	return mem.ID, nil
 }
@@ -688,6 +693,10 @@ type CompactResult struct {
 	Extracted int
 	// Warnings 非致命告警（英文）
 	Warnings []string
+	// TokensAfter 本次压缩后上下文占用的即时估算：压缩前占用减去被折叠内容占用、再加上新摘要占用，
+	// 即「被折叠内容换成新摘要」后的上下文占用估算（估值口径见 estimatedCompactedTokens），随压缩
+	// 检查点一并落库并供压缩完成即刻展示；无法估算时为 0。
+	TokensAfter int
 }
 
 // CompactionMetrics 携带一次摘要推进（`CompactStream` / `Compact` 产出）的展示度量，随检查点一并
@@ -698,6 +707,9 @@ type CompactionMetrics struct {
 	TokensBefore int
 	// FoldedCount 折叠进摘要的消息条数
 	FoldedCount int
+	// TokensAfter 推进后上下文占用的即时估算 token：调用方入参留 0，由 CompactStream 在摘要产出后
+	// 算得并随检查点落库（估值口径见 estimatedCompactedTokens）；静默滚动不产出估算，留 0。
+	TokensAfter int
 }
 
 // Recall 以查询文本在「命名空间 + Agent 类型 + 会话」范围内检索长期记忆，记忆只在其来源会话内
@@ -744,35 +756,38 @@ func (m *Memory) ReindexEmbeddings(ctx context.Context, namespaceName string, re
 
 // SummarizeStream 与 Summarize 语义一致，但经 onDelta 逐块回调摘要生成的增量文本：
 // onDelta 非空时用 flash 档位 Stream 逐块读取并回调（回调返回错误即中止并透传）；
-// 为空时退回一次性 Generate。返回（新摘要, 新游标, 错误）。
-func (m *Memory) SummarizeStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, onDelta func(string) error) (string, uint, error) {
+// 为空时退回一次性 Generate。返回（新摘要, 新游标, 本次摘要模型调用的 token 用量, 错误）；
+// 用量取自响应元信息，供应商未返回时该值为 nil（调用方据此跳过任何依赖用量的估算）。
+func (m *Memory) SummarizeStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, onDelta func(string) error) (string, uint, *schema.TokenUsage, error) {
 	if session == nil {
-		return "", 0, errors.New("memory: nil session")
+		return "", 0, nil, errors.New("memory: nil session")
 	}
 	if len(evicted) == 0 {
-		return string(session.Summary.Value()), session.SummaryUptoSeq, nil
+		return string(session.Summary.Value()), session.SummaryUptoSeq, nil, nil
 	}
 	chat, err := m.resolveFlashChat()
 	if err != nil {
-		return "", 0, err
+		return "", 0, nil, errors.WithStack(err)
 	}
 	messages := []*schema.Message{
 		schema.SystemMessage(m.params.Text("memory.summarySystemPrompt")),
 		schema.UserMessage(buildSummaryPrompt(string(session.Summary.Value()), evicted, m.params.Int("memory.evictedMessageByteLimit"))),
 	}
 	var content string
+	var usage *schema.TokenUsage
 	if onDelta == nil {
 		resp, gerr := chat.Generate(ctx, messages)
 		if gerr != nil {
-			return "", 0, errors.WithStack(gerr)
+			return "", 0, nil, errors.WithStack(gerr)
 		}
 		if resp != nil {
 			content = resp.Content
+			usage = responseUsage(resp)
 		}
 	} else {
 		reader, serr := chat.Stream(ctx, messages)
 		if serr != nil {
-			return "", 0, errors.WithStack(serr)
+			return "", 0, nil, errors.WithStack(serr)
 		}
 		defer reader.Close()
 		var sb strings.Builder
@@ -782,23 +797,39 @@ func (m *Memory) SummarizeStream(ctx context.Context, session *ai.AgentSession, 
 				if errors.Is(recvErr, io.EOF) {
 					break
 				}
-				return "", 0, errors.WithStack(recvErr)
+				return "", 0, nil, errors.WithStack(recvErr)
 			}
-			if chunk == nil || chunk.Content == "" {
+			if chunk == nil {
+				continue
+			}
+			// 用量常落在不带正文的末帧，故先于正文过滤采集；后到的非空用量覆盖先到的。
+			if u := responseUsage(chunk); u != nil {
+				usage = u
+			}
+			if chunk.Content == "" {
 				continue
 			}
 			sb.WriteString(chunk.Content)
 			if derr := onDelta(chunk.Content); derr != nil {
-				return "", 0, derr
+				return "", 0, nil, derr
 			}
 		}
 		content = sb.String()
 	}
 	if strings.TrimSpace(content) == "" {
-		return "", 0, errors.New("memory: summary model returned an empty response")
+		return "", 0, nil, errors.New("memory: summary model returned an empty response")
 	}
 	summary := truncateBytes(strings.TrimSpace(content), m.params.Int("session.maxContextBytes"))
-	return summary, uint(evicted[len(evicted)-1].Seq), nil
+	return summary, uint(evicted[len(evicted)-1].Seq), usage, nil
+}
+
+// responseUsage 从一条模型响应帧（非流式整帧或流式任一帧）取回 token 用量：响应元信息缺失或
+// 未携带用量时返回 nil。
+func responseUsage(msg *schema.Message) *schema.TokenUsage {
+	if msg == nil || msg.ResponseMeta == nil {
+		return nil
+	}
+	return msg.ResponseMeta.Usage
 }
 
 // Summarize 用 flash 档位把「既有摘要 + 被挤出消息」重写为新的滚动摘要：返回新摘要与被挤出
@@ -806,7 +837,8 @@ func (m *Memory) SummarizeStream(ctx context.Context, session *ai.AgentSession, 
 // resolver 为 nil、档位未绑定或解析失败、模型返回空内容时均返回英文错误（由调用方降级为不推进
 // 游标）。摘要自身按 session.maxContextBytes 截断，避免摘要膨胀。
 func (m *Memory) Summarize(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage) (string, uint, error) {
-	return m.SummarizeStream(ctx, session, evicted, nil)
+	summary, upto, _, err := m.SummarizeStream(ctx, session, evicted, nil)
+	return summary, upto, errors.WithStack(err)
 }
 
 // SessionTopicFallback 是会话主题生成失败时的兜底：把首个用户问题按 sessionTopicByteLimit 截断
@@ -858,16 +890,21 @@ func (m *Memory) CompactStream(ctx context.Context, session *ai.AgentSession, ev
 	if len(evicted) == 0 {
 		return result, nil
 	}
-	summary, upto, err := m.SummarizeStream(ctx, session, evicted, onDelta)
+	summary, upto, usage, err := m.SummarizeStream(ctx, session, evicted, onDelta)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
+	// 压缩后占用的即时估算：优先取摘要模型用量算出的估值，用量缺失或该估值不合理时回落为按字节折算
+	// 的估值（见 estimatedCompactedTokens），使压缩完成即刻总有可展示的占用值。该估值随检查点一并落库，
+	// 故刷新 / 重进会话后仍可回显前后对比；后续生成由供应商测得的真实 prompt tokens 到达后即被覆盖。
+	metrics.TokensAfter = estimatedCompactedTokens(metrics.TokensBefore, usage, evicted, summary, m.params.Int("memory.evictedMessageByteLimit"))
 	if err := m.sessions.UpdateSummaryAndCheckpoint(ctx, session, summary, upto, reason, metrics); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	session.Summary = serializer.NewCrypto([]byte(summary))
 	session.SummaryUptoSeq = upto
 	result.Summary = summary
+	result.TokensAfter = metrics.TokensAfter
 	if !m.params.Bool("memory.enabled") {
 		result.Warnings = append(result.Warnings, "memory: long-term memory is disabled, extraction skipped")
 		return result, nil
@@ -876,6 +913,56 @@ func (m *Memory) CompactStream(ctx context.Context, session *ai.AgentSession, ev
 	result.Extracted = extracted
 	result.Warnings = append(result.Warnings, warnings...)
 	return result, nil
+}
+
+// estimatedCompactedTokens 估算一次压缩后会话的上下文占用：优先取摘要模型用量算出的估值
+// （见 estimatedTokensAfter），用量缺失或该估值不合理时回落为按字节折算的估值（见
+// estimatedTokensByBytes），使压缩完成即刻总有可展示的占用估算。两者都无解时返回 0，
+// 调用方据此不携带 TokensAfter，回落为等待真实测量回填。
+func estimatedCompactedTokens(before int, usage *schema.TokenUsage, evicted []*ai.AgentMessage, summary string, perMessageByteLimit int) int {
+	if after := estimatedTokensAfter(before, usage); after > 0 {
+		return after
+	}
+	return estimatedTokensByBytes(before, evicted, summary, perMessageByteLimit)
+}
+
+// estimatedTokensByBytes 在没有可用的摘要模型用量时按字节折算压缩后占用：压缩前占用加上「新摘要 −
+// 被折叠内容」的字节差（按 approxBytesPerToken 折算成 token）。被折叠内容的字节数取
+// buildMessageTranscript 的产物长度——即摘要提示词中真正呈现的那份文本（单条按 perMessageByteLimit
+// 截断），与实际入参口径一致。新摘要替换的是「旧摘要 + 被折叠内容」，此处只减被折叠内容，故该估值
+// 偏保守（偏高）。压缩前占用为 0（无基线）或折算结果不构成缩减（≤0 或 ≥压缩前占用）时返回 0，
+// 不给出无意义的估值。
+func estimatedTokensByBytes(before int, evicted []*ai.AgentMessage, summary string, perMessageByteLimit int) int {
+	if before <= 0 {
+		return 0
+	}
+	folded := len(buildMessageTranscript(evicted, perMessageByteLimit))
+	after := before + (len(summary)-folded)/approxBytesPerToken
+	if after <= 0 || after >= before {
+		return 0
+	}
+	return after
+}
+
+// estimatedTokensAfter 依据摘要调用的真实用量估算压缩后的上下文占用：压缩前占用减去交给摘要
+// 模型的 prompt tokens（即被折叠内容在提示词中的占用），再加上 completion tokens（新摘要自身）。
+// 该值只是估算——摘要提示词的系统提示与逐条截断都会引入偏差——故仅用于压缩完成后立即展示；
+// 后续生成由供应商测得的真实 prompt tokens 到达后由前端校准为精确值。
+//
+// 估算只在输入可信且结果合理时给出，否则返回 0（调用方据此改用字节折算的估值，见
+// estimatedCompactedTokens）：压缩前占用必须为正——为 0 时本就没有可用的基线（如会话最近一条助手
+// 消息被取消 / 失败，从未记下用量），此时公式会因「新摘要 completion 大于摘要 prompt」而得出比压缩前
+// 更大的无意义正值；且估算结果必须为正、必须严格小于压缩前占用——压缩不可能抬高占用，凡不满足者一律
+// 视为估算失效。
+func estimatedTokensAfter(before int, usage *schema.TokenUsage) int {
+	if usage == nil || before <= 0 {
+		return 0
+	}
+	after := before - usage.PromptTokens + usage.CompletionTokens
+	if after <= 0 || after >= before {
+		return 0
+	}
+	return after
 }
 
 // Compact 压缩一个会话：先把 summary_upto_seq 之后的全部消息折叠进滚动摘要并落库，再
@@ -888,9 +975,10 @@ func (m *Memory) Compact(ctx context.Context, session *ai.AgentSession) (*Compac
 	}
 	msgs, err := m.sessions.ListMessagesAfter(ctx, session.ID, session.UserID, session.SummaryUptoSeq)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
-	// 度量与是否展示无关：三种推进原因均落真实值，读取侧再按 reason 决定是否回显。
+	// 度量口径见 ContextTokens（末次真实测量；会话尚无任何测量时为 0，表示「尚无测量」而非
+	// 「占用为 0」）：与是否展示无关，三种推进原因均落值，读取侧再按 reason 决定是否回显。
 	contextTokens, _ := m.sessions.ContextTokens(ctx, session.ID, session.UserID)
 	return m.CompactStream(ctx, session, msgs, "manual", CompactionMetrics{TokensBefore: contextTokens, FoldedCount: len(msgs)}, nil)
 }

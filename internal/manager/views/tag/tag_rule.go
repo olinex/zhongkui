@@ -493,14 +493,14 @@ func TagRuleUpdate(c *gin.Context) {
 	// 事务内：快照当前内容 → 更新规则 → 裁剪超限版本
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
 		if err := snapshotTagRuleVersion(tx, &instance); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if err := tx.Model(&tag.TagRule{}).Where("id = ? AND namespace_name = ?", instance.ID, namespace).Updates(map[string]any{
 			"description": candidate.Description,
 			"rego":        candidate.Rego,
 			"enabled":     candidate.Enabled,
 		}).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return pruneTagRuleVersions(tx, instance.ID, namespace)
 	}); err != nil {
@@ -549,11 +549,11 @@ func TagRuleBatchDelete(c *gin.Context) {
 			if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
 				// 显式级联删除历史版本
 				if err := tx.Where("rule_id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagRuleVersion{}).Error; err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				return tx.Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&tag.TagRule{}).Error
 			}); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			notifyTagRuleChange(c, &instance)
 			return nil
@@ -601,13 +601,13 @@ func TagRuleBatchSetEnabled(enabled bool) gin.HandlerFunc {
 					candidate := instance
 					candidate.Enabled = true
 					if err := validateTagRuleCandidateBatch(c, &candidate); err != nil {
-						return err
+						return errors.WithStack(err)
 					}
 				}
 				if err := db.WithContext(c).Model(&tag.TagRule{}).
 					Where("id = ? AND namespace_name = ?", instance.ID, namespace).
 					Update("enabled", enabled).Error; err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				instance.Enabled = enabled
 				notifyTagRuleChange(c, &instance)
@@ -970,7 +970,7 @@ func TagRuleVersionRollback(c *gin.Context) {
 	// 事务内：快照当前内容 → 回滚目标版本内容
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
 		if err := snapshotTagRuleVersion(tx, &instance); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return tx.Model(&tag.TagRule{}).Where("id = ? AND namespace_name = ?", instance.ID, namespace).Updates(map[string]any{
 			"name":        candidate.Name,
@@ -1030,7 +1030,7 @@ func validateTagRuleCandidateBatch(c *gin.Context, candidate *tag.TagRule) error
 	db := middlewares.GetCoreDatabase(c)
 	group, err := buildTagRuleGroup(c, db, candidate)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	// Rego 校验（语法 + 契约 + 组级语义编译），与 validate / dry-run 统一复用公共函数
 	if errs, ok := tagengine.ValidateRegoRules(c, group); !ok {
@@ -1046,7 +1046,7 @@ func validateTagRuleCandidateBatch(c *gin.Context, candidate *tag.TagRule) error
 			middlewares.GetLogger(c).Warnf(c, nil,
 				"tag rule runtime validation skipped: no samples provisioned, model=%s", candidate.Model)
 		} else {
-			return err
+			return errors.WithStack(err)
 		}
 	} else if len(issues) > 0 {
 		return invalidTagRuleRuntimeError(issues)
@@ -1065,7 +1065,7 @@ func buildTagRuleGroup(ctx *gin.Context, db *database.DB, candidate *tag.TagRule
 	}
 	var rules []*tag.TagRule
 	if err := query.Find(&rules).Error; err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if candidate.Enabled {
 		rules = append(rules, candidate)
@@ -1096,7 +1096,7 @@ func snapshotTagRuleVersion(tx *database.DB, rule *tag.TagRule) error {
 		Where("rule_id = ? AND namespace_name = ?", rule.ID, rule.NamespaceName).
 		Select("COALESCE(MAX(version), 0)").
 		Scan(&maxVersion).Error; err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	version := &tag.TagRuleVersion{
 		RuleID:        rule.ID,
@@ -1118,7 +1118,7 @@ func pruneTagRuleVersions(tx *database.DB, ruleID uint, namespace string) error 
 		Order("version DESC").
 		Offset(tag.MaxTagRuleVersions).
 		Pluck("version", &versions).Error; err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if len(versions) == 0 {
 		return nil

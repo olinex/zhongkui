@@ -10,51 +10,21 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	// 第三方
 	"github.com/gin-gonic/gin"
-	. "github.com/smartystreets/goconvey/convey"
 
 	// 项目内部
 	ai "zhongkuisec.com/zhongkui/internal/ai"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
+	"zhongkuisec.com/zhongkui/internal/manager/response"
 	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
-
-// compactSSEEvent 是解析出的单条 SSE 事件：Name 取自 event 行，Data 为 data 行的 JSON 对象。
-type compactSSEEvent struct {
-	// Name 事件名（compress_start / compress_delta / compress_done）
-	Name string
-	// Data 事件负载（data 行 JSON 反序列化）
-	Data map[string]any
-}
-
-// parseCompactSSEEvents 把 SSE 响应体按空行切分为事件块，逐块解析 event 行与 data 行。
-// 仅用于测试断言，容忍末尾空块。
-func parseCompactSSEEvents(body string) []compactSSEEvent {
-	var events []compactSSEEvent
-	for _, block := range strings.Split(body, "\n\n") {
-		block = strings.TrimSpace(block)
-		if block == "" {
-			continue
-		}
-		ev := compactSSEEvent{Data: map[string]any{}}
-		for _, line := range strings.Split(block, "\n") {
-			switch {
-			case strings.HasPrefix(line, "event: "):
-				ev.Name = strings.TrimPrefix(line, "event: ")
-			case strings.HasPrefix(line, "data: "):
-				_ = json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &ev.Data)
-			}
-		}
-		events = append(events, ev)
-	}
-	return events
-}
 
 // newCompactChatServer 启动一个 OpenAI 兼容的假对话端点：stream=true 时按 SSE 返回两段摘要
 // 增量后以 [DONE] 收尾（供滚动摘要流式生成），否则返回一段非 JSON 正文（供记忆抽取：解析失败仅
@@ -162,128 +132,7 @@ func loadSessionMessages(t *testing.T, db *database.DB, sessionID uint) []*model
 	return messages
 }
 
-// reloadCompactSession 重新读取一个会话行，供断言游标与摘要落库。
-func reloadCompactSession(t *testing.T, db *database.DB, sessionID uint) *modelsai.AgentSession {
-	t.Helper()
-	row := &modelsai.AgentSession{}
-	if err := db.Where("id = ?", sessionID).First(row).Error; err != nil {
-		t.Fatalf("reload session %d: %v", sessionID, err)
-	}
-	return row
-}
-
-// TestAgentSessionCompact 会话压缩的 SSE 语义：成功时按 start → delta → done 流式下发并推进
-// 滚动摘要游标；userMessageIndex 指定折叠边界时仅折叠该轮及更早消息、更晚消息不受影响；序号越界
-// 沿用本地化 404（非 SSE）；flash 档位未绑定时仍以 start → done(foldedCount=0) 收敛。
-func TestAgentSessionCompact(t *testing.T) {
-	Convey("压缩 AI 会话上下文（SSE 流式）", t, func() {
-		db := createKnowledgeTestDB(t)
-		Reset(func() {
-			So(db.Rollback().Error, ShouldBeNil)
-		})
-
-		Convey("全量折叠成功时下发 start→delta→done 且游标推进到末条消息", func() {
-			srv := newCompactChatServer(t)
-			defer srv.Close()
-			rt := newCompactingAiRuntime(t, db, srv.URL)
-			r := newSessionCompactTestRouter(db, knowledgeTestNamespace, rt)
-			src := seedBranchSourceSession(t, db, "源会话")
-			messages := loadSessionMessages(t, db, src.ID)
-			So(len(messages), ShouldEqual, 4)
-			expectedUpto := messages[len(messages)-1].Seq
-
-			w := doKnowledgeJSONRequest(r, http.MethodPost, compactPath(src.ID), map[string]any{})
-			So(w.Code, ShouldEqual, http.StatusOK)
-			So(w.Header().Get("Content-Type"), ShouldContainSubstring, "text/event-stream")
-
-			events := parseCompactSSEEvents(w.Body.String())
-			So(len(events), ShouldBeGreaterThanOrEqualTo, 2)
-			So(events[0].Name, ShouldEqual, "compress_start")
-			So(events[0].Data["reason"], ShouldEqual, "manual")
-			hasDelta := false
-			for _, e := range events {
-				if e.Name == "compress_delta" {
-					hasDelta = true
-				}
-			}
-			So(hasDelta, ShouldBeTrue)
-			last := events[len(events)-1]
-			So(last.Name, ShouldEqual, "compress_done")
-			So(last.Data["foldedCount"], ShouldEqual, float64(4))
-			So(last.Data["summaryUptoSeq"], ShouldEqual, float64(expectedUpto))
-
-			row := reloadCompactSession(t, db, src.ID)
-			So(row.SummaryUptoSeq, ShouldEqual, uint(expectedUpto))
-			So(string(row.Summary.Value()), ShouldNotBeEmpty)
-		})
-
-		Convey("userMessageIndex=1 只折叠第 1 轮，更晚消息与游标不受影响", func() {
-			srv := newCompactChatServer(t)
-			defer srv.Close()
-			rt := newCompactingAiRuntime(t, db, srv.URL)
-			r := newSessionCompactTestRouter(db, knowledgeTestNamespace, rt)
-			src := seedBranchSourceSession(t, db, "源会话")
-			messages := loadSessionMessages(t, db, src.ID)
-			So(len(messages), ShouldEqual, 4)
-			// 第 1 条用户消息（u1）之后的首条助手消息（a1）的 seq 即折叠上界。
-			firstAssistantSeq := messages[1].Seq
-
-			w := doKnowledgeJSONRequest(r, http.MethodPost, compactPath(src.ID), map[string]any{
-				"userMessageIndex": 1,
-			})
-			So(w.Code, ShouldEqual, http.StatusOK)
-			events := parseCompactSSEEvents(w.Body.String())
-			last := events[len(events)-1]
-			So(last.Name, ShouldEqual, "compress_done")
-			So(last.Data["foldedCount"], ShouldEqual, float64(2))
-			So(last.Data["summaryUptoSeq"], ShouldEqual, float64(firstAssistantSeq))
-
-			// 游标停在第 1 轮助手消息：更晚的第 2 轮（u2/a2）未被折叠（seq 均 > 游标）。
-			row := reloadCompactSession(t, db, src.ID)
-			So(row.SummaryUptoSeq, ShouldEqual, uint(firstAssistantSeq))
-			later := loadMessagesAfter(t, db, src.ID, uint(firstAssistantSeq))
-			So(len(later), ShouldEqual, 2)
-			So(later[0].Seq, ShouldBeGreaterThan, uint64(row.SummaryUptoSeq))
-		})
-
-		Convey("userMessageIndex 越界返回本地化 404（非 SSE）", func() {
-			rt := newEnabledAiRuntime(t, db)
-			r := newSessionCompactTestRouter(db, knowledgeTestNamespace, rt)
-			src := seedBranchSourceSession(t, db, "源会话")
-
-			w := doKnowledgeJSONRequest(r, http.MethodPost, compactPath(src.ID), map[string]any{
-				"userMessageIndex": 999,
-			})
-			So(w.Code, ShouldEqual, http.StatusNotFound)
-			So(w.Header().Get("Content-Type"), ShouldContainSubstring, "application/json")
-			So(w.Body.String(), ShouldContainSubstring, "not found")
-		})
-
-		Convey("flash 档位未绑定时仍以 start→done(foldedCount=0) 收敛（SSE 格式）", func() {
-			rt := newEnabledAiRuntime(t, db)
-			r := newSessionCompactTestRouter(db, knowledgeTestNamespace, rt)
-			src := seedBranchSourceSession(t, db, "源会话")
-
-			w := doKnowledgeJSONRequest(r, http.MethodPost, compactPath(src.ID), map[string]any{})
-			So(w.Code, ShouldEqual, http.StatusOK)
-			So(w.Header().Get("Content-Type"), ShouldContainSubstring, "text/event-stream")
-
-			events := parseCompactSSEEvents(w.Body.String())
-			So(len(events), ShouldEqual, 2)
-			So(events[0].Name, ShouldEqual, "compress_start")
-			So(events[0].Data["reason"], ShouldEqual, "manual")
-			So(events[1].Name, ShouldEqual, "compress_done")
-			// 失败路径折叠条数为 0，因 omitempty 被省略（不是显式 0）。
-			So(events[1].Data["foldedCount"], ShouldBeNil)
-
-			// 摘要未生成时游标不动（仍为 0）。
-			row := reloadCompactSession(t, db, src.ID)
-			So(row.SummaryUptoSeq, ShouldEqual, uint(0))
-		})
-	})
-}
-
-// loadMessagesAfter 读取 seq > afterSeq 的消息（按 seq 升序），供边界断言。
+// loadMessagesAfter 读取 seq > afterSeq 的消息（按 seq 升序），供折叠下界断言。
 func loadMessagesAfter(t *testing.T, db *database.DB, sessionID uint, afterSeq uint) []*modelsai.AgentMessage {
 	t.Helper()
 	store, err := ai.NewSessionStore(db)
@@ -295,4 +144,233 @@ func loadMessagesAfter(t *testing.T, db *database.DB, sessionID uint, afterSeq u
 		t.Fatalf("ListMessagesAfter error = %v", err)
 	}
 	return messages
+}
+
+// reloadCompactSession 重新读取一个会话行，供断言游标与摘要落库。
+func reloadCompactSession(t *testing.T, db *database.DB, sessionID uint) *modelsai.AgentSession {
+	t.Helper()
+	row := &modelsai.AgentSession{}
+	if err := db.Where("id = ?", sessionID).First(row).Error; err != nil {
+		t.Fatalf("reload session %d: %v", sessionID, err)
+	}
+	return row
+}
+
+// decodeCompactCode 解析压缩响应体中的业务码，供被拒用例断言 1125。
+func decodeCompactCode(t *testing.T, body []byte) int {
+	t.Helper()
+	var resp struct {
+		Code int `json:"code"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		t.Fatalf("unmarshal response error = %v (body=%s)", err, string(body))
+	}
+	return resp.Code
+}
+
+// TestAgentCompressSessionFoldScope 覆盖 Task 8 的折叠区间口径（8.1 / 8.2）：入参以选中的助手回答为
+// 折叠上界、以会话当前游标 summary_upto_seq 为下界，更晚的消息保持原文。以同步方式直接调用
+// Agent.CompressSession（与端点共用的折叠集合选择函数 compactFoldSet），不经 RunHub 在途活动——
+// 测试库为单连接事务（testdb.Core），在途活动的后台落库 goroutine 与该活动的读库并发会触发
+// conn busy，无法稳定断言；在途活动的生命周期语义另由 internal/ai 的 RunHub 用例覆盖。
+func TestAgentCompressSessionFoldScope(t *testing.T) {
+	db := createKnowledgeTestDB(t)
+	srv := newCompactChatServer(t)
+	defer srv.Close()
+	rt := newCompactingAiRuntime(t, db, srv.URL)
+	agent := rt.Current().Agent
+	if agent == nil {
+		t.Fatal("compacting runtime has no agent assembled")
+	}
+	session := seedBranchSourceSession(t, db, "源会话")
+	messages := loadSessionMessages(t, db, session.ID)
+	if len(messages) != 4 {
+		t.Fatalf("seeded messages = %d, want 4", len(messages))
+	}
+	a1 := messages[1] // u1(1) a1(2) u2(3) a2(4)
+	a2 := messages[3]
+	ctx := context.Background()
+
+	var reports []ai.CompressEvent
+	report := func(ev ai.CompressEvent) error {
+		reports = append(reports, ev)
+		return nil
+	}
+
+	// 第一次：上界 = a1.seq，下界 = 会话当前游标（尚未摘要，为 0）→ 折叠 u1 / a1 两条。
+	evicted := compactFoldSet(messages, a1.Seq)
+	if len(evicted) != 2 {
+		t.Fatalf("first fold set = %d messages, want 2", len(evicted))
+	}
+	agent.CompressSession(ctx, session, evicted, "manual", session.TargetModel, report)
+	if len(reports) == 0 {
+		t.Fatal("first compression reported no events")
+	}
+	first := reports[len(reports)-1]
+	if first.Type != modelsai.AgentRunEventCompressDone {
+		t.Fatalf("first compression last event = %q, want compress_done", first.Type)
+	}
+	if first.FoldedCount != 2 {
+		t.Errorf("first compression foldedCount = %d, want 2", first.FoldedCount)
+	}
+	if first.SummaryUptoSeq != uint(a1.Seq) {
+		t.Errorf("first compression summaryUptoSeq = %d, want %d", first.SummaryUptoSeq, a1.Seq)
+	}
+	if row := reloadCompactSession(t, db, session.ID); row.SummaryUptoSeq != uint(a1.Seq) {
+		t.Fatalf("cursor after first compression = %d, want %d", row.SummaryUptoSeq, a1.Seq)
+	}
+
+	// 第二次：下界 = 上次压缩结尾（a1.seq），上界 = a2.seq → 只折叠其间的 u2 / a2 两条。
+	later := loadMessagesAfter(t, db, session.ID, session.SummaryUptoSeq)
+	evicted2 := compactFoldSet(later, a2.Seq)
+	if len(evicted2) != 2 {
+		t.Fatalf("second fold set = %d messages, want 2", len(evicted2))
+	}
+	reports = nil
+	agent.CompressSession(ctx, session, evicted2, "manual", session.TargetModel, report)
+	if len(reports) == 0 {
+		t.Fatal("second compression reported no events")
+	}
+	second := reports[len(reports)-1]
+	if second.FoldedCount != 2 {
+		t.Errorf("second compression foldedCount = %d, want 2", second.FoldedCount)
+	}
+	if second.SummaryUptoSeq != uint(a2.Seq) {
+		t.Errorf("second compression summaryUptoSeq = %d, want %d", second.SummaryUptoSeq, a2.Seq)
+	}
+	if row := reloadCompactSession(t, db, session.ID); row.SummaryUptoSeq != uint(a2.Seq) {
+		t.Fatalf("cursor after second compression = %d, want %d", row.SummaryUptoSeq, a2.Seq)
+	}
+	// 更晚的消息保持原文：折叠不删除任何消息，会话消息总数仍为 4。
+	if got := len(loadSessionMessages(t, db, session.ID)); got != 4 {
+		t.Errorf("message total after fold = %d, want 4 (later messages must stay verbatim)", got)
+	}
+}
+
+// TestAgentSessionCompactBoundaryNotFound 覆盖压缩边界的本地化 404（8.4）：助手消息 ID 不存在、或指向
+// 非助手消息时，端点以 JSON 404（非 SSE）拒绝，且尚未启动任何在途活动。
+func TestAgentSessionCompactBoundaryNotFound(t *testing.T) {
+	db := createKnowledgeTestDB(t)
+	rt := newEnabledAiRuntime(t, db)
+	r := newSessionCompactTestRouter(db, knowledgeTestNamespace, rt)
+	session := seedBranchSourceSession(t, db, "源会话")
+	messages := loadSessionMessages(t, db, session.ID)
+	if len(messages) != 4 {
+		t.Fatalf("seeded messages = %d, want 4", len(messages))
+	}
+
+	cases := []struct {
+		name string
+		id   uint
+	}{
+		{"不存在的助手消息", 99999},
+		{"非助手消息（用户提问）", messages[0].ID},
+	}
+	for _, tc := range cases {
+		w := doKnowledgeJSONRequest(r, http.MethodPost, compactPath(session.ID), map[string]any{
+			"assistantMessageID": tc.id,
+		})
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("%s: status = %d, want %d (body=%s)", tc.name, w.Code, http.StatusNotFound, w.Body.String())
+		}
+		if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "application/json") {
+			t.Errorf("%s: content-type = %q, want application/json", tc.name, ct)
+		}
+		if body := w.Body.String(); !strings.Contains(body, "not found") {
+			t.Errorf("%s: body = %q, want localized not found", tc.name, body)
+		}
+	}
+}
+
+// TestAgentSessionCompact_RejectsRunning 端到端覆盖「运行中 → 压缩被拒 1125」：为该会话起一次阻塞的在途
+// 活动（内存登记为 running），压缩端点应先经 CanCompact 守卫以 409 + 业务码 1125 拒绝，且压缩未发生
+// （消息数不变、游标仍为 0）。用例走 PostgreSQL 测试库（起活动会登记 agent_live_runs 含 TIMESTAMPTZ 列）。
+func TestAgentSessionCompact_RejectsRunning(t *testing.T) {
+	db := createKnowledgeTestDB(t)
+	rt := newEnabledAiRuntime(t, db)
+	r := newSessionCompactTestRouter(db, knowledgeTestNamespace, rt)
+	session := seedSessionWithOneTurn(t, db, "运行中压缩")
+	store, err := ai.NewSessionStore(db)
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	before := truncateMessageCount(t, store, session.ID)
+
+	ctx := context.Background()
+	if _, err := rt.RunHub().StartActivity(ai.NewDetachedContext(ctx), ai.ActivityInput{
+		SessionID: session.ID, UserID: sessionTestUserID, Namespace: knowledgeTestNamespace,
+		Run: func(ctx context.Context, report func(typ modelsai.AgentRunEventType, payload any) error) error {
+			<-ctx.Done()
+			return ctx.Err()
+		},
+	}, nil); err != nil {
+		t.Fatalf("StartActivity error = %v", err)
+	}
+	// 起活动的瞬间 RunHub 会发布初始 state 事件并由后台落库 goroutine 写库；该活动自身阻塞于 ctx.Done
+	// 且不再上报任何事件，故等这一条写库完成后落库 goroutine 即进入空闲。测试库为单连接事务
+	// （testdb.Core），若不等待，处理器的读库会与该后台写库在同一连接上并发（pgx 报 conn busy）。
+	time.Sleep(100 * time.Millisecond)
+	defer func() {
+		_ = rt.RunHub().Cancel(context.Background(), session.ID, sessionTestUserID, knowledgeTestNamespace)
+	}()
+
+	w := doKnowledgeJSONRequest(r, http.MethodPost, compactPath(session.ID), map[string]any{})
+	if w.Code != http.StatusConflict {
+		t.Fatalf("compact(running) status = %d, want %d (body=%s)", w.Code, http.StatusConflict, w.Body.String())
+	}
+	if code := decodeCompactCode(t, w.Body.Bytes()); code != response.CodeAgentInteractionBusy {
+		t.Errorf("compact(running) code = %d, want %d", code, response.CodeAgentInteractionBusy)
+	}
+	if got := truncateMessageCount(t, store, session.ID); got != before {
+		t.Errorf("message count after rejected compact = %d, want unchanged %d", got, before)
+	}
+	if row := reloadCompactSession(t, db, session.ID); row.SummaryUptoSeq != 0 || row.Summary != nil {
+		t.Errorf("compact(running) mutated the session: summaryUptoSeq=%d summarySet=%v", row.SummaryUptoSeq, row.Summary != nil)
+	}
+}
+
+// TestAgentSessionCompact_RejectsWaiting 端到端覆盖「等待中 → 压缩被拒 1125」：为该会话播一次真实挂起
+// 现场（agent_runs 待恢复登记 + agent_live_runs 挂起登记、无内存活动），压缩端点应先经 CanCompact 守卫
+// 以 409 + 业务码 1125 拒绝，且压缩未发生。
+func TestAgentSessionCompact_RejectsWaiting(t *testing.T) {
+	db := createKnowledgeTestDB(t)
+	rt := newEnabledAiRuntime(t, db)
+	r := newSessionCompactTestRouter(db, knowledgeTestNamespace, rt)
+	session := seedSessionWithOneTurn(t, db, "等待中压缩")
+	store, err := ai.NewSessionStore(db)
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	before := truncateMessageCount(t, store, session.ID)
+
+	if err := db.Omit("Namespace").Create(&modelsai.AgentRun{
+		NamespaceName: knowledgeTestNamespace,
+		UserID:        sessionTestUserID,
+		SessionID:     session.ID,
+		Status:        modelsai.AgentRunStatusPending,
+		ExpiresAt:     time.Now().Add(time.Hour),
+	}).Error; err != nil {
+		t.Fatalf("seed pending agent run error = %v", err)
+	}
+	if err := db.Omit("Namespace").Create(&modelsai.AgentLiveRun{
+		NamespaceName: knowledgeTestNamespace,
+		UserID:        sessionTestUserID,
+		RunID:         serializer.NewHexUUIDv4(),
+		SessionID:     session.ID,
+		Phase:         modelsai.AgentRunPhaseSuspended,
+		ExpiresAt:     time.Now().Add(time.Hour),
+	}).Error; err != nil {
+		t.Fatalf("seed suspended live run error = %v", err)
+	}
+
+	w := doKnowledgeJSONRequest(r, http.MethodPost, compactPath(session.ID), map[string]any{})
+	if w.Code != http.StatusConflict {
+		t.Fatalf("compact(waiting) status = %d, want %d (body=%s)", w.Code, http.StatusConflict, w.Body.String())
+	}
+	if code := decodeCompactCode(t, w.Body.Bytes()); code != response.CodeAgentInteractionBusy {
+		t.Errorf("compact(waiting) code = %d, want %d", code, response.CodeAgentInteractionBusy)
+	}
+	if got := truncateMessageCount(t, store, session.ID); got != before {
+		t.Errorf("message count after rejected compact = %d, want unchanged %d", got, before)
+	}
 }

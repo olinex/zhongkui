@@ -396,7 +396,7 @@ func (x *xdpWire) LinkType() layers.LinkType {
 func (x *xdpWire) SetBPFFilter(expr string) error {
 	spec, err := CompileBPFProgramJIT(expr)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	x.bpfSpec = spec

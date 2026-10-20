@@ -11,11 +11,12 @@ import type { SearchIn } from "@/components/@types/table";
 import type { FlexIDs } from "./@types/admin";
 import type {
   AgentOutput,
+  AgentAssistantInputRerunIn,
+  AgentAssistantInputRerunOut,
   AgentMemoryStatusIn,
-  AgentMessageQuestionnaire,
   AgentMessageTruncateIn,
+  AgentMessageBlockOut,
   AgentPromptOptimizeIn,
-  AgentQuestionnaireReanswerIn,
   AgentSessionBranchIn,
   AgentSessionCompactIn,
   AgentSessionCreateIn,
@@ -269,14 +270,14 @@ export function agentMessageTruncate(id: number, data: AgentMessageTruncateIn): 
   });
 }
 
-// agentQuestionnaireReanswer 回退（重新回答）一次已提交的问卷：定位问卷锚点消息，删除其后的全部消息
-// 并重置关联运行现场为待回答，返回问卷载荷（题目 + 上次答案，供前端预填重开）与待执行调用列表
-// （供重答后经 agentToolResultStream 原样回传续跑）。
-export function agentQuestionnaireReanswer(
+// agentAssistantInputRerun 回退到一条助手待输入回合（问卷作答 / 工具授权）：定位该回合的助手锚点消息，
+// 删除其后的全部消息并把关联运行现场重置为待输入，出参按回合种类给出问卷各轮载荷（供前端预填重开）或
+// 待审批调用清单（供前端重建审批面板），授权 / 重答后经 agentToolResultStream 原样回传续跑。
+export function agentAssistantInputRerun(
   sessionID: number,
-  data: AgentQuestionnaireReanswerIn,
-): AxiosPromise<AgentMessageQuestionnaire> {
-  return request.post(`/ai/agent/${sessionID}/questionnaire/reanswer`, data, {
+  data: AgentAssistantInputRerunIn,
+): AxiosPromise<AgentAssistantInputRerunOut> {
+  return request.post(`/ai/agent/${sessionID}/input/rerun`, data, {
     headers: getJwtHeader(),
   });
 }
@@ -359,7 +360,14 @@ export interface AgentStreamHandlers {
   // onReasoning 思考过程增量（reasoning 事件）：与正文增量并行累积，供折叠区块实时呈现
   onReasoning?: (delta: string) => void;
   onStage?: (stage: AgentStageEvent) => void;
+  // onBlock 内容块事件（block 事件）：负载 {seq, kind, payload}，块创建与收敛各下发一次；前端据此按
+  // seq 归并出本消息的有序内容块（消息体的唯一展示来源，与刷新后的出参 blocks 同源）
+  onBlock?: (ev: AgentMessageBlockOut) => void;
   onToolRequest?: (req: ToolRequestPayload) => void;
+  // onState 交互状态事件（state 事件）：负载 {state, substate}，为会话交互状态的唯一权威来源。
+  // 前端据此驱动输入闸门 / 停止按钮 / 授权与问卷面板 / 运行子状态标识 / 锁定提示，
+  // 不再自行推断「是否运行中 / 是否等待审批」。
+  onState?: (state: string, substate: string) => void;
   // 上下文压缩开始：携带压缩原因、压缩前占用 token、有效档位容量与触发阈值
   onCompressStart?: (payload: CompressStartPayload) => void;
   // 上下文压缩摘要增量：摘要生成的实时增量文本
@@ -543,11 +551,21 @@ function dispatchAgentEvent(event: SSERawEvent, handlers: AgentStreamHandlers): 
     case "stage":
       handlers.onStage?.(event.data as AgentStageEvent);
       break;
+    // 内容块事件：负载 {seq, kind, payload}，块的创建与收敛各下发一次，是消息体的唯一展示来源
+    case "block":
+      handlers.onBlock?.(event.data as AgentMessageBlockOut);
+      break;
     // 挂起事件：模型请求调用平台原生接口，流随后正常 EOF（不发 done / error），
     // 前端须置为「等待审批」态而非失败
     case "tool_request":
       handlers.onToolRequest?.(event.data as ToolRequestPayload);
       break;
+    // 交互状态事件：负载 {state, substate}，为会话交互状态的唯一权威来源；前端据此驱动 UI
+    case "state": {
+      const payload = event.data as { state: string; substate: string };
+      handlers.onState?.(payload.state, payload.substate);
+      break;
+    }
     // 上下文压缩事件（compress_start / compress_delta / compress_done）：手动压缩流为无 id
     // 事件，不触发 onSeq，仅按类型分发
     case "compress_start":

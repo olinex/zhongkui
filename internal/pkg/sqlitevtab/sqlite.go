@@ -143,7 +143,7 @@ func (sc *sqliteConn) Open(ctx context.Context) error {
 	if err := sc.syncModules(sc.pool.registrySnapshot()); err != nil {
 		_ = conn.Close()
 		sc.conn = nil
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -305,7 +305,7 @@ func (p *SQLitePool) Query(ctx context.Context, sql string, args ...any) ([]stri
 	defer func() { sc.queryCtx = nil }()
 
 	if err = sc.syncModules(p.registrySnapshot()); err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 
 	stmt, _, err := sc.conn.Prepare(sql)
@@ -316,7 +316,7 @@ func (p *SQLitePool) Query(ctx context.Context, sql string, args ...any) ([]stri
 
 	for i, arg := range args {
 		if err := bindStmtValue(stmt, i+1, arg); err != nil {
-			return nil, nil, err
+			return nil, nil, errors.WithStack(err)
 		}
 	}
 

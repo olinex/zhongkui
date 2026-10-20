@@ -73,27 +73,27 @@ func Export(ctx context.Context, opts Options) error {
 		}
 		content, err := RenderPackage(opts.ProjectRoot, entry.Package, true)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if err := writeDoc(rootDir, entry.Output, narrativeDocument(entry, content)); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 
 	// 投影页：内容由调用方按单一事实来源渲染，此处仅落盘（套用统一页头与生成标记）。
 	if err := writeProjections(rootDir, opts.Projections); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// 参考档：自动发现并导出后端全部包
 	refs, err := discoverPackages(opts.ProjectRoot)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	for _, ref := range refs {
 		content, err := renderDir(ref.Dir, false)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		// 输出路径由包实际所在目录相对项目根推导，不依赖模块导入路径，
 		// 从而使构建信息缺失（如 `go run <文件>`）时导出依然正确。
@@ -103,14 +103,14 @@ func Export(ctx context.Context, opts Options) error {
 		}
 		output := filepath.Join("reference", rel+".md")
 		if err := writeDoc(rootDir, output, referenceDocument(ref, content)); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 
 	// 索引档：生成项目根 README.md（封面 + 目录），作为文档体系的唯一入口。
 	// 链接一律以 docs/ 前缀书写，使其相对项目根可跳转。
 	if err := writeDoc(opts.ProjectRoot, "README.md", readmeDocument(len(refs), opts.Projections)); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ func GeneratedNarrativeDocuments(projectRoot string) ([]NarrativeDocument, error
 		}
 		content, err := RenderPackage(projectRoot, entry.Package, true)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if content == "" {
 			continue
@@ -222,7 +222,7 @@ func GeneratedNarrativeDocuments(projectRoot string) ([]NarrativeDocument, error
 func writeProjections(rootDir string, projections []Projection) error {
 	for _, p := range projections {
 		if err := writeDoc(rootDir, p.Output, projectionDocument(p)); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 	return nil

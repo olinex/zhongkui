@@ -106,7 +106,7 @@ func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey
 	}
 	if typeKey == MustTypeKey(&network.HttpTransport{}) {
 		if exists, err := sampleExists(ctx, db, namespace, typeKey, httpExampleSampleName); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		} else if !exists {
 			raw, err := json.Marshal(httpTransportExample)
 			if err != nil {
@@ -126,7 +126,7 @@ func EnsureModelSamples(ctx context.Context, db *database.DB, namespace, typeKey
 			// 并发幂等：唯一约束冲突说明其他调用方已供给同名样例，
 			// 忽略该错误后以重查结果为准；若重查仍无此样例则视为真实错误返回
 			if exists, existsErr := sampleExists(ctx, db, namespace, typeKey, sample.Name); existsErr != nil {
-				return nil, existsErr
+				return nil, errors.WithStack(existsErr)
 			} else if !exists {
 				return nil, errors.WithStack(err)
 			}

@@ -61,8 +61,15 @@ func TestMapAgentLiveRunError(t *testing.T) {
 }
 
 // TestNewAgentLiveRunOut 测试驻留运行快照到视图层输出项的映射：挂起阶段标记待审批并携带待执行
-// 调用列表，其它阶段待审批为假且待执行调用为空数组。
+// 调用列表，其它阶段待审批为假且待执行调用为空数组；交互状态五项随 interaction 快照原样写入。
 func TestNewAgentLiveRunOut(t *testing.T) {
+	interaction := ai.InteractionSnapshot{
+		State:        modelsai.AgentInteractionStateWaiting,
+		Substate:     modelsai.AgentInteractionSubstateApproval,
+		Locked:       false,
+		UserTurns:    2,
+		MaxUserTurns: 20,
+	}
 	suspended := newAgentLiveRunOut(&ai.LiveRunStatus{
 		RunID:   serializer.MustHexUUIDv4FromString("11111111-1111-1111-1111-111111111111"),
 		Phase:   modelsai.AgentRunPhaseSuspended,
@@ -70,7 +77,7 @@ func TestNewAgentLiveRunOut(t *testing.T) {
 		PendingCalls: []ai.PendingCall{
 			{CallID: "c1", ToolName: "api_invoke", Arguments: "{}", AuditLevel: ai.AuditLevelSuggest, ApprovalRequired: true},
 		},
-	})
+	}, interaction)
 	if !suspended.AwaitingApproval || suspended.LastSeq != 7 || len(suspended.PendingCalls) != 1 {
 		t.Fatalf("suspended snapshot = %+v, want awaiting approval with one pending call", suspended)
 	}
@@ -78,8 +85,20 @@ func TestNewAgentLiveRunOut(t *testing.T) {
 	if call := suspended.PendingCalls[0]; call.AuditLevel != ai.AuditLevelSuggest || !call.ApprovalRequired {
 		t.Errorf("pending call = %+v, want audit level and approval flag carried through", call)
 	}
-	running := newAgentLiveRunOut(&ai.LiveRunStatus{RunID: serializer.MustHexUUIDv4FromString("22222222-2222-2222-2222-222222222222"), Phase: modelsai.AgentRunPhaseRunning})
+	// 交互状态五项须与会话出参同口径地随快照下发。
+	if suspended.InteractionState != modelsai.AgentInteractionStateWaiting ||
+		suspended.InteractionSubstate != modelsai.AgentInteractionSubstateApproval ||
+		suspended.Locked || suspended.UserTurns != 2 || suspended.MaxUserTurns != 20 {
+		t.Errorf("suspended interaction = %+v, want the interaction snapshot carried through", suspended)
+	}
+	running := newAgentLiveRunOut(&ai.LiveRunStatus{RunID: serializer.MustHexUUIDv4FromString("22222222-2222-2222-2222-222222222222"), Phase: modelsai.AgentRunPhaseRunning}, ai.InteractionSnapshot{
+		State:    modelsai.AgentInteractionStateRunning,
+		Substate: modelsai.AgentInteractionSubstateGenerating,
+	})
 	if running.AwaitingApproval || running.PendingCalls == nil || len(running.PendingCalls) != 0 {
 		t.Errorf("running snapshot = %+v, want not awaiting approval with an empty (non-nil) call list", running)
+	}
+	if running.InteractionState != modelsai.AgentInteractionStateRunning || running.InteractionSubstate != modelsai.AgentInteractionSubstateGenerating {
+		t.Errorf("running interaction = %+v, want running/generating", running)
 	}
 }

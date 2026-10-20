@@ -69,7 +69,7 @@ func reconcileVectorColumns(
 			exec,
 		)
 		if err != nil {
-			return reconciled, err
+			return reconciled, errors.WithStack(err)
 		}
 		if changed {
 			reconciled = true
@@ -106,7 +106,7 @@ func reconcileVectorColumn(
 	}
 	current, found, err := currentDim(ctx)
 	if err != nil || !found {
-		return false, err
+		return false, errors.WithStack(err)
 	}
 	if current == dimensions {
 		return false, nil
@@ -169,7 +169,7 @@ func CheckEmbeddingDimension(ctx context.Context, db *gorm.DB, dimensions int) e
 	for _, vc := range vectorColumns {
 		current, found, err := currentColumnDimension(ctx, db, vc.table, vc.column)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if !found {
 			continue

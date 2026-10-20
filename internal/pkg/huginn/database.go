@@ -192,7 +192,7 @@ type database struct {
 func loadDatabase(contents string) (*database, error) {
 	sections, err := parseSections(contents)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return newDatabase(sections), nil
 }
@@ -229,5 +229,5 @@ func globalDatabase() (*database, error) {
 		}
 		globalDB, globalDBErr = loadDatabase(string(p0f) + "\n" + string(local))
 	})
-	return globalDB, globalDBErr
+	return globalDB, errors.WithStack(globalDBErr)
 }

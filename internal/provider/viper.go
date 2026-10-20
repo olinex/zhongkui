@@ -5,12 +5,13 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"zhongkuisec.com/zhongkui/internal/pkg/config"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 func newViperProvider() do.Provider[*viper.Viper] {
 	return func(i do.Injector) (*viper.Viper, error) {
 		if cmd, err := do.Invoke[*cobra.Command](i); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		} else {
 			return config.NewDefaultViperWithCmd(cmd), nil
 		}

@@ -96,6 +96,8 @@
 1121 = "该会话的驻留运行已过期"
 1122 = "无权访问该会话的在途运行"
 1123 = "请求过于频繁，请稍后再试"
+1124 = "会话已达轮次上限，请回滚后再试"
+1125 = "当前会话状态不允许该操作，请稍后再试"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -1987,6 +1989,47 @@ other = "已取消"
 [enum.agentRunPhase.suspended]
 other = "待审批"
 
+# 会话交互状态（枚举类 agentInteractionState）
+[enum.agentInteractionState.waiting]
+other = "等待中"
+
+[enum.agentInteractionState.running]
+other = "运行中"
+
+[enum.agentInteractionState.paused]
+other = "暂停"
+
+[enum.agentInteractionState.locked]
+other = "已锁定"
+
+# 会话交互子状态（枚举类 agentInteractionSubstate）
+[enum.agentInteractionSubstate.approval]
+other = "等待授权"
+
+[enum.agentInteractionSubstate.answer]
+other = "等待回答"
+
+[enum.agentInteractionSubstate.generating]
+other = "正文生成中"
+
+[enum.agentInteractionSubstate.thinking]
+other = "思考中"
+
+[enum.agentInteractionSubstate.tool_calling]
+other = "工具调用中"
+
+[enum.agentInteractionSubstate.compacting]
+other = "上下文压缩中"
+
+[enum.agentInteractionSubstate.success]
+other = "成功"
+
+[enum.agentInteractionSubstate.failed]
+other = "失败"
+
+[enum.agentInteractionSubstate.aborted]
+other = "用户中止"
+
 # MCP 远端传输方式（枚举类 mcpTransport）
 [enum.mcpTransport.sse]
 other = "SSE"
@@ -2301,6 +2344,12 @@ other = "自动压缩阈值"
 [param.session.compactThresholdRatio.comment]
 other = "触发自动压缩的占用比例阈值（占用 token / 档位容量）"
 
+[param.session.maxUserTurns.label]
+other = "会话轮次上限"
+
+[param.session.maxUserTurns.comment]
+other = "有效轮次的会话上限（会话内当前存在的用户提问条数）；达到即自动锁定并拒绝新提问，回滚使轮次降到上限以下即自动解锁"
+
 [param.session.topicSystemPrompt.label]
 other = "会话主题提示词"
 
@@ -2467,6 +2516,108 @@ other = "向用户提问"
 
 [tool.ask_user.comment]
 other = "模型在信息不足或需用户在多个方案间抉择时向用户提问；由前端呈现问卷、用户作答后回传结果，可一次提多个问题，每题提供候选答案"
+
+[tool.math_eval.label]
+other = "表达式求值"
+
+[tool.math_eval.comment]
+other = "对单个算术或逻辑表达式精确求值，避免模型心算失误；支持四则运算、幂、比较与逻辑运算符"
+
+[tool.unit_convert.label]
+other = "单位换算"
+
+[tool.unit_convert.comment]
+other = "在同一物理量的不同单位之间换算，覆盖长度、质量、时间、面积、体积、数据量、速度、温度等类别"
+
+[tool.base_convert.label]
+other = "进制转换"
+
+[tool.base_convert.comment]
+other = "在 2~36 进制之间进行任意精度整数转换"
+
+[tool.datetime_calc.label]
+other = "日期时间运算"
+
+[tool.datetime_calc.comment]
+other = "获取当前时刻、换算时区、做日期时间的加减与差值计算，支持 IANA 时区"
+
+[tool.regex.label]
+other = "正则测试与替换"
+
+[tool.regex.comment]
+other = "按 Go（RE2）语法测试文本是否匹配或执行替换，返回命中详情或替换结果"
+
+[tool.json_diff.label]
+other = "JSON 差异比较"
+
+[tool.json_diff.comment]
+other = "递归比较两段 JSON，按路径列出新增、删除与变更的字段"
+
+[tool.text_stats.label]
+other = "文本统计"
+
+[tool.text_stats.comment]
+other = "统计文本的字符数、字节数、词数、行数与段落数"
+
+[tool.hash.label]
+other = "哈希摘要"
+
+[tool.hash.comment]
+other = "对文本计算 MD5、SHA-1、SHA-256 或 SHA-512 摘要，同时给出十六进制与 Base64 表示"
+
+[tool.encode_convert.label]
+other = "编码转换"
+
+[tool.encode_convert.comment]
+other = "在 Base64、Base64URL、Hex、URL 与 HTML 编码之间进行编码或解码"
+
+[tool.uuid.label]
+other = "UUID 生成"
+
+[tool.uuid.comment]
+other = "生成指定版本（v4 或 v7）的 UUID，可一次批量生成"
+
+[tool.json.label]
+other = "JSON 处理"
+
+[tool.json.comment]
+other = "对 JSON 文本做合法性校验、缩进格式化、压缩，以及按路径取值"
+
+[tool.csv_parse.label]
+other = "CSV 解析"
+
+[tool.csv_parse.comment]
+other = "把 CSV 文本解析为表头与数据行，支持自定义分隔符与是否含表头"
+
+[tool.url_parse.label]
+other = "URL 解析"
+
+[tool.url_parse.comment]
+other = "解析 URL 的协议、用户、主机、端口、路径、查询参数与片段等分量"
+
+[tool.poly_solve.label]
+other = "多项式求根"
+
+[tool.poly_solve.comment]
+other = "求一元高次多项式的全部根，优先精确给出有理根，其余以复数数值近似，并标注重数"
+
+[tool.linear_solve.label]
+other = "线性方程组求解"
+
+[tool.linear_solve.comment]
+other = "求解线性方程组 Ax=b，判定唯一解 / 无穷多解 / 无解，并在无穷多解时给出特解与零空间基"
+
+[tool.root_find.label]
+other = "方程数值求根"
+
+[tool.root_find.comment]
+other = "求一元方程 f(x)=0 的实根，可按区间扫描全部根，也可由初值用牛顿法迭代定位"
+
+[tool.nonlinear_solve.label]
+other = "非线性方程组求解"
+
+[tool.nonlinear_solve.comment]
+other = "用牛顿-拉夫逊法求解非线性方程组，给出解向量、残余与迭代次数"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)

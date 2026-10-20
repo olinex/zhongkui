@@ -78,13 +78,13 @@ func (h *SendGroupHandler) Do(ctx context.Context, task etl.Task) error {
 		return errors.WithStack(err)
 	}
 	if err := validateSendGroupInput(input); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	targets, err := h.service.ResolveGroupTargets(ctx, input)
 	if err != nil {
 		h.logger.Ctx(ctx).Errorf("notify: resolve group targets failed (namespace=%s groupID=%v event=%s/%d): %v",
 			input.Namespace, input.GroupID, input.EventType, input.EventID, err)
-		return err
+		return errors.WithStack(err)
 	}
 	h.logger.Ctx(ctx).Infof("notify: fan out %d send:target tasks (namespace=%s groupID=%v event=%s/%d)",
 		len(targets), input.Namespace, input.GroupID, input.EventType, input.EventID)
@@ -99,13 +99,13 @@ func (h *SendGroupHandler) Do(ctx context.Context, task etl.Task) error {
 			enqueueErr = errors.Join(enqueueErr, err)
 		}
 	}
-	return enqueueErr
+	return errors.WithStack(enqueueErr)
 }
 
 // NewSendGroupTask 将通知组发送请求编码为 notify:send:group 异步任务；必填字段缺失返回错误。
 func NewSendGroupTask(in notifybase.SendGroupInput) (*asynq.Task, error) {
 	if err := validateSendGroupInput(in); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	payload, err := json.Marshal(&in)
 	if err != nil {
@@ -146,12 +146,12 @@ func (h *SendTargetHandler) Do(ctx context.Context, task etl.Task) error {
 		return errors.WithStack(err)
 	}
 	if err := validateSendTargetInput(input); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err := h.service.SendToTarget(ctx, input); err != nil {
 		h.logger.Ctx(ctx).Errorf("notify: send-to-target failed (namespace=%s targetID=%d event=%s/%d): %v",
 			input.Namespace, input.TargetID, input.EventType, input.EventID, err)
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -159,7 +159,7 @@ func (h *SendTargetHandler) Do(ctx context.Context, task etl.Task) error {
 // NewSendTargetTask 将单目标直投请求编码为 notify:send:target 异步任务；必填字段缺失返回错误。
 func NewSendTargetTask(in notifybase.SendTargetInput) (*asynq.Task, error) {
 	if err := validateSendTargetInput(in); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	payload, err := json.Marshal(&in)
 	if err != nil {

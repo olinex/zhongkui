@@ -40,7 +40,7 @@ func convertDocx(r io.ReaderAt, size int64) (string, error) {
 	defer rc.Close()
 	blocks, err := parseDocxBody(rc)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	return strings.Join(blocks, "\n\n"), nil
 }
@@ -97,7 +97,7 @@ func (p *docxParagraph) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 	for {
 		tok, err := d.Token()
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		switch t := tok.(type) {
 		case xml.StartElement:
@@ -105,30 +105,30 @@ func (p *docxParagraph) UnmarshalXML(d *xml.Decoder, start xml.StartElement) err
 			case "pStyle":
 				var s docxVal
 				if err := d.DecodeElement(&s, &t); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				p.style = s.Val
 			case "t":
 				var s docxText
 				if err := d.DecodeElement(&s, &t); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				// xml:space="preserve" 时 chardata 原样保留前导/尾随空格
 				b.WriteString(s.Value)
 			case "br", "cr":
 				b.WriteString("\n")
 				if err := d.Skip(); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 			case "tab":
 				b.WriteString("\t")
 				if err := d.Skip(); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 			case "instrText":
 				// 域代码（如页码域）不属正文，跳过以免脏文本
 				if err := d.Skip(); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 			}
 		case xml.EndElement:
@@ -183,7 +183,7 @@ func (t *docxTable) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	for {
 		tok, err := d.Token()
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		switch e := tok.(type) {
 		case xml.StartElement:
@@ -193,14 +193,14 @@ func (t *docxTable) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 			case "tc":
 				cell, err := decodeTableCell(d, e)
 				if err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				if inRow {
 					row = append(row, cell)
 				}
 			case "tbl":
 				if err := d.Skip(); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 			}
 		case xml.EndElement:
@@ -221,7 +221,7 @@ func decodeTableCell(d *xml.Decoder, start xml.StartElement) (string, error) {
 	for {
 		tok, err := d.Token()
 		if err != nil {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 		switch e := tok.(type) {
 		case xml.StartElement:
@@ -229,14 +229,14 @@ func decodeTableCell(d *xml.Decoder, start xml.StartElement) (string, error) {
 			case "p":
 				var p docxParagraph
 				if err := d.DecodeElement(&p, &e); err != nil {
-					return "", err
+					return "", errors.WithStack(err)
 				}
 				if s := strings.TrimSpace(p.text); s != "" {
 					parts = append(parts, s)
 				}
 			case "tbl":
 				if err := d.Skip(); err != nil {
-					return "", err
+					return "", errors.WithStack(err)
 				}
 			}
 		case xml.EndElement:

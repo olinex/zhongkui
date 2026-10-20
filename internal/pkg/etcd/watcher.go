@@ -157,7 +157,7 @@ func (w *Watcher) watchLoop(ctx context.Context) error {
 				return errors.New("etcd change watch channel closed")
 			}
 			if err := w.handleResponse(ctx, resp); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 	}

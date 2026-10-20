@@ -27,18 +27,28 @@ type stubChat struct {
 	reply     string              // Generate 的完整回复
 	chunks    []string            // Stream 的分块；为空时退回单块 reply
 	reason    []string            // Stream 的思考分块（ReasoningContent），在正文分块之前外发
+	usage     *schema.TokenUsage  // 非空时随响应元信息上报的 token 用量（Generate 直接附带；Stream 随末帧附带）
 	gotInputs [][]*schema.Message // 记录每次调用收到的消息列表
 	gotOpts   [][]model.Option    // 记录每次调用收到的选项
+}
+
+// responseMeta 按配置的用量构造响应元信息；未配置用量时返回 nil。
+func (s *stubChat) responseMeta() *schema.ResponseMeta {
+	if s.usage == nil {
+		return nil
+	}
+	return &schema.ResponseMeta{Usage: s.usage}
 }
 
 // Generate 记录输入消息并返回配置的完整回复（思考内容一并聚合返回）。
 func (s *stubChat) Generate(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.Message, error) {
 	s.gotInputs = append(s.gotInputs, input)
 	s.gotOpts = append(s.gotOpts, opts)
-	return &schema.Message{Role: schema.Assistant, Content: s.reply, ReasoningContent: strings.Join(s.reason, "")}, nil
+	return &schema.Message{Role: schema.Assistant, Content: s.reply, ReasoningContent: strings.Join(s.reason, ""), ResponseMeta: s.responseMeta()}, nil
 }
 
-// Stream 记录输入消息并返回配置的分块流，未配置分块时退回单块回复；思考分块先于正文分块外发。
+// Stream 记录输入消息并返回配置的分块流，未配置分块时退回单块回复；思考分块先于正文分块外发；
+// 配置了用量时再补发一帧仅承载用量的空正文帧（用量常落在末帧，供采集用量而正文不受影响）。
 func (s *stubChat) Stream(ctx context.Context, input []*schema.Message, opts ...model.Option) (*schema.StreamReader[*schema.Message], error) {
 	s.gotInputs = append(s.gotInputs, input)
 	s.gotOpts = append(s.gotOpts, opts)
@@ -46,7 +56,11 @@ func (s *stubChat) Stream(ctx context.Context, input []*schema.Message, opts ...
 	if len(chunks) == 0 {
 		chunks = []string{s.reply}
 	}
-	sr, sw := schema.Pipe[*schema.Message](len(chunks) + len(s.reason))
+	extra := 0
+	if s.usage != nil {
+		extra = 1
+	}
+	sr, sw := schema.Pipe[*schema.Message](len(chunks) + len(s.reason) + extra)
 	go func() {
 		defer sw.Close()
 		for _, r := range s.reason {
@@ -54,6 +68,9 @@ func (s *stubChat) Stream(ctx context.Context, input []*schema.Message, opts ...
 		}
 		for _, c := range chunks {
 			sw.Send(&schema.Message{Role: schema.Assistant, Content: c}, nil)
+		}
+		if meta := s.responseMeta(); meta != nil {
+			sw.Send(&schema.Message{Role: schema.Assistant, ResponseMeta: meta}, nil)
 		}
 	}()
 	return sr, nil
@@ -441,14 +458,14 @@ func TestStreamRun_ReasoningStreamedAndPersisted(t *testing.T) {
 	if len(messages) != 2 {
 		t.Fatalf("ListMessages len = %d, want 2 (user + assistant)", len(messages))
 	}
-	if messages[1].Reasoning == nil || string(messages[1].Reasoning.Value()) != "think harder" {
-		t.Errorf("persisted reasoning = %v, want %q", messages[1].Reasoning, "think harder")
+	if got := reasoningTextOf(t, agent.store, messages[1]); got != "think harder" {
+		t.Errorf("persisted reasoning = %q, want %q", got, "think harder")
 	}
 	if string(messages[1].Content.Value()) != "Hello" {
 		t.Errorf("persisted content = %q, want %q", messages[1].Content.Value(), "Hello")
 	}
-	if messages[0].Reasoning != nil {
-		t.Errorf("user message reasoning = %v, want nil", messages[0].Reasoning)
+	if got := reasoningTextOf(t, agent.store, messages[0]); got != "" {
+		t.Errorf("user message reasoning = %q, want none", got)
 	}
 }
 
@@ -856,8 +873,8 @@ func TestStreamRun_RollingSummaryInjected(t *testing.T) {
 }
 
 // TestAgent_CompressSession 测试统一流式压缩例程：report 依次收到 start（含占用/容量/阈值）、
-// 若干 delta、done（含折叠条数与摘要游标）；evicted 为空时只有 start + done(FoldedCount=0)；
-// 摘要模型失败时仅告警、返回 nil，且以 foldedCount=0 的 done 收尾。
+// 若干 delta、done（含折叠条数、摘要游标与压缩后占用估算）；evicted 为空时只有 start +
+// done(FoldedCount=0)；摘要模型失败时仅告警、返回 nil，且以 foldedCount=0 的 done 收尾。
 func TestAgent_CompressSession(t *testing.T) {
 	ctx := context.Background()
 	db := newTestSessionDB(t)
@@ -870,7 +887,11 @@ func TestAgent_CompressSession(t *testing.T) {
 		"memory.enabled":                "false",
 		"session.compactThresholdRatio": "0.8",
 	})
-	memory := newTestMemory(t, db, &stubChat{chunks: []string{"folded ", "summary"}}, stubEmbedder{}, map[string]string{
+	// 摘要模型上报用量：压缩前占用 500 − prompt 120 + completion 20 = 估算 400。
+	memory := newTestMemory(t, db, &stubChat{
+		chunks: []string{"folded ", "summary"},
+		usage:  &schema.TokenUsage{PromptTokens: 120, CompletionTokens: 20},
+	}, stubEmbedder{}, map[string]string{
 		"memory.summarySystemPrompt": "sp",
 		"memory.enabled":             "false",
 	})
@@ -892,18 +913,19 @@ func TestAgent_CompressSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
-	appendMsg := func(role ai.MessageRole, content string) {
+	appendMsg := func(role ai.MessageRole, content string, promptTokens int) {
 		t.Helper()
 		if _, err := store.AppendMessage(ctx, &ai.AgentMessage{
-			SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: role, Content: encTestValue(content),
+			SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: role, Content: encTestValue(content), PromptTokens: promptTokens,
 		}); err != nil {
 			t.Fatalf("AppendMessage error = %v", err)
 		}
 	}
-	appendMsg(ai.MessageRoleUser, "u1")
-	appendMsg(ai.MessageRoleAssistant, "a1")
-	appendMsg(ai.MessageRoleUser, "u2")
-	appendMsg(ai.MessageRoleAssistant, "a2")
+	appendMsg(ai.MessageRoleUser, "u1", 0)
+	appendMsg(ai.MessageRoleAssistant, "a1", 0)
+	appendMsg(ai.MessageRoleUser, "u2", 0)
+	// 最新助手消息的 prompt tokens 即压缩前占用（500），故估算压缩后占用为 500-120+20=400。
+	appendMsg(ai.MessageRoleAssistant, "a2", 500)
 	evicted, err := store.ListMessagesAfter(ctx, session.ID, session.UserID, 0)
 	if err != nil {
 		t.Fatalf("ListMessagesAfter error = %v", err)
@@ -933,8 +955,20 @@ func TestAgent_CompressSession(t *testing.T) {
 	if done.Type != ai.AgentRunEventCompressDone || done.FoldedCount != 4 || done.SummaryUptoSeq != 4 || done.Reason != "manual" || done.TokensBefore != start.Tokens {
 		t.Errorf("done event = %+v, want 4 folded messages and cursor 4", done)
 	}
+	if done.TokensAfter != 400 {
+		t.Errorf("done event TokensAfter = %d, want the estimated 400", done.TokensAfter)
+	}
 	if session.SummaryUptoSeq != 4 || string(session.Summary.Value()) != "folded summary" {
 		t.Errorf("session after compression = (%q, %d), want the folded summary in place", session.Summary.Value(), session.SummaryUptoSeq)
+	}
+	// 压缩后占用的即时估算随检查点落库，供刷新 / 重进会话后回显前后对比与展示占用下调。
+	var checkpoint ai.AgentSessionCompaction
+	if err := db.Order("id DESC").First(&checkpoint).Error; err != nil {
+		t.Fatalf("loading the compaction checkpoint error = %v", err)
+	}
+	if checkpoint.TokensBefore != start.Tokens || checkpoint.FoldedCount != 4 || checkpoint.TokensAfter != 400 {
+		t.Errorf("checkpoint metrics = (tokens_before=%d, folded_count=%d, tokens_after=%d), want (%d, 4, 400)",
+			checkpoint.TokensBefore, checkpoint.FoldedCount, checkpoint.TokensAfter, start.Tokens)
 	}
 
 	// evicted 为空：只有 start 与 foldedCount=0 的 done；显式 slot 覆盖会话档位（flash 容量 32000）。
@@ -961,6 +995,138 @@ func TestAgent_CompressSession(t *testing.T) {
 	}
 	if len(events) != 2 || events[1].Type != ai.AgentRunEventCompressDone || events[1].FoldedCount != 0 {
 		t.Errorf("failure events = %+v, want start + done(foldedCount=0)", events)
+	}
+}
+
+// TestEstimatedTokensAfter_Guards 测试压缩后占用估算的守卫：仅在输入可信且结果合理时给出量值，
+// 否则一律返回 0（调用方据此不携带 TokensAfter、回落为等待真实测量回填）。重点覆盖「压缩前占用
+// 为 0（无基线）」这一来自真实缺陷的入力——公式会因「摘要 completion 大于摘要 prompt」而得出比
+// 压缩前更大的无意义正值。
+func TestEstimatedTokensAfter_Guards(t *testing.T) {
+	cases := []struct {
+		name   string
+		before int
+		usage  *schema.TokenUsage
+		want   int
+	}{
+		{"metrics and a plausible fold", 500, &schema.TokenUsage{PromptTokens: 120, CompletionTokens: 20}, 400},
+		{"no usage from the provider", 500, nil, 0},
+		{"no baseline, per-message content-like usage", 0, &schema.TokenUsage{PromptTokens: 0, CompletionTokens: 122}, 0},
+		{"no baseline with a plain usage", 0, &schema.TokenUsage{PromptTokens: 120, CompletionTokens: 20}, 0},
+		{"fold would not shrink the context", 500, &schema.TokenUsage{PromptTokens: 0, CompletionTokens: 30}, 0},
+		{"fold would empty the context", 500, &schema.TokenUsage{PromptTokens: 500, CompletionTokens: 0}, 0},
+	}
+	for _, tc := range cases {
+		if got := estimatedTokensAfter(tc.before, tc.usage); got != tc.want {
+			t.Errorf("estimatedTokensAfter(%d, %+v) = %d, want %d", tc.before, tc.usage, got, tc.want)
+		}
+	}
+}
+
+// TestEstimatedCompactedTokens 测试压缩后占用的即时估算口径：优先取摘要模型用量算出的估值；用量
+// 缺失或该估值不可用（不构成缩减）时回落为按字节折算的估值，使压缩完成即刻总有可展示的占用值；压缩
+// 前占用为 0（无基线）或按字节折算也不构成缩减时返回 0，回落为等待真实测量回填。
+func TestEstimatedCompactedTokens(t *testing.T) {
+	// "user" + ": " + "hello world" + "\n" = 18 字节 → 折算 18/3 = 6 个 token。
+	folded := []*ai.AgentMessage{{Role: ai.MessageRoleUser, Content: encTestValue("hello world")}}
+	cases := []struct {
+		name    string
+		before  int
+		usage   *schema.TokenUsage
+		evicted []*ai.AgentMessage
+		summary string
+		want    int
+	}{
+		{"usage from the provider wins", 500, &schema.TokenUsage{PromptTokens: 120, CompletionTokens: 20}, folded, "s", 400},
+		{"no usage falls back to the byte estimate", 500, nil, folded, "s", 495},
+		{"unusable usage also falls back", 500, &schema.TokenUsage{PromptTokens: 0, CompletionTokens: 30}, folded, "s", 495},
+		{"no baseline gives no estimate", 0, nil, folded, "s", 0},
+		{"fold that does not shrink gives no estimate", 500, nil, folded, strings.Repeat("s", 60), 0},
+	}
+	for _, tc := range cases {
+		if got := estimatedCompactedTokens(tc.before, tc.usage, tc.evicted, tc.summary, 0); got != tc.want {
+			t.Errorf("estimatedCompactedTokens(%s) = %d, want %d", tc.name, got, tc.want)
+		}
+	}
+}
+
+// TestAgent_CompressSession_KeepsMessagesAndBlocks 测试压缩不改动会话消息与内容块：压缩只把被挤出的
+// 历史折叠进滚动摘要并前移摘要游标（summary_upto_seq），既不删除消息也不删除其块（块不参与摘要折叠）。
+// 压缩前后消息条数与块条数须完全一致，且每块的载荷保持不变。
+func TestAgent_CompressSession_KeepsMessagesAndBlocks(t *testing.T) {
+	ctx := context.Background()
+	db := newTestSessionDB(t)
+	store, err := NewSessionStore(db)
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	params := testParams(t, map[string]string{
+		"memory.summarySystemPrompt": "sp",
+		"memory.enabled":             "false",
+	})
+	memory := newTestMemory(t, db, &stubChat{chunks: []string{"folded ", "summary"}}, stubEmbedder{}, map[string]string{
+		"memory.summarySystemPrompt": "sp",
+		"memory.enabled":             "false",
+	})
+	agent, err := NewAgent(ctx, stubResolver(&stubChat{reply: "unused"}), &stubRetriever{}, store, params, memory, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("NewAgent error = %v", err)
+	}
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
+	if err != nil {
+		t.Fatalf("CreateSession error = %v", err)
+	}
+	appendAssistantWithBlock := func(content string) {
+		t.Helper()
+		saved, aerr := store.AppendMessage(ctx, &ai.AgentMessage{
+			SessionID: session.ID, NamespaceName: "default", UserID: session.UserID, Role: ai.MessageRoleAssistant, Content: encTestValue(content),
+		})
+		if aerr != nil {
+			t.Fatalf("AppendMessage error = %v", aerr)
+		}
+		if aerr := store.AppendBlock(ctx, &ai.AgentMessageBlock{
+			NamespaceName: "default", UserID: session.UserID, MessageID: saved.ID, BlockSeq: 1,
+			Kind: ai.AgentMessageBlockKindContent, Payload: encTestValue(`{"text":"` + content + `"}`),
+		}); aerr != nil {
+			t.Fatalf("AppendBlock error = %v", aerr)
+		}
+	}
+	appendAssistantWithBlock("a1")
+	appendAssistantWithBlock("a2")
+	evicted, err := store.ListMessagesAfter(ctx, session.ID, session.UserID, 0)
+	if err != nil {
+		t.Fatalf("ListMessagesAfter error = %v", err)
+	}
+	if len(evicted) != 2 {
+		t.Fatalf("evicted len = %d, want 2", len(evicted))
+	}
+	countBlocks := func() int64 {
+		t.Helper()
+		var n int64
+		if cerr := db.Raw("SELECT count(*) FROM agent_message_blocks WHERE user_id = ?", session.UserID).Scan(&n).Error; cerr != nil {
+			t.Fatalf("counting blocks error = %v", cerr)
+		}
+		return n
+	}
+	messagesBefore := len(evicted)
+	blocksBefore := countBlocks()
+
+	report := func(CompressEvent) error { return nil }
+	if got := agent.CompressSession(ctx, session, evicted, "manual", "", report); got == nil || got.Summary != "folded summary" {
+		t.Fatalf("CompressSession() = %+v, want the folded summary", got)
+	}
+	if session.SummaryUptoSeq != 2 {
+		t.Errorf("summary_upto_seq = %d, want 2 (the cursor advances to the last folded seq)", session.SummaryUptoSeq)
+	}
+	after, err := store.ListMessages(ctx, session.ID, session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(after) != messagesBefore {
+		t.Errorf("messages after compression = %d, want %d (compression must not delete messages)", len(after), messagesBefore)
+	}
+	if blocks := countBlocks(); blocks != blocksBefore {
+		t.Errorf("blocks after compression = %d, want %d (compression must not delete blocks)", blocks, blocksBefore)
 	}
 }
 

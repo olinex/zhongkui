@@ -7,7 +7,6 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    __typeProbe: typeof import('./components/forms/__typeProbe.vue')['default']
     ActionButtonGroup: typeof import('./components/base/ActionButtonGroup.vue')['default']
     AdaptiveCell: typeof import('./components/table/AdaptiveCell.vue')['default']
     AdaptiveField: typeof import('./components/forms/AdaptiveField.vue')['default']

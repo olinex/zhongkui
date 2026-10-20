@@ -4,6 +4,7 @@
 
 ## Index
 
+- [func AgentAssistantInputRerun\(c \*gin.Context\)](<#AgentAssistantInputRerun>)
 - [func AgentMemoryBatchDelete\(c \*gin.Context\)](<#AgentMemoryBatchDelete>)
 - [func AgentMemoryDetailGet\(c \*gin.Context\)](<#AgentMemoryDetailGet>)
 - [func AgentMemoryListGet\(c \*gin.Context\)](<#AgentMemoryListGet>)
@@ -39,6 +40,8 @@
 - [func RegisterRoutes\(ctx \*views.RegisterContext\)](<#RegisterRoutes>)
 - [func RetrievalDryRunStream\(c \*gin.Context\)](<#RetrievalDryRunStream>)
 - [func RetrievalOptions\(c \*gin.Context\)](<#RetrievalOptions>)
+- [type AgentAssistantInputRerunIn](<#AgentAssistantInputRerunIn>)
+- [type AgentAssistantInputRerunOut](<#AgentAssistantInputRerunOut>)
 - [type AgentCancelOut](<#AgentCancelOut>)
 - [type AgentLiveRunOut](<#AgentLiveRunOut>)
 - [type AgentMemoryBatchIn](<#AgentMemoryBatchIn>)
@@ -46,6 +49,7 @@
 - [type AgentMemoryItemOut](<#AgentMemoryItemOut>)
 - [type AgentMemoryListOut](<#AgentMemoryListOut>)
 - [type AgentMemoryStatusIn](<#AgentMemoryStatusIn>)
+- [type AgentMessageBlockOut](<#AgentMessageBlockOut>)
 - [type AgentMessageCompressOut](<#AgentMessageCompressOut>)
 - [type AgentMessageItemOut](<#AgentMessageItemOut>)
 - [type AgentMessageListOut](<#AgentMessageListOut>)
@@ -53,6 +57,7 @@
 - [type AgentPendingCallOut](<#AgentPendingCallOut>)
 - [type AgentPromptOptimizeIn](<#AgentPromptOptimizeIn>)
 - [type AgentPromptOptimizeOut](<#AgentPromptOptimizeOut>)
+- [type AgentQuestionnaireOut](<#AgentQuestionnaireOut>)
 - [type AgentSessionBranchIn](<#AgentSessionBranchIn>)
 - [type AgentSessionCompactIn](<#AgentSessionCompactIn>)
 - [type AgentSessionCreateIn](<#AgentSessionCreateIn>)
@@ -84,6 +89,22 @@
 - [type RetrievalWeightsIn](<#RetrievalWeightsIn>)
 - [type RetrievalWeightsOut](<#RetrievalWeightsOut>)
 
+
+<a name="AgentAssistantInputRerun"></a>
+## func AgentAssistantInputRerun
+
+```go
+func AgentAssistantInputRerun(c *gin.Context)
+```
+
+AgentAssistantInputRerun 处理「回退到助手待输入回合」的请求（路由 POST /agent/:sessionID/input/rerun）。 泛化既有「问卷重新回答」语义，同时覆盖两类历史待输入回合（由该回合现场中的挂起调用判定）：
+
+- 问卷回合（含 ask\_user 调用）：删除锚点之后的全部消息、清空锚点本轮产出并重置为 suspended，把承载 现场重置为 pending（刷新存活期限），出参以 Questionnaire 返回题目 \+ 上次答案，供前端预填重开问卷；
+- 工具授权回合（其余调用）：同样截断与重置，出参以 PendingCalls 返回待审批调用清单，供前端重建 审批面板完成重新授权。
+
+两类回合均使改答 / 重新授权后经既有 tool\-result 接口按新决策续跑、写回同一锚点行。出参附带回退后的 交互主状态（与 StateOf 同口径），供前端立即刷新状态驱动 UI。
+
+处理顺序：命名空间 → 会话 ID → AI 启用 → 属主 → 会话归属（404 语义同详情接口）→ 状态守卫 （CanRerunUserInput，运行中 / 等待中被拒、已锁定放行；在绑定请求体与任何写库之前，被拒时不得产生任何 改动）→ 绑定请求体 → 执行回退。锚点消息不存在 / 不是待输入回合、或承载现场不存在均返回 404（避免泄露 资源存在性）；现场已过期按既有「已过期」语义以 400 拒绝（前端按后端本地化提示）。
 
 <a name="AgentMemoryBatchDelete"></a>
 ## func AgentMemoryBatchDelete
@@ -137,7 +158,7 @@ AgentMessageListGet 处理获取 AI 助手会话消息列表的请求。 会话�
 func AgentMessageTruncate(c *gin.Context)
 ```
 
-AgentMessageTruncate 处理从某一轮用户消息起截断会话消息的请求（路由 POST /session/:id/messages/truncate）。 供前端「回退 / 删除到某一轮对话」使用：按 UserMessageIndex（仅计用户消息）定位该轮提问，删除其 自身及之后的全部消息（含助手回复）。会话不存在 / 归属不符返回 404；目标用户消息不存在（序号越界） 同样返回 404，避免泄露会话内容细节。
+AgentMessageTruncate 处理从某一轮用户消息起截断会话消息的请求（路由 POST /session/:id/messages/truncate）。 供前端「回退 / 删除到某一轮对话」使用：按 UserMessageIndex（仅计用户消息）定位该轮提问，删除其 自身及之后的全部消息（含助手回复）。会话不存在 / 归属不符返回 404；目标用户消息不存在（序号越界） 同样返回 404，避免泄露会话内容细节。 状态守卫（口径来源见 ai.CanRollback）：回滚是一次「改动有效轮次」的既成事实操作，仅在 \`暂停\` / \`已锁定\` 允许发起——已锁定非死路，回滚把轮次降到上限以下即自动解锁；\`运行中\` / \`等待中\` 无稳定截断对象，一律 以 409 \+ 业务码 1125 拒绝（守卫在绑定请求体与调用 store 之前生效，绝不产生半截截断）。 截断同时作废该轮及之后的挂起现场（见 store）；内存中的在途运行再显式取消一次，作为「读取事实」与 「执行截断」之间竞态窗口的兜底（并发发送可能恰在守卫判定后启动一次运行）——否则客户端刷新 / 重开抽屉时 会探测到这个仍在「运行中」的 live\-run 并续播，把已删除回合的回答重新拼回消息区。取消为尽力而为， 失败不影响截断结果。 截断成功后重算并向该会话在内存运行广播交互状态（须走 broadcastInteractionState 同一入口，不得就地拼 状态）：回滚改变有效轮次，可能由 \`已锁定\` 派生回落 \`暂停\`。
 
 <a name="AgentPromptOptimize"></a>
 ## func AgentPromptOptimize
@@ -173,7 +194,7 @@ AgentSessionBranch 处理以某一轮对话为结尾创建会话分支的请求�
 func AgentSessionCompact(c *gin.Context)
 ```
 
-AgentSessionCompact 处理压缩 AI 助手会话上下文并抽取长期记忆的请求（SSE，路由 POST /session/:id/compact）。 先校验会话归属（404 语义同详情接口），再按可选的 userMessageIndex 确定折叠上界：折叠该轮提问 连同其助手回复以及更早的尚未摘要消息（userMessageIndex=0 时折叠全部尚未摘要消息，保持全量 语义）。压缩事件经 SSE 流写出：以事件类型为事件名，依次下发 compress\_start / compress\_delta / compress\_done，data 为事件载荷；摘要在脱管上下文（context.WithoutCancel）中完成并落库，客户端 断连不取消摘要生成与落库，写 SSE 失败仅吞掉。该轮序号越界或其后尚无助手回复沿用既有本地化 404（与消息截断一致，避免泄露会话内容细节）。
+AgentSessionCompact 处理压缩 AI 助手会话上下文并抽取长期记忆的请求（SSE，路由 POST /session/:id/compact）。 口径（Task 8）：入参以选中的助手回答为折叠边界——折叠「当前滚动摘要游标 summary\_upto\_seq（下界） 之后、到该助手回答 seq（上界）为止」的尚未摘要消息并把游标推进到该答案，更晚的消息保持原文； 边界为 0 时折叠全部尚未摘要消息（全量语义）。压缩本身是一次在途活动（RunHub.StartActivity）： 期间会话为 运行中/上下文压缩中、可中止，完成后经活动终局自然回落 暂停；失败仅告警且不产生半截检查点。 处理顺序严格：校验命名空间 / AI 功能 / 属主 / 会话归属（404 语义同详情接口）→ 交互状态守卫（仅 暂停 / 已锁定 可发起，运行中 / 等待中 → 409\+1125）→ 绑定请求体 → 解析边界 seq（消息不存在 / 非助手消息 → 本地化 404）→ 读未摘要消息并选出折叠集合 → 启动在途活动 → 订阅透传 SSE。所有可能 返回 JSON 错误的步骤（尤其边界解析与读库）都必须在启动活动与构造 SSE 写手之前完成，被拒时尚未 产生在途活动。
 
 <a name="AgentSessionCreate"></a>
 ## func AgentSessionCreate
@@ -267,9 +288,8 @@ AgentToolResult 处理回传客户端工具调用结果并续跑挂起运行的�
 
 1. 校验命名空间、会话 ID、AI 功能与会话归属（404 语义同其它接口，避免泄露资源存在性）；
 2. 绑定请求体（须覆盖挂起时下发的全部 callID；同一轮多个调用一次性回传）；
-3. 调用 ResumeRun 认领运行现场（校验归属/状态/过期并原子消费）并重建续跑流；
-4. 仅当 ResumeRun 成功后才构造 SSE 写手：NewSSEWriter 一旦构造即写入响应头，此后无法再返回 JSON 错误，故失败时按 errors.Is 映射业务码以 JSON 中断（此时尚未构造 SSE 写手）；
-5. 成功后以与流式生成一致的事件语义透传续跑输出（delta/stage/done），再次命中 client 工具时 再次下发 tool\_request 并以 io.EOF 正常结束。
+3. 经驻留运行执行器 RunHub 启动续跑（StartResume）：它先同步认领运行现场（校验归属/状态/过期并 原子消费），再以与首轮生成一致的登记 / 广播 / 收敛路径执行——因此续跑同样拥有独立的在途登记并 在收敛时写入终态，不会残留挂起现场留下的 suspended 登记（否则前端刷新后会据它误判「仍在等待 审批」，并以陈旧的挂起事件回放覆盖已落库的正文与思考）；认领失败按 errors.Is 映射业务码以 JSON 中断（此时尚未构造 SSE 写手）；
+4. 成功后订阅该运行并把回放 \+ 实时事件透传为带序号的 SSE 事件（事件语义 delta/stage/done 与首轮 生成一致），再次命中 client 工具时再次下发 tool\_request 并以运行收敛结束。
 
 <a name="KnowledgeDocumentBatchDelete"></a>
 ## func KnowledgeDocumentBatchDelete
@@ -421,6 +441,36 @@ func RetrievalOptions(c *gin.Context)
 
 RetrievalOptions 处理检索试运行参数默认值请求：从 AI 运行时参数解析器（当前 AI 组件 携带的参数解析器，即注册表默认值叠加 agent\_params 覆盖值）读取 retrieval.\* 键， 返回 topK/candidates/fusion/weights 默认值供前端对话框预填展示。
 
+<a name="AgentAssistantInputRerunIn"></a>
+## type AgentAssistantInputRerunIn
+
+AgentAssistantInputRerunIn 定义「回退到助手待输入回合」的请求输入。
+
+```go
+type AgentAssistantInputRerunIn struct {
+    // MessageID 助手待输入回合的锚点消息 ID（会话消息列表出参的 id），必填
+    MessageID uint `json:"messageID" binding:"required"`
+}
+```
+
+<a name="AgentAssistantInputRerunOut"></a>
+## type AgentAssistantInputRerunOut
+
+AgentAssistantInputRerunOut 定义「回退到助手待输入回合」的出参：按回合种类给出对应载荷，并附上 回退后的会话交互主状态（与 StateOf 同口径，供前端立即刷新状态驱动 UI）。Kind 与回退后的会话 交互子状态同值（answer=问卷作答 / approval=工具授权）。
+
+```go
+type AgentAssistantInputRerunOut struct {
+    // Kind 回合种类：answer（问卷作答）/ approval（工具授权）
+    Kind modelsai.AgentInteractionSubstate `json:"kind"`
+    // InteractionState 回退后的会话交互主状态（供前端立即刷新状态驱动 UI）
+    InteractionState modelsai.AgentInteractionState `json:"interactionState"`
+    // Questionnaires 问卷回合按轮次先后并列的各轮载荷（题目 + 上次答案 + 待执行调用），仅问卷回合携带
+    Questionnaires []AgentQuestionnaireOut `json:"questionnaires,omitempty"`
+    // PendingCalls 该回合的待执行调用清单，授权回合据此重建审批面板
+    PendingCalls []AgentPendingCallOut `json:"pendingCalls,omitempty"`
+}
+```
+
 <a name="AgentCancelOut"></a>
 ## type AgentCancelOut
 
@@ -450,6 +500,16 @@ type AgentLiveRunOut struct {
     AwaitingApproval bool `json:"awaitingApproval"`
     // PendingCalls 挂起待审批时的待执行调用列表，非挂起时为空数组
     PendingCalls []AgentPendingCallOut `json:"pendingCalls"`
+    // InteractionState 该会话当前交互主状态（与 AgentSessionItemOut 同口径）
+    InteractionState modelsai.AgentInteractionState `json:"interactionState"`
+    // InteractionSubstate 该会话当前交互子状态
+    InteractionSubstate modelsai.AgentInteractionSubstate `json:"interactionSubstate"`
+    // Locked 该会话是否已锁定
+    Locked bool `json:"locked"`
+    // UserTurns 该会话有效轮次
+    UserTurns int `json:"userTurns"`
+    // MaxUserTurns 该会话轮次上限（参数 session.maxUserTurns 的生效值）
+    MaxUserTurns int `json:"maxUserTurns"`
 }
 ```
 
@@ -553,6 +613,24 @@ type AgentMemoryStatusIn struct {
 }
 ```
 
+<a name="AgentMessageBlockOut"></a>
+## type AgentMessageBlockOut
+
+AgentMessageBlockOut 定义助手消息所承载的\*\*一块\*\*内容块的展示项：块在消息内的序号、块类型与该块的 明文 JSON 载荷。载荷不经视图层再解码（原样透传块表明文 JSON），与前端的块渲染、流式 block 事件的 payload 同源，故前端刷新 / 重进会话与实时会话由同一数据源驱动。
+
+```go
+type AgentMessageBlockOut struct {
+    // Seq 块在所属消息内的单调序号（从 1 起），即内容的真实产生顺序
+    Seq uint64 `json:"seq"`
+    // Kind 块类型：reasoning（思考段）/ tool_calls（工具调用组）/ approval（授权待审）/
+    // questionnaire（主动提问）/ content（正文段）
+    Kind modelsai.AgentMessageBlockKind `json:"kind"`
+    // Payload 该块的明文 JSON 载荷（对象）：按块类型为 reasoning/content 的文本、tool_calls 的调用记录
+    // 列表、approval 的待审批清单或 questionnaire 的题目与作答，形状与流式 block 事件的 payload 一致
+    Payload json.RawMessage `json:"payload"`
+}
+```
+
 <a name="AgentMessageCompressOut"></a>
 ## type AgentMessageCompressOut
 
@@ -566,6 +644,10 @@ type AgentMessageCompressOut struct {
     TokensBefore int `json:"tokensBefore"`
     // FoldedCount 本次折叠进摘要的消息条数（三种原因均为真实条数）
     FoldedCount int `json:"foldedCount"`
+    // TokensAfter 本次推进后上下文占用的即时估算 token（仅 auto / manual 给出，静默滚动与估算
+    // 不可用时为 0）：供刷新 / 重进会话后仍回显压缩前后对比；为 0 时前端回落为仅展示压缩前占用与
+    // 折叠条数
+    TokensAfter int `json:"tokensAfter"`
 }
 ```
 
@@ -582,8 +664,6 @@ type AgentMessageItemOut struct {
     Role modelsai.MessageRole `json:"role"`
     // Content 消息正文内容
     Content string `json:"content"`
-    // Reasoning 助手回复的思考过程全文，无则省略
-    Reasoning string `json:"reasoning,omitempty"`
     // Draft 助手回复的结构化草稿载荷（JSON 对象），无草稿时省略
     Draft json.RawMessage `json:"draft,omitempty"`
     // Citations 助手回复的检索引用来源列表，无引用时省略
@@ -602,6 +682,14 @@ type AgentMessageItemOut struct {
     // Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
     // 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
     Compress *AgentMessageCompressOut `json:"compress,omitempty"`
+    // Blocks 该助手消息的有序内容块（按 block_seq 升序）：思考段 / 工具调用组 / 授权待审 / 主动提问 /
+    // 正文段各按其真实产生时序排列，是消息体的唯一展示来源，与流式 block 事件同源；无块时省略
+    Blocks []AgentMessageBlockOut `json:"blocks,omitempty"`
+    // PendingCalls 该助手消息若承载「仍待用户输入」的挂起现场（问卷待作答 / 工具待授权），此处给出该
+    // 现场的待执行调用清单：回退重开（重新回答 / 重新授权）只重置挂起现场、不产生在途运行，故刷新 /
+    // 重进会话时无从经在途快照（AgentLiveRunOut）重建可交互面板，改由此处随消息下发（提交 / 取消续跑
+    // 需原样回传其中的 callID）；其余消息不带此字段
+    PendingCalls []AgentPendingCallOut `json:"pendingCalls,omitempty"`
     // CreatedAt 创建时间
     CreatedAt time.Time `json:"createdAt"`
 }
@@ -676,6 +764,26 @@ type AgentPromptOptimizeOut struct {
 }
 ```
 
+<a name="AgentQuestionnaireOut"></a>
+## type AgentQuestionnaireOut
+
+AgentQuestionnaireOut 定义助手消息所承载的\*\*一轮\*\*问卷展示项：题目、用户作答与是否仍待回答。供前端 把该轮渲染成一个独立问答框，并提供「重新回答」入口（仅末轮）与在刷新 / 重进后据 phase=suspended 重建 问卷面板。
+
+```go
+type AgentQuestionnaireOut struct {
+    // Questions 本轮问卷题目列表（每题含候选项与可选说明）
+    Questions []ai.QuestionnaireQuestion `json:"questions"`
+    // Answers 本轮用户作答列表（未作答或取消回答时为空）
+    Answers []ai.QuestionnaireAnswer `json:"answers,omitempty"`
+    // Awaiting 本轮是否仍待用户回答：仅可能落在末轮——消息 phase 为 suspended，且末轮仍存在未作答的题目；
+    // 由 AgentAssistantInputRerun 对「回退重开」回合另行显式置位
+    Awaiting bool `json:"awaiting"`
+    // PendingCalls 承载该问卷的运行现场中的待执行调用：在「重新回答」接口出参中给出（供重答后经既有
+    // tool-result 原样回传续跑）；现场不可用时（已消费 / 已过期）不携带，前端据此把面板降级为不可用
+    PendingCalls []AgentPendingCallOut `json:"pendingCalls,omitempty"`
+}
+```
+
 <a name="AgentSessionBranchIn"></a>
 ## type AgentSessionBranchIn
 
@@ -696,9 +804,10 @@ AgentSessionCompactIn 定义会话压缩的请求输入。
 
 ```go
 type AgentSessionCompactIn struct {
-    // UserMessageIndex 折叠边界的用户消息序号（从 1 起，仅计用户消息、按 seq 升序）：折叠该轮提问
-    // 连同其助手回复以及更早的尚未摘要消息；为 0 时保持全量语义（折叠全部尚未摘要消息）。
-    UserMessageIndex int `json:"userMessageIndex"`
+    // AssistantMessageID 折叠边界的助手消息 ID：折叠该助手回答及其之前的尚未摘要消息（下界为当前
+    // 滚动摘要游标 summary_upto_seq）；为 0 时保持全量语义（折叠全部尚未摘要消息）。口径由「第 N 轮
+    // 用户提问」改为「以助手回答为边界」，故入参按消息 ID 而非用户消息序号定位。
+    AssistantMessageID uint `json:"assistantMessageID"`
 }
 ```
 
@@ -744,10 +853,21 @@ type AgentSessionItemOut struct {
     ReviewValve modelsai.ReviewValve `json:"reviewValve"`
     // Summary 会话滚动摘要，无摘要时为空串
     Summary string `json:"summary"`
-    // ContextTokens 会话最近一条助手消息的输入 token 数（上下文占用度量；无助手消息为 0）
+    // ContextTokens 会话的上下文占用度量：最近一条有用量记录的助手消息的输入 token 数
+    // （无可用测量为 0，0 表示「尚无测量」而非「占用为 0」，见 ai.SessionStore.ContextTokens）
     ContextTokens int `json:"contextTokens"`
     // ContextLimit 会话有效档位的上下文 token 容量（≤ 0 表示该档位关闭占用展示与自动压缩）
     ContextLimit int `json:"contextLimit"`
+    // InteractionState 会话交互主状态（waiting/running/paused/locked），由既有事实推导（不落库）
+    InteractionState modelsai.AgentInteractionState `json:"interactionState"`
+    // InteractionSubstate 会话交互子状态（随主状态取值；已锁定为空串）
+    InteractionSubstate modelsai.AgentInteractionSubstate `json:"interactionSubstate"`
+    // Locked 会话是否已锁定（有效轮次达上限）；恒等于 InteractionState 为 locked
+    Locked bool `json:"locked"`
+    // UserTurns 会话有效轮次（当前存在的用户提问条数，被回滚删除的不计入）
+    UserTurns int `json:"userTurns"`
+    // MaxUserTurns 会话轮次上限（参数 session.maxUserTurns 的生效值；≤ 0 表示不设上限）
+    MaxUserTurns int `json:"maxUserTurns"`
     // CreatedAt 创建时间
     CreatedAt time.Time `json:"createdAt"`
     // UpdatedAt 更新时间
@@ -863,6 +983,9 @@ type AgentStatusOut struct {
     ParamOverrideCount int `json:"paramOverrideCount"`
     // CompactThresholdRatio 触发自动压缩的占用比例阈值
     CompactThresholdRatio float64 `json:"compactThresholdRatio"`
+    // MaxUserTurns 会话轮次上限（参数 session.maxUserTurns 的生效值），供前端在尚无会话时展示
+    // 闸门口径（≤ 0 表示不设上限，永不锁定）
+    MaxUserTurns int `json:"maxUserTurns"`
     // Reason AI 能力不可用的原因说明（按请求语言本地化；可用时为空）
     Reason string `json:"reason"`
     // LiveRun 指定会话当前在途运行的状态快照（请求未指定会话或该会话无在途运行时为 nil），

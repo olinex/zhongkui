@@ -743,7 +743,7 @@ type knowledgeUploadCounter struct {
 func (c *knowledgeUploadCounter) Read(p []byte) (int, error) {
 	n, err := c.r.Read(p)
 	c.n += int64(n)
-	return n, err
+	return n, errors.WithStack(err)
 }
 
 // KnowledgeDocumentUpload 处理导入知识库文档（multipart/form-data）的请求。

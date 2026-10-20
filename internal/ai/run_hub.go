@@ -36,6 +36,9 @@ const (
 	defaultRunDetachGraceSeconds = 90
 	// supersedeWaitTimeout 被新运行取代的在途运行的收敛等待上限：超时仅告警（新运行仍继续登记）
 	supersedeWaitTimeout = 15 * time.Second
+	// cancelWaitTimeout 取消端点等待生成 goroutine 真正退出的安全上限：取消信号已下发，超时仅告警
+	// （不阻塞调用方返回），仅用于防止极端卡死（如执行器忽略 ctx 取消）时长挂请求。
+	cancelWaitTimeout = 15 * time.Second
 )
 
 // 包级错误哨兵：驻留运行的订阅/取消失败类别，供上层 errors.Is 映射业务码。
@@ -62,7 +65,8 @@ func NewDetachedContext(ctx context.Context) DetachedContext {
 	return DetachedContext{ctx: ctx}
 }
 
-// base 返回脱管基础上下文；未携带时回退为 Background。
+// base 返回脱管基础上下文；未携带时回退为 Background（兜底，非活动链路：仅用于构造脱管上下文，
+// 真正的活动根 context 由 newLiveRun 经 WithTimeout 从其派生，取消经该根的 cancel 传播）。
 func (d DetachedContext) base() context.Context {
 	if d.ctx == nil {
 		return context.Background()
@@ -70,12 +74,18 @@ func (d DetachedContext) base() context.Context {
 	return d.ctx
 }
 
-// RunExecutor 是 RunHub 依赖的对话执行能力（由 *Agent 实现）：以脱管上下文执行一次运行并把
-// 输出抽干到回调。抽出接口便于测试注入替身，RunHub 只依赖该单一方法。
+// RunExecutor 是 RunHub 依赖的对话执行能力（由 *Agent 实现）：以脱管上下文执行一次运行（首轮生成
+// 或续跑）并把输出抽干到回调。抽出接口便于测试注入替身。
 type RunExecutor interface {
 	// RunDetached 以脱管上下文执行一次带会话持久化的运行，onEvent 收每个流项、onToolRequest 收
 	// 挂起时下发的客户端工具请求；正常结束返回 nil。
 	RunDetached(ctx context.Context, in AgentInput, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error
+	// PrepareResume 认领挂起运行现场并构建续跑输入（不启动运行）；认领失败返回哨兵错误
+	// （不存在 / 归属不符 / 已消费 / 已过期），供调用方在登记与构造 SSE 写手前同步映射业务码。
+	PrepareResume(ctx context.Context, in ResumeInput) (AgentInput, error)
+	// ResumeDetached 以 PrepareResume 备好的输入脱管执行一次续跑，抽干语义同 RunDetached
+	// （不重载历史、不追加用户消息）。
+	ResumeDetached(ctx context.Context, in AgentInput, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error
 }
 
 // RunStore 是 RunHub 依赖的运行持久化能力（由 *SessionStore 实现），抽出接口便于测试注入替身。
@@ -116,6 +126,15 @@ type Published struct {
 	Payload []byte
 }
 
+// InteractionStateEvent 是流式 state 事件的负载：仅承载交互状态与子状态（StateOf 出参的子集）。
+// 其余出参（locked/userTurns/maxUserTurns）随 HTTP 快照出参下发，不占用流式事件负载。
+type InteractionStateEvent struct {
+	// State 交互主状态（waiting/running/paused/locked 之一）
+	State ai.AgentInteractionState `json:"state"`
+	// Substate 交互子状态（随主状态取值；已锁定为空串）
+	Substate ai.AgentInteractionSubstate `json:"substate"`
+}
+
 // PendingCall 是一条待执行的工具调用（供刷新后重建待审批现场）。
 type PendingCall struct {
 	// CallID 与模型 tool call id 一致
@@ -142,6 +161,12 @@ type LiveRunStatus struct {
 	LastSeq uint64
 	// PendingCalls 挂起待审批时的待执行调用列表（非挂起时为空）
 	PendingCalls []PendingCall
+	// InMemory 该快照是否取自内存在途运行；false 表示取自数据库登记（本进程内存中已无对应活动）。
+	// 调用方据此判定「running 却非内存」的孤儿运行（进程重启 / goroutine 丢失），把它按已收敛处理。
+	InMemory bool
+	// Substate 在途活动当前上报的交互子状态（generating/thinking/tool_calling/compacting）；仅在
+	// 内存分支有意义（InMemory 为 true 时），DB 回落分支为空串。
+	Substate ai.AgentInteractionSubstate
 }
 
 // subscriber 是一个订阅者：通过带缓冲的事件通道接收实时事件。
@@ -170,6 +195,8 @@ type liveRun struct {
 	mu sync.Mutex
 	// phase 当前生命周期阶段
 	phase ai.AgentRunPhase
+	// substate 当前上报的交互子状态（变更时经 state 事件广播）
+	substate ai.AgentInteractionSubstate
 	// seq 已发布的最大事件序号
 	seq uint64
 	// buffer 有界内存环形缓冲（回放优先取内存）
@@ -251,6 +278,8 @@ type RunHub struct {
 	maxOverride *time.Duration
 	// supersedeOverride 被取代运行收敛等待上限的测试覆盖
 	supersedeOverride *time.Duration
+	// cancelOverride 取消端点等待执行 goroutine 退出的上限测试覆盖
+	cancelOverride *time.Duration
 }
 
 // NewRunHub 构造运行执行器。
@@ -315,6 +344,14 @@ func (h *RunHub) supersedeTimeout() time.Duration {
 	return supersedeWaitTimeout
 }
 
+// cancelTimeout 返回取消端点等待执行 goroutine 退出的上限（测试覆盖优先）。
+func (h *RunHub) cancelTimeout() time.Duration {
+	if h.cancelOverride != nil {
+		return *h.cancelOverride
+	}
+	return cancelWaitTimeout
+}
+
 // supersede 收敛一个被新运行取代的在途运行：置取消并触发其 cancel，随后等待它走到终态
 // （finish 中已通过 FinishLiveRun 把 DB 登记改为非 running），从而使新运行的登记不触发
 // uq_agent_live_runs_running 冲突，也不产生孤儿运行。等待超时仅告警，不阻塞新运行登记。
@@ -337,24 +374,146 @@ func (h *RunHub) supersede(prev *liveRun) {
 	}
 }
 
+// runFunc 是一次驻留运行的执行闭包：在给定脱管上下文下执行并把输出抽干到回调（首轮生成经
+// RunDetached、续跑经 ResumeDetached）。由 Start / StartResume 在登记前构造，交给 execute 调用。
+type runFunc func(ctx context.Context, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error
+
 // Start 启动一次驻留运行：登记（agent_live_runs）后在独立 goroutine 中执行，事件先广播给
 // 订阅者再异步落库。started 非空时在登记完成后立即以 runID 回调（供调用方在 goroutine 启动前
 // 完成订阅，避免漏掉早期事件）。返回运行标识。
 func (h *RunHub) Start(detached DetachedContext, in AgentInput, sessionID uint, userID uint, namespace string, started func(runID serializer.HexUUID)) (serializer.HexUUID, error) {
+	agent := h.agent()
+	return h.launch(detached, sessionID, userID, namespace, func(run *liveRun) (runFunc, error) {
+		// 首轮生成的初始交互子状态为「思考中」：登记后 start 会据此发布初始 state 事件，
+		// 使订阅方（含回放）先收到 running 状态。
+		run.substate = ai.AgentInteractionSubstateThinking
+		// 属主用户随运行注入：既用于隔离，也确保脱管执行时落库/召回归属一致。
+		in.UserID = userID
+		// 阶段事件与压缩事件的上报回调在此注入（首轮生成会触发两者），执行闭包据此持有已配好的输入。
+		in.ToolReporter = func(ev StageEvent) error {
+			h.publishStage(run, ev)
+			return nil
+		}
+		in.CompressReporter = func(ev CompressEvent) error {
+			// 压缩开始 / 摘要增量 → compacting；压缩完成 → 回到正文生成中（随后继续产出正文）。
+			switch ev.Type {
+			case ai.AgentRunEventCompressStart, ai.AgentRunEventCompressDelta:
+				h.reportSubstate(run, ai.AgentInteractionSubstateCompacting)
+			case ai.AgentRunEventCompressDone:
+				h.reportSubstate(run, ai.AgentInteractionSubstateGenerating)
+			}
+			h.publishJSON(run, ev.Type, ev)
+			return nil
+		}
+		return func(ctx context.Context, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error {
+			return agent.RunDetached(ctx, in, onEvent, onToolRequest)
+		}, nil
+	}, started)
+}
+
+// StartResume 启动一次续跑（客户端工具调用结果回传后恢复挂起运行）的驻留运行：先同步认领运行现场并
+// 构建续跑输入（PrepareResume——认领失败即返回哨兵错误，此时尚未登记、也未构造 SSE 写手，调用方仍可
+// 返回 JSON 业务码），再以与 Start 一致的登记 / 广播 / 收敛路径执行（ResumeDetached）。如此续跑与首轮
+// 生成一样拥有独立的 live-run 登记并在收敛时写入终态（done/cancelled/failed）：否则挂起现场留下的
+// suspended 登记会一直残留，前端刷新后据它误判「仍在等待审批」，并以陈旧的挂起事件回放覆盖已落库的
+// 正文。返回运行标识。
+func (h *RunHub) StartResume(detached DetachedContext, in ResumeInput, sessionID uint, userID uint, namespace string, started func(runID serializer.HexUUID)) (serializer.HexUUID, error) {
+	agent := h.agent()
+	return h.launch(detached, sessionID, userID, namespace, func(run *liveRun) (runFunc, error) {
+		// 续跑的初始交互子状态同首轮：「思考中」，登记后由 start 发布初始 state 事件。
+		run.substate = ai.AgentInteractionSubstateThinking
+		in.SessionID = sessionID
+		in.NamespaceName = namespace
+		in.UserID = userID
+		// 认领现场并回灌 tool message 的阶段（PrepareResume）就要上报 toolResult 阶段终态，故先注入阶段上报。
+		in.ToolReporter = func(ev StageEvent) error {
+			h.publishStage(run, ev)
+			return nil
+		}
+		prepared, err := agent.PrepareResume(run.ctx, in)
+		if err != nil {
+			return nil, errors.WithStack(err)
+		}
+		return func(ctx context.Context, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error {
+			return agent.ResumeDetached(ctx, prepared, onEvent, onToolRequest)
+		}, nil
+	}, started)
+}
+
+// ActivityInput 描述一次通用在途活动（如手动上下文压缩）的启动参数：会话 / 属主 / 命名空间为登记
+// 必需字段，Run 是活动本体。与生成（Start / StartResume）共用同一套登记互斥、运行根 context、取消、
+// 终局化与落库路径，从而满足「会话内至多一个在途活动」——压缩与生成冲突时同样返回既有的
+// ErrAgentLiveRunAlreadyRunning 哨兵。
+type ActivityInput struct {
+	// SessionID 所属会话 ID
+	SessionID uint
+	// UserID 属主用户 ID
+	UserID uint
+	// Namespace 所属命名空间
+	Namespace string
+	// Run 活动本体：在活动根 context 下执行；report 用于下发活动自己的流式事件
+	// （delta / reasoning / stage / tool_request / compress_*，取消后内容类事件被自动抑制）。
+	Run func(ctx context.Context, report func(typ ai.AgentRunEventType, payload any) error) error
+}
+
+// StartActivity 启动一次通用在途活动（如上下文压缩）：与 Start / StartResume 共用同一内部启动路径
+// （登记互斥、运行根 context、取消、终局化与落库）。Run 在活动根 ctx 下执行；Run 正常返回（nil）时由
+// RunHub 以 done 事件收口，使 execute 的既有终局分支（sawDone → done）自然成立——故无需为活动另写一套
+// 收敛逻辑。活动被取消时 Run 应随 ctx 返回错误，此时既不产出 done、也不产生半截检查点。
+func (h *RunHub) StartActivity(detached DetachedContext, in ActivityInput, started func(runID serializer.HexUUID)) (serializer.HexUUID, error) {
+	return h.launch(detached, in.SessionID, in.UserID, in.Namespace, func(run *liveRun) (runFunc, error) {
+		// 通用在途活动（如手动上下文压缩）的初始交互子状态为「上下文压缩中」；start 据此发布初始
+		// state 事件，订阅方先收到 running/compacting。
+		run.substate = ai.AgentInteractionSubstateCompacting
+		return func(ctx context.Context, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error {
+			report := func(typ ai.AgentRunEventType, payload any) error {
+				h.publishJSON(run, typ, payload)
+				return nil
+			}
+			if err := in.Run(ctx, report); err != nil {
+				return errors.WithStack(err)
+			}
+			// 成功收口：以 done 事件收尾，令 execute 的 sawDone → done 分支自然成立。
+			if onEvent != nil {
+				return onEvent(AgentOutput{Done: true})
+			}
+			return nil
+		}, nil
+	}, started)
+}
+
+// launch 是 Start / StartResume / StartActivity 共用的内部启动路径：构造运行（newLiveRun，含根
+// context 与取消载体）→ 由 build 装配执行闭包（装配期可做同步准备，如续跑认领现场）→ 走 start 完成
+// 登记、冲突判定与收敛。build 返回错误时就地取消刚构造的运行（避免泄漏其最大时长计时器）并透传错误。
+func (h *RunHub) launch(detached DetachedContext, sessionID, userID uint, namespace string, build func(run *liveRun) (runFunc, error), started func(runID serializer.HexUUID)) (serializer.HexUUID, error) {
+	run, runCtx, err := h.newLiveRun(detached, sessionID, userID, namespace)
+	if err != nil {
+		return serializer.NewNilHexUUIDv4(), errors.WithStack(err)
+	}
+	exec, err := build(run)
+	if err != nil {
+		run.cancel()
+		return serializer.NewNilHexUUIDv4(), errors.WithStack(err)
+	}
+	if err := h.start(run, runCtx, exec, started); err != nil {
+		return serializer.NewNilHexUUIDv4(), errors.WithStack(err)
+	}
+	return run.runID, nil
+}
+
+// newLiveRun 构造一次运行的运行期结构（不登记、不执行）：校验组件已装配，分配运行标识并派生脱管上下文
+// 与「单次运行最大时长」上界。返回运行结构、带超时的执行上下文（执行期供用）与错误。
+func (h *RunHub) newLiveRun(detached DetachedContext, sessionID, userID uint, namespace string) (*liveRun, context.Context, error) {
 	if h.agent() == nil {
-		return serializer.NewNilHexUUIDv4(), errors.New("ai: run hub: no agent is assembled")
+		return nil, nil, errors.New("ai: run hub: no agent is assembled")
 	}
-	store := h.store()
-	if store == nil {
-		return serializer.NewNilHexUUIDv4(), errors.New("ai: run hub: no session store is assembled")
+	if h.store() == nil {
+		return nil, nil, errors.New("ai: run hub: no session store is assembled")
 	}
-	// 属主用户随运行注入：既用于隔离，也确保脱管执行时落库/召回归属一致。
-	in.UserID = userID
-	runID := newAgentRunID()
 	ctx := context.WithoutCancel(detached.base())
 	runCtx, cancel := context.WithTimeout(ctx, h.maxRunDuration())
 	run := &liveRun{
-		runID:          runID,
+		runID:          newAgentRunID(),
 		sessionID:      sessionID,
 		userID:         userID,
 		namespace:      namespace,
@@ -368,87 +527,102 @@ func (h *RunHub) Start(detached DetachedContext, in AgentInput, sessionID uint, 
 		persistDone:    make(chan struct{}),
 		finishDone:     make(chan struct{}),
 	}
+	return run, runCtx, nil
+}
+
+// start 登记并启动一次已构造好的运行：先占位再收敛（保证同一会话不出现两个在途运行共存），随后登记
+// agent_live_runs（部分唯一索引 uq_agent_live_runs_running 据此拒绝并发在途运行）并启动落库与执行
+// goroutine。登记失败时就地撤销占位并取消运行，返回错误。exec 为本次运行的执行闭包。
+func (h *RunHub) start(run *liveRun, runCtx context.Context, exec runFunc, started func(runID serializer.HexUUID)) error {
+	store := h.store()
 	h.mu.Lock()
 	if h.closed {
 		h.mu.Unlock()
-		cancel()
-		return serializer.NewNilHexUUIDv4(), errors.New("ai: run hub is closed")
+		run.cancel()
+		return errors.New("ai: run hub is closed")
 	}
 	// 先占位再收敛：并发 Start 时后到者能取到先到者并收敛它，保证同一会话不出现两个在途运行共存。
-	prev := h.runs[sessionID]
-	h.runs[sessionID] = run
+	prev := h.runs[run.sessionID]
+	h.runs[run.sessionID] = run
 	h.mu.Unlock()
 	if prev != nil && prev != run {
 		h.supersede(prev)
 	}
 
 	// 收敛完成后才登记：这样部分唯一索引 uq_agent_live_runs_running 不会与旧运行的在途登记冲突。
-	if err := store.CreateLiveRun(ctx, &ai.AgentLiveRun{
-		NamespaceName: namespace,
-		UserID:        userID,
-		RunID:         runID,
-		SessionID:     sessionID,
+	if err := store.CreateLiveRun(run.ctx, &ai.AgentLiveRun{
+		NamespaceName: run.namespace,
+		UserID:        run.userID,
+		RunID:         run.runID,
+		SessionID:     run.sessionID,
 		Phase:         ai.AgentRunPhaseRunning,
 		LastSeq:       0,
 		ExpiresAt:     time.Now().Add(agentLiveRunTTL),
 	}); err != nil {
 		h.mu.Lock()
-		if h.runs[sessionID] == run {
-			delete(h.runs, sessionID)
+		if h.runs[run.sessionID] == run {
+			delete(h.runs, run.sessionID)
 		}
 		h.mu.Unlock()
-		cancel()
+		run.cancel()
 		// 会话已有在途运行（CreateLiveRun 的 ON CONFLICT DO NOTHING 未写入）转为明确错误并记录
 		// 告警，避免与其它登记失败混淆。
 		if errors.Is(err, ErrAgentLiveRunAlreadyRunning) {
 			if l := h.logger(); l != nil {
-				l.Ctx(ctx).Warnf("ai: session %d already has an in-flight live run: %v", sessionID, err)
+				l.Ctx(run.ctx).Warnf("ai: session %d already has an in-flight live run: %v", run.sessionID, err)
 			}
-			return serializer.NewNilHexUUIDv4(), errors.WithStack(errors.Newf("ai: run hub: session %d already has an in-flight live run", sessionID))
+			return errors.WithStack(errors.Newf("ai: run hub: session %d already has an in-flight live run", run.sessionID))
 		}
-		return serializer.NewNilHexUUIDv4(), err
+		return errors.WithStack(err)
 	}
 	go h.persistLoop(run)
+	// 发布初始 state 事件（running + 初始子状态）：在订阅回调与执行 goroutine 之前发布，使订阅方
+	// （含按 after 回放）必然先收到「运行中」状态，而不必等第一个阶段 / 增量事件才出现状态。
+	h.publishJSON(run, ai.AgentRunEventState, InteractionStateEvent{
+		State:    ai.AgentInteractionStateRunning,
+		Substate: run.substate,
+	})
 	if started != nil {
-		started(runID)
+		started(run.runID)
 	}
-	go h.execute(run, runCtx, in)
-	return runID, nil
+	go h.execute(run, runCtx, exec)
+	return nil
 }
 
-// execute 在 runCtx 下执行一次运行并把输出转为事件：阶段事件经 ToolReporter、增量与完成项经
-// onEvent、客户端工具请求经 onToolRequest 全部发布；结束后据「是否被取消 / 是否出错 / 是否
-// 挂起 / 是否有完成项」收敛终态并调用 finish。
-func (h *RunHub) execute(run *liveRun, runCtx context.Context, in AgentInput) {
-	agent := h.agent()
+// execute 在 runCtx 下执行一次运行并把输出转为事件：增量与完成项、思考过程、内容块、客户端工具请求经
+// 各自的发布路径全部发布（阶段事件由执行闭包注入到输入里的 ToolReporter 上报）；结束后据「是否被取消 /
+// 是否出错 / 是否挂起 / 是否有完成项」收敛终态并调用 finish。
+func (h *RunHub) execute(run *liveRun, runCtx context.Context, exec runFunc) {
 	var sawDone, sawToolRequest bool
 	var runErr error
-	if agent == nil {
+	if exec == nil {
 		runErr = errors.New("ai: run hub: no agent is assembled")
 	} else {
-		in.ToolReporter = func(ev StageEvent) error {
-			h.publishStage(run, ev)
-			return nil
-		}
-		in.CompressReporter = func(ev CompressEvent) error {
-			h.publishJSON(run, ev.Type, ev)
-			return nil
-		}
-		runErr = agent.RunDetached(runCtx, in,
+		runErr = exec(runCtx,
 			func(out AgentOutput) error {
+				// 块事件与增量同源同序：同一流项可能**同时**含增量与块事件（如正文增量开块），故块事件
+				// 独立于下方「增量 / done / 思考」互斥分支之外逐条下发——先块后增量，使前端先据 block
+				// 事件建立 / 收敛块，再把随之而来的增量归并到当前开放块。块创建与收敛各下发一次，
+				// 收敛事件的 payload 为该块终态全文（前端 upsert by seq 即收敛）。
+				for _, ev := range out.Blocks {
+					h.publishJSON(run, ai.AgentRunEventBlock, ev)
+				}
 				switch {
 				case out.Delta != "":
+					h.reportSubstate(run, ai.AgentInteractionSubstateGenerating)
 					h.publishDelta(run, "", out.Delta)
 				case out.Done:
 					sawDone = true
 					h.publishJSON(run, ai.AgentRunEventDone, out)
 				case out.Reasoning != "":
+					h.reportSubstate(run, ai.AgentInteractionSubstateThinking)
 					h.publishJSON(run, ai.AgentRunEventReasoning, map[string]string{"delta": out.Reasoning})
 				}
 				return nil
 			},
 			func(req ToolRequest) error {
 				sawToolRequest = true
+				h.reportSubstate(run, ai.AgentInteractionSubstateToolCalling)
 				h.publishJSON(run, ai.AgentRunEventToolRequest, req)
 				return nil
 			},
@@ -485,6 +659,9 @@ func (h *RunHub) finish(run *liveRun, phase ai.AgentRunPhase, errMsg string) {
 	if errMsg != "" {
 		h.publishJSON(run, ai.AgentRunEventError, map[string]string{"error": errMsg, "phase": string(phase)})
 	}
+	// 终局 state 事件：必须在 run.finished 置位之前发布——publish 对 finished 的运行直接丢弃。
+	// 终局状态由本运行的 phase 与内存缓冲里已发布的 tool_request 事件本地推导（不查库）。
+	h.publishJSON(run, ai.AgentRunEventState, terminalStateEvent(run, phase))
 	run.mu.Lock()
 	run.finished = true
 	run.phase = phase
@@ -516,6 +693,36 @@ func (h *RunHub) finish(run *liveRun, phase ai.AgentRunPhase, errMsg string) {
 	}
 	h.mu.Unlock()
 	close(run.finishDone)
+}
+
+// terminalStateEvent 由运行终态阶段本地推导终局的 state 事件负载（不查库）：cancelled → paused/aborted、
+// failed → paused/failed、done → paused/success，suspended → waiting 并按下述判定子状态。挂起子状态
+// 的口径与 SessionStore.PendingRunSubstate **同源**：用本运行内存缓冲里已发布的 tool_request 事件
+// 判定——存在问卷类 ask_user 调用 → answer，否则（含列表为空）→ approval；ask_user 字面量仍只在
+// client_tools.go 一处声明（isQuestionnaireTool）。暂停类的三个子状态与 StateOf 的 pausedSubstateOf
+// 同源，故流式 state 事件与刷新后的 HTTP 快照出参口径一致。
+func terminalStateEvent(run *liveRun, phase ai.AgentRunPhase) InteractionStateEvent {
+	switch phase {
+	case ai.AgentRunPhaseCancelled:
+		return InteractionStateEvent{State: ai.AgentInteractionStatePaused, Substate: ai.AgentInteractionSubstateAborted}
+	case ai.AgentRunPhaseFailed:
+		return InteractionStateEvent{State: ai.AgentInteractionStatePaused, Substate: ai.AgentInteractionSubstateFailed}
+	case ai.AgentRunPhaseDone:
+		return InteractionStateEvent{State: ai.AgentInteractionStatePaused, Substate: ai.AgentInteractionSubstateSuccess}
+	case ai.AgentRunPhaseSuspended:
+		run.mu.Lock()
+		calls := pendingCallsOf(run.buffer.events)
+		run.mu.Unlock()
+		for _, call := range calls {
+			if isQuestionnaireTool(call.ToolName) {
+				return InteractionStateEvent{State: ai.AgentInteractionStateWaiting, Substate: ai.AgentInteractionSubstateAnswer}
+			}
+		}
+		return InteractionStateEvent{State: ai.AgentInteractionStateWaiting, Substate: ai.AgentInteractionSubstateApproval}
+	default:
+		// 相位空间仅上述五个；其余（理论上不可达）保守归为暂停/成功。
+		return InteractionStateEvent{State: ai.AgentInteractionStatePaused, Substate: ai.AgentInteractionSubstateSuccess}
+	}
 }
 
 // persistLoop 是落库 goroutine：按顺序消费事件队列并落库，收到关闭信号后抽干残余事件再退出。
@@ -551,10 +758,32 @@ func (h *RunHub) appendEvent(run *liveRun, store RunStore, ev *ai.AgentRunEvent)
 	}
 }
 
+// contentEventType 判定事件是否为「内容类」事件（受取消前置条件抑制）：delta / reasoning / stage /
+// tool_request / block / compress_start / compress_delta / compress_done。放行事件为 done / error /
+// state——finish 需要在取消后下发携带 phase=cancelled 的 error 事件，state 是交互状态广播（Task 6 用）。
+func contentEventType(typ ai.AgentRunEventType) bool {
+	switch typ {
+	case ai.AgentRunEventDelta, ai.AgentRunEventReasoning, ai.AgentRunEventStage,
+		ai.AgentRunEventToolRequest, ai.AgentRunEventBlock, ai.AgentRunEventCompressStart,
+		ai.AgentRunEventCompressDelta, ai.AgentRunEventCompressDone:
+		return true
+	default:
+		return false
+	}
+}
+
 // publish 发布一条事件：持锁自增序号、写内存缓冲、非阻塞扇出给订阅者，解锁后异步入落库队列。
+// 取消前置条件在此一处判定：run.cancelled 为真（显式取消或退订宽限自动取消）时抑制一切内容类事件，
+// 使「中止生效后不得再下发任何 delta / reasoning / stage / tool_request / block / compress_* 事件」成为
+// 可断言的事实——所有发布路径（publishDelta / publishStage / publishJSON）都经
+// 此处，无需在每个调用点各写一遍。done / error / state 照常放行。
 func (h *RunHub) publish(run *liveRun, typ ai.AgentRunEventType, payload []byte) {
 	run.mu.Lock()
 	if run.finished {
+		run.mu.Unlock()
+		return
+	}
+	if run.cancelled && contentEventType(typ) {
 		run.mu.Unlock()
 		return
 	}
@@ -606,12 +835,42 @@ func (h *RunHub) publishDelta(run *liveRun, stage string, delta string) {
 }
 
 // publishStage 发布一条阶段事件：带增量的阶段事件归入 delta（携带阶段标识），否则发布 stage。
+// 阶段切换即子状态切换，故在此先上报子状态（stage → 思考 / 生成 / 工具调用），驱动 state 事件。
 func (h *RunHub) publishStage(run *liveRun, ev StageEvent) {
+	h.reportSubstate(run, substateForStage(ev.Stage))
 	if ev.Delta != "" {
 		h.publishDelta(run, string(ev.Stage), ev.Delta)
 		return
 	}
 	h.publishJSON(run, ai.AgentRunEventStage, ev)
+}
+
+// substateForStage 把阶段标识映射为「运行中」的交互子状态：正文生成阶段 → generating，工具调用/结果
+// 阶段 → tool_calling，其余（检索等前置与评估阶段）→ thinking。这是「后端上报子状态」的唯一映射点。
+func substateForStage(stage EvalStage) ai.AgentInteractionSubstate {
+	switch stage {
+	case EvalStageAnswer:
+		return ai.AgentInteractionSubstateGenerating
+	case EvalStageToolCall, EvalStageToolResult:
+		return ai.AgentInteractionSubstateToolCalling
+	default:
+		return ai.AgentInteractionSubstateThinking
+	}
+}
+
+// reportSubstate 上报一次运行子状态并在值发生变化时发布 state 事件（State 恒为 running）：
+// 已收敛（finished）或已取消（cancelled）的运行不再上报（与 publish 的放行口径一致）；值未变更时
+// 不重复发布，避免同一子状态下每次增量都产生一条 state 事件。持锁比较、更新字段，**释放锁后**再
+// 发布——publish 内部要取 run.mu，持锁发布会自锁死锁。
+func (h *RunHub) reportSubstate(run *liveRun, substate ai.AgentInteractionSubstate) {
+	run.mu.Lock()
+	if run.finished || run.cancelled || run.substate == substate {
+		run.mu.Unlock()
+		return
+	}
+	run.substate = substate
+	run.mu.Unlock()
+	h.publishJSON(run, ai.AgentRunEventState, InteractionStateEvent{State: ai.AgentInteractionStateRunning, Substate: substate})
 }
 
 // Subscribe 订阅某会话的在途运行：返回「回放事件（序号 > after）」与「实时事件通道」以及退订
@@ -760,6 +1019,13 @@ func (run *liveRun) stopGraceLocked() {
 
 // Cancel 显式取消某会话的在途运行：命名空间不符返回 ErrAgentLiveRunForbidden，运行不存在返回
 // ErrAgentLiveRunNotFound，已收敛终态时幂等返回 nil（不报错）。
+//
+// 命中内存中的在途运行时，先置取消标记并调用根 context 的 cancel()（取消信号沿 context 树即时切断
+// 上游模型流式请求与工具执行，从源头停止 token 消耗），再等待该运行的执行 goroutine 真正退出
+// （finish 完成终局化并 close(finishDone)）后才返回，并设安全上限兜底（超时仅告警）。因此「取消
+// 返回后不可能再有正文事件」是调用方可依赖的事实：返回时该活动已完成终局化。等待不在持有
+// h.mu / run.mu 时进行，避免与 finish 的加锁互等。无内存运行（纯 DB 登记）时维持既有幂等语义：
+// 仅校验归属 / 存在性后返回，不等待。
 func (h *RunHub) Cancel(ctx context.Context, sessionID uint, userID uint, namespace string) error {
 	h.mu.Lock()
 	run := h.runs[sessionID]
@@ -791,9 +1057,19 @@ func (h *RunHub) Cancel(ctx context.Context, sessionID uint, userID uint, namesp
 	}
 	run.cancelled = true
 	cancel := run.cancel
+	done := run.finishDone
 	run.mu.Unlock()
 	if cancel != nil {
 		cancel()
+	}
+	// 等待执行 goroutine 真正退出后再返回：finish 已 close(finishDone)，返回时该活动已完成终局化，
+	// 故「取消返回后不可能再有正文事件」成为可断言的事实。安全上限兜底，超时仅告警、不阻塞返回。
+	select {
+	case <-done:
+	case <-time.After(h.cancelTimeout()):
+		if l := h.logger(); l != nil {
+			l.Ctx(run.ctx).Warnf("ai: cancelled run %s did not finish within %s", run.runID, h.cancelTimeout())
+		}
 	}
 	return nil
 }
@@ -806,7 +1082,7 @@ func (h *RunHub) LiveRun(ctx context.Context, sessionID uint, userID uint) (*Liv
 	h.mu.Unlock()
 	if run != nil && run.userID == userID {
 		run.mu.Lock()
-		st := &LiveRunStatus{RunID: run.runID, Phase: run.phase, LastSeq: run.seq}
+		st := &LiveRunStatus{RunID: run.runID, Phase: run.phase, LastSeq: run.seq, InMemory: true, Substate: run.substate}
 		st.PendingCalls = pendingCallsOf(run.buffer.events)
 		run.mu.Unlock()
 		return st, nil
@@ -835,6 +1111,21 @@ func (h *RunHub) LiveRun(ctx context.Context, sessionID uint, userID uint) (*Liv
 		st.PendingCalls = pendingCallsOf(paid)
 	}
 	return st, nil
+}
+
+// BroadcastInteractionState 在指定会话的内存在途运行上发布一条 state 事件；无内存运行（暂停 /
+// 已锁定 / 等待中：后端此时无生成 goroutine）时为 no-op——此时状态随 HTTP 出参下发。属主不符同样
+// 视为无在途活动并直接返回（不报错：「无在途活动」是正常事实，不是异常）。广播路径不写 DB：DB 登记
+// 由运行自身的终局化写入，视图层只负责把重算出的状态推给当前在途运行的订阅者。
+func (h *RunHub) BroadcastInteractionState(ctx context.Context, sessionID, userID uint, ev InteractionStateEvent) error {
+	h.mu.Lock()
+	run := h.runs[sessionID]
+	h.mu.Unlock()
+	if run == nil || run.userID != userID {
+		return nil
+	}
+	h.publishJSON(run, ai.AgentRunEventState, ev)
+	return nil
 }
 
 // pendingCallsOf 从事件序列中提取全部 tool_request 事件，重建待执行调用列表。

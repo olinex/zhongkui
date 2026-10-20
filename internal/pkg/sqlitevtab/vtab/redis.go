@@ -280,7 +280,7 @@ func (redisPlugin) NewConfig() any { return &RedisConfig{} }
 func (redisPlugin) ValidateConfig(cfg any) error {
 	c := cfg.(*RedisConfig)
 	if _, err := redisDatasourceFactory(nil, c.Struct); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -316,11 +316,11 @@ func (redisPlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) (
 	pool.Release(ctx, client)
 	ds, err := redisDatasourceFactory(pool, c.Struct)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	schema, err := schemaOf(ds)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return schemaColumnsOut(schema), nil
 }
