@@ -121,7 +121,7 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	// 使前端动态配置在重启后恢复注册状态（rego sqlite.query 立即可查）
 	sqliteVTabPools := provider.MustInvokeSQLiteVTabPools(i)
 	if err := datasourcepkg.Reload(ctx, coreDB, sqliteVTabPools); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	engine := provider.MustInvokeGin(i)

@@ -13,6 +13,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/models/network"
 	"zhongkuisec.com/zhongkui/internal/models/tag"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
@@ -59,7 +60,7 @@ func runStage(ctx context.Context, s *tagStage, items ...any) ([]any, error) {
 	}
 	close(in)
 	if err := s.Process(ctx, in, out); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	got := make([]any, 0, len(items))
 	for item := range out {

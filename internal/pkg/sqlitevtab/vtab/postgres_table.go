@@ -47,7 +47,7 @@ func NewPostgresDatasource(ctx context.Context, pool *PostgresPool, table string
 	}
 	db, err := pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	// 自省失败的分支都需先归还连接再上抛
 	const q = `SELECT column_name, udt_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = $1 ORDER BY ordinal_position`
@@ -143,14 +143,14 @@ func derivePgValueType(udtName string) sqlitevtab.ValueType {
 func (d *PostgresDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	db, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	query, args := d.buildQuery(pushdown)
 	rows, err := d.fetch(ctx, db, query, args)
 	// fetch 已同步取回全部行，连接作用域到此结束，即时归还以便复用
 	d.pool.Release(ctx, db)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return newMySQLRows(rows), nil
 }
@@ -250,7 +250,7 @@ func (d *PostgresDatasource) scanRow(qrows *sql.Rows) ([]any, error) {
 		ptrs[i] = &dest[i]
 	}
 	if err := qrows.Scan(ptrs...); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	row := make([]any, len(dest))
 	for i, v := range dest {

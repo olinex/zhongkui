@@ -33,7 +33,7 @@ type ParsePayload struct {
 func NewParseTask(documentID uint) (*asynq.Task, error) {
 	payload := ParsePayload{DocumentID: documentID}
 	if err := validateParsePayload(payload); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	data, err := json.Marshal(&payload)
 	if err != nil {

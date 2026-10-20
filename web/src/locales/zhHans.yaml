@@ -1379,6 +1379,7 @@ page:
     compressStart: 正在压缩上下文…
     compressDone: "压缩前 {before} · 已折叠 {count} 条"
     compressCompare: "压缩前 {before} → 压缩后 {after}（占用 {percent}%）"
+    compressTokensUnknown: 未知
     compressSucceeded: 上下文压缩完成
     compressFailed: 上下文压缩失败
     approvalTitle: 工具调用审批
@@ -1412,6 +1413,27 @@ page:
     deleteMessage: 删除
     confirmRollbackMessage: 确定从这一轮对话重新开始吗？该条消息及其之后的全部内容将被删除。
     confirmDeleteMessage: 确定删除该条消息及其之后的全部内容吗？
+    questionnaireTitle: AI 提问
+    questionnaireOther: 其他
+    questionnaireCustomPlaceholder: 请输入你的回答
+    questionnaireSubmit: 提交
+    questionnaireCancel: 取消回答
+    questionnairePrev: 上一题
+    questionnaireNext: 下一题
+    questionnaireUnanswered: 未作答的题目将按「未作答」提交
+    questionnaireUnavailable: 本次提问已失效，无法提交作答，请直接发起新的提问
+    questionnaireReanswer: 重新回答
+    questionnaireReanswerBusy: 本轮仍在生成，完成后可重新回答
+    confirmReanswerQuestionnaire: 确定重新回答吗？本问之后的内容将被清空并重新生成。
+    approvalRerun: 重新授权
+    approvalRerunBusy: 本轮仍在生成，完成后可重新授权
+    confirmRerunApproval: 确定重新授权吗？本回合之后的内容将被清空并重新生成。
+    questionnaireNoAnswer: 未作答
+    questionnairePendingHint: AI 正在等待你回答上方的问题，请先完成作答
+    questionnaireJump: 查看问题
+    lockedHint: "会话{label}（{used}/{max} 轮），回滚历史消息后可继续提问"
+    lockedReject: 会话已达提问轮次上限，请先回滚历史消息后再提问
+    stateGuardReject: 当前会话状态暂不允许该操作，请稍后再试
   aiKnowledge:
     dryRun: 检索试运行
     query: 查询问题

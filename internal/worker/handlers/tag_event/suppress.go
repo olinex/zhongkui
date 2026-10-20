@@ -179,11 +179,11 @@ func (h *EventSuppressHandler) Do(ctx context.Context, task etl.Task) error {
 		// 通知在状态变更提交前投递：失败则回滚，事件保持 pending
 		sendTasks, err := buildSendTasks(tx, alertingIDs)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		for _, sendTask := range sendTasks {
 			if _, err := h.client.EnqueueContext(ctx, sendTask, asynq.MaxRetry(3)); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 		return nil
@@ -324,7 +324,7 @@ func buildSendTasks(db *database.DB, eventIDs []uint) ([]*asynq.Task, error) {
 			})
 		}
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		tasks = append(tasks, task)
 	}

@@ -7,13 +7,13 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    __typeProbe: typeof import('./components/forms/__typeProbe.vue')['default']
     ActionButtonGroup: typeof import('./components/base/ActionButtonGroup.vue')['default']
     AdaptiveCell: typeof import('./components/table/AdaptiveCell.vue')['default']
     AdaptiveField: typeof import('./components/forms/AdaptiveField.vue')['default']
     AgentParamPanel: typeof import('./components/admin/AgentParamPanel.vue')['default']
     AppDialog: typeof import('./components/base/AppDialog.vue')['default']
     AppHeader: typeof import('./components/base/AppHeader.vue')['default']
+    AskUserQuestionnaire: typeof import('./components/ai/AskUserQuestionnaire.vue')['default']
     AssistantDrawer: typeof import('./components/ai/AssistantDrawer.vue')['default']
     AssistantMarkdown: typeof import('./components/ai/AssistantMarkdown.vue')['default']
     AssistantQuestionRail: typeof import('./components/ai/AssistantQuestionRail.vue')['default']

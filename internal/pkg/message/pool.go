@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/resourcepool"
 )
 
@@ -93,7 +94,7 @@ func (p *Pool) Send(ctx context.Context, typ string, config json.RawMessage, tar
 	key := makeKey(typ, config)
 	ch, err := p.manager.Acquire(ctx, key)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	defer p.manager.Release(ctx, key, ch)
 	return ch.Send(ctx, target, msg)

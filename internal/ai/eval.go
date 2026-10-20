@@ -284,7 +284,7 @@ func streamChat(ctx context.Context, chat chatGenerator, stage EvalStage, messag
 		sb.WriteString(chunk.Content)
 		if report != nil {
 			if reportErr := report(StageEvent{Stage: stage, Delta: chunk.Content}); reportErr != nil {
-				return sb.String(), meta, reportErr
+				return sb.String(), meta, errors.WithStack(reportErr)
 			}
 		}
 	}
@@ -300,7 +300,7 @@ func generateAnswer(ctx context.Context, params *Params, chat chatGenerator, que
 	}
 	content, meta, err := streamChat(ctx, chat, EvalStageAnswer, messages, report)
 	if err != nil {
-		return "", meta, err
+		return "", meta, errors.WithStack(err)
 	}
 	var parsed struct {
 		Answer string `json:"answer"`
@@ -324,7 +324,7 @@ func judgeChunkRelevance(ctx context.Context, params *Params, chat chatGenerator
 	}
 	content, meta, err := streamChat(ctx, chat, EvalStageChunkRelevance, messages, report)
 	if err != nil {
-		return nil, meta, err
+		return nil, meta, errors.WithStack(err)
 	}
 	var parsed struct {
 		Judgments []struct {
@@ -363,7 +363,7 @@ func judgeClaims(ctx context.Context, params *Params, chat chatGenerator, answer
 	}
 	content, meta, err := streamChat(ctx, chat, EvalStageClaims, messages, report)
 	if err != nil {
-		return nil, meta, err
+		return nil, meta, errors.WithStack(err)
 	}
 	var parsed struct {
 		Claims []struct {
@@ -401,7 +401,7 @@ func judgeReverseQuestions(ctx context.Context, params *Params, chat chatGenerat
 	}
 	content, meta, err := streamChat(ctx, chat, EvalStageReverseQuestions, messages, report)
 	if err != nil {
-		return nil, meta, err
+		return nil, meta, errors.WithStack(err)
 	}
 	var parsed struct {
 		Questions []string `json:"questions"`
@@ -433,7 +433,7 @@ func judgeSuggestions(ctx context.Context, params *Params, chat chatGenerator, q
 	}
 	content, meta, err := streamChat(ctx, chat, EvalStageSuggestions, messages, report)
 	if err != nil {
-		return nil, meta, err
+		return nil, meta, errors.WithStack(err)
 	}
 	var parsed struct {
 		Suggestions []struct {
@@ -670,14 +670,14 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 	var emitErr error
 	emit := func(ev StageEvent) error {
 		if emitErr != nil {
-			return emitErr
+			return errors.WithStack(emitErr)
 		}
 		if report == nil {
 			return nil
 		}
 		ev.Model = modelName
 		emitErr = report(ev)
-		return emitErr
+		return errors.WithStack(emitErr)
 	}
 	fail := func(stage EvalStage, warnPrefix string, meta CallMeta, err error) {
 		ev.Warnings = append(ev.Warnings, "dry-run: "+warnPrefix+": "+err.Error())
@@ -689,7 +689,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 	})
 	calls = append(calls, call)
 	if emitErr != nil {
-		return ev, calls, emitErr
+		return ev, calls, errors.WithStack(emitErr)
 	}
 	if err != nil {
 		fail(EvalStageAnswer, "answer generation failed", call, err)
@@ -698,7 +698,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 		_ = emit(StageEvent{Stage: EvalStageAnswer, Status: EvalStatusDone, ElapsedMs: call.ElapsedMs, Usage: &call.Usage})
 	}
 	if emitErr != nil {
-		return ev, calls, emitErr
+		return ev, calls, errors.WithStack(emitErr)
 	}
 
 	var judgments []ChunkJudgment
@@ -707,7 +707,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 	})
 	calls = append(calls, call)
 	if emitErr != nil {
-		return ev, calls, emitErr
+		return ev, calls, errors.WithStack(emitErr)
 	}
 	if err != nil {
 		fail(EvalStageChunkRelevance, "chunk relevance judgment failed", call, err)
@@ -722,7 +722,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 		_ = emit(StageEvent{Stage: EvalStageChunkRelevance, Status: EvalStatusDone, ElapsedMs: call.ElapsedMs, Usage: &call.Usage})
 	}
 	if emitErr != nil {
-		return ev, calls, emitErr
+		return ev, calls, errors.WithStack(emitErr)
 	}
 
 	// 声明抽取与反推问题依赖答案，仅在生成成功时执行
@@ -733,7 +733,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 		})
 		calls = append(calls, call)
 		if emitErr != nil {
-			return ev, calls, emitErr
+			return ev, calls, errors.WithStack(emitErr)
 		}
 		if err != nil {
 			fail(EvalStageClaims, "claim faithfulness judgment failed", call, err)
@@ -744,7 +744,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 			_ = emit(StageEvent{Stage: EvalStageClaims, Status: EvalStatusDone, ElapsedMs: call.ElapsedMs, Usage: &call.Usage})
 		}
 		if emitErr != nil {
-			return ev, calls, emitErr
+			return ev, calls, errors.WithStack(emitErr)
 		}
 
 		var questions []string
@@ -753,7 +753,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 		})
 		calls = append(calls, call)
 		if emitErr != nil {
-			return ev, calls, emitErr
+			return ev, calls, errors.WithStack(emitErr)
 		}
 		if err != nil {
 			fail(EvalStageReverseQuestions, "reverse question generation failed", call, err)
@@ -768,7 +768,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 		}
 	}
 	if emitErr != nil {
-		return ev, calls, emitErr
+		return ev, calls, errors.WithStack(emitErr)
 	}
 
 	// 改进建议不依赖回答是否生成成功：回答失败本身即是重要诊断线索，故该阶段置于
@@ -779,7 +779,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 	})
 	calls = append(calls, call)
 	if emitErr != nil {
-		return ev, calls, emitErr
+		return ev, calls, errors.WithStack(emitErr)
 	}
 	if err != nil {
 		fail(EvalStageSuggestions, "suggestion generation failed", call, err)
@@ -788,7 +788,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 		_ = emit(StageEvent{Stage: EvalStageSuggestions, Status: EvalStatusDone, ElapsedMs: call.ElapsedMs, Usage: &call.Usage})
 	}
 	if emitErr != nil {
-		return ev, calls, emitErr
+		return ev, calls, errors.WithStack(emitErr)
 	}
 	return ev, calls, nil
 }
@@ -798,7 +798,7 @@ func evaluate(ctx context.Context, params *Params, chat chatGenerator, embed emb
 func runStage[T any](stage EvalStage, emit func(StageEvent) error, call func() (T, CallMeta, error)) (T, CallMeta, error) {
 	var zero T
 	if err := emit(StageEvent{Stage: stage, Status: EvalStatusStart}); err != nil {
-		return zero, CallMeta{Stage: stage}, err
+		return zero, CallMeta{Stage: stage}, errors.WithStack(err)
 	}
 	return call()
 }

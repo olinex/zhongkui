@@ -214,6 +214,14 @@ var Specs = []ParamSpec{
 		Group: "session",
 		Kind:  ParamKindText,
 	},
+	// session.maxUserTurns 会话的交互轮次上限：有效轮次 = 会话内当前存在的用户提问条数（role=user，
+	// 被回滚删除的不计入），达到该上限即自动锁定、拒绝新提问；回滚使轮次降到上限以下即自动解锁。
+	// <=0 视为不设上限（永不锁定）。锁定是 StateOf 的全函数推导结果，不写任何状态列。
+	{
+		Key:   "session.maxUserTurns",
+		Group: "session",
+		Kind:  ParamKindInt,
+	},
 
 	// ---- memory：长期记忆与会话摘要 ----
 	// memory.enabled 长期记忆总开关：关闭时跳过记忆检索与注入，且不报错。

@@ -1382,6 +1382,7 @@ page:
     compressStart: Compacting context…
     compressDone: "Before {before} · folded {count}"
     compressCompare: "Before {before} → after {after} ({percent}%)"
+    compressTokensUnknown: n/a
     compressSucceeded: Context compaction done
     compressFailed: Context compaction failed
     approvalTitle: Tool Call Approval
@@ -1415,6 +1416,27 @@ page:
     deleteMessage: Delete
     confirmRollbackMessage: Restart from this turn? This message and everything after it will be deleted.
     confirmDeleteMessage: Delete this message and everything after it?
+    questionnaireTitle: AI Question
+    questionnaireOther: Other
+    questionnaireCustomPlaceholder: Type your answer
+    questionnaireSubmit: Submit
+    questionnaireCancel: Cancel
+    questionnairePrev: Previous
+    questionnaireNext: Next
+    questionnaireUnanswered: Unanswered questions are submitted as unanswered
+    questionnaireUnavailable: This question is no longer active, so your answer cannot be submitted. Please ask a new question.
+    questionnaireReanswer: Reanswer
+    questionnaireReanswerBusy: Still generating this turn. You can reanswer once it finishes.
+    confirmReanswerQuestionnaire: Reanswer this question? Everything after it will be cleared and regenerated.
+    approvalRerun: Rerun approval
+    approvalRerunBusy: Still generating this turn. You can rerun the approval once it finishes.
+    confirmRerunApproval: Rerun this approval? Everything after it will be cleared and regenerated.
+    questionnaireNoAnswer: Not answered
+    questionnairePendingHint: AI is waiting for your answer above. Please answer first.
+    questionnaireJump: View Question
+    lockedHint: "Session {label} ({used}/{max} turns). Roll back a message to keep asking."
+    lockedReject: This session has reached the turn limit. Roll back an earlier message to keep asking.
+    stateGuardReject: The session is not ready for this action. Please try again later.
   aiKnowledge:
     dryRun: Dry Run
     query: Query

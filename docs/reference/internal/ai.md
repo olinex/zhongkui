@@ -7,6 +7,11 @@
 - [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func BroadcastChange\(ctx context.Context, client \*etcd.EtcdClient, event \*ChangeEvent\) error](<#BroadcastChange>)
+- [func CanCancel\(facts InteractionFacts\) error](<#CanCancel>)
+- [func CanCompact\(facts InteractionFacts\) error](<#CanCompact>)
+- [func CanRerunUserInput\(facts InteractionFacts\) error](<#CanRerunUserInput>)
+- [func CanRollback\(facts InteractionFacts\) error](<#CanRollback>)
+- [func CanSend\(facts InteractionFacts\) error](<#CanSend>)
 - [func CheckEmbeddingDimension\(ctx context.Context, db \*gorm.DB, dimensions int\) error](<#CheckEmbeddingDimension>)
 - [func ChunkEmbeddingDimension\(ctx context.Context, db \*gorm.DB\) \(int, bool, error\)](<#ChunkEmbeddingDimension>)
 - [func MemoryEmbeddingDimension\(ctx context.Context, db \*gorm.DB\) \(int, bool, error\)](<#MemoryEmbeddingDimension>)
@@ -23,20 +28,27 @@
 - [func WithNamespace\(namespaceName string\) retriever.Option](<#WithNamespace>)
 - [func WithRetrieveTopK\(topK int\) retriever.Option](<#WithRetrieveTopK>)
 - [func WithWeights\(weights FusionWeights\) retriever.Option](<#WithWeights>)
+- [type ActivityInput](<#ActivityInput>)
 - [type Agent](<#Agent>)
   - [func NewAgent\(ctx context.Context, resolver ChatResolver, retriever retriever.Retriever, store \*SessionStore, params \*Params, memory \*Memory, logger \*logging.Logger, tools \[\]tool.BaseTool, toolInfos \[\]\*schema.ToolInfo, opts ...AgentOption\) \(\*Agent, error\)](<#NewAgent>)
   - [func \(a \*Agent\) CompressSession\(ctx context.Context, session \*ai.AgentSession, evicted \[\]\*ai.AgentMessage, reason string, slot ai.Slot, report CompressReporter\) \*CompactResult](<#Agent.CompressSession>)
   - [func \(a \*Agent\) Generate\(ctx context.Context, input AgentInput, opts ...compose.Option\) \(AgentOutput, error\)](<#Agent.Generate>)
   - [func \(a \*Agent\) OptimizePrompt\(ctx context.Context, query string\) \(string, error\)](<#Agent.OptimizePrompt>)
+  - [func \(a \*Agent\) PrepareResume\(ctx context.Context, in ResumeInput\) \(AgentInput, error\)](<#Agent.PrepareResume>)
+  - [func \(a \*Agent\) ResumeDetached\(ctx context.Context, in AgentInput, onEvent func\(AgentOutput\) error, onToolRequest func\(ToolRequest\) error\) error](<#Agent.ResumeDetached>)
   - [func \(a \*Agent\) ResumeRun\(ctx context.Context, in ResumeInput, opts ...compose.Option\) \(\*schema.StreamReader\[AgentOutput\], error\)](<#Agent.ResumeRun>)
   - [func \(a \*Agent\) RunDetached\(ctx context.Context, in AgentInput, onEvent func\(AgentOutput\) error, onToolRequest func\(ToolRequest\) error\) error](<#Agent.RunDetached>)
   - [func \(a \*Agent\) Stream\(ctx context.Context, input AgentInput, opts ...compose.Option\) \(\*schema.StreamReader\[AgentOutput\], error\)](<#Agent.Stream>)
   - [func \(a \*Agent\) StreamRun\(ctx context.Context, input AgentInput, opts ...compose.Option\) \(\*schema.StreamReader\[AgentOutput\], error\)](<#Agent.StreamRun>)
+- [type AgentBlockEvent](<#AgentBlockEvent>)
 - [type AgentInput](<#AgentInput>)
 - [type AgentOption](<#AgentOption>)
   - [func WithSlotContextLimit\(fn func\(ai.Slot\) int\) AgentOption](<#WithSlotContextLimit>)
 - [type AgentOutput](<#AgentOutput>)
 - [type AgentState](<#AgentState>)
+- [type ApprovalBlockPayload](<#ApprovalBlockPayload>)
+- [type ApprovalCallRecord](<#ApprovalCallRecord>)
+- [type AssistantInputTurn](<#AssistantInputTurn>)
 - [type AuditLevel](<#AuditLevel>)
 - [type BusinessData](<#BusinessData>)
   - [func SanitizeBusinessData\(data BusinessData, params \*Params\) \(BusinessData, error\)](<#SanitizeBusinessData>)
@@ -56,6 +68,7 @@
   - [func \(c \*Components\) Enabled\(\) bool](<#Components.Enabled>)
 - [type CompressEvent](<#CompressEvent>)
 - [type CompressReporter](<#CompressReporter>)
+- [type ContentBlockPayload](<#ContentBlockPayload>)
 - [type DetachedContext](<#DetachedContext>)
   - [func NewDetachedContext\(ctx context.Context\) DetachedContext](<#NewDetachedContext>)
 - [type DiagnosisCategory](<#DiagnosisCategory>)
@@ -74,6 +87,10 @@
 - [type FaithfulnessClaim](<#FaithfulnessClaim>)
 - [type FusionWeights](<#FusionWeights>)
 - [type GeneratedKnowledgeDoc](<#GeneratedKnowledgeDoc>)
+- [type InteractionFacts](<#InteractionFacts>)
+- [type InteractionSnapshot](<#InteractionSnapshot>)
+  - [func StateOf\(facts InteractionFacts\) InteractionSnapshot](<#StateOf>)
+- [type InteractionStateEvent](<#InteractionStateEvent>)
 - [type Knowledge](<#Knowledge>)
   - [func NewKnowledge\(db \*database.DB, embed embedder, params \*Params\) \(\*Knowledge, error\)](<#NewKnowledge>)
   - [func \(k \*Knowledge\) DeleteDocument\(ctx context.Context, docID uint\) error](<#Knowledge.DeleteDocument>)
@@ -96,7 +113,7 @@
   - [func \(m \*Memory\) ReindexEmbeddings\(ctx context.Context, namespaceName string, report SyncReporter\) \(int, error\)](<#Memory.ReindexEmbeddings>)
   - [func \(m \*Memory\) SetStatus\(ctx context.Context, namespaceName string, userID uint, id uint, status ai.MemoryStatus\) error](<#Memory.SetStatus>)
   - [func \(m \*Memory\) Summarize\(ctx context.Context, session \*ai.AgentSession, evicted \[\]\*ai.AgentMessage\) \(string, uint, error\)](<#Memory.Summarize>)
-  - [func \(m \*Memory\) SummarizeStream\(ctx context.Context, session \*ai.AgentSession, evicted \[\]\*ai.AgentMessage, onDelta func\(string\) error\) \(string, uint, error\)](<#Memory.SummarizeStream>)
+  - [func \(m \*Memory\) SummarizeStream\(ctx context.Context, session \*ai.AgentSession, evicted \[\]\*ai.AgentMessage, onDelta func\(string\) error\) \(string, uint, \*schema.TokenUsage, error\)](<#Memory.SummarizeStream>)
   - [func \(m \*Memory\) Write\(ctx context.Context, in tools.MemoryWriteInput\) \(\*ai.AgentMemory, error\)](<#Memory.Write>)
 - [type MemoryHit](<#MemoryHit>)
 - [type MemoryQuery](<#MemoryQuery>)
@@ -122,6 +139,13 @@
   - [func \(p \*Params\) Text\(key string\) string](<#Params.Text>)
 - [type PendingCall](<#PendingCall>)
 - [type Published](<#Published>)
+- [type QuestionnaireAnswer](<#QuestionnaireAnswer>)
+- [type QuestionnaireBlockPayload](<#QuestionnaireBlockPayload>)
+- [type QuestionnaireOption](<#QuestionnaireOption>)
+- [type QuestionnairePayload](<#QuestionnairePayload>)
+  - [func \(p QuestionnairePayload\) FullyAnswered\(\) bool](<#QuestionnairePayload.FullyAnswered>)
+- [type QuestionnaireQuestion](<#QuestionnaireQuestion>)
+- [type ReasoningBlockPayload](<#ReasoningBlockPayload>)
 - [type ResumeInput](<#ResumeInput>)
 - [type RetrievalResult](<#RetrievalResult>)
   - [func ToRetrievalResults\(docs \[\]\*schema.Document\) \[\]RetrievalResult](<#ToRetrievalResults>)
@@ -134,10 +158,13 @@
 - [type RunExecutor](<#RunExecutor>)
 - [type RunHub](<#RunHub>)
   - [func NewRunHub\(deps RunHubDeps\) \*RunHub](<#NewRunHub>)
+  - [func \(h \*RunHub\) BroadcastInteractionState\(ctx context.Context, sessionID, userID uint, ev InteractionStateEvent\) error](<#RunHub.BroadcastInteractionState>)
   - [func \(h \*RunHub\) Cancel\(ctx context.Context, sessionID uint, userID uint, namespace string\) error](<#RunHub.Cancel>)
   - [func \(h \*RunHub\) LiveRun\(ctx context.Context, sessionID uint, userID uint\) \(\*LiveRunStatus, error\)](<#RunHub.LiveRun>)
   - [func \(h \*RunHub\) Shutdown\(ctx context.Context\) error](<#RunHub.Shutdown>)
   - [func \(h \*RunHub\) Start\(detached DetachedContext, in AgentInput, sessionID uint, userID uint, namespace string, started func\(runID serializer.HexUUID\)\) \(serializer.HexUUID, error\)](<#RunHub.Start>)
+  - [func \(h \*RunHub\) StartActivity\(detached DetachedContext, in ActivityInput, started func\(runID serializer.HexUUID\)\) \(serializer.HexUUID, error\)](<#RunHub.StartActivity>)
+  - [func \(h \*RunHub\) StartResume\(detached DetachedContext, in ResumeInput, sessionID uint, userID uint, namespace string, started func\(runID serializer.HexUUID\)\) \(serializer.HexUUID, error\)](<#RunHub.StartResume>)
   - [func \(h \*RunHub\) Subscribe\(ctx context.Context, sessionID uint, userID uint, after uint64\) \(\[\]Published, \<\-chan Published, func\(\), error\)](<#RunHub.Subscribe>)
 - [type RunHubDeps](<#RunHubDeps>)
 - [type RunStore](<#RunStore>)
@@ -157,13 +184,20 @@
   - [func \(r \*Runtime\) TestModel\(ctx context.Context, cfg llm.ModelConfig\) error](<#Runtime.TestModel>)
 - [type SessionStore](<#SessionStore>)
   - [func NewSessionStore\(db \*database.DB\) \(\*SessionStore, error\)](<#NewSessionStore>)
+  - [func \(s \*SessionStore\) AbortPendingRun\(ctx context.Context, sessionID, userID uint\) error](<#SessionStore.AbortPendingRun>)
+  - [func \(s \*SessionStore\) AppendBlock\(ctx context.Context, block \*ai.AgentMessageBlock\) error](<#SessionStore.AppendBlock>)
   - [func \(s \*SessionStore\) AppendMessage\(ctx context.Context, msg \*ai.AgentMessage\) \(\*ai.AgentMessage, error\)](<#SessionStore.AppendMessage>)
   - [func \(s \*SessionStore\) AppendRunEvent\(ctx context.Context, ev \*ai.AgentRunEvent\) error](<#SessionStore.AppendRunEvent>)
-  - [func \(s \*SessionStore\) AssistantSeqAtUserMessage\(ctx context.Context, sessionID, userID uint, index int\) \(uint64, error\)](<#SessionStore.AssistantSeqAtUserMessage>)
+  - [func \(s \*SessionStore\) AssistantSeqAtMessage\(ctx context.Context, sessionID, userID uint, messageID uint\) \(uint64, error\)](<#SessionStore.AssistantSeqAtMessage>)
   - [func \(s \*SessionStore\) BranchSessionFromUserMessage\(ctx context.Context, sessionID, userID uint, userMessageIndex int, title string\) \(\*ai.AgentSession, error\)](<#SessionStore.BranchSessionFromUserMessage>)
   - [func \(s \*SessionStore\) ClaimAgentRun\(ctx context.Context, sessionID uint, namespaceName string, userID uint\) \(\*ai.AgentRun, error\)](<#SessionStore.ClaimAgentRun>)
   - [func \(s \*SessionStore\) ContextTokens\(ctx context.Context, sessionID, userID uint\) \(int, error\)](<#SessionStore.ContextTokens>)
-  - [func \(s \*SessionStore\) ContextTokensBySession\(ctx context.Context, userID uint, sessionIDs \[\]uint\) \(map\[uint\]int, error\)](<#SessionStore.ContextTokensBySession>)
+  - [func \(s \*SessionStore\) ContextUsage\(ctx context.Context, sessionID, userID uint\) \(int, error\)](<#SessionStore.ContextUsage>)
+  - [func \(s \*SessionStore\) ContextUsageBySession\(ctx context.Context, userID uint, sessionIDs \[\]uint\) \(map\[uint\]int, error\)](<#SessionStore.ContextUsageBySession>)
+  - [func \(s \*SessionStore\) ConvergeExpiredPendingRuns\(ctx context.Context, now time.Time, limit int\) \(int64, error\)](<#SessionStore.ConvergeExpiredPendingRuns>)
+  - [func \(s \*SessionStore\) ConvergeExpiredRunningLiveRuns\(ctx context.Context, now time.Time, limit int\) \(int64, error\)](<#SessionStore.ConvergeExpiredRunningLiveRuns>)
+  - [func \(s \*SessionStore\) ConvergeOrphanLiveRun\(ctx context.Context, runID serializer.HexUUID, sessionID, userID uint\) error](<#SessionStore.ConvergeOrphanLiveRun>)
+  - [func \(s \*SessionStore\) CountUserTurns\(ctx context.Context, sessionID, userID uint\) \(int, error\)](<#SessionStore.CountUserTurns>)
   - [func \(s \*SessionStore\) CreateLiveRun\(ctx context.Context, lr \*ai.AgentLiveRun\) error](<#SessionStore.CreateLiveRun>)
   - [func \(s \*SessionStore\) CreateSession\(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, userID uint\) \(\*ai.AgentSession, error\)](<#SessionStore.CreateSession>)
   - [func \(s \*SessionStore\) DeleteExpiredAgentRuns\(ctx context.Context, now time.Time, limit int\) \(int64, error\)](<#SessionStore.DeleteExpiredAgentRuns>)
@@ -172,21 +206,29 @@
   - [func \(s \*SessionStore\) DeleteMessage\(ctx context.Context, id, userID uint\) error](<#SessionStore.DeleteMessage>)
   - [func \(s \*SessionStore\) DeleteSession\(ctx context.Context, id uint, namespaceName string, userID uint\) error](<#SessionStore.DeleteSession>)
   - [func \(s \*SessionStore\) FinishLiveRun\(ctx context.Context, runID serializer.HexUUID, userID uint, phase ai.AgentRunPhase, lastSeq uint64\) error](<#SessionStore.FinishLiveRun>)
+  - [func \(s \*SessionStore\) GetMessage\(ctx context.Context, id, userID uint\) \(\*ai.AgentMessage, error\)](<#SessionStore.GetMessage>)
   - [func \(s \*SessionStore\) GetSession\(ctx context.Context, id uint, namespaceName string, userID uint\) \(\*ai.AgentSession, error\)](<#SessionStore.GetSession>)
   - [func \(s \*SessionStore\) HistoryMessages\(ctx context.Context, sessionID, userID uint, maxCount int\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.HistoryMessages>)
   - [func \(s \*SessionStore\) LatestAssistantMessage\(ctx context.Context, sessionID, userID uint\) \(\*ai.AgentMessage, error\)](<#SessionStore.LatestAssistantMessage>)
   - [func \(s \*SessionStore\) LatestLiveRun\(ctx context.Context, sessionID, userID uint\) \(\*ai.AgentLiveRun, error\)](<#SessionStore.LatestLiveRun>)
+  - [func \(s \*SessionStore\) ListBlocksByMessage\(ctx context.Context, messageID uint, namespaceName string, userID uint\) \(\[\]\*ai.AgentMessageBlock, error\)](<#SessionStore.ListBlocksByMessage>)
+  - [func \(s \*SessionStore\) ListBlocksByMessages\(ctx context.Context, messageIDs \[\]uint, namespaceName string, userID uint\) \(map\[uint\]\[\]\*ai.AgentMessageBlock, error\)](<#SessionStore.ListBlocksByMessages>)
   - [func \(s \*SessionStore\) ListCompactions\(ctx context.Context, sessionID, userID uint\) \(\[\]\*ai.AgentSessionCompaction, error\)](<#SessionStore.ListCompactions>)
   - [func \(s \*SessionStore\) ListMessages\(ctx context.Context, sessionID, userID uint, limit, offset int\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessages>)
   - [func \(s \*SessionStore\) ListMessagesAfter\(ctx context.Context, sessionID, userID uint, afterSeq uint\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessagesAfter>)
   - [func \(s \*SessionStore\) ListMessagesBefore\(ctx context.Context, sessionID, userID uint, beforeSeq uint, afterSeq uint\) \(\[\]\*ai.AgentMessage, error\)](<#SessionStore.ListMessagesBefore>)
   - [func \(s \*SessionStore\) ListRunEventsAfter\(ctx context.Context, runID serializer.HexUUID, userID uint, after uint64, limit int\) \(\[\]\*ai.AgentRunEvent, error\)](<#SessionStore.ListRunEventsAfter>)
   - [func \(s \*SessionStore\) ListSessions\(ctx context.Context, namespaceName string, userID uint, limit, offset int\) \(\[\]\*ai.AgentSession, error\)](<#SessionStore.ListSessions>)
+  - [func \(s \*SessionStore\) PendingInputCalls\(ctx context.Context, sessionID, userID uint\) \(uint, \[\]PendingCall, error\)](<#SessionStore.PendingInputCalls>)
+  - [func \(s \*SessionStore\) PendingRunSubstate\(ctx context.Context, sessionID, userID uint\) \(ai.AgentInteractionSubstate, error\)](<#SessionStore.PendingRunSubstate>)
   - [func \(s \*SessionStore\) RenameSession\(ctx context.Context, id uint, namespaceName string, userID uint, title string\) \(\*ai.AgentSession, error\)](<#SessionStore.RenameSession>)
+  - [func \(s \*SessionStore\) RerunAssistantInput\(ctx context.Context, sessionID, userID uint, messageID uint\) \(\*AssistantInputTurn, error\)](<#SessionStore.RerunAssistantInput>)
   - [func \(s \*SessionStore\) SaveAgentRun\(ctx context.Context, run \*ai.AgentRun\) error](<#SessionStore.SaveAgentRun>)
+  - [func \(s \*SessionStore\) SetAgentRunAnchor\(ctx context.Context, runID, anchorMessageID uint\) error](<#SessionStore.SetAgentRunAnchor>)
   - [func \(s \*SessionStore\) SetSessionStatus\(ctx context.Context, id uint, namespaceName string, userID uint, status ai.SessionStatus\) \(\*ai.AgentSession, error\)](<#SessionStore.SetSessionStatus>)
   - [func \(s \*SessionStore\) TruncateMessagesFromUserMessage\(ctx context.Context, sessionID, userID uint, userMessageIndex int\) error](<#SessionStore.TruncateMessagesFromUserMessage>)
   - [func \(s \*SessionStore\) UpdateAssistantMessage\(ctx context.Context, msg \*ai.AgentMessage\) error](<#SessionStore.UpdateAssistantMessage>)
+  - [func \(s \*SessionStore\) UpdateBlock\(ctx context.Context, block \*ai.AgentMessageBlock\) error](<#SessionStore.UpdateBlock>)
   - [func \(s \*SessionStore\) UpdateLiveRunSeq\(ctx context.Context, runID serializer.HexUUID, lastSeq uint64\) error](<#SessionStore.UpdateLiveRunSeq>)
   - [func \(s \*SessionStore\) UpdateSessionValve\(ctx context.Context, id uint, namespaceName string, userID uint, valve ai.ReviewValve\) \(\*ai.AgentSession, error\)](<#SessionStore.UpdateSessionValve>)
   - [func \(s \*SessionStore\) UpdateSummaryAndCheckpoint\(ctx context.Context, session \*ai.AgentSession, summary string, uptoSeq uint, reason string, metrics CompactionMetrics\) error](<#SessionStore.UpdateSummaryAndCheckpoint>)
@@ -214,6 +256,8 @@
   - [func \(s \*Store\) ModelConfig\(ctx context.Context, slot ai.Slot\) \(llm.ModelConfig, error\)](<#Store.ModelConfig>)
 - [type SyncProgressItem](<#SyncProgressItem>)
 - [type SyncReporter](<#SyncReporter>)
+- [type ToolCallBlockPayload](<#ToolCallBlockPayload>)
+- [type ToolCallRecord](<#ToolCallRecord>)
 - [type ToolExecOwner](<#ToolExecOwner>)
 - [type ToolRequest](<#ToolRequest>)
 - [type ToolRequestReporter](<#ToolRequestReporter>)
@@ -266,6 +310,17 @@ var (
     ErrAgentRunConsumed = errors.New("agent run already consumed")
     // ErrAgentRunExpired 运行现场已过期
     ErrAgentRunExpired = errors.New("agent run expired")
+)
+```
+
+<a name="ErrInteractionLocked"></a>交互状态守卫的包级错误哨兵，供视图层 errors.Is 映射业务码（1124 / 1125），不依赖 internal/manager/response：领域层只暴露语义，不关心 HTTP 状态码与文案。
+
+```go
+var (
+    // ErrInteractionLocked 会话已达轮次上限，拒绝新提问（视图层映射为业务码 1124）
+    ErrInteractionLocked = errors.New("agent interaction locked")
+    // ErrInteractionBusy 当前交互状态不允许该操作（视图层映射为业务码 1125）
+    ErrInteractionBusy = errors.New("agent interaction busy")
 )
 ```
 
@@ -454,6 +509,12 @@ var Specs = []ParamSpec{
     },
 
     {
+        Key:   "session.maxUserTurns",
+        Group: "session",
+        Kind:  ParamKindInt,
+    },
+
+    {
         Key:   "memory.enabled",
         Group: "memory",
         Kind:  ParamKindBool,
@@ -599,6 +660,81 @@ var ToolSpecs = []ToolSpec{
         Name:  "knowledge_search",
         Group: "builtin",
     },
+
+    {
+        Name:  "math_eval",
+        Group: "builtin",
+    },
+    {
+        Name:  "unit_convert",
+        Group: "builtin",
+    },
+    {
+        Name:  "base_convert",
+        Group: "builtin",
+    },
+    {
+        Name:  "datetime_calc",
+        Group: "builtin",
+    },
+    {
+        Name:  "regex",
+        Group: "builtin",
+    },
+    {
+        Name:  "json_diff",
+        Group: "builtin",
+    },
+    {
+        Name:  "text_stats",
+        Group: "builtin",
+    },
+    {
+        Name:  "hash",
+        Group: "builtin",
+    },
+    {
+        Name:  "encode_convert",
+        Group: "builtin",
+    },
+    {
+        Name:  "uuid",
+        Group: "builtin",
+    },
+    {
+        Name:  "json",
+        Group: "builtin",
+    },
+    {
+        Name:  "csv_parse",
+        Group: "builtin",
+    },
+    {
+        Name:  "url_parse",
+        Group: "builtin",
+    },
+
+    {
+        Name:  "poly_solve",
+        Group: "builtin",
+    },
+    {
+        Name:  "linear_solve",
+        Group: "builtin",
+    },
+    {
+        Name:  "root_find",
+        Group: "builtin",
+    },
+    {
+        Name:  "nonlinear_solve",
+        Group: "builtin",
+    },
+
+    {
+        Name:  askUserToolName,
+        Group: "client",
+    },
 }
 ```
 
@@ -610,6 +746,51 @@ func BroadcastChange(ctx context.Context, client *etcd.EtcdClient, event *Change
 ```
 
 BroadcastChange 广播 LLM 配置变更事件到 etcd 全局键。 管理端写路径在 DB 事务提交后调用，通知各进程的监听方重读数据库并重建运行时； 委托 etcd 通用广播层（JSON 序列化 \+ Put \+ 超时上限）；未绑定 etcd 客户端时返回 etcd.ErrChangeUnavailable，由写路径告警降级而不影响已提交的业务变更。
+
+<a name="CanCancel"></a>
+## func CanCancel
+
+```go
+func CanCancel(facts InteractionFacts) error
+```
+
+CanCancel 判定当前交互状态是否允许中止：仅运行中（任一子状态）与等待中允许，其余返回 ErrInteractionBusy。需注意本守卫表达的是「UI 上停止按钮是否可用」的等价口径；取消端点在 运行中 / 等待中以外的状态下由端点自行保持幂等语义（例如重复取消不报错），本守卫不负责该语义。
+
+<a name="CanCompact"></a>
+## func CanCompact
+
+```go
+func CanCompact(facts InteractionFacts) error
+```
+
+CanCompact 判定当前交互状态是否允许发起手动上下文压缩：口径与 CanRollback 一致——仅暂停 与已锁定允许；压缩本身是一次在途活动，运行中 / 等待中（含压缩中）返回 ErrInteractionBusy。
+
+<a name="CanRerunUserInput"></a>
+## func CanRerunUserInput
+
+```go
+func CanRerunUserInput(facts InteractionFacts) error
+```
+
+CanRerunUserInput 判定当前交互状态是否允许「回退到某条助手待输入回合（问卷 / 授权）」： 口径与 CanRollback 一致——仅暂停与已锁定允许，运行中 / 等待中返回 ErrInteractionBusy。
+
+<a name="CanRollback"></a>
+## func CanRollback
+
+```go
+func CanRollback(facts InteractionFacts) error
+```
+
+CanRollback 判定当前交互状态是否允许「回滚到某条用户提问发送前」：仅暂停与已锁定允许 （已锁定非死路，回滚使其轮次降到上限以下即自动解锁），运行中 / 等待中返回 ErrInteractionBusy。
+
+<a name="CanSend"></a>
+## func CanSend
+
+```go
+func CanSend(facts InteractionFacts) error
+```
+
+CanSend 判定当前交互状态是否允许发送新提问：仅暂停允许；已锁定返回 ErrInteractionLocked （视图层映射 1124），运行中 / 等待中返回 ErrInteractionBusy（视图层映射 1125）。判定只依据 StateOf 的结果，与前端输入闸门口径同源。
 
 <a name="CheckEmbeddingDimension"></a>
 ## func CheckEmbeddingDimension
@@ -768,6 +949,25 @@ func WithWeights(weights FusionWeights) retriever.Option
 
 WithWeights 设置 weighted 融合权重。
 
+<a name="ActivityInput"></a>
+## type ActivityInput
+
+ActivityInput 描述一次通用在途活动（如手动上下文压缩）的启动参数：会话 / 属主 / 命名空间为登记 必需字段，Run 是活动本体。与生成（Start / StartResume）共用同一套登记互斥、运行根 context、取消、 终局化与落库路径，从而满足「会话内至多一个在途活动」——压缩与生成冲突时同样返回既有的 ErrAgentLiveRunAlreadyRunning 哨兵。
+
+```go
+type ActivityInput struct {
+    // SessionID 所属会话 ID
+    SessionID uint
+    // UserID 属主用户 ID
+    UserID uint
+    // Namespace 所属命名空间
+    Namespace string
+    // Run 活动本体：在活动根 context 下执行；report 用于下发活动自己的流式事件
+    // （delta / reasoning / stage / tool_request / compress_*，取消后内容类事件被自动抑制）。
+    Run func(ctx context.Context, report func(typ ai.AgentRunEventType, payload any) error) error
+}
+```
+
 <a name="Agent"></a>
 ## type Agent
 
@@ -815,6 +1015,26 @@ func (a *Agent) OptimizePrompt(ctx context.Context, query string) (string, error
 
 OptimizePrompt 单轮优化用户诉求：以参数 agent.promptOptimizeSystemPrompt 为系统提示，用 flash 档位把 query 改写为更清晰、更易被模型正确理解的提问，返回裁剪后的纯文本。该能力无会话、无工具、 无记忆，不写任何库。query 裁剪后为空时不调用模型即返回英文错误；resolver 缺失、flash 档位未绑定 或解析失败、模型返回空内容时同样返回英文错误，绝不静默降级到其它档位（与 GenerateTopic / Summarize 等辅助 LLM 任务一致）。
 
+<a name="Agent.PrepareResume"></a>
+### func \(\*Agent\) PrepareResume
+
+```go
+func (a *Agent) PrepareResume(ctx context.Context, in ResumeInput) (AgentInput, error)
+```
+
+PrepareResume 认领挂起运行现场并构建续跑输入：校验归属/状态/过期并原子消费现场，反序列化现场中的 消息链、待执行调用与引用，把前端回传结果按待执行调用的原始顺序回灌为 tool message，并取回锚点行上的 问卷载荷、把本次回传的答案\*\*并入\*\*其中。返回的 AgentInput 可直接交给 Stream 续跑。
+
+「认领 \+ 构建输入」从 ResumeRun 中拆出，供 RunHub 的 StartResume 在构造 SSE 写手前同步校验（认领失败 仍能返回 JSON 业务码错误），随后由 ResumeDetached 以已备好的输入驻留执行。认领失败直接返回对应哨兵 错误（不存在/归属不符/已消费/已过期），本函数不额外包装以免破坏 errors.Is 语义。 ToolReporter 取自 in.ToolReporter（准备阶段回灌 tool message 时上报 toolResult 终态，并作为续跑运行阶段 事件的上报回调）；ToolRequestReporter 不在准备阶段注入——再次挂起的 tool\_request 上报由执行阶段的调用方 （ResumeDetached 的 onToolRequest）注入。
+
+<a name="Agent.ResumeDetached"></a>
+### func \(\*Agent\) ResumeDetached
+
+```go
+func (a *Agent) ResumeDetached(ctx context.Context, in AgentInput, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error
+```
+
+ResumeDetached 以已备好的续跑输入脱管执行一次续跑并把输出抽干到回调（供 RunHub 驻留执行）： 抽干语义与 RunDetached 一致（onEvent 收每个流项、onToolRequest 收再次挂起时下发的客户端工具请求）， 区别仅在于输入由 PrepareResume 备好——不重载历史、不追加用户消息。调用方须传入脱管上下文，使客户端 断开不中止图循环、且最终 done 仍以脱管 ctx 落库。
+
 <a name="Agent.ResumeRun"></a>
 ### func \(\*Agent\) ResumeRun
 
@@ -857,6 +1077,27 @@ StreamRun 是带会话持久化的流式执行入口（SSE 管线后端）：
 4. 流末尾收到 done 项时先持久化助手回复（正文 \+ 草稿 \+ 引用）再向外发送 done。
 
 SessionID 为 0 时跳过全部持久化，行为与 Stream 一致。会话不存在时返回 ErrSessionNotFound 且不落任何消息；提问为空时返回英文错误（不落空消息）。
+
+<a name="AgentBlockEvent"></a>
+## type AgentBlockEvent
+
+AgentBlockEvent 是块「创建 / 更新 / 收敛」时的流式事件载荷（供 run\_hub 下发 block 事件）：Seq 为块 在所属消息内的序号、Kind 为块类型、Payload 为该块的 JSON 载荷（明文，未加密）。前端据 \{seq, kind\} 归并增量到「当前开放块」，并在收敛事件到达时以 payload 覆盖整块。
+
+```go
+type AgentBlockEvent struct {
+    // Seq 块在所属消息内的单调序号（从 1 起）
+    Seq uint64 `json:"seq"`
+    // Kind 块类型
+    Kind ai.AgentMessageBlockKind `json:"kind"`
+    // Payload 块载荷 JSON（明文；落库前由落库层加密）
+    Payload json.RawMessage `json:"payload"`
+    // Created 该事件是否为块的创建事件：true 表示本次为该块新建（reasoning / content 的创建载荷仅带
+    // 首个增量，其后同段增量经增量事件追加），false 表示同块的收敛 / 更新（reasoning / content 的收敛
+    // 载荷为该块终态全文）。前端据此区分「置空文本建块后由增量累积」与「以载荷整块覆盖」——从序号 0
+    // 回放时若不分此二者，创建载荷的先导增量会与本块已有 / 随后的增量文本重复。
+    Created bool `json:"created"`
+}
+```
 
 <a name="AgentInput"></a>
 ## type AgentInput
@@ -908,12 +1149,20 @@ type AgentInput struct {
     ResumeMessages []*schema.Message `json:"-"`
     // ResumeCitations 恢复运行要产出的检索引用（不对外暴露），由挂起时刻持久化的引用预置进采集器。
     ResumeCitations []RetrievalResult `json:"-"`
+    // Questionnaire 问卷挂起与续跑之间共享的运行期状态（不对外暴露）：由 StreamRun / ResumeRun 在
+    // 进入图前分配，随 AgentInput 以指针形式在节点 3 与 wrapPersist 之间共享（结构体按值拷贝只复制
+    // 指针，两侧指向同一对象）。节点 3 在问卷挂起时写入载荷与现场 ID；wrapPersist 据此决定「保留
+    // 锚点行」还是按既有逻辑回收阶段性落库行，并在续跑时把终态回答写回锚点行。非问卷运行的指针仍然
+    // 存在但载荷为 nil，行为与引入问卷前完全一致。
+    Questionnaire *questionnaireState `json:"-"`
+
     // ReviewValve 会话级审核阀门（不对外暴露），由 StreamRun / ResumeRun 从会话读取注入，不对外暴露；
     // 与每条调用的审核重要级合成得出最终是否需人工审核。
     ReviewValve ai.ReviewValve `json:"-"`
     // CompressReporter 压缩过程事件上报通道（不对外暴露），由视图层/RunHub 注入；为 nil 时不上报。
     // 与 ToolReporter / ToolRequestReporter 同为 json:"-"。
     CompressReporter CompressReporter `json:"-"`
+    // contains filtered or unexported fields
 }
 ```
 
@@ -966,6 +1215,15 @@ type AgentOutput struct {
     TotalTokens int `json:"totalTokens"`
     // ElapsedMs 本轮总耗时（毫秒），从 StreamRun 开始到 done 项产出（仅 done 项）
     ElapsedMs int64 `json:"elapsedMs"`
+    // MessageID 本回合助手消息的落库行 ID（仅 done 项，且仅当本次运行持久化了会话时给出；无会话的
+    // 旁路运行为 0）：落库后才可知，故由持久化收尾处回填。供前端实时会话把本地气泡绑定到该行——
+    // 「压缩到此」等按消息 ID 定位的操作由此无需先回读历史即可发起（与 tool_request 载荷携带挂起
+    // 锚点 ID 同源同义，见 reportToolRequests）。
+    MessageID uint `json:"messageID,omitempty"`
+    // Blocks 本次流项承载的「新增块事件」（仅内传，不对外序列化）：由本包在内容真实产生时点从块构建器
+    // 取出并挂到对应的流项上，供 run_hub 以 block 事件下发（前端据 {seq, kind} 归并增量到当前开放块）。
+    // 与 delta / reasoning 增量、done 项同源同序。
+    Blocks []AgentBlockEvent `json:"-"`
 }
 ```
 
@@ -977,6 +1235,53 @@ AgentState 是图运行期间的共享状态，经 compose.ProcessState 在节�
 ```go
 type AgentState struct {
     // contains filtered or unexported fields
+}
+```
+
+<a name="ApprovalBlockPayload"></a>
+## type ApprovalBlockPayload
+
+ApprovalBlockPayload 是 approval 块的载荷：本轮待审批调用清单。
+
+```go
+type ApprovalBlockPayload struct {
+    // Calls 本轮待审批调用，按发起顺序排列
+    Calls []*ApprovalCallRecord `json:"calls"`
+}
+```
+
+<a name="ApprovalCallRecord"></a>
+## type ApprovalCallRecord
+
+ApprovalCallRecord 是 approval 块内一条待审批调用记录：以 PendingCall 的既有形状承载调用描述， 并附用户决策与执行结果 / 错误。
+
+```go
+type ApprovalCallRecord struct {
+    PendingCall
+    // Decision 用户决策：nil 表示尚无最终决策（仍待审批 / 只读回显），非 nil 时 true 为批准、
+    // false 为拒绝（语义同 ToolResult.Approved）
+    Decision *bool `json:"decision,omitempty"`
+    // Result 执行结果文本（批准且执行成功时有效，落库前按回灌上限截断）
+    Result string `json:"result,omitempty"`
+    // Error 执行错误文本（前端执行失败时有效）
+    Error string `json:"error,omitempty"`
+}
+```
+
+<a name="AssistantInputTurn"></a>
+## type AssistantInputTurn
+
+AssistantInputTurn 是历史「助手待输入回合」的回退结果：回合种类、问卷各轮载荷（仅问卷回合）与 该回合待执行调用清单（供重答 / 重新授权后经既有 tool\-result 原样回传续跑）。
+
+```go
+type AssistantInputTurn struct {
+    // Kind 回合种类：answer（问卷作答）或 approval（工具授权）
+    Kind ai.AgentInteractionSubstate
+    // Questionnaires 问卷回合按轮次先后排列的各轮载荷（题目 + 上次答案），前端据此预填各问答框；
+    // 授权回合为空
+    Questionnaires []QuestionnairePayload
+    // Calls 该回合的待执行调用清单（callID 须与挂起时一致）
+    Calls []PendingCall
 }
 ```
 
@@ -1228,6 +1533,10 @@ type CompactResult struct {
     Extracted int
     // Warnings 非致命告警（英文）
     Warnings []string
+    // TokensAfter 本次压缩后上下文占用的即时估算：压缩前占用减去被折叠内容占用、再加上新摘要占用，
+    // 即「被折叠内容换成新摘要」后的上下文占用估算（估值口径见 estimatedCompactedTokens），随压缩
+    // 检查点一并落库并供压缩完成即刻展示；无法估算时为 0。
+    TokensAfter int
 }
 ```
 
@@ -1242,6 +1551,9 @@ type CompactionMetrics struct {
     TokensBefore int
     // FoldedCount 折叠进摘要的消息条数
     FoldedCount int
+    // TokensAfter 推进后上下文占用的即时估算 token：调用方入参留 0，由 CompactStream 在摘要产出后
+    // 算得并随检查点落库（估值口径见 estimatedCompactedTokens）；静默滚动不产出估算，留 0。
+    TokensAfter int
 }
 ```
 
@@ -1302,6 +1614,12 @@ type CompressEvent struct {
     Threshold float64 `json:"threshold,omitempty"`
     // TokensBefore 压缩前占用 token（仅 compress_done）
     TokensBefore int `json:"tokensBefore,omitempty"`
+    // TokensAfter 压缩后占用 token 的即时估算（仅 compress_done）：压缩前占用 − 被折叠内容占用 +
+    // 新摘要占用，优先取摘要模型用量算出的估值，用量缺失或其估值不可用时回落为按字节折算的估值
+    // （见 estimatedCompactedTokens），亦即压缩完成即刻总能给出一个可展示的值——两种口径都不可用时
+    // 才缺省（前端回落为仅展示压缩前占用与折叠条数）。该值仅作即时展示并与检查点同时落库，待在途
+    // 或后续生成由供应商测得的真实 prompt tokens 到达后覆盖为精确值。
+    TokensAfter int `json:"tokensAfter,omitempty"`
     // FoldedCount 本次折叠的消息条数（仅 compress_done）
     FoldedCount int `json:"foldedCount,omitempty"`
     // SummaryUptoSeq 压缩后滚动摘要游标（仅 compress_done）
@@ -1316,6 +1634,18 @@ CompressReporter 上报一次上下文压缩事件；返回错误（写失败/�
 
 ```go
 type CompressReporter func(CompressEvent) error
+```
+
+<a name="ContentBlockPayload"></a>
+## type ContentBlockPayload
+
+ContentBlockPayload 是 content 块的载荷：一段连续正文文本，开放期内增量累积。
+
+```go
+type ContentBlockPayload struct {
+    // Text 累积的正文文本
+    Text string `json:"text"`
+}
 ```
 
 <a name="DetachedContext"></a>
@@ -1573,6 +1903,12 @@ ExpiredRunStore 过期运行数据清理所需的持久化能力（由 \*Session
 
 ```go
 type ExpiredRunStore interface {
+    // ConvergeExpiredPendingRuns 收敛一批已过期的挂起运行现场为失败：作废现场并写回锚点助手消息终局，
+    // 使会话回落 暂停/失败（见 ConvergeExpiredPendingRuns 实现）。返回收敛行数。
+    ConvergeExpiredPendingRuns(ctx context.Context, now time.Time, limit int) (int64, error)
+    // ConvergeExpiredRunningLiveRuns 收敛一批已过期且仍登记为 running 的在途运行为失败：置失败并写回
+    // 会话最近一条助手消息终局（见 ConvergeExpiredRunningLiveRuns 实现）。返回收敛行数。
+    ConvergeExpiredRunningLiveRuns(ctx context.Context, now time.Time, limit int) (int64, error)
     // DeleteExpiredLiveRuns 硬删除一批超过 now 的运行登记，返回删除行数
     DeleteExpiredLiveRuns(ctx context.Context, now time.Time, limit int) (int64, error)
     // DeleteExpiredRunEvents 硬删除一批超过 now 的事件日志（兜底清理未被级联的事件），返回删除行数
@@ -1625,6 +1961,77 @@ type GeneratedKnowledgeDoc struct {
     Title string
     // Content 文档正文（Markdown）
     Content string
+}
+```
+
+<a name="InteractionFacts"></a>
+## type InteractionFacts
+
+InteractionFacts 是状态推导的只读事实快照：由调用方（视图层 / 会话服务）按会话当前事实 填齐后传入，推导函数不查库、不持锁，故同一份事实必得同一份状态。它只承载「既有事实」， 不承载任何可变状态，也不承担缓存职责。
+
+```go
+type InteractionFacts struct {
+    // LiveRunning 会话内是否存在 running 的在途活动（生成或上下文压缩），由调用方查内存登记
+    // （RunHub 的活动表）得出；true 时会话处于运行中，优先于挂起现场与锁定。
+    LiveRunning bool
+    // LiveSubstate 在途活动当前上报的子状态（generating/thinking/tool_calling/compacting），
+    // 仅当 LiveRunning == true 时有意义；取值不在合法集内（含空串）时按 generating 兜底。
+    LiveSubstate ai.AgentInteractionSubstate
+    // PendingKind 挂起现场的种类：answer（问卷类 ask_user）或 approval（工具授权），空串表示
+    // 无挂起现场。「存在挂起活动或 pending 运行现场」统一由该字段非空表达，由调用方查
+    // agent_runs 的 pending 现场与内存挂起活动得出。
+    PendingKind ai.AgentInteractionSubstate
+    // UserTurns 有效轮次：会话内当前存在的 role=user 消息条数（被回滚删除的提问不计入），
+    // 由调用方按 agent_messages 统计得出。
+    UserTurns int
+    // MaxUserTurns 轮次上限（来源为全局参数 session.maxUserTurns）；<=0 视为不设上限，永不锁定。
+    MaxUserTurns int
+    // LastAssistantPhase 会话内最近一条助手消息的终局阶段（done/failed/cancelled）；空串表示
+    // 无助手消息或该消息尚未终结（例如仍在生成中），两者在推导时同归为「成功」。
+    LastAssistantPhase ai.AgentRunPhase
+}
+```
+
+<a name="InteractionSnapshot"></a>
+## type InteractionSnapshot
+
+InteractionSnapshot 是状态推导的稳定出参：state / substate / locked / userTurns / maxUserTurns 供会话详情、会话列表、在途运行快照与流式 state 事件共用。故意不带 JSON 标签：序列化形态由 视图层决定，领域层只保证取值口径唯一。已锁定时 Substate 为空串（已锁定无子状态）。
+
+```go
+type InteractionSnapshot struct {
+    // State 主状态，必为四个取值之一（推导全函数保证无空档）
+    State ai.AgentInteractionState
+    // Substate 子状态；已锁定时为空串，其余主状态随事实映射
+    Substate ai.AgentInteractionSubstate
+    // Locked 恒等于 State == AgentInteractionStateLocked，保证「是否锁定」只有一处来源
+    Locked bool
+    // UserTurns 透传的有效轮次，供视图层展示与判定
+    UserTurns int
+    // MaxUserTurns 透传的轮次上限，供视图层展示
+    MaxUserTurns int
+}
+```
+
+<a name="StateOf"></a>
+### func StateOf
+
+```go
+func StateOf(facts InteractionFacts) InteractionSnapshot
+```
+
+StateOf 是交互状态的唯一权威推导（全函数）：任一时刻必落且仅落一个主状态，输入仅为既有事实。 推导按严格优先级短路——在途活动 \> 挂起现场 \> 轮次上限 \> 暂停，因此不会产生并列或歧义； 所有子状态都经归一出参，保证返回值永远是合法枚举值。
+
+<a name="InteractionStateEvent"></a>
+## type InteractionStateEvent
+
+InteractionStateEvent 是流式 state 事件的负载：仅承载交互状态与子状态（StateOf 出参的子集）。 其余出参（locked/userTurns/maxUserTurns）随 HTTP 快照出参下发，不占用流式事件负载。
+
+```go
+type InteractionStateEvent struct {
+    // State 交互主状态（waiting/running/paused/locked 之一）
+    State ai.AgentInteractionState `json:"state"`
+    // Substate 交互子状态（随主状态取值；已锁定为空串）
+    Substate ai.AgentInteractionSubstate `json:"substate"`
 }
 ```
 
@@ -1708,6 +2115,12 @@ type LiveRunStatus struct {
     LastSeq uint64
     // PendingCalls 挂起待审批时的待执行调用列表（非挂起时为空）
     PendingCalls []PendingCall
+    // InMemory 该快照是否取自内存在途运行；false 表示取自数据库登记（本进程内存中已无对应活动）。
+    // 调用方据此判定「running 却非内存」的孤儿运行（进程重启 / goroutine 丢失），把它按已收敛处理。
+    InMemory bool
+    // Substate 在途活动当前上报的交互子状态（generating/thinking/tool_calling/compacting）；仅在
+    // 内存分支有意义（InMemory 为 true 时），DB 回落分支为空串。
+    Substate ai.AgentInteractionSubstate
 }
 ```
 
@@ -1843,10 +2256,10 @@ Summarize 用 flash 档位把「既有摘要 \+ 被挤出消息」重写为新�
 ### func \(\*Memory\) SummarizeStream
 
 ```go
-func (m *Memory) SummarizeStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, onDelta func(string) error) (string, uint, error)
+func (m *Memory) SummarizeStream(ctx context.Context, session *ai.AgentSession, evicted []*ai.AgentMessage, onDelta func(string) error) (string, uint, *schema.TokenUsage, error)
 ```
 
-SummarizeStream 与 Summarize 语义一致，但经 onDelta 逐块回调摘要生成的增量文本： onDelta 非空时用 flash 档位 Stream 逐块读取并回调（回调返回错误即中止并透传）； 为空时退回一次性 Generate。返回（新摘要, 新游标, 错误）。
+SummarizeStream 与 Summarize 语义一致，但经 onDelta 逐块回调摘要生成的增量文本： onDelta 非空时用 flash 档位 Stream 逐块读取并回调（回调返回错误即中止并透传）； 为空时退回一次性 Generate。返回（新摘要, 新游标, 本次摘要模型调用的 token 用量, 错误）； 用量取自响应元信息，供应商未返回时该值为 nil（调用方据此跳过任何依赖用量的估算）。
 
 <a name="Memory.Write"></a>
 ### func \(\*Memory\) Write
@@ -2158,6 +2571,105 @@ type Published struct {
 }
 ```
 
+<a name="QuestionnaireAnswer"></a>
+## type QuestionnaireAnswer
+
+QuestionnaireAnswer 是用户对某题的作答：Answered=false 表示未作答（Answer 为空）；Custom=true 表示用户选择了「其他」并自填文本，此时 Answer 为用户自定义文本。
+
+```go
+type QuestionnaireAnswer struct {
+    // QuestionID 对应的提问 ID（QuestionnaireQuestion.ID）
+    QuestionID string `json:"questionID"`
+    // Answered 该题是否已作答
+    Answered bool `json:"answered"`
+    // Answer 作答文本：候选项文本或用户自定义文本（未作答时为空）
+    Answer string `json:"answer"`
+    // Custom 该作答是否为「其他」自定义输入（false 表示选择了某个候选项）
+    Custom bool `json:"custom"`
+}
+```
+
+<a name="QuestionnaireBlockPayload"></a>
+## type QuestionnaireBlockPayload
+
+QuestionnaireBlockPayload 是 questionnaire 块的载荷：一轮 ask\_user 问卷的题目与作答。 同一回合内模型可多轮提问，每一轮各自成一块（按 BlockSeq 先后排列），仅末轮可为待回答。
+
+```go
+type QuestionnaireBlockPayload struct {
+    // Questions 本轮问卷的题目列表
+    Questions []QuestionnaireQuestion `json:"questions"`
+    // Answers 本轮用户的作答（首次挂起时为空，续跑终态化后承载答案）
+    Answers []QuestionnaireAnswer `json:"answers,omitempty"`
+    // Awaiting 本轮是否待用户回答
+    Awaiting bool `json:"awaiting"`
+}
+```
+
+<a name="QuestionnaireOption"></a>
+## type QuestionnaireOption
+
+QuestionnaireOption 是 ask\_user 问卷中的一个候选答案：Text 为候选答案文本，Detail 为其可选说明。
+
+```go
+type QuestionnaireOption struct {
+    // Text 候选答案文本
+    Text string `json:"text"`
+    // Detail 候选答案的可选说明，用于补充其含义或后果
+    Detail string `json:"detail,omitempty"`
+}
+```
+
+<a name="QuestionnairePayload"></a>
+## type QuestionnairePayload
+
+QuestionnairePayload 是「一轮」ask\_user 问卷的完整载荷：Questions 为该轮的题目，Answers 为该轮用户的 作答（首次挂起时为空，续跑终态化后承载答案，供历史回显与回退重答）。同一回合内模型可多轮提问（拿到上一轮 答案后再次调用 ask\_user），每一轮各自成一个 questionnaire 块、按 block\_seq 先后\*\*并列\*\*存储，前端据此把 各轮渲染成各自独立的问答框并把最新一轮沉在底部。它既是 run 现场的回落依据，也是回退（重新回答）接口的出参形态。
+
+```go
+type QuestionnairePayload struct {
+    // Questions 本次问卷的题目列表
+    Questions []QuestionnaireQuestion `json:"questions"`
+    // Answers 用户作答列表；缺项的题目按未作答处理
+    Answers []QuestionnaireAnswer `json:"answers,omitempty"`
+}
+```
+
+<a name="QuestionnairePayload.FullyAnswered"></a>
+### func \(QuestionnairePayload\) FullyAnswered
+
+```go
+func (p QuestionnairePayload) FullyAnswered() bool
+```
+
+FullyAnswered 报告\*\*单轮\*\*载荷中的题目是否全部已作答：逐题按 id 取\*\*首个\*\*匹配答案（与前端 questionnaireAnswerTextOf 的判定一致），答案存在且 Answered=true 视为已作答。多轮提问的各轮各自成一份 载荷，故视图层只需对\*\*末轮\*\*调用它即可判定 awaiting：末轮仍存在未作答的题目等价于「该轮仍在等用户作答」； 非问卷挂起（末轮在此之前已作答）时它恒为 true、不误判。
+
+<a name="QuestionnaireQuestion"></a>
+## type QuestionnaireQuestion
+
+QuestionnaireQuestion 是 ask\_user 问卷中的一个提问：ID 为本次问卷内的唯一标识（回传答案据它定位 对应问题），Question 为题面，Options 为 1\~3 条候选答案。
+
+```go
+type QuestionnaireQuestion struct {
+    // ID 本次问卷内的唯一标识，用于在回传答案中定位对应问题
+    ID  string `json:"id"`
+    // Question 要向用户提出的问题文本
+    Question string `json:"question"`
+    // Options 该问题的候选答案列表（1~3 条）
+    Options []QuestionnaireOption `json:"options"`
+}
+```
+
+<a name="ReasoningBlockPayload"></a>
+## type ReasoningBlockPayload
+
+ReasoningBlockPayload 是 reasoning 块的载荷：一段连续思考文本，开放期内增量累积。
+
+```go
+type ReasoningBlockPayload struct {
+    // Text 累积的思考文本
+    Text string `json:"text"`
+}
+```
+
 <a name="ResumeInput"></a>
 ## type ResumeInput
 
@@ -2287,13 +2799,19 @@ TouchUsage 递增给定知识文档的 use\_count 与 last\_used\_at；ids 为�
 <a name="RunExecutor"></a>
 ## type RunExecutor
 
-RunExecutor 是 RunHub 依赖的对话执行能力（由 \*Agent 实现）：以脱管上下文执行一次运行并把 输出抽干到回调。抽出接口便于测试注入替身，RunHub 只依赖该单一方法。
+RunExecutor 是 RunHub 依赖的对话执行能力（由 \*Agent 实现）：以脱管上下文执行一次运行（首轮生成 或续跑）并把输出抽干到回调。抽出接口便于测试注入替身。
 
 ```go
 type RunExecutor interface {
     // RunDetached 以脱管上下文执行一次带会话持久化的运行，onEvent 收每个流项、onToolRequest 收
     // 挂起时下发的客户端工具请求；正常结束返回 nil。
     RunDetached(ctx context.Context, in AgentInput, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error
+    // PrepareResume 认领挂起运行现场并构建续跑输入（不启动运行）；认领失败返回哨兵错误
+    // （不存在 / 归属不符 / 已消费 / 已过期），供调用方在登记与构造 SSE 写手前同步映射业务码。
+    PrepareResume(ctx context.Context, in ResumeInput) (AgentInput, error)
+    // ResumeDetached 以 PrepareResume 备好的输入脱管执行一次续跑，抽干语义同 RunDetached
+    // （不重载历史、不追加用户消息）。
+    ResumeDetached(ctx context.Context, in AgentInput, onEvent func(AgentOutput) error, onToolRequest func(ToolRequest) error) error
 }
 ```
 
@@ -2317,6 +2835,15 @@ func NewRunHub(deps RunHubDeps) *RunHub
 
 NewRunHub 构造运行执行器。
 
+<a name="RunHub.BroadcastInteractionState"></a>
+### func \(\*RunHub\) BroadcastInteractionState
+
+```go
+func (h *RunHub) BroadcastInteractionState(ctx context.Context, sessionID, userID uint, ev InteractionStateEvent) error
+```
+
+BroadcastInteractionState 在指定会话的内存在途运行上发布一条 state 事件；无内存运行（暂停 / 已锁定 / 等待中：后端此时无生成 goroutine）时为 no\-op——此时状态随 HTTP 出参下发。属主不符同样 视为无在途活动并直接返回（不报错：「无在途活动」是正常事实，不是异常）。广播路径不写 DB：DB 登记 由运行自身的终局化写入，视图层只负责把重算出的状态推给当前在途运行的订阅者。
+
 <a name="RunHub.Cancel"></a>
 ### func \(\*RunHub\) Cancel
 
@@ -2325,6 +2852,8 @@ func (h *RunHub) Cancel(ctx context.Context, sessionID uint, userID uint, namesp
 ```
 
 Cancel 显式取消某会话的在途运行：命名空间不符返回 ErrAgentLiveRunForbidden，运行不存在返回 ErrAgentLiveRunNotFound，已收敛终态时幂等返回 nil（不报错）。
+
+命中内存中的在途运行时，先置取消标记并调用根 context 的 cancel\(\)（取消信号沿 context 树即时切断 上游模型流式请求与工具执行，从源头停止 token 消耗），再等待该运行的执行 goroutine 真正退出 （finish 完成终局化并 close\(finishDone\)）后才返回，并设安全上限兜底（超时仅告警）。因此「取消 返回后不可能再有正文事件」是调用方可依赖的事实：返回时该活动已完成终局化。等待不在持有 h.mu / run.mu 时进行，避免与 finish 的加锁互等。无内存运行（纯 DB 登记）时维持既有幂等语义： 仅校验归属 / 存在性后返回，不等待。
 
 <a name="RunHub.LiveRun"></a>
 ### func \(\*RunHub\) LiveRun
@@ -2352,6 +2881,24 @@ func (h *RunHub) Start(detached DetachedContext, in AgentInput, sessionID uint, 
 ```
 
 Start 启动一次驻留运行：登记（agent\_live\_runs）后在独立 goroutine 中执行，事件先广播给 订阅者再异步落库。started 非空时在登记完成后立即以 runID 回调（供调用方在 goroutine 启动前 完成订阅，避免漏掉早期事件）。返回运行标识。
+
+<a name="RunHub.StartActivity"></a>
+### func \(\*RunHub\) StartActivity
+
+```go
+func (h *RunHub) StartActivity(detached DetachedContext, in ActivityInput, started func(runID serializer.HexUUID)) (serializer.HexUUID, error)
+```
+
+StartActivity 启动一次通用在途活动（如上下文压缩）：与 Start / StartResume 共用同一内部启动路径 （登记互斥、运行根 context、取消、终局化与落库）。Run 在活动根 ctx 下执行；Run 正常返回（nil）时由 RunHub 以 done 事件收口，使 execute 的既有终局分支（sawDone → done）自然成立——故无需为活动另写一套 收敛逻辑。活动被取消时 Run 应随 ctx 返回错误，此时既不产出 done、也不产生半截检查点。
+
+<a name="RunHub.StartResume"></a>
+### func \(\*RunHub\) StartResume
+
+```go
+func (h *RunHub) StartResume(detached DetachedContext, in ResumeInput, sessionID uint, userID uint, namespace string, started func(runID serializer.HexUUID)) (serializer.HexUUID, error)
+```
+
+StartResume 启动一次续跑（客户端工具调用结果回传后恢复挂起运行）的驻留运行：先同步认领运行现场并 构建续跑输入（PrepareResume——认领失败即返回哨兵错误，此时尚未登记、也未构造 SSE 写手，调用方仍可 返回 JSON 业务码），再以与 Start 一致的登记 / 广播 / 收敛路径执行（ResumeDetached）。如此续跑与首轮 生成一样拥有独立的 live\-run 登记并在收敛时写入终态（done/cancelled/failed）：否则挂起现场留下的 suspended 登记会一直残留，前端刷新后据它误判「仍在等待审批」，并以陈旧的挂起事件回放覆盖已落库的 正文。返回运行标识。
 
 <a name="RunHub.Subscribe"></a>
 ### func \(\*RunHub\) Subscribe
@@ -2548,6 +3095,24 @@ func NewSessionStore(db *database.DB) (*SessionStore, error)
 
 NewSessionStore 构造 SessionStore；db 为空时返回英文错误。
 
+<a name="SessionStore.AbortPendingRun"></a>
+### func \(\*SessionStore\) AbortPendingRun
+
+```go
+func (s *SessionStore) AbortPendingRun(ctx context.Context, sessionID, userID uint) error
+```
+
+AbortPendingRun 中止一个「等待中」会话的挂起现场（用户点击停止）：作废该会话最近一条 pending 现场 （置为 consumed），并把其锚点助手消息的终局阶段置为 cancelled，使状态推导回落 \`暂停/用户中止\`。 无 pending 现场（已消费 / 已过期 / 不存在）时幂等返回 nil——重复中止不报错。单事务执行，避免现场与 锚点消息中途不一致。不删除任何消息、长期记忆与压缩检查点。
+
+<a name="SessionStore.AppendBlock"></a>
+### func \(\*SessionStore\) AppendBlock
+
+```go
+func (s *SessionStore) AppendBlock(ctx context.Context, block *ai.AgentMessageBlock) error
+```
+
+AppendBlock 新建一个内容块（agent\_message\_blocks）并按传入的 BlockSeq 落库：调用方已按块构建器的 分配结果填好 MessageID / BlockSeq / Kind，并在 Payload 上以 crypto 序列化器写入加密载荷。 message\_id 为真外键（ON DELETE CASCADE），块随所属助手消息级联删除，故不残留孤儿块。 block 为空或 MessageID / BlockSeq 为 0 时返回英文错误。
+
 <a name="SessionStore.AppendMessage"></a>
 ### func \(\*SessionStore\) AppendMessage
 
@@ -2566,14 +3131,14 @@ func (s *SessionStore) AppendRunEvent(ctx context.Context, ev *ai.AgentRunEvent)
 
 AppendRunEvent 追加一条运行事件到事件日志（按 \(run\_id, seq\) 唯一）；ev 为空时返回英文错误。
 
-<a name="SessionStore.AssistantSeqAtUserMessage"></a>
-### func \(\*SessionStore\) AssistantSeqAtUserMessage
+<a name="SessionStore.AssistantSeqAtMessage"></a>
+### func \(\*SessionStore\) AssistantSeqAtMessage
 
 ```go
-func (s *SessionStore) AssistantSeqAtUserMessage(ctx context.Context, sessionID, userID uint, index int) (uint64, error)
+func (s *SessionStore) AssistantSeqAtMessage(ctx context.Context, sessionID, userID uint, messageID uint) (uint64, error)
 ```
 
-AssistantSeqAtUserMessage 返回「第 index 条用户消息（从 1 起，仅计 role=user、按 seq 升序）之后 的首条助手消息」的会话内 seq，供手动压缩把折叠上界定位到该轮助手回复；目标用户消息不存在或其后 尚无助手回复时返回 ErrMessageNotFound。
+AssistantSeqAtMessage 返回指定助手消息（id）在所属会话内的 seq，供手动压缩把折叠上界定位到该助手 回答；该消息不存在、不属于该会话与属主，或不是助手消息时返回 ErrMessageNotFound。按角色过滤而非按 「第 N 轮」定位：折叠边界以选中的助手回答为准，与前端选中的那条消息一一对应。
 
 <a name="SessionStore.BranchSessionFromUserMessage"></a>
 ### func \(\*SessionStore\) BranchSessionFromUserMessage
@@ -2591,7 +3156,7 @@ BranchSessionFromUserMessage 以第 userMessageIndex 条（从 1 起，仅按用
 func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName string, userID uint) (*ai.AgentRun, error)
 ```
 
-ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件取该 会话最近一行（不按状态过滤，以便区分「不存在」与「已消费」），归属不符的行在查询阶段即被过滤， 表现为「不存在」；随后依次校验状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并 返回该现场。失败类别见包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed / ErrAgentRunExpired， 供上层映射业务码。
+ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件，优先 取该会话最新的 pending 现场，无 pending 时再取最新一行用于区分「不存在 / 已消费 / 已过期」——回退 （reanswer）会把较早的问卷现场重置为 pending 并把更晚的现场置为已消费，故必须按状态优先而非单纯 按 id 取最新，否则会认领到已消费的现场。归属不符的行在查询阶段即被过滤，表现为「不存在」；随后 依次校验状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并返回该现场。失败类别见 包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed / ErrAgentRunExpired，供上层映射业务码。
 
 <a name="SessionStore.ContextTokens"></a>
 ### func \(\*SessionStore\) ContextTokens
@@ -2600,16 +3165,63 @@ ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、
 func (s *SessionStore) ContextTokens(ctx context.Context, sessionID, userID uint) (int, error)
 ```
 
-ContextTokens 返回会话最近一条助手消息的输入 token 数（PromptTokens），即当前会话的上下文 占用度量；无助手消息（ErrMessageNotFound）时返回 0，不视为错误。
+ContextTokens 返回会话的上下文占用度量：最近一条「有用量记录」的助手消息的输入 token 数 （PromptTokens \> 0）。被取消 / 失败 / 挂起而中断落库的助手消息从未收到供应商的用量帧，用量列 为 0——它不构成一次测量，故跳过并回落到更早的末次测量（与前端占用环「取最近一条带用量的助手 消息」的口径一致）；若无任何可用测量（无助手消息，或全部助手消息都未记下用量）返回 0，不视为 错误。注意 0 的含义是「尚无测量」，不是「占用为 0」。
 
-<a name="SessionStore.ContextTokensBySession"></a>
-### func \(\*SessionStore\) ContextTokensBySession
+<a name="SessionStore.ContextUsage"></a>
+### func \(\*SessionStore\) ContextUsage
 
 ```go
-func (s *SessionStore) ContextTokensBySession(ctx context.Context, userID uint, sessionIDs []uint) (map[uint]int, error)
+func (s *SessionStore) ContextUsage(ctx context.Context, sessionID, userID uint) (int, error)
 ```
 
-ContextTokensBySession 批量返回每个会话最近一条助手消息的输入 token 数（PromptTokens）， 供会话列表一次性取回各会话的上下文占用。以「按 session\_id 分组的 MAX\(seq\) 子查询 JOIN agent\_messages」单条 SQL 完成，避免逐会话查询的 N\+1；无助手消息的会话不出现在结果中， sessionIDs 为空时返回空 map。
+ContextUsage 返回会话用于展示的上下文占用：取「末次真实测量」与「最近一次带估算的压缩推进」中 更晚发生者的 token 数——压缩本身不产生新的真实测量（见 ContextTokens），若压缩晚于末次测量 （即压缩后尚无生成落定），展示占用取该次压缩的即时估算（检查点 tokens\_after）；此后任一生成落定 （其助手消息行比该压缩更晚落库）即由真实测量接管。与 ContextTokens 的分工：本方法服务展示 （会话列表 / 详情 / 前端的占用指示），ContextTokens 服务压缩前的度量基线——压缩基线必须始终取 真实测量，绝不能用上一次的估算去度量下一次压缩，否则估算偏差会逐次累积。 会话既无测量也无估算时返回 0，含义同 ContextTokens：表示「尚无测量」，不是「占用为 0」。
+
+<a name="SessionStore.ContextUsageBySession"></a>
+### func \(\*SessionStore\) ContextUsageBySession
+
+```go
+func (s *SessionStore) ContextUsageBySession(ctx context.Context, userID uint, sessionIDs []uint) (map[uint]int, error)
+```
+
+ContextUsageBySession 批量返回每个会话用于展示的上下文占用（口径同 ContextUsage）：分别取每个 会话末次真实测量的助手消息与最近一条带估算的压缩检查点，逐会话取更晚发生者。两侧各以一条分组 查询批量取回（避免逐会话查询的 N\+1），再在 Go 侧按落库时间合并——取舍规则只在此一处实现，单会话 口径即本方法的单元素特例。无可用值的会话不出现在结果中（调用方缺省为 0），sessionIDs 为空时返回 空 map。
+
+<a name="SessionStore.ConvergeExpiredPendingRuns"></a>
+### func \(\*SessionStore\) ConvergeExpiredPendingRuns
+
+```go
+func (s *SessionStore) ConvergeExpiredPendingRuns(ctx context.Context, now time.Time, limit int) (int64, error)
+```
+
+ConvergeExpiredPendingRuns 分批收敛已过期的挂起运行现场：把其锚点助手消息终局置为 failed（使会话回落 暂停/失败），并把现场本身置为 expired（作废，不再可恢复）。单事务内对一批（≤ limit）执行，收敛后状态 变为 expired，故同一批不会重复命中。不删除任何消息、长期记忆与压缩检查点。
+
+<a name="SessionStore.ConvergeExpiredRunningLiveRuns"></a>
+### func \(\*SessionStore\) ConvergeExpiredRunningLiveRuns
+
+```go
+func (s *SessionStore) ConvergeExpiredRunningLiveRuns(ctx context.Context, now time.Time, limit int) (int64, error)
+```
+
+ConvergeExpiredRunningLiveRuns 分批收敛已过期且仍登记为 running 的在途运行：逐行经 ConvergeOrphanLiveRun 置失败并写回会话最近助手消息终局。收敛后阶段变为 failed，故同一批不会重复命中 （分批循环可自然抽干）。仅收敛 running；suspended / done / failed / cancelled 的过期登记留给删除步骤。
+
+<a name="SessionStore.ConvergeOrphanLiveRun"></a>
+### func \(\*SessionStore\) ConvergeOrphanLiveRun
+
+```go
+func (s *SessionStore) ConvergeOrphanLiveRun(ctx context.Context, runID serializer.HexUUID, sessionID, userID uint) error
+```
+
+ConvergeOrphanLiveRun 把一个内存中已无对应活动的在途运行登记（running / suspended）收敛为失败： 置其阶段为 failed，并把该会话最近一条助手消息的终局阶段置为 failed，使会话派生回落 暂停/失败。 用于两处：状态推导读取路径发现孤儿（进程重启 / goroutine 丢失）时的即时兜底，以及过期清理任务对 超期 running 登记的收敛。登记已被收敛（或已被删除）时幂等返回 nil。不删除任何消息、长期记忆与 压缩检查点。
+
+<a name="SessionStore.CountUserTurns"></a>
+### func \(\*SessionStore\) CountUserTurns
+
+```go
+func (s *SessionStore) CountUserTurns(ctx context.Context, sessionID, userID uint) (int, error)
+```
+
+CountUserTurns 返回会话内当前存在的用户提问条数（有效轮次）：只计 role=user 且归属匹配的现存消息行。 agent\_messages 无 deleted\_at 列（见 DeleteSession），回滚是物理删除，故按现存行计数即天然排除已回滚 的提问——「发送前判定」与「每轮终局判定」共用同一口径，不会出现「已满仍可发」或「发完不锁」的偏差。
+
+会话锁定不需要写任何状态列：它是 StateOf 的全函数推导结果（UserTurns \>= MaxUserTurns 且无在途活动 / 挂起现场时即为 locked），因此本方法只如实读数，调用方（视图层事实装配）据此推导，回滚删除若干条提问 后有效轮次自然下降，状态即自然回到 paused——「派生即解锁」，不存在额外的解锁写路径。
 
 <a name="SessionStore.CreateLiveRun"></a>
 ### func \(\*SessionStore\) CreateLiveRun
@@ -2672,7 +3284,7 @@ DeleteMessage 硬删除一条消息行（按消息 ID 定位，并限定属主�
 func (s *SessionStore) DeleteSession(ctx context.Context, id uint, namespaceName string, userID uint) error
 ```
 
-DeleteSession 在同一事务内以真实（硬）删除移除会话及其从属数据：会话行不再软删除，连同其消息、 压缩检查点、长期记忆、挂起运行现场与驻留运行登记及事件一并整行删除。会话对各子表均为真 FK （ON DELETE CASCADE），但不依赖数据库是否强制外键（如 sqlite 默认关闭），仍显式清理：先删消息与 压缩检查点，再删长期记忆（agent\_memories）、挂起运行现场（agent\_runs）与驻留运行登记及事件 （agent\_live\_runs / agent\_run\_events），最后经 Unscoped 硬删会话本身（消息/检查点/事件/登记本就无 deleted\_at 列为硬删；记忆与运行现场亦经 Unscoped 硬删）。
+DeleteSession 在同一事务内以真实（硬）删除移除会话及其从属数据：会话行不再软删除，连同其消息、 内容块、压缩检查点、长期记忆、挂起运行现场与驻留运行登记及事件一并整行删除。会话对各子表均为真 FK （ON DELETE CASCADE），但不依赖数据库是否强制外键（如 sqlite 默认关闭），仍显式清理：先删消息的 内容块与消息、压缩检查点，再删长期记忆（agent\_memories）、挂起运行现场（agent\_runs）与驻留运行登记 及事件（agent\_live\_runs / agent\_run\_events），最后经 Unscoped 硬删会话本身（消息/块/检查点/事件/ 登记本就无 deleted\_at 列为硬删；记忆与运行现场亦经 Unscoped 硬删）。
 
 <a name="SessionStore.FinishLiveRun"></a>
 ### func \(\*SessionStore\) FinishLiveRun
@@ -2682,6 +3294,15 @@ func (s *SessionStore) FinishLiveRun(ctx context.Context, runID serializer.HexUU
 ```
 
 FinishLiveRun 把驻留运行收敛到终态阶段并写入最终事件序号（限定属主用户）；只写 status 与 last\_seq 两列。
+
+<a name="SessionStore.GetMessage"></a>
+### func \(\*SessionStore\) GetMessage
+
+```go
+func (s *SessionStore) GetMessage(ctx context.Context, id, userID uint) (*ai.AgentMessage, error)
+```
+
+GetMessage 按消息 ID 查询一条消息（限定属主用户），供运行层取回问卷锚点行上的载荷；不存在 （含归属不符）时返回 ErrMessageNotFound。
 
 <a name="SessionStore.GetSession"></a>
 ### func \(\*SessionStore\) GetSession
@@ -2718,6 +3339,24 @@ func (s *SessionStore) LatestLiveRun(ctx context.Context, sessionID, userID uint
 ```
 
 LatestLiveRun 返回某会话最近一条驻留运行登记（按 id 倒序），并限定属主用户； 不存在时返回 ErrAgentRunNotFound。
+
+<a name="SessionStore.ListBlocksByMessage"></a>
+### func \(\*SessionStore\) ListBlocksByMessage
+
+```go
+func (s *SessionStore) ListBlocksByMessage(ctx context.Context, messageID uint, namespaceName string, userID uint) ([]*ai.AgentMessageBlock, error)
+```
+
+ListBlocksByMessage 按 block\_seq 升序返回某条助手消息的全部内容块，并限定租户归属 （namespace\_name \+ user\_id）；无块时返回空切片。
+
+<a name="SessionStore.ListBlocksByMessages"></a>
+### func \(\*SessionStore\) ListBlocksByMessages
+
+```go
+func (s *SessionStore) ListBlocksByMessages(ctx context.Context, messageIDs []uint, namespaceName string, userID uint) (map[uint][]*ai.AgentMessageBlock, error)
+```
+
+ListBlocksByMessages 批量返回多条助手消息的内容块（按 message\_id、block\_seq 升序），并限定租户归属 （namespace\_name \+ user\_id），以单条 IN 查询避免逐消息查询的 N\+1。返回 message\_id → 该消息块列表 的映射；messageIDs 为空时返回空 map。无块的消息不出现在结果中。
 
 <a name="SessionStore.ListCompactions"></a>
 ### func \(\*SessionStore\) ListCompactions
@@ -2773,6 +3412,26 @@ func (s *SessionStore) ListSessions(ctx context.Context, namespaceName string, u
 
 ListSessions 列出命名空间下属于该用户且状态为 active 的会话，按更新时间倒序（最近活跃在前）； limit/offset 非正数时不限定。归档（archived）等非 active 会话不出现在列表中。
 
+<a name="SessionStore.PendingInputCalls"></a>
+### func \(\*SessionStore\) PendingInputCalls
+
+```go
+func (s *SessionStore) PendingInputCalls(ctx context.Context, sessionID, userID uint) (uint, []PendingCall, error)
+```
+
+PendingInputCalls 只读返回会话当前「仍待用户输入」的挂起现场（agent\_runs 中该会话最近一条未过期的 status=pending 行）的锚点消息 ID 与该现场的待执行调用清单：供消息列表接口在刷新 / 重进会话后为承载该 现场的助手消息（问卷待作答 / 工具待授权）重建可交互面板——否则前端据出参的 awaiting / 授权记录渲染 出面板，却没有可回传的调用，提交 / 取消会静默无反应、不发任何请求。可用现场的口径：状态为 pending 且 未过期的现场中取 id 最大（最新）的一行；无可用现场（不存在 / 已消费 / 已过期 / 调用为空）时锚点为 0、 调用为 nil，调用方据此不向任何消息附加。
+
+转换口径与 RerunAssistantInput 一致（共用 toPendingCalls）：CallID / ToolName / Arguments / ExecOwner / AuditLevel 原样透传；审批合成结论不随现场持久化，问卷类调用由前端按工具名识别、豁免 审批，其余调用保守置为「需人工审批」，避免未经用户决策即自动执行。
+
+<a name="SessionStore.PendingRunSubstate"></a>
+### func \(\*SessionStore\) PendingRunSubstate
+
+```go
+func (s *SessionStore) PendingRunSubstate(ctx context.Context, sessionID, userID uint) (ai.AgentInteractionSubstate, error)
+```
+
+PendingRunSubstate 返回会话当前挂起现场（agent\_runs 中该会话最近一条未过期的 status=pending 行） 对应的「等待中」子状态：现场中存在问卷类 ask\_user 调用时为 answer，其余（工具授权等）为 approval。 无可用现场（不存在 / 已消费 / 已过期）时返回空串，表示「无挂起现场」，由调用方据此判定是否落入 等待中。工具种类判定复用 isQuestionnaireTool，ask\_user 字面量仍只在 client\_tools.go 一处声明。
+
 <a name="SessionStore.RenameSession"></a>
 ### func \(\*SessionStore\) RenameSession
 
@@ -2782,6 +3441,19 @@ func (s *SessionStore) RenameSession(ctx context.Context, id uint, namespaceName
 
 RenameSession 重命名会话标题，返回更新后的会话；会话不属于给定命名空间 / 属主用户时返回 ErrSessionNotFound。
 
+<a name="SessionStore.RerunAssistantInput"></a>
+### func \(\*SessionStore\) RerunAssistantInput
+
+```go
+func (s *SessionStore) RerunAssistantInput(ctx context.Context, sessionID, userID uint, messageID uint) (*AssistantInputTurn, error)
+```
+
+RerunAssistantInput 回退到一条历史「助手待输入回合」，供用户在锚点消息上重新作答问卷或重新授权工具 调用：定位该会话中承载该回合的助手锚点行，删除其后的全部消息（该回合此前的最终回答及其后各轮），把 锚点行的本轮产出（正文、草稿、引用与用量）一并清空并重置为 suspended（待输入），把锚点消息上承载本 回合输入的块之后的块一并清除、并把该块重置为待输入，再把承载该回合的运行现场重置为 pending、刷新其 存活期限——使用户经既有 tool\-result 续跑时仍沿用同一现场与同一锚点行；该锚点之后的更晚现场一律置为 已消费（其对应回合已被截断，现场不再可用）。
+
+回合种类由现场中的待执行调用判定：任一为问卷类 ask\_user → answer（出参据锚点 questionnaire 块返回各 轮题目 \+ 上次答案，供前端预填重开问卷）；其余 → approval（出参据锚点 approval 块返回待审批调用清单， 供前端重建审批面板）。据此把能力从既有的「问卷重新回答」泛化为同时覆盖工具授权回合。
+
+锚点消息不存在、不属于该会话与属主、不是助手消息，或该回合不是待输入回合（现场无待执行调用；问卷回合 锚点未携带 questionnaire 块、授权回合锚点未携带 approval 块）时返回 ErrMessageNotFound；承载该回合的 运行现场不存在时返回 ErrAgentRunNotFound；该现场已过期（超过 agentRunTTL）时返回 ErrAgentRunExpired （与恢复链路的「已过期」语义一致，前端据此给出本地化提示）。单事务执行，避免截断与现场重置中途留下 不一致状态。
+
 <a name="SessionStore.SaveAgentRun"></a>
 ### func \(\*SessionStore\) SaveAgentRun
 
@@ -2790,6 +3462,15 @@ func (s *SessionStore) SaveAgentRun(ctx context.Context, run *ai.AgentRun) error
 ```
 
 SaveAgentRun 创建一行运行现场（状态为 pending），承载挂起时刻的运行现场。
+
+<a name="SessionStore.SetAgentRunAnchor"></a>
+### func \(\*SessionStore\) SetAgentRunAnchor
+
+```go
+func (s *SessionStore) SetAgentRunAnchor(ctx context.Context, runID, anchorMessageID uint) error
+```
+
+SetAgentRunAnchor 把挂起锚点消息 ID 回写到运行现场：挂起时 wrapPersist 写好承载本回合最终回答（问卷 挂起还承载问卷载荷）的助手消息行后调用，使续跑能原地终态化该行、回退接口能据锚点截断其后消息。现场 不存在（含归属不符）时返回 ErrAgentRunNotFound。
 
 <a name="SessionStore.SetSessionStatus"></a>
 ### func \(\*SessionStore\) SetSessionStatus
@@ -2807,7 +3488,7 @@ SetSessionStatus 更新会话状态（如归档），返回更新后的会话；
 func (s *SessionStore) TruncateMessagesFromUserMessage(ctx context.Context, sessionID, userID uint, userMessageIndex int) error
 ```
 
-TruncateMessagesFromUserMessage 截断会话消息：删除会话内第 userMessageIndex 条（从 1 起，仅按 用户消息计数、按 seq 升序定位）用户消息，以及该条之后的全部消息（含助手回复），供「回退 / 删除到 某一轮对话」使用。目标用户消息不存在（序号越界）时返回 ErrMessageNotFound。 单事务执行，避免截断中途留下不一致的会话内容。截断落在已压缩区间内（summary\_upto\_seq ≥ 被截断 起始 seq）时，按压缩检查点回退上下文起点：恢复「upto\_seq \< 起始 seq」的最近一个检查点的摘要与 游标，无可用检查点则清空摘要、summary\_upto\_seq 置 0（回到最开始）；并作废（删除）upto\_seq ≥ 起始 seq 的检查点。截断点尚未被摘要覆盖（summary\_upto\_seq \< 起始 seq）时摘要与游标保持不变。回滚不删除 压缩期间抽取的长期记忆（agent\_memories），也不做级联删除。后续追加仍按会话 message\_seq 单调分配， 序号不复用。
+TruncateMessagesFromUserMessage 截断会话消息：删除会话内第 userMessageIndex 条（从 1 起，仅按 用户消息计数、按 seq 升序定位）用户消息，以及该条之后的全部消息（含助手回复）与其内容块（显式删除， 不残留孤儿块），供「回退 / 删除到某一轮对话」使用。目标用户消息不存在（序号越界）时返回 ErrMessageNotFound。 锚点落在被截断区间内的运行现场（agent\_runs）一并置为已消费：其锚点消息已删除，现场无从续跑， 留着会让前端据 live\-run 续播、把已删除回合的回答重新拼回消息区。 单事务执行，避免截断中途留下不一致的会话内容。截断落在已压缩区间内（summary\_upto\_seq ≥ 被截断 起始 seq）时，按压缩检查点回退上下文起点：恢复「upto\_seq \< 起始 seq」的最近一个检查点的摘要与 游标，无可用检查点则清空摘要、summary\_upto\_seq 置 0（回到最开始）；并作废（删除）upto\_seq ≥ 起始 seq 的检查点。截断点尚未被摘要覆盖（summary\_upto\_seq \< 起始 seq）时摘要与游标保持不变。回滚不删除 压缩期间抽取的长期记忆（agent\_memories），也不做级联删除。后续追加仍按会话 message\_seq 单调分配， 序号不复用。
 
 <a name="SessionStore.UpdateAssistantMessage"></a>
 ### func \(\*SessionStore\) UpdateAssistantMessage
@@ -2816,7 +3497,16 @@ TruncateMessagesFromUserMessage 截断会话消息：删除会话内第 userMess
 func (s *SessionStore) UpdateAssistantMessage(ctx context.Context, msg *ai.AgentMessage) error
 ```
 
-UpdateAssistantMessage 原地更新一条已落库的助手消息（按消息 ID 定位，并限定属主用户），供运行 途中把阶段性落库的那一行继续累积正文 / 思考，以及运行终结时写入生命周期终态阶段（phase：done / failed / cancelled）。不重分配 seq，故消息在会话内的顺序与只读游标不变。必须用「结构体 \+ Select」 写这几列（正文 / 思考 / 草稿 / 引用为密文列，走 crypto 序列化器；map 形式会绕过序列化器把明文直写 库，见 UpdateSummaryAndCheckpoint）。msg 为空或 ID 为 0 时返回英文错误；目标消息不存在（含归属 不符）时返回 ErrMessageNotFound。
+UpdateAssistantMessage 原地更新一条已落库的助手消息（按消息 ID 定位，并限定属主用户），供运行 途中把阶段性落库的那一行继续累积正文，以及运行终结时写入生命周期终态阶段（phase：done / failed / cancelled / suspended）。不重分配 seq，故消息在会话内的顺序与只读游标不变。必须用「结构体 \+ Select」 写这几列（正文 / 草稿 / 引用为密文列，走 crypto 序列化器；map 形式会绕过序列化器把明文直写库，见 UpdateSummaryAndCheckpoint）。思考 / 问卷 / 授权清单不再有对应列，一律由 agent\_message\_blocks 的 reasoning / questionnaire / approval 块承载。msg 为空或 ID 为 0 时返回英文错误；目标消息不存在 （含归属不符）时返回 ErrMessageNotFound。
+
+<a name="SessionStore.UpdateBlock"></a>
+### func \(\*SessionStore\) UpdateBlock
+
+```go
+func (s *SessionStore) UpdateBlock(ctx context.Context, block *ai.AgentMessageBlock) error
+```
+
+UpdateBlock 更新同一内容块（开放块增量累积后的落库与收敛时的终态写回）：按 message\_id \+ block\_seq 定位，并限定租户归属（namespace\_name \+ user\_id）。只更新载荷列——BlockSeq / Kind 由创建时定死、 不可变。Payload 是密文列，必须以「结构体 \+ Select」写（map 形式会绕过 crypto 序列化器把明文直写库）。 block 为空或 MessageID / BlockSeq 为 0 时返回英文错误；目标块不存在（含归属不符）时返回 ErrMessageNotFound。
 
 <a name="SessionStore.UpdateLiveRunSeq"></a>
 ### func \(\*SessionStore\) UpdateLiveRunSeq
@@ -3121,6 +3811,48 @@ type SyncReporter interface {
 }
 ```
 
+<a name="ToolCallBlockPayload"></a>
+## type ToolCallBlockPayload
+
+ToolCallBlockPayload 是 tool\_calls 块的载荷：同一轮（round）发起的调用并列为一组。
+
+```go
+type ToolCallBlockPayload struct {
+    // Calls 该轮内按发起顺序排列的调用记录
+    Calls []*ToolCallRecord `json:"calls"`
+}
+```
+
+<a name="ToolCallRecord"></a>
+## type ToolCallRecord
+
+ToolCallRecord 是 tool\_calls 块内一条工具调用记录：字段对齐 StageEvent（Tool / CallID / Round / ElapsedMs / Err / Status）与挂起现场（Arguments / AuditLevel / ExecOwner）的既有定义，承载一条 调用从发起到结果的完整事实，供重开会话按块原样回显。
+
+```go
+type ToolCallRecord struct {
+    // CallID 本次调用的唯一标识（与模型 tool call id 一致），toolResult 据此归并回填
+    CallID string `json:"callID"`
+    // ToolName 工具名
+    ToolName string `json:"toolName"`
+    // Arguments 模型给出的调用入参（原始 JSON 文本，可能携带凭据，随块加密落库）
+    Arguments string `json:"arguments"`
+    // AuditLevel 本条调用的审核重要级
+    AuditLevel AuditLevel `json:"auditLevel"`
+    // ExecOwner 执行归属（client / backend）
+    ExecOwner ToolExecOwner `json:"execOwner"`
+    // Round 本次调用所属的轮次（从 1 起），同一轮内并发发起的调用落库后据此回显为一组
+    Round int `json:"round,omitempty"`
+    // Status 调用状态：发起为 start、完成 done、失败 failed（取值同 EvalStageStatus）
+    Status EvalStageStatus `json:"status"`
+    // ElapsedMs 执行耗时（毫秒，仅 done / failed 有意义）
+    ElapsedMs int64 `json:"elapsedMs"`
+    // Error 失败原因（仅 failed 有值）
+    Error string `json:"error,omitempty"`
+    // Result 结果摘要（落库前按 agent.maxToolResultBytes 截断）
+    Result string `json:"result,omitempty"`
+}
+```
+
 <a name="ToolExecOwner"></a>
 ## type ToolExecOwner
 
@@ -3160,6 +3892,11 @@ type ToolRequest struct {
     ApprovalRequired bool `json:"approvalRequired"`
     // ExecOwner 执行归属（client / backend）；为空时按 client 处理
     ExecOwner ToolExecOwner `json:"execOwner"`
+    // MessageID 本次挂起所锚定的助手消息 ID（agent_messages.id）：挂起必定把本回合的助手消息行落为
+    // 锚点（问卷挂起写问卷载荷、其余挂起仅置 phase=suspended），故正常挂起恒非零，前端据此在实时会话
+    // 内即刻把挂起定位到具体助手消息行（「重新回答」须按它截断其后消息）。仅运行期共享状态缺失的旁路
+    // 调用为 0（省略，此时无处可锚）
+    MessageID uint `json:"messageID,omitempty"`
 }
 ```
 

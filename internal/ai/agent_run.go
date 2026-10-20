@@ -79,19 +79,28 @@ func (s *SessionStore) SaveAgentRun(ctx context.Context, run *ai.AgentRun) error
 	return nil
 }
 
-// ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件取该
-// 会话最近一行（不按状态过滤，以便区分「不存在」与「已消费」），归属不符的行在查询阶段即被过滤，
-// 表现为「不存在」；随后依次校验状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并
-// 返回该现场。失败类别见包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed / ErrAgentRunExpired，
-// 供上层映射业务码。
+// ClaimAgentRun 认领一次恢复请求对应的运行现场：以（会话 ID、命名空间、属主用户）为查询条件，优先
+// 取该会话最新的 pending 现场，无 pending 时再取最新一行用于区分「不存在 / 已消费 / 已过期」——回退
+// （reanswer）会把较早的问卷现场重置为 pending 并把更晚的现场置为已消费，故必须按状态优先而非单纯
+// 按 id 取最新，否则会认领到已消费的现场。归属不符的行在查询阶段即被过滤，表现为「不存在」；随后
+// 依次校验状态与过期，通过后原子置为 consumed（并发双提交只有一方成功）并返回该现场。失败类别见
+// 包级哨兵 ErrAgentRunNotFound / ErrAgentRunConsumed / ErrAgentRunExpired，供上层映射业务码。
 func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namespaceName string, userID uint) (*ai.AgentRun, error) {
+	scope := "session_id = ? AND namespace_name = ? AND user_id = ?"
 	var run ai.AgentRun
 	err := s.db.WithContext(ctx).
-		Where("session_id = ? AND namespace_name = ? AND user_id = ?", sessionID, namespaceName, userID).
+		Where(scope+" AND status = ?", sessionID, namespaceName, userID, ai.AgentRunStatusPending).
 		Order("id DESC").
 		First(&run).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, ErrAgentRunNotFound
+		// 无 pending 现场：取最新一行只为区分「已消费 / 已过期 / 不存在」，不参与认领。
+		err = s.db.WithContext(ctx).
+			Where(scope, sessionID, namespaceName, userID).
+			Order("id DESC").
+			First(&run).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrAgentRunNotFound
+		}
 	}
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -135,19 +144,20 @@ func prepareClientToolCall(tc schema.ToolCall, in AgentInput, round int, request
 }
 
 // persistSuspendedRun 把挂起时刻的运行现场落库：完整消息链、待执行调用列表、检索引用、档位、归属
-// 与过期时间。任一序列化或落库失败返回错误，调用方据此中止挂起。
-func (a *Agent) persistSuspendedRun(ctx context.Context, in AgentInput, slot ai.Slot, messages []*schema.Message, collector *knowledgeCollector, pending []pendingToolCall) error {
+// 与过期时间。任一序列化或落库失败返回错误，调用方据此中止挂起。返回值为新落库现场的 ID，供问卷
+// 挂起在写好锚点消息行后把其 ID 回写现场（见 SetAgentRunAnchor）。
+func (a *Agent) persistSuspendedRun(ctx context.Context, in AgentInput, slot ai.Slot, messages []*schema.Message, collector *knowledgeCollector, pending []pendingToolCall) (uint, error) {
 	messagesJSON, err := json.Marshal(messages)
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	pendingJSON, err := json.Marshal(pending)
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	citationsJSON, err := json.Marshal(collector.snapshot())
 	if err != nil {
-		return errors.WithStack(err)
+		return 0, errors.WithStack(err)
 	}
 	run := &ai.AgentRun{
 		NamespaceName:    in.NamespaceName,
@@ -160,7 +170,59 @@ func (a *Agent) persistSuspendedRun(ctx context.Context, in AgentInput, slot ai.
 		Slot:             slot,
 		ExpiresAt:        time.Now().Add(agentRunTTL),
 	}
-	return a.store.SaveAgentRun(ctx, run)
+	if err := a.store.SaveAgentRun(ctx, run); err != nil {
+		return 0, errors.WithStack(err)
+	}
+	return run.ID, nil
+}
+
+// SetAgentRunAnchor 把挂起锚点消息 ID 回写到运行现场：挂起时 wrapPersist 写好承载本回合最终回答（问卷
+// 挂起还承载问卷载荷）的助手消息行后调用，使续跑能原地终态化该行、回退接口能据锚点截断其后消息。现场
+// 不存在（含归属不符）时返回 ErrAgentRunNotFound。
+func (s *SessionStore) SetAgentRunAnchor(ctx context.Context, runID, anchorMessageID uint) error {
+	if runID == 0 {
+		return errors.New("session store: unidentified agent run")
+	}
+	res := s.db.WithContext(ctx).Model(&ai.AgentRun{}).
+		Where("id = ?", runID).
+		Update("anchor_message_id", anchorMessageID)
+	if res.Error != nil {
+		return errors.WithStack(res.Error)
+	}
+	if res.RowsAffected == 0 {
+		return ErrAgentRunNotFound
+	}
+	return nil
+}
+
+// AbortPendingRun 中止一个「等待中」会话的挂起现场（用户点击停止）：作废该会话最近一条 pending 现场
+// （置为 consumed），并把其锚点助手消息的终局阶段置为 cancelled，使状态推导回落 `暂停/用户中止`。
+// 无 pending 现场（已消费 / 已过期 / 不存在）时幂等返回 nil——重复中止不报错。单事务执行，避免现场与
+// 锚点消息中途不一致。不删除任何消息、长期记忆与压缩检查点。
+func (s *SessionStore) AbortPendingRun(ctx context.Context, sessionID, userID uint) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var run ai.AgentRun
+		err := tx.Where("session_id = ? AND user_id = ? AND status = ?", sessionID, userID, ai.AgentRunStatusPending).
+			Order("id DESC").First(&run).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if err := tx.Model(&ai.AgentRun{}).Where("id = ?", run.ID).
+			Update("status", ai.AgentRunStatusConsumed).Error; err != nil {
+			return errors.WithStack(err)
+		}
+		if run.AnchorMessageID != 0 {
+			if err := tx.Model(&ai.AgentMessage{}).
+				Where("id = ? AND user_id = ?", run.AnchorMessageID, userID).
+				Update("phase", ai.AgentRunPhaseCancelled).Error; err != nil {
+				return errors.WithStack(err)
+			}
+		}
+		return nil
+	})
 }
 
 // ResumeInput 是一次恢复运行的入参。
@@ -185,23 +247,48 @@ type ResumeInput struct {
 // 认领失败直接返回对应哨兵错误（不存在/归属不符/已消费/已过期），上层据此映射业务码，本函数不
 // 额外包装以免破坏 errors.Is 语义。
 func (a *Agent) ResumeRun(ctx context.Context, in ResumeInput, opts ...compose.Option) (*schema.StreamReader[AgentOutput], error) {
-	// 续跑同样是一次完整回答，耗时自进入本函数起算，token 用量经回调累加，随最终 done 落库。
+	input, err := a.PrepareResume(ctx, in)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	// 本路径自持流：再次挂起的 tool_request 上报取自入参（ResumeDetached 路径则由 RunHub 的
+	// onToolRequest 注入）。
+	input.ToolRequestReporter = in.ToolRequests
+	// 续跑同样是一次完整回答，耗时自本函数起算，token 用量经回调累加，随最终 done 落库。
 	metrics := newRunMetrics()
+	reader, err := a.Stream(ctx, input, append(opts, compose.WithCallbacks(metrics.handler()))...)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	return a.wrapPersist(ctx, reader, input, metrics), nil
+}
+
+// PrepareResume 认领挂起运行现场并构建续跑输入：校验归属/状态/过期并原子消费现场，反序列化现场中的
+// 消息链、待执行调用与引用，把前端回传结果按待执行调用的原始顺序回灌为 tool message，并取回锚点行上的
+// 问卷载荷、把本次回传的答案**并入**其中。返回的 AgentInput 可直接交给 Stream 续跑。
+//
+// 「认领 + 构建输入」从 ResumeRun 中拆出，供 RunHub 的 StartResume 在构造 SSE 写手前同步校验（认领失败
+// 仍能返回 JSON 业务码错误），随后由 ResumeDetached 以已备好的输入驻留执行。认领失败直接返回对应哨兵
+// 错误（不存在/归属不符/已消费/已过期），本函数不额外包装以免破坏 errors.Is 语义。
+// ToolReporter 取自 in.ToolReporter（准备阶段回灌 tool message 时上报 toolResult 终态，并作为续跑运行阶段
+// 事件的上报回调）；ToolRequestReporter 不在准备阶段注入——再次挂起的 tool_request 上报由执行阶段的调用方
+// （ResumeDetached 的 onToolRequest）注入。
+func (a *Agent) PrepareResume(ctx context.Context, in ResumeInput) (AgentInput, error) {
 	run, err := a.store.ClaimAgentRun(ctx, in.SessionID, in.NamespaceName, in.UserID)
 	if err != nil {
-		return nil, err
+		return AgentInput{}, errors.WithStack(err)
 	}
 	var msgs []*schema.Message
 	if err := json.Unmarshal(run.MessagesJSON.Value(), &msgs); err != nil {
-		return nil, errors.WithStack(err)
+		return AgentInput{}, errors.WithStack(err)
 	}
 	var pending []pendingToolCall
 	if err := json.Unmarshal(run.PendingCallsJSON.Value(), &pending); err != nil {
-		return nil, errors.WithStack(err)
+		return AgentInput{}, errors.WithStack(err)
 	}
 	var citations []RetrievalResult
 	if err := json.Unmarshal(run.CitationsJSON.Value(), &citations); err != nil {
-		return nil, errors.WithStack(err)
+		return AgentInput{}, errors.WithStack(err)
 	}
 	// 运行现场未持久化 Agent 类型，尽力从会话回填（失败留空，按缺省类型处理）；同一会话的
 	// 审核阀门也在此取回，使续跑新产生的调用与首次挂起使用同一阀门。
@@ -212,14 +299,48 @@ func (a *Agent) ResumeRun(ctx context.Context, in ResumeInput, opts ...compose.O
 		reviewValve = session.ReviewValve
 	}
 	input := AgentInput{
-		SessionID:           run.SessionID,
-		NamespaceName:       run.NamespaceName,
-		UserID:              run.UserID,
-		AgentKind:           agentKind,
-		Slot:                run.Slot,
-		ToolReporter:        in.ToolReporter,
-		ToolRequestReporter: in.ToolRequests,
-		ReviewValve:         reviewValve,
+		SessionID:     run.SessionID,
+		NamespaceName: run.NamespaceName,
+		UserID:        run.UserID,
+		AgentKind:     agentKind,
+		Slot:          run.Slot,
+		ToolReporter:  in.ToolReporter,
+		ReviewValve:   reviewValve,
+	}
+	// 挂起续跑：本次运行的助手消息行就是挂起时写下的锚点行（run.AnchorMessageID），终态化须原地写回该行
+	// 而非新增。问卷挂起时取回锚点行上的各轮问卷载荷（此前各轮的题目 + 答案）并把本次回传的答案**并入末轮**，
+	// 使终态化后该行仍保留多轮提问的完整各轮数据；只回传本轮题目的答案，故并入末轮而非整份覆盖——覆盖会把此前
+	// 各轮已作答的答案顶掉，用户刷新即看到「未作答」。非问卷挂起（锚点行无问卷载荷）时仅为复用该行。
+	input.Questionnaire = &questionnaireState{anchorID: run.AnchorMessageID}
+	// 续跑以锚点行作为本次运行的助手消息行（终态化原地写回该行），故块构建器以锚点 ID 初始化；并把下一
+	// 个待分配块序号抬到锚点已有块的最大 block_seq + 1，使本次运行新产生的块接续其后的序号（避免与锚点
+	// 已有块的 (message_id, block_seq) 唯一约束冲突）。
+	input.blocks = newBlockBuilder(run.AnchorMessageID, a.params.Int("agent.maxToolResultBytes"))
+	if run.AnchorMessageID != 0 {
+		if blocks, berr := a.store.ListBlocksByMessage(ctx, run.AnchorMessageID, run.NamespaceName, run.UserID); berr == nil {
+			var maxSeq uint64
+			for _, blk := range blocks {
+				if blk.BlockSeq > maxSeq {
+					maxSeq = blk.BlockSeq
+				}
+			}
+			input.blocks.SeedNextSeq(maxSeq + 1)
+		}
+		// 问卷挂起时取回锚点行上的各轮 questionnaire 块（此前各轮的题目 + 答案），把本次回传的答案**并入
+		// 末轮**，使终态化后各轮仍保留完整数据；loadedRounds 记录载入的轮次数，供 wrapPersist 区分「既有
+		// 轮次（只回填作答）」与「本次新产生的轮次（新建 questionnaire 块）」。
+		if rounds := a.loadAnchorQuestionnaire(ctx, run.AnchorMessageID, run.NamespaceName, run.UserID); len(rounds) > 0 {
+			if answers := questionnaireAnswersFromResults(pending, in.Results); len(answers) > 0 {
+				rounds = attachRoundAnswers(rounds, answers)
+			} else if questionnaireRoundDeclined(pending, in.Results) {
+				// 取消回答：本次回传的全部问卷调用均被拒（无答案），末轮因「回退重开」可能仍带着上次
+				// 作答的答案（供预填），须清空使其回到未作答——否则终态化写回的仍是旧答案，刷新 / 重进
+				// 会把它当作本次作答。
+				rounds = clearLastRoundAnswers(rounds)
+			}
+			input.Questionnaire.rounds = rounds
+			input.Questionnaire.loadedRounds = len(rounds)
+		}
 	}
 	// 恢复时后端须能执行已批准的 backend 调用：注入与 generate 相同的工具上下文（记忆 + 知识
 	// 检索），并以采集器承接 backend knowledge_search 的新命中（执行后并入 citations 续跑产出）。
@@ -228,14 +349,10 @@ func (a *Agent) ResumeRun(ctx context.Context, in ResumeInput, opts ...compose.O
 	toolCtx = a.knowledgeToolContext(toolCtx, input, collector)
 	msgs = append(msgs, a.buildResumeToolMessages(ctx, toolCtx, pending, in.Results, a.params.Int("agent.maxToolResultBytes"), in.ToolReporter)...)
 	citations = collector.snapshot()
+	// 本轮没有新的用户提问，须走 Stream（不落用户消息）而非 StreamRun。
 	input.ResumeMessages = msgs
 	input.ResumeCitations = citations
-	// 本轮没有新的用户提问，须走 Stream（不落用户消息）而非 StreamRun。
-	reader, err := a.Stream(ctx, input, append(opts, compose.WithCallbacks(metrics.handler()))...)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return a.wrapPersist(ctx, reader, input, metrics), nil
+	return input, nil
 }
 
 // buildResumeToolMessages 按待执行调用的原始顺序，把恢复现场组装为 tool message 列表：
@@ -320,6 +437,69 @@ func (c pendingToolCall) execOwner() ToolExecOwner {
 		return ToolExecOwnerClient
 	}
 	return c.ExecOwner
+}
+
+// loadAnchorQuestionnaire 取回问卷锚点消息行上的各轮 questionnaire 块（按 block_seq 先后还原的题目 + 上次
+// 答案）；行不存在、无 questionnaire 块或块载荷无法解码时返回 nil（此时续跑按「无问卷载荷」处理——授权回合
+// 续跑即如此，属正常情形，故不告警）。
+func (a *Agent) loadAnchorQuestionnaire(ctx context.Context, messageID uint, namespaceName string, userID uint) []QuestionnairePayload {
+	return loadQuestionnaireRoundsFromBlocks(ctx, a.store.db, messageID, namespaceName, userID)
+}
+
+// questionnaireAnswersFromResults 从恢复现场回传的结果中取出问卷答案：按 pending 原序遍历**全部**问卷类
+// 调用（一轮内可有多条 ask_user 调用，其题目在挂起时已合并为一张问卷），逐条取回其 Result（前端回传的
+// {"answers":[...]} JSON）并把答案依序合并。未回传结果、用户取消（Approved=false）、执行出错、结果为空
+// 或载荷非法的调用被跳过；全部调用都取不到答案时返回 nil——此时锚点行只保留题目（无答案），与「取消
+// 回答」的语义一致。
+func questionnaireAnswersFromResults(pending []pendingToolCall, results []ToolResult) []QuestionnaireAnswer {
+	byCallID := make(map[string]ToolResult, len(results))
+	for _, r := range results {
+		byCallID[r.CallID] = r
+	}
+	var answers []QuestionnaireAnswer
+	for _, call := range pending {
+		if !isQuestionnaireTool(call.ToolName) {
+			continue
+		}
+		result, ok := byCallID[call.CallID]
+		if !ok || !result.Approved || result.Error != "" || result.Result == "" {
+			continue
+		}
+		var payload struct {
+			Answers []QuestionnaireAnswer `json:"answers"`
+		}
+		if err := json.Unmarshal([]byte(result.Result), &payload); err != nil {
+			continue
+		}
+		answers = append(answers, payload.Answers...)
+	}
+	if len(answers) == 0 {
+		return nil
+	}
+	return answers
+}
+
+// questionnaireRoundDeclined 判断本次恢复现场中的问卷类调用是否「整体被取消回答」：存在至少一条问卷
+// （ask_user）调用，且其回传结果一律标记未批准（Approved=false）。取消回答时前端对每条 ask_user 回传
+// approved=false 且不携带答案，故据此与「取不到任何答案」区分出「用户取消」这一情形（无结果的调用按
+// 未取消处理，返回 false，避免把异常回传误判为取消而清掉末轮答案）。
+func questionnaireRoundDeclined(pending []pendingToolCall, results []ToolResult) bool {
+	byCallID := make(map[string]ToolResult, len(results))
+	for _, r := range results {
+		byCallID[r.CallID] = r
+	}
+	found := false
+	for _, call := range pending {
+		if !isQuestionnaireTool(call.ToolName) {
+			continue
+		}
+		found = true
+		result, ok := byCallID[call.CallID]
+		if !ok || result.Approved {
+			return false
+		}
+	}
+	return found
 }
 
 // declinedToolCallText 是用户拒绝执行一次挂起调用时回灌给模型的固定英文文案（client / backend 共用）。

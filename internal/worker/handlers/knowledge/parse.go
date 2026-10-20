@@ -101,7 +101,7 @@ func (h *ParseHandler) Do(ctx context.Context, task etl.Task) error {
 		return errors.WithStack(err)
 	}
 	if err := validateParsePayload(payload); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	var doc ai.KnowledgeDocument
@@ -159,7 +159,7 @@ func (h *ParseHandler) parse(ctx context.Context, doc *ai.KnowledgeDocument) err
 	}
 	text, err := h.extract(ctx, doc, path)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	doc.Content = serializer.NewCrypto([]byte(text))
 	// 采用结构体 Select 更新以触发 crypto 序列化器加密存储（map 更新不会走序列化器）
@@ -168,7 +168,7 @@ func (h *ParseHandler) parse(ctx context.Context, doc *ai.KnowledgeDocument) err
 		return errors.WithStack(err)
 	}
 	if err := h.index(ctx, doc); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err := h.setStatus(ctx, doc, ai.KnowledgeDocStatusReady, ""); err != nil {
 		return errors.WithStack(err)

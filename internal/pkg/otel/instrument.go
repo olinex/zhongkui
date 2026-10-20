@@ -54,7 +54,7 @@ func AsynqServerMiddleware() asynq.MiddlewareFunc {
 				span.RecordError(err)
 				span.SetStatus(codes.Error, err.Error())
 			}
-			return err
+			return errors.WithStack(err)
 		})
 	}
 }
@@ -87,7 +87,7 @@ func (c *TracedAsynqClient) EnqueueContext(ctx context.Context, task *asynq.Task
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return info, err
+		return info, errors.WithStack(err)
 	}
 	span.SetAttributes(
 		attribute.String("task.id", info.ID),
@@ -102,7 +102,7 @@ func (c *TracedAsynqClient) EnqueueContext(ctx context.Context, task *asynq.Task
 		attribute.Int("task.retried", info.Retried),
 		attribute.Int("task.payload_size", len(info.Payload)),
 	)
-	return info, err
+	return info, errors.WithStack(err)
 }
 
 // InjectRedisClient 为 Redis 客户端注入 OpenTelemetry 的链路追踪与指标采集；OTEL 未启用时不作处理。

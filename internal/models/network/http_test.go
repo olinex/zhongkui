@@ -21,6 +21,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/s3"
 )
 
@@ -106,20 +107,20 @@ func readPutBody(r *http.Request) ([]byte, error) {
 	for {
 		header, err := br.ReadString('\n')
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		size, err := strconv.ParseInt(strings.SplitN(strings.TrimRight(header, "\r\n"), ";", 2)[0], 16, 64)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if size == 0 {
 			break
 		}
 		if _, err := io.CopyN(&buf, br, size); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if _, err := br.Discard(2); err != nil { // 消费 chunk 数据后的 CRLF
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 	}
 	return buf.Bytes(), nil

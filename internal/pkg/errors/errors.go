@@ -54,12 +54,12 @@ func WithStack(err error) error {
 	if base.Env.ErrorStack && err != nil {
 		switch err.(type) {
 		case stackError:
-			return err
+			return errors.WithStack(err)
 		default:
 			return errors.WithStack(err)
 		}
 	}
-	return err
+	return errors.WithStack(err)
 }
 
 // Is 报告目标错误是否与给定的错误匹配。

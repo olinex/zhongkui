@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/pprof/profile"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // ProfilingConfig 定义性能剖析的采集开关与展示条目数。
@@ -266,7 +267,7 @@ func countGoroutines(path string) int {
 func readProfileFile(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(data) < 2 || data[0] != 0x1f || data[1] != 0x8b {
@@ -275,13 +276,13 @@ func readProfileFile(path string) ([]byte, error) {
 
 	reader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	defer reader.Close()
 
 	var buf bytes.Buffer
 	if _, err := buf.ReadFrom(reader); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return buf.Bytes(), nil
 }
@@ -289,12 +290,12 @@ func readProfileFile(path string) ([]byte, error) {
 func parseCPUProfile(path string, topN int) ([]ProfileEntry, error) {
 	data, err := readProfileFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	p, err := profile.ParseData(data)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	cumByFunc := make(map[string]struct {
@@ -384,12 +385,12 @@ func parseCPUProfile(path string, topN int) ([]ProfileEntry, error) {
 func parseHeapProfile(path string, topN int) ([]ProfileEntry, error) {
 	data, err := readProfileFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	p, err := profile.ParseData(data)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	allocBytesByFunc := make(map[string]int64)
@@ -465,12 +466,12 @@ func parseHeapProfile(path string, topN int) ([]ProfileEntry, error) {
 func parseHeapProfileObjects(path string, topN int) ([]ProfileEntry, error) {
 	data, err := readProfileFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	p, err := profile.ParseData(data)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	allocObjByFunc := make(map[string]int64)

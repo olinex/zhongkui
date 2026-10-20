@@ -135,7 +135,7 @@ func convertCbpfToEbpf(cbpf []pcap.BPFInstruction) (asm.Instructions, error) {
 		label := c.labels[i]
 		block, err := c.emitInstruction(i)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if len(block) > 0 {
 			block[0] = block[0].WithSymbol(label)
@@ -460,7 +460,7 @@ func CompileBPFProgramJIT(filterExpr string) (*ebpf.CollectionSpec, error) {
 func BuildXdpCollectionSpec(cbpfInsns []pcap.BPFInstruction) (*ebpf.CollectionSpec, error) {
 	ebpfFilter, err := convertCbpfToEbpf(cbpfInsns)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	spec := &ebpf.CollectionSpec{

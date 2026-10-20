@@ -72,7 +72,7 @@ type fakeDialer struct {
 func (d *fakeDialer) Dial(_ context.Context, cfg mcp.ConnConfig) (mcpConn, error) {
 	d.dialed = append(d.dialed, cfg.URL)
 	if err, ok := d.failures[cfg.URL]; ok {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	conn, ok := d.conns[cfg.URL]
 	if !ok {

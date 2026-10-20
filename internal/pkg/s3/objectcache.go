@@ -193,12 +193,12 @@ func (c *ObjectCache) Materialize(ctx context.Context, objectKey string) (string
 	}
 	rc, err := c.backend.Fetch(ctx, objectKey)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	defer rc.Close()
 	full, err := c.materialize(rc, objectKey)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	c.setCache(objectKey, full)
 	return full, nil

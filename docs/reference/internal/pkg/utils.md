@@ -4,6 +4,8 @@
 
 ## Index
 
+- [Constants](<#constants>)
+- [Variables](<#variables>)
 - [func BuildSearchCondQuery\(db \*database.DB, searcher SearcherIn\) \(\*database.DB, error\)](<#BuildSearchCondQuery>)
 - [func BuildSearchCountQuery\(db \*database.DB, searcher SearcherIn\) \(\*database.DB, error\)](<#BuildSearchCountQuery>)
 - [func BuildSearchDataQuery\(db \*database.DB, searcher SearcherIn\) \(\*database.DB, error\)](<#BuildSearchDataQuery>)
@@ -15,20 +17,55 @@
 - [func FindField\(model any, path, nameTag string\) \(\*reflect.StructField, error\)](<#FindField>)
 - [func FormatScalar\(kind ScalarKind, value any\) \(string, error\)](<#FormatScalar>)
 - [func ParseScalar\(kind ScalarKind, literal string\) \(any, error\)](<#ParseScalar>)
+- [func ProcessJSON\(operation, text, path string, indent int\) \(any, error\)](<#ProcessJSON>)
 - [func ProjectItemFields\(out any, fields \[\]string\) map\[string\]any](<#ProjectItemFields>)
 - [func ProjectSearchItems\[T any\]\(rows \[\]T, searcher ProjectorSearcher, newOut func\(\*T\) any\) \[\]map\[string\]any](<#ProjectSearchItems>)
+- [func RunDatetimeCalc\(in DatetimeCalcInput\) \(any, error\)](<#RunDatetimeCalc>)
+- [func RunRegex\(operation, pattern, text, replacement string, global bool\) \(any, error\)](<#RunRegex>)
 - [func SetField\(obj any, name string, value any\)](<#SetField>)
+- [type BaseConvertResult](<#BaseConvertResult>)
+  - [func ConvertBase\(value string, fromBase, toBase int\) \(BaseConvertResult, error\)](<#ConvertBase>)
 - [type BaseItemOut](<#BaseItemOut>)
 - [type BaseSoftDeleteItemOut](<#BaseSoftDeleteItemOut>)
 - [type BaseTotalOut](<#BaseTotalOut>)
   - [func \(o \*BaseTotalOut\) GetTotal\(\) uint](<#BaseTotalOut.GetTotal>)
+- [type CSVParseResult](<#CSVParseResult>)
+  - [func ParseCSV\(text, delimiter string, hasHeader bool\) \(CSVParseResult, error\)](<#ParseCSV>)
+- [type DatetimeCalcInput](<#DatetimeCalcInput>)
+- [type DatetimeDiffResult](<#DatetimeDiffResult>)
+- [type DatetimePointResult](<#DatetimePointResult>)
+- [type EncodeConvertResult](<#EncodeConvertResult>)
+  - [func EncodeConvert\(scheme, operation, text string\) \(EncodeConvertResult, error\)](<#EncodeConvert>)
 - [type EnumOption](<#EnumOption>)
 - [type FieldProjector](<#FieldProjector>)
 - [type FilterByItem](<#FilterByItem>)
 - [type FilterByOption](<#FilterByOption>)
 - [type FilterByOptionItem](<#FilterByOptionItem>)
+- [type HashResult](<#HashResult>)
+  - [func Hash\(input, algorithm string\) \(HashResult, error\)](<#Hash>)
+- [type JSONQueryResult](<#JSONQueryResult>)
+- [type JSONTextResult](<#JSONTextResult>)
+- [type JSONValidateResult](<#JSONValidateResult>)
+- [type JsonDiffEntry](<#JsonDiffEntry>)
+- [type JsonDiffResult](<#JsonDiffResult>)
+  - [func DiffJSON\(left, right string\) \(JsonDiffResult, error\)](<#DiffJSON>)
+- [type LinearSystemSolution](<#LinearSystemSolution>)
+  - [func SolveLinearSystem\(a \[\]\[\]float64, b \[\]float64, tolerance float64\) \(LinearSystemSolution, error\)](<#SolveLinearSystem>)
+- [type MathEvalResult](<#MathEvalResult>)
+  - [func EvalMathExpression\(expression string\) \(MathEvalResult, error\)](<#EvalMathExpression>)
+- [type NonlinearSolution](<#NonlinearSolution>)
+  - [func SolveNonlinearSystem\(equations \[\]string, variables \[\]string, initial \[\]float64, tolerance float64, maxIterations int\) \(NonlinearSolution, error\)](<#SolveNonlinearSystem>)
 - [type OrderByItem](<#OrderByItem>)
+- [type PolynomialRoot](<#PolynomialRoot>)
+- [type PolynomialSolution](<#PolynomialSolution>)
+  - [func SolvePolynomial\(coefficients \[\]float64, tolerance float64, maxIterations int\) \(PolynomialSolution, error\)](<#SolvePolynomial>)
 - [type ProjectorSearcher](<#ProjectorSearcher>)
+- [type RegexMatch](<#RegexMatch>)
+- [type RegexReplaceResult](<#RegexReplaceResult>)
+- [type RegexTestResult](<#RegexTestResult>)
+- [type RootFindEntry](<#RootFindEntry>)
+- [type RootFindSolution](<#RootFindSolution>)
+  - [func FindRoots\(expression string, interval \*\[2\]float64, initial \*float64, tolerance float64, maxIterations int\) \(RootFindSolution, error\)](<#FindRoots>)
 - [type ScalarKind](<#ScalarKind>)
 - [type SearchOptions](<#SearchOptions>)
 - [type SearchOut](<#SearchOut>)
@@ -36,8 +73,108 @@
 - [type SearchProjectedOut](<#SearchProjectedOut>)
   - [func NewSearchProjectedOut\(total uint, items \[\]map\[string\]any\) \*SearchProjectedOut](<#NewSearchProjectedOut>)
 - [type SearcherIn](<#SearcherIn>)
+- [type TextStatsResult](<#TextStatsResult>)
+  - [func StatsText\(text string\) \(TextStatsResult, error\)](<#StatsText>)
 - [type TotalOut](<#TotalOut>)
+- [type URLParseResult](<#URLParseResult>)
+  - [func ParseURL\(raw string\) \(URLParseResult, error\)](<#ParseURL>)
+- [type UUIDResult](<#UUIDResult>)
+  - [func GenerateUUID\(version string, count int\) \(UUIDResult, error\)](<#GenerateUUID>)
+- [type UnitConvertResult](<#UnitConvertResult>)
+  - [func ConvertUnit\(value float64, from, to string\) \(UnitConvertResult, error\)](<#ConvertUnit>)
 
+
+## Constants
+
+<a name="DefaultCSVDelimiter"></a>csv 的可选入参缺省值。
+
+```go
+const (
+    // DefaultCSVDelimiter 是 delimiter 缺省值（英文逗号）。
+    DefaultCSVDelimiter = ","
+    // DefaultCSVHasHeader 是 has_header 缺省值（首行为表头）。
+    DefaultCSVHasHeader = true
+)
+```
+
+<a name="DefaultUUIDVersion"></a>uuid 的可选入参缺省值与数量上限。
+
+```go
+const (
+    // DefaultUUIDVersion 是 version 缺省值（随机 UUID）。
+    DefaultUUIDVersion = "4"
+    // DefaultUUIDCount 是 count 缺省值。
+    DefaultUUIDCount = 1
+)
+```
+
+<a name="DefaultPolySolveTolerance"></a>各工具的缺省容差与迭代上限，供适配器在可选入参缺省时填充。
+
+```go
+const (
+    // DefaultPolySolveTolerance SolvePolynomial 的缺省收敛容差
+    DefaultPolySolveTolerance = 1e-12
+    // DefaultPolySolveMaxIterations SolvePolynomial 的缺省迭代上限
+    DefaultPolySolveMaxIterations = 100
+    // DefaultLinearSolveTolerance SolveLinearSystem 的缺省容差
+    DefaultLinearSolveTolerance = 1e-12
+    // DefaultRootFindTolerance FindRoots 的缺省容差
+    DefaultRootFindTolerance = 1e-12
+    // DefaultRootFindMaxIterations FindRoots 的缺省迭代上限
+    DefaultRootFindMaxIterations = 100
+    // DefaultNonlinearSolveTolerance SolveNonlinearSystem 的缺省容差
+    DefaultNonlinearSolveTolerance = 1e-12
+    // DefaultNonlinearSolveMaxIterations SolveNonlinearSystem 的缺省迭代上限
+    DefaultNonlinearSolveMaxIterations = 100
+)
+```
+
+<a name="DefaultDatetimeTimezone"></a>DefaultDatetimeTimezone 是时区类可选入参的缺省值：timezone / from\_timezone / to\_timezone 缺省时 一律按 UTC 解释。
+
+```go
+const DefaultDatetimeTimezone = "UTC"
+```
+
+<a name="DefaultJSONIndent"></a>json 工具的缩进参数：缺省 2，合法区间 1..8。
+
+```go
+const (
+    // DefaultJSONIndent 是 format 操作 indent 缺省值。
+    DefaultJSONIndent = 2
+)
+```
+
+## Variables
+
+<a name="DatetimeOperations"></a>DatetimeOperations 是 operation 的取值空间（now / convert / add / diff），供适配器渲染参数 schema 的枚举与错误文案。
+
+```go
+var DatetimeOperations = []string{"now", "convert", "add", "diff"}
+```
+
+<a name="EncodeSchemeNames"></a>EncodeSchemeNames 是编码方案取值空间的字符串清单（字典序固定），供参数 schema 的枚举与错误文案 渲染复用。
+
+```go
+var EncodeSchemeNames = []string{"base64", "base64url", "hex", "url", "html"}
+```
+
+<a name="HashAlgorithmNames"></a>HashAlgorithmNames 是 hash 算法取值空间的字符串清单（字典序固定），供参数 schema 的枚举与错误 文案渲染复用。
+
+```go
+var HashAlgorithmNames = []string{"md5", "sha1", "sha256", "sha512"}
+```
+
+<a name="JSONOperations"></a>JSONOperations 是 json 工具操作取值空间的字符串清单（字典序固定），供参数 schema 的枚举与错误 文案渲染复用。
+
+```go
+var JSONOperations = []string{"validate", "format", "minify", "query"}
+```
+
+<a name="RegexOperations"></a>RegexOperations 是 regex 操作取值空间的字符串清单，供参数 schema 的枚举与错误文案渲染复用。
+
+```go
+var RegexOperations = []string{regexOpTest, regexOpReplace}
+```
 
 <a name="BuildSearchCondQuery"></a>
 ## func BuildSearchCondQuery
@@ -286,6 +423,15 @@ func ParseScalar(kind ScalarKind, literal string) (any, error)
 
 ParseScalar 把文本字面量按 kind 解析为强类型值（string→string、int→int、 float→float64、bool→bool）。数值与布尔类型先修剪首尾空白（宽容直接手改库内数据的情形）， 字符串类型不修剪；解析失败或 kind 未知时返回英文错误。
 
+<a name="ProcessJSON"></a>
+## func ProcessJSON
+
+```go
+func ProcessJSON(operation, text, path string, indent int) (any, error)
+```
+
+ProcessJSON 按 operation（validate / format / minify / query）处理 JSON 文本并返回对应结果 （JSONValidateResult / JSONTextResult / JSONQueryResult）。operation 先去除首尾空白；操作非法、 format 缩进越界、非法 JSON 或非法查询路径时返回英文错误（工具名前缀由适配器补齐）。indent 为 0 时取 DefaultJSONIndent。validate 对非法文本不视为失败，而是返回 Valid=false 与错误文本。
+
 <a name="ProjectItemFields"></a>
 ## func ProjectItemFields
 
@@ -304,6 +450,24 @@ func ProjectSearchItems[T any](rows []T, searcher ProjectorSearcher, newOut func
 
 ProjectSearchItems 将行列表按请求字段投影为 map 项列表 rows: 查询行（模型行或 Out 结构体）；searcher: 搜索入参（提供请求字段与投影白名单） newOut: 全字段映射函数（行 → 列表 Out，可为恒等函数） 请求字段为空时回退到全部白名单字段（GetOptions\(\).Fields）， 保证前端未指定 fields 时默认返回白名单全集，视图层无需自行判断。
 
+<a name="RunDatetimeCalc"></a>
+## func RunDatetimeCalc
+
+```go
+func RunDatetimeCalc(in DatetimeCalcInput) (any, error)
+```
+
+RunDatetimeCalc 按 operation 分派 datetime\_calc 的各操作，返回 DatetimePointResult（now / convert / add）或 DatetimeDiffResult（diff）。operation 非法时返回英文错误（工具名前缀由适配器补齐）。
+
+<a name="RunRegex"></a>
+## func RunRegex
+
+```go
+func RunRegex(operation, pattern, text, replacement string, global bool) (any, error)
+```
+
+RunRegex 执行 regex 工具：校验 operation / pattern / replacement，编译正则后按操作类型返回 RegexTestResult（test）或 RegexReplaceResult（replace）。operation 非法、pattern / replacement 为空或正则编译失败时返回英文错误（工具名前缀由适配器补齐）。
+
 <a name="SetField"></a>
 ## func SetField
 
@@ -312,6 +476,29 @@ func SetField(obj any, name string, value any)
 ```
 
 SetField 设置结构体字段的值（字段不可导出时经 unsafe 反射写入）。
+
+<a name="BaseConvertResult"></a>
+## type BaseConvertResult
+
+BaseConvertResult 是进制转换成功时返回的载荷。
+
+```go
+type BaseConvertResult struct {
+    // Result 目标进制下的数值字符串
+    Result string `json:"result"`
+    // Decimal 十进制下的数值字符串
+    Decimal string `json:"decimal"`
+}
+```
+
+<a name="ConvertBase"></a>
+### func ConvertBase
+
+```go
+func ConvertBase(value string, fromBase, toBase int) (BaseConvertResult, error)
+```
+
+ConvertBase 把 value（fromBase 进制下的整数表示，可带前导负号）转换为 toBase 进制并返回 BaseConvertResult。fromBase / toBase 须在 2..36 之间；value 去空白后为空或对源进制非法时 返回英文错误。
 
 <a name="BaseItemOut"></a>
 ## type BaseItemOut
@@ -357,6 +544,136 @@ func (o *BaseTotalOut) GetTotal() uint
 ```
 
 GetTotal 获取总数 返回值：总数
+
+<a name="CSVParseResult"></a>
+## type CSVParseResult
+
+CSVParseResult 是 ParseCSV 成功时返回的载荷：header / rows 无数据时为空数组而非 null；rowCount 为数据行数（不含表头），columnCount 为列数。
+
+```go
+type CSVParseResult struct {
+    // Delimiter 实际使用的字段分隔符
+    Delimiter string `json:"delimiter"`
+    // HasHeader 首行是否被当作表头
+    HasHeader bool `json:"hasHeader"`
+    // Header 表头字段（无表头时为空数组）
+    Header []string `json:"header"`
+    // Rows 数据行（不含表头）
+    Rows [][]string `json:"rows"`
+    // RowCount 数据行数（不含表头）
+    RowCount int `json:"rowCount"`
+    // ColumnCount 列数
+    ColumnCount int `json:"columnCount"`
+}
+```
+
+<a name="ParseCSV"></a>
+### func ParseCSV
+
+```go
+func ParseCSV(text, delimiter string, hasHeader bool) (CSVParseResult, error)
+```
+
+ParseCSV 用 delimiter（为空时取 DefaultCSVDelimiter，须为单个字符）解析 CSV 文本，按 hasHeader 决定首行是否作为表头，返回 CSVParseResult。分隔符非单字符或 CSV 语法非法（如引号不闭合）时返回 英文错误（工具名前缀由适配器补齐）。
+
+<a name="DatetimeCalcInput"></a>
+## type DatetimeCalcInput
+
+DatetimeCalcInput 汇集 datetime\_calc 的全部入参，供 RunDatetimeCalc 按 operation 分派。
+
+```go
+type DatetimeCalcInput struct {
+    // Operation 要执行的操作：now / convert / add / diff
+    Operation string
+    // Timezone 目标/解释时区（now 输出、convert 输出目标、add 运算时区），缺省 UTC
+    Timezone string
+    // Time 待处理时间，除 now 外使用
+    Time string
+    // FromTimezone convert 的源时区，缺省 UTC
+    FromTimezone string
+    // ToTimezone convert 的目标时区，缺省取 timezone，再缺省 UTC
+    ToTimezone string
+    // Duration add 的增量（支持 h/m/s/ms/us/ns 与 d）
+    Duration string
+    // Start diff 的起始时间
+    Start string
+    // End diff 的结束时间
+    End string
+}
+```
+
+<a name="DatetimeDiffResult"></a>
+## type DatetimeDiffResult
+
+DatetimeDiffResult 是 diff 返回的载荷：两个时间点之差。
+
+```go
+type DatetimeDiffResult struct {
+    // Operation 恒为 diff
+    Operation string `json:"operation"`
+    // Seconds 时间差（秒，含小数）
+    Seconds float64 `json:"seconds"`
+    // Duration 可读时长，如 60h0m0s
+    Duration string `json:"duration"`
+}
+```
+
+<a name="DatetimePointResult"></a>
+## type DatetimePointResult
+
+DatetimePointResult 是 now / convert / add 返回的载荷：一个时间点在目标时区下的各字段拆解，便于 模型直接引用。
+
+```go
+type DatetimePointResult struct {
+    // Operation 本次操作名
+    Operation string `json:"operation"`
+    // Time 目标时区下的 RFC3339 时间串
+    Time string `json:"time"`
+    // Timezone 结果所在时区名
+    Timezone string `json:"timezone"`
+    // EpochSeconds Unix 秒
+    EpochSeconds int64 `json:"epochSeconds"`
+    // Year 年
+    Year int `json:"year"`
+    // Month 月（1-12）
+    Month int `json:"month"`
+    // Day 日
+    Day int `json:"day"`
+    // Hour 时
+    Hour int `json:"hour"`
+    // Minute 分
+    Minute int `json:"minute"`
+    // Second 秒
+    Second int `json:"second"`
+    // Weekday 英文星期名
+    Weekday string `json:"weekday"`
+}
+```
+
+<a name="EncodeConvertResult"></a>
+## type EncodeConvertResult
+
+EncodeConvertResult 是 EncodeConvert 成功时返回的载荷。
+
+```go
+type EncodeConvertResult struct {
+    // Operation 实际执行的操作方向
+    Operation string `json:"operation"`
+    // Scheme 实际使用的编码方案
+    Scheme string `json:"scheme"`
+    // Result 转换后的文本
+    Result string `json:"result"`
+}
+```
+
+<a name="EncodeConvert"></a>
+### func EncodeConvert
+
+```go
+func EncodeConvert(scheme, operation, text string) (EncodeConvertResult, error)
+```
+
+EncodeConvert 以 scheme 指定的方案对 text 执行 operation（encode 或 decode）并返回 EncodeConvertResult。operation 与 scheme 先去除首尾空白；操作方向非法、方案越界、文本为空或 decode 输入非法（如非法 base64 / hex）时返回英文错误（工具名前缀由适配器补齐）。
 
 <a name="EnumOption"></a>
 ## type EnumOption
@@ -427,6 +744,201 @@ type FilterByOptionItem struct {
 }
 ```
 
+<a name="HashResult"></a>
+## type HashResult
+
+HashResult 是 Hash 成功时返回的载荷：摘要的十六进制与小写 base64 两种表示。
+
+```go
+type HashResult struct {
+    // Algorithm 实际使用的哈希算法
+    Algorithm string `json:"algorithm"`
+    // Hex 摘要的十六进制（小写）表示
+    Hex string `json:"hex"`
+    // Base64 摘要的小写 base64 表示
+    Base64 string `json:"base64"`
+}
+```
+
+<a name="Hash"></a>
+### func Hash
+
+```go
+func Hash(input, algorithm string) (HashResult, error)
+```
+
+Hash 对 UTF\-8 文本 input 以 algorithm 指定的算法计算摘要并返回 HashResult。algorithm 先去除首尾 空白；算法越界或文本为空时返回英文错误（工具名前缀由适配器补齐）。
+
+<a name="JSONQueryResult"></a>
+## type JSONQueryResult
+
+JSONQueryResult 是 json 工具 query 操作返回的载荷：命中时 value 为任意 JSON 值（未命中时省略）。 Value 用 json.RawMessage 承载，以便正确区分「未命中」（省略）与命中且值为 null / 0 / false / "" 等零值（仍需输出）。
+
+```go
+type JSONQueryResult struct {
+    // Operation 实际执行的操作（恒为 query）
+    Operation string `json:"operation"`
+    // Found 是否命中路径
+    Found bool `json:"found"`
+    // Value 命中路径处的值（未命中时省略）
+    Value json.RawMessage `json:"value,omitempty"`
+    // Path 本次查询使用的路径
+    Path string `json:"path"`
+}
+```
+
+<a name="JSONTextResult"></a>
+## type JSONTextResult
+
+JSONTextResult 是 json 工具 format / minify 操作返回的载荷。
+
+```go
+type JSONTextResult struct {
+    // Operation 实际执行的操作（format 或 minify）
+    Operation string `json:"operation"`
+    // Result 处理后的 JSON 文本
+    Result string `json:"result"`
+}
+```
+
+<a name="JSONValidateResult"></a>
+## type JSONValidateResult
+
+JSONValidateResult 是 json 工具 validate 操作返回的载荷：合法时 error 省略。
+
+```go
+type JSONValidateResult struct {
+    // Operation 实际执行的操作（恒为 validate）
+    Operation string `json:"operation"`
+    // Valid 文本是否为合法 JSON
+    Valid bool `json:"valid"`
+    // Error 非法时的错误文本（合法时省略）
+    Error string `json:"error,omitempty"`
+}
+```
+
+<a name="JsonDiffEntry"></a>
+## type JsonDiffEntry
+
+JsonDiffEntry 是单条差异：路径、类型与两侧取值。added 的左值与 removed 的右值为 null。
+
+```go
+type JsonDiffEntry struct {
+    // Path 差异路径：对象键用 .key，数组下标用 [i]，根路径为空串
+    Path string `json:"path"`
+    // Kind 差异类型：added / removed / changed
+    Kind string `json:"kind"`
+    // Left 左侧取值（removed / changed 时有效）
+    Left interface{} `json:"left"`
+    // Right 右侧取值（added / changed 时有效）
+    Right interface{} `json:"right"`
+}
+```
+
+<a name="JsonDiffResult"></a>
+## type JsonDiffResult
+
+JsonDiffResult 是 json\_diff 返回的载荷：differences 按路径确定性排列（无差异时为空数组）。
+
+```go
+type JsonDiffResult struct {
+    // Equal 两侧是否完全相等
+    Equal bool `json:"equal"`
+    // Count 差异条数
+    Count int `json:"count"`
+    // Differences 差异列表（无差异时为空数组而非 null）
+    Differences []JsonDiffEntry `json:"differences"`
+}
+```
+
+<a name="DiffJSON"></a>
+### func DiffJSON
+
+```go
+func DiffJSON(left, right string) (JsonDiffResult, error)
+```
+
+DiffJSON 比较两段 JSON 文本的结构化差异：对象按键比较（缺失 / 新增 / 值变），数组按下标比较（长度 差视为新增 / 删除），标量直接比较。任一侧非法 JSON 时返回英文错误（工具名前缀由适配器补齐）。
+
+<a name="LinearSystemSolution"></a>
+## type LinearSystemSolution
+
+LinearSystemSolution 是线性方程组求解成功时返回的载荷：SolutionType 取 unique|infinite|none； unique 给 solution，infinite 给 particular 与 nullspace，none 时各向量为空。
+
+```go
+type LinearSystemSolution struct {
+    // SolutionType 解的类型：unique / infinite / none
+    SolutionType string `json:"solutionType"`
+    // Rank 矩阵 A 的秩
+    Rank int `json:"rank"`
+    // Solution 唯一解向量（非唯一解时为空数组）
+    Solution []float64 `json:"solution"`
+    // Particular 无穷多解的一个特解（自由变量取 0；非无穷多解时为空数组）
+    Particular []float64 `json:"particular"`
+    // Nullspace 零空间的基向量，每个自由变量对应一个（非无穷多解时为空数组）
+    Nullspace [][]float64 `json:"nullspace"`
+}
+```
+
+<a name="SolveLinearSystem"></a>
+### func SolveLinearSystem
+
+```go
+func SolveLinearSystem(a [][]float64, b []float64, tolerance float64) (LinearSystemSolution, error)
+```
+
+SolveLinearSystem 求解线性方程组 a x = b。a 为系数矩阵（按行给出，必须为方阵），b 为常数列 向量。返回解的类型（unique / infinite / none）、矩阵 A 的秩，以及相应的解向量、特解与零空间基 向量。容差非正、矩阵为空 / 非方阵或 b 长度不符时返回英文错误。
+
+<a name="MathEvalResult"></a>
+## type MathEvalResult
+
+MathEvalResult 是表达式求值成功时返回的载荷：result 为求值结果（数字统一为 float64， 布尔保持 bool），expression 为原表达式。
+
+```go
+type MathEvalResult struct {
+    // Result 求值结果：number（float64）或 bool
+    Result any `json:"result"`
+    // Expression 原始表达式
+    Expression string `json:"expression"`
+}
+```
+
+<a name="EvalMathExpression"></a>
+### func EvalMathExpression
+
+```go
+func EvalMathExpression(expression string) (MathEvalResult, error)
+```
+
+EvalMathExpression 对单个算术/逻辑表达式求值并返回 MathEvalResult。表达式先去除首尾空白， 为空则返回错误；语法非法、求值失败或结果类型不可序列化时返回英文错误。结果中的 expression 为去空白后的表达式。
+
+<a name="NonlinearSolution"></a>
+## type NonlinearSolution
+
+NonlinearSolution 是非线性方程组求解成功时返回的载荷：solution 为变量名到解的映射，residual 为各方程绝对值残差的最大值，converged 表示是否在迭代上限内收敛。
+
+```go
+type NonlinearSolution struct {
+    // Solution 变量名到近似解的映射
+    Solution map[string]float64 `json:"solution"`
+    // Residual 各方程 f 绝对值残差的最大值
+    Residual float64 `json:"residual"`
+    // Iterations 实际执行的牛顿迭代次数
+    Iterations int `json:"iterations"`
+    // Converged 是否在迭代上限内收敛
+    Converged bool `json:"converged"`
+}
+```
+
+<a name="SolveNonlinearSystem"></a>
+### func SolveNonlinearSystem
+
+```go
+func SolveNonlinearSystem(equations []string, variables []string, initial []float64, tolerance float64, maxIterations int) (NonlinearSolution, error)
+```
+
+SolveNonlinearSystem 求解非线性方程组 F\(x\)=0（牛顿\-拉夫逊法，雅可比矩阵用中心差分数值近似）。 equations 每项为约定等于 0 的表达式，variables 给出变量名，initial 给出迭代初值；三者长度必须 一致。容差非正、迭代上限小于 1、任一入参为空、长度不一致、变量名为空或重名、表达式非法时返回 英文错误；雅可比奇异返回英文错误；迭代上限内未收敛不报错，仅将 converged 置为 false。
+
 <a name="OrderByItem"></a>
 ## type OrderByItem
 
@@ -440,6 +952,47 @@ type OrderByItem interface {
 }
 ```
 
+<a name="PolynomialRoot"></a>
+## type PolynomialRoot
+
+PolynomialRoot 是多项式求根输出中的单个根：实部 / 虚部、可精确表达时的有理数串与重数。
+
+```go
+type PolynomialRoot struct {
+    // Real 根的实部
+    Real float64 `json:"real"`
+    // Imag 根的虚部
+    Imag float64 `json:"imag"`
+    // Exact 有理根的精确表示（如 "1"、"-1/2"）；复根为空串
+    Exact string `json:"exact"`
+    // Multiplicity 该根的重数
+    Multiplicity int `json:"multiplicity"`
+}
+```
+
+<a name="PolynomialSolution"></a>
+## type PolynomialSolution
+
+PolynomialSolution 是多项式求根成功时返回的载荷。
+
+```go
+type PolynomialSolution struct {
+    // Degree 去掉前导零系数后的多项式次数
+    Degree int `json:"degree"`
+    // Roots 全部根，按实部升序、再按虚部升序排列
+    Roots []PolynomialRoot `json:"roots"`
+}
+```
+
+<a name="SolvePolynomial"></a>
+### func SolvePolynomial
+
+```go
+func SolvePolynomial(coefficients []float64, tolerance float64, maxIterations int) (PolynomialSolution, error)
+```
+
+SolvePolynomial 求一元多项式 P\(x\)=0 的全部根。coefficients 从最高次到最低次排列；去掉前导零 系数得到真实次数后，若系数可表示为整数则用有理根定理精确提取有理根（含重数）并对约化多项式用 Durand–Kerner 求复根。容差非正、迭代上限小于 1、系数为空 / 全零或次数小于 1 时返回英文错误。
+
 <a name="ProjectorSearcher"></a>
 ## type ProjectorSearcher
 
@@ -451,6 +1004,95 @@ type ProjectorSearcher interface {
     FieldProjector
 }
 ```
+
+<a name="RegexMatch"></a>
+## type RegexMatch
+
+RegexMatch 是 test 操作返回的单条匹配：文本、起始字节位置、捕获组与命名捕获组。
+
+```go
+type RegexMatch struct {
+    // Text 整条匹配命中的文本
+    Text string `json:"text"`
+    // Index 匹配在原文中的起始字节位置
+    Index int `json:"index"`
+    // Groups 捕获组文本（不含整条匹配，未参与匹配的组为空串；无组时为空数组）
+    Groups []string `json:"groups"`
+    // NamedGroups 命名捕获组名到文本的映射（无命名组时为空对象）
+    NamedGroups map[string]string `json:"namedGroups"`
+}
+```
+
+<a name="RegexReplaceResult"></a>
+## type RegexReplaceResult
+
+RegexReplaceResult 是 regex 在 operation 为 replace 时返回的载荷。
+
+```go
+type RegexReplaceResult struct {
+    // Operation 恒为 replace
+    Operation string `json:"operation"`
+    // Result 替换后的文本
+    Result string `json:"result"`
+    // Count 实际执行的替换次数
+    Count int `json:"count"`
+}
+```
+
+<a name="RegexTestResult"></a>
+## type RegexTestResult
+
+RegexTestResult 是 regex 在 operation 为 test 时返回的载荷。
+
+```go
+type RegexTestResult struct {
+    // Operation 恒为 test
+    Operation string `json:"operation"`
+    // Matched 是否至少命中一次
+    Matched bool `json:"matched"`
+    // Count 命中次数
+    Count int `json:"count"`
+    // Matches 全部命中（无命中时为空数组而非 null）
+    Matches []RegexMatch `json:"matches"`
+}
+```
+
+<a name="RootFindEntry"></a>
+## type RootFindEntry
+
+RootFindEntry 是求根输出中的单个根：根的近似值、该点的函数值与所用方法。
+
+```go
+type RootFindEntry struct {
+    // Root 根的近似值
+    Root float64 `json:"root"`
+    // FValue 根处的函数值（理论上接近 0）
+    FValue float64 `json:"fValue"`
+    // Method 求解方法：bisection 或 newton
+    Method string `json:"method"`
+}
+```
+
+<a name="RootFindSolution"></a>
+## type RootFindSolution
+
+RootFindSolution 是求根成功时返回的载荷：roots 按根值升序排列，无根时为空数组。
+
+```go
+type RootFindSolution struct {
+    // Roots 全部找到的根
+    Roots []RootFindEntry `json:"roots"`
+}
+```
+
+<a name="FindRoots"></a>
+### func FindRoots
+
+```go
+func FindRoots(expression string, interval *[2]float64, initial *float64, tolerance float64, maxIterations int) (RootFindSolution, error)
+```
+
+FindRoots 对一般方程 f\(x\)=0 做数值求根，表达式中的变量名固定为 x，^ 表示幂运算。可给定扫描区间 interval（在区间内扫描变号子区间并用二分法细化）或给定初值 initial（用牛顿法迭代），至少提供 其中之一，二者都给时合并两条模式的结果。表达式的数学函数支持 sin cos tan exp log sqrt abs pow 等。 表达式为空、非法，interval / initial 均未提供，区间非正长度，容差非正或迭代上限小于 1 时返回 英文错误。
 
 <a name="ScalarKind"></a>
 ## type ScalarKind
@@ -547,6 +1189,37 @@ type SearcherIn interface {
 }
 ```
 
+<a name="TextStatsResult"></a>
+## type TextStatsResult
+
+TextStatsResult 是 text\_stats 返回的载荷，覆盖字符、单词、行与段落的统计。
+
+```go
+type TextStatsResult struct {
+    // Characters rune 数（字符数）
+    Characters int `json:"characters"`
+    // CharactersNoWhitespace 去除空白后的 rune 数
+    CharactersNoWhitespace int `json:"charactersNoWhitespace"`
+    // Bytes UTF-8 字节数
+    Bytes int `json:"bytes"`
+    // Words 按空白切分的词数
+    Words int `json:"words"`
+    // Lines 按 \n 切分的行数（空文本为 0）
+    Lines int `json:"lines"`
+    // Paragraphs 以连续空行分隔的非空块数
+    Paragraphs int `json:"paragraphs"`
+}
+```
+
+<a name="StatsText"></a>
+### func StatsText
+
+```go
+func StatsText(text string) (TextStatsResult, error)
+```
+
+StatsText 统计一段文本的字符数、去空白字符数、UTF\-8 字节数、词数、行数与段落数。字符数按 Unicode 码点（rune）计，行数按 \\n 计，段落按连续空行分隔的非空块计；空文本各项均为 0。
+
 <a name="TotalOut"></a>
 ## type TotalOut
 
@@ -557,3 +1230,90 @@ type TotalOut interface {
     GetTotal() uint // 获取总数
 }
 ```
+
+<a name="URLParseResult"></a>
+## type URLParseResult
+
+URLParseResult 是 ParseURL 成功时返回的载荷：query 为参数名到值的映射（无参数时为空对象而非 null）。
+
+```go
+type URLParseResult struct {
+    // Scheme 协议方案
+    Scheme string `json:"scheme"`
+    // User 用户名（无则空串）
+    User string `json:"user"`
+    // Host 主机名（不含端口）
+    Host string `json:"host"`
+    // Port 端口（无则空串）
+    Port string `json:"port"`
+    // Path 路径
+    Path string `json:"path"`
+    // Fragment 片段标识（# 之后的部分）
+    Fragment string `json:"fragment"`
+    // Query 查询参数（参数名到值列表的映射）
+    Query map[string][]string `json:"query"`
+    // QueryString 原始查询串（未解码）
+    QueryString string `json:"queryString"`
+    // IsAbsolute 是否为绝对 URL（带 scheme）
+    IsAbsolute bool `json:"isAbsolute"`
+}
+```
+
+<a name="ParseURL"></a>
+### func ParseURL
+
+```go
+func ParseURL(raw string) (URLParseResult, error)
+```
+
+ParseURL 用标准库 net/url 把 raw 拆解为结构化字段并返回 URLParseResult。raw 去空白后为空或非法 时返回英文错误（工具名前缀由适配器补齐）。
+
+<a name="UUIDResult"></a>
+## type UUIDResult
+
+UUIDResult 是 GenerateUUID 成功时返回的载荷：UUIDs 为生成结果（至少一个，因而恒非空）。
+
+```go
+type UUIDResult struct {
+    // Version 实际使用的 UUID 版本
+    Version string `json:"version"`
+    // UUIDs 生成的 UUID 列表（字符串形式）
+    UUIDs []string `json:"uuids"`
+}
+```
+
+<a name="GenerateUUID"></a>
+### func GenerateUUID
+
+```go
+func GenerateUUID(version string, count int) (UUIDResult, error)
+```
+
+GenerateUUID 按 version（"4" 或 "7"）生成 count 个 UUID 并返回 UUIDResult。version 先去除首尾 空白，为空则取 DefaultUUIDVersion；版本越界、数量越界（不在 1..100）或生成失败时返回英文错误 （工具名前缀由适配器补齐）。
+
+<a name="UnitConvertResult"></a>
+## type UnitConvertResult
+
+UnitConvertResult 是单位换算成功时返回的载荷。
+
+```go
+type UnitConvertResult struct {
+    // Result 换算后的数值
+    Result float64 `json:"result"`
+    // From 源单位（已规范化为小写）
+    From string `json:"from"`
+    // To 目标单位（已规范化为小写）
+    To  string `json:"to"`
+    // Category 所属类别
+    Category string `json:"category"`
+}
+```
+
+<a name="ConvertUnit"></a>
+### func ConvertUnit
+
+```go
+func ConvertUnit(value float64, from, to string) (UnitConvertResult, error)
+```
+
+ConvertUnit 把 value 从 from 单位换算为 to 单位并返回 UnitConvertResult。from / to 先规范化为 小写并去空白；空单位、未知单位或跨类别换算时返回英文错误。

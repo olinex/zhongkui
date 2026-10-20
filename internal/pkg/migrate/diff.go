@@ -187,7 +187,7 @@ ORDER BY ordinal_position`,
 			scanColumn: func(rows *sql.Rows) (ColumnInfo, error) {
 				var col ColumnInfo
 				err := rows.Scan(&col.Name, &col.DataType, &col.Nullable, &col.Default)
-				return col, err
+				return col, errors.WithStack(err)
 			},
 		})
 	case "clickhouse":
@@ -203,7 +203,7 @@ ORDER BY position`,
 			scanColumn: func(rows *sql.Rows) (ColumnInfo, error) {
 				var col ColumnInfo
 				err := rows.Scan(&col.Name, &col.DataType, &col.Nullable)
-				return col, err
+				return col, errors.WithStack(err)
 			},
 			filterTable: func(name string) bool {
 				if strings.HasPrefix(name, ".inner") {
@@ -223,7 +223,7 @@ ORDER BY position`,
 func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]TableInfo, error) {
 	rows, err := db.QueryContext(ctx, r.listTablesQuery)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	defer rows.Close()
 
@@ -231,7 +231,7 @@ func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]Tabl
 	for rows.Next() {
 		var name string
 		if err := rows.Scan(&name); err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		if r.filterTable != nil && !r.filterTable(name) {
 			continue
@@ -243,7 +243,7 @@ func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]Tabl
 	for _, name := range tableNames {
 		colRows, err := db.QueryContext(ctx, r.listColumnsQuery, name)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		var cols []ColumnInfo
@@ -251,7 +251,7 @@ func readTables(ctx context.Context, db *sql.DB, r tableReader) (map[string]Tabl
 			col, err := r.scanColumn(colRows)
 			if err != nil {
 				colRows.Close()
-				return nil, err
+				return nil, errors.WithStack(err)
 			}
 			cols = append(cols, col)
 		}

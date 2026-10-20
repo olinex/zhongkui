@@ -33,7 +33,7 @@ func Setup(ctx context.Context) (func(context.Context) error, error) {
 			err = errors.Join(err, fn(ctx))
 		}
 		shutdownFuncs = nil
-		return err
+		return errors.WithStack(err)
 	}
 
 	if !Env.Enabled {

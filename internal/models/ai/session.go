@@ -44,8 +44,9 @@ type AgentSession struct {
 }
 
 // AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文
-// （Content），以及助手回复的草稿载荷（DraftJSON）、引用来源列表（CitationsJSON）
-// 与思考过程（Reasoning）。对应表为 agent_messages。
+// （Content），以及助手回复的草稿载荷（DraftJSON）与引用来源列表（CitationsJSON）。
+// 一轮助手回答的思考 / 工具调用 / 授权 / 问卷 / 正文按时序存于子表
+// agent_message_blocks（AgentMessageBlock）。对应表为 agent_messages。
 type AgentMessage struct {
 	database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
 
@@ -68,8 +69,6 @@ type AgentMessage struct {
 	DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12812,length=32"`
 	// CitationsJSON 引用来源列表（JSON），可空，经 crypto 序列化器加密落库（引用携带知识库正文）
 	CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12813,length=32"`
-	// Reasoning 助手回复的思考过程，加密落库、可空（模型未返回思考内容时为 NULL）
-	Reasoning *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
 	// PromptTokens 本轮助手回答全部模型调用的输入 token 累加（明文数值，用户消息恒为 0）
 	PromptTokens int `gorm:"type:INT"`
 	// CompletionTokens 本轮助手回答全部模型调用的输出 token 累加（明文数值，用户消息恒为 0）
@@ -78,11 +77,35 @@ type AgentMessage struct {
 	TotalTokens int `gorm:"type:INT"`
 	// ElapsedMs 本轮助手回答的总耗时（毫秒，明文数值，用户消息恒为 0）
 	ElapsedMs int64 `gorm:"type:BIGINT"`
-	// Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled），
-	// 空表示尚未终结（运行在途的阶段性落库行）。运行被中断（超时 / 报错 / 取消）时据此表达
-	// 「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文拼接提示文案（提示语若混入正文，
-	// 会被喂回模型污染下一轮上下文）；用户消息恒为空。
+	// Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled，
+	// 以及问卷挂起期的 suspended），空表示尚未终结（运行在途的阶段性落库行）。运行被中断
+	// （超时 / 报错 / 取消）时据此表达「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文
+	// 拼接提示文案（提示语若混入正文，会被喂回模型污染下一轮上下文）；用户消息恒为空。
 	Phase AgentRunPhase `gorm:"type:VARCHAR(16)"`
+}
+
+// AgentMessageBlock 表示一条助手回答（AgentMessage）下的一个有序内容块：一轮回答的思考段、
+// 工具调用组、授权待审、主动提问与正文段各按其真实产生时序落为一个块。BlockSeq 在同一消息内
+// 单调递增（从 1 起），块的顺序即内容真实产生的顺序；块为展示事实，不参与模型上下文回灌。
+// 对应表为 agent_message_blocks。
+type AgentMessageBlock struct {
+	database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+	// Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+	Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+	// NamespaceName 所属命名空间名称，多租户隔离字段
+	NamespaceName string `gorm:"type:VARCHAR(32)"`
+	// UserID 数据属主用户 ID（users.id），用于跨用户隔离
+	UserID uint `gorm:"type:BIGINT;not null"`
+	// MessageID 从属的助手消息 ID（agent_messages.id），消息删除时块级联删除（真外键，无哨兵值）
+	MessageID uint `gorm:"type:BIGINT"`
+	// BlockSeq 块在所属消息内的单调递增序号（从 1 起），与 MessageID 共同唯一，即内容的真实产生顺序
+	BlockSeq uint64 `gorm:"type:BIGINT;not null"`
+	// Kind 块类型：reasoning/tool_calls/approval/questionnaire/content（取值见 AgentMessageBlockKind）
+	Kind AgentMessageBlockKind `gorm:"type:VARCHAR(16);not null"`
+	// Payload 块的 JSON 载荷（思考文本 / 工具调用记录 / 授权清单 / 问卷题目与作答 / 正文文本），
+	// 经 crypto 序列化器加密落库
+	Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
 }
 
 // AgentSessionCompaction 表示一次滚动摘要推进（静默滚动或压缩）留下的压缩检查点：记录推进后的
@@ -110,4 +133,8 @@ type AgentSessionCompaction struct {
 	TokensBefore int `gorm:"type:INT"`
 	// FoldedCount 本次推进折叠进摘要的消息条数（三种原因均为真实条数）
 	FoldedCount int `gorm:"type:INT"`
+	// TokensAfter 本次推进后上下文占用的即时估算 token（压缩前占用 − 被折叠内容占用 + 新摘要占用，
+	// 口径见 ai.CompactionMetrics 与 ai 包压缩时的估值函数）。仅用户可见的压缩推进（auto / manual）
+	// 落值；静默滚动（rolling）与估算不可用时留 0，表示「无估算」，读取侧据此回落到末次真实测量。
+	TokensAfter int `gorm:"type:INT"`
 }

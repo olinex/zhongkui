@@ -162,11 +162,68 @@
                     }}
                   </span>
                 </div>
-                <!-- 工具调用阶段：按轮聚组展示——该轮思考折叠块渲染一次、置于组上方，组内各调用行自上而下
-                   成行；一轮内并发多次调用时以并行计数与左侧细线框成一组，体现「一次思考 → N 次并行调用」 -->
-                <div v-if="m.stages && m.stages.length > 0" class="assistant-stages">
-                  <template v-for="g in stageGroupsOf(m)" :key="g.key">
-                    <div v-if="g.reasoningText" class="zk-panel assistant-reasoning">
+                <!-- 消息体内按时序排布的内容块（见 assistantBlocksOf）：工具调用阶段按轮聚组——该轮
+                   思考折叠块渲染一次、置于组上方，组内各调用行自上而下成行；一轮内并发多次调用时以
+                   并行计数与左侧细线框成一组，体现「一次思考 → N 次并行调用」。人工审批与主动提问两块
+                   按其触发轮次内联插入，使整条消息自上而下严格按时序阅读——作答 / 批准之后新增的思考
+                   与调用必然落在交互块之后，不再出现「后续过程反在提问之上」的错位 -->
+                <div v-if="assistantBlocksOf(m).length > 0" class="assistant-stages">
+                  <template v-for="b in assistantBlocksOf(m)" :key="b.key">
+                    <!-- 末个思考折叠块（b.primary）：流式期间默认展开、结束自动折叠，受控 v-model 承载
+                         用户手动切换；流式增长期内把其滚动区粘到底部 -->
+                    <div
+                      v-if="b.kind === 'reasoning' && b.primary"
+                      class="zk-panel assistant-reasoning"
+                    >
+                      <v-expansion-panels
+                        :model-value="m.reasoningExpanded ? REASONING_PANEL : ''"
+                        @update:model-value="(v: unknown) => setReasoningExpanded(m, v)"
+                      >
+                        <v-expansion-panel :value="REASONING_PANEL">
+                          <expansion-panel-title
+                            icon="mdi-brain"
+                            size="sm"
+                            :title="
+                              reasoningStreamingOf(m)
+                                ? $t('page.aiAssistant.reasoningStreaming')
+                                : $t('page.aiAssistant.reasoningDone')
+                            "
+                          >
+                            <!-- 思考来源说明：当前档位模型未配置思考开关（开关已隐藏），却仍产出思考内容，
+                               说明是该模型默认开启思考。以警示图标 + 悬浮提示解释来源，并指引管理员在
+                               「LLM 模型」高级配置中填写思考开关字段与开 / 关取值，从而手动控制思考 -->
+                            <v-tooltip
+                              v-if="!slotThinkingToggle"
+                              location="top"
+                              :max-width="REASONING_NOTE_MAX_WIDTH"
+                              :text="$t('page.aiAssistant.reasoningDefaultOnHint')"
+                            >
+                              <template #activator="{ props: reasonNoteProps }">
+                                <v-icon
+                                  v-bind="reasonNoteProps"
+                                  icon="mdi-alert-circle-outline"
+                                  size="x-small"
+                                  color="warning"
+                                />
+                              </template>
+                            </v-tooltip>
+                          </expansion-panel-title>
+                          <v-expansion-panel-text>
+                            <div
+                              :ref="(el) => setReasoningBodyRef(m.key, el)"
+                              class="assistant-reasoning-body"
+                            >
+                              <assistant-markdown
+                                :content="b.text ?? ''"
+                                :streaming="reasoningStreamingOf(m)"
+                              />
+                            </div>
+                          </v-expansion-panel-text>
+                        </v-expansion-panel>
+                      </v-expansion-panels>
+                    </div>
+                    <!-- 其余各轮思考折叠块：锚定在对应调用组上方（历史消息无分段时整条思考落到正文上方那块） -->
+                    <div v-else-if="b.kind === 'reasoning'" class="zk-panel assistant-reasoning">
                       <v-expansion-panels>
                         <v-expansion-panel :value="REASONING_PANEL">
                           <expansion-panel-title
@@ -176,23 +233,32 @@
                           />
                           <v-expansion-panel-text>
                             <div class="assistant-reasoning-body">
-                              <assistant-markdown :content="g.reasoningText" />
+                              <assistant-markdown :content="b.text ?? ''" />
                             </div>
                           </v-expansion-panel-text>
                         </v-expansion-panel>
                       </v-expansion-panels>
                     </div>
+                    <!-- 正文块：整条消息末尾的最终正文与其间各轮说明文本各成一块（b.primary 为末尾最终
+                         正文，流式期间禁用 mermaid），按 seq 自然排布 -->
+                    <div v-else-if="b.kind === 'content'" class="assistant-preamble">
+                      <assistant-markdown
+                        :content="b.text ?? ''"
+                        :streaming="b.primary === true && m.streaming === true"
+                      />
+                    </div>
                     <div
+                      v-else-if="b.kind === 'stages'"
                       class="assistant-stage-group"
-                      :class="{ 'assistant-stage-group--parallel': g.stages.length > 1 }"
+                      :class="{ 'assistant-stage-group--parallel': (b.parallelCount ?? 0) > 1 }"
                     >
                       <div
-                        v-if="g.stages.length > 1"
+                        v-if="(b.parallelCount ?? 0) > 1"
                         class="zk-hint assistant-stage-parallel-label"
                       >
-                        {{ $t("page.aiAssistant.parallelCalls", { count: g.stages.length }) }}
+                        {{ $t("page.aiAssistant.parallelCalls", { count: b.parallelCount ?? 0 }) }}
                       </div>
-                      <div v-for="s in g.stages" :key="s.key" class="assistant-stage">
+                      <div v-for="s in b.stages" :key="s.key" class="assistant-stage">
                         <v-icon
                           :icon="stageIconOf(s, m.streaming === true)"
                           :color="stageColorOf(s, m.streaming === true)"
@@ -207,67 +273,189 @@
                         </span>
                       </div>
                     </div>
+                    <!-- 主动提问：每轮各自渲染成一个独立问答框（多轮提问按轮次先后自上而下排列，最新一轮
+                         沉在底部，避免用户找不到新提问）——仍待回答的那轮渲染交互问卷面板（会话被阻塞，
+                         由输入区禁用体现），已作答（含取消）的各轮渲染问答记录卡片；「重新回答」入口仅
+                         末轮提供（更早各轮的运行现场已被消费）。
+                         面板自身保持完全可交互——不传会话级 busy：问卷挂起时 awaitingApproval 为
+                         true、busy 亦为 true，若以 busy 闸住面板会把「下一题 / 提交 / 取消」一并锁死。
+                         现场不可用（无未决策的 ask_user 调用可回传）时降级为只读展示并给出说明文本，
+                         避免提交 / 取消可点却无反应、也不发请求 -->
+                    <div
+                      v-else-if="b.kind === 'questionnaire' && b.questionnaire"
+                      class="assistant-interaction"
+                    >
+                      <ask-user-questionnaire
+                        v-if="b.questionnaire.awaiting"
+                        :payload="questionnairePayloadOf(b.questionnaire)"
+                        :disabled="!questionnaireInteractive(m)"
+                        @submit="submitQuestionnaire"
+                        @cancel="cancelQuestionnaire"
+                      />
+                      <div v-else class="zk-hairline-top pt-2">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon icon="mdi-comment-question-outline" size="small" class="me-1" />
+                          <span class="zk-label-caps">{{
+                            $t("page.aiAssistant.questionnaireTitle")
+                          }}</span>
+                          <v-spacer />
+                          <!-- 重新回答：仅末轮（最新一轮）可重答，更早各轮的现场已被后续轮次消费；
+                               会话正忙（续跑仍在生成 / 等待审批等）时禁用——此刻重答会与在途运行冲突
+                               （截断并重生成必须先中止它），仅以提示说明原因；空闲时可用。
+                               禁用按钮自身不派发指针事件，故套一层 span 承载气泡激活器 -->
+                          <v-tooltip
+                            v-if="b.reanswerable"
+                            location="top"
+                            :text="$t('page.aiAssistant.questionnaireReanswerBusy')"
+                            :disabled="!busy"
+                          >
+                            <template #activator="{ props: reanswerProps }">
+                              <span v-bind="reanswerProps" class="d-inline-flex">
+                                <v-btn
+                                  size="small"
+                                  variant="text"
+                                  :disabled="busy"
+                                  @click="openRerunConfirm(m, 'answer')"
+                                >
+                                  {{ $t("page.aiAssistant.questionnaireReanswer") }}
+                                </v-btn>
+                              </span>
+                            </template>
+                          </v-tooltip>
+                        </div>
+                        <div
+                          v-for="(q, idx) in b.questionnaire.questions"
+                          :key="q.id || idx"
+                          class="zk-panel--subtle pa-2 mb-2"
+                        >
+                          <div class="text-body-medium">{{ q.question }}</div>
+                          <div class="zk-hint mt-1">
+                            {{ questionnaireAnswerTextOf(b.questionnaire, q.id) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 人工审批：模型请求调用平台原生接口，逐条展示并需用户批准执行 / 拒绝。
+                         ask_user 问卷类调用豁免审批，由后端 approval 块直接排除、不出现在此面板 -->
+                    <div v-else-if="b.kind === 'approval'" class="assistant-interaction">
+                      <div class="zk-hairline-top pt-2">
+                        <div class="d-flex align-center mb-1">
+                          <v-icon icon="mdi-shield-key-outline" size="small" class="me-1" />
+                          <span class="zk-label-caps">{{
+                            $t("page.aiAssistant.approvalTitle")
+                          }}</span>
+                          <v-spacer />
+                          <span v-if="m.awaitingApproval" class="zk-hint">
+                            {{ $t("page.aiAssistant.approvalWaiting") }}
+                          </span>
+                          <!-- 重新授权：仅历史（已决策）授权回合提供——当前仍等待审批时面板本身即可再次
+                               批准 / 拒绝，无需回退；会话正忙时禁用，仅以提示说明原因。禁用按钮自身不派发
+                               指针事件，故套一层 span 承载气泡激活器 -->
+                          <v-tooltip
+                            v-if="m.awaitingApproval !== true"
+                            location="top"
+                            :text="$t('page.aiAssistant.approvalRerunBusy')"
+                            :disabled="!busy"
+                          >
+                            <template #activator="{ props: rerunProps }">
+                              <span v-bind="rerunProps" class="d-inline-flex">
+                                <v-btn
+                                  size="small"
+                                  variant="text"
+                                  class="ms-2"
+                                  :disabled="busy"
+                                  @click="openRerunConfirm(m, 'approval')"
+                                >
+                                  {{ $t("page.aiAssistant.approvalRerun") }}
+                                </v-btn>
+                              </span>
+                            </template>
+                          </v-tooltip>
+                        </div>
+                        <div
+                          v-for="c in b.approvalCalls ?? []"
+                          :key="c.callID"
+                          class="zk-panel--subtle pa-2 mb-2"
+                        >
+                          <div class="d-flex align-center">
+                            <span class="zk-mono-emphasis">{{ c.toolName }}</span>
+                            <!-- 审核重要级徽章（label 经枚举类 auditLevel 按当前语言渲染） -->
+                            <v-chip
+                              v-if="c.auditLevel"
+                              size="x-small"
+                              color="info"
+                              variant="tonal"
+                              class="ms-2"
+                            >
+                              {{ enumLabelOf(EnumClass.auditLevel, c.auditLevel) }}
+                            </v-chip>
+                            <v-spacer />
+                            <!-- 免审批调用：自动批准标识，不展示批准 / 拒绝按钮 -->
+                            <v-chip
+                              v-if="c.approvalRequired === false"
+                              size="x-small"
+                              color="info"
+                              class="me-2"
+                            >
+                              {{ $t("page.aiAssistant.autoApproved") }}
+                            </v-chip>
+                            <v-chip v-if="c.decision === true" size="x-small" color="success">
+                              {{ $t("page.aiAssistant.approved") }}
+                            </v-chip>
+                            <v-chip v-else-if="c.decision === false" size="x-small" color="error">
+                              {{ $t("page.aiAssistant.rejected") }}
+                            </v-chip>
+                          </div>
+                          <!-- 后端执行的调用：前端仅审批，工具由服务端执行，用户无需（也无法）本地执行 -->
+                          <div v-if="c.execOwner === 'backend'" class="zk-hint mt-1">
+                            {{ $t("page.aiAssistant.approvalBackendNote") }}
+                          </div>
+                          <template v-if="c.arguments">
+                            <div class="zk-hint mt-1">
+                              {{ $t("page.aiAssistant.approvalParams") }}
+                            </div>
+                            <div class="zk-code-preview font-mono assistant-approval-block">
+                              {{ c.arguments }}
+                            </div>
+                          </template>
+                          <div v-if="c.error" class="zk-error-text mt-1">{{ c.error }}</div>
+                          <div
+                            v-else-if="c.result"
+                            class="zk-code-preview font-mono assistant-approval-block"
+                          >
+                            {{ c.result }}
+                          </div>
+                          <div
+                            v-if="
+                              m.awaitingApproval === true &&
+                              c.decision === undefined &&
+                              c.approvalRequired !== false
+                            "
+                            class="d-flex mt-2"
+                          >
+                            <v-btn
+                              size="small"
+                              variant="tonal"
+                              color="primary"
+                              @click="approveCall(m, c.callID)"
+                            >
+                              {{ $t("page.aiAssistant.approve") }}
+                            </v-btn>
+                            <v-btn
+                              size="small"
+                              variant="text"
+                              class="ms-2"
+                              @click="rejectCall(m, c.callID)"
+                            >
+                              {{ $t("page.aiAssistant.reject") }}
+                            </v-btn>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </template>
                 </div>
-                <!-- 思考过程折叠区块（末段，即产出回答前那一轮）：展示模型的思考过程，复用统一 Markdown
-                   渲染入口；流式期间默认展开，结束后自动折叠，用户可手动切换。此前各轮的思考块已渲染在
-                   对应调用行上方（见上）。
-                   标题不另设文案：状态（思考中… / 思考完成）本身已说明该区块的主体内容，
-                   再叠一句「思考过程」属重复信息，故直接以状态作标题、不再挂说明行 -->
-                <div
-                  v-if="m.role === 'assistant' && topReasoningText(m)"
-                  class="zk-panel assistant-reasoning"
-                >
-                  <v-expansion-panels
-                    :model-value="m.reasoningExpanded ? REASONING_PANEL : ''"
-                    @update:model-value="(v: unknown) => setReasoningExpanded(m, v)"
-                  >
-                    <v-expansion-panel :value="REASONING_PANEL">
-                      <expansion-panel-title
-                        icon="mdi-brain"
-                        size="sm"
-                        :title="
-                          m.reasoningStreaming
-                            ? $t('page.aiAssistant.reasoningStreaming')
-                            : $t('page.aiAssistant.reasoningDone')
-                        "
-                      >
-                        <!-- 思考来源说明：当前档位模型未配置思考开关（开关已隐藏），却仍产出思考内容，
-                           说明是该模型默认开启思考。以警示图标 + 悬浮提示解释来源，并指引管理员在
-                           「LLM 模型」高级配置中填写思考开关字段与开 / 关取值，从而手动控制思考 -->
-                        <v-tooltip
-                          v-if="!slotThinkingToggle"
-                          location="top"
-                          :max-width="REASONING_NOTE_MAX_WIDTH"
-                          :text="$t('page.aiAssistant.reasoningDefaultOnHint')"
-                        >
-                          <template #activator="{ props: reasonNoteProps }">
-                            <v-icon
-                              v-bind="reasonNoteProps"
-                              icon="mdi-alert-circle-outline"
-                              size="x-small"
-                              color="warning"
-                            />
-                          </template>
-                        </v-tooltip>
-                      </expansion-panel-title>
-                      <v-expansion-panel-text>
-                        <div class="assistant-reasoning-body">
-                          <assistant-markdown
-                            :content="topReasoningText(m)"
-                            :streaming="m.reasoningStreaming === true"
-                          />
-                        </div>
-                      </v-expansion-panel-text>
-                    </v-expansion-panel>
-                  </v-expansion-panels>
-                </div>
-                <!-- 助手消息渲染 Markdown 富文本；用户消息按纯文本展示 -->
-                <assistant-markdown
-                  v-if="m.role === 'assistant' && m.content"
-                  :content="m.content"
-                  :streaming="m.streaming === true"
-                />
+                <!-- 无块回退：用户消息按纯文本展示；助手消息无块（尚未产出 / 全是空档）时以纯文本兜底 -->
                 <div v-else-if="m.content" class="assistant-plain text-body-medium">
                   {{ m.content }}
                 </div>
@@ -279,85 +467,6 @@
                 >
                   <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
                   <span class="zk-hint ms-2">{{ interruptedTextOf(m) }}</span>
-                </div>
-                <!-- 人工审批面板：模型请求调用平台原生接口，逐条展示并需用户批准执行 / 拒绝 -->
-                <div
-                  v-if="m.pendingCalls && m.pendingCalls.length > 0"
-                  class="zk-hairline-top mt-2 pt-2"
-                >
-                  <div class="d-flex align-center mb-1">
-                    <v-icon icon="mdi-shield-key-outline" size="small" class="me-1" />
-                    <span class="zk-label-caps">{{ $t("page.aiAssistant.approvalTitle") }}</span>
-                    <v-spacer />
-                    <span v-if="m.awaitingApproval" class="zk-hint">
-                      {{ $t("page.aiAssistant.approvalWaiting") }}
-                    </span>
-                  </div>
-                  <div
-                    v-for="c in m.pendingCalls"
-                    :key="c.callID"
-                    class="zk-panel--subtle pa-2 mb-2"
-                  >
-                    <div class="d-flex align-center">
-                      <span class="zk-mono-emphasis">{{ c.toolName }}</span>
-                      <!-- 审核重要级徽章（label 经枚举类 auditLevel 按当前语言渲染） -->
-                      <v-chip
-                        v-if="c.auditLevel"
-                        size="x-small"
-                        color="info"
-                        variant="tonal"
-                        class="ms-2"
-                      >
-                        {{ enumLabelOf(EnumClass.auditLevel, c.auditLevel) }}
-                      </v-chip>
-                      <v-spacer />
-                      <!-- 免审批调用：自动批准标识，不展示批准 / 拒绝按钮 -->
-                      <v-chip
-                        v-if="c.approvalRequired === false"
-                        size="x-small"
-                        color="info"
-                        class="me-2"
-                      >
-                        {{ $t("page.aiAssistant.autoApproved") }}
-                      </v-chip>
-                      <v-chip v-if="c.decision === 'approved'" size="x-small" color="success">
-                        {{ $t("page.aiAssistant.approved") }}
-                      </v-chip>
-                      <v-chip v-else-if="c.decision === 'rejected'" size="x-small" color="error">
-                        {{ $t("page.aiAssistant.rejected") }}
-                      </v-chip>
-                    </div>
-                    <!-- 后端执行的调用：前端仅审批，工具由服务端执行，用户无需（也无法）本地执行 -->
-                    <div v-if="c.execOwner === 'backend'" class="zk-hint mt-1">
-                      {{ $t("page.aiAssistant.approvalBackendNote") }}
-                    </div>
-                    <template v-if="c.arguments">
-                      <div class="zk-hint mt-1">{{ $t("page.aiAssistant.approvalParams") }}</div>
-                      <div class="zk-code-preview font-mono assistant-approval-block">
-                        {{ c.arguments }}
-                      </div>
-                    </template>
-                    <div v-if="c.error" class="zk-error-text mt-1">{{ c.error }}</div>
-                    <div
-                      v-else-if="c.result"
-                      class="zk-code-preview font-mono assistant-approval-block"
-                    >
-                      {{ c.result }}
-                    </div>
-                    <div v-if="!c.decision" class="d-flex mt-2">
-                      <v-btn
-                        size="small"
-                        variant="tonal"
-                        color="primary"
-                        @click="approveCall(m, c)"
-                      >
-                        {{ $t("page.aiAssistant.approve") }}
-                      </v-btn>
-                      <v-btn size="small" variant="text" class="ms-2" @click="rejectCall(m, c)">
-                        {{ $t("page.aiAssistant.reject") }}
-                      </v-btn>
-                    </div>
-                  </div>
                 </div>
                 <template v-if="citationsOf(m).length > 0">
                   <v-divider class="my-2" />
@@ -424,7 +533,7 @@
                     icon="mdi-archive-arrow-down-outline"
                     size="small"
                     variant="text"
-                    :disabled="busy || m.compress?.phase === 'running'"
+                    :disabled="busy || m.id === undefined || foldedMessageKeys.has(m.key)"
                     :title="$t('page.aiAssistant.compressToHere')"
                     :aria-label="$t('page.aiAssistant.compressToHere')"
                     @click="compactToHere(m)"
@@ -507,7 +616,32 @@
         </v-alert>
         <!-- 单一边框容器：正文在上，档位选择与发送按钮内置其底部（对齐主流对话产品）。
              底色取弱化面板（on-surface 6% + hairline），让输入区在消息流中凸显出来 -->
-        <div class="assistant-composer zk-panel zk-panel--subtle">
+        <div
+          class="assistant-composer zk-panel zk-panel--subtle"
+          :class="{ 'assistant-composer--blocked': composerDisabled }"
+        >
+          <!-- 会话状态条：输入被闸住时展示原因——运行 / 等待子状态取后端枚举 label（正在思考 /
+               正在调用工具 / 等待审批…），已锁定则展示锁定提示与「回滚后可继续提问」引导。
+               以图标 + 缩进与输入区其它部分作视觉区分，不与下方控件抢占 -->
+          <div
+            v-if="inputGated && !questionnairePending"
+            class="assistant-composer-status zk-hint"
+            :class="{ 'assistant-composer-status--locked': locked }"
+          >
+            <v-progress-circular v-if="!locked" indeterminate size="14" width="2" color="primary" />
+            <v-icon v-else icon="mdi-lock-outline" size="x-small" />
+            <span>{{ composerStatusText }}</span>
+          </div>
+          <!-- 问卷待作答提示行：问卷已内联在消息流中（见 assistantBlocksOf），会话被阻塞，
+               输入区整体禁用；此处置一条提示并给出「查看问题」入口，把用户视线引回消息流里的问卷 -->
+          <div v-if="questionnairePending" class="assistant-composer-pending zk-hint">
+            <v-icon icon="mdi-comment-question-outline" size="x-small" />
+            <span>{{ $t("page.aiAssistant.questionnairePendingHint") }}</span>
+            <v-spacer />
+            <v-btn size="x-small" variant="text" @click="scrollToBottom">
+              {{ $t("page.aiAssistant.questionnaireJump") }}
+            </v-btn>
+          </div>
           <!-- 待发提问队列：当前回答进行中提交的追问按序堆叠在输入框上方，本轮结束后自动依次投递。
                每项可置顶（移到队首）/ 修改（出队并回填输入框）/ 删除；后两者在输入框已有内容时
                一并禁用，避免回填覆盖用户已写内容 -->
@@ -551,6 +685,7 @@
             rows="2"
             auto-grow
             hide-details
+            :disabled="composerDisabled"
             :title="$t('model.aiSession.field.query')"
             @keydown.enter.exact="onComposerEnter"
             @compositionstart="composerComposing = true"
@@ -563,6 +698,7 @@
               variant="plain"
               density="compact"
               hide-details
+              :disabled="composerDisabled"
               :title="slotFullTitle"
               class="assistant-composer-slot zk-control-hover"
             />
@@ -574,6 +710,7 @@
               variant="plain"
               density="compact"
               hide-details
+              :disabled="composerDisabled"
               :title="reviewValveTooltip"
               class="assistant-composer-valve zk-control-hover"
               @update:model-value="updateReviewValve"
@@ -632,6 +769,7 @@
                     density="compact"
                     color="primary"
                     hide-details
+                    :disabled="composerDisabled"
                     :aria-label="$t('page.aiAssistant.thinking')"
                   />
                 </div>
@@ -665,7 +803,7 @@
                 @click="optimizePrompt"
               />
               <v-btn
-                v-if="streaming"
+                v-if="runActive"
                 icon="mdi-stop"
                 size="small"
                 variant="tonal"
@@ -764,6 +902,34 @@
         />
       </template>
     </confirm-dialog>
+
+    <!-- 回退到助手待输入回合确认对话框（重新回答问卷 / 重新授权工具共用一个弹窗，按种类切换文案）：
+         提醒确认后本回合之后的全部内容将被清空并重新进入对应的等待态 -->
+    <confirm-dialog
+      ref="rerunConfirmRef"
+      :title="
+        pendingRerunKind === 'approval'
+          ? $t('page.aiAssistant.approvalRerun')
+          : $t('page.aiAssistant.questionnaireReanswer')
+      "
+      prepend-icon="mdi-refresh"
+      @confirm="confirmRerun"
+    >
+      <template #body>
+        <confirm-alert
+          :action="
+            pendingRerunKind === 'approval'
+              ? $t('page.aiAssistant.approvalRerun')
+              : $t('page.aiAssistant.questionnaireReanswer')
+          "
+          :text="
+            pendingRerunKind === 'approval'
+              ? $t('page.aiAssistant.confirmRerunApproval')
+              : $t('page.aiAssistant.confirmReanswerQuestionnaire')
+          "
+        />
+      </template>
+    </confirm-dialog>
   </v-navigation-drawer>
 </template>
 
@@ -773,6 +939,7 @@ import * as yup from "yup";
 import { useForm } from "vee-validate";
 
 import {
+  agentAssistantInputRerun,
   agentMessageListGet,
   agentMessageTruncate,
   agentPromptOptimize,
@@ -791,23 +958,32 @@ import {
   type AgentStreamHandlers,
 } from "@/apis/ai";
 import type {
+  AgentApprovalBlockPayload,
+  AgentApprovalCallRecord,
+  AgentAssistantInputRerunOut,
+  AgentContentBlockPayload,
   AgentLiveRunOut,
+  AgentMessageBlockOut,
   AgentMessageItem,
   AgentPromptOptimizeOut,
+  AgentQuestionnaireBlockPayload,
+  AgentReasoningBlockPayload,
   AgentSessionItem,
-  AgentStageEvent,
   AgentStatusOut,
+  AgentToolCallsBlockPayload,
   CompressDeltaPayload,
   CompressDonePayload,
   CompressStartPayload,
   EvalStage,
   EvalStageStatus,
+  QuestionnaireAnswer,
+  QuestionnairePayload,
   RetrievalResult,
   ToolRequestPayload,
   ToolResultItemIn,
 } from "@/apis/@types/ai";
 import { getResponse, getSimpleResponse } from "@/apis/base";
-import { useAgentRunStore } from "@/stores/agentRun";
+import { useAgentRunStore, type RunState } from "@/stores/agentRun";
 import { useAppStore } from "@/stores/app";
 import { localManager } from "@/stores/local";
 import { knowledgeDocumentHref } from "@/utils/ai";
@@ -917,8 +1093,8 @@ const sessionListMode = ref(false);
 const renamingSessionID = ref<number | null>(null);
 const deletingSessionID = ref<number | null>(null);
 
-// AgentStageState 工具调用阶段视图模型：一次工具调用一行，同一次调用的「发起（toolCall）」与
-// 「结果（toolResult）」按 callID 递进收敛到同一行；无 callID 时回退按「阶段 + 工具名」归并
+// AgentStageState 工具调用阶段视图模型：一次工具调用一行，由 tool_calls 块内的一条记录映射而来
+// （同一次调用的发起与结果收敛在同一记录上），仅供既有阶段组渲染复用 stageLabelOf / stageIconOf
 interface AgentStageState {
   key: string;
   stage: EvalStage;
@@ -926,30 +1102,6 @@ interface AgentStageState {
   status?: EvalStageStatus;
   elapsedMs: number;
   error?: string;
-  // callID 本次工具调用的唯一标识（命中该值的事件归并到本行）；缺失时为空，按旧键回退归并
-  callID?: string;
-  // round 本次调用所属轮次（从 1 起）：同一轮内并发发起的多次调用据此聚为一组；缺失时该行独成一组
-  round?: number;
-}
-
-// AgentStageGroup 一轮工具调用的展示分组：同轮（round 相同且相邻）的调用行归为一组，组上方渲染
-// 该轮思考折叠块一次，组内多行以并行计数与左侧细线呈现「一次思考 → N 次并行调用」的从属关系
-interface AgentStageGroup {
-  key: string;
-  round?: number;
-  stages: AgentStageState[];
-  // reasoningText 该轮思考文本：取锚定到本组任一次调用的思考分段（同轮思考只归属首个调用行）
-  reasoningText: string;
-}
-
-// ReasoningSegment 一段模型思考：live 期间按「轮」切分。anchorCallID 非空表示该段紧随其后的那次
-// 工具调用（渲染在该调用行上方）；为空表示最后一轮（产出回答前），维持在回答正文上方。
-// 与阶段行同为 live-only 视图态，不落库；刷新后回退为整条 reasoning 单块展示
-interface ReasoningSegment {
-  key: string;
-  text: string;
-  streaming: boolean;
-  anchorCallID?: string;
 }
 
 // PendingCallState 单条待审批的工具调用视图模型：toolName / arguments 为后端原样下发的
@@ -981,7 +1133,8 @@ interface PendingCallState {
 //   reason      推进原因（auto 自动 / manual 手动 / rolling 静默滚动）
 //   tokensBefore 推进前占用 token（实时的取自 compress_start，历史的取自压缩检查点）
 //   foldedCount  本次折叠的消息条数（实时的取自 compress_done，历史的取自压缩检查点）
-//   tokensAfter  压缩后占用 token（下一次生成 done.promptTokens 回填，供前后对比；历史回显无此项）
+//   tokensAfter  压缩后占用 token（压缩完成即刻取 compress_done 的估算，随压缩检查点落库并于刷新 /
+//                重进会话后随历史带回；供前后对比，下一次生成的真实 done.promptTokens 到达后校准）
 interface CompressState {
   phase: "running" | "done" | "failed";
   draft: string;
@@ -991,14 +1144,15 @@ interface CompressState {
   tokensAfter?: number;
 }
 
-// ChatMessage 会话消息视图模型：会话历史消息与流式占位消息统一形态。
-// citations 由 done 事件回填；stages 为本次生成实时累积的工具调用阶段（历史消息不携带，
-// 后端不持久化阶段）；pendingCalls/awaitingApproval 承载「前端执行 + 人工审批」链路的状态；
-// compress 承载本轮（自动）或手动触发的上下文压缩展示态
+// ChatMessage 会话消息视图模型：会话历史消息与流式占位消息统一形态。消息体一律由 blocks（后端有序
+// 内容块）驱动渲染——实时流经 block 事件按 seq upsert、刷新 / 重进会话由出参 blocks 恢复，同一套
+// 「块 → 渲染块」映射同时服务二者；content 仅作纯文本兜底与复制 / 提问导航用，不再参与消息体渲染
 interface ChatMessage {
   key: number;
-  // id 服务端消息主键：历史消息自列表接口带回；仅存于内存的即时气泡（尚未回读服务端）无此项。
-  // 续播中断运行时就地复用该行重建本轮内容，避免与已落库的中间产物重影
+  // id 服务端消息主键：历史消息自列表接口带回；实时气泡则由流内事件回填——助手消息在 done
+  // （AgentOutput.messageID）或挂起 tool_request（锚点 ID）到达时绑定，故无需回读历史即可按
+  // 消息 ID 发起「压缩到此」等操作。续播中断运行时就地复用该行重建本轮内容，避免与已落库的
+  // 中间产物重影
   id?: number;
   role: "user" | "assistant" | "system";
   content: string;
@@ -1006,17 +1160,13 @@ interface ChatMessage {
   createdAt?: string;
   citations?: RetrievalResult[];
   streaming?: boolean;
-  // reasoning 助手思考过程全文：流式期间为累积增量，done 到达后收敛为全文（历史消息取自列表接口）
-  reasoning?: string;
-  // reasoningSegments 思考过程按「轮」的分段（live-only）：每段锚定到其后的那次工具调用并渲染在
-  // 该调用行上方，末段（产出回答前）维持在正文上方；历史消息不携带，回退整条 reasoning 单块展示
-  reasoningSegments?: ReasoningSegment[];
-  // reasoningStreaming 思考过程是否仍在流式生成（驱动折叠区块的展开态与状态文案）
-  reasoningStreaming?: boolean;
-  // reasoningExpanded 思考过程区块当前是否展开：流式期间默认展开、结束自动折叠，用户可手动切换
+  // reasoningExpanded 思考折叠区块（末个 reasoning 块）当前是否展开：流式期间默认展开、结束自动折叠，
+  // 用户可手动切换
   reasoningExpanded?: boolean;
-  stages?: AgentStageState[];
-  // pendingCalls 本次挂起、待用户审批并执行的接口调用（为空表示无待审批项）
+  // blocks 本条助手消息的有序内容块（后端 AgentMessageBlockOut）：实时会话直接引用 store 的当前运行
+  // 块列表，历史消息取自列表接口——消息体的唯一展示来源
+  blocks?: AgentMessageBlockOut[];
+  // pendingCalls 本次挂起、待用户审批并执行的接口调用（为空表示无待审批项）；其 callID 为提交续跑所必需
   pendingCalls?: PendingCallState[];
   // awaitingApproval 是否处于「等待审批」态（收到 tool_request 后置 true，提交回传后置 false）
   awaitingApproval?: boolean;
@@ -1148,23 +1298,15 @@ const setReasoningExpanded = (m: ChatMessage, value: unknown): void => {
 };
 
 // ---- 上下文占用指示 ----
-// contextUsedTokens 当前会话占用的 token：优先取最新一条已带用的助手消息的 promptTokens
-// （done 到达即回填），无则回落到会话列表项记录的 contextTokens；草稿态无会话为 0
+// contextUsedTokens 当前会话占用的 token：直接取会话列表项给出的展示占用（后端 ContextUsage：
+// 末次真实测量与更晚的压缩后估算中更晚者），故压缩完成即刻即降至压缩后的估算值，刷新 / 重进会话
+// 后仍保持该口径；会话随后任一生成的真实测量落定后，后端即改由真实口径给出。草稿态无会话为 0
 const contextUsedTokens = computed<number>(() => {
-  for (let i = messages.value.length - 1; i >= 0; i--) {
-    const m = messages.value[i];
-    if (m.role === "assistant" && m.promptTokens) {
-      return m.promptTokens;
-    }
-  }
   const id = activeSessionID.value;
-  if (id !== null) {
-    const session = sessions.value.find((s) => s.id === id);
-    if (session) {
-      return session.contextTokens ?? 0;
-    }
+  if (id === null) {
+    return 0;
   }
-  return 0;
+  return sessions.value.find((s) => s.id === id)?.contextTokens ?? 0;
 });
 
 // headerTitle 头部标题：进入某个会话后展示该会话主题；会话尚无主题（主题由首条消息发出后
@@ -1279,147 +1421,67 @@ const stageMetaTextOf = (stage: AgentStageState): string => {
   return parts.join(" · ");
 };
 
-// applyAgentStage 应用一次工具调用阶段事件：优先按 callID 归并到该次调用所在行，使同一次调用的
-// 「发起（toolCall）」与「结果（toolResult）」递进收敛到同一行；无 callID 时回退按「阶段 + 工具名」
-// 归并（如达到轮数上限的整体失败事件）。命中同一行时同时更新阶段标签、状态、耗时与失败原因
-const applyAgentStage = (key: number, ev: AgentStageEvent): void => {
-  const msg = messages.value.find((m) => m.key === key);
-  if (!msg) {
-    return;
-  }
-  const stages = (msg.stages ??= []);
-  const stageKey = ev.callID ?? `${ev.stage}:${ev.tool ?? ""}`;
-  const target = stages.find((s) => s.key === stageKey);
-  if (target) {
-    target.stage = ev.stage;
-    target.status = ev.status ?? target.status;
-    if (ev.elapsedMs > 0) {
-      target.elapsedMs = ev.elapsedMs;
-    }
-    if (ev.error) {
-      target.error = ev.error;
-    }
-  } else {
-    stages.push({
-      key: stageKey,
-      stage: ev.stage,
-      tool: ev.tool ?? "",
-      status: ev.status,
-      elapsedMs: ev.elapsedMs,
-      error: ev.error,
-      callID: ev.callID,
-      round: ev.round,
-    });
-  }
-  scrollToBottom();
-};
-
-// stageGroupsOf 把阶段行按轮聚组：round 相同且相邻的行归为一组（后端每轮从 1 递增下发 round），
-// 使「一次思考 → N 次并行调用」的从属关系一眼可读；无 round 的行（旧数据 / 回退键）各自成组。
-// 组内思考取锚定到本组任一次调用的分段文本（同轮思考只归属首个调用行，故取到即该轮思考）
-const stageGroupsOf = (m: ChatMessage): AgentStageGroup[] => {
-  const groups: AgentStageGroup[] = [];
-  for (const s of m.stages ?? []) {
-    const last = groups[groups.length - 1];
-    if (last && last.round !== undefined && s.round === last.round) {
-      last.stages.push(s);
-      continue;
-    }
-    groups.push({ key: `g-${s.key}`, round: s.round, stages: [s], reasoningText: "" });
-  }
-  for (const g of groups) {
-    for (const s of g.stages) {
-      if (!s.callID) {
-        continue;
-      }
-      const text = anchoredReasoningTextOf(m, s.callID);
-      if (text) {
-        g.reasoningText = text;
-        break;
-      }
-    }
-  }
-  return groups;
-};
+// stageRowsOf 把一条 tool_calls 块载荷映射为阶段行（复用既有阶段渲染）：问卷类调用（ask_user）豁免
+// 工具行（问卷面板即其呈现），故从可见行中剔除；记录状态 start 归入发起（toolCall）、其余归入结果
+// （toolResult），以复用既有阶段枚举文案
+const stageRowsOf = (payload: AgentToolCallsBlockPayload): AgentStageState[] =>
+  (payload.calls ?? [])
+    .filter((c) => c.toolName !== ASK_USER_TOOL_NAME)
+    .map((c) => ({
+      key: c.callID,
+      stage: c.status === "start" ? "toolCall" : "toolResult",
+      tool: c.toolName,
+      status: c.status,
+      elapsedMs: c.elapsedMs,
+      error: c.error,
+    }));
 
 // awaitingFirstResponse 判断该助手消息是否仍处于「请求已发出、尚无任何产出」的等待首包阶段：
-// 流式已开始但正文 / 思考 / 工具阶段均未到达（含模型首包前的长等待与被中断前的空档）。
-// 此阶段以「等待响应中…」替代「生成中…」，避免长等待被误读为服务异常而触发刷新或重复提交
+// 流式已开始但尚无任何内容块到达（含模型首包前的长等待与被中断前的空档）。此阶段以「等待响应中…」
+// 替代「生成中…」，避免长等待被误读为服务异常而触发刷新或重复提交
 const awaitingFirstResponse = (m: ChatMessage): boolean =>
-  m.streaming === true &&
-  m.content.trim() === "" &&
-  !m.reasoning &&
-  !(m.stages && m.stages.length > 0);
+  m.streaming === true && (m.blocks?.length ?? 0) === 0;
 
-// ---- 思考过程分段 ----
-// reasoningSegmentSeq 思考分段的自增键序列：分段为 live-only 视图态，键仅需在本消息内唯一
-let reasoningSegmentSeq = 0;
-const nextReasoningSegmentKey = (): string => `rs-${(reasoningSegmentSeq += 1)}`;
-
-// appendReasoning 把一段思考增量累加进消息的思考分段：追加到当前未锚定的末段；若末段已锚定
-// （该轮思考已归属其后的那次调用）则新开一段。同时维持整条 reasoning 累积与展开态，供上方
-// 折叠区块驱动（末段即「正文上方那块」）
-const appendReasoning = (m: ChatMessage, delta: string): void => {
-  const segments = (m.reasoningSegments ??= []);
-  let seg = segments[segments.length - 1];
-  if (!seg || seg.anchorCallID) {
-    seg = { key: nextReasoningSegmentKey(), text: "", streaming: true };
-    segments.push(seg);
-  }
-  seg.text += delta;
-  seg.streaming = true;
-  m.reasoning = (m.reasoning ?? "") + delta;
-  m.reasoningStreaming = true;
-  m.reasoningExpanded = true;
+// reasoningStreamingOf 思考折叠区块是否仍在流式生成：消息仍在流式且末个块仍为 reasoning 块
+// （新块（正文 / 工具调用 / 交互）一开即收敛该思考块，故末块一变即视为思考已停）
+const reasoningStreamingOf = (m: ChatMessage): boolean => {
+  const blocks = m.blocks ?? [];
+  const last = blocks[blocks.length - 1];
+  return m.streaming === true && last?.kind === "reasoning";
 };
 
-// anchorReasoningSegment 把当前未锚定的思考分段锚定到刚发起的那次工具调用（渲染在该调用行上方）。
-// 已锚定或尚无文本的分段不改动：一轮内多个调用时该轮思考只归属首个调用行
-const anchorReasoningSegment = (m: ChatMessage, callID: string): void => {
-  const segments = m.reasoningSegments;
-  if (!segments || segments.length === 0) {
-    return;
-  }
-  const seg = segments[segments.length - 1];
-  if (seg.anchorCallID || seg.text === "") {
-    return;
-  }
-  seg.anchorCallID = callID;
-  seg.streaming = false;
-};
-
-// endReasoningStreaming 结束思考流式：闭合末段并收起折叠区块（保留已累积内容）
-const endReasoningStreaming = (m: ChatMessage): void => {
-  m.reasoningStreaming = false;
+// endReasoningStreamingOf 结束思考流式：收起末个思考折叠区块（保留已累积内容）。思考是否仍在流式由
+// reasoningStreamingOf 据块序列派生，故此处只需收敛展开态——done / 挂起 / 失败 / 中断时调用
+const endReasoningStreamingOf = (m: ChatMessage): void => {
   m.reasoningExpanded = false;
-  const segments = m.reasoningSegments;
-  if (segments && segments.length > 0) {
-    segments[segments.length - 1].streaming = false;
-  }
-};
-
-// anchoredReasoningTextOf 返回某次调用行上方要渲染的思考文本（锚定到该次调用的分段）；
-// 无分段或该调用未锚定任何分段时返回空串（不占位）
-const anchoredReasoningTextOf = (m: ChatMessage, callID?: string): string => {
-  if (!callID || !m.reasoningSegments) {
-    return "";
-  }
-  return m.reasoningSegments.find((s) => s.anchorCallID === callID)?.text ?? "";
-};
-
-// topReasoningText 返回正文上方那块的思考文本：末段（无 anchorCallID，即产出回答前那一轮）。
-// 历史消息无分段时回退整条 reasoning，保持刷新后行为不变
-const topReasoningText = (m: ChatMessage): string => {
-  if (!m.reasoningSegments) {
-    return m.reasoning ?? "";
-  }
-  const unanchored = m.reasoningSegments.filter((s) => !s.anchorCallID);
-  return unanchored[unanchored.length - 1]?.text ?? "";
 };
 
 const scrollToBottom = (): void => {
   void nextTick(() => {
     const el = messagesRef.value;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  });
+};
+
+// reasoningBodyRefs 各条助手消息的「思考正文」滚动区（键为消息 key）：思考正文自带限高滚动，
+// 消息区的 scrollToBottom 到不了它内部。与 turnRefs 同法——元素卸载时 Vue 以 null 回调，同步剔除
+const reasoningBodyRefs = new Map<number, HTMLElement>();
+const setReasoningBodyRef = (key: number, el: unknown): void => {
+  if (el instanceof HTMLElement) {
+    reasoningBodyRefs.set(key, el);
+  } else {
+    reasoningBodyRefs.delete(key);
+  }
+};
+
+// scrollReasoningToBottom 把某条消息的思考正文粘到底部：内容流式增长超过限高后新内容追加在
+// 可视区下方，滚动位置不动就会一直停在旧位置、最新思考看不见；每来一段增量即重新贴底。
+// 同 scrollToBottom 延后到 nextTick（须待增量落到 DOM 再测量）；面板收起时元素不在，静默跳过
+const scrollReasoningToBottom = (key: number): void => {
+  void nextTick(() => {
+    const el = reasoningBodyRefs.get(key);
     if (el) {
       el.scrollTop = el.scrollHeight;
     }
@@ -1538,11 +1600,31 @@ const notifyNoResponse = async (): Promise<void> => {
   notifyError(i18n.global.t("page.aiAssistant.noResponse"));
 };
 
+// applySessionSnapshots 用会话列表出参回填各会话的交互状态快照（interactionState/substate/locked/
+// userTurns/maxUserTurns）：刷新 / 切会话后据此恢复输入闸门与锁定提示（无在途运行时以列表为权威）；
+// 当前会话若有在途活动（运行中 / 等待中），则以实时 state 事件为准，不用列表覆盖，避免中途被冲淡
+const applySessionSnapshots = (list: AgentSessionItem[]): void => {
+  for (const s of list) {
+    if (agentRun.hasActivityOf(s.id)) {
+      continue;
+    }
+    agentRun.setSnapshot(s.id, {
+      state: s.interactionState,
+      substate: s.interactionSubstate,
+      locked: s.locked,
+      userTurns: s.userTurns,
+      maxUserTurns: s.maxUserTurns,
+    });
+  }
+};
+
 const loadSessions = async (): Promise<void> => {
   await getResponse<AgentSessionItem[]>(
     agentSessionListGet(),
     async (rsp) => {
       sessions.value = rsp.data ?? [];
+      // 用列表出参回填各会话交互状态快照（当前会话在途时跳过，见 applySessionSnapshots）
+      applySessionSnapshots(sessions.value);
       // 当前选中会话若已被删除则清空选中态
       if (
         activeSessionID.value !== null &&
@@ -1570,14 +1652,23 @@ const loadMessages = async (id: number): Promise<void> => {
         content: m.content ?? "",
         createdAt: m.createdAt,
         citations: m.citations,
-        reasoning: m.reasoning,
+        // 消息体由出参 blocks（后端有序内容块）驱动渲染，与实时流 block 事件同源：同一套「块 → 渲染块」
+        // 映射同时服务历史与实时，故无需任何 live-only 时序态（思考分段 / 正文边界 / 问卷轮次等）
+        blocks: m.blocks,
+        // 仍待用户输入的挂起现场（问卷待作答 / 待授权工具）不随「在途运行快照」下发——回退重开（重新
+        // 回答 / 重新授权）只重置挂起现场、不产生在途运行，故其待执行调用随消息出参一并带回，在此登记，
+        // 使问卷 / 审批面板在刷新 / 重进会话后仍可提交 / 取消（提交续跑需原样回传 callID）。等待态
+        // （awaitingApproval）不在此置位，由随后的 resumeLiveRun 在无在途运行分支据这里的调用补置，
+        // 避免历史回读即置等待态而把「刷新」误判为「同页重开」、跳过后面的块重建
+        pendingCalls: m.pendingCalls ? toPendingCallStates(m.pendingCalls) : undefined,
         promptTokens: m.promptTokens,
         completionTokens: m.completionTokens,
         totalTokens: m.totalTokens,
         elapsedMs: m.elapsedMs,
         phase: m.phase,
         // 历史压缩记录：后端按压缩游标把过往的压缩推进（含静默滚动 rolling）锚定到被折叠的最后
-        // 一条消息，回显为完成态（无流式摘要增量、无压缩后占用对比），复用现有压缩块渲染
+        // 一条消息，回显为完成态（无流式摘要增量），并带回该次推进的压缩后占用估算（auto / manual
+        // 有值，rolling 为 0），故刷新 / 重进会话后仍可展示前后对比，复用现有压缩块渲染
         compress: m.compress
           ? {
               phase: "done" as const,
@@ -1590,6 +1681,7 @@ const loadMessages = async (id: number): Promise<void> => {
                     : "auto",
               tokensBefore: m.compress.tokensBefore,
               foldedCount: m.compress.foldedCount,
+              tokensAfter: m.compress.tokensAfter,
             }
           : undefined,
       }));
@@ -1617,7 +1709,6 @@ const selectSession = async (id: number): Promise<void> => {
   draftMode.value = false;
   activeSessionID.value = id;
   messages.value = [];
-  streaming.value = false;
   // 会话记录了缺省档位时同步到档位下拉；未记录时保持当前选择
   const target = sessions.value.find((s) => s.id === id);
   if (target && target.slot) {
@@ -1652,7 +1743,6 @@ const startNewSession = (): void => {
   draftMode.value = true;
   activeSessionID.value = null;
   messages.value = [];
-  streaming.value = false;
 };
 
 // openRenameSessionDialog 打开某一行的重命名对话框：标题预填该行原文
@@ -1718,7 +1808,7 @@ const deleteSessionAction = async (): Promise<void> => {
   const id = deletingSessionID.value;
   // 删除会话前退订其（若为当前会话的）在途流，避免残留订阅
   agentRun.detach(id);
-  streaming.value = false;
+  agentRun.settle(id);
   await getSimpleResponse(
     agentSessionDelete(id),
     async (rsp) => {
@@ -1741,48 +1831,99 @@ const deleteSessionAction = async (): Promise<void> => {
 
 // ---- 流式问答 ----
 const query = ref("");
-const streaming = ref(false);
 // creating 是否正在创建会话：未选中会话时首条消息需先建会话再发起流式生成，
-// 这段时间既不属 streaming 也无待审批项，单独标记以免同一问题被重复提交；
+// 这段时间无在途运行，单独标记以免同一问题被重复提交；
 // 同时驱动发送按钮转入加载态，把创建等待期（后端同步生成主题，耗时明显）显式反馈给用户
 const creating = ref(false);
-// optimizing 是否正在优化提问：调用提示词优化接口改写当前输入，
-// 与 streaming / 待审批 / 创建会话同为运行态，期间禁止提交（见 canSend）
+// optimizing 是否正在优化提问：调用提示词优化接口改写当前输入，与运行态一并纳入提交闸门（见 canSend）
 const optimizing = ref(false);
 // compacting 是否正在手动压缩上下文（「压缩到此」触发的独立一次性 SSE 流）：
-// 与 streaming / 待审批 / 创建会话同为运行态——在途期间不得再向后端发起生成（见 canSend），
-// 但提问仍可转入待发队列排队（见 canEnqueueQueued / onSubmitClick）
+// 在途期间不得再向后端发起生成（见 canSend），但提问仍可转入待发队列排队（见 canEnqueueQueued）
 const compacting = ref(false);
 
-// awaitingApproval 是否存在等待人工审批的接口调用：为 true 时本轮生成已挂起，禁止再发起新生成
-const awaitingApproval = computed<boolean>(() =>
-  messages.value.some((m) => m.awaitingApproval === true),
+// ---- 会话交互状态（唯一权威来自后端）----
+// 交互主状态取值的后端口径（等待 / 运行 / 已锁定）：前端不声明完整取值空间，
+// 仅在此用于判定闸门与派生态；其余取值（暂停）与未知空状态一律按「可输入」保守兜底
+const STATE_RUNNING = "running";
+const STATE_WAITING = "waiting";
+const STATE_LOCKED = "locked";
+
+// activeRunState 当前会话的运行态快照（agentRun store 持有）；未选中会话或无记录时为 undefined
+const activeRunState = computed<RunState | undefined>(() => {
+  const id = activeSessionID.value;
+  return id === null ? undefined : agentRun.runs[id];
+});
+
+// interactionState / interactionSubstate 当前会话交互主状态与子状态：唯一权威来自后端
+// （SSE state 事件 / 快照出参），经 store 透传；空串表示未知，由派生态保守兜底（绝不卡死）
+const interactionState = computed<string>(() => activeRunState.value?.state ?? "");
+const interactionSubstate = computed<string>(() => activeRunState.value?.substate ?? "");
+
+// runActive 会话是否有在途活动（运行中 / 等待中）：停止按钮可用、回滚类操作禁用的唯一依据
+const runActive = computed<boolean>(
+  () => interactionState.value === STATE_RUNNING || interactionState.value === STATE_WAITING,
 );
 
-// canSend 是否可发起生成：AI 可用、不在等待审批中、也不在创建会话途中。
-// 不要求已有会话——未选中会话时发送即先创建会话（主题由后端据该问题生成），
-// 因此打开抽屉后可直接输入并发出首条消息，无需先点「新建会话」。
-// creating 必须一并纳入闸门：创建途中再次回车/点击会带着同一问题重复建会话
-// （正文已在回显时清空，见 echoUserQuery）；optimizing 同理，优化途中输入框内容即将被整体替换；
-// compacting 同理，压缩流在途时上下文正被折叠，此时新提问只能进待发队列（见 canEnqueueQueued）
+// locked 会话是否已锁定（有效轮次达上限）：输入闸门关闭，但回滚类操作仍放行（回滚后可继续提问）
+const locked = computed<boolean>(() => interactionState.value === STATE_LOCKED);
+
+// inputGated 输入闸门是否关闭：运行中 / 等待中 / 已锁定 均关闭；暂停（含未知空状态）放行（保守兜底）
+const inputGated = computed<boolean>(() => runActive.value || locked.value);
+
+// userTurns / maxUserTurns 快照口径的会话有效轮次与上限（供锁定提示展示）
+const userTurns = computed<number>(() => activeRunState.value?.userTurns ?? 0);
+const maxUserTurns = computed<number>(() => activeRunState.value?.maxUserTurns ?? 0);
+
+// questionnairePending 当前会话是否正等待问卷作答（waiting + answer）：输入区整体禁用并给出跳转提示
+const questionnairePending = computed<boolean>(
+  () => interactionState.value === STATE_WAITING && interactionSubstate.value === "answer",
+);
+
+// composerDisabled 输入控件是否禁用：问卷待作答或会话已锁定——此刻既发不出去、也不该入队，直接禁用输入；
+// 其余在途状态（运行中 / 等待审批）仍允许输入以转入待发队列（见 canEnqueueQueued）
+const composerDisabled = computed<boolean>(() => questionnairePending.value || locked.value);
+
+// stateLabel / substateLabel 交互主状态与子状态展示文案：label 由后端枚举类下发，前端不硬编码文案
+const stateLabel = computed<string>(() =>
+  interactionState.value
+    ? enumLabelOf(EnumClass.agentInteractionState, interactionState.value)
+    : "",
+);
+const substateLabel = computed<string>(() =>
+  interactionSubstate.value
+    ? enumLabelOf(EnumClass.agentInteractionSubstate, interactionSubstate.value)
+    : "",
+);
+
+// composerStatusText 输入区状态条文案：已锁定时展示锁定提示（含「回滚后可继续提问」引导）；
+// 其余在途状态展示后端下发的交互子状态 label（缺失回退主状态 label），使输入被闸住的原因对用户可见
+const composerStatusText = computed<string>(() => {
+  if (locked.value) {
+    return i18n.global.t("page.aiAssistant.lockedHint", {
+      label: stateLabel.value,
+      used: userTurns.value,
+      max: maxUserTurns.value,
+    });
+  }
+  return substateLabel.value || stateLabel.value;
+});
+
+// canSend 是否可发起生成：AI 可用、输入闸门未关（运行中 / 等待中 / 已锁定均不可发），
+// 且不在创建会话 / 优化提问 / 手动压缩途中——这些运行态下输入框内容或将被替换、或无权改写。
+// 不要求已有会话——未选中会话时发送即先创建会话（主题由后端据该问题生成）
 const canSend = computed<boolean>(
   () =>
     aiEnabled.value &&
-    !awaitingApproval.value &&
+    !inputGated.value &&
     !creating.value &&
     !optimizing.value &&
     !compacting.value,
 );
 
-// composerActionsEnabled 输入区动作（优化 / 撤回）的公共闸门：AI 可用，且无在途生成 / 待审批 /
-// 会话创建 / 优化请求——这些运行态下输入框内容或将被整体替换、或无权改写
+// composerActionsEnabled 输入区动作（优化 / 撤回）的公共闸门：AI 可用，且输入闸门未关、
+// 无会话创建 / 无优化请求
 const composerActionsEnabled = computed<boolean>(
-  () =>
-    aiEnabled.value &&
-    !streaming.value &&
-    !awaitingApproval.value &&
-    !creating.value &&
-    !optimizing.value,
+  () => aiEnabled.value && !inputGated.value && !creating.value && !optimizing.value,
 );
 
 // canOptimize 是否可优化提问：公共闸门可用，且输入框已有非空内容——无诉求可优化
@@ -1808,11 +1949,10 @@ watch(query, (value) => {
 });
 
 // ---- 用户消息快捷操作（复制 / 回退 / 删除）----
-// busy 当前会话是否正忙（生成中 / 等待审批 / 创建会话中 / 手动压缩中）：忙时禁止截断，避免删除在途运行正在使用的
-// 消息，导致服务端与本地内容错位；发送入口亦据此把新提问转入待发队列（见 onSubmitClick / onComposerEnter）
-const busy = computed<boolean>(
-  () => streaming.value || awaitingApproval.value || creating.value || compacting.value,
-);
+// busy 当前会话是否正忙（在途运行中 / 创建会话中 / 手动压缩中）：忙时禁止截断，避免删除在途运行正在使用的
+// 消息，导致服务端与本地内容错位；发送入口亦据此把新提问转入待发队列（见 onSubmitClick / onComposerEnter）。
+// 已锁定不算忙——锁定只闸住「新提问」，回滚类操作须仍可用（见各按钮的 disabled 绑定）
+const busy = computed<boolean>(() => runActive.value || creating.value || compacting.value);
 
 // ---- 待发提问队列（生成中提交的追问）----
 // QueuedQuery 队列中的一条待发提问；key 仅用于列表渲染与操作定位，不随正文持久化
@@ -1834,15 +1974,18 @@ const activeQueue = computed<QueuedQuery[]>(() =>
 const canModifyQueued = computed<boolean>(() => query.value.trim() === "");
 
 // canEnqueueQueued 运行中能否把当前输入转入待发队列：队列按会话归属，故须已选中会话；
-// 创建会话（尚无会话可归属）与优化途中（输入将被整体改写）仍禁止；
-// 手动压缩在途则允许——此时新提问发不出去，排队正是唯一去处（见 canSend / busy）
+// 须确有「后续会投递队列的在途运行」（在途运行中 / 手动压缩在途）——已锁定时无运行可投递，
+// 不得入队（应引导回滚）；创建会话（尚无会话可归属）与优化途中（输入将被整体改写）仍禁止；
+// 问卷待作答时会话被阻塞，亦不得入队
 const canEnqueueQueued = computed<boolean>(
   () =>
     aiEnabled.value &&
     activeSessionID.value !== null &&
     query.value.trim() !== "" &&
+    (runActive.value || compacting.value) &&
     !creating.value &&
-    !optimizing.value,
+    !optimizing.value &&
+    !questionnairePending.value,
 );
 
 // ensureQueueLoaded 懒加载某会话的队列：首次访问时从本地记忆恢复，按恢复顺序生成列表 key
@@ -1918,10 +2061,11 @@ const pinQueued = (target: QueuedQuery): void => {
   persistQueue(sessionID);
 };
 
-// drainQueuedQuery 当前回答结束后自动投递队首提问：仅当目标会话即当前会话且无在途运行时执行
-// （切走的会话其队列留待切回时再投递，避免把消息推入非当前会话的消息区）；先出队持久化再发起生成
+// drainQueuedQuery 当前回答结束后自动投递队首提问：仅当目标会话即当前会话、无在途运行且未锁定时执行
+// （切走的会话其队列留待切回时再投递，避免把消息推入非当前会话的消息区；已锁定则投递必被后端拒绝）；
+// 先出队持久化再发起生成
 const drainQueuedQuery = (sessionID: number): void => {
-  if (sessionID !== activeSessionID.value || busy.value) {
+  if (sessionID !== activeSessionID.value || busy.value || locked.value) {
     return;
   }
   ensureQueueLoaded(sessionID);
@@ -1935,9 +2079,17 @@ const drainQueuedQuery = (sessionID: number): void => {
   startStream(sessionID, head.text);
 };
 
-// onSubmitClick 发送按钮 / 回车统一入口：空闲时直接发送，运行中（生成 / 待审批 / 建会话 / 压缩）则转入待发队列排队
+// onSubmitClick 发送按钮 / 回车统一入口：空闲时直接发送，运行中（生成 / 待审批 / 建会话 / 压缩）则转入待发队列排队。
+// 运行中并非一律可入队（见 canEnqueueQueued）：问卷待作答时会话被阻塞，此刻既发不出、也不该排队，
+// 否则输入内容会无声消失且永远等不到投递。此时保持输入原样并把原因告知用户，与发送按钮的禁用态一致。
 const onSubmitClick = (): void => {
   if (busy.value) {
+    if (!canEnqueueQueued.value) {
+      if (questionnairePending.value) {
+        notifyError(i18n.global.t("page.aiAssistant.questionnairePendingHint"));
+      }
+      return;
+    }
     enqueueQuery();
     return;
   }
@@ -2118,6 +2270,10 @@ const confirmMessageAction = async (): Promise<void> => {
   await getSimpleResponse(
     agentMessageTruncate(sessionID, { userMessageIndex: target.userIndex }),
     async (rsp) => {
+      // 截断已一并作废该轮及其之后的运行（后端同构处理）：本地运行态须同步收敛，否则残留的
+      // 「生成中」闸门会把新提问挡进待发队列，且后续探测续播会把已删除回合的产出重新拼回消息区
+      agentRun.detach(sessionID);
+      agentRun.settle(sessionID);
       const localIndex = messages.value.findIndex((m) => m.key === target.key);
       if (localIndex >= 0) {
         messages.value.splice(localIndex);
@@ -2150,12 +2306,165 @@ const pruneSubmittedCalls = (msg: ChatMessage): void => {
   msg.pendingCalls = remain.length > 0 ? remain : undefined;
 };
 
-// applyToolRequest 应用一次挂起事件：把待审批调用累积到消息（按 callID 幂等，回放重复下发
-// 不重复入列），置为等待审批态；免审批调用直接预置为已批准
+// ASK_USER_TOOL_NAME 主动提问客户端工具名（与后端登记一致）：命中即豁免人工审批，改由问卷面板承载。
+const ASK_USER_TOOL_NAME = "ask_user";
+
+// toPendingCallStates 把后端出参的待执行调用映射为视图态（「重新回答」出参、消息列表出参与续播快照
+// 共用）：问卷类调用（ask_user）不预置决策、留待用户在面板作答后再定；其余免审批调用
+// （approvalRequired=false）自动批准
+const toPendingCallStates = (calls: ToolRequestPayload[]): PendingCallState[] =>
+  calls.map((c) => ({
+    callID: c.callID,
+    toolName: c.toolName,
+    arguments: c.arguments,
+    auditLevel: c.auditLevel,
+    approvalRequired: c.approvalRequired,
+    execOwner: c.execOwner,
+    decision:
+      c.approvalRequired === false && c.toolName !== ASK_USER_TOOL_NAME ? "approved" : undefined,
+  }));
+
+// undecidedPendingCall 该待执行调用是否仍未决策：问卷类调用（ask_user）恒未决策（前端只在用户作答 /
+// 取消后才定），其余调用按后端合成的 approvalRequired 判定（false 已在映射时预置为已批准）
+const undecidedPendingCall = (c: PendingCallState): boolean =>
+  c.toolName === ASK_USER_TOOL_NAME || c.approvalRequired === true;
+
+// awaitingQuestionnaireBlockOf 取消息中「仍待回答」的那一轮问卷块（后端保证只可能是末轮）：非空即该轮
+// 问卷已内联在消息流中，会话阻塞直至用户提交或取消；提交 / 取消据其载荷原位更新为已作答。
+const awaitingQuestionnaireBlockOf = (
+  m: ChatMessage | null,
+): AgentQuestionnaireBlockPayload | null => {
+  const blocks = m?.blocks ?? [];
+  for (let i = blocks.length - 1; i >= 0; i--) {
+    const b = blocks[i];
+    if (b.kind !== "questionnaire") {
+      continue;
+    }
+    const payload = b.payload as AgentQuestionnaireBlockPayload;
+    if (payload?.awaiting) {
+      return payload;
+    }
+  }
+  return null;
+};
+
+// parseQuestionnaireArgs 把 ask_user 调用的入参文本解析为问卷载荷（题目列表）；无法解析为含题目的
+// 合法问卷时返回 null（退回按普通调用处理）。
+const parseQuestionnaireArgs = (argumentsText: string): QuestionnairePayload | null => {
+  try {
+    const parsed = JSON.parse(argumentsText) as QuestionnairePayload;
+    if (!parsed || !Array.isArray(parsed.questions) || parsed.questions.length === 0) {
+      return null;
+    }
+    return { questions: parsed.questions };
+  } catch {
+    return null;
+  }
+};
+
+// AssistantBlock 助手消息体内的**一块**渲染块：由后端有序内容块（AgentMessageBlockOut）直接映射而来，
+// 故实时流与刷新 / 重进会话（消息出参 blocks）由同一套映射渲染，二者天然一致。
+interface AssistantBlock {
+  key: string;
+  kind: "reasoning" | "content" | "stages" | "questionnaire" | "approval";
+  // text 仅 reasoning / content 使用：该块的文本
+  text?: string;
+  // primary 仅 reasoning / content 使用：是否为同类块中的末个（reasoning 为流式思考块、content 为末尾正文）
+  primary?: boolean;
+  // stages / parallelCount 仅 stages 使用：本块（一轮）可见调用行与其数量（>1 时展示并行计数）
+  stages?: AgentStageState[];
+  parallelCount?: number;
+  // questionnaire 仅 questionnaire 使用：本轮问卷载荷（题目 + 作答 + 是否待回答）
+  questionnaire?: AgentQuestionnaireBlockPayload;
+  // reanswerable 仅 questionnaire 使用：是否为末个问卷块（「重新回答」只作用于末轮：更早各轮的运行现场
+  // 已被后续轮次消费、无从重建）
+  reanswerable?: boolean;
+  // approvalCalls 仅 approval 使用：本块待审批调用清单
+  approvalCalls?: AgentApprovalCallRecord[];
+}
+
+// lastSeqOfKind 求某类块在块列表中的最大 seq（无该类块时返回 -1）：用于标记末个同 kind 块（流式思考 /
+// 末尾正文 / 可重答的末轮问卷）
+const lastSeqOfKind = (blocks: AgentMessageBlockOut[], kind: string): number => {
+  let seq = -1;
+  for (const b of blocks) {
+    if (b.kind === kind) {
+      seq = b.seq;
+    }
+  }
+  return seq;
+};
+
+// assistantBlocksOf 把一条助手消息的有序内容块（blocks）映射为渲染块：逐个按 kind 取载荷——文字块
+// （reasoning / content）取 payload.text，工具调用块把记录映射为阶段行，交互块取清单 / 问卷载荷；空的
+// 文字块与无可见调用行的工具调用块不占位。同类块的末个分别标记为 primary（流式思考 / 末尾正文）与
+// reanswerable（末轮问卷）。
+const assistantBlocksOf = (m: ChatMessage): AssistantBlock[] => {
+  const blocks = m.blocks ?? [];
+  const lastReasoning = lastSeqOfKind(blocks, "reasoning");
+  const lastContent = lastSeqOfKind(blocks, "content");
+  const lastQuestionnaire = lastSeqOfKind(blocks, "questionnaire");
+  const out: AssistantBlock[] = [];
+  for (const b of blocks) {
+    const key = `b-${b.seq}`;
+    switch (b.kind) {
+      case "reasoning": {
+        const text = (b.payload as AgentReasoningBlockPayload)?.text ?? "";
+        if (text !== "") {
+          out.push({ key, kind: "reasoning", text, primary: b.seq === lastReasoning });
+        }
+        break;
+      }
+      case "content": {
+        const text = (b.payload as AgentContentBlockPayload)?.text ?? "";
+        if (text !== "") {
+          out.push({ key, kind: "content", text, primary: b.seq === lastContent });
+        }
+        break;
+      }
+      case "tool_calls": {
+        const stages = stageRowsOf(b.payload as AgentToolCallsBlockPayload);
+        if (stages.length > 0) {
+          out.push({ key, kind: "stages", stages, parallelCount: stages.length });
+        }
+        break;
+      }
+      case "questionnaire":
+        out.push({
+          key,
+          kind: "questionnaire",
+          questionnaire: b.payload as AgentQuestionnaireBlockPayload,
+          reanswerable: b.seq === lastQuestionnaire,
+        });
+        break;
+      case "approval":
+        out.push({
+          key,
+          kind: "approval",
+          approvalCalls: (b.payload as AgentApprovalBlockPayload)?.calls ?? [],
+        });
+        break;
+    }
+  }
+  return out;
+};
+
+// applyToolRequest 应用一次挂起事件：把待执行的调用登记到消息的 pendingCalls（按 callID 幂等，回放重复
+// 下发不重复入列），置为等待审批态；免审批调用（approvalRequired=false）预置为已批准。问卷类调用
+// （ask_user）豁免审批：不预置决策，留待用户在问卷面板作答 / 取消后再定，其待执行调用仍登记在
+// pendingCalls 中（提交续跑需原样回传 callID）。审批面板与问卷面板本身由后端的 approval / questionnaire
+// 块事件实时下发（见 consumeAgentStream 的 onBlock），前端不再据入参重建块。
 const applyToolRequest = (assistantKey: number, req: ToolRequestPayload): void => {
   const msg = messages.value.find((m) => m.key === assistantKey);
   if (!msg) {
     return;
+  }
+  // 挂起锚点消息 ID：挂起时后端已把本回合的助手消息落库为锚点行，并随每条 tool_request 一并下发其 ID。
+  // 本地气泡的落库行 ID 另有 done 事件这一来源（见 onDone）；此处按 tool_request 再行登记，使挂起
+  // 现场在 done 到达前即可定位到锚点行（「重新回答」按锚点截断其后消息并重答）；缺省（旧服务端未
+  // 下发）时保持无 id，行为与引入该字段前一致
+  if (req.messageID !== undefined) {
+    msg.id = req.messageID;
   }
   pruneSubmittedCalls(msg);
   const calls = (msg.pendingCalls ??= []);
@@ -2168,9 +2477,9 @@ const applyToolRequest = (assistantKey: number, req: ToolRequestPayload): void =
       approvalRequired: req.approvalRequired,
       execOwner: req.execOwner,
     };
-    // 免审批调用（approvalRequired=false）：不弹人工审批，直接置为已批准；
-    // 与需人工审批的调用同处一批，待全部决策后整体提交
-    if (req.approvalRequired === false) {
+    // 免审批的非问卷调用（approvalRequired=false）：不弹人工审批，直接置为已批准；与需人工审批的调用
+    // 同处一批，待全部决策后整体提交。问卷类调用（ask_user）不预置决策，留待面板作答 / 取消后再定
+    if (req.toolName !== ASK_USER_TOOL_NAME && req.approvalRequired === false) {
       call.decision = "approved";
     }
     calls.push(call);
@@ -2182,8 +2491,8 @@ const applyToolRequest = (assistantKey: number, req: ToolRequestPayload): void =
 
 // ---- 上下文压缩 ----
 // （手动压缩在途标记 compacting 与 streaming / creating 等运行态一并声明，见上方输入区）
-// pendingCompact 手动压缩的待补全项：压缩那一刻尚无后续生成，先展示「压缩前占用 + 折叠条数」，
-// 待该会话随后首次生成的 done.promptTokens 到达再补上「压缩后占用」并清空
+// pendingCompact 手动压缩的待补全项：压缩完成时先展示 compress_done 带回的压缩后占用估算，
+// 待该会话随后首次生成的 done.promptTokens 到达再以真实测量校准该展示并清空
 const pendingCompact = ref<{
   sessionID: number;
   messageKey: number;
@@ -2215,8 +2524,8 @@ const applyCompressDelta = (key: number, p: CompressDeltaPayload): void => {
   }
 };
 
-// applyCompressDone 置压缩完成态并写入折叠条数（foldedCount 为 0 或缺失时仍置 done）；
-// 完成后刷新会话列表以更新摘要与占用
+// applyCompressDone 置压缩完成态并写入折叠条数与压缩后占用估算（foldedCount 为 0 或缺失时仍置
+// done）；估算同时回填会话列表项与占用指示并立即刷新列表，使占用环即刻降至压缩后的估算值
 const applyCompressDone = (key: number, p: CompressDonePayload): void => {
   const msg = messages.value.find((m) => m.key === key);
   if (msg?.compress) {
@@ -2224,6 +2533,15 @@ const applyCompressDone = (key: number, p: CompressDonePayload): void => {
     msg.compress.foldedCount = p.foldedCount;
     if (p.tokensBefore !== undefined) {
       msg.compress.tokensBefore = p.tokensBefore;
+    }
+    // 压缩后占用估算：即刻写回压缩记录与所属会话列表项以驱动占用环，无需等待列表刷新；后端该值
+    // 同为压缩后口径（见 ContextUsage），随后生成的真实测量经 loadSessions 覆盖为精确值
+    if (p.tokensAfter !== undefined) {
+      msg.compress.tokensAfter = p.tokensAfter;
+      const session = sessions.value.find((s) => s.id === activeSessionID.value);
+      if (session) {
+        session.contextTokens = p.tokensAfter;
+      }
     }
   }
   scrollToBottom();
@@ -2244,6 +2562,28 @@ const applyPendingCompact = (sessionID: number, promptTokens?: number): void => 
   pendingCompact.value = null;
 };
 
+// foldedMessageKeys 已折叠进摘要的消息 key 集合：取最新一条（非失败）压缩记录所在消息为折叠边界——
+// 消息列表按 seq 升序，压缩记录的锚点即本次折叠的最后一条消息，故该消息及其之前（按序）的消息都已
+// 折叠进滚动摘要。对它们再「压缩到此」，折叠集合为空（compactFoldSet 遇到首条 seq > uptoSeq 即止），
+// 是无意义的空操作，故其压缩按钮置灰。压缩失败（phase=failed）的记录不构成边界（该次推进未生效、
+// 游标未前进），按钮保持可用以便重试。
+const foldedMessageKeys = computed<Set<number>>(() => {
+  const keys = new Set<number>();
+  const list = messages.value;
+  let boundary = -1;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const c = list[i].compress;
+    if (c && c.phase !== "failed") {
+      boundary = i;
+      break;
+    }
+  }
+  for (let i = 0; i <= boundary; i++) {
+    keys.add(list[i].key);
+  }
+  return keys;
+});
+
 // compressIconOf 压缩展示态图标：进行中旋转、失败告警、完成归档
 const compressIconOf = (c: CompressState): string => {
   if (c.phase === "running") {
@@ -2263,8 +2603,17 @@ const compressColorOf = (c: CompressState): string | undefined => {
   return c.phase === "running" ? "primary" : undefined;
 };
 
-// compressTextOf 压缩展示态文案：进行中提示压缩中、失败提示失败、完成优先展示前后对比
-// （已补全 tokensAfter 且当前档位容量已知时），否则仅展示压缩前占用与折叠条数
+// compressTokensOf 渲染占用 token 数值：无可用测量（0 或缺失——如会话最近一条助手消息被取消 /
+// 失败而从未记下用量）时以「未知」占位，避免把「没有基线」误显示成 0，更避免据此给出「压缩后
+// 大于压缩前」这类不可能的对比
+const compressTokensOf = (tokens?: number): number | string =>
+  tokens !== undefined && tokens > 0
+    ? tokens
+    : i18n.global.t("page.aiAssistant.compressTokensUnknown");
+
+// compressTextOf 压缩展示态文案：进行中提示压缩中、失败提示失败、完成优先展示前后对比（已有
+// 压缩后占用——压缩完成时的估算或后续生成的真实回填——且为正、且当前档位容量已知时），否则仅
+// 展示压缩前占用与折叠条数
 const compressTextOf = (m: ChatMessage): string => {
   const c = m.compress;
   if (!c) {
@@ -2276,15 +2625,15 @@ const compressTextOf = (m: ChatMessage): string => {
   if (c.phase === "failed") {
     return i18n.global.t("page.aiAssistant.compressFailed");
   }
-  if (c.tokensAfter !== undefined && contextLimitTokens.value > 0) {
+  if (c.tokensAfter !== undefined && c.tokensAfter > 0 && contextLimitTokens.value > 0) {
     return i18n.global.t("page.aiAssistant.compressCompare", {
-      before: c.tokensBefore ?? 0,
+      before: compressTokensOf(c.tokensBefore),
       after: c.tokensAfter,
       percent: Math.round((c.tokensAfter / contextLimitTokens.value) * 100),
     });
   }
   return i18n.global.t("page.aiAssistant.compressDone", {
-    before: c.tokensBefore ?? 0,
+    before: compressTokensOf(c.tokensBefore),
     count: c.foldedCount ?? 0,
   });
 };
@@ -2296,23 +2645,20 @@ const finishCompact = (sessionID: number): void => {
   drainQueuedQuery(sessionID);
 };
 
-// compactToHere 手动把上下文压缩到该助手消息所属轮次：以该轮提问的用户消息序号为折叠边界调
-// 独立 SSE 压缩流，事件复用自动压缩的展示块逻辑挂到该消息；压缩后占用待随后首次生成补全
+// compactToHere 手动把上下文压缩到该助手消息：以该助手消息 ID 为折叠边界（消息列表出参的 id）
+// 调独立 SSE 压缩流，事件复用自动压缩的展示块逻辑挂到该消息；压缩后占用待随后首次生成补全。
+// 边界口径按后端 Task 8（按助手回答边界的压缩）——不再以「第 N 轮用户提问」定位
 const compactToHere = (m: ChatMessage): void => {
   const sessionID = activeSessionID.value;
   // busy 已含 compacting：手动压缩亦属在途运行，串行触发由同一闸门兜住
-  if (sessionID === null || busy.value) {
-    return;
-  }
-  const question = precedingUserMessageOf(m.key);
-  const idx = question ? userMessageIndexOf(question.key) : 0;
-  if (idx < 1) {
+  // m.id 缺失（尚未落库的即时气泡）时无处锚定边界，不作发起
+  if (sessionID === null || busy.value || m.id === undefined) {
     return;
   }
   compacting.value = true;
   agentSessionCompactStream(
     sessionID,
-    { userMessageIndex: idx },
+    { assistantMessageID: m.id },
     {
       onCompressStart: (p) => applyCompressStart(m.key, p),
       onCompressDelta: (p) => applyCompressDelta(m.key, p),
@@ -2363,11 +2709,20 @@ const consumeAgentStream = (
   start: StreamStarter,
   opts?: { historical?: boolean },
 ): void => {
-  streaming.value = true;
   const unsubscribe = start({
     // 事件序号：更新续播游标（供刷新 / 重连后 agentStreamResume 的 after 参数）
     onSeq: (seq: number) => {
       agentRun.noteSeq(sessionID, seq);
+    },
+    // 交互状态事件（唯一权威）：写入 store，UI（输入闸门 / 停止 / 面板 / 状态条）由派生态统一驱动
+    onState: (state: string, substate: string) => {
+      agentRun.setState(sessionID, state, substate);
+    },
+    // 内容块事件（block）：后端下发块创建 / 收敛事件，按 seq upsert 进 store 的当前运行块列表（消息体
+    // 引用同一数组，故即时渲染）。增量文本由随后的 delta / reasoning 事件按「最后一个同 kind 块」追加
+    onBlock: (ev: AgentMessageBlockOut) => {
+      agentRun.upsertBlock(sessionID, ev);
+      scrollToBottom();
     },
     onDelta: (delta: string) => {
       agentRun.appendBuffer(sessionID, delta);
@@ -2375,41 +2730,35 @@ const consumeAgentStream = (
       if (msg) {
         pruneSubmittedCalls(msg);
         msg.content += delta;
+        // 正文增量追加进本消息最后一个 content 块（块事件仅在其创建 / 收敛时下发，其间的增量在此累积）
+        agentRun.appendBlockText(sessionID, "content", delta);
         scrollToBottom();
       }
     },
-    // 思考过程增量事件：累积到当前助手消息的思考分段（按「轮」切分），流式期间默认展开折叠区块
+    // 思考过程增量事件：追加进本消息最后一个 reasoning 块，流式期间默认展开折叠区块。除消息区外，
+    // 思考正文自身的限高滚动区也要贴底，否则超出限高后最新思考留在视野之外
     onReasoning: (delta: string) => {
       const msg = messages.value.find((m) => m.key === assistantKey);
       if (msg) {
         pruneSubmittedCalls(msg);
-        appendReasoning(msg, delta);
+        agentRun.appendBlockText(sessionID, "reasoning", delta);
+        // 思考流式期间默认展开（与旧的实时行为一致；结束后由 endReasoningStreamingOf 自动折叠）
+        msg.reasoningExpanded = true;
         scrollToBottom();
+        scrollReasoningToBottom(assistantKey);
       }
     },
-    // 工具调用阶段事件：一次调用发起（toolCall/start）时把当前未锚定的思考分段锚定到该次调用，
-    // 使其渲染在该调用行上方；阶段行按 callID 归并递进
-    onStage: (ev: AgentStageEvent) => {
-      const msg = messages.value.find((m) => m.key === assistantKey);
-      if (msg) {
-        pruneSubmittedCalls(msg);
-        if (ev.stage === "toolCall" && ev.status === "start" && ev.callID) {
-          anchorReasoningSegment(msg, ev.callID);
-        }
-      }
-      applyAgentStage(assistantKey, ev);
-    },
-    // 挂起事件：累积本轮待审批调用（同一轮可能多条，按 callID 累加而非覆盖）。
-    // 流已正常 EOF（无 done / error），故不视为失败：保持 streaming=false
+    // 挂起事件：登记本轮待执行调用（同一轮可能多条，按 callID 累加而非覆盖）。挂起不算失败：
+    // 流正常 EOF（无 done / error），会话转入等待审批（由后端 state 事件下发 waiting/approval）。
+    // 审批 / 问卷面板由随最后流项下发的 approval / questionnaire 块事件实时渲染，无需在此重建
     onToolRequest: (req: ToolRequestPayload) => {
       agentRun.addPendingCall(sessionID, req);
       applyToolRequest(assistantKey, req);
-      // 本轮挂起：思考过程流随之结束，折叠区块自动收起
+      // 本轮挂起：思考过程流随之结束，折叠区块自动收起（交互状态由后端 state 事件置为等待审批）
       const msg = messages.value.find((m) => m.key === assistantKey);
       if (msg) {
-        endReasoningStreaming(msg);
+        endReasoningStreamingOf(msg);
       }
-      streaming.value = false;
       void loadSessions();
     },
     // 上下文压缩事件（自动压缩经 RunHub 发布、带 id 触发 onSeq）：展示块挂在当前助手消息上，
@@ -2429,9 +2778,13 @@ const consumeAgentStream = (
         msg.completionTokens = out.completionTokens;
         msg.totalTokens = out.totalTokens;
         msg.elapsedMs = out.elapsedMs;
-        // 思考过程随 done 收敛为全文并结束流式；折叠区块自动收起（无思考时保持既有值不变）
-        msg.reasoning = out.reasoning ?? msg.reasoning;
-        endReasoningStreaming(msg);
+        // 落库行 ID 随 done 事件回填：实时气泡由此绑定到服务端已落库的那一行，使「压缩到此」等
+        // 按消息 ID 定位的操作无需先回读历史即可发起（与挂起时经 tool_request 回填同源）
+        if (out.messageID !== undefined) {
+          msg.id = out.messageID;
+        }
+        // 思考过程随 done 结束流式（全文已由 reasoning 块的收敛事件落定）；折叠区块自动收起
+        endReasoningStreamingOf(msg);
         msg.streaming = false;
         // 自动压缩已于本轮完成：本轮 done.promptTokens 即压缩后的真实占用，补全前后对比
         if (msg.compress?.phase === "done") {
@@ -2439,10 +2792,10 @@ const consumeAgentStream = (
         }
         scrollToBottom();
       }
-      streaming.value = false;
       // 手动压缩的待补全项：本轮生成即该会话随后首次生成，用其 promptTokens 补全压缩后占用
       applyPendingCompact(sessionID, out.promptTokens);
-      // 会话活跃时间变化，刷新列表以维持最近活跃在前的排序
+      // 会话活跃时间与上下文占用变化，刷新列表：占用由后端按「末次真实测量与更晚的压缩后估算中
+      // 更晚者」给出（见 ContextUsage），本轮生成的真实测量即由此接管展示
       void loadSessions();
     },
     // 流正常 EOF：本轮挂起调用已全部送达。若全部为免审批调用（或用户已全部决策），
@@ -2465,7 +2818,7 @@ const consumeAgentStream = (
       if (msg) {
         msg.streaming = false;
         // 思考过程随失败结束流式，折叠区块自动收起（保留已累积的思考内容）
-        endReasoningStreaming(msg);
+        endReasoningStreamingOf(msg);
         // 恢复失败的调用已不可执行，清空待审批态避免界面卡在等待中
         msg.awaitingApproval = false;
         msg.pendingCalls = undefined;
@@ -2475,7 +2828,6 @@ const consumeAgentStream = (
           msg.phase = phase;
         }
       }
-      streaming.value = false;
       // 回放已收敛运行的中断（续播）不再弹提示：该中断在用户离开时即已发生，重开抽屉时再提示属打扰
       if (!opts?.historical) {
         notifyError(text);
@@ -2510,28 +2862,214 @@ const trySubmitApprovals = (msg: ChatMessage): void => {
   });
   msg.awaitingApproval = false;
   const sessionID = activeSessionID.value;
-  agentRun.markAwaiting(sessionID, false);
+  // 交互状态随续跑由后端 state 事件（running）下发，前端不在此改写
   consumeAgentStream(sessionID, msg.key, (handlers) =>
     agentToolResultStream(sessionID, { results }, handlers),
   );
 };
 
-// approveCall 批准该调用：记录决策并尝试提交本轮结果
-const approveCall = (msg: ChatMessage, call: PendingCallState): void => {
-  if (call.decision) {
+// setApprovalDecision 记录某条待审批调用的决策并尝试提交本轮结果：同时更新 pendingCalls 中该调用的
+// decision（提交续跑据其合成结果）与 approval 块内同名记录的 decision（面板徽章即时反映决策——后端
+// 从不回写 approval 块的 Decision，故仅本地更新）。
+const setApprovalDecision = (msg: ChatMessage, callID: string, approved: boolean): void => {
+  const call = (msg.pendingCalls ?? []).find((c) => c.callID === callID);
+  if (!call || call.decision) {
     return;
   }
-  call.decision = "approved";
+  call.decision = approved ? "approved" : "rejected";
+  for (const b of msg.blocks ?? []) {
+    if (b.kind !== "approval") {
+      continue;
+    }
+    const rec = (b.payload as AgentApprovalBlockPayload)?.calls?.find((c) => c.callID === callID);
+    if (rec) {
+      rec.decision = approved;
+    }
+  }
   trySubmitApprovals(msg);
 };
 
-// rejectCall 拒绝：仅记录决策，不执行任何调用
-const rejectCall = (msg: ChatMessage, call: PendingCallState): void => {
-  if (call.decision) {
+// approveCall 批准该调用（按 callID 定位）：记录决策并尝试提交本轮结果
+const approveCall = (msg: ChatMessage, callID: string): void =>
+  setApprovalDecision(msg, callID, true);
+
+// rejectCall 拒绝（按 callID 定位）：仅记录决策，不执行任何调用
+const rejectCall = (msg: ChatMessage, callID: string): void =>
+  setApprovalDecision(msg, callID, false);
+
+// ---- 主动提问（问卷）----
+// awaitingQuestionnaireMsg 当前会话中仍待回答的问卷所在助手消息（取最近一条）：非空时该轮问卷已内联在
+// 消息流中（见 assistantBlocksOf 的 questionnaire 块），会话阻塞直至用户提交或取消回答。后端保证仅
+// 「末轮」可能仍待回答，故这条消息中仍待回答的那一轮恒为其各轮问卷的最后一轮——提交 / 取消据此定位。
+const awaitingQuestionnaireMsg = computed<ChatMessage | null>(() => {
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    if (awaitingQuestionnaireBlockOf(messages.value[i])) {
+      return messages.value[i];
+    }
+  }
+  return null;
+});
+
+// questionnaireInteractive 某条消息的问卷面板是否可交互：仍待回答且消息上登记了「未决策的 ask_user
+// 调用」时可提交 / 取消（callID 为提交续跑所必需）；现场不可用（已消费 / 已过期 / 未随消息带回）时
+// 降级为只读展示，避免出现可点击却无任何反应、也不发请求的假交互
+const questionnaireInteractive = (m: ChatMessage | null): boolean =>
+  m !== null &&
+  (m.pendingCalls ?? []).some((c) => c.toolName === ASK_USER_TOOL_NAME && !c.decision);
+
+// questionnairePayloadOf 取某一轮问卷的提交载荷（题目 + 上次答案），供问卷面板渲染与预填
+const questionnairePayloadOf = (q: AgentQuestionnaireBlockPayload): QuestionnairePayload => ({
+  questions: q.questions,
+  answers: q.answers,
+});
+
+// questionnaireAnswerTextOf 取某题的用户作答展示文本：已作答取答案文本，未作答取本地化「未作答」
+const questionnaireAnswerTextOf = (
+  q: AgentQuestionnaireBlockPayload,
+  questionID: string,
+): string => {
+  const ans = q.answers?.find((a) => a.questionID === questionID);
+  if (!ans || !ans.answered) {
+    return i18n.global.t("page.aiAssistant.questionnaireNoAnswer");
+  }
+  return ans.answer;
+};
+
+// submitQuestionnaire 提交问卷：把作答归一化为各条 ask_user 调用的执行结果（approved=true、result 为
+// 答案 JSON）并逐条标记已决策，随后在本轮全部调用决策齐备时一次性整体回传续跑（见 trySubmitApprovals）。
+// 一轮内可能有多条 ask_user 调用（题目前端已合并为同一轮的问卷），故按题目归属把答案拆回各条调用：
+// 每条调用只取自己 arguments 中声明的题目所对应的答案。末轮问卷块被乐观地原位更新为已作答（awaiting
+// =false + answers）——问卷收敛不回推 block 事件（后端仅落库不回发），故须前端自更新面板状态。
+const submitQuestionnaire = (payload: { answers: QuestionnaireAnswer[] }): void => {
+  const msg = awaitingQuestionnaireMsg.value;
+  if (!msg) {
     return;
   }
-  call.decision = "rejected";
+  const calls = (msg.pendingCalls ?? []).filter(
+    (c) => c.toolName === ASK_USER_TOOL_NAME && !c.decision,
+  );
+  if (calls.length === 0) {
+    return;
+  }
+  // 仅末轮可能仍待回答：把作答记到末轮问卷块并收起其交互面板（更早各轮维持已作答的卡片展示）
+  const block = awaitingQuestionnaireBlockOf(msg);
+  if (block) {
+    block.answers = payload.answers;
+    block.awaiting = false;
+  }
+  for (const call of calls) {
+    const ids = new Set(parseQuestionnaireArgs(call.arguments)?.questions.map((q) => q.id) ?? []);
+    call.decision = "approved";
+    call.result = JSON.stringify({
+      answers: payload.answers.filter((a) => ids.has(a.questionID)),
+    });
+  }
   trySubmitApprovals(msg);
+};
+
+// cancelQuestionnaire 取消回答：逐条以 approved=false 回传（模型收到既有拒绝文案），并收起末轮问卷面板。
+// 须一并清空末轮的用户答案——「重新回答」后末轮带着上次作答的答案（供预填重开），取消回答后应回到
+// 未作答，不清则已答卡片会把上次答案当成本次作答展示。
+const cancelQuestionnaire = (): void => {
+  const msg = awaitingQuestionnaireMsg.value;
+  if (!msg) {
+    return;
+  }
+  const calls = (msg.pendingCalls ?? []).filter(
+    (c) => c.toolName === ASK_USER_TOOL_NAME && !c.decision,
+  );
+  if (calls.length === 0) {
+    return;
+  }
+  const block = awaitingQuestionnaireBlockOf(msg);
+  if (block) {
+    block.awaiting = false;
+    block.answers = undefined;
+  }
+  for (const call of calls) {
+    call.decision = "rejected";
+  }
+  trySubmitApprovals(msg);
+};
+
+// 待确认回退的助手待输入回合锚点消息 key 与回合种类：确认后会截断该回合之后的全部消息并重新进入
+// 对应等待态，故须先经弹窗提醒。仅存 key 与种类而不存消息对象——确认时按 key 取回（其间消息列表
+// 可能已被重载）
+const pendingRerunKey = ref<number | null>(null);
+const pendingRerunKind = ref<"answer" | "approval">("answer");
+const rerunConfirmRef = useTemplateRef("rerunConfirmRef");
+
+// openRerunConfirm 打开「回退到助手待输入回合」确认弹窗（重新回答 / 重新授权按钮的入口）：忙或锚点
+// 未就绪时不进入确认；kind 决定弹窗文案与确认后重开的等待态种类
+const openRerunConfirm = (m: ChatMessage, kind: "answer" | "approval"): void => {
+  if (busy.value || m.id === undefined) {
+    return;
+  }
+  pendingRerunKey.value = m.key;
+  pendingRerunKind.value = kind;
+  rerunConfirmRef.value?.open({});
+};
+
+// confirmRerun 确认回退：按 key 取回锚点消息后按种类执行（截断与重建见 rerunAssistantInput）
+const confirmRerun = async (): Promise<void> => {
+  const key = pendingRerunKey.value;
+  const kind = pendingRerunKind.value;
+  pendingRerunKey.value = null;
+  if (key === null) {
+    return;
+  }
+  const m = messages.value.find((x) => x.key === key);
+  if (!m) {
+    return;
+  }
+  await rerunAssistantInput(m, kind);
+};
+
+// rerunAssistantInput 回退到一条助手待输入回合：调用回退接口截断该锚点之后的消息、重置该回合回答与
+// 关联现场，并据返回载荷重开对应面板（含待执行调用，供重答 / 重新授权后经 tool-result 续跑）：
+//   - kind=answer（问卷作答）：后端把末轮 questionnaire 块置回待回答（保留上次答案），前端据出参取回 callID
+//   - kind=approval（工具授权）：后端清空 approval 块各记录的决策 / 结果，前端据出参取回 callID
+// 后端已就地重置锚点块并删除其后块、截断后续消息，故此处整表重载以取回重设后的块序列（比本地同构截断
+// 更不易与后端漂移），再按 id 定位锚点消息附加待执行调用与等待态。
+const rerunAssistantInput = async (m: ChatMessage, kind: "answer" | "approval"): Promise<void> => {
+  const sessionID = activeSessionID.value;
+  if (sessionID === null || m.id === undefined || busy.value) {
+    return;
+  }
+  const anchorID = m.id;
+  await getResponse<AgentAssistantInputRerunOut>(
+    agentAssistantInputRerun(sessionID, { messageID: anchorID }),
+    async (rsp) => {
+      await loadMessages(sessionID);
+      const anchor = messages.value.find((x) => x.id === anchorID);
+      if (anchor) {
+        // 回退重开后锚点的块序列即本回合续跑的新起点：以出参块序列重建运行块列表并把锚点消息绑定到
+        // 该数组（同 startStream / resumeLiveRun 的绑定口径）。否则随后「取消 / 提交」触发的续跑，其
+        // block / delta 事件会落到 store 里上一运行的遗留数组上，锚点消息不即时重建——表现为「生成完
+        // 却无正文」，刷新重载才由历史块补齐。
+        agentRun.adoptAnchorBlocks(sessionID, anchor.blocks ?? []);
+        anchor.blocks = agentRun.stateOf(sessionID).blocks;
+        // 重建待执行调用（callID 为提交续跑所必需）：授权回合取自出参 pendingCalls，问卷回合取自各轮
+        // 问卷携带的调用；均据 approvalRequired 预置免审批调用的决策
+        if (kind === "approval") {
+          anchor.pendingCalls = toPendingCallStates(rsp.data.pendingCalls ?? []);
+        } else {
+          const rounds = rsp.data.questionnaires ?? [];
+          anchor.pendingCalls = toPendingCallStates(rounds.flatMap((q) => q.pendingCalls ?? []));
+        }
+        // 仅当现场仍带未决策调用时才置为等待（审批 / 作答）态：与消息回读同口径
+        anchor.awaitingApproval = (anchor.pendingCalls ?? []).some(undecidedPendingCall);
+      }
+      // 会话级交互状态以出参为准立即刷新（回退后会话为「等待中/对应子状态」，后端 kind 与交互子状态同值）：
+      // 否则本地仍按「暂停」驱动，输入闸门不会关闭，用户可发出一个必被后端拒绝（409 + 1125）的提问
+      agentRun.setState(sessionID, rsp.data.interactionState, rsp.data.kind);
+      scrollToBottom();
+    },
+    async (rsp) => {
+      notifyError(rsp.summary);
+    },
+    notifyNoResponse,
+  );
 };
 
 // startStream 推送用户消息与流式占位消息并发起首轮流式生成：SSE 增量经 onDelta 累积，
@@ -2553,8 +3091,12 @@ const startStream = (sessionID: number, q: string, echoedUserKey?: number): void
   messages.value.push({ key: assistantKey, role: "assistant", content: "", streaming: true });
   query.value = "";
   scrollToBottom();
-  // 新运行开始：重置该会话的运行态与续播游标
-  agentRun.begin(sessionID);
+  // 新运行开始：重置该会话的运行态与续播游标（其块列表就地清空、引用不变）
+  const runState = agentRun.begin(sessionID);
+  // 消息体绑定 store 的当前运行块列表（同一数组引用）：onBlock upsert 与增量归并都作用于该数组，
+  // 消息因而即时渲染；故须在 begin 之后取定引用
+  const assistantMsg = messages.value[messages.value.length - 1];
+  assistantMsg.blocks = runState.blocks;
 
   consumeAgentStream(sessionID, assistantKey, (handlers) =>
     agentStreamGenerate(
@@ -2646,23 +3188,26 @@ const onComposerEnter = (event: KeyboardEvent): void => {
     return;
   }
   event.preventDefault();
-  // 运行中（生成 / 待审批 / 建会话 / 压缩）回车即把当前输入转入待发队列，让用户可连续抛出多个追问，
-  // 而不必等本轮回答结束
-  if (busy.value) {
-    enqueueQuery();
+  // 优化请求在途时输入将被整体改写，此时任何提交都不成立（与 canSend 闸门一致），保持输入原样；
+  // 其余情形与发送按钮同一入口（见 onSubmitClick）：运行中转入待发队列，被闸住时提示原因
+  if (optimizing.value) {
     return;
   }
-  if (!streaming.value && !awaitingApproval.value && !creating.value && !optimizing.value) {
-    void sendQuery();
-  }
+  onSubmitClick();
 };
 
 // sendQuery 发起一次流式问答：先校验输入，未选中会话时先本地回显再创建会话，
 // 会话已存在时直接推送用户消息与流式占位消息
 const sendQuery = async (): Promise<void> => {
-  // 等待审批期间本轮生成已挂起，不接受新的生成请求（须先完成或拒绝全部待审批调用）；
-  // 创建会话途中同理拒绝，避免同一问题重复建会话
-  if (streaming.value || awaitingApproval.value || creating.value) {
+  // 输入闸门关闭（运行中 / 等待中）时不接受新的生成请求：运行中由 onSubmitClick 转入待发队列，
+  // 此处不会再被触达；已锁定时给出提示（须先回滚历史消息才能继续提问）；创建会话途中同理拒绝，
+  // 避免同一问题重复建会话
+  if (inputGated.value || creating.value) {
+    if (locked.value) {
+      notifyError(i18n.global.t("page.aiAssistant.lockedReject"));
+    } else if (runActive.value) {
+      notifyError(i18n.global.t("page.aiAssistant.stateGuardReject"));
+    }
     return;
   }
   const q = query.value.trim();
@@ -2732,7 +3277,6 @@ const cancelGeneration = (): void => {
     agentRun.detach(sessionID);
     agentRun.settle(sessionID);
   }
-  streaming.value = false;
   // 停止后残留的流式占位消息停止闪烁，保留已生成的增量内容
   const last = messages.value[messages.value.length - 1];
   if (last && last.streaming) {
@@ -2763,33 +3307,27 @@ const fetchLiveRun = async (id: number): Promise<AgentLiveRunOut | null> => {
 // abandonLocalRun 会话已无在途运行却残留「生成中」态（如服务端退订宽限取消后重开）时，
 // 清理本地运行态，避免界面永远卡在生成中
 const abandonLocalRun = (id: number): void => {
-  const state = agentRun.runs[id];
-  if (!state || (!state.streaming && !state.awaitingApproval)) {
+  if (!agentRun.hasActivityOf(id)) {
     return;
   }
-  streaming.value = false;
   const last = messages.value[messages.value.length - 1];
   if (last && last.role === "assistant") {
     last.streaming = false;
     last.awaitingApproval = false;
     // 思考过程随运行中断结束流式并收起折叠区块（保留已累积的思考内容），避免残留「思考中…」
-    endReasoningStreaming(last);
+    endReasoningStreamingOf(last);
   }
   agentRun.settle(id);
 };
 
-// resetAssistantProgress 清空一条助手消息的「本轮增量态」（正文、思考分段、工具调用行、待审批项
-// 与压缩展示态）：续播前进度未知时先把承载消息清空，再从持久化事件从头重建，避免重建出的增量与
-// 已落库的正文相互叠加（重影）；历史消息为只读展示，清空后即由回放补齐。id / createdAt / phase 为
-// 落库的既有事实（非本轮增量），一并保留——phase 为 failed / cancelled 时终端仍据此展示中断提示，
-// 即使回放无法重现 error 事件也不丢该事实。
+// resetAssistantProgress 清空一条助手消息的「本轮增量态」（正文、思考展开态、待执行调用与压缩展示态）：
+// 续播前进度未知时先把承载消息清空，再从持久化事件从头重建，避免重建出的增量与已落库的正文相互叠加
+// （重影）；历史消息为只读展示，清空后即由回放补齐。id / createdAt / phase 为落库的既有事实（非本轮
+// 增量），一并保留——phase 为 failed / cancelled 时终端仍据此展示中断提示，即使回放无法重现 error 事件
+// 也不丢该事实。块列表的清空与重新绑定由调用方（resumeLiveRun）经 store 完成（消息体须引用 store 数组）。
 const resetAssistantProgress = (msg: ChatMessage): void => {
   msg.content = "";
-  msg.reasoning = undefined;
-  msg.reasoningSegments = undefined;
-  msg.reasoningStreaming = undefined;
   msg.reasoningExpanded = undefined;
-  msg.stages = undefined;
   msg.pendingCalls = undefined;
   msg.awaitingApproval = false;
   msg.citations = undefined;
@@ -2798,6 +3336,27 @@ const resetAssistantProgress = (msg: ChatMessage): void => {
   msg.completionTokens = undefined;
   msg.totalTokens = undefined;
   msg.elapsedMs = undefined;
+};
+
+// resumePendingInput 无在途运行时，据消息列表出参带回的待执行调用恢复「回退重开」的待输入现场（重新回答
+// / 重新授权只重置挂起现场、不产生在途运行）：为承载未决策调用的助手消息补置等待态（使面板的提交 / 取消
+// 能通过 awaitingApproval 闸门），并把其块列表重建 / 绑到 store 的运行块列表（同 rerunAssistantInput 的绑定
+// 口径），使随后经 tool-result 续跑的 block / 增量即时落到该消息上渲染（否则落到 store 里另一份数组上，
+// 表现为「生成完却无正文，刷新才见」）。命中并恢复时返回 true；无此类消息时返回 false，由调用方按「运行
+// 已收尾」兜底清理本地残留的在途态。
+const resumePendingInput = (id: number): boolean => {
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    const msg = messages.value[i];
+    const calls = msg.pendingCalls ?? [];
+    if (msg.role !== "assistant" || !calls.some(undecidedPendingCall)) {
+      continue;
+    }
+    msg.awaitingApproval = true;
+    agentRun.adoptAnchorBlocks(id, msg.blocks ?? []);
+    msg.blocks = agentRun.stateOf(id).blocks;
+    return true;
+  }
+  return false;
 };
 
 // resumeLiveRun 会话打开 / 切换 / 刷新后：探测在途运行态并复用 consumeAgentStream 回放续播。
@@ -2810,24 +3369,37 @@ const resumeLiveRun = async (id: number): Promise<void> => {
   agentRun.detach(id);
   const live = await fetchLiveRun(id);
   if (!live || !live.runID) {
-    abandonLocalRun(id);
+    // 无在途运行：可能为「运行确已收尾」（含服务端退订宽限取消），也可能为「回退重开后的待输入现场」
+    // （重新回答 / 重新授权只重置挂起现场、不产生在途运行）。据消息列表出参带回的待执行调用识别后者并
+    // 恢复其可交互现场；识别不到时才按「运行已收尾」清理本地残留的在途态，避免把合法的等待中状态误清。
+    if (!resumePendingInput(id)) {
+      abandonLocalRun(id);
+    }
     return;
   }
-  const isStreaming = live.phase === "running";
-  const isAwaiting = live.awaitingApproval === true;
+  // 本地是否已有在途活动（同页重开时该气泡仍在流式 / 待审批）：须在快照覆盖前取，供下方判定
+  const hadLocalActivity = agentRun.hasActivityOf(id);
+  // 交互状态五项以快照出参为准写入 store（与后端唯一推导同口径），UI 由派生态统一驱动
+  agentRun.setSnapshot(id, {
+    state: live.interactionState,
+    substate: live.interactionSubstate,
+    locked: live.locked,
+    userTurns: live.userTurns,
+    maxUserTurns: live.maxUserTurns,
+  });
+  const isStreaming = live.interactionState === STATE_RUNNING;
+  const isAwaiting = live.interactionState === STATE_WAITING;
   // 已中断（failed / cancelled）：本轮已产出的中间产物已落库，回放即可重建，故本地无在途态时
   // 仍继续续播（区别于已正常收尾的 done）
   const isInterrupted = !isStreaming && !isAwaiting && live.phase !== "done";
-  // 服务端运行已收敛终态（done / failed / cancelled）且本地无在途态、亦非中断回放：无可续播内容
+  // 服务端运行已收敛终态（done / failed / cancelled）且本地无在途活动、亦非中断回放：无可续播内容
   // （本轮作答已收尾后关抽屉再重开即属此列），直接返回，避免误建一个空的助手占位气泡
-  const local = agentRun.runs[id];
-  if (
-    !isStreaming &&
-    !isAwaiting &&
-    !local?.streaming &&
-    !local?.awaitingApproval &&
-    !isInterrupted
-  ) {
+  if (!isStreaming && !isAwaiting && !hadLocalActivity && !isInterrupted) {
+    // 但该会话仍可能带「回退重开」的待输入现场（重新回答 / 重新授权只重置 agent_runs 挂起现场、不产生
+    // 在途运行）：回退前那条更早的运行已收尾（done），却仍被 LatestLiveRun 当作「最近一条 live run」
+    // 探测到，故仍会走到这里。若就此返回，面板虽可交互（消息出参已带回待执行调用）却因等待态闸门
+    // （awaitingApproval）未置位而提交 / 取消静默失效。故先据消息出参恢复该现场。
+    resumePendingInput(id);
     return;
   }
   // 决定承载消息与续播起点：
@@ -2840,46 +3412,48 @@ const resumeLiveRun = async (id: number): Promise<void> => {
   const resumedInPlace =
     !!msg && msg.role === "assistant" && (msg.streaming === true || msg.awaitingApproval === true);
   if (!resumedInPlace) {
-    if (!msg || msg.role !== "assistant" || msg.id === undefined) {
-      // 无已落库的助手行可供承载：运行仍在途时新建占位气泡；已中断则本轮未产出任何正文 / 思考，
-      // 无产物可续播，不再造空气泡
-      if (isInterrupted) {
-        return;
+    // 已中断（failed / cancelled）：本轮中间产物在中止 / 失败时已随终局化整体落库（取消端会等生成
+    // goroutine 完成终局化后才返回），消息出参的块列表即该行的完整事实，直接采用即可。若仍按「从序号 0
+    // 回放重建」清空块数组再回放，只会重建「最近这次运行」的事件所产的块——它会把这之前各轮（如作答前
+    // 的提问轮）产生的块一并抹掉，而回放本就覆盖不到那些块（它们属另一次运行的事件），表现为「问卷 /
+    // 更早正文消失、只剩本次运行的片段」。
+    if (isInterrupted) {
+      if (msg && msg.role === "assistant" && msg.id !== undefined) {
+        agentRun.adoptAnchorBlocks(id, msg.blocks ?? []);
+        msg.blocks = agentRun.stateOf(id).blocks;
       }
-      msg = { key: nextKey(), role: "assistant", content: "" };
+      return;
+    }
+    // 从序号 0 完整回放重建：以该消息已落库的块为基线（而非清空）——助手消息的块是多轮运行累加出来的
+    // （如先提问轮、续跑轮），回放只覆盖「最近一次运行」的事件、重建不了更早各轮的块，清空会让问卷 /
+    // 更早正文消失。基线保留它们；本次运行那部分块由回放按其创建事件置回空文本、再由增量按块序号精确
+    // 重建、最后以收敛全文覆盖，故不与基线里的旧文本重复。
+    agentRun.adoptAnchorBlocks(id, msg && msg.role === "assistant" ? (msg.blocks ?? []) : []);
+    const blocks = agentRun.stateOf(id).blocks;
+    if (!msg || msg.role !== "assistant" || msg.id === undefined) {
+      // 无已落库的助手行可供承载（仅在途运行会走到这里）：新建占位气泡承接随后的回放
+      msg = { key: nextKey(), role: "assistant", content: "", blocks };
       messages.value.push(msg);
     } else {
       resetAssistantProgress(msg);
+      msg.blocks = blocks;
     }
     after = 0;
   }
   msg.streaming = isStreaming;
-  msg.awaitingApproval = isAwaiting;
+  // 待回答问卷的消息保持等待态：探测到的最新 live run 可能是该问卷之后的续跑（已 done / running），
+  // 据此把 awaitingApproval 冲为 false 会让面板的提交 / 取消因等待态闸门（见 trySubmitApprovals）静默失效。
+  // 仍待回答的问卷块由 awaitingQuestionnaireBlockOf 定位（后端保证只可能是末轮）
+  msg.awaitingApproval = isAwaiting || awaitingQuestionnaireBlockOf(msg) !== null;
   if (isAwaiting && (live.pendingCalls?.length ?? 0) > 0) {
-    msg.pendingCalls = live.pendingCalls.map((c) => ({
-      callID: c.callID,
-      toolName: c.toolName,
-      arguments: c.arguments,
-      auditLevel: c.auditLevel,
-      approvalRequired: c.approvalRequired,
-      execOwner: c.execOwner,
-      decision: c.approvalRequired === false ? "approved" : undefined,
-    }));
+    msg.pendingCalls = toPendingCallStates(live.pendingCalls);
   }
-  agentRun.restore(id, {
-    runID: live.runID,
-    streaming: isStreaming,
-    awaitingApproval: isAwaiting,
-    pendingCalls: msg.pendingCalls ?? [],
-  });
-  streaming.value = isStreaming;
+  agentRun.restore(id, { runID: live.runID, pendingCalls: msg.pendingCalls ?? [] });
   scrollToBottom();
   // 从上述起点回放：同页重开无缺口，跨页由序号 0 完整重建；historical 抑制回放中断的错误提示
   consumeAgentStream(id, msg.key, (handlers) => agentStreamResume(id, after, handlers), {
     historical: !isStreaming && !isAwaiting,
   });
-  // 待审批续播时并非「生成中」：consumeAgentStream 默认置为生成中，这里按实际阶段校正
-  streaming.value = isStreaming;
 };
 
 // ---- 生命周期 ----
@@ -2893,6 +3467,9 @@ const initialize = async (): Promise<void> => {
   // 审核阀门下拉与审批面板重要级徽章经统一枚举注册表渲染
   void ensureEnum(EnumClass.reviewValve);
   void ensureEnum(EnumClass.auditLevel);
+  // 会话交互主状态与子状态：输入区状态条 / 锁定提示的 label 经统一枚举注册表渲染
+  void ensureEnum(EnumClass.agentInteractionState);
+  void ensureEnum(EnumClass.agentInteractionSubstate);
   await Promise.all([loadStatus(), loadSessions()]);
   // 刷新后恢复上次会话：会话仍在则回填其档位 / 阀门并载入历史，供随后 watch(opened) 续播；
   // 会话已删除时 loadSessions 已把 activeSessionID 清空，此处自然跳过
@@ -2995,6 +3572,40 @@ onUnmounted(() => {
 
 .assistant-composer:focus-within {
   border-color: rgb(var(--v-theme-primary));
+}
+
+/* 问卷待作答 / 会话已锁定时：输入区整体禁用（见模板中的 :disabled），仅弱化呈现、不隐藏/不成遮罩——
+   用户仍能看到自己此前的输入，作答 / 回滚后即恢复可用 */
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
+.assistant-composer--blocked {
+  opacity: 0.6;
+}
+
+/* 会话状态条：展示输入被闸住的原因（运行 / 等待子状态或锁定提示）。以弱化底 + 图标与输入区
+   其它部分作视觉区分，并留出与下方控件的间距（信息提示与操作区不挤在一起） */
+.assistant-composer-status {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-2);
+  margin: var(--zk-space-2) var(--zk-space-2) 0;
+  padding: var(--zk-space-1) var(--zk-space-2);
+  border-radius: var(--zk-radius-sm);
+  background-color: rgb(var(--v-theme-on-surface), var(--zk-surface-raised-opacity));
+}
+
+/* 锁定态：提示以警示色呈现，与「运行中 / 等待中」的中性状态条区分 */
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
+.assistant-composer-status--locked {
+  color: rgb(var(--v-theme-warning));
+}
+
+/* 问卷待作答提示行：与队列区共用 8px 横向内边距，图标 + 提示文案 + 右端「查看问题」入口；
+   置于输入框上方，把用户视线引回消息流中内联的问卷。纵向内边距与队列项取齐 */
+.assistant-composer-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-1);
+  padding: var(--zk-space-2) var(--zk-space-2) 0;
 }
 
 /* 正文输入区：起始高度下限交给 Vuetify 的 auto-grow（rows="2" 定起始行数，
@@ -3278,6 +3889,18 @@ onUnmounted(() => {
   margin-bottom: var(--zk-space-1);
 }
 
+/* 内联交互块（问卷 / 人工审批）：按其触发轮次插入调用组序列中，与相邻调用组留出间距，
+   使整条消息自上而下严格按时序阅读。块内沿用 zk-hairline-top 提供与上下内容的弱分隔 */
+.assistant-interaction {
+  margin: var(--zk-space-2) 0;
+}
+
+/* 各轮说明正文（content 块，见 assistantBlocksOf）：随轮次内联渲染在对应问答框 / 调用组之上，
+   与末尾最终正文同一呈现口径，仅补与上方块的间距 */
+.assistant-preamble {
+  margin-top: var(--zk-space-2);
+}
+
 /* 上下文压缩展示块：外观基线取自 .zk-panel--subtle（弱化底 + 圆角），失败态补一条错误色描边。
    位于该轮快捷操作行下方（模板上的 mt-2 提供间距）。width: 100% 必需：它位于 .assistant-turn
    这一 align-items: flex-start 的纵向 flex 内，不撑满会被收缩成内容宽，running 态的摘要增量
@@ -3301,11 +3924,12 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* 思考正文（折叠块展开区）：限高滚动，长思考不撑高消息区。高度上限取全站长文本区令牌
-   --zk-preview-max-height（同文档正文 / 分块正文 / 明文预览），不另立数值；约束落在正文
-   自己的容器上（而非面板正文根元素），滚动条只随正文出现，面板内边距不参与滚动 */
+/* 思考正文（折叠块展开区）：限高滚动，长思考不撑高消息区。高度上限取思考区专属令牌
+   --zk-reasoning-max-height（全站长文本预览上限的 1/3：思考是流式增量长文本，独占一屏高度
+   会把正文挤出视口）；约束落在正文自己的容器上（而非面板正文根元素），滚动条只随正文出现，
+   面板内边距不参与滚动。流式增长时的粘底由 scrollReasoningToBottom 负责（见 onReasoning） */
 .assistant-reasoning-body {
-  max-height: var(--zk-preview-max-height);
+  max-height: var(--zk-reasoning-max-height);
   overflow-y: auto;
 }
 

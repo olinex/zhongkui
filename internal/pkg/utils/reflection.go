@@ -47,7 +47,7 @@ func FindField(model any, path, nameTag string) (*reflect.StructField, error) {
 func ExtractFieldTag(model any, path, nameTag, tagKey string) (string, error) {
 	f, err := FindField(model, path, nameTag)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	return f.Tag.Get(tagKey), nil
 }

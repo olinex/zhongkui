@@ -112,7 +112,7 @@ func (p *Pools) Unregister(ctx context.Context, ns, name string) error {
 	if isNotRegistered(err) {
 		return nil
 	}
-	return err
+	return errors.WithStack(err)
 }
 
 // Close 关闭全部命名空间池（幂等）。实现对 Pools 的所有权清理。

@@ -40,7 +40,7 @@ type realMCPDialer struct{}
 func (realMCPDialer) Dial(ctx context.Context, cfg mcp.ConnConfig) (mcpConn, error) {
 	conn, err := mcp.DialConn(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return conn, nil
 }
@@ -96,7 +96,7 @@ func (ts *ToolSet) warnf(format string, args ...any) {
 func (s *Store) LoadTools(ctx context.Context, logger *logging.Logger) (*ToolSet, error) {
 	rows, err := s.loadEnabledTools(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	set := &ToolSet{Tools: []tool.BaseTool{}, Infos: []*schema.ToolInfo{}}
 	ordered, byServer := s.groupMCPRows(set, rows)

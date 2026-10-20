@@ -395,3 +395,97 @@ func TestChatClient_StreamExceedsModelTimeout(t *testing.T) {
 		t.Errorf("elapsed = %v, want > model timeout %v (stream should outlive the model timeout)", elapsed, modelTimeout)
 	}
 }
+
+// TestChatClient_StreamCanceled 验证流式路径尊重传入 ctx 的取消：服务端持续慢速产出 SSE，客户端
+// 读到首块后取消 ctx，Recv 必须迅速以 context.Canceled（errors.Is）结束、且不再收到后续增量——
+// 这正是「用户中止即断流止损」的底座：取消经 ctx 传播到上游 HTTP 请求并关闭连接，从根本上停止
+// token 消耗。
+func TestChatClient_StreamCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	firstChunkSent := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			t.Errorf("response writer does not support flushing")
+			return
+		}
+		writeChunk := func(content string) {
+			_, _ = io.WriteString(w, `data: {"id":"1","object":"chat.completion.chunk","created":0,"model":"m","choices":[{"index":0,"delta":{"content":"`+content+`"},"finish_reason":null}]}`+"\n\n")
+			flusher.Flush()
+		}
+		writeChunk("he")
+		close(firstChunkSent)
+		// 持续慢速产出，直到客户端断开（ctx 取消会中断本次请求、进而停止本循环）。
+		for {
+			select {
+			case <-r.Context().Done():
+				return
+			case <-time.After(10 * time.Millisecond):
+				writeChunk("x")
+			}
+		}
+	}))
+	defer srv.Close()
+
+	chat, err := NewChatClient(context.Background(), ModelConfig{
+		Kind:        ModelKindChat,
+		BaseURL:     srv.URL + "/v1",
+		APIKey:      "sk-test",
+		Model:       "gpt-test",
+		Timeout:     5 * time.Second,
+		Temperature: 0.5,
+		MaxTokens:   16,
+	})
+	if err != nil {
+		t.Fatalf("NewChatClient() error = %v", err)
+	}
+	reader, err := chat.Stream(ctx, []*schema.Message{schema.UserMessage("hi")})
+	if err != nil {
+		t.Fatalf("Stream() error = %v", err)
+	}
+	defer reader.Close()
+
+	chunk, err := reader.Recv()
+	if err != nil {
+		t.Fatalf("Recv() first chunk error = %v", err)
+	}
+	if chunk == nil || chunk.Content != "he" {
+		t.Fatalf("first chunk = %+v, want content %q", chunk, "he")
+	}
+	<-firstChunkSent
+
+	// 读到首块后取消：后续 Recv 必须迅速收敛到 context.Canceled，且不再有有效增量。
+	cancel()
+	start := time.Now()
+	for {
+		type recvResult struct {
+			chunk *schema.Message
+			err   error
+		}
+		resCh := make(chan recvResult, 1)
+		go func() {
+			c, e := reader.Recv()
+			resCh <- recvResult{chunk: c, err: e}
+		}()
+		var res recvResult
+		select {
+		case res = <-resCh:
+		case <-time.After(3 * time.Second):
+			t.Fatal("Recv() did not observe the cancellation in time")
+		}
+		if res.err != nil {
+			if !errors.Is(res.err, context.Canceled) {
+				t.Fatalf("Recv() error = %v, want context.Canceled", res.err)
+			}
+			break
+		}
+		if res.chunk != nil && res.chunk.Content != "" {
+			t.Errorf("received content %q after cancellation, want no further increments", res.chunk.Content)
+		}
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Errorf("cancellation took %v to be observed, want it to be prompt", elapsed)
+	}
+}

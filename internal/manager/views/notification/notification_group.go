@@ -293,7 +293,7 @@ func NotificationGroupCreate(c *gin.Context) {
 		// 创建时随组绑定目标（可选）
 		if len(in.TargetIDs) > 0 {
 			if err := replaceNotificationGroupTargetsTx(tx, namespace, instance.ID, in.TargetIDs); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 		return nil
@@ -340,12 +340,12 @@ func NotificationGroupUpdate(c *gin.Context) {
 		if err := tx.Model(&core.NotificationGroup{}).
 			Where("id = ? AND namespace_name = ?", instance.ID, namespace).
 			Updates(map[string]any{"description": in.Description}).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		// 编辑时若携带 targetIds 则整集替换绑定目标（缺省不改动既有绑定）
 		if in.TargetIDs != nil {
 			if err := replaceNotificationGroupTargetsTx(tx, namespace, instance.ID, *in.TargetIDs); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		}
 		return nil
@@ -392,7 +392,7 @@ func NotificationGroupBatchDelete(c *gin.Context) {
 			return db.WithContext(c).Transaction(func(tx *database.DB) error {
 				// 显式删除组目标关联行
 				if err := tx.Where("group_id = ?", instance.ID).Delete(&core.NotificationGroupTarget{}).Error; err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 				return tx.Where("id = ? AND namespace_name = ?", instance.ID, namespace).Delete(&core.NotificationGroup{}).Error
 			})
@@ -424,7 +424,7 @@ func NotificationGroupSetDefault(c *gin.Context) {
 	if err := db.WithContext(c).Transaction(func(tx *database.DB) error {
 		if err := tx.Model(&core.NotificationGroup{}).Where("namespace_name = ?", namespace).
 			Update("is_default", false).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return tx.Model(&core.NotificationGroup{}).
 			Where("id = ? AND namespace_name = ?", instance.ID, namespace).
@@ -459,18 +459,18 @@ func replaceNotificationGroupTargetsTx(tx *database.DB, namespace string, groupI
 	}
 	var found []*core.NotificationTarget
 	if err := tx.Where("namespace_name = ? AND id IN ?", namespace, dedup).Find(&found).Error; err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if len(found) != len(dedup) {
 		return errNotificationGroupTargetInvalid
 	}
 	// 事务内整集替换：删除既有关联行后插入新集合
 	if err := tx.Where("group_id = ?", groupID).Delete(&core.NotificationGroupTarget{}).Error; err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	for _, tid := range dedup {
 		if err := tx.Create(&core.NotificationGroupTarget{GroupID: groupID, TargetID: uint(tid)}).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 	}
 	return nil

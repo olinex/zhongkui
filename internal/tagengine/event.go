@@ -105,7 +105,7 @@ func boolExprToClause(e *tag.BoolExpr) (clause.Expression, error) {
 	for _, term := range e.Or {
 		p, err := andTermToClause(term)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		parts = append(parts, p)
 	}
@@ -120,7 +120,7 @@ func andTermToClause(t *tag.AndTerm) (clause.Expression, error) {
 	for _, factor := range t.Not {
 		p, err := notFactorToClause(factor)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		parts = append(parts, p)
 	}
@@ -133,7 +133,7 @@ func andTermToClause(t *tag.AndTerm) (clause.Expression, error) {
 func notFactorToClause(f *tag.NotFactor) (clause.Expression, error) {
 	atom, err := atomToClause(f.Atom)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	if f.Not {
 		return clause.Not(atom), nil

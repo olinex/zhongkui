@@ -50,7 +50,7 @@ func (s *mapStage[I, O]) Process(ctx context.Context, in <-chan I, out chan<- O)
 			}
 			o, err := s.fn(ctx, v)
 			if err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			select {
 			case out <- o:
@@ -129,13 +129,13 @@ func (s *bufferStage[T]) Process(ctx context.Context, in <-chan T, out chan<- []
 				batch = append(batch, v)
 			}
 			if err := flush(); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			return ctx.Err()
 		case <-timerC:
 			stopTimer()
 			if err := flush(); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		case v, ok := <-in:
 			if !ok {
@@ -148,7 +148,7 @@ func (s *bufferStage[T]) Process(ctx context.Context, in <-chan T, out chan<- []
 			if len(batch) >= s.size {
 				stopTimer()
 				if err := flush(); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 			}
 		}

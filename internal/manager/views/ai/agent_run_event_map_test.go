@@ -25,6 +25,8 @@ func TestAgentRunEventTypeSSEMapping(t *testing.T) {
 		modelsai.AgentRunEventCompressDone:  sse.SSEEventCompressDone,
 		modelsai.AgentRunEventDone:          sse.SSEEventDone,
 		modelsai.AgentRunEventError:         sse.SSEEventError,
+		modelsai.AgentRunEventState:         sse.SSEEventState,
+		modelsai.AgentRunEventBlock:         sse.SSEEventBlock,
 	}
 	types := modelsai.AllAgentRunEventTypes()
 	if len(mapping) != len(types) {

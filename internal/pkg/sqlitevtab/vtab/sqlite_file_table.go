@@ -55,7 +55,7 @@ func NewSQLiteFileDatasource(ctx context.Context, pool *SQLiteFilePool, table st
 	}
 	db, err := pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	q := "PRAGMA table_info(" + quotePgIdent(table) + ")"
 	qrows, err := db.QueryContext(ctx, q)
@@ -154,13 +154,13 @@ func deriveSQLiteValueType(decl string) sqlitevtab.ValueType {
 func (d *SQLiteFileDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	db, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	query, args := d.buildQuery(pushdown)
 	rows, err := d.fetch(ctx, db, query, args)
 	d.pool.Release(ctx, db)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return newMySQLRows(rows), nil
 }
@@ -253,7 +253,7 @@ func (d *SQLiteFileDatasource) scanRow(qrows *sql.Rows) ([]any, error) {
 		ptrs[i] = &dest[i]
 	}
 	if err := qrows.Scan(ptrs...); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	row := make([]any, len(dest))
 	for i, v := range dest {

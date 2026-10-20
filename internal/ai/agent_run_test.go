@@ -18,11 +18,13 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/tools"
 	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
-// testClientToolName 是本包运行现场用例使用的客户端工具名：生产 client 注册表当前为空，故用例
-// 自行登记一个占位 client 工具，使「命中 client 工具即挂起」的分支可被触发。
+// testClientToolName 是本包运行现场用例使用的客户端工具名：生产 client 注册表登记了问卷类工具
+// ask_user（其入参契约固定为问卷载荷，不便于承载任意自由入参的通用挂起/回传用例），故用例另行登记
+// 一个占位 client 工具，使「命中 client 工具即挂起」的分支可被通用地触发。
 const testClientToolName = "test_client_tool"
 
 // ensureTestClientTool 幂等登记测试用 client 工具 schema 并返回之（同名只登记一次，避免注册表
@@ -145,6 +147,13 @@ func clientCall(id, arguments string) schema.ToolCall {
 	}}
 }
 
+// askUserCall 构造一次问卷类 client 工具 ask_user 的调用（callID + 问卷入参 JSON 文本）。
+func askUserCall(id, arguments string) schema.ToolCall {
+	return schema.ToolCall{ID: id, Type: "function", Function: schema.FunctionCall{
+		Name: askUserToolName, Arguments: arguments,
+	}}
+}
+
 // TestAgentRun_SuspendThenApproveResume 测试挂起 → 批准续跑：命中 client 工具时挂起且不发 done，
 // tool_request 携带工具名与原样入参；批准后结果按原序回灌为 tool message，从生成节点续跑并产出
 // 带持久化引用的 done。
@@ -185,6 +194,25 @@ func TestAgentRun_SuspendThenApproveResume(t *testing.T) {
 	if req.Arguments != `{"payload":"page-1"}` {
 		t.Errorf("arguments = %q, want the raw model arguments", req.Arguments)
 	}
+	// 挂起一律落锚点行：本回合的助手消息行以 phase=suspended 保留，其 ID 回写运行现场并随 tool_request
+	// 载荷下发（本回合无任何已外发正文，故为一条空锚点行），使前端实时会话能把挂起定位到该行。
+	messages, err := f.store.ListMessages(ctx, f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("ListMessages len = %d, want 2 (user + the suspension anchor)", len(messages))
+	}
+	anchor := messages[1]
+	if anchor.Role != ai.MessageRoleAssistant || anchor.Phase != ai.AgentRunPhaseSuspended {
+		t.Errorf("anchor = %+v, want an assistant row with phase suspended", anchor)
+	}
+	if req.MessageID != anchor.ID {
+		t.Errorf("tool request message id = %d, want the anchor row %d", req.MessageID, anchor.ID)
+	}
+	if run := f.latestRun(t); run.AnchorMessageID != anchor.ID {
+		t.Errorf("run anchor message id = %d, want the anchor row %d", run.AnchorMessageID, anchor.ID)
+	}
 
 	resumeReader, err := f.agent.ResumeRun(ctx, f.resumeInput(ToolResult{CallID: "call-1", Approved: true, Result: `{"ok":true}`}))
 	if err != nil {
@@ -207,6 +235,17 @@ func TestAgentRun_SuspendThenApproveResume(t *testing.T) {
 	last := chat.gotInputs[1][len(chat.gotInputs[1])-1]
 	if last.Role != schema.Tool || last.ToolCallID != "call-1" || last.Content != `{"ok":true}` {
 		t.Errorf("fed-back tool message = %+v, want the approved result", last)
+	}
+	// 续跑原地终态化锚点行：同一回合仍只有一条助手消息（不新增一行造成「残篇 + 完整回复」），锚点行 phase=done。
+	final, err := f.store.ListMessages(ctx, f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(final) != 2 {
+		t.Fatalf("ListMessages len = %d, want 2 (the anchor row is finalized in place, not duplicated)", len(final))
+	}
+	if final[1].ID != anchor.ID || final[1].Phase != ai.AgentRunPhaseDone {
+		t.Errorf("final assistant = %+v, want the anchor row %d finalized to done", final[1], anchor.ID)
 	}
 }
 
@@ -272,6 +311,17 @@ func TestAgentRun_ResumeKeepsSuspendedRoundText(t *testing.T) {
 	}
 	if deltas != "let me check the page " {
 		t.Fatalf("suspend deltas = %q, want the round text streamed before suspension", deltas)
+	}
+	// 挂起锚点行保留本回合已外发的前导说明文本（phase=suspended）：旧实现回收该行，刷新后这段文本会消失。
+	messages, err := f.store.ListMessages(ctx, f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("ListMessages len = %d, want 2 (user + the suspension anchor)", len(messages))
+	}
+	if messages[1].Phase != ai.AgentRunPhaseSuspended || string(messages[1].Content.Value()) != "let me check the page " {
+		t.Errorf("anchor = %+v, want the streamed round text kept with phase suspended", messages[1])
 	}
 
 	resumeReader, err := f.agent.ResumeRun(ctx, f.resumeInput(ToolResult{CallID: "call-1", Approved: true, Result: "ok"}))
@@ -620,7 +670,7 @@ func TestStreamRun_RunDeadlinePersistsPartialAssistantMessage(t *testing.T) {
 	if got, want := string(messages[1].Content.Value()), content; got != want {
 		t.Errorf("persisted assistant content = %q, want the partial content only (the notice must not be mixed into the content)", got)
 	}
-	if got := string(messages[1].Reasoning.Value()); got != reasoning {
+	if got := reasoningTextOf(t, f.store, messages[1]); got != reasoning {
 		t.Errorf("persisted assistant reasoning = %q, want the partial reasoning", got)
 	}
 	if got := messages[1].Phase; got != ai.AgentRunPhaseFailed {
@@ -637,10 +687,11 @@ func TestWrapPersist_CancelledRunPersistsCancelledPhase(t *testing.T) {
 	defer cancel()
 	f := newAgentRunFixture(t, &scriptedChat{turns: []scriptedTurn{{content: "unused"}}}, &stubRetriever{}, false)
 
+	partial := strings.Repeat("p", assistantCheckpointBytes*2)
 	inSR, inSW := schema.Pipe[AgentOutput](8)
 	go func() {
 		defer inSW.Close()
-		inSW.Send(AgentOutput{Delta: strings.Repeat("p", assistantCheckpointBytes*2)}, nil)
+		inSW.Send(AgentOutput{Delta: partial}, nil)
 		cancel()
 		inSW.Send(AgentOutput{}, errors.WithStack(context.Canceled))
 	}()
@@ -657,6 +708,10 @@ func TestWrapPersist_CancelledRunPersistsCancelledPhase(t *testing.T) {
 	}
 	if got := messages[0].Phase; got != ai.AgentRunPhaseCancelled {
 		t.Errorf("persisted assistant phase = %q, want cancelled", got)
+	}
+	// 中止后保留已生成的部分正文（不向正文拼接任何提示文案：提示由前端据 cancelled 阶段渲染）。
+	if got := string(messages[0].Content.Value()); got != partial {
+		t.Errorf("persisted assistant content len = %d, want the partial content preserved (len %d)", len(got), len(partial))
 	}
 }
 
@@ -691,5 +746,487 @@ func TestWrapPersist_SuspensionDiscardsCheckpointedRow(t *testing.T) {
 	}
 	if session.MessageSeq != 1 {
 		t.Errorf("session message_seq = %d, want 1 (a checkpoint row was allocated before being discarded)", session.MessageSeq)
+	}
+}
+
+// TestAgentRun_QuestionnaireAnchor 测试问卷挂起与续跑的锚点消息不变式：ask_user 调用豁免审核
+// （tool_request 恒 none / 不需人工审核），挂起时保留本回合的助手消息行作为锚点（phase=suspended、
+// 带问卷题目，并把其 ID 回写运行现场）；续跑回传答案后原地终态化该行（phase=done、保留问卷题目
+// 并并入答案），同一回合始终只有一条用户消息与一条助手消息。
+func TestAgentRun_QuestionnaireAnchor(t *testing.T) {
+	ctx := context.Background()
+	args := `{"questions":[{"id":"q1","question":"选哪个方案？","options":[{"text":"方案A"},{"text":"方案B","detail":"更稳妥"}]}]}`
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{askUserCall("call-q", args)}},
+		{content: `{"content": "final answer", "draft": {}}`},
+	}}
+	f := newAgentRunFixture(t, chat, &stubRetriever{}, false)
+
+	reader, err := f.agent.StreamRun(ctx, f.input("q"))
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	if _, done, err := collectStream(t, reader); err != nil {
+		t.Fatalf("suspend stream error = %v, want a clean end", err)
+	} else if done.Done {
+		t.Fatal("suspend stream produced a done item, want tool_request as the terminal state")
+	}
+	if len(f.requests) != 1 {
+		t.Fatalf("tool requests = %+v, want exactly one", f.requests)
+	}
+	req := f.requests[0]
+	if req.CallID != "call-q" || req.ToolName != askUserToolName {
+		t.Errorf("tool request = %+v, want call-q / %s", req, askUserToolName)
+	}
+	if req.ApprovalRequired || req.AuditLevel != AuditLevelNone {
+		t.Errorf("tool request = %+v, want the questionnaire exempt from the review valve (none / not required)", req)
+	}
+
+	// 挂起后：会话内恰有一条用户消息与一条助手锚点消息（phase=suspended、带问卷题目）。
+	anchor := questionnaireAnchorRow(t, f)
+	if anchor.Phase != ai.AgentRunPhaseSuspended {
+		t.Errorf("anchor phase = %q, want suspended", anchor.Phase)
+	}
+	rounds := decodeAnchorRounds(t, f, anchor)
+	if len(rounds) != 1 {
+		t.Fatalf("anchor rounds = %d, want exactly one round", len(rounds))
+	}
+	if qs := rounds[0].Questions; len(qs) != 1 || qs[0].ID != "q1" || qs[0].Question != "选哪个方案？" {
+		t.Fatalf("anchor questions = %+v, want the single q1 question", qs)
+	}
+	if len(rounds[0].Answers) != 0 {
+		t.Errorf("anchor answers = %+v, want none before the user answered", rounds[0].Answers)
+	}
+	if run := f.latestRun(t); run.AnchorMessageID != anchor.ID {
+		t.Errorf("run anchor message id = %d, want the anchor row %d", run.AnchorMessageID, anchor.ID)
+	}
+	// 载荷带锚点消息 ID：tool_request 在锚点行落库后才下发，故其 messageID 应为锚点行 ID，
+	// 供前端在实时会话内即刻拿到「重新回答」所需的截断目标（实时气泡本地不带 id）。
+	if req.MessageID != anchor.ID {
+		t.Errorf("tool request message id = %d, want the anchor row %d", req.MessageID, anchor.ID)
+	}
+
+	// 续跑：回传答案后原地终态化锚点行，不新增助手消息。
+	answers := `{"answers":[{"questionID":"q1","answered":true,"answer":"方案A","custom":false}]}`
+	resumeReader, err := f.agent.ResumeRun(ctx, f.resumeInput(ToolResult{CallID: "call-q", Approved: true, Result: answers}))
+	if err != nil {
+		t.Fatalf("ResumeRun error = %v", err)
+	}
+	if _, resumed, err := collectStream(t, resumeReader); err != nil {
+		t.Fatalf("resume stream error = %v", err)
+	} else if !resumed.Done || resumed.Content != "final answer" {
+		t.Fatalf("resumed output = %+v, want the final answer done item", resumed)
+	}
+
+	final := questionnaireAnchorRow(t, f)
+	if final.ID != anchor.ID {
+		t.Errorf("final assistant id = %d, want the anchor row %d (a single assistant message per turn)", final.ID, anchor.ID)
+	}
+	if final.Phase != ai.AgentRunPhaseDone {
+		t.Errorf("final phase = %q, want done", final.Phase)
+	}
+	finalRounds := decodeAnchorRounds(t, f, final)
+	if len(finalRounds) != 1 {
+		t.Fatalf("final rounds = %d, want exactly one round", len(finalRounds))
+	}
+	if as := finalRounds[0].Answers; len(as) != 1 || !as[0].Answered || as[0].Answer != "方案A" || as[0].Custom {
+		t.Errorf("final answers = %+v, want the q1 answer as the selected option", as)
+	}
+}
+
+// TestAgentRun_QuestionnaireMerge 测试一轮内多条 ask_user 调用的合并：题目按调用顺序合并为同一张问卷
+// （锚点行只落一条合并载荷），每条调用各自挂起一条 tool_request（均豁免审核）；续跑逐条回传各自答案后
+// 合并写入锚点行——同一回合仍只有一条助手消息。
+func TestAgentRun_QuestionnaireMerge(t *testing.T) {
+	ctx := context.Background()
+	firstArgs := `{"questions":[{"id":"q1","question":"选哪个方案？","options":[{"text":"方案A"},{"text":"方案B"}]}]}`
+	secondArgs := `{"questions":[{"id":"q2","question":"何时上线？","options":[{"text":"本周"},{"text":"下周"}]}]}`
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{askUserCall("call-q1", firstArgs), askUserCall("call-q2", secondArgs)}},
+		{content: `{"content": "final answer", "draft": {}}`},
+	}}
+	f := newAgentRunFixture(t, chat, &stubRetriever{}, false)
+
+	reader, err := f.agent.StreamRun(ctx, f.input("q"))
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	if _, done, err := collectStream(t, reader); err != nil {
+		t.Fatalf("suspend stream error = %v, want a clean end", err)
+	} else if done.Done {
+		t.Fatal("suspend stream produced a done item, want tool_request as the terminal state")
+	}
+	if len(f.requests) != 2 {
+		t.Fatalf("tool requests = %+v, want two (one per ask_user call)", f.requests)
+	}
+	for _, req := range f.requests {
+		if req.ToolName != askUserToolName || req.ApprovalRequired || req.AuditLevel != AuditLevelNone {
+			t.Errorf("tool request = %+v, want an ask_user call exempt from the review valve", req)
+		}
+	}
+
+	// 挂起后：题目按调用顺序合并进同一条锚点行。
+	anchor := questionnaireAnchorRow(t, f)
+	if anchor.Phase != ai.AgentRunPhaseSuspended {
+		t.Errorf("anchor phase = %q, want suspended", anchor.Phase)
+	}
+	payload := decodeAnchorRounds(t, f, anchor)
+	if len(payload) != 1 {
+		t.Fatalf("anchor rounds = %d, want a single merged round", len(payload))
+	}
+	if qs := payload[0].Questions; len(qs) != 2 || qs[0].ID != "q1" || qs[1].ID != "q2" {
+		t.Fatalf("anchor questions = %+v, want the merged q1 / q2 questions", qs)
+	}
+	// 每条挂起调用都带同一锚点消息 ID（合并问卷只落一条锚点行，两条调用据它共同定位）。
+	for _, req := range f.requests {
+		if req.MessageID != anchor.ID {
+			t.Errorf("tool request = %+v, message id = %d, want the shared anchor row %d", req, req.MessageID, anchor.ID)
+		}
+	}
+
+	// 续跑：逐条回传各自的答案，合并写入锚点行，仍不新增助手消息。
+	resumeReader, err := f.agent.ResumeRun(ctx, f.resumeInput(
+		ToolResult{CallID: "call-q1", Approved: true, Result: `{"answers":[{"questionID":"q1","answered":true,"answer":"方案A"}]}`},
+		ToolResult{CallID: "call-q2", Approved: true, Result: `{"answers":[{"questionID":"q2","answered":true,"answer":"本周"}]}`},
+	))
+	if err != nil {
+		t.Fatalf("ResumeRun error = %v", err)
+	}
+	if _, resumed, err := collectStream(t, resumeReader); err != nil {
+		t.Fatalf("resume stream error = %v", err)
+	} else if !resumed.Done || resumed.Content != "final answer" {
+		t.Fatalf("resumed output = %+v, want the final answer done item", resumed)
+	}
+
+	final := questionnaireAnchorRow(t, f)
+	if final.ID != anchor.ID {
+		t.Errorf("final assistant id = %d, want the anchor row %d (a single assistant message per turn)", final.ID, anchor.ID)
+	}
+	finalPayload := decodeAnchorRounds(t, f, final)
+	if len(finalPayload) != 1 {
+		t.Fatalf("final rounds = %d, want a single merged round", len(finalPayload))
+	}
+	if as := finalPayload[0].Answers; len(as) != 2 {
+		t.Fatalf("final answers = %+v, want the merged q1 / q2 answers", as)
+	} else if as[0].QuestionID != "q1" || as[0].Answer != "方案A" ||
+		as[1].QuestionID != "q2" || as[1].Answer != "本周" {
+		t.Errorf("final answers = %+v, want q1 = 方案A and q2 = 本周", as)
+	}
+}
+
+// TestAgentRun_QuestionnaireSecondRound 测试同一回合内的多轮提问：用户作答第一轮后模型再次调用 ask_user
+// 提问第二轮，锚点行的问卷载荷须**按轮次并列**（第二轮挂起时第一轮的题目与答案各自留在自己那一轮里，
+// 终态化后两轮题目与答案俱在）。前端据此把各轮渲染成各自独立的问答框，而不是把第二轮题目塞进第一轮框内。
+func TestAgentRun_QuestionnaireSecondRound(t *testing.T) {
+	ctx := context.Background()
+	firstArgs := `{"questions":[{"id":"q1","question":"选哪个方案？","options":[{"text":"方案A"},{"text":"方案B"}]}]}`
+	secondArgs := `{"questions":[{"id":"q2","question":"何时上线？","options":[{"text":"本周"},{"text":"下周"}]}]}`
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{askUserCall("call-q1", firstArgs)}},
+		{toolCalls: []schema.ToolCall{askUserCall("call-q2", secondArgs)}},
+		{content: `{"content": "final answer", "draft": {}}`},
+	}}
+	f := newAgentRunFixture(t, chat, &stubRetriever{}, false)
+
+	// 第一轮挂起：锚点行只含 q1，尚无答案。
+	reader, err := f.agent.StreamRun(ctx, f.input("q"))
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	if _, done, err := collectStream(t, reader); err != nil {
+		t.Fatalf("suspend stream error = %v, want a clean end", err)
+	} else if done.Done {
+		t.Fatal("suspend stream produced a done item, want tool_request as the terminal state")
+	}
+	anchor := questionnaireAnchorRow(t, f)
+	first := decodeAnchorRounds(t, f, anchor)
+	if len(first) != 1 {
+		t.Fatalf("first suspension rounds = %d, want exactly one round", len(first))
+	}
+	if qs := first[0].Questions; len(qs) != 1 || qs[0].ID != "q1" || len(first[0].Answers) != 0 {
+		t.Fatalf("first suspension payload = %+v, want the q1 question without answers", first[0])
+	}
+
+	// 作答第一轮续跑：模型改提第二轮问题（q2），锚点行须把第一轮作为独立一轮保留、第二轮另起一轮追加。
+	resumeReader, err := f.agent.ResumeRun(ctx, f.resumeInput(
+		ToolResult{CallID: "call-q1", Approved: true, Result: `{"answers":[{"questionID":"q1","answered":true,"answer":"方案A"}]}`},
+	))
+	if err != nil {
+		t.Fatalf("ResumeRun error = %v", err)
+	}
+	if _, done, err := collectStream(t, resumeReader); err != nil {
+		t.Fatalf("second suspend stream error = %v, want a clean end", err)
+	} else if done.Done {
+		t.Fatal("the second suspension produced a done item, want tool_request as the terminal state")
+	}
+	if len(f.requests) != 2 {
+		t.Fatalf("tool requests = %+v, want two (one per round)", f.requests)
+	}
+	if second := f.requests[1]; second.CallID != "call-q2" || second.MessageID != anchor.ID {
+		t.Errorf("second tool request = %+v, want call-q2 anchored to the row %d", second, anchor.ID)
+	}
+	secondRow := questionnaireAnchorRow(t, f)
+	if secondRow.ID != anchor.ID || secondRow.Phase != ai.AgentRunPhaseSuspended {
+		t.Errorf("second suspension row = (%d, %s), want the same anchor row %d still suspended", secondRow.ID, secondRow.Phase, anchor.ID)
+	}
+	secondRounds := decodeAnchorRounds(t, f, secondRow)
+	if len(secondRounds) != 2 {
+		t.Fatalf("second suspension rounds = %d, want two independent rounds", len(secondRounds))
+	}
+	if qs := secondRounds[0].Questions; len(qs) != 1 || qs[0].ID != "q1" {
+		t.Fatalf("first round questions = %+v, want the q1 question", qs)
+	}
+	if as := secondRounds[0].Answers; len(as) != 1 || as[0].QuestionID != "q1" || as[0].Answer != "方案A" {
+		t.Fatalf("first round answers = %+v, want the q1 answer kept in its own round", as)
+	}
+	if qs := secondRounds[1].Questions; len(qs) != 1 || qs[0].ID != "q2" || len(secondRounds[1].Answers) != 0 {
+		t.Fatalf("second round = %+v, want the new q2 question without answers", secondRounds[1])
+	}
+
+	// 作答第二轮续跑至终态：两轮题目与答案俱在，同一回合仍只有一条助手消息。
+	resumeReader, err = f.agent.ResumeRun(ctx, f.resumeInput(
+		ToolResult{CallID: "call-q2", Approved: true, Result: `{"answers":[{"questionID":"q2","answered":true,"answer":"本周"}]}`},
+	))
+	if err != nil {
+		t.Fatalf("ResumeRun error = %v", err)
+	}
+	if _, resumed, err := collectStream(t, resumeReader); err != nil {
+		t.Fatalf("resume stream error = %v", err)
+	} else if !resumed.Done || resumed.Content != "final answer" {
+		t.Fatalf("resumed output = %+v, want the final answer done item", resumed)
+	}
+	final := questionnaireAnchorRow(t, f)
+	if final.ID != anchor.ID || final.Phase != ai.AgentRunPhaseDone {
+		t.Errorf("final row = (%d, %s), want the anchor row %d in done", final.ID, final.Phase, anchor.ID)
+	}
+	finalRounds := decodeAnchorRounds(t, f, final)
+	if len(finalRounds) != 2 {
+		t.Fatalf("final rounds = %d, want two independent rounds", len(finalRounds))
+	}
+	if len(finalRounds[0].Questions) != 1 || len(finalRounds[0].Answers) != 1 ||
+		len(finalRounds[1].Questions) != 1 || len(finalRounds[1].Answers) != 1 {
+		t.Fatalf("final rounds = %+v, want each round carrying its own question and answer", finalRounds)
+	}
+	if a0 := finalRounds[0].Answers[0]; a0.QuestionID != "q1" || a0.Answer != "方案A" {
+		t.Errorf("first round answer = %+v, want q1 = 方案A", a0)
+	}
+	if a1 := finalRounds[1].Answers[0]; a1.QuestionID != "q2" || a1.Answer != "本周" {
+		t.Errorf("second round answer = %+v, want q2 = 本周", a1)
+	}
+}
+
+// TestAgentRun_QuestionnaireCancelAfterRerun 测试「重新回答后再取消回答」：回退重开（RerunAssistantInput）
+// 会在锚点行上保留上次作答的答案供预填，此后用户取消回答时末轮的旧答案须被清空——否则终态化写回的仍是
+// 旧答案，界面 / 刷新后会把上次作答当成本次作答展示（本次取消应当全部题目未作答）。
+func TestAgentRun_QuestionnaireCancelAfterRerun(t *testing.T) {
+	ctx := context.Background()
+	args := `{"questions":[{"id":"q1","question":"选哪个方案？","options":[{"text":"方案A"},{"text":"方案B"}]}]}`
+	chat := &scriptedChat{turns: []scriptedTurn{
+		{toolCalls: []schema.ToolCall{askUserCall("call-q1", args)}},
+		{content: `{"content": "first answer", "draft": {}}`},
+		{content: `{"content": "second answer", "draft": {}}`},
+	}}
+	f := newAgentRunFixture(t, chat, &stubRetriever{}, false)
+
+	// 第一轮挂起后作答续跑至终态：锚点行的 q1 带上答案（方案A）。
+	reader, err := f.agent.StreamRun(ctx, f.input("q"))
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	if _, done, err := collectStream(t, reader); err != nil {
+		t.Fatalf("suspend stream error = %v, want a clean end", err)
+	} else if done.Done {
+		t.Fatal("suspend stream produced a done item, want tool_request as the terminal state")
+	}
+	anchor := questionnaireAnchorRow(t, f)
+	resumeReader, err := f.agent.ResumeRun(ctx, f.resumeInput(
+		ToolResult{CallID: "call-q1", Approved: true, Result: `{"answers":[{"questionID":"q1","answered":true,"answer":"方案A"}]}`},
+	))
+	if err != nil {
+		t.Fatalf("ResumeRun(error) = %v", err)
+	}
+	if _, resumed, err := collectStream(t, resumeReader); err != nil {
+		t.Fatalf("resume stream error = %v", err)
+	} else if !resumed.Done {
+		t.Fatalf("resumed output = %+v, want the answered turn to finish", resumed)
+	}
+	answered := decodeAnchorRounds(t, f, questionnaireAnchorRow(t, f))
+	if as := answered[0].Answers; len(as) != 1 || as[0].QuestionID != "q1" || as[0].Answer != "方案A" {
+		t.Fatalf("round after answering = %+v, want q1 = 方案A", answered[0])
+	}
+
+	// 回退重开：现场复位为 pending、锚点行仍保留上次答案（供前端预填重开）。
+	if _, err := f.store.RerunAssistantInput(ctx, f.session.ID, f.session.UserID, anchor.ID); err != nil {
+		t.Fatalf("RerunAssistantInput error = %v", err)
+	}
+	kept := decodeAnchorRounds(t, f, questionnaireAnchorRow(t, f))
+	if as := kept[0].Answers; len(as) != 1 || as[0].Answer != "方案A" {
+		t.Fatalf("round after rerun = %+v, want the previous answer kept for prefill", kept[0])
+	}
+
+	// 取消回答续跑至终态：末轮的旧答案须被清空，回到「全部题目未作答」。
+	resumeReader, err = f.agent.ResumeRun(ctx, f.resumeInput(
+		ToolResult{CallID: "call-q1", Approved: false},
+	))
+	if err != nil {
+		t.Fatalf("ResumeRun(cancel) error = %v", err)
+	}
+	if _, resumed, err := collectStream(t, resumeReader); err != nil {
+		t.Fatalf("cancel resume stream error = %v", err)
+	} else if !resumed.Done {
+		t.Fatalf("cancel resumed output = %+v, want the turn to finish", resumed)
+	}
+	final := decodeAnchorRounds(t, f, questionnaireAnchorRow(t, f))
+	if len(final) != 1 || len(final[0].Answers) != 0 {
+		t.Fatalf("round after cancel = %+v, want the previous answer cleared (nothing answered)", final)
+	}
+}
+
+// questionnaireAnchorRow 回读会话内承载问卷锚点的助手消息行，并断言本回合恰有一条用户消息与一条
+// 助手消息（维持「同一回合只有一条助手消息」不变式）。
+func questionnaireAnchorRow(t *testing.T, f *agentRunFixture) *ai.AgentMessage {
+	t.Helper()
+	messages, err := f.store.ListMessages(context.Background(), f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("ListMessages len = %d, want 2 (user + the questionnaire anchor)", len(messages))
+	}
+	return messages[1]
+}
+
+// decodeAnchorRounds 回读一条助手消息上的 questionnaire 块，按 block_seq 先后还原为按轮次并列的问卷
+// 载荷；无问卷块或无法解码即失败。
+func decodeAnchorRounds(t *testing.T, f *agentRunFixture, msg *ai.AgentMessage) []QuestionnairePayload {
+	t.Helper()
+	blocks, err := f.store.ListBlocksByMessage(context.Background(), msg.ID, msg.NamespaceName, msg.UserID)
+	if err != nil {
+		t.Fatalf("ListBlocksByMessage error = %v", err)
+	}
+	rounds := make([]QuestionnairePayload, 0, len(blocks))
+	for _, block := range blocks {
+		if block.Kind != ai.AgentMessageBlockKindQuestionnaire || block.Payload == nil {
+			continue
+		}
+		var payload QuestionnaireBlockPayload
+		if derr := decodeBlockPayload(block.Payload.Value(), &payload); derr != nil {
+			t.Fatalf("decoding questionnaire block payload failed: %v", derr)
+		}
+		if len(payload.Questions) == 0 {
+			continue
+		}
+		rounds = append(rounds, QuestionnairePayload{Questions: payload.Questions, Answers: payload.Answers})
+	}
+	if len(rounds) == 0 {
+		t.Fatal("the anchor message carries no questionnaire block")
+	}
+	return rounds
+}
+
+// blocksOfMsg 按 block_seq 升序回读一条消息的全部内容块。
+func blocksOfMsg(t *testing.T, store *SessionStore, msg *ai.AgentMessage) []*ai.AgentMessageBlock {
+	t.Helper()
+	blocks, err := store.ListBlocksByMessage(context.Background(), msg.ID, msg.NamespaceName, msg.UserID)
+	if err != nil {
+		t.Fatalf("ListBlocksByMessage error = %v", err)
+	}
+	return blocks
+}
+
+// reasoningTextOf 归并一条消息的全部 reasoning 块文本（思考段按时序各成一块，此处只关心合计文本）。
+func reasoningTextOf(t *testing.T, store *SessionStore, msg *ai.AgentMessage) string {
+	t.Helper()
+	var sb strings.Builder
+	for _, block := range blocksOfMsg(t, store, msg) {
+		if block.Kind != ai.AgentMessageBlockKindReasoning || block.Payload == nil {
+			continue
+		}
+		var payload ReasoningBlockPayload
+		if derr := decodeBlockPayload(block.Payload.Value(), &payload); derr != nil {
+			t.Fatalf("decoding reasoning block payload failed: %v", derr)
+		}
+		sb.WriteString(payload.Text)
+	}
+	return sb.String()
+}
+
+// TestClaimAgentRun_PrefersPendingOverNewerConsumed 测试认领顺序：回退（reanswer）会把较早的问卷
+// 现场重置为 pending 并把更晚的现场置为已消费，故 ClaimAgentRun 必须优先取最新 pending 现场，而非
+// 单纯取 id 最大的一行——否则会认领到已消费的现场、回退后的重答无法续跑。
+func TestClaimAgentRun_PrefersPendingOverNewerConsumed(t *testing.T) {
+	ctx := context.Background()
+	store, err := NewSessionStore(testdb.Core(t))
+	if err != nil {
+		t.Fatalf("NewSessionStore error = %v", err)
+	}
+	session, err := store.CreateSession(ctx, "default", "t", "standard", "knowledge", testUserID)
+	if err != nil {
+		t.Fatalf("CreateSession error = %v", err)
+	}
+	saveRun := func(status ai.AgentRunStatus) ai.AgentRun {
+		t.Helper()
+		run := &ai.AgentRun{
+			NamespaceName:    "default",
+			UserID:           session.UserID,
+			SessionID:        session.ID,
+			Status:           status,
+			MessagesJSON:     serializer.NewCrypto([]byte("[]")),
+			PendingCallsJSON: serializer.NewCrypto([]byte("[]")),
+			CitationsJSON:    serializer.NewCrypto([]byte("[]")),
+			Slot:             "standard",
+			ExpiresAt:        time.Now().Add(time.Hour),
+		}
+		if err := store.SaveAgentRun(ctx, run); err != nil {
+			t.Fatalf("SaveAgentRun(%s) error = %v", status, err)
+		}
+		return *run
+	}
+	older := saveRun(ai.AgentRunStatusPending)
+	newer := saveRun(ai.AgentRunStatusConsumed)
+	if newer.ID <= older.ID {
+		t.Fatalf("run ids = (%d, %d), want the consumed run saved after the pending one", older.ID, newer.ID)
+	}
+
+	claimed, err := store.ClaimAgentRun(ctx, session.ID, "default", session.UserID)
+	if err != nil {
+		t.Fatalf("ClaimAgentRun error = %v", err)
+	}
+	if claimed.ID != older.ID {
+		t.Errorf("claimed run id = %d, want the older pending run %d (not the newer consumed one %d)", claimed.ID, older.ID, newer.ID)
+	}
+}
+
+// TestAgentRun_DoneCarriesMessageID 测试 done 项携带本回合助手消息的落库行 ID：该 ID 只有落库后才
+// 可知，故由持久化收尾处回填；前端实时会话据此把本地气泡绑定到已落库的那一行（如「压缩到此」需按
+// 消息 ID 定位折叠边界），无需先回读历史即可发起。
+func TestAgentRun_DoneCarriesMessageID(t *testing.T) {
+	ctx := context.Background()
+	chat := &scriptedChat{turns: []scriptedTurn{{content: `{"content": "done answer", "draft": {}}`}}}
+	f := newAgentRunFixture(t, chat, &stubRetriever{}, false)
+
+	reader, err := f.agent.StreamRun(ctx, f.input("q"))
+	if err != nil {
+		t.Fatalf("StreamRun error = %v", err)
+	}
+	_, done, err := collectStream(t, reader)
+	if err != nil {
+		t.Fatalf("stream error = %v", err)
+	}
+	if !done.Done || done.Content != "done answer" {
+		t.Fatalf("done item = %+v, want the finalized answer", done)
+	}
+	if done.MessageID == 0 {
+		t.Fatal("done item carries no message id, want the persisted assistant row id")
+	}
+	messages, err := f.store.ListMessages(ctx, f.session.ID, f.session.UserID, 0, 0)
+	if err != nil {
+		t.Fatalf("ListMessages error = %v", err)
+	}
+	if len(messages) != 2 {
+		t.Fatalf("ListMessages len = %d, want 2 (user + assistant)", len(messages))
+	}
+	if messages[1].ID != done.MessageID {
+		t.Errorf("done messageID = %d, want the persisted assistant row %d", done.MessageID, messages[1].ID)
 	}
 }

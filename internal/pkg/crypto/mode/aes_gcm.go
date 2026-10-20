@@ -61,7 +61,7 @@ type AESGCMMode struct {
 //
 //	mode, err := NewAESGCMMode([]byte("0123456789abcdef"), nil)
 //	if err != nil {
-//	    return err
+//	    return errors.WithStack(err)
 //	}
 //	ciphertext, err := mode.Encrypt([]byte("hello"))
 func NewAESGCMMode(cryptoKey, additionalData []byte) (*AESGCMMode, error) {

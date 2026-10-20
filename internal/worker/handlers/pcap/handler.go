@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/pterm/pterm"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/etl"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 	"zhongkuisec.com/zhongkui/internal/worker/handlers/base"
@@ -21,7 +22,7 @@ func (w *pcapHandler) Do(ctx context.Context, task etl.Task) error {
 	ctx = WithPcapStats(ctx, stats)
 	err := w.handler.Do(ctx, task)
 	pterm.Debug.Println(translate.T("cli.pcap.import-stats", map[string]any{"Stats": stats.Snapshot()}))
-	return err
+	return errors.WithStack(err)
 }
 
 // NewPcapBatchHandler 创建一个用于处理PCAP文件导入的批量任务处理器。

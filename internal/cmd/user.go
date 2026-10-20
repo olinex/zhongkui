@@ -12,6 +12,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/pkg/cliinput"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 	"zhongkuisec.com/zhongkui/internal/pkg/validator"
@@ -28,7 +29,7 @@ type createUserInput struct {
 func extractUserInput(v *viper.Viper) (createUserInput, error) {
 	var in createUserInput
 	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
-		return in, err
+		return in, errors.WithStack(err)
 	}
 	return in, nil
 }
@@ -36,7 +37,7 @@ func extractUserInput(v *viper.Viper) (createUserInput, error) {
 func extractUsernamePassword(v *viper.Viper) (username, password string, err error) {
 	var in user.UserPasswordLoginIn
 	if err := cliinput.Extract(v, validator.Validate, &in, ""); err != nil {
-		return "", "", err
+		return "", "", errors.WithStack(err)
 	}
 	return in.Username, in.Password, nil
 }

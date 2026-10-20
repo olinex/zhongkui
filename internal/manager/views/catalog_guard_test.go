@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
 
 // bareMetaHandlers 是不允许在 helper 之外被裸用的构造器名（含包名限定写法亦可被包含匹配捕获）。
@@ -37,7 +39,7 @@ func TestCatalogSingleDeclarationPoint(t *testing.T) {
 
 	walkErr := filepath.WalkDir(viewsDir, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		if entry.IsDir() {
 			return nil
@@ -52,7 +54,7 @@ func TestCatalogSingleDeclarationPoint(t *testing.T) {
 
 		content, readErr := os.ReadFile(path)
 		if readErr != nil {
-			return readErr
+			return errors.WithStack(readErr)
 		}
 		for lineIndex, line := range strings.Split(string(content), "\n") {
 			trimmed := strings.TrimSpace(line)

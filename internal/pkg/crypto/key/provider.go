@@ -129,7 +129,7 @@ func (p *KMSSecretKeyProvider) GetSecretKey() ([]byte, error) {
 //
 //	provider, err := NewSecretKeyProvider("config", "my-secret-key")
 //	if err != nil {
-//	    return err
+//	    return errors.WithStack(err)
 //	}
 //	key, err := provider.GetSecretKey()
 func NewSecretKeyProvider(source string, parentSecretKey string) (SecretKeyProvider, error) {

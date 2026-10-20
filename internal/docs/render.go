@@ -98,11 +98,11 @@ func RenderPackage(projectRoot, importPath string, narrative bool) (string, erro
 		// 直接返回原始错误，避免构造出误导性路径。
 		modulePath := base.ModulePath()
 		if modulePath == "" {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 		fallback := filepath.Join(projectRoot, strings.TrimPrefix(importPath, modulePath+"/"))
 		if info, statErr := os.Stat(fallback); statErr != nil || !info.IsDir() {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 		dir = fallback
 	}

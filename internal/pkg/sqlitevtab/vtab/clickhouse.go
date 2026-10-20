@@ -125,11 +125,11 @@ func (clickhousePlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Read
 	pool := NewClickHousePool(&ClickHouseConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
 	ds, err := NewClickHouseDatasource(ctx, pool, c.Table)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	schema, err := schemaOf(ds)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return schemaColumnsOut(schema), nil
 }
@@ -150,7 +150,7 @@ func (clickhousePlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, 
 	})
 	cols, err := parseDatasourceColumns(c.Schema)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return NewClickHouseDatasourceWithSchema(poolHandle, c.Table, cols)
 }

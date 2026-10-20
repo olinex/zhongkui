@@ -101,7 +101,7 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 	}
 
 	if err := p.validateHeader(header); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// 创建解密读取器（包裹 r，自动读 nonce + 解密）

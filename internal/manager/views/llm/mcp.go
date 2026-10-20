@@ -348,7 +348,7 @@ func McpServerBatchDelete(c *gin.Context) {
 				}
 				return errors.WithStack(tx.Delete(&aimodel.McpServer{}, instance.ID).Error)
 			}); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			deleted++
 			return nil
@@ -551,7 +551,7 @@ func reconcileMCPTools(db *gorm.DB, server *aimodel.McpServer, remote []ai.MCPRe
 		return nil
 	})
 	if err != nil {
-		return McpServerSyncOut{}, err
+		return McpServerSyncOut{}, errors.WithStack(err)
 	}
 	return out, nil
 }

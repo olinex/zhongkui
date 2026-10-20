@@ -61,7 +61,7 @@ func SampleBodyObjectKeys(model string, input map[string]any) (map[string]string
 func CopySampleS3Objects(ctx context.Context, client *s3.S3Client, model string, input map[string]any, uid string) (cleanup func(), err error) {
 	keys, err := SampleBodyObjectKeys(model, input)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	copied := make([]string, 0, len(keys))
 	for field, src := range keys {
@@ -80,7 +80,7 @@ func CopySampleS3Objects(ctx context.Context, client *s3.S3Client, model string,
 func DeleteSampleS3Objects(ctx context.Context, client *s3.S3Client, model string, input map[string]any) error {
 	keys, err := SampleBodyObjectKeys(model, input)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	objects := make([]string, 0, len(keys))
 	for _, key := range keys {

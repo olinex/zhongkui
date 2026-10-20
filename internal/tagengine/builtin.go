@@ -73,7 +73,7 @@ func sqliteQuery(bctx rego.BuiltinContext, sqlTerm, paramsTerm *ast.Term) (*ast.
 	}
 	args, err := regoArrayToBindArgs(arr)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	pool := poolFromContext(bctx.Context)
 	if pool == nil {
@@ -92,7 +92,7 @@ func regoArrayToBindArgs(arr *ast.Array) ([]any, error) {
 	if err := arr.Iter(func(term *ast.Term) error {
 		v, err := regoValueToBind(term.Value)
 		if err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		args = append(args, v)
 		return nil

@@ -56,7 +56,7 @@ func NewClickHouseDatasource(ctx context.Context, pool *ClickHousePool, table st
 	}
 	db, err := pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	// DESCRIBE TABLE 返回 (name, type, default_type, default_expression, comment)，
 	// 仅需前两列
@@ -167,13 +167,13 @@ base:
 func (d *ClickHouseDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	db, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	query, args := d.buildQuery(pushdown)
 	rows, err := d.fetch(ctx, db, query, args)
 	d.pool.Release(ctx, db)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return newMySQLRows(rows), nil
 }
@@ -264,7 +264,7 @@ func (d *ClickHouseDatasource) scanRow(qrows *sql.Rows) ([]any, error) {
 		ptrs[i] = &dest[i]
 	}
 	if err := qrows.Scan(ptrs...); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	row := make([]any, len(dest))
 	for i, v := range dest {

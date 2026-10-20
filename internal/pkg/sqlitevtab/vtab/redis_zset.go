@@ -13,6 +13,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab"
 )
 
@@ -44,14 +45,14 @@ func NewRedisZSetDatasource(pool *RedisPool) *RedisZSetDatasource {
 func (d *RedisZSetDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constraint) (sqlitevtab.Rows, error) {
 	client, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	plan := d.resolveKeyPlan(pushdown)
 	rows, err := d.fetch(ctx, client, plan)
 	// fetch 已同步取回全部行，连接作用域到此结束，即时归还以便复用
 	d.pool.Release(ctx, client)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return newRedisRows(rows), nil
 }
@@ -81,7 +82,7 @@ func (d *RedisZSetDatasource) fetch(ctx context.Context, client *redis.Client, p
 	}
 	keys, err := d.scanKeys(ctx, client, plan.pattern)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	for _, k := range keys {
 		appendKey(k)

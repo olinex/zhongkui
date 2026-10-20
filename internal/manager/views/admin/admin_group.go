@@ -398,18 +398,18 @@ func GroupRbacPolicyAdd(c *gin.Context) {
 		// 杜绝"组删除瞬间仍写入策略"的悬挂引用；SQLite 退化为普通读）
 		var group core.Group
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&group, "name = ?", name).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		// 校验策略模板存在（行锁防并发删除模板）
 		var template core.RbacPolicyTemplate
 		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).First(&template, "target = ? AND action = ?", in.Target, in.Action).Error; err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 
 		// 行锁保持期间通过 enforcer 增量写入策略（独立连接写入，锁由本事务持有直至提交）
 		if _, err := enforcer.AddPolicy(name, in.Target, in.Action, in.Effect); err != nil {
-			return err
+			return errors.WithStack(err)
 		}
 		return nil
 	}); err != nil {

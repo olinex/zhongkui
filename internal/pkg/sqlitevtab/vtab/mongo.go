@@ -184,7 +184,7 @@ func (mongoPlugin) Register(_ context.Context, _ *sqlitevtab.SQLitePool, _ *s3.O
 	}
 	cols, err := parseDatasourceColumns(c.Schema)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return NewMongoDatasourceWithSchema(NewMongoPool(&MongoConfig{
 		URI: c.URI, DB: c.DB, Collection: c.Collection, Namespace: namespace,

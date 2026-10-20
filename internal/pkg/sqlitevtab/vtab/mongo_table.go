@@ -76,7 +76,7 @@ func (d *MongoDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constr
 	_ = pushdown
 	cli, err := d.pool.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	coll := cli.Database(d.pool.db).Collection(d.pool.collection)
 	cursor, err := coll.Find(ctx, bson.M{})
@@ -87,7 +87,7 @@ func (d *MongoDatasource) Open(ctx context.Context, pushdown []sqlitevtab.Constr
 	out, err := d.collect(ctx, cursor)
 	d.pool.Release(ctx, cli)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return newMySQLRows(out), nil
 }

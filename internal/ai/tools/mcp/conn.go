@@ -38,7 +38,7 @@ type Connection struct {
 func DialConn(ctx context.Context, cfg ConnConfig) (*Connection, error) {
 	cli, err := Dial(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return &Connection{cli: cli}, nil
 }

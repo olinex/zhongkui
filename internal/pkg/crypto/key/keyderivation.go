@@ -119,7 +119,7 @@ func GetKeyDerivation() (*KeyDerivation, error) {
 //
 //	key, err := kd.DeriveChildKey(100, 32)
 //	if err != nil {
-//	    return err
+//	    return errors.WithStack(err)
 //	}
 //	// key 是 32 字节的派生密钥
 func (k *KeyDerivation) DeriveChildKey(offset, length int) ([]byte, error) {

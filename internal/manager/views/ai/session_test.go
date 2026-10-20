@@ -82,31 +82,72 @@ func seedBranchSourceSession(t *testing.T, db *database.DB, title string) *model
 	return src
 }
 
-// TestNewAgentMessageItemOutReasoning 校验消息列表输出项回显助手思考过程：有 reasoning 时输出非空并
-// 随 JSON 序列化暴露；无 reasoning（指针为 nil）时输出为空且经 omitempty 省略。
-func TestNewAgentMessageItemOutReasoning(t *testing.T) {
-	Convey("消息列表输出项回显助手思考过程", t, func() {
-		Convey("有 reasoning 时输出非空", func() {
-			out := newAgentMessageItemOut(&modelsai.AgentMessage{
-				Role:      modelsai.MessageRoleAssistant,
-				Content:   serializer.NewCrypto([]byte("答案")),
-				Reasoning: serializer.NewCrypto([]byte("思考过程")),
+// TestNewAgentMessageItemOutBlocks 校验消息列表输出项携带有序内容块：按 block_seq 升序透传五种 kind 的
+// 载荷（与块表一致），且旧出参字段 reasoning / questionnaires 已从出参移除（序列化后无对应顶层 JSON 键）。
+func TestNewAgentMessageItemOutBlocks(t *testing.T) {
+	Convey("消息列表输出项携带有序内容块并移除旧出参", t, func() {
+		order := []modelsai.AgentMessageBlockKind{
+			modelsai.AgentMessageBlockKindReasoning,
+			modelsai.AgentMessageBlockKindToolCalls,
+			modelsai.AgentMessageBlockKindApproval,
+			modelsai.AgentMessageBlockKindQuestionnaire,
+			modelsai.AgentMessageBlockKindContent,
+		}
+		payloads := map[modelsai.AgentMessageBlockKind]string{
+			modelsai.AgentMessageBlockKindReasoning:     `{"text":"思考"}`,
+			modelsai.AgentMessageBlockKindToolCalls:     `{"calls":[{"callID":"c1","toolName":"search"}]}`,
+			modelsai.AgentMessageBlockKindApproval:      `{"calls":[{"callID":"c2","toolName":"api_invoke"}]}`,
+			modelsai.AgentMessageBlockKindQuestionnaire: `{"questions":[{"id":"q1","question":"要查什么？"}],"awaiting":true}`,
+			modelsai.AgentMessageBlockKindContent:       `{"text":"正文"}`,
+		}
+		blocks := make([]*modelsai.AgentMessageBlock, 0, len(order))
+		for i, kind := range order {
+			blocks = append(blocks, &modelsai.AgentMessageBlock{
+				BlockSeq: uint64(i + 1),
+				Kind:     kind,
+				Payload:  serializer.NewCrypto([]byte(payloads[kind])),
 			})
-			So(out.Reasoning, ShouldEqual, "思考过程")
-			raw, err := json.Marshal(out)
-			So(err, ShouldBeNil)
-			So(strings.Contains(string(raw), `"reasoning":"思考过程"`), ShouldBeTrue)
-		})
+		}
 
-		Convey("无 reasoning 时省略", func() {
+		Convey("块按 block_seq 升序透传且载荷与块表一致", func() {
 			out := newAgentMessageItemOut(&modelsai.AgentMessage{
 				Role:    modelsai.MessageRoleAssistant,
 				Content: serializer.NewCrypto([]byte("答案")),
-			})
-			So(out.Reasoning, ShouldEqual, "")
+			}, blocks)
+			So(len(out.Blocks), ShouldEqual, len(order))
+			for i, b := range out.Blocks {
+				So(b.Seq, ShouldEqual, uint64(i+1))
+				So(b.Kind, ShouldEqual, order[i])
+				So(string(b.Payload), ShouldEqual, payloads[order[i]])
+			}
+		})
+
+		Convey("旧出参字段 reasoning 与 questionnaires 已移除", func() {
+			out := newAgentMessageItemOut(&modelsai.AgentMessage{
+				Role:    modelsai.MessageRoleAssistant,
+				Content: serializer.NewCrypto([]byte("答案")),
+			}, blocks)
 			raw, err := json.Marshal(out)
 			So(err, ShouldBeNil)
-			So(strings.Contains(string(raw), "reasoning"), ShouldBeFalse)
+			var decoded map[string]json.RawMessage
+			So(json.Unmarshal(raw, &decoded), ShouldBeNil)
+			_, hasReasoning := decoded["reasoning"]
+			_, hasQuestionnaires := decoded["questionnaires"]
+			So(hasReasoning, ShouldBeFalse)
+			So(hasQuestionnaires, ShouldBeFalse)
+			_, hasBlocks := decoded["blocks"]
+			So(hasBlocks, ShouldBeTrue)
+		})
+
+		Convey("无块时省略 blocks", func() {
+			out := newAgentMessageItemOut(&modelsai.AgentMessage{
+				Role:    modelsai.MessageRoleUser,
+				Content: serializer.NewCrypto([]byte("提问")),
+			}, nil)
+			So(out.Blocks, ShouldBeNil)
+			raw, err := json.Marshal(out)
+			So(err, ShouldBeNil)
+			So(strings.Contains(string(raw), "blocks"), ShouldBeFalse)
 		})
 	})
 }

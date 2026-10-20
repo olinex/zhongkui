@@ -20,9 +20,9 @@ type SSEEventValue string
 
 // SSE 事件类型常量：SSE 流上事件的 event 行取值。前端按事件类型分发解析：
 // delta 累积正文、reasoning 累积思考过程、stage 呈现执行阶段的状态与用量、
-// done 呈现结构化产物与引用、error 中断提示、ping 保活、tool_request 挂起等待前端
-// 执行客户端工具，compress_start/compress_delta/compress_done 呈现会话上下文压缩的
-// 开始、摘要增量与完成。
+// block 呈现有序内容块的创建与收敛、done 呈现结构化产物与引用、error 中断提示、
+// ping 保活、tool_request 挂起等待前端执行客户端工具，compress_start/compress_delta/
+// compress_done 呈现会话上下文压缩的开始、摘要增量与完成。
 const (
 	// SSEEventDelta 增量文本事件（data 为 {"delta": "..."}，可带 {"stage": "..."}）
 	SSEEventDelta SSEEventValue = "delta"
@@ -45,6 +45,12 @@ const (
 	SSEEventCompressDelta SSEEventValue = "compress_delta"
 	// SSEEventCompressDone 上下文压缩完成事件（data 含压缩前后占用、折叠条数与滚动摘要游标）
 	SSEEventCompressDone SSEEventValue = "compress_done"
+	// SSEEventState 会话交互状态事件（data 为 {"state": "...", "substate": "..."}，下发
+	// 后端推导出的会话交互主状态与子状态）
+	SSEEventState SSEEventValue = "state"
+	// SSEEventBlock 内容块事件（data 含 {seq, kind, payload} 的有序内容块，块创建与收敛各下发
+	// 一次；前端据 {seq, kind} 归并增量到当前开放块）
+	SSEEventBlock SSEEventValue = "block"
 )
 
 // SSEEvent 是 SSE 流上的一条无序号事件：event 行携带类型，data 行携带 JSON 负载。
@@ -94,7 +100,7 @@ type SSEIDEvent struct {
 func (e SSEIDEvent) Encode() ([]byte, error) {
 	body, err := e.SSEEvent.Encode()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	var sb strings.Builder
 	sb.WriteString("id: ")
@@ -171,6 +177,12 @@ func (s *SSEWriter) SendStageDelta(stage string, delta string) error {
 // SendStage 发送阶段事件（stage 事件，payload 为调用方的阶段状态负载）。
 func (s *SSEWriter) SendStage(payload any) error {
 	return WriteSSE(s.w, SSEEvent{Event: SSEEventStage, Data: payload})
+}
+
+// SendState 发送会话交互状态事件（state 事件，payload 由调用方提供，须含描述交互主状态的
+// state 与子状态的 substate 字段），供前端以单一状态源驱动界面。
+func (s *SSEWriter) SendState(payload any) error {
+	return WriteSSE(s.w, SSEEvent{Event: SSEEventState, Data: payload})
 }
 
 // SendToolRequest 发送工具执行请求事件（tool_request 事件，表示本次流挂起等待

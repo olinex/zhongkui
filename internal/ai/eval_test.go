@@ -35,7 +35,7 @@ func (f *fakeChat) Stream(ctx context.Context, messages []*schema.Message, opts 
 	}
 	msg, err := f.gen(ctx, messages, opts...)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	half := len(msg.Content) / 2
 	chunks := []*schema.Message{

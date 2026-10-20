@@ -460,13 +460,13 @@ func splitHTTPTransactions(streamID int, meta *streamMeta, packets []PacketRecor
 func readHTTPRequest(r *bufio.Reader) (*http.Request, []byte, error) {
 	// 预先窥探是否有数据
 	if _, err := r.Peek(1); err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 
 	// 使用 net/http 读取请求
 	req, err := http.ReadRequest(r)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 
 	// 经 Request.Write 重建原始线格式字节
@@ -481,12 +481,12 @@ func readHTTPRequest(r *bufio.Reader) (*http.Request, []byte, error) {
 // readHTTPResponse 以给定请求为上下文，从 reader 读取一个 HTTP 响应。
 func readHTTPResponse(r *bufio.Reader, req *http.Request) (*http.Response, []byte, error) {
 	if _, err := r.Peek(1); err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 
 	resp, err := http.ReadResponse(r, req)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.WithStack(err)
 	}
 
 	var buf bytes.Buffer

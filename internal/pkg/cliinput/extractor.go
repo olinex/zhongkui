@@ -19,7 +19,7 @@
 //	func run(v *viper.Viper, validate *validator.Validate) error {
 //	    var in RegisterInput
 //	    if err := cliinput.Extract(v, validate, &in); err != nil {
-//	        return err
+//	        return errors.WithStack(err)
 //	    }
 //	    // in.Username 与 in.Password 此时已填充并通过校验
 //	}
@@ -103,7 +103,7 @@ func extractStruct(v *viper.Viper, validate *uv.Validate, topLevel any, structVa
 		if field.Type.Kind() == reflect.Struct && field.Tag.Get(TagViper) == "" {
 			subPrefix := prefix + field.Name + "."
 			if err := extractStruct(v, validate, topLevel, fieldVal, subPrefix); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 			continue
 		}
@@ -133,7 +133,7 @@ func extractStruct(v *viper.Viper, validate *uv.Validate, topLevel any, structVa
 		// 必须在 Kind-based switch 之前通过类型比较单独处理，否则会被 Int64 分支拦截
 		if field.Type == reflect.TypeFor[time.Duration]() || field.Type == reflect.TypeFor[serializer.DurationNS]() || field.Type == reflect.TypeFor[serializer.DurationMS]() {
 			if err := extractDuration(v, viperKey, promptText, fieldPath, fieldVal); err != nil {
-				return err
+				return errors.WithStack(err)
 			}
 		} else {
 			switch fieldVal.Kind() {
@@ -167,24 +167,24 @@ func extractStruct(v *viper.Viper, validate *uv.Validate, topLevel any, structVa
 
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				if err := extractInt(v, viperKey, promptText, fieldPath, fieldVal); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 				if err := extractUint(v, viperKey, promptText, fieldPath, fieldVal); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 
 			case reflect.Float32, reflect.Float64:
 				if err := extractFloat(v, viperKey, promptText, fieldPath, fieldVal); err != nil {
-					return err
+					return errors.WithStack(err)
 				}
 
 			case reflect.Slice:
 				// 目前仅支持 []string 类型
 				if field.Type.Elem().Kind() == reflect.String {
 					if err := extractStringSlice(v, viperKey, promptText, fieldPath, fieldVal); err != nil {
-						return err
+						return errors.WithStack(err)
 					}
 				} else {
 					continue
@@ -220,12 +220,12 @@ func promptWithConfirm(promptText string, mask bool) (string, error) {
 	for {
 		value, err := promptOnce(promptText, mask)
 		if err != nil {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 
 		confirmValue, err := promptOnce(promptText+translatePrompt(CliI18nPrefix+".prompt.confirm-suffix"), mask)
 		if err != nil {
-			return "", err
+			return "", errors.WithStack(err)
 		}
 
 		if value == confirmValue {

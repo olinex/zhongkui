@@ -115,12 +115,12 @@ func (sqliteFilePlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, 
 	objectKey := SQLiteObjectKey(namespace, name)
 	path, err := store.Materialize(ctx, objectKey)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	poolHandle := NewSQLiteFilePool(&SQLiteFileConfig{Path: path, Namespace: namespace})
 	cols, err := parseDatasourceColumns(c.Schema)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return NewSQLiteFileDatasourceWithSchema(poolHandle, c.Table, cols)
 }

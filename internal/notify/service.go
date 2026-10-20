@@ -525,7 +525,7 @@ func (s *Service) finalize(ctx context.Context, ev *sendEvent, group *core.Notif
 	}
 	if sendErr != nil {
 		// 发送失败透传错误，触发任务重试；错误已由渠道以项目 errors 包构造，无需重复包裹
-		return sendErr
+		return errors.WithStack(sendErr)
 	}
 	return nil
 }

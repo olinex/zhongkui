@@ -105,7 +105,7 @@ func CoerceScalar(kind ScalarKind, value any) (any, error) {
 func FormatScalar(kind ScalarKind, value any) (string, error) {
 	coerced, err := CoerceScalar(kind, value)
 	if err != nil {
-		return "", err
+		return "", errors.WithStack(err)
 	}
 	switch v := coerced.(type) {
 	case string:

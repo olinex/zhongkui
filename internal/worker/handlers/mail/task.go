@@ -67,11 +67,11 @@ func (h *MailSendHandler) Do(ctx context.Context, task etl.Task) error {
 		return errors.WithStack(err)
 	}
 	if err := validateMailSendInput(input); err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if err := h.sender.Send(ctx, input.To, input.Message, input.Language); err != nil {
 		h.logger.Ctx(ctx).Errorf("mail: send failed (to=%s template=%s): %v", input.To, input.Message.Template, err)
-		return err
+		return errors.WithStack(err)
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func (h *MailSendHandler) Do(ctx context.Context, task etl.Task) error {
 // NewMailSendTask 将系统级邮件直发请求编码为 mail:send 异步任务；必填字段缺失或邮箱非法返回错误。
 func NewMailSendTask(in MailSendInput) (*asynq.Task, error) {
 	if err := validateMailSendInput(in); err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	payload, err := json.Marshal(&in)
 	if err != nil {

@@ -9,12 +9,20 @@
 - [func ChatSlotValues\(\) \[\]string](<#ChatSlotValues>)
 - [func InvalidChatSlotError\(value Slot\) error](<#InvalidChatSlotError>)
 - [func SlotKind\(slot Slot\) llm.ModelKind](<#SlotKind>)
+- [type AgentInteractionState](<#AgentInteractionState>)
+  - [func AllAgentInteractionStates\(\) \[\]AgentInteractionState](<#AllAgentInteractionStates>)
+  - [func ParseAgentInteractionState\(raw AgentInteractionState\) \(AgentInteractionState, error\)](<#ParseAgentInteractionState>)
+- [type AgentInteractionSubstate](<#AgentInteractionSubstate>)
+  - [func AllAgentInteractionSubstates\(\) \[\]AgentInteractionSubstate](<#AllAgentInteractionSubstates>)
+  - [func ParseAgentInteractionSubstate\(raw AgentInteractionSubstate\) \(AgentInteractionSubstate, error\)](<#ParseAgentInteractionSubstate>)
 - [type AgentKind](<#AgentKind>)
   - [func AllAgentKinds\(\) \[\]AgentKind](<#AllAgentKinds>)
   - [func ParseAgentKind\(raw AgentKind\) \(AgentKind, error\)](<#ParseAgentKind>)
 - [type AgentLiveRun](<#AgentLiveRun>)
 - [type AgentMemory](<#AgentMemory>)
 - [type AgentMessage](<#AgentMessage>)
+- [type AgentMessageBlock](<#AgentMessageBlock>)
+- [type AgentMessageBlockKind](<#AgentMessageBlockKind>)
 - [type AgentParam](<#AgentParam>)
 - [type AgentRun](<#AgentRun>)
 - [type AgentRunEvent](<#AgentRunEvent>)
@@ -95,6 +103,100 @@ func SlotKind(slot Slot) llm.ModelKind
 ```
 
 SlotKind 返回档位要求的模型类型：embedding 档位要求向量模型，其余对话档位要求对话模型。
+
+<a name="AgentInteractionState"></a>
+## type AgentInteractionState
+
+AgentInteractionState 是会话交互状态（四主状态）的标识：等待中（waiting）、运行中（running）、 暂停（paused）与已锁定（locked）。交互状态由既有事实（在途活动、挂起现场、会话消息与轮次上限） 唯一推导，不落库为独立可变列；等待中/运行中/暂停各自携带子状态（见 AgentInteractionSubstate）， 已锁定无子状态。
+
+```go
+type AgentInteractionState string
+```
+
+<a name="AgentInteractionStateWaiting"></a>会话交互状态常量。
+
+```go
+const (
+    // AgentInteractionStateWaiting 等待中：本轮尚未结束，且必须由用户输入才能继续（等授权或等回答）
+    AgentInteractionStateWaiting AgentInteractionState = "waiting"
+    // AgentInteractionStateRunning 运行中：会话内存在在途活动（生成或上下文压缩），后端正在产出
+    AgentInteractionStateRunning AgentInteractionState = "running"
+    // AgentInteractionStatePaused 暂停：会话静默待命，最近一次运行已有终局，可发起新提问或回滚类操作
+    AgentInteractionStatePaused AgentInteractionState = "paused"
+    // AgentInteractionStateLocked 已锁定：有效轮次已达上限，拒绝新的提问，仍可执行回滚类操作
+    AgentInteractionStateLocked AgentInteractionState = "locked"
+)
+```
+
+<a name="AllAgentInteractionStates"></a>
+### func AllAgentInteractionStates
+
+```go
+func AllAgentInteractionStates() []AgentInteractionState
+```
+
+AllAgentInteractionStates 返回全部会话交互状态（主状态）的副本，声明顺序即枚举类条目顺序与 前端展示顺序；供交互状态机与视图层复用，调用方修改返回值不影响该取值空间。
+
+<a name="ParseAgentInteractionState"></a>
+### func ParseAgentInteractionState
+
+```go
+func ParseAgentInteractionState(raw AgentInteractionState) (AgentInteractionState, error)
+```
+
+ParseAgentInteractionState 解析并校验会话交互状态（主状态）：不在取值空间内的取值（含空串） 返回英文错误；合法取值原样返回。主状态没有缺省值（由推导全函数必定落一个），故空串视为非法。
+
+<a name="AgentInteractionSubstate"></a>
+## type AgentInteractionSubstate
+
+AgentInteractionSubstate 是会话交互子状态的标识：等待中（approval/answer）、运行中 （generating/thinking/tool\_calling/compacting）与暂停（success/failed/aborted）三类主状态各自的 细分取值，与 AgentInteractionState 一同由交互状态机推导；已锁定无子状态（其子状态以空串表达）。
+
+```go
+type AgentInteractionSubstate string
+```
+
+<a name="AgentInteractionSubstateApproval"></a>交互子状态常量。
+
+```go
+const (
+    // AgentInteractionSubstateApproval 等待授权：等待用户批准/拒绝客户端工具调用
+    AgentInteractionSubstateApproval AgentInteractionSubstate = "approval"
+    // AgentInteractionSubstateAnswer 等待回答：等待用户提交主动提问问卷
+    AgentInteractionSubstateAnswer AgentInteractionSubstate = "answer"
+    // AgentInteractionSubstateGenerating 正文生成中：模型正在流式产出正文
+    AgentInteractionSubstateGenerating AgentInteractionSubstate = "generating"
+    // AgentInteractionSubstateThinking 思考中：模型正在产出思考/推理内容
+    AgentInteractionSubstateThinking AgentInteractionSubstate = "thinking"
+    // AgentInteractionSubstateToolCalling 工具调用中：正在执行工具调用
+    AgentInteractionSubstateToolCalling AgentInteractionSubstate = "tool_calling"
+    // AgentInteractionSubstateCompacting 上下文压缩中：正在生成滚动摘要
+    AgentInteractionSubstateCompacting AgentInteractionSubstate = "compacting"
+    // AgentInteractionSubstateSuccess 成功：最近一次运行正常结束
+    AgentInteractionSubstateSuccess AgentInteractionSubstate = "success"
+    // AgentInteractionSubstateFailed 失败：最近一次运行以错误结束
+    AgentInteractionSubstateFailed AgentInteractionSubstate = "failed"
+    // AgentInteractionSubstateAborted 用户中止：最近一次运行被用户（或退订宽限）中止
+    AgentInteractionSubstateAborted AgentInteractionSubstate = "aborted"
+)
+```
+
+<a name="AllAgentInteractionSubstates"></a>
+### func AllAgentInteractionSubstates
+
+```go
+func AllAgentInteractionSubstates() []AgentInteractionSubstate
+```
+
+AllAgentInteractionSubstates 返回全部会话交互子状态的副本，声明顺序即枚举类条目顺序与前端 展示顺序；供交互状态机与视图层复用，调用方修改返回值不影响该取值空间。
+
+<a name="ParseAgentInteractionSubstate"></a>
+### func ParseAgentInteractionSubstate
+
+```go
+func ParseAgentInteractionSubstate(raw AgentInteractionSubstate) (AgentInteractionSubstate, error)
+```
+
+ParseAgentInteractionSubstate 解析并校验会话交互子状态：不在取值空间内的取值（含空串）返回 英文错误；合法取值原样返回。合法子状态由本取值空间穷举，已锁定主状态无子状态（由调用方以空串 单独表达），故空串在此视为非法。
 
 <a name="AgentKind"></a>
 ## type AgentKind
@@ -210,7 +312,7 @@ type AgentMemory struct {
 <a name="AgentMessage"></a>
 ## type AgentMessage
 
-AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文 （Content），以及助手回复的草稿载荷（DraftJSON）、引用来源列表（CitationsJSON） 与思考过程（Reasoning）。对应表为 agent\_messages。
+AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文 （Content），以及助手回复的草稿载荷（DraftJSON）与引用来源列表（CitationsJSON）。 一轮助手回答的思考 / 工具调用 / 授权 / 问卷 / 正文按时序存于子表 agent\_message\_blocks（AgentMessageBlock）。对应表为 agent\_messages。
 
 ```go
 type AgentMessage struct {
@@ -235,8 +337,6 @@ type AgentMessage struct {
     DraftJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12812,length=32"`
     // CitationsJSON 引用来源列表（JSON），可空，经 crypto 序列化器加密落库（引用携带知识库正文）
     CitationsJSON *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12813,length=32"`
-    // Reasoning 助手回复的思考过程，加密落库、可空（模型未返回思考内容时为 NULL）
-    Reasoning *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
     // PromptTokens 本轮助手回答全部模型调用的输入 token 累加（明文数值，用户消息恒为 0）
     PromptTokens int `gorm:"type:INT"`
     // CompletionTokens 本轮助手回答全部模型调用的输出 token 累加（明文数值，用户消息恒为 0）
@@ -245,12 +345,65 @@ type AgentMessage struct {
     TotalTokens int `gorm:"type:INT"`
     // ElapsedMs 本轮助手回答的总耗时（毫秒，明文数值，用户消息恒为 0）
     ElapsedMs int64 `gorm:"type:BIGINT"`
-    // Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled），
-    // 空表示尚未终结（运行在途的阶段性落库行）。运行被中断（超时 / 报错 / 取消）时据此表达
-    // 「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文拼接提示文案（提示语若混入正文，
-    // 会被喂回模型污染下一轮上下文）；用户消息恒为空。
+    // Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled，
+    // 以及问卷挂起期的 suspended），空表示尚未终结（运行在途的阶段性落库行）。运行被中断
+    // （超时 / 报错 / 取消）时据此表达「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文
+    // 拼接提示文案（提示语若混入正文，会被喂回模型污染下一轮上下文）；用户消息恒为空。
     Phase AgentRunPhase `gorm:"type:VARCHAR(16)"`
 }
+```
+
+<a name="AgentMessageBlock"></a>
+## type AgentMessageBlock
+
+AgentMessageBlock 表示一条助手回答（AgentMessage）下的一个有序内容块：一轮回答的思考段、 工具调用组、授权待审、主动提问与正文段各按其真实产生时序落为一个块。BlockSeq 在同一消息内 单调递增（从 1 起），块的顺序即内容真实产生的顺序；块为展示事实，不参与模型上下文回灌。 对应表为 agent\_message\_blocks。
+
+```go
+type AgentMessageBlock struct {
+    database.BaseModel // 内嵌基础模型，包含 ID、CreatedAt、UpdatedAt 字段（表无 deleted_at 列）
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace core.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `gorm:"type:VARCHAR(32)"`
+    // UserID 数据属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `gorm:"type:BIGINT;not null"`
+    // MessageID 从属的助手消息 ID（agent_messages.id），消息删除时块级联删除（真外键，无哨兵值）
+    MessageID uint `gorm:"type:BIGINT"`
+    // BlockSeq 块在所属消息内的单调递增序号（从 1 起），与 MessageID 共同唯一，即内容的真实产生顺序
+    BlockSeq uint64 `gorm:"type:BIGINT;not null"`
+    // Kind 块类型：reasoning/tool_calls/approval/questionnaire/content（取值见 AgentMessageBlockKind）
+    Kind AgentMessageBlockKind `gorm:"type:VARCHAR(16);not null"`
+    // Payload 块的 JSON 载荷（思考文本 / 工具调用记录 / 授权清单 / 问卷题目与作答 / 正文文本），
+    // 经 crypto 序列化器加密落库
+    Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
+}
+```
+
+<a name="AgentMessageBlockKind"></a>
+## type AgentMessageBlockKind
+
+AgentMessageBlockKind 是助手回答有序内容块的类型标识（agent\_message\_blocks.kind）：思考段 （reasoning）、工具调用组（tool\_calls）、授权待审（approval）、主动提问（questionnaire）与 正文段（content）。块的产生顺序即内容真实产生的时序，取值与 agent\_message\_blocks.kind 列的 取值一致。仅内部流转与展示使用，\*\*不注册枚举类\*\*（无 i18n label，约定同 AgentRunEventType）。
+
+```go
+type AgentMessageBlockKind string
+```
+
+<a name="AgentMessageBlockKindReasoning"></a>助手回答内容块类型常量。
+
+```go
+const (
+    // AgentMessageBlockKindReasoning 思考段：模型返回的思考/推理内容，连续增量聚为一个块
+    AgentMessageBlockKindReasoning AgentMessageBlockKind = "reasoning"
+    // AgentMessageBlockKindToolCalls 工具调用组：同一轮（round）发起的调用聚为一个块
+    AgentMessageBlockKindToolCalls AgentMessageBlockKind = "tool_calls"
+    // AgentMessageBlockKindApproval 授权待审：本轮待前端审批与执行的客户端工具调用清单
+    AgentMessageBlockKindApproval AgentMessageBlockKind = "approval"
+    // AgentMessageBlockKindQuestionnaire 主动提问：一轮 ask_user 问卷的题目与作答
+    AgentMessageBlockKindQuestionnaire AgentMessageBlockKind = "questionnaire"
+    // AgentMessageBlockKindContent 正文段：模型返回的面向用户正文，连续增量聚为一个块
+    AgentMessageBlockKindContent AgentMessageBlockKind = "content"
+)
 ```
 
 <a name="AgentParam"></a>
@@ -302,6 +455,9 @@ type AgentRun struct {
     CitationsJSON *serializer.Crypto `json:"citations" gorm:"column:citations;type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12816,length=32"`
     // Slot 本次运行使用的档位，取值来自枚举类 llmSlot
     Slot Slot `json:"slot" gorm:"type:VARCHAR(255)"`
+    // AnchorMessageID 本现场的挂起锚点消息 ID（agent_messages.id）：挂起时承载本回合最终回答（问卷挂起
+    // 还承载问卷载荷）的助手消息行；续跑据此原地终态化该行而非新增。旁路调用（运行期共享状态缺失）为 0
+    AnchorMessageID uint `json:"anchorMessageID" gorm:"type:BIGINT"`
     // ExpiresAt 运行现场过期时间，超过该时刻的现场不可恢复
     ExpiresAt time.Time `json:"expiresAt" gorm:"type:TIMESTAMPTZ;index:idx_agent_runs_expires_at"`
 }
@@ -340,7 +496,7 @@ type AgentRunEvent struct {
 <a name="AgentRunEventType"></a>
 ## type AgentRunEventType
 
-AgentRunEventType 是驻留运行事件日志（agent\_run\_events.type）与 SSE 事件类型的标识： 增量文本（delta）、思考过程增量（reasoning）、阶段状态（stage）、工具执行请求 （tool\_request）、上下文压缩开始（compress\_start）、压缩摘要增量（compress\_delta）、 压缩完成（compress\_done）、完成（done）与错误（error）。取值与 sse.SSEEventValue 常量 一一对应，仅内部流转使用，\*\*不注册枚举类\*\*（不面向用户展示，无 i18n label）。
+AgentRunEventType 是驻留运行事件日志（agent\_run\_events.type）与 SSE 事件类型的标识： 增量文本（delta）、思考过程增量（reasoning）、阶段状态（stage）、工具执行请求 （tool\_request）、内容块（block）、上下文压缩开始（compress\_start）、压缩摘要增量 （compress\_delta）、压缩完成（compress\_done）、交互状态（state）、完成（done）与错误 （error）。取值与 sse.SSEEventValue 常量一一对应，仅内部流转使用，\*\*不注册枚举类\*\* （不面向用户展示，无 i18n label）。
 
 ```go
 type AgentRunEventType string
@@ -368,6 +524,10 @@ const (
     AgentRunEventDone AgentRunEventType = "done"
     // AgentRunEventError 错误事件
     AgentRunEventError AgentRunEventType = "error"
+    // AgentRunEventState 会话交互状态事件（携带 {state, substate} 交互状态与子状态）
+    AgentRunEventState AgentRunEventType = "state"
+    // AgentRunEventBlock 内容块事件（携带 {seq, kind, payload} 的有序内容块，块创建与收敛各下发一次）
+    AgentRunEventBlock AgentRunEventType = "block"
 )
 ```
 
@@ -529,6 +689,10 @@ type AgentSessionCompaction struct {
     TokensBefore int `gorm:"type:INT"`
     // FoldedCount 本次推进折叠进摘要的消息条数（三种原因均为真实条数）
     FoldedCount int `gorm:"type:INT"`
+    // TokensAfter 本次推进后上下文占用的即时估算 token（压缩前占用 − 被折叠内容占用 + 新摘要占用，
+    // 口径见 ai.CompactionMetrics 与 ai 包压缩时的估值函数）。仅用户可见的压缩推进（auto / manual）
+    // 落值；静默滚动（rolling）与估算不可用时留 0，表示「无估算」，读取侧据此回落到末次真实测量。
+    TokensAfter int `gorm:"type:INT"`
 }
 ```
 

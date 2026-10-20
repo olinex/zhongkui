@@ -344,7 +344,7 @@ func analyzeTCPIPv4(raw []byte) (*tcpObservedPackage, error) {
 
 	tcp, err := parseTCPPacket(raw[headerLen:])
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return visitTCP(tcp, ipV4, ittl, ihl, olen, quirks)
 }
@@ -376,7 +376,7 @@ func analyzeTCPIPv6(raw []byte) (*tcpObservedPackage, error) {
 
 	tcp, err := parseTCPPacket(raw[40:])
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return visitTCP(tcp, ipV6, ittl, 40, olen, quirks)
 }

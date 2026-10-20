@@ -334,11 +334,11 @@ func (mysqlPlugin) IntrospectSchema(ctx context.Context, cfg any, _ io.Reader) (
 	pool := NewMySQLPool(&MySQLConfig{Addr: c.Addr, Port: c.Port, User: c.User, Password: c.Password, DBName: c.DBName})
 	ds, err := NewMySQLDatasource(ctx, pool, c.Table)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	schema, err := schemaOf(ds)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return schemaColumnsOut(schema), nil
 }
@@ -359,7 +359,7 @@ func (mysqlPlugin) Register(ctx context.Context, _ *sqlitevtab.SQLitePool, _ *s3
 	})
 	cols, err := parseDatasourceColumns(c.Schema)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	return NewMySQLDatasourceWithSchema(poolHandle, c.Table, cols)
 }

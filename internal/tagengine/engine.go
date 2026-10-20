@@ -91,11 +91,11 @@ func (e *Engine) loadGroup(ctx context.Context, namespace, model string) (*compi
 	}
 	rules, err := e.getRulesFromDB(ctx, namespace, model)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	group, err := CompileGroup(ctx, rules)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 	e.cache.Store(key, group)
 	return group, nil

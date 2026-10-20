@@ -242,7 +242,7 @@ func (o *Orchestrator[Handler, Item]) Start(ctx context.Context) error {
 							time.Since(pollStart),
 							err,
 						)
-						return err
+						return errors.WithStack(err)
 					},
 				)
 				pollWg.GoNamed(

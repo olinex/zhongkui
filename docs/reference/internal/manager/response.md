@@ -79,6 +79,8 @@ const (
     CodeAgentLiveRunExpired                       // 1121: 驻留运行登记已过期
     CodeAgentLiveRunForbidden                     // 1122: 驻留运行归属不符
     CodeTooManyRequests                           // 1123: 请求过于频繁（命中公共接口限流）
+    CodeAgentSessionLocked                        // 1124: 会话已达轮次上限，拒绝新提问
+    CodeAgentInteractionBusy                      // 1125: 当前交互状态不允许该操作
 )
 ```
 

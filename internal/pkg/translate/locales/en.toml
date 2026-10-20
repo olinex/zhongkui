@@ -96,6 +96,8 @@
 1121 = "The live run of this session has expired"
 1122 = "You are not allowed to access the live run of this session"
 1123 = "Too many requests, please try again later"
+1124 = "The session has reached the maximum number of turns, please roll back and retry"
+1125 = "The current session state does not allow this operation, please try again later"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -2510,6 +2512,47 @@ other = "Cancelled"
 [enum.agentRunPhase.suspended]
 other = "Awaiting Approval"
 
+# Agent interaction state (enum class agentInteractionState)
+[enum.agentInteractionState.waiting]
+other = "Waiting"
+
+[enum.agentInteractionState.running]
+other = "Running"
+
+[enum.agentInteractionState.paused]
+other = "Paused"
+
+[enum.agentInteractionState.locked]
+other = "Locked"
+
+# Agent interaction substate (enum class agentInteractionSubstate)
+[enum.agentInteractionSubstate.approval]
+other = "Awaiting approval"
+
+[enum.agentInteractionSubstate.answer]
+other = "Awaiting answer"
+
+[enum.agentInteractionSubstate.generating]
+other = "Generating"
+
+[enum.agentInteractionSubstate.thinking]
+other = "Thinking"
+
+[enum.agentInteractionSubstate.tool_calling]
+other = "Calling tool"
+
+[enum.agentInteractionSubstate.compacting]
+other = "Compacting context"
+
+[enum.agentInteractionSubstate.success]
+other = "Succeeded"
+
+[enum.agentInteractionSubstate.failed]
+other = "Failed"
+
+[enum.agentInteractionSubstate.aborted]
+other = "Aborted by user"
+
 # MCP remote transport (enum class mcpTransport)
 [enum.mcpTransport.sse]
 other = "SSE"
@@ -2833,6 +2876,12 @@ other = "Auto-compaction Threshold"
 [param.session.compactThresholdRatio.comment]
 other = "Usage ratio threshold (context tokens / slot capacity) that triggers auto-compaction"
 
+[param.session.maxUserTurns.label]
+other = "Session Turn Limit"
+
+[param.session.maxUserTurns.comment]
+other = "Upper bound on effective turns (user messages currently present in the session); reaching it locks the session and rejects new questions, while rolling back below the bound unlocks it"
+
 [param.session.topicSystemPrompt.label]
 other = "Session Topic Prompt"
 
@@ -2993,6 +3042,114 @@ other = "Knowledge Base Search"
 
 [tool.knowledge_search.comment]
 other = "Called by the agent on demand to search the knowledge base of the current namespace; the agent decides when to search and which query to use, and may call it multiple times"
+
+[tool.ask_user.label]
+other = "Ask User"
+
+[tool.ask_user.comment]
+other = "Called by the model when information is insufficient or the user must choose among options; the frontend presents the questions and returns the user's answers, allowing multiple questions at once with candidate answers per question"
+
+[tool.math_eval.label]
+other = "Expression evaluation"
+
+[tool.math_eval.comment]
+other = "Evaluate a single arithmetic or logical expression precisely so the model need not compute it mentally; supports arithmetic, power, comparison and logical operators"
+
+[tool.unit_convert.label]
+other = "Unit conversion"
+
+[tool.unit_convert.comment]
+other = "Convert a value between units of the same physical quantity, covering length, mass, time, area, volume, data size, speed and temperature"
+
+[tool.base_convert.label]
+other = "Base conversion"
+
+[tool.base_convert.comment]
+other = "Convert an arbitrary-precision integer between bases 2 and 36"
+
+[tool.datetime_calc.label]
+other = "Date and time arithmetic"
+
+[tool.datetime_calc.comment]
+other = "Get the current instant, convert time zones, add or subtract durations and compute differences, with IANA time zone support"
+
+[tool.regex.label]
+other = "Regex test and replace"
+
+[tool.regex.comment]
+other = "Test whether text matches a Go (RE2) pattern or perform replacement, returning matches or the replaced text"
+
+[tool.json_diff.label]
+other = "JSON diff"
+
+[tool.json_diff.comment]
+other = "Recursively compare two JSON documents and list added, removed and changed paths"
+
+[tool.text_stats.label]
+other = "Text statistics"
+
+[tool.text_stats.comment]
+other = "Count characters, bytes, words, lines and paragraphs of a text"
+
+[tool.hash.label]
+other = "Hash digest"
+
+[tool.hash.comment]
+other = "Compute MD5, SHA-1, SHA-256 or SHA-512 digests of a text, returning both hexadecimal and Base64 representations"
+
+[tool.encode_convert.label]
+other = "Encoding conversion"
+
+[tool.encode_convert.comment]
+other = "Encode or decode between Base64, Base64URL, Hex, URL and HTML encodings"
+
+[tool.uuid.label]
+other = "UUID generation"
+
+[tool.uuid.comment]
+other = "Generate UUIDs of a given version (v4 or v7), optionally in batch"
+
+[tool.json.label]
+other = "JSON processing"
+
+[tool.json.comment]
+other = "Validate, pretty-print, minify JSON text and read values by path"
+
+[tool.csv_parse.label]
+other = "CSV parsing"
+
+[tool.csv_parse.comment]
+other = "Parse CSV text into a header and data rows, with a custom delimiter and optional header"
+
+[tool.url_parse.label]
+other = "URL parsing"
+
+[tool.url_parse.comment]
+other = "Parse a URL into scheme, user, host, port, path, query parameters and fragment"
+
+[tool.poly_solve.label]
+other = "Polynomial roots"
+
+[tool.poly_solve.comment]
+other = "Find all roots of a univariate polynomial, giving rational roots exactly and approximating the rest as complex numbers with multiplicities"
+
+[tool.linear_solve.label]
+other = "Linear system solver"
+
+[tool.linear_solve.comment]
+other = "Solve the linear system Ax=b, deciding between a unique solution, infinitely many solutions or none, and returning a particular solution plus a nullspace basis when solutions are infinite"
+
+[tool.root_find.label]
+other = "Numeric root finder"
+
+[tool.root_find.comment]
+other = "Find real roots of a univariate equation f(x)=0, either by scanning an interval for all roots or by Newton iteration from an initial guess"
+
+[tool.nonlinear_solve.label]
+other = "Nonlinear system solver"
+
+[tool.nonlinear_solve.comment]
+other = "Solve a system of nonlinear equations with the Newton-Raphson method, returning the solution vector, residual and iteration count"
 
 # =============================================================================
 # Custom OPA builtins metadata (tagengine.custom-functions.<name>.description)
