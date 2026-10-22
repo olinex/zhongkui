@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -35,7 +36,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签规则列表查询 - 支持分页、搜索和排序
 		tagRuleGroup.POST("/list", TagRuleListGet)
 		// 标签规则列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
-		views.RegisterListApi[*views.TagRuleListGetSearchIn, *TagRuleListOut](tagRuleGroup, "/list", "标签规则列表查询 - 支持分页、搜索和排序")
+		views.RegisterListApi[*views.TagRuleListGetSearchIn, *TagRuleListOut](tagRuleGroup, "/list", "标签规则列表查询 - 支持分页、搜索和排序",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.list",
+				Domain:    "tag",
+				Intent:    "查看标签规则列表与启用状态",
+				Entities:  []string{"tag_rules"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 创建标签规则 - 创建新的标签识别规则（归属当前请求命名空间）
 		tagRuleGroup.POST("/create", TagRuleCreate)
 		// 创建标签规则元信息
@@ -43,7 +53,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签规则详情查询 - 根据ID获取规则详细信息
 		tagRuleGroup.POST("/:id/get", TagRuleDetailGet)
 		// 标签规则详情元信息
-		views.RegisterApi(tagRuleGroup, "/:id/get", "标签规则详情查询 - 根据ID获取规则详细信息", views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleDetailOut]()))
+		views.RegisterApi(tagRuleGroup, "/:id/get", "标签规则详情查询 - 根据ID获取规则详细信息",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleDetailOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.detail",
+				Domain:    "tag",
+				Intent:    "查看标签规则详情",
+				Entities:  []string{"tag_rules"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 标签规则信息更新 - 更新规则描述/内容/启用状态
 		tagRuleGroup.POST("/:id/update", TagRuleUpdate)
 		// 标签规则信息更新元信息
@@ -71,23 +91,57 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签规则语法校验元信息
 		views.RegisterApi(tagRuleGroup, "/validate", "标签规则语法校验 - 校验 Rego 源码语法与契约，返回带行列号的错误",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleValidateIn](), views.WithBodyOutput[TagRuleValidateOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.validate",
+				Domain:    "tag",
+				Intent:    "校验标签规则 Rego 语法（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 标签规则单规则 dry-run - 对一条候选规则评估 JSON 输入文档，输出运行细节
 		tagRuleGroup.POST("/single/dry-run", TagRuleDryRun)
 		// 标签规则单规则 dry-run 元信息
 		views.RegisterApi(tagRuleGroup, "/single/dry-run", "标签规则单规则 dry-run - 对一条候选规则评估 JSON 输入文档，输出运行细节",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleDryRunRuleIn](), views.WithBodyOutput[TagRuleDryRunOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.dry-run",
+				Domain:    "tag",
+				Intent:    "对单条候选标签规则执行 dry-run（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 标签规则规则组 dry-run - 对一组候选规则评估 JSON 输入文档，输出逐规则与合并标签
 		tagRuleGroup.POST("/group/dry-run", TagRuleDryRunGroup)
 		// 标签规则规则组 dry-run 元信息
 		views.RegisterApi(tagRuleGroup, "/group/dry-run", "标签规则规则组 dry-run - 对一组候选规则评估 JSON 输入文档，输出逐规则与合并标签",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleDryRunGroupIn](), views.WithBodyOutput[TagRuleDryRunOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.dry-run.group",
+				Domain:    "tag",
+				Intent:    "对一组候选标签规则执行 dry-run（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 标签规则版本列表 - 获取规则的全部历史版本
 		tagRuleGroup.POST("/:id/version/list", TagRuleVersionList)
 		// 标签规则版本列表元信息
-		views.RegisterApi(tagRuleGroup, "/:id/version/list", "标签规则版本列表 - 获取规则的全部历史版本", views.WithMethod(http.MethodPost))
+		views.RegisterApi(tagRuleGroup, "/:id/version/list", "标签规则版本列表 - 获取规则的全部历史版本",
+			views.WithMethod(http.MethodPost),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.version.list",
+				Domain:    "tag",
+				Intent:    "查看标签规则历史版本",
+				Entities:  []string{"tag_rule_versions"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 标签规则回滚 - 将规则回滚到指定历史版本
 		tagRuleGroup.POST("/:id/version/:version/rollback", TagRuleVersionRollback)
 		// 标签规则回滚元信息
@@ -95,19 +149,59 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签规则目标模型元信息 - 返回输入文档字段元信息，供 Rego 编辑器补全与字段面板
 		tagRuleGroup.POST("/model/metadata", TagRuleModelMetadata)
 		// 标签规则目标模型元信息元信息
-		views.RegisterApi(tagRuleGroup, "/model/metadata", "标签规则目标模型元信息 - 返回输入文档字段元信息，供 Rego 编辑器补全与字段面板", views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleModelIn](), views.WithBodyOutput[TagRuleModelMetadataOut]()))
+		views.RegisterApi(tagRuleGroup, "/model/metadata", "标签规则目标模型元信息 - 返回输入文档字段元信息，供 Rego 编辑器补全与字段面板",
+			views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleModelIn](), views.WithBodyOutput[TagRuleModelMetadataOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.model.metadata",
+				Domain:    "tag",
+				Intent:    "查看标签规则目标模型的字段元信息",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
+		)
 		// 标签规则目标模型样例 - 返回当前命名空间下的系统样例列表，缺失时懒供给
 		tagRuleGroup.POST("/model/samples", TagRuleModelSamples)
 		// 标签规则目标模型样例元信息
-		views.RegisterApi(tagRuleGroup, "/model/samples", "标签规则目标模型样例 - 返回当前命名空间下的系统样例列表，缺失时懒供给", views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleModelIn](), views.WithBodyOutput[TagRuleModelSamplesOut]()))
+		views.RegisterApi(tagRuleGroup, "/model/samples", "标签规则目标模型样例 - 返回当前命名空间下的系统样例列表，缺失时懒供给",
+			views.WithMethod(http.MethodPost, views.WithBodyInput[TagRuleModelIn](), views.WithBodyOutput[TagRuleModelSamplesOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.model.samples",
+				Domain:    "tag",
+				Intent:    "查看标签规则目标模型样例",
+				Entities:  []string{"tag_summings"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 标签规则自定义 OPA 内置函数元信息 - 供 Rego 编辑器函数补全/悬停提示
 		tagRuleGroup.POST("/functions", TagRuleFunctions)
 		// 标签规则自定义 OPA 内置函数元信息
-		views.RegisterApi(tagRuleGroup, "/functions", "标签规则自定义 OPA 内置函数元信息 - 供 Rego 编辑器函数补全/悬停提示", views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleFunctionsOut]()))
+		views.RegisterApi(tagRuleGroup, "/functions", "标签规则自定义 OPA 内置函数元信息 - 供 Rego 编辑器函数补全/悬停提示",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleFunctionsOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.functions",
+				Domain:    "tag",
+				Intent:    "查看 Rego 自定义内置函数",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
+		)
 		// 标签规则 sqlite 语句元信息 - 返回当前命名空间已注册数据源 schema，供 Rego 编辑器 SQL 补全/提示
 		tagRuleGroup.POST("/sqlite/meta", TagRuleSqliteMeta)
 		// 标签规则 sqlite 语句元信息
-		views.RegisterApi(tagRuleGroup, "/sqlite/meta", "标签规则 sqlite 语句元信息 - 返回当前命名空间已注册数据源 schema，供 Rego 编辑器 SQL 补全/提示", views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleSqliteMetaOut]()))
+		views.RegisterApi(tagRuleGroup, "/sqlite/meta", "标签规则 sqlite 语句元信息 - 返回当前命名空间已注册数据源 schema，供 Rego 编辑器 SQL 补全/提示",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleSqliteMetaOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule.sqlite.meta",
+				Domain:    "tag",
+				Intent:    "查看当前命名空间已注册数据源的 schema",
+				Entities:  []string{"datasources"},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
+		)
 	}
 
 	// ========== 标签规则样例：/api/v1/tag-event/tag-rule-sample ==========
@@ -117,7 +211,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签规则样例列表查询 - 支持分页、搜索和排序
 		tagRuleSampleGroup.POST("/list", TagRuleSampleListGet)
 		// 标签规则样例列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
-		views.RegisterListApi[*views.TagRuleSampleListGetSearchIn, *TagRuleSampleListOut](tagRuleSampleGroup, "/list", "标签规则样例列表查询 - 支持分页、搜索和排序")
+		views.RegisterListApi[*views.TagRuleSampleListGetSearchIn, *TagRuleSampleListOut](tagRuleSampleGroup, "/list", "标签规则样例列表查询 - 支持分页、搜索和排序",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule-sample.list",
+				Domain:    "tag",
+				Intent:    "查看标签规则验证样例列表",
+				Entities:  []string{"tag_rule_samples"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 创建标签规则样例 - 创建新的验证样例（归属当前请求命名空间，model/input 创建后不可变）
 		tagRuleSampleGroup.POST("/create", TagRuleSampleCreate)
 		// 创建标签规则样例元信息
@@ -125,7 +228,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签规则样例详情查询 - 根据ID获取样例完整信息
 		tagRuleSampleGroup.POST("/:id/get", TagRuleSampleDetailGet)
 		// 标签规则样例详情元信息
-		views.RegisterApi(tagRuleSampleGroup, "/:id/get", "标签规则样例详情查询 - 根据ID获取样例完整信息", views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleSampleDetailOut]()))
+		views.RegisterApi(tagRuleSampleGroup, "/:id/get", "标签规则样例详情查询 - 根据ID获取样例完整信息",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[TagRuleSampleDetailOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.rule-sample.detail",
+				Domain:    "tag",
+				Intent:    "查看标签规则验证样例详情",
+				Entities:  []string{"tag_rule_samples"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 标签规则样例信息更新 - 仅允许更新样例名称与说明（model/input 不可变）
 		tagRuleSampleGroup.POST("/:id/update", TagRuleSampleUpdate)
 		// 标签规则样例信息更新元信息
@@ -146,7 +259,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签事件规则列表查询 - 支持分页、搜索和排序
 		tagEventRuleGroup.POST("/list", TagEventRuleListGet)
 		// 标签事件规则列表自省信息 - 返回搜索选项、表格列与各 HTTP 方法的入参出参结构体定义
-		views.RegisterListApi[*views.TagEventRuleListGetSearchIn, *TagEventRuleListOut](tagEventRuleGroup, "/list", "标签事件规则列表查询 - 支持分页、搜索和排序")
+		views.RegisterListApi[*views.TagEventRuleListGetSearchIn, *TagEventRuleListOut](tagEventRuleGroup, "/list", "标签事件规则列表查询 - 支持分页、搜索和排序",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event-rule.list",
+				Domain:    "tag",
+				Intent:    "查看标签事件规则列表",
+				Entities:  []string{"tag_event_rules"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 创建标签事件规则 - 创建新的标签事件规则，创建前逐条件校验表达式语法
 		tagEventRuleGroup.POST("/create", TagEventRuleCreate)
 		// 创建标签事件规则元信息
@@ -154,7 +276,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签事件规则详情查询 - 根据ID获取规则详细信息
 		tagEventRuleGroup.POST("/:id/get", TagEventRuleDetailGet)
 		// 标签事件规则详情元信息
-		views.RegisterApi(tagEventRuleGroup, "/:id/get", "标签事件规则详情查询 - 根据ID获取规则详细信息", views.WithMethod(http.MethodPost, views.WithBodyOutput[TagEventRuleDetailOut]()))
+		views.RegisterApi(tagEventRuleGroup, "/:id/get", "标签事件规则详情查询 - 根据ID获取规则详细信息",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[TagEventRuleDetailOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event-rule.detail",
+				Domain:    "tag",
+				Intent:    "查看标签事件规则详情",
+				Entities:  []string{"tag_event_rules", "tag_event_conditions"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 标签事件规则信息更新 - 更新规则描述/匹配策略/启用状态/条件集合，更新前快照当前版本
 		tagEventRuleGroup.POST("/:id/update", TagEventRuleUpdate)
 		// 标签事件规则信息更新元信息
@@ -182,17 +314,43 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签事件规则表达式校验元信息
 		views.RegisterApi(tagEventRuleGroup, "/validate", "标签事件规则表达式校验 - 校验条件表达式语法，返回精炼后的标准表达式或错误消息",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[TagEventRuleValidateIn](), views.WithBodyOutput[TagEventRuleValidateOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event-rule.validate",
+				Domain:    "tag",
+				Intent:    "校验标签事件规则表达式（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 标签事件规则 dry-run - 对一条候选规则（不落库）执行事件检测，查询 tag_summings
 		tagEventRuleGroup.POST("/dry-run", TagEventRuleDryRun)
 		// 标签事件规则 dry-run 元信息
 		views.RegisterApi(tagEventRuleGroup, "/dry-run", "标签事件规则 dry-run - 对一条候选规则（不落库）执行事件检测，查询 tag_summings",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[TagEventRuleDryRunIn](), views.WithBodyOutput[TagEventRuleDryRunOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event-rule.dry-run",
+				Domain:    "tag",
+				Intent:    "对候选标签事件规则执行 dry-run（不落库）",
+				Entities:  []string{"tag_summings"},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 标签事件规则版本列表 - 获取规则的全部历史版本
 		tagEventRuleGroup.POST("/:id/version/list", TagEventRuleVersionList)
 		// 标签事件规则版本列表元信息
-		views.RegisterApi(tagEventRuleGroup, "/:id/version/list", "标签事件规则版本列表 - 获取规则的全部历史版本", views.WithMethod(http.MethodPost))
+		views.RegisterApi(tagEventRuleGroup, "/:id/version/list", "标签事件规则版本列表 - 获取规则的全部历史版本",
+			views.WithMethod(http.MethodPost),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event-rule.version.list",
+				Domain:    "tag",
+				Intent:    "查看标签事件规则历史版本",
+				Entities:  []string{"tag_event_rule_versions"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 标签事件规则回滚 - 将规则回滚到指定历史版本，回滚前先快照当前内容
 		tagEventRuleGroup.POST("/:id/version/:version/rollback", TagEventRuleVersionRollback)
 		// 标签事件规则回滚元信息
@@ -207,12 +365,29 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 标签事件记录列表 - 支持分页、搜索、排序与筛选
 		eventGroup.POST("/list", TagEventRecordListGet)
 		// 标签事件记录列表自省信息 - 返回搜索选项、表格列与出参结构体定义
-		views.RegisterListApi[*views.TagEventRecordListGetSearchIn, *TagEventRecordListOut](eventGroup, "/list", "标签事件记录列表 - 支持分页、搜索、排序与筛选")
+		views.RegisterListApi[*views.TagEventRecordListGetSearchIn, *TagEventRecordListOut](eventGroup, "/list", "标签事件记录列表 - 支持分页、搜索、排序与筛选",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event.list",
+				Domain:    "tag",
+				Intent:    "查看标签事件（风险）记录列表",
+				Entities:  []string{"tag_event_records"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 标签事件记录详情 - 返回事件基础信息、命中明细与关联发送记录
 		eventGroup.POST("/:id/get", TagEventRecordDetailGet)
 		// 标签事件记录详情元信息
 		views.RegisterApi(eventGroup, "/:id/get", "标签事件记录详情 - 返回事件基础信息、命中明细与关联发送记录",
 			views.WithMethod(http.MethodPost, views.WithBodyOutput[TagEventRecordDetailOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event.detail",
+				Domain:    "tag",
+				Intent:    "查看单条标签事件的命中明细与通知记录",
+				Entities:  []string{"tag_event_records", "tag_event_record_hits"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
 		)
 		// 批量关闭标签事件记录 - 将当前命名空间下未关闭的事件记录置为 closed
 		eventGroup.POST("/close", TagEventRecordBatchClose)
@@ -226,6 +401,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 命中条件原始数据反查元信息
 		views.RegisterApi(eventGroup, "/hit/records", "命中条件原始数据反查 - 前端透传命中明细的模型、原始记录 ID 列表与入库时间范围",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[TagEventRecordHitRecordsIn](), views.WithBodyOutput[TagEventRecordHitRecordsOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "tag.event.hit.records",
+				Domain:    "tag",
+				Intent:    "反查标签事件命中条件的原始记录",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
 		)
 	}
 }

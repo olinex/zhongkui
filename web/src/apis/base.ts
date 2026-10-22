@@ -20,6 +20,27 @@ export const current_base_url = (): string => {
   return baseURL;
 };
 
+// API_VERSION_PREFIX 是后端原生接口的固定版本前缀：能力规范入参中的 path 总是携带它。
+const API_VERSION_PREFIX = "/api/v1";
+
+// apiRequestURL 把后端下发的完整接口路径转换为可执行的绝对地址。
+//
+// axios 实例的 baseURL 通常已包含 /api/v1（默认 http://localhost:8080/api/v1）；若把
+// /api/v1/xxx 直接交给 request.request，axios 会再次拼接 baseURL，得到
+// /api/v1/api/v1/xxx 而 404。此处以 baseURL 的 origin 与部署前缀重建绝对地址：
+//   - baseURL 以 /api/v1 结尾时，去掉该版本前缀后保留其部署前缀（如 /zhongkui）；
+//   - 能力 path 仍使用后端下发的完整 /api/v1 路径，不接受调用方覆盖 host。
+export function apiRequestURL(path: string): string {
+  const baseURL = request.defaults.baseURL || window.location.origin;
+  const base = new URL(baseURL, window.location.origin);
+  const basePath = base.pathname.replace(/\/+$/, "");
+  const deploymentPrefix = basePath.endsWith(API_VERSION_PREFIX)
+    ? basePath.slice(0, -API_VERSION_PREFIX.length)
+    : basePath;
+  const targetPath = deploymentPrefix + (path.startsWith("/") ? path : `/${path}`);
+  return new URL(targetPath, base.origin).toString();
+}
+
 // AUTH_FAILED_EVENT 全局鉴权失败事件名：已登录却收到后端 HTTP 401 时由响应拦截器广播，
 // 订阅方据此统一复位会话并跳转 401 页面（见 router/index.ts）。
 export const AUTH_FAILED_EVENT: string = "base:auth-failed";

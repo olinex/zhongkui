@@ -108,7 +108,7 @@ func newTestAgent(t *testing.T, chat model.BaseChatModel, retriever retriever.Re
 		"session.maxContextMessages": "10",
 		"session.maxContextBytes":    "4096",
 	})
-	agent, err := NewAgent(context.Background(), stubResolver(chat), retriever, store, params, nil, nil, nil, nil)
+	agent, err := NewAgent(context.Background(), stubResolver(chat), retriever, store, params, nil, nil, nil, nil, withTestCapabilities())
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
 	}
@@ -304,10 +304,13 @@ func TestBuildAgentMessages(t *testing.T) {
 	data := BusinessData{"src": "192.168.1.1"}
 	messages := buildAgentMessages(testParams(t, nil), ai.AgentKindKnowledge, "", nil, history, data, "  current q  ")
 	if len(messages) != 4 {
-		t.Fatalf("buildAgentMessages() len = %d, want 4", len(messages))
+		t.Fatalf("buildAgentMessages() len = %d, want 4 (system + 2 history + user)", len(messages))
 	}
 	if messages[0].Role != schema.System || !strings.Contains(messages[0].Content, "ZhongKui") {
 		t.Errorf("messages[0] = %+v, want the agent system prompt", messages[0])
+	}
+	if !strings.Contains(messages[0].Content, "format=capability") {
+		t.Errorf("messages[0] 缺少能力发现指引: %q", messages[0].Content)
 	}
 	user := messages[3]
 	if user.Role != schema.User {
@@ -738,7 +741,7 @@ func TestBuildAgentMessages_SummaryInjected(t *testing.T) {
 		t.Errorf("messages[0] role = %v, want system", messages[0].Role)
 	}
 	if messages[1].Role != schema.System || !strings.HasPrefix(messages[1].Content, agentSummarySectionTitle) || !strings.Contains(messages[1].Content, "folded") {
-		t.Errorf("messages[1] = %+v, want the summary section right after the system prompt", messages[1])
+		t.Errorf("messages[1] = %+v, want the summary section after the system prompt", messages[1])
 	}
 	if messages[2].Content != "prev q" || messages[3].Content != "prev a" {
 		t.Errorf("history order = [%q, %q], want [prev q, prev a]", messages[2].Content, messages[3].Content)
@@ -787,7 +790,7 @@ func newRollingSummaryFixture(t *testing.T, minEvicted int) *rollingSummaryFixtu
 	}
 	agent, err := NewAgent(ctx,
 		slotChatResolver(map[ai.Slot]model.BaseChatModel{ai.SlotStandard: agentChat}),
-		&stubRetriever{}, store, params, memory, nil, nil, nil)
+		&stubRetriever{}, store, params, memory, nil, nil, nil, withTestCapabilities())
 	if err != nil {
 		t.Fatalf("NewAgent error = %v", err)
 	}
@@ -1168,6 +1171,9 @@ func TestBuildAgentMessages_MemorySectionSkipped(t *testing.T) {
 		messages := buildAgentMessages(testParams(t, nil), ai.AgentKindKnowledge, "", memories, nil, nil, "q")
 		if len(messages) != 2 {
 			t.Fatalf("buildAgentMessages(%+v) len = %d, want 2 (system + user)", memories, len(messages))
+		}
+		if messages[0].Role != schema.System || !strings.Contains(messages[0].Content, "format=capability") {
+			t.Errorf("messages[0] = %+v, want the system prompt with the capability hint", messages[0])
 		}
 	}
 }

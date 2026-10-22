@@ -114,6 +114,8 @@ type metadataOptions struct {
 	description string
 	// ragDisabled 标记该接口被显式排除出 RAG 接口知识目录；零值（未声明）表示纳入。
 	ragDisabled bool
+	// capability 是该接口的 AI 能力元数据；由 WithCapability 写入，未声明时为 nil。
+	capability *CapabilityMeta
 	// methods 保存按 HTTP 方法分组的方法级配置，key 为 HTTP 方法名（如 GET、POST）
 	methods map[string]*metadataOptions
 }

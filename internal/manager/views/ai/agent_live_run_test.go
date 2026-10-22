@@ -82,12 +82,12 @@ func TestNewAgentLiveRunOut(t *testing.T) {
 		t.Fatalf("suspended snapshot = %+v, want awaiting approval with one pending call", suspended)
 	}
 	// 审核重要级与「是否需要人工审批」须随快照下发，供前端重建待审批面板时不丢字段
-	if call := suspended.PendingCalls[0]; call.AuditLevel != ai.AuditLevelSuggest || !call.ApprovalRequired {
+	if call := suspended.PendingCalls[0]; call.AuditLevel != string(ai.AuditLevelSuggest) || !call.ApprovalRequired {
 		t.Errorf("pending call = %+v, want audit level and approval flag carried through", call)
 	}
 	// 交互状态五项须与会话出参同口径地随快照下发。
-	if suspended.InteractionState != modelsai.AgentInteractionStateWaiting ||
-		suspended.InteractionSubstate != modelsai.AgentInteractionSubstateApproval ||
+	if suspended.InteractionState != string(modelsai.AgentInteractionStateWaiting) ||
+		suspended.InteractionSubstate != string(modelsai.AgentInteractionSubstateApproval) ||
 		suspended.Locked || suspended.UserTurns != 2 || suspended.MaxUserTurns != 20 {
 		t.Errorf("suspended interaction = %+v, want the interaction snapshot carried through", suspended)
 	}
@@ -98,7 +98,7 @@ func TestNewAgentLiveRunOut(t *testing.T) {
 	if running.AwaitingApproval || running.PendingCalls == nil || len(running.PendingCalls) != 0 {
 		t.Errorf("running snapshot = %+v, want not awaiting approval with an empty (non-nil) call list", running)
 	}
-	if running.InteractionState != modelsai.AgentInteractionStateRunning || running.InteractionSubstate != modelsai.AgentInteractionSubstateGenerating {
+	if running.InteractionState != string(modelsai.AgentInteractionStateRunning) || running.InteractionSubstate != string(modelsai.AgentInteractionSubstateGenerating) {
 		t.Errorf("running interaction = %+v, want running/generating", running)
 	}
 }

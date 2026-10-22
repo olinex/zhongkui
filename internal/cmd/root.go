@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -39,6 +40,9 @@ func getSignalCancel(ctx context.Context) context.CancelFunc {
 var RootCmd = &cobra.Command{
 	Use:   "zhongkui",
 	Short: "cmd.short",
+	// 错误由 Execute 统一打印一次；不再由 cobra 重复打印错误与用法。
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		var i = do.New()
 		ctx := cmd.Context()
@@ -128,13 +132,14 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-// Execute 本地化命令树后执行根命令，执行失败时打印错误。
+// Execute 本地化命令树后执行根命令，执行失败时打印错误并以非零状态退出。
 func Execute() {
 	// 在命令执行前将命令描述与标志说明本地化为 CLI 语言
 	// 因为 --help 等路径不会触发 PersistentPreRunE，这里必须提前完成翻译
 	localizeCmdTree()
 	if err := RootCmd.Execute(); err != nil {
 		pterm.Error.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -228,6 +233,8 @@ func init() {
 	// sync
 	syncCmd.AddCommand(syncDocsCmd)
 	syncCmd.AddCommand(syncApisCmd)
+	syncCmd.AddCommand(syncSchemaCmd)
+	syncCmd.AddCommand(syncCapabilitiesCmd)
 	syncCmd.AddCommand(syncEmbeddingsCmd)
 	syncCmd.AddCommand(syncEmbeddingDimensionsCmd)
 	RootCmd.AddCommand(syncCmd)

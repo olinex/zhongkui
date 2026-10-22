@@ -23,6 +23,9 @@ import (
 // askUserToolName 是问卷类 client 工具 ask_user 的工具名单点声明（禁止在别处写该字面量）。
 const askUserToolName = "ask_user"
 
+// apiInvokeToolName 是只读接口调用 client 工具 api_invoke 的工具名单点声明。
+const apiInvokeToolName = "api_invoke"
+
 // maxQuestionnaireOptions 是单个提问允许的候选答案条数上限（与工具 schema 的
 // 「1~3 条」约束一致）。
 const maxQuestionnaireOptions = 3
@@ -118,6 +121,35 @@ func newAskUserToolInfo() *schema.ToolInfo {
 						},
 					},
 				},
+			},
+		}),
+	}
+}
+
+// newApiInvokeToolInfo 构造 api_invoke 的工具元信息与参数 JSON schema：模型只给能力 ID 与请求体，
+// 不能指定任意 URL；HTTP 方法与路径由后端按能力快照白名单解析并写入挂起现场，前端只执行该
+// 已解析的只读调用。
+func newApiInvokeToolInfo() *schema.ToolInfo {
+	return &schema.ToolInfo{
+		Name: apiInvokeToolName,
+		Desc: "在用户自身凭据下调用一个已登记的只读平台能力，并返回接口响应。能力清单可通过 " +
+			"knowledge_search 并传 format=capability 查询。只允许调用平台能力中" +
+			"登记且标记为可调用的只读能力；不要用它执行写入、删除或任意 URL 请求。调用前可先用 knowledge_search " +
+			"并传 format=native_api 确认入参字段与路径参数。pathParams 用于填充路径中的 :param 占位符，params 为请求体对象。" +
+			"该调用需要用户人工审批后才会执行。",
+		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+			"capability": {
+				Type:     schema.String,
+				Desc:     "能力 ID，必须来自平台能力知识（knowledge_search 的 format=capability），例如 traffic.list。",
+				Required: true,
+			},
+			"params": {
+				Type: schema.Object,
+				Desc: "请求体 JSON 对象；字段与校验规则可用 knowledge_search 并传 format=native_api 查询。无请求体时可省略或传空对象。",
+			},
+			"pathParams": {
+				Type: schema.Object,
+				Desc: "路径参数对象：键为路径中的 :param 名（如 id），值为非空字符串；仅当接口路径含占位符时必填。",
 			},
 		}),
 	}
@@ -294,7 +326,9 @@ func (p QuestionnairePayload) FullyAnswered() bool {
 	return true
 }
 
-// init 在启动期经 client schema 注册表登记 ask_user；client 工具只登记入参契约，执行落于前端。
+// init 在启动期经 client schema 注册表登记 ask_user 与 api_invoke；client 工具只登记入参契约，
+// 执行落于前端（api_invoke 的接口白名单解析与只读校验由后端在挂起前完成）。
 func init() {
 	registerClientToolInfo(askUserToolName, newAskUserToolInfo())
+	registerClientToolInfo(apiInvokeToolName, newApiInvokeToolInfo())
 }

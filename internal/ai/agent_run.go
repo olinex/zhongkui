@@ -18,6 +18,7 @@ import (
 	"gorm.io/gorm"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
@@ -129,15 +130,24 @@ func (s *SessionStore) ClaimAgentRun(ctx context.Context, sessionID uint, namesp
 
 // prepareClientToolCall 处理一次 client 来源工具调用：仅当本次运行有持久化会话且具备审批通道时，
 // 原样登记待执行调用（工具名与入参文本，后端不做解释），待本轮结束统一挂起；否则返回回灌给模型的
-// 英文错误文本，此时不产生任何 ToolRequest。
-func prepareClientToolCall(tc schema.ToolCall, in AgentInput, round int, requests ToolRequestReporter) (*pendingToolCall, string) {
+// 英文错误文本，此时不产生任何 ToolRequest。api_invoke 是唯一例外：其目标接口必须由后端按能力
+// 快照白名单解析并将规范入参写入挂起现场，故在登记前先做只读、路径参数与请求体校验。
+func prepareClientToolCall(tc schema.ToolCall, in AgentInput, round int, requests ToolRequestReporter, capabilities []capability.Capability) (*pendingToolCall, string) {
 	if in.SessionID == 0 || requests == nil {
 		return nil, "client tool calls require a persisted session and an approval channel; this call cannot be executed"
+	}
+	arguments := tc.Function.Arguments
+	if tc.Function.Name == apiInvokeToolName {
+		canonical, errText := prepareApiInvokeCall(arguments, capabilities)
+		if errText != "" {
+			return nil, errText
+		}
+		arguments = canonical
 	}
 	return &pendingToolCall{
 		CallID:    tc.ID,
 		ToolName:  tc.Function.Name,
-		Arguments: tc.Function.Arguments,
+		Arguments: arguments,
 		ExecOwner: ToolExecOwnerClient,
 		Round:     round,
 	}, ""
@@ -344,7 +354,7 @@ func (a *Agent) PrepareResume(ctx context.Context, in ResumeInput) (AgentInput, 
 	}
 	// 恢复时后端须能执行已批准的 backend 调用：注入与 generate 相同的工具上下文（记忆 + 知识
 	// 检索），并以采集器承接 backend knowledge_search 的新命中（执行后并入 citations 续跑产出）。
-	collector := &knowledgeCollector{results: citations}
+	collector := newKnowledgeCollector(citations)
 	toolCtx := a.memoryToolContext(ctx, input)
 	toolCtx = a.knowledgeToolContext(toolCtx, input, collector)
 	msgs = append(msgs, a.buildResumeToolMessages(ctx, toolCtx, pending, in.Results, a.params.Int("agent.maxToolResultBytes"), in.ToolReporter)...)

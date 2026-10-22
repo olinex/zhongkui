@@ -35,6 +35,12 @@ const (
 	// 该格式非用户导入格式，与叙述页分区（generated）及人工文档相互隔离：同步接口知识时只操作
 	// 该分区，绝不触碰其余格式的文档。
 	FormatNativeApi Format = "native_api"
+	// FormatSchema 由模型声明与迁移脚本自动生成的数据表知识文档专用分区（落库值 schema）。
+	// 与接口、叙述页及人工文档隔离：同步数据表知识时只操作该分区。
+	FormatSchema Format = "schema"
+	// FormatCapability 由视图层能力声明自动生成的能力知识文档专用分区（落库值 capability）。
+	// 与接口、数据表、叙述页及人工文档隔离：同步能力知识时只操作该分区。
+	FormatCapability Format = "capability"
 )
 
 // Detect 按文件名扩展名（大小写不敏感）识别文档格式：.md/.markdown → markdown、.txt → txt、

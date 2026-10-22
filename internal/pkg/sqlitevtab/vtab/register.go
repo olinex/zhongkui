@@ -7,7 +7,7 @@
 //
 // 数据源类型以 DatasourcePlugin 接口描述：类型键（Key）、前端配置的构造与反射（NewConfig /
 // ConfigType）、连通性探活（TestConn）、表结构自省（IntrospectSchema）与带参注册（Register），
-// 另有不做连接的配置校验（ValidateConfig）。实现集中在各自的 <type>.go 文件内，并经 init 期
+// 另有不做连接的配置校验（ValidateConfig）。实现集中在各类型自己的 `.go` 文件内，并经 init 期
 // RegisterDatasourceType 自注册进进程级、并发安全的插件注册表。由此，新增一种数据源类型只需
 // 实现该接口并自注册，即可被 registerInto / TestConn / IntrospectSchema / ValidateConfigJSON
 // 统一驱动，无需再改动任何按类型分发的 switch 或维护一份平行的类型清单；DatasourceTypes /

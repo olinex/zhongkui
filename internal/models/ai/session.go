@@ -101,10 +101,10 @@ type AgentMessageBlock struct {
 	MessageID uint `gorm:"type:BIGINT"`
 	// BlockSeq 块在所属消息内的单调递增序号（从 1 起），与 MessageID 共同唯一，即内容的真实产生顺序
 	BlockSeq uint64 `gorm:"type:BIGINT;not null"`
-	// Kind 块类型：reasoning/tool_calls/approval/questionnaire/content（取值见 AgentMessageBlockKind）
+	// Kind 块类型：reasoning/tool_calls/approval/questionnaire/content/next_steps（取值见 AgentMessageBlockKind）
 	Kind AgentMessageBlockKind `gorm:"type:VARCHAR(16);not null"`
-	// Payload 块的 JSON 载荷（思考文本 / 工具调用记录 / 授权清单 / 问卷题目与作答 / 正文文本），
-	// 经 crypto 序列化器加密落库
+	// Payload 块的 JSON 载荷（思考文本 / 工具调用记录 / 授权清单 / 问卷题目与作答 / 正文文本 /
+	// 推荐的下一步），经 crypto 序列化器加密落库
 	Payload *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12819,length=32"`
 }
 

@@ -1,8 +1,9 @@
-// 本文件承载助手回答有序内容块（AgentMessageBlock）的运行时唯一实现：五类块（reasoning /
-// tool_calls / approval / questionnaire / content）的 JSON 载荷类型与统一编解码，以及「当前开放块」
-// 追踪与消息内块序号（BlockSeq）分配。块的产生规则（思考增量开块 / 工具调用按轮聚组 / 待审批建块 /
-// 问卷建块 / 正文增量开块）、开放块的收敛与待落库写入集都在这里一处给出，使实时流（run_hub 的 block
-// 事件）与落库（session store 的块读写）共用同一套规则，从构造上消除「实时对、刷新错」的偏差。
+// 本文件承载助手回答有序内容块（AgentMessageBlock）的运行时唯一实现：六类块（reasoning /
+// tool_calls / approval / questionnaire / content / next_steps）的 JSON 载荷类型与统一编解码，
+// 以及「当前开放块」追踪与消息内块序号（BlockSeq）分配。块的产生规则（思考增量开块 / 工具调用
+// 按轮聚组 / 待审批建块 / 问卷建块 / 正文增量开块 / 推荐下一步建块）、开放块的收敛与待落库写入集
+// 都在这里一处给出，使实时流（run_hub 的 block 事件）与落库（session store 的块读写）共用同一套
+// 规则，从构造上消除「实时对、刷新错」的偏差。
 // 块为展示事实，不参与模型上下文回灌（助手消息回灌模型的正文仍取 agent_messages.content）。
 
 package ai
@@ -108,6 +109,27 @@ type QuestionnaireBlockPayload struct {
 	Answers []QuestionnaireAnswer `json:"answers,omitempty"`
 	// Awaiting 本轮是否待用户回答
 	Awaiting bool `json:"awaiting"`
+}
+
+// NextStep 是 next_steps 块内一条推荐的下一步：Title 为简短行动标题（不超过 24 个字符），
+// Reason 为推荐理由（不超过 64 个字符），Text 为可直接发送给助手的完整诉求，
+// Recommended 标记该条是否为最推荐项（同一块内仅首条为 true）。
+type NextStep struct {
+	// Title 推荐标题（简洁的行动名称，不超过 24 个字符）
+	Title string `json:"title,omitempty"`
+	// Text 推荐文本（用户可直接作为下一条诉求发送）
+	Text string `json:"text"`
+	// Reason 推荐理由（为什么推荐该步骤，不超过 64 个字符）
+	Reason string `json:"reason,omitempty"`
+	// Recommended 是否为最推荐项
+	Recommended bool `json:"recommended,omitempty"`
+}
+
+// NextStepsBlockPayload 是 next_steps 块的载荷：回答完成后基于整体上下文给出的 1-3 条推荐项，
+// 顺序即推荐程度（首条最推荐）。
+type NextStepsBlockPayload struct {
+	// Steps 推荐的下一步列表
+	Steps []NextStep `json:"steps"`
 }
 
 // encodeBlockPayload 把块载荷结构编码为 JSON 字节，供落库层经 crypto 序列化器写入加密列。
@@ -394,6 +416,19 @@ func (b *blockBuilder) AddQuestionnaire(questions []QuestionnaireQuestion) {
 		Questions: questions,
 		Awaiting:  true,
 	})
+	b.emit(block, true)
+}
+
+// AddNextSteps 创建 next_steps 块，承载回答完成后基于整体上下文给出的 1-3 条推荐的下一步。
+// 该块总是落在最终正文块之后（beginNew 先收敛当前开放的 content 块），故每轮回答至多一块。
+// 构建器已收敛或列表为空时无操作。
+func (b *blockBuilder) AddNextSteps(steps []NextStep) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.closed || len(steps) == 0 {
+		return
+	}
+	block := b.beginNew(ai.AgentMessageBlockKindNextSteps, &NextStepsBlockPayload{Steps: steps})
 	b.emit(block, true)
 }
 

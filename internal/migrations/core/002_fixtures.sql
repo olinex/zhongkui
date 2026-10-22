@@ -748,7 +748,7 @@ FROM (VALUES
 规则：
 - "content"：面向用户可见的 Markdown 回答。回答语言与用户提问的语言保持一致。
 - "draft"：承载结构化事实、抽取的实体或可供下游自动化使用的可执行计划的 JSON 对象；没有适用内容时用 {}。
-- 当回答需要引用知识库中的既有资料时，调用内置工具 knowledge_search（可用不同查询多次调用）；当引用了它的结果时，按命中条目的标题标注来源。
+- 当回答需要引用知识库中的既有资料时，调用内置工具 knowledge_search（可用不同查询多次调用），并按约定的 citation 编号在正文中标注来源。
 - 绝不编造所给上下文之外的事实。$$
     ),
     (
@@ -759,7 +759,7 @@ FROM (VALUES
 
 规则：
 - 回答使用 Markdown 编排：标题、列表、表格、代码块均可；代码块请标注语言。
-- 需要引用平台知识库中的既有资料时，调用内置工具 knowledge_search（可用不同查询多次调用）；引用其命中结果时，按命中条目的标题标注来源。
+- 需要引用平台知识库中的既有资料时，调用内置工具 knowledge_search（可用不同查询多次调用），并按约定的 citation 编号在正文中标注来源。
 - 绝不编造所给上下文与工具结果之外的事实。$$
     ),
     (
@@ -796,6 +796,24 @@ FROM (VALUES
 - 仅输出改写后的提问正文本身，不要任何解释、前言、后缀、引号包裹或代码块包裹。
 - 输出语言必须与原始诉求保持一致。$$
     ),
+    (
+        'agent.nextStepsSystemPrompt',
+        $$你是「下一步推荐器」。给定一段 AI 助手会话的最近上下文、用户本轮提问与助手本轮回答，推断用户接下来最可能、最重要或最急迫的下一步任务，供用户直接选用。
+
+要求：
+- 输出 1-3 条，按推荐程度从高到低排列，第一条为最推荐。
+- 每条包含 "title"、"reason" 与 "text" 三个字段。
+- "title" 是简洁的行动标题，不超过 24 个字符，不要写成完整句子。
+- "reason" 说明为什么推荐该步骤（最可能、最重要或最急迫的依据），不超过 64 个字符。
+- "text" 是用户可直接发送的完整诉求，须自包含、具体、可执行；不要复述已有回答。
+- 不使用编号、引号、Markdown 或代码块包裹。
+- 推荐项应落在平台能力范围内（如流量查看、标签规则、数据源、通知、ETL、知识库）。
+- 若本轮回答已明确完成且没有有意义的后续动作，输出空数组。
+- 语言与用户本轮提问保持一致。
+
+仅回复一个 JSON 对象，形如 {"steps": [{"title": "标题", "reason": "推荐理由", "text": "可直接发送的完整诉求"}]}，不要输出任何其他内容。$$
+    ),
+    ('agent.nextStepsEnabled', 'true'),
     ('agent.businessSectionTitle', '## 当前业务现场'),
     ('agent.questionSectionTitle', '## 用户提问'),
     ('agent.retrievedDocSnippetLimit', '500'),
@@ -893,7 +911,8 @@ ON CONFLICT (key) DO NOTHING;
 -- （如 memory_write）取 false，需管理员在工具面板显式启用；只读基础能力（如 knowledge_search、
 -- client 的 ask_user）取 true，管理员仍可在工具面板停用。守卫测试 internal/ai/tools_fixture_test.go
 -- 断言注册表键集合与本段各来源行集合双向一致，忘记追加即会暴露漂移。当前注册表已声明 memory_write
--- 与 knowledge_search（builtin）两个工具，以及 ask_user（client）——问卷类只读交互能力；此外又新增
+-- 与 knowledge_search（builtin）两个工具，以及 ask_user、api_invoke（client）——
+-- 问卷类只读交互与只读接口调用；此外又新增
 -- 了「数学 / 时间 / 文本 / 编码 / 数据」五类共 13 个通用内置工具（math_eval、unit_convert、
 -- base_convert、datetime_calc、regex、json_diff、text_stats、hash、encode_convert、uuid、json、
 -- csv_parse、url_parse），以及「高阶方程计算」4 个工具（poly_solve、linear_solve、root_find、
@@ -919,7 +938,8 @@ VALUES
     ('linear_solve', 'builtin', NULL, '', '', true),
     ('root_find', 'builtin', NULL, '', '', true),
     ('nonlinear_solve', 'builtin', NULL, '', '', true),
-    ('ask_user', 'client', NULL, '', '', true)
+    ('ask_user', 'client', NULL, '', '', true),
+    ('api_invoke', 'client', NULL, '', '', true)
 ON CONFLICT (name) DO NOTHING;
 
 -- +goose Down

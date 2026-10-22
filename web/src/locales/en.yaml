@@ -1354,6 +1354,7 @@ page:
     deleteSession: Delete Session
     citations: Citations
     citationOpen: Open source in a new tab
+    citationsExpand: "Show {count} more"
     emptyQuery: Please enter a request
     optimizePrompt: Optimize prompt
     optimizePromptFailed: Prompt optimization failed
@@ -1399,6 +1400,8 @@ page:
       none: Only calls requiring mandatory review need approval, the rest run directly
     autoApproved: Auto-approved
     approvalBackendNote: This call runs on the server — you only need to approve or reject
+    apiInvokeInvalidArgs: The call arguments could not be parsed, so the read-only endpoint was not invoked
+    apiInvokeFailed: "Failed to invoke the read-only capability: {error}"
     thinking: Thinking
     thinkingHint: When enabled, the model's reasoning process is requested and shown with the answer
     reasoningDefaultOnHint: This model enables thinking by default, so reasoning is output even without a thinking switch; fill in the model's Thinking Field and its on/off values under Advanced in "LLM Model" to control it manually.
@@ -1437,6 +1440,11 @@ page:
     lockedHint: "Session {label} ({used}/{max} turns). Roll back a message to keep asking."
     lockedReject: This session has reached the turn limit. Roll back an earlier message to keep asking.
     stateGuardReject: The session is not ready for this action. Please try again later.
+    nextStepsTitle: Recommended next steps
+    nextStepsHint: Click to send, or fill the input
+    nextStepsRecommended: Recommended
+    nextStepsFill: Fill the input
+    nextStepsDraftNotEmpty: The input already has content. Clear it to send directly.
   aiKnowledge:
     dryRun: Dry Run
     query: Query

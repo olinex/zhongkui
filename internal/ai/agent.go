@@ -19,6 +19,7 @@ import (
 
 	// 项目内部
 
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/ai/tools"
 	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
@@ -42,6 +43,15 @@ const agentRegoQuery = "data.agent.validate"
 // agentSummarySectionTitle 是注入给 LLM 时「会话滚动摘要」段的标题常量（长期记忆分节的
 // 标题取参数 memory.sectionTitle，分节位于摘要之后、窗口历史之前）。
 const agentSummarySectionTitle = "## 会话摘要"
+
+// agentCapabilityHint 是随系统提示一并注入的能力发现指引：能力知识位于 capability 分区，
+// 不再把整张能力地图常驻上下文。该指引与可编辑的提示词分离，保证配置未更新时仍然生效。
+const agentCapabilityHint = "判断平台是否具备某项能力、或用户意图对应哪个原生接口时，调用 knowledge_search 并传 format=capability；需要接口的精确入参、出参与字段含义时，传 format=native_api。"
+
+// agentCitationHint 是随系统提示一并注入的来源标注约定：knowledge_search 每条命中带 citation
+// 来源编号，正文须以 [n] 标注，前端据此把标注链接到对应来源文档。与可编辑的提示词分离，
+// 保证存量库的提示词未更新时该约定仍然生效（否则正文标注无法与引用列表对齐）。
+const agentCitationHint = "引用知识库检索结果时，使用命中条目的 citation 字段作为来源编号，在正文相应句或段末尾标注 [n]（多处来源写作 [1][2]）；编号只能取自 citation 字段，不得自行编号或引用未检索到的来源。"
 
 // ToolRequest 是一条待执行工具调用请求（对应 SSE tool_request 事件的载荷）：client 工具由前端
 // 在用户自身凭据下执行，backend 工具由后端在恢复时自行执行。
@@ -312,6 +322,8 @@ type Agent struct {
 	toolInfos     []*schema.ToolInfo          // 与 tools 对应的 schema 清单（无工具时为空）
 	toolIndex     map[string]tool.BaseTool    // 按 Info(ctx).Name 建立的工具索引（节点 4 派发用）
 	toolInfoIndex map[string]*schema.ToolInfo // 按 Name 建立的 schema 索引（审核评估按名取用途说明用）
+	// capabilities 返回当前能力快照；由 Runtime 在路由注册后注入，未注入时视为无能力。
+	capabilities func() []capability.Capability
 	// slotContextLimit 按档位解析上下文窗口容量（token 数）的回调，由上层经 WithSlotContextLimit
 	// 注入（取自模型注册表 llm_models.context_tokens）；为 nil 时容量恒为 0（不做占用展示与自动压缩）。
 	slotContextLimit func(ai.Slot) int
@@ -328,12 +340,26 @@ func WithSlotContextLimit(fn func(ai.Slot) int) AgentOption {
 	return func(a *Agent) { a.slotContextLimit = fn }
 }
 
+// WithCapabilities 注入能力快照读取回调：Agent 仅用它校验 api_invoke 白名单；未注入时视为
+// 无能力，所有 api_invoke 调用都会被拒绝。
+func WithCapabilities(fn func() []capability.Capability) AgentOption {
+	return func(a *Agent) { a.capabilities = fn }
+}
+
 // contextLimit 返回指定档位的上下文窗口容量；未注入取数回调时返回 0。
 func (a *Agent) contextLimit(slot ai.Slot) int {
 	if a.slotContextLimit == nil {
 		return 0
 	}
 	return a.slotContextLimit(slot)
+}
+
+// capabilityItems 返回当前能力快照；未注入读取回调时返回 nil。
+func (a *Agent) capabilityItems() []capability.Capability {
+	if a.capabilities == nil {
+		return nil
+	}
+	return a.capabilities()
 }
 
 // NewAgent 构造 Agent：校验依赖后组装四节点图并编译。resolver/retriever/store/params
@@ -548,7 +574,7 @@ func (a *Agent) generate(ctx context.Context, messages []*schema.Message) (*sche
 				// client 来源工具不在本地工具索引 a.toolIndex 中，须特判：仅当本次运行有持久化会话
 				// 且具备审批通道时登记为待执行调用；否则记录回灌文案（稍后按工具失败回灌）。
 				if isClientTool(name) {
-					call, failText := prepareClientToolCall(tc, in, round+1, toolRequests)
+					call, failText := prepareClientToolCall(tc, in, round+1, toolRequests, a.capabilityItems())
 					entry := toolCallEntry{tc: tc, owner: ToolExecOwnerClient, call: call, failText: failText}
 					// 问卷类调用：解析入参为问卷载荷。入参非法时不挂起（撤销待执行登记、按工具失败回灌），
 					// 让模型据错误文本修正后重试，避免给用户弹出一个残缺问卷。
@@ -1708,9 +1734,9 @@ func (a *Agent) assembleContext(ctx context.Context, in AgentInput) (string, err
 		st.input = in
 		if in.ResumeMessages != nil {
 			// 恢复路径：把挂起时刻持久化的引用预置进采集器，供节点 4 在 done 中产出引用。
-			st.knowledge = &knowledgeCollector{results: in.ResumeCitations}
+			st.knowledge = newKnowledgeCollector(in.ResumeCitations)
 		} else {
-			st.knowledge = &knowledgeCollector{}
+			st.knowledge = newKnowledgeCollector(nil)
 		}
 		st.slot = in.Slot
 		st.toolReporter = in.ToolReporter
@@ -1767,7 +1793,8 @@ func (a *Agent) recallMemories(ctx context.Context, in AgentInput) []MemoryHit {
 }
 
 // validateOutput 是节点 4：透传 LLM 流式增量（delta 项），流结束后聚合全文并
-// 执行结构化产物解析与 Rego 校验，产出最终 done 项。
+// 执行结构化产物解析与 Rego 校验，产出最终 done 项；真实会话在 done 前还会生成
+// 本次回答的「推荐的下一步」块，生成失败静默跳过。
 func (a *Agent) validateOutput(ctx context.Context, in *schema.StreamReader[*schema.Message]) (*schema.StreamReader[AgentOutput], error) {
 	outSR, outSW := schema.Pipe[AgentOutput](64)
 	go func() {
@@ -1778,8 +1805,11 @@ func (a *Agent) validateOutput(ctx context.Context, in *schema.StreamReader[*sch
 		// 块构建器（与节点 3 / wrapPersist 共享）：思考与正文增量在真实产生时点写入，使块时序单点来源
 		// 在本包内成立。为 nil（旁路调用）时跳过建块。
 		var builder *blockBuilder
+		// runInput 本次运行的输入（历史 / 摘要 / 查询 / 档位）：推荐下一步据此组装整体上下文
+		var runInput AgentInput
 		if err := compose.ProcessState[*AgentState](ctx, func(ctx context.Context, st *AgentState) error {
 			builder = st.input.blocks
+			runInput = st.input
 			return nil
 		}); err != nil {
 			outSW.Send(AgentOutput{}, errors.WithStack(err))
@@ -1846,6 +1876,19 @@ func (a *Agent) validateOutput(ctx context.Context, in *schema.StreamReader[*sch
 		// 会破坏其 JSON 解析。
 		out.Content = turnEmittedText(resume) + out.Content
 		out.Reasoning = reasoning.String()
+		// 推荐下一步：真实会话在最终正文之后追加 next_steps 块；生成 / 解析 / 超时失败只告警并跳过，
+		// 绝不改变本轮 done 的正文与落库。须在 Send(done) 之前建块，使块事件随 done 同批收敛下发。
+		if builder != nil && runInput.SessionID != 0 {
+			if steps := a.recommendNextSteps(ctx, runInput, out.Content); len(steps) > 0 {
+				builder.AddNextSteps(steps)
+			}
+		}
+		// 推荐调用期间被中止：不得把本轮当作正常 done 下发（否则取消会被误记为成功）；推荐自身的
+		// 独立超时只影响 callCtx，父 ctx 仍正常时继续下发 done。
+		if cerr := ctx.Err(); cerr != nil {
+			outSW.Send(AgentOutput{}, errors.WithStack(cerr))
+			return
+		}
 		outSW.Send(out, nil)
 	}()
 	return outSR, nil
@@ -1986,18 +2029,20 @@ func validateDraftWithRego(ctx context.Context, source string, draft json.RawMes
 	return true, "", nil
 }
 
-// buildAgentMessages 组装发送给 LLM 的完整消息列表：系统提示 + 会话摘要（若有）+
-// 长期记忆分节（若有）+ 历史消息 + 业务现场 + 当前提问（业务段拼接在用户消息内，控制消息
-// 条数）。长期记忆分节位于摘要之后、窗口历史之前。系统提示词按 Agent 类型选取：general
-// 类型取 agent.generalSystemPrompt（纯 Markdown 正文），其余取 agent.systemPrompt（结构化
-// JSON 信封）。摘要段标题、记忆段标题、两个分节标题与片段截断长度均经参数解析器 params 读取。
+// buildAgentMessages 组装发送给 LLM 的完整消息列表：系统提示（附能力发现指引与来源标注约定）+ 会话摘要
+// （若有）+ 长期记忆分节（若有）+ 历史消息 + 业务现场 + 当前提问（业务段拼接在用户消息内，
+// 控制消息条数）。长期记忆分节位于摘要之后、窗口历史之前。系统提示词按 Agent 类型选取：
+// general 类型取 agent.generalSystemPrompt（纯 Markdown 正文），其余取 agent.systemPrompt
+// （结构化 JSON 信封）。摘要段标题、记忆段标题、两个分节标题与片段截断长度均经参数解析器
+// params 读取。能力地图不再作为独立系统消息常驻，模型按需经 knowledge_search 检索。
 func buildAgentMessages(params *Params, agentKind ai.AgentKind, summary string, memories []MemoryHit, history []*schema.Message, businessData BusinessData, query string) []*schema.Message {
 	promptKey := "agent.systemPrompt"
 	if agentKind == ai.AgentKindGeneral {
 		promptKey = "agent.generalSystemPrompt"
 	}
 	messages := make([]*schema.Message, 0, 3+len(history))
-	messages = append(messages, schema.SystemMessage(params.Text(promptKey)))
+	// 能力地图不再常驻：系统提示只附加固定的能力发现指引与来源标注约定，具体能力按需检索 capability 分区。
+	messages = append(messages, schema.SystemMessage(params.Text(promptKey)+"\n\n"+agentCapabilityHint+"\n"+agentCitationHint))
 	if trimmed := strings.TrimSpace(summary); trimmed != "" {
 		messages = append(messages, schema.SystemMessage(agentSummarySectionTitle+"\n"+trimmed))
 	}

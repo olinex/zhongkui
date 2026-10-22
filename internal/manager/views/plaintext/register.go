@@ -4,6 +4,7 @@ package plaintext
 import (
 	"net/http"
 
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -26,11 +27,27 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 加密字段明文解密元信息
 	views.RegisterApi(plaintextGroup, "/crypto", "加密字段明文解密 - 请求携带模型注册名 + 字段 + base64 密文，按字段权限点静态授权后返回明文",
 		views.WithMethod(http.MethodPost, views.WithBodyInput[CryptoPlaintextIn]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "security.plaintext.crypto",
+			Domain:    "security",
+			Intent:    "按字段权限查看加密字段明文（敏感，仅参考）",
+			Entities:  []string{},
+			Access:    capability.AccessRead,
+			Invokable: false,
+		}),
 	)
 	// S3 body 明文读取 - 请求携带模型注册名 + 字段 + 对象键，按字段权限点静态授权后返回明文
 	plaintextGroup.POST("/s3", S3PlaintextGet)
 	// S3 body 明文读取元信息
 	views.RegisterApi(plaintextGroup, "/s3", "S3 body 明文读取 - 请求携带模型注册名 + 字段 + 对象键，按字段权限点静态授权后返回明文",
 		views.WithMethod(http.MethodPost, views.WithBodyInput[S3PlaintextIn]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "security.plaintext.s3",
+			Domain:    "security",
+			Intent:    "按字段权限读取 S3 对象明文（敏感，仅参考）",
+			Entities:  []string{},
+			Access:    capability.AccessRead,
+			Invokable: false,
+		}),
 	)
 }

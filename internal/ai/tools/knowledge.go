@@ -22,8 +22,18 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 )
+
+// knowledgeSearchFormats 是 knowledge_search 允许限定的知识分区：仅代码声明生成的四类分区，
+// 不含人工导入格式。限定 native_api 即可把检索范围收敛到接口知识，用于查询接口用途与字段。
+var knowledgeSearchFormats = []string{
+	string(docconv.FormatGenerated),
+	string(docconv.FormatNativeApi),
+	string(docconv.FormatSchema),
+	string(docconv.FormatCapability),
+}
 
 // knowledgeRuntimeKey 是知识检索运行期检索器与截断长度在 ctx 中的键。用私有空结构体作键可避免与
 // 其他包或本包其他上下文的键冲突（只有本包能构造该类型的值）。
@@ -44,13 +54,16 @@ type KnowledgeHit struct {
 	// Complete 内容是否为整篇文档展开结果（small-to-big）：为 true 时不再按 SnippetLimit 截断，
 	// 由上层（internal/ai）在检索结果上标记。
 	Complete bool
+	// Citation 本次运行内稳定的来源编号（1 起，由上层采集器去重后分配）；模型在正文中引用该条
+	// 内容时据此标注 [citation]。0 表示未分配（如采集器缺失）。
+	Citation int
 }
 
 // KnowledgeSearcher 是知识检索器接口：由上层（internal/ai）的适配器实现，
 // 内部调用 Retriever.Retrieve（命名空间与文档限定由适配器持有，模型入参不参与）。
 type KnowledgeSearcher interface {
-	// Search 按查询语句检索当前运行命名空间的知识库并返回命中条目。
-	Search(ctx context.Context, query string) ([]KnowledgeHit, error)
+	// Search 按查询语句与可选分区过滤检索当前运行命名空间的知识库并返回命中条目。
+	Search(ctx context.Context, query string, format docconv.Format) ([]KnowledgeHit, error)
 }
 
 // KnowledgeRuntime 是 knowledge_search 运行期所需的上下文快照。由 Agent 节点 4 在派发工具前经
@@ -74,11 +87,13 @@ func knowledgeRuntimeFrom(ctx context.Context) (KnowledgeRuntime, bool) {
 	return rt, ok
 }
 
-// knowledgeSearchArgs 是 knowledge_search 的 JSON 入参形态：query 必填，命名空间、文档限定与
-// topK 等均不暴露给模型。
+// knowledgeSearchArgs 是 knowledge_search 的 JSON 入参形态：query 必填，format 可选（限定知识
+// 分区），命名空间、文档限定与 topK 等均不暴露给模型。
 type knowledgeSearchArgs struct {
 	// Query 检索查询语句（必填，去空白后非空）
 	Query string `json:"query"`
+	// Format 可选的知识分区（generated / native_api / schema / capability），空表示全部分区
+	Format string `json:"format"`
 }
 
 // knowledgeSearchItem 是返回给模型的单条命中：字段与 KnowledgeHit 一一对应，字段名采用小驼峰。
@@ -93,6 +108,8 @@ type knowledgeSearchItem struct {
 	Content string `json:"content"`
 	// Score 检索相关度分数
 	Score float64 `json:"score"`
+	// Citation 本次运行内稳定的来源编号（1 起）；模型在正文中引用该条内容时应标注 [citation]
+	Citation int `json:"citation,omitempty"`
 }
 
 // knowledgeSearchResult 是 knowledge_search 返回给模型的 JSON 载荷：results 为命中列表（无命中时
@@ -116,12 +133,22 @@ func (t *knowledgeSearchTool) Info(_ context.Context) (*schema.ToolInfo, error) 
 		Name: "knowledge_search",
 		Desc: "在用户维护的知识库中检索与查询相关的文档片段（语义与关键词混合检索）。" +
 			"当回答需要引用知识库中的既有资料时调用；可用不同的查询多次调用，逐步收敛到所需信息。" +
+			"每条命中带 citation 字段，是本次运行内稳定的来源编号；在最终回答中引用该条内容时，" +
+			"请在相应位置标注 [citation]（多处来源写作 [1][2]），编号只能取自该字段。" +
+			"需要查询平台原生接口的用途、入参或出参字段时，传 format=native_api；" +
+			"查询已迁移数据表时传 format=schema；查询平台能力地图与能力明细时传 format=capability。" +
 			"检索范围（命名空间与文档）由本次运行固定，调用无法改变。",
 		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
 			"query": {
 				Type:     schema.String,
 				Desc:     "用于检索知识库的查询语句，必须非空。",
 				Required: true,
+			},
+			"format": {
+				Type: schema.String,
+				Desc: "可选的知识分区：native_api（原生接口知识）、schema（数据表知识）、" +
+					"capability（平台能力知识）、generated（注释生成的叙述页）；省略时检索全部分区。",
+				Enum: knowledgeSearchFormats,
 			},
 		}),
 	}, nil
@@ -140,11 +167,15 @@ func (t *knowledgeSearchTool) InvokableRun(ctx context.Context, argumentsInJSON 
 	if query == "" {
 		return "", errors.New("knowledge_search: query must be non-empty")
 	}
+	format, err := knowledgeSearchFormat(args.Format)
+	if err != nil {
+		return "", err
+	}
 	rt, ok := knowledgeRuntimeFrom(ctx)
 	if !ok || rt.Searcher == nil {
 		return "", errors.New("knowledge_search: no knowledge runtime in context")
 	}
-	hits, err := rt.Searcher.Search(ctx, query)
+	hits, err := rt.Searcher.Search(ctx, query, format)
 	if err != nil {
 		return "", errors.WithStack(err)
 	}
@@ -161,6 +192,7 @@ func (t *knowledgeSearchTool) InvokableRun(ctx context.Context, argumentsInJSON 
 			ChunkIndex: hit.ChunkIndex,
 			Content:    content,
 			Score:      hit.Score,
+			Citation:   hit.Citation,
 		})
 	}
 	result := knowledgeSearchResult{Results: results}
@@ -172,6 +204,21 @@ func (t *knowledgeSearchTool) InvokableRun(ctx context.Context, argumentsInJSON 
 		return "", errors.WithStack(err)
 	}
 	return string(out), nil
+}
+
+// knowledgeSearchFormat 校验并归一化可选分区：空串表示不限定；其余必须属于四类生成分区，
+// 其他取值返回英文错误，避免模型用人工导入格式绕过检索范围约定。
+func knowledgeSearchFormat(raw string) (docconv.Format, error) {
+	format := strings.TrimSpace(raw)
+	if format == "" {
+		return "", nil
+	}
+	for _, allowed := range knowledgeSearchFormats {
+		if format == allowed {
+			return docconv.Format(format), nil
+		}
+	}
+	return "", errors.Newf("knowledge_search: unsupported format %q, allowed values are %s", format, strings.Join(knowledgeSearchFormats, ", "))
 }
 
 // truncateSnippet 按 rune 把 s 截断到前 max 个 rune，发生截断时追加 "..."；max 非正数或字符串本身

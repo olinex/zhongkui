@@ -14,6 +14,7 @@ import (
 
 	// 项目内部
 
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
@@ -60,6 +61,25 @@ type Runtime struct {
 	cleanerCancel context.CancelFunc
 	// cleanerDone 清理任务退出信号（Shutdown 据此等待其停止）
 	cleanerDone chan struct{}
+	// capabilities 是视图层声明的能力快照，仅供 api_invoke 白名单校验，不注入模型上下文。
+	capabilities atomic.Pointer[[]capability.Capability]
+}
+
+// SetCapabilities 注入能力快照：能力声明位于视图层，AI 包不反向依赖 manager，故由装配层
+// 在 registerViewRoutes 之后调用。该快照只用于 api_invoke 的只读白名单校验，不进入提示词。
+// 传入的切片会被复制，调用方后续修改不影响运行时。
+func (r *Runtime) SetCapabilities(items []capability.Capability) {
+	copied := append([]capability.Capability(nil), items...)
+	r.capabilities.Store(&copied)
+}
+
+// capabilityItems 返回当前能力快照；尚未注入时返回 nil。
+func (r *Runtime) capabilityItems() []capability.Capability {
+	items := r.capabilities.Load()
+	if items == nil {
+		return nil
+	}
+	return *items
 }
 
 // NewRuntime 构造运行时并完成首次装配：读取数据库配置、构建客户端与组件、建立维度
@@ -346,7 +366,7 @@ func (r *Runtime) build(ctx context.Context) (state *runtimeState, err error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
-	agent, err := NewAgent(ctx, r.chatResolver(st.chats), retriever, sessions, snap.Params(), memoryService, r.logger, snap.Tools(), snap.ToolInfos(), WithSlotContextLimit(snap.SlotContextLimit))
+	agent, err := NewAgent(ctx, r.chatResolver(st.chats), retriever, sessions, snap.Params(), memoryService, r.logger, snap.Tools(), snap.ToolInfos(), WithSlotContextLimit(snap.SlotContextLimit), WithCapabilities(r.capabilityItems))
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}

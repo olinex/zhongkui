@@ -353,6 +353,18 @@ other = "Sync native API knowledge into RAG"
 [cmd.sync.apis.long]
 other = "Assemble the native API catalog declared at view route registration (including purpose and request/response metadata), then idempotently sync it into the builtin system namespace's RAG (format=native_api) via a content-hash diff plan, visible to retrieval from every namespace. Additions/updates/deletions converge via the diff plan, unchanged content results in zero writes, the partition is read/written in isolation without touching narrative pages or manual documents, and nothing is written to disk."
 
+[cmd.sync.schema.short]
+other = "Sync database table knowledge into RAG"
+
+[cmd.sync.schema.long]
+other = "Parse model declarations and migrations to generate one knowledge document per migrated table (fields, nullability, indexes and foreign keys), then idempotently sync them into the builtin system namespace's RAG (format=schema) via a content-hash diff plan. Unchanged content results in zero writes, the partition is read/written in isolation without touching API, capability, narrative or manual documents, and nothing is written to disk."
+
+[cmd.sync.capabilities.short]
+other = "Sync platform capability knowledge into RAG"
+
+[cmd.sync.capabilities.long]
+other = "Generate one overall capability map plus one detail document per capability from the view-layer capability declarations, then idempotently sync them into the builtin system namespace's RAG (format=capability) via a content-hash diff plan. Unchanged content results in zero writes, the partition is read/written in isolation without touching API, table, narrative or manual documents, and nothing is written to disk."
+
 [cmd.sync.embeddings.short]
 other = "Recompute embedding vectors in a namespace with the current model"
 
@@ -446,6 +458,9 @@ other = "timeout for clearing the etcd cache"
 
 [flag.create.user.username]
 other = "username of the new user (at least 6 characters)"
+
+[flag.create.docs.check]
+other = "only verify that generated docs match the code declarations without writing files (for CI)"
 
 [flag.create.user.password]
 other = "password of the new user (at least 8 characters)"
@@ -996,6 +1011,24 @@ other = "Synchronized [[.Apis]] native API(s) for namespace [[.Namespace]]"
 
 [cli.sync.apis.failed]
 other = "Failed to sync native API knowledge: [[.Err]]"
+
+[cli.sync.schema.disabled]
+other = "AI is not enabled; cannot sync database table knowledge"
+
+[cli.sync.schema.done]
+other = "Synchronized [[.Tables]] database table(s) for namespace [[.Namespace]]"
+
+[cli.sync.schema.failed]
+other = "Failed to sync database table knowledge: [[.Err]]"
+
+[cli.sync.capabilities.disabled]
+other = "AI is not enabled; cannot sync platform capability knowledge"
+
+[cli.sync.capabilities.done]
+other = "Synchronized [[.Capabilities]] capability document(s) for namespace [[.Namespace]]"
+
+[cli.sync.capabilities.failed]
+other = "Failed to sync platform capability knowledge: [[.Err]]"
 
 [cli.sync.embeddings.no-namespace]
 other = "Missing --namespace: specify the target namespace"
@@ -2655,6 +2688,12 @@ other = "Generated"
 [enum.documentFormat.native_api]
 other = "Native API"
 
+[enum.documentFormat.schema]
+other = "Database table"
+
+[enum.documentFormat.capability]
+other = "Platform capability"
+
 [enum.knowledgeDocStatus.pending]
 other = "Pending"
 
@@ -2759,6 +2798,18 @@ other = "Prompt optimization system prompt"
 
 [param.agent.promptOptimizeSystemPrompt.comment]
 other = "System prompt that rewrites the user's original request into a clearer, more specific, more understandable question, and must output only the rewritten question text itself"
+
+[param.agent.nextStepsSystemPrompt.label]
+other = "Next-step recommendation system prompt"
+
+[param.agent.nextStepsSystemPrompt.comment]
+other = "System prompt that generates 1-3 recommended next steps (the first is the most recommended) from the session context after each answer, and must output only JSON"
+
+[param.agent.nextStepsEnabled.label]
+other = "Recommend next steps"
+
+[param.agent.nextStepsEnabled.comment]
+other = "Whether to automatically generate recommended next steps after each assistant answer; when disabled, nothing is generated or shown"
 
 [param.agent.businessSectionTitle.label]
 other = "Business Scene Section Title"
@@ -3048,6 +3099,12 @@ other = "Ask User"
 
 [tool.ask_user.comment]
 other = "Called by the model when information is insufficient or the user must choose among options; the frontend presents the questions and returns the user's answers, allowing multiple questions at once with candidate answers per question"
+
+[tool.api_invoke.label]
+other = "Invoke Read-only Capability"
+
+[tool.api_invoke.comment]
+other = "Invoke a read-only capability under the user's own credentials after backend allowlist validation; requires human approval and is executed by the frontend, returning only the endpoint response"
 
 [tool.math_eval.label]
 other = "Expression evaluation"

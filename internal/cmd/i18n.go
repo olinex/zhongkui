@@ -10,7 +10,7 @@ import (
 // zhUsageTemplate / enUsageTemplate 是本地化的 cobra usage 模板。
 // 结构复刻 cobra v1.10.2 的 defaultUsageTemplate，仅本地化固定文案。
 // 模板在渲染时才由 cobra 解析（见 cobra.SetUsageTemplate），
-// 因此模板中的 {{.CommandPath}} 等动作可正常执行。
+// 因此模板中的 Go 模板动作（如 .CommandPath）可正常执行。
 const (
 	zhUsageTemplate = `用法:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
@@ -74,7 +74,7 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 )
 
 // localizedUsageTemplate 返回本地化的 cobra usage 模板。
-// 模板含 Go 模板动作（{{if .Runnable}} 等），渲染数据来自 cobra 的命令上下文，
+// 模板含 Go 模板动作（如 if .Runnable），渲染数据来自 cobra 的命令上下文，
 // 无法经 go-i18n 预渲染（其模板上下文无 .Runnable/.CommandPath 等字段），
 // 故此处直接按默认语言返回 Go 常量模板。
 func localizedUsageTemplate() string {

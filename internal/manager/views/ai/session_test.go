@@ -117,7 +117,7 @@ func TestNewAgentMessageItemOutBlocks(t *testing.T) {
 			So(len(out.Blocks), ShouldEqual, len(order))
 			for i, b := range out.Blocks {
 				So(b.Seq, ShouldEqual, uint64(i+1))
-				So(b.Kind, ShouldEqual, order[i])
+				So(b.Kind, ShouldEqual, string(order[i]))
 				So(string(b.Payload), ShouldEqual, payloads[order[i]])
 			}
 		})
@@ -177,7 +177,7 @@ func TestAgentSessionCreate(t *testing.T) {
 			So(json.Unmarshal(w.Body.Bytes(), &resp), ShouldBeNil)
 			So(resp.Data, ShouldNotBeNil)
 			So(resp.Data.Title, ShouldEqual, query)
-			So(resp.Data.AgentKind, ShouldEqual, modelsai.AgentKindKnowledge)
+			So(resp.Data.AgentKind, ShouldEqual, string(modelsai.AgentKindKnowledge))
 			So(resp.Data.ID, ShouldBeGreaterThan, 0)
 
 			var row modelsai.AgentSession
@@ -235,8 +235,8 @@ func TestAgentSessionBranch(t *testing.T) {
 		So(resp.Data, ShouldNotBeNil)
 		So(resp.Data.ID, ShouldNotEqual, src.ID)
 		So(resp.Data.Title, ShouldEqual, "源会话")
-		So(resp.Data.Slot, ShouldEqual, modelsai.SlotStandard)
-		So(resp.Data.AgentKind, ShouldEqual, modelsai.AgentKindKnowledge)
+		So(resp.Data.Slot, ShouldEqual, string(modelsai.SlotStandard))
+		So(resp.Data.AgentKind, ShouldEqual, string(modelsai.AgentKindKnowledge))
 
 		store, err := ai.NewSessionStore(db)
 		So(err, ShouldBeNil)

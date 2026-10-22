@@ -14,21 +14,26 @@ import (
 	// 第三方
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
+
+	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 )
 
-// fakeKnowledgeSearcher 是 KnowledgeSearcher 的测试替身：记录收到的 query 与调用次数，按预设
+// fakeKnowledgeSearcher 是 KnowledgeSearcher 的测试替身：记录收到的 query、分区与调用次数，按预设
 // 返回 hits 或错误。
 type fakeKnowledgeSearcher struct {
-	hits  []KnowledgeHit
-	err   error
-	calls int
-	got   []string
+	hits    []KnowledgeHit
+	err     error
+	calls   int
+	got     []string
+	formats []docconv.Format
 }
 
 // Search 记录入参并返回预设结果。
-func (s *fakeKnowledgeSearcher) Search(_ context.Context, query string) ([]KnowledgeHit, error) {
+func (s *fakeKnowledgeSearcher) Search(_ context.Context, query string, format docconv.Format) ([]KnowledgeHit, error) {
 	s.calls++
 	s.got = append(s.got, query)
+	s.formats = append(s.formats, format)
 	return s.hits, s.err
 }
 
@@ -178,8 +183,27 @@ func TestKnowledgeSearch_CompleteNotTruncated(t *testing.T) {
 	}
 }
 
+// TestKnowledgeSearch_Format 覆盖可选分区：合法分区透传给检索器，非法分区被拒且不触发检索。
+func TestKnowledgeSearch_Format(t *testing.T) {
+	s := &fakeKnowledgeSearcher{}
+	tool := &knowledgeSearchTool{}
+	if _, err := tool.InvokableRun(knowledgeRuntimeCtx(s, 0), `{"query":"q","format":"native_api"}`); err != nil {
+		t.Fatalf("InvokableRun(native_api) error = %v", err)
+	}
+	if len(s.formats) != 1 || s.formats[0] != docconv.FormatNativeApi {
+		t.Errorf("searcher formats = %v, want [native_api]", s.formats)
+	}
+	if _, err := tool.InvokableRun(knowledgeRuntimeCtx(s, 0), `{"query":"q","format":"markdown"}`); err == nil ||
+		!strings.Contains(err.Error(), "unsupported format") {
+		t.Errorf("invalid format error = %v, want unsupported format", err)
+	}
+	if s.calls != 1 {
+		t.Errorf("searcher calls = %d, want 1 (invalid format must not search)", s.calls)
+	}
+}
+
 // TestKnowledgeSearch_Info 覆盖 Info：工具名为 knowledge_search；参数 schema 中 query 存在、类型
-// 为 string 且必填；不存在 namespace / docIDs / topK 之类越权入参。
+// 为 string 且必填；format 可选且枚举限定四类生成分区；不存在 namespace / docIDs / topK 之类越权入参。
 func TestKnowledgeSearch_Info(t *testing.T) {
 	info, err := (&knowledgeSearchTool{}).Info(context.Background())
 	if err != nil {
@@ -196,10 +220,27 @@ func TestKnowledgeSearch_Info(t *testing.T) {
 	if !ok || query.Type != string(schema.String) {
 		t.Errorf("query property = %+v (present=%v), want a string", query, ok)
 	}
+	format, ok := js.Properties.Get("format")
+	if !ok || format.Type != string(schema.String) {
+		t.Errorf("format property = %+v (present=%v), want an optional string", format, ok)
+	} else {
+		got := make([]string, 0, len(format.Enum))
+		for _, value := range format.Enum {
+			if text, ok := value.(string); ok {
+				got = append(got, text)
+			}
+		}
+		if strings.Join(got, ",") != strings.Join(knowledgeSearchFormats, ",") {
+			t.Errorf("format enum = %v, want %v", got, knowledgeSearchFormats)
+		}
+	}
 	required := false
 	for _, name := range js.Required {
 		if name == "query" {
 			required = true
+		}
+		if name == "format" {
+			t.Errorf("format 不应为必填")
 		}
 	}
 	if !required {
@@ -207,7 +248,7 @@ func TestKnowledgeSearch_Info(t *testing.T) {
 	}
 	for _, forbidden := range []string{"namespace", "docIDs", "topK", "top_k", "docs"} {
 		if _, ok := js.Properties.Get(forbidden); ok {
-			t.Errorf("property %q is present, want only query exposed", forbidden)
+			t.Errorf("property %q is present, want only query/format exposed", forbidden)
 		}
 	}
 }

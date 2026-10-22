@@ -267,6 +267,9 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	// 全局功能开关端点（/features/list，公共接口）与全部视图域路由统一由 registerViewRoutes
 	// 注册，使在线装配与离线接口目录装配（CollectApiCatalog）共用同一份域注册清单。
 	registerViewRoutes(rc)
+	// 能力声明随路由注册写入接口目录，此处把同一份快照注入 AI 运行时，仅供 api_invoke
+	// 白名单校验；能力发现走 knowledge_search 的 capability 分区，不常驻模型上下文。
+	aiRuntime.SetCapabilities(views.CapabilityItems())
 
 	return nil
 }

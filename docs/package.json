@@ -1,0 +1,14 @@
+{
+  "name": "zhongkui-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "vitepress": "^1.6.4"
+  }
+}

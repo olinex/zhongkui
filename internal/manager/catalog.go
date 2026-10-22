@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 	"zhongkuisec.com/zhongkui/internal/manager/views/admin"
 	"zhongkuisec.com/zhongkui/internal/manager/views/ai"
@@ -66,6 +67,14 @@ func registerViewRoutes(rc *views.RegisterContext) {
 	rc.V1Group.POST("/features/list", rc.FeatureRegistry, views.FeaturesListGet)
 	views.RegisterApi(rc.V1Group, "/features/list", "查询全部功能开关（key + 是否启用）",
 		views.WithMethod(http.MethodPost, views.WithBodyOutput[views.FeaturesListGetOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "platform.feature.list",
+			Domain:    "platform",
+			Intent:    "查看平台功能开关及启用状态",
+			Entities:  []string{},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
 	)
 
 	admin.RegisterRoutes(rc)
@@ -85,6 +94,14 @@ func CollectApiCatalog() []views.ApiDescriptor {
 	_, rc := newOfflineRegisterContext()
 	registerViewRoutes(rc)
 	return views.ApiCatalog()
+}
+
+// CollectCapabilities 离线装配全部视图域并返回视图层声明的能力快照；供 CLI（能力知识同步）
+// 与文档投影使用，保证与在线路由声明同源。
+func CollectCapabilities() []capability.Capability {
+	_, rc := newOfflineRegisterContext()
+	registerViewRoutes(rc)
+	return views.CapabilityItems()
 }
 
 // CollectApiKnowledgeDocs 离线装配全部视图域并返回纳入 RAG 的原生接口知识文档。

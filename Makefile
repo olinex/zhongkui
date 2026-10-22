@@ -17,37 +17,49 @@ endif
 # 抓包基准测试需要 root 权限，默认使用 sudo；可通过 SUDO= make bench-slow 显式跳过
 SUDO ?= sudo
 
-.PHONY:
-	run-dev-deps
-	stop-dev-deps
-	remove-dev-deps
-	pull-dev-deps
-	dev-tools
-	protobuf-tools
-	ts-tools
-	pcap-tools
-	p0f-update
-	build
-	build-release
-	run
-	clean
-	lint
-	bench-prepare
-	bench-smoke
-	bench-slow
-	bench-fast
-	bench-raw
-	bench-xdp-phys
-	bench-xdp-phys-raw
-	bench-probe
-	uptrace-install
-	uptrace-config
-	uptrace-init
-	uptrace-start
-	uptrace-stop
-	uptrace-clear
-	uptrace-uninstall
-	uptrace-cli-help
+.PHONY: bench-fast
+.PHONY: bench-prepare
+.PHONY: bench-probe
+.PHONY: bench-raw
+.PHONY: bench-slow
+.PHONY: bench-smoke
+.PHONY: bench-xdp-phys
+.PHONY: bench-xdp-phys-raw
+.PHONY: build
+.PHONY: build-check
+.PHONY: build-release
+.PHONY: ci
+.PHONY: clean
+.PHONY: create-test-dbs
+.PHONY: dev-tools
+.PHONY: docs
+.PHONY: docs-build
+.PHONY: docs-check
+.PHONY: docs-dev
+.PHONY: docs-install
+.PHONY: docs-preview
+.PHONY: fmt-check
+.PHONY: license-check
+.PHONY: lint
+.PHONY: p0f-update
+.PHONY: pcap-tools
+.PHONY: protobuf-tools
+.PHONY: pull-dev-deps
+.PHONY: remove-dev-deps
+.PHONY: run
+.PHONY: run-dev-deps
+.PHONY: stop-dev-deps
+.PHONY: test
+.PHONY: ts-tools
+.PHONY: uptrace-clear
+.PHONY: uptrace-cli-help
+.PHONY: uptrace-config
+.PHONY: uptrace-init
+.PHONY: uptrace-install
+.PHONY: uptrace-start
+.PHONY: uptrace-stop
+.PHONY: uptrace-uninstall
+.PHONY: vet
 
 # ============================================================
 # 依赖工具构建
@@ -125,6 +137,7 @@ run-dev-deps:
 				quay.io/coreos/etcd:v3.6.5; \
 			docker run -itd --restart unless-stopped --name clickhouse-server --network host \
 				--ulimit nofile=262144:262144 \
+				-v "$(CURDIR)/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
 				-e CLICKHOUSE_PASSWORD=root_password \
 				clickhouse:25.3.3; \
 			docker run -itd --restart unless-stopped --name postgres --network host \
@@ -146,6 +159,7 @@ run-dev-deps:
 				quay.io/coreos/etcd:v3.6.5; \
 			nerdctl run -td --restart=always --name clickhouse-server --net=host \
 				--ulimit nofile=262144:262144 \
+				-v "$(CURDIR)/config/clickhouse/config.d:/etc/clickhouse-server/config.d:ro" \
 				-e CLICKHOUSE_PASSWORD=root_password \
 				clickhouse:25.3.3; \
 			nerdctl run -td --restart=always --name postgres --net=host \
@@ -391,6 +405,74 @@ clean:
 # 用法: make lint
 lint:
 	go run cmd/commentlint/main.go ./...
+
+# fmt-check - 检查已跟踪的 Go 文件是否符合 gofmt
+# 用法: make fmt-check
+fmt-check:
+	@unformatted=$$(gofmt -l $$(git ls-files '*.go') $$(git ls-files --others --exclude-standard '*.go')); \
+	if [ -n "$$unformatted" ]; then \
+		echo "以下文件未通过 gofmt:"; \
+		echo "$$unformatted"; \
+		exit 1; \
+	fi
+
+# vet - 运行 go vet
+# 用法: make vet
+vet:
+	go vet ./...
+
+# test - 运行全部单元测试
+# 用法: make test
+test:
+	go test ./...
+
+# build-check - 编译全部包但不产出二进制，作为 CI 的构建门禁
+# 用法: make build-check
+build-check:
+	go build ./...
+
+# docs - 生成文档：叙述页、参考页、总目录与导航文件
+# 用法: make docs
+docs:
+	go run cmd/zki/main.go create docs
+
+# docs-check - 校验生成文档与代码声明一致，不写盘；CI 用它拦截文档漂移
+# 用法: make docs-check
+docs-check:
+	go run cmd/zki/main.go create docs --check
+
+# docs-install - 安装文档站点依赖（VitePress）
+# 用法: make docs-install
+docs-install:
+	cd docs && pnpm install
+
+# docs-dev - 本地启动文档站点（默认 http://localhost:5173）
+# 用法: make docs-dev
+docs-dev:
+	cd docs && pnpm dev
+
+# docs-build - 构建静态文档站点到 docs/.vitepress/dist
+# 部署到子路径时用 DOCS_BASE 覆盖，例如 DOCS_BASE=/zhongkui/ make docs-build
+# 用法: make docs-build
+docs-build:
+	cd docs && pnpm build
+
+# docs-preview - 预览已构建的文档站点
+# 用法: make docs-preview
+docs-preview:
+	cd docs && pnpm preview
+
+# license-check - 第三方依赖许可证门禁：拒绝 GPL/AGPL/LGPL/SSPL/非商业与未知许可证
+# Go 侧检查链接进 cmd/zki 的模块；Web 侧检查 pnpm 生产依赖（需要 pnpm）
+# CI 设置 LICENSE_CHECK_REQUIRE_WEB=1 强制要求 Web 检查
+# 用法: make license-check
+license-check:
+	go run cmd/licensecheck/main.go --root .
+
+# ci - 提交与 CI 的统一入口：格式、构建、vet、测试、注释检查、许可证与文档漂移检查
+# 用法: make ci
+ci: fmt-check build-check vet test lint license-check docs-check
+	@echo "CI 检查全部通过"
 
 # ============================================================
 # Wire 抓包实现基线测试

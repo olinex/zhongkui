@@ -1,0 +1,10 @@
+zhongkui
+Copyright 2026 The zhongkui Authors
+
+This product includes software developed by third parties. Each third-party
+component remains under its own license. The component inventory, versions and
+license texts are listed in THIRD_PARTY_LICENSES.md; dependency manifests are
+go.mod, go.sum, web/package.json and web/pnpm-lock.yaml.
+
+This product includes the Apache License 2.0 text distributed with the project;
+see LICENSE for the full terms.

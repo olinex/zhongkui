@@ -60,14 +60,14 @@ type AgentSessionItemOut struct {
 	// Title 会话标题
 	Title string `json:"title"`
 	// Slot 会话缺省档位（flash/standard/advanced），空表示按 agent.defaultSlot 参数解析
-	Slot modelsai.Slot `json:"slot"`
+	Slot string `json:"slot"`
 	// Status 会话状态（active/archived）
-	Status modelsai.SessionStatus `json:"status"`
+	Status string `json:"status"`
 	// AgentKind 会话所属 Agent 类型（knowledge/rego）
-	AgentKind modelsai.AgentKind `json:"agentKind"`
+	AgentKind string `json:"agentKind"`
 	// ReviewValve 会话级审核阀门（each/auto/none），与本会话内 client 工具调用的审核重要级合成，
 	// 决定调用是否需人工审核
-	ReviewValve modelsai.ReviewValve `json:"reviewValve"`
+	ReviewValve string `json:"reviewValve"`
 	// Summary 会话滚动摘要，无摘要时为空串
 	Summary string `json:"summary"`
 	// ContextTokens 会话的上下文占用度量：最近一条有用量记录的助手消息的输入 token 数
@@ -76,9 +76,9 @@ type AgentSessionItemOut struct {
 	// ContextLimit 会话有效档位的上下文 token 容量（≤ 0 表示该档位关闭占用展示与自动压缩）
 	ContextLimit int `json:"contextLimit"`
 	// InteractionState 会话交互主状态（waiting/running/paused/locked），由既有事实推导（不落库）
-	InteractionState modelsai.AgentInteractionState `json:"interactionState"`
+	InteractionState string `json:"interactionState"`
 	// InteractionSubstate 会话交互子状态（随主状态取值；已锁定为空串）
-	InteractionSubstate modelsai.AgentInteractionSubstate `json:"interactionSubstate"`
+	InteractionSubstate string `json:"interactionSubstate"`
 	// Locked 会话是否已锁定（有效轮次达上限）；恒等于 InteractionState 为 locked
 	Locked bool `json:"locked"`
 	// UserTurns 会话有效轮次（当前存在的用户提问条数，被回滚删除的不计入）
@@ -99,19 +99,19 @@ type AgentSessionCreateIn struct {
 	// Query 首个用户问题，必填；会话主题据此经 LLM 生成（失败时按其截断兜底）
 	Query string `json:"query" binding:"required"`
 	// Slot 会话缺省档位（flash/standard/advanced），可选；空表示按 agent.defaultSlot 参数解析
-	Slot modelsai.Slot `json:"slot"`
+	Slot string `json:"slot"`
 	// AgentKind 会话所属 Agent 类型（knowledge/rego），可选；缺省 knowledge，非法取值以 400 +
 	// 英文错误拒绝
-	AgentKind modelsai.AgentKind `json:"agentKind"`
+	AgentKind string `json:"agentKind"`
 	// ReviewValve 会话级审核阀门（each/auto/none），可选；缺省经 defaults 库以 each（逐一审核）兜底，
 	// 空值或取值空间外的取值以 400 + 英文错误拒绝
-	ReviewValve modelsai.ReviewValve `json:"reviewValve" default:"each" binding:"enum=reviewValve"`
+	ReviewValve string `json:"reviewValve" default:"each" binding:"enum=reviewValve"`
 }
 
 // AgentSessionValveIn 定义更新 AI 助手会话审核阀门的请求输入。
 type AgentSessionValveIn struct {
 	// ReviewValve 会话新审核阀门（each/auto/none），必填；非取值空间内的取值以 400 + 英文错误拒绝
-	ReviewValve modelsai.ReviewValve `json:"reviewValve" binding:"required,enum=reviewValve"`
+	ReviewValve string `json:"reviewValve" binding:"required,enum=reviewValve"`
 }
 
 // AgentSessionRenameIn 定义重命名 AI 助手会话的请求输入。
@@ -127,7 +127,7 @@ type AgentMessageItemOut struct {
 	// ID 消息 ID
 	ID uint `json:"id"`
 	// Role 消息角色（user/assistant/system）
-	Role modelsai.MessageRole `json:"role"`
+	Role string `json:"role"`
 	// Content 消息正文内容
 	Content string `json:"content"`
 	// Draft 助手回复的结构化草稿载荷（JSON 对象），无草稿时省略
@@ -144,7 +144,7 @@ type AgentMessageItemOut struct {
 	ElapsedMs int64 `json:"elapsedMs"`
 	// Phase 本条助手消息所属运行的生命周期终态阶段（done/failed/cancelled），空表示尚未终结
 	// （用户消息与在途运行的阶段性落库行）；前端据 failed/cancelled 展示「本轮被中断」提示
-	Phase modelsai.AgentRunPhase `json:"phase,omitempty"`
+	Phase string `json:"phase,omitempty"`
 	// Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
 	// 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
 	Compress *AgentMessageCompressOut `json:"compress,omitempty"`
@@ -167,10 +167,11 @@ type AgentMessageBlockOut struct {
 	// Seq 块在所属消息内的单调序号（从 1 起），即内容的真实产生顺序
 	Seq uint64 `json:"seq"`
 	// Kind 块类型：reasoning（思考段）/ tool_calls（工具调用组）/ approval（授权待审）/
-	// questionnaire（主动提问）/ content（正文段）
-	Kind modelsai.AgentMessageBlockKind `json:"kind"`
+	// questionnaire（主动提问）/ content（正文段）/ next_steps（推荐的下一步）
+	Kind string `json:"kind"`
 	// Payload 该块的明文 JSON 载荷（对象）：按块类型为 reasoning/content 的文本、tool_calls 的调用记录
-	// 列表、approval 的待审批清单或 questionnaire 的题目与作答，形状与流式 block 事件的 payload 一致
+	// 列表、approval 的待审批清单、questionnaire 的题目与作答或 next_steps 的推荐项列表，形状与流式
+	// block 事件的 payload 一致
 	Payload json.RawMessage `json:"payload"`
 }
 
@@ -216,9 +217,9 @@ type AgentAssistantInputRerunIn struct {
 // 交互子状态同值（answer=问卷作答 / approval=工具授权）。
 type AgentAssistantInputRerunOut struct {
 	// Kind 回合种类：answer（问卷作答）/ approval（工具授权）
-	Kind modelsai.AgentInteractionSubstate `json:"kind"`
+	Kind string `json:"kind"`
 	// InteractionState 回退后的会话交互主状态（供前端立即刷新状态驱动 UI）
-	InteractionState modelsai.AgentInteractionState `json:"interactionState"`
+	InteractionState string `json:"interactionState"`
 	// Questionnaires 问卷回合按轮次先后并列的各轮载荷（题目 + 上次答案 + 待执行调用），仅问卷回合携带
 	Questionnaires []AgentQuestionnaireOut `json:"questionnaires,omitempty"`
 	// PendingCalls 该回合的待执行调用清单，授权回合据此重建审批面板
@@ -257,14 +258,14 @@ type AgentStreamIn struct {
 	// DocIDs 检索限定的文档 ID 列表，为空表示不限定
 	DocIDs []uint `json:"docIDs"`
 	// BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
-	BusinessData ai.BusinessData `json:"businessData"`
+	BusinessData map[string]any `json:"businessData"`
 	// RegoRule 可选的结构化草稿 Rego 校验规则源码，为空跳过规则校验
 	RegoRule string `json:"regoRule"`
 	// Thinking 思考模式，取 on/off，空表示不注入思考开关
 	Thinking string `json:"thinking" binding:"omitempty,oneof=on off"`
 	// Slot 本次生成的显式档位（flash/standard/advanced），可选；为空时依次回退到会话档位与
 	// agent.defaultSlot 参数
-	Slot modelsai.Slot `json:"slot"`
+	Slot string `json:"slot"`
 	// After 订阅起点序号（仅转发序号 > after 的事件）；0 表示从头转发，供重连续播时跳过已收事件
 	After uint64 `json:"after"`
 }
@@ -284,12 +285,12 @@ type AgentPendingCallOut struct {
 	// Arguments 模型给出的调用入参（原始 JSON 文本）
 	Arguments string `json:"arguments"`
 	// AuditLevel 本条调用的审核重要级（取值集合与展示文案由后端枚举类 auditLevel 下发）
-	AuditLevel ai.AuditLevel `json:"auditLevel"`
+	AuditLevel string `json:"auditLevel"`
 	// ApprovalRequired 由审核重要级与会话阀门合成得出的最终结论：false 表示无需人工审批
 	ApprovalRequired bool `json:"approvalRequired"`
 	// ExecOwner 执行归属（client / backend）：client 由前端在用户自身凭据下执行，backend 由后端
 	// 在恢复续跑时自行执行（已批准的 builtin / MCP 工具）
-	ExecOwner ai.ToolExecOwner `json:"execOwner"`
+	ExecOwner string `json:"execOwner"`
 }
 
 // AgentLiveRunOut 定义一次驻留运行的当前状态快照（供刷新后发现在途运行与待审批现场）。
@@ -297,7 +298,7 @@ type AgentLiveRunOut struct {
 	// RunID 运行标识
 	RunID serializer.HexUUID `json:"runID"`
 	// Phase 运行生命周期阶段（running/done/failed/cancelled/suspended）
-	Phase modelsai.AgentRunPhase `json:"phase"`
+	Phase string `json:"phase"`
 	// LastSeq 已发布的最大事件序号（续播起点）
 	LastSeq uint64 `json:"lastSeq"`
 	// AwaitingApproval 是否挂起待审批（phase 为 suspended 时为 true）
@@ -305,9 +306,9 @@ type AgentLiveRunOut struct {
 	// PendingCalls 挂起待审批时的待执行调用列表，非挂起时为空数组
 	PendingCalls []AgentPendingCallOut `json:"pendingCalls"`
 	// InteractionState 该会话当前交互主状态（与 AgentSessionItemOut 同口径）
-	InteractionState modelsai.AgentInteractionState `json:"interactionState"`
+	InteractionState string `json:"interactionState"`
 	// InteractionSubstate 该会话当前交互子状态
-	InteractionSubstate modelsai.AgentInteractionSubstate `json:"interactionSubstate"`
+	InteractionSubstate string `json:"interactionSubstate"`
 	// Locked 该会话是否已锁定
 	Locked bool `json:"locked"`
 	// UserTurns 该会话有效轮次
@@ -349,7 +350,7 @@ type AgentToolResultIn struct {
 // AgentSlotStatusOut 定义单个档位的绑定模型与可用性输出项。
 type AgentSlotStatusOut struct {
 	// Slot 档位标识（flash/standard/advanced/embedding）
-	Slot modelsai.Slot `json:"slot"`
+	Slot string `json:"slot"`
 	// ModelName 绑定模型在注册表中的本地标识（无绑定时为空）
 	ModelName string `json:"modelName"`
 	// ProviderModel 供应商侧的模型名（无绑定时为空）
@@ -386,12 +387,12 @@ type AgentStatusOut struct {
 	Slots []AgentSlotStatusOut `json:"slots"`
 	// DefaultSlot 未显式指定档位且会话未记录档位时使用的默认档位（参数 agent.defaultSlot 的
 	// 生效值），供前端档位下拉取初值，避免前端自持档位字面量
-	DefaultSlot modelsai.Slot `json:"defaultSlot"`
+	DefaultSlot string `json:"defaultSlot"`
 	// AssistantAgentKind 通用助手创建会话时使用的 Agent 类型（前端据此创建会话，避免声明枚举字面量）
-	AssistantAgentKind modelsai.AgentKind `json:"assistantAgentKind"`
+	AssistantAgentKind string `json:"assistantAgentKind"`
 	// DefaultReviewValve 会话未创建或未记录阀门时使用的默认审核阀门档位，供前端在会话尚未创建时
 	// 为阀门下拉取初值，避免前端自持枚举字面量
-	DefaultReviewValve modelsai.ReviewValve `json:"defaultReviewValve"`
+	DefaultReviewValve string `json:"defaultReviewValve"`
 	// ParamOverrideCount 当前值与出厂值不同的行为参数条数（0 表示全部参数仍为出厂值）
 	ParamOverrideCount int `json:"paramOverrideCount"`
 	// CompactThresholdRatio 触发自动压缩的占用比例阈值
@@ -419,15 +420,15 @@ func newAgentSessionItemOut(s *modelsai.AgentSession, snap *ai.Snapshot, context
 	return AgentSessionItemOut{
 		ID:                  s.ID,
 		Title:               s.Title,
-		Slot:                s.TargetModel,
-		Status:              s.Status,
-		AgentKind:           s.AgentKind,
-		ReviewValve:         s.ReviewValve,
+		Slot:                string(s.TargetModel),
+		Status:              string(s.Status),
+		AgentKind:           string(s.AgentKind),
+		ReviewValve:         string(s.ReviewValve),
 		Summary:             string(s.Summary.Value()),
 		ContextTokens:       contextTokens,
 		ContextLimit:        snap.SlotContextLimit(slot),
-		InteractionState:    interaction.State,
-		InteractionSubstate: interaction.Substate,
+		InteractionState:    string(interaction.State),
+		InteractionSubstate: string(interaction.Substate),
 		Locked:              interaction.Locked,
 		UserTurns:           interaction.UserTurns,
 		MaxUserTurns:        interaction.MaxUserTurns,
@@ -442,13 +443,13 @@ func newAgentSessionItemOut(s *modelsai.AgentSession, snap *ai.Snapshot, context
 func newAgentMessageItemOut(m *modelsai.AgentMessage, blocks []*modelsai.AgentMessageBlock) AgentMessageItemOut {
 	out := AgentMessageItemOut{
 		ID:               m.ID,
-		Role:             m.Role,
+		Role:             string(m.Role),
 		Content:          string(m.Content.Value()),
 		PromptTokens:     m.PromptTokens,
 		CompletionTokens: m.CompletionTokens,
 		TotalTokens:      m.TotalTokens,
 		ElapsedMs:        m.ElapsedMs,
-		Phase:            m.Phase,
+		Phase:            string(m.Phase),
 		Blocks:           newAgentMessageBlockOuts(blocks),
 		CreatedAt:        m.CreatedAt,
 	}
@@ -476,7 +477,7 @@ func newAgentMessageBlockOuts(blocks []*modelsai.AgentMessageBlock) []AgentMessa
 		if b == nil {
 			continue
 		}
-		out := AgentMessageBlockOut{Seq: b.BlockSeq, Kind: b.Kind}
+		out := AgentMessageBlockOut{Seq: b.BlockSeq, Kind: string(b.Kind)}
 		if payload := b.Payload.Value(); len(payload) > 0 {
 			out.Payload = json.RawMessage(payload)
 		}
@@ -552,7 +553,7 @@ func AgentSessionCreate(c *gin.Context) {
 		return
 	}
 	slot := modelsai.Slot("")
-	if value := modelsai.Slot(strings.TrimSpace(string(in.Slot))); value != "" {
+	if value := modelsai.Slot(strings.TrimSpace(in.Slot)); value != "" {
 		parsed, ok := modelsai.ParseChatSlot(value)
 		if !ok {
 			response.CreateBadBodyError(modelsai.InvalidChatSlotError(value)).AbortWithGinH(c)
@@ -560,7 +561,7 @@ func AgentSessionCreate(c *gin.Context) {
 		}
 		slot = parsed
 	}
-	agentKind, err := modelsai.ParseAgentKind(in.AgentKind)
+	agentKind, err := modelsai.ParseAgentKind(modelsai.AgentKind(in.AgentKind))
 	if err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
@@ -576,7 +577,7 @@ func AgentSessionCreate(c *gin.Context) {
 		return
 	}
 	// 会话初始审核阀门按请求落库：缺省值 each（逐一审核）已由 defaults 库在绑定前填充，此处必为合法取值。
-	updated, err := comps.Sessions.UpdateSessionValve(c, session.ID, namespace, userID, in.ReviewValve)
+	updated, err := comps.Sessions.UpdateSessionValve(c, session.ID, namespace, userID, modelsai.ReviewValve(in.ReviewValve))
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -714,7 +715,7 @@ func AgentSessionValveSet(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	updated, err := comps.Sessions.UpdateSessionValve(c, uint(sessionID), namespace, userID, in.ReviewValve)
+	updated, err := comps.Sessions.UpdateSessionValve(c, uint(sessionID), namespace, userID, modelsai.ReviewValve(in.ReviewValve))
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -1137,10 +1138,10 @@ func AgentStream(c *gin.Context) {
 		DocIDs:        in.DocIDs,
 		SessionID:     uint(sessionID),
 		UserID:        userID,
-		BusinessData:  in.BusinessData,
+		BusinessData:  ai.BusinessData(in.BusinessData),
 		RegoRule:      in.RegoRule,
 		Thinking:      in.Thinking,
-		Slot:          modelsai.Slot(strings.TrimSpace(string(in.Slot))),
+		Slot:          modelsai.Slot(strings.TrimSpace(in.Slot)),
 		DeclaredSlot:  session.TargetModel,
 	}, uint(sessionID), userID, namespace, nil); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -1210,11 +1211,11 @@ func mapAgentLiveRunError(c *gin.Context, err error) {
 func newAgentLiveRunOut(st *ai.LiveRunStatus, interaction ai.InteractionSnapshot) *AgentLiveRunOut {
 	out := &AgentLiveRunOut{
 		RunID:               st.RunID,
-		Phase:               st.Phase,
+		Phase:               string(st.Phase),
 		LastSeq:             st.LastSeq,
 		AwaitingApproval:    st.Phase == modelsai.AgentRunPhaseSuspended,
-		InteractionState:    interaction.State,
-		InteractionSubstate: interaction.Substate,
+		InteractionState:    string(interaction.State),
+		InteractionSubstate: string(interaction.Substate),
 		Locked:              interaction.Locked,
 		UserTurns:           interaction.UserTurns,
 		MaxUserTurns:        interaction.MaxUserTurns,
@@ -1231,9 +1232,9 @@ func newAgentPendingCallOuts(calls []ai.PendingCall) []AgentPendingCallOut {
 			CallID:           call.CallID,
 			ToolName:         call.ToolName,
 			Arguments:        call.Arguments,
-			AuditLevel:       call.AuditLevel,
+			AuditLevel:       string(call.AuditLevel),
 			ApprovalRequired: call.ApprovalRequired,
-			ExecOwner:        call.ExecOwner,
+			ExecOwner:        string(call.ExecOwner),
 		})
 	}
 	return out
@@ -1461,8 +1462,8 @@ func AgentAssistantInputRerun(c *gin.Context) {
 	}
 	// 事实（消息截断、锚点与现场重置）已变更，重算交互主状态写入出参，使前端立即按「等待中」驱动 UI。
 	out := AgentAssistantInputRerunOut{
-		Kind:             turn.Kind,
-		InteractionState: interactionSnapshot(c, comps, session).State,
+		Kind:             string(turn.Kind),
+		InteractionState: string(interactionSnapshot(c, comps, session).State),
 	}
 	if turn.Kind == modelsai.AgentInteractionSubstateAnswer {
 		// 锚点此刻已重置为 suspended（挂起待输入），故按挂起相位映射各轮：更早各轮（已作答）为只读卡片、
@@ -1496,13 +1497,13 @@ func AgentStatusGet(c *gin.Context) {
 	rt := middlewares.GetAiRuntime(c)
 	snap := rt.Snapshot()
 	out := AgentStatusOut{Enabled: rt.Enabled(), Reason: snap.DisabledReason(middlewares.GetLanguage(c))}
-	out.DefaultSlot = snap.DefaultSlot()
-	out.AssistantAgentKind = modelsai.AgentKindGeneral
-	out.DefaultReviewValve = modelsai.DefaultReviewValve
+	out.DefaultSlot = string(snap.DefaultSlot())
+	out.AssistantAgentKind = string(modelsai.AgentKindGeneral)
+	out.DefaultReviewValve = string(modelsai.DefaultReviewValve)
 	slots := snap.Slots()
 	out.Slots = make([]AgentSlotStatusOut, 0, len(modelsai.AllSlots))
 	for _, slot := range modelsai.AllSlots {
-		item := AgentSlotStatusOut{Slot: slot}
+		item := AgentSlotStatusOut{Slot: string(slot)}
 		if info, ok := slots[slot]; ok {
 			item.ModelName = info.Name
 			item.ProviderModel = info.Model

@@ -245,6 +245,7 @@
                       <assistant-markdown
                         :content="b.text ?? ''"
                         :streaming="b.primary === true && m.streaming === true"
+                        :citations="citationsOf(m)"
                       />
                     </div>
                     <div
@@ -437,6 +438,8 @@
                               size="small"
                               variant="tonal"
                               color="primary"
+                              :loading="callExecuting(m, c.callID)"
+                              :disabled="callExecuting(m, c.callID)"
                               @click="approveCall(m, c.callID)"
                             >
                               {{ $t("page.aiAssistant.approve") }}
@@ -445,11 +448,107 @@
                               size="small"
                               variant="text"
                               class="ms-2"
+                              :disabled="callExecuting(m, c.callID)"
                               @click="rejectCall(m, c.callID)"
                             >
                               {{ $t("page.aiAssistant.reject") }}
                             </v-btn>
                           </div>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- 推荐的下一步：仅最新一条助手回答、非流式态展示。点击行直接发送；右侧按钮把文本
+                         追加到输入框（已有内容时换行 append）。输入框非空 / 会话忙 / 已锁定时禁用直接发送，
+                         以 tooltip 说明原因，避免清空用户草稿 -->
+                    <div
+                      v-else-if="
+                        b.kind === 'nextSteps' &&
+                        m.key === latestAssistantKey &&
+                        !m.streaming &&
+                        m.phase !== 'failed' &&
+                        m.phase !== 'cancelled'
+                      "
+                      class="assistant-next-steps zk-panel--subtle pa-2"
+                    >
+                      <div class="assistant-next-steps-header">
+                        <v-icon icon="mdi-lightbulb-on-outline" size="small" color="primary" />
+                        <span class="zk-label-caps">{{
+                          $t("page.aiAssistant.nextStepsTitle")
+                        }}</span>
+                        <v-spacer />
+                        <span class="zk-hint">{{ $t("page.aiAssistant.nextStepsHint") }}</span>
+                      </div>
+                      <div class="assistant-next-step-list">
+                        <div
+                          v-for="(step, idx) in b.nextSteps ?? []"
+                          :key="`${idx}-${step.text}`"
+                          class="assistant-next-step"
+                          :class="{
+                            'zk-row-hover': canSendNextStep,
+                            'assistant-next-step--disabled': !canSendNextStep,
+                          }"
+                        >
+                          <v-tooltip
+                            location="top"
+                            :text="nextStepSendBlockedReason"
+                            :disabled="canSendNextStep"
+                          >
+                            <template #activator="{ props: sendProps }">
+                              <span v-bind="sendProps" class="assistant-next-step-activator">
+                                <button
+                                  type="button"
+                                  class="assistant-next-step-main"
+                                  :disabled="!canSendNextStep"
+                                  @click="sendNextStep(step.text)"
+                                >
+                                  <v-icon
+                                    icon="mdi-arrow-right-thin"
+                                    size="small"
+                                    class="assistant-next-step-icon"
+                                  />
+                                  <span class="assistant-next-step-text">
+                                    <span class="assistant-next-step-title text-body-medium">
+                                      {{ step.title || step.text }}
+                                    </span>
+                                    <span
+                                      v-if="step.reason"
+                                      class="assistant-next-step-reason zk-hint"
+                                    >
+                                      {{ step.reason }}
+                                    </span>
+                                  </span>
+                                </button>
+                              </span>
+                            </template>
+                          </v-tooltip>
+                          <v-chip
+                            v-if="step.recommended || idx === 0"
+                            size="x-small"
+                            color="primary"
+                            variant="tonal"
+                            class="assistant-next-step-badge"
+                          >
+                            {{ $t("page.aiAssistant.nextStepsRecommended") }}
+                          </v-chip>
+                          <v-tooltip
+                            location="top"
+                            :text="
+                              nextStepFillBlockedReason || $t('page.aiAssistant.nextStepsFill')
+                            "
+                          >
+                            <template #activator="{ props: fillProps }">
+                              <span v-bind="fillProps" class="d-inline-flex">
+                                <v-btn
+                                  icon="mdi-content-paste"
+                                  size="x-small"
+                                  variant="text"
+                                  :disabled="!canFillNextStep"
+                                  :aria-label="$t('page.aiAssistant.nextStepsFill')"
+                                  @click.stop="appendNextStep(step.text)"
+                                />
+                              </span>
+                            </template>
+                          </v-tooltip>
                         </div>
                       </div>
                     </div>
@@ -472,8 +571,10 @@
                   <v-divider class="my-2" />
                   <div class="zk-label-caps mb-1">{{ $t("page.aiAssistant.citations") }}</div>
                   <v-list class="bg-transparent" density="compact">
-                    <v-list-item v-for="(c, idx) in citationsOf(m)" :key="idx">
+                    <v-list-item v-for="(c, idx) in visibleCitations(m)" :key="idx">
                       <v-list-item-title class="text-body-medium">
+                        <!-- 序号与正文中的 [n] 标注一一对应，便于对照「哪一段引用的是哪个来源」 -->
+                        <span class="assistant-citation-index">[{{ idx + 1 }}]</span>
                         <!-- 来源命名空间可溯源（含历史消息缺失该字段的降级）时标题渲染为链接，
                            直接跳转文档详情页；缺失则保持纯文本，避免产生无效跳转 -->
                         <a
@@ -493,6 +594,27 @@
                       </v-list-item-subtitle>
                     </v-list-item>
                   </v-list>
+                  <!-- 引用超过 3 条时默认收起其余条目，由用户按需展开 / 收起 -->
+                  <v-btn
+                    v-if="citationsOf(m).length > CITATION_VISIBLE_LIMIT"
+                    size="small"
+                    variant="text"
+                    class="assistant-citations-toggle"
+                    @click="toggleCitations(m)"
+                  >
+                    {{
+                      citationsExpandedOf(m)
+                        ? $t("action.collapse")
+                        : $t("page.aiAssistant.citationsExpand", {
+                            count: citationsOf(m).length - CITATION_VISIBLE_LIMIT,
+                          })
+                    }}
+                    <v-icon
+                      class="ms-1"
+                      size="x-small"
+                      :icon="citationsExpandedOf(m) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                    />
+                  </v-btn>
                 </template>
               </div>
               <!-- 助手回答快捷操作：回答完（非生成中）后常驻展示——助手内容多且已去掉气泡，
@@ -679,6 +801,7 @@
             </div>
           </div>
           <v-textarea
+            ref="composerRef"
             v-model="query"
             variant="plain"
             density="compact"
@@ -965,6 +1088,8 @@ import type {
   AgentLiveRunOut,
   AgentMessageBlockOut,
   AgentMessageItem,
+  AgentNextStep,
+  AgentNextStepsBlockPayload,
   AgentPromptOptimizeOut,
   AgentQuestionnaireBlockPayload,
   AgentReasoningBlockPayload,
@@ -982,7 +1107,7 @@ import type {
   ToolRequestPayload,
   ToolResultItemIn,
 } from "@/apis/@types/ai";
-import { getResponse, getSimpleResponse } from "@/apis/base";
+import { apiRequestURL, getJwtHeader, getResponse, getSimpleResponse, request } from "@/apis/base";
 import { useAgentRunStore, type RunState } from "@/stores/agentRun";
 import { useAppStore } from "@/stores/app";
 import { localManager } from "@/stores/local";
@@ -1076,6 +1201,7 @@ const [renameSessionTitle, renameSessionTitleProps] = renameForm.defineField("ti
 const renameSessionDialogRef = useTemplateRef("renameSessionDialogRef");
 const deleteConfirmRef = useTemplateRef("deleteConfirmRef");
 const messagesRef = useTemplateRef("messagesRef");
+const composerRef = useTemplateRef<{ focus: () => void }>("composerRef");
 
 // ---- 会话与消息状态 ----
 const sessions = ref<AgentSessionItem[]>([]);
@@ -1123,6 +1249,8 @@ interface PendingCallState {
   // result 执行成功时的结果文本；error 执行失败时的错误文本
   result?: string;
   error?: string;
+  // executing 该调用的前端执行是否进行中（api_invoke 使用；其余 client 工具无需本地执行）
+  executing?: boolean;
   submitted?: boolean;
 }
 
@@ -1382,6 +1510,29 @@ const loadStatus = async (): Promise<void> => {
 
 // citationsOf 归一化引用列表（后端消息可能省略该字段）
 const citationsOf = (m: ChatMessage): RetrievalResult[] => m.citations ?? [];
+
+// CITATION_VISIBLE_LIMIT 引用默认展示条数：超出部分收起，由用户按需展开
+const CITATION_VISIBLE_LIMIT = 3;
+
+// expandedCitationKeys 已展开全部引用的消息 key 集合（按消息维度独立记忆，切换会话不清空）
+const expandedCitationKeys = ref(new Set<number>());
+
+const citationsExpandedOf = (m: ChatMessage): boolean => expandedCitationKeys.value.has(m.key);
+
+// visibleCitations 当前应展示的引用：未展开时仅取前 CITATION_VISIBLE_LIMIT 条
+const visibleCitations = (m: ChatMessage): RetrievalResult[] => {
+  const list = citationsOf(m);
+  return citationsExpandedOf(m) ? list : list.slice(0, CITATION_VISIBLE_LIMIT);
+};
+
+// toggleCitations 展开 / 收起当前消息的引用的其余条目
+const toggleCitations = (m: ChatMessage): void => {
+  if (expandedCitationKeys.value.has(m.key)) {
+    expandedCitationKeys.value.delete(m.key);
+    return;
+  }
+  expandedCitationKeys.value.add(m.key);
+};
 
 // ---- 工具调用阶段 ----
 // stageLabelOf 阶段展示名（经枚举注册表 evalStage 按当前语言渲染 label）
@@ -2096,6 +2247,78 @@ const onSubmitClick = (): void => {
   void sendQuery();
 };
 
+// ---- 推荐的下一步 ----
+// latestAssistantKey 最后一条助手消息的 key：推荐的下一步只在该条消息下展示，历史回答不再重复打扰
+const latestAssistantKey = computed<number | undefined>(() => {
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    if (messages.value[i].role === "assistant") {
+      return messages.value[i].key;
+    }
+  }
+  return undefined;
+});
+
+// nextStepSendBlockedReason 推荐项「直接发送」被闸住的原因：空串表示可发送。输入框已有内容时禁用，
+// 避免直接发送清空用户草稿；其余闸门与会话发送入口同源。
+const nextStepSendBlockedReason = computed<string>(() => {
+  if (!aiEnabled.value) {
+    return i18n.global.t("page.aiAssistant.disabled");
+  }
+  if (query.value.trim() !== "") {
+    return i18n.global.t("page.aiAssistant.nextStepsDraftNotEmpty");
+  }
+  if (locked.value) {
+    return i18n.global.t("page.aiAssistant.lockedReject");
+  }
+  if (inputGated.value || creating.value || optimizing.value || compacting.value) {
+    return i18n.global.t("page.aiAssistant.stateGuardReject");
+  }
+  return "";
+});
+
+// canSendNextStep 推荐项是否可直接发送
+const canSendNextStep = computed<boolean>(() => nextStepSendBlockedReason.value === "");
+
+// nextStepFillBlockedReason 推荐项「填入输入框」被闸住的原因：空串表示可填入。输入区被禁用
+// （问卷待作答 / 已锁定）或会话创建 / 优化途中不写入，避免内容被覆盖或清空。
+const nextStepFillBlockedReason = computed<string>(() => {
+  if (!aiEnabled.value) {
+    return i18n.global.t("page.aiAssistant.disabled");
+  }
+  if (locked.value) {
+    return i18n.global.t("page.aiAssistant.lockedReject");
+  }
+  if (questionnairePending.value) {
+    return i18n.global.t("page.aiAssistant.questionnairePendingHint");
+  }
+  if (creating.value || optimizing.value) {
+    return i18n.global.t("page.aiAssistant.stateGuardReject");
+  }
+  return "";
+});
+
+// canFillNextStep 推荐项是否可填入输入框
+const canFillNextStep = computed<boolean>(() => nextStepFillBlockedReason.value === "");
+
+// sendNextStep 点击推荐项直接发送：写入输入框后复用既有发送入口（会话创建 / 状态守卫 / 错误提示一致）
+const sendNextStep = (text: string): void => {
+  if (!canSendNextStep.value) {
+    return;
+  }
+  query.value = text;
+  void sendQuery();
+};
+
+// appendNextStep 把推荐项填入输入框：已有内容时以换行 append，不覆盖用户草稿；填入后聚焦输入框
+const appendNextStep = (text: string): void => {
+  if (!canFillNextStep.value) {
+    return;
+  }
+  const base = query.value.replace(/\s+$/u, "");
+  query.value = base === "" ? text : `${base}\n${text}`;
+  void nextTick(() => composerRef.value?.focus());
+};
+
 // messageTimeOf 该条消息创建时间的展示文本（本地化）；缺失时返回空串（信息属补充，不占位）
 const messageTimeOf = (m: ChatMessage): string =>
   m.createdAt ? localeDatetimeFormat(DateTime.fromISO(m.createdAt)) : "";
@@ -2308,6 +2531,12 @@ const pruneSubmittedCalls = (msg: ChatMessage): void => {
 
 // ASK_USER_TOOL_NAME 主动提问客户端工具名（与后端登记一致）：命中即豁免人工审批，改由问卷面板承载。
 const ASK_USER_TOOL_NAME = "ask_user";
+// API_INVOKE_TOOL_NAME 只读能力调用：后端已在挂起前把能力解析为规范入参（method/path/params），
+// 前端批准后按该入参在用户自身凭据下执行，并把响应作为工具结果回传。
+const API_INVOKE_TOOL_NAME = "api_invoke";
+// API_INVOKE_RESULT_MAX_CHARS 前端回传的工具结果字符上限：结果最终还会经后端
+// agent.maxToolResultBytes 截断，此处先挡住超大响应，避免把整段载荷塞进挂起现场。
+const API_INVOKE_RESULT_MAX_CHARS = 48_000;
 
 // toPendingCallStates 把后端出参的待执行调用映射为视图态（「重新回答」出参、消息列表出参与续播快照
 // 共用）：问卷类调用（ask_user）不预置决策、留待用户在面板作答后再定；其余免审批调用
@@ -2366,7 +2595,7 @@ const parseQuestionnaireArgs = (argumentsText: string): QuestionnairePayload | n
 // 故实时流与刷新 / 重进会话（消息出参 blocks）由同一套映射渲染，二者天然一致。
 interface AssistantBlock {
   key: string;
-  kind: "reasoning" | "content" | "stages" | "questionnaire" | "approval";
+  kind: "reasoning" | "content" | "stages" | "questionnaire" | "approval" | "nextSteps";
   // text 仅 reasoning / content 使用：该块的文本
   text?: string;
   // primary 仅 reasoning / content 使用：是否为同类块中的末个（reasoning 为流式思考块、content 为末尾正文）
@@ -2381,6 +2610,8 @@ interface AssistantBlock {
   reanswerable?: boolean;
   // approvalCalls 仅 approval 使用：本块待审批调用清单
   approvalCalls?: AgentApprovalCallRecord[];
+  // nextSteps 仅 nextSteps 使用：推荐的下一步列表（首条为最推荐）
+  nextSteps?: AgentNextStep[];
 }
 
 // lastSeqOfKind 求某类块在块列表中的最大 seq（无该类块时返回 -1）：用于标记末个同 kind 块（流式思考 /
@@ -2444,6 +2675,13 @@ const assistantBlocksOf = (m: ChatMessage): AssistantBlock[] => {
           approvalCalls: (b.payload as AgentApprovalBlockPayload)?.calls ?? [],
         });
         break;
+      case "next_steps": {
+        const steps = (b.payload as AgentNextStepsBlockPayload)?.steps ?? [];
+        if (steps.length > 0) {
+          out.push({ key, kind: "nextSteps", nextSteps: steps });
+        }
+        break;
+      }
     }
   }
   return out;
@@ -2884,14 +3122,97 @@ const setApprovalDecision = (msg: ChatMessage, callID: string, approved: boolean
     const rec = (b.payload as AgentApprovalBlockPayload)?.calls?.find((c) => c.callID === callID);
     if (rec) {
       rec.decision = approved;
+      // api_invoke 由前端执行：把执行结果 / 错误同步到审批块，批准后即可在面板内看到本次调用的产物。
+      rec.result = call.result;
+      rec.error = call.error;
     }
   }
   trySubmitApprovals(msg);
 };
 
-// approveCall 批准该调用（按 callID 定位）：记录决策并尝试提交本轮结果
-const approveCall = (msg: ChatMessage, callID: string): void =>
+// callExecuting 该调用当前是否正在前端执行（对照 pendingCalls 的本地执行态），用于禁用重复点击。
+const callExecuting = (msg: ChatMessage, callID: string): boolean =>
+  (msg.pendingCalls ?? []).find((c) => c.callID === callID)?.executing === true;
+
+// approveCall 批准该调用（按 callID 定位）：api_invoke 先在前端执行只读接口，执行结束（无论成功
+// 或失败）再记录决策并尝试提交本轮结果；其余 client 工具无需本地执行，直接记录决策。
+const approveCall = (msg: ChatMessage, callID: string): void => {
+  const call = (msg.pendingCalls ?? []).find((c) => c.callID === callID);
+  if (!call || call.decision || call.executing) {
+    return;
+  }
+  if (call.toolName === API_INVOKE_TOOL_NAME) {
+    void (async () => {
+      await executeApiInvoke(call);
+      setApprovalDecision(msg, callID, true);
+    })();
+    return;
+  }
   setApprovalDecision(msg, callID, true);
+};
+
+// ApiInvokeArgs 是后端解析后的规范入参：method/path 已按能力白名单确定，前端不再接受模型给出的
+// 任意 URL；params 为请求体对象。
+interface ApiInvokeArgs {
+  capability?: string;
+  method: string;
+  path: string;
+  params?: unknown;
+}
+
+// parseApiInvokeArgs 解析后端下发的规范入参；缺少 method/path 时返回 null。
+const parseApiInvokeArgs = (argumentsText: string): ApiInvokeArgs | null => {
+  try {
+    const parsed = JSON.parse(argumentsText) as Partial<ApiInvokeArgs>;
+    if (typeof parsed.method !== "string" || typeof parsed.path !== "string") {
+      return null;
+    }
+    return {
+      capability: typeof parsed.capability === "string" ? parsed.capability : undefined,
+      method: parsed.method,
+      path: parsed.path,
+      params: parsed.params,
+    };
+  } catch {
+    return null;
+  }
+};
+
+// truncateApiInvokeResult 把序列化后的响应截断到上限，保留明确截断标记。
+const truncateApiInvokeResult = (text: string): string =>
+  text.length > API_INVOKE_RESULT_MAX_CHARS
+    ? `${text.slice(0, API_INVOKE_RESULT_MAX_CHARS)}\n…（结果已截断）`
+    : text;
+
+// executeApiInvoke 在用户自身凭据下执行一次已解析的只读调用：成功时把响应体序列化写入 result，
+// 失败时把错误文本写入 error；两种情况均由后续决策提交回传，供模型继续推理。
+const executeApiInvoke = async (call: PendingCallState): Promise<void> => {
+  const args = parseApiInvokeArgs(call.arguments);
+  if (!args) {
+    call.error = i18n.global.t("page.aiAssistant.apiInvokeInvalidArgs");
+    return;
+  }
+  call.executing = true;
+  call.error = undefined;
+  try {
+    const response = await request.request({
+      // 后端 path 带 /api/v1，baseURL 也含 /api/v1；经 apiRequestURL 重建绝对地址，避免二次拼接。
+      url: apiRequestURL(args.path),
+      method: args.method,
+      data: args.params ?? {},
+      // 与其余业务请求一致携带当前用户 JWT：能力调用以用户自身身份执行，后端鉴权照常生效。
+      headers: getJwtHeader(),
+      // 平台列表接口可能超过全局 1s 超时；能力调用给足 30s，仍由后端鉴权与响应上限兜底。
+      timeout: 30_000,
+    });
+    call.result = truncateApiInvokeResult(JSON.stringify(response.data ?? ""));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    call.error = i18n.global.t("page.aiAssistant.apiInvokeFailed", { error: message });
+  } finally {
+    call.executing = false;
+  }
+};
 
 // rejectCall 拒绝（按 callID 定位）：仅记录决策，不执行任何调用
 const rejectCall = (msg: ChatMessage, callID: string): void =>
@@ -3901,6 +4222,98 @@ onUnmounted(() => {
   margin-top: var(--zk-space-2);
 }
 
+/* 推荐的下一步：回答末尾的可选行动区，底色 / 圆角由 .zk-panel--subtle 提供，这里只补与正文的
+   间距与整宽（所在纵向 flex 为 align-items: flex-start，不撑满会被收缩成内容宽）。行与行之间
+   不加分隔边框，靠间距与悬停底色区分 */
+.assistant-next-steps {
+  width: 100%;
+  margin-top: var(--zk-space-3);
+}
+
+.assistant-next-steps-header {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-1);
+  margin-bottom: var(--zk-space-1);
+}
+
+.assistant-next-step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 单条推荐：整行可点击直接发送；悬停底色由全局 zk-row-hover 提供（仅可发送时挂载） */
+.assistant-next-step {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-1);
+  padding: 2px var(--zk-space-1) 2px var(--zk-space-2);
+  border-radius: var(--zk-radius-sm);
+}
+
+/* 不可发送时抑制行级可点击暗示（按钮自身禁用，填入按钮仍可用） */
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
+.assistant-next-step--disabled {
+  cursor: default;
+}
+
+.assistant-next-step-activator {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 直接发送按钮：原生 button 承载整行文本，抹平浏览器默认外观以与站点字体 / 颜色一致 */
+.assistant-next-step-main {
+  display: flex;
+  align-items: center;
+  gap: var(--zk-space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assistant-next-step-main:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.assistant-next-step-icon {
+  flex: 0 0 auto;
+  opacity: 0.55;
+}
+
+.assistant-next-step-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+/* 推荐标题：行动名称，作为该行的主文本 */
+.assistant-next-step-title {
+  overflow-wrap: anywhere;
+}
+
+/* 推荐理由：弱化呈现，与标题同处一列，说明为什么推荐该步骤 */
+.assistant-next-step-reason {
+  overflow-wrap: anywhere;
+}
+
+.assistant-next-step-badge {
+  flex: 0 0 auto;
+}
+
 /* 上下文压缩展示块：外观基线取自 .zk-panel--subtle（弱化底 + 圆角），失败态补一条错误色描边。
    位于该轮快捷操作行下方（模板上的 mt-2 提供间距）。width: 100% 必需：它位于 .assistant-turn
    这一 align-items: flex-start 的纵向 flex 内，不撑满会被收缩成内容宽，running 态的摘要增量
@@ -3945,6 +4358,13 @@ onUnmounted(() => {
   margin-top: var(--zk-space-1);
 }
 
+/* 引用序号：与正文上标标注同号，取副标题灰以弱于标题本身 */
+.assistant-citation-index {
+  margin-inline-end: var(--zk-space-1);
+  color: rgb(var(--v-theme-on-surface-variant));
+  font-variant-numeric: tabular-nums;
+}
+
 /* 引用标题链接：命名空间可溯源时标题渲染为链接，颜色走主题 primary，默认无下划线，
    悬停显现下划线，与站内其它文本链接风格一致 */
 .assistant-citation-link {
@@ -3963,6 +4383,12 @@ onUnmounted(() => {
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* 引用展开 / 收起入口：取副标题灰、弱于引用正文。全局 VBtn 默认 compact 会再压 12px
+   高度（x-small 仅剩 8px，中文字形被裁切），故与站内其它文字按钮统一用 small 档 */
+.assistant-citations-toggle {
+  color: rgb(var(--v-theme-on-surface-variant));
 }
 
 /* 审批参数 / 结果 JSON 视区：限高滚动，避免长响应撑高气泡 */

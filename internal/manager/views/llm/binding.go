@@ -21,7 +21,7 @@ import (
 // 「已绑定但模型类型与档位不符」三种情况。
 type LlmSlotBindingOut struct {
 	// Slot 档位标识：flash | standard | advanced | embedding
-	Slot aimodel.Slot `json:"slot"`
+	Slot string `json:"slot"`
 	// ModelID 绑定模型的 ID（未绑定时为 0）
 	ModelID uint `json:"modelID"`
 	// ModelName 绑定模型的本地标识（未绑定时为空）
@@ -82,7 +82,7 @@ func LlmBindingListGet(c *gin.Context) {
 	}
 	slots := make([]LlmSlotBindingOut, 0, len(aimodel.AllSlots))
 	for _, slot := range aimodel.AllSlots {
-		out := LlmSlotBindingOut{Slot: slot, ModelID: modelIDs[slot]}
+		out := LlmSlotBindingOut{Slot: string(slot), ModelID: modelIDs[slot]}
 		out.RequiredKind = aimodel.SlotKind(slot)
 		if info, ok := infos[slot]; ok {
 			out.ModelName = info.Name

@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	// 项目内部
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -46,7 +47,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 模型列表查询 - 支持分页、排序与过滤（时间/名称/类型/启用状态），不返回凭据
 		llmGroup.POST("/model/list", LlmModelListGet)
 		// 模型列表自省信息 - 返回搜索选项、表格列与出参结构体定义
-		views.RegisterListApi[*views.LlmModelListGetSearchIn, *LlmModelListOut](llmGroup, "/model/list", "模型列表查询 - 支持分页、排序与过滤（时间/名称/类型/启用状态），不返回凭据")
+		views.RegisterListApi[*views.LlmModelListGetSearchIn, *LlmModelListOut](llmGroup, "/model/list", "模型列表查询 - 支持分页、排序与过滤（时间/名称/类型/启用状态），不返回凭据",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.model.list",
+				Domain:    "llm",
+				Intent:    "查看模型端点列表",
+				Entities:  []string{"llm_models"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 注册模型端点 - 校验名称唯一、类型合法与端点字段合法后落库
 		llmGroup.POST("/model/create", LlmModelCreate)
 		// 注册模型端点元信息
@@ -58,6 +68,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 模型详情元信息
 		views.RegisterApi(llmGroup, "/model/:id/get", "模型详情查询 - 根据ID获取端点完整配置（apiKey 为密文）",
 			views.WithMethod(http.MethodPost, views.WithBodyOutput[LlmModelDetailOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.model.detail",
+				Domain:    "llm",
+				Intent:    "查看模型端点详情（凭据为密文）",
+				Entities:  []string{"llm_models"},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 更新模型端点 - 类型不可变；apiKey 留空表示沿用原凭据
 		llmGroup.POST("/model/:id/update", LlmModelUpdate)
@@ -76,6 +94,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 测试模型端点连通性元信息
 		views.RegisterApi(llmGroup, "/model/test", "测试模型端点连通性 - 不落库；支持「已注册模型 id」或「完整端点配置」两种用法",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[LlmModelTestIn](), views.WithBodyOutput[LlmModelTestOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.model.test",
+				Domain:    "llm",
+				Intent:    "测试模型端点连通性（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 	}
 
@@ -88,6 +114,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 档位绑定列表元信息
 		views.RegisterApi(llmGroup, "/binding/list", "档位绑定列表 - 返回四个槽位的绑定摘要、槽位可用性与 AI 能力整体可用性",
 			views.WithMethod(http.MethodPost, views.WithBodyOutput[LlmBindingListOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.binding.list",
+				Domain:    "llm",
+				Intent:    "查看档位绑定与可用性",
+				Entities:  []string{"llm_bindings", "llm_models"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
 		)
 		// 绑定档位 - 校验模型存在、已启用且类型与档位匹配后写入（重复绑定覆盖为最新模型）
 		llmGroup.POST("/binding/:slot/set", LlmBindingSet)
@@ -111,6 +145,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 参数列表元信息
 		views.RegisterApi(llmGroup, "/param/list", "参数列表查询 - 返回元信息、默认值与当前生效值（label / comment 跟随请求语言）",
 			views.WithMethod(http.MethodPost, views.WithBodyOutput[LlmParamListOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.param.list",
+				Domain:    "llm",
+				Intent:    "查看 Agent 参数元信息与生效值",
+				Entities:  []string{"agent_params"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
 		)
 		// 覆盖参数 - 批量提交 {key, value}；键必须已声明、值须符合声明类型
 		llmGroup.POST("/param/set", LlmParamSet)
@@ -133,7 +175,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// MCP 服务器列表查询 - 支持分页、排序与过滤（时间/名称/传输方式/启用状态），headers 为密文
 		llmGroup.POST("/mcp/list", McpServerListGet)
 		// MCP 服务器列表自省信息 - 返回搜索选项、表格列与出参结构体定义
-		views.RegisterListApi[*views.McpServerListGetSearchIn, *McpServerListOut](llmGroup, "/mcp/list", "MCP 服务器列表查询 - 支持分页、排序与过滤（时间/名称/传输方式/启用状态），headers 为密文")
+		views.RegisterListApi[*views.McpServerListGetSearchIn, *McpServerListOut](llmGroup, "/mcp/list", "MCP 服务器列表查询 - 支持分页、排序与过滤（时间/名称/传输方式/启用状态），headers 为密文",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.mcp.list",
+				Domain:    "llm",
+				Intent:    "查看 MCP 服务器列表",
+				Entities:  []string{"mcp_servers"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 注册 MCP 服务器 - 校验名称唯一、传输方式合法与端点字段合法后落库
 		llmGroup.POST("/mcp/create", McpServerCreate)
 		// 注册 MCP 服务器元信息
@@ -145,6 +196,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// MCP 服务器详情元信息
 		views.RegisterApi(llmGroup, "/mcp/:id/get", "MCP 服务器详情查询 - 根据ID获取端点完整配置（headers 为密文）",
 			views.WithMethod(http.MethodPost, views.WithBodyOutput[McpServerDetailOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.mcp.detail",
+				Domain:    "llm",
+				Intent:    "查看 MCP 服务器详情（凭据为密文）",
+				Entities:  []string{"mcp_servers"},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 更新 MCP 服务器 - 传输方式可改；headers 留空表示沿用原凭据
 		llmGroup.POST("/mcp/:id/update", McpServerUpdate)
@@ -163,6 +222,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 测试 MCP 服务器连通性元信息
 		views.RegisterApi(llmGroup, "/mcp/test", "测试 MCP 服务器连通性 - 不落库；返回远端 tools/list 发现的工具数量与名称清单",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[McpServerTestIn](), views.WithBodyOutput[McpServerTestOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.mcp.test",
+				Domain:    "llm",
+				Intent:    "测试 MCP 服务器连通性（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 同步工具清单 - 把远端 tools/list 对账进工具注册表（事务）
 		llmGroup.POST("/mcp/:id/sync", McpServerSync)
@@ -178,7 +245,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 工具列表查询 - 支持分页、排序与过滤（时间/名称/来源/启用状态）
 		llmGroup.POST("/tool/list", LlmToolListGet)
 		// 工具列表自省信息 - 返回搜索选项、表格列与出参结构体定义
-		views.RegisterListApi[*views.LlmToolListGetSearchIn, *LlmToolListOut](llmGroup, "/tool/list", "工具列表查询 - 支持分页、排序与过滤（时间/名称/来源/启用状态）")
+		views.RegisterListApi[*views.LlmToolListGetSearchIn, *LlmToolListOut](llmGroup, "/tool/list", "工具列表查询 - 支持分页、排序与过滤（时间/名称/来源/启用状态）",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "llm.tool.list",
+				Domain:    "llm",
+				Intent:    "查看工具注册表",
+				Entities:  []string{"llm_tools"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 批量启用/停用工具 - 按 id 统一写入目标启用状态
 		llmGroup.POST("/tool/set-enabled", LlmToolSetEnabled)
 		// 批量启用/停用工具元信息

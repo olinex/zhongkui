@@ -27,8 +27,8 @@ type GroupRbacPolicyIn struct {
 	Action string `json:"action" binding:"required,min=1,max=64"`
 
 	// Effect 表示权限效果，只能是"allow"(允许)或"deny"(拒绝)。
-	// 必须提供，用于定义策略是允许访问还是拒绝访问。
-	Effect string `json:"effect" binding:"required,oneof=allow deny"`
+	// 必须提供，用于定义策略是允许访问还是拒绝访问；取值经 enum=policyEffect 绑定枚举注册表校验。
+	Effect string `json:"effect" binding:"required,enum=policyEffect"`
 }
 
 // GroupUpdateIn 定义组更新输入结构体。

@@ -273,7 +273,7 @@ func TestAgentAssistantInputRerun_ReanswerQuestionnaire(t *testing.T) {
 	if resp.Data == nil {
 		t.Fatalf("rerun data is nil (body=%s)", w.Body.String())
 	}
-	if resp.Data.Kind != modelsai.AgentInteractionSubstateAnswer {
+	if resp.Data.Kind != string(modelsai.AgentInteractionSubstateAnswer) {
 		t.Errorf("kind = %q, want %q", resp.Data.Kind, modelsai.AgentInteractionSubstateAnswer)
 	}
 	if len(resp.Data.Questionnaires) != 1 {
@@ -290,7 +290,7 @@ func TestAgentAssistantInputRerun_ReanswerQuestionnaire(t *testing.T) {
 		t.Errorf("questionnaire.pendingCalls = %+v, want the pending ask_user call exempt from approval", q.PendingCalls)
 	}
 	expected := ai.StateOf(ai.InteractionFacts{UserTurns: 1, MaxUserTurns: 20})
-	if resp.Data.InteractionState != expected.State {
+	if resp.Data.InteractionState != string(expected.State) {
 		t.Errorf("interactionState = %q, want %q", resp.Data.InteractionState, expected.State)
 	}
 	assertRerunSideEffects(t, db, session, anchor, run, beforeExpires)
@@ -386,7 +386,7 @@ func TestAgentAssistantInputRerun_ReauthorizeTool(t *testing.T) {
 	if resp.Data == nil {
 		t.Fatalf("rerun data is nil (body=%s)", w.Body.String())
 	}
-	if resp.Data.Kind != modelsai.AgentInteractionSubstateApproval {
+	if resp.Data.Kind != string(modelsai.AgentInteractionSubstateApproval) {
 		t.Errorf("kind = %q, want %q", resp.Data.Kind, modelsai.AgentInteractionSubstateApproval)
 	}
 	if len(resp.Data.Questionnaires) != 0 {
@@ -400,7 +400,7 @@ func TestAgentAssistantInputRerun_ReauthorizeTool(t *testing.T) {
 		t.Errorf("pendingCall = %+v, want the search_docs call requiring approval", call)
 	}
 	expected := ai.StateOf(ai.InteractionFacts{UserTurns: 1, MaxUserTurns: 20})
-	if resp.Data.InteractionState != expected.State {
+	if resp.Data.InteractionState != string(expected.State) {
 		t.Errorf("interactionState = %q, want %q", resp.Data.InteractionState, expected.State)
 	}
 	assertRerunSideEffects(t, db, session, anchor, run, beforeExpires)

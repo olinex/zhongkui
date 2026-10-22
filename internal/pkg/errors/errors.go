@@ -40,8 +40,8 @@ func Newf(format string, args ...any) error {
 	return fmt.Errorf(format, args...)
 }
 
-// WithStack 返回错误的根本原因，并为第三方库或标准库的错误添加堆栈信息。
-// 如果错误已经是 StackError 类型，则直接返回原错误。
+// WithStack 为第三方库或标准库的错误添加堆栈信息；关闭堆栈时原样返回。
+// 已带堆栈的错误不会被重复包装，nil 错误返回 nil。
 // 这个函数通常用于包装来自外部库的错误，以添加上下文调用栈。
 //
 // 示例:
@@ -51,13 +51,14 @@ func Newf(format string, args ...any) error {
 //	    return WithStack(err)
 //	}
 func WithStack(err error) error {
-	if base.Env.ErrorStack && err != nil {
-		switch err.(type) {
-		case stackError:
-			return errors.WithStack(err)
-		default:
-			return errors.WithStack(err)
-		}
+	if err == nil {
+		return nil
+	}
+	if !base.Env.ErrorStack {
+		return err
+	}
+	if _, ok := err.(stackError); ok {
+		return err
 	}
 	return errors.WithStack(err)
 }

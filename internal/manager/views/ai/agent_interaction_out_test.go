@@ -106,10 +106,10 @@ func TestAgentSessionDetailInteractionOut(t *testing.T) {
 
 	// 与同一事实口径的推导结果对齐（详情出参 == StateOf(facts)）。
 	expected := ai.StateOf(ai.InteractionFacts{UserTurns: 1, MaxUserTurns: 7})
-	if resp.Data.InteractionState != expected.State {
+	if resp.Data.InteractionState != string(expected.State) {
 		t.Errorf("interactionState = %q, want %q", resp.Data.InteractionState, expected.State)
 	}
-	if resp.Data.InteractionSubstate != expected.Substate {
+	if resp.Data.InteractionSubstate != string(expected.Substate) {
 		t.Errorf("interactionSubstate = %q, want %q", resp.Data.InteractionSubstate, expected.Substate)
 	}
 	if resp.Data.Locked != expected.Locked {
@@ -122,8 +122,8 @@ func TestAgentSessionDetailInteractionOut(t *testing.T) {
 		t.Errorf("maxUserTurns = %d, want %d", resp.Data.MaxUserTurns, expected.MaxUserTurns)
 	}
 	// 显式锚定语义：一条提问、上限 7 → 暂停/成功、未锁定。
-	if resp.Data.InteractionState != modelsai.AgentInteractionStatePaused ||
-		resp.Data.InteractionSubstate != modelsai.AgentInteractionSubstateSuccess ||
+	if resp.Data.InteractionState != string(modelsai.AgentInteractionStatePaused) ||
+		resp.Data.InteractionSubstate != string(modelsai.AgentInteractionSubstateSuccess) ||
 		resp.Data.Locked {
 		t.Errorf("session detail state = %q/%q locked=%v, want paused/success locked=false",
 			resp.Data.InteractionState, resp.Data.InteractionSubstate, resp.Data.Locked)
@@ -197,10 +197,10 @@ func TestAgentStatusOutLiveRunInteractionOut(t *testing.T) {
 		t.Fatalf("status liveRun is nil (body=%s)", w.Body.String())
 	}
 	live := resp.Data.LiveRun
-	if live.Phase != modelsai.AgentRunPhaseRunning {
+	if live.Phase != string(modelsai.AgentRunPhaseRunning) {
 		t.Errorf("liveRun.phase = %q, want %q", live.Phase, modelsai.AgentRunPhaseRunning)
 	}
-	if live.InteractionState != modelsai.AgentInteractionStatePaused || live.InteractionSubstate != modelsai.AgentInteractionSubstateFailed || live.Locked {
+	if live.InteractionState != string(modelsai.AgentInteractionStatePaused) || live.InteractionSubstate != string(modelsai.AgentInteractionSubstateFailed) || live.Locked {
 		t.Errorf("liveRun state = %q/%q locked=%v, want paused/failed locked=false",
 			live.InteractionState, live.InteractionSubstate, live.Locked)
 	}

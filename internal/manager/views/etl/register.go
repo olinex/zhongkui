@@ -3,6 +3,7 @@ package etl
 import (
 	"net/http"
 
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -30,15 +31,45 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 服务器列表查询 - 获取所有任务队列服务器信息
 		inspectorGroup.POST("/server/list", EtlPipelineInspectorServerListGet)
 		// 服务器列表元信息
-		views.RegisterApi(inspectorGroup, "/server/list", "服务器列表查询 - 获取所有任务队列服务器信息", views.WithMethod(http.MethodPost, views.WithBodyOutput[PipelineServerInfo]()))
+		views.RegisterApi(inspectorGroup, "/server/list", "服务器列表查询 - 获取所有任务队列服务器信息",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[PipelineServerInfo]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "etl.server.list",
+				Domain:    "etl",
+				Intent:    "查看异步任务服务器列表",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 调度器列表查询 - 获取所有任务调度器信息
 		inspectorGroup.POST("/scheduler/list", EtlPipelineInspectorSchedulerListGet)
 		// 调度器列表元信息
-		views.RegisterApi(inspectorGroup, "/scheduler/list", "调度器列表查询 - 获取所有任务调度器信息", views.WithMethod(http.MethodPost, views.WithBodyOutput[PipelineSchedulerInfo]()))
+		views.RegisterApi(inspectorGroup, "/scheduler/list", "调度器列表查询 - 获取所有任务调度器信息",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[PipelineSchedulerInfo]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "etl.scheduler.list",
+				Domain:    "etl",
+				Intent:    "查看任务调度器列表",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 队列列表查询 - 获取所有任务队列信息
 		inspectorGroup.POST("/queue/list", EtlPipelineInspectorQueueListGet)
 		// 队列列表元信息
-		views.RegisterApi(inspectorGroup, "/queue/list", "队列列表查询 - 获取所有任务队列信息", views.WithMethod(http.MethodPost))
+		views.RegisterApi(inspectorGroup, "/queue/list", "队列列表查询 - 获取所有任务队列信息",
+			views.WithMethod(http.MethodPost),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "etl.queue.list",
+				Domain:    "etl",
+				Intent:    "查看任务队列列表",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 队列恢复运行 - 恢复指定队列的任务处理
 		inspectorGroup.POST("/queue/:name/unpause", EtlPipelineInspectorQueueUnpause)
 		// 队列恢复运行元信息
@@ -50,12 +81,30 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 队列每日统计查询 - 获取队列的每日任务统计信息
 		inspectorGroup.POST("/queue/daily-stat/list", EtlPipelineInspectorDailyStatListGet)
 		// 队列每日统计元信息
-		views.RegisterApi(inspectorGroup, "/queue/daily-stat/list", "队列每日统计查询 - 获取队列的每日任务统计信息", views.WithMethod(http.MethodPost, views.WithBodyInput[ETLPipelineInspectorDailyStatIn]()))
+		views.RegisterApi(inspectorGroup, "/queue/daily-stat/list", "队列每日统计查询 - 获取队列的每日任务统计信息",
+			views.WithMethod(http.MethodPost, views.WithBodyInput[ETLPipelineInspectorDailyStatIn]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "etl.queue.daily-stat",
+				Domain:    "etl",
+				Intent:    "查看队列每日任务统计",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 任务列表查询 - 获取所有任务信息
 		inspectorGroup.POST("/task/list", EtlPipelineInspectorTaskListGet)
 		// 任务列表元信息
 		views.RegisterApi(inspectorGroup, "/task/list", "任务列表查询 - 获取所有任务信息",
 			views.WithMethod(http.MethodPost, views.WithBodyInput[ETLPipelineInspectorTaskListIn](), views.WithBodyOutput[PipelineTaskInfo]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "etl.task.list",
+				Domain:    "etl",
+				Intent:    "查看异步任务列表",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
 		)
 		// 按状态删除任务 - 删除指定状态的所有任务
 		inspectorGroup.POST("/task/state/delete", EtlPipelineInspectorStateTaskDelete)

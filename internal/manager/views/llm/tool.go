@@ -30,7 +30,7 @@ type LlmToolListOut struct {
 	// Name Agent 面向的工具名，全局唯一
 	Name string `json:"name"`
 	// Source 工具来源：builtin | mcp
-	Source aimodel.ToolSource `json:"source"`
+	Source string `json:"source"`
 	// McpServerName 所属 MCP 服务器的本地标识；内置工具为空
 	McpServerName string `json:"mcpServerName"`
 	// RemoteName MCP 服务器侧的工具名；内置工具为空
@@ -122,7 +122,7 @@ func LlmToolListGet(c *gin.Context) {
 				UpdatedAt: row.UpdatedAt,
 			},
 			Name:          row.Name,
-			Source:        row.Source,
+			Source:        string(row.Source),
 			McpServerName: name,
 			RemoteName:    row.RemoteName,
 			Enabled:       row.Enabled,

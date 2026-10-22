@@ -38,6 +38,8 @@ type ApiDescriptor struct {
 	RagEnabled bool
 	// Meta 该方法的入参/出参结构体元信息。
 	Meta *MethodMeta
+	// Capability AI 能力元数据；未声明时为 nil，该接口不进入能力地图与 api_invoke 白名单。
+	Capability *CapabilityMeta
 }
 
 // ApiKnowledgeDoc 是接口知识文档的渲染结果，可直接映射为知识库生成文档。
@@ -120,6 +122,7 @@ func recordApi(fullPath string, options *metadataOptions) {
 			Description: strings.TrimSpace(options.description),
 			RagEnabled:  enabled,
 			Meta:        meta,
+			Capability:  options.capability,
 		}
 	}
 }
@@ -153,6 +156,12 @@ func ApiKnowledgeDocs() []ApiKnowledgeDoc {
 		docs = append(docs, renderApiKnowledgeDoc(descriptor))
 	}
 	return docs
+}
+
+// RenderApiDoc 把单个接口渲染为文档投影使用的标题与正文。
+// 正文与 RAG 知识文档同源，保证人类参考页与模型上下文逐字一致。
+func RenderApiDoc(descriptor ApiDescriptor) ApiKnowledgeDoc {
+	return renderApiKnowledgeDoc(descriptor)
 }
 
 // renderApiKnowledgeDoc 把单个接口渲染为 Markdown 知识文档（纯函数，逐字节幂等）。

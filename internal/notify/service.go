@@ -355,9 +355,9 @@ func renderFuncs(lang *base.Language) template.FuncMap {
 
 // renderI18nDefault 依据语言在翻译包（internal/pkg/translate）中按
 // notify.<template>.title / notify.<template>.content 键取回默认标题/正文，作为持久化模板
-// 解析缺位时的回退。notify.* 默认模板因含 {{...}} 函数调用一律经 text/template 渲染：translate 的
+// 解析缺位时的回退。notify.* 默认模板因含函数调用动作一律经 text/template 渲染：translate 的
 // 全局数据定界符为 [[ / ]]（dataDelimParser），这些源串不含 [[，go-i18n fast-path 原样透出
-// 未渲染原文，故此处经 Localize(lang, key, nil) 拿到的即原始模板串（保留 {{...}} 占位符），
+// 未渲染原文，故此处经 Localize(lang, key, nil) 拿到的即原始模板串（保留占位符动作），
 // 再经 message.RenderTemplateWithFuncs 以 renderFuncs 注入的模板函数（T/TenumKey/TenumValue）
 // 渲染枚举 label。键缺失时
 // Localize 回退返回键本身，据此判定默认模板是否可用。渲染得到的结构体仍为

@@ -23,6 +23,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/crypto"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
@@ -270,6 +271,9 @@ type RetrieveOptions struct {
 	NamespaceName string
 	// DocIDs 限定检索的文档 ID 列表，为空表示不限定
 	DocIDs []uint
+	// Format 限定检索的知识文档格式分区（如 native_api / schema / capability / generated），
+	// 为空表示不限定分区。
+	Format docconv.Format
 	// TopK LLM 重排后保留的最终条数
 	TopK int
 	// Candidates 融合后送入重排的候选条数
@@ -291,6 +295,13 @@ func WithNamespace(namespaceName string) retriever.Option {
 func WithDocIDs(docIDs []uint) retriever.Option {
 	return retriever.WrapImplSpecificOptFn(func(o *RetrieveOptions) {
 		o.DocIDs = docIDs
+	})
+}
+
+// WithFormat 限定检索的知识文档格式分区；空值表示不限定。
+func WithFormat(format docconv.Format) retriever.Option {
+	return retriever.WrapImplSpecificOptFn(func(o *RetrieveOptions) {
+		o.Format = format
 	})
 }
 
@@ -534,6 +545,9 @@ func (r *Retriever) vectorRetrieve(ctx context.Context, o *RetrieveOptions, vec 
 	if len(o.DocIDs) > 0 {
 		q = q.Where("c.document_id IN ?", o.DocIDs)
 	}
+	if o.Format != "" {
+		q = q.Where("d.format = ?", string(o.Format))
+	}
 	q = q.Order(clause.OrderBy{Expression: gorm.Expr("c.embedding <=> ?::vector", lit)}).
 		Limit(o.Candidates)
 	var rows []struct {
@@ -560,6 +574,9 @@ func (r *Retriever) keywordRetrieve(ctx context.Context, o *RetrieveOptions, que
 		Where("c.search @@ plainto_tsquery('simple', ?)", query)
 	if len(o.DocIDs) > 0 {
 		q = q.Where("c.document_id IN ?", o.DocIDs)
+	}
+	if o.Format != "" {
+		q = q.Where("d.format = ?", string(o.Format))
 	}
 	q = q.Order(clause.OrderBy{Expression: gorm.Expr("ts_rank(c.search, plainto_tsquery('simple', ?)) DESC", query)}).
 		Limit(o.Candidates)

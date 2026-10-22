@@ -783,7 +783,7 @@ func TestRecoverWithStack_Integration(t *testing.T) {
 					// 记录任务结束
 					// 在实际实现中，这里可能会有日志记录
 
-					return errors.WithStack(err)
+					return err
 				})
 			}
 

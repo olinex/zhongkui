@@ -3,6 +3,7 @@ package ai
 import (
 	"net/http"
 
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -39,7 +40,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 知识库文档列表查询 - 支持分页、搜索与排序。
 	docGroup.POST("/list", KnowledgeDocumentListGet)
 	// 知识库文档列表元信息
-	views.RegisterListApi[*views.KnowledgeDocumentListGetSearchIn, *KnowledgeDocumentListOut](docGroup, "/list", "知识库文档列表查询 - 支持分页、搜索与排序。")
+	views.RegisterListApi[*views.KnowledgeDocumentListGetSearchIn, *KnowledgeDocumentListOut](docGroup, "/list", "知识库文档列表查询 - 支持分页、搜索与排序。",
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.knowledge.list",
+			Domain:    "ai",
+			Intent:    "查看知识库文档列表",
+			Entities:  []string{"knowledge_documents"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 创建知识库文档 - 落库后切块向量化（AI 未启用时文档保留，可稍后重新索引）
 	docGroup.POST("/create", KnowledgeDocumentCreate)
 	// 创建知识库文档元信息
@@ -51,7 +61,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 按文档 ID 查询当前命名空间内某篇知识库文档的完整信息。
 	docGroup.POST("/:id/get", KnowledgeDocumentDetailGet)
 	// 知识库文档详情元信息
-	views.RegisterApi(docGroup, "/:id/get", "按文档 ID 查询当前命名空间内某篇知识库文档的完整信息。", views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentDetailOut]()))
+	views.RegisterApi(docGroup, "/:id/get", "按文档 ID 查询当前命名空间内某篇知识库文档的完整信息。",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentDetailOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.knowledge.detail",
+			Domain:    "ai",
+			Intent:    "查看知识库文档详情",
+			Entities:  []string{"knowledge_documents"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 更新知识库文档 - 更新标题/正文并触发重新索引
 	docGroup.POST("/:id/update", KnowledgeDocumentUpdate)
 	// 更新知识库文档元信息
@@ -67,11 +87,31 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 知识库文档分块明细 - 聚合索引摘要（分块统计/切片参数/向量维度/索引新鲜度）与逐块明细
 	docGroup.POST("/:id/chunks", KnowledgeDocumentChunksGet)
 	// 知识库文档分块明细元信息
-	views.RegisterApi(docGroup, "/:id/chunks", "知识库文档分块明细 - 聚合索引摘要（分块统计/切片参数/向量维度/索引新鲜度）与逐块明细", views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]()))
+	views.RegisterApi(docGroup, "/:id/chunks", "知识库文档分块明细 - 聚合索引摘要（分块统计/切片参数/向量维度/索引新鲜度）与逐块明细",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.knowledge.chunks",
+			Domain:    "ai",
+			Intent:    "查看知识库文档的分块与索引摘要",
+			Entities:  []string{"knowledge_documents", "knowledge_chunks"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）
 	docGroup.POST("/:id/download", KnowledgeDocumentDownload)
 	// 下载知识库文档原件元信息（二进制流响应不适配结构体元信息，仅登记请求方法）
-	views.RegisterApi(docGroup, "/:id/download", "下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）", views.WithMethod(http.MethodPost))
+	views.RegisterApi(docGroup, "/:id/download", "下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）",
+		views.WithMethod(http.MethodPost),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.knowledge.download",
+			Domain:    "ai",
+			Intent:    "下载知识库文档原件（二进制流，仅参考）",
+			Entities:  []string{"knowledge_documents"},
+			Access:    capability.AccessRead,
+			Invokable: false,
+		}),
+	)
 
 	// ========== 系统命名空间知识库（只读）：/api/v1/ai/doc/system ==========
 	// 系统命名空间承载代码声明的公开共享知识，对前端以只读方式开放；不提供任何写方法。
@@ -79,29 +119,90 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 系统命名空间知识库文档列表查询 - 只读，数据范围恒为内置系统命名空间。
 	systemGroup.POST("/list", KnowledgeSystemDocumentListGet)
 	// 系统命名空间知识库文档列表元信息
-	views.RegisterListApi[*views.KnowledgeDocumentListGetSearchIn, *KnowledgeDocumentListOut](systemGroup, "/list", "系统命名空间知识库文档列表查询 - 只读，数据范围恒为内置系统命名空间")
+	views.RegisterListApi[*views.KnowledgeDocumentListGetSearchIn, *KnowledgeDocumentListOut](systemGroup, "/list", "系统命名空间知识库文档列表查询 - 只读，数据范围恒为内置系统命名空间",
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.knowledge.system.list",
+			Domain:    "ai",
+			Intent:    "查看系统命名空间的共享知识文档",
+			Entities:  []string{"knowledge_documents"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 系统命名空间知识库文档详情 - 只读。
 	systemGroup.POST("/:id/get", KnowledgeSystemDocumentDetailGet)
 	// 系统命名空间知识库文档详情元信息
-	views.RegisterApi(systemGroup, "/:id/get", "系统命名空间知识库文档详情 - 只读", views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentDetailOut]()))
+	views.RegisterApi(systemGroup, "/:id/get", "系统命名空间知识库文档详情 - 只读",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentDetailOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.knowledge.system.detail",
+			Domain:    "ai",
+			Intent:    "查看系统知识文档详情",
+			Entities:  []string{"knowledge_documents"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 系统命名空间知识库文档分块明细 - 只读。
 	systemGroup.POST("/:id/chunks", KnowledgeSystemDocumentChunksGet)
 	// 系统命名空间知识库文档分块明细元信息
-	views.RegisterApi(systemGroup, "/:id/chunks", "系统命名空间知识库文档分块明细 - 只读", views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]()))
+	views.RegisterApi(systemGroup, "/:id/chunks", "系统命名空间知识库文档分块明细 - 只读",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[KnowledgeDocumentChunksOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.knowledge.system.chunks",
+			Domain:    "ai",
+			Intent:    "查看系统知识文档的分块与索引摘要",
+			Entities:  []string{"knowledge_documents", "knowledge_chunks"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 
 	// ========== 知识库检索试运行：/api/v1/ai/retrieval ==========
 	// 知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估
 	aiGroup.POST("/retrieval/dry-run", RetrievalDryRunStream)
 	// 知识库检索试运行元信息（SSE 流式：仅注册请求体输入）
-	views.RegisterApi(aiGroup, "/retrieval/dry-run", "知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估", views.WithMethod(http.MethodPost, views.WithBodyInput[DryRunIn]()))
+	views.RegisterApi(aiGroup, "/retrieval/dry-run", "知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[DryRunIn]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.retrieval.dry-run",
+			Domain:    "ai",
+			Intent:    "执行知识库检索试运行（SSE 流式，仅参考）",
+			Entities:  []string{"knowledge_documents", "knowledge_chunks"},
+			Access:    capability.AccessRead,
+			Invokable: false,
+		}),
+	)
 	// 知识库检索试运行参数默认值（来自行为参数注册表，供前端对话框预填）
 	aiGroup.POST("/retrieval/options", RetrievalOptions)
+	views.RegisterApi(aiGroup, "/retrieval/options", "知识库检索试运行参数默认值（来自行为参数注册表，供前端对话框预填）",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[RetrievalOptionsOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.retrieval.options",
+			Domain:    "ai",
+			Intent:    "查看知识库检索试运行的参数默认值",
+			Entities:  []string{},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 
 	// ========== Agent 会话：/api/v1/ai/session ==========
 	// AI 助手会话的创建/列表/详情/重命名/删除与消息查询；会话为命名空间级资源。
 	sessionGroup := aiGroup.Group("/session")
 	// 查询当前命名空间内的 AI 助手会话列表，按最近更新时间倒序。
 	sessionGroup.POST("/list", AgentSessionListGet)
+	views.RegisterApi(sessionGroup, "/list", "查询当前命名空间内的 AI 助手会话列表，按最近更新时间倒序。",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentSessionListOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.session.list",
+			Domain:    "ai",
+			Intent:    "查看当前命名空间的 AI 会话列表",
+			Entities:  []string{"agent_sessions"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 创建会话
 	sessionGroup.POST("/create", AgentSessionCreate)
 	// 创建会话元信息
@@ -109,7 +210,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 会话详情查询
 	sessionGroup.POST("/:id/get", AgentSessionDetailGet)
 	// 会话详情元信息
-	views.RegisterApi(sessionGroup, "/:id/get", "会话详情查询", views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentSessionItemOut]()))
+	views.RegisterApi(sessionGroup, "/:id/get", "会话详情查询",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentSessionItemOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.session.detail",
+			Domain:    "ai",
+			Intent:    "查看 AI 会话详情",
+			Entities:  []string{"agent_sessions"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 重命名会话
 	sessionGroup.POST("/:id/rename", AgentSessionRename)
 	// 重命名会话元信息
@@ -123,7 +234,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 会话消息列表查询 - 按创建时间升序
 	sessionGroup.POST("/:id/messages", AgentMessageListGet)
 	// 会话消息列表元信息
-	views.RegisterApi(sessionGroup, "/:id/messages", "会话消息列表查询 - 按创建时间升序", views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMessageListOut]()))
+	views.RegisterApi(sessionGroup, "/:id/messages", "会话消息列表查询 - 按创建时间升序",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMessageListOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.session.messages",
+			Domain:    "ai",
+			Intent:    "查看 AI 会话的消息记录",
+			Entities:  []string{"agent_messages"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 从某一轮用户消息起截断会话消息 - 删除该轮提问及其之后的全部消息（回退 / 删除）
 	sessionGroup.POST("/:id/messages/truncate", AgentMessageTruncate)
 	// 截断会话消息元信息
@@ -144,11 +265,30 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影
 	memoryGroup.POST("/list", AgentMemoryListGet)
 	// 记忆列表元信息
-	views.RegisterListApi[*views.AgentMemoryListGetSearchIn, *AgentMemoryListOut](memoryGroup, "/list", "记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影")
+	views.RegisterListApi[*views.AgentMemoryListGetSearchIn, *AgentMemoryListOut](memoryGroup, "/list", "记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影",
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.memory.list",
+			Domain:    "ai",
+			Intent:    "查看长期记忆列表",
+			Entities:  []string{"agent_memories"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 记忆详情查询
 	memoryGroup.POST("/:id/get", AgentMemoryDetailGet)
 	// 记忆详情元信息
-	views.RegisterApi(memoryGroup, "/:id/get", "记忆详情查询", views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMemoryDetailOut]()))
+	views.RegisterApi(memoryGroup, "/:id/get", "记忆详情查询",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentMemoryDetailOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.memory.detail",
+			Domain:    "ai",
+			Intent:    "查看长期记忆详情",
+			Entities:  []string{"agent_memories"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 	// 批量删除记忆 - 软删除
 	memoryGroup.POST("/delete", AgentMemoryBatchDelete)
 	// 批量删除记忆元信息
@@ -186,5 +326,15 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	views.RegisterApi(aiGroup, "/prompt/optimize", "优化用户提问的提示词 - 把当前诉求改写为更清晰、更易被正确理解的提问（单轮、非流式）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentPromptOptimizeIn](), views.WithBodyOutput[AgentPromptOptimizeOut]()))
 	// 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的在途运行快照。
 	aiGroup.POST("/status", AgentStatusGet)
-	views.RegisterApi(aiGroup, "/status", "查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的在途运行快照。", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentStatusIn](), views.WithBodyOutput[AgentStatusOut]()))
+	views.RegisterApi(aiGroup, "/status", "查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的在途运行快照。",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[AgentStatusIn](), views.WithBodyOutput[AgentStatusOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.status",
+			Domain:    "ai",
+			Intent:    "查看 AI 助手运行状态与档位可用性",
+			Entities:  []string{},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 }

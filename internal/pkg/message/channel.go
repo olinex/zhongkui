@@ -39,7 +39,7 @@ const (
 
 // Message 通用结构化通知消息，与事件类型解耦：由事件源构造（模板键 + 参数），
 // 在发送时由 Service 按目标语言经 locales 模板渲染为具体文本（RenderedMessage）。
-// Params 的键与模板占位符（{{.Key}}）一一对应，采用开头大写驼峰命名。
+// Params 的键与模板占位符（如 .Key）一一对应，采用开头大写驼峰命名。
 type Message struct {
 	// Template 消息模板键，取值由业务层定义（如 notify 下的模板键常量）（必填）
 	Template string `json:"template" binding:"required"`

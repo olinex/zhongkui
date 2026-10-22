@@ -12,6 +12,7 @@ import (
 
 	// 项目内部
 	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/docs"
 	"zhongkuisec.com/zhongkui/internal/manager"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
@@ -106,6 +107,78 @@ var syncApisCmd = &cobra.Command{
 		pterm.Success.Println(translate.T("cli.sync.apis.done", map[string]any{
 			"Namespace": base.SystemNamespace,
 			"Apis":      len(apiDocs),
+		}))
+	},
+}
+
+// syncSchemaCmd 从模型声明与迁移脚本同步数据表知识到 RAG：每张已迁移表一篇，落 format=schema，
+// 幂等同步到内置系统命名空间（base.SystemNamespace）。标题为稳定去重键；正文与数据表参考页同源，
+// 只读写 schema 分区，不触碰人工文档、接口、能力与叙述页分区。
+var syncSchemaCmd = &cobra.Command{
+	Use:   "schema",
+	Short: "cmd.sync.schema.short",
+	Long:  "cmd.sync.schema.long",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, i := cmdToolBox(cmd)
+		rt := provider.MustInvokeAi(ctx, i)
+		if !rt.Enabled() {
+			pterm.Error.Println(translate.T("cli.sync.schema.disabled", nil))
+			return
+		}
+		cwd, err := os.Getwd()
+		if err != nil {
+			pterm.Error.Println(translate.T("cli.sync.schema.failed", map[string]any{"Err": err}))
+			return
+		}
+		generated, err := docs.SchemaKnowledgeDocuments(cwd)
+		if err != nil {
+			pterm.Error.Println(translate.T("cli.sync.schema.failed", map[string]any{"Err": err}))
+			return
+		}
+		tableDocs := make([]ai.GeneratedKnowledgeDoc, 0, len(generated))
+		for _, doc := range generated {
+			tableDocs = append(tableDocs, ai.GeneratedKnowledgeDoc{Key: doc.Key, Title: doc.Title, Content: doc.Content})
+		}
+		model := embeddingModelName(rt)
+		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatSchema, tableDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
+			pterm.Error.Println(translate.T("cli.sync.schema.failed", map[string]any{"Err": err}))
+			return
+		}
+		pterm.Success.Println(translate.T("cli.sync.schema.done", map[string]any{
+			"Namespace": base.SystemNamespace,
+			"Tables":    len(tableDocs),
+		}))
+	},
+}
+
+// syncCapabilitiesCmd 从视图层能力声明同步能力知识到 RAG：一篇整体能力地图 + 每条能力一篇明细，
+// 落 format=capability，幂等同步到内置系统命名空间（base.SystemNamespace）。标题为稳定去重键；
+// 只读写 capability 分区，不触碰其余分区。能力由视图层随接口声明提供，属于代码声明的公开共享
+// 数据，故无需运维指定命名空间。
+var syncCapabilitiesCmd = &cobra.Command{
+	Use:   "capabilities",
+	Short: "cmd.sync.capabilities.short",
+	Long:  "cmd.sync.capabilities.long",
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx, i := cmdToolBox(cmd)
+		rt := provider.MustInvokeAi(ctx, i)
+		if !rt.Enabled() {
+			pterm.Error.Println(translate.T("cli.sync.capabilities.disabled", nil))
+			return
+		}
+		generated := capability.KnowledgeDocs(manager.CollectCapabilities())
+		capDocs := make([]ai.GeneratedKnowledgeDoc, 0, len(generated))
+		for _, doc := range generated {
+			capDocs = append(capDocs, ai.GeneratedKnowledgeDoc{Key: doc.Title, Title: doc.Title, Content: doc.Content})
+		}
+		model := embeddingModelName(rt)
+		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatCapability, capDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
+			pterm.Error.Println(translate.T("cli.sync.capabilities.failed", map[string]any{"Err": err}))
+			return
+		}
+		pterm.Success.Println(translate.T("cli.sync.capabilities.done", map[string]any{
+			"Namespace":    base.SystemNamespace,
+			"Capabilities": len(capDocs),
 		}))
 	},
 }

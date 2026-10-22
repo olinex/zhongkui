@@ -94,6 +94,19 @@ var Specs = []ParamSpec{
 		Group: "agent",
 		Kind:  ParamKindText,
 	},
+	// agent.nextStepsSystemPrompt 回答完成后生成「推荐的下一步」的系统提示词：基于整体上下文给出
+	// 1-3 条按推荐程度排序的可直接发送诉求，要求仅输出 JSON。
+	{
+		Key:   "agent.nextStepsSystemPrompt",
+		Group: "agent",
+		Kind:  ParamKindText,
+	},
+	// agent.nextStepsEnabled 是否在每条回答完成后自动生成「推荐的下一步」；关闭后不生成、不展示。
+	{
+		Key:   "agent.nextStepsEnabled",
+		Group: "agent",
+		Kind:  ParamKindBool,
+	},
 	{
 		Key:   "agent.businessSectionTitle",
 		Group: "agent",

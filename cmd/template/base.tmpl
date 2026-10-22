@@ -2,11 +2,10 @@
 package {{ .PackageName }}
 
 import (
-    {{- if .TimeModule }}
-    "time"
-    {{- end }}
-    "zhongkuisec.com/zhongkui/internal/pkg/utils"
-    "zhongkuisec.com/zhongkui/internal/pkg/serializer"
+{{ if .TimeModule }}	"time"
+
+{{ end }}	"zhongkuisec.com/zhongkui/internal/pkg/utils"
+	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
 type Pagination struct {

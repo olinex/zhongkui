@@ -16,6 +16,8 @@ var formatValues = []Format{
 	FormatDocx,
 	FormatGenerated,
 	FormatNativeApi,
+	FormatSchema,
+	FormatCapability,
 }
 
 // init 注册枚举类 documentFormat（取值空间固定，条目在注册时快照）。

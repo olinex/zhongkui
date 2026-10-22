@@ -11,10 +11,13 @@ import (
 func testParams(t *testing.T, overrides map[string]string) *Params {
 	t.Helper()
 	values := map[string]string{
-		"agent.systemPrompt":                "test system prompt of ZhongKui AI",
-		"agent.generalSystemPrompt":         "test general system prompt of ZhongKui AI",
-		"agent.auditLevelSystemPrompt":      "test audit level system prompt",
-		"agent.promptOptimizeSystemPrompt":  "test prompt optimize system prompt",
+		"agent.systemPrompt":               "test system prompt of ZhongKui AI",
+		"agent.generalSystemPrompt":        "test general system prompt of ZhongKui AI",
+		"agent.auditLevelSystemPrompt":     "test audit level system prompt",
+		"agent.promptOptimizeSystemPrompt": "test prompt optimize system prompt",
+		"agent.nextStepsSystemPrompt":      "test next steps system prompt",
+		// 推荐下一步默认关闭：既有用例不应额外发起辅助模型调用；专测显式覆盖为 "true"。
+		"agent.nextStepsEnabled":            "false",
 		"agent.businessSectionTitle":        "## Current Business Scene",
 		"agent.questionSectionTitle":        "## User Question",
 		"agent.retrievedDocSnippetLimit":    "500",

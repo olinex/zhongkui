@@ -4,6 +4,7 @@ package user
 import (
 	"net/http"
 
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -86,7 +87,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 授权信息获取 - 获取用户的RBAC权限和可访问的命名空间
 		selfGroup.POST("/authorization-info/get", UserSelfAuthorizationInfoGet)
 		// 授权信息获取元信息
-		views.RegisterApi(selfGroup, "/authorization-info/get", "授权信息获取 - 获取用户的RBAC权限和可访问的命名空间", views.WithMethod(http.MethodPost, views.WithBodyOutput[AuthorizationInfoOut]()))
+		views.RegisterApi(selfGroup, "/authorization-info/get", "授权信息获取 - 获取用户的RBAC权限和可访问的命名空间",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[AuthorizationInfoOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "user.permission",
+				Domain:    "user",
+				Intent:    "查看当前用户的 RBAC 权限与可访问命名空间",
+				Entities:  []string{"rbac_policies", "namespaces"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 个人资料修改 - 更新用户的昵称、邮箱等个人信息
 		selfGroup.POST("/profile/change", UserSelfProfileChange)
 		// 个人资料修改元信息
@@ -94,7 +105,17 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 访问密钥列表获取 - 获取用户的所有访问密钥
 		selfGroup.POST("/access-key/list", UserSelfAccessKeyListGet)
 		// 访问密钥列表元信息
-		views.RegisterApi(selfGroup, "/access-key/list", "访问密钥列表获取 - 获取用户的所有访问密钥", views.WithMethod(http.MethodPost, views.WithBodyOutput[UserAccessKeyOut]()))
+		views.RegisterApi(selfGroup, "/access-key/list", "访问密钥列表获取 - 获取用户的所有访问密钥",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[UserAccessKeyOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "user.access-key.list",
+				Domain:    "user",
+				Intent:    "查看当前用户的访问密钥",
+				Entities:  []string{"access_keys"},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
+		)
 		// 创建访问密钥 - 为用户创建新的访问密钥
 		selfGroup.POST("/access-key/create", UserSelfAccessKeyCreate)
 		// 创建访问密钥元信息
@@ -118,6 +139,14 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 前端配置查询元信息
 		views.RegisterApi(selfGroup, "/frontend-config/get", "前端配置查询 - 获取当前用户保存的前端页面配置",
 			views.WithMethod(http.MethodPost, views.WithBodyOutput[UserFrontendConfigOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "user.frontend-config.get",
+				Domain:    "user",
+				Intent:    "查看当前用户保存的前端页面配置",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
 		)
 		// 前端配置同步 - 上传当前用户的前端页面配置（乐观锁并发校验）
 		selfGroup.POST("/frontend-config/sync", UserSelfFrontendConfigSync)

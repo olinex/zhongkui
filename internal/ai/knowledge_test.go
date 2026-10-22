@@ -12,6 +12,7 @@ import (
 
 	// 项目内部
 
+	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 )
 
@@ -343,10 +344,13 @@ func TestSortedResults_Deterministic(t *testing.T) {
 // TestRetrieveOptions 测试实现专属选项经 retriever.Option 注入并合并到默认值。
 func TestRetrieveOptions(t *testing.T) {
 	o := retriever.GetImplSpecificOptions(&RetrieveOptions{TopK: 5}, WithNamespace("ns"),
-		WithDocIDs([]uint{1, 2}), WithRetrieveTopK(3), WithCandidates(9),
+		WithDocIDs([]uint{1, 2}), WithFormat(docconv.FormatNativeApi), WithRetrieveTopK(3), WithCandidates(9),
 		WithFusion("weighted"), WithWeights(FusionWeights{Vector: 1, Keyword: 0}))
 	if o.NamespaceName != "ns" {
 		t.Errorf("NamespaceName = %q, want %q", o.NamespaceName, "ns")
+	}
+	if o.Format != docconv.FormatNativeApi {
+		t.Errorf("Format = %q, want %q", o.Format, docconv.FormatNativeApi)
 	}
 	if len(o.DocIDs) != 2 || o.DocIDs[0] != 1 || o.DocIDs[1] != 2 {
 		t.Errorf("DocIDs = %v, want [1 2]", o.DocIDs)

@@ -209,7 +209,7 @@ func TestAgentMessageTruncate_AllowsLockedAndRecalculates(t *testing.T) {
 	if resp.Data == nil {
 		t.Fatalf("session detail data is nil (body=%s)", detail.Body.String())
 	}
-	if resp.Data.InteractionState != modelsai.AgentInteractionStatePaused || resp.Data.Locked {
+	if resp.Data.InteractionState != string(modelsai.AgentInteractionStatePaused) || resp.Data.Locked {
 		t.Errorf("state after rollback = %q locked=%v, want paused locked=false", resp.Data.InteractionState, resp.Data.Locked)
 	}
 	if resp.Data.UserTurns != 0 || resp.Data.MaxUserTurns != 1 {

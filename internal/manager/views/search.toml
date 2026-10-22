@@ -3851,21 +3851,21 @@ actions = ["ctn", "ictn"]
 fieldName = "agentKind"
 fieldType = "string"
 column = "agent_kind"
-binding = "oneof=knowledge rego"
+binding = "enum=agentKind"
 actions = ["eq"]
 
 [[AgentMemoryListGet.filterByFields]]
 fieldName = "kind"
 fieldType = "string"
 column = "kind"
-binding = "oneof=fact preference decision artifact"
+binding = "enum=memoryKind"
 actions = ["eq"]
 
 [[AgentMemoryListGet.filterByFields]]
 fieldName = "status"
 fieldType = "string"
 column = "status"
-binding = "oneof=active archived"
+binding = "enum=memoryStatus"
 actions = ["eq"]
 
 [[AgentMemoryListGet.selectFields]]

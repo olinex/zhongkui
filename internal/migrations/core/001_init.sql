@@ -763,9 +763,9 @@ COMMENT ON COLUMN agent_messages.elapsed_ms IS 'the total elapsed time in millis
 COMMENT ON COLUMN agent_messages.phase IS 'the terminal lifecycle phase of the run that produced this assistant message (done/failed/cancelled) or suspended while an ask_user questionnaire is awaiting the answers, empty while the run is still in flight or for user messages; the render layer derives the interrupted/cancelled notice from it rather than keeping such text in the content';
 
 -- Agent 会话消息内容块（agent_message_blocks）：一轮助手回答（agent_messages 的助手行）的思考段 /
--- 工具调用组 / 授权待审 / 主动提问 / 正文段各按其真实产生时序落为一个块。块于内容真实产生的时点创建，
--- block_seq 在同一消息内单调递增（从 1 起），块的顺序即内容真实产生的顺序。块为展示事实，不参与模型
--- 上下文回灌（助手消息回灌模型的正文仍取 agent_messages.content）；块随所属助手消息级联删除。
+-- 工具调用组 / 授权待审 / 主动提问 / 正文段 / 推荐的下一步各按其真实产生时序落为一个块。块于内容真实产生
+-- 的时点创建，block_seq 在同一消息内单调递增（从 1 起），块的顺序即内容真实产生的顺序。块为展示事实，
+-- 不参与模型上下文回灌（助手消息回灌模型的正文仍取 agent_messages.content）；块随所属助手消息级联删除。
 CREATE TABLE IF NOT EXISTS agent_message_blocks (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -788,8 +788,8 @@ COMMENT ON COLUMN agent_message_blocks.namespace_name IS 'the namespace the agen
 COMMENT ON COLUMN agent_message_blocks.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
 COMMENT ON COLUMN agent_message_blocks.message_id IS 'the owning assistant message id (agent_messages.id), a real foreign key, cascade delete with the message, no sentinel';
 COMMENT ON COLUMN agent_message_blocks.block_seq IS 'the monotonically increasing seq of the block within its message (starting from 1), unique together with message_id, defining the real generation order of the content';
-COMMENT ON COLUMN agent_message_blocks.kind IS 'the block kind, its values come from the internal enum AgentMessageBlockKind (reasoning/tool_calls/approval/questionnaire/content)';
-COMMENT ON COLUMN agent_message_blocks.payload IS 'the block payload JSON (reasoning text / tool-call records / approval list / questionnaire questions and answers / content text), stored encrypted with the crypto serializer, null when not applicable';
+COMMENT ON COLUMN agent_message_blocks.kind IS 'the block kind, its values come from the internal enum AgentMessageBlockKind (reasoning/tool_calls/approval/questionnaire/content/next_steps)';
+COMMENT ON COLUMN agent_message_blocks.payload IS 'the block payload JSON (reasoning text / tool-call records / approval list / questionnaire questions and answers / content text / recommended next steps), stored encrypted with the crypto serializer, null when not applicable';
 
 CREATE TABLE IF NOT EXISTS agent_session_compactions (
     id BIGSERIAL PRIMARY KEY,

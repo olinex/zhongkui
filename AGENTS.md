@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-- **Module**: `zhongkuisec.com/zhongkui` (Go 1.26.3)
+- **Module**: `zhongkuisec.com/zhongkui` (Go 1.27.3)
 - **Type**: 网络流量抓包与数据分析平台
 - **Stack**: Go (Gin + GORM + gRPC + Cobra + Viper + OpenTelemetry) + Vue 3 + Vuetify 3
 
@@ -111,7 +111,7 @@ Composite indexes / unique constraints use `uq`/`idx` prefix:
 
 - **加密列用 `serializer.Crypto`**：敏感字段声明为 `*serializer.Crypto` 并带 `secure:"mode=\"aes-gcm\",offset=...,length=..."` tag，SQL 列类型 `BYTEA` 且可空（`001_init.sql` 的 `COMMENT` 标注 `stored encrypted with the crypto serializer`）；写路径赋值 `serializer.NewCrypto([]byte(...))`，读路径取 `string(field.Value())`（`Value()` 对 nil 安全）。密钥派生路径为 `FieldTag` → `GetKeyDerivation` → `DeriveChildKey(offset,length)`。
 - **`offset` 全局唯一且不越界**：须满足 `offset + max(key.MinKeyLength, length) <= key.PasswordBookSize`，否则密钥派生回绕甚至 panic；新增/调整 `secure` 字段由 `internal/pkg/crypto/secure_offset_test.go`（AST 扫描 `internal/models`）守卫唯一性与边界。
-- **AI 会话全链路一并加密**：同一隔离域内的会话内容不得留下明文旁路，`agent_messages.content/draft_json/citations_json`、`agent_sessions.summary`、`agent_runs.messages/pending_calls/citations` 一律按上述口径加密。`agent_runs` 三列原为 `JSONB`，加密后落库为可空 `BYTEA`（失去 DB 侧 JSONB 路径查询能力，现有读写仅整列存取，无此需求）；`agent_sessions.title` 保留明文（列表展示与检索语义）。
+- **AI 会话全链路一并加密**：同一隔离域内的会话内容不得留下明文旁路，`agent_messages.content/draft_json/citations_json`、`agent_message_blocks.payload`、`agent_sessions.summary`、`agent_session_compactions.summary`、`agent_runs.messages/pending_calls/citations` 一律按上述口径加密。`agent_runs` 三列原为 `JSONB`，加密后落库为可空 `BYTEA`（失去 DB 侧 JSONB 路径查询能力，现有读写仅整列存取，无此需求）；`agent_sessions.title` 保留明文（列表展示与检索语义）。
 - **摘要字段用 `serializer.Hash` + 带密钥 HMAC**：用于去重/陈旧判定的摘要字段声明为 `serializer.Hash` 并带 `secure:"mode=\"hmac-sha256\",offset=...,length=..."` tag（SQL 列 `CHAR(64)`，ClickHouse `String`），写路径赋值 `serializer.NewHashDigest(...)`，读路径与出参取 `field.Digest()`；禁止裸 `sha256`（防离线爆破）。序列化器只做 string/[]byte 互转、nil 安全与 JSON，并在 `Value` 时校验 tag mode 必须为 `hmac-sha256`。摘要须在写库前预计算（确定性，可等值匹配与建唯一索引），故不可复用可逆且随机的 `serializer.Crypto`。一次性摘要用 `crypto.DigestForField`；正文等体积大、无法一次性持有的流式摘要用 `crypto.HashKeyForField` 派生密钥后自行 `hmac.New(sha256.New, key)` 计算，且摘要与 S3 对象键同源时须同批改为 HMAC，避免明文摘要经列值泄漏内容指纹。
 - **`map` 更新绕过序列化器**：`Updates(map[string]any{...})` / `Update(col, v)` 不经 field serializer，明文直写；加密字段必须走「结构体 + `Select(列...)`」更新以触发序列化器（先例见 `internal/ai/memory.go`、`internal/manager/views/ai/knowledge.go`、`internal/worker/handlers/knowledge/parse.go`）。
 - **`Scan` 到本地结构体不解密**：检索/汇总行结构体须内嵌模型结构体（如 `struct{ ai.KnowledgeChunk; Score float64 }`）以继承 serializer tag，否则静默拿到密文。
@@ -200,6 +200,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - 允许出现在 In/Out 结构体字段中的类型：基本类型、标准库类型（如 `time.Time`）、第三方类型（gopacket/layers、`gorm.io/datatypes.JSON` 等）、`internal/pkg` 共享类型（`serializer.*`、`utils.BaseTotalOut` 等）、视图层自定义类型（如 `TcpOptionOut` / `LayerInfoOut`）。
 - 模型层专属类型（`network.LayerLevel` / `network.TCPOptions` / `network.LayerStack` 等）同样不得出现在 In/Out 结构体字段中，一律用视图层等价类型替换（如 `uint8`、`[]TcpOptionOut`、`[]LayerInfoOut`）。
 - 数据流：处理器以模型查询数据库，再经显式映射函数（`newXxxOut`，入参为模型指针）逐字段转换为独立 Out；JSON 字段名（json tag）须与映射来源字段保持一致，避免破坏前端契约。
+- **`internal/ai` 的 JSON 协议载体类型豁免**：上述禁令只约束**模型层**（`internal/models`）。`internal/ai` 中**声明了 json tag、且被设计为 JSON 协议载体**的结构体类型（线形态的唯一权威定义，同时充当 SSE 事件载荷、加密列 JSON 形状与 API 出参三处契约）**允许**直接作为 In/Out 字段类型——镜像它们只会产生必须与线载荷逐字节一致的平行结构体，与「单一事实来源」及「实时流与刷新渲染一致」两条约束相冲突，故显式豁免并登记先例：`ai.RetrievalResult`（`AgentMessageItemOut.citations`）、`ai.QuestionnaireQuestion` / `ai.QuestionnaireAnswer`（`AgentQuestionnaireOut.questions` / `.answers`）、`ai.DryRunResult`（`DryRunOut` 类型别名）。反之，`internal/ai` 中的**值类型别名**（如 `ai.AuditLevel` / `ai.ToolExecOwner`）与**基础类型别名**（如 `ai.BusinessData`）与模型层枚举同构、无协议载体语义，一律镜像为视图层等价类型（`string` / `map[string]any`），不得直通。
 - 例外：**局部匿名扫描容器**（`var rows []struct { network.Xxx; utils.BaseTotalOut }`）仅作 GORM 扫描用途，不属于 In/Out 结构体，允许内嵌模型，沿用 notification 模块既有模式。
 
 ### 长期记忆（Long-Term Memory）
@@ -233,11 +234,12 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
   - **整篇展开预算 `retrieval.expandDocLimit`**（rune 数，默认 26000）：按结果顺序**逐篇累计**展开，单篇超过该值或累计后超出该值的文档**退回分块**而非截断整篇；非正数关闭展开。默认值取「覆盖全部 199 篇生成文档（最大者 `http-transport/list` 约 25042 rune）」，与 `agent.maxToolResultBytes` 量级配套——若调低，须同步核验 `agent.maxToolResultBytes` 仍能容纳「整篇展开 + 其余分块命中」的工具结果 JSON，否则会在 `internal/ai/agent.go` 处被二次截断成非法 JSON。
   - **`Complete` 表达「不再截断」**：为 true 时消费方一律原样返回、不做片段截断——`internal/ai/tools/knowledge.go` 的 `knowledge_search`（`hit.Complete` 时不走 `truncateSnippet`）、`internal/ai/eval.go` 的 `evalSnippet` 均据此豁免 `SnippetLimit`。`Complete` 经 `schema.Document.MetaData` 与 `ToRetrievalResults` 往返，但**不参与线序列化**（`json:"-"`），前端契约不变。
   - **失败不中断**：取数失败按「增强逻辑失败绝不中断检索」处理——`r.warnf` 告警后返回原分块结果（与使用统计回写同策略）。
-- **不得预设知识库内容范畴**：知识库由用户自行上传维护，内容随命名空间而异，任何一侧都不得假定它是「平台知识」或某一领域资料。工具描述（`knowledgeSearchTool.Info`）、参数说明与系统提示（`agent.systemPrompt`）一律用中性措辞——如「检索用户维护的知识库中的文档片段」「当回答需要引用知识库中的既有资料时调用」；描述检索能力时须写明「语义与关键词混合检索」，不得简化为「语义相似度检索」。系统提示 `agent.systemPrompt` 需引导模型按需调用 `knowledge_search` 并按命中条目标题引用来源。
+- **不得预设知识库内容范畴**：知识库由用户自行上传维护，内容随命名空间而异，任何一侧都不得假定它是「平台知识」或某一领域资料。工具描述（`knowledgeSearchTool.Info`）、参数说明与系统提示（`agent.systemPrompt`）一律用中性措辞——如「检索用户维护的知识库中的文档片段」「当回答需要引用知识库中的既有资料时调用」；描述检索能力时须写明「语义与关键词混合检索」，不得简化为「语义相似度检索」。系统提示 `agent.systemPrompt` 需引导模型按需调用 `knowledge_search`，并按命中条目的 `citation` 编号在正文相应位置标注 `[n]`。
 - **三层链路与出厂默认**：内置工具元信息（`internal/ai` 的 `ToolSpecs`）、出厂行（`002_fixtures.sql` 的 `llm_tools` 段）、实现注册表（`internal/ai/tools` 的 `Register`）三处必须同步，由 `internal/ai/tools_fixture_test.go` 双向守卫；`knowledge_search` 是只读基础能力，出厂 `enabled=true`，管理员仍可在「工具」页停用，停用后不再进入模型可用工具清单。
 - **通用内置工具按能力类别分文件、纯算法下沉 pkg**：数学 / 时间 / 文本 / 编码 / 数据等通用计算能力，其**纯算法按类别分文件实现于 `internal/pkg/utils`**（`math.go` / `equation.go` / `datetime.go` / `text.go` / `encoding.go` / `data.go`，只含算法与结果结构体，不 import Eino），`internal/ai/tools` 只留**同名的 6 个薄适配器**（仅 `args` / schema / `Info` / `InvokableRun` / `init()` 的 `Register`：解析 JSON 入参、按需补缺省、调 utils 导出函数、包工具名前缀错误、序列化结果），每个文件在 `init()` 登记本类别工具。如此分层的理由是让与业务无关的纯计算能力可被其它模块直接复用，并把依赖方向固定为 `internal/ai → internal/pkg` 以减少导入环——故 `internal/pkg/utils` 不得反向依赖 `internal/ai`，也不得 import Eino（`github.com/cloudwego/eino/...`）。粒度遵循「一能力一工具」（工具名 `snake_case`、全局唯一），不按类别聚合为单个带 `operation` 的多能力工具。这些工具均为无状态、纯计算、无副作用、无租户边界的只读能力，故与 `knowledge_search` 同策略出厂 `enabled=true`（管理员仍可在「工具」页停用），同样受上述内置工具三处同步守卫约束。依赖取舍：表达式求值复用既有依赖 `github.com/casbin/govaluate`，UUID 用 `github.com/google/uuid`，其余用标准库，`datetime_calc` 内嵌 `time/tzdata` 兜底 IANA 时区。
 - **dry-run 不走工具**：检索试运行（`Retriever.DryRun` 与视图层 dry-run 端点）保持「确定性检索 → 生成 → RAGAS 评估」链路不变，仍用于评估 RAG 本身，不经 LLM 工具编排。
 - **引用须携带 `namespaceName` 以支持溯源**：`RetrievalResult` 新增 `namespaceName` 字段（json `namespaceName`），自检索 SQL → Eino `MetaData` → SSE `done` → 消息落库（`CitationsJSON`）全线贯通，任一环节不得丢弃；前端据此判断来源命名空间并把引用标题渲染为指向独立知识文档详情页的超链接。
+- **正文引用标注按来源编号对齐**：`knowledgeCollector` 对命中按（命名空间 + 文档 ID + 分块序号）去重，并分配本次运行内稳定的 1 起编号，经 `KnowledgeHit.Citation` → `knowledge_search` 结果的 `citation` 字段提供给模型；系统提示要求模型在正文中用 `[n]` 标注来源。前端 `AssistantMarkdown` 把 `[n]` 改写为指向第 n 条引用文档详情页的上标链接（跳过代码块与行内代码，编号越界或缺失命名空间时保持原文），来源列表同号展示，二者据此一一对应。编号必须由采集器分配且在后续检索追加时保持不变，不得由模型自行编号。
 
 ### 注释生成文档入 RAG（generated 分区）
 
@@ -246,7 +248,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **分区隔离**：叙述页落在 `format='generated'`（`docconv.FormatGenerated`）的专用知识域，与人工业务文档分区隔离；同步（`SyncGeneratedDocs`，接收调用方传入的文档集与目标 format）只读写该分区，不得影响人工文档。
 - **幂等同步**：按新增 / 更新 / 删除差异计划幂等执行——正文未变的条目零写入（不重复向量化），条目下线即清理，连续两次执行且源码未变时第二次不产生任何写入。
 - **检索范围**：`knowledge_search` 不限定 format，可命中叙述页与人工文档。
-- **投影边界（参考页不入 RAG）**：进 RAG 的是**单篇**叙述页；`docs/reference/**`（逐包参考档）与项目根 `README.md`（封面 + 目录）是随 `zki create docs` 生成、带 `DO NOT EDIT` 的人读产物，**不入 RAG**，避免同一份说明以整页粒度重复索引。
+- **投影边界（参考页不入 RAG）**：进 RAG 的是**单篇**叙述页；`docs/generated/reference/**`（逐包参考档与参考索引）与 `docs/index.md`、`docs/nav.json` 是随 `zki create docs` 生成、带 `DO NOT EDIT` 的人读产物，**不入 RAG**，避免同一份说明以整页粒度重复索引。
 
 ### 原生接口知识目录（注册期声明 + RAG 同步）
 
@@ -260,11 +262,23 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 - **文档渲染形态（检索可读性约束）**：`renderApiKnowledgeDoc` 段落顺序固定为「用途 / 请求 / 请求示例 / 请求头入参 / 入参 / 响应头出参 / 出参 / 响应示例」，四类结构体节各自自包含（同一节内某类型只定义一次，跨节各自重复，便于分块检索时无需依赖整篇展开即可读到本节的类型定义）。每节渲染为「顶层字段表 + 具名嵌套类型子节」：子节标题为 `### <字段路径>（<类型全名>）`，字段路径对切片/数组追加 `[]`、map 追加 `{}`（如 `options[]`），递归展开深度上限 `nestedSectionMaxDepth`；`time.Time` 等标量结构体不展开，类型名集合防环。枚举列内联该枚举类全部取值（`<类名>：<值1>、<值2>`，未注册时退化为仅类名）；`Enum` / `EnumType` 与 `default` 均取自既有标签，不新增标签。
 - **示例生成必须确定性**：[catalog_example.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/manager/views/catalog_example.go) 的 `BuildJSONExample` 逐字节幂等——示例正文参与文档内容摘要（HMAC-SHA256）比对，用 map 组装对象（遍历顺序随机）会导致每次同步都判定「内容已变更」而全量重嵌入。一律按结构体字段声明顺序手工拼装；取值只用类型化占位，不臆造业务样例——枚举字段取枚举类首个 value、有 `default` 标签取该默认值（注意 `utils.ParseScalar` 整数返回 `int`、浮点返回 `float64`，两者都要处理）、字符串 `"string"`、数值 `0`、布尔 `false`、`time.Time` 固定字面量、对象递归展开、数组取单元素示例；深度上限 `jsonExampleMaxDepth` + 类型名集合防环。
 - **预算分页（分块可读性约束）**：字段表与示例代码块按预算切分，使单个分块即可读到完整内容、无需依赖整篇展开——`writeFieldTable` 逐行累积，超 `fieldTableMaxRunes`（480 rune，含表头预算）即另起一张表（重复表头，保证每张表自包含）；`writeExampleSection` 经 `splitJSONExampleBlocks` 在顶层字段边界分组，每组收口为独立合法 JSON 对象且 ≤ `exampleBlockMaxRunes`（480 rune）。两处常量与切分逻辑须保持确定性（同一输入逐字节幂等）。已知不足：单个顶层 key 包裹巨型嵌套数组（如 `{"items":[...]}`）时无法在示例层继续拆分，此类示例依赖整篇展开交付。
-- **后续约定**：Agent 客户端工具 `api_invoke`（后续 spec）的白名单与参数构造必须复用本目录作为「有哪些原生接口可调用、各自用途与入参出参」的唯一事实来源。
+- **接口详情走 RAG**：接口目录经 `zki sync apis` 进入 `native_api` 分区后，模型查询接口用途与字段统一走 `knowledge_search` 的 `format=native_api`；不再维护第二份接口快照或专用描述工具。
+
+### AI 能力地图（capability）
+
+- **唯一声明点**：能力在视图层随接口声明，经 `views.WithCapability(...)` 写入接口目录；`views.CapabilityItems()` 从同一份目录派生能力快照。新增能力只改对应视图域的 `RegisterApi` / `RegisterListApi` 调用，禁止在提示词、前端或其他包另维护第二份清单。
+- **引用天然同源**：能力的 method/path 直接取自接口声明，不再手写；`internal/manager/catalog_capability_test.go` 强制校验 ID 唯一、字段齐备、只读属性，以及与接口目录一致。
+- **只读优先**：能力地图只登记 `AccessRead` 接口；敏感、诊断或仅用于编辑器辅助的只读接口标为 `Invokable=false`（可被检索知晓但 `api_invoke` 拒绝），写入能力须在审核、审计与白名单就绪后再加入。
+- **按需检索**：能力地图与每条能力明细经 `zki sync capabilities` 写入 `capability` 分区；模型判断平台能力时调用 `knowledge_search` 并传 `format=capability`。整张地图不再作为 system message 常驻，系统提示只附加一句固定的能力发现指引（`agentCapabilityHint`）。
+- **运行期白名单**：`manager.RouteRegister` 在 `registerViewRoutes` 之后经 `Runtime.SetCapabilities` 注入能力快照，仅供 `api_invoke` 做只读白名单校验，不进入模型上下文。
+- **人机同源**：`zki create docs` 经 `manager.CollectCapabilities()` 生成 `docs/generated/reference/capability-map.md`，内容与 `capability` 分区的整体地图同源，禁止另写一份能力说明。
+- **能力知识分区**：`capability.KnowledgeDocs(manager.CollectCapabilities())` 生成「一篇整体地图 + 每条能力一篇明细」，`zki sync capabilities` 只写 `docconv.FormatCapability`（值 `capability`）分区；标题即稳定去重键，不得人工维护第二份能力说明。
+- **接口详情查询复用 RAG**：不另建接口快照或专用工具；接口知识已由 `zki sync apis` 进入 `native_api` 分区，模型需要用途、入参或出参字段时，用 `knowledge_search` 并传 `format=native_api`。`format` 仅允许 `generated` / `native_api` / `schema` / `capability` 四类生成分区，空值表示全部分区；检索在向量路与关键词路 SQL 中统一按 `knowledge_documents.format` 过滤。
+- **api_invoke（client，只读）**：模型只能提供能力 ID、`pathParams` 与 `params`；后端在挂起前完成白名单解析（能力必须 `AccessRead` + `Invokable`、路径参数受限字符集、请求体 ≤64 KiB 且必须是 JSON 对象），并把 `method/path/params` 规范入参写入挂起现场。能力快照本身就是接口白名单（与接口目录同源），其端点存在性由 `internal/manager/catalog_capability_test.go` 守卫，运行期不再另查接口目录。前端只执行该规范入参，不得信任模型给的任意方法或 URL；所有非问卷 client 工具仍走人工审批。
 
 ### 内置系统命名空间（system，代码声明的公开共享数据）
 
-- **定位与单一常量**：`base.SystemNamespace = "system"`（[consts.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/pkg/base/consts.go)）承载**由代码声明、对所有租户公开共享**的数据，与 `base.DefaultNamespace` 并列为内置命名空间。首个占用者为原生接口目录（`native_api` 分区）。禁止在任何位置写 `"system"` 字面量。
+- **定位与单一常量**：`base.SystemNamespace = "system"`（[consts.go](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/pkg/base/consts.go)）承载**由代码声明、对所有租户公开共享**的数据，与 `base.DefaultNamespace` 并列为内置命名空间。占用者为原生接口目录（`native_api`）、数据表（`schema`）、平台能力（`capability`）与注释叙述页（`generated`）。禁止在任何位置写 `"system"` 字面量。
 - **只存一份，禁止复制**：共享数据**不得**按命名空间各复制一份（那会重复索引、重复消耗 embedding token）；一律单份落在 system 作用域，经检索并入生效。
 - **真实行 + 种子化**：`knowledge_documents` / `knowledge_chunks` 的 `namespace_name` 为 `NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE`，故 system 必须有真实命名空间行；该行作为结构性内置行由 `001_init.sql` 紧随 `namespaces` 建表后种子化（值须与 `base.SystemNamespace` 一致，不新增独立迁移文件），其 webhook 占位通知渠道由 `002_fixtures.sql` 第 7 段「为每个已存在命名空间补齐占位渠道」自动覆盖（维持「每个命名空间必有占位渠道」不变式）。
 - **检索并入**：检索在调用方限定命名空间之外自动并入 system 作用域，由公用函数 [base.NamespaceScope](file:///Users/olin/Documents/workspace/golang/zhongkui/internal/pkg/base/namespace.go) 统一解析（空命名空间不追加，保持「空命名空间不命中」语义；system 自身不重复）；凡是按命名空间取数的跨租户操作都应复用它，向量路与关键词路两处 SQL 必须一并使用。`WithDocIDs` 的文档限定保持不变，显式限定文档时不穿透 system。
@@ -314,15 +328,15 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 ### Agent 会话消息内容块（Agent Message Content Blocks）
 
-- **块模型与类型**：一轮助手回答的全部产出按**真实产生顺序**落为有序内容块——表 `agent_message_blocks`（挂 `message_id` 真外键 `ON DELETE CASCADE`、`block_seq` 在同一条消息内单调递增、加密 `payload` 列复用 `secure` offset），模型 `internal/models/ai` 的 `AgentMessageBlock`。块种类 `AgentMessageBlockKind`（`reasoning` / `tool_calls` / `approval` / `questionnaire` / `content`）单点声明于 `internal/models/ai/enum.go`，**不注册枚举类、无 i18n label**（沿用 `AgentRunEventType` 约定）。
+- **块模型与类型**：一轮助手回答的全部产出按**真实产生顺序**落为有序内容块——表 `agent_message_blocks`（挂 `message_id` 真外键 `ON DELETE CASCADE`、`block_seq` 在同一条消息内单调递增、加密 `payload` 列复用 `secure` offset），模型 `internal/models/ai` 的 `AgentMessageBlock`。块种类 `AgentMessageBlockKind`（`reasoning` / `tool_calls` / `approval` / `questionnaire` / `content` / `next_steps`）单点声明于 `internal/models/ai/enum.go`，**不注册枚举类、无 i18n label**（沿用 `AgentRunEventType` 约定）。
 - **块替代旧列而非并存**：`agent_messages` 不含 `reasoning` / `questionnaire_json` 列——基线迁移 `internal/migrations/core/001_init.sql` 直接就无此两列、并内含 `agent_message_blocks` 建表（未拆独立增量迁移，保持一次性基线）；思考过程、多轮问卷、工具授权清单一律由块承载。**不兼容旧数据**、不存在读取侧回退合成逻辑。
-- **产生规则唯一实现**：块的开 / 追加 / 归并统一实现在 `internal/ai/blocks.go` 的 `blockBuilder`（`AddReasoning` / `AddContent` / `AddToolCall` / `AddToolResult` / `AddApproval` / `AddQuestionnaire` / `Close`），由 `internal/ai/agent.go` 在思考 / 正文增量、`stage`（`toolCall` / `toolResult`）、问卷挂起、审批挂起各产生点调用。前端与读取侧**不得**重建边界或另写一套时序规则。
-- **各类块的产生口径**：思考增量按段开块（多段思考落为多个 `reasoning` 块，非整段）；工具调用按 `round` 归入同一 `tool_calls` 块，`toolResult` 回填状态 / 耗时 / 错误 / 结果（`ToolCallRecord`）；`tool_request`（非问卷类）落一个 `approval` 块（`ApprovalCallRecord` 承载待审批清单与决策 / 执行结果）；`ask_user` 挂起每轮落一个 `questionnaire` 块（题目 + 作答 + `awaiting`）；正文增量按段开 / 追加 `content` 块。同一消息内 `BlockSeq` 单调分配，块顺序即产生顺序。
+- **产生规则唯一实现**：块的开 / 追加 / 归并统一实现在 `internal/ai/blocks.go` 的 `blockBuilder`（`AddReasoning` / `AddContent` / `AddToolCall` / `AddToolResult` / `AddApproval` / `AddQuestionnaire` / `AddNextSteps` / `Close`），由 `internal/ai/agent.go` 在思考 / 正文增量、`stage`（`toolCall` / `toolResult`）、问卷挂起、审批挂起与回答完成后的推荐下一步各产生点调用。前端与读取侧**不得**重建边界或另写一套时序规则。
+- **各类块的产生口径**：思考增量按段开块（多段思考落为多个 `reasoning` 块，非整段）；工具调用按 `round` 归入同一 `tool_calls` 块，`toolResult` 回填状态 / 耗时 / 错误 / 结果（`ToolCallRecord`）；`tool_request`（非问卷类）落一个 `approval` 块（`ApprovalCallRecord` 承载待审批清单与决策 / 执行结果）；`ask_user` 挂起每轮落一个 `questionnaire` 块（题目 + 作答 + `awaiting`）；正文增量按段开 / 追加 `content` 块；回答完成后在最终正文块之后落一个 `next_steps` 块（1-3 条，每条含标题 `title`（≤24 字）、推荐理由 `reason`（≤64 字）与可直接发送的 `text`，首条 `recommended=true`，由 flash 档位辅助调用生成，失败 / 超时 / 关闭开关时静默跳过）。同一消息内 `BlockSeq` 单调分配，块顺序即产生顺序。
 - **落库与收敛**：开放块增量累积，在种类切换 / 挂起 / 终态化 / 中止 / 失败时收敛（`Close`）；挂起（`persistSuspensionAnchor` / `addSuspensionBlocks`）与终态化（`finalizeAssistantMessage`）分别收敛并落库，中止 / 失败后不再新增块。
 - **事件与出参同源**：`AgentRunEventType` 新增 `block`（= `sse.SSEEventBlock`，映射守卫测试覆盖），payload 为 `{seq, kind, payload}`；`RunHub` 在块创建与收敛各下发一次，并纳入取消抑制清单（中止生效后不再发布）。消息列表 / 详情出参 `AgentMessageItemOut.blocks`（元素 `AgentMessageBlockOut{seq, kind, payload}`，按 `block_seq` 升序，经 `ListBlocksByMessages` 批量读取消除 N+1）与流事件同源同序，故**实时流与刷新 / 重进会话渲染完全一致**。
 - **回滚级联**：`TruncateMessagesFromUserMessage` / `DeleteSession` 在同一事务内删除消息及其块（外键级联 / 显式删除），无孤儿块；回退到助手待输入回合只删「锚点承载本回合输入的块之后」的块并保留锚点问卷 / 授权块。压缩不删消息、不折叠块，压缩前后块序列不变；回滚 / 压缩仍受交互状态守卫约束（仅 `暂停` / `已锁定` 可发起）。
-- **块与上下文隔离**：块是**展示事实**——不进模型提示词、不参与压缩摘要折叠、不改变 `agent_messages` 的正文 / 引用 / 用量口径。
-- **前端一致渲染**：`AssistantDrawer` 一律由块列表渲染；`agentRun` store 把 `delta` / `reasoning` 增量归并进当前开放同类块（`upsertBlock` / `appendBlockText`），历史由 `blocks` 出参恢复；问卷 / 授权 / 工具调用 / 思考段 / 正文段的渲染与交互入口（重新回答 / 重新授权 / 待审批 / 回滚类）一律按块定位。
+- **块与上下文隔离**：块是**展示事实**——不进模型提示词、不参与压缩摘要折叠、不改变 `agent_messages` 的正文 / 引用 / 用量口径。`next_steps` 的生成读取会话摘要、最近对话与本轮回答，但块本身不回灌模型上下文。
+- **前端一致渲染**：`AssistantDrawer` 一律由块列表渲染；`agentRun` store 把 `delta` / `reasoning` 增量归并进当前开放同类块（`upsertBlock` / `appendBlockText`），历史由 `blocks` 出参恢复；问卷 / 授权 / 工具调用 / 思考段 / 正文段 / 推荐下一步的渲染与交互入口（重新回答 / 重新授权 / 待审批 / 回滚类 / 点击发送 / 填入输入框）一律按块定位。
 
 ### Agent 交互状态机（Agent Interaction State Machine）
 
@@ -342,7 +356,7 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
 
 ### LLM 提示词与工具文案（中文约束）
 
-- **一律中文**：凡送入模型或供模型决策的自然语言文本统一使用中文——出厂提示词（`002_fixtures.sql` 的 `agent.systemPrompt`、`retrieval.rerankSystemPrompt`、`session.topicSystemPrompt`、`memory.summarySystemPrompt`、`memory.extractSystemPrompt`、`eval.*SystemPrompt`）、界面段标题类参数（`agent.businessSectionTitle`、`agent.questionSectionTitle`、`memory.sectionTitle`）、用户消息中由代码拼接的段标题与标签（`agentSummarySectionTitle`、`buildRerankPrompt`、`buildEvalChunkPrompt`、`buildClaimsPrompt`、`buildSummaryPrompt`、`buildSuggestionsPrompt` 及其语言指令），以及内置工具的 `Info.Desc` 与参数说明（`internal/ai/tools`）。禁止新增英文提示词或英文工具描述。
+- **一律中文**：凡送入模型或供模型决策的自然语言文本统一使用中文——出厂提示词（`002_fixtures.sql` 的 `agent.systemPrompt`、`retrieval.rerankSystemPrompt`、`session.topicSystemPrompt`、`memory.summarySystemPrompt`、`memory.extractSystemPrompt`、`eval.*SystemPrompt`、`agent.nextStepsSystemPrompt`）、界面段标题类参数（`agent.businessSectionTitle`、`agent.questionSectionTitle`、`memory.sectionTitle`）、用户消息中由代码拼接的段标题与标签（`agentSummarySectionTitle`、`buildRerankPrompt`、`buildEvalChunkPrompt`、`buildClaimsPrompt`、`buildSummaryPrompt`、`buildSuggestionsPrompt`、`buildNextStepsPrompt` 及其语言指令），以及内置工具的 `Info.Desc` 与参数说明（`internal/ai/tools`）。禁止新增英文提示词或英文工具描述。
 - **结构性标识保持英文**：JSON 键（`content` / `draft` / `results` / `memories` / `judgments` / `claims` / `suggestions` 等）、枚举取值（`memory.extractSystemPrompt` 的 `kind` 取值与 `memoryKindNames()` 返回的记忆类别）、工具名（`knowledge_search` / `memory_write`）、诊断类别标识（`coverage` / `ranking` / `generation` / `context` / `other`）与消息角色（`user` / `assistant` / `system`）是解析契约，必须保持英文原样，不得翻译。
 - **输出语言由提示词声明或代码追加**：回答语言以「跟随用户提问语言」为原则（在 `agent.systemPrompt` 内声明）；`eval.suggestionsSystemPrompt` 的建议正文语言由 `suggestionsSystemPrompt` 在代码侧追加 BCP-47 语言标签指令，禁止把语言约束写进可编辑的提示词正文（否则管理员编辑提示词时会丢失）。
 - **错误信息仍用英文**：工具与内部流程返回的 `error` 面向排障而非终端用户（同 `internal/ai/tools` 包注释），保持英文，不属于本约束所指的「提示词」范畴。
@@ -381,20 +395,22 @@ func MustInvokeViper(i do.Injector) *viper.Viper { ... }
   - `jsonObject`：所有取值均为字符串的 JSON 对象文本（字面量 `null`、数组、非字符串取值一律不合法）；可选时配 `omitempty`。
   - `trimmed`：字符串首尾无空白。后端**只判定、不静默裁剪**——裁剪会让前端提交原值与实际落库值不一致；由此前端对同名单行输入必须 trim，文本域（`v-textarea`）豁免（见「String Input Trimming 字符串输入去空白」）。
 - **就地校验禁令**：视图层 In 结构体的字段合法性**一律由绑定标签表达**，禁止书写 `normalizeXxx` / `parseXxx` 这类仅做 trim、枚举白名单、URL 或 JSON 形态判断的私有方法；处理器只做「绑定 → 业务约束（唯一性、存在性等）→ 落库」。数据层解码（如密文列解出的 JSON 文本转 `map[string]string`）不属于校验，保留在处理器内。
+- **枚举取值一律经 `enum=<类名>` 绑定，禁止就地书写取值白名单**：取值空间已注册为枚举类的字段，其校验必须写作 `enum=<类名>`；**禁止**写作 `oneof=<值1> <值2> ...` 这类就地枚举白名单——白名单一旦落在用法处即与枚举注册表形成第二份取值事实，注册表新增取值时不会同步（先例：`AgentMemoryListGet` 过滤项曾把 `agentKind` 写成 `oneof=knowledge rego`，漏掉注册表中已有的 `general`；`memoryStatus` 亦曾写作 `oneof=active archived`）。本约束同样覆盖 `search.toml` 为生成过滤项声明的 `binding`（写作 `binding = "enum=<类名>"`），因生成的 `FilterByItem` 同为视图层字段校验的载体；非枚举的内部固定取值（分页档位、排序字段名、过滤动作符等，如 `oneof=eq`、`oneof=10 20 50 100`）不受此限。
 - **条件必填**：同一 In 结构体存在多种用法时（如「带 id 时其余字段被忽略」），用 `required_if=<字段> <值>` + `omitempty` 表达条件必填，而非无条件的 `required`。
 
 ### 文档分类与导出（Diátaxis + gomarkdoc）
 
-- **四分类与唯一清单**：文档按 Diátaxis 组织为教程（`docs/tutorials/`）、操作指南（`docs/how-to/`）、参考（`docs/reference/`）、解释（`docs/explanation/`）四类；分类取值与全部条目（分类/标题/摘要/角色/适用场景/来源包/产物路径/渲染档）唯一登记在 `internal/docs/registry.go` 的 `Registry()`，分类取值定义在 `internal/docs/category.go`（`tutorial` / `how-to` / `reference` / `explanation`），新增或调整文档一律改此处。
-- **建议阅读角色与适用场景**：每条条目须标注一个或多个建议阅读角色（`Entry.Roles`）与一句话适用场景（`Entry.Scene`）。角色取值定义在 `internal/docs/role.go`，`Roles()` 是角色集合唯一注册点，取值为 `admin`（管理员，平台治理：用户 / 角色权限 / 命名空间 / 功能开关）、`secops`（安全运营，日常使用告警与标签：查看风险 / 编写调整 rego 规则 / 解读标签窗口统计 / 接收通知）、`ops`（运维，部署与运行：安装配置 / 数据库迁移 / 数据源接入 / 通知渠道配置 / 异步任务与队列 / 采集运行）、`dev`（研发，扩展系统能力：数据源插件 / 通知渠道类型 / 枚举类 / AI Agent 工具 / 管理端页面 / 依赖注入与生命周期 / 流水线调度），新增或调整角色一律改此处。角色与场景在三处呈现：叙述页页头 `> 分类：… · 来源：… · 角色：… · 适用场景：…`（手写 Overview 页同带角色行）、项目根 `README.md` 各条目行的 `（角色：…；来源 …）` 片段、以及项目根 `README.md` 末尾的「按角色找文档」分区。守卫测试强制每条条目 Roles 与 Scene 非空、每个角色合法且至少被一条条目使用。
-- **文档入口（根 README 封面 + 目录）**：`zki create docs` 在项目根生成 `README.md` 作为文档体系的唯一入口，含封面（项目标题 + 一句话简介 + Diátaxis 四分类说明）与目录（四分类全部条目 + 末尾「按角色找文档」），并带 `DO NOT EDIT` 生成标记（来源标注 `internal/docs/registry.go`）。目录内的文档链接一律以 `docs/` 前缀书写（`internal/docs/export.go` 的 `readmeLink`），保证相对项目根可跳转；`docs/` 内不再生成独立的索引页，入口统一到根 `README.md`。
-- **单一事实来源**：教程 / 操作指南 / 解释的正文以既有功能包的 package 注释承载、经 gomarkdoc 导出，禁止在 Markdown 里重复维护同一知识；`docs/` 下除 `registry.go` 登记的手写条目（`Overview: true`）、既有 `docs/kernel/` 文档与投影页外，其余均为生成产物，首行带 `DO NOT EDIT` 生成标记（`internal/docs/export.go` 的 `generatedHeaderFormat`），不得手改。
-- **投影页（Projection）**：除「叙述档（包注释）」与「参考档（包符号）」外，第三类产物是**投影页**——正文由调用方按单一事实来源在别处渲染好，导出器只负责落盘并套用统一页头（分类固定为参考）。**约束**：投影页正文必须以「声明 → 投影」方式派生（禁止人工维护第二份说明）；投影页只进 `docs/` 供人阅读，不参与 RAG 摄取（见「投影边界（参考页不入 RAG）」）；`Options.Projections` 为空时导出行为与不传时完全一致；投影页不参与「按角色找文档」分区，与其条目仅出现在项目根 `README.md` 的「参考」分区。当前生产侧无投影页（原接口能力参考页已随「agent 调用工具请求原生接口」功能整体剔除），机制保留供后续声明源派生页面复用。
+- **四分类、两来源、唯一清单**：Diátaxis 只描述页面种类（`tutorial` / `how-to` / `reference` / `explanation`，见 `internal/docs/category.go`），导航分区（`Section`）描述读者旅程；来源（`Source`）只有 `comment`（代码声明派生）与 `curated`（人策展，AI 可起草）两种。全部条目（分类/分区/顺序/标题/摘要/角色/场景/责任人/来源/AI 摄入/来源包/产物路径/渲染档）唯一登记在 `internal/docs/registry.go` 的 `Registry()`，新增或调整文档一律改此处。
+- **目录按来源隔离（硬边界）**：`docs/generated/` 只由生成器写入，每个文件首行带 `DO NOT EDIT`；`docs/curated/` 只由人写入（AI 起草的初稿也归此目录）。生成器只能写 `docs/generated/`、`docs/index.md`、`docs/nav.json`，路径白名单与「覆盖前校验生成标记」由 `internal/docs/export.go` 的 `writeGenerated` 强制；CI 在生成后要求 `git diff --exit-code -- docs/curated` 为空。
+- **文档入口**：`zki create docs` 生成 `docs/index.md`（总目录 + 阅读路径 + 按角色索引）与 `docs/nav.json`（站点侧边栏与链接检查的机器可读大纲），链接相对 `docs/` 书写；项目根 `README.md` 是手写产品门面，生成器禁止写入；文档只维护中文，不提供英文版本。
+- **策展文档（AI 起草 + 人审校）**：`docs/curated/**` 每页必须带三行元信息头——`> 状态：草稿（AI 起草）` 或 `> 状态：已校对`、`> 责任人：@账号`、`> 依据：` 反引号包裹的仓库相对路径；状态为「已校对」且责任人明确才可合并。页面必须从 `docs/templates/` 的模板起草，模板中的「起草须知」必须在定稿前删除。策展页只写意图与取舍：字段表、接口签名、枚举取值、命令参数表一律链接生成页，禁止复制。
+- **单一事实来源**：概念与任务正文不再由 package 注释承载。package 注释只写「包职责 / 文件分工 / 边界 / 不变量」，任务步骤写入 `docs/curated/`；生成条目由注册表声明并在 `docs/generated/explanation/` 落盘，禁止手改。
+- **投影页（Projection）**：正文由调用方按单一事实来源渲染，导出器只落盘并套用统一页头（分类固定为参考），输出必须位于 `generated/` 下；投影页不入 RAG；`Options.Projections` 为空时导出行为与不传时一致。
 - **每个包至多一条叙述条目**：同一包的 package 注释只对应一篇叙述页，避免同包多页内容重复、被 RAG 重复索引。
-- **导出命令**：`zki create docs`（`internal/cmd/docs.go`），自带 `PersistentPreRunE` / `PersistentPostRunE` 旁路根命令全局 eager 启动，故无 DB/Redis/Etcd 亦可运行；一次导出产出全部叙述页 + `./internal/...`、`./cmd/...` 的参考页 + 项目根 `README.md`（封面 + 目录）。**抽取或生成失败不得静默**：导出出错必须以 `pterm.Error` 报错并返回错误使命令非零退出，避免参考页缺失被吞掉。
+- **导出与漂移检查**：`zki create docs`（`internal/cmd/docs.go`）一次导出叙述页、参考页、参考索引、`docs/index.md` 与 `docs/nav.json`；`zki create docs --check` 导出到临时目录并逐文件比对生成域，任何缺失、多余或内容不同都以非零退出（`make docs-check`）。**抽取或生成失败不得静默**：出错必须经 `pterm.Error` 报错并返回错误使命令非零退出。
 - **叙述档渲染约束（重要）**：叙述档在 `internal/docs/render.go` 中额外覆盖 `text` 模板（`narrativeTextTemplate`）关闭纯文本转义，因此叙述来源的 package 注释必须写成「原样 Markdown 且安全」——命令 / 路径 / 配置键 / 标识符一律用反引号包裹（否则 `_`、`*` 等会被 Markdown 解析成斜体 / 加粗）；禁止 `# ` 单井号标题（Go 文档注释只识别单井号为 heading，会渲染成固定层级并与注册表注入的 H1 标题重复、层级倒挂），顶层小节用 `## `、嵌套用 `### `；避免会被当作 HTML 标签吞掉的裸尖括号占位符。
 - **参考档保持内置转义**：参考档不覆盖 `text` 模板，沿用 gomarkdoc 内置转义——这对符号文档里的字面量 `#`、尖括号是正确行为，不得关闭。
-- **守卫测试**：`internal/docs/registry_test.go` 校验分类合法、输出路径唯一、来源包存在、叙述条目元信息完整；改注册表后必须过此测试。
+- **守卫测试**：`internal/docs/registry_test.go` 校验分类与分区合法、分区内顺序唯一、来源与根目录一致、责任人非空、来源包存在、孤儿页（生成与策展分别检查）、生成文件带标记、策展页元信息头与依据路径、叙述条目元信息完整；改注册表或文档后必须过此测试。
 
 ### 密码重置（忘记密码）安全链路
 
@@ -582,7 +598,7 @@ export const useAppStore = defineStore("app", {
 
 ### 样式体系分层（Style Layering）
 
-本文件是前端设计系统的**唯一信任源**——视觉令牌、色板、组件视觉基线与开发禁令全部收敛于此，不存在第二份设计文档（原 `web/src/styles/DESIGN.md` 已并入本文件并删除）。下列源文件是规范的**实现载体**：
+本文件是前端设计系统的**唯一信任源**（完整口径与不变式见文末「单一信任源（Single Source of Truth）」一节）。下列源文件是规范的**实现载体**：
 
 | 载体 | 职责 |
 |------|------|
@@ -947,7 +963,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 
 **优先用视觉结构表达功能划分，而不是写说明文本**：区块靠「标题 + 分隔/边界 + 间距」表达层级，提示收敛为 icon / tooltip。
 
-文本颜色只允许取自 Vuetify 主题 tokens（`web/src/plugins/vuetify.ts` 的 `--v-theme-*` 或对应 `text-*` 工具类），**禁止** `text-medium-emphasis` 等固定透明度弱化——其背景色叠算对比不足。按文字角色选用「字号 + 颜色」组合，确保 light/dark 双主题下对比达标。
+文本颜色只允许取自 Vuetify 主题 tokens（`web/src/plugins/vuetify.ts` 的 `--v-theme-*` 或对应 `text-*` 工具类）。按文字角色选用「字号 + 颜色」组合，确保 light/dark 双主题下对比达标。
 
 | 角色 Role | 字号 Size | 颜色 Color | 字重 | 典型场景 |
 |-----------|-----------|-----------|------|----------|
@@ -965,7 +981,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 
 - 主文本一律 `text-on-surface`，次要/说明/提示一律 `text-on-surface-variant`；不要自定义灰度或任意 hex。
 - 说明/提示类文本**必须**缩到 `text-caption`（12px）以与字段名（14px）形成字号区分，而不是和字段名同样字号。
-- 不要用 `text-medium-emphasis` / `text-low-emphasis` 表达「次要」——统一改用 `text-on-surface-variant`。
+- 不要用 `text-medium-emphasis` / `text-low-emphasis` 表达「次要」——统一改用 `text-on-surface-variant`（固定透明度弱化会与背景色叠算，对比不足）。
 - 表头一律 caption + `text-on-surface-variant` + 600 + uppercase，由 `styles/main.scss` 的 `.v-data-table th` 统一实现，页面不得重复声明。
 - 表格行操作列（`__actions`）专用于摆放行级按钮，其表头与单元格一律水平居中并固定置尾；该约定由 `utils/column.ts` 的 `useColumnVisibility` 统一覆写，页面与表格不得就地声明该列的 `align` / `fixed`。
 - **列表启用态一律用行内开关**：列表页 / 面板的行级「启用 / 禁用 / 启停」不使用操作列（`__actions`）菜单，一律在对应状态列内用 `EnabledSwitchCell`（`components/table/EnabledSwitchCell.vue`）就地开关——即时调用后端接口、乐观更新、按行 pending、失败回退；布尔字段用 `v-model` 绑定行字段，非布尔状态（枚举 / 布尔派生）用 `:model-value` + `@update:model-value` 映射。批量启停仍保留在批量操作中。
@@ -1010,7 +1026,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
    - 反例：`font-size: 13px; border-radius: 8px;` → 正例：`font-size: var(--zk-font-size-body); border-radius: var(--zk-radius-md);`
 4. **禁止**在 `.vue` 中声明 `border` / `background-color` / `color` / `font-size` / `border-radius` / `box-shadow`：一律改用主题类、`.zk-*` 外壳类或全局规则。
    - 反例：`<style scoped>.box { border: 1px solid …; background-color: …; }</style>` → 正例：容器直接引用 `.zk-panel`，scoped 块只保留布局。
-5. **禁止**重复声明 `plugins/vuetify.ts` 的 `defaults` 已覆盖的属性（`variant` / `density` / `rounded` / `elevation`）。
+5. **禁止**重复声明 `plugins/vuetify.ts` 的 `defaults` 已覆盖的属性（`variant` / `density` / `rounded` / `elevation` / `maxWidth` / `size` / `inset`）；完整属性清单以「组件与变体约定 · 组件默认值清单」为准。
    - 反例：`<v-select v-model="x" variant="outlined" density="compact" />` → 正例：`<v-select v-model="x" />`
 
 `<style scoped>` 目标：每个 `.vue` 的样式块**只保留布局定位**（flex / grid / 尺寸约束 / 溢出 / 定位），其余一律抽到外壳层（`styles/main.scss`）或改用主题类。兜底校验：`web/stylelint.config.js` 的 `declaration-property-value-disallowed-list` 拦截 hex 与 `rgb(数字…)` 字面量（`src/styles/**` 令牌层与外壳层豁免）。
@@ -1040,7 +1056,7 @@ $zk-font-mono: ui-monospace, "SF Mono", sfmono-regular, menlo, consolas,
 
 **核心原则：功能未开通时，相关入口不隐藏，而是「展示但不可用」，并把用户引导到开通入口。**
 
-- **单一数据来源**：功能可用性与「不可用原因」一律由后端 `features` 接口（`internal/manager/features` → `GET /api/v1/features`）下发，原因按请求语言本地化。前端只保留功能键常量（`stores/features.ts` 的 `FEATURE_*`）用于引用，**禁止**在前端自行推断可用性或自造原因文案。`stores/features.ts` 是前端唯一访问点，按语言缓存（`loadedLang`），语言切换自动重载，拉取失败按「全部关闭」处理且不标记已加载（下次导航自动重试）。
+- **单一数据来源**：功能可用性与「不可用原因」一律由后端 `features` 接口（`internal/manager/features` → `POST /api/v1/features/list`）下发，原因按请求语言本地化。前端只保留功能键常量（`stores/features.ts` 的 `FEATURE_*`）用于引用，**禁止**在前端自行推断可用性或自造原因文案。`stores/features.ts` 是前端唯一访问点，按语言缓存（`loadedLang`），语言切换自动重载，拉取失败按「全部关闭」处理且不标记已加载（下次导航自动重试）。
 - **侧边栏入口不隐藏**：`navigation.ts` 上声明了 `feature` 的导航分组 / 子项，在功能关闭时**禁止**从侧边栏过滤掉，必须以不可用态展示：
   - 标题用次级文本色（`text-on-surface-variant`）置灰；
   - 追加**锁定标识**（见下条「导航标识徽章」）；
@@ -1093,20 +1109,20 @@ const option = computed(() =>
 
 ### 补充禁令（Additional Prohibitions）
 
-以下是上文各节未覆盖的独立条款：
+以下为跨章节**收口禁令**：同一主题若已在专职章节详述，此处只保留速查条目并注明出处，细节以专职章节为准。
 
-- **不要使用重于 `$zk-shadow-md` 的阴影**，也不要在同一元素叠加多层阴影。
-- **不要用非语义色表达状态**（如自造绿色表示成功）；语义色同样不得用于纯装饰。
-- **不要用比例字体渲染技术性取值**（ID / 哈希 / hex / 字节数一律 `.font-mono`）。
-- **不要抑制或替换 `:focus-visible`** 的全局 primary 描边。
-- **不要发明未定义的颜色名**（如 `third` / `tertiary` / `accent2`），也不要在组件内重述主题色（本地 `const primary = "#2563EB"` 或重复书写 `border: 1px solid ...` 字符串）。
-- **不要新增第二套语法高亮配色**，也不要在组件内新建 `.zk-*` 类——新外壳统一注册在 `main.scss`。
+- **不要使用重于 `$zk-shadow-md` 的阴影**，也不要在同一元素叠加多层阴影（详见「圆角、阴影与扁平化」）。
+- **不要用非语义色表达状态**（如自造绿色表示成功）；语义色同样不得用于纯装饰（详见「组件与变体约定 · 语义色」与「视觉层级与文本规范」）。
+- **不要用比例字体渲染技术性取值**（ID / 哈希 / hex / 字节数一律 `.font-mono`，详见「字号与排版」）。
+- **不要抑制或替换 `:focus-visible`** 的全局 primary 描边（详见「布局约定 · 全局 focus」）。
+- **不要发明未定义的颜色名**（如 `third` / `tertiary` / `accent2`），也不要在组件内重述主题色（本地 `const primary = "#2563EB"` 或重复书写 `border: 1px solid ...` 字符串）（详见「就地样式禁令」）。
+- **不要新增第二套语法高亮配色**，也不要在组件内新建 `.zk-*` 类——新外壳统一注册在 `main.scss`（详见「样式体系分层」）。
 - **不要手搭对话框、不要复制编辑器外壳、不要用散文解释界面**：三者正确做法分别见「组件与变体约定 · 对话框 / 代码编辑器」与「视觉层级与文本规范 · 说明文本收敛」。
 
 ### 单一信任源（Single Source of Truth）
 
 - **本文件（`AGENTS.md`）是前端设计系统的唯一信任源**：视觉令牌、色板、组件视觉基线与开发禁令全部收敛于此，不存在第二份设计文档（原 `web/src/styles/DESIGN.md` 已并入本文件并删除）。
-- 上列源文件（`plugins/vuetify.ts` / `styles/tokens.scss` / `styles/main.scss` / `styles/settings.scss` / `components/base/AppDialog.vue` / `utils/editorHighlight.ts` / `utils/chartTheme.ts`）是规范的**实现载体**，规范只在必要处指向它们；`.zk-*` 类的完整清单以 `styles/main.scss` 为准（本文件只列职责摘要与约定），组件默认值清单与 `plugins/vuetify.ts` 的 `defaults` 对象同步维护。
+- 「样式体系分层（Style Layering）」一节所列的源文件均为规范的**实现载体**，规范只在必要处指向它们（该节表格是载体清单的唯一权威处，此处不重复枚举）；`.zk-*` 类的完整清单以 `styles/main.scss` 为准（本文件只列职责摘要与约定），组件默认值清单与 `plugins/vuetify.ts` 的 `defaults` 对象同步维护。
 - 本文件的约定与实现**不得相互矛盾**：发现不一致时，先判断哪一方是错的，再同时修正实现与本文件，禁止只改一边，也禁止为此新增第二份文档。
 
 ### Code Style
@@ -1192,5 +1208,6 @@ meta:
 8. 测试文件与被测源码放在一起（`_test.go` / `_test.ts`）
 9. 代码与注释中禁止 emoji，除非显式要求
 10. 提交前运行 `pnpm lint`（web 前端 ESLint）、`pnpm lint:style`（Stylelint）与 `pnpm type-check`（vue-tsc），三者全部通过
-11. 分层边界：`internal/pkg/llm` 只承载 AI 能力薄封装——OpenAI 兼容客户端、端点配置快照（`ModelConfig`）、embedding 探针与 Markdown 分块器，以及客户端入参契约所需的 `ModelKind` 取值与解析（模型档位 `Slot` 及其取值空间/解析 helper 归 `internal/models/core`，因被持久化模型用作 GORM 字段类型）；LLM 行为参数注册表（`Specs` / `Params`）、内置工具元信息（`ToolSpecs`）、pgvector 列校准（`ReconcileEmbeddingColumn` 等）、业务数据清洗（`SanitizeBusinessData`）与 embedding 兼容性判定（`VerifyEmbeddingCompat`）一律归 `internal/ai`；业务枚举按取值空间归 `internal/models/core`（`ToolSource` / `llmSlot`）或 `internal/models/ai`（`AgentKind` / `AgentRunStatus` / `SessionStatus` / `MessageRole` / `MemoryKind` / `MemoryStatus`），禁止再上移进 `internal/pkg/llm`
+11. 分层边界：`internal/pkg/llm` 只承载 AI 能力薄封装——OpenAI 兼容客户端、端点配置快照（`ModelConfig`）、embedding 探针与 Markdown 分块器，以及客户端入参契约所需的 `ModelKind` 取值与解析（模型档位 `Slot` 及其取值空间 `AllSlots` / 解析 helper 归 `internal/models/ai`，与该取值空间的定义处同包，并因被持久化模型 `agent_sessions.slot` 用作 GORM 字段类型）；LLM 行为参数注册表（`Specs` / `Params`）、内置工具元信息（`ToolSpecs`）、pgvector 列校准（`ReconcileEmbeddingColumn` 等）、业务数据清洗（`SanitizeBusinessData`）与 embedding 兼容性判定（`VerifyEmbeddingCompat`）一律归 `internal/ai`；业务枚举按取值空间归 `internal/models/ai`（`ToolSource` / `llmToolSource`、`Slot` / `llmSlot`、`AgentKind` / `AgentRunStatus` / `SessionStatus` / `MessageRole` / `MemoryKind` / `MemoryStatus`），禁止再上移进 `internal/pkg/llm`
 12. 提交前运行 `make lint`（Go 注释完备性检查，见「Comments」），并保证 `gofmt`、`go build ./...`、`go vet ./...` 通过
+13. 第三方依赖许可证门禁：新增 Go 运行时依赖或 Web 生产依赖前必须通过 `make license-check`；GPL/AGPL/LGPL/SSPL/非商业与未知许可证一律拒绝，例外只允许以「组件@版本 → 已核对 SPDX」登记在 `internal/lint/licensecheck`，并同步更新 `THIRD_PARTY_LICENSES.md`

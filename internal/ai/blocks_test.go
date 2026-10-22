@@ -258,6 +258,34 @@ func TestBlockBuilder_ApprovalAndQuestionnaire(t *testing.T) {
 	}
 }
 
+// TestBlockBuilder_AddNextSteps 覆盖推荐下一步建块：正文之后追加 next_steps 块（正文块先收敛），
+// 载荷承载 1-3 条推荐项且首条标记为最推荐。
+func TestBlockBuilder_AddNextSteps(t *testing.T) {
+	b := newBlockBuilder(7, 32768)
+	b.AddContent("最终正文")
+	b.AddNextSteps([]NextStep{
+		{Title: "查看流量详情", Text: "查看该接口的流量详情", Reason: "刚提到了该接口", Recommended: true},
+		{Title: "编写标签规则", Text: "为该接口编写标签规则", Reason: "可沉淀为规则"},
+	})
+	b.Close()
+	writes := b.DrainWrites()
+
+	seqs := blockSeqs(writes)
+	if len(seqs) != 2 || seqs[0] != 1 || seqs[1] != 2 {
+		t.Fatalf("block seqs = %v, want [1 2]", seqs)
+	}
+	if kindAt(writes, 1) != ai.AgentMessageBlockKindContent || kindAt(writes, 2) != ai.AgentMessageBlockKindNextSteps {
+		t.Fatalf("kinds = %s / %s, want content then next_steps", kindAt(writes, 1), kindAt(writes, 2))
+	}
+	var payload NextStepsBlockPayload
+	if err := decodeBlockPayload(finalPayloadAt(t, writes, 2), &payload); err != nil {
+		t.Fatalf("decode next_steps error = %v", err)
+	}
+	if len(payload.Steps) != 2 || !payload.Steps[0].Recommended || payload.Steps[1].Recommended {
+		t.Fatalf("steps = %+v, want the first item marked recommended", payload.Steps)
+	}
+}
+
 // TestBlockBuilder_ClosedStopsNewBlocks 覆盖收敛后不再新增块。
 func TestBlockBuilder_ClosedStopsNewBlocks(t *testing.T) {
 	b := newBlockBuilder(7, 32768)

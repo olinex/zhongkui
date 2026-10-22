@@ -168,9 +168,10 @@ const (
 )
 
 // AgentMessageBlockKind 是助手回答有序内容块的类型标识（agent_message_blocks.kind）：思考段
-// （reasoning）、工具调用组（tool_calls）、授权待审（approval）、主动提问（questionnaire）与
-// 正文段（content）。块的产生顺序即内容真实产生的时序，取值与 agent_message_blocks.kind 列的
-// 取值一致。仅内部流转与展示使用，**不注册枚举类**（无 i18n label，约定同 AgentRunEventType）。
+// （reasoning）、工具调用组（tool_calls）、授权待审（approval）、主动提问（questionnaire）、
+// 正文段（content）与推荐的下一步（next_steps）。块的产生顺序即内容真实产生的时序，取值与
+// agent_message_blocks.kind 列的取值一致。仅内部流转与展示使用，**不注册枚举类**（无 i18n
+// label，约定同 AgentRunEventType）。
 type AgentMessageBlockKind string
 
 // 助手回答内容块类型常量。
@@ -185,6 +186,8 @@ const (
 	AgentMessageBlockKindQuestionnaire AgentMessageBlockKind = "questionnaire"
 	// AgentMessageBlockKindContent 正文段：模型返回的面向用户正文，连续增量聚为一个块
 	AgentMessageBlockKindContent AgentMessageBlockKind = "content"
+	// AgentMessageBlockKindNextSteps 推荐的下一步：回答完成后基于整体上下文给出的 1-3 条可选诉求
+	AgentMessageBlockKindNextSteps AgentMessageBlockKind = "next_steps"
 )
 
 // SessionStatus 是 Agent 会话状态的标识：活跃（active）与归档（archived），取值与
@@ -456,6 +459,7 @@ var agentMessageBlockValues = []AgentMessageBlockKind{
 	AgentMessageBlockKindApproval,
 	AgentMessageBlockKindQuestionnaire,
 	AgentMessageBlockKindContent,
+	AgentMessageBlockKindNextSteps,
 }
 
 // memoryKindValues 是 memoryKind 枚举类的取值空间，声明顺序即枚举类条目顺序与前端展示顺序。

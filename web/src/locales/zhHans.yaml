@@ -1351,6 +1351,7 @@ page:
     deleteSession: 删除会话
     citations: 引用来源
     citationOpen: 在新标签页打开来源
+    citationsExpand: 展开其余 {count} 条
     emptyQuery: 请输入诉求
     optimizePrompt: 优化提问
     optimizePromptFailed: 提示词优化失败
@@ -1396,6 +1397,8 @@ page:
       none: 仅「必须审核」的调用需人工批准，其余直接执行
     autoApproved: 已自动批准
     approvalBackendNote: 该调用由服务端执行，你只需批准或拒绝
+    apiInvokeInvalidArgs: 调用参数无法解析，未执行本次只读接口调用
+    apiInvokeFailed: 调用只读能力失败：{error}
     thinking: 思考
     thinkingHint: 开启后请求模型输出思考过程，回答将附带可折叠的思考内容
     reasoningDefaultOnHint: 该模型默认开启思考，未配置思考开关时也会输出思考内容；可在「LLM 模型」的高级配置中填写思考开关字段与开启 / 关闭取值，以手动控制思考。
@@ -1434,6 +1437,11 @@ page:
     lockedHint: "会话{label}（{used}/{max} 轮），回滚历史消息后可继续提问"
     lockedReject: 会话已达提问轮次上限，请先回滚历史消息后再提问
     stateGuardReject: 当前会话状态暂不允许该操作，请稍后再试
+    nextStepsTitle: 推荐的下一步
+    nextStepsHint: 点击直接发送，或填入输入框
+    nextStepsRecommended: 推荐
+    nextStepsFill: 填入输入框
+    nextStepsDraftNotEmpty: 输入框已有内容，清空后才能直接发送
   aiKnowledge:
     dryRun: 检索试运行
     query: 查询问题

@@ -8,13 +8,13 @@ import "slices"
 type Category string
 
 const (
-	// CategoryTutorial 教程分类（学习导向），对应 docs/tutorials。
+	// CategoryTutorial 教程分类（学习导向），页面位于策展目录的教程分区。
 	CategoryTutorial Category = "tutorial"
-	// CategoryHowTo 操作指南分类（任务导向），对应 docs/how-to。
+	// CategoryHowTo 操作指南分类（任务导向），页面位于策展目录的操作指南分区。
 	CategoryHowTo Category = "how-to"
-	// CategoryReference 参考分类（信息导向），对应 docs/reference。
+	// CategoryReference 参考分类（信息导向），页面位于生成目录的参考分区。
 	CategoryReference Category = "reference"
-	// CategoryExplanation 解释分类（理解导向），对应 docs/explanation。
+	// CategoryExplanation 解释分类（理解导向），生成页与策展页均可使用。
 	CategoryExplanation Category = "explanation"
 )
 
@@ -31,22 +31,6 @@ func Categories() []Category {
 // Valid 报告该分类是否为已注册的合法分类。
 func (c Category) Valid() bool {
 	return slices.Contains(Categories(), c)
-}
-
-// Dir 返回该分类在 docs/ 下的子目录名。
-func (c Category) Dir() string {
-	switch c {
-	case CategoryTutorial:
-		return "tutorials"
-	case CategoryHowTo:
-		return "how-to"
-	case CategoryReference:
-		return "reference"
-	case CategoryExplanation:
-		return "explanation"
-	default:
-		return string(c)
-	}
 }
 
 // Label 返回该分类的中文标签。

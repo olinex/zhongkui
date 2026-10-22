@@ -26,15 +26,15 @@ type AgentMemoryItemOut struct {
 	// ID 记忆 ID
 	ID uint `json:"id"`
 	// AgentKind 记忆所属 Agent 类型（knowledge/rego）
-	AgentKind modelsai.AgentKind `json:"agentKind"`
+	AgentKind string `json:"agentKind"`
 	// Kind 记忆类别（fact/preference/decision/artifact）
-	Kind modelsai.MemoryKind `json:"kind"`
+	Kind string `json:"kind"`
 	// Title 记忆标题
 	Title string `json:"title"`
 	// Content 记忆正文
 	Content string `json:"content"`
 	// Status 记忆状态（active/archived）
-	Status modelsai.MemoryStatus `json:"status"`
+	Status string `json:"status"`
 	// UseCount 被检索命中的次数
 	UseCount int `json:"useCount"`
 	// LastUsedAt 最近一次被检索召回的时间，可空
@@ -58,17 +58,17 @@ type AgentMemoryDetailOut struct {
 	// NamespaceName 所属命名空间
 	NamespaceName string `json:"namespaceName"`
 	// AgentKind 记忆所属 Agent 类型（knowledge/rego）
-	AgentKind modelsai.AgentKind `json:"agentKind"`
+	AgentKind string `json:"agentKind"`
 	// SessionID 来源会话 ID（记忆按会话隔离，仅在来源会话内可见）
 	SessionID uint `json:"sessionID"`
 	// Kind 记忆类别（fact/preference/decision/artifact）
-	Kind modelsai.MemoryKind `json:"kind"`
+	Kind string `json:"kind"`
 	// Title 记忆标题
 	Title string `json:"title"`
 	// Content 记忆正文
 	Content string `json:"content"`
 	// Status 记忆状态（active/archived）
-	Status modelsai.MemoryStatus `json:"status"`
+	Status string `json:"status"`
 	// UseCount 被检索命中的次数
 	UseCount int `json:"useCount"`
 	// LastUsedAt 最近一次被检索召回的时间，可空
@@ -88,18 +88,18 @@ type AgentMemoryBatchIn struct {
 // AgentMemoryStatusIn 定义启停长期记忆的请求输入。
 type AgentMemoryStatusIn struct {
 	// Status 目标状态（active/archived），必填且须为合法取值
-	Status modelsai.MemoryStatus `json:"status" binding:"required,oneof=active archived"`
+	Status string `json:"status" binding:"required,enum=memoryStatus"`
 }
 
 // newAgentMemoryItemOut 将记忆模型映射为列表项输出。
 func newAgentMemoryItemOut(m *modelsai.AgentMemory) AgentMemoryItemOut {
 	return AgentMemoryItemOut{
 		ID:         m.ID,
-		AgentKind:  m.AgentKind,
-		Kind:       m.Kind,
+		AgentKind:  string(m.AgentKind),
+		Kind:       string(m.Kind),
 		Title:      m.Title,
 		Content:    string(m.Content.Value()),
-		Status:     m.Status,
+		Status:     string(m.Status),
 		UseCount:   m.UseCount,
 		LastUsedAt: m.LastUsedAt,
 		CreatedAt:  m.CreatedAt,
@@ -112,12 +112,12 @@ func newAgentMemoryDetailOut(m *modelsai.AgentMemory) AgentMemoryDetailOut {
 	return AgentMemoryDetailOut{
 		ID:            m.ID,
 		NamespaceName: m.NamespaceName,
-		AgentKind:     m.AgentKind,
+		AgentKind:     string(m.AgentKind),
 		SessionID:     m.SessionID,
-		Kind:          m.Kind,
+		Kind:          string(m.Kind),
 		Title:         m.Title,
 		Content:       string(m.Content.Value()),
-		Status:        m.Status,
+		Status:        string(m.Status),
 		UseCount:      m.UseCount,
 		LastUsedAt:    m.LastUsedAt,
 		CreatedAt:     m.CreatedAt,
@@ -276,7 +276,7 @@ func AgentMemorySetStatus(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	if err := comps.Memory.SetStatus(c, namespace, userID, uint(id), in.Status); err != nil {
+	if err := comps.Memory.SetStatus(c, namespace, userID, uint(id), modelsai.MemoryStatus(in.Status)); err != nil {
 		if errors.Is(err, ai.ErrMemoryNotFound) {
 			response.ErrDefaultPageNotFound.AbortWithGinH(c)
 			return

@@ -240,7 +240,8 @@ export interface AgentMessageItem {
 
 // 助手消息内容块的类型取值（后端 AgentMessageBlockKind）：不注册枚举类、无 i18n label（同
 // AgentRunEventType 约定），前端不声明取值空间，此处仅为「块 → 渲染块」分派用的字面量联合类型。
-export type AgentBlockKind = "reasoning" | "tool_calls" | "approval" | "questionnaire" | "content";
+export type AgentBlockKind =
+  "reasoning" | "tool_calls" | "approval" | "questionnaire" | "content" | "next_steps";
 
 // 助手消息所承载的**一块**内容块展示项（后端 AgentMessageBlockOut）：块在消息内的序号、块类型与
 // 该块的明文 JSON 载荷。载荷形状与流式 block 事件的 payload 一致（按 kind 区分），刷新 / 重进会话
@@ -306,6 +307,18 @@ export interface AgentQuestionnaireBlockPayload {
   questions: QuestionnaireQuestion[];
   answers?: QuestionnaireAnswer[];
   awaiting: boolean;
+}
+// next_steps 块内一条推荐的下一步：title 为不超过 24 字的行动标题，reason 为不超过 64 字的推荐理由，
+// text 为可直接发送的完整诉求；recommended 标记最推荐项
+export interface AgentNextStep {
+  title?: string;
+  text: string;
+  reason?: string;
+  recommended?: boolean;
+}
+// next_steps 块载荷：回答完成后基于整体上下文给出的 1-3 条推荐项，顺序即推荐程度（首条最推荐）
+export interface AgentNextStepsBlockPayload {
+  steps: AgentNextStep[];
 }
 
 // 助手消息所承载的**一轮**问卷展示项（后端 AgentQuestionnaireOut）：仅用于「回退到助手待输入回合」

@@ -4,6 +4,7 @@ package datasource
 import (
 	"net/http"
 
+	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -34,11 +35,30 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 第三方数据源类型枚举 - 返回 redis / mysql 类型及各自配置字段 schema，供前端动态渲染
 		dsGroup.POST("/types", DatasourceTypeConfigGet)
 		// 第三方数据源类型枚举元信息
-		views.RegisterApi(dsGroup, "/types", "第三方数据源类型枚举 - 返回 redis / mysql 类型及各自配置字段 schema，供前端动态渲染", views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceTypesOut]()))
+		views.RegisterApi(dsGroup, "/types", "第三方数据源类型枚举 - 返回 redis / mysql 类型及各自配置字段 schema，供前端动态渲染",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceTypesOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "datasource.types",
+				Domain:    "datasource",
+				Intent:    "查看可用数据源类型及其配置字段",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 第三方数据源列表查询 - 支持分页、搜索和排序
 		dsGroup.POST("/list", DatasourceListGet)
 		// 第三方数据源列表自省信息 - 返回搜索选项、表格列与出参结构体定义
-		views.RegisterListApi[*views.DatasourceListGetSearchIn, *DatasourceListOut](dsGroup, "/list", "第三方数据源列表查询 - 支持分页、搜索和排序")
+		views.RegisterListApi[*views.DatasourceListGetSearchIn, *DatasourceListOut](dsGroup, "/list", "第三方数据源列表查询 - 支持分页、搜索和排序",
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "datasource.list",
+				Domain:    "datasource",
+				Intent:    "查看已接入的第三方数据源及其启用状态",
+				Entities:  []string{"datasources"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 创建第三方数据源 - 注册 vtable 校验配置后落库（归属当前请求命名空间）
 		dsGroup.POST("/create", DatasourceCreate)
 		// 创建第三方数据源元信息
@@ -46,15 +66,45 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		// 测试第三方数据源连接 - 预检连通性，不落库不注册 vtable，失败原因放 body 返回
 		dsGroup.POST("/test", DatasourceTest)
 		// 测试第三方数据源连接元信息
-		views.RegisterApi(dsGroup, "/test", "测试第三方数据源连接 - 预检连通性，不落库不注册 vtable，失败原因放 body 返回", views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceTestIn](), views.WithBodyOutput[DatasourceTestOut]()))
+		views.RegisterApi(dsGroup, "/test", "测试第三方数据源连接 - 预检连通性，不落库不注册 vtable，失败原因放 body 返回",
+			views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceTestIn](), views.WithBodyOutput[DatasourceTestOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "datasource.test",
+				Domain:    "datasource",
+				Intent:    "测试第三方数据源连通性（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
+		)
 		// 自省第三方数据源表结构 - 预检列定义，不落库不注册 vtable；sqlite_file 上传 .db 文件
 		dsGroup.POST("/introspect", DatasourceIntrospect)
 		// 自省第三方数据源表结构元信息
-		views.RegisterApi(dsGroup, "/introspect", "自省第三方数据源表结构 - 预检列定义，不落库不注册 vtable；sqlite_file 上传 .db 文件", views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceIntrospectIn](), views.WithBodyOutput[DatasourceIntrospectOut]()))
+		views.RegisterApi(dsGroup, "/introspect", "自省第三方数据源表结构 - 预检列定义，不落库不注册 vtable；sqlite_file 上传 .db 文件",
+			views.WithMethod(http.MethodPost, views.WithBodyInput[DatasourceIntrospectIn](), views.WithBodyOutput[DatasourceIntrospectOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "datasource.introspect",
+				Domain:    "datasource",
+				Intent:    "预检第三方数据源表结构（不落库）",
+				Entities:  []string{},
+				Access:    capability.AccessRead,
+				Invokable: false,
+			}),
+		)
 		// 第三方数据源详情查询 - 根据ID获取数据源完整信息
 		dsGroup.POST("/:id/get", DatasourceDetailGet)
 		// 第三方数据源详情元信息
-		views.RegisterApi(dsGroup, "/:id/get", "第三方数据源详情查询 - 根据ID获取数据源完整信息", views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceDetailOut]()))
+		views.RegisterApi(dsGroup, "/:id/get", "第三方数据源详情查询 - 根据ID获取数据源完整信息",
+			views.WithMethod(http.MethodPost, views.WithBodyOutput[DatasourceDetailOut]()),
+			views.WithCapability(views.CapabilityMeta{
+				ID:        "datasource.detail",
+				Domain:    "datasource",
+				Intent:    "查看单个第三方数据源的完整配置",
+				Entities:  []string{"datasources"},
+				Access:    capability.AccessRead,
+				Invokable: true,
+			}),
+		)
 		// 更新第三方数据源 - 更新启用状态/配置/描述（名称不可变），覆盖注册相应 vtable
 		dsGroup.POST("/:id/update", DatasourceUpdate)
 		// 更新第三方数据源元信息

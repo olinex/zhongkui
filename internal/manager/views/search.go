@@ -84,7 +84,7 @@ func (i *keywordAgentMemoryListGetFilterByItem) GetValue() any {
 
 type agentKindAgentMemoryListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq"`
-	Value  string `mapstructure:"value" binding:"oneof=knowledge rego"`
+	Value  string `mapstructure:"value" binding:"enum=agentKind"`
 }
 
 func (i *agentKindAgentMemoryListGetFilterByItem) GetName() string {
@@ -105,7 +105,7 @@ func (i *agentKindAgentMemoryListGetFilterByItem) GetValue() any {
 
 type kindAgentMemoryListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq"`
-	Value  string `mapstructure:"value" binding:"oneof=fact preference decision artifact"`
+	Value  string `mapstructure:"value" binding:"enum=memoryKind"`
 }
 
 func (i *kindAgentMemoryListGetFilterByItem) GetName() string {
@@ -126,7 +126,7 @@ func (i *kindAgentMemoryListGetFilterByItem) GetValue() any {
 
 type statusAgentMemoryListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq"`
-	Value  string `mapstructure:"value" binding:"oneof=active archived"`
+	Value  string `mapstructure:"value" binding:"enum=memoryStatus"`
 }
 
 func (i *statusAgentMemoryListGetFilterByItem) GetName() string {

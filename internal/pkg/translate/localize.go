@@ -7,9 +7,9 @@ import (
 )
 
 // dataDelimParser 是 translate 层使用的全局文本解析器：将 go-i18n 的模板定界符
-// 从默认的 {{ / }} 改写为 [[ / ]]。如此普通翻译消息的数据占位符统一写作 [[.X]]，
-// 与 text/template 保留的 {{ }} 定界符彻底隔离，避免两层模板定界符歧义。
-// notify.* 默认模板正文含 {{...}} 函数调用（走 text/template 渲染），因源串不含 [[
+// 从默认的双大括号改写为 [[ / ]]。如此普通翻译消息的数据占位符统一写作 [[.X]]，
+// 与 text/template 保留的双大括号定界符彻底隔离，避免两层模板定界符歧义。
+// notify.* 默认模板正文含函数调用动作（走 text/template 渲染），因源串不含 [[
 // 会触发 go-i18n fast-path 原样透出；普通消息则写 [[.X]] 由 go-i18n 直接数据渲染。
 var dataDelimParser = &template.TextParser{LeftDelim: "[[", RightDelim: "]]"}
 

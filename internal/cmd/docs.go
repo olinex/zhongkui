@@ -42,17 +42,34 @@ var createDocsCmd = &cobra.Command{
 		provider.InjectUniversalTranslator(ctx, i)
 		_ = provider.MustInvokeUniversalTranslator(i)
 
+		// 命令描述与参数说明经本地化后才能进入 CLI 参考页。
+		localizeCmdTree()
 		cwd, err := os.Getwd()
 		if err != nil {
-			pterm.Error.Println(err.Error())
 			return errors.WithStack(err)
 		}
-		// 导出 Diátaxis 分类文档（叙事页 + 参考页 + 索引），无需数据库 / Redis / etcd。
-		if err := docs.Export(ctx, docs.Options{ProjectRoot: cwd, Root: docs.Root}); err != nil {
-			pterm.Error.Println(err.Error())
+		// --check 只校验不写盘：CI 据此发现生成物漂移。
+		check, err := cmd.Flags().GetBool("check")
+		if err != nil {
+			return errors.WithStack(err)
+		}
+		if check {
+			if err := docs.Check(ctx, cwd, cmd.Root()); err != nil {
+				return errors.WithStack(err)
+			}
+			pterm.Success.Println(translate.T("cli.docs.check-ok", nil))
 			return nil
+		}
+		// 导出文档（叙述页 + 参考投影 + 参考页 + 总目录 + 导航文件），无需数据库 / Redis / etcd。
+		if err := docs.Export(ctx, docs.Options{ProjectRoot: cwd, Root: docs.Root, RootCommand: cmd.Root()}); err != nil {
+			return errors.WithStack(err)
 		}
 		pterm.Success.Println(translate.T("cli.docs.generated", map[string]any{"Dir": docs.Root}))
 		return nil
 	},
+}
+
+// init 注册文档导出命令的局部参数。
+func init() {
+	createDocsCmd.Flags().Bool("check", false, "flag.create.docs.check")
 }

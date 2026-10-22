@@ -39,6 +39,10 @@ vendor/
 # Go test coverage
 coverage.out
 
+# VitePress 构建缓存与临时文件
+docs/.vitepress/cache/
+docs/.vitepress/.temp/
+
 # Rust / Huginn Net specific
 third_party/huginn-net/target/
 
