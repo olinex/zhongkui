@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
@@ -49,7 +48,7 @@ func memoryRuntimeCtx(w MemoryWriter) context.Context {
 
 // TestMemoryWrite_MissingWriter 覆盖未注入运行期或写入器为 nil 时返回英文错误且不误报写入。
 func TestMemoryWrite_MissingWriter(t *testing.T) {
-	run := &memoryWriteTool{}
+	run := memoryWriteTool
 	args := `{"content":"a stable fact"}`
 
 	if _, err := run.InvokableRun(context.Background(), args); err == nil {
@@ -74,7 +73,7 @@ func TestMemoryWrite_EmptyContent(t *testing.T) {
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {
 			w := &fakeMemoryWriter{}
-			if _, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(w), args); err == nil {
+			if _, err := memoryWriteTool.InvokableRun(memoryRuntimeCtx(w), args); err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
 			if w.calls != 0 {
@@ -87,7 +86,7 @@ func TestMemoryWrite_EmptyContent(t *testing.T) {
 // TestMemoryWrite_Kind 覆盖：非法 kind 被拒；空 kind 落为 fact；合法 kind 原样传递。
 func TestMemoryWrite_Kind(t *testing.T) {
 	invalid := &fakeMemoryWriter{}
-	if _, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(invalid), `{"content":"x","kind":"bogus"}`); err == nil {
+	if _, err := memoryWriteTool.InvokableRun(memoryRuntimeCtx(invalid), `{"content":"x","kind":"bogus"}`); err == nil {
 		t.Fatal("invalid-kind error = nil, want a rejection")
 	} else if !strings.Contains(err.Error(), "invalid kind") {
 		t.Errorf("invalid-kind error = %q, want it to mention the invalid kind", err)
@@ -97,7 +96,7 @@ func TestMemoryWrite_Kind(t *testing.T) {
 	}
 
 	defaulted := &fakeMemoryWriter{}
-	if _, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(defaulted), `{"content":"x"}`); err != nil {
+	if _, err := memoryWriteTool.InvokableRun(memoryRuntimeCtx(defaulted), `{"content":"x"}`); err != nil {
 		t.Fatalf("empty-kind run error = %v", err)
 	}
 	if defaulted.calls != 1 || defaulted.got[0].Kind != aimodel.MemoryKindFact {
@@ -105,7 +104,7 @@ func TestMemoryWrite_Kind(t *testing.T) {
 	}
 
 	explicit := &fakeMemoryWriter{}
-	if _, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(explicit), `{"content":"x","kind":"decision"}`); err != nil {
+	if _, err := memoryWriteTool.InvokableRun(memoryRuntimeCtx(explicit), `{"content":"x","kind":"decision"}`); err != nil {
 		t.Fatalf("explicit-kind run error = %v", err)
 	}
 	if explicit.calls != 1 || explicit.got[0].Kind != aimodel.MemoryKindDecision {
@@ -117,7 +116,7 @@ func TestMemoryWrite_Kind(t *testing.T) {
 // 的 JSON 可解出 ID 与 saved。
 func TestMemoryWrite_Success(t *testing.T) {
 	w := &fakeMemoryWriter{id: 123}
-	out, err := (&memoryWriteTool{}).InvokableRun(memoryRuntimeCtx(w),
+	out, err := memoryWriteTool.InvokableRun(memoryRuntimeCtx(w),
 		`{"content":"  normalize me  ","title":"T","kind":"preference"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
@@ -149,7 +148,7 @@ func TestMemoryWrite_Success(t *testing.T) {
 
 // TestMemoryWrite_Info 覆盖 Info 的工具名与参数 schema：content 必填、kind 带枚举取值、title 存在。
 func TestMemoryWrite_Info(t *testing.T) {
-	info, err := (&memoryWriteTool{}).Info(context.Background())
+	info, err := memoryWriteTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -200,6 +199,3 @@ func TestMemoryWrite_BuildResolves(t *testing.T) {
 
 // 仅用于确认假替身满足接口（编译期断言）。
 var _ MemoryWriter = (*fakeMemoryWriter)(nil)
-
-// 仅用于确认工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*memoryWriteTool)(nil)

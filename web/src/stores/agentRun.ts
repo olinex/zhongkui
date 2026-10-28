@@ -2,12 +2,18 @@
 // AI 运行态 store（单例）：承担 SSE 订阅所有权与「运行生命周期」状态，与抽屉组件的挂载 / 可见性解耦。
 // 组件关闭抽屉或卸载时仅 detach（退订），不取消服务端运行——退订本身即触发服务端退订宽限计时，
 // 宽限内重连即停表续跑；宽限内始终无订阅者才由服务端自动取消。刷新后由组件读 live-run 状态并经
-// agentStreamResume 续播。lastSeq 经 localManager 按会话持久化，作为续播的 after 参数。
+// /agent/:sessionID/events 续播。lastSeq 经 localManager 按会话持久化，作为续播的 after 参数。
 
 import { defineStore } from "pinia";
 
 import { localManager } from "@/stores/local";
-import type { AgentBlockKind, AgentMessageBlockOut, ToolRequestPayload } from "@/apis/@types/ai";
+import type {
+  AgentBlockKind,
+  AgentMessageBlockOut,
+  AgentToolCallRecord,
+  AgentToolCallsBlockPayload,
+  ToolRequestPayload,
+} from "@/apis/@types/ai";
 
 // RunPendingCall 单条待审批调用的运行态记录（与视图层 PendingCallState 同形）
 export interface RunPendingCall {
@@ -16,8 +22,8 @@ export interface RunPendingCall {
   arguments: string;
   auditLevel?: string;
   approvalRequired?: boolean;
-  // 执行归属：client 由前端执行（默认，字段缺失时按此处理）、backend 由后端执行（前端仅审批）
-  execOwner?: "client" | "backend";
+  // 执行归属：client 由前端执行、backend 由后端执行（前端仅审批）
+  execOwner: "client" | "backend";
   decision?: "approved" | "rejected";
   result?: string;
   error?: string;
@@ -192,6 +198,13 @@ export const useAgentRunStore = defineStore("agentRun", {
         localManager.setAgentRunSeq(sessionID, seq);
       }
     },
+    // resetSeq 为一条新的传输流派生游标：每轮 /chat、/action、/render 的实时事件游标都从 1 重新
+    // 计数，直接消费该流前须把续播游标归零，避免旧轮次的大序号让 /events?after= 越界。
+    resetSeq(sessionID: number): void {
+      const state = this.stateOf(sessionID);
+      state.lastSeq = 0;
+      localManager.setAgentRunSeq(sessionID, 0);
+    },
     // appendBuffer 累积助手正文增量
     appendBuffer(sessionID: number, delta: string): void {
       this.stateOf(sessionID).buffer += delta;
@@ -226,10 +239,13 @@ export const useAgentRunStore = defineStore("agentRun", {
         state.blocks[idx] = ev;
         return;
       }
+      // 创建事件携带首个增量（block.created 的 text 即首段），并入占位块；其后同段增量经
+      // appendBlockText 精确追加，避免首段文本丢失。
+      const first = (ev.payload as { text?: string } | undefined)?.text ?? "";
       const placeholder: AgentMessageBlockOut = {
         seq: ev.seq,
         kind: ev.kind,
-        payload: { text: "" },
+        payload: { text: first },
       };
       if (idx >= 0) {
         state.blocks[idx] = placeholder;
@@ -239,6 +255,25 @@ export const useAgentRunStore = defineStore("agentRun", {
       if (ev.created) {
         state.openSeq = ev.seq;
       }
+    },
+    // upsertToolCall 应用一条 tool.call.updated：按块序号定位 tool_calls 块，按 callID 原位归并单条
+    // 调用记录（start / done / failed 与耗时、结果），使同一次调用在消息体内始终只占一行。
+    upsertToolCall(sessionID: number, blockSeq: number, call: AgentToolCallRecord): void {
+      const state = this.stateOf(sessionID);
+      let block = state.blocks.find((b) => b.seq === blockSeq && b.kind === "tool_calls");
+      if (!block) {
+        block = { seq: blockSeq, kind: "tool_calls", payload: { calls: [] } };
+        insertBlock(state, block);
+      }
+      const payload = block.payload as AgentToolCallsBlockPayload | undefined;
+      const calls = [...(payload?.calls ?? [])];
+      const idx = calls.findIndex((c) => c.callID === call.callID);
+      if (idx >= 0) {
+        calls[idx] = { ...calls[idx], ...call };
+      } else {
+        calls.push(call);
+      }
+      block.payload = { ...payload, calls };
     },
     // appendBlockText 把一段思考 / 正文增量追加进「当前开放块」（openSeq，由该 kind 的创建事件确立）的文本
     // 载荷——从序号 0 回放时基线里可能已有后续同 kind 块，按「最后一个同 kind 块」追加会落错序号；openSeq
@@ -292,6 +327,18 @@ export const useAgentRunStore = defineStore("agentRun", {
       const state = this.stateOf(sessionID);
       releaseSubscription(state);
       state.unsubscribe = unsubscribe;
+    },
+    // release 丢弃某会话当前的订阅句柄（仅当与给定句柄一致），**不中止**连接：流已自然结束
+    // （EOF / 错误）时用它在收尾阶段清理句柄，避免后续 attach / detach 对已完成的请求再调用
+    // abort，在浏览器网络记录里留下 net::ERR_ABORTED。
+    release(sessionID: number, unsubscribe: () => void): void {
+      const state = this.runs[sessionID];
+      if (!state || state.unsubscribe === null) {
+        return;
+      }
+      if (state.unsubscribe === unsubscribe) {
+        state.unsubscribe = null;
+      }
     },
     // detach 退订某会话的在途流（仅断连接，不取消服务端运行）。幂等：运行已收敛时只丢弃句柄、
     // 不再 abort 那条正在自然收尾的连接（见 releaseSubscription）

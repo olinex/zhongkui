@@ -2,14 +2,17 @@
 // （AgentRunStatus）、运行生命周期阶段（AgentRunPhase）、会话交互状态（AgentInteractionState）、
 // 交互子状态（AgentInteractionSubstate）、会话状态（SessionStatus）、消息角色（MessageRole）、
 // 记忆类别（MemoryKind）、记忆状态（MemoryStatus）、工具来源（ToolSource）、模型档位（Slot）与
-// 会话审核阀门（ReviewValve）的取值空间，并把这些取值空间注册为枚举类
-// knowledgeDocStatus / agentKind / agentRunStatus / agentRunPhase / agentInteractionState /
-// agentInteractionSubstate / memoryKind / memoryStatus / llmToolSource / llmSlot / reviewValve
+// 会话审核阀门（ReviewValve）的取值空间，并把这些取值空间注册为枚举类 knowledgeDocStatus /
+// agentKind / agentRunStatus / agentRunPhase / agentInteractionState / agentInteractionSubstate /
+// memoryKind / memoryStatus / llmToolSource / llmSlot / reviewValve
 // （审核阀门的取值常量与取值序列在 valve.go）。取值的唯一来源是类型化常量，取值序列就地复用为
 // 条目来源，条目在包内 init 注册时快照。类名须与前端 utils/enums.ts 的 EnumClass 成员、i18n 键
-// enum.<类名>.<key> 以及消费方引用一致。档位枚举类 llmSlot 的取值空间 Slot / AllSlots 与全部
-// 解析/校验 helper 一并声明于本文件（原先声明在 internal/models/core，因 Slot 被本包的持久化模型
-// LlmBinding 用作 GORM 字段类型而随 llm.go 一并迁入本包）。包内文档注释见 document.go。
+// enum.<类名>.<key> 以及消费方引用一致。消息原生表示不再在本包声明：其取值空间与对话模型接口
+// 形态同源，统一为 internal/pkg/llm 的 APIMode（枚举类 llmAPIMode）。档位枚举类 llmSlot 的取值
+// 空间 Slot / AllSlots 与全部解析/校验 helper 一并声明于本文件（原先声明在 internal/models/core，
+// 因 Slot 被本包的持久化模型 LlmBinding 用作 GORM 字段类型而随 llm.go 一并迁入本包）。包内文档
+// 注释见 document.go。
+
 package ai
 
 import (
@@ -52,9 +55,9 @@ const (
 	AgentKindRego AgentKind = "rego"
 )
 
-// AgentRunStatus 是 Agent 运行现场状态的标识：待恢复（pending）、已消费（consumed）与
-// 已过期（expired），取值与 agent_runs.status 列的取值一致。运行现场在命中客户端工具
-// 时挂起并落库，仅处于 pending 且未过期的现场可被恢复。
+// AgentRunStatus 是 Agent 运行现场状态的标识：待恢复（pending）与已消费（consumed），取值与
+// agent_runs.status 列的取值一致。运行现场在命中客户端工具时挂起并落库，处于 pending 的现场
+// 可被恢复（现场不设过期，只要会话未删除即可恢复）。
 type AgentRunStatus string
 
 // 运行现场状态常量。
@@ -63,15 +66,12 @@ const (
 	AgentRunStatusPending AgentRunStatus = "pending"
 	// AgentRunStatusConsumed 已消费：运行现场已被成功恢复，不可再次恢复
 	AgentRunStatusConsumed AgentRunStatus = "consumed"
-	// AgentRunStatusExpired 已过期：运行现场超过存活期限，不可恢复
-	AgentRunStatusExpired AgentRunStatus = "expired"
 )
 
-// AgentRunPhase 是驻留运行（RunHub 管理的 liveRun）生命周期阶段的标识：运行中（running）、
-// 已完成（done）、失败（failed）、已取消（cancelled）与挂起待审批（suspended），取值与
-// agent_live_runs.status 列的取值一致。与运行现场状态 AgentRunStatus 是不同概念：
-// AgentRunStatus 描述 agent_runs 中「待恢复现场」的消费状态，AgentRunPhase 描述一次
-// 在途运行的生命周期阶段。
+// AgentRunPhase 是 Agent 回合生命周期阶段的标识：运行中（running）、已完成（done）、失败
+// （failed）、已取消（cancelled）与挂起待审批（suspended），取值与 agent_messages.phase
+// 列的取值一致。与运行现场状态 AgentRunStatus 是不同概念：AgentRunStatus 描述 agent_runs 中
+// 「待恢复现场」的消费状态，AgentRunPhase 描述一次回合的生命周期阶段。
 type AgentRunPhase string
 
 // 运行生命周期阶段常量。
@@ -131,63 +131,6 @@ const (
 	AgentInteractionSubstateFailed AgentInteractionSubstate = "failed"
 	// AgentInteractionSubstateAborted 用户中止：最近一次运行被用户（或退订宽限）中止
 	AgentInteractionSubstateAborted AgentInteractionSubstate = "aborted"
-)
-
-// AgentRunEventType 是驻留运行事件日志（agent_run_events.type）与 SSE 事件类型的标识：
-// 增量文本（delta）、思考过程增量（reasoning）、阶段状态（stage）、工具执行请求
-// （tool_request）、内容块（block）、上下文压缩开始（compress_start）、压缩摘要增量
-// （compress_delta）、压缩完成（compress_done）、交互状态（state）、完成（done）与错误
-// （error）。取值与 sse.SSEEventValue 常量一一对应，仅内部流转使用，**不注册枚举类**
-// （不面向用户展示，无 i18n label）。
-type AgentRunEventType string
-
-// 运行事件类型常量。
-const (
-	// AgentRunEventDelta 增量文本事件
-	AgentRunEventDelta AgentRunEventType = "delta"
-	// AgentRunEventReasoning 思考过程增量事件（模型返回的思考/推理内容增量）
-	AgentRunEventReasoning AgentRunEventType = "reasoning"
-	// AgentRunEventStage 阶段状态事件
-	AgentRunEventStage AgentRunEventType = "stage"
-	// AgentRunEventToolRequest 工具执行请求事件（运行挂起等待前端执行并审批客户端工具）
-	AgentRunEventToolRequest AgentRunEventType = "tool_request"
-	// AgentRunEventCompressStart 上下文压缩开始事件（携带压缩原因、占用 token、容量与阈值）
-	AgentRunEventCompressStart AgentRunEventType = "compress_start"
-	// AgentRunEventCompressDelta 上下文压缩摘要增量事件（携带摘要生成的增量文本）
-	AgentRunEventCompressDelta AgentRunEventType = "compress_delta"
-	// AgentRunEventCompressDone 上下文压缩完成事件（携带压缩前后占用、折叠条数与摘要游标）
-	AgentRunEventCompressDone AgentRunEventType = "compress_done"
-	// AgentRunEventDone 完成事件
-	AgentRunEventDone AgentRunEventType = "done"
-	// AgentRunEventError 错误事件
-	AgentRunEventError AgentRunEventType = "error"
-	// AgentRunEventState 会话交互状态事件（携带 {state, substate} 交互状态与子状态）
-	AgentRunEventState AgentRunEventType = "state"
-	// AgentRunEventBlock 内容块事件（携带 {seq, kind, payload} 的有序内容块，块创建与收敛各下发一次）
-	AgentRunEventBlock AgentRunEventType = "block"
-)
-
-// AgentMessageBlockKind 是助手回答有序内容块的类型标识（agent_message_blocks.kind）：思考段
-// （reasoning）、工具调用组（tool_calls）、授权待审（approval）、主动提问（questionnaire）、
-// 正文段（content）与推荐的下一步（next_steps）。块的产生顺序即内容真实产生的时序，取值与
-// agent_message_blocks.kind 列的取值一致。仅内部流转与展示使用，**不注册枚举类**（无 i18n
-// label，约定同 AgentRunEventType）。
-type AgentMessageBlockKind string
-
-// 助手回答内容块类型常量。
-const (
-	// AgentMessageBlockKindReasoning 思考段：模型返回的思考/推理内容，连续增量聚为一个块
-	AgentMessageBlockKindReasoning AgentMessageBlockKind = "reasoning"
-	// AgentMessageBlockKindToolCalls 工具调用组：同一轮（round）发起的调用聚为一个块
-	AgentMessageBlockKindToolCalls AgentMessageBlockKind = "tool_calls"
-	// AgentMessageBlockKindApproval 授权待审：本轮待前端审批与执行的客户端工具调用清单
-	AgentMessageBlockKindApproval AgentMessageBlockKind = "approval"
-	// AgentMessageBlockKindQuestionnaire 主动提问：一轮 ask_user 问卷的题目与作答
-	AgentMessageBlockKindQuestionnaire AgentMessageBlockKind = "questionnaire"
-	// AgentMessageBlockKindContent 正文段：模型返回的面向用户正文，连续增量聚为一个块
-	AgentMessageBlockKindContent AgentMessageBlockKind = "content"
-	// AgentMessageBlockKindNextSteps 推荐的下一步：回答完成后基于整体上下文给出的 1-3 条可选诉求
-	AgentMessageBlockKindNextSteps AgentMessageBlockKind = "next_steps"
 )
 
 // SessionStatus 是 Agent 会话状态的标识：活跃（active）与归档（archived），取值与
@@ -399,7 +342,6 @@ var agentKindValues = []AgentKind{AgentKindGeneral, AgentKindKnowledge, AgentKin
 var agentRunStatusValues = []AgentRunStatus{
 	AgentRunStatusPending,
 	AgentRunStatusConsumed,
-	AgentRunStatusExpired,
 }
 
 // agentRunPhaseValues 是 agentRunPhase 枚举类的取值空间，声明顺序即枚举类条目顺序与前端展示顺序。
@@ -432,34 +374,6 @@ var agentInteractionSubstateValues = []AgentInteractionSubstate{
 	AgentInteractionSubstateSuccess,
 	AgentInteractionSubstateFailed,
 	AgentInteractionSubstateAborted,
-}
-
-// agentRunEventValues 是 AgentRunEventType 的取值空间，声明顺序即事件流转顺序（新增事件一律追加
-// 于末尾，保持只增不改）。运行事件类型不注册枚举类（不面向用户），此清单仅供遍历与「与 SSE 事件名
-// 映射」的守卫测试使用。
-var agentRunEventValues = []AgentRunEventType{
-	AgentRunEventDelta,
-	AgentRunEventReasoning,
-	AgentRunEventStage,
-	AgentRunEventToolRequest,
-	AgentRunEventCompressStart,
-	AgentRunEventCompressDelta,
-	AgentRunEventCompressDone,
-	AgentRunEventDone,
-	AgentRunEventError,
-	AgentRunEventState,
-	AgentRunEventBlock,
-}
-
-// agentMessageBlockValues 是 AgentMessageBlockKind 的取值空间，声明顺序即块类型的声明顺序。
-// 块类型不注册枚举类（仅内部流转与展示），此清单仅供遍历与守卫测试使用。
-var agentMessageBlockValues = []AgentMessageBlockKind{
-	AgentMessageBlockKindReasoning,
-	AgentMessageBlockKindToolCalls,
-	AgentMessageBlockKindApproval,
-	AgentMessageBlockKindQuestionnaire,
-	AgentMessageBlockKindContent,
-	AgentMessageBlockKindNextSteps,
 }
 
 // memoryKindValues 是 memoryKind 枚举类的取值空间，声明顺序即枚举类条目顺序与前端展示顺序。
@@ -579,14 +493,6 @@ func ParseAgentInteractionSubstate(raw AgentInteractionSubstate) (AgentInteracti
 	return "", errors.Newf("invalid agent interaction substate %q", raw)
 }
 
-// AllAgentRunEventTypes 返回全部运行事件类型的副本，声明顺序即事件流转顺序；供 RunHub 与视图层
-// 复用，调用方修改返回值不影响该取值空间。
-func AllAgentRunEventTypes() []AgentRunEventType {
-	types := make([]AgentRunEventType, len(agentRunEventValues))
-	copy(types, agentRunEventValues)
-	return types
-}
-
 // AllMemoryKinds 返回全部记忆类别的副本，声明顺序即枚举类条目顺序与前端展示顺序；供记忆服务、
 // 工具层与视图层复用，调用方修改返回值不影响该取值空间。
 func AllMemoryKinds() []MemoryKind {
@@ -630,14 +536,14 @@ func ParseMemoryStatus(raw MemoryStatus) (MemoryStatus, error) {
 
 // init 注册枚举类 knowledgeDocStatus / agentKind / agentRunStatus / agentRunPhase /
 // agentInteractionState / agentInteractionSubstate / memoryKind / memoryStatus / llmToolSource /
-// llmSlot / reviewValve（取值空间固定，条目在注册时快照）。agentKind 复用 agentKindValues，Agent
-// 类型成员仍只在本文件一处声明；agentRunStatus 复用 agentRunStatusValues，运行现场状态成员仍只在
-// 本文件一处声明；agentRunPhase 复用 agentRunPhaseValues，运行生命周期阶段成员仍只在本文件一处
-// 声明；agentInteractionState / agentInteractionSubstate 复用本文件的两份取值序列，会话交互状态与
-// 子状态成员仍只在本文件一处声明；memoryKind / memoryStatus 复用本文件的两份取值序列，记忆
-// 类别/状态成员仍只在本文件一处声明；llmToolSource 复用 toolSourceValues；llmSlot 的取值空间直接
-// 复用本文件的 AllSlots 清单，档位成员仍只在该清单一处声明；reviewValve 复用 valve.go 的
-// reviewValveValues，审核阀门成员仍在 valve.go 一处声明。
+// llmSlot / reviewValve（取值空间固定，条目在注册时快照）。agentKind 复用
+// agentKindValues，Agent 类型成员仍只在本文件一处声明；agentRunStatus 复用 agentRunStatusValues，
+// 运行现场状态成员仍只在本文件一处声明；agentRunPhase 复用 agentRunPhaseValues，运行生命周期
+// 阶段成员仍只在本文件一处声明；agentInteractionState / agentInteractionSubstate 复用本文件的
+// 两份取值序列，会话交互状态与子状态成员仍只在本文件一处声明；memoryKind / memoryStatus 复用
+// 本文件的两份取值序列，记忆类别/状态成员仍只在本文件一处声明；llmToolSource 复用
+// toolSourceValues；llmSlot 的取值空间直接复用本文件的 AllSlots 清单，档位成员仍只在该清单
+// 一处声明；reviewValve 复用 valve.go 的 reviewValveValues，审核阀门成员仍在 valve.go 一处声明。
 func init() {
 	enum.Register(enum.Type{Name: "knowledgeDocStatus", Entries: enum.EntriesOf(knowledgeDocStatusValues)})
 	enum.Register(enum.Type{Name: "agentKind", Entries: enum.EntriesOf(agentKindValues)})

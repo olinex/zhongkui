@@ -77,34 +77,21 @@ func (h *EventCleanupHandler) Do(ctx context.Context, task etl.Task) error {
 
 // parseCleanupRetention 从任务载荷提取清理保留期；载荷缺失/解析失败/保留期非正值时回退默认值（7 天）。
 // 默认值由 cleanupTaskPayload.Retention 的 default 标签声明，此处经 defaults.Set 取回，不重复字面量。
-// 普通 asynq 定时任务的载荷即 sCfg.Payload（retention 位于顶层）；
-// 兼容游标任务载荷（retention 嵌于 payload 子对象）以免被误配为游标模式。
+// 清理任务固定为普通 cron 定时任务，载荷即 sCfg.Payload（retention 位于顶层）。
 func parseCleanupRetention(raw []byte) (time.Duration, error) {
-	var fallback cleanupTaskPayload
-	if err := defaults.Set(&fallback); err != nil {
+	var payload cleanupTaskPayload
+	if err := defaults.Set(&payload); err != nil {
 		return 0, errors.WithStack(err)
 	}
-	defaultRetention := fallback.Retention.Std()
+	defaultRetention := payload.Retention.Std()
 	if len(raw) == 0 {
 		return defaultRetention, nil
 	}
-	var m map[string]any
-	if err := json.Unmarshal(raw, &m); err != nil {
+	if err := json.Unmarshal(raw, &payload); err != nil {
 		return defaultRetention, errors.WithStack(err)
 	}
-	if inner, ok := m["payload"].(map[string]any); ok && len(inner) > 0 {
-		m = inner
-	}
-	data, err := json.Marshal(m)
-	if err != nil {
-		return defaultRetention, errors.WithStack(err)
-	}
-	var p cleanupTaskPayload
-	if err := json.Unmarshal(data, &p); err != nil {
-		return defaultRetention, errors.WithStack(err)
-	}
-	if p.Retention <= 0 {
+	if payload.Retention <= 0 {
 		return defaultRetention, nil
 	}
-	return p.Retention.Std(), nil
+	return payload.Retention.Std(), nil
 }

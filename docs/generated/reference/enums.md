@@ -54,7 +54,6 @@
 | --- | --- | --- |
 | `pending` | `pending` | 待恢复 |
 | `consumed` | `consumed` | 已消费 |
-| `expired` | `expired` | 已过期 |
 
 ## auditLevel
 
@@ -186,6 +185,13 @@
 | --- | --- | --- |
 | `zh-Hans` | `zh-Hans` | 简体中文 |
 | `en` | `en` | 英文 |
+
+## llmAPIMode
+
+| Key | 存储值 | 展示名 |
+| --- | --- | --- |
+| `chat` | `chat` | Chat Completions |
+| `responses` | `responses` | Response API |
 
 ## llmModelKind
 

@@ -1,11 +1,11 @@
 package llm
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/config"
 	// 标准库
 	"testing"
 
 	// 项目内部
-	"zhongkuisec.com/zhongkui/internal/ai"
 	aimodel "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/enum"
 )
@@ -14,7 +14,7 @@ import (
 // 其枚举类必须已在枚举注册表登记，且封闭取值清单内的每个字面量都是该类条目的 value。
 // 否则前端会按一个不存在的枚举类取 label，或对清单内的取值取不到 label 而裸显字面量。
 func TestParamSpecsEnumTypesRegistered(t *testing.T) {
-	for _, spec := range ai.Specs {
+	for _, spec := range config.Specs {
 		if spec.EnumType == "" {
 			continue
 		}

@@ -10,6 +10,7 @@
 - [func New\(msg string\) error](<#New>)
 - [func Newf\(format string, args ...any\) error](<#Newf>)
 - [func WithStack\(err error\) error](<#WithStack>)
+- [func Wrapf\(err error, format string, args ...any\) error](<#Wrapf>)
 
 
 <a name="As"></a>
@@ -102,4 +103,19 @@ result, err := someExternalLib.DoSomething()
 if err != nil {
     return WithStack(err)
 }
+```
+
+<a name="Wrapf"></a>
+## func Wrapf
+
+```go
+func Wrapf(err error, format string, args ...any) error
+```
+
+Wrapf 为已有错误添加上下文并保留错误链；err 为 nil 时返回 nil。 关闭堆栈时仍保留可 errors.Is/As 的错误链，只是不附加调用栈。
+
+示例:
+
+```
+return errors.Wrapf(err, "load config %q", path)
 ```

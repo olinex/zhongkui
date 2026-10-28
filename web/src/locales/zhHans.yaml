@@ -321,6 +321,7 @@ model:
       id: ID
       name: 名称
       kind: 模型类型
+      apiMode: API 模式
       baseURL: 接入地址
       apiKey: 凭据
       model: 模型名
@@ -341,6 +342,9 @@ model:
       updatedAt: 更新时间
       updatedAtTime: 更新时间
       updatedAtDate: 更新日期
+    apiMode:
+      chat: Chat Completions
+      responses: Responses
     validation:
       jsonObject: "{path}必须是合法的 JSON 对象"
       jsonValue: "{path}必须是合法的 JSON 值"
@@ -1385,7 +1389,11 @@ page:
     compressFailed: 上下文压缩失败
     approvalTitle: 工具调用审批
     approvalWaiting: 等待审批
+    approvalHint: 请逐项批准或拒绝，全部决定后自动继续
+    approvalPrev: 上一项
+    approvalNext: 下一项
     approvalParams: 调用参数
+    approvalResult: 调用结果
     approve: 批准
     reject: 拒绝
     approved: 已批准
@@ -1411,6 +1419,8 @@ page:
     branchTitle: "{title}（分支）"
     branchCreated: 已创建分支会话
     usageTokens: "{count} tokens"
+    usagePromptTokens: "输入 {count} tokens"
+    usageCompletionTokens: "输出 {count} tokens"
     usageElapsed: "耗时 {seconds}s"
     rollbackMessage: 回退
     deleteMessage: 删除
@@ -1427,13 +1437,16 @@ page:
     questionnaireUnavailable: 本次提问已失效，无法提交作答，请直接发起新的提问
     questionnaireReanswer: 重新回答
     questionnaireReanswerBusy: 本轮仍在生成，完成后可重新回答
-    confirmReanswerQuestionnaire: 确定重新回答吗？本问之后的内容将被清空并重新生成。
-    approvalRerun: 重新授权
-    approvalRerunBusy: 本轮仍在生成，完成后可重新授权
-    confirmRerunApproval: 确定重新授权吗？本回合之后的内容将被清空并重新生成。
+    confirmReanswerQuestionnaire: 确定重新回答吗？该问卷之后的回答将被清除，你可以重新作答。
+    approvalRerun: 重新审批
+    approvalRerunBusy: 本轮仍在生成，完成后可重新审批
+    confirmRerunApproval: 确定重新审批吗？该审批之后的回答将被清除，你可以重新选择批准或拒绝。
     questionnaireNoAnswer: 未作答
     questionnairePendingHint: AI 正在等待你回答上方的问题，请先完成作答
     questionnaireJump: 查看问题
+    blockNav: 块间快速跳读
+    blockPrev: 上一块
+    blockNext: 下一块
     lockedHint: "会话{label}（{used}/{max} 轮），回滚历史消息后可继续提问"
     lockedReject: 会话已达提问轮次上限，请先回滚历史消息后再提问
     stateGuardReject: 当前会话状态暂不允许该操作，请稍后再试
@@ -1526,6 +1539,7 @@ page:
     dimensionsHint: 向量维度由后端在绑定 embedding 档位时探测确定；如需调整索引维度，请联系运维在服务器上执行
     extraBodyHint: '为该模型每次请求自动合并的 JSON 对象（例如 {''{"top_k": 20}''}）；留空表示不附加'
     thinkingHint: 字段名与开启/关闭取值三者齐备时生效；留空表示该模型不支持思考开关
+    apiModeHint: 仅对话模型可选；Responses 使用 Agentic 消息协议，工具调用与中断续跑语义一致
     advancedTitle: 高级配置
     advancedHint: 额外请求字段与思考开关，均为可选；仅对话模型适用
   llmBindingAdmin:

@@ -176,7 +176,7 @@ func TestTagEventRecordHitRecords(t *testing.T) {
 
 		Convey("精确过滤基于 timestamp：created_at 晚于窗口的 pcap 回放行仍返回", func() {
 			// 模拟 pcap 回放/历史导入：流量时间在窗口内（timestamp=now-1min），
-			// 入库时间远晚于窗口（created_at=now+2h），旧实现按 created_at 上界过滤会误排
+			// 入库时间远晚于窗口（created_at=now+2h），若按 created_at 上界过滤会误排
 			insertHttpTransportRowMeta(rawDB, v1, middlewares.DefaultNamespace, "GET", "api.example.com", "/admin/users", now.Add(-time.Minute), now.Add(2*time.Hour))
 
 			w := doTagEventRuleRequest(r, http.MethodPost, tagEventRecordHitPath(), reqIn(serializer.HexUUIDs{v1}))

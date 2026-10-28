@@ -651,7 +651,7 @@ func TagRuleValidate(c *gin.Context) {
 // TagRuleModelMetadata 处理获取标签规则目标模型输入字段元信息的请求。
 // 返回输入文档扁平化字段元信息列表（按字段名排序，Description 按请求语言翻译）
 // 与合法标签维度选项列表；供前端 Rego 编辑器自动补全与 dimension 下拉使用；
-// 未注册模型返回 400 + 错误码 1107。
+// 未注册模型返回 400 + 错误码 1203。
 func TagRuleModelMetadata(c *gin.Context) {
 	var in TagRuleModelIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
@@ -678,7 +678,7 @@ func TagRuleModelMetadata(c *gin.Context) {
 // TagRuleModelSamples 处理获取标签规则目标模型系统样例列表的请求。
 // 模型在当前命名空间下无样例时懒供给（default 零值文档，HttpTransport 额外预置 http-example）后返回；
 // 样例按命名空间隔离，仅返回当前请求命名空间的样例；
-// 样例输入文档反序列化为 map；未注册模型返回 400 + 错误码 1107。
+// 样例输入文档反序列化为 map；未注册模型返回 400 + 错误码 1203。
 func TagRuleModelSamples(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {

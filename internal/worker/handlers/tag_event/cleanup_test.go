@@ -52,12 +52,6 @@ func TestParseCleanupRetention(t *testing.T) {
 			So(err, ShouldBeNil)
 			So(got, ShouldResemble, 48*time.Hour)
 		})
-
-		Convey("游标包裹载荷的保留期兼容", func() {
-			got, err := parseCleanupRetention([]byte(`{"triggerAt":"2026-01-01T00:00:00Z","payload":{"retention":"48h"}}`))
-			So(err, ShouldBeNil)
-			So(got, ShouldResemble, 48*time.Hour)
-		})
 	})
 }
 

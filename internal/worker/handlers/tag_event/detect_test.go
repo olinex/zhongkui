@@ -53,7 +53,7 @@ func TestParseCursorTaskPayload(t *testing.T) {
 			So(err, ShouldNotBeNil)
 		})
 
-		Convey("非游标载荷（旧版配置 JSON）：解析成功但 TriggerAt 为零值", func() {
+		Convey("缺失 triggerAt：解析成功但为零值（由处理器拒绝）", func() {
 			triggerAt, _, err := pipeline.ParseCursorTaskPayload([]byte(`{"cronSpec":"* * * * *","enabled":true}`))
 			So(err, ShouldBeNil)
 			So(triggerAt.IsZero(), ShouldBeTrue)

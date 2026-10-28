@@ -161,7 +161,7 @@ LlmParamReset 处理恢复 Agent 参数出厂值的请求。 按分组（Group �
 func LlmParamSet(c *gin.Context)
 ```
 
-LlmParamSet 处理批量写入 Agent 参数的请求。 先全量校验（键必须已声明、值必须符合注册表声明的类型），校验通过后再逐条写入， 避免部分写入后因后续条目非法而中断；空值等价于恢复出厂值（把当前值写回 default\_value），与「参数记录恒存在」的启动期强校验保持一致。
+LlmParamSet 处理批量写入 Agent 参数的请求。 先全量校验（键必须已声明、值必须符合注册表声明的类型、跨键关系必须成立），校验通过后 再逐条写入，避免部分写入后因后续条目非法而中断；空值等价于恢复出厂值（把当前值写回 default\_value），与「参数记录恒存在」的启动期强校验保持一致。跨键关系在这里提前拦截， 避免把库改成下次启动无法通过校验的状态。
 
 <a name="LlmToolBatchDelete"></a>
 ## func LlmToolBatchDelete
@@ -233,7 +233,7 @@ McpServerListGet 处理获取 MCP 服务器注册表列表的请求。 支持分
 func McpServerSync(c *gin.Context)
 ```
 
-McpServerSync 处理把远端工具清单同步到工具注册表的请求。 经 ai.ProbeMCPServer 取回远端 tools/list 后与 llm\_tools 中该服务器的行（source='mcp'、 mcp\_server\_id=:id）对账：新工具以 enabled=false 新增，已存在工具保留 enabled 并刷新 description / remote\_name，远端已不存在的工具被删除。全程在一个事务里完成，一致后重建运行时 并广播变更。
+McpServerSync 处理把远端工具清单同步到工具注册表的请求。 经 llminfra.ProbeMCPServer 取回远端 tools/list 后与 llm\_tools 中该服务器的行（source='mcp'、 mcp\_server\_id=:id）对账：新工具以 enabled=false 新增，已存在工具保留 enabled 并刷新 description / remote\_name，远端已不存在的工具被删除。全程在一个事务里完成，一致后重建运行时 并广播变更。
 
 <a name="McpServerTest"></a>
 ## func McpServerTest
@@ -242,7 +242,7 @@ McpServerSync 处理把远端工具清单同步到工具注册表的请求。 �
 func McpServerTest(c *gin.Context)
 ```
 
-McpServerTest 处理 MCP 服务器连通性测试请求。 不落库、不产生任何副作用；支持「已注册服务器 id」（读取解密凭据）与「完整端点配置」两种用法。 探测经 ai.ProbeMCPServer 执行 MCP initialize 握手 \+ tools/list，返回远端发现的工具数量与名称 清单；失败（不可达、握手失败等）返回明确的英文错误。本接口耗时较长，服务端不设额外上限， 超时由 timeoutSeconds / 请求上下文约束。
+McpServerTest 处理 MCP 服务器连通性测试请求。 不落库、不产生任何副作用；支持「已注册服务器 id」（读取解密凭据）与「完整端点配置」两种用法。 探测经 llminfra.ProbeMCPServer 执行 MCP initialize 握手 \+ tools/list，返回远端发现的工具数量与名称 清单；失败（不可达、握手失败等）返回明确的英文错误。本接口耗时较长，服务端不设额外上限， 超时由 timeoutSeconds / 请求上下文约束。
 
 <a name="McpServerUpdate"></a>
 ## func McpServerUpdate
@@ -344,6 +344,8 @@ type LlmModelCreateIn struct {
     ThinkingOnValue string `json:"thinkingOnValue"`
     // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
     ThinkingOffValue string `json:"thinkingOffValue"`
+    // APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
+    APIMode llm.APIMode `json:"apiMode" binding:"max=16"`
 }
 ```
 
@@ -388,6 +390,8 @@ type LlmModelDetailOut struct {
     ThinkingOnValue string `json:"thinkingOnValue"`
     // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
     ThinkingOffValue string `json:"thinkingOffValue"`
+    // APIMode 对话模型接口形态：chat（默认）| responses
+    APIMode llm.APIMode `json:"apiMode"`
 }
 ```
 
@@ -482,6 +486,8 @@ type LlmModelUpdateIn struct {
     ThinkingOnValue string `json:"thinkingOnValue"`
     // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
     ThinkingOffValue string `json:"thinkingOffValue"`
+    // APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
+    APIMode llm.APIMode `json:"apiMode" binding:"max=16"`
 }
 ```
 

@@ -53,8 +53,7 @@
 ```go
 const (
     // Prefix 配置前缀，用于在配置文件中标识任务队列相关配置。
-    // 例如，完整的配置路径为 "pipeline.<queue_name>.<config_field>"。
-    // 保留 "pipeline" 原值以兼容既有配置文件与运行环境。
+    // 完整的配置路径为 "pipeline.<queue_name>.<config_field>"。
     Prefix = "pipeline"
 )
 ```

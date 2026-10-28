@@ -1,12 +1,14 @@
 package ai
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/contract"
+	"zhongkuisec.com/zhongkui/internal/ai/retrieval"
 	// 第三方
 	"github.com/cloudwego/eino/components/retriever"
 	"github.com/gin-gonic/gin"
 
 	// 项目内部
-	ai "zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/knowledge"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/pkg/sse"
@@ -36,8 +38,8 @@ type RetrievalWeightsIn struct {
 	Keyword float64 `json:"keyword"`
 }
 
-// DryRunOut 定义知识库检索试运行响应输出（与 ai.DryRunResult 同构）。
-type DryRunOut = ai.DryRunResult
+// DryRunOut 定义知识库检索试运行响应输出（与 knowledge.DryRunResult 同构）。
+type DryRunOut = knowledge.DryRunResult
 
 // RetrievalWeightsOut weighted 融合权重（视图层独立定义，避免直接序列化检索层权重类型）。
 type RetrievalWeightsOut struct {
@@ -99,25 +101,25 @@ func RetrievalDryRunStream(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	opts := []retriever.Option{ai.WithNamespace(namespace)}
+	opts := []retriever.Option{knowledge.WithNamespace(namespace)}
 	if len(in.DocIDs) > 0 {
-		opts = append(opts, ai.WithDocIDs(in.DocIDs))
+		opts = append(opts, knowledge.WithDocIDs(in.DocIDs))
 	}
 	if in.TopK > 0 {
-		opts = append(opts, ai.WithRetrieveTopK(in.TopK))
+		opts = append(opts, knowledge.WithRetrieveTopK(in.TopK))
 	}
 	if in.Candidates > 0 {
-		opts = append(opts, ai.WithCandidates(in.Candidates))
+		opts = append(opts, knowledge.WithCandidates(in.Candidates))
 	}
 	if in.Fusion != "" {
-		opts = append(opts, ai.WithFusion(in.Fusion))
+		opts = append(opts, knowledge.WithFusion(in.Fusion))
 	}
 	if in.Weights.Vector != 0 || in.Weights.Keyword != 0 {
-		opts = append(opts, ai.WithWeights(ai.FusionWeights{Vector: in.Weights.Vector, Keyword: in.Weights.Keyword}))
+		opts = append(opts, knowledge.WithWeights(retrieval.FusionWeights{Vector: in.Weights.Vector, Keyword: in.Weights.Keyword}))
 	}
 	sseWriter := sse.NewSSEWriter(c.Writer)
 	// 阶段事件映射：带增量输出的事件走 delta 事件（携带阶段标识），状态事件走 stage 事件
-	report := func(ev ai.StageEvent) error {
+	report := func(ev contract.StageEvent) error {
 		if ev.Delta != "" {
 			return sseWriter.SendStageDelta(string(ev.Stage), ev.Delta)
 		}

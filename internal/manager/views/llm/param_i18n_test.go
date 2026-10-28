@@ -1,12 +1,12 @@
 package llm
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/config"
 	// 标准库
 	"fmt"
 	"testing"
 
 	// 项目内部
-	"zhongkuisec.com/zhongkui/internal/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
@@ -25,7 +25,7 @@ func TestParamSpecsI18nKeysComplete(t *testing.T) {
 		t.Fatalf("translate.L(%q) = %q, want the key itself; the miss check of this test is unsound", missingKeySentinel, got)
 	}
 	for _, supported := range base.SupportLanguages {
-		for _, spec := range ai.Specs {
+		for _, spec := range config.Specs {
 			for _, suffix := range []string{"label", "comment"} {
 				key := fmt.Sprintf("param.%s.%s", spec.Key, suffix)
 				if got := translate.L(&supported, key, nil); got == key {

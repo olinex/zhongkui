@@ -24,6 +24,7 @@ LlmModel 表示一个注册到平台的 LLM 模型端点（chat 或 embedding）
 | deleted_at | *time.Time | 是 | - | 软删除时间 |
 | name | VARCHAR(64) | 是 | - | Name 模型的本地标识，全局唯一（uq_llm_models_name） |
 | kind | VARCHAR(16) | 是 | - | Kind 模型类型：chat（对话）\| embedding（向量化），取值见视图层 llmModelKind 枚举类 |
+| api_mode | VARCHAR(16) | 否 | chat | APIMode 模型端点使用的接口模式：chat（Chat Completions，默认）\| responses（Response API）； responses 仅对 chat 类模型有效，embedding 模型恒为 chat。取值空间与解析/校验见 internal/pkg/llm （llm.APIMode / llmAPIMode 枚举类）。 |
 | base_url | VARCHAR(512) | 是 | - | BaseURL 模型端点的基地址（OpenAI 兼容 API），如 https://api.openai.com/v1 |
 | api_key | BYTEA | 是 | - | APIKey 访问模型端点的凭据，以加密形式持久化（crypto serializer 密文入库，BYTEA 列）； 明文经 APIKeyData() 获取 |
 | model | VARCHAR(128) | 是 | - | ModelName 供应商侧的模型名，如 gpt-4o-mini、text-embedding-3-small； 列名保持 model，Go 字段名取 ModelName 是因为内嵌的 gorm.Model 已占用 Model 标识符 |

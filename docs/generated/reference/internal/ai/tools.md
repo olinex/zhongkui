@@ -107,6 +107,9 @@ type KnowledgeHit struct {
     // Complete 内容是否为整篇文档展开结果（small-to-big）：为 true 时不再按 SnippetLimit 截断，
     // 由上层（internal/ai）在检索结果上标记。
     Complete bool
+    // Citation 本次运行内稳定的来源编号（1 起，由上层采集器去重后分配）；模型在正文中引用该条
+    // 内容时据此标注 [citation]。0 表示未分配（如采集器缺失）。
+    Citation int
 }
 ```
 

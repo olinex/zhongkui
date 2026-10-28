@@ -76,28 +76,27 @@
 1101 = "User Old Password Check Failed"
 1102 = "User Username Or Email Already Exist"
 1103 = "Too Many Access Key"
-1104 = "Tag Rule Validation Failed"
-1105 = "Tag Event Rule Validation Failed"
-1106 = "Tag Rule Runtime Validation Failed"
-1107 = "Tag Rule Target Model Not Registered"
-1108 = "Frontend Config Has Been Updated By Another Browser, Please Refresh And Retry"
-1109 = "Frontend Config Sync Is Not Enabled"
-1110 = "Tag Rule Sample Input Cannot Be Deserialized Into Target Model"
-1111 = "Notification Send Failed"
-1112 = "Invalid Scheduler Task Config"
-1113 = "Password reset is unavailable. Please contact the administrator or try again later"
-1114 = "The password reset link is invalid or expired, please request a new one"
-1115 = "The slot binding is incompatible with the current system configuration, adjust it as described in the error details and retry"
-1116 = "The pending API invocation no longer exists, please start a new question"
-1117 = "This API invocation has already been processed, please do not submit it again"
-1118 = "This API invocation has timed out, please start a new question"
-1119 = "The builtin system namespace is protected and cannot be deleted"
-1120 = "There is no live run for this session"
-1121 = "The live run of this session has expired"
-1122 = "You are not allowed to access the live run of this session"
-1123 = "Too many requests, please try again later"
-1124 = "The session has reached the maximum number of turns, please roll back and retry"
-1125 = "The current session state does not allow this operation, please try again later"
+1104 = "Password reset is unavailable. Please contact the administrator or try again later"
+1105 = "The password reset link is invalid or expired, please request a new one"
+1106 = "Too many requests, please try again later"
+1200 = "Tag Rule Validation Failed"
+1201 = "Tag Event Rule Validation Failed"
+1202 = "Tag Rule Runtime Validation Failed"
+1203 = "Tag Rule Target Model Not Registered"
+1204 = "Tag Rule Sample Input Cannot Be Deserialized Into Target Model"
+1300 = "The pending API invocation no longer exists, please start a new question"
+1301 = "This API invocation has already been processed, please do not submit it again"
+1302 = "There is no live run for this session"
+1303 = "The live run of this session has expired"
+1304 = "You are not allowed to access the live run of this session"
+1305 = "The session has reached the maximum number of turns, please roll back and retry"
+1306 = "The current session state does not allow this operation, please try again later"
+1400 = "Frontend Config Has Been Updated By Another Browser, Please Refresh And Retry"
+1401 = "Frontend Config Sync Is Not Enabled"
+1402 = "Notification Send Failed"
+1403 = "Invalid Scheduler Task Config"
+1404 = "The slot binding is incompatible with the current system configuration, adjust it as described in the error details and retry"
+1405 = "The builtin system namespace is protected and cannot be deleted"
 
 [error]
 emptyUrlParam = "The url param `%s` is nil or empty"
@@ -130,6 +129,7 @@ llmParamValueNotAllowed = "parameter `%q` expects one of %s, got `%q`"
 llmModelNameEmpty = "model name must be non-empty"
 llmModelNameExists = "model name `%q` already exists"
 llmModelContextTokensInvalid = "context tokens must be a positive integer (required for chat models)"
+apiModeInvalid = "api mode must be chat or responses; responses is only available for chat models"
 llmModelBound = "model `%q` is bound to a slot; unbind it before deleting"
 extraBodyInvalid = "the advanced request config must be a valid JSON object"
 thinkingValueInvalid = "the thinking on/off values must be valid JSON"
@@ -2499,6 +2499,13 @@ other = "Knowledge Retrieval"
 [enum.agentKind.rego]
 other = "Rego Rule Generation"
 
+# Model API mode (enum class llmAPIMode)
+[enum.llmAPIMode.chat]
+other = "Chat Completions"
+
+[enum.llmAPIMode.responses]
+other = "Response API"
+
 # Long-term memory kind (enum class memoryKind)
 [enum.memoryKind.fact]
 other = "Fact"
@@ -2811,18 +2818,6 @@ other = "Recommend next steps"
 [param.agent.nextStepsEnabled.comment]
 other = "Whether to automatically generate recommended next steps after each assistant answer; when disabled, nothing is generated or shown"
 
-[param.agent.businessSectionTitle.label]
-other = "Business Scene Section Title"
-
-[param.agent.businessSectionTitle.comment]
-other = "Section title of the current business scene part inside the user message"
-
-[param.agent.questionSectionTitle.label]
-other = "Question Section Title"
-
-[param.agent.questionSectionTitle.comment]
-other = "Section title of the question part inside the user message"
-
 [param.agent.retrievedDocSnippetLimit.label]
 other = "Knowledge Search Snippet Limit"
 
@@ -2839,7 +2834,7 @@ other = "Slot used when none is explicitly requested and the call site declares 
 other = "Max Tool Rounds"
 
 [param.agent.maxToolRounds.comment]
-other = "Maximum number of tool-call rounds in a single turn; when the bound is reached with tool calls still pending, the text of that round becomes the answer"
+other = "Maximum tool-call rounds in one autonomous run (reset after a human approval/questionnaire); when the bound is reached with tool calls still pending, the text of that round becomes the answer"
 
 [param.agent.maxToolResultBytes.label]
 other = "Tool Result Byte Limit"
@@ -2945,12 +2940,6 @@ other = "Long-term Memory Switch"
 
 [param.memory.enabled.comment]
 other = "Master switch of long-term memory; when off, generation requests skip memory retrieval and injection without any error"
-
-[param.memory.sectionTitle.label]
-other = "Memory Section Title"
-
-[param.memory.sectionTitle.comment]
-other = "Section title used when long-term memories are injected into the prompt"
 
 [param.memory.topK.label]
 other = "Memory Injection Count"

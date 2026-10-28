@@ -1200,21 +1200,21 @@ type HeaderOption struct {
 
 ```go
 type HttpTransportListGetFilterBy struct {
-    TimestampFrom timestampFromHttpTransportListGetFilterByItem `mapstructure:"timestampFrom" binding:"required"`
-    TimestampTo   timestampToHttpTransportListGetFilterByItem   `mapstructure:"timestampTo" binding:"required"`
-    CreatedAtFrom createdAtFromHttpTransportListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
-    CreatedAtTo   createdAtToHttpTransportListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
-    Namespace     namespaceHttpTransportListGetFilterByItem     `mapstructure:"namespace" binding:"required"`
-    SessionID     *sessionIDHttpTransportListGetFilterByItem    `mapstructure:"sessionID"`
-    ClientIp      *clientIpHttpTransportListGetFilterByItem     `mapstructure:"clientIp"`
-    ServerIp      *serverIpHttpTransportListGetFilterByItem     `mapstructure:"serverIp"`
-    ClientPort    *clientPortHttpTransportListGetFilterByItem   `mapstructure:"clientPort"`
-    ServerPort    *serverPortHttpTransportListGetFilterByItem   `mapstructure:"serverPort"`
-    Method        *methodHttpTransportListGetFilterByItem       `mapstructure:"method"`
-    Host          *hostHttpTransportListGetFilterByItem         `mapstructure:"host"`
-    Path          *pathHttpTransportListGetFilterByItem         `mapstructure:"path"`
-    FileExt       *fileExtHttpTransportListGetFilterByItem      `mapstructure:"fileExt"`
-    HttpVersion   *httpVersionHttpTransportListGetFilterByItem  `mapstructure:"httpVersion"`
+    TimestampFrom *timestampFromHttpTransportListGetFilterByItem `mapstructure:"timestampFrom"`
+    TimestampTo   *timestampToHttpTransportListGetFilterByItem   `mapstructure:"timestampTo"`
+    CreatedAtFrom createdAtFromHttpTransportListGetFilterByItem  `mapstructure:"createdAtFrom" binding:"required"`
+    CreatedAtTo   createdAtToHttpTransportListGetFilterByItem    `mapstructure:"createdAtTo" binding:"required"`
+    Namespace     namespaceHttpTransportListGetFilterByItem      `mapstructure:"namespace" binding:"required"`
+    SessionID     *sessionIDHttpTransportListGetFilterByItem     `mapstructure:"sessionID"`
+    ClientIp      *clientIpHttpTransportListGetFilterByItem      `mapstructure:"clientIp"`
+    ServerIp      *serverIpHttpTransportListGetFilterByItem      `mapstructure:"serverIp"`
+    ClientPort    *clientPortHttpTransportListGetFilterByItem    `mapstructure:"clientPort"`
+    ServerPort    *serverPortHttpTransportListGetFilterByItem    `mapstructure:"serverPort"`
+    Method        *methodHttpTransportListGetFilterByItem        `mapstructure:"method"`
+    Host          *hostHttpTransportListGetFilterByItem          `mapstructure:"host"`
+    Path          *pathHttpTransportListGetFilterByItem          `mapstructure:"path"`
+    FileExt       *fileExtHttpTransportListGetFilterByItem       `mapstructure:"fileExt"`
+    HttpVersion   *httpVersionHttpTransportListGetFilterByItem   `mapstructure:"httpVersion"`
 }
 ```
 
@@ -1306,17 +1306,17 @@ func (s *HttpTransportListGetSearchIn) ResolveSelectColumns() []string
 
 ```go
 type Ipv4TcpListGetFilterBy struct {
-    TimestampFrom timestampFromIpv4TcpListGetFilterByItem `mapstructure:"timestampFrom" binding:"required"`
-    TimestampTo   timestampToIpv4TcpListGetFilterByItem   `mapstructure:"timestampTo" binding:"required"`
-    CreatedAtFrom createdAtFromIpv4TcpListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
-    CreatedAtTo   createdAtToIpv4TcpListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
-    Namespace     namespaceIpv4TcpListGetFilterByItem     `mapstructure:"namespace" binding:"required"`
-    SessionID     *sessionIDIpv4TcpListGetFilterByItem    `mapstructure:"sessionID"`
-    TcpStreamID   *tcpStreamIDIpv4TcpListGetFilterByItem  `mapstructure:"tcpStreamID"`
-    Ipv4Src       *ipv4SrcIpv4TcpListGetFilterByItem      `mapstructure:"ipv4Src"`
-    Ipv4Dst       *ipv4DstIpv4TcpListGetFilterByItem      `mapstructure:"ipv4Dst"`
-    SrcPort       *srcPortIpv4TcpListGetFilterByItem      `mapstructure:"srcPort"`
-    DstPort       *dstPortIpv4TcpListGetFilterByItem      `mapstructure:"dstPort"`
+    TimestampFrom *timestampFromIpv4TcpListGetFilterByItem `mapstructure:"timestampFrom"`
+    TimestampTo   *timestampToIpv4TcpListGetFilterByItem   `mapstructure:"timestampTo"`
+    CreatedAtFrom createdAtFromIpv4TcpListGetFilterByItem  `mapstructure:"createdAtFrom" binding:"required"`
+    CreatedAtTo   createdAtToIpv4TcpListGetFilterByItem    `mapstructure:"createdAtTo" binding:"required"`
+    Namespace     namespaceIpv4TcpListGetFilterByItem      `mapstructure:"namespace" binding:"required"`
+    SessionID     *sessionIDIpv4TcpListGetFilterByItem     `mapstructure:"sessionID"`
+    TcpStreamID   *tcpStreamIDIpv4TcpListGetFilterByItem   `mapstructure:"tcpStreamID"`
+    Ipv4Src       *ipv4SrcIpv4TcpListGetFilterByItem       `mapstructure:"ipv4Src"`
+    Ipv4Dst       *ipv4DstIpv4TcpListGetFilterByItem       `mapstructure:"ipv4Dst"`
+    SrcPort       *srcPortIpv4TcpListGetFilterByItem       `mapstructure:"srcPort"`
+    DstPort       *dstPortIpv4TcpListGetFilterByItem       `mapstructure:"dstPort"`
 }
 ```
 
@@ -1408,17 +1408,17 @@ func (s *Ipv4TcpListGetSearchIn) ResolveSelectColumns() []string
 
 ```go
 type Ipv6TcpListGetFilterBy struct {
-    TimestampFrom timestampFromIpv6TcpListGetFilterByItem `mapstructure:"timestampFrom" binding:"required"`
-    TimestampTo   timestampToIpv6TcpListGetFilterByItem   `mapstructure:"timestampTo" binding:"required"`
-    CreatedAtFrom createdAtFromIpv6TcpListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
-    CreatedAtTo   createdAtToIpv6TcpListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
-    Namespace     namespaceIpv6TcpListGetFilterByItem     `mapstructure:"namespace" binding:"required"`
-    SessionID     *sessionIDIpv6TcpListGetFilterByItem    `mapstructure:"sessionID"`
-    TcpStreamID   *tcpStreamIDIpv6TcpListGetFilterByItem  `mapstructure:"tcpStreamID"`
-    Ipv6Src       *ipv6SrcIpv6TcpListGetFilterByItem      `mapstructure:"ipv6Src"`
-    Ipv6Dst       *ipv6DstIpv6TcpListGetFilterByItem      `mapstructure:"ipv6Dst"`
-    SrcPort       *srcPortIpv6TcpListGetFilterByItem      `mapstructure:"srcPort"`
-    DstPort       *dstPortIpv6TcpListGetFilterByItem      `mapstructure:"dstPort"`
+    TimestampFrom *timestampFromIpv6TcpListGetFilterByItem `mapstructure:"timestampFrom"`
+    TimestampTo   *timestampToIpv6TcpListGetFilterByItem   `mapstructure:"timestampTo"`
+    CreatedAtFrom createdAtFromIpv6TcpListGetFilterByItem  `mapstructure:"createdAtFrom" binding:"required"`
+    CreatedAtTo   createdAtToIpv6TcpListGetFilterByItem    `mapstructure:"createdAtTo" binding:"required"`
+    Namespace     namespaceIpv6TcpListGetFilterByItem      `mapstructure:"namespace" binding:"required"`
+    SessionID     *sessionIDIpv6TcpListGetFilterByItem     `mapstructure:"sessionID"`
+    TcpStreamID   *tcpStreamIDIpv6TcpListGetFilterByItem   `mapstructure:"tcpStreamID"`
+    Ipv6Src       *ipv6SrcIpv6TcpListGetFilterByItem       `mapstructure:"ipv6Src"`
+    Ipv6Dst       *ipv6DstIpv6TcpListGetFilterByItem       `mapstructure:"ipv6Dst"`
+    SrcPort       *srcPortIpv6TcpListGetFilterByItem       `mapstructure:"srcPort"`
+    DstPort       *dstPortIpv6TcpListGetFilterByItem       `mapstructure:"dstPort"`
 }
 ```
 
@@ -2141,14 +2141,14 @@ func (s *NamespaceListGetSearchIn) ResolveSelectColumns() []string
 
 ```go
 type NetworkStackListGetFilterBy struct {
-    TimestampFrom timestampFromNetworkStackListGetFilterByItem `mapstructure:"timestampFrom" binding:"required"`
-    TimestampTo   timestampToNetworkStackListGetFilterByItem   `mapstructure:"timestampTo" binding:"required"`
-    CreatedAtFrom createdAtFromNetworkStackListGetFilterByItem `mapstructure:"createdAtFrom" binding:"required"`
-    CreatedAtTo   createdAtToNetworkStackListGetFilterByItem   `mapstructure:"createdAtTo" binding:"required"`
-    TraceID       traceIDNetworkStackListGetFilterByItem       `mapstructure:"traceID" binding:"required"`
-    Namespace     *namespaceNetworkStackListGetFilterByItem    `mapstructure:"namespace"`
-    SessionID     *sessionIDNetworkStackListGetFilterByItem    `mapstructure:"sessionID"`
-    Cli2Srv       *cli2SrvNetworkStackListGetFilterByItem      `mapstructure:"cli2Srv"`
+    TimestampFrom *timestampFromNetworkStackListGetFilterByItem `mapstructure:"timestampFrom"`
+    TimestampTo   *timestampToNetworkStackListGetFilterByItem   `mapstructure:"timestampTo"`
+    CreatedAtFrom createdAtFromNetworkStackListGetFilterByItem  `mapstructure:"createdAtFrom" binding:"required"`
+    CreatedAtTo   createdAtToNetworkStackListGetFilterByItem    `mapstructure:"createdAtTo" binding:"required"`
+    TraceID       traceIDNetworkStackListGetFilterByItem        `mapstructure:"traceID" binding:"required"`
+    Namespace     *namespaceNetworkStackListGetFilterByItem     `mapstructure:"namespace"`
+    SessionID     *sessionIDNetworkStackListGetFilterByItem     `mapstructure:"sessionID"`
+    Cli2Srv       *cli2SrvNetworkStackListGetFilterByItem       `mapstructure:"cli2Srv"`
 }
 ```
 

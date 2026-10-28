@@ -7,13 +7,12 @@
 
 ### ai
 
-- [`agent_live_runs`](./ai/agent_live_runs.md) — AgentLiveRun 表示一次驻留运行（RunHub 管理的 liveRun）的持久化登记：记录运行标识、 归属（命名空间 + 会话）、生命周期阶段、已发布的最大事件序号与过期时间，供刷新后 发现并重连在途运行。
+- [`agent_checkpoints`](./ai/agent_checkpoints.md) — AgentCheckpoint 保存 eino 图一次运行的可恢复现场：挂起时由 checkpoint 存储写入，续跑按同一键恢复图 现场并跳过已完成节点，运行收敛后随之删除。
+- [`agent_interactions`](./ai/agent_interactions.md) — AgentInteraction 保存业务交互：审批、问卷与推荐的下一步各落一行，供刷新 / 重进会话时重建 可交互块（块本身由消息载荷与交互类型重新投影，不落库）。
 - [`agent_memories`](./ai/agent_memories.md) — AgentMemory 表示一条长期记忆，按「命名空间 + 属主用户 + Agent 类型 + 来源会话」归属与隔离， 仅在其来源会话内可见。
-- [`agent_message_blocks`](./ai/agent_message_blocks.md) — AgentMessageBlock 表示一条助手回答（AgentMessage）下的一个有序内容块：一轮回答的思考段、 工具调用组、授权待审、主动提问与正文段各按其真实产生时序落为一个块。
-- [`agent_messages`](./ai/agent_messages.md) — AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、正文 （Content），以及助手回复的草稿载荷（DraftJSON）与引用来源列表（CitationsJSON）。
+- [`agent_messages`](./ai/agent_messages.md) — AgentMessage 表示 AI 助手会话中的一条消息，记录消息角色（Role）、原生消息载荷 （MessageKind / Payload）、正文（Content），以及助手回复的草稿载荷（DraftJSON）与引用 来源列表（CitationsJSON）。
 - [`agent_params`](./ai/agent_params.md) — AgentParam 表示一条 Agent 行为参数记录：出厂值（DefaultValue）由 migrate fixture 注入、 只读，当前生效值（Value）可由管理接口或直接改库调整。
-- [`agent_run_events`](./ai/agent_run_events.md) — AgentRunEvent 表示驻留运行事件日志中的一条事件：按 (RunID, Seq) 唯一，payload 为 已序列化的 JSON 负载（含助手正文与引用等用户内容，经 crypto 序列化器加密落库）。
-- [`agent_runs`](./ai/agent_runs.md) — AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后， 后端把完整消息链、待执行调用列表、检索引用、档位与过期时间落库，结束本次流等待前端回传 审批决定与执行结果，再据该现场从中断处续跑。
+- [`agent_runs`](./ai/agent_runs.md) — AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后， 后端把待执行调用列表、检索引用与档位落库，结束本次流等待前端回传 审批决定与执行结果，再据该现场从中断处续跑。
 - [`agent_session_compactions`](./ai/agent_session_compactions.md) — AgentSessionCompaction 表示一次滚动摘要推进（静默滚动或压缩）留下的压缩检查点：记录推进后的 上下文起点（UptoSeq）与该时刻的摘要全文（加密落库），与 AgentSession 的 Summary/SummaryUptoSeq 对应，作为回滚时「逐级回退 start bound」的可恢复起点。
 - [`agent_sessions`](./ai/agent_sessions.md) — AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答消息 （AgentMessage），并记录会话缺省档位与状态。
 - [`knowledge_chunks`](./ai/knowledge_chunks.md) — KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元： 每个分块携带向量化表示（Embedding）与全文检索表示（Search）， 支持向量相似度检索与关键词检索。

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/contract"
 	// 标准库
 	"strconv"
 	"strings"
@@ -15,7 +16,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
-// syncProgress 是 ai.SyncReporter 的 CLI 渲染实现：以 pterm 进度条实时展示处理速度与预计
+// syncProgress 是 contract.SyncReporter 的 CLI 渲染实现：以 pterm 进度条实时展示处理速度与预计
 // 剩余时间，并在结束后打印逐条明细汇总表。它供 sync docs / sync apis / sync embeddings
 // 三条链路复用；同一实例只服务于一次 Start→Step...→Finish 生命周期。
 type syncProgress struct {
@@ -26,7 +27,7 @@ type syncProgress struct {
 	// bar 进度条实例；total<=0 或创建失败时为 nil（降级为仅上报不渲染进度条）。
 	bar *pterm.ProgressbarPrinter
 	// rows 逐条进度明细，Finish 时汇总为表格。
-	rows []ai.SyncProgressItem
+	rows []contract.SyncProgressItem
 	// total 本次待处理总条数。
 	total int
 	// done 已完成条数累计。
@@ -127,7 +128,7 @@ func (p *syncProgress) refresh() {
 }
 
 // Step 上报一条进度明细：记录明细、累加已完成条数并推进进度条。
-func (p *syncProgress) Step(item ai.SyncProgressItem) {
+func (p *syncProgress) Step(item contract.SyncProgressItem) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.rows = append(p.rows, item)
@@ -229,7 +230,7 @@ func syncETA(done, total int, elapsed time.Duration) string {
 
 // syncItemTitle 取明细条目标题：Title 非空时用 Title，为空（记忆批）时取
 // cli.sync.progress.memory-item（占位 Count）。
-func syncItemTitle(row ai.SyncProgressItem) string {
+func syncItemTitle(row contract.SyncProgressItem) string {
 	if row.Title != "" {
 		return row.Title
 	}
@@ -248,7 +249,7 @@ func syncActionLabel(action string) string {
 // buildSyncTable 组装汇总表数据：表头（条目/动作/耗时/输入 Token/输出 Token）+ 逐条明细 +
 // 合计行。合计行的「条目」列取 cli.sync.progress.total-row，「动作」列取 cli.sync.progress.count
 // （占位 Count = 各行 Count 之和），耗时与 token 列取各行之和。
-func buildSyncTable(rows []ai.SyncProgressItem) [][]string {
+func buildSyncTable(rows []contract.SyncProgressItem) [][]string {
 	data := [][]string{{
 		translate.T("cli.sync.progress.col.item", nil),
 		translate.T("cli.sync.progress.col.action", nil),

@@ -59,20 +59,24 @@
 | 术语 | 英文/标识 | 含义 | 代码位置 |
 | --- | --- | --- | --- |
 | 会话 | session | 用户与助手的一段连续对话 | `internal/models/ai` |
-| 消息块 | message block | 消息中的结构化片段：正文、工具调用、审批、引用等 | `internal/models/ai` |
-| 一次运行 | run | 从用户提问到回答结束的一次执行；可挂起、续跑、取消 | `internal/ai/agent_run.go` |
-| 长期记忆 | memory | 跨会话保留的用户/租户事实，按命名空间隔离 | `internal/ai/memory.go` |
-| 知识库 | knowledge base | 用户维护的文档集合，支持语义与关键词混合检索 | `internal/ai/knowledge_tool.go` |
+| 领域事件 | domain event | AI 助手唯一的流式 UI 协议：服务端以 SSE 下发（回合 / 消息 / 内容块 / 工具 / 交互），前端按块渲染 | `internal/ai/assistant/`、`internal/ai/turns/` |
+| 内容块 | block | 一条助手消息内的有序展示单元：思考、正文、工具调用、审批、问卷、下一步、压缩、中断提示 | `internal/ai/assistant/blocks.go` |
+| 回合 | turn | 从用户提问（或一次动作续跑）到本轮结束的一次执行；由会话内的 TurnLoop 驱动 | `internal/ai/turns/loop.go` |
+| TurnLoop | turn loop | eino ADK 的多轮会话驱动：持有输入生成、Agent 选择、事件投影、续跑映射与 checkpoint | `internal/ai/turns/loop.go` |
+| 交互 | interaction | 需要用户参与并持久化的内容块：审批、问卷、推荐的下一步 | `internal/models/ai/agent_interaction.go` |
+| 长期记忆 | memory | 跨会话保留的用户/租户事实，按命名空间隔离 | `internal/ai/memory/`（`store.go` / `summary.go` / `extract.go`） |
+| 知识库 | knowledge base | 用户维护的文档集合，支持语义与关键词混合检索 | `internal/ai/knowledge/searcher.go` |
 | 分块 | chunk | 文档检索的最小单元，携带向量与全文检索列 | `internal/models/ai` |
 | 父子索引 | small-to-big | 用小块命中、按整篇文档返回的检索策略 | `internal/ai` 检索实现 |
-| 工具 | tool | Agent 可调用的能力，分 builtin / client / MCP | `internal/ai/tool_specs.go` |
-| 客户端工具 | client tool | 由前端在用户凭据下执行的工具 | `internal/ai/client_tools.go` |
+| 工具 | tool | Agent 可调用的能力，分 builtin / client / MCP | `internal/ai/config/tool_specs.go` |
+| 客户端工具 | client tool | 由前端在用户凭据下执行的工具，用 eino 中断挂起、用动作续跑 | `agentkit/client_tools.go` |
 | 审核重要级 | audit level | 对一次客户端工具调用的风险分级：must / suggest / auto / none | `internal/ai/audit.go` |
 | 审核阀门 | review valve | 会话级的人审策略：each / auto / none | `internal/models/ai` |
 | 原生接口 | native API | 平台自身声明的 `/api/v1` 接口，登记在接口目录 | `internal/manager/views/catalog.go` |
 | 接口目录 | API catalog | 接口用途与入参/出参元信息的注册表，供文档与 AI 使用 | `internal/manager/views/catalog.go` |
 | 能力地图 | capability map | 「意图 → 接口」索引，由视图层能力声明派生并写入 `capability` 分区按需检索 | `internal/manager/views/capability.go`、`internal/ai/capability` |
-| 上下文压缩 | compaction | 把过长历史摘要化以控制上下文预算 | `internal/ai/agent_run.go` |
+| 上下文压缩 | compaction | 把过长历史摘要化以控制上下文预算，进度以 `message.compress` 事件更新压缩块 | `internal/ai/memory/`、`agentkit/compaction.go` |
+| 挂起现场 | checkpoint | eino 序列化的引擎现场，续跑据此恢复；业务挂起元数据另存 `agent_runs` | `agentkit/checkpoint.go` |
 
 ## 6. 文档体系
 

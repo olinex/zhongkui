@@ -88,7 +88,6 @@ var (
 var (
 	// schedulerName 调度器名称常量，用于标识当前服务组件。
 	// 此名称会出现在日志和监控指标中，帮助识别调度器实例。
-	// 保留 "pipeline-scheduler" 原值以兼容既有 etcd 选举与监控指标。
 	schedulerName = "pipeline-scheduler"
 
 	// SchedulerCfgEtcdPrefix etcd 键前缀常量，用于存储所有定时任务的配置。

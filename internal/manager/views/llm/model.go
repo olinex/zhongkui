@@ -13,7 +13,7 @@ import (
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/change"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
@@ -59,6 +59,8 @@ type LlmModelCreateIn struct {
 	ThinkingOnValue string `json:"thinkingOnValue"`
 	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
 	ThinkingOffValue string `json:"thinkingOffValue"`
+	// APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
+	APIMode llm.APIMode `json:"apiMode" binding:"max=16"`
 }
 
 // LlmModelUpdateIn 定义更新 LLM 模型端点的请求输入结构。
@@ -94,6 +96,8 @@ type LlmModelUpdateIn struct {
 	ThinkingOnValue string `json:"thinkingOnValue"`
 	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
 	ThinkingOffValue string `json:"thinkingOffValue"`
+	// APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
+	APIMode llm.APIMode `json:"apiMode" binding:"max=16"`
 }
 
 // LlmModelDetailOut 定义 LLM 模型端点的详情输出结构。
@@ -134,6 +138,8 @@ type LlmModelDetailOut struct {
 	ThinkingOnValue string `json:"thinkingOnValue"`
 	// ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
 	ThinkingOffValue string `json:"thinkingOffValue"`
+	// APIMode 对话模型接口形态：chat（默认）| responses
+	APIMode llm.APIMode `json:"apiMode"`
 }
 
 // LlmModelListOut 定义 LLM 模型列表的输出项结构。
@@ -244,6 +250,15 @@ func LlmModelCreate(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
+	apiMode, err := llm.ParseAPIMode(in.APIMode)
+	if err != nil {
+		response.CreateBadBodyMessageError("apiModeInvalid").AbortWithGinH(c)
+		return
+	}
+	if err := llm.ValidateAPIMode(kind, apiMode); err != nil {
+		response.CreateBadBodyMessageError("apiModeInvalid").AbortWithGinH(c)
+		return
+	}
 	name, baseURL, modelName := strings.TrimSpace(in.Name), strings.TrimSpace(in.BaseURL), strings.TrimSpace(in.Model)
 	if name == "" {
 		response.CreateBadBodyMessageError("llmModelNameEmpty").AbortWithGinH(c)
@@ -252,6 +267,7 @@ func LlmModelCreate(c *gin.Context) {
 	// 端点字段不变量由 pkgllm.ModelConfig.Validate 校验（Kind 与 Name 已在上方单独处理）
 	endpoint := llm.ModelConfig{
 		Kind:        kind,
+		APIMode:     apiMode,
 		BaseURL:     baseURL,
 		APIKey:      in.APIKey,
 		Model:       modelName,
@@ -301,6 +317,7 @@ func LlmModelCreate(c *gin.Context) {
 	instance := &aimodel.LlmModel{
 		Name:             name,
 		Kind:             kind,
+		APIMode:          apiMode,
 		BaseURL:          baseURL,
 		APIKey:           serializer.NewCrypto([]byte(in.APIKey)),
 		ModelName:        modelName,
@@ -319,7 +336,7 @@ func LlmModelCreate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindModel, instance.Name)
+	afterConfigWrite(c, change.ChangeKindModel, instance.Name)
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -373,6 +390,15 @@ func LlmModelUpdate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
+	apiMode, err := llm.ParseAPIMode(in.APIMode)
+	if err != nil {
+		response.CreateBadBodyMessageError("apiModeInvalid").AbortWithGinH(c)
+		return
+	}
+	if err := llm.ValidateAPIMode(kind, apiMode); err != nil {
+		response.CreateBadBodyMessageError("apiModeInvalid").AbortWithGinH(c)
+		return
+	}
 	name, baseURL, modelName := strings.TrimSpace(in.Name), strings.TrimSpace(in.BaseURL), strings.TrimSpace(in.Model)
 	if name == "" {
 		response.CreateBadBodyMessageError("llmModelNameEmpty").AbortWithGinH(c)
@@ -387,6 +413,7 @@ func LlmModelUpdate(c *gin.Context) {
 	endpoint := llm.ModelConfig{
 		Name:        name,
 		Kind:        kind,
+		APIMode:     apiMode,
 		BaseURL:     baseURL,
 		APIKey:      apiKey,
 		Model:       modelName,
@@ -449,9 +476,10 @@ func LlmModelUpdate(c *gin.Context) {
 		}
 	}
 	// 凭据留空时更新列中不含 api_key，保持原密文不变；未绑定 embedding 槽位时不写 dimensions
-	columns := []string{"name", "base_url", "model", "timeout_seconds", "temperature", "max_tokens", "context_tokens", "enabled", "description", "extra_body", "thinking_field", "thinking_on_value", "thinking_off_value"}
+	columns := []string{"name", "base_url", "model", "timeout_seconds", "temperature", "max_tokens", "context_tokens", "enabled", "description", "extra_body", "thinking_field", "thinking_on_value", "thinking_off_value", "api_mode"}
 	update := aimodel.LlmModel{
 		Name:             name,
+		APIMode:          apiMode,
 		BaseURL:          baseURL,
 		ModelName:        modelName,
 		TimeoutSeconds:   in.TimeoutSeconds,
@@ -478,7 +506,7 @@ func LlmModelUpdate(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindModel, name)
+	afterConfigWrite(c, change.ChangeKindModel, name)
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -522,7 +550,7 @@ func LlmModelBatchDelete(c *gin.Context) {
 		},
 	)
 	if deleted > 0 {
-		afterConfigWrite(c, ai.ChangeKindModel, fmt.Sprintf("%d models deleted", deleted))
+		afterConfigWrite(c, change.ChangeKindModel, fmt.Sprintf("%d models deleted", deleted))
 	}
 }
 
@@ -610,5 +638,6 @@ func newLlmModelDetailOut(m *aimodel.LlmModel) LlmModelDetailOut {
 		ThinkingField:    m.ThinkingField,
 		ThinkingOnValue:  m.ThinkingOnValue,
 		ThinkingOffValue: m.ThinkingOffValue,
+		APIMode:          m.APIMode,
 	}
 }

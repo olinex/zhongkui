@@ -26,9 +26,9 @@ export interface QuickStartGroup {
   builtin?: boolean;
 }
 
-// isBuiltinGroup 判断是否为内置分组；兼容旧数据（内置分组 id 恒为 "default"）
-export const isBuiltinGroup = (group: Pick<QuickStartGroup, "id" | "builtin">): boolean => {
-  return group.builtin === true || group.id === "default";
+// isBuiltinGroup 判断是否为内置分组（由 builtin 标记唯一决定，不可删除）
+export const isBuiltinGroup = (group: Pick<QuickStartGroup, "builtin">): boolean => {
+  return group.builtin === true;
 };
 
 // linkKey 为导航链接构造稳定标识（路由名 + 参数），用于去重与作为 Vue 列表 key。
@@ -48,36 +48,7 @@ const seedDefaultGroups = (): QuickStartGroup[] => {
   ];
 };
 
-// legacyNavRemap 旧导航键 → 新导航键的迁移映射。
-// 标签规则/标签事件规则经「管理 → 流量审计 → 标签事件」两次迁移，旧键已从语言包移除，
-// 持久化的快速开始配置需就地改写，避免渲染裸键；幂等可重复应用。
-const legacyNavRemap: Record<string, string | undefined> = {
-  "navbar.admin.tagRule": "navbar.tagEvent.tagRule",
-  "navbar.admin.tagEventRule": "navbar.tagEvent.tagEventRule",
-  "navbar.traffic.tagRule": "navbar.tagEvent.tagRule",
-  "navbar.traffic.tagEventRule": "navbar.tagEvent.tagEventRule",
-};
-
-// normalizeStoredGroups 迁移旧版本持久化配置：改写已迁移的导航键与路由名（幂等）。
-const normalizeStoredGroups = (groups: QuickStartGroup[]): QuickStartGroup[] => {
-  return groups.map((group) => ({
-    ...group,
-    links: group.links.map((link) => {
-      const title = legacyNavRemap[link.title] ?? link.title;
-      const routeName =
-        link.routeName === "Admin Tag Rule List" || link.routeName === "Traffic Tag Rule List"
-          ? "Tag Rule List"
-          : link.routeName === "Admin Tag Event Rule List" ||
-              link.routeName === "Traffic Tag Event Rule List"
-            ? "Tag Event Rule List"
-            : link.routeName;
-      return { ...link, title, routeName };
-    }),
-  }));
-};
-
-// parseStoredGroups 解析本地存储的分组配置，损坏数据时回退默认分组；
-// 解析后经 normalizeStoredGroups 迁移旧键，保证渲染与导航一致。
+// parseStoredGroups 解析本地存储的分组配置，损坏数据时回退默认分组
 const parseStoredGroups = (raw: string | null): QuickStartGroup[] | null => {
   if (!raw) {
     return null;
@@ -87,7 +58,7 @@ const parseStoredGroups = (raw: string | null): QuickStartGroup[] | null => {
     if (!Array.isArray(parsed)) {
       return null;
     }
-    return normalizeStoredGroups(parsed as QuickStartGroup[]);
+    return parsed as QuickStartGroup[];
   } catch {
     return null;
   }

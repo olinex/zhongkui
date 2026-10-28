@@ -76,28 +76,27 @@
 1101 = "用户旧密码验证失败"
 1102 = "用户名或邮箱已存在"
 1103 = "过多的访问密钥"
-1104 = "标签规则校验失败"
-1105 = "标签事件规则校验失败"
-1106 = "标签规则运行期校验失败"
-1107 = "标签规则目标模型未注册"
-1108 = "前端配置已被其他浏览器更新，请刷新后重试"
-1109 = "前端配置同步未开启"
-1110 = "标签规则样例输入无法反序列化为目标模型"
-1111 = "通知发送失败"
-1112 = "定时任务配置非法"
-1113 = "重置密码功能不可用，请联系管理员或稍后再试"
-1114 = "重置密码链接无效或已过期，请重新申请"
-1115 = "档位绑定与系统当前配置不兼容，请按错误详情调整后重试"
-1116 = "待审批的接口调用已不存在，请重新发起提问"
-1117 = "该接口调用已被处理，请勿重复提交"
-1118 = "本次接口调用已超时，请重新发起提问"
-1119 = "内置系统命名空间受保护，禁止删除"
-1120 = "该会话没有在途运行"
-1121 = "该会话的驻留运行已过期"
-1122 = "无权访问该会话的在途运行"
-1123 = "请求过于频繁，请稍后再试"
-1124 = "会话已达轮次上限，请回滚后再试"
-1125 = "当前会话状态不允许该操作，请稍后再试"
+1104 = "重置密码功能不可用，请联系管理员或稍后再试"
+1105 = "重置密码链接无效或已过期，请重新申请"
+1106 = "请求过于频繁，请稍后再试"
+1200 = "标签规则校验失败"
+1201 = "标签事件规则校验失败"
+1202 = "标签规则运行期校验失败"
+1203 = "标签规则目标模型未注册"
+1204 = "标签规则样例输入无法反序列化为目标模型"
+1300 = "待审批的接口调用已不存在，请重新发起提问"
+1301 = "该接口调用已被处理，请勿重复提交"
+1302 = "该会话没有在途运行"
+1303 = "该会话的驻留运行已过期"
+1304 = "无权访问该会话的在途运行"
+1305 = "会话已达轮次上限，请回滚后再试"
+1306 = "当前会话状态不允许该操作，请稍后再试"
+1400 = "前端配置已被其他浏览器更新，请刷新后重试"
+1401 = "前端配置同步未开启"
+1402 = "通知发送失败"
+1403 = "定时任务配置非法"
+1404 = "档位绑定与系统当前配置不兼容，请按错误详情调整后重试"
+1405 = "内置系统命名空间受保护，禁止删除"
 
 [error]
 emptyUrlParam = "URL参数`%s`不应为空"
@@ -130,6 +129,7 @@ llmParamValueNotAllowed = "参数 `%q` 的取值必须为 %s 之一，实际为 
 llmModelNameEmpty = "模型名称不能为空"
 llmModelNameExists = "模型名称 `%q` 已存在"
 llmModelContextTokensInvalid = "上下文容量必须是正整数（对话模型必填）"
+apiModeInvalid = "接口形态必须是 chat 或 responses；responses 仅对话模型可用"
 llmModelBound = "模型 `%q` 已绑定到档位，请先解绑再删除"
 extraBodyInvalid = "高级请求配置须为合法的 JSON 对象"
 thinkingValueInvalid = "思考开/关取值须为合法 JSON"
@@ -1979,6 +1979,13 @@ other = "知识检索"
 [enum.agentKind.rego]
 other = "Rego 规则生成"
 
+# 对话模型接口形态（枚举类 llmAPIMode）
+[enum.llmAPIMode.chat]
+other = "Chat Completions"
+
+[enum.llmAPIMode.responses]
+other = "Response API"
+
 # 长期记忆类别（枚举类 memoryKind）
 [enum.memoryKind.fact]
 other = "事实"
@@ -2282,18 +2289,6 @@ other = "推荐下一步"
 [param.agent.nextStepsEnabled.comment]
 other = "是否在每条助手回答完成后自动生成「推荐的下一步」；关闭后不生成、不展示"
 
-[param.agent.businessSectionTitle.label]
-other = "业务现场分节标题"
-
-[param.agent.businessSectionTitle.comment]
-other = "用户消息中当前业务现场分节的标题"
-
-[param.agent.questionSectionTitle.label]
-other = "提问分节标题"
-
-[param.agent.questionSectionTitle.comment]
-other = "用户消息中提问分节的标题"
-
 [param.agent.retrievedDocSnippetLimit.label]
 other = "知识检索片段截断长度"
 
@@ -2310,7 +2305,7 @@ other = "未显式指定档位且调用点未声明建议档位时使用的默�
 other = "工具调用轮数上限"
 
 [param.agent.maxToolRounds.comment]
-other = "单轮对话中工具调用循环的最大轮数，达到上限仍存在工具调用时以该轮文本作为答案"
+other = "单次自主工具循环的最大轮数（人工审批 / 问卷续跑重新计数），达到上限仍存在工具调用时以该轮文本作为答案"
 
 [param.agent.maxToolResultBytes.label]
 other = "工具结果字节上限"
@@ -2416,12 +2411,6 @@ other = "长期记忆开关"
 
 [param.memory.enabled.comment]
 other = "长期记忆总开关，关闭时生成请求跳过记忆检索与注入且不报错"
-
-[param.memory.sectionTitle.label]
-other = "记忆分节标题"
-
-[param.memory.sectionTitle.comment]
-other = "长期记忆注入提示词时使用的分节标题"
 
 [param.memory.topK.label]
 other = "记忆注入条数"

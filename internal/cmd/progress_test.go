@@ -3,9 +3,9 @@ package cmd
 import (
 	"testing"
 	"time"
+	"zhongkuisec.com/zhongkui/internal/ai/contract"
 
 	// 项目内部
-	ai "zhongkuisec.com/zhongkui/internal/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
 
@@ -102,10 +102,10 @@ func TestSyncETA(t *testing.T) {
 
 // TestSyncItemTitle 验证明细条目标题：Title 非空原样返回，为空时回退记忆批本地化标签。
 func TestSyncItemTitle(t *testing.T) {
-	if got := syncItemTitle(ai.SyncProgressItem{Title: "pkg/foo"}); got != "pkg/foo" {
+	if got := syncItemTitle(contract.SyncProgressItem{Title: "pkg/foo"}); got != "pkg/foo" {
 		t.Errorf("syncItemTitle(有标题) = %q, want %q", got, "pkg/foo")
 	}
-	got := syncItemTitle(ai.SyncProgressItem{Count: 3})
+	got := syncItemTitle(contract.SyncProgressItem{Count: 3})
 	key := "cli.sync.progress.memory-item"
 	if got == key || got == "" {
 		t.Errorf("syncItemTitle(空标题) = %q, want 本地化标签（非键名）", got)
@@ -114,12 +114,12 @@ func TestSyncItemTitle(t *testing.T) {
 
 // TestSyncActionLabel 验证动作标识本地化：非空动作返回本地化标签，空串返回 "-"。
 func TestSyncActionLabel(t *testing.T) {
-	got := syncActionLabel(ai.SyncActionCreate)
-	if got == "cli.sync.progress.action."+ai.SyncActionCreate {
-		t.Errorf("syncActionLabel(%q) 未命中本地化，返回键名 %q", ai.SyncActionCreate, got)
+	got := syncActionLabel(contract.SyncActionCreate)
+	if got == "cli.sync.progress.action."+contract.SyncActionCreate {
+		t.Errorf("syncActionLabel(%q) 未命中本地化，返回键名 %q", contract.SyncActionCreate, got)
 	}
 	if got == "" {
-		t.Errorf("syncActionLabel(%q) 返回空串", ai.SyncActionCreate)
+		t.Errorf("syncActionLabel(%q) 返回空串", contract.SyncActionCreate)
 	}
 	if blank := syncActionLabel(""); blank != "-" {
 		t.Errorf("syncActionLabel(\"\") = %q, want %q", blank, "-")
@@ -129,20 +129,20 @@ func TestSyncActionLabel(t *testing.T) {
 // TestBuildSyncTable 验证汇总表组装：表头 + 逐条明细 + 合计行，合计行取总数标签与 token 之和，
 // 零用量行 token 列显示 "-"。
 func TestBuildSyncTable(t *testing.T) {
-	rows := []ai.SyncProgressItem{
+	rows := []contract.SyncProgressItem{
 		{
 			Title:     "pkg/foo",
-			Action:    ai.SyncActionCreate,
+			Action:    contract.SyncActionCreate,
 			Count:     1,
 			ElapsedMs: 1200,
-			Usage:     ai.EmbedUsage{PromptTokens: 100},
+			Usage:     contract.EmbedUsage{PromptTokens: 100},
 		},
 		{
 			Title:     "",
-			Action:    ai.SyncActionMemory,
+			Action:    contract.SyncActionMemory,
 			Count:     5,
 			ElapsedMs: 500,
-			Usage:     ai.EmbedUsage{},
+			Usage:     contract.EmbedUsage{},
 		},
 	}
 	data := buildSyncTable(rows)

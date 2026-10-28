@@ -34,12 +34,13 @@ var (
 // 命名空间名称允许包含中文等非 ASCII 字符，而 HTTP 请求头值仅允许 ISO-8859-1（Latin-1）
 // 字符，前端在写入请求头前会先调用 encodeURIComponent 编码；否则浏览器会抛出
 // "String contains non ISO-8859-1 code point" 异常导致请求从未发出。
-// 解码失败（如旧客户端直接写入未编码的原始值）时回退使用原始值，保证兼容性。
+// 解码失败（非法百分号编码）返回空串：非法传输编码不可能是合法命名空间，由中间件按「命名空间不存在」拒绝。
 func decodeNamespace(raw string) string {
-	if decoded, err := url.PathUnescape(raw); err == nil {
-		return decoded
+	decoded, err := url.PathUnescape(raw)
+	if err != nil {
+		return ""
 	}
-	return raw
+	return decoded
 }
 
 // NamespaceMiddleware 创建一个命名空间识别中间件。

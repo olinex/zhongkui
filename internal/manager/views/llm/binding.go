@@ -1,13 +1,14 @@
 package llm
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
 	// 第三方
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/change"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
@@ -97,7 +98,7 @@ func LlmBindingListGet(c *gin.Context) {
 	}
 	// 索引维度是 embedding 档位绑定成败的关键前置信息，读不出（列未建）时以 0 出参，
 	// 由前端提示运维先执行迁移
-	indexDim, found, err := ai.ChunkEmbeddingDimension(c, db)
+	indexDim, found, err := llminfra.ChunkEmbeddingDimension(c, db)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
@@ -169,7 +170,7 @@ func LlmBindingSet(c *gin.Context) {
 			// 维度不兼容属于「请求体合法、冲突在于系统当前索引维度」的配置性拒绝，
 			// 用专门的业务码（并附含修复步骤的详情）；端点不可达 / 凭据无效等错误
 			// 仍是请求侧问题，按请求体错误透出
-			var mismatch *ai.EmbeddingDimensionMismatchError
+			var mismatch *llminfra.EmbeddingDimensionMismatchError
 			if errors.As(err, &mismatch) {
 				response.CreateLlmBindingIncompatibleError(
 					"llmBindingIncompatibleDimension",
@@ -201,7 +202,7 @@ func LlmBindingSet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindBinding, string(slot))
+	afterConfigWrite(c, change.ChangeKindBinding, string(slot))
 	response.SimpleOK.AbortWithGinH(c)
 }
 
@@ -222,6 +223,6 @@ func LlmBindingUnbind(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	afterConfigWrite(c, ai.ChangeKindBinding, string(slot))
+	afterConfigWrite(c, change.ChangeKindBinding, string(slot))
 	response.SimpleOK.AbortWithGinH(c)
 }

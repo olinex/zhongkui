@@ -2,7 +2,7 @@
   <!-- 助手消息 Markdown 渲染的唯一入口：全站仅此一处渲染助手富文本，
        因此代码高亮 / mermaid / 安全外链等规则也在此集中注册 -->
   <md-preview
-    class="assistant-markdown"
+    class="zk-chat-markdown"
     :model-value="rendered"
     :theme="theme"
     :no-mermaid="streaming"
@@ -38,7 +38,7 @@ config({
       tokens[idx].attrSet("target", "_blank");
       tokens[idx].attrSet("rel", "noopener noreferrer");
       if ((tokens[idx].attrGet("href") ?? "").includes(CITE_FRAGMENT)) {
-        tokens[idx].attrJoin("class", "assistant-citation-ref");
+        tokens[idx].attrJoin("class", "zk-chat-citation-ref");
         tokens[idx].attrSet("title", i18n.global.t("page.aiAssistant.citationOpen"));
       }
       return self.renderToken(tokens, idx, options);
@@ -68,7 +68,8 @@ const CODE_SEGMENT = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]*`)/g;
 // CITATION_MARKER 匹配正文中的来源标注 [n]；紧跟 ( 的是已有链接，不再改写
 const CITATION_MARKER = /\[(\d+)\](?!\()/g;
 
-// annotateCitations 把正文中的 [n] 改写为指向第 n 条引用的站内链接；编号越界或历史消息
+// annotateCitations 把正文中的 [n] 改写为指向第 n 条引用的站内链接：编号越界（常见于模型复用
+// 历史轮次正文里的旧 [n]）时直接移除该标注，避免正文出现当前消息没有对应来源的假引用；历史消息
 // 缺失命名空间（无法溯源）时保持原文，避免产生死链
 const annotateCitations = (text: string, citations: RetrievalResult[]): string => {
   if (!text || citations.length === 0) {
@@ -83,7 +84,10 @@ const annotateCitations = (text: string, citations: RetrievalResult[]): string =
       return segment.replace(CITATION_MARKER, (match, raw) => {
         const number = Number(raw);
         const citation = citations[number - 1];
-        if (!citation || !citation.namespaceName) {
+        if (!citation) {
+          return "";
+        }
+        if (!citation.namespaceName) {
           return match;
         }
         const href = knowledgeDocumentHref(citation.documentID, citation.namespaceName);
@@ -95,33 +99,3 @@ const annotateCitations = (text: string, citations: RetrievalResult[]): string =
 
 const rendered = computed(() => annotateCitations(props.content, props.citations));
 </script>
-
-<style scoped>
-/* 预览根容器（.md-editor）在深色主题下按 --md-bk-color 铺纯黑底，与抽屉 surface 的深灰不一致，
-   读起来像一块突兀的黑块；置为透明，让正文直接落在对话框自身背景上。
-   （内层 .md-editor-preview / .md-editor-preview-wrapper 本就没有底色，无需逐个覆盖。） */
-.assistant-markdown {
-  background-color: transparent;
-}
-
-/* 仅布局定位：内边距交由外层的 .zk-chat-bubble 承担，避免与 md-editor 默认内边距叠加 */
-.assistant-markdown :deep(.md-editor-preview) {
-  padding: 0;
-}
-
-/* 正文内来源标注：上标小号、主题主色、无下划线，与正文区分但不抢视线；
-   标注后紧跟的来源列表给出同一编号，用户可据此对照 */
-.assistant-markdown :deep(.assistant-citation-ref) {
-  margin-inline-start: 1px;
-  color: rgb(var(--v-theme-primary));
-  font-size: 0.75em;
-  font-variant-numeric: tabular-nums;
-  line-height: 0;
-  vertical-align: super;
-  text-decoration: none;
-}
-
-.assistant-markdown :deep(.assistant-citation-ref:hover) {
-  text-decoration: underline;
-}
-</style>

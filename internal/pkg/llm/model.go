@@ -33,6 +33,47 @@ func ParseModelKind(value ModelKind) (ModelKind, error) {
 	}
 }
 
+// APIMode 是对话模型使用的接口形态标识：chat（Chat Completions，*schema.Message）与
+// responses（Response API，*schema.AgenticMessage）。取值与 llm_models.api_mode 列、
+// agent_messages.message_kind 列的取值一致，决定客户端的接口实现以及消息载荷的编解码方式。
+type APIMode string
+
+// 对话模型 API 形态常量。
+const (
+	// APIModeChat 使用 Chat Completions（*schema.Message），全部模型的默认取值。
+	APIModeChat APIMode = "chat"
+	// APIModeResponses 使用 Response API（*schema.AgenticMessage），仅 chat 类模型可配置。
+	APIModeResponses APIMode = "responses"
+)
+
+// ParseAPIMode 解析并规范化接口形态取值（忽略首尾空白；不区分大小写）：空串取缺省值 chat（与
+// llm_models.api_mode 列默认值一致），chat / responses 合法，其余取值返回英文错误。形态清单与
+// 取值规范化只在本包声明，调用方不再各自校验并拼错误文案。
+func ParseAPIMode(value APIMode) (APIMode, error) {
+	mode := APIMode(strings.ToLower(strings.TrimSpace(string(value))))
+	switch mode {
+	case "":
+		return APIModeChat, nil
+	case APIModeChat, APIModeResponses:
+		return mode, nil
+	default:
+		return "", errors.Newf("invalid api mode %q: expected chat or responses", value)
+	}
+}
+
+// ValidateAPIMode 校验模型类型与接口形态的组合：接口形态本身必须合法（空串按 chat 处理），且
+// responses 只允许用于 chat 类模型；embedding 等非 chat 类模型使用 responses 时返回英文错误。
+func ValidateAPIMode(kind ModelKind, mode APIMode) error {
+	parsed, err := ParseAPIMode(mode)
+	if err != nil {
+		return errors.WithStack(err)
+	}
+	if parsed == APIModeResponses && kind != ModelKindChat {
+		return errors.Newf("api mode %q requires a chat model, got %q", APIModeResponses, kind)
+	}
+	return nil
+}
+
 // ModelConfig 是一个模型端点的运行时配置快照，由 ai 运行时从模型注册表（llm_models）
 // 与档位绑定（llm_bindings）组装而来，是 LLM 接入配置的唯一事实来源（不再来自配置文件）。
 type ModelConfig struct {
@@ -40,6 +81,8 @@ type ModelConfig struct {
 	Name string
 	// Kind 模型类型（chat / embedding）
 	Kind ModelKind
+	// APIMode 对话模型的 API 形态：chat（Chat Completions）| responses（Response API）
+	APIMode APIMode
 	// BaseURL 模型端点的 OpenAI 兼容接口 Base URL
 	BaseURL string
 	// APIKey 访问模型端点的明文凭据（落库为密文，此处为解密后的明文）

@@ -814,8 +814,6 @@ FROM (VALUES
 仅回复一个 JSON 对象，形如 {"steps": [{"title": "标题", "reason": "推荐理由", "text": "可直接发送的完整诉求"}]}，不要输出任何其他内容。$$
     ),
     ('agent.nextStepsEnabled', 'true'),
-    ('agent.businessSectionTitle', '## 当前业务现场'),
-    ('agent.questionSectionTitle', '## 用户提问'),
     ('agent.retrievedDocSnippetLimit', '500'),
     ('agent.defaultSlot', 'standard'),
     ('agent.maxToolRounds', '10'),
@@ -842,7 +840,6 @@ FROM (VALUES
         $$你根据首个用户消息为一次会话命名。请产出一个能概括该会话主题的简短标题，语言与消息一致。控制在 20 个字符以内，须具体、忠于事实：不要引号、不要行尾标点、不要「Topic:」这类前缀，也不要换行。仅回复标题文本。$$
     ),
     ('memory.enabled', 'true'),
-    ('memory.sectionTitle', '## 长期记忆'),
     ('memory.topK', '5'),
     ('memory.candidates', '20'),
     ('memory.maxItems', '8'),
@@ -875,7 +872,7 @@ FROM (VALUES
     ),
     (
         'eval.reverseQuestionsSystemPrompt',
-        $$你是答案相关度评判员。反推至多 3 个该回答可能回答的问题。仅回复一个形如 {"questions": ["...", "..."]} 的 JSON 对象。不要输出任何其他内容。$$
+        $$你是答案相关度评判员。反推若干个该回答可能回答的问题。仅回复一个形如 {"questions": ["...", "..."]} 的 JSON 对象。不要输出任何其他内容。$$
     ),
     (
         'eval.suggestionsSystemPrompt',

@@ -1,6 +1,7 @@
 package ai
 
 import (
+	sessionstore "zhongkuisec.com/zhongkui/internal/ai/session"
 	// 标准库
 	"context"
 	"encoding/json"
@@ -51,9 +52,9 @@ func newSessionTestRouter(db *database.DB, namespace string, rt *ai.Runtime) *gi
 // （u1/a1/u2/a2），返回源会话；供会话分支用例使用。
 func seedBranchSourceSession(t *testing.T, db *database.DB, title string) *modelsai.AgentSession {
 	t.Helper()
-	store, err := ai.NewSessionStore(db)
+	store, err := sessionstore.NewStore(db)
 	if err != nil {
-		t.Fatalf("NewSessionStore error = %v", err)
+		t.Fatalf("NewStore error = %v", err)
 	}
 	src, err := store.CreateSession(context.Background(), knowledgeTestNamespace, title, modelsai.SlotStandard, modelsai.AgentKindKnowledge, sessionTestUserID)
 	if err != nil {
@@ -80,76 +81,6 @@ func seedBranchSourceSession(t *testing.T, db *database.DB, title string) *model
 		}
 	}
 	return src
-}
-
-// TestNewAgentMessageItemOutBlocks 校验消息列表输出项携带有序内容块：按 block_seq 升序透传五种 kind 的
-// 载荷（与块表一致），且旧出参字段 reasoning / questionnaires 已从出参移除（序列化后无对应顶层 JSON 键）。
-func TestNewAgentMessageItemOutBlocks(t *testing.T) {
-	Convey("消息列表输出项携带有序内容块并移除旧出参", t, func() {
-		order := []modelsai.AgentMessageBlockKind{
-			modelsai.AgentMessageBlockKindReasoning,
-			modelsai.AgentMessageBlockKindToolCalls,
-			modelsai.AgentMessageBlockKindApproval,
-			modelsai.AgentMessageBlockKindQuestionnaire,
-			modelsai.AgentMessageBlockKindContent,
-		}
-		payloads := map[modelsai.AgentMessageBlockKind]string{
-			modelsai.AgentMessageBlockKindReasoning:     `{"text":"思考"}`,
-			modelsai.AgentMessageBlockKindToolCalls:     `{"calls":[{"callID":"c1","toolName":"search"}]}`,
-			modelsai.AgentMessageBlockKindApproval:      `{"calls":[{"callID":"c2","toolName":"api_invoke"}]}`,
-			modelsai.AgentMessageBlockKindQuestionnaire: `{"questions":[{"id":"q1","question":"要查什么？"}],"awaiting":true}`,
-			modelsai.AgentMessageBlockKindContent:       `{"text":"正文"}`,
-		}
-		blocks := make([]*modelsai.AgentMessageBlock, 0, len(order))
-		for i, kind := range order {
-			blocks = append(blocks, &modelsai.AgentMessageBlock{
-				BlockSeq: uint64(i + 1),
-				Kind:     kind,
-				Payload:  serializer.NewCrypto([]byte(payloads[kind])),
-			})
-		}
-
-		Convey("块按 block_seq 升序透传且载荷与块表一致", func() {
-			out := newAgentMessageItemOut(&modelsai.AgentMessage{
-				Role:    modelsai.MessageRoleAssistant,
-				Content: serializer.NewCrypto([]byte("答案")),
-			}, blocks)
-			So(len(out.Blocks), ShouldEqual, len(order))
-			for i, b := range out.Blocks {
-				So(b.Seq, ShouldEqual, uint64(i+1))
-				So(b.Kind, ShouldEqual, string(order[i]))
-				So(string(b.Payload), ShouldEqual, payloads[order[i]])
-			}
-		})
-
-		Convey("旧出参字段 reasoning 与 questionnaires 已移除", func() {
-			out := newAgentMessageItemOut(&modelsai.AgentMessage{
-				Role:    modelsai.MessageRoleAssistant,
-				Content: serializer.NewCrypto([]byte("答案")),
-			}, blocks)
-			raw, err := json.Marshal(out)
-			So(err, ShouldBeNil)
-			var decoded map[string]json.RawMessage
-			So(json.Unmarshal(raw, &decoded), ShouldBeNil)
-			_, hasReasoning := decoded["reasoning"]
-			_, hasQuestionnaires := decoded["questionnaires"]
-			So(hasReasoning, ShouldBeFalse)
-			So(hasQuestionnaires, ShouldBeFalse)
-			_, hasBlocks := decoded["blocks"]
-			So(hasBlocks, ShouldBeTrue)
-		})
-
-		Convey("无块时省略 blocks", func() {
-			out := newAgentMessageItemOut(&modelsai.AgentMessage{
-				Role:    modelsai.MessageRoleUser,
-				Content: serializer.NewCrypto([]byte("提问")),
-			}, nil)
-			So(out.Blocks, ShouldBeNil)
-			raw, err := json.Marshal(out)
-			So(err, ShouldBeNil)
-			So(strings.Contains(string(raw), "blocks"), ShouldBeFalse)
-		})
-	})
 }
 
 // TestAgentSessionCreate 创建会话的输入语义：请求携带首个用户问题（query），会话主题由后端生成
@@ -238,16 +169,16 @@ func TestAgentSessionBranch(t *testing.T) {
 		So(resp.Data.Slot, ShouldEqual, string(modelsai.SlotStandard))
 		So(resp.Data.AgentKind, ShouldEqual, string(modelsai.AgentKindKnowledge))
 
-		store, err := ai.NewSessionStore(db)
+		store, err := sessionstore.NewStore(db)
 		So(err, ShouldBeNil)
-		branched, err := store.ListMessages(context.Background(), resp.Data.ID, sessionTestUserID, 0, 0)
+		branched, err := store.ListMessages(context.Background(), resp.Data.ID, knowledgeTestNamespace, sessionTestUserID, 0, 0)
 		So(err, ShouldBeNil)
 		So(len(branched), ShouldEqual, 2)
 		So(string(branched[0].Content.Value()), ShouldEqual, "u1")
 		So(string(branched[1].Content.Value()), ShouldEqual, "a1")
 
 		// 源会话消息不受分支影响。
-		source, err := store.ListMessages(context.Background(), src.ID, sessionTestUserID, 0, 0)
+		source, err := store.ListMessages(context.Background(), src.ID, knowledgeTestNamespace, sessionTestUserID, 0, 0)
 		So(err, ShouldBeNil)
 		So(len(source), ShouldEqual, 4)
 	})

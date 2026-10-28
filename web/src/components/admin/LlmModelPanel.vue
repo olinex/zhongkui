@@ -33,6 +33,11 @@
       <span v-else class="zk-hint">{{ INVALID_PLACEHOLDER }}</span>
     </template>
 
+    <!-- API 模式仅 chat 模型有意义：缺省（历史模型未下发）按 chat 展示 -->
+    <template #cell-apiMode="{ item }">
+      {{ apiModeLabel(item.apiMode) }}
+    </template>
+
     <!-- 凭据为加密列：列表出参为密文，仅以「已加密」标识占位，点击解密查看明文 -->
     <template #cell-apiKey="{ item }">
       <encrypted-value-cell
@@ -112,6 +117,19 @@
               v-bind="createKindProps"
               :items="kindOptions"
               :label="$t('model.llmModel.field.kind')"
+            />
+          </v-col>
+        </v-row>
+        <!-- API 模式仅对话模型可选：chat 为默认，responses 走 Agentic 消息协议 -->
+        <v-row v-if="createKind === LLM_MODEL_KIND_CHAT" density="compact">
+          <v-col cols="6">
+            <v-select
+              v-model="createApiMode"
+              v-bind="createApiModeProps"
+              :items="apiModeOptions"
+              :label="$t('model.llmModel.field.apiMode')"
+              :hint="$t('page.llmModelAdmin.apiModeHint')"
+              persistent-hint
             />
           </v-col>
         </v-row>
@@ -292,6 +310,20 @@
               :model-value="enumLabelOf(EnumClass.llmModelKind, proxy.kind)"
               :label="$t('model.llmModel.field.kind')"
               disabled
+            />
+          </v-col>
+        </v-row>
+        <!-- API 模式仅对话模型可选：chat 为默认，responses 走 Agentic 消息协议 -->
+        <v-row v-if="proxy.kind === LLM_MODEL_KIND_CHAT" density="compact">
+          <v-col cols="6">
+            <v-select
+              v-model="updateApiMode"
+              v-bind="updateApiModeProps"
+              :items="apiModeOptions"
+              :label="$t('model.llmModel.field.apiMode')"
+              :hint="$t('page.llmModelAdmin.apiModeHint')"
+              persistent-hint
+              :disabled="!editable"
             />
           </v-col>
         </v-row>
@@ -487,6 +519,7 @@ const updateForm = useForm({ validationSchema: updateLlmModelSchema() });
 
 const [createName, createNameProps] = createForm.defineField("name", vuetifyCfg);
 const [createKind, createKindProps] = createForm.defineField("kind", vuetifyCfg);
+const [createApiMode, createApiModeProps] = createForm.defineField("apiMode", vuetifyCfg);
 const [createBaseURL, createBaseURLProps] = createForm.defineField("baseURL", vuetifyCfg);
 const [createApiKey, createApiKeyProps] = createForm.defineField("apiKey", vuetifyCfg);
 const [createModel, createModelProps] = createForm.defineField("model", vuetifyCfg);
@@ -523,6 +556,7 @@ const [createThinkingOffValue, createThinkingOffValueProps] = createForm.defineF
 );
 
 const [updateName, updateNameProps] = updateForm.defineField("name", vuetifyCfg);
+const [updateApiMode, updateApiModeProps] = updateForm.defineField("apiMode", vuetifyCfg);
 const [updateBaseURL, updateBaseURLProps] = updateForm.defineField("baseURL", vuetifyCfg);
 const [updateApiKey, updateApiKeyProps] = updateForm.defineField("apiKey", vuetifyCfg);
 const [updateModel, updateModelProps] = updateForm.defineField("model", vuetifyCfg);
@@ -580,6 +614,23 @@ const kindOptions = computed(() => enumOptionsOf(EnumClass.llmModelKind));
 const LLM_MODEL_KIND_EMBEDDING = "embedding";
 // LLM_MODEL_KIND_CHAT 对话模型在 llmModelKind 枚举中的值（仅该类型模型需填上下文容量）
 const LLM_MODEL_KIND_CHAT = "chat";
+// API_MODE_CHAT / API_MODE_RESPONSES 对话模型的 API 模式：Chat Completions / Responses API
+const API_MODE_CHAT = "chat";
+const API_MODE_RESPONSES = "responses";
+
+// apiMode 下拉选项：取值由后端契约固定为 chat / responses，文案经 i18n 渲染
+const apiModeOptions = computed(() => [
+  { title: i18n.global.t("model.llmModel.apiMode.chat"), value: API_MODE_CHAT },
+  { title: i18n.global.t("model.llmModel.apiMode.responses"), value: API_MODE_RESPONSES },
+]);
+
+// apiModeLabel 列表 / 详情展示：历史模型未下发该字段时按 chat 兜底
+const apiModeLabel = (value: string | undefined): string =>
+  i18n.global.t(
+    value === API_MODE_RESPONSES
+      ? "model.llmModel.apiMode.responses"
+      : "model.llmModel.apiMode.chat",
+  );
 
 onMounted(() => {
   void ensureEnum(EnumClass.llmModelKind);
@@ -590,6 +641,8 @@ onMounted(() => {
 const createDefaults = {
   name: "",
   kind: "",
+  // 对话模型默认走 Chat Completions
+  apiMode: API_MODE_CHAT,
   baseURL: "",
   apiKey: "",
   model: "",
@@ -622,6 +675,8 @@ const createAction = createForm.handleSubmit(async (values) => {
       // 单行文本提交前去除首尾空白；apiKey 为凭据，按原样提交不做 trim
       name: (values.name as string).trim(),
       kind: values.kind,
+      // API 模式仅对话模型有效：非对话模型提交 chat，由后端按缺省处理
+      apiMode: values.kind === LLM_MODEL_KIND_CHAT ? values.apiMode : API_MODE_CHAT,
       baseURL: (values.baseURL as string).trim(),
       apiKey: values.apiKey,
       model: (values.model as string).trim(),
@@ -669,6 +724,8 @@ const detailGetAction = async (item: Record<string, any>): Promise<void> => {
       updateForm.resetForm({
         values: {
           name: rsp.data.name,
+          // 历史模型可能未下发 apiMode，按 chat 兜底
+          apiMode: rsp.data.apiMode || API_MODE_CHAT,
           baseURL: rsp.data.baseURL,
           // 凭据不回填密文：留空即表示沿用原凭据
           apiKey: "",
@@ -704,6 +761,7 @@ const itemUpdateAction = () => {
     await getSimpleResponse(
       llmModelUpdate(editModelID, {
         name: (values.name as string).trim(),
+        apiMode: values.apiMode || API_MODE_CHAT,
         baseURL: (values.baseURL as string).trim(),
         // 空串表示沿用原凭据（后端按留空处理）
         apiKey: values.apiKey,
@@ -794,6 +852,7 @@ const projectFields = (visible: string[]): string[] => [
   "id",
   "name",
   "kind",
+  "apiMode",
   "enabled",
   ...visible,
 ];
@@ -900,6 +959,7 @@ const setEnabledRequest = async (item: Record<string, any>, enabled: boolean) =>
   const detail = (await llmModelDetailGet(item.id as number)).data.data as LlmModelDetailOut;
   return llmModelUpdate(detail.id, {
     name: detail.name,
+    apiMode: detail.apiMode || API_MODE_CHAT,
     baseURL: detail.baseURL,
     apiKey: "",
     model: detail.model,

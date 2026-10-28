@@ -7,6 +7,15 @@
 - [func ParseExtraBody\(raw string\) \(map\[string\]any, error\)](<#ParseExtraBody>)
 - [func ParseJSONValue\(raw string\) \(any, error\)](<#ParseJSONValue>)
 - [func ProbeEmbeddingDimensions\(ctx context.Context, cfg ModelConfig\) \(int, error\)](<#ProbeEmbeddingDimensions>)
+- [func ValidateAPIMode\(kind ModelKind, mode APIMode\) error](<#ValidateAPIMode>)
+- [type APIMode](<#APIMode>)
+  - [func ParseAPIMode\(value APIMode\) \(APIMode, error\)](<#ParseAPIMode>)
+- [type AgenticClient](<#AgenticClient>)
+  - [func NewAgenticChatClient\(ctx context.Context, cfg ModelConfig\) \(\*AgenticClient, error\)](<#NewAgenticChatClient>)
+  - [func \(c \*AgenticClient\) Generate\(ctx context.Context, messages \[\]\*schema.AgenticMessage, opts ...model.Option\) \(\*schema.AgenticMessage, error\)](<#AgenticClient.Generate>)
+  - [func \(c \*AgenticClient\) ModelName\(\) string](<#AgenticClient.ModelName>)
+  - [func \(c \*AgenticClient\) RequestOptions\(thinking string\) \[\]model.Option](<#AgenticClient.RequestOptions>)
+  - [func \(c \*AgenticClient\) Stream\(ctx context.Context, messages \[\]\*schema.AgenticMessage, opts ...model.Option\) \(\*schema.StreamReader\[\*schema.AgenticMessage\], error\)](<#AgenticClient.Stream>)
 - [type ChatClient](<#ChatClient>)
   - [func NewChatClient\(ctx context.Context, cfg ModelConfig\) \(\*ChatClient, error\)](<#NewChatClient>)
   - [func \(c \*ChatClient\) Generate\(ctx context.Context, messages \[\]\*schema.Message, opts ...model.Option\) \(\*schema.Message, error\)](<#ChatClient.Generate>)
@@ -55,6 +64,100 @@ func ProbeEmbeddingDimensions(ctx context.Context, cfg ModelConfig) (int, error)
 ```
 
 ProbeEmbeddingDimensions 对 embedding 端点发起一次最小向量化请求并返回实际输出的向量维度。 cfg.Dimensions \> 0 时随请求声明该维度（OpenAI 兼容端点的 dimensions 参数，模型可据此返回 降维向量），否则请求模型原生维度。超时取 cfg.Timeout，未声明（0）时经 defaults.Set 回填 ModelConfig.Timeout 的 default 标签声明的 15s；端点不可达、凭据非法或返回空向量时返回英文错误， 绝不静默失败。
+
+<a name="ValidateAPIMode"></a>
+## func ValidateAPIMode
+
+```go
+func ValidateAPIMode(kind ModelKind, mode APIMode) error
+```
+
+ValidateAPIMode 校验模型类型与接口形态的组合：接口形态本身必须合法（空串按 chat 处理），且 responses 只允许用于 chat 类模型；embedding 等非 chat 类模型使用 responses 时返回英文错误。
+
+<a name="APIMode"></a>
+## type APIMode
+
+APIMode 是对话模型使用的接口形态标识：chat（Chat Completions，\*schema.Message）与 responses（Response API，\*schema.AgenticMessage）。取值与 llm\_models.api\_mode 列、 agent\_messages.message\_kind 列的取值一致，决定客户端的接口实现以及消息载荷的编解码方式。
+
+```go
+type APIMode string
+```
+
+<a name="APIModeChat"></a>对话模型 API 形态常量。
+
+```go
+const (
+    // APIModeChat 使用 Chat Completions（*schema.Message），全部模型的默认取值。
+    APIModeChat APIMode = "chat"
+    // APIModeResponses 使用 Response API（*schema.AgenticMessage），仅 chat 类模型可配置。
+    APIModeResponses APIMode = "responses"
+)
+```
+
+<a name="ParseAPIMode"></a>
+### func ParseAPIMode
+
+```go
+func ParseAPIMode(value APIMode) (APIMode, error)
+```
+
+ParseAPIMode 解析并规范化接口形态取值（忽略首尾空白；不区分大小写）：空串取缺省值 chat（与 llm\_models.api\_mode 列默认值一致），chat / responses 合法，其余取值返回英文错误。形态清单与 取值规范化只在本包声明，调用方不再各自校验并拼错误文案。
+
+<a name="AgenticClient"></a>
+## type AgenticClient
+
+AgenticClient 封装 eino\-ext 的 Response API 模型（agenticopenai），用于支持 /v1/responses 的 OpenAI 兼容端点；它是 ChatClient 的 responses 对应实现，满足 model.AgenticModel 接口。
+
+```go
+type AgenticClient struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewAgenticChatClient"></a>
+### func NewAgenticChatClient
+
+```go
+func NewAgenticChatClient(ctx context.Context, cfg ModelConfig) (*AgenticClient, error)
+```
+
+NewAgenticChatClient 依据模型配置构造 AgenticClient。
+
+<a name="AgenticClient.Generate"></a>
+### func \(\*AgenticClient\) Generate
+
+```go
+func (c *AgenticClient) Generate(ctx context.Context, messages []*schema.AgenticMessage, opts ...model.Option) (*schema.AgenticMessage, error)
+```
+
+Generate 执行一次非流式调用，产出一条 AgenticMessage。
+
+<a name="AgenticClient.ModelName"></a>
+### func \(\*AgenticClient\) ModelName
+
+```go
+func (c *AgenticClient) ModelName() string
+```
+
+ModelName 返回供应商侧的模型名。
+
+<a name="AgenticClient.RequestOptions"></a>
+### func \(\*AgenticClient\) RequestOptions
+
+```go
+func (c *AgenticClient) RequestOptions(thinking string) []model.Option
+```
+
+RequestOptions 依据 ExtraBody 与思考开关构造按请求的模型选项。agenticopenai.WithExtraFields 采用覆盖语义，故先把各来源合并为一张表再一次传入。
+
+<a name="AgenticClient.Stream"></a>
+### func \(\*AgenticClient\) Stream
+
+```go
+func (c *AgenticClient) Stream(ctx context.Context, messages []*schema.AgenticMessage, opts ...model.Option) (*schema.StreamReader[*schema.AgenticMessage], error)
+```
+
+Stream 执行一次流式调用，返回 AgenticMessage 流；读取器由调用方负责关闭。
 
 <a name="ChatClient"></a>
 ## type ChatClient
@@ -243,6 +346,8 @@ type ModelConfig struct {
     Name string
     // Kind 模型类型（chat / embedding）
     Kind ModelKind
+    // APIMode 对话模型的 API 形态：chat（Chat Completions）| responses（Response API）
+    APIMode APIMode
     // BaseURL 模型端点的 OpenAI 兼容接口 Base URL
     BaseURL string
     // APIKey 访问模型端点的明文凭据（落库为密文，此处为解密后的明文）

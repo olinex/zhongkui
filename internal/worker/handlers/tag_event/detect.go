@@ -7,7 +7,6 @@ package tag_event
 
 import (
 	"context"
-	"time"
 
 	"github.com/samber/do/v2"
 
@@ -51,17 +50,16 @@ func NewEventDetectHandler(i do.Injector) *EventDetectHandler {
 // Do 执行一次标签事件检测。
 // 检测时间取自任务载荷中的游标时间点（CursorTaskPayload.TriggerAt），由 CursorScheduler
 // 按游标推进投递：即使积压补投或多个触发点并行执行，每个触发点也使用自身时间窗口计算，
-// 不会因实际执行时刻漂移而重复或遗漏。载荷解析失败时回退到当前时间并记录告警。
+// 不会因实际执行时刻漂移而重复或遗漏。载荷解析失败或缺失 triggerAt 时返回错误触发 asynq 重试。
 // 表达式非法仅记录告警日志并跳过对应条件，入库失败返回错误触发 asynq 重试；
 // 加载/查询错误返回错误触发 asynq 重试。
 func (h *EventDetectHandler) Do(ctx context.Context, task etl.Task) error {
 	now, _, err := pipeline.ParseCursorTaskPayload(task.Payload())
 	if err != nil {
-		// 载荷非游标格式（如旧版本 cron 调度投递的配置 JSON 载荷）时回退到当前时间
-		h.logger.Ctx(ctx).Warnf("tag event detect: parse cursor payload failed, fallback to now: %v", err)
-		now = time.Now()
-	} else if now.IsZero() {
-		now = time.Now()
+		return errors.WithStack(err)
+	}
+	if now.IsZero() {
+		return errors.New("tag event detect: the cursor task payload is missing triggerAt")
 	}
 	conds, err := h.loadConditions(ctx)
 	if err != nil {

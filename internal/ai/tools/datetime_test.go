@@ -11,14 +11,13 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 )
 
 // TestDatetimeCalc_Info 覆盖 Info：工具名为 datetime_calc；operation 存在、类型为 string、必填且带
 // now/convert/add/diff 四个枚举；关键可选参数存在。
 func TestDatetimeCalc_Info(t *testing.T) {
-	info, err := (&datetimeCalcTool{}).Info(context.Background())
+	info, err := datetimeCalcTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -73,7 +72,7 @@ func TestDatetimeCalc_InvokableErrors(t *testing.T) {
 	}
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := (&datetimeCalcTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := datetimeCalcTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -86,7 +85,7 @@ func TestDatetimeCalc_InvokableErrors(t *testing.T) {
 
 // TestDatetimeCalc_Smoke 锁定 datetime_calc 的出参 JSON 线形状与字段名（convert 与 diff 各一例）。
 func TestDatetimeCalc_Smoke(t *testing.T) {
-	convert, err := (&datetimeCalcTool{}).InvokableRun(context.Background(),
+	convert, err := datetimeCalcTool.InvokableRun(context.Background(),
 		`{"operation":"convert","time":"2024-01-01 00:00:00","from_timezone":"UTC","to_timezone":"Asia/Shanghai"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun(convert) error = %v", err)
@@ -97,7 +96,7 @@ func TestDatetimeCalc_Smoke(t *testing.T) {
 		t.Errorf("convert = %q, want %q", convert, wantConvert)
 	}
 
-	diff, err := (&datetimeCalcTool{}).InvokableRun(context.Background(),
+	diff, err := datetimeCalcTool.InvokableRun(context.Background(),
 		`{"operation":"diff","start":"2024-01-01T00:00:00Z","end":"2024-01-01T01:00:00Z"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun(diff) error = %v", err)
@@ -132,6 +131,3 @@ func datetimeTestRequiredContains(required []string, name string) bool {
 	}
 	return false
 }
-
-// 仅用于确认工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*datetimeCalcTool)(nil)

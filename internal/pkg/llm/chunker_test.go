@@ -154,7 +154,7 @@ func TestMarkdownChunker_NoOverlapAcrossHeading(t *testing.T) {
 		"从前有座山，山里有座庙。",
 	}, "\n\n")
 	doc := &schema.Document{Content: content}
-	// overlap(100) 远大于「说明」正文长度(39)，旧实现会把整段复读到「内容」块开头
+	// overlap(100) 远大于「说明」正文长度(39)，若不做重叠裁剪会把整段复读到「内容」块开头
 	c := NewMarkdownChunker(800, 100)
 	got, err := c.Transform(context.Background(), []*schema.Document{doc})
 	if err != nil {

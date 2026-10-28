@@ -12,7 +12,7 @@ import (
 
 	// 项目内部
 
-	"zhongkuisec.com/zhongkui/internal/ai"
+	"zhongkuisec.com/zhongkui/internal/ai/change"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
@@ -174,7 +174,7 @@ func LlmToolSetEnabled(c *gin.Context) {
 		},
 	)
 	if changed > 0 {
-		afterConfigWrite(c, ai.ChangeKindTool, fmt.Sprintf("%d tools updated", changed))
+		afterConfigWrite(c, change.ChangeKindTool, fmt.Sprintf("%d tools updated", changed))
 	}
 }
 
@@ -223,7 +223,7 @@ func LlmToolBatchDelete(c *gin.Context) {
 		},
 	)
 	if deleted > 0 {
-		afterConfigWrite(c, ai.ChangeKindTool, fmt.Sprintf("%d tools deleted", deleted))
+		afterConfigWrite(c, change.ChangeKindTool, fmt.Sprintf("%d tools deleted", deleted))
 	}
 }
 

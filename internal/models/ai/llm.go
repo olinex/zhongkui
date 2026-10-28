@@ -32,6 +32,10 @@ type LlmModel struct {
 	Name string `gorm:"type:VARCHAR(64);uniqueIndex:uq_llm_models_name"`
 	// Kind 模型类型：chat（对话）| embedding（向量化），取值见视图层 llmModelKind 枚举类
 	Kind llm.ModelKind `gorm:"type:VARCHAR(16);index:idx_llm_models_kind"`
+	// APIMode 模型端点使用的接口模式：chat（Chat Completions，默认）| responses（Response API）；
+	// responses 仅对 chat 类模型有效，embedding 模型恒为 chat。取值空间与解析/校验见 internal/pkg/llm
+	// （llm.APIMode / llmAPIMode 枚举类）。
+	APIMode llm.APIMode `gorm:"type:VARCHAR(16);not null;default:chat"`
 	// BaseURL 模型端点的基地址（OpenAI 兼容 API），如 https://api.openai.com/v1
 	BaseURL string `gorm:"type:VARCHAR(512)"`
 	// APIKey 访问模型端点的凭据，以加密形式持久化（crypto serializer 密文入库，BYTEA 列）；

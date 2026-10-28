@@ -7,7 +7,7 @@
     <!-- 标题行兼步骤条：标题靠左、序号徽标右对齐，两者共用一行——步骤条不再单独占一条高度。
          滚动与高度上限由窗口承载（外层面板需裁剪溢出）。内边距取 8px（--zk-space-2）与窗口
          外边距同一档，标题图标 / 题干 / 候选项高亮带的左边缘因此都在 8px 上对齐 -->
-    <v-stepper v-model="current" editable flat class="zk-questionnaire-stepper">
+    <v-stepper v-model="current" editable flat class="zk-compact-stepper">
       <div class="d-flex align-center pa-2">
         <v-icon icon="mdi-comment-question-outline" size="small" class="me-2" />
         <span class="zk-label-caps">{{ $t("page.aiAssistant.questionnaireTitle") }}</span>
@@ -16,7 +16,7 @@
              徽标换成编辑铅笔，问卷场景里「第几题」比「可编辑」更该被看到，故当前题仍显序号 -->
         <v-stepper-header v-if="multi">
           <template v-for="(q, qi) in payload.questions" :key="q.id">
-            <!-- 步骤间连线：步骤条最典型的视觉信号，横向细线不占高度（长度由 .zk-questionnaire-stepper 收窄成短段） -->
+            <!-- 步骤间连线：步骤条最典型的视觉信号，横向细线不占高度（长度由 .zk-compact-stepper 收窄成短段） -->
             <v-divider v-if="qi > 0" />
             <v-stepper-item :value="qi + 1" :complete="isAnswered(qi) && current !== qi + 1">
               <template #icon="{ hasCompleted }">
@@ -37,10 +37,10 @@
               <div
                 v-for="(opt, oi) in q.options"
                 :key="oi"
-                class="assistant-questionnaire-option zk-row-hover"
+                class="zk-chat-option zk-row-hover py-1 px-2"
                 :class="{
                   'zk-row-selected': states[qi].selected === oi,
-                  'assistant-questionnaire-option--disabled': disabled,
+                  'zk-chat-option--disabled': disabled,
                 }"
                 role="radio"
                 :aria-checked="states[qi].selected === oi"
@@ -63,10 +63,10 @@
               </div>
               <!-- 「其他」：每题恒定附带的自由作答项，选中后展开自定义输入框 -->
               <div
-                class="assistant-questionnaire-option zk-row-hover"
+                class="zk-chat-option zk-row-hover py-1 px-2"
                 :class="{
                   'zk-row-selected': states[qi].selected === OTHER,
-                  'assistant-questionnaire-option--disabled': disabled,
+                  'zk-chat-option--disabled': disabled,
                 }"
                 role="radio"
                 :aria-checked="states[qi].selected === OTHER"
@@ -92,8 +92,7 @@
             <v-text-field
               v-if="states[qi].selected === OTHER"
               v-model="states[qi].custom"
-              class="assistant-questionnaire-custom"
-              density="compact"
+              class="ps-6"
               hide-details
               :disabled="disabled"
               :placeholder="$t('page.aiAssistant.questionnaireCustomPlaceholder')"
@@ -253,8 +252,10 @@ const submit = (): void => {
 </script>
 
 <style scoped>
-/* 问卷面板：外壳复用 .zk-panel（描边 + 圆角 + surface 底）；本组件只保留布局定位。
-   宽度撑满父容器（位置由父组件决定），高度由内部滚动区封顶，不随视口伸缩 */
+/* 布局定位层：描边 / 圆角 / 底色 / 悬停与选中态由 .zk-panel、.zk-row-hover、
+   .zk-row-selected、.zk-chat-option 承载；本块只保留布局。 */
+
+/* 问卷面板：宽度撑满父容器（位置由父组件决定），高度由内部滚动区封顶，不随视口伸缩 */
 .assistant-questionnaire {
   display: flex;
   flex-direction: column;
@@ -262,32 +263,16 @@ const submit = (): void => {
   overflow: hidden;
 }
 
-/* 候选项行：「其他」与候选项共用；选中态 / 悬停底由外壳类 .zk-row-selected / .zk-row-hover 提供。
-   纵向内边距收到 4px（--zk-space-1）——panel 内选项往往有六七个，每项省 8px 就是最显著的收紧；
-   横向保持 8px，因自定义输入框的缩进（space-6）按「图标 + 图标与文本间距」算出，改动横向会破开对齐 */
-.assistant-questionnaire-option {
+/* 候选项行：「其他」与候选项共用；文字与单选图标顶端对齐 */
+.zk-chat-option {
   display: flex;
   align-items: flex-start;
   gap: var(--zk-space-2);
-  padding: var(--zk-space-1) var(--zk-space-2);
-  cursor: pointer;
-}
-
-/* 只读态（现场不可用）：禁作答，取消指针反馈，与可作答态在视觉上区分 */
-/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
-.assistant-questionnaire-option--disabled {
-  cursor: default;
-  pointer-events: none;
 }
 
 /* 候选项文本块：占满行内剩余宽度，长文案可换行 */
 .assistant-questionnaire-option-main {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-/* 自定义输入框与选项文本左对齐（让出单选图标宽度 + 间距） */
-.assistant-questionnaire-custom {
-  padding-inline-start: var(--zk-space-6);
 }
 </style>

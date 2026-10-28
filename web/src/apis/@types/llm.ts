@@ -11,6 +11,8 @@ export interface LlmModelItem {
   updatedAt: string;
   name: string;
   kind: string;
+  // apiMode 对话模型的 API 模式：chat（Chat Completions，默认）/ responses（Responses API）
+  apiMode: string;
   baseURL: string;
   apiKey: string;
   model: string;
@@ -45,6 +47,8 @@ export interface LlmModelListOut {
 export interface LlmModelCreateIn {
   name: string;
   kind: string;
+  // apiMode 仅对话模型有效（chat / responses），缺省由后端取 chat
+  apiMode?: string;
   baseURL: string;
   apiKey: string;
   model: string;
@@ -67,6 +71,8 @@ export interface LlmModelCreateIn {
 // dimensions 为数据库 schema 属性，由后端探测写回，不接受前端提交
 export interface LlmModelUpdateIn {
   name: string;
+  // apiMode 仅对话模型有效（chat / responses），留空表示沿用 chat 默认
+  apiMode?: string;
   baseURL: string;
   apiKey: string;
   model: string;

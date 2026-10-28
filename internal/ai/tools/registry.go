@@ -65,10 +65,12 @@ package tools
 import (
 	// 标准库
 	"context"
+	"encoding/json"
 	"sort"
 
 	// 第三方
 	"github.com/cloudwego/eino/components/tool"
+	"github.com/cloudwego/eino/components/tool/utils"
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
@@ -131,4 +133,34 @@ func Names() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// mustInferTool 按入参结构体 T 推导参数 JSON schema 并构造 eino 可调用工具；schema 推导失败属于
+// 编程缺陷，直接 panic（与 Register 的 fail fast 一致）。入参解析与结果序列化沿用 encoding/json，
+// 使工具的错误文本与出参线形状与迁移前完全一致。
+func mustInferTool[T, D any](name, desc string, fn utils.InvokeFunc[T, D]) tool.InvokableTool {
+	built, err := utils.InferTool(name, desc, fn,
+		utils.WithUnmarshalArguments(func(_ context.Context, arguments string) (any, error) {
+			var in T
+			if uerr := json.Unmarshal([]byte(arguments), &in); uerr != nil {
+				return nil, uerr
+			}
+			return in, nil
+		}),
+		utils.WithMarshalOutput(func(_ context.Context, output any) (string, error) {
+			// 结果本身已是字符串（如需要自定义线形状的工具）时原样返回，不做二次 JSON 编码。
+			if text, ok := output.(string); ok {
+				return text, nil
+			}
+			out, merr := json.Marshal(output)
+			if merr != nil {
+				return "", merr
+			}
+			return string(out), nil
+		}),
+	)
+	if err != nil {
+		panic("ai/tools: build builtin tool " + name + ": " + err.Error())
+	}
+	return built
 }

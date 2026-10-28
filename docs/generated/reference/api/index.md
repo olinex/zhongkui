@@ -64,11 +64,12 @@
 - [`POST /api/v1/admin/user/list`](./admin/post-admin-user-list.md) — 用户列表查询 - 支持分页、搜索和排序
 ### AI 助手
 
-- [`POST /api/v1/ai/agent/:sessionID/input/rerun`](./ai/post-ai-agent-sessionID-input-rerun.md) — 回退到助手待输入回合（问卷作答 / 工具授权）- 删除该锚点之后的回复、把锚点与本回合运行现场重置为待输入，返回该回合的题目与上次答案 / 待审批调用清单供前端重建面板
-- [`POST /api/v1/ai/agent/:sessionID/run/cancel`](./ai/post-ai-agent-sessionID-run-cancel.md) — 取消某会话在途运行（落 cancelled 终态，可回放）
-- [`GET /api/v1/ai/agent/:sessionID/stream`](./ai/get-ai-agent-sessionID-stream.md) — AI 助手 SSE 流式问答（POST 启动驻留运行并转发事件）：运行与连接解耦，刷新后经 GET 续播。
-- [`POST /api/v1/ai/agent/:sessionID/stream`](./ai/post-ai-agent-sessionID-stream.md) — AI 助手 SSE 流式问答（POST 启动驻留运行并转发事件）：运行与连接解耦，刷新后经 GET 续播。
-- [`POST /api/v1/ai/agent/:sessionID/tool-result`](./ai/post-ai-agent-sessionID-tool-result.md) — 回传客户端工具调用结果并续跑挂起运行（SSE 流式：继续输出 delta/stage/done 或再次挂起）
+- [`POST /api/v1/ai/agent/:sessionID/abort`](./ai/post-ai-agent-sessionID-abort.md) — 中止当前回合（下发 turn.completed(cancelled) 并作废挂起现场）
+- [`POST /api/v1/ai/agent/:sessionID/action`](./ai/post-ai-agent-sessionID-action.md) — 提交审批 / 问卷动作并续跑（SSE）
+- [`POST /api/v1/ai/agent/:sessionID/chat`](./ai/post-ai-agent-sessionID-chat.md) — 启动或抢占一轮 AI 助手对话（SSE）
+- [`GET /api/v1/ai/agent/:sessionID/events`](./ai/get-ai-agent-sessionID-events.md) — 运行中重连订阅后续事件（SSE，?after= 指定回放起点）
+- [`POST /api/v1/ai/agent/:sessionID/interaction/reopen`](./ai/post-ai-agent-sessionID-interaction-reopen.md) — 回退到某次审批 / 问卷交互的待处理状态（可重新决策 / 作答，不重跑整轮回答）
+- [`GET /api/v1/ai/agent/:sessionID/render`](./ai/get-ai-agent-sessionID-render.md) — 回放会话的历史快照与当前挂起交互（SSE）
 - [`POST /api/v1/ai/doc/:id/chunks`](./ai/post-ai-doc-id-chunks.md) — 知识库文档分块明细 - 聚合索引摘要（分块统计/切片参数/向量维度/索引新鲜度）与逐块明细
 - [`POST /api/v1/ai/doc/:id/download`](./ai/post-ai-doc-id-download.md) — 下载知识库文档原件 - 解密 S3 原件以附件流式返回（二进制流，不经统一 JSON 响应封装）
 - [`POST /api/v1/ai/doc/:id/get`](./ai/post-ai-doc-id-get.md) — 按文档 ID 查询当前命名空间内某篇知识库文档的完整信息。
@@ -89,7 +90,7 @@
 - [`POST /api/v1/ai/retrieval/dry-run`](./ai/post-ai-retrieval-dry-run.md) — 知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估
 - [`POST /api/v1/ai/retrieval/options`](./ai/post-ai-retrieval-options.md) — 知识库检索试运行参数默认值（来自行为参数注册表，供前端对话框预填）
 - [`POST /api/v1/ai/session/:id/branch`](./ai/post-ai-session-id-branch.md) — 以某一轮用户消息为结尾创建会话分支 - 把该轮及其之前的全部消息复制到新会话
-- [`POST /api/v1/ai/session/:id/compact`](./ai/post-ai-session-id-compact.md) — 压缩会话上下文并抽取长期记忆（SSE 流式：依次下发 compress_start / compress_delta / compress_done，可选 assistantMessageID 指定折叠边界）
+- [`POST /api/v1/ai/session/:id/compact`](./ai/post-ai-session-id-compact.md) — 压缩会话上下文并抽取长期记忆（message.compress SSE 流式进度，可选 assistantMessageID 指定折叠边界）
 - [`POST /api/v1/ai/session/:id/get`](./ai/post-ai-session-id-get.md) — 会话详情查询
 - [`POST /api/v1/ai/session/:id/messages`](./ai/post-ai-session-id-messages.md) — 会话消息列表查询 - 按创建时间升序
 - [`POST /api/v1/ai/session/:id/messages/truncate`](./ai/post-ai-session-id-messages-truncate.md) — 从某一轮用户消息起截断会话消息 - 删除该轮提问及其之后的全部消息（回退 / 删除）
@@ -97,7 +98,7 @@
 - [`POST /api/v1/ai/session/:id/valve`](./ai/post-ai-session-id-valve.md) — 更新会话审核阀门
 - [`POST /api/v1/ai/session/create`](./ai/post-ai-session-create.md) — 创建会话
 - [`POST /api/v1/ai/session/list`](./ai/post-ai-session-list.md) — 查询当前命名空间内的 AI 助手会话列表，按最近更新时间倒序。
-- [`POST /api/v1/ai/status`](./ai/post-ai-status.md) — 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的在途运行快照。
+- [`POST /api/v1/ai/status`](./ai/post-ai-status.md) — 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的回合状态快照。
 ### 数据源
 
 - [`POST /api/v1/datasource/:id/get`](./datasource/post-datasource-id-get.md) — 第三方数据源详情查询 - 根据ID获取数据源完整信息

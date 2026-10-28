@@ -149,9 +149,8 @@ const pickBottom = (): void => {
 }
 
 /* 「直达底部」特殊按钮：尺寸与节奏完全对齐圆点按钮——同为撑满轨宽、固定高 --zk-space-4
-   的命中区且不留额外间距，故与圆点的视觉间距一致；视觉标记是内层箭头图标，其尺寸由按钮
-   字号驱动（v-icon 宽高均为 1em、x-small 也只是把字号写成 1em），取 --zk-space-2 与圆点等大
-   （外观——颜色 / 悬停——登记在外壳层 .zk-rail-bottom） */
+   的命中区且不留额外间距，故与圆点的视觉间距一致；外观（颜色 / 悬停 / 图标尺寸）登记在
+   外壳层 .zk-rail-bottom */
 .zk-rail-bottom {
   flex: 0 0 auto;
   display: flex;
@@ -159,8 +158,6 @@ const pickBottom = (): void => {
   justify-content: center;
   width: 100%;
   height: var(--zk-space-4);
-  padding: 0;
-  font-size: var(--zk-space-2);
 }
 
 /* 圆点按钮：固定高（--zk-space-4 = 16px）、宽度撑满轨宽——每个按钮即该圆点的命中区，
@@ -173,7 +170,6 @@ const pickBottom = (): void => {
   justify-content: center;
   width: 100%;
   height: var(--zk-space-4);
-  padding: 0;
 }
 
 /* 视觉圆点尺寸：外观（底色 / 圆角 / 过渡）在 .zk-question-dot / .zk-question-mark 外壳类中定义 */

@@ -32,6 +32,8 @@ export const EnumClass = {
   documentFormat: "documentFormat",
   knowledgeDocStatus: "knowledgeDocStatus",
   agentKind: "agentKind",
+  // 对话模型接口形态（归属 internal/pkg/llm）：chat / responses
+  llmAPIMode: "llmAPIMode",
   memoryKind: "memoryKind",
   memoryStatus: "memoryStatus",
   // 客户端工具调用的审核重要级（归属 internal/ai）与会话级审核阀门（归属 internal/models/ai）

@@ -322,6 +322,7 @@ model:
       id: ID
       name: Name
       kind: Model Kind
+      apiMode: API Mode
       baseURL: Base URL
       apiKey: API Key
       model: Model
@@ -342,6 +343,9 @@ model:
       updatedAt: Updated At
       updatedAtTime: Updated At Time
       updatedAtDate: Updated At Date
+    apiMode:
+      chat: Chat Completions
+      responses: Responses
     validation:
       jsonObject: "{path} must be a valid JSON object"
       jsonValue: "{path} must be a valid JSON value"
@@ -1388,7 +1392,11 @@ page:
     compressFailed: Context compaction failed
     approvalTitle: Tool Call Approval
     approvalWaiting: Awaiting approval
+    approvalHint: Approve or reject each call; the run continues automatically once all are decided
+    approvalPrev: Previous
+    approvalNext: Next
     approvalParams: Arguments
+    approvalResult: Call result
     approve: Approve
     reject: Reject
     approved: Approved
@@ -1414,6 +1422,8 @@ page:
     branchTitle: "{title} (branch)"
     branchCreated: Branch session created
     usageTokens: "{count} tokens"
+    usagePromptTokens: "Input {count} tokens"
+    usageCompletionTokens: "Output {count} tokens"
     usageElapsed: "{seconds}s"
     rollbackMessage: Roll back
     deleteMessage: Delete
@@ -1430,13 +1440,16 @@ page:
     questionnaireUnavailable: This question is no longer active, so your answer cannot be submitted. Please ask a new question.
     questionnaireReanswer: Reanswer
     questionnaireReanswerBusy: Still generating this turn. You can reanswer once it finishes.
-    confirmReanswerQuestionnaire: Reanswer this question? Everything after it will be cleared and regenerated.
-    approvalRerun: Rerun approval
-    approvalRerunBusy: Still generating this turn. You can rerun the approval once it finishes.
-    confirmRerunApproval: Rerun this approval? Everything after it will be cleared and regenerated.
+    confirmReanswerQuestionnaire: Reopen this question? Everything after it will be cleared so you can answer it again.
+    approvalRerun: Reopen approval
+    approvalRerunBusy: Still generating this turn. You can reopen the approval once it finishes.
+    confirmRerunApproval: Reopen this approval? Everything after it will be cleared so you can approve or reject it again.
     questionnaireNoAnswer: Not answered
     questionnairePendingHint: AI is waiting for your answer above. Please answer first.
     questionnaireJump: View Question
+    blockNav: Quick block navigation
+    blockPrev: Previous block
+    blockNext: Next block
     lockedHint: "Session {label} ({used}/{max} turns). Roll back a message to keep asking."
     lockedReject: This session has reached the turn limit. Roll back an earlier message to keep asking.
     stateGuardReject: The session is not ready for this action. Please try again later.
@@ -1529,6 +1542,7 @@ page:
     dimensionsHint: The vector dimensions are probed by the backend when an embedding slot is bound; to change the index dimensions, contact the operations team to run the server-side command
     extraBodyHint: 'A JSON object merged into every request for this model (e.g. {''{"top_k": 20}''}); leave blank to add nothing'
     thinkingHint: "Takes effect only when the field name and both on/off values are provided; leave blank to disable it for this model"
+    apiModeHint: "Chat models only; Responses uses the Agentic message protocol with the same tool-call and resume semantics"
     advancedTitle: Advanced Settings
     advancedHint: "Extra request fields and the thinking switch are both optional; chat models only"
   llmBindingAdmin:

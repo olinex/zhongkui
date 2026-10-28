@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"zhongkuisec.com/zhongkui/internal/ai/llminfra"
 	// 标准库
 	"context"
 	"os"
@@ -11,8 +12,9 @@ import (
 	"github.com/spf13/cobra"
 
 	// 项目内部
-	ai "zhongkuisec.com/zhongkui/internal/ai"
 	"zhongkuisec.com/zhongkui/internal/ai/capability"
+	"zhongkuisec.com/zhongkui/internal/ai/knowledge"
+	"zhongkuisec.com/zhongkui/internal/ai/llmconfig"
 	"zhongkuisec.com/zhongkui/internal/docs"
 	"zhongkuisec.com/zhongkui/internal/manager"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
@@ -60,9 +62,9 @@ var syncDocsCmd = &cobra.Command{
 			pterm.Error.Println(translate.T("cli.sync.docs.failed", map[string]any{"Err": err}))
 			return
 		}
-		narrativeDocs := make([]ai.GeneratedKnowledgeDoc, 0, len(narratives))
+		narrativeDocs := make([]knowledge.GeneratedKnowledgeDoc, 0, len(narratives))
 		for _, n := range narratives {
-			narrativeDocs = append(narrativeDocs, ai.GeneratedKnowledgeDoc{Key: n.Key, Title: n.Title, Content: n.Content})
+			narrativeDocs = append(narrativeDocs, knowledge.GeneratedKnowledgeDoc{Key: n.Key, Title: n.Title, Content: n.Content})
 		}
 		model := embeddingModelName(rt)
 		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatGenerated, narrativeDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
@@ -95,9 +97,9 @@ var syncApisCmd = &cobra.Command{
 		}
 		// 离线装配接口目录，仅取纳入 RAG 的接口渲染为生成文档；标题即稳定去重键。
 		catalog := manager.CollectApiKnowledgeDocs()
-		apiDocs := make([]ai.GeneratedKnowledgeDoc, 0, len(catalog))
+		apiDocs := make([]knowledge.GeneratedKnowledgeDoc, 0, len(catalog))
 		for _, doc := range catalog {
-			apiDocs = append(apiDocs, ai.GeneratedKnowledgeDoc{Key: doc.Title, Title: doc.Title, Content: doc.Content})
+			apiDocs = append(apiDocs, knowledge.GeneratedKnowledgeDoc{Key: doc.Title, Title: doc.Title, Content: doc.Content})
 		}
 		model := embeddingModelName(rt)
 		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatNativeApi, apiDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
@@ -135,9 +137,9 @@ var syncSchemaCmd = &cobra.Command{
 			pterm.Error.Println(translate.T("cli.sync.schema.failed", map[string]any{"Err": err}))
 			return
 		}
-		tableDocs := make([]ai.GeneratedKnowledgeDoc, 0, len(generated))
+		tableDocs := make([]knowledge.GeneratedKnowledgeDoc, 0, len(generated))
 		for _, doc := range generated {
-			tableDocs = append(tableDocs, ai.GeneratedKnowledgeDoc{Key: doc.Key, Title: doc.Title, Content: doc.Content})
+			tableDocs = append(tableDocs, knowledge.GeneratedKnowledgeDoc{Key: doc.Key, Title: doc.Title, Content: doc.Content})
 		}
 		model := embeddingModelName(rt)
 		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatSchema, tableDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
@@ -167,9 +169,9 @@ var syncCapabilitiesCmd = &cobra.Command{
 			return
 		}
 		generated := capability.KnowledgeDocs(manager.CollectCapabilities())
-		capDocs := make([]ai.GeneratedKnowledgeDoc, 0, len(generated))
+		capDocs := make([]knowledge.GeneratedKnowledgeDoc, 0, len(generated))
 		for _, doc := range generated {
-			capDocs = append(capDocs, ai.GeneratedKnowledgeDoc{Key: doc.Title, Title: doc.Title, Content: doc.Content})
+			capDocs = append(capDocs, knowledge.GeneratedKnowledgeDoc{Key: doc.Title, Title: doc.Title, Content: doc.Content})
 		}
 		model := embeddingModelName(rt)
 		if err := rt.Current().Knowledge.SyncGeneratedDocs(ctx, base.SystemNamespace, docconv.FormatCapability, capDocs, newSyncProgress(base.SystemNamespace, model)); err != nil {
@@ -261,7 +263,7 @@ func reconcileCoreAISchema(ctx context.Context, gormDB *database.DB, target int)
 	if target <= 0 {
 		return errors.New(translate.T("cli.sync.embedding-dimensions-flag-required", nil))
 	}
-	store, err := ai.NewStore(gormDB)
+	store, err := llmconfig.NewStore(gormDB)
 	if err != nil {
 		return errors.Newf("failed to read ai model registry: %v", err)
 	}
@@ -276,7 +278,7 @@ func reconcileCoreAISchema(ctx context.Context, gormDB *database.DB, target int)
 			"Target":     target,
 		}))
 	}
-	reconciled, err := ai.ReconcileEmbeddingColumn(ctx, gormDB, target)
+	reconciled, err := llminfra.ReconcileEmbeddingColumn(ctx, gormDB, target)
 	if err != nil {
 		return errors.Newf("failed to reconcile ai embedding column: %v", err)
 	}

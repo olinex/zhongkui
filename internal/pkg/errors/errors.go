@@ -63,6 +63,22 @@ func WithStack(err error) error {
 	return errors.WithStack(err)
 }
 
+// Wrapf 为已有错误添加上下文并保留错误链；err 为 nil 时返回 nil。
+// 关闭堆栈时仍保留可 errors.Is/As 的错误链，只是不附加调用栈。
+//
+// 示例:
+//
+//	return errors.Wrapf(err, "load config %q", path)
+func Wrapf(err error, format string, args ...any) error {
+	if err == nil {
+		return nil
+	}
+	if base.Env.ErrorStack {
+		return errors.Wrapf(err, format, args...)
+	}
+	return fmt.Errorf("%s: %w", fmt.Sprintf(format, args...), err)
+}
+
 // Is 报告目标错误是否与给定的错误匹配。
 // 如果 err 是 StackError 类型，会先解包内部的错误再进行比较。
 // 支持错误链的递归检查。

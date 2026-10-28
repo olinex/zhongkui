@@ -1112,8 +1112,9 @@ column = "enabled"
 
 
 # 原始流量审计 - IPv4 TCP 包
-# 过滤字段：timestamp / created_at / namespace 必填（required = true；双时间范围命中分区键与 ORDER BY 首键，
-# namespace 由前端全局命名空间提供）；可选字段仅精确匹配（eq），配合 bloom_filter 跳过索引在十亿级数据上按数据块剪枝。
+# 过滤字段：created_at / namespace 必填（required = true；created_at 命中分区键，namespace 由前端全局
+# 命名空间提供）；timestamp 选填（提供时按采集时间精确过滤，不提供则仅按入库时间裁剪）；
+# 可选字段仅精确匹配（eq），配合 bloom_filter 跳过索引在十亿级数据上按数据块剪枝。
 [Ipv4TcpListGet]
 [[Ipv4TcpListGet.orderByFields]]
 fieldName = "timestamp"
@@ -1123,16 +1124,14 @@ column = "timestamp"
 fieldName = "timestampFrom"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["gte"]
 
 [[Ipv4TcpListGet.filterByFields]]
 fieldName = "timestampTo"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["lte"]
 
 [[Ipv4TcpListGet.filterByFields]]
@@ -1365,7 +1364,7 @@ column = "payload"
 
 
 # 原始流量审计 - IPv6 TCP 包
-# 过滤字段与 IPv4 TCP 包一致（timestamp / created_at / namespace 必填，可选五元组与 session_id）。
+# 过滤字段与 IPv4 TCP 包一致（created_at / namespace 必填，timestamp 选填，可选五元组与 session_id）。
 [Ipv6TcpListGet]
 [[Ipv6TcpListGet.orderByFields]]
 fieldName = "timestamp"
@@ -1375,16 +1374,14 @@ column = "timestamp"
 fieldName = "timestampFrom"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["gte"]
 
 [[Ipv6TcpListGet.filterByFields]]
 fieldName = "timestampTo"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["lte"]
 
 [[Ipv6TcpListGet.filterByFields]]
@@ -1601,7 +1598,7 @@ column = "payload"
 
 
 # 原始流量审计 - HTTP 传输
-# 过滤字段：timestamp / created_at / namespace 必填；可选 client/server IP 与端口、请求行/URI 与 HTTP 版本低基数字段。
+# 过滤字段：created_at / namespace 必填，timestamp 选填；可选 client/server IP 与端口、请求行/URI 与 HTTP 版本低基数字段。
 [HttpTransportListGet]
 [[HttpTransportListGet.orderByFields]]
 fieldName = "timestamp"
@@ -1611,16 +1608,14 @@ column = "timestamp"
 fieldName = "timestampFrom"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["gte"]
 
 [[HttpTransportListGet.filterByFields]]
 fieldName = "timestampTo"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["lte"]
 
 [[HttpTransportListGet.filterByFields]]
@@ -2305,7 +2300,7 @@ column = "tags"
 
 # 原始流量审计 - 网络堆栈（HTTP 传输关联下钻）
 # 以 HttpTransport 的 traceID 为键查询组成该 TCP 流的全部网络堆栈记录；
-# timestamp / created_at 双时间范围必填，命中分区键防全表扫描。
+# created_at 范围必填（命中分区键防全表扫描），timestamp 选填（提供时按采集时间精确过滤）。
 [NetworkStackListGet]
 [[NetworkStackListGet.orderByFields]]
 fieldName = "timestamp"
@@ -2331,16 +2326,14 @@ column = "proto"
 fieldName = "timestampFrom"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["gte"]
 
 [[NetworkStackListGet.filterByFields]]
 fieldName = "timestampTo"
 fieldType = "time.Time"
 column = "timestamp"
-binding = "required"
-required = true
+binding = ""
 actions = ["lte"]
 
 [[NetworkStackListGet.filterByFields]]
@@ -3566,6 +3559,10 @@ column = "thinking_on_value"
 [[LlmModelListGet.selectFields]]
 fieldName = "thinkingOffValue"
 column = "thinking_off_value"
+
+[[LlmModelListGet.selectFields]]
+fieldName = "apiMode"
+column = "api_mode"
 
 # MCP 服务器注册表列表（admin 配置 API：/api/v1/admin/llm/mcp/list）
 # 注册表为全局配置（不按命名空间隔离），过滤/排序覆盖时间、名称、传输方式与启用状态

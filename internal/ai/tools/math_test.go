@@ -11,17 +11,16 @@ import (
 	"testing"
 
 	// 第三方
-	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/schema"
 )
 
 // ============================================================================
-// math_eval
+// 数学求值工具
 // ============================================================================
 
 // TestMathEval_Info 覆盖 Info：工具名与入参 schema（expression 为 string 且必填）。
 func TestMathEval_Info(t *testing.T) {
-	info, err := (&mathEvalTool{}).Info(context.Background())
+	info, err := mathEvalTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -60,7 +59,7 @@ func TestMathEval_InvokableErrors(t *testing.T) {
 	}
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := (&mathEvalTool{}).InvokableRun(context.Background(), args)
+			_, err := mathEvalTool.InvokableRun(context.Background(), args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -73,7 +72,7 @@ func TestMathEval_InvokableErrors(t *testing.T) {
 
 // TestMathEval_Smoke 锁定 math_eval 的出参 JSON 线形状与字段名。
 func TestMathEval_Smoke(t *testing.T) {
-	out, err := (&mathEvalTool{}).InvokableRun(context.Background(), `{"expression":"(1+2)*3-4/2"}`)
+	out, err := mathEvalTool.InvokableRun(context.Background(), `{"expression":"(1+2)*3-4/2"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -83,12 +82,12 @@ func TestMathEval_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// unit_convert
+// 单位换算工具
 // ============================================================================
 
 // TestUnitConvert_Info 覆盖 Info：工具名与入参 schema（value 为 number、from/to 为 string 且均必填）。
 func TestUnitConvert_Info(t *testing.T) {
-	info, err := (&unitConvertTool{}).Info(context.Background())
+	info, err := unitConvertTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -131,7 +130,7 @@ func TestUnitConvert_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&unitConvertTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := unitConvertTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -144,7 +143,7 @@ func TestUnitConvert_InvokableErrors(t *testing.T) {
 
 // TestUnitConvert_Smoke 锁定 unit_convert 的出参 JSON 线形状与字段名。
 func TestUnitConvert_Smoke(t *testing.T) {
-	out, err := (&unitConvertTool{}).InvokableRun(context.Background(), `{"value":1,"from":"km","to":"m"}`)
+	out, err := unitConvertTool.InvokableRun(context.Background(), `{"value":1,"from":"km","to":"m"}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -154,13 +153,13 @@ func TestUnitConvert_Smoke(t *testing.T) {
 }
 
 // ============================================================================
-// base_convert
+// 进制转换工具
 // ============================================================================
 
 // TestBaseConvert_Info 覆盖 Info：工具名与入参 schema（value 为 string、from_base/to_base 为 integer
 // 且均必填）。
 func TestBaseConvert_Info(t *testing.T) {
-	info, err := (&baseConvertTool{}).Info(context.Background())
+	info, err := baseConvertTool.Info(context.Background())
 	if err != nil {
 		t.Fatalf("Info error = %v", err)
 	}
@@ -202,7 +201,7 @@ func TestBaseConvert_InvokableErrors(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := (&baseConvertTool{}).InvokableRun(context.Background(), tc.args)
+			_, err := baseConvertTool.InvokableRun(context.Background(), tc.args)
 			if err == nil {
 				t.Fatal("error = nil, want a rejection")
 			}
@@ -215,7 +214,7 @@ func TestBaseConvert_InvokableErrors(t *testing.T) {
 
 // TestBaseConvert_Smoke 锁定 base_convert 的出参 JSON 线形状与字段名。
 func TestBaseConvert_Smoke(t *testing.T) {
-	out, err := (&baseConvertTool{}).InvokableRun(context.Background(), `{"value":"ff","from_base":16,"to_base":2}`)
+	out, err := baseConvertTool.InvokableRun(context.Background(), `{"value":"ff","from_base":16,"to_base":2}`)
 	if err != nil {
 		t.Fatalf("InvokableRun error = %v", err)
 	}
@@ -250,8 +249,3 @@ func mathTestRequiredContains(required []string, name string) bool {
 	}
 	return false
 }
-
-// 仅用于确认三个工具满足 eino 的可调用工具接口（编译期断言）。
-var _ tool.InvokableTool = (*mathEvalTool)(nil)
-var _ tool.InvokableTool = (*unitConvertTool)(nil)
-var _ tool.InvokableTool = (*baseConvertTool)(nil)

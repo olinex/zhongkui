@@ -32,7 +32,7 @@ RouteRegister 是装配入口，其顺序本身即隐含约束：先初始化命
 
 ## 响应与错误码体系
 
-response 包以 CodeError 统一承载 HTTP 状态码、业务错误码与详情，经 ToGinH / ToGinW 序列化， 经 AbortWithGinH / AbortWithGinW 直接中断请求。错误码分两段：基础码自 1000 起（CodeUnknown、 CodeBadBody、CodeBadQuery、CodeBadUrlParam、CodeBadJwtToken、CodeAuthorizeFailed 等），业务码 自 1100 起（如 CodeLlmBindingIncompatible=1115 表示档位绑定与系统当前配置不兼容）。错误码同时 作为 i18n 消息键（`code.{码}`），详情可经 DetailContext 按请求语言本地化。
+response 包以 CodeError 统一承载 HTTP 状态码、业务错误码与详情，经 ToGinH / ToGinW 序列化， 经 AbortWithGinH / AbortWithGinW 直接中断请求。错误码分两段：基础码 1000-1099（CodeUnknown、 CodeBadBody、CodeBadQuery、CodeBadUrlParam、CodeBadJwtToken、CodeAuthorizeFailed 等），业务码按领域 区间分配（1100-1199 通用与账户 / 1200-1299 标签 / 1300-1399 AI 助手 / 1400-1499 平台与运维；如 CodeLlmBindingIncompatible=1404 表示档位绑定与系统当前配置不兼容）。错误码同时 作为 i18n 消息键（`code.{码}`），详情可经 DetailContext 按请求语言本地化。
 
 ## 视图层与 In/Out 解耦
 

@@ -46,6 +46,50 @@ func TestParseExtraBody(t *testing.T) {
 	}
 }
 
+// TestParseAPIMode 测试接口形态解析：空串取缺省 chat，chat / responses 合法（容忍空白与大小写），
+// 其余取值返回英文错误。
+func TestParseAPIMode(t *testing.T) {
+	cases := []struct {
+		raw  APIMode
+		want APIMode
+		ok   bool
+	}{
+		{"", APIModeChat, true},
+		{" chat ", APIModeChat, true},
+		{"RESPONSES", APIModeResponses, true},
+		{"completions", "", false},
+	}
+	for _, c := range cases {
+		mode, err := ParseAPIMode(c.raw)
+		if c.ok {
+			if err != nil || mode != c.want {
+				t.Errorf("ParseAPIMode(%q) = (%q, %v), want (%q, nil)", c.raw, mode, err, c.want)
+			}
+			continue
+		}
+		if err == nil || mode != "" {
+			t.Errorf("ParseAPIMode(%q) = (%q, %v), want an error", c.raw, mode, err)
+		}
+	}
+}
+
+// TestValidateAPIMode 测试模型类型与接口形态的组合校验：chat 类模型两种形态均可用，
+// embedding 等非 chat 类模型只允许 chat。
+func TestValidateAPIMode(t *testing.T) {
+	if err := ValidateAPIMode(ModelKindChat, APIModeResponses); err != nil {
+		t.Errorf("ValidateAPIMode(chat, responses) error = %v, want nil", err)
+	}
+	if err := ValidateAPIMode(ModelKindEmbedding, ""); err != nil {
+		t.Errorf("ValidateAPIMode(embedding, default) error = %v, want nil", err)
+	}
+	if err := ValidateAPIMode(ModelKindEmbedding, APIModeResponses); err == nil {
+		t.Error("ValidateAPIMode(embedding, responses) error = nil, want an error")
+	}
+	if err := ValidateAPIMode(ModelKindChat, "bogus"); err == nil {
+		t.Error("ValidateAPIMode(chat, bogus) error = nil, want an error")
+	}
+}
+
 // TestParseJSONValue 表驱动测试 ParseJSONValue：空串返回 (nil, nil)，合法 JSON 值解析为对应的
 // any（bool / object / string / number / array），非法 JSON 返回英文错误。
 func TestParseJSONValue(t *testing.T) {

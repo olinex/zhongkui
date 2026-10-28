@@ -30,7 +30,8 @@
   "extraBody": "string",
   "thinkingField": "string",
   "thinkingOnValue": "string",
-  "thinkingOffValue": "string"
+  "thinkingOffValue": "string",
+  "apiMode": "string"
 }
 ```
 
@@ -55,3 +56,4 @@
 | thinkingField | string | - | max=64 | - | - |
 | thinkingOnValue | string | - | - | - | - |
 | thinkingOffValue | string | - | - | - | - |
+| apiMode | llm.APIMode | - | max=16 | - | - |

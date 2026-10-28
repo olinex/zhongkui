@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"zhongkuisec.com/zhongkui/internal/ai/capability"
+	"zhongkuisec.com/zhongkui/internal/ai/contract"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
 )
 
@@ -11,10 +12,9 @@ import (
 // 分组挂认证/授权/命名空间/核心库/功能开关/AI 组件/S3/对象缓存/管道投递客户端中间件；子组：
 //   - /doc    知识库文档 CRUD/list/reindex/chunks + 导入上传/原件下载
 //   - /session  Agent 会话 create/list/get/rename/valve/delete/messages
-//   - /memory  长期记忆 create/list/get/update/delete/status
-//   - /agent/:sessionID/stream  SSE 流式生成
-//   - /agent/:sessionID/tool-result  回传客户端工具调用结果并续跑挂起运行（SSE）
-//   - /status  AI 状态（可用性 + 维度差异）
+//   - /memory  长期记忆 create/list(get/update)/delete/status
+//   - /agent/:sessionID/{chat,render,action,events,abort}  事件流式接口
+//   - /status  AI 状态（可用性 + 维度差异 + 会话回合快照）
 //
 // 知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存
 // （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务入队）中间件供子路由共享。
@@ -253,10 +253,10 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	sessionGroup.POST("/:id/branch", AgentSessionBranch)
 	// 会话分支元信息
 	views.RegisterApi(sessionGroup, "/:id/branch", "以某一轮用户消息为结尾创建会话分支 - 把该轮及其之前的全部消息复制到新会话", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentSessionBranchIn](), views.WithBodyOutput[AgentSessionItemOut]()))
-	// 压缩会话上下文并抽取长期记忆（SSE 流式）- 折叠未摘要消息进滚动摘要并按开关抽取长期记忆
+	// 压缩会话上下文并抽取长期记忆（message.compress SSE）- 折叠未摘要消息进滚动摘要并按开关抽取长期记忆
 	sessionGroup.POST("/:id/compact", AgentSessionCompact)
-	// 压缩会话上下文元信息（SSE 流式：仅注册请求体输入）
-	views.RegisterApi(sessionGroup, "/:id/compact", "压缩会话上下文并抽取长期记忆（SSE 流式：依次下发 compress_start / compress_delta / compress_done，可选 assistantMessageID 指定折叠边界）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentSessionCompactIn]()))
+	// 压缩会话上下文元信息（message.compress SSE：仅注册请求体输入）
+	views.RegisterApi(sessionGroup, "/:id/compact", "压缩会话上下文并抽取长期记忆（message.compress SSE 流式进度，可选 assistantMessageID 指定折叠边界）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentSessionCompactIn]()))
 
 	// ========== 长期记忆：/api/v1/ai/memory ==========
 	// 会话级长期记忆的管理接口（列表/详情/批量删除/启停）；记忆由 Agent 运行期按会话生成，
@@ -298,35 +298,36 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 启停记忆元信息
 	views.RegisterApi(memoryGroup, "/:id/status", "启停记忆 - active/archived", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryStatusIn]()))
 
-	// ========== Agent 流式生成与状态：/api/v1/ai ==========
-	// SSE 流式问答（带会话持久化）、续播在途运行、回传客户端工具调用结果续跑挂起运行与 AI 状态查询。
+	// ========== Agent 回合（领域事件）与状态：/api/v1/ai ==========
+	// 所有服务端→前端输出均为领域事件，以 `id: <seq>` + `data: <json>` 的 SSE 行下发；运行与
+	// 连接解耦，刷新后经 render 重建历史、经 events?after= 续接实时增量。
 	// 同 path 的 GET/POST 元信息必须合并进单次 RegisterApi（其内部只注册一次 OPTIONS，重复注册同一
 	// path 的 OPTIONS 会使 gin 抛出路由冲突 panic）。
-	aiGroup.POST("/agent/:sessionID/stream", AgentStream)
-	// 续播某会话在途运行（SSE 流式，刷新 / 重连后经 ?after= 续接，运行已结束则回放后 EOF）
-	aiGroup.GET("/agent/:sessionID/stream", AgentStreamResume)
-	views.RegisterApi(aiGroup, "/agent/:sessionID/stream", "AI 助手 SSE 流式问答（POST 启动驻留运行并转发事件）：运行与连接解耦，刷新后经 GET 续播。",
-		views.WithMethod(http.MethodPost, views.WithBodyInput[AgentStreamIn]()),
-		views.WithMethod(http.MethodGet))
-	// 回传客户端工具调用结果并续跑挂起运行（SSE 流式：继续输出 delta/stage/done 或再次挂起）
-	aiGroup.POST("/agent/:sessionID/tool-result", AgentToolResult)
-	// 回传工具调用结果元信息（SSE 流式：仅注册请求体输入）
-	views.RegisterApi(aiGroup, "/agent/:sessionID/tool-result", "回传客户端工具调用结果并续跑挂起运行（SSE 流式：继续输出 delta/stage/done 或再次挂起）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentToolResultIn]()))
-	// 回退到助手待输入回合（问卷作答 / 工具授权）- 删除该锚点之后的回复、把锚点与本回合运行现场重置为待输入
-	aiGroup.POST("/agent/:sessionID/input/rerun", AgentAssistantInputRerun)
-	// 回退到助手待输入回合元信息
-	views.RegisterApi(aiGroup, "/agent/:sessionID/input/rerun", "回退到助手待输入回合（问卷作答 / 工具授权）- 删除该锚点之后的回复、把锚点与本回合运行现场重置为待输入，返回该回合的题目与上次答案 / 待审批调用清单供前端重建面板", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentAssistantInputRerunIn](), views.WithBodyOutput[AgentAssistantInputRerunOut]()))
-	// 取消某会话在途运行（落 cancelled 终态，可回放）
-	aiGroup.POST("/agent/:sessionID/run/cancel", AgentRunCancel)
-	// 取消某会话在途运行元信息
-	views.RegisterApi(aiGroup, "/agent/:sessionID/run/cancel", "取消某会话在途运行（落 cancelled 终态，可回放）", views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentCancelOut]()))
+	aiGroup.POST("/agent/:sessionID/chat", AgentChat)
+	// 启动（或抢占）一轮对话元信息（SSE：仅注册请求体输入）
+	views.RegisterApi(aiGroup, "/agent/:sessionID/chat", "启动或抢占一轮 AI 助手对话（SSE）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentChatIn]()))
+	aiGroup.GET("/agent/:sessionID/render", AgentRender)
+	// 历史回放元信息（SSE：回放历史快照与挂起交互后结束）
+	views.RegisterApi(aiGroup, "/agent/:sessionID/render", "回放会话的历史快照与当前挂起交互（SSE）", views.WithMethod(http.MethodGet))
+	aiGroup.POST("/agent/:sessionID/action", AgentAction)
+	// 审批 / 问卷动作元信息（SSE：仅注册请求体输入）
+	views.RegisterApi(aiGroup, "/agent/:sessionID/action", "提交审批 / 问卷动作并续跑（SSE）", views.WithMethod(http.MethodPost, views.WithBodyInput[contract.ActionRequest]()))
+	aiGroup.POST("/agent/:sessionID/interaction/reopen", AgentInteractionReopen)
+	// 重新审批 / 重新回答元信息（回退到该次交互的待处理状态，不重跑整轮回答）
+	views.RegisterApi(aiGroup, "/agent/:sessionID/interaction/reopen", "回退到某次审批 / 问卷交互的待处理状态（可重新决策 / 作答，不重跑整轮回答）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentInteractionReopenIn]()))
+	aiGroup.GET("/agent/:sessionID/events", AgentEvents)
+	// 运行中重连订阅元信息（SSE：?after= 指定回放起点）
+	views.RegisterApi(aiGroup, "/agent/:sessionID/events", "运行中重连订阅后续事件（SSE，?after= 指定回放起点）", views.WithMethod(http.MethodGet))
+	aiGroup.POST("/agent/:sessionID/abort", AgentAbort)
+	// 中止当前回合元信息
+	views.RegisterApi(aiGroup, "/agent/:sessionID/abort", "中止当前回合（下发 turn.completed(cancelled) 并作废挂起现场）", views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentCancelOut]()))
 	// 提示词优化 - 把当前诉求改写为更清晰、更易被正确理解的提问（单轮、非流式）
 	aiGroup.POST("/prompt/optimize", AgentPromptOptimize)
 	// 提示词优化元信息
 	views.RegisterApi(aiGroup, "/prompt/optimize", "优化用户提问的提示词 - 把当前诉求改写为更清晰、更易被正确理解的提问（单轮、非流式）", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentPromptOptimizeIn](), views.WithBodyOutput[AgentPromptOptimizeOut]()))
-	// 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的在途运行快照。
+	// 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的回合状态快照。
 	aiGroup.POST("/status", AgentStatusGet)
-	views.RegisterApi(aiGroup, "/status", "查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的在途运行快照。",
+	views.RegisterApi(aiGroup, "/status", "查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的回合状态快照。",
 		views.WithMethod(http.MethodPost, views.WithBodyInput[AgentStatusIn](), views.WithBodyOutput[AgentStatusOut]()),
 		views.WithCapability(views.CapabilityMeta{
 			ID:        "ai.status",
