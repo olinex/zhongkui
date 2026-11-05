@@ -52,15 +52,16 @@ pnpm dev
 - 发布前必须更新 `CHANGELOG.md` 的 `## [X.Y.Z] - YYYY-MM-DD` 段，并将 `web/package.json` 的 `version` 对齐到同一版本号。
 - 开发构建不注入 SemVer，`zki version` 回落显示 commit hash；只有 release 构建注入语义化版本。
 
-发布命令：
+发布命令（Gitee 为主仓）：
 
 ```bash
 make build-release VERSION=v0.1.0   # 校验版本号并编译 release 二进制
 make release VERSION=v0.1.0         # 校验分支/工作区/CHANGELOG/前端版本，执行 make ci 后创建标签
+make dist VERSION=v0.1.0            # 打包 zki_<version>_<os>_<arch>.tar.gz 与 sha256
 git push origin master --follow-tags
 ```
 
-推送 tag 后，GitHub Actions 的 `release` 工作流会重新执行 `make ci`、构建 `linux/amd64` 制品并发布到 GitHub Release；Gitee 主仓的发布页需手工同步制品。
+推送 tag 后在 Gitee 创建 Release，并上传 `dist/` 下的制品与校验和。GitHub 为只读镜像，不发布 Release；Gitee Go 的发布流水线在 Gitee 控制台配置，命令与上面一致（见 `.gitee/README.md`）。
 
 ## 6. 测试与检查
 
