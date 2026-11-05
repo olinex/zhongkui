@@ -28,6 +28,7 @@ PeriodicReportRun 表示一次报告运行的记录：由计划在 cron 触发�
 | title | VARCHAR(256) | 是 | - | Title 生成报告的标题 |
 | size_bytes | BIGINT | 是 | - | SizeBytes 生成的报告字节大小 |
 | error | VARCHAR(2048) | 是 | - | Error 运行失败原因，成功时为空 |
+| session_id | BIGINT | 是 | - | SessionID 本次运行专属的 Agent 会话 ID（agent_sessions.id 外键，会话删除时置空）； nil 表示尚未创建。每次运行独立建会话，使同一计划的多份报告可以并发生成。 |
 | started_at | TIMESTAMPTZ | 是 | - | StartedAt 实际开始执行时间，null 表示尚未开始 |
 | finished_at | TIMESTAMPTZ | 是 | - | FinishedAt 执行结束时间，null 表示尚未结束 |
 

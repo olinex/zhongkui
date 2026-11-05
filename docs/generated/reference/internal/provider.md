@@ -18,6 +18,7 @@
 - [func DescribeRedisConfig\(\) config.ConfigDescriptions](<#DescribeRedisConfig>)
 - [func DescribeS3Config\(\) config.ConfigDescriptions](<#DescribeS3Config>)
 - [func GetScope\(ctx context.Context\) \*do.Scope](<#GetScope>)
+- [func InjectAccessKeyPool\(i do.Injector\)](<#InjectAccessKeyPool>)
 - [func InjectAi\(ctx context.Context, i do.Injector\)](<#InjectAi>)
 - [func InjectApiLogger\(i do.Injector\)](<#InjectApiLogger>)
 - [func InjectCacheRedis\(i do.Injector\)](<#InjectCacheRedis>)
@@ -57,6 +58,7 @@
 - [func InjectTagEngine\(i do.Injector\)](<#InjectTagEngine>)
 - [func InjectUniversalTranslator\(ctx context.Context, i do.Injector\)](<#InjectUniversalTranslator>)
 - [func InjectViper\(i do.Injector\)](<#InjectViper>)
+- [func InvokeAccessKeyPool\(i do.Injector\) \(\*coremodel.AccessKeyPool, error\)](<#InvokeAccessKeyPool>)
 - [func InvokeAi\(ctx context.Context, i do.Injector\) \(\*ai.Runtime, error\)](<#InvokeAi>)
 - [func InvokeApiLogger\(i do.Injector\) \(\*logging.Logger, error\)](<#InvokeApiLogger>)
 - [func InvokeCacheRedis\(i do.Injector\) \(\*redis.Client, error\)](<#InvokeCacheRedis>)
@@ -97,6 +99,7 @@
 - [func InvokeUniversalTranslator\(i do.Injector\) \(\*ut.UniversalTranslator, error\)](<#InvokeUniversalTranslator>)
 - [func InvokeViper\(i do.Injector\) \(\*viper.Viper, error\)](<#InvokeViper>)
 - [func Models\(dbName string\) \[\]any](<#Models>)
+- [func MustInvokeAccessKeyPool\(i do.Injector\) \*coremodel.AccessKeyPool](<#MustInvokeAccessKeyPool>)
 - [func MustInvokeAi\(ctx context.Context, i do.Injector\) \*ai.Runtime](<#MustInvokeAi>)
 - [func MustInvokeApiLogger\(i do.Injector\) \*logging.Logger](<#MustInvokeApiLogger>)
 - [func MustInvokeCacheRedis\(i do.Injector\) \*redis.Client](<#MustInvokeCacheRedis>)
@@ -230,6 +233,12 @@ const (
 )
 ```
 
+<a name="AccessKeyPoolTTL"></a>AccessKeyPoolTTL 是访问密钥签名令牌的防重放窗口：时间戳超出该窗口或 nonce 在窗口内重复 均视为重放。Web 接口层与 gRPC 认证器共用同一窗口。
+
+```go
+const AccessKeyPoolTTL = time.Minute
+```
+
 <a name="CoreModels"></a>
 ## func CoreModels
 
@@ -346,6 +355,15 @@ func GetScope(ctx context.Context) *do.Scope
 ```
 
 GetScope 从上下文中获取注入器实例。
+
+<a name="InjectAccessKeyPool"></a>
+## func InjectAccessKeyPool
+
+```go
+func InjectAccessKeyPool(i do.Injector)
+```
+
+InjectAccessKeyPool 向依赖注入器注册访问密钥池 provider。
 
 <a name="InjectAi"></a>
 ## func InjectAi
@@ -697,6 +715,15 @@ func InjectViper(i do.Injector)
 ```
 
 InjectViper 向依赖注入器注册 Viper 配置实例 provider。
+
+<a name="InvokeAccessKeyPool"></a>
+## func InvokeAccessKeyPool
+
+```go
+func InvokeAccessKeyPool(i do.Injector) (*coremodel.AccessKeyPool, error)
+```
+
+InvokeAccessKeyPool 从依赖注入器解析访问密钥池，错误交由调用方处理。
 
 <a name="InvokeAi"></a>
 ## func InvokeAi
@@ -1057,6 +1084,15 @@ func Models(dbName string) []any
 ```
 
 Models 按数据库名返回对应的打标模型清单。
+
+<a name="MustInvokeAccessKeyPool"></a>
+## func MustInvokeAccessKeyPool
+
+```go
+func MustInvokeAccessKeyPool(i do.Injector) *coremodel.AccessKeyPool
+```
+
+MustInvokeAccessKeyPool 从依赖注入器解析访问密钥池；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeAi"></a>
 ## func MustInvokeAi

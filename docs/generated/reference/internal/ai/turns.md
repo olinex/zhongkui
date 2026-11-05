@@ -107,6 +107,10 @@ type ChatInput struct {
     // SystemHint 是本轮附加的系统级约束，注入在系统提示词末尾；空表示不附加。
     // 用于需要固定输出契约的自动化场景（如周期报告要求统一 JSON 信封）。
     SystemHint string
+    // Automation 是无人值守运行上下文，仅周期报告等后台任务使用（审核自动通过、
+    // api_invoke 服务端回调、ask_user 降级提示）。携带不可序列化的回调，不持久化，
+    // 也不会写入 ChatItem / checkpoint。
+    Automation *agentkit.Automation
 }
 ```
 

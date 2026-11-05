@@ -114,7 +114,7 @@ ComputeCursorTriggers 根据上一次游标与当前时间计算需要触发的�
 
 积压行为由 BacklogPolicy 控制：
 
-- Enabled=false 时跳过全部积压，不生成任何历史触发点，游标直接对齐到当前网格点；
+- Enabled=false 时跳过全部积压，仅投递不晚于当前时刻的最近一次网格点（未超出游标时 不重复投递），游标推进到该网格点；
 - Window 大于 0 时仅补投 \[now\-Window, now\] 内的触发点，更早的积压直接丢弃；
 - Limit 限制单次最多生成的触发点个数，防止长间隔导致的积压一次性实例化海量时间戳。
 
@@ -740,7 +740,7 @@ type SchedulerTaskConfig struct {
 
     // BacklogEnabled 是否补投积压期间错过的历史触发点。
     // 长时间停机或游标异常会形成积压 (last, now]；为 false 时跳过全部积压，
-    // 仅投递不晚于当前时刻的最近一次触发点（cron）或对齐到当前网格点（interval）。
+    // 仅投递不晚于当前时刻的最近一次触发点（cron）或当前网格点（interval）。
     // 默认值: false（不补投）。注意本字段默认值必须与零值一致：任务配置在导入 etcd 前会经
     // defaults.Set 补默认值，若默认写成 true，配置文件中显式声明的 false 会被当成零值覆盖回 true。
     BacklogEnabled bool `mapstructure:"backlogEnabled" json:"backlog_enabled" default:"false" comment:"是否补投积压期间错过的历史触发点，false 时跳过全部积压，默认关闭"` // 是否补投积压

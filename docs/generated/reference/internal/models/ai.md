@@ -65,6 +65,7 @@
 - [type PeriodicReportRun](<#PeriodicReportRun>)
 - [type PeriodicReportRunStatus](<#PeriodicReportRunStatus>)
 - [type ReviewValve](<#ReviewValve>)
+- [type SessionOrigin](<#SessionOrigin>)
 - [type SessionStatus](<#SessionStatus>)
 - [type SkillInputField](<#SkillInputField>)
   - [func ParseSkillInputFields\(raw datatypes.JSON\) \(\[\]SkillInputField, error\)](<#ParseSkillInputFields>)
@@ -669,6 +670,9 @@ type AgentSession struct {
     Status SessionStatus `gorm:"type:VARCHAR(16)"`
     // AgentKind 会话所属 Agent 类型（如 knowledge/rego），记忆归属与检索据此隔离
     AgentKind AgentKind `gorm:"type:VARCHAR(32);default:knowledge"`
+    // Origin 会话来由：chat（普通助手会话，默认）或 periodic_report（周期报告运行会话）。
+    // 内部运行会话不进入 AI 助手会话列表，只在其业务入口（周期报告历史）中查看。
+    Origin SessionOrigin `gorm:"type:VARCHAR(16);not null;default:chat"`
     // ReviewValve 会话级审核阀门（each/auto/none），与本会话内 client 工具调用评估出的审核
     // 重要级合成，决定该调用是否需人工审核；空表示按列默认值 each（逐一审核）
     ReviewValve ReviewValve `gorm:"type:VARCHAR(16);default:each"`
@@ -1167,8 +1171,6 @@ type PeriodicReportPlan struct {
     InputValues datatypes.JSON `gorm:"type:JSONB;not null;default:'{}'"`
     // Enabled 计划是否启用，默认 true；停用的计划不再触发
     Enabled bool `gorm:"type:BOOLEAN;default:true"`
-    // SessionID 计划专属的 Agent 会话 ID（agent_sessions.id 外键，会话删除时置空）；nil 表示尚未创建
-    SessionID *uint `gorm:"type:BIGINT"`
     // UserID 计划属主用户 ID（users.id），用于跨用户隔离
     UserID uint `gorm:"type:BIGINT;not null"`
     // RetentionDays 报告保留天数，默认 90
@@ -1223,6 +1225,9 @@ type PeriodicReportRun struct {
     SizeBytes int64 `gorm:"type:BIGINT"`
     // Error 运行失败原因，成功时为空
     Error string `gorm:"type:VARCHAR(2048)"`
+    // SessionID 本次运行专属的 Agent 会话 ID（agent_sessions.id 外键，会话删除时置空）；
+    // nil 表示尚未创建。每次运行独立建会话，使同一计划的多份报告可以并发生成。
+    SessionID *uint `gorm:"type:BIGINT"`
     // StartedAt 实际开始执行时间，null 表示尚未开始
     StartedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
     // FinishedAt 执行结束时间，null 表示尚未结束
@@ -1271,6 +1276,26 @@ const (
     ReviewValveAuto ReviewValve = "auto"
     // ReviewValveNone 无需审核：仅 must 重要级的调用需人工审核，其余自动执行
     ReviewValveNone ReviewValve = "none"
+)
+```
+
+<a name="SessionOrigin"></a>
+## type SessionOrigin
+
+SessionOrigin 是 Agent 会话来由的标识：普通助手会话（chat）与内部运行会话（periodic\_report）， 取值与 agent\_sessions.origin 列的取值一致。内部运行会话只在创建它的业务入口（如周期性报告的 历史报告）中查看，不出现在 AI 助手会话列表。此处只声明类型与取值常量，不注册枚举类。
+
+```go
+type SessionOrigin string
+```
+
+<a name="SessionOriginChat"></a>会话来由常量。
+
+```go
+const (
+    // SessionOriginChat 普通助手会话：用户在 AI 助手中创建并展示在会话列表中
+    SessionOriginChat SessionOrigin = "chat"
+    // SessionOriginPeriodicReport 周期报告运行会话：每次运行独立创建，不在助手会话列表中展示
+    SessionOriginPeriodicReport SessionOrigin = "periodic_report"
 )
 ```
 

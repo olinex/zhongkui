@@ -27,6 +27,7 @@ AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答
 | target_model | VARCHAR(255) | 是 | - | TargetModel 会话缺省档位（列名沿用历史命名）：取值 flash/standard/advanced，空表示按 参数 agent.defaultSlot 解析；生成请求未显式指定档位时使用该档位 |
 | status | VARCHAR(16) | 是 | - | Status 会话状态（如 active/archived），默认 active |
 | agent_kind | VARCHAR(32) | 是 | knowledge | AgentKind 会话所属 Agent 类型（如 knowledge/rego），记忆归属与检索据此隔离 |
+| origin | VARCHAR(16) | 否 | chat | Origin 会话来由：chat（普通助手会话，默认）或 periodic_report（周期报告运行会话）。 内部运行会话不进入 AI 助手会话列表，只在其业务入口（周期报告历史）中查看。 |
 | review_valve | VARCHAR(16) | 是 | each | ReviewValve 会话级审核阀门（each/auto/none），与本会话内 client 工具调用评估出的审核 重要级合成，决定该调用是否需人工审核；空表示按列默认值 each（逐一审核） |
 | summary | BYTEA | 是 | - | Summary 会话滚动摘要，压缩已折叠进其中的历史消息，无摘要时为空 （正文含用户原文，经 crypto 序列化器加密落库） |
 | message_seq | BIGINT | 否 | - | MessageSeq 会话内已分配的最大消息序号（seq），供消息 seq 原子分配 |

@@ -22,6 +22,7 @@
   - [func \(s \*Store\) ContextUsageBySession\(ctx context.Context, namespaceName string, userID uint, sessionIDs \[\]uint\) \(map\[uint\]int, error\)](<#Store.ContextUsageBySession>)
   - [func \(s \*Store\) CountUserTurns\(ctx context.Context, sessionID uint, namespaceName string, userID uint\) \(int, error\)](<#Store.CountUserTurns>)
   - [func \(s \*Store\) CreateSession\(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, userID uint\) \(\*ai.AgentSession, error\)](<#Store.CreateSession>)
+  - [func \(s \*Store\) CreateSessionWithOrigin\(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, origin ai.SessionOrigin, userID uint\) \(\*ai.AgentSession, error\)](<#Store.CreateSessionWithOrigin>)
   - [func \(s \*Store\) DB\(\) \*database.DB](<#Store.DB>)
   - [func \(s \*Store\) DeleteMessage\(ctx context.Context, id uint, namespaceName string, userID uint\) error](<#Store.DeleteMessage>)
   - [func \(s \*Store\) DeleteSession\(ctx context.Context, id uint, namespaceName string, userID uint\) error](<#Store.DeleteSession>)
@@ -255,7 +256,16 @@ CountUserTurns 返回会话内当前存在的用户提问条数（有效轮次�
 func (s *Store) CreateSession(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, userID uint) (*ai.AgentSession, error)
 ```
 
-CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位 \(flash/standard/advanced\)，空表示生成时按 agent.defaultSlot 参数解析；agentKind 为会话所属 Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。
+CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位 \(flash/standard/advanced\)，空表示生成时按 agent.defaultSlot 参数解析；agentKind 为会话所属 Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。会话来由取普通助手会话。
+
+<a name="Store.CreateSessionWithOrigin"></a>
+### func \(\*Store\) CreateSessionWithOrigin
+
+```go
+func (s *Store) CreateSessionWithOrigin(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, origin ai.SessionOrigin, userID uint) (*ai.AgentSession, error)
+```
+
+CreateSessionWithOrigin 按指定会话来由创建会话；内部运行会话（如周期报告每次运行）以 periodic\_report 创建，从而不出现在 AI 助手会话列表中。
 
 <a name="Store.DB"></a>
 ### func \(\*Store\) DB
@@ -417,7 +427,7 @@ ListNativeMessages 返回会话最近 maxCount 条消息（限定命名空间与
 func (s *Store) ListSessions(ctx context.Context, namespaceName string, userID uint, limit, offset int) ([]*ai.AgentSession, error)
 ```
 
-ListSessions 列出命名空间下属于该用户且状态为 active 的会话，按更新时间倒序（最近活跃在前）； limit/offset 非正数时不限定。归档（archived）等非 active 会话不出现在列表中。
+ListSessions 列出命名空间下属于该用户、状态为 active 且会话来由为普通助手的会话，按更新时间 倒序（最近活跃在前）；limit/offset 非正数时不限定。归档（archived）等非 active 会话与内部 运行会话（如周期报告每次运行的会话）不出现在列表中。
 
 <a name="Store.RenameSession"></a>
 ### func \(\*Store\) RenameSession

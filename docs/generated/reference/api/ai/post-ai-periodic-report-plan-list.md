@@ -179,7 +179,6 @@
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
 | nextRunAt | time.Time | - | - | - | - |
-| sessionID | uint | - | - | - | - |
 | createdAt | time.Time | - | - | - | - |
 | updatedAt | time.Time | - | - | - | - |
 

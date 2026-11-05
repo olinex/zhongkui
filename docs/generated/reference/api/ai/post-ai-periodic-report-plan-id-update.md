@@ -57,7 +57,6 @@
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
 | nextRunAt | time.Time | - | - | - | - |
-| sessionID | uint | - | - | - | - |
 | createdAt | time.Time | - | - | - | - |
 | updatedAt | time.Time | - | - | - | - |
 
@@ -76,7 +75,6 @@
   "retentionDays": 0,
   "expiresAt": "1970-01-01T00:00:00Z",
   "nextRunAt": "1970-01-01T00:00:00Z",
-  "sessionID": 0,
   "createdAt": "1970-01-01T00:00:00Z",
   "updatedAt": "1970-01-01T00:00:00Z"
 }

@@ -88,11 +88,12 @@
 | sizeBytes | int64 | - | - | - | - |
 | error | string | - | - | - | - |
 | triggerAt | time.Time | - | - | - | - |
+| sessionID | uint | - | - | - | - |
 | startedAt | time.Time | - | - | - | - |
-| finishedAt | time.Time | - | - | - | - |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| finishedAt | time.Time | - | - | - | - |
 | createdAt | time.Time | - | - | - | - |
 
 ## 响应示例

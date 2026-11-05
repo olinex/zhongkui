@@ -52,18 +52,31 @@
 - [func TagRuleEngineMiddleware\(engine \*tagengine.Engine\) gin.HandlerFunc](<#TagRuleEngineMiddleware>)
 - [func TranslateMiddleware\(\) gin.HandlerFunc](<#TranslateMiddleware>)
 - [func ZapLoggerMiddleware\(logger \*logging.Logger\) gin.HandlerFunc](<#ZapLoggerMiddleware>)
+- [type AccessKeyAuthenticator](<#AccessKeyAuthenticator>)
+  - [func NewAccessKeyAuthenticator\(keys \*core.AccessKeyPool, db \*database.DB\) \*AccessKeyAuthenticator](<#NewAccessKeyAuthenticator>)
+  - [func \(a \*AccessKeyAuthenticator\) AuthenticateRequest\(c \*gin.Context\) \(\*core.User, \*response.CodeError\)](<#AccessKeyAuthenticator.AuthenticateRequest>)
+  - [func \(a \*AccessKeyAuthenticator\) Match\(c \*gin.Context\) bool](<#AccessKeyAuthenticator.Match>)
+  - [func \(a \*AccessKeyAuthenticator\) Name\(\) string](<#AccessKeyAuthenticator.Name>)
 - [type ApiLogger](<#ApiLogger>)
   - [func GetLogger\(c \*gin.Context\) \*ApiLogger](<#GetLogger>)
   - [func \(a \*ApiLogger\) Debugf\(c \*gin.Context, fields \[\]any, template string, args ...any\)](<#ApiLogger.Debugf>)
   - [func \(a \*ApiLogger\) Errorf\(c \*gin.Context, fields \[\]any, template string, args ...any\)](<#ApiLogger.Errorf>)
   - [func \(a \*ApiLogger\) Infof\(c \*gin.Context, fields \[\]any, template string, args ...any\)](<#ApiLogger.Infof>)
   - [func \(a \*ApiLogger\) Warnf\(c \*gin.Context, fields \[\]any, template string, args ...any\)](<#ApiLogger.Warnf>)
+- [type Authenticator](<#Authenticator>)
+  - [func GetAuth\(c \*gin.Context\) \*Authenticator](<#GetAuth>)
+  - [func NewAuthenticator\(authenticators ...CredentialAuthenticator\) \*Authenticator](<#NewAuthenticator>)
+  - [func \(a \*Authenticator\) AuthenticateMiddleware\(allowAnonymous bool\) gin.HandlerFunc](<#Authenticator.AuthenticateMiddleware>)
+  - [func \(a \*Authenticator\) AuthenticatorMiddleware\(\) gin.HandlerFunc](<#Authenticator.AuthenticatorMiddleware>)
+  - [func \(a \*Authenticator\) JWT\(\) \*JwtAuthenticator](<#Authenticator.JWT>)
+- [type CredentialAuthenticator](<#CredentialAuthenticator>)
 - [type JwtAuthenticator](<#JwtAuthenticator>)
-  - [func GetAuth\(c \*gin.Context\) \*JwtAuthenticator](<#GetAuth>)
+  - [func GetJWT\(c \*gin.Context\) \*JwtAuthenticator](<#GetJWT>)
   - [func NewJwtAuthenticator\(cfg \*config.AuthConfig, db \*database.DB, kd \*key.KeyDerivation\) \*JwtAuthenticator](<#NewJwtAuthenticator>)
-  - [func \(j \*JwtAuthenticator\) Authenticate\(c \*gin.Context, kd \*key.KeyDerivation\) \*core.User](<#JwtAuthenticator.Authenticate>)
-  - [func \(j \*JwtAuthenticator\) AuthenticateMiddleware\(allowAnonymous bool\) gin.HandlerFunc](<#JwtAuthenticator.AuthenticateMiddleware>)
-  - [func \(j \*JwtAuthenticator\) AuthenticatorMiddleware\(\) gin.HandlerFunc](<#JwtAuthenticator.AuthenticatorMiddleware>)
+  - [func \(j \*JwtAuthenticator\) Authenticate\(c \*gin.Context\) \*core.User](<#JwtAuthenticator.Authenticate>)
+  - [func \(j \*JwtAuthenticator\) AuthenticateRequest\(c \*gin.Context\) \(\*core.User, \*response.CodeError\)](<#JwtAuthenticator.AuthenticateRequest>)
+  - [func \(j \*JwtAuthenticator\) Match\(c \*gin.Context\) bool](<#JwtAuthenticator.Match>)
+  - [func \(j \*JwtAuthenticator\) Name\(\) string](<#JwtAuthenticator.Name>)
   - [func \(j \*JwtAuthenticator\) Parse\(token string\) \(\*jwt.Token, \*UserClaims, error\)](<#JwtAuthenticator.Parse>)
   - [func \(j \*JwtAuthenticator\) Refresh\(c \*gin.Context\) \(string, \*response.CodeError\)](<#JwtAuthenticator.Refresh>)
   - [func \(j \*JwtAuthenticator\) Sign\(user \*core.User\) \(string, \*response.CodeError\)](<#JwtAuthenticator.Sign>)
@@ -79,7 +92,7 @@
 const (
     // AnonymousUsername 定义匿名用户的用户名
     AnonymousUsername = "anon"
-    // AuthCtxName 定义在 Gin 上下文中存储认证器的键名
+    // AuthCtxName 定义在 Gin 上下文中存储统一鉴权聚合器的键名
     AuthCtxName = "auth"
     // UserCtxName 定义在 Gin 上下文中存储用户信息的键名
     UserCtxName = "user"
@@ -190,16 +203,15 @@ const TagRuleEngineCtxName = "tag-engine"
 
 ## Variables
 
-<a name="ErrUserNotExist"></a>
+<a name="ErrNoCredential"></a>
 
 ```go
 var (
-    // ErrUserNotExist 用户不存在的错误
+    // ErrNoCredential 表示请求未携带任何受支持的认证凭据。
+    // 业务码沿用 CodeBadJwtToken，保持既有 401 响应契约不变。
+    ErrNoCredential = response.CreateCodeError(http.StatusUnauthorized, response.CodeBadJwtToken, nil)
+    // ErrUserNotExist 表示请求上下文中没有已认证用户。
     ErrUserNotExist = response.CreateCodeError(http.StatusUnauthorized, response.CodeUserNotExist, nil)
-    // ErrJwtBadToken JWT 令牌格式错误或无效
-    ErrJwtBadToken = response.CreateCodeError(http.StatusUnauthorized, response.CodeBadJwtToken, nil)
-    // ErrJwtTimeoutToken JWT 令牌已过期且超过刷新时间限制
-    ErrJwtTimeoutToken = response.CreateCodeError(http.StatusUnauthorized, response.CodeTimeoutJwtToken, nil)
 )
 ```
 
@@ -212,6 +224,23 @@ var (
     // ErrAuthorizeFailed 表示授权失败错误
     ErrAuthorizeFailed = response.CreateCodeError(http.StatusForbidden, response.CodeAuthorizeFailed, nil)
 )
+```
+
+<a name="ErrJwtBadToken"></a>
+
+```go
+var (
+    // ErrJwtBadToken JWT 令牌格式错误或无效
+    ErrJwtBadToken = response.CreateCodeError(http.StatusUnauthorized, response.CodeBadJwtToken, nil)
+    // ErrJwtTimeoutToken JWT 令牌已过期且超过刷新时间限制
+    ErrJwtTimeoutToken = response.CreateCodeError(http.StatusUnauthorized, response.CodeTimeoutJwtToken, nil)
+)
+```
+
+<a name="ErrBadAccessKey"></a>ErrBadAccessKey 表示访问密钥令牌无效、密钥不存在/停用/过期或签名校验失败。
+
+```go
+var ErrBadAccessKey = response.CreateCodeError(http.StatusUnauthorized, response.CodeBadAccessKey, nil)
 ```
 
 <a name="ErrNampspaceDoesNotExist"></a>
@@ -596,7 +625,7 @@ GetTagRuleEngine 从 Gin 请求上下文中获取标签引擎。
 func GetUser(c *gin.Context) (*core.User, *response.CodeError)
 ```
 
-GetUser 从 Gin 上下文中获取用户信息 参数:
+GetUser 从 Gin 上下文中获取用户信息。 参数:
 
 - c: Gin 上下文
 
@@ -955,6 +984,69 @@ r := gin.New()
 r.Use(ZapLoggerMiddleware(logger))
 ```
 
+<a name="AccessKeyAuthenticator"></a>
+## type AccessKeyAuthenticator
+
+AccessKeyAuthenticator 使用 X\-Access\-Key 请求头完成访问密钥签名鉴权。 令牌解析、方法比对、防重放、密钥状态与签名校验统一委托 internal/pkg/auth 的共享实现， 本类型只负责把 Web 请求的方法标识传入共享鉴权，并按用户标识加载用户。
+
+```go
+type AccessKeyAuthenticator struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="NewAccessKeyAuthenticator"></a>
+### func NewAccessKeyAuthenticator
+
+```go
+func NewAccessKeyAuthenticator(keys *core.AccessKeyPool, db *database.DB) *AccessKeyAuthenticator
+```
+
+NewAccessKeyAuthenticator 创建访问密钥认证器。 参数:
+
+- keys: 访问密钥池
+- db: 核心数据库连接
+
+返回:
+
+- \*AccessKeyAuthenticator: 新创建的认证器实例
+
+<a name="AccessKeyAuthenticator.AuthenticateRequest"></a>
+### func \(\*AccessKeyAuthenticator\) AuthenticateRequest
+
+```go
+func (a *AccessKeyAuthenticator) AuthenticateRequest(c *gin.Context) (*core.User, *response.CodeError)
+```
+
+AuthenticateRequest 认证当前请求，满足 CredentialAuthenticator 接口。
+
+参数:
+
+- c: Gin 上下文
+
+返回:
+
+- \*core.User: 认证成功的用户对象
+- \*response.CodeError: 认证失败时返回 ErrBadAccessKey
+
+<a name="AccessKeyAuthenticator.Match"></a>
+### func \(\*AccessKeyAuthenticator\) Match
+
+```go
+func (a *AccessKeyAuthenticator) Match(c *gin.Context) bool
+```
+
+Match 报告当前请求是否携带访问密钥签名令牌。
+
+<a name="AccessKeyAuthenticator.Name"></a>
+### func \(\*AccessKeyAuthenticator\) Name
+
+```go
+func (a *AccessKeyAuthenticator) Name() string
+```
+
+Name 返回本认证器的名称，用于日志与可观测性。
+
 <a name="ApiLogger"></a>
 ## type ApiLogger
 
@@ -1056,6 +1148,96 @@ Warnf 记录警告级别的日志 适用于记录不影响系统运行但需要�
 - template: 日志消息模板
 - args: 模板格式化参数
 
+<a name="Authenticator"></a>
+## type Authenticator
+
+Authenticator 是统一的多路鉴权聚合器：按注册顺序遍历 CredentialAuthenticator， 命中第一个携带凭据的认证器后只执行该路认证，从而实现可扩展的多路鉴权中间件。
+
+```go
+type Authenticator struct {
+    // contains filtered or unexported fields
+}
+```
+
+<a name="GetAuth"></a>
+### func GetAuth
+
+```go
+func GetAuth(c *gin.Context) *Authenticator
+```
+
+GetAuth 从 Gin 上下文中获取统一鉴权聚合器。 参数:
+
+- c: Gin 上下文
+
+返回:
+
+- \*Authenticator: 聚合器实例，如果不存在返回 nil
+
+<a name="NewAuthenticator"></a>
+### func NewAuthenticator
+
+```go
+func NewAuthenticator(authenticators ...CredentialAuthenticator) *Authenticator
+```
+
+NewAuthenticator 创建多路鉴权聚合器。传入 nil 认证器属于装配错误，直接 panic（fail fast）。
+
+<a name="Authenticator.AuthenticateMiddleware"></a>
+### func \(\*Authenticator\) AuthenticateMiddleware
+
+```go
+func (a *Authenticator) AuthenticateMiddleware(allowAnonymous bool) gin.HandlerFunc
+```
+
+AuthenticateMiddleware 认证中间件：按注册顺序选择第一个匹配的认证器执行认证， 成功时把用户写入上下文；无任何凭据命中时按 allowAnonymous 注入匿名用户或返回 401。
+
+参数:
+
+- allowAnonymous: 是否允许匿名访问
+
+返回:
+
+- gin.HandlerFunc: Gin 中间件函数
+
+<a name="Authenticator.AuthenticatorMiddleware"></a>
+### func \(\*Authenticator\) AuthenticatorMiddleware
+
+```go
+func (a *Authenticator) AuthenticatorMiddleware() gin.HandlerFunc
+```
+
+AuthenticatorMiddleware 把统一鉴权聚合器注入请求上下文，供后续处理器通过 GetAuth 取用。 需要签发 JWT 的处理器经 GetJWT 从聚合器中取回 JWT 认证器，不再单独注入第二份实例。
+
+返回:
+
+- gin.HandlerFunc: Gin 中间件函数
+
+<a name="Authenticator.JWT"></a>
+### func \(\*Authenticator\) JWT
+
+```go
+func (a *Authenticator) JWT() *JwtAuthenticator
+```
+
+JWT 返回聚合器中注册的 JWT 认证器；未注册时返回 nil。 登录、刷新等需要签发令牌的处理器经此取用，认证选择本身仍由聚合器负责。
+
+<a name="CredentialAuthenticator"></a>
+## type CredentialAuthenticator
+
+CredentialAuthenticator 是一路凭据的认证器抽象。聚合器按注册顺序选择第一个匹配当前请求的 认证器执行认证；一旦匹配，认证失败即终止请求，不回退到其他方式或匿名身份。
+
+```go
+type CredentialAuthenticator interface {
+    // Name 返回认证方式名称，用于日志与可观测性。
+    Name() string
+    // Match 报告当前请求是否携带本认证方式的凭据。
+    Match(c *gin.Context) bool
+    // AuthenticateRequest 认证当前请求；成功返回用户，失败返回业务错误。
+    AuthenticateRequest(c *gin.Context) (*core.User, *response.CodeError)
+}
+```
+
 <a name="JwtAuthenticator"></a>
 ## type JwtAuthenticator
 
@@ -1067,20 +1249,20 @@ type JwtAuthenticator struct {
 }
 ```
 
-<a name="GetAuth"></a>
-### func GetAuth
+<a name="GetJWT"></a>
+### func GetJWT
 
 ```go
-func GetAuth(c *gin.Context) *JwtAuthenticator
+func GetJWT(c *gin.Context) *JwtAuthenticator
 ```
 
-GetAuth 从 Gin 上下文中获取认证器实例 参数:
+GetJWT 从请求上下文中的统一鉴权聚合器里取回 JWT 认证器，供登录 / 刷新等需要签发令牌的 处理器使用。JWT 实例不再单独注入上下文，始终由聚合器这一份注册实例派生。 参数:
 
 - c: Gin 上下文
 
 返回:
 
-- \*JwtAuthenticator: 认证器实例，如果不存在返回 nil
+- \*JwtAuthenticator: JWT 认证器实例，聚合器或 JWT 认证器不存在时返回 nil
 
 <a name="NewJwtAuthenticator"></a>
 ### func NewJwtAuthenticator
@@ -1093,6 +1275,7 @@ NewJwtAuthenticator 创建新的 JWT 认证器实例 参数:
 
 - cfg: 认证配置
 - db: 数据库连接
+- kd: 密钥派生器
 
 返回:
 
@@ -1102,7 +1285,7 @@ NewJwtAuthenticator 创建新的 JWT 认证器实例 参数:
 ### func \(\*JwtAuthenticator\) Authenticate
 
 ```go
-func (j *JwtAuthenticator) Authenticate(c *gin.Context, kd *key.KeyDerivation) *core.User
+func (j *JwtAuthenticator) Authenticate(c *gin.Context) *core.User
 ```
 
 Authenticate 认证用户请求 从请求中提取令牌，验证有效性，并返回对应的用户信息 参数:
@@ -1113,31 +1296,32 @@ Authenticate 认证用户请求 从请求中提取令牌，验证有效性，并
 
 - \*core.User: 认证成功的用户对象，认证失败返回 nil
 
-<a name="JwtAuthenticator.AuthenticateMiddleware"></a>
-### func \(\*JwtAuthenticator\) AuthenticateMiddleware
+<a name="JwtAuthenticator.AuthenticateRequest"></a>
+### func \(\*JwtAuthenticator\) AuthenticateRequest
 
 ```go
-func (j *JwtAuthenticator) AuthenticateMiddleware(allowAnonymous bool) gin.HandlerFunc
+func (j *JwtAuthenticator) AuthenticateRequest(c *gin.Context) (*core.User, *response.CodeError)
 ```
 
-AuthenticateMiddleware 认证中间件 验证请求中的 JWT 令牌，将用户信息设置到上下文中 参数:
+AuthenticateRequest 认证当前请求，满足 CredentialAuthenticator 接口： 令牌缺失或非法时统一返回 ErrJwtBadToken，由聚合器终止请求。
 
-- allowAnonymous: 是否允许匿名访问
-
-返回:
-
-- gin.HandlerFunc: Gin 中间件函数
-
-<a name="JwtAuthenticator.AuthenticatorMiddleware"></a>
-### func \(\*JwtAuthenticator\) AuthenticatorMiddleware
+<a name="JwtAuthenticator.Match"></a>
+### func \(\*JwtAuthenticator\) Match
 
 ```go
-func (j *JwtAuthenticator) AuthenticatorMiddleware() gin.HandlerFunc
+func (j *JwtAuthenticator) Match(c *gin.Context) bool
 ```
 
-AuthenticatorMiddleware 认证器中间件 将认证器实例设置到 Gin 上下文中，供后续处理使用 返回:
+Match 报告当前请求是否携带 JWT 令牌。
 
-- gin.HandlerFunc: Gin 中间件函数
+<a name="JwtAuthenticator.Name"></a>
+### func \(\*JwtAuthenticator\) Name
+
+```go
+func (j *JwtAuthenticator) Name() string
+```
+
+Name 返回本认证器的名称，用于日志与可观测性。
 
 <a name="JwtAuthenticator.Parse"></a>
 ### func \(\*JwtAuthenticator\) Parse

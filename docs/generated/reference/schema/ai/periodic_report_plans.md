@@ -28,7 +28,6 @@ PeriodicReportPlan 表示一个周期性报告计划：按 cron 表达式周期�
 | cron_spec | VARCHAR(64) | 否 | - | CronSpec 计划执行的 cron 表达式 |
 | input_values | JSONB | 否 | '{}' | InputValues 技能输入字段的实参（JSON 对象，键为字段名），无实参时为空对象 |
 | enabled | BOOLEAN | 是 | true | Enabled 计划是否启用，默认 true；停用的计划不再触发 |
-| session_id | BIGINT | 是 | - | SessionID 计划专属的 Agent 会话 ID（agent_sessions.id 外键，会话删除时置空）；nil 表示尚未创建 |
 | user_id | BIGINT | 否 | - | UserID 计划属主用户 ID（users.id），用于跨用户隔离 |
 | retention_days | INT | 否 | 90 | RetentionDays 报告保留天数，默认 90 |
 | expires_at | TIMESTAMPTZ | 是 | - | ExpiresAt 计划失效时间，null 表示长期有效 |

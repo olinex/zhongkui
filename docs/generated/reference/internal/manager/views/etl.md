@@ -105,7 +105,7 @@ EtlPipelineInspectorQueueUnpause 恢复指定队列的处理 该函数将暂停�
 func EtlPipelineInspectorSchedulerListGet(c *gin.Context)
 ```
 
-EtlPipelineInspectorSchedulerListGet 获取所有定时任务配置 该函数从 etcd 读取全部定时任务配置（cron 与 interval 两种调度模式统一）， 返回任务类型的完整配置列表，供前端定时任务管理页展示与回填。
+EtlPipelineInspectorSchedulerListGet 获取所有定时任务配置 该函数从 etcd 读取全部定时任务配置（cron 与 interval 两种调度模式统一）， 按任务类型名称升序返回完整配置列表，供前端定时任务管理页展示与回填。 etcd 读取结果来自 map，遍历顺序随机；若不排序，同一份配置每次请求的行序都会变化。
 
 路由: GET /api/v1/etl/inspector/scheduler/list
 
