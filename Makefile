@@ -44,6 +44,7 @@ SUDO ?= sudo
 .PHONY: p0f-update
 .PHONY: pcap-tools
 .PHONY: release
+.PHONY: dist
 .PHONY: protobuf-tools
 .PHONY: pull-dev-deps
 .PHONY: remove-dev-deps
@@ -433,6 +434,31 @@ release:
 	$(MAKE) ci
 	git tag -a "$(VERSION)" -m "zhongkui $(VERSION)"
 	@echo "已创建标签 $(VERSION)；推送: git push origin master --follow-tags"
+
+# dist - 打包 release 制品与 sha256 校验和 (供 Gitee Release 上传)
+# 用法: make dist VERSION=v1.2.3
+dist:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make dist VERSION=v1.2.3"; \
+		exit 1; \
+	fi
+	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
+		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号"; \
+		exit 1; \
+	}
+	$(MAKE) build-release VERSION=$(VERSION)
+	@version_number=$$(echo '$(VERSION)' | sed 's/^v//'); \
+	os=$$(go env GOOS); arch=$$(go env GOARCH); \
+	archive="zki_$${version_number}_$${os}_$${arch}.tar.gz"; \
+	mkdir -p dist; \
+	cp bin/zki LICENSE NOTICE THIRD_PARTY_LICENSES.md dist/; \
+	tar -C dist -czf "$$archive" zki LICENSE NOTICE THIRD_PARTY_LICENSES.md; \
+	if command -v sha256sum >/dev/null 2>&1; then \
+		sha256sum "$$archive" > "$$archive.sha256"; \
+	else \
+		shasum -a 256 "$$archive" > "$$archive.sha256"; \
+	fi; \
+	echo "已生成 dist/$$archive 与 dist/$$archive.sha256"
 
 # run - 使用 go run 直接运行 zki
 # 用法: make run ARGS="version" 或 make run ARGS="run web --config=config.toml"
