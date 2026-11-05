@@ -63,6 +63,11 @@ func CoreModels() []any {
 		&aimodel.AgentMemory{},
 		&aimodel.AgentRun{},
 		&aimodel.AgentInteraction{},
+		&aimodel.AgentCheckpoint{},
+		&aimodel.AgentSkill{},
+		&aimodel.PeriodicReportPlan{},
+		&aimodel.PeriodicReportRun{},
+		&aimodel.PeriodicReportPlanWatch{},
 	}
 }
 

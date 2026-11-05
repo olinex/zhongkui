@@ -77,7 +77,7 @@
 - [`POST /api/v1/ai/doc/:id/update`](./ai/post-ai-doc-id-update.md) — 更新知识库文档 - 更新标题/正文并触发重新索引
 - [`POST /api/v1/ai/doc/create`](./ai/post-ai-doc-create.md) — 创建知识库文档 - 落库后切块向量化（AI 未启用时文档保留，可稍后重新索引）
 - [`POST /api/v1/ai/doc/delete`](./ai/post-ai-doc-delete.md) — 批量删除知识库文档 - 删除文档及其分块索引
-- [`POST /api/v1/ai/doc/list`](./ai/post-ai-doc-list.md) — 知识库文档列表查询 - 支持分页、搜索与排序。
+- [`POST /api/v1/ai/doc/list`](./ai/post-ai-doc-list.md) — 知识库文档列表查询 - 支持分页、搜索、排序与创建/更新时间过滤。
 - [`POST /api/v1/ai/doc/system/:id/chunks`](./ai/post-ai-doc-system-id-chunks.md) — 系统命名空间知识库文档分块明细 - 只读
 - [`POST /api/v1/ai/doc/system/:id/get`](./ai/post-ai-doc-system-id-get.md) — 系统命名空间知识库文档详情 - 只读
 - [`POST /api/v1/ai/doc/system/list`](./ai/post-ai-doc-system-list.md) — 系统命名空间知识库文档列表查询 - 只读，数据范围恒为内置系统命名空间
@@ -85,7 +85,20 @@
 - [`POST /api/v1/ai/memory/:id/get`](./ai/post-ai-memory-id-get.md) — 记忆详情查询
 - [`POST /api/v1/ai/memory/:id/status`](./ai/post-ai-memory-id-status.md) — 启停记忆 - active/archived
 - [`POST /api/v1/ai/memory/delete`](./ai/post-ai-memory-delete.md) — 批量删除记忆 - 软删除
-- [`POST /api/v1/ai/memory/list`](./ai/post-ai-memory-list.md) — 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影
+- [`POST /api/v1/ai/memory/list`](./ai/post-ai-memory-list.md) — 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 与创建/更新时间过滤及字段投影
+- [`POST /api/v1/ai/periodic-report/feed/list`](./ai/post-ai-periodic-report-feed-list.md) — 报告中心信息流查询 - 仅返回关注计划的成功运行记录
+- [`POST /api/v1/ai/periodic-report/plan/:id/delete`](./ai/post-ai-periodic-report-plan-id-delete.md) — 删除报告计划 - 软删除计划
+- [`POST /api/v1/ai/periodic-report/plan/:id/run`](./ai/post-ai-periodic-report-plan-id-run.md) — 立即执行报告计划 - 跳过 cron 直接投递一条生成任务（已到期计划返回 400）
+- [`POST /api/v1/ai/periodic-report/plan/:id/toggle`](./ai/post-ai-periodic-report-plan-id-toggle.md) — 启停报告计划 - 停用后不再按 cron 触发
+- [`POST /api/v1/ai/periodic-report/plan/:id/update`](./ai/post-ai-periodic-report-plan-id-update.md) — 更新报告计划 - 可编辑字段整体覆盖，下次执行时间交由分发器重算
+- [`POST /api/v1/ai/periodic-report/plan/create`](./ai/post-ai-periodic-report-plan-create.md) — 创建报告计划 - 校验技能资格与 cron 后落库
+- [`POST /api/v1/ai/periodic-report/plan/list`](./ai/post-ai-periodic-report-plan-list.md) — 报告计划列表查询 - 支持 keyword / enabled 与创建/更新时间过滤及分页
+- [`POST /api/v1/ai/periodic-report/run/:id/delete`](./ai/post-ai-periodic-report-run-id-delete.md) — 删除报告运行记录 - 一并删除报告对象；运行中与已结束的记录均可删除
+- [`POST /api/v1/ai/periodic-report/run/:id/get`](./ai/post-ai-periodic-report-run-id-get.md) — 报告运行详情查询 - 含报告正文（对象缺失返回 404）
+- [`POST /api/v1/ai/periodic-report/run/list`](./ai/post-ai-periodic-report-run-list.md) — 报告运行记录列表查询 - 可按计划 / 状态过滤并分页
+- [`POST /api/v1/ai/periodic-report/skill/options`](./ai/post-ai-periodic-report-skill-options.md) — 可作为报告来源的技能选项 - 仅返回可周期执行且含时间窗口字段的已启用自定义技能
+- [`POST /api/v1/ai/periodic-report/watch/list`](./ai/post-ai-periodic-report-watch-list.md) — 关注计划候选列表 - 分页返回可关注计划，并回填当前用户关注状态
+- [`POST /api/v1/ai/periodic-report/watch/set`](./ai/post-ai-periodic-report-watch-set.md) — 设置计划关注状态 - 幂等关注 / 取消关注
 - [`POST /api/v1/ai/prompt/optimize`](./ai/post-ai-prompt-optimize.md) — 优化用户提问的提示词 - 把当前诉求改写为更清晰、更易被正确理解的提问（单轮、非流式）
 - [`POST /api/v1/ai/retrieval/dry-run`](./ai/post-ai-retrieval-dry-run.md) — 知识库 RAG dry-run（SSE 流式）：混合检索 → 生成回答 → RAGAS 风格量化评估
 - [`POST /api/v1/ai/retrieval/options`](./ai/post-ai-retrieval-options.md) — 知识库检索试运行参数默认值（来自行为参数注册表，供前端对话框预填）
@@ -98,6 +111,13 @@
 - [`POST /api/v1/ai/session/:id/valve`](./ai/post-ai-session-id-valve.md) — 更新会话审核阀门
 - [`POST /api/v1/ai/session/create`](./ai/post-ai-session-create.md) — 创建会话
 - [`POST /api/v1/ai/session/list`](./ai/post-ai-session-list.md) — 查询当前命名空间内的 AI 助手会话列表，按最近更新时间倒序。
+- [`POST /api/v1/ai/skill/:id/get`](./ai/post-ai-skill-id-get.md) — 技能详情查询 - 含解密后的技能正文
+- [`POST /api/v1/ai/skill/:id/status`](./ai/post-ai-skill-id-status.md) — 启停技能 - 停用的技能不参与运行时装配
+- [`POST /api/v1/ai/skill/:id/update`](./ai/post-ai-skill-id-update.md) — 更新技能 - 名称/描述/正文与周期能力、输入字段、固定参数整体覆盖；周期技能须含 nowTime 输入字段及 timeOffset / timeWindow 固定参数
+- [`POST /api/v1/ai/skill/create`](./ai/post-ai-skill-create.md) — 创建技能 - 名称在同命名空间内唯一，新建默认启用，周期能力、输入字段与固定参数由用户提交；周期技能须含 nowTime 输入字段及 timeOffset / timeWindow 固定参数
+- [`POST /api/v1/ai/skill/delete`](./ai/post-ai-skill-delete.md) — 批量删除技能 - 软删除
+- [`POST /api/v1/ai/skill/list`](./ai/post-ai-skill-list.md) — 技能列表查询 - 支持分页、keyword/enabled 与创建/更新时间过滤及字段投影
+- [`POST /api/v1/ai/skill/options`](./ai/post-ai-skill-options.md) — 技能选择器选项 - 合并内置技能与当前命名空间已启用技能
 - [`POST /api/v1/ai/status`](./ai/post-ai-status.md) — 查询 AI 助手运行状态：是否启用、各档位绑定模型与可用性、生效参数覆盖数量，可选附指定会话的回合状态快照。
 ### 数据源
 

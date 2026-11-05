@@ -80,7 +80,7 @@ type NotificationTargetDetailOut struct {
 	// Config 目标级配置的密文。密文由 gorm 模型经 crypto 序列化器落库/读取，
 	// 本 Out 结构直接复用模型 *serializer.Crypto，经其 MarshalJSON 输出 base64 密文；
 	// 字段经 form 标签标记为 crypto，由 meta options 告知前端该字段已加密（明文经明文权限接口查看）
-	Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+	Config *serializer.Crypto `json:"config" form:"kind=crypto"`
 	// Language 目标偏好的消息语言（base.Language），空表示平台默认
 	Language base.Language `json:"language"`
 	// Description 目标描述
@@ -154,7 +154,7 @@ type NotificationTargetTestSendChannelOut struct {
 	// Enabled 渠道是否启用
 	Enabled bool `json:"enabled"`
 	// Config 渠道级配置密文（base64），前端可经 plaintext 接口解密
-	Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+	Config *serializer.Crypto `json:"config" form:"kind=crypto"`
 }
 
 // NotificationTargetTestSendTargetOut 定义 test-send 的目标参数输出结构。
@@ -166,7 +166,7 @@ type NotificationTargetTestSendTargetOut struct {
 	// Enabled 目标是否启用
 	Enabled bool `json:"enabled"`
 	// Config 目标级配置密文（base64），前端可经 plaintext 接口解密
-	Config *serializer.Crypto `json:"config" form:"kind:crypto"`
+	Config *serializer.Crypto `json:"config" form:"kind=crypto"`
 }
 
 // NotificationTargetListGet 处理获取通知目标列表的请求。
@@ -325,9 +325,14 @@ func NotificationTargetDetailGet(c *gin.Context) {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
 	}
-	// 加载所属渠道信息（渠道缺失时渠道字段保持空值）
+	// 加载所属渠道信息（渠道不存在时渠道字段保持空值）；其他数据库错误必须暴露，
+	// 否则详情页会以空渠道信息伪装成正常响应。
 	channel := core.NotificationChannel{}
-	_ = db.WithContext(c).Where("id = ? AND namespace_name = ?", instance.ChannelID, namespace).First(&channel).Error
+	if err := db.WithContext(c).Where("id = ? AND namespace_name = ?", instance.ChannelID, namespace).First(&channel).Error; err != nil &&
+		!errors.Is(err, gorm.ErrRecordNotFound) {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
+	}
 	response.SimpleOK.AbortWithGinW(c, notificationTargetDetailOut(&instance, &channel))
 }
 

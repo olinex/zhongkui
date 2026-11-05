@@ -74,29 +74,6 @@ func NewStore(db *database.DB, embed port.Embedder, params *config.Params, logge
 	return &Store{db: db, embed: embed, params: params, logger: logger}, nil
 }
 
-// MemoryQuery 是记忆列表的过滤与分页条件。
-type MemoryQuery struct {
-	// NamespaceName 限定命名空间（必填，非空）
-	NamespaceName string
-	// UserID 限定属主用户（users.id），用于跨用户隔离
-	UserID uint
-	// AgentKind 按 Agent 类型过滤（非空时生效）
-	AgentKind ai.AgentKind
-	// Kind 按记忆类别过滤（非空时生效）
-	Kind ai.MemoryKind
-	// Status 按记忆状态过滤（非空时生效）
-	Status ai.MemoryStatus
-	// Keyword 按标题/正文模糊匹配（非空时生效）
-	Keyword string
-	// Offset 分页偏移（小于 0 时取 0）
-	Offset int
-	// Limit 每页条数（小于等于 0 时取默认 20）
-	Limit int
-}
-
-// defaultMemoryListLimit 是记忆列表的默认每页条数。
-const defaultMemoryListLimit = 20
-
 // 记忆检索 SQL 行：内嵌 AgentMemory 以复用其字段的 crypto 序列化器标签（本地结构体的
 // 同名字段无标签，会把原始密文字节扫入 string，静默得到密文而非明文），查询仅 Select 检索
 // 所需列，避免载入 embedding 大字段。
@@ -124,6 +101,10 @@ func (s *Store) Write(ctx context.Context, in tools.MemoryWriteInput) (*ai.Agent
 	}
 	if in.SessionID == 0 {
 		return nil, errors.New("memory: empty session id, long-term memory requires a session")
+	}
+	if in.UserID == 0 {
+		// user_id 为 users(id) 外键，0 不是合法属主。
+		return nil, errors.New("memory: empty user id, long-term memory requires an owner")
 	}
 	content := NormalizeMemoryContent(in.Content)
 	if content == "" {
@@ -412,51 +393,6 @@ func (s *Store) Get(ctx context.Context, namespaceName string, userID uint, id u
 		return nil, errors.WithStack(err)
 	}
 	return &mem, nil
-}
-
-// List 分页列出命名空间下的记忆：AgentKind/Kind/Status 非空时过滤，Keyword 非空时按
-// 标题/正文 ILIKE 模糊匹配；按 updated_at 降序排序，并同时返回过滤后的总数。
-func (s *Store) List(ctx context.Context, q MemoryQuery) ([]*ai.AgentMemory, int64, error) {
-	namespaceName := strings.TrimSpace(q.NamespaceName)
-	if namespaceName == "" {
-		return nil, 0, errors.New("memory: empty namespace name")
-	}
-	base := func() *gorm.DB {
-		tx := s.db.WithContext(ctx).Model(&ai.AgentMemory{}).Where("namespace_name = ? AND user_id = ?", namespaceName, q.UserID)
-		if q.AgentKind != "" {
-			tx = tx.Where("agent_kind = ?", q.AgentKind)
-		}
-		if q.Kind != "" {
-			tx = tx.Where("kind = ?", q.Kind)
-		}
-		if q.Status != "" {
-			tx = tx.Where("status = ?", q.Status)
-		}
-		if keyword := strings.TrimSpace(q.Keyword); keyword != "" {
-			like := "%" + keyword + "%"
-			// 正文已加密存储，无法再做 ILIKE 明文匹配，改走 search 列（tsvector）的关键词命中；
-			// 标题仍为明文，保留子串匹配。
-			tx = tx.Where("title ILIKE ? OR search @@ plainto_tsquery('simple', ?)", like, keyword)
-		}
-		return tx
-	}
-	var total int64
-	if err := base().Count(&total).Error; err != nil {
-		return nil, 0, errors.WithStack(err)
-	}
-	limit := q.Limit
-	if limit <= 0 {
-		limit = defaultMemoryListLimit
-	}
-	offset := q.Offset
-	if offset < 0 {
-		offset = 0
-	}
-	var items []*ai.AgentMemory
-	if err := base().Order("updated_at DESC").Limit(limit).Offset(offset).Find(&items).Error; err != nil {
-		return nil, 0, errors.WithStack(err)
-	}
-	return items, total, nil
 }
 
 // Delete 软删除指定命名空间下、属于该用户的若干记忆；ids 为空直接返回 nil。

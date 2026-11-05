@@ -26,6 +26,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/jsengine"
 	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 	"zhongkuisec.com/zhongkui/internal/pkg/translate"
 )
@@ -253,6 +254,13 @@ type Store struct {
 	// db core 库连接（模型注册表、档位绑定与行为参数读取）。
 	db     *database.DB
 	dialer mcpDialer // MCP 连接器（生产实现委托 internal/ai/tools/mcp，测试可替换为假实现）
+	// jsEngine 是进程内 JS 运行时，供依赖嵌入式脚本的内置工具使用；未注入时相应工具装配报错。
+	jsEngine *jsengine.Engine
+}
+
+// SetJSEngine 注入 JS 运行时：由装配层在构造 Store 后、首次 LoadTools 之前调用。
+func (s *Store) SetJSEngine(engine *jsengine.Engine) {
+	s.jsEngine = engine
 }
 
 // NewStore 构造 Store；db 为空时返回英文错误。MCP 连接器默认取生产实现（本包不引用 MCP SDK）。

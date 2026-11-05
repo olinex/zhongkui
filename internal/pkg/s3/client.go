@@ -274,16 +274,32 @@ func (s *S3Client) CPutObject(ctx context.Context, objectKey string, cryptoKey [
 	//   - pipeWriter.Close() 必须在 w.Close() 之后执行
 	//   - w.Close() 需要向 pipeWriter 写入 GCM 认证标签（finalization block）
 	//   - 如果 pipeWriter 先关闭，w.Close() 会写入失败，导致数据不完整
+	// copyErr 回传写侧（io.Copy / 加密写入器 Close）的错误：写侧失败会让上传数据不完整，
+	// 必须与 PutObject 的错误一起上报，不能静默丢弃。
+	copyErrCh := make(chan error, 1)
 	go func() {
-		defer pipeWriter.Close() // 后注册，后执行（LIFO：第二个执行）
-		defer w.Close()          // 先注册，先执行（LIFO：第一个执行）
-		io.Copy(w, reader)
+		_, copyErr := io.Copy(w, reader)
+		if closeErr := w.Close(); copyErr == nil {
+			copyErr = closeErr
+		}
+		if copyErr != nil {
+			// 让 PutObject 侧的读端感知写端失败，避免其把截断数据当成完整对象上传。
+			_ = pipeWriter.CloseWithError(copyErr)
+		} else {
+			_ = pipeWriter.Close()
+		}
+		copyErrCh <- copyErr
 	}()
 
 	uploadInfo, err := s.cli.PutObject(ctx, s.bucket, objectKey, pipeReader, objectSize, opts)
-	pipeReader.Close()
+	// 先关闭读端以解除写侧可能的阻塞，再等待写侧收敛并取回其错误。
+	_ = pipeReader.Close()
+	copyErr := <-copyErrCh
 	if err != nil {
 		return minio.UploadInfo{}, errors.WithStack(err)
+	}
+	if copyErr != nil {
+		return minio.UploadInfo{}, errors.WithStack(copyErr)
 	}
 	return uploadInfo, nil
 }

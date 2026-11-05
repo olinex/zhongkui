@@ -17,7 +17,6 @@
 - [func ReportFinish\(r SyncReporter\)](<#ReportFinish>)
 - [func ReportStart\(r SyncReporter, total int\)](<#ReportStart>)
 - [func ReportStep\(r SyncReporter, item SyncProgressItem\)](<#ReportStep>)
-- [func StripJSONFence\(s string\) string](<#StripJSONFence>)
 - [func ValidateActionRequest\(request ActionRequest\) error](<#ValidateActionRequest>)
 - [type ActionRequest](<#ActionRequest>)
 - [type ApprovalDecision](<#ApprovalDecision>)
@@ -42,7 +41,6 @@
 - [type InteractionStatus](<#InteractionStatus>)
 - [type MemoryHit](<#MemoryHit>)
 - [type NextStep](<#NextStep>)
-  - [func \(s NextStep\) Validate\(\) error](<#NextStep.Validate>)
 - [type NextStepsPayload](<#NextStepsPayload>)
 - [type PendingCall](<#PendingCall>)
   - [func ToPendingCalls\(pending \[\]PendingCall\) \[\]PendingCall](<#ToPendingCalls>)
@@ -208,7 +206,7 @@ IsValidAction 判断 name 是否为已知的客户端操作。
 func NewApiInvokeToolInfo() *schema.ToolInfo
 ```
 
-NewApiInvokeToolInfo 构造 api\_invoke 的工具元信息与参数 JSON schema：模型只给能力 ID 与请求体， 不能指定任意 URL；HTTP 方法与路径由后端按能力快照白名单解析并写入挂起现场，前端只执行该 已解析的只读调用。
+NewApiInvokeToolInfo 构造 api\_invoke 的工具元信息与参数 JSON schema：模型只给能力 ID 与请求体， 不能指定任意 URL；HTTP 方法与路径由后端按能力快照白名单解析并写入挂起现场，前端只执行该 已解析的调用。只读与写入能力共用同一工具，是否可调用由能力的 Invokable 属性决定。
 
 <a name="NewAskUserToolInfo"></a>
 ## func NewAskUserToolInfo
@@ -263,15 +261,6 @@ func ReportStep(r SyncReporter, item SyncProgressItem)
 ```
 
 ReportStep 在 r 非空时转发 Step。
-
-<a name="StripJSONFence"></a>
-## func StripJSONFence
-
-```go
-func StripJSONFence(s string) string
-```
-
-StripJSONFence 去掉首尾的 \`\`\`json 代码围栏（若存在），返回去除首尾空白后的内容。
 
 <a name="ValidateActionRequest"></a>
 ## func ValidateActionRequest
@@ -710,7 +699,7 @@ type MemoryHit struct {
 <a name="NextStep"></a>
 ## type NextStep
 
-NextStep 是推荐下一步的一条候选：Title 为简短行动标题（不超过 24 个字符），Reason 为推荐理由 （不超过 64 个字符），Text 为可直接发送给助手的完整诉求（不超过 200 个字符），Recommended 标记 该条是否为最推荐项（同一组内仅首条为 true）。长度约束由 binding 标签声明，经 Validate 校验。
+NextStep 是推荐下一步的一条候选：Title 为简短行动标题（不超过 24 个字符），Reason 为推荐理由 （不超过 64 个字符），Text 为可直接发送给助手的完整诉求（不超过 200 个字符），Recommended 标记 该条是否为最推荐项（同一组内仅首条为 true）。长度约束由 binding 标签声明，经 validator.Check 校验。
 
 ```go
 type NextStep struct {
@@ -724,15 +713,6 @@ type NextStep struct {
     Recommended bool `json:"recommended,omitempty"`
 }
 ```
-
-<a name="NextStep.Validate"></a>
-### func \(NextStep\) Validate
-
-```go
-func (s NextStep) Validate() error
-```
-
-Validate 按 binding 标签校验推荐项：Text / Reason 必填，Title / Text / Reason 均不得超过各自 长度上限。校验不通过时返回英文错误（携带校验器原始信息），调用方据此丢弃该条。
 
 <a name="NextStepsPayload"></a>
 ## type NextStepsPayload

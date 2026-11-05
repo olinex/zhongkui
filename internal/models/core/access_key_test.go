@@ -1,14 +1,18 @@
 package core
 
 import (
+	"context"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/smartystreets/goconvey/convey"
 	"zhongkuisec.com/zhongkui/internal/pkg/auth"
+	"zhongkuisec.com/zhongkui/internal/pkg/crypto/key"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/redis"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
+	"zhongkuisec.com/zhongkui/internal/pkg/testdb"
 )
 
 // TestAccessKey_UserID 测试 UserID 方法
@@ -298,6 +302,94 @@ func TestAccessKeyPool_UpdateLastAccess(t *testing.T) {
 			convey.SkipConvey("This test requires database mock setup", func() {})
 		})
 	})
+}
+
+var initAccessKeyPoolTestKeyOnce sync.Once
+
+// initAccessKeyPoolTestKeyDerivation 初始化全局密钥派生：用户密码经 crypto 序列化器
+// 加解密存储，测试须与生产一致地派生密钥，否则写库报 KeyDerivation not initialized。
+func initAccessKeyPoolTestKeyDerivation() {
+	initAccessKeyPoolTestKeyOnce.Do(func() {
+		provider := key.NewConfigFileSecretKeyProvider("test-secret-key-for-unit-test")
+		book, err := key.LoadPasswordBook("")
+		if err != nil {
+			panic("failed to load password book: " + err.Error())
+		}
+		key.InitGlobalKeyDerivation(provider, book)
+	})
+}
+
+// TestAccessKeyPool_FirstUsableByUser 测试按用户筛选可用访问密钥。
+// 使用共享 PostgreSQL 测试库（testdb.Core），覆盖停用/过期过滤、取首条与无可用密钥。
+func TestAccessKeyPool_FirstUsableByUser(t *testing.T) {
+	initAccessKeyPoolTestKeyDerivation()
+	db := testdb.Core(t)
+	pool := NewAccessKeyPool(db, nil, time.Minute)
+
+	user := &User{
+		UnionID:    serializer.NewHexUUIDv4(),
+		NickleName: "first-usable-user",
+		Username:   "first-usable-user",
+		Password:   serializer.NewCrypto([]byte("test-password")),
+		Email:      "first-usable-user@example.com",
+		Active:     true,
+	}
+	if err := db.Create(user).Error; err != nil {
+		t.Fatalf("create test user: %v", err)
+	}
+
+	past := time.Now().Add(-time.Hour)
+	disabled, err := NewAccessKey(user, false, "disabled", nil)
+	if err != nil {
+		t.Fatalf("new disabled access key: %v", err)
+	}
+	expired, err := NewAccessKey(user, true, "expired", &past)
+	if err != nil {
+		t.Fatalf("new expired access key: %v", err)
+	}
+	usable, err := NewAccessKey(user, true, "usable", nil)
+	if err != nil {
+		t.Fatalf("new usable access key: %v", err)
+	}
+	for _, key := range []*AccessKey{disabled, expired, usable} {
+		if err := db.Create(key).Error; err != nil {
+			t.Fatalf("create access key: %v", err)
+		}
+	}
+
+	key, err := pool.FirstUsableByUser(context.Background(), user.ID)
+	if err != nil {
+		t.Fatalf("FirstUsableByUser: %v", err)
+	}
+	if key == nil {
+		t.Fatal("FirstUsableByUser returned nil, want the usable key")
+	}
+	if key.AccessKeyID != usable.AccessKeyID {
+		t.Fatalf("FirstUsableByUser = %q, want %q", key.AccessKeyID, usable.AccessKeyID)
+	}
+	// Preload("User") 必须带回用户，否则 UserID() 会得到零 UUID
+	if key.UserID() != user.UnionID.String() {
+		t.Fatalf("key.UserID() = %q, want %q", key.UserID(), user.UnionID.String())
+	}
+
+	other := &User{
+		UnionID:    serializer.NewHexUUIDv4(),
+		NickleName: "no-key-user",
+		Username:   "no-key-user",
+		Password:   serializer.NewCrypto([]byte("test-password")),
+		Email:      "no-key-user@example.com",
+		Active:     true,
+	}
+	if err := db.Create(other).Error; err != nil {
+		t.Fatalf("create other user: %v", err)
+	}
+	key, err = pool.FirstUsableByUser(context.Background(), other.ID)
+	if err != nil {
+		t.Fatalf("FirstUsableByUser for user without keys: %v", err)
+	}
+	if key != nil {
+		t.Fatalf("FirstUsableByUser = %v, want nil", key.AccessKeyID)
+	}
 }
 
 // TestConstants 测试常量定义

@@ -409,9 +409,9 @@ func TestETLHelperFunctions(t *testing.T) {
 			queueList = make(map[string]*PipelineQueueInfo)
 			So(queueList, ShouldBeEmpty)
 
-			var taskList ETLPipelineInspectorTaskListOut
-			taskList = []*PipelineTaskInfo{}
-			So(taskList, ShouldHaveLength, 0)
+			taskList := ETLPipelineInspectorTaskListOut{Items: []*PipelineTaskInfo{}}
+			So(taskList.Items, ShouldHaveLength, 0)
+			So(taskList.Total, ShouldEqual, 0)
 		})
 	})
 }

@@ -1,6 +1,6 @@
 <template>
   <v-text-field
-    :model-value="modelValue"
+    :model-value="displayValue"
     :label="label"
     :density="density"
     :clearable="clearable"
@@ -51,6 +51,7 @@
 import { DateTime } from "luxon";
 
 import type { Density } from "../@types/base";
+import { localeDateFormat } from "@/utils/i18n";
 
 // 底层字段的校验规则形态：通过时返回 true，否则返回要展示的错误消息。
 type Rule = (value: unknown) => boolean | string;
@@ -75,7 +76,7 @@ const nextDate = () => {
   update(DateTime.now().plus({ days: 1 }).toJSDate());
 };
 
-defineProps({
+const props = defineProps({
   modelValue: {
     // 原样透传给日期选择器。
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,6 +126,26 @@ defineProps({
 
 // 值变更事件。
 const emits = defineEmits(["update:modelValue"]);
+
+// displayValue 日期展示口径：ISO 日期字符串 / Date / DateTime 按当前语言本地化（与列表 DATE 列、
+// 筛选条件一致），已本地化的文本原样展示，避免同一应用内出现 YYYY-MM-DD 与 YYYY/MM/DD 两种写法。
+const displayValue = computed((): string => {
+  const value = props.modelValue;
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "string") {
+    const parsed = DateTime.fromISO(value);
+    return parsed.isValid ? localeDateFormat(parsed) : value;
+  }
+  if (value instanceof Date) {
+    return localeDateFormat(DateTime.fromJSDate(value));
+  }
+  if (DateTime.isDateTime(value)) {
+    return localeDateFormat(value);
+  }
+  return String(value);
+});
 </script>
 
 <style scoped>

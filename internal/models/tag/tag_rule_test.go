@@ -178,6 +178,10 @@ func TestTagRule_UniqueConstraint(t *testing.T) {
 			other := base
 			other.ID = 0
 			other.NamespaceName = "tenant-b"
+			// tag_rules.namespace_name 为 namespaces(name) 外键，跨命名空间用例需先建命名空间。
+			convey.So(db.Exec(
+				`INSERT INTO namespaces (name) VALUES ('tenant-b') ON CONFLICT (name) DO NOTHING`,
+			).Error, convey.ShouldBeNil)
 			convey.So(db.Create(&other).Error, convey.ShouldBeNil)
 		})
 

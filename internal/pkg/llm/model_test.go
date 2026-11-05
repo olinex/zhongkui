@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TestParseExtraBody 表驱动测试 ParseExtraBody：空串返回 (nil, nil)，合法 JSON 对象解析为
-// map[string]any，非法 JSON 与非对象 JSON（数组、数字、字符串、布尔、null）均返回英文错误。
+// TestParseExtraBody 表驱动测试 ParseExtraBody：空串、空白与 null 返回 (nil, nil)，合法 JSON 对象
+// 解析为 map[string]any，非法 JSON 与非对象 JSON（数组、数字、字符串、布尔）均返回英文错误。
 func TestParseExtraBody(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -25,7 +25,7 @@ func TestParseExtraBody(t *testing.T) {
 		{name: "number", raw: `123`, want: nil, wantErr: true},
 		{name: "string", raw: `"abc"`, want: nil, wantErr: true},
 		{name: "boolean", raw: `true`, want: nil, wantErr: true},
-		{name: "null", raw: `null`, want: nil, wantErr: true},
+		{name: "null", raw: `null`, want: nil, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

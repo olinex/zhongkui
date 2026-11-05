@@ -97,7 +97,7 @@
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.notificationTemplate.field.description')"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -211,7 +211,7 @@
                   v-bind="updateDescriptionProps"
                   :label="$t('model.notificationTemplate.field.description')"
                   :disabled="!editable"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>

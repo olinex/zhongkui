@@ -131,7 +131,7 @@ func TestAgentPromptOptimize(t *testing.T) {
 
 			w := doKnowledgeJSONRequest(r, http.MethodPost, "/ai/prompt/optimize", map[string]any{"query": "   "})
 			So(w.Code, ShouldEqual, http.StatusBadRequest)
-			So(w.Body.String(), ShouldContainSubstring, "query is required")
+			So(w.Body.String(), ShouldContainSubstring, "query")
 		})
 
 		Convey("AI 未启用返回本地化 400", func() {

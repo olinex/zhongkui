@@ -17,6 +17,7 @@ import (
 	_ "zhongkuisec.com/zhongkui/internal/pkg/message"
 	_ "zhongkuisec.com/zhongkui/internal/pkg/sqlitevtab/vtab"
 	_ "zhongkuisec.com/zhongkui/internal/tagengine"
+	_ "zhongkuisec.com/zhongkui/internal/worker"
 
 	// internal — 被测依赖
 	"zhongkuisec.com/zhongkui/internal/pkg/base"

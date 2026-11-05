@@ -58,6 +58,7 @@ const (
 	CodePasswordResetUnavailable    = 1104 // 1104: 重置密码功能不可用（系统未启用或未配置 SMTP）
 	CodePasswordResetTokenInvalid   = 1105 // 1105: 重置密码令牌无效或已过期
 	CodeTooManyRequests             = 1106 // 1106: 请求过于频繁（命中公共接口限流）
+	CodeBadAccessKey                = 1107 // 1107: 访问密钥无效或已过期
 
 	// 1200-1299 标签
 	CodeTagRuleInvalid            = 1200 // 1200: 标签规则校验失败（语法/契约/组级冲突）

@@ -123,6 +123,84 @@ func TestBuildModelInputAgenticSections(t *testing.T) {
 	}
 }
 
+// TestBuildModelInputSkillSection 校验选用技能时系统提示插入「当前技能」段（名称 / 说明 / 正文），
+// 未选技能时系统提示不含该段：技能段只在本轮显式选用时出现，且不影响其余固定段落。
+func TestBuildModelInputSkillSection(t *testing.T) {
+	params := mustParams(t, nil)
+
+	t.Run("带技能的系统提示包含当前技能段", func(t *testing.T) {
+		rc := RunContext[*schema.Message]{
+			Request: Request{
+				Query:            "how do I triage this alert?",
+				AgentKind:        modelsai.AgentKindKnowledge,
+				SkillName:        "  traffic-triager  ",
+				SkillDescription: " 按五元组排查流量 ",
+				SkillContent:     " 先看五元组，再下钻 HTTP 传输 ",
+			},
+		}
+		messages, err := buildModelInput[*schema.Message](t.Context(), params, rc)
+		if err != nil {
+			t.Fatalf("buildModelInput() error = %v", err)
+		}
+		system := messages[0].Content
+		if !strings.Contains(system, "## 当前技能") ||
+			!strings.Contains(system, "traffic-triager") ||
+			!strings.Contains(system, "按五元组排查流量") ||
+			!strings.Contains(system, "先看五元组，再下钻 HTTP 传输") {
+			t.Errorf("system prompt misses the skill section: %q", system)
+		}
+		if !strings.Contains(system, agentCapabilityHint) || !strings.Contains(system, agentCitationHint) {
+			t.Errorf("system prompt misses the fixed sections: %q", system)
+		}
+	})
+
+	t.Run("未带技能的系统提示不含当前技能段", func(t *testing.T) {
+		rc := RunContext[*schema.Message]{
+			Request: Request{
+				Query:        "plain question",
+				AgentKind:    modelsai.AgentKindKnowledge,
+				SkillContent: "   ",
+			},
+		}
+		messages, err := buildModelInput[*schema.Message](t.Context(), params, rc)
+		if err != nil {
+			t.Fatalf("buildModelInput() error = %v", err)
+		}
+		if strings.Contains(messages[0].Content, "## 当前技能") {
+			t.Errorf("system prompt unexpectedly contains the skill section: %q", messages[0].Content)
+		}
+	})
+}
+
+// TestBuildModelInputSystemHint 校验调用方附加的系统级约束追加在系统提示词末尾，空值不注入。
+func TestBuildModelInputSystemHint(t *testing.T) {
+	params := mustParams(t, nil)
+	rc := RunContext[*schema.Message]{
+		Request: Request{
+			Query:      "生成周期报告",
+			AgentKind:  modelsai.AgentKindKnowledge,
+			SystemHint: "  只输出统一 JSON 信封  ",
+		},
+	}
+	messages, err := buildModelInput[*schema.Message](t.Context(), params, rc)
+	if err != nil {
+		t.Fatalf("buildModelInput() error = %v", err)
+	}
+	system := messages[0].Content
+	if !strings.HasSuffix(system, "只输出统一 JSON 信封") {
+		t.Errorf("system prompt should end with the system hint: %q", system)
+	}
+
+	rc.Request.SystemHint = "   "
+	messages, err = buildModelInput[*schema.Message](t.Context(), params, rc)
+	if err != nil {
+		t.Fatalf("buildModelInput() error = %v", err)
+	}
+	if strings.Contains(messages[0].Content, "只输出统一 JSON 信封") {
+		t.Errorf("system prompt unexpectedly contains an empty system hint: %q", messages[0].Content)
+	}
+}
+
 func TestBuildModelInputResumePassesThrough(t *testing.T) {
 	params := mustParams(t, nil)
 	rt := &Runtime{params: params}

@@ -98,14 +98,15 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/knowledge"
 	"zhongkuisec.com/zhongkui/internal/ai/memory"
 	"zhongkuisec.com/zhongkui/internal/ai/session"
+	"zhongkuisec.com/zhongkui/internal/ai/skill"
 	"zhongkuisec.com/zhongkui/internal/ai/turns"
 )
 
 // Components 聚合 AI 助手（RAG + Agent）运行所需的全部组件：ADK Agent 运行时（Agent）、
 // TurnLoop 会话驱动（Turns）、知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化
-// （session.Store）、行为参数解析器（Params）与已启用的工具清单（Tools）。由本包的运行时
-// （Runtime）依据数据库模型注册表装配，并经请求中间件注入视图层；AI 未启用时各执行组件为 nil，
-// 视图层以 Enabled 统一判断。
+// （session.Store）、技能资源存储（skill.Store）、行为参数解析器（Params）与已启用的工具清单
+// （Tools）。由本包的运行时（Runtime）依据数据库模型注册表装配，并经请求中间件注入视图层；
+// AI 未启用时各执行组件为 nil，视图层以 Enabled 统一判断。
 type Components struct {
 	// Agent ADK Agent 运行时（AI 未启用时为 nil）
 	Agent *agentkit.Runtime
@@ -117,6 +118,8 @@ type Components struct {
 	Retriever *knowledge.Retriever
 	// Sessions 会话持久化（AI 未启用时为 nil）
 	Sessions *session.Store
+	// Skills 技能资源存储（AI 未启用时为 nil）
+	Skills *skill.Store
 	// Memory 会话记忆服务（滚动摘要 / 会话压缩 / 长期记忆检索；AI 未启用时为 nil）
 	Memory *memory.Service
 	// Params 行为参数解析器（始终非 nil）

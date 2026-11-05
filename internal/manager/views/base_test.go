@@ -352,6 +352,7 @@ func TestGetJSONTagAndType(t *testing.T) {
 			So(names["name"], ShouldEqual, "string")
 			So(names["email"], ShouldEqual, "string")
 		})
+
 	})
 }
 

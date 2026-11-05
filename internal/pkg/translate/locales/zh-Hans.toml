@@ -79,6 +79,7 @@
 1104 = "重置密码功能不可用，请联系管理员或稍后再试"
 1105 = "重置密码链接无效或已过期，请重新申请"
 1106 = "请求过于频繁，请稍后再试"
+1107 = "访问密钥无效或已过期"
 1200 = "标签规则校验失败"
 1201 = "标签事件规则校验失败"
 1202 = "标签规则运行期校验失败"
@@ -111,6 +112,17 @@ llmBindingKindMismatch = "模型 %s 是 %s 模型，无法绑定到 %s 档位（
 llmBindingIncompatibleDimension = "embedding 模型 %s 与知识库索引维度 %d 不兼容（该模型实际返回 %d 维）；请先解绑 embedding 档位（若已绑定），执行 `sync embedding-dimensions --dimensions %d` 重建索引后再绑定"
 enumUnknownType = "未知的枚举类 `%s`"
 aiFeatureDisabled = "AI 功能未启用，请先在档位绑定中启用所需模型"
+aiSkillUnavailable = "技能不存在或已停用"
+aiSkillNameExists = "同名技能已存在"
+aiSkillBuiltinReadonly = "内置技能由代码维护，不可编辑或删除"
+aiSkillInvalidFields = "技能输入字段或固定参数不合法：%v"
+aiSkillPeriodicNowTimeRequired = "可周期执行的技能必须包含 name=nowTime、类型为 date 的输入字段"
+periodicReportSkillNotEligible = "所选技能不可用于周期性报告，请选择可周期执行、固定参数含合法时间窗口且包含 nowTime 输入字段的技能"
+periodicReportScheduleInvalid = "cron 表达式非法"
+periodicReportInputMissing = "技能必填输入未填写"
+periodicReportInputInvalid = "技能输入参数不合法：键必须属于技能固定参数或输入字段，值的类型须与原字段一致，且不能覆盖 nowTime 或提供非法时间窗口"
+periodicReportPlanExpired = "报告计划已到期，不能立即执行"
+periodicReportRunObjectMissing = "报告正文不存在或已被清理"
 knowledgeImportedContentReadOnly = "导入文档的正文为只读内容，请重新解析文档以刷新"
 knowledgeDocumentParsing = "文档正在解析中，请等待解析完成后再重新索引"
 knowledgeDocumentNotFound = "知识库文档 %d 不存在"
@@ -168,8 +180,10 @@ enum = "字段取值不在允许范围内"
 httpUrl = "字段须为绝对的 http 或 https 地址"
 jsonObject = "字段须为 JSON 对象文本，且所有取值均为字符串"
 trimmed = "字段首尾不能包含空白字符"
+notBlank = "字段不能为空白字符"
 gtCurrentTime = "字段必须晚于当前时间"
 ltCurrentTime = "字段必须早于当前时间"
+cron = "字段须为合法的 cron 表达式（支持 5 段标准 cron 或 @daily 等描述符）"
 
 # =============================================================================
 # Interactive prompt texts (cliinput) - Key layout: cli.input.prompt.<Struct>.<Field>
@@ -1969,6 +1983,23 @@ other = "MCP 工具"
 [enum.llmToolSource.client]
 other = "客户端工具"
 
+# 技能来源（枚举类 agentSkillSource）
+[enum.agentSkillSource.custom]
+other = "自定义技能"
+
+[enum.agentSkillSource.builtin]
+other = "内置技能"
+
+# 报告运行状态（枚举类 periodicReportRunStatus）
+[enum.periodicReportRunStatus.running]
+other = "运行中"
+
+[enum.periodicReportRunStatus.success]
+other = "成功"
+
+[enum.periodicReportRunStatus.failed]
+other = "失败"
+
 # Agent 类型（枚举类 agentKind）
 [enum.agentKind.general]
 other = "通用助手"
@@ -2319,6 +2350,24 @@ other = "退订宽限秒数"
 [param.agent.runDetachGraceSeconds.comment]
 other = "驻留运行最后一名订阅者退订后，超过该秒数仍无订阅者则自动取消运行；<=0 表示关闭自动取消"
 
+[param.agent.llmTimeoutRetryEnabled.label]
+other = "超时自动重试"
+
+[param.agent.llmTimeoutRetryEnabled.comment]
+other = "非流式模型调用（记忆抽取、审核分级、检索重排等）超时后是否自动重试；流式对话不受影响"
+
+[param.agent.llmTimeoutRetryMaxRetries.label]
+other = "超时重试次数"
+
+[param.agent.llmTimeoutRetryMaxRetries.comment]
+other = "超时后最多重试几次（不含首次请求）；0 表示不重试"
+
+[param.agent.llmTimeoutRetryMultiplier.label]
+other = "超时放大倍数"
+
+[param.agent.llmTimeoutRetryMultiplier.comment]
+other = "每次重试把单次请求超时乘以该倍数；例如基础 60 秒、倍数 2 时依次为 120、240、480 秒"
+
 # ---- retrieval：混合检索融合与 LLM 重排 ----
 [param.retrieval.topK.label]
 other = "最终引用条数"
@@ -2561,10 +2610,10 @@ other = "向用户提问"
 other = "模型在信息不足或需用户在多个方案间抉择时向用户提问；由前端呈现问卷、用户作答后回传结果，可一次提多个问题，每题提供候选答案"
 
 [tool.api_invoke.label]
-other = "调用只读能力"
+other = "调用平台能力"
 
 [tool.api_invoke.comment]
-other = "在用户自身凭据下调用经后端白名单校验的只读能力；需用户人工审批后由前端执行，只返回接口响应"
+other = "在用户自身凭据下调用经后端白名单校验的只读或写入能力；需用户人工审批后由前端执行，只返回接口响应"
 
 [tool.math_eval.label]
 other = "表达式求值"
@@ -2644,6 +2693,12 @@ other = "URL 解析"
 [tool.url_parse.comment]
 other = "解析 URL 的协议、用户、主机、端口、路径、查询参数与片段等分量"
 
+[tool.mermaid_check.label]
+other = "Mermaid 图表校验"
+
+[tool.mermaid_check.comment]
+other = "在输出图表前校验 mermaid 源码合法性，按行号返回问题与修改建议，供 Agent 自行整改；覆盖流程图语法、连线写法与样式类引用"
+
 [tool.poly_solve.label]
 other = "多项式求根"
 
@@ -2676,3 +2731,37 @@ other = "用牛顿-拉夫逊法求解非线性方程组，给出解向量、残�
 
 [tagengine.custom-functions.sqlite.query.description]
 other = "查询第三方数据源：对注册为 sqlite vtable 的第三方数据源执行 SELECT 语句并返回行对象数组。\n参数：第一参数为查询语句（支持 ? 占位符），第二参数为按顺序绑定到占位符的参数数组。\n返回值：每行是以列名为键的对象，经下标加列名访问（如 rows[0].value）；无匹配行时返回空数组，下标访问会使规则体不满足，可先用 count(rows) > 0 判断"
+
+# 任务类型（枚举类 taskType，来源 worker 的任务处理器注册表 TaskTypes()）
+[enum.taskType."network:pcapimport"]
+other = "PCAP 抓包文件导入"
+
+[enum.taskType."tag:event:detect"]
+other = "标签事件检测"
+
+[enum.taskType."tag:event:suppress"]
+other = "标签事件抑制评估"
+
+[enum.taskType."tag:event:cleanup"]
+other = "标签事件无效记录清理"
+
+[enum.taskType."mail:send"]
+other = "系统级邮件直发"
+
+[enum.taskType."notify:send:group"]
+other = "通知组发送"
+
+[enum.taskType."notify:send:target"]
+other = "通知单目标直投"
+
+[enum.taskType."ai:doc:parse"]
+other = "知识文档导入解析"
+
+[enum.taskType."periodic-report:plan:dispatch"]
+other = "周期性报告计划分发"
+
+[enum.taskType."periodic-report:plan:run"]
+other = "周期性报告生成"
+
+[enum.taskType."periodic-report:run:cleanup"]
+other = "周期性报告生命周期清理"

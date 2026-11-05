@@ -190,12 +190,15 @@ $zk-resize-grip-opacity: 0.24;
 // 编辑器外壳（CodeMirror 族）
 //   editor-font-size           编辑器正文与 CodeMirror 内部文本字号
 //   editor-min-height          编辑器正文最小高度
+//   editor-body-height        编辑器正文固定高度（Markdown 编辑 / 预览、JSON 编辑器同高，
+//                              超出在区内纵向滚动；全屏模式下改为铺满视口）
 //   editor-padding             编辑器外壳内边距
 //   editor-header-min-height   编辑器区块标题行最小高度（标题 + 校验状态图标）
 // ---------------------------------------------------------------------------
 
 $zk-editor-font-size: 0.8125rem; // 13px
 $zk-editor-min-height: 160px;
+$zk-editor-body-height: 240px;
 $zk-editor-padding: $zk-space-2;
 $zk-editor-header-min-height: 24px;
 
@@ -317,6 +320,7 @@ $zk-shadow-md:
   --zk-resize-grip-opacity: #{$zk-resize-grip-opacity};
   --zk-editor-font-size: #{$zk-editor-font-size};
   --zk-editor-min-height: #{$zk-editor-min-height};
+  --zk-editor-body-height: #{$zk-editor-body-height};
   --zk-editor-padding: #{$zk-editor-padding};
   --zk-editor-header-min-height: #{$zk-editor-header-min-height};
   --zk-surface-subtle-opacity: #{$zk-surface-subtle-opacity};

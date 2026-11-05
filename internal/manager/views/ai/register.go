@@ -13,11 +13,14 @@ import (
 //   - /doc    知识库文档 CRUD/list/reindex/chunks + 导入上传/原件下载
 //   - /session  Agent 会话 create/list/get/rename/valve/delete/messages
 //   - /memory  长期记忆 create/list(get/update)/delete/status
+//   - /skill   技能 create/list/detail/update/delete/status
+//   - /periodic-report  周期性报告：技能选项、计划 CRUD/启停/立即执行、运行记录、关注与信息流
 //   - /agent/:sessionID/{chat,render,action,events,abort}  事件流式接口
 //   - /status  AI 状态（可用性 + 维度差异 + 会话回合快照）
 //
 // 知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存
-// （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务入队）中间件供子路由共享。
+// （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务与报告计划任务入队）中间件供
+// 子路由共享。报告计划由分发器按 next_run_at 调度，视图层不再读写 etcd。
 func RegisterRoutes(ctx *views.RegisterContext) {
 	aiGroup := ctx.V1Group.Group(
 		"/ai",
@@ -31,16 +34,16 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		ctx.Ai,                // AI 助手组件（RAG 知识库 + Agent）
 		ctx.S3,                // S3 客户端（知识库原件读写）
 		ctx.ObjectCache,       // 对象缓存（原件加密上传/下载/清理）
-		ctx.PipelineClient,    // 管道投递客户端（解析任务入队）
+		ctx.PipelineClient,    // 管道投递客户端（解析任务与报告计划任务入队）
 	)
 
 	// ========== 知识库文档：/api/v1/ai/doc ==========
 	// 知识库文档 CRUD 与重新索引；文档为命名空间级资源，落库后经 Knowledge 切块向量化。
 	docGroup := aiGroup.Group("/doc")
-	// 知识库文档列表查询 - 支持分页、搜索与排序。
+	// 知识库文档列表查询 - 支持分页、搜索、排序与创建/更新时间过滤。
 	docGroup.POST("/list", KnowledgeDocumentListGet)
 	// 知识库文档列表元信息
-	views.RegisterListApi[*views.KnowledgeDocumentListGetSearchIn, *KnowledgeDocumentListOut](docGroup, "/list", "知识库文档列表查询 - 支持分页、搜索与排序。",
+	views.RegisterListApi[*views.KnowledgeDocumentListGetSearchIn, *KnowledgeDocumentListOut](docGroup, "/list", "知识库文档列表查询 - 支持分页、搜索、排序与创建/更新时间过滤。",
 		views.WithCapability(views.CapabilityMeta{
 			ID:        "ai.knowledge.list",
 			Domain:    "ai",
@@ -262,10 +265,10 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	// 会话级长期记忆的管理接口（列表/详情/批量删除/启停）；记忆由 Agent 运行期按会话生成，
 	// 不在管理端新增或修改。
 	memoryGroup := aiGroup.Group("/memory")
-	// 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影
+	// 记忆列表查询 - 支持分页、keyword/agentKind/kind/status 与创建/更新时间过滤及字段投影
 	memoryGroup.POST("/list", AgentMemoryListGet)
 	// 记忆列表元信息
-	views.RegisterListApi[*views.AgentMemoryListGetSearchIn, *AgentMemoryListOut](memoryGroup, "/list", "记忆列表查询 - 支持分页、keyword/agentKind/kind/status 过滤与字段投影",
+	views.RegisterListApi[*views.AgentMemoryListGetSearchIn, *AgentMemoryListOut](memoryGroup, "/list", "记忆列表查询 - 支持分页、keyword/agentKind/kind/status 与创建/更新时间过滤及字段投影",
 		views.WithCapability(views.CapabilityMeta{
 			ID:        "ai.memory.list",
 			Domain:    "ai",
@@ -297,6 +300,223 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 	memoryGroup.POST("/:id/status", AgentMemorySetStatus)
 	// 启停记忆元信息
 	views.RegisterApi(memoryGroup, "/:id/status", "启停记忆 - active/archived", views.WithMethod(http.MethodPost, views.WithBodyInput[AgentMemoryStatusIn]()))
+
+	// ========== 技能：/api/v1/ai/skill ==========
+	// AI 技能的命名空间级管理接口（创建 / 列表 / 详情 / 更新 / 批量删除 / 启停）；技能正文加密落库，
+	// 列表不返回正文，由 Agent 运行时按需装配。
+	skillGroup := aiGroup.Group("/skill")
+	// 技能列表查询 - 支持分页、keyword/enabled 与创建/更新时间过滤及字段投影
+	skillGroup.POST("/list", AgentSkillListGet)
+	// 技能列表元信息
+	views.RegisterListApi[*views.AgentSkillListGetSearchIn, *AgentSkillListOut](skillGroup, "/list", "技能列表查询 - 支持分页、keyword/enabled 与创建/更新时间过滤及字段投影",
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.skill.list",
+			Domain:    "ai",
+			Intent:    "查看技能列表",
+			Entities:  []string{"agent_skills"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 技能选择器选项 - 合并内置技能与当前命名空间已启用技能（不返回正文）
+	skillGroup.POST("/options", AgentSkillOptionsGet)
+	// 技能选择器选项元信息：只读合并结果，供 AI 助手在推荐或复用技能前确认可用技能；
+	// 不返回技能正文，因此与技能列表同属可安全调用的只读能力。
+	views.RegisterApi(skillGroup, "/options", "技能选择器选项 - 合并内置技能与当前命名空间已启用技能",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentSkillOptionListOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.skill.options",
+			Domain:    "ai",
+			Intent:    "查看当前可用的技能选项（内置技能与已启用自定义技能）",
+			Entities:  []string{"agent_skills"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 创建技能 - 名称在同命名空间内唯一，新建默认启用；周期能力、输入字段与固定参数由用户提交
+	skillGroup.POST("/create", AgentSkillCreate)
+	// 创建技能元信息：写入能力，供 AI 在「技能共创」流程中经 api_invoke 在用户审批后创建技能；
+	// 名称在同命名空间内唯一，新建默认启用，周期能力、输入字段与固定参数随创建一次写入。
+	views.RegisterApi(skillGroup, "/create", "创建技能 - 名称在同命名空间内唯一，新建默认启用，周期能力、输入字段与固定参数由用户提交；周期技能须含 nowTime 输入字段及 timeOffset / timeWindow 固定参数",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[AgentSkillCreateIn](), views.WithBodyOutput[AgentSkillDetailOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.skill.create",
+			Domain:    "ai",
+			Intent:    "创建 AI 技能（写入，需用户在审批卡片上确认）",
+			Entities:  []string{"agent_skills"},
+			Access:    capability.AccessWrite,
+			Invokable: true,
+		}),
+	)
+	// 技能详情查询 - 含解密后的技能正文
+	skillGroup.POST("/:id/get", AgentSkillDetailGet)
+	// 技能详情元信息
+	views.RegisterApi(skillGroup, "/:id/get", "技能详情查询 - 含解密后的技能正文",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[AgentSkillDetailOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.skill.detail",
+			Domain:    "ai",
+			Intent:    "查看技能详情",
+			Entities:  []string{"agent_skills"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 更新技能 - 名称/描述/正文整体覆盖
+	skillGroup.POST("/:id/update", AgentSkillUpdate)
+	// 更新技能元信息（不开放给 api_invoke：AI 侧只允许创建，创建必须一次成功）
+	views.RegisterApi(skillGroup, "/:id/update", "更新技能 - 名称/描述/正文与周期能力、输入字段、固定参数整体覆盖；周期技能须含 nowTime 输入字段及 timeOffset / timeWindow 固定参数",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[AgentSkillUpdateIn](), views.WithBodyOutput[AgentSkillDetailOut]()))
+	// 批量删除技能 - 软删除
+	skillGroup.POST("/delete", AgentSkillBatchDelete)
+	// 批量删除技能元信息
+	views.RegisterApi(skillGroup, "/delete", "批量删除技能 - 软删除",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[AgentSkillBatchIn](), views.WithBodyOutput[views.BatchResultOut]()))
+	// 启停技能 - 停用的技能不参与运行时装配
+	skillGroup.POST("/:id/status", AgentSkillSetEnabled)
+	// 启停技能元信息
+	views.RegisterApi(skillGroup, "/:id/status", "启停技能 - 停用的技能不参与运行时装配",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[AgentSkillStatusIn]()))
+
+	// ========== 周期性报告：/api/v1/ai/periodic-report ==========
+	// 周期性报告计划的命名空间级管理接口（技能选项 / 计划 CRUD / 启停 / 立即执行）与运行记录、
+	// 关注关系、信息流查询；计划由 periodic-report:plan:dispatch 分发器按 next_run_at 定时投递。
+	periodicReportGroup := aiGroup.Group("/periodic-report")
+	// 可作为报告来源的技能选项 - 仅返回可周期执行且含时间窗口字段的已启用自定义技能
+	periodicReportGroup.POST("/skill/options", PeriodicReportSkillOptionsGet)
+	// 报告技能选项元信息
+	views.RegisterApi(periodicReportGroup, "/skill/options", "可作为报告来源的技能选项 - 仅返回可周期执行且含时间窗口字段的已启用自定义技能",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[PeriodicReportSkillOptionListOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.skill.options",
+			Domain:    "ai",
+			Intent:    "查看可作为报告来源的技能选项",
+			Entities:  []string{"agent_skills"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 报告计划列表查询 - 支持 keyword / enabled 与创建/更新时间过滤及分页
+	periodicReportGroup.POST("/plan/list", PeriodicReportPlanListGet)
+	// 报告计划列表元信息
+	views.RegisterListApi[*views.PeriodicReportPlanListGetSearchIn, *PeriodicReportPlanListOut](periodicReportGroup, "/plan/list", "报告计划列表查询 - 支持 keyword / enabled 与创建/更新时间过滤及分页",
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.plan.list",
+			Domain:    "ai",
+			Intent:    "查看报告计划列表",
+			Entities:  []string{"periodic_report_plans"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 创建报告计划 - 校验技能资格与 cron 后落库
+	periodicReportGroup.POST("/plan/create", PeriodicReportPlanCreate)
+	// 创建报告计划元信息：写入能力，供「周期报告技能共创」完成技能后经 api_invoke 在用户审批后
+	// 把技能排入周期计划；未登记能力时模型在能力地图中看不到该入口，api_invoke 也无法调用。
+	views.RegisterApi(periodicReportGroup, "/plan/create", "创建报告计划 - 校验技能资格与 cron 后落库",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[PeriodicReportPlanCreateIn](), views.WithBodyOutput[PeriodicReportPlanItemOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.plan.create",
+			Domain:    "ai",
+			Intent:    "创建周期性报告计划（写入，需用户在审批卡片上确认）",
+			Entities:  []string{"periodic_report_plans"},
+			Access:    capability.AccessWrite,
+			Invokable: true,
+		}),
+	)
+	// 更新报告计划 - 可编辑字段整体覆盖，下次执行时间交由分发器重算
+	periodicReportGroup.POST("/plan/:id/update", PeriodicReportPlanUpdate)
+	// 更新报告计划元信息
+	views.RegisterApi(periodicReportGroup, "/plan/:id/update", "更新报告计划 - 可编辑字段整体覆盖，下次执行时间交由分发器重算",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[PeriodicReportPlanUpdateIn](), views.WithBodyOutput[PeriodicReportPlanItemOut]()))
+	// 启停报告计划 - 停用后不再按 cron 触发
+	periodicReportGroup.POST("/plan/:id/toggle", PeriodicReportPlanToggle)
+	// 启停报告计划元信息
+	views.RegisterApi(periodicReportGroup, "/plan/:id/toggle", "启停报告计划 - 停用后不再按 cron 触发",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[PeriodicReportPlanToggleIn](), views.WithBodyOutput[PeriodicReportPlanItemOut]()))
+	// 删除报告计划 - 软删除计划
+	periodicReportGroup.POST("/plan/:id/delete", PeriodicReportPlanDelete)
+	// 删除报告计划元信息
+	views.RegisterApi(periodicReportGroup, "/plan/:id/delete", "删除报告计划 - 软删除计划",
+		views.WithMethod(http.MethodPost))
+	// 立即执行报告计划 - 跳过 cron 直接投递一条生成任务（已到期计划返回 400）
+	periodicReportGroup.POST("/plan/:id/run", PeriodicReportPlanRun)
+	// 立即执行报告计划元信息：写入能力，创建计划后由用户确认立即试用一次，运行产物按真实数据生成
+	views.RegisterApi(periodicReportGroup, "/plan/:id/run", "立即执行报告计划 - 跳过 cron 直接投递一条生成任务（已到期计划返回 400）",
+		views.WithMethod(http.MethodPost),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.plan.run",
+			Domain:    "ai",
+			Intent:    "立即执行周期性报告计划并生成一条真实报告（写入，需用户在审批卡片上确认）",
+			Entities:  []string{"periodic_report_plans", "periodic_report_runs"},
+			Access:    capability.AccessWrite,
+			Invokable: true,
+		}),
+	)
+	// 报告运行记录列表查询 - 可按计划 / 状态过滤并分页
+	periodicReportGroup.POST("/run/list", PeriodicReportRunListGet)
+	// 报告运行记录列表元信息
+	views.RegisterListApi[*views.PeriodicReportRunListGetSearchIn, *PeriodicReportRunListOut](periodicReportGroup, "/run/list", "报告运行记录列表查询 - 可按计划 / 状态过滤并分页",
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.run.list",
+			Domain:    "ai",
+			Intent:    "查看报告运行记录列表",
+			Entities:  []string{"periodic_report_runs"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 报告运行详情查询 - 含报告正文（对象缺失返回 404）
+	periodicReportGroup.POST("/run/:id/get", PeriodicReportRunDetailGet)
+	// 报告运行详情元信息
+	views.RegisterApi(periodicReportGroup, "/run/:id/get", "报告运行详情查询 - 含报告正文（对象缺失返回 404）",
+		views.WithMethod(http.MethodPost, views.WithBodyOutput[PeriodicReportRunDetailOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.run.detail",
+			Domain:    "ai",
+			Intent:    "查看报告运行详情与正文",
+			Entities:  []string{"periodic_report_runs"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 删除报告运行记录 - 一并删除报告对象；运行中与已结束的记录均可删除
+	periodicReportGroup.POST("/run/:id/delete", PeriodicReportRunDelete)
+	// 删除报告运行记录元信息
+	views.RegisterApi(periodicReportGroup, "/run/:id/delete", "删除报告运行记录 - 一并删除报告对象；运行中与已结束的记录均可删除",
+		views.WithMethod(http.MethodPost))
+	// 关注计划候选列表 - 分页返回可关注计划，并回填当前用户关注状态
+	periodicReportGroup.POST("/watch/list", PeriodicReportWatchListGet)
+	// 关注计划候选列表元信息
+	views.RegisterApi(periodicReportGroup, "/watch/list", "关注计划候选列表 - 分页返回可关注计划，并回填当前用户关注状态",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[views.PeriodicReportWatchListGetSearchIn](), views.WithBodyOutput[PeriodicReportWatchListOut]()),
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.watch.list",
+			Domain:    "ai",
+			Intent:    "查看当前用户关注的报告计划",
+			Entities:  []string{"periodic_report_plans"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
+	// 设置计划关注状态 - 幂等关注 / 取消关注
+	periodicReportGroup.POST("/watch/set", PeriodicReportWatchSet)
+	// 设置计划关注状态元信息
+	views.RegisterApi(periodicReportGroup, "/watch/set", "设置计划关注状态 - 幂等关注 / 取消关注",
+		views.WithMethod(http.MethodPost, views.WithBodyInput[PeriodicReportWatchSetIn]()))
+	// 报告中心信息流查询 - 仅返回关注计划的成功运行记录
+	periodicReportGroup.POST("/feed/list", PeriodicReportFeedListGet)
+	// 报告中心信息流元信息
+	views.RegisterListApi[*views.PeriodicReportFeedListGetSearchIn, *PeriodicReportFeedListOut](periodicReportGroup, "/feed/list", "报告中心信息流查询 - 仅返回关注计划的成功运行记录",
+		views.WithCapability(views.CapabilityMeta{
+			ID:        "ai.periodicReport.feed.list",
+			Domain:    "ai",
+			Intent:    "查看报告中心信息流",
+			Entities:  []string{"periodic_report_runs"},
+			Access:    capability.AccessRead,
+			Invokable: true,
+		}),
+	)
 
 	// ========== Agent 回合（领域事件）与状态：/api/v1/ai ==========
 	// 所有服务端→前端输出均为领域事件，以 `id: <seq>` + `data: <json>` 的 SSE 行下发；运行与

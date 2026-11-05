@@ -68,9 +68,9 @@
 <script setup lang="ts" name="rego-dry-run-panel">
 import { tagRuleDryRun } from "@/apis/tagEvent";
 import {
-  TrafficCryptoFields,
-  TrafficFieldTypes,
-  TrafficS3Fields,
+  trafficCryptoKeysOf,
+  trafficFieldTypesOf,
+  trafficS3KeysOf,
   trafficTypeFromModelKey,
 } from "@/apis/traffic";
 import { getResponse } from "@/apis/base";
@@ -99,6 +99,31 @@ const result = ref<TagRuleDryRunOut | null>(null);
 const inputDialog = ref(false);
 const plaintextDialogRef = useTemplateRef("plaintextDialogRef");
 const plaintextLoading = ref("");
+// 加密 / S3 字段集合与字段渲染类型：全部来自流量列表 OPTIONS 自省，随模型切换加载
+const cryptoKeys = ref(new Set<string>());
+const s3Keys = ref(new Set<string>());
+const fieldTypes = ref<Record<string, BackendDataType>>({});
+
+watch(
+  () => trafficTypeFromModelKey(props.model),
+  async (trafficType) => {
+    if (!trafficType) {
+      cryptoKeys.value = new Set<string>();
+      s3Keys.value = new Set<string>();
+      fieldTypes.value = {};
+      return;
+    }
+    const [crypto, s3, types] = await Promise.all([
+      trafficCryptoKeysOf(trafficType),
+      trafficS3KeysOf(trafficType),
+      trafficFieldTypesOf(trafficType),
+    ]);
+    cryptoKeys.value = crypto;
+    s3Keys.value = s3;
+    fieldTypes.value = types;
+  },
+  { immediate: true },
+);
 
 // 与 rego 编辑器联动：编辑器内选中的样例 input 同步到此处，作为试运行输入。
 watch(
@@ -115,19 +140,15 @@ const ruleEntries = computed<[string, TagRuleDryRunRuleOut][]>(() =>
 );
 
 // detailFields 试运行 input 字段：遍历 input 文档按模型类型翻译字段名；
-// 加密/S3 字段经模型类型键逆映射识别后提供明文查看，其余字段按流量模型类型
-// （TrafficFieldTypes）由 AdaptiveCell 以列表页方式渲染
+// 加密/S3 字段经 OPTIONS 自省 kind 识别后提供明文查看，其余字段按自省类型由
+// AdaptiveCell 以列表页方式渲染
 const detailFields = computed<DetailField[]>(() => {
   const modelKey = modelTypeKeyToI18nKey(props.model);
-  const trafficType = trafficTypeFromModelKey(props.model);
-  const cryptoKeys = new Set(trafficType ? (TrafficCryptoFields[trafficType] ?? []) : []);
-  const s3Keys = new Set(trafficType ? (TrafficS3Fields[trafficType] ?? []) : []);
-  // 字段渲染类型：按流量类型查 TrafficFieldTypes，未知类型/字段回退 STRING
-  const fieldTypes = trafficType ? TrafficFieldTypes[trafficType] : {};
   return Object.entries(inputData.value).map(([key, value]) => {
     const label = modelFieldTitle(modelKey, key);
-    const fieldType = fieldTypes[key] ?? BackendDataType.STRING;
-    if (cryptoKeys.has(key) && typeof value === "string" && value !== "") {
+    // 字段渲染类型来自 OPTIONS 自省，未知字段回退字符串
+    const fieldType = fieldTypes.value[key] ?? BackendDataType.STRING;
+    if (cryptoKeys.value.has(key) && typeof value === "string" && value !== "") {
       return {
         key,
         label,
@@ -138,7 +159,7 @@ const detailFields = computed<DetailField[]>(() => {
         type: fieldType,
       };
     }
-    if (s3Keys.has(key) && typeof value === "string" && value !== "") {
+    if (s3Keys.value.has(key) && typeof value === "string" && value !== "") {
       return {
         key,
         label,

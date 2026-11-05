@@ -13,13 +13,13 @@ import (
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/ai/config"
-	"zhongkuisec.com/zhongkui/internal/ai/contract"
 	"zhongkuisec.com/zhongkui/internal/ai/port"
 	"zhongkuisec.com/zhongkui/internal/ai/retrieval"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/docconv"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // RetrieveOptions 是 Retriever.Retrieve 的实现专属调用参数，经 retriever.Option 注入。
@@ -246,7 +246,7 @@ func (r *Retriever) rerank(ctx context.Context, chat port.ChatGenerator, query s
 
 // parseRerankIndices 解析模型返回的 JSON 序号数组；容忍 ```json 代码围栏包裹。
 func parseRerankIndices(content string) ([]int, error) {
-	content = contract.StripJSONFence(content)
+	content = validator.StripJSONFence(content)
 	if content == "" {
 		return nil, errors.New("retriever: rerank response is empty")
 	}

@@ -105,6 +105,7 @@ export function fromBackendDataType(btype: BackendDataType, action: SearchAction
     case SearchAction.NOT_CONTAIN:
     case SearchAction.IGNORE_CASE_CONTAIN:
     case SearchAction.IGNORE_CASE_NOT_CONTAIN:
+    case SearchAction.FTS:
       switch (btype) {
         case BackendDataType.STRING:
           return SearchInputType.STRING;

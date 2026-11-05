@@ -99,6 +99,10 @@ func buildModelInput[M adk.MessageType](ctx context.Context, params *config.Para
 		"BusinessData":         "",
 		"QuestionSectionTitle": agentQuestionSectionTitle,
 		"Query":                strings.TrimSpace(rc.Request.Query),
+		"SkillName":            strings.TrimSpace(rc.Request.SkillName),
+		"SkillDescription":     strings.TrimSpace(rc.Request.SkillDescription),
+		"SkillContent":         strings.TrimSpace(rc.Request.SkillContent),
+		"SystemHint":           strings.TrimSpace(rc.Request.SystemHint),
 		"history":              msgops.NormalizeMessagesForModelInput(stripHistoryCitationMarkers(rc.History)),
 	}
 

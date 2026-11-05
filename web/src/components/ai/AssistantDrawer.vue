@@ -1,5 +1,11 @@
 <template>
-  <v-navigation-drawer v-model="opened" location="right" temporary :width="drawerWidth">
+  <v-navigation-drawer
+    v-model="opened"
+    location="right"
+    temporary
+    :width="drawerWidth"
+    :class="{ 'assistant-drawer--resizing': drawerResizing }"
+  >
     <div class="assistant-drawer d-flex flex-column h-100">
       <!-- 左缘拖拽手柄：向左拖动即增宽（抽屉贴右缘），握把样式与通用手柄组件一致。
            placement="outside"：8px 命中条越过抽屉边框贴到外侧，不再压住柜内内容；
@@ -10,6 +16,8 @@
         placement="outside"
         :min="DRAWER_WIDTH_MIN"
         :max="maxDrawerWidth"
+        @resize-start="drawerResizing = true"
+        @resize-end="onDrawerResizeEnd"
       />
       <!-- 头部：标题 + 会话切换 + 新建会话 + 关闭 -->
       <div class="d-flex align-center pa-2">
@@ -161,6 +169,12 @@
                       )
                     }}
                   </span>
+                </div>
+                <!-- 携带技能发送的用户消息：技能名常驻气泡顶部，表明本轮使用的技能。技能锚定在用户
+                     消息（轮次）上，即时气泡与刷新后的历史气泡同源展示，同一会话各轮可带不同技能 -->
+                <div v-if="m.skillName" class="d-flex align-center ga-1 mb-1">
+                  <v-icon icon="mdi-lightning-bolt-outline" size="x-small" />
+                  <span class="text-body-small">{{ m.skillName }}</span>
                 </div>
                 <!-- 消息体内按时序排布的内容块（见 assistantBlocksOf）：工具调用阶段按轮聚组——该轮
                    思考折叠块渲染一次、置于组上方，组内各调用行自上而下成行；一轮内并发多次调用时以
@@ -488,12 +502,13 @@
                 </div>
                 <!-- 运行未正常结束提示：助手消息 phase 为 failed / cancelled 时展示，按阶段取文案
                    （由前端 i18n 提供，不落库、不混入正文）；以警示图标 + 弱化底与正文区分 -->
-                <div
-                  v-if="interruptedTextOf(m)"
-                  class="zk-panel--subtle pa-2 mt-2 d-flex align-center"
-                >
-                  <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
-                  <span class="zk-hint ms-2">{{ interruptedTextOf(m) }}</span>
+                <div v-if="interruptedTextOf(m)" class="zk-panel--subtle pa-2 mt-2">
+                  <div class="d-flex align-center">
+                    <v-icon icon="mdi-alert-circle-outline" size="small" color="warning" />
+                    <span class="zk-hint ms-2">{{ interruptedTextOf(m) }}</span>
+                  </div>
+                  <!-- 失败原因原样透出：才有机会看出是工具、模型还是续跑现场的问题 -->
+                  <div v-if="m.turnError" class="zk-error-text ms-6 mt-1">{{ m.turnError }}</div>
                 </div>
                 <!-- 引用来源仅在整轮回答完整结束后展示：message.citations 会先于 turn.completed
                      到达（检索命中后即下发），提前渲染会让引用一直挂在流式正文下方；等待审批 /
@@ -657,8 +672,8 @@
                   {{ compressBodyOf(m) }}
                 </div>
               </div>
-              <!-- 用户消息快捷操作：悬停该轮时淡入（左侧创建时间 + 复制 / 回退 / 删除）；生成中禁用，
-                 避免截断在途运行正在使用的消息 -->
+              <!-- 用户消息快捷操作：悬停该轮时淡入（左侧创建时间 + 复制 / 回退 / 删除）；回退与删除在生成中禁用，
+                 避免截断在途运行正在使用的消息；复制不受影响，等待用户操作时也应可用 -->
               <div v-if="m.role === 'user'" class="zk-chat-actions d-flex align-center ga-2 mt-1">
                 <span class="zk-hint">{{ messageTimeOf(m) }}</span>
                 <div class="assistant-message-buttons">
@@ -666,7 +681,6 @@
                     icon="mdi-content-copy"
                     size="small"
                     variant="text"
-                    :disabled="busy"
                     :title="$t('page.aiAssistant.copyMessage')"
                     :aria-label="$t('page.aiAssistant.copyMessage')"
                     @click="copyMessage(m)"
@@ -754,6 +768,14 @@
               class="zk-chat-queue-item d-flex align-center ga-1 py-1 px-1 ps-2"
             >
               <v-icon icon="mdi-clock-outline" size="x-small" color="on-surface-variant" />
+              <v-chip
+                v-if="item.skillName"
+                size="x-small"
+                variant="tonal"
+                prepend-icon="mdi-lightning-bolt-outline"
+              >
+                {{ item.skillName }}
+              </v-chip>
               <span class="zk-chat-queue-text">{{ item.text }}</span>
               <v-btn
                 icon="mdi-arrow-up-bold-outline"
@@ -784,6 +806,46 @@
               />
             </div>
           </div>
+          <!-- 技能下拉：输入框整段为「/关键字」时浮现在输入框上方，按关键字本地过滤已启用技能；
+               上下键移动高亮、回车选中、Esc 关闭（见 onComposerKeydown / onComposerEnter） -->
+          <div v-if="skillMenuVisible" class="zk-chat-skill-menu zk-panel zk-panel--subtle">
+            <v-list v-if="filteredSkills.length > 0" density="compact" nav>
+              <v-list-item
+                v-for="(item, idx) in filteredSkills"
+                :key="item.id"
+                :active="idx === skillActiveIndex"
+                @click="selectSkillAt(idx)"
+              >
+                <template #prepend>
+                  <v-icon icon="mdi-lightning-bolt-outline" size="small" />
+                </template>
+                <v-list-item-title>{{ item.name }}</v-list-item-title>
+                <v-list-item-subtitle v-if="item.description">
+                  {{ item.description }}
+                </v-list-item-subtitle>
+              </v-list-item>
+            </v-list>
+            <div v-else class="zk-hint px-3 py-2">
+              {{
+                skillLoading
+                  ? $t("page.aiAssistant.skillsLoading")
+                  : $t("page.aiAssistant.skillsEmpty")
+              }}
+            </div>
+          </div>
+          <!-- 已选技能：选中后以 chip 常驻输入框上方，随本次提问发送；可点关闭取消选择 -->
+          <div v-if="selectedSkill" class="d-flex align-center ga-1 pt-2 px-2">
+            <v-chip
+              size="small"
+              variant="tonal"
+              color="primary"
+              closable
+              prepend-icon="mdi-lightning-bolt-outline"
+              @click:close="selectedSkill = null"
+            >
+              {{ selectedSkill.name }}
+            </v-chip>
+          </div>
           <v-textarea
             ref="composerRef"
             v-model="query"
@@ -792,7 +854,9 @@
             auto-grow
             hide-details
             :disabled="composerDisabled"
+            :placeholder="$t('page.aiAssistant.composerPlaceholder')"
             :title="$t('model.aiSession.field.query')"
+            @keydown="onComposerKeydown"
             @keydown.enter.exact="onComposerEnter"
             @compositionstart="composerComposing = true"
             @compositionend="composerComposing = false"
@@ -1038,6 +1102,7 @@
 </template>
 
 <script setup lang="ts" name="assistant-drawer">
+import axios from "axios";
 import { DateTime } from "luxon";
 import * as yup from "yup";
 import { useForm } from "vee-validate";
@@ -1053,6 +1118,7 @@ import {
   agentSessionListGet,
   agentSessionRename,
   agentSessionValveSet,
+  agentSkillOptionsGet,
   agentStatusGet,
   assistantActionStream,
   assistantChatStream,
@@ -1075,6 +1141,7 @@ import type {
   AgentQuestionnaireBlockPayload,
   AgentReasoningBlockPayload,
   AgentSessionItem,
+  AgentSkillOptionListOut,
   AgentStatusOut,
   AgentToolCallsBlockPayload,
   AssistantActionRequest,
@@ -1157,29 +1224,33 @@ const opened = computed<boolean>({
 });
 
 // ---- 抽屉宽度 ----
-// 默认随视口收放，但保持在可读区间内（窄屏不小于 320px，宽屏不超过 560px）；
-// 用户可在左缘拖拽手动设定宽度，手动值优先于视口比例值，并在视口收窄时同步收敛
+// 默认随视口收放，但保持在可读区间内（窄屏不小于 320px）；上限取视口的 80%，允许用户在宽屏
+// 上把抽屉拉到接近全屏。用户可在左缘拖拽手动设定宽度，手动值优先于视口比例值，并在视口收窄
+// 时同步收敛
 const DRAWER_WIDTH_RATIO = 0.42;
 const DRAWER_WIDTH_MIN = 320;
-const DRAWER_WIDTH_MAX = 560;
+const DRAWER_WIDTH_MAX_RATIO = 0.8;
 
 const viewportWidth = ref<number>(window.innerWidth);
 
-// maxDrawerWidth 当前视口下允许的最大宽度：不超过设计上限，也不超出视口本身
+// maxDrawerWidth 当前视口下允许的最大宽度：视口的 80%，且不低于最小宽度
 const maxDrawerWidth = computed<number>(() =>
-  Math.min(DRAWER_WIDTH_MAX, Math.max(DRAWER_WIDTH_MIN, viewportWidth.value)),
+  Math.max(DRAWER_WIDTH_MIN, Math.round(viewportWidth.value * DRAWER_WIDTH_MAX_RATIO)),
 );
 
 // autoDrawerWidth 未手动设定时的宽度：按视口比例取宽并收敛到可读区间
 const autoDrawerWidth = computed<number>(() =>
   Math.min(
-    DRAWER_WIDTH_MAX,
+    maxDrawerWidth.value,
     Math.max(DRAWER_WIDTH_MIN, Math.round(viewportWidth.value * DRAWER_WIDTH_RATIO)),
   ),
 );
 
 // manualWidth 用户拖拽设定的宽度；为 null 时回退视口比例值
 const manualWidth = ref<number | null>(null);
+
+// drawerResizing 是否正在拖拽宽度：拖拽期间关闭抽屉过渡、并跳过逐帧的提问位置重算
+const drawerResizing = ref(false);
 
 // drawerWidth 抽屉实际宽度：手动值优先于视口比例值；写入时落到手动值上（手柄组件已按 min/max 收敛）
 const drawerWidth = computed<number>({
@@ -1304,6 +1375,10 @@ interface ChatMessage {
   // createdAt 消息创建时间（ISO 文本）：历史消息取自后端，即时发出、尚未回读服务端的消息取本地时间
   createdAt?: string;
   citations?: RetrievalResult[];
+  // skillID / skillName 本用户消息携带的技能（锚定在轮次而非会话）：即时气泡由发送时的选择写入，
+  // 历史气泡由快照 / 消息出参回填，二者一致；用于气泡顶部展示本轮技能、回退时把技能一并回填输入区
+  skillID?: number;
+  skillName?: string;
   streaming?: boolean;
   // reasoningExpanded 思考折叠区块（末个 reasoning 块）当前是否展开：流式期间默认展开、结束自动折叠，
   // 用户可手动切换
@@ -1327,6 +1402,9 @@ interface ChatMessage {
   // agentRunPhase）：为 failed/cancelled 时渲染中断提示横幅（文案由前端 i18n 提供，不落库、不混入
   // 正文）；历史消息取自列表接口，在途消息由 error 事件回填
   phase?: string;
+  // turnError 本轮失败的原始错误文本（turn.error / 流错误）：随中断提示一并展示，避免只有一条泛化
+  // 文案而看不出真实原因；仅本会话内存态，刷新后不回填
+  turnError?: string;
 }
 
 let messageKey = 0;
@@ -1998,7 +2076,20 @@ watch(
   () => messages.value.length,
   () => void nextTick(updateActiveQuestion),
 );
-watch(drawerWidth, () => void nextTick(updateActiveQuestion));
+// 拖拽期间每帧宽度变化都会触发一次强制布局（updateActiveQuestion 需要读取各轮 rect），
+// 是「拖动不跟手」的主因之一；拖拽中跳过，结束后由 onDrawerResizeEnd 统一重算一次
+watch(drawerWidth, () => {
+  if (drawerResizing.value) {
+    return;
+  }
+  void nextTick(updateActiveQuestion);
+});
+
+// onDrawerResizeEnd 拖拽结束：恢复抽屉过渡并统一重算提问位置
+const onDrawerResizeEnd = (): void => {
+  drawerResizing.value = false;
+  void nextTick(updateActiveQuestion);
+};
 
 // ---- 会话加载 ----
 const notifyError = (text: string): void => {
@@ -2068,7 +2159,9 @@ const approvalOverrideOf = (call: PendingCallState): PendingCallState => {
   };
 };
 
-// mergePendingCalls 合并新解析的调用与既有视图态：按 callID 保留本地决策 / 执行结果 / 提交标记。
+// mergePendingCalls 合并新解析的调用与既有视图态：仅当仍属同一个挂起点（中断 ID 相同）时保留本地
+// 决策 / 执行结果 / 提交标记——续跑后模型再次发起同类调用会产生新的挂起点，若继续沿用旧决策，
+// 新调用会被误显示为「已批准」而没有批准 / 拒绝按钮，提交也会因旧标记被跳过，界面停在「等待授权」。
 const mergePendingCalls = (
   parsed: PendingCallState[],
   existing: PendingCallState[] | undefined,
@@ -2076,7 +2169,7 @@ const mergePendingCalls = (
   const old = new Map((existing ?? []).map((call) => [call.callID, call]));
   return parsed.map((call) => {
     const prev = old.get(call.callID);
-    if (!prev) {
+    if (!prev || prev.interruptId !== call.interruptId) {
       return call;
     }
     return {
@@ -2445,6 +2538,160 @@ watch(query, (value) => {
   }
 });
 
+// ---- 技能选择（斜杠触发）----
+// SkillOption 技能下拉选项：内置与自定义技能统一以 agent_skills 行 ID 作为选择标识，
+// 选择与关键字匹配只需 id / name / description
+interface SkillOption {
+  id: number;
+  name: string;
+  description: string;
+}
+
+// skillOptions 合并内置技能与当前命名空间已启用自定义技能的选项；skillOptionsNamespace
+// 记录已加载的命名空间（含「已加载但为空」），避免每次按键都重复请求
+const skillOptions = ref<SkillOption[]>([]);
+const skillOptionsNamespace = ref("");
+const selectedSkill = ref<SkillOption | null>(null);
+const skillMenuOpen = ref(false);
+const skillLoading = ref(false);
+const skillActiveIndex = ref(0);
+
+// skillToken 输入框整段恰为「/关键字」时取关键字（「/」后即为空串）；不匹配斜杠形态时为 null
+const skillToken = computed<string | null>(() => /^\/([^\s]*)$/.exec(query.value)?.[1] ?? null);
+
+// skillMenuVisible 技能下拉是否可见：已处于斜杠触发态且输入法未在组字
+// （组字期间的按键属于候选词选择，不应弹出下拉）
+const skillMenuVisible = computed<boolean>(
+  () => skillMenuOpen.value && skillToken.value !== null && !composerComposing.value,
+);
+
+// filteredSkills 按关键字对技能名 / 描述做小写包含匹配，最多展示 8 项
+const filteredSkills = computed<SkillOption[]>(() => {
+  const kw = (skillToken.value ?? "").toLowerCase();
+  return skillOptions.value
+    .filter(
+      (s) => !kw || s.name.toLowerCase().includes(kw) || s.description.toLowerCase().includes(kw),
+    )
+    .slice(0, 8);
+});
+
+// ensureSkillsLoaded 懒加载技能选项（内置技能 + 当前命名空间已启用自定义技能）：该命名空间已
+// 加载过（含空结果）则直接返回；失败不写入命名空间缓存，下次按键可重试。请求带序号：命名空间
+// 切换或并发触发时只采用最后一次请求的结果，避免旧命名空间的响应覆盖新命名空间的列表。
+let skillRequestSeq = 0;
+const ensureSkillsLoaded = async (): Promise<void> => {
+  const requested = appStore.namespace;
+  if (skillOptionsNamespace.value === requested) {
+    return;
+  }
+  const seq = ++skillRequestSeq;
+  skillLoading.value = true;
+  try {
+    await getResponse<AgentSkillOptionListOut>(
+      agentSkillOptionsGet(),
+      async (rsp) => {
+        if (seq !== skillRequestSeq || appStore.namespace !== requested) {
+          return;
+        }
+        skillOptions.value = rsp.data.items;
+        skillOptionsNamespace.value = requested;
+      },
+      async (rsp) => {
+        if (seq === skillRequestSeq) {
+          notifyError(rsp.summary);
+        }
+      },
+      notifyNoResponse,
+    );
+  } finally {
+    if (seq === skillRequestSeq) {
+      skillLoading.value = false;
+    }
+  }
+};
+
+// selectSkillAt 选中技能下拉中的第 index 项：记为已选技能、清空输入框并关闭下拉，
+// 随后把焦点交还输入框以便续写提问
+const selectSkillAt = (index: number): void => {
+  const item = filteredSkills.value[index];
+  if (!item) {
+    return;
+  }
+  selectedSkill.value = item;
+  query.value = "";
+  skillMenuOpen.value = false;
+  void nextTick(() => composerRef.value?.focus());
+};
+
+// onComposerKeydown 输入框按键：技能下拉可见时接管上下键（循环移动高亮）、Esc（关闭下拉）与
+// "/"（关闭信号，斜杠本身被吞掉），其余按键一律不干预。
+// 斜杠规则与编辑器侧的 slashTrigger.ts 一致：首个 "/" 唤起下拉，再次输入 "/" 仅关闭下拉，
+// 输入区保留那个字面量斜杠（不会变成 "//"）。
+const onComposerKeydown = (event: KeyboardEvent): void => {
+  if (!skillMenuVisible.value) {
+    return;
+  }
+  if (event.key === "/") {
+    event.preventDefault();
+    skillMenuOpen.value = false;
+    return;
+  }
+  const total = filteredSkills.value.length;
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    if (total > 0) {
+      skillActiveIndex.value = (skillActiveIndex.value + 1) % total;
+    }
+    return;
+  }
+  if (event.key === "ArrowUp") {
+    event.preventDefault();
+    if (total > 0) {
+      skillActiveIndex.value = (skillActiveIndex.value - 1 + total) % total;
+    }
+    return;
+  }
+  if (event.key === "Escape") {
+    event.preventDefault();
+    skillMenuOpen.value = false;
+  }
+};
+
+// 下拉项变化（过滤结果变短）时把高亮收敛到合法范围，避免回车选中越界项
+watch(
+  () => filteredSkills.value.length,
+  (length) => {
+    if (skillActiveIndex.value >= length) {
+      skillActiveIndex.value = length > 0 ? length - 1 : 0;
+    }
+  },
+);
+
+// 输入框进入 / 离开「/关键字」形态：进入即打开下拉并预加载技能，离开则收起
+watch(query, () => {
+  const token = skillToken.value;
+  if (token === null) {
+    skillMenuOpen.value = false;
+    return;
+  }
+  skillMenuOpen.value = true;
+  skillActiveIndex.value = 0;
+  void ensureSkillsLoaded();
+});
+
+// 命名空间切换：技能按命名空间隔离，清空缓存与已选技能；下拉仍打开时立即重载
+watch(
+  () => appStore.namespace,
+  () => {
+    skillOptions.value = [];
+    skillOptionsNamespace.value = "";
+    selectedSkill.value = null;
+    if (skillMenuOpen.value) {
+      void ensureSkillsLoaded();
+    }
+  },
+);
+
 // ---- 用户消息快捷操作（复制 / 回退 / 删除）----
 // busy 当前会话是否正忙（在途运行中 / 创建会话中 / 手动压缩中）：忙时禁止截断，避免删除在途运行正在使用的
 // 消息，导致服务端与本地内容错位；发送入口亦据此把新提问转入待发队列（见 onSubmitClick / onComposerEnter）。
@@ -2456,6 +2703,9 @@ const busy = computed<boolean>(() => runActive.value || creating.value || compac
 interface QueuedQuery {
   key: number;
   text: string;
+  // 入队时选中的技能 ID 与展示名（仅内存态，随队列投递的请求透传；正文持久化不包含此项）
+  skillID?: number;
+  skillName?: string;
 }
 
 // agentQueues 各会话的待发队列（按会话 ID 分桶，内存态；正文由 localManager 持久化）
@@ -2512,7 +2762,13 @@ const enqueueQuery = (): void => {
     return;
   }
   ensureQueueLoaded(sessionID);
-  agentQueues.value[sessionID].push({ key: nextKey(), text });
+  agentQueues.value[sessionID].push({
+    key: nextKey(),
+    text,
+    skillID: selectedSkill.value?.id,
+    skillName: selectedSkill.value?.name,
+  });
+  selectedSkill.value = null;
   query.value = "";
   persistQueue(sessionID);
 };
@@ -2538,6 +2794,14 @@ const editQueued = (target: QueuedQuery): void => {
   ensureQueueLoaded(sessionID);
   agentQueues.value[sessionID] = agentQueues.value[sessionID].filter((it) => it.key !== target.key);
   query.value = target.text;
+  // 该项入队时带技能：一并回填已选技能，重新提交时仍按同一技能生成
+  if (target.skillID) {
+    selectedSkill.value = {
+      id: target.skillID,
+      name: target.skillName ?? "",
+      description: "",
+    };
+  }
   persistQueue(sessionID);
 };
 
@@ -2573,7 +2837,11 @@ const drainQueuedQuery = (sessionID: number): void => {
   const [head] = list.splice(0, 1);
   persistQueue(sessionID);
   optimizeUndo.value = null;
-  startStream(sessionID, head.text);
+  // 队列项的技能（仅内存态）随投递一并透传；无技能时按未选技能发送
+  const skill: SkillOption | null = head.skillID
+    ? { id: head.skillID, name: head.skillName ?? "", description: "" }
+    : null;
+  startStream(sessionID, head.text, undefined, skill);
 };
 
 // onSubmitClick 发送按钮 / 回车统一入口：空闲时直接发送，运行中（生成 / 待审批 / 建会话 / 压缩）则转入待发队列排队。
@@ -2781,7 +3049,15 @@ const retryMessage = async (m: ChatMessage): Promise<void> => {
       if (localIndex >= 0) {
         messages.value.splice(localIndex);
       }
-      startStream(sessionID, question.content);
+      // 重试沿用原提问的技能：气泡上记录的技能随本次重新生成一并透传
+      startStream(
+        sessionID,
+        question.content,
+        undefined,
+        question.skillID
+          ? { id: question.skillID, name: question.skillName ?? "", description: "" }
+          : null,
+      );
     },
     async (rsp) => {
       notifyError(rsp.summary);
@@ -2833,6 +3109,9 @@ const pendingMessage = ref<{
   key: number;
   userIndex: number;
   content: string;
+  // 目标消息携带的技能：回退确认后与正文一起回填输入区（无技能时为 undefined）
+  skillID?: number;
+  skillName?: string;
   rollback: boolean;
 } | null>(null);
 
@@ -2845,7 +3124,14 @@ const openMessageAction = (m: ChatMessage, rollback: boolean): void => {
   if (userIndex < 1) {
     return;
   }
-  pendingMessage.value = { key: m.key, userIndex, content: m.content, rollback };
+  pendingMessage.value = {
+    key: m.key,
+    userIndex,
+    content: m.content,
+    skillID: m.skillID,
+    skillName: m.skillName,
+    rollback,
+  };
   messageActionDialogRef.value?.open({});
 };
 
@@ -2874,6 +3160,10 @@ const confirmMessageAction = async (): Promise<void> => {
       }
       if (target.rollback) {
         query.value = target.content;
+        // 技能随正文一并回填，回退后再次发送仍按同一技能生成；该轮未带技能时同步清空当前选择
+        selectedSkill.value = target.skillID
+          ? { id: target.skillID, name: target.skillName ?? "", description: "" }
+          : null;
       }
       scrollToBottom();
       appStore.notify({ text: rsp.summary, timeout: 3000, color: "success" });
@@ -3218,9 +3508,10 @@ const assistantMessageFor = (messageID?: number): ChatMessage | undefined => {
 };
 
 // bindAssistantBlocks 把消息的块列表指向 store 的当前运行块数组：实时 block 事件写入 store 后，
-// 消息体随同一数组即时渲染。
+// 消息体随同一数组即时渲染。绑定前先按语义身份清理同块重复（快照块与在途回放块序号不同时会写进
+// 两份，表现为同一「AI 提问」卡片出现两次）。
 const bindAssistantBlocks = (sessionID: number, msg: ChatMessage): void => {
-  msg.blocks = agentRun.stateOf(sessionID).blocks;
+  msg.blocks = agentRun.normalizeBlocks(sessionID);
 };
 
 // syncAssistantContent 由 content 块派生消息纯文本（复制 / 提问导航 / 兜底展示用）。
@@ -3294,6 +3585,9 @@ const chatMessageOfSnapshot = (snapshot: AssistantMessageSnapshot): ChatMessage 
     content: snapshot.content ?? "",
     createdAt: snapshot.createdAt || undefined,
     citations: snapshot.citations,
+    // 本轮技能随用户消息快照回放：刷新后气泡顶部仍展示当时选用的技能，回退 / 分支同样沿用
+    skillID: snapshot.skillID,
+    skillName: snapshot.skillName,
     blocks,
     pendingCalls: pendingCalls.length > 0 ? pendingCalls : undefined,
     awaitingApproval: pendingCalls.some((call) => !call.decision) || awaitingQuestionnaire,
@@ -3407,6 +3701,43 @@ const clearInterrupt = (): void => {
   activeInterrupt = null;
 };
 
+// userMessageInsertIndex 计算用户消息在同轮助手输出之前应落到的下标：消息主键与后端 seq 同序，
+// 故定位首个主键更大的消息；主键缺失时退到当前运行新建的无主键助手占位消息。返回 -1 表示可留在末尾。
+const userMessageInsertIndex = (messageID?: number): number => {
+  if (messageID !== undefined && messageID > 0) {
+    const later = messages.value.findIndex((msg) => msg.id !== undefined && msg.id > messageID);
+    if (later >= 0) {
+      return later;
+    }
+  }
+  const active = activeAssistantMessage();
+  if (active && active.id === undefined) {
+    const index = messages.value.indexOf(active);
+    return index >= 0 ? index : -1;
+  }
+  return -1;
+};
+
+// placeUserMessage 插入或校正用户消息的位置：turn.started 可能晚于同轮助手快照到达（如中途重放
+// 历史后再收到实时事件），直接追加会把提问排到回答之后；此处统一按主键归位到同轮助手输出之前。
+const placeUserMessage = (msg: ChatMessage): void => {
+  const list = messages.value;
+  const target = userMessageInsertIndex(msg.id);
+  const current = list.indexOf(msg);
+  if (current < 0) {
+    if (target >= 0) {
+      list.splice(target, 0, msg);
+    } else {
+      list.push(msg);
+    }
+    return;
+  }
+  if (target >= 0 && current > target) {
+    list.splice(current, 1);
+    list.splice(target, 0, msg);
+  }
+};
+
 // adoptAssistantUserMessage 用 turn.started 的用户消息事实替换本地回显（按消息主键去重）。
 const adoptAssistantUserMessage = (
   user: NonNullable<AssistantEventOf<"turn.started">["payload"]["userMessage"]>,
@@ -3415,6 +3746,9 @@ const adoptAssistantUserMessage = (
   if (existing) {
     existing.content = user.content;
     existing.createdAt = user.createdAt;
+    existing.skillID = user.skillID;
+    existing.skillName = user.skillName;
+    placeUserMessage(existing);
     pendingUserEcho = null;
     return;
   }
@@ -3422,6 +3756,9 @@ const adoptAssistantUserMessage = (
     pendingUserEcho.id = user.messageID;
     pendingUserEcho.content = user.content;
     pendingUserEcho.createdAt = user.createdAt;
+    pendingUserEcho.skillID = user.skillID;
+    pendingUserEcho.skillName = user.skillName;
+    placeUserMessage(pendingUserEcho);
     pendingUserEcho = null;
     return;
   }
@@ -3429,14 +3766,19 @@ const adoptAssistantUserMessage = (
   if (last?.role === "user" && last.id === undefined && last.content === user.content) {
     last.id = user.messageID;
     last.createdAt = user.createdAt;
+    last.skillID = user.skillID;
+    last.skillName = user.skillName;
+    placeUserMessage(last);
     return;
   }
-  messages.value.push({
+  placeUserMessage({
     key: nextKey(),
     role: "user",
     content: user.content,
     createdAt: user.createdAt,
     id: user.messageID,
+    skillID: user.skillID,
+    skillName: user.skillName,
   });
 };
 
@@ -3603,9 +3945,15 @@ const applyAssistantEvent = (sessionID: number, event: AssistantEventUnion): voi
       approvalOverrides.clear();
       activeInterrupt = null;
       return;
-    case "snapshot.message":
-      messages.value.push(chatMessageOfSnapshot(event.payload.message));
+    case "snapshot.message": {
+      const message = chatMessageOfSnapshot(event.payload.message);
+      messages.value.push(message);
+      // 历史回放同样按主键归位用户消息，避免损坏的旧数据把提问排到回答之后
+      if (message.role === "user") {
+        placeUserMessage(message);
+      }
       return;
+    }
     case "snapshot.end":
       scrollToBottom();
       return;
@@ -3648,6 +3996,7 @@ const applyAssistantEvent = (sessionID: number, event: AssistantEventUnion): voi
         if (target) {
           target.streaming = false;
           target.phase = "failed";
+          target.turnError = event.payload.message || undefined;
           endReasoningStreamingOf(target);
         }
         agentRun.settle(sessionID);
@@ -3804,6 +4153,7 @@ const consumeAssistantStream = (
         msg.awaitingApproval = false;
         endReasoningStreamingOf(msg);
         msg.phase = "failed";
+        msg.turnError = text || undefined;
       }
       if (!cancelRequested) {
         notifyError(text || i18n.global.t("page.aiAssistant.error"));
@@ -4012,6 +4362,22 @@ const truncateApiInvokeResult = (text: string): string =>
     ? `${text.slice(0, API_INVOKE_RESULT_MAX_CHARS)}\n…（结果已截断）`
     : text;
 
+// apiInvokeErrorText 还原能力调用的失败原因：后端统一错误封套（code / summary / details）以缩进
+// JSON 原样保留，避免拼接成单行后丢失字段层级与原始类型；响应体不是结构化对象时回落到响应原文，
+// 再无响应体时才使用 axios 的 HTTP 状态码消息（如 "Request failed with status code 400"）。
+const apiInvokeErrorText = (err: unknown): string => {
+  if (axios.isAxiosError(err) && err.response) {
+    const body = err.response.data;
+    if (typeof body === "string" && body.trim() !== "") {
+      return body;
+    }
+    if (body !== null && typeof body === "object") {
+      return JSON.stringify(body, null, 2);
+    }
+  }
+  return err instanceof Error ? err.message : String(err);
+};
+
 // executeApiInvoke 在用户自身凭据下执行一次已解析的只读调用：成功时把响应体序列化写入 result，
 // 失败时把错误文本写入 error；两种情况均由后续决策提交回传，供模型继续推理。
 const executeApiInvoke = async (call: PendingCallState): Promise<void> => {
@@ -4030,13 +4396,13 @@ const executeApiInvoke = async (call: PendingCallState): Promise<void> => {
       data: args.params ?? {},
       // 与其余业务请求一致携带当前用户 JWT：能力调用以用户自身身份执行，后端鉴权照常生效。
       headers: getJwtHeader(),
-      // 平台列表接口可能超过全局 1s 超时；能力调用给足 30s，仍由后端鉴权与响应上限兜底。
-      timeout: 30_000,
+      // 平台列表接口可能超过全局 1s 超时；能力调用给足 60s（如 ai.skill.create 会在后端同步
+      // 调用 LLM 评审正文），仍由后端鉴权与响应上限兜底。
+      timeout: 60_000,
     });
     call.result = truncateApiInvokeResult(JSON.stringify(response.data ?? ""));
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    call.error = i18n.global.t("page.aiAssistant.apiInvokeFailed", { error: message });
+    call.error = apiInvokeErrorText(err);
   } finally {
     call.executing = false;
   }
@@ -4256,7 +4622,12 @@ const confirmRerun = async (): Promise<void> => {
 // echoedUserKey 为首条消息在「创建会话」等待期已本地回显的气泡 key（见 echoUserQuery）：
 // 气泡仍在时直接复用，避免同一提问出现两次；若等待期消息区被清空（如创建途中点
 // 「新建会话」）致回显丢失，则回落为按常规补推用户气泡，保证会话内容与服务端一致
-const startStream = (sessionID: number, q: string, echoedUserKey?: number): void => {
+const startStream = (
+  sessionID: number,
+  q: string,
+  echoedUserKey?: number,
+  skill?: SkillOption | null,
+): void => {
   const echoed =
     echoedUserKey !== undefined ? messages.value.find((m) => m.key === echoedUserKey) : undefined;
   const echo: ChatMessage = echoed ?? {
@@ -4265,6 +4636,9 @@ const startStream = (sessionID: number, q: string, echoedUserKey?: number): void
     content: q,
     createdAt: new Date().toISOString(),
   };
+  // 技能随气泡记录：气泡顶部据此展示本轮技能，回退时也从同一字段回填输入区
+  echo.skillID = skill?.id;
+  echo.skillName = skill?.name;
   if (!echoed) {
     messages.value.push(echo);
   }
@@ -4278,6 +4652,9 @@ const startStream = (sessionID: number, q: string, echoedUserKey?: number): void
   agentRun.begin(sessionID);
   const chatRequest: AgentChatIn = {
     query: q,
+    // 本次生成选中的技能 ID：后端据此解析内置/自定义技能并把正文装配进系统提示
+    //（未选技能时不带该字段）
+    skillID: skill?.id,
     // 本次生成的显式档位（为空时由后端回退到会话档位与默认档位参数）
     slot: slot.value || undefined,
     // 思考开关：仅当当前档位绑定模型支持时注入（开启 on / 关闭 off），不支持则不带该字段
@@ -4291,13 +4668,15 @@ const startStream = (sessionID: number, q: string, echoedUserKey?: number): void
 // echoUserQuery 首条消息本地回显：在「创建会话」等待期先把用户气泡推进消息区并清空输入框。
 // 后端创建会话需同步调用模型生成主题、耗时明显，若等创建成功再推气泡，等待期消息区毫无反馈，
 // 用户会误以为回车未被受理；返回该气泡 key，供创建未成功时回滚（见 rollbackUserQuery）
-const echoUserQuery = (q: string): number => {
+const echoUserQuery = (q: string, skill?: SkillOption | null): number => {
   const key = nextKey();
   messages.value.push({
     key,
     role: "user",
     content: q,
     createdAt: new Date().toISOString(),
+    skillID: skill?.id,
+    skillName: skill?.name,
   });
   query.value = "";
   scrollToBottom();
@@ -4313,7 +4692,11 @@ const rollbackUserQuery = (key: number, q: string): void => {
 
 // createSessionForQuery 未选中会话时据首个问题创建会话：主题由后端经 LLM 生成并随响应回传，
 // 成功后立即发起本次流式生成；失败则中止本次发送并回滚本地回显的用户气泡（见 rollbackUserQuery）
-const createSessionForQuery = async (firstQuery: string, userKey: number): Promise<void> => {
+const createSessionForQuery = async (
+  firstQuery: string,
+  userKey: number,
+  skill?: SkillOption | null,
+): Promise<void> => {
   creating.value = true;
   // created 会话是否创建成功（成功回调内已接续发起生成）：未成功（失败 / 无响应）时回滚回显，
   // 避免消息区留下一条并未真正发出的提问
@@ -4336,7 +4719,7 @@ const createSessionForQuery = async (firstQuery: string, userKey: number): Promi
         activeSessionID.value = rsp.data.id;
         draftMode.value = false;
         // 首条消息已本地回显：startStream 据其补流式占位消息，不再重复推送用户气泡
-        startStream(rsp.data.id, firstQuery, userKey);
+        startStream(rsp.data.id, firstQuery, userKey, skill);
       },
       async (rsp) => {
         notifyError(rsp.summary);
@@ -4360,6 +4743,12 @@ const composerComposing = ref(false);
 // （让输入法正常上屏）；其余情况下拦截换行并触发发送（Shift+Enter 由 .exact 排除在外，用于换行）
 const onComposerEnter = (event: KeyboardEvent): void => {
   if (event.isComposing || composerComposing.value) {
+    return;
+  }
+  // 技能下拉可见时回车语义是「选中当前高亮技能」：只改写输入区，不发送提问
+  if (skillMenuVisible.value) {
+    event.preventDefault();
+    selectSkillAt(skillActiveIndex.value);
     return;
   }
   event.preventDefault();
@@ -4392,16 +4781,20 @@ const sendQuery = async (): Promise<void> => {
   }
   // 消息已发出：撤回现场随之失效（正文在 startStream 清空，watch 亦会兜底）
   optimizeUndo.value = null;
+  // 本次提问选中的技能：随请求透传，发送后再清除（避免请求发出前被清空导致技能丢失）
+  const skill = selectedSkill.value;
   // 未选中会话（含点「新建会话」后的待创建态）：先据首个问题创建会话
   // （主题由后端生成并回传），创建成功后才发起流式生成。创建会话需后端同步调模型生成主题、
   // 耗时明显，故先本地回显用户气泡并让发送按钮转入加载态（见 canSend / creating），
   // 让「回车已被受理」在等待期即刻可见；创建未成功再回滚回显
   if (activeSessionID.value === null) {
-    const userKey = echoUserQuery(q);
-    await createSessionForQuery(q, userKey);
+    const userKey = echoUserQuery(q, skill);
+    await createSessionForQuery(q, userKey, skill);
+    selectedSkill.value = null;
     return;
   }
-  startStream(activeSessionID.value, q);
+  startStream(activeSessionID.value, q, undefined, skill);
+  selectedSkill.value = null;
 };
 
 // optimizePrompt 优化提问：调用提示词优化接口，把当前输入改写为更清晰、更易被正确理解的提问。
@@ -4581,8 +4974,10 @@ const syncSessionState = async (id: number): Promise<void> => {
 
 // ---- 生命周期 ----
 // 抽屉全局常驻但按需初始化：首次展开时才请求枚举 / 状态 / 会话，
-// 避免在未登录（如登录页）时就发出鉴权请求
-let initialized = false;
+// 避免在未登录（如登录页）时就发出鉴权请求；ensureInitialized 以单例 Promise 复用，
+// 使「展开抽屉」与「按指定会话打开」两条入口共用同一次初始化，避免会话列表清空选中态。
+let initPromise: Promise<void> | undefined;
+const ensureInitialized = (): Promise<void> => (initPromise ??= initialize());
 const initialize = async (): Promise<void> => {
   void ensureEnum(EnumClass.llmSlot);
   // 工具调用阶段名与档位标签经统一枚举注册表渲染
@@ -4603,11 +4998,8 @@ watch(activeSessionID, (value) => {
 
 watch(opened, async (value) => {
   if (value) {
-    if (!initialized) {
-      initialized = true;
-      // 首开需等初始化（状态 + 会话列表）就绪后再载入历史与续播
-      await initialize();
-    }
+    // 首开需等初始化（状态 + 会话列表）就绪后再载入历史与续播
+    await ensureInitialized();
     // 重开抽屉：以 render 重建历史与当前缓冲快照，再按在途运行快照恢复交互状态并续接事件流
     // （宽限期内重连即停表续跑）。完成后（busy 已如实反映在途运行）再投递队首待发提问——
     // 关抽屉期间完成的运行不会再触发流回调，仅在此补投递。
@@ -4659,6 +5051,12 @@ onUnmounted(() => {
 .assistant-drawer {
   position: relative;
   min-height: 0;
+}
+
+/* 拖拽期间关闭抽屉自身的 width 过渡：Vuetify 默认给 width 0.2s 过渡，每帧写入的宽度
+   都被动画追赶，表现为拖动不跟手、松手后还要再滑一段才落位 */
+.assistant-drawer--resizing {
+  transition: none;
 }
 
 /* 左缘拖拽手柄按 placement="outside" 贴到抽屉外侧，其 8px 命中条会越出内容区左缘；
@@ -4784,12 +5182,6 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-/* 审批参数 / 结果 JSON 视区：限高滚动，避免长响应撑高气泡 */
-.assistant-approval-block {
-  max-height: var(--zk-inline-preview-max-height);
-  overflow: auto;
-}
-
 /* 引用正文两行截断，避免单条引用撑爆气泡 */
 .assistant-citation-text {
   display: -webkit-box;
@@ -4841,6 +5233,13 @@ onUnmounted(() => {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* 技能下拉：限高滚动，避免技能较多时撑高输入区 */
+.zk-chat-skill-menu {
+  max-height: 240px;
+  overflow-y: auto;
+  margin: 8px;
 }
 
 /* 会话列表面板：行内 hover / 选中底色铺满盒宽，裁掉四角以贴合面板圆角 */

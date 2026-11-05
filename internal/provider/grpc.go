@@ -1,10 +1,7 @@
 package provider
 
 import (
-	"time"
-
 	"github.com/samber/do/v2"
-	"zhongkuisec.com/zhongkui/internal/models/core"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/config"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
@@ -24,12 +21,9 @@ var (
 )
 
 func grpcReporterAuthenticator(i do.Injector) map[string]grpc.Authenticator {
-	if coreDB, err := InvokeCoreDatabase(i); err != nil {
-		return nil
-	} else if cacheRedis, err := InvokeCacheRedis(i); err != nil {
+	if pool, err := InvokeAccessKeyPool(i); err != nil {
 		return nil
 	} else {
-		pool := core.NewAccessKeyPool(coreDB, cacheRedis, time.Minute)
 		accessKeyAuthenticator := grpc.NewAccessKeyAuthenticator(pool)
 		return map[string]grpc.Authenticator{
 			grpc.ProtocolAccessKeySecret: accessKeyAuthenticator,

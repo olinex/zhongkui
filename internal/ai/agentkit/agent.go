@@ -177,7 +177,7 @@ func (r *Runtime) buildChatHandle(ctx context.Context, slot modelsai.Slot) (*Slo
 		ToolsConfig:   r.toolsConfig(),
 		GenModelInput: newGenModelInput[*schema.Message](r),
 		MaxIterations: r.maxIterations(),
-		Handlers:      r.handlers[*schema.Message](false),
+		Handlers:      newHandlers[*schema.Message](r, false),
 		ModelRetryConfig: &adk.TypedModelRetryConfig[*schema.Message]{
 			MaxRetries:  modelRetryAttempts,
 			IsRetryAble: func(_ context.Context, err error) bool { return isTransientModelError(err) },
@@ -213,7 +213,7 @@ func (r *Runtime) buildAgenticHandle(ctx context.Context, slot modelsai.Slot) (*
 		ToolsConfig:   r.toolsConfig(),
 		GenModelInput: newGenModelInput[*schema.AgenticMessage](r),
 		MaxIterations: r.maxIterations(),
-		Handlers:      r.handlers[*schema.AgenticMessage](true),
+		Handlers:      newHandlers[*schema.AgenticMessage](r, true),
 	})
 	if err != nil {
 		return nil, errors.Wrapf(err, "agentkit: build responses agent for slot %q", slot)
@@ -239,9 +239,10 @@ func (r *Runtime) toolsConfig() adk.ToolsConfig {
 	}
 }
 
-// handlers 返回某个消息表示的中间件链：韧性 / 审核 / 工具结果包装（注册顺序即外层到内层）。
+// newHandlers 返回某个消息表示的中间件链：韧性 / 审核 / 工具结果包装（注册顺序即外层到内层）。
 // agentic 模型没有原生 ModelRetryConfig，由韧性中间件承担瞬时重试；chat 由原生配置承担。
-func (r *Runtime) handlers[M adk.MessageType](retry bool) []adk.TypedChatModelAgentMiddleware[M] {
+// Go 方法不支持类型参数，故以包级泛型函数接收 Runtime 参数。
+func newHandlers[M adk.MessageType](r *Runtime, retry bool) []adk.TypedChatModelAgentMiddleware[M] {
 	return []adk.TypedChatModelAgentMiddleware[M]{
 		newResilientMiddleware[M](retry),
 		newAuditMiddleware[M](r.evaluator, r.logger),

@@ -55,6 +55,7 @@ type metaTestForm struct {
 	Enabled  bool              `json:"enabled"`
 	Password string            `json:"password" form:"kind=password"`
 	Headers  map[string]string `json:"headers"`
+	Data     map[string]any    `json:"data" form:"kind=json"`
 	Skip     string            // 无 json 标签，应被忽略
 }
 
@@ -181,6 +182,7 @@ func TestGetStructMeta(t *testing.T) {
 			So(fields["enabled"].Kind, ShouldEqual, KindBoolean)
 			So(fields["password"].Kind, ShouldEqual, KindPassword)
 			So(fields["headers"].Kind, ShouldEqual, KindObject)
+			So(fields["data"].Kind, ShouldEqual, KindJSON)
 		})
 
 		Convey("未指定类型时应返回 nil", func() {

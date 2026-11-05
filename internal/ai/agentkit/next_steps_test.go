@@ -73,7 +73,7 @@ func TestInlineNextStepsFilterSplitsMultibyteSafely(t *testing.T) {
 }
 
 // TestNormalizeNextSteps 测试归一化：去空白 / 去重 / 最多保留 3 条 / 首条标记为最推荐，且不再做
-// 长度截断（取值原样保留，长度合法性交由 contract.NextStep.Validate 判定）。
+// 长度截断（取值原样保留，长度合法性交由 contract.NextStep 的 binding 标签经 validator.Check 判定）。
 func TestNormalizeNextSteps(t *testing.T) {
 	items := []contract.NextStep{
 		{Title: "  A  ", Reason: " r1 ", Text: " t1 "},

@@ -175,7 +175,7 @@ func UserPasswordLogin(c *gin.Context) {
 	err := middlewares.GetCoreDatabase(c).Take(&user, &core.User{Username: in.Username, Active: true}).Error
 	// 验证密码
 	passwordValid := user.Password != nil && crypto.CheckPassword(user.Password.Value(), in.Password)
-	auth := middlewares.GetAuth(c)
+	auth := middlewares.GetJWT(c)
 	// 检查登录是否成功
 	if err != nil || user.ID == 0 || !passwordValid {
 		ErrUsernamePasswordCheckFailed.AbortWithGinH(c)
@@ -404,7 +404,7 @@ func UserSelfProfileChange(c *gin.Context) {
 		return
 	}
 	// 更新用户信息并刷新JWT令牌
-	auth := middlewares.GetAuth(c)
+	auth := middlewares.GetJWT(c)
 	user.NickleName = in.NickleName
 	user.Email = in.Email
 	if token, err := auth.Sign(user); err != nil {
@@ -422,7 +422,7 @@ func UserSelfProfileChange(c *gin.Context) {
 // 路由：POST /api/v1/user/jwt/refresh（豁免强制认证与授权，用过期 access token 换发）
 // 功能：刷新当前用户的JWT令牌
 func UserSelfJwtRefresh(c *gin.Context) {
-	auth := middlewares.GetAuth(c)
+	auth := middlewares.GetJWT(c)
 	// 刷新令牌
 	newToken, codeErr := auth.Refresh(c)
 	if codeErr != nil {

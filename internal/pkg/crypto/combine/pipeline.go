@@ -79,9 +79,8 @@ func (p *Pipeline) CompressEncrypt(w io.Writer) (io.WriteCloser, error) {
 	// 创建压缩写入器（包裹 encWriter）
 	compWriter, err := p.compressor.WrapWriter(encWriter)
 	if err != nil {
-		// 尝试关闭已创建的 encWriter
-		encWriter.Close()
-		return nil, errors.WithStack(err)
+		// 尝试关闭已创建的 encWriter，其错误一并返回，避免被首个错误掩盖。
+		return nil, errors.WithStack(errors.Join(err, encWriter.Close()))
 	}
 
 	return &pipelineWriteCloser{
@@ -113,8 +112,7 @@ func (p *Pipeline) DecryptDecompress(r io.Reader) (io.ReadCloser, error) {
 	// 创建解压读取器（包裹 encReader）
 	decompReader, err := p.compressor.WrapReader(encReader)
 	if err != nil {
-		encReader.Close()
-		return nil, errors.WithStack(err)
+		return nil, errors.WithStack(errors.Join(err, encReader.Close()))
 	}
 
 	// 收集源 reader 的 Closer（如果实现了的话），用于级联关闭
@@ -164,9 +162,8 @@ func (pwc *pipelineWriteCloser) Write(p []byte) (int, error) {
 func (pwc *pipelineWriteCloser) Close() error {
 	// 先关闭压缩写入器（刷新缓冲区，写入剩余压缩数据）
 	if err := pwc.compWriter.Close(); err != nil {
-		// 仍尝试关闭加密写入器
-		pwc.encWriter.Close()
-		return errors.WithStack(err)
+		// 仍尝试关闭加密写入器，并把两个错误合并上报。
+		return errors.WithStack(errors.Join(err, pwc.encWriter.Close()))
 	}
 	// 再关闭加密写入器（写入 nonce + 加密所有数据）
 	if err := pwc.encWriter.Close(); err != nil {
@@ -194,17 +191,18 @@ func (prc *pipelineReadCloser) Read(p []byte) (int, error) {
 func (prc *pipelineReadCloser) Close() error {
 	// 先关闭解压读取器（释放解压器内部资源）
 	if err := prc.decompReader.Close(); err != nil {
-		// 仍尝试关闭剩余层
-		prc.encReader.Close()
+		// 仍尝试关闭剩余层，并把所有错误合并上报。
+		var closers []error
+		closers = append(closers, err, prc.encReader.Close())
 		if prc.srcCloser != nil {
-			prc.srcCloser.Close()
+			closers = append(closers, prc.srcCloser.Close())
 		}
-		return errors.WithStack(err)
+		return errors.WithStack(errors.Join(closers...))
 	}
 	// 再关闭解密读取器（清理加密状态）
 	if err := prc.encReader.Close(); err != nil {
 		if prc.srcCloser != nil {
-			prc.srcCloser.Close()
+			return errors.WithStack(errors.Join(err, prc.srcCloser.Close()))
 		}
 		return errors.WithStack(err)
 	}

@@ -112,15 +112,20 @@ func NewAskUserToolInfo() *schema.ToolInfo {
 
 // NewApiInvokeToolInfo 构造 api_invoke 的工具元信息与参数 JSON schema：模型只给能力 ID 与请求体，
 // 不能指定任意 URL；HTTP 方法与路径由后端按能力快照白名单解析并写入挂起现场，前端只执行该
-// 已解析的只读调用。
+// 已解析的调用。只读与写入能力共用同一工具，是否可调用由能力的 Invokable 属性决定。
 func NewApiInvokeToolInfo() *schema.ToolInfo {
 	return &schema.ToolInfo{
 		Name: ApiInvokeToolName,
-		Desc: "在用户自身凭据下调用一个已登记的只读平台能力，并返回接口响应。能力清单可通过 " +
+		Desc: "在用户自身凭据下调用一个已登记的平台能力，并返回接口响应。能力清单可通过 " +
 			"knowledge_search 并传 format=capability 查询。只允许调用平台能力中" +
-			"登记且标记为可调用的只读能力；不要用它执行写入、删除或任意 URL 请求。构造 params 前应先调用 knowledge_search " +
+			"登记且标记为可调用的能力，不得请求任意 URL。写入类能力会真实改变平台数据：" +
+			"仅当用户明确要求并已确认要写入的具体内容（名称、字段值与影响范围）时才可以调用，" +
+			"不得自行推测或批量写入。构造 params 前应先调用 knowledge_search " +
 			"并传 format=native_api 核对入参字段名、嵌套结构与路径参数，不要凭字段语义自行拼装。pathParams 用于填充路径中的 :param 占位符，params 为请求体对象。" +
-			"该调用需要用户人工审批后才会执行。",
+			"所有调用都需要用户在审批卡片上确认后才会执行；未获得成功结果前不得声称已执行或已保存。" +
+			"调用形状为 {capability, params, pathParams, complete}；complete 仅在全部字段（尤其长文本）" +
+			"完整输出后置为 true。平台据此拒绝被截断的半截参数；若工具返回参数不完整，" +
+			"必须重新发起同一能力的完整调用。",
 		ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
 			"capability": {
 				Type:     schema.String,
@@ -135,12 +140,17 @@ func NewApiInvokeToolInfo() *schema.ToolInfo {
 				Type: schema.Object,
 				Desc: "路径参数对象：键为路径中的 :param 名（如 id），值为非空字符串；仅当接口路径含占位符时必填。",
 			},
+			"complete": {
+				Type:     schema.Boolean,
+				Desc:     "参数完整性自声明：必须在本调用的全部字段（尤其长文本）都已完整输出后置为 true。平台解析 JSON 后校验该标志，据此拒绝被提前截断的半截参数；若工具提示参数不完整，请重新发起同一能力的完整调用，不要拆分、省略或改用其他能力。",
+				Required: true,
+			},
 		}),
 	}
 }
 
 // init 在启动期经 client schema 注册表登记 ask_user 与 api_invoke；client 工具只登记入参契约，
-// 执行落于前端（api_invoke 的接口白名单解析与只读校验由后端在挂起前完成）。
+// 执行落于前端（api_invoke 的接口白名单解析与可调用校验由后端在挂起前完成）。
 func init() {
 	RegisterClientToolInfo(AskUserToolName, NewAskUserToolInfo())
 	RegisterClientToolInfo(ApiInvokeToolName, NewApiInvokeToolInfo())

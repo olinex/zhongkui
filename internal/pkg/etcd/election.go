@@ -197,5 +197,7 @@ func (e *Election) Start(ctx context.Context) error {
 //   - 应用接收到终止信号（如 SIGTERM）
 //   - 需要主动放弃领导者角色时
 func (e *Election) Shutdown() {
-	e.handler.Shutdown(e.ctx)
+	if err := e.handler.Shutdown(e.ctx); err != nil {
+		e.logger.Ctx(e.ctx).Warnf("etcd election: shutdown handler %s failed: %v", e.handler.Name(), err)
+	}
 }

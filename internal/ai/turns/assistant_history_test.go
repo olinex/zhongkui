@@ -46,7 +46,11 @@ func TestRenderAssistantSnapshots(t *testing.T) {
 	store, sess := newTestStore(t)
 	ctx := context.Background()
 
-	appendNative(t, store, nativeRow(sess, modelsai.MessageRoleUser, msgops.NewUser[*schema.Message]("what is zhongkui")))
+	userRow := nativeRow(sess, modelsai.MessageRoleUser, msgops.NewUser[*schema.Message]("what is zhongkui"))
+	skillID := uint(7)
+	userRow.SkillID = &skillID
+	userRow.SkillName = "periodic_report_cocreate"
+	appendNative(t, store, userRow)
 
 	answer := &schema.Message{Role: schema.Assistant, ReasoningContent: "think", Content: "hello answer"}
 	answerRow := appendNative(t, store, nativeRow(sess, modelsai.MessageRoleAssistant, answer))
@@ -161,6 +165,9 @@ func TestRenderAssistantSnapshots(t *testing.T) {
 	user, answerSnapshot := messages[0], messages[1]
 	if user.Role != "user" || user.UserMessageIndex != 1 || user.Content != "what is zhongkui" {
 		t.Fatalf("用户消息 = %+v", user)
+	}
+	if user.SkillID != 7 || user.SkillName != "periodic_report_cocreate" {
+		t.Fatalf("用户消息技能 = (%d, %q)", user.SkillID, user.SkillName)
 	}
 	if answerSnapshot.Role != "assistant" {
 		t.Fatalf("助手消息 = %+v", answerSnapshot)

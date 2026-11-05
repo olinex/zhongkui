@@ -31,6 +31,15 @@
   - [func \(s \*AgentMemoryListGetSearchIn\) GetOptions\(\) \*utils.SearchOptions](<#AgentMemoryListGetSearchIn.GetOptions>)
   - [func \(s \*AgentMemoryListGetSearchIn\) GetOrderBy\(\) \[\]utils.OrderByItem](<#AgentMemoryListGetSearchIn.GetOrderBy>)
   - [func \(s \*AgentMemoryListGetSearchIn\) ResolveSelectColumns\(\) \[\]string](<#AgentMemoryListGetSearchIn.ResolveSelectColumns>)
+- [type AgentSkillListGetFilterBy](<#AgentSkillListGetFilterBy>)
+- [type AgentSkillListGetOrderBy](<#AgentSkillListGetOrderBy>)
+- [type AgentSkillListGetSearchIn](<#AgentSkillListGetSearchIn>)
+  - [func \(s \*AgentSkillListGetSearchIn\) GetFields\(\) \[\]string](<#AgentSkillListGetSearchIn.GetFields>)
+  - [func \(s \*AgentSkillListGetSearchIn\) GetFilterBy\(\) map\[string\]utils.FilterByItem](<#AgentSkillListGetSearchIn.GetFilterBy>)
+  - [func \(s \*AgentSkillListGetSearchIn\) GetGreedy\(\) bool](<#AgentSkillListGetSearchIn.GetGreedy>)
+  - [func \(s \*AgentSkillListGetSearchIn\) GetOptions\(\) \*utils.SearchOptions](<#AgentSkillListGetSearchIn.GetOptions>)
+  - [func \(s \*AgentSkillListGetSearchIn\) GetOrderBy\(\) \[\]utils.OrderByItem](<#AgentSkillListGetSearchIn.GetOrderBy>)
+  - [func \(s \*AgentSkillListGetSearchIn\) ResolveSelectColumns\(\) \[\]string](<#AgentSkillListGetSearchIn.ResolveSelectColumns>)
 - [type ApiDescriptor](<#ApiDescriptor>)
   - [func ApiCatalog\(\) \[\]ApiDescriptor](<#ApiCatalog>)
 - [type ApiKnowledgeDoc](<#ApiKnowledgeDoc>)
@@ -219,6 +228,42 @@
 - [type Pagination](<#Pagination>)
   - [func \(p \*Pagination\) GetPage\(\) uint](<#Pagination.GetPage>)
   - [func \(p \*Pagination\) GetPageSize\(\) uint](<#Pagination.GetPageSize>)
+- [type PeriodicReportFeedListGetFilterBy](<#PeriodicReportFeedListGetFilterBy>)
+- [type PeriodicReportFeedListGetOrderBy](<#PeriodicReportFeedListGetOrderBy>)
+- [type PeriodicReportFeedListGetSearchIn](<#PeriodicReportFeedListGetSearchIn>)
+  - [func \(s \*PeriodicReportFeedListGetSearchIn\) GetFields\(\) \[\]string](<#PeriodicReportFeedListGetSearchIn.GetFields>)
+  - [func \(s \*PeriodicReportFeedListGetSearchIn\) GetFilterBy\(\) map\[string\]utils.FilterByItem](<#PeriodicReportFeedListGetSearchIn.GetFilterBy>)
+  - [func \(s \*PeriodicReportFeedListGetSearchIn\) GetGreedy\(\) bool](<#PeriodicReportFeedListGetSearchIn.GetGreedy>)
+  - [func \(s \*PeriodicReportFeedListGetSearchIn\) GetOptions\(\) \*utils.SearchOptions](<#PeriodicReportFeedListGetSearchIn.GetOptions>)
+  - [func \(s \*PeriodicReportFeedListGetSearchIn\) GetOrderBy\(\) \[\]utils.OrderByItem](<#PeriodicReportFeedListGetSearchIn.GetOrderBy>)
+  - [func \(s \*PeriodicReportFeedListGetSearchIn\) ResolveSelectColumns\(\) \[\]string](<#PeriodicReportFeedListGetSearchIn.ResolveSelectColumns>)
+- [type PeriodicReportPlanListGetFilterBy](<#PeriodicReportPlanListGetFilterBy>)
+- [type PeriodicReportPlanListGetOrderBy](<#PeriodicReportPlanListGetOrderBy>)
+- [type PeriodicReportPlanListGetSearchIn](<#PeriodicReportPlanListGetSearchIn>)
+  - [func \(s \*PeriodicReportPlanListGetSearchIn\) GetFields\(\) \[\]string](<#PeriodicReportPlanListGetSearchIn.GetFields>)
+  - [func \(s \*PeriodicReportPlanListGetSearchIn\) GetFilterBy\(\) map\[string\]utils.FilterByItem](<#PeriodicReportPlanListGetSearchIn.GetFilterBy>)
+  - [func \(s \*PeriodicReportPlanListGetSearchIn\) GetGreedy\(\) bool](<#PeriodicReportPlanListGetSearchIn.GetGreedy>)
+  - [func \(s \*PeriodicReportPlanListGetSearchIn\) GetOptions\(\) \*utils.SearchOptions](<#PeriodicReportPlanListGetSearchIn.GetOptions>)
+  - [func \(s \*PeriodicReportPlanListGetSearchIn\) GetOrderBy\(\) \[\]utils.OrderByItem](<#PeriodicReportPlanListGetSearchIn.GetOrderBy>)
+  - [func \(s \*PeriodicReportPlanListGetSearchIn\) ResolveSelectColumns\(\) \[\]string](<#PeriodicReportPlanListGetSearchIn.ResolveSelectColumns>)
+- [type PeriodicReportRunListGetFilterBy](<#PeriodicReportRunListGetFilterBy>)
+- [type PeriodicReportRunListGetOrderBy](<#PeriodicReportRunListGetOrderBy>)
+- [type PeriodicReportRunListGetSearchIn](<#PeriodicReportRunListGetSearchIn>)
+  - [func \(s \*PeriodicReportRunListGetSearchIn\) GetFields\(\) \[\]string](<#PeriodicReportRunListGetSearchIn.GetFields>)
+  - [func \(s \*PeriodicReportRunListGetSearchIn\) GetFilterBy\(\) map\[string\]utils.FilterByItem](<#PeriodicReportRunListGetSearchIn.GetFilterBy>)
+  - [func \(s \*PeriodicReportRunListGetSearchIn\) GetGreedy\(\) bool](<#PeriodicReportRunListGetSearchIn.GetGreedy>)
+  - [func \(s \*PeriodicReportRunListGetSearchIn\) GetOptions\(\) \*utils.SearchOptions](<#PeriodicReportRunListGetSearchIn.GetOptions>)
+  - [func \(s \*PeriodicReportRunListGetSearchIn\) GetOrderBy\(\) \[\]utils.OrderByItem](<#PeriodicReportRunListGetSearchIn.GetOrderBy>)
+  - [func \(s \*PeriodicReportRunListGetSearchIn\) ResolveSelectColumns\(\) \[\]string](<#PeriodicReportRunListGetSearchIn.ResolveSelectColumns>)
+- [type PeriodicReportWatchListGetFilterBy](<#PeriodicReportWatchListGetFilterBy>)
+- [type PeriodicReportWatchListGetOrderBy](<#PeriodicReportWatchListGetOrderBy>)
+- [type PeriodicReportWatchListGetSearchIn](<#PeriodicReportWatchListGetSearchIn>)
+  - [func \(s \*PeriodicReportWatchListGetSearchIn\) GetFields\(\) \[\]string](<#PeriodicReportWatchListGetSearchIn.GetFields>)
+  - [func \(s \*PeriodicReportWatchListGetSearchIn\) GetFilterBy\(\) map\[string\]utils.FilterByItem](<#PeriodicReportWatchListGetSearchIn.GetFilterBy>)
+  - [func \(s \*PeriodicReportWatchListGetSearchIn\) GetGreedy\(\) bool](<#PeriodicReportWatchListGetSearchIn.GetGreedy>)
+  - [func \(s \*PeriodicReportWatchListGetSearchIn\) GetOptions\(\) \*utils.SearchOptions](<#PeriodicReportWatchListGetSearchIn.GetOptions>)
+  - [func \(s \*PeriodicReportWatchListGetSearchIn\) GetOrderBy\(\) \[\]utils.OrderByItem](<#PeriodicReportWatchListGetSearchIn.GetOrderBy>)
+  - [func \(s \*PeriodicReportWatchListGetSearchIn\) ResolveSelectColumns\(\) \[\]string](<#PeriodicReportWatchListGetSearchIn.ResolveSelectColumns>)
 - [type RbacPolicyTemplateListGetFilterBy](<#RbacPolicyTemplateListGetFilterBy>)
 - [type RbacPolicyTemplateListGetOrderBy](<#RbacPolicyTemplateListGetOrderBy>)
 - [type RbacPolicyTemplateListGetSearchIn](<#RbacPolicyTemplateListGetSearchIn>)
@@ -514,10 +559,16 @@ validFlexLen 校验批量标识符列表长度（1..maxBatchItems）。 长度�
 
 ```go
 type AgentMemoryListGetFilterBy struct {
-    Keyword   *keywordAgentMemoryListGetFilterByItem   `mapstructure:"keyword"`
-    AgentKind *agentKindAgentMemoryListGetFilterByItem `mapstructure:"agentKind"`
-    Kind      *kindAgentMemoryListGetFilterByItem      `mapstructure:"kind"`
-    Status    *statusAgentMemoryListGetFilterByItem    `mapstructure:"status"`
+    CreatedAt     *createdAtAgentMemoryListGetFilterByItem     `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeAgentMemoryListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateAgentMemoryListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt     *updatedAtAgentMemoryListGetFilterByItem     `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeAgentMemoryListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateAgentMemoryListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Keyword       *keywordAgentMemoryListGetFilterByItem       `mapstructure:"keyword"`
+    AgentKind     *agentKindAgentMemoryListGetFilterByItem     `mapstructure:"agentKind"`
+    Kind          *kindAgentMemoryListGetFilterByItem          `mapstructure:"kind"`
+    Status        *statusAgentMemoryListGetFilterByItem        `mapstructure:"status"`
 }
 ```
 
@@ -598,6 +649,106 @@ func (s *AgentMemoryListGetSearchIn) GetOrderBy() []utils.OrderByItem
 
 ```go
 func (s *AgentMemoryListGetSearchIn) ResolveSelectColumns() []string
+```
+
+
+
+<a name="AgentSkillListGetFilterBy"></a>
+## type AgentSkillListGetFilterBy
+
+
+
+```go
+type AgentSkillListGetFilterBy struct {
+    CreatedAt     *createdAtAgentSkillListGetFilterByItem     `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeAgentSkillListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateAgentSkillListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt     *updatedAtAgentSkillListGetFilterByItem     `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeAgentSkillListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateAgentSkillListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Keyword       *keywordAgentSkillListGetFilterByItem       `mapstructure:"keyword"`
+    Source        *sourceAgentSkillListGetFilterByItem        `mapstructure:"source"`
+    Enabled       *enabledAgentSkillListGetFilterByItem       `mapstructure:"enabled"`
+}
+```
+
+<a name="AgentSkillListGetOrderBy"></a>
+## type AgentSkillListGetOrderBy
+
+
+
+```go
+type AgentSkillListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+```
+
+<a name="AgentSkillListGetSearchIn"></a>
+## type AgentSkillListGetSearchIn
+
+
+
+```go
+type AgentSkillListGetSearchIn struct {
+    Pagination
+    Greedy   bool                       `mapstructure:"greedy" default:"false"`
+    OrderBy  []AgentSkillListGetOrderBy `mapstructure:"orderBy"`
+    FilterBy *AgentSkillListGetFilterBy `mapstructure:"filterBy"`
+    Fields   []string                   `mapstructure:"fields"`
+}
+```
+
+<a name="AgentSkillListGetSearchIn.GetFields"></a>
+### func \(\*AgentSkillListGetSearchIn\) GetFields
+
+```go
+func (s *AgentSkillListGetSearchIn) GetFields() []string
+```
+
+
+
+<a name="AgentSkillListGetSearchIn.GetFilterBy"></a>
+### func \(\*AgentSkillListGetSearchIn\) GetFilterBy
+
+```go
+func (s *AgentSkillListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
+```
+
+
+
+<a name="AgentSkillListGetSearchIn.GetGreedy"></a>
+### func \(\*AgentSkillListGetSearchIn\) GetGreedy
+
+```go
+func (s *AgentSkillListGetSearchIn) GetGreedy() bool
+```
+
+
+
+<a name="AgentSkillListGetSearchIn.GetOptions"></a>
+### func \(\*AgentSkillListGetSearchIn\) GetOptions
+
+```go
+func (s *AgentSkillListGetSearchIn) GetOptions() *utils.SearchOptions
+```
+
+
+
+<a name="AgentSkillListGetSearchIn.GetOrderBy"></a>
+### func \(\*AgentSkillListGetSearchIn\) GetOrderBy
+
+```go
+func (s *AgentSkillListGetSearchIn) GetOrderBy() []utils.OrderByItem
+```
+
+
+
+<a name="AgentSkillListGetSearchIn.ResolveSelectColumns"></a>
+### func \(\*AgentSkillListGetSearchIn\) ResolveSelectColumns
+
+```go
+func (s *AgentSkillListGetSearchIn) ResolveSelectColumns() []string
 ```
 
 
@@ -1526,12 +1677,20 @@ const (
     KindTextarea Kind = "textarea"
     // KindObject 对象/结构化数据（通常以 JSON 文本编辑）
     KindObject Kind = "object"
+    // KindJSON JSON 字段：列表列以 JSON 胶囊展示（点开查看完整 JSON），表单以 JSON 文本编辑
+    KindJSON Kind = "json"
+    // KindHex 十六进制文本字段：列表列以 hex 形式展示
+    KindHex Kind = "hex"
+    // KindDecByte 十进制字节数字段：列表列按人类可读的存储大小展示
+    KindDecByte Kind = "decByte"
     // KindColumns 列定义列表：形如 [{name, type}] 的手动 schema 编辑器（数据源接入用）
     KindColumns Kind = "columns"
     // KindBoolean 布尔开关
     KindBoolean Kind = "boolean"
     // KindCrypto 加密字段：值保存为 base64 密文（经 meta options 下发前端，明文需走明文权限接口）
     KindCrypto Kind = "crypto"
+    // KindS3 S3 对象字段：值为对象键，列表展示键与大小并提供明文读取入口
+    KindS3 Kind = "s3"
 )
 ```
 
@@ -1542,9 +1701,15 @@ const (
 
 ```go
 type KnowledgeDocumentListGetFilterBy struct {
-    Title  *titleKnowledgeDocumentListGetFilterByItem  `mapstructure:"title"`
-    Format *formatKnowledgeDocumentListGetFilterByItem `mapstructure:"format"`
-    Status *statusKnowledgeDocumentListGetFilterByItem `mapstructure:"status"`
+    CreatedAt     *createdAtKnowledgeDocumentListGetFilterByItem     `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimeKnowledgeDocumentListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDateKnowledgeDocumentListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt     *updatedAtKnowledgeDocumentListGetFilterByItem     `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimeKnowledgeDocumentListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDateKnowledgeDocumentListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Title         *titleKnowledgeDocumentListGetFilterByItem         `mapstructure:"title"`
+    Format        *formatKnowledgeDocumentListGetFilterByItem        `mapstructure:"format"`
+    Status        *statusKnowledgeDocumentListGetFilterByItem        `mapstructure:"status"`
 }
 ```
 
@@ -2761,6 +2926,382 @@ func (p *Pagination) GetPage() uint
 
 ```go
 func (p *Pagination) GetPageSize() uint
+```
+
+
+
+<a name="PeriodicReportFeedListGetFilterBy"></a>
+## type PeriodicReportFeedListGetFilterBy
+
+
+
+```go
+type PeriodicReportFeedListGetFilterBy struct {
+}
+```
+
+<a name="PeriodicReportFeedListGetOrderBy"></a>
+## type PeriodicReportFeedListGetOrderBy
+
+
+
+```go
+type PeriodicReportFeedListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt triggerAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+```
+
+<a name="PeriodicReportFeedListGetSearchIn"></a>
+## type PeriodicReportFeedListGetSearchIn
+
+
+
+```go
+type PeriodicReportFeedListGetSearchIn struct {
+    Pagination
+    Greedy   bool                               `mapstructure:"greedy" default:"false"`
+    OrderBy  []PeriodicReportFeedListGetOrderBy `mapstructure:"orderBy"`
+    FilterBy *PeriodicReportFeedListGetFilterBy `mapstructure:"filterBy"`
+    Fields   []string                           `mapstructure:"fields"`
+}
+```
+
+<a name="PeriodicReportFeedListGetSearchIn.GetFields"></a>
+### func \(\*PeriodicReportFeedListGetSearchIn\) GetFields
+
+```go
+func (s *PeriodicReportFeedListGetSearchIn) GetFields() []string
+```
+
+
+
+<a name="PeriodicReportFeedListGetSearchIn.GetFilterBy"></a>
+### func \(\*PeriodicReportFeedListGetSearchIn\) GetFilterBy
+
+```go
+func (s *PeriodicReportFeedListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
+```
+
+
+
+<a name="PeriodicReportFeedListGetSearchIn.GetGreedy"></a>
+### func \(\*PeriodicReportFeedListGetSearchIn\) GetGreedy
+
+```go
+func (s *PeriodicReportFeedListGetSearchIn) GetGreedy() bool
+```
+
+
+
+<a name="PeriodicReportFeedListGetSearchIn.GetOptions"></a>
+### func \(\*PeriodicReportFeedListGetSearchIn\) GetOptions
+
+```go
+func (s *PeriodicReportFeedListGetSearchIn) GetOptions() *utils.SearchOptions
+```
+
+
+
+<a name="PeriodicReportFeedListGetSearchIn.GetOrderBy"></a>
+### func \(\*PeriodicReportFeedListGetSearchIn\) GetOrderBy
+
+```go
+func (s *PeriodicReportFeedListGetSearchIn) GetOrderBy() []utils.OrderByItem
+```
+
+
+
+<a name="PeriodicReportFeedListGetSearchIn.ResolveSelectColumns"></a>
+### func \(\*PeriodicReportFeedListGetSearchIn\) ResolveSelectColumns
+
+```go
+func (s *PeriodicReportFeedListGetSearchIn) ResolveSelectColumns() []string
+```
+
+
+
+<a name="PeriodicReportPlanListGetFilterBy"></a>
+## type PeriodicReportPlanListGetFilterBy
+
+
+
+```go
+type PeriodicReportPlanListGetFilterBy struct {
+    CreatedAt     *createdAtPeriodicReportPlanListGetFilterByItem     `mapstructure:"createdAt"`
+    CreatedAtTime *createdAtTimePeriodicReportPlanListGetFilterByItem `mapstructure:"createdAtTime"`
+    CreatedAtDate *createdAtDatePeriodicReportPlanListGetFilterByItem `mapstructure:"createdAtDate"`
+    UpdatedAt     *updatedAtPeriodicReportPlanListGetFilterByItem     `mapstructure:"updatedAt"`
+    UpdatedAtTime *updatedAtTimePeriodicReportPlanListGetFilterByItem `mapstructure:"updatedAtTime"`
+    UpdatedAtDate *updatedAtDatePeriodicReportPlanListGetFilterByItem `mapstructure:"updatedAtDate"`
+    Keyword       *keywordPeriodicReportPlanListGetFilterByItem       `mapstructure:"keyword"`
+    Enabled       *enabledPeriodicReportPlanListGetFilterByItem       `mapstructure:"enabled"`
+}
+```
+
+<a name="PeriodicReportPlanListGetOrderBy"></a>
+## type PeriodicReportPlanListGetOrderBy
+
+
+
+```go
+type PeriodicReportPlanListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+```
+
+<a name="PeriodicReportPlanListGetSearchIn"></a>
+## type PeriodicReportPlanListGetSearchIn
+
+
+
+```go
+type PeriodicReportPlanListGetSearchIn struct {
+    Pagination
+    Greedy   bool                               `mapstructure:"greedy" default:"false"`
+    OrderBy  []PeriodicReportPlanListGetOrderBy `mapstructure:"orderBy"`
+    FilterBy *PeriodicReportPlanListGetFilterBy `mapstructure:"filterBy"`
+    Fields   []string                           `mapstructure:"fields"`
+}
+```
+
+<a name="PeriodicReportPlanListGetSearchIn.GetFields"></a>
+### func \(\*PeriodicReportPlanListGetSearchIn\) GetFields
+
+```go
+func (s *PeriodicReportPlanListGetSearchIn) GetFields() []string
+```
+
+
+
+<a name="PeriodicReportPlanListGetSearchIn.GetFilterBy"></a>
+### func \(\*PeriodicReportPlanListGetSearchIn\) GetFilterBy
+
+```go
+func (s *PeriodicReportPlanListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
+```
+
+
+
+<a name="PeriodicReportPlanListGetSearchIn.GetGreedy"></a>
+### func \(\*PeriodicReportPlanListGetSearchIn\) GetGreedy
+
+```go
+func (s *PeriodicReportPlanListGetSearchIn) GetGreedy() bool
+```
+
+
+
+<a name="PeriodicReportPlanListGetSearchIn.GetOptions"></a>
+### func \(\*PeriodicReportPlanListGetSearchIn\) GetOptions
+
+```go
+func (s *PeriodicReportPlanListGetSearchIn) GetOptions() *utils.SearchOptions
+```
+
+
+
+<a name="PeriodicReportPlanListGetSearchIn.GetOrderBy"></a>
+### func \(\*PeriodicReportPlanListGetSearchIn\) GetOrderBy
+
+```go
+func (s *PeriodicReportPlanListGetSearchIn) GetOrderBy() []utils.OrderByItem
+```
+
+
+
+<a name="PeriodicReportPlanListGetSearchIn.ResolveSelectColumns"></a>
+### func \(\*PeriodicReportPlanListGetSearchIn\) ResolveSelectColumns
+
+```go
+func (s *PeriodicReportPlanListGetSearchIn) ResolveSelectColumns() []string
+```
+
+
+
+<a name="PeriodicReportRunListGetFilterBy"></a>
+## type PeriodicReportRunListGetFilterBy
+
+
+
+```go
+type PeriodicReportRunListGetFilterBy struct {
+    PlanID *planIDPeriodicReportRunListGetFilterByItem `mapstructure:"planID"`
+    Status *statusPeriodicReportRunListGetFilterByItem `mapstructure:"status"`
+}
+```
+
+<a name="PeriodicReportRunListGetOrderBy"></a>
+## type PeriodicReportRunListGetOrderBy
+
+
+
+```go
+type PeriodicReportRunListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt triggerAt finishedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+```
+
+<a name="PeriodicReportRunListGetSearchIn"></a>
+## type PeriodicReportRunListGetSearchIn
+
+
+
+```go
+type PeriodicReportRunListGetSearchIn struct {
+    Pagination
+    Greedy   bool                              `mapstructure:"greedy" default:"false"`
+    OrderBy  []PeriodicReportRunListGetOrderBy `mapstructure:"orderBy"`
+    FilterBy *PeriodicReportRunListGetFilterBy `mapstructure:"filterBy"`
+    Fields   []string                          `mapstructure:"fields"`
+}
+```
+
+<a name="PeriodicReportRunListGetSearchIn.GetFields"></a>
+### func \(\*PeriodicReportRunListGetSearchIn\) GetFields
+
+```go
+func (s *PeriodicReportRunListGetSearchIn) GetFields() []string
+```
+
+
+
+<a name="PeriodicReportRunListGetSearchIn.GetFilterBy"></a>
+### func \(\*PeriodicReportRunListGetSearchIn\) GetFilterBy
+
+```go
+func (s *PeriodicReportRunListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
+```
+
+
+
+<a name="PeriodicReportRunListGetSearchIn.GetGreedy"></a>
+### func \(\*PeriodicReportRunListGetSearchIn\) GetGreedy
+
+```go
+func (s *PeriodicReportRunListGetSearchIn) GetGreedy() bool
+```
+
+
+
+<a name="PeriodicReportRunListGetSearchIn.GetOptions"></a>
+### func \(\*PeriodicReportRunListGetSearchIn\) GetOptions
+
+```go
+func (s *PeriodicReportRunListGetSearchIn) GetOptions() *utils.SearchOptions
+```
+
+
+
+<a name="PeriodicReportRunListGetSearchIn.GetOrderBy"></a>
+### func \(\*PeriodicReportRunListGetSearchIn\) GetOrderBy
+
+```go
+func (s *PeriodicReportRunListGetSearchIn) GetOrderBy() []utils.OrderByItem
+```
+
+
+
+<a name="PeriodicReportRunListGetSearchIn.ResolveSelectColumns"></a>
+### func \(\*PeriodicReportRunListGetSearchIn\) ResolveSelectColumns
+
+```go
+func (s *PeriodicReportRunListGetSearchIn) ResolveSelectColumns() []string
+```
+
+
+
+<a name="PeriodicReportWatchListGetFilterBy"></a>
+## type PeriodicReportWatchListGetFilterBy
+
+
+
+```go
+type PeriodicReportWatchListGetFilterBy struct {
+    Keyword *keywordPeriodicReportWatchListGetFilterByItem `mapstructure:"keyword"`
+    Enabled *enabledPeriodicReportWatchListGetFilterByItem `mapstructure:"enabled"`
+}
+```
+
+<a name="PeriodicReportWatchListGetOrderBy"></a>
+## type PeriodicReportWatchListGetOrderBy
+
+
+
+```go
+type PeriodicReportWatchListGetOrderBy struct {
+    Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+    Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+```
+
+<a name="PeriodicReportWatchListGetSearchIn"></a>
+## type PeriodicReportWatchListGetSearchIn
+
+
+
+```go
+type PeriodicReportWatchListGetSearchIn struct {
+    Pagination
+    Greedy   bool                                `mapstructure:"greedy" default:"false"`
+    OrderBy  []PeriodicReportWatchListGetOrderBy `mapstructure:"orderBy"`
+    FilterBy *PeriodicReportWatchListGetFilterBy `mapstructure:"filterBy"`
+    Fields   []string                            `mapstructure:"fields"`
+}
+```
+
+<a name="PeriodicReportWatchListGetSearchIn.GetFields"></a>
+### func \(\*PeriodicReportWatchListGetSearchIn\) GetFields
+
+```go
+func (s *PeriodicReportWatchListGetSearchIn) GetFields() []string
+```
+
+
+
+<a name="PeriodicReportWatchListGetSearchIn.GetFilterBy"></a>
+### func \(\*PeriodicReportWatchListGetSearchIn\) GetFilterBy
+
+```go
+func (s *PeriodicReportWatchListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
+```
+
+
+
+<a name="PeriodicReportWatchListGetSearchIn.GetGreedy"></a>
+### func \(\*PeriodicReportWatchListGetSearchIn\) GetGreedy
+
+```go
+func (s *PeriodicReportWatchListGetSearchIn) GetGreedy() bool
+```
+
+
+
+<a name="PeriodicReportWatchListGetSearchIn.GetOptions"></a>
+### func \(\*PeriodicReportWatchListGetSearchIn\) GetOptions
+
+```go
+func (s *PeriodicReportWatchListGetSearchIn) GetOptions() *utils.SearchOptions
+```
+
+
+
+<a name="PeriodicReportWatchListGetSearchIn.GetOrderBy"></a>
+### func \(\*PeriodicReportWatchListGetSearchIn\) GetOrderBy
+
+```go
+func (s *PeriodicReportWatchListGetSearchIn) GetOrderBy() []utils.OrderByItem
+```
+
+
+
+<a name="PeriodicReportWatchListGetSearchIn.ResolveSelectColumns"></a>
+### func \(\*PeriodicReportWatchListGetSearchIn\) ResolveSelectColumns
+
+```go
+func (s *PeriodicReportWatchListGetSearchIn) ResolveSelectColumns() []string
 ```
 
 

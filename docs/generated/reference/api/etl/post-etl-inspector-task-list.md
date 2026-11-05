@@ -18,6 +18,7 @@
 {
   "queue": "string",
   "state": "string",
+  "type": "ai:doc:parse",
   "group": "string"
 }
 ```
@@ -30,9 +31,20 @@
 | pageSize | uint | - | oneof=10 20 50 100 | - | 10 |
 | queue | string | 是 | required | - | - |
 | state | string | 是 | required,oneof=pending active aggregating scheduled retry archived completed | - | - |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| type | string | - | omitempty,enum=taskType | taskType：ai:doc:parse、mail:send、network:pcapimport、notify:send:group、notify:send:target、periodic-report:plan:dispatch、periodic-report:plan:run、periodic-report:run:cleanup、tag:event:cleanup、tag:event:detect、tag:event:suppress | - |
 | group | string | - | - | - | - |
 
 ## 出参
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| items | []*etl.PipelineTaskInfo | - | - | - | - |
+| total | int | - | - | - | - |
+
+### items[]（[]*etl.PipelineTaskInfo）
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
@@ -61,22 +73,32 @@
 
 ```json
 {
-  "id": "",
-  "queue": "string",
-  "type": "string",
-  "payload": "string",
-  "result": "string",
-  "state": "string",
-  "maxRetry": 0,
-  "retried": 0,
-  "lastErr": "string",
-  "lastFailedAt": "1970-01-01T00:00:00Z",
-  "nextProcessAt": "1970-01-01T00:00:00Z",
-  "completedAt": "1970-01-01T00:00:00Z",
-  "deadline": "1970-01-01T00:00:00Z",
-  "timeout": 0,
-  "retention": 0,
-  "group": "string",
-  "isOrphaned": false
+  "items": [
+    {
+      "id": "",
+      "queue": "string",
+      "type": "string",
+      "payload": "string",
+      "result": "string",
+      "state": "string",
+      "maxRetry": 0,
+      "retried": 0,
+      "lastErr": "string",
+      "lastFailedAt": "1970-01-01T00:00:00Z",
+      "nextProcessAt": "1970-01-01T00:00:00Z",
+      "completedAt": "1970-01-01T00:00:00Z",
+      "deadline": "1970-01-01T00:00:00Z",
+      "timeout": 0,
+      "retention": 0,
+      "group": "string",
+      "isOrphaned": false
+    }
+  ]
+}
+```
+
+```json
+{
+  "total": 0
 }
 ```

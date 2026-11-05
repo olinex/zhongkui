@@ -5,6 +5,9 @@ import (
 
 	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/manager/views"
+	// blank import：触发 worker 包 init 注册 taskType 枚举类（取值空间为任务处理器注册表），
+	// 供任务列表的任务类型筛选与 /admin/enum 自省接口使用。
+	_ "zhongkuisec.com/zhongkui/internal/worker"
 )
 
 // RegisterRoutes 注册 /api/v1/etl ETL管道监控接口路由。
@@ -96,7 +99,7 @@ func RegisterRoutes(ctx *views.RegisterContext) {
 		inspectorGroup.POST("/task/list", EtlPipelineInspectorTaskListGet)
 		// 任务列表元信息
 		views.RegisterApi(inspectorGroup, "/task/list", "任务列表查询 - 获取所有任务信息",
-			views.WithMethod(http.MethodPost, views.WithBodyInput[ETLPipelineInspectorTaskListIn](), views.WithBodyOutput[PipelineTaskInfo]()),
+			views.WithMethod(http.MethodPost, views.WithBodyInput[ETLPipelineInspectorTaskListIn](), views.WithBodyOutput[ETLPipelineInspectorTaskListOut]()),
 			views.WithCapability(views.CapabilityMeta{
 				ID:        "etl.task.list",
 				Domain:    "etl",

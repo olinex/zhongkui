@@ -3314,6 +3314,48 @@ fieldName = "updatedAt"
 column = "updated_at"
 
 [[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[KnowledgeDocumentListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[KnowledgeDocumentListGet.filterByFields]]
 fieldName = "title"
 fieldType = "string"
 column = "title"
@@ -3825,7 +3867,8 @@ column = "description"
 # AgentMemoryListGet
 
 # 长期记忆列表（AI 助手记忆管理页：/api/v1/ai/memory/list）
-# 过滤：keyword（标题/正文模糊）、agentKind / kind / status（枚举等值）；字段投影白名单见 selectFields。
+# 过滤：keyword（search tsvector 全文检索，覆盖标题与正文）、agentKind / kind / status（枚举等值）；
+# 字段投影白名单见 selectFields。
 [AgentMemoryListGet]
 timeModule = true
 
@@ -3838,11 +3881,54 @@ fieldName = "updatedAt"
 column = "updated_at"
 
 [[AgentMemoryListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentMemoryListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentMemoryListGet.filterByFields]]
 fieldName = "keyword"
 fieldType = "string"
-column = "content"
+# 正文加密存储，无法 ILIKE 明文；search 列为「标题 + 正文」的 tsvector，走全文检索动作
+column = "search"
 binding = ""
-actions = ["ctn", "ictn"]
+actions = ["fts"]
 
 [[AgentMemoryListGet.filterByFields]]
 fieldName = "agentKind"
@@ -3904,3 +3990,437 @@ column = "created_at"
 [[AgentMemoryListGet.selectFields]]
 fieldName = "updatedAt"
 column = "updated_at"
+
+# AgentSkillListGet
+
+# 技能列表（AI 助手技能管理页：/api/v1/ai/skill/list）
+# 过滤：keyword（名称模糊）、source（来源等值）、enabled（启停状态等值）；列表不返回加密正文，
+# 投影白名单见 selectFields；只读语义由 source='builtin' 表达。
+[AgentSkillListGet]
+timeModule = true
+
+[[AgentSkillListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[AgentSkillListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "keyword"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = ["ctn", "ictn"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "source"
+fieldType = "string"
+column = "source"
+binding = ""
+actions = ["eq"]
+
+[[AgentSkillListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "name"
+column = "name"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "source"
+column = "source"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "description"
+column = "description"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "periodicCapable"
+column = "periodic_capable"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "inputFields"
+column = "input_fields"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "fixedFields"
+column = "fixed_fields"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[AgentSkillListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+# PeriodicReportPlanListGet
+
+# 周期性报告计划列表（报告计划管理页：/api/v1/ai/periodic-report/plan/list）
+# 过滤：keyword（计划名称模糊）、enabled（启停状态等值）；投影白名单见 selectFields。
+[PeriodicReportPlanListGet]
+timeModule = true
+
+[[PeriodicReportPlanListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[PeriodicReportPlanListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "createdAt"
+fieldType = "time.Time"
+column = "created_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "createdAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "createdAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(created_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "updatedAt"
+fieldType = "time.Time"
+column = "updated_at"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "updatedAtTime"
+fieldType = "serializer.TimeOnly"
+column = "Time(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "updatedAtDate"
+fieldType = "serializer.DateOnly"
+column = "Date(updated_at)"
+binding = "required"
+actions = ["eq", "neq", "nil", "lt", "lte", "gt", "gte"]
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "keyword"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = ["ctn", "ictn"]
+
+[[PeriodicReportPlanListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "name"
+column = "name"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "description"
+column = "description"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "skillID"
+column = "skill_id"
+
+# skillName 由处理器第二趟按 skill_id 批量回填，投影列复用 skill_id 作占位
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "skillName"
+column = "skill_id"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "cronSpec"
+column = "cron_spec"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "inputValues"
+column = "input_values"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "retentionDays"
+column = "retention_days"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "expiresAt"
+column = "expires_at"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "nextRunAt"
+column = "next_run_at"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[PeriodicReportPlanListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+# PeriodicReportRunListGet
+
+# 周期性报告运行记录列表（报告计划管理页的历史报告弹窗：/api/v1/ai/periodic-report/run/list）
+# 过滤：planID（所属计划等值）、status（运行状态枚举等值）；投影白名单见 selectFields。
+[PeriodicReportRunListGet]
+timeModule = true
+
+[[PeriodicReportRunListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[PeriodicReportRunListGet.orderByFields]]
+fieldName = "triggerAt"
+column = "trigger_at"
+
+[[PeriodicReportRunListGet.orderByFields]]
+fieldName = "finishedAt"
+column = "finished_at"
+
+[[PeriodicReportRunListGet.filterByFields]]
+fieldName = "planID"
+fieldType = "uint"
+column = "plan_id"
+binding = ""
+actions = ["eq"]
+
+[[PeriodicReportRunListGet.filterByFields]]
+fieldName = "status"
+fieldType = "string"
+column = "status"
+binding = "enum=periodicReportRunStatus"
+actions = ["eq"]
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "planID"
+column = "plan_id"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "status"
+column = "status"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "title"
+column = "title"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "objectKey"
+column = "object_key"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "sizeBytes"
+column = "size_bytes"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "error"
+column = "error"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "triggerAt"
+column = "trigger_at"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "sessionID"
+column = "session_id"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "startedAt"
+column = "started_at"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "finishedAt"
+column = "finished_at"
+
+[[PeriodicReportRunListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+# PeriodicReportWatchListGet
+
+# 关注计划候选列表（首页报告看板设置弹窗：/api/v1/ai/periodic-report/watch/list）
+# 返回当前命名空间内的报告计划，watched 由处理器按当前用户关注关系第二趟回填；
+# 过滤 keyword（计划名称模糊）、enabled（启停状态等值），投影白名单见 selectFields。
+[PeriodicReportWatchListGet]
+timeModule = true
+
+[[PeriodicReportWatchListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[PeriodicReportWatchListGet.orderByFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+[[PeriodicReportWatchListGet.filterByFields]]
+fieldName = "keyword"
+fieldType = "string"
+column = "name"
+binding = ""
+actions = ["ctn", "ictn"]
+
+[[PeriodicReportWatchListGet.filterByFields]]
+fieldName = "enabled"
+fieldType = "bool"
+column = "enabled"
+binding = ""
+actions = ["eq"]
+
+[[PeriodicReportWatchListGet.selectFields]]
+fieldName = "id"
+column = "id"
+
+[[PeriodicReportWatchListGet.selectFields]]
+fieldName = "name"
+column = "name"
+
+[[PeriodicReportWatchListGet.selectFields]]
+fieldName = "description"
+column = "description"
+
+[[PeriodicReportWatchListGet.selectFields]]
+fieldName = "enabled"
+column = "enabled"
+
+# watched 由处理器按当前用户关注关系回填，投影列复用 id 作占位
+[[PeriodicReportWatchListGet.selectFields]]
+fieldName = "watched"
+column = "id"
+
+[[PeriodicReportWatchListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[PeriodicReportWatchListGet.selectFields]]
+fieldName = "updatedAt"
+column = "updated_at"
+
+# PeriodicReportFeedListGet
+
+# 报告中心信息流（主页报告看板：/api/v1/ai/periodic-report/feed/list）
+# 只返回当前用户关注计划的成功运行记录；无额外过滤，投影白名单见 selectFields。
+[PeriodicReportFeedListGet]
+timeModule = true
+
+[[PeriodicReportFeedListGet.orderByFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+[[PeriodicReportFeedListGet.orderByFields]]
+fieldName = "triggerAt"
+column = "trigger_at"
+
+[[PeriodicReportFeedListGet.selectFields]]
+fieldName = "runID"
+column = "id"
+
+[[PeriodicReportFeedListGet.selectFields]]
+fieldName = "planID"
+column = "plan_id"
+
+# planName 由处理器第二趟按 plan_id 批量回填，投影列复用 plan_id 作占位
+[[PeriodicReportFeedListGet.selectFields]]
+fieldName = "planName"
+column = "plan_id"
+
+[[PeriodicReportFeedListGet.selectFields]]
+fieldName = "title"
+column = "title"
+
+[[PeriodicReportFeedListGet.selectFields]]
+fieldName = "status"
+column = "status"
+
+[[PeriodicReportFeedListGet.selectFields]]
+fieldName = "triggerAt"
+column = "trigger_at"
+
+[[PeriodicReportFeedListGet.selectFields]]
+fieldName = "createdAt"
+column = "created_at"
+
+# 任务列表筛选：任务类型取值来自 worker 任务处理器注册表（taskType 枚举类）
+[[enums]]
+typeName = "ETLPipelineInspectorTaskListIn"
+[[enums.fields]]
+field = "type"
+set = "taskType"

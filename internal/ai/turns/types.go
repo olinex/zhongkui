@@ -102,6 +102,21 @@ type ChatInput struct {
 	Thinking string
 	// Slot 可选地覆盖会话使用的槽位。
 	Slot modelsai.Slot
+	// SkillID 是本轮选用技能的 ID，0 表示未选技能。
+	SkillID uint
+	// SkillName 是本轮选用技能的名称，空表示未选技能。
+	SkillName string
+	// SkillDescription 是本轮选用技能的说明，空表示未提供说明。
+	SkillDescription string
+	// SkillContent 是本轮选用技能的正文指引，空表示未选技能。
+	SkillContent string
+	// SystemHint 是本轮附加的系统级约束，注入在系统提示词末尾；空表示不附加。
+	// 用于需要固定输出契约的自动化场景（如周期报告要求统一 JSON 信封）。
+	SystemHint string
+	// Automation 是无人值守运行上下文，仅周期报告等后台任务使用（审核自动通过、
+	// api_invoke 服务端回调、ask_user 降级提示）。携带不可序列化的回调，不持久化，
+	// 也不会写入 ChatItem / checkpoint。
+	Automation *agentkit.Automation
 }
 
 // ActionInput 通过审批 / 问卷操作恢复一个挂起的运行。
@@ -193,6 +208,16 @@ type ChatItem struct {
 	Thinking string
 	// Slot 是本轮次实际使用的模型槽位。
 	Slot modelsai.Slot
+	// SkillID 是本轮选用技能的 ID，0 表示未选技能。
+	SkillID uint
+	// SkillName 是本轮选用技能的名称，空表示未选技能。
+	SkillName string
+	// SkillDescription 是本轮选用技能的说明，空表示未提供说明。
+	SkillDescription string
+	// SkillContent 是本轮选用技能的正文指引，空表示未选技能。
+	SkillContent string
+	// SystemHint 是本轮附加的系统级约束，注入在系统提示词末尾；空表示不附加。
+	SystemHint string
 	// Action 携带用于恢复挂起运行的审批/问卷操作。
 	Action *TurnAction
 	// 当操作本身未携带根中断 ID 时，InterruptID 指定该操作针对的

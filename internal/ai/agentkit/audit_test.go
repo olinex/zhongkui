@@ -95,3 +95,28 @@ func TestAuditEvaluateFallsBackToMust(t *testing.T) {
 		t.Fatalf("fallback decision = %+v, want must / approval", decisions[0])
 	}
 }
+
+// TestAuditEvaluateAutomationClearsApproval 校验无人值守上下文中审核结论仍保留 AuditLevel（供日志 /
+// 评估），但 ApprovalRequired 一律为 false，不再插入人工审批。
+func TestAuditEvaluateAutomationClearsApproval(t *testing.T) {
+	chat := &fakeChat{script: []*schema.Message{{
+		Role:    schema.Assistant,
+		Content: `{"levels":[{"callID":"c1","level":"must"},{"callID":"c2","level":"suggest"}]}`,
+	}}}
+	evaluator := audit.New(audit.Deps{
+		Chats:  func(modelsai.Slot) (model.BaseChatModel, error) { return chat, nil },
+		Params: testParams(nil),
+	})
+	middleware := &auditMiddleware[*schema.Message]{evaluator: evaluator}
+	ctx := WithAutomation(context.Background(), &Automation{})
+	decisions := middleware.evaluate(ctx, modelsai.SlotStandard, modelsai.ReviewValveEach, []msgops.ToolCall{
+		{ID: "c1", Name: "add", Args: "{}"},
+		{ID: "c2", Name: contract.ApiInvokeToolName, Args: "{}"},
+	}, 1)
+	if decisions[0].AuditLevel != contract.AuditLevelMust || decisions[0].ApprovalRequired {
+		t.Errorf("backend must under automation = %+v, want must / no approval", decisions[0])
+	}
+	if decisions[1].AuditLevel != contract.AuditLevelSuggest || decisions[1].ApprovalRequired {
+		t.Errorf("client suggest under automation = %+v, want suggest / no approval", decisions[1])
+	}
+}

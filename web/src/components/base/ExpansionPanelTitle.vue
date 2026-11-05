@@ -1,10 +1,15 @@
 <template>
   <!-- 展开面板标题区基线：图标头像 + 加粗标题 + 说明；全站 v-expansion-panels 共用，
        用法处不得自写标题结构（见 AGENTS.md「展开面板族」）。
+       默认插槽用于行内元信息（紧随文字块）；需要独占一行时改用 meta 槽，标题与元信息分两行展示，
+       避免长标题与 chip 组挤在同一行换行。
        size="sm" 为「紧凑变体」：标题与说明并为单行、头像缩至 24px，供默认收起、
        仅作收纳入口的折叠块（如 AI 助手的思考过程）压缩收起态占用高度 -->
   <v-expansion-panel-title :class="{ 'zk-expansion-title--sm': size === 'sm' }">
-    <div class="panel-title" :class="{ 'panel-title--sm': size === 'sm' }">
+    <div
+      class="panel-title"
+      :class="{ 'panel-title--sm': size === 'sm', 'panel-title--with-meta': stacked }"
+    >
       <v-avatar :color="color" variant="tonal" :size="avatarSize" rounded>
         <v-icon :size="iconSize" :class="{ 'mdi-spin': spin }">{{ icon }}</v-icon>
       </v-avatar>
@@ -14,6 +19,10 @@
       </div>
       <!-- 行内元信息（计数 chip 等）：紧随文字块，不顶到最右 -->
       <slot />
+      <!-- 第二行元信息：使用方提供 meta 槽时渲染，标题与元信息分两行展示 -->
+      <div v-if="stacked" class="panel-meta">
+        <slot name="meta" />
+      </div>
     </div>
 
     <!-- actions 槽会顶替 Vuetify 的默认展开图标，故由本组件统一补回 chevron，
@@ -26,7 +35,12 @@
 </template>
 
 <script setup lang="ts" name="expansion-panel-title">
-import { computed } from "vue";
+import { computed, useSlots } from "vue";
+
+const slots = useSlots();
+
+// stacked 表示使用方提供了 meta 槽：标题行与元信息行上下分布，避免长标题与 chip 组挤在同一行
+const stacked = computed(() => Boolean(slots.meta));
 
 const props = withDefaults(
   defineProps<{
@@ -62,6 +76,17 @@ const iconSize = computed(() => (props.size === "sm" ? "x-small" : "small"));
 .panel-title-text {
   display: flex;
   flex-direction: column;
+}
+
+/* 双行变体：标题行（头像 / 标题 / 行内元信息）与 meta 行上下分布 */
+/* stylelint-disable-next-line selector-class-pattern -- BEM 修饰符，与同组件其它修饰符同风格 */
+.panel-title--with-meta {
+  flex: 1;
+  flex-wrap: wrap;
+}
+
+.panel-meta {
+  flex: 0 0 100%;
 }
 
 /* 紧凑变体：头像与文字块、标题与说明各自贴上，说明随标题同一基线排列 */

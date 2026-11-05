@@ -150,6 +150,10 @@ export interface TurnStartedPayload {
     content: string;
     createdAt: string;
     userIndex: number;
+    /** 本轮选用的技能 ID；未选技能时缺省 */
+    skillID?: number;
+    /** 本轮选用的技能名称快照；未选技能时缺省 */
+    skillName?: string;
   };
 }
 
@@ -225,6 +229,7 @@ snapshot.end
 - `blocks`：按 `seq` 升序的终态块（`created` 不带）。
 - `citations` / `compress` / `pendingCalls`：与现有消息出参一致。
 - `userMessageIndex` / `messageID`：供回退、分支、压缩定位。
+- `skillID` / `skillName`（仅用户消息）：该轮选用的技能与名称快照，与 `turn.started` 的 `userMessage` 同源，保证刷新后气泡仍展示本轮技能；技能按轮次锚定，同一会话各轮可不同。
 
 前端收到 `snapshot.begin` 时清空消息列表与运行状态；`snapshot.end` 后结束加载态。
 

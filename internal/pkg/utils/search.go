@@ -156,6 +156,15 @@ func convertFilterClause(item FilterByItem, f func(query any, args ...any) (tx *
 			return nil, errors.Newf("Invalid value type: %T for action: %s", value, action)
 		}
 
+	// 全文检索：column 须为 tsvector 列，按 plainto_tsquery('simple', ?) 匹配（多词按 AND 语义）
+	case "fts":
+		switch v := value.(type) {
+		case string:
+			return f(column+" @@ plainto_tsquery('simple', ?)", v), nil
+		default:
+			return nil, errors.Newf("Invalid value type: %T for action: %s", value, action)
+		}
+
 	case "nil": // 为空
 		return f(column + " IS NULL"), nil
 	case "nnil": // 不为空

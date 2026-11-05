@@ -13,8 +13,7 @@
     <!-- 编辑区与操作行同处一个描边外壳内：操作按钮行位于框内底部右侧，
          与助手输入区（assistant-composer 的 toolbar 行）的组织方式一致 -->
     <div class="zk-editor json-editor-box" :class="{ 'is-error': !!shownError }">
-      <!-- minHeight 为公开 prop（按场景传入自定义最小高度），属运行时计算值，故保留 :style 绑定 -->
-      <div ref="hostRef" class="json-editor-host" :style="{ minHeight }" />
+      <div ref="hostRef" class="json-editor-host" />
       <div class="json-editor-toolbar">
         <v-btn
           class="beautify-btn"
@@ -57,8 +56,6 @@ const props = withDefaults(
     errorMessage?: string;
     /** 禁用编辑（只读） */
     disabled?: boolean;
-    /** 编辑器最小高度 */
-    minHeight?: string;
     /** 空文档提示文案 */
     placeholderText?: string;
   }>(),
@@ -68,7 +65,6 @@ const props = withDefaults(
     valid: false,
     errorMessage: "",
     disabled: false,
-    minHeight: "96px",
     placeholderText: "",
   },
 );
@@ -203,9 +199,10 @@ defineExpose({ focus: () => view.value?.focus() });
   flex-direction: column;
 }
 
-/* 编辑区占据外壳的剩余高度，最小高度由 minHeight prop 决定 */
+/* 编辑区固定高度：长 JSON 在 CodeMirror 自身的滚动容器内纵向浏览，与 MarkdownEditor 正文同高 */
 .json-editor-host {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  height: var(--zk-editor-body-height);
 }
 
 /* 操作行：按钮贴右，与助手输入区的 toolbar 行同构 */

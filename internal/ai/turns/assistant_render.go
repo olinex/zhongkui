@@ -34,13 +34,15 @@ func (m *Manager) RenderAssistant(ctx context.Context, sessionID, userID uint, n
 	}
 	switch kind {
 	case llm.APIModeResponses:
-		return m.renderAssistantFor[*schema.AgenticMessage](ctx, sess)
+		return renderAssistantFor[*schema.AgenticMessage](m, ctx, sess)
 	default:
-		return m.renderAssistantFor[*schema.Message](ctx, sess)
+		return renderAssistantFor[*schema.Message](m, ctx, sess)
 	}
 }
 
-func (m *Manager) renderAssistantFor[M adk.MessageType](ctx context.Context, sess *modelsai.AgentSession) (*Stream, error) {
+// renderAssistantFor 构造指定原生消息表示下的历史快照流。Go 方法不支持类型参数，故以包级泛型函数
+// 接收 Manager 参数。
+func renderAssistantFor[M adk.MessageType](m *Manager, ctx context.Context, sess *modelsai.AgentSession) (*Stream, error) {
 	stored, err := m.deps.Sessions.ListNativeMessages(ctx, sess.ID, sess.NamespaceName, sess.UserID, 0)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -77,7 +79,14 @@ func (m *Manager) renderAssistantFor[M adk.MessageType](ctx context.Context, ses
 	if checkpoints, cpErr := m.deps.Sessions.ListCompactions(ctx, sess.ID, sess.UserID); cpErr == nil {
 		// 摘要全文单独取（ListCompactions 刻意不解密摘要）：压缩块在历史回放中收起展示，用户点击
 		// 展开时需要有完整内容，故与检查点一并装入展示态。
-		summaries, _ := m.deps.Sessions.ListCompactionSummaries(ctx, sess.ID, sess.UserID)
+		summaries, sumErr := m.deps.Sessions.ListCompactionSummaries(ctx, sess.ID, sess.UserID)
+		if sumErr != nil {
+			// 摘要全文取不到不阻断历史回放：压缩块仍按检查点渲染，仅缺展开内容。
+			if m.deps.Logger != nil {
+				m.deps.Logger.Ctx(ctx).Warnf("turns: load compaction summaries failed: %v", sumErr)
+			}
+			summaries = nil
+		}
 		for _, cp := range checkpoints {
 			if cp == nil {
 				continue

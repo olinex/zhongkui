@@ -13,6 +13,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/etl"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 	message "zhongkuisec.com/zhongkui/internal/pkg/message"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // fakeETLTask 实现 etl.Task 接口的测试替身。
@@ -49,25 +50,25 @@ func testMessage() message.Message {
 
 // TestValidateMailSendInput 测试邮件直发载荷的字段校验。
 func TestValidateMailSendInput(t *testing.T) {
-	convey.Convey("validateMailSendInput 校验邮件直发载荷", t, func() {
+	convey.Convey("validator.Check 校验邮件直发载荷", t, func() {
 		convey.Convey("合法输入通过校验", func() {
-			err := validateMailSendInput(MailSendInput{To: "a@example.com", Message: testMessage(), Language: "zh-Hans"})
-			convey.So(err, convey.ShouldBeNil)
+			in := MailSendInput{To: "a@example.com", Message: testMessage(), Language: "zh-Hans"}
+			convey.So(validator.Check(&in), convey.ShouldBeNil)
 		})
 
 		convey.Convey("空收件人返回错误", func() {
-			err := validateMailSendInput(MailSendInput{Message: testMessage()})
-			convey.So(err, convey.ShouldNotBeNil)
+			in := MailSendInput{Message: testMessage()}
+			convey.So(validator.Check(&in), convey.ShouldNotBeNil)
 		})
 
 		convey.Convey("非法邮箱返回错误", func() {
-			err := validateMailSendInput(MailSendInput{To: "not-an-email", Message: testMessage()})
-			convey.So(err, convey.ShouldNotBeNil)
+			in := MailSendInput{To: "not-an-email", Message: testMessage()}
+			convey.So(validator.Check(&in), convey.ShouldNotBeNil)
 		})
 
 		convey.Convey("空消息模板返回错误", func() {
-			err := validateMailSendInput(MailSendInput{To: "a@example.com", Message: message.Message{Template: ""}})
-			convey.So(err, convey.ShouldNotBeNil)
+			in := MailSendInput{To: "a@example.com", Message: message.Message{Template: ""}}
+			convey.So(validator.Check(&in), convey.ShouldNotBeNil)
 		})
 	})
 }

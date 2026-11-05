@@ -17,6 +17,10 @@ func (s *Store) SaveAgentRun(ctx context.Context, run *modelsai.AgentRun) error 
 	if run == nil {
 		return errors.New("session store: nil agent run")
 	}
+	if run.UserID == 0 || run.SessionID == 0 {
+		// user_id / session_id 均为外键，0 不是合法引用。
+		return errors.New("session store: agent run requires a user and a session")
+	}
 	if err := s.db.WithContext(ctx).Create(run).Error; err != nil {
 		return errors.WithStack(err)
 	}

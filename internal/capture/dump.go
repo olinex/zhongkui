@@ -43,13 +43,23 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, c
 	if err != nil {
 		return 0, 0, errors.WithStack(err)
 	}
-	defer file.Close()
+	// Close 的错误（写入失败 / 刷盘失败）同样意味着分片不完整，必须并入返回值。
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = errors.WithStack(closeErr)
+		}
+	}()
 	if c.trackFile != nil {
 		c.trackFile(filePath)
 	}
 	// 带缓冲区的写入器，实现批量写入文件
 	buffer := bufio.NewWriterSize(file, int(c.uploadCfg.PacketBufferSize))
-	defer buffer.Flush()
+	// 注册顺序保证 LIFO 执行：wc.Close（刷加密尾部）→ buffer.Flush → file.Close。
+	defer func() {
+		if flushErr := buffer.Flush(); flushErr != nil && err == nil {
+			err = errors.WithStack(flushErr)
+		}
+	}()
 	// 流式压缩加密层，实现分块压缩后加密
 	pipeline, err := combine.NewZstdAESGCMPipelineWithLevel(cryptoKey, c.uploadCfg.EncoderLevel)
 	if err != nil {
@@ -59,7 +69,11 @@ func (c *capturer) dumpOne(ctx context.Context, ws wire.Wire, filePath string, c
 	if err != nil {
 		return 0, 0, errors.WithStack(err)
 	}
-	defer wc.Close()
+	defer func() {
+		if closeErr := wc.Close(); closeErr != nil && err == nil {
+			err = errors.WithStack(closeErr)
+		}
+	}()
 
 	// 压缩加密后的写入器，实现批量写入文件
 	writer := pcapgo.NewWriter(wc)

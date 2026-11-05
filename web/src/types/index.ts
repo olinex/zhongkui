@@ -72,6 +72,8 @@ export enum SearchAction {
   LESS_EQUAL = "lte",
   GREATER = "gt",
   GREATER_EQUAL = "gte",
+  // FTS 全文检索：后端按 tsvector @@ plainto_tsquery 匹配（多词为 AND 语义）
+  FTS = "fts",
 }
 
 export enum SupportLanguage {

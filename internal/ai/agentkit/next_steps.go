@@ -17,6 +17,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/retrieval"
 	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // 推荐下一步的行为上限（非提示词正文；内联路径的输出约定见 agentNextStepsHint，兜底辅助调用的
@@ -371,7 +372,7 @@ type nextStepsPayload struct {
 // ParseNextSteps 容错解析推荐模型输出：先去掉 ```json 代码围栏，再按 {"steps":[...]} 解析；
 // 失败时退回裸数组解析。条目既接受 {"title","reason","text"} 对象，也接受纯字符串。
 func ParseNextSteps(content string) ([]contract.NextStep, error) {
-	trimmed := contract.StripJSONFence(content)
+	trimmed := validator.StripJSONFence(content)
 	if strings.TrimSpace(trimmed) == "" {
 		return nil, errNextStepsEmpty
 	}
@@ -428,7 +429,7 @@ func NormalizeNextSteps(items []contract.NextStep) ([]contract.NextStep, error) 
 			continue
 		}
 		candidate := contract.NextStep{Title: title, Text: text, Reason: reason}
-		if err := candidate.Validate(); err != nil {
+		if err := validator.Check(&candidate); err != nil {
 			return nil, errors.Wrapf(err, "agentkit: next step #%d violates the contract", i+1)
 		}
 		if seen[text] {
@@ -447,7 +448,7 @@ func NormalizeNextSteps(items []contract.NextStep) ([]contract.NextStep, error) 
 }
 
 // normalizeNextStepField 规范化标题 / 文本 / 理由：去首尾空白、去包裹引号 / 反引号，折叠所有空白为
-// 单空格；不做长度截断，长度约束由 contract.NextStep.Validate 判定。
+// 单空格；不做长度截断，长度约束由 contract.NextStep 的 binding 标签经 validator.Check 判定。
 func normalizeNextStepField(value string) string {
 	value = strings.TrimSpace(value)
 	value = strings.Trim(value, "\"'`")

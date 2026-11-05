@@ -35,7 +35,18 @@ const sampleTestNamespace = "sample-unit-test"
 // tag_rule_samples 表已由 testdb 统一迁移。
 func setupSampleDB(t *testing.T) *database.DB {
 	t.Helper()
-	return testdb.Core(t)
+	db := testdb.Core(t)
+	// tag_rule_samples / tag_rules 的 namespace_name 为 namespaces(name) 外键；样例隔离用例
+	// 还会懒供给 tenant-a / tenant-b 命名空间。
+	for _, ns := range []string{sampleTestNamespace, "tenant-a", "tenant-b"} {
+		if err := db.Exec(
+			`INSERT INTO namespaces (name) VALUES (?) ON CONFLICT (name) DO NOTHING`,
+			ns,
+		).Error; err != nil {
+			t.Fatalf("seed sample test namespace %q: %v", ns, err)
+		}
+	}
+	return db
 }
 
 // insertSample 为目标模型插入一条验证样例（归属 sampleTestNamespace，与 sampleRules 规则一致）。

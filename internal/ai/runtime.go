@@ -20,15 +20,34 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/memory"
 	"zhongkuisec.com/zhongkui/internal/ai/port"
 	"zhongkuisec.com/zhongkui/internal/ai/session"
+	"zhongkuisec.com/zhongkui/internal/ai/skill"
 	"zhongkuisec.com/zhongkui/internal/ai/turns"
 	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/base"
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/etcd"
+	"zhongkuisec.com/zhongkui/internal/pkg/jsengine"
 	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
+
+// RuntimeOption 是运行时的可选装配项，用于注入由 provider 统一管理的可选依赖；
+// 不传时运行时按原有能力装配，测试与无依赖场景无需构造这些组件。
+type RuntimeOption func(*runtimeOptions)
+
+// runtimeOptions 是可选项的落地结构。
+type runtimeOptions struct {
+	// jsEngine 是进程内 JS 运行时（mermaid_check 等依赖嵌入式脚本的内置工具使用）
+	jsEngine *jsengine.Engine
+}
+
+// WithJSEngine 注入 JS 运行时；为空时依赖脚本的内置工具在装配阶段报错，其他能力不受影响。
+func WithJSEngine(engine *jsengine.Engine) RuntimeOption {
+	return func(options *runtimeOptions) {
+		options.jsEngine = engine
+	}
+}
 
 // runtimeState 是运行时的一份完整装配态：由配置快照与据此构建的客户端、组件组成。
 // 构造后整体只读，因此可经原子指针一次性替换，读取方无需加锁。
@@ -90,11 +109,18 @@ func (r *Runtime) capabilityItems() []capability.Capability {
 // 强校验，并创建 etcd 变更监听器。首次装配失败（如 embedding 维度不一致、绑定模型
 // 端点信息不完整）返回错误，由启动路径中止启动；模型注册表为空时装配为未启用状态而
 // 不报错，服务可正常启动等待前端注册模型。
-func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, logger *logging.Logger) (*Runtime, error) {
+func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, logger *logging.Logger, options ...RuntimeOption) (*Runtime, error) {
+	applied := runtimeOptions{}
+	for _, option := range options {
+		if option != nil {
+			option(&applied)
+		}
+	}
 	store, err := llmconfig.NewStore(db)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	store.SetJSEngine(applied.jsEngine)
 	if logger == nil {
 		return nil, errors.New("ai runtime: nil logger")
 	}
@@ -323,6 +349,13 @@ func (r *Runtime) buildChats(ctx context.Context, snap *llmconfig.Snapshot) (map
 		Kinds:   map[ai.Slot]llm.APIMode{},
 		Options: map[ai.Slot]func(thinking string) []model.Option{},
 	}
+	// 超时重试策略来自 agent_params（热配置）：参数变更触发运行时重建后，新客户端即采用新策略。
+	params := snap.Params()
+	timeoutRetry := llm.TimeoutRetryPolicy{
+		Enabled:    params.Bool("agent.llmTimeoutRetryEnabled"),
+		MaxRetries: params.Int("agent.llmTimeoutRetryMaxRetries"),
+		Multiplier: params.Int("agent.llmTimeoutRetryMultiplier"),
+	}
 	for slot, info := range snap.Slots() {
 		if !info.Bound || info.Kind == llm.ModelKindEmbedding {
 			continue
@@ -331,6 +364,7 @@ func (r *Runtime) buildChats(ctx context.Context, snap *llmconfig.Snapshot) (map
 		if err != nil {
 			return nil, nil, agentkit.ModelSet{}, nil, errors.WithStack(err)
 		}
+		cfg.TimeoutRetry = timeoutRetry
 		responses := cfg.APIMode == llm.APIModeResponses
 		chat, chatErr := llm.NewChatClient(ctx, cfg)
 		if chatErr != nil && !responses {
@@ -375,10 +409,14 @@ func requestOptionsFn(client any) func(thinking string) []model.Option {
 }
 
 // buildComponents 构建持久化与能力层组件并装配 ADK Agent 与 TurnLoop 会话驱动：会话存储、
-// 知识索引、检索器、记忆服务、Agent 运行时与回合管理器。各组件共享同一份快照参数与对话解析
-// 回调，保证热重载后口径一致。
+// 技能存储、知识索引、检索器、记忆服务、Agent 运行时与回合管理器。各组件共享同一份快照参数与
+// 对话解析回调，保证热重载后口径一致。
 func (r *Runtime) buildComponents(ctx context.Context, snap *llmconfig.Snapshot, chats map[ai.Slot]model.BaseChatModel, models agentkit.ModelSet, embedder embedding.Embedder) (*Components, error) {
 	sessions, err := session.NewStore(r.db)
+	if err != nil {
+		return nil, errors.WithStack(err)
+	}
+	skills, err := skill.NewStore(r.db)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
@@ -441,6 +479,7 @@ func (r *Runtime) buildComponents(ctx context.Context, snap *llmconfig.Snapshot,
 		Knowledge: kbIndex,
 		Retriever: retriever,
 		Sessions:  sessions,
+		Skills:    skills,
 		Memory:    memoryService,
 		Params:    snap.Params(),
 		Tools:     snap.Tools(),

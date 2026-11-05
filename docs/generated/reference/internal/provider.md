@@ -34,6 +34,7 @@
 - [func InjectGin\(i do.Injector\)](<#InjectGin>)
 - [func InjectGrpcLogger\(i do.Injector\)](<#InjectGrpcLogger>)
 - [func InjectHealthServer\(ctx context.Context, i do.Injector\)](<#InjectHealthServer>)
+- [func InjectJSEngine\(ctx context.Context, i do.Injector\)](<#InjectJSEngine>)
 - [func InjectKeyDerivation\(i do.Injector\)](<#InjectKeyDerivation>)
 - [func InjectMailSender\(i do.Injector\)](<#InjectMailSender>)
 - [func InjectMessagePool\(i do.Injector\)](<#InjectMessagePool>)
@@ -73,6 +74,7 @@
 - [func InvokeGin\(i do.Injector\) \(\*gin.Engine, error\)](<#InvokeGin>)
 - [func InvokeGrpcLogger\(i do.Injector\) \(\*logging.Logger, error\)](<#InvokeGrpcLogger>)
 - [func InvokeHealthServer\(ctx context.Context, i do.Injector\) \(\*health.Server, error\)](<#InvokeHealthServer>)
+- [func InvokeJSEngine\(i do.Injector\) \(\*jsengine.Engine, error\)](<#InvokeJSEngine>)
 - [func InvokeKeyDerivation\(i do.Injector\) \(\*key.KeyDerivation, error\)](<#InvokeKeyDerivation>)
 - [func InvokeMailSender\(i do.Injector\) \(\*mail.Sender, error\)](<#InvokeMailSender>)
 - [func InvokeMessagePool\(i do.Injector\) \(\*message.Pool, error\)](<#InvokeMessagePool>)
@@ -111,6 +113,7 @@
 - [func MustInvokeGin\(i do.Injector\) \*gin.Engine](<#MustInvokeGin>)
 - [func MustInvokeGrpcLogger\(i do.Injector\) \*logging.Logger](<#MustInvokeGrpcLogger>)
 - [func MustInvokeHealthServer\(ctx context.Context, i do.Injector\) \*health.Server](<#MustInvokeHealthServer>)
+- [func MustInvokeJSEngine\(i do.Injector\) \*jsengine.Engine](<#MustInvokeJSEngine>)
 - [func MustInvokeKeyDerivation\(i do.Injector\) \*key.KeyDerivation](<#MustInvokeKeyDerivation>)
 - [func MustInvokeMailSender\(i do.Injector\) \*mail.Sender](<#MustInvokeMailSender>)
 - [func MustInvokeMessagePool\(i do.Injector\) \*message.Pool](<#MustInvokeMessagePool>)
@@ -488,6 +491,15 @@ func InjectHealthServer(ctx context.Context, i do.Injector)
 
 InjectHealthServer 注册全局健康探针服务。
 
+<a name="InjectJSEngine"></a>
+## func InjectJSEngine
+
+```go
+func InjectJSEngine(ctx context.Context, i do.Injector)
+```
+
+InjectJSEngine 向依赖注入器注册 JS 运行时 provider。
+
 <a name="InjectKeyDerivation"></a>
 ## func InjectKeyDerivation
 
@@ -839,6 +851,15 @@ func InvokeHealthServer(ctx context.Context, i do.Injector) (*health.Server, err
 
 InvokeHealthServer 从注入器解析全局健康探针服务。
 
+<a name="InvokeJSEngine"></a>
+## func InvokeJSEngine
+
+```go
+func InvokeJSEngine(i do.Injector) (*jsengine.Engine, error)
+```
+
+InvokeJSEngine 从依赖注入器解析 JS 运行时，错误交由调用方处理。
+
 <a name="InvokeKeyDerivation"></a>
 ## func InvokeKeyDerivation
 
@@ -1180,6 +1201,15 @@ func MustInvokeHealthServer(ctx context.Context, i do.Injector) *health.Server
 ```
 
 MustInvokeHealthServer 从注入器解析全局健康探针服务，失败时 panic。
+
+<a name="MustInvokeJSEngine"></a>
+## func MustInvokeJSEngine
+
+```go
+func MustInvokeJSEngine(i do.Injector) *jsengine.Engine
+```
+
+MustInvokeJSEngine 从依赖注入器解析 JS 运行时；失败时 panic（仅用于启动关键依赖）。
 
 <a name="MustInvokeKeyDerivation"></a>
 ## func MustInvokeKeyDerivation

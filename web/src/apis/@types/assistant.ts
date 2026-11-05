@@ -176,6 +176,10 @@ export interface AssistantUserMessageSnapshot {
   createdAt: string;
   // 该提问在会话内的序号（从 1 起）
   userIndex: number;
+  // 本轮选用的技能 ID，未选技能时缺省
+  skillID?: number;
+  // 本轮选用的技能名称快照，未选技能时缺省
+  skillName?: string;
 }
 
 // AssistantTurnStartedPayload 回合开始事件的载荷。

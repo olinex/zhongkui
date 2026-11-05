@@ -24,7 +24,9 @@ func newUniversalTranslator(_ context.Context) do.Provider[*ut.UniversalTranslat
 			return nil, errors.WithStack(err)
 		}
 		for tag, fn := range funcs {
-			validator.Validate.RegisterValidation(tag, fn)
+			if err := validator.Validate.RegisterValidation(tag, fn); err != nil {
+				return nil, errors.WithStack(err)
+			}
 		}
 		for _, lang := range base.SupportLanguages {
 			for tag := range funcs {

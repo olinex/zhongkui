@@ -1,10 +1,11 @@
 // 本文件声明知识文档处理状态（KnowledgeDocStatus）、Agent 类型（AgentKind）、运行现场状态
 // （AgentRunStatus）、运行生命周期阶段（AgentRunPhase）、会话交互状态（AgentInteractionState）、
 // 交互子状态（AgentInteractionSubstate）、会话状态（SessionStatus）、消息角色（MessageRole）、
-// 记忆类别（MemoryKind）、记忆状态（MemoryStatus）、工具来源（ToolSource）、模型档位（Slot）与
-// 会话审核阀门（ReviewValve）的取值空间，并把这些取值空间注册为枚举类 knowledgeDocStatus /
-// agentKind / agentRunStatus / agentRunPhase / agentInteractionState / agentInteractionSubstate /
-// memoryKind / memoryStatus / llmToolSource / llmSlot / reviewValve
+// 记忆类别（MemoryKind）、记忆状态（MemoryStatus）、工具来源（ToolSource）、技能来源（SkillSource）、
+// 模型档位（Slot）与会话审核阀门（ReviewValve）的取值空间，并把这些取值空间注册为枚举类
+// knowledgeDocStatus / agentKind / agentRunStatus / agentRunPhase / agentInteractionState /
+// agentInteractionSubstate / memoryKind / memoryStatus / llmToolSource / agentSkillSource /
+// llmSlot / reviewValve
 // （审核阀门的取值常量与取值序列在 valve.go）。取值的唯一来源是类型化常量，取值序列就地复用为
 // 条目来源，条目在包内 init 注册时快照。类名须与前端 utils/enums.ts 的 EnumClass 成员、i18n 键
 // enum.<类名>.<key> 以及消费方引用一致。消息原生表示不再在本包声明：其取值空间与对话模型接口
@@ -146,6 +147,19 @@ const (
 	SessionStatusArchived SessionStatus = "archived"
 )
 
+// SessionOrigin 是 Agent 会话来由的标识：普通助手会话（chat）与内部运行会话（periodic_report），
+// 取值与 agent_sessions.origin 列的取值一致。内部运行会话只在创建它的业务入口（如周期性报告的
+// 历史报告）中查看，不出现在 AI 助手会话列表。此处只声明类型与取值常量，不注册枚举类。
+type SessionOrigin string
+
+// 会话来由常量。
+const (
+	// SessionOriginChat 普通助手会话：用户在 AI 助手中创建并展示在会话列表中
+	SessionOriginChat SessionOrigin = "chat"
+	// SessionOriginPeriodicReport 周期报告运行会话：每次运行独立创建，不在助手会话列表中展示
+	SessionOriginPeriodicReport SessionOrigin = "periodic_report"
+)
+
 // MessageRole 是 Agent 会话消息角色的标识：用户（user）、助手（assistant）与系统（system），
 // 取值与 agent_messages.role 列的取值一致。此处只声明类型与取值常量，不注册枚举类：消息角色
 // 原本就不是前端下拉的枚举类。
@@ -202,6 +216,17 @@ const (
 	ToolSourceMCP ToolSource = "mcp"
 	// ToolSourceClient 客户端工具：由前端在用户凭据下执行，后端只下发请求描述符并等待审批结果
 	ToolSourceClient ToolSource = "client"
+)
+
+// SkillSource 是技能来源的取值类型（agent_skills.source 与视图层 source 字段）。
+type SkillSource string
+
+// 技能来源常量。
+const (
+	// SkillSourceCustom 自定义技能：由用户在命名空间内维护，正文加密落库
+	SkillSourceCustom SkillSource = "custom"
+	// SkillSourceBuiltin 内置技能：由代码注册表声明、fixture 注入注册行，正文由代码按名提供
+	SkillSourceBuiltin SkillSource = "builtin"
 )
 
 // Slot 是模型档位槽位标识：flash（轻量）、standard（标准）、advanced（增强）三档对话模型
@@ -393,6 +418,9 @@ var memoryStatusValues = []MemoryStatus{
 // toolSourceValues 是 llmToolSource 枚举类的取值空间，声明顺序即枚举类条目顺序与前端下拉的展示顺序。
 var toolSourceValues = []ToolSource{ToolSourceBuiltin, ToolSourceMCP, ToolSourceClient}
 
+// skillSourceValues 是 agentSkillSource 枚举类的取值空间，声明顺序即枚举类条目顺序与前端展示顺序。
+var skillSourceValues = []SkillSource{SkillSourceCustom, SkillSourceBuiltin}
+
 // AllAgentKinds 返回全部 Agent 类型的副本，声明顺序即枚举类条目顺序与前端展示顺序；供展示与
 // 校验遍历使用，调用方修改返回值不影响该取值空间。
 func AllAgentKinds() []AgentKind {
@@ -536,7 +564,7 @@ func ParseMemoryStatus(raw MemoryStatus) (MemoryStatus, error) {
 
 // init 注册枚举类 knowledgeDocStatus / agentKind / agentRunStatus / agentRunPhase /
 // agentInteractionState / agentInteractionSubstate / memoryKind / memoryStatus / llmToolSource /
-// llmSlot / reviewValve（取值空间固定，条目在注册时快照）。agentKind 复用
+// agentSkillSource / llmSlot / reviewValve（取值空间固定，条目在注册时快照）。agentKind 复用
 // agentKindValues，Agent 类型成员仍只在本文件一处声明；agentRunStatus 复用 agentRunStatusValues，
 // 运行现场状态成员仍只在本文件一处声明；agentRunPhase 复用 agentRunPhaseValues，运行生命周期
 // 阶段成员仍只在本文件一处声明；agentInteractionState / agentInteractionSubstate 复用本文件的
@@ -554,6 +582,7 @@ func init() {
 	enum.Register(enum.Type{Name: "memoryKind", Entries: enum.EntriesOf(memoryKindValues)})
 	enum.Register(enum.Type{Name: "memoryStatus", Entries: enum.EntriesOf(memoryStatusValues)})
 	enum.Register(enum.Type{Name: "llmToolSource", Entries: enum.EntriesOf(toolSourceValues)})
+	enum.Register(enum.Type{Name: "agentSkillSource", Entries: enum.EntriesOf(skillSourceValues)})
 	enum.Register(enum.Type{Name: "llmSlot", Entries: enum.EntriesOf(AllSlots)})
 	enum.Register(enum.Type{Name: "reviewValve", Entries: enum.EntriesOf(reviewValveValues)})
 }

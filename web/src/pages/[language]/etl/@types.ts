@@ -19,7 +19,6 @@ export interface InspectorServerListItem {
   started: string;
   status: string;
   processingTasks: ProcessingTask[];
-  show: boolean;
 }
 
 export interface InspectorSchedulerListItem {
@@ -119,4 +118,8 @@ export type InspectorQueueListOut = Record<string, InspectorQueueItem>;
 
 export type InspectorDailyStatListOut = Record<string, InspectorDailyStatItem[]>;
 
-export type InspectorTaskListOut = InspectorTaskListItem[];
+// 任务列表出参：items 为当前页任务，total 为当前队列 / 状态 / 任务类型筛选下的总数
+export interface InspectorTaskListOut {
+  items: InspectorTaskListItem[];
+  total: number;
+}

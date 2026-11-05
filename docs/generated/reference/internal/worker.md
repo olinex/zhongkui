@@ -5,6 +5,7 @@
 ## Index
 
 - [func Registry\(ctx context.Context, injector do.Injector\)](<#Registry>)
+- [func TaskTypes\(\) \[\]string](<#TaskTypes>)
 
 
 <a name="Registry"></a>
@@ -14,10 +15,13 @@
 func Registry(ctx context.Context, injector do.Injector)
 ```
 
-Registry 注册所有 worker 处理器到任务队列与处理器框架。 目前注册以下处理器：
+Registry 注册所有 worker 处理器到任务队列与处理器框架。 任务处理器按 taskHandlerSpecs 逐项登记；另注册分布式 TCP 流处理器工厂（IPv4 和 IPv6）， 后者由外部运行时按需实例化，不经过队列。
 
-- pcap 导入任务的 batch handler（pcap.NewPcapBatchHandler）
-- 标签事件检测（tag:event:detect）与抑制评估（tag:event:suppress）handler
-- 通用通知发送（notify:send）handler，由标签事件等事件源投递
-- 知识文档导入解析（ai:doc:parse）handler，由知识库导入接口投递
-- 分布式 TCP 流处理器工厂（IPv4 和 IPv6）
+<a name="TaskTypes"></a>
+## func TaskTypes
+
+```go
+func TaskTypes() []string
+```
+
+TaskTypes 返回 worker 已注册的全部任务类型（按类型名升序）。 与 Registry 共用 taskHandlerSpecs，故导出清单即实际登记清单； 供管理端「已注册任务类型」视图展示。

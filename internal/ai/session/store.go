@@ -41,8 +41,18 @@ func NewStore(db *database.DB) (*Store, error) {
 
 // CreateSession 创建一个新会话，初始状态为 active；slot 为该会话的缺省档位
 // (flash/standard/advanced)，空表示生成时按 agent.defaultSlot 参数解析；agentKind 为会话所属
-// Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。
+// Agent 类型，空取缺省 knowledge，非法取值直接返回英文错误且不落库。会话来由取普通助手会话。
 func (s *Store) CreateSession(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, userID uint) (*ai.AgentSession, error) {
+	return s.CreateSessionWithOrigin(ctx, namespaceName, title, slot, agentKind, ai.SessionOriginChat, userID)
+}
+
+// CreateSessionWithOrigin 按指定会话来由创建会话；内部运行会话（如周期报告每次运行）以
+// periodic_report 创建，从而不出现在 AI 助手会话列表中。
+func (s *Store) CreateSessionWithOrigin(ctx context.Context, namespaceName, title string, slot ai.Slot, agentKind ai.AgentKind, origin ai.SessionOrigin, userID uint) (*ai.AgentSession, error) {
+	if userID == 0 {
+		// user_id 为 users(id) 外键，0 不是合法属主。
+		return nil, errors.New("session store: user id is required")
+	}
 	kind, err := ai.ParseAgentKind(agentKind)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -54,6 +64,7 @@ func (s *Store) CreateSession(ctx context.Context, namespaceName, title string, 
 		TargetModel:   slot,
 		Status:        ai.SessionStatusActive,
 		AgentKind:     kind,
+		Origin:        origin,
 	}
 	if err := s.db.WithContext(ctx).Create(session).Error; err != nil {
 		return nil, errors.WithStack(err)
@@ -77,10 +88,14 @@ func (s *Store) GetSession(ctx context.Context, id uint, namespaceName string, u
 	return &session, nil
 }
 
-// ListSessions 列出命名空间下属于该用户且状态为 active 的会话，按更新时间倒序（最近活跃在前）；
-// limit/offset 非正数时不限定。归档（archived）等非 active 会话不出现在列表中。
+// ListSessions 列出命名空间下属于该用户、状态为 active 且会话来由为普通助手的会话，按更新时间
+// 倒序（最近活跃在前）；limit/offset 非正数时不限定。归档（archived）等非 active 会话与内部
+// 运行会话（如周期报告每次运行的会话）不出现在列表中。
 func (s *Store) ListSessions(ctx context.Context, namespaceName string, userID uint, limit, offset int) ([]*ai.AgentSession, error) {
-	q := s.db.WithContext(ctx).Where("namespace_name = ? AND user_id = ? AND status = ?", namespaceName, userID, ai.SessionStatusActive).Order("updated_at DESC")
+	q := s.db.WithContext(ctx).
+		Where("namespace_name = ? AND user_id = ? AND status = ? AND origin = ?",
+			namespaceName, userID, ai.SessionStatusActive, ai.SessionOriginChat).
+		Order("updated_at DESC")
 	if limit > 0 {
 		q = q.Limit(limit)
 	}

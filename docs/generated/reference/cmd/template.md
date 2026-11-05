@@ -78,8 +78,8 @@ var (
 var RootCmd = &cobra.Command{
     Use:   "api",
     Short: "The seismograph api group command lines",
-    Run: func(cmd *cobra.Command, args []string) {
-        cmd.Help()
+    RunE: func(cmd *cobra.Command, args []string) error {
+        return cmd.Help()
     },
 }
 ```

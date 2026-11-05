@@ -55,6 +55,13 @@
 | `pending` | `pending` | 待恢复 |
 | `consumed` | `consumed` | 已消费 |
 
+## agentSkillSource
+
+| Key | 存储值 | 展示名 |
+| --- | --- | --- |
+| `custom` | `custom` | 自定义技能 |
+| `builtin` | `builtin` | 内置技能 |
+
 ## auditLevel
 
 | Key | 存储值 | 展示名 |
@@ -261,6 +268,14 @@
 | `default` | `default` | 默认 |
 | `override` | `override` | 覆盖 |
 
+## periodicReportRunStatus
+
+| Key | 存储值 | 展示名 |
+| --- | --- | --- |
+| `running` | `running` | 运行中 |
+| `success` | `success` | 成功 |
+| `failed` | `failed` | 失败 |
+
 ## policyEffect
 
 | Key | 存储值 | 展示名 |
@@ -297,3 +312,19 @@
 | Key | 存储值 | 展示名 |
 | --- | --- | --- |
 | `httpTransport` | `zhongkuisec.com/zhongkui/internal/models/network.HttpTransport` | HTTP 传输 |
+
+## taskType
+
+| Key | 存储值 | 展示名 |
+| --- | --- | --- |
+| `ai:doc:parse` | `ai:doc:parse` | 知识文档导入解析 |
+| `mail:send` | `mail:send` | 系统级邮件直发 |
+| `network:pcapimport` | `network:pcapimport` | PCAP 抓包文件导入 |
+| `notify:send:group` | `notify:send:group` | 通知组发送 |
+| `notify:send:target` | `notify:send:target` | 通知单目标直投 |
+| `periodic-report:plan:dispatch` | `periodic-report:plan:dispatch` | 周期性报告计划分发 |
+| `periodic-report:plan:run` | `periodic-report:plan:run` | 周期性报告生成 |
+| `periodic-report:run:cleanup` | `periodic-report:run:cleanup` | 周期性报告生命周期清理 |
+| `tag:event:cleanup` | `tag:event:cleanup` | 标签事件无效记录清理 |
+| `tag:event:detect` | `tag:event:detect` | 标签事件检测 |
+| `tag:event:suppress` | `tag:event:suppress` | 标签事件抑制评估 |

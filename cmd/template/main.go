@@ -342,7 +342,10 @@ var searchGenerateCmd = &cobra.Command{
 			outputFile.Close()
 			panic(fmt.Sprintf("Failed to execute template: %v", err))
 		}
-		outputFile.Close()
+		// 生成器必须确认内容已落盘：Close 失败说明输出可能被截断。
+		if err := outputFile.Close(); err != nil {
+			panic(fmt.Sprintf("Failed to close output file: %v", err))
+		}
 		// 可选：渲染枚举字段绑定表 enum_bindings.go（由 search.toml 的 [[enums]] 声明驱动）
 		if !genEnum {
 			return
@@ -351,7 +354,11 @@ var searchGenerateCmd = &cobra.Command{
 		if err != nil {
 			panic(fmt.Sprintf("Invalid enum output file: %v", err))
 		}
-		defer enumOutputFile.Close()
+		defer func() {
+			if err := enumOutputFile.Close(); err != nil {
+				panic(fmt.Sprintf("Failed to close enum output file: %v", err))
+			}
+		}()
 		err = enumTmpl.Execute(enumOutputFile, enumGenerateTemplateData{
 			PackageName: packageName,
 			Types:       templateTypes,
@@ -366,8 +373,8 @@ var searchGenerateCmd = &cobra.Command{
 var RootCmd = &cobra.Command{
 	Use:   "api",
 	Short: "The seismograph api group command lines",
-	Run: func(cmd *cobra.Command, args []string) {
-		cmd.Help()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cmd.Help()
 	},
 }
 
@@ -420,5 +427,9 @@ func init() {
 }
 
 func main() {
-	RootCmd.Execute()
+	// 命令失败必须让进程以非零状态退出，避免生成失败被 CI 当成成功。
+	if err := RootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

@@ -21,6 +21,9 @@ import type {
   AgentSessionCreateIn,
   AgentSessionRenameIn,
   AgentSessionValveIn,
+  AgentSkillCreateIn,
+  AgentSkillStatusIn,
+  AgentSkillUpdateIn,
   AssistantActionRequest,
   DryRunStageEvent,
   EvalStage,
@@ -298,6 +301,66 @@ export function agentMemoryDelete(ids: FlexIDs): AxiosPromise {
 
 export function agentMemoryStatusSet(id: number, data: AgentMemoryStatusIn): AxiosPromise {
   return request.post(`/ai/memory/${id}/status`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// ---- AI 技能 ----
+export function agentSkillListGet(data: SearchIn): AxiosPromise {
+  return request.post("/ai/skill/list", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentSkillListOptions(): AxiosPromise {
+  return request.options("/ai/skill/list", {
+    headers: getJwtHeader(),
+  });
+}
+
+// agentSkillOptionsGet 拉取聊天框技能选择器选项：合并跨命名空间内置技能与当前命名空间已启用技能
+export function agentSkillOptionsGet(): AxiosPromise {
+  return request.post("/ai/skill/options", {}, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentSkillDetailGet(id: number): AxiosPromise {
+  return request.post(
+    `/ai/skill/${id}/get`,
+    {},
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+// agentSkillCreate 创建技能：周期能力、输入字段与固定参数随请求一次落库。
+export function agentSkillCreate(data: AgentSkillCreateIn): AxiosPromise {
+  return request.post("/ai/skill/create", data, {
+    headers: getJwtHeader(),
+  });
+}
+
+// agentSkillUpdate 更新技能：全部定义字段整体覆盖。
+export function agentSkillUpdate(id: number, data: AgentSkillUpdateIn): AxiosPromise {
+  return request.post(`/ai/skill/${id}/update`, data, {
+    headers: getJwtHeader(),
+  });
+}
+
+export function agentSkillDelete(ids: FlexIDs): AxiosPromise {
+  return request.post(
+    "/ai/skill/delete",
+    { ids },
+    {
+      headers: getJwtHeader(),
+    },
+  );
+}
+
+export function agentSkillStatusSet(id: number, data: AgentSkillStatusIn): AxiosPromise {
+  return request.post(`/ai/skill/${id}/status`, data, {
     headers: getJwtHeader(),
   });
 }

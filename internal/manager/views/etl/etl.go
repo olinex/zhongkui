@@ -3,6 +3,7 @@ package etl
 
 import (
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -188,6 +189,7 @@ type ETLPipelineInspectorTaskListIn struct {
 	views.Pagination        // 嵌入分页参数
 	Queue            string `json:"queue" binding:"required"`                                                                     // 队列名称（必须）
 	State            string `json:"state" binding:"required,oneof=pending active aggregating scheduled retry archived completed"` // 任务状态（必须，只能是预定义值）
+	Type             string `json:"type" binding:"omitempty,enum=taskType"`                                                       // 任务类型筛选（可选，取值见 taskType 枚举类）
 	Group            string `json:"group"`                                                                                        // 任务分组标识符（可选）
 }
 
@@ -223,9 +225,13 @@ type ETLPipelineInspectorQueueListOut = map[string]*PipelineQueueInfo
 // 返回所有队列的每日统计信息，键为队列名称
 type ETLPipelineInspectorQueueStatOut = map[string][]*PipelineQueueDailyStat
 
-// ETLPipelineInspectorTaskListOut 是任务列表查询的输出类型别名
-// 返回指定状态的任务信息列表
-type ETLPipelineInspectorTaskListOut = []*PipelineTaskInfo
+// ETLPipelineInspectorTaskListOut 是任务列表查询的输出结构。
+// Items 为当前页任务，Total 为当前队列 / 状态 / 任务类型筛选下的任务总数，
+// 使前端分页与筛选保持同一口径。
+type ETLPipelineInspectorTaskListOut struct {
+	Items []*PipelineTaskInfo `json:"items"` // 当前页任务列表
+	Total int                 `json:"total"` // 过滤后的任务总数
+}
 
 // EtlPipelineInspectorServerListGet 获取所有异步任务处理服务器的信息
 // 该函数通过管道检查器获取所有服务器的状态、配置和当前处理的任务列表
@@ -269,7 +275,8 @@ func EtlPipelineInspectorServerListGet(c *gin.Context) {
 
 // EtlPipelineInspectorSchedulerListGet 获取所有定时任务配置
 // 该函数从 etcd 读取全部定时任务配置（cron 与 interval 两种调度模式统一），
-// 返回任务类型的完整配置列表，供前端定时任务管理页展示与回填。
+// 按任务类型名称升序返回完整配置列表，供前端定时任务管理页展示与回填。
+// etcd 读取结果来自 map，遍历顺序随机；若不排序，同一份配置每次请求的行序都会变化。
 //
 // 路由: GET /api/v1/etl/inspector/scheduler/list
 //
@@ -297,6 +304,7 @@ func EtlPipelineInspectorSchedulerListGet(c *gin.Context) {
 			BacklogLimit:   cfg.BacklogLimit,
 		})
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].TypeName < out[j].TypeName })
 	response.SimpleOK.AbortWithGinW(c, out)
 }
 
@@ -490,8 +498,8 @@ func EtlPipelineInspectorTaskListGet(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	page := asynq.Page(int(in.Page))
-	pageSize := asynq.PageSize(int(in.PageSize))
+	page := int(in.Page)
+	pageSize := int(in.PageSize)
 	inspector := middlewares.GetPipelineInspector(c)
 	var lister func(string, ...asynq.ListOption) ([]*asynq.TaskInfo, error)
 	switch in.State {
@@ -514,23 +522,119 @@ func EtlPipelineInspectorTaskListGet(c *gin.Context) {
 	default:
 		panic(fmt.Sprintf("bad state %s does not support", in.State))
 	}
-	if rawTasks, err := lister(in.Queue, page, pageSize); err != nil {
-		// 队列不存在（如尚未有任务入队、或工作进程未运行）时，asynq 返回
-		// ErrQueueNotFound；对只读的任务列表应将此视为"空"，返回空列表而非未知错误，
-		// 避免前端在加载到真实队列前误报。
-		if errors.Is(err, asynq.ErrQueueNotFound) {
-			response.SimpleOK.AbortWithGinW(c, ETLPipelineInspectorTaskListOut{})
+
+	// asynq 不支持按任务类型过滤：指定类型时逐页扫描后过滤，并返回过滤后的总数，
+	// 使分页与筛选口径一致；未指定类型时直接取请求页，总数取队列状态计数。
+	var (
+		rawTasks []*asynq.TaskInfo
+		total    int
+	)
+	if in.Type != "" {
+		var err error
+		rawTasks, total, err = listTasksByType(lister, in.Queue, in.Type, page, pageSize)
+		if err != nil {
+			response.CreateAccidentError(err).AbortWithGinH(c)
 			return
 		}
-		response.CreateAccidentError(err).AbortWithGinH(c)
-		return
 	} else {
-		tasks := make(ETLPipelineInspectorTaskListOut, 0, len(rawTasks))
-		for _, rawTask := range rawTasks {
-			tasks = append(tasks, NewPipelineTaskInfo(rawTask))
+		var err error
+		rawTasks, err = lister(in.Queue, asynq.Page(page), asynq.PageSize(pageSize))
+		if err != nil {
+			// 队列不存在（如尚未有任务入队、或工作进程未运行）时，asynq 返回
+			// ErrQueueNotFound；对只读的任务列表应将此视为"空"，返回空列表而非未知错误，
+			// 避免前端在加载到真实队列前误报。
+			if errors.Is(err, asynq.ErrQueueNotFound) {
+				response.SimpleOK.AbortWithGinW(c, ETLPipelineInspectorTaskListOut{
+					Items: []*PipelineTaskInfo{},
+					Total: 0,
+				})
+				return
+			}
+			response.CreateAccidentError(err).AbortWithGinH(c)
+			return
 		}
-		response.SimpleOK.AbortWithGinW(c, tasks)
-		return
+		total, err = queueStateTotal(inspector, in.Queue, in.State)
+		if err != nil {
+			response.CreateAccidentError(err).AbortWithGinH(c)
+			return
+		}
+	}
+
+	tasks := make([]*PipelineTaskInfo, 0, len(rawTasks))
+	for _, rawTask := range rawTasks {
+		tasks = append(tasks, NewPipelineTaskInfo(rawTask))
+	}
+	response.SimpleOK.AbortWithGinW(c, ETLPipelineInspectorTaskListOut{Items: tasks, Total: total})
+}
+
+// taskTypeFilterScanPageSize 按类型筛选时逐页扫描的页大小：asynq 不提供按类型过滤，
+// 需读取后过滤；取较大页大小以减少 Redis 往返次数。
+const taskTypeFilterScanPageSize = 1000
+
+// listTasksByType 逐页扫描队列指定状态的任务，过滤出类型匹配项后按请求分页返回，
+// 并返回过滤后的总数。队列不存在时视为空列表。
+func listTasksByType(
+	lister func(string, ...asynq.ListOption) ([]*asynq.TaskInfo, error),
+	queue, taskType string,
+	page, pageSize int,
+) ([]*asynq.TaskInfo, int, error) {
+	matching := make([]*asynq.TaskInfo, 0)
+	for p := 1; ; p++ {
+		tasks, err := lister(queue, asynq.Page(p), asynq.PageSize(taskTypeFilterScanPageSize))
+		if err != nil {
+			if errors.Is(err, asynq.ErrQueueNotFound) {
+				return []*asynq.TaskInfo{}, 0, nil
+			}
+			return nil, 0, errors.WithStack(err)
+		}
+		for _, task := range tasks {
+			if task.Type == taskType {
+				matching = append(matching, task)
+			}
+		}
+		if len(tasks) < taskTypeFilterScanPageSize {
+			break
+		}
+	}
+	total := len(matching)
+	start := (page - 1) * pageSize
+	if start >= total {
+		return []*asynq.TaskInfo{}, total, nil
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	return matching[start:end], total, nil
+}
+
+// queueStateTotal 返回队列指定状态的任务总数（未按类型筛选时的分页总数）。
+// 队列不存在时返回 0。
+func queueStateTotal(inspector *pipeline.Inspector, queue, state string) (int, error) {
+	info, err := inspector.GetQueueInfo(queue)
+	if err != nil {
+		if errors.Is(err, asynq.ErrQueueNotFound) {
+			return 0, nil
+		}
+		return 0, errors.WithStack(err)
+	}
+	switch state {
+	case asynq.TaskStateActive.String():
+		return info.Active, nil
+	case asynq.TaskStatePending.String():
+		return info.Pending, nil
+	case asynq.TaskStateScheduled.String():
+		return info.Scheduled, nil
+	case asynq.TaskStateRetry.String():
+		return info.Retry, nil
+	case asynq.TaskStateArchived.String():
+		return info.Archived, nil
+	case asynq.TaskStateCompleted.String():
+		return info.Completed, nil
+	case asynq.TaskStateAggregating.String():
+		return info.Aggregating, nil
+	default:
+		return 0, nil
 	}
 }
 

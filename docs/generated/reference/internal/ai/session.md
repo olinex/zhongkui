@@ -199,7 +199,7 @@ AssistantSeqAtMessage 返回指定助手消息（id）在所属会话内的 seq�
 func (s *Store) BranchSessionFromUserMessage(ctx context.Context, sessionID, userID uint, userMessageIndex int, title string) (*ai.AgentSession, error)
 ```
 
-BranchSessionFromUserMessage 以第 userMessageIndex 条（从 1 起，仅按用户消息计数、按 seq 升序 定位）用户消息所在轮次为结尾，把该会话从最早一条消息起、直到「下一条用户消息之前」的全部消息 复制为一个新会话，供前端「分支」使用（新会话可独立演进，源会话不受影响）。目标用户消息不存在 （序号越界）时返回 ErrMessageNotFound；源会话不属于给定属主用户时返回 ErrSessionNotFound。 单事务执行，避免复制中途留下半截会话。新会话归属同一命名空间与属主，标题为空时沿用源会话标题， 档位 / Agent 类型 / 审核阀门与源会话一致，状态 active；滚动摘要不复制（消息 seq 会重新编号， 原摘要覆盖范围失去意义）。复制出的消息在新会话内 seq 从 1 连续重新编号（新 session\_id 不同， 不受 UNIQUE\(session\_id,user\_id,seq\) 影响），保留 role/message\_kind/payload/content/draft/citations/ created\_at 等载荷，不复制 id 与源 seq。新会话的 message\_seq 直接置为复制条数（在插入时一次算好， 供后续追加消息从 count\+1 继续分配 seq）。
+BranchSessionFromUserMessage 以第 userMessageIndex 条（从 1 起，仅按用户消息计数、按 seq 升序 定位）用户消息所在轮次为结尾，把该会话从最早一条消息起、直到「下一条用户消息之前」的全部消息 复制为一个新会话，供前端「分支」使用（新会话可独立演进，源会话不受影响）。目标用户消息不存在 （序号越界）时返回 ErrMessageNotFound；源会话不属于给定属主用户时返回 ErrSessionNotFound。 单事务执行，避免复制中途留下半截会话。新会话归属同一命名空间与属主，标题为空时沿用源会话标题， 档位 / Agent 类型 / 审核阀门与源会话一致，状态 active；滚动摘要不复制（消息 seq 会重新编号， 原摘要覆盖范围失去意义）。复制出的消息在新会话内 seq 从 1 连续重新编号（新 session\_id 不同， 不受 UNIQUE\(session\_id,user\_id,seq\) 影响），保留 role/message\_kind/payload/content/draft/citations/ skill\_id/skill\_name/created\_at 等载荷，不复制 id 与源 seq。新会话的 message\_seq 直接置为复制条数（在插入时一次算好， 供后续追加消息从 count\+1 继续分配 seq）。
 
 <a name="Store.ClaimAgentRun"></a>
 ### func \(\*Store\) ClaimAgentRun

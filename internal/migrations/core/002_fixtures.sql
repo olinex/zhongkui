@@ -154,6 +154,21 @@ INSERT INTO rbac_policies (ptype, v0, v1, v2, v3) VALUES
     ('p', 'admin', 'api:/api/v1/ai/memory/delete', 'OPTIONS', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/:id/status', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/ai/memory/:id/status', 'OPTIONS', 'allow'),
+    -- AI 助手接口：技能管理（列表/创建/详情/更新/批量删除/启停）
+    ('p', 'admin', 'api:/api/v1/ai/skill/list', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/list', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/options', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/options', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/create', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/create', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/:id/get', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/:id/get', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/:id/update', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/:id/update', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/delete', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/delete', 'OPTIONS', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/:id/status', 'POST', 'allow'),
+    ('p', 'admin', 'api:/api/v1/ai/skill/:id/status', 'OPTIONS', 'allow'),
     -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖 / MCP 服务器注册表 / 工具注册表）
     ('p', 'admin', 'api:/api/v1/admin/llm/model/list', 'POST', 'allow'),
     ('p', 'admin', 'api:/api/v1/admin/llm/model/list', 'OPTIONS', 'allow'),
@@ -446,6 +461,21 @@ INSERT INTO rbac_policy_templates (target, action) VALUES
     ('api:/api/v1/ai/memory/delete', 'OPTIONS'),
     ('api:/api/v1/ai/memory/:id/status', 'POST'),
     ('api:/api/v1/ai/memory/:id/status', 'OPTIONS'),
+    -- AI 助手接口：技能管理（列表/创建/详情/更新/批量删除/启停）
+    ('api:/api/v1/ai/skill/list', 'POST'),
+    ('api:/api/v1/ai/skill/list', 'OPTIONS'),
+    ('api:/api/v1/ai/skill/options', 'POST'),
+    ('api:/api/v1/ai/skill/options', 'OPTIONS'),
+    ('api:/api/v1/ai/skill/create', 'POST'),
+    ('api:/api/v1/ai/skill/create', 'OPTIONS'),
+    ('api:/api/v1/ai/skill/:id/get', 'POST'),
+    ('api:/api/v1/ai/skill/:id/get', 'OPTIONS'),
+    ('api:/api/v1/ai/skill/:id/update', 'POST'),
+    ('api:/api/v1/ai/skill/:id/update', 'OPTIONS'),
+    ('api:/api/v1/ai/skill/delete', 'POST'),
+    ('api:/api/v1/ai/skill/delete', 'OPTIONS'),
+    ('api:/api/v1/ai/skill/:id/status', 'POST'),
+    ('api:/api/v1/ai/skill/:id/status', 'OPTIONS'),
     -- AI 助手 admin 配置接口（模型注册表 / 档位绑定 / Agent 参数覆盖 / MCP 服务器注册表 / 工具注册表）
     ('api:/api/v1/admin/llm/model/list', 'POST'),
     ('api:/api/v1/admin/llm/model/list', 'OPTIONS'),
@@ -819,6 +849,9 @@ FROM (VALUES
     ('agent.maxToolRounds', '10'),
     ('agent.maxToolResultBytes', '32768'),
     ('agent.runDetachGraceSeconds', '90'),
+    ('agent.llmTimeoutRetryEnabled', 'true'),
+    ('agent.llmTimeoutRetryMaxRetries', '3'),
+    ('agent.llmTimeoutRetryMultiplier', '2'),
     ('retrieval.topK', '5'),
     ('retrieval.candidates', '30'),
     ('retrieval.expandDocLimit', '26000'),
@@ -912,8 +945,9 @@ ON CONFLICT (key) DO NOTHING;
 -- 问卷类只读交互与只读接口调用；此外又新增
 -- 了「数学 / 时间 / 文本 / 编码 / 数据」五类共 13 个通用内置工具（math_eval、unit_convert、
 -- base_convert、datetime_calc、regex、json_diff、text_stats、hash、encode_convert、uuid、json、
--- csv_parse、url_parse），以及「高阶方程计算」4 个工具（poly_solve、linear_solve、root_find、
--- nonlinear_solve），均为只读纯计算能力，故出厂 enabled=true，故此处种下这些出厂行。
+-- csv_parse、url_parse），「高阶方程计算」4 个工具（poly_solve、linear_solve、root_find、
+-- nonlinear_solve），以及图表源码校验工具 mermaid_check，均为只读纯计算能力，故出厂
+-- enabled=true，故此处种下这些出厂行。
 INSERT INTO llm_tools (name, source, mcp_server_id, remote_name, description, enabled)
 VALUES
     ('memory_write', 'builtin', NULL, '', '', false),
@@ -931,6 +965,7 @@ VALUES
     ('json', 'builtin', NULL, '', '', true),
     ('csv_parse', 'builtin', NULL, '', '', true),
     ('url_parse', 'builtin', NULL, '', '', true),
+    ('mermaid_check', 'builtin', NULL, '', '', true),
     ('poly_solve', 'builtin', NULL, '', '', true),
     ('linear_solve', 'builtin', NULL, '', '', true),
     ('root_find', 'builtin', NULL, '', '', true),
@@ -939,10 +974,25 @@ VALUES
     ('api_invoke', 'client', NULL, '', '', true)
 ON CONFLICT (name) DO NOTHING;
 
+-- 内置技能出厂行：内置技能是 agent_skills 中 source='builtin'、namespace_name='system' 的注册行。
+-- 新增内置技能时，必须同时追加代码定义与此段 INSERT 出厂行，列顺序固定为
+-- (namespace_name, name, description, content, enabled, source)：name 与代码注册表键一致、
+-- description 为明文展示文案、content 为 NULL（正文由 internal/ai/skill 的 BuiltinSkills 代码
+-- 注册表按 name 提供）、enabled 出厂 true、source 固定 'builtin'；由
+-- internal/ai/skill/builtin_fixture_test.go 双向守卫。
+INSERT INTO agent_skills (namespace_name, name, description, content, enabled, source)
+VALUES
+    ('system', 'periodic_report_cocreate', '通过多轮对话共创周期报告类 AI 技能（日报/周报/月报）：明确报告定位、周期与时间窗口、数据来源、指标口径与报告结构，并按评分标准评估质量、给出改进建议与迭代方案。', NULL, true, 'builtin'),
+    ('system', 'risk_tag_rego_rule', '通过多轮对话共创风险标签 Rego 规则：澄清风险场景与目标模型、核对输入字段与数据能力、起草并校验规则、用样例试运行评估命中质量，经用户确认后按审批卡片创建标签规则。', NULL, true, 'builtin')
+ON CONFLICT DO NOTHING;
+
 -- +goose Down
 
 -- 工具出厂行：清理本段种下的内置与客户端来源行；llm_tools 表本身由 001 的 Down 段删除。
 DELETE FROM llm_tools WHERE source IN ('builtin', 'client');
+
+-- 内置技能出厂行：清理系统命名空间的内置技能注册行；agent_skills 表本身由 001 的 Down 段删除。
+DELETE FROM agent_skills WHERE namespace_name = 'system';
 
 -- Agent 参数出厂值
 DELETE FROM agent_params;

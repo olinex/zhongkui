@@ -6,7 +6,7 @@
     <!-- 宽度来自 AppDialog 的尺寸档位（sm = 560px）；内容区经 AppDialog 的 scrollable
          滚动，故无需本地 max-height。 -->
     <app-dialog v-model="dialog" :title="$t('action.detail')" size="sm">
-      <VueJsonPretty :data="value && JSON.parse(value)" />
+      <json-viewer :data="value && JSON.parse(value)" />
       <template #footer>
         <v-btn color="info" @click="copy">
           {{ $t("action.copy") }}
@@ -17,10 +17,8 @@
 </template>
 
 <script setup lang="ts" name="json-chip">
-import VueJsonPretty from "vue-json-pretty";
 import i18n from "@/utils/i18n";
 import type { Density, Variant } from "../@types/base";
-import "vue-json-pretty/lib/styles.css";
 import { copyToClipboard } from "@/utils/clipboard";
 
 const dialog = ref(false);

@@ -603,7 +603,7 @@ func writeGenerated(rootDir, output, content string) error {
 	existing, readErr := os.ReadFile(target)
 	// nav.json 是 JSON，无法携带生成标记；它只允许落在 docs 根，由白名单与路径校验保护。
 	if clean != "nav.json" && readErr == nil && !bytes.HasPrefix(existing, []byte(generatedMarker)) {
-		return errors.Newf("docs: 拒绝覆盖非生成文件 %q（缺少生成标记）", output)
+		return errors.Newf("docs: refusing to overwrite non-generated file %q (missing generated marker)", output)
 	}
 	if readErr != nil && !os.IsNotExist(readErr) {
 		return errors.WithStack(readErr)
@@ -620,14 +620,14 @@ func writeGenerated(rootDir, output, content string) error {
 // generatedOutputPath 校验并归一化生成输出路径：只允许 index.md、nav.json 与 generated/ 前缀。
 func generatedOutputPath(output string) (string, error) {
 	if output == "" {
-		return "", errors.New("docs: 生成输出路径为空")
+		return "", errors.New("docs: generated output path is empty")
 	}
 	if path.IsAbs(output) || strings.Contains(output, "\\") {
-		return "", errors.Newf("docs: 生成输出路径必须是相对路径: %q", output)
+		return "", errors.Newf("docs: generated output path must be relative: %q", output)
 	}
 	clean := path.Clean(output)
 	if clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
-		return "", errors.Newf("docs: 生成输出路径不得逃逸 docs 目录: %q", output)
+		return "", errors.Newf("docs: generated output path must not escape the docs directory: %q", output)
 	}
 	if clean == "index.md" || clean == "nav.json" {
 		return clean, nil
@@ -635,7 +635,7 @@ func generatedOutputPath(output string) (string, error) {
 	if strings.HasPrefix(clean, GeneratedRoot+"/") {
 		return clean, nil
 	}
-	return "", errors.Newf("docs: 生成输出必须位于 %s/ 下: %q", GeneratedRoot, output)
+	return "", errors.Newf("docs: generated output must be under %s/: %q", GeneratedRoot, output)
 }
 
 // pruneGenerated 删除生成域中未在本次导出集合内的陈旧文件，并自底向上清理空目录。

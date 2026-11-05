@@ -4,7 +4,6 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/memory"
 	// 标准库
 	"strconv"
-	"strings"
 	"time"
 
 	// 第三方
@@ -125,15 +124,14 @@ func newAgentMemoryDetailOut(m *modelsai.AgentMemory) AgentMemoryDetailOut {
 }
 
 // AgentMemoryListGet 处理长期记忆列表查询的请求。
-// 仅返回当前命名空间内的记忆，支持分页、按 keyword/agentKind/kind/status 过滤与字段投影；
-// 过滤与落库语义复用 memory.Memory.List（MemoryStore），视图层不自写 SQL。
+// 仅返回当前命名空间内属于当前用户的记忆，支持分页、keyword/agentKind/kind/status 过滤、排序与
+// 字段投影；查询构建与总数统计统一委托 utils.BuildSearchCountQuery，视图层不自写过滤 SQL。
 func AgentMemoryListGet(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
 		return
 	}
-	comps := requireAiEnabled(c)
-	if comps == nil {
+	if requireAiEnabled(c) == nil {
 		return
 	}
 	userID, ok := middlewares.RequireUserID(c)
@@ -149,37 +147,37 @@ func AgentMemoryListGet(c *gin.Context) {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
 		return
 	}
-	query := memory.MemoryQuery{
-		NamespaceName: namespace,
-		UserID:        userID,
-		Offset:        int((in.Page - 1) * in.PageSize),
-		Limit:         int(in.PageSize),
+	// 以局部扫描行承载记忆模型与注入的 total 列，随后映射为 Out 结构
+	var rows []struct {
+		modelsai.AgentMemory
+		utils.BaseTotalOut
 	}
-	if fb := in.FilterBy; fb != nil {
-		if fb.Keyword != nil {
-			query.Keyword = strings.TrimSpace(fb.Keyword.Value)
-		}
-		if fb.AgentKind != nil {
-			query.AgentKind = modelsai.AgentKind(strings.TrimSpace(fb.AgentKind.Value))
-		}
-		if fb.Kind != nil {
-			query.Kind = modelsai.MemoryKind(strings.TrimSpace(fb.Kind.Value))
-		}
-		if fb.Status != nil {
-			query.Status = modelsai.MemoryStatus(strings.TrimSpace(fb.Status.Value))
-		}
-	}
-	items, total, err := comps.Memory.List(c, query)
+	db := middlewares.GetCoreDatabase(c).Model(&modelsai.AgentMemory{}).
+		Where("namespace_name = ? AND user_id = ?", namespace, userID)
+	query, err := utils.BuildSearchCountQuery(db, &in)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
 		return
+	} else if err := query.Find(&rows).Error; err != nil {
+		response.CreateAccidentError(err).AbortWithGinH(c)
+		return
 	}
-	outs := make([]AgentMemoryListOut, 0, len(items))
-	for _, m := range items {
-		outs = append(outs, AgentMemoryListOut{AgentMemoryItemOut: newAgentMemoryItemOut(m)})
+	items := make([]*AgentMemoryListOut, 0, len(rows))
+	var total uint
+	for i := range rows {
+		if i == 0 {
+			total = rows[i].Total
+		}
+		items = append(items, &AgentMemoryListOut{
+			AgentMemoryItemOut: newAgentMemoryItemOut(&rows[i].AgentMemory),
+			BaseTotalOut:       utils.BaseTotalOut{Total: total},
+		})
 	}
-	projected := utils.ProjectSearchItems(outs, &in, func(o *AgentMemoryListOut) any { return *o })
-	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(uint(total), projected))
+	// 字段投影：按请求 fields 投影，未指定时回退全部白名单字段（封装于 utils.ProjectSearchItems）
+	projected := utils.ProjectSearchItems(items, &in, func(o **AgentMemoryListOut) any {
+		return *o
+	})
+	response.SimpleOK.AbortWithGinW(c, utils.NewSearchProjectedOut(total, projected))
 }
 
 // AgentMemoryDetailGet 处理长期记忆详情查询的请求。

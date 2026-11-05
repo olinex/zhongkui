@@ -137,7 +137,7 @@ type EmailChannelConfig struct {
     // Password 认证密码
     Password string `json:"password" form:"kind=password"`
     // From 发件人邮箱地址，必填
-    From string `json:"from" binding:"required" form:"kind=string"`
+    From string `json:"from" binding:"required,email" form:"kind=string"`
 }
 ```
 
@@ -149,7 +149,7 @@ EmailTarget 邮件目标级配置。
 ```go
 type EmailTarget struct {
     // To 收件人邮箱地址，必填
-    To string `json:"to" binding:"required" form:"kind=string"`
+    To string `json:"to" binding:"required,email" form:"kind=string"`
 }
 ```
 
@@ -300,8 +300,8 @@ WebhookTarget Webhook 目标级配置。
 
 ```go
 type WebhookTarget struct {
-    // URL 接收 Webhook 的地址，必填
-    URL string `json:"url" binding:"required" form:"kind=string"`
+    // URL 接收 Webhook 的地址，必填且须为绝对 http/https 地址
+    URL string `json:"url" binding:"required,httpUrl" form:"kind=string"`
     // Headers 附加请求头，可选
     Headers map[string]string `json:"headers" form:"kind=object"`
 }

@@ -145,7 +145,7 @@ func packageDir(projectRoot, importPath string) (string, error) {
 			return pkg.Dir, nil
 		}
 	}
-	return "", errors.Newf("docs: 无法解析包 %q 的目录", importPath)
+	return "", errors.Newf("docs: cannot resolve directory of package %q", importPath)
 }
 
 // renderDir 加载指定目录的包并按选定档位渲染 Markdown。

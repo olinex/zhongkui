@@ -190,6 +190,9 @@ type Config struct {
 	// FrontendBaseURL 是前端站点的基础地址（含协议与端口），项目级配置，
 	// 用于构造外部可访问的前端链接（如密码重置链接）
 	FrontendBaseURL string `mapstructure:"frontendBaseURL" default:"http://127.0.0.1:8000" comment:"前端站点基础地址（含协议与端口），项目级配置"`
+	// InternalBaseURL 是 worker 后台任务调用 Web API 的内部基地址（含协议与端口）。
+	// 周期报告等无人值守任务据此在服务内部发起带访问密钥签名的 HTTP 请求。
+	InternalBaseURL string `mapstructure:"internalBaseURL" default:"http://127.0.0.1:8080" comment:"worker 后台任务调用 Web API 的内部基地址（含协议与端口）"`
 	// TrustedProxies 是受信代理的 IP / 网段列表（serializer.CIDR），Gin 据此判定是否采信
 	// X-Forwarded-For 等代理头来推导客户端地址；默认空列表表示不信任任何代理，
 	// 此时 ClientIP 退化为 TCP 对端地址，反向代理部署时须显式填入代理网段。
@@ -269,6 +272,17 @@ func GetConfig(c *gin.Context) *Config {
 //   - error: 任一步骤失败时返回的错误
 func ExtractConfig(v *viper.Viper, validate *validator.Validate) (*Config, error) {
 	return config.ExtractConfig[Config](v, validate, Prefix)
+}
+
+// MustExtractConfig 从 Viper 实例中提取并校验 API 管理层配置；提取或校验失败时 panic。
+// 用于初始化阶段快速失败（如路由注册、HTTP 服务启动、worker 处理器构造），
+// 避免把配置错误推迟到首个请求才暴露。
+func MustExtractConfig(v *viper.Viper, validate *validator.Validate) *Config {
+	cfg, err := ExtractConfig(v, validate)
+	if err != nil {
+		panic(err)
+	}
+	return cfg
 }
 
 // DescribeConfig 返回 API 管理层配置项的元描述列表。

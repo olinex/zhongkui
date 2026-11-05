@@ -65,14 +65,9 @@ func (m *Service) Recall(ctx context.Context, namespaceName string, agentKind ai
 	return m.store.Retrieve(ctx, namespaceName, agentKind, sessionID, userID, query)
 }
 
-// 以下薄委托方法把长期记忆的管理接口（列表/详情/删除/启停）暴露给视图层，使视图层经
+// 以下薄委托方法把长期记忆的管理接口（详情/删除/启停）暴露给视图层，使视图层经
 // Components.Service 直接复用 Store 的落库与去重语义，无需自己持有 store 或重写任何
 // SQL。语义与参数完全等同 Store 的同名方法。
-
-// List 分页列出命名空间下的长期记忆，语义完全委托 Store.List。
-func (m *Service) List(ctx context.Context, q MemoryQuery) ([]*ai.AgentMemory, int64, error) {
-	return m.store.List(ctx, q)
-}
 
 // Get 读取指定命名空间下属于该用户的一条长期记忆，未找到时返回 ErrMemoryNotFound。
 func (m *Service) Get(ctx context.Context, namespaceName string, userID uint, id uint) (*ai.AgentMemory, error) {

@@ -28,7 +28,9 @@
 //     渠道与目标；
 //   - notify.SendGroupTask / SendTargetTask：通用通知的组发送与单目标直投；
 //   - knowledge.ParseTask（ai:doc:parse）：知识文档导入解析，拉取解密 S3 原件、抽取文本、切块
-//     向量化并收敛文档状态。
+//     向量化并收敛文档状态；
+//   - periodicreport.TaskDispatch（periodic-report:plan:dispatch）/ TaskPlanRun（periodic-report:plan:run）/
+//     TaskRunCleanup（periodic-report:run:cleanup）：周期性报告计划的到期扫描分发、生成与生命周期清理。
 //
 // 同时登记两个分布式 TCP 流处理器工厂（flow.ProcIpv4Tcp / flow.ProcIpv6Tcp）。任务类型常量均
 // 由其所属子包声明（如 knowledge.ParseTask），本包只引用，保证「投递侧与消费侧」共享同一字面量。
@@ -63,6 +65,7 @@ package worker
 
 import (
 	"context"
+	"sort"
 
 	"github.com/samber/do/v2"
 	"zhongkuisec.com/zhongkui/internal/pkg/etl"
@@ -70,38 +73,118 @@ import (
 	"zhongkuisec.com/zhongkui/internal/worker/handlers/mail"
 	"zhongkuisec.com/zhongkui/internal/worker/handlers/notify"
 	"zhongkuisec.com/zhongkui/internal/worker/handlers/pcap"
+	"zhongkuisec.com/zhongkui/internal/worker/handlers/periodicreport"
 	"zhongkuisec.com/zhongkui/internal/worker/handlers/tag_event"
 	"zhongkuisec.com/zhongkui/internal/worker/processors/flow"
 )
 
+// taskHandlerSpec 描述一个 worker 可消费的任务处理器：任务类型常量与构造方式。
+// Registry 与 TaskTypes 都以此切片为唯一事实来源，新增任务只在此处登记一次。
+type taskHandlerSpec struct {
+	// typ 任务类型常量，投递侧与消费侧共享同一字面量
+	typ string
+	// newHandler 按注入器构造处理器；入参为 worker 启动期注入器
+	newHandler func(injector do.Injector) etl.Handler
+}
+
+// taskHandlerSpecs 是 worker 可消费任务的唯一清单。
+// 顺序仅影响注册顺序，TaskTypes 导出时会按类型名排序。
+var taskHandlerSpecs = []taskHandlerSpec{
+	// pcap 导入任务：PCAP 抓包文件导入的批量处理
+	{
+		typ: pcap.PcapImport,
+		newHandler: func(do.Injector) etl.Handler {
+			return pcap.NewPcapBatchHandler()
+		},
+	},
+	// 标签事件检测、抑制评估与无效记录清理
+	{
+		typ: tag_event.TagEventDetectTask,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return tag_event.NewEventDetectHandler(injector)
+		},
+	},
+	{
+		typ: tag_event.TagEventSuppressTask,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return tag_event.NewEventSuppressHandler(injector)
+		},
+	},
+	{
+		typ: tag_event.TagEventCleanupTask,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return tag_event.NewEventCleanupHandler(injector)
+		},
+	},
+	// 系统级邮件直发：按系统 smtp 配置直接向指定收件人投递，不经过数据库通知渠道/目标
+	{
+		typ: mail.MailSendTask,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return mail.NewMailSendHandler(injector)
+		},
+	},
+	// 通用通知组发送与单目标直投
+	{
+		typ: notify.SendGroupTask,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return notify.NewSendGroupHandler(injector)
+		},
+	},
+	{
+		typ: notify.SendTargetTask,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return notify.NewSendTargetHandler(injector)
+		},
+	},
+	// 知识文档导入解析：拉取解密 S3 原件、抽取文本、切块向量化并收敛状态
+	{
+		typ: knowledge.ParseTask,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return knowledge.NewParseHandler(injector)
+		},
+	},
+	// 报告计划分发、生成与生命周期清理
+	{
+		typ: periodicreport.TaskDispatch,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return periodicreport.NewDispatchHandler(injector)
+		},
+	},
+	{
+		typ: periodicreport.TaskPlanRun,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return periodicreport.NewRunHandler(injector)
+		},
+	},
+	{
+		typ: periodicreport.TaskRunCleanup,
+		newHandler: func(injector do.Injector) etl.Handler {
+			return periodicreport.NewCleanupHandler(injector)
+		},
+	},
+}
+
 // Registry 注册所有 worker 处理器到任务队列与处理器框架。
-// 目前注册以下处理器：
-//   - pcap 导入任务的 batch handler（pcap.NewPcapBatchHandler）
-//   - 标签事件检测（tag:event:detect）与抑制评估（tag:event:suppress）handler
-//   - 通用通知发送（notify:send）handler，由标签事件等事件源投递
-//   - 知识文档导入解析（ai:doc:parse）handler，由知识库导入接口投递
-//   - 分布式 TCP 流处理器工厂（IPv4 和 IPv6）
+// 任务处理器按 taskHandlerSpecs 逐项登记；另注册分布式 TCP 流处理器工厂（IPv4 和 IPv6），
+// 后者由外部运行时按需实例化，不经过队列。
 func Registry(ctx context.Context, injector do.Injector) {
-	// 注册 pcap 导入任务的 worker
-	etl.HandlerRegister(pcap.PcapImport, pcap.NewPcapBatchHandler())
-
-	// 注册标签事件检测、抑制评估与无效记录清理 worker
-	etl.HandlerRegister(tag_event.TagEventDetectTask, tag_event.NewEventDetectHandler(injector))
-	etl.HandlerRegister(tag_event.TagEventSuppressTask, tag_event.NewEventSuppressHandler(injector))
-	etl.HandlerRegister(tag_event.TagEventCleanupTask, tag_event.NewEventCleanupHandler(injector))
-
-	// 注册系统级邮件直发 worker（mail:send），按系统 smtp 配置直接向指定收件人投递，
-	// 不经过数据库通知渠道/目标
-	etl.HandlerRegister(mail.MailSendTask, mail.NewMailSendHandler(injector))
-
-	// 注册通用通知组发送与单目标直投 worker
-	etl.HandlerRegister(notify.SendGroupTask, notify.NewSendGroupHandler(injector))
-	etl.HandlerRegister(notify.SendTargetTask, notify.NewSendTargetHandler(injector))
-
-	// 注册知识文档导入解析 worker（ai:doc:parse）：拉取解密 S3 原件、抽取文本、切块向量化并收敛状态
-	etl.HandlerRegister(knowledge.ParseTask, knowledge.NewParseHandler(injector))
+	for _, spec := range taskHandlerSpecs {
+		etl.HandlerRegister(spec.typ, spec.newHandler(injector))
+	}
 
 	// 注册分布式 TCP 流处理器
 	etl.RegisterProcessorFactory(flow.ProcIpv4Tcp, flow.NewIPv4PacketProcessorFactory(injector))
 	etl.RegisterProcessorFactory(flow.ProcIpv6Tcp, flow.NewIPv6PacketProcessorFactory(injector))
+}
+
+// TaskTypes 返回 worker 已注册的全部任务类型（按类型名升序）。
+// 与 Registry 共用 taskHandlerSpecs，故导出清单即实际登记清单；
+// 供管理端「已注册任务类型」视图展示。
+func TaskTypes() []string {
+	types := make([]string, 0, len(taskHandlerSpecs))
+	for _, spec := range taskHandlerSpecs {
+		types = append(types, spec.typ)
+	}
+	sort.Strings(types)
+	return types
 }

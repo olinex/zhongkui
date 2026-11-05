@@ -15,11 +15,11 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
-// appendUserMessage 把当前查询作为原生用户消息持久化。模型
-// 历史在此追加之前加载，以免用户消息被
-// GenModelInput 重复添加。
-func (l *genericSessionLoop[M]) appendUserMessage(ctx context.Context, sess *modelsai.AgentSession, query string) (*modelsai.AgentMessage, error) {
-	msg := msgops.NewUser[M](query)
+// appendUserMessage 把当前查询作为原生用户消息持久化，并把本轮选用的技能锚定在这条用户消息上
+// （技能归属轮次而非会话，同一会话的不同轮次可各自选用不同技能）。模型历史在此追加之前加载，
+// 以免用户消息被 GenModelInput 重复添加。
+func (l *genericSessionLoop[M]) appendUserMessage(ctx context.Context, sess *modelsai.AgentSession, item *ChatItem) (*modelsai.AgentMessage, error) {
+	msg := msgops.NewUser[M](item.Query)
 	payload, err := json.Marshal(msg)
 	if err != nil {
 		return nil, errors.WithStack(err)
@@ -31,6 +31,8 @@ func (l *genericSessionLoop[M]) appendUserMessage(ctx context.Context, sess *mod
 		Role:          modelsai.MessageRoleUser,
 		MessageKind:   msgops.APIModeOf[M](),
 		Payload:       serializer.NewCrypto(payload),
+		SkillID:       modelsai.SkillIDColumn(item.SkillID),
+		SkillName:     item.SkillName,
 	}
 	return l.deps.Sessions.AppendNativeMessage(ctx, row)
 }

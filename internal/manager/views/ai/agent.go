@@ -6,6 +6,7 @@ import (
 	// 标准库
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -149,6 +150,10 @@ type AgentMessageItemOut struct {
 	ElapsedMs int64 `json:"elapsedMs"`
 	// Phase 本条助手消息所属回合的生命周期终态阶段（done/failed/cancelled），空表示尚未终结
 	Phase string `json:"phase,omitempty"`
+	// SkillID 本条用户消息所在轮次选用的技能 ID，0 表示未选技能（用户消息才有值）
+	SkillID uint `json:"skillID,omitempty"`
+	// SkillName 本条用户消息所在轮次选用的技能名称快照，空表示未选技能（用户消息才有值）
+	SkillName string `json:"skillName,omitempty"`
 	// Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
 	// 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
 	Compress *AgentMessageCompressOut `json:"compress,omitempty"`
@@ -197,8 +202,8 @@ type AgentSessionCompactIn struct {
 
 // AgentChatIn 定义启动（或抢占）一轮对话的请求输入。
 type AgentChatIn struct {
-	// Query 用户本次提问文本，必填
-	Query string `json:"query" binding:"required"`
+	// Query 用户本次提问文本，必填且不能为空白
+	Query string `json:"query" binding:"required,notBlank"`
 	// DocIDs 检索限定的文档 ID 列表，为空表示不限定
 	DocIDs []uint `json:"docIDs"`
 	// BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
@@ -208,6 +213,9 @@ type AgentChatIn struct {
 	// Slot 本次生成的显式档位（flash/standard/advanced），可选；为空时依次回退到会话档位与
 	// agent.defaultSlot 参数
 	Slot string `json:"slot"`
+	// SkillID 本轮选用的技能 ID（内置与自定义统一），可选；为 0 表示不注入技能指引，
+	// 非 0 时须存在且已启用（自定义技能还须属于当前命名空间）
+	SkillID uint `json:"skillID"`
 }
 
 // AgentLiveRunOut 定义一轮会话的实时生命周期快照（turns.Manager.State）。
@@ -350,6 +358,8 @@ func newAgentMessageItemOut(m *modelsai.AgentMessage) AgentMessageItemOut {
 		TotalTokens:      m.TotalTokens,
 		ElapsedMs:        m.ElapsedMs,
 		Phase:            string(m.Phase),
+		SkillID:          modelsai.SkillIDFromColumn(m.SkillID),
+		SkillName:        m.SkillName,
 		CreatedAt:        m.CreatedAt,
 	}
 	if citationsJSON := m.CitationsJSON.Value(); len(citationsJSON) > 0 {
@@ -616,7 +626,9 @@ func AgentSessionDelete(c *gin.Context) {
 	}
 	// 会话删除前先停掉并遗忘其 TurnLoop，避免循环在删除后仍有产出。
 	if comps.Turns != nil {
-		_ = comps.Turns.StopSession(c.Request.Context(), uint(id))
+		if err := comps.Turns.StopSession(c.Request.Context(), uint(id)); err != nil {
+			middlewares.GetLogger(c).Warnf(c, nil, "ai session delete: stop turn session %d failed: %v", id, err)
+		}
 	}
 	if err := comps.Sessions.DeleteSession(c, uint(id), namespace, userID); err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -716,8 +728,8 @@ func compactFoldSet(messages []*modelsai.AgentMessage, uptoSeq uint64) []*models
 
 // AgentPromptOptimizeIn 定义提示词优化的请求输入。
 type AgentPromptOptimizeIn struct {
-	// Query 待优化的用户诉求，必填
-	Query string `json:"query" binding:"required"`
+	// Query 待优化的用户诉求，必填且不能为空白
+	Query string `json:"query" binding:"required,notBlank"`
 }
 
 // AgentPromptOptimizeOut 定义提示词优化的输出。
@@ -744,10 +756,6 @@ func AgentPromptOptimize(c *gin.Context) {
 		return
 	}
 	query := strings.TrimSpace(in.Query)
-	if query == "" {
-		response.CreateBadBodyError(errors.New("query is required")).AbortWithGinH(c)
-		return
-	}
 	out, err := comps.Agent.OptimizePrompt(c, query)
 	if err != nil {
 		response.CreateAccidentError(err).AbortWithGinH(c)
@@ -863,7 +871,9 @@ func AgentMessageTruncate(c *gin.Context) {
 	}
 	// 竞态兜底：截断已作废挂起现场；内存回合再中止一次，避免其继续写回已删除的回合。
 	if comps.Turns != nil {
-		_ = comps.Turns.Abort(c.Request.Context(), uint(id), userID, namespace)
+		if err := comps.Turns.Abort(c.Request.Context(), uint(id), userID, namespace); err != nil {
+			middlewares.GetLogger(c).Warnf(c, nil, "ai session truncate: abort turn session %d failed: %v", id, err)
+		}
 	}
 	response.SimpleOK.AbortWithGinH(c)
 }
@@ -918,7 +928,11 @@ func AgentSessionBranch(c *gin.Context) {
 func AgentStatusGet(c *gin.Context) {
 	// 请求体可选：无会话 ID 时保持零值（不查询任何会话），全程不因缺体而失败。
 	var in AgentStatusIn
-	_ = c.ShouldBindBodyWithJSON(&in)
+	// 请求体可选：仅忽略「未携带请求体」；格式非法或类型错误必须按 400 返回，不能静默当作零值。
+	if err := c.ShouldBindBodyWithJSON(&in); err != nil && !errors.Is(err, io.EOF) {
+		response.CreateBadBodyError(err).AbortWithGinH(c)
+		return
+	}
 	rt := middlewares.GetAiRuntime(c)
 	snap := rt.Snapshot()
 	comps := rt.Current()
@@ -983,12 +997,14 @@ func AgentStatusGet(c *gin.Context) {
 	// 状态按 (namespace, user_id) 作用域隔离：未认证（GetUser 失败）时跳过，不泄露他人会话。
 	if out.Enabled && in.SessionID != 0 && comps.Turns != nil && comps.Sessions != nil {
 		if user, codeErr := middlewares.GetUser(c); codeErr == nil {
-			namespace, _ := middlewares.GetNamespace(c)
+			namespace, nsErr := middlewares.GetNamespace(c)
 			// 先解出会话再取状态：交互五项须由 interactionSnapshot 推导，而事实装配需要会话本体；
 			// 取不到会话（不存在 / 归属不符 / 已删除）时不附快照——避免给出空状态。
-			if session, serr := comps.Sessions.GetSession(c.Request.Context(), in.SessionID, namespace, user.ID); serr == nil {
-				if st, err := comps.Turns.State(c.Request.Context(), in.SessionID, user.ID, namespace); err == nil {
-					out.LiveRun = newAgentLiveRunOut(st, interactionSnapshot(c, comps, session))
+			if nsErr == nil {
+				if session, serr := comps.Sessions.GetSession(c.Request.Context(), in.SessionID, namespace, user.ID); serr == nil {
+					if st, err := comps.Turns.State(c.Request.Context(), in.SessionID, user.ID, namespace); err == nil {
+						out.LiveRun = newAgentLiveRunOut(st, interactionSnapshot(c, comps, session))
+					}
 				}
 			}
 		}

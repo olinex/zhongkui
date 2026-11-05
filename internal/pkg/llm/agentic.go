@@ -9,6 +9,7 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // AgenticClient 封装 eino-ext 的 Response API 模型（agenticopenai），用于支持 /v1/responses
@@ -20,22 +21,15 @@ type AgenticClient struct {
 	cfg ModelConfig
 }
 
-// Generate 执行一次非流式调用，产出一条 AgenticMessage。
+// Generate 执行一次非流式调用，产出一条 AgenticMessage；超时按 TimeoutRetry 策略重试。
 func (c *AgenticClient) Generate(ctx context.Context, messages []*schema.AgenticMessage, opts ...model.Option) (*schema.AgenticMessage, error) {
-	if c.cfg.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, c.cfg.Timeout)
-		defer cancel()
-	}
 	opts = append([]model.Option{
 		model.WithTemperature(float32(c.cfg.Temperature)),
 		model.WithMaxTokens(c.cfg.MaxTokens),
 	}, opts...)
-	msg, err := c.model.Generate(ctx, messages, opts...)
-	if err != nil {
-		return nil, errors.WithStack(err)
-	}
-	return msg, nil
+	return retryOnTimeout(ctx, c.cfg.Timeout, c.cfg.TimeoutRetry, func(attemptCtx context.Context) (*schema.AgenticMessage, error) {
+		return c.model.Generate(attemptCtx, messages, opts...)
+	})
 }
 
 // Stream 执行一次流式调用，返回 AgenticMessage 流；读取器由调用方负责关闭。
@@ -68,8 +62,8 @@ func (c *AgenticClient) ModelName() string { return c.cfg.Model }
 
 // NewAgenticChatClient 依据模型配置构造 AgenticClient。
 func NewAgenticChatClient(ctx context.Context, cfg ModelConfig) (*AgenticClient, error) {
-	if cfg.BaseURL == "" || cfg.APIKey == "" || cfg.Model == "" {
-		return nil, errors.New("incomplete agentic chat config: baseURL/apiKey/model must all be non-empty")
+	if err := cfg.validateEndpoint(); err != nil {
+		return nil, errors.Newf("incomplete agentic chat config: %s", validator.Describe(err))
 	}
 	timeout := cfg.Timeout
 	maxTokens := cfg.MaxTokens

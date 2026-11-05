@@ -97,7 +97,10 @@ func init() {
 	flags := generateTestcaseCmd.Flags()
 	flags.StringP("pcap", "p", "", "flag.create.testcase.pcap")
 	flags.StringP("output", "o", "./testcases", "flag.create.testcase.output")
-	generateTestcaseCmd.MarkFlagRequired("pcap")
+	// 标记必填失败说明 flag 名写错，属编程错误，直接 panic 暴露。
+	if err := generateTestcaseCmd.MarkFlagRequired("pcap"); err != nil {
+		panic(err)
+	}
 }
 
 // generateTestcase 使用 tshark 从 pcap 文件中提取 HTTP 数据。
@@ -233,8 +236,16 @@ func extractStreamMeta(pcapPath string, streamID int) (*streamMeta, error) {
 		ClientAddr: fields[0],
 		ServerAddr: fields[1],
 	}
-	meta.ClientPort, _ = strconv.Atoi(fields[2])
-	meta.ServerPort, _ = strconv.Atoi(fields[3])
+	clientPort, err := strconv.Atoi(fields[2])
+	if err != nil {
+		return nil, fmt.Errorf("invalid client port %q: %w", fields[2], err)
+	}
+	serverPort, err := strconv.Atoi(fields[3])
+	if err != nil {
+		return nil, fmt.Errorf("invalid server port %q: %w", fields[3], err)
+	}
+	meta.ClientPort = clientPort
+	meta.ServerPort = serverPort
 
 	return meta, nil
 }
@@ -273,7 +284,11 @@ func extractPacketRecords(pcapPath string, streamID int, meta *streamMeta) ([]Pa
 
 		packet := PacketRecord{}
 		if len(fields) > 0 {
-			packet.Frame, _ = strconv.Atoi(fields[0])
+			frame, err := strconv.Atoi(fields[0])
+			if err != nil {
+				return nil, fmt.Errorf("invalid frame number %q: %w", fields[0], err)
+			}
+			packet.Frame = frame
 		}
 		// 用源端口判定方向——对客户端与服务端共用同一 IP 的 localhost 流量同样正确
 		if len(fields) > 1 {
@@ -284,11 +299,17 @@ func extractPacketRecords(pcapPath string, streamID int, meta *streamMeta) ([]Pa
 			}
 		}
 		if len(fields) > 2 {
-			v, _ := strconv.ParseUint(fields[2], 10, 32)
+			v, err := strconv.ParseUint(fields[2], 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid tcp.seq_raw %q: %w", fields[2], err)
+			}
 			packet.SeqRaw = uint32(v)
 		}
 		if len(fields) > 3 {
-			v, _ := strconv.ParseUint(fields[3], 10, 32)
+			v, err := strconv.ParseUint(fields[3], 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("invalid tcp.ack_raw %q: %w", fields[3], err)
+			}
 			packet.AckRaw = uint32(v)
 		}
 

@@ -75,16 +75,20 @@ import (
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/jsengine"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
 )
 
-// Deps 是构建内置工具时可注入的运行期依赖：数据库句柄与日志记录器。构造由调用方（运行时
-// 装配）持有并复用，实现不得修改其内容。
+// Deps 是构建内置工具时可注入的运行期依赖：数据库句柄、日志记录器与进程内 JS 运行时。
+// 构造由调用方（运行时装配）持有并复用，实现不得修改其内容。
 type Deps struct {
 	// DB core 库句柄
 	DB *database.DB
 	// Logger 日志记录器
 	Logger *logging.Logger
+	// JS 进程内 JS 运行时（provider 管理的单例）；仅依赖脚本的工具（如 mermaid_check）使用，
+	// 其他工具忽略该字段。
+	JS *jsengine.Engine
 }
 
 // Builder 是内置工具的构造器：按名取其实现，注入依赖后返回可被节点 4 消费的 eino

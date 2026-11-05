@@ -40,6 +40,8 @@ MessageKind 的取值空间与枚举类注册见 internal/pkg/llm（APIMode，�
 | total_tokens | INT | 是 | - | TotalTokens 本轮助手回答全部模型调用的 token 总量累加（明文数值，用户消息恒为 0） |
 | elapsed_ms | BIGINT | 是 | - | ElapsedMs 本轮助手回答的总耗时（毫秒，明文数值，用户消息恒为 0） |
 | phase | VARCHAR(16) | 是 | - | Phase 本条助手消息所属运行的生命周期终态阶段（AgentRunPhase：done/failed/cancelled， 以及问卷挂起期的 suspended），空表示尚未终结（运行在途的阶段性落库行）。运行被中断 （超时 / 报错 / 取消）时据此表达「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文 拼接提示文案（提示语若混入正文，会被喂回模型污染下一轮上下文）；用户消息恒为空。 |
+| skill_id | BIGINT | 是 | - | SkillID 本条用户消息所在轮次选用的技能 ID（agent_skills.id），nil 表示未选技能；技能归属 「轮次」而非会话——同一会话的不同轮次可分别选用不同技能。仅用户消息有值。列上设外键约束 REFERENCES agent_skills(id) ON DELETE SET NULL，故未选技能以 NULL 而非 0 表达。 |
+| skill_name | VARCHAR(64) | 否 | '' | SkillName 本轮技能名称快照（写入时的技能名），空表示未选技能；以快照而非实时关联， 保证技能后续重命名 / 停用 / 删除后历史气泡仍能如实展示当时选用的技能。仅用户消息有值。 |
 
 ## 索引与外键
 

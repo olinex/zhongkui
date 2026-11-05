@@ -17,6 +17,7 @@ import (
 	modelsai "zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/logging"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // ChatResolver 按档位解析对话模型。
@@ -154,7 +155,7 @@ type levelPayload struct {
 // parseLevels 容错解析评估模型输出：先去掉 ```json 代码围栏，再按 {"levels":[...]} 解析，
 // 失败时退回裸数组解析（容忍仅有 levels 数组的形式）。空白响应返回英文错误。
 func parseLevels(content string) ([]levelItem, error) {
-	trimmed := contract.StripJSONFence(content)
+	trimmed := validator.StripJSONFence(content)
 	if strings.TrimSpace(trimmed) == "" {
 		return nil, errors.New("agent: audit level response is empty")
 	}

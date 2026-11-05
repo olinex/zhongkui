@@ -3,8 +3,6 @@ package agentkit
 import (
 	"context"
 	"encoding/json"
-	"strconv"
-	"strings"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
@@ -13,6 +11,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/capability"
 	"zhongkuisec.com/zhongkui/internal/ai/contract"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // askUserTool 把 ask_user 实现为 eino 一等工具：首次调用以工具级中断挂起并携带问卷载荷，
@@ -26,6 +25,10 @@ func (t *askUserTool) Info(_ context.Context) (*schema.ToolInfo, error) {
 
 // InvokableRun 首次调用校验入参并挂起；续跑时按 ToolResumeResult 回灌答案。
 func (t *askUserTool) InvokableRun(ctx context.Context, argumentsInJSON string, _ ...tool.Option) (string, error) {
+	// 后台无人值守：没有可交互的前端，直接返回固定降级提示，不校验参数、不挂起。
+	if _, ok := AutomationFrom(ctx); ok {
+		return AskUserUnattendedNotice, nil
+	}
 	wasInterrupted, hasState, storedArguments := tool.GetInterruptState[string](ctx)
 	if !hasState || storedArguments == "" {
 		storedArguments = argumentsInJSON
@@ -80,14 +83,18 @@ func (t *apiInvokeTool) Info(_ context.Context) (*schema.ToolInfo, error) {
 
 // InvokableRun 首次调用校验并规范化入参后挂起；续跑时按 ToolResumeResult 回灌结果。
 func (t *apiInvokeTool) InvokableRun(ctx context.Context, argumentsInJSON string, _ ...tool.Option) (string, error) {
+	// 后台无人值守：没有前端可审批与执行，改由服务端回调执行并回灌结果，不产生挂起。
+	if automation, ok := AutomationFrom(ctx); ok {
+		return t.invokeUnattended(ctx, automation, argumentsInJSON), nil
+	}
 	wasInterrupted, hasState, storedArguments := tool.GetInterruptState[string](ctx)
 	if !hasState || storedArguments == "" {
 		storedArguments = argumentsInJSON
 	}
 	if !wasInterrupted {
-		canonical, errText := prepareApiInvokeCall(argumentsInJSON, t.capabilityItems())
-		if errText != "" {
-			return errText, nil
+		canonical, err := prepareApiInvokeCall(argumentsInJSON, t.capabilityItems())
+		if err != nil {
+			return err.Error(), nil
 		}
 		callID := compose.GetToolCallID(ctx)
 		decision, _ := lookupToolDecision(ctx, callID)
@@ -104,6 +111,27 @@ func (t *apiInvokeTool) InvokableRun(ctx context.Context, argumentsInJSON string
 		return "", tool.StatefulInterrupt(ctx, apiInvokeApprovalRequest(decision, callID, storedArguments), storedArguments)
 	}
 	return noToolResultText, nil
+}
+
+// invokeUnattended 在无人值守运行中执行一次 api_invoke：先按能力白名单解析规范入参，再交给服务端
+// 回调执行。任何失败都只作为工具结果文本回灌给模型，不产生中断。
+func (t *apiInvokeTool) invokeUnattended(ctx context.Context, automation *Automation, argumentsInJSON string) string {
+	canonicalJSON, err := prepareApiInvokeCall(argumentsInJSON, t.capabilityItems())
+	if err != nil {
+		return err.Error()
+	}
+	var canonical apiInvokeCanonicalArgs
+	if err := json.Unmarshal([]byte(canonicalJSON), &canonical); err != nil {
+		return ApiInvokeFailedPrefix + err.Error()
+	}
+	if automation.InvokeAPI == nil {
+		return ApiInvokeUnavailableNotice
+	}
+	result, err := automation.InvokeAPI(ctx, canonical.Method, canonical.Path, canonical.Params)
+	if err != nil {
+		return ApiInvokeFailedPrefix + err.Error()
+	}
+	return result
 }
 
 // capabilityItems 返回当前能力快照；为空时视为无能力。
@@ -147,47 +175,52 @@ func clientToolResumeResult(result *contract.ToolResumeResult) string {
 	}
 }
 
-// 问卷入参校验的固定错误。
-var (
-	errQuestionnaireRequiresQuestion = errors.New("ask_user requires at least one question")
-	errQuestionnaireRequiresID       = errors.New("each ask_user question requires a non-empty id")
-	errQuestionnaireRequiresText     = errors.New("each ask_user question requires a non-empty question text")
-	errQuestionnaireOptionCount      = errors.New("each ask_user question requires 1 to " + strconv.Itoa(contract.MaxQuestionnaireOptions) + " options")
-	errQuestionnaireOptionText       = errors.New("each ask_user option requires a non-empty text")
-)
-
-// askUserArgs 是 ask_user 工具入参的解析目标：只取问卷题目。
-type askUserArgs struct {
-	// Questions 问卷题目列表
-	Questions []contract.QuestionnaireQuestion `json:"questions"`
+// askUserOptionRule 是问卷候选项的校验视图。
+type askUserOptionRule struct {
+	// Text 候选答案文本
+	Text string `json:"text" binding:"notBlank"`
+	// Detail 候选答案的可选说明
+	Detail string `json:"detail"`
 }
 
-// parseQuestionnaireArgs 把模型给出的 ask_user 调用入参解析为问卷载荷并做基本校验（至少 1 题，每题需
+// askUserQuestionRule 是单个问卷题目的校验视图。
+type askUserQuestionRule struct {
+	// ID 题目在本轮问卷内的唯一标识
+	ID string `json:"id" binding:"notBlank"`
+	// Question 题面
+	Question string `json:"question" binding:"notBlank"`
+	// Options 候选答案，1~3 条；max=3 与 contract.MaxQuestionnaireOptions 保持一致
+	Options []askUserOptionRule `json:"options" binding:"required,min=1,max=3,dive"`
+}
+
+// askUserArgs 是 ask_user 工具入参的校验视图。
+type askUserArgs struct {
+	// Questions 问卷题目，至少 1 题
+	Questions []askUserQuestionRule `json:"questions" binding:"required,min=1,dive"`
+}
+
+// parseQuestionnaireArgs 把模型给出的 ask_user 调用入参解析为问卷载荷并按校验视图校验（至少 1 题，每题需
 // 有非空 id / question 与 1~3 条非空 text 的候选项）。解析或校验失败返回英文错误，调用方据此按工具
 // 失败回灌、让模型修正后重试，而不是挂起一个空问卷。
 func parseQuestionnaireArgs(arguments string) (*contract.QuestionnairePayload, error) {
 	var args askUserArgs
-	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
+	if err := validator.DecodeObject(arguments, &args); err != nil {
 		return nil, errors.WithStack(err)
 	}
-	if len(args.Questions) == 0 {
-		return nil, errQuestionnaireRequiresQuestion
+	if err := validator.Check(&args); err != nil {
+		return nil, errors.Newf("ask_user questionnaire is invalid: %s", validator.Describe(err))
 	}
+	questions := make([]contract.QuestionnaireQuestion, 0, len(args.Questions))
 	for _, q := range args.Questions {
-		if strings.TrimSpace(q.ID) == "" {
-			return nil, errQuestionnaireRequiresID
-		}
-		if strings.TrimSpace(q.Question) == "" {
-			return nil, errQuestionnaireRequiresText
-		}
-		if len(q.Options) == 0 || len(q.Options) > contract.MaxQuestionnaireOptions {
-			return nil, errQuestionnaireOptionCount
-		}
+		options := make([]contract.QuestionnaireOption, 0, len(q.Options))
 		for _, o := range q.Options {
-			if strings.TrimSpace(o.Text) == "" {
-				return nil, errQuestionnaireOptionText
-			}
+			options = append(options, contract.QuestionnaireOption{Text: o.Text, Detail: o.Detail})
 		}
+		questions = append(questions, contract.QuestionnaireQuestion{
+			ID:       q.ID,
+			Question: q.Question,
+			Options:  options,
+		})
 	}
-	return &contract.QuestionnairePayload{Questions: args.Questions}, nil
+	return &contract.QuestionnairePayload{Questions: questions}, nil
 }

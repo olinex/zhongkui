@@ -52,6 +52,8 @@ const (
 	TagJSONObject = "jsonObject"
 	// TagTrimmed 已去除首尾空白标签
 	TagTrimmed = "trimmed"
+	// TagNotBlank 非空白字符串标签（去首尾空白后非空）
+	TagNotBlank = "notBlank"
 )
 
 // JSONType* 是 JSON 值类型名常量：供 validator 的 jsonObject 等校验能力与调用方复用，
@@ -676,6 +678,13 @@ func IsTrimmed(value string) bool {
 	return strings.TrimSpace(value) == value
 }
 
+// IsNotBlank 判断字符串去除首尾空白后是否非空；纯空白（含空串）视为空白。
+// 与 trimmed 的区别：trimmed 拒绝任何首尾空白（须由前端先行去除），notBlank 只要求内容
+// 里存在非空白字符，允许正文类字段保留有语义的缩进与换行。
+func IsNotBlank(value string) bool {
+	return strings.TrimSpace(value) != ""
+}
+
 // stringFieldValue 取出字符串类字段的值，支持具名 string 类型（如 pkg/llm 的枚举取值类型），
 // 使自定义标签（enum / httpUrl / jsonObject / trimmed）可直接施加于枚举字段；非 string 类的
 // 字段返回 false。
@@ -722,4 +731,13 @@ func ValidateTrimmed(fl validator.FieldLevel) bool {
 		return false
 	}
 	return IsTrimmed(v)
+}
+
+// ValidateNotBlank 是 notBlank 标签的验证函数。
+func ValidateNotBlank(fl validator.FieldLevel) bool {
+	v, ok := stringFieldValue(fl)
+	if !ok {
+		return false
+	}
+	return IsNotBlank(v)
 }

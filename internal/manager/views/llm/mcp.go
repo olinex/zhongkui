@@ -82,7 +82,7 @@ type McpServerDetailOut struct {
 	// URL MCP 端点地址
 	URL string `json:"url"`
 	// Headers 请求头的密文；明文不回显，需经明文权限接口查看
-	Headers *serializer.Crypto `json:"headers" form:"kind:crypto"`
+	Headers *serializer.Crypto `json:"headers" form:"kind=crypto"`
 	// TimeoutSeconds 单次请求超时秒数
 	TimeoutSeconds int `json:"timeoutSeconds"`
 	// Enabled 是否启用

@@ -314,6 +314,8 @@ func TestChatTurnEvents(t *testing.T) {
 		UserID:        sess.UserID,
 		NamespaceName: sess.NamespaceName,
 		Query:         "hello",
+		SkillID:       9,
+		SkillName:     "periodic_report_cocreate",
 	})
 	if err != nil {
 		t.Fatalf("chat: %v", err)
@@ -348,12 +350,30 @@ func TestChatTurnEvents(t *testing.T) {
 	if started.UserMessage.MessageID == 0 || started.UserMessage.UserIndex != 1 || started.UserMessage.Content != "hello" {
 		t.Fatalf("userMessage = %+v", started.UserMessage)
 	}
+	if started.UserMessage.SkillID != 9 || started.UserMessage.SkillName != "periodic_report_cocreate" {
+		t.Fatalf("userMessage 技能 = (%d, %q)", started.UserMessage.SkillID, started.UserMessage.SkillName)
+	}
 	completed := eventOf[assistant.TurnCompletedPayload](t, collected, assistant.EventTypeTurnCompleted)
 	if completed.Phase != modelsai.AgentRunPhaseDone || completed.MessageID == 0 || completed.Usage == nil {
 		t.Fatalf("turn.completed = %+v", completed)
 	}
 	if completed.MessageID != eventOf[assistant.MessagePersistedPayload](t, collected, assistant.EventTypeMessagePersisted).MessageID {
 		t.Fatalf("turn.completed messageID 与 message.persisted 不一致")
+	}
+	// 技能随用户消息落库：刷新后历史快照据该列回放本轮技能。
+	rows, err := manager.deps.Sessions.ListNativeMessages(context.Background(), sess.ID, sess.NamespaceName, sess.UserID, 0)
+	if err != nil {
+		t.Fatalf("list native messages: %v", err)
+	}
+	var userRow *modelsai.AgentMessage
+	for _, row := range rows {
+		if row.Role == modelsai.MessageRoleUser {
+			userRow = row
+			break
+		}
+	}
+	if userRow == nil || modelsai.SkillIDFromColumn(userRow.SkillID) != 9 || userRow.SkillName != "periodic_report_cocreate" {
+		t.Fatalf("用户消息落库技能 = %+v", userRow)
 	}
 }
 

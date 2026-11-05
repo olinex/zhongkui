@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS capturers (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    namespace_name VARCHAR(32) NOT NULL,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     name VARCHAR(32) NOT NULL,
     version VARCHAR(32) NOT NULL
 );
@@ -269,8 +269,8 @@ CREATE TABLE IF NOT EXISTS notification_group_targets (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    group_id INT NOT NULL,
-    target_id INT NOT NULL
+    group_id INT NOT NULL REFERENCES notification_groups(id) ON DELETE CASCADE,
+    target_id INT NOT NULL REFERENCES notification_targets(id) ON DELETE CASCADE
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_notification_group_targets_group_target
@@ -366,7 +366,7 @@ CREATE TABLE IF NOT EXISTS tag_event_rules (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    namespace_name VARCHAR(32) NOT NULL,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     enabled BOOLEAN NOT NULL DEFAULT true,
     notification_group_id INT REFERENCES notification_groups(id) ON DELETE SET NULL,
@@ -422,7 +422,7 @@ CREATE TABLE IF NOT EXISTS tag_event_rule_versions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     rule_id INT NOT NULL REFERENCES tag_event_rules(id) ON DELETE CASCADE,
-    namespace_name VARCHAR(32) NOT NULL,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     version INT NOT NULL,
     name VARCHAR(255) NOT NULL,
     match_all BOOLEAN NOT NULL DEFAULT false,
@@ -453,7 +453,7 @@ CREATE TABLE IF NOT EXISTS tag_event_records (
     id BIGSERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    namespace_name VARCHAR(32) NOT NULL,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     rule_id INT NOT NULL REFERENCES tag_event_rules(id) ON DELETE CASCADE,
     rule_name VARCHAR(255) NOT NULL,
     match_all BOOLEAN NOT NULL DEFAULT false,
@@ -519,7 +519,7 @@ CREATE TABLE IF NOT EXISTS tag_rules (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    namespace_name VARCHAR(32) NOT NULL,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     name VARCHAR(128) NOT NULL,
     description VARCHAR(512) NOT NULL DEFAULT '',
     model VARCHAR(255) NOT NULL,
@@ -543,7 +543,7 @@ CREATE TABLE IF NOT EXISTS tag_rule_versions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     rule_id INT NOT NULL REFERENCES tag_rules(id) ON DELETE CASCADE,
-    namespace_name VARCHAR(32) NOT NULL,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     version INT NOT NULL,
     name VARCHAR(128) NOT NULL,
     description VARCHAR(512) NOT NULL DEFAULT '',
@@ -570,7 +570,7 @@ CREATE TABLE IF NOT EXISTS tag_rule_samples (
     id SERIAL PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    namespace_name VARCHAR(32) NOT NULL,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     model VARCHAR(255) NOT NULL,
     name VARCHAR(128) NOT NULL,
     input JSONB NOT NULL,
@@ -694,11 +694,12 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(256) NOT NULL DEFAULT '',
     target_model VARCHAR(255) NOT NULL DEFAULT '',
     status VARCHAR(16) NOT NULL DEFAULT 'active',
     agent_kind VARCHAR(32) NOT NULL DEFAULT 'knowledge',
+    origin VARCHAR(16) NOT NULL DEFAULT 'chat',
     review_valve VARCHAR(16) NOT NULL DEFAULT 'each',
     summary BYTEA,
     message_seq BIGINT NOT NULL DEFAULT 0,
@@ -714,16 +715,57 @@ COMMENT ON COLUMN agent_sessions.created_at IS 'the creation time of the agent s
 COMMENT ON COLUMN agent_sessions.updated_at IS 'the last update time of the agent session';
 COMMENT ON COLUMN agent_sessions.deleted_at IS 'the soft delete time of the agent session, null means not deleted';
 COMMENT ON COLUMN agent_sessions.namespace_name IS 'the namespace the agent session belongs to';
-COMMENT ON COLUMN agent_sessions.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_sessions.user_id IS 'the owning user id for cross-user isolation, a foreign key cascade deleted with the user';
 COMMENT ON COLUMN agent_sessions.title IS 'the title of the agent session, defaulting to a summary of the first user message';
 COMMENT ON COLUMN agent_sessions.target_model IS 'the default slot of the session (flash/standard/advanced), empty means resolving through the agent.defaultSlot parameter';
 COMMENT ON COLUMN agent_sessions.status IS 'the status of the agent session, default active';
 COMMENT ON COLUMN agent_sessions.agent_kind IS 'the agent kind the session belongs to, e.g. knowledge or rego';
+COMMENT ON COLUMN agent_sessions.origin IS 'the origin of the session, chat for assistant conversations or periodic_report for internal periodic report runs';
 COMMENT ON COLUMN agent_sessions.review_valve IS 'the review valve of the session (each/auto/none), composed with the evaluated audit level to decide whether a client tool call needs manual approval';
 COMMENT ON COLUMN agent_sessions.summary IS 'the rolling summary of the session, compressing the messages already folded into it, stored encrypted with the crypto serializer, null when none';
 COMMENT ON COLUMN agent_sessions.summary_upto_seq IS 'the session-local seq of the last message covered by the rolling summary, 0 means nothing is summarized yet';
 COMMENT ON COLUMN agent_sessions.message_seq IS 'the maximum message seq allocated within the session, used for atomic seq allocation';
 COMMENT ON COLUMN agent_sessions.pending_interrupt_id IS 'the root interrupt id currently pending on the session (the ADK resume key), empty when nothing is pending';
+
+-- Agent 技能（agent_skills）：须先于 agent_messages 建表，使后者的 skill_id 可直接内联外键。
+CREATE TABLE IF NOT EXISTS agent_skills (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    source VARCHAR(16) NOT NULL DEFAULT 'custom',
+    name VARCHAR(64) NOT NULL,
+    description VARCHAR(256) NOT NULL DEFAULT '',
+    content BYTEA,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    periodic_capable BOOLEAN NOT NULL DEFAULT false,
+    input_fields JSONB NOT NULL DEFAULT '[]',
+    fixed_fields JSONB NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_skills_namespace
+    ON agent_skills (namespace_name);
+
+CREATE INDEX IF NOT EXISTS idx_agent_skills_source
+    ON agent_skills (source);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_skills_namespace_name
+    ON agent_skills (namespace_name, name) WHERE deleted_at IS NULL;
+
+COMMENT ON COLUMN agent_skills.id IS 'the primary key of the agent skill';
+COMMENT ON COLUMN agent_skills.created_at IS 'the creation time of the agent skill';
+COMMENT ON COLUMN agent_skills.updated_at IS 'the last update time of the agent skill';
+COMMENT ON COLUMN agent_skills.deleted_at IS 'the soft delete time of the agent skill, null means not deleted';
+COMMENT ON COLUMN agent_skills.namespace_name IS 'the namespace the agent skill belongs to, cascade delete with the namespace';
+COMMENT ON COLUMN agent_skills.source IS 'the source of the agent skill, custom or builtin; builtin rows live in the system namespace and are read-only';
+COMMENT ON COLUMN agent_skills.name IS 'the name of the agent skill, unique among the not deleted skills of the same namespace';
+COMMENT ON COLUMN agent_skills.description IS 'the plaintext description of the agent skill';
+COMMENT ON COLUMN agent_skills.content IS 'the content of the agent skill, stored encrypted with the crypto serializer; null for builtin skills whose content comes from the code registry';
+COMMENT ON COLUMN agent_skills.enabled IS 'whether the agent skill is enabled';
+COMMENT ON COLUMN agent_skills.periodic_capable IS 'whether the agent skill can run periodically and produce scheduled reports, provided by the user';
+COMMENT ON COLUMN agent_skills.input_fields IS 'the structured input fields JSON provided by the user, an empty array when the skill needs no input';
+COMMENT ON COLUMN agent_skills.fixed_fields IS 'the free-form fixed parameter JSON object provided by the user, keys mapped to arbitrary JSON values preserving their original types, an empty object when the skill has no fixed parameters';
 
 CREATE TABLE IF NOT EXISTS agent_messages (
     id BIGSERIAL PRIMARY KEY,
@@ -731,7 +773,7 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     seq BIGINT NOT NULL,
     role VARCHAR(16) NOT NULL,
     message_kind VARCHAR(16) NOT NULL DEFAULT 'chat',
@@ -743,7 +785,9 @@ CREATE TABLE IF NOT EXISTS agent_messages (
     completion_tokens INT NOT NULL DEFAULT 0,
     total_tokens INT NOT NULL DEFAULT 0,
     elapsed_ms BIGINT NOT NULL DEFAULT 0,
-    phase VARCHAR(16) NOT NULL DEFAULT ''
+    phase VARCHAR(16) NOT NULL DEFAULT '',
+    skill_id BIGINT REFERENCES agent_skills(id) ON DELETE SET NULL,
+    skill_name VARCHAR(64) NOT NULL DEFAULT ''
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_agent_messages_session_seq
@@ -754,7 +798,7 @@ COMMENT ON COLUMN agent_messages.created_at IS 'the creation time of the agent m
 COMMENT ON COLUMN agent_messages.updated_at IS 'the last update time of the agent message';
 COMMENT ON COLUMN agent_messages.session_id IS 'the owning agent session id, cascade delete with the session';
 COMMENT ON COLUMN agent_messages.namespace_name IS 'the namespace the agent message belongs to';
-COMMENT ON COLUMN agent_messages.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_messages.user_id IS 'the owning user id for cross-user isolation, a foreign key cascade deleted with the user';
 COMMENT ON COLUMN agent_messages.seq IS 'the monotonically increasing seq of the message within its session (starting from 1), unique together with session_id and user_id, used as the consistent ordering key for reads, cursors and summarization';
 COMMENT ON COLUMN agent_messages.role IS 'the role of the message, e.g. user, assistant or system';
 COMMENT ON COLUMN agent_messages.message_kind IS 'the eino message representation carried by payload: chat (*schema.Message) or responses (*schema.AgenticMessage), default chat';
@@ -767,6 +811,8 @@ COMMENT ON COLUMN agent_messages.completion_tokens IS 'the sum of completion tok
 COMMENT ON COLUMN agent_messages.total_tokens IS 'the sum of total tokens over all model calls of this assistant reply, 0 for user messages or when the provider returns no usage';
 COMMENT ON COLUMN agent_messages.elapsed_ms IS 'the total elapsed time in milliseconds of this assistant reply (from the run start to the done item), 0 for user messages';
 COMMENT ON COLUMN agent_messages.phase IS 'the terminal lifecycle phase of the run that produced this assistant message (done/failed/cancelled) or suspended while an ask_user questionnaire is awaiting the answers, empty while the run is still in flight or for user messages; the render layer derives the interrupted/cancelled notice from it rather than keeping such text in the content';
+COMMENT ON COLUMN agent_messages.skill_id IS 'the agent skill id selected for this turn (agent_skills.id, restricted by a foreign key with ON DELETE SET NULL), null when no skill was selected; the skill is anchored per turn rather than per session, so different turns of the same session may select different skills; only set on user messages';
+COMMENT ON COLUMN agent_messages.skill_name IS 'the skill name snapshot captured when this turn was created, empty when no skill was selected; stored as a snapshot (not a live join) so historical bubbles still show the skill that was actually used after the skill is renamed, disabled or deleted; only set on user messages';
 
 -- Agent 会话交互（agent_interactions）：审批 / 问卷 / 下一步等业务交互各落一行，供刷新后重建
 -- 交互卡片与续跑映射；与助手消息（agent_messages）通过 message_id 关联，交互随会话级联删除。
@@ -775,7 +821,7 @@ CREATE TABLE IF NOT EXISTS agent_interactions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     message_id BIGINT NOT NULL DEFAULT 0,
     seq BIGINT NOT NULL,
@@ -793,7 +839,7 @@ COMMENT ON COLUMN agent_interactions.id IS 'the primary key of the agent interac
 COMMENT ON COLUMN agent_interactions.created_at IS 'the creation time of the agent interaction';
 COMMENT ON COLUMN agent_interactions.updated_at IS 'the last update time of the agent interaction';
 COMMENT ON COLUMN agent_interactions.namespace_name IS 'the namespace the agent interaction belongs to';
-COMMENT ON COLUMN agent_interactions.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_interactions.user_id IS 'the owning user id for cross-user isolation, a foreign key cascade deleted with the user';
 COMMENT ON COLUMN agent_interactions.session_id IS 'the owning agent session id, cascade delete with the session';
 COMMENT ON COLUMN agent_interactions.message_id IS 'the assistant message id (agent_messages.id) the interaction is attached to, 0 means not bound';
 COMMENT ON COLUMN agent_interactions.seq IS 'the monotonically increasing seq of the interaction within its session (starting from 1), defining the real generation order';
@@ -807,7 +853,7 @@ CREATE TABLE IF NOT EXISTS agent_session_compactions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
     session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     upto_seq BIGINT NOT NULL DEFAULT 0,
     summary BYTEA,
     reason VARCHAR(16) NOT NULL DEFAULT '',
@@ -824,7 +870,7 @@ COMMENT ON COLUMN agent_session_compactions.created_at IS 'the creation time of 
 COMMENT ON COLUMN agent_session_compactions.updated_at IS 'the last update time of the compaction checkpoint';
 COMMENT ON COLUMN agent_session_compactions.namespace_name IS 'the namespace the compaction checkpoint belongs to';
 COMMENT ON COLUMN agent_session_compactions.session_id IS 'the owning agent session id, cascade delete with the session';
-COMMENT ON COLUMN agent_session_compactions.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_session_compactions.user_id IS 'the owning user id for cross-user isolation, a foreign key cascade deleted with the user';
 COMMENT ON COLUMN agent_session_compactions.upto_seq IS 'the context start bound (summary_upto_seq snapshot) after this advance, monotonically increasing within a session';
 COMMENT ON COLUMN agent_session_compactions.summary IS 'the full rolling summary after this advance, stored encrypted with the crypto serializer, used to restore an earlier start bound on rollback';
 COMMENT ON COLUMN agent_session_compactions.reason IS 'the reason that advanced the summary: rolling, auto or manual';
@@ -838,7 +884,7 @@ CREATE TABLE IF NOT EXISTS agent_memories (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     agent_kind VARCHAR(32) NOT NULL,
     session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     kind VARCHAR(16) NOT NULL DEFAULT 'fact',
@@ -869,7 +915,7 @@ COMMENT ON COLUMN agent_memories.created_at IS 'the creation time of the agent m
 COMMENT ON COLUMN agent_memories.updated_at IS 'the last update time of the agent memory';
 COMMENT ON COLUMN agent_memories.deleted_at IS 'the soft delete time of the agent memory, null means not deleted';
 COMMENT ON COLUMN agent_memories.namespace_name IS 'the namespace the agent memory belongs to';
-COMMENT ON COLUMN agent_memories.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_memories.user_id IS 'the owning user id for cross-user isolation, a foreign key cascade deleted with the user';
 COMMENT ON COLUMN agent_memories.agent_kind IS 'the agent kind the memory belongs to, e.g. knowledge or rego';
 COMMENT ON COLUMN agent_memories.session_id IS 'the originating agent session id (a real foreign key, cascade delete with the session, no sentinel), the isolation dimension for retrieval and uniqueness (visible only within its originating session)';
 COMMENT ON COLUMN agent_memories.kind IS 'the category of the memory, e.g. fact, preference, decision or artifact';
@@ -888,7 +934,7 @@ CREATE TABLE IF NOT EXISTS agent_runs (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ,
     namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
-    user_id BIGINT NOT NULL DEFAULT 0,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_id BIGINT NOT NULL REFERENCES agent_sessions(id) ON DELETE CASCADE,
     status VARCHAR(16) NOT NULL DEFAULT 'pending',
     pending_calls BYTEA,
@@ -906,7 +952,7 @@ COMMENT ON COLUMN agent_runs.created_at IS 'the creation time of the agent run';
 COMMENT ON COLUMN agent_runs.updated_at IS 'the last update time of the agent run';
 COMMENT ON COLUMN agent_runs.deleted_at IS 'the soft delete time of the agent run, null means not deleted';
 COMMENT ON COLUMN agent_runs.namespace_name IS 'the namespace the agent run belongs to';
-COMMENT ON COLUMN agent_runs.user_id IS 'the owning user id for cross-user isolation, 0 means no owner';
+COMMENT ON COLUMN agent_runs.user_id IS 'the owning user id for cross-user isolation, a foreign key cascade deleted with the user';
 COMMENT ON COLUMN agent_runs.session_id IS 'the owning agent session id of the run (a real foreign key, cascade delete with the session, no sentinel)';
 COMMENT ON COLUMN agent_runs.status IS 'the status of the run, its values come from the enum class agentRunStatus';
 COMMENT ON COLUMN agent_runs.pending_calls IS 'the pending tool call list JSON (callID, api id, arguments and the synthesized request descriptor), stored encrypted with the crypto serializer, null when not applicable';
@@ -1073,7 +1119,117 @@ COMMENT ON COLUMN llm_tools.remote_name IS 'the tool name on the mcp server side
 COMMENT ON COLUMN llm_tools.description IS 'the description cache for listing, empty for builtin tools whose text comes from i18n';
 COMMENT ON COLUMN llm_tools.enabled IS 'is the llm tool enabled, default false and a disabled tool is not assembled';
 
+CREATE TABLE IF NOT EXISTS periodic_report_plans (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    name VARCHAR(128) NOT NULL,
+    description VARCHAR(512) NOT NULL DEFAULT '',
+    skill_id BIGINT NOT NULL REFERENCES agent_skills(id) ON DELETE RESTRICT,
+    cron_spec VARCHAR(64) NOT NULL,
+    input_values JSONB NOT NULL DEFAULT '{}',
+    enabled BOOLEAN DEFAULT true,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    retention_days INT NOT NULL DEFAULT 90,
+    expires_at TIMESTAMPTZ,
+    next_run_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_periodic_report_plans_namespace_name
+    ON periodic_report_plans (namespace_name);
+
+CREATE INDEX IF NOT EXISTS idx_periodic_report_plans_skill_id
+    ON periodic_report_plans (skill_id);
+
+CREATE INDEX IF NOT EXISTS idx_periodic_report_plans_dispatch
+    ON periodic_report_plans (enabled, next_run_at) WHERE deleted_at IS NULL;
+
+COMMENT ON COLUMN periodic_report_plans.id IS 'the primary key of the periodic report plan';
+COMMENT ON COLUMN periodic_report_plans.created_at IS 'the creation time of the periodic report plan';
+COMMENT ON COLUMN periodic_report_plans.updated_at IS 'the last update time of the periodic report plan';
+COMMENT ON COLUMN periodic_report_plans.deleted_at IS 'the soft delete time of the periodic report plan, null means not deleted';
+COMMENT ON COLUMN periodic_report_plans.namespace_name IS 'the namespace the periodic report plan belongs to, cascade delete with the namespace';
+COMMENT ON COLUMN periodic_report_plans.name IS 'the name of the periodic report plan';
+COMMENT ON COLUMN periodic_report_plans.description IS 'the description of the periodic report plan';
+COMMENT ON COLUMN periodic_report_plans.skill_id IS 'the agent skill id the periodic report plan runs, restricted by a foreign key';
+COMMENT ON COLUMN periodic_report_plans.cron_spec IS 'the cron expression that triggers the periodic report plan';
+COMMENT ON COLUMN periodic_report_plans.input_values IS 'the skill input values JSON object keyed by input field name';
+COMMENT ON COLUMN periodic_report_plans.enabled IS 'whether the periodic report plan is enabled, default true';
+COMMENT ON COLUMN periodic_report_plans.user_id IS 'the owning user id of the periodic report plan';
+COMMENT ON COLUMN periodic_report_plans.retention_days IS 'the number of days generated reports are retained, default 90';
+COMMENT ON COLUMN periodic_report_plans.expires_at IS 'the expiration time of the periodic report plan, null means it never expires';
+COMMENT ON COLUMN periodic_report_plans.next_run_at IS 'the next scheduled run time of the periodic report plan, null means pending dispatcher calculation';
+
+CREATE TABLE IF NOT EXISTS periodic_report_runs (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    plan_id BIGINT NOT NULL REFERENCES periodic_report_plans(id) ON DELETE CASCADE,
+    trigger_at TIMESTAMPTZ NOT NULL,
+    status VARCHAR(16) NOT NULL,
+    object_key VARCHAR(512) NOT NULL DEFAULT '',
+    title VARCHAR(256) NOT NULL DEFAULT '',
+    size_bytes BIGINT NOT NULL DEFAULT 0,
+    error VARCHAR(2048) NOT NULL DEFAULT '',
+    session_id BIGINT REFERENCES agent_sessions(id) ON DELETE SET NULL,
+    started_at TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_periodic_report_runs_plan_id_trigger_at
+    ON periodic_report_runs (plan_id, trigger_at) WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_periodic_report_runs_plan_id
+    ON periodic_report_runs (plan_id);
+
+CREATE INDEX IF NOT EXISTS idx_periodic_report_runs_status
+    ON periodic_report_runs (status);
+
+COMMENT ON COLUMN periodic_report_runs.id IS 'the primary key of the periodic report run';
+COMMENT ON COLUMN periodic_report_runs.created_at IS 'the creation time of the periodic report run';
+COMMENT ON COLUMN periodic_report_runs.updated_at IS 'the last update time of the periodic report run';
+COMMENT ON COLUMN periodic_report_runs.deleted_at IS 'the soft delete time of the periodic report run, null means not deleted';
+COMMENT ON COLUMN periodic_report_runs.namespace_name IS 'the namespace the periodic report run belongs to';
+COMMENT ON COLUMN periodic_report_runs.plan_id IS 'the periodic report plan id that triggered this run';
+COMMENT ON COLUMN periodic_report_runs.trigger_at IS 'the trigger time point of the run, unique per plan among not deleted rows';
+COMMENT ON COLUMN periodic_report_runs.status IS 'the status of the run, its values come from the enum class periodicReportRunStatus';
+COMMENT ON COLUMN periodic_report_runs.object_key IS 'the object storage key of the generated report, empty when no output';
+COMMENT ON COLUMN periodic_report_runs.title IS 'the title of the generated report';
+COMMENT ON COLUMN periodic_report_runs.size_bytes IS 'the byte size of the generated report';
+COMMENT ON COLUMN periodic_report_runs.error IS 'the failure reason of the run, empty when succeeded';
+COMMENT ON COLUMN periodic_report_runs.session_id IS 'the dedicated agent session id of this run, null when not created yet';
+COMMENT ON COLUMN periodic_report_runs.started_at IS 'the actual start time of the run, null when not started yet';
+COMMENT ON COLUMN periodic_report_runs.finished_at IS 'the finish time of the run, null when not finished yet';
+
+CREATE TABLE IF NOT EXISTS periodic_report_plan_watches (
+    id BIGSERIAL PRIMARY KEY,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    namespace_name VARCHAR(32) NOT NULL REFERENCES namespaces(name) ON DELETE CASCADE,
+    plan_id BIGINT NOT NULL REFERENCES periodic_report_plans(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_periodic_report_plan_watches_user_id_namespace_name_plan_id
+    ON periodic_report_plan_watches (user_id, namespace_name, plan_id) WHERE deleted_at IS NULL;
+
+COMMENT ON COLUMN periodic_report_plan_watches.id IS 'the primary key of the periodic report plan watch';
+COMMENT ON COLUMN periodic_report_plan_watches.created_at IS 'the creation time of the periodic report plan watch';
+COMMENT ON COLUMN periodic_report_plan_watches.updated_at IS 'the last update time of the periodic report plan watch';
+COMMENT ON COLUMN periodic_report_plan_watches.deleted_at IS 'the soft delete time of the periodic report plan watch, null means not deleted';
+COMMENT ON COLUMN periodic_report_plan_watches.user_id IS 'the watching user id';
+COMMENT ON COLUMN periodic_report_plan_watches.namespace_name IS 'the namespace the watched periodic report plan belongs to';
+COMMENT ON COLUMN periodic_report_plan_watches.plan_id IS 'the watched periodic report plan id';
+
 -- +goose Down
+DROP TABLE IF EXISTS periodic_report_plan_watches;
+DROP TABLE IF EXISTS periodic_report_runs;
+DROP TABLE IF EXISTS periodic_report_plans;
 DROP TABLE IF EXISTS llm_tools;
 DROP TABLE IF EXISTS mcp_servers;
 DROP TABLE IF EXISTS agent_params;
@@ -1081,7 +1237,11 @@ DROP TABLE IF EXISTS llm_bindings;
 DROP TABLE IF EXISTS llm_models;
 DROP TABLE IF EXISTS agent_memories;
 DROP TABLE IF EXISTS agent_runs;
+-- agent_messages.skill_id 外键引用 agent_skills，故须先删引用方再删被引用表。
 DROP TABLE IF EXISTS agent_messages;
+DROP TABLE IF EXISTS agent_skills;
+DROP TABLE IF EXISTS agent_checkpoints;
+DROP TABLE IF EXISTS agent_interactions;
 DROP TABLE IF EXISTS agent_session_compactions;
 DROP TABLE IF EXISTS agent_sessions;
 DROP TABLE IF EXISTS knowledge_chunks;

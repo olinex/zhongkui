@@ -3,35 +3,18 @@ package contract
 import (
 	// 标准库
 	"encoding/json"
-	"strings"
 
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
-
-// StripJSONFence 去掉首尾的 ```json 代码围栏（若存在），返回去除首尾空白后的内容。
-func StripJSONFence(s string) string {
-	s = strings.TrimSpace(s)
-	if !strings.HasPrefix(s, "```") {
-		return s
-	}
-	lines := strings.Split(s, "\n")
-	if len(lines) >= 2 {
-		lines = lines[1:]
-		if strings.HasPrefix(strings.TrimSpace(lines[len(lines)-1]), "```") {
-			lines = lines[:len(lines)-1]
-		}
-		return strings.TrimSpace(strings.Join(lines, "\n"))
-	}
-	return s
-}
 
 // ParseJSONResponse 去掉首尾 ```json 代码围栏后把 content 解析为 T。label 描述调用点
 // （如 "dry-run: cannot parse chunk relevance response"）；解析失败时返回的错误文本为
 // "<label> as JSON: <响应前 200 字符>"，供各调用点统一容错文案。
 func ParseJSONResponse[T any](content, label string) (T, error) {
 	var out T
-	body := StripJSONFence(content)
+	body := validator.StripJSONFence(content)
 	if err := json.Unmarshal([]byte(body), &out); err != nil {
 		return out, errors.Newf("%s as JSON: %q", label, truncateForError(body))
 	}

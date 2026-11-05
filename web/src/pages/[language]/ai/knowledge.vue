@@ -189,11 +189,10 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="12">
-                <v-textarea
+                <markdown-editor
                   v-model="createContent"
-                  v-bind="createContentProps"
                   :label="$t('model.aiDocument.field.content')"
-                  rows="10"
+                  :error-message="createForm.errors.value.content"
                 />
               </v-col>
             </v-row>
@@ -234,13 +233,12 @@
             </v-row>
             <v-row density="compact">
               <v-col cols="12">
-                <v-textarea
+                <markdown-editor
                   v-model="editContent"
-                  v-bind="editContentProps"
                   :label="$t('model.aiDocument.field.content')"
+                  :error-message="updateForm.errors.value.content"
                   :readonly="editDocumentImported"
                   :disabled="!editable"
-                  rows="10"
                 />
               </v-col>
             </v-row>
@@ -768,10 +766,11 @@ const createForm = useForm({ validationSchema: createDocSchema });
 const updateForm = useForm({ validationSchema: updateDocSchema });
 
 const [createTitle, createTitleProps] = createForm.defineField("title", vuetifyCfg);
-const [createContent, createContentProps] = createForm.defineField("content", vuetifyCfg);
+// 正文由 MarkdownEditor 承载，错误信息经 errorMessage 单独下发，不再透传 vuetify 字段配置
+const [createContent] = createForm.defineField("content", vuetifyCfg);
 
 const [editTitle, editTitleProps] = updateForm.defineField("title", vuetifyCfg);
-const [editContent, editContentProps] = updateForm.defineField("content", vuetifyCfg);
+const [editContent] = updateForm.defineField("content", vuetifyCfg);
 
 // ---- 创建对话框 ----
 const openCreateDialogAction = (): void => {

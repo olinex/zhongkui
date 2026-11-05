@@ -118,7 +118,7 @@
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.tagRule.field.description')"
-                  rows="2"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -218,7 +218,7 @@
                   v-bind="editDescriptionProps"
                   :label="$t('model.tagRule.field.description')"
                   :disabled="!editable"
-                  rows="2"
+                  rows="3"
                 />
               </v-col>
             </v-row>

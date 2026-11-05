@@ -43,9 +43,9 @@ func Check(ctx context.Context, projectRoot string, root *cobra.Command) error {
 	}
 	if len(diffs) > 0 {
 		if len(diffs) > checkMaxReport {
-			diffs = append(diffs[:checkMaxReport], fmt.Sprintf("……其余 %d 个文件省略", len(diffs)-checkMaxReport))
+			diffs = append(diffs[:checkMaxReport], fmt.Sprintf("... and %d more files omitted", len(diffs)-checkMaxReport))
 		}
-		return errors.Newf("docs: 文档生成物与代码声明不一致，请运行 `zki create docs` 后提交：\n  %s",
+		return errors.Newf("docs: generated artifacts are out of sync with code declarations; run `zki create docs` and commit the result:\n  %s",
 			strings.Join(diffs, "\n  "))
 	}
 	return nil
@@ -71,14 +71,14 @@ func compareGeneratedTrees(expectedRoot, actualRoot string) ([]string, error) {
 		actualPath := filepath.Join(actualRoot, filepath.FromSlash(rel))
 		actualData, err := os.ReadFile(actualPath)
 		if os.IsNotExist(err) {
-			diffs = append(diffs, "缺失: "+rel)
+			diffs = append(diffs, "missing: "+rel)
 			continue
 		}
 		if err != nil {
 			return nil, errors.WithStack(err)
 		}
 		if !bytes.Equal(expectedData, actualData) {
-			diffs = append(diffs, "内容不一致: "+rel)
+			diffs = append(diffs, "content mismatch: "+rel)
 		}
 	}
 
@@ -88,7 +88,7 @@ func compareGeneratedTrees(expectedRoot, actualRoot string) ([]string, error) {
 	}
 	for _, rel := range actual {
 		if !expectedSet[rel] {
-			diffs = append(diffs, "多余: "+rel)
+			diffs = append(diffs, "unexpected: "+rel)
 		}
 	}
 	sort.Strings(diffs)

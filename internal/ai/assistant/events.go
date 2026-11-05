@@ -49,6 +49,10 @@ type UserMessageSnapshot struct {
 	CreatedAt string `json:"createdAt"`
 	// UserIndex 该提问在会话内的序号（从 1 起）。
 	UserIndex int `json:"userIndex"`
+	// SkillID 本轮选用的技能 ID，0 表示未选技能。
+	SkillID uint `json:"skillID,omitempty"`
+	// SkillName 本轮选用的技能名称快照，空表示未选技能。
+	SkillName string `json:"skillName,omitempty"`
 }
 
 // TurnStartedPayload 是回合开始事件的载荷。

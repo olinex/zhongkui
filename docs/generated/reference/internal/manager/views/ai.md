@@ -25,6 +25,13 @@
 - [func AgentSessionListGet\(c \*gin.Context\)](<#AgentSessionListGet>)
 - [func AgentSessionRename\(c \*gin.Context\)](<#AgentSessionRename>)
 - [func AgentSessionValveSet\(c \*gin.Context\)](<#AgentSessionValveSet>)
+- [func AgentSkillBatchDelete\(c \*gin.Context\)](<#AgentSkillBatchDelete>)
+- [func AgentSkillCreate\(c \*gin.Context\)](<#AgentSkillCreate>)
+- [func AgentSkillDetailGet\(c \*gin.Context\)](<#AgentSkillDetailGet>)
+- [func AgentSkillListGet\(c \*gin.Context\)](<#AgentSkillListGet>)
+- [func AgentSkillOptionsGet\(c \*gin.Context\)](<#AgentSkillOptionsGet>)
+- [func AgentSkillSetEnabled\(c \*gin.Context\)](<#AgentSkillSetEnabled>)
+- [func AgentSkillUpdate\(c \*gin.Context\)](<#AgentSkillUpdate>)
 - [func AgentStatusGet\(c \*gin.Context\)](<#AgentStatusGet>)
 - [func KnowledgeDocumentBatchDelete\(c \*gin.Context\)](<#KnowledgeDocumentBatchDelete>)
 - [func KnowledgeDocumentChunksGet\(c \*gin.Context\)](<#KnowledgeDocumentChunksGet>)
@@ -38,6 +45,19 @@
 - [func KnowledgeSystemDocumentChunksGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentChunksGet>)
 - [func KnowledgeSystemDocumentDetailGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentDetailGet>)
 - [func KnowledgeSystemDocumentListGet\(c \*gin.Context\)](<#KnowledgeSystemDocumentListGet>)
+- [func PeriodicReportFeedListGet\(c \*gin.Context\)](<#PeriodicReportFeedListGet>)
+- [func PeriodicReportPlanCreate\(c \*gin.Context\)](<#PeriodicReportPlanCreate>)
+- [func PeriodicReportPlanDelete\(c \*gin.Context\)](<#PeriodicReportPlanDelete>)
+- [func PeriodicReportPlanListGet\(c \*gin.Context\)](<#PeriodicReportPlanListGet>)
+- [func PeriodicReportPlanRun\(c \*gin.Context\)](<#PeriodicReportPlanRun>)
+- [func PeriodicReportPlanToggle\(c \*gin.Context\)](<#PeriodicReportPlanToggle>)
+- [func PeriodicReportPlanUpdate\(c \*gin.Context\)](<#PeriodicReportPlanUpdate>)
+- [func PeriodicReportRunDelete\(c \*gin.Context\)](<#PeriodicReportRunDelete>)
+- [func PeriodicReportRunDetailGet\(c \*gin.Context\)](<#PeriodicReportRunDetailGet>)
+- [func PeriodicReportRunListGet\(c \*gin.Context\)](<#PeriodicReportRunListGet>)
+- [func PeriodicReportSkillOptionsGet\(c \*gin.Context\)](<#PeriodicReportSkillOptionsGet>)
+- [func PeriodicReportWatchListGet\(c \*gin.Context\)](<#PeriodicReportWatchListGet>)
+- [func PeriodicReportWatchSet\(c \*gin.Context\)](<#PeriodicReportWatchSet>)
 - [func RegisterRoutes\(ctx \*views.RegisterContext\)](<#RegisterRoutes>)
 - [func RetrievalDryRunStream\(c \*gin.Context\)](<#RetrievalDryRunStream>)
 - [func RetrievalOptions\(c \*gin.Context\)](<#RetrievalOptions>)
@@ -63,6 +83,15 @@
 - [type AgentSessionListOut](<#AgentSessionListOut>)
 - [type AgentSessionRenameIn](<#AgentSessionRenameIn>)
 - [type AgentSessionValveIn](<#AgentSessionValveIn>)
+- [type AgentSkillBatchIn](<#AgentSkillBatchIn>)
+- [type AgentSkillCreateIn](<#AgentSkillCreateIn>)
+- [type AgentSkillDetailOut](<#AgentSkillDetailOut>)
+- [type AgentSkillItemOut](<#AgentSkillItemOut>)
+- [type AgentSkillListOut](<#AgentSkillListOut>)
+- [type AgentSkillOptionListOut](<#AgentSkillOptionListOut>)
+- [type AgentSkillOptionOut](<#AgentSkillOptionOut>)
+- [type AgentSkillStatusIn](<#AgentSkillStatusIn>)
+- [type AgentSkillUpdateIn](<#AgentSkillUpdateIn>)
 - [type AgentSlotStatusOut](<#AgentSlotStatusOut>)
 - [type AgentStatusIn](<#AgentStatusIn>)
 - [type AgentStatusOut](<#AgentStatusOut>)
@@ -79,9 +108,27 @@
 - [type KnowledgeDocumentReindexOut](<#KnowledgeDocumentReindexOut>)
 - [type KnowledgeDocumentUpdateIn](<#KnowledgeDocumentUpdateIn>)
 - [type KnowledgeDocumentUploadOut](<#KnowledgeDocumentUploadOut>)
+- [type PeriodicReportFeedItemOut](<#PeriodicReportFeedItemOut>)
+- [type PeriodicReportFeedListOut](<#PeriodicReportFeedListOut>)
+- [type PeriodicReportPlanCreateIn](<#PeriodicReportPlanCreateIn>)
+- [type PeriodicReportPlanItemOut](<#PeriodicReportPlanItemOut>)
+- [type PeriodicReportPlanListOut](<#PeriodicReportPlanListOut>)
+- [type PeriodicReportPlanToggleIn](<#PeriodicReportPlanToggleIn>)
+- [type PeriodicReportPlanUpdateIn](<#PeriodicReportPlanUpdateIn>)
+- [type PeriodicReportRunDetailOut](<#PeriodicReportRunDetailOut>)
+- [type PeriodicReportRunItemOut](<#PeriodicReportRunItemOut>)
+- [type PeriodicReportRunListOut](<#PeriodicReportRunListOut>)
+- [type PeriodicReportSkillInputFieldOut](<#PeriodicReportSkillInputFieldOut>)
+- [type PeriodicReportSkillOptionListOut](<#PeriodicReportSkillOptionListOut>)
+- [type PeriodicReportSkillOptionOut](<#PeriodicReportSkillOptionOut>)
+- [type PeriodicReportWatchListOut](<#PeriodicReportWatchListOut>)
+- [type PeriodicReportWatchPlanItemOut](<#PeriodicReportWatchPlanItemOut>)
+- [type PeriodicReportWatchSetIn](<#PeriodicReportWatchSetIn>)
 - [type RetrievalOptionsOut](<#RetrievalOptionsOut>)
 - [type RetrievalWeightsIn](<#RetrievalWeightsIn>)
 - [type RetrievalWeightsOut](<#RetrievalWeightsOut>)
+- [type SkillInputFieldIn](<#SkillInputFieldIn>)
+- [type SkillInputFieldOut](<#SkillInputFieldOut>)
 
 
 <a name="AgentAbort"></a>
@@ -109,7 +156,7 @@ AgentAction 处理审批 / 问卷动作的请求（SSE，路由 POST /agent/:ses
 func AgentChat(c *gin.Context)
 ```
 
-AgentChat 处理启动（或抢占）一轮对话的请求（SSE，路由 POST /agent/:sessionID/chat）。 校验命名空间 / AI 功能 / 属主 / 会话归属后，按会话锁定状态拒绝已达轮次上限的会话；随后把请求 装配为 turns.ChatInput 交给 turns.Manager.Chat，运行在独立 goroutine 中执行，本接口只负责订阅并 转发事件。客户端断开只 detach 订阅，回合继续执行并写入会话缓冲。
+AgentChat 处理启动（或抢占）一轮对话的请求（SSE，路由 POST /agent/:sessionID/chat）。 校验命名空间 / AI 功能 / 属主 / 会话归属后，按会话锁定状态拒绝已达轮次上限的会话；请求可选指定 本轮技能（SkillID），非 0 时须存在、属于当前命名空间且已启用，否则以 400 拒绝（绝不静默忽略）； 随后把请求装配为 turns.ChatInput 交给 turns.Manager.Chat，运行在独立 goroutine 中执行，本接口只 负责订阅并转发事件。客户端断开只 detach 订阅，回合继续执行并写入会话缓冲。
 
 <a name="AgentEvents"></a>
 ## func AgentEvents
@@ -154,7 +201,7 @@ AgentMemoryDetailGet 处理长期记忆详情查询的请求。 记忆不存在�
 func AgentMemoryListGet(c *gin.Context)
 ```
 
-AgentMemoryListGet 处理长期记忆列表查询的请求。 仅返回当前命名空间内的记忆，支持分页、按 keyword/agentKind/kind/status 过滤与字段投影； 过滤与落库语义复用 memory.Memory.List（MemoryStore），视图层不自写 SQL。
+AgentMemoryListGet 处理长期记忆列表查询的请求。 仅返回当前命名空间内属于当前用户的记忆，支持分页、keyword/agentKind/kind/status 过滤、排序与 字段投影；查询构建与总数统计统一委托 utils.BuildSearchCountQuery，视图层不自写过滤 SQL。
 
 <a name="AgentMemorySetStatus"></a>
 ## func AgentMemorySetStatus
@@ -272,6 +319,69 @@ func AgentSessionValveSet(c *gin.Context)
 ```
 
 AgentSessionValveSet 处理更新 AI 助手会话审核阀门的请求（路由 /session/:id/valve）。 依次校验命名空间、会话 ID、AI 功能与会话归属（404 语义同其它接口，避免泄露资源存在性）， 绑定请求体（阀门取值经 enum=reviewValve 绑定标签校验，非法取值以 400 拒绝、不落库）， 随后更新该会话的审核阀门并返回更新后的会话项（与详情/列表出参同构）。
+
+<a name="AgentSkillBatchDelete"></a>
+## func AgentSkillBatchDelete
+
+```go
+func AgentSkillBatchDelete(c *gin.Context)
+```
+
+AgentSkillBatchDelete 批量软删除 AI 技能。 逐条按 \(id, namespace\) 确认技能存在（不存在记录失败明细），再软删；返回批量结果汇总。
+
+<a name="AgentSkillCreate"></a>
+## func AgentSkillCreate
+
+```go
+func AgentSkillCreate(c *gin.Context)
+```
+
+AgentSkillCreate 处理创建 AI 技能的请求。 新建技能默认启用；周期能力、输入字段与固定参数由用户提交，周期技能必须包含 nowTime 输入字段， 且固定参数必须包含 timeOffset 与 timeWindow（timeWindow 须大于 0）。 同命名空间下已存在同名技能返回 400（aiSkillNameExists）。名称 / 描述 / 正文与输入字段结构的 必填、长度与空白约束由 binding 统一校验。
+
+<a name="AgentSkillDetailGet"></a>
+## func AgentSkillDetailGet
+
+```go
+func AgentSkillDetailGet(c *gin.Context)
+```
+
+AgentSkillDetailGet 处理 AI 技能详情查询的请求。 技能不存在或不属于当前命名空间时返回 404。
+
+<a name="AgentSkillListGet"></a>
+## func AgentSkillListGet
+
+```go
+func AgentSkillListGet(c *gin.Context)
+```
+
+AgentSkillListGet 处理 AI 技能列表查询的请求。 返回当前命名空间的自定义技能与全局内置技能（内置技能由代码注册表声明、fixture 注入注册行， 跨命名空间可见但只读），支持分页、keyword / source / enabled 过滤、排序与字段投影；与项目其它 列表接口一致，查询构建与总数统计统一委托 utils.BuildSearchCountQuery，视图层不自写过滤 SQL。 列表不返回加密正文；只读语义由 source='builtin' 直接表达，不再单独下发布尔标记。
+
+<a name="AgentSkillOptionsGet"></a>
+## func AgentSkillOptionsGet
+
+```go
+func AgentSkillOptionsGet(c *gin.Context)
+```
+
+AgentSkillOptionsGet 处理技能选择器选项查询的请求。 先返回 agent\_skills 中位于系统命名空间且已启用的内置技能注册行（按 id 升序，即 fixture 注入顺序；代码侧正文缺失的行按编程缺陷跳过），再返回当前命名空间已启用的自定义技能（按创建 时间倒序）。本接口只服务聊天框选择器，不返回技能正文；管理页仍走 AgentSkillListGet，内置 技能按 source='builtin' 在管理列表可见且只读。
+
+<a name="AgentSkillSetEnabled"></a>
+## func AgentSkillSetEnabled
+
+```go
+func AgentSkillSetEnabled(c *gin.Context)
+```
+
+AgentSkillSetEnabled 处理启停 AI 技能的请求。 技能不存在或不属于当前命名空间时返回 404；停用的技能不参与运行时装配。
+
+<a name="AgentSkillUpdate"></a>
+## func AgentSkillUpdate
+
+```go
+func AgentSkillUpdate(c *gin.Context)
+```
+
+AgentSkillUpdate 处理更新 AI 技能的请求。 按 \(id, namespace\) 定位技能，不存在返回 404；其余写入错误与创建同口径映射。名称、描述、 正文与周期能力、输入字段、固定参数全部整体覆盖，周期技能同样必须包含 nowTime 输入字段， 且固定参数必须包含 timeOffset 与 timeWindow（timeWindow 须大于 0）。
 
 <a name="AgentStatusGet"></a>
 ## func AgentStatusGet
@@ -396,6 +506,123 @@ func KnowledgeSystemDocumentListGet(c *gin.Context)
 
 KnowledgeSystemDocumentListGet 处理获取系统命名空间知识库文档列表的请求。 与 KnowledgeDocumentListGet 同构，唯一区别是数据范围恒为内置系统命名空间 （base.SystemNamespace），不取自客户端命名空间，故为纯只读接口。
 
+<a name="PeriodicReportFeedListGet"></a>
+## func PeriodicReportFeedListGet
+
+```go
+func PeriodicReportFeedListGet(c *gin.Context)
+```
+
+PeriodicReportFeedListGet 处理报告中心信息流查询的请求。 只返回当前用户关注计划的成功运行记录，支持排序、分页与字段投影；查询构建与总数统计统一委托 utils.BuildSearchCountQuery。planName 按 plan\_id 第二趟批量回填，未关注任何计划时直接返回空列表。
+
+<a name="PeriodicReportPlanCreate"></a>
+## func PeriodicReportPlanCreate
+
+```go
+func PeriodicReportPlanCreate(c *gin.Context)
+```
+
+PeriodicReportPlanCreate 处理创建报告计划的请求。 校验与落库由领域层完成；下次执行时间留空，由分发器按 cron 计算。
+
+<a name="PeriodicReportPlanDelete"></a>
+## func PeriodicReportPlanDelete
+
+```go
+func PeriodicReportPlanDelete(c *gin.Context)
+```
+
+PeriodicReportPlanDelete 处理删除报告计划的请求。 按 \(id, namespace\) 定位并软删除计划，分发器不再选取已删除计划。
+
+<a name="PeriodicReportPlanListGet"></a>
+## func PeriodicReportPlanListGet
+
+```go
+func PeriodicReportPlanListGet(c *gin.Context)
+```
+
+PeriodicReportPlanListGet 处理报告计划列表查询的请求。 仅返回当前命名空间内的计划，支持 keyword（计划名称模糊）与 enabled 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。skillName 不落库，按 skill\_id 第二趟批量回填。
+
+<a name="PeriodicReportPlanRun"></a>
+## func PeriodicReportPlanRun
+
+```go
+func PeriodicReportPlanRun(c *gin.Context)
+```
+
+PeriodicReportPlanRun 处理立即执行报告计划的请求。 计划不存在返回 404；计划已过期返回 400（periodicReportPlanExpired）；否则立即投递一条生成任务。
+
+<a name="PeriodicReportPlanToggle"></a>
+## func PeriodicReportPlanToggle
+
+```go
+func PeriodicReportPlanToggle(c *gin.Context)
+```
+
+PeriodicReportPlanToggle 处理启停报告计划的请求。 按 \(id, namespace\) 定位计划，不存在返回 404；启用时清空下次执行时间，交由分发器重新计算。
+
+<a name="PeriodicReportPlanUpdate"></a>
+## func PeriodicReportPlanUpdate
+
+```go
+func PeriodicReportPlanUpdate(c *gin.Context)
+```
+
+PeriodicReportPlanUpdate 处理更新报告计划的请求。 按 \(id, namespace\) 定位计划，不存在返回 404；更新会清空下次执行时间，交由分发器重新计算。
+
+<a name="PeriodicReportRunDelete"></a>
+## func PeriodicReportRunDelete
+
+```go
+func PeriodicReportRunDelete(c *gin.Context)
+```
+
+PeriodicReportRunDelete 处理删除报告运行记录的请求。 按 \(id, namespace\) 定位记录：先删除对象存储中的报告正文（对象已不存在视为已删除），再软删除 运行记录。运行中与已结束的记录都允许删除；删除后生成任务的结果不再回写该记录。
+
+<a name="PeriodicReportRunDetailGet"></a>
+## func PeriodicReportRunDetailGet
+
+```go
+func PeriodicReportRunDetailGet(c *gin.Context)
+```
+
+PeriodicReportRunDetailGet 处理报告运行详情查询的请求。 运行记录不存在或跨命名空间返回 404；无产出时正文为空；对象缺失返回 404 （periodicReportRunObjectMissing），其余读取失败返回意外错误。
+
+<a name="PeriodicReportRunListGet"></a>
+## func PeriodicReportRunListGet
+
+```go
+func PeriodicReportRunListGet(c *gin.Context)
+```
+
+PeriodicReportRunListGet 处理报告运行记录列表查询的请求。 仅返回当前命名空间内的运行记录，支持 planID / status 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。
+
+<a name="PeriodicReportSkillOptionsGet"></a>
+## func PeriodicReportSkillOptionsGet
+
+```go
+func PeriodicReportSkillOptionsGet(c *gin.Context)
+```
+
+PeriodicReportSkillOptionsGet 处理报告技能选项查询的请求。 只返回当前命名空间内可周期执行的自定义技能（含时间窗口字段），供前端渲染计划创建表单。
+
+<a name="PeriodicReportWatchListGet"></a>
+## func PeriodicReportWatchListGet
+
+```go
+func PeriodicReportWatchListGet(c *gin.Context)
+```
+
+PeriodicReportWatchListGet 处理关注计划候选列表查询的请求。 仅返回当前命名空间内的报告计划，支持 keyword / enabled 过滤、排序、分页与字段投影； 查询构建与总数统计统一委托 utils.BuildSearchCountQuery。watched 不落库，按当前用户的 关注关系第二趟回填。
+
+<a name="PeriodicReportWatchSet"></a>
+## func PeriodicReportWatchSet
+
+```go
+func PeriodicReportWatchSet(c *gin.Context)
+```
+
+PeriodicReportWatchSet 处理设置计划关注状态的请求。 关注时校验计划属于当前命名空间（不存在 404）；幂等设置，重复关注不会重复插入。
+
 <a name="RegisterRoutes"></a>
 ## func RegisterRoutes
 
@@ -408,10 +635,12 @@ RegisterRoutes 注册 /api/v1/ai AI 助手（RAG \+ Agent）接口。 分组挂�
 - /doc 知识库文档 CRUD/list/reindex/chunks \+ 导入上传/原件下载
 - /session Agent 会话 create/list/get/rename/valve/delete/messages
 - /memory 长期记忆 create/list\(get/update\)/delete/status
+- /skill 技能 create/list/detail/update/delete/status
+- /periodic\-report 周期性报告：技能选项、计划 CRUD/启停/立即执行、运行记录、关注与信息流
 - /agent/:sessionID/\{chat,render,action,events,abort\} 事件流式接口
 - /status AI 状态（可用性 \+ 维度差异 \+ 会话回合快照）
 
-知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存 （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务入队）中间件供子路由共享。
+知识库文档导入需 S3 原件存储与解析任务异步投递，故在父组挂 S3（原件读写）、对象缓存 （原件加密上传/下载/清理）与管道投递客户端（asynq 解析任务与报告计划任务入队）中间件供 子路由共享。报告计划由分发器按 next\_run\_at 调度，视图层不再读写 etcd。
 
 <a name="RetrievalDryRunStream"></a>
 ## func RetrievalDryRunStream
@@ -450,8 +679,8 @@ AgentChatIn 定义启动（或抢占）一轮对话的请求输入。
 
 ```go
 type AgentChatIn struct {
-    // Query 用户本次提问文本，必填
-    Query string `json:"query" binding:"required"`
+    // Query 用户本次提问文本，必填且不能为空白
+    Query string `json:"query" binding:"required,notBlank"`
     // DocIDs 检索限定的文档 ID 列表，为空表示不限定
     DocIDs []uint `json:"docIDs"`
     // BusinessData 前端透传的当前业务现场（注入前经 SanitizeBusinessData 清洗限界）
@@ -461,6 +690,9 @@ type AgentChatIn struct {
     // Slot 本次生成的显式档位（flash/standard/advanced），可选；为空时依次回退到会话档位与
     // agent.defaultSlot 参数
     Slot string `json:"slot"`
+    // SkillID 本轮选用的技能 ID（内置与自定义统一），可选；为 0 表示不注入技能指引，
+    // 非 0 时须存在且已启用（自定义技能还须属于当前命名空间）
+    SkillID uint `json:"skillID"`
 }
 ```
 
@@ -471,10 +703,10 @@ AgentInteractionReopenIn 定义「重新审批 / 重新回答」的请求输入�
 
 ```go
 type AgentInteractionReopenIn struct {
-    // CallIDs 审批卡片上的工具调用 ID（审批回退使用）
-    CallIDs []string `json:"callIDs"`
-    // InterruptIDs 问卷卡片上的根中断 ID（问卷回退使用）
-    InterruptIDs []string `json:"interruptIDs"`
+    // CallIDs 审批卡片上的工具调用 ID（审批回退使用）：与 InterruptIDs 至少提供其一
+    CallIDs []string `json:"callIDs" binding:"required_without=InterruptIDs,dive,notBlank"`
+    // InterruptIDs 问卷卡片上的根中断 ID（问卷回退使用）：与 CallIDs 至少提供其一
+    InterruptIDs []string `json:"interruptIDs" binding:"required_without=CallIDs,dive,notBlank"`
 }
 ```
 
@@ -652,6 +884,10 @@ type AgentMessageItemOut struct {
     ElapsedMs int64 `json:"elapsedMs"`
     // Phase 本条助手消息所属回合的生命周期终态阶段（done/failed/cancelled），空表示尚未终结
     Phase string `json:"phase,omitempty"`
+    // SkillID 本条用户消息所在轮次选用的技能 ID，0 表示未选技能（用户消息才有值）
+    SkillID uint `json:"skillID,omitempty"`
+    // SkillName 本条用户消息所在轮次选用的技能名称快照，空表示未选技能（用户消息才有值）
+    SkillName string `json:"skillName,omitempty"`
     // Compress 该消息所锚定的历史压缩记录（压缩游标 upto_seq 等于本条消息 seq 时给出），
     // 无则为 nil；供前端刷新 / 重进会话后回显过往的压缩推进（含静默滚动 rolling）
     Compress *AgentMessageCompressOut `json:"compress,omitempty"`
@@ -689,8 +925,8 @@ AgentPromptOptimizeIn 定义提示词优化的请求输入。
 
 ```go
 type AgentPromptOptimizeIn struct {
-    // Query 待优化的用户诉求，必填
-    Query string `json:"query" binding:"required"`
+    // Query 待优化的用户诉求，必填且不能为空白
+    Query string `json:"query" binding:"required,notBlank"`
 }
 ```
 
@@ -829,6 +1065,184 @@ AgentSessionValveIn 定义更新 AI 助手会话审核阀门的请求输入。
 type AgentSessionValveIn struct {
     // ReviewValve 会话新审核阀门（each/auto/none），必填；非取值空间内的取值以 400 + 英文错误拒绝
     ReviewValve string `json:"reviewValve" binding:"required,enum=reviewValve"`
+}
+```
+
+<a name="AgentSkillBatchIn"></a>
+## type AgentSkillBatchIn
+
+AgentSkillBatchIn 定义批量删除 AI 技能的请求输入；Ids 接受标量或数组。
+
+```go
+type AgentSkillBatchIn struct {
+    // Ids 待批量删除的技能 ID 列表
+    Ids views.FlexList[uint] `json:"ids"`
+}
+```
+
+<a name="AgentSkillCreateIn"></a>
+## type AgentSkillCreateIn
+
+AgentSkillCreateIn 定义创建 AI 技能的请求输入。 名称须非空、首尾无空白且不超过 64 个字符；描述不超过 256 个字符；正文须含非空白内容且 不超过 32768 个字符。上述约束统一由 binding 校验，存储层不再重复校验。
+
+```go
+type AgentSkillCreateIn struct {
+    // Name 技能名称，必填（1..64 个字符，首尾不能有空白）
+    Name string `json:"name" binding:"required,trimmed,max=64"`
+    // Description 技能描述，可选（不超过 256 个字符）
+    Description string `json:"description" binding:"max=256"`
+    // Content 技能正文，必填（不能为纯空白，不超过 32768 个字符）
+    Content string `json:"content" binding:"required,notBlank,max=32768"`
+    // PeriodicCapable 技能是否可周期执行；为 true 时输入字段必须包含 name=nowTime、type=date
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写）
+    InputFields []SkillInputFieldIn `json:"inputFields" binding:"dive"`
+    // FixedFields 技能固定参数（由用户填写），值为原始 JSON
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
+}
+```
+
+<a name="AgentSkillDetailOut"></a>
+## type AgentSkillDetailOut
+
+AgentSkillDetailOut 定义 AI 技能详情的输出结构（含解密后的技能正文）。
+
+```go
+type AgentSkillDetailOut struct {
+    // ID 技能 ID
+    ID  uint `json:"id"`
+    // NamespaceName 所属命名空间
+    NamespaceName string `json:"namespaceName"`
+    // Source 技能来源：custom | builtin；builtin 只读（可启停）
+    Source string `json:"source"`
+    // Name 技能名称（同一命名空间内唯一）
+    Name string `json:"name"`
+    // Description 技能描述，便于在列表中识别技能用途
+    Description string `json:"description"`
+    // Content 技能正文内容（由 crypto 序列化器解密后输出明文）
+    Content string `json:"content"`
+    // Enabled 技能是否启用；停用的技能不参与运行时装配
+    Enabled bool `json:"enabled"`
+    // PeriodicCapable 技能是否可周期执行（由用户声明）
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写），供报告计划渲染输入表单
+    InputFields []SkillInputFieldOut `json:"inputFields"`
+    // FixedFields 技能固定参数（由用户填写），保留各键的原始 JSON 类型
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="AgentSkillItemOut"></a>
+## type AgentSkillItemOut
+
+AgentSkillItemOut 定义 AI 技能列表项的输出结构（独立于模型层，逐字段映射）。 列表不返回加密正文，正文仅在详情与创建 / 更新结果中给出。
+
+```go
+type AgentSkillItemOut struct {
+    // ID 技能 ID
+    ID  uint `json:"id"`
+    // Name 技能名称（同一命名空间内唯一；内置技能为全局名称）
+    Name string `json:"name"`
+    // Source 技能来源：custom | builtin；builtin 由代码注册表声明，只读（可启停）
+    Source string `json:"source"`
+    // Description 技能描述（明文），便于在列表中识别技能用途
+    Description string `json:"description"`
+    // Enabled 技能是否启用；停用的技能不参与运行时装配
+    Enabled bool `json:"enabled"`
+    // PeriodicCapable 技能是否可周期执行（由用户声明）
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写），供报告计划渲染输入表单；
+    // 列表按 JSON 展示（form kind=json，经 OPTIONS 自省下发前端）
+    InputFields []SkillInputFieldOut `json:"inputFields" gorm:"-" form:"kind=json"`
+    // InputFieldsRaw 列表扫描用的原始 JSON 列，映射为 InputFields 后不直接对外输出
+    InputFieldsRaw datatypes.JSON `json:"-" gorm:"column:input_fields"`
+    // FixedFields 技能固定参数（由用户填写），保留各键的原始 JSON 类型；
+    // 列表按 JSON 展示（form kind=json，经 OPTIONS 自省下发前端）
+    FixedFields map[string]json.RawMessage `json:"fixedFields" gorm:"-" form:"kind=json"`
+    // FixedFieldsRaw 列表扫描用的原始 JSON 列，映射为 FixedFields 后不直接对外输出
+    FixedFieldsRaw datatypes.JSON `json:"-" gorm:"column:fixed_fields"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="AgentSkillListOut"></a>
+## type AgentSkillListOut
+
+AgentSkillListOut 定义 AI 技能列表输出（嵌入 BaseTotalOut 支持分页总数）。
+
+```go
+type AgentSkillListOut struct {
+    AgentSkillItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="AgentSkillOptionListOut"></a>
+## type AgentSkillOptionListOut
+
+AgentSkillOptionListOut 定义技能选择器选项列表输出：内置技能在前、当前命名空间已启用 自定义技能在后；不返回技能正文。
+
+```go
+type AgentSkillOptionListOut struct {
+    // Items 合并后的技能选项
+    Items []AgentSkillOptionOut `json:"items"`
+}
+```
+
+<a name="AgentSkillOptionOut"></a>
+## type AgentSkillOptionOut
+
+AgentSkillOptionOut 定义技能选择器的选项输出：内置与自定义技能统一以 agent\_skills 行 ID 作为选择标识，选择器与聊天请求都以 ID 表达一次技能选择。
+
+```go
+type AgentSkillOptionOut struct {
+    // ID 技能 ID（agent_skills.id）
+    ID  uint `json:"id"`
+    // Name 技能名称
+    Name string `json:"name"`
+    // Description 技能说明，可为空
+    Description string `json:"description"`
+}
+```
+
+<a name="AgentSkillStatusIn"></a>
+## type AgentSkillStatusIn
+
+AgentSkillStatusIn 定义启停 AI 技能的请求输入。
+
+```go
+type AgentSkillStatusIn struct {
+    // Enabled 目标启用状态（true 启用 / false 停用）；前端总会显式传入，故不使用 binding 必填
+    Enabled bool `json:"enabled"`
+}
+```
+
+<a name="AgentSkillUpdateIn"></a>
+## type AgentSkillUpdateIn
+
+AgentSkillUpdateIn 定义更新 AI 技能的请求输入（全部定义字段整体覆盖）。
+
+```go
+type AgentSkillUpdateIn struct {
+    // Name 技能名称，必填（1..64 个字符，首尾不能有空白）
+    Name string `json:"name" binding:"required,trimmed,max=64"`
+    // Description 技能描述，可选（不超过 256 个字符）
+    Description string `json:"description" binding:"max=256"`
+    // Content 技能正文，必填（不能为纯空白，不超过 32768 个字符）
+    Content string `json:"content" binding:"required,notBlank,max=32768"`
+    // PeriodicCapable 技能是否可周期执行；为 true 时输入字段必须包含 name=nowTime、type=date
+    PeriodicCapable bool `json:"periodicCapable"`
+    // InputFields 技能输入字段（由用户填写）
+    InputFields []SkillInputFieldIn `json:"inputFields" binding:"dive"`
+    // FixedFields 技能固定参数（由用户填写），值为原始 JSON
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
 }
 ```
 
@@ -1184,6 +1598,310 @@ type KnowledgeDocumentUploadOut struct {
 }
 ```
 
+<a name="PeriodicReportFeedItemOut"></a>
+## type PeriodicReportFeedItemOut
+
+PeriodicReportFeedItemOut 定义报告中心信息流的条目输出。
+
+```go
+type PeriodicReportFeedItemOut struct {
+    // RunID 运行记录 ID
+    RunID uint `json:"runID"`
+    // PlanID 所属报告计划 ID
+    PlanID uint `json:"planID"`
+    // PlanName 所属计划名称快照；计划已删除时为空
+    PlanName string `json:"planName"`
+    // Title 生成报告的标题
+    Title string `json:"title"`
+    // Status 运行状态（running/success/failed）
+    Status string `json:"status"`
+    // TriggerAt 计划触发时间点
+    TriggerAt time.Time `json:"triggerAt"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+}
+```
+
+<a name="PeriodicReportFeedListOut"></a>
+## type PeriodicReportFeedListOut
+
+PeriodicReportFeedListOut 定义报告中心信息流列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportFeedListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportFeedListOut struct {
+    PeriodicReportFeedItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportPlanCreateIn"></a>
+## type PeriodicReportPlanCreateIn
+
+PeriodicReportPlanCreateIn 定义创建报告计划的请求输入：字段格式与保留天数范围由视图层 binding 与 default 标签统一校验，技能资格、cron 与输入偏置由领域层校验。
+
+```go
+type PeriodicReportPlanCreateIn struct {
+    // Name 计划名称，必填（不超过 128 个字符）
+    Name string `json:"name" binding:"required,max=128"`
+    // Description 计划说明，可选（不超过 512 个字符）
+    Description string `json:"description" binding:"max=512"`
+    // SkillID 计划使用的技能 ID，必填
+    SkillID uint `json:"skillID" binding:"required"`
+    // CronSpec 计划执行的 cron 表达式，必填、不超过 64 个字符且须通过 cron 语法校验
+    CronSpec string `json:"cronSpec" binding:"required,max=64,cron"`
+    // InputValues 技能输入字段的实参（键为字段名），保留原始 JSON 类型
+    InputValues map[string]json.RawMessage `json:"inputValues"`
+    // RetentionDays 报告保留天数，缺省 90 天，允许 1..3650 天
+    RetentionDays int `json:"retentionDays" default:"90" binding:"min=1,max=3650"`
+    // ExpiresAt 计划失效时间，空表示长期有效
+    ExpiresAt *time.Time `json:"expiresAt"`
+}
+```
+
+<a name="PeriodicReportPlanItemOut"></a>
+## type PeriodicReportPlanItemOut
+
+PeriodicReportPlanItemOut 定义报告计划列表项的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type PeriodicReportPlanItemOut struct {
+    // ID 计划 ID
+    ID  uint `json:"id"`
+    // Name 计划名称
+    Name string `json:"name"`
+    // Description 计划说明，可为空
+    Description string `json:"description"`
+    // SkillID 计划使用的技能 ID
+    SkillID uint `json:"skillID"`
+    // SkillName 计划关联的技能名称（按 skill_id 关联读取，不落库快照）
+    SkillName string `json:"skillName"`
+    // CronSpec 计划执行的 cron 表达式
+    CronSpec string `json:"cronSpec"`
+    // InputValues 技能输入字段的实参（键为字段名），保留原始 JSON 类型；
+    // 列表按 JSON 展示（form kind=json，经 OPTIONS 自省下发前端）
+    InputValues map[string]json.RawMessage `json:"inputValues" form:"kind=json"`
+    // Enabled 计划是否启用
+    Enabled bool `json:"enabled"`
+    // RetentionDays 报告保留天数
+    RetentionDays int `json:"retentionDays"`
+    // ExpiresAt 计划失效时间，nil 表示长期有效
+    ExpiresAt *time.Time `json:"expiresAt"`
+    // NextRunAt 下一次计划执行时间，nil 表示待分发器计算
+    NextRunAt *time.Time `json:"nextRunAt"`
+    // SessionID 计划关联的会话 ID，0 表示尚未创建
+    SessionID uint `json:"sessionID"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="PeriodicReportPlanListOut"></a>
+## type PeriodicReportPlanListOut
+
+PeriodicReportPlanListOut 定义报告计划列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportPlanListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportPlanListOut struct {
+    PeriodicReportPlanItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportPlanToggleIn"></a>
+## type PeriodicReportPlanToggleIn
+
+PeriodicReportPlanToggleIn 定义启停报告计划的请求输入。
+
+```go
+type PeriodicReportPlanToggleIn struct {
+    // Enabled 目标启用状态（true 启用 / false 停用）
+    Enabled bool `json:"enabled"`
+}
+```
+
+<a name="PeriodicReportPlanUpdateIn"></a>
+## type PeriodicReportPlanUpdateIn
+
+PeriodicReportPlanUpdateIn 定义更新报告计划的请求输入（可编辑字段整体覆盖）。
+
+```go
+type PeriodicReportPlanUpdateIn struct {
+    // Name 计划名称，必填（不超过 128 个字符）
+    Name string `json:"name" binding:"required,max=128"`
+    // Description 计划说明，可选（不超过 512 个字符）
+    Description string `json:"description" binding:"max=512"`
+    // SkillID 计划使用的技能 ID，必填
+    SkillID uint `json:"skillID" binding:"required"`
+    // CronSpec 计划执行的 cron 表达式，必填、不超过 64 个字符且须通过 cron 语法校验
+    CronSpec string `json:"cronSpec" binding:"required,max=64,cron"`
+    // InputValues 技能输入字段的实参（键为字段名），保留原始 JSON 类型
+    InputValues map[string]json.RawMessage `json:"inputValues"`
+    // RetentionDays 报告保留天数，缺省 90 天，允许 1..3650 天
+    RetentionDays int `json:"retentionDays" default:"90" binding:"min=1,max=3650"`
+    // ExpiresAt 计划失效时间，空表示长期有效
+    ExpiresAt *time.Time `json:"expiresAt"`
+}
+```
+
+<a name="PeriodicReportRunDetailOut"></a>
+## type PeriodicReportRunDetailOut
+
+PeriodicReportRunDetailOut 定义报告运行详情输出：在列表项基础上补充报告正文。
+
+```go
+type PeriodicReportRunDetailOut struct {
+    PeriodicReportRunItemOut
+    // Content 报告正文；无产出或未生成时为空
+    Content string `json:"content"`
+}
+```
+
+<a name="PeriodicReportRunItemOut"></a>
+## type PeriodicReportRunItemOut
+
+PeriodicReportRunItemOut 定义报告运行记录列表项的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type PeriodicReportRunItemOut struct {
+    // ID 运行记录 ID
+    ID  uint `json:"id"`
+    // PlanID 所属报告计划 ID
+    PlanID uint `json:"planID"`
+    // Status 运行状态（running/success/failed）
+    Status string `json:"status"`
+    // Title 生成报告的标题
+    Title string `json:"title"`
+    // ObjectKey 报告对象的存储键，无产出时为空
+    ObjectKey string `json:"objectKey"`
+    // SizeBytes 生成报告的字节大小
+    SizeBytes int64 `json:"sizeBytes"`
+    // Error 运行失败原因，成功时为空
+    Error string `json:"error"`
+    // TriggerAt 计划触发时间点
+    TriggerAt time.Time `json:"triggerAt"`
+    // StartedAt 实际开始执行时间，nil 表示尚未开始
+    StartedAt *time.Time `json:"startedAt"`
+    // FinishedAt 执行结束时间，nil 表示尚未结束
+    FinishedAt *time.Time `json:"finishedAt"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+}
+```
+
+<a name="PeriodicReportRunListOut"></a>
+## type PeriodicReportRunListOut
+
+PeriodicReportRunListOut 定义报告运行记录列表项输出（嵌入 BaseTotalOut 支持分页总数）。 字段与 search.toml 的 PeriodicReportRunListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportRunListOut struct {
+    PeriodicReportRunItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportSkillInputFieldOut"></a>
+## type PeriodicReportSkillInputFieldOut
+
+PeriodicReportSkillInputFieldOut 定义报告可用技能输入字段的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type PeriodicReportSkillInputFieldOut struct {
+    // Name 字段名称，作为计划 inputValues 中的键
+    Name string `json:"name"`
+    // Type 字段类型，取值为 date / number / string / enum / boolean；nowTime 是字段名，其类型为 date
+    Type string `json:"type"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空
+    Description string `json:"description"`
+}
+```
+
+<a name="PeriodicReportSkillOptionListOut"></a>
+## type PeriodicReportSkillOptionListOut
+
+PeriodicReportSkillOptionListOut 定义报告技能选项列表输出。
+
+```go
+type PeriodicReportSkillOptionListOut struct {
+    // Items 可选择作为报告来源的技能
+    Items []PeriodicReportSkillOptionOut `json:"items"`
+}
+```
+
+<a name="PeriodicReportSkillOptionOut"></a>
+## type PeriodicReportSkillOptionOut
+
+PeriodicReportSkillOptionOut 定义可作为周期性报告来源的技能选项输出。
+
+```go
+type PeriodicReportSkillOptionOut struct {
+    // ID 技能 ID（agent_skills.id）
+    ID  uint `json:"id"`
+    // Name 技能名称
+    Name string `json:"name"`
+    // Description 技能说明，可为空
+    Description string `json:"description"`
+    // InputFields 技能输入字段，供前端渲染计划输入表单
+    InputFields []PeriodicReportSkillInputFieldOut `json:"inputFields"`
+    // FixedFields 技能固定参数，保留原始 JSON 类型；前端只读展示并作为计划偏置默认值
+    FixedFields map[string]json.RawMessage `json:"fixedFields"`
+}
+```
+
+<a name="PeriodicReportWatchListOut"></a>
+## type PeriodicReportWatchListOut
+
+PeriodicReportWatchListOut 定义关注计划候选列表项输出（嵌入 BaseTotalOut 支持分页总数）。
+
+```go
+type PeriodicReportWatchListOut struct {
+    PeriodicReportWatchPlanItemOut
+    utils.BaseTotalOut
+}
+```
+
+<a name="PeriodicReportWatchPlanItemOut"></a>
+## type PeriodicReportWatchPlanItemOut
+
+PeriodicReportWatchPlanItemOut 定义关注计划候选列表项输出（独立于模型层，逐字段映射）。 字段与 search.toml 的 PeriodicReportWatchListGet.selectFields 一一对应。
+
+```go
+type PeriodicReportWatchPlanItemOut struct {
+    // ID 计划 ID
+    ID  uint `json:"id"`
+    // Name 计划名称
+    Name string `json:"name"`
+    // Description 计划说明，可为空
+    Description string `json:"description"`
+    // Enabled 计划是否启用
+    Enabled bool `json:"enabled"`
+    // Watched 当前用户是否已关注该计划（处理器按关注关系回填）
+    Watched bool `json:"watched"`
+    // CreatedAt 创建时间
+    CreatedAt time.Time `json:"createdAt"`
+    // UpdatedAt 更新时间
+    UpdatedAt time.Time `json:"updatedAt"`
+}
+```
+
+<a name="PeriodicReportWatchSetIn"></a>
+## type PeriodicReportWatchSetIn
+
+PeriodicReportWatchSetIn 定义设置计划关注状态的请求输入。
+
+```go
+type PeriodicReportWatchSetIn struct {
+    // PlanID 计划 ID，必填
+    PlanID uint `json:"planID" binding:"required"`
+    // Watched 目标关注状态（true 关注 / false 取消关注）
+    Watched bool `json:"watched"`
+}
+```
+
 <a name="RetrievalOptionsOut"></a>
 ## type RetrievalOptionsOut
 
@@ -1227,5 +1945,41 @@ type RetrievalWeightsOut struct {
     Vector float64 `json:"vector"`
     // Keyword 关键词检索路权重
     Keyword float64 `json:"keyword"`
+}
+```
+
+<a name="SkillInputFieldIn"></a>
+## type SkillInputFieldIn
+
+SkillInputFieldIn 定义用户填写的技能输入字段：结构约束由 binding 校验，周期 nowTime 契约 与固定参数约束由模型层统一校验。
+
+```go
+type SkillInputFieldIn struct {
+    // Name 字段名称，必填（1..64 个字符，首尾不能有空白）
+    Name string `json:"name" binding:"required,trimmed,max=64"`
+    // Type 字段类型，取值为 date / number / string / enum / boolean
+    Type modelsai.SkillInputFieldType `json:"type" binding:"required,oneof=date number string enum boolean"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空（不超过 256 个字符）
+    Description string `json:"description" binding:"max=256"`
+}
+```
+
+<a name="SkillInputFieldOut"></a>
+## type SkillInputFieldOut
+
+SkillInputFieldOut 定义技能输入字段的输出结构（独立于模型层，逐字段映射）。
+
+```go
+type SkillInputFieldOut struct {
+    // Name 字段名称，作为报告计划 inputValues 中的键
+    Name string `json:"name"`
+    // Type 字段类型，取值为 date / number / string / enum / boolean；nowTime 是字段名，其类型为 date
+    Type string `json:"type"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空
+    Description string `json:"description"`
 }
 ```

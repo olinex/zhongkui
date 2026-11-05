@@ -110,6 +110,24 @@ var Specs = []ParamSpec{
     },
 
     {
+        Key:   "agent.llmTimeoutRetryEnabled",
+        Group: "agent",
+        Kind:  ParamKindBool,
+    },
+
+    {
+        Key:   "agent.llmTimeoutRetryMaxRetries",
+        Group: "agent",
+        Kind:  ParamKindInt,
+    },
+
+    {
+        Key:   "agent.llmTimeoutRetryMultiplier",
+        Group: "agent",
+        Kind:  ParamKindInt,
+    },
+
+    {
         Key:   "retrieval.topK",
         Group: "retrieval",
         Kind:  ParamKindInt,
@@ -377,6 +395,11 @@ var ToolSpecs = []ToolSpec{
     },
     {
         Name:  "url_parse",
+        Group: "builtin",
+    },
+
+    {
+        Name:  "mermaid_check",
         Group: "builtin",
     },
 

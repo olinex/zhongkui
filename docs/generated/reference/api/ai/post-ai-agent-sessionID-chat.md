@@ -21,7 +21,8 @@
   "docIDs": [0],
   "businessData": {},
   "thinking": "string",
-  "slot": "string"
+  "slot": "string",
+  "skillID": 0
 }
 ```
 
@@ -29,8 +30,9 @@
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
-| query | string | 是 | required | - | - |
+| query | string | 是 | required,notBlank | - | - |
 | docIDs | []uint | - | - | - | - |
 | businessData | map[string]interface {} | - | - | - | - |
 | thinking | string | - | omitempty,oneof=on off | - | - |
 | slot | string | - | - | - | - |
+| skillID | uint | - | - | - | - |

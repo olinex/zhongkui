@@ -127,8 +127,12 @@ func RetrievalDryRunStream(c *gin.Context) {
 	}
 	out, err := comps.Retriever.DryRun(c, in.Query, report, middlewares.GetLanguage(c).String(), opts...)
 	if err != nil {
-		_ = sseWriter.SendError(err)
+		if sendErr := sseWriter.SendError(err); sendErr != nil {
+			middlewares.GetLogger(c).Warnf(c, nil, "ai dryrun: send error event failed: %v", sendErr)
+		}
 		return
 	}
-	_ = sseWriter.SendDone(out)
+	if err := sseWriter.SendDone(out); err != nil {
+		middlewares.GetLogger(c).Warnf(c, nil, "ai dryrun: send done event failed: %v", err)
+	}
 }

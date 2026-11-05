@@ -7,8 +7,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"zhongkuisec.com/zhongkui/internal/manager/config"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
 	"zhongkuisec.com/zhongkui/internal/models/core"
@@ -18,33 +16,14 @@ import (
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
 )
 
-const (
-	// AnonymousUsername 定义匿名用户的用户名
-	AnonymousUsername = "anon"
-	// AuthCtxName 定义在 Gin 上下文中存储认证器的键名
-	AuthCtxName = "auth"
-	// UserCtxName 定义在 Gin 上下文中存储用户信息的键名
-	UserCtxName = "user"
-)
+// 编译期断言：确保 JwtAuthenticator 实现了统一的凭据认证器接口。
+var _ CredentialAuthenticator = (*JwtAuthenticator)(nil)
 
 var (
-	// ErrUserNotExist 用户不存在的错误
-	ErrUserNotExist = response.CreateCodeError(http.StatusUnauthorized, response.CodeUserNotExist, nil)
 	// ErrJwtBadToken JWT 令牌格式错误或无效
 	ErrJwtBadToken = response.CreateCodeError(http.StatusUnauthorized, response.CodeBadJwtToken, nil)
 	// ErrJwtTimeoutToken JWT 令牌已过期且超过刷新时间限制
 	ErrJwtTimeoutToken = response.CreateCodeError(http.StatusUnauthorized, response.CodeTimeoutJwtToken, nil)
-
-	// anonymous 匿名用户对象，用于处理不需要认证的请求
-	anonymous = &core.User{
-		Username: AnonymousUsername,
-		UnionID: [16]byte{
-			0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff,
-		},
-	}
 )
 
 // UserClaims 自定义 JWT 声明结构
@@ -74,6 +53,7 @@ type JwtAuthenticator struct {
 // 参数:
 //   - cfg: 认证配置
 //   - db: 数据库连接
+//   - kd: 密钥派生器
 //
 // 返回:
 //   - *JwtAuthenticator: 新创建的认证器实例
@@ -171,7 +151,7 @@ func (j *JwtAuthenticator) Parse(token string) (*jwt.Token, *UserClaims, error) 
 //
 // 返回:
 //   - *core.User: 认证成功的用户对象，认证失败返回 nil
-func (j *JwtAuthenticator) Authenticate(c *gin.Context, kd *key.KeyDerivation) *core.User {
+func (j *JwtAuthenticator) Authenticate(c *gin.Context) *core.User {
 	token := j.getPureToken(c)
 	if token == "" {
 		return nil
@@ -188,6 +168,25 @@ func (j *JwtAuthenticator) Authenticate(c *gin.Context, kd *key.KeyDerivation) *
 	} else {
 		return nil
 	}
+}
+
+// Name 返回本认证器的名称，用于日志与可观测性。
+func (j *JwtAuthenticator) Name() string {
+	return "jwt"
+}
+
+// Match 报告当前请求是否携带 JWT 令牌。
+func (j *JwtAuthenticator) Match(c *gin.Context) bool {
+	return j.getPureToken(c) != ""
+}
+
+// AuthenticateRequest 认证当前请求，满足 CredentialAuthenticator 接口：
+// 令牌缺失或非法时统一返回 ErrJwtBadToken，由聚合器终止请求。
+func (j *JwtAuthenticator) AuthenticateRequest(c *gin.Context) (*core.User, *response.CodeError) {
+	if user := j.Authenticate(c); user != nil {
+		return user, nil
+	}
+	return nil, ErrJwtBadToken
 }
 
 // Sign 为用户创建 JWT 令牌
@@ -279,94 +278,4 @@ func (j *JwtAuthenticator) TokenCookieInject(c *gin.Context, token string) {
 		j.cfg.Cookie.Secure,
 		j.cfg.Cookie.HttpOnly,
 	)
-}
-
-// AuthenticatorMiddleware 认证器中间件
-// 将认证器实例设置到 Gin 上下文中，供后续处理使用
-// 返回:
-//   - gin.HandlerFunc: Gin 中间件函数
-func (j *JwtAuthenticator) AuthenticatorMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Set(AuthCtxName, j)
-		c.Next()
-	}
-}
-
-// AuthenticateMiddleware 认证中间件
-// 验证请求中的 JWT 令牌，将用户信息设置到上下文中
-// 参数:
-//   - allowAnonymous: 是否允许匿名访问
-//
-// 返回:
-//   - gin.HandlerFunc: Gin 中间件函数
-func (j *JwtAuthenticator) AuthenticateMiddleware(allowAnonymous bool) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		_, span := StartMiddlewareSpan(c, "authenticate")
-		defer span.End()
-		attrs := []attribute.KeyValue{attribute.Bool("allow-anon", allowAnonymous)}
-		if user := j.Authenticate(c, j.kd); user != nil {
-			attrs = append(attrs, attribute.String("user", user.UnionID.String()))
-			c.Set(UserCtxName, user)
-		} else if allowAnonymous {
-			attrs = append(attrs, attribute.String("user", "anon"))
-			c.Set(UserCtxName, anonymous)
-		} else {
-			span.SetAttributes(attrs...)
-			span.SetStatus(codes.Error, "auth failed")
-			ErrJwtBadToken.AbortWithGinH(c)
-			return
-		}
-		span.SetAttributes(attrs...)
-		span.SetStatus(codes.Ok, "auth success")
-		c.Next()
-	}
-}
-
-// GetUser 从 Gin 上下文中获取用户信息
-// 参数:
-//   - c: Gin 上下文
-//
-// 返回:
-//   - *core.User: 用户对象
-//   - *CodeError: 如果用户不存在返回错误
-func GetUser(c *gin.Context) (*core.User, *response.CodeError) {
-	if user, ok := c.Get(UserCtxName); ok {
-		return user.(*core.User), nil
-	} else {
-		return nil, ErrUserNotExist
-	}
-}
-
-// RequireUserID 从请求上下文获取当前请求用户 ID（users.id）。
-//
-// 与 GetUser 的区别在于：用户缺失时不会返回错误值由调用方处理，而是直接中断请求并返回 false，
-// 适用于必须已认证才能继续执行的处理器。
-//
-// 参数：
-//   - c: Gin 请求上下文
-//
-// 返回值：
-//   - uint: 当前请求用户 ID；获取失败时为 0
-//   - bool: 是否成功获取；false 表示用户缺失，请求已被中断
-func RequireUserID(c *gin.Context) (uint, bool) {
-	user, err := GetUser(c)
-	if err != nil {
-		err.AbortWithGinH(c)
-		return 0, false
-	}
-	return user.ID, true
-}
-
-// GetAuth 从 Gin 上下文中获取认证器实例
-// 参数:
-//   - c: Gin 上下文
-//
-// 返回:
-//   - *JwtAuthenticator: 认证器实例，如果不存在返回 nil
-func GetAuth(c *gin.Context) *JwtAuthenticator {
-	if auth, ok := c.Get(AuthCtxName); ok {
-		return auth.(*JwtAuthenticator)
-	} else {
-		return nil
-	}
 }

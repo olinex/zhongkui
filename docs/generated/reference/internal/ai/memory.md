@@ -15,7 +15,6 @@
 - [func SessionTopicFallback\(query string\) string](<#SessionTopicFallback>)
 - [type ExtractedMemory](<#ExtractedMemory>)
   - [func ParseExtractedMemories\(content string, max int\) \(\[\]ExtractedMemory, error\)](<#ParseExtractedMemories>)
-- [type MemoryQuery](<#MemoryQuery>)
 - [type Service](<#Service>)
   - [func NewService\(store \*Store, sessions Sessions, resolver port.ChatResolver, params \*config.Params, logger \*logging.Logger\) \(\*Service, error\)](<#NewService>)
   - [func \(m \*Service\) Compact\(ctx context.Context, session \*ai.AgentSession\) \(\*contract.CompactResult, error\)](<#Service.Compact>)
@@ -23,7 +22,6 @@
   - [func \(m \*Service\) Delete\(ctx context.Context, namespaceName string, userID uint, ids \[\]uint\) error](<#Service.Delete>)
   - [func \(m \*Service\) GenerateTopic\(ctx context.Context, query string\) string](<#Service.GenerateTopic>)
   - [func \(m \*Service\) Get\(ctx context.Context, namespaceName string, userID uint, id uint\) \(\*ai.AgentMemory, error\)](<#Service.Get>)
-  - [func \(m \*Service\) List\(ctx context.Context, q MemoryQuery\) \(\[\]\*ai.AgentMemory, int64, error\)](<#Service.List>)
   - [func \(m \*Service\) Recall\(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID, userID uint, query string\) \(\[\]contract.MemoryHit, error\)](<#Service.Recall>)
   - [func \(m \*Service\) ReindexEmbeddings\(ctx context.Context, namespaceName string, report contract.SyncReporter\) \(int, error\)](<#Service.ReindexEmbeddings>)
   - [func \(m \*Service\) SetStatus\(ctx context.Context, namespaceName string, userID uint, id uint, status ai.MemoryStatus\) error](<#Service.SetStatus>)
@@ -36,7 +34,6 @@
   - [func NewStore\(db \*database.DB, embed port.Embedder, params \*config.Params, logger \*logging.Logger\) \(\*Store, error\)](<#NewStore>)
   - [func \(s \*Store\) Delete\(ctx context.Context, namespaceName string, userID uint, ids \[\]uint\) error](<#Store.Delete>)
   - [func \(s \*Store\) Get\(ctx context.Context, namespaceName string, userID uint, id uint\) \(\*ai.AgentMemory, error\)](<#Store.Get>)
-  - [func \(s \*Store\) List\(ctx context.Context, q MemoryQuery\) \(\[\]\*ai.AgentMemory, int64, error\)](<#Store.List>)
   - [func \(s \*Store\) ReindexEmbeddings\(ctx context.Context, namespaceName string, report contract.SyncReporter\) \(int, error\)](<#Store.ReindexEmbeddings>)
   - [func \(s \*Store\) Retrieve\(ctx context.Context, namespaceName string, agentKind ai.AgentKind, sessionID, userID uint, query string\) \(\[\]contract.MemoryHit, error\)](<#Store.Retrieve>)
   - [func \(s \*Store\) SetStatus\(ctx context.Context, namespaceName string, userID uint, id uint, status ai.MemoryStatus\) error](<#Store.SetStatus>)
@@ -150,32 +147,6 @@ func ParseExtractedMemories(content string, max int) ([]ExtractedMemory, error)
 
 ParseExtractedMemories 容错解析抽取结果：先去掉 \`\`\`json 代码围栏，再按 \{"memories":\[...\]\} 解析， 失败时退回裸数组解析；条数超过 max（max\>0 时）则截断。空白响应返回英文错误。
 
-<a name="MemoryQuery"></a>
-## type MemoryQuery
-
-MemoryQuery 是记忆列表的过滤与分页条件。
-
-```go
-type MemoryQuery struct {
-    // NamespaceName 限定命名空间（必填，非空）
-    NamespaceName string
-    // UserID 限定属主用户（users.id），用于跨用户隔离
-    UserID uint
-    // AgentKind 按 Agent 类型过滤（非空时生效）
-    AgentKind ai.AgentKind
-    // Kind 按记忆类别过滤（非空时生效）
-    Kind ai.MemoryKind
-    // Status 按记忆状态过滤（非空时生效）
-    Status ai.MemoryStatus
-    // Keyword 按标题/正文模糊匹配（非空时生效）
-    Keyword string
-    // Offset 分页偏移（小于 0 时取 0）
-    Offset int
-    // Limit 每页条数（小于等于 0 时取默认 20）
-    Limit int
-}
-```
-
 <a name="Service"></a>
 ## type Service
 
@@ -240,15 +211,6 @@ func (m *Service) Get(ctx context.Context, namespaceName string, userID uint, id
 ```
 
 Get 读取指定命名空间下属于该用户的一条长期记忆，未找到时返回 ErrMemoryNotFound。
-
-<a name="Service.List"></a>
-### func \(\*Service\) List
-
-```go
-func (m *Service) List(ctx context.Context, q MemoryQuery) ([]*ai.AgentMemory, int64, error)
-```
-
-List 分页列出命名空间下的长期记忆，语义完全委托 Store.List。
 
 <a name="Service.Recall"></a>
 ### func \(\*Service\) Recall
@@ -366,15 +328,6 @@ func (s *Store) Get(ctx context.Context, namespaceName string, userID uint, id u
 ```
 
 Get 读取指定命名空间下、属于该用户的一条记忆；不存在时返回 ErrMemoryNotFound。
-
-<a name="Store.List"></a>
-### func \(\*Store\) List
-
-```go
-func (s *Store) List(ctx context.Context, q MemoryQuery) ([]*ai.AgentMemory, int64, error)
-```
-
-List 分页列出命名空间下的记忆：AgentKind/Kind/Status 非空时过滤，Keyword 非空时按 标题/正文 ILIKE 模糊匹配；按 updated\_at 降序排序，并同时返回过滤后的总数。
 
 <a name="Store.ReindexEmbeddings"></a>
 ### func \(\*Store\) ReindexEmbeddings

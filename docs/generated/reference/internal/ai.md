@@ -7,7 +7,7 @@
 - [type Components](<#Components>)
   - [func \(c \*Components\) Enabled\(\) bool](<#Components.Enabled>)
 - [type Runtime](<#Runtime>)
-  - [func NewRuntime\(ctx context.Context, db \*database.DB, client \*etcd.EtcdClient, logger \*logging.Logger\) \(\*Runtime, error\)](<#NewRuntime>)
+  - [func NewRuntime\(ctx context.Context, db \*database.DB, client \*etcd.EtcdClient, logger \*logging.Logger, options ...RuntimeOption\) \(\*Runtime, error\)](<#NewRuntime>)
   - [func \(r \*Runtime\) AgenticChat\(slot ai.Slot\) \(model.AgenticModel, error\)](<#Runtime.AgenticChat>)
   - [func \(r \*Runtime\) Chat\(slot ai.Slot\) \(model.BaseChatModel, error\)](<#Runtime.Chat>)
   - [func \(r \*Runtime\) Current\(\) \*Components](<#Runtime.Current>)
@@ -22,12 +22,14 @@
   - [func \(r \*Runtime\) Start\(ctx context.Context\) error](<#Runtime.Start>)
   - [func \(r \*Runtime\) TestModel\(ctx context.Context, cfg llm.ModelConfig\) error](<#Runtime.TestModel>)
   - [func \(r \*Runtime\) Turns\(\) \*turns.Manager](<#Runtime.Turns>)
+- [type RuntimeOption](<#RuntimeOption>)
+  - [func WithJSEngine\(engine \*jsengine.Engine\) RuntimeOption](<#WithJSEngine>)
 
 
 <a name="Components"></a>
 ## type Components
 
-Components 聚合 AI 助手（RAG \+ Agent）运行所需的全部组件：ADK Agent 运行时（Agent）、 TurnLoop 会话驱动（Turns）、知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化 （session.Store）、行为参数解析器（Params）与已启用的工具清单（Tools）。由本包的运行时 （Runtime）依据数据库模型注册表装配，并经请求中间件注入视图层；AI 未启用时各执行组件为 nil， 视图层以 Enabled 统一判断。
+Components 聚合 AI 助手（RAG \+ Agent）运行所需的全部组件：ADK Agent 运行时（Agent）、 TurnLoop 会话驱动（Turns）、知识库索引（Knowledge）、知识库检索器（Retriever）、会话持久化 （session.Store）、技能资源存储（skill.Store）、行为参数解析器（Params）与已启用的工具清单 （Tools）。由本包的运行时（Runtime）依据数据库模型注册表装配，并经请求中间件注入视图层； AI 未启用时各执行组件为 nil，视图层以 Enabled 统一判断。
 
 ```go
 type Components struct {
@@ -41,6 +43,8 @@ type Components struct {
     Retriever *knowledge.Retriever
     // Sessions 会话持久化（AI 未启用时为 nil）
     Sessions *session.Store
+    // Skills 技能资源存储（AI 未启用时为 nil）
+    Skills *skill.Store
     // Memory 会话记忆服务（滚动摘要 / 会话压缩 / 长期记忆检索；AI 未启用时为 nil）
     Memory *memory.Service
     // Params 行为参数解析器（始终非 nil）
@@ -75,7 +79,7 @@ type Runtime struct {
 ### func NewRuntime
 
 ```go
-func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, logger *logging.Logger) (*Runtime, error)
+func NewRuntime(ctx context.Context, db *database.DB, client *etcd.EtcdClient, logger *logging.Logger, options ...RuntimeOption) (*Runtime, error)
 ```
 
 NewRuntime 构造运行时并完成首次装配：读取数据库配置、构建客户端与组件、建立维度 强校验，并创建 etcd 变更监听器。首次装配失败（如 embedding 维度不一致、绑定模型 端点信息不完整）返回错误，由启动路径中止启动；模型注册表为空时装配为未启用状态而 不报错，服务可正常启动等待前端注册模型。
@@ -205,3 +209,21 @@ func (r *Runtime) Turns() *turns.Manager
 ```
 
 Turns 返回 TurnLoop 会话驱动（随装配态重建），供视图层取用；AI 未启用时为 nil。
+
+<a name="RuntimeOption"></a>
+## type RuntimeOption
+
+RuntimeOption 是运行时的可选装配项，用于注入由 provider 统一管理的可选依赖； 不传时运行时按原有能力装配，测试与无依赖场景无需构造这些组件。
+
+```go
+type RuntimeOption func(*runtimeOptions)
+```
+
+<a name="WithJSEngine"></a>
+### func WithJSEngine
+
+```go
+func WithJSEngine(engine *jsengine.Engine) RuntimeOption
+```
+
+WithJSEngine 注入 JS 运行时；为空时依赖脚本的内置工具在装配阶段报错，其他能力不受影响。

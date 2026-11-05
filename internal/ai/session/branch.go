@@ -124,7 +124,7 @@ func (s *Store) TruncateMessagesFromUserMessage(ctx context.Context, sessionID, 
 // 档位 / Agent 类型 / 审核阀门与源会话一致，状态 active；滚动摘要不复制（消息 seq 会重新编号，
 // 原摘要覆盖范围失去意义）。复制出的消息在新会话内 seq 从 1 连续重新编号（新 session_id 不同，
 // 不受 UNIQUE(session_id,user_id,seq) 影响），保留 role/message_kind/payload/content/draft/citations/
-// created_at 等载荷，不复制 id 与源 seq。新会话的 message_seq 直接置为复制条数（在插入时一次算好，
+// skill_id/skill_name/created_at 等载荷，不复制 id 与源 seq。新会话的 message_seq 直接置为复制条数（在插入时一次算好，
 // 供后续追加消息从 count+1 继续分配 seq）。
 func (s *Store) BranchSessionFromUserMessage(ctx context.Context, sessionID, userID uint, userMessageIndex int, title string) (*ai.AgentSession, error) {
 	if userMessageIndex < 1 {
@@ -179,26 +179,26 @@ bounds AS (
 ),
 new_session AS (
     INSERT INTO agent_sessions
-        (created_at, updated_at, namespace_name, user_id, title, target_model, status, agent_kind, review_valve, message_seq)
+        (created_at, updated_at, namespace_name, user_id, title, target_model, status, agent_kind, origin, review_valve, message_seq)
     SELECT
-        NOW(), NOW(), a.namespace_name, a.user_id, ?, a.target_model, ?, a.agent_kind, a.review_valve,
+        NOW(), NOW(), a.namespace_name, a.user_id, ?, a.target_model, ?, a.agent_kind, a.origin, a.review_valve,
         (SELECT COUNT(*) FROM agent_messages m
          WHERE m.session_id = ? AND m.user_id = ? AND (b.upper_seq IS NULL OR m.seq < b.upper_seq))
     FROM agent_sessions a, bounds b
     WHERE a.id = ? AND a.user_id = ? AND b.anchor_seq IS NOT NULL
-    RETURNING id, created_at, updated_at, namespace_name, user_id, title, target_model, status, agent_kind, review_valve, message_seq
+    RETURNING id, created_at, updated_at, namespace_name, user_id, title, target_model, status, agent_kind, origin, review_valve, message_seq
 ),
 copied AS (
     INSERT INTO agent_messages
-        (created_at, updated_at, session_id, namespace_name, user_id, seq, role, message_kind, payload, content, draft_json, citations_json, prompt_tokens, completion_tokens, total_tokens, elapsed_ms)
+        (created_at, updated_at, session_id, namespace_name, user_id, seq, role, message_kind, payload, content, draft_json, citations_json, prompt_tokens, completion_tokens, total_tokens, elapsed_ms, skill_id, skill_name)
     SELECT
         m.created_at, NOW(), ns.id, m.namespace_name, m.user_id, ROW_NUMBER() OVER (ORDER BY m.seq),
         m.role, m.message_kind, m.payload, m.content, m.draft_json, m.citations_json,
-        m.prompt_tokens, m.completion_tokens, m.total_tokens, m.elapsed_ms
+        m.prompt_tokens, m.completion_tokens, m.total_tokens, m.elapsed_ms, m.skill_id, m.skill_name
     FROM agent_messages m, bounds b, new_session ns
     WHERE m.session_id = ? AND m.user_id = ? AND (b.upper_seq IS NULL OR m.seq < b.upper_seq)
 )
-SELECT id, created_at, updated_at, namespace_name, user_id, title, target_model, status, agent_kind, review_valve, message_seq
+SELECT id, created_at, updated_at, namespace_name, user_id, title, target_model, status, agent_kind, origin, review_valve, message_seq
 FROM new_session
 `,
 			sessionID, userID, ai.MessageRoleUser, userMessageIndex-1,
@@ -212,7 +212,7 @@ FROM new_session
 		var branch ai.AgentSession
 		if err := row.Scan(&branch.ID, &branch.CreatedAt, &branch.UpdatedAt, &branch.NamespaceName,
 			&branch.UserID, &branch.Title, &branch.TargetModel, &branch.Status, &branch.AgentKind,
-			&branch.ReviewValve, &branch.MessageSeq); err != nil {
+			&branch.Origin, &branch.ReviewValve, &branch.MessageSeq); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return ErrMessageNotFound
 			}

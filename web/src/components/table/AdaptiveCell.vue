@@ -31,7 +31,7 @@
     :value="item[header.key]"
   />
   <json-chip
-    v-else-if="header.type === BackendDataType.JSON"
+    v-else-if="header.kind === 'json' || header.type === BackendDataType.JSON"
     :value="headerJson(item[header.key])"
   />
   <div v-else-if="header.type === BackendDataType.DATETIME">
@@ -50,23 +50,23 @@
     {{ enumLabelOf(header.enumType, item[header.key]) }}
   </div>
   <v-menu
-    v-else-if="header.type === BackendDataType.ACTIONS && actions"
+    v-else-if="header.type === BackendDataType.ACTIONS && Object.keys(rowActions(item)).length > 0"
     location="bottom right"
     open-on-hover
   >
-    <template #activator="{ props }">
+    <template #activator="{ props: activatorProps }">
       <!-- 密度由主题层决定（VBtn density="compact"）。 -->
       <v-btn
         icon="mdi-dots-vertical"
         variant="plain"
         :title="$t('model.__base.field.__actions')"
         :aria-label="$t('model.__base.field.__actions')"
-        v-bind="props"
+        v-bind="activatorProps"
       />
     </template>
     <v-list>
       <v-list-item
-        v-for="(action, name) in actions(item)"
+        v-for="(action, name) in rowActions(item)"
         :key="name"
         :vallue="name"
         @click="action(item)"
@@ -93,7 +93,7 @@ import {
 import { enumLabelOf } from "@/utils/enums";
 import { DateTime } from "luxon";
 
-defineProps({
+const props = defineProps({
   header: {
     type: Object as PropType<TableHeader>,
     required: true,
@@ -114,6 +114,10 @@ defineProps({
     default: () => {},
   },
 });
+
+// rowActions 取当前行的可用操作集合；空集合表示该行没有任何可选动作，单元格不渲染菜单入口。
+const rowActions = (item: Record<string, unknown>): ItemActions =>
+  props.actions ? props.actions(item) : {};
 
 // headerJson 将单元格值归一化为 JSON 字符串
 // json-chip 期望接收 JSON 字符串；对象/数组等结构化值经 JSON.stringify 后展示

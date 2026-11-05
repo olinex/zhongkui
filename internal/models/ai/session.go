@@ -32,6 +32,9 @@ type AgentSession struct {
 	Status SessionStatus `gorm:"type:VARCHAR(16)"`
 	// AgentKind 会话所属 Agent 类型（如 knowledge/rego），记忆归属与检索据此隔离
 	AgentKind AgentKind `gorm:"type:VARCHAR(32);default:knowledge"`
+	// Origin 会话来由：chat（普通助手会话，默认）或 periodic_report（周期报告运行会话）。
+	// 内部运行会话不进入 AI 助手会话列表，只在其业务入口（周期报告历史）中查看。
+	Origin SessionOrigin `gorm:"type:VARCHAR(16);not null;default:chat"`
 	// ReviewValve 会话级审核阀门（each/auto/none），与本会话内 client 工具调用评估出的审核
 	// 重要级合成，决定该调用是否需人工审核；空表示按列默认值 each（逐一审核）
 	ReviewValve ReviewValve `gorm:"type:VARCHAR(16);default:each"`
@@ -96,6 +99,30 @@ type AgentMessage struct {
 	// （超时 / 报错 / 取消）时据此表达「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文
 	// 拼接提示文案（提示语若混入正文，会被喂回模型污染下一轮上下文）；用户消息恒为空。
 	Phase AgentRunPhase `gorm:"type:VARCHAR(16)"`
+	// SkillID 本条用户消息所在轮次选用的技能 ID（agent_skills.id），nil 表示未选技能；技能归属
+	// 「轮次」而非会话——同一会话的不同轮次可分别选用不同技能。仅用户消息有值。列上设外键约束
+	// REFERENCES agent_skills(id) ON DELETE SET NULL，故未选技能以 NULL 而非 0 表达。
+	SkillID *uint `gorm:"type:BIGINT"`
+	// SkillName 本轮技能名称快照（写入时的技能名），空表示未选技能；以快照而非实时关联，
+	// 保证技能后续重命名 / 停用 / 删除后历史气泡仍能如实展示当时选用的技能。仅用户消息有值。
+	SkillName string `gorm:"type:VARCHAR(64);not null;default:''"`
+}
+
+// SkillIDColumn 把轮次技能 ID 映射为消息行的可空技能列：0（未选技能）映射为 NULL，
+// 使 agent_messages.skill_id 的外键约束不会因「未选技能」而违例。
+func SkillIDColumn(id uint) *uint {
+	if id == 0 {
+		return nil
+	}
+	return &id
+}
+
+// SkillIDFromColumn 把消息行的可空技能列还原为轮次技能 ID：NULL 映射为 0（未选技能）。
+func SkillIDFromColumn(id *uint) uint {
+	if id == nil {
+		return 0
+	}
+	return *id
 }
 
 // AgentSessionCompaction 表示一次滚动摘要推进（静默滚动或压缩）留下的压缩检查点：记录推进后的

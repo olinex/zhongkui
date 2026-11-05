@@ -23,8 +23,11 @@
 - [memory 参考](internal/ai/memory.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/memory`
 - [msgops 参考](internal/ai/msgops.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/msgops`
 - [port 参考](internal/ai/port.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/port`
+- [reports 参考](internal/ai/reports.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/reports`
+- [periodic 参考](internal/ai/reports/periodic.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/reports/periodic`
 - [retrieval 参考](internal/ai/retrieval.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/retrieval`
 - [session 参考](internal/ai/session.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/session`
+- [skill 参考](internal/ai/skill.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/skill`
 - [tools 参考](internal/ai/tools.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/tools`
 - [mcp 参考](internal/ai/tools/mcp.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/tools/mcp`
 - [turns 参考](internal/ai/turns.md) — 来源 `zhongkuisec.com/zhongkui/internal/ai/turns`
@@ -86,9 +89,11 @@
 - [hash 参考](internal/pkg/hash.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/hash`
 - [health 参考](internal/pkg/health.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/health`
 - [huginn 参考](internal/pkg/huginn.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/huginn`
+- [jsengine 参考](internal/pkg/jsengine.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/jsengine`
 - [llm 参考](internal/pkg/llm.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/llm`
 - [logging 参考](internal/pkg/logging.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/logging`
 - [mail 参考](internal/pkg/mail.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/mail`
+- [mermaid 参考](internal/pkg/mermaid.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/mermaid`
 - [message 参考](internal/pkg/message.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/message`
 - [migrate 参考](internal/pkg/migrate.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/migrate`
 - [ml 参考](internal/pkg/ml.md) — 来源 `zhongkuisec.com/zhongkui/internal/pkg/ml`
@@ -121,6 +126,7 @@
 - [mail 参考](internal/worker/handlers/mail.md) — 来源 `zhongkuisec.com/zhongkui/internal/worker/handlers/mail`
 - [notify 参考](internal/worker/handlers/notify.md) — 来源 `zhongkuisec.com/zhongkui/internal/worker/handlers/notify`
 - [pcap 参考](internal/worker/handlers/pcap.md) — 来源 `zhongkuisec.com/zhongkui/internal/worker/handlers/pcap`
+- [periodicreport 参考](internal/worker/handlers/periodicreport.md) — 来源 `zhongkuisec.com/zhongkui/internal/worker/handlers/periodicreport`
 - [tag_event 参考](internal/worker/handlers/tag_event.md) — 来源 `zhongkuisec.com/zhongkui/internal/worker/handlers/tag_event`
 - [flow 参考](internal/worker/processors/flow.md) — 来源 `zhongkuisec.com/zhongkui/internal/worker/processors/flow`
 - [totel 参考](internal/worker/totel.md) — 来源 `zhongkuisec.com/zhongkui/internal/worker/totel`

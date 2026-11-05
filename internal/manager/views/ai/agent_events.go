@@ -123,8 +123,10 @@ func streamAssistantEvents(c *gin.Context, stream *turns.Stream) {
 
 	if stream.Resume != nil {
 		if stream.Resume.Reset != "" {
-			_ = writer.WriteControl(stream.SessionID, assistant.EventTypeResumeReset, stream.Resume.FromSeq, stream.Resume.RunID,
-				assistant.ResumeResetPayload{Reason: stream.Resume.Reset})
+			if err := writer.WriteControl(stream.SessionID, assistant.EventTypeResumeReset, stream.Resume.FromSeq, stream.Resume.RunID,
+				assistant.ResumeResetPayload{Reason: stream.Resume.Reset}); err != nil {
+				return
+			}
 			return
 		}
 		if err := writer.WriteControl(stream.SessionID, assistant.EventTypeResumeBegin, stream.Resume.FromSeq, stream.Resume.RunID,
@@ -209,8 +211,11 @@ func streamCompactEvents(c *gin.Context, sessionID, messageID uint, folded int, 
 	run(report)
 	if !done {
 		// 压缩未上报终态（例如记忆服务未装配）：显式收敛为失败，避免前端停留在 running。
-		_ = writer.WriteEvent(emitter.Next(assistant.EventTypeMessageCompress, assistant.MessageCompressPayload{
+		if err := writer.WriteEvent(emitter.Next(assistant.EventTypeMessageCompress, assistant.MessageCompressPayload{
 			Compress: assistant.CompressState{Phase: assistant.CompressPhaseFailed, Reason: "manual"},
-		}))
+		})); err != nil {
+			// 客户端已断开：写失败无需再处理，回合侧的压缩结果不受影响。
+			return
+		}
 	}
 }

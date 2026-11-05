@@ -10,16 +10,9 @@
         :create="openCreateDialogAction"
         :project-fields="projectFields"
         model-name="notificationChannel"
+        @view-plaintext="viewConfigPlaintext"
       >
-        <!-- config 为加密字段，列表统一用加密字段组件展示（提供明文查看入口） -->
-        <template #cell-config="{ item }">
-          <encrypted-value-cell
-            kind="crypto"
-            :item="item"
-            field-key="config"
-            @view-plaintext="viewConfigPlaintext"
-          />
-        </template>
+        <!-- config 为加密字段（后端 kind=crypto），由 SearchTable 自动渲染加密单元格 -->
         <!-- 渠道类型列显示可读名称（与创建/编辑表单及筛选下拉一致），而非原始类型键 -->
         <template #cell-type="{ value }">
           {{ enumLabelOf(EnumClass.channelType, String(value ?? "")) }}
@@ -168,7 +161,7 @@
                   v-model="createDescription"
                   v-bind="createDescriptionProps"
                   :label="$t('model.notificationChannel.field.description')"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -268,7 +261,7 @@
                   v-bind="editDescriptionProps"
                   :label="$t('model.notificationChannel.field.description')"
                   :disabled="!editable"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>

@@ -25,6 +25,23 @@ func newNotificationTestDB(t *testing.T) *database.DB {
 	return testdb.Core(t)
 }
 
+// seedNotificationGroupTargetParents 为通知组关联测试准备被引用的渠道、目标与通知组：
+// notification_group_targets.group_id / target_id 现为外键，插入关联前父行必须存在。
+func seedNotificationGroupTargetParents(db *database.DB) {
+	_ = db.Exec(
+		`INSERT INTO notification_channels (id, namespace_name, name, type)
+		 VALUES (1, 'default', 'test-channel', 'email') ON CONFLICT DO NOTHING`,
+	).Error
+	_ = db.Exec(
+		`INSERT INTO notification_targets (id, namespace_name, name, channel_id, type)
+		 VALUES (2, 'default', 'test-target', 1, 'email') ON CONFLICT DO NOTHING`,
+	).Error
+	_ = db.Exec(
+		`INSERT INTO notification_groups (id, namespace_name, name)
+		 VALUES (1, 'default', 'test-group-a'), (3, 'default', 'test-group-b') ON CONFLICT DO NOTHING`,
+	).Error
+}
+
 // ensureTestNamespace 确保指定名称的命名空间在测试库中存在（幂等）。
 // 注意不能使用 GORM 的 FirstOrCreate：其内部 Create 在独立事务中执行，
 // 后续语句在同一事务内看不到该行，导致父键/外键校验失败（PostgreSQL 下报
@@ -364,6 +381,7 @@ func TestNotificationGroupTarget_UniqueConstraint(t *testing.T) {
 	convey.Convey("测试 NotificationGroupTarget 唯一约束", t, func() {
 		convey.Convey("同一 group_id + target_id 的重复关联应插入失败", func() {
 			db := newNotificationTestDB(t)
+			seedNotificationGroupTargetParents(db)
 			base := NotificationGroupTarget{
 				GroupID:  1,
 				TargetID: 2,
@@ -379,6 +397,7 @@ func TestNotificationGroupTarget_UniqueConstraint(t *testing.T) {
 
 		convey.Convey("同一目标加入不同组应插入成功", func() {
 			db := newNotificationTestDB(t)
+			seedNotificationGroupTargetParents(db)
 			base := NotificationGroupTarget{
 				GroupID:  1,
 				TargetID: 2,

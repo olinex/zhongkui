@@ -15,12 +15,16 @@
 - [`agent_runs`](./ai/agent_runs.md) — AgentRun 表示一次 Agent 运行在挂起时刻的运行现场：命中客户端工具后， 后端把待执行调用列表、检索引用与档位落库，结束本次流等待前端回传 审批决定与执行结果，再据该现场从中断处续跑。
 - [`agent_session_compactions`](./ai/agent_session_compactions.md) — AgentSessionCompaction 表示一次滚动摘要推进（静默滚动或压缩）留下的压缩检查点：记录推进后的 上下文起点（UptoSeq）与该时刻的摘要全文（加密落库），与 AgentSession 的 Summary/SummaryUptoSeq 对应，作为回滚时「逐级回退 start bound」的可恢复起点。
 - [`agent_sessions`](./ai/agent_sessions.md) — AgentSession 表示一个 AI 助手会话，聚合同一话题下的多轮问答消息 （AgentMessage），并记录会话缺省档位与状态。
+- [`agent_skills`](./ai/agent_skills.md) — AgentSkill 表示一条 AI 技能定义，记录技能名称、明文描述与加密正文，并提供启停开关。
 - [`knowledge_chunks`](./ai/knowledge_chunks.md) — KnowledgeChunk 表示知识文档切分后的一个分块，是 RAG 检索的最小单元： 每个分块携带向量化表示（Embedding）与全文检索表示（Search）， 支持向量相似度检索与关键词检索。
 - [`knowledge_documents`](./ai/knowledge_documents.md) — KnowledgeDocument 表示一份上传到知识库的文档，是 RAG 索引的输入单元： 文档按标题层级切分为多个知识分块（KnowledgeChunk），并保存内容摘要 （Hash）以判断已有分块索引是否随内容变更而过期。
 - [`llm_bindings`](./ai/llm_bindings.md) — LlmBinding 表示一个档位到模型注册表记录的绑定关系，每个槽位至多一条记录 （slot 唯一）。
 - [`llm_models`](./ai/llm_models.md) — LlmModel 表示一个注册到平台的 LLM 模型端点（chat 或 embedding），是 LLM 配置的 唯一事实来源（不再来自配置文件）。
 - [`llm_tools`](./ai/llm_tools.md) — LlmTool 表示一条注册到平台的工具记录，是 Agent 可调用的工具的唯一事实来源。
 - [`mcp_servers`](./ai/mcp_servers.md) — McpServer 表示一个注册到平台的远程 MCP（Model Context Protocol）端点，是 Agent 可调用 的 MCP 工具的来源。
+- [`periodic_report_plan_watches`](./ai/periodic_report_plan_watches.md) — PeriodicReportPlanWatch 表示用户对某个报告计划的关注关系：关注后该用户的报告中心展示该计划的运行 记录。
+- [`periodic_report_plans`](./ai/periodic_report_plans.md) — PeriodicReportPlan 表示一个周期性报告计划：按 cron 表达式周期性执行指定技能，携带渲染输入所需的 实参，并按保留天数清理历史报告。
+- [`periodic_report_runs`](./ai/periodic_report_runs.md) — PeriodicReportRun 表示一次报告运行的记录：由计划在 cron 触发点创建，记录触发时间、运行状态与产出 （对象存储键、标题、大小）以及失败原因。
 ### api
 
 - [`http_api_meta`](./api/http_api_meta.md) — HttpApiMeta 表示接口访问的元信息聚合记录。

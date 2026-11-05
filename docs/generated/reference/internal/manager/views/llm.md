@@ -314,21 +314,21 @@ LlmModelCreateIn 定义创建 LLM 模型端点的请求输入结构。 端点三
 ```go
 type LlmModelCreateIn struct {
     // Name 模型本地标识，全局唯一，最长 64
-    Name string `json:"name" binding:"max=64"`
+    Name string `json:"name" binding:"required,trimmed,max=64"`
     // Kind 模型类型：chat（对话）| embedding（向量化），创建后不可更改
-    Kind llm.ModelKind `json:"kind" binding:"max=16"`
+    Kind llm.ModelKind `json:"kind" binding:"required,enum=llmModelKind"`
     // BaseURL 模型端点的 OpenAI 兼容接口基地址，最长 512
-    BaseURL string `json:"baseURL" binding:"max=512"`
+    BaseURL string `json:"baseURL" binding:"required,trimmed,max=512"`
     // APIKey 访问端点的凭据（明文提交，落库为密文）
-    APIKey string `json:"apiKey"`
+    APIKey string `json:"apiKey" binding:"required"`
     // Model 供应商侧模型名（如 gpt-4o-mini、text-embedding-3-small），最长 128
-    Model string `json:"model" binding:"max=128"`
+    Model string `json:"model" binding:"required,trimmed,max=128"`
     // TimeoutSeconds 单次请求超时秒数，默认 60
-    TimeoutSeconds int `json:"timeoutSeconds" default:"60"`
+    TimeoutSeconds int `json:"timeoutSeconds" default:"60" binding:"min=1"`
     // Temperature 采样温度，取值 [0, 2]，默认 0.2（仅 chat 模型有意义）
-    Temperature float64 `json:"temperature" default:"0.2"`
+    Temperature float64 `json:"temperature" default:"0.2" binding:"min=0,max=2"`
     // MaxTokens 单次生成的最大 token 数，默认 4096（仅 chat 模型有意义）
-    MaxTokens int `json:"maxTokens" default:"4096"`
+    MaxTokens int `json:"maxTokens" default:"4096" binding:"min=1"`
     // ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
     ContextTokens int `json:"contextTokens"`
     // Enabled 是否启用，默认启用；禁用的模型不可绑定到档位
@@ -345,7 +345,7 @@ type LlmModelCreateIn struct {
     // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
     ThinkingOffValue string `json:"thinkingOffValue"`
     // APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
-    APIMode llm.APIMode `json:"apiMode" binding:"max=16"`
+    APIMode llm.APIMode `json:"apiMode" binding:"omitempty,enum=llmAPIMode"`
 }
 ```
 
@@ -364,7 +364,7 @@ type LlmModelDetailOut struct {
     // BaseURL 模型端点的 OpenAI 兼容接口基地址
     BaseURL string `json:"baseURL"`
     // APIKey 访问凭据的密文；明文不回显，需经明文权限接口查看
-    APIKey *serializer.Crypto `json:"apiKey" form:"kind:crypto"`
+    APIKey *serializer.Crypto `json:"apiKey" form:"kind=crypto"`
     // Model 供应商侧模型名
     Model string `json:"model"`
     // TimeoutSeconds 单次请求超时秒数
@@ -419,20 +419,20 @@ LlmModelTestIn 连通性测试请求输入，支持两种用法：
 type LlmModelTestIn struct {
     // ID 已注册模型的 ID；大于 0 时忽略其余字段
     ID  uint64 `json:"id"`
-    // Kind 模型类型：chat | embedding
-    Kind llm.ModelKind `json:"kind" binding:"max=16"`
-    // BaseURL 模型端点的 OpenAI 兼容接口基地址
-    BaseURL string `json:"baseURL" binding:"max=512"`
-    // APIKey 访问端点的明文凭据
-    APIKey string `json:"apiKey"`
-    // Model 供应商侧模型名
-    Model string `json:"model" binding:"max=128"`
+    // Kind 模型类型：chat | embedding；仅未传 id 时必填
+    Kind llm.ModelKind `json:"kind" binding:"required_if=ID 0,omitempty,enum=llmModelKind"`
+    // BaseURL 模型端点的 OpenAI 兼容接口基地址；仅未传 id 时必填
+    BaseURL string `json:"baseURL" binding:"required_if=ID 0,omitempty,trimmed,max=512"`
+    // APIKey 访问端点的明文凭据；仅未传 id 时必填
+    APIKey string `json:"apiKey" binding:"required_if=ID 0"`
+    // Model 供应商侧模型名；仅未传 id 时必填
+    Model string `json:"model" binding:"required_if=ID 0,omitempty,trimmed,max=128"`
     // TimeoutSeconds 探活超时秒数，默认 60
-    TimeoutSeconds int `json:"timeoutSeconds" default:"60"`
+    TimeoutSeconds int `json:"timeoutSeconds" default:"60" binding:"min=1"`
     // Temperature 采样温度（仅 chat 模型有意义，探活不参与请求）
-    Temperature float64 `json:"temperature" default:"0.2"`
+    Temperature float64 `json:"temperature" default:"0.2" binding:"min=0,max=2"`
     // MaxTokens 单次生成的最大 token 数（探活不参与请求）
-    MaxTokens int `json:"maxTokens" default:"4096"`
+    MaxTokens int `json:"maxTokens" default:"4096" binding:"min=1"`
 }
 ```
 
@@ -458,19 +458,19 @@ LlmModelUpdateIn 定义更新 LLM 模型端点的请求输入结构。 模型类
 ```go
 type LlmModelUpdateIn struct {
     // Name 模型本地标识，全局唯一，最长 64
-    Name string `json:"name" binding:"max=64"`
+    Name string `json:"name" binding:"required,trimmed,max=64"`
     // BaseURL 模型端点的 OpenAI 兼容接口基地址，最长 512
-    BaseURL string `json:"baseURL" binding:"max=512"`
+    BaseURL string `json:"baseURL" binding:"required,trimmed,max=512"`
     // APIKey 访问端点的凭据；留空表示沿用原凭据
     APIKey string `json:"apiKey"`
     // Model 供应商侧模型名，最长 128
-    Model string `json:"model" binding:"max=128"`
+    Model string `json:"model" binding:"required,trimmed,max=128"`
     // TimeoutSeconds 单次请求超时秒数，须为正数
-    TimeoutSeconds int `json:"timeoutSeconds"`
+    TimeoutSeconds int `json:"timeoutSeconds" binding:"min=1"`
     // Temperature 采样温度，取值 [0, 2]（仅 chat 模型有意义）
-    Temperature float64 `json:"temperature"`
+    Temperature float64 `json:"temperature" binding:"min=0,max=2"`
     // MaxTokens 单次生成的最大 token 数（仅 chat 模型有意义）
-    MaxTokens int `json:"maxTokens"`
+    MaxTokens int `json:"maxTokens" binding:"min=1"`
     // ContextTokens 上下文窗口容量（token 数），仅 chat 模型有意义且必填正整数；embedding 模型忽略（留 0）
     ContextTokens int `json:"contextTokens"`
     // Enabled 是否启用；禁用的模型不可绑定到档位
@@ -487,7 +487,7 @@ type LlmModelUpdateIn struct {
     // ThinkingOffValue 关闭思考时写入 ThinkingField 的取值（JSON 文本，如 false）
     ThinkingOffValue string `json:"thinkingOffValue"`
     // APIMode 对话模型接口形态：chat（默认）| responses；仅 chat 类模型可设为 responses
-    APIMode llm.APIMode `json:"apiMode" binding:"max=16"`
+    APIMode llm.APIMode `json:"apiMode" binding:"omitempty,enum=llmAPIMode"`
 }
 ```
 
@@ -709,7 +709,7 @@ type McpServerDetailOut struct {
     // URL MCP 端点地址
     URL string `json:"url"`
     // Headers 请求头的密文；明文不回显，需经明文权限接口查看
-    Headers *serializer.Crypto `json:"headers" form:"kind:crypto"`
+    Headers *serializer.Crypto `json:"headers" form:"kind=crypto"`
     // TimeoutSeconds 单次请求超时秒数
     TimeoutSeconds int `json:"timeoutSeconds"`
     // Enabled 是否启用

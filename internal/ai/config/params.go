@@ -142,7 +142,27 @@ var Specs = []ParamSpec{
 		Group: "agent",
 		Kind:  ParamKindInt,
 	},
-
+	// agent.llmTimeoutRetryEnabled 非流式模型调用（记忆抽取、审核分级等 Generate 链路）
+	// 是否在超时时自动重试；流式对话不施加整请求超时，不受该开关影响。
+	{
+		Key:   "agent.llmTimeoutRetryEnabled",
+		Group: "agent",
+		Kind:  ParamKindBool,
+	},
+	// agent.llmTimeoutRetryMaxRetries 超时重试的最大次数（不含首次请求）；每次重试的截止时间
+	// 按 agent.llmTimeoutRetryMultiplier 逐次放大。
+	{
+		Key:   "agent.llmTimeoutRetryMaxRetries",
+		Group: "agent",
+		Kind:  ParamKindInt,
+	},
+	// agent.llmTimeoutRetryMultiplier 超时重试的截止时间倍数：首次沿用模型单次请求超时，
+	// 第 n 次重试使用「模型超时 × 倍数^n」；<=0 时按 2 处理。
+	{
+		Key:   "agent.llmTimeoutRetryMultiplier",
+		Group: "agent",
+		Kind:  ParamKindInt,
+	},
 	// ---- retrieval：混合检索融合与 LLM 重排 ----
 	{
 		Key:   "retrieval.topK",

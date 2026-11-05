@@ -91,6 +91,9 @@ code.404 = "not found"
 error.emptyUrlParam = "empty url param: %s"
 error.badUrlParam = "bad url param: %s"
 error.aiFeatureDisabled = "ai feature is disabled"
+error.aiSkillUnavailable = "the skill is unavailable or disabled"
+error.aiSkillNameExists = "a skill with the same name already exists"
+error.aiSkillBuiltinReadonly = "builtin skills are maintained by code and cannot be edited or deleted"
 error.knowledgeImportedContentReadOnly = "imported document content is read-only; reparse the document to refresh it"
 error.knowledgeDocumentParsing = "document is already being parsed; wait for it to finish before reindexing"
 error.knowledgeDocumentNotFound = "knowledge document %d not found"
@@ -125,6 +128,15 @@ func createKnowledgeTestDB(t *testing.T) *database.DB {
 	ns := core.Namespace{Name: knowledgeTestNamespace}
 	if err := db.Where(core.Namespace{Name: knowledgeTestNamespace}).FirstOrCreate(&ns).Error; err != nil {
 		t.Fatalf("seed knowledge test namespace: %v", err)
+	}
+	// agent_sessions / periodic_report_plans 的 user_id 为 users(id) 外键；视图测试统一使用属主 1，
+	// 先确保该用户存在，避免在全新测试库上触发外键失败。
+	if err := db.Exec(
+		`INSERT INTO users (id, union_id, nickle_name, username, password, email)
+		 VALUES (1, '00000000-0000-0000-0000-000000000103', 'ai-view-test', 'ai-view-test-user', '\x00'::bytea, 'ai-view-test@example.com')
+		 ON CONFLICT DO NOTHING`,
+	).Error; err != nil {
+		t.Fatalf("seed ai view test user: %v", err)
 	}
 	return db
 }

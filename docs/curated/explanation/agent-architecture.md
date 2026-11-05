@@ -497,7 +497,7 @@ sequenceDiagram
 | --- | --- | --- | --- |
 | 内置（builtin） | 后端 | 查知识库、算数、解方程、查时间、JSON 处理 | 一般不需要；只有被判定为「危险」时才需要批准 |
 | MCP | 后端（通过远程 MCP 服务器） | 外部系统提供的工具 | 同上 |
-| client | 前端（用户自己的环境/凭据） | 向用户提问 `ask_user`、调用平台只读接口 `api_invoke` | `ask_user` 填问卷；`api_invoke` 一律审批 |
+| client | 前端（用户自己的环境/凭据） | 向用户提问 `ask_user`、调用平台接口 `api_invoke`（只读与写入能力共用） | `ask_user` 填问卷；`api_invoke` 一律审批 |
 
 ### 6.2 工具循环：一个来回不够就再来一轮
 
@@ -973,6 +973,7 @@ flowchart TD
 | `knowledge_chunks.heading_path` / `.content` | 12802 / 12803 |
 | `knowledge_documents.hash`（HMAC） | 12804 |
 | `agent_memories.content` / `.hash` | 12805 / 12806 |
+| `agent_skills.content` | 12823 |
 | `agent_sessions.summary` | 12810 |
 | `agent_messages.payload` | 12821 |
 | `agent_messages.citations_json` | 12813 |

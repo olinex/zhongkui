@@ -16,6 +16,9 @@ export interface TableHeader {
   key: string;
   title: string;
   type: BackendDataType;
+  // 列展示语义类型（取自 OPTIONS 的 kind，如 json）；JSON 不是数据类型，
+  // 展示方式经该字段下发，单元格据此选择渲染分支
+  kind?: string;
   align?: Align;
   sortable?: boolean;
   fixed?: Fixed;

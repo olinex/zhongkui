@@ -1,8 +1,10 @@
 import type { AxiosPromise } from "axios";
-import { getJwtHeader, request } from "./base";
+import { getJwtHeader, getResponse, request } from "./base";
 
 import { BackendDataType } from "@/types";
+import type { FieldMeta, MetaOut } from "@/components/@types/meta";
 import type { SearchIn } from "@/components/@types/table";
+import { fieldRenderTypeOfMeta } from "@/utils/meta";
 import { HTTP_TRANSPORT_MODEL_KEY } from "@/utils/rego";
 import type {
   PlaintextCryptoIn,
@@ -11,153 +13,67 @@ import type {
   TrafficType,
 } from "./@types/traffic";
 
-// TrafficCryptoFields 各类型加密字段清单
-// 对应模型 secure:"serializer:crypto" 字段，列表返回 base64 密文
-export const TrafficCryptoFields: Record<TrafficType, string[]> = {
-  "ipv4-tcp": ["payload"],
-  "ipv6-tcp": ["payload"],
-  "http-transport": [
-    "reqHdrAuthorization",
-    "reqHdrProxyAuthorization",
-    "reqHdrCookie",
-    "reqHdrSecWebsocketKey",
-    "rspHdrWwwAuthenticate",
-    "rspHdrProxyAuthenticate",
-    "rspHdrSetCookie",
-    "rspHdrSecWebsocketAccept",
-  ],
-};
+// trafficFieldMetasCache 流量类型 → 列表 OPTIONS 自省字段元信息（按 JSON 字段名索引）缓存
+const trafficFieldMetasCache = new Map<TrafficType, Promise<Record<string, FieldMeta>>>();
 
-// TrafficS3Fields 各类型 S3 body 字段清单
-// 列表返回 S3 对象键，明文经 /plaintext/s3 按 object_key 读取
-export const TrafficS3Fields: Record<TrafficType, string[]> = {
-  "ipv4-tcp": [],
-  "ipv6-tcp": [],
-  "http-transport": ["reqBody", "rspBody"],
-};
+// trafficFieldMetasOf 取该流量类型的列表字段元信息：来源为 OPTIONS 的 meta.bodyOutput，
+// 字段展示语义（kind）与数据类型均由后端 Out 结构体声明，前端不再维护重复字段清单；
+// 自省失败时不缓存并回退空对象，下次调用重新拉取。
+export function trafficFieldMetasOf(type: TrafficType): Promise<Record<string, FieldMeta>> {
+  const cached = trafficFieldMetasCache.get(type);
+  if (cached) {
+    return cached;
+  }
+  const pending = new Promise<Record<string, FieldMeta>>((resolve) => {
+    const failed = async (): Promise<void> => {
+      trafficFieldMetasCache.delete(type);
+      resolve({});
+    };
+    void getResponse<MetaOut>(
+      trafficListOptions(type),
+      async (rsp) => {
+        const metas: Record<string, FieldMeta> = {};
+        for (const field of rsp.data.meta?.POST?.bodyOutput?.fields ?? []) {
+          metas[field.name] = field;
+        }
+        resolve(metas);
+      },
+      failed,
+      failed,
+      failed,
+    );
+  });
+  trafficFieldMetasCache.set(type, pending);
+  return pending;
+}
 
-// TrafficExtraFieldTypes 流量模型非 STRING 字段渲染类型（按字段 json 名，缺省 STRING）：
-// 仅覆盖需要特殊渲染的非常用字段，供列表/详情/样例文档按列表页方式（AdaptiveCell）统一渲染；
-// 类型依据 internal/models/network 下三个模型（PacketIPv4TCP / PacketIPv6TCP / HttpTransport）的 JSON tag 逐一核对
-export const TrafficExtraFieldTypes: Record<string, BackendDataType> = {
-  // 布尔标志：捕获状态与 TCP 扩展标志
-  truncated: BackendDataType.BOOLEAN,
-  bitEce: BackendDataType.BOOLEAN,
-  bitCwr: BackendDataType.BOOLEAN,
-  bitNs: BackendDataType.BOOLEAN,
-  // 复合结构：JSON 预览
-  tags: BackendDataType.JSON,
-  options: BackendDataType.JSON,
-  queries: BackendDataType.JSON,
-  layerStack: BackendDataType.JSON,
-  ipv4Options: BackendDataType.JSON,
-  ipv6HopByHop: BackendDataType.JSON,
-  // 时间戳
-  clientStartTimestamp: BackendDataType.DATETIME,
-  clientEndTimestamp: BackendDataType.DATETIME,
-  serverStartTimestamp: BackendDataType.DATETIME,
-  serverEndTimestamp: BackendDataType.DATETIME,
-  // 字节数与负载偏移（uint32 / uint64）
-  captureLength: BackendDataType.UINT32,
-  clientConsumed: BackendDataType.UINT64,
-  clientStartPayloadOffset: BackendDataType.UINT64,
-  clientEndPayloadOffset: BackendDataType.UINT64,
-  serverConsumed: BackendDataType.UINT64,
-  serverStartPayloadOffset: BackendDataType.UINT64,
-  serverEndPayloadOffset: BackendDataType.UINT64,
-  // TCP 数值字段
-  dataOffset: BackendDataType.UINT8,
-  checksum: BackendDataType.UINT16,
-  urgent: BackendDataType.UINT16,
-  // IPv4 数值字段
-  ipv4Version: BackendDataType.UINT8,
-  ipv4Ihl: BackendDataType.UINT8,
-  ipv4Tos: BackendDataType.UINT8,
-  ipv4ID: BackendDataType.UINT16,
-  ipv4Flags: BackendDataType.UINT8,
-  ipv4FragOffset: BackendDataType.UINT16,
-  ipv4Checksum: BackendDataType.UINT16,
-  // IPv6 数值字段
-  ipv6Version: BackendDataType.UINT8,
-  ipv6TrafficClass: BackendDataType.UINT8,
-  ipv6FlowLabel: BackendDataType.UINT32,
-  ipv6LastHeader: BackendDataType.UINT8,
-  // 链路层数值字段
-  ethType: BackendDataType.UINT16,
-  ethLength: BackendDataType.UINT16,
-  // HTTP 传输数值字段
-  clientIsn: BackendDataType.UINT32,
-  serverIsn: BackendDataType.UINT32,
-  streamIndex: BackendDataType.UINT32,
-  ipVersion: BackendDataType.UINT8,
-  fpTcpMtu: BackendDataType.UINT16,
-  // 指纹置信度（float64，0-1 区间）
-  fpOsQuality: BackendDataType.FLOAT64,
-  fpTcpClientOsQuality: BackendDataType.FLOAT64,
-  fpTcpServerOsQuality: BackendDataType.FLOAT64,
-  fpHttpBrowserQuality: BackendDataType.FLOAT64,
-  fpHttpServerQuality: BackendDataType.FLOAT64,
-};
+// trafficKindKeysOf 按展示语义 kind（crypto / s3）取字段名集合
+async function trafficKindKeysOf(type: TrafficType, kind: string): Promise<Set<string>> {
+  const metas = await trafficFieldMetasOf(type);
+  return new Set(
+    Object.values(metas)
+      .filter((field) => field.kind === kind)
+      .map((field) => field.name),
+  );
+}
 
-// TrafficFieldTypes 各类型流量模型字段渲染类型（含通用/特有字段，缺省 STRING）：
-// 供样例文档、Rego 试运行等无法从表头推导类型的场景，按列表页方式（AdaptiveCell）渲染字段值
-export const TrafficFieldTypes: Record<TrafficType, Record<string, BackendDataType>> = {
-  "ipv4-tcp": {
-    ...TrafficExtraFieldTypes,
-    timestamp: BackendDataType.DATETIME,
-    createdAt: BackendDataType.DATETIME,
-    sessionID: BackendDataType.UUID,
-    tcpStreamID: BackendDataType.HEX,
-    srcPort: BackendDataType.UINT16,
-    dstPort: BackendDataType.UINT16,
-    seq: BackendDataType.UINT32,
-    ack: BackendDataType.UINT32,
-    bitFin: BackendDataType.BOOLEAN,
-    bitSyn: BackendDataType.BOOLEAN,
-    bitRst: BackendDataType.BOOLEAN,
-    bitPsh: BackendDataType.BOOLEAN,
-    bitAck: BackendDataType.BOOLEAN,
-    bitUrg: BackendDataType.BOOLEAN,
-    window: BackendDataType.UINT16,
-    ipv4Ttl: BackendDataType.UINT8,
-    ipv4IpProtocol: BackendDataType.UINT8,
-    ipv4Length: BackendDataType.UINT16,
-    fpMtu: BackendDataType.UINT16,
-  },
-  "ipv6-tcp": {
-    ...TrafficExtraFieldTypes,
-    timestamp: BackendDataType.DATETIME,
-    createdAt: BackendDataType.DATETIME,
-    sessionID: BackendDataType.UUID,
-    tcpStreamID: BackendDataType.HEX,
-    srcPort: BackendDataType.UINT16,
-    dstPort: BackendDataType.UINT16,
-    seq: BackendDataType.UINT32,
-    ack: BackendDataType.UINT32,
-    bitFin: BackendDataType.BOOLEAN,
-    bitSyn: BackendDataType.BOOLEAN,
-    bitRst: BackendDataType.BOOLEAN,
-    bitPsh: BackendDataType.BOOLEAN,
-    bitAck: BackendDataType.BOOLEAN,
-    bitUrg: BackendDataType.BOOLEAN,
-    window: BackendDataType.UINT16,
-    ipv6HopLimit: BackendDataType.UINT8,
-    ipv6NextHeader: BackendDataType.UINT8,
-    ipv6Length: BackendDataType.UINT16,
-    fpMtu: BackendDataType.UINT16,
-  },
-  "http-transport": {
-    ...TrafficExtraFieldTypes,
-    timestamp: BackendDataType.DATETIME,
-    createdAt: BackendDataType.DATETIME,
-    sessionID: BackendDataType.UUID,
-    traceID: BackendDataType.UUID,
-    clientPort: BackendDataType.UINT16,
-    serverPort: BackendDataType.UINT16,
-    reqBodyLength: BackendDataType.DECIMAL_BYTE,
-    rspBodyLength: BackendDataType.DECIMAL_BYTE,
-  },
-};
+// trafficCryptoKeysOf 加密字段集合（Out 字段 form:"kind=crypto" 声明）
+export const trafficCryptoKeysOf = (type: TrafficType): Promise<Set<string>> =>
+  trafficKindKeysOf(type, "crypto");
+
+// trafficS3KeysOf S3 对象字段集合（Out 字段 form:"kind=s3" 声明）
+export const trafficS3KeysOf = (type: TrafficType): Promise<Set<string>> =>
+  trafficKindKeysOf(type, "s3");
+
+// trafficFieldTypesOf 字段渲染类型映射：由 OPTIONS 自省推导，替代前端硬编码字段类型表
+export async function trafficFieldTypesOf(
+  type: TrafficType,
+): Promise<Record<string, BackendDataType>> {
+  const metas = await trafficFieldMetasOf(type);
+  return Object.fromEntries(
+    Object.entries(metas).map(([name, meta]) => [name, fieldRenderTypeOfMeta(meta)]),
+  );
+}
 
 // TrafficModelKeys 流量类型 → 目标模型类型键（tagengine 注册名），供“收藏样例”使用；
 // 仅登记 tagengine 已注册模型，未登记类型不显示收藏入口

@@ -14,6 +14,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/port"
 	"zhongkuisec.com/zhongkui/internal/ai/retrieval"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // streamChat 以流式方式执行一次大模型调用：逐块累积正文并上报增量，记录整体耗时与
@@ -42,6 +43,12 @@ func streamChat(ctx context.Context, chat port.ChatGenerator, stage contract.Eva
 	return content, meta, nil
 }
 
+// answerResponse 是 dry-run 回答输出的结构化校验视图：answer 必填且不能为空白。
+type answerResponse struct {
+	// Answer 模型给出的回答正文
+	Answer string `json:"answer" binding:"notBlank"`
+}
+
 // generateAnswer 基于检索上下文生成回答：system prompt 要求仅依据上下文回答、
 // 上下文不含答案时承认不知道，且仅输出 JSON。Answer 为空时返回英文错误。
 func generateAnswer(ctx context.Context, params *config.Params, chat port.ChatGenerator, query string, results []retrieval.RetrievalResult, report contract.EvalReporter) (string, contract.CallMeta, error) {
@@ -57,14 +64,12 @@ func generateAnswer(ctx context.Context, params *config.Params, chat port.ChatGe
 	if err != nil {
 		return "", meta, errors.WithStack(err)
 	}
-	parsed, perr := contract.ParseJSONResponse[struct {
-		Answer string `json:"answer"`
-	}](content, "dry-run: cannot parse answer response")
-	if perr != nil {
-		return "", meta, perr
+	var parsed answerResponse
+	if err := validator.DecodeObjectLenient(content, &parsed); err != nil {
+		return "", meta, errors.Newf("dry-run: cannot parse answer response: %v", err)
 	}
-	if strings.TrimSpace(parsed.Answer) == "" {
-		return "", meta, errors.New("dry-run: answer response contains an empty answer")
+	if err := validator.Check(&parsed); err != nil {
+		return "", meta, errors.Newf("dry-run: answer response is invalid: %s", validator.Describe(err))
 	}
 	return parsed.Answer, meta, nil
 }

@@ -66,7 +66,7 @@ func (h *MailSendHandler) Do(ctx context.Context, task etl.Task) error {
 	if err := json.Unmarshal(task.Payload(), &input); err != nil {
 		return errors.WithStack(err)
 	}
-	if err := validateMailSendInput(input); err != nil {
+	if err := validator.Check(&input); err != nil {
 		return errors.WithStack(err)
 	}
 	if err := h.sender.Send(ctx, input.To, input.Message, input.Language); err != nil {
@@ -78,7 +78,7 @@ func (h *MailSendHandler) Do(ctx context.Context, task etl.Task) error {
 
 // NewMailSendTask 将系统级邮件直发请求编码为 mail:send 异步任务；必填字段缺失或邮箱非法返回错误。
 func NewMailSendTask(in MailSendInput) (*asynq.Task, error) {
-	if err := validateMailSendInput(in); err != nil {
+	if err := validator.Check(&in); err != nil {
 		return nil, errors.WithStack(err)
 	}
 	payload, err := json.Marshal(&in)
@@ -86,11 +86,4 @@ func NewMailSendTask(in MailSendInput) (*asynq.Task, error) {
 		return nil, errors.WithStack(err)
 	}
 	return asynq.NewTask(MailSendTask, payload), nil
-}
-
-// validateMailSendInput 校验系统级邮件直发载荷的必填字段：收件人邮箱（必需合法）与消息模板键。
-// 校验规则声明在 MailSendInput / Message 结构体的 binding 标签上，经全局 validator 引擎
-// 统一执行（validator.Validate.Struct），错误为 validator.ValidationErrors。
-func validateMailSendInput(in MailSendInput) error {
-	return errors.WithStack(validator.Validate.Struct(&in))
 }

@@ -222,7 +222,9 @@ func (m *Manager) deleteCheckpoint(ctx context.Context, checkpointID string) {
 	if !ok {
 		return
 	}
-	_ = deleter.Delete(ctx, checkpointID)
+	if err := deleter.Delete(ctx, checkpointID); err != nil && m.deps.Logger != nil {
+		m.deps.Logger.Ctx(ctx).Warnf("turns: delete checkpoint failed: %v", err)
+	}
 }
 
 func (m *Manager) watchLoop(state *sessionState, loop sessionLoop) {
@@ -246,10 +248,14 @@ func (m *Manager) watchLoop(state *sessionState, loop sessionLoop) {
 		}
 		state.mu.Unlock()
 		if current != nil {
-			// 循环在该轮次关闭流之前就退出了（例如 GenInput/PrepareAgent
-			// 失败）：终止订阅者，而不是让它们
-			// 永久阻塞。
-			current.CloseNotice("error", "the session loop exited before completing the turn")
+			// 循环在该轮次关闭流之前就退出了（例如 GenInput / GenResume / PrepareAgent 失败）：
+			// 终止订阅者，而不是让它们永久阻塞。提示优先透出 TurnLoop 的真实退出原因，
+			// 避免用户只看到一条与实际原因无关的泛化错误。
+			notice := "the session loop exited before completing the turn"
+			if err := loop.ExitError(); err != nil {
+				notice = err.Error()
+			}
+			current.CloseNotice("error", notice)
 		}
 	}()
 }
@@ -353,7 +359,10 @@ func (m *Manager) ReopenInteraction(ctx context.Context, in ReopenInteractionInp
 	}
 	// 先把挂起时的图现场写回会话检查点键：回退后状态即为等待输入，用户随即提交时续跑必须
 	// 能读到该现场。写失败则不落库，避免出现「等待输入但无现场」的空档。
-	previous, hadPrevious, _ := store.Get(ctx, sessionCheckpointID(sess.ID))
+	previous, hadPrevious, getErr := store.Get(ctx, sessionCheckpointID(sess.ID))
+	if getErr != nil {
+		return errors.WithStack(getErr)
+	}
 	if err := store.Set(ctx, sessionCheckpointID(sess.ID), data); err != nil {
 		return errors.WithStack(err)
 	}
@@ -366,7 +375,9 @@ func (m *Manager) ReopenInteraction(ctx context.Context, in ReopenInteractionInp
 	if err := m.deps.Sessions.RewindToInteraction(ctx, sess.ID, sess.UserID, target.ID, rewind); err != nil {
 		// 落库失败即撤销刚写回的现场，避免留下「有现场却无挂起运行」的孤儿检查点。
 		if hadPrevious {
-			_ = store.Set(ctx, sessionCheckpointID(sess.ID), previous)
+			if restoreErr := store.Set(ctx, sessionCheckpointID(sess.ID), previous); restoreErr != nil && m.deps.Logger != nil {
+				m.deps.Logger.Ctx(ctx).Warnf("turns: restore checkpoint after rewind failure failed: %v", restoreErr)
+			}
 		} else {
 			m.deleteCheckpoint(ctx, sessionCheckpointID(sess.ID))
 		}
@@ -543,6 +554,9 @@ func (m *Manager) Chat(ctx context.Context, in ChatInput) (*Stream, error) {
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
+	// 只在本次运行的 context 上携带无人值守上下文：新建与复用循环都经同一个 ctx 启动，
+	// 前端聊天不传 Automation 时行为保持不变。
+	ctx = agentkit.WithAutomation(ctx, in.Automation)
 	rt := m.runtime()
 	if rt == nil {
 		return nil, errors.New("turns: agent runtime is not configured")
@@ -568,6 +582,11 @@ func (m *Manager) Chat(ctx context.Context, in ChatInput) (*Stream, error) {
 		BusinessDataJSON: string(businessJSON),
 		Thinking:         in.Thinking,
 		Slot:             slot,
+		SkillID:          in.SkillID,
+		SkillName:        in.SkillName,
+		SkillDescription: in.SkillDescription,
+		SkillContent:     in.SkillContent,
+		SystemHint:       in.SystemHint,
 	}
 
 	state := m.stateFor(sess.ID)
@@ -592,8 +611,12 @@ func (m *Manager) Chat(ctx context.Context, in ChatInput) (*Stream, error) {
 	// 再放弃现场；其检查点不得被新循环重放。
 	if hadPending {
 		m.snapshotRedoCheckpoint(ctx, sess, sessionCheckpointID(sess.ID), 0)
-		_ = m.deps.Sessions.AbortPendingRun(ctx, sess.ID, sess.UserID)
-		_ = m.deps.Sessions.SetPendingInterrupt(ctx, sess.ID, sess.UserID, "")
+		if err := m.deps.Sessions.AbortPendingRun(ctx, sess.ID, sess.UserID); err != nil && m.deps.Logger != nil {
+			m.deps.Logger.Ctx(ctx).Warnf("turns: abort pending run before new turn failed: %v", err)
+		}
+		if err := m.deps.Sessions.SetPendingInterrupt(ctx, sess.ID, sess.UserID, ""); err != nil && m.deps.Logger != nil {
+			m.deps.Logger.Ctx(ctx).Warnf("turns: clear pending interrupt before new turn failed: %v", err)
+		}
 		m.cancelPendingInteractions(ctx, sess)
 		m.deleteCheckpoint(ctx, sessionCheckpointID(sess.ID))
 	}
@@ -658,6 +681,15 @@ func (m *Manager) Action(ctx context.Context, in ActionInput) (*Stream, error) {
 			return nil, ErrNoPendingRun
 		}
 		return nil, errors.WithStack(err)
+	}
+	// 挂起现场已被本次动作认领，会话随即离开「等待授权」：先清空持久化的 pending 中断 ID。
+	// 续跑若再次挂起会由 loop 重新写入；而续跑若在事件投影前就结束（如 GenResume / PrepareAgent
+	// 失败、动作目标无法映射），没有这步清空会让状态接口一直据残留 ID 推导为 waiting，
+	// 前端输入区便永久停在「等待授权」，停止按钮也一直可点。
+	if err := m.deps.Sessions.SetPendingInterrupt(ctx, sess.ID, sess.UserID, ""); err != nil {
+		if m.deps.Logger != nil {
+			m.deps.Logger.Ctx(ctx).Warnf("turns: clear pending interrupt after action claim failed: %v", err)
+		}
 	}
 	if run.CheckpointID == "" {
 		return nil, ErrCheckpointMissing
@@ -849,8 +881,12 @@ func (m *Manager) Abort(ctx context.Context, sessionID, userID uint, namespaceNa
 	if state == nil {
 		// 等待中中止：先为待处理审批留底图现场快照，再作废现场。
 		m.snapshotRedoCheckpoint(ctx, sess, sessionCheckpointID(sess.ID), 0)
-		_ = m.deps.Sessions.AbortPendingRun(ctx, sess.ID, sess.UserID)
-		_ = m.deps.Sessions.SetPendingInterrupt(ctx, sess.ID, sess.UserID, "")
+		if err := m.deps.Sessions.AbortPendingRun(ctx, sess.ID, sess.UserID); err != nil && m.deps.Logger != nil {
+			m.deps.Logger.Ctx(ctx).Warnf("turns: abort pending run failed: %v", err)
+		}
+		if err := m.deps.Sessions.SetPendingInterrupt(ctx, sess.ID, sess.UserID, ""); err != nil && m.deps.Logger != nil {
+			m.deps.Logger.Ctx(ctx).Warnf("turns: clear pending interrupt failed: %v", err)
+		}
 		m.cancelPendingInteractions(ctx, sess)
 		m.deleteCheckpoint(ctx, sessionCheckpointID(sess.ID))
 		return nil
@@ -878,7 +914,9 @@ func (m *Manager) Abort(ctx context.Context, sessionID, userID uint, namespaceNa
 
 	// 等待中中止：先为待处理审批留底图现场快照，再作废现场。
 	m.snapshotRedoCheckpoint(ctx, sess, sessionCheckpointID(sess.ID), 0)
-	_ = m.deps.Sessions.AbortPendingRun(ctx, sess.ID, sess.UserID)
+	if err := m.deps.Sessions.AbortPendingRun(ctx, sess.ID, sess.UserID); err != nil && m.deps.Logger != nil {
+		m.deps.Logger.Ctx(ctx).Warnf("turns: abort pending run failed: %v", err)
+	}
 	if err := m.deps.Sessions.SetPendingInterrupt(ctx, sess.ID, sess.UserID, ""); err != nil {
 		return errors.WithStack(err)
 	}
@@ -1195,7 +1233,9 @@ func (m *Manager) cancelPendingInteractions(ctx context.Context, sess *modelsai.
 		if row == nil || row.Status != modelsai.InteractionStatusPending {
 			continue
 		}
-		_ = m.deps.Sessions.UpdateInteractionStatus(ctx, row.ID, sess.UserID, modelsai.InteractionStatusCancelled, nil)
+		if err := m.deps.Sessions.UpdateInteractionStatus(ctx, row.ID, sess.UserID, modelsai.InteractionStatusCancelled, nil); err != nil && m.deps.Logger != nil {
+			m.deps.Logger.Ctx(ctx).Warnf("turns: cancel pending interaction %d failed: %v", row.ID, err)
+		}
 	}
 }
 

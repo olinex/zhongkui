@@ -167,6 +167,12 @@ func (m *auditMiddleware[M]) evaluate(ctx context.Context, slot modelsai.Slot, v
 			decision.ApprovalRequired = false
 		}
 	}
+	// 无人值守运行没有前端可审批：保留 AuditLevel 供日志 / 评估，但一律不要求人工审核。
+	if _, ok := AutomationFrom(ctx); ok {
+		for i := range decisions {
+			decisions[i].ApprovalRequired = false
+		}
+	}
 	return decisions
 }
 
@@ -179,6 +185,10 @@ func (m *auditMiddleware[M]) WrapInvokableToolCall(_ context.Context, endpoint a
 	callID := tCtx.CallID
 	name := tCtx.Name
 	return func(ctx context.Context, argumentsInJSON string, opts ...tool.Option) (string, error) {
+		// 无人值守运行没有前端可审批：直接执行，不插入审批中断。
+		if _, ok := AutomationFrom(ctx); ok {
+			return endpoint(ctx, argumentsInJSON, opts...)
+		}
 		wasInterrupted, hasState, storedArguments := tool.GetInterruptState[string](ctx)
 		if !hasState || storedArguments == "" {
 			storedArguments = argumentsInJSON

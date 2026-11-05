@@ -1,9 +1,16 @@
 <template>
   <!-- 工具调用审批面板：一批多个调用按「一项一步」呈现，与问卷面板同构（标题行兼步骤条、
        窗口逐项展示、页脚翻项），避免多张审批卡片纵向堆叠挤占消息区。
-       等待态下每项可批准 / 拒绝；历史批次以记录态回显（决策徽章 + 结果），仍可逐项回看 -->
+       等待态下可在页脚逐项批准 / 拒绝；历史批次以记录态回显（决策徽章 + 结果），仍可逐项回看 -->
   <div v-if="calls.length > 0" class="assistant-approval-steps zk-panel">
-    <v-stepper v-model="current" editable flat class="zk-compact-stepper">
+    <!-- 展开区滚动落在文本块自身（.assistant-approval-block），故挂 --inner-scroll 修饰类：
+         步骤窗口不再整体滚动，参数 / 结果的标题行与开关始终留在原位 -->
+    <v-stepper
+      v-model="current"
+      editable
+      flat
+      class="zk-compact-stepper zk-compact-stepper--inner-scroll"
+    >
       <div class="d-flex align-center pa-2">
         <v-icon icon="mdi-shield-key-outline" size="small" class="me-2" />
         <span class="zk-label-caps">{{ $t("page.aiAssistant.approvalTitle") }}</span>
@@ -83,7 +90,31 @@
                 {{ c.arguments }}
               </div>
             </template>
-            <div v-if="c.error" class="zk-error-text">{{ c.error }}</div>
+            <!-- 调用错误：与参数 / 结果同构，默认收起；错误正文可能带多行 JSON，长文本不撑高面板 -->
+            <template v-if="c.error">
+              <div
+                class="zk-error-text d-flex align-center assistant-approval-section-toggle"
+                role="button"
+                tabindex="0"
+                :aria-expanded="errorExpandedOf(ci)"
+                @click="toggleError(ci)"
+                @keydown.enter.prevent="toggleError(ci)"
+                @keydown.space.prevent="toggleError(ci)"
+              >
+                <span>{{ $t("page.aiAssistant.approvalError") }}</span>
+                <v-spacer />
+                <v-icon
+                  :icon="errorExpandedOf(ci) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+                  size="x-small"
+                />
+              </div>
+              <div
+                v-if="errorExpandedOf(ci)"
+                class="zk-code-preview font-mono assistant-approval-block"
+              >
+                {{ c.error }}
+              </div>
+            </template>
             <!-- 调用结果：审批完成后默认收起（结果 JSON 可能很长），点击标题行 / 箭头展开 -->
             <template v-else-if="c.result">
               <div
@@ -109,43 +140,51 @@
                 {{ c.result }}
               </div>
             </template>
-            <div v-if="canDecide(c)" class="d-flex">
-              <v-btn
-                size="small"
-                variant="tonal"
-                color="primary"
-                :loading="isExecuting(c)"
-                :disabled="isExecuting(c)"
-                @click="decide(c.callID, 'approve')"
-              >
-                {{ $t("page.aiAssistant.approve") }}
-              </v-btn>
-              <v-btn
-                size="small"
-                variant="text"
-                class="ms-2"
-                :disabled="isExecuting(c)"
-                @click="decide(c.callID, 'reject')"
-              >
-                {{ $t("page.aiAssistant.reject") }}
-              </v-btn>
-            </div>
           </div>
         </v-stepper-window-item>
       </v-stepper-window>
     </v-stepper>
-    <!-- 页脚：等待态说明全部决定后自动续跑；翻项按钮与问卷面板同节奏 -->
-    <div v-if="multi || awaiting" class="zk-hairline-top pa-2 d-flex align-center ga-2">
-      <span v-if="awaiting" class="zk-hint">
+    <!-- 页脚：决策按钮固定在滚动窗口之外、自成一行——调用参数再长也无需滚到最后即可批准 / 拒绝；
+         说明与翻项按钮的节奏与问卷面板一致 -->
+    <div v-if="multi || awaiting" class="zk-hairline-top pa-2">
+      <div v-if="awaiting" class="zk-hint">
         {{ $t("page.aiAssistant.approvalHint") }}
-      </span>
-      <v-spacer />
-      <v-btn v-if="!isFirst" size="small" variant="text" @click="goPrev">
-        {{ $t("page.aiAssistant.approvalPrev") }}
-      </v-btn>
-      <v-btn v-if="!isLast" size="small" variant="tonal" @click="goNext">
-        {{ $t("page.aiAssistant.approvalNext") }}
-      </v-btn>
+      </div>
+      <!-- 决策行：按当前步骤取目标调用，与参数区的滚动完全分离 -->
+      <div v-if="canDecideCurrent" class="d-flex align-center ga-2" :class="{ 'mt-1': awaiting }">
+        <v-btn
+          size="small"
+          variant="tonal"
+          color="primary"
+          :loading="currentExecuting"
+          :disabled="currentExecuting"
+          @click="decide(currentCallID, 'approve')"
+        >
+          {{ $t("page.aiAssistant.approve") }}
+        </v-btn>
+        <v-btn
+          size="small"
+          variant="text"
+          :disabled="currentExecuting"
+          @click="decide(currentCallID, 'reject')"
+        >
+          {{ $t("page.aiAssistant.reject") }}
+        </v-btn>
+      </div>
+      <!-- 翻项行：多步时提供不产生决策的浏览入口 -->
+      <div
+        v-if="multi"
+        class="d-flex align-center ga-2"
+        :class="{ 'mt-1': awaiting || canDecideCurrent }"
+      >
+        <v-spacer />
+        <v-btn v-if="!isFirst" size="small" variant="text" @click="goPrev">
+          {{ $t("page.aiAssistant.approvalPrev") }}
+        </v-btn>
+        <v-btn v-if="!isLast" size="small" variant="tonal" @click="goNext">
+          {{ $t("page.aiAssistant.approvalNext") }}
+        </v-btn>
+      </div>
     </div>
   </div>
 </template>
@@ -198,6 +237,23 @@ const isExecuting = (call: AgentApprovalCallRecord): boolean =>
 const canDecide = (call: AgentApprovalCallRecord): boolean =>
   props.interactive && call.approvalRequired !== false && call.decision === undefined;
 
+// 页脚决策行按当前步骤取目标调用：决策按钮固定在滚动窗口外，参数再长也不会被挤到需滚动的位置
+const currentCall = computed<AgentApprovalCallRecord | undefined>(
+  () => props.calls[current.value - 1],
+);
+
+const canDecideCurrent = computed<boolean>(() => {
+  const call = currentCall.value;
+  return call !== undefined && canDecide(call);
+});
+
+const currentCallID = computed<string>(() => currentCall.value?.callID ?? "");
+
+const currentExecuting = computed<boolean>(() => {
+  const call = currentCall.value;
+  return call !== undefined && isExecuting(call);
+});
+
 // expandedParamSeqs 已展开调用参数的步骤序号集合：已决策项默认收起（步骤序号在组件内稳定，
 // 直接按下标记忆），待决策项不受此集合影响、始终展开
 const expandedParamSeqs = ref(new Set<number>());
@@ -210,6 +266,19 @@ const toggleParams = (ci: number): void => {
     return;
   }
   expandedParamSeqs.value.add(ci);
+};
+
+// expandedErrorSeqs 已展开调用错误的步骤序号集合：错误正文可能含多行 JSON，默认收起
+const expandedErrorSeqs = ref(new Set<number>());
+
+const errorExpandedOf = (ci: number): boolean => expandedErrorSeqs.value.has(ci);
+
+const toggleError = (ci: number): void => {
+  if (expandedErrorSeqs.value.has(ci)) {
+    expandedErrorSeqs.value.delete(ci);
+    return;
+  }
+  expandedErrorSeqs.value.add(ci);
 };
 
 // expandedResultSeqs 已展开调用结果的步骤序号集合：结果 JSON 可能很长，默认全部收起
@@ -261,5 +330,12 @@ const goNext = (): void => {
 /* 已决策项的「调用参数 / 调用结果」标题行兼展开开关 */
 .assistant-approval-section-toggle {
   cursor: pointer;
+}
+
+/* 调用参数 / 调用结果 JSON 视区：限高滚动，长响应不撑高气泡，也不让步骤窗口整体滚动。
+   本类由本组件模板使用，父组件（AssistantDrawer）的 scoped 样式无法命中，故声明在此 */
+.assistant-approval-block {
+  max-height: var(--zk-inline-preview-max-height);
+  overflow: auto;
 }
 </style>

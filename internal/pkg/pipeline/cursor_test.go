@@ -67,10 +67,28 @@ func TestComputeCursorTriggers(t *testing.T) {
 			So(next.Equal(at(9, 1, 0)), ShouldBeTrue)
 		})
 
-		Convey("禁用积压补投：不生成历史触发点，游标直接对齐到当前网格点", func() {
+		Convey("禁用积压补投：跳过历史触发点，仅投递当前网格点", func() {
 			triggers, next := ComputeCursorTriggers(at(9, 0, 0), at(9, 5, 45), time.Minute, BacklogPolicy{Enabled: false})
+			equalTriggers(triggers, at(9, 5, 0))
+			So(next.Equal(at(9, 5, 0)), ShouldBeTrue)
+		})
+
+		Convey("禁用积压补投且首次运行：立即投递当前网格点", func() {
+			triggers, next := ComputeCursorTriggers(time.Time{}, at(9, 5, 45), time.Minute, BacklogPolicy{Enabled: false})
+			equalTriggers(triggers, at(9, 5, 0))
+			So(next.Equal(at(9, 5, 0)), ShouldBeTrue)
+		})
+
+		Convey("禁用积压补投且游标已覆盖当前网格点：不重复投递也不回退游标", func() {
+			triggers, next := ComputeCursorTriggers(at(9, 5, 0), at(9, 5, 30), time.Minute, BacklogPolicy{Enabled: false})
 			So(triggers, ShouldBeNil)
 			So(next.Equal(at(9, 5, 0)), ShouldBeTrue)
+		})
+
+		Convey("禁用积压补投且游标超前：不投递也不回退游标", func() {
+			triggers, next := ComputeCursorTriggers(at(9, 6, 0), at(9, 5, 45), time.Minute, BacklogPolicy{Enabled: false})
+			So(triggers, ShouldBeNil)
+			So(next.Equal(at(9, 6, 0)), ShouldBeTrue)
 		})
 
 		Convey("窗口裁剪：仅补投窗口期内的触发点", func() {

@@ -43,8 +43,8 @@ func NewParseTask(documentID uint) (*asynq.Task, error) {
 }
 
 // validateParsePayload 校验解析载荷的必填字段：文档 ID。校验规则声明在 ParsePayload 的
-// binding 标签上，经全局 validator 引擎统一执行（validator.Validate.Struct），错误为
+// binding 标签上，经全局 validator 引擎统一执行（validator.Check），错误为
 // validator.ValidationErrors。
 func validateParsePayload(in ParsePayload) error {
-	return errors.WithStack(validator.Validate.Struct(&in))
+	return errors.WithStack(validator.Check(&in))
 }

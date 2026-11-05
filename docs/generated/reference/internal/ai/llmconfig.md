@@ -28,6 +28,7 @@
   - [func \(s \*Store\) Load\(ctx context.Context\) \(\*Snapshot, error\)](<#Store.Load>)
   - [func \(s \*Store\) LoadTools\(ctx context.Context, logger \*logging.Logger\) \(\*ToolSet, error\)](<#Store.LoadTools>)
   - [func \(s \*Store\) ModelConfig\(ctx context.Context, slot ai.Slot\) \(llm.ModelConfig, error\)](<#Store.ModelConfig>)
+  - [func \(s \*Store\) SetJSEngine\(engine \*jsengine.Engine\)](<#Store.SetJSEngine>)
 - [type ToolSet](<#ToolSet>)
   - [func \(ts \*ToolSet\) Close\(\) error](<#ToolSet.Close>)
 
@@ -267,6 +268,15 @@ func (s *Store) ModelConfig(ctx context.Context, slot ai.Slot) (llm.ModelConfig,
 ```
 
 ModelConfig 读取单个档位的模型端点配置；未绑定或绑定不可用时返回 ErrSlotNotBound。 供不持有运行时快照的场景（如依赖状态探测）按档位单独取值。
+
+<a name="Store.SetJSEngine"></a>
+### func \(\*Store\) SetJSEngine
+
+```go
+func (s *Store) SetJSEngine(engine *jsengine.Engine)
+```
+
+SetJSEngine 注入 JS 运行时：由装配层在构造 Store 后、首次 LoadTools 之前调用。
 
 <a name="ToolSet"></a>
 ## type ToolSet

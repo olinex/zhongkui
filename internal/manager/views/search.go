@@ -61,8 +61,134 @@ type AgentMemoryListGetOrderBy struct {
 	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
 	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
 }
+type createdAtAgentMemoryListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtAgentMemoryListGetFilterByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtTimeAgentMemoryListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTimeAgentMemoryListGetFilterByItem) GetName() string {
+	return "createdAtTime"
+}
+
+func (i *createdAtTimeAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "Time(created_at)"
+}
+
+func (i *createdAtTimeAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtTimeAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtDateAgentMemoryListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtDateAgentMemoryListGetFilterByItem) GetName() string {
+	return "createdAtDate"
+}
+
+func (i *createdAtDateAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "Date(created_at)"
+}
+
+func (i *createdAtDateAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtDateAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtAgentMemoryListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtAgentMemoryListGetFilterByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtTimeAgentMemoryListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTimeAgentMemoryListGetFilterByItem) GetName() string {
+	return "updatedAtTime"
+}
+
+func (i *updatedAtTimeAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "Time(updated_at)"
+}
+
+func (i *updatedAtTimeAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtTimeAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtDateAgentMemoryListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtDateAgentMemoryListGetFilterByItem) GetName() string {
+	return "updatedAtDate"
+}
+
+func (i *updatedAtDateAgentMemoryListGetFilterByItem) GetColumn() string {
+	return "Date(updated_at)"
+}
+
+func (i *updatedAtDateAgentMemoryListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtDateAgentMemoryListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
 type keywordAgentMemoryListGetFilterByItem struct {
-	Action string `mapstructure:"action" binding:"required,oneof=ctn ictn"`
+	Action string `mapstructure:"action" binding:"required,oneof=fts"`
 	Value  string `mapstructure:"value" binding:""`
 }
 
@@ -71,7 +197,7 @@ func (i *keywordAgentMemoryListGetFilterByItem) GetName() string {
 }
 
 func (i *keywordAgentMemoryListGetFilterByItem) GetColumn() string {
-	return "content"
+	return "search"
 }
 
 func (i *keywordAgentMemoryListGetFilterByItem) GetAction() string {
@@ -146,10 +272,16 @@ func (i *statusAgentMemoryListGetFilterByItem) GetValue() any {
 }
 
 type AgentMemoryListGetFilterBy struct {
-	Keyword   *keywordAgentMemoryListGetFilterByItem   `mapstructure:"keyword"`
-	AgentKind *agentKindAgentMemoryListGetFilterByItem `mapstructure:"agentKind"`
-	Kind      *kindAgentMemoryListGetFilterByItem      `mapstructure:"kind"`
-	Status    *statusAgentMemoryListGetFilterByItem    `mapstructure:"status"`
+	CreatedAt     *createdAtAgentMemoryListGetFilterByItem     `mapstructure:"createdAt"`
+	CreatedAtTime *createdAtTimeAgentMemoryListGetFilterByItem `mapstructure:"createdAtTime"`
+	CreatedAtDate *createdAtDateAgentMemoryListGetFilterByItem `mapstructure:"createdAtDate"`
+	UpdatedAt     *updatedAtAgentMemoryListGetFilterByItem     `mapstructure:"updatedAt"`
+	UpdatedAtTime *updatedAtTimeAgentMemoryListGetFilterByItem `mapstructure:"updatedAtTime"`
+	UpdatedAtDate *updatedAtDateAgentMemoryListGetFilterByItem `mapstructure:"updatedAtDate"`
+	Keyword       *keywordAgentMemoryListGetFilterByItem       `mapstructure:"keyword"`
+	AgentKind     *agentKindAgentMemoryListGetFilterByItem     `mapstructure:"agentKind"`
+	Kind          *kindAgentMemoryListGetFilterByItem          `mapstructure:"kind"`
+	Status        *statusAgentMemoryListGetFilterByItem        `mapstructure:"status"`
 }
 
 type AgentMemoryListGetSearchIn struct {
@@ -186,6 +318,24 @@ func (s *AgentMemoryListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem
 	items := make(map[string]utils.FilterByItem)
 	if s.FilterBy == nil {
 		return items
+	}
+	if s.FilterBy.CreatedAt != nil {
+		items["createdAt"] = s.FilterBy.CreatedAt
+	}
+	if s.FilterBy.CreatedAtTime != nil {
+		items["createdAtTime"] = s.FilterBy.CreatedAtTime
+	}
+	if s.FilterBy.CreatedAtDate != nil {
+		items["createdAtDate"] = s.FilterBy.CreatedAtDate
+	}
+	if s.FilterBy.UpdatedAt != nil {
+		items["updatedAt"] = s.FilterBy.UpdatedAt
+	}
+	if s.FilterBy.UpdatedAtTime != nil {
+		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+	}
+	if s.FilterBy.UpdatedAtDate != nil {
+		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
 	}
 	if s.FilterBy.Keyword != nil {
 		items["keyword"] = s.FilterBy.Keyword
@@ -254,11 +404,88 @@ func (s *AgentMemoryListGetSearchIn) GetOptions() *utils.SearchOptions {
 		},
 		FilterBy: []*utils.FilterByOption{
 			{
+				Name: "createdAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
 				Name: "keyword",
 				Type: "string",
 				Actions: []string{
-					"ctn",
-					"ictn",
+					"fts",
 				},
 			},
 			{
@@ -292,6 +519,479 @@ func (s *AgentMemoryListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"status",
 			"useCount",
 			"lastUsedAt",
+			"createdAt",
+			"updatedAt",
+		},
+	}
+}
+
+type createdAtAgentSkillListGetOrderByItem int
+
+func (i *createdAtAgentSkillListGetOrderByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtAgentSkillListGetOrderByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtAgentSkillListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type updatedAtAgentSkillListGetOrderByItem int
+
+func (i *updatedAtAgentSkillListGetOrderByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtAgentSkillListGetOrderByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtAgentSkillListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type AgentSkillListGetOrderBy struct {
+	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type createdAtAgentSkillListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtAgentSkillListGetFilterByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtAgentSkillListGetFilterByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtTimeAgentSkillListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTimeAgentSkillListGetFilterByItem) GetName() string {
+	return "createdAtTime"
+}
+
+func (i *createdAtTimeAgentSkillListGetFilterByItem) GetColumn() string {
+	return "Time(created_at)"
+}
+
+func (i *createdAtTimeAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtTimeAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtDateAgentSkillListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtDateAgentSkillListGetFilterByItem) GetName() string {
+	return "createdAtDate"
+}
+
+func (i *createdAtDateAgentSkillListGetFilterByItem) GetColumn() string {
+	return "Date(created_at)"
+}
+
+func (i *createdAtDateAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtDateAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtAgentSkillListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtAgentSkillListGetFilterByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtAgentSkillListGetFilterByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtTimeAgentSkillListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTimeAgentSkillListGetFilterByItem) GetName() string {
+	return "updatedAtTime"
+}
+
+func (i *updatedAtTimeAgentSkillListGetFilterByItem) GetColumn() string {
+	return "Time(updated_at)"
+}
+
+func (i *updatedAtTimeAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtTimeAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtDateAgentSkillListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtDateAgentSkillListGetFilterByItem) GetName() string {
+	return "updatedAtDate"
+}
+
+func (i *updatedAtDateAgentSkillListGetFilterByItem) GetColumn() string {
+	return "Date(updated_at)"
+}
+
+func (i *updatedAtDateAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtDateAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type keywordAgentSkillListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=ctn ictn"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *keywordAgentSkillListGetFilterByItem) GetName() string {
+	return "keyword"
+}
+
+func (i *keywordAgentSkillListGetFilterByItem) GetColumn() string {
+	return "name"
+}
+
+func (i *keywordAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *keywordAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type sourceAgentSkillListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *sourceAgentSkillListGetFilterByItem) GetName() string {
+	return "source"
+}
+
+func (i *sourceAgentSkillListGetFilterByItem) GetColumn() string {
+	return "source"
+}
+
+func (i *sourceAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *sourceAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type enabledAgentSkillListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  bool   `mapstructure:"value" binding:""`
+}
+
+func (i *enabledAgentSkillListGetFilterByItem) GetName() string {
+	return "enabled"
+}
+
+func (i *enabledAgentSkillListGetFilterByItem) GetColumn() string {
+	return "enabled"
+}
+
+func (i *enabledAgentSkillListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *enabledAgentSkillListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type AgentSkillListGetFilterBy struct {
+	CreatedAt     *createdAtAgentSkillListGetFilterByItem     `mapstructure:"createdAt"`
+	CreatedAtTime *createdAtTimeAgentSkillListGetFilterByItem `mapstructure:"createdAtTime"`
+	CreatedAtDate *createdAtDateAgentSkillListGetFilterByItem `mapstructure:"createdAtDate"`
+	UpdatedAt     *updatedAtAgentSkillListGetFilterByItem     `mapstructure:"updatedAt"`
+	UpdatedAtTime *updatedAtTimeAgentSkillListGetFilterByItem `mapstructure:"updatedAtTime"`
+	UpdatedAtDate *updatedAtDateAgentSkillListGetFilterByItem `mapstructure:"updatedAtDate"`
+	Keyword       *keywordAgentSkillListGetFilterByItem       `mapstructure:"keyword"`
+	Source        *sourceAgentSkillListGetFilterByItem        `mapstructure:"source"`
+	Enabled       *enabledAgentSkillListGetFilterByItem       `mapstructure:"enabled"`
+}
+
+type AgentSkillListGetSearchIn struct {
+	Pagination
+	Greedy   bool                       `mapstructure:"greedy" default:"false"`
+	OrderBy  []AgentSkillListGetOrderBy `mapstructure:"orderBy"`
+	FilterBy *AgentSkillListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                   `mapstructure:"fields"`
+}
+
+func (s *AgentSkillListGetSearchIn) GetGreedy() bool {
+	return s.Greedy
+}
+
+func (s *AgentSkillListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+	items := make([]utils.OrderByItem, 0)
+	if s.OrderBy == nil {
+		return items
+	}
+	for _, ord := range s.OrderBy {
+		switch ord.Name {
+		case "createdAt":
+			item := createdAtAgentSkillListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "updatedAt":
+			item := updatedAtAgentSkillListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		}
+	}
+	return items
+}
+
+func (s *AgentSkillListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+	items := make(map[string]utils.FilterByItem)
+	if s.FilterBy == nil {
+		return items
+	}
+	if s.FilterBy.CreatedAt != nil {
+		items["createdAt"] = s.FilterBy.CreatedAt
+	}
+	if s.FilterBy.CreatedAtTime != nil {
+		items["createdAtTime"] = s.FilterBy.CreatedAtTime
+	}
+	if s.FilterBy.CreatedAtDate != nil {
+		items["createdAtDate"] = s.FilterBy.CreatedAtDate
+	}
+	if s.FilterBy.UpdatedAt != nil {
+		items["updatedAt"] = s.FilterBy.UpdatedAt
+	}
+	if s.FilterBy.UpdatedAtTime != nil {
+		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+	}
+	if s.FilterBy.UpdatedAtDate != nil {
+		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+	}
+	if s.FilterBy.Keyword != nil {
+		items["keyword"] = s.FilterBy.Keyword
+	}
+	if s.FilterBy.Source != nil {
+		items["source"] = s.FilterBy.Source
+	}
+	if s.FilterBy.Enabled != nil {
+		items["enabled"] = s.FilterBy.Enabled
+	}
+	return items
+}
+
+func (s *AgentSkillListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *AgentSkillListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "name":
+			add("name")
+		case "source":
+			add("source")
+		case "description":
+			add("description")
+		case "enabled":
+			add("enabled")
+		case "periodicCapable":
+			add("periodic_capable")
+		case "inputFields":
+			add("input_fields")
+		case "fixedFields":
+			add("fixed_fields")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		}
+	}
+	return columns
+}
+
+func (s *AgentSkillListGetSearchIn) GetOptions() *utils.SearchOptions {
+	return &utils.SearchOptions{
+		OrderBy: []string{
+			"createdAt",
+			"updatedAt",
+		},
+		FilterBy: []*utils.FilterByOption{
+			{
+				Name: "createdAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "keyword",
+				Type: "string",
+				Actions: []string{
+					"ctn",
+					"ictn",
+				},
+			},
+			{
+				Name: "source",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "enabled",
+				Type: "bool",
+				Actions: []string{
+					"eq",
+				},
+			},
+		},
+		Fields: []string{
+			"id",
+			"name",
+			"source",
+			"description",
+			"enabled",
+			"periodicCapable",
+			"inputFields",
+			"fixedFields",
 			"createdAt",
 			"updatedAt",
 		},
@@ -4082,6 +4782,132 @@ type KnowledgeDocumentListGetOrderBy struct {
 	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
 	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
 }
+type createdAtKnowledgeDocumentListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtTimeKnowledgeDocumentListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTimeKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "createdAtTime"
+}
+
+func (i *createdAtTimeKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "Time(created_at)"
+}
+
+func (i *createdAtTimeKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtTimeKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtDateKnowledgeDocumentListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtDateKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "createdAtDate"
+}
+
+func (i *createdAtDateKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "Date(created_at)"
+}
+
+func (i *createdAtDateKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtDateKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtKnowledgeDocumentListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtTimeKnowledgeDocumentListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTimeKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "updatedAtTime"
+}
+
+func (i *updatedAtTimeKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "Time(updated_at)"
+}
+
+func (i *updatedAtTimeKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtTimeKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtDateKnowledgeDocumentListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtDateKnowledgeDocumentListGetFilterByItem) GetName() string {
+	return "updatedAtDate"
+}
+
+func (i *updatedAtDateKnowledgeDocumentListGetFilterByItem) GetColumn() string {
+	return "Date(updated_at)"
+}
+
+func (i *updatedAtDateKnowledgeDocumentListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtDateKnowledgeDocumentListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
 type titleKnowledgeDocumentListGetFilterByItem struct {
 	Action string `mapstructure:"action" binding:"required,oneof=eq neq pfx npfx ipfx inpfx sfx nsfx isfx insfx ctn nctn ictn inctn"`
 	Value  string `mapstructure:"value" binding:""`
@@ -4146,9 +4972,15 @@ func (i *statusKnowledgeDocumentListGetFilterByItem) GetValue() any {
 }
 
 type KnowledgeDocumentListGetFilterBy struct {
-	Title  *titleKnowledgeDocumentListGetFilterByItem  `mapstructure:"title"`
-	Format *formatKnowledgeDocumentListGetFilterByItem `mapstructure:"format"`
-	Status *statusKnowledgeDocumentListGetFilterByItem `mapstructure:"status"`
+	CreatedAt     *createdAtKnowledgeDocumentListGetFilterByItem     `mapstructure:"createdAt"`
+	CreatedAtTime *createdAtTimeKnowledgeDocumentListGetFilterByItem `mapstructure:"createdAtTime"`
+	CreatedAtDate *createdAtDateKnowledgeDocumentListGetFilterByItem `mapstructure:"createdAtDate"`
+	UpdatedAt     *updatedAtKnowledgeDocumentListGetFilterByItem     `mapstructure:"updatedAt"`
+	UpdatedAtTime *updatedAtTimeKnowledgeDocumentListGetFilterByItem `mapstructure:"updatedAtTime"`
+	UpdatedAtDate *updatedAtDateKnowledgeDocumentListGetFilterByItem `mapstructure:"updatedAtDate"`
+	Title         *titleKnowledgeDocumentListGetFilterByItem         `mapstructure:"title"`
+	Format        *formatKnowledgeDocumentListGetFilterByItem        `mapstructure:"format"`
+	Status        *statusKnowledgeDocumentListGetFilterByItem        `mapstructure:"status"`
 }
 
 type KnowledgeDocumentListGetSearchIn struct {
@@ -4185,6 +5017,24 @@ func (s *KnowledgeDocumentListGetSearchIn) GetFilterBy() map[string]utils.Filter
 	items := make(map[string]utils.FilterByItem)
 	if s.FilterBy == nil {
 		return items
+	}
+	if s.FilterBy.CreatedAt != nil {
+		items["createdAt"] = s.FilterBy.CreatedAt
+	}
+	if s.FilterBy.CreatedAtTime != nil {
+		items["createdAtTime"] = s.FilterBy.CreatedAtTime
+	}
+	if s.FilterBy.CreatedAtDate != nil {
+		items["createdAtDate"] = s.FilterBy.CreatedAtDate
+	}
+	if s.FilterBy.UpdatedAt != nil {
+		items["updatedAt"] = s.FilterBy.UpdatedAt
+	}
+	if s.FilterBy.UpdatedAtTime != nil {
+		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+	}
+	if s.FilterBy.UpdatedAtDate != nil {
+		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
 	}
 	if s.FilterBy.Title != nil {
 		items["title"] = s.FilterBy.Title
@@ -4251,6 +5101,84 @@ func (s *KnowledgeDocumentListGetSearchIn) GetOptions() *utils.SearchOptions {
 			"updatedAt",
 		},
 		FilterBy: []*utils.FilterByOption{
+			{
+				Name: "createdAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
 			{
 				Name: "title",
 				Type: "string",
@@ -9140,6 +10068,1039 @@ func (s *NotificationTemplateListGetSearchIn) GetOptions() *utils.SearchOptions 
 			"content",
 			"source",
 			"description",
+		},
+	}
+}
+
+type createdAtPeriodicReportFeedListGetOrderByItem int
+
+func (i *createdAtPeriodicReportFeedListGetOrderByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtPeriodicReportFeedListGetOrderByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtPeriodicReportFeedListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type triggerAtPeriodicReportFeedListGetOrderByItem int
+
+func (i *triggerAtPeriodicReportFeedListGetOrderByItem) GetName() string {
+	return "triggerAt"
+}
+
+func (i *triggerAtPeriodicReportFeedListGetOrderByItem) GetColumn() string {
+	return "trigger_at"
+}
+
+func (i *triggerAtPeriodicReportFeedListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type PeriodicReportFeedListGetOrderBy struct {
+	Name  string `mapstructure:"name" binding:"required,oneof=createdAt triggerAt"`
+	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+
+type PeriodicReportFeedListGetFilterBy struct {
+}
+
+type PeriodicReportFeedListGetSearchIn struct {
+	Pagination
+	Greedy   bool                               `mapstructure:"greedy" default:"false"`
+	OrderBy  []PeriodicReportFeedListGetOrderBy `mapstructure:"orderBy"`
+	FilterBy *PeriodicReportFeedListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                           `mapstructure:"fields"`
+}
+
+func (s *PeriodicReportFeedListGetSearchIn) GetGreedy() bool {
+	return s.Greedy
+}
+
+func (s *PeriodicReportFeedListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+	items := make([]utils.OrderByItem, 0)
+	if s.OrderBy == nil {
+		return items
+	}
+	for _, ord := range s.OrderBy {
+		switch ord.Name {
+		case "createdAt":
+			item := createdAtPeriodicReportFeedListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "triggerAt":
+			item := triggerAtPeriodicReportFeedListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		}
+	}
+	return items
+}
+
+func (s *PeriodicReportFeedListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+	items := make(map[string]utils.FilterByItem)
+	if s.FilterBy == nil {
+		return items
+	}
+	return items
+}
+
+func (s *PeriodicReportFeedListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *PeriodicReportFeedListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "runID":
+			add("id")
+		case "planID":
+			add("plan_id")
+		case "planName":
+			add("plan_id")
+		case "title":
+			add("title")
+		case "status":
+			add("status")
+		case "triggerAt":
+			add("trigger_at")
+		case "createdAt":
+			add("created_at")
+		}
+	}
+	return columns
+}
+
+func (s *PeriodicReportFeedListGetSearchIn) GetOptions() *utils.SearchOptions {
+	return &utils.SearchOptions{
+		OrderBy: []string{
+			"createdAt",
+			"triggerAt",
+		},
+		FilterBy: []*utils.FilterByOption{},
+		Fields: []string{
+			"runID",
+			"planID",
+			"planName",
+			"title",
+			"status",
+			"triggerAt",
+			"createdAt",
+		},
+	}
+}
+
+type createdAtPeriodicReportPlanListGetOrderByItem int
+
+func (i *createdAtPeriodicReportPlanListGetOrderByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtPeriodicReportPlanListGetOrderByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtPeriodicReportPlanListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type updatedAtPeriodicReportPlanListGetOrderByItem int
+
+func (i *updatedAtPeriodicReportPlanListGetOrderByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtPeriodicReportPlanListGetOrderByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtPeriodicReportPlanListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type PeriodicReportPlanListGetOrderBy struct {
+	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type createdAtPeriodicReportPlanListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtPeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtPeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtPeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtPeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtTimePeriodicReportPlanListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtTimePeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "createdAtTime"
+}
+
+func (i *createdAtTimePeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "Time(created_at)"
+}
+
+func (i *createdAtTimePeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtTimePeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type createdAtDatePeriodicReportPlanListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *createdAtDatePeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "createdAtDate"
+}
+
+func (i *createdAtDatePeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "Date(created_at)"
+}
+
+func (i *createdAtDatePeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *createdAtDatePeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtPeriodicReportPlanListGetFilterByItem struct {
+	Action string    `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  time.Time `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtPeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtPeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtPeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtPeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtTimePeriodicReportPlanListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.TimeOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtTimePeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "updatedAtTime"
+}
+
+func (i *updatedAtTimePeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "Time(updated_at)"
+}
+
+func (i *updatedAtTimePeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtTimePeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type updatedAtDatePeriodicReportPlanListGetFilterByItem struct {
+	Action string              `mapstructure:"action" binding:"required,oneof=eq neq nil lt lte gt gte"`
+	Value  serializer.DateOnly `mapstructure:"value" binding:"required"`
+}
+
+func (i *updatedAtDatePeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "updatedAtDate"
+}
+
+func (i *updatedAtDatePeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "Date(updated_at)"
+}
+
+func (i *updatedAtDatePeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *updatedAtDatePeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type keywordPeriodicReportPlanListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=ctn ictn"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *keywordPeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "keyword"
+}
+
+func (i *keywordPeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "name"
+}
+
+func (i *keywordPeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *keywordPeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type enabledPeriodicReportPlanListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  bool   `mapstructure:"value" binding:""`
+}
+
+func (i *enabledPeriodicReportPlanListGetFilterByItem) GetName() string {
+	return "enabled"
+}
+
+func (i *enabledPeriodicReportPlanListGetFilterByItem) GetColumn() string {
+	return "enabled"
+}
+
+func (i *enabledPeriodicReportPlanListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *enabledPeriodicReportPlanListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type PeriodicReportPlanListGetFilterBy struct {
+	CreatedAt     *createdAtPeriodicReportPlanListGetFilterByItem     `mapstructure:"createdAt"`
+	CreatedAtTime *createdAtTimePeriodicReportPlanListGetFilterByItem `mapstructure:"createdAtTime"`
+	CreatedAtDate *createdAtDatePeriodicReportPlanListGetFilterByItem `mapstructure:"createdAtDate"`
+	UpdatedAt     *updatedAtPeriodicReportPlanListGetFilterByItem     `mapstructure:"updatedAt"`
+	UpdatedAtTime *updatedAtTimePeriodicReportPlanListGetFilterByItem `mapstructure:"updatedAtTime"`
+	UpdatedAtDate *updatedAtDatePeriodicReportPlanListGetFilterByItem `mapstructure:"updatedAtDate"`
+	Keyword       *keywordPeriodicReportPlanListGetFilterByItem       `mapstructure:"keyword"`
+	Enabled       *enabledPeriodicReportPlanListGetFilterByItem       `mapstructure:"enabled"`
+}
+
+type PeriodicReportPlanListGetSearchIn struct {
+	Pagination
+	Greedy   bool                               `mapstructure:"greedy" default:"false"`
+	OrderBy  []PeriodicReportPlanListGetOrderBy `mapstructure:"orderBy"`
+	FilterBy *PeriodicReportPlanListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                           `mapstructure:"fields"`
+}
+
+func (s *PeriodicReportPlanListGetSearchIn) GetGreedy() bool {
+	return s.Greedy
+}
+
+func (s *PeriodicReportPlanListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+	items := make([]utils.OrderByItem, 0)
+	if s.OrderBy == nil {
+		return items
+	}
+	for _, ord := range s.OrderBy {
+		switch ord.Name {
+		case "createdAt":
+			item := createdAtPeriodicReportPlanListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "updatedAt":
+			item := updatedAtPeriodicReportPlanListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		}
+	}
+	return items
+}
+
+func (s *PeriodicReportPlanListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+	items := make(map[string]utils.FilterByItem)
+	if s.FilterBy == nil {
+		return items
+	}
+	if s.FilterBy.CreatedAt != nil {
+		items["createdAt"] = s.FilterBy.CreatedAt
+	}
+	if s.FilterBy.CreatedAtTime != nil {
+		items["createdAtTime"] = s.FilterBy.CreatedAtTime
+	}
+	if s.FilterBy.CreatedAtDate != nil {
+		items["createdAtDate"] = s.FilterBy.CreatedAtDate
+	}
+	if s.FilterBy.UpdatedAt != nil {
+		items["updatedAt"] = s.FilterBy.UpdatedAt
+	}
+	if s.FilterBy.UpdatedAtTime != nil {
+		items["updatedAtTime"] = s.FilterBy.UpdatedAtTime
+	}
+	if s.FilterBy.UpdatedAtDate != nil {
+		items["updatedAtDate"] = s.FilterBy.UpdatedAtDate
+	}
+	if s.FilterBy.Keyword != nil {
+		items["keyword"] = s.FilterBy.Keyword
+	}
+	if s.FilterBy.Enabled != nil {
+		items["enabled"] = s.FilterBy.Enabled
+	}
+	return items
+}
+
+func (s *PeriodicReportPlanListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *PeriodicReportPlanListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "name":
+			add("name")
+		case "description":
+			add("description")
+		case "skillID":
+			add("skill_id")
+		case "skillName":
+			add("skill_id")
+		case "cronSpec":
+			add("cron_spec")
+		case "inputValues":
+			add("input_values")
+		case "enabled":
+			add("enabled")
+		case "retentionDays":
+			add("retention_days")
+		case "expiresAt":
+			add("expires_at")
+		case "nextRunAt":
+			add("next_run_at")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		}
+	}
+	return columns
+}
+
+func (s *PeriodicReportPlanListGetSearchIn) GetOptions() *utils.SearchOptions {
+	return &utils.SearchOptions{
+		OrderBy: []string{
+			"createdAt",
+			"updatedAt",
+		},
+		FilterBy: []*utils.FilterByOption{
+			{
+				Name: "createdAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "createdAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAt",
+				Type: "time.Time",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtTime",
+				Type: "serializer.TimeOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "updatedAtDate",
+				Type: "serializer.DateOnly",
+				Actions: []string{
+					"eq",
+					"neq",
+					"nil",
+					"lt",
+					"lte",
+					"gt",
+					"gte",
+				},
+			},
+			{
+				Name: "keyword",
+				Type: "string",
+				Actions: []string{
+					"ctn",
+					"ictn",
+				},
+			},
+			{
+				Name: "enabled",
+				Type: "bool",
+				Actions: []string{
+					"eq",
+				},
+			},
+		},
+		Fields: []string{
+			"id",
+			"name",
+			"description",
+			"skillID",
+			"skillName",
+			"cronSpec",
+			"inputValues",
+			"enabled",
+			"retentionDays",
+			"expiresAt",
+			"nextRunAt",
+			"createdAt",
+			"updatedAt",
+		},
+	}
+}
+
+type createdAtPeriodicReportRunListGetOrderByItem int
+
+func (i *createdAtPeriodicReportRunListGetOrderByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtPeriodicReportRunListGetOrderByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtPeriodicReportRunListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type triggerAtPeriodicReportRunListGetOrderByItem int
+
+func (i *triggerAtPeriodicReportRunListGetOrderByItem) GetName() string {
+	return "triggerAt"
+}
+
+func (i *triggerAtPeriodicReportRunListGetOrderByItem) GetColumn() string {
+	return "trigger_at"
+}
+
+func (i *triggerAtPeriodicReportRunListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type finishedAtPeriodicReportRunListGetOrderByItem int
+
+func (i *finishedAtPeriodicReportRunListGetOrderByItem) GetName() string {
+	return "finishedAt"
+}
+
+func (i *finishedAtPeriodicReportRunListGetOrderByItem) GetColumn() string {
+	return "finished_at"
+}
+
+func (i *finishedAtPeriodicReportRunListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type PeriodicReportRunListGetOrderBy struct {
+	Name  string `mapstructure:"name" binding:"required,oneof=createdAt triggerAt finishedAt"`
+	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type planIDPeriodicReportRunListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  uint   `mapstructure:"value" binding:""`
+}
+
+func (i *planIDPeriodicReportRunListGetFilterByItem) GetName() string {
+	return "planID"
+}
+
+func (i *planIDPeriodicReportRunListGetFilterByItem) GetColumn() string {
+	return "plan_id"
+}
+
+func (i *planIDPeriodicReportRunListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *planIDPeriodicReportRunListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type statusPeriodicReportRunListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  string `mapstructure:"value" binding:"enum=periodicReportRunStatus"`
+}
+
+func (i *statusPeriodicReportRunListGetFilterByItem) GetName() string {
+	return "status"
+}
+
+func (i *statusPeriodicReportRunListGetFilterByItem) GetColumn() string {
+	return "status"
+}
+
+func (i *statusPeriodicReportRunListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *statusPeriodicReportRunListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type PeriodicReportRunListGetFilterBy struct {
+	PlanID *planIDPeriodicReportRunListGetFilterByItem `mapstructure:"planID"`
+	Status *statusPeriodicReportRunListGetFilterByItem `mapstructure:"status"`
+}
+
+type PeriodicReportRunListGetSearchIn struct {
+	Pagination
+	Greedy   bool                              `mapstructure:"greedy" default:"false"`
+	OrderBy  []PeriodicReportRunListGetOrderBy `mapstructure:"orderBy"`
+	FilterBy *PeriodicReportRunListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                          `mapstructure:"fields"`
+}
+
+func (s *PeriodicReportRunListGetSearchIn) GetGreedy() bool {
+	return s.Greedy
+}
+
+func (s *PeriodicReportRunListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+	items := make([]utils.OrderByItem, 0)
+	if s.OrderBy == nil {
+		return items
+	}
+	for _, ord := range s.OrderBy {
+		switch ord.Name {
+		case "createdAt":
+			item := createdAtPeriodicReportRunListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "triggerAt":
+			item := triggerAtPeriodicReportRunListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "finishedAt":
+			item := finishedAtPeriodicReportRunListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		}
+	}
+	return items
+}
+
+func (s *PeriodicReportRunListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+	items := make(map[string]utils.FilterByItem)
+	if s.FilterBy == nil {
+		return items
+	}
+	if s.FilterBy.PlanID != nil {
+		items["planID"] = s.FilterBy.PlanID
+	}
+	if s.FilterBy.Status != nil {
+		items["status"] = s.FilterBy.Status
+	}
+	return items
+}
+
+func (s *PeriodicReportRunListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *PeriodicReportRunListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "planID":
+			add("plan_id")
+		case "status":
+			add("status")
+		case "title":
+			add("title")
+		case "objectKey":
+			add("object_key")
+		case "sizeBytes":
+			add("size_bytes")
+		case "error":
+			add("error")
+		case "triggerAt":
+			add("trigger_at")
+		case "sessionID":
+			add("session_id")
+		case "startedAt":
+			add("started_at")
+		case "finishedAt":
+			add("finished_at")
+		case "createdAt":
+			add("created_at")
+		}
+	}
+	return columns
+}
+
+func (s *PeriodicReportRunListGetSearchIn) GetOptions() *utils.SearchOptions {
+	return &utils.SearchOptions{
+		OrderBy: []string{
+			"createdAt",
+			"triggerAt",
+			"finishedAt",
+		},
+		FilterBy: []*utils.FilterByOption{
+			{
+				Name: "planID",
+				Type: "uint",
+				Actions: []string{
+					"eq",
+				},
+			},
+			{
+				Name: "status",
+				Type: "string",
+				Actions: []string{
+					"eq",
+				},
+			},
+		},
+		Fields: []string{
+			"id",
+			"planID",
+			"status",
+			"title",
+			"objectKey",
+			"sizeBytes",
+			"error",
+			"triggerAt",
+			"sessionID",
+			"startedAt",
+			"finishedAt",
+			"createdAt",
+		},
+	}
+}
+
+type createdAtPeriodicReportWatchListGetOrderByItem int
+
+func (i *createdAtPeriodicReportWatchListGetOrderByItem) GetName() string {
+	return "createdAt"
+}
+
+func (i *createdAtPeriodicReportWatchListGetOrderByItem) GetColumn() string {
+	return "created_at"
+}
+
+func (i *createdAtPeriodicReportWatchListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type updatedAtPeriodicReportWatchListGetOrderByItem int
+
+func (i *updatedAtPeriodicReportWatchListGetOrderByItem) GetName() string {
+	return "updatedAt"
+}
+
+func (i *updatedAtPeriodicReportWatchListGetOrderByItem) GetColumn() string {
+	return "updated_at"
+}
+
+func (i *updatedAtPeriodicReportWatchListGetOrderByItem) GetOrder() string {
+	if *i == 1 {
+		return "ASC"
+	} else {
+		return "DESC"
+	}
+}
+
+type PeriodicReportWatchListGetOrderBy struct {
+	Name  string `mapstructure:"name" binding:"required,oneof=createdAt updatedAt"`
+	Order int    `mapstructure:"order" binding:"oneof=1 -1"`
+}
+type keywordPeriodicReportWatchListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=ctn ictn"`
+	Value  string `mapstructure:"value" binding:""`
+}
+
+func (i *keywordPeriodicReportWatchListGetFilterByItem) GetName() string {
+	return "keyword"
+}
+
+func (i *keywordPeriodicReportWatchListGetFilterByItem) GetColumn() string {
+	return "name"
+}
+
+func (i *keywordPeriodicReportWatchListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *keywordPeriodicReportWatchListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type enabledPeriodicReportWatchListGetFilterByItem struct {
+	Action string `mapstructure:"action" binding:"required,oneof=eq"`
+	Value  bool   `mapstructure:"value" binding:""`
+}
+
+func (i *enabledPeriodicReportWatchListGetFilterByItem) GetName() string {
+	return "enabled"
+}
+
+func (i *enabledPeriodicReportWatchListGetFilterByItem) GetColumn() string {
+	return "enabled"
+}
+
+func (i *enabledPeriodicReportWatchListGetFilterByItem) GetAction() string {
+	return i.Action
+}
+
+func (i *enabledPeriodicReportWatchListGetFilterByItem) GetValue() any {
+	return i.Value
+}
+
+type PeriodicReportWatchListGetFilterBy struct {
+	Keyword *keywordPeriodicReportWatchListGetFilterByItem `mapstructure:"keyword"`
+	Enabled *enabledPeriodicReportWatchListGetFilterByItem `mapstructure:"enabled"`
+}
+
+type PeriodicReportWatchListGetSearchIn struct {
+	Pagination
+	Greedy   bool                                `mapstructure:"greedy" default:"false"`
+	OrderBy  []PeriodicReportWatchListGetOrderBy `mapstructure:"orderBy"`
+	FilterBy *PeriodicReportWatchListGetFilterBy `mapstructure:"filterBy"`
+	Fields   []string                            `mapstructure:"fields"`
+}
+
+func (s *PeriodicReportWatchListGetSearchIn) GetGreedy() bool {
+	return s.Greedy
+}
+
+func (s *PeriodicReportWatchListGetSearchIn) GetOrderBy() []utils.OrderByItem {
+	items := make([]utils.OrderByItem, 0)
+	if s.OrderBy == nil {
+		return items
+	}
+	for _, ord := range s.OrderBy {
+		switch ord.Name {
+		case "createdAt":
+			item := createdAtPeriodicReportWatchListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		case "updatedAt":
+			item := updatedAtPeriodicReportWatchListGetOrderByItem(ord.Order)
+			items = append(items, &item)
+		}
+	}
+	return items
+}
+
+func (s *PeriodicReportWatchListGetSearchIn) GetFilterBy() map[string]utils.FilterByItem {
+	items := make(map[string]utils.FilterByItem)
+	if s.FilterBy == nil {
+		return items
+	}
+	if s.FilterBy.Keyword != nil {
+		items["keyword"] = s.FilterBy.Keyword
+	}
+	if s.FilterBy.Enabled != nil {
+		items["enabled"] = s.FilterBy.Enabled
+	}
+	return items
+}
+
+func (s *PeriodicReportWatchListGetSearchIn) GetFields() []string {
+	return s.Fields
+}
+
+func (s *PeriodicReportWatchListGetSearchIn) ResolveSelectColumns() []string {
+	if len(s.Fields) == 0 {
+		return nil
+	}
+	columns := make([]string, 0, len(s.Fields))
+	seen := make(map[string]struct{}, len(s.Fields))
+	add := func(column string) {
+		if _, dup := seen[column]; dup {
+			return
+		}
+		seen[column] = struct{}{}
+		columns = append(columns, column)
+	}
+	for _, name := range s.Fields {
+		switch name {
+		case "id":
+			add("id")
+		case "name":
+			add("name")
+		case "description":
+			add("description")
+		case "enabled":
+			add("enabled")
+		case "watched":
+			add("id")
+		case "createdAt":
+			add("created_at")
+		case "updatedAt":
+			add("updated_at")
+		}
+	}
+	return columns
+}
+
+func (s *PeriodicReportWatchListGetSearchIn) GetOptions() *utils.SearchOptions {
+	return &utils.SearchOptions{
+		OrderBy: []string{
+			"createdAt",
+			"updatedAt",
+		},
+		FilterBy: []*utils.FilterByOption{
+			{
+				Name: "keyword",
+				Type: "string",
+				Actions: []string{
+					"ctn",
+					"ictn",
+				},
+			},
+			{
+				Name: "enabled",
+				Type: "bool",
+				Actions: []string{
+					"eq",
+				},
+			},
+		},
+		Fields: []string{
+			"id",
+			"name",
+			"description",
+			"enabled",
+			"watched",
+			"createdAt",
+			"updatedAt",
 		},
 	}
 }

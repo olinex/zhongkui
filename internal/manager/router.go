@@ -135,10 +135,12 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	messagePool := provider.MustInvokeMessagePool(i)
 	aiRuntime := provider.MustInvokeAi(ctx, i)
 	cacheRedis := provider.MustInvokeCacheRedis(i)
-	cfg, err := config.ExtractConfig(viper, validator.Validate)
-	if err != nil {
-		return errors.WithStack(err)
-	}
+	cfg := config.MustExtractConfig(viper, validator.Validate)
+	// 创建 JWT 与访问密钥认证器，并聚合为统一的多路鉴权中间件；访问密钥池由 provider 统一装配
+	accessKeyPool := provider.MustInvokeAccessKeyPool(i)
+	jwtAuthenticator := middlewares.NewJwtAuthenticator(&cfg.Auth, coreDB, kd)
+	accessKeyAuthenticator := middlewares.NewAccessKeyAuthenticator(accessKeyPool, coreDB)
+	authenticator := middlewares.NewAuthenticator(accessKeyAuthenticator, jwtAuthenticator)
 
 	// 受信代理网段：Gin 默认信任所有代理并采信 X-Forwarded-For，来源地址可被伪造，
 	// 故按配置收紧——默认空列表即不信任任何代理，ClientIP 退化为 TCP 对端地址；
@@ -151,9 +153,6 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	if err := engine.SetTrustedProxies(trustedProxies); err != nil {
 		return errors.WithStack(err)
 	}
-
-	// 创建JWT认证器，用于用户身份验证和令牌管理
-	authenticator := middlewares.NewJwtAuthenticator(&cfg.Auth, coreDB, kd)
 
 	// ==================== 全局中间件配置 ====================
 	// 以下中间件将应用于所有HTTP请求，按照添加顺序执行
@@ -176,9 +175,9 @@ func RouteRegister(ctx context.Context, i do.Injector) error {
 	// ==================== 分组中间件配置 ====================
 	// 以下中间件将根据路由分组选择性应用，提供细粒度的访问控制和功能支持
 
-	// Authenticator - 认证器中间件，将认证器实例注入请求上下文
+	// Authenticator - 统一鉴权聚合器注入中间件，供处理器取用聚合器与 JWT 认证器
 	authenticatorMiddleware := authenticator.AuthenticatorMiddleware()
-	// ForceAuthenticate - 强制认证中间件，要求请求必须通过JWT认证
+	// ForceAuthenticate - 强制认证中间件，要求请求必须通过受支持的凭据认证
 	forceAuthenticateMiddleware := authenticator.AuthenticateMiddleware(false)
 	// Policy - RBAC策略中间件，将策略引擎注入请求上下文
 	policyMiddleware := middlewares.RbacPolicyMiddleware(rbac)

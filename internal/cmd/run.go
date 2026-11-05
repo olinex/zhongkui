@@ -86,6 +86,14 @@ var workerCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, i := cmdToolBox(cmd)
 		worker.Registry(ctx, i)
+		// worker 进程不注册 HTTP 路由，必须离线装配同一份能力目录并注入 AI 运行时，
+		// 否则后台周期报告经 api_invoke 调用接口时白名单为空，全部能力调用被拒。
+		aiRuntime, err := provider.InvokeAi(ctx, i)
+		if err != nil {
+			pterm.Error.Println(err.Error())
+			return
+		}
+		aiRuntime.SetCapabilities(manager.CollectCapabilities())
 		// 与 web 进程一致，启动时重载第三方数据源：扫描已启用数据源注册为各命名空间的
 		// SQLite vtable，保证 worker 进程内 sqlite.query 可按裸名查询。缺失该步骤时
 		// 规则中的第三方数据源查询全部失败（no such table），标签识别报错后透传、

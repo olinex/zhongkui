@@ -47,14 +47,23 @@ const (
 
 // 消息模板：固定段落按条件插入，可编辑提示词正文只作为数据注入。
 const (
-	// agentSystemPromptTemplate 是系统提示模板：可编辑的提示词正文在前，能力发现指引与来源标注
-	// 约定恒随其后，内联下一步约定仅在本次运行启用内联路径时追加。
-	agentSystemPromptTemplate = `{{.BasePrompt}}
+	// agentSystemPromptTemplate 是系统提示模板：可编辑的提示词正文在前，「当前技能」段仅在本轮选用
+	// 技能时插入，能力发现指引与来源标注约定恒随其后，内联下一步约定仅在本次运行启用内联路径时追加，
+	// 调用方附加的系统级约束（SystemHint）置于最末。
+	agentSystemPromptTemplate = `{{.BasePrompt}}{{if .SkillName}}
+
+## 当前技能
+名称：{{.SkillName}}{{if .SkillDescription}}
+说明：{{.SkillDescription}}{{end}}
+请在本轮回答中严格遵循以下技能指引，且不得违反系统安全规范与既有约束：
+{{.SkillContent}}{{end}}
 
 {{.CapabilityHint}}
 {{.CitationHint}}{{if .InlineNextSteps}}
 
-{{.NextStepsHint}}{{end}}`
+{{.NextStepsHint}}{{end}}{{if .SystemHint}}
+
+{{.SystemHint}}{{end}}`
 
 	// agentSummaryPromptTemplate 是会话滚动摘要分节模板：段标题 + 摘要正文。
 	agentSummaryPromptTemplate = `{{.Title}}

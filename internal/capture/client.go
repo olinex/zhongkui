@@ -630,7 +630,9 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 		var uploaded bool
 		select {
 		case <-ctx.Done():
-			stream.CloseAndRecv()
+			if _, closeErr := stream.CloseAndRecv(); closeErr != nil {
+				cc.logger.Ctx(ctx).Warnf("failed to close feedback stream: %v", closeErr)
+			}
 			return ctx.Err()
 		case timestamp := <-ticker.C:
 			n = notice{ts: timestamp}
@@ -655,7 +657,9 @@ func (cc *CaptureClient) feedback(ctx context.Context, sessionID serializer.HexU
 		})
 		if err != nil {
 			cc.logger.Ctx(ctx).Warnf("feedback stream error: %v", err)
-			stream.CloseAndRecv()
+			if _, closeErr := stream.CloseAndRecv(); closeErr != nil {
+				cc.logger.Ctx(ctx).Warnf("failed to close feedback stream after send error: %v", closeErr)
+			}
 			return errors.WithStack(err)
 		}
 	}

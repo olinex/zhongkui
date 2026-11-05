@@ -26,8 +26,10 @@ func newAiProvider(ctx context.Context) do.Provider[*ai.Runtime] {
 			return nil, errors.WithStack(err)
 		} else if logger, err := InvokeDatabaseLogger(i); err != nil {
 			return nil, errors.WithStack(err)
+		} else if engine, err := InvokeJSEngine(i); err != nil {
+			return nil, errors.WithStack(err)
 		} else {
-			return ai.NewRuntime(ctx, db, client, logger)
+			return ai.NewRuntime(ctx, db, client, logger, ai.WithJSEngine(engine))
 		}
 	}
 }

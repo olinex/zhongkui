@@ -95,16 +95,16 @@ type HttpTransportListGetListItemOut struct {
 	// Method HTTP 请求方法
 	Method string `json:"method"`
 	// ReqBody 请求主体（S3 对象键，空字符串表示内容为空）
-	ReqBody string `json:"reqBody"`
+	ReqBody string `json:"reqBody" form:"kind=s3"`
 	// ReqBodyHash 请求主体 HMAC-SHA256 摘要（hex，带密钥防离线爆破）
 	ReqBodyHash string `json:"reqBodyHash"`
 	// ReqBodyLength 请求主体字节长度
-	ReqBodyLength int64 `json:"reqBodyLength"`
+	ReqBodyLength int64 `json:"reqBodyLength" form:"kind=decByte"`
 	// ---- HttpRequestHeaders ----
 	// ReqHdrAuthorization 认证信息（加密存储）
-	ReqHdrAuthorization *serializer.Crypto `json:"reqHdrAuthorization" form:"kind:crypto"`
+	ReqHdrAuthorization *serializer.Crypto `json:"reqHdrAuthorization" form:"kind=crypto"`
 	// ReqHdrProxyAuthorization 代理认证信息（加密存储）
-	ReqHdrProxyAuthorization *serializer.Crypto `json:"reqHdrProxyAuthorization" form:"kind:crypto"`
+	ReqHdrProxyAuthorization *serializer.Crypto `json:"reqHdrProxyAuthorization" form:"kind=crypto"`
 	// ReqHdrCacheControl 缓存控制指令
 	ReqHdrCacheControl string `json:"reqHdrCacheControl"`
 	// ReqHdrIfMatch 条件匹配
@@ -132,7 +132,7 @@ type HttpTransportListGetListItemOut struct {
 	// ReqHdrMaxForwards 最大转发跳数
 	ReqHdrMaxForwards int32 `json:"reqHdrMaxForwards"`
 	// ReqHdrCookie 客户端 Cookie（加密存储）
-	ReqHdrCookie *serializer.Crypto `json:"reqHdrCookie" form:"kind:crypto"`
+	ReqHdrCookie *serializer.Crypto `json:"reqHdrCookie" form:"kind=crypto"`
 	// ReqHdrOrigin 请求源
 	ReqHdrOrigin string `json:"reqHdrOrigin"`
 	// ReqHdrAccessControlRequestHeaders CORS 预检请求头
@@ -170,7 +170,7 @@ type HttpTransportListGetListItemOut struct {
 	// ReqHdrTrailer 尾部字段声明
 	ReqHdrTrailer string `json:"reqHdrTrailer"`
 	// ReqHdrSecWebSocketKey WebSocket 握手密钥（加密存储）
-	ReqHdrSecWebSocketKey *serializer.Crypto `json:"reqHdrSecWebsocketKey" form:"kind:crypto"`
+	ReqHdrSecWebSocketKey *serializer.Crypto `json:"reqHdrSecWebsocketKey" form:"kind=crypto"`
 	// ReqHdrSecWebSocketVersion WebSocket 协议版本
 	ReqHdrSecWebSocketVersion string `json:"reqHdrSecWebsocketVersion"`
 	// ReqHdrSecWebSocketProtocol WebSocket 子协议
@@ -233,16 +233,16 @@ type HttpTransportListGetListItemOut struct {
 	ReqHdrAltUsed string `json:"reqHdrAltUsed"`
 	// ---- HttpResponseBody ----
 	// RspBody 响应主体（S3 对象键，空字符串表示内容为空）
-	RspBody string `json:"rspBody"`
+	RspBody string `json:"rspBody" form:"kind=s3"`
 	// RspBodyHash 响应主体 HMAC-SHA256 摘要（hex，带密钥防离线爆破）
 	RspBodyHash string `json:"rspBodyHash"`
 	// RspBodyLength 响应主体字节长度
-	RspBodyLength int64 `json:"rspBodyLength"`
+	RspBodyLength int64 `json:"rspBodyLength" form:"kind=decByte"`
 	// ---- HttpResponseHeaders ----
 	// RspHdrWWWAuthenticate 认证质询（加密存储）
-	RspHdrWWWAuthenticate *serializer.Crypto `json:"rspHdrWwwAuthenticate" form:"kind:crypto"`
+	RspHdrWWWAuthenticate *serializer.Crypto `json:"rspHdrWwwAuthenticate" form:"kind=crypto"`
 	// RspHdrProxyAuthenticate 代理认证质询（加密存储）
-	RspHdrProxyAuthenticate *serializer.Crypto `json:"rspHdrProxyAuthenticate" form:"kind:crypto"`
+	RspHdrProxyAuthenticate *serializer.Crypto `json:"rspHdrProxyAuthenticate" form:"kind=crypto"`
 	// RspHdrAge 缓存年龄（秒）
 	RspHdrAge int64 `json:"rspHdrAge"`
 	// RspHdrCacheControl 缓存控制指令
@@ -268,7 +268,7 @@ type HttpTransportListGetListItemOut struct {
 	// RspHdrAcceptPost 可接受的 POST 媒体类型
 	RspHdrAcceptPost string `json:"rspHdrAcceptPost"`
 	// RspHdrSetCookie 设置 Cookie（加密存储）
-	RspHdrSetCookie *serializer.Crypto `json:"rspHdrSetCookie" form:"kind:crypto"`
+	RspHdrSetCookie *serializer.Crypto `json:"rspHdrSetCookie" form:"kind=crypto"`
 	// RspHdrAccessControlAllowCredentials CORS 允许凭据
 	RspHdrAccessControlAllowCredentials string `json:"rspHdrAccessControlAllowCredentials"`
 	// RspHdrAccessControlAllowHeaders CORS 允许标头
@@ -350,7 +350,7 @@ type HttpTransportListGetListItemOut struct {
 	// RspHdrTrailer 尾部字段声明
 	RspHdrTrailer string `json:"rspHdrTrailer"`
 	// RspHdrSecWebSocketAccept WebSocket 握手接受（加密存储）
-	RspHdrSecWebSocketAccept *serializer.Crypto `json:"rspHdrSecWebsocketAccept" form:"kind:crypto"`
+	RspHdrSecWebSocketAccept *serializer.Crypto `json:"rspHdrSecWebsocketAccept" form:"kind=crypto"`
 	// RspHdrSecWebSocketProtocol WebSocket 子协议
 	RspHdrSecWebSocketProtocol string `json:"rspHdrSecWebsocketProtocol"`
 	// RspHdrSecWebSocketExtensions WebSocket 扩展

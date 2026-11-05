@@ -168,6 +168,10 @@ type MessageSnapshot struct {
 	Phase modelsai.AgentRunPhase `json:"phase,omitempty"`
 	// UserMessageIndex 用户消息在会话内的序号（从 1 起），供回退 / 分支定位。
 	UserMessageIndex int `json:"userMessageIndex,omitempty"`
+	// SkillID 本条用户消息所在轮次选用的技能 ID，0 表示未选技能；仅用户消息有值。
+	SkillID uint `json:"skillID,omitempty"`
+	// SkillName 本条用户消息所在轮次选用的技能名称快照，空表示未选技能；仅用户消息有值。
+	SkillName string `json:"skillName,omitempty"`
 	// Citations 检索引用。
 	Citations []retrieval.RetrievalResult `json:"citations,omitempty"`
 	// Compress 该消息锚定的历史压缩记录。

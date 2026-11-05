@@ -126,9 +126,9 @@ import { DateTime } from "luxon";
 import { getResponse } from "@/apis/base";
 import { tagEventRecordHitRecordsGet } from "@/apis/tagEvent";
 import {
-  TrafficCryptoFields,
-  TrafficFieldTypes,
-  TrafficS3Fields,
+  trafficCryptoKeysOf,
+  trafficFieldTypesOf,
+  trafficS3KeysOf,
   trafficTypeFromModelKey,
 } from "@/apis/traffic";
 
@@ -167,6 +167,10 @@ const currentIndex = ref(0);
 const loading = ref(true);
 const errorText = ref("");
 const plaintextLoading = ref("");
+// 加密 / S3 字段集合与字段渲染类型：全部来自流量列表 OPTIONS 自省，随命中模型加载
+const cryptoKeys = ref(new Set<string>());
+const s3Keys = ref(new Set<string>());
+const fieldTypes = ref<Record<string, BackendDataType>>({});
 
 // 打开时按命中条件透传参数拉取原始记录；切换命中条件时重置浏览位置。
 // 入参 model/ids 来自命中明细；createdAtFrom/createdAtTo 由事件检测时间 detectedAt
@@ -221,6 +225,27 @@ const trafficType = computed<TrafficType | undefined>(() => {
   return props.hit ? trafficTypeFromModelKey(props.hit.model) : undefined;
 });
 
+watch(
+  trafficType,
+  async (type) => {
+    if (!type) {
+      cryptoKeys.value = new Set<string>();
+      s3Keys.value = new Set<string>();
+      fieldTypes.value = {};
+      return;
+    }
+    const [crypto, s3, types] = await Promise.all([
+      trafficCryptoKeysOf(type),
+      trafficS3KeysOf(type),
+      trafficFieldTypesOf(type),
+    ]);
+    cryptoKeys.value = crypto;
+    s3Keys.value = s3;
+    fieldTypes.value = types;
+  },
+  { immediate: true },
+);
+
 // 命中摘要字段（条件名/模型/维度/维度值/次数/阈值/窗口）
 interface SummaryField {
   key: string;
@@ -260,16 +285,14 @@ const detailFields = computed<DetailField[]>(() => {
   if (!typeName || !item) {
     return [];
   }
-  const fieldTypes = TrafficFieldTypes[typeName] ?? {};
-  const cryptoKeys = new Set(TrafficCryptoFields[typeName] ?? []);
-  const s3Keys = new Set(TrafficS3Fields[typeName] ?? []);
   const modelKey = modelTypeKeyToI18nKey(props.hit?.model ?? "");
   return Object.entries(item)
     .filter(([, value]) => value !== null && value !== undefined && value !== "")
     .map(([key, value]) => {
       const label = modelFieldTitle(modelKey, key);
-      const fieldType = fieldTypes[key] ?? BackendDataType.STRING;
-      if (cryptoKeys.has(key)) {
+      // 字段渲染类型来自 OPTIONS 自省，未知字段回退字符串
+      const fieldType = fieldTypes.value[key] ?? BackendDataType.STRING;
+      if (cryptoKeys.value.has(key)) {
         return {
           key,
           label,
@@ -280,7 +303,7 @@ const detailFields = computed<DetailField[]>(() => {
           type: fieldType,
         };
       }
-      if (s3Keys.has(key)) {
+      if (s3Keys.value.has(key)) {
         return {
           key,
           label,

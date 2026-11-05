@@ -226,7 +226,7 @@ func (s *Store) dialMCPGroup(ctx context.Context, set *ToolSet, group *mcpGroup)
 // appendBuiltinTool 经 internal/ai/tools 按名解析内置工具并追加其 schema；解析或取 schema 失败
 // 只记英文告警并跳过该工具，不上抛（内置实现的缺失属编程缺陷，但按降级处理以免阻断其余工具）。
 func (s *Store) appendBuiltinTool(ctx context.Context, set *ToolSet, logger *logging.Logger, row *ai.LlmTool) {
-	built, err := tools.Build(ctx, row.Name, tools.Deps{DB: s.db, Logger: logger})
+	built, err := tools.Build(ctx, row.Name, tools.Deps{DB: s.db, Logger: logger, JS: s.jsEngine})
 	if err != nil {
 		set.warnf("ai: builtin tool %q could not be built and is skipped: %v", row.Name, err)
 		return

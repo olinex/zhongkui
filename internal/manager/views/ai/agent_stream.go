@@ -18,6 +18,7 @@ import (
 	"zhongkuisec.com/zhongkui/internal/ai/contract"
 	interaction "zhongkuisec.com/zhongkui/internal/ai/interaction"
 	sessionstore "zhongkuisec.com/zhongkui/internal/ai/session"
+	skillstore "zhongkuisec.com/zhongkui/internal/ai/skill"
 	"zhongkuisec.com/zhongkui/internal/ai/turns"
 	"zhongkuisec.com/zhongkui/internal/manager/middlewares"
 	"zhongkuisec.com/zhongkui/internal/manager/response"
@@ -36,9 +37,10 @@ func agentSessionFromParam(c *gin.Context, comps *ai.Components, namespace strin
 }
 
 // AgentChat 处理启动（或抢占）一轮对话的请求（SSE，路由 POST /agent/:sessionID/chat）。
-// 校验命名空间 / AI 功能 / 属主 / 会话归属后，按会话锁定状态拒绝已达轮次上限的会话；随后把请求
-// 装配为 turns.ChatInput 交给 turns.Manager.Chat，运行在独立 goroutine 中执行，本接口只负责订阅并
-// 转发事件。客户端断开只 detach 订阅，回合继续执行并写入会话缓冲。
+// 校验命名空间 / AI 功能 / 属主 / 会话归属后，按会话锁定状态拒绝已达轮次上限的会话；请求可选指定
+// 本轮技能（SkillID），非 0 时须存在、属于当前命名空间且已启用，否则以 400 拒绝（绝不静默忽略）；
+// 随后把请求装配为 turns.ChatInput 交给 turns.Manager.Chat，运行在独立 goroutine 中执行，本接口只
+// 负责订阅并转发事件。客户端断开只 detach 订阅，回合继续执行并写入会话缓冲。
 func AgentChat(c *gin.Context) {
 	namespace, ok := middlewares.RequireNamespace(c)
 	if !ok {
@@ -69,7 +71,20 @@ func AgentChat(c *gin.Context) {
 	if rejectIfSessionLocked(c, interactionSnapshot(c, comps, session)) {
 		return
 	}
+	// 本轮显式选用技能时先解析引用并校验可用性（内置技能查代码注册表，自定义技能查当前命名
+	// 空间且须启用）；任一条不满足即 400 拒绝，绝不静默忽略或降级为「未选技能」。
 	chatInput := newChatInput(session, in)
+	selection, ok := resolveChatSkill(c, comps, namespace, in)
+	if !ok {
+		return
+	}
+	if selection != nil {
+		// 技能内容以代码注册表或库中最新值为准，覆盖请求透传的占位字段。
+		chatInput.SkillID = selection.ID
+		chatInput.SkillName = selection.Name
+		chatInput.SkillDescription = selection.Description
+		chatInput.SkillContent = selection.Content
+	}
 	stream, err := comps.Turns.Chat(c.Request.Context(), chatInput)
 	if err != nil {
 		mapAgentTurnError(c, err)
@@ -149,10 +164,10 @@ func AgentAction(c *gin.Context) {
 // AgentInteractionReopenIn 定义「重新审批 / 重新回答」的请求输入：审批回退按调用 ID 定位，问卷回退
 // 按根中断 ID 定位，二者至少提供其一。
 type AgentInteractionReopenIn struct {
-	// CallIDs 审批卡片上的工具调用 ID（审批回退使用）
-	CallIDs []string `json:"callIDs"`
-	// InterruptIDs 问卷卡片上的根中断 ID（问卷回退使用）
-	InterruptIDs []string `json:"interruptIDs"`
+	// CallIDs 审批卡片上的工具调用 ID（审批回退使用）：与 InterruptIDs 至少提供其一
+	CallIDs []string `json:"callIDs" binding:"required_without=InterruptIDs,dive,notBlank"`
+	// InterruptIDs 问卷卡片上的根中断 ID（问卷回退使用）：与 CallIDs 至少提供其一
+	InterruptIDs []string `json:"interruptIDs" binding:"required_without=CallIDs,dive,notBlank"`
 }
 
 // AgentInteractionReopen 处理「重新审批 / 重新回答」请求（路由 POST /agent/:sessionID/interaction/reopen）。
@@ -190,10 +205,6 @@ func AgentInteractionReopen(c *gin.Context) {
 	var in AgentInteractionReopenIn
 	if err := c.ShouldBindBodyWithJSON(&in); err != nil {
 		response.CreateBadBodyError(err).AbortWithGinH(c)
-		return
-	}
-	if len(in.CallIDs) == 0 && len(in.InterruptIDs) == 0 {
-		response.CreateBadBodyError(errors.New("callIDs or interruptIDs is required")).AbortWithGinH(c)
 		return
 	}
 	if err := comps.Turns.ReopenInteraction(c.Request.Context(), turns.ReopenInteractionInput{
@@ -295,6 +306,76 @@ func newChatInput(session *modelsai.AgentSession, in AgentChatIn) turns.ChatInpu
 		BusinessData:  contract.BusinessData(in.BusinessData),
 		Thinking:      in.Thinking,
 		Slot:          modelsai.Slot(strings.TrimSpace(in.Slot)),
+		SkillID:       in.SkillID,
+	}
+}
+
+// chatSkillSelection 是一轮对话最终采用的技能内容：内置技能 ID 为 0，其余三项由代码注册表
+// 或库中记录填入，随后覆盖到 turns.ChatInput 的同名字段。
+type chatSkillSelection struct {
+	// ID 自定义技能 ID；内置技能为 0
+	ID uint
+	// Name 技能名称（内置取注册表 Title）
+	Name string
+	// Description 技能说明
+	Description string
+	// Content 技能正文（写入系统提示词「当前技能」段）
+	Content string
+}
+
+// resolveChatSkill 解析并校验本轮选用的技能：SkillID 为 0 时返回 (nil, true) 表示未选技能；
+// 技能不存在 / 已停用 / 自定义技能不属于当前命名空间 / 内置技能代码正文缺失 / 技能存储缺失时
+// 以 400 + 本地化错误中断请求并返回 (nil, false)；其余读取失败以意外错误中断。内置与自定义技能
+// 统一按 agent_skills 行 ID 选择，内置正文按行名称取自代码注册表。
+func resolveChatSkill(c *gin.Context, comps *ai.Components, namespace string, in AgentChatIn) (*chatSkillSelection, bool) {
+	if in.SkillID == 0 {
+		return nil, true
+	}
+	if comps.Skills == nil {
+		response.CreateBadBodyMessageError("aiSkillUnavailable").AbortWithGinH(c)
+		return nil, false
+	}
+	item, getErr := comps.Skills.GetByID(c.Request.Context(), in.SkillID)
+	if getErr != nil {
+		if errors.Is(getErr, skillstore.ErrSkillNotFound) {
+			response.CreateBadBodyMessageError("aiSkillUnavailable").AbortWithGinH(c)
+			return nil, false
+		}
+		response.CreateAccidentError(getErr).AbortWithGinH(c)
+		return nil, false
+	}
+	if !item.Enabled {
+		response.CreateBadBodyMessageError("aiSkillUnavailable").AbortWithGinH(c)
+		return nil, false
+	}
+	switch item.Source {
+	case modelsai.SkillSourceBuiltin:
+		spec, declared := skillstore.LookupBuiltin(item.Name)
+		if !declared {
+			// 注册行存在但代码正文缺失属于编程缺陷（守卫测试拦截）；运行期按不可用处理。
+			response.CreateBadBodyMessageError("aiSkillUnavailable").AbortWithGinH(c)
+			return nil, false
+		}
+		return &chatSkillSelection{
+			ID:          item.ID,
+			Name:        item.Name,
+			Description: item.Description,
+			Content:     spec.Content,
+		}, true
+	case modelsai.SkillSourceCustom:
+		if item.NamespaceName != strings.TrimSpace(namespace) {
+			response.CreateBadBodyMessageError("aiSkillUnavailable").AbortWithGinH(c)
+			return nil, false
+		}
+		return &chatSkillSelection{
+			ID:          item.ID,
+			Name:        item.Name,
+			Description: item.Description,
+			Content:     string(item.Content.Value()),
+		}, true
+	default:
+		response.CreateBadBodyMessageError("aiSkillUnavailable").AbortWithGinH(c)
+		return nil, false
 	}
 }
 

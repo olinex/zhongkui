@@ -131,7 +131,9 @@ func (r *Runtime) CompressSessionWithMetrics(ctx context.Context, session *model
 	}
 	if len(evicted) == 0 {
 		if report != nil {
-			report(contract.CompressEvent{Type: contract.CompressEventDone, FoldedCount: 0})
+			if err := report(contract.CompressEvent{Type: contract.CompressEventDone, FoldedCount: 0}); err != nil {
+				r.warnf(ctx, "agentkit: report compression done failed: %v", err)
+			}
 		}
 		return &contract.CompactResult{Summary: string(session.Summary.Value())}
 	}
@@ -145,12 +147,14 @@ func (r *Runtime) CompressSessionWithMetrics(ctx context.Context, session *model
 	if err != nil {
 		r.warnf(ctx, "agentkit: session compression failed, keeping the previous summary: %v", err)
 		if report != nil {
-			report(contract.CompressEvent{Type: contract.CompressEventDone, FoldedCount: 0})
+			if reportErr := report(contract.CompressEvent{Type: contract.CompressEventDone, FoldedCount: 0}); reportErr != nil {
+				r.warnf(ctx, "agentkit: report compression failure done event failed: %v", reportErr)
+			}
 		}
 		return nil
 	}
 	if report != nil {
-		report(contract.CompressEvent{
+		if err := report(contract.CompressEvent{
 			Type:           contract.CompressEventDone,
 			Reason:         reason,
 			TokensBefore:   metrics.TokensBefore,
@@ -158,7 +162,9 @@ func (r *Runtime) CompressSessionWithMetrics(ctx context.Context, session *model
 			FoldedCount:    len(evicted),
 			Summary:        result.Summary,
 			SummaryUptoSeq: session.SummaryUptoSeq,
-		})
+		}); err != nil {
+			r.warnf(ctx, "agentkit: report compression done failed: %v", err)
+		}
 	}
 	return result
 }

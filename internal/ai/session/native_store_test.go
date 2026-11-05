@@ -9,6 +9,7 @@ import (
 	// 项目内部
 	"zhongkuisec.com/zhongkui/internal/ai/aitest"
 	"zhongkuisec.com/zhongkui/internal/models/ai"
+	"zhongkuisec.com/zhongkui/internal/pkg/database"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
 	"zhongkuisec.com/zhongkui/internal/pkg/llm"
 	"zhongkuisec.com/zhongkui/internal/pkg/serializer"
@@ -126,7 +127,7 @@ func TestNativeStore_UpdateNativeMessage(t *testing.T) {
 
 	updatedPayload := []byte(`{"role":"assistant","content":"final-answer"}`)
 	if err := store.UpdateNativeMessage(ctx, &ai.AgentMessage{
-		ID:               msg.ID,
+		BaseModel:        database.BaseModel{ID: msg.ID},
 		SessionID:        session.ID,
 		NamespaceName:    session.NamespaceName,
 		UserID:           testUserID,
@@ -167,7 +168,7 @@ func TestNativeStore_UpdateNativeMessage(t *testing.T) {
 	assertEncryptedColumn(t, "agent_messages.citations_json", raw.CitationsJSON, "native-citation")
 
 	err = store.UpdateNativeMessage(ctx, &ai.AgentMessage{
-		ID:            msg.ID,
+		BaseModel:     database.BaseModel{ID: msg.ID},
 		SessionID:     session.ID,
 		NamespaceName: session.NamespaceName,
 		UserID:        testOtherUserID,

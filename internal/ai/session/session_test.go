@@ -92,6 +92,10 @@ func TestSessionStore_ListSessions(t *testing.T) {
 	if _, err := store.CreateSession(ctx, "other", "s", "m", "knowledge", testUserID); err != nil {
 		t.Fatalf("CreateSession error = %v", err)
 	}
+	// 内部运行会话（周期报告）不进入助手会话列表
+	if _, err := store.CreateSessionWithOrigin(ctx, "default", "报告计划：s", "m", "knowledge", ai.SessionOriginPeriodicReport, testUserID); err != nil {
+		t.Fatalf("CreateSessionWithOrigin error = %v", err)
+	}
 	all, err := store.ListSessions(ctx, "default", testUserID, 0, 0)
 	if err != nil {
 		t.Fatalf("ListSessions error = %v", err)

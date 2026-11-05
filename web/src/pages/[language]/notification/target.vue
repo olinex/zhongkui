@@ -10,6 +10,7 @@
         :create="openCreateDialogAction"
         :project-fields="projectFields"
         model-name="notificationTarget"
+        @view-plaintext="viewConfigPlaintext"
       >
         <!-- 渠道列显示渠道名称（与创建/编辑表单一致），而非渠道 ID -->
         <template #cell-channelID="{ item }">
@@ -23,15 +24,7 @@
         <template #cell-language="{ value }">
           {{ $t(languageNameKey(String(value ?? ""))) }}
         </template>
-        <!-- config 为加密字段，列表统一用加密字段组件展示（提供明文查看入口） -->
-        <template #cell-config="{ item }">
-          <encrypted-value-cell
-            kind="crypto"
-            :item="item"
-            field-key="config"
-            @view-plaintext="viewConfigPlaintext"
-          />
-        </template>
+        <!-- config 为加密字段（后端 kind=crypto），由 SearchTable 自动渲染加密单元格 -->
         <!-- 启用态：开关即时写入（乐观更新，失败回退） -->
         <template #cell-enabled="{ item }">
           <enabled-switch-cell
@@ -125,7 +118,7 @@
                 <v-textarea
                   v-model="createDescription"
                   :label="$t('model.notificationTarget.field.description')"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>
@@ -235,7 +228,7 @@
                   v-model="editDescription"
                   :label="$t('model.notificationTarget.field.description')"
                   :disabled="!editable"
-                  rows="1"
+                  rows="3"
                 />
               </v-col>
             </v-row>

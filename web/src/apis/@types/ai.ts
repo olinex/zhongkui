@@ -196,6 +196,86 @@ export interface AgentMemoryStatusIn {
   status: string;
 }
 
+// 技能（AgentSkill）
+// 技能按命名空间隔离，由名称、描述与正文组成，正文为可复用的技能内容（Markdown 文本）。
+// AgentSkillInputFieldOut 技能输入字段（由用户填写），供报告计划渲染输入表单。
+export interface AgentSkillInputFieldOut {
+  // 字段名称，作为报告计划 inputValues 中的键
+  name: string;
+  // 字段类型（date / number / string / enum / boolean）；nowTime 是字段名，其类型为 date
+  type: string;
+  // 该字段是否必填
+  required: boolean;
+  // 字段用途说明，可为空
+  description: string;
+}
+export interface AgentSkillItemOut {
+  id: number;
+  // 技能名称，同一命名空间内唯一；内置技能为全局名称
+  name: string;
+  // 技能来源：custom | builtin；builtin 只读（可启停）
+  source: string;
+  // 技能描述，便于在技能列表中识别用途，可空
+  description: string;
+  enabled: boolean;
+  // 技能是否可周期执行（由用户声明）
+  periodicCapable: boolean;
+  // 技能输入字段（由用户填写）
+  inputFields: AgentSkillInputFieldOut[];
+  // 技能固定参数（由用户填写的自由形状 JSON 对象）：值可为字符串 / 数字 / 布尔 /
+  // 对象 / 数组并保留原始类型
+  fixedFields: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface AgentSkillDetailOut extends AgentSkillItemOut {
+  // 所属命名空间
+  namespaceName: string;
+  // 技能正文内容
+  content: string;
+}
+export interface AgentSkillCreateIn {
+  name: string;
+  description: string;
+  content: string;
+  // 是否可周期执行；为 true 时 inputFields 必须包含 name=nowTime、type=date 的字段
+  periodicCapable: boolean;
+  // 技能输入字段
+  inputFields: AgentSkillInputFieldOut[];
+  // 技能固定参数，保留各键原始 JSON 类型
+  fixedFields: Record<string, unknown>;
+}
+export interface AgentSkillUpdateIn {
+  name: string;
+  description: string;
+  content: string;
+  // 是否可周期执行；为 true 时 inputFields 必须包含 name=nowTime、type=date 的字段
+  periodicCapable: boolean;
+  // 技能输入字段
+  inputFields: AgentSkillInputFieldOut[];
+  // 技能固定参数，保留各键原始 JSON 类型
+  fixedFields: Record<string, unknown>;
+}
+export interface AgentSkillStatusIn {
+  // 目标启停状态
+  enabled: boolean;
+}
+
+// 技能选择器选项（AgentSkillOptionOut）：合并跨命名空间内置技能与当前命名空间已启用技能；
+// 内置与自定义技能统一以 agent_skills 行 ID 作为选择标识。
+export interface AgentSkillOptionOut {
+  // 技能 ID
+  id: number;
+  // 展示名
+  name: string;
+  // 技能说明，可空
+  description: string;
+}
+export interface AgentSkillOptionListOut {
+  // 合并后的选项列表（内置在前、自定义在后）
+  items: AgentSkillOptionOut[];
+}
+
 // 检索引用（RetrievalResult，来自 done 事件的 citations）
 export interface RetrievalResult {
   documentID: string;
@@ -225,6 +305,12 @@ export interface AgentMessageItem {
   // agentRunPhase）：failed/cancelled 表示本轮被中断，前端据此展示中断提示；用户消息与在途
   // 运行的阶段性落库行缺省
   phase?: string;
+  // 本条用户消息所在轮次选用的技能 ID（技能归属轮次而非会话，同一会话的不同轮次可各自不同）；
+  // 未选技能时缺省（用户消息才有值）
+  skillID?: number;
+  // 本条用户消息所在轮次选用的技能名称快照：技能后续重命名 / 停用 / 删除后仍如实展示当时选用
+  // 的技能；未选技能时缺省（用户消息才有值）
+  skillName?: string;
   // 该消息所锚定的历史压缩记录（压缩游标等于本条消息 seq 时由后端给出）：供刷新 / 重进会话后
   // 回显过往的压缩推进（含静默滚动 rolling）；无则为缺省
   compress?: AgentMessageCompressItem;
@@ -393,7 +479,11 @@ export interface AgentSessionBranchIn {
 
 // 启动一轮对话的请求体（AgentChatIn）：POST /agent/:sessionID/chat，
 // 语义与旧的生成流请求体一致（query 必填，其余为可选上下文）。
-export type AgentChatIn = AgentStreamIn;
+export interface AgentChatIn extends AgentStreamIn {
+  // 本轮对话选用的技能 ID（内置与自定义统一，可选），后端据此把技能正文装配进系统提示；
+  // 未选技能时不携带该字段
+  skillID?: number;
+}
 
 // 重新审批 / 重新回答请求体（AgentInteractionReopenIn）：审批回退按卡片上的工具调用 ID（callIDs）
 // 定位交互，问卷回退按卡片上的根中断 ID（interruptIDs）定位交互，二者至少提供其一。后端把会话回退

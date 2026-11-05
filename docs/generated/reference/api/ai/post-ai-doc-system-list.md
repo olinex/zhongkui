@@ -22,8 +22,37 @@
       "name": "string",
       "order": 0
     }
-  ],
+  ]
+}
+```
+
+```json
+{
   "filterBy": {
+    "createdAt": {
+      "action": "string",
+      "value": "1970-01-01T00:00:00Z"
+    },
+    "createdAtTime": {
+      "action": "string",
+      "value": {}
+    },
+    "createdAtDate": {
+      "action": "string",
+      "value": {}
+    },
+    "updatedAt": {
+      "action": "string",
+      "value": "1970-01-01T00:00:00Z"
+    },
+    "updatedAtTime": {
+      "action": "string",
+      "value": {}
+    },
+    "updatedAtDate": {
+      "action": "string",
+      "value": {}
+    },
     "title": {
       "action": "string",
       "value": "string"
@@ -36,7 +65,12 @@
       "action": "string",
       "value": "string"
     }
-  },
+  }
+}
+```
+
+```json
+{
   "fields": ["string"]
 }
 ```
@@ -63,9 +97,63 @@
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| createdAt | views.createdAtKnowledgeDocumentListGetFilterByItem | - | - | - | - |
+| createdAtTime | views.createdAtTimeKnowledgeDocumentListGetFilterByItem | - | - | - | - |
+| createdAtDate | views.createdAtDateKnowledgeDocumentListGetFilterByItem | - | - | - | - |
+| updatedAt | views.updatedAtKnowledgeDocumentListGetFilterByItem | - | - | - | - |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| updatedAtTime | views.updatedAtTimeKnowledgeDocumentListGetFilterByItem | - | - | - | - |
+| updatedAtDate | views.updatedAtDateKnowledgeDocumentListGetFilterByItem | - | - | - | - |
 | title | views.titleKnowledgeDocumentListGetFilterByItem | - | - | - | - |
 | format | views.formatKnowledgeDocumentListGetFilterByItem | - | - | - | - |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
 | status | views.statusKnowledgeDocumentListGetFilterByItem | - | - | - | - |
+
+### filterBy.createdAt（views.createdAtKnowledgeDocumentListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq neq nil lt lte gt gte | - | - |
+| value | time.Time | 是 | required | - | - |
+
+### filterBy.createdAtTime（views.createdAtTimeKnowledgeDocumentListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq neq nil lt lte gt gte | - | - |
+| value | serializer.TimeOnly | 是 | required | - | - |
+
+### filterBy.createdAtDate（views.createdAtDateKnowledgeDocumentListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq neq nil lt lte gt gte | - | - |
+| value | serializer.DateOnly | 是 | required | - | - |
+
+### filterBy.updatedAt（views.updatedAtKnowledgeDocumentListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq neq nil lt lte gt gte | - | - |
+| value | time.Time | 是 | required | - | - |
+
+### filterBy.updatedAtTime（views.updatedAtTimeKnowledgeDocumentListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq neq nil lt lte gt gte | - | - |
+| value | serializer.TimeOnly | 是 | required | - | - |
+
+### filterBy.updatedAtDate（views.updatedAtDateKnowledgeDocumentListGetFilterByItem）
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| action | string | 是 | required,oneof=eq neq nil lt lte gt gte | - | - |
+| value | serializer.DateOnly | 是 | required | - | - |
 
 ### filterBy.title（views.titleKnowledgeDocumentListGetFilterByItem）
 

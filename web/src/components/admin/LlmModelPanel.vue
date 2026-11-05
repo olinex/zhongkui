@@ -15,6 +15,7 @@
     :create="openCreateDialogAction"
     :project-fields="projectFields"
     model-name="llmModel"
+    @view-plaintext="viewApiKeyPlaintext"
   >
     <!-- 维度为只读 schema 属性：未探测到（0）时以占位符展示，避免误认为可编辑配置 -->
     <template #cell-dimensions="{ item }">
@@ -38,15 +39,7 @@
       {{ apiModeLabel(item.apiMode) }}
     </template>
 
-    <!-- 凭据为加密列：列表出参为密文，仅以「已加密」标识占位，点击解密查看明文 -->
-    <template #cell-apiKey="{ item }">
-      <encrypted-value-cell
-        kind="crypto"
-        :item="item"
-        field-key="apiKey"
-        @view-plaintext="viewApiKeyPlaintext"
-      />
-    </template>
+    <!-- 凭据为加密列（后端 kind=crypto）：由 SearchTable 自动渲染加密单元格，点击经事件查看明文 -->
 
     <!-- 启用态：行内开关就地改写（后端无独立启停接口，内部走「读详情 + 整表单更新」） -->
     <template #cell-enabled="{ item }">
@@ -219,7 +212,7 @@
               v-model="createDescription"
               v-bind="createDescriptionProps"
               :label="$t('model.llmModel.field.description')"
-              rows="1"
+              rows="3"
             />
           </v-col>
         </v-row>
@@ -421,7 +414,7 @@
               v-model="updateDescription"
               v-bind="updateDescriptionProps"
               :label="$t('model.llmModel.field.description')"
-              rows="1"
+              rows="3"
               :disabled="!editable"
             />
           </v-col>

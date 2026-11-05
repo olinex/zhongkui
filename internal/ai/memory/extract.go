@@ -18,12 +18,12 @@ import (
 	"github.com/cloudwego/eino/schema"
 
 	// 项目内部
-	"zhongkuisec.com/zhongkui/internal/ai/contract"
 	"zhongkuisec.com/zhongkui/internal/ai/port"
 	"zhongkuisec.com/zhongkui/internal/ai/retrieval"
 	"zhongkuisec.com/zhongkui/internal/ai/tools"
 	"zhongkuisec.com/zhongkui/internal/models/ai"
 	"zhongkuisec.com/zhongkui/internal/pkg/errors"
+	"zhongkuisec.com/zhongkui/internal/pkg/validator"
 )
 
 // extract 从被摘要的消息中抽取长期记忆并落库：用 flash 档位生成结果、容错解析 JSON，逐条经
@@ -111,7 +111,7 @@ type extractionPayload struct {
 // ParseExtractedMemories 容错解析抽取结果：先去掉 ```json 代码围栏，再按 {"memories":[...]} 解析，
 // 失败时退回裸数组解析；条数超过 max（max>0 时）则截断。空白响应返回英文错误。
 func ParseExtractedMemories(content string, max int) ([]ExtractedMemory, error) {
-	trimmed := contract.StripJSONFence(content)
+	trimmed := validator.StripJSONFence(content)
 	if strings.TrimSpace(trimmed) == "" {
 		return nil, errors.New("memory: extraction response is empty")
 	}

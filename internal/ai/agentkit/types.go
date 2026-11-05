@@ -40,6 +40,14 @@ type Request struct {
 	Slot modelsai.Slot
 	// ReviewValve 是会话级审批阀门。
 	ReviewValve modelsai.ReviewValve
+	// SkillName 是本轮选用技能的名称，空表示未选技能（不注入技能指引段）。
+	SkillName string
+	// SkillDescription 是本轮选用技能的说明，空表示未提供说明。
+	SkillDescription string
+	// SkillContent 是本轮选用技能的正文指引，空表示未选技能（不注入技能指引段）。
+	SkillContent string
+	// SystemHint 是本轮附加的系统级约束，追加在系统提示词末尾；空表示不附加。
+	SystemHint string
 }
 
 // RunContext[M] 会在 Runner.Run 之前注入 ctx。GenModelInput 读取它以

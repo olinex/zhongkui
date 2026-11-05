@@ -7,8 +7,17 @@
 - [Constants](<#constants>)
 - [Variables](<#variables>)
 - [func ChatSlotValues\(\) \[\]string](<#ChatSlotValues>)
+- [func InputFieldAcceptsJSON\(fieldType SkillInputFieldType, raw json.RawMessage\) bool](<#InputFieldAcceptsJSON>)
 - [func InvalidChatSlotError\(value Slot\) error](<#InvalidChatSlotError>)
+- [func MergeParameters\(sources ...map\[string\]json.RawMessage\) map\[string\]json.RawMessage](<#MergeParameters>)
+- [func ParseSkillFixedFields\(raw datatypes.JSON\) \(map\[string\]json.RawMessage, error\)](<#ParseSkillFixedFields>)
+- [func SkillFixedFieldsJSON\(fields map\[string\]json.RawMessage\) \(datatypes.JSON, error\)](<#SkillFixedFieldsJSON>)
+- [func SkillIDColumn\(id uint\) \*uint](<#SkillIDColumn>)
+- [func SkillIDFromColumn\(id \*uint\) uint](<#SkillIDFromColumn>)
+- [func SkillInputFieldsJSON\(fields \[\]SkillInputField\) \(datatypes.JSON, error\)](<#SkillInputFieldsJSON>)
 - [func SlotKind\(slot Slot\) llm.ModelKind](<#SlotKind>)
+- [func ValidateSkillFixedFields\(fields map\[string\]json.RawMessage, periodic bool, inputFields \[\]SkillInputField\) error](<#ValidateSkillFixedFields>)
+- [func ValidateSkillPeriodicInputFields\(periodic bool, fields \[\]SkillInputField\) error](<#ValidateSkillPeriodicInputFields>)
 - [type AgentCheckpoint](<#AgentCheckpoint>)
 - [type AgentInteraction](<#AgentInteraction>)
 - [type AgentInteractionState](<#AgentInteractionState>)
@@ -32,6 +41,7 @@
   - [func ParseAgentRunStatus\(raw AgentRunStatus\) \(AgentRunStatus, error\)](<#ParseAgentRunStatus>)
 - [type AgentSession](<#AgentSession>)
 - [type AgentSessionCompaction](<#AgentSessionCompaction>)
+- [type AgentSkill](<#AgentSkill>)
 - [type InteractionKind](<#InteractionKind>)
 - [type InteractionStatus](<#InteractionStatus>)
 - [type KnowledgeChunk](<#KnowledgeChunk>)
@@ -50,8 +60,20 @@
   - [func AllMemoryStatuses\(\) \[\]MemoryStatus](<#AllMemoryStatuses>)
   - [func ParseMemoryStatus\(raw MemoryStatus\) \(MemoryStatus, error\)](<#ParseMemoryStatus>)
 - [type MessageRole](<#MessageRole>)
+- [type PeriodicReportPlan](<#PeriodicReportPlan>)
+- [type PeriodicReportPlanWatch](<#PeriodicReportPlanWatch>)
+- [type PeriodicReportRun](<#PeriodicReportRun>)
+- [type PeriodicReportRunStatus](<#PeriodicReportRunStatus>)
 - [type ReviewValve](<#ReviewValve>)
 - [type SessionStatus](<#SessionStatus>)
+- [type SkillInputField](<#SkillInputField>)
+  - [func ParseSkillInputFields\(raw datatypes.JSON\) \(\[\]SkillInputField, error\)](<#ParseSkillInputFields>)
+- [type SkillInputFieldType](<#SkillInputFieldType>)
+  - [func AllSkillInputFieldTypes\(\) \[\]SkillInputFieldType](<#AllSkillInputFieldTypes>)
+- [type SkillPeriodicWindow](<#SkillPeriodicWindow>)
+  - [func ParsePeriodicWindowFromFields\(fields map\[string\]json.RawMessage\) \(SkillPeriodicWindow, error\)](<#ParsePeriodicWindowFromFields>)
+  - [func ParseSkillPeriodicWindow\(raw datatypes.JSON\) \(SkillPeriodicWindow, error\)](<#ParseSkillPeriodicWindow>)
+- [type SkillSource](<#SkillSource>)
 - [type Slot](<#Slot>)
   - [func ParseChatSlot\(value Slot\) \(Slot, bool\)](<#ParseChatSlot>)
   - [func ParseSlot\(value Slot\) \(Slot, error\)](<#ParseSlot>)
@@ -60,6 +82,19 @@
 
 
 ## Constants
+
+<a name="SkillInputFieldNameNowTime"></a>技能输入字段与固定参数的约定键：nowTime 是运行时注入的输入字段名（其类型必须为 date）； timeOffset / timeWindow 是周期技能固定参数中必须以 Go 时长字符串给出的键。
+
+```go
+const (
+    // SkillInputFieldNameNowTime 运行时注入的当前时间字段名；周期技能的该字段类型必须为 date
+    SkillInputFieldNameNowTime = "nowTime"
+    // SkillFixedFieldTimeOffset 周期技能固定参数中的时间偏移键，值须为 Go 时长字符串，允许为负
+    SkillFixedFieldTimeOffset = "timeOffset"
+    // SkillFixedFieldTimeWindow 周期技能固定参数中的时间窗口键，值须为 Go 时长字符串且大于 0
+    SkillFixedFieldTimeWindow = "timeWindow"
+)
+```
 
 <a name="DefaultReviewValve"></a>DefaultReviewValve 出厂默认阀门：会话未创建或未记录阀门时的默认档位，取「逐一审核」以保持 引入本特性前「一律人工审核」的既有行为，与 agent\_sessions.review\_valve 列的默认值一致。
 
@@ -84,6 +119,15 @@ func ChatSlotValues() []string
 
 ChatSlotValues 把对话档位清单展开为字面量清单（embedding 不在其列），返回新切片，调用方 修改不影响内部档位清单。档位成员仍只声明在 AllSlots 一处，清单由此派生，新增档位无需同步 修改消费方（如参数注册表 agent.defaultSlot 的封闭取值清单）。
 
+<a name="InputFieldAcceptsJSON"></a>
+## func InputFieldAcceptsJSON
+
+```go
+func InputFieldAcceptsJSON(fieldType SkillInputFieldType, raw json.RawMessage) bool
+```
+
+InputFieldAcceptsJSON 判断原始 JSON 值是否符合技能输入字段类型：类型不在取值空间或 JSON 非法时返回 false；number / boolean 分别要求 JSON 数字 / 布尔，string / enum / date 均要求 JSON 字符串。
+
 <a name="InvalidChatSlotError"></a>
 ## func InvalidChatSlotError
 
@@ -93,6 +137,60 @@ func InvalidChatSlotError(value Slot) error
 
 InvalidChatSlotError 返回「对话档位取值不合法」的英文错误，枚举文案与档位清单同源；供 视图层在 ParseChatSlot 返回 false 时直接使用，各处不再重复拼写档位枚举。
 
+<a name="MergeParameters"></a>
+## func MergeParameters
+
+```go
+func MergeParameters(sources ...map[string]json.RawMessage) map[string]json.RawMessage
+```
+
+MergeParameters 按传入顺序合并参数映射，后者同名键覆盖前者，返回新 map 且不修改入参； 典型用法为 MergeParameters\(fixedFields, planInputs, runtimeInputs\)，优先级由右向左递增。
+
+<a name="ParseSkillFixedFields"></a>
+## func ParseSkillFixedFields
+
+```go
+func ParseSkillFixedFields(raw datatypes.JSON) (map[string]json.RawMessage, error)
+```
+
+ParseSkillFixedFields 把技能行 fixed\_fields 列的 JSON 解码为自由形状的参数映射：空值（nil 或 空串）与 JSON null 返回空 map；非 JSON object 或非法 JSON 返回英文错误。值以 json.RawMessage 承载，保留字符串、数字、布尔、对象与数组的原始 JSON 类型。
+
+<a name="SkillFixedFieldsJSON"></a>
+## func SkillFixedFieldsJSON
+
+```go
+func SkillFixedFieldsJSON(fields map[string]json.RawMessage) (datatypes.JSON, error)
+```
+
+SkillFixedFieldsJSON 把固定参数映射编码为技能行 fixed\_fields 列的 JSON：nil 或空 map 编码为 空 JSON 对象，非法值（如无法序列化的内容）返回英文错误。
+
+<a name="SkillIDColumn"></a>
+## func SkillIDColumn
+
+```go
+func SkillIDColumn(id uint) *uint
+```
+
+SkillIDColumn 把轮次技能 ID 映射为消息行的可空技能列：0（未选技能）映射为 NULL， 使 agent\_messages.skill\_id 的外键约束不会因「未选技能」而违例。
+
+<a name="SkillIDFromColumn"></a>
+## func SkillIDFromColumn
+
+```go
+func SkillIDFromColumn(id *uint) uint
+```
+
+SkillIDFromColumn 把消息行的可空技能列还原为轮次技能 ID：NULL 映射为 0（未选技能）。
+
+<a name="SkillInputFieldsJSON"></a>
+## func SkillInputFieldsJSON
+
+```go
+func SkillInputFieldsJSON(fields []SkillInputField) (datatypes.JSON, error)
+```
+
+SkillInputFieldsJSON 把输入字段列表编码为技能行 input\_fields 列的 JSON：nil 或空切片编码为 空 JSON 数组，非法值（如无法序列化的内容）返回英文错误。
+
 <a name="SlotKind"></a>
 ## func SlotKind
 
@@ -101,6 +199,24 @@ func SlotKind(slot Slot) llm.ModelKind
 ```
 
 SlotKind 返回档位要求的模型类型：embedding 档位要求向量模型，其余对话档位要求对话模型。
+
+<a name="ValidateSkillFixedFields"></a>
+## func ValidateSkillFixedFields
+
+```go
+func ValidateSkillFixedFields(fields map[string]json.RawMessage, periodic bool, inputFields []SkillInputField) error
+```
+
+ValidateSkillFixedFields 校验技能固定参数：按 skillReservedFixedFields 的 isdefault 规则拒绝运行时 保留键，并拒绝与输入字段同名的固定字段；periodic 为 true 时进一步按 skillPeriodicWindowFields 校验 timeOffset / timeWindow，非周期技能不要求时长键。输入字段声明本身由调用方的校验视图负责。
+
+<a name="ValidateSkillPeriodicInputFields"></a>
+## func ValidateSkillPeriodicInputFields
+
+```go
+func ValidateSkillPeriodicInputFields(periodic bool, fields []SkillInputField) error
+```
+
+ValidateSkillPeriodicInputFields 校验周期技能的输入字段：必须且只能有一个 name=nowTime、 type=date 的字段；非周期技能不校验。字段名重复、类型非法等结构问题由调用方的 binding 负责。
 
 <a name="AgentCheckpoint"></a>
 ## type AgentCheckpoint
@@ -378,6 +494,13 @@ type AgentMessage struct {
     // （超时 / 报错 / 取消）时据此表达「本轮未正常结束」，由渲染层按阶段展示提示——不再向正文
     // 拼接提示文案（提示语若混入正文，会被喂回模型污染下一轮上下文）；用户消息恒为空。
     Phase AgentRunPhase `gorm:"type:VARCHAR(16)"`
+    // SkillID 本条用户消息所在轮次选用的技能 ID（agent_skills.id），nil 表示未选技能；技能归属
+    // 「轮次」而非会话——同一会话的不同轮次可分别选用不同技能。仅用户消息有值。列上设外键约束
+    // REFERENCES agent_skills(id) ON DELETE SET NULL，故未选技能以 NULL 而非 0 表达。
+    SkillID *uint `gorm:"type:BIGINT"`
+    // SkillName 本轮技能名称快照（写入时的技能名），空表示未选技能；以快照而非实时关联，
+    // 保证技能后续重命名 / 停用 / 删除后历史气泡仍能如实展示当时选用的技能。仅用户消息有值。
+    SkillName string `gorm:"type:VARCHAR(64);not null;default:''"`
 }
 ```
 
@@ -594,6 +717,41 @@ type AgentSessionCompaction struct {
     // 口径见 ai.CompactionMetrics 与 ai 包压缩时的估值函数）。仅用户可见的压缩推进（auto / manual）
     // 落值；静默滚动（rolling）与估算不可用时留 0，表示「无估算」，读取侧据此回落到末次真实测量。
     TokensAfter int `gorm:"type:INT"`
+}
+```
+
+<a name="AgentSkill"></a>
+## type AgentSkill
+
+AgentSkill 表示一条 AI 技能定义，记录技能名称、明文描述与加密正文，并提供启停开关。 对应表为 agent\_skills：自定义技能按命名空间隔离；内置技能固定位于 base.SystemNamespace， 正文为空（Content 为 nil），由代码注册表按名提供。
+
+```go
+type AgentSkill struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace coremodel.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段；内置技能固定为 base.SystemNamespace
+    NamespaceName string `gorm:"type:VARCHAR(32);index:idx_agent_skills_namespace"`
+    // Source 技能来源：custom | builtin，取值见 SkillSource（枚举类 agentSkillSource）
+    Source SkillSource `gorm:"type:VARCHAR(16);not null;default:'custom';index:idx_agent_skills_source"`
+    // Name 技能名称，同一命名空间内未删除的技能名称唯一；内置技能同时是代码注册表的对齐键
+    Name string `gorm:"type:VARCHAR(64)"`
+    // Description 技能描述（明文存储），便于在技能列表中识别技能用途
+    Description string `gorm:"type:VARCHAR(256)"`
+    // Content 技能正文内容，经 crypto 序列化器加密存储；内置技能不落库（nil），正文取自代码注册表
+    Content *serializer.Crypto `gorm:"type:BYTEA;serializer:crypto" secure:"mode=\"aes-gcm\",offset=12823,length=32"`
+    // Enabled 技能是否启用，默认 true；停用的技能不参与运行时装配
+    Enabled bool `gorm:"type:BOOLEAN;not null;default:true"`
+    // PeriodicCapable 技能是否可周期执行（由用户声明）：为 true 时应按固定周期、固定时间窗口
+    // 取数并输出报告，可作为周期性报告计划的技能来源
+    PeriodicCapable bool `gorm:"type:BOOLEAN;not null;default:false"`
+    // InputFields 技能输入字段的结构化描述（由用户填写，JSON 数组），供报告计划渲染输入表单；
+    // 无输入字段时为空数组
+    InputFields datatypes.JSON `gorm:"type:JSONB;not null;default:'[]'"`
+    // FixedFields 技能固定参数（由用户填写，JSON 对象），键为参数名、值为任意 JSON 值，
+    // 保留原始 JSON 类型；周期技能的 timeOffset / timeWindow 为 Go 时长字符串；无固定参数时为空对象
+    FixedFields datatypes.JSON `gorm:"type:JSONB;not null;default:'{}'"`
 }
 ```
 
@@ -984,6 +1142,116 @@ const (
 )
 ```
 
+<a name="PeriodicReportPlan"></a>
+## type PeriodicReportPlan
+
+PeriodicReportPlan 表示一个周期性报告计划：按 cron 表达式周期性执行指定技能，携带渲染输入所需的 实参，并按保留天数清理历史报告。对应表为 periodic\_report\_plans。
+
+```go
+type PeriodicReportPlan struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // Namespace 所属的命名空间实体，用于 GORM 关联（foreignKey:NamespaceName;references:Name；级联删除）
+    Namespace coremodel.Namespace `gorm:"foreignKey:NamespaceName;references:Name;onDelete:CASCADE"`
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `gorm:"type:VARCHAR(32);index:idx_periodic_report_plans_namespace_name"`
+    // Name 报告计划名称
+    Name string `gorm:"type:VARCHAR(128);not null"`
+    // Description 报告计划说明，可为空
+    Description string `gorm:"type:VARCHAR(512)"`
+    // SkillID 计划使用的技能 ID（agent_skills.id，受外键约束）
+    SkillID uint `gorm:"type:BIGINT;not null"`
+    // CronSpec 计划执行的 cron 表达式
+    CronSpec string `gorm:"type:VARCHAR(64);not null"`
+    // InputValues 技能输入字段的实参（JSON 对象，键为字段名），无实参时为空对象
+    InputValues datatypes.JSON `gorm:"type:JSONB;not null;default:'{}'"`
+    // Enabled 计划是否启用，默认 true；停用的计划不再触发
+    Enabled bool `gorm:"type:BOOLEAN;default:true"`
+    // SessionID 计划专属的 Agent 会话 ID（agent_sessions.id 外键，会话删除时置空）；nil 表示尚未创建
+    SessionID *uint `gorm:"type:BIGINT"`
+    // UserID 计划属主用户 ID（users.id），用于跨用户隔离
+    UserID uint `gorm:"type:BIGINT;not null"`
+    // RetentionDays 报告保留天数，默认 90
+    RetentionDays int `gorm:"type:INT;not null;default:90"`
+    // ExpiresAt 计划失效时间，null 表示长期有效
+    ExpiresAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+    // NextRunAt 下一次计划执行时间，NULL 表示待分发器计算
+    NextRunAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+}
+```
+
+<a name="PeriodicReportPlanWatch"></a>
+## type PeriodicReportPlanWatch
+
+PeriodicReportPlanWatch 表示用户对某个报告计划的关注关系：关注后该用户的报告中心展示该计划的运行 记录。对应表为 periodic\_report\_plan\_watches。
+
+```go
+type PeriodicReportPlanWatch struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // UserID 关注者用户 ID（users.id）
+    UserID uint `gorm:"type:BIGINT;not null;uniqueIndex:uq_periodic_report_plan_watches_user_id_namespace_name_plan_id,where:deleted_at IS NULL"`
+    // NamespaceName 计划所属命名空间名称，用户隔离维度
+    NamespaceName string `gorm:"type:VARCHAR(32);not null;uniqueIndex:uq_periodic_report_plan_watches_user_id_namespace_name_plan_id,where:deleted_at IS NULL"`
+    // PlanID 被关注的报告计划 ID
+    PlanID uint `gorm:"type:BIGINT;not null;uniqueIndex:uq_periodic_report_plan_watches_user_id_namespace_name_plan_id,where:deleted_at IS NULL"`
+}
+```
+
+<a name="PeriodicReportRun"></a>
+## type PeriodicReportRun
+
+PeriodicReportRun 表示一次报告运行的记录：由计划在 cron 触发点创建，记录触发时间、运行状态与产出 （对象存储键、标题、大小）以及失败原因。对应表为 periodic\_report\_runs。
+
+```go
+type PeriodicReportRun struct {
+    gorm.Model // 内嵌 gorm.Model，包含 ID、CreatedAt、UpdatedAt、DeletedAt 字段
+
+    // NamespaceName 所属命名空间名称，多租户隔离字段
+    NamespaceName string `gorm:"type:VARCHAR(32)"`
+    // PlanID 所属报告计划 ID
+    PlanID uint `gorm:"type:BIGINT;not null;index:idx_periodic_report_runs_plan_id;uniqueIndex:uq_periodic_report_runs_plan_id_trigger_at,priority:1,where:deleted_at IS NULL"`
+    // TriggerAt 计划触发时间点；同一计划同一触发点唯一（未删除行范围内）
+    TriggerAt time.Time `gorm:"type:TIMESTAMPTZ;not null;uniqueIndex:uq_periodic_report_runs_plan_id_trigger_at,priority:2,where:deleted_at IS NULL"`
+    // Status 运行状态，取值来自枚举类 periodicReportRunStatus（running/success/failed）
+    Status PeriodicReportRunStatus `gorm:"type:VARCHAR(16);not null;index:idx_periodic_report_runs_status"`
+    // ObjectKey 生成的报告对象在对象存储中的键，无产出时为空
+    ObjectKey string `gorm:"type:VARCHAR(512)"`
+    // Title 生成报告的标题
+    Title string `gorm:"type:VARCHAR(256)"`
+    // SizeBytes 生成的报告字节大小
+    SizeBytes int64 `gorm:"type:BIGINT"`
+    // Error 运行失败原因，成功时为空
+    Error string `gorm:"type:VARCHAR(2048)"`
+    // StartedAt 实际开始执行时间，null 表示尚未开始
+    StartedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+    // FinishedAt 执行结束时间，null 表示尚未结束
+    FinishedAt *time.Time `gorm:"type:TIMESTAMPTZ"`
+}
+```
+
+<a name="PeriodicReportRunStatus"></a>
+## type PeriodicReportRunStatus
+
+PeriodicReportRunStatus 是报告运行记录状态的标识：运行中（running）、成功（success）与失败（failed）。 取值与 periodic\_report\_runs.status 列的取值一致，取值空间在包内 init 注册为枚举类 periodicReportRunStatus。
+
+```go
+type PeriodicReportRunStatus string
+```
+
+<a name="PeriodicReportRunStatusRunning"></a>报告运行记录状态常量。
+
+```go
+const (
+    // PeriodicReportRunStatusRunning 运行中：报告任务已触发，正在取数与生成
+    PeriodicReportRunStatusRunning PeriodicReportRunStatus = "running"
+    // PeriodicReportRunStatusSuccess 成功：报告已生成并落对象存储
+    PeriodicReportRunStatusSuccess PeriodicReportRunStatus = "success"
+    // PeriodicReportRunStatusFailed 失败：报告生成失败，失败原因见 PeriodicReportRun.Error
+    PeriodicReportRunStatusFailed PeriodicReportRunStatus = "failed"
+)
+```
+
 <a name="ReviewValve"></a>
 ## type ReviewValve
 
@@ -1023,6 +1291,120 @@ const (
     SessionStatusActive SessionStatus = "active"
     // SessionStatusArchived 会话状态：归档（不再展示/参与上下文）
     SessionStatusArchived SessionStatus = "archived"
+)
+```
+
+<a name="SkillInputField"></a>
+## type SkillInputField
+
+SkillInputField 表示技能的一个输入字段的结构化描述：由用户填写，是报告计划渲染输入表单的 JSON 协议载体（技能行 input\_fields 列的 JSON 形状）。
+
+```go
+type SkillInputField struct {
+    // Name 字段名称，作为报告计划 inputValues 中的键
+    Name string `json:"name"`
+    // Type 字段类型，取值见 SkillInputFieldType
+    Type SkillInputFieldType `json:"type"`
+    // Required 该字段是否必填
+    Required bool `json:"required"`
+    // Description 字段用途说明，可为空
+    Description string `json:"description"`
+}
+```
+
+<a name="ParseSkillInputFields"></a>
+### func ParseSkillInputFields
+
+```go
+func ParseSkillInputFields(raw datatypes.JSON) ([]SkillInputField, error)
+```
+
+ParseSkillInputFields 把技能行 input\_fields 列的 JSON 解码为输入字段列表：空值（nil 或空串） 与 JSON null 返回空切片，非法 JSON 或无法映射的形状返回英文错误。
+
+<a name="SkillInputFieldType"></a>
+## type SkillInputFieldType
+
+SkillInputFieldType 是技能输入字段的类型标识：由用户填写，决定报告计划输入表单的控件 形态与计划 inputValues 中允许承载的 JSON 值类型。取值集合与命令边界 inputFieldRule 的 oneof 规则保持一致。
+
+```go
+type SkillInputFieldType string
+```
+
+<a name="SkillInputFieldTypeString"></a>技能输入字段类型常量。
+
+```go
+const (
+    // SkillInputFieldTypeString 文本类型，承载 JSON 字符串
+    SkillInputFieldTypeString SkillInputFieldType = "string"
+    // SkillInputFieldTypeNumber 数字类型，承载 JSON 数字
+    SkillInputFieldTypeNumber SkillInputFieldType = "number"
+    // SkillInputFieldTypeBoolean 布尔类型，承载 JSON 布尔
+    SkillInputFieldTypeBoolean SkillInputFieldType = "boolean"
+    // SkillInputFieldTypeEnum 枚举类型，承载 JSON 字符串
+    SkillInputFieldTypeEnum SkillInputFieldType = "enum"
+    // SkillInputFieldTypeDate 日期类型，承载 JSON 字符串；name=nowTime 的字段必须使用该类型
+    SkillInputFieldTypeDate SkillInputFieldType = "date"
+)
+```
+
+<a name="AllSkillInputFieldTypes"></a>
+### func AllSkillInputFieldTypes
+
+```go
+func AllSkillInputFieldTypes() []SkillInputFieldType
+```
+
+AllSkillInputFieldTypes 返回全部输入字段类型的副本，声明顺序即前端编辑器中的展示顺序；供边界校验与 测试遍历使用，调用方修改返回值不影响该取值空间。
+
+<a name="SkillPeriodicWindow"></a>
+## type SkillPeriodicWindow
+
+SkillPeriodicWindow 表示周期技能从固定参数解析出的时间窗口：TimeOffset 是相对 nowTime 的偏移 （可为负），TimeWindow 是窗口长度（必须大于 0）。
+
+```go
+type SkillPeriodicWindow struct {
+    // TimeOffset 相对 nowTime 的偏移，可为负（如 -24h 表示窗口结束于当前时刻）
+    TimeOffset time.Duration
+    // TimeWindow 窗口长度，必须大于 0
+    TimeWindow time.Duration
+}
+```
+
+<a name="ParsePeriodicWindowFromFields"></a>
+### func ParsePeriodicWindowFromFields
+
+```go
+func ParsePeriodicWindowFromFields(fields map[string]json.RawMessage) (SkillPeriodicWindow, error)
+```
+
+ParsePeriodicWindowFromFields 从已解码的固定参数映射解析周期时间窗口：把映射转换为 skillPeriodicWindowFields 结构体后交由全局 validator 校验（required / gt=0），校验通过再转回 SkillPeriodicWindow，供创建 / 更新校验与运行期直接复用 map。
+
+<a name="ParseSkillPeriodicWindow"></a>
+### func ParseSkillPeriodicWindow
+
+```go
+func ParseSkillPeriodicWindow(raw datatypes.JSON) (SkillPeriodicWindow, error)
+```
+
+ParseSkillPeriodicWindow 从技能行 fixed\_fields 列的 JSON 解析周期时间窗口：要求存在 timeOffset 与 timeWindow，且两者均可被 serializer.DurationMS 解析，timeWindow 须大于 0；缺失、类型错误 或解析失败返回英文错误。
+
+<a name="SkillSource"></a>
+## type SkillSource
+
+SkillSource 是技能来源的取值类型（agent\_skills.source 与视图层 source 字段）。
+
+```go
+type SkillSource string
+```
+
+<a name="SkillSourceCustom"></a>技能来源常量。
+
+```go
+const (
+    // SkillSourceCustom 自定义技能：由用户在命名空间内维护，正文加密落库
+    SkillSourceCustom SkillSource = "custom"
+    // SkillSourceBuiltin 内置技能：由代码注册表声明、fixture 注入注册行，正文由代码按名提供
+    SkillSourceBuiltin SkillSource = "builtin"
 )
 ```
 

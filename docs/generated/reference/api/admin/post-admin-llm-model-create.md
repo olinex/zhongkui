@@ -39,22 +39,25 @@
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
-| name | string | - | max=64 | - | - |
-| kind | llm.ModelKind | - | max=16 | llmModelKind：chat、embedding | - |
-| baseURL | string | - | max=512 | - | - |
-| apiKey | string | - | - | - | - |
-| model | string | - | max=128 | - | - |
-| timeoutSeconds | int | - | - | - | 60 |
-| temperature | float64 | - | - | - | 0.2 |
-| maxTokens | int | - | - | - | 4096 |
-| contextTokens | int | - | - | - | - |
+| name | string | 是 | required,trimmed,max=64 | - | - |
+| kind | llm.ModelKind | 是 | required,enum=llmModelKind | llmModelKind：chat、embedding | - |
+| baseURL | string | 是 | required,trimmed,max=512 | - | - |
+| apiKey | string | 是 | required | - | - |
+| model | string | 是 | required,trimmed,max=128 | - | - |
+| timeoutSeconds | int | - | min=1 | - | 60 |
+| temperature | float64 | - | min=0,max=2 | - | 0.2 |
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
+| maxTokens | int | - | min=1 | - | 4096 |
+| contextTokens | int | - | - | - | - |
 | enabled | bool | - | - | - | true |
 | description | string | - | max=512 | - | - |
 | extraBody | string | - | - | - | - |
 | thinkingField | string | - | max=64 | - | - |
 | thinkingOnValue | string | - | - | - | - |
 | thinkingOffValue | string | - | - | - | - |
-| apiMode | llm.APIMode | - | max=16 | - | - |
+
+| 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
+| --- | --- | --- | --- | --- | --- |
+| apiMode | llm.APIMode | - | omitempty,enum=llmAPIMode | - | - |

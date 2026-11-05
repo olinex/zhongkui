@@ -53,7 +53,7 @@ func DeleteSchedulerTaskConfig(ctx context.Context, client *etcd.EtcdClient, tas
 
 // EnqueueSchedulerTaskNow 立即投递一条签到当前时刻作为触发时间点的任务。
 // 用于前端"立即执行"能力：以任务当前配置的队列/超时/重试参数将 config 中的
-// 固定入参透传给处理器，触发时间点为调用时刻（time.Now）。
+// 固定入参透传给处理器，触发时间点为调用时刻（time.Now），任务类型为配置键 taskType。
 func EnqueueSchedulerTaskNow(ctx context.Context, enq *Client, taskType string, cfg SchedulerTaskConfig) error {
 	opts := taskOptions(cfg)
 	params := payloadParams(cfg)

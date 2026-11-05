@@ -212,6 +212,10 @@ func buildAssistantSnapshots[M adk.MessageType](
 					Content:          msgops.Text(msg),
 					CreatedAt:        formatMessageTime(row.CreatedAt),
 					UserMessageIndex: userIndex,
+					// 技能锚定在用户消息上：历史回放与实时气泡据此展示本轮技能，
+					// 同一会话的不同轮次各自携带各自选用的技能。
+					SkillID:   modelsai.SkillIDFromColumn(row.SkillID),
+					SkillName: row.SkillName,
 				},
 			})
 			continue

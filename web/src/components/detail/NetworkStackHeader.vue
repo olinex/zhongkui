@@ -23,7 +23,8 @@
           {{ $t("model.networkStack.header.rawJson") }}
         </v-btn>
       </template>
-      <VueJsonPretty v-if="showRaw" :data="parsed" />
+      <!-- 与 JsonChip 共用同一套 JSON 视图能力（行号 / 折叠 / 边界跳转） -->
+      <json-viewer v-if="showRaw" :data="parsed" />
       <template v-else>
         <v-alert v-if="isLoopback" type="info" class="mb-2">
           {{ $t("model.networkStack.header.loopbackNote") }}
@@ -67,9 +68,6 @@
 </template>
 
 <script setup lang="ts" name="network-stack-header">
-import VueJsonPretty from "vue-json-pretty";
-import "vue-json-pretty/lib/styles.css";
-
 import i18n from "@/utils/i18n";
 import { copyToClipboard } from "@/utils/clipboard";
 import { HEADER_FIELDS, buildHeaderSummary, formatHeaderValue } from "./networkStackHeader";

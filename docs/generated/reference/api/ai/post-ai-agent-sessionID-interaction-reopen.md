@@ -26,5 +26,5 @@
 
 | 字段 | 类型 | 必填 | 校验 | 枚举 | 默认值 |
 | --- | --- | --- | --- | --- | --- |
-| callIDs | []string | - | - | - | - |
-| interruptIDs | []string | - | - | - | - |
+| callIDs | []string | 是 | required_without=InterruptIDs,dive,notBlank | - | - |
+| interruptIDs | []string | 是 | required_without=CallIDs,dive,notBlank | - | - |

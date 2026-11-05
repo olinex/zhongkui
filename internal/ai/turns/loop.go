@@ -35,6 +35,8 @@ type sessionLoop interface {
 	Slot() modelsai.Slot
 	// Kind 返回循环的消息表示（对话模型接口形态）。
 	Kind() llm.APIMode
+	// ExitError 返回循环的退出原因（正常结束为 nil），供管理器把真实错误透出到流内。
+	ExitError() error
 }
 
 // turnBinding 把一个 ChatItem 与它使用的轮次流（以及之后的知识收集器）
@@ -78,6 +80,9 @@ type genericSessionLoop[M adk.MessageType] struct {
 	sess    *modelsai.AgentSession
 	turns   map[*ChatItem]*turnBinding
 	started bool
+	// exitErr 保存 TurnLoop 的退出原因（正常结束为 nil），供管理器在流内收敛时透出具体错误，
+	// 而不是只给用户一条泛化的「回合提前退出」提示。
+	exitErr error
 	running bool
 }
 
@@ -168,10 +173,26 @@ func (l *genericSessionLoop[M]) start() {
 		l.mu.Unlock()
 		l.loop.Run(l.detached)
 		go func() {
-			l.loop.Wait()
+			l.setExitState(l.loop.Wait())
 			l.finish()
 		}()
 	})
+}
+
+// setExitState 记录 TurnLoop 的退出原因；在 finish 之前写入，保证 Wait 返回时已可读。
+func (l *genericSessionLoop[M]) setExitState(state *adk.TurnLoopExitState[*ChatItem, M]) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if state != nil {
+		l.exitErr = state.ExitReason
+	}
+}
+
+// ExitError 返回 TurnLoop 的退出原因（正常结束为 nil）。
+func (l *genericSessionLoop[M]) ExitError() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.exitErr
 }
 
 func (l *genericSessionLoop[M]) finish() {
@@ -284,12 +305,12 @@ func (l *genericSessionLoop[M]) genInput(ctx context.Context, loop *adk.TurnLoop
 	}
 	history := decodeStoredMessages[M](stored)
 
-	appended, err := l.appendUserMessage(ctx, sess, queryItem.Query)
+	appended, err := l.appendUserMessage(ctx, sess, queryItem)
 	if err != nil {
 		return nil, errors.WithStack(err)
 	}
 
-	rc, runCtx := l.buildRunContext(ctx, sess, queryItem, slot, history, binding.stream, l.userMessageSnapshot(ctx, sess, queryItem.Query, appended))
+	rc, runCtx := l.buildRunContext(ctx, sess, queryItem, slot, history, binding.stream, l.userMessageSnapshot(ctx, sess, queryItem, appended))
 	return &adk.GenInputResult[*ChatItem, M]{
 		RunCtx:    runCtx,
 		Input:     l.handle.NewInput(rc),
@@ -464,16 +485,20 @@ func (l *genericSessionLoop[M]) emitTerminalEvents(stream *turnStream, phase mod
 
 func (l *genericSessionLoop[M]) buildRunContext(ctx context.Context, sess *modelsai.AgentSession, item *ChatItem, slot modelsai.Slot, history []M, stream *turnStream, userMessage *assistant.UserMessageSnapshot) (agentkit.RunContext[M], context.Context) {
 	request := agentkit.Request{
-		Query:         item.Query,
-		NamespaceName: firstNonEmpty(item.NamespaceName, sess.NamespaceName),
-		DocIDs:        append([]uint(nil), item.DocIDs...),
-		SessionID:     sess.ID,
-		UserID:        firstNonZero(item.UserID, sess.UserID),
-		AgentKind:     sess.AgentKind,
-		BusinessData:  decodeBusinessData(item.BusinessDataJSON),
-		Thinking:      item.Thinking,
-		Slot:          slot,
-		ReviewValve:   sess.ReviewValve,
+		Query:            item.Query,
+		NamespaceName:    firstNonEmpty(item.NamespaceName, sess.NamespaceName),
+		DocIDs:           append([]uint(nil), item.DocIDs...),
+		SessionID:        sess.ID,
+		UserID:           firstNonZero(item.UserID, sess.UserID),
+		AgentKind:        sess.AgentKind,
+		BusinessData:     decodeBusinessData(item.BusinessDataJSON),
+		Thinking:         item.Thinking,
+		Slot:             slot,
+		ReviewValve:      sess.ReviewValve,
+		SkillName:        item.SkillName,
+		SkillDescription: item.SkillDescription,
+		SkillContent:     item.SkillContent,
+		SystemHint:       item.SystemHint,
 	}
 	rc := agentkit.RunContext[M]{
 		History: history,
@@ -494,14 +519,18 @@ func (l *genericSessionLoop[M]) buildRunContext(ctx context.Context, sess *model
 
 func (l *genericSessionLoop[M]) buildResumeContext(ctx context.Context, sess *modelsai.AgentSession, item *ChatItem, slot modelsai.Slot, stream *turnStream) context.Context {
 	request := agentkit.Request{
-		NamespaceName: firstNonEmpty(item.NamespaceName, sess.NamespaceName),
-		DocIDs:        append([]uint(nil), item.DocIDs...),
-		SessionID:     sess.ID,
-		UserID:        firstNonZero(item.UserID, sess.UserID),
-		AgentKind:     sess.AgentKind,
-		Thinking:      item.Thinking,
-		Slot:          slot,
-		ReviewValve:   sess.ReviewValve,
+		NamespaceName:    firstNonEmpty(item.NamespaceName, sess.NamespaceName),
+		DocIDs:           append([]uint(nil), item.DocIDs...),
+		SessionID:        sess.ID,
+		UserID:           firstNonZero(item.UserID, sess.UserID),
+		AgentKind:        sess.AgentKind,
+		Thinking:         item.Thinking,
+		Slot:             slot,
+		ReviewValve:      sess.ReviewValve,
+		SkillName:        item.SkillName,
+		SkillDescription: item.SkillDescription,
+		SkillContent:     item.SkillContent,
+		SystemHint:       item.SystemHint,
 	}
 
 	collector := knowledge.NewCollector(l.initialCitations)
@@ -558,16 +587,18 @@ func (l *genericSessionLoop[M]) loadSession(ctx context.Context) (*modelsai.Agen
 	return sess, nil
 }
 
-// userMessageSnapshot 把刚落库的提问整理为 turn.started 的用户消息事实；userIndex 取
-// 落库后的用户提问条数（从 1 起）。
-func (l *genericSessionLoop[M]) userMessageSnapshot(ctx context.Context, sess *modelsai.AgentSession, query string, appended *modelsai.AgentMessage) *assistant.UserMessageSnapshot {
+// userMessageSnapshot 把刚落库的提问整理为 turn.started 的用户消息事实（含本轮技能）；
+// userIndex 取落库后的用户提问条数（从 1 起）。
+func (l *genericSessionLoop[M]) userMessageSnapshot(ctx context.Context, sess *modelsai.AgentSession, item *ChatItem, appended *modelsai.AgentMessage) *assistant.UserMessageSnapshot {
 	if appended == nil {
 		return nil
 	}
 	snapshot := &assistant.UserMessageSnapshot{
 		MessageID: appended.ID,
-		Content:   query,
+		Content:   item.Query,
 		CreatedAt: appended.CreatedAt.UTC().Format(time.RFC3339),
+		SkillID:   item.SkillID,
+		SkillName: item.SkillName,
 	}
 	if count, err := l.deps.Sessions.CountUserTurns(ctx, sess.ID, sess.NamespaceName, sess.UserID); err == nil {
 		snapshot.UserIndex = count

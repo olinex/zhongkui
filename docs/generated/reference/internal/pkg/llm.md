@@ -33,9 +33,9 @@
   - [func NewMarkdownChunker\(size, overlap int\) \*MarkdownChunker](<#NewMarkdownChunker>)
   - [func \(c \*MarkdownChunker\) Transform\(\_ context.Context, src \[\]\*schema.Document, \_ ...document.TransformerOption\) \(\[\]\*schema.Document, error\)](<#MarkdownChunker.Transform>)
 - [type ModelConfig](<#ModelConfig>)
-  - [func \(c ModelConfig\) Validate\(\) error](<#ModelConfig.Validate>)
 - [type ModelKind](<#ModelKind>)
   - [func ParseModelKind\(value ModelKind\) \(ModelKind, error\)](<#ParseModelKind>)
+- [type TimeoutRetryPolicy](<#TimeoutRetryPolicy>)
 
 
 <a name="ParseExtraBody"></a>
@@ -45,7 +45,7 @@
 func ParseExtraBody(raw string) (map[string]any, error)
 ```
 
-ParseExtraBody 解析模型端点的高级请求配置（llm\_models.extra\_body）：入参去掉首尾空白后 为空则返回 \(nil, nil\)；否则必须是 JSON 对象（\{\}），解析为 map\[string\]any 返回。非对象或 非法 JSON 返回英文错误。
+ParseExtraBody 解析模型端点的高级请求配置（llm\_models.extra\_body）：入参为空、纯空白或 字面量 null 时返回 \(nil, nil\)；否则必须是 JSON 对象（\{\}），解析为 map\[string\]any 返回。 非对象或非法 JSON 返回英文错误。
 
 <a name="ParseJSONValue"></a>
 ## func ParseJSONValue
@@ -54,7 +54,7 @@ ParseExtraBody 解析模型端点的高级请求配置（llm\_models.extra\_body
 func ParseJSONValue(raw string) (any, error)
 ```
 
-ParseJSONValue 解析思考开关的开/关取值（llm\_models.thinking\_on\_value / thinking\_off\_value）： 入参去掉首尾空白后为空则返回 \(nil, nil\)；否则用 json.Unmarshal 解析为任意 JSON 值 （bool / object / string / number / array）返回。非法 JSON 返回英文错误。
+ParseJSONValue 解析思考开关的开/关取值（llm\_models.thinking\_on\_value / thinking\_off\_value）： 入参为空或字面量 null 时返回 \(nil, nil\)；否则解析为任意 JSON 值（bool / object / string / number / array）返回。非法 JSON 返回英文错误。
 
 <a name="ProbeEmbeddingDimensions"></a>
 ## func ProbeEmbeddingDimensions
@@ -130,7 +130,7 @@ NewAgenticChatClient 依据模型配置构造 AgenticClient。
 func (c *AgenticClient) Generate(ctx context.Context, messages []*schema.AgenticMessage, opts ...model.Option) (*schema.AgenticMessage, error)
 ```
 
-Generate 执行一次非流式调用，产出一条 AgenticMessage。
+Generate 执行一次非流式调用，产出一条 AgenticMessage；超时按 TimeoutRetry 策略重试。
 
 <a name="AgenticClient.ModelName"></a>
 ### func \(\*AgenticClient\) ModelName
@@ -188,7 +188,7 @@ NewChatClient 依据模型端点配置快照构造 ChatClient。 要求 baseURL/
 func (c *ChatClient) Generate(ctx context.Context, messages []*schema.Message, opts ...model.Option) (*schema.Message, error)
 ```
 
-Generate 以非流式方式生成回复，调用时注入温度与 maxTokens。以模型超时给 context 施加 整请求截止时间（等价于原 http.Client.Timeout），超时为正数时才生效。
+Generate 以非流式方式生成回复，调用时注入温度与 maxTokens。以模型超时给 context 施加 整请求截止时间（等价于原 http.Client.Timeout），超时为正数时才生效；命中超时且启用了 TimeoutRetry 时按策略逐次放宽截止时间重试。
 
 <a name="ChatClient.ModelName"></a>
 ### func \(\*ChatClient\) ModelName
@@ -338,7 +338,7 @@ Transform 对每个输入文档执行 markdown 结构感知切片，返回切片
 <a name="ModelConfig"></a>
 ## type ModelConfig
 
-ModelConfig 是一个模型端点的运行时配置快照，由 ai 运行时从模型注册表（llm\_models） 与档位绑定（llm\_bindings）组装而来，是 LLM 接入配置的唯一事实来源（不再来自配置文件）。
+ModelConfig 是一个模型端点的运行时配置快照，由 ai 运行时从模型注册表（llm\_models） 与档位绑定（llm\_bindings）组装而来，是 LLM 接入配置的唯一事实来源（不再来自配置文件）。 完整形状规则声明在视图层入口 In 结构体；本类型只保留构造客户端所需的端点三要素标签， 供 validateEndpoint 在运行时边界 fail fast。
 
 ```go
 type ModelConfig struct {
@@ -349,14 +349,16 @@ type ModelConfig struct {
     // APIMode 对话模型的 API 形态：chat（Chat Completions）| responses（Response API）
     APIMode APIMode
     // BaseURL 模型端点的 OpenAI 兼容接口 Base URL
-    BaseURL string
+    BaseURL string `binding:"notBlank"`
     // APIKey 访问模型端点的明文凭据（落库为密文，此处为解密后的明文）
-    APIKey string
+    APIKey string `binding:"required"`
     // Model 供应商侧的模型名（如 gpt-4o-mini、text-embedding-3-small）
-    Model string
+    Model string `binding:"notBlank"`
     // Timeout 单次请求的超时；未声明（0）时由探活经 defaults.Set 回填 default 标签声明的 15s，
     // 构造正式客户端时 0 仍交由底层客户端默认值
     Timeout time.Duration `default:"15s"`
+    // TimeoutRetry 非流式 Generate 的超时重试策略；零值表示不重试，由运行时按 agent_params 注入
+    TimeoutRetry TimeoutRetryPolicy
     // Temperature 采样温度，仅 chat 类模型有意义
     Temperature float64
     // MaxTokens 单次生成的最大 token 数，仅 chat 类模型有意义
@@ -377,15 +379,6 @@ type ModelConfig struct {
     ThinkingOffValue any
 }
 ```
-
-<a name="ModelConfig.Validate"></a>
-### func \(ModelConfig\) Validate
-
-```go
-func (c ModelConfig) Validate() error
-```
-
-Validate 校验模型端点的字段不变量：端点三要素非空、超时与最大 token 数为正数、 温度落在 \[0, 2\]。Kind 与 Name 不在校验范围内：Kind 由 ParseModelKind 在入口解析为合法取值， Name 的注册表内唯一性属于视图层语义。向量维度同样不校验：它不再由前端提交， 「索引维度是运维独占的 schema 属性」由运维经 sync embedding\-dimensions 显式指定，模型的已验证 维度则由后端在绑定 embedding 档位时经真实探测写入（见 VerifyEmbeddingCompat）。
 
 <a name="ModelKind"></a>
 ## type ModelKind
@@ -415,3 +408,19 @@ func ParseModelKind(value ModelKind) (ModelKind, error)
 ```
 
 ParseModelKind 解析并校验模型类型取值（忽略首尾空白；不区分大小写）：仅 chat / embedding 为合法取值，其余取值返回英文错误。类型清单与取值规范化只在本包声明，调用方不再各自校验。
+
+<a name="TimeoutRetryPolicy"></a>
+## type TimeoutRetryPolicy
+
+TimeoutRetryPolicy 是超时重试策略：仅用于非流式 Generate，遇到超时错误时按倍数放宽 单次请求截止时间后重试。零值（Enabled=false）表示不重试。
+
+```go
+type TimeoutRetryPolicy struct {
+    // Enabled 是否开启超时重试
+    Enabled bool
+    // MaxRetries 最大重试次数（不含首次请求）；Enabled 为 true 且该值大于 0 时生效
+    MaxRetries int
+    // Multiplier 每次重试的截止时间倍数；非正数按 2 处理
+    Multiplier int
+}
+```

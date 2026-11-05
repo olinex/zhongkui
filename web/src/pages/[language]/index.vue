@@ -9,6 +9,81 @@
           <p class="text-title-large on-surface-variant mt-2">{{ $t("home.subtitle") }}</p>
         </div>
 
+        <!-- 报告看板：仅登录且 AI 功能开启时渲染 -->
+        <div v-if="periodicReportBoardVisible" class="mb-8">
+          <div class="d-flex align-center mb-4">
+            <h2 class="text-title-large">{{ $t("home.periodicReportBoard.self") }}</h2>
+            <v-spacer />
+            <v-btn
+              :text="$t('home.periodicReportBoard.settings')"
+              prepend-icon="mdi-cog-outline"
+              variant="text"
+              @click="openWatchSettingsAction"
+            />
+          </div>
+
+          <!-- 瀑布流：列数按可用宽度 1 / 2 / 3 变化，卡片不跨列断开 -->
+          <div v-if="feedItems.length > 0" class="periodic-report-board-masonry">
+            <v-card
+              v-for="feed in feedItems"
+              :key="feed.runID"
+              class="periodic-report-board-card zk-interactive-card"
+              @click="openFeedDetailAction(feed)"
+            >
+              <div class="d-flex flex-column ga-2">
+                <div class="d-flex align-center justify-space-between ga-2">
+                  <span class="zk-hint text-truncate">{{ feed.planName }}</span>
+                  <div class="d-flex align-center ga-1 flex-shrink-0">
+                    <v-icon
+                      :icon="runStatusMeta(feed.status).icon"
+                      :color="runStatusMeta(feed.status).color"
+                      :class="{ 'mdi-spin': runStatusMeta(feed.status).spin }"
+                      size="small"
+                    />
+                    <span class="zk-hint">{{
+                      enumLabelOf(EnumClass.periodicReportRunStatus, feed.status)
+                    }}</span>
+                  </div>
+                </div>
+                <span class="zk-section-title">{{ feed.title || feed.planName }}</span>
+                <div class="d-flex align-center justify-space-between ga-2">
+                  <span class="zk-hint">
+                    {{ localeDatetimeFormat(DateTime.fromISO(feed.createdAt)) }}
+                  </span>
+                  <v-btn
+                    :text="$t('home.periodicReportBoard.viewDetail')"
+                    variant="text"
+                    @click.stop="openFeedDetailAction(feed)"
+                  />
+                </div>
+              </div>
+            </v-card>
+          </div>
+
+          <!-- 空看板：引导前往设置关注计划 -->
+          <div
+            v-else-if="!feedLoading"
+            class="periodic-report-board-empty zk-panel--subtle zk-hint"
+          >
+            <span>{{ $t("home.periodicReportBoard.empty") }}</span>
+            <v-btn
+              :text="$t('home.periodicReportBoard.selectPlans')"
+              variant="text"
+              color="primary"
+              @click="openWatchSettingsAction"
+            />
+          </div>
+
+          <div v-if="feedItems.length < feedTotal" class="d-flex justify-center mt-4">
+            <v-btn
+              :text="$t('home.periodicReportBoard.loadMore')"
+              variant="tonal"
+              :loading="feedLoading"
+              @click="loadMoreFeedAction"
+            />
+          </div>
+        </div>
+
         <!-- 快速开始区域 -->
         <div class="d-flex align-center mb-4">
           <h2 class="text-title-large">{{ $t("home.quickStart.self") }}</h2>
@@ -135,6 +210,53 @@
           </div>
         </div>
 
+        <!-- 设置关注的报告计划：勾选即时写入（乐观更新，失败回退） -->
+        <app-dialog
+          v-model="watchDialog"
+          :title="$t('home.periodicReportBoard.settings')"
+          icon="mdi-cog-outline"
+          size="sm"
+        >
+          <div v-if="watchPlans.length === 0" class="zk-hint">
+            {{ $t("home.periodicReportBoard.noPlans") }}
+          </div>
+          <v-list v-else>
+            <v-checkbox
+              v-for="plan in watchPlans"
+              :key="plan.id"
+              :model-value="watchedPlanIDs.includes(plan.id)"
+              :label="plan.name"
+              hide-details
+              @update:model-value="
+                (value: boolean | null) => toggleWatchAction(plan, value === true)
+              "
+            />
+          </v-list>
+          <template #footer>
+            <v-btn :text="$t('action.close')" variant="text" @click="watchDialog = false" />
+          </template>
+        </app-dialog>
+
+        <!-- 报告正文：信息流卡片点击后按运行记录读取解密正文 -->
+        <app-dialog
+          v-model="periodicReportDetailDialog"
+          :title="$t('home.periodicReportBoard.viewDetail')"
+          :subtitle="periodicReportDetailTitle"
+          icon="mdi-file-document-outline"
+          size="xl"
+          :loading="periodicReportDetailLoading"
+        >
+          <assistant-markdown v-if="periodicReportDetailContent" :content="periodicReportDetailContent" />
+          <div v-else-if="!periodicReportDetailLoading" class="zk-hint">{{ INVALID_PLACEHOLDER }}</div>
+          <template #footer>
+            <v-btn
+              :text="$t('action.close')"
+              variant="text"
+              @click="periodicReportDetailDialog = false"
+            />
+          </template>
+        </app-dialog>
+
         <!-- 添加导航链接对话框 -->
         <app-dialog
           v-model="addLinkDialog"
@@ -206,13 +328,39 @@ meta:
 import router from "@/router";
 import { filterNavigationByPerm, navigationGroups } from "@/navigation";
 import type { NavChild } from "@/navigation";
-import { useFeaturesStore } from "@/stores/features";
+import { useAppStore } from "@/stores/app";
+import { FEATURE_AI, useFeaturesStore } from "@/stores/features";
 import { isBuiltinGroup, linkKey, useQuickStartStore } from "@/stores/quickStart";
 import type { QuickStartGroup, QuickStartLink } from "@/stores/quickStart";
 import { useUserStore } from "@/stores/user";
-import i18n from "@/utils/i18n";
+import { getResponse, getSimpleResponse } from "@/apis/base";
+import {
+  periodicReportEnvelopeContent,
+  periodicReportFeedListGet,
+  periodicReportRunDetailGet,
+  periodicReportWatchListGet,
+  periodicReportWatchSet,
+} from "@/apis/periodicReport";
+import { INVALID_PLACEHOLDER } from "@/utils/base";
+import { EnumClass, enumLabelOf, ensureEnum } from "@/utils/enums";
+import i18n, { localeDatetimeFormat } from "@/utils/i18n";
+
+// 第三方
+import { DateTime } from "luxon";
+
+// 类型
+import type {
+  PeriodicReportFeedItem,
+  PeriodicReportFeedListOut,
+  PeriodicReportRunDetailOut,
+  PeriodicReportWatchListOut,
+  PeriodicReportWatchPlan,
+} from "@/apis/@types/periodicReport";
 
 const store = useQuickStartStore();
+const appStore = useAppStore();
+const featuresStore = useFeaturesStore();
+const userStore = useUserStore();
 const route = useRoute();
 
 // --- 分组操作 ---
@@ -336,6 +484,177 @@ const goto = (link: QuickStartLink) => {
   router.push({ name: link.routeName as any, params: { ...route.params, ...link.params } as any });
 };
 
+// --- 报告看板 ---
+// 后端分页契约只接受 10/20/50/100，看板每次加载 10 条
+const FEED_PAGE_SIZE = 10;
+
+const feedItems = ref<PeriodicReportFeedItem[]>([]);
+const feedTotal = ref(0);
+const feedPage = ref(0);
+const feedLoading = ref(false);
+
+// 看板仅在登录且 AI 功能开启时渲染；首页 requiresAuth=false，未登录时不得发起报告请求
+const periodicReportBoardVisible = computed(
+  () => userStore.valid && featuresStore.enabled[FEATURE_AI] === true,
+);
+
+const notifyError = (text: string): void => {
+  appStore.notify({ text, timeout: 3000, color: "error" });
+};
+
+// loadFeedAction 拉取信息流：reset 为真时从第一页重建，否则追加下一页
+const loadFeedAction = async (reset = false): Promise<void> => {
+  if (!periodicReportBoardVisible.value || feedLoading.value) {
+    return;
+  }
+  const nextPage = reset ? 1 : feedPage.value + 1;
+  feedLoading.value = true;
+  await getResponse<PeriodicReportFeedListOut>(
+    periodicReportFeedListGet({
+      greedy: false,
+      page: nextPage,
+      pageSize: FEED_PAGE_SIZE,
+      orderBy: [{ name: "createdAt", order: -1 }],
+    }),
+    async (rsp) => {
+      const items = rsp.data.items ?? [];
+      feedItems.value = reset ? items : [...feedItems.value, ...items];
+      // 分页总数缺失时按本页是否满页推断是否还有下一页，避免「加载更多」入口消失
+      feedTotal.value =
+        rsp.data.total ??
+        (items.length >= FEED_PAGE_SIZE ? nextPage * FEED_PAGE_SIZE + 1 : feedItems.value.length);
+      feedPage.value = nextPage;
+    },
+    async (rsp) => notifyError(rsp.summary),
+    undefined,
+    undefined,
+    async () => {
+      feedLoading.value = false;
+    },
+  );
+};
+
+const loadMoreFeedAction = async (): Promise<void> => {
+  await loadFeedAction();
+};
+
+// refreshPeriodicReportBoard 登录态 / 功能开关满足条件后加载枚举与首屏信息流
+const refreshPeriodicReportBoard = async (): Promise<void> => {
+  await ensureEnum(EnumClass.periodicReportRunStatus);
+  await loadFeedAction(true);
+};
+
+watch(
+  () => userStore.valid,
+  (valid) => {
+    if (valid) {
+      void featuresStore.load();
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  periodicReportBoardVisible,
+  (visible) => {
+    if (!visible) {
+      feedItems.value = [];
+      feedTotal.value = 0;
+      feedPage.value = 0;
+      return;
+    }
+    void refreshPeriodicReportBoard();
+  },
+  { immediate: true },
+);
+
+// --- 关注计划设置 ---
+const watchDialog = ref(false);
+const watchPlans = ref<PeriodicReportWatchPlan[]>([]);
+const watchedPlanIDs = ref<number[]>([]);
+
+const openWatchSettingsAction = async (): Promise<void> => {
+  watchDialog.value = true;
+  await getResponse<PeriodicReportWatchListOut>(
+    periodicReportWatchListGet({
+      greedy: false,
+      page: 1,
+      pageSize: 100,
+      orderBy: [{ name: "createdAt", order: -1 }],
+    }),
+    async (rsp) => {
+      watchPlans.value = rsp.data.items ?? [];
+      watchedPlanIDs.value = watchPlans.value.filter((plan) => plan.watched).map((plan) => plan.id);
+    },
+    async (rsp) => notifyError(rsp.summary),
+  );
+};
+
+// toggleWatchAction 勾选 / 取消关注：先乐观更新界面，写入失败回退，成功后刷新看板
+const toggleWatchAction = async (plan: PeriodicReportWatchPlan, watched: boolean): Promise<void> => {
+  const previous = [...watchedPlanIDs.value];
+  watchedPlanIDs.value = watched
+    ? [...new Set([...previous, plan.id])]
+    : previous.filter((id) => id !== plan.id);
+  await getSimpleResponse(
+    periodicReportWatchSet({ planID: plan.id, watched }),
+    async () => {
+      await loadFeedAction(true);
+    },
+    async (rsp) => {
+      watchedPlanIDs.value = previous;
+      notifyError(rsp.summary);
+    },
+  );
+};
+
+// --- 报告正文 ---
+const periodicReportDetailDialog = ref(false);
+const periodicReportDetailTitle = ref("");
+const periodicReportDetailContent = ref("");
+const periodicReportDetailLoading = ref(false);
+
+const openRunDetailAction = async (runID: number, title?: string): Promise<void> => {
+  periodicReportDetailTitle.value = title ?? "";
+  periodicReportDetailContent.value = "";
+  periodicReportDetailDialog.value = true;
+  periodicReportDetailLoading.value = true;
+  await getResponse<PeriodicReportRunDetailOut>(
+    periodicReportRunDetailGet(runID),
+    async (rsp) => {
+      periodicReportDetailTitle.value = rsp.data.title;
+      periodicReportDetailContent.value = periodicReportEnvelopeContent(rsp.data.content);
+    },
+    async (rsp) => {
+      periodicReportDetailDialog.value = false;
+      notifyError(rsp.summary);
+    },
+    undefined,
+    undefined,
+    async () => {
+      periodicReportDetailLoading.value = false;
+    },
+  );
+};
+
+const openFeedDetailAction = (feed: PeriodicReportFeedItem): void => {
+  void openRunDetailAction(feed.runID, feed.title);
+};
+
+// runStatusMeta 运行状态的图标 / 语义色 / 旋转动效（运行中使用 mdi-spin 表达进行中）
+const runStatusMeta = (status: string): { icon: string; color: string; spin: boolean } => {
+  switch (status) {
+    case "success":
+      return { icon: "mdi-check-circle", color: "success", spin: false };
+    case "failed":
+      return { icon: "mdi-alert-circle", color: "error", spin: false };
+    case "running":
+      return { icon: "mdi-loading", color: "primary", spin: true };
+    default:
+      return { icon: "mdi-help-circle", color: "info", spin: false };
+  }
+};
+
 // --- 拖拽排序（原生 HTML5 DnD） ---
 const dragSource = ref<{ groupID: string; index: number } | null>(null);
 const dropTarget = ref<{ groupID: string; index: number } | null>(null);
@@ -450,5 +769,42 @@ const onDragEnd = () => {
   justify-content: center;
   min-height: var(--zk-control-height-compact);
   margin-top: var(--zk-space-2);
+}
+
+/* 报告看板瀑布流：默认单列，可用宽度增加后依次变为 2 / 3 列。
+   卡片用 break-inside: avoid 保证不被跨列断开。 */
+.periodic-report-board-masonry {
+  column-count: 1;
+  column-gap: var(--zk-space-3);
+}
+
+@media (width >= 960px) {
+  .periodic-report-board-masonry {
+    column-count: 2;
+  }
+}
+
+@media (width >= 1280px) {
+  .periodic-report-board-masonry {
+    column-count: 3;
+  }
+}
+
+/* 报告卡片：表面与描边来自全局 .v-card，悬停反馈来自 .zk-interactive-card；
+   此处只补充瀑布流所需的断列约束与内边距。 */
+.periodic-report-board-card {
+  break-inside: avoid;
+  padding: var(--zk-space-3);
+  margin-bottom: var(--zk-space-3);
+  cursor: pointer;
+}
+
+/* 空看板：弱化面板底色 + hairline 提示区，按钮与文案两端对齐。 */
+.periodic-report-board-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--zk-space-2);
+  padding: var(--zk-space-3);
 }
 </style>
