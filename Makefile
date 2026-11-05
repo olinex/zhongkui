@@ -422,11 +422,11 @@ release:
 		exit 1; \
 	fi
 	@version_number=$$(echo '$(VERSION)' | sed 's/^v//'); \
-	grep -q "## [$$version_number] - " CHANGELOG.md || { \
+	grep -Fq "## [$$version_number] - " CHANGELOG.md || { \
 		echo "ERROR: CHANGELOG.md 缺少 '## [$$version_number] - YYYY-MM-DD' 版本段"; \
 		exit 1; \
 	}; \
-	grep -q "\"version\": \"$$version_number\"" web/package.json || { \
+	grep -Fq "\"version\": \"$$version_number\"" web/package.json || { \
 		echo "ERROR: web/package.json 的 version 未对齐 $$version_number"; \
 		exit 1; \
 	}
