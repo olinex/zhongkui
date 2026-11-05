@@ -48,7 +48,7 @@ const (
 <a name="CleanupHandler"></a>
 ## type CleanupHandler
 
-CleanupHandler 消费 periodic\-report:run:cleanup 定时任务：把到期计划停用， 再按各计划保留天数清理已结束的运行记录及其报告对象。
+CleanupHandler 消费 periodic\-report:run:cleanup 定时任务：把到期计划停用， 再按各计划保留天数清理已结束的运行记录及其报告对象与运行会话。
 
 ```go
 type CleanupHandler struct {
@@ -101,7 +101,7 @@ NewDispatchHandler 从 do.Injector 解析依赖并创建报告计划分发处理
 func (h *DispatchHandler) Do(ctx context.Context, _ etl.Task) error
 ```
 
-Do 消费一条 periodic\-report:plan:dispatch 任务。任务载荷无需使用：每轮均以当前时刻扫描到期计划。 对 next\_run\_at 为 NULL 的计划只计算并写回下次执行时间，不投递；对已到期计划先投递 periodic\-report:plan:run，再以 CAS 把 next\_run\_at 推进到当前时刻之后的第一个触发点（最多补一次， 不补历史积压）。单计划失败只记录告警，不中断整轮。
+Do 消费一条 periodic\-report:plan:dispatch 任务。任务载荷无需使用：每轮均以当前时刻扫描到期计划。 对 next\_run\_at 为 NULL 的计划只计算并写回下次执行时间，不投递；对已到期计划投递 periodic\-report:plan:run，再以 CAS 把 next\_run\_at 推进到当前时刻之后的第一个触发点（最多补一次， 不补历史积压）。每次运行使用独立会话，同一计划的多份报告可以并发生成，无需按计划串行拦截。 单计划失败只记录告警，不中断整轮。
 
 <a name="PeriodicReportRunner"></a>
 ## type PeriodicReportRunner
@@ -157,10 +157,14 @@ type RunInput struct {
     Skill *modelsai.AgentSkill
     // Query 送入 Agent 的中文提示词（重试时为纠错提示）。
     Query string
-    // SessionID 计划专属会话 ID，0 表示尚未创建。
+    // TriggerAt 本次运行的触发时间点，用于为独立会话生成可辨识的标题。
+    TriggerAt time.Time
+    // SessionID 本次运行已创建的会话 ID，0 表示尚未创建（每次运行独立建会话，不复用其它运行）。
     SessionID uint
     // SystemHint 本轮注入的系统级输出契约，追加在系统提示词末尾。
     SystemHint string
+    // Automation 是无人值守运行上下文：周期报告重试沿用同一个调用器，凭据只在内存中。
+    Automation *agentkit.Automation
 }
 ```
 
@@ -171,7 +175,7 @@ RunOutput 是一次报告生成的结果。
 
 ```go
 type RunOutput struct {
-    // SessionID 实际使用的会话 ID，供调用方回写计划。
+    // SessionID 本次运行使用的会话 ID，供调用方回写运行记录。
     SessionID uint
     // Content 生成的 Markdown 报告正文。
     Content string

@@ -15,9 +15,10 @@
 - [type PlanInput](<#PlanInput>)
 - [type ReportEnvelope](<#ReportEnvelope>)
   - [func ParseReportEnvelope\(raw string\) \(ReportEnvelope, error\)](<#ParseReportEnvelope>)
+- [type SessionRemover](<#SessionRemover>)
 - [type Store](<#Store>)
   - [func NewStore\(db \*database.DB\) \(\*Store, error\)](<#NewStore>)
-  - [func \(s \*Store\) Cleanup\(ctx context.Context, now time.Time, objects ObjectRemover, perPlanLimit int\) \(CleanupResult, error\)](<#Store.Cleanup>)
+  - [func \(s \*Store\) Cleanup\(ctx context.Context, now time.Time, objects ObjectRemover, sessions SessionRemover, perPlanLimit int\) \(CleanupResult, error\)](<#Store.Cleanup>)
   - [func \(s \*Store\) CreatePlan\(ctx context.Context, namespace string, userID uint, in PlanInput\) \(\*modelsai.PeriodicReportPlan, error\)](<#Store.CreatePlan>)
   - [func \(s \*Store\) CreateRunIfAbsent\(ctx context.Context, run \*modelsai.PeriodicReportRun\) \(bool, error\)](<#Store.CreateRunIfAbsent>)
   - [func \(s \*Store\) DeletePlan\(ctx context.Context, namespace string, id uint\) \(\*modelsai.PeriodicReportPlan, error\)](<#Store.DeletePlan>)
@@ -39,7 +40,7 @@
   - [func \(s \*Store\) SetNextRunAtIfNull\(ctx context.Context, planID uint, next time.Time\) error](<#Store.SetNextRunAtIfNull>)
   - [func \(s \*Store\) SetNextRunAtIfUnchanged\(ctx context.Context, planID uint, old, next time.Time\) \(bool, error\)](<#Store.SetNextRunAtIfUnchanged>)
   - [func \(s \*Store\) SetPlanEnabled\(ctx context.Context, namespace string, id uint, enabled bool\) \(\*modelsai.PeriodicReportPlan, error\)](<#Store.SetPlanEnabled>)
-  - [func \(s \*Store\) SetPlanSession\(ctx context.Context, planID, sessionID uint\) error](<#Store.SetPlanSession>)
+  - [func \(s \*Store\) SetRunSession\(ctx context.Context, runID, sessionID uint\) error](<#Store.SetRunSession>)
   - [func \(s \*Store\) SetWatch\(ctx context.Context, namespace string, userID, planID uint, watched bool\) error](<#Store.SetWatch>)
   - [func \(s \*Store\) SkillNamesByIDs\(ctx context.Context, ids \[\]uint\) \(map\[uint\]string, error\)](<#Store.SkillNamesByIDs>)
   - [func \(s \*Store\) UpdatePlan\(ctx context.Context, namespace string, id uint, in PlanInput\) \(\*modelsai.PeriodicReportPlan, error\)](<#Store.UpdatePlan>)
@@ -219,6 +220,18 @@ func ParseReportEnvelope(raw string) (ReportEnvelope, error)
 
 ParseReportEnvelope 解析并校验模型输出是否符合统一信封契约。 校验失败返回面向模型的纠错原因（会被回传要求重新生成）：回答必须是不带围栏的裸 JSON 对象， content 必须为非空字符串，draft 若存在必须是 JSON 对象。
 
+<a name="SessionRemover"></a>
+## type SessionRemover
+
+SessionRemover 抽象报告运行会话的删除能力，生产实现为 \*session.Store。报告每次运行使用 独立会话，运行记录按保留天数清理时须一并删除其会话，避免会话与消息无限累积。
+
+```go
+type SessionRemover interface {
+    // DeleteSession 删除指定命名空间与属主下的会话及其从属数据。
+    DeleteSession(ctx context.Context, id uint, namespaceName string, userID uint) error
+}
+```
+
 <a name="Store"></a>
 ## type Store
 
@@ -243,10 +256,10 @@ NewStore 构造 Store；db 为空时返回英文错误。
 ### func \(\*Store\) Cleanup
 
 ```go
-func (s *Store) Cleanup(ctx context.Context, now time.Time, objects ObjectRemover, perPlanLimit int) (CleanupResult, error)
+func (s *Store) Cleanup(ctx context.Context, now time.Time, objects ObjectRemover, sessions SessionRemover, perPlanLimit int) (CleanupResult, error)
 ```
 
-Cleanup 执行到期计划停用与超期报告清理：先把到期计划停用（不再需要清理调度配置，分发器 只挑选启用的计划），再对全部计划按保留天数清理已结束的运行记录（先删对象、再软删记录， 对象删除失败时保留记录待下轮）。单项失败不中断整体流程，最终返回首个错误； perPlanLimit 非正时取默认上限。
+Cleanup 执行到期计划停用与超期报告清理：先把到期计划停用（不再需要清理调度配置，分发器 只挑选启用的计划），再对全部计划按保留天数清理已结束的运行记录（先删对象、再删本次运行的 独立会话、最后软删记录；对象或会话删除失败时保留记录待下轮）。单项失败不中断整体流程， 最终返回首个错误；perPlanLimit 非正时取默认上限。
 
 <a name="Store.CreatePlan"></a>
 ### func \(\*Store\) CreatePlan
@@ -437,14 +450,14 @@ func (s *Store) SetPlanEnabled(ctx context.Context, namespace string, id uint, e
 
 SetPlanEnabled 设置给定命名空间下一条计划的启停状态并返回最新行；不存在或跨命名空间时 返回 ErrPlanNotFound。启用时清空 next\_run\_at，交给分发器按当前 cron 重新计算；停用时保留原值。
 
-<a name="Store.SetPlanSession"></a>
-### func \(\*Store\) SetPlanSession
+<a name="Store.SetRunSession"></a>
+### func \(\*Store\) SetRunSession
 
 ```go
-func (s *Store) SetPlanSession(ctx context.Context, planID, sessionID uint) error
+func (s *Store) SetRunSession(ctx context.Context, runID, sessionID uint) error
 ```
 
-SetPlanSession 仅按计划 ID 更新计划关联的会话 ID，供报告生成器内部使用；sessionID 为 0 时 写入 NULL（会话删除后同样由外键置空）。
+SetRunSession 仅按运行记录 ID 更新本次运行使用的会话 ID，供报告生成器内部使用； sessionID 为 0 时写入 NULL（尚未创建或会话已删除）。
 
 <a name="Store.SetWatch"></a>
 ### func \(\*Store\) SetWatch

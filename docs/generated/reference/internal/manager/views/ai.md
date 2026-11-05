@@ -1688,8 +1688,6 @@ type PeriodicReportPlanItemOut struct {
     ExpiresAt *time.Time `json:"expiresAt"`
     // NextRunAt 下一次计划执行时间，nil 表示待分发器计算
     NextRunAt *time.Time `json:"nextRunAt"`
-    // SessionID 计划关联的会话 ID，0 表示尚未创建
-    SessionID uint `json:"sessionID"`
     // CreatedAt 创建时间
     CreatedAt time.Time `json:"createdAt"`
     // UpdatedAt 更新时间
@@ -1781,6 +1779,8 @@ type PeriodicReportRunItemOut struct {
     Error string `json:"error"`
     // TriggerAt 计划触发时间点
     TriggerAt time.Time `json:"triggerAt"`
+    // SessionID 本次运行专属的 Agent 会话 ID，0 表示尚未创建
+    SessionID uint `json:"sessionID"`
     // StartedAt 实际开始执行时间，nil 表示尚未开始
     StartedAt *time.Time `json:"startedAt"`
     // FinishedAt 执行结束时间，nil 表示尚未结束

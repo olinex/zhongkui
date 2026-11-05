@@ -207,15 +207,7 @@ StreamClientInterceptor 是gRPC客户端的流式拦截器。 该拦截器在处
 
 AccessKeyAuthenticator 基于访问密钥\(AccessKey\)的认证器实现。 它通过验证请求中携带的签名令牌来确认请求者的身份。
 
-认证令牌格式为：accessKeyID:timestamp:nonce:base64\(method\):signature 其中：
-
-- accessKeyID: 访问密钥ID，用于从密钥池中查找对应的密钥信息
-- timestamp: 请求时间戳（毫秒），用于防重放攻击和过期检查
-- nonce: 随机字符串，防止同一请求被重复提交
-- base64\(method\): 经URL安全Base64编码的gRPC方法名
-- signature: HMAC\-SHA256签名，格式为 "hmac\-sha256:\<base64签名值\>"
-
-签名的原始数据格式为：timestamp/nonce/method/body（当前body为空字符串）
+令牌格式与校验流程由 internal/pkg/auth 的 AuthenticateAccessKey 统一实现，本类型只负责把 共享鉴权结果映射为 gRPC 状态码；Web 接口层的 X\-Access\-Key 鉴权复用同一份实现。
 
 ```go
 type AccessKeyAuthenticator struct {
@@ -249,32 +241,7 @@ func (a *AccessKeyAuthenticator) Handle(ctx context.Context, method, token strin
 
 Handle 执行基于访问密钥的身份验证处理。
 
-验证流程如下：
-
-1. 解析令牌：将令牌按冒号分隔为5部分，校验格式是否正确
-2. 验证方法名：解码Base64编码的方法名，与实际调用的gRPC方法比对
-3. 解析时间戳：将时间戳字符串解析为整数
-4. 防重放检测：通过密钥池检查nonce是否已被使用过（重放攻击防护）
-5. 查询密钥：根据accessKeyID从密钥池中获取对应的密钥信息
-6. 密钥状态检查：验证密钥是否存在、是否启用、是否已过期
-7. 签名验证：使用密钥的Secret生成HMAC\-SHA256签名，与请求中的签名比对
-8. 更新访问记录：认证成功后更新密钥的最后访问时间
-
-参数：
-
-- ctx: 请求上下文
-- method: 实际调用的gRPC方法完整路径
-- token: 认证令牌，格式为 accessKeyID:timestamp:nonce:base64\(method\):signature
-
-返回：
-
-- userID: 认证成功时返回密钥所属的用户ID
-- err: 认证失败时返回的gRPC错误，可能的错误包括：
-- ErrInvalidToken: 令牌格式错误、方法名不匹配、密钥不存在、签名不匹配
-- ErrNonceDuplicated: nonce重复，疑似重放攻击
-- ErrAccessKeyDisabled: 访问密钥已被禁用
-- ErrAccessKeyExpired: 访问密钥已过期
-- ErrInternal: 内部错误（如密钥池操作失败）
+认证令牌格式为：accessKeyID:timestamp:nonce:base64\(method\):signature 校验流程（解析、方法比对、防重放、密钥状态、签名校验、最后访问时间更新）统一由 auth.AuthenticateAccessKey 完成；本方法仅将失败原因映射为既有 gRPC 错误码。
 
 <a name="AccessKeySecretPerRPCCredentials"></a>
 ## type AccessKeySecretPerRPCCredentials

@@ -43,6 +43,7 @@ SUDO ?= sudo
 .PHONY: lint
 .PHONY: p0f-update
 .PHONY: pcap-tools
+.PHONY: release
 .PHONY: protobuf-tools
 .PHONY: pull-dev-deps
 .PHONY: remove-dev-deps
@@ -305,8 +306,9 @@ pcap-tools:
 # ============================================================
 #
 # 版本号规则:
-#   - 开发构建: 版本号 = git describe --tags --always --dirty，如 "c2d4d21-dirty"
-#   - Release 构建: 版本号 = 语义化版本，如 "v1.2.3"，通过 make build-release VERSION=v1.2.3 设置
+#   - 版本号唯一来源是 annotated tag `vX.Y.Z`，由 `make release` 创建
+#   - 开发构建不注入 SemVer，版本显示回落为 commit hash，如 "c2d4d21"
+#   - Release 构建必须显式指定 VERSION，如 `make build-release VERSION=v1.2.3`
 #
 # 编译时版本信息通过 -ldflags 注入到二进制，运行时可通过以下命令查看:
 #   ./bin/zki version          # 精简输出，如 c2d4d21 或 v1.2.3
@@ -314,21 +316,28 @@ pcap-tools:
 #   go run cmd/zki/main.go version  # 开发时无需预编译，直接查看 commit hash
 #
 # 版本变量说明:
-#   VERSION     - 语义化版本号 / git describe 结果，优先显示
+#   VERSION     - 语义化版本号，仅 release 构建使用
 #   COMMIT      - git commit hash (短格式)
 #   BUILD_TIME  - 构建时间 (ISO8601 UTC)
 #   BUILDER     - 构建者用户名
 #
 
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "unknown")
+VERSION ?=
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 BUILD_TIME ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 BUILDER  ?= $(shell whoami)
 
-LDFLAGS = -X zhongkuisec.com/zhongkui/internal/pkg/version.SemVer=$(VERSION) \
-          -X zhongkuisec.com/zhongkui/internal/pkg/version.Commit=$(COMMIT) \
-          -X zhongkuisec.com/zhongkui/internal/pkg/version.BuildTime=$(BUILD_TIME) \
-          -X zhongkuisec.com/zhongkui/internal/pkg/version.Builder=$(BUILDER)
+# 语义化版本（SemVer 2.0.0）：vX.Y.Z，可带预发布与构建元数据
+SEMVER_PATTERN := ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*))?(\+([0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*))?$$
+
+# 开发构建只注入 commit 等信息，SemVer 留空，避免把 git describe 的非语义化结果当成版本号
+DEV_LDFLAGS = -X zhongkuisec.com/zhongkui/internal/pkg/version.Commit=$(COMMIT) \
+              -X zhongkuisec.com/zhongkui/internal/pkg/version.BuildTime=$(BUILD_TIME) \
+              -X zhongkuisec.com/zhongkui/internal/pkg/version.Builder=$(BUILDER)
+
+# Release 构建额外注入语义化版本号
+RELEASE_LDFLAGS = $(DEV_LDFLAGS) \
+                  -X zhongkuisec.com/zhongkui/internal/pkg/version.SemVer=$(VERSION)
 
 # p0f 指纹签名库（随 Go 包内嵌）：
 # p0f.fp 为上游基础库（可用 make p0f-update 刷新覆盖）；p0f.local.fp 为本地定制签名，
@@ -370,19 +379,60 @@ p0f-update:
 	@echo "=== 运行指纹测试验证 ==="
 	go test ./internal/network/detectors -run '^TestFingerprintFromPcap$$' -v
 
-# build - 编译 zki 二进制 (开发版本，版本号自动取 git commit)
+# build - 编译 zki 二进制 (开发版本，版本显示回落为 commit hash)
 # 用法: make build
 build: internal/pkg/protobuf/reporter/v1/reporter.pb.go internal/pkg/protobuf/reporter/v1/reporter_grpc.pb.go internal/manager/views/search.go internal/manager/views/enum_bindings.go
-	go build -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
+	go build -ldflags "$(DEV_LDFLAGS)" -o bin/zki cmd/zki/main.go
 
-# build-release - 编译 release 版本 (需手动指定语义化版本号)
+# build-release - 编译 release 版本 (需手动指定并通过校验的语义化版本号)
 # 用法: make build-release VERSION=v1.2.3
 build-release:
-	@if [ -z "$(VERSION)" ] || [ "$(VERSION)" = "unknown" ]; then \
+	@if [ -z "$(VERSION)" ]; then \
 		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make build-release VERSION=v1.2.3"; \
 		exit 1; \
 	fi
-	go build -ldflags "$(LDFLAGS)" -o bin/zki cmd/zki/main.go
+	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
+		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号，示例: v1.2.3 或 v0.1.0-alpha.1"; \
+		exit 1; \
+	}
+	go build -ldflags "$(RELEASE_LDFLAGS)" -o bin/zki cmd/zki/main.go
+
+# release - 在 master 上创建发布标签 (要求 CHANGELOG 与 web/package.json 已对齐)
+# 用法: make release VERSION=v1.2.3
+# 前置: 当前分支为 master、工作区干净、CHANGELOG 存在对应版本段、版本标签未创建
+release:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "ERROR: 请设置 VERSION 为语义化版本号，例如: make release VERSION=v1.2.3"; \
+		exit 1; \
+	fi
+	@echo '$(VERSION)' | grep -Eq '$(SEMVER_PATTERN)' || { \
+		echo "ERROR: VERSION '$(VERSION)' 不是合法的语义化版本号"; \
+		exit 1; \
+	}
+	@if [ "$$(git rev-parse --abbrev-ref HEAD)" != "master" ]; then \
+		echo "ERROR: 发布必须在 master 分支上进行，当前为 $$(git rev-parse --abbrev-ref HEAD)"; \
+		exit 1; \
+	fi
+	@if [ -n "$$(git status --porcelain)" ]; then \
+		echo "ERROR: 工作区不干净，请先提交或清理改动"; \
+		exit 1; \
+	fi
+	@if git rev-parse -q --verify "refs/tags/$(VERSION)" >/dev/null 2>&1; then \
+		echo "ERROR: 标签 $(VERSION) 已存在"; \
+		exit 1; \
+	fi
+	@version_number=$$(echo '$(VERSION)' | sed 's/^v//'); \
+	grep -q "## [$$version_number] - " CHANGELOG.md || { \
+		echo "ERROR: CHANGELOG.md 缺少 '## [$$version_number] - YYYY-MM-DD' 版本段"; \
+		exit 1; \
+	}; \
+	grep -q "\"version\": \"$$version_number\"" web/package.json || { \
+		echo "ERROR: web/package.json 的 version 未对齐 $$version_number"; \
+		exit 1; \
+	}
+	$(MAKE) ci
+	git tag -a "$(VERSION)" -m "zhongkui $(VERSION)"
+	@echo "已创建标签 $(VERSION)；推送: git push origin master --follow-tags"
 
 # run - 使用 go run 直接运行 zki
 # 用法: make run ARGS="version" 或 make run ARGS="run web --config=config.toml"

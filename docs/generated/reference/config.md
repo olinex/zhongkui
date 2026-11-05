@@ -26,6 +26,7 @@
 | `api.auth.tokenTimeout` | `int64` | `1h` | JWT 令牌有效时长，过期后需重新签发或刷新 |
 | `api.frontendBaseURL` | `string` | `http://127.0.0.1:8000` | 前端站点基础地址（含协议与端口），项目级配置 |
 | `api.host` | `string` | `0.0.0.0` | HTTP 服务监听地址，0.0.0.0 表示监听所有网络接口 |
+| `api.internalBaseURL` | `string` | `http://127.0.0.1:8080` | worker 后台任务调用 Web API 的内部基地址（含协议与端口） |
 | `api.namespace` | `struct` | `-` | 多命名空间（多租户）识别配置 |
 | `api.namespace.headerName` | `string` | `X-Namespace` | 携带命名空间标识的 HTTP 请求头名称 |
 | `api.namespace.namespace` | `string` | `namespace` | 携带命名空间标识的 Cookie 名称 |

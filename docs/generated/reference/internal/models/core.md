@@ -22,6 +22,7 @@
   - [func \(a \*AccessKey\) UserID\(\) string](<#AccessKey.UserID>)
 - [type AccessKeyPool](<#AccessKeyPool>)
   - [func NewAccessKeyPool\(db \*database.DB, cache \*redis.Client, ttl time.Duration\) \*AccessKeyPool](<#NewAccessKeyPool>)
+  - [func \(a \*AccessKeyPool\) FirstUsableByUser\(ctx context.Context, userID uint\) \(\*AccessKey, error\)](<#AccessKeyPool.FirstUsableByUser>)
   - [func \(a \*AccessKeyPool\) GetKey\(ctx context.Context, id string\) \(auth.AccessKey, error\)](<#AccessKeyPool.GetKey>)
   - [func \(a \*AccessKeyPool\) IsDuplicated\(ctx context.Context, id string, timestamp time.Time, nonce string\) \(bool, error\)](<#AccessKeyPool.IsDuplicated>)
   - [func \(a \*AccessKeyPool\) UpdateLastAccess\(ctx context.Context, id string\) error](<#AccessKeyPool.UpdateLastAccess>)
@@ -367,6 +368,27 @@ NewAccessKeyPool 创建一个新的访问键池实例 参数:
 返回:
 
 - \*AccessKeyPool: 新创建的访问键池实例
+
+<a name="AccessKeyPool.FirstUsableByUser"></a>
+### func \(\*AccessKeyPool\) FirstUsableByUser
+
+```go
+func (a *AccessKeyPool) FirstUsableByUser(ctx context.Context, userID uint) (*AccessKey, error)
+```
+
+FirstUsableByUser 返回指定用户下第一条可用的访问密钥。
+
+可用条件为：密钥属于该用户、已启用，且未设置过期时间或过期时间晚于当前时刻。 按 id 升序取第一条；用户没有任何可用密钥时返回 \(nil, nil\)，便于调用方区分 「没有可用密钥」与「查询出错」。
+
+参数:
+
+- ctx: 上下文，用于传递请求级数据和控制超时
+- userID: 用户数据库 ID
+
+返回:
+
+- \*AccessKey: 可用的访问密钥（已预加载 User），不存在时为 nil
+- error: 查询过程中发生的错误
 
 <a name="AccessKeyPool.GetKey"></a>
 ### func \(\*AccessKeyPool\) GetKey
